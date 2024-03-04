@@ -99,13 +99,13 @@ CONTAINS
 
          con = fpi_const/SQRT(cell%omtil)* ((atoms%rmt(ntyp))**2)/2.0
 
-         !$acc kernels present(smat,smat%data_c,smat%data_r)&
-         !$acc & copyin(fjgj,fjgj%fj,fjgj%gj,fjgjPr,fjgjPr%fj,fjgjPr%gj,l,lapw,lapw%kvec(:,:,na),lapwPr,lapwPr%kvec(:,:,na),ud,clo1(:),dotp,cph(:),cphPr(:),atoms,lapw%index_lo(:,na),lapw%gk(:,:,:)) &
-         !$acc & copyin(lapwPr%index_lo(:,na),lapwPr%gk(:,:,:),ud%dulon(:,ntyp,isp),ud%ddn(:,ntyp,isp),ud%uulon(:,ntyp,isp),ud%uloulopn(:,:,ntyp,isp),blo1(:)) &
-         !$acc & copyin(atoms%nlo(ntyp),lapw%nv(:),lapwPr%nv(:),atoms%llo(:,ntyp),alo1(:), fmpi, fmpi%n_size, fmpi%n_rank)&
-         !$acc & default(none)
+         !!$acc kernels present(smat,smat%data_c,smat%data_r)&
+         !!$acc & copyin(fjgj,fjgj%fj,fjgj%gj,fjgjPr,fjgjPr%fj,fjgjPr%gj,l,lapw,lapw%kvec(:,:,na),lapwPr,lapwPr%kvec(:,:,na),ud,clo1(:),dotp,cph(:),cphPr(:),atoms,lapw%index_lo(:,na),lapw%gk(:,:,:)) &
+         !!$acc & copyin(lapwPr%index_lo(:,na),lapwPr%gk(:,:,:),ud%dulon(:,ntyp,isp),ud%ddn(:,ntyp,isp),ud%uulon(:,ntyp,isp),ud%uloulopn(:,:,ntyp,isp),blo1(:)) &
+         !!$acc & copyin(atoms%nlo(ntyp),lapw%nv(:),lapwPr%nv(:),atoms%llo(:,ntyp),alo1(:), fmpi, fmpi%n_size, fmpi%n_rank)&
+         !!$acc & default(none)
          
-         !$acc loop gang private(fact1,fl2p1,l) independent
+         !!$acc loop gang private(fact1,fl2p1,l) independent
          DO lo = 1,atoms%nlo(ntyp) !loop over all LOs for this atom
             l = atoms%llo(lo,ntyp)
             fl2p1 = (2*l+1)/fpi_const
@@ -121,7 +121,7 @@ CONTAINS
                IF (l_fullj) THEN
                   lorow = lapwPr%nv(igSpinPr)+lapwPr%index_lo(lo,na)+nkvec
                   kp = lapwPr%kvec(nkvec,lo,na)
-                  !$acc loop vector private(fact2,dotp) independent
+                  !!$acc loop vector private(fact2,dotp) independent
                   DO k = fmpi%n_rank + 1, lapw%nv(igSpin), fmpi%n_size
                      fact2 = con * fl2p1 * ( &
                            & fjgj%fj(k,l,isp,igSpin)*(alo1(lo) &
@@ -140,7 +140,7 @@ CONTAINS
                                             & * CONJG(cphPr(kp)) * cph(k)
                      END IF
                   END DO
-                  !$acc end loop
+                  !!$acc end loop
                END IF
                locol = lapw%nv(igSpin)+lapw%index_lo(lo,na)+nkvec !this is the column of the matrix
                IF (MOD(locol-1,fmpi%n_size) == fmpi%n_rank) THEN
@@ -148,7 +148,7 @@ CONTAINS
                   k = lapw%kvec(nkvec,lo,na)
                   ! Calculate the overlap matrix elements with the regular Flapw
                   ! basis functions
-                  !$acc loop vector private(fact2,dotp,kp) independent
+                  !!$acc loop vector private(fact2,dotp,kp) independent
                   DO kp = 1,lapwPr%nv(igSpinPr)
                      fact2 = con * fl2p1 * ( &
                            & fjgjPr%fj(kp,l,isp,igSpinPr)*(alo1(lo) &
@@ -167,10 +167,10 @@ CONTAINS
                                             & * CONJG(cphPr(kp)) * cph(k)
                      END IF
                   END DO
-                  !$acc end loop
+                  !!$acc end loop
                   ! Calculate the overlap matrix elements with other local orbitals
                   ! of the same atom, if they have the same l
-                  !$acc loop vector private(lp,fact3,nkvecp,kp,lorow,dotp) independent
+                  !!$acc loop vector private(lp,fact3,nkvecp,kp,lorow,dotp) independent
                   DO lop = 1, MERGE(lo-1,atoms%nlo(ntyp),igSpinPr==igSpin.AND..NOT.l_fullj)
                      IF (lop==lo) CYCLE !Do later
                      lp = atoms%llo(lop,ntyp)
@@ -203,7 +203,7 @@ CONTAINS
                   ! Calculate the overlap matrix elements of one local
                   ! orbital with itself
                   lop=lo
-                  !$acc loop vector private(kp,lorow,dotp) independent
+                  !!$acc loop vector private(kp,lorow,dotp) independent
                   DO nkvecp = 1,MERGE(nkvec,invsfct* (2*l+1),igSpinPr==igSpin.AND..NOT.l_fullj)
                      kp = lapwPr%kvec(nkvecp,lo,na)
                      lorow = lapwPr%nv(igSpinPr)+lapwPr%index_lo(lo,na)+nkvecp
@@ -219,19 +219,19 @@ CONTAINS
                                                & * CONJG(cphPr(kp)) * cph(k)
                      END IF
                   END DO
-                  !$acc end loop
+                  !!$acc end loop
                END IF ! mod(locol-1,n_size) = nrank
             END DO
-            !$acc end loop
+            !!$acc end loop
          END DO
-         !$acc end loop
-         !$acc end kernels
+         !!$acc end loop
+         !!$acc end kernels
       END IF
     
    END SUBROUTINE slomat
 
    PURE REAL FUNCTION legpol(l,arg)
-      !$acc routine seq
+      !!$acc routine seq
 
       IMPLICIT NONE
 

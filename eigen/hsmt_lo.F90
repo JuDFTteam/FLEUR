@@ -84,18 +84,20 @@ CONTAINS
        !CPP_OMP END DO
        IF ( present(smat)) THEN
           !CPP_OMP DO
-          !CPP_ACC kernels present(smat,smat%data_r,smat%data_c)copyin(fmpi,lapw,lapw%nv)
+          !!CPP_ACC kernels present(smat,smat%data_r,smat%data_c)copyin(fmpi,lapw,lapw%nv)
           DO  nkvec =  fmpi%n_rank+1, l, fmpi%n_size
              IF( nkvec > lapw%nv(igSpin)) THEN
                 kp=(nkvec-1)/fmpi%n_size+1
                 IF (smat%l_real) THEN
+                   !$acc update self(smat%data_r)
                    smat%data_r(:,kp) = 0.0
                 ELSE
+                   !$acc update self(smat%data_c)
                    smat%data_c(:,kp) = CMPLX(0.0,0.0)
                 ENDIF
              ENDIF
           ENDDO
-          !CPP_ACC end kernels
+          !!CPP_ACC end kernels
           !CPP_OMP END DO
        ENDIF
        !CPP_OMP END PARALLEL
@@ -129,6 +131,7 @@ CONTAINS
                         CALL slomat(input,atoms,sym,fmpi,lapw,cell,nococonv,n,na,&
                            ilSpinPr,ud, alo1(:,ilSpinPr),blo1(:,ilSpinPr),clo1(:,ilSpinPr),fjgj,&
                            igSpinPr,igSpin,chi,smat,l_fullj,lapwq,fjgjq)
+                        !$acc update device(smat%data_c,smat%data_r)   
                      ELSE
                         CALL slomat(input,atoms,sym,fmpi,lapw,cell,nococonv,n,na,&
                            ilSpinPr,ud, alo1(:,ilSpinPr),blo1(:,ilSpinPr),clo1(:,ilSpinPr),fjgj,&
