@@ -150,7 +150,7 @@ CONTAINS
         nat_stop  = atoms%nat
       ENDIF
       nat_l = nat_stop - nat_start + 1
-      print *,fmpi%n_rank,nat_start,nat_stop,atoms%nat
+     
     ! set up A and B coefficients
     ALLOCATE (ahelp(atoms%lmaxd*(atoms%lmaxd+2),nat_l,input%neig,input%jspins))
     ALLOCATE (bhelp(atoms%lmaxd*(atoms%lmaxd+2),nat_l,input%neig,input%jspins))
