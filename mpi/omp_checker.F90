@@ -21,7 +21,7 @@ contains
       logical :: l_problem
 
 
-      !$omp parallel shared(cpu) private(me, num_threads, mycpu) default(none)
+      !$omp parallel shared(cpu) private(me, num_threads, mycpu) 
 !$    if (.false.) then
       me = 0
       num_threads = 1

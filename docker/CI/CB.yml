@@ -33,6 +33,7 @@ perf-intel:
   rules:
       - if: $CI_TASKS =~ /CB/    
 
+
 perf-intel-ifx:
   needs:
     - perf-intel
