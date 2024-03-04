@@ -36,7 +36,7 @@ build-nvhpc-gpu:
       - build.nvgpu
     expire_in: 12h
   script:
-    - /bin/bash -i -c "cd $CI_PROJECT_DIR; LDFLAGS=-llapack FC=/opt/nvidia_hpc_sdk/Linux_x86_64/2023/compilers/bin/nvfortran ./configure.sh  -l nvgpu -gpu acc:cc60 -make"
+    - /bin/bash -i -c "cd $CI_PROJECT_DIR; LDFLAGS="-Wl,--copy-dt-needed-entries -llapack" FC=/opt/nvidia_hpc_sdk/Linux_x86_64/2023/compilers/bin/nvfortran ./configure.sh  -l nvgpu -gpu acc:cc60 -make"
   allow_failure: true
   rules:
     - if: $CI_TASKS =~ /gpu/
@@ -49,7 +49,6 @@ test-nvhpc-gpu:
      - rtx2080ti
   variables:
     BUILD_FOLDER: build.nvgpu
-    LD_LIBRARY_PATH: 
   needs: 
     - build-nvhpc-gpu
   allow_failure: true
