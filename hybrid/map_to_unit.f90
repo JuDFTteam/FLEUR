@@ -8,7 +8,7 @@ contains
     y = x
 
     ! everything close to 0 or 1 get's mapped to 0 and 1
-    where (abs(y - dnint(y)) < 1e-6) y = dnint(y)
+    where (abs(y - anint(y)) < 1e-6) y = anint(y)
     ! map to 0 -> 1 interval
     y = y - floor(y)
  end function map_to_unit

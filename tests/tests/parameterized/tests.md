@@ -40,7 +40,7 @@ Testset: Films
 |+|Fe Monolayer Triangular method|film/Fe_1l_Tria|
 |+|Si Film, plotting|film/SiFilmPlot|
 |+|Si Film, plotting,slicing|film/SiFilmSlicePlot|
-
+|+|Pt 3 layers,soc,inversion|film/Pt-3|soc
 
 
 Testset: Forces

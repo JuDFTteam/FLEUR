@@ -344,10 +344,10 @@ CONTAINS
     e_up = 0.0
     ! determine upper edge
     nodeu = -1
-    DO WHILE ( nodeu <= node )
+    DO WHILE ( nodeu.LE.node )
        CALL radsra(e_up,l,vr(:),atoms%rmsh(1,n),&
             atoms%dx(n),atoms%jri(n),c, us,dus,nodeu,f(:,1),f(:,2))
-       IF (nodeu.LT.node) THEN
+       IF (nodeu.LE.node) THEN
           e_up = e_up + 5.0
        END IF
     ENDDO
@@ -357,7 +357,7 @@ CONTAINS
     DO WHILE ( nodeu.GT.node )
        CALL radsra(e_lo,l,vr(:),atoms%rmsh(1,n),&
             atoms%dx(n),atoms%jri(n),c, us,dus,nodeu,f(:,1),f(:,2))
-       IF (nodeu.GE.node) THEN
+       IF (nodeu.GT.node) THEN
           e_lo = e_lo - 50.0
        END IF
     ENDDO
@@ -373,6 +373,7 @@ CONTAINS
        END IF
     END DO
     e = (e_up+e_lo) / 2.0
+    
   END FUNCTION priv_scalar_relativi
 
 

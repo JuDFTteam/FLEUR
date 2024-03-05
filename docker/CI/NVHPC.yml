@@ -29,16 +29,19 @@ test-pgi:
 build-nvhpc-gpu:
   image:  
   stage: build
+  tags:
+      - rtx2080ti
   artifacts:
     paths:
       - build.nvgpu
     expire_in: 12h
   script:
-    - /bin/bash -i -c "cd $CI_PROJECT_DIR; ./configure.sh -gpu acc:cc60 -l nvgpu -libdir /opt/nvidia/hpc_sdk/Linux_x86_64/22.3/cuda/11.0/targets/x86_64-linux/lib/stubs/ -c auto; cd build.nvgpu; make"
+    - cd $CI_PROJECT_DIR; LDFLAGS="-Wl,--copy-dt-needed-entries -llapack" FC=/opt/nvidia_hpc_sdk/Linux_x86_64/2023/compilers/bin/nvfortran ./configure.sh  -l nvgpu -c auto -gpu acc:cc60 -make
   allow_failure: true
   rules:
     - if: $CI_TASKS =~ /gpu/
-
+    - if: $CI_COMMIT_BRANCH =~ /gpu/
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_MESSAGE =~ /gpu/'
 
 test-nvhpc-gpu:
   image: 
@@ -47,9 +50,15 @@ test-nvhpc-gpu:
      - rtx2080ti
   variables:
     BUILD_FOLDER: build.nvgpu
+    LD_LIBRARY_PATH: /opt/nvidia_hpc_sdk/Linux_x86_64/23.9/cuda/12.2/targets/x86_64-linux/lib:${LD_LIBRARY_PATH}
+  before_script:
+    - pip install pytest-html  
+    - ldd build.nvgpu/fleur
+    - echo $LD_LIBRARY_PATH
   needs: 
     - build-nvhpc-gpu
   allow_failure: true
   rules:
-      - if: $CI_TASKS =~ /broken/    
-  
+      - if: $CI_TASKS =~ /gpu/    
+      - if: $CI_COMMIT_BRANCH =~ /gpu/
+      - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_MESSAGE =~ /gpu/'

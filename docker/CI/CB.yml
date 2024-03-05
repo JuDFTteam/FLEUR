@@ -33,6 +33,7 @@ perf-intel:
   rules:
       - if: $CI_TASKS =~ /CB/    
 
+
 perf-intel-ifx:
   needs:
     - perf-intel
@@ -50,6 +51,25 @@ perf-intel-ifx:
     - make -j 12
   rules:
       - if: $CI_TASKS =~ /CB/    
+
+perf-gpu:
+  extends: .perf-generic
+  tags:
+    - rtx2080ti
+  variables:
+    BENCHER_TESTBED: GPU-iffcluster
+    OMP_NUM_THREADS: 16
+    LD_LIBRARY_PATH: /opt/nvidia_hpc_sdk/Linux_x86_64/23.9/cuda/12.2/targets/x86_64-linux/lib:${LD_LIBRARY_PATH}
+  before_script:
+    - cd $CI_PROJECT_DIR
+    - LDFLAGS="-Wl,--copy-dt-needed-entries -llapack" FC=/opt/nvidia_hpc_sdk/Linux_x86_64/2023/compilers/bin/nvfortran ./configure.sh  -c auto -gpu acc:cc60 
+    - cd build
+    - make -j 12
+    - curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh | sh
+    - export PATH=${PATH}:${HOME}/.cargo/bin
+  allow_failure: true
+  rules:
+    - if: $CI_TASKS =~ /CB/
 
 
 .perf-generic:
