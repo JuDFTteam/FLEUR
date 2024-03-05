@@ -132,7 +132,7 @@ CONTAINS
 
             ALLOCATE(ev_list(noccbd))
             ev_list = (/(i, i=1,noccbd, 1)/)
-            ALLOCATE(q_ev_list(noccbdq))
+            ALLOCATE(q_ev_list(nbasfcnq))
             q_ev_list = (/(i, i=1,nbasfcnq, 1)/)
 
             ALLOCATE(eigk(noccbd))
@@ -195,7 +195,7 @@ CONTAINS
                IF (l_real) THEN ! l_real for zMatk
                   tempVec(:nbasfcnq) = MATMUL(hmat%data_c,zMatk%data_r(:nbasfcn,nu))
                ELSE
-                  CALL CPP_zgemv('N',nbasfcnq,nbasfcn,1.0,hmat%data_c,nbasfcnq,zMatk%data_c(:nbasfcn,nu),1,CMPLX(0.0,0.0),tempVec,1)
+                  CALL CPP_zgemv('N',nbasfcnq,nbasfcn,CMPLX(1.0,0.0),hmat%data_c,nbasfcnq,zMatk%data_c(:nbasfcn,nu),1,CMPLX(0.0,0.0),tempVec,1)
                   !tempVec(:nbasfcnq) = MATMUL(hmat%data_c,zMatk%data_c(:nbasfcn,nu))
                END IF
 
@@ -214,7 +214,7 @@ CONTAINS
                IF (zMatq%l_real) THEN ! l_real for zMatq
                   tempMat1(:nbasfcnq) = MATMUL(TRANSPOSE(zMatq%data_r),tempvec)
                ELSE
-                  CALL CPP_zgemv('C',nbasfcnq,nbasfcnq,1.0,zmatq%data_c,nbasfcnq,tempvec,1,CMPLX(0.0,0.0),tempMat1,1)
+                  CALL CPP_zgemv('C',nbasfcnq,nbasfcnq,CMPLX(1.0,0.0),zmatq%data_c,nbasfcnq,tempvec,1,CMPLX(0.0,0.0),tempMat1,1)
                   !tempMat1(:nbasfcnq) = MATMUL(CONJG(TRANSPOSE(zMatq%data_c)),tempvec)
                END IF
 
@@ -270,16 +270,16 @@ CONTAINS
                   z1H(:nbasfcnq,nu) = -MATMUL(zMatq%data_r,tempMat2(:nbasfcnq))
                   IF (.NOT.sh_den.AND..NOT.old_and_wrong) z1H2(:nbasfcnq,nu) = -MATMUL(zMatq%data_r,tempMat3(:nbasfcnq))
                ELSE
-                  CALL CPP_zgemv('N',nbasfcnq,nbasfcnq,-1.0,zmatq%data_c,nbasfcnq,tempMat2(:nbasfcnq),1,CMPLX(0.0,0.0),z1H(:nbasfcnq,nu),1)
+                  CALL CPP_zgemv('N',nbasfcnq,nbasfcnq,CMPLX(-1.0,0.0),zMatq%data_c,nbasfcnq,tempMat2,1,CMPLX(0.0,0.0),z1H(:nbasfcnq,nu),1)
                   !z1H(:nbasfcnq,nu) = -MATMUL(zMatq%data_c,tempMat2(:nbasfcnq))
-                  IF (.NOT.sh_den.AND..NOT.old_and_wrong) CALL CPP_zgemv('N',nbasfcnq,nbasfcnq,-1.0,zmatq%data_c,nbasfcnq,tempMat3(:nbasfcnq),1,CMPLX(0.0,0.0),z1H2(:nbasfcnq,nu),1)
+                  IF (.NOT.sh_den.AND..NOT.old_and_wrong) CALL CPP_zgemv('N',nbasfcnq,nbasfcnq,CMPLX(-1.0,0.0),zmatq%data_c,nbasfcnq,tempMat3,1,CMPLX(0.0,0.0),z1H2(:nbasfcnq,nu),1)
                   !IF (.NOT.sh_den.AND..NOT.old_and_wrong) z1H2(:nbasfcnq,nu) = -MATMUL(zMatq%data_c,tempMat3(:nbasfcnq))
                END IF
 
                IF (l_real) THEN ! l_real for zMatk
                   tempVec(:nbasfcnq) = MATMUL(smat%data_c,zMatk%data_r(:nbasfcn,nu))
                ELSE
-                  CALL CPP_zgemv('N',nbasfcnq,nbasfcn,1.0,smat%data_c,nbasfcnq,zMatk%data_c(:nbasfcn,nu),1,CMPLX(0.0,0.0),tempVec,1)
+                  CALL CPP_zgemv('N',nbasfcnq,nbasfcn,CMPLX(1.0,0.0),smat%data_c,nbasfcnq,zMatk%data_c(:nbasfcn,nu),1,CMPLX(0.0,0.0),tempVec,1)
                   !tempVec(:nbasfcnq) = MATMUL(smat%data_c,zMatk%data_c(:nbasfcn,nu))
                END IF
 
@@ -298,7 +298,7 @@ CONTAINS
                IF (zMatq%l_real) THEN ! l_real for zMatq
                   tempMat1(:nbasfcnq) = MATMUL(TRANSPOSE(zMatq%data_r),tempvec)
                ELSE
-                  CALL CPP_zgemv('C',nbasfcnq,nbasfcnq,1.0,zmatq%data_c,nbasfcnq,tempvec,1,CMPLX(0.0,0.0),tempMat1,1)
+                  CALL CPP_zgemv('C',nbasfcnq,nbasfcnq,CMPLX(1.0,0.0),zmatq%data_c,nbasfcnq,tempvec,1,CMPLX(0.0,0.0),tempMat1,1)
                   !tempMat1(:nbasfcnq) = MATMUL(CONJG(TRANSPOSE(zMatq%data_c)),tempvec)
                END IF
                   
@@ -357,9 +357,9 @@ CONTAINS
                   z1S(:nbasfcnq,nu) = -MATMUL(zMatq%data_r,tempMat2(:nbasfcnq))
                   IF (.NOT.sh_den.AND..NOT.old_and_wrong) z1S2(:nbasfcnq,nu) = -MATMUL(zMatq%data_r,tempMat3(:nbasfcnq))
                ELSE
-                  CALL CPP_zgemv('N',nbasfcnq,nbasfcnq,-1.0,zmatq%data_c,nbasfcnq,tempMat2(:nbasfcnq),1,CMPLX(0.0,0.0),z1S(:nbasfcnq,nu),1)
+                  CALL CPP_zgemv('N',nbasfcnq,nbasfcnq,CMPLX(-1.0,0.0),zmatq%data_c,nbasfcnq,tempMat2,1,CMPLX(0.0,0.0),z1S(:nbasfcnq,nu),1)
                   !z1S(:nbasfcnq,nu) = -MATMUL(zMatq%data_c,tempMat2(:nbasfcnq))
-                  IF (.NOT.sh_den.AND..NOT.old_and_wrong) CALL CPP_zgemv('N',nbasfcnq,nbasfcnq,-1.0,zmatq%data_c,nbasfcnq,tempMat3(:nbasfcnq),1,CMPLX(0.0,0.0),z1S2(:nbasfcnq,nu),1)
+                  IF (.NOT.sh_den.AND..NOT.old_and_wrong) CALL CPP_zgemv('N',nbasfcnq,nbasfcnq,CMPLX(-1.0,0.0),zmatq%data_c,nbasfcnq,tempMat3,1,CMPLX(0.0,0.0),z1S2(:nbasfcnq,nu),1)
                   !IF (.NOT.sh_den.AND..NOT.old_and_wrong) z1S2(:nbasfcnq,nu) = -MATMUL(zMatq%data_c,tempMat3(:nbasfcnq))
                END IF
 
