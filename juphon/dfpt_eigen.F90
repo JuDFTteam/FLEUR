@@ -185,7 +185,6 @@ CONTAINS
             ALLOCATE(tempMat2(nbasfcnq))
             IF (.NOT.sh_den.AND..NOT.old_and_wrong) ALLOCATE(tempMat3(nbasfcnq))
 
-            !TODO: Optimize this with (SCA)LAPACK CALLS
             CALL timestart("Matrix multiplications")
             DO nu = 1, noccbd
                eigs1(nu) = 0.0
