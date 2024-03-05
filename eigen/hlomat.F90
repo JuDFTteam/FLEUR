@@ -85,23 +85,26 @@ CONTAINS
       lo_lmax=maxval(atoms%llo)
 
       ALLOCATE(abclo(3,-atoms%llod:atoms%llod,2*(2*atoms%llod+1),atoms%nlod))
-      ALLOCATE(ax(2*lo_lmax+1,MAXVAL(lapw%nv)),bx(2*lo_lmax+1,MAXVAL(lapw%nv)),cx(2*lo_lmax+1,MAXVAL(lapw%nv)))      
       ALLOCATE(abCoeffsPr(0:2*atoms%lnonsph(ntyp)*(atoms%lnonsph(ntyp)+2)+1,MAXVAL(lapwPr%nv)))
-      ALLOCATE(axPr(MAXVAL(lapwPr%nv),2*lo_lmax+1),bxPr(MAXVAL(lapwPr%nv),2*lo_lmax+1),cxPr(MAXVAL(lapwPr%nv),2*lo_lmax+1))
       ALLOCATE(abcloPr(3,-atoms%llod:atoms%llod,2*(2*atoms%llod+1),atoms%nlod))
+      ALLOCATE(ax(2*lo_lmax+1,MAXVAL(lapw%nv)),bx(2*lo_lmax+1,MAXVAL(lapw%nv)),cx(2*lo_lmax+1,MAXVAL(lapw%nv)))      
+      ALLOCATE(axPr(MAXVAL(lapwPr%nv),2*lo_lmax+1),bxPr(MAXVAL(lapwPr%nv),2*lo_lmax+1),cxPr(MAXVAL(lapwPr%nv),2*lo_lmax+1))
 
-      !$acc data create(abcoeffs,abclo,abcoeffsPr,abcloPr)
+      !$acc data create(abclo,abcoeffsPr,abcloPr)
       !$acc data copyin(alo1,blo1,clo1,fjgjPr,fjgjpr%fj,fjgjpr%gj,tlmplm,tlmplm%h_loc_LO,tlmplm%h_lo)
       CALL hsmt_ab(sym,atoms,noco,nococonv,ilSpinPr,igSpinPr,ntyp,na,cell,lapwPr,fjgjPr,abCoeffsPr(:,:),ab_size_Pr,.TRUE.,abcloPr,alo1(:,ilSpinPr),blo1(:,ilSpinPr),clo1(:,ilSpinPr))
 
       !we need the "unprimed" abcoeffs
       IF (ilSpin==ilSpinPr.AND.igSpinPr==igSpin.AND.l_samelapw) THEN
+         ALLOCATE(abCoeffs(0:2*atoms%lnonsph(ntyp)*(atoms%lnonsph(ntyp)+2)+1,MAXVAL(lapwPr%nv)))
+         !$acc enter data(abcoeffs)
          !$acc kernels present(abcoeffs,abcoeffsPr,abclo,abcloPr)
          if (l_fullj) abcoeffs=abcoeffsPr !TODO automatic alloc on GPU????
          abclo=abcloPr
          !$acc end kernels
       ELSE     
          ALLOCATE(abCoeffs(0:2*atoms%lnonsph(ntyp)*(atoms%lnonsph(ntyp)+2)+1,MAXVAL(lapw%nv)))       
+         !$acc enter data(abcoeffs)
          CALL hsmt_ab(sym,atoms,noco,nococonv,ilSpin,igSpin,ntyp,na,cell,lapw,fjgj,abCoeffs(:,:),ab_size,.TRUE.,abclo,alo1(:,ilSpin),blo1(:,ilSpin),clo1(:,ilSpin))
       END IF
    
@@ -134,18 +137,7 @@ CONTAINS
             call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,tlmplm%h_loc_LO(0:2*s-1,s+l*l:,ntyp,ilSpinPr,ilSpin),bxPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
             call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,tlmplm%h_LO(0:2*s-1,-l:,lo+mlo,ilSpinPr,ilSpin),cxPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
        
-            !Calculate the a,b,c coefs
-            !DO m = -l,l
-            !   lm = l* (l+1) + m
-            !   s = tlmplm%h_loc2_nonsph(ntyp) 
-            !   axPr(:,l+1+m) = matmul(transpose(conjg(abCoeffsPr(0:2*s-1,:))),tlmplm%h_loc_LO(0:2*s-1,lm,ntyp,ilSpinPr,ilSpin))
-            !   bxPr(:,l+1+m) = matmul(transpose(conjg(abCoeffsPr(0:2*s-1,:))),tlmplm%h_loc_LO(0:2*s-1,s+lm,ntyp,ilSpinPr,ilSpin))
-            !   cxPr(:,l+1+m) = matmul(transpose(conjg(abCoeffsPr(0:2*s-1,:))),tlmplm%h_LO(0:2*s-1,m,lo+mlo,ilSpinPr,ilSpin))
-            !ENDDO  
-
-          
-
-
+            
             !LAPW LO contributions
             !$acc kernels present(hmat,hmat%data_c,hmat%data_r,abclo,axpr,bxpr,cxpr)&
             !$acc & copyin(lapw,lapw%nv,lapw%index_lo,fmpi,fmpi%n_size,fmpi%n_rank,lo,na,igSpin)
@@ -186,7 +178,7 @@ CONTAINS
             DO lo = 1,atoms%nlo(ntyp)
                l = atoms%llo(lo,ntyp)
                s = tlmplm%h_loc2_nonsph(ntyp) 
-               !$acc data create(axpr,bxpr,cxpr)
+               !$acc data create(ax,bx,cx)
                call blas_matmul(2*l+1,maxval(lapw%nv),2*s,tlmplm%h_loc_LO(0:2*s-1,l*l:,ntyp,ilSpinPr,ilSpin),abCoeffs,ax,cmplx(1.0,0.0),cmplx(0.0,0.0),'T','N')
                call blas_matmul(2*l+1,maxval(lapw%nv),2*s,tlmplm%h_loc_LO(0:2*s-1,s+l*l:,ntyp,ilSpinPr,ilSpin),abCoeffs,bx,cmplx(1.0,0.0),cmplx(0.0,0.0),'T','N')
                call blas_matmul(2*l+1,maxval(lapw%nv),2*s,tlmplm%h_LO2(0:2*s-1,-l:,lo+mlo,ilSpinPr,ilSpin),abCoeffs,cx,cmplx(1.0,0.0),cmplx(0.0,0.0),'T','N')
@@ -283,7 +275,7 @@ CONTAINS
          !$acc end kernels
          CALL timestop("LO-LO")
       END IF
-
+      !$acc exit data delete(abcoeffs)
       !$acc end data
       !$acc end data
    END SUBROUTINE hlomat
