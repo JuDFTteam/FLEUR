@@ -228,28 +228,28 @@ CONTAINS
                   tlmplm%tuulo(lm,m,lo+mlo,iSpinPr,iSpin) = tlmplm%tuulo(lm,m,lo+mlo,iSpinPr,iSpin) &
                          + 0.5 * usdus%uulon(lo,ntyp,iSpinPr) &
                         * ( enpara%el0(l,ntyp,iSpinPr)+enpara%ello0(lo,ntyp,iSpinPr) )
-                  tlmplm%h_LO(lm,m,lo+mlo,iSpinPr,iSpin)=tlmplm%h_LO(lm,m,lo+mlo,iSpinPr,iSpin) + &
+                  tlmplm%h_LO(lm,m,lo+mlo,iSpinPr,iSpin)=tlmplm%h_LO(lm,m,lo+mlo,iSpinPr,iSpin)  &
                         + 0.5 * usdus%uulon(lo,ntyp,iSpinPr) &
                         * ( enpara%el0(l,ntyp,iSpinPr)+enpara%ello0(lo,ntyp,iSpinPr) )
                   tlmplm%tdulo(lm,m,lo+mlo,iSpinPr,iSpin) = tlmplm%tdulo(lm,m,lo+mlo,iSpinPr,iSpin) &
                       + 0.5 * usdus%dulon(lo,ntyp,iSpinPr) &
                       * ( enpara%el0(l,ntyp,iSpinPr)+enpara%ello0(lo,ntyp,iSpinPr) ) &
                       + 0.5 * usdus%uulon(lo,ntyp,iSpinPr)
-                  tlmplm%h_LO(lm+s,m,lo+mlo,iSpinPr,iSpin)=tlmplm%h_LO(lm+s,m,lo+mlo,iSpinPr,iSpin) + &
+                  tlmplm%h_LO(lm+s,m,lo+mlo,iSpinPr,iSpin)=tlmplm%h_LO(lm+s,m,lo+mlo,iSpinPr,iSpin)  &
                       + 0.5 * usdus%dulon(lo,ntyp,iSpinPr) &
                       * ( enpara%el0(l,ntyp,iSpinPr)+enpara%ello0(lo,ntyp,iSpinPr) ) &
                       + 0.5 * usdus%uulon(lo,ntyp,iSpinPr)
                   tlmplm%tulou(lm,m,lo+mlo,iSpinPr,iSpin) = tlmplm%tulou(lm,m,lo+mlo,iSpinPr,iSpin) &
                     & + 0.5 * usdus%uulon(lo,ntyp,iSpinPr) &
                     & * ( enpara%el0(l,ntyp,iSpinPr)+enpara%ello0(lo,ntyp,iSpinPr) )
-                  tlmplm%h_LO2(lm,m,lo+mlo,iSpinPr,iSpin)=tlmplm%h_LO2(lm,m,lo+mlo,iSpinPr,iSpin) + &
+                  tlmplm%h_LO2(lm,m,lo+mlo,iSpinPr,iSpin)=tlmplm%h_LO2(lm,m,lo+mlo,iSpinPr,iSpin)  &
                       + 0.5 * usdus%uulon(lo,ntyp,iSpinPr) &
                       * ( enpara%el0(l,ntyp,iSpinPr)+enpara%ello0(lo,ntyp,iSpinPr) )
                   tlmplm%tulod(lm,m,lo+mlo,iSpinPr,iSpin) = tlmplm%tulod(lm,m,lo+mlo,iSpinPr,iSpin) &
                     & + 0.5 * usdus%dulon(lo,ntyp,iSpinPr) &
                     & * ( enpara%el0(l,ntyp,iSpinPr)+enpara%ello0(lo,ntyp,iSpinPr) ) &
                     & + 0.5 * usdus%uulon(lo,ntyp,iSpinPr)
-                  tlmplm%h_LO2(lm+s,m,lo+mlo,iSpinPr,iSpin)=tlmplm%h_LO2(lm+s,m,lo+mlo,iSpinPr,iSpin) + &
+                  tlmplm%h_LO2(lm+s,m,lo+mlo,iSpinPr,iSpin)=tlmplm%h_LO2(lm+s,m,lo+mlo,iSpinPr,iSpin)  &
                       + 0.5 * usdus%dulon(lo,ntyp,iSpinPr) &
                       * ( enpara%el0(l,ntyp,iSpinPr)+enpara%ello0(lo,ntyp,iSpinPr) ) &
                       + 0.5 * usdus%uulon(lo,ntyp,iSpinPr)

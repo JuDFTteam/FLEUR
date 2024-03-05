@@ -5,6 +5,9 @@
 !--------------------------------------------------------------------------------
 
 module m_magmoments
+    implicit none
+    private
+    public:: spinMoments,orbMoments
     !! Module to encapsulate routines to calculate and output the spin- and orbital Moments
     contains
     SUBROUTINE spinMoments(input,atoms,noco,nococonv,moments,den)
@@ -23,7 +26,7 @@ module m_magmoments
         TYPE(t_potden),INTENT(IN),OPTIONAL  :: den
      
         INTEGER                       :: iType
-        REAL                          :: up,down,local_m(0:3),global_m(0:3)
+        REAL                          :: up,down,local_m(0:3),global_m(0:3),off1,off2
         COMPLEX                       :: off_diag
         LOGICAL                       :: l_offdiag
      

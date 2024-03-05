@@ -7,6 +7,8 @@
 MODULE m_calc_hybrid
    USE m_judft
    use m_store_load_hybrid
+   private
+   public calc_hybrid
 CONTAINS
 
    SUBROUTINE calc_hybrid(fi,mpdata,hybdat,fmpi,nococonv,stars,enpara,&
@@ -27,6 +29,7 @@ CONTAINS
       use m_create_coul_comms
       use m_eigvec_setup
       use m_distrib_vx
+      use iso_c_binding
 #ifdef CPP_MPI 
       use mpi 
 #endif

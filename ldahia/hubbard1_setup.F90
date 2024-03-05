@@ -25,6 +25,9 @@ MODULE m_hubbard1_setup
    CHARACTER(len=30), PARAMETER :: hubbard1CalcFolder = "Hubbard1"
    CHARACTER(len=30), PARAMETER :: hubbard1Outfile    = "out"
 
+   CHARACTER(len=30), PARAMETER :: cfg_file_ccf  = "somefile"
+   CHARACTER(len=30), PARAMETER :: cfg_file_bath = "somefile"
+
    CONTAINS
 
    SUBROUTINE hubbard1_setup(atoms,cell,gfinp,hub1inp,input,fmpi,noco,kpts,sphhar,sym,nococonv,pot,gdft,hub1data,results,den)
