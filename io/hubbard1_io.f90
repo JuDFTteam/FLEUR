@@ -42,7 +42,7 @@ MODULE m_hubbard1_io
    REAL, PARAMETER    :: sigma = 0.0314
    INTEGER, PARAMETER :: nmats = 0
 
-   public:: write_hubbard1_input
+   public:: write_hubbard1_input,read_ccfmat
    CONTAINS
 
    SUBROUTINE write_hubbard1_input(path,i_hia,l,f0,f2,f4,f6,hub1inp,hub1data,mu,n,l_bath)
