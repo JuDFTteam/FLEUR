@@ -29,7 +29,7 @@ CONTAINS
       use m_create_coul_comms
       use m_eigvec_setup
       use m_distrib_vx
-      use, intrinsic iso_c_binding
+      use, intrinsic :: iso_c_binding
 #ifdef CPP_MPI 
       use mpi 
 #endif
