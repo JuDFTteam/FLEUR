@@ -53,8 +53,6 @@ test-nvhpc-gpu:
     LD_LIBRARY_PATH: /opt/nvidia_hpc_sdk/Linux_x86_64/23.9/cuda/12.2/targets/x86_64-linux/lib:${LD_LIBRARY_PATH}
   before_script:
     - pip install pytest-html  
-    - ldd build.nvgpu/fleur
-    - echo $LD_LIBRARY_PATH
   needs: 
     - build-nvhpc-gpu
   allow_failure: true
