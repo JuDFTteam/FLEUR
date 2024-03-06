@@ -21,7 +21,7 @@ test-nvhpc-cpu:
   variables:
     BUILD_FOLDER: build
   needs: 
-    - build-NVHPC-cpu
+    - build-nvhpc-cpu
   allow_failure: true
   rules:
       - if: $CI_TASKS =~ /nvidia/    
