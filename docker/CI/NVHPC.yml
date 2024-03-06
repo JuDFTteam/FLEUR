@@ -10,7 +10,7 @@ build-nvhpc-cpu:
        - build
      expire_in: 12h
   script:
-    - /bin/bash -i -c "cd $CI_PROJECT_DIR; LDFLAGS='-Wl,--copy-dt-needed-entries -llapack' ./configure.sh -c auto ; cd build; make"
+    - /bin/bash -i -c "cd $CI_PROJECT_DIR; LDFLAGS='-Wl,--copy-dt-needed-entries' ./configure.sh -c auto ; cd build; make"
   allow_failure: true
   rules:
       - if: $CI_TASKS =~ /nvidia/    
