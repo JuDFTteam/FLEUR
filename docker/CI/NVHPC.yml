@@ -2,26 +2,26 @@ image:
   name: iffregistry.fz-juelich.de/fleur/fleur:NVHPC
   entrypoint: ["/usr/bin/bash -i -c"]
 
-build-pgi:
+build-nvhpc-cpu:
   image: iffregistry.fz-juelich.de/fleur/fleur:NVHPC
   stage: build
   artifacts:
      paths:
-       - build.pgi
+       - build
      expire_in: 12h
   script:
-    - /bin/bash -i -c "cd $CI_PROJECT_DIR; ./configure.sh -l pgi -c auto; cd build.pgi; make"
+    - /bin/bash -i -c "cd $CI_PROJECT_DIR; LDFLAGS='-Wl,--copy-dt-needed-entries' ./configure.sh -c auto ; cd build; make"
   allow_failure: true
   rules:
       - if: $CI_TASKS =~ /nvidia/    
   
-test-pgi:
+test-nvhpc-cpu:
   image: iffregistry.fz-juelich.de/fleur/fleur:NVHPC
   extends: .test-fleur
   variables:
-    BUILD_FOLDER: build.pgi
+    BUILD_FOLDER: build
   needs: 
-    - build-pgi
+    - build-nvhpc-cpu
   allow_failure: true
   rules:
       - if: $CI_TASKS =~ /nvidia/    
@@ -33,10 +33,10 @@ build-nvhpc-gpu:
       - rtx2080ti
   artifacts:
     paths:
-      - build.nvgpu
+      - build
     expire_in: 12h
   script:
-    - cd $CI_PROJECT_DIR; LDFLAGS="-Wl,--copy-dt-needed-entries -llapack" FC=/opt/nvidia_hpc_sdk/Linux_x86_64/2023/compilers/bin/nvfortran ./configure.sh  -l nvgpu -c auto -gpu acc:cc60 -make
+    - cd $CI_PROJECT_DIR; LDFLAGS="-Wl,--copy-dt-needed-entries -llapack" FC=/opt/nvidia_hpc_sdk/Linux_x86_64/2023/compilers/bin/nvfortran ./configure.sh  -c auto -gpu acc:cc60 -make
   allow_failure: true
   rules:
     - if: $CI_TASKS =~ /gpu/
@@ -49,12 +49,10 @@ test-nvhpc-gpu:
   tags:
      - rtx2080ti
   variables:
-    BUILD_FOLDER: build.nvgpu
+    BUILD_FOLDER: build
     LD_LIBRARY_PATH: /opt/nvidia_hpc_sdk/Linux_x86_64/23.9/cuda/12.2/targets/x86_64-linux/lib:${LD_LIBRARY_PATH}
   before_script:
     - pip install pytest-html  
-    - ldd build.nvgpu/fleur
-    - echo $LD_LIBRARY_PATH
   needs: 
     - build-nvhpc-gpu
   allow_failure: true

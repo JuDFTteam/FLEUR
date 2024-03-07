@@ -19,10 +19,10 @@ class Fleur(Package):
     version("develop", branch="develop")
     version("release", branch="release")
     version("7.0", commit="4db9bf591c4f6e01580d0671a7bf9ed4a566468b")
-    version("5.1", tag="MaX-R5.1", commit="a482abd9511b16412c2222e2ac1b1a303acd454b")
-    version("5.0", tag="MaX-R5", commit="f2df362c3dad6ef39938807ea14e4ec4cb677723")
-    version("4.0", tag="MaX-R4", commit="ea0db7877451e6240124e960c5546318c9ab3953")
-    version("3.1", tag="MaX-R3.1", commit="f6288a0699604ad9e11efbfcde824b96db429404")
+    version("5.1", tag="MaX-R5.1", commit="a482abd9511b16412c2222e2ac1b1a303acd454b" deprecated=True))
+    version("5.0", tag="MaX-R5", commit="f2df362c3dad6ef39938807ea14e4ec4cb677723" deprecated=True))
+    version("4.0", tag="MaX-R4", commit="ea0db7877451e6240124e960c5546318c9ab3953" deprecated=True))
+    version("3.1", tag="MaX-R3.1", commit="f6288a0699604ad9e11efbfcde824b96db429404" deprecated=True))
 
     patch("elsi-config.patch",when="@7.0")
 
@@ -70,7 +70,7 @@ class Fleur(Package):
     depends_on("elsi", when="+elsi")
 
     conflicts("%intel@:16.0.4", msg="ifort version <16.0 will most probably not work correctly")
-    conflicts("%gcc@:6.3.0", msg="gfortran is known to work with versions newer than v6.3")
+    conflicts("%gcc@:6.3.0", msg="gfortran version <v6.3 will most probably not work correctly")
     conflicts(
         "%pgi@:18.4.0",
         msg="You need at least PGI version 18.4 \
@@ -78,6 +78,7 @@ class Fleur(Package):
     )
     conflicts("~hdf5", when="@7.0:" ,msg="Spack installs of versions >6.0 need hdf5")
     conflicts("~scalapack", when="+elpa", msg="ELPA requires scalapack support")
+    conflicts("~scalapack", when="+elsi", msg="ELSI requires scalapack support")
     conflicts("@:5.0", when="fft=fftw", msg="FFTW interface is supported from Fleur v5.0")
     conflicts("@:5.0", when="+wannier90", msg="wannier90 is supported from Fleur v5.0")
     conflicts("@:4.0", when="+spfft", msg="SpFFT is supported from Fleur v4.0")
