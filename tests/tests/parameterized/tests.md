@@ -37,7 +37,7 @@ Testset: Films
 |-|-----------|--------------|------|----
 |+|Fe Monolayer SOC|film/Fe_1l_SOC|soc
 |+|Fe Monolayer|film/Fe_1l|
-|+|Fe Monolayer Triangular method|film/Fe_1l_Tria|
+| |Fe Monolayer Triangular method|film/Fe_1l_Tria| | not reproducible on INTEL compilers
 |+|Si Film, plotting|film/SiFilmPlot|
 |+|Si Film, plotting,slicing|film/SiFilmSlicePlot|
 |+|Pt 3 layers,soc,inversion|film/Pt-3|soc
