@@ -24,6 +24,8 @@ class Fleur(Package):
     version("4.0", tag="MaX-R4", commit="ea0db7877451e6240124e960c5546318c9ab3953")
     version("3.1", tag="MaX-R3.1", commit="f6288a0699604ad9e11efbfcde824b96db429404")
 
+    patch("elsi-config.patch",when="@7.0")
+
     variant("mpi", default=True, description="Enable MPI support")
     variant("hdf5", default=True, description="Enable HDF5 support")
     variant("scalapack", default=False, description="Enable SCALAPACK")
@@ -145,6 +147,14 @@ class Fleur(Package):
             options["-libdir"].append(spec["spfft"].prefix.lib + "64")
             # Workaround: The library needs spfft.mod in include/spfft path
             options["-includedir"].append(join_path(spec["spfft"].prefix.include, "spfft"))
+        if "+elsi" in spec:
+            options["-link"].append(spec["elsi"].libs.link_flags)
+            #workaround: additional dependencies
+            options["-link"].append("-lMatrixSwitch -lNTPoly -lOMM -lelpa -lfortjson")
+           # Workaround: The library is installed in /lib64 not /lib
+            options["-libdir"].append(spec["elsi"].prefix.lib)
+            # Workaround: The library needs spfft.mod in include/spfft path
+            options["-includedir"].append(spec["elsi"].prefix.include)
         if "+elpa" in spec:
             options["-link"].append(spec["elpa"].libs.link_flags)
             options["-libdir"].append(spec["elpa"].prefix.lib)
@@ -163,9 +173,9 @@ class Fleur(Package):
         args.append(" ".join(options["-libdir"]))
         args.append("-includedir")
         args.append(" ".join(options["-includedir"]))
-
+        
         sh("configure.sh", *args)
-
+        
     def install(self, spec, prefix):
         with working_dir("build"):
             make()
