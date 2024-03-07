@@ -88,7 +88,7 @@ CONTAINS
        END DO
        IF (input%film) THEN
           resDen%vac(:,1,:,:) = resDen%vac(:,1,:,:) - input%preconditioning_param ** 2 / fpi_const * REAL(vYukawa%vac(:,1,:,:)) ! TODO: AN TB; REAL to COMPLEX OK?
-          resDen%vac(:,2:,:,:) = resDen%vac(:,2:,:,:) - input%preconditioning_param ** 2 / fpi_const * vYukawa%vac(:vacuum%nmzxyd,2:,:,:)
+          resDen%vac(:vacuum%nmzxyd,2:,:,:) = resDen%vac(:vacuum%nmzxyd,2:,:,:) - input%preconditioning_param ** 2 / fpi_const * vYukawa%vac(:vacuum%nmzxyd,2:,:,:)
        END IF
        IF( input%jspins == 2 ) CALL resDen%ChargeAndMagnetisationToSpins()
        ! fix the preconditioned density
