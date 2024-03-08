@@ -36,6 +36,7 @@ endif()
 
 add_library(juDFT STATIC
 ${judft_HDF}
+fpErrorDetection.c
 usage_data.F90
 logging.f90
 info.F90
