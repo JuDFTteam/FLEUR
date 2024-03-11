@@ -207,4 +207,147 @@ CONTAINS
       CALL ft_dyn_direct(q_lim,-1,bqpt,dyn_mat_q,dyn_mat_r)
    END SUBROUTINE
 
+   SUBROUTINE make_sym_list(sym, bqpt, sym_count, sym_list)
+      TYPE(t_sym), INTENT(IN)    :: sym
+      REAL,        INTENT(IN)    :: bqpt(3)
+      INTEGER,     INTENT(OUT)   :: sym_count
+      INTEGER,     INTENT(INOUT) :: sym_list(:)
+      
+      INTEGER :: iSym
+      
+      sym_count = 0
+      sym_list = 0
+      DO iSym = 1, sym%nop
+         IF (norm2(bqpt-MATMUL(bqpt,sym%mrot(:,:,iSym)))<1e-8) THEN
+            sym_count = sym_count + 1
+            sym_list(sym_count) = iSym
+         END IF
+      END DO
+   END SUBROUTINE
+
+   SUBROUTINE make_sym_dynvec(atoms, sym, amat, bqpt, iDtype, iDir, sym_count, sym_list, dynvec, sym_dynvec)
+      USE m_inv3
+
+      TYPE(t_atoms), INTENT(IN)    :: atoms
+      TYPE(t_sym),   INTENT(IN)    :: sym
+      REAL,          INTENT(IN)    :: amat(3,3), bqpt(3)
+      INTEGER,       INTENT(IN)    :: iDtype, iDir, sym_count
+      INTEGER,       INTENT(IN)    :: sym_list(sym_count)
+      COMPLEX,       INTENT(IN)    :: dynvec(:)
+      COMPLEX,       INTENT(INOUT) :: sym_dynvec(:,:,:)
+     
+      INTEGER :: iSym, iAtom, iRow, iCol
+      REAL    :: phas, det, mrot(3,3), invmrot(3,3), invamat(3,3)
+      COMPLEX :: brot(3,3), temp_mat_1(3,3), temp_mat_2(3,3)
+      COMPLEX :: phase_fac, rotvec(3)
+
+      iRow = 3 * (iDtype-1) + iDir
+
+      DO iSym = 1, sym_count
+         mrot = sym%mrot(:,:,sym_list(iSym))
+         invmrot = sym%mrot(:,:,sym%invtab(sym_list(iSym)))
+         CALL inv3(amat,invamat,det)
+         temp_mat_1 = MATMUL(invmrot,invamat)
+         brot = MATMUL(amat,temp_mat_1)
+         DO iAtom = 1, atoms%nat
+            iCol = 3 * (iAtom-1)
+
+            phas = -tpi_const*(dot_product(bqpt(:),atoms%taual(:,iAtom)-atoms%taual(:,iDtype)))
+            phase_fac = cmplx(cos(phas),sin(phas))
+
+            rotvec = MATMUL(brot,dynvec(iCol+1:iCol+3))
+            sym_dynvec(iCol+1:iCol+3,iRow,iSym) = phase_fac * rotvec
+         END DO
+      END DO 
+   END SUBROUTINE
+
+   SUBROUTINE cheat_dynmat(atoms, sym, amat, bqpt, iBetaPr, jDirPr, sym_count, sym_list, sym_dynvec, dynmat, sym_dynmat, l_cheated)
+      USE m_inv3
+
+      TYPE(t_atoms), INTENT(IN)    :: atoms
+      TYPE(t_sym),   INTENT(IN)    :: sym
+      REAL,          INTENT(IN)    :: amat(3,3), bqpt(3)
+      INTEGER,       INTENT(IN)    :: iBetaPr, jDirPr, sym_count
+      INTEGER,       INTENT(IN)    :: sym_list(sym_count)
+      COMPLEX,       INTENT(IN)    :: sym_dynvec(:,:,:), dynmat(:,:)
+      COMPLEX,       INTENT(INOUT) :: sym_dynmat(:,:)
+      LOGICAL,       INTENT(OUT)   :: l_cheated
+
+      INTEGER :: iSym, iDatom, iAtom, iRowPr, iColPr, iRow, iCol, iDir, jDir, iDirPr, kDir, iBeta, iAlpha, iAlphaPr, symsumcount, aAlpha(atoms%nat), iDone, iNeed, kNeed
+      REAL    :: phas, det, mrot(3,3), invmrot(3,3), invamat(3,3)
+      COMPLEX :: brot(3,3), temp_mat_1(3,3), temp_mat_2(3,3), symsum(3,3), symvec(3)
+      COMPLEX :: phase_fac, rotvec(3), rhs_vecs(3,3 * (iBetaPr-1) + jDirPr - 1), rhs_vec_full(3)
+      LOGICAL :: l_mapped, l_done(3), l_need(3)
+
+      l_cheated = .FALSE.
+      iRowPr = 3 * (iBetaPr-1) + jDirPr
+      alphaPrloop: DO iAlphaPr = 1, atoms%nat
+         iColPr = 3 * (iAlphaPr-1)
+         DO iBeta = 1, iBetaPr
+            iRow = 3 * (iBeta-1)
+            alphaloop: DO iAlpha = 1, atoms%nat
+               iCol = 3 * (iAlpha-1)
+               symloop: DO iSym = 1, sym_count
+                  IF (.NOT.(iBetaPr==sym%mapped_atom(sym_list(iSym),iBeta))) CYCLE
+                  IF (.NOT.(iAlphaPr==sym%mapped_atom(sym_list(iSym),iAlpha))) CYCLE
+                  ! Get all rhs vectors that are possible
+                  rhs_vecs = sym_dynvec(iCol+1:iCol+3,:iRowPr-1,iSym)
+                  phas = tpi_const*(dot_product(bqpt(:),atoms%taual(:,iAlphaPr)-atoms%taual(:,iBetaPr)))
+                  phase_fac = cmplx(cos(phas),sin(phas))
+                  
+                  invmrot = sym%mrot(:,:,sym%invtab(sym_list(iSym)))
+                  CALL inv3(amat,invamat,det)
+                  temp_mat_1 = MATMUL(invmrot,invamat)
+                  brot = MATMUL(amat,temp_mat_1)
+                  
+                  DO jDir = 1, 3
+                     IF (iRow+jDir>iRowPr) CYCLE symloop
+                     rhs_vec_full = rhs_vecs(:, iRow + jDir)
+                     !write(*,*) "---------------"
+                     !write(*,*) rhs_vec_full
+                     symvec = brot(:, jDir)
+                     !write(*,*) symvec
+                  
+                     l_done = .FALSE.
+                     iDone = 0
+                     l_need = .TRUE.
+                     iNeed = 3
+                     DO kDir = 1, 3
+                        !IF (ABS(symvec(kDir))>1e-8.AND.ANY((ABS(dynmat(3 * (iBetaPr-1) + kDir,:))<1e-15)))  
+                        IF (ALL(ABS(dynmat(3 * (iBetaPr-1) + kDir,iColPr+1:iColPr+3))>1e-15)) THEN 
+                           l_done(kDir) = .TRUE.
+                           iDone = iDone + 1
+                           l_need(kDir) = .FALSE.
+                           iNeed = iNeed - 1
+                           CYCLE
+                        END IF
+                        IF (ABS(symvec(kDir))<1e-8) THEN
+                           l_need(kDir) = .FALSE.
+                            iNeed = iNeed - 1
+                            CYCLE
+                        END IF
+                        kNeed = kDir
+                     END DO
+                     !write(*,*) iDone, l_done
+                     !write(*,*) iNeed, l_need, kNeed
+                     IF (iDone==0.OR.iDone==3) CYCLE
+                     IF (iNeed/=1) CYCLE
+                     DO kDir = 1, 3
+                        IF (.NOT.l_need(kDir)) rhs_vec_full = rhs_vec_full - symvec(kDir)*dynmat(3 * (iBetaPr-1) + kDir,iColPr+1:iColPr+3)
+                     END DO
+                     !write(*,*) rhs_vec_full
+                     !write(*,*) symvec(kNeed)
+                     IF (ABS(symvec(kNeed))/=0) THEN 
+                        sym_dynmat(iRowPr-jDirPr+kNeed,iColPr+1:iColPr+3) = rhs_vec_full/symvec(kNeed)
+                        l_cheated = .TRUE.
+                     END IF
+                     !write(*,*) sym_dynmat(iRowPr+kNeed,:)
+                     IF (ALL(ABS(sym_dynmat(iRowPr-jDirPr+kNeed,iColPr+1:iColPr+3))>1e-15)) CYCLE alphaloop
+                  END DO
+               END DO symloop
+            END DO alphaloop
+         END DO
+      END DO alphaPrloop
+   END SUBROUTINE
+
 END MODULE m_dfpt_dynmat_sym
