@@ -391,8 +391,10 @@ CONTAINS
       IF (l_dfpt_scf) THEN
          ! Do the self-consistency calculations for each specified q, for all atoms and for
          ! all three cartesian directions.
-         ! TODO: The effort here should be greatly reducible by symmetry considerations. 
-         DO iQ = fi%juPhon%startq, SIZE(q_list)
+         ! TODO: The effort here should be greatly reducible by symmetry considerations.
+         write(*,*) fi%juPhon%startq/=0, fi%juPhon%stopq, size(q_list)
+          
+         DO iQ = fi%juPhon%startq, MERGE(fi%juPhon%stopq,SIZE(q_list),fi%juPhon%stopq/=0)
             CALL timestart("q-point")
             kqpts = fi%kpts
             ! Modify this from kpts only in DFPT case.
