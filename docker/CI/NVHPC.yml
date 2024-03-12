@@ -36,7 +36,7 @@ build-nvhpc-gpu:
       - build
     expire_in: 12h
   script:
-    - cd $CI_PROJECT_DIR; LDFLAGS="-Wl,--copy-dt-needed-entries -llapack" FC=/opt/nvidia_hpc_sdk/Linux_x86_64/2023/compilers/bin/nvfortran ./configure.sh  -c auto -gpu acc:cc60 -make
+    - cd $CI_PROJECT_DIR; LDFLAGS="-Wl,--copy-dt-needed-entries -llapack" FC=/opt/nvidia_hpc_sdk/Linux_x86_64/2023/compilers/bin/nvfortran ./configure.sh  -c nvidia -gpu acc:cc60 -make
   allow_failure: true
   rules:
     - if: $CI_TASKS =~ /gpu/
