@@ -346,10 +346,9 @@ module m_VYukawaFilm
       g_damped(irec2) = sqrt( stars%sk2(irec2) ** 2 + input%preconditioning_param ** 2 )
       vcons2(irec2) = -1. / ( 2. * g_damped(irec2) )
       do iz = nzmin, nzmax
-        exp_m(iz,irec2) = exp_save( - g_damped(irec2) * z(iz) )
-        exp_p(iz,irec2) = exp_save(   g_damped(irec2) * z(iz) )
+        exp_m(iz,irec2) = exp_save( - g_damped(irec2) * (z(iz)+cell%z1) )
+        exp_p(iz,irec2) = exp_save(   g_damped(irec2) * (z(iz)-cell%z1) )
       end do
-      expDhg(irec2) = exp_save( - cell%z1 * g_damped(irec2) )
     end do
     do irec3 = 1, stars%ng3
       vcons1(irec3) = fpi_const * psq(irec3) / ( stars%sk3(irec3) ** 2 + input%preconditioning_param ** 2 )
@@ -371,7 +370,7 @@ module m_VYukawaFilm
             VIz(iz,irec2) = VIz(iz,irec2) &
                           + vcons1(irec3) * c_ph(iqz,irec2) * &
                             ( exp( ImagUnit * qz * z(iz) ) &
-                            + vcons2(irec2) * expDhg(irec2) * &
+                            + vcons2(irec2) * &
                               ( ( g_damped(irec2) + ImagUnit * qz ) * exp_p(iz,irec2) * exp(   ImagUnit * qz * cell%z1 ) &
                               + ( g_damped(irec2) - ImagUnit * qz ) * exp_m(iz,irec2) * exp( - ImagUnit * qz * cell%z1 ) ) )
           end if
@@ -381,6 +380,11 @@ module m_VYukawaFilm
 
 
     ! CONTRIBUTION FROM THE VACUUM CHARGE DENSITY
+
+      do iz = nzmin, nzmax
+        exp_m(iz,irec2) = exp_save( - g_damped(irec2) * z(iz) )
+        exp_p(iz,irec2) = exp_save(   g_damped(irec2) * z(iz) )
+      end do
 
     ! irec2 loop continues
       eta(-nzdh:nzdh,irec2) = exp_m(-nzdh:nzdh,irec2) * alphm(irec2,2) + exp_p(-nzdh:nzdh,irec2) * alphm(irec2,1)
