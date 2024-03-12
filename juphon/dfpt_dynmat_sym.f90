@@ -302,7 +302,7 @@ CONTAINS
                   
                   DO jDir = 1, 3
                      IF (iRow+jDir>iRowPr) CYCLE symloop
-                     rhs_vec_full = rhs_vecs(:, iRow + jDir)
+                     rhs_vec_full = phase_fac*rhs_vecs(:, iRow + jDir)
                      !write(*,*) "---------------"
                      !write(*,*) rhs_vec_full
                      symvec = brot(:, jDir)
@@ -312,6 +312,7 @@ CONTAINS
                      iDone = 0
                      l_need = .TRUE.
                      iNeed = 3
+                     kNeed = 0
                      DO kDir = 1, 3
                         !IF (ABS(symvec(kDir))>1e-8.AND.ANY((ABS(dynmat(3 * (iBetaPr-1) + kDir,:))<1e-15)))  
                         IF (ALL(ABS(dynmat(3 * (iBetaPr-1) + kDir,iColPr+1:iColPr+3))>1e-15)) THEN 
@@ -335,14 +336,17 @@ CONTAINS
                      DO kDir = 1, 3
                         IF (.NOT.l_need(kDir)) rhs_vec_full = rhs_vec_full - symvec(kDir)*dynmat(3 * (iBetaPr-1) + kDir,iColPr+1:iColPr+3)
                      END DO
-                     !write(*,*) rhs_vec_full
-                     !write(*,*) symvec(kNeed)
-                     IF (ABS(symvec(kNeed))/=0) THEN 
+                     IF (SQRT(REAL(DOT_PRODUCT(rhs_vec_full,rhs_vec_full)))<1e-15) CYCLE
+                     !write(*,*) "Newrhs:", rhs_vec_full
+                     !write(*,*) "Thesym:", symvec(kNeed)
+                     IF (ABS(symvec(kNeed))>1e-8) THEN 
                         sym_dynmat(iRowPr-jDirPr+kNeed,iColPr+1:iColPr+3) = rhs_vec_full/symvec(kNeed)
                         l_cheated = .TRUE.
+                     ELSE
+                        CYCLE
                      END IF
-                     !write(*,*) sym_dynmat(iRowPr+kNeed,:)
-                     IF (ALL(ABS(sym_dynmat(iRowPr-jDirPr+kNeed,iColPr+1:iColPr+3))>1e-15)) CYCLE alphaloop
+                     !write(*,*) "Cheat: ", sym_dynmat(iRowPr-jDirPr+kNeed,:)
+                     IF (ALL(ABS(sym_dynmat(iRowPr-jDirPr+kNeed,iColPr+1:iColPr+3))>1e-15)) CYCLE alphaPrloop
                   END DO
                END DO symloop
             END DO alphaloop
