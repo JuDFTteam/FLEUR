@@ -12,7 +12,9 @@ MODULE m_cusolver_diag
 #endif  
   IMPLICIT NONE
   PRIVATE
+#ifdef CPP_CUSOLVER
   type(cusolverDnHandle)  :: handle        
+#endif  
   PUBLIC cusolver_diag
 
 CONTAINS
