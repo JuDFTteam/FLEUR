@@ -18,6 +18,7 @@ MODULE m_types_input
   INTEGER :: neig=0
   REAL    :: rkmax=0.0
   REAL    :: gmax
+  REAL    :: gmaxz=0.0
   REAL    :: zelec
   LOGICAL :: eig66(2)=.FALSE.
   LOGICAL :: strho =.FALSE.
@@ -112,6 +113,7 @@ SUBROUTINE mpi_bc_input(this,mpi_comm,irank)
    CALL mpi_bc(this%neig,rank,mpi_comm)
    CALL mpi_bc(this%rkmax,rank,mpi_comm)
    CALL mpi_bc(this%gmax,rank,mpi_comm)
+   CALL mpi_bc(this%gmaxz,rank,mpi_comm)
    CALL mpi_bc(this%zelec,rank,mpi_comm)
    CALL mpi_bc(this%strho,rank,mpi_comm)
    CALL mpi_bc(this%cdinf,rank,mpi_comm)
@@ -191,6 +193,12 @@ SUBROUTINE read_xml_input(this,xml)
    this%comment = TRIM(ADJUSTL(this%comment))
    this%rkmax = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/cutoffs/@Kmax'))
    this%gmax = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/cutoffs/@Gmax'))
+   
+   numberNodes = xml%GetNumberOfNodes('/fleurInput/calculationSetup/cutoffs/@Gmaxz')
+
+   IF (numberNodes == 1) THEN
+      this%gmaxz = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/cutoffs/@Gmaxz'))
+   END IF
 
    xPathA = '/fleurInput/calculationSetup/cutoffs/@numbands'
    numberNodes = xml%GetNumberOfNodes(xPathA)

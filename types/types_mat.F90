@@ -70,7 +70,7 @@ CONTAINS
          complex:: a_c
          INTEGER:: i,j
 
-         INTEGER,PARAMETER :: gpu_mode=1,omp_mode=2,caxpy_mode=2
+         INTEGER,PARAMETER :: gpu_mode=1,omp_mode=2,caxpy_mode=3
          INTEGER :: mode=caxpy_mode
          
          a_c=1.0

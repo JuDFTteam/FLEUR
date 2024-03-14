@@ -12,7 +12,7 @@ MODULE m_types_mpimat
    USE mpi
 #endif
    IMPLICIT NONE
-   PRIVATE
+   !PRIVATE
    INTEGER, PARAMETER    :: DEFAULT_BLOCKSIZE = 64
    INTEGER, PARAMETER   :: dlen_ = 9
 
@@ -418,6 +418,7 @@ CONTAINS
 #else
       LOGICAL,PARAMETER:: use_pdgemr2d=.false.
 #endif         
+
       call timestart("mpimat_copy")
 
       select type (mat1)
@@ -430,6 +431,7 @@ CONTAINS
 #ifdef CPP_SCALAPACK
       SELECT TYPE (mat1)
       TYPE IS (t_mpimat)
+         print *,mat1%is_column_cyclic(),mat%is_column_cyclic(),use_pdgemr2d
          if (mat1%is_column_cyclic().and..not.mat%is_column_cyclic().and..not.use_pdgemr2d) THEN
             call cyclic_column_to_2Dblock_cyclic(mat1,mat,n1,n2)
          else
@@ -445,7 +447,6 @@ CONTAINS
 #else
        call judft_error("Distributed matrix without SCALAPACK",calledby="mpimat_copy")      
 #endif
-
       call timestop("mpimat_copy")
    END SUBROUTINE mpimat_copy
 
@@ -1186,5 +1187,75 @@ CONTAINS
 
       is_column_cyclic=(mat%blacsdata%blacs_desc(5)==mat%global_size1.and.mat%blacsdata%blacs_desc(6)==1)
    end function
+
+#if 1==2
+   subroutine generate_map_to_irank(mpi_com,blacs_desc,map)
+      implicit none
+      INTEGER,INTENT(IN):: mpi_com,blacs_desc(dlen_)
+      INTEGER,INTENT(OUT),ALLOCATABLE:: map(:,:)
+
+   
+      call MPI_COMM_RANK(mpi_com,my_proc,ierr)
+      call blacs_gridinfo(blacs_desc(2),nprow,npcol,myrow,mycol)
+      ALLOCTATE(map(0:nprow-1,0:npcol-1))
+      map=-1
+      map(myrow,mycol)=my_proc
+      CALL MPI_ALLREDUCE(MPI_IN_PLACE,map,size(map),MPI_INTEGER,MPI_MAX,mpi_com,ierr)
+      if (any(map)<0) call judft_bug("Problem with distribution ")
+   end SUBROUTINE
+
+   subroutine dist_column_to_blocks_c(vec,blocksize,offset,distributed)
+      implicit none
+      COMPLEX,INTENT(IN)::vec(:)
+      INTEGER,INTENT(IN):: blocksize,offset
+      COMPLEX,INTENT(OUT)::distributed(:,:),d_index(:)
+
+      INTEGER:: i,prows,p_index,bl_pos
+      d_index=0
+      
+      prows=size(distributed,2) !Number of rows in processor grid
+      p_index=((offset-1)/blocksize)%rows+1 !processor on grid to start with
+      bl_pos=(offset-1)%blocksize !offset within block
+      DO i=1,size(vec)
+         bl_pos=bl_pos+1
+         if (bl_pos>blocksize) THEN
+            bl_pos=1
+            p_index=p_index+1
+            if (p_index>prows) p_index=1
+         endif
+         d_index(p_index)=d_index(p_index)+1 
+         distributed(p_index(p_index),p_index)=vec(i)
+      ENDDO     
+   END subroutine
+
+   subroutine send_column(vec,blocksize,roffset,coffset,map,col_nr) 
+      implicit none
+
+      integer :: d_index(size(map,1))
+      distributed(:,:)
+
+      allocate(distributed(size(vec)/size(map,1)+blocksize,size(map,1)))
+      !Distribute the data locally
+      call dist_column_to_blocks_c(vec,blocksize,roffset,distributed,d_index)
+      !Find processor column that owns the data
+      p_c=(col_nr-1+coffset-1)%size(map,2)
+      !send the data
+      DO p_r=1,size(map,1)
+         call MPI_ISEND(distributed(:,p_r),d_index(p_r),MPI_COMPLEX,map(p_r,p_c),col_nr,ierr)
+      ENDDO
+   END subroutine
+
+   subroutine recieve_data(vec,blocksize,map,col_nr)
+      implicit none
+      
+
+
+   end subroutine
+
+
+#endif
+
+
+
 
 END MODULE m_types_mpimat

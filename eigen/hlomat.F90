@@ -128,24 +128,13 @@ CONTAINS
          DO lo = 1,atoms%nlo(ntyp)
             l = atoms%llo(lo,ntyp)
             s = tlmplm%h_loc2_nonsph(ntyp) 
-            !$acc data create(axpr,bxpr,cxpr)
-            
+            !TODO here we copy the data to the CPU
+            !$acc update self(abcoeffspr)
             call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,tlmplm%h_loc_LO(0:2*s-1,l*l:,ntyp,ilSpinPr,ilSpin),axPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
             call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,tlmplm%h_loc_LO(0:2*s-1,s+l*l:,ntyp,ilSpinPr,ilSpin),bxPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
             call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,tlmplm%h_LO(0:2*s-1,-l:,lo+mlo,ilSpinPr,ilSpin),cxPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
-       
-            !Calculate the a,b,c coefs
-            !DO m = -l,l
-            !   lm = l* (l+1) + m
-            !   s = tlmplm%h_loc2_nonsph(ntyp) 
-            !   axPr(:,l+1+m) = matmul(transpose(conjg(abCoeffsPr(0:2*s-1,:))),tlmplm%h_loc_LO(0:2*s-1,lm,ntyp,ilSpinPr,ilSpin))
-            !   bxPr(:,l+1+m) = matmul(transpose(conjg(abCoeffsPr(0:2*s-1,:))),tlmplm%h_loc_LO(0:2*s-1,s+lm,ntyp,ilSpinPr,ilSpin))
-            !   cxPr(:,l+1+m) = matmul(transpose(conjg(abCoeffsPr(0:2*s-1,:))),tlmplm%h_LO(0:2*s-1,m,lo+mlo,ilSpinPr,ilSpin))
-            !ENDDO  
-
-          
-
-
+            !$acc data copyin(axpr,bxpr,cxpr)
+            
             !LAPW LO contributions
             !$acc kernels present(hmat,hmat%data_c,hmat%data_r,abclo,axpr,bxpr,cxpr)&
             !$acc & copyin(lapw,lapw%nv,lapw%index_lo,fmpi,fmpi%n_size,fmpi%n_rank,lo,na,igSpin)
@@ -190,7 +179,7 @@ CONTAINS
                call blas_matmul(2*l+1,maxval(lapw%nv),2*s,tlmplm%h_loc_LO(0:2*s-1,l*l:,ntyp,ilSpinPr,ilSpin),abCoeffs,ax,cmplx(1.0,0.0),cmplx(0.0,0.0),'T','N')
                call blas_matmul(2*l+1,maxval(lapw%nv),2*s,tlmplm%h_loc_LO(0:2*s-1,s+l*l:,ntyp,ilSpinPr,ilSpin),abCoeffs,bx,cmplx(1.0,0.0),cmplx(0.0,0.0),'T','N')
                call blas_matmul(2*l+1,maxval(lapw%nv),2*s,tlmplm%h_LO2(0:2*s-1,-l:,lo+mlo,ilSpinPr,ilSpin),abCoeffs,cx,cmplx(1.0,0.0),cmplx(0.0,0.0),'T','N')
-
+            
                !$acc kernels present(hmat,hmat%data_c,hmat%data_r,abcloPr,ax,bx,cx)&
                !$acc & copyin(lapwPr,lapwPr%nv,lapwPr%index_lo,fmpi,fmpi%n_size,fmpi%n_rank,invsfct,igSpinPr,lo,na,l)
                DO nkvec = 1,invsfct*(2*l+1)
@@ -219,6 +208,7 @@ CONTAINS
                END DO
                !$acc end kernels
                !$acc end data
+               
             END DO
             CALL timestop("LO-LAPW")
          END IF

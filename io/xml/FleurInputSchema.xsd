@@ -662,6 +662,7 @@
       <xsd:attribute name="Kmax" type="FleurDouble" use="required"/>
       <xsd:attribute name="Gmax" type="FleurDouble" use="required"/>
       <xsd:attribute default="0.0" name="GmaxXC" type="FleurDouble" use="optional"/>
+      <xsd:attribute default="0.0" name="Gmaxz" type="FleurDouble" use="optional"/>
       <xsd:attribute default="0" name="numbands" type="NumBandsType" use="optional"/>
    </xsd:complexType>
 

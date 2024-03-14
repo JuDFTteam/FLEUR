@@ -6,12 +6,16 @@ MODULE m_types_hybdat
    use m_io_matrix
    use m_judft
    use m_types_misc
+   use m_types_fleurinput
+   use m_types_mpi
+   use m_constants
+      
 #ifdef CPP_MPI
    use mpi
 #endif
    IMPLICIT NONE
-
-   TYPE t_hybdat
+   private 
+   TYPE,public:: t_hybdat
       COMPLEX, ALLOCATABLE   :: stepfunc(:, :, :)
       INTEGER, ALLOCATABLE   :: lmaxc(:)
       INTEGER, ALLOCATABLE   :: nbands(:,:) ! nkptf, jsp
@@ -55,7 +59,7 @@ MODULE m_types_hybdat
       procedure :: set_nbands       => set_nbands_hybdat
       procedure :: set_maxlmindx    => set_maxlmindx_hybdat
    END TYPE t_hybdat
-
+   public:: gptnorm
 contains
    subroutine set_maxlmindx_hybdat(hybdat, atoms, num_radfun_per_l)
       implicit none
@@ -76,8 +80,6 @@ contains
    end subroutine set_maxlmindx_hybdat
 
    subroutine set_nobd_hybdat(hybdat, fi, results)
-      use m_types_fleurinput
-      use m_types_misc
       implicit none
       class(t_hybdat), intent(inout) :: hybdat
       type(t_fleurinput), intent(in) :: fi
@@ -109,10 +111,6 @@ contains
    end subroutine set_nobd_hybdat
 
    subroutine set_nbands_hybdat(hybdat, fi, fmpi, results)
-      use m_types_mpi
-      use m_types_fleurinput
-      use m_types_misc
-      use m_constants
       implicit none
       class(t_hybdat), intent(inout) :: hybdat
       type(t_fleurinput), intent(in) :: fi
@@ -189,8 +187,7 @@ contains
    end subroutine set_nbands_hybdat
 
    subroutine allocate_hybdat(hybdat, fi, num_radfun_per_l)
-      use m_types_fleurinput
-      use m_judft
+
       implicit none
       class(t_hybdat), intent(inout) :: hybdat
       type(t_fleurinput), intent(in) :: fi
@@ -252,9 +249,7 @@ contains
    end subroutine free_hybdat
 
    subroutine set_stepfunction(hybdat, cell, atoms, g, svol)
-      use m_types_cell
-      use m_types_atoms
-      use m_judft
+  
       implicit none
       class(t_hybdat), INTENT(INOUT) :: hybdat
       type(t_cell), INTENT(in)    :: cell
@@ -284,9 +279,7 @@ contains
 
    !private subroutine
    FUNCTION stepfunction(cell, atoms, g)
-      USE m_types_cell
-      USE m_types_atoms
-      USE m_constants
+   
       IMPLICIT NONE
 
       TYPE(t_cell), INTENT(IN)    :: cell
@@ -335,9 +328,9 @@ contains
       integer, intent(in)  :: mtx_dim
       integer, intent(out) :: slots_per_mtx, col_in_slot
 
-      integer(8)            :: mtx_size, type_size, i
+      integer(8)            :: mtx_size, type_size
       integer(8), parameter :: max_bytes = huge(slots_per_mtx) - 1
-
+      integer  :: i
       type_size = merge(8, 16, l_real)
 
       ! avoid int32 overflow

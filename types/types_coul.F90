@@ -7,6 +7,7 @@ module m_types_coul
    use mpi
 #endif
    implicit none
+   private
    type t_coul
       REAL, ALLOCATABLE      :: mt1_r(:, :, :, :)
       REAL, ALLOCATABLE      :: mt2_r(:, :, :, :), mt3_r(:, :, :)
@@ -25,7 +26,7 @@ module m_types_coul
       procedure :: free => t_coul_free
       procedure :: mpi_bcast => t_coul_mpi_bc
    end type t_coul
-
+   public t_coul
 contains
 
    subroutine t_coul_mpi_bc(coul, fi, communicator, root)

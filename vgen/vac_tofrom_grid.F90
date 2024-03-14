@@ -430,7 +430,7 @@ CONTAINS
 
     COMPLEX, ALLOCATABLE    :: fg(:)
     REAL, ALLOCATABLE       :: bf2(:)
-    INTEGER                 :: js,irec2,idx,ivac,ip
+    INTEGER                 :: js,irec2,idx,ivac,ip,nmz0
 
     ALLOCATE ( fg(stars%ng2),bf2(ifft2d) )
 

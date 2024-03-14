@@ -12,6 +12,7 @@ MODULE m_pw_tofrom_grid
    TYPE(t_fftgrid) :: fftgrid
    INTEGER         :: griddim
    REAL            :: gmax
+   REAL            :: gmaxz
 
    PUBLIC :: init_pw_grid, pw_to_grid, pw_from_grid, finish_pw_grid
 CONTAINS
@@ -33,15 +34,25 @@ CONTAINS
 
     if (present(xcpot)) THEN
       gmax=xcpot%gmaxxc
+      gmaxz=stars%gmaxz
       if (xcpot%needs_grad().and.gmax>0.0) then
-         call fftgrid%init(cell,sym,gmax)
+         if (gmaxz>0.0) then
+            call fftgrid%init(cell,sym,gmax,gmaxz)
+         else
+            call fftgrid%init(cell,sym,gmax)
+         end if
       else
          call fftgrid%init((/3*stars%mx1,3*stars%mx2,3*stars%mx3/))
          gmax=stars%gmax
       endif
     else
       gmax=stars%gmax
-      call fftgrid%init(cell,sym,gmax)
+      gmaxz=stars%gmaxz
+      if (gmaxz>0.0) then
+         call fftgrid%init(cell,sym,gmax,gmaxz)
+      else
+         call fftgrid%init(cell,sym,gmax)
+      end if
    endif
     griddim=size(fftgrid%grid)
 
@@ -134,11 +145,15 @@ CONTAINS
           ALLOCATE( mx(0:griddim-1),my(0:griddim-1),magmom(0:griddim-1))
        ENDIF
     END IF
-
+!    if (gmaxz>0.0) write(*,*) "Present in pw_to_grid"
     IF (PRESENT(rho)) THEN
     !Put den_pw on grid and store into rho(:,1:2)
         DO js=1,jspins
-            call fftgrid%putFieldOnGrid(stars,den_pw(:,js),cell,gmax)
+            if (gmaxz>0.0) then
+               call fftgrid%putFieldOnGrid(stars,den_pw(:,js),cell,gmax,gmaxz)
+            else
+               call fftgrid%putFieldOnGrid(stars,den_pw(:,js),cell,gmax)
+            end if
             call fftgrid%perform_fft(forward=.false.)
             ! TODO: grid is technically still complex right? The REAL cast happens here:
             !rho(0:,js)=fftgrid%grid
@@ -148,7 +163,11 @@ CONTAINS
 
        IF (l_noco) THEN
           !  Get mx,my on real space grid and recalculate rho and magmom
-          call fftgrid%putFieldOnGrid(stars,den_pw(:,3),cell,gmax)
+          if (gmaxz>0.0) then
+             call fftgrid%putFieldOnGrid(stars,den_pw(:,3),cell,gmax,gmaxz)
+          else
+             call fftgrid%putFieldOnGrid(stars,den_pw(:,3),cell,gmax)
+          end if
           call fftgrid%perform_fft(forward=.false.)
           mx=real(fftgrid%grid)
           my=aimag(fftgrid%grid) ! TODO: There is NO magic minus here. This is so scuffed....
@@ -188,7 +207,11 @@ CONTAINS
        DO idm = 1,3
          fd=0.0;fd(idm)=1
          DO js=1,jspins
-            call fftgrid%putFieldOnGrid(stars,den_pw(:,js),cell,gmax,firstderiv=fd)
+            if (gmaxz>0.0) then
+               call fftgrid%putFieldOnGrid(stars,den_pw(:,js),cell,gmax,gmaxz,firstderiv=fd)
+            else
+               call fftgrid%putFieldOnGrid(stars,den_pw(:,js),cell,gmax,firstderiv=fd)
+            end if
             call fftgrid%perform_fft(forward=.false.)
             rhd1(0:,js,idm)=fftgrid%grid
          END DO
@@ -198,7 +221,11 @@ CONTAINS
              sd=0;sd(jdm)=1
              ndm = ndm + 1
              DO js=1,jspins
-                call fftgrid%putFieldOnGrid(stars,den_pw(:,js),cell,gmax,firstderiv=fd,secondderiv=sd)
+                if (gmaxz>0.0) then
+                   call fftgrid%putFieldOnGrid(stars,den_pw(:,js),cell,gmax,gmaxz,firstderiv=fd,secondderiv=sd)
+                else
+                   call fftgrid%putFieldOnGrid(stars,den_pw(:,js),cell,gmax,firstderiv=fd,secondderiv=sd)
+                end if
                 call fftgrid%perform_fft(forward=.false.)
                 rhd2(0:,js,ndm)=fftgrid%grid
              END DO
@@ -339,7 +366,11 @@ CONTAINS
     DO js = 1,SIZE(v_in,2)
        fftgrid%grid=v_in(0:,js)
        call fftgrid%perform_fft(forward=.true.)
-       call fftgrid%takeFieldFromGrid(stars,fg3,gmax)
+       if (gmaxz>0.0) then
+          call fftgrid%takeFieldFromGrid(stars,fg3,gmax,gmaxz)
+       else
+          call fftgrid%takeFieldFromGrid(stars,fg3,gmax)
+       END IF
        v_out_pw(:,js) = v_out_pw(:,js) + fg3(:)
 
        !----> add to warped coulomb potential
@@ -347,7 +378,11 @@ CONTAINS
          if (size(fftgrid%grid)==size(stars%ufft)) THEN
             fftgrid%grid=v_in(0:,js)*stars%ufft
             call fftgrid%perform_fft(forward=.true.)
-            call fftgrid%takeFieldFromGrid(stars,fg3,gmax)
+            if (gmaxz>0.0) then
+               call fftgrid%takeFieldFromGrid(stars,fg3,gmax,gmaxz)
+            else
+               call fftgrid%takeFieldFromGrid(stars,fg3,gmax)
+            end if
             fg3 = fg3*stars%nstr
          else
           call convol(stars,fg3)
