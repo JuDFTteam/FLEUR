@@ -413,8 +413,11 @@ CONTAINS
       CLASS(t_mat), INTENT(IN)      ::mat1
       INTEGER, INTENT(IN) ::n1, n2
       INTEGER :: irank, err
-
+#ifdef __INTEL_COMPILER
       LOGICAL,PARAMETER:: use_pdgemr2d=.true.
+#else
+      LOGICAL,PARAMETER:: use_pdgemr2d=.false.
+#endif         
       call timestart("mpimat_copy")
 
       select type (mat1)
