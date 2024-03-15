@@ -32,8 +32,10 @@ CONTAINS
     complex,allocatable     :: work_c(:)
 
     logical :: firstcall=.true.
-    if (firstcall) istat=cusolverDnCreate(handle)
-    if (istat /= CUSOLVER_STATUS_SUCCESS) call judft_error('handle creation failed')
+    if (firstcall) THEN
+      istat=cusolverDnCreate(handle)
+      if (istat /= CUSOLVER_STATUS_SUCCESS) call judft_error('handle creation failed')
+    endif  
 
     ALLOCATE(t_mat::zmat)
     ALLOCATE(eig_tmp(hmat%matsize1))
