@@ -647,11 +647,7 @@ CONTAINS
 
       WRITE (oUnit,*) '------------------------------------------------------'
 
-#if defined(CPP_MPI)
-      CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
-#endif
-
-      CALL juDFT_end("Phonon calculation finished.")
+      CALL juDFT_end("Phonon calculation finished.",fmpi%irank)
 
     END SUBROUTINE dfpt
 
