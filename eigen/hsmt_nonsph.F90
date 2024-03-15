@@ -338,7 +338,7 @@ CONTAINS
 #ifdef _OPENACC
          IF (hmat%l_real) THEN
             !$acc kernels present(hmat,hmat%data_r,data_c) default(none)
-            hmat%data_r = fac*hmat%data_r + real(data_c)
+            hmat%data_r = hmat%data_r + real(data_c)
             !$acc end kernels
          ELSE
             if (set0) THEN
