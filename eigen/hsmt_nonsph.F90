@@ -347,7 +347,7 @@ CONTAINS
                !$acc end kernels
             else
                !$acc kernels present(hmat,hmat%data_c,data_c) default(none)
-               hmat%data_c = fac*hmat%data_c + data_c
+               hmat%data_c = hmat%data_c + data_c
                !$acc end kernels
             endif
          END IF
