@@ -75,8 +75,7 @@ class Fleur(CudaPackage, Package):
     conflicts("cuda_arch=none", when="+cuda",msg="CUDA architecture is required")
 
     def setup_build_environment(self, env):
-        spec = self.spec
-
+        spec= self.spec
         if "+mpi" in spec:
             env.set("CC", spec["mpi"].mpicc, force=True)
             env.set("FC", spec["mpi"].mpifc, force=True)
