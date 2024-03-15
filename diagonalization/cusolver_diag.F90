@@ -33,6 +33,7 @@ CONTAINS
 
     logical :: firstcall=.true.
     if (firstcall) THEN
+      firstcall=.false.
       istat=cusolverDnCreate(handle)
       if (istat /= CUSOLVER_STATUS_SUCCESS) call judft_error('handle creation failed')
     endif  
