@@ -16,7 +16,7 @@ timerlist={
     "Setup of H&S matrices":0.0,
     "Diagonalization":0.0,
     "generation of new charge densi":0.0,
-
+    "Charge Density Mixing":0.0,
 }
 
 def process_subtimers(st):
@@ -47,7 +47,7 @@ def process_judft_times(dir):
 
 def write_BMF(dir,timerlist):
     benchmarks=["Total","Initialization","Iteration","generation of potential","H generation and diagonalizati","Setup of H&S matrices",
-        "Diagonalization","generation of new charge densi"]
+        "Diagonalization","generation of new charge densi","Charge Density Mixing"]
     bmf={}
 
     for b in benchmarks:
