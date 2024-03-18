@@ -69,7 +69,7 @@ CONTAINS
          END SELECT  
       END SELECT
       call timestart("elsi_ev")
-#ifdef CPP_GPU
+#ifdef _OPENACC
       call elsi_set_elpa_gpu(eh,1)
 #endif
       !Now perform diagonalization
