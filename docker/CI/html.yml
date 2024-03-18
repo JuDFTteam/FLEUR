@@ -28,8 +28,8 @@ intel-maqao:
   script:
     - cd $CI_PROJECT_DIR
     - ulimit -s unlimited
-    - source compiler-select intel
-    - CC=gcc FC=ifort ./configure.sh -c auto -hdf5 false
+    - source compiler-select intel-oneapi-2024
+    - ./configure.sh -c intel -hdf5 false
     - cd build
     - make -j 12
     - cp ../tests/performance/performance/inputfiles/Noco/inp.xml .
