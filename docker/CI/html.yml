@@ -81,6 +81,7 @@ gfortran-coverage:
   extends: .test-fleur
   stage: html
   needs: []
+  coverage: '/functions\.\.\: ([\.d\]*).*functions/'
   variables:
     BUILD_FOLDER: "."
     juDFT_MPI: "mpirun -n {mpi_procs} --allow-run-as-root "
