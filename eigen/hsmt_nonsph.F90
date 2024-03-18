@@ -336,19 +336,22 @@ CONTAINS
       END DO
 
 #ifdef _OPENACC
-      BLOCK
-         real:: fac
-         fac=merge(0.0,1.0,set0)
          IF (hmat%l_real) THEN
             !$acc kernels present(hmat,hmat%data_r,data_c) default(none)
-            hmat%data_r = fac*hmat%data_r + real(data_c)
+            hmat%data_r = hmat%data_r + real(data_c)
             !$acc end kernels
          ELSE
-            !$acc kernels present(hmat,hmat%data_c,data_c) default(none)
-            hmat%data_c = fac*hmat%data_c + data_c
-            !$acc end kernels
+            if (set0) THEN
+               !$acc kernels present(hmat,hmat%data_c,data_c) default(none)
+               hmat%data_c =  data_c
+               !$acc end kernels
+            else
+               !$acc kernels present(hmat,hmat%data_c,data_c) default(none)
+               hmat%data_c = hmat%data_c + data_c
+               !$acc end kernels
+            endif
          END IF
-      END BLOCK   
+      
 #else
       IF (hmat%l_real) THEN
          !$OMP PARALLEL DO DEFAULT(shared)
