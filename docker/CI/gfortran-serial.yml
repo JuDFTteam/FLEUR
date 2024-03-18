@@ -12,6 +12,7 @@ build-gfortran-serial:
     expire_in: 12h
   rules:
     - if: $CI_TASKS =~ /serial/    
+    - if: $CI_TASKS =~ /all/    
   
 build-gfortran-hdf5-serial:
   image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
@@ -27,6 +28,7 @@ build-gfortran-hdf5-serial:
     - make -j 2
   rules:
       - if: $CI_TASKS =~ /serial/    
+      - if: $CI_TASKS =~ /all/    
 
 test-gfortran-serial:
   image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
@@ -37,6 +39,7 @@ test-gfortran-serial:
     BUILD_FOLDER: build.serial
   rules:
     - if: $CI_TASKS =~ /serial/    
+    - if: $CI_TASKS =~ /all/    
   
   
 build-gfortran-hdf5-debug:
@@ -53,6 +56,7 @@ build-gfortran-hdf5-debug:
     - make -j 2
   rules:
       - if: $CI_TASKS =~ /debug/    
+      - if: $CI_TASKS =~ /all/    
 
 test-gfortran-serial-debug:
   image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
@@ -63,4 +67,5 @@ test-gfortran-serial-debug:
     BUILD_FOLDER: build.debug
   rules:
     - if: $CI_TASKS =~ /debug/    
+    - if: $CI_TASKS =~ /all/    
   

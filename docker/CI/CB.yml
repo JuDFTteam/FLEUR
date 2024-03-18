@@ -13,6 +13,7 @@ perf-gfortran:
     - VERBOSE=1 make -j 12
   rules:
     - if: $CI_TASKS =~ /CB/  
+    - if: $CI_TASKS =~ /all/    
 
 
 perf-intel:
@@ -32,6 +33,7 @@ perf-intel:
     - make -j 12
   rules:
       - if: $CI_TASKS =~ /CB/    
+      - if: $CI_TASKS =~ /all/    
 
 
 perf-intel-ifx:
@@ -51,6 +53,7 @@ perf-intel-ifx:
     - make -j 12
   rules:
       - if: $CI_TASKS =~ /CB/    
+      - if: $CI_TASKS =~ /all/    
 
 perf-gpu:
   extends: .perf-generic
@@ -70,6 +73,7 @@ perf-gpu:
   allow_failure: true
   rules:
     - if: $CI_TASKS =~ /CB/
+    - if: $CI_TASKS =~ /all/    
 
 
 .perf-generic:

@@ -17,6 +17,7 @@ pages:
       - public
   rules:
       - if: $CI_TASKS =~ /doc/    
+      - if: $CI_TASKS =~ /all/    
   
 intel-maqao:
   stage: html
@@ -32,7 +33,7 @@ intel-maqao:
     - cd build
     - make -j 12
     - cp ../tests/performance/performance/inputfiles/Noco/inp.xml .
-    - /local/th1/DFT/maqao oneview -R1 --ignore-output-code -- fleur
+    - /local/th1/DFT/maqao oneview -R1 --ignore-output-code -- fleur -diag dummy
     - mkdir -p $CI_PROJECT_DIR/public
     - cp -r maqao*/RESULTS $CI_PROJECT_DIR/public
   artifacts:
@@ -41,7 +42,9 @@ intel-maqao:
       - build
       - public
   rules:
-    - if: $CI_TASKS =~ /doc/   
+    - if: $CI_TASKS =~ /doc/ 
+    - if: $CI_TASKS =~ /all/    
+  
 
 ford:
   image: iffregistry.fz-juelich.de/fleur/fleur:ford
@@ -56,7 +59,8 @@ ford:
       - public
   rules:
       - if: $CI_TASKS =~ /doc/    
-  
+      - if: $CI_TASKS =~ /all/    
+
 doxygen:
   image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
   stage: html
@@ -74,7 +78,8 @@ doxygen:
       - build/inpgen
   rules:
       - if: $CI_TASKS =~ /doc/    
-  
+      - if: $CI_TASKS =~ /all/    
+
 
 gfortran-coverage:
   image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
@@ -111,5 +116,6 @@ gfortran-coverage:
     url: https://fleur.iffgit.fz-juelich.de/fleur/coverage_html
   rules:
       - if: $CI_TASKS =~ /doc/    
-  
+      - if: $CI_TASKS =~ /all/    
+
 
