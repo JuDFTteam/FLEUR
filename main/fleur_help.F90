@@ -106,7 +106,7 @@ CONTAINS
          //",spfft"&
 #endif
          )
-    CALL new_argument(1,"-diag","Choose method for diagonalization","lapack,debugout,lapack_singlePrec,stop,"&
+    CALL new_argument(1,"-diag","Choose method for diagonalization","lapack,debugout,lapack_singlePrec,stop,dummy,"&
 #ifdef CPP_SCALAPACK
          //",scalapack"&
 #endif
