@@ -22,7 +22,7 @@ MODULE m_types_xml
       INTEGER:: id
       character(len=200):: basepath = ""
       integer           :: versionNumber = 0
-      INTEGER           :: currentversionNumber = 37 !parameters are not allowed here
+      INTEGER           :: currentversionNumber = 38 !parameters are not allowed here
       
       CHARACTER(len=100) :: filename_add_xml     
    CONTAINS
