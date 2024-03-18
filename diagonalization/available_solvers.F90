@@ -79,7 +79,7 @@ INTEGER,PARAMETER:: diag_lapack_singlePrec=11
 INTEGER,PARAMETER:: diag_dummy=21
 
 
-  INTEGER,PARAMETER::diag_all_solver(13)=(/diag_chase,diag_elemental,diag_scalapack,diag_elpa,diag_elsielpa,&
+  INTEGER,PARAMETER::diag_all_solver(14)=(/diag_chase,diag_elemental,diag_scalapack,diag_elpa,diag_elsielpa,&
                      diag_elsichase,diag_magma,diag_stop,diag_cusolver,diag_lapack,diag_lapack_singlePrec,&
                      diag_elpa_1node,diag_debugout,diag_dummy/)
   
