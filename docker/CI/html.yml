@@ -29,7 +29,7 @@ intel-maqao:
     - cd $CI_PROJECT_DIR
     - ulimit -s unlimited
     - which compiler-select
-    - source compiler-select intel-oneapi-2024
+    - set +e; source compiler-select intel-oneapi-2024; set -e
     - ./configure.sh -c intel -hdf5 false
     - cd build
     - make -j 12
