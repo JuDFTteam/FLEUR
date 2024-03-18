@@ -16,6 +16,7 @@ CONTAINS
   SUBROUTINE eigen_diag(solver,hmat,smat,ne,eig,ev,ikpt,jsp,iter)
     USE m_lapack_diag
     USE m_lapack_singlePrec_diag
+    USE m_dummy_diag
     USE m_magma
     USE m_elpa
     USE m_elpa_onenode
