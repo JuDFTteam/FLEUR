@@ -136,4 +136,38 @@ CONTAINS
 
   END FUNCTION select_solver
 
+  subroutine print_solver(parallel)
+    LOGICAL,INTENT(IN):: parallel
+    select case(select_solver(0,parallel))
+    case(diag_chase)
+      write(*,*) "Selected Eigensolver :            chase"
+    case(diag_elemental)
+      write(*,*) "Selected Eigensolver :            elemental"
+    case(diag_scalapack)
+      write(*,*) "Selected Eigensolver :            scalapack"
+    case(diag_elpa)
+      write(*,*) "Selected Eigensolver :            elpa"
+    case(diag_elsielpa)
+      write(*,*) "Selected Eigensolver :            elsielpa"
+    case(diag_elsichase)
+      write(*,*) "Selected Eigensolver :            elsichase"
+    case(diag_magma)
+      write(*,*) "Selected Eigensolver :            magma"
+    case(diag_stop)
+      write(*,*) "Selected Eigensolver :            stop"
+    case(diag_cusolver)
+      write(*,*) "Selected Eigensolver :            cusolver"
+    case(diag_lapack)
+      write(*,*) "Selected Eigensolver :            lapack"
+    case(diag_lapack_singleprec)
+      write(*,*) "Selected Eigensolver :            lapack_singlePrec"
+    case(diag_elpa_1node)
+      write(*,*) "Selected Eigensolver :            elpa_1node"
+    case(diag_debugout)
+      write(*,*) "Selected Eigensolver :            debugout"
+    case(diag_dummy)
+      write(*,*) "Selected Eigensolver :            dummy"
+    end select
+  end subroutine      
+
 END MODULE m_available_solvers

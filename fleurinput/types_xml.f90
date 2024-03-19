@@ -811,7 +811,7 @@ CONTAINS
 
       !This will dump the inp.xml into inp_dump.xml
       call write_xml_file()
-      print *, "Now copying inp_dump.xml"
+      !print *, "Now copying inp_dump.xml"
       open (99, file="inp_dump.xml")
       firstline = .true. !Do not copy first line of file
       write (fileNum, *) "  <!-- Now follows a dump of the inp.xml file after evaluating the Schema -->"

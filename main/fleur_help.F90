@@ -90,6 +90,7 @@ CONTAINS
     CALL new_argument(0,"-check","run in check mode, i.e. stop after init","")
     CALL new_argument(0,"-info","Print out information on recommended parallelization and available charge densities","")
     CALL new_argument(2,"-wtime","run for # minutes (used to estimate if another iteration is started)","")
+    call new_argument(1,"-blocksize","blocksize used for 2d distributed matrixes","")
     CALL new_argument(1,"-j","Distribute MPI ranks to run subjobs (Format PE:DIR meaning run with PE in directory DIR)","")
     CALL new_argument(1,"-f","Obtain info on subjobs from file","")
     CALL new_argument(2,"-min_pe_per_kpt","Try to use at least specified number of PE in eigenvalue parallelization","")
