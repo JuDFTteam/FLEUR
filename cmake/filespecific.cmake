@@ -17,6 +17,8 @@ if (CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
    set_source_files_properties(io/eig66_mpi.F90 PROPERTIES COMPILE_FLAGS -g0)
    set_source_files_properties(vgen/mt_tofrom_grid.F90 PROPERTIES COMPILE_FLAGS -O1)
    set_source_files_properties(vgen/psqpw.F90 PROPERTIES COMPILE_FLAGS -O1)
+   set_source_files_properties(cdn/cdnovlp.F90 PROPERTIES COMPILE_FLAGS -O1)
+   
    if (CMAKE_Fortran_COMPILER_VERSION VERSION_LESS "14.1.0.0")
       set_source_files_properties(vgen/vmtxcg.F90 PROPERTIES COMPILE_FLAGS -no-openmp)
    endif()
