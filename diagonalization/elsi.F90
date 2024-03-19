@@ -111,6 +111,7 @@ CONTAINS
 
 
       END select   
+      call evec%free()
       call timestop("redistribute")
       call elsi_finalize(eh)
       call timestop("ELSI")

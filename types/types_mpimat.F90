@@ -629,7 +629,7 @@ CONTAINS
       IMPLICIT NONE
       CLASS(t_mpimat), INTENT(INOUT) :: mat
       INTEGER :: ierr
-      return
+     
       IF (ALLOCATED(mat%data_r)) DEALLOCATE (mat%data_r)
       IF (ALLOCATED(mat%data_c)) DEALLOCATE (mat%data_c)
       IF (ASSOCIATED(mat%blacsdata)) THEN

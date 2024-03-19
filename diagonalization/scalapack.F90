@@ -271,6 +271,7 @@ CONTAINS
     CLASS DEFAULT
       call judft_error("Wrong type (2) in scalapack")
     END SELECT
+    call ev_dist%free()
 #ifdef FLEUR_USE_SCOREP
     SCOREP_RECORDING_ON()
 #endif    

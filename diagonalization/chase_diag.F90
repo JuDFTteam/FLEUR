@@ -409,7 +409,7 @@ CONTAINS
           CALL CPU_TIME(t3)
        END IF
     ENDIF
-
+    call chase_mat%free()
     ne = nev
     IF (myid==0) CALL write_eig(chase_eig_id,ikpt,jsp,nev+nex,nev+nex,&
          eigenvalues(:(nev+nex)),zmat=zMatTemp)
