@@ -563,12 +563,12 @@ CONTAINS
                mat(i)%blacsdata%no_use = mat(i)%blacsdata%no_use - 1
                mat(i)%blacsdata => null()
             ELSE
-   #ifdef CPP_SCALAPACK
+#ifdef CPP_SCALAPACK
                if (mat(i)%blacsdata%blacs_desc(2) /= -1) THEN
                   CALL BLACS_GRIDEXIT(mat(i)%blacsdata%blacs_desc(2), ierr)
                   DEALLOCATE (mat(i)%blacsdata)
                endif   
-   #endif
+#endif
             END IF
          END IF
       END DO
@@ -587,12 +587,12 @@ CONTAINS
                   mat(i,j)%blacsdata%no_use = mat(i,j)%blacsdata%no_use - 1
                   mat(i,j)%blacsdata => null()
                ELSE
-      #ifdef CPP_SCALAPACK
+#ifdef CPP_SCALAPACK
                   if (mat(i,j)%blacsdata%blacs_desc(2) /= -1) THEN
                      CALL BLACS_GRIDEXIT(mat(i,j)%blacsdata%blacs_desc(2), ierr)
                      DEALLOCATE (mat(i,j)%blacsdata)
                   endif   
-      #endif
+#endif
                END IF
             END IF
          END DO
@@ -612,12 +612,12 @@ CONTAINS
                      mat(i,j,k)%blacsdata%no_use = mat(i,j,k)%blacsdata%no_use - 1
                      mat(i,j,k)%blacsdata => null()
                   ELSE
-         #ifdef CPP_SCALAPACK
+#ifdef CPP_SCALAPACK
                      if (mat(i,j,k)%blacsdata%blacs_desc(2) /= -1) THEN
                         CALL BLACS_GRIDEXIT(mat(i,j,k)%blacsdata%blacs_desc(2), ierr)
                         DEALLOCATE (mat(i,j,k)%blacsdata)
                      endif   
-         #endif
+#endif
                   END IF
                END IF
             END DO
