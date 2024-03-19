@@ -64,8 +64,9 @@ perf-gpu:
     OMP_NUM_THREADS: 16
     LD_LIBRARY_PATH: /opt/nvidia_hpc_sdk/Linux_x86_64/23.9/cuda/12.2/targets/x86_64-linux/lib:${LD_LIBRARY_PATH}
   before_script:
+    - set +e;source compiler-select nvhpc;set -e
     - cd $CI_PROJECT_DIR
-    - LDFLAGS="-Wl,--copy-dt-needed-entries -llapack" FC=/opt/nvidia_hpc_sdk/Linux_x86_64/2023/compilers/bin/nvfortran ./configure.sh  -c auto -gpu acc:cc60 
+    - ./configure.sh  -c nvidia -gpu acc:cc60 -make -link "/opt/nvidia_hpc_sdk/Linux_x86_64/23.9/compilers/lib/liblapack.a /opt/nvidia_hpc_sdk/Linux_x86_64/23.9/compilers/lib/libblas.a"
     - cd build
     - make -j 12
     - curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh | sh
@@ -88,4 +89,3 @@ perf-gpu:
     - cp Testing/performance/*/bencher.json .
     - echo "$CI_COMMIT_REF_NAME"
     - bencher run  --if-branch "$CI_COMMIT_REF_NAME" --else-if-branch "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" --endif-branch   --file bencher.json
-
