@@ -77,6 +77,7 @@ perf-gpu:
 
 
 .perf-generic:
+  stage: perf
   variables:
     BENCHER_HOST: https://iffbencher.fz-juelich.de:61016
     BENCHER_PROJECT: fleur
