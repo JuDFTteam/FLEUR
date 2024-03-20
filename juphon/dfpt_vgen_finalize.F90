@@ -12,7 +12,7 @@ MODULE m_dfpt_vgen_finalize
 
 CONTAINS
 
-   SUBROUTINE dfpt_vgen_finalize(fmpi,atoms,stars,sym,noco,nococonv,input,sphhar,vTot,vTot1,vTot1imag,denRot,den1Rot,den1imRot,starsq,killcont)
+   SUBROUTINE dfpt_vgen_finalize(fmpi,atoms,stars,sym,juphon,noco,nococonv,input,sphhar,vTot,vTot1,vTot1imag,denRot,den1Rot,den1imRot,starsq,killcont)
       !! Collinear case: put V1Theta+VTheta1 into V1%pw_w together
       !! Noco case: Correctly rotate back the potential into a 2x2 matrix (TODO)
         USE m_types
@@ -27,6 +27,7 @@ CONTAINS
         TYPE(t_noco),     INTENT(IN)    :: noco
         TYPE(t_nococonv), INTENT(IN)    :: nococonv
         TYPE(t_sym),      INTENT(IN)    :: sym
+        TYPE(t_juphon),   INTENT(IN)    :: juphon
         TYPE(t_stars),    INTENT(IN)    :: stars, starsq
         TYPE(t_atoms),    INTENT(IN)    :: atoms
         TYPE(t_input),    INTENT(IN)    :: input
@@ -50,7 +51,7 @@ CONTAINS
                vre = 0.0; v1re = 0.0; v1im = 0.0
                CALL fft3d(v1re, v1im, vTot1%pw(:, js), starsq, +1)
                CALL fft3d(vre, fftwork, vTot%pw(:, js), stars, +1)
-               v1full = killcont(1)*CMPLX(v1re,v1im) * stars%ufft + killcont(2)*vre * starsq%ufft1!-q
+               v1full = killcont(1)*CMPLX(v1re,v1im) * stars%ufft + juphon%l_phonon * killcont(2)*vre * starsq%ufft1!-q
                v1re =  REAL(v1full)
                v1im = AIMAG(v1full)
                CALL fft3d(v1re, v1im, vTot1%pw_w(:, js), starsq, -1)

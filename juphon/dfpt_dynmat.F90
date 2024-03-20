@@ -151,7 +151,7 @@ CONTAINS
             sigma_loc = cmplx(0.0,0.0)
             IF (iDir_col==3) sigma_loc = -sigma_ext
             CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
-                           fi%cell,fmpi,fi%noco,nococonv,rho_dummy,vTot,&
+                           fi%juphon,fi%cell,fmpi,fi%noco,nococonv,rho_dummy,vTot,&
                            starsq,rho1_dummy,vExt1,.FALSE.,vExt1Im,rho1_dummy,iDtype_col,iDir_col,[0,0],sigma_loc)
 
             ! IR integral:
@@ -298,7 +298,7 @@ CONTAINS
                sigma_loc = cmplx(0.0,0.0)
                IF (iDir_col==3) sigma_loc = -sigma_ext
                CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
-                              fi%cell,fmpi,fi%noco,nococonv,rho_dummy,vTot,&
+                              fi%juphon,fi%cell,fmpi,fi%noco,nococonv,rho_dummy,vTot,&
                               stars,rho_dummy,vExt1,.FALSE.,vExt1Im,rho_dummy,iDtype_col,iDir_col,[0,0],sigma_loc)
 
                ! Integrals:
