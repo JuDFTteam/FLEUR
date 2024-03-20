@@ -339,12 +339,12 @@ CONTAINS
          denOut1%iter = denIn1%iter
          IF (.NOT.l_minusq) THEN
             CALL dfpt_cdngen(eig_id,dfpt_eig_id,fmpi,fi%input,banddosdummy,fi%vacuum,&
-                             fi%kpts,fi%atoms,sphhar,starsq,fi%sym,fi%gfinp,fi%hub1inp,&
+                             fi%kpts,fi%atoms,sphhar,starsq,fi%sym,fi%juphon,fi%gfinp,fi%hub1inp,&
                              enpara,fi%cell,fi%noco,nococonv,vTot,results,results1,&
                              archiveType,xcpot,denOut1,denOut1Im,bqpt,iDtype,iDir,l_real)
          ELSE
             CALL dfpt_cdngen(eig_id,dfpt_eig_id,fmpi,fi%input,banddosdummy,fi%vacuum,&
-                             fi%kpts,fi%atoms,sphhar,starsq,fi%sym,fi%gfinp,fi%hub1inp,&
+                             fi%kpts,fi%atoms,sphhar,starsq,fi%sym,fi%juphon,fi%gfinp,fi%hub1inp,&
                              enpara,fi%cell,fi%noco,nococonv,vTot,results,results1,&
                              archiveType,xcpot,denOut1,denOut1Im,bqpt,iDtype,iDir,l_real,&
                              qm_eig_id,dfpt_eigm_id,starsmq,results1m)
@@ -356,7 +356,7 @@ CONTAINS
             CALL denOut1m%init(starsmq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN, l_dfpt=.TRUE.)
             CALL denOut1mIm%init(starsmq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN, l_dfpt=.FALSE.)
             CALL dfpt_cdngen(eig_id,dfpt_eigm_id,fmpi,fi%input,banddosdummy,fi%vacuum,&
-                             fi%kpts,fi%atoms,sphhar,starsmq,fi%sym,fi%gfinp,fi%hub1inp,&
+                             fi%kpts,fi%atoms,sphhar,starsmq,fi%sym,fi%juphon,fi%gfinp,fi%hub1inp,&
                              enpara,fi%cell,fi%noco,nococonv,vTot,results,results1m,&
                              archiveType,xcpot,denOut1m,denOut1mIm,-bqpt,iDtype,iDir,l_real,&
                              q_eig_id,dfpt_eig_id,starsq,results1)
