@@ -11,7 +11,7 @@ MODULE m_dfpt_eigen
 #endif
    USE m_juDFT
 
-#ifdef _OPENACC
+#ifdef _OPENACC_later
    USE cublas
 #define CPP_zgemv cublaszgemv
 #else

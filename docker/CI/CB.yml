@@ -13,6 +13,7 @@ perf-gfortran:
     - VERBOSE=1 make -j 12
   rules:
     - if: $CI_TASKS =~ /CB/  
+    - if: $CI_TASKS =~ /all/    
 
 
 perf-intel:
@@ -32,6 +33,7 @@ perf-intel:
     - make -j 12
   rules:
       - if: $CI_TASKS =~ /CB/    
+      - if: $CI_TASKS =~ /all/    
 
 
 perf-intel-ifx:
@@ -51,6 +53,7 @@ perf-intel-ifx:
     - make -j 12
   rules:
       - if: $CI_TASKS =~ /CB/    
+      - if: $CI_TASKS =~ /all/    
 
 perf-gpu:
   extends: .perf-generic
@@ -65,14 +68,17 @@ perf-gpu:
     - LDFLAGS="-Wl,--copy-dt-needed-entries -llapack" FC=/opt/nvidia_hpc_sdk/Linux_x86_64/2023/compilers/bin/nvfortran ./configure.sh  -c auto -gpu acc:cc60 
     - cd build
     - make -j 12
-    - curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh | sh
-    - export PATH=${PATH}:${HOME}/.cargo/bin
+    - wget https://github.com/bencherdev/bencher/releases/download/v0.4.4/bencher-v0.4.4-linux-x86-64
+    - mv bencher-v0.4.4-linux-x86-64 bencher; chmod +x bencher
+    - export PATH=${PATH}:${PWD}
   allow_failure: true
   rules:
     - if: $CI_TASKS =~ /CB/
+    - if: $CI_TASKS =~ /all/    
 
 
 .perf-generic:
+  stage: perf
   variables:
     BENCHER_HOST: https://iffbencher.fz-juelich.de:61016
     BENCHER_PROJECT: fleur

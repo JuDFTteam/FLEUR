@@ -14,6 +14,7 @@ build-gfortran-hdf5:
     - if: $CI_TASKS
       when: never
     - if: $CI_TASKS =~ /gfortran/  
+    - if: $CI_TASKS =~ /all/    
     - when: on_success
 
 
@@ -46,6 +47,7 @@ fast-test-gfortran-hdf5:
     - if: $CI_TASKS
       when: never
     - if: $CI_TASKS =~ /gfortran/  
+    - if: $CI_TASKS =~ /all/    
     - when: on_success
 
 masci-test-gfortran-hdf5: 
@@ -61,6 +63,7 @@ masci-test-gfortran-hdf5:
     - if: $CI_TASKS
       when: never
     - if: $CI_TASKS =~ /gfortran/  
+    - if: $CI_TASKS =~ /all/    
     - when: on_success
 
 

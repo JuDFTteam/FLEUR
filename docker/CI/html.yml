@@ -17,6 +17,7 @@ pages:
       - public
   rules:
       - if: $CI_TASKS =~ /doc/    
+      - if: $CI_TASKS =~ /all/    
   
 intel-maqao:
   stage: html
@@ -27,12 +28,13 @@ intel-maqao:
   script:
     - cd $CI_PROJECT_DIR
     - ulimit -s unlimited
-    - source compiler-select intel
-    - CC=gcc FC=ifort ./configure.sh -c auto -hdf5 false
+    - which compiler-select
+    - set +e; source compiler-select intel-oneapi-2024; set -e
+    - ./configure.sh -c intel -hdf5 false
     - cd build
     - make -j 12
-    - cp ../tests/performance/performance/inputfiles/Noco/inp.xml .
-    - /local/th1/DFT/maqao oneview -R1 --ignore-output-code -- fleur
+    - cp ../tests/performance/inputfiles/Noco/inp.xml .
+    - /local/th1/DFT/maqao oneview -R1 --ignore-output-code -- fleur -diag dummy
     - mkdir -p $CI_PROJECT_DIR/public
     - cp -r maqao*/RESULTS $CI_PROJECT_DIR/public
   artifacts:
@@ -41,7 +43,9 @@ intel-maqao:
       - build
       - public
   rules:
-    - if: $CI_TASKS =~ /doc/   
+    - if: $CI_TASKS =~ /doc/ 
+    - if: $CI_TASKS =~ /all/    
+  
 
 ford:
   image: iffregistry.fz-juelich.de/fleur/fleur:ford
@@ -56,7 +60,8 @@ ford:
       - public
   rules:
       - if: $CI_TASKS =~ /doc/    
-  
+      - if: $CI_TASKS =~ /all/    
+
 doxygen:
   image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
   stage: html
@@ -74,13 +79,15 @@ doxygen:
       - build/inpgen
   rules:
       - if: $CI_TASKS =~ /doc/    
-  
+      - if: $CI_TASKS =~ /all/    
+
 
 gfortran-coverage:
   image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
   extends: .test-fleur
   stage: html
   needs: []
+  coverage: '/functions\.\.\: ([\.\d]*).*functions/'
   variables:
     BUILD_FOLDER: "."
     juDFT_MPI: "mpirun -n {mpi_procs} --allow-run-as-root "
@@ -110,5 +117,6 @@ gfortran-coverage:
     url: https://fleur.iffgit.fz-juelich.de/fleur/coverage_html
   rules:
       - if: $CI_TASKS =~ /doc/    
-  
+      - if: $CI_TASKS =~ /all/    
+
 

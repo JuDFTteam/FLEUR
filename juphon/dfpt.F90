@@ -679,7 +679,7 @@ CONTAINS
 
       WRITE (oUnit,*) '------------------------------------------------------'
 
-      CALL juDFT_end("Phonon calculation finished.")
+      CALL juDFT_end("Phonon calculation finished.",fmpi%irank)
 
     END SUBROUTINE dfpt
 

@@ -105,20 +105,17 @@ module m_VYukawaFilm
 
     end if ChooseVariant
 
-
     ! MUFFIN-TIN POTENTIAL
 
     call Vmts( input, fmpi, stars, sphhar, atoms, sym, cell,   .FALSE., &
                VYukawa%pw(:,1), den%mt(:,0:,:,1), VYukawa%potdenType, &
                VYukawa%mt(:,0:,:,1) )
-
  
     ! MODIFICATION FOR CHARGE NEUTRALITY
 
     call VYukawaModify( stars, vacuum, cell, sym, input, fmpi, atoms, sphhar,   noco, nococonv,&
                         den, &
                         VYukawa )
-
 
   end subroutine VYukawaFilm
 
@@ -156,16 +153,16 @@ module m_VYukawaFilm
     complex                     :: c_ph(-stars%mx3:stars%mx3,stars%ng2)
     complex                     :: signIqz
     real                        :: g_damped(stars%ng2), qz, sign, vcons(stars%ng2) 
-    real                        :: exp_m(vacuum%nmzd,stars%ng2), exp_p(vacuum%nmzd,stars%ng2)
-    real                        :: expDhg(stars%ng2), expDg(stars%ng2)
-    real                        :: z(vacuum%nmzd)
+    real                        :: exp_m(vacuum%nmz,stars%ng2), exp_p(vacuum%nmz,stars%ng2)
+    real                        :: expDg(stars%ng2)
+    real                        :: z(vacuum%nmz)
     integer                     :: iz, irec2, irec3, ivac, iqz
-    complex                     :: fa(vacuum%nmzxyd,2:stars%ng2), fb(vacuum%nmzxyd,2:stars%ng2)
-    complex                     :: alpha(vacuum%nmzxyd,2:stars%ng2,2), beta(vacuum%nmzxyd,2:stars%ng2,2), gamma(vacuum%nmzxyd,2:stars%ng2)
-    real                        :: ga(vacuum%nmzd), gb(vacuum%nmzd)
-    real                        :: delta(vacuum%nmzd,2), epsilon(vacuum%nmzd,2), zeta(vacuum%nmzd)
-    complex                     :: VVxy(vacuum%nmzxyd,2:stars%ng2,2) ! this is the qxy /= 0 part of the vacuum potential
-    real                        :: VVz(vacuum%nmzd,2)                ! this is the qxy  = 0 part of the vacuum potential
+    complex                     :: fa(vacuum%nmzxy,2:stars%ng2), fb(vacuum%nmzxy,2:stars%ng2)
+    complex                     :: alpha(vacuum%nmzxy,2:stars%ng2,2), beta(vacuum%nmzxy,2:stars%ng2,2), gamma(vacuum%nmzxy,2:stars%ng2)
+    real                        :: ga(vacuum%nmz), gb(vacuum%nmz)
+    real                        :: delta(vacuum%nmz,2), epsilon(vacuum%nmz,2), zeta(vacuum%nmz)
+    complex                     :: VVxy(vacuum%nmzxy,2:stars%ng2,2) ! this is the qxy /= 0 part of the vacuum potential
+    real                        :: VVz(vacuum%nmz,2)                ! this is the qxy  = 0 part of the vacuum potential
 
 
     ! DEFINITIONS / ALLOCATIONS / INITIALISATIONS    
@@ -180,7 +177,6 @@ module m_VYukawaFilm
         exp_m(iz,irec2) = exp_save( - g_damped(irec2) * z(iz) )
         exp_p(iz,irec2) = exp_save(   g_damped(irec2) * z(iz) )
       end do
-      expDhg(irec2) = exp_save( - cell%z1 * g_damped(irec2) )
       expDg(irec2)  = exp_save( -2 * cell%z1 * g_damped(irec2) )
     end do
     sum_qz = (0.,0.)
@@ -214,10 +210,19 @@ module m_VYukawaFilm
 
     ! CONTRIBUTION FROM THE VACUUM CHARGE DENSITY
 
-    ! shifting z:
-    do irec2 = 1, stars%ng2
-      exp_m(1:vacuum%nmz,irec2) = exp_m(1:vacuum%nmz,irec2) * expDhg(irec2)
-      exp_p(1:vacuum%nmz,irec2) = exp_p(1:vacuum%nmz,irec2) / expDhg(irec2)
+    exp_m = 0.0
+    exp_p = 0.0
+    g_damped(1) = sqrt( stars%sk2(1) ** 2 + input%preconditioning_param ** 2 )
+    do iz = 1, vacuum%nmz
+      exp_m(iz,1) = exp_save(-g_damped(1) * (z(iz)+cell%z1))
+      exp_p(iz,1) = exp_save( g_damped(1) * (z(iz)+cell%z1))
+    end do
+    do irec2 = 2, stars%ng2
+      g_damped(irec2) = sqrt( stars%sk2(irec2) ** 2 + input%preconditioning_param ** 2 )
+      do iz = 1, vacuum%nmzxy
+        exp_m(iz,irec2) = exp_save(-g_damped(irec2) * (z(iz)+cell%z1))
+        exp_p(iz,irec2) = exp_save( g_damped(irec2) * (z(iz)+cell%z1))
+      end do
     end do
 
     ! case irec2 > 1:
@@ -273,7 +278,7 @@ module m_VYukawaFilm
         VVxy(1:vacuum%nmzxy,irec2,ivac) = VVxy(1:vacuum%nmzxy,irec2,ivac) * exp( -0.1 / rmt * z(1:vacuum%nmzxy) )
       end do
     end do
-    VVnew(:,1,:)=VVz
+    VVnew(:vacuum%nmz,1,:)=VVz
     VVnew(:vacuum%nmzxy,2:,:)=VVxy
   end subroutine VYukawaFilmVacuumVariant1
 
@@ -341,10 +346,9 @@ module m_VYukawaFilm
       g_damped(irec2) = sqrt( stars%sk2(irec2) ** 2 + input%preconditioning_param ** 2 )
       vcons2(irec2) = -1. / ( 2. * g_damped(irec2) )
       do iz = nzmin, nzmax
-        exp_m(iz,irec2) = exp_save( - g_damped(irec2) * z(iz) )
-        exp_p(iz,irec2) = exp_save(   g_damped(irec2) * z(iz) )
+        exp_m(iz,irec2) = exp_save( - g_damped(irec2) * (z(iz)+cell%z1) )
+        exp_p(iz,irec2) = exp_save(   g_damped(irec2) * (z(iz)-cell%z1) )
       end do
-      expDhg(irec2) = exp_save( - cell%z1 * g_damped(irec2) )
     end do
     do irec3 = 1, stars%ng3
       vcons1(irec3) = fpi_const * psq(irec3) / ( stars%sk3(irec3) ** 2 + input%preconditioning_param ** 2 )
@@ -366,7 +370,7 @@ module m_VYukawaFilm
             VIz(iz,irec2) = VIz(iz,irec2) &
                           + vcons1(irec3) * c_ph(iqz,irec2) * &
                             ( exp( ImagUnit * qz * z(iz) ) &
-                            + vcons2(irec2) * expDhg(irec2) * &
+                            + vcons2(irec2) * &
                               ( ( g_damped(irec2) + ImagUnit * qz ) * exp_p(iz,irec2) * exp(   ImagUnit * qz * cell%z1 ) &
                               + ( g_damped(irec2) - ImagUnit * qz ) * exp_m(iz,irec2) * exp( - ImagUnit * qz * cell%z1 ) ) )
           end if
@@ -376,6 +380,11 @@ module m_VYukawaFilm
 
 
     ! CONTRIBUTION FROM THE VACUUM CHARGE DENSITY
+
+      do iz = nzmin, nzmax
+        exp_m(iz,irec2) = exp_save( - g_damped(irec2) * z(iz) )
+        exp_p(iz,irec2) = exp_save(   g_damped(irec2) * z(iz) )
+      end do
 
     ! irec2 loop continues
       eta(-nzdh:nzdh,irec2) = exp_m(-nzdh:nzdh,irec2) * alphm(irec2,2) + exp_p(-nzdh:nzdh,irec2) * alphm(irec2,1)
@@ -890,7 +899,6 @@ module m_VYukawaFilm
       z(iz) = cell%amat(3,3) * iz * partitioning
     end do
 
-
     ! INTEGRATION OF THE PREVIOUSLY COMPUTED YUKAWA POTENTIAL
 
     ! initialise VYukawaModification with in-going VYukawa and prepare for integration
@@ -909,7 +917,6 @@ module m_VYukawaFilm
     qhat = ( q0 / ( 2 * dh ) ) / ( sinh(ldh) / ( ldh * cosh( ldh ) ) - 1 )
     qbar = input%preconditioning_param ** 2 / fpi_const *  qhat
 
-
     ! SET UP CONSTANT CHARGE DENSITY
 
     ! instead of den%pw(1,1) = qbar we directly set the pseudo charge density
@@ -918,7 +925,6 @@ module m_VYukawaFilm
       den%mt(1:atoms%jri(n),0,n,1) = sfp_const * qbar * atoms%rmsh(1:atoms%jri(n),n) ** 2
     end do
     psq = cmplx(0.0,0.0); psq(1) = qbar
-
 
     ! CALCULATE THE INTERSTITIAL POTENTIAL AS A FUNCTION OF z
 
@@ -930,7 +936,6 @@ module m_VYukawaFilm
     do iz = -nzdh+1, nzdh-1
       VIz(iz) = qhat * ( 1 - cosh( input%preconditioning_param * z(iz) ) / cosh( ldh ) ) 
     end do
-
 
     ! 1D FOURIER TRANSFORM TO FIND THE 3D-FOURIER COEFFICIENTS
 
@@ -954,18 +959,15 @@ module m_VYukawaFilm
       if ( irec3 /= 0 ) VYukawaModification%pw(irec3,1) = VYukawaModification%pw(irec3,1) + VIqz(iqz) * partitioning / ( stars%nstr(irec3) / stars%nstr2(1) )
     end do
 
-
     ! MUFFIN-TIN POTENTIAL
 
     call Vmts( input, fmpi, stars, sphhar, atoms, sym, cell,   .FALSE., &
                VYukawaModification%pw(:,1), den%mt(:,0:,:,1), VYukawaModification%potdenType, &
                VYukawaModification%mt(:,0:,:,1) )
 
-
     ! APPLYING THE MODIFICATION TO THE YUKAWA POTENTIAL
 
     call VYukawa%AddPotDen( VYukawa, VYukawaModification )
-
 
   end subroutine VYukawaModify
 

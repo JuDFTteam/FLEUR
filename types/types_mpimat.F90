@@ -15,7 +15,6 @@ MODULE m_types_mpimat
    !PRIVATE
    INTEGER, PARAMETER    :: DEFAULT_BLOCKSIZE = 64
    INTEGER, PARAMETER   :: dlen_ = 9
-   LOGICAL:: use_pdgemr2d=.true.
 
    !<This data-type extends the basic t_mat for distributed matrices.
    !<
@@ -57,7 +56,9 @@ MODULE m_types_mpimat
       procedure   :: print_type => mpimat_print_type
       PROCEDURE   :: linear_problem => t_mpimat_lproblem
       PROCEDURE   :: is_column_cyclic
-      FINAL :: finalize, finalize_1d, finalize_2d, finalize_3d
+#ifndef __INTEL_COMPILER      
+      FINAL :: finalize,finalize_1d,finalize_2d,finalize_3d
+#endif      
    END TYPE t_mpimat
 
    PUBLIC t_mpimat, mingeselle
@@ -414,6 +415,11 @@ CONTAINS
       CLASS(t_mat), INTENT(IN)      ::mat1
       INTEGER, INTENT(IN) ::n1, n2
       INTEGER :: irank, err
+#ifdef __INTEL_COMPILER
+      LOGICAL,PARAMETER:: use_pdgemr2d=.true.
+#else
+      LOGICAL,PARAMETER:: use_pdgemr2d=.false.
+#endif         
 
       call timestart("mpimat_copy")
 
@@ -427,7 +433,6 @@ CONTAINS
 #ifdef CPP_SCALAPACK
       SELECT TYPE (mat1)
       TYPE IS (t_mpimat)
-         print *,mat1%is_column_cyclic(),mat%is_column_cyclic(),use_pdgemr2d
          if (mat1%is_column_cyclic().and..not.mat%is_column_cyclic().and..not.use_pdgemr2d) THEN
             call cyclic_column_to_2Dblock_cyclic(mat1,mat,n1,n2)
          else
@@ -530,16 +535,42 @@ CONTAINS
    SUBROUTINE finalize(mat)
       IMPLICIT NONE
       TYPE(t_mpimat), INTENT(INOUT) :: mat
-      CALL mpimat_free(mat)
+      INTEGER :: ierr
+      IF (ASSOCIATED(mat%blacsdata)) THEN
+         IF (mat%blacsdata%no_use > 1) THEN
+            mat%blacsdata%no_use = mat%blacsdata%no_use - 1
+            mat%blacsdata => null()
+         ELSE
+#ifdef CPP_SCALAPACK
+            if (mat%blacsdata%blacs_desc(2) /= -1) THEN
+               CALL BLACS_GRIDEXIT(mat%blacsdata%blacs_desc(2), ierr)
+               DEALLOCATE (mat%blacsdata)
+            endif   
+#endif
+         END IF
+      END IF
+      
    END SUBROUTINE finalize
 
    SUBROUTINE finalize_1d(mat)
       IMPLICIT NONE
 
       TYPE(t_mpimat), INTENT(INOUT) :: mat(:)
-      INTEGER                      :: i
+      INTEGER                      :: i,ierr
       DO i = 1, size(mat)
-         CALL mpimat_free(mat(i))
+         IF (ASSOCIATED(mat(i)%blacsdata)) THEN
+            IF (mat(i)%blacsdata%no_use > 1) THEN
+               mat(i)%blacsdata%no_use = mat(i)%blacsdata%no_use - 1
+               mat(i)%blacsdata => null()
+            ELSE
+#ifdef CPP_SCALAPACK
+               if (mat(i)%blacsdata%blacs_desc(2) /= -1) THEN
+                  CALL BLACS_GRIDEXIT(mat(i)%blacsdata%blacs_desc(2), ierr)
+                  DEALLOCATE (mat(i)%blacsdata)
+               endif   
+#endif
+            END IF
+         END IF
       END DO
    END SUBROUTINE finalize_1d
 
@@ -547,25 +578,48 @@ CONTAINS
       IMPLICIT NONE
 
       TYPE(t_mpimat), INTENT(INOUT) :: mat(:, :)
-      INTEGER                      :: i, j
+      INTEGER                      :: i, j,ierr
 
       DO i = 1, size(mat, dim=1)
          DO j = 1, size(mat, dim=2)
-            CALL mpimat_free(mat(i, j))
+            IF (ASSOCIATED(mat(i,j)%blacsdata)) THEN
+               IF (mat(i,j)%blacsdata%no_use > 1) THEN
+                  mat(i,j)%blacsdata%no_use = mat(i,j)%blacsdata%no_use - 1
+                  mat(i,j)%blacsdata => null()
+               ELSE
+#ifdef CPP_SCALAPACK
+                  if (mat(i,j)%blacsdata%blacs_desc(2) /= -1) THEN
+                     CALL BLACS_GRIDEXIT(mat(i,j)%blacsdata%blacs_desc(2), ierr)
+                     DEALLOCATE (mat(i,j)%blacsdata)
+                  endif   
+#endif
+               END IF
+            END IF
          END DO
       END DO
    END SUBROUTINE finalize_2d
 
    SUBROUTINE finalize_3d(mat)
       IMPLICIT NONE
-
       TYPE(t_mpimat), INTENT(INOUT) :: mat(:, :, :)
-      INTEGER                      :: i, j, k
+      INTEGER                      :: i, j, k, ierr
 
       DO i = 1, size(mat, dim=1)
          DO j = 1, size(mat, dim=2)
             DO k = 1, size(mat, dim=3)
-               CALL mpimat_free(mat(i, j, k))
+               IF (ASSOCIATED(mat(i,j,k)%blacsdata)) THEN
+                  IF (mat(i,j,k)%blacsdata%no_use > 1) THEN
+                     mat(i,j,k)%blacsdata%no_use = mat(i,j,k)%blacsdata%no_use - 1
+                     mat(i,j,k)%blacsdata => null()
+                  ELSE
+#ifdef CPP_SCALAPACK
+                     if (mat(i,j,k)%blacsdata%blacs_desc(2) /= -1) THEN
+                        CALL BLACS_GRIDEXIT(mat(i,j,k)%blacsdata%blacs_desc(2), ierr)
+                        DEALLOCATE (mat(i,j,k)%blacsdata)
+                     endif   
+#endif
+                  END IF
+               END IF
             END DO
          END DO
       END DO
@@ -575,6 +629,7 @@ CONTAINS
       IMPLICIT NONE
       CLASS(t_mpimat), INTENT(INOUT) :: mat
       INTEGER :: ierr
+     
       IF (ALLOCATED(mat%data_r)) DEALLOCATE (mat%data_r)
       IF (ALLOCATED(mat%data_c)) DEALLOCATE (mat%data_c)
       IF (ASSOCIATED(mat%blacsdata)) THEN
@@ -622,7 +677,8 @@ CONTAINS
          mat%matsize1 = 0
          mat%matsize2 = 0
       else
-         nbx = DEFAULT_BLOCKSIZE; nby = DEFAULT_BLOCKSIZE
+         nbx = priv_get_blocksize()
+         nby = priv_get_blocksize()
          IF (PRESENT(nb_x)) nbx = nb_x
          IF (PRESENT(nb_y)) nby = nb_y
          IF (.NOT. (PRESENT(matsize1) .AND. PRESENT(matsize2) .AND. PRESENT(mpi_subcom) .AND. PRESENT(l_real) .AND. PRESENT(l_2d))) &
@@ -815,6 +871,19 @@ CONTAINS
 #endif
    END SUBROUTINE priv_create_blacsgrid
 
+   integer function priv_get_blocksize()
+      integer, save:: block_size=-1
+      character(len=10):: str
+      priv_get_blocksize=block_size
+      if (priv_get_blocksize>0) return
+      block_size=DEFAULT_BLOCKSIZE
+
+      if (judft_was_argument("-blocksize")) THEN
+         str=judft_string_for_argument("-blocksize")
+         read(str,*) block_size
+      endif
+   end function   
+
    SUBROUTINE mingeselle(mat_in, mat_out)
       !---------------------------------------------------------------------+
       !                                                                     |
@@ -912,8 +981,7 @@ CONTAINS
                   IF (nsl(n_p)) c_help_size(1, n_p) = c_help_size(1, n_p) + 1
                END DO
             END DO
-            !print*, "send", n_rank, ns_tot, n_send
-
+       
             ! determine number of elements to receive from other pe's
 
             DO ki = 1, mat_out%matsize2
@@ -924,8 +992,7 @@ CONTAINS
                   n_r(n_p) = n_r(n_p) + 1
                END DO
             END DO
-            !print*, "recv", n_rank, nr_tot, n_r
-
+       
             ! determine the maximal number of s/r-counts and allocate s/r-arrays
 
             ns_max = 0

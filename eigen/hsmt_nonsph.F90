@@ -69,7 +69,7 @@ CONTAINS
          lapwPr = lapw
          fjgjPr = fjgj
       END IF
-
+      !$acc data copyin(fjgjPr,fjgjPr%fj,fjgjPr%gj)
       size_ab = maxval(lapw%nv)
 
       IF (fmpi%n_size==1) Then
@@ -336,15 +336,22 @@ CONTAINS
       END DO
 
 #ifdef _OPENACC
-      IF (hmat%l_real) THEN
-         !$acc kernels present(hmat,hmat%data_r,data_c) default(none)
-         hmat%data_r = hmat%data_r + real(data_c)
-         !$acc end kernels
-      ELSE
-         !$acc kernels present(hmat,hmat%data_c,data_c) default(none)
-         hmat%data_c = hmat%data_c + data_c
-         !$acc end kernels
-      END IF
+         IF (hmat%l_real) THEN
+            !$acc kernels present(hmat,hmat%data_r,data_c) default(none)
+            hmat%data_r = hmat%data_r + real(data_c)
+            !$acc end kernels
+         ELSE
+            if (set0) THEN
+               !$acc kernels present(hmat,hmat%data_c,data_c) default(none)
+               hmat%data_c =  data_c
+               !$acc end kernels
+            else
+               !$acc kernels present(hmat,hmat%data_c,data_c) default(none)
+               hmat%data_c = hmat%data_c + data_c
+               !$acc end kernels
+            endif
+         END IF
+      
 #else
       IF (hmat%l_real) THEN
          !$OMP PARALLEL DO DEFAULT(shared)
@@ -357,7 +364,7 @@ CONTAINS
      !$acc exit data delete(ab2,ab1,abCoeffs,abCoeffsPr,data_c,ab_select,h_loc)
       DEALLOCATE(ab_select,abCoeffs,abCoeffsPr,ab1,ab2,h_loc)
       IF (ALLOCATED(data_c)) DEALLOCATE(data_c)
- 
+      !$acc end data
       CALL timestop("non-spherical setup")
    END SUBROUTINE hsmt_nonsph
 

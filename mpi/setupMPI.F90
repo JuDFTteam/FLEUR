@@ -17,7 +17,7 @@ CONTAINS
 
     use m_omp_checker
     USE m_types
-    USE m_available_solvers,ONLY:parallel_solver_available
+    USE m_available_solvers,ONLY:parallel_solver_available,print_solver
     INTEGER,INTENT(in)           :: nkpt,neigd,nbasfcn
     TYPE(t_mpi),INTENT(inout)    :: fmpi
 
@@ -33,11 +33,11 @@ CONTAINS
     !$ omp=omp_get_max_threads()
     if (fmpi%irank==0) THEN
        !print INFO on parallelization
-       WRITE(*,*) "--------------------------------------------------------"
+       WRITE(*,*) "------------Calculation Setup---------------------------"
 #ifdef CPP_MPI
-       write(*,*) "Number of MPI-tasks:  ",fmpi%isize
+       write(*,*) "Number of MPI-tasks  : ",fmpi%isize
        CALL MPI_COMM_SIZE(fmpi%mpi_comm_same_node,isize,i)
-       write(*,*) "Number of PE/node  :  ",isize
+       write(*,*) "Number of PE/node    : ",isize
        CALL add_usage_data("MPI-PE",fmpi%isize)
        call log%add("MPI-Ranks",int2str(fmpi%isize))
 #else
@@ -45,11 +45,11 @@ CONTAINS
        call log%add("MPI-Ranks","noMPI")
 #endif
        IF (omp==-1) THEN
-          write(*,*) "No OpenMP version of FLEUR."
+         WRITE(*,*) "Number of OMP-threads:            No OpenMP"
           CALL add_usage_data("OMP",0)
           call log%add("OMP","NoOpenMP")
        ELSE
-          WRITE(*,*) "Number of OMP-threads:",omp
+         WRITE(*,*) "Number of OMP-threads: ",omp
           call log%add("OMP-Tasks",int2str(omp))
           IF(omp.EQ.1.AND.fmpi%isize.GE.6.AND.&
              ABS(NINT(REAL(nkpt)/REAL(fmpi%isize))*fmpi%isize-nkpt).GT.1.0e-7) THEN
@@ -102,7 +102,7 @@ CONTAINS
       endif
     endif
 #endif
-
+    if (fmpi%irank==0) call print_solver(fmpi%n_size>0)
 
     ALLOCATE(fmpi%k_list(SIZE([(i, i=INT(fmpi%irank/fmpi%n_size)+1,nkpt,fmpi%isize/fmpi%n_size )])))
     ! this corresponds to the compact = .true. switch in priv_create_comm
@@ -195,11 +195,11 @@ CONTAINS
     fmpi%n_size   = fmpi%isize/n_members
     !fmpi%n_stride = n_members
     IF (fmpi%irank == 0) THEN
-       WRITE(*,*) 'k-points in parallel: ',n_members
-       WRITE(*,*) "pe's per k-point:     ",fmpi%n_size
-       WRITE(*,*) '# of k-point loops:   ',nkpt/n_members
+       WRITE(*,*) 'k-points in parallel : ',n_members
+       WRITE(*,*) "pe's per k-point     : ",fmpi%n_size
+       WRITE(*,*) 'No of k-point loops  : ',nkpt/n_members
        if (mod(nkpt,n_members).ne.0) then
-         Write(*,*) 'your k-point parallelism is not fully load-balanced'
+         Write(*,*) 'Info/Warning         : your k-point parallelism is not fully load-balanced'
        endif
 
        IF((REAL(nbasfcn) / REAL(fmpi%n_size)).LE.20) THEN

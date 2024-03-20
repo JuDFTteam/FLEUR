@@ -13,6 +13,7 @@ build-intel:
   allow_failure: false
   rules:
       - if: $CI_TASKS =~ /intel/
+      - if: $CI_TASKS =~ /all/    
 
 test-intel:
   image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
@@ -24,6 +25,7 @@ test-intel:
   allow_failure: true
   rules:
       - if: $CI_TASKS =~ /intel/    
+      - if: $CI_TASKS =~ /all/    
 
 build-intel-ifx:
   image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
@@ -40,6 +42,7 @@ build-intel-ifx:
   allow_failure: true
   rules:
       - if: $CI_TASKS =~ /intel/
+      - if: $CI_TASKS =~ /all/    
 
 test-intel-ifx:
   image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
@@ -51,6 +54,7 @@ test-intel-ifx:
   allow_failure: true
   rules:
       - if: $CI_TASKS =~ /intel/    
+      - if: $CI_TASKS =~ /all/    
   
 build-intel-debug:
   image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
@@ -67,6 +71,7 @@ build-intel-debug:
   allow_failure: false
   rules:
       - if: $CI_TASKS =~ /debug/
+      - if: $CI_TASKS =~ /all/    
 
 test-intel-debug:
   image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
@@ -78,4 +83,5 @@ test-intel-debug:
   allow_failure: true
   rules:
       - if: $CI_TASKS =~ /debug/    
+      - if: $CI_TASKS =~ /all/    
   
