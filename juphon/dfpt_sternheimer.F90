@@ -83,7 +83,7 @@ CONTAINS
       banddosdummy = fi%banddos
 
       ! Calculate the q-shifted G-vectors and related quantities like the perturbed step function
-      CALL make_stars(starsq, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, qpts%bk(:,iQ), iDtype, iDir)
+      CALL make_stars(starsq, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, qpts%bk(:,iQ), iDtype, iDir)!TODO: Theta1 raus fuer efield
       starsq%ufft = stars%ufft
 
       ! Initialize the density perturbation; denIn1Im is only for the imaginary MT part
@@ -228,7 +228,7 @@ CONTAINS
 #endif
 
          ! Add the potential gradient to the potential perturbation in the displaced MT
-         IF (strho) THEN
+         IF (strho.AND.fi%juphon%l_phonon) THEN
             vTot1%mt(:,0:,iDtype,1) = vTot1%mt(:,0:,iDtype,1) + grVext%mt(:,0:,iDtype,1)
             IF (fi%input%jspins==2) vTot1%mt(:,0:,iDtype,2) = vTot1%mt(:,0:,iDtype,2) + grVext%mt(:,0:,iDtype,1)
             IF (l_minusq) THEN
@@ -236,10 +236,10 @@ CONTAINS
                IF (fi%input%jspins==2) vTot1m%mt(:,0:,iDtype,2) = vTot1m%mt(:,0:,iDtype,2) + grVext%mt(:,0:,iDtype,1)
             END IF
          ELSE
-            vTot1%mt(:,0:,iDtype,:) = vTot1%mt(:,0:,iDtype,:) + grVtot%mt(:,0:,iDtype,:)
+            IF (fi%juphon%l_phonon) vTot1%mt(:,0:,iDtype,:) = vTot1%mt(:,0:,iDtype,:) + grVtot%mt(:,0:,iDtype,:)
             realiter = realiter + 1
             IF (l_minusq) THEN
-               vTot1m%mt(:,0:,iDtype,:) = vTot1m%mt(:,0:,iDtype,:) + grVtot%mt(:,0:,iDtype,:)
+               IF (fi%juphon%l_phonon) vTot1m%mt(:,0:,iDtype,:) = vTot1m%mt(:,0:,iDtype,:) + grVtot%mt(:,0:,iDtype,:)
             END IF
          END IF
 
@@ -318,11 +318,11 @@ CONTAINS
          ! Exit here after the new final eigenvalues have been generated
          ! and before a new density perturbation is built
          IF (final_SH_it) THEN
-            denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) + grRho%mt(:,0:,iDtype,:)
+            IF (fi%juphon%l_phonon) denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) + grRho%mt(:,0:,iDtype,:)
             CALL denIn1%distribute(fmpi%mpi_comm)
 
             IF (l_minusq) THEN
-               denIn1m%mt(:,0:,iDtype,:) = denIn1m%mt(:,0:,iDtype,:) + grRho%mt(:,0:,iDtype,:)
+               IF (fi%juphon%l_phonon) denIn1m%mt(:,0:,iDtype,:) = denIn1m%mt(:,0:,iDtype,:) + grRho%mt(:,0:,iDtype,:)
                CALL denIn1m%distribute(fmpi%mpi_comm)
             END IF
 
@@ -369,13 +369,13 @@ CONTAINS
             strho = .FALSE.
             denIn1 = denOut1
             denIn1Im = denOut1Im
-            denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
+            IF (fi%juphon%l_phonon) denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
             IF (fmpi%irank==0) write(*,*) "Starting perturbation generated."
             CALL timestop("Sternheimer Iteration")
             IF (l_minusq) THEN
                denIn1m = denOut1m
                denIn1mIm = denOut1mIm
-               denIn1m%mt(:,0:,iDtype,:) = denIn1m%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
+               IF (fi%juphon%l_phonon) denIn1m%mt(:,0:,iDtype,:) = denIn1m%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
             END IF
             CYCLE scfloop
          END IF
@@ -386,13 +386,13 @@ CONTAINS
             onedone = .TRUE.
             denIn1 = denOut1
             denIn1Im = denOut1Im
-            denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
+            IF (fi%juphon%l_phonon) denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
             IF (fmpi%irank==0) write(*,*) "1st 'real' density perturbation generated."
             CALL timestop("Sternheimer Iteration")
             IF (l_minusq) THEN
                denIn1m = denOut1m
                denIn1mIm = denOut1mIm
-               denIn1m%mt(:,0:,iDtype,:) = denIn1m%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
+               IF (fi%juphon%l_phonon) denIn1m%mt(:,0:,iDtype,:) = denIn1m%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
             END IF
             CYCLE scfloop
          END IF
@@ -427,11 +427,11 @@ CONTAINS
 
          ! First mixing in the 2nd "real" iteration.
          ! Remove the gradient from denIn as to not mix identical big numbers.
-         denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) + grRho%mt(:,0:,iDtype,:)
+         IF (fi%juphon%l_phonon) denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) + grRho%mt(:,0:,iDtype,:)
          CALL denIn1%distribute(fmpi%mpi_comm)
 
          IF (l_minusq) THEN
-            denIn1m%mt(:,0:,iDtype,:) = denIn1m%mt(:,0:,iDtype,:) + grRho%mt(:,0:,iDtype,:)
+            IF (fi%juphon%l_phonon) denIn1m%mt(:,0:,iDtype,:) = denIn1m%mt(:,0:,iDtype,:) + grRho%mt(:,0:,iDtype,:)
             CALL denIn1m%distribute(fmpi%mpi_comm)
          END IF
 
@@ -447,7 +447,7 @@ CONTAINS
                          denIn1Im, denOut1Im, dfpt_tag)
          CALL timestop("DFPT mixing")
 
-         denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
+         IF (fi%juphon%l_phonon) denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
 
          CALL denIn1%distribute(fmpi%mpi_comm)
 
@@ -459,7 +459,7 @@ CONTAINS
                             denIn1mIm, denOut1mIm, dfpt_tag//"m")
             CALL timestop("DFPT mixing")
 
-            denIn1m%mt(:,0:,iDtype,:) = denIn1m%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
+            IF (fi%juphon%l_phonon) denIn1m%mt(:,0:,iDtype,:) = denIn1m%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
 
             CALL denIn1m%distribute(fmpi%mpi_comm)
          END IF
