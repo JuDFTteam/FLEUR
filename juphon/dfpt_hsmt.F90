@@ -9,7 +9,7 @@ MODULE m_dfpt_hsmt
    IMPLICIT NONE
 
 CONTAINS
-   SUBROUTINE dfpt_hsmt(atoms, sym, enpara, iSpin, iDir, iDtype, input, fmpi, &
+   SUBROUTINE dfpt_hsmt(atoms, sym, juphon, enpara, iSpin, iDir, iDtype, input, fmpi, &
                       & noco, nococonv, cell, lapw, lapwq, usdus, td, tdV1, hmat, smat, nk, killcont)
 
       !> Setup of the MT part of the Hamiltonian and the overlap perturbation matrices
@@ -52,6 +52,7 @@ CONTAINS
       TYPE(t_noco),     INTENT(IN)    :: noco
       TYPE(t_nococonv), INTENT(IN)    :: nococonv
       TYPE(t_sym),      INTENT(IN)    :: sym
+      TYPE(t_juphon),   INTENT(IN)    :: juphon
       TYPE(t_cell),     INTENT(IN)    :: cell
       TYPE(t_atoms),    INTENT(IN)    :: atoms
       TYPE(t_enpara),   INTENT(IN)    :: enpara
@@ -116,7 +117,7 @@ CONTAINS
                CALL timestop("fjgjq coefficients")
 
                IF (.NOT.noco%l_noco) THEN
-                  IF (n.EQ.iDtype) THEN
+                  IF (n.EQ.iDtype .AND. juphon%l_phonon) THEN
                      CALL hsmt_nonsph(n,fmpi,sym,atoms,ilSpinPr,ilSpin,1,1,chi_one,noco,nococonv,cell,lapw,td,fjgj,h1mat_tmp(1,1),.TRUE.,lapwq,fjgjq)
                      CALL hsmt_sph(n,atoms,fmpi,ilSpinPr,input,nococonv,1,1,chi_one,lapw,enpara%el0,td%e_shift(n,ilSpinPr),usdus,fjgj,s1mat_tmp(1,1),h1mat_tmp(1,1),.TRUE.,.TRUE.,lapwq,fjgjq)
                      CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,usdus,td,fjgj,n,chi_one,ilSpinPr,ilSpin,igSpinPr,igSpin,h1mat_tmp(1,1),.FALSE.,.TRUE.,.TRUE.,s1mat_tmp(1,1),lapwq,fjgjq)
@@ -130,7 +131,7 @@ CONTAINS
                   ! TODO: Everything from here onwards  most certainly has the wrong spin logic.
                   IF (ilSpinPr==ilSpin) THEN !local spin-diagonal contribution
                      CALL hsmt_spinor(ilSpinPr,n,nococonv,chi)
-                     IF (n.EQ.iDtype) THEN
+                     IF (n.EQ.iDtype .AND. juphon%l_phonon) THEN
                         CALL hsmt_nonsph(n,fmpi,sym,atoms,ilSpinPr,ilSpinPr,1,1,chi_one,noco,nococonv,cell,lapw,td,fjgj,hmat_tmp,.TRUE.,lapwq,fjgjq)
                         CALL hsmt_sph(n,atoms,fmpi,ilSpinPr,input,nococonv,1,1,chi_one,lapw,enpara%el0,td%e_shift(n,ilSpinPr),usdus,fjgj,smat_tmp,hmat_tmp,.TRUE.,.TRUE.,lapwq,fjgjq)
                         CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,usdus,td,fjgj,n,chi_one,ilSpinPr,ilSpin,igSpinPr,igSpin,hmat_tmp,.TRUE.,.TRUE.,.TRUE.,smat_tmp,lapwq,fjgjq)
@@ -150,7 +151,7 @@ CONTAINS
                   ELSE IF (noco%l_unrestrictMT(n)) THEN
                      !2,1
                      CALL hsmt_spinor(3,n,nococonv,chi)
-                     IF (n.EQ.iDtype) THEN
+                     IF (n.EQ.iDtype .AND. juphon%l_phonon) THEN
                         CALL hsmt_nonsph(n,fmpi,sym,atoms,ilSpinPr,ilSpinPr,2,1,chi_one,noco,nococonv,cell,lapw,td,fjgj,hmat_tmp,.TRUE.,lapwq,fjgjq)
                         CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,usdus,td,fjgj,n,chi_one,2,1,igSpinPr,igSpin,hmat_tmp,.TRUE.,.TRUE.,.FALSE.,lapwq=lapwq,fjgjq=fjgjq)
                         CALL timestart("hsmt_distspins")
@@ -169,7 +170,7 @@ CONTAINS
 
                      !1,2
                      CALL hsmt_spinor(4,n,nococonv,chi)
-                     IF (n.EQ.iDtype) THEN
+                     IF (n.EQ.iDtype .AND. juphon%l_phonon) THEN
                         CALL hsmt_nonsph(n,fmpi,sym,atoms,ilSpinPr,ilSpinPr,1,2,chi_one,noco,nococonv,cell,lapw,td,fjgj,hmat_tmp,.TRUE.,lapwq,fjgjq)
                         CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,usdus,td,fjgj,n,chi_one,1,2,igSpinPr,igSpin,hmat_tmp,.TRUE.,.TRUE.,.FALSE.,lapwq=lapwq,fjgjq=fjgjq)
                         CALL timestart("hsmt_distspins")
@@ -193,15 +194,17 @@ CONTAINS
       !!$acc end data
 
       ! TODO: Does this need some ACC magic?
-      DO igSpinPr=MERGE(1,1,noco%l_noco),MERGE(2,1,noco%l_noco)
-         DO igSpin=MERGE(1,1,noco%l_noco),MERGE(2,1,noco%l_noco)
-            CALL matrix_pref(fmpi, atoms, cell%bmat, lapwq%gvec(:, :, igSpinPr), lapw%gvec(:,:,igSpin), lapwq, lapw, &
-                           & nk, lapwq%nv(igSpinPr), lapw%nv(igSpin), iDtype, iDir, &
-                           & h1mat_tmp(igSpinPr,igSpin), s1mat_tmp(igSpinPr,igSpin), hmat(igSpinPr,igSpin), smat(igSpinPr,igSpin),killcont(2:3))
-            CALL h1mat_tmp(igSpinPr,igSpin)%free()
-            CALL s1mat_tmp(igSpinPr,igSpin)%free()
+      IF (juphon%l_phonon) THEN
+         DO igSpinPr=MERGE(1,1,noco%l_noco),MERGE(2,1,noco%l_noco)
+            DO igSpin=MERGE(1,1,noco%l_noco),MERGE(2,1,noco%l_noco)
+               CALL matrix_pref(fmpi, atoms, cell%bmat, lapwq%gvec(:, :, igSpinPr), lapw%gvec(:,:,igSpin), lapwq, lapw, &
+                              & nk, lapwq%nv(igSpinPr), lapw%nv(igSpin), iDtype, iDir, &
+                              & h1mat_tmp(igSpinPr,igSpin), s1mat_tmp(igSpinPr,igSpin), hmat(igSpinPr,igSpin), smat(igSpinPr,igSpin),killcont(2:3))
+               CALL h1mat_tmp(igSpinPr,igSpin)%free()
+               CALL s1mat_tmp(igSpinPr,igSpin)%free()
+            END DO
          END DO
-      END DO
+      END IF
       IF (noco%l_noco) THEN
          !$acc exit data delete(smat_tmp%data_c,smat_tmp%data_r,hmat_tmp%data_c,hmat_tmp%data_r)
          !$acc exit data delete(smat_tmp,hmat_tmp)
