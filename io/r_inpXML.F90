@@ -304,6 +304,12 @@ CONTAINS
 
       stars%gmaxInit = stars%gmax
 
+      numberNodes = xml%GetNumberOfNodes('/fleurInput/calculationSetup/cutoffs/@Gmaxz')
+
+      IF (numberNodes == 1) THEN
+         stars%gmaxz = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/cutoffs/@Gmaxz'))
+      END IF
+      
       xPathA = '/fleurInput/calculationSetup/cutoffs/@numbands'
       numberNodes = xmlGetNumberOfNodes(xPathA)
       DIMENSION%neigd = 0

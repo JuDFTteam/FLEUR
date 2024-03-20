@@ -16,7 +16,7 @@ timerlist={
     "Setup of H&S matrices":0.0,
     "Diagonalization":0.0,
     "generation of new charge densi":0.0,
-
+    "Charge Density Mixing":0.0,
 }
 
 def process_subtimers(st):
@@ -41,7 +41,21 @@ def process_judft_times(dir):
     process_subtimers(all_times["subtimers"])
     with open(dir+"/perf.json","w") as f:
         f.write(json.dumps(timerlist,indent=4))
+    write_BMF(dir,timerlist)
     return dir+"/perf.json"    
+
+
+def write_BMF(dir,timerlist):
+    benchmarks=["Total","Initialization","Iteration","generation of potential","H generation and diagonalizati","Setup of H&S matrices",
+        "Diagonalization","generation of new charge densi","Charge Density Mixing"]
+    bmf={}
+
+    for b in benchmarks:
+        bmf[b]={"runtime":{"value":timerlist[b]}}
+    with open(dir+"/bencher.json","w") as f:
+        f.write(json.dumps(bmf,indent=4))
+
+
 
 def run_fleur(testdir,env):
     import subprocess

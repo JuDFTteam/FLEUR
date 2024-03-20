@@ -16,14 +16,15 @@ module m_types_fft
    use cufft
 #endif
    !$ use omp_lib
-
+   implicit none
+   private
 #ifdef CPP_FFT_MKL
    type ptr_container
       type(dfti_descriptor), pointer :: dfti_handle
    endtype ptr_container
 #endif
 
-   type t_fft 
+   type,public:: t_fft 
       logical :: initialized = .False.
       integer :: backend = -1
       integer :: batch_size = 1

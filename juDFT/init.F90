@@ -24,7 +24,7 @@ MODULE m_juDFT_init
          LOGICAL, INTENT(IN) :: l_checkStack
 
          juDFT_outUnit = outUnit
-         IF (.NOT.judft_was_argument("-debugtime")) CALL signal_handler()
+         IF (.NOT.judft_was_argument("-debugtime")) CALL install_signal_handler()
          IF (l_checkStack) CALL checkstack()
 #if defined(CPP_PATCH_INTEL)&&defined(__INTEL_COMPILER)
        call patch_intel()
@@ -32,18 +32,30 @@ MODULE m_juDFT_init
 
       END SUBROUTINE juDFT_init
 
-      SUBROUTINE signal_handler()
+      SUBROUTINE install_signal_handler()
       !Installs custom handlers for SIGTERM,SIGSEGV
 
 
 #ifdef __INTEL_COMPILER
       USE ifport
-      INTEGER :: result
-      EXTERNAL intel_signal_handler
-      result=signal(SIGTERM,intel_signal_handler,-1)
-      result=signal(SIGSEGV,intel_signal_handler,-1)
+      INTEGER :: result,signal_handler
+      EXTERNAL signal_handler
+      result=signal(2,signal_handler,-1)
+      result=signal(4,signal_handler,-1)
+      result=signal(6,signal_handler,-1)
+      result=signal(11,signal_handler,-1)
+      result=signal(15,signal_handler,-1)
 #endif
-      END SUBROUTINE signal_handler
+#ifdef __GFORTRAN__
+      external :: signal_handler
+
+!      call signal(2,signal_handler)
+!      call signal(4,signal_handler)
+!      call signal(6,signal_handler)
+!      call signal(11,signal_handler)
+!      call signal(15,signal_handler)
+#endif      
+      END SUBROUTINE install_signal_handler
 
 #if defined(CPP_PATCH_INTEL)&&defined(__INTEL_COMPILER)
       subroutine patch_intel()
@@ -69,20 +81,23 @@ MODULE m_juDFT_init
 
       END MODULE m_juDFT_init
 
-      ! NOTE: The intel_signal_handler has to be outside the module
+      ! NOTE: The signal_handler has to be outside the module
       !       as the OS has to have it under a certain name that
       !       would be changed if it would be defined in the module.
-#ifdef __INTEL_COMPILER
-      FUNCTION intel_signal_handler(signal)
+      FUNCTION signal_handler(signal)
 #ifdef CPP_MPI
       use mpi
 #endif
       USE iso_fortran_env
       USE m_judft_time
       USE m_judft_sysinfo
+      use m_judft_logging
+      use m_judft_string,only:int2str
       IMPLICIT NONE
       INTEGER :: signal
-      INTEGER :: intel_signal_handler
+      INTEGER :: signal_handler
+
+      type(t_log_message)::log
 #ifdef CPP_MPI
       INTEGER:: irank,ierr
       LOGICAL:: l_mpi_init
@@ -96,18 +111,41 @@ MODULE m_juDFT_init
 #else
       WRITE(*,*) "Signal detected:",signal
 #endif
-      WRITE(*,*) "This might be due to either:"
-      WRITE(*,*) " - A bug"
-      WRITE(*,*) " - Your job running out of memory"
-      WRITE(*,*) " - Your job got killed externally (e.g. no cpu-time left)"
-      WRITE(*,*) " - ...."
-      WRITE(*,*) "Please check and report if you believe you found a bug"
+      SELECT CASE(signal)
+      case(15) !SigTerm
+            write(*,*) "Your run was stopped externally"
+            write(*,*) "This might for example happen if you run out of cpu-time."
+      case(4)  !SigIll
+            write(*,*) "Your FLEUR executable contains illegal instructions."
+            write(*,*) "You most probably compiled for the wrong processor architecture"
+      case(11) !SigSegv
+            write(*,*) "FLEUR tried an illegal memory access."      
+            WRITE(*,*) "This might indicate a bug, or your calculation"
+            write(*,*) "failed because you were running out of memory"
+            WRITE(*,*) "Please check and report if you believe you found a bug"
+      case(2)  !SigInt
+            write(*,*) "You stopped FLEUR, e.g. by pressing CTRL-C"
+      case(6)  !SigAbrt
+            write(*,*) "Your job aborted abnormally."     
+            WRITE(*,*) "This might indicate a bug, a problem in some"
+            write(*,*) "external library, or some kind of hardware issue."
+            WRITE(*,*) "Please check and report if you believe you found a bug"
+      case default
+            write(*,*) "No more information for this signal available"
+      end select      
+      
       CALL writetimes()
       CALL PRINT_memory_info(output_unit,.true.)
+
+      call log%add("Signal detected",int2str(signal))
+      call juDFT_time_lastlocation(log)
+      call log%report(logmode_error)
+      call log_stop()
+
 #ifdef CPP_MPI
       IF (l_mpi_init) CALL MPI_ABORT(MPI_COMM_WORLD,0,ierr)
 #endif
       STOP "Signal"
-      intel_signal_handler=0
-      END FUNCTION intel_signal_handler
-#endif
+      signal_handler=0
+      END FUNCTION signal_handler
+

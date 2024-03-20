@@ -75,9 +75,13 @@ INTEGER,PARAMETER:: diag_lapack_singlePrec=11
 #else
   INTEGER,PARAMETER:: diag_debugout=20
 #endif  
-  INTEGER,PARAMETER::diag_all_solver(13)=(/diag_chase,diag_elemental,diag_scalapack,diag_elpa,diag_elsielpa,&
+!14.solver
+INTEGER,PARAMETER:: diag_dummy=21
+
+
+  INTEGER,PARAMETER::diag_all_solver(14)=(/diag_chase,diag_elemental,diag_scalapack,diag_elpa,diag_elsielpa,&
                      diag_elsichase,diag_magma,diag_stop,diag_cusolver,diag_lapack,diag_lapack_singlePrec,&
-                     diag_elpa_1node,diag_debugout/)
+                     diag_elpa_1node,diag_debugout,diag_dummy/)
   
 CONTAINS
 
@@ -115,7 +119,9 @@ CONTAINS
        IF (TRIM(juDFT_string_for_argument("-diag"))=="debugout")   diag_solver=diag_debugout
        IF (TRIM(juDFT_string_for_argument("-diag"))=="elsielpa")   diag_solver=diag_elsielpa
        IF (TRIM(juDFT_string_for_argument("-diag"))=="elsichase")  diag_solver=diag_elsichase
+       IF (TRIM(juDFT_string_for_argument("-diag"))=="dummy")      diag_solver=diag_dummy
        IF (TRIM(juDFT_string_for_argument("-diag"))=="stop")       diag_solver=diag_stop
+       
        !Check if solver is possible
        IF (diag_solver<0)  CALL juDFT_error(&
             "You selected a solver for the eigenvalue problem that is not available",&
@@ -129,5 +135,39 @@ CONTAINS
     END IF
 
   END FUNCTION select_solver
+
+  subroutine print_solver(parallel)
+    LOGICAL,INTENT(IN):: parallel
+    select case(select_solver(0,parallel))
+    case(diag_chase)
+      write(*,*) "Selected Eigensolver :            chase"
+    case(diag_elemental)
+      write(*,*) "Selected Eigensolver :            elemental"
+    case(diag_scalapack)
+      write(*,*) "Selected Eigensolver :            scalapack"
+    case(diag_elpa)
+      write(*,*) "Selected Eigensolver :            elpa"
+    case(diag_elsielpa)
+      write(*,*) "Selected Eigensolver :            elsielpa"
+    case(diag_elsichase)
+      write(*,*) "Selected Eigensolver :            elsichase"
+    case(diag_magma)
+      write(*,*) "Selected Eigensolver :            magma"
+    case(diag_stop)
+      write(*,*) "Selected Eigensolver :            stop"
+    case(diag_cusolver)
+      write(*,*) "Selected Eigensolver :            cusolver"
+    case(diag_lapack)
+      write(*,*) "Selected Eigensolver :            lapack"
+    case(diag_lapack_singleprec)
+      write(*,*) "Selected Eigensolver :            lapack_singlePrec"
+    case(diag_elpa_1node)
+      write(*,*) "Selected Eigensolver :            elpa_1node"
+    case(diag_debugout)
+      write(*,*) "Selected Eigensolver :            debugout"
+    case(diag_dummy)
+      write(*,*) "Selected Eigensolver :            dummy"
+    end select
+  end subroutine      
 
 END MODULE m_available_solvers

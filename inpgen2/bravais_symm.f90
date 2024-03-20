@@ -23,7 +23,9 @@ CONTAINS
     !==> Locals
     REAL    amet(3,3),b1,b2,b3,d1,d2,d3,dmax,dt
     INTEGER i,k,k1,k2,k3,m1,m2,m3,n1,n2,n3
-    INTEGER irot(3,3)
+    INTEGER irot(3,3), tempRot(3,3)
+    INTEGER,PARAMETER :: invs_matrix(3,3)=RESHAPE([-1,0,0,0,-1,0,0,0,-1],[3,3])
+    INTEGER,PARAMETER :: zrfs_matrix(3,3)=RESHAPE([1,0,0,0,1,0,0,0,-1],[3,3])
 
     INTEGER,PARAMETER::neig12=12! max. number of lattice vectors with same length
     ! (max occurs for close-packed fcc: 12)
@@ -123,6 +125,17 @@ CONTAINS
           ENDDO
        ENDDO
     ENDDO
+
+    DO i = 2, nops
+       IF (ALL(mrot(:,:,i)==invs_matrix)) THEN
+          mrot(:,:,i) = mrot(:,:,2)
+          mrot(:,:,2) = invs_matrix(:,:)
+       END IF
+       IF (ALL(mrot(:,:,i)==zrfs_matrix)) THEN
+          mrot(:,:,i) = mrot(:,:,3)
+          mrot(:,:,3) = zrfs_matrix(:,:)
+       END IF
+    END DO
 
     WRITE (oUnit,'(//," Point group of the Bravais lattice has ",i2," operations")') nops
 

@@ -7,12 +7,13 @@ build-intel:
      expire_in: 12h
   script:
     - cd $CI_PROJECT_DIR
-    - ./configure.sh -l intel
+    - ./configure.sh -l intel -c auto
     - cd build.intel
     - make -j 2
   allow_failure: false
   rules:
       - if: $CI_TASKS =~ /intel/
+      - if: $CI_TASKS =~ /all/    
 
 test-intel:
   image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
@@ -24,6 +25,7 @@ test-intel:
   allow_failure: true
   rules:
       - if: $CI_TASKS =~ /intel/    
+      - if: $CI_TASKS =~ /all/    
 
 build-intel-ifx:
   image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
@@ -34,12 +36,13 @@ build-intel-ifx:
      expire_in: 12h
   script:
     - cd $CI_PROJECT_DIR
-    - FC=ifx ./configure.sh -l intel.ifx
+    - FC=ifx ./configure.sh -l intel.ifx -c auto
     - cd build.intel.ifx
     - make -j 2
   allow_failure: true
   rules:
       - if: $CI_TASKS =~ /intel/
+      - if: $CI_TASKS =~ /all/    
 
 test-intel-ifx:
   image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
@@ -51,6 +54,7 @@ test-intel-ifx:
   allow_failure: true
   rules:
       - if: $CI_TASKS =~ /intel/    
+      - if: $CI_TASKS =~ /all/    
   
 build-intel-debug:
   image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
@@ -61,12 +65,13 @@ build-intel-debug:
      expire_in: 12h
   script:
     - cd $CI_PROJECT_DIR
-    - ./configure.sh -l intel -d -flags "-init=array,snan,huge -ftrapuv "
+    - ./configure.sh -l intel -d -c auto
     - cd build.intel.debug
     - make -j 2
   allow_failure: false
   rules:
       - if: $CI_TASKS =~ /debug/
+      - if: $CI_TASKS =~ /all/    
 
 test-intel-debug:
   image: iffregistry.fz-juelich.de/fleur/fleur:oneAPI
@@ -78,4 +83,5 @@ test-intel-debug:
   allow_failure: true
   rules:
       - if: $CI_TASKS =~ /debug/    
+      - if: $CI_TASKS =~ /all/    
   

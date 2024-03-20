@@ -662,6 +662,7 @@
       <xsd:attribute name="Kmax" type="FleurDouble" use="required"/>
       <xsd:attribute name="Gmax" type="FleurDouble" use="required"/>
       <xsd:attribute default="0.0" name="GmaxXC" type="FleurDouble" use="optional"/>
+      <xsd:attribute default="0.0" name="Gmaxz" type="FleurDouble" use="optional"/>
       <xsd:attribute default="0" name="numbands" type="NumBandsType" use="optional"/>
    </xsd:complexType>
 
@@ -1119,6 +1120,7 @@
       <xsd:attribute name="l_dos" type="FleurBool" use="optional"/>
       <xsd:attribute name="l_scf" type="FleurBool" use="optional"/>
       <xsd:attribute name="startq" type="xsd:positiveInteger" use="optional"/>
+      <xsd:attribute name="stopq" type="xsd:nonNegativeInteger" use="optional"/>
       <xsd:attribute name="qmode" type="xsd:nonNegativeInteger" use="optional"/>
    </xsd:complexType>
 

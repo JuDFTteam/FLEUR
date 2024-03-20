@@ -64,6 +64,7 @@ CONTAINS
 
       INTEGER :: i, js
       REAL    :: b(3,atoms%ntype), dummy1(atoms%ntype), dummy2(atoms%ntype)
+      complex                           :: sigma_loc(2)
 
       IF (fmpi%irank == 0) THEN
          IF (noco%l_sourceFree) THEN
@@ -107,8 +108,8 @@ CONTAINS
       ! a)
       ! Sum up both spins in den into workden:
       CALL den%sum_both_spin(workden)
-
-      CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,stars,cell,sphhar,atoms,.FALSE.,workden,vCoul,results)
+      sigma_loc = cmplx(0.0,0.0)
+      CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,stars,cell,sphhar,atoms,.FALSE.,workden,vCoul,sigma_loc,results)
 
       !vdW Potential
       workden%vac = CMPLX(0.0,0.0)

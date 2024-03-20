@@ -137,6 +137,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
    type(t_hybmpi)    :: glob_mpi
 
    complex :: c_phase(fi%input%neig)
+   complex                           :: sigma_loc(2)
 
 #endif
 
@@ -462,7 +463,8 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
       CALL overallVCoul%resetPotDen()
       ALLOCATE(overallVCoul%pw_w(size(overallVCoul%pw,1),size(overallVCoul%pw,2)))
       overallVCoul%pw_w(:,:) = 0.0
-      CALL vgen_coulomb(1,fmpi, fi%input,fi%field,fi%vacuum,fi%sym,stars,fi%cell,sphhar,fi%atoms,.FALSE.,overallDen,overallVCoul)
+      sigma_loc = cmplx(0.0,0.0)
+      CALL vgen_coulomb(1,fmpi, fi%input,fi%field,fi%vacuum,fi%sym,stars,fi%cell,sphhar,fi%atoms,.FALSE.,overallDen,overallVCoul,sigma_loc)
       CALL convol(stars,overallVCoul%pw_w(:,1),overallVCoul%pw(:,1))   ! Is there a problem with a second spin?!
       CALL overallVCoul%distribute(fmpi%mpi_comm)
 

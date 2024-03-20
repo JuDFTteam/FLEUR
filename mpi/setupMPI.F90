@@ -17,12 +17,15 @@ CONTAINS
 
     use m_omp_checker
     USE m_types
-    USE m_available_solvers,ONLY:parallel_solver_available
+    USE m_available_solvers,ONLY:parallel_solver_available,print_solver
     INTEGER,INTENT(in)           :: nkpt,neigd,nbasfcn
     TYPE(t_mpi),INTENT(inout)    :: fmpi
 
     INTEGER :: omp=-1,i,isize,localrank,gpus,ii, me, nk,ierr
     logical :: finished
+
+    TYPE(t_log_message) :: log
+    
 #ifdef CPP_MPI
     CALL juDFT_COMM_SPLIT_TYPE(fmpi%mpi_comm,MPI_COMM_TYPE_SHARED,0,MPI_INFO_NULL,fmpi%mpi_comm_same_node)
 #endif
@@ -30,20 +33,24 @@ CONTAINS
     !$ omp=omp_get_max_threads()
     if (fmpi%irank==0) THEN
        !print INFO on parallelization
-       WRITE(*,*) "--------------------------------------------------------"
+       WRITE(*,*) "------------Calculation Setup---------------------------"
 #ifdef CPP_MPI
-       write(*,*) "Number of MPI-tasks:  ",fmpi%isize
+       write(*,*) "Number of MPI-tasks  : ",fmpi%isize
        CALL MPI_COMM_SIZE(fmpi%mpi_comm_same_node,isize,i)
-       write(*,*) "Number of PE/node  :  ",isize
+       write(*,*) "Number of PE/node    : ",isize
        CALL add_usage_data("MPI-PE",fmpi%isize)
+       call log%add("MPI-Ranks",int2str(fmpi%isize))
 #else
        CALL add_usage_data("MPI-PE",1)
+       call log%add("MPI-Ranks","noMPI")
 #endif
        IF (omp==-1) THEN
-          write(*,*) "No OpenMP version of FLEUR."
+         WRITE(*,*) "Number of OMP-threads:            No OpenMP"
           CALL add_usage_data("OMP",0)
+          call log%add("OMP","NoOpenMP")
        ELSE
-          WRITE(*,*) "Number of OMP-threads:",omp
+         WRITE(*,*) "Number of OMP-threads: ",omp
+          call log%add("OMP-Tasks",int2str(omp))
           IF(omp.EQ.1.AND.fmpi%isize.GE.6.AND.&
              ABS(NINT(REAL(nkpt)/REAL(fmpi%isize))*fmpi%isize-nkpt).GT.1.0e-7) THEN
              WRITE(*,*) ''
@@ -62,7 +69,8 @@ CONTAINS
           CALL add_usage_data("OMP",omp)
        ENDIF
     endif
-    call priv_distribute_gpu(fmpi)
+    call priv_distribute_gpu(fmpi,log)
+    call log%report(logmode_info)
     IF (fmpi%isize==1) THEN
        !give some info on available parallelisation
        CALL priv_dist_info(nkpt)
@@ -94,7 +102,7 @@ CONTAINS
       endif
     endif
 #endif
-
+    if (fmpi%irank==0) call print_solver(fmpi%n_size>0)
 
     ALLOCATE(fmpi%k_list(SIZE([(i, i=INT(fmpi%irank/fmpi%n_size)+1,nkpt,fmpi%isize/fmpi%n_size )])))
     ! this corresponds to the compact = .true. switch in priv_create_comm
@@ -187,11 +195,11 @@ CONTAINS
     fmpi%n_size   = fmpi%isize/n_members
     !fmpi%n_stride = n_members
     IF (fmpi%irank == 0) THEN
-       WRITE(*,*) 'k-points in parallel: ',n_members
-       WRITE(*,*) "pe's per k-point:     ",fmpi%n_size
-       WRITE(*,*) '# of k-point loops:   ',nkpt/n_members
+       WRITE(*,*) 'k-points in parallel : ',n_members
+       WRITE(*,*) "pe's per k-point     : ",fmpi%n_size
+       WRITE(*,*) 'No of k-point loops  : ',nkpt/n_members
        if (mod(nkpt,n_members).ne.0) then
-         Write(*,*) 'your k-point parallelism is not fully load-balanced'
+         Write(*,*) 'Info/Warning         : your k-point parallelism is not fully load-balanced'
        endif
 
        IF((REAL(nbasfcn) / REAL(fmpi%n_size)).LE.20) THEN
@@ -328,17 +336,19 @@ CONTAINS
 #endif
     end
 
-   subroutine priv_distribute_gpu(fmpi)
+   subroutine priv_distribute_gpu(fmpi,log)
 #ifdef _OPENACC
    use openacc
 #endif    
     use m_types_mpi
     type(t_mpi),intent(in):: fmpi
+    type(t_log_message),INTENT(INOUT):: log
     INTEGER :: i, isize, gpus,localrank
-
 #ifdef _OPENACC
 call timestart("Distribute GPUs")
     gpus=acc_get_num_devices(acc_device_nvidia)
+    
+    call log%add("No GPUs",int2str(gpus))
 #ifdef CPP_MPI
     if (fmpi%irank==0) write(*,*) "Number of GPU per node/MPI:",gpus
     CALL MPI_COMM_SIZE(fmpi%mpi_comm_same_node,isize,i)

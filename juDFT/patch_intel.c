@@ -40,7 +40,7 @@ void __intel_cpu_features_init_x();              // fair dispatcher: checks CPU 
 }  // end of extern "C"
 #endif
 
-#ifdef __INTEL_COMPILER
+//#ifdef __INTEL_COMPILER
 void intel_cpu_patch() {
     // force a re-evaluation of the CPU features without discriminating by CPU brand
     __intel_cpu_feature_indicator = 0;
@@ -48,7 +48,7 @@ void intel_cpu_patch() {
     __intel_cpu_features_init_x();
     __intel_cpu_feature_indicator = __intel_cpu_feature_indicator_x;
 }
-#endif
+//#endif
 /***********************  intel_mkl_cpuid_patch.c  **************************
 * Author:           Agner Fog
 * Date created:     2019-12-29
@@ -187,7 +187,7 @@ void __intel_mkl_features_init_x();                 // fair dispatcher: checks C
 #ifdef __cplusplus
 }  // end of extern "C"
 #endif
-#ifdef __INTEL_COMPILER
+//#ifdef __INTEL_COMPILER
 void intel_mkl_patch() {
     // force a re-evaluation of the CPU features without discriminating by CPU brand
     __intel_mkl_feature_indicator = 0;
@@ -195,4 +195,4 @@ void intel_mkl_patch() {
     __intel_mkl_features_init_x();
     __intel_mkl_feature_indicator = __intel_mkl_feature_indicator_x;
 }
-#endif
+//#endif

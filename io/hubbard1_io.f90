@@ -21,6 +21,7 @@ MODULE m_hubbard1_io
    USE m_generic_txtio
 
    IMPLICIT NONE
+   PRIVATE
    !------------------------------------------------------------------
    !Here the keywords for the hubbard 1 solver input file are defined
    !------------------------------------------------------------------
@@ -41,7 +42,7 @@ MODULE m_hubbard1_io
    REAL, PARAMETER    :: sigma = 0.0314
    INTEGER, PARAMETER :: nmats = 0
 
-
+   public:: write_hubbard1_input,read_ccfmat
    CONTAINS
 
    SUBROUTINE write_hubbard1_input(path,i_hia,l,f0,f2,f4,f6,hub1inp,hub1data,mu,n,l_bath)
@@ -184,10 +185,9 @@ MODULE m_hubbard1_io
    END SUBROUTINE write_hubbard1_input
 
    SUBROUTINE read_ccfmat(ccfmat,l)
-
-      REAL,             INTENT(INOUT) :: ccfmat(-l:,-l:)
       INTEGER,          INTENT(IN)  :: l
-
+      REAL,             INTENT(INOUT) :: ccfmat(-l:,-l:)
+   
       INTEGER :: info, io_error,io_unit
 
       ccfmat = 0.0

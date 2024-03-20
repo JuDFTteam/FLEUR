@@ -25,7 +25,8 @@ MODULE m_types_juPhon
       REAL    :: eps_pert  = 0.00001 ! Convergence criterion
       !REAL    :: eDiffcut  = 1e-12   ! Cutoff for energy differences
       !REAL    :: eDiffcut  = 1e-3   ! Cutoff for energy differences
-      REAL    :: eDiffcut  = 1e-7   ! Cutoff for energy differences
+      !REAL    :: eDiffcut  = 1e-7   ! Cutoff for energy differences
+      REAL    :: eDiffcut  = 1e-5   ! Cutoff for energy differences
       REAL    :: fDiffcut  = 1e-7    ! Cutoff for occupation differences
       REAL    :: qpt_ph(3)           ! Debug q
 
@@ -36,6 +37,7 @@ MODULE m_types_juPhon
       LOGICAL :: l_dos  = .FALSE.     ! Calculate the phonon density of states
       LOGICAL :: l_scf  = .TRUE.     ! Do a self-consistency run for dynmats
       INTEGER :: startq = 1          ! Start the q-loop at a specific point
+      INTEGER :: stopq  = 0          ! Stop  the q-loop at a specific point
       INTEGER :: qmode  = 0          ! 0: Single-shot calculation for qlist
                                      ! 1: Reads q from fullsym_* input files
 
@@ -142,6 +144,7 @@ CONTAINS
       CALL mpi_bc(this%l_dos, rank, mpi_comm)
       CALL mpi_bc(this%l_scf, rank, mpi_comm)
       CALL mpi_bc(this%startq, rank, mpi_comm)
+      CALL mpi_bc(this%stopq, rank, mpi_comm)
       CALL mpi_bc(this%qmode, rank, mpi_comm)
       CALL mpi_bc(this%singleQpt, rank, mpi_comm)
       CALL mpi_bc(this%qvec, rank, mpi_comm)
@@ -297,6 +300,12 @@ CONTAINS
 
          IF (numberNodes == 1) THEN
            this%startq  = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@startq'))
+         END IF
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@stopq')
+
+         IF (numberNodes == 1) THEN
+           this%stopq  = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@stopq'))
          END IF
 
          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@qmode')

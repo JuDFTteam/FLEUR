@@ -5,6 +5,7 @@ stages:
    - build
    - fast-test
    - test
+   - perf
    - html
    - deploy
 
@@ -17,3 +18,4 @@ include:
    - "docker/CI/NVHPC.yml"
    - "docker/CI/html.yml"
    - "docker/CI/AiiDA.yml"
+   - "docker/CI/CB.yml"

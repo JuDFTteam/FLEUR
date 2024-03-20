@@ -7,7 +7,7 @@ build-gfortran12-hdf5:
      expire_in: 12h
   script:
     - cd $CI_PROJECT_DIR
-    - ./configure.sh -l gfortran12 GITLAB
+    - FLEUR_INCLUDEDIR="/opt/include /usr/include" FLEUR_LIBRARIES="-L/opt/lib;-ldl;-L/usr/lib;-L/usr/lib/x86_64-linux-gnu;-lscalapack-openmpi;-lfftw3" ./configure.sh -l gfortran12 -c mpi
     - cd build.gfortran12
     - make -j 2
   rules:

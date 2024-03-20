@@ -472,6 +472,7 @@ CONTAINS
             ALLOCATE (t_mpimat::ev)
             CALL ev%init(hmat%l_real, hmat%global_size1, hmat%global_size1, hmat%blacsdata%mpi_com, .FALSE.)
             CALL ev%copy(hmat, 1, 1)
+            call ev_dist%free()
          CLASS DEFAULT
             call judft_error("Wrong type (1) in scalapack")
          END SELECT

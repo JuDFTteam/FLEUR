@@ -22,9 +22,9 @@ CONTAINS
 
       TYPE(t_stars), INTENT(IN) :: stars
       
-      INTEGER, INTENT (IN) :: isn
-      REAL                 :: afft2(0:9*stars%mx1*stars%mx2-1),bfft2(0:9*stars%mx1*stars%mx2-1)
-      COMPLEX              :: fg(:)
+      INTEGER, INTENT (IN)   :: isn
+      REAL                   :: afft2(0:9*stars%mx1*stars%mx2-1),bfft2(0:9*stars%mx1*stars%mx2-1)
+      COMPLEX                :: fg(:)
     
       REAL,         OPTIONAL, INTENT(IN) :: firstderiv(3),secondderiv(3)
       TYPE(t_cell), OPTIONAL, INTENT(IN) :: cell

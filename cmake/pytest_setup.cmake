@@ -94,6 +94,7 @@ if [ \"$1\" = \"-perf\" ]
 then
 shift
 $PYTHON_EXECUTABLE ${CMAKE_SOURCE_DIR}/tests/performance/scripts/perf.py \"$@\"
+exit 0
 else
 PYTHONDONTWRITEBYTECODE=1 PYTEST_ADDOPTS=$PYTEST_ADDOPTS $PYTHON_EXECUTABLE -m pytest \"$@\" | tee -i Testing/pytest_session.stdout
 fi

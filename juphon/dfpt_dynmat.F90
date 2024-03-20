@@ -13,7 +13,7 @@ CONTAINS
    SUBROUTINE dfpt_dynmat_row(fi, stars, starsq, sphhar, xcpot, nococonv, hybdat, fmpi, qpts, iQ, iDtype_row, iDir_row, &
                               eig_id, dfpt_eig_id, dfpt_eig_id2, enpara, results, results1, l_real, &
                               rho, vTot, grRho3, grVext3, grVC3, denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_row, &
-                              E2ndOrdII, q_eig_id)
+                              E2ndOrdII, sigma_ext, sigma_gext, q_eig_id)
       USE m_step_function
       USE m_convol
       USE m_dfpt_vgen
@@ -43,6 +43,8 @@ CONTAINS
       COMPLEX, INTENT(INOUT) :: dyn_row(:)
 
       COMPLEX, INTENT(INOUT) :: E2ndOrdII(:,:)
+      
+      COMPLEX, OPTIONAL, INTENT(IN) :: sigma_ext(2), sigma_gext(3,2)
      
       INTEGER, OPTIONAL, INTENT(IN) :: q_eig_id
 
@@ -56,6 +58,8 @@ CONTAINS
 
       REAL :: qvec(3)
       REAL :: e2_vm(fi%atoms%nat)
+
+      complex                           :: sigma_loc(2)
 
       COMPLEX, ALLOCATABLE :: dyn_row_HF(:), dyn_row_eigen(:), dyn_row_int(:)
       COMPLEX, ALLOCATABLE :: theta1full(:, :, :), theta1full0(:, :, :)!, theta2(:, :, :)
@@ -144,9 +148,11 @@ CONTAINS
             ! Get V_{ext}(1) for \alpha, i with gradient cancellation
             CALL vExt1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
             CALL vExt1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
+            sigma_loc = cmplx(0.0,0.0)
+            !IF (iDir_col==3) sigma_loc = -sigma_ext
             CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                            fi%cell,fmpi,fi%noco,nococonv,rho_dummy,vTot,&
-                           starsq,rho1_dummy,vExt1,.FALSE.,vExt1Im,rho1_dummy,iDtype_col,iDir_col,[0,0])
+                           starsq,rho1_dummy,vExt1,.FALSE.,vExt1Im,rho1_dummy,iDtype_col,iDir_col,[0,0],sigma_loc)
 
             ! IR integral:
             pwwq2 = CMPLX(0.0,0.0)
@@ -180,9 +186,13 @@ CONTAINS
                                 denIn1_mt(:,0:,iDtype_row) - &
                                 (grRho3(iDir_row)%mt(:,0:,iDtype_row,1)+grRho3(iDir_row)%mt(:,0:,iDtype_row,fi%input%jspins))/(3.0-fi%input%jspins)
 
+               sigma_loc = cmplx(0.0,0.0)
+               !IF (iDir_col==3) sigma_loc = sigma_gext(iDir_row,:)
+               !IF (iDir_row==3) sigma_loc = sigma_gext(iDir_col,:)
                CALL vgen_coulomb(1, fmpi, fi%input, fi%field, fi%vacuum, fi%sym, starsq, fi%cell, &
-                         & sphhar, fi%atoms, .TRUE., rho1_dummy, grgrVCq, &
-                         & dfptdenimag=rho1_dummy, dfptvCoulimag=grgrVCqIm,dfptden0=rho1_dummy,stars2=stars,iDtype=iDtype_col,iDir=iDir_col,iDir2=iDir_row)
+                         & sphhar, fi%atoms, .TRUE., rho1_dummy, grgrVCq, sigma_loc, &
+                         & dfptdenimag=rho1_dummy, dfptvCoulimag=grgrVCqIm,dfptden0=rho1_dummy,stars2=stars,iDtype=iDtype_col,iDir=iDir_col,iDir2=iDir_row, &
+                         & sigma_disc2=MERGE(sigma_ext,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir_col==3.AND.iDir_row==3.AND..FALSE.))
                IF (iDtype_col==iDtype_row) THEN
                   e2_vm = 0.0
                   CALL dfpt_e2_madelung(fi%atoms,fi%input%jspins,rho1_dummy%mt(:,0,:,:),grgrVCq%mt(:,0,:,1),e2_vm(:))
@@ -285,9 +295,11 @@ CONTAINS
                CALL vExt1%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
                CALL vExt1Im%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
                ! Get V_{ext}(1) for \alpha, i, q=0 with gradient cancellation
+               sigma_loc = cmplx(0.0,0.0)
+               !IF (iDir_col==3) sigma_loc = -sigma_ext
                CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                               fi%cell,fmpi,fi%noco,nococonv,rho_dummy,vTot,&
-                              stars,rho_dummy,vExt1,.FALSE.,vExt1Im,rho_dummy,iDtype_col,iDir_col,[0,0])
+                              stars,rho_dummy,vExt1,.FALSE.,vExt1Im,rho_dummy,iDtype_col,iDir_col,[0,0],sigma_loc)
 
                ! Integrals:
                rho_pw = (grRho3(iDir_row)%pw(:,1)+grRho3(iDir_row)%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)

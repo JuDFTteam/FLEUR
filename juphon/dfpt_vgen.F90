@@ -10,7 +10,7 @@ CONTAINS
 
    SUBROUTINE dfpt_vgen(hybdat,field,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
                    cell,fmpi,noco,nococonv,den,vTot,&
-                   &starsq,dfptdenimag,dfptvTot,l_xc,dfptvTotimag,dfptdenreal,iDtype,iDir,killcont)
+                   &starsq,dfptdenimag,dfptvTot,l_xc,dfptvTotimag,dfptdenreal,iDtype,iDir,killcont,sigma_disc)
       !--------------------------------------------------------------------------
       ! FLAPW potential perturbation generator (main routine)
       !
@@ -66,9 +66,12 @@ CONTAINS
       INTEGER, OPTIONAL, INTENT(IN)           :: iDtype, iDir ! DFPT: Type and direction of displaced atom
 
       INTEGER, OPTIONAL, INTENT(IN)           :: killcont(2)
+      complex, OPTIONAL, INTENT(IN)           :: sigma_disc(2)
 
       TYPE(t_potden)                   :: workden, denRot, workdenImag, workdenReal, den1Rot, den1imRot
       TYPE(t_potden)                   :: vCoul, dfptvCoulimag, vxc, exc, vx, EnergyDen
+
+      complex                           :: sigma_loc(2)
 
       vCoul = dfptvTot
       vx = vTot
@@ -117,7 +120,8 @@ CONTAINS
         CALL dfptdenimag%sum_both_spin(workdenImag)
         ! NOTE: The normal stars are also passed as an optional argument, because
         !       they are needed for surface-qlm.
-        CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,starsq,cell,sphhar,atoms,.TRUE.,workdenReal,vCoul,&
+        sigma_loc = sigma_disc
+        CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,starsq,cell,sphhar,atoms,.TRUE.,workdenReal,vCoul,sigma_loc,&
                         & dfptdenimag=workdenImag,dfptvCoulimag=dfptvCoulimag,dfptden0=workden,stars2=stars,iDtype=iDtype,iDir=iDir)
 
       ! b)

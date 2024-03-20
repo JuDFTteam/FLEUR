@@ -20,7 +20,7 @@ MODULE m_abclocdn
   !           of atom 'na' to it.
   !*********************************************************************
 CONTAINS
-  SUBROUTINE abclocdn(atoms,sym,noco,lapw,cell,ccchi,iintsp,phase,ylm,&
+  SUBROUTINE abclocdn(atoms,noco,lapw,cell,ccchi,iintsp,phase,ylm,&
        ntyp,na,k,nkvec,lo,ne,alo1,blo1,clo1,acof,bcof,ccof,zMat,l_force,fgp,force,na_index)
 
     USE m_types
@@ -29,7 +29,6 @@ CONTAINS
     IMPLICIT NONE
 
     TYPE(t_noco),  INTENT(IN) :: noco
-    TYPE(t_sym),   INTENT(IN) :: sym
     TYPE(t_atoms), INTENT(IN) :: atoms
     TYPE(t_lapw),  INTENT(IN) :: lapw
     TYPE(t_cell),  INTENT(IN) :: cell
@@ -82,7 +81,7 @@ CONTAINS
     endif
 
     !!$acc kernels default(none) present(acof,bcof,ccof,alo1,blo1,clo1,ccchi,ylm)create(ctmp) &
-    !!$acc copyin(work,na,term1,l,ne,ll1,sym,sym%invsat,noco)
+    !!$acc copyin(work,na,term1,l,ne,ll1,noco)
     !!$acc loop seq private(i,m,lm,ctmp,na2,lmp)
     DO i = 1,ne
       !!$acc loop seq

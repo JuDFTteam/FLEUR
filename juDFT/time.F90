@@ -131,7 +131,7 @@ CONTAINS
       INTEGER, INTENT(IN), OPTIONAL           :: line
 
       INTEGER::n, thread_id
-      
+
       thread_id = 0
       !$ thread_id = omp_get_thread_num()
       if(thread_id == 0) then
@@ -166,7 +166,6 @@ CONTAINS
 
    SUBROUTINE timestop(ttimer)
      !$ use omp_lib
-    
       implicit none
       CHARACTER(LEN=*), INTENT(IN) :: ttimer
 
@@ -200,6 +199,7 @@ CONTAINS
 
    !>
    SUBROUTINE priv_debug_output(startstop, name)
+      USE iso_c_binding
       USE m_judft_sysinfo
 #ifdef CPP_MPI
       USE mpi
@@ -209,10 +209,28 @@ CONTAINS
 #endif      
       IMPLICIT NONE
       CHARACTER(LEN=*), INTENT(IN):: startstop, name
+      INTEGER :: fpErrorDetectionReturnCode
 #ifdef CPP_MPI
-      INTEGER::irank, ierr
-      LOGICAL:: l_mpi
+      INTEGER :: irank, ierr
+      LOGICAL :: l_mpi
 #endif
+
+#ifdef CPP_DEBUG
+      interface
+         function startFPErrorDetection() bind(C, name="startFPErrorDetection")
+            use iso_c_binding
+            INTEGER(c_int) startFPErrorDetection
+         end function startFPErrorDetection
+      end interface
+
+      interface
+         function stopFPErrorDetection() bind(C, name="stopFPErrorDetection")
+            use iso_c_binding
+            INTEGER(c_int) stopFPErrorDetection
+         end function stopFPErrorDetection
+      end interface
+#endif
+
       IF (.NOT. l_debug) RETURN
 #ifdef CPP_NVTX
       if (index(startstop,"started")>0) THEN
@@ -234,6 +252,17 @@ CONTAINS
 #else
       WRITE (*, "(3a,f20.2,5x,a)") startstop, name, " at:", cputime() - debugtimestart, memory_usage_string()
 #endif
+
+#ifdef CPP_DEBUG
+      IF(TRIM(ADJUSTL(name)).EQ."Iteration") THEN
+         IF(TRIM(ADJUSTL(startstop)).EQ."started") THEN
+            fpErrorDetectionReturnCode = startFPErrorDetection()
+         ELSE IF(TRIM(ADJUSTL(startstop)).EQ."stopped") THEN
+            fpErrorDetectionReturnCode = stopFPErrorDetection()
+         END IF
+      END IF
+#endif
+
    END SUBROUTINE priv_debug_output
 
    RECURSIVE SUBROUTINE priv_writetimes_longest(timer, fid, timernames, timertimes)
@@ -727,10 +756,13 @@ CONTAINS
 #endif
    END FUNCTION cputime
    !>
-   SUBROUTINE juDFT_time_lastlocation()
+   SUBROUTINE juDFT_time_lastlocation(log)
+      use m_juDFT_logging
+      type(t_log_message),intent(inout)::log
       IF (ASSOCIATED(current_timer)) THEN
          WRITE (*, *) "Last known location:"
          WRITE (*, *) "Last timer:", current_timer%name
+         call log%add("Last timer",trim(current_timer%name))
          IF (lastline > 0) THEN
             WRITE (*, *) "File:", TRIM(lastfile), ":", lastline
          ENDIF

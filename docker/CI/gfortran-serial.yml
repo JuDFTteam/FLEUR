@@ -12,6 +12,7 @@ build-gfortran-serial:
     expire_in: 12h
   rules:
     - if: $CI_TASKS =~ /serial/    
+    - if: $CI_TASKS =~ /all/    
   
 build-gfortran-hdf5-serial:
   image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
@@ -22,11 +23,12 @@ build-gfortran-hdf5-serial:
      expire_in: 12h
   script:
     - cd $CI_PROJECT_DIR
-    - ./configure.sh -m GITLAB -mpi FALSE
+    - FLEUR_INCLUDEDIR="/opt/include /usr/include" FLEUR_LIBRARIES="-L/opt/lib;-ldl;-L/usr/lib;-L/usr/lib/x86_64-linux-gnu;-lscalapack-openmpi;-lfftw3" ./configure.sh -c mpi -mpi FALSE
     - cd build
     - make -j 2
   rules:
       - if: $CI_TASKS =~ /serial/    
+      - if: $CI_TASKS =~ /all/    
 
 test-gfortran-serial:
   image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
@@ -37,6 +39,7 @@ test-gfortran-serial:
     BUILD_FOLDER: build.serial
   rules:
     - if: $CI_TASKS =~ /serial/    
+    - if: $CI_TASKS =~ /all/    
   
   
 build-gfortran-hdf5-debug:
@@ -48,11 +51,12 @@ build-gfortran-hdf5-debug:
      expire_in: 12h
   script:
     - cd $CI_PROJECT_DIR
-    - ./configure.sh -m GITLAB -mpi FALSE -d -flags "-fcheck=all -finit-real=snan -finit-derived"
+    - FLEUR_INCLUDEDIR="/opt/include /usr/include" FLEUR_LIBRARIES="-L/opt/lib;-ldl;-L/usr/lib;-L/usr/lib/x86_64-linux-gnu;-lscalapack-openmpi;-lfftw3" ./configure.sh -c mpi -mpi FALSE -d -flags "-fcheck=all -finit-real=snan -finit-derived"
     - cd build.debug
     - make -j 2
   rules:
       - if: $CI_TASKS =~ /debug/    
+      - if: $CI_TASKS =~ /all/    
 
 test-gfortran-serial-debug:
   image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
@@ -63,4 +67,5 @@ test-gfortran-serial-debug:
     BUILD_FOLDER: build.debug
   rules:
     - if: $CI_TASKS =~ /debug/    
+    - if: $CI_TASKS =~ /all/    
   

@@ -144,7 +144,7 @@ CONTAINS
       REAL                                         :: xp(3,(atoms%lmaxd+1+mod(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1))
       REAL, ALLOCATABLE                            :: intden(:,:)
       TYPE(t_gradients)               :: tmp_grad
-
+      complex                          :: sigma_loc(2)
 
       CALL div%init_potden_simple(stars%ng3,atoms%jmtd,atoms%msh,sphhar%nlhd,atoms%ntype, &
                                   atoms%n_u,atoms%n_vPairs,1,.FALSE.,.FALSE.,POTDEN_TYPE_DEN, &
@@ -165,7 +165,8 @@ CONTAINS
       phi%pw_w = CMPLX(0.0,0.0)
 
       CALL timestart("Building potential")
-      CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,stars,cell,sphhar,atloc,.TRUE.,div,phi)
+      sigma_loc = cmplx(0.0,0.0)
+      CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,stars,cell,sphhar,atloc,.TRUE.,div,phi,sigma_loc)
       CALL timestop("Building potential")
 
       DO i=1,3
