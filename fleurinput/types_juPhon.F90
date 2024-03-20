@@ -39,6 +39,11 @@ MODULE m_types_juPhon
       INTEGER :: startq = 1          ! Start the q-loop at a specific point
       INTEGER :: qmode  = 0          ! 0: Single-shot calculation for qlist
                                      ! 1: Reads q from fullsym_* input files
+      LOGICAL :: l_phonon = .TRUE.
+      LOGICAL :: l_efield = .FALSE.
+      LOGICAL :: l_cheatsym = .FALSE.
+      LOGICAL :: l_procc = .TRUE.
+      LOGICAL :: l_prodyn = .TRUE.
 
       REAL, ALLOCATABLE :: qvec(:,:)
 
@@ -146,6 +151,11 @@ CONTAINS
       CALL mpi_bc(this%qmode, rank, mpi_comm)
       CALL mpi_bc(this%singleQpt, rank, mpi_comm)
       CALL mpi_bc(this%qvec, rank, mpi_comm)
+      CALL mpi_bc(this%l_phonon, rank, mpi_comm)
+      CALL mpi_bc(this%l_efield, rank, mpi_comm)
+      CALL mpi_bc(this%l_cheatsym, rank, mpi_comm)
+      CALL mpi_bc(this%l_procc, rank, mpi_comm)
+      CALL mpi_bc(this%l_prodyn, rank, mpi_comm)
 
    END SUBROUTINE mpi_bc_juPhon
 
@@ -304,6 +314,35 @@ CONTAINS
 
          IF (numberNodes == 1) THEN
            this%qmode  = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@qmode'))
+         END IF
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_phonon')
+
+         IF (numberNodes == 1) THEN
+           this%l_phonon    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_phonon'))
+         END IF
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_efield')
+
+         IF (numberNodes == 1) THEN
+           this%l_field    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_field'))
+         END IF
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_cheatsym')
+
+         IF (numberNodes == 1) THEN
+           this%l_cheatsym    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_cheatsym'))
+         END IF
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_procc')
+
+         IF (numberNodes == 1) THEN
+           this%l_procc    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_procc'))
+         END IF
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_prodyn')
+
+         IF (numberNodes == 1) THEN
+           this%l_prodyn    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_prodyn'))
          END IF
 
          this%qpt_ph(1) = 0.0
