@@ -68,8 +68,8 @@ perf-gpu:
     - LDFLAGS="-Wl,--copy-dt-needed-entries -llapack" FC=/opt/nvidia_hpc_sdk/Linux_x86_64/2023/compilers/bin/nvfortran ./configure.sh  -c auto -gpu acc:cc60 
     - cd build
     - make -j 12
-    - wget https://github.com/bencherdev/bencher/releases/download/v0.4.4/bencher-v0.4.4-linux-x86-64
-    - mv bencher-v0.4.4-linux-x86-64 bencher; chmod +x bencher
+    - wget https://github.com/bencherdev/bencher/releases/download/v0.4.1/bencher-v0.4.1-linux-x86-64
+    - mv bencher-v0.4.1-linux-x86-64 bencher; chmod +x bencher
     - export PATH=${PATH}:${PWD}
   allow_failure: true
   rules:
