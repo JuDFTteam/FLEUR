@@ -16,7 +16,7 @@ module m_psqpw
 
 contains
 
-  subroutine psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym,   &
+  subroutine psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym, juphon,  &
        &     den, ispin, l_xyav, potdenType, psq, sigma_disc, rhoimag, stars2, iDtype, iDir, rho0, qpw0, iDir2, mat2ord )
 
 #ifdef CPP_MPI
@@ -43,6 +43,7 @@ contains
     type(t_cell),       intent(in)  :: cell
     type(t_input),      intent(in)  :: input
     type(t_sym),        intent(in)  :: sym
+    type(t_juphon),     intent(in)  :: juphon
     type(t_potden),     intent(in)  :: den
      
     logical,            intent(in)  :: l_xyav
@@ -92,16 +93,16 @@ contains
     ! Calculate multipole moments
     call timestart("mpmom")
     IF (.NOT.l_dfptvgen) THEN
-        call mpmom( input, fmpi, atoms, sphhar, stars, sym, cell,   qpw, rho, potdenType, qlm )
+        call mpmom( input, fmpi, atoms, sphhar, stars, sym, juphon, cell,   qpw, rho, potdenType, qlm )
     ELSE IF (PRESENT(iDir2)) THEN
         ! DFPT case:
         ! Additional contributions to qlm due to surface corrections.
-        call mpmom( input, fmpi, atoms, sphhar, stars, sym, cell,   qpw, rho, potdenType, qlm, &
+        call mpmom( input, fmpi, atoms, sphhar, stars, sym, juphon, cell,   qpw, rho, potdenType, qlm, &
                   & rhoimag=rhoimag, stars2=stars2, iDtype=iDtype, iDir=iDir, rho0=rho0, qpw0=qpw0, iDir2=iDir2, mat2ord=mat2ord )
     ELSE
         ! DFPT case:
         ! Additional contributions to qlm due to surface corrections.
-        call mpmom( input, fmpi, atoms, sphhar, stars, sym, cell,   qpw, rho, potdenType, qlm, &
+        call mpmom( input, fmpi, atoms, sphhar, stars, sym, juphon, cell,   qpw, rho, potdenType, qlm, &
                   & rhoimag=rhoimag, stars2=stars2, iDtype=iDtype, iDir=iDir, rho0=rho0, qpw0=qpw0 )
     END IF
     call timestop("mpmom")

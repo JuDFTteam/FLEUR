@@ -35,7 +35,7 @@ module m_VYukawaFilm
 
 
 
-  subroutine VYukawaFilm( stars, vacuum, cell, sym, input, fmpi, atoms, sphhar,   noco, nococonv,den, &
+  subroutine VYukawaFilm( stars, vacuum, cell, sym, juphon, input, fmpi, atoms, sphhar,   noco, nococonv,den, &
                           VYukawa )
 
     use m_constants
@@ -48,6 +48,7 @@ module m_VYukawaFilm
     type(t_vacuum),     intent(in)    :: vacuum
     type(t_cell),       intent(in)    :: cell
     type(t_sym),        intent(in)    :: sym
+    type(t_juphon),     intent(in)    :: juphon
     type(t_input),      intent(in)    :: input
     type(t_mpi),        intent(in)    :: fmpi
     type(t_atoms),      intent(in)    :: atoms 
@@ -68,7 +69,7 @@ module m_VYukawaFilm
     ! PSEUDO-CHARGE DENSITY
 
     call psqpw( fmpi, atoms, sphhar, stars, vacuum, cell, input, sym,   &
-                den, 1, .false., VYukawa%potdenType, &
+                juphon, den, 1, .false., VYukawa%potdenType, &
                 psq, sigma_loc )
 
     ChooseVariant: if ( .true. ) then

@@ -16,7 +16,7 @@ MODULE m_mix
 contains
 
   SUBROUTINE mix_charge( field,   fmpi, l_writehistory,&
-       stars, atoms, sphhar, vacuum, input, sym, cell, noco, nococonv,&
+       stars, atoms, sphhar, vacuum, input, sym, juphon, cell, noco, nococonv,&
          archiveType, xcpot, iteration, inDen, outDen, results, l_runhia, sliceplot,&
          inDenIm, outDenIm, dfpt_tag)
 
@@ -46,6 +46,7 @@ contains
     type(t_noco),      intent(in)    :: noco
     type(t_nococonv),  intent(in)    :: nococonv
     TYPE(t_sym),TARGET,INTENT(in)    :: sym
+    TYPE(t_juphon),    INTENT(in)    :: juphon
     TYPE(t_stars),TARGET,INTENT(in)  :: stars
     TYPE(t_cell),TARGET,INTENT(in)   :: cell
     TYPE(t_sphhar),TARGET,INTENT(in) :: sphhar
@@ -139,7 +140,7 @@ contains
     IF( input%preconditioning_param /= 0 .AND. .NOT.l_dfpt)  THEN
        CALL timestart("Preconditioner")
        CALL kerker( field,  fmpi, &
-                    stars, atoms, sphhar, vacuum, input, sym, cell, noco, nococonv,&
+                    stars, atoms, sphhar, vacuum, input, sym, juphon, cell, noco, nococonv,&
                       inDen, outDen, fsm(it) )
        !Store modified density in history
        CALL mixing_history_store(fsm(it))

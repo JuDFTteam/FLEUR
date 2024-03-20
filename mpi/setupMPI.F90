@@ -68,7 +68,6 @@ CONTAINS
 
           CALL add_usage_data("OMP",omp)
        ENDIF
-       call print_solver(fmpi%isize>0)
     endif
     call priv_distribute_gpu(fmpi,log)
     call log%report(logmode_info)
@@ -103,7 +102,7 @@ CONTAINS
       endif
     endif
 #endif
-
+    if (fmpi%irank==0) call print_solver(fmpi%n_size>0)
 
     ALLOCATE(fmpi%k_list(SIZE([(i, i=INT(fmpi%irank/fmpi%n_size)+1,nkpt,fmpi%isize/fmpi%n_size )])))
     ! this corresponds to the compact = .true. switch in priv_create_comm

@@ -102,13 +102,13 @@ CONTAINS
 
       COMPLEX, ALLOCATABLE :: grrhodummy(:, :, :, :, :)
 
-      COMPLEX, ALLOCATABLE :: dyn_mat(:,:,:), dyn_mat_r(:,:,:), dyn_mat_q_full(:,:,:), dyn_mat_pathq(:,:)
+      COMPLEX, ALLOCATABLE :: dyn_mat(:,:,:), dyn_mat_r(:,:,:), dyn_mat_q_full(:,:,:), dyn_mat_pathq(:,:), sym_dynvec(:,:,:), sym_dyn_mat(:,:,:)
       REAL,    ALLOCATABLE :: e2_vm(:,:,:)
 
-      INTEGER :: ngdp, iSpin, iQ, iDir, iDtype, nspins, zlim, iVac, lh, iDir2
+      INTEGER :: ngdp, iSpin, iQ, iDir, iDtype, nspins, zlim, iVac, lh, iDir2, sym_count
       INTEGER :: iStar, xInd, yInd, zInd, q_eig_id, ikpt, ierr, qm_eig_id, iArray
       INTEGER :: dfpt_eig_id, dfpt_eig_id2, dfpt_eigm_id, dfpt_eigm_id2
-      LOGICAL :: l_real, l_minusq, l_dfpt_scf
+      LOGICAL :: l_real, l_minusq, l_dfpt_scf, l_cheated
 
       LOGICAL :: l_dfpt_band, l_dfpt_dos, l_dfpt_full
 
@@ -117,6 +117,7 @@ CONTAINS
       CHARACTER(len=100) :: inp_pref, trash
 
       INTEGER, ALLOCATABLE :: q_list(:)
+      INTEGER, ALLOCATABLE :: sym_list(:) ! For each q: Collect, which symmetries leave q unchanged.
 
       ! Desym-tests:
       INTEGER :: grid(3), iread
@@ -130,6 +131,8 @@ CONTAINS
       l_dfpt_band  = fi%juPhon%l_band
       l_dfpt_full  = fi%juPhon%l_intp
       l_dfpt_dos   = fi%juPhon%l_dos
+
+      l_cheated = .FALSE.
 
       l_real = fi%sym%invs.AND.(.NOT.fi%noco%l_soc).AND.(.NOT.fi%noco%l_noco).AND.fi%atoms%n_hia==0
 
@@ -204,6 +207,9 @@ CONTAINS
 
          ALLOCATE(q_list(SIZE(qpts_loc%bk,2)))
          q_list = (/(iArray, iArray=1,SIZE(qpts_loc%bk,2), 1)/)
+
+         ALLOCATE(sym_list(fi_fullsym%sym%nop))
+         sym_list = 0
       ELSE
          ! Read qpoints from the juPhon qlist in inp.xml
          qpts_loc = qpts
@@ -232,9 +238,9 @@ CONTAINS
       sigma_ext  = cmplx(0.0,0.0)
       sigma_coul = cmplx(0.0,0.0)
       sigma_gext = cmplx(0.0,0.0)
-      CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, stars_nosym, fi_nosym%cell, &
+      CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, fi%juphon, stars_nosym, fi_nosym%cell, &
                          & sphhar_nosym, fi_nosym%atoms, .FALSE., imagrhodummy, vext_dummy, sigma_ext)
-      CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, stars_nosym, fi_nosym%cell, &
+      CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, fi%juphon, stars_nosym, fi_nosym%cell, &
                          & sphhar_nosym, fi_nosym%atoms, .FALSE., rho_nosym, vC_dummy, sigma_coul)
       DO iDir = 1, 3
          CALL grRho3(iDir)%copyPotDen(rho_nosym)
@@ -255,7 +261,7 @@ CONTAINS
          write(oUnit, *) "grVext", iDir
          sigma_loc  = cmplx(0.0,0.0)
          !IF (iDir==3) sigma_loc  = sigma_ext
-         CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, stars_nosym, fi_nosym%cell, &
+         CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, fi%juphon, stars_nosym, fi_nosym%cell, &
                          & sphhar_nosym, fi_nosym%atoms, .FALSE., imagrhodummy, grVext3(iDir), sigma_loc, &
                          & dfptdenimag=imagrhodummy, dfptvCoulimag=grvextdummy,dfptden0=imagrhodummy,stars2=stars_nosym,iDtype=0,iDir=iDir)
          IF (iDir==3) sigma_gext(iDir,:) = sigma_loc
@@ -324,13 +330,13 @@ CONTAINS
          sigma_loc  = cmplx(0.0,0.0)
          IF (iDir==3) sigma_loc  = sigma_coul
          CALL dfpt_vgen(hybdat_nosym, fi_nosym%field, fi_nosym%input, xcpot_nosym, fi_nosym%atoms, sphhar_nosym, stars_nosym, fi_nosym%vacuum, fi_nosym%sym, &
-                        fi_nosym%cell, fmpi_nosym, fi_nosym%noco, nococonv_nosym, rho_nosym, vTot_nosym, &
+                        fi%juphon, fi_nosym%cell, fmpi_nosym, fi_nosym%noco, nococonv_nosym, rho_nosym, vTot_nosym, &
                         stars_nosym, imagrhodummy, grVtot3(iDir), .TRUE., grvextdummy, grRho3(iDir), 0, iDir, [0,0], sigma_loc)
          write(oUnit, *) "grVC", iDir
          sigma_loc  = cmplx(0.0,0.0)
          IF (iDir==3) sigma_loc  = sigma_coul
          CALL dfpt_vgen(hybdat_nosym, fi_nosym%field, fi_nosym%input, xcpot_nosym, fi_nosym%atoms, sphhar_nosym, stars_nosym, fi_nosym%vacuum, fi_nosym%sym, &
-                        fi_nosym%cell, fmpi_nosym, fi_nosym%noco, nococonv_nosym, rho_nosym, vTot_nosym, &
+                        fi%juphon, fi_nosym%cell, fmpi_nosym, fi_nosym%noco, nococonv_nosym, rho_nosym, vTot_nosym, &
                         stars_nosym, imagrhodummy, grVC3(iDir), .FALSE., grvextdummy, grRho3(iDir), 0, iDir, [0,0], sigma_loc)
       END DO
 
@@ -341,7 +347,7 @@ CONTAINS
 
                !IF (iDir2==3) sigma_loc = sigma_gext(iDir,:)
                !IF (iDir==3) sigma_loc = sigma_gext(iDir2,:)
-               CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, stars_nosym, fi_nosym%cell, &
+               CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, fi%juphon, stars_nosym, fi_nosym%cell, &
                          & sphhar_nosym, fi_nosym%atoms, .TRUE., imagrhodummy, grgrVC3x3(iDir2,iDir), sigma_loc, &
                          & dfptdenimag=imagrhodummy, dfptvCoulimag=grvextdummy,dfptden0=imagrhodummy,stars2=stars_nosym,iDtype=0,iDir=iDir,iDir2=iDir2, &
                          & sigma_disc2=MERGE(sigma_ext,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir2==3.AND.iDir==3.AND..FALSE.))
@@ -388,12 +394,20 @@ CONTAINS
 
       ALLOCATE(dyn_mat(SIZE(q_list),3*fi_nosym%atoms%ntype,3*fi_nosym%atoms%ntype))
       dyn_mat = cmplx(0.0,0.0)
+      ALLOCATE(sym_dyn_mat(SIZE(q_list),3*fi_nosym%atoms%ntype,3*fi_nosym%atoms%ntype))
+      sym_dyn_mat = cmplx(0.0,0.0)
       IF (l_dfpt_scf) THEN
          ! Do the self-consistency calculations for each specified q, for all atoms and for
          ! all three cartesian directions.
-         ! TODO: The effort here should be greatly reducible by symmetry considerations. 
-         DO iQ = fi%juPhon%startq, SIZE(q_list)
+         ! TODO: The effort here should be greatly reducible by symmetry considerations.
+         write(*,*) fi%juPhon%startq/=0, fi%juPhon%stopq, size(q_list)
+          
+         DO iQ = fi%juPhon%startq, MERGE(fi%juPhon%stopq,SIZE(q_list),fi%juPhon%stopq/=0)
             CALL timestart("q-point")
+            IF (.NOT.fi%juPhon%qmode==0) THEN
+               CALL make_sym_list(fi_fullsym%sym, qpts_loc%bk(:,q_list(iQ)),sym_count,sym_list)
+               ALLOCATE(sym_dynvec(3*fi_nosym%atoms%ntype,3*fi_nosym%atoms%ntype-1,sym_count))
+            END IF
             kqpts = fi%kpts
             ! Modify this from kpts only in DFPT case.
             DO ikpt = 1, fi%kpts%nkpt
@@ -475,6 +489,14 @@ CONTAINS
                CALL timestart("Typeloop")
                DO iDir = 1, 3
                   CALL timestart("Dirloop")
+                  IF (.NOT.fi%juPhon%qmode==0.AND.fmpi%irank==0) THEN
+                     IF (iDtype==1.AND.iDir==2) sym_dyn_mat(iQ, 1, :) = dyn_mat(iQ, 1, :)
+                     IF (3 *(iDtype-1)+iDir>1) THEN
+                        CALL cheat_dynmat(fi_fullsym%atoms, fi_fullsym%sym, fi_fullsym%cell%amat, qpts_loc%bk(:,q_list(iQ)), iDtype, iDir, sym_count, sym_list(:sym_count), sym_dynvec, dyn_mat(iQ,:,:), sym_dyn_mat(iQ,:,:), l_cheated)
+                     END IF
+                     IF (l_cheated) WRITE(*,*) "Following row was cheated!"
+                     IF (l_cheated) write(*,*) sym_dyn_mat(iQ,3 *(iDtype-1)+iDir,:)
+                  END IF
                   dfpt_tag = ''
                   WRITE(dfpt_tag,'(a1,i0,a2,i0,a2,i0)') 'q', q_list(iQ), '_b', iDtype, '_j', iDir
 
@@ -538,8 +560,15 @@ CONTAINS
                   END IF
                   CALL timestop("Dynmat")
                   dyn_mat(iQ,3 *(iDtype-1)+iDir,:) = dyn_mat(iQ,3 *(iDtype-1)+iDir,:) + conjg(E2ndOrdII(3 *(iDtype-1)+iDir,:))
+                  IF (.NOT.fi%juPhon%qmode==0) THEN
+                     CALL make_sym_dynvec(fi_fullsym%atoms, fi_fullsym%sym, fi_fullsym%cell%amat, qpts_loc%bk(:,q_list(iQ)), iDtype, iDir, sym_count, sym_list(:sym_count), dyn_mat(iQ,3 *(iDtype-1)+iDir,:), sym_dynvec)
+                  END IF
+
                   IF (fmpi%irank==0) write(*,*) "dynmat row for ", dfpt_tag
                   IF (fmpi%irank==0) write(*,*) dyn_mat(iQ,3 *(iDtype-1)+iDir,:)
+                  IF (fmpi%irank==0.AND.l_cheated) write(*,*) "The cheat:"
+                  IF (fmpi%irank==0.AND.l_cheated) write(*,*) sym_dyn_mat(iQ,3 *(iDtype-1)+iDir,:)
+                  l_cheated = .FALSE.
                   IF (fmpi%irank==0) WRITE(9339,*) dyn_mat(iQ,3 *(iDtype-1)+iDir,:)
                   CALL timestop("Dirloop")
                END DO
@@ -564,6 +593,9 @@ CONTAINS
             END IF
             !CALL close_eig(q_eig_id)
             !IF (l_minusq) CALL close_eig(qm_eig_id)
+            IF (.NOT.fi%juPhon%qmode==0) THEN
+               DEALLOCATE(sym_dynvec)
+            END IF
             CALL timestop("q-point")
 
          END DO

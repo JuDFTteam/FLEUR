@@ -9,7 +9,7 @@ MODULE m_dfpt_vgen
 CONTAINS
 
    SUBROUTINE dfpt_vgen(hybdat,field,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
-                   cell,fmpi,noco,nococonv,den,vTot,&
+                   juphon, cell,fmpi,noco,nococonv,den,vTot,&
                    &starsq,dfptdenimag,dfptvTot,l_xc,dfptvTotimag,dfptdenreal,iDtype,iDir,killcont,sigma_disc)
       !--------------------------------------------------------------------------
       ! FLAPW potential perturbation generator (main routine)
@@ -51,6 +51,7 @@ CONTAINS
       TYPE(t_noco),      INTENT(IN)    :: noco
       TYPE(t_nococonv),  INTENT(IN)    :: nococonv
       TYPE(t_sym),       INTENT(IN)    :: sym
+      TYPE(t_juphon),    INTENT(IN)    :: juphon
       TYPE(t_stars),     INTENT(IN)    :: stars
       TYPE(t_cell),      INTENT(IN)    :: cell
       TYPE(t_sphhar),    INTENT(IN)    :: sphhar
@@ -121,7 +122,7 @@ CONTAINS
         ! NOTE: The normal stars are also passed as an optional argument, because
         !       they are needed for surface-qlm.
         sigma_loc = sigma_disc
-        CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,starsq,cell,sphhar,atoms,.TRUE.,workdenReal,vCoul,sigma_loc,&
+        CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,juphon,starsq,cell,sphhar,atoms,.TRUE.,workdenReal,vCoul,sigma_loc,&
                         & dfptdenimag=workdenImag,dfptvCoulimag=dfptvCoulimag,dfptden0=workden,stars2=stars,iDtype=iDtype,iDir=iDir)
 
       ! b)
@@ -154,7 +155,7 @@ CONTAINS
       IF (iDtype/=0.AND.ANY(killcont/=0)) THEN
          ! d)
          ! NOTE: This is so different from the base case, that we build a new subroutine.
-         CALL dfpt_vgen_finalize(fmpi,atoms,stars,sym,noco,nococonv,input,sphhar,vTot,dfptvTot,dfptvTotimag,denRot,den1Rot,den1imRot,starsq,killcont)
+         CALL dfpt_vgen_finalize(fmpi,atoms,stars,sym,juphon,noco,nococonv,input,sphhar,vTot,dfptvTot,dfptvTotimag,denRot,den1Rot,den1imRot,starsq,killcont)
          !DEALLOCATE(vcoul%pw_w)
       ELSE
          ! TODO: Write here something for the gradient. It does not need pw(_w)-stuff.

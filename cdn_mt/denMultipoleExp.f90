@@ -4,7 +4,7 @@ IMPLICIT NONE
 
 CONTAINS
 
-SUBROUTINE denMultipoleExp(input, fmpi, atoms, sphhar, stars, sym, cell,   den)
+SUBROUTINE denMultipoleExp(input, fmpi, atoms, sphhar, stars, sym, juphon, cell,   den)
 
    USE m_types
    USE m_constants
@@ -16,6 +16,7 @@ SUBROUTINE denMultipoleExp(input, fmpi, atoms, sphhar, stars, sym, cell,   den)
    TYPE(t_sphhar), INTENT(IN) :: sphhar
    TYPE(t_stars),  INTENT(IN) :: stars
    TYPE(t_sym),    INTENT(IN) :: sym
+   TYPE(t_juphon), INTENT(IN) :: juphon
    TYPE(t_cell),   INTENT(IN) :: cell
     
    TYPE(t_potden), INTENT(IN) :: den
@@ -30,7 +31,7 @@ SUBROUTINE denMultipoleExp(input, fmpi, atoms, sphhar, stars, sym, cell,   den)
       END IF
       qlm = CMPLX(0.0,0.0)
       workDen = den
-      CALL mpmom(input,fmpi,atoms,sphhar,stars,sym,cell ,workDen%pw(1:,1),workDen%mt(:,0:,1:,1),POTDEN_TYPE_DEN,qlm,l_coreCharge=.FALSE.)
+      CALL mpmom(input,fmpi,atoms,sphhar,stars,sym,juphon,cell ,workDen%pw(1:,1),workDen%mt(:,0:,1:,1),POTDEN_TYPE_DEN,qlm,l_coreCharge=.FALSE.)
       IF(fmpi%irank.EQ.0) THEN
          WRITE(oUnit,*) '======================================='
       END IF
@@ -40,7 +41,7 @@ SUBROUTINE denMultipoleExp(input, fmpi, atoms, sphhar, stars, sym, cell,   den)
          WRITE(oUnit,*) '======================================='
       END IF
       qlm = CMPLX(0.0,0.0)
-      CALL mpmom(input,fmpi,atoms,sphhar,stars,sym,cell ,workDen%pw(1:,2),workDen%mt(:,0:,1:,2),POTDEN_TYPE_DEN,qlm,l_coreCharge=.FALSE.)
+      CALL mpmom(input,fmpi,atoms,sphhar,stars,sym,juphon,cell ,workDen%pw(1:,2),workDen%mt(:,0:,1:,2),POTDEN_TYPE_DEN,qlm,l_coreCharge=.FALSE.)
       IF(fmpi%irank.EQ.0) THEN
          WRITE(oUnit,*) '======================================='
       END IF
@@ -53,7 +54,7 @@ SUBROUTINE denMultipoleExp(input, fmpi, atoms, sphhar, stars, sym, cell,   den)
    qlm = CMPLX(0.0,0.0)
    workDen = den
    IF(input%jspins == 2) CALL workDen%SpinsToChargeAndMagnetisation()
-   CALL mpmom(input,fmpi,atoms,sphhar,stars,sym,cell ,workDen%pw(1:,1),workDen%mt(:,0:,1:,1),POTDEN_TYPE_DEN,qlm,l_coreCharge=.FALSE.)
+   CALL mpmom(input,fmpi,atoms,sphhar,stars,sym,juphon,cell ,workDen%pw(1:,1),workDen%mt(:,0:,1:,1),POTDEN_TYPE_DEN,qlm,l_coreCharge=.FALSE.)
    IF(fmpi%irank.EQ.0) THEN
       WRITE(oUnit,*) '======================================='
    END IF
@@ -64,7 +65,7 @@ SUBROUTINE denMultipoleExp(input, fmpi, atoms, sphhar, stars, sym, cell,   den)
          WRITE(oUnit,*) '======================================='
       END IF
       qlm = CMPLX(0.0,0.0)
-      CALL mpmom(input,fmpi,atoms,sphhar,stars,sym,cell ,workDen%pw(1:,2),workDen%mt(:,0:,1:,2),POTDEN_TYPE_DEN,qlm,l_coreCharge=.FALSE.)
+      CALL mpmom(input,fmpi,atoms,sphhar,stars,sym,juphon,cell ,workDen%pw(1:,2),workDen%mt(:,0:,1:,2),POTDEN_TYPE_DEN,qlm,l_coreCharge=.FALSE.)
       IF(fmpi%irank.EQ.0) THEN
          WRITE(oUnit,*) '======================================='
       END IF

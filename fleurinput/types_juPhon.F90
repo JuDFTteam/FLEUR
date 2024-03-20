@@ -37,8 +37,14 @@ MODULE m_types_juPhon
       LOGICAL :: l_dos  = .FALSE.     ! Calculate the phonon density of states
       LOGICAL :: l_scf  = .TRUE.     ! Do a self-consistency run for dynmats
       INTEGER :: startq = 1          ! Start the q-loop at a specific point
+      INTEGER :: stopq  = 0          ! Stop  the q-loop at a specific point
       INTEGER :: qmode  = 0          ! 0: Single-shot calculation for qlist
                                      ! 1: Reads q from fullsym_* input files
+      LOGICAL :: l_phonon = .TRUE.
+      LOGICAL :: l_efield = .FALSE.
+      LOGICAL :: l_cheatsym = .FALSE.
+      LOGICAL :: l_procc = .TRUE.
+      LOGICAL :: l_prodyn = .TRUE.
 
       REAL, ALLOCATABLE :: qvec(:,:)
 
@@ -143,9 +149,15 @@ CONTAINS
       CALL mpi_bc(this%l_dos, rank, mpi_comm)
       CALL mpi_bc(this%l_scf, rank, mpi_comm)
       CALL mpi_bc(this%startq, rank, mpi_comm)
+      CALL mpi_bc(this%stopq, rank, mpi_comm)
       CALL mpi_bc(this%qmode, rank, mpi_comm)
       CALL mpi_bc(this%singleQpt, rank, mpi_comm)
       CALL mpi_bc(this%qvec, rank, mpi_comm)
+      CALL mpi_bc(this%l_phonon, rank, mpi_comm)
+      CALL mpi_bc(this%l_efield, rank, mpi_comm)
+      CALL mpi_bc(this%l_cheatsym, rank, mpi_comm)
+      CALL mpi_bc(this%l_procc, rank, mpi_comm)
+      CALL mpi_bc(this%l_prodyn, rank, mpi_comm)
 
    END SUBROUTINE mpi_bc_juPhon
 
@@ -300,10 +312,45 @@ CONTAINS
            this%startq  = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@startq'))
          END IF
 
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@stopq')
+
+         IF (numberNodes == 1) THEN
+           this%stopq  = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@stopq'))
+         END IF
+
          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@qmode')
 
          IF (numberNodes == 1) THEN
            this%qmode  = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@qmode'))
+         END IF
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_phonon')
+
+         IF (numberNodes == 1) THEN
+           this%l_phonon    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_phonon'))
+         END IF
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_efield')
+
+         IF (numberNodes == 1) THEN
+           this%l_efield    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_efield'))
+         END IF
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_cheatsym')
+
+         IF (numberNodes == 1) THEN
+           this%l_cheatsym    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_cheatsym'))
+         END IF
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_procc')
+
+         IF (numberNodes == 1) THEN
+           this%l_procc    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_procc'))
+         END IF
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_prodyn')
+
+         IF (numberNodes == 1) THEN
+           this%l_prodyn    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_prodyn'))
          END IF
 
          this%qpt_ph(1) = 0.0

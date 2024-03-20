@@ -1120,7 +1120,13 @@
       <xsd:attribute name="l_dos" type="FleurBool" use="optional"/>
       <xsd:attribute name="l_scf" type="FleurBool" use="optional"/>
       <xsd:attribute name="startq" type="xsd:positiveInteger" use="optional"/>
+      <xsd:attribute name="stopq" type="xsd:nonNegativeInteger" use="optional"/>
       <xsd:attribute name="qmode" type="xsd:nonNegativeInteger" use="optional"/>
+      <xsd:attribute name="l_phonon" type="FleurBool" use="optional"/>
+      <xsd:attribute name="l_efield" type="FleurBool" use="optional"/>
+      <xsd:attribute name="l_cheatsym" type="FleurBool" use="optional"/>
+      <xsd:attribute name="l_procc" type="FleurBool" use="optional"/>
+      <xsd:attribute name="l_prodyn" type="FleurBool" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="OutputType">

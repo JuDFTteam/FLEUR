@@ -14,7 +14,7 @@ use mpi
 CONTAINS
 
 SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddosdummy,cell,atoms,enpara,stars,&
-                  vacuum,sphhar,sym,vTot ,cdnvalJob,den,dosdummy,vacdosdummy,&
+                  vacuum,sphhar,sym,juphon,vTot,cdnvalJob,den,dosdummy,vacdosdummy,&
                   hub1inp, cdnvalJob1, resultsdummy, resultsdummy1, bqpt, iDtype, iDir, denIm, l_real,&
                   qm_eid_id,dfpt_eigm_id,starsmq,resultsdummy1m,cdnvalJob1m)
 
@@ -48,6 +48,7 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
    TYPE(t_noco),          INTENT(IN)    :: noco
    TYPE(t_nococonv),      INTENT(IN)    :: nococonv
    TYPE(t_sym),           INTENT(IN)    :: sym
+   TYPE(t_juphon),        INTENT(IN)    :: juphon
    TYPE(t_stars),         INTENT(IN)    :: stars
    TYPE(t_cell),          INTENT(IN)    :: cell
    TYPE(t_kpts),          INTENT(IN)    :: kpts
@@ -238,7 +239,7 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
       ! valence density in the atomic spheres
       CALL eigVecCoeffs%init(input,atoms,jspin,noccbd,noco%l_mperp)
       CALL eigVecCoeffs1%init(input,atoms,jspin,noccbd,noco%l_mperp)
-      CALL eigVecCoeffsPref%init(input,atoms,jspin,noccbd,noco%l_mperp)
+      IF (juphon%l_phonon) CALL eigVecCoeffsPref%init(input,atoms,jspin,noccbd,noco%l_mperp)
 
       IF (l_minusq) CALL eigVecCoeffs1m%init(input,atoms,jspin,noccbd,noco%l_mperp)
 
@@ -250,17 +251,19 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
          CALL abcof(input,atoms,sym,cell,lapwq,noccbd,usdus,noco,nococonv,ispin,&
                     eigVecCoeffs1%abcof(:,0:,0,:,ispin),eigVecCoeffs1%abcof(:,0:,1,:,ispin),&
                     eigVecCoeffs1%ccof(-atoms%llod:,:,:,:,ispin),zMat1)
-         CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,noco,nococonv,ispin,&
-                    eigVecCoeffsPref%abcof(:,0:,0,:,ispin),eigVecCoeffsPref%abcof(:,0:,1,:,ispin),&
-                    eigVecCoeffsPref%ccof(-atoms%llod:,:,:,:,ispin),zMatPref)
+         IF (juphon%l_phonon) CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,noco,nococonv,ispin,&
+                                   eigVecCoeffsPref%abcof(:,0:,0,:,ispin),eigVecCoeffsPref%abcof(:,0:,1,:,ispin),&
+                                   eigVecCoeffsPref%ccof(-atoms%llod:,:,:,:,ispin),zMatPref)
          IF (l_minusq) CALL abcof(input,atoms,sym,cell,lapwmq,noccbd,usdus,noco,nococonv,ispin,&
                                   eigVecCoeffs1m%abcof(:,0:,0,:,ispin),eigVecCoeffs1m%abcof(:,0:,1,:,ispin),&
                                   eigVecCoeffs1m%ccof(-atoms%llod:,:,:,:,ispin),zMat1)
 
-         eigVecCoeffs1%abcof(:,0:,:,iDtype,ispin) = eigVecCoeffs1%abcof(:,0:,:,iDtype,ispin) + eigVecCoeffsPref%abcof(:,0:,:,iDtype,ispin)
-         eigVecCoeffs1%ccof(-atoms%llod:,:,:,iDtype,ispin) = eigVecCoeffs1%ccof(-atoms%llod:,:,:,iDtype,ispin) + eigVecCoeffsPref%ccof(-atoms%llod:,:,:,iDtype,ispin)
+         IF (juphon%l_phonon) THEN
+            eigVecCoeffs1%abcof(:,0:,:,iDtype,ispin) = eigVecCoeffs1%abcof(:,0:,:,iDtype,ispin) + eigVecCoeffsPref%abcof(:,0:,:,iDtype,ispin)
+            eigVecCoeffs1%ccof(-atoms%llod:,:,:,iDtype,ispin) = eigVecCoeffs1%ccof(-atoms%llod:,:,:,iDtype,ispin) + eigVecCoeffsPref%ccof(-atoms%llod:,:,:,iDtype,ispin)
+         END IF
 
-         IF (l_minusq) THEN
+         IF (l_minusq.AND.juphon%l_phonon) THEN
             eigVecCoeffs1m%abcof(:,0:,:,iDtype,ispin) = eigVecCoeffs1m%abcof(:,0:,:,iDtype,ispin) + eigVecCoeffsPref%abcof(:,0:,:,iDtype,ispin)
             eigVecCoeffs1m%ccof(-atoms%llod:,:,:,iDtype,ispin) = eigVecCoeffs1m%ccof(-atoms%llod:,:,:,iDtype,ispin) + eigVecCoeffsPref%ccof(-atoms%llod:,:,:,iDtype,ispin)
          END IF

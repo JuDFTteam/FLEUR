@@ -69,8 +69,9 @@ perf-gpu:
     - ./configure.sh  -c nvidia -gpu acc:cc60 -make -link "/opt/nvidia_hpc_sdk/Linux_x86_64/23.9/compilers/lib/liblapack.a /opt/nvidia_hpc_sdk/Linux_x86_64/23.9/compilers/lib/libblas.a"
     - cd build
     - make -j 12
-    - curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh | sh
-    - export PATH=${PATH}:${HOME}/.cargo/bin
+    - wget https://github.com/bencherdev/bencher/releases/download/v0.4.1/bencher-v0.4.1-linux-x86-64
+    - mv bencher-v0.4.1-linux-x86-64 bencher; chmod +x bencher
+    - export PATH=${PATH}:${PWD}
   allow_failure: true
   rules:
     - if: $CI_TASKS =~ /CB/

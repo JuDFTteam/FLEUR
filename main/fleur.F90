@@ -343,7 +343,7 @@ CONTAINS
          END IF
 
          CALL timestart("generation of potential")
-         CALL vgen(hybdat, fi%field, fi%input, xcpot, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, &
+         CALL vgen(hybdat, fi%field, fi%input, xcpot, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, fi%juphon, &
                    fi%cell,   fi%sliceplot, fmpi, results, fi%noco, nococonv, EnergyDen, inDen, vTot, vx, vCoul, vxc, exc)
          CALL timestop("generation of potential")
 
@@ -529,7 +529,7 @@ CONTAINS
             CALL outDen%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN)
             outDen%iter = inDen%iter
             CALL cdngen(eig_id, fmpi, input_soc, fi%banddos, fi%sliceplot, fi%vacuum, &
-                        fi%kpts, fi%atoms, sphhar, stars, fi%sym, fi%gfinp, fi%hub1inp, &
+                        fi%kpts, fi%atoms, sphhar, stars, fi%sym, fi%juphon, fi%gfinp, fi%hub1inp, &
                         enpara, fi%cell, fi%noco, nococonv, vTot, results,   fi%corespecinput, &
                         archiveType, xcpot, outDen, EnergyDen, greensFunction, hub1data,vxc,exc)
             ! The density matrix for DFT+Hubbard1 only changes in hubbard1_setup and is kept constant otherwise
@@ -622,7 +622,7 @@ CONTAINS
 
          ! mix input and output densities
          CALL mix_charge(field2, fmpi, (iter == fi%input%itmax .OR. judft_was_argument("-mix_io")), stars, &
-                         fi%atoms, sphhar, fi%vacuum, fi%input, fi%sym, fi%cell, fi%noco, nococonv, &
+                         fi%atoms, sphhar, fi%vacuum, fi%input, fi%sym, fi%juphon, fi%cell, fi%noco, nococonv, &
                          archiveType, xcpot, iter, inDen, outDen, results, hub1data%l_runthisiter, fi%sliceplot)
 
          ! Rotating to the local MT frame

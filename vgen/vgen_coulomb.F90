@@ -12,7 +12,7 @@ module m_vgen_coulomb
 #endif
 contains
 
-  subroutine vgen_coulomb( ispin, fmpi,    input, field, vacuum, sym, stars, &
+  subroutine vgen_coulomb( ispin, fmpi,    input, field, vacuum, sym, juphon, stars, &
              cell, sphhar, atoms, dosf, den, vCoul, sigma_disc, results, dfptdenimag, dfptvCoulimag, dfptden0, stars2, iDtype, iDir, iDir2, sigma_disc2 )
     !----------------------------------------------------------------------------
     ! FLAPW potential generator
@@ -46,6 +46,7 @@ contains
     type(t_field),      intent(in)               :: field
     type(t_vacuum),     intent(in)               :: vacuum
     type(t_sym),        intent(in)               :: sym
+    type(t_juphon),     intent(in)               :: juphon
     type(t_stars),      intent(in)               :: stars
     type(t_cell),       intent(in)               :: cell
     type(t_sphhar),     intent(in)               :: sphhar
@@ -100,18 +101,18 @@ contains
     call timestart( "psqpw" )
     if (.not.l_dfptvgen) then
         call psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym,   &
-            & den, ispin, .false., vCoul%potdenType, psq, sigma_loc )
+            & juphon, den, ispin, .false., vCoul%potdenType, psq, sigma_loc )
     else if (.not.l_2ndord) then
         ! If we do DFPT, the MT density perturbation has an imaginary part that needs to be explicitly carried
         ! as another variable dfptdenimag%mt and results in the same component for the Coulomb potential later on.
         ! Also, the ionic qlm behave differently.
         call psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym,   &
-            & den, ispin, .false., vCoul%potdenType, psq, sigma_loc,&
+            & juphon, den, ispin, .false., vCoul%potdenType, psq, sigma_loc,&
             & dfptdenimag%mt(:,:,:,ispin), stars2, iDtype, iDir, dfptden0%mt(:,:,:,ispin), dfptden0%pw(:,ispin) )
     else
         call make_mat_2nd(mat2ord)
         call psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym,   &
-            & den, ispin, .false., vCoul%potdenType, psq, sigma_loc,&
+            & juphon, den, ispin, .false., vCoul%potdenType, psq, sigma_loc,&
             & dfptdenimag%mt(:,:,:,ispin), stars2, iDtype, iDir, dfptden0%mt(:,:,:,ispin), dfptden0%pw(:,ispin), iDir2, mat2ord )
     end if
     call timestop( "psqpw" )
