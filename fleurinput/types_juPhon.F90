@@ -324,7 +324,7 @@ CONTAINS
          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_efield')
 
          IF (numberNodes == 1) THEN
-           this%l_field    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_field'))
+           this%l_efield    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_efield'))
          END IF
 
          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_cheatsym')
