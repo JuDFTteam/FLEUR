@@ -49,11 +49,11 @@ MODULE m_juDFT_init
 #ifdef __GFORTRAN__
       external :: signal_handler
 
-      call signal(2,signal_handler)
-      call signal(4,signal_handler)
-      call signal(6,signal_handler)
-      call signal(11,signal_handler)
-      call signal(15,signal_handler)
+!      call signal(2,signal_handler)
+!      call signal(4,signal_handler)
+!      call signal(6,signal_handler)
+!      call signal(11,signal_handler)
+!      call signal(15,signal_handler)
 #endif      
       END SUBROUTINE install_signal_handler
 

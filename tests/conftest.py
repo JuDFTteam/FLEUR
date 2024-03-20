@@ -304,8 +304,11 @@ def pytest_collection_modifyitems(session, config, items):
     confile = os.path.abspath(os.path.join(test_dir_path, path))
     confile = os.path.join(confile, filename)
     marker_list = read_cmake_config(confile)
-    marker_list = marker_list + markers_cmd_to_skip
+    if len(markers_cmd_to_skip)>0:
+        if (markers_cmd_to_skip[0]!=''):
+            marker_list = marker_list + markers_cmd_to_skip
     marker_list = sorted(list(set(marker_list)))
+    print("maker_list_cmd",markers_cmd_to_skip)
     print("\nExcluding tests with the following markers in 'pytest_incl.py': ", marker_list)
     run_every = config.getoption("runevery")
     if run_every is None:

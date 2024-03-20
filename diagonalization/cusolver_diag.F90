@@ -12,7 +12,10 @@ MODULE m_cusolver_diag
 #endif  
   IMPLICIT NONE
   PRIVATE
- PUBLIC cusolver_diag
+#ifdef CPP_CUSOLVER
+  type(cusolverDnHandle)  :: handle        
+#endif  
+  PUBLIC cusolver_diag
 
 CONTAINS
   SUBROUTINE cusolver_diag(hmat,smat,ne,eig,zmat)
@@ -27,10 +30,13 @@ CONTAINS
     INTEGER                 :: istat,ne_found,lwork_d,devinfo(1)
     real,allocatable        :: work_d(:),eig_tmp(:)
     complex,allocatable     :: work_c(:)
-    type(cusolverDnHandle)  :: handle        
 
-    istat = cusolverDnCreate(handle)
-    if (istat /= CUSOLVER_STATUS_SUCCESS) call judft_error('handle creation failed')
+    logical :: firstcall=.true.
+    if (firstcall) THEN
+      firstcall=.false.
+      istat=cusolverDnCreate(handle)
+      if (istat /= CUSOLVER_STATUS_SUCCESS) call judft_error('handle creation failed')
+    endif  
 
     ALLOCATE(t_mat::zmat)
     ALLOCATE(eig_tmp(hmat%matsize1))

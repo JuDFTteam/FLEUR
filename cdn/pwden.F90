@@ -69,8 +69,8 @@ CONTAINS
 
       REAL, INTENT(IN)       :: we(:)  !(nobd)
       REAL, INTENT(IN)       :: eig(:) !(input%neig)
-      INTEGER, INTENT(IN)    :: ev_list(ne)
       INTEGER, INTENT(IN)    :: ne
+      INTEGER, INTENT(IN)    :: ev_list(ne)
       INTEGER, INTENT(IN)    :: ikpt
       INTEGER, INTENT(IN)    :: jspin
       COMPLEX, INTENT(INOUT) ::  f_b8(3, atoms%ntype)

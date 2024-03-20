@@ -219,8 +219,8 @@ SUBROUTINE mpi_bc_atoms(this,mpi_comm,irank)
     IF (ALLOCATED(this%lda_opc)) DEALLOCATE(this%lda_opc)
     ALLOCATE(this%econf(this%ntype))
     ALLOCATE(this%lda_u(4*this%ntype))
-    ALLOCATE(this%lda_v(4*this%ntype))
-    ALLOCATE(this%lda_opc(this%n_v))
+    ALLOCATE(this%lda_opc(4*this%ntype))
+    ALLOCATE(this%lda_v(this%n_v))
  ENDIF
 
  DO n=1,this%ntype

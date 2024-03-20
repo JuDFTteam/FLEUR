@@ -66,7 +66,7 @@ CONTAINS
       IMPLICIT NONE
       INTEGER :: numThreads
       numThreads = 1
-      !$omp parallel
+      !$omp parallel shared(numThreads)
       !$ numThreads = omp_get_num_threads()
       !$omp end parallel
       getNumberOfThreads = numThreads

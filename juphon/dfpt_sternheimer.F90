@@ -181,7 +181,7 @@ CONTAINS
          IF (strho) THEN
             write(oUnit, *) "vExt1", iDir
             sigma_loc = cmplx(0.0,0.0)
-            IF (iDir==3) sigma_loc = -sigma_disc
+            !IF (iDir==3) sigma_loc = -sigma_disc
             CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                            fi%juphon,fi%cell,fmpi,fi%noco,nococonv,rho_loc0,vTot,&
                            starsq,denIn1Im,vTot1,.FALSE.,vTot1Im,denIn1,iDtype,iDir,[1,1],sigma_loc)!-?
@@ -190,7 +190,7 @@ CONTAINS
                            ! contained.
             IF (l_minusq) THEN
                sigma_loc = cmplx(0.0,0.0)
-               IF (iDir==3) sigma_loc = -sigma_disc
+               !IF (iDir==3) sigma_loc = -sigma_disc
                CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                               fi%juphon,fi%cell,fmpi,fi%noco,nococonv,rho_loc0,vTot,&
                               starsmq,denIn1mIm,vTot1m,.FALSE.,vTot1mIm,denIn1m,iDtype,iDir,[1,1],sigma_loc)!-?
@@ -198,13 +198,13 @@ CONTAINS
          ELSE
             write(oUnit, *) "vEff1", iDir
             sigma_loc = cmplx(0.0,0.0)
-            IF (iDir==3) sigma_loc = -sigma_disc2
+            !IF (iDir==3) sigma_loc = -sigma_disc2
             CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                            fi%juphon,fi%cell,fmpi,fi%noco,nococonv,rho_loc,vTot,&
                            starsq,denIn1Im,vTot1,.TRUE.,vTot1Im,denIn1,iDtype,iDir,[1,1],sigma_loc)
             IF (l_minusq) THEN
                sigma_loc = cmplx(0.0,0.0)
-               IF (iDir==3) sigma_loc = -sigma_disc2
+               !IF (iDir==3) sigma_loc = -sigma_disc2
                CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                               fi%juphon,fi%cell,fmpi,fi%noco,nococonv,rho_loc,vTot,&
                               starsmq,denIn1mIm,vTot1m,.TRUE.,vTot1mIm,denIn1m,iDtype,iDir,[1,1],sigma_loc)
@@ -215,7 +215,7 @@ CONTAINS
          IF (final_SH_it) THEN
             write(oUnit, *) "vC1", iDir
             sigma_loc = cmplx(0.0,0.0)
-            IF (iDir==3) sigma_loc = -sigma_disc2
+            !IF (iDir==3) sigma_loc = -sigma_disc2
             CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                            fi%juphon,fi%cell,fmpi,fi%noco,nococonv,rho_loc,vTot,&
                            starsq,denIn1Im,vC1,.FALSE.,vC1Im,denIn1,iDtype,iDir,[0,0],sigma_loc)

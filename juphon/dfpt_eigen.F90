@@ -11,6 +11,13 @@ MODULE m_dfpt_eigen
 #endif
    USE m_juDFT
 
+#ifdef _OPENACC_later
+   USE cublas
+#define CPP_zgemv cublaszgemv
+#else
+#define CPP_zgemv zgemv
+#endif
+
    IMPLICIT NONE
 
 CONTAINS
@@ -71,6 +78,10 @@ CONTAINS
       COMPLEX, ALLOCATABLE      :: tempVec(:), tempMat1(:), tempMat2(:), z1H(:,:), z1S(:,:), tempMat3(:), z1H2(:,:), z1S2(:,:)
       REAL,    ALLOCATABLE      :: eigk(:), eigq(:), eigs1(:), eigBuffer(:,:,:)
 
+      COMPLEX  zdotc
+      EXTERNAL zdotc
+
+
       old_and_wrong = .FALSE.
 
       CALL vx%copyPotDen(vTot)
@@ -121,7 +132,7 @@ CONTAINS
 
             ALLOCATE(ev_list(noccbd))
             ev_list = (/(i, i=1,noccbd, 1)/)
-            ALLOCATE(q_ev_list(noccbdq))
+            ALLOCATE(q_ev_list(nbasfcnq))
             q_ev_list = (/(i, i=1,nbasfcnq, 1)/)
 
             ALLOCATE(eigk(noccbd))
@@ -174,7 +185,6 @@ CONTAINS
             ALLOCATE(tempMat2(nbasfcnq))
             IF (.NOT.sh_den.AND..NOT.old_and_wrong) ALLOCATE(tempMat3(nbasfcnq))
 
-            !TODO: Optimize this with (SCA)LAPACK CALLS
             CALL timestart("Matrix multiplications")
             DO nu = 1, noccbd
                eigs1(nu) = 0.0
@@ -184,7 +194,8 @@ CONTAINS
                IF (l_real) THEN ! l_real for zMatk
                   tempVec(:nbasfcnq) = MATMUL(hmat%data_c,zMatk%data_r(:nbasfcn,nu))
                ELSE
-                  tempVec(:nbasfcnq) = MATMUL(hmat%data_c,zMatk%data_c(:nbasfcn,nu))
+                  CALL CPP_zgemv('N',nbasfcnq,nbasfcn,CMPLX(1.0,0.0),hmat%data_c,nbasfcnq,zMatk%data_c(:nbasfcn,nu),1,CMPLX(0.0,0.0),tempVec,1)
+                  !tempVec(:nbasfcnq) = MATMUL(hmat%data_c,zMatk%data_c(:nbasfcn,nu))
                END IF
 
                IF (norm2(q_loop).LT.1e-8) THEN
@@ -192,7 +203,8 @@ CONTAINS
                   IF (l_real) THEN
                      eigs1(nu) = REAL(DOT_PRODUCT(zMatk%data_r(:nbasfcn,nu),tempVec))
                   ELSE
-                     eigs1(nu) = REAL(DOT_PRODUCT(zMatk%data_c(:nbasfcn,nu),tempVec))
+                     eigs1(nu) = REAL(zdotc(nbasfcn,zMatk%data_c(:nbasfcn,nu),1,tempVec,1))
+                     !eigs1(nu) = REAL(DOT_PRODUCT(zMatk%data_c(:nbasfcn,nu),tempVec))
                   END IF
                ELSE
                   eigs1(nu) = 0
@@ -201,7 +213,8 @@ CONTAINS
                IF (zMatq%l_real) THEN ! l_real for zMatq
                   tempMat1(:nbasfcnq) = MATMUL(TRANSPOSE(zMatq%data_r),tempvec)
                ELSE
-                  tempMat1(:nbasfcnq) = MATMUL(CONJG(TRANSPOSE(zMatq%data_c)),tempvec)
+                  CALL CPP_zgemv('C',nbasfcnq,nbasfcnq,CMPLX(1.0,0.0),zmatq%data_c,nbasfcnq,tempvec,1,CMPLX(0.0,0.0),tempMat1,1)
+                  !tempMat1(:nbasfcnq) = MATMUL(CONJG(TRANSPOSE(zMatq%data_c)),tempvec)
                END IF
 
                ! tempMat1 = H^{(1}_{\nu'\nu}
@@ -256,15 +269,17 @@ CONTAINS
                   z1H(:nbasfcnq,nu) = -MATMUL(zMatq%data_r,tempMat2(:nbasfcnq))
                   IF (.NOT.sh_den.AND..NOT.old_and_wrong) z1H2(:nbasfcnq,nu) = -MATMUL(zMatq%data_r,tempMat3(:nbasfcnq))
                ELSE
-                  z1H(:nbasfcnq,nu) = -MATMUL(zMatq%data_c,tempMat2(:nbasfcnq))
-                  IF (.NOT.sh_den.AND..NOT.old_and_wrong) z1H2(:nbasfcnq,nu) = -MATMUL(zMatq%data_c,tempMat3(:nbasfcnq))
-
+                  CALL CPP_zgemv('N',nbasfcnq,nbasfcnq,CMPLX(-1.0,0.0),zMatq%data_c,nbasfcnq,tempMat2,1,CMPLX(0.0,0.0),z1H(:nbasfcnq,nu),1)
+                  !z1H(:nbasfcnq,nu) = -MATMUL(zMatq%data_c,tempMat2(:nbasfcnq))
+                  IF (.NOT.sh_den.AND..NOT.old_and_wrong) CALL CPP_zgemv('N',nbasfcnq,nbasfcnq,CMPLX(-1.0,0.0),zmatq%data_c,nbasfcnq,tempMat3,1,CMPLX(0.0,0.0),z1H2(:nbasfcnq,nu),1)
+                  !IF (.NOT.sh_den.AND..NOT.old_and_wrong) z1H2(:nbasfcnq,nu) = -MATMUL(zMatq%data_c,tempMat3(:nbasfcnq))
                END IF
 
                IF (l_real) THEN ! l_real for zMatk
                   tempVec(:nbasfcnq) = MATMUL(smat%data_c,zMatk%data_r(:nbasfcn,nu))
                ELSE
-                  tempVec(:nbasfcnq) = MATMUL(smat%data_c,zMatk%data_c(:nbasfcn,nu))
+                  CALL CPP_zgemv('N',nbasfcnq,nbasfcn,CMPLX(1.0,0.0),smat%data_c,nbasfcnq,zMatk%data_c(:nbasfcn,nu),1,CMPLX(0.0,0.0),tempVec,1)
+                  !tempVec(:nbasfcnq) = MATMUL(smat%data_c,zMatk%data_c(:nbasfcn,nu))
                END IF
 
                IF (norm2(q_loop).LT.1e-8) THEN
@@ -272,7 +287,8 @@ CONTAINS
                   IF (l_real) THEN
                      eigs1(nu) = eigs1(nu) - eigk(nu)*REAL(DOT_PRODUCT(zMatk%data_r(:nbasfcn,nu),tempVec))
                   ELSE
-                     eigs1(nu) = eigs1(nu) - eigk(nu)*REAL(DOT_PRODUCT(zMatk%data_c(:nbasfcn,nu),tempVec))
+                     eigs1(nu) = eigs1(nu) - eigk(nu)*REAL(zdotc(nbasfcn,zMatk%data_c(:nbasfcn,nu),1,tempVec,1))
+                     !eigs1(nu) = eigs1(nu) - eigk(nu)*REAL(DOT_PRODUCT(zMatk%data_c(:nbasfcn,nu),tempVec))
                   END IF
                ELSE
                   eigs1(nu) = 0
@@ -281,7 +297,8 @@ CONTAINS
                IF (zMatq%l_real) THEN ! l_real for zMatq
                   tempMat1(:nbasfcnq) = MATMUL(TRANSPOSE(zMatq%data_r),tempvec)
                ELSE
-                  tempMat1(:nbasfcnq) = MATMUL(CONJG(TRANSPOSE(zMatq%data_c)),tempvec)
+                  CALL CPP_zgemv('C',nbasfcnq,nbasfcnq,CMPLX(1.0,0.0),zmatq%data_c,nbasfcnq,tempvec,1,CMPLX(0.0,0.0),tempMat1,1)
+                  !tempMat1(:nbasfcnq) = MATMUL(CONJG(TRANSPOSE(zMatq%data_c)),tempvec)
                END IF
                   
                ! tempMat1 = S^{(1}_{\nu'\nu}
@@ -339,8 +356,10 @@ CONTAINS
                   z1S(:nbasfcnq,nu) = -MATMUL(zMatq%data_r,tempMat2(:nbasfcnq))
                   IF (.NOT.sh_den.AND..NOT.old_and_wrong) z1S2(:nbasfcnq,nu) = -MATMUL(zMatq%data_r,tempMat3(:nbasfcnq))
                ELSE
-                  z1S(:nbasfcnq,nu) = -MATMUL(zMatq%data_c,tempMat2(:nbasfcnq))
-                  IF (.NOT.sh_den.AND..NOT.old_and_wrong) z1S2(:nbasfcnq,nu) = -MATMUL(zMatq%data_c,tempMat3(:nbasfcnq))
+                  CALL CPP_zgemv('N',nbasfcnq,nbasfcnq,CMPLX(-1.0,0.0),zmatq%data_c,nbasfcnq,tempMat2,1,CMPLX(0.0,0.0),z1S(:nbasfcnq,nu),1)
+                  !z1S(:nbasfcnq,nu) = -MATMUL(zMatq%data_c,tempMat2(:nbasfcnq))
+                  IF (.NOT.sh_den.AND..NOT.old_and_wrong) CALL CPP_zgemv('N',nbasfcnq,nbasfcnq,CMPLX(-1.0,0.0),zmatq%data_c,nbasfcnq,tempMat3,1,CMPLX(0.0,0.0),z1S2(:nbasfcnq,nu),1)
+                  !IF (.NOT.sh_den.AND..NOT.old_and_wrong) z1S2(:nbasfcnq,nu) = -MATMUL(zMatq%data_c,tempMat3(:nbasfcnq))
                END IF
 
                zMat1%data_c(:nbasfcnq,nu) = z1H(:nbasfcnq,nu) + z1S(:nbasfcnq,nu)

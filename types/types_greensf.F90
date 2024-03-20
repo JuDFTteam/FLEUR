@@ -450,7 +450,7 @@ MODULE m_types_greensf
                            occError = .TRUE.
                         ELSE
                            WRITE(message,9100) spin,m,REAL(occmtx(m,m))
-9100                       FORMAT("Invalid element in mmpmat (spin ",I1,",m ",I2"): ",f14.8)
+9100                       FORMAT("Invalid element in mmpmat (spin ",I1,",m ",I2,"): ",f14.8)
                            CALL juDFT_warn(TRIM(ADJUSTL(message)),calledby="occupationMatrix")
                         ENDIF
                      ENDIF

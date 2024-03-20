@@ -72,6 +72,7 @@ CONTAINS
 
     TYPE(t_mat)::zmat
     TYPE(t_lapw)::lapw
+    TYPE(t_sym) :: sym_l
 
     INTEGER :: ierr, jsp
 
@@ -112,7 +113,8 @@ CONTAINS
     CALL spnorb( fi%atoms,fi%noco,nococonv,fi%input,fmpi, enpara,vTot%mt,usdus,rsoc,.TRUE.,hub1inp,hub1data)
     !
 
-
+    sym_l=fi%sym
+    sym_l%ngopr=1 !No rotated k-points
     ALLOCATE (eig_so(2*fi%input%neig))
     ALLOCATE (eigBuffer(2*fi%input%neig,fi%kpts%nkpt,wannierspin))
     ALLOCATE (neigBuffer(fi%kpts%nkpt,wannierspin))
@@ -128,12 +130,12 @@ CONTAINS
     DO nk_i=1,SIZE(fmpi%k_list)
         nk=fmpi%k_list(nk_i)
      !DO nk = fmpi%n_start,n_end,n_stride
-       CALL lapw%init(fi%input,fi%noco, nococonv,fi%kpts,fi%atoms,fi%sym,nk,fi%cell, fmpi)
+       CALL lapw%init(fi%input,fi%noco, nococonv,fi%kpts,fi%atoms,sym_l,nk,fi%cell, fmpi)
        ALLOCATE( zso(lapw%nv(1)+fi%atoms%nlotot,2*fi%input%neig,wannierspin))
        zso(:,:,:) = CMPLX(0.0,0.0)
 
        CALL timestart("eigenso: alineso")
-       CALL alineso(eig_id,lapw, fmpi,fi%atoms,fi%sym,fi%kpts,&
+       CALL alineso(eig_id,lapw, fmpi,fi%atoms,sym_l,fi%kpts,&
        fi%input,fi%noco,nococonv,fi%cell, nk,usdus,rsoc,nsz,nmat, eig_so,zso)
        CALL timestop("eigenso: alineso")
        IF (fmpi%irank.EQ.0) THEN

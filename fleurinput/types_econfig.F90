@@ -29,6 +29,7 @@ MODULE m_types_econfig
      procedure :: is_polarized
      PROCEDURE :: broadcast
      PROCEDURE :: get_state_string
+     PROCEDURE :: get_state_l
      PROCEDURE :: get_states_for_orbital
      PROCEDURE :: get_core
   END TYPE t_econfig
@@ -108,9 +109,36 @@ CONTAINS
        call judft_error("Invalid reqest for string with kappa")
     END SELECT
 
-
     WRITE(str,"(a1,i1,a)") "(",econf%nprnc(i),s
   END FUNCTION get_state_string
+
+  FUNCTION get_state_l(econf,i) RESULT(l)
+    CLASS(t_econfig),INTENT(IN):: econf
+    INTEGER,INTENT(in)         :: i
+    INTEGER :: l
+
+    l = -1
+
+    SELECT CASE (econf%kappa(i))
+    CASE (-1)
+       l = 0
+    CASE (1)
+       l = 1
+    CASE (-2)
+       l = 1
+    CASE (2)
+       l = 2
+    CASE (-3)
+       l = 2
+    CASE (3)
+       l = 3
+    CASE (-4)
+       l = 3
+    CASE default
+       call judft_error("Invalid reqest for l with kappa")
+    END SELECT
+  END FUNCTION get_state_l
+
 
 
   SUBROUTINE broadcast(econf,irank,mpi_comm)

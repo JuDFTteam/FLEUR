@@ -44,12 +44,18 @@ contains
 
       complex, optional, intent(in) :: sigma_disc2(2)
 
-      complex                     :: sumq
+      complex                     :: sumq, newdp, newdm, newdp2, newdm2
       real                        :: bj0, bj1, qzh, sigmaa(2)
       integer                     :: ig3, imz, ivac, ncsh
       real                        :: f(vacuum%nmzd), sig(vacuum%nmzd), vtemp(vacuum%nmzd)
 
       vmz1dh = cmplx(0.0,0.0)
+
+      newdp =  cmplx(0.0,0.0)
+      newdm =  cmplx(0.0,0.0)
+      newdp2 =  cmplx(0.0,0.0)
+      newdm2 =  cmplx(0.0,0.0)
+
       vnew(:,1:vacuum%nvac) = 0.0 ! initialize potential
 
       ! obtain mesh point (ncsh) of charge sheet for external electric field
@@ -63,6 +69,11 @@ contains
       rhobar = - psq(1)
       sumq = 0.0
 
+      IF (l_bind) newdp = -psq(1) * cell%z1
+      IF (l_bind) newdm = -psq(1) * cell%z1
+      IF (l_bind) newdp2 = -psq(1) * cell%z1 * cell%z1
+      IF (l_bind) newdm2 =  psq(1) * cell%z1 * cell%z1
+
       do ig3 = 2, stars%ng3
          if (stars%ig2(ig3) == 1) then           ! select g_|| = 0
             qzh = stars%kv3(3,ig3) * cell%bmat(3,3) * cell%z1
@@ -71,13 +82,20 @@ contains
             if ( vacuum%nvac==2 ) then
                bj1 = ( sin(qzh) - qzh * cos(qzh) ) / ( qzh * qzh )
                sumq = sumq - 2. * fpi_const * ImagUnit * bj1 * psq(ig3) * cell%z1 *cell%z1
+
+               ! New discontinuity correction
+               IF (l_bind) newdp = newdp + ImagUnit * psq(ig3) * cmplx(cos(qzh), sin(qzh)) * cell%z1 / qzh
+               IF (l_bind) newdm = newdm - ImagUnit * psq(ig3) * cmplx(cos(qzh),-sin(qzh)) * cell%z1 / qzh
+               IF (l_bind) newdp2 = newdp2 + psq(ig3) * cmplx(cos(qzh), sin(qzh)) * cell%z1**2 / qzh**2
+               IF (l_bind) newdm2 = newdm2 - psq(ig3) * cmplx(cos(qzh),-sin(qzh)) * cell%z1**2 / qzh**2
+
             end if
          end if
       end do ! --> qzh, bj0, bj1, psq finished; rhobar, sumq passed on and unchanged
-    
+       
       ! lower (nvac=2) vacuum
       if ( vacuum%nvac == 2 ) vnew(1:vacuum%nmz,2) =  sumq
-    
+
       ! g=0 vacuum potential due to
       ! negative of rhobar + vacuum (g=0) charge ----> v2(z)
 
@@ -136,25 +154,28 @@ contains
          ! external electric field contribution
          do imz = 1, ncsh
             vnew(imz,ivac) = - fpi_const * ( vtemp(imz) + sig1dh * vacuum%dvac - rhobar * vacuum%dvac * vacuum%dvac / 2. ) + vz1dh + vnew(imz,ivac) &
-                             - fpi_const * (sigma_disc(1) * ( vacuum%dvac / 2. - (imz-1) * vacuum%delz ) - sigma_disc(2) * ( vacuum%dvac / 2. + (imz-1) * vacuum%delz ))! Discontinuity correction
-            if (present(sigma_disc2)) vnew(imz,ivac) = vnew(imz,ivac) - fpi_const * (sigma_disc2(1)+sigma_disc2(2))
+                             - fpi_const * (sigma_disc(1) * ( vacuum%dvac / 2. - (imz-1) * vacuum%delz ) - sigma_disc(2) * ( vacuum%dvac / 2. + (imz-1) * vacuum%delz )) &! Discontinuity correction
+                             - fpi_const * (-newdp2-newdm2+newdp * ( vacuum%dvac / 2. - (imz-1) * vacuum%delz ) - newdm * ( vacuum%dvac / 2. + (imz-1) * vacuum%delz ))! New discontinuity correction
+            !if (present(sigma_disc2)) vnew(imz,ivac) = vnew(imz,ivac) - fpi_const * (sigma_disc2(1)+sigma_disc2(2))
          end do
          do imz = ncsh + 1, vacuum%nmz
             vnew(imz,ivac) = - fpi_const * ( vtemp(imz) + sig1dh * vacuum%dvac - rhobar * vacuum%dvac * vacuum%dvac / 2. ) + vz1dh + vnew(imz,ivac) &
                            + fpi_const * ( imz - ncsh ) * vacuum%delz * sigmaa(2) & ! Discontinuity correction
-                           - fpi_const * (sigma_disc(1) * ( vacuum%dvac / 2. - (imz-1) * vacuum%delz ) - sigma_disc(2) * ( vacuum%dvac / 2. + (imz-1) * vacuum%delz )) ! Discontinuity correction
-            if (present(sigma_disc2)) vnew(imz,ivac) = vnew(imz,ivac) - fpi_const * (sigma_disc2(1)+sigma_disc2(2))
+                           - fpi_const * (sigma_disc(1) * ( vacuum%dvac / 2. - (imz-1) * vacuum%delz ) - sigma_disc(2) * ( vacuum%dvac / 2. + (imz-1) * vacuum%delz )) &! Discontinuity correction
+                           - fpi_const * (-newdp2-newdm2+newdp * ( vacuum%dvac / 2. - (imz-1) * vacuum%delz ) - newdm * ( vacuum%dvac / 2. + (imz-1) * vacuum%delz )) ! New discontinuity correction
+            !if (present(sigma_disc2)) vnew(imz,ivac) = vnew(imz,ivac) - fpi_const * (sigma_disc2(1)+sigma_disc2(2))
          end do
          !if (l_bind) then
          !   ! Fix the potential to 0 at -infinity and save the resulting value at the vacuum border -D/2
          !   vnew(:,2) = vnew(:,2) - vnew(vacuum%nmz,2)
          !   vmz1dh = vnew(1,2)
          !end if
-         if (l_bind) then
+         ! Discontinuity correction
+         !if (l_bind) then
             ! Fix the potential to 0 at -infinity and save the resulting value at the vacuum border -D/2
-            vnew(:,2) = cmplx(0.0,0.0)
+            !vnew(:,2) = cmplx(0.0,0.0) 
             !vmz1dh = vnew(1,2)
-         end if
+         !end if
       end if ! Dirichlet/Neumann
    end subroutine vvac
 end module m_vvac

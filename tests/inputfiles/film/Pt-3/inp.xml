@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<fleurInput fleurInputVersion="0.38">
+   <comment>
+      No title                                                                                            
+   </comment>
+   <calculationSetup>
+      <cutoffs Kmax="3.00000000" Gmax="12.00000000" GmaxXC="12.00000000" numbands="0"/>
+      <scfLoop itmax="1" minDistance=".00001000" maxIterBroyd="15" imix="Anderson" alpha=".05000000" precondParam="0.0" spinf="2.00000000"/>
+      <coreElectrons ctail="T" frcor="F" kcrel="0" coretail_lmax="0"/>
+      <xcFunctional name="pbe" relativisticCorrections="F"/>
+      <magnetism jspins="1"/>
+      <soc l_soc="T" theta=".00000000" phi=".00000000" spav="F"/>
+      <expertModes spex="0" secvar="F"/>
+      <geometryOptimization l_f="F" forcealpha="1.00000000" forcemix="BFGS" epsdisp=".00001000" epsforce=".00001000"/>
+      <ldaU l_linMix="F" mixParam=".050000" spinf="1.000000"/>
+   </calculationSetup>
+   <cell>
+      <bzIntegration valenceElectrons="48.00000000" mode="hist" fermiSmearingEnergy=".00100000">
+         <kPointListSelection listName="default"/>
+         <kPointLists>
+            <kPointList name="default" count="1" nx="2" ny="2" nz="1" type="mesh">
+               <kPoint weight="     4.0000000000000">   1.00/4.00    1.00/4.00    0.00/2.00</kPoint>
+            </kPointList>
+         </kPointLists>
+      </bzIntegration>
+      <symmetryOperations>
+         <symOp>
+            <row-1>1 0 0 .0000000000</row-1>
+            <row-2>0 1 0 .0000000000</row-2>
+            <row-3>0 0 1 .0000000000</row-3>
+         </symOp>
+         <symOp>
+            <row-1>-1 0 0 .0000000000</row-1>
+            <row-2>0 -1 0 .0000000000</row-2>
+            <row-3>0 0 1 .0000000000</row-3>
+         </symOp>
+         <symOp>
+            <row-1>0 -1 0 .0000000000</row-1>
+            <row-2>1 0 0 .0000000000</row-2>
+            <row-3>0 0 1 .0000000000</row-3>
+         </symOp>
+         <symOp>
+            <row-1>0 1 0 .0000000000</row-1>
+            <row-2>-1 0 0 .0000000000</row-2>
+            <row-3>0 0 1 .0000000000</row-3>
+         </symOp>
+         <symOp>
+            <row-1>-1 0 0 .0000000000</row-1>
+            <row-2>0 -1 0 .0000000000</row-2>
+            <row-3>0 0 -1 .0000000000</row-3>
+         </symOp>
+         <symOp>
+            <row-1>1 0 0 .0000000000</row-1>
+            <row-2>0 1 0 .0000000000</row-2>
+            <row-3>0 0 -1 .0000000000</row-3>
+         </symOp>
+         <symOp>
+            <row-1>0 1 0 .0000000000</row-1>
+            <row-2>-1 0 0 .0000000000</row-2>
+            <row-3>0 0 -1 .0000000000</row-3>
+         </symOp>
+         <symOp>
+            <row-1>0 -1 0 .0000000000</row-1>
+            <row-2>1 0 0 .0000000000</row-2>
+            <row-3>0 0 -1 .0000000000</row-3>
+         </symOp>
+      </symmetryOperations>
+      <filmLattice scale="1.00000000" dVac="12.74000000" dTilda="15.24000000">
+         <bravaisMatrixFilm>
+            <row-1>    5.2999999999999998     0.0000000000000000</row-1>
+            <row-2>    0.0000000000000000     5.2999999999999998</row-2>
+         </bravaisMatrixFilm>
+         <vacuumEnergyParameters vacuum="1" spinUp="-.25000000" spinDown="-.25000000"/>
+      </filmLattice>
+   </cell>
+   <atomSpecies>
+      <species name="Platinum (Pt)" element="Pt" atomicNumber="78">
+         <mtSphere radius="2.52000000" gridPoints="833" logIncrement=".01600000"/>
+         <atomicCutoffs lmax="10" lnonsphr="8"/>
+         <electronConfig flipSpins="F">
+            <coreConfig>(1s1/2) (2s1/2) (2p1/2) (2p3/2) (3s1/2) (3p1/2) (3p3/2) (4s1/2) (3d3/2) (3d5/2) (4p1/2) (4p3/2) (5s1/2) (4d3/2) (4d5/2) (4f5/2) (4f7/2)</coreConfig>
+            <valenceConfig>(5p1/2) (5p3/2) (6s1/2) (5d3/2) (5d5/2)</valenceConfig>
+            <stateOccupation state="(6s1/2)" spinUp=".50000000" spinDown=".50000000"/>
+            <stateOccupation state="(5d3/2)" spinUp="1.80000000" spinDown="1.80000000"/>
+            <stateOccupation state="(5d5/2)" spinUp="2.70000000" spinDown="2.70000000"/>
+         </electronConfig>
+         <energyParameters s="6" p="6" d="5" f="5"/>
+         <lo type="SCLO" l="1" n="5" eDeriv="0"/>
+      </species>
+   </atomSpecies>
+   <atomGroups>
+      <atomGroup species="Platinum (Pt)">
+         <filmPos label="                   1">.0000000000 .0000000000 .0000000000</filmPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Platinum (Pt)">
+         <filmPos label="                   2">1.000/2.000 1.000/2.000 -3.7500000000</filmPos>
+         <filmPos label="                   3">1.000/2.000 1.000/2.000 3.7500000000</filmPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+   </atomGroups>
+   <output dos="F" band="F" slice="F">
+      <checks vchk="F" cdinf="F"/>
+      <bandDOS minEnergy="-.50000000*Htr" maxEnergy=".50000000*Htr" sigma=".01500000" storeEVData="T"/>
+      <vacuumDOS vacdos="F" integ="F" star="F" nstars="0" locx1=".00000" locy1=".00000" locx2=".00000" locy2=".00000" nstm="0" tworkf=".00000"/>
+      <unfoldingBand unfoldBand="F" supercellX="1" supercellY="1" supercellZ="1"/>
+      <plotting iplot="0" polar="F">
+         <plot TwoD="T" vec1="  1.0  0.0  0.0" vec2="  0.0  1.0  0.0" vec3="  0.0  0.0  1.0" zero="  0.0  0.0 -0.5" file="plot"/>
+      </plotting>
+      <chargeDensitySlicing numkpt="0" minEigenval=".00000000" maxEigenval=".00000000" nnne="0" pallst="F"/>
+      <specialOutput eonly="F" bmt="F"/>
+      <magneticCircularDichroism mcd="F" energyLo="-10.00000000" energyUp=".00000000"/>
+   </output>
+  <!-- We include the file relax.xml here to enable relaxations (see documentation) -->
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="relax.xml"> <xi:fallback/> </xi:include>
+</fleurInput>
+
+<!--
+Command line when calling inpgen (only for documentation purposes):
+../../inpgen -f inp_simple -overwrite -inc +all -kpt nk=2
+
+Initial (original) inpgen input (only for documentation purposes):
+&input film=t /
+     5.3     0.00    0.00
+     0.00     5.3    0.00
+     0.00    0.00    1.00
+     1.00
+     1.00    1.00    1.00
+
+      3
+ 78  0.0     0.0     0.00
+ 78  0.5     0.5     -3.75
+ 78  0.5     0.5     3.75
+
+&soc 0.0 0.0 /
+-->

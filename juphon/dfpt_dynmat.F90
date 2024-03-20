@@ -149,7 +149,7 @@ CONTAINS
             CALL vExt1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
             CALL vExt1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
             sigma_loc = cmplx(0.0,0.0)
-            IF (iDir_col==3) sigma_loc = -sigma_ext
+            !IF (iDir_col==3) sigma_loc = -sigma_ext
             CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                            fi%juphon,fi%cell,fmpi,fi%noco,nococonv,rho_dummy,vTot,&
                            starsq,rho1_dummy,vExt1,.FALSE.,vExt1Im,rho1_dummy,iDtype_col,iDir_col,[0,0],sigma_loc)
@@ -187,12 +187,12 @@ CONTAINS
                                 (grRho3(iDir_row)%mt(:,0:,iDtype_row,1)+grRho3(iDir_row)%mt(:,0:,iDtype_row,fi%input%jspins))/(3.0-fi%input%jspins)
 
                sigma_loc = cmplx(0.0,0.0)
-               IF (iDir_col==3) sigma_loc = sigma_gext(iDir_row,:)
-               IF (iDir_row==3) sigma_loc = sigma_gext(iDir_col,:)
+               !IF (iDir_col==3) sigma_loc = sigma_gext(iDir_row,:)
+               !IF (iDir_row==3) sigma_loc = sigma_gext(iDir_col,:)
                CALL vgen_coulomb(1, fmpi, fi%input, fi%field, fi%vacuum, fi%sym, fi%juphon, starsq, fi%cell, &
                          & sphhar, fi%atoms, .TRUE., rho1_dummy, grgrVCq, sigma_loc, &
                          & dfptdenimag=rho1_dummy, dfptvCoulimag=grgrVCqIm,dfptden0=rho1_dummy,stars2=stars,iDtype=iDtype_col,iDir=iDir_col,iDir2=iDir_row, &
-                         & sigma_disc2=MERGE(sigma_ext,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir_col==3.AND.iDir_row==3))
+                         & sigma_disc2=MERGE(sigma_ext,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir_col==3.AND.iDir_row==3.AND..FALSE.))
                IF (iDtype_col==iDtype_row) THEN
                   e2_vm = 0.0
                   CALL dfpt_e2_madelung(fi%atoms,fi%input%jspins,rho1_dummy%mt(:,0,:,:),grgrVCq%mt(:,0,:,1),e2_vm(:))
@@ -296,7 +296,7 @@ CONTAINS
                CALL vExt1Im%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
                ! Get V_{ext}(1) for \alpha, i, q=0 with gradient cancellation
                sigma_loc = cmplx(0.0,0.0)
-               IF (iDir_col==3) sigma_loc = -sigma_ext
+               !IF (iDir_col==3) sigma_loc = -sigma_ext
                CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                               fi%juphon,fi%cell,fmpi,fi%noco,nococonv,rho_dummy,vTot,&
                               stars,rho_dummy,vExt1,.FALSE.,vExt1Im,rho_dummy,iDtype_col,iDir_col,[0,0],sigma_loc)

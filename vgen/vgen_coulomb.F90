@@ -75,7 +75,7 @@ contains
     complex, allocatable                         :: alphm(:,:), psq(:)
     real,    allocatable                         :: af1(:), bf1(:)
     LOGICAL :: l_dfptvgen ! If this is true, we handle things differently!
-    LOGICAL :: l_2ndord
+    LOGICAL :: l_2ndord, l_corr
 
 #ifdef CPP_MPI
     integer:: ierr
@@ -83,9 +83,16 @@ contains
 
     l_dfptvgen = PRESENT(stars2)
     l_2ndord = PRESENT(iDir2)
+    l_corr = ALL(ABS(den%vac)<1e-12)
     vmz1dh_is = cmplx(0.0,0.0)
     sigma_loc = sigma_disc
     sigma_loc2 = MERGE(sigma_disc,cmplx(0.0,0.0),PRESENT(sigma_disc2))
+
+    vintcza = cmplx(0.0,0.0)
+    sig1dh = cmplx(0.0,0.0)
+    vz1dh = cmplx(0.0,0.0)
+    vmz1dh = cmplx(0.0,0.0)
+    vslope = cmplx(0.0,0.0)
 
     allocate ( alphm(stars%ng2,2), af1(3*stars%mx3), bf1(3*stars%mx3), psq(stars%ng3)  )
     vCoul%iter = den%iter
@@ -120,12 +127,14 @@ contains
           ! handled by the G_||/=0 parts in vvacis/vvacxy, that are told to explicitly
           ! start at star 1 instead of 2 for this!
           if (.not.l_2ndord) then
-            call vvac( vacuum, stars, cell,  input, field, psq, den%vac(:,1,:,ispin), vCoul%vac(:,1,:,ispin), rhobar, sig1dh, vz1dh,vslope,.FALSE..AND.l_dfptvgen,vmz1dh,sigma_disc )
+            !call vvac( vacuum, stars, cell,  input, field, psq, den%vac(:,1,:,ispin), vCoul%vac(:,1,:,ispin), rhobar, sig1dh, vz1dh,vslope,.FALSE..AND.l_dfptvgen,vmz1dh,sigma_disc )
+            call vvac( vacuum, stars, cell,  input, field, psq, den%vac(:,1,:,ispin), vCoul%vac(:,1,:,ispin), rhobar, sig1dh, vz1dh,vslope,l_corr,vmz1dh,sigma_disc )
           else
-            call vvac( vacuum, stars, cell,  input, field, psq, den%vac(:,1,:,ispin), vCoul%vac(:,1,:,ispin), rhobar, sig1dh, vz1dh,vslope,.TRUE.,vmz1dh,sigma_disc,sigma_disc2 )
+            !call vvac( vacuum, stars, cell,  input, field, psq, den%vac(:,1,:,ispin), vCoul%vac(:,1,:,ispin), rhobar, sig1dh, vz1dh,vslope,.TRUE.,vmz1dh,sigma_disc,sigma_disc2 )
+            call vvac( vacuum, stars, cell,  input, field, psq, den%vac(:,1,:,ispin), vCoul%vac(:,1,:,ispin), rhobar, sig1dh, vz1dh,vslope,l_corr,vmz1dh,sigma_disc,sigma_disc2 )
           end if
         end if
-        call vvacis( stars, vacuum, cell, psq, input, field, vCoul%vac(:vacuum%nmzxyd,:,:,ispin), l_dfptvgen )
+        call vvacis( stars, vacuum, cell, psq, input, field, vCoul%vac(:vacuum%nmzxyd,:,:,ispin), l_dfptvgen, l_corr )
         call vvacxy( stars, vacuum, cell, sym, input, field, den%vac(:vacuum%nmzxyd,:,:,ispin), vCoul%vac(:vacuum%nmzxyd,:,:,ispin), alphm, l_dfptvgen )
         call timestop( "Vacuum" )
       end if
@@ -153,11 +162,11 @@ contains
             if (.not.l_2ndord) then
               vintcza = vintcz( stars, vacuum, cell,  input, field, z, irec2, psq, &
                                 vCoul%vac(:,:,:,ispin), &
-                                rhobar, sig1dh, vz1dh, alphm, vslope, sigma_disc, l_dfptvgen, vmz1dh-vmz1dh_is )
+                                rhobar, sig1dh, vz1dh, alphm, vslope, sigma_disc, l_dfptvgen, l_corr, vmz1dh-vmz1dh_is )
             else
             vintcza = vintcz( stars, vacuum, cell,  input, field, z, irec2, psq, &
                               vCoul%vac(:,:,:,ispin), &
-                                rhobar, sig1dh, vz1dh, alphm, vslope, sigma_disc, l_dfptvgen, vmz1dh-vmz1dh_is, sigma_disc2 )
+                                rhobar, sig1dh, vz1dh, alphm, vslope, sigma_disc, l_dfptvgen, l_corr, vmz1dh-vmz1dh_is, sigma_disc2 )
             end if
             af1(i) = real( vintcza )
             bf1(i) = aimag( vintcza )

@@ -457,8 +457,8 @@ CONTAINS
          ELSE
             CALL priv_error('Undefined result 0^0')
          END IF
-      CASE ('cos(', 'sin(', 'exp(', 'log(', 'abs(', 'sqrt(', 'acos(', ' &
-            asin(', 'atan(', 'cosh(', 'tanh(', 'tan(')
+      CASE ('cos(', 'sin(', 'exp(', 'log(', 'abs(', 'sqrt(', 'acos(',  &
+            'asin(', 'atan(', 'cosh(', 'tanh(', 'tan(')
          call priv_getnextatom(string, nextnumber, nextcommand)
          number = priv_calc(string, nextnumber, nextcommand)
          SELECT CASE (command)

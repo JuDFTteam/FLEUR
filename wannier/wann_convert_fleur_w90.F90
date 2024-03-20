@@ -702,7 +702,7 @@
             do n = 1, m
               do compo=1,num_compos
                   s_real=real(oper_o(n, m, ik, map3(compo)))*conversionfactor
-                  s_img=imag(oper_o(n, m, ik, map3(compo)))*conversionfactor
+                  s_img=aimag(oper_o(n, m, ik, map3(compo)))*conversionfactor
                   write (spn_in, *) s_real, s_img   !,compo,n, m, ik 
 !               oper_o(n, m, ik, compo) = cmplx(s_real, s_img, dp)
               ! Read upper-triangular part, now build the rest
@@ -726,7 +726,7 @@
             do n = 1+write_bands, m
               do compo=1,num_compos
                   s_real=real(oper_o(n, m, ik, compo))*conversionfactor
-                  s_img=imag(oper_o(n, m, ik, compo))*conversionfactor
+                  s_img=aimag(oper_o(n, m, ik, compo))*conversionfactor
                   write (spn_in, *) s_real, s_img
 !               oper_o(n, m, ik, compo) = cmplx(s_real, s_img, dp)
               ! Read upper-triangular part, now build the rest

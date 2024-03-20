@@ -261,12 +261,12 @@ CONTAINS
         CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,ierr)
         CALL MPI_COMM_SIZE(MPI_COMM_WORLD,isize,ierr)
 
-        if (irank==0) print *,"Running on ",isize," PE"
+        !if (irank==0) print *,"Running on ",isize," PE"
         !First determine if there are PE that should be distributed automatically
         IF (any(jobs%pe_requested==0)) THEN
             i=count(jobs%pe_requested==0)
             free_pe=isize-sum(jobs%pe_requested)
-            if (irank==0) print *,i," jobs are distributed on ",free_pe," unassigned PE"
+            if (irank==0.and.i>1) print *,i," jobs are distributed on ",free_pe," unassigned PE"
             i=free_pe/i
 
             IF (i<1) THEN

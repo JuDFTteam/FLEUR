@@ -2,15 +2,20 @@ module m_work_package
    use m_types
    use m_distribute_mpi
    use m_divide_most_evenly
+   use m_mtir_size
+#ifdef _OPENACC 
+   use openacc
+   use iso_c_binding
+#endif
    implicit none
-
-   type t_band_package  
+   private
+   type,public:: t_band_package  
       integer :: start_idx, psize, rank, size
    contains 
       procedure :: init => t_band_package_init
    end type t_band_package
 
-   type t_q_package 
+   type,public:: t_q_package 
       integer :: rank, size, ptr
       type(t_hybmpi) :: submpi
       type(t_band_package), allocatable :: band_packs(:)
@@ -19,11 +24,11 @@ module m_work_package
       procedure :: free => t_q_package_free
    end type t_q_package 
 
-   type t_qwps
+   type,public:: t_qwps
       type(t_q_package), allocatable :: q_packs 
    end type t_qwps
 
-   type t_k_package
+   type,public:: t_k_package
       integer :: nk, rank, size
       type(t_hybmpi) :: submpi
       type(t_q_package), allocatable :: q_packs(:)
@@ -33,7 +38,7 @@ module m_work_package
       procedure :: free  => t_k_package_free
    end type t_k_package 
 
-   type t_work_package 
+   type,public:: t_work_package 
       integer :: rank, size, n_kpacks, max_kpacks
       type(t_k_package), allocatable :: k_packs(:)
       type(t_hybmpi) :: submpi
@@ -322,11 +327,7 @@ contains
    end function calc_n_parts
 
    integer(8) function target_memsize(fi, hybdat)
-#ifdef _OPENACC 
-      use openacc
-      use iso_c_binding
-      use m_mtir_size
-#endif
+
       implicit none 
       type(t_fleurinput), intent(in) :: fi
       type(t_hybdat), intent(in)     :: hybdat

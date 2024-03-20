@@ -1,4 +1,3 @@
-
 pages:
   image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
   stage: deploy
@@ -6,6 +5,7 @@ pages:
     - doxygen
     - gfortran-coverage
     - ford
+    - intel-maqao
   script:
     - echo "HTML should be ready from cache..."
     - mv $CI_PROJECT_DIR/docs/Docu_main.html $CI_PROJECT_DIR/public/index.html
@@ -17,6 +17,34 @@ pages:
       - public
   rules:
       - if: $CI_TASKS =~ /doc/    
+      - if: $CI_TASKS =~ /all/    
+  
+intel-maqao:
+  stage: html
+  tags:
+    - rtx2080ti
+  variables:
+    OMP_NUM_THREADS: 4
+  script:
+    - cd $CI_PROJECT_DIR
+    - ulimit -s unlimited
+    - which compiler-select
+    - set +e; source compiler-select intel-oneapi-2024; set -e
+    - ./configure.sh -c intel -hdf5 false
+    - cd build
+    - make -j 12
+    - cp ../tests/performance/inputfiles/Noco/inp.xml .
+    - /local/th1/DFT/maqao oneview -R1 --ignore-output-code -- fleur -diag dummy
+    - mkdir -p $CI_PROJECT_DIR/public
+    - cp -r maqao*/RESULTS $CI_PROJECT_DIR/public
+  artifacts:
+    when: always
+    paths:
+      - build
+      - public
+  rules:
+    - if: $CI_TASKS =~ /doc/ 
+    - if: $CI_TASKS =~ /all/    
   
 
 ford:
@@ -32,7 +60,8 @@ ford:
       - public
   rules:
       - if: $CI_TASKS =~ /doc/    
-  
+      - if: $CI_TASKS =~ /all/    
+
 doxygen:
   image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
   stage: html
@@ -50,13 +79,15 @@ doxygen:
       - build/inpgen
   rules:
       - if: $CI_TASKS =~ /doc/    
-  
+      - if: $CI_TASKS =~ /all/    
+
 
 gfortran-coverage:
   image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
   extends: .test-fleur
   stage: html
   needs: []
+  coverage: '/functions\.\.\: ([\.\d]*).*functions/'
   variables:
     BUILD_FOLDER: "."
     juDFT_MPI: "mpirun -n {mpi_procs} --allow-run-as-root "
@@ -86,5 +117,6 @@ gfortran-coverage:
     url: https://fleur.iffgit.fz-juelich.de/fleur/coverage_html
   rules:
       - if: $CI_TASKS =~ /doc/    
-  
+      - if: $CI_TASKS =~ /all/    
+
 

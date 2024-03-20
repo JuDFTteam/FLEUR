@@ -111,7 +111,7 @@ CONTAINS
             IF(.NOT.l_found) THEN
                WRITE(line,'(2a)') 'mv out.xml ', TRIM(ADJUSTL(tempFilename))
                CALL system(TRIM(ADJUSTL(line)))
-               WRITE (*,*) 'Moving old out.xml to ', TRIM(ADJUSTL(tempFilename)), '.'
+               !WRITE (*,*) 'Moving old out.xml to ', TRIM(ADJUSTL(tempFilename)), '.'
             ELSE
                CALL juDFT_warn("No free out-???.xml file places for storing old out.xml files!")
             END IF

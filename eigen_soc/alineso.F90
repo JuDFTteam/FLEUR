@@ -135,24 +135,27 @@ CONTAINS
 ! in case of ev-parallelization, now distribute the atoms:
 !
       IF (fmpi%n_size > 1) THEN
-        nat_l = FLOOR(real(atoms%nat)/fmpi%n_size)
-        extra = atoms%nat - nat_l*fmpi%n_size
-        nat_start = fmpi%n_rank*nat_l + 1 + extra
-        nat_stop  = (fmpi%n_rank+1)*nat_l + extra
-        IF (fmpi%n_rank < extra) THEN
-          nat_start = nat_start - (extra - fmpi%n_rank)
-          nat_stop  = nat_stop - (extra - fmpi%n_rank - 1)
-        ENDIF
+         nat_l=ceiling(real(atoms%ntype)/fmpi%n_size) !stride in types
+         nat_start=fmpi%n_rank*nat_l+1                !now start and stop for types
+         nat_stop=(fmpi%n_rank+1)*nat_l
+         if (nat_start>atoms%ntype.or.nat_stop>atoms%ntype) THEN
+            nat_start=1
+            nat_stop=0
+         ELSE   
+            nat_start=sum(atoms%neq(:nat_start-1))+1        !convert to na
+            nat_stop=sum(atoms%neq(:nat_stop))
+         ENDIF   
       ELSE
         nat_start = 1
         nat_stop  = atoms%nat
       ENDIF
       nat_l = nat_stop - nat_start + 1
-
+     
     ! set up A and B coefficients
     ALLOCATE (ahelp(atoms%lmaxd*(atoms%lmaxd+2),nat_l,input%neig,input%jspins))
     ALLOCATE (bhelp(atoms%lmaxd*(atoms%lmaxd+2),nat_l,input%neig,input%jspins))
     ALLOCATE (chelp(-atoms%llod :atoms%llod, input%neig,atoms%nlod,nat_l,input%jspins))
+    
     CALL timestart("alineso SOC: -help") 
     CALL hsohelp(atoms,sym,input,lapw,nsz,cell,zmat,usdus,&
                  zso,noco,nococonv,nat_start,nat_stop,nat_l,ahelp,bhelp,chelp)

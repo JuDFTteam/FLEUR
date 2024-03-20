@@ -1,0 +1,13 @@
+# This is a Spack Environment file.
+#
+# It describes a set of packages to be installed, along with
+# configuration settings.
+spack:
+  # add package specs to the `specs` list
+  specs:
+  - fleur%oneapi+mpi+openmp+hdf5+elsi ^hdf5~mpi 
+  view: true
+  concretizer:
+    unify: true
+  repos:
+  - ${FLEUR_SOURCE}/cmake/spack/repo
