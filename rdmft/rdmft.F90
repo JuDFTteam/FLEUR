@@ -464,7 +464,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
       ALLOCATE(overallVCoul%pw_w(size(overallVCoul%pw,1),size(overallVCoul%pw,2)))
       overallVCoul%pw_w(:,:) = 0.0
       sigma_loc = cmplx(0.0,0.0)
-      CALL vgen_coulomb(1,fmpi, fi%input,fi%field,fi%vacuum,fi%sym,stars,fi%cell,sphhar,fi%atoms,.FALSE.,overallDen,overallVCoul,sigma_loc)
+      CALL vgen_coulomb(1,fmpi, fi%input,fi%field,fi%vacuum,fi%sym,fi%juphon,stars,fi%cell,sphhar,fi%atoms,.FALSE.,overallDen,overallVCoul,sigma_loc)
       CALL convol(stars,overallVCoul%pw_w(:,1),overallVCoul%pw(:,1))   ! Is there a problem with a second spin?!
       CALL overallVCoul%distribute(fmpi%mpi_comm)
 
@@ -859,7 +859,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
 
    !I think we need most of cdngen at this place so I just use cdngen
    CALL outDen%resetPotDen()
-   CALL cdngen(eig_id,fmpi,fi%input,fi%banddos,fi%sliceplot,fi%vacuum,fi%kpts,fi%atoms,sphhar,stars,fi%sym,fi%gfinp,fi%hub1inp,&
+   CALL cdngen(eig_id,fmpi,fi%input,fi%banddos,fi%sliceplot,fi%vacuum,fi%kpts,fi%atoms,sphhar,stars,fi%sym,fi%juphon,fi%gfinp,fi%hub1inp,&
                enpara,fi%cell,fi%noco,nococonv,vTot,results, fi%corespecinput,archiveType,xcpot,outDen, EnergyDen)
 
    ! Calculate RDMFT energy

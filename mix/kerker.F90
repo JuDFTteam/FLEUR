@@ -8,7 +8,7 @@ MODULE m_kerker
 CONTAINS
 
   SUBROUTINE kerker( field,  fmpi, &
-       stars, atoms, sphhar, vacuum, input, sym, cell, noco, nococonv,&
+       stars, atoms, sphhar, vacuum, input, sym, juphon, cell, noco, nococonv,&
          inDen, outDen, precon_v  )
 
     !Implementation of the Kerker preconditioner by M.Hinzen
@@ -29,6 +29,7 @@ CONTAINS
     TYPE(t_noco),      INTENT(in)    :: noco
     TYPE(t_nococonv),      INTENT(in)    :: nococonv
     TYPE(t_sym),       INTENT(in)    :: sym
+    TYPE(t_juphon),    INTENT(in)    :: juphon
     TYPE(t_stars),     INTENT(in)    :: stars
     TYPE(t_cell),      INTENT(in)    :: cell
     TYPE(t_sphhar),    INTENT(in)    :: sphhar
@@ -64,7 +65,7 @@ CONTAINS
     CALL resDen%distribute(fmpi%mpi_comm)
     IF ( .NOT. input%film ) THEN
        sigma_loc = cmplx(0.0,0.0)
-       CALL vgen_coulomb( 1, fmpi,    input, field, vacuum, sym, stars, cell, &
+       CALL vgen_coulomb( 1, fmpi,    input, field, vacuum, sym, juphon, stars, cell, &
             sphhar, atoms, .FALSE., resDen, vYukawa, sigma_loc )
     ELSE
        call resDenMod%init( stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN )
@@ -73,7 +74,7 @@ CONTAINS
        end if
        CALL resDenMod%distribute(fmpi%mpi_comm)
        vYukawa%iter = resDen%iter
-       CALL VYukawaFilm( stars, vacuum, cell, sym, input, fmpi, atoms, sphhar,   noco, nococonv,resDenMod, &
+       CALL VYukawaFilm( stars, vacuum, cell, sym, juphon, input, fmpi, atoms, sphhar,   noco, nococonv,resDenMod, &
             vYukawa )
     END IF
 

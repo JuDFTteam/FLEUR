@@ -9,7 +9,7 @@ MODULE m_magMultipoles
   USE m_constants
   IMPLICIT NONE
 CONTAINS
-  SUBROUTINE magMultipoles(sym,stars, atoms,cell, sphhar, vacuum, input, noco,nococonv,outden)
+  SUBROUTINE magMultipoles(sym,juphon,stars, atoms,cell, sphhar, vacuum, input, noco,nococonv,outden)
     USE m_plot
     USE m_divergence
     USE m_mpmom
@@ -17,6 +17,7 @@ CONTAINS
     TYPE(t_atoms), INTENT(IN)                   :: atoms
     TYPE(t_sphhar), INTENT(IN)                  :: sphhar
     TYPE(t_sym), INTENT(IN)                     :: sym
+    TYPE(t_juphon), INTENT(IN)                  :: juphon
     TYPE(t_noco), INTENT(IN)                    :: noco
     TYPE(t_nococonv), INTENT(IN)                :: nococonv
     TYPE(t_stars),INTENT(IN)                    :: stars
@@ -46,7 +47,7 @@ CONTAINS
     !Calcalate divergence
     CALL divergence(input,stars,atoms,sphhar,vacuum,sym,cell,noco,m_den,div)
     qlmo = 0.0
-    CALL mt_moments( input, atoms, sym,sphhar, div%mt(:,:,:,1), POTDEN_TYPE_POTCOUL,qlmo,.FALSE.)
+    CALL mt_moments( input, atoms, sym, juphon, sphhar, div%mt(:,:,:,1), POTDEN_TYPE_POTCOUL,qlmo,.FALSE.)
 
     WRITE(oUnit,*) "Magnetic Multipoles:"
     DO n=1,atoms%ntype

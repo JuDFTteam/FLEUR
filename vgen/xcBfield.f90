@@ -102,7 +102,7 @@ CONTAINS
 
    END SUBROUTINE makeVectorField
 
-   SUBROUTINE sourcefree(fmpi,field,stars,atoms,sphhar,vacuum,input ,sym,cell,noco,aVec,vScal,vCorr)
+   SUBROUTINE sourcefree(fmpi,field,stars,atoms,sphhar,vacuum,input ,sym,juphon,cell,noco,aVec,vScal,vCorr)
       USE m_vgen_coulomb
       USE m_gradYlm
       USE m_grdchlh
@@ -131,6 +131,7 @@ CONTAINS
       TYPE(t_input),                INTENT(IN)     :: input
        
       TYPE(t_sym),                  INTENT(IN)     :: sym
+      TYPE(t_juphon),               INTENT(IN)     :: juphon
       TYPE(t_cell),                 INTENT(IN)     :: cell
       TYPE(t_noco),                 INTENT(IN)     :: noco
       TYPE(t_potden), DIMENSION(3), INTENT(INOUT)  :: aVec
@@ -166,7 +167,7 @@ CONTAINS
 
       CALL timestart("Building potential")
       sigma_loc = cmplx(0.0,0.0)
-      CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,stars,cell,sphhar,atloc,.TRUE.,div,phi,sigma_loc)
+      CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,juphon,stars,cell,sphhar,atloc,.TRUE.,div,phi,sigma_loc)
       CALL timestop("Building potential")
 
       DO i=1,3

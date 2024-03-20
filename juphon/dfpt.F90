@@ -230,9 +230,9 @@ CONTAINS
       sigma_ext  = cmplx(0.0,0.0)
       sigma_coul = cmplx(0.0,0.0)
       sigma_gext = cmplx(0.0,0.0)
-      CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, stars_nosym, fi_nosym%cell, &
+      CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, fi%juphon, stars_nosym, fi_nosym%cell, &
                          & sphhar_nosym, fi_nosym%atoms, .FALSE., imagrhodummy, vext_dummy, sigma_ext)
-      CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, stars_nosym, fi_nosym%cell, &
+      CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, fi%juphon, stars_nosym, fi_nosym%cell, &
                          & sphhar_nosym, fi_nosym%atoms, .FALSE., rho_nosym, vC_dummy, sigma_coul)
       DO iDir = 1, 3
          CALL grRho3(iDir)%copyPotDen(rho_nosym)
@@ -253,7 +253,7 @@ CONTAINS
          write(oUnit, *) "grVext", iDir
          sigma_loc  = cmplx(0.0,0.0)
          IF (iDir==3) sigma_loc  = sigma_ext
-         CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, stars_nosym, fi_nosym%cell, &
+         CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, fi%juphon, stars_nosym, fi_nosym%cell, &
                          & sphhar_nosym, fi_nosym%atoms, .FALSE., imagrhodummy, grVext3(iDir), sigma_loc, &
                          & dfptdenimag=imagrhodummy, dfptvCoulimag=grvextdummy,dfptden0=imagrhodummy,stars2=stars_nosym,iDtype=0,iDir=iDir)
          IF (iDir==3) sigma_gext(iDir,:) = sigma_loc
@@ -341,7 +341,7 @@ CONTAINS
 
                IF (iDir2==3) sigma_loc = sigma_gext(iDir,:)
                IF (iDir==3) sigma_loc = sigma_gext(iDir2,:)
-               CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, stars_nosym, fi_nosym%cell, &
+               CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, fi%juphon, stars_nosym, fi_nosym%cell, &
                          & sphhar_nosym, fi_nosym%atoms, .TRUE., imagrhodummy, grgrVC3x3(iDir2,iDir), sigma_loc, &
                          & dfptdenimag=imagrhodummy, dfptvCoulimag=grvextdummy,dfptden0=imagrhodummy,stars2=stars_nosym,iDtype=0,iDir=iDir,iDir2=iDir2, &
                          & sigma_disc2=MERGE(sigma_ext,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir2==3.AND.iDir==3))

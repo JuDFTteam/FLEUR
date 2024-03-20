@@ -10,7 +10,7 @@ MODULE m_cdngen
 CONTAINS
 
 SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
-                  kpts,atoms,sphhar,stars,sym,gfinp,hub1inp,&
+                  kpts,atoms,sphhar,stars,sym,juphon,gfinp,hub1inp,&
                   enpara,cell,noco,nococonv,vTot,results ,coreSpecInput,&
                   archiveType, xcpot,outDen,EnergyDen,greensFunction,hub1data,vxc,exc)
 
@@ -68,6 +68,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_noco),INTENT(IN)          :: noco
    TYPE(t_nococonv),INTENT(INOUT)   :: nococonv
    TYPE(t_sym),INTENT(IN)           :: sym
+   TYPE(t_juphon),INTENT(IN)        :: juphon
    TYPE(t_stars),INTENT(IN)         :: stars
    TYPE(t_cell),INTENT(IN)          :: cell
    TYPE(t_kpts),INTENT(IN)          :: kpts
@@ -254,7 +255,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    call core_den%subPotDen(outDen, val_den)
    CALL timestop("cdngen: cdncore")
 
-   IF(.FALSE.) CALL denMultipoleExp(input, fmpi, atoms, sphhar, stars, sym, cell,   outDen) ! There should be a switch in the inp file for this
+   IF(.FALSE.) CALL denMultipoleExp(input, fmpi, atoms, sphhar, stars, sym, juphon, cell,   outDen) ! There should be a switch in the inp file for this
    IF(fmpi%irank.EQ.0) THEN
       IF(input%lResMax>0) CALL resMoms(sym,input,atoms,sphhar,noco,nococonv,outDen,moments%rhoLRes) ! There should be a switch in the inp file for this
    END IF
@@ -277,7 +278,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
          CALL spinMoments(input,atoms,noco,nococonv,den=outDen)
          CALL orbMoments(input,atoms,noco,nococonv,moments)
 
-         if (sym%nop==1.and..not.input%film) call magMultipoles(sym,stars, atoms,cell, sphhar, vacuum, input, noco,nococonv,outden)
+         if (sym%nop==1.and..not.input%film) call magMultipoles(sym,juphon,stars, atoms,cell, sphhar, vacuum, input, noco,nococonv,outden)
          !Generate and save the new nocoinp file if the directions of the local
          !moments are relaxed or a constraint B-field is calculated.
       END IF

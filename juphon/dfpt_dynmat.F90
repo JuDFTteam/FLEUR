@@ -189,7 +189,7 @@ CONTAINS
                sigma_loc = cmplx(0.0,0.0)
                IF (iDir_col==3) sigma_loc = sigma_gext(iDir_row,:)
                IF (iDir_row==3) sigma_loc = sigma_gext(iDir_col,:)
-               CALL vgen_coulomb(1, fmpi, fi%input, fi%field, fi%vacuum, fi%sym, starsq, fi%cell, &
+               CALL vgen_coulomb(1, fmpi, fi%input, fi%field, fi%vacuum, fi%sym, fi%juphon, starsq, fi%cell, &
                          & sphhar, fi%atoms, .TRUE., rho1_dummy, grgrVCq, sigma_loc, &
                          & dfptdenimag=rho1_dummy, dfptvCoulimag=grgrVCqIm,dfptden0=rho1_dummy,stars2=stars,iDtype=iDtype_col,iDir=iDir_col,iDir2=iDir_row, &
                          & sigma_disc2=MERGE(sigma_ext,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir_col==3.AND.iDir_row==3))
