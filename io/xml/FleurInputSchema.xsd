@@ -1120,6 +1120,7 @@
       <xsd:attribute name="l_dos" type="FleurBool" use="optional"/>
       <xsd:attribute name="l_scf" type="FleurBool" use="optional"/>
       <xsd:attribute name="startq" type="xsd:positiveInteger" use="optional"/>
+      <xsd:attribute name="stopq" type="xsd:nonNegativeInteger" use="optional"/>
       <xsd:attribute name="qmode" type="xsd:nonNegativeInteger" use="optional"/>
    </xsd:complexType>
 
