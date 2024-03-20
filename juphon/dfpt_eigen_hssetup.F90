@@ -53,7 +53,7 @@ CONTAINS
       ! h1 gets V1Theta(k+q,k), VTheta1(k+q,k) and TTheta1(k+q,k)
       ! s1 gets Theta1(k+q,k)
       CALL timestart("Interstitial part")
-      CALL dfpt_hs_int(fi%noco, starsq, lapwq, lapw, fmpi, fi%cell%bbmat, isp, vTot1%pw_w, hmat, smat, killcont(1:3))
+      CALL dfpt_hs_int(fi%noco, fi%juphon, starsq, lapwq, lapw, fmpi, fi%cell%bbmat, isp, vTot1%pw_w, hmat, smat, killcont(1:3))
       CALL timestop("Interstitial part")
 
       ! Interstitial part:
