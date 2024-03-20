@@ -5,9 +5,7 @@ include_directories(include)
 add_subdirectory("fleurinput")
 
 set(c_filesFleur io/xml/dropInputSchema.c io/xml/dropOutputSchema.c io/xml/xmlInterfaceWrapper.c)
-if(FLEUR_USE_CUSOLVER)
-  set(c_filesFleur ${c_filesFleur} diagonalization/cusolver.c)
-endif()
+
 
 if(FLEUR_USE_PROG_THREAD)
    set(c_filesFleur ${c_filesFleur} hybrid/progress_thread/progress_thread.c)
