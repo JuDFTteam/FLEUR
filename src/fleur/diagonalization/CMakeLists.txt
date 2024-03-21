@@ -37,11 +37,11 @@ src/fleur/diagonalization/elemental.F90
 src/fleur/diagonalization/available_solvers.F90
 src/fleur/diagonalization/writeout.F90
 src/fleur/diagonalization/elpa_20180525_onenode.F90
-types/types_mat.F90
-types/types_mpimat.F90
-types/types_setup.F90
-io/io_matrix.F90
-io/iomatrix_hdf.F90
+src/fleur/types/types_mat.F90
+src/fleur/types/types_mpimat.F90
+src/fleur/types/types_setup.F90
+src/fleur/io/io_matrix.F90
+src/fleur/io/iomatrix_hdf.F90
 )
 
 add_executable(diag_test EXCLUDE_FROM_ALL ${diag_test_files}  )
