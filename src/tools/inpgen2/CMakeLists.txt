@@ -13,11 +13,11 @@ set(FLEUR_SRC "${CMAKE_SOURCE_DIR}/src/fleur")
 if (INPGEN_USE_kplib)
    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
    set(externallibs
-	${FLEUR_SRC}/kpoints/kplib_interface.F90
+	kpoints/kplib_interface.F90
 	${FLEUR_SRC}/external/kplib/fleur_interface.cpp
 )
 else()
-   set(externallibs ${FLEUR_SRC}/kpoints/kplib_interface_dummy.F90)
+   set(externallibs kpoints/kplib_interface_dummy.F90)
 endif()
 
 add_executable(inpgen2 ${externallibs}
@@ -78,18 +78,19 @@ ${FLEUR_SRC}/init/ss_sym.f
 ${FLEUR_SRC}/global/sort.f90
 ${FLEUR_SRC}/math/inv3.f90
 ${FLEUR_SRC}/io/w_inpXML.f90
-${FLEUR_SRC}/kpoints/divi.f
-#${FLEUR_SRC}/kpoints/bravais.f
-#${FLEUR_SRC}/kpoints/brzone2.f90
-${FLEUR_SRC}/kpoints/kpttet.f
-${FLEUR_SRC}/kpoints/kptmop.f
-${FLEUR_SRC}/kpoints/ordstar.f
-${FLEUR_SRC}/kpoints/fulstar.f
-#${FLEUR_SRC}/kpoints/tetcon.f90
-${FLEUR_SRC}/kpoints/kvecon.f
-${FLEUR_SRC}/kpoints/kprep.f
-#${FLEUR_SRC}/kpoints/triang.f
-${FLEUR_SRC}/kpoints/make_tetra.f
+
+kpoints/divi.f
+#kpoints/bravais.f
+#kpoints/brzone2.f90
+kpoints/kpttet.f
+kpoints/kptmop.f
+kpoints/ordstar.f
+kpoints/fulstar.f
+#kpoints/tetcon.f90
+kpoints/kvecon.f
+kpoints/kprep.f
+#kpoints/triang.f
+kpoints/make_tetra.f
 
 ${FLEUR_SRC}/math/util.F
 ${FLEUR_SRC}/math/pol_angle.f90
@@ -117,7 +118,7 @@ ${FLEUR_SRC}/types/types_setup.F90
 ${FLEUR_SRC}/types/types_hub1data.f90
 
 ${FLEUR_SRC}/hybrid/divide_most_evenly.f90
-${FLEUR_SRC}/kpoints/kptgen_hybrid.f90
+kpoints/kptgen_hybrid.f90
 ${FLEUR_SRC}/io/nocoInputCheck.F90
 ${FLEUR_SRC}/eigen/orthoglo.F90
 ${FLEUR_SRC}/math/ylm4.F90
@@ -130,7 +131,7 @@ ${FLEUR_SRC}/cdn/int_21lo.f90
 ${FLEUR_SRC}/xc-pot/gaunt.f90
 #${FLEUR_SRC}/math/grule.f90
 ${FLEUR_SRC}/init/ifft235.f90
-${FLEUR_SRC}/kpoints/gkptwgt.f90
+kpoints/gkptwgt.f90
 ${FLEUR_SRC}/init/local_sym.f
 ${FLEUR_SRC}/init/lhcal.f
 ${FLEUR_SRC}/init/ptsym.f90
@@ -173,62 +174,62 @@ if (INPGEN_USE_kplib)
 endif()
 set_target_properties(inpgen2 PROPERTIES LINKER_LANGUAGE Fortran)
 
-file(REMOVE ${CMAKE_SOURCE_DIR}/inpgen2/default_econfig.h)
-file(REMOVE ${CMAKE_SOURCE_DIR}/inpgen2/default2_econfig.h)
-file(REMOVE ${CMAKE_SOURCE_DIR}/inpgen2/oxides_validation_econfig.h)
-file(REMOVE ${CMAKE_SOURCE_DIR}/inpgen2/profileConfig.h)
+file(REMOVE ${CMAKE_SOURCE_DIR}/src/tools/inpgen2/default_econfig.h)
+file(REMOVE ${CMAKE_SOURCE_DIR}/src/tools/inpgen2/default2_econfig.h)
+file(REMOVE ${CMAKE_SOURCE_DIR}/src/tools/inpgen2/oxides_validation_econfig.h)
+file(REMOVE ${CMAKE_SOURCE_DIR}/src/tools/inpgen2/profileConfig.h)
 find_program(XXD_PROG xxd)
 
 if (XXD_PROG)
     ADD_CUSTOM_COMMAND(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/default_econfig.h
     COMMAND ${XXD_PROG} -i default.econfig ${CMAKE_CURRENT_BINARY_DIR}/default_econfig.h
-    DEPENDS ${CMAKE_SOURCE_DIR}/inpgen2/default.econfig
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/inpgen2/
+    DEPENDS ${CMAKE_SOURCE_DIR}/src/tools/inpgen2/default.econfig
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/src/tools/inpgen2/
     COMMENT "Putting current default.econfig into default_econfig.h")
 
     ADD_CUSTOM_COMMAND(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/default2_econfig.h
     COMMAND ${XXD_PROG} -i default2.econfig ${CMAKE_CURRENT_BINARY_DIR}/default2_econfig.h
-    DEPENDS ${CMAKE_SOURCE_DIR}/inpgen2/default2.econfig
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/inpgen2/
+    DEPENDS ${CMAKE_SOURCE_DIR}/src/tools/inpgen2/default2.econfig
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/src/tools/inpgen2/
     COMMENT "Putting current default2.econfig into default2_econfig.h")
 
     ADD_CUSTOM_COMMAND(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/oxides_validation_econfig.h
     COMMAND ${XXD_PROG} -i oxides_validation.econfig ${CMAKE_CURRENT_BINARY_DIR}/oxides_validation_econfig.h
-    DEPENDS ${CMAKE_SOURCE_DIR}/inpgen2/oxides_validation.econfig
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/inpgen2/
+    DEPENDS ${CMAKE_SOURCE_DIR}/src/tools/inpgen2/oxides_validation.econfig
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/src/tools/inpgen2/
     COMMENT "Putting current oxides_validation.econfig into oxides_validation_econfig.h")
 
     ADD_CUSTOM_COMMAND(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/profileConfig.h
     COMMAND ${XXD_PROG} -i profile.config ${CMAKE_CURRENT_BINARY_DIR}/profileConfig.h
-    DEPENDS ${CMAKE_SOURCE_DIR}/inpgen2/profile.config
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/inpgen2/
+    DEPENDS ${CMAKE_SOURCE_DIR}/src/tools/inpgen2/profile.config
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/src/tools/inpgen2/
     COMMENT "Putting current profile.config into profileConfig.h")
 else()
     ADD_CUSTOM_COMMAND(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/default_econfig.h
-    COMMAND cp ${CMAKE_SOURCE_DIR}/inpgen2/default_econfig.h.backup ${CMAKE_CURRENT_BINARY_DIR}/default_econfig.h
+    COMMAND cp ${CMAKE_SOURCE_DIR}/src/tools/inpgen2/default_econfig.h.backup ${CMAKE_CURRENT_BINARY_DIR}/default_econfig.h
     COMMENT "No xxd found using backup")
     message("No xxd command found! Using backup of default_econfig.h")
 
     ADD_CUSTOM_COMMAND(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/default2_econfig.h
-    COMMAND cp ${CMAKE_SOURCE_DIR}/inpgen2/default2_econfig.h.backup ${CMAKE_CURRENT_BINARY_DIR}/default2_econfig.h
+    COMMAND cp ${CMAKE_SOURCE_DIR}/src/tools/inpgen2/default2_econfig.h.backup ${CMAKE_CURRENT_BINARY_DIR}/default2_econfig.h
     COMMENT "No xxd found using backup")
     message("No xxd command found! Using backup of oxides_validation_econfig.h")
 
     ADD_CUSTOM_COMMAND(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/oxides_validation_econfig.h
-    COMMAND cp ${CMAKE_SOURCE_DIR}/inpgen2/oxides_validation_econfig.h.backup ${CMAKE_CURRENT_BINARY_DIR}/oxides_validation_econfig.h
+    COMMAND cp ${CMAKE_SOURCE_DIR}/src/tools/inpgen2/oxides_validation_econfig.h.backup ${CMAKE_CURRENT_BINARY_DIR}/oxides_validation_econfig.h
     COMMENT "No xxd found using backup")
     message("No xxd command found! Using backup of oxides_validation_econfig.h")
 
     ADD_CUSTOM_COMMAND(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/profileConfig.h
-    COMMAND cp ${CMAKE_SOURCE_DIR}/inpgen2/profileConfig.h.backup ${CMAKE_CURRENT_BINARY_DIR}/profileConfig.h
+    COMMAND cp ${CMAKE_SOURCE_DIR}/src/tools/inpgen2/profileConfig.h.backup ${CMAKE_CURRENT_BINARY_DIR}/profileConfig.h
     COMMENT "No xxd found using backup")
     message("No xxd command found! Using backup of profileConfig.h")
 

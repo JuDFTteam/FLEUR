@@ -25,4 +25,5 @@ src/fleur/init/angles.f90
 src/fleur/init/step_function.F90
 src/fleur/init/ptsym.f90
 src/fleur/init/test_performance.F90
+src/fleur/init/unfoldBandKPTS.f90
 )

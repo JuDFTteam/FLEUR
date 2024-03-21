@@ -97,6 +97,6 @@ endif()
 target_compile_options(juDFT PRIVATE $<$<COMPILE_LANGUAGE:Fortran>:${FLEUR_PRECISION_OPTION}>)
 
 #Set module directories
-include_directories("${CMAKE_CURRENT_BINARY_DIR}/modules/juDFT")
-set_target_properties(juDFT PROPERTIES Fortran_MODULE_DIRECTORY modules/juDFT)
+include_directories("${CMAKE_BINARY_DIR}/modules/juDFT")
+set_target_properties(juDFT PROPERTIES Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/modules/juDFT)
 set_source_files_properties(time.F90 PROPERTIES COMPILE_FLAGS -O0)
