@@ -548,7 +548,6 @@
       input%kcrel=0
       BACKSPACE(5)
       READ (UNIT=5,fmt='(A)') line
-      input%l_bmt= ( line(52:56)=='bmt=T' ).or.( line(52:56)=='bmt=t' )
       WRITE (oUnit,9170)  input%frcor,sliceplot%slice,input%ctail
  8050 FORMAT (6x,l1,7x,l1,7x,l1,6x,l1,7x,i1,5x,l1,5x,l1)
 

@@ -47,10 +47,7 @@ CONTAINS
     !            |            +- writeDensity
     !            +-- f2u -- wrtdop
     !            +-- u2f -- loddop
-    !            +-- bmt -+- readDensity
-    !                     +- wrtdop
     !----------------------------------------
-    USE m_bmt
     USE m_stden
     USE m_cdnsp
     USE m_flipcdn
@@ -146,16 +143,12 @@ CONTAINS
 
 
 
-       IF (input%l_bmt) THEN
-          CALL bmt(stars,input,noco,atoms,sphhar,vacuum,cell,sym )
-       ENDIF
 
     ENDIF ! fmpi%irank == 0
 
     IF (input%strho)          CALL juDFT_end("starting density generated",fmpi%irank)
     IF (input%swsp)           CALL juDFT_end("spin polarised density generated",fmpi%irank)
     IF (input%lflip)          CALL juDFT_end("magnetic moments flipped",fmpi%irank)
-    IF (input%l_bmt)          CALL juDFT_end('"cdnbmt" written',fmpi%irank)
 
   END SUBROUTINE OPTIONAL
 END MODULE m_optional

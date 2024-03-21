@@ -619,7 +619,7 @@ WRITE (fileNum, 242) 1.0
 
 !      <specialOutput form66="F" eonly="F" bmt="F"/>
 420   FORMAT('      <specialOutput eonly="', l1, '" bmt="', l1, '"/>')
-      WRITE (fileNum, 420) input%eonly, input%l_bmt
+      WRITE (fileNum, 420) input%eonly
 
 !      <magneticCircularDichroism energyLo="-10.0" energyUp="0.0"/>
 430   FORMAT('      <magneticCircularDichroism mcd="',l1,'" energyLo="', f0.8, '" energyUp="', f0.8, '"/>')

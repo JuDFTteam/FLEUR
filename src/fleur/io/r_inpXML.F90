@@ -1902,8 +1902,7 @@ CONTAINS
       sliceplot%plpot = .FALSE.
 
       input%eonly = .FALSE.
-      input%l_bmt = .FALSE.
-
+     
       xPathA = '/fleurInput/output'
       numberNodes = xmlGetNumberOfNodes(xPathA)
 
@@ -1947,7 +1946,6 @@ CONTAINS
 
          IF (numberNodes.EQ.1) THEN
             input%eonly = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eonly'))
-            input%l_bmt = evaluateFirstBoolOnly(xmlGetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@bmt'))
          END IF
 
          ! Read in optional densityOfStates output parameters

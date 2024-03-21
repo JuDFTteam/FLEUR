@@ -55,7 +55,6 @@ MODULE m_types_input
   REAL    :: tkb=0.001
   INTEGER :: bz_integration=BZINT_METHOD_HIST
   LOGICAL :: l_bloechl=.FALSE. !Are the bloechl corrections used for bz_integration=BZINT_METHOD_TETRA
-  LOGICAL :: l_bmt=.FALSE.
   !INTEGER:: scale
   INTEGER:: kcrel =0
   LOGICAL:: frcor =.FALSE. !frozen core
@@ -143,7 +142,6 @@ SUBROUTINE mpi_bc_input(this,mpi_comm,irank)
    CALL mpi_bc(this%tkb,rank,mpi_comm)
    CALL mpi_bc(this%bz_integration,rank,mpi_comm)
    CALL mpi_bc(this%l_bloechl,rank,mpi_comm)
-   CALL mpi_bc(this%l_bmt,rank,mpi_comm)
    CALL mpi_bc(this%kcrel,rank,mpi_comm)
    CALL mpi_bc(this%frcor,rank,mpi_comm)
    CALL mpi_bc(this%lflip,rank,mpi_comm)
@@ -411,7 +409,6 @@ SUBROUTINE read_xml_input(this,xml)
       numberNodes = xml%GetNumberOfNodes(xPathA)
       IF (numberNodes.EQ.1) THEN
          this%eonly = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eonly'))
-         this%l_bmt = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@bmt'))
       END IF
       ! Read in optional vacuumDOS parameters
       xPathA = '/fleurInput/output/vacuumDOS'
