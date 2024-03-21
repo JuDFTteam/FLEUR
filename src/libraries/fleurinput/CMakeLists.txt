@@ -1,12 +1,11 @@
 cmake_minimum_required(VERSION 3.0)
 project(FLEUR LANGUAGES Fortran)
 
-include("../cmake/Generate_Schema.cmake")
+include("${CMAKE_SOURCE_DIR}/cmake/Generate_Schema.cmake")
 
 #set(FLEURINPUT_COMPILEOPTS "-r8")
 
-add_library(fleurinput	 STATIC
-fleurinput_read_xml.f90    fleurinput_mpi_bc.f90
+set (fleurinp_src fleurinput_read_xml.f90    fleurinput_mpi_bc.f90
 types_fleurinput_base.F90  types_input.f90      
 types_coreSpecInput.f90    types_hybinp.f90     types_noco.f90
 types_vacuum.f90           types_banddos.f90    types_wannier.f90
@@ -16,12 +15,19 @@ types_econfig.F90          types_field.F90      types_xcpot.F90
 types_enparaXML.f90        types_forcetheo_data.f90
 types_mpinp.f90            types_gfinp.F90      types_hub1inp.f90
 types_xml.f90              types_juPhon.F90     types_brZone.f90
-calculator.f90 constants.f90 mpi_bc_tool.F90 ../include/inputSchema.h ../include/outputSchema.h ../io/xml/dropInputSchema.c 
-../io/xml/dropOutputSchema.c ../io/xml/inputSchema_old.h ../io/xml/outputSchema_old.h ../io/xml/xmlInterfaceWrapper.c
-../math/d_wigner.F90 ../math/inv3.f90 ../math/grule.f90 ../global/sort.f90 ../global/atom_shells.f90 ../kpoints/tetcon.f90 
-../kpoints/triang.f ../kpoints/bravais.f ../kpoints/brzone2.f90
-../hybrid/map_to_unit.f90
+calculator.f90 constants.f90 mpi_bc_tool.F90)
+
+set(fleurinp_src ${fleurinp_src}
+${CMAKE_SOURCE_DIR}/src/fleur/io/xml/dropInputSchema.c 
+${CMAKE_SOURCE_DIR}/src/fleur/io/xml/dropOutputSchema.c ${CMAKE_SOURCE_DIR}/src/fleur/io/xml/inputSchema_old.h ${CMAKE_SOURCE_DIR}/src/fleur/io/xml/outputSchema_old.h ${CMAKE_SOURCE_DIR}/src/fleur/io/xml/xmlInterfaceWrapper.c
+${CMAKE_SOURCE_DIR}/src/fleur/math/d_wigner.F90 ${CMAKE_SOURCE_DIR}/src/fleur/math/inv3.f90 ${CMAKE_SOURCE_DIR}/src/fleur/math/grule.f90 ${CMAKE_SOURCE_DIR}/src/fleur/global/sort.f90 ${CMAKE_SOURCE_DIR}/src/fleur/global/atom_shells.f90 ${CMAKE_SOURCE_DIR}/src/fleur/kpoints/tetcon.f90 
+${CMAKE_SOURCE_DIR}/src/fleur/kpoints/triang.f ${CMAKE_SOURCE_DIR}/src/fleur/kpoints/bravais.f ${CMAKE_SOURCE_DIR}/src/fleur/kpoints/brzone2.f90
+${CMAKE_SOURCE_DIR}/src/fleur/hybrid/map_to_unit.f90
+${CMAKE_BINARY_DIR}/include/inputSchema.h ${CMAKE_BINARY_DIR}/include/outputSchema.h 
 )
+
+
+add_library(fleurinput	 STATIC ${fleurinp_src})
 #Set module directories
 include_directories("${CMAKE_CURRENT_BINARY_DIR}/modules/fleurinput")
 

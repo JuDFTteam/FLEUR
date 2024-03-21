@@ -8,7 +8,7 @@ option(INPGEN_USE_DEBUG "Set CPP_DEBUG when compiling code" OFF)
 #set(JUFDT_COMPILEOPTS "-r8")
 option(INPGEN_USE_kplib "Use kplib library" OFF)
 
-set(FLEUR_SRC "${CMAKE_CURRENT_SOURCE_DIR}/../")
+set(FLEUR_SRC "${CMAKE_SOURCE_DIR}/src/fleur")
 
 if (INPGEN_USE_kplib)
    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
@@ -123,7 +123,7 @@ ${FLEUR_SRC}/eigen/orthoglo.F90
 ${FLEUR_SRC}/math/ylm4.F90
 ${FLEUR_SRC}/cdn/slab_dim.f90
 ${FLEUR_SRC}/cdn/slabgeom.f90
-${FLEUR_SRC}/dos/nstm3.f90
+${FLEUR_SRC}/propcalc/dos/nstm3.f90
 ${FLEUR_SRC}/cdn/int_21.f90
 ${FLEUR_SRC}/cdn/int_21lo.f90
 
@@ -150,7 +150,7 @@ ${FLEUR_SRC}/global/find_enpara.f90
 ${FLEUR_SRC}/io/xsf_io.f90
 ${FLEUR_SRC}/init/boxdim.f90
 ${FLEUR_SRC}/mpi/mpi_reduce_tool.F90
-${FLEUR_SRC}/fleurinput/mpi_bc_tool.F90
+${FLEUR_SRC}/../libraries/fleurinput/mpi_bc_tool.F90
 )
 
 set_source_files_properties(${CMAKE_BINARY_DIR}/include/buildinfo.h PROPERTIES GENERATED TRUE)

@@ -1,14 +1,19 @@
 set(fleur_F77 ${fleur_F77}
 )
 set(fleur_F90 ${fleur_F90}
-ldau/sgaunt.f90
-ldau/u_setup.f90
-ldau/uj2f.f90
-ldau/umtx.f90
-ldau/doubleCounting.f90
-ldau/dftUPotential.f90
-ldau/coulombPotential.f90
-ldau/v_ham.f90
-# ldau/v_mmp.f90
-# ldau/v_mmp21.f90
+${CMAKE_SOURCE_DIR}/src/fleur/ldaX/sgaunt.f90
+${CMAKE_SOURCE_DIR}/src/fleur/ldaX/u_setup.f90
+${CMAKE_SOURCE_DIR}/src/fleur/ldaX/uj2f.f90
+${CMAKE_SOURCE_DIR}/src/fleur/ldaX/umtx.f90
+${CMAKE_SOURCE_DIR}/src/fleur/ldaX/doubleCounting.f90
+${CMAKE_SOURCE_DIR}/src/fleur/ldaX/dftUPotential.f90
+${CMAKE_SOURCE_DIR}/src/fleur/ldaX/coulombPotential.f90
+${CMAKE_SOURCE_DIR}/src/fleur/ldaX/v_ham.f90
+${CMAKE_SOURCE_DIR}/src/fleur/ldaX/add_selfen.F90
+${CMAKE_SOURCE_DIR}/src/fleur/ldaX/crystalfield.F90
+${CMAKE_SOURCE_DIR}/src/fleur/ldaX/hubbard1_setup.F90
+${CMAKE_SOURCE_DIR}/src/fleur/ldaX/hubbard1Distance.f90
+${CMAKE_SOURCE_DIR}/src/fleur/ldaX/opc_setup.f90
+${CMAKE_SOURCE_DIR}/src/fleur/ldaX/slater.f90
+${CMAKE_SOURCE_DIR}/src/fleur/ldaX/types_selfen.F90
 )

@@ -1,12 +1,9 @@
 set(fleur_F77 ${fleur_F77}
-optional/stpot1.f
+${CMAKE_SOURCE_DIR}/src/fleur/startden/stpot1.f
 )
 set(fleur_F90 ${fleur_F90}
-optional/atom2.f90
-optional/bmt.f90
-optional/cdnsp.f90
-optional/flipcdn.f90
-optional/outcdn.f90
-optional/stden.f90
-optional/plot.F90
+${CMAKE_SOURCE_DIR}/src/fleur/startden/atom2.f90
+${CMAKE_SOURCE_DIR}/src/fleur/startden/cdnsp.f90
+${CMAKE_SOURCE_DIR}/src/fleur/startden/flipcdn.f90
+${CMAKE_SOURCE_DIR}/src/fleur/startden/stden.f90
 )
