@@ -5,7 +5,7 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_eig66_hdf
-#include "juDFT_env.h"
+use m_juDFT
    !*****************************************************************
    ! DESC:Module for hdf-io of eig-file
    !      To be compatible with f90 interface of HDF, use kind for vars

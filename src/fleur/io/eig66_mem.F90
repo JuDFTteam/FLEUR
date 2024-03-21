@@ -1,5 +1,5 @@
 MODULE m_eig66_mem
-#include "juDFT_env.h"
+use m_juDFT
    ! Do the IO of the eig-file into memory
    ! The eig-file is split into four arrays:
    ! eig_int contains the basis-set information/integers (ne)

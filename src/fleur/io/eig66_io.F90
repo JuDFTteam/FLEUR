@@ -5,7 +5,7 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_eig66_io
-#include "juDFT_env.h"
+use m_juDFT
    use m_types_mat
    USE m_eig66_data
    IMPLICIT NONE

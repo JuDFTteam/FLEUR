@@ -5,7 +5,7 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_eig66_da
-#include "juDFT_env.h"
+use m_juDFT
    ! Do the IO of the eig-file in fortran direct-access
    ! The eig-file is split into two parts:
    ! eig.bas contains the basis-set information

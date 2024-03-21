@@ -5,7 +5,7 @@
 !--------------------------------------------------------------------------------
 
 module m_eig66_data
-#include "juDFT_env.h"
+use m_juDFT
 #ifdef CPP_HDF
    use hdf5
 #endif

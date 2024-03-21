@@ -1,5 +1,5 @@
 MODULE m_eig66_mpi
-#include "juDFT_env.h"
+use m_juDFT
    USE m_eig66_data
    USE m_types_mat
    USE m_judft
