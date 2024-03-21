@@ -1,27 +1,27 @@
 [submodule "external/libxc-git"]
-	path = libraries/external/libxc-git
+	path = src/libraries/external/libxc-git
 	url = https://gitlab.com/libxc/libxc.git
 [submodule "docs/katacoda-tutorials"]
 	path = docs/katacoda-tutorials
 	url = gitlab@iffgit.fz-juelich.de:fleur/katacoda-tutorials.git
 [submodule "external/wannier90"]
-	path = libraries/external/wannier90
+	path = src/libraries/external/wannier90
 	url = https://github.com/wannier-developers/wannier90.git
 [submodule "edsolver-library"]
-	path = libraries/external/edsolver-library
+	path = src/libraries/external/edsolver-library
 	url = gitlab@iffgit.fz-juelich.de:janssen/edsolver-library.git
 [submodule "external/kplib/kplib"]
-	path = libraries/external/kplib/kplib
+	path = src/libraries/external/kplib/kplib
 	url = https://gitlab.com/muellergroup/kplib.git
 [submodule "external/hdf5-git"]
-	path = libraries/external/hdf5-git
+	path = src/libraries/external/hdf5-git
 	url = https://github.com/HDFGroup/hdf5.git
 [submodule "external/libxml2-git"]
-	path = libraries/external/libxml2-git
+	path = src/libraries/external/libxml2-git
 	url = https://gitlab.gnome.org/GNOME/libxml2.git
 [submodule "external/elsi-git"]
-	path = libraries/external/elsi-git
+	path = src/libraries/external/elsi-git
 	url = https://gitlab.com/elsi_project/elsi_interface.git
 [submodule "external/SCALAPACK-git"]
-	path = libraries/external/SCALAPACK-git
+	path = src/libraries/external/SCALAPACK-git
 	url = https://github.com/Reference-ScaLAPACK/scalapack.git
