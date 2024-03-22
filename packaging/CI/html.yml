@@ -33,7 +33,7 @@ intel-maqao:
     - ./configure.sh -c intel -hdf5 false
     - cd build
     - make -j 12
-    - cp ../tests/performance/inputfiles/Noco/inp.xml .
+    - cp $CI_PROJECT_DIR/testing/performance/inputfiles/Noco/inp.xml .
     - /local/th1/DFT/maqao oneview -R1 --ignore-output-code -- fleur -diag dummy
     - mkdir -p $CI_PROJECT_DIR/public
     - cp -r maqao*/RESULTS $CI_PROJECT_DIR/public
