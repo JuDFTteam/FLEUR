@@ -1442,14 +1442,14 @@ def collect_all_judft_messages():
     by grepping for them.
     """
     testdir = test_dir()
-    rel_fleur_source = '../'
+    rel_fleur_source = '../src/fleur'
     fleur_source_dir = os.path.abspath(os.path.join(testdir, rel_fleur_source))
     # source code is top dir, to much other stuff in there, thats why hardcode source dirs for speed
     # and to avoid problems with binaries and so on.
-    src_folders = ['cdn', 'cdn_mt', 'core', 'diagonalization', 'dos', 'eels', 'eigen',
-    'eigen_secvar', 'eigen_soc', 'external', 'fermi', 'fft', 'fleurinput', 'force',
-    'forcetheorem', 'global', 'greensf', 'hybrid', 'include', 'init', 'inpgen2',
-    'io', 'juDFT', 'kpoints', 'ldahia', 'ldau', 'main', 'math', 'mix', 'mpi', 'optional', 'orbdep',
+    src_folders = ['cdn', 'cdn_mt', 'core', 'diagonalization', 'propcalc/dos', 'propcalc/eels', 'eigen',
+     'eigen_soc', 'fermi', 'fft', '../tools/fleurinput', 'force',
+    'forcetheorem', 'global', 'greensf', 'hybrid',  'init', '../tools/inpgen2',
+    'io', 'juDFT', '../tools/inpgen2/kpoints',  'ldaX', 'main', 'math', 'mix', 'mpi', 'startden', 'propcalc/orbdep',
     'rdmft', 'tetra', 'types', 'vgen', 'wannier', 'xc-pot'
      ]
 
