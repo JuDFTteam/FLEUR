@@ -1,0 +1,122 @@
+pages:
+  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
+  stage: deploy
+  needs: 
+    - doxygen
+    - gfortran-coverage
+    - ford
+    - intel-maqao
+  script:
+    - echo "HTML should be ready from cache..."
+    - mv $CI_PROJECT_DIR/docs/Docu_main.html $CI_PROJECT_DIR/public/index.html
+  environment:
+     name: HTML-Pages
+     url: https://fleur.iffgit.fz-juelich.de/fleur
+  artifacts:
+    paths:
+      - public
+  rules:
+      - if: $CI_TASKS =~ /doc/    
+      - if: $CI_TASKS =~ /all/    
+  
+intel-maqao:
+  stage: html
+  tags:
+    - rtx2080ti
+  variables:
+    OMP_NUM_THREADS: 4
+  script:
+    - cd $CI_PROJECT_DIR
+    - ulimit -s unlimited
+    - which compiler-select
+    - set +e; source compiler-select intel-oneapi-2024; set -e
+    - ./configure.sh -c intel -hdf5 false
+    - cd build
+    - make -j 12
+    - cp $CI_PROJECT_DIR/testing/performance/inputfiles/Noco/inp.xml .
+    - /local/th1/DFT/maqao oneview -R1 --ignore-output-code -- fleur -diag dummy
+    - mkdir -p $CI_PROJECT_DIR/public
+    - cp -r maqao*/RESULTS $CI_PROJECT_DIR/public
+  artifacts:
+    when: always
+    paths:
+      - build
+      - public
+  rules:
+    - if: $CI_TASKS =~ /doc/ 
+    - if: $CI_TASKS =~ /all/    
+  
+
+ford:
+  image: iffregistry.fz-juelich.de/fleur/fleur:ford
+  stage: html
+  needs: []  
+  script:
+    - cd $CI_PROJECT_DIR/docs ; ford -f ford.md
+    - mkdir ../public
+    - mv ford-doc ../public/ford
+  artifacts:
+    paths:
+      - public
+  rules:
+      - if: $CI_TASKS =~ /doc/    
+      - if: $CI_TASKS =~ /all/    
+
+doxygen:
+  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
+  stage: html
+  needs: []
+  script:
+    - cd $CI_PROJECT_DIR ;FLEUR_INCLUDEDIR="/opt/include /usr/include" FLEUR_LIBRARIES="-L/opt/lib;-ldl;-L/usr/lib;-L/usr/lib/x86_64-linux-gnu;-lscalapack-openmpi;-lfftw3" ./configure.sh -c mpi
+    - cd $CI_PROJECT_DIR/build ; make doc
+    - mkdir ../public
+    - mv docs/html/ ../public/doxygen
+  artifacts:
+    paths:
+      - public
+      - build/fleur
+      - build/fleur_MPI
+      - build/inpgen
+  rules:
+      - if: $CI_TASKS =~ /doc/    
+      - if: $CI_TASKS =~ /all/    
+
+
+gfortran-coverage:
+  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
+  extends: .test-fleur
+  stage: html
+  needs: []
+  coverage: '/functions\.\.\: ([\.\d]*).*functions/'
+  variables:
+    BUILD_FOLDER: "."
+    juDFT_MPI: "mpirun -n {mpi_procs} --allow-run-as-root "
+  before_script:
+      - cd $CI_PROJECT_DIR
+      - pip install lcov_cobertura
+      - FLEUR_INCLUDEDIR="/opt/include /usr/include" FLEUR_LIBRARIES="-L/opt/lib;-ldl;-L/usr/lib;-L/usr/lib/x86_64-linux-gnu;-lscalapack-openmpi;-lfftw3" ./configure.sh -c mpi -l coverage -flags --coverage 
+      - cd build.coverage
+      - make -j 4
+      - lcov --config-file  $CI_PROJECT_DIR/docker/CI/lcov-conf --exclude "*.inc" --capture --initial -d CMakeFiles -o baseline.info
+  after_script:
+      - cd $CI_PROJECT_DIR/build.coverage
+      - lcov --config-file  $CI_PROJECT_DIR/docker/CI/lcov-conf --exclude "*.inc" --capture  -d CMakeFiles -o after.info
+      - lcov --config-file  $CI_PROJECT_DIR/docker/CI/lcov-conf --add-tracefile baseline.info --add-tracefile after.info -o combined.info
+      - mkdir ../public;genhtml --output-directory ../public/coverage_html --title "FLEUR test coverage" --config-file  $CI_PROJECT_DIR/docker/CI/lcov-conf combined.info 
+      - lcov_cobertura combined.info 
+  allow_failure: true
+  artifacts:
+    paths:
+      - public
+    reports:  
+      coverage_report:
+        coverage_format: cobertura
+        path: build.coverage/coverage.xml  
+  environment:
+    name: Coverage
+    url: https://fleur.iffgit.fz-juelich.de/fleur/coverage_html
+  rules:
+      - if: $CI_TASKS =~ /doc/    
+      - if: $CI_TASKS =~ /all/    
+
+

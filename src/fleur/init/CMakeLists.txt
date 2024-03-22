@@ -1,0 +1,29 @@
+set(fleur_F77 ${fleur_F77}
+src/fleur/init/gtest.f
+src/fleur/init/lhcal.f
+src/fleur/init/local_sym.f
+src/fleur/init/ss_sym.f
+)
+set(fleur_F90 ${fleur_F90}
+src/fleur/init/ifft235.f90
+src/fleur/init/fleurinput_postprocess.f90
+include/buildinfo.h
+src/fleur/init/compile_descr.F90
+src/fleur/init/checks.F90
+src/fleur/init/efield.f90
+src/fleur/init/make_stars.f90
+src/fleur/init/make_sphhar.f90
+src/fleur/init/make_sym.f90
+src/fleur/init/make_forcetheo.f90
+src/fleur/init/make_xcpot.f90
+src/fleur/init/boxdim.f90
+src/fleur/init/mapatom.F90
+src/fleur/init/spgrot.f90
+src/fleur/init/stepf.F90
+src/fleur/init/lapw_dim.F90
+src/fleur/init/angles.f90
+src/fleur/init/step_function.F90
+src/fleur/init/ptsym.f90
+src/fleur/init/test_performance.F90
+src/fleur/init/unfoldBandKPTS.f90
+)
