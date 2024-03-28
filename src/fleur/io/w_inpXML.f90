@@ -618,7 +618,7 @@ WRITE (fileNum, 242) 1.0
       WRITE (fileNum, 410) sliceplot%kk, sliceplot%e1s, sliceplot%e2s, sliceplot%nnne, input%pallst
 
 !      <specialOutput form66="F" eonly="F" bmt="F"/>
-420   FORMAT('      <specialOutput eonly="', l1, '" bmt="', l1, '"/>')
+420   FORMAT('      <specialOutput eonly="', l1, '"/>')
       WRITE (fileNum, 420) input%eonly
 
 !      <magneticCircularDichroism energyLo="-10.0" energyUp="0.0"/>
