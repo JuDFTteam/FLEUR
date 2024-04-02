@@ -50,6 +50,8 @@ module m_dfpt_dynmat_eig
     integer, intent(in)                        :: iqpt
     logical                                    :: l_sumrule
     complex, allocatable                       :: dynMat0(:, :)
+    character(len=100)                         :: trash
+    integer                                    :: iread
 
     ! Array variables
     ! a       : (LAPACK) matrix to diagonalize
