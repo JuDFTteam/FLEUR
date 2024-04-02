@@ -49,9 +49,9 @@ module m_dfpt_dynmat_eig
     integer                                    :: iatom
     integer, intent(in)                        :: iqpt
     logical                                    :: l_sumrule
-    complex, allocatable                       :: dynMat0(:, :)
+    complex, allocatable                       :: dyn_Mat0(:, :)
     character(len=100)                         :: trash
-    integer                                    :: iread
+    integer                                    :: iread, iDir
 
     ! Array variables
     ! a       : (LAPACK) matrix to diagonalize
