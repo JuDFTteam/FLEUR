@@ -121,7 +121,7 @@ module m_dfpt_dynmat_eig
       IF (iqpt/=0) THEN
         ALLOCATE(dyn_mat0,mold=dyn_mat)
         OPEN( 110, file="dynMatq=0001", status="old")
-        DO iread = 1, 3 + 3*fi%atoms%nat ! Loop over dynmat rows
+        DO iread = 1, 3 + 3*atoms%nat ! Loop over dynmat rows
           IF (iread<4) THEN
             READ( 110,*) trash
             write(*,*) iread, trash
