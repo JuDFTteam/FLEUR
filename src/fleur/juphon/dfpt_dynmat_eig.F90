@@ -119,7 +119,7 @@ module m_dfpt_dynmat_eig
 
     l_sumrule = .TRUE.
     IF (l_sumrule) THEN
-      IF (iqpt/=0) THEN
+      IF (iqpt/=1) THEN
         ALLOCATE(dynmat0,mold=dynmat)
         OPEN( 110, file="dynMatq=0001", status="old")
         DO iread = 1, 3 + 3*atoms%nat ! Loop over dynmat rows
