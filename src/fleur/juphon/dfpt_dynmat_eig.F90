@@ -52,6 +52,7 @@ module m_dfpt_dynmat_eig
     complex, allocatable                       :: dyn_Mat0(:, :)
     character(len=100)                         :: trash
     integer                                    :: iread, iDir
+    real                                       :: numbers(3*fi%atoms%nat,6*fi%atoms%nat)
 
     ! Array variables
     ! a       : (LAPACK) matrix to diagonalize
