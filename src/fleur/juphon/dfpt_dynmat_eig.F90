@@ -47,7 +47,9 @@ module m_dfpt_dynmat_eig
     integer                                    :: itype
     integer                                    :: ieqat
     integer                                    :: iatom
-    integer, intent(in)                       :: iqpt
+    integer, intent(in)                        :: iqpt
+    logical                                    :: l_sumrule
+    complex, allocatable                       :: dynMat0(:, :)
 
     ! Array variables
     ! a       : (LAPACK) matrix to diagonalize
@@ -112,6 +114,52 @@ module m_dfpt_dynmat_eig
       end do
     end do
 
+    l_sumrule = .TRUE.
+    IF (l_sumrule) THEN
+      IF (iqpt/=0) THEN
+        ALLOCATE(dyn_mat0,mold=dyn_mat)
+        OPEN( 110, file="dynMatq=0001", status="old")
+        DO iread = 1, 3 + 3*fi%atoms%nat ! Loop over dynmat rows
+          IF (iread<4) THEN
+            READ( 110,*) trash
+            write(*,*) iread, trash
+          ELSE
+            READ( 110,*) numbers(iread-3,:)
+            write(*,*) iread, numbers(iread-3,:)
+            dyn_mat0(iread-3,:) = CMPLX(numbers(iread-3,::2),numbers(iread-3,2::2))
+          END IF
+        END DO ! iread
+        CLOSE(110)
+      ELSE
+        ALLOCATE(dyn_mat0,mold=dyn_mat)
+        dyn_mat0 = a
+      END IF
+
+      allocate( w(n))
+      w = 0.
+
+      allocate( rwork(3 * n))
+      rwork = 0.
+
+      lwork = 2 * n
+      allocate(work(lwork))
+      work = 0.
+
+      ! Diagonalize Gamma dynamical matrix
+      call zheev( jobz, uplo, n, dyn_mat0, lda, w, work, lwork, rwork, info )
+
+      ! w: eigenvalues q=0, a: eigenvectors q=0
+      DO jj = 1, lda
+        DO ii = 1, lda
+          DO iDir = 1, 3
+            a(jj, ii) = a(jj, ii) - w(iDir)*dyn_mat0(jj,iDir)*conjg(dyn_mat0(ii,iDir))
+          END DO
+        END DO
+      END DO
+      DEALLOCATE(w, rwork, work)
+      DEALLOCATE(dyn_mat0)
+    END IF
+
     write(*, '(a,3f9.3)') 'q =', qvec
     write(*, '(a)')       '==================================='
     write(*, '(a)')
@@ -171,7 +219,10 @@ module m_dfpt_dynmat_eig
     else
       a(:, :) = cmplx(0., 0.)
     end if
+
     close( 109 )
+
+
 
   end subroutine diagonalizeDynMat
 
