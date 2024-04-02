@@ -49,10 +49,10 @@ module m_dfpt_dynmat_eig
     integer                                    :: iatom
     integer, intent(in)                        :: iqpt
     logical                                    :: l_sumrule
-    complex, allocatable                       :: dyn_Mat0(:, :)
+    complex, allocatable                       :: dynMat0(:, :)
     character(len=100)                         :: trash
     integer                                    :: iread, iDir
-    real                                       :: numbers(3*fi%atoms%nat,6*fi%atoms%nat)
+    real                                       :: numbers(3*atoms%nat,6*atoms%nat)
 
     ! Array variables
     ! a       : (LAPACK) matrix to diagonalize
@@ -120,7 +120,7 @@ module m_dfpt_dynmat_eig
     l_sumrule = .TRUE.
     IF (l_sumrule) THEN
       IF (iqpt/=0) THEN
-        ALLOCATE(dyn_mat0,mold=dyn_mat)
+        ALLOCATE(dynmat0,mold=dynmat)
         OPEN( 110, file="dynMatq=0001", status="old")
         DO iread = 1, 3 + 3*atoms%nat ! Loop over dynmat rows
           IF (iread<4) THEN
@@ -129,13 +129,13 @@ module m_dfpt_dynmat_eig
           ELSE
             READ( 110,*) numbers(iread-3,:)
             write(*,*) iread, numbers(iread-3,:)
-            dyn_mat0(iread-3,:) = CMPLX(numbers(iread-3,::2),numbers(iread-3,2::2))
+            dynmat0(iread-3,:) = CMPLX(numbers(iread-3,::2),numbers(iread-3,2::2))
           END IF
         END DO ! iread
         CLOSE(110)
       ELSE
-        ALLOCATE(dyn_mat0,mold=dyn_mat)
-        dyn_mat0 = a
+        ALLOCATE(dynmat0,mold=dynmat)
+        dynmat0 = a
       END IF
 
       allocate( w(n))
@@ -149,18 +149,18 @@ module m_dfpt_dynmat_eig
       work = 0.
 
       ! Diagonalize Gamma dynamical matrix
-      call zheev( jobz, uplo, n, dyn_mat0, lda, w, work, lwork, rwork, info )
+      call zheev( jobz, uplo, n, dynmat0, lda, w, work, lwork, rwork, info )
 
       ! w: eigenvalues q=0, a: eigenvectors q=0
       DO jj = 1, lda
         DO ii = 1, lda
           DO iDir = 1, 3
-            a(jj, ii) = a(jj, ii) - w(iDir)*dyn_mat0(jj,iDir)*conjg(dyn_mat0(ii,iDir))
+            a(jj, ii) = a(jj, ii) - w(iDir)*dynmat0(jj,iDir)*conjg(dynmat0(ii,iDir))
           END DO
         END DO
       END DO
       DEALLOCATE(w, rwork, work)
-      DEALLOCATE(dyn_mat0)
+      DEALLOCATE(dynmat0)
     END IF
 
     write(*, '(a,3f9.3)') 'q =', qvec
