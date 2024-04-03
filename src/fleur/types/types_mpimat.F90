@@ -16,6 +16,12 @@ MODULE m_types_mpimat
    INTEGER, PARAMETER    :: DEFAULT_BLOCKSIZE = 64
    INTEGER, PARAMETER   :: dlen_ = 9
 
+#ifdef __INTEL_COMPILER
+   LOGICAL:: use_pdgemr2d=.true.
+#else
+   LOGICAL:: use_pdgemr2d=.false.
+#endif         
+
    !<This data-type extends the basic t_mat for distributed matrices.
    !<
    !<It stores the additional mpi_communicator and sets up a blacs grid for the matrix.
@@ -415,11 +421,6 @@ CONTAINS
       CLASS(t_mat), INTENT(IN)      ::mat1
       INTEGER, INTENT(IN) ::n1, n2
       INTEGER :: irank, err
-#ifdef __INTEL_COMPILER
-      LOGICAL,PARAMETER:: use_pdgemr2d=.true.
-#else
-      LOGICAL,PARAMETER:: use_pdgemr2d=.false.
-#endif         
 
       call timestart("mpimat_copy")
 
@@ -874,14 +875,15 @@ CONTAINS
    integer function priv_get_blocksize()
       integer, save:: block_size=-1
       character(len=10):: str
-      priv_get_blocksize=block_size
-      if (priv_get_blocksize>0) return
-      block_size=DEFAULT_BLOCKSIZE
-
-      if (judft_was_argument("-blocksize")) THEN
-         str=judft_string_for_argument("-blocksize")
-         read(str,*) block_size
+      if (block_size<0)  THEN
+         block_size=DEFAULT_BLOCKSIZE
+         if (judft_was_argument("-blocksize")) THEN
+            str=judft_string_for_argument("-blocksize")
+            read(str,*) block_size
+         endif
       endif
+      priv_get_blocksize=block_size
+      
    end function   
 
    SUBROUTINE mingeselle(mat_in, mat_out)
@@ -1259,12 +1261,11 @@ CONTAINS
       class(t_mpimat),intent(inout)::mat2d
       integer,intent(in),optional  ::offset1,offset2
 
-      INTEGER:: irank,isize,np_col,np_row,my_col,my_row !info on processors and processor grid
+      INTEGER:: irank,isize,np_col,np_row,my_col,my_row,col,row !info on processors and processor grid
       INTEGER,ALLOCATABLE:: map(:,:)
       INTEGER,ALLOCATABLE:: row_map(:)
       INTEGER,ALLOCATABLE:: col_map(:)
       INTEGER            :: win_handle
-      TYPE(C_PTR)        :: buffer
       INTEGER:: ierr,blocksize,global_col,global_col2d,n_col2d,n
 
       blocksize=mat2d%blacsdata%blacs_desc(5) !blocksize is assumed to be the same for both dimensions
@@ -1272,28 +1273,31 @@ CONTAINS
       call MPI_COMM_rank(mat%blacsdata%mpi_com,irank,ierr)
       call blacs_gridinfo(mat2d%blacsdata%blacs_desc(2),np_row,np_col,my_row,my_col)
 
+      !map that maps processor grid to iranks
       call generate_map_to_irank(np_row,np_col,my_row,my_col,irank,mat2d%blacsdata%blacs_desc(2),mat%blacsdata%mpi_com,map)
+      !which row/column of processor grid contains the data
       row_map=get_vector_map(mat%global_size1,offset1,blocksize,np_row)
       col_map=get_vector_map(mat%global_size2,offset2,blocksize,np_col)
-
-      call create_RMA_win(mat,offset1,offset2,row_map,col_map,my_row,my_col,blocksize,mat%blacsdata%mpi_com,win_handle,buffer)
-      global_col=irank
-      DO n=1,mat%global_size2 !loop over all local columns
-         global_col2d=offset2+global_col
-         n_col2d=local_offsets(global_col,blocksize,my_col,np_col)+1 !local column on target matrix
-         call send_column(mat,n,n_col2d,row_map,map(:,col_map(global_col)),win_handle)
+      call create_RMA_win(mat2d,offset1,np_row,my_row,blocksize,mat2d%blacsdata%mpi_com,win_handle) 
+      global_col=irank+1
+      DO n=1,mat%matsize2 !loop over all local columns
+               !first fence before all the commm
+         call mpi_win_fence(MPI_MODE_NOSTORE,win_handle,ierr)
+         call send_column(mat,n,global_col,offset2,blocksize,np_col,col_map(global_col),row_map,map(:,col_map(global_col)),win_handle,irank)
          global_col=global_col+isize !the next local column corresponds to this global column
       ENDDO   
-      call finish_rma(mat2d,offset1,offset2,np_row,np_col,my_row,my_col,blocksize,row_map,col_map,win_handle,buffer)
+      call mpi_win_fence(MPI_MODE_NOSTORE,win_handle,ierr)
+
+      call finish_rma(win_handle)
    end subroutine
 
-   subroutine generate_map_to_irank(npcol,nprow,myrow,mycol,irank,ictxt,mpi_com,map)
+   subroutine generate_map_to_irank(nprow,npcol,myrow,mycol,irank,ictxt,mpi_com,map)
       implicit none
       INTEGER,INTENT(IN):: nprow,npcol,myrow,mycol,irank,ictxt,mpi_com
       INTEGER,INTENT(OUT),ALLOCATABLE:: map(:,:)
 
       integer:: ierr
-      call blacs_gridinfo(ictxt,nprow,npcol,myrow,mycol)
+
       ALLOCATE(map(0:nprow-1,0:npcol-1))
       map=-1
       map(myrow,mycol)=irank
@@ -1312,103 +1316,92 @@ CONTAINS
 
       DO n=1,size(map)
          !in which block are we
-         blockindex=(n+offset-1)/blocksize
+         blockindex=(n+offset-2)/blocksize !offset is counted from 1
          !on which processor
          map(n)=mod(blockindex,np)
       ENDDO
    END function   
 
-   subroutine send_column(mat,n_col1D,n_col2d,row_map,gridmap,win_handle)
+   subroutine send_column(mat,n_col1D,n_col,offset2,blocksize,np_col,my_col,row_map,gridmap,win_handle,irank)
       implicit none
       type(t_mpimat),intent(in)::mat
-      integer,intent(in):: n_col1d,n_col2d  ! local column to send, local column on receiving side
+      integer,intent(in):: n_col1d,n_col   ! local column to send, global on sending side
+      INTEGER,intent(in):: offset2,blocksize,np_col,my_col,irank
       integer,intent(in):: row_map(:)        ! mapping of the (local) index of the row to the processor row in the gridmap
       integer,intent(in):: gridmap(0:)       ! mapping of the processor to the MPI irank
       integer,intent(in):: win_handle
 
-      integer:: myrow,send_size,ierr
+      integer:: myrow,send_size,ierr,n,nn
+      integer(MPI_ADDRESS_KIND)::disp
+      integer:: req(size(gridmap))
+
+      real,allocatable:: buffer_r(:)
+      complex,allocatable:: buffer_c(:)
+      if (mat%l_real) THEN
+         allocate(buffer_r(mat%matsize1))
+      else
+         allocate(buffer_c(mat%matsize1))
+      endif   
+
+      !First find the local column on the recieving processors
+      call infog1l(n_col+offset2-1,blocksize,np_col,my_col,0,n,nn)
+      disp=n-1
 
       DO myrow=0,size(gridmap)-1
          send_size=count(row_map==myrow)
          if (mat%l_real) THEN
-            call mpi_put(pack(mat%data_r(:,n_col1d),row_map==myrow),send_size,MPI_DOUBLE_PRECISION,gridmap(myrow),n_col2d,send_size,MPI_DOUBLE_complex,win_handle,ierr)
+            buffer_r(1:send_size)=pack(mat%data_r(:,n_col1d),row_map==myrow)
+            call mpi_put(buffer_r,send_size,MPI_DOUBLE_PRECISION,gridmap(myrow),disp,send_size,MPI_DOUBLE_PRECISION,win_handle,ierr)
          else
-            call mpi_put(pack(mat%data_c(:,n_col1d),row_map==myrow),send_size,MPI_DOUBLE_COMPLEX,gridmap(myrow),n_col2d,send_size,MPI_DOUBLE_complex,win_handle,ierr)
+            buffer_c(1:send_size)=pack(mat%data_c(:,n_col1d),row_map==myrow)
+            call mpi_put(buffer_c,send_size,MPI_DOUBLE_COMPLEX,gridmap(myrow),disp,send_size,MPI_DOUBLE_complex,win_handle,ierr)
          endif   
       ENDDO
+      
    END subroutine
    
-   subroutine create_RMA_win(mat,offset1,offset2,row_map,col_map,my_row,my_col,blocksize,mpi_comm,win_handle,buffer)
+   subroutine create_RMA_win(mat,offset1,np_row,my_row,blocksize,mpi_comm,win_handle)
       use iso_c_binding
       implicit none
-      type(t_mpimat),intent(in)::mat !This is the sending matrix
-      INTEGER,INTENT(IN)  :: offset1,offset2 ! The offsets of the target matrix
-      INTEGER,INTENT(IN)  :: my_col,my_row !Info on the blacs processor grid of the target matrix
-      INTEGER,INTENT(IN)  :: row_map(:),col_map(:) !Maps of the data on the 2d processor grid
+      type(t_mpimat),intent(in),target::mat !This is the sending matrix
+      INTEGER,INTENT(IN)  :: offset1 ! The offsets of the target matrix
+      INTEGER,INTENT(IN)  :: my_row,np_row !Info on the blacs processor grid of the target matrix
       integer,INTENT(IN)  :: blocksize,mpi_comm 
-      type(c_ptr),intent(out) :: buffer
       INTEGER,INTENT(OUT)     :: win_handle
 
       !locals
       INTEGER(KIND=MPI_ADDRESS_KIND) :: buffersize
-      INTEGER           :: data_in_byte,row_size,ierr,info
+      INTEGER                        :: data_in_byte,row_size,ierr,info,start,nn
+      type(c_ptr)                    :: ptr
       
 
       !determine local storage
       data_in_byte=merge(8,16,mat%l_real) 
-      buffersize=count(row_map==my_row)*count(col_map==my_col)*data_in_byte
-      row_size=count(row_map==my_row)*data_in_byte
+      call infog1l(offset1,blocksize,np_row,my_row,0,start,nn)
+
+      buffersize=(mat%matsize1*mat%matsize2-start+1)*data_in_byte 
+      row_size=mat%matsize1*data_in_byte
+
+      if (mat%l_real) THEN
+         ptr=c_loc(mat%data_r(start,1))
+      else
+         ptr=c_loc(mat%data_c(start,1))
+      endif   
+
+      call mpi_comm_rank(mpi_comm,nn,ierr)
       !Set the info and create the window
       call mpi_info_create(info,ierr)
       call mpi_info_set(info,"no_locks","true",ierr)
-      call mpi_win_allocate(buffersize,row_size,info,mpi_comm,buffer,win_handle,ierr)
+      !call mpi_win_create(ptr,buffersize,row_size,info,mpi_comm,win_handle,ierr)
+      call mpi_win_create(mat%data_r(start,1),buffersize,row_size,info,mpi_comm,win_handle,ierr)
+      
       call mpi_info_free(info,ierr)
-      !first fence before all the commm
-      call mpi_win_fence(MPI_MODE_NOSTORE,win_handle,ierr)
    END subroutine
 
-
-   function local_offsets(offset,blocksize,my_p,np) result(off)
-      INTEGER,INTENT(IN):: offset,blocksize,my_p,np
-      INTEGER:: off
-
-      integer:: global !Global index
-      off=0
-      global=my_p*blocksize
-      do while(global+blocksize<=offset)
-         global=global+np*blocksize
-         off=off+blocksize
-      enddo
-      if (global<offset) THEN
-         !offset in this block
-         off=off+offset-global
-      endif
-   END function
-
-
-   subroutine finish_rma(mat,offset1,offset2,np_row,np_col,my_row,my_col,blocksize,row_map,col_map,win_handle,buffer)
-      use iso_c_binding
-      class(t_mpimat),INTENT(inout) ::mat
-      integer,INTENT(IN):: offset1,offset2,blocksize,win_handle,my_row,my_col,np_row,np_col
-      integer,intent(in):: row_map(:),col_map(:)
-      type(c_ptr)       :: buffer
-      real,pointer    :: data_r(:,:)
-      complex,pointer :: data_c(:,:)
-      integer:: off1,off2 !local offsets
+   
+   subroutine finish_rma(win_handle)
+      integer,INTENT(IN):: win_handle
       integer:: ierr
-
-      off1=local_offsets(offset1,blocksize,my_row,np_row)
-      off2=local_offsets(offset2,blocksize,my_col,np_col)
-
-      call mpi_win_fence(0,win_handle,ierr)
-      if (mat%l_real) THEN
-         call c2f_pointer(buffer,data_r,[count(row_map==my_row),count(col_map==my_col)])
-         mat%data_r(off1:,off2:)=data_r
-      else
-         call c2f_pointer(buffer,data_c,[count(row_map==my_row),count(col_map==my_col)])
-         mat%data_c(off1:,off2:)=data_c
-      endif   
-      call mpi_free_mem(buffer,ierr)
       call mpi_win_free(win_handle,ierr)
    end subroutine   
 
