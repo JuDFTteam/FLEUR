@@ -746,10 +746,10 @@ CONTAINS
       !TRY TO USE mpi OR openmp wall-clock functions
 #ifdef _OPENMP
       cputime = real(omp_get_wtime(),kind=kind(cputime))
-#elif __INTEL_COMPILER
-      cputime = rtc()
 #elif CPP_MPI
       cputime = real(MPI_WTIME(),kind=kind(cputime))
+#elif __INTEL_COMPILER
+      cputime = rtc()
 #else
       !use f95 intrinsic function
       CALL CPU_TIME(cputime)
