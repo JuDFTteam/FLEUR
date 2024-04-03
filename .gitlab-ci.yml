@@ -5,16 +5,17 @@ stages:
    - build
    - fast-test
    - test
+   - perf
    - html
    - deploy
 
 include:
-   - "docker/CI/test-template.yml"
-   - "docker/CI/gfortran-hdf.yml"
-   - "docker/CI/gfortran-serial.yml"
-   - "docker/CI/gfortran-12.yml"
-   - "docker/CI/oneAPI.yml"
-   - "docker/CI/NVHPC.yml"
-   - "docker/CI/html.yml"
-   - "docker/CI/AiiDA.yml"
-   - "docker/CI/CB.yml"
+   - "packaging/CI/test-template.yml"
+   - "packaging/CI/gfortran-hdf.yml"
+   - "packaging/CI/gfortran-serial.yml"
+   - "packaging/CI/gfortran-12.yml"
+   - "packaging/CI/oneAPI.yml"
+   - "packaging/CI/NVHPC.yml"
+   - "packaging/CI/html.yml"
+   - "packaging/CI/AiiDA.yml"
+   - "packaging/CI/CB.yml"

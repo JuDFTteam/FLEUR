@@ -1,0 +1,35 @@
+set(fleur_F77 ${fleur_F77}
+src/fleur/math/angle.f
+src/fleur/math/clebsch.f
+src/fleur/math/cylbes.f
+src/fleur/math/cylpts.f
+src/fleur/math/dcylbs.f
+src/fleur/math/dsphbs.f
+src/fleur/math/gaussp.f
+src/fleur/math/inwint.f
+src/fleur/math/outint.f
+src/fleur/math/points.f
+src/fleur/math/qsf.f
+src/fleur/math/sphbes.f
+src/fleur/math/sphpts.f
+src/fleur/math/difcub.f
+)
+set(fleur_F90 ${fleur_F90}
+#src/fleur/math/d_wigner.F90
+src/fleur/math/inv3.f90
+src/fleur/math/qranf.f90
+src/fleur/math/differentiate.f90
+src/fleur/math/SphBessel.f90
+src/fleur/math/DoubleFactorial.f90
+src/fleur/math/LattHarmsSphHarmsConv.f90
+src/fleur/math/ExpSave.f90
+#src/fleur/math/grule.f90
+src/fleur/math/intgr.F90
+src/fleur/math/trapz.f90
+src/fleur/math/ylm4.F90
+#src/fleur/math/grule.f90
+src/fleur/math/gradYlm.f90
+src/fleur/math/pol_angle.f90
+src/fleur/math/BfieldtoVmat.f90
+src/fleur/math/matmul_dgemm.F90
+)
