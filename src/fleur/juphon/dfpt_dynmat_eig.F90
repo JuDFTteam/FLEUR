@@ -121,7 +121,7 @@ module m_dfpt_dynmat_eig
     IF (l_sumrule) THEN
       IF (iqpt/=1) THEN
         ALLOCATE(dynmat0,mold=dynmat)
-        OPEN( 110, file="dynMatq=0001", status="old")
+        OPEN( 110, file="dynMatq=gamma", status="old")
         DO iread = 1, 3 + 3*atoms%nat ! Loop over dynmat rows
           IF (iread<4) THEN
             READ( 110,*) trash
@@ -136,6 +136,16 @@ module m_dfpt_dynmat_eig
       ELSE
         ALLOCATE(dynmat0,mold=dynmat)
         dynmat0 = a
+        ! Write non-corrected dynMatq for sumrule at q!=gamma
+        OPEN( 111, file="dynMatq=gamma",status="replace",action="write",form="formatted")
+        write(111, '(a,3f9.3)') 'q =', qvec
+        write(111, '(a)')       '==================================='
+        write(111, '(a)')
+        write(111, '(a)') 'Original Dynamical Matrix [mass corrected]'
+        DO ii = 1, lda
+          write(111, '(3(2(es16.8,1x),3x))') dynmat0(ii, :)
+        END DO
+        CLOSE(111)
       END IF
 
       allocate( w(n))
