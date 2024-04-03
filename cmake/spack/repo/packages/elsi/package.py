@@ -12,7 +12,8 @@ class Elsi(CMakePackage):
     codes to a variety of eigenvalue solvers."""
 
     homepage = "https://wordpress.elsi-interchange.org/"
-    url = "https://wordpress.elsi-interchange.org/wp-content/uploads/2019/03/elsi-2.2.1.tar.gz"
+    #url = "https://wordpress.elsi-interchange.org/wp-content/uploads/2019/03/elsi-2.2.1.tar.gz"
+    git = "https://gitlab.com/ElectronicStructureLibrary/elsi-interface.git"
 
     license("BSD-3-Clause")
 
