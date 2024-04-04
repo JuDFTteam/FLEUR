@@ -1266,7 +1266,7 @@ CONTAINS
       INTEGER,ALLOCATABLE:: row_map(:)
       INTEGER,ALLOCATABLE:: col_map(:)
       INTEGER            :: win_handle
-      INTEGER:: ierr,blocksize,global_col,global_col2d,n_col2d,n
+      INTEGER:: ierr,blocksize,global_col,global_col2d,n_col2d,n,ir
 
       blocksize=mat2d%blacsdata%blacs_desc(5) !blocksize is assumed to be the same for both dimensions
       call MPI_COMM_SIZE(mat%blacsdata%mpi_com,isize,ierr)
@@ -1281,14 +1281,11 @@ CONTAINS
       call create_RMA_win(mat2d,offset1,np_row,my_row,blocksize,mat2d%blacsdata%mpi_com,win_handle) 
       global_col=irank+1
       DO n=1,mat%matsize2 !loop over all local columns
-               !first fence before all the commm
-         call mpi_win_fence(MPI_MODE_NOSTORE,win_handle,ierr)
+         !first fence before all the commm
          call send_column(mat,n,global_col,offset2,blocksize,np_col,col_map(global_col),row_map,map(:,col_map(global_col)),win_handle,irank)
          global_col=global_col+isize !the next local column corresponds to this global column
-      ENDDO   
-      call mpi_win_fence(MPI_MODE_NOSTORE,win_handle,ierr)
-
-      call finish_rma(win_handle)
+      ENDDO
+      call mpi_win_free(win_handle,ierr)
    end subroutine
 
    subroutine generate_map_to_irank(nprow,npcol,myrow,mycol,irank,ictxt,mpi_com,map)
@@ -1351,10 +1348,14 @@ CONTAINS
          send_size=count(row_map==myrow)
          if (mat%l_real) THEN
             buffer_r(1:send_size)=pack(mat%data_r(:,n_col1d),row_map==myrow)
+            CALL MPI_WIN_LOCK(MPI_LOCK_SHARED, gridmap(myrow), 0, win_handle, ierr)
             call mpi_put(buffer_r,send_size,MPI_DOUBLE_PRECISION,gridmap(myrow),disp,send_size,MPI_DOUBLE_PRECISION,win_handle,ierr)
+            call MPI_WIN_UNLOCK(gridmap(myrow), win_handle, ierr)
          else
             buffer_c(1:send_size)=pack(mat%data_c(:,n_col1d),row_map==myrow)
+            CALL MPI_WIN_LOCK(MPI_LOCK_SHARED, gridmap(myrow), 0, win_handle, ierr)
             call mpi_put(buffer_c,send_size,MPI_DOUBLE_COMPLEX,gridmap(myrow),disp,send_size,MPI_DOUBLE_complex,win_handle,ierr)
+            call MPI_WIN_UNLOCK(gridmap(myrow), win_handle, ierr)
          endif   
       ENDDO
       
@@ -1371,39 +1372,26 @@ CONTAINS
 
       !locals
       INTEGER(KIND=MPI_ADDRESS_KIND) :: buffersize
-      INTEGER                        :: data_in_byte,row_size,ierr,info,start,nn
-      type(c_ptr)                    :: ptr
+      INTEGER                        :: data_in_byte,row_size,ierr,start,nn
       
 
       !determine local storage
       data_in_byte=merge(8,16,mat%l_real) 
       call infog1l(offset1,blocksize,np_row,my_row,0,start,nn)
-
-      buffersize=(mat%matsize1*mat%matsize2-start+1)*data_in_byte 
+      buffersize=mat%matsize1
+      buffersize=(buffersize*mat%matsize2-start+1)*data_in_byte 
       row_size=mat%matsize1*data_in_byte
 
       if (mat%l_real) THEN
-         ptr=c_loc(mat%data_r(start,1))
+         call mpi_win_create(mat%data_r(start,1),buffersize,row_size,MPI_INFO_NULL,mpi_comm,win_handle,ierr)
       else
-         ptr=c_loc(mat%data_c(start,1))
+         call mpi_win_create(mat%data_c(start,1),buffersize,row_size,MPI_INFO_NULL,mpi_comm,win_handle,ierr)
       endif   
 
-      call mpi_comm_rank(mpi_comm,nn,ierr)
-      !Set the info and create the window
-      call mpi_info_create(info,ierr)
-      call mpi_info_set(info,"no_locks","true",ierr)
-      !call mpi_win_create(ptr,buffersize,row_size,info,mpi_comm,win_handle,ierr)
-      call mpi_win_create(mat%data_r(start,1),buffersize,row_size,info,mpi_comm,win_handle,ierr)
       
-      call mpi_info_free(info,ierr)
    END subroutine
 
    
-   subroutine finish_rma(win_handle)
-      integer,INTENT(IN):: win_handle
-      integer:: ierr
-      call mpi_win_free(win_handle,ierr)
-   end subroutine   
 
   
 #endif
