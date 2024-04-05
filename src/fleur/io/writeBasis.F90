@@ -457,7 +457,7 @@ SUBROUTINE writeBasis(input,noco,nococonv,kpts,atoms,sym,cell,enpara,hub1data,vT
       CALL io_write_attint0(metaGroupID,'version',version)
       CALL h5gclose_f(metaGroupID, hdfError)
 
-   DO jsp = 1,MERGE(1,input%jspins,noco%l_noco)
+   DO jsp = 1,input%jspins !MERGE(1,input%jspins,noco%l_noco)
        jspNoco = MERGE(1,jsp,noco%l_noco)
        write(jsp_name , '(a,i0)') '/jsp_',jsp
        CALL h5gcreate_f(fileID, TRIM(ADJUSTL(jsp_name)), jspGroupID, hdfError)
@@ -511,35 +511,38 @@ SUBROUTINE writeBasis(input,noco,nococonv,kpts,atoms,sym,cell,enpara,hub1data,vT
 		!CALL read_eig(eig_id,nk,jsp,eig=results%eig(:,nk,jsp),zmat=zMat)
 		dims(:1)=(/numbands/)
 		dimsInt=dims
-		CALL h5screate_simple_f(1,dims(:1),eigSpaceID,hdfError)
-		CALL h5dcreate_f(kptGroupID, "eig", H5T_NATIVE_DOUBLE, eigSpaceID, eigSetID, hdfError)
-		CALL h5sclose_f(eigSpaceID,hdfError)
-                CALL io_write_real1(eigSetID,(/1/),dimsInt(:1),"eig",results%eig(:numbands,nk,jsp))
-		CALL h5dclose_f(eigSetID, hdfError)
 
-                CALL io_write_attint0(kptGroupID,'numbands',numbands)
-		IF (zMat%l_real) THEN
-		      dims(:2)=(/nbasfcn,numbands/)
-		      dimsInt=dims
-		      CALL h5screate_simple_f(2,dims(:2),kptCoordSpaceID,hdfError)
-		      CALL h5dcreate_f(kptGroupID, "pw", H5T_NATIVE_DOUBLE, kptCoordSpaceID, kptCoordSetID, hdfError)
-		      CALL h5sclose_f(kptCoordSpaceID,hdfError)
+      IF((jsp.EQ.1).OR.(.NOT.noco%l_noco)) THEN
+         CALL h5screate_simple_f(1,dims(:1),eigSpaceID,hdfError)
+         CALL h5dcreate_f(kptGroupID, "eig", H5T_NATIVE_DOUBLE, eigSpaceID, eigSetID, hdfError)
+         CALL h5sclose_f(eigSpaceID,hdfError)
+         CALL io_write_real1(eigSetID,(/1/),dimsInt(:1),"eig",results%eig(:numbands,nk,jsp))
+         CALL h5dclose_f(eigSetID, hdfError)
+         CALL io_write_attint0(kptGroupID,'numbands',numbands)
+
+         IF (zMat%l_real) THEN
+            dims(:2)=(/nbasfcn,numbands/)
+            dimsInt=dims
+            CALL h5screate_simple_f(2,dims(:2),kptCoordSpaceID,hdfError)
+            CALL h5dcreate_f(kptGroupID, "pw", H5T_NATIVE_DOUBLE, kptCoordSpaceID, kptCoordSetID, hdfError)
+            CALL h5sclose_f(kptCoordSpaceID,hdfError)
             CALL io_write_real2(kptCoordSetID,(/1,1/),dimsInt(:2),"evec_r",zMat%data_r(:nbasfcn,:numbands))
-		      CALL h5dclose_f(kptCoordSetID, hdfError)
-		ELSE
-                      AllOCATE(output3(2,nbasfcn,numbands))
+            CALL h5dclose_f(kptCoordSetID, hdfError)
+         ELSE
+            AllOCATE(output3(2,nbasfcn,numbands))
 !			SIZE(zMat%data_c,1),SIZE(zMat%data_c,2)
-		      output3(1,:,:)=REAL(zMat%data_c(:,:numbands))
-		      output3(2,:,:)=AIMAG(zMat%data_c(:,:numbands))
-		      dims(:3)=(/2,nbasfcn,numbands/)
-		      dimsInt=dims
-		      CALL h5screate_simple_f(3,dims(:3),zmatSpaceID,hdfError)
-		      CALL h5dcreate_f(kptGroupID, "pw", H5T_NATIVE_DOUBLE, zmatSpaceID, zmatSetID, hdfError)
-		      CALL h5sclose_f(zmatSpaceID,hdfError)
-		      CALL io_write_real3(zmatSetID,(/1,1,1/),dimsInt(:3),"output3",output3(:2,:nbasfcn,:numbands))
-		      CALL h5dclose_f(zmatSetID, hdfError)
-		      DEAllOCATE(output3)
-		END IF
+            output3(1,:,:)=REAL(zMat%data_c(:,:numbands))
+            output3(2,:,:)=AIMAG(zMat%data_c(:,:numbands))
+            dims(:3)=(/2,nbasfcn,numbands/)
+            dimsInt=dims
+            CALL h5screate_simple_f(3,dims(:3),zmatSpaceID,hdfError)
+            CALL h5dcreate_f(kptGroupID, "pw", H5T_NATIVE_DOUBLE, zmatSpaceID, zmatSetID, hdfError)
+            CALL h5sclose_f(zmatSpaceID,hdfError)
+            CALL io_write_real3(zmatSetID,(/1,1,1/),dimsInt(:3),"output3",output3(:2,:nbasfcn,:numbands))
+            CALL h5dclose_f(zmatSetID, hdfError)
+            DEAllOCATE(output3)
+         END IF
+      END IF
 		!AllOCATE(output(2,numbands,atoms%lmaxd*(atoms%lmaxd+2)+1,atoms%nat))
 		!output(1,:,:,:)=REAL(eigVecCoeffs%acof(:,0:,:,jsp))
 		!output(2,:,:,:)=AIMAG(eigVecCoeffs%acof(:,0:,:,jsp))
