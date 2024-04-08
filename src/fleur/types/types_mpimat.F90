@@ -1253,7 +1253,7 @@ CONTAINS
       is_column_cyclic=(mat%blacsdata%blacs_desc(5)==mat%global_size1.and.mat%blacsdata%blacs_desc(6)==1)
    end function
 
-#if 1==1
+#ifdef CPP_SCALAPACK
    subroutine cyclic_column_to_2Dblock_cyclic(mat,mat2d,offset1,offset2)
       use iso_c_binding
       implicit none 
