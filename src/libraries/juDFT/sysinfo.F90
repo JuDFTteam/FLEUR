@@ -12,6 +12,8 @@
 #endif
 MODULE m_judft_sysinfo
   IMPLICIT NONE
+
+
 CONTAINS
   
 integer function num_openmp()
@@ -71,6 +73,7 @@ end function
   
   !Read mstat to find out current memory usage
   FUNCTION memory_usage_string(maxmem)
+   use iso_c_binding
     IMPLICIT NONE
     LOGICAL,INTENT(IN),OPTIONAL :: maxmem
     CHARACTER(len=100):: memory_usage_string
@@ -79,7 +82,16 @@ end function
     LOGICAL:: firstcall=.TRUE.
     LOGICAL:: available=.FALSE.
     CHARACTER(len=40)::line
-    
+   
+#if CPP_GPU
+   interface
+   function gpu_mem_usage() bind(c)
+      use, intrinsic :: iso_c_binding
+      real(kind=c_double) :: gpu_mem_usage
+   end function gpu_mem_usage
+   end interface    
+#endif
+
     IF (firstcall) THEN
        firstcall=.FALSE.
        OPEN(fid,FILE="/proc/self/statm",status='old',action='read',iostat=idum)
@@ -111,6 +123,11 @@ end function
           END IF
        END IF
     END IF
+
+#ifdef CPP_GPU
+   write(line,"(f10.3)") gpu_mem_usage()
+   memory_usage_string=TRIM(memory_usage_string)//" GPU: "//trim(line)//"GB"
+#endif      
   END FUNCTION memory_usage_string
     
    

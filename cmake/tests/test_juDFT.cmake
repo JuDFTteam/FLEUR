@@ -20,6 +20,9 @@ if (DEFINED FLEUR_USE_HDF5)
      message("SET:${FLEUR_HDF5_LIBRARIES}")
      set(JUDFT_LIBRARIES ${FLEUR_HDF5_LIBRARIES} CACHE STRING "Libraries for linking with HDF5")
    endif()
+   if (FLEUR_USE_GPU)
+     set(JUDFT_USE_GPU ON CACHE STRING "Compile for GPU/CUDA support")
+   endif  
 endif()
 #In addition you might want to set
 set(JUDFT_COMPILEOPTS ${FLEUR_PRECISION_OPTION})
