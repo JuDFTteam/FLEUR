@@ -570,6 +570,7 @@ CONTAINS
                   IF (fmpi%irank==0.AND.l_cheated) write(*,*) sym_dyn_mat(iQ,3 *(iDtype-1)+iDir,:)
                   l_cheated = .FALSE.
                   IF (fmpi%irank==0) WRITE(9339,*) dyn_mat(iQ,3 *(iDtype-1)+iDir,:)
+                  IF (fmpi_nosym%irank == 0 .AND. fi_nosym%juphon%l_rm_qhdf) call system("rm "//TRIM(dfpt_tag)//".hdf")
                   CALL timestop("Dirloop")
                END DO
                CALL timestop("Typeloop")

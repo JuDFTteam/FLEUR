@@ -37,6 +37,7 @@ MODULE m_types_juPhon
       LOGICAL :: l_dos  = .FALSE.     ! Calculate the phonon density of states
       LOGICAL :: l_scf  = .TRUE.     ! Do a self-consistency run for dynmats
       LOGICAL :: l_sumrule  = .FALSE. ! Apply sumrule for dynmats
+      LOGICAL :: l_rm_qhdf  = .FALSE. ! Remove q*hdf files, after convergence
       INTEGER :: startq = 1          ! Start the q-loop at a specific point
       INTEGER :: stopq  = 0          ! Stop  the q-loop at a specific point
       INTEGER :: qmode  = 0          ! 0: Single-shot calculation for qlist
@@ -150,6 +151,7 @@ CONTAINS
       CALL mpi_bc(this%l_dos, rank, mpi_comm)
       CALL mpi_bc(this%l_scf, rank, mpi_comm)
       CALL mpi_bc(this%l_sumrule, rank, mpi_comm)
+      CALL mpi_bc(this%l_rm_qhdf, rank, mpi_comm)
       CALL mpi_bc(this%startq, rank, mpi_comm)
       CALL mpi_bc(this%stopq, rank, mpi_comm)
       CALL mpi_bc(this%qmode, rank, mpi_comm)
@@ -312,6 +314,12 @@ CONTAINS
 
          IF (numberNodes == 1) THEN
            this%l_sumrule  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_sumrule'))
+         END IF
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_rm_qhdf')
+
+         IF (numberNodes == 1) THEN
+           this%l_rm_qhdf  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_rm_qhdf'))
          END IF
 
          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@startq')
