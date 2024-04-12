@@ -56,38 +56,50 @@ module m_juDFT_logging
         CLASS(t_log_message),INTENT(IN)::logmessage
         
         if (allocated(logmessage%key)) THEN
-            write(fh,"(5a)") '  "',logmessage%key,'":"',logmessage%message,'"'
-            if (ASSOCIATED(logmessage%next)) call logmessage%next%write()
-        end if 
+            if (ASSOCIATED(logmessage%next)) THEN
+                write(fh,"(5a)") '  "',logmessage%key,'":"',logmessage%message,'",'
+                call logmessage%next%write()
+            else
+                write(fh,"(5a)") '  "',logmessage%key,'":"',logmessage%message,'",'
+            endif 
+        endif    
     end subroutine    
 
     
-    subroutine report(logmessage,level)
+    subroutine report(logmessage,level,first)
         integer,intent(in)::level
+        logical,intent(in),optional::first
         CLASS(t_log_message),intent(inout):: logmessage
 
         integer:: dt(8)
 
         if (fh==-1) return
-
-        write(fh,"(a)") "{"
+        if (present(first)) then
+            if (first) THEN
+                write(fh,"(a)") "[{"
+            else 
+                write(fh,"(a)") ",{"
+            endif
+        else
+            write(fh,"(a)") ",{"
+        endif
         select case(level)
         case(logmode_status)
-            write(fh,"(a)") '  "loglevel":"status"'
+            write(fh,"(a)") '  "loglevel":"status",'
         case(logmode_info)
-            write(fh,"(a)") '  "loglevel":"info"'
+            write(fh,"(a)") '  "loglevel":"info",'
         case(logmode_warning)
-            write(fh,"(a)") '  "loglevel":"warning"'
+            write(fh,"(a)") '  "loglevel":"warning",'
         case(logmode_error)
-            write(fh,"(a)") '  "loglevel":"error"'
+            write(fh,"(a)") '  "loglevel":"error",'
         case(logmode_bug)
-            write(fh,"(a)") '  "loglevel":"bug"'
+            write(fh,"(a)") '  "loglevel":"bug",'
         case default
-            write(fh,"(a)") '  "loglevel":"unkown"'
+            write(fh,"(a)") '  "loglevel":"unkown",'
         end select
 
         call date_and_time(values=dt)
-        write(fh,"(a,i2.2,a,i2.2,a,i4,a,i2.2,a,i2.2,a,i2.2,a)") '  "timestamp":"',dt(3),".",dt(2),".",dt(1)," ",dt(5),":",dt(6),":",dt(7),'"'
+        write(fh,"(a,i2.2,a,i2.2,a,i4,a,i2.2,a,i2.2,a,i2.2,a)") '  "timestamp":"',dt(3),".",dt(2),".",dt(1)," ",dt(5),":",dt(6),":",dt(7),'",'
 
         call logmessage%write()
         call logmessage%delete_all()
@@ -111,12 +123,15 @@ module m_juDFT_logging
         else
             call log%add("Started","FLEUR")
         endif 
-        call log%report(logmode_status)    
+        call log%report(logmode_status,first=.true.)    
     end subroutine 
 
 
 
     subroutine log_stop()
-        if (fh/=-1) close(fh)
+        if (fh/=-1) THEN
+            write(fh,*) "]"
+            close(fh)
+        endif    
     end subroutine
 end module    
