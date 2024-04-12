@@ -11,6 +11,10 @@ MODULE m_chkmt
 !  Derive also other parameters for the input file, to provide some
 !  help in the out-file.
 !                         GM'16
+!
+! Note: This procedure is prepared to also return the next nearest
+!       neighbors. That data is stored in nearestNeighborAtomsSorted,
+!       nearestNeighborShiftsSorted, numNextNearestNeighbors.
 !---------------------------------------------------------------------
    CONTAINS
 
@@ -67,10 +71,17 @@ MODULE m_chkmt
 
       INTEGER, ALLOCATABLE :: numAtomsInCubes(:,:,:)
       INTEGER, ALLOCATABLE :: atomRefsInCubes(:,:,:,:)
+      INTEGER, ALLOCATABLE :: atomsInCubes(:,:,:,:)
+      INTEGER, ALLOCATABLE :: atomShiftsInCubes(:,:,:,:,:)
       INTEGER, ALLOCATABLE :: refCubes(:,:)
-      INTEGER, ALLOCATABLE :: nearestNeighbors(:,:)
+      INTEGER, ALLOCATABLE :: nearestNeighborRefsSorted(:,:)
+      INTEGER, ALLOCATABLE :: nearestNeighborAtomsSorted(:,:)
+      INTEGER, ALLOCATABLE :: nearestNeighborShiftsSorted(:,:,:)
       INTEGER, ALLOCATABLE :: numNearestNeighbors(:)
+      INTEGER, ALLOCATABLE :: numNextNearestNeighbors(:)
+      INTEGER, ALLOCATABLE :: neighborAtomRefs(:)
       INTEGER, ALLOCATABLE :: neighborAtoms(:)
+      INTEGER, ALLOCATABLE :: neighborShifts(:,:)
       INTEGER, ALLOCATABLE :: distIndexList(:)
       REAL,    ALLOCATABLE :: posInCubes(:,:,:,:,:)
       REAL,    ALLOCATABLE :: refPos(:,:)
@@ -165,11 +176,19 @@ MODULE m_chkmt
       ALLOCATE (atomRefsInCubes(maxCubeAtoms,minCubeIndex(1):maxCubeIndex(1),&
                                              minCubeIndex(2):maxCubeIndex(2),&
                                              minCubeIndex(3):maxCubeIndex(3)))
+      ALLOCATE (atomsInCubes(maxCubeAtoms,minCubeIndex(1):maxCubeIndex(1),&
+                                          minCubeIndex(2):maxCubeIndex(2),&
+                                          minCubeIndex(3):maxCubeIndex(3)))
+      ALLOCATE (atomShiftsInCubes(3,maxCubeAtoms,minCubeIndex(1):maxCubeIndex(1),&
+                                                 minCubeIndex(2):maxCubeIndex(2),&
+                                                 minCubeIndex(3):maxCubeIndex(3)))
       ALLOCATE (posInCubes(3,maxCubeAtoms,minCubeIndex(1):maxCubeIndex(1),&
                                           minCubeIndex(2):maxCubeIndex(2),&
                                           minCubeIndex(3):maxCubeIndex(3)))
       ALLOCATE (refCubes(3,atoms%ntype),refPos(3,atoms%ntype))
-      ALLOCATE (nearestNeighbors(maxCubeAtoms,atoms%ntype),numNearestNeighbors(atoms%ntype))
+      ALLOCATE (nearestNeighborRefsSorted(maxCubeAtoms,atoms%ntype),numNearestNeighbors(atoms%ntype),numNextNearestNeighbors(atoms%ntype))
+      ALLOCATE (nearestNeighborAtomsSorted(maxCubeAtoms,atoms%ntype))
+      ALLOCATE (nearestNeighborShiftsSorted(3,maxCubeAtoms,atoms%ntype))
       ALLOCATE (nearestNeighborDists(maxCubeAtoms,atoms%ntype))
 
       numAtomsInCubes = 0
@@ -229,6 +248,10 @@ MODULE m_chkmt
                            STOP 'ERROR: maxCubeAtoms is not large enough in chkmt.'
                         END IF
                         atomRefsInCubes(numAtoms,cubeIndex(1),cubeIndex(2),cubeIndex(3)) = n
+                        atomsInCubes(numAtoms,cubeIndex(1),cubeIndex(2),cubeIndex(3)) = iAtom
+                        atomShiftsInCubes(1,numAtoms,cubeIndex(1),cubeIndex(2),cubeIndex(3)) = i - FLOOR(atoms%taual(1,na))
+                        atomShiftsInCubes(2,numAtoms,cubeIndex(1),cubeIndex(2),cubeIndex(3)) = j - FLOOR(atoms%taual(2,na))
+                        atomShiftsInCubes(3,numAtoms,cubeIndex(1),cubeIndex(2),cubeIndex(3)) = k - FLOOR(atoms%taual(3,na))
                         posInCubes(:,numAtoms,cubeIndex(1),cubeIndex(2),cubeIndex(3)) = pos(:)
                         IF((i.EQ.0).AND.(j.EQ.0).AND.(k.EQ.0).AND.(na.EQ.1)) THEN
                            refCubes(:,n) = cubeIndex(:)
@@ -246,12 +269,14 @@ MODULE m_chkmt
 
       maxSqrDist = cubeLength**2
       ALLOCATE(sqrDistances(8*maxCubeAtoms)) ! Formally 27, but 8 should be enough due to maxSqrDist
+      ALLOCATE(neighborAtomRefs(8*maxCubeAtoms))
       ALLOCATE(neighborAtoms(8*maxCubeAtoms))
+      ALLOCATE(neighborShifts(3,8*maxCubeAtoms))
       ALLOCATE(distIndexList(8*maxCubeAtoms))
 
       DO n = 1, atoms%ntype
          cubeIndex(:) = refCubes(:,n)
-         neighborAtoms = 0
+         neighborAtomRefs = 0
          iNeighborAtom = 0
          identicalAtoms = 0
          DO i = cubeIndex(1) - 1, cubeIndex(1) + 1
@@ -265,7 +290,9 @@ MODULE m_chkmt
                         identicalAtoms = identicalAtoms + 1
                      ELSE IF (currentDist.LT.maxSqrDist) THEN
                         iNeighborAtom = iNeighborAtom + 1
-                        neighborAtoms(iNeighborAtom) = atomRefsInCubes(iAtom,i,j,k)
+                        neighborAtomRefs(iNeighborAtom) = atomRefsInCubes(iAtom,i,j,k)
+                        neighborAtoms(iNeighborAtom) = atomsInCubes(iAtom,i,j,k)
+                        neighborShifts(:,iNeighborAtom) = atomShiftsInCubes(:,iAtom,i,j,k)
                         sqrDistances(iNeighborAtom) = currentDist
                      END IF
                   END DO
@@ -279,18 +306,33 @@ MODULE m_chkmt
          numNearestNeighbors(n) = MIN(maxCubeAtoms,iNeighborAtom)
          CALL sort(distIndexList(:iNeighborAtom),sqrDistances(:iNeighborAtom))
          DO i = 1, numNearestNeighbors(n)
-            nearestNeighbors(i,n) = neighborAtoms(distIndexList(i))
+            nearestNeighborRefsSorted(i,n) = neighborAtomRefs(distIndexList(i))
+            nearestNeighborAtomsSorted(i,n) = neighborAtoms(distIndexList(i))
+            nearestNeighborShiftsSorted(:,i,n) = neighborShifts(:,distIndexList(i))
             nearestNeighborDists(i,n) = SQRT(sqrDistances(distIndexList(i)))
          END DO
       END DO
 
+      WRITE(ounit,*) ''
       DO i = 1, atoms%ntype
          IF(numNearestNeighbors(i).GE.1) THEN
-            nearestAtoms(i) = nearestNeighbors(1,i)
+            nearestAtoms(i) = nearestNeighborRefsSorted(1,i)
             nearestAtomDists(i) = nearestNeighborDists(1,i)
+            WRITE(ounit,'(a,i6,a)') 'Nearest atoms, shifts for reference of atom type ', i, ":"
+            WRITE(ounit,'(a)') '   atom       shifts'
+            WRITE(ounit,'(4i6)') nearestNeighborAtomsSorted(1,i), nearestNeighborShiftsSorted(:,1,i)
+            DO j = 2, numNearestNeighbors(i)
+              IF ((nearestNeighborDists(j,i) - nearestAtomDists(i)).GT.0.0001) THEN
+                 numNextNearestNeighbors(i) = j - 1
+                 EXIT
+              END IF
+              IF (j.EQ.numNearestNeighbors(i)) numNextNearestNeighbors(i) = j
+              WRITE(ounit,'(4i6)') nearestNeighborAtomsSorted(j,i), nearestNeighborShiftsSorted(:,j,i)
+            END DO
          ELSE
             nearestAtoms(i) = -1
             nearestAtomDists(i) = 5000.0 * cubeLength
+            numNextNearestNeighbors(i) = 0
          END IF
       END DO
 
@@ -347,7 +389,7 @@ MODULE m_chkmt
       !       atoms with the same atomic number
       DO i = 1, atoms%ntype
          DO j = 1, numNearestNeighbors(i)
-            k = nearestNeighbors(j,i)
+            k = nearestNeighborRefsSorted(j,i)
             IF (rmt1(i)+rmt1(k).GE.nearestNeighborDists(j,i)) THEN
                minRmts(atoms%nz(i)) = MIN(rmtFac*nearestNeighborDists(j,i)/2.0,MIN(rmt1(i),minRmts(atoms%nz(i))))
                minRmts(atoms%nz(k)) = MIN(rmtFac*nearestNeighborDists(j,i)/2.0,MIN(rmt1(k),minRmts(atoms%nz(k))))
@@ -418,7 +460,7 @@ MODULE m_chkmt
          iAtom = 0
          DO i = 1, atoms%ntype
             DO j = 1, numNearestNeighbors(i)
-               k = nearestNeighbors(j,i)
+               k = nearestNeighborRefsSorted(j,i)
                IF (atoms%rmt(i)+atoms%rmt(k).GE.nearestNeighborDists(j,i)) THEN
                   error = .TRUE.
                   IF (PRESENT(overlap)) overlap(i,k)=atoms%rmt(i)+atoms%rmt(k)-nearestNeighborDists(j,i)
@@ -445,9 +487,9 @@ MODULE m_chkmt
          IF (error.AND..NOT.PRESENT(overlap)) CALL juDFT_error("Error checking M.T. radii",calledby ="chkmt")
       END IF
 
-      DEALLOCATE(nearestNeighbors,numNearestNeighbors,nearestNeighborDists)
-      DEALLOCATE(distIndexList,neighborAtoms,sqrDistances)
-      DEALLOCATE(numAtomsInCubes,atomRefsInCubes,posInCubes,refCubes,refPos)
+      DEALLOCATE(nearestNeighborRefsSorted,nearestNeighborAtomsSorted,nearestNeighborShiftsSorted,numNearestNeighbors,numNextNearestNeighbors,nearestNeighborDists)
+      DEALLOCATE(distIndexList,neighborAtomRefs,neighborAtoms,neighborShifts,sqrDistances)
+      DEALLOCATE(numAtomsInCubes,atomRefsInCubes,atomsInCubes,atomShiftsInCubes,posInCubes,refCubes,refPos)
 
   240 FORMAT('Error in muffin tin radii pair (',i5,',',i5,'):',3f10.5)
   241 FORMAT('   error: atom ',i3,' # ',i3,'reaches out into vaccuum')
