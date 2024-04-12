@@ -60,27 +60,24 @@ module m_juDFT_logging
                 write(fh,"(5a)") '  "',logmessage%key,'":"',logmessage%message,'",'
                 call logmessage%next%write()
             else
-                write(fh,"(5a)") '  "',logmessage%key,'":"',logmessage%message,'",'
+                write(fh,"(5a)") '  "',logmessage%key,'":"',logmessage%message,'"'
             endif 
         endif    
     end subroutine    
 
     
-    subroutine report(logmessage,level,first)
+    subroutine report(logmessage,level)
         integer,intent(in)::level
-        logical,intent(in),optional::first
+        logical::first=.true.
         CLASS(t_log_message),intent(inout):: logmessage
 
         integer:: dt(8)
 
         if (fh==-1) return
-        if (present(first)) then
-            if (first) THEN
-                write(fh,"(a)") "[{"
-            else 
-                write(fh,"(a)") ",{"
-            endif
-        else
+        if (first) THEN
+            write(fh,"(a)") "[{"
+            first=.false.
+        else 
             write(fh,"(a)") ",{"
         endif
         select case(level)
@@ -123,7 +120,7 @@ module m_juDFT_logging
         else
             call log%add("Started","FLEUR")
         endif 
-        call log%report(logmode_status,first=.true.)    
+        call log%report(logmode_status)    
     end subroutine 
 
 
@@ -132,6 +129,7 @@ module m_juDFT_logging
         if (fh/=-1) THEN
             write(fh,*) "]"
             close(fh)
-        endif    
+        endif
+        fh=-1    
     end subroutine
 end module    

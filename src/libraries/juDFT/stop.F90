@@ -288,7 +288,7 @@ CONTAINS
     !logging
     call log%add("Success",message)
     call log%report(logmode_status)
-
+    call log_stop()
     CALL writetimes()
     CALL print_memory_info(output_unit,.true.)
     CALL send_usage_data()
