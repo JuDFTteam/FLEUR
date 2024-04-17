@@ -12,7 +12,7 @@ MODULE m_make_stars
    PRIVATE
    PUBLIC :: make_stars
 CONTAINS
-   SUBROUTINE make_stars(stars,sym,atoms,vacuum,sphhar,input,cell,noco,fmpi,qvec,iDtype,iDir)
+   SUBROUTINE make_stars(stars,sym,atoms,vacuum,sphhar,input,cell,noco,fmpi,qvec,iDtype,iDir, gfactor)
       USE m_stepf
       USE m_types_sym
       USE m_types_atoms
@@ -36,6 +36,7 @@ CONTAINS
       TYPE(t_cell),INTENT(in)::cell
       TYPE(t_noco),INTENT(in)::noco
       TYPE(t_mpi),INTENT(in)::fmpi
+      REAL, OPTIONAL, INTENT(IN) :: gfactor
 
       REAL, OPTIONAL, INTENT(IN) :: qvec(3)
       INTEGER, OPTIONAL, INTENT(IN) :: iDtype, iDir
@@ -49,6 +50,7 @@ CONTAINS
          CALL timestart("star-setup")
          stars%gmax=input%gmax
          IF (ABS(input%gmaxz).GE.1e-8) stars%gmaxz=input%gmaxz
+         IF (PRESENT(gfactor) .AND. ABS(input%gmaxz).LT.1e-8) stars%gmaxz = gfactor * stars%gmax 
          IF (PRESENT(qvec)) THEN
             CALL stars%dim(sym,cell,input%film,qvec)
             CALL stars%init(cell,sym,input%film,input%rkmax,qvec)

@@ -32,6 +32,12 @@ CONTAINS
       USE m_dfpt_gradient
       USE m_npy
 
+      USE m_dfpt_crank_gvecs
+      USE m_convn
+      USE m_types_potden
+
+      USE m_checkdopall
+
       TYPE(t_mpi),        INTENT(IN)     :: fmpi
       TYPE(t_fleurinput), INTENT(IN)     :: fi
       TYPE(t_sphhar),     INTENT(IN)     :: sphhar
@@ -92,6 +98,12 @@ CONTAINS
 
       CLASS(t_xcpot),     ALLOCATABLE :: xcpot_fullsym
       CLASS(t_forcetheo), ALLOCATABLE :: forcetheo_fullsym
+
+      !! Local Star types:
+      TYPE(t_stars) :: local_stars
+      TYPE(t_potden) :: local_potden,local_grVext3(3),local_imagrhodummy,local_grvextdummy,local_grgrVC3x3(3,3)
+      TYPE(t_atoms) :: local_atoms
+
 
       INTEGER,          ALLOCATABLE :: recG(:, :)
       INTEGER                       :: ngdp2km
@@ -219,6 +231,18 @@ CONTAINS
          q_list = (/(iArray, iArray=1,SIZE(fi%juPhon%qvec,2), 1)/)
       END IF
 
+
+      CALL crank_gvecs(fi_nosym,fmpi_nosym,fi_nosym%sym,fi_nosym%cell,fi_nosym%input,sphhar_nosym, fi_nosym%vacuum , fi_nosym%noco ,local_stars, local_potden,local_atoms=local_atoms)
+
+      IF (fmpi%irank == 0 ) THEN 
+         write(*,*) "Global ncv" , fi_nosym%atoms%ncv
+         write(*,*) "Local ncv" , local_atoms%ncv
+
+         write(*,*) "Size local potden" , size(local_potden%pw(:,1))
+         write(*,*) "Stars size local", local_stars%ng3
+         write(*,*) "Stars size global", stars%ng3
+      END IF 
+
       ! Generate the gradients of the density and the various potentials, that will be used at different points in the programm.
       ! The density gradient is calculated by numerical differentiation, while the potential gradients are constructed (from the
       ! density gradient) by a Weinert construction, just like the potentials are from the density.
@@ -230,7 +254,16 @@ CONTAINS
       CALL imagrhodummy%resetPotDen()
       CALL grvextdummy%copyPotDen(rho_nosym)
 
-      CALL vext_dummy%copyPotDen(vTot_nosym)
+
+      CALL local_imagrhodummy%copyPotDen(local_potden)
+      CALL local_imagrhodummy%resetPotDen()
+      CALL local_grvextdummy%copyPotDen(local_potden)
+      CALL local_grvextdummy%resetPotDen()
+
+
+
+      !CALL vext_dummy%copyPotDen(vTot_nosym)
+      CALL vext_dummy%copyPotDen(local_potden)
       CALL vext_dummy%resetPotDen()
       CALL vC_dummy%copyPotDen(vTot_nosym)
       CALL vC_dummy%resetPotDen()
@@ -238,18 +271,24 @@ CONTAINS
       sigma_ext  = cmplx(0.0,0.0)
       sigma_coul = cmplx(0.0,0.0)
       sigma_gext = cmplx(0.0,0.0)
-      CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, fi%juphon, stars_nosym, fi_nosym%cell, &
-                         & sphhar_nosym, fi_nosym%atoms, .FALSE., imagrhodummy, vext_dummy, sigma_ext)
+      CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, fi%juphon, local_stars, fi_nosym%cell, &
+                         & sphhar_nosym, local_atoms, .FALSE., local_imagrhodummy, vext_dummy, sigma_ext)                
       CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, fi%juphon, stars_nosym, fi_nosym%cell, &
                          & sphhar_nosym, fi_nosym%atoms, .FALSE., rho_nosym, vC_dummy, sigma_coul)
       DO iDir = 1, 3
          CALL grRho3(iDir)%copyPotDen(rho_nosym)
          CALL grRho3(iDir)%resetPotDen()
          DO iDir2 = 1, 3
-            CALL grgrvextnum(iDir2,iDir)%copyPotDen(vTot_nosym)
+            !CALL grgrvextnum(iDir2,iDir)%copyPotDen(vTot_nosym)
+            !CALL grgrvextnum(iDir2,iDir)%resetPotDen()
+            CALL grgrvextnum(iDir2,iDir)%copyPotDen(local_potden)
             CALL grgrvextnum(iDir2,iDir)%resetPotDen()
-            CALL grgrVC3x3(iDir2,iDir)%copyPotDen(vTot_nosym)
+            CALL grgrVC3x3(iDir2,iDir)%copyPotDen(local_potden)
             CALL grgrVC3x3(iDir2,iDir)%resetPotDen()
+            
+            CALL local_grgrVC3x3(iDir2,iDir)%copyPotDen(local_potden)
+            CALL local_grgrVC3x3(iDir2,iDir)%resetPotDen()
+
          END DO
          CALL grVext3(iDir)%copyPotDen(vTot_nosym)
          CALL grVext3(iDir)%resetPotDen()
@@ -257,15 +296,27 @@ CONTAINS
          CALL grVtot3(iDir)%resetPotDen()
          CALL grVC3(iDir)%copyPotDen(vTot_nosym)
          CALL grVC3(iDir)%resetPotDen()
+
+         CALL local_grVext3(iDir)%copyPotDen(local_potden)
+         CALL local_grVext3(iDir)%resetPotDen()
+
+
          ! Generate the external potential gradient.
          write(oUnit, *) "grVext", iDir
          sigma_loc  = cmplx(0.0,0.0)
          !IF (iDir==3) sigma_loc  = sigma_ext
-         CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, fi%juphon, stars_nosym, fi_nosym%cell, &
-                         & sphhar_nosym, fi_nosym%atoms, .FALSE., imagrhodummy, grVext3(iDir), sigma_loc, &
-                         & dfptdenimag=imagrhodummy, dfptvCoulimag=grvextdummy,dfptden0=imagrhodummy,stars2=stars_nosym,iDtype=0,iDir=iDir)
+         CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, fi%juphon, local_stars, fi_nosym%cell, &
+                         & sphhar_nosym, local_atoms, .FALSE., local_imagrhodummy, local_grVext3(iDir), sigma_loc, &
+                         & dfptdenimag=local_imagrhodummy, dfptvCoulimag=local_grvextdummy,dfptden0=local_imagrhodummy,stars2=local_stars,iDtype=0,iDir=iDir)
+         DO iSpin = 1 , fi_nosym%input%jspins
+            CALL checkDOPALL(fi_nosym%input, sphhar_nosym, local_stars ,local_atoms, fi_nosym%sym, fi_nosym%vacuum, fi_nosym%cell,local_grVext3(iDir),iSpin,local_grvextdummy)
+         END DO 
+         write(oUnit,*) "grVext was called for iDir" , iDir
          IF (iDir==3) sigma_gext(iDir,:) = sigma_loc
+
+         call cast_smaller_grid(grVext3(iDir),local_grVext3(iDir),stars_nosym,fi_nosym%input )
       END DO
+      !CALL vext_dummy%reset_dfpt() ! this is needed as copyPotden does not deallocate in its routine and we work with different stars
       !CALL vext_dummy%copyPotDen(vTot_nosym)
       !CALL vext_dummy%resetPotDen()
       ! Density gradient
@@ -301,7 +352,7 @@ CONTAINS
             END DO
          END DO
       END DO
-
+      CALL vext_dummy%reset_dfpt() ! not needed anymore
       IF (fi_nosym%input%film) THEN
          DO yInd = -stars_nosym%mx2, stars_nosym%mx2
             DO xInd = -stars_nosym%mx1, stars_nosym%mx1
@@ -343,18 +394,35 @@ CONTAINS
          DO iDir2 = 1, 3
             DO iDir = 1, 3
                CALL imagrhodummy%resetPotDen()
+               CALL local_imagrhodummy%resetPotDen()
+               CALL local_grvextdummy%resetPotDen()
                sigma_loc = cmplx(0.0,0.0)
 
                !IF (iDir2==3) sigma_loc = sigma_gext(iDir,:)
                !IF (iDir==3) sigma_loc = sigma_gext(iDir2,:)
-               CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, fi%juphon, stars_nosym, fi_nosym%cell, &
-                         & sphhar_nosym, fi_nosym%atoms, .TRUE., imagrhodummy, grgrVC3x3(iDir2,iDir), sigma_loc, &
-                         & dfptdenimag=imagrhodummy, dfptvCoulimag=grvextdummy,dfptden0=imagrhodummy,stars2=stars_nosym,iDtype=0,iDir=iDir,iDir2=iDir2, &
-                         & sigma_disc2=MERGE(sigma_ext,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir2==3.AND.iDir==3.AND..FALSE.))
+               CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, fi%juphon, local_stars, fi_nosym%cell, &
+                        & sphhar_nosym, local_atoms, .TRUE., local_imagrhodummy, local_grgrVC3x3(iDir2,iDir), sigma_loc, &
+                        & dfptdenimag=local_imagrhodummy, dfptvCoulimag=local_grvextdummy,dfptden0=local_imagrhodummy,stars2=local_stars,iDtype=0,iDir=iDir,iDir2=iDir2, &
+                        & sigma_disc2=MERGE(sigma_ext,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir2==3.AND.iDir==3 .AND..FALSE.))
+               
+               CALL cast_smaller_grid(grgrVC3x3(iDir2,iDir),local_grgrVC3x3(iDir2,iDir),stars_nosym,fi_nosym%input )   ! this cast only the pw part onto the smaller grid
                CALL dfpt_e2_madelung(fi_nosym%atoms,fi_nosym%input%jspins,imagrhodummy%mt(:,0,:,:),grgrVC3x3(iDir2,iDir)%mt(:,0,:,1),e2_vm(:,iDir2,iDir))
             END DO
          END DO
       CALL save_npy("radii.npy",fi_nosym%atoms%rmsh(:,1))
+      
+      !!! Free memory
+      call local_stars%reset_stars()
+      call local_potden%reset_dfpt()
+      call local_imagrhodummy%reset_dfpt()
+      call local_grvextdummy%reset_dfpt()
+      DO iDir2 = 1 , 3
+         DO iDir = 1,3
+         call local_grgrVC3x3(iDir2,iDir)%reset_dfpt()
+         END DO 
+         call local_grVext3(iDir2)%reset_dfpt()
+      END DO 
+      
       DO iDir2 = 1, 3
          DO iDir = 1, 3
             CALL save_npy("grgrVC_"//int2str(idir2)//int2str(idir)//"_pw.npy",grgrVC3x3(iDir2,iDir)%pw(:,1))
@@ -362,6 +430,8 @@ CONTAINS
          END DO
       END DO
       
+      IF (fmpi%irank == 0 ) write(*,*) "Madleung Constructed done"
+
       CALL grRho3(1)%distribute(fmpi%mpi_comm)
       CALL grRho3(2)%distribute(fmpi%mpi_comm)
       CALL grRho3(3)%distribute(fmpi%mpi_comm)
@@ -570,6 +640,7 @@ CONTAINS
                   IF (fmpi%irank==0.AND.l_cheated) write(*,*) sym_dyn_mat(iQ,3 *(iDtype-1)+iDir,:)
                   l_cheated = .FALSE.
                   IF (fmpi%irank==0) WRITE(9339,*) dyn_mat(iQ,3 *(iDtype-1)+iDir,:)
+                  IF (fmpi_nosym%irank == 0 .AND. fi_nosym%juphon%l_rm_qhdf) call system("rm "//TRIM(dfpt_tag)//".hdf")
                   CALL timestop("Dirloop")
                END DO
                CALL timestop("Typeloop")
@@ -582,7 +653,7 @@ CONTAINS
             IF (fmpi%irank==0) THEN
                WRITE(*,*) '-------------------------'
                CALL timestart("Dynmat diagonalization")
-               CALL DiagonalizeDynMat(fi_nosym%atoms, qpts_loc%bk(:,q_list(iQ)), fi%juPhon%calcEigenVec, dyn_mat(iQ,:,:), eigenVals, eigenVecs, q_list(iQ),.TRUE.,"raw")
+               CALL DiagonalizeDynMat(fi_nosym%atoms, qpts_loc%bk(:,q_list(iQ)), fi%juPhon%calcEigenVec, dyn_mat(iQ,:,:), eigenVals, eigenVecs, q_list(iQ),.TRUE.,"raw", fi_nosym%juphon%l_sumrule)
                CALL timestop("Dynmat diagonalization")
 
                CALL timestart("Frequency calculation")
@@ -645,7 +716,7 @@ CONTAINS
                CALL ift_dyn(fi_fullsym%atoms,fi_fullsym%kpts,fi_fullsym%sym,fi_fullsym%cell%amat,fi_nosym%kpts%bk(:,iQ),dyn_mat_r,dyn_mat_pathq)
                WRITE(*,*) '-------------------------'
                CALL timestart("Dynmat diagonalization")
-               CALL DiagonalizeDynMat(fi_nosym%atoms, fi_nosym%kpts%bk(:,iQ), fi%juPhon%calcEigenVec, dyn_mat_pathq, eigenVals, eigenVecs, iQ,.FALSE.,TRIM(dynfiletag))
+               CALL DiagonalizeDynMat(fi_nosym%atoms, fi_nosym%kpts%bk(:,iQ), fi%juPhon%calcEigenVec, dyn_mat_pathq, eigenVals, eigenVecs, iQ,.FALSE.,TRIM(dynfiletag),fi_nosym%juphon%l_sumrule)
                CALL timestop("Dynmat diagonalization")
 
                CALL timestart("Frequency calculation")

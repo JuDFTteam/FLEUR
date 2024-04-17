@@ -28,6 +28,7 @@ MODULE m_types_juPhon
       !REAL    :: eDiffcut  = 1e-7   ! Cutoff for energy differences
       REAL    :: eDiffcut  = 1e-5   ! Cutoff for energy differences
       REAL    :: fDiffcut  = 1e-7    ! Cutoff for occupation differences
+      REAL    :: gfactor   = 0.0     ! Local gmaxz cutoff for film 
       REAL    :: qpt_ph(3)           ! Debug q
 
       LOGICAL :: e1term = .TRUE.     ! Calculate the eigenenergy response
@@ -36,6 +37,8 @@ MODULE m_types_juPhon
       LOGICAL :: l_band = .FALSE.    ! Interpolate the q-set to a bandstructure
       LOGICAL :: l_dos  = .FALSE.     ! Calculate the phonon density of states
       LOGICAL :: l_scf  = .TRUE.     ! Do a self-consistency run for dynmats
+      LOGICAL :: l_sumrule  = .FALSE. ! Apply sumrule for dynmats
+      LOGICAL :: l_rm_qhdf  = .FALSE. ! Apply sumrule for dynmats
       INTEGER :: startq = 1          ! Start the q-loop at a specific point
       INTEGER :: stopq  = 0          ! Stop  the q-loop at a specific point
       INTEGER :: qmode  = 0          ! 0: Single-shot calculation for qlist
@@ -148,6 +151,8 @@ CONTAINS
       CALL mpi_bc(this%l_band, rank, mpi_comm)
       CALL mpi_bc(this%l_dos, rank, mpi_comm)
       CALL mpi_bc(this%l_scf, rank, mpi_comm)
+      CALL mpi_bc(this%l_sumrule, rank, mpi_comm)
+      CALL mpi_bc(this%l_rm_qhdf, rank, mpi_comm)
       CALL mpi_bc(this%startq, rank, mpi_comm)
       CALL mpi_bc(this%stopq, rank, mpi_comm)
       CALL mpi_bc(this%qmode, rank, mpi_comm)
@@ -264,6 +269,13 @@ CONTAINS
            this%fDiffcut  = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@fDiffcut'))
          END IF
 
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@gfactor')
+
+         IF (numberNodes == 1) THEN
+           this%gfactor  = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@gfactor'))
+         END IF
+
+
          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@singleQpt')
 
          IF (numberNodes == 1) THEN
@@ -304,6 +316,18 @@ CONTAINS
 
          IF (numberNodes == 1) THEN
            this%l_scf  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_scf'))
+         END IF
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_sumrule')
+
+         IF (numberNodes == 1) THEN
+           this%l_sumrule  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_sumrule'))
+         END IF
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_rm_qhdf')
+
+         IF (numberNodes == 1) THEN
+           this%l_rm_qhdf  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_rm_qhdf'))
          END IF
 
          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@startq')

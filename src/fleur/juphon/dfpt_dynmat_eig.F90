@@ -6,7 +6,7 @@ module m_dfpt_dynmat_eig
 
   contains
 
-  subroutine DiagonalizeDynMat(atoms, qvec, calcEv, dynMat, w, a, iqpt, l_scalemass, add_tag)
+  subroutine DiagonalizeDynMat(atoms, qvec, calcEv, dynMat, w, a, iqpt, l_scalemass, add_tag,l_sumrule)
 
     USE m_juDFT_stop
     implicit none
@@ -24,6 +24,7 @@ module m_dfpt_dynmat_eig
     complex, allocatable, intent(out) :: a(:, :)
     logical, intent(in) :: l_scalemass
     character(len=*), intent(in) :: add_tag
+    logical, intent(in) :: l_sumrule
 
     ! Array parameters
 
@@ -47,7 +48,11 @@ module m_dfpt_dynmat_eig
     integer                                    :: itype
     integer                                    :: ieqat
     integer                                    :: iatom
-    integer, intent(in)                       :: iqpt
+    integer, intent(in)                        :: iqpt
+    complex, allocatable                       :: dynMat0(:, :)
+    character(len=100)                         :: trash
+    integer                                    :: iread, iDir
+    real                                       :: numbers(3*atoms%nat,6*atoms%nat)
 
     ! Array variables
     ! a       : (LAPACK) matrix to diagonalize
@@ -112,6 +117,61 @@ module m_dfpt_dynmat_eig
       end do
     end do
 
+    IF (l_sumrule) THEN
+      IF (iqpt/=1) THEN
+        ALLOCATE(dynmat0,mold=dynmat)
+        OPEN( 110, file="dynMatq=gamma", status="old")
+        DO iread = 1, 3 + 3*atoms%nat ! Loop over dynmat rows
+          IF (iread<4) THEN
+            READ( 110,*) trash
+            write(*,*) iread, trash
+          ELSE
+            READ( 110,*) numbers(iread-3,:)
+            write(*,*) iread, numbers(iread-3,:)
+            dynmat0(iread-3,:) = CMPLX(numbers(iread-3,::2),numbers(iread-3,2::2))
+          END IF
+        END DO ! iread
+        CLOSE(110)
+      ELSE
+        ALLOCATE(dynmat0,mold=dynmat)
+        dynmat0 = a
+        ! Write non-corrected dynMatq for sumrule at q!=gamma
+        OPEN( 111, file="dynMatq=gamma",status="replace",action="write",form="formatted")
+        write(111, '(a,3f9.3)') 'q =', qvec
+        write(111, '(a)')       '==================================='
+        write(111, '(a)')
+        write(111, '(a)') 'Original Dynamical Matrix [mass corrected]'
+        DO ii = 1, lda
+          write(111, '(3(2(es16.8,1x),3x))') dynmat0(ii, :)
+        END DO
+        CLOSE(111)
+      END IF
+
+      allocate( w(n))
+      w = 0.
+
+      allocate( rwork(3 * n))
+      rwork = 0.
+
+      lwork = 2 * n
+      allocate(work(lwork))
+      work = 0.
+
+      ! Diagonalize Gamma dynamical matrix
+      call zheev( jobz, uplo, n, dynmat0, lda, w, work, lwork, rwork, info )
+
+      ! w: eigenvalues q=0, a: eigenvectors q=0
+      DO jj = 1, lda
+        DO ii = 1, lda
+          DO iDir = 1, 3
+            a(jj, ii) = a(jj, ii) - w(iDir)*dynmat0(jj,iDir)*conjg(dynmat0(ii,iDir))
+          END DO
+        END DO
+      END DO
+      DEALLOCATE(w, rwork, work)
+      DEALLOCATE(dynmat0)
+    END IF
+
     write(*, '(a,3f9.3)') 'q =', qvec
     write(*, '(a)')       '==================================='
     write(*, '(a)')
@@ -171,7 +231,10 @@ module m_dfpt_dynmat_eig
     else
       a(:, :) = cmplx(0., 0.)
     end if
+
     close( 109 )
+
+
 
   end subroutine diagonalizeDynMat
 
