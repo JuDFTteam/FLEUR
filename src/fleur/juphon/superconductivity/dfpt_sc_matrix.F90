@@ -304,7 +304,6 @@ CONTAINS
         CALL timestart("K integration")
         CALL dfpt_k_int(fi, fmpi, resultsq,  eig,eigqq,noccbd_k,nbasfcnq_k,el_ph_mat)
         CALL timestop("K integration")
-        STOP
     END SUBROUTINE dfpt_sc_matrix
 
 
