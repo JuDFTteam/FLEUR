@@ -15,6 +15,7 @@ MODULE m_dfpt_sternheimer
    USE m_constants
    USE m_cdn_io
    USE m_eig66_io
+   USE m_dfpt_sc_matrix
 
 IMPLICIT NONE
 
@@ -62,6 +63,8 @@ CONTAINS
       LOGICAL :: l_cont, l_exist, l_lastIter, l_dummy, strho, onedone, final_SH_it, l_minusq, l_existm
 
       complex :: sigma_loc(2)
+
+      REAL    :: g_mat
 
       TYPE(t_banddos)  :: banddosdummy
       TYPE(t_field)    :: field2
@@ -318,6 +321,18 @@ CONTAINS
          ! Exit here after the new final eigenvalues have been generated
          ! and before a new density perturbation is built
          IF (final_SH_it) THEN
+            ! Here come the Superconducitivy part as we need the density with gradient 
+            ! And the gradient is removed before we go out
+            ! Construct the necessary elements for the calculation of superconducitivity 
+            IF (fi%juPhon%l_elph) THEN
+               CALL timestart("El-Ph Matrix Element")
+               ! Calculate the Theta V1 for electron-phonon coupling
+               CALL dfpt_sc_matrix(fi, sphhar, results, resultsq, fmpi, enpara, nococonv, starsq, vTot1, vTot1Im, &
+                                   vTot, rho, bqpt, eig_id, q_eig_id, iDir, iDtype, killcont, l_real, g_mat)
+               CALL timestop("El-Ph Matrix Element")
+            END IF
+
+
             IF (fi%juphon%l_phonon) denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) + grRho%mt(:,0:,iDtype,:)
             CALL denIn1%distribute(fmpi%mpi_comm)
 
