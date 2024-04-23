@@ -5,7 +5,9 @@
 #include("${CMAKE_SOURCE_DIR}/cmake/buildinfo.cmake")
 
 file(REMOVE ${CMAKE_SOURCE_DIR}/init/compileinfo.h)
-file(GENERATE OUTPUT ${CMAKE_BINARY_DIR}/include/compileinfo.h CONTENT "compile_flags=\"${CMAKE_Fortran_FLAGS}\"\nlink_flags=\"${FLEUR_LIBRARIES}\"\n")
+string(SUBSTRING CMAKE_Fortran_FLAGS 1 110 TMP_FLAGS)
+string(SUBSTRING FLEUR_LIBRARIES 1 110 TMP_LIBS)
+file(GENERATE OUTPUT ${CMAKE_BINARY_DIR}/include/compileinfo.h CONTENT "compile_flags=\"${TMP_FLAGS}\"\nlink_flags=\"${TMP_LIBS}\"\n")
 
 set(buildinfo_deps)
 if (EXISTS "${CMAKE_SOURCE_DIR}/.git")
