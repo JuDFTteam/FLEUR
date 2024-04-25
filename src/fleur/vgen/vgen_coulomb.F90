@@ -77,6 +77,8 @@ contains
     LOGICAL :: l_dfptvgen ! If this is true, we handle things differently!
     LOGICAL :: l_2ndord, l_corr
 
+    ! For non analytic corrections:
+    !REAL :: q_lim
 #ifdef CPP_MPI
     integer:: ierr
 #endif
@@ -215,6 +217,11 @@ contains
           first_star = MERGE(2,1,stars%sk3(1)< 1E-9)
           vCoul%pw(first_star:stars%ng3,ispin) = fpi_const * psq(first_star:stars%ng3) / stars%sk3(first_star:stars%ng3) ** 2
         end if
+        if ( l_dfptvgen .AND. juphon%l_efield ) then
+          print*,"jetzt anders:"
+          vCoul%pw(1,ispin) = cmplx(0.0,1/juphon%qlim)
+          PRINT *, vCoul%pw(:,ispin)
+        end if
       end if
     call timestop("interstitial")
     end if ! fmpi%irank == 0
@@ -240,6 +247,9 @@ contains
       call vmts( input, fmpi, stars, sphhar, atoms, sym, cell,   dosf, vCoul%pw(:,ispin), &
                  den%mt(:,0:,:,ispin), vCoul%potdenType, vCoul%mt(:,0:,:,ispin), &
                  dfptdenimag%mt(:,0:,:,ispin), dfptvCoulimag%mt(:,0:,:,ispin), iDtype, iDir, iDir2, mat2ord )
+    END IF
+    IF (juphon%l_efield) THEN
+      PRINT *, "MT anders"
     END IF
     call timestop( "MT-spheres" )
 

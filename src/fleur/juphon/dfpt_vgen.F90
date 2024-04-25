@@ -38,6 +38,7 @@ CONTAINS
       USE m_get_int_perturbation
       USE m_get_mt_perturbation
       USE m_dfpt_vgen_finalize
+      USE m_npy
 
       IMPLICIT NONE
 
@@ -124,7 +125,15 @@ CONTAINS
         sigma_loc = sigma_disc
         CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,juphon,starsq,cell,sphhar,atoms,.TRUE.,workdenReal,vCoul,sigma_loc,&
                         & dfptdenimag=workdenImag,dfptvCoulimag=dfptvCoulimag,dfptden0=workden,stars2=stars,iDtype=iDtype,iDir=iDir)
+      
 
+      CALL save_npy("v1_pw.npy",dfptvTot%pw)
+      print*,"stop"
+      IF (juphon%l_efield) THEN
+         print*,"true"
+      END IF
+      STOP
+                                               
       ! b)
       CALL vCoul%copy_both_spin(dfptvTot)
       CALL dfptvCoulimag%copy_both_spin(dfptvTotimag)
@@ -148,7 +157,7 @@ CONTAINS
       END IF
 
       ! Skip vxc if we want only vC/vExt
-         IF (l_xc) CALL vgen_xcpot(hybdat,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
+         IF (l_xc .AND. .NOT. juphon%l_efield) CALL vgen_xcpot(hybdat,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
                         cell,fmpi,noco,den,denRot,EnergyDen,dfptvTot,vx,vxc,exc, &
                         & den1Rot=den1Rot, den1Rotimag=den1imRot, dfptvTotimag=dfptvTotimag,starsq=starsq)
 
