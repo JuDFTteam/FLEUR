@@ -102,7 +102,7 @@ CONTAINS
       endif
     endif
 #endif
-    if (fmpi%irank==0) call print_solver(fmpi%n_size>0)
+    if (fmpi%irank==0) call print_solver(fmpi%n_size>1)
 
     ALLOCATE(fmpi%k_list(SIZE([(i, i=INT(fmpi%irank/fmpi%n_size)+1,nkpt,fmpi%isize/fmpi%n_size )])))
     ! this corresponds to the compact = .true. switch in priv_create_comm
