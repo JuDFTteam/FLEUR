@@ -1112,6 +1112,7 @@
       <xsd:attribute name="eps_pert" type="FleurDouble" use="optional"/>
       <xsd:attribute name="eDiffcut" type="FleurDouble" use="optional"/>
       <xsd:attribute name="fDiffcut" type="FleurDouble" use="optional"/>
+      <xsd:attribute name="qlim" type="FleurDouble" use="optional"/>      
       <xsd:attribute name="singleQpt" type="xsd:positiveInteger" use="optional"/>
       <xsd:attribute name="e1term" type="FleurBool" use="optional"/>
       <xsd:attribute name="f1term" type="FleurBool" use="optional"/>
