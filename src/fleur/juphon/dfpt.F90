@@ -611,9 +611,9 @@ CONTAINS
          ! 0) Read
          DO iQ = 1, fi_fullsym%kpts%nkpt ! Loop over dynmat files to read
             IF (iQ<=9) THEN
-               OPEN( 3001, file="dynMatq=00"//int2str(iQ), status="old")
+               OPEN( 3001, file="dynMatq=000"//int2str(iQ), status="old")
             ELSE
-               OPEN( 3001, file="dynMatq=0"//int2str(iQ), status="old")
+               OPEN( 3001, file="dynMatq=00"//int2str(iQ), status="old")
             END IF
             DO iread = 1, 3 + 3*fi%atoms%nat ! Loop over dynmat rows
                IF (iread<4) THEN
