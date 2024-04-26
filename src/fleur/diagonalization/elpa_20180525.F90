@@ -71,23 +71,28 @@ CONTAINS
             CALL elpa_obj%set("process_row", hmat%blacsdata%myrow, err)
             CALL elpa_obj%set("process_col", hmat%blacsdata%mycol, err)
             CALL elpa_obj%set("blacs_context", hmat%blacsdata%blacs_desc(2), err)
+            call elpa_obj%set("timings",1,err)
+            err = elpa_obj%setup()
+            
 #if defined(CPP_GPU)||defined(_OPENACC)
-            CALL elpa_obj%set("gpu", 1, err)
+            CALL elpa_obj%set("nvidia-gpu", 1, err)
+            call elpa_obj%setup_gpu()
             print *, "ELPA for GPU"
 #else
             CALL elpa_obj%set("solver", ELPA_SOLVER_2STAGE)
 #endif
-            err = elpa_obj%setup()
+            
 
             CALL hmat%u2l()
             CALL smat%u2l()
-
+            call elpa_obj%timer_start("ELPA")
             IF (hmat%l_real) THEN
                CALL elpa_obj%generalized_eigenvectors(hmat%data_r, smat%data_r, eig2, ev_dist%data_r, .FALSE., err)
             ELSE
                CALL elpa_obj%generalized_eigenvectors(hmat%data_c, smat%data_c, eig2, ev_dist%data_c, .FALSE., err)
             ENDIF
-
+            call elpa_obj%timer_stop("ELPA")
+            call elpa_obj%print_times("ELPA")
             CALL elpa_deallocate(elpa_obj)
             CALL elpa_uninit()
             ! END of ELPA stuff
