@@ -76,6 +76,7 @@ CONTAINS
             
 #if defined(CPP_GPU)||defined(_OPENACC)
             call elpa_obj%set("gpu_hermitian_multiply",1, err)
+            call elpa_obj%set("cannon_for_generalized",0,err)
             CALL elpa_obj%set("nvidia-gpu", 1, err)
             call elpa_obj%setup_gpu()
             print *, "ELPA for GPU"
