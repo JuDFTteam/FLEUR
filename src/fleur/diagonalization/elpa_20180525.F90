@@ -75,9 +75,11 @@ CONTAINS
             err = elpa_obj%setup()
             
 #if defined(CPP_GPU)||defined(_OPENACC)
+            call elpa_obj%set("gpu_hermitian_multiply",1, err)
             CALL elpa_obj%set("nvidia-gpu", 1, err)
             call elpa_obj%setup_gpu()
             print *, "ELPA for GPU"
+            if (myid==0) call elpa_obj%store_settings("save_to_disk.txt", success)
 #else
             CALL elpa_obj%set("solver", ELPA_SOLVER_2STAGE)
 #endif
@@ -92,7 +94,7 @@ CONTAINS
                CALL elpa_obj%generalized_eigenvectors(hmat%data_c, smat%data_c, eig2, ev_dist%data_c, .FALSE., err)
             ENDIF
             call elpa_obj%timer_stop("ELPA")
-            call elpa_obj%print_times("ELPA")
+            if (myid==0) call elpa_obj%print_times("ELPA")
             CALL elpa_deallocate(elpa_obj)
             CALL elpa_uninit()
             ! END of ELPA stuff
