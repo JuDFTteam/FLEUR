@@ -79,7 +79,7 @@ CONTAINS
             CALL elpa_obj%set("nvidia-gpu", 1, err)
             call elpa_obj%setup_gpu()
             print *, "ELPA for GPU"
-            if (myid==0) call elpa_obj%store_settings("save_to_disk.txt", success)
+            if (myid==0) call elpa_obj%store_settings("save_to_disk.txt", err)
 #else
             CALL elpa_obj%set("solver", ELPA_SOLVER_2STAGE)
 #endif
