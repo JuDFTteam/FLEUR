@@ -709,6 +709,7 @@ CONTAINS
       type(t_stars), intent(in)  :: stars
        
       type(t_sym),   intent(in)  :: sym
+      ! The reducedStarsCutoff can probably be eliminated now that the numerics is better under control
       INTEGER,       INTENT(IN)  :: reducedStarsCutoff
       integer,       intent(in)  :: neq,natd, jspin, n
       real,          intent(in)  :: taual(3,natd)
@@ -879,7 +880,7 @@ CONTAINS
             ! ---->     calculate form factor inside the mt-sphere
             !           (use analytic integration of gaussian)
 
-              qfin = - f11 * SIN(gr)/gr + f12 * rcerf(ar,ai) * EXP(-a4*g*g) 
+              qfin = - f11 * SIN(gr)/gr + f12 * rcerfAddExp(ar,ai,-a4*g*g)
 
             ! ---->     calculate form factor outside the mt-sphere
             !           (do numerical integration of tails)
