@@ -875,7 +875,7 @@ CONTAINS
             ! ---->     calculate form factor inside the mt-sphere
             !           (use analytic integration of gaussian)
 
-              qfin = - f11 * SIN(gr)/gr + f12 * rcerfAddExp(ar,ai,-a4*g*g)
+              qfin = - f11 * SIN(gr)/gr + f12 * rcerfMulExp(ar,ai,-a4*g*g)
 
             ! ---->     calculate form factor outside the mt-sphere
             !           (do numerical integration of tails)
