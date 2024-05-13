@@ -7,7 +7,7 @@ c     new declaration part
 c                       s. bl"ugel, IFF, Nov.97
 
       PRIVATE
-      PUBLIC rcerf
+      PUBLIC rcerf, rcerfMulExp
       CONTAINS
 c*********************************************************************
       REAL FUNCTION rcerf(x,y)
@@ -31,6 +31,30 @@ c
       RCERF = 1.0 - real( exp( -z*z ) * cmplx( wr,-wi ) )
 
       END FUNCTION rcerf
+
+      REAL FUNCTION rcerfMulExp(x,y,addExp)
+      
+      IMPLICIT NONE
+
+      REAL, INTENT(IN)    :: x,y, addExp
+
+      COMPLEX             :: z
+      REAL                :: wr,wi
+
+      z = cmplx(x,y)
+
+c--->    calculate w(z')=exp(-z'**2)*erfc(-iz') for -iz'=z
+
+      CALL wofz(y,x,wr,wi)
+
+c--->   exp(addExp) * erf(x+iy) =
+c          exp(addExp) - exp(-z**2+addExp)*conjg( w(y+ix) )
+
+      rcerfMulExp = exp(addExp) 
+     +              - real(exp(-z*z+CMPLX(addExp))*cmplx(wr,-wi))
+
+      END FUNCTION rcerfMulExp
+
 
 c*********************************************************************
       SUBROUTINE wofz(x,y,wr,wi)

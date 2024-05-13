@@ -4,6 +4,7 @@ project(FLEUR LANGUAGES Fortran)
 #These options should be adjusted
 option(JUDFT_USE_MPI "Compile with MPI, will also work in serial" OFF)
 option(JUDFT_USE_HDF5 "Compile HDF5 tools" OFF)
+option(JUDFT_USE_GPU "Compile for GPU/CUDA support" OFF)
 option(JUDFT_USE_HDF5MPI "Is the HDF5 version able to do parallel IO" OFF)
 option(JUDFT_USE_COLLECT "Collect usage data" ON)
 option(JUDFT_USE_DEBUG "Set CPP_DEBUG when compiling code" OFF)
@@ -37,6 +38,7 @@ endif()
 add_library(juDFT STATIC
 ${judft_HDF}
 fpErrorDetection.c
+gpu_mem_usage.c
 usage_data.F90
 logging.f90
 info.F90
@@ -55,7 +57,9 @@ npy.F90
 round.f90
 internalParams.f90
 )
-
+if (JUDFT_USE_GPU)
+target_compile_definitions(juDFT PUBLIC CPP_GPU)
+endif()
 if (JUDFT_USE_MPI)
   target_compile_definitions(juDFT PUBLIC CPP_MPI)
 endif()

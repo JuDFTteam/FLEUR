@@ -570,6 +570,7 @@ CONTAINS
                   IF (fmpi%irank==0.AND.l_cheated) write(*,*) sym_dyn_mat(iQ,3 *(iDtype-1)+iDir,:)
                   l_cheated = .FALSE.
                   IF (fmpi%irank==0) WRITE(9339,*) dyn_mat(iQ,3 *(iDtype-1)+iDir,:)
+                  IF (fmpi_nosym%irank == 0 .AND. fi_nosym%juphon%l_rm_qhdf) call system("rm "//TRIM(dfpt_tag)//".hdf")
                   CALL timestop("Dirloop")
                END DO
                CALL timestop("Typeloop")
@@ -610,9 +611,9 @@ CONTAINS
          ! 0) Read
          DO iQ = 1, fi_fullsym%kpts%nkpt ! Loop over dynmat files to read
             IF (iQ<=9) THEN
-               OPEN( 3001, file="dynMatq=00"//int2str(iQ), status="old")
+               OPEN( 3001, file="dynMatq=000"//int2str(iQ), status="old")
             ELSE
-               OPEN( 3001, file="dynMatq=0"//int2str(iQ), status="old")
+               OPEN( 3001, file="dynMatq=00"//int2str(iQ), status="old")
             END IF
             DO iread = 1, 3 + 3*fi%atoms%nat ! Loop over dynmat rows
                IF (iread<4) THEN

@@ -622,7 +622,6 @@ CONTAINS
 
 !     ..Local variables
       integer nat1, n, n_out_p, k
-      INTEGER :: reducedStarsCutoff ! This is introduced to avoid numerical instabilities.
       complex czero
 
 !     ..Local arrays
@@ -639,7 +638,6 @@ CONTAINS
       ENDDO
 #endif
       DO k = 1, stars%ng3
-          IF (stars%sk3(k).LE.3.0*input%rkmax) reducedStarsCutoff = k ! The factor 3.0 is arbitrary. One could try going down to 2.0.
           qpwc(k) = czero
       ENDDO
 
@@ -654,7 +652,7 @@ CONTAINS
               
               ! (1) Form factor for each atom type
              
-              CALL FormFactor_forAtomType(atoms%msh,method2,n_out_p,reducedStarsCutoff,&
+              CALL FormFactor_forAtomType(atoms%msh,method2,n_out_p,&
                                  atoms%rmt(n),atoms%jri(n),atoms%dx(n),mshc(n),rat(:,n), &
                                  rh(:,n),alpha(n),stars,cell,acoff(n),qf)
 
@@ -663,11 +661,11 @@ CONTAINS
               nat1 = atoms%firstAtom(n)
               
               IF (l_f2) THEN     
-                 CALL StructureConst_forAtom(nat1,stars ,sym,reducedStarsCutoff,&
+                 CALL StructureConst_forAtom(nat1,stars ,sym,&
                                     atoms%neq(n),atoms%nat,atoms%taual,&
                                     cell,qf,qpwc_at,jspin,l_f2,n,vpw,ffonat)
               ELSE
-                 CALL StructureConst_forAtom(nat1,stars ,sym,reducedStarsCutoff,&
+                 CALL StructureConst_forAtom(nat1,stars ,sym,&
                                     atoms%neq(n),atoms%nat,atoms%taual,&
                                     cell,qf,qpwc_at,jspin,l_f2,n)              
               END IF
@@ -696,7 +694,7 @@ CONTAINS
        END IF
       end subroutine ft_of_CorePseudocharge
 
-   SUBROUTINE StructureConst_forAtom(nat1,stars ,sym,reducedStarsCutoff,&
+   SUBROUTINE StructureConst_forAtom(nat1,stars ,sym,&
                           neq,natd,taual,cell,qf,qpwc_at,jspin,l_f2,n,vpw,ffonat)
       ! Calculates the structure constant for each atom of atom type
 
@@ -709,7 +707,6 @@ CONTAINS
       type(t_stars), intent(in)  :: stars
        
       type(t_sym),   intent(in)  :: sym
-      INTEGER,       INTENT(IN)  :: reducedStarsCutoff
       integer,       intent(in)  :: neq,natd, jspin, n
       real,          intent(in)  :: taual(3,natd)
       type(t_cell),  intent(in)  :: cell
@@ -741,11 +738,11 @@ CONTAINS
       force_mt_loc=0.0
       force_is_loc=cmplx(0.0,0.0)
 !$OMP PARALLEL DO DEFAULT(none) &
-!$OMP SHARED(stars ,sym,reducedStarsCutoff,neq,natd,nat1,taual,cell,qf,qpwc_at,l_f2,ffonat,n,jspin,vpw) &
+!$OMP SHARED(stars ,sym,neq,natd,nat1,taual,cell,qf,qpwc_at,l_f2,ffonat,n,jspin,vpw) &
 !$OMP FIRSTPRIVATE(czero) &
 !$OMP PRIVATE(k,kr,phas,nat2,nat,sf,j,x,kcmplx,phase) &
 !$OMP REDUCTION(+:force_mt_loc,force_is_loc)
-      DO  k = 2,reducedStarsCutoff
+      DO k = 2, stars%ng3
          
             CALL spgrot(sym%nop, sym%symor, sym%mrot, sym%tau, sym%invtab, &
                         stars%kv3(:,k), kr, phas)
@@ -794,7 +791,7 @@ CONTAINS
       END IF
    END SUBROUTINE StructureConst_forAtom
 
-   SUBROUTINE FormFactor_forAtomType(msh, method2, n_out_p, reducedStarsCutoff, rmt, jri, dx, &
+   SUBROUTINE FormFactor_forAtomType(msh, method2, n_out_p, rmt, jri, dx, &
                                      mshc, rat, rh, alpha, stars, cell, acoff, &
                                      qf)
 
@@ -805,7 +802,6 @@ CONTAINS
 
       
       integer          ,intent(in) :: msh,method2, n_out_p
-      INTEGER,          INTENT(IN) :: reducedStarsCutoff
       real             ,intent(in) :: rmt
       integer          ,intent(in) :: jri
       real             ,intent(in) :: dx
@@ -835,11 +831,11 @@ CONTAINS
       ar  = SQRT( alpha ) * rmt 
 
 !$OMP PARALLEL DO DEFAULT(none) & 
-!$OMP SHARED(stars,f11,f12,ar,method2,n_out_p,reducedStarsCutoff,jri,rat,rh,dx,tail) &
+!$OMP SHARED(stars,f11,f12,ar,method2,n_out_p,jri,rat,rh,dx,tail) &
 !$OMP SHARED(alpha,cell,mshc,rmt,qf) &
 !$OMP FIRSTPRIVATE(zero) &
 !$OMP PRIVATE(k,g,ai,qfin,ir,j,rhohelp,qfout,gr,a4,alpha3)
-      DO k = 1, reducedStarsCutoff
+      DO k = 1, stars%ng3
          g = stars%sk3(k)
          !    first G=0
          IF ( k.EQ.1 ) THEN
@@ -879,7 +875,7 @@ CONTAINS
             ! ---->     calculate form factor inside the mt-sphere
             !           (use analytic integration of gaussian)
 
-              qfin = - f11 * SIN(gr)/gr + f12 * rcerf(ar,ai) * EXP(-a4*g*g) 
+              qfin = - f11 * SIN(gr)/gr + f12 * rcerfMulExp(ar,ai,-a4*g*g)
 
             ! ---->     calculate form factor outside the mt-sphere
             !           (do numerical integration of tails)
