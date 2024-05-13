@@ -74,7 +74,8 @@ class Elsi(CMakePackage):
         with when("@2.9.1:"):
             args.append(self.define_from_variant("USE_GPU_CUDA","use_gpu_cuda"))
             args.append(self.define_from_variant("ENABLE_CHASE","enable_chase"))
-
+            if self.spec.satisfies("+use_gpu_cuda"):
+                args.append(self.define("CMAKE_CUDA_FLAGS","-arch=sm_80"))
 
         if self.spec.variants["elpa2_kernel"].value != "none":
             args.append(self.define_from_variant("ELPA2_KERNEL", "elpa2_kernel"))
