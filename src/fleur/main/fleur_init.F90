@@ -158,6 +158,7 @@ CONTAINS
                              Xcpot, Forcetheo_data, fi%kpts, Enparaxml, fi%gfinp, fi%hub1inp, fmpi%Mpi_comm, fi%juPhon)
       !Remaining init is done using all PE
       call make_xcpot(fmpi, xcpot, fi%atoms, fi%input)
+      if (fi%noco%l_noco.and..not.xcpot%vxc_is_LDA()) call judft_warn("Noco should be used only with LDA",hint="GGA calculations and l_noco=T can be very error prone due.")
       CALL nococonv%init(fi%noco)
       CALL nococonv%init_ss(fi%noco, fi%atoms)
       !CALL ylmnorm_init(MAX(fi%atoms%lmaxd, 2*fi%hybinp%lexp))
