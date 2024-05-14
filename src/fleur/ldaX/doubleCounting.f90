@@ -67,12 +67,14 @@ MODULE m_doubleCounting
          mag = mag + mag_m(1:)
       ENDDO
       IF(spin_dim == 1) then
-         charge=charge/2.0
+         ! In the l_amf case the spin degeneracy will be dealt with in the coulombPotential call.
+         IF(.NOT.ldau%l_amf) charge=charge/2.0
          mag = 0.0
       ENDIF
 
       Vdc = cmplx_0
       IF(ldau%l_amf) THEN
+
          ALLOCATE(modified_density(-lmaxU_const:lmaxU_const, -lmaxU_const:lmaxU_const, SIZE(density,3)), source=cmplx_0)
          modified_density = cmplx_0
          D = real(2*(2*ldau%l+1))
@@ -93,7 +95,9 @@ MODULE m_doubleCounting
             ENDDO
 
          ENDDO
+         
          call coulombPotential(modified_density,ldau, MIN(2,SIZE(density,3)), l_spinoffd,Vdc,tmp)
+         
       ELSE
          DO ispin = 1, spin_dim
 
@@ -202,7 +206,7 @@ MODULE m_doubleCounting
       IF(ldau%l_amf) THEN
          ALLOCATE(modified_density(-lmaxU_const:lmaxU_const, -lmaxU_const:lmaxU_const, SIZE(density,3)), source=cmplx_0)
          modified_density = cmplx_0
-         D = real(2*(2*ldau%l+1))
+         D = real(2*(2*ldau%l+1)) ! This factor averages over the different m and spin
 
          DO ispin = 1, spin_dim
 
@@ -220,7 +224,8 @@ MODULE m_doubleCounting
             ENDDO
 
          ENDDO
-         call coulombPotential(density-modified_density,ldau, MIN(2,SIZE(density,3)), l_spinoffd,tmp,doubleCountingEnergy)
+         
+         call coulombPotential(density,ldau, MIN(2,SIZE(density,3)), l_spinoffd,tmp,doubleCountingEnergy)
       ELSE
          doubleCountingEnergy = U/2*charge*(charge-1) -J/2*charge*(charge/2-1)-J*dot_product(mag,mag)/4
       ENDIF

@@ -54,7 +54,7 @@ MODULE m_dftUPotential
                                              .FALSE.,spinavg_dc_local,0.0)
 
       if(ldau%l_amf) then
-         energy_contribution = double_counting
+         energy_contribution = energy_contribution - double_counting
       else
          energy_contribution = energy_contribution - double_counting
       endif
