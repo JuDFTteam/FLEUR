@@ -960,6 +960,7 @@
       <xsd:attribute default="F" name="vchk" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="cdinf" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="disp" type="FleurBool" use="optional"/>
+      <xsd:attribute default="F" name="sympsi" type="FleurBool" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="SpecialOutputType">

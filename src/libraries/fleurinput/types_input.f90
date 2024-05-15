@@ -65,6 +65,7 @@ MODULE m_types_input
   LOGICAL:: pallst=.FALSE.
   LOGICAL:: l_coreSpec=.FALSE.
   LOGICAL:: l_wann=.FALSE.
+  LOGICAL:: l_sympsi=.FALSE.
   LOGICAL:: l_kpts_fullbz=.FALSE.
   LOGICAL:: secvar=.FALSE.
   LOGICAL:: evonly=.FALSE.
@@ -154,7 +155,7 @@ SUBROUTINE mpi_bc_input(this,mpi_comm,irank)
    CALL mpi_bc(this%secvar,rank,mpi_comm)
    CALL mpi_bc(this%evonly,rank,mpi_comm)
    CALL mpi_bc(this%l_onlyMtStDen,rank,mpi_comm)
-   !    call mpi_bc(this%l_inpXML,rank,mpi_comm)
+   call mpi_bc(this%l_sympsi,rank,mpi_comm)
    CALL mpi_bc(this%fixed_moment ,rank,mpi_comm)
    CALL mpi_bc(this%l_core_confpot,rank,mpi_comm)
    CALL mpi_bc(this%l_useapw,rank,mpi_comm)
@@ -170,6 +171,7 @@ SUBROUTINE mpi_bc_input(this,mpi_comm,irank)
    CALL mpi_bc(this%rdmftStatesBelow,rank,mpi_comm)
    CALL mpi_bc(this%rdmftStatesAbove,rank,mpi_comm)
    CALL mpi_bc(this%rdmftFunctional,rank,mpi_comm)
+   CALL mpi_bc(this%lResMax,rank,mpi_comm)
 END SUBROUTINE mpi_bc_input
 
 SUBROUTINE read_xml_input(this,xml)
@@ -397,6 +399,7 @@ SUBROUTINE read_xml_input(this,xml)
       IF (numberNodes.EQ.1) THEN
          this%vchk = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@vchk'))
          this%cdinf = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@cdinf'))
+         this%l_sympsi = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@sympsi'))
       END IF
       ! Read in optional plotting parameters
       xPathA = '/fleurInput/output/plotting'

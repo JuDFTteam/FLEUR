@@ -73,6 +73,9 @@ CONTAINS
 
     CALL timestart("sympsi")
 
+    open(24,file="sympsi_grp_k",ACTION="write",ACCESS='append')
+    open(444,file="sympsi_table",ACTION="write",ACCESS='append')
+
     IF (soc) THEN
        ALLOCATE(su(2,2,2*sym%nop))
        CALL grp_k(sym,mrot_k,cell,lapw%bkpt,nclass,nirr,c_table, grpname,irrname,su)
@@ -246,6 +249,8 @@ CONTAINS
     DEALLOCATE(csum)
     DEALLOCATE(chars)
 
+    close(24)
+    close(444)
     CALL timestop("sympsi")
 
   END SUBROUTINE sympsi

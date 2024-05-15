@@ -346,8 +346,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
       END IF
       IF (input%film) CALL regCharges%sumBandsVac(vacuum,vacdos,noccbd,ikpt,jsp_start,jsp_end,eig,we)
 
-      IF (.FALSE..AND.(banddos%dos.OR.banddos%vacdos.OR.input%cdinf)) THEN
-         ! since z is no longer an argument of cdninf sympsi has to be called here!
+      IF (input%l_sympsi.and.allocated(dos%jsym)) THEN
          CALL sympsi(lapw,jspin,sym,noccbd,cell,eig,noco,dos%jsym(:,ikpt,jspin),zMat)
       END IF
    END DO ! end of k-point loop
