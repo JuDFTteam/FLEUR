@@ -202,6 +202,10 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
 
    CALL timestop("stden - init")
 
+   if (noco%l_noco) THEN
+      rh1(:,:,1)=0.5*(rh1(:,:,1)+rh1(:,:,2))
+      rh1(:,:,2)=rh1(:,:,1)
+   ENDIF   
    DO ispin = 1, input%jspins
       CALL cdnovlp(fmpi,sphhar,stars,atoms,sym,vacuum,&
                    cell,input ,l_st,ispin,rh1(:,:,ispin),&
