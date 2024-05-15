@@ -171,7 +171,7 @@ module m_magmoments
         CALL pol_angle(magmom(1),magmom(2),magmom(3),beta,alpha,.true.)
                 
         if (l_offdiag) THEN
-           write(oUnit,'(i6,1x,f9.6,2(" | ",5(f9.6,1x)),"  mm ")') itype,sqrt(dot_product(magmom(1:3),magmom(1:3))),magmom,alpha,beta,magmomL,alphaL,betaL
+           write(oUnit,'(i6,1x,f9.6,2(" | ",5(f9.6,1x)),a)') itype,sqrt(dot_product(magmom(1:3),magmom(1:3))),magmom,alpha,beta,magmomL,alphaL,betaL,grepstring
         elseif (l_noco.or.l_soc) THEN
            write(oUnit,'(i6,1x,f9.6," | ",5(f9.6,1x)," |    ---       ---    ",f9.6,"    ---          ---           ",a)') &
             itype,sqrt(dot_product(magmom(1:3),magmom(1:3))),magmom,alpha,beta,magmomL(3),grepstring
