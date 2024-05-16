@@ -258,7 +258,7 @@ contains
     !write out mixed density (but not for a plotting run)
     IF ((fmpi%irank==0).AND.(sliceplot%iplot==0).AND..NOT.l_dfpt) THEN
       CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,CDN_INPUT_DEN_const,&
-         1,results%last_distance,results%ef,results%last_mmpmatDistance,results%last_occDistance,.TRUE.,inDen)
+         1,results%last_distance,results%ef,results%last_mmpmatDistance,results%last_occDistance,.TRUE.,inDen,b_constr=nococonv%b_con)
     ELSE IF ((fmpi%irank==0).AND.(sliceplot%iplot==0).AND.l_dfpt) THEN
       CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,CDN_INPUT_DEN_const,&
          1,results%last_distance,results%ef,results%last_mmpmatDistance,results%last_occDistance,.TRUE.,inDen,inFilename=dfpt_tag,denIm=inDenIm)

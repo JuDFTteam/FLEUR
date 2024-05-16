@@ -1763,7 +1763,7 @@ MODULE m_cdnpot_io_hdf
 
    SUBROUTINE writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
                               starsIndex, latharmsIndex, structureIndex, stepfunctionIndex,&
-                              date,time,distance,fermiEnergy,mmpmatDistance,occDistance,l_qfix,iter,den,denIm)
+                              date,time,distance,fermiEnergy,mmpmatDistance,occDistance,l_qfix,iter,den,denIm,b_constr)
       use m_types_input
       use m_types_potden
       TYPE(t_input),    INTENT(IN) :: input
@@ -1780,7 +1780,7 @@ MODULE m_cdnpot_io_hdf
       LOGICAL, INTENT (IN)         :: l_qfix
 
       TYPE(t_potden), OPTIONAL, INTENT(IN) :: denIm
-
+      REAL,OPTIONAL,INTENT(IN)             :: b_constr(:,:)
       INTEGER                      :: i, iVac
       INTEGER                      :: ntype,jmtd,nmzd,nmzxyd,nlhd,ng3,ng2
       INTEGER                      :: nmz,nvac,od_nq2,nmzxy,n_u,n_opc
@@ -1971,6 +1971,8 @@ MODULE m_cdnpot_io_hdf
                CALL io_write_complex4(fvacSetID,(/-1,1,1,1,1/),dimsInt(:5),"vac",den%vac(:,:,:,:input%jspins))
                CALL h5dclose_f(fvacSetID, hdfError)
             END IF
+            if (present(b_constr)) call io_write_var(groupID,"b_con",b_constr)
+            
 
             IF((densityType.EQ.DENSITY_TYPE_NOCO_IN_const).OR.&
                (densityType.EQ.DENSITY_TYPE_NOCO_OUT_const).OR.(densityType.EQ.DENSITY_TYPE_FFN_IN_const).OR.&
@@ -1995,7 +1997,7 @@ MODULE m_cdnpot_io_hdf
                   CALL h5dclose_f(cdomvacSetID, hdfError)
                END IF
             ENDIF
-
+            
             IF ((fileFormatVersion.GE.29).AND.(n_u.GT.0)) THEN
                IF((densityType.EQ.DENSITY_TYPE_FFN_IN_const).OR.&
                   (densityType.EQ.DENSITY_TYPE_FFN_OUT_const).OR.&
@@ -2064,6 +2066,7 @@ MODULE m_cdnpot_io_hdf
                   CALL h5dclose_f(frOffImSetID, hdfError)
                END IF
             END IF
+            if (present(b_constr)) call io_write_var(groupID,"b_con",b_constr)
 
             dims(:3)=(/2,ng3,input%jspins/)
             dimsInt = dims
@@ -2188,6 +2191,9 @@ MODULE m_cdnpot_io_hdf
          CALL h5sclose_f(frSpaceID,hdfError)
          CALL io_write_real4(frSetID,(/1,1,1,1/),dimsInt(:4),"mt",den%mt(:,0:,:,:input%jspins))
          CALL h5dclose_f(frSetID, hdfError)
+
+         if (present(b_constr)) call io_write_var(groupID,"b_con",b_constr)
+         
 
          IF (PRESENT(denIm)) THEN
             dims(:4)=(/jmtd,nlhd+1,ntype,input%jspins/)
@@ -2584,7 +2590,7 @@ MODULE m_cdnpot_io_hdf
    END SUBROUTINE writePotentialHDF
 
    SUBROUTINE readDensityHDF(fileID, input, stars, latharms, atoms, vacuum,  &
-                             archiveName, densityType,fermiEnergy,lastDistance,l_qfix,l_DimChange,den,denIm)
+                             archiveName, densityType,fermiEnergy,lastDistance,l_qfix,l_DimChange,den,denIm,b_constr)
       use m_types_input
       use m_types_stars
       use m_types_sphhar
@@ -2610,6 +2616,7 @@ MODULE m_cdnpot_io_hdf
       LOGICAL, INTENT (OUT)        :: l_qfix, l_DimChange
 
       TYPE(t_potden), OPTIONAL, INTENT(INOUT) :: denIm
+      REAL,optional,INTENT(INOUT) :: b_constr(:,:)
 
       INTEGER               :: starsIndex, latharmsIndex, structureIndex, stepfunctionIndex
       INTEGER               :: previousDensityIndex, jspins, jspinsmmp
@@ -3024,7 +3031,6 @@ MODULE m_cdnpot_io_hdf
          frTemp(1:jmtdOut,1:nlhdOut+1,1:ntypeOut,1:jspinsOut)
          DEALLOCATE(frTemp)
       END IF
-
       IF ((localDensityType.EQ.DENSITY_TYPE_FFN_IN_const).OR.(localDensityType.EQ.DENSITY_TYPE_FFN_OUT_const)) THEN
          ALLOCATE(frTemp(jmtd,1:nlhd+1,ntype,1:2))
          dimsInt(:4)=(/jmtd,nlhd+1,ntype,2/)
@@ -3034,6 +3040,7 @@ MODULE m_cdnpot_io_hdf
          den%mt(1:jmtdOut,0:nlhdOut,1:ntypeOut,3:4) =&
             frTemp(1:jmtdOut,1:nlhdOut+1,1:ntypeOut,1:2)
          DEALLOCATE(frTemp)
+         
          IF (PRESENT(denIm)) THEN
             ALLOCATE(frTemp(jmtd,1:nlhd+1,ntype,1:2))
             dimsInt(:4)=(/jmtd,nlhd+1,ntype,2/)
@@ -3045,7 +3052,7 @@ MODULE m_cdnpot_io_hdf
             DEALLOCATE(frTemp)
          END IF
       END IF
-
+      if (present(b_constr).and.io_dataexists(groupID,"b_con")) call io_read_var(groupID,"b_con",b_constr)
       den%pw = CMPLX(0.0,0.0)
       ALLOCATE(fpwTemp(ng3,jspins))
       dimsInt(:3)=(/2,ng3,jspins/)

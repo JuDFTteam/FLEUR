@@ -37,7 +37,7 @@ CONTAINS
       USE m_magnMomFromDen
       USE m_force_sf ! Klueppelberg (force level 3)
       USE m_fleur_vdW
-
+      use m_vgen_constraint
       IMPLICIT NONE
 
       TYPE(t_results),   INTENT(INOUT) :: results
@@ -132,7 +132,7 @@ CONTAINS
                       cell,fmpi,noco,den,denRot,EnergyDen,vTot,vx,vxc,exc,results=results)
 
       CALL bfield(input,stars,noco,atoms,field,vTot)
-
+      if (any(noco%l_constrained)) call vgen_constraint(atoms,noco,nococonv,vtot)
 
 
       ! d)

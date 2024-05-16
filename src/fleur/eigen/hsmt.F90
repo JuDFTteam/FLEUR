@@ -107,10 +107,9 @@ CONTAINS
                 CALL hsmt_distspins(chi,hmat_tmp,hmat)
                 CALL timestop("hsmt_distspins")
               ELSE !Add off-diagonal contributions to Hamiltonian if needed
-                IF (noco%l_unrestrictMT(n).OR.noco%l_spinoffd_ldau(n)) THEN
+                IF (noco%l_unrestrictMT(n).OR.noco%l_spinoffd_ldau(n).or.noco%l_constrained(n)) THEN
                   CALL hsmt_mtNocoPot_offdiag(n,input,fmpi,sym,atoms,noco,nococonv,cell,lapw,usdus,td,fjgj,igSpinPr,igSpin,hmat_tmp,hmat)
                 ENDIF
-                IF (noco%l_constrained(n)) CALL hsmt_offdiag(n,atoms,fmpi,nococonv,lapw,td,usdus,fjgj,ilSpinPr,ilSpin,igSpinPr,igSpin,hmat)
                 IF (noco%l_soc) CALL hsmt_soc_offdiag(n,atoms,cell,fmpi,nococonv,lapw,sym,usdus,td,fjgj,hmat)
               ENDIF
             ELSE
@@ -127,8 +126,7 @@ CONTAINS
                     CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,usdus,td,fjgj,&
                     n,chi(igSpinPr,igSpin),ilSpinPr,ilSpin,igSpinPr,igSpin,hmat(igSpinPr,igSpin),.FALSE.,.FALSE.,.FALSE.,smat=smat(igSpinPr,igSpin))
                   ELSE
-                    IF (any(noco%l_unrestrictMT).OR.noco%l_spinoffd_ldau(n)) call hsmt_mtNocoPot_offdiag(n,input,fmpi,sym,atoms,noco,nococonv,cell,lapw,usdus,td,fjgj,igSpinPr,igSpin,hmat_tmp,hmat)
-                    IF (any(noco%l_constrained)) CALL hsmt_offdiag(n,atoms,fmpi,nococonv,lapw,td,usdus,fjgj,ilSpinPr,ilSpin,igSpinPr,igSpin,hmat)
+                    IF (noco%l_unrestrictMT(n).OR.noco%l_spinoffd_ldau(n).or.noco%l_constrained(n)) call hsmt_mtNocoPot_offdiag(n,input,fmpi,sym,atoms,noco,nococonv,cell,lapw,usdus,td,fjgj,igSpinPr,igSpin,hmat_tmp,hmat)
                   ENDIF
                 ENDDO
               ENDDO

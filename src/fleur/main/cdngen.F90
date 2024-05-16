@@ -277,6 +277,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
          !Calculate and write out spin densities at the nucleus and magnetic moments in the spheres
          CALL spinMoments(input,atoms,noco,nococonv,den=outDen)
          CALL orbMoments(input,atoms,noco,nococonv,moments)
+         if (any(noco%l_constrained)) call nococonv%update_b_cons(atoms,noco,vtot,outDen)
 
          if (sym%nop==1.and..not.input%film) call magMultipoles(sym,juphon,stars, atoms,cell, sphhar, vacuum, input, noco,nococonv,outden)
          !Generate and save the new nocoinp file if the directions of the local

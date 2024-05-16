@@ -136,7 +136,7 @@ CONTAINS
 
 
   SUBROUTINE readDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,inOrOutCDN,&
-       relCdnIndex,fermiEnergy,lastDistance,l_qfix,den,inFilename,denIm)
+       relCdnIndex,fermiEnergy,lastDistance,l_qfix,den,inFilename,denIm,b_constr)
 
     TYPE(t_stars),INTENT(IN)     :: stars
     TYPE(t_vacuum),INTENT(IN)    :: vacuum
@@ -146,7 +146,7 @@ CONTAINS
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_sym),INTENT(IN)       :: sym
     TYPE(t_noco),INTENT(IN)      :: noco
-     
+    REAL,INTENT(INOUT),OPTIONAL  :: b_constr(:,:)
 
     TYPE(t_potden),INTENT(INOUT) :: den
 
@@ -246,7 +246,7 @@ CONTAINS
                  fermiEnergy,lastDistance,l_qfix,l_DimChange,den,denIm)
           ELSE
              CALL readDensityHDF(fileID, input, stars, sphhar, atoms, vacuum,   archiveName, densityType,&
-                 fermiEnergy,lastDistance,l_qfix,l_DimChange,den)
+                 fermiEnergy,lastDistance,l_qfix,l_DimChange,den,b_constr=b_constr)
           END IF
 
           CALL closeCDNPOT_HDF(fileID)
@@ -384,7 +384,7 @@ CONTAINS
   END SUBROUTINE readDensity
 
   SUBROUTINE writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,inOrOutCDN,&
-       relCdnIndex,distance,fermiEnergy,mmpmatDistance,occDistance,l_qfix,den,inFilename,denIm)
+       relCdnIndex,distance,fermiEnergy,mmpmatDistance,occDistance,l_qfix,den,inFilename,denIm,b_constr)
 
     TYPE(t_noco),INTENT(IN)      :: noco
     TYPE(t_stars),INTENT(IN)     :: stars
@@ -408,6 +408,7 @@ CONTAINS
     CHARACTER(LEN=*), OPTIONAL, INTENT(IN)  :: inFilename
 
     TYPE(t_potden), OPTIONAL, INTENT(INOUT) :: denIm
+    REAL, OPTIONAL, INTENT(IN) :: b_constr(:,:)
 
     TYPE(t_stars)        :: starsTemp
     TYPE(t_vacuum)       :: vacuumTemp
@@ -529,10 +530,17 @@ CONTAINS
             currentStepfunctionIndex,date,time,distance,fermiEnergy,mmpmatDistance,&
             occDistance,l_qfix,den%iter+relCdnIndex,den,denIm)
        ELSE
-          CALL writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
+          if (any(noco%l_constrained)) THEN
+            CALL writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
+               currentStarsIndex, currentLatharmsIndex, currentStructureIndex,&
+               currentStepfunctionIndex,date,time,distance,fermiEnergy,mmpmatDistance,&
+               occDistance,l_qfix,den%iter+relCdnIndex,den,b_constr=b_constr)
+          else
+            CALL writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
                currentStarsIndex, currentLatharmsIndex, currentStructureIndex,&
                currentStepfunctionIndex,date,time,distance,fermiEnergy,mmpmatDistance,&
                occDistance,l_qfix,den%iter+relCdnIndex,den)
+          endif          
        END IF
 
        IF(l_storeIndices) THEN

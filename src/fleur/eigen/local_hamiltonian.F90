@@ -50,9 +50,9 @@ CONTAINS
       COMPLEX :: one
 
       CALL timestart("local_hamiltonian")
-      CALL td%init(atoms,input%jspins,(noco%l_noco.AND.noco%l_soc.AND..NOT.noco%l_ss).OR.any(noco%l_constrained))
+      CALL td%init(atoms,input%jspins,(noco%l_noco.AND.noco%l_soc.AND..NOT.noco%l_ss).OR.any(noco%l_constrained).or.any(noco%l_constrained))
 
-      DO jsp=1,MERGE(4,input%jspins,any(noco%l_unrestrictMT).OR.any(noco%l_spinoffd_ldau))
+      DO jsp=1,MERGE(4,input%jspins,any(noco%l_unrestrictMT).OR.any(noco%l_spinoffd_ldau).or.any(noco%l_constrained))
 
          DO j1=merge(jsp,1,jsp<3),merge(jsp,2,jsp<3)
             j2  = MERGE(j1,3-j1,jsp<3)
@@ -62,7 +62,7 @@ CONTAINS
             !$OMP PARALLEL DO DEFAULT(NONE) PRIVATE(l,m,lm,s)&
             !$OMP SHARED(atoms,sphhar,sym,enpara,nococonv,j1,j2,jsp,fmpi,v,vx,input,hub1inp,hub1data,td,ud,alpha_hybrid,one,l_dfptmod,noco)
             DO  n = 1,atoms%ntype
-               IF (j1==j2.OR.noco%l_unrestrictMT(n)) THEN
+               IF (j1==j2.OR.noco%l_unrestrictMT(n).or.noco%l_constrained(n)) THEN
                   CALL tlmplm(n,sphhar,atoms,sym,enpara,nococonv,j1,j2,jsp,fmpi,v,vx,input,hub1inp,hub1data,td,ud,alpha_hybrid,one,PRESENT(l_dfptmod))
                END IF
                !Copy local hamiltonian for non_spherical setup
@@ -94,7 +94,6 @@ CONTAINS
                call cholesky_decompose(td%h_loc_nonsph(:,:,:,j1,j2),td%e_shift(:,jsp),atoms,ud,jsp)
             endif
 
-            IF (any(noco%l_constrained)) CALL tlmplm_constrained(atoms,v,enpara,input,hub1data,ud,nococonv,td)
          END DO
       END DO
 
@@ -105,53 +104,6 @@ CONTAINS
       CALL timestop("local_hamiltonian")
    END SUBROUTINE 
 
-   SUBROUTINE tlmplm_constrained(atoms,v,enpara,input,hub1data,ud,nococonv,td)
-      USE m_radovlp
-      USE m_types
-      USE m_tlmplm
-      TYPE(t_input),    INTENT(IN)    :: input
-      TYPE(t_atoms),    INTENT(IN)    :: atoms
-      TYPE(t_enpara),   INTENT(IN)    :: enpara
-      TYPE(t_potden),   INTENT(IN)    :: v
-      TYPE(t_tlmplm),   INTENT(INOUT) :: td
-      TYPE(t_usdus),    INTENT(INOUT) :: ud
-      TYPE(t_nococonv), INTENT(IN)    :: nococonv
-      TYPE(t_hub1data), INTENT(IN)    :: hub1data
-
-      REAL, ALLOCATABLE :: uun21(:,:),udn21(:,:),dun21(:,:),ddn21(:,:)
- 
-      COMPLEX :: c
-      INTEGER :: n,l,s
-
-      ALLOCATE(uun21(0:atoms%lmaxd,atoms%ntype),udn21(0:atoms%lmaxd,atoms%ntype), &
-             & dun21(0:atoms%lmaxd,atoms%ntype),ddn21(0:atoms%lmaxd,atoms%ntype))
-
-      CALL rad_ovlp(atoms,ud,input,hub1data,v%mt,enpara%el0,uun21,udn21,dun21,ddn21)
-
-      DO  n = 1,atoms%ntype
-         ! In a constraint calculation, we have to calculate the local spin
-         ! off-diagonal contributions
-
-         s=atoms%lnonsph(n)+1
-         ! First ispin=1,jspin=2 case
-         DO l=0, atoms%lnonsph(n)
-            c = (-0.5)*CMPLX(nococonv%b_con(1,n),nococonv%b_con(2,n))
-            td%h_off(l  ,l  ,n,1,2)     =td%h_off(l  ,l  ,n,1,2) + uun21(l,n)*c
-            td%h_off(l  ,l+s,n,1,2)     =td%h_off(l  ,l+s,n,1,2) + udn21(l,n)*c
-            td%h_off(l+s,l  ,n,1,2)     =td%h_off(l+s,l  ,n,1,2) + dun21(l,n)*c
-            td%h_off(l+s,l+s,n,1,2)     =td%h_off(l+s,l+s,n,1,2) + ddn21(l,n)*c
-         END DO
-
-         ! Then ispin=2,jspin=1 case
-         DO l = 0, atoms%lnonsph(n)
-            c = (-0.5)*CMPLX(nococonv%b_con(1,n),-nococonv%b_con(2,n))
-            td%h_off(l  ,l  ,n,2,1)     =td%h_off(l  ,l  ,n,2,1) + uun21(l,n)*c
-            td%h_off(l  ,l+s,n,2,1)     =td%h_off(l  ,l+s,n,2,1) + udn21(l,n)*c
-            td%h_off(l+s,l  ,n,2,1)     =td%h_off(l+s,l  ,n,2,1) + dun21(l,n)*c
-            td%h_off(l+s,l+s,n,2,1)     =td%h_off(l+s,l+s,n,2,1) + ddn21(l,n)*c
-         END DO
-      END DO
-   END SUBROUTINE tlmplm_constrained
 
    SUBROUTINE add_ldaU(fmpi,inden,jsp,atoms,v,ud,input,hub1data,enpara,mat,mat_half,j1,j2,l_lomatrix)
                ! Include contribution from LDA+U and LDA+HIA (latter are behind LDA+U contributions)

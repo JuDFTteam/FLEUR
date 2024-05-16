@@ -41,10 +41,56 @@ MODULE m_types_nococonv
       procedure :: rot_magvec_ntype,rot_magvec_explicit
       generic   :: rot_magvec =>rot_magvec_ntype,rot_magvec_explicit
       procedure :: avg_moments
+      procedure :: update_b_cons
       procedure :: mpi_bc => mpi_bc_nococonv
    end TYPE
    public :: t_nococonv
 CONTAINS
+
+SUBROUTINE update_b_cons(nococonv,atoms,noco,vtot,den)
+   use m_types_atoms
+   use m_types_noco
+   use m_types_potden
+   use m_intgr
+   CLASS(t_nococonv),INTENT(INOUT):: nococonv
+   type(t_atoms),intent(in)       :: atoms
+   type(t_potden),intent(in)      :: vtot
+   type(t_potden),intent(in)      :: den
+   type(t_noco),intent(in)        :: noco
+   
+
+   integer:: itype
+   real :: b_xc(maxval(atoms%jri)),b_xc_av,scale,b_con_outx,b_con_outy
+   real :: mag(0:3),up,down,off1,off2
+   complex:: off_diag
+
+   DO itype=1,atoms%ntype
+      if (.not.noco%l_constrained(itype)) cycle
+      !calculate the local moment
+      CALL intgr3(den%mt(:,0,itype,1),atoms%rmsh(:,itype),atoms%dx(itype),atoms%jri(itype),up)
+      CALL intgr3(den%mt(:,0,itype,2),atoms%rmsh(:,itype),atoms%dx(itype),atoms%jri(itype),down)
+      up=up*sfp_const;down=down*sfp_const
+      CALL intgr3(den%mt(:,0,itype,3),atoms%rmsh(:,itype),atoms%dx(itype),atoms%jri(itype),off1)
+      CALL intgr3(den%mt(:,0,itype,4),atoms%rmsh(:,itype),atoms%dx(itype),atoms%jri(itype),off2)
+      off_diag=cmplx(off1,off2)*sfp_const
+      mag=nococonv%denmat_to_mag(up,down,off_diag)
+
+
+      b_xc (:atoms%jri(itype)) = (  vtot%mt(:atoms%jri(itype),0,itype,1) - vtot%mt(:atoms%jri(itype),0,itype,2) )*atoms%rmsh(:atoms%jri(itype),itype)
+      CALL intgr3(b_xc,atoms%rmsh(1,itype),atoms%dx(itype),atoms%jri(itype),b_xc_av)
+      b_xc_av = fpi_const*b_xc_av/atoms%volmts(itype)
+      !--->    calculate the output constraint B-field (B_con)
+      !        take negative of absolute value! gb`05
+      scale = -ABS(b_xc_av/mag(3))
+      b_con_outx = scale*mag(1)
+      b_con_outy = scale*mag(2)
+      !--->    mix input and output constraint fields
+      WRITE  (oUnit,"('  -->',10x,' input B_con_x=',f12.6,' input B_con_y=',f12.6)") nococonv%b_con(1,itype),nococonv%b_con(2,itype)
+      WRITE  (oUnit,"('  -->',10x,' delta B_con_x=',f12.6,' delta B_con_y=',f12.6)") b_con_outx,b_con_outy
+      nococonv%b_con(1,itype) = nococonv%b_con(1,itype) + noco%mix_b*b_con_outx
+      nococonv%b_con(2,itype) = nococonv%b_con(2,itype) + noco%mix_b*b_con_outy
+   END DO   
+END SUBROUTINE 
 
 SUBROUTINE mpi_bc_nococonv(this,mpi_comm,irank)
    USE m_mpi_bc_tool
