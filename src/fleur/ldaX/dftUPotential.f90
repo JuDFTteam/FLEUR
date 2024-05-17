@@ -3,7 +3,6 @@ MODULE m_dftUPotential
    USE m_constants
    USE m_juDFT
    USE m_types
-   USE m_uj2f
    USE m_doubleCounting
    USE m_coulombPotential
 
