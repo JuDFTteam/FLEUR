@@ -45,11 +45,7 @@ MODULE m_dftUPotential
       double_counting = doubleCountingEnergy(density, ldau, u_htr, j_htr, l_spinoffd,&
                                              .FALSE.,spinavg_dc_local,0.0)
 
-      if(ldau%l_amf) then
-         energy_contribution = energy_contribution - double_counting
-      else
-         energy_contribution = energy_contribution - double_counting
-      endif
+      energy_contribution = energy_contribution - double_counting
       
       total_charge = 0.0
       DO ispin = 1, MIN(2,SIZE(density,3))
