@@ -124,10 +124,6 @@ MODULE m_checks
      END IF
 
      ! Disable functionalities that are known to have bugs:
-
-     IF (ANY(atoms%lda_u(1:atoms%n_u)%l_amf)) THEN
-        CALL juDFT_warn("Around Mean Field limit in LDA+U calculations is disabled at the moment.")
-     END IF
      
      IF(banddos%l_mcd) THEN
         CALL juDFT_warn("Magnetic Circular Dichroism calculations are disbled at the moment.")
