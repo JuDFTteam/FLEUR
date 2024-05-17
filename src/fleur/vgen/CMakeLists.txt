@@ -6,6 +6,7 @@ src/fleur/vgen/modcyli.f
 src/fleur/vgen/modcylk.f
 )
 set(fleur_F90 ${fleur_F90}
+src/fleur/vgen/vgen_constraint.F90
 src/fleur/vgen/rotate_mt_den_tofrom_local.f90
 src/fleur/vgen/b_field.F90
 src/fleur/vgen/mkgylm.f90
