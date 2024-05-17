@@ -399,6 +399,7 @@ SUBROUTINE read_xml_input(this,xml)
       IF (numberNodes.EQ.1) THEN
          this%vchk = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@vchk'))
          this%cdinf = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@cdinf'))
+         this%l_sympsi = .FALSE.
          IF (xml%versionNumber > 37) this%l_sympsi = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@sympsi'))
       END IF
       ! Read in optional plotting parameters
