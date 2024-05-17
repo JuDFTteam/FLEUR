@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<fleurInput fleurInputVersion="0.34">
+<fleurInput fleurInputVersion="0.38">
    <comment>
       title   
    </comment>
@@ -66,4 +66,3 @@
   <!-- We include the file relax.inp here to enable relaxations (see documentation) -->
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="relax.xml"> <xi:fallback/> </xi:include>
 </fleurInput>
-
