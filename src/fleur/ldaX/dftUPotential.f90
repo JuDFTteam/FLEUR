@@ -3,7 +3,6 @@ MODULE m_dftUPotential
    USE m_constants
    USE m_juDFT
    USE m_types
-   USE m_uj2f
    USE m_doubleCounting
    USE m_coulombPotential
 
@@ -27,23 +26,16 @@ MODULE m_dftUPotential
 
       LOGICAL :: spinavg_dc_local
       INTEGER :: m,ispin,jspin
-      REAL    :: u_htr,j_htr,f0,f2,f4,f6,energy_contribution,total_charge, double_counting
+      REAL    :: u_htr,j_htr,energy_contribution,total_charge, double_counting
       COMPLEX, ALLOCATABLE :: Vdc(:,:,:)
 
       spinavg_dc_local = .false.
       if(present(spinavg_dc)) spinavg_dc_local = spinavg_dc .and. jspins==2
 
       call coulombPotential(density, ldau, jspins, l_spinoffd, potential, energy_contribution)
-
-      CALL uj2f(jspins,ldau,f0,f2,f4,f6)
-      u_htr = f0/hartree_to_ev_const
-      IF (ldau%l.EQ.1) THEN
-         j_htr = f2/(5*hartree_to_ev_const)
-      ELSE IF (ldau%l.EQ.2) THEN
-         j_htr = 1.625*f2/(14*hartree_to_ev_const)
-      ELSE IF (ldau%l.EQ.3) THEN
-         j_htr = (286.+195.*451./675.+250.*1001./2025.)*f2/(6435*hartree_to_ev_const)
-      END IF
+      
+      u_htr = ldau%U / hartree_to_ev_const
+      j_htr = ldau%J / hartree_to_ev_const
 
       !Add double counting terms
       Vdc = doubleCountingPot(density, ldau, u_htr, j_htr, l_spinoffd,&
@@ -53,11 +45,7 @@ MODULE m_dftUPotential
       double_counting = doubleCountingEnergy(density, ldau, u_htr, j_htr, l_spinoffd,&
                                              .FALSE.,spinavg_dc_local,0.0)
 
-      if(ldau%l_amf) then
-         energy_contribution = energy_contribution - double_counting
-      else
-         energy_contribution = energy_contribution - double_counting
-      endif
+      energy_contribution = energy_contribution - double_counting
       
       total_charge = 0.0
       DO ispin = 1, MIN(2,SIZE(density,3))

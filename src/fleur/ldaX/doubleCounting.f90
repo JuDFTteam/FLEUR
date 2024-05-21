@@ -191,7 +191,6 @@ MODULE m_doubleCounting
          mag_m = nococonv%denmat_to_mag(real(density(m,m,1)),&
                                         real(density(m,m,min(2,spin_dim))),&
                                         r21)
-
          charge = charge + mag_m(0)
          mag = mag + mag_m(1:)
       ENDDO
@@ -225,7 +224,11 @@ MODULE m_doubleCounting
 
          ENDDO
          
-         call coulombPotential(density,ldau, MIN(2,SIZE(density,3)), l_spinoffd,tmp,doubleCountingEnergy)
+         IF(spin_dim == 1) THEN
+            modified_density = modified_density * 2.0
+         END IF
+         
+         call coulombPotential(modified_density,ldau, MIN(2,SIZE(density,3)), l_spinoffd,tmp,doubleCountingEnergy)
       ELSE
          doubleCountingEnergy = U/2*charge*(charge-1) -J/2*charge*(charge/2-1)-J*dot_product(mag,mag)/4
       ENDIF
