@@ -10,7 +10,7 @@ MODULE m_types_sphhar
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: t_sphhar
-   !Data for the spherical harmonics
+   !Data for the spherical harmonics, Correction: actual lattice Harmonics
   TYPE:: t_sphhar
       !No of symmetry types (must
       !equal maxval(sym%ntypsy)
@@ -20,14 +20,14 @@ MODULE m_types_sphhar
       !max of nlh
       INTEGER ::nlhd
       !No of sphhar (ntypsd)
-      INTEGER, ALLOCATABLE ::nlh(:)
+      INTEGER, ALLOCATABLE ::nlh(:) !no of lattice harmonics
       !l's of sphhar (0:nlhd,ntypsd)
       INTEGER, ALLOCATABLE ::llh(:, :)
       !No of members in sphhar (0:nlh
       INTEGER, ALLOCATABLE ::nmem(:, :)
       !lm's of of members (max(nmem),
       INTEGER, ALLOCATABLE ::mlh(:, :, :)
-      !phasefactors (max(nmem),0:nlhd
+      !phasefactors (max(nmem),0:nlhd, linear combination
       COMPLEX, ALLOCATABLE ::clnu(:, :, :)
    END TYPE t_sphhar
  CONTAINS

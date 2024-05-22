@@ -126,11 +126,12 @@ CONTAINS
         CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,juphon,starsq,cell,sphhar,atoms,.TRUE.,workdenReal,vCoul,sigma_loc,&
                         & dfptdenimag=workdenImag,dfptvCoulimag=dfptvCoulimag,dfptden0=workden,stars2=stars,iDtype=iDtype,iDir=iDir)
       
-
+      
       CALL save_npy("v1_pw.npy",dfptvTot%pw)
       print*,"stop"
       IF (juphon%l_efield) THEN
-         print*,"true"
+         !call dfpt_efield
+         print*,"efield true"
       END IF
       STOP
                                                

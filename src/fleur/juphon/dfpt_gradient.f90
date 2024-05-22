@@ -169,17 +169,28 @@ CONTAINS
 
         rholhreal = 0.0
         rholhimag = 0.0
-
+        print*,"Hallo"
         DO iSpin = 1, jspins
             DO iType = 1, atoms%ntype
                 iAtom = atoms%firstAtom(iType)
                 ptsym = sym%ntypsy(iAtom)
+                print*, "ptsym", ptsym
                 DO ilh = 0, sphhar%nlh(ptsym)
                     l = sphhar%llh(iLH, ptsym)
+                    print*,"l", l
+                    print*,"sphhar%nmem(ilh, ptsym)",sphhar%nmem(ilh, ptsym)
                     DO iMem = 1, sphhar%nmem(ilh, ptsym)
+                        print*,"iMem-loop"
                         m = sphhar%mlh(iMem, ilh, ptsym)
+                      
+                        print*, 'm',m
                         ilm = l * (l+1) + m + 1
+                        print*, 'ilm', ilm
+                        print*,"atoms%jri(iType)",atoms%jri(iType)
+                        print*, "sphhar%clnu(1, ilh, ptsym)",sphhar%clnu(1, ilh, ptsym)
                         DO iR = 1, atoms%jri(iType)
+                          !print*, "iR", iR
+                          !print*,"rholhreal(iR, ilh, iType, iSpin)",rholhreal(iR, ilh, iType, iSpin)
                            IF ((radfact.EQ.0).AND.(l.EQ.0)) THEN
                                factor = atoms%rmsh(iR, iType) / sfp_const
                            ELSE IF (radfact.EQ.2) THEN
