@@ -108,13 +108,13 @@ module m_VYukawaFilm
 
     ! MUFFIN-TIN POTENTIAL
 
-    call Vmts( input, fmpi, stars, sphhar, atoms, sym, cell,   .FALSE., &
+    call Vmts( input, fmpi, stars, sphhar, atoms, sym, cell, juphon,  .FALSE., &
                VYukawa%pw(:,1), den%mt(:,0:,:,1), VYukawa%potdenType, &
                VYukawa%mt(:,0:,:,1) )
  
     ! MODIFICATION FOR CHARGE NEUTRALITY
 
-    call VYukawaModify( stars, vacuum, cell, sym, input, fmpi, atoms, sphhar,   noco, nococonv,&
+    call VYukawaModify( stars, vacuum, cell, sym, input, fmpi, atoms, sphhar, juphon,  noco, nococonv,&
                         den, &
                         VYukawa )
 
@@ -838,7 +838,7 @@ module m_VYukawaFilm
 
 
 
-  subroutine VYukawaModify( stars, vacuum, cell, sym, input, fmpi, atoms, sphhar,   noco, nococonv,den, &
+  subroutine VYukawaModify( stars, vacuum, cell, sym, input, fmpi, atoms, sphhar, juphon,  noco, nococonv,den, &
                             VYukawa )
 
     ! This subroutine adds a potential to the previously computed Yukawa
@@ -860,13 +860,14 @@ module m_VYukawaFilm
 
     type(t_stars),      intent(in)    :: stars
     type(t_vacuum),     intent(in)    :: vacuum
-    type(t_nococonv),  intent(in)    :: nococonv
+    type(t_nococonv),   intent(in)    :: nococonv
     type(t_cell),       intent(in)    :: cell
     type(t_sym),        intent(in)    :: sym
     type(t_input),      intent(in)    :: input
     type(t_mpi),        intent(in)    :: fmpi
     type(t_atoms),      intent(in)    :: atoms
     type(t_sphhar),     intent(in)    :: sphhar
+    type(t_juphon),     intent(in)    :: juphon
      
     type(t_noco),       intent(in)    :: noco
     type(t_potden),     intent(inout) :: den
@@ -962,7 +963,7 @@ module m_VYukawaFilm
 
     ! MUFFIN-TIN POTENTIAL
 
-    call Vmts( input, fmpi, stars, sphhar, atoms, sym, cell,   .FALSE., &
+    call Vmts( input, fmpi, stars, sphhar, atoms, sym, cell, juphon,  .FALSE., &
                VYukawaModification%pw(:,1), den%mt(:,0:,:,1), VYukawaModification%potdenType, &
                VYukawaModification%mt(:,0:,:,1) )
 

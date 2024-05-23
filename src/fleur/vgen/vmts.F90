@@ -4,7 +4,7 @@ module m_vmts
 #endif
 contains
 
-  subroutine vmts( input, fmpi, stars, sphhar, atoms, sym, cell,   dosf, vpw, rho, potdenType, vr, rhoIm, vrIm, iDtype, iDir, iDir2, mat2ord )
+  subroutine vmts( input, fmpi, stars, sphhar, atoms, sym, cell, juphon,  dosf, vpw, rho, potdenType, vr, rhoIm, vrIm, iDtype, iDir, iDir2, mat2ord  )
 
   !-------------------------------------------------------------------------
   ! This subroutine calculates the lattice harmonics expansion coefficients
@@ -50,12 +50,14 @@ contains
     type(t_atoms),  intent(in)        :: atoms
     type(t_sym),    intent(in)        :: sym
     type(t_cell),   intent(in)        :: cell
+    type(t_juphon), intent(in)        :: juphon
      
     LOGICAL,        INTENT(IN)        :: dosf
     complex,        intent(in)        :: vpw(:)!(stars%ng3,input%jspins)
     real,           intent(in)        :: rho(:,0:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
     integer,        intent(in)        :: potdenType
     real,           intent(out)       :: vr(:,0:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
+    
     REAL,    OPTIONAL, INTENT(IN)     :: rhoIm(:,0:,:)
     REAL,    OPTIONAL, INTENT(OUT)    :: vrIm(:,0:,:)
     INTEGER, OPTIONAL, INTENT(IN)     :: iDtype, iDir
@@ -82,6 +84,10 @@ contains
 
     ! SPHERE BOUNDARY CONTRIBUTION to the coefficients calculated from the values
     ! of the interstitial Coulomb / Yukawa potential on the sphere boundary
+    
+   print *, "here"
+    PRINT *, vr(1:atoms%jri(n),0,:)
+       
 
     ALLOCATE (vtlLocal(0:sphhar%nlhd,atoms%ntype))
     vtlLocal(:,:) = cmplx(0.0,0.0)
@@ -199,7 +205,7 @@ contains
            termsR = integral_2(imax) + ( AIMAG(vtl(lh,n)) / green_factor - integral_1(imax) * green_2(imax) ) / green_1(imax)
            vrIm(1:imax,lh,n) = green_factor * (   green_1(1:imax) * ( termsR - integral_2(1:imax) ) &
                                                 + green_2(1:imax) *            integral_1(1:imax)   )
-        END IF
+        END IF      
       end do
     end do
     if ( potdenType == POTDEN_TYPE_POTYUK ) then
@@ -209,8 +215,16 @@ contains
     if ( potdenType /= POTDEN_TYPE_POTYUK .AND. potdenType /= POTDEN_TYPE_CRYSTALFIELD) then
       IF (.NOT.l_dfptvgen) THEN
          do n = 1, atoms%ntype
+         !print *, vr(1:atoms%jri(n),0,n)
+         !print*,sfp_const
          vr(1:atoms%jri(n),0,n) = vr(1:atoms%jri(n),0,n) - sfp_const * ( 1.0 / atoms%rmsh(1:atoms%jri(n),n) - 1.0 / atoms%rmt(n) ) * atoms%zatom(n)
          end do
+      !ELSE IF ( l_dfptvgen .AND. juphon%l_efield ) THEN
+      !   DO n = 1, atoms%ntype
+       !     write(*,'A,I') 'Test', n
+         !vr(1:atoms%jri(n),lh,n) 
+     
+       !  end do
       ELSE IF (.NOT.PRESENT(iDir2)) THEN
          ! DFPT case:
          ! l=1 contributions from the Coulomb singularity instead of l=0 (1/r -> 1/r^2)
