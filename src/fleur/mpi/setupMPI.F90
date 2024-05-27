@@ -355,6 +355,7 @@ call timestart("Distribute GPUs")
     if (isize>1) THEN
       if (fmpi%irank==0) write(*,*) "Number of MPI/PE per node:",isize
       if (gpus>isize) call judft_warn("You use more GPU/node as MPI-PEs/node running. This will underutilize the GPUs")
+      if (isize>gpus) call nvidia_mps()
       CALL MPI_COMM_RANK(fmpi%mpi_comm_same_node,localrank,i)
       if (gpus>1) THEN 
          call acc_set_device_num(mod(localrank,gpus),acc_device_nvidia)
@@ -368,4 +369,18 @@ call timestart("Distribute GPUs")
 #endif
     end subroutine
 
+
+    subroutine nvidia_mps()
+      !checks if multi-processor-services are available on the GPU
+      character(len=100) :: path
+      LOGICAL            :: l_mps
+
+      !first check if non-default path is used
+      call GET_ENVIRONMENT_VARIABLE("CUDA_MPS_PIPE_DIRECTORY",path)
+      if (len_trim(path)==0) path="tmp/nvidia-mps"
+
+      inquire(file=path//"/control",exist=l_mps)
+
+      if (.not.l_mps) call judft_warn("You use more than a single MPI/GPU but the NVIDIA MPS are not available")
+    end subroutine
 END MODULE m_setupMPI
