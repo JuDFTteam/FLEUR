@@ -83,7 +83,7 @@ end function
     LOGICAL:: available=.FALSE.
     CHARACTER(len=40)::line
    
-#if CPP_GPU
+#if CPP_GPU_CUDA
    interface
    function gpu_mem_usage() bind(c)
       use, intrinsic :: iso_c_binding
@@ -124,7 +124,7 @@ end function
        END IF
     END IF
 
-#ifdef CPP_GPU
+#ifdef CPP_GPU_CUDA
    write(line,"(f10.3)") gpu_mem_usage()
    memory_usage_string=TRIM(memory_usage_string)//" GPU: "//trim(line)//"GB"
 #endif      

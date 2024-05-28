@@ -32,6 +32,12 @@ if (CLI_FLEUR_USE_GPU)
      set(FLEUR_MPI_DEFINITIONS ${FLEUR_MPI_DEFINITIONS} "CPP_CUSOLVER")
      set(FLEUR_DEFINITIONS ${FLEUR_DEFINITIONS} "CPP_CUSOLVER")
    endif()
+   #Check also for cuda.h
+   try_compile(FLEUR_USE_CUDA_C ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_cuda.c)
+   if (FLEUR_USE_CUDA_C)
+      set(FLEUR_MPI_DEFINITIONS ${FLEUR_MPI_DEFINITIONS} "CPP_GPU_CUDA")
+      set(FLEUR_DEFINITIONS ${FLEUR_DEFINITIONS} "CPP_GPU_CUDA")
+   endif()   
 else()
    set(FLEUR_USE_GPU FALSE)
    #if we do not use GPU-code we should use OpenMP-on the CPU instead

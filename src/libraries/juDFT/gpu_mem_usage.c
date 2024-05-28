@@ -1,5 +1,5 @@
 
-#ifdef CPP_GPU
+#ifdef CPP_GPU_CUDA
 #include "cuda.h"
 
 
