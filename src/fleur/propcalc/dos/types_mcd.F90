@@ -11,6 +11,8 @@ MODULE m_types_mcd
   public t_mcd
   TYPE,extends(t_eigdos):: t_mcd
     REAL                 :: emcd_lo, emcd_up, maxE_mcd
+    INTEGER              :: numInvolvedAtomTypes
+    INTEGER, ALLOCATABLE :: atomTypeIndices(:)
     INTEGER, ALLOCATABLE :: ncore(:)
     INTEGER,ALLOCATABLE  :: n_dos_to_type(:)
     REAL,    ALLOCATABLE :: e_mcd(:,:,:)
@@ -49,7 +51,7 @@ subroutine make_dos(eigdos,kpts,input,banddos,efermi)
 
     integer ::n,i,ind,ntype,nc,k,l,jspin
     real    :: e1,e2,e_lo,e_up,fac
-    real,allocatable:: dos(:,:,:)
+    real,allocatable:: dos(:,:,:), totDos(:,:,:)
     if (allocated(eigdos%dos)) return
     !Call the routine of the parent-class
     call t_eigdos_make_dos(eigdos,kpts,input,banddos,efermi)
@@ -69,6 +71,7 @@ subroutine make_dos(eigdos,kpts,input,banddos,efermi)
     ENDDO
 
     allocate(dos,mold=eigdos%dos)
+    ALLOCATE(totDOS(size(eigdos%mcd_grid),size(eigdos%e_mcd,2),size(eigdos%ncore)*3))
     dos=0.0
     ind=0
     DO ntype=1,size(eigdos%ncore)
@@ -83,6 +86,7 @@ subroutine make_dos(eigdos,kpts,input,banddos,efermi)
                 IF ((e2.LE.eigdos%mcd_grid(l)).AND. (e1.GT.eigdos%mcd_grid(l))) THEN
                   fac = (eigdos%mcd_grid(l)-e1)/(e2-e1)
                   dos(l,jspin,ind) = dos(l,jspin,ind)+ eigdos%dos(i,jspin,ind)*(1.-fac) + fac * eigdos%dos(i+1,jspin,ind)
+                  totDos(l,jspin,3*(ntype-1)+k) = totDos(l,jspin,3*(ntype-1)+k) + eigdos%dos(i,jspin,ind)*(1.-fac) + fac * eigdos%dos(i+1,jspin,ind)
                 ENDIF
               ENDDO
             ENDDO
@@ -90,6 +94,11 @@ subroutine make_dos(eigdos,kpts,input,banddos,efermi)
         ENDDO
       ENDDO
     ENDDO
+    DO k = 1, size(eigdos%ncore)*3
+       dos(:,:,ind+k) = totDos(:,:,k)
+    END DO
+    DEALLOCATE(totDos)
+    
     eigdos%dos=dos
   end subroutine
 
@@ -98,27 +107,45 @@ function get_weight_eig(this,id)
   INTEGER,intent(in)         :: id
   real,allocatable:: get_weight_eig(:,:,:)
 
-  INTEGER :: ind,ntype,nc
-
+  INTEGER :: ind,ntype,nc, typeIndex, offset, n_dos, mcdIndex
   ind=0
   DO ntype=1,size(this%ncore)
     DO nc=1,this%ncore(ntype)
       ind=ind+1
-      if (ind==id) get_weight_eig=this%mcd(ntype,nc,:,:,:)
+      if (ind==id) get_weight_eig=this%mcd(3*(ntype-1)+1,nc,:,:,:)
       ind=ind+1
-      if (ind==id) get_weight_eig=this%mcd(ntype+1,nc,:,:,:)
+      if (ind==id) get_weight_eig=this%mcd(3*(ntype-1)+2,nc,:,:,:)
       ind=ind+1
-      if (ind==id) get_weight_eig=this%mcd(ntype+2,nc,:,:,:)
+      if (ind==id) get_weight_eig=this%mcd(3*(ntype-1)+3,nc,:,:,:)
       IF(ind>id) return
     ENDDO
   ENDDO
-  IF(ind>id)CALL judft_error("Types_mcd: data not found")
+
+  typeIndex = (id - 3*sum(this%ncore) - 1) / 3 + 1
+  offset = mod(id,3)
+
+  IF (offset.EQ.0) offset = 3
+  IF ((id.GT.3*sum(this%ncore)).AND.(typeIndex.LE.this%numInvolvedAtomTypes)) THEN
+     ALLOCATE(get_weight_eig(SIZE(this%mcd,3),SIZE(this%mcd,4),SIZE(this%mcd,5)))
+     get_weight_eig = 0.0
+     DO ntype=1,size(this%ncore)
+        DO nc=1,this%ncore(ntype)
+           mcdIndex = 3*(ntype-1)+offset
+           n_dos = (mcdIndex-1)/3+1
+           IF (this%atomTypeIndices(this%n_dos_to_type(n_dos)).EQ.typeIndex) THEN
+              get_weight_eig(:,:,:) = get_weight_eig(:,:,:) + this%mcd(mcdIndex,nc,:,:,:)
+           END IF
+        END DO
+     END DO
+  END IF
+  IF (ind>id) CALL judft_error("Types_mcd: data not found")
 
 END function
 
 integer function get_num_weights(this)
   class(t_mcd),intent(in):: this
-  get_num_weights=3*sum(this%ncore)
+  
+  get_num_weights=3*sum(this%ncore) + 3*this%numInvolvedAtomTypes
 end function
 
   character(len=20) function get_weight_name(this,id)
@@ -126,28 +153,38 @@ end function
     INTEGER,intent(in)         :: id
 
     character(len=3):: c
-    INTEGER :: ind,n_dos,nc,n
+    INTEGER :: ind,n_dos,nc,n, typeIndex, iType
+    select case(mod(id,3))
+    case(1)
+      c="pos"
+    case(2)
+      c="neg"
+    case(0)
+      c="cir"
+    end select
     ind=0
     DO n=1,size(this%mcd,1)
       n_dos=(n-1)/3+1
-      select case(mod(n,3))
-      case(1)
-        c="pos"
-      case(2)
-        c="neg"
-      case(0)
-        c="cir"
-      end select
       DO nc=1,this%ncore(n_dos)
         ind=ind+1
         if (ind==id) THEN
           write(get_weight_name,"(a,i0,a,i0,a)") "At",this%n_dos_to_type(n_dos),"NC",nc,c
           RETURN
-        ELSE IF(ind>id) then
-          CALL judft_error("Types_mcd: data not found")
         ENDIF
       ENDDO
     ENDDO
+    typeIndex = (id - 3*sum(this%ncore) - 1) / 3 + 1
+    IF ((typeIndex.GT.0).AND.(typeIndex.LE.this%numInvolvedAtomTypes)) THEN
+       DO iType = 1, SIZE(this%atomTypeIndices)
+          IF(typeIndex.EQ.this%atomTypeIndices(iType)) THEN
+             write(get_weight_name,"(a,i0,a)") "At",typeIndex,c
+             RETURN
+          END IF
+       END DO
+    END IF
+    IF(ind>id) then
+       CALL judft_error("Types_mcd: data not found")
+    END IF
   end function
 
 
@@ -167,9 +204,24 @@ SUBROUTINE mcd_init(thisMCD,banddos,input,atoms,kpts,eig)
    real,INTENT(IN)                      :: eig(:,:,:)
 
    integer :: ntype !no of types for which MCD is calculated
-
+   INTEGER :: numInvolvedAtomTypes, i
+   LOGICAL :: involvedAtomTypes(atoms%ntype)
+   
+   ALLOCATE (thisMCD%atomTypeIndices(atoms%ntype))
+   thisMCD%atomTypeIndices = 0
+   involvedAtomTypes = .FALSE.
    thisMCD%n_dos_to_type=banddos%dos_typelist
    ntype=size(banddos%dos_typelist)
+   DO i = 1, ntype
+      involvedAtomTypes(thisMCD%n_dos_to_type(i)) = .TRUE.
+   END DO
+   numInvolvedAtomTypes = 0
+   DO i = 1, atoms%ntype
+      IF (involvedAtomTypes(i)) numInvolvedAtomTypes = numInvolvedAtomTypes + 1
+      thisMCD%atomTypeIndices(i) = numInvolvedAtomTypes
+   END DO
+   thisMCD%numInvolvedAtomTypes = numInvolvedAtomTypes
+   
    thisMCD%name_of_dos="MCD"
    ALLOCATE (thisMCD%ncore(ntype))
    ALLOCATE (thisMCD%e_mcd(ntype,input%jspins,29))

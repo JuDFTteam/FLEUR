@@ -125,10 +125,6 @@ MODULE m_checks
 
      ! Disable functionalities that are known to have bugs:
      
-     IF(banddos%l_mcd) THEN
-        CALL juDFT_warn("Magnetic Circular Dichroism calculations are disbled at the moment.")
-     END IF
-     
      IF (ANY(atoms%lapw_l(:).GE.0)) THEN
         CALL juDFT_warn("APW+lo calculations are disabled at the moment.")
      END IF
