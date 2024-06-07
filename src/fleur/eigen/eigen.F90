@@ -49,6 +49,7 @@ CONTAINS
       USE m_unfold_band_kpts !used for unfolding bands
       USE m_types_mpimat
       use m_store_load_hybrid
+      USE m_npy
 
       IMPLICIT NONE
 

@@ -9,7 +9,7 @@ module m_npy
    character(len=*), parameter         :: magic_str = "NUMPY"
 
    !ifx can not compile this file yet...
-#ifndef __INTEL_LLVM_COMPILER  
+!!!!! #ifndef __INTEL_LLVM_COMPILER  
    interface save_npy
       module procedure write_int64_vec, write_int64_mtx, &
          write_int32_vec, write_int32_mtx, write_int32_3d, &
@@ -1038,14 +1038,15 @@ contains
       fin_str = trim(str)
    end function shape_str
 
-#endif   
+!!!!! #endif   
 end module m_npy
 
-#ifdef __INTEL_LLVM_COMPILER
-subroutine save_npy(filename,dummy)
-   Character(len=*):: filename
-   REAL            :: dummy
+!!!!! #ifdef __INTEL_LLVM_COMPILER
+!!!!! subroutine save_npy(filename,dummy)
+!!!!!   Character(len=*):: filename
+!!!!!   REAL            :: dummy
 
-   STOP "ERROR: LLVM does not support npy module"
-end subroutine
-#endif   
+!!!!!   STOP "ERROR: LLVM does not support npy module"
+!!!!! end subroutine
+!!!!! #endif
+
