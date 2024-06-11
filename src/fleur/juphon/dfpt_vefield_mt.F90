@@ -4,7 +4,7 @@
 
     contains
     
-        subroutine dfpt_vefield_mt(juphon,atoms,sym,sphhar,vr)
+        subroutine dfpt_vefield_mt(juphon,atoms,sym,sphhar,dfptvCoulreal,dfptvCoulimag)
             use m_types
             use m_ylm
             use m_sphbes
@@ -16,7 +16,8 @@
             type(t_atoms),      intent(in)               :: atoms
             type(t_sym),        intent(in)               :: sym
             TYPE(t_sphhar),    INTENT(IN)                :: sphhar
-            real,               intent(out)              :: vr(:,0:,:)!(atoms%jmtd,0:sphharl%nlhd,atoms%ntype)     
+            real,               intent(out)              :: dfptvCoulreal(:,0:,:)!(atoms%jmtd,0:sphharl%nlhd,atoms%ntype)   
+            real,               intent(out)              :: dfptvCoulimag(:,0:,:)
 
             complex,allocatable                          :: vcoul(:,:,:,:)
             real,allocatable                             :: resultreal(:,:,:,:)
@@ -36,13 +37,14 @@
             allocate(resultreal(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,1))
             allocate(resultimag(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,1))
             !print*,sphhar%nlhd
-            print*, "vcoul shape", shape(vcoul)
+            !print*, "vcoul shape", shape(vcoul)
             !stop
             qlim = juphon%qlim 
+            print*, 'qlim', qlim
             qnormvec = 0.0
             qnormvec(1) = 1
-            print*,"dimmension"
-            print*,shape(vr(:,0:,:))
+            !print*,"dimmension"
+            !print*,shape(vr(:,0:,:))
             !print*, "sym"
             !print*, sym%nop
             !print*, qnormvec
@@ -82,20 +84,21 @@
                 !print*, shape(sbf)
             !end do
             !determine final coefficient:
-            print*, "complete version"
+            !print*, "complete version"
             !allocate(vcoul(atoms%jmtd,1,atoms%ntype))
             !print*, shape(vr)
             !print*, shape(vcoul)
+            !print*, "test"
             do n =1, atoms%ntype
                 lmax = atoms%lmax(n)
                 imax = atoms%jri(n)
                 !print*,ylm(:)
                 allocate(ylm((lmax+1)**2))
                 ylm = 0.0
-                print*,ylm(:)
+                !print*,ylm(:)
                 call ylm4(lmax,qnormvec,ylm(:))
-                print*, "lower bound"
-                print*,lbound(ylm,1)
+                !print*, "lower bound"
+                !print*,lbound(ylm,1)
                 !print*,ylm(:)
                 call save_npy("ylm.npy",ylm(:))
                 allocate(sbf(0:lmax,imax))
@@ -114,7 +117,7 @@
                     pref = fpi_const*(ImagUnit**(l+1))
                     !print*,pref
                     ll1 = l*(l+1)+1
-                    print*, "l ",l
+                    !print*, "l ",l
                     do m =-l,l
                         lm = ll1 + m 
                         !print*, lm
@@ -133,7 +136,8 @@
             end do
             !print*, vr(:,:,:)
             !write(1000,*) vr(:,:,:)
-            call save_npy("vr.npy",vcoul(:,:,1,1))
+            call save_npy("vcoul.npy",vcoul(:,:,1,1))
+            !print*,vcoul(1,:9,1,1)
             !print*, lbound(vr,1)
             !print*, lbound(vr,2)
             !print*, lbound(vr,3)
@@ -147,15 +151,18 @@
 
             !go to lattice harmonics: save in seperate array?
             
-            call sh_to_lh(sym, atoms, sphhar, 1, 2, vcoul(:, :, :, :), resultreal(:,:,:,:), resultimag(:,:,:,:))
+            call sh_to_lh(sym, atoms, sphhar, 1, 3, vcoul(:, :, :, :), resultreal(:,:,:,:), resultimag(:,:,:,:))
             !print*, "real part:"
             !print*, abs(resultreal(2,:,:,1))
             !print*, "imag part:"
             !print*, abs(resultimag(2,:,:,1))
-            print*, 'shape', shape(resultreal(:,:,:,:))
-            print*, 'vcoul(1,0:8,1,1)',vcoul(1,0:8,1,1)
-            print*, 'resultreal', resultreal(1,:8,1,1)
-            print*, 'resultimag', resultimag(1,:8,1,1)
+            !print*, 'shape', shape(resultreal(:,:,:,:))
+            !print*, 'vcoul(1,:9,1,1)'
+            !print*,vcoul(1,:9,1,1)
+            !print*, 'resultreal'
+            !print*, resultreal(1,0:8,1,1)
+            !print*, 'resultimag'
+            !print*, resultimag(1,0:8,1,1)
             !call save_npy("resultreal.npy",resultreal(:,:,1,1))
             !call save_npy("resultimag.npy",resultimag(:,:,1,1))  
 
@@ -170,11 +177,17 @@
             !q_norm = ()
             !call ylm4_batched(0,0,)
             !print*, 
+
+
+            ! return final potential:
+            dfptvCoulreal(:,:,:) = resultreal(:,:,:,1) 
+            dfptvCoulimag(:,:,:) = resultimag(:,:,:,1) 
             
+            !print*, "test"
             !print*, "shape", shape(sphhar%clnu(:,:,:))
             !print*, "phase stuff", sphhar%clnu(:,:,:)
-            print*, "Stop"
-            stop
+            !print*, "Stop"
+            !stop
             !print*, juphon%qlim
             !print*,shape(vr)! vCoul(:,0:,:)
             !lmax = 9

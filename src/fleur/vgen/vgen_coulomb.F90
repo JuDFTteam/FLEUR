@@ -229,6 +229,8 @@ contains
     end if ! fmpi%irank == 0
 
     ! MUFFIN-TIN POTENTIAL
+    !print*,"dfptvCoulimag%mt(:,0:,:,ispin)"
+    !print*, dfptvCoulimag%mt(:,0:,:,ispin)
     call timestart( "MT-spheres" )
 #ifdef CPP_MPI
     CALL MPI_BARRIER(fmpi%mpi_comm,ierr) !should be totally useless, but needed anyway????
@@ -242,14 +244,15 @@ contains
     ELSE IF ( l_dfptvgen .AND. juphon%l_efield ) THEN
       PRINT *, "im in VMTS II"
       !call print_hello()
-      CALL dfpt_vefield_mt(juphon,atoms,sym,sphhar,vCoul%mt(:,0:,:,ispin))
- 
+      CALL dfpt_vefield_mt(juphon,atoms,sym,sphhar,vCoul%mt(:,0:,:,ispin),dfptvCoulimag%mt(:,0:,:,ispin))
+      !print*,'vCoul%mt(:,0:,:,ispin)',vCoul%mt(:,0:,:,ispin)
+      !print*,'vCoul%mt(2,0:,:,ispin)',dfptvCoulimag%mt(2,0:,:,ispin)
       print*,"MT efield"
       !PRINT *,vCoul%mt(:,0,:,ispin)
       PRINT *, SHAPE(vCoul%mt(:,0:,:,ispin))
-      call vmts( input, fmpi, stars, sphhar, atoms, sym, cell, juphon,  dosf, vCoul%pw(:,ispin), &
-                  den%mt(:,0:,:,ispin), vCoul%potdenType, vCoul%mt(:,0:,:,ispin), &
-                  dfptdenimag%mt(:,0:,:,ispin), dfptvCoulimag%mt(:,0:,:,ispin), iDtype, iDir, iDir2, mat2ord )
+      !call vmts( input, fmpi, stars, sphhar, atoms, sym, cell, juphon,  dosf, vCoul%pw(:,ispin), &
+                  !den%mt(:,0:,:,ispin), vCoul%potdenType, vCoul%mt(:,0:,:,ispin), &
+                  !dfptdenimag%mt(:,0:,:,ispin), dfptvCoulimag%mt(:,0:,:,ispin), iDtype, iDir, iDir2, mat2ord )
       PRINT *, "filled up"
       !PRINT *,vCoul%mt(:,0,:,ispin)
       PRINT *, SHAPE(vCoul%mt(:,0:,:,ispin))

@@ -123,17 +123,20 @@ CONTAINS
         ! NOTE: The normal stars are also passed as an optional argument, because
         !       they are needed for surface-qlm.
         sigma_loc = sigma_disc
+        print*, 'vCoul', vCoul%pw
         CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,juphon,starsq,cell,sphhar,atoms,.TRUE.,workdenReal,vCoul,sigma_loc,&
                         & dfptdenimag=workdenImag,dfptvCoulimag=dfptvCoulimag,dfptden0=workden,stars2=stars,iDtype=iDtype,iDir=iDir)
-      
+         print*, "Im here"
+         !print*, 'vCoul', vCoul%pw
+         STOP
       
       CALL save_npy("v1_pw.npy",dfptvTot%pw)
-      print*,"stop"
+      !print*,"stop"
       IF (juphon%l_efield) THEN
          !call dfpt_efield
          print*,"efield true"
       END IF
-      STOP
+      !STOP
                                                
       ! b)
       CALL vCoul%copy_both_spin(dfptvTot)
@@ -158,10 +161,13 @@ CONTAINS
       END IF
 
       ! Skip vxc if we want only vC/vExt
-         IF (l_xc .AND. .NOT. juphon%l_efield) CALL vgen_xcpot(hybdat,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
+      !print*, "to be changed"
+         IF (l_xc) THEN 
+            CALL vgen_xcpot(hybdat,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
                         cell,fmpi,noco,den,denRot,EnergyDen,dfptvTot,vx,vxc,exc, &
                         & den1Rot=den1Rot, den1Rotimag=den1imRot, dfptvTotimag=dfptvTotimag,starsq=starsq)
-
+            !print*,"er tut es"
+         END IF
       IF (iDtype/=0.AND.ANY(killcont/=0)) THEN
          ! d)
          ! NOTE: This is so different from the base case, that we build a new subroutine.

@@ -81,7 +81,8 @@ CONTAINS
       COMPLEX  zdotc
       EXTERNAL zdotc
 
-
+      !print*,'Stop'
+      !STOP
       old_and_wrong = .FALSE.
 
       CALL vx%copyPotDen(vTot)
@@ -96,15 +97,17 @@ CONTAINS
       ALLOCATE(eigBuffer(fi%input%neig,fi%kpts%nkpt,fi%input%jspins))
       eigBuffer = 0.0
       results1%eig = 1.0e300
-
       DO jsp = 1, MERGE(1,fi%input%jspins,fi%noco%l_noco)
+         !print*, 'k_list(nk_i)',fmpi%k_list
          k_loop:DO nk_i = 1,size(fmpi%k_list)
             nk=fmpi%k_list(nk_i)
-
+            !print*, 'nk_i',nk_i
+            !print*,"hallo"
             ! Get the required eigenvectors and values at k for occupied bands:
             bkpt = fi%kpts%bk(:, nk)
-
+            !print*, 'bkpt',fi%kpts%bk(:, nk)
             q_loop = bqpt
+            !print*,'q_loop',q_loop
 
             CALL lapw%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, nk, fi%cell, fmpi)
             CALL lapwq%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, nk, fi%cell, fmpi, q_loop)
@@ -129,6 +132,13 @@ CONTAINS
             ! Then read all the stuff into it
             CALL zMatk%init(l_real,nbasfcn,noccbd)
             CALL zMatq%init(l_real,nbasfcnq,nbasfcnq)
+            !print*,zMatk
+            !print*,'shape(zMatk_r)', shape(zMatk%data_r)
+            !print*,'shape(zMatk_c)', shape(zMatk%data_c)
+            !print*,'shape(zMat_r)', shape(zMatq%data_r)
+            !print*,'shape(zMatq_c)', shape(zMatq%data_c)
+            !print*, zMatq%data_c(:,:)
+            !call save_npy("ylm.npy",ylm(:))
 
             ALLOCATE(ev_list(noccbd))
             ev_list = (/(i, i=1,noccbd, 1)/)
@@ -143,7 +153,16 @@ CONTAINS
             CALL read_eig(eig_id, nk, jsp, list=ev_list, neig=neigk, eig=eigk, zmat=zMatk)
             CALL read_eig(q_eig_id, nk, jsp, list=q_ev_list, neig=neigq, eig=eigq, zmat=zMatq)
             CALL timestop("Read eigenstuff at k/k+q")
-
+            !print*,'shape(zMatk)', shape(zMatk%data_c)
+            !print*,'shape(zMatq)', shape(zMatq%data_c)
+            !print*, zMatq%data_c(:,:)
+            call save_npy("zMatk.npy",zMatk%data_c(:,:))
+            call save_npy("zMatq.npy",zMatq%data_c(:,:))
+            
+            !if (nk_i == 1) then      
+             !  print*, "STOP"
+               !STOP
+            !end if 
             ! Construct the perturbed Hamiltonian and Overlap matrix perturbations:
             CALL timestart("Setup of matrix perturbations")
             CALL dfpt_eigen_hssetup(jsp,fmpi,fi,enpara,nococonv,starsq,ud,td,tdV1,vTot,v1real,lapw,lapwq,iDir,iDtype,hmat,smat,nk,killcont)

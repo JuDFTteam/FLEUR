@@ -178,10 +178,16 @@ CONTAINS
          ! Vext1 for the starting perturbation
          ! Veff1 every other time
          CALL timestart("Generation of potential perturbation")
+         !print*, 'strho',strho
+         !STOP
          IF (strho) THEN
             write(oUnit, *) "vExt1", iDir
             sigma_loc = cmplx(0.0,0.0)
             !IF (iDir==3) sigma_loc = -sigma_disc
+            print*, "vor dem eigentlichen Ausfuehren"
+            print*, 'vTot1 pw', vTot1%pw
+            print*, 'vTot1 mt', vTot1%mt
+            !call save_npy("ylm.npy",ylm(:))
             CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                            fi%juphon,fi%cell,fmpi,fi%noco,nococonv,rho_loc0,vTot,&
                            starsq,denIn1Im,vTot1,.FALSE.,vTot1Im,denIn1,iDtype,iDir,[1,1],sigma_loc)!-?
@@ -210,7 +216,7 @@ CONTAINS
                               starsmq,denIn1mIm,vTot1m,.TRUE.,vTot1mIm,denIn1m,iDtype,iDir,[1,1],sigma_loc)
             END IF
          END IF
-
+         !STOP
          ! For the calculation of the dynamical matrix, we need VC1 additionally
          IF (final_SH_it) THEN
             write(oUnit, *) "vC1", iDir

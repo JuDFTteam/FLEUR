@@ -174,20 +174,20 @@ CONTAINS
             DO iType = 1, atoms%ntype
                 iAtom = atoms%firstAtom(iType)
                 ptsym = sym%ntypsy(iAtom)
-                print*, "ptsym", ptsym
+                !print*, "ptsym", ptsym
                 DO ilh = 0, sphhar%nlh(ptsym)
                     l = sphhar%llh(iLH, ptsym)
-                    print*,"l", l
-                    print*,"sphhar%nmem(ilh, ptsym)",sphhar%nmem(ilh, ptsym)
+                    !print*,"l", l
+                    !print*,"sphhar%nmem(ilh, ptsym)",sphhar%nmem(ilh, ptsym)
                     DO iMem = 1, sphhar%nmem(ilh, ptsym)
-                        print*,"iMem-loop"
+                        !print*,"iMem-loop"
                         m = sphhar%mlh(iMem, ilh, ptsym)
                       
-                        print*, 'm',m
+                        !print*, 'm',m
                         ilm = l * (l+1) + m + 1
-                        print*, 'ilm', ilm
-                        print*,"atoms%jri(iType)",atoms%jri(iType)
-                        print*, "sphhar%clnu(1, ilh, ptsym)",sphhar%clnu(1, ilh, ptsym)
+                        !print*, 'ilm', ilm
+                        !print*,"atoms%jri(iType)",atoms%jri(iType)
+                        !print*, "sphhar%clnu(1, ilh, ptsym)",sphhar%clnu(1, ilh, ptsym)
                         DO iR = 1, atoms%jri(iType)
                           !print*, "iR", iR
                           !print*,"rholhreal(iR, ilh, iType, iSpin)",rholhreal(iR, ilh, iType, iSpin)
