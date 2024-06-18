@@ -41,8 +41,8 @@ test-aiida-fleur-dev-gfortran-hdf5:
     - rm -rf tests/workflows/calculations tests/workflows/caches
     - rm -rf tests/calculation/data_dir
     - mkdir -p tests/workflows/caches
-    - masci-tools fleur-schema add ../io/xml/FleurInputSchema.xsd --overwrite
-    - masci-tools fleur-schema add ../io/xml/FleurOutputSchema.xsd --overwrite
+    - masci-tools fleur-schema add ../src/fleur/io/xml/FleurInputSchema.xsd --overwrite
+    - masci-tools fleur-schema add ../src/fleur/io/xml/FleurOutputSchema.xsd --overwrite
     - echo -e "\e[0Ksection_end:`date +%s`:test-dependencies\r\e[0K"
   script:
     - git log --pretty=oneline --abbrev-commit -n 1
