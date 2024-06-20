@@ -18,7 +18,7 @@ test-aiida-fleur-dev-gfortran-hdf5:
     AIIDA_FIRST_NAME: "Giuseppe"
     AIIDA_LAST_NAME: "Verdi"
     AIIDA_INSTITUTION: "Khedivial"
-    AIIDA_DB_BACKEND: "django"
+    AIIDA_DB_BACKEND: "core.psql_dos"
 
   services:
     - postgres:12.2-alpine
@@ -41,8 +41,8 @@ test-aiida-fleur-dev-gfortran-hdf5:
     - rm -rf tests/workflows/calculations tests/workflows/caches
     - rm -rf tests/calculation/data_dir
     - mkdir -p tests/workflows/caches
-    - masci-tools fleur-schema add ../io/xml/FleurInputSchema.xsd --overwrite
-    - masci-tools fleur-schema add ../io/xml/FleurOutputSchema.xsd --overwrite
+    - masci-tools fleur-schema add ../src/fleur/io/xml/FleurInputSchema.xsd --overwrite
+    - masci-tools fleur-schema add ../src/fleur/io/xml/FleurOutputSchema.xsd --overwrite
     - echo -e "\e[0Ksection_end:`date +%s`:test-dependencies\r\e[0K"
   script:
     - git log --pretty=oneline --abbrev-commit -n 1
@@ -55,7 +55,6 @@ test-aiida-fleur-dev-gfortran-hdf5:
     - pwd
     - cd ./tests/
     - export PATH=$PATH:/root/.local/bin
-    - reentry scan 
     - >
       verdi quicksetup --non-interactive
       --profile="${AIIDA_PROFILE}"
@@ -80,7 +79,8 @@ test-aiida-fleur-dev-gfortran-hdf5:
     #Copy testfile for SCF workchain from fleur tests
     # - cp files/workflow_test_files/inp_scf.xml files/inpxml/Si/inp.xml
     # run tests
-    - pytest --local-exe-hdf5 --mpl --cov-report=term-missing:skip-covered --cov=aiida_fleur --cov=tests --mock-regenerate-test-data --export-cache-allow-migration
+    #- pytest --local-exe-hdf5 --mpl --cov-report=term-missing:skip-covered --cov=aiida_fleur --cov=tests --mock-regenerate-test-data --export-cache-allow-migration
+    - pytest --local-exe-hdf5 --mpl --cov-report=term-missing:skip-covered --cov=aiida_fleur --cov=tests 
   allow_failure: true
   artifacts:
     when: always
