@@ -317,7 +317,7 @@ contains
     END DO
     !$OMP END PARALLEL DO
 
-    if ( fmpi%irank == 0 .AND. .NOT. l_dfptvgen) then
+    if ( fmpi%irank == 0 .AND. norm2(stars%center)<1e-8 ) then
       ! q=0 term: see (A19) (Coulomb case) or (A20) (Yukawa case)
       do n = 1, atoms%ntype
         if ( potdenType /= POTDEN_TYPE_POTYUK ) then
