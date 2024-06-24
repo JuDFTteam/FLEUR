@@ -84,7 +84,7 @@ endif()
 file(GENERATE OUTPUT ${CMAKE_BINARY_DIR}/run_tests.sh CONTENT
 "#!/usr/bin/env bash
 ADDOPTS_ENV=\${PYTEST_ADDOPTS}
-PYTEST_ADDOPTS=\"${CMAKE_SOURCE_DIR}/tests --build_dir=${CMAKE_BINARY_DIR} \${ADDOPTS_ENV}\"
+PYTEST_ADDOPTS=\"${CMAKE_SOURCE_DIR}/testing --build_dir=${CMAKE_BINARY_DIR} \${ADDOPTS_ENV}\"
 PYTHON_EXECUTABLE=\"${FLEUR_PYTHON}\"
 if [[ ! -z \"\${juDFT_PYTHON}\" ]]; then
   PYTHON_EXECUTABLE=\${juDFT_PYTHON}
@@ -93,7 +93,8 @@ mkdir -p Testing
 if [ \"$1\" = \"-perf\" ]
 then
 shift
-$PYTHON_EXECUTABLE ${CMAKE_SOURCE_DIR}/tests/performance/scripts/perf.py \"$@\"
+$PYTHON_EXECUTABLE ${CMAKE_SOURCE_DIR}/testing/performance/scripts/perf.py \"$@\"
+exit 0
 else
 PYTHONDONTWRITEBYTECODE=1 PYTEST_ADDOPTS=$PYTEST_ADDOPTS $PYTHON_EXECUTABLE -m pytest \"$@\" | tee -i Testing/pytest_session.stdout
 fi

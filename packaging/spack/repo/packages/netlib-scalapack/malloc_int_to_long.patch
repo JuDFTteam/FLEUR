@@ -1,0 +1,13 @@
+diff --git a/REDIST/SRC/pgemraux.c b/REDIST/SRC/pgemraux.c
+index 17dc301..47d3538 100644
+--- a/REDIST/SRC/pgemraux.c
++++ b/REDIST/SRC/pgemraux.c
+@@ -105,7 +105,7 @@ extern void Cpigemr2d();
+ #include <stdlib.h>
+ #include <assert.h>
+ void *
+-mr2d_malloc(Int n)
++mr2d_malloc(long n)
+ {
+   void *ptr;
+   assert(n > 0);

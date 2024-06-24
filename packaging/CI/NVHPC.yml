@@ -1,0 +1,69 @@
+image:
+  name: iffregistry.fz-juelich.de/fleur/fleur:NVHPC
+  entrypoint: ["/usr/bin/bash -i -c"]
+
+build-nvhpc-cpu:
+  image: iffregistry.fz-juelich.de/fleur/fleur:NVHPC
+  stage: build
+  artifacts:
+     paths:
+       - build
+     expire_in: 12h
+  script:
+    - /bin/bash -i -c "cd $CI_PROJECT_DIR; LDFLAGS='-Wl,--copy-dt-needed-entries' ./configure.sh -c auto ; cd build; make"
+  allow_failure: true
+  rules:
+      - if: $CI_TASKS =~ /nvidia/     
+      - if: $CI_TASKS =~ /all/    
+ 
+test-nvhpc-cpu:
+  image: iffregistry.fz-juelich.de/fleur/fleur:NVHPC
+  extends: .test-fleur
+  variables:
+    BUILD_FOLDER: build
+  needs: 
+    - build-nvhpc-cpu
+  allow_failure: true
+  rules:
+      - if: $CI_TASKS =~ /nvidia/    
+      - if: $CI_TASKS =~ /all/    
+  
+build-nvhpc-gpu:
+  image:  
+  stage: build
+  tags:
+      - rtx2080ti
+  artifacts:
+    paths:
+      - build
+    expire_in: 12h
+  script:
+    - set +e;source compiler-select nvhpc;set -e
+    - cd $CI_PROJECT_DIR
+    - ./configure.sh  -c nvidia -gpu acc:cc60 -make -link "/opt/nvidia_hpc_sdk/Linux_x86_64/23.9/compilers/lib/liblapack.a /opt/nvidia_hpc_sdk/Linux_x86_64/23.9/compilers/lib/libblas.a"
+  allow_failure: true
+  rules:
+    - if: $CI_TASKS =~ /gpu/
+    - if: $CI_COMMIT_BRANCH =~ /gpu/
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_MESSAGE =~ /gpu/'
+    - if: $CI_TASKS =~ /all/    
+
+test-nvhpc-gpu:
+  image: 
+  extends: .test-fleur
+  tags:
+     - rtx2080ti
+  variables:
+    BUILD_FOLDER: build
+    LD_LIBRARY_PATH: /opt/nvidia_hpc_sdk/Linux_x86_64/23.9/cuda/12.2/targets/x86_64-linux/lib:${LD_LIBRARY_PATH}
+  before_script:
+    - pip install pytest-html
+    - set +e; source compiler-select nvhpc  ;set -e
+  needs: 
+    - build-nvhpc-gpu
+  allow_failure: true
+  rules:
+      - if: $CI_TASKS =~ /gpu/    
+      - if: $CI_COMMIT_BRANCH =~ /gpu/
+      - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_MESSAGE =~ /gpu/'
+      - if: $CI_TASKS =~ /all/    

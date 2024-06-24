@@ -7,7 +7,7 @@ set(Python3_FIND_STRATEGY LOCATION)
 find_package(Python3)
 message("Python3 found:${Python3_FOUND}")
 message("Python3 path:${Python3_EXECUTABLE}")
-message("The python executable used for the tests"
+message("The python executable used for FLEURist"
         "can be overwritten with the juDFT_PYTHON environment variable")
 
 if( Python3_FOUND )
@@ -23,7 +23,7 @@ PYTHON_EXECUTABLE=\"${FLEUR_PYTHON}\"
 if [[ ! -z \"\${juDFT_PYTHON}\" ]]; then
   PYTHON_EXECUTABLE=\${juDFT_PYTHON}
 fi
-$PYTHON_EXECUTABLE \"${CMAKE_SOURCE_DIR}/fleurist/fleurist.py\" \"$@\"  
+$PYTHON_EXECUTABLE \"${CMAKE_SOURCE_DIR}/src/tools/fleurist/fleurist.py\" \"$@\"  
 ")
 
 add_custom_target(fleurist ALL
