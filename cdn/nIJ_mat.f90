@@ -39,8 +39,7 @@ MODULE m_nIJmat
 
       INTEGER i,i_v,i_pair,natom1,latom1,ll1atom1,atom2,natom2,latom2,ll1atom2,matom1,matom2,lm1atom1,lm1atom2,counter
       COMPLEX c_0,A1, B1, A2, B2, power_factor, exponent
-      REAL  norm1_W, norm2_W
-
+      REAL  norm1_W, norm2_W, r_5digit, i_5digit
         counter=0
         DO i_v = 1,atoms%n_v
             Do atom2=1,atoms%lda_v(i_v)%numOtherAtoms
@@ -50,6 +49,7 @@ MODULE m_nIJmat
 
         CALL usdustemp%init(atoms,input%jspins)
         CALL timestart("nIJ_mat")
+
 
         i_pair=1 
         DO i_v = 1,atoms%n_v
@@ -71,7 +71,7 @@ MODULE m_nIJmat
                     Do matom2=-latom2,latom2
                         lm1atom2=ll1atom2+matom2
                         c_0=cmplx_0
-                        Do i=1,ne 
+                        Do i=1,ne
                              A1 = eigVecCoeffs%abcof(i,lm1atom1,0,natom1,jspin)
                              B1 = eigVecCoeffs%abcof(i,lm1atom1,1,natom1,jspin)
                              A2 = eigVecCoeffs%abcof(i,lm1atom2,0,natom2,jspin)
@@ -79,6 +79,10 @@ MODULE m_nIJmat
                              c_0 = c_0 + we(i) * (conjg(A2)*A1 + conjg(A2)*B1*norm1_W + conjg(B2)*A1*norm2_W + conjg(B2)*B1*norm1_W*norm2_W) *power_factor * exponent
                         ENDDO
                         nIJ_llp_mmp(matom1,matom2,i_pair) = nIJ_llp_mmp(matom1,matom2,i_pair) + c_0
+                        !r_5digit= anint(REAL(nIJ_llp_mmp(matom1,matom2,i_pair))*10.0**5)/10.0**5
+                        !i_5digit=anint(AIMAG(nIJ_llp_mmp(matom1,matom2,i_pair))*10.0**5)/10.0**5
+                        !nIJ_llp_mmp(matom1,matom2,i_pair) = cmplx(r_5digit,i_5digit)
+                        !WRITE(211,*) "nIJ", nIJ_llp_mmp(matom1,matom2,i_pair)
                     ENDDO
                 ENDDO
                 i_pair=i_pair+1
