@@ -7,7 +7,7 @@
       <cutoffs Kmax="3.60000000" Gmax="10.80000000" GmaxXC="10.80000000" numbands="0"/>
       <scfLoop itmax="3" minDistance=".00001000" maxIterBroyd="15" imix="Anderson" alpha=".09000000" precondParam="0.80" spinf="2.00000000"/>
       <coreElectrons ctail="F" frcor="F" kcrel="0" coretail_lmax="0"/>
-      <xcFunctional name="pbe" relativisticCorrections="F"/>
+      <xcFunctional name="vwn" relativisticCorrections="F"/>
       <magnetism jspins="2" l_noco="T" l_ss="F">
          <qss>.0000000000 .0000000000 .0000000000</qss>
          <mtNocoParams l_mperp="F" l_mtNocoPot="F" l_relaxSQA="F" mag_mixing_scheme="0" mix_RelaxWeightOffD="1.00000000" l_constrained="F" mix_constr="1.00000000"/>
