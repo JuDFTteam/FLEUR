@@ -64,7 +64,7 @@ select_compiler "Choose the C-Compiler"
 export CC=${ccomp[$number]}
 
 echo "Searching Compilers. Please wait...."
-find_compilers "mpic++ mpicxx mpigxx mpiicpc icc icpc g++ nvc++"
+find_compilers "mpic++ mpicxx mpigxx mpiicpc mpiicpx icc icpc g++ nvc++"
 select_compiler "Choose the C++-Compiler" 
 export CXX=${ccomp[$number]}
 }
