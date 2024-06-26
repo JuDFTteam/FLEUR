@@ -49,7 +49,6 @@ class Elpa(AutotoolsPackage, CudaPackage, ROCmPackage):
     variant("openmp", default=True, description="Activates OpenMP support")
     variant("mpi", default=True, description="Activates MPI support")
 
-    patch("fujitsu.patch", when="%fj")
 
     depends_on("autoconf", type="build", when="@2024.03.001")
     depends_on("automake", type="build", when="@2024.03.001")
