@@ -22,7 +22,7 @@ class Elpa(AutotoolsPackage, CudaPackage, ROCmPackage):
 
     license("LGPL-3.0-only")
 
-    version("2024.03.001", branch="master_pre_stage")
+    version("2024.05.001", branch="master_pre_stage")
 
     version(
         "2023.11.001-patched",
