@@ -59,12 +59,12 @@ select_compiler "Choose the Fortran-Compiler"
 export FC=${ccomp[$number]}
 
 echo "Searching Compilers. Please wait...."
-find_compilers "mpicc mpiicc mpiicx icc nvc gcc"
+find_compilers "mpicc mpiicc mpiicx icc icx nvc gcc"
 select_compiler "Choose the C-Compiler" 
 export CC=${ccomp[$number]}
 
 echo "Searching Compilers. Please wait...."
-find_compilers "mpic++ mpicxx mpigxx mpiicpc mpiicpx icc icpc g++ nvc++"
+find_compilers "mpic++ mpicxx mpigxx mpiicpc mpiicpx icc icpc icpx g++ nvc++"
 select_compiler "Choose the C++-Compiler" 
 export CXX=${ccomp[$number]}
 }
