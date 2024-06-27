@@ -50,8 +50,8 @@ class Elpa(AutotoolsPackage, CudaPackage, ROCmPackage):
     variant("mpi", default=True, description="Activates MPI support")
 
 
-    depends_on("autoconf", type="build", when="@2024.03.001")
-    depends_on("automake", type="build", when="@2024.03.001")
+    depends_on("autoconf", type="build", when="@2024.03.001:")
+    depends_on("automake", type="build", when="@2024.03.001:")
 
     depends_on("blas")
     depends_on("lapack")
