@@ -108,5 +108,11 @@ def run_test(name=None,env=None):
         scriptdir=scriptdir+"/Noco"
     return run_fleur(scriptdir,env)
 
-if __name__=='__main__': print(run_test())
+if __name__=='__main__': 
+    
+    if len(sys.argv)>1:
+        if sys.argv[1]=="bencher":
+            process_judft_times(os.getcwd())
+            exit()        
+    print(run_test())
 
