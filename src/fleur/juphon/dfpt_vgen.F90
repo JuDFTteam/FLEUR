@@ -39,8 +39,8 @@ CONTAINS
       USE m_get_mt_perturbation
       USE m_dfpt_vgen_finalize
       USE m_npy
-      use m_dfpt_vefield
-      use m_checkdopall
+      USE m_dfpt_vefield
+      USE m_checkdopall
 
       IMPLICIT NONE
 
@@ -145,7 +145,7 @@ CONTAINS
          !print*, "dfptvefieldimag%pw", shape(dfptvefieldimag%pw)
          !print*,'lbound(dfptvefield%mt,1)',lbound(dfptvefield%mt,1)
 
-         CALL dfpt_vefield(juphon,atoms,sym,sphhar,cell,dfptvefield,dfptvefieldimag)
+         CALL dfpt_vefield(juphon,atoms,sym,sphhar,cell,dfptvefield,dfptvefieldimag,3)
          !print*, "now after calling dfpt_vefield "
          !print*,"dfptvefield%pw(:,1)",dfptvefield%pw(:,1) 
          !print*,"dfptvefield%mtreal(:,1)",dfptvefield%mt(:,1,:,1) 
@@ -154,7 +154,7 @@ CONTAINS
          !print*,"checkdopall:"
          !write(oUnit,*) "Here checkdopall"
          write(oUnit,*) "l_max =", atoms%lmax
-         write(oUnit,*) "qlim =(0,0,", juphon%qlim, ")"
+         write(oUnit,*) "qlim =(0,0,", juphon%qlim,")"
          write(oUnit,*) "Center Stars",starsq%center
          print*,"starsq"
          print* , "Center Stars", starsq%center 

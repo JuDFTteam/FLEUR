@@ -12,7 +12,7 @@ MODULE m_make_stars
    PRIVATE
    PUBLIC :: make_stars
 CONTAINS
-   SUBROUTINE make_stars(stars,sym,atoms,vacuum,sphhar,input,cell,noco,fmpi,qvec,iDtype,iDir)
+   SUBROUTINE make_stars(stars,sym,atoms,vacuum,sphhar,input,cell,noco,fmpi,qvec,iDtype,iDir,l_efield)
       USE m_stepf
       USE m_types_sym
       USE m_types_atoms
@@ -40,9 +40,17 @@ CONTAINS
       REAL, OPTIONAL, INTENT(IN) :: qvec(3)
       INTEGER, OPTIONAL, INTENT(IN) :: iDtype, iDir
 
+      LOGICAL, OPTIONAL, INTENT(IN) :: l_efield
+      LOGICAL       :: l_ef
+      
       INTEGER :: ierr
 
       TYPE(t_fftgrid) :: fftgrid
+      
+      !changes for efield:
+      l_ef = .FALSE. 
+      IF (PRESENT(l_efield)) l_ef = .TRUE.
+      print*,"l_ef", l_ef
 
       ! Dimensioning of stars
       IF (fmpi%irank==0) THEN
@@ -64,14 +72,19 @@ CONTAINS
       call mpi_bc(stars%mx2,0,fmpi%mpi_comm)
       call mpi_bc(stars%mx3,0,fmpi%mpi_comm)
       call mpi_bc(stars%ng3,0,fmpi%mpi_comm)
-
+     
       CALL timestart("stepf")
       IF (PRESENT(qvec)) THEN
-         IF (fmpi%irank == 0) THEN
-            ALLOCATE (stars%ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1))
-            ALLOCATE (stars%ufft1(0:27*stars%mx1*stars%mx2*stars%mx3-1),stars%ustep(stars%ng3))
-            CALL stepf_analytical(sym, stars, atoms, input, cell, fmpi, fftgrid, qvec, iDtype, iDir, 1)
-            CALL stepf_stars(stars,fftgrid,qvec)
+         IF (fmpi%irank == 0) THEN 
+            IF (l_ef) THEN !only allocate uff1 to avoid memory error in dfpt_vgen_finalize
+               !ALLOCATE (stars%ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1))
+               ALLOCATE (stars%ufft1(0:27*stars%mx1*stars%mx2*stars%mx3-1),stars%ustep(stars%ng3))
+            ELSE
+               ALLOCATE (stars%ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1))
+               ALLOCATE (stars%ufft1(0:27*stars%mx1*stars%mx2*stars%mx3-1),stars%ustep(stars%ng3))
+               CALL stepf_analytical(sym, stars, atoms, input, cell, fmpi, fftgrid, qvec, iDtype, iDir, 1)
+               CALL stepf_stars(stars,fftgrid,qvec)
+            END IF
          END IF
       ELSE
          ALLOCATE (stars%ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1))
