@@ -4,7 +4,7 @@ module m_dfpt_vefield
 
     contains
     
-        subroutine dfpt_vefield(juphon,atoms,sym,sphhar,cell,dfptvefield,dfptvefieldimag)
+        subroutine dfpt_vefield(juphon,atoms,sym,sphhar,cell,dfptvefield,dfptvefieldimag,iDir)
             use m_types
             use m_ylm
             use m_sphbes
@@ -21,6 +21,7 @@ module m_dfpt_vefield
             TYPE(t_sphhar),    INTENT(IN)                :: sphhar
             TYPE(t_cell),      INTENT(IN)                :: cell
             type(t_potden),     intent(inout)            :: dfptvefield, dfptvefieldimag
+            integer,             intent(in)              :: iDir 
             !real,               intent(out)              :: dfptvCoulreal(:,0:,:)!(atoms%jmtd,0:sphharl%nlhd,atoms%ntype)   
             !real,               intent(out)              :: dfptvCoulimag(:,0:,:)
 
@@ -31,7 +32,7 @@ module m_dfpt_vefield
             !type(t_potden),     intent(inout)            :: v1efield_mt
             complex, allocatable                         :: ylm(:)
             complex                                      :: pref
-            real                                         :: qlim, qnormvec(3), qnormvecintern(3)
+            real                                         :: qlim, qnormvec(3), qnormvecintern(3) 
             real                                         :: inv_bmat(3,3), determinant
             integer                                      :: n, lmax, l, iop, m, ll1, lm, i, imax
             !real, allocatable, dimension(:,:)            :: il, kl     
@@ -64,14 +65,14 @@ module m_dfpt_vefield
             qlim = juphon%qlim 
             print*, 'qlim', qlim
             qnormvec = 0.0
-            qnormvec(3) = 1
+            qnormvec(iDir) = 1
             !print*, "cell%bmat",cell%bmat
             !print*, "cell%bbmat",cell%bbmat
             !inv_bmat(:,:) = matmul()
             inv_bmat(:,:) =0.0
-            call inv3(cell%bmat,inv_bmat(:,:),determinant)
-            qnormvecintern(:) = matmul(qnormvec,cell%bmat(:,:))!matmul(cell%amat,qnormvec)!matmul(qnormvec(:),inv_bmat(:,:))
-            print*, 'qnormvecintern(:)',qnormvecintern(:)
+            !call inv3(cell%bmat,inv_bmat(:,:),determinant)
+            !qnormvecintern(:) = matmul(qnormvec,cell%bmat(:,:))!matmul(cell%amat,qnormvec)!matmul(qnormvec(:),inv_bmat(:,:))
+            !print*, 'qnormvecintern(:)',qnormvecintern(:)
             !stop
 
             print*, 'qnormvec',qnormvec(:)
@@ -83,7 +84,7 @@ module m_dfpt_vefield
                 allocate(ylm((lmax+1)**2))
                 ylm = 0.0
                 !print*,ylm(:)
-                call ylm4(lmax,qnormvecintern(:),ylm(:))
+                call ylm4(lmax,qnormvec(:),ylm(:))
                 !print*, "lower bound"
                 !print*,lbound(ylm,1)
                 !print*,ylm(:)
