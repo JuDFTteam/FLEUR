@@ -54,7 +54,7 @@ CONTAINS
        call sm_store(n)%read_unformatted(888)
        call fsm_store(n)%read_unformatted(888)
     ENDDO
-    CLOSE(888)
+    CLOSE(888,status='DELETE') !The same history should not be read twice!
 !#endif
   END SUBROUTINE mixing_history_open
 
