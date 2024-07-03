@@ -101,7 +101,11 @@ CONTAINS
        IF (hybinp%l_hybrid) THEN
           xcpot%inbuild_name = "pbe0"
        ELSE
-          xcpot%inbuild_name = "pbe"
+          if (noco%l_noco) THEN 
+            xcpot%inbuild_name = "vwn"
+          else 
+            xcpot%inbuild_name = "pbe"
+          endif  
        ENDIF
        CALL xcpot%init(atoms%ntype)
     ENDIF
