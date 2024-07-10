@@ -191,6 +191,7 @@ contains
     IF (l_dfpt) inDenIm%mt=0.0
     IF (ALLOCATED(inDen%vac)) inden%vac=0.0
     IF (ALLOCATED(inDen%mmpMat).AND.l_densitymatrix) inden%mmpMat(:,:,:atoms%n_u,:)=0.0
+    IF (ALLOCATED(inDen%nIJ_llp_mmp).AND.l_densitymatrixV) inden%nIJ_llp_mmp(:,:,:,:)=CMPLX(0.0,0.0)
     IF (.NOT.l_dfpt) THEN
       CALL sm(it)%to_density(inDen,vacuum%nmzxyd)
     ELSE
