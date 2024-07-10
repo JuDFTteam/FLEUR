@@ -98,16 +98,14 @@ If all went well, a picture should pop up, looking something like this:
 
 # Density-functional perturbation theory
 
-Make a subfolder DFPT and copy the optimized input file to it. Now you invoke the inpgen several different times to gain the necessary input for the phonon calculation:
+Make a subfolder DFPT and copy the optimized input file to it. Now you invoke the inpgen once to gain the necessary input for the phonon calculation:
 
 ```
-$ /path/to/fleur/inpgen -f inpCu_fit
-$ /path/to/fleur/inpgen -f inpCu_fit -nosym -add_name desym
+$ /path/to/fleur/inpgen -f inpCu_fit -nosym
 $ /path/to/fleur/inpgen -inp.xml -noKsym -kpt dfpt#gamma@grid=16,16,16
-$ /path/to/fleur/inpgen -inp.xml -noKsym -add_name desym -kpt dfpt#gamma@grid=16,16,16
 ```
 
-Edit both ```inp.xml``` and ```desym_inp.xml``` to reflect all the changes in the initial input file, like the setting of ```ctail``` etc. Especially ensure, that you use the same libxc functional you used initially, e.g. ```vwn```:
+Edit both ```inp.xml```  to reflect all the changes in the initial input file, like the setting of ```ctail``` etc. Especially ensure, that you use the same libxc functional you used initially, e.g. ```vwn```:
 
 ```
       <xcFunctional name="LibXC" relativisticCorrections="F">
@@ -121,7 +119,7 @@ Then invoke FLEUR once to generate a ground state solution:
 $ /path/to/fleur
 ```
 
-Re-edit ```*inp.xml```. Set ```numbands="all"``` in ```cutoffs``` and ```<kPointListSelection listName="dfpt"/>``` in ```bzIntegration```. Now, you want to specify the DFPT setup in ```inp.xml``` only. In the provided k-point grid of 16x16x16, any q-point in steps of 1/16 is available for calculation. In general, q always has to be the difference between to vectors of the k-set, baring a shift by a complete reciprocal unit vector. In this case, we set
+Re-edit ```inp.xml```. Set ```numbands="all"``` in ```cutoffs``` and ```<kPointListSelection listName="dfpt"/>``` in ```bzIntegration```. Now, you want to specify the DFPT setup in ```inp.xml```. In the provided k-point grid of 16x16x16, any q-point in steps of 1/16 is available for calculation. In general, q always has to be the difference between to vectors of the k-set, baring a shift by a complete reciprocal unit vector. In this case, we set
 
 ```
       <juPhon l_dfpt="T">
