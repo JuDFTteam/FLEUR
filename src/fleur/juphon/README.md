@@ -105,7 +105,7 @@ $ /path/to/fleur/inpgen -f inpCu_fit -nosym
 $ /path/to/fleur/inpgen -inp.xml -noKsym -kpt dfpt#gamma@grid=16,16,16
 ```
 
-Edit both ```inp.xml```  to reflect all the changes in the initial input file, like the setting of ```ctail``` etc. Especially ensure, that you use the same libxc functional you used initially, e.g. ```vwn```:
+Edit ```inp.xml```  to reflect all the changes in the initial input file, like the setting of ```ctail``` etc. Especially ensure, that you use the same libxc functional you used initially, e.g. ```vwn```:
 
 ```
       <xcFunctional name="LibXC" relativisticCorrections="F">
