@@ -516,7 +516,9 @@ CONTAINS
       TYPE(xc_f90_func_info_t)            :: xc_info
 
       xc_info = xc_f90_func_get_info(xc_func)
-      is_energy_func = merge(is_E_func, .False., PRESENT(is_E_func))
+
+      is_energy_func = .FALSE.
+      IF (PRESENT(is_E_func)) is_energy_func = is_E_func
 
       SELECT CASE(xc_f90_func_info_get_kind(xc_info))
       CASE (XC_EXCHANGE)
