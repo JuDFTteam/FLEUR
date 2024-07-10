@@ -112,14 +112,14 @@ Edit ```inp.xml```  to reflect all the changes in the initial input file, like t
          <LibXCName  exchange="lda_x" correlation="lda_c_vwn"/>
       </xcFunctional>
 ```
-
+The ground state density should be calculated on the same k-mesh, as the follow-up DFPT calculation. Therefore, we set ```<kPointListSelection listName="dfpt"/>``` in ```bzIntegration```
 Then invoke FLEUR once to generate a ground state solution:
 
 ```
 $ /path/to/fleur
 ```
 
-Re-edit ```inp.xml```. Set ```numbands="all"``` in ```cutoffs``` and ```<kPointListSelection listName="dfpt"/>``` in ```bzIntegration```. Now, you want to specify the DFPT setup in ```inp.xml```. In the provided k-point grid of 16x16x16, any q-point in steps of 1/16 is available for calculation. In general, q always has to be the difference between to vectors of the k-set, baring a shift by a complete reciprocal unit vector. In this case, we set
+Re-edit ```inp.xml```. Set ```numbands="all"``` in ```cutoffs```. Now, you want to specify the DFPT setup in ```inp.xml```. In the provided k-point grid of 16x16x16, any q-point in steps of 1/16 is available for calculation. In general, q always has to be the difference between to vectors of the k-set, baring a shift by a complete reciprocal unit vector. In this case, we set
 
 ```
       <juPhon l_dfpt="T">
