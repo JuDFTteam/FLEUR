@@ -112,7 +112,7 @@ Edit ```inp.xml```  to reflect all the changes in the initial input file, like t
          <LibXCName  exchange="lda_x" correlation="lda_c_vwn"/>
       </xcFunctional>
 ```
-The ground state density should be calculated on the same k-mesh, as the follow-up DFPT calculation. Therefore, we set ```<kPointListSelection listName="dfpt"/>``` in ```bzIntegration```
+The ground state density should be calculated on the same k-mesh, as the follow-up DFPT calculation. Therefore, we set ```<kPointListSelection listName="dfpt"/>``` in ```bzIntegration```.
 Then invoke FLEUR once to generate a ground state solution:
 
 ```
