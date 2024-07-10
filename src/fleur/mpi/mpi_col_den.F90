@@ -549,6 +549,15 @@ CONTAINS
        ENDIF
     ENDIF
     !-lda+U
+       
+    !+LDA+V
+    IF ( atoms%n_v.GT.0 ) THEN
+       ALLOCATE(c_b(size(den%nIJ_llp_mmp)))
+       CALL MPI_REDUCE(den%nIJ_llp_mmp,c_b,size(den%nIJ_llp_mmp),MPI_DOUBLE_COMPLEX,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+       if (fmpi%irank.EQ.0) den%nIJ_llp_mmp=reshape(c_b,shape(den%nIJ_llp_mmp))
+       DEALLOCATE(c_b)
+    END IF
+    !-LDA+V
 
     !+lda+OP
     IF ( atoms%n_opc.GT.0 ) THEN
