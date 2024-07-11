@@ -15,6 +15,7 @@ MODULE m_dfpt_sternheimer
    USE m_constants
    USE m_cdn_io
    USE m_eig66_io
+   use m_inv3
 
 IMPLICIT NONE
 
@@ -53,6 +54,9 @@ CONTAINS
       INTEGER,         OPTIONAL, INTENT(IN)    :: dfpt_eigm_id, dfpt_eigm_id2
       TYPE(t_potden),  OPTIONAL, INTENT(INOUT) :: vTot1m, vTot1mIm
 
+      !changes for efield:
+      real                              :: qvec_ext(3),qvec_int(3),det,inv_bmat(3,3)
+
 #ifdef CPP_MPI
       INTEGER :: ierr
 #endif
@@ -83,7 +87,16 @@ CONTAINS
       banddosdummy = fi%banddos
 
       ! Calculate the q-shifted G-vectors and related quantities like the perturbed step function
+      IF ( fi%juPhon%l_efield) THEN
+         qvec_ext = qpts%bk(:,iQ)
+         print*,'qvec_ext',qvec_ext
+         call inv3(fi%cell%bmat,inv_bmat(:,:),det)
+         qvec_int = matmul(qvec_ext,transpose(inv_bmat))
+         print*,'qvec_int',qvec_int 
+         CALL make_stars(starsq, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, qvec_int, iDtype, iDir,fi%juPhon%l_efield)!TODO: Theta1 raus fuer efield
+      ELSE 
       CALL make_stars(starsq, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, qpts%bk(:,iQ), iDtype, iDir)!TODO: Theta1 raus fuer efield
+      END IF
       starsq%ufft = stars%ufft
 
       ! Initialize the density perturbation; denIn1Im is only for the imaginary MT part
@@ -185,8 +198,8 @@ CONTAINS
             sigma_loc = cmplx(0.0,0.0)
             !IF (iDir==3) sigma_loc = -sigma_disc
             print*, "vor dem eigentlichen Ausfuehren"
-            print*, 'vTot1 pw', vTot1%pw
-            print*, 'vTot1 mt', vTot1%mt
+            !print*, 'vTot1 pw', vTot1%pw
+            !print*, 'vTot1 mt', vTot1%mt
             !call save_npy("ylm.npy",ylm(:))
             CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                            fi%juphon,fi%cell,fmpi,fi%noco,nococonv,rho_loc0,vTot,&
