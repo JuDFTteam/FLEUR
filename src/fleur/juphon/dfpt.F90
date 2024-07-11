@@ -31,6 +31,7 @@ CONTAINS
       USE m_make_dos
       USE m_dfpt_gradient
       USE m_npy
+      USE m_dfpt_dielecten
 
       TYPE(t_mpi),        INTENT(IN)     :: fmpi
       TYPE(t_fleurinput), INTENT(IN)     :: fi
@@ -105,6 +106,10 @@ CONTAINS
       COMPLEX, ALLOCATABLE :: dyn_mat(:,:,:), dyn_mat_r(:,:,:), dyn_mat_q_full(:,:,:), dyn_mat_pathq(:,:), sym_dynvec(:,:,:), sym_dyn_mat(:,:,:)
       REAL,    ALLOCATABLE :: e2_vm(:,:,:)
 
+      !For e-field:
+      COMPLEX, ALLOCATABLE :: diel_tensor(:,:)
+      REAL, ALLOCATABLE    :: diel_tensor_occ1(:,:)!check if this makes sense
+
       INTEGER :: ngdp, iSpin, iQ, iDir, iDtype, nspins, zlim, iVac, lh, iDir2, sym_count
       INTEGER :: iStar, xInd, yInd, zInd, q_eig_id, ikpt, ierr, qm_eig_id, iArray
       INTEGER :: dfpt_eig_id, dfpt_eig_id2, dfpt_eigm_id, dfpt_eigm_id2
@@ -123,6 +128,13 @@ CONTAINS
       INTEGER :: grid(3), iread
       REAL    :: dr_re(fi%vacuum%nmzd), dr_im(fi%vacuum%nmzd), drr_dummy(fi%vacuum%nmzd), numbers(3*fi%atoms%nat,6*fi%atoms%nat)
       complex                           :: sigma_loc(2), sigma_ext(2), sigma_coul(2), sigma_gext(3,2)
+
+      !for e-field:
+      real, allocatable                  :: we1_data(:,:,:,:),eig1_data(:,:,:,:)
+      allocate(we1_data(fi%input%neig,size(fmpi%k_list), MERGE(1,fi%input%jspins,fi%noco%l_noco),3*fi%atoms%ntype))
+      allocate(eig1_data(fi%input%neig,size(fmpi%k_list), MERGE(1,fi%input%jspins,fi%noco%l_noco),3*fi%atoms%ntype))
+      we1_data = 0.0
+      eig1_data = 0.0
 
       ALLOCATE(e2_vm(fi%atoms%nat,3,3))
 
@@ -151,7 +163,8 @@ CONTAINS
           ! the cutoffs are chosen appropriately.
           CALL dfpt_check(fi_nosym, xcpot_nosym)
       END IF
-
+      !print*,"fi%atoms%ntype",fi%atoms%ntype
+      !STOP
       IF (fi%sym%nop>1) THEN
          WRITE(*,*) "Desymmetrization needed. Going ahead!"
          ! Grid size for desym quality test:
@@ -396,6 +409,13 @@ CONTAINS
       dyn_mat = cmplx(0.0,0.0)
       ALLOCATE(sym_dyn_mat(SIZE(q_list),3*fi_nosym%atoms%ntype,3*fi_nosym%atoms%ntype))
       sym_dyn_mat = cmplx(0.0,0.0)
+      !print*,"dynshape", shape(dyn_mat)
+      !print*, "dynmat",dyn_mat
+      !allocate dielectric tensor:
+      ALLOCATE(diel_tensor(3*fi_nosym%atoms%ntype,3*fi_nosym%atoms%ntype))
+      ALLOCATE(diel_tensor_occ1(3*fi_nosym%atoms%ntype,3*fi_nosym%atoms%ntype))
+      diel_tensor = cmplx(0.0,0.0)
+      diel_tensor_occ1 = cmplx(0.0,0.0)
       IF (l_dfpt_scf) THEN
          ! Do the self-consistency calculations for each specified q, for all atoms and for
          ! all three cartesian directions.
@@ -535,11 +555,19 @@ CONTAINS
                      CALL timestop("Sternheimer with -q")
                   ELSE
                      CALL timestart("Sternheimer")
-                     CALL dfpt_sternheimer(fi_nosym, xcpot_nosym, sphhar_nosym, stars_nosym, starsq, nococonv_nosym, qpts_loc, fmpi_nosym, results_nosym, q_results, enpara_nosym, hybdat_nosym, &
-                                          rho_nosym, vTot_nosym, grRho3(iDir), grVtot3(iDir), grVext3(iDir), q_list(iQ), iDtype, iDir, &
-                                          dfpt_tag, eig_id, l_real, results1, dfpt_eig_id, dfpt_eig_id2, q_eig_id, &
-                                          denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, MERGE(sigma_ext,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir==3), &
-                                          MERGE(sigma_coul,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir==3))
+                     IF (fi%juPhon%l_efield) THEN
+                        CALL dfpt_sternheimer(fi_nosym, xcpot_nosym, sphhar_nosym, stars_nosym, starsq, nococonv_nosym, qpts_loc, fmpi_nosym, results_nosym, q_results, enpara_nosym, hybdat_nosym, &
+                                             rho_nosym, vTot_nosym, grRho3(iDir), grVtot3(iDir), grVext3(iDir), q_list(iQ), iDtype, iDir, &
+                                             dfpt_tag, eig_id, l_real, results1, dfpt_eig_id, dfpt_eig_id2, q_eig_id, &
+                                             denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, MERGE(sigma_ext,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir==3), &
+                                             MERGE(sigma_coul,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir==3))
+                     ELSE
+                        CALL dfpt_sternheimer(fi_nosym, xcpot_nosym, sphhar_nosym, stars_nosym, starsq, nococonv_nosym, qpts_loc, fmpi_nosym, results_nosym, q_results, enpara_nosym, hybdat_nosym, &
+                                             rho_nosym, vTot_nosym, grRho3(iDir), grVtot3(iDir), grVext3(iDir), q_list(iQ), iDtype, iDir, &
+                                             dfpt_tag, eig_id, l_real, results1, dfpt_eig_id, dfpt_eig_id2, q_eig_id, &
+                                             denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, MERGE(sigma_ext,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir==3), &
+                                             MERGE(sigma_coul,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir==3))
+                     END IF
                      CALL timestop("Sternheimer")
                   END IF
 
@@ -547,17 +575,26 @@ CONTAINS
                   CALL timestart("Dynmat")
                   ! Once the first order quantities are converged, we can construct all
                   ! additional necessary quantities and from that the dynamical matrix.
-                  IF (.TRUE.) THEN
-                     CALL dfpt_dynmat_row(fi_nosym, stars_nosym, starsq, sphhar_nosym, xcpot_nosym, nococonv_nosym, hybdat_nosym, fmpi_nosym, qpts_loc, q_list(iQ), iDtype, iDir, &
+                  IF (fi%juPhon%l_efield) THEN
+                     CALL dfpt_dielecten_row_HF(fi_nosym,stars_nosym,starsq,sphhar_nosym,fmpi_nosym,denIn1,denIn1Im,results_nosym, results1,3 *(iDtype-1)+iDir,diel_tensor(3 *(iDtype-1)+iDir,:))
+                     CALL dfpt_dielecten_occ1(fi,fmpi,results1,we1_data,eig1_data,diel_tensor_occ1,3 *(iDtype-1)+iDir)
+                     
+                     diel_tensor(:,:) = diel_tensor(:,:) + diel_tensor_occ1(:,:)
+                  ELSE
+                     IF(.TRUE.) THEN
+                        CALL dfpt_dynmat_row(fi_nosym, stars_nosym, starsq, sphhar_nosym, xcpot_nosym, nococonv_nosym, hybdat_nosym, fmpi_nosym, qpts_loc, q_list(iQ), iDtype, iDir, &
                                           eig_id, dfpt_eig_id, dfpt_eig_id2, enpara_nosym, results_nosym, results1, l_real,&
                                           rho_nosym, vTot_nosym, grRho3, grVext3, grVC3, &
                                           denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_mat(iQ,3 *(iDtype-1)+iDir,:), E2ndOrdII, sigma_ext, sigma_gext)
-                  ELSE
-                     CALL dfpt_dynmat_row(fi_nosym, stars_nosym, starsq, sphhar_nosym, xcpot_nosym, nococonv_nosym, hybdat_nosym, fmpi_nosym, qpts_loc, q_list(iQ), iDtype, iDir, &
+                     ELSE
+                        CALL dfpt_dynmat_row(fi_nosym, stars_nosym, starsq, sphhar_nosym, xcpot_nosym, nococonv_nosym, hybdat_nosym, fmpi_nosym, qpts_loc, q_list(iQ), iDtype, iDir, &
                                           eig_id, dfpt_eig_id, dfpt_eig_id2, enpara_nosym, results_nosym, results1, l_real,&
                                           rho_nosym, vTot_nosym, grRho3, grVext3, grVC3, &
                                           denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_mat(iQ,3 *(iDtype-1)+iDir,:), E2ndOrdII, sigma_ext, sigma_gext, q_eig_id)
+                     END IF
                   END IF
+                  print*,"diel_tensor(3 *(iDtype-1)+iDir,:)", diel_tensor(3 *(iDtype-1)+iDir,:)
+                  !stop
                   CALL timestop("Dynmat")
                   dyn_mat(iQ,3 *(iDtype-1)+iDir,:) = dyn_mat(iQ,3 *(iDtype-1)+iDir,:) + conjg(E2ndOrdII(3 *(iDtype-1)+iDir,:))
                   !IF (.NOT.fi%juPhon%qmode==0) THEN
@@ -578,6 +615,10 @@ CONTAINS
                CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
 #endif
             END DO
+            !STOP
+            !IF (fi%juPhon%l_efield) THEN
+               !CALL dfpt_dielecten_occ1(3 *(iDtype-1)+iDir)
+            !END IF
 
             IF (fmpi%irank==0) THEN
                WRITE(*,*) '-------------------------'
