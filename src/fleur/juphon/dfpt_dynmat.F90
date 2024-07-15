@@ -371,6 +371,8 @@ CONTAINS
 
             ! Calculate the contributions to the dynamical matrix that stem
             ! from terms related to occupation numbers and the eigenenergies.
+            ! killcont =  [T1_pw, S1_pw, T1q_pw, S1q_pw,  V1_MT, ikGH0_MT, ikGS0_MT,
+            !             ikGH1q_MT, ikGS1q_MT , ikGH2_MT, ikGS2_MT] 
             IF (.NOT.PRESENT(q_eig_id)) THEN
                CALL dfpt_dynmat_eigen(fi, results, results1, fmpi, enpara, nococonv, &
                                       stars, starsq, sphhar, rho, hub1data, vTot, vTot, vTot1, vTot1Im, &
