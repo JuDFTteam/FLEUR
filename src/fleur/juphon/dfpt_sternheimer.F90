@@ -15,6 +15,7 @@ MODULE m_dfpt_sternheimer
    USE m_constants
    USE m_cdn_io
    USE m_eig66_io
+   USE m_dfpt_potden_offset
 
 IMPLICIT NONE
 
