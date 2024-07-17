@@ -578,8 +578,9 @@ CONTAINS
                   IF (fi%juPhon%l_efield) THEN
                      CALL dfpt_dielecten_row_HF(fi_nosym,stars_nosym,starsq,sphhar_nosym,fmpi_nosym,denIn1,denIn1Im,results_nosym, results1,3 *(iDtype-1)+iDir,diel_tensor(3 *(iDtype-1)+iDir,:))
                      CALL dfpt_dielecten_occ1(fi,fmpi,results1,we1_data,eig1_data,diel_tensor_occ1,3 *(iDtype-1)+iDir)
-                     
+
                      diel_tensor(:,:) = diel_tensor(:,:) + diel_tensor_occ1(:,:)
+                     print*, 'diel_tensor(:,:)',diel_tensor(:,:)
                   ELSE
                      IF(.TRUE.) THEN
                         CALL dfpt_dynmat_row(fi_nosym, stars_nosym, starsq, sphhar_nosym, xcpot_nosym, nococonv_nosym, hybdat_nosym, fmpi_nosym, qpts_loc, q_list(iQ), iDtype, iDir, &
@@ -615,7 +616,7 @@ CONTAINS
                CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
 #endif
             END DO
-            !STOP
+            STOP
             !IF (fi%juPhon%l_efield) THEN
                !CALL dfpt_dielecten_occ1(3 *(iDtype-1)+iDir)
             !END IF

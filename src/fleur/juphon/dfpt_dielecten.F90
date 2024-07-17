@@ -148,7 +148,7 @@ module m_dfpt_dielecten
 
 
             diel_tensor_occ1(:,:) = 0.0
-
+            !print*, "results1%eig(:,:,:)", results1%eig(:,:,:)
             we1_data(:,:,:,no_row) = results1%w_iks
             eig1_data(:,:,:,no_row) = results1%eig
             if (no_row == 3*fi%atoms%ntype) then
@@ -160,8 +160,10 @@ module m_dfpt_dielecten
                             do nk_i = 1, size(fmpi%k_list)
                                 nk = fmpi%k_list(nk_i)
                                 do nband = 1,fi%input%neig
+                                    !print*,"we1_data(nband,nk,jsp,ten_row)",we1_data(nband,nk,jsp,ten_row)
+                                    !print*,"eig1_data(nband,nk,jsp,ten_col)",eig1_data(nband,nk,jsp,ten_col)
                                     temp_val = temp_val + we1_data(nband,nk,jsp,ten_row)*eig1_data(nband,nk,jsp,ten_col)
-                                    print*,'temp_val',temp_val
+                                    !print*,'temp_val',temp_val
                                 end do
                             end do
                         end do
@@ -170,7 +172,7 @@ module m_dfpt_dielecten
                 end do
                 print*,"diel_tensor_occ1",diel_tensor_occ1(:,:)
                 print*,"test"
-                stop
+                !stop
             end if 
         end subroutine dfpt_dielecten_occ1
 
