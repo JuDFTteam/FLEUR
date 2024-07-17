@@ -28,7 +28,7 @@ MODULE m_types_juPhon
       !REAL    :: eDiffcut  = 1e-7   ! Cutoff for energy differences
       REAL    :: eDiffcut  = 1e-5   ! Cutoff for energy differences
       REAL    :: fDiffcut  = 1e-7    ! Cutoff for occupation differences
-      REAL    :: qlim  = 0.3    ! Cutoff for occupation differences
+      REAL    :: qlim  = 0.3         ! qlim value
       REAL    :: qpt_ph(3)           ! Debug q
 
       LOGICAL :: e1term = .TRUE.     ! Calculate the eigenenergy response

@@ -219,11 +219,6 @@ contains
           first_star = MERGE(2,1,stars%sk3(1)< 1E-9)
           vCoul%pw(first_star:stars%ng3,ispin) = fpi_const * psq(first_star:stars%ng3) / stars%sk3(first_star:stars%ng3) ** 2
         end if
-        if ( l_dfptvgen .AND. juphon%l_efield ) then
-          print*,"jetzt anders:"
-          vCoul%pw(1,ispin) = cmplx(0.0,1/juphon%qlim)
-          !PRINT *, vCoul%pw(:,ispin)
-        end if
       end if
     call timestop("interstitial")
     end if ! fmpi%irank == 0
@@ -241,23 +236,8 @@ contains
     IF (.NOT.l_dfptvgen) THEN
       call vmts( input, fmpi, stars, sphhar, atoms, sym, cell, juphon,  dosf, vCoul%pw(:,ispin), &
                  den%mt(:,0:,:,ispin), vCoul%potdenType, vCoul%mt(:,0:,:,ispin) )
-    ELSE IF ( l_dfptvgen .AND. juphon%l_efield ) THEN
-      PRINT *, "im in VMTS II"
-      !call print_hello()
-      CALL dfpt_vefield_mt(juphon,atoms,sym,sphhar,vCoul%mt(:,0:,:,ispin),dfptvCoulimag%mt(:,0:,:,ispin))
-      !print*,'vCoul%mt(:,0:,:,ispin)',vCoul%mt(:,0:,:,ispin)
-      !print*,'vCoul%mt(2,0:,:,ispin)',dfptvCoulimag%mt(2,0:,:,ispin)
-      print*,"MT efield"
-      !PRINT *,vCoul%mt(:,0,:,ispin)
-      PRINT *, SHAPE(vCoul%mt(:,0:,:,ispin))
-      !call vmts( input, fmpi, stars, sphhar, atoms, sym, cell, juphon,  dosf, vCoul%pw(:,ispin), &
-                  !den%mt(:,0:,:,ispin), vCoul%potdenType, vCoul%mt(:,0:,:,ispin), &
-                  !dfptdenimag%mt(:,0:,:,ispin), dfptvCoulimag%mt(:,0:,:,ispin), iDtype, iDir, iDir2, mat2ord )
-      PRINT *, "filled up"
-      !PRINT *,vCoul%mt(:,0,:,ispin)
-      PRINT *, SHAPE(vCoul%mt(:,0:,:,ispin))
     ELSE IF (.NOT.l_2ndord) THEN
-      write(1500,*) "mache normal dfpt" ! fort.1500 
+      !write(1500,*) "mache normal dfpt" ! fort.1500 
       ! For DFPT there is a) an imaginary part to the potential and b) a different treatment
       ! for the ionic 1/r (now 1/r^2) contribution.
       call vmts( input, fmpi, stars, sphhar, atoms, sym, cell, juphon,  dosf, vCoul%pw(:,ispin), &

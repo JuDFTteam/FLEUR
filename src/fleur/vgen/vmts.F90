@@ -85,8 +85,8 @@ contains
     ! SPHERE BOUNDARY CONTRIBUTION to the coefficients calculated from the values
     ! of the interstitial Coulomb / Yukawa potential on the sphere boundary
     
-   print *, "here"
-    PRINT *, vr(1:atoms%jri(n),0,:)
+   !print *, "here"
+    !PRINT *, vr(1:atoms%jri(n),0,:)
        
 
     ALLOCATE (vtlLocal(0:sphhar%nlhd,atoms%ntype))

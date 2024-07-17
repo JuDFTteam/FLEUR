@@ -169,7 +169,6 @@ CONTAINS
 
         rholhreal = 0.0
         rholhimag = 0.0
-        print*,"Hallo"
         DO iSpin = 1, jspins
             DO iType = 1, atoms%ntype
                 iAtom = atoms%firstAtom(iType)
