@@ -58,16 +58,16 @@ module m_dfpt_dielecten
                     pwwq2 = CMPLX(0.0,0.0)
                     CALL dfpt_convol_big(1, starsq, stars, vExt1%pw(:,1), CMPLX(1.0,0.0)*stars%ufft, pwwq2)
                     CALL dfpt_int_pw(starsq, fi%cell, denIn1_pw, pwwq2, tempval_pw)
-                    print*, 'tempval_mt',tempval_pw
+                    !print*, 'tempval_mt',tempval_pw
                     dieltensor_HF(col_index) = dieltensor_HF(col_index) + tempval_pw
-                    print*, "dieltensor_row",dieltensor_row(:)
+                    !print*, "dieltensor_row",dieltensor_row(:)
 
 
                     !Muffin-tin 
                     do iType = 1, fi%atoms%ntype
                         tempval_mt = CMPLX(0.0,0.0)               
                         call dfpt_int_mt(fi%atoms, sphhar, fi%sym, iType, denIn1_mt, denIn1_mt_Im, vExt1%mt(:,0:,:,1), vExt1Im%mt(:,0:,:,1), tempval_mt)
-                        print*, 'tempval_mt',tempval_mt
+                        !print*, 'tempval_mt',tempval_mt
                         dieltensor_HF(col_index) = dieltensor_HF(col_index) + tempval_mt
                     end do
                 end do
@@ -81,9 +81,9 @@ module m_dfpt_dielecten
             !interstitial
 
             !Muffin-tin
-            print*,"shape(results1%w_iks(:,:,:))",shape(results%w_iks(:,:,:))
-            print*,"shape(results1%eig(:,:,:))",shape(results1%eig(:,:,:))
-            print*,"fi%input%neig",fi%input%neig
+            !print*,"shape(results1%w_iks(:,:,:))",shape(results%w_iks(:,:,:))
+            !print*,"shape(results1%eig(:,:,:))",shape(results1%eig(:,:,:))
+            !print*,"fi%input%neig",fi%input%neig
             !print*, "fmpi%k_list",shape(fmpi%)
             !len_kpoints = shape(fmpi%k_list,1)
             allocate(we1_data(fi%input%neig,size(fmpi%k_list), MERGE(1,fi%input%jspins,fi%noco%l_noco),3*fi%atoms%ntype))
@@ -100,19 +100,19 @@ module m_dfpt_dielecten
             DO jsp = 1, MERGE(1,fi%input%jspins,fi%noco%l_noco)
                 DO nk_i = 1,size(fmpi%k_list)
                     nk = fmpi%k_list(nk_i)
-                    print*, "nk", nk
-                    print*,"Doing the shit"
-                    print*,size(fmpi%k_list)
+                    !print*, "nk", nk
+                    !print*,"Doing the shit"
+                    !print*,size(fmpi%k_list)
                     !print*, shape(results%w_iks)
                     !print*, shape(results%eig)
                     !we  = results%w_iks(:,nk,jsp)
                     we1 = results1%w_iks(:,nk,jsp)
-                    print*, "shape(we1)",shape(we1) 
+                    !print*, "shape(we1)",shape(we1) 
                     !eig = results%eig(:,nk,jsp)
                     eig1 = results1%eig(:,nk,jsp)
-                    print*,eig1
-                    print*,"shape(eig1)",shape(eig1)
-                    print*,kind(eig1)
+                    !print*,eig1
+                    !print*,"shape(eig1)",shape(eig1)
+                    !print*,kind(eig1)
                 END DO
             END DO
             call save_npy("we1_data.npy",we1_data(:,:,:,:))
@@ -152,7 +152,7 @@ module m_dfpt_dielecten
             we1_data(:,:,:,no_row) = results1%w_iks
             eig1_data(:,:,:,no_row) = results1%eig
             if (no_row == 3*fi%atoms%ntype) then
-                print*,"end of rows"
+                !print*,"end of rows"
                 do ten_row = 1,3*fi%atoms%ntype
                     do ten_col = 1,3*fi%atoms%ntype
                         temp_val = 0.0
@@ -170,9 +170,11 @@ module m_dfpt_dielecten
                         diel_tensor_occ1(ten_row,ten_col) = temp_val
                     end do
                 end do
-                print*,"diel_tensor_occ1",diel_tensor_occ1(:,:)
-                print*,"test"
+                !print*,"diel_tensor_occ1",diel_tensor_occ1(:,:)
+                !print*,"test"
                 !stop
+            else
+                print*,"not last row"
             end if 
         end subroutine dfpt_dielecten_occ1
 

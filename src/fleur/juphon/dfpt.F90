@@ -109,6 +109,9 @@ CONTAINS
       !For e-field:
       COMPLEX, ALLOCATABLE :: diel_tensor(:,:)
       REAL, ALLOCATABLE    :: diel_tensor_occ1(:,:)!check if this makes sense
+      REAL, ALLOCATABLE    :: we1_data(:,:,:,:),eig1_data(:,:,:,:)
+      COMPLEX, ALLOCATABLE :: dielten_iden(:,:)   
+      INTEGER              :: i_iden
 
       INTEGER :: ngdp, iSpin, iQ, iDir, iDtype, nspins, zlim, iVac, lh, iDir2, sym_count
       INTEGER :: iStar, xInd, yInd, zInd, q_eig_id, ikpt, ierr, qm_eig_id, iArray
@@ -129,13 +132,9 @@ CONTAINS
       REAL    :: dr_re(fi%vacuum%nmzd), dr_im(fi%vacuum%nmzd), drr_dummy(fi%vacuum%nmzd), numbers(3*fi%atoms%nat,6*fi%atoms%nat)
       complex                           :: sigma_loc(2), sigma_ext(2), sigma_coul(2), sigma_gext(3,2)
 
-      !for e-field:
-      real, allocatable                  :: we1_data(:,:,:,:),eig1_data(:,:,:,:)
-      allocate(we1_data(fi%input%neig,size(fmpi%k_list), MERGE(1,fi%input%jspins,fi%noco%l_noco),3*fi%atoms%ntype))
-      allocate(eig1_data(fi%input%neig,size(fmpi%k_list), MERGE(1,fi%input%jspins,fi%noco%l_noco),3*fi%atoms%ntype))
-      we1_data = 0.0
-      eig1_data = 0.0
 
+
+      
       ALLOCATE(e2_vm(fi%atoms%nat,3,3))
 
       l_dfpt_scf   = fi%juPhon%l_scf
@@ -411,6 +410,23 @@ CONTAINS
       sym_dyn_mat = cmplx(0.0,0.0)
       !print*,"dynshape", shape(dyn_mat)
       !print*, "dynmat",dyn_mat
+         
+      
+      !allocations for efield:
+      ALLOCATE(we1_data(fi%input%neig,size(fmpi%k_list), MERGE(1,fi%input%jspins,fi%noco%l_noco),3*fi%atoms%ntype))
+      ALLOCATE(eig1_data(fi%input%neig,size(fmpi%k_list), MERGE(1,fi%input%jspins,fi%noco%l_noco),3*fi%atoms%ntype))
+      we1_data = 0.0
+      eig1_data = 0.0
+      
+      ALLOCATE(dielten_iden(3*fi_nosym%atoms%ntype,3*fi_nosym%atoms%ntype))
+      dielten_iden = CMPLX(0,0)
+
+      DO i_iden = 1,3*fi_nosym%atoms%ntype
+         print*,i_iden
+         dielten_iden(i_iden,i_iden) = CMPLX(1,0)
+      END DO
+      !print*,"dielten_iden",dielten_iden(:,:)
+      !print*,"here"
       !allocate dielectric tensor:
       ALLOCATE(diel_tensor(3*fi_nosym%atoms%ntype,3*fi_nosym%atoms%ntype))
       ALLOCATE(diel_tensor_occ1(3*fi_nosym%atoms%ntype,3*fi_nosym%atoms%ntype))
@@ -614,8 +630,10 @@ CONTAINS
 
 #if defined(CPP_MPI)
                CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
-#endif
+#endif      
             END DO
+            diel_tensor(:,:) = dielten_iden(:,:) - (fpi_const/fi%cell%omtil)*diel_tensor(:,:)
+            call save_npy("diel_tensor.npy",diel_tensor(:,:))
             STOP
             !IF (fi%juPhon%l_efield) THEN
                !CALL dfpt_dielecten_occ1(3 *(iDtype-1)+iDir)

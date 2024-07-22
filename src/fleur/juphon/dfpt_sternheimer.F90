@@ -95,7 +95,7 @@ CONTAINS
          print*,'qvec_int',qvec_int 
          CALL make_stars(starsq, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, qvec_int, iDtype, iDir,fi%juPhon%l_efield)!TODO: Theta1 raus fuer efield
       ELSE 
-      CALL make_stars(starsq, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, qpts%bk(:,iQ), iDtype, iDir)!TODO: Theta1 raus fuer efield
+         CALL make_stars(starsq, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, qpts%bk(:,iQ), iDtype, iDir)!TODO: Theta1 raus fuer efield
       END IF
       starsq%ufft = stars%ufft
 
@@ -160,6 +160,7 @@ CONTAINS
       CALL vC1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
 
       bqpt = qpts%bk(:, iQ)
+      print*,'iQ', iQ
 
       IF (l_minusq) THEN
          CALL vTot1m%init(starsmq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)

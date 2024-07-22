@@ -63,7 +63,7 @@ module m_dfpt_vefield
             !print*, "v1efield_mt shape", shape(v1efield_mt)
             !stop
             qlim = juphon%qlim 
-            print*, 'qlim', qlim
+            !print*, 'qlim', qlim
             qnormvec = 0.0
             qnormvec(iDir) = 1
             !print*, "cell%bmat",cell%bmat
@@ -75,7 +75,7 @@ module m_dfpt_vefield
             !print*, 'qnormvecintern(:)',qnormvecintern(:)
             !stop
 
-            print*, 'qnormvec',qnormvec(:)
+            !print*, 'qnormvec',qnormvec(:)
             !print*, 'qnormvectrans', qnorm
             do n =1, atoms%ntype
                 lmax = atoms%lmax(n)
