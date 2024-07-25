@@ -340,27 +340,29 @@ CONTAINS
                         stars_nosym, imagrhodummy, grVC3(iDir), .FALSE., grvextdummy, grRho3(iDir), 0, iDir, [0,0], sigma_loc)
       END DO
 
-         DO iDir2 = 1, 3
-            DO iDir = 1, 3
-               CALL imagrhodummy%resetPotDen()
-               sigma_loc = cmplx(0.0,0.0)
-
-               !IF (iDir2==3) sigma_loc = sigma_gext(iDir,:)
-               !IF (iDir==3) sigma_loc = sigma_gext(iDir2,:)
-               CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, fi%juphon, stars_nosym, fi_nosym%cell, &
-                         & sphhar_nosym, fi_nosym%atoms, .TRUE., imagrhodummy, grgrVC3x3(iDir2,iDir), sigma_loc, &
-                         & dfptdenimag=imagrhodummy, dfptvCoulimag=grvextdummy,dfptden0=imagrhodummy,stars2=stars_nosym,iDtype=0,iDir=iDir,iDir2=iDir2, &
-                         & sigma_disc2=MERGE(sigma_ext,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir2==3.AND.iDir==3.AND..FALSE.))
-               CALL dfpt_e2_madelung(fi_nosym%atoms,fi_nosym%input%jspins,imagrhodummy%mt(:,0,:,:),grgrVC3x3(iDir2,iDir)%mt(:,0,:,1),e2_vm(:,iDir2,iDir))
-            END DO
-         END DO
-      CALL save_npy("radii.npy",fi_nosym%atoms%rmsh(:,1))
       DO iDir2 = 1, 3
          DO iDir = 1, 3
-            CALL save_npy("grgrVC_"//int2str(idir2)//int2str(idir)//"_pw.npy",grgrVC3x3(iDir2,iDir)%pw(:,1))
-            CALL save_npy("grgrVCnum_"//int2str(idir2)//int2str(idir)//"_pw.npy",grgrvextnum(iDir2,iDir)%pw(:,1))
+            CALL imagrhodummy%resetPotDen()
+            sigma_loc = cmplx(0.0,0.0)
+
+            !IF (iDir2==3) sigma_loc = sigma_gext(iDir,:)
+            !IF (iDir==3) sigma_loc = sigma_gext(iDir2,:)
+            CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, fi%juphon, stars_nosym, fi_nosym%cell, &
+                        & sphhar_nosym, fi_nosym%atoms, .TRUE., imagrhodummy, grgrVC3x3(iDir2,iDir), sigma_loc, &
+                        & dfptdenimag=imagrhodummy, dfptvCoulimag=grvextdummy,dfptden0=imagrhodummy,stars2=stars_nosym,iDtype=0,iDir=iDir,iDir2=iDir2, &
+                        & sigma_disc2=MERGE(sigma_ext,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir2==3.AND.iDir==3.AND..FALSE.))
+            CALL dfpt_e2_madelung(fi_nosym%atoms,fi_nosym%input%jspins,imagrhodummy%mt(:,0,:,:),grgrVC3x3(iDir2,iDir)%mt(:,0,:,1),e2_vm(:,iDir2,iDir))
          END DO
       END DO
+   
+      ! Reactivate if second order properties need to be analyzed 
+      !CALL save_npy("radii.npy",fi_nosym%atoms%rmsh(:,1))
+      !DO iDir2 = 1, 3
+      !   DO iDir = 1, 3
+      !      CALL save_npy("grgrVC_"//int2str(idir2)//int2str(idir)//"_pw.npy",grgrVC3x3(iDir2,iDir)%pw(:,1))
+      !      CALL save_npy("grgrVCnum_"//int2str(idir2)//int2str(idir)//"_pw.npy",grgrvextnum(iDir2,iDir)%pw(:,1))
+      !   END DO
+      !END DO
       
       CALL grRho3(1)%distribute(fmpi%mpi_comm)
       CALL grRho3(2)%distribute(fmpi%mpi_comm)
@@ -370,7 +372,8 @@ CONTAINS
       CALL grVext3(3)%distribute(fmpi%mpi_comm)
       CALL timestop("Gradient generation")
       
-      CALL test_vac_stuff(fi_nosym,stars_nosym,sphhar_nosym,rho_nosym,vTot_nosym,grRho3,grVtot3,grVC3,grVext3,grrhodummy,grid)
+      ! Can be reactivated if film system is studied again
+      !CALL test_vac_stuff(fi_nosym,stars_nosym,sphhar_nosym,rho_nosym,vTot_nosym,grRho3,grVtot3,grVC3,grVext3,grrhodummy,grid)
 
       ! Old CRG-jp Routine to get the vectors G+q for Eii2
       CALL genPertPotDensGvecs( stars_nosym, fi_nosym%cell, fi_nosym%input, ngdp, ngdp2km, [0.0,0.0,0.0], recG )
