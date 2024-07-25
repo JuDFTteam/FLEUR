@@ -74,59 +74,62 @@ MODULE m_dfpt_potden_offset
         CALL timestart("DFPT potden offset correction")
 
         IF ( fmpi%irank==0 .AND. norm2(stars%center) < 1e-8 ) THEN 
-            DO WHILE (l_do)
-                ! IR integral
-                ! Only G=0 survives
-                CALL convol(stars, dummy_w,potden%pw(:,ispin))
-                int_ir = dummy_w(1) * cell%omtil
+            ! IR integral
+            ! Only G=0 survives
+            CALL convol(stars, dummy_w,potden%pw(:,ispin))
+            int_ir = dummy_w(1) * cell%omtil
 
-                ! Convolution for the constant shift we will add onto G=0
-                CALL convol(stars, dummy_const_w, dummy_const(:))
-                vol_ir = dummy_const_w(1) * cell%omtil
+            ! Convolution for the constant shift we will add onto G=0
+            CALL convol(stars, dummy_const_w, dummy_const(:))
+            vol_ir = dummy_const_w(1) * cell%omtil
 
-                ! MT part
-                ! Only l=0 survives
-                DO iType = 1, atoms%ntype
-                    IF (.NOT. l_den ) THEN
-                        mt_r(1:atoms%jri(iType),iType) = atoms%rmsh( 1:atoms%jri(iType),iType) **2 * potden%mt(1:atoms%jri(iType),0,iType,ispin)
-                        mt_Im(1:atoms%jri(iType),iType) = atoms%rmsh( 1:atoms%jri(iType),iType) **2 * potdenImag%mt(1:atoms%jri(iType),0,iType,ispin)
-                    ELSE 
-                        mt_r(1:atoms%jri(iType),iType) = potden%mt(1:atoms%jri(iType),0,iType,ispin) 
-                        mt_Im(1:atoms%jri(iType),iType) = potdenImag%mt(1:atoms%jri(iType),0,iType,ispin)
-                    END IF 
-                    CALL intgr3(mt_r(:,iType),atoms%rmsh(1,iType),atoms%dx(iType),atoms%jri(iType),int_mt_r(iType))
-                    CALL intgr3(mt_Im(:,iType),atoms%rmsh(1,iType),atoms%dx(iType),atoms%jri(iType),int_mt_Im(iType))
-                    
-                    vol_mts = vol_mts + atoms%volmts(iType)/sfp_const
-                    
-                    
-
-                    int_mt_tot = int_mt_tot + sfp_const* CMPLX(int_mt_r(iType),int_mt_Im(iType))
-                    write(f_write+2,*)  "Atom Type iDtype", iType , "Value", sfp_const*CMPLX(int_mt_r(iType),int_mt_Im(iType))
-                END DO 
-
-                sum_ints =  int_ir + int_mt_tot               
-                offset =  (-int_ir - int_mt_tot)/ (vol_ir + CMPLX(vol_mts,0))
-            
-                IF ( l_correct ) THEN
-                    potden%pw(1,ispin) = potden%pw(1,ispin) + offset
-                
-                    DO iType = 1, atoms%ntype 
-                        potden%mt(1:atoms%jri(iType),0,iType,ispin) = potden%mt(1:atoms%jri(iType),0,iType,ispin) + REAL(offset)
-                        potdenImag%mt(1:atoms%jri(iType),0,iType,ispin) = potdenImag%mt(1:atoms%jri(iType),0,iType,ispin) + AIMAG(offset)
-                    END DO 
+            ! MT part
+            ! Only l=0 survives
+            DO iType = 1, atoms%ntype
+                IF (.NOT. l_den ) THEN
+                    mt_r(1:atoms%jri(iType),iType) = atoms%rmsh( 1:atoms%jri(iType),iType) **2 * potden%mt(1:atoms%jri(iType),0,iType,ispin)
+                    mt_Im(1:atoms%jri(iType),iType) = atoms%rmsh( 1:atoms%jri(iType),iType) **2 * potdenImag%mt(1:atoms%jri(iType),0,iType,ispin)
+                ELSE 
+                    mt_r(1:atoms%jri(iType),iType) = potden%mt(1:atoms%jri(iType),0,iType,ispin) 
+                    mt_Im(1:atoms%jri(iType),iType) = potdenImag%mt(1:atoms%jri(iType),0,iType,ispin)
                 END IF 
-                count = count + 1 
-                IF (ABS(sum_ints) .LT. 1e-6 .OR. .NOT. l_correct) l_do = .FALSE.  
+                CALL intgr3(mt_r(:,iType),atoms%rmsh(1,iType),atoms%dx(iType),atoms%jri(iType),int_mt_r(iType))
+                CALL intgr3(mt_Im(:,iType),atoms%rmsh(1,iType),atoms%dx(iType),atoms%jri(iType),int_mt_Im(iType))
+                
+                vol_mts = vol_mts + atoms%volmts(iType)
+
+                int_mt_tot = int_mt_tot + sfp_const* CMPLX(int_mt_r(iType),int_mt_Im(iType))
+                write(f_write+2,*)  "Atom Type iDtype", iType , "Value", sfp_const*CMPLX(int_mt_r(iType),int_mt_Im(iType))
             END DO 
+
+            sum_ints =  int_ir + int_mt_tot       
+            offset =  (int_ir + int_mt_tot)/ (cell%omtil)
+            
+            IF ( l_correct) THEN
+                potden%pw(1,ispin) = potden%pw(1,ispin) - offset
+                ! this only works for densities atm 
+                IF (l_den) THEN
+                    DO iType = 1, atoms%ntype 
+                        potden%mt(1:atoms%jri(iType),0,iType,ispin) = potden%mt(1:atoms%jri(iType),0,iType,ispin) &
+                        &                                           - sfp_const * REAL(offset) * atoms%rmsh( 1:atoms%jri(iType),iType) **2
+                        potdenImag%mt(1:atoms%jri(iType),0,iType,ispin) = potdenImag%mt(1:atoms%jri(iType),0,iType,ispin) &
+                        &                                               - sfp_const* AIMAG(offset) * atoms%rmsh( 1:atoms%jri(iType),iType) **2
+                    END DO 
+                ELSE
+                    DO iType = 1, atoms%ntype 
+                        potden%mt(1:atoms%jri(iType),0,iType,ispin) = potden%mt(1:atoms%jri(iType),0,iType,ispin) &
+                        &                                           - sfp_const * REAL(offset) 
+                        potdenImag%mt(1:atoms%jri(iType),0,iType,ispin) = potdenImag%mt(1:atoms%jri(iType),0,iType,ispin) &
+                        &                                               - sfp_const* AIMAG(offset)
+                    END DO 
+                END IF
+            END IF 
             
             IF ( l_correct ) THEN 
                 write(f_write,*)  "Offset that was corrected for", offset
-                write(f_write,*)  "Number of corrections it took", count
                 write(f_write,*)  "Sum", int_mt_tot + int_ir
             ELSE 
-                write(f_write+1,*) "Offset", offset , "Sum", int_mt_tot + int_ir
-                write(f_write+1,*)  "Number of corrections it took", count
+                write(f_write+1,*) "Sum", int_mt_tot + int_ir
                 write(f_write+1,*) "Int ir", int_ir 
                 write(f_write+1,*) "Int mt", int_mt_tot
             END IF 
@@ -208,65 +211,71 @@ MODULE m_dfpt_potden_offset
         CALL timestart("DFPT vgen offset correction")
 
         IF ( fmpi%irank==0 .AND. norm2(starsq%center) < 1e-8 ) THEN 
-            DO WHILE (l_do)
-                ! IR integral
-                ! Only G=0 survives
-                CALL dfpt_surface_convol(1,stars, starsq, potden1,potden,dummy_w)
-                int_ir = dummy_w(1) * cell%omtil
+            ! IR integral
+            ! Only G=0 survives
+            CALL dfpt_surface_convol(1,stars, starsq, potden1,potden,dummy_w)
+            int_ir = dummy_w(1) * cell%omtil
 
-                ! Convolution for the constant shift we will add onto G=0
-                CALL convol(stars, dummy_const_w, dummy_const(:))
-                vol_ir = dummy_const_w(1) * cell%omtil
+            ! Convolution for the constant shift we will add onto G=0
+            CALL convol(stars, dummy_const_w, dummy_const(:))
+            vol_ir = dummy_const_w(1) * cell%omtil
 
-                ! MT part
-                ! Only l=0 survives
-                DO iType = 1, atoms%ntype
-                    IF (.NOT. l_den ) THEN
-                        mt_r(1:atoms%jri(iType),iType) = atoms%rmsh( 1:atoms%jri(iType),iType) **2 * potden1%mt(1:atoms%jri(iType),0,iType,ispin)
-                        mt_Im(1:atoms%jri(iType),iType) = atoms%rmsh( 1:atoms%jri(iType),iType) **2 * potden1Imag%mt(1:atoms%jri(iType),0,iType,ispin)
-                        IF (iType == iDtype) THEN
-                            mt_r(1:atoms%jri(iType),iType) = mt_r(1:atoms%jri(iType),iType) + atoms%rmsh( 1:atoms%jri(iType),iType) **2 * grpotden%mt(1:atoms%jri(iType),0,iType,ispin)
-                            !mt_Im(1:atoms%jri(iType),iType) =  mt_Im(1:atoms%jri(iType),iType) + atoms%rmsh( 1:atoms%jri(iType),iType) **2 * %mt(1:atoms%jri(iType),0,iType,ispin)
-                        END IF
-                    ELSE 
-                        mt_r(1:atoms%jri(iType),iType) = potden1%mt(1:atoms%jri(iType),0,iType,ispin)
-                        mt_Im(1:atoms%jri(iType),iType) = potden1Imag%mt(1:atoms%jri(iType),0,iType,ispin)
-                        IF (iType == iDtype) THEN
-                            mt_r(1:atoms%jri(iType),iType) = mt_r(1:atoms%jri(iType),iType) + grpotden%mt(1:atoms%jri(iType),0,iType,ispin)
-                        END IF 
+            ! MT part
+            ! Only l=0 survives
+            DO iType = 1, atoms%ntype
+                IF (.NOT. l_den ) THEN
+                    mt_r(1:atoms%jri(iType),iType) = atoms%rmsh( 1:atoms%jri(iType),iType) **2 * potden1%mt(1:atoms%jri(iType),0,iType,ispin)
+                    mt_Im(1:atoms%jri(iType),iType) = atoms%rmsh( 1:atoms%jri(iType),iType) **2 * potden1Imag%mt(1:atoms%jri(iType),0,iType,ispin)
+                    IF (iType == iDtype) THEN
+                        mt_r(1:atoms%jri(iType),iType) = mt_r(1:atoms%jri(iType),iType) + atoms%rmsh( 1:atoms%jri(iType),iType) **2 * grpotden%mt(1:atoms%jri(iType),0,iType,ispin)
+                        !mt_Im(1:atoms%jri(iType),iType) =  mt_Im(1:atoms%jri(iType),iType) + atoms%rmsh( 1:atoms%jri(iType),iType) **2 * %mt(1:atoms%jri(iType),0,iType,ispin)
+                    END IF
+                ELSE 
+                    mt_r(1:atoms%jri(iType),iType) = potden1%mt(1:atoms%jri(iType),0,iType,ispin)
+                    mt_Im(1:atoms%jri(iType),iType) = potden1Imag%mt(1:atoms%jri(iType),0,iType,ispin)
+                    IF (iType == iDtype) THEN
+                        mt_r(1:atoms%jri(iType),iType) = mt_r(1:atoms%jri(iType),iType) + grpotden%mt(1:atoms%jri(iType),0,iType,ispin)
                     END IF 
-                    CALL intgr3(mt_r(:,iType),atoms%rmsh(1,iType),atoms%dx(iType),atoms%jri(iType),int_mt_r(iType))
-                    CALL intgr3(mt_Im(:,iType),atoms%rmsh(1,iType),atoms%dx(iType),atoms%jri(iType),int_mt_Im(iType))
-
-                    
-                    vol_mts = vol_mts + atoms%volmts(iType)/sfp_const
-                    
-
-                    int_mt_tot = int_mt_tot + sfp_const * CMPLX(int_mt_r(iType),int_mt_Im(iType)) 
-                    write(f_write+2,*)  "Atom Type iDtype", iType , "Value", sfp_const*CMPLX(int_mt_r(iType),int_mt_Im(iType))
-                END DO 
-
-                sum_ints = int_ir + int_mt_tot
-                offset =  (-int_ir - int_mt_tot)/ (vol_ir + CMPLX(vol_mts,0))
-                
-                IF ( l_correct ) THEN
-                    potden1%pw(1,ispin) = potden1%pw(1,ispin) + offset
-                
-                    DO iType = 1, atoms%ntype 
-                        potden1%mt(1:atoms%jri(iType),0,iType,ispin) = potden1%mt(1:atoms%jri(iType),0,iType,ispin) + REAL(offset)
-                        potden1Imag%mt(1:atoms%jri(iType),0,iType,ispin) = potden1Imag%mt(1:atoms%jri(iType),0,iType,ispin) + AIMAG(offset)
-                    END DO 
                 END IF 
-                count = count + 1 
-                IF (ABS(sum_ints) .LT. 1e-6 .OR. .NOT. l_correct) l_do = .FALSE.  
-            END DO !l_do 
+                CALL intgr3(mt_r(:,iType),atoms%rmsh(1,iType),atoms%dx(iType),atoms%jri(iType),int_mt_r(iType))
+                CALL intgr3(mt_Im(:,iType),atoms%rmsh(1,iType),atoms%dx(iType),atoms%jri(iType),int_mt_Im(iType))
+
+                
+                vol_mts = vol_mts + atoms%volmts(iType)
+                
+
+                int_mt_tot = int_mt_tot + sfp_const * CMPLX(int_mt_r(iType),int_mt_Im(iType)) 
+                write(f_write+2,*)  "Atom Type iDtype", iType , "Value", sfp_const*CMPLX(int_mt_r(iType),int_mt_Im(iType))
+            END DO 
+
+            sum_ints = int_ir + int_mt_tot
+            offset =  (int_ir + int_mt_tot)/ cell%omtil 
+            
+            IF ( l_correct) THEN
+                potden1%pw(1,ispin) = potden1%pw(1,ispin) - offset
+                IF (l_den) THEN
+                    DO iType = 1, atoms%ntype 
+                        potden1%mt(1:atoms%jri(iType),0,iType,ispin) = potden1%mt(1:atoms%jri(iType),0,iType,ispin) &
+                        &                                           - sfp_const * REAL(offset) * atoms%rmsh( 1:atoms%jri(iType),iType) **2
+                        potden1Imag%mt(1:atoms%jri(iType),0,iType,ispin) = potden1Imag%mt(1:atoms%jri(iType),0,iType,ispin) &
+                        &                                               - sfp_const* AIMAG(offset) * atoms%rmsh( 1:atoms%jri(iType),iType) **2
+                    END DO 
+                ELSE
+                    DO iType = 1, atoms%ntype 
+                        potden1%mt(1:atoms%jri(iType),0,iType,ispin) = potden1%mt(1:atoms%jri(iType),0,iType,ispin) &
+                        &                                           - sfp_const * REAL(offset) 
+                        potden1Imag%mt(1:atoms%jri(iType),0,iType,ispin) = potden1Imag%mt(1:atoms%jri(iType),0,iType,ispin) &
+                        &                                               - sfp_const* AIMAG(offset)
+                    END DO 
+                END IF
+            END IF 
+            
             IF ( l_correct ) THEN 
                 write(f_write,*)  "Offset that was corrected for", offset
-                write(f_write,*)  "Number of corrections it took", count
                 write(f_write,*)  "Sum", int_mt_tot + int_ir
             ELSE 
-                write(f_write+1,*) "Offset", offset , "Sum", int_mt_tot + int_ir
-                write(f_write+1,*)  "Number of corrections it took", count
+                !write(f_write+1,*) "Offset", offset , 
+                write(f_write+1,*)"Sum", int_mt_tot + int_ir
                 write(f_write+1,*) "Int ir", int_ir 
                 write(f_write+1,*) "Int mt", int_mt_tot
             END IF 

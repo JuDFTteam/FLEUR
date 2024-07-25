@@ -67,7 +67,7 @@ CONTAINS
       TYPE(t_banddos)  :: banddosdummy
       TYPE(t_field)    :: field2
       TYPE(t_potden)  :: denOut1, denOut1Im, rho_loc, rho_loc0
-      TYPE(t_potden)   :: denIn1m, denIn1mIm, denOut1m, denOut1mIm
+      TYPE(t_potden)   :: denIn1m, denIn1mIm, denOut1m, denOut1mIm !, dummy_gr
 
       l_minusq = PRESENT(starsmq)
       realiter = 0
@@ -80,6 +80,8 @@ CONTAINS
       CALL rho_loc%copyPotDen(rho)
       CALL rho_loc0%copyPotDen(rho)
       CALL rho_loc0%resetPotDen()
+      !CAll dummy_gr%copyPotDen(grRho)
+      !CAll dummy_gr%resetpotden()
 
       banddosdummy = fi%banddos
 
@@ -378,6 +380,16 @@ CONTAINS
                denIn1mIm = denOut1mIm
                IF (fi%juphon%l_phonon) denIn1m%mt(:,0:,iDtype,:) = denIn1m%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
             END IF
+
+            !IF (fmpi%irank == 0 ) write(4501,*) "STRHO", "Type", iDtype, "Direction", iDir
+            !IF (fmpi%irank == 0 ) write(4500,*) "STRHO","Type",iDtype, "Direction", iDir
+            !CALL dfpt_potden_offset(1,fmpi,starsq,fi%cell,fi%atoms,denIn1,denIn1Im,.TRUE.,.TRUE.)
+            !CALL dfpt_potden_offset(1,fmpi,starsq,fi%cell,fi%atoms,denIn1,denIn1Im,.FALSE.,.TRUE.)
+            !IF (fmpi%irank == 0 ) write(4551,*) "STRHO", "Type", iDtype, "Direction", iDir
+            !IF (fmpi%irank == 0 ) write(4550,*) "STRHO","Type",iDtype, "Direction", iDir
+            !CALL dfpt_surface_offset(1,fmpi,starsq,stars,fi%cell,fi%atoms,denIn1,denIn1Im,rho,grRho,iDtype,.TRUE.,.TRUE.)
+            !CALL dfpt_surface_offset(1,fmpi,starsq,stars,fi%cell,fi%atoms,denIn1,denIn1Im,rho,grRho,iDtype,.FALSE.,.TRUE.)
+            
             CYCLE scfloop
          END IF
 
@@ -395,6 +407,14 @@ CONTAINS
                denIn1mIm = denOut1mIm
                IF (fi%juphon%l_phonon) denIn1m%mt(:,0:,iDtype,:) = denIn1m%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
             END IF
+            !IF (fmpi%irank == 0 ) write(4501,*) "NOT ONEDONE", "Type", iDtype, "Direction", iDir
+            !IF (fmpi%irank == 0 ) write(4500,*) "NOT ONEDONE","Type",iDtype, "Direction", iDir
+            !CALL dfpt_potden_offset(1,fmpi,starsq,fi%cell,fi%atoms,denIn1,denIn1Im,.TRUE.,.TRUE.)
+            !CALL dfpt_potden_offset(1,fmpi,starsq,fi%cell,fi%atoms,denIn1,denIn1Im,.FALSE.,.TRUE.)
+            !IF (fmpi%irank == 0 ) write(4551,*) "NOT ONEDONE", "Type", iDtype, "Direction", iDir
+            !IF (fmpi%irank == 0 ) write(4550,*) "NOT ONEDONE","Type",iDtype, "Direction", iDir
+            !CALL dfpt_surface_offset(1,fmpi,starsq,stars,fi%cell,fi%atoms,denIn1,denIn1Im,rho,grRho,iDtype,.TRUE.,.TRUE.)
+            !CALL dfpt_surface_offset(1,fmpi,starsq,stars,fi%cell,fi%atoms,denIn1,denIn1Im,rho,grRho,iDtype,.FALSE.,.TRUE.)
             CYCLE scfloop
          END IF
 
@@ -419,6 +439,24 @@ CONTAINS
             CALL denIn1m%distribute(fmpi%mpi_comm)
             CALL denIn1mIm%distribute(fmpi%mpi_comm)
          END IF
+
+         
+         ! we mix denOut1 into denIn1 therefore we need to correct denOut1 
+         ! but denOut1 does not contains the gradient. Gradient cancellation is already done for
+         ! give dummy_gr
+         !IF (fmpi%irank == 0 ) write(4551,*) "Iteration", iter, "Type", iDtype, "Direction", iDir
+         !IF (fmpi%irank == 0 ) write(4550,*) "Iteration", iter,"Type",iDtype, "Direction", iDir
+         !CALL dfpt_surface_offset(1,fmpi,starsq,stars,fi%cell,fi%atoms,denOut1,denOut1Im,rho,dummy_gr,iDtype,.TRUE.,.TRUE.)
+         !CALL dfpt_surface_offset(1,fmpi,starsq,stars,fi%cell,fi%atoms,denOut1,denOut1Im,rho,dummy_gr,iDtype,.FALSE.,.TRUE.)
+         
+         ! we need to account for the gradient if we do not take surface terms with us
+         !denOut1%mt(:,0:,iDtype,:) = denOut1%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
+         !IF (fmpi%irank == 0 ) write(4501,*) "Iteration", iter, "Type", iDtype, "Direction", iDir
+         !IF (fmpi%irank == 0 ) write(4500,*) "Iteration", iter,"Type",iDtype, "Direction", iDir
+         !CALL dfpt_potden_offset(1,fmpi,starsq,fi%cell,fi%atoms,denOut1,denOut1Im,.TRUE.,.TRUE.)
+         !CALL dfpt_potden_offset(1,fmpi,starsq,fi%cell,fi%atoms,denOut1,denOut1Im,.FALSE.,.TRUE.)
+         !denOut1%mt(:,0:,iDtype,:) = denOut1%mt(:,0:,iDtype,:) + grRho%mt(:,0:,iDtype,:)
+
 
 #ifdef CPP_MPI
          CALL MPI_BARRIER(fmpi%mpi_comm, ierr)
