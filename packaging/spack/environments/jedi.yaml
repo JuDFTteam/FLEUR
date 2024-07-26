@@ -12,7 +12,7 @@ spack:
   concretizer:
     unify: true
   repos:
-  - /p/home/jusers/wortmann1/jureca/fleur4htc/fleur/packaging/spack/repo
+  - ${FLEUR_SOURCE}/packaging/spack/repo
   packages:
     automake:
       buildable: false
