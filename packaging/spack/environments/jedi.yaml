@@ -45,7 +45,8 @@ spack:
     hdf5:
       buildable: false
       externals:
-      - spec: hdf5@1.12
+      - spec: hdf5@1.14.2
+        prefix: /p/software/jedi/stages/2024/software/HDF5/1.14.2-nvompic-2023a
         modules: [Stages/2024, NVHPC/24.3-CUDA-12, OpenMPI, HDF5]
     perl:
       buildable: false
