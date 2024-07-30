@@ -41,6 +41,7 @@ CONTAINS
          ikG0 = (ikG-1) / fmpi%n_size + 1
          DO ikGPr = 1, nvPr + atoms%nlo(iDtype)
             IF (ikGPr<=nvPr.AND.ikG<=nv) THEN
+               ! LAPW-LAPW
                pref = gvec(:, ikG) + lapw%bkpt
                pref = pref - gvecPr(:, ikGPr) - lapwPr%bkpt - lapwPr%qphon
                pref = ImagUnit * MATMUL(pref, bmat)
@@ -60,7 +61,7 @@ CONTAINS
                smat%data_c(ikGPr, ikG0) = smat%data_c(ikGPr, ikG0) &
                                       & + killcont(2) * pref(iDir) * smat_tmp%data_c(ikGPr, ikG0)
             ELSE IF (ikGPr<=nvPr.AND.ikG==nv+1) THEN
-
+               ! LAPW-LO
                DO iLo = 1, atoms%nlo(iDtype)
                   DO imLo = 1, lapw%nkvec(iLo,iDtype)
                      ikLo = lapw%kvec(imLo,iLo,iDtype)
@@ -77,6 +78,7 @@ CONTAINS
                   END DO
                END DO ! loop over LOs
 
+               ! This was a trial forget for now 
                !iLo = ikG-nv
                !l = atoms%llo(iLo, iDtype)
                !DO imLo = 1, 2*l+1
@@ -96,6 +98,7 @@ CONTAINS
                !   END IF
                !END DO
             ELSE IF (ikGPr>nvPr.AND.ikG<=nv) THEN
+               ! LO-LAPW
                iLoPr = ikGPr-nvPr
                lPr = atoms%llo(iLoPr, iDtype)
                DO imLoPr = 1, 2*lPr+1
@@ -112,6 +115,7 @@ CONTAINS
                                            & + killcont(2) * pref(iDir) * smat_tmp%data_c(ikGLoPr, ikG0)
                END DO
             ELSE IF (ikGPr>nvPr.AND.ikG>nv) THEN
+               ! LO-LO
                iLoPr = ikGPr-nvPr
                lPr = atoms%llo(iLoPr, iDtype)
                iLo = ikG-nv

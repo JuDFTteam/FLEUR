@@ -42,6 +42,7 @@ CONTAINS
       TYPE(t_mpimat)        :: ev_dist
       INTEGER               :: kernel
       CLASS(elpa_t), pointer :: elpa_obj
+      LOGICAL :: firstcall=.true.
 
       call timestart("ELPA 2018")
       SELECT TYPE (hmat)
@@ -51,7 +52,10 @@ CONTAINS
             CALL MPI_BARRIER(hmat%blacsdata%mpi_com, err)
             CALL MPI_COMM_SIZE(hmat%blacsdata%mpi_com, np, err)
             CALL MPI_COMM_RANK(hmat%blacsdata%mpi_com, myid, err)
-            err = elpa_init(20180525)
+            if (firstcall)THEN
+               err = elpa_init(20180525)
+               firstcall=.false.
+            endif   
             elpa_obj => elpa_allocate()
 
             ALLOCATE (eig2(hmat%global_size1), stat=err) ! The eigenvalue array
@@ -96,8 +100,9 @@ CONTAINS
             ENDIF
             call elpa_obj%timer_stop("ELPA")
             if (myid==0) call elpa_obj%print_times("ELPA")
+            call MPI_BARRIER(hmat%blacsdata%mpi_com,err)
             CALL elpa_deallocate(elpa_obj)
-            CALL elpa_uninit()
+            !CALL elpa_uninit()
             ! END of ELPA stuff
             !
             !     Each process has all eigenvalues in output

@@ -1,0 +1,100 @@
+# This is a Spack Environment file.
+#
+# It describes a set of packages to be installed, along with
+# configuration settings.
+spack:
+  # add package specs to the `specs` list
+  specs:
+  - fleur@develop%nvhpc+cuda+elpa+mpi+hdf5 cuda_arch=80
+  - elpa~openmp+cuda cuda_arch=80
+  - netlib-scalapack
+  view: true
+  concretizer:
+    unify: true
+  repos:
+  - ${FLEUR_SOURCE}/packaging/spack/repo
+  packages:
+    automake:
+      buildable: false
+      externals:
+      - spec: automake@1.16.5
+        prefix: /p/software/jedi/stages/2024/software/Automake/1.16.5-GCCcore-12.3.0
+        modules: [Autotools]
+    netlib-lapack:
+      externals:
+      - spec: netlib-lapack@2.0
+        prefix: /p/software/jedi/stages/2024/software/NVHPC/24.3-CUDA-12/Linux_aarch64/24.3/compilers  
+    autoconf:
+      buildable: false
+      externals:
+      - spec: autoconf@2.71
+        prefix: /p/software/jedi/stages/2024/software/Autoconf/2.71-GCCcore-12.3.0
+        modules: [Autotools]
+    mpi:
+      require: openmpi
+    libtool:
+      buildable: false
+      externals:
+      - spec: libtool@2.4.6
+        prefix: /usr
+    libxml2:
+      buildable: false
+      externals:
+      - spec: libxml2@2.11
+        modules: [Stages/2024, libxml2/.2.11.4]
+    hdf5:
+      buildable: false
+      externals:
+      - spec: hdf5@1.14.2
+        prefix: /p/software/jedi/stages/2024/software/HDF5/1.14.2-nvompic-2023a
+        modules: [Stages/2024, NVHPC/24.3-CUDA-12, OpenMPI, HDF5]
+    perl:
+      buildable: false
+      externals:
+      - spec: perl@5.26.3
+        prefix: /usr
+    python:
+      externals:
+      - spec: python@3.6.8
+        prefix: /usr
+      buildable: false
+    gmake:
+      buildable: false
+      externals:
+      - spec: gmake@4.2.1
+        prefix: /usr
+    openmpi:
+      buildable: false
+      externals:
+      - spec: openmpi@4.1.5
+        modules: [Stages/2024, NVHPC/24.3-CUDA-12, OpenMPI]
+    all:
+      variants:
+      - cuda_arch=80
+    cuda:
+      buildable: false
+      externals:
+      - spec: cuda@12.2.0
+        modules: [Stages/2024, CUDA/12]
+    lapack:
+      require: netlib-lapack
+    cmake:
+      buildable: false
+      externals:
+      - spec: cmake@3.26.3
+        modules:
+        - CMake
+  compilers:
+  - compiler:
+      spec: nvhpc@=24.3
+      paths:
+        cc: /p/software/jedi/stages/2024/software/NVHPC/24.3-CUDA-12/Linux_aarch64/24.3/compilers/bin/nvc
+        cxx: /p/software/jedi/stages/2024/software/NVHPC/24.3-CUDA-12/Linux_aarch64/24.3/compilers/bin/nvc++
+        f77: /p/software/jedi/stages/2024/software/NVHPC/24.3-CUDA-12/Linux_aarch64/24.3/compilers/bin/nvfortran
+        fc: /p/software/jedi/stages/2024/software/NVHPC/24.3-CUDA-12/Linux_aarch64/24.3/compilers/bin/nvfortran
+      flags: {}
+      operating_system: rhel9
+      target: aarch64
+      modules: [Stages/2024, NVHPC/24.3-CUDA-12, OpenMPI]
+      environment: {}
+      extra_rpaths: []

@@ -60,8 +60,6 @@ CONTAINS
 
       INTEGER                   :: nu
 
-      LOGICAL                   :: old_and_wrong
-
       COMPLEX                   :: wtfq
 
       TYPE(t_tlmplm) :: td, tdV1
@@ -82,7 +80,6 @@ CONTAINS
       EXTERNAL zdotc
 
 
-      old_and_wrong = .FALSE.
 
       CALL vx%copyPotDen(vTot)
       ALLOCATE(vx%pw_w, mold=vx%pw)
@@ -164,7 +161,7 @@ CONTAINS
             z1S = CMPLX(0.0,0.0)
 
             ! For the dynmat calculation: initialize the auxiliary coefficients
-            IF (.NOT.sh_den.AND..NOT.old_and_wrong) THEN
+            IF (.NOT.sh_den) THEN
                IF (fmpi%n_size == 1) THEN
                   ALLOCATE (t_mat::zMat2)
                ELSE
@@ -183,7 +180,7 @@ CONTAINS
             ALLOCATE(tempVec(nbasfcnq))
             ALLOCATE(tempMat1(nbasfcnq))
             ALLOCATE(tempMat2(nbasfcnq))
-            IF (.NOT.sh_den.AND..NOT.old_and_wrong) ALLOCATE(tempMat3(nbasfcnq))
+            IF (.NOT.sh_den) ALLOCATE(tempMat3(nbasfcnq))
 
             CALL timestart("Matrix multiplications")
             DO nu = 1, noccbd
@@ -219,15 +216,7 @@ CONTAINS
 
                ! tempMat1 = H^{(1}_{\nu'\nu}
                DO iNupr = 1, nbasfcnq
-                  IF (.NOT.sh_den.AND.old_and_wrong) THEN
-                     IF (norm2(bqpt)<1e-8.AND.iNupr==nu) THEN
-                        tempMat2(iNupr) = 0.0
-                     ELSE IF (ABS(eigq(iNupr)-eigk(nu))<fi%juPhon%eDiffCut) THEN
-                        tempMat2(iNupr) = 0.0
-                     ELSE
-                        tempMat2(iNupr) = 1.0/(eigq(iNupr)-eigk(nu))*tempMat1(iNupr)
-                     END IF
-                  ELSE IF (.NOT.sh_den.AND..NOT.old_and_wrong) THEN
+                  IF (.NOT.sh_den) THEN
                      IF (norm2(bqpt)<1e-8.AND.iNupr==nu) THEN
                         tempMat2(iNupr) = 0.0
                         tempMat3(iNupr) = 0.0
@@ -267,11 +256,11 @@ CONTAINS
 
                IF (zMatq%l_real) THEN
                   z1H(:nbasfcnq,nu) = -MATMUL(zMatq%data_r,tempMat2(:nbasfcnq))
-                  IF (.NOT.sh_den.AND..NOT.old_and_wrong) z1H2(:nbasfcnq,nu) = -MATMUL(zMatq%data_r,tempMat3(:nbasfcnq))
+                  IF (.NOT.sh_den) z1H2(:nbasfcnq,nu) = -MATMUL(zMatq%data_r,tempMat3(:nbasfcnq))
                ELSE
                   CALL CPP_zgemv('N',nbasfcnq,nbasfcnq,CMPLX(-1.0,0.0),zMatq%data_c,nbasfcnq,tempMat2,1,CMPLX(0.0,0.0),z1H(:nbasfcnq,nu),1)
                   !z1H(:nbasfcnq,nu) = -MATMUL(zMatq%data_c,tempMat2(:nbasfcnq))
-                  IF (.NOT.sh_den.AND..NOT.old_and_wrong) CALL CPP_zgemv('N',nbasfcnq,nbasfcnq,CMPLX(-1.0,0.0),zmatq%data_c,nbasfcnq,tempMat3,1,CMPLX(0.0,0.0),z1H2(:nbasfcnq,nu),1)
+                  IF (.NOT.sh_den) CALL CPP_zgemv('N',nbasfcnq,nbasfcnq,CMPLX(-1.0,0.0),zmatq%data_c,nbasfcnq,tempMat3,1,CMPLX(0.0,0.0),z1H2(:nbasfcnq,nu),1)
                   !IF (.NOT.sh_den.AND..NOT.old_and_wrong) z1H2(:nbasfcnq,nu) = -MATMUL(zMatq%data_c,tempMat3(:nbasfcnq))
                END IF
 
@@ -303,15 +292,7 @@ CONTAINS
                   
                ! tempMat1 = S^{(1}_{\nu'\nu}
                DO iNupr = 1, nbasfcnq
-                  IF (.NOT.sh_den.AND.old_and_wrong) THEN
-                     IF (norm2(bqpt)<1e-8.AND.iNupr==nu) THEN
-                        tempMat2(iNupr) = 0.0
-                     ELSE IF (ABS(eigq(iNupr)-eigk(nu))<fi%juPhon%eDiffCut) THEN
-                        tempMat2(iNupr) = 0.5*tempMat1(iNupr)
-                     ELSE
-                        tempMat2(iNupr) = -eigk(nu)/(eigq(iNupr)-eigk(nu))*tempMat1(iNupr)
-                     END IF
-                  ELSE IF (.NOT.sh_den.AND..NOT.old_and_wrong) THEN
+                  IF (.NOT.sh_den) THEN
                      IF (norm2(bqpt)<1e-8.AND.iNupr==nu) THEN
                         tempMat2(iNupr) = 0.0
                         tempMat3(iNupr) = 0.0
@@ -354,16 +335,16 @@ CONTAINS
 
                IF (zMatq%l_real) THEN
                   z1S(:nbasfcnq,nu) = -MATMUL(zMatq%data_r,tempMat2(:nbasfcnq))
-                  IF (.NOT.sh_den.AND..NOT.old_and_wrong) z1S2(:nbasfcnq,nu) = -MATMUL(zMatq%data_r,tempMat3(:nbasfcnq))
+                  IF (.NOT.sh_den) z1S2(:nbasfcnq,nu) = -MATMUL(zMatq%data_r,tempMat3(:nbasfcnq))
                ELSE
                   CALL CPP_zgemv('N',nbasfcnq,nbasfcnq,CMPLX(-1.0,0.0),zmatq%data_c,nbasfcnq,tempMat2,1,CMPLX(0.0,0.0),z1S(:nbasfcnq,nu),1)
                   !z1S(:nbasfcnq,nu) = -MATMUL(zMatq%data_c,tempMat2(:nbasfcnq))
-                  IF (.NOT.sh_den.AND..NOT.old_and_wrong) CALL CPP_zgemv('N',nbasfcnq,nbasfcnq,CMPLX(-1.0,0.0),zmatq%data_c,nbasfcnq,tempMat3,1,CMPLX(0.0,0.0),z1S2(:nbasfcnq,nu),1)
+                  IF (.NOT.sh_den) CALL CPP_zgemv('N',nbasfcnq,nbasfcnq,CMPLX(-1.0,0.0),zmatq%data_c,nbasfcnq,tempMat3,1,CMPLX(0.0,0.0),z1S2(:nbasfcnq,nu),1)
                   !IF (.NOT.sh_den.AND..NOT.old_and_wrong) z1S2(:nbasfcnq,nu) = -MATMUL(zMatq%data_c,tempMat3(:nbasfcnq))
                END IF
 
                zMat1%data_c(:nbasfcnq,nu) = z1H(:nbasfcnq,nu) + z1S(:nbasfcnq,nu)
-               IF (.NOT.sh_den.AND..NOT.old_and_wrong) zMat2%data_c(:nbasfcnq,nu) = z1H2(:nbasfcnq,nu) + z1S2(:nbasfcnq,nu)
+               IF (.NOT.sh_den) zMat2%data_c(:nbasfcnq,nu) = z1H2(:nbasfcnq,nu) + z1S2(:nbasfcnq,nu)
             END DO
 
             results1%neig = results%neig
@@ -392,12 +373,12 @@ CONTAINS
                CALL write_eig(dfpt_eig_id, nk, jsp, noccbd, noccbd, &
                               eigs1(:noccbd), n_start=n_size,n_end=n_rank,zMat=zMat1)
                eigBuffer(:noccbd,nk,jsp) = eigs1(:noccbd)
-               IF (.NOT.sh_den.AND..NOT.old_and_wrong) CALL write_eig(dfpt_eig_id2, nk, jsp, noccbd, noccbd, &
+               IF (.NOT.sh_den) CALL write_eig(dfpt_eig_id2, nk, jsp, noccbd, noccbd, &
                                                                       eigs1(:noccbd), n_start=n_size,n_end=n_rank,zMat=zMat2)
             ELSE
                IF (fmpi%pe_diag) CALL write_eig(dfpt_eig_id, nk, jsp, noccbd, &
                               n_start=fmpi%n_size,n_end=fmpi%n_rank,zMat=zMat1)
-               IF ((.NOT.sh_den).AND.(.NOT.old_and_wrong).AND.fmpi%pe_diag) CALL write_eig(dfpt_eig_id2, nk, jsp, noccbd, &
+               IF ((.NOT.sh_den).AND.fmpi%pe_diag) CALL write_eig(dfpt_eig_id2, nk, jsp, noccbd, &
                                                                               n_start=fmpi%n_size,n_end=fmpi%n_rank,zMat=zMat2)
             END IF
 
