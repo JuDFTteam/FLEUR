@@ -432,7 +432,10 @@ MODULE m_cdnpot_io_hdf
       CALL h5gopen_f(fileID, TRIM(ADJUSTL(groupName)), groupID, hdfError)
 
       CALL io_read_attreal0(groupID,'gmax',stars%gmax)
-      CALL io_read_attreal0(groupID,'gmaxz',stars%gmaxz)
+      stars%gmaxz = 0.0
+      IF (fileFormatVersion.GE.35) THEN
+         CALL io_read_attreal0(groupID,'gmaxz',stars%gmaxz)
+      END IF
 !      CALL io_read_attreal0(groupID,'gmaxInit',stars%gmaxInit)
       CALL io_read_attint0(groupID,'ng3',stars%ng3)
       CALL io_read_attint0(groupID,'ng2',stars%ng2)
