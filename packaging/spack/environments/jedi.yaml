@@ -5,7 +5,7 @@
 spack:
   # add package specs to the `specs` list
   specs:
-  - fleur@develop%nvhpc+cuda+elpa+mpi+hdf5 cuda_arch=80
+  - fleur@develop%nvhpc+cuda+elpa+mpi+hdf5 cuda_arch=90
   - elpa~openmp+cuda cuda_arch=80
   - netlib-scalapack
   view: true
@@ -92,7 +92,11 @@ spack:
         cxx: /p/software/jedi/stages/2024/software/NVHPC/24.3-CUDA-12/Linux_aarch64/24.3/compilers/bin/nvc++
         f77: /p/software/jedi/stages/2024/software/NVHPC/24.3-CUDA-12/Linux_aarch64/24.3/compilers/bin/nvfortran
         fc: /p/software/jedi/stages/2024/software/NVHPC/24.3-CUDA-12/Linux_aarch64/24.3/compilers/bin/nvfortran
-      flags: {}
+      flags:
+        cflags: -tp=host -O3
+        cppflags: -O3
+        cxxflags: -tp=host -O3
+        fflags: -tp=host -O3
       operating_system: rhel9
       target: aarch64
       modules: [Stages/2024, NVHPC/24.3-CUDA-12, OpenMPI]
