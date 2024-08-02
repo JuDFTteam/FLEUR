@@ -59,7 +59,7 @@ CONTAINS
       INTEGER :: invsfct,l,lm,lmp,lo,lolo,lolop,lop,lp,i,lo_lmax
       INTEGER :: mp,nkvec,nkvecp,lmplm,loplo,kp,m,mlo,mlolo,mlolo_new,lolop_new
       INTEGER :: locol,lorow,n,k,ab_size,ab_size_Pr,s
-      LOGICAL :: l_samelapw, anyColOnRank
+      LOGICAL :: l_samelapw
 
       ! Local Arrays
       COMPLEX, ALLOCATABLE :: abCoeffs(:,:), ax(:,:), bx(:,:), cx(:,:)
@@ -127,17 +127,6 @@ CONTAINS
          DO lo = 1,atoms%nlo(ntyp)
             l = atoms%llo(lo,ntyp)
             s = tlmplm%h_loc2_nonsph(ntyp) 
-
-            anyColOnRank = .FALSE.
-            DO nkvec = 1,invsfct*(2*l+1)
-               locol= lapw%nv(igSpin)+lapw%index_lo(lo,na)+nkvec ! This is the column of the matrix
-               IF (MOD(locol-1,fmpi%n_size) == fmpi%n_rank) THEN ! Only this MPI rank calculates this column
-                  anyColOnRank = .TRUE.
-                  EXIT
-               END IF
-            END DO
-            IF(.NOT.anyColOnRank) CYCLE
-
             !TODO here we copy the data to the CPU
             !$acc update self(abcoeffspr)
             call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,tlmplm%h_loc_LO(0:2*s-1,l*l:,ntyp,ilSpinPr,ilSpin),axPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
