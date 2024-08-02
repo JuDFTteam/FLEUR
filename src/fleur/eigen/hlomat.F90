@@ -58,7 +58,7 @@ CONTAINS
       COMPLEX :: prod,axx,bxx,cxx
       INTEGER :: invsfct,l,lm,lmp,lo,lolo,lolop,lop,lp,i,lo_lmax
       INTEGER :: mp,nkvec,nkvecp,lmplm,loplo,kp,m,mlo,mlolo,mlolo_new,lolop_new
-      INTEGER :: locol,lorow,n,k,ab_size,ab_size_Pr,s
+      INTEGER :: locol,lorow,n,k,ab_size,ab_size_Pr,s,colOffset, modOffset
       LOGICAL :: l_samelapw
 
       ! Local Arrays
@@ -134,36 +134,38 @@ CONTAINS
             call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,tlmplm%h_LO(0:2*s-1,-l:,lo+mlo,ilSpinPr,ilSpin),cxPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
             !$acc data copyin(axpr,bxpr,cxpr)
             
+            colOffset = lapw%nv(igSpin)+lapw%index_lo(lo,na)
+            modOffset = fmpi%n_rank - MOD(colOffset,fmpi%n_size)
+            If(modOffset.LT.0) modOffset = modOffset + fmpi%n_size
+
             !LAPW LO contributions
             !$acc kernels present(hmat,hmat%data_c,hmat%data_r,abclo,axpr,bxpr,cxpr)&
-            !$acc & copyin(lapw,lapw%nv,lapw%index_lo,fmpi,fmpi%n_size,fmpi%n_rank,lo,na,igSpin)
-            DO nkvec = 1,invsfct*(2*l+1)
-               locol= lapw%nv(igSpin)+lapw%index_lo(lo,na)+nkvec ! This is the column of the matrix
-               IF (MOD(locol-1,fmpi%n_size) == fmpi%n_rank) THEN ! Only this MPI rank calculates this column
-                  locol=(locol-1)/fmpi%n_size+1 ! This is the column in local storage
-                  IF (hmat%l_real) THEN
-                    DO m=-l,l
-                        DO kp = 1,lapwPr%nv(igSpinPr)
-                           hmat%data_r(kp,locol) = hmat%data_r(kp,locol) &
+            !$acc & copyin(lapw,lapw%nv,lapw%index_lo,fmpi,fmpi%n_size,fmpi%n_rank,lo,na,igSpin,colOffset,modOffset)
+            DO nkvec = 1+modOffset,invsfct*(2*l+1),fmpi%n_size
+               locol= colOffset+nkvec ! This is the column of the matrix
+               locol=(locol-1)/fmpi%n_size+1 ! This is the column in local storage
+               IF (hmat%l_real) THEN
+                  DO m=-l,l
+                     DO kp = 1,lapwPr%nv(igSpinPr)
+                        hmat%data_r(kp,locol) = hmat%data_r(kp,locol) &
                                                & + REAL(chi) * invsfct * (&
                                                & abclo(1,m,nkvec,lo) *  axPr(kp,l+1+m) + &
                                                & abclo(2,m,nkvec,lo) *  bxPr(kp,l+1+m) + &
                                                & abclo(3,m,nkvec,lo) *  cxPr(kp,l+1+m) )
-                        ENDDO   
-                    END DO
-                  ELSE
-                    DO m=-l,l
-                        DO kp = 1,lapwPr%nv(igSpinPr)
-                           hmat%data_c(kp,locol) = hmat%data_c(kp,locol) &
+                     ENDDO   
+                  END DO
+               ELSE
+                  DO m=-l,l
+                     DO kp = 1,lapwPr%nv(igSpinPr)
+                        hmat%data_c(kp,locol) = hmat%data_c(kp,locol) &
                                                & + chi * invsfct * ( &
                                                & abclo(1,m,nkvec,lo) *  axPr(kp,(l+1+m)) + &
                                                & abclo(2,m,nkvec,lo) *  bxPr(kp,(l+1+m)) + &
                                                & abclo(3,m,nkvec,lo) *  cxPr(kp,(l+1+m)) )
-                        ENDDO   
-                     END DO
-                  END IF
-                     ! Jump to the last matrix element of the current row
+                     ENDDO   
+                  END DO
                END IF
+                     ! Jump to the last matrix element of the current row
             END DO
             !$acc end kernels
             !$acc end data
