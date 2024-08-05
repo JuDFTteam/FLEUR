@@ -26,7 +26,7 @@ CONTAINS
       INTEGER, INTENT(IN) :: eig_id, dfpt_eig_id
 
       REAL    :: efermi, ef_num, ef_den, x
-      INTEGER :: j, jsp, k, nspins, noccbd
+      INTEGER :: j, jsp, k, nspins, noccbd, noccbd_max
 
       REAL, ALLOCATABLE :: sxm(:,:,:)
 
@@ -48,10 +48,13 @@ CONTAINS
          results1%ef = 0.0
          ef_num = 0.0
          ef_den = 0.0
+         noccbd_max = 0
+         sxm = 0.0
 
          DO jsp = 1, nspins
             DO k = 1, kpts%nkpt
                noccbd  = COUNT(results%w_iks(:,k,jsp)*2.0/input%jspins>1.e-8)
+               IF (noccbd > noccbd_max ) noccbd_max = noccbd
                DO j = 1, noccbd
                   x = (results%eig(j,k,jsp)-efermi)/input%tkb
                   sxm(j,k,jsp) = sfermi(-x)
@@ -67,9 +70,9 @@ CONTAINS
             results1%ef = 0.0
          END IF
 
-         results1%w_iks(:noccbd,:,1:nspins) = -results%w_iks(:noccbd,:,1:nspins) &
-                                            * sxm(:noccbd,:,1:nspins) &
-                                            * (results1%eig(:noccbd,:,1:nspins)-results1%ef)/input%tkb
+         results1%w_iks(:noccbd_max,:,1:nspins) = -results%w_iks(:noccbd_max,:,1:nspins) &
+                                            * sxm(:noccbd_max,:,1:nspins) &
+                                            * (results1%eig(:noccbd_max,:,1:nspins)-results1%ef)/input%tkb
       END IF
 
       RETURN
