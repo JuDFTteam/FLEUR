@@ -133,8 +133,8 @@ CONTAINS
                   l_anyColOnMPI = .TRUE.
                END IF
             END DO
-            IF(.NOT.l_anyColOnMPI) CYCLE
             CALL timestop("LAPW-LO-1")
+            IF(.NOT.l_anyColOnMPI) CYCLE
             CALL timestart("LAPW-LO-1b")
             l = atoms%llo(lo,ntyp)
             s = tlmplm%h_loc2_nonsph(ntyp) 
