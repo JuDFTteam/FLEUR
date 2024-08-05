@@ -128,13 +128,6 @@ CONTAINS
             l = atoms%llo(lo,ntyp)
             s = tlmplm%h_loc2_nonsph(ntyp)
 
-            CALL timestart("LAPW-LO: ACC copy to cpu")
-
-            !TODO here we copy the data to the CPU
-            !$acc update self(abcoeffspr)
-
-            CALL timestop("LAPW-LO: ACC copy to cpu")
-
             l_AnyColOnMPI = .FALSE.
             DO nkvec = 1,invsfct*(2*l+1)
                locol= lapw%nv(igSpin)+lapw%index_lo(lo,na)+nkvec ! This is the column of the matrix
@@ -143,6 +136,13 @@ CONTAINS
                END IF
             END DO
             IF(.NOT.l_AnyColOnMPI) CYCLE
+
+            CALL timestart("LAPW-LO: ACC copy to cpu")
+
+            !TODO here we copy the data to the CPU
+            !$acc update self(abcoeffspr)
+
+            CALL timestop("LAPW-LO: ACC copy to cpu")
 
             call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,tlmplm%h_loc_LO(0:2*s-1,l*l:,ntyp,ilSpinPr,ilSpin),axPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
             call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,tlmplm%h_loc_LO(0:2*s-1,s+l*l:,ntyp,ilSpinPr,ilSpin),bxPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
