@@ -128,8 +128,12 @@ CONTAINS
             l = atoms%llo(lo,ntyp)
             s = tlmplm%h_loc2_nonsph(ntyp)
 
+            CALL timestart("LAPW-LO: ACC copy to cpu")
+
             !TODO here we copy the data to the CPU
             !$acc update self(abcoeffspr)
+
+            CALL timestop("LAPW-LO: ACC copy to cpu")
 
             l_AnyColOnMPI = .FALSE.
             DO nkvec = 1,invsfct*(2*l+1)
