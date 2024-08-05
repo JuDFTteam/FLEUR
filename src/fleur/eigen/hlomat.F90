@@ -59,7 +59,7 @@ CONTAINS
       INTEGER :: invsfct,l,lm,lmp,lo,lolo,lolop,lop,lp,i,lo_lmax
       INTEGER :: mp,nkvec,nkvecp,lmplm,loplo,kp,m,mlo,mlolo,mlolo_new,lolop_new
       INTEGER :: locol,lorow,n,k,ab_size,ab_size_Pr,s
-      LOGICAL :: l_samelapw, l_AnyColOnMPI
+      LOGICAL :: l_samelapw
 
       ! Local Arrays
       COMPLEX, ALLOCATABLE :: abCoeffs(:,:), ax(:,:), bx(:,:), cx(:,:)
@@ -122,27 +122,19 @@ CONTAINS
          IF (sym%invsat(na) == 0) invsfct = 1
          IF (sym%invsat(na) == 1) invsfct = 2
          CALL timestart("LAPW-LO")
+
+         CALL timestart("LAPW-LO: ACC copy to cpu")
+
+         !TODO here we copy the data to the CPU
+         !$acc update self(abcoeffspr)
+
+         CALL timestop("LAPW-LO: ACC copy to cpu")
+
          ! Calculate the hamiltonian matrix elements with the regular
          ! LAPW basis-functions   
          DO lo = 1,atoms%nlo(ntyp)
             l = atoms%llo(lo,ntyp)
             s = tlmplm%h_loc2_nonsph(ntyp)
-
-            l_AnyColOnMPI = .FALSE.
-            DO nkvec = 1,invsfct*(2*l+1)
-               locol= lapw%nv(igSpin)+lapw%index_lo(lo,na)+nkvec ! This is the column of the matrix
-               IF (MOD(locol-1,fmpi%n_size) == fmpi%n_rank) THEN ! Only this MPI rank calculates this column
-                  l_AnyColOnMPI = .TRUE.
-               END IF
-            END DO
-            IF(.NOT.l_AnyColOnMPI) CYCLE
-
-            CALL timestart("LAPW-LO: ACC copy to cpu")
-
-            !TODO here we copy the data to the CPU
-            !$acc update self(abcoeffspr)
-
-            CALL timestop("LAPW-LO: ACC copy to cpu")
 
             call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,tlmplm%h_loc_LO(0:2*s-1,l*l:,ntyp,ilSpinPr,ilSpin),axPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
             call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,tlmplm%h_loc_LO(0:2*s-1,s+l*l:,ntyp,ilSpinPr,ilSpin),bxPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
