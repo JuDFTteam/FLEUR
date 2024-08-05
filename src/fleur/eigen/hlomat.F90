@@ -59,7 +59,7 @@ CONTAINS
       INTEGER :: invsfct,l,lm,lmp,lo,lolo,lolop,lop,lp,i,lo_lmax
       INTEGER :: mp,nkvec,nkvecp,lmplm,loplo,kp,m,mlo,mlolo,mlolo_new,lolop_new
       INTEGER :: locol,lorow,n,k,ab_size,ab_size_Pr,s
-      LOGICAL :: l_samelapw, l_anyColOnMPI
+      LOGICAL :: l_samelapw
 
       ! Local Arrays
       COMPLEX, ALLOCATABLE :: abCoeffs(:,:), ax(:,:), bx(:,:), cx(:,:)
@@ -125,17 +125,6 @@ CONTAINS
          ! Calculate the hamiltonian matrix elements with the regular
          ! LAPW basis-functions   
          DO lo = 1,atoms%nlo(ntyp)
-            CALL timestart("LAPW-LO-1")
-            l_anyColOnMPI = .FALSE.
-            DO nkvec = 1,invsfct*(2*l+1)
-               locol= lapw%nv(igSpin)+lapw%index_lo(lo,na)+nkvec ! This is the column of the matrix
-               IF (MOD(locol-1,fmpi%n_size) == fmpi%n_rank) THEN
-                  l_anyColOnMPI = .TRUE.
-               END IF
-            END DO
-            CALL timestop("LAPW-LO-1")
-            IF(.NOT.l_anyColOnMPI) CYCLE
-            CALL timestart("LAPW-LO-1b")
             l = atoms%llo(lo,ntyp)
             s = tlmplm%h_loc2_nonsph(ntyp) 
             !TODO here we copy the data to the CPU
@@ -144,8 +133,7 @@ CONTAINS
             call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,tlmplm%h_loc_LO(0:2*s-1,s+l*l:,ntyp,ilSpinPr,ilSpin),bxPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
             call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,tlmplm%h_LO(0:2*s-1,-l:,lo+mlo,ilSpinPr,ilSpin),cxPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
             !$acc data copyin(axpr,bxpr,cxpr)
-            CALL timestop("LAPW-LO-1b")
-            CALL timestart("LAPW-LO-2")
+            
             !LAPW LO contributions
             !$acc kernels present(hmat,hmat%data_c,hmat%data_r,abclo,axpr,bxpr,cxpr)&
             !$acc & copyin(lapw,lapw%nv,lapw%index_lo,fmpi,fmpi%n_size,fmpi%n_rank,lo,na,igSpin)
@@ -179,7 +167,6 @@ CONTAINS
             END DO
             !$acc end kernels
             !$acc end data
-            CALL timestop("LAPW-LO-2")
          ENDDO
          CALL timestop("LAPW-LO")
          IF (l_fullj) THEN
