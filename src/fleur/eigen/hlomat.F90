@@ -123,15 +123,11 @@ CONTAINS
          IF (sym%invsat(na) == 1) invsfct = 2
          CALL timestart("LAPW-LO")
 
-         CALL timestart("LAPW-LO: ACC copy to cpu")
-
-         !TODO here we copy the data to the CPU
+         !Here we copy the data to the CPU (This seems to be the main time consumer of this subroutine.)
          !$acc update self(abcoeffspr)
 
-         CALL timestop("LAPW-LO: ACC copy to cpu")
-
          ! Calculate the hamiltonian matrix elements with the regular
-         ! LAPW basis-functions   
+         ! LAPW basis-functions
          DO lo = 1,atoms%nlo(ntyp)
             l = atoms%llo(lo,ntyp)
             s = tlmplm%h_loc2_nonsph(ntyp)
