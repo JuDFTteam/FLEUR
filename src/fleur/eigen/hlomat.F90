@@ -134,7 +134,7 @@ CONTAINS
          !Here we copy the data to the CPU (This seems to be the main time consumer of this subroutine.)
 !         !$acc update self(abcoeffspr)
 
-         !$acc data copyin(axpr,bxpr,cxpr)
+         !$acc data create(axPr,bxPr,cxPr)
 
          ! Calculate the hamiltonian matrix elements with the regular
          ! LAPW basis-functions
@@ -188,8 +188,8 @@ CONTAINS
                END IF
             END DO
             !$acc end kernels
-            !$acc end data
          ENDDO
+         !$acc end data
          CALL timestop("LAPW-LO")
          IF (l_fullj) THEN
             CALL timestart("LO-LAPW")
