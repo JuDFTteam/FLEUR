@@ -145,7 +145,7 @@ CONTAINS
          !print*, "dfptvefieldimag%pw", shape(dfptvefieldimag%pw)
          !print*,'lbound(dfptvefield%mt,1)',lbound(dfptvefield%mt,1)
 
-         CALL dfpt_vefield(juphon,atoms,sym,sphhar,cell,dfptvefield,dfptvefieldimag,3)
+         CALL dfpt_vefield(juphon,atoms,sym,sphhar,cell,dfptvefield,dfptvefieldimag,iDir)
          !print*, "now after calling dfpt_vefield "
          !print*,"dfptvefield%pw(:,1)",dfptvefield%pw(:,1) 
          !print*,"dfptvefield%mtreal(:,1)",dfptvefield%mt(:,1,:,1) 
@@ -153,11 +153,11 @@ CONTAINS
          !STOP
          !print*,"checkdopall:"
          !write(oUnit,*) "Here checkdopall"
-         write(oUnit,*) "l_max =", atoms%lmax
-         write(oUnit,*) "qlim =(0,0,", juphon%qlim,")"
-         write(oUnit,*) "Center Stars",starsq%center
-         print*,"starsq"
-         print* , "Center Stars", starsq%center 
+         !write(oUnit,*) "l_max =", atoms%lmax
+         !write(oUnit,*) "qlim =(0,0,", juphon%qlim,")"
+         !write(oUnit,*) "Center Stars",starsq%center
+         !print*,"starsq"
+         !print* , "Center Stars", starsq%center 
          !starsq%center = [0.0,0.0,0.0625]
          !print* , "Center Stars", starsq%center 
          CALL checkDOPALL(input, sphhar, starsq,atoms, sym, vacuum, cell,dfptvefield,1, dfptvefieldimag   )
@@ -283,7 +283,6 @@ CONTAINS
       ELSE
          ! TODO: Write here something for the gradient. It does not need pw(_w)-stuff.
       END IF
-
       CALL dfptvTot%distribute(fmpi%mpi_comm)
       CALL dfptvTotimag%distribute(fmpi%mpi_comm)
 

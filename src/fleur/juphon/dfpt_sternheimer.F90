@@ -31,7 +31,7 @@ CONTAINS
       TYPE(t_stars),      INTENT(IN)    :: stars
       TYPE(t_stars),      INTENT(INOUT) :: starsq
       TYPE(t_nococonv),   INTENT(IN)    :: nococonv
-      TYPE(t_kpts),       INTENT(IN)    :: qpts
+      TYPE(t_kpts),       INTENT(INOUT) :: qpts !out added for efield
       TYPE(t_mpi),        INTENT(IN)    :: fmpi
       TYPE(t_results),    INTENT(INOUT) :: results, resultsq, results1
       TYPE(t_hybdat),     INTENT(INOUT) :: hybdat
@@ -55,7 +55,7 @@ CONTAINS
       TYPE(t_potden),  OPTIONAL, INTENT(INOUT) :: vTot1m, vTot1mIm
 
       !changes for efield:
-      real                              :: qvec_ext(3),qvec_int(3),det,inv_bmat(3,3)
+      real                              :: qvec_ext(3),qvec_int(3),det,inv_bmat(3,3),qvec_norm(3)
 
 #ifdef CPP_MPI
       INTEGER :: ierr
@@ -85,6 +85,14 @@ CONTAINS
       CALL rho_loc0%resetPotDen()
 
       banddosdummy = fi%banddos
+      !choose correct q for efield:
+      print*,"qpts%bk(:,iQ)",qpts%bk(:,iQ)
+      IF ( fi%juPhon%l_efield) THEN
+         qvec_norm(iDir) = 1
+         print*,"qvec_norm(iDir) ", qvec_norm(iDir) 
+         qpts%bk(:,iQ) = fi%juPhon%qlim*qvec_norm(:)
+         print*,"qpts%bk(:,iQ)",qpts%bk(:,iQ)
+      END IF
 
       ! Calculate the q-shifted G-vectors and related quantities like the perturbed step function
       IF ( fi%juPhon%l_efield) THEN

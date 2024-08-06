@@ -150,6 +150,8 @@ module m_dfpt_dielecten
             diel_tensor_occ1(:,:) = 0.0
             !print*, "results1%eig(:,:,:)", results1%eig(:,:,:)
             we1_data(:,:,:,no_row) = results1%w_iks
+            !print*, "shape(we1_data)",shape(we1_data)
+            !stop
             eig1_data(:,:,:,no_row) = results1%eig
             if (no_row == 3*fi%atoms%ntype) then
                 !print*,"end of rows"

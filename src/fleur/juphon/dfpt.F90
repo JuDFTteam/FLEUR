@@ -231,6 +231,7 @@ CONTAINS
          q_list = (/(iArray, iArray=1,SIZE(fi%juPhon%qvec,2), 1)/)
       END IF
 
+
       ! Generate the gradients of the density and the various potentials, that will be used at different points in the programm.
       ! The density gradient is calculated by numerical differentiation, while the potential gradients are constructed (from the
       ! density gradient) by a Weinert construction, just like the potentials are from the density.
@@ -594,7 +595,8 @@ CONTAINS
                   IF (fi%juPhon%l_efield) THEN
                      CALL dfpt_dielecten_row_HF(fi_nosym,stars_nosym,starsq,sphhar_nosym,fmpi_nosym,denIn1,denIn1Im,results_nosym, results1,3 *(iDtype-1)+iDir,diel_tensor(3 *(iDtype-1)+iDir,:))
                      CALL dfpt_dielecten_occ1(fi,fmpi,results1,we1_data,eig1_data,diel_tensor_occ1,3 *(iDtype-1)+iDir)
-
+                     call save_npy("integralpart.npy",diel_tensor(:,:))
+                     call save_npy("diel_tensor_occ1.npy",diel_tensor_occ1(:,:))
                      diel_tensor(:,:) = diel_tensor(:,:) + diel_tensor_occ1(:,:)
                      print*, 'diel_tensor(:,:)',diel_tensor(:,:)
                   ELSE
@@ -633,6 +635,7 @@ CONTAINS
 #endif      
             END DO
             diel_tensor(:,:) = dielten_iden(:,:) - (fpi_const/fi%cell%omtil)*diel_tensor(:,:)
+            call save_npy("dielten_iden.npy",dielten_iden(:,:))
             call save_npy("diel_tensor.npy",diel_tensor(:,:))
             STOP
             !IF (fi%juPhon%l_efield) THEN
