@@ -270,20 +270,19 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
 
    IF (fmpi%irank == 0) CALL openXMLElementNoAttributes('allElectronCharges')
    CALL qfix(fmpi,stars,nococonv,atoms,sym,vacuum,sphhar,input,cell ,outDen,noco%l_noco,.TRUE.,l_par=.TRUE.,force_fix=.TRUE.,fix=fix)
-   IF (fmpi%irank == 0) THEN
-      CALL closeXMLElement('allElectronCharges')
-
-      IF (input%jspins == 2) THEN
-         !Calculate and write out spin densities at the nucleus and magnetic moments in the spheres
+   IF (fmpi%irank == 0) CALL closeXMLElement('allElectronCharges')
+   IF (input%jspins == 2) THEN
+      !Calculate and write out spin densities at the nucleus and magnetic moments in the spheres
+      IF (fmpi%irank == 0) THEN
          CALL spinMoments(input,atoms,noco,nococonv,den=outDen)
          CALL orbMoments(input,atoms,noco,nococonv,moments)
          if (any(noco%l_constrained)) call nococonv%update_b_cons(atoms,noco,vtot,outDen)
-
-         if (sym%nop==1.and..not.input%film) call magMultipoles(sym,juphon,stars, atoms,cell, sphhar, vacuum, input, noco,nococonv,outden)
-         !Generate and save the new nocoinp file if the directions of the local
-         !moments are relaxed or a constraint B-field is calculated.
       END IF
-   END IF ! fmpi%irank == 0
+
+      if (sym%nop==1.and..not.input%film) call magMultipoles(fmpi,sym,juphon,stars, atoms,cell, sphhar, vacuum, input, noco,nococonv,outden)
+      !Generate and save the new nocoinp file if the directions of the local
+      !moments are relaxed or a constraint B-field is calculated.
+   END IF
    Perform_metagga = Allocated(Energyden%Mt) &
                    .And. (Xcpot%Exc_is_metagga() .Or. Xcpot%Vx_is_metagga())
    If(Perform_metagga) Then

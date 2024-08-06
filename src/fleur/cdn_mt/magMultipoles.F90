@@ -9,10 +9,11 @@ MODULE m_magMultipoles
   USE m_constants
   IMPLICIT NONE
 CONTAINS
-  SUBROUTINE magMultipoles(sym,juphon,stars, atoms,cell, sphhar, vacuum, input, noco,nococonv,outden)
+  SUBROUTINE magMultipoles(fmpi,sym,juphon,stars, atoms,cell, sphhar, vacuum, input, noco,nococonv,outden)
     USE m_plot
     USE m_divergence
     USE m_mpmom
+    TYPE(t_mpi),INTENT(IN)                      :: fmpi
     TYPE(t_input),INTENT(IN)                    :: input
     TYPE(t_atoms), INTENT(IN)                   :: atoms
     TYPE(t_sphhar), INTENT(IN)                  :: sphhar
@@ -45,16 +46,18 @@ CONTAINS
     CALL matrixsplit(sym,stars, atoms, sphhar, vacuum, input, noco,nococonv, 1.0, &
          outden, cden, m_den(1), m_den(2), m_den(3))
     !Calcalate divergence
-    CALL divergence(input,stars,atoms,sphhar,vacuum,sym,cell,noco,m_den,div)
+    CALL divergence(fmpi,input,stars,atoms,sphhar,vacuum,sym,cell,noco,m_den,div)
     qlmo = 0.0
     CALL mt_moments( input, atoms, sym, juphon, sphhar, div%mt(:,:,:,1), POTDEN_TYPE_POTCOUL,qlmo,.FALSE.)
 
-    WRITE(oUnit,*) "Magnetic Multipoles:"
-    DO n=1,atoms%ntype
-       WRITE(oUnit,*) "Atom type:",n
-       DO l=0,4
-          WRITE(oUnit,"(10(2f12.7,3x))") (qlmo(m,l,n),m=-l,l)
-       ENDDO
-    ENDDO
+    IF (fmpi%irank == 0) THEN    
+       WRITE(oUnit,*) "Magnetic Multipoles:"
+       DO n=1,atoms%ntype
+          WRITE(oUnit,*) "Atom type:",n
+          DO l=0,4
+             WRITE(oUnit,"(10(2f12.7,3x))") (qlmo(m,l,n),m=-l,l)
+          END DO
+       END DO
+    END IF
   END SUBROUTINE magMultipoles
 END MODULE m_magMultipoles

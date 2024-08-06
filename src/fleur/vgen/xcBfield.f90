@@ -154,7 +154,7 @@ CONTAINS
       div%pw_w = CMPLX(0.0,0.0)
 
       CALL timestart("Building divergence")
-      CALL divergence(input,stars,atoms,sphhar,vacuum,sym,cell,noco,aVec,div)
+      CALL divergence(fmpi,input,stars,atoms,sphhar,vacuum,sym,cell,noco,aVec,div)
       CALL timestop("Building divergence")
 
       ! Local atoms variable with no charges;

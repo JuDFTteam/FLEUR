@@ -10,7 +10,7 @@ MODULE m_divergence
    PUBLIC :: divergence, vac_grad, divpotgrad
 
 CONTAINS
-   SUBROUTINE divergence(input,stars,atoms,sphhar,vacuum,sym,cell,noco,bxc,div)
+   SUBROUTINE divergence(fmpi,input,stars,atoms,sphhar,vacuum,sym,cell,noco,bxc,div)
       USE m_lattHarmsSphHarmsConv
       USE m_gradYlm
       USE m_constants
@@ -24,6 +24,7 @@ CONTAINS
 
       IMPLICIT NONE
 
+      TYPE(t_mpi),                  INTENT(IN)    :: fmpi
       TYPE(t_input),                INTENT(IN)    :: input
       TYPE(t_stars),                INTENT(IN)    :: stars
       TYPE(t_atoms),                INTENT(IN)    :: atoms
