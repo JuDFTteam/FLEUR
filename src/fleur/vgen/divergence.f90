@@ -47,6 +47,8 @@ CONTAINS
       ALLOCATE(flm(atoms%jmtd,indmax,atoms%ntype))
       ALLOCATE(divflm(atoms%jmtd,indmax,atoms%ntype))
 
+      CALL timestart("region 1")
+
       DO i=1,3
          DO iType=1, atoms%ntype
             CALL lattHarmsRepToSphHarms(sym, atoms, sphhar, iType, bxc(i)%mt(:,:,iType,1), flm(:,:,iType))
@@ -59,15 +61,17 @@ CONTAINS
             CALL gradYlm(atoms,flm,grsflm3)
          END IF
       END DO
-
+      CALL timestop("region 1")
+      CALL timestart("region 2")
       DEALLOCATE(flm)
 
       CALL divYlm(grsflm1(:,:indmax,:,:),grsflm2(:,:indmax,:,:),grsflm3(:,:indmax,:,:), divflm)
-
+      CALL timestop("region 2")
+      CALL timestart("region 3")
       DO iType=1, atoms%ntype
          CALL sphHarmsRepToLattHarms(sym, atoms, sphhar, iType, divflm(:,1:indmax,iType), div%mt(:,0:,iType,1))
       END DO
-
+      CALL timestop("region 3")
       DEALLOCATE(divflm,grsflm1,grsflm2,grsflm3)
 
       CALL timestop("MT divergence")
