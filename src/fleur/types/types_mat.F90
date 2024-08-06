@@ -803,9 +803,11 @@ CONTAINS
          if(ldc < max(1,m)) call judft_error("problem with ldc")
 
          if(run_on_gpu) then
+            WRITE(1001,*) 'A-1'
             call perform_cublas_gemm(mat1%l_real, transA_i,transB_i,m,n,k, lda, ldb, ldc,&
                                     mat1%data_r, mat1%data_c, mat2%data_r, mat2%data_c, res%data_r, res%data_c)
          else
+            WRITE(1001,*) 'B-1'
             IF (mat1%l_real) THEN
                call dgemm(transA_i,transB_i,m,n,k, 1.0, mat1%data_r, lda, mat2%data_r, ldb, 0.0, res%data_r, ldc)
             ELSE
@@ -821,12 +823,14 @@ CONTAINS
          if(ldc < max(1,m)) call judft_error("problem with ldc")
 
          if(run_on_gpu) then
+            WRITE(1001,*) 'A-2'
             !$acc data create(tmp, tmp%data_r, tmp%data_c)
             call perform_cublas_gemm(mat1%l_real, transA_i, transB_i, m,n,k, lda, ldb, ldc,& 
                                      mat1%data_r, mat1%data_c, mat2%data_r, mat2%data_c, tmp%data_r, tmp%data_c)
             call mat1%copy(tmp,1,1)
             !$acc end data
          else
+            WRITE(1001,*) 'B-2'
             if (mat1%l_real) THEN
                call dgemm(transA_i,transB_i,n,n,n, 1.0, mat1%data_r, lda, mat2%data_r, ldb, 0.0, tmp%data_r, ldc)
             ELSE
