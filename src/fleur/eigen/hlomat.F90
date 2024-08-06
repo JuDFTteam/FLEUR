@@ -20,6 +20,19 @@ CONTAINS
   SUBROUTINE hlomat(input,atoms,fmpi,lapw,ud,tlmplm,sym,cell,noco,nococonv,ilSpinPr,ilSpin,&
        ntyp,na,fjgj,alo1,blo1,clo1, igSpinPr,igSpin,chi,hmat,l_fullj,l_ham,lapwq,fjgjq)
 
+#ifdef _OPENACC
+#ifdef __PGI
+    use cublas
+#endif
+#define CPP_ACC acc
+#define CPP_OMP no_OMP_used
+#define zgemm_acc cublaszgemm
+#else
+#define CPP_ACC No_acc_used
+#define CPP_OMP OMP
+#define zgemm_acc zgemm
+#endif
+
     USE m_hsmt_ab
     USE m_types
 !    USE m_types_mpimat
@@ -58,7 +71,7 @@ CONTAINS
       COMPLEX :: prod,axx,bxx,cxx
       INTEGER :: invsfct,l,lm,lmp,lo,lolo,lolop,lop,lp,i,lo_lmax
       INTEGER :: mp,nkvec,nkvecp,lmplm,loplo,kp,m,mlo,mlolo,mlolo_new,lolop_new
-      INTEGER :: locol,lorow,n,k,ab_size,ab_size_Pr,s
+      INTEGER :: locol,lorow,n,k,ab_size,ab_size_Pr,s, lda, ldb, ldc
       LOGICAL :: l_samelapw
 
       ! Local Arrays
@@ -124,18 +137,29 @@ CONTAINS
          CALL timestart("LAPW-LO")
 
          !Here we copy the data to the CPU (This seems to be the main time consumer of this subroutine.)
-         !$acc update self(abcoeffspr)
+!         !$acc update self(abcoeffspr)
+
+         !$acc data copyin(axpr,bxpr,cxpr)
 
          ! Calculate the hamiltonian matrix elements with the regular
          ! LAPW basis-functions
          DO lo = 1,atoms%nlo(ntyp)
             l = atoms%llo(lo,ntyp)
             s = tlmplm%h_loc2_nonsph(ntyp)
+            lda = SIZE(abCoeffsPr,1)
+            ldb = SIZE(tlmplm%h_loc_LO(0:2*s-1,l*l:,ntyp,ilSpinPr,ilSpin),1)
+            ldc = SIZE(axPr,1)
 
-            call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,tlmplm%h_loc_LO(0:2*s-1,l*l:,ntyp,ilSpinPr,ilSpin),axPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
-            call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,tlmplm%h_loc_LO(0:2*s-1,s+l*l:,ntyp,ilSpinPr,ilSpin),bxPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
-            call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,tlmplm%h_LO(0:2*s-1,-l:,lo+mlo,ilSpinPr,ilSpin),cxPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
-            !$acc data copyin(axpr,bxpr,cxpr)
+            !$acc host_data use_device(abCoeffsPr,tlmplm%h_loc_LO,tlmplm%h_LO,axPr,bxPr,cxPr)
+            call zgemm_acc('C', 'N', maxval(lapwPr%nv), 2*l+1, 2*s, cmplx(1.0,0.0), abCoeffsPr, lda, tlmplm%h_loc_LO(0:2*s-1,l*l:,ntyp,ilSpinPr,ilSpin),   ldb, cmplx(0.0,0.0), axPr, ldc)
+            call zgemm_acc('C', 'N', maxval(lapwPr%nv), 2*l+1, 2*s, cmplx(1.0,0.0), abCoeffsPr, lda, tlmplm%h_loc_LO(0:2*s-1,s+l*l:,ntyp,ilSpinPr,ilSpin), ldb, cmplx(0.0,0.0), bxPr, ldc)
+            call zgemm_acc('C', 'N', maxval(lapwPr%nv), 2*l+1, 2*s, cmplx(1.0,0.0), abCoeffsPr, lda, tlmplm%h_LO(0:2*s-1,-l:,lo+mlo,ilSpinPr,ilSpin),      ldb, cmplx(0.0,0.0), cxPr, ldc)
+            !$acc end host_data
+
+!            call blas_matmul(maxval(lapwPr%nv), 2*l+1, 2*s, abCoeffsPr, tlmplm%h_loc_LO(0:2*s-1,l*l:,ntyp,ilSpinPr,ilSpin),   axPr, cmplx(1.0,0.0), cmplx(0.0,0.0), 'C')
+!            call blas_matmul(maxval(lapwPr%nv), 2*l+1, 2*s, abCoeffsPr, tlmplm%h_loc_LO(0:2*s-1,s+l*l:,ntyp,ilSpinPr,ilSpin), bxPr, cmplx(1.0,0.0), cmplx(0.0,0.0), 'C')
+!            call blas_matmul(maxval(lapwPr%nv), 2*l+1, 2*s, abCoeffsPr, tlmplm%h_LO(0:2*s-1,-l:,lo+mlo,ilSpinPr,ilSpin),      cxPr, cmplx(1.0,0.0), cmplx(0.0,0.0), 'C')
+!            !$acc data copyin(axpr,bxpr,cxpr)
             
             !LAPW LO contributions
             !$acc kernels present(hmat,hmat%data_c,hmat%data_r,abclo,axpr,bxpr,cxpr)&
