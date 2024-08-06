@@ -21,15 +21,10 @@ CONTAINS
        ntyp,na,fjgj,alo1,blo1,clo1, igSpinPr,igSpin,chi,hmat,l_fullj,l_ham,lapwq,fjgjq)
 
 #ifdef _OPENACC
-#ifdef __PGI
+! Maybe there has to be another ifdef here to test whether cublas is available.
     use cublas
-#endif
-#define CPP_ACC acc
-#define CPP_OMP no_OMP_used
 #define zgemm_acc cublaszgemm
 #else
-#define CPP_ACC No_acc_used
-#define CPP_OMP OMP
 #define zgemm_acc zgemm
 #endif
 
