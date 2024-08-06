@@ -135,6 +135,8 @@ CONTAINS
          !Here we copy the data to the CPU (This seems to be the main time consumer of this subroutine.)
          !$acc update self(abcoeffspr)
 
+         !$acc data create(axpr,bxpr,cxpr)
+
          ! Calculate the hamiltonian matrix elements with the regular
          ! LAPW basis-functions
          DO lo = 1,atoms%nlo(ntyp)
@@ -144,7 +146,7 @@ CONTAINS
             call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,tlmplm%h_loc_LO(0:2*s-1,l*l:,ntyp,ilSpinPr,ilSpin),axPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
             call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,tlmplm%h_loc_LO(0:2*s-1,s+l*l:,ntyp,ilSpinPr,ilSpin),bxPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
             call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,tlmplm%h_LO(0:2*s-1,-l:,lo+mlo,ilSpinPr,ilSpin),cxPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
-            !$acc data copyin(axpr,bxpr,cxpr)
+!            !$acc data copyin(axpr,bxpr,cxpr)
             
             !LAPW LO contributions
             !$acc kernels present(hmat,hmat%data_c,hmat%data_r,abclo,axpr,bxpr,cxpr)&
@@ -178,8 +180,8 @@ CONTAINS
                END IF
             END DO
             !$acc end kernels
-            !$acc end data
          ENDDO
+         !$acc end data
          CALL timestop("LAPW-LO")
          IF (l_fullj) THEN
             CALL timestart("LO-LAPW")
