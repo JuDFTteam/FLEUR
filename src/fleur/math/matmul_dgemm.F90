@@ -149,7 +149,7 @@ module m_matmul_dgemm
 #endif
     ENDIF
 #endif    
-    
+    WRITE(1000,*) 'CUBLAS SELECT C: ', sel
 end function                
 
 end module
