@@ -119,15 +119,6 @@ CONTAINS
        ALLOCATE(s2h_e(ne,MAXVAL(lapw%nv)))
     ENDIF
 
-    WRITE(1001,*) 'Test start'
-#ifdef __PGI
-    WRITE(1001,*) '__PGI defined!'
-#endif
-#ifdef _CUDA
-    WRITE(1001,*) '_CUDA defined!'
-#endif
-    WRITE(1001,*) 'Test end'
-
     !Use inversion symmetry explicitely
     l_useinversionsym=any(sym%invsat==2)!.and.(.not.noco%l_soc).and.(.not.present(nat_start))
 
