@@ -80,6 +80,15 @@ CONTAINS
          fjgjPr => fjgj
       END IF
 
+    WRITE(1002,*) 'Test start'
+#ifdef __PGI
+    WRITE(1002,*) '__PGI defined!'
+#endif
+#ifdef _CUDA
+    WRITE(1002,*) '_CUDA defined!'
+#endif
+    WRITE(1002,*) 'Test end'
+
       ! Synthesize a and b
       
       lo_lmax=maxval(atoms%llo)
