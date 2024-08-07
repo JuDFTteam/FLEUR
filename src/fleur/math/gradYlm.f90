@@ -65,7 +65,7 @@ CONTAINS
      endif
   end subroutine Derivative
 
-   SUBROUTINE gradYlm(atoms, r2FshMt, r2GrFshMt)
+   SUBROUTINE gradYlm(fmpi, atoms, r2FshMt, r2GrFshMt)
    ! Based on work for juphon by C. Gerhorst.
   !---------------------------------------------------------------------------------------------------------------------------------
   !> @author
@@ -90,6 +90,7 @@ CONTAINS
 
     ! Type parameter
     ! ***************
+    TYPE(t_mpi),                       INTENT(IN)  :: fmpi
     type(t_atoms),                     intent(in)  :: atoms
 
     ! Array parameters
@@ -161,10 +162,8 @@ CONTAINS
 
     pfac = sqrt( fpi_const / 3 )
     do mqn_mpp = -1, 1
-      iatom = 0
-      do itype = 1, atoms%ntype
-        do ieqat = 1, atoms%neq(itype)
-          iatom = iatom + 1
+      DO iatom = 1, atoms%nat
+          itype = atoms%itype(iatom)
           do oqn_l = 0, atoms%lmax(itype)
             do mqn_m = -oqn_l, oqn_l
 
@@ -215,15 +214,12 @@ CONTAINS
               end if ! ( abs(mqn_m - mqn_mpp) <= oqn_l - 1 )
             end do ! mqn_m
           end do ! oqn_l
-        end do ! ieqat
-      end do ! itype
+      end do ! iatom
     end do ! mqn_mpp
 
     ! Conversion from natural to cartesian coordinates
-    iatom = 0
-    do itype = 1, atoms%ntype
-      do ieqat = 1, atoms%neq(itype)
-        iatom = iatom + 1
+    DO iatom = 1, atoms%nat
+        itype = atoms%itype(iatom)
         do oqn_l = 0, atoms%lmax(itype) + 1
           do mqn_m = -oqn_l, oqn_l
             lmOutput = oqn_l * (oqn_l + 1) + 1 + mqn_m
@@ -232,8 +228,7 @@ CONTAINS
             end do ! imesh
           end do ! mqn_m
         end do ! oqn_l
-      end do ! ieqat
-    end do ! itype
+    end do ! iatom
 
    END SUBROUTINE gradYlm
 

@@ -177,7 +177,7 @@ CONTAINS
       ENDDO
 
       CALL timestart("Building correction field")
-      CALL divpotgrad(input,stars,atloc,sphhar,vacuum,sym,cell,noco,phi,cvec)
+      CALL divpotgrad(fmpi,input,stars,atloc,sphhar,vacuum,sym,cell,noco,phi,cvec)
       CALL timestop("Building correction field")
 
       CALL init_pw_grid(stars,sym,cell)

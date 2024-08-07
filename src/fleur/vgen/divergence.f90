@@ -54,11 +54,11 @@ CONTAINS
             CALL lattHarmsRepToSphHarms(sym, atoms, sphhar, iType, bxc(i)%mt(:,:,iType,1), flm(:,:,iType))
          END DO
          IF (i==1) THEN
-            CALL gradYlm(atoms,flm,grsflm1)
+            CALL gradYlm(fmpi,atoms,flm,grsflm1)
          ELSE IF (i==2) THEN
-            CALL gradYlm(atoms,flm,grsflm2)
+            CALL gradYlm(fmpi,atoms,flm,grsflm2)
          ELSE
-            CALL gradYlm(atoms,flm,grsflm3)
+            CALL gradYlm(fmpi,atoms,flm,grsflm3)
          END IF
       END DO
       CALL timestop("region 1")
@@ -275,7 +275,7 @@ CONTAINS
 
    END SUBROUTINE vac_grad
 
-   SUBROUTINE divpotgrad(input,stars,atoms,sphhar,vacuum,sym,cell,noco,pot,grad)
+   SUBROUTINE divpotgrad(fmpi,input,stars,atoms,sphhar,vacuum,sym,cell,noco,pot,grad)
 
       USE m_types
       USE m_lattHarmsSphHarmsConv
@@ -291,6 +291,7 @@ CONTAINS
 
       IMPLICIT NONE
 
+      TYPE(t_mpi), INTENT(IN)                     :: fmpi
       TYPE(t_input), INTENT(IN)                   :: input
       TYPE(t_stars),INTENT(IN)                    :: stars
       TYPE(t_atoms), INTENT(IN)                   :: atoms
@@ -321,7 +322,7 @@ CONTAINS
          CALL lattHarmsRepToSphHarms(sym, atoms, sphhar, iType, denloc%mt(:,:,iType,1), flm(:,:,iType))
       END DO
 
-      CALL gradYlm(atoms,flm,grsflm)
+      CALL gradYlm(fmpi,atoms,flm,grsflm)
 
       DEALLOCATE(flm)
 
