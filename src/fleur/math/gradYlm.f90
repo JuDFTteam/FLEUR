@@ -65,7 +65,7 @@ CONTAINS
      endif
   end subroutine Derivative
 
-   SUBROUTINE gradYlm(fmpi, atoms, r2FshMt, r2GrFshMt)
+   SUBROUTINE gradYlm(atoms, iAtom, r2FshMt, r2GrFshMt)
    ! Based on work for juphon by C. Gerhorst.
   !---------------------------------------------------------------------------------------------------------------------------------
   !> @author
@@ -90,13 +90,16 @@ CONTAINS
 
     ! Type parameter
     ! ***************
-    TYPE(t_mpi),                       INTENT(IN)  :: fmpi
     type(t_atoms),                     intent(in)  :: atoms
+
+    ! Scalar parameters
+    ! *****************
+    INTEGER,                           INTENT(IN)  :: iAtom
 
     ! Array parameters
     ! ****************
-    complex,       allocatable,        intent(in)  :: r2FshMt(:, :, :)
-    complex,       allocatable,        intent(out) :: r2GrFshMt(:, :, :, :)
+    complex,                           intent(in)    :: r2FshMt(:, :)
+    complex,                           intent(INOUT) :: r2GrFshMt(:, :, :)
 
 
     ! Local Scalar Variables
@@ -116,7 +119,6 @@ CONTAINS
     real                                           :: tGaunt
     integer                                        :: itype
     integer                                        :: ieqat
-    integer                                        :: iatom
     integer                                        :: imesh
     integer                                        :: mqn_m
     integer                                        :: oqn_l
@@ -137,7 +139,7 @@ CONTAINS
     real,          allocatable                     :: rDerFshMtim(:)
     real,          allocatable                     :: rDerJunk(:)
     complex,       allocatable                     :: rDerFshMt(:)
-    complex,       allocatable                     :: r2GrFshMtNat(:, :, :, :)
+    complex,       allocatable                     :: r2GrFshMtNat(:, :, :)
     !Matrix syntax idea from http://stackoverflow.com/questions/3708307/how-to-initialize-two-dimensional-arrays-in-fortran
     complex, dimension(3, 3)  :: Tmatrix !no parameter anymore since the init below is not OK for this
     Tmatrix = transpose(reshape([                                                          &
@@ -148,8 +150,7 @@ CONTAINS
 
 
     ! Initialization of additionaly required arrays.
-    allocate( r2GrFshMt(atoms%jmtd, ( atoms%lmaxd + 2 )**2, atoms%nat, 3) )
-    allocate( r2GrFshMtNat(atoms%jmtd, ( atoms%lmaxd + 2 )**2, atoms%nat, 3) )
+    allocate( r2GrFshMtNat(atoms%jmtd, ( atoms%lmaxd + 2 )**2, 3) )
     allocate( r2FshMtre(atoms%jmtd), r2FshMtim(atoms%jmtd), rDerFshMtre(atoms%jmtd), rDerFshMtim(atoms%jmtd), rDerJunk(atoms%jmtd), rDerFshMt(atoms%jmtd) )
 
     r2FshMtre(:) = 0.
@@ -160,10 +161,10 @@ CONTAINS
     r2GrFshMt = cmplx(0., 0.)
     r2GrFshMtNat = cmplx(0., 0.)
 
+    iType = atoms%itype(iAtom)
+
     pfac = sqrt( fpi_const / 3 )
     do mqn_mpp = -1, 1
-      DO iatom = 1, atoms%nat
-          itype = atoms%itype(iatom)
           do oqn_l = 0, atoms%lmax(itype)
             do mqn_m = -oqn_l, oqn_l
 
@@ -176,17 +177,15 @@ CONTAINS
                 rDerFshMtre(:) = 0.
                 rDerFshMtim(:) = 0.
                 ! This is also a trade of between storage and performance, because derivative is called redundantly, maybe store it?
-                r2FshMtre(:)=real(r2FshMt(:, lmInput, itype))
-                r2FshMtim(:)=aimag(r2FshMt(:, lmInput, itype))
+                r2FshMtre(:)=real(r2FshMt(:, lmInput))
+                r2FshMtim(:)=aimag(r2FshMt(:, lmInput))
                 call Derivative( r2FshMtre, itype, atoms, rDerFshMtre )
                 call Derivative( r2FshMtim, itype, atoms, rDerFshMtim )
 
                 tGaunt = Gaunt1( oqn_l + 1, oqn_l, 1, mqn_m - mqn_mpp, mqn_m, -mqn_mpp, atoms%lmaxd + 1 )
                 do imesh = 1, atoms%jri(itype)
                   rDerFshMt(imesh) = cmplx(rDerFshMtre(imesh), rDerFshMtim(imesh))
-                  r2GrFshMtNat(imesh, lmOutput, iatom, mqn_mpp + 2) = r2GrFshMtNat(imesh, lmOutput, iatom, mqn_mpp + 2) + pfac *   &
-                    & (-1)**mqn_mpp * tGaunt &
-                    & * (rDerFshMt(imesh) - ((oqn_l + 2)* r2FshMt(imesh, lmInput, iatom) / atoms%rmsh(imesh, itype)))
+                  r2GrFshMtNat(imesh, lmOutput, mqn_mpp + 2) = r2GrFshMtNat(imesh, lmOutput, mqn_mpp + 2) + pfac * (-1)**mqn_mpp * tGaunt * (rDerFshMt(imesh) - ((oqn_l + 2)* r2FshMt(imesh, lmInput) / atoms%rmsh(imesh, itype)))
                 end do ! imesh
               end if ! ( abs(mqn_m - mqn_mpp) <= oqn_l + 1 )
 
@@ -199,44 +198,38 @@ CONTAINS
                 rDerFshMtre(:) = 0.
                 rDerFshMtim(:) = 0.
                 ! This is also a trade of between storage and performance, because derivative is called redundantly, maybe store it?
-                r2FshMtre(:)=real(r2FshMt(:, lmInput, itype))
-                r2FshMtim(:)=aimag(r2FshMt(:, lmInput, itype))
+                r2FshMtre(:)=real(r2FshMt(:, lmInput))
+                r2FshMtim(:)=aimag(r2FshMt(:, lmInput))
                 call Derivative( r2FshMtre, itype, atoms, rDerFshMtre )
                 call Derivative( r2FshMtim, itype, atoms, rDerFshMtim )
 
                 tGaunt = Gaunt1( oqn_l - 1, oqn_l, 1, mqn_m - mqn_mpp, mqn_m, -mqn_mpp, atoms%lmaxd + 1 )
                 do imesh = 1, atoms%jri(itype)
                   rDerFshMt(imesh) = cmplx(rDerFshMtre(imesh), rDerFshMtim(imesh))
-                  r2GrFshMtNat(imesh, lmOutput, iatom, mqn_mpp + 2) = r2GrFshMtNat(imesh, lmOutput, iatom, mqn_mpp + 2) + pfac *   &
-                    & (-1)**mqn_mpp * tGaunt * ( rDerFshMt(imesh) + ( (oqn_l - 1) * r2FshMt(imesh, lmInput, iatom)&
-                    & / atoms%rmsh(imesh, itype) ) )
+                  r2GrFshMtNat(imesh, lmOutput, mqn_mpp + 2) = r2GrFshMtNat(imesh, lmOutput, mqn_mpp + 2) + pfac * (-1)**mqn_mpp * tGaunt * ( rDerFshMt(imesh) + ( (oqn_l - 1) * r2FshMt(imesh, lmInput) / atoms%rmsh(imesh, itype) ) )
                 enddo ! imesh
               end if ! ( abs(mqn_m - mqn_mpp) <= oqn_l - 1 )
             end do ! mqn_m
           end do ! oqn_l
-      end do ! iatom
     end do ! mqn_mpp
 
     ! Conversion from natural to cartesian coordinates
-    DO iatom = 1, atoms%nat
-        itype = atoms%itype(iatom)
-        do oqn_l = 0, atoms%lmax(itype) + 1
-          do mqn_m = -oqn_l, oqn_l
-            lmOutput = oqn_l * (oqn_l + 1) + 1 + mqn_m
-            do imesh = 1, atoms%jri(itype)
-              r2GrFshMt(imesh, lmOutput, iatom, 1:3) = matmul( Tmatrix(1:3, 1:3), r2GrFshMtNat(imesh, lmOutput, iatom, 1:3) )
-            end do ! imesh
-          end do ! mqn_m
-        end do ! oqn_l
-    end do ! iatom
+    do oqn_l = 0, atoms%lmax(itype) + 1
+      do mqn_m = -oqn_l, oqn_l
+        lmOutput = oqn_l * (oqn_l + 1) + 1 + mqn_m
+        do imesh = 1, atoms%jri(itype)
+          r2GrFshMt(imesh, lmOutput, :) = matmul( Tmatrix(1:3, 1:3), r2GrFshMtNat(imesh, lmOutput, :) )
+        end do ! imesh
+      end do ! mqn_m
+    end do ! oqn_l
 
    END SUBROUTINE gradYlm
 
-   SUBROUTINE divYlm(gradMtx, gradMty, gradMtz, divMt)
-      COMPLEX, INTENT(IN) :: gradMtx(:,:,:,:), gradMty(:,:,:,:), gradMtz(:,:,:,:) !r,lm,n,x
-      COMPLEX, INTENT(OUT) :: divMt(:,:,:)
+   SUBROUTINE divYlm(gradMt, divMt)
+      COMPLEX, INTENT(IN)    :: gradMt(:,:,:,:)
+      COMPLEX, INTENT(INOUT) :: divMt(:,:)
 
-      divMt(:,:,:)=gradMtx(:,:,:,1)+gradMty(:,:,:,2)+gradMtz(:,:,:,3)
+      divMt(:,:) = gradMt(:,:,1,1) + gradMt(:,:,2,2) + gradMt(:,:,3,3)
 
    END SUBROUTINE divYlm
 
