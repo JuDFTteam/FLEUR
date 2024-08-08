@@ -38,15 +38,23 @@ CONTAINS
 
       TYPE(t_potden), DIMENSION(3)                :: grad
 
-      INTEGER :: i, iType, lh, iAtom
+      TYPE(t_parallelLoop)           :: mpiLoop
 
-      COMPLEX :: grsflm(atoms%jmtd,(atoms%lmaxd + 2 )**2, 3, 3)
-      COMPLEX :: divflm(atoms%jmtd,(atoms%lmaxd+1)**2)
-      COMPLEX :: flm(atoms%jmtd,(atoms%lmaxd+1)**2)
+      INTEGER :: i, iType, lh, iAtom, length, ierr
+
+      COMPLEX, ALLOCATABLE :: grsflm(:,:,:,:)
+      COMPLEX, ALLOCATABLE :: divflm(:,:)
+      COMPLEX, ALLOCATABLE :: flm(:,:)
+      COMPLEX, ALLOCATABLE :: tempArray(:,:,:)
+
+      ALLOCATE(grsflm(atoms%jmtd,(atoms%lmaxd + 2 )**2, 3, 3))
+      ALLOCATE(divflm(atoms%jmtd,(atoms%lmaxd+1)**2))
+      ALLOCATE(flm(atoms%jmtd,(atoms%lmaxd+1)**2))
 
       CALL timestart("MT divergence")
 
-      DO iAtom = 1, atoms%nat
+      CALL mpiLoop%init(fmpi%irank,fmpi%isize,1,atoms%nat)
+      DO iAtom = mpiLoop%bunchMinIndex, mpiLoop%bunchMaxIndex
          iType = atoms%itype(iAtom)
          grsflm = CMPLX(0.0,0.0)
          DO i = 1, 3
@@ -57,6 +65,12 @@ CONTAINS
          CALL divYlm(grsflm, divflm)
          CALL sphHarmsRepToLattHarms(sym, atoms, sphhar, iType, divflm, div%mt(:,0:,iType,1))
       END DO
+      length = SIZE(div%mt,1) * SIZE(div%mt,2) * SIZE(div%mt,3)
+      ALLOCATE(tempArray(SIZE(div%mt,1),SIZE(div%mt,2),SIZE(div%mt,3)))
+      CALL MPI_ALLREDUCE(div%mt(:,:,:,1),tempArray,length,MPI_DOUBLE_COMPLEX,MPI_SUM,MPI_COMM_WORLD,ierr)
+      CALL zcopy(length, tempArray, 1, div%mt(:,:,:,1), 1)
+      DEALLOCATE(tempArray)
+      DEALLOCATE(flm,divflm,grsflm)
 
       CALL timestop("MT divergence")
 
@@ -259,7 +273,7 @@ CONTAINS
 
    END SUBROUTINE vac_grad
 
-   SUBROUTINE divpotgrad(fmpi,input,stars,atoms,sphhar,vacuum,sym,cell,noco,pot,grad)
+   SUBROUTINE divpotgrad(input,stars,atoms,sphhar,vacuum,sym,cell,noco,pot,grad)
 
       USE m_types
       USE m_lattHarmsSphHarmsConv
@@ -275,7 +289,6 @@ CONTAINS
 
       IMPLICIT NONE
 
-      TYPE(t_mpi), INTENT(IN)                     :: fmpi
       TYPE(t_input), INTENT(IN)                   :: input
       TYPE(t_stars),INTENT(IN)                    :: stars
       TYPE(t_atoms), INTENT(IN)                   :: atoms
@@ -290,12 +303,15 @@ CONTAINS
       TYPE(t_potden)                              :: denloc
       INTEGER :: i, iType, lh, lhmax, iAtom
 
-      COMPLEX                                     :: flm(atoms%jmtd,(atoms%lmaxd+1)**2)
-      COMPLEX                                     :: grsflm(atoms%jmtd,(atoms%lmaxd + 2 )**2, 3)
+      COMPLEX, ALLOCATABLE                        :: flm(:,:)
+      COMPLEX, ALLOCATABLE                        :: grsflm(:,:,:)
 
       CALL timestart("MT potential gradient")
 
       denloc=pot
+
+      ALLOCATE(flm(atoms%jmtd,(atoms%lmaxd+1)**2))
+      ALLOCATE(grsflm(atoms%jmtd,(atoms%lmaxd + 2 )**2, 3))
 
       DO iAtom = 1, atoms%nat
          iType = atoms%itype(iAtom)
@@ -311,6 +327,8 @@ CONTAINS
             CALL sphHarmsRepToLattHarms(sym, atoms, sphhar, iType, grsflm(:,:,i)/(4.0*pi_const), grad(i)%mt(:,0:,iType,1))
          END DO
       END DO
+
+      DEALLOCATE(grsflm,flm)
 
       CALL timestop("MT potential gradient")
 
