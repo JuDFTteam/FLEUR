@@ -48,8 +48,8 @@ CONTAINS
       COMPLEX, ALLOCATABLE :: tempArray(:,:,:)
 
       ALLOCATE(grsflm(atoms%jmtd,(atoms%lmaxd + 2 )**2, 3, 3))
-      ALLOCATE(divflm(atoms%jmtd,(atoms%lmaxd+1)**2))
-      ALLOCATE(flm(atoms%jmtd,(atoms%lmaxd+1)**2))
+      ALLOCATE(divflm(atoms%jmtd,(atoms%lmaxd+2)**2))
+      ALLOCATE(flm(atoms%jmtd,(atoms%lmaxd+2)**2))
 
       CALL timestart("MT divergence")
 
@@ -310,7 +310,7 @@ CONTAINS
 
       denloc=pot
 
-      ALLOCATE(flm(atoms%jmtd,(atoms%lmaxd+1)**2))
+      ALLOCATE(flm(atoms%jmtd,(atoms%lmaxd + 2)**2))
       ALLOCATE(grsflm(atoms%jmtd,(atoms%lmaxd + 2 )**2, 3))
 
       DO iAtom = 1, atoms%nat
