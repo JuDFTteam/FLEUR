@@ -53,7 +53,7 @@ CONTAINS
       ALLOCATE(tempArray(SIZE(div%mt,1),0:SIZE(div%mt,2)-1,SIZE(div%mt,3)))
 
       CALL timestart("MT divergence")
-      tempArray = CMPLX(0.0,0.0)
+      tempArray = 0.0
       CALL mpiLoop%init(fmpi%irank,fmpi%isize,1,atoms%nat)
       DO iAtom = mpiLoop%bunchMinIndex, mpiLoop%bunchMaxIndex
          iType = atoms%itype(iAtom)
