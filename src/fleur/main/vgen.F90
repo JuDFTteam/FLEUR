@@ -136,6 +136,10 @@ CONTAINS
 
 
       CALL vTot%distribute(fmpi%mpi_comm)
+      CALL vCoul%distribute(fmpi%mpi_comm)
+      CALL vx%distribute(fmpi%mpi_comm)
+      CALL vxc%distribute(fmpi%mpi_comm)
+      CALL exc%distribute(fmpi%mpi_comm)
       ! d)
       ! TODO: Check if this is needed for more potentials as well!
       CALL vgen_finalize(fmpi ,field,cell,atoms,stars,vacuum,sym,juphon,noco,nococonv,input,xcpot,sphhar,vTot,vCoul,denRot,sliceplot)

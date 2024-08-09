@@ -99,7 +99,7 @@ CONTAINS
          CALL timestop("Building B")
 
          CALL timestart("SF subroutine")
-         CALL sourcefree(fmpi,field,stars,atoms,sphhar,vacuum,input ,sym,juphon,cell,noco,bxc,vScal,vCorr)
+         CALL sourcefree(fmpi,field,stars,atoms,sphhar,vacuum,input,sym,juphon,cell,bxc,vScal,vCorr)
          CALL timestop("SF subroutine")
 
          CALL timestart("Correcting vTot")

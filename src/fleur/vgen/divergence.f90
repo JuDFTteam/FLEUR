@@ -10,7 +10,7 @@ MODULE m_divergence
    PUBLIC :: divergence, vac_grad, divpotgrad
 
 CONTAINS
-   SUBROUTINE divergence(fmpi,input,stars,atoms,sphhar,vacuum,sym,cell,noco,bxc,div)
+   SUBROUTINE divergence(fmpi,input,stars,atoms,sphhar,vacuum,sym,cell,bxc,div)
       USE m_lattHarmsSphHarmsConv
       USE m_gradYlm
       USE m_constants
@@ -32,7 +32,6 @@ CONTAINS
       TYPE(t_vacuum),               INTENT(IN)    :: vacuum
       TYPE(t_sym),                  INTENT(IN)    :: sym
       TYPE(t_cell),                 INTENT(IN)    :: cell
-      TYPE(t_noco),                 INTENT(IN)    :: noco
       TYPE(t_potden), DIMENSION(3), INTENT(INOUT) :: bxc
       TYPE(t_potden),               INTENT(INOUT) :: div
 
@@ -275,7 +274,7 @@ CONTAINS
 
    END SUBROUTINE vac_grad
 
-   SUBROUTINE divpotgrad(input,stars,atoms,sphhar,vacuum,sym,cell,noco,pot,grad)
+   SUBROUTINE divpotgrad(input,stars,atoms,sphhar,vacuum,sym,cell,pot,grad)
 
       USE m_types
       USE m_lattHarmsSphHarmsConv
@@ -298,7 +297,6 @@ CONTAINS
       TYPE(t_vacuum),INTENT(IN)                   :: vacuum
       TYPE(t_sym), INTENT(IN)                     :: sym
       TYPE(t_cell),INTENT(IN)                     :: cell
-      TYPE(t_noco), INTENT(IN)                    :: noco
       TYPE(t_potden), INTENT(IN)                  :: pot
       TYPE(t_potden), dimension(3), INTENT(INOUT) :: grad
 

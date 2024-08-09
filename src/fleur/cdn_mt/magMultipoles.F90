@@ -46,7 +46,7 @@ CONTAINS
     CALL matrixsplit(sym,stars, atoms, sphhar, vacuum, input, noco,nococonv, 1.0, &
          outden, cden, m_den(1), m_den(2), m_den(3))
     !Calcalate divergence
-    CALL divergence(fmpi,input,stars,atoms,sphhar,vacuum,sym,cell,noco,m_den,div)
+    CALL divergence(fmpi,input,stars,atoms,sphhar,vacuum,sym,cell,m_den,div)
     qlmo = 0.0
     CALL mt_moments( input, atoms, sym, juphon, sphhar, div%mt(:,:,:,1), POTDEN_TYPE_POTCOUL,qlmo,.FALSE.)
 
