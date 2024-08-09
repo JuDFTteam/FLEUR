@@ -37,7 +37,7 @@ src/fleur/vgen/b_field.F90
 src/fleur/vgen/write_xcstuff.f90
 #src/fleur/vgen/xy_av_den.f90
 src/fleur/vgen/VYukawaFilm.f90
-src/fleur/vgen/divergence.f90
+src/fleur/vgen/divergence.F90
 src/fleur/vgen/xcBfield.f90
 )
 

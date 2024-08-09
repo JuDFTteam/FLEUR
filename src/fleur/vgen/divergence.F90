@@ -6,6 +6,7 @@
 MODULE m_divergence
    USE m_types
    USE m_juDFT
+   USE mpi
    PRIVATE
    PUBLIC :: divergence, vac_grad, divpotgrad
 
@@ -67,7 +68,7 @@ CONTAINS
       END DO
       length = SIZE(div%mt,1) * SIZE(div%mt,2) * SIZE(div%mt,3)
 #ifdef CPP_MPI
-      CALL MPI_ALLREDUCE(tempArray(:,0:,:),div%mt(:,0:,:,1),length,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+      CALL MPI_ALLREDUCE(tempArray(:,0:,:),div%mt(:,0:,:,1),length,MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)
 #else
       div%mt(:,0:,:,1) = tempArray(:,0:,:)
 #endif
