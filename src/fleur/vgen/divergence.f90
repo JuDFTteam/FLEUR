@@ -67,8 +67,8 @@ CONTAINS
       END DO
       length = SIZE(div%mt,1) * SIZE(div%mt,2) * SIZE(div%mt,3)
       ALLOCATE(tempArray(SIZE(div%mt,1),SIZE(div%mt,2),SIZE(div%mt,3)))
-      CALL MPI_ALLREDUCE(div%mt(:,:,:,1),tempArray,length,MPI_DOUBLE_COMPLEX,MPI_SUM,MPI_COMM_WORLD,ierr)
-      CALL zcopy(length, tempArray, 1, div%mt(:,:,:,1), 1)
+      CALL MPI_ALLREDUCE(div%mt(:,0:,:,1),tempArray,length,MPI_DOUBLE_COMPLEX,MPI_SUM,MPI_COMM_WORLD,ierr)
+      CALL zcopy(length, tempArray, 1, div%mt(:,0:,:,1), 1)
       DEALLOCATE(tempArray)
       DEALLOCATE(flm,divflm,grsflm)
 
