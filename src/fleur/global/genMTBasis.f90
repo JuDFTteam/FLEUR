@@ -103,7 +103,7 @@ CONTAINS
     END DO
     
     ! As quality measure: Calculate and write out overlap in MT spheres for each l for which LOs exist
-    IF (l_write) THEN
+    IF (l_write.AND..FALSE.) THEN
     
        WRITE(oUnit,*) ''
        WRITE(oUnit,'(a,i5,a)') 'Representation of radial basis functions, core electron states in terms of the other radial basis functions for atom type ',iType,':'

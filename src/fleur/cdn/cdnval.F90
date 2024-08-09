@@ -138,7 +138,6 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    call timestart("init")
    l_real = sym%invs.AND.(.NOT.noco%l_soc).AND.(.NOT.noco%l_noco).AND.atoms%n_hia==0
 
-   call timestart("region 1")
    ! Klueppelberg (force level 3)
    IF (input%l_f.AND.(input%f_level.GE.3)) THEN
       CALL init_sf(sym,cell,atoms)
@@ -162,9 +161,6 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
       l_empty = l_empty.OR.greensfImagPart%l_calc
    ENDIF
 
-   call timestop("region 1")
-   call timestart("region 2")
-
    ALLOCATE (f(atoms%jmtd,2,0:atoms%lmaxd,input%jspins)) ! Deallocation before mpi_col_den
    ALLOCATE (g(atoms%jmtd,2,0:atoms%lmaxd,input%jspins))
    ALLOCATE (flo(atoms%jmtd,2,atoms%nlod,input%jspins))
@@ -177,9 +173,6 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    CALL denCoeffsOffdiag%init(atoms,noco,sphhar,banddos%l_jDOS,any(noco%l_unrestrictMT).OR.noco%l_mperp)
    CALL force%init1(input,atoms)
    CALL orb%init(atoms,noco,jsp_start,jsp_end)
-
-   call timestop("region 2")
-   call timestart("region 3")
 
    !Greens function always considers the empty states
    IF(gfinp%n>0 .AND. PRESENT(greensfImagPart)) THEN
@@ -210,9 +203,6 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    END IF
 8000 FORMAT (/,/,10x,'valence density: spin=',i2)
 
-   call timestop("region 3")
-   call timestart("region 4")
-
    DO iType = 1, atoms%ntype
       DO ispin = 1, input%jspins
          CALL genMTBasis(atoms,enpara,vTot,fmpi,iType,ispin,usdus,f(:,:,0:,ispin),g(:,:,0:,ispin),flo(:,:,:,ispin),&
@@ -229,7 +219,6 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    IF (noco%l_soc.OR.noco%l_noco) skip_tt = 2 * skip_tt
 
    jsp = MERGE(1,jspin,noco%l_noco)
-   call timestop("region 4")
    call timestop("init")
 
    max_length_k_list=size(cdnvalJob%k_list)
