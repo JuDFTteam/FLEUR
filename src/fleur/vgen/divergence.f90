@@ -45,14 +45,15 @@ CONTAINS
       COMPLEX, ALLOCATABLE :: grsflm(:,:,:,:)
       COMPLEX, ALLOCATABLE :: divflm(:,:)
       COMPLEX, ALLOCATABLE :: flm(:,:)
-      COMPLEX, ALLOCATABLE :: tempArray(:,:,:)
+      REAL, ALLOCATABLE :: tempArray(:,:,:)
 
       ALLOCATE(grsflm(atoms%jmtd,(atoms%lmaxd + 2 )**2, 3, 3))
       ALLOCATE(divflm(atoms%jmtd,(atoms%lmaxd+2)**2))
       ALLOCATE(flm(atoms%jmtd,(atoms%lmaxd+2)**2))
+      ALLOCATE(tempArray(SIZE(div%mt,1),0:SIZE(div%mt,2)-1,SIZE(div%mt,3)))
 
       CALL timestart("MT divergence")
-
+      tempArray = CMPLX(0.0,0.0)
       CALL mpiLoop%init(fmpi%irank,fmpi%isize,1,atoms%nat)
       DO iAtom = mpiLoop%bunchMinIndex, mpiLoop%bunchMaxIndex
          iType = atoms%itype(iAtom)
@@ -63,14 +64,15 @@ CONTAINS
          END DO
          divflm = CMPLX(0.0,0.0)
          CALL divYlm(grsflm, divflm)
-         CALL sphHarmsRepToLattHarms(sym, atoms, sphhar, iType, divflm, div%mt(:,0:,iType,1))
+         CALL sphHarmsRepToLattHarms(sym, atoms, sphhar, iType, divflm, tempArray(:,0:,iType))
       END DO
       length = SIZE(div%mt,1) * SIZE(div%mt,2) * SIZE(div%mt,3)
-      ALLOCATE(tempArray(SIZE(div%mt,1),SIZE(div%mt,2),SIZE(div%mt,3)))
-      CALL MPI_ALLREDUCE(div%mt(:,0:,:,1),tempArray,length,MPI_DOUBLE_COMPLEX,MPI_SUM,MPI_COMM_WORLD,ierr)
-      CALL zcopy(length, tempArray, 1, div%mt(:,0:,:,1), 1)
-      DEALLOCATE(tempArray)
-      DEALLOCATE(flm,divflm,grsflm)
+#ifdef CPP_MPI
+      CALL MPI_ALLREDUCE(tempArray(:,0:,:),div%mt(:,0:,:,1),length,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+#else
+      div%mt(:,0:,:,1) = tempArray(:,0:,:)
+#endif
+      DEALLOCATE(tempArray,flm,divflm,grsflm)
 
       CALL timestop("MT divergence")
 
