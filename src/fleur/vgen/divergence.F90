@@ -6,7 +6,10 @@
 MODULE m_divergence
    USE m_types
    USE m_juDFT
+#ifdef CPP_MPI
    USE mpi
+#endif
+
    PRIVATE
    PUBLIC :: divergence, vac_grad, divpotgrad
 
