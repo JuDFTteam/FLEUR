@@ -104,11 +104,12 @@ CONTAINS
     END IF
   END FUNCTION ssdisp_next_job
 
-  SUBROUTINE ssdisp_postprocess(this)
+  SUBROUTINE ssdisp_postprocess(this,fi,results)
     USE m_xmlOutput
     IMPLICIT NONE
     CLASS(t_forcetheo_ssdisp),INTENT(INOUT):: this
-
+    TYPE(t_fleurinput),INTENT(IN)   :: fi
+    TYPE(t_results),INTENT(IN)      :: results
     !Locals
     INTEGER:: n,q
     CHARACTER(LEN=12):: attributes(4)

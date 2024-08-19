@@ -27,6 +27,9 @@ MODULE m_types_jij
      PROCEDURE :: postprocess => jij_postprocess
      PROCEDURE :: init   => jij_init !not overloaded
      PROCEDURE :: dist   => jij_dist !not overloaded
+     PROCEDURE :: map
+     PROCEDURE :: jij_q
+     PROCEDURE :: fourier_transform
   END TYPE t_forcetheo_jij
 
 CONTAINS
@@ -151,9 +154,11 @@ CONTAINS
     nococonv%beta(this%jatom(this%loopindex))=this%thetaj
 
     !rotate according to q-vector
-    DO n = 1,atoms%ntype
-       nococonv%alph(n) = nococonv%alph(n) + tpi_const*DOT_PRODUCT(nococonv%qss,atoms%taual(:,atoms%firstAtom(n)))
-    ENDDO
+    !DO n = 1,atoms%ntype
+    !   nococonv%alph(n) = nococonv%alph(n) + tpi_const*DOT_PRODUCT(nococonv%qss,atoms%taual(:,atoms%firstAtom(n)))
+    !ENDDO
+
+  
 
     IF (.NOT.this%l_io) RETURN
     IF (fmpi%irank .EQ. 0) THEN
@@ -164,14 +169,19 @@ CONTAINS
     END IF
   END FUNCTION jij_next_job
 
-  SUBROUTINE jij_postprocess(this)
+  SUBROUTINE jij_postprocess(this,fi,results)
     USE m_xmlOutput
     IMPLICIT NONE
     CLASS(t_forcetheo_jij),INTENT(INOUT):: this
-
+    TYPE(t_fleurinput), INTENT(IN)      :: fi
+    Type(t_results),INTENT(IN)          :: results
     !Locals
-    INTEGER:: n
+    INTEGER:: n,i,j
     CHARACTER(LEN=18):: attributes(6)
+    complex,allocatable :: jq(:,:,:)
+    real,allocatable    :: jr(:,:,:)
+    INTEGER,allocatable :: R(:,:)
+
 
     IF (this%loopindex==0) RETURN
 
@@ -193,8 +203,33 @@ CONTAINS
        CALL writeXMLElementForm('Config',(/'n     ','q     ','iatom ','jatom ','phase ','ev-sum'/),attributes,&
                RESHAPE((/1,1,5,5,5,6,4,18,4,4,2,15/),(/6,2/)))
     ENDDO
+    
+    call this%jij_q(fi%atoms,results%M,Jq)
+
+    call this%fourier_transform(fi%atoms,fi%sym,jq,jr,R)
+
+    DO i=1,fi%atoms%ntype
+      if (this%map(i,i,1)==0) cycle !non magnetic
+      DO j=i,fi%atoms%ntype
+        if (this%map(j,j,1)==0) cycle !non magnetic
+        write(762,*) "J_Q:",i,j
+        write(762,"(f15.8,f15.8)") jq(i,j,:)
+        DO n=merge(2,1,i==j),size(R,2)
+          WRITE(attributes(1),'(i0)') i
+          WRITE(attributes(2),'(i0)') j
+          WRITE(attributes(3),'(i0)') R(1,n)
+          WRITE(attributes(4),'(i0)') R(2,n)
+          WRITE(attributes(5),'(i0)') R(3,n)
+          WRITE(attributes(6),'(f15.8)') JR(i,j,n)
+          CALL writeXMLElementForm('J_ij',(/'iatom ','jatom ','R_x   ','R_y   ','R_z   ','Jij(R)'/),attributes,&
+               RESHAPE((/5,5,3,3,3,6,4,4,4,4,4,15/),(/6,2/)))
+        enddo
+      ENDDO
+    ENDDO
+        
     CALL closeXMLElement('Forcetheorem_JIJ')
     CALL judft_end("Forcetheorem: Jij")
+
   END SUBROUTINE jij_postprocess
 
 
@@ -228,6 +263,143 @@ CONTAINS
   END FUNCTION  jij_eval
 
 
+  subroutine jij_q(this,atoms,M,Jq)
+  !   Now calculate Jq=Re(Jq)+i*Im(Jq)
+  !  See thesis M.Lezaic, page 55
+    USE m_types
+    IMPLICIT NONE
+    CLASS(t_forcetheo_jij),INTENT(IN):: this
+    type(t_atoms),INTENT(IN)         :: atoms
+    real,INTENT(IN)                  :: m(:) !Magnetic moments
+    complex,allocatable,intent(out)  :: Jq(:,:,:)
+
+    integer:: n,nn,q,idx,idx0,idxp,idx0p
+    real   :: im_q,re_q,sqsin
+    
+    sqsin=sin(this%thetaj)**2
+
+    allocate(jq(atoms%ntype,atoms%ntype,size(this%qvec,2)))
+    Jq=0.0
+    !calculate the J_q(n,n)
+    DO n=1,atoms%ntype
+      if (this%map(n,n,1)==0) cycle !This atom is not magnetic
+      DO q=2,SIZE(this%qvec,2)
+        idx=this%map(n,n,q)
+        idx0=this%map(n,n,1)
+        Jq(n,n,q)=-2.0*(this%evsum(idx)-this%evsum(idx0))/(M(n)**2*sqsin)
+        print *,"jij:",n,n,q,Jq(n,n,q)
+      ENDDO
+    ENDDO  
+    !now the J_q(n,m)
+    DO n=1,atoms%ntype
+      if (this%map(n,n,1)==0) cycle !This atom is not magnetic
+      DO nn=n+1,atoms%ntype
+        if (this%map(nn,nn,1)==0) cycle !This atom is not magnetic
+        DO q=1,size(this%qvec,2)
+          idx=this%map(n,nn,q)
+          idx0=this%map(n,nn,1)
+          idxp=this%map(n,nn,q,.true.)
+          idx0p=this%map(n,nn,1,.true.)
+          re_q=(this%evsum(idx0p)-this%evsum(idx))/(m(n)*m(nn)*sqsin)-0.5*(M(n)/M(nn)*Jq(n,n,q)+M(nn)/M(n)*Jq(nn,nn,q))
+          im_q=(this%evsum(idxp)-this%evsum(idx))/(m(n)*m(nn)*sqsin)-Re_q
+          Jq(n,nn,q)=cmplx(re_q,im_q)
+          print *,"jij:",n,nn,q,Jq(n,nn,q)
+        ENDDO
+      ENDDO
+    ENDDO        
+    print *,"jQ done"
+  end subroutine
+   
+
+  integer function map(this,n,nn,q,phase)
+    CLASS(t_forcetheo_jij),INTENT(IN):: this
+    integer,intent(in)               :: n,nn,q
+    logical,optional,intent(in)      :: phase
+
+    logical :: ph
+    integer :: i
+
+    ph=.false.
+    if (present(phase)) ph=phase
+
+    map=0
+    DO i=1,this%no_loops
+      if (this%iatom(i)==n.and.this%jatom(i)==nn.and.this%q_index(i)==q.and.(this%phase2(i).eqv.ph)) then 
+        map=i
+        RETURN
+      endif 
+    enddo
+  end function
+
+  subroutine fourier_transform(this,atoms,sym,jq,jr,R)
+    CLASS(t_forcetheo_jij),INTENT(IN):: this
+    TYPE(t_atoms),intent(in)         :: ATOMS
+    type(t_sym),intent(in)           :: sym
+    complex,intent(in)               :: jq(:,:,:)
+    REAL,ALLOCATABLE,INTENT(OUT)     :: jr(:,:,:)
+    INTEGER,ALLOCATABLE,INTENT(OUT)  :: R(:,:)
+    
+    INTEGER  :: q,n_q,nn,nnn,i,j
+    LOGICAL  :: new
+    real     :: dabsq(3),divi(3),tau(3)
+
+    REAL,ALLOCATABLE:: qvec(:,:)
+    INTEGER,PARAMETER:: nx=1,ny=1,nz=1
+
+
+
+    !Construct lattice vectors to use:
+    ALLOCATE(R(3,(nx+1)*(ny+1)*(nz+1)))
+    n=0
+    DO i=0,nx
+      DO ii=0,ny 
+        do iii=0,nz
+          n=n+1
+          R(:,n)=[i,ii,iii]
+        ENDDO
+      ENDDO
+    ENDDO
+
+    Allocate(qvec(3,sym%nop))
+    allocate(jr(size(jq,1),size(jq,2),size(r,2)))
+    DO q=1,size(this%qvec,2)
+      !construct all equivalent q-vectors
+      n_q=1
+      DO nn=1,sym%nop
+        qvec(:,n_q)=matmul(this%qvec(:,q),sym%mrot(:,:,nn))
+        !check if this is a new q-vector
+        new=.true.
+        test_loop:DO nnn=1,n_q-1
+          DO ii=1,2
+            Dabsq(:)=ABS(qvec(:,nnn)+((-1)**ii)*qvec(:,n_q))
+            divi(:)=ABS(Dabsq(:)/FLOAT(NINT(Dabsq(:)))-1.0)
+            IF(((Dabsq(1).LT.tol).OR.(divi(1).LT.tol)).AND. &
+               ((Dabsq(2).LT.tol).OR.(divi(2).LT.tol)).AND. & 
+               ((Dabsq(3).LT.tol).OR.(divi(3).LT.tol)))THEN
+                new=.false.
+               exit test_loop
+            ENDIF
+           ENDDO ! ii
+         ENDDO test_loop
+         if (new) n_q=n_q+1
+      ENDDO  
+
+      !Now do the fourier transform
+      J_r=0.0
+      DO i=1,atoms%ntype
+        if (this%map(i,i,1)==0) cycle !non-magnetic atom
+        DO j=1,atoms%ntype
+          if (this%map(j,j,1)==0) cycle !non-magnetic atom
+          tau=atoms%taual(:,atoms%firstAtom(i))-atoms%taual(:,atoms%firstatom(j))
+          DO nn=1,n_q
+            DO nnn=1,size(r,2)  
+                  Jr(i,j,nnn)=Jr(i,j,nnn)+exp(cmplx(0.0,-1.0)*dot_product(qvec(:,nn),1.0*R(:,nnn)-tau))*jq(i,j,q)
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO            
+    enddo
+  end subroutine
 
   SUBROUTINE priv_analyse_data()
 !-------------------------------------------------------------------
@@ -407,35 +579,6 @@ c...
 5502    FORMAT(3(i3))
   44       CONTINUE
       ENDDO !nn
-c...      Now calculate Jq=Re(Jq)+i*Im(Jq)
-              mu=1
-           DO imt=1,mtypes
-              ReJq(mu,mu,qcount)=-2.0*(seigv(mu,mu,qcount,1)
-     &                -seigv0(mu,mu,1))/(M(mu)*M(mu)*sqsin)
-              ImJq(mu,mu,qcount)=0.0
-               DO remt=mu+1,mu+nmagtype(imt)-1
-               ReJq(remt,remt,qcount)=ReJq(mu,mu,qcount)
-               ImJq(remt,remt,qcount)=0.0
-               ENDDO!remt
-           mu=mu+nmagtype(imt)
-           ENDDO !imt
-              mu=1
-           DO imt=1,limit
-            DO nu=mu+1,nmagn
-              ReJq(mu,nu,qcount)=((seigv0(mu,nu,2)-
-     &        seigv(mu,nu,qcount,1))/(M(mu)*M(nu)*sqsin))
-     &        -(0.5*M(mu)*ReJq(mu,mu,qcount)/M(nu))-
-     &        (0.5*M(nu)*ReJq(nu,nu,qcount)/M(mu))
-              IF(invs)THEN
-               ImJq(mu,nu,qcount)=0.0
-              ELSE
-               ImJq(mu,nu,qcount)=((seigv(mu,nu,qcount,2)
-     &         -seigv(mu,nu,qcount,1))/
-     &         (M(mu)*M(nu)*sqsin))-ReJq(mu,nu,qcount)
-              ENDIF !invs
-            ENDDO !nu
-             mu=mu+nmagtype(imt)
-           ENDDO !mu
 
          ENDIF !if(n.eq.1)
       ENDDO !n

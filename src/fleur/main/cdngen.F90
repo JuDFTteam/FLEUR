@@ -275,7 +275,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
 
       IF (input%jspins == 2) THEN
          !Calculate and write out spin densities at the nucleus and magnetic moments in the spheres
-         CALL spinMoments(input,atoms,noco,nococonv,den=outDen)
+         CALL spinMoments(input,atoms,noco,nococonv,den=outDen,results=results)
          CALL orbMoments(input,atoms,noco,nococonv,moments)
          if (any(noco%l_constrained)) call nococonv%update_b_cons(atoms,noco,vtot,outDen)
 

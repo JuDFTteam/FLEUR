@@ -101,9 +101,12 @@ CONTAINS
     skip=.FALSE.
   END FUNCTION forcetheo_eval
 
-  SUBROUTINE forcetheo_postprocess(this)
+  SUBROUTINE forcetheo_postprocess(this,fi,results)
+    USE m_types,ONLY: t_fleurinput,t_results
     IMPLICIT NONE
     CLASS(t_forcetheo),INTENT(INOUT):: this
+    TYPE(t_fleurinput),INTENT(IN)   :: fi
+    TYPE(t_results),INTENT(IN)      :: results
   END SUBROUTINE forcetheo_postprocess
 
 

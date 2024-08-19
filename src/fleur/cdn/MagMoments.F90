@@ -10,7 +10,7 @@ module m_magmoments
     public:: spinMoments,orbMoments
     !! Module to encapsulate routines to calculate and output the spin- and orbital Moments
     contains
-    SUBROUTINE spinMoments(input,atoms,noco,nococonv,moments,den)
+    SUBROUTINE spinMoments(input,atoms,noco,nococonv,moments,den,results)
         !! Calculate and output the spin moments
         !! Either the moments have to be given as calculated in cdnval (moments-argument)
         !! or the moments are calculated from the density 
@@ -24,6 +24,7 @@ module m_magmoments
         TYPE(t_nococonv), INTENT(IN)        :: nococonv
         TYPE(t_moments),INTENT(IN),OPTIONAL :: moments
         TYPE(t_potden),INTENT(IN),OPTIONAL  :: den
+        TYPE(t_results),INTENT(INOUT),OPTIONAL:: results
      
         INTEGER                       :: iType
         REAL                          :: up,down,local_m(0:3),global_m(0:3),off1,off2
@@ -33,7 +34,10 @@ module m_magmoments
         if (input%jspins==1) return ! No spin-pol calculation!
         if (.not.present(moments).and..not.present(den)) return !No data provided
         if (present(moments)) call priv_print_spin_density_at_nucleus(input,atoms,moments)
-        
+        if (present(results))then 
+           if (.not.allocated(results%m)) allocate(results%m(atoms%ntype))
+        endif
+
 
         !Header of output
         write(ounit,*)
@@ -81,13 +85,15 @@ module m_magmoments
            global_m=nococonv%denmat_to_mag(up,down,off_diag)
 
            call priv_print_mt_moment(itype,noco%l_noco,l_offdiag,noco%l_soc,local_m(1:3),global_m(1:3),"smm")
+           if (present(results))  results%m(itype)=sqrt(dot_product(local_m(1:3),local_m(1:3)))
         enddo   
      
         CALL closeXMLElement('magneticMomentsInMTSpheres')
         write(oUnit,*) "------------------------------------------------------------------------------------------------------------------------"
         write(oUnit,*)
         if (noco%l_soc) write(ounit,*) "SOC calculation: Global frame aligned to lattice"
-     
+        
+
     END SUBROUTINE 
 
     SUBROUTINE orbMoments(input,atoms,noco,nococonv,moments)

@@ -132,11 +132,12 @@ CONTAINS
     skip=.TRUE.
   END FUNCTION  mae_eval
 
-  SUBROUTINE mae_postprocess(this)
+  SUBROUTINE mae_postprocess(this,fi,results)
     USE m_xmlOutput
     IMPLICIT NONE
     CLASS(t_forcetheo_mae),INTENT(INOUT):: this
-
+    TYPE(t_fleurinput),INTENT(IN)   :: fi
+    TYPE(t_results),INTENT(IN)      :: results
     !Locals
     INTEGER:: n
     CHARACTER(LEN=16):: attributes(3)

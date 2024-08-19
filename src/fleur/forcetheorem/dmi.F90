@@ -113,14 +113,15 @@ CONTAINS
     END IF
   END FUNCTION dmi_next_job
 
-  SUBROUTINE dmi_postprocess(this)
+  SUBROUTINE dmi_postprocess(this,fi,results)
     USE m_xmlOutput
 #ifdef CPP_MPI
     USE mpi
 #endif
     IMPLICIT NONE
     CLASS(t_forcetheo_dmi),INTENT(INOUT):: this
-
+    TYPE(t_fleurinput),INTENT(IN)   :: fi
+    TYPE(t_results),INTENT(IN)      :: results
     !Locals
     INTEGER:: n,q,i,nef,ierr
     CHARACTER(LEN=20):: attributes(6)

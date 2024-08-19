@@ -43,6 +43,7 @@ MODULE m_types_misc
       REAL, ALLOCATABLE    :: w_iks(:,:,:)
       REAL, ALLOCATABLE    :: w_iksRDMFT(:,:,:)
       REAL, ALLOCATABLE    :: eig(:,:,:)
+      REAL, ALLOCATABLE    :: M(:)
       INTEGER, ALLOCATABLE :: neig(:,:) ! neig(nkpts,jspins) number of calculated eigenvalues for each k point, spin
       REAL :: tkb_loc
 
