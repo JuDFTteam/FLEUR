@@ -256,7 +256,7 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
                                    eigVecCoeffsPref%ccof(-atoms%llod:,:,:,:,ispin),zMatPref)
          IF (l_minusq) CALL abcof(input,atoms,sym,cell,lapwmq,noccbd,usdus,noco,nococonv,ispin,&
                                   eigVecCoeffs1m%abcof(:,0:,0,:,ispin),eigVecCoeffs1m%abcof(:,0:,1,:,ispin),&
-                                  eigVecCoeffs1m%ccof(-atoms%llod:,:,:,:,ispin),zMat1)
+                                  eigVecCoeffs1m%ccof(-atoms%llod:,:,:,:,ispin),zMat1m)
 
          IF (juphon%l_phonon) THEN
             eigVecCoeffs1%abcof(:,0:,:,iDtype,ispin) = eigVecCoeffs1%abcof(:,0:,:,iDtype,ispin) + eigVecCoeffsPref%abcof(:,0:,:,iDtype,ispin)

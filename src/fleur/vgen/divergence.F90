@@ -6,11 +6,15 @@
 MODULE m_divergence
    USE m_types
    USE m_juDFT
+#ifdef CPP_MPI
+   USE mpi
+#endif
+
    PRIVATE
    PUBLIC :: divergence, vac_grad, divpotgrad
 
 CONTAINS
-   SUBROUTINE divergence(input,stars,atoms,sphhar,vacuum,sym,cell,noco,bxc,div)
+   SUBROUTINE divergence(fmpi,input,stars,atoms,sphhar,vacuum,sym,cell,bxc,div)
       USE m_lattHarmsSphHarmsConv
       USE m_gradYlm
       USE m_constants
@@ -24,6 +28,7 @@ CONTAINS
 
       IMPLICIT NONE
 
+      TYPE(t_mpi),                  INTENT(IN)    :: fmpi
       TYPE(t_input),                INTENT(IN)    :: input
       TYPE(t_stars),                INTENT(IN)    :: stars
       TYPE(t_atoms),                INTENT(IN)    :: atoms
@@ -31,43 +36,46 @@ CONTAINS
       TYPE(t_vacuum),               INTENT(IN)    :: vacuum
       TYPE(t_sym),                  INTENT(IN)    :: sym
       TYPE(t_cell),                 INTENT(IN)    :: cell
-      TYPE(t_noco),                 INTENT(IN)    :: noco
       TYPE(t_potden), DIMENSION(3), INTENT(INOUT) :: bxc
       TYPE(t_potden),               INTENT(INOUT) :: div
 
       TYPE(t_potden), DIMENSION(3)                :: grad
 
-      INTEGER :: i,iType,indmax, lh
-      COMPLEX, ALLOCATABLE :: flm(:,:,:),grsflm1(:,:,:,:),grsflm2(:,:,:,:),grsflm3(:,:,:,:),divflm(:,:,:) ! (iR,lm,n[,x,i])
+      TYPE(t_parallelLoop)           :: mpiLoop
+
+      INTEGER :: i, iType, lh, iAtom, length, ierr
+
+      COMPLEX, ALLOCATABLE :: grsflm(:,:,:,:)
+      COMPLEX, ALLOCATABLE :: divflm(:,:)
+      COMPLEX, ALLOCATABLE :: flm(:,:)
+      REAL, ALLOCATABLE :: tempArray(:,:,:)
+
+      ALLOCATE(grsflm(atoms%jmtd,(atoms%lmaxd + 2 )**2, 3, 3))
+      ALLOCATE(divflm(atoms%jmtd,(atoms%lmaxd+2)**2))
+      ALLOCATE(flm(atoms%jmtd,(atoms%lmaxd+2)**2))
+      ALLOCATE(tempArray(SIZE(div%mt,1),0:SIZE(div%mt,2)-1,SIZE(div%mt,3)))
 
       CALL timestart("MT divergence")
-      indmax=(atoms%lmaxd+1)**2
-
-      ALLOCATE(flm(atoms%jmtd,indmax,atoms%ntype))
-      ALLOCATE(divflm(atoms%jmtd,indmax,atoms%ntype))
-
-      DO i=1,3
-         DO iType=1, atoms%ntype
-            CALL lattHarmsRepToSphHarms(sym, atoms, sphhar, iType, bxc(i)%mt(:,:,iType,1), flm(:,:,iType))
+      tempArray = 0.0
+      CALL mpiLoop%init(fmpi%irank,fmpi%isize,1,atoms%nat)
+      DO iAtom = mpiLoop%bunchMinIndex, mpiLoop%bunchMaxIndex
+         iType = atoms%itype(iAtom)
+         grsflm = CMPLX(0.0,0.0)
+         DO i = 1, 3
+            CALL lattHarmsRepToSphHarms(sym, atoms, sphhar, iType, bxc(i)%mt(:,:,iType,1), flm)
+            CALL gradYlm(atoms,iAtom,flm,grsflm(:,:,:,i))
          END DO
-         IF (i==1) THEN
-            CALL gradYlm(atoms,flm,grsflm1)
-         ELSE IF (i==2) THEN
-            CALL gradYlm(atoms,flm,grsflm2)
-         ELSE
-            CALL gradYlm(atoms,flm,grsflm3)
-         END IF
+         divflm = CMPLX(0.0,0.0)
+         CALL divYlm(grsflm, divflm)
+         CALL sphHarmsRepToLattHarms(sym, atoms, sphhar, iType, divflm, tempArray(:,0:,iType))
       END DO
-
-      DEALLOCATE(flm)
-
-      CALL divYlm(grsflm1(:,:indmax,:,:),grsflm2(:,:indmax,:,:),grsflm3(:,:indmax,:,:), divflm)
-
-      DO iType=1, atoms%ntype
-         CALL sphHarmsRepToLattHarms(sym, atoms, sphhar, iType, divflm(:,1:indmax,iType), div%mt(:,0:,iType,1))
-      END DO
-
-      DEALLOCATE(divflm,grsflm1,grsflm2,grsflm3)
+      length = SIZE(div%mt,1) * SIZE(div%mt,2) * SIZE(div%mt,3)
+#ifdef CPP_MPI
+      CALL MPI_ALLREDUCE(tempArray(:,0:,:),div%mt(:,0:,:,1),length,MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)
+#else
+      div%mt(:,0:,:,1) = tempArray(:,0:,:)
+#endif
+      DEALLOCATE(tempArray,flm,divflm,grsflm)
 
       CALL timestop("MT divergence")
 
@@ -270,7 +278,7 @@ CONTAINS
 
    END SUBROUTINE vac_grad
 
-   SUBROUTINE divpotgrad(input,stars,atoms,sphhar,vacuum,sym,cell,noco,pot,grad)
+   SUBROUTINE divpotgrad(input,stars,atoms,sphhar,vacuum,sym,cell,pot,grad)
 
       USE m_types
       USE m_lattHarmsSphHarmsConv
@@ -293,40 +301,38 @@ CONTAINS
       TYPE(t_vacuum),INTENT(IN)                   :: vacuum
       TYPE(t_sym), INTENT(IN)                     :: sym
       TYPE(t_cell),INTENT(IN)                     :: cell
-      TYPE(t_noco), INTENT(IN)                    :: noco
       TYPE(t_potden), INTENT(IN)                  :: pot
       TYPE(t_potden), dimension(3), INTENT(INOUT) :: grad
 
       TYPE(t_potden)                              :: denloc
-      INTEGER :: i,iType,indmax,lh,lhmax
-      COMPLEX, ALLOCATABLE :: flm(:,:,:),grsflm(:,:,:,:) ! (iR,lm,n[,x,i])
+      INTEGER :: i, iType, lh, lhmax, iAtom
+
+      COMPLEX, ALLOCATABLE                        :: flm(:,:)
+      COMPLEX, ALLOCATABLE                        :: grsflm(:,:,:)
 
       CALL timestart("MT potential gradient")
-      indmax=(atoms%lmaxd+1)**2
-
-      ALLOCATE(flm(atoms%jmtd,indmax,atoms%ntype))
 
       denloc=pot
 
-      DO iType=1,atoms%ntype
-         lhmax=sphhar%nlh(sym%ntypsy(atoms%firstAtom(iType)))
+      ALLOCATE(flm(atoms%jmtd,(atoms%lmaxd + 2)**2))
+      ALLOCATE(grsflm(atoms%jmtd,(atoms%lmaxd + 2 )**2, 3))
+
+      DO iAtom = 1, atoms%nat
+         iType = atoms%itype(iAtom)
+         flm = CMPLX(0.0,0.0)
+         lhmax = sphhar%nlh(sym%ntypsy(atoms%firstAtom(iType)))
          DO lh=0, lhmax
             denloc%mt(:,lh,iType,1) = denloc%mt(:,lh,iType,1)*atoms%rmsh(:, iType)**2
          END DO ! lh
-         CALL lattHarmsRepToSphHarms(sym, atoms, sphhar, iType, denloc%mt(:,:,iType,1), flm(:,:,iType))
-      END DO
-
-      CALL gradYlm(atoms,flm,grsflm)
-
-      DEALLOCATE(flm)
-
-      DO i=1,3
-         DO iType=1,atoms%ntype
-            CALL sphHarmsRepToLattHarms(sym, atoms, sphhar, iType, grsflm(:,1:indmax,iType,i)/(4.0*pi_const), grad(i)%mt(:,0:,iType,1))
+         CALL lattHarmsRepToSphHarms(sym, atoms, sphhar, iType, denloc%mt(:,:,iType,1), flm(:,:))
+         grsflm = CMPLX(0.0,0.0)
+         CALL gradYlm(atoms,iAtom,flm,grsflm)
+         DO i=1,3
+            CALL sphHarmsRepToLattHarms(sym, atoms, sphhar, iType, grsflm(:,:,i)/(4.0*pi_const), grad(i)%mt(:,0:,iType,1))
          END DO
       END DO
 
-      DEALLOCATE(grsflm)
+      DEALLOCATE(grsflm,flm)
 
       CALL timestop("MT potential gradient")
 

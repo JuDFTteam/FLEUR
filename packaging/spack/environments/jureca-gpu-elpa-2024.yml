@@ -5,15 +5,19 @@
 spack:
   # add package specs to the `specs` list
   specs:
-  - fleur@develop%nvhpc+cuda+elpa+mpi+hdf5 cuda_arch=80
+  - fleur@develop%nvhpc+cuda+elpa+mpi+hdf5 fft=fftw cuda_arch=80
   - elpa~openmp+cuda cuda_arch=80
   - netlib-scalapack
   view: true
   concretizer:
     unify: true
   repos:
-  - /p/home/jusers/wortmann1/jureca/fleur4htc/fleur/packaging/spack/repo
+  - ${FLEUR_SOURCE}/packaging/spack/repo
   packages:
+    netlib-lapack:
+      externals:
+      - spec: netlib-lapack@2.0
+        prefix: /p/software/jurecadc/stages/2024/software/NVHPC/24.3-CUDA-12/Linux_x86_64/24.3/compilers/
     mpi:
       require: openmpi
     libtool:
@@ -21,6 +25,11 @@ spack:
       externals:
       - spec: libtool@2.4.6
         prefix: /usr
+    fftw:
+      buildable: false
+      externals:
+        - spec: fftw@3.3.10
+          modules: [Stages/2024, FFTW/3.3.10]
     libxml2:
       buildable: false
       externals:
@@ -29,8 +38,8 @@ spack:
     hdf5:
       buildable: false
       externals:
-      - spec: hdf5@1.12
-        modules: [Stages/2024, NVHPC, OpenMPI, HDF5]
+      - spec: hdf5@1.14.2
+        modules: [Stages/2024, NVHPC/24.3-CUDA-12, OpenMPI, HDF5]
     perl:
       buildable: false
       externals:
@@ -50,7 +59,7 @@ spack:
       buildable: false
       externals:
       - spec: openmpi@4.1.5
-        modules: [Stages/2024, OpenMPI]
+        modules: [Stages/2024, NVHPC, OpenMPI]
     all:
       variants:
       - cuda_arch=80
@@ -58,9 +67,9 @@ spack:
       buildable: false
       externals:
       - spec: cuda@12.2.0
-        modules: [Stages/2024 CUDA/12]
+        modules: [Stages/2024, CUDA/12]
     lapack:
-      require: openblas
+      require: netlib-lapack
     cmake:
       buildable: false
       externals:
@@ -69,15 +78,19 @@ spack:
         - CMake
   compilers:
   - compiler:
-      spec: nvhpc@=23.7
+      spec: nvhpc@=24.3
       paths:
-        cc: /p/software/jurecadc/stages/2024/software/NVHPC/23.7-CUDA-12/Linux_x86_64/23.7/compilers/bin/nvc
-        cxx: /p/software/jurecadc/stages/2024/software/NVHPC/23.7-CUDA-12/Linux_x86_64/23.7/compilers/bin/nvc++
-        f77: /p/software/jurecadc/stages/2024/software/NVHPC/23.7-CUDA-12/Linux_x86_64/23.7/compilers/bin/nvfortran
-        fc: /p/software/jurecadc/stages/2024/software/NVHPC/23.7-CUDA-12/Linux_x86_64/23.7/compilers/bin/nvfortran
-      flags: {}
+        cc: /p/software/jurecadc/stages/2024/software/NVHPC/24.3-CUDA-12/Linux_x86_64/24.3/compilers/bin/nvc
+        cxx: /p/software/jurecadc/stages/2024/software/NVHPC/24.3-CUDA-12/Linux_x86_64/24.3/compilers/bin/nvc++
+        f77: /p/software/jurecadc/stages/2024/software/NVHPC/24.3-CUDA-12/Linux_x86_64/24.3/compilers/bin/nvfortran
+        fc: /p/software/jurecadc/stages/2024/software/NVHPC/24.3-CUDA-12/Linux_x86_64/24.3/compilers/bin/nvfortran
+      flags:
+        cflags: -tp=host -O3
+        cppflags: -O3
+        cxxflags: -tp=host -O3
+        fflags: -tp=host -O3
       operating_system: rocky8
       target: x86_64
-      modules: []
+      modules: [Stages/2024, NVHPC/24.3-CUDA-12, OpenMPI]
       environment: {}
       extra_rpaths: []

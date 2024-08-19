@@ -11,7 +11,7 @@ module m_matmul_dgemm
 #ifdef CPP_MAGMA
     use magma
 #endif
-#ifdef _CUDA
+#ifdef __PGI
     use cublas
 #endif
     implicit none
@@ -45,7 +45,7 @@ module m_matmul_dgemm
         select case (priv_select_multiply_r(a,b,c))   
         case (blas_select)
             call dgemm(op_aa,op_bb,m,n,k, alphaa, a, lda, b,ldb,betaa, c, ldc)
-#ifdef _CUDA
+#ifdef __PGI
         case (cublas_select)
             !$acc host_data use_device(a,b,c)
             call cublasDgemm(op_aa, op_bb, m, n, k, alphaa,a, lda, b, ldb, betaa, c, ldc)
@@ -82,7 +82,7 @@ module m_matmul_dgemm
         select case (priv_select_multiply_c(a,b,c))   
         case (blas_select)
             call zgemm(op_aa,op_bb,m,n,k, alphaa, a, lda, b,ldb,betaa, c, ldc)
-#ifdef _CUDA
+#ifdef __PGI
         case (cublas_select)
             !$acc host_data use_device(a,b,c)
             call cublaszgemm(op_aa, op_bb, m, n, k, alphaa,a, lda, b, ldb, betaa, c, ldc)
@@ -122,7 +122,7 @@ module m_matmul_dgemm
 #ifdef _OPENACC
         if (acc_is_present(a).and.acc_is_present(b).and.acc_is_present(c)) THEN
             !All data on GPU
-#ifdef _CUDA
+#ifdef __PGI
 
             sel=cublas_select;return
 #endif
@@ -141,7 +141,7 @@ module m_matmul_dgemm
 #ifdef _OPENACC
     if (acc_is_present(a).and.acc_is_present(b).and.acc_is_present(c)) THEN
         !All data on GPU
-#ifdef _CUDA
+#ifdef __PGI
         sel=cublas_select            
 #endif
 #ifdef CPP_MAGMA
@@ -149,7 +149,6 @@ module m_matmul_dgemm
 #endif
     ENDIF
 #endif    
-    
 end function                
 
 end module

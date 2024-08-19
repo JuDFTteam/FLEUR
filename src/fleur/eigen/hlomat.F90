@@ -122,18 +122,27 @@ CONTAINS
          IF (sym%invsat(na) == 0) invsfct = 1
          IF (sym%invsat(na) == 1) invsfct = 2
          CALL timestart("LAPW-LO")
+
+#ifndef __PGI
+         !Here we copy the data to the CPU (This seems to be the main time consumer of this subroutine.)
+         !$acc update self(abcoeffspr)
+#endif
+
+         !$acc data create(axpr,bxpr,cxpr)
+
          ! Calculate the hamiltonian matrix elements with the regular
-         ! LAPW basis-functions   
+         ! LAPW basis-functions
          DO lo = 1,atoms%nlo(ntyp)
             l = atoms%llo(lo,ntyp)
-            s = tlmplm%h_loc2_nonsph(ntyp) 
-            !TODO here we copy the data to the CPU
-            !$acc update self(abcoeffspr)
+            s = tlmplm%h_loc2_nonsph(ntyp)
+
             call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,tlmplm%h_loc_LO(0:2*s-1,l*l:,ntyp,ilSpinPr,ilSpin),axPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
             call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,tlmplm%h_loc_LO(0:2*s-1,s+l*l:,ntyp,ilSpinPr,ilSpin),bxPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
             call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,tlmplm%h_LO(0:2*s-1,-l:,lo+mlo,ilSpinPr,ilSpin),cxPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
-            !$acc data copyin(axpr,bxpr,cxpr)
-            
+#ifndef __PGI
+            !$acc update device(axpr,bxpr,cxpr)
+!            !$acc data copyin(axpr,bxpr,cxpr)
+#endif            
             !LAPW LO contributions
             !$acc kernels present(hmat,hmat%data_c,hmat%data_r,abclo,axpr,bxpr,cxpr)&
             !$acc & copyin(lapw,lapw%nv,lapw%index_lo,fmpi,fmpi%n_size,fmpi%n_rank,lo,na,igSpin)
@@ -166,8 +175,8 @@ CONTAINS
                END IF
             END DO
             !$acc end kernels
-            !$acc end data
          ENDDO
+         !$acc end data
          CALL timestop("LAPW-LO")
          IF (l_fullj) THEN
             CALL timestart("LO-LAPW")

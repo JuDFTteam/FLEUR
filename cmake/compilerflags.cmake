@@ -31,8 +31,10 @@ if (CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
        set(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -check assume,bounds,contiguous,format,output_conversion,stack -traceback -O0 -g  -DCPP_DEBUG")
    endif()
 elseif (CMAKE_Fortran_COMPILER_ID MATCHES "NVHPC")
-  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS}  -tp=zen2 -mp -O1 -g ")
-  set(FLEUR_COMPILE_OPTIONS -mavx2 -Mlre -Mautoinline -Mpre -Mvect=simd -Mcache_align -Mflushz -O2 -g)
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS}  -tp=host -mp -cudalib=cublas -cudaforlibs -O3 -g ")
+  set(FLEUR_COMPILE_OPTIONS -Mlre -Mautoinline -Mvect=simd -Mcache_align -Mflushz -O3 -g)
+#old line:
+#  set(FLEUR_COMPILE_OPTIONS -mavx2 -Mlre -Mautoinline -Mpre -Mvect=simd -Mcache_align -Mflushz -O2 -g)
   set(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -C -traceback -O0 -g -Mchkstk -gpu=debug -DCPP_DEBUG")
 elseif (CMAKE_Fortran_COMPILER_ID MATCHES "PGI")
    set(CMAKE_SHARED_LIBRARY_LINK_Fortran_FLAGS "") #fix problem in cmake
