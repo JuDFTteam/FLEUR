@@ -102,7 +102,8 @@ CONTAINS
   END FUNCTION forcetheo_eval
 
   SUBROUTINE forcetheo_postprocess(this,fi,results)
-    USE m_types,ONLY: t_fleurinput,t_results
+    USE m_types_fleurinput
+    USE m_types_misc
     IMPLICIT NONE
     CLASS(t_forcetheo),INTENT(INOUT):: this
     TYPE(t_fleurinput),INTENT(IN)   :: fi
