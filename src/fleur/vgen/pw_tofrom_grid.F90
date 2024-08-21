@@ -107,7 +107,7 @@ CONTAINS
 
 
     INTEGER      :: js,i,idm,ig,ndm,jdm,j
-    REAL         :: rhotot,mmx,mmy,mmz,theta,phi,fd(3),sd(3)
+    REAL         :: rhotot,mmx,mmy,mmz,theta,phi,fd(3),sd(3), rhoCutGrad
     COMPLEX      :: rho21
     !     .. Local Arrays ..
     COMPLEX, ALLOCATABLE :: cqpw(:,:),ph_wrk(:)
@@ -338,8 +338,37 @@ CONTAINS
        END IF
 
     ENDIF
+    rhoCutGrad = 3.0e-6
     IF (PRESENT(rho)) THEN
        WHERE(ABS(rho) < d_15) rho = d_15
+       IF (dograds) THEN
+          ! In the following, gradients at places with very small densities are set to zero. This is done for stability reasons.
+          DO i = 1, griddim
+             IF(rho(i-1,1).LT.rhoCutGrad) THEN
+                grad%agru(i) = 0.0
+                grad%g2ru(i) = 0.0
+                grad%gggru(i) = 0.0
+
+                grad%agrt(i) = grad%agrd(i)
+                grad%g2rt(i) = grad%g2rd(i)
+                grad%gggrt(i) = grad%gggrd(i)
+             END IF
+
+             IF(rho(i-1,jspins).LT.rhoCutGrad) THEN
+                grad%agrd(i) = 0.0
+                grad%g2rd(i) = 0.0
+                grad%gggrd(i) = 0.0
+
+                grad%agrt(i) = grad%agru(i)
+                grad%g2rt(i) = grad%g2ru(i)
+                grad%gggrt(i) = grad%gggru(i)
+             END IF
+
+             IF((rho(i-1,1).LT.rhoCutGrad).AND.(rho(i-1,jspins).LT.rhoCutGrad)) THEN
+                grad%gzgr(i) = 0.0
+             END IF
+          END DO
+       END IF
     ENDIF
     IF (PRESENT(rhoim)) THEN
        WHERE(ABS(rhoim) < d_15) rhoim = d_15
