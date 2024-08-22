@@ -56,9 +56,11 @@ round.f90
 npy.F90
 round.f90
 internalParams.f90
+nvtx.F90
 )
 if (JUDFT_USE_GPU)
 target_compile_definitions(juDFT PUBLIC CPP_GPU)
+target_compile_definitions(juDFT PUBLIC CPP_NVTX) #Use by default
 endif()
 if (JUDFT_USE_MPI)
   target_compile_definitions(juDFT PUBLIC CPP_MPI)
