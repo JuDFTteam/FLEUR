@@ -18,7 +18,7 @@ MODULE m_cdnovlp
    PUBLIC :: cdnovlp 
 CONTAINS
    SUBROUTINE cdnovlp(fmpi, sphhar, stars, atoms, sym, vacuum,cell, input, &
-                        l_st, jspin, rh, qpw, rho, rhvac, vpw, vr)
+                        l_st, jspin, rh, qpw, rho, rhvac, l_CutHighG, vpw, vr)
       !--------------------------------------------------------------------------
       !     calculates the overlapping core tail density and adds
       !     its contribution to the corresponging components of
@@ -117,7 +117,7 @@ CONTAINS
           !     .. Scalar Arguments ..
 
           INTEGER,INTENT (IN) :: jspin       
-          LOGICAL,INTENT (IN) :: l_st
+          LOGICAL,INTENT (IN) :: l_st, l_CutHighG
           !     ..
           !     .. Array Arguments ..
           COMPLEX,INTENT(IN),OPTIONAL :: vpw(:,:)
@@ -444,6 +444,14 @@ CONTAINS
           ELSE
              CALL ft_of_CorePseudocharge(fmpi,input,atoms,mshc,alpha,tol_14,rh, &
                              acoff,stars,method2,rat,cell ,sym,qpwc,jspin,l_f2)
+          END IF
+
+          IF(l_CutHighG) THEN
+             DO k = 1, stars%ng3
+                IF (stars%sk3(k).GT.(2.0*input%rkmax)) THEN
+                   qpwc(k) = CMPLX(0.0,0.0)
+                END IF
+             END DO
           END IF
 
           DO k = 1 , stars%ng3    
