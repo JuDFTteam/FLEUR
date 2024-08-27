@@ -44,7 +44,7 @@ CONTAINS
     IF (.NOT.l_fileexist) RETURN !No previous data
 ! I comment out this extra code path for the PGI compiler. It seems to be
 ! not needed.
-!#ifdef __PGI
+!#ifdef CPP_GPU
 !    PRINT *,"Warning PGI compiler does not support reading of history"
 !#else
     OPEN(888,file=filename,status='old',form='unformatted')

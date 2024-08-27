@@ -12,7 +12,7 @@ MODULE m_hsefunctional
    USE m_types_hybdat
    IMPLICIT NONE
 
-#ifdef __PGI
+#ifdef CPP_GPU
    REAL, EXTERNAL ::erfc
 #endif
    ! Constant omega of the HSE exchange functional
@@ -1096,7 +1096,7 @@ CONTAINS
       IF (ngptm < noGpts) call juDFT_error( 'hsefunctional: error calculating Fourier coefficients, noGpts too large')
 
       gPts(:, :) = g(:, pgptm(1:noGPts))
-#ifndef __PGI
+#ifndef CPP_GPU
       gpoints: DO cg=1, noGPts
          ntypesA: DO cn=1, ntype
          ! Calculate the phase factor exp(-iGR) for all atoms

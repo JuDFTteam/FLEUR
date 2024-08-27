@@ -13,9 +13,7 @@ CONTAINS
   SUBROUTINE abcof(input,atoms,sym, cell,lapw,ne,usdus,&
                    noco,nococonv,jspin , acof,bcof,ccof,zMat,eig,force,nat_start,nat_stop)
 #ifdef _OPENACC
-#ifdef __PGI
     use cublas
-#endif
 #define CPP_ACC acc
 #define CPP_OMP no_OMP_used
 #define zgemm_acc cublaszgemm

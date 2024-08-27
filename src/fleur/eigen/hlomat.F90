@@ -123,10 +123,10 @@ CONTAINS
          IF (sym%invsat(na) == 1) invsfct = 2
          CALL timestart("LAPW-LO")
 
-#ifndef __PGI
-         !Here we copy the data to the CPU (This seems to be the main time consumer of this subroutine.)
-         !$acc update self(abcoeffspr)
-#endif
+!#ifndef CPP_GPU
+!         !Here we copy the data to the CPU (This seems to be the main time consumer of this subroutine.)
+!         !$acc update self(abcoeffspr)
+!#endif
 
          !$acc data create(axpr,bxpr,cxpr)
 
@@ -139,10 +139,10 @@ CONTAINS
             call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,tlmplm%h_loc_LO(0:2*s-1,l*l:,ntyp,ilSpinPr,ilSpin),axPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
             call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,tlmplm%h_loc_LO(0:2*s-1,s+l*l:,ntyp,ilSpinPr,ilSpin),bxPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
             call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,tlmplm%h_LO(0:2*s-1,-l:,lo+mlo,ilSpinPr,ilSpin),cxPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
-#ifndef __PGI
-            !$acc update device(axpr,bxpr,cxpr)
-!            !$acc data copyin(axpr,bxpr,cxpr)
-#endif            
+!#ifndef CPP_GPU
+!            !$acc update device(axpr,bxpr,cxpr)
+!!            !$acc data copyin(axpr,bxpr,cxpr)
+!#endif            
             !LAPW LO contributions
             !$acc kernels present(hmat,hmat%data_c,hmat%data_r,abclo,axpr,bxpr,cxpr)&
             !$acc & copyin(lapw,lapw%nv,lapw%index_lo,fmpi,fmpi%n_size,fmpi%n_rank,lo,na,igSpin)
