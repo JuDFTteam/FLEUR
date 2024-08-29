@@ -66,6 +66,12 @@ CONTAINS
       COMPLEX, ALLOCATABLE :: abclo(:,:,:,:)
       COMPLEX, ALLOCATABLE :: abCoeffsPr(:,:), axPr(:,:), bxPr(:,:), cxPr(:,:)
       COMPLEX, ALLOCATABLE :: abcloPr(:,:,:,:)
+#ifdef CPP_GPU
+      COMPLEX, ALLOCATABLE :: h_loc_LO_A_tmp(:,:)
+      COMPLEX, ALLOCATABLE :: h_loc_LO_B_tmp(:,:)
+      COMPLEX, ALLOCATABLE :: h_LO_tmp(:,:)
+#endif
+
 
       TYPE(t_lapw) ,POINTER:: lapwPr
       TYPE(t_fjgj) ,POINTER:: fjgjPr
@@ -135,14 +141,29 @@ CONTAINS
          DO lo = 1,atoms%nlo(ntyp)
             l = atoms%llo(lo,ntyp)
             s = tlmplm%h_loc2_nonsph(ntyp)
-
+#ifdef CPP_GPU
+            ALLOCATE(h_loc_LO_A_tmp(2*s,2*l+1),h_loc_LO_B_tmp(2*s,2*l+1),h_LO_tmp(2*s,2*l+1))
+            !$acc data create(h_loc_LO_A_tmp,h_loc_LO_B_tmp,h_LO_tmp)
+            !$acc kernels
+            h_loc_LO_A_tmp(:,:) = tlmplm%h_loc_LO(0:2*s-1,l*l:l*l+2*l,ntyp,ilSpinPr,ilSpin)
+            h_loc_LO_B_tmp(:,:) = tlmplm%h_loc_LO(0:2*s-1,s+l*l:s+l*l+2*l,ntyp,ilSpinPr,ilSpin)
+            h_LO_tmp(:,:) = tlmplm%h_LO(0:2*s-1,-l:l,lo+mlo,ilSpinPr,ilSpin)
+            !$acc end kernels
+            call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,h_loc_LO_A_tmp,axPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
+            call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,h_loc_LO_B_tmp,bxPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
+            call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,h_LO_tmp,cxPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
+            !$acc end data
+            DEALLOCATE(h_LO_tmp,h_loc_LO_B_tmp,h_loc_LO_A_tmp)
+#else
             call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,tlmplm%h_loc_LO(0:2*s-1,l*l:,ntyp,ilSpinPr,ilSpin),axPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
             call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,tlmplm%h_loc_LO(0:2*s-1,s+l*l:,ntyp,ilSpinPr,ilSpin),bxPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
             call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,tlmplm%h_LO(0:2*s-1,-l:,lo+mlo,ilSpinPr,ilSpin),cxPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
+#endif
+
 !#ifndef CPP_GPU
 !            !$acc update device(axpr,bxpr,cxpr)
 !!            !$acc data copyin(axpr,bxpr,cxpr)
-!#endif            
+!#endif
             !LAPW LO contributions
             !$acc kernels present(hmat,hmat%data_c,hmat%data_r,abclo,axpr,bxpr,cxpr)&
             !$acc & copyin(lapw,lapw%nv,lapw%index_lo,fmpi,fmpi%n_size,fmpi%n_rank,lo,na,igSpin)
