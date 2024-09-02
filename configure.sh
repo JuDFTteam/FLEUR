@@ -75,6 +75,14 @@ echo -e "${RED}------------ Welcome to the FLEUR configuration script ----------
 . $DIR/cmake/process_arguments.sh
 
 
+if [ $conf_spack -gt 0 ]
+then
+     source $DIR/packaging/spack/setup-spack-for-fleur.sh
+     setup_spack
+     exit
+fi
+
+
 if [ $gitupdate -gt 0 ]
 then
     update_git

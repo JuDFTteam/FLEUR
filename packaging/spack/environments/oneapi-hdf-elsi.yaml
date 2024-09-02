@@ -1,4 +1,5 @@
 # This is a Spack Environment file.
+##docu Generic recipe for Intel OneAPI compilers
 #
 # It describes a set of packages to be installed, along with
 # configuration settings.

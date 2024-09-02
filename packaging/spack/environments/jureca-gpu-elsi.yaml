@@ -1,5 +1,6 @@
 # This is a Spack Environment file.
-#
+##docu Config for a specific computer: JURECA@JSC
+##docu GPU version with ELSI library, using 2023 stage of modules#
 # It describes a set of packages to be installed, along with
 # configuration settings.
 #

@@ -38,6 +38,7 @@ do
     -warn_only) CLI_WARN_ONLY=1;;
     -d) debug=1;;
     -amd) CLI_PATCH_INTEL=1;;
+    -spack) conf_spack=1;;
     -*) error="Unknown argument";;
     *)  break;;	# terminate while loop
   esac
