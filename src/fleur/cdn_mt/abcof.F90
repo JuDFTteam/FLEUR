@@ -78,7 +78,7 @@ CONTAINS
     COMPLEX, ALLOCATABLE :: work_c(:,:), workTrans_c(:,:), workTrans_cf(:,:)
     COMPLEX, ALLOCATABLE :: abCoeffs(:,:)
     COMPLEX, ALLOCATABLE :: abTemp(:,:)
-    COMPLEX, ALLOCATABLE :: helpMat_c(:,:), helpMat_force(:,:)
+    COMPLEX, ALLOCATABLE :: helpMat_force(:,:)
 
 
     CALL timestart("abcof")
@@ -111,7 +111,6 @@ CONTAINS
        force%aveccof = CMPLX(0.0,0.0)
        force%bveccof = CMPLX(0.0,0.0)
        force%cveccof = CMPLX(0.0,0.0)
-       ALLOCATE(helpMat_c(atoms%lmaxd*(atoms%lmaxd+2)+1,MAXVAL(lapw%nv)))
        ALLOCATE(helpMat_force(ne,atoms%lmaxd*(atoms%lmaxd+2)+1))
        ALLOCATE(workTrans_cf(ne,MAXVAL(lapw%nv)))
        ALLOCATE(s2h_e(ne,MAXVAL(lapw%nv)))
@@ -310,11 +309,11 @@ CONTAINS
                    fgpl(:,iLAPW) = MATMUL(fgr,cell%bmat)
                 ENDDO
 
-                helpMat_c = CONJG(abCoeffs(1+abSize:,:)) !TODO: Is this conjugation costly?
-                workTrans_cf = 0.0
+                workTrans_cf = CMPLX(0.0,0.0)
+                helpMat_force = CMPLX(0.0,0.0)
 
-                CALL zgemm("N","T",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),s2h_e,ne,abCoeffs,size(abcoeffs,1),CMPLX(1.0,0.0),force%e1cof(:,:,iAtom),ne)
-                CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),s2h_e,ne,helpMat_c,size(helpMat_c,1),CMPLX(1.0,0.0),force%e2cof(:,:,iAtom),ne)
+                CALL zgemm("N","T",ne,abSize,nvmax,CMPLX(1.0,0.0),s2h_e,ne,abCoeffs,size(abcoeffs,1),CMPLX(1.0,0.0),force%e1cof(:,:,iAtom),ne)
+                CALL zgemm("N","T",ne,abSize,nvmax,CMPLX(1.0,0.0),s2h_e,ne,abCoeffs(1+abSize,1),size(abcoeffs,1),CMPLX(1.0,0.0),force%e2cof(:,:,iAtom),ne)
                 DO i =1,3
                    IF (zmat%l_real) THEN
                       DO iLAPW = 1,nvmax
@@ -325,9 +324,9 @@ CONTAINS
                          workTrans_cf(:,iLAPW) = workTrans_c(:,iLAPW) * fgpl(i,iLAPW)
                       ENDDO
                    ENDIF
-                   CALL zgemm("N","T",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),workTrans_cf,ne,abCoeffs,size(abCoeffs,1),CMPLX(0.0,0.0),helpMat_force,ne)
+                   CALL zgemm("N","T",ne,abSize,nvmax,CMPLX(1.0,0.0),workTrans_cf,ne,abCoeffs,size(abCoeffs,1),CMPLX(0.0,0.0),helpMat_force,ne)
                    force%aveccof(i,:,:,iAtom) = force%aveccof(i,:,:,iAtom) + helpMat_force(:,:)
-                   CALL zgemm("N","C",ne,atoms%lmaxd*(atoms%lmaxd+2)+1,nvmax,CMPLX(1.0,0.0),workTrans_cf,ne,helpMat_c,size(helpMat_c,1),CMPLX(0.0,0.0),helpMat_force,ne)
+                   CALL zgemm("N","T",ne,abSize,nvmax,CMPLX(1.0,0.0),workTrans_cf,ne,abCoeffs(1+abSize,1),size(abcoeffs,1),CMPLX(0.0,0.0),helpMat_force,ne)
                    force%bveccof(i,:,:,iAtom) = force%bveccof(i,:,:,iAtom) + helpMat_force(:,:)
                 ENDDO
                 CALL timestop("force contributions")
@@ -345,7 +344,6 @@ CONTAINS
     !$acc exit data delete(fjgj)
     DEALLOCATE(work_c)
     IF(l_force) THEN
-       DEALLOCATE(helpMat_c)
        DEALLOCATE(helpMat_force)
        DEALLOCATE(workTrans_cf)
        DEALLOCATE(s2h_e)
