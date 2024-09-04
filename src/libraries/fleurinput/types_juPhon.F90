@@ -36,6 +36,7 @@ MODULE m_types_juPhon
       LOGICAL :: l_band = .FALSE.    ! Interpolate the q-set to a bandstructure
       LOGICAL :: l_dos  = .FALSE.     ! Calculate the phonon density of states
       LOGICAL :: l_scf  = .TRUE.     ! Do a self-consistency run for dynmats
+      LOGICAL :: l_elph = .FALSE.    ! Calculate electron-phonon matrix elements
       LOGICAL :: l_sumrule  = .FALSE. ! Apply sumrule for dynmats
       LOGICAL :: l_rm_qhdf  = .FALSE. ! Remove q*hdf files, after convergence
       INTEGER :: startq = 1          ! Start the q-loop at a specific point
@@ -150,6 +151,7 @@ CONTAINS
       CALL mpi_bc(this%l_band, rank, mpi_comm)
       CALL mpi_bc(this%l_dos, rank, mpi_comm)
       CALL mpi_bc(this%l_scf, rank, mpi_comm)
+      CALL mpi_bc(this%l_elph, rank, mpi_comm)
       CALL mpi_bc(this%l_sumrule, rank, mpi_comm)
       CALL mpi_bc(this%l_rm_qhdf, rank, mpi_comm)
       CALL mpi_bc(this%startq, rank, mpi_comm)
@@ -308,6 +310,12 @@ CONTAINS
 
          IF (numberNodes == 1) THEN
            this%l_scf  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_scf'))
+         END IF
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_elph')
+
+         IF (numberNodes == 1) THEN
+           this%l_elph  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_elph'))
          END IF
 
          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_sumrule')
