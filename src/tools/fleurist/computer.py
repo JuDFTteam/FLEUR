@@ -176,7 +176,7 @@ class localhost(basic_cluster):
             print(command)
         else:
             print(f"Running: {command}")    
-            os.run(command)
+            os.system(command)
         
 
 def get_computer_by_config(conf):
