@@ -30,6 +30,7 @@ CONTAINS
       USE m_types_eigdos
       USE m_make_dos
       USE m_dfpt_gradient
+      USE m_dfpt_elph_mat
       USE m_npy
 
       TYPE(t_mpi),        INTENT(IN)     :: fmpi
@@ -56,6 +57,7 @@ CONTAINS
       TYPE(t_potden)                :: grRho3(3), grVtot3(3), grVC3(3), grVext3(3)
       TYPE(t_potden)                :: grgrVC3x3(3,3), grgrvextnum(3,3)
       TYPE(t_potden)                :: denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, vTot1m, vTot1mIm ! q-quantities
+      TYPE(t_potden), ALLOCATABLE   :: den_elph(:) , denIm_elph(:)
       TYPE(t_results)               :: q_results, results1, qm_results, results1m
       TYPE(t_kpts)                  :: qpts_loc
       TYPE(t_kpts)                  :: kqpts, kqmpts ! basically kpts, but with q added onto each one.
@@ -405,7 +407,11 @@ CONTAINS
          ! TODO: The effort here should be greatly reducible by symmetry considerations.
          
          !IF (fmpi%irank==0) write(*,*) fi%juPhon%startq/=0, fi%juPhon%stopq, size(q_list)
-          
+         IF (fi_nosym%juphon%l_elph) THEN 
+            ALLOCATE(den_elph(3*fi_nosym%atoms%ntype))
+            ALLOCATE(denIm_elph(3*fi_nosym%atoms%ntype))
+         END IF 
+
          DO iQ = fi%juPhon%startq, MERGE(fi%juPhon%stopq,SIZE(q_list),fi%juPhon%stopq/=0)
             CALL timestart("q-point")
             IF (.NOT.fi%juPhon%qmode==0) THEN
@@ -568,6 +574,11 @@ CONTAINS
                      CALL make_sym_dynvec(fi_fullsym%atoms, fi_fullsym%sym, fi_fullsym%cell%amat, qpts_loc%bk(:,q_list(iQ)), iDtype, iDir, sym_count, sym_list(:sym_count), dyn_mat(iQ,3 *(iDtype-1)+iDir,:), sym_dynvec)
                   END IF
 
+                  IF (fi_nosym%juphon%l_elph) THEN 
+                     den_elph(iDir+3*(iDtype-1)) = denIn1
+                     denIm_elph(iDir+3*(iDtype-1)) = denIn1Im
+                  END IF 
+
                   IF (fmpi%irank==0) write(*,*) "dynmat row for ", dfpt_tag
                   IF (fmpi%irank==0) write(*,*) dyn_mat(iQ,3 *(iDtype-1)+iDir,:)
                   IF (fmpi%irank==0.AND.l_cheated) write(*,*) "The cheat:"
@@ -602,9 +613,11 @@ CONTAINS
                DEALLOCATE(sym_dynvec)
             END IF
             CALL timestop("q-point")
-
+            IF (fi_nosym%juphon%l_elph) CALL dfpt_elph_mat(fi_nosym,xcpot_nosym,sphhar_nosym,stars_nosym,nococonv_nosym,qpts,fmpi,results_nosym, q_results,enpara_nosym,hybdat_nosym,rho_nosym,vTot_nosym,grRho3,grVtot3, &
+            &                                                q_list(iQ),eig_id,q_eig_id,l_real,den_elph,denIm_elph)
          END DO
       END IF
+
 
       ! If the Dynmats-Files were already created, we can read them in and do postprocessing.
       ! a) Transform the q-Mesh onto real space.
