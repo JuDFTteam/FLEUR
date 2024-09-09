@@ -162,7 +162,7 @@ CONTAINS
                   !$acc         l, iatm, iatm2, itype, lm_0, bandoi, bandof, psize, atom_phase, atom_phase1, atom_phase2, ioffset, ik, jsp, &
                   !$acc         mpdata, mpdata%num_radbasfn, mpdata%num_radfun_per_l, mpdata%l1, mpdata%l2, mpdata%n1, mpdata%n2,&
                   !$acc         hybdat, hybdat%prodm, hybdat%nbands, hybdat%nindxp1, hybdat%gauntarr)&
-                  !$acc private(k,j,n,i,l1, l2, n1, n2, offdiag, lm, m, cscal, cscal2, add1, add2, ishift, lm1, m1, m2, lm2, lm1_cprod, lm2_cprod)
+                  !$acc private(k,j,n,i,l1, l2, n1, n2, offdiag, lm1_0, lm2_0, lm, m, cscal, cscal2, add1, add2, ishift, lm1, m1, m2, lm2, lm1_cprod, lm2_cprod)
 #else            
                   !$OMP PARALLEL DO default(shared) collapse(2) schedule(dynamic) & 
                   !$OMP private(k,j,n, n1, l1, n2, l2, offdiag, lm1_0, lm2_0, lm, m, cscal, cscal2, add1, add2, ishift, lm1, m1, m2, lm2, i, lm1_cprod, lm2_cprod)&
@@ -264,7 +264,7 @@ CONTAINS
                   !$acc         l, iatm, itype, lm_0, bandoi, bandof, psize, atom_phase, ik, jsp, &
                   !$acc         mpdata, mpdata%num_radbasfn, mpdata%num_radfun_per_l, mpdata%l1, mpdata%l2, mpdata%n1, mpdata%n2,&
                   !$acc         hybdat, hybdat%prodm, hybdat%nbands, hybdat%nindxp1, hybdat%gauntarr)&
-                  !$acc private(k,j,n,i,l1, l2, n1, n2, offdiag, lm, m, cscal, lm1, m1, m2, lm2)
+                  !$acc private(k,j,n,i,l1, l2, n1, n2, offdiag, lm1_0, lm2_0, lm, m, cscal, lm1, m1, m2, lm2)
 #else            
                   !$OMP PARALLEL DO default(shared) collapse(2) schedule(dynamic) & 
                   !$OMP private(k,j,n, n1, l1, n2, l2, offdiag, lm1_0, lm2_0, lm, m, cscal, lm1, m1, m2, lm2, i)&
