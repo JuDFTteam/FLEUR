@@ -1,5 +1,5 @@
 find_spack(){
-    SPACK=${SPACK:-`which spack`}
+    SPACK=spack
 
     if ! which "$SPACK" >/dev/null
     then
