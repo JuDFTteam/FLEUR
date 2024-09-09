@@ -553,7 +553,6 @@ contains
 
       integer :: ic, iatom, l, ix, iy, ix_loc, pe_ix, i, itype, ierr
       INTEGER:: blacs_desc(9), umap(1, 1), np
-      real, allocatable    :: tmp(:)
       type(t_mat)          :: loc_cpy
       !
       ! add ir part to the matrix coulomb_mtir
@@ -599,7 +598,7 @@ contains
          endif
 #endif
       class is (t_mat)
-         !$OMP parallel do default(shared) shared(mpdata, hybdat, loc_cpy, ic, fi, ikpt) private(ix, iy) collapse(2)
+         !$OMP parallel do default(shared) shared(mpdata, hybdat, ic, fi, ikpt) private(ix, iy) collapse(2)
          do ix = 1, mpdata%n_g(ikpt)
             do iy = 1, mpdata%n_g(ikpt) 
                if(fi%sym%invs) then
