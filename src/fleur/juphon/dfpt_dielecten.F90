@@ -3,12 +3,13 @@ module m_dfpt_dielecten
     use m_dfpt_vefield
     use m_convol
     use m_dfpt_dynmat
+    use m_npy
 
     implicit none
 
     contains
 
-        subroutine dfpt_dielecten_row_HF(fi,stars,starsq,sphhar,fmpi,denIn1,denIn1Im,results,results1,no_row,dieltensor_row)
+        subroutine dfpt_dielecten_row_HF(fi,stars,starsq,sphhar,fmpi,denIn1,denIn1Im,results,results1,no_row,dieltensor_row,iDtype,iDir)
 
 
             
@@ -20,13 +21,19 @@ module m_dfpt_dielecten
             TYPE(t_mpi),        intent(in)     :: fmpi
             complex, intent(inout)             :: dieltensor_row(:)
             integer, intent(in)                :: no_row
-            
+            integer, intent(in)                :: iDtype,iDir
             type(t_potden)                     :: vExt1, vExt1Im
 
             
             complex, allocatable               :: pwwq2(:),tempval_pw,tempval_mt, denIn1_pw(:), dieltensor_HF(:),dieltensor_occu(:),dieltensor_(:)
             real, allocatable                  :: denIn1_mt(:,:,:),denIn1_mt_Im(:,:,:), we1(:),eig1(:), we1_data(:,:,:,:),eig1_data(:,:,:,:)
             integer                            :: iDtype_col,iDir_col,col_index,iType,jsp,nk_i, nk,len_kpoints
+            
+            character(len=100)                 :: filename,filename_Im,den_string,den_string_pw,den_string_mt,den_string_mtIm
+            character(len=5)                   :: intiDtype
+            character(len=5)                   :: intiDir
+            character(len=5)                   :: intiDtype_col
+            character(len=5)                   :: intiDir_col
 
 
             !CALL vExt1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
@@ -36,10 +43,31 @@ module m_dfpt_dielecten
             ALLOCATE(denIn1_mt(fi%atoms%jmtd,0:sphhar%nlhd,fi%atoms%ntype),denIn1_mt_Im(fi%atoms%jmtd,0:sphhar%nlhd,fi%atoms%ntype))
             ALLOCATE(dieltensor_HF(SIZE(dieltensor_row)),dieltensor_occu(SIZE(dieltensor_row)))
             print*, "Im in dfpt_dielecten"
-            print*, "dieltensor_row", dieltensor_HF
+            !print*, "dieltensor_row", dieltensor_HF
+            write(intiDtype, '(I5)') iDtype
+            write(intiDir, '(I5)') iDir
+            den_string = '_'//  trim(adjustl(intiDtype)) // '_'//trim(adjustl(intiDir))//'.npy'
+            den_string_pw = 'denIn1_pw'//den_string
+            den_string_mt = 'denIn1_mt'//den_string
+            den_string_mtIm = 'denIn1_mtIm'//den_string
+            !print*, 'den_string',den_string
+            !print*, 'den_string_pw',den_string_pw
+            !print*, 'den_string_mt',den_string_mt
+            !print*, 'den_string_mtIm',den_string_mtIm
             denIn1_pw  = (denIn1%pw(:,1)+denIn1%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
             denIn1_mt = (denIn1%mt(:,0:,:,1)+denIn1%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
             denIn1_mt_Im = (denIn1Im%mt(:,0:,:,1)+denIn1Im%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
+            print*,shape(denIn1_pw)
+            !stop
+            !print*,'max value', maxval(denIn1_pw(:,:,1))
+            !stop
+            !print*,'shape(denIn1_mt)',shape(denIn1_mt)
+            !print*,'shape(denIn1_mt_Im)',shape(denIn1_mt_Im)
+            !call save_npy(den_string_pw,denIn1_pw)
+            !call save_npy(den_string_mt,denIn1_mt(:,:,1))
+            !call save_npy(den_string_mtIm,denIn1_mt_Im(:,:,1))
+            !print*, 'Maximum val den', maxval(denIn1_mt(:,:,1))
+            write(400 + fmpi%irank , *)
             do iDtype_col = 1, fi%atoms%ntype
                 print*,"iDtype_col",iDtype_col 
                 do iDir_col = 1, 3
@@ -51,10 +79,33 @@ module m_dfpt_dielecten
                     col_index = 3 * (iDtype_col - 1) + iDir_col
                     call vExt1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
                     call vExt1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
+                    !print*, 'Maximum val', maxval(vExt1%mt(:,:,:,:))
                     call dfpt_vefield(fi%juPhon,fi%atoms,fi%sym,sphhar,fi%cell,vExt1,vExt1Im,iDir_col)
+                    !print*,'fmpi%mpi_comm',fmpi%mpi_comm
+                    !CALL vExt1%distribute(fmpi%mpi_comm)
+                    !CALL vExt1Im%distribute(fmpi%mpi_comm)
+                    !print*,'shape(vExt1%mt)',shape(vExt1%mt)
+                    !print*,'shape(vExt1%mt(:,:,2,:))',shape(vExt1%mt(:,:,2,:))
+                    !print*, 'Maximum val 1', maxval(vExt1%mt(:,:,1,1))
+                    !print*, 'Maximum val 2', maxval(vExt1%mt(:,:,2,1))
+                    !print*, 'DIFFERENCE MAX real', maxval(vExt1%mt(:,:,1,1)-vExt1%mt(:,:,2,1))
+                    !print*, 'DIFFERENCE MAX imag', maxval(vExt1Im%mt(:,:,1,1)-vExt1Im%mt(:,:,2,1))
+                    !stop
                     !print*,'shape Vext1', shape(vExt1%pw)
                     !print*,'shape Vext1im', shape(vExt1Im%pw)
                     ! IR integral:
+                    write(intiDtype_col, '(I5)') iDtype_col
+                    write(intiDir_col, '(I5)') iDir_col
+                    !write(intStr2, '(I5)') intVal2
+                    !print*,'intiDir',intiDir
+                    !print*,'trim(intiDir)',trim(intiDir)
+                    filename = 'v1efield_mt_' //  trim(adjustl(intiDtype)) // '_'//trim(adjustl(intiDir))//'_'//trim(adjustl(intiDtype_col))//'_'//trim(adjustl(intiDir_col))//'.npy'
+                    filename_Im = 'v1efield_mt_Im_' //  trim(adjustl(intiDtype)) // '_'//trim(adjustl(intiDir))//'_'//trim(adjustl(intiDtype_col))//'_'//trim(adjustl(intiDir_col))//'.npy'
+
+                    !call save_npy(filename,vExt1%mt(:,:,1,1))
+                    !call save_npy(filename_Im,vExt1Im%mt(:,:,1,1))
+                    !stop
+                    !call save_npy("v1efield_mt_",iDtype,"_",iDir,"_",iDtype_col,"_",iDir_col,".npy",vExt1%mt)
                     pwwq2 = CMPLX(0.0,0.0)
                     CALL dfpt_convol_big(1, starsq, stars, vExt1%pw(:,1), CMPLX(1.0,0.0)*stars%ufft, pwwq2)
                     CALL dfpt_int_pw(starsq, fi%cell, denIn1_pw, pwwq2, tempval_pw)
@@ -70,6 +121,9 @@ module m_dfpt_dielecten
                         !print*, 'tempval_mt',tempval_mt
                         dieltensor_HF(col_index) = dieltensor_HF(col_index) + tempval_mt
                     end do
+                    !print*,'filename',trim(filename)
+                    !print*, 'Maximum val', maxval(vExt1%mt(:,:,1,1))
+                    !stop
                 end do
             end do 
             dieltensor_row(:)= dieltensor_HF(:)
