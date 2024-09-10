@@ -163,6 +163,11 @@ CONTAINS
          CALL checkDOPALL(input, sphhar, starsq,atoms, sym, vacuum, cell,dfptvefield,1, dfptvefieldimag   )
          !STOP
          IF ( l_xc) THEN  !iteration >1: 
+            !testing
+            !dfptvefield%pw = dfptvefield%pw*0
+            !dfptvefield%mt = dfptvefield%mt*0
+            !dfptvefieldimag%pw = dfptvefieldimag%pw*0
+
             ! a)
             ! Sum up both spins in den into workden:
             CALL den%sum_both_spin(workden)
@@ -205,7 +210,7 @@ CONTAINS
             END IF
 
                ! Skip vxc if we want only vC/vExt
-               !print*, "to be changed"
+               !print*, "vxc turned off"
                CALL vgen_xcpot(hybdat,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
                            cell,fmpi,noco,den,denRot,EnergyDen,dfptvTot,vx,vxc,exc, &
                            & den1Rot=den1Rot, den1Rotimag=den1imRot, dfptvTotimag=dfptvTotimag,starsq=starsq)
@@ -215,8 +220,14 @@ CONTAINS
                !dfptvTotimag +=dfptvefieldimag
             END IF
          dfptvTot%pw = dfptvTot%pw + dfptvefield%pw
-         dfptvTot%mt = dfptvTot%mt + dfptvefield%mt
-         dfptvTotimag%mt = dfptvTotimag%mt+ dfptvefieldimag%mt
+         dfptvTot%mt =dfptvTot%mt + dfptvefield%mt
+         dfptvTotimag%mt = dfptvTotimag%mt+ dfptvefieldimag%mt!dfptvefieldimag%mt!dfptvTotimag%mt+ dfptvefieldimag%mt
+         !print*,'maxval(vTot1%mt(:,:,1,1))',maxval(dfptvTot%mt(:,:,1,1))
+         !print*,'maxval(vTot1%mt(:,:,2,1))',maxval(dfptvTot%mt(:,:,2,1))
+         !print*,'max diff mt re',maxval(dfptvTot%mt(:,:,1,1)-dfptvTot%mt(:,:,2,1))
+         !print*,'maxval(vTot1Im%mt(:,:,1,1))',maxval(dfptvTotimag%mt(:,:,1,1))
+         !print*,'maxval(vTot1Im%mt(:,:,2,1))',maxval(dfptvTotimag%mt(:,:,2,1))
+         !print*,'max diff mt Im',maxval(dfptvTotimag%mt(:,:,1,1)-dfptvTotimag%mt(:,:,2,1))
          !print*, "dfptvTot%pw", dfptvTot%pw(:,1)
          !STOP
       ELSE !(=standard phonon case)

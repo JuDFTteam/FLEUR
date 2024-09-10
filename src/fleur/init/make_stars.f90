@@ -79,6 +79,7 @@ CONTAINS
             IF (l_ef) THEN !only allocate uff1 to avoid memory error in dfpt_vgen_finalize
                !ALLOCATE (stars%ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1))
                ALLOCATE (stars%ufft1(0:27*stars%mx1*stars%mx2*stars%mx3-1),stars%ustep(stars%ng3))
+               stars%ufft1= 0.0
             ELSE
                ALLOCATE (stars%ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1))
                ALLOCATE (stars%ufft1(0:27*stars%mx1*stars%mx2*stars%mx3-1),stars%ustep(stars%ng3))

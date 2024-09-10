@@ -212,7 +212,7 @@ contains
       deallocate( il, kl )
     end if
 
-    if ( potdenType /= POTDEN_TYPE_POTYUK .AND. potdenType /= POTDEN_TYPE_CRYSTALFIELD) then
+    if ( potdenType /= POTDEN_TYPE_POTYUK .AND. potdenType /= POTDEN_TYPE_CRYSTALFIELD .AND. .NOT. juphon%l_efield) then 
       IF (.NOT.l_dfptvgen) THEN
          do n = 1, atoms%ntype
          !print *, vr(1:atoms%jri(n),0,n)

@@ -593,12 +593,14 @@ CONTAINS
                   ! Once the first order quantities are converged, we can construct all
                   ! additional necessary quantities and from that the dynamical matrix.
                   IF (fi%juPhon%l_efield) THEN
-                     CALL dfpt_dielecten_row_HF(fi_nosym,stars_nosym,starsq,sphhar_nosym,fmpi_nosym,denIn1,denIn1Im,results_nosym, results1,3 *(iDtype-1)+iDir,diel_tensor(3 *(iDtype-1)+iDir,:))
-                     CALL dfpt_dielecten_occ1(fi,fmpi,results1,we1_data,eig1_data,diel_tensor_occ1,3 *(iDtype-1)+iDir)
+                     !print*, shape(denIn1%mt)
+                     !stop
+                     CALL dfpt_dielecten_row_HF(fi_nosym,stars_nosym,starsq,sphhar_nosym,fmpi_nosym,denIn1,denIn1Im,results_nosym, results1,3 *(iDtype-1)+iDir,diel_tensor(3 *(iDtype-1)+iDir,:),iDtype,iDir)
+                     !CALL dfpt_dielecten_occ1(fi,fmpi,results1,we1_data,eig1_data,diel_tensor_occ1,3 *(iDtype-1)+iDir)
                      call save_npy("integralpart.npy",diel_tensor(:,:))
                      call save_npy("diel_tensor_occ1.npy",diel_tensor_occ1(:,:))
                      diel_tensor(:,:) = diel_tensor(:,:) + diel_tensor_occ1(:,:)
-                     print*, 'diel_tensor(:,:)',diel_tensor(:,:)
+                     !print*, 'diel_tensor(:,:)',diel_tensor(:,:)
                   ELSE
                      IF(.TRUE.) THEN
                         CALL dfpt_dynmat_row(fi_nosym, stars_nosym, starsq, sphhar_nosym, xcpot_nosym, nococonv_nosym, hybdat_nosym, fmpi_nosym, qpts_loc, q_list(iQ), iDtype, iDir, &
@@ -612,7 +614,7 @@ CONTAINS
                                           denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_mat(iQ,3 *(iDtype-1)+iDir,:), E2ndOrdII, sigma_ext, sigma_gext, q_eig_id)
                      END IF
                   END IF
-                  print*,"diel_tensor(3 *(iDtype-1)+iDir,:)", diel_tensor(3 *(iDtype-1)+iDir,:)
+                  !print*,"diel_tensor(3 *(iDtype-1)+iDir,:)", diel_tensor(3 *(iDtype-1)+iDir,:)
                   !stop
                   CALL timestop("Dynmat")
                   dyn_mat(iQ,3 *(iDtype-1)+iDir,:) = dyn_mat(iQ,3 *(iDtype-1)+iDir,:) + conjg(E2ndOrdII(3 *(iDtype-1)+iDir,:))
@@ -637,7 +639,10 @@ CONTAINS
             diel_tensor(:,:) = dielten_iden(:,:) - (fpi_const/fi%cell%omtil)*diel_tensor(:,:)
             call save_npy("dielten_iden.npy",dielten_iden(:,:))
             call save_npy("diel_tensor.npy",diel_tensor(:,:))
-            STOP
+            IF (fi%juPhon%l_efield) THEN
+               PRINT*,"STOP"
+               STOP
+            END IF 
             !IF (fi%juPhon%l_efield) THEN
                !CALL dfpt_dielecten_occ1(3 *(iDtype-1)+iDir)
             !END IF

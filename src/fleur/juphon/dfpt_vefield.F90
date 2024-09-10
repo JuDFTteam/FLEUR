@@ -49,7 +49,7 @@ module m_dfpt_vefield
             dfptvefield%pw(:,1) = 0.0
             !print*,'dfptvefieldimag%pw(1,ispin)',dfptvefieldimag%pw(:,1)
             dfptvefield%pw(1,1) = cmplx(0.0,1/juphon%qlim)
-            call save_npy("vefield-pw.npy",dfptvefield%pw(:,1))
+            !call save_npy("vefield-pw.npy",dfptvefield%pw(:,1))
             !print*,'dfptvefieldimag%pw(1,ispin)',dfptvefieldimag%pw(:,1)
             !print*,'dfptvefieldimag%pw(1,ispin)',dfptvefieldimag%mt(:,1,1,1)
             !print*, 'stop'
@@ -57,6 +57,7 @@ module m_dfpt_vefield
 
             !MT-part
             allocate(v1efield_mt(atoms%jmtd,sphhar%nlhd +1,atoms%ntype,1))
+            v1efield_mt(:,:,:,:) = 0
             allocate(resultreal(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,1))
             allocate(resultimag(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,1))
             !print*,sphhar%nlhd
@@ -88,7 +89,7 @@ module m_dfpt_vefield
                 !print*, "lower bound"
                 !print*,lbound(ylm,1)
                 !print*,ylm(:)
-                call save_npy("ylm.npy",ylm(:))
+                !call save_npy("ylm.npy",ylm(:))
                 allocate(sbf(0:lmax,imax))
                 !print*, "lower bound"
                 !print*,lbound(sbf,1)
@@ -99,8 +100,7 @@ module m_dfpt_vefield
                     !print*, sbf(:,i)
                     !print*, atoms%rmsh(i,n)
                 end do
-                call save_npy("sphbes.npy",sbf(:,:))
-                v1efield_mt(:,:,:,:) = 0
+                !call save_npy("sphbes.npy",sbf(:,:))
                 do l = 0,lmax
                     pref = fpi_const*(ImagUnit**(l+1))
                     !print*,pref
@@ -113,7 +113,8 @@ module m_dfpt_vefield
                 end do
                 deallocate(sbf,ylm)
             end do
-            call save_npy("vefield-mt.npy",v1efield_mt(:,:,1,1))
+            !print*,'maxvalue in dfpt_vgen n ',maxval(v1efield_mt(1,0,1,1))
+            !call save_npy("vefield-mt.npy",v1efield_mt(:,:,1,1))
             !print*, vr(:,:,:)
             !write(1000,*) vr(:,:,:)
             !call save_npy("v1efield_mt.npy",v1efield_mt(:,:,1,1))
