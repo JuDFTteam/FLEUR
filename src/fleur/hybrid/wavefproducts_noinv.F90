@@ -121,8 +121,10 @@ CONTAINS
       ! read in cmt coefficients from direct access file cmt
       call calc_cmt(fi%atoms, fi%cell, fi%input, fi%noco, nococonv, fi%hybinp, hybdat, mpdata, fi%kpts, fi%sym,  z_kqpt_p, jsp, ikqpt, c_phase_kqpt, cmt_ikqpt)
 
+      ASSOCIATE(radfun_per_l => mpdata%num_radfun_per_l)
+
       call timestart("loop over l, l1, l2, n, n1, n2")
-      !$acc data copyin(mpdata, mpdata%num_radbasfn, mpdata%num_radfun_per_l, mpdata%l1, mpdata%l2, mpdata%n1, mpdata%n2,&
+      !$acc data copyin(mpdata, mpdata%num_radbasfn, radfun_per_l, mpdata%l1, mpdata%l2, mpdata%n1, mpdata%n2,&
       !$acc        hybdat, hybdat%prodm, hybdat%nbands, hybdat%nindxp1, hybdat%gauntarr, &
       !$acc        lmstart, cmt_nk, cmt_ikqpt)
 
@@ -160,7 +162,7 @@ CONTAINS
                   !$acc parallel loop default(none) collapse(2)&
                   !$acc present(lmstart, cmt_ikqpt, cmt_nk, cprod,&
                   !$acc         l, iatm, iatm2, itype, lm_0, bandoi, bandof, psize, atom_phase, atom_phase1, atom_phase2, ioffset, ik, jsp, &
-                  !$acc         mpdata, mpdata%num_radbasfn, mpdata%num_radfun_per_l, mpdata%l1, mpdata%l2, mpdata%n1, mpdata%n2,&
+                  !$acc         mpdata, mpdata%num_radbasfn, radfun_per_l, mpdata%l1, mpdata%l2, mpdata%n1, mpdata%n2,&
                   !$acc         hybdat, hybdat%prodm, hybdat%nbands, hybdat%nindxp1, hybdat%gauntarr)&
                   !$acc private(k,j,n,i,l1, l2, n1, n2, offdiag, lm1_0, lm2_0, lm, m, cscal, cscal2, add1, add2, ishift, lm1, m1, m2, lm2, lm1_cprod, lm2_cprod)
 #else            
@@ -204,7 +206,7 @@ CONTAINS
                                     m2 = m1 + m ! Gaunt condition -m1+m2-m=0
                                  
                                     IF (abs(m2) <= l2) THEN
-                                       lm2 = lm2_0 + n2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
+                                       lm2 = lm2_0 + n2 + (m2 + l2)*radfun_per_l(l2, itype)
                                        IF (abs(hybdat%gauntarr(1, l1, l2, l, m1, m)) > 1e-12) THEN
                                           cscal  = cscal  + hybdat%gauntarr(1, l1, l2, l, m1, m) * REAL(cmt_ikqpt(j, lm2, iatm))  * REAL(conjg(cmt_nk(k, lm1, iatm))) + &
                                                             hybdat%gauntarr(1, l1, l2, l, m1, m) * REAL(cmt_ikqpt(j, lm2, iatm2)) * REAL(conjg(cmt_nk(k, lm1, iatm2)))
@@ -215,7 +217,7 @@ CONTAINS
 
                                     m2 = m1 - m ! switch role of b1 and b2
                                     IF (abs(m2) <= l2 .and. offdiag) THEN
-                                       lm2 = lm2_0 + n2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
+                                       lm2 = lm2_0 + n2 + (m2 + l2)*radfun_per_l(l2, itype)
                                        IF (abs(hybdat%gauntarr(2, l1, l2, l, m1, m)) > 1e-12) THEN
                                           cscal  = cscal  + hybdat%gauntarr(2, l1, l2, l, m1, m) * REAL(cmt_ikqpt(j, lm1, iatm))  * REAL(conjg(cmt_nk(k, lm2, iatm))) + &
                                                             hybdat%gauntarr(2, l1, l2, l, m1, m) * REAL(cmt_ikqpt(j, lm1, iatm2)) * REAL(conjg(cmt_nk(k, lm2, iatm2)))
@@ -224,7 +226,7 @@ CONTAINS
                                        END IF
                                     END IF
 
-                                    lm1 = lm1 + mpdata%num_radfun_per_l(l1, itype) ! go to lm start index for next m1-quantum number
+                                    lm1 = lm1 + radfun_per_l(l1, itype) ! go to lm start index for next m1-quantum number
 
                                  END DO  !m1
 
@@ -262,7 +264,7 @@ CONTAINS
                   !$acc parallel loop default(none) collapse(2)&
                   !$acc present(lmstart, cmt_ikqpt, cmt_nk, cprod,&
                   !$acc         l, iatm, itype, lm_0, bandoi, bandof, psize, atom_phase, ik, jsp, &
-                  !$acc         mpdata, mpdata%num_radbasfn, mpdata%num_radfun_per_l, mpdata%l1, mpdata%l2, mpdata%n1, mpdata%n2,&
+                  !$acc         mpdata, mpdata%num_radbasfn, radfun_per_l, mpdata%l1, mpdata%l2, mpdata%n1, mpdata%n2,&
                   !$acc         hybdat, hybdat%prodm, hybdat%nbands, hybdat%nindxp1, hybdat%gauntarr)&
                   !$acc private(k,j,n,i,l1, l2, n1, n2, offdiag, lm1_0, lm2_0, lm, m, cscal, lm1, m1, m2, lm2)
 #else            
@@ -299,7 +301,7 @@ CONTAINS
                                     m2 = m1 + m ! Gaunt condition -m1+m2-m=0
                                  
                                     IF (abs(m2) <= l2) THEN
-                                       lm2 = lm2_0 + n2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
+                                       lm2 = lm2_0 + n2 + (m2 + l2)*radfun_per_l(l2, itype)
                                        IF (abs(hybdat%gauntarr(1, l1, l2, l, m1, m)) > 1e-12) THEN
                                           cscal = cscal + hybdat%gauntarr(1, l1, l2, l, m1, m) * cmt_ikqpt(j, lm2, iatm) * conjg(cmt_nk(k, lm1, iatm))
                                        END IF
@@ -307,13 +309,13 @@ CONTAINS
 
                                     m2 = m1 - m ! switch role of b1 and b2
                                     IF (abs(m2) <= l2 .and. offdiag) THEN
-                                       lm2 = lm2_0 + n2 + (m2 + l2)*mpdata%num_radfun_per_l(l2, itype)
+                                       lm2 = lm2_0 + n2 + (m2 + l2)*radfun_per_l(l2, itype)
                                        IF (abs(hybdat%gauntarr(2, l1, l2, l, m1, m)) > 1e-12) THEN
                                           cscal = cscal + hybdat%gauntarr(2, l1, l2, l, m1, m) * cmt_ikqpt(j, lm1, iatm) * conjg(cmt_nk(k, lm2, iatm))
                                        END IF
                                     END IF
 
-                                    lm1 = lm1 + mpdata%num_radfun_per_l(l1, itype) ! go to lm start index for next m1-quantum number
+                                    lm1 = lm1 + radfun_per_l(l1, itype) ! go to lm start index for next m1-quantum number
 
                                  END DO  !m1
 
@@ -339,6 +341,7 @@ CONTAINS
             END IF
          END DO
       !$acc end data
+      END ASSOCIATE
       deallocate(cmt_ikqpt)
 
       call timestop("loop over l, l1, l2, n, n1, n2")
