@@ -23,7 +23,7 @@ MODULE m_types_xml
       character(len=200):: basepath = ""
       integer           :: versionNumber = 0
       INTEGER           :: currentversionNumber = 38 !parameters are not allowed here
-      
+      INTEGER           :: currentOutversionNumber = 37
       CHARACTER(len=100) :: filename_add_xml     
    CONTAINS
       PROCEDURE        :: init
@@ -145,7 +145,7 @@ CONTAINS
       ! Check version of inp.xml
       versionString = adjustl(xml%GetAttributeValue('/fleurInput/@fleurInputVersion'))
       read (versionString, *) tempReal
-      write(outputVersionString,'(a,i0)') '0.', xml%currentversionNumber
+      write(outputVersionString,'(a,i0)') '0.', xml%currentOutversionNumber
       xml%versionNumber = nint(tempReal*100)
       IF (xml%versionNumber .NE. xml%currentversionNumber) THEN
          if (.not. l_allow_old .and. xml%versionNumber<33) CALL juDFT_error('Version number of '//TRIM(filename_add)//'inp.xml file is not compatible with this fleur version')
