@@ -121,7 +121,10 @@ CONTAINS
                 CALL matrix_element(fi,sphhar,results,resultsq,fmpi,enpara,nococonv,starsq,vTot1,vTot1Im,vTot,rho_loc,bqpt,eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatCart)
                 CALL timestop("Generate electron-phonon matrix element")
 
-                IF (.NOT. ALLOCATED(gmat)) ALLOCATE(gmat(size(gmatCart,1),size(gmatCart,2),size(gmatCart,3),size(gmatCart,4),3*fi%atoms%ntype))
+                IF (.NOT. ALLOCATED(gmat)) THEN
+                    ALLOCATE(gmat(size(gmatCart,1),size(gmatCart,2),size(gmatCart,3),size(gmatCart,4),3*fi%atoms%ntype))
+                    gmat=CMPLX(0.0,0.0)
+                END IF 
                 !TODO Read in the eigenvecotrs from Dynmats, here we can take them from memory
                 IF (fmpi%irank==0) THEN 
                     ! Numerics saves the day 
