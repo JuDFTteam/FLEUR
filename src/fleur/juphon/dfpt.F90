@@ -605,7 +605,7 @@ CONTAINS
                CALL CalculateFrequencies(fi_nosym%atoms, q_list(iQ), eigenVals, eigenFreqs,"raw")
                CALL timestop("Frequency calculation")
                write(9991,*) "Eii2 new:", E2ndOrdII
-               DEALLOCATE(eigenVals, eigenVecs, eigenFreqs, E2ndOrdII)
+               !DEALLOCATE(eigenVals, eigenVecs, eigenFreqs, E2ndOrdII)
             END IF
             !CALL close_eig(q_eig_id)
             !IF (l_minusq) CALL close_eig(qm_eig_id)
@@ -614,7 +614,8 @@ CONTAINS
             END IF
             CALL timestop("q-point")
             IF (fi_nosym%juphon%l_elph) CALL dfpt_elph_mat(fi_nosym,xcpot_nosym,sphhar_nosym,stars_nosym,nococonv_nosym,qpts,fmpi,results_nosym, q_results,enpara_nosym,hybdat_nosym,rho_nosym,vTot_nosym,grRho3,grVtot3, &
-            &                                                q_list(iQ),eig_id,q_eig_id,l_real,den_elph,denIm_elph)
+            &                                                q_list(iQ),eig_id,q_eig_id,l_real,den_elph,denIm_elph,eigenVecs,eigenVals)
+            IF (fmpi%irank==0) DEALLOCATE(eigenVals, eigenVecs, eigenFreqs, E2ndOrdII)
          END DO
       END IF
 
