@@ -1,0 +1,400 @@
+#!/bin/bash
+
+DEFAULT_IMAGE="judft/future"
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+NC='\033[0m' # No Color
+
+title(){
+    if [ "$1" == "  ERROR   " ]
+    then
+        color=$RED
+    else
+        color=$GREEN
+    fi       
+    if [ -n "$1" ]
+    then 
+        echo -e "${GREEN}===============$1===================${NC}"
+    else
+        echo -e "${GREEN}============================================${NC}"
+    fi    
+}
+
+report(){
+    echo -e "${GREEN}DONE:     ${NC}$1"
+}
+
+info(){
+    echo -e "${GREEN}INFO:     ${NC}$1"
+}
+
+failed(){
+    echo -e "${RED}FAILED:   ${NC}$1"
+}
+
+
+FHOME=$HOME/.future
+
+welcome(){
+    title
+    echo
+    echo "Welcome to "
+    echo -e "${GREEN}               F     U    T     U     R     E${NC}"
+    echo -e "           the ${GREEN}F${NC}LEUR "
+    echo -e "                     ${GREEN}U${NC}ser "
+    echo -e "                          ${GREEN}T${NC}utorial "
+    echo -e "                                ${GREEN}U${NC}sing "
+    echo -e "                                      ${GREEN}R${NC}esources in a container "
+    echo -e "                                           ${GREEN} E${NC}nvironment"
+    echo -e "${GREEN}               F     U    T     U     R     E${NC}"
+    echo
+    title
+}
+
+find_docker(){
+DOCKER=${DOCKER:-`which docker`}
+DOCKER=${DOCKER:-`which podman`}
+
+if [ -r $FHOME/DOCKER ]
+then
+    DOCKER=`cat $FHOME/DOCKER`
+fi
+
+if ! which "$DOCKER" >/dev/null
+then
+   title "  ERROR   "
+   echo -e "${RED}No container environment found"
+   echo "To use this tutorial you need to install either docker or "
+   echo "podman or another compatible container environment"
+   echo "Please check http://docker.com for possible downloads."
+   echo "If you actually have such an enviroment installed but it "
+   echo "is not found here, please either:"
+   echo " - set the DOCKER environment variable: e.g 'export DOCKER=path_to_your_docker_executable'"
+   echo " - use 'future config' to set the full path'"
+   echo -e "${NC}"
+   title "  ERROR   "
+   exit
+fi
+}
+
+define_image(){
+    mkdir -p $FHOME
+    if [ -r $FHOME/IMAGE ]
+    then
+        IMAGE=`cat $FHOME/IMAGE`
+    else    
+        IMAGE=$DEFAULT_IMAGE
+    fi
+}
+
+find_local_image(){
+    if ! $DOCKER image ls $IMAGE >/dev/null
+    then
+        unset IMAGE
+    fi    
+}
+
+download_image(){
+    #Download image (will only update if needed)
+    define_image
+    info "Pulling the tutorial image from the server."
+    info "This may take some time (>6GB image to download)."
+    $DOCKER pull $IMAGE &> $FHOME/log
+    report "Image downloaded."
+}
+
+config(){
+    title " STORAGE  "
+    echo "You can 'mount' a directory from your host system into the future container. This will be found in the folder 'persistent_storage'"
+    echo "This is usefull if you want to transfer data in/out of the container or need persistent storage. It is not required"
+    read -p "Enter a path to be mounted into the image for persistent storage (otherwise press enter not to mount any storage):" persist
+    if [ -n "$persist" ]
+    then
+        echo $persist >$FHOME/PERSIST
+    else
+        rm $FHOME/PERSIST 2>/dev/null
+    fi
+    title "  DOCKER  "
+    echo "Usually docker or podman will be found automatically if properly installed on your system."
+    echo "Only if this fails and you see corresponding please set the path here" 
+    read -p "Enter the full-path to the docker command (otherwise press enter to try to find it automatically):" docker
+    if [ -n "$docker" ]
+    then
+        echo $docker >$FHOME/DOCKER
+    else
+        rm  $FHOME/DOCKER 2>/dev/null
+    fi
+
+    title "IMAGE NAME"
+    echo -e "${RED}This option should only used if you have a good reason${NC}"
+    read -p "Enter the name of the tutorial image(otherwise press enter to use default):" image
+    if [ -n "$image" ]
+    then
+        echo $image >$FHOME/IMAGE
+    else
+        rm  $FHOME/image 2>/dev/null
+    fi
+    
+
+}
+
+start_container(){
+    stat=$(check_status)
+    if [ "$stat" == "OK" ]
+    then
+        failed "Future already running."
+        failed "Use 'future open' to connect to it or"
+        failed "use 'future stop' to stop the running container."
+        exit
+    fi
+    if [ "$stat" == "STOPPED" ]
+    then
+        $DOCKER start future >/dev/null
+        report "Restarted stopped container."
+        status
+        exit
+    fi        
+    if $DOCKER image ls $IMAGE >/dev/null
+    then
+        if [ -r $FHOME/PERSIST ]
+        then
+            PERSIST=`cat $FHOME/PERSIST`
+            report "Using persistant storage at:$PERSIST"
+        fi
+        printf -- "       Starting the container "
+        if [ -n "$PERSIST" ]
+        then
+            $DOCKER run -p 8888:8888 --name future -v $PERSIST:/home/jovyan/persistent_storage -e GRANT_SUDO=yes --user root $IMAGE &> $FHOME/log &
+        else
+            $DOCKER run -p 8888:8888 --name future -e GRANT_SUDO=yes --user root $IMAGE &> $FHOME/log &
+
+        fi
+        while ! ( grep -q 'http://127.0.0.1' $FHOME/log || grep -q 'Error response from daemon' $FHOME/log )
+        do
+            printf -- "."
+            sleep 5
+        done
+
+        if grep -q 'Error response from daemon' $FHOME/log
+        then
+            title "  ERROR   "
+            failed "Could not start the image!! Try the following command to inspect the log:"
+            failed "cat $FHOME/log"
+            rm $FHOME/URL 2> /dev/null
+            title "  ERROR   "
+            exit
+        fi
+
+
+        URL=`grep "http://127.0." $FHOME/log |tail -1 |cut -b 8-100|sed  "s/lab/lab\/tree\/Welcome.ipynb/"`
+        echo $URL > $FHOME/URL
+    else
+        failed "$IMAGE not found. Use 'future download' first"
+    fi
+    status        
+}
+
+stop_container(){
+    if $DOCKER ps |grep future >/dev/null
+    then
+        $DOCKER stop future >/dev/null
+    fi
+    status
+}
+
+delete_container(){    
+     stat=$(check_status)
+    if [ "$stat" == "OK" ]
+    then
+        title "  ERROR   "
+        failed "Before deleting the container, you have to run 'future stop'"
+        exit
+    fi
+    echo -e "${RED}WARNING   :${NC} This command deletes the container. You might loose all data not stored on a persistent storage"
+    echo "             Press return to continue or CTRL-c to abort"
+    read 
+    $DOCKER rm future >/dev/null
+    rm $FHOME/URL 2>/dev/null
+    report "future-container was deleted"
+    status
+}
+
+check_status(){
+    if $DOCKER ps |grep future >/dev/null
+    then
+        if [ -r $FHOME/URL ]
+        then 
+            echo "OK"
+        else
+            echo "Error: Running, No URL"
+        fi
+    else
+       if $DOCKER ps -a |grep future >/dev/null
+       then
+            if [ -r $FHOME/URL ]
+            then 
+                echo "STOPPED"
+            else
+                echo "Error: Stopped,No URL"
+            fi
+        else
+              echo "No Container"    
+        fi
+    fi
+}
+
+build(){
+    info "Trying to build the container image locally"
+    if [ -r Dockerfile.future ]
+    then
+        info "Found local Dockerfile, starting to build"
+        $DOCKER build -f Dockerfile.future -t $IMAGE . |tee build.log
+        info "Done, you might want to check the log in build.log"
+    else
+       title "  ERROR   "
+       failed "Building only works in a directory cloned from the repo of the tutorial"
+       title "  ERROR   "
+       exit
+    fi
+}
+
+status(){
+    info "Container environment found at $DOCKER"
+    if [ -n "$IMAGE" ]
+    then
+        info "Image found as $IMAGE"
+    fi
+    stat=$(check_status)     
+    if [ "$stat" == "OK" ]
+    then
+        title "Compute info"
+        printf -- "${GREEN}INFO:     ${NC}No of CPU:"
+        $DOCKER  exec future /bin/sh -c 'grep processor /proc/cpuinfo |wc -l'
+        printf -- "${GREEN}INFO:     ${NC}Available Mem:"
+         $DOCKER  exec future /bin/sh -c 'free -h |head -2 |tail -1|cut -c 75-'
+        title "  STATUS  "
+        info "future is running, to connect use"
+        info " - 'future open' if supported or"
+        URL=`cat $FHOME/URL`
+        info " - use a webbrowser to open:\n             $URL"
+        info " - To stop future use 'future stop'"
+        title 
+    elif [ "$stat" == "STOPPED" ]
+    then
+        title "  STATUS  "
+        info "FUTURE is not running."
+        info "The container has been stopped and can be restarted." 
+        title
+    elif [ "$stat" == "No Container" ]
+    then
+        title "  STATUS  "
+        info "FUTURE is not running."
+        title
+    else    
+        title "  ERROR   "
+        echo -e "${RED}ERROR:     ${NC} status detected:$stat"
+        echo -e "ERROR:     try to do 'future delete' and start again"
+        title "  ERROR   "
+    fi
+}
+
+open_webpage(){
+    stat=$(check_status)
+    if [ "$stat" == "OK" ]
+    then
+        URL=`cat $FHOME/URL`
+        if [[ `uname` == 'Darwin' ]]
+        then
+            open -u "$URL"
+        else
+            python -m webbrowser $URL 
+        fi
+    else
+        failed "Container not running. Use 'future start' first."
+        exit
+    fi    
+
+    title 
+    info "Please use your browser to open:\n          $URL"
+}
+
+help(){
+    cat <<EOF 
+
+Usage: future COMMAND
+where COMMAND is one of:
+  download: download/update the future image 
+  start   : start the future-container
+  stop    : stop the future-container
+  open    : open future in your webbrowser
+  status  : show if the future container is running
+  delete  : delete the future-container
+  
+  help    : display this help page
+  config  : set some configurations (usually not needed)
+  build   : build the future image locally (usually only for development purpose)
+
+The basic sequence of commands to use is:
+- future download
+- future start
+- future open
+
+This will open the tutorial in a webpage or show the URL to open.
+
+You might then use:
+- future stop
+to stop the running tutorial and then later on
+- future start
+- future open
+to use it again
+
+EOF
+}
+
+process_arguments(){
+   case "$1" in
+      help) # display Help
+         help
+         exit;;
+      -h) # display Help
+         help
+         exit;;
+      start) # display Help
+         start_container
+         exit;;
+      stop) # display Help
+         stop_container
+         exit;;
+      delete) # display Help
+         delete_container
+         exit;;
+      open) # display Help
+         open_webpage
+         exit;;
+      download) # display Help
+         download_image
+         exit;;
+      build)
+          build
+          exit;;   
+      status) # display Help
+         status
+         exit;;
+      *)
+         help
+         exit;;   
+   esac
+
+}
+
+welcome
+if [ "$1" == "config" ]
+then
+    config
+    exit
+fi
+find_docker
+define_image
+find_local_image
+process_arguments $1

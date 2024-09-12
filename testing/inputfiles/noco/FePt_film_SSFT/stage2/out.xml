@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<fleurOutput fleurOutputVersion="0.37">
+   <programVersion version="fleur 39">
+      <compilationInfo date="2024-08-22T16:56:03" user="micha" host="iff1745" flag="MAKE_Fortran_FLAGS" link="LEUR_LIBRARIES"/>
+      <gitInfo version="MaX-R7.1-187-g7dadf0d7f-dirty" branch="develop" lastCommitHash="7dadf0d7fdc2c925a1e145fa5f9c7f39184b55d5"/>
+      <targetComputerArchitectures>GEN</targetComputerArchitectures>
+      <precision type="DOUBLE"/>
+      <targetStructureClass> </targetStructureClass>
+      <additionalCompilerFlags>CPP_MPI             CPP_HDF            CPP_WANN</additionalCompilerFlags>
+   </programVersion>
+   <parallelSetup>
+      <openMP ompThreads="1"/>
+      <mpi mpiProcesses="2"/>
+      <mem memoryPerNode="32637976 kB"/>
+   </parallelSetup>
+   <startDateAndTime date="2024/08/22" time="18:18:22" zone="+0200"/>
+   <!-- Now follows a dump of the inp.xml file after evaluating the Schema -->
+  <fleurInput fleurInputVersion="0.38">
+     <comment>
+        A Fleur input generator calculation with aiida
+     </comment>
+     <calculationSetup>
+        <cutoffs Kmax="4.00000000" Gmax="10.00000000" GmaxXC="8.70000000" numbands="0" Gmaxz="0.0"/>
+        <scfLoop itmax="1" minDistance=".00001000" maxIterBroyd="99" imix="Anderson" alpha=".05000000" precondParam="0.0" spinf="2.00000000"/>
+        <coreElectrons ctail="F" frcor="F" kcrel="0" coretail_lmax="0" l_core_confpot="T"/>
+        <xcFunctional name="vwn" relativisticCorrections="F"/>
+        <magnetism jspins="2" l_noco="T" l_ss="T" swsp="F" lflip="F" l_J="F" l_onlyMtStDen="F" fixed_moment="0.0">
+           <qss>.0000000000 .0000000000 .0000000000</qss>
+        </magnetism>
+        <soc theta=".00000000" phi=".00000000" l_soc="F" spav="F" off="F" soc66="T"/>
+        <prodBasis gcutm="2.90000000" tolerance=".00010000" ewaldlambda="3" lexp="16" bands="0" fftcut="1.0"/>
+        <expertModes gw="0" secvar="F" vdW="NONE" vdW_tol="0.0005" pot8="F" eig66="F" lpr="0" isec1="99" warp_factor="1.0"/>
+        <geometryOptimization l_f="F" forcealpha="1.00000000" forcemix="BFGS" epsdisp=".00001000" epsforce=".00001000" f_level="-1" qfix="0" force_converged="0.00001"/>
+        <ldaU l_linMix="F" mixParam=".050000" spinf="1.000000" l_adjEnpara="F" l_spinoffd="F" l_nonsphDC="F" l_initialGuess="F"/>
+     </calculationSetup>
+     <cell>
+        <bzIntegration valenceElectrons="18.00000000" mode="hist" fermiSmearingEnergy=".00100000" l_bloechl="F">
+           <kPointListSelection listName="default"/>
+           <kPointLists>
+           <kPointList name="default" count="2" type="unspecified">
+              <kPoint weight="    0.500000" label="">   -0.250000     0.250000     0.000000</kPoint>
+              <kPoint weight="    0.500000" label="">    0.250000     0.250000     0.000000</kPoint>
+           </kPointList>
+           </kPointLists>
+        </bzIntegration>
+        <symmetryOperations>
+          <symOp>
+            <row-1>1 0 0 .0000000000</row-1>
+            <row-2>0 1 0 .0000000000</row-2>
+            <row-3>0 0 1 .0000000000</row-3>
+          </symOp>
+          <symOp>
+            <row-1>1 0 0 .0000000000</row-1>
+            <row-2>0 -1 0 .0000000000</row-2>
+            <row-3>0 0 1 .0000000000</row-3>
+          </symOp>
+        </symmetryOperations>
+       <filmLattice scale="1.00000000" dVac="7.35000000" dTilda="10.91000000">
+           <bravaisMatrix>
+              <row-1>5.301179702900000 .000000000000000 .000000000000000</row-1>
+              <row-2>.000000000000000 7.497000033000000 .000000000000000</row-2>
+              <row-3>.000000000000000 .000000000000000 7.992850008800000</row-3>
+           </bravaisMatrix>
+           <vacuumEnergyParameters vacuum="1" spinUp="-.25000000" spinDown="-.25000000"/>
+           <vacuumEnergyParameters vacuum="2" spinUp="-.25000000" spinDown="-.25000000"/>
+        </filmLattice>
+     </cell>
+     <atomSpecies>
+        <species name="Fe-1" element="Fe" atomicNumber="26">
+           <mtSphere radius="2.20000000" gridPoints="787" logIncrement=".01600000"/>
+           <atomicCutoffs lmax="10" lnonsphr="6"/>
+           <electronConfig flipSpins="F">
+              <coreConfig>[Ar]</coreConfig>
+              <valenceConfig>(4s1/2) (3d3/2) (3d5/2)</valenceConfig>
+              <stateOccupation state="(3d3/2)" spinUp="2.00000000" spinDown="1.00000000"/>
+              <stateOccupation state="(3d5/2)" spinUp="3.00000000" spinDown=".00000000"/>
+           </electronConfig>
+          <energyParameters s="4" p="4" d="3" f="4"/>
+        </species>
+        <species name="Pt-1" element="Pt" atomicNumber="78">
+           <mtSphere radius="2.20000000" gridPoints="787" logIncrement=".01700000"/>
+           <atomicCutoffs lmax="10" lnonsphr="6"/>
+           <electronConfig flipSpins="F">
+              <coreConfig>[Xe] (4f5/2) (4f7/2)</coreConfig>
+              <valenceConfig>(6s1/2) (5d3/2) (5d5/2)</valenceConfig>
+              <stateOccupation state="(6s1/2)" spinUp=".50000000" spinDown=".50000000"/>
+              <stateOccupation state="(5d5/2)" spinUp="3.00000000" spinDown="2.00000000"/>
+           </electronConfig>
+           <energyParameters s="6" p="6" d="5" f="5"/>
+        </species>
+     </atomSpecies>
+     <atomGroups>
+        <atomGroup species="Fe-1">
+           <filmPos label="                 222" wannier="F">.0000000000 .0000000000 -.9964250044</filmPos>
+           <force calculate="T" relaxXYZ="TTT"/>
+           <nocoParams alpha=".00000000" beta="1.570796326" l_magn="F" M="0.0"/>
+        </atomGroup>
+        <atomGroup species="Pt-1">
+           <filmPos label="                   2" wannier="F">1.000/2.000 1.000/2.000 .9964250044</filmPos>
+           <force calculate="T" relaxXYZ="TTT"/>
+           <nocoParams alpha=".00000000" beta="1.570796326" l_magn="F" M="0.0"/>
+        </atomGroup>
+     </atomGroups>
+     <output dos="F" band="F" slice="F" coreSpec="F" wannier="F" eig66="F">
+        <checks vchk="F" cdinf="F" disp="F" sympsi="F"/>
+        <unfoldingBand unfoldBand="F" supercellX="1" supercellY="1" supercellZ="1" useOlap="T"/>
+        <plotting iplot="0" polar="F" format="1"/>
+        <chargeDensitySlicing numkpt="0" minEigenval=".00000000" maxEigenval=".00000000" nnne="0" pallst="F"/>
+        <specialOutput eonly="F" bmt="F" form66="F"/>
+     </output>
+  <forceTheorem>
+   <spinSpiralDispersion>
+            <q> 0.0 0.0 0.0 </q>
+            <q> 0.2 0.0 0.0 </q>
+   </spinSpiralDispersion>
+  </forceTheorem>
+   <!-- We include the file relax.inp here to enable relaxations (see documentation) -->
+  
+  </fleurInput>
+   <!-- END of dump of the inp.xml file -->
+   <numericalParameters>
+      <atomsInCell nat="2" ntype="2" jmtd="787" n_u="0" n_hia="0" n_opc="0"/>
+      <basis nvd="471" lmaxd="10" nlotot="0"/>
+      <density ng3="3888" ng2="166"/>
+      <bands numbands="30"/>
+      <volumes unitCell="292.110641" interstitial="202.906165" omegaTilda="433.595523" surfaceArea="39.7429444" z1="3.67500000">
+         <mtVolume atomType="1" mtRadius="2.20000000" mtVolume="44.60223810"/>
+         <mtVolume atomType="2" mtRadius="2.20000000" mtVolume="44.60223810"/>
+      </volumes>
+      <kPointList weightScale="1.00000000" count="         2">
+         <kPoint weight="0.500000">-0.250000            0.250000            0.000000</kPoint>
+         <kPoint weight="0.500000">0.250000            0.250000            0.000000</kPoint>
+      </kPointList>
+   </numericalParameters>
+   <scfLoop>
+      <iteration numberForCurrentRun="    1" overallNumber="    6">
+         <Forcetheorem_Loop calculationType="SSDISP" No="1">
+            <energyParameters units="Htr">
+               <atomicEP atomType="1" spin="1" branch="4s" branchLowest="-3.44" branchHighest="1.55" value="-0.3474624982"/>
+               <atomicEP atomType="1" spin="1" branch="4p" branchLowest="-2.19" branchHighest="2.14" value="-0.2119845346"/>
+               <atomicEP atomType="1" spin="1" branch="3d" branchLowest="-9.99" branchHighest="-0.17" value="-0.3158124825"/>
+               <atomicEP atomType="1" spin="1" branch="4f" branchLowest="-9.99" branchHighest="3.15" value="0.1028539481"/>
+               <atomicEP atomType="2" spin="1" branch="6s" branchLowest="-3.76" branchHighest="1.87" value="-0.4467674625"/>
+               <atomicEP atomType="2" spin="1" branch="6p" branchLowest="-2.01" branchHighest="3.07" value="-0.2979908192"/>
+               <atomicEP atomType="2" spin="1" branch="5d" branchLowest="-11.27" branchHighest="0.17" value="-0.3160002186"/>
+               <atomicEP atomType="2" spin="1" branch="5f" branchLowest="-2.62" branchHighest="2.53" value="-0.0143843793"/>
+               <vacuumEP vacuum="1" spin="1" vzIR="-0.2334346101" vzInf="-0.0000234857" value="-0.2500234857"/>
+               <vacuumEP vacuum="2" spin="1" vzIR="-0.2391433081" vzInf="-0.0307523585" value="-0.2807523585"/>
+               <atomicEP atomType="1" spin="2" branch="4s" branchLowest="-3.30" branchHighest="1.65" value="-0.3106954762"/>
+               <atomicEP atomType="1" spin="2" branch="4p" branchLowest="-2.06" branchHighest="2.24" value="-0.1791294346"/>
+               <atomicEP atomType="1" spin="2" branch="3d" branchLowest="-9.99" branchHighest="-0.03" value="-0.2075052708"/>
+               <atomicEP atomType="1" spin="2" branch="4f" branchLowest="-9.99" branchHighest="3.25" value="0.1325939289"/>
+               <atomicEP atomType="2" spin="2" branch="6s" branchLowest="-3.75" branchHighest="1.89" value="-0.4366192818"/>
+               <atomicEP atomType="2" spin="2" branch="6p" branchLowest="-2.00" branchHighest="3.08" value="-0.2883254616"/>
+               <atomicEP atomType="2" spin="2" branch="5d" branchLowest="-11.27" branchHighest="0.18" value="-0.3028501797"/>
+               <atomicEP atomType="2" spin="2" branch="5f" branchLowest="-2.61" branchHighest="2.54" value="-0.0048023497"/>
+               <vacuumEP vacuum="1" spin="2" vzIR="-0.2334346101" vzInf="-0.0000234857" value="-0.2500234857"/>
+               <vacuumEP vacuum="2" spin="2" vzIR="-0.2391433081" vzInf="-0.0307523585" value="-0.2807523585"/>
+            </energyParameters>
+            <eigenvalues>
+               <eigenvaluesAt spin="1" ikpt="1" k_x="-0.25000000" k_y="0.25000000" k_z="0.00000000">
+                         -0.3646327441       -0.3436912450       -0.3387869006       -0.3353017744       -0.3313292433
+                         -0.3115173365       -0.3018005219       -0.2915024548       -0.2890151454       -0.2860362693
+                         -0.2720613110       -0.2683001282       -0.2636261611       -0.2609097013       -0.2539960393
+                         -0.2460558637       -0.2389925048       -0.1993614438       -0.1977573373       -0.1838166133
+                         -0.1740957451       -0.1602996387       -0.1223407102       -0.0995762353       -0.0534391892
+                         -0.0282104211        0.0199971019        0.0300738745        0.0975694245        0.1090813425
+               </eigenvaluesAt>
+               <eigenvaluesAt spin="1" ikpt="2" k_x="0.25000000" k_y="0.25000000" k_z="0.00000000">
+                         -0.3646327441       -0.3436912450       -0.3387869006       -0.3353017744       -0.3313292433
+                         -0.3115173365       -0.3018005219       -0.2915024548       -0.2890151454       -0.2860362693
+                         -0.2720613110       -0.2683001282       -0.2636261611       -0.2609097013       -0.2539960393
+                         -0.2460558637       -0.2389925048       -0.1993614438       -0.1977573373       -0.1838166133
+                         -0.1740957451       -0.1602996387       -0.1223407102       -0.0995762353       -0.0534391892
+                         -0.0282104211        0.0199971019        0.0300738745        0.0975694245        0.1090813425
+               </eigenvaluesAt>
+            </eigenvalues>
+            <bandgap value="0.0436499629" units="eV"/>
+            <sumValenceSingleParticleEnergies value="-5.1964201788" units="Htr"/>
+            <FermiEnergy value="-0.1985593906" units="Htr"/>
+         </Forcetheorem_Loop>
+         <Forcetheorem_Loop calculationType="SSDISP" No="2">
+            <energyParameters units="Htr">
+               <atomicEP atomType="1" spin="1" branch="4s" branchLowest="-3.44" branchHighest="1.55" value="-0.3474624982"/>
+               <atomicEP atomType="1" spin="1" branch="4p" branchLowest="-2.19" branchHighest="2.14" value="-0.2119845346"/>
+               <atomicEP atomType="1" spin="1" branch="3d" branchLowest="-9.99" branchHighest="-0.17" value="-0.3158124825"/>
+               <atomicEP atomType="1" spin="1" branch="4f" branchLowest="-9.99" branchHighest="3.15" value="0.1028539481"/>
+               <atomicEP atomType="2" spin="1" branch="6s" branchLowest="-3.76" branchHighest="1.87" value="-0.4467674625"/>
+               <atomicEP atomType="2" spin="1" branch="6p" branchLowest="-2.01" branchHighest="3.07" value="-0.2979908192"/>
+               <atomicEP atomType="2" spin="1" branch="5d" branchLowest="-11.27" branchHighest="0.17" value="-0.3160002186"/>
+               <atomicEP atomType="2" spin="1" branch="5f" branchLowest="-2.62" branchHighest="2.53" value="-0.0143843793"/>
+               <vacuumEP vacuum="1" spin="1" vzIR="-0.2334346101" vzInf="-0.0000234857" value="-0.2500234857"/>
+               <vacuumEP vacuum="2" spin="1" vzIR="-0.2391433081" vzInf="-0.0307523585" value="-0.2807523585"/>
+               <atomicEP atomType="1" spin="2" branch="4s" branchLowest="-3.30" branchHighest="1.65" value="-0.3106954762"/>
+               <atomicEP atomType="1" spin="2" branch="4p" branchLowest="-2.06" branchHighest="2.24" value="-0.1791294346"/>
+               <atomicEP atomType="1" spin="2" branch="3d" branchLowest="-9.99" branchHighest="-0.03" value="-0.2075052708"/>
+               <atomicEP atomType="1" spin="2" branch="4f" branchLowest="-9.99" branchHighest="3.25" value="0.1325939289"/>
+               <atomicEP atomType="2" spin="2" branch="6s" branchLowest="-3.75" branchHighest="1.89" value="-0.4366192818"/>
+               <atomicEP atomType="2" spin="2" branch="6p" branchLowest="-2.00" branchHighest="3.08" value="-0.2883254616"/>
+               <atomicEP atomType="2" spin="2" branch="5d" branchLowest="-11.27" branchHighest="0.18" value="-0.3028501797"/>
+               <atomicEP atomType="2" spin="2" branch="5f" branchLowest="-2.61" branchHighest="2.54" value="-0.0048023497"/>
+               <vacuumEP vacuum="1" spin="2" vzIR="-0.2334346101" vzInf="-0.0000234857" value="-0.2500234857"/>
+               <vacuumEP vacuum="2" spin="2" vzIR="-0.2391433081" vzInf="-0.0307523585" value="-0.2807523585"/>
+            </energyParameters>
+            <eigenvalues>
+               <eigenvaluesAt spin="1" ikpt="1" k_x="-0.25000000" k_y="0.25000000" k_z="0.00000000">
+                         -0.3802834173       -0.3456372181       -0.3412768211       -0.3384251432       -0.3281804925
+                         -0.3173784643       -0.3046667406       -0.2952902746       -0.2856069941       -0.2835875305
+                         -0.2752976942       -0.2662133103       -0.2577165980       -0.2527234062       -0.2395772754
+                         -0.2341676600       -0.2292236266       -0.1955569941       -0.1940061315       -0.1789706119
+                         -0.1735475009       -0.1627252598       -0.1374763249       -0.0855122938       -0.0732323858
+                         -0.0072082083       -0.0030719925        0.0441252629        0.0671565402        0.0806876613
+               </eigenvaluesAt>
+               <eigenvaluesAt spin="1" ikpt="2" k_x="0.25000000" k_y="0.25000000" k_z="0.00000000">
+                         -0.3839580108       -0.3439547693       -0.3416238203       -0.3387958011       -0.3273836261
+                         -0.3169091013       -0.3045456034       -0.2951495490       -0.2849534179       -0.2841686078
+                         -0.2749262342       -0.2674076538       -0.2571201424       -0.2529338184       -0.2394231211
+                         -0.2341530494       -0.2286743905       -0.1956018314       -0.1938459023       -0.1788274335
+                         -0.1738348842       -0.1626358355       -0.1405994531       -0.0877622058       -0.0698400180
+                         -0.0092132508        0.0004346441        0.0472971278        0.0703934968        0.0783182042
+               </eigenvaluesAt>
+            </eigenvalues>
+            <bandgap value="0.0422011231" units="eV"/>
+            <sumValenceSingleParticleEnergies value="-5.1707441316" units="Htr"/>
+            <FermiEnergy value="-0.1947532933" units="Htr"/>
+         </Forcetheorem_Loop>
+         <Forcetheorem_SSDISP qvectors="2" units="Htr">
+            <Entry q="1" ev-sum="-5.1964202"/>
+            <Entry q="2" ev-sum="-5.1707441"/>
+         </Forcetheorem_SSDISP>
+      </iteration>
+   </scfLoop>
+   <endDateAndTime date="2024/08/22" time="18:18:23" zone="+0200"/>
+</fleurOutput>

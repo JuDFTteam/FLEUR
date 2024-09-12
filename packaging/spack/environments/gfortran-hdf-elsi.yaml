@@ -1,0 +1,32 @@
+# This is a Spack Environment file.
+##docu Generic recipe for gfortran
+#
+# It describes a set of packages to be installed, along with
+# configuration settings.
+#
+#  IMPORTANT: you have to set th/home/jovyan/persistent_storage/tutorial/0.Installation/I2/fleur/environment variable to the FLEUR-root directory to find the
+#             adjusted spack recipes in the repo included below!
+#
+spack:
+  # add package specs to the `specs` list
+  specs:
+  - fleur%gcc+mpi+openmp+hdf5+elsi ^hdf5~mpi
+  view: true
+  concretizer:
+    unify: true
+  repos:
+  - /home/jovyan/persistent_storage/tutorial/0.Installation/I2/fleur//packaging/spack/repo
+  compilers:
+  - compiler:
+      spec: gcc@=13.2.0
+      paths:
+        cc: /usr/bin/gcc
+        cxx: /usr/bin/g++
+        f77: /usr/bin/gfortran
+        fc: /usr/bin/gfortran
+      flags: {}
+      operating_system: ubuntu24.04
+      target: aarch64
+      modules: []
+      environment: {}
+      extra_rpaths: []

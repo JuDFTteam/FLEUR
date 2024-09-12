@@ -1,0 +1,21 @@
+set(fleur_F90 ${fleur_F90}
+#${CMAKE_SOURCE_DIR}/src/fleur/propcalc/dos/Ek_write_sl.f90
+${CMAKE_SOURCE_DIR}/src/fleur/propcalc/dos/dos_bin.f90
+${CMAKE_SOURCE_DIR}/src/fleur/propcalc/dos/cdninf.f90
+${CMAKE_SOURCE_DIR}/src/fleur/propcalc/dos/smooth.f90
+${CMAKE_SOURCE_DIR}/src/fleur/propcalc/dos/gnuplot.F90
+#${CMAKE_SOURCE_DIR}/src/fleur/propcalc/dos/evaldos.f90
+${CMAKE_SOURCE_DIR}/src/fleur/propcalc/dos/grp_k.f90
+${CMAKE_SOURCE_DIR}/src/fleur/propcalc/dos/nstm3.f90
+${CMAKE_SOURCE_DIR}/src/fleur/propcalc/dos/sympsi.F90
+${CMAKE_SOURCE_DIR}/src/fleur/propcalc/dos/dostetra.f90
+${CMAKE_SOURCE_DIR}/src/fleur/propcalc/dos/tetra_dos.f90
+${CMAKE_SOURCE_DIR}/src/fleur/propcalc/dos/ptdos.f90
+${CMAKE_SOURCE_DIR}/src/fleur/propcalc/dos/make_dos.F90
+${CMAKE_SOURCE_DIR}/src/fleur/propcalc/dos/types_jdos.F90
+${CMAKE_SOURCE_DIR}/src/fleur/propcalc/dos/types_mcd.F90
+${CMAKE_SOURCE_DIR}/src/fleur/propcalc/dos/types_orbcomp.F90
+${CMAKE_SOURCE_DIR}/src/fleur/propcalc/dos/types_slab.F90
+${CMAKE_SOURCE_DIR}/src/fleur/propcalc/dos/types_eigdos.F90
+${CMAKE_SOURCE_DIR}/src/fleur/propcalc/dos/types_vacdos.f90
+)

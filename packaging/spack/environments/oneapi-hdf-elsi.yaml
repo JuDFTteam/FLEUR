@@ -1,0 +1,18 @@
+# This is a Spack Environment file.
+##docu Generic recipe for Intel OneAPI compilers
+#
+# It describes a set of packages to be installed, along with
+# configuration settings.
+#
+#  IMPORTANT: you have to set the FLEUR_SOURCE environment variable to the FLEUR-root directory to find the
+#             adjusted spack recipes in the repo included below!
+#
+spack:
+  # add package specs to the `specs` list
+  specs:
+  - fleur%oneapi+mpi+openmp+hdf5+elsi ^hdf5~mpi 
+  view: true
+  concretizer:
+    unify: true
+  repos:
+  - ${FLEUR_SOURCE}/packaging/spack/repo

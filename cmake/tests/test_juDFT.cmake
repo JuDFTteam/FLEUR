@@ -1,4 +1,4 @@
-if(NOT EXISTS "${PROJECT_SOURCE_DIR}/juDFT/CMakeLists.txt" )
+if(NOT EXISTS "${PROJECT_SOURCE_DIR}/src/libraries/juDFT/CMakeLists.txt" )
     find_package(Git REQUIRED)
     execute_process(COMMAND ${GIT_EXECUTABLE} submodule init juDFT WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} RESULT_VARIABLE _res_init OUTPUT_QUIET ERROR_QUIET)
     execute_process(COMMAND ${GIT_EXECUTABLE} submodule update  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} RESULT_VARIABLE _res_update OUTPUT_QUIET ERROR_QUIET)
@@ -20,6 +20,9 @@ if (DEFINED FLEUR_USE_HDF5)
      message("SET:${FLEUR_HDF5_LIBRARIES}")
      set(JUDFT_LIBRARIES ${FLEUR_HDF5_LIBRARIES} CACHE STRING "Libraries for linking with HDF5")
    endif()
+   if (FLEUR_USE_GPU)
+     set(JUDFT_USE_GPU ON CACHE STRING "Compile for GPU/CUDA support")
+   endif ()
 endif()
 #In addition you might want to set
 set(JUDFT_COMPILEOPTS ${FLEUR_PRECISION_OPTION})
@@ -27,6 +30,6 @@ if (CLI_PATCH_INTEL)
    set(JUDFT_PATCH_INTEL ON CACHE BOOL "Apply patches to MKL for performance on AMD")
 endif()
 
-add_subdirectory(juDFT)
+add_subdirectory(src/libraries/juDFT)
 
 include_directories("${CMAKE_CURRENT_BINARY_DIR}/juDFT/modules/juDFT")

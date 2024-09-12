@@ -1,0 +1,137 @@
+!-------------------------------------------------------------------------------
+! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
+
+MODULE m_elpa
+CONTAINS
+   SUBROUTINE elpa_diag(hmat, smat, ne, eig, ev)
+      !
+      !----------------------------------------------------
+      !- Parallel eigensystem solver - driver routine based on chani; dw'12
+      !  Uses the ELPA for the actual diagonalization
+      !
+      !
+      ! hmat ..... Hamiltonian matrix
+      ! smat ..... overlap matrix
+      ! ne ....... number of ev's searched (and found) on this node
+      !            On input, overall number of ev's searched,
+      !            On output, local number of ev's found
+      ! eig ...... eigenvalues, output
+      ! ev ....... eigenvectors, output
+      !
+      !----------------------------------------------------
+      USE m_juDFT
+      USE m_types_mpimat
+      USE m_types_mat
+      USE elpa
+      IMPLICIT NONE
+
+      CLASS(t_mat), INTENT(INOUT)    :: hmat, smat
+      CLASS(t_mat), ALLOCATABLE, INTENT(OUT)::ev
+      REAL, INTENT(out)              :: eig(:)
+      INTEGER, INTENT(INOUT)         :: ne
+
+      !...  Local variables
+      !
+      INTEGER           :: num, np, myid
+      INTEGER           :: err
+      INTEGER           :: i
+      REAL, ALLOCATABLE      :: eig2(:)
+      TYPE(t_mpimat)        :: ev_dist
+      INTEGER               :: kernel
+      CLASS(elpa_t), pointer :: elpa_obj
+      LOGICAL :: firstcall=.true.
+
+      call timestart("ELPA 2018")
+      SELECT TYPE (hmat)
+      TYPE IS (t_mpimat)
+         SELECT TYPE (smat)
+         TYPE IS (t_mpimat)
+            CALL MPI_BARRIER(hmat%blacsdata%mpi_com, err)
+            CALL MPI_COMM_SIZE(hmat%blacsdata%mpi_com, np, err)
+            CALL MPI_COMM_RANK(hmat%blacsdata%mpi_com, myid, err)
+            if (firstcall)THEN
+               err = elpa_init(20180525)
+               firstcall=.false.
+            endif   
+            elpa_obj => elpa_allocate()
+
+            ALLOCATE (eig2(hmat%global_size1), stat=err) ! The eigenvalue array
+            IF (err .NE. 0) CALL juDFT_error('Failed to allocated "eig2"', calledby='elpa')
+
+            CALL ev_dist%init(hmat)! Eigenvectors
+            IF (err .NE. 0) CALL juDFT_error('Failed to allocated "ev_dist"', calledby='elpa')
+
+            ! Blocking factor
+            IF (hmat%blacsdata%blacs_desc(5) .NE. hmat%blacsdata%blacs_desc(6)) CALL judft_error("Different block sizes for rows/columns not supported")
+            CALL elpa_obj%set("na", hmat%global_size1, err)
+            CALL elpa_obj%set("nev", ne, err)
+            CALL elpa_obj%set("local_nrows", hmat%matsize1, err)
+            CALL elpa_obj%set("local_ncols", hmat%matsize2, err)
+            CALL elpa_obj%set("nblk", hmat%blacsdata%blacs_desc(5), err)
+            CALL elpa_obj%set("mpi_comm_parent", hmat%blacsdata%mpi_com, err)
+            CALL elpa_obj%set("process_row", hmat%blacsdata%myrow, err)
+            CALL elpa_obj%set("process_col", hmat%blacsdata%mycol, err)
+            CALL elpa_obj%set("blacs_context", hmat%blacsdata%blacs_desc(2), err)
+            call elpa_obj%set("timings",1,err)
+            err = elpa_obj%setup()
+            
+#if defined(CPP_GPU)||defined(_OPENACC)
+            call elpa_obj%set("gpu_hermitian_multiply",1, err)
+            !call elpa_obj%set("cannon_for_generalized",0,err)
+            CALL elpa_obj%set("nvidia-gpu", 1, err)
+            call elpa_obj%setup_gpu()
+            print *, "ELPA for GPU"
+            if (myid==0) call elpa_obj%store_settings("save_to_disk.txt", err)
+#else
+            CALL elpa_obj%set("solver", ELPA_SOLVER_2STAGE)
+#endif
+            
+
+            CALL hmat%u2l()
+            CALL smat%u2l()
+            call elpa_obj%timer_start("ELPA")
+            IF (hmat%l_real) THEN
+               CALL elpa_obj%generalized_eigenvectors(hmat%data_r, smat%data_r, eig2, ev_dist%data_r, .FALSE., err)
+            ELSE
+               CALL elpa_obj%generalized_eigenvectors(hmat%data_c, smat%data_c, eig2, ev_dist%data_c, .FALSE., err)
+            ENDIF
+            call elpa_obj%timer_stop("ELPA")
+            if (myid==0) call elpa_obj%print_times("ELPA")
+            call MPI_BARRIER(hmat%blacsdata%mpi_com,err)
+            CALL elpa_deallocate(elpa_obj)
+            !CALL elpa_uninit()
+            ! END of ELPA stuff
+            !
+            !     Each process has all eigenvalues in output
+            eig(:ne) = eig2(:ne)
+            DEALLOCATE (eig2)
+            !
+            !
+            !     Redistribute eigenvectors  from ScaLAPACK distribution to each process, i.e. for
+            !     process i these are eigenvectors i+1, np+i+1, 2*np+i+1...
+            !     Only num=num2/np eigenvectors per process
+            !
+            num = ne
+            ne = 0
+            DO i = myid + 1, num, np
+               ne = ne + 1
+            ENDDO
+            !
+            !
+            ALLOCATE (t_mpimat::ev)
+            CALL ev%init(hmat%l_real, hmat%global_size1, hmat%global_size1, hmat%blacsdata%mpi_com, .FALSE.)
+            CALL ev%copy(ev_dist, 1, 1)
+         CLASS DEFAULT
+            CALL judft_error("Wrong type (1) in scalapack")
+         END SELECT
+      CLASS DEFAULT
+         CALL judft_error("Wrong type (2) in scalapack")
+      END SELECT
+
+      call timestop("ELPA 2018")
+
+   END SUBROUTINE elpa_diag
+END MODULE m_elpa
