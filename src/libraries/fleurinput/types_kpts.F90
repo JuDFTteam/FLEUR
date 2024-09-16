@@ -599,7 +599,7 @@ CONTAINS
          END IF
       END IF
 
-      IF (((input%bz_integration.EQ.BZINT_METHOD_TRIA)).AND.(.NOT.input%film)) THEN
+      IF ((input%bz_integration.EQ.BZINT_METHOD_TRIA).AND.(.NOT.input%film)) THEN
 
          IF(kpts%kptsKind.NE.KPTS_KIND_TRIA_BULK) THEN
             CALL juDFT_error("'tria' tetrahedron decomposition for bulk systems needs a tria-bulk k-point set",&
@@ -704,7 +704,7 @@ CONTAINS
       END IF
 
       IF((input%bz_integration.EQ.BZINT_METHOD_TETRA).OR.&
-         (input%bz_integration.EQ.BZINT_METHOD_TRIA).OR. juphon%l_elph ) THEN
+         (input%bz_integration.EQ.BZINT_METHOD_TRIA).OR. (juphon%l_dfpt .AND. juphon%l_elph)) THEN
          CALL timestart("setup tetraList")
          allocate(kpts%tetraList( MERGE(2*sym%nop,sym%nop,.NOT.sym%invs)&
                                  *MERGE(6,24,input%film),kpts%nkpt),source=0)
