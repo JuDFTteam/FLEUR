@@ -212,7 +212,7 @@ contains
       deallocate( il, kl )
     end if
 
-    if ( potdenType /= POTDEN_TYPE_POTYUK .AND. potdenType /= POTDEN_TYPE_CRYSTALFIELD .AND. .NOT. juphon%l_efield) then 
+    if ( potdenType /= POTDEN_TYPE_POTYUK .AND. potdenType /= POTDEN_TYPE_CRYSTALFIELD) then 
       IF (.NOT.l_dfptvgen) THEN
          do n = 1, atoms%ntype
          !print *, vr(1:atoms%jri(n),0,n)
@@ -225,40 +225,42 @@ contains
          !vr(1:atoms%jri(n),lh,n) 
      
        !  end do
-      ELSE IF (.NOT.PRESENT(iDir2)) THEN
-         ! DFPT case:
-         ! l=1 contributions from the Coulomb singularity instead of l=0 (1/r -> 1/r^2)
-         DO n = MERGE(1,iDtype,iDtype==0), MERGE(atoms%ntype,iDtype,iDtype==0)
-            ptsym = sym%ntypsy(atoms%firstAtom(n))
-            pref = MERGE(atoms%zatom(n),-atoms%zatom(n),iDtype==0)
-            DO lh = 1, 3
-               l = sphhar%llh(lh, ptsym)
-               DO iMem = 1, sphhar%nmem(lh, ptsym)
-                  m = sphhar%mlh(iMem, lh, ptsym)
-                  lm = l*(l+1) + m + 1
-                  vr(1:atoms%jri(n),lh,n) = vr(1:atoms%jri(n),lh,n) + &
-                                             conjg(sphhar%clnu(iMem, lh, ptsym)) * c_im(iDir, lm - 1) * pref * &
-                                             ( 1 - (atoms%rmsh(1:atoms%jri(n), n) / atoms%rmt(n))**3) / atoms%rmsh(1:atoms%jri(n),n)**2
+      ELSE IF (juphon%l_phonon) THEN
+         IF (.NOT.PRESENT(iDir2)) THEN
+            ! DFPT case:
+            ! l=1 contributions from the Coulomb singularity instead of l=0 (1/r -> 1/r^2)
+            DO n = MERGE(1,iDtype,iDtype==0), MERGE(atoms%ntype,iDtype,iDtype==0)
+               ptsym = sym%ntypsy(atoms%firstAtom(n))
+               pref = MERGE(atoms%zatom(n),-atoms%zatom(n),iDtype==0)
+               DO lh = 1, 3
+                  l = sphhar%llh(lh, ptsym)
+                  DO iMem = 1, sphhar%nmem(lh, ptsym)
+                     m = sphhar%mlh(iMem, lh, ptsym)
+                     lm = l*(l+1) + m + 1
+                     vr(1:atoms%jri(n),lh,n) = vr(1:atoms%jri(n),lh,n) + &
+                                                conjg(sphhar%clnu(iMem, lh, ptsym)) * c_im(iDir, lm - 1) * pref * &
+                                                ( 1 - (atoms%rmsh(1:atoms%jri(n), n) / atoms%rmt(n))**3) / atoms%rmsh(1:atoms%jri(n),n)**2
+                  END DO
                END DO
             END DO
-         END DO
-      ELSE
-         ! DFPT 2nd order case:
-         ! l=2 contributions from the Coulomb singularity instead of l=0 (1/r -> 1/r^3)
-         DO n = 1, atoms%ntype!MERGE(1,iDtype,iDtype==0), MERGE(atoms%ntype,iDtype,iDtype==0)
-            ptsym = sym%ntypsy(atoms%firstAtom(n))
-            pref = -atoms%zatom(n)!MERGE(atoms%zatom(n),-atoms%zatom(n),iDtype==0)
-            DO lh = 4, 8
-               l = sphhar%llh(lh, ptsym)
-               DO iMem = 1, sphhar%nmem(lh, ptsym)
-                  m = sphhar%mlh(iMem, lh, ptsym)
-                  lm = l*(l+1) + m + 1
-                  IF ((n.EQ.iDtype).OR.(0.EQ.iDtype)) vr(1:atoms%jri(n),lh,n) = vr(1:atoms%jri(n),lh,n) + &
-                                                      conjg(sphhar%clnu(iMem, lh, ptsym)) * mat2ord(lm-4,iDir2,iDir) * pref * &
-                                                      ( 1 - (atoms%rmsh(1:atoms%jri(n), n) / atoms%rmt(n))**5) / atoms%rmsh(1:atoms%jri(n),n)**3
+         ELSE
+            ! DFPT 2nd order case:
+            ! l=2 contributions from the Coulomb singularity instead of l=0 (1/r -> 1/r^3)
+            DO n = 1, atoms%ntype!MERGE(1,iDtype,iDtype==0), MERGE(atoms%ntype,iDtype,iDtype==0)
+               ptsym = sym%ntypsy(atoms%firstAtom(n))
+               pref = -atoms%zatom(n)!MERGE(atoms%zatom(n),-atoms%zatom(n),iDtype==0)
+               DO lh = 4, 8
+                  l = sphhar%llh(lh, ptsym)
+                  DO iMem = 1, sphhar%nmem(lh, ptsym)
+                     m = sphhar%mlh(iMem, lh, ptsym)
+                     lm = l*(l+1) + m + 1
+                     IF ((n.EQ.iDtype).OR.(0.EQ.iDtype)) vr(1:atoms%jri(n),lh,n) = vr(1:atoms%jri(n),lh,n) + &
+                                                         conjg(sphhar%clnu(iMem, lh, ptsym)) * mat2ord(lm-4,iDir2,iDir) * pref * &
+                                                         ( 1 - (atoms%rmsh(1:atoms%jri(n), n) / atoms%rmt(n))**5) / atoms%rmsh(1:atoms%jri(n),n)**3
+                  END DO
                END DO
             END DO
-         END DO
+         END IF
       END IF
     end if
     end if
