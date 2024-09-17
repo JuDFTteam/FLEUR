@@ -42,7 +42,11 @@ module m_dfpt_dielecten
             ALLOCATE(denIn1_pw(starsq%ng3))
             ALLOCATE(denIn1_mt(fi%atoms%jmtd,0:sphhar%nlhd,fi%atoms%ntype),denIn1_mt_Im(fi%atoms%jmtd,0:sphhar%nlhd,fi%atoms%ntype))
             ALLOCATE(dieltensor_HF(SIZE(dieltensor_row)),dieltensor_occu(SIZE(dieltensor_row)))
+            dieltensor_HF(:) = CMPLX(0.0,0.0)
             print*, "Im in dfpt_dielecten"
+            print*,"shape(denIn1%pw)",shape(denIn1%pw)
+            print*,"shape(denIn1%mt)",shape(denIn1%mt)
+            print*,"shape(denIn1Im%mt)",shape(denIn1Im%mt)
             !print*, "dieltensor_row", dieltensor_HF
             write(intiDtype, '(I5)') iDtype
             write(intiDir, '(I5)') iDir
@@ -58,14 +62,16 @@ module m_dfpt_dielecten
             denIn1_mt = (denIn1%mt(:,0:,:,1)+denIn1%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
             denIn1_mt_Im = (denIn1Im%mt(:,0:,:,1)+denIn1Im%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
             print*,shape(denIn1_pw)
+            print*,shape(denIn1_mt)
+            print*,shape(denIn1_mt_Im)
             !stop
             !print*,'max value', maxval(denIn1_pw(:,:,1))
             !stop
             !print*,'shape(denIn1_mt)',shape(denIn1_mt)
             !print*,'shape(denIn1_mt_Im)',shape(denIn1_mt_Im)
-            !call save_npy(den_string_pw,denIn1_pw)
-            !call save_npy(den_string_mt,denIn1_mt(:,:,1))
-            !call save_npy(den_string_mtIm,denIn1_mt_Im(:,:,1))
+            call save_npy(den_string_pw,denIn1_pw)
+            call save_npy(den_string_mt,denIn1_mt(:,:,:))
+            call save_npy(den_string_mtIm,denIn1_mt_Im(:,:,:))
             !print*, 'Maximum val den', maxval(denIn1_mt(:,:,1))
             write(400 + fmpi%irank , *)
             do iDtype_col = 1, fi%atoms%ntype
@@ -100,16 +106,19 @@ module m_dfpt_dielecten
                     !print*,'intiDir',intiDir
                     !print*,'trim(intiDir)',trim(intiDir)
                     filename = 'v1efield_mt_' //  trim(adjustl(intiDtype)) // '_'//trim(adjustl(intiDir))//'_'//trim(adjustl(intiDtype_col))//'_'//trim(adjustl(intiDir_col))//'.npy'
+                    filename_pw = 'v1efield_pw_' //  trim(adjustl(intiDtype)) // '_'//trim(adjustl(intiDir))//'_'//trim(adjustl(intiDtype_col))//'_'//trim(adjustl(intiDir_col))//'.npy'
                     filename_Im = 'v1efield_mt_Im_' //  trim(adjustl(intiDtype)) // '_'//trim(adjustl(intiDir))//'_'//trim(adjustl(intiDtype_col))//'_'//trim(adjustl(intiDir_col))//'.npy'
 
-                    !call save_npy(filename,vExt1%mt(:,:,1,1))
-                    !call save_npy(filename_Im,vExt1Im%mt(:,:,1,1))
+                    call save_npy(filename,vExt1%mt(:,:,:,1))
+                    call save_npy(filename_pw,vExt1%pw(:,:))
+                    call save_npy(filename_Im,vExt1Im%mt(:,:,:,1))
                     !stop
                     !call save_npy("v1efield_mt_",iDtype,"_",iDir,"_",iDtype_col,"_",iDir_col,".npy",vExt1%mt)
                     pwwq2 = CMPLX(0.0,0.0)
                     CALL dfpt_convol_big(1, starsq, stars, vExt1%pw(:,1), CMPLX(1.0,0.0)*stars%ufft, pwwq2)
                     CALL dfpt_int_pw(starsq, fi%cell, denIn1_pw, pwwq2, tempval_pw)
-                    !print*, 'tempval_mt',tempval_pw
+                    print*, 'tempval_pw',tempval_pw
+                    print*,'dieltensor_HF(col_index)',dieltensor_HF(col_index)
                     dieltensor_HF(col_index) = dieltensor_HF(col_index) + tempval_pw
                     !print*, "dieltensor_row",dieltensor_row(:)
 
@@ -118,8 +127,10 @@ module m_dfpt_dielecten
                     do iType = 1, fi%atoms%ntype
                         tempval_mt = CMPLX(0.0,0.0)               
                         call dfpt_int_mt(fi%atoms, sphhar, fi%sym, iType, denIn1_mt, denIn1_mt_Im, vExt1%mt(:,0:,:,1), vExt1Im%mt(:,0:,:,1), tempval_mt)
-                        !print*, 'tempval_mt',tempval_mt
+                        print*, 'tempval_mt',tempval_mt
+                        print*,'dieltensor_HF(col_index)',dieltensor_HF(col_index)
                         dieltensor_HF(col_index) = dieltensor_HF(col_index) + tempval_mt
+                        print*,'dieltensor_HF(col_index)',dieltensor_HF(col_index)
                     end do
                     !print*,'filename',trim(filename)
                     !print*, 'Maximum val', maxval(vExt1%mt(:,:,1,1))
