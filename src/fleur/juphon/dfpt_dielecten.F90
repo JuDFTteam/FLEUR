@@ -29,7 +29,7 @@ module m_dfpt_dielecten
             real, allocatable                  :: denIn1_mt(:,:,:),denIn1_mt_Im(:,:,:), we1(:),eig1(:), we1_data(:,:,:,:),eig1_data(:,:,:,:)
             integer                            :: iDtype_col,iDir_col,col_index,iType,jsp,nk_i, nk,len_kpoints
             
-            character(len=100)                 :: filename,filename_Im,den_string,den_string_pw,den_string_mt,den_string_mtIm
+            character(len=100)                 :: filename,filename_pw,filename_Im,den_string,den_string_pw,den_string_mt,den_string_mtIm
             character(len=5)                   :: intiDtype
             character(len=5)                   :: intiDir
             character(len=5)                   :: intiDtype_col
@@ -109,9 +109,9 @@ module m_dfpt_dielecten
                     filename_pw = 'v1efield_pw_' //  trim(adjustl(intiDtype)) // '_'//trim(adjustl(intiDir))//'_'//trim(adjustl(intiDtype_col))//'_'//trim(adjustl(intiDir_col))//'.npy'
                     filename_Im = 'v1efield_mt_Im_' //  trim(adjustl(intiDtype)) // '_'//trim(adjustl(intiDir))//'_'//trim(adjustl(intiDtype_col))//'_'//trim(adjustl(intiDir_col))//'.npy'
 
-                    call save_npy(filename,vExt1%mt(:,:,:,1))
-                    call save_npy(filename_pw,vExt1%pw(:,:))
-                    call save_npy(filename_Im,vExt1Im%mt(:,:,:,1))
+                    !call save_npy(filename,vExt1%mt(:,:,:,1))
+                    !call save_npy(filename_pw,vExt1%pw(:,:))
+                    !call save_npy(filename_Im,vExt1Im%mt(:,:,:,1))
                     !stop
                     !call save_npy("v1efield_mt_",iDtype,"_",iDir,"_",iDtype_col,"_",iDir_col,".npy",vExt1%mt)
                     pwwq2 = CMPLX(0.0,0.0)
