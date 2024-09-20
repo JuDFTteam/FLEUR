@@ -25,11 +25,14 @@ MODULE m_dfpt_elph_mat
     IMPLICIT NONE
 
 CONTAINS
-    SUBROUTINE dfpt_elph_mat(fi,xcpot,sphhar,stars,nococonv,qpts,fmpi,results, resultsq, enpara,hybdat, rho,vTot,grRho,grVtot,iQ,eig_id,q_eig_id,l_real,denIn1,denIn1Im,eigenVecs,eigenVals)
+    SUBROUTINE dfpt_elph_mat(fi,xcpot,sphhar,stars,nococonv,qpts,fmpi,results, resultsq, results1, enpara,hybdat, rho,vTot,grRho,grVtot,iQ,eig_id,q_eig_id,l_real,denIn1,denIn1Im,eigenVecs,eigenVals)
 
         USE m_vgen
         USE m_make_stars
         USE m_dfpt_vgen
+        USE m_dfpt_tetra
+        USE m_eig66_io, ONLY : write_eig, read_eig
+
 
 
         IMPLICIT NONE 
@@ -40,7 +43,7 @@ CONTAINS
         TYPE(t_stars),INTENT(IN) :: stars
         TYPE(t_nococonv), INTENT(IN) :: nococonv
         TYPE(t_mpi), INTENT(IN) :: fmpi
-        TYPE(t_results), INTENT(IN) :: results,resultsq
+        TYPE(t_results), INTENT(IN) :: results,resultsq,results1
         TYPE(t_enpara), INTENT(IN) :: enpara
         TYPE(t_sphhar), INTENT(IN)  :: sphhar
         TYPE(t_kpts), INTENT(IN) :: qpts 
@@ -62,6 +65,10 @@ CONTAINS
         COMPLEX :: sigma_loc(2)
         COMPLEX,ALLOCATABLE:: gmatCart(:,:,:,:) !(nu',nu,kpoints,jsp)
         COMPLEX,ALLOCATABLE:: gmat(:,:,:,:,:) !(nu',nu,kpoints,jsp,normal_mode)
+        COMPLEX,ALLOCATABLE:: kInt_gmat(:,:,:,:) !(nu',nu,jsp,normal_mode)
+        REAL, ALLOCATABLE :: ph_linewidth(:,:) !(jsp,normal_mode)
+        INTEGER :: nbasfcnq_min ,iNupr,nu, ispin 
+
 
 #ifdef CPP_MPI
         INTEGER :: ierr
@@ -118,7 +125,7 @@ CONTAINS
                 CALL timestop("Generating Potential Perturbation")
 
                 CALL timestart("Generate electron-phonon matrix element")
-                CALL matrix_element(fi,sphhar,results,resultsq,fmpi,enpara,nococonv,starsq,vTot1,vTot1Im,vTot,rho_loc,bqpt,eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatCart)
+                CALL matrix_element(fi,sphhar,results,resultsq,fmpi,enpara,nococonv,starsq,vTot1,vTot1Im,vTot,rho_loc,bqpt,eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatCart,nbasfcnq_min)
                 CALL timestop("Generate electron-phonon matrix element")
 
                 IF (.NOT. ALLOCATED(gmat)) THEN
@@ -145,10 +152,56 @@ CONTAINS
             END DO !iDir 
         END DO !iDtype 
 
+
+        ! Construct the Superconduction temperature 
+
+        !Set this code block behind a logical in the future 
+        IF (fmpi%irank==0) THEN
+
+            gmat(:,:,:,:,:) = ABS(gmat(:,:,:,:,:))**2 
+            CALL timestart("k-Integration el-ph")
+            call dfpt_tetra_int(fi,results,resultsq, results1, gmat,nbasfcnq_min,kInt_gmat)
+            CALL timestop("k-Integration el-ph")
+            
+            DEALLOCATE(gmat)
+            ALLOCATE(ph_linewidth(fi%input%jspins, 3*fi%atoms%ntype))
+            
+            ph_linewidth = 0.0 
+            DO iMode = 1 , 3*fi%atoms%ntype
+                DO nu = 1 , size(kInt_gmat,2)
+                    DO iNupr = 1 , nbasfcnq_min
+                        ph_linewidth(:,iMode) =  ph_linewidth(:,iMode) + tpi_const * eigenVals(iMode)/fi%kpts%nkpt*REAL(kInt_gmat(iNupr,nu,:,iMode))
+                    END DO 
+                END DO 
+            END DO 
+            
+            CALL save_npy("linewidth.npy", ph_linewidth)
+
+            IF ( iQ .EQ. fi%juPhon%startq ) THEN 
+                open( 110, file="linewidth", status='replace', action='write', form='formatted')
+                write(110,*) "q-Point", qpts%bk(:,iQ) 
+                write(*,*) "Linewidth q-Point", qpts%bk(:,iQ) 
+                DO ispin  = 1 , fi%input%jspins
+                    write(110,*) ph_linewidth(ispin,:) 
+                    write(*,*) ph_linewidth(ispin,:) 
+                END DO 
+            ELSE
+                open( 110, file="linewidth", status="old", position="append", action="write")
+                write(110,*) "q-Point", qpts%bk(:,iQ) 
+                write(*,*) "Linewidth q-Point", qpts%bk(:,iQ) 
+                DO ispin  = 1 , fi%input%jspins
+                    write(110,*) ph_linewidth(ispin,:) 
+                    write(*,*) ph_linewidth(ispin,:) 
+                END DO
+            END IF 
+ 
+                        
+            close(110)
+        END IF 
     END SUBROUTINE dfpt_elph_mat
 
 
-    SUBROUTINE matrix_element(fi,sphhar,results, resultsq,fmpi,enpara,nococonv,starsq,v1real,v1imag,vTot,inden,bqpt,eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatBuffer)
+    SUBROUTINE matrix_element(fi,sphhar,results, resultsq,fmpi,enpara,nococonv,starsq,v1real,v1imag,vTot,inden,bqpt,eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatBuffer,nbasfcnq_min)
         ! This routine is very similar to dfpt_eigen
         ! However, we do not need the gmat which is slightly different to z1
         ! Output needs to be different 
@@ -173,6 +226,7 @@ CONTAINS
         INTEGER, INTENT(IN) :: eig_id, q_eig_id,iDir, iDtype ,killcont(6) 
         LOGICAL, INTENT(IN) :: l_real
         COMPLEX,ALLOCATABLE,INTENT(INOUT) :: gmatBuffer(:,:,:,:) !(nu',nu,kpoints,jsp)
+        INTEGER,INTENT(INOUT):: nbasfcnq_min
 
 
         TYPE(t_tlmplm)  :: td, tdV1
@@ -199,18 +253,24 @@ CONTAINS
         ! lapw and lapwq can be different if k and k+q do not align
         nbasfcnq_max = lapwq%dim_nvd()
         noccbd_max = 0 
+        nbasfcnq_min = 1000000000! ridiculous but should ensure 
         IF (fmpi%irank==0) THEN 
             DO jsp = 1, MERGE(1,fi%input%jspins,fi%noco%l_noco)
                 DO nk_i = 1, fi%kpts%nkpt
                     CALL lapw%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, nk_i, fi%cell, fmpi)
+                    CALL lapwq%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, nk_i, fi%cell, fmpi, bqpt)
                     noccbd  = COUNT(results%w_iks(:,nk_i,jsp)*2.0/fi%input%jspins>1.e-8)
+                    nbasfcnq = MERGE(lapwq%nv(1)+lapwq%nv(2)+2*fi%atoms%nlotot,lapwq%nv(1)+fi%atoms%nlotot,fi%noco%l_noco)
                     IF (noccbd.GT.noccbd_max) noccbd_max = noccbd
+                    ! maybe we can reduce the calculation to nbasfcnq_min --> saves memory and time 
+                    IF (nbasfcnq .LT. nbasfcnq_min) nbasfcnq_min =nbasfcnq
                 END DO !nk_i
             END DO !jsp 
         END IF 
 
 #ifdef CPP_MPI
         CALL MPI_BCAST(noccbd_max, 1, MPI_INTEGER, 0, fmpi%mpi_comm, ierr)
+        CALL MPI_BCAST(nbasfcnq_min, 1, MPI_INTEGER, 0, fmpi%mpi_comm, ierr)
 #endif 
 
         CALL vx%copyPotDen(vTot)
@@ -240,7 +300,7 @@ CONTAINS
                 
                 nbasfcn  = MERGE(lapw%nv(1)+lapw%nv(2)+2*fi%atoms%nlotot,lapw%nv(1)+fi%atoms%nlotot,fi%noco%l_noco)
                 nbasfcnq = MERGE(lapwq%nv(1)+lapwq%nv(2)+2*fi%atoms%nlotot,lapwq%nv(1)+fi%atoms%nlotot,fi%noco%l_noco)
-
+                IF (fmpi%irank==0) write(2000,*) "nbasfcnq", nbasfcn ,"nbasfcn" , nbasfcn , "k-Point" , nk
                 IF (fmpi%n_size == 1) THEN
                     ALLOCATE (t_mat::zMatk)
                     ALLOCATE (t_mat::zMatq)
@@ -251,18 +311,18 @@ CONTAINS
 
                 ! Initialize the expansion coefficient matrices at k and k+q
                 ! Then read all the stuff into it
-                CALL zMatk%init(l_real,nbasfcn,noccbd)
+                CALL zMatk%init(l_real,nbasfcn,noccbd_max)
                 CALL zMatq%init(l_real,nbasfcnq,nbasfcnq)
 
 
                 ! We only need this for read in 
                 ! Data inside we do not care about
-                ALLOCATE(ev_list(noccbd))
-                ev_list = (/(i, i=1,noccbd, 1)/)
+                ALLOCATE(ev_list(noccbd_max))
+                ev_list = (/(i, i=1,noccbd_max, 1)/)
                 ALLOCATE(q_ev_list(nbasfcnq))
                 q_ev_list = (/(i, i=1,nbasfcnq, 1)/)
 
-                ALLOCATE(eigk(noccbd))
+                ALLOCATE(eigk(noccbd_max))
                 ALLOCATE(eigq(nbasfcnq))
 
                 CALL timestart("Read eigenstuff at k/k+q")
@@ -283,7 +343,7 @@ CONTAINS
                 END IF
     
                 ! Initialize the electron-phonon matrix
-                CALL gmat%init(.FALSE.,nbasfcnq,noccbd)
+                CALL gmat%init(.FALSE.,nbasfcnq,noccbd_max)
                 gmat%data_c(:,:) = cmplx(0.0,0.0)
                 ALLOCATE(gmatH,mold=gmat%data_c)
                 ALLOCATE(gmatS,mold=gmat%data_c)
@@ -298,7 +358,7 @@ CONTAINS
                 tempVec = cmplx(0.0,0.0)
                 tempMat1 = cmplx(0.0,0.0)
                 CALL timestart("Matrix multiplication")
-                DO nu = 1, noccbd ! this might need to be adjusted due to k-integration --> more states needed
+                DO nu = 1, noccbd_max ! this might need to be adjusted due to k-integration --> more states needed
                     IF (l_real) THEN ! l_real for zMatk
                         tempVec(:nbasfcnq) = MATMUL(hmat%data_c,zMatk%data_r(:nbasfcn,nu))
                     ELSE
@@ -336,9 +396,9 @@ CONTAINS
 
                 END DO !nu
 
-                gmat%data_c(:nbasfcnq,:noccbd) = gmatH(:nbasfcnq,:noccbd) + gmatS(:nbasfcnq,:noccbd)
+                gmat%data_c(:nbasfcnq,:noccbd_max) = gmatH(:nbasfcnq,:noccbd_max) + gmatS(:nbasfcnq,:noccbd_max)
 
-                gmatBuffer(:nbasfcnq,:noccbd,nk,jsp) = gmat%data_c(:nbasfcnq,:noccbd)
+                gmatBuffer(:nbasfcnq,:noccbd_max,nk,jsp) = gmat%data_c(:nbasfcnq,:noccbd_max)
                 CALL timestop("Matrix multiplication")
                 IF (ALLOCATED(ev_list)) DEALLOCATE(ev_list)
                 IF (ALLOCATED(q_ev_list)) DEALLOCATE(q_ev_list)
