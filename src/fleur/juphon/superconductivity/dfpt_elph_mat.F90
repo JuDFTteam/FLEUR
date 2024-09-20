@@ -25,7 +25,7 @@ MODULE m_dfpt_elph_mat
     IMPLICIT NONE
 
 CONTAINS
-    SUBROUTINE dfpt_elph_mat(fi,xcpot,sphhar,stars,nococonv,qpts,fmpi,results, resultsq, enpara,hybdat, rho,vTot,grRho,grVtot,iQ,eig_id,q_eig_id,l_real,denIn1,denIn1Im)
+    SUBROUTINE dfpt_elph_mat(fi,xcpot,sphhar,stars,nococonv,qpts,fmpi,results, resultsq, enpara,hybdat, rho,vTot,grRho,grVtot,iQ,eig_id,q_eig_id,l_real,denIn1,denIn1Im,eigenVecs,eigenVals)
 
         USE m_vgen
         USE m_make_stars
@@ -49,14 +49,40 @@ CONTAINS
         INTEGER,INTENT(IN)         :: iQ,eig_id,q_eig_id
         LOGICAL,INTENT(IN)         :: l_real
         TYPE(t_potden), ALLOCATABLE,  INTENT(IN)     :: denIn1(:) , denIn1Im(:)
+        COMPLEX, ALLOCATABLE, INTENT(IN) :: eigenVecs(:,:) ! Only allocated on irank 0
+        REAL,ALLOCATABLE, INTENT(IN) :: eigenVals(:) ! Only allocated on irank 0
+
         
         TYPE(t_potden) :: vTot1,vTot1Im,denIn1_loc, denIn1Im_loc, rho_loc
 
 
         TYPE(t_stars) :: starsq
-        INTEGER :: iDtype, iDir, killcont(6) 
+        INTEGER :: iDtype, iDir, killcont(6) ,iMode , iPerturb
         REAL :: bqpt(3)
         COMPLEX :: sigma_loc(2)
+        COMPLEX,ALLOCATABLE:: gmatCart(:,:,:,:) !(nu',nu,kpoints,jsp)
+        COMPLEX,ALLOCATABLE:: gmat(:,:,:,:,:) !(nu',nu,kpoints,jsp,normal_mode)
+
+#ifdef CPP_MPI
+        INTEGER :: ierr
+#endif 
+
+        REAL                                      :: atomic_mass_array(118)
+
+        ! This should be changed, but was copied from dfpt_dynmat_eig.F90
+        atomic_mass_array = [1.01, 4.00, 6.94, 9.01, 10.81, 12.01, 14.01, 16.00, 19.00, 20.18, &      ! up to neon
+                      & 22.99, 24.31, 26.98, 28.09, 30.97, 32.06, 35.45, 39.95, &                 ! up to argon
+                      & 39.10, 40.08, 44.96, 47.87, 50.94, 52.00, 54.94, 55.85, 58.93, &          ! up to cobalt
+                      & 58.69, 63.55, 65.38, 69.72, 72.63, 74.92, 78.97, 79.90, 83.80, &          ! up to krypton
+                      & 85.47, 87.62, 88.91, 91.22, 92.91, 95.95, 97.40, 101.07, 102.91, &        ! up to ruthenium
+                      & 106.42, 107.87, 112.41, 114.82, 118.71, 121.76, 127.60, 126.90, 131.29, & ! up to xenon
+                      & 132.91, 137.33, 138.91, 140.12, 140.91, 144.24, 146.00, 150.36, 151.96, & ! up to europium
+                      & 157.25, 158.93, 162.50, 164.93, 167.26, 168.93, 173.05, 174.97, 178.49, & ! up to hafnium
+                      & 180.95, 183.84, 186.21, 190.23, 192.22, 195.08, 196.97, 200.59, 204.38, & ! up to thallium
+                      & 207.20, 208.98, 209.98, 210.00, 222.00, 223.00, 226.00, 227.00, 232.04, & ! up to thorium
+                      & 231.04, 238.03, 237.00, 244.00, 243.00, 247.00, 247.00, 251.00, 252.00, & ! up to einsteinium
+                      & 257.00, 258.00, 259.00, 262.00, 267.00, 269.00, 270.00, 272.00, 273.00, & ! up to hassium
+                      & 277.00, 281.00, 281.00, 285.00, 286.00, 289.00, 288.00, 293.00, 294.00, 294.00]
 
         ! killcont can be used to blot out certain contricutions to the
         ! perturbed matrices.
@@ -80,6 +106,7 @@ CONTAINS
                 CALL vTot1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
 
                 bqpt = qpts%bk(:, iQ)
+                iPerturb = iDir+3*(iDtype-1)
                 
                 CALL timestart("Generating Potential Perturbation")
                 IF (fmpi%irank==0) WRITE(oUnit, *) "vEff1", iDir
@@ -91,19 +118,37 @@ CONTAINS
                 CALL timestop("Generating Potential Perturbation")
 
                 CALL timestart("Generate electron-phonon matrix element")
-                CALL matrix_element(fi,sphhar,results,resultsq,fmpi,enpara,nococonv,starsq,vTot1,vTot1Im,vTot,rho_loc,bqpt,eig_id,q_eig_id,iDir,iDtype,killcont,l_real)
+                CALL matrix_element(fi,sphhar,results,resultsq,fmpi,enpara,nococonv,starsq,vTot1,vTot1Im,vTot,rho_loc,bqpt,eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatCart)
                 CALL timestop("Generate electron-phonon matrix element")
 
+                IF (.NOT. ALLOCATED(gmat)) THEN
+                    ALLOCATE(gmat(size(gmatCart,1),size(gmatCart,2),size(gmatCart,3),size(gmatCart,4),3*fi%atoms%ntype))
+                    gmat=CMPLX(0.0,0.0)
+                END IF 
+                !TODO Read in the eigenvecotrs from Dynmats, here we can take them from memory
+                IF (fmpi%irank==0) THEN 
+                    ! Numerics saves the day 
+                    ! Think about Gamma if Frequencies are approximately zero
+                    DO iMode = 1 , 3*fi%atoms%ntype
+                        IF (eigenVals(iMode) .LT. 0.0 ) THEN 
+                            gmat(:,:,:,:,iMode) = gmat(:,:,:,:,iMode) + eigenVecs(iPerturb,iMode)* -1*ImagUnit / SQRT(2* atomic_mass_array(fi%atoms%nz(CEILING(iPerturb/3.0))) * SQRT(ABS(eigenVals(iMode)))) * gmatCart(:,:,:,:) 
+                        ELSE
+                            gmat(:,:,:,:,iMode) = gmat(:,:,:,:,iMode) + eigenVecs(iPerturb,iMode) / SQRT(2* atomic_mass_array(fi%atoms%nz(CEILING(iPerturb/3.0))) * SQRT(eigenVals(iMode))) * gmatCart(:,:,:,:) 
+                        END IF 
+                    END DO  
+                END IF 
+                
                 CALL starsq%reset_stars()
                 CALL denIn1_loc%resetpotden()
                 CALL denIn1Im_loc%resetpotden()
+                DEALLOCATE(gmatCart)
             END DO !iDir 
         END DO !iDtype 
 
     END SUBROUTINE dfpt_elph_mat
 
 
-    SUBROUTINE matrix_element(fi,sphhar,results, resultsq,fmpi,enpara,nococonv,starsq,v1real,v1imag,vTot,inden,bqpt,eig_id,q_eig_id,iDir,iDtype,killcont,l_real)
+    SUBROUTINE matrix_element(fi,sphhar,results, resultsq,fmpi,enpara,nococonv,starsq,v1real,v1imag,vTot,inden,bqpt,eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatBuffer)
         ! This routine is very similar to dfpt_eigen
         ! However, we do not need the gmat which is slightly different to z1
         ! Output needs to be different 
@@ -127,6 +172,7 @@ CONTAINS
         REAL,  INTENT(IN) :: bqpt(3)
         INTEGER, INTENT(IN) :: eig_id, q_eig_id,iDir, iDtype ,killcont(6) 
         LOGICAL, INTENT(IN) :: l_real
+        COMPLEX,ALLOCATABLE,INTENT(INOUT) :: gmatBuffer(:,:,:,:) !(nu',nu,kpoints,jsp)
 
 
         TYPE(t_tlmplm)  :: td, tdV1
@@ -137,17 +183,41 @@ CONTAINS
         CLASS(t_mat), ALLOCATABLE :: hmat,smat
         TYPE(t_hub1data) :: hub1data
 
+#ifdef CPP_MPI
+        INTEGER :: ierr
+#endif 
 
-        INTEGER :: jsp, nk_i, nk ,noccbd,noccbdq,nbasfcn,nbasfcnq , i , neigk,neigq, nu
+        INTEGER :: jsp, nk_i, nk ,noccbd,noccbdq,nbasfcn,nbasfcnq , i , neigk,neigq, nu , noccbd_max,nbasfcnq_max
+        INTEGER :: tmp1
         REAL :: bkpt(3)
         REAL, ALLOCATABLE :: eigk(:),eigq(:)
         COMPLEX, ALLOCATABLE :: gmatH(:,:),gmatS(:,:),tempVec(:),tempMat1(:)
 
         INTEGER, ALLOCATABLE      :: ev_list(:), q_ev_list(:)
 
+
+        ! lapw and lapwq can be different if k and k+q do not align
+        nbasfcnq_max = lapwq%dim_nvd()
+        noccbd_max = 0 
+        IF (fmpi%irank==0) THEN 
+            DO jsp = 1, MERGE(1,fi%input%jspins,fi%noco%l_noco)
+                DO nk_i = 1, fi%kpts%nkpt
+                    CALL lapw%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, nk_i, fi%cell, fmpi)
+                    noccbd  = COUNT(results%w_iks(:,nk_i,jsp)*2.0/fi%input%jspins>1.e-8)
+                    IF (noccbd.GT.noccbd_max) noccbd_max = noccbd
+                END DO !nk_i
+            END DO !jsp 
+        END IF 
+
+#ifdef CPP_MPI
+        CALL MPI_BCAST(noccbd_max, 1, MPI_INTEGER, 0, fmpi%mpi_comm, ierr)
+#endif 
+
         CALL vx%copyPotDen(vTot)
         ALLOCATE(vx%pw_w, mold=vx%pw)
         vx%pw_w = vTot%pw_w
+        ALLOCATE(gmatBuffer(nbasfcnq_max,noccbd_max,fi%kpts%nkpt,fi%input%jspins))
+        gmatBuffer=0.0 
 
         ! Get the (lm) matrix elements for V1 and H0
         CALL ud%init(fi%atoms,fi%input%jspins)
@@ -264,10 +334,11 @@ CONTAINS
                     !gmat%data_c(:nbasfcnq,nu) = -eigk(nu)*tempMat1(:nbasfcnq)
                     gmatS(:nbasfcnq,nu) = -eigk(nu)*tempMat1(:nbasfcnq)
 
-                END DO 
+                END DO !nu
 
                 gmat%data_c(:nbasfcnq,:noccbd) = gmatH(:nbasfcnq,:noccbd) + gmatS(:nbasfcnq,:noccbd)
 
+                gmatBuffer(:nbasfcnq,:noccbd,nk,jsp) = gmat%data_c(:nbasfcnq,:noccbd)
                 CALL timestop("Matrix multiplication")
                 IF (ALLOCATED(ev_list)) DEALLOCATE(ev_list)
                 IF (ALLOCATED(q_ev_list)) DEALLOCATE(q_ev_list)
@@ -292,6 +363,12 @@ CONTAINS
 
             END DO !nk_i
         END DO !jsp
+
+#ifdef CPP_MPI
+        CALL MPI_ALLREDUCE(MPI_IN_PLACE,gmatBuffer,size(gmatBuffer),MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
+        CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
+#endif
+
     END SUBROUTINE matrix_element
 
 

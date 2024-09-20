@@ -177,7 +177,7 @@ CONTAINS
          IF(fi%noco%l_soc.OR.fi%noco%l_ss) l_timeReversalCheck = .TRUE.
       END IF
       CALL fi%kpts%init(fi%sym, fi%input%film, fi%hybinp%l_hybrid .or. fi%input%l_rdmft, l_timeReversalCheck)
-      CALL fi%kpts%initTetra(fi%input, fi%cell, fi%sym, fi%noco%l_soc .OR. fi%noco%l_ss)
+      CALL fi%kpts%initTetra(fi%input, fi%cell, fi%sym, fi%noco%l_soc .OR. fi%noco%l_ss,fi%juphon)
       IF (fmpi%irank == 0) CALL fi%gfinp%init(fi%atoms, fi%sym, fi%noco, fi%cell, fi%input)
       CALL fi%gfinp%mpi_bc(fmpi%mpi_comm) !THis has to be rebroadcasted because there could be new gf elements after init_gfinp
       CALL convn(fmpi%irank == 0, fi%atoms, stars)

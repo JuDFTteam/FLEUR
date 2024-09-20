@@ -210,8 +210,8 @@ CONTAINS
          ALLOCATE(q_list(SIZE(qpts_loc%bk,2)))
          q_list = (/(iArray, iArray=1,SIZE(qpts_loc%bk,2), 1)/)
 
-         ALLOCATE(sym_list(fi_fullsym%sym%nop))
-         sym_list = 0
+         !ALLOCATE(sym_list(fi_fullsym%sym%nop))
+         !sym_list = 0
       ELSE
          ! Read qpoints from the juPhon qlist in inp.xml
          qpts_loc = qpts
@@ -414,10 +414,10 @@ CONTAINS
 
          DO iQ = fi%juPhon%startq, MERGE(fi%juPhon%stopq,SIZE(q_list),fi%juPhon%stopq/=0)
             CALL timestart("q-point")
-            IF (.NOT.fi%juPhon%qmode==0) THEN
-               CALL make_sym_list(fi_fullsym%sym, qpts_loc%bk(:,q_list(iQ)),sym_count,sym_list)
-               ALLOCATE(sym_dynvec(3*fi_nosym%atoms%ntype,3*fi_nosym%atoms%ntype-1,sym_count))
-            END IF
+            !IF (.NOT.fi%juPhon%qmode==0) THEN
+            !   CALL make_sym_list(fi_fullsym%sym, qpts_loc%bk(:,q_list(iQ)),sym_count,sym_list)
+            !   ALLOCATE(sym_dynvec(3*fi_nosym%atoms%ntype,3*fi_nosym%atoms%ntype-1,sym_count))
+            !END IF
             kqpts = fi%kpts
             ! Modify this from kpts only in DFPT case.
             DO ikpt = 1, fi%kpts%nkpt
@@ -499,14 +499,14 @@ CONTAINS
                CALL timestart("Typeloop")
                DO iDir = 1, 3
                   CALL timestart("Dirloop")
-                  IF (.NOT.fi%juPhon%qmode==0.AND.fmpi%irank==0) THEN
-                     IF (iDtype==1.AND.iDir==2) sym_dyn_mat(iQ, 1, :) = dyn_mat(iQ, 1, :)
-                     IF (3 *(iDtype-1)+iDir>1) THEN
-                        CALL cheat_dynmat(fi_fullsym%atoms, fi_fullsym%sym, fi_fullsym%cell%amat, qpts_loc%bk(:,q_list(iQ)), iDtype, iDir, sym_count, sym_list(:sym_count), sym_dynvec, dyn_mat(iQ,:,:), sym_dyn_mat(iQ,:,:), l_cheated)
-                     END IF
-                     IF (l_cheated) WRITE(*,*) "Following row was cheated!"
-                     IF (l_cheated) write(*,*) sym_dyn_mat(iQ,3 *(iDtype-1)+iDir,:)
-                  END IF
+                  !IF (.NOT.fi%juPhon%qmode==0.AND.fmpi%irank==0) THEN
+                  !   IF (iDtype==1.AND.iDir==2) sym_dyn_mat(iQ, 1, :) = dyn_mat(iQ, 1, :)
+                  !   IF (3 *(iDtype-1)+iDir>1) THEN
+                  !      CALL cheat_dynmat(fi_fullsym%atoms, fi_fullsym%sym, fi_fullsym%cell%amat, qpts_loc%bk(:,q_list(iQ)), iDtype, iDir, sym_count, sym_list(:sym_count), sym_dynvec, dyn_mat(iQ,:,:), sym_dyn_mat(iQ,:,:), l_cheated)
+                  !   END IF
+                  !   IF (l_cheated) WRITE(*,*) "Following row was cheated!"
+                  !   IF (l_cheated) write(*,*) sym_dyn_mat(iQ,3 *(iDtype-1)+iDir,:)
+                  !END IF
                   dfpt_tag = ''
                   WRITE(dfpt_tag,'(a1,i0,a2,i0,a2,i0)') 'q', q_list(iQ), '_b', iDtype, '_j', iDir
 
@@ -570,9 +570,9 @@ CONTAINS
                   END IF
                   CALL timestop("Dynmat")
                   dyn_mat(iQ,3 *(iDtype-1)+iDir,:) = dyn_mat(iQ,3 *(iDtype-1)+iDir,:) + conjg(E2ndOrdII(3 *(iDtype-1)+iDir,:))
-                  IF (.NOT.fi%juPhon%qmode==0) THEN
-                     CALL make_sym_dynvec(fi_fullsym%atoms, fi_fullsym%sym, fi_fullsym%cell%amat, qpts_loc%bk(:,q_list(iQ)), iDtype, iDir, sym_count, sym_list(:sym_count), dyn_mat(iQ,3 *(iDtype-1)+iDir,:), sym_dynvec)
-                  END IF
+                  !IF (.NOT.fi%juPhon%qmode==0) THEN
+                  !   CALL make_sym_dynvec(fi_fullsym%atoms, fi_fullsym%sym, fi_fullsym%cell%amat, qpts_loc%bk(:,q_list(iQ)), iDtype, iDir, sym_count, sym_list(:sym_count), dyn_mat(iQ,3 *(iDtype-1)+iDir,:), sym_dynvec)
+                  !END IF
 
                   IF (fi_nosym%juphon%l_elph) THEN 
                      den_elph(iDir+3*(iDtype-1)) = denIn1
@@ -581,9 +581,9 @@ CONTAINS
 
                   IF (fmpi%irank==0) write(*,*) "dynmat row for ", dfpt_tag
                   IF (fmpi%irank==0) write(*,*) dyn_mat(iQ,3 *(iDtype-1)+iDir,:)
-                  IF (fmpi%irank==0.AND.l_cheated) write(*,*) "The cheat:"
-                  IF (fmpi%irank==0.AND.l_cheated) write(*,*) sym_dyn_mat(iQ,3 *(iDtype-1)+iDir,:)
-                  l_cheated = .FALSE.
+                  !IF (fmpi%irank==0.AND.l_cheated) write(*,*) "The cheat:"
+                  !IF (fmpi%irank==0.AND.l_cheated) write(*,*) sym_dyn_mat(iQ,3 *(iDtype-1)+iDir,:)
+                  !l_cheated = .FALSE.
                   IF (fmpi%irank==0) WRITE(9339,*) dyn_mat(iQ,3 *(iDtype-1)+iDir,:)
                   IF (fmpi_nosym%irank == 0 .AND. fi_nosym%juphon%l_rm_qhdf) call system("rm "//TRIM(dfpt_tag)//".hdf")
                   CALL timestop("Dirloop")
@@ -605,16 +605,17 @@ CONTAINS
                CALL CalculateFrequencies(fi_nosym%atoms, q_list(iQ), eigenVals, eigenFreqs,"raw")
                CALL timestop("Frequency calculation")
                write(9991,*) "Eii2 new:", E2ndOrdII
-               DEALLOCATE(eigenVals, eigenVecs, eigenFreqs, E2ndOrdII)
+               !DEALLOCATE(eigenVals, eigenVecs, eigenFreqs, E2ndOrdII)
             END IF
             !CALL close_eig(q_eig_id)
             !IF (l_minusq) CALL close_eig(qm_eig_id)
-            IF (.NOT.fi%juPhon%qmode==0) THEN
-               DEALLOCATE(sym_dynvec)
-            END IF
+            !IF (.NOT.fi%juPhon%qmode==0) THEN
+            !   DEALLOCATE(sym_dynvec)
+            !END IF
             CALL timestop("q-point")
             IF (fi_nosym%juphon%l_elph) CALL dfpt_elph_mat(fi_nosym,xcpot_nosym,sphhar_nosym,stars_nosym,nococonv_nosym,qpts,fmpi,results_nosym, q_results,enpara_nosym,hybdat_nosym,rho_nosym,vTot_nosym,grRho3,grVtot3, &
-            &                                                q_list(iQ),eig_id,q_eig_id,l_real,den_elph,denIm_elph)
+            &                                                q_list(iQ),eig_id,q_eig_id,l_real,den_elph,denIm_elph,eigenVecs,eigenVals)
+            IF (fmpi%irank==0) DEALLOCATE(eigenVals, eigenVecs, eigenFreqs, E2ndOrdII)
          END DO
       END IF
 
@@ -629,8 +630,10 @@ CONTAINS
          DO iQ = 1, fi_fullsym%kpts%nkpt ! Loop over dynmat files to read
             IF (iQ<=9) THEN
                OPEN( 3001, file="dynMatq=000"//int2str(iQ), status="old")
-            ELSE
+            ELSEIF(iQ<=99) THEN 
                OPEN( 3001, file="dynMatq=00"//int2str(iQ), status="old")
+            ELSE 
+               OPEN( 3001, file="dynMatq=0"//int2str(iQ), status="old")
             END IF
             DO iread = 1, 3 + 3*fi%atoms%nat ! Loop over dynmat rows
                IF (iread<4) THEN
