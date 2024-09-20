@@ -15,7 +15,7 @@ spack:
   concretizer:
     unify: true
   repos:
-  - /home/jovyan/persistent_storage/tutorial/0.Installation/I2/fleur//packaging/spack/repo
+  - ${FLEUR_SOURCE}/packaging/spack/repo
   compilers:
   - compiler:
       spec: gcc@=13.2.0
