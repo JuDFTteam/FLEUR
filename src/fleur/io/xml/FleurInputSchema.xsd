@@ -702,7 +702,7 @@
    </xsd:complexType>
 
    <xsd:complexType name="SCFLoopType">
-      <xsd:attribute name="itmax" type="xsd:positiveInteger" use="required"/>
+      <xsd:attribute name="itmax" type="xsd:nonNegativeInteger" use="required"/>
       <xsd:attribute default="99" name="maxIterBroyd" type="xsd:nonNegativeInteger" use="optional"/>
       <xsd:attribute name="imix" type="MixingEnum" use="required"/>
       <xsd:attribute name="alpha" type="FleurDouble" use="required"/>
