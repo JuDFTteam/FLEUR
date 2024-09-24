@@ -23,7 +23,7 @@ Welcome to the source code of FLEUR
 
 The primary git-repository of FLEUR can be found on the [iffgit-Server at FZ-Jülich](https://iffgit.fz-juelich.de/fleur/fleur/).
 
-You can clone the repository by using
+You can clone the repository by using:
 ```
 git clone https://iffgit.fz-juelich.de/fleur/fleur.git
 ```
