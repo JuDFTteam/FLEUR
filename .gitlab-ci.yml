@@ -4,6 +4,7 @@ variables:
 stages:
    - build
    - test
+   - fast-test
    - perf
    - html
    - deploy
