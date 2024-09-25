@@ -92,7 +92,7 @@ CONTAINS
           CALL sphbes(atoms%lmax(n),gs, fb)
           CALL dsphbs(atoms%lmax(n),gs,fb, gb)
 !          !$OMP SIMD PRIVATE(ws,ff,gg)
-          !$acc parallel loop vector PRIVATE(ws,ff,gg) present(fjgj,fjgj%fj,fjgj%gj)
+          !!$acc parallel loop vector PRIVATE(ws,ff,gg) present(fjgj,fjgj%fj,fjgj%gj)
           DO l = 0,atoms%lmax(n)
              !---> set up wronskians for the matching conditions for each ntype
              DO jspin = jspinStart, jspinEnd
@@ -111,7 +111,7 @@ CONTAINS
                 ENDIF
              END DO
           ENDDO
-          !$acc end parallel loop
+          !!$acc end parallel loop
 !          !$OMP END SIMD
        ENDDO ! k = 1, lapw%nv
 #ifdef _OPENACC
