@@ -85,14 +85,14 @@ CONTAINS
        !$OMP SHARED(lapw,atoms,con1,usdus,l_socfirst,noco,input)&
        !$OMP SHARED(fjgj,intspin,n,ispin,apw,jspinStart,jspinEnd)
 #else
-       !!$acc parallel loop present(fjgj,fjgj%fj,fjgj%gj) private(l,gs,fb,gb,ws,ff,gg,jspin)
+       !$acc parallel loop present(fjgj,fjgj%fj,fjgj%gj) private(l,gs,fb,gb,ws,ff,gg,jspin)
 #endif
        DO k = 1,lapw%nv(intspin)
           gs = lapw%rk(k,intspin)*atoms%rmt(n)
           CALL sphbes(atoms%lmax(n),gs, fb)
           CALL dsphbs(atoms%lmax(n),gs,fb, gb)
 !          !$OMP SIMD PRIVATE(ws,ff,gg)
-          !!$acc parallel loop vector PRIVATE(ws,ff,gg) present(fjgj,fjgj%fj,fjgj%gj)
+          !$acc parallel loop vector PRIVATE(ws,ff,gg) present(fjgj,fjgj%fj,fjgj%gj)
           DO l = 0,atoms%lmax(n)
              !---> set up wronskians for the matching conditions for each ntype
              DO jspin = jspinStart, jspinEnd
@@ -111,11 +111,11 @@ CONTAINS
                 ENDIF
              END DO
           ENDDO
-          !!$acc end parallel loop
+          !$acc end parallel loop
 !          !$OMP END SIMD
        ENDDO ! k = 1, lapw%nv
 #ifdef _OPENACC
-       !!$acc end parallel loop
+       !$acc end parallel loop
 #else
        !$OMP END PARALLEL DO
 #endif
