@@ -3,7 +3,6 @@ variables:
 
 stages:
    - build
-   - fast-test
    - test
    - perf
    - html
