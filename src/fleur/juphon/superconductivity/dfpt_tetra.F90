@@ -14,6 +14,7 @@ MODULE m_dfpt_tetra
     USE m_juDFT
     USE m_types
     USE m_constants
+    IMPLICIT NONE 
 
 CONTAINS 
     SUBROUTINE dfpt_tetra_int(fi, results, resultsq,results1, gmat,nbasfcnq_min , k_int )
@@ -39,7 +40,7 @@ CONTAINS
         INTEGER, INTENT(IN) :: nbasfcnq_min
         COMPLEX, ALLOCATABLE, INTENT(INOUT) :: k_int(:,:,:,:)
         
-        INTEGER :: noccbd_max, iMode ,icase
+        INTEGER :: noccbd_max, iMode ,icase, ncorners, ispin ,itet , nu , i , icorn , j , jcorn , iNupr
         REAL, ALLOCATABLE :: eigk(:,:,:),eigq(:,:,:),eigk_nondeg(:,:,:),eigq_nondeg(:,:,:),eigkVal(:),eigqVal(:)
         COMPLEX :: area 
         COMPLEX,ALLOCATABLE :: tmp_gmat(:)
@@ -52,7 +53,7 @@ CONTAINS
         ALLOCATE(eigq_nondeg,mold=eigq)
 
         eigk(:,:,:) = results%eig(:size(gmat,2),:,:)
-        eigq(:,:,:) = resultsq%eig(:nbasfcnq,:,:)
+        eigq(:,:,:) = resultsq%eig(:nbasfcnq_min,:,:)
         
 
         ALLOCATE(k_int(nbasfcnq_min,size(gmat,2),size(gmat,4),size(gmat,5) ) )
@@ -199,7 +200,7 @@ CONTAINS
         call sorting(eigk,r_arr2=eigq,c_arr2=gmat)
 
         
-        IF ( eigk(1) .LT. efmeri  .AND. efermi .LT. eigk(2) ) THEN 
+        IF ( eigk(1) .LT. efermi  .AND. efermi .LT. eigk(2) ) THEN 
             !case=1
             prefac= ( efermi - eigq(1) ) / ( efermi - eigk(1) )
 
@@ -328,7 +329,7 @@ CONTAINS
         ELSE
             intersection_val = 0
             interpol_mat = 0
-            icase = 3 
+            
         END IF 
 
     END SUBROUTINE surface_intersection
