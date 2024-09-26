@@ -52,12 +52,11 @@ CONTAINS
 
     !     ..
     !     .. Local Scalars ..
-    REAL con1,ff,gg,gs
+    REAL con1,ff,gg,gs,ws
 
     INTEGER k,l,lo,intspin,jspin, jspinStart, jSpinEnd
     LOGICAL l_socfirst
     !     .. Local Arrays ..
-    REAL ws(input%jspins)
     REAL gb(0:atoms%lmaxd), fb(0:atoms%lmaxd)
     LOGICAL apw(0:atoms%lmaxd)
     !     ..
@@ -85,20 +84,18 @@ CONTAINS
        !$OMP SHARED(lapw,atoms,con1,usdus,l_socfirst,noco,input)&
        !$OMP SHARED(fjgj,intspin,n,ispin,apw,jspinStart,jspinEnd)
 #else
-       !$acc parallel loop present(fjgj,fjgj%fj,fjgj%gj) private(l,gs,fb,gb,ws,ff,gg,jspin)
+       !$acc kernels present(fjgj,fjgj%fj,fjgj%gj) &
+       !$acc &copyin(lapw,lapw%rk,lapw%nv,atoms,atoms%lmax,apw,con1)&
+       !$acc &copyin(usdus,usdus%dus,usdus%uds,usdus%us,usdus%duds)
+       !$acc loop gang private(gs,fb,gb)!,ws,ff,gg,jspin)
 #endif
        DO k = 1,lapw%nv(intspin)
           gs = lapw%rk(k,intspin)*atoms%rmt(n)
           CALL sphbes(atoms%lmax(n),gs, fb)
           CALL dsphbs(atoms%lmax(n),gs,fb, gb)
 !          !$OMP SIMD PRIVATE(ws,ff,gg)
-          !!$acc parallel loop vector PRIVATE(ws,ff,gg) present(fjgj,fjgj%fj,fjgj%gj)
+          !$acc loop vector PRIVATE(ws,ff,gg,jspin)
           DO l = 0,atoms%lmax(n)
-             !---> set up wronskians for the matching conditions for each ntype
-             DO jspin = jspinStart, jspinEnd
-                ws(jspin) = con1/(usdus%uds(l,n,jspin)*usdus%dus(l,n,jspin)&
-                            - usdus%us(l,n,jspin)*usdus%duds(l,n,jspin))
-             END DO
              ff = fb(l)
              gg = lapw%rk(k,intspin)*gb(l)
              DO jspin = jspinStart, jspinEnd
@@ -106,16 +103,18 @@ CONTAINS
                    fjgj%fj(k,l,jspin,intspin) = 1.0*con1 * ff / usdus%us(l,n,jspin)
                    fjgj%gj(k,l,jspin,intspin) = 0.0
                 ELSE
-                   fjgj%fj(k,l,jspin,intspin) = ws(jspin) * ( usdus%uds(l,n,jspin)*gg - usdus%duds(l,n,jspin)*ff )
-                   fjgj%gj(k,l,jspin,intspin) = ws(jspin) * ( usdus%dus(l,n,jspin)*ff - usdus%us(l,n,jspin)*gg )
+                   ws = con1/(usdus%uds(l,n,jspin)*usdus%dus(l,n,jspin)- usdus%us(l,n,jspin)*usdus%duds(l,n,jspin))
+                   fjgj%fj(k,l,jspin,intspin) = ws * ( usdus%uds(l,n,jspin)*gg - usdus%duds(l,n,jspin)*ff )
+                   fjgj%gj(k,l,jspin,intspin) = ws * ( usdus%dus(l,n,jspin)*ff - usdus%us(l,n,jspin)*gg )
                 ENDIF
              END DO
           ENDDO
-          !!$acc end parallel loop
+          !$acc end loop
 !          !$OMP END SIMD
        ENDDO ! k = 1, lapw%nv
 #ifdef _OPENACC
-       !$acc end parallel loop
+       !$acc end loop
+       !$acc end kernels
 #else
        !$OMP END PARALLEL DO
 #endif
