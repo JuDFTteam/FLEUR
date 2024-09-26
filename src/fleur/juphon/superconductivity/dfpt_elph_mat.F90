@@ -162,7 +162,7 @@ CONTAINS
         IF (fmpi%irank==0) THEN
 
 
-            CALL dfpt_ph_linewidth(fi,qpts,results,resultsq,results1,eigenVals,gmat,iQ,ph_linewidth) 
+            CALL dfpt_ph_linewidth(fi,qpts,results,resultsq,results1,eigenVals,gmat,iQ,nbasfcnq_min, ph_linewidth) 
         END IF 
 
     END SUBROUTINE dfpt_elph_mat

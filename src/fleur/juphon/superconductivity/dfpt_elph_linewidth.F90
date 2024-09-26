@@ -17,7 +17,7 @@ MODULE m_dfpt_elph_linewidth
     IMPLICIT NONE
 
 CONTAINS
-    SUBROUTINE dfpt_ph_linewidth(fi,qpts,results,resultsq,results1,eigenVals,gmat,iQ,ph_linewidth)
+    SUBROUTINE dfpt_ph_linewidth(fi,qpts,results,resultsq,results1,eigenVals,gmat,iQ,nbasfcnq_min,ph_linewidth)
         ! This subroutine calculates the phonon linewdith
         ! Currently implemented is the linewidth calcualtion with smearing 
 
@@ -33,9 +33,10 @@ CONTAINS
         REAL,ALLOCATABLE,INTENT(IN) :: eigenVals(:)
         COMPLEX,ALLOCATABLE,INTENT(INOUT) :: gmat(:,:,:,:,:)
         INTEGER, INTENT(IN) :: iQ
+        INTEGER, INTENT(IN) :: nbasfcnq_min
         REAL, ALLOCATABLE, INTENT(OUT)    :: ph_linewidth(:)
 
-        INTEGER :: nbasfcnq_min ,iNupr,nu, ispin , gridPoint , nk , nZero , iMode
+        INTEGER :: iNupr,nu, ispin , gridPoint , nk , nZero , iMode
         REAL :: emin, emax , x ,xq
         REAL, ALLOCATABLE :: eGrid(:),linewidth(:,:)
         COMPLEX,ALLOCATABLE:: kInt_gmat(:,:,:,:) !(nu',nu,jsp,normal_mode)

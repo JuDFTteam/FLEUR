@@ -68,7 +68,6 @@ CONTAINS
       emin = MINVAL(egrid)
       DO jsp = 1, SIZE(matrix_element,4)
          DO nk = 1 , size(matrix_element,3)
-            print* , "weight",  wtkpt(nk)
             wk = wtkpt(nk) / de 
                DO nu = 1 , SIZE(matrix_element,2)
                   DO iNupr = 1 , size(matrix_element,1)
