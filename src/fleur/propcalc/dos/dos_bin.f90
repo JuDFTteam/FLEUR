@@ -34,4 +34,54 @@ CONTAINS
          END DO
       END DO
    END SUBROUTINE dos_bin
+
+   SUBROUTINE dos_bin_transport(jspins,wtkpt,egrid,eig,eigq,matrix_element,g,energyShift,spinDeg)
+      !! This subroutine generates the idos,
+      !! Almost identical to upper subroutine
+      !! However, we have have e1 and e2 
+      IMPLICIT NONE 
+
+      INTEGER, INTENT(IN)  :: jspins
+      REAL,    INTENT(IN)  :: wtkpt(:),egrid(:)
+      REAL, INTENT(IN)     :: eig(:,:,:) , eigq(:,:,:) , matrix_element(:,:,:,:) !(nu',nu,kpts,jspin)
+      REAL, INTENT(OUT)    :: g(:,:) 
+      REAL, OPTIONAL, INTENT(IN) :: energyShift
+      LOGICAL , OPTIONAL, INTENT(IN) :: spinDeg
+
+
+      REAL :: de, wk , emin, shift  , degen
+      INTEGER :: jsp, nk , nu , iNupr , i 
+      LOGICAL :: l_deg
+
+
+      degen = 2.0
+      l_deg = .TRUE. 
+      
+      IF (PRESENT(spinDeg)) l_deg = spinDeg
+      IF(.NOT.l_deg) degen = 1.0 
+      
+
+      de = abs(egrid(2)-egrid(1))
+      g = 0.0
+      shift = 0.0 
+      IF (PRESENT(energyShift)) shift=energyShift
+      emin = MINVAL(egrid)
+      DO jsp = 1, SIZE(matrix_element,4)
+         DO nk = 1 , size(matrix_element,3)
+            print* , "weight",  wtkpt(nk)
+            wk = wtkpt(nk) / de 
+               DO nu = 1 , SIZE(matrix_element,2)
+                  DO iNupr = 1 , size(matrix_element,1)
+                     ! make sure if we hit emin we are at the first bin
+                     i = NINT((eig(nu,nk,jsp) -eigq(iNupr,nk,jsp) -shift - emin)/de) + 1
+                     IF ( (i.LE.size(g,1)) .AND. (i.GE.1) ) THEN 
+                        g(i,jsp) = g(i,jsp) + wk*matrix_element(iNupr,nu,nk,jsp)* degen/jspins
+                     END IF 
+                  END DO ! iNupr
+               END DO ! nu 
+         END DO  ! k 
+      END DO  ! jsp 
+
+   END SUBROUTINE dos_bin_transport
+
 END MODULE m_dosbin
