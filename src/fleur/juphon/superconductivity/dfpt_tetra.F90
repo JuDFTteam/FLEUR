@@ -17,7 +17,7 @@ MODULE m_dfpt_tetra
     IMPLICIT NONE 
 
 CONTAINS 
-    SUBROUTINE dfpt_tetra_int(fi,results,resultsq,results1,gmat,nbasfcnq_min,k_Int)
+    SUBROUTINE dfpt_tetra_int(fi,results,resultsq,results1,gmat,nbasfcnq_min,k_int)
         !
         ! subroutine that calculates k integration of type
         ! \sum_k F(k) \delta(\Omega - \varepsilon_{k,\nu'}) \delta( E - \varepsilon_{k,\nu}) 
@@ -36,7 +36,7 @@ CONTAINS
         TYPE(t_results), INTENT(IN)    :: results
         TYPE(t_results), INTENT(IN)    :: resultsq
         TYPE(t_results), INTENT(IN)    :: results1
-        COMPLEX, ALLOCATABLE,INTENT(INOUT) :: gmat(:,:,:,:,:)  !(nu',nu,kpoints,jsp,normal_mode)\
+        COMPLEX, ALLOCATABLE,INTENT(INOUT) :: gmat(:,:,:,:,:)  !(nu',nu,kpoints,jsp,normal_mode)
         INTEGER, INTENT(IN) :: nbasfcnq_min
         COMPLEX, ALLOCATABLE, INTENT(INOUT) :: k_int(:,:,:,:)
         
