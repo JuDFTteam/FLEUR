@@ -85,16 +85,17 @@ CONTAINS
        !$OMP SHARED(fjgj,intspin,n,ispin,apw,jspinStart,jspinEnd)
 #else
        !$acc kernels present(fjgj,fjgj%fj,fjgj%gj) &
-       !$acc &copyin(lapw,lapw%rk,lapw%nv,atoms,atoms%lmax,apw,con1)&
-       !$acc &copyin(usdus,usdus%dus,usdus%uds,usdus%us,usdus%duds)
-       !$acc loop gang private(gs,fb,gb)!,ws,ff,gg,jspin)
+       !$acc &copyin(lapw,lapw%rk,lapw%nv,atoms,atoms%rmt,atoms%lmax,apw,con1)&
+       !$acc &copyin(usdus,usdus%dus,usdus%uds,usdus%us,usdus%duds)&
+       !$acc &copyin(intspin,n)
+       !$acc loop gang private(k,gs,fb,gb)!,ws,ff,gg,jspin)
 #endif
        DO k = 1,lapw%nv(intspin)
           gs = lapw%rk(k,intspin)*atoms%rmt(n)
           CALL sphbes(atoms%lmax(n),gs, fb)
           CALL dsphbs(atoms%lmax(n),gs,fb, gb)
 !          !$OMP SIMD PRIVATE(ws,ff,gg)
-          !$acc loop vector PRIVATE(ws,ff,gg,jspin)
+          !$acc loop vector PRIVATE(l,ws,ff,gg,jspin)
           DO l = 0,atoms%lmax(n)
              ff = fb(l)
              gg = lapw%rk(k,intspin)*gb(l)
