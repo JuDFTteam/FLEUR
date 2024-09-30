@@ -111,7 +111,8 @@ CONTAINS
       REAL, ALLOCATABLE    :: diel_tensor_occ1(:,:)!check if this makes sense
       REAL, ALLOCATABLE    :: we1_data(:,:,:,:),eig1_data(:,:,:,:)
       COMPLEX, ALLOCATABLE :: dielten_iden(:,:)   
-      INTEGER              :: i_iden
+      INTEGER              :: i_iden, row
+      INTEGER              :: no_iDtype
 
       INTEGER :: ngdp, iSpin, iQ, iDir, iDtype, nspins, zlim, iVac, lh, iDir2, sym_count
       INTEGER :: iStar, xInd, yInd, zInd, q_eig_id, ikpt, ierr, qm_eig_id, iArray
@@ -429,8 +430,8 @@ CONTAINS
       !print*,"dielten_iden",dielten_iden(:,:)
       !print*,"here"
       !allocate dielectric tensor:
-      ALLOCATE(diel_tensor(3*fi_nosym%atoms%ntype,3*fi_nosym%atoms%ntype))
-      ALLOCATE(diel_tensor_occ1(3*fi_nosym%atoms%ntype,3*fi_nosym%atoms%ntype))
+      ALLOCATE(diel_tensor(3,3))
+      ALLOCATE(diel_tensor_occ1(3,3))
       diel_tensor = cmplx(0.0,0.0)
       diel_tensor_occ1 = cmplx(0.0,0.0)
       IF (l_dfpt_scf) THEN
@@ -439,6 +440,19 @@ CONTAINS
          ! TODO: The effort here should be greatly reducible by symmetry considerations.
          write(*,*) fi%juPhon%startq/=0, fi%juPhon%stopq, size(q_list)
           
+
+         !DO iQ_dirc 1, 3 
+         !   CALL eigen 
+         !   CALL sternheimer 
+         !   CALL dielectric 
+         !   print
+
+         !ENd DO 
+
+
+
+
+
          DO iQ = fi%juPhon%startq, MERGE(fi%juPhon%stopq,SIZE(q_list),fi%juPhon%stopq/=0)
             CALL timestart("q-point")
            ! IF (.NOT.fi%juPhon%qmode==0) THEN
@@ -481,7 +495,7 @@ CONTAINS
 
             ! Get the eigenstuff at k+q
             CALL q_results%reset_results(fi%input)
-
+            ! hier machen wir diagonlisierung fuer jeden q punkt in der inp xml 
             CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv, mpdata, &
                      hybdat, 1, q_eig_id, q_results, rho, vTot, vxc, hub1data, &
                      qpts_loc%bk(:,q_list(iQ)))
@@ -521,10 +535,13 @@ CONTAINS
 
                CALL timestop("Eigenstuff at k-q")
             END IF
-
-            DO iDtype = 1, fi_nosym%atoms%ntype
+            no_iDtype = fi_nosym%atoms%ntype
+            IF (fi%juPhon%l_efield) THEN 
+               no_iDtype = 1
+            END IF 
+            DO iDtype = 1, no_iDtype!fi_nosym%atoms%ntype
                CALL timestart("Typeloop")
-               DO iDir = 1, 3
+               DO iDir = 1, 1!3
                   CALL timestart("Dirloop")
                  ! IF (.NOT.fi%juPhon%qmode==0.AND.fmpi%irank==0) THEN
                  !    IF (iDtype==1.AND.iDir==2) sym_dyn_mat(iQ, 1, :) = dyn_mat(iQ, 1, :)
@@ -578,6 +595,9 @@ CONTAINS
                                              dfpt_tag, eig_id, l_real, results1, dfpt_eig_id, dfpt_eig_id2, q_eig_id, &
                                              denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, MERGE(sigma_ext,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir==3), &
                                              MERGE(sigma_coul,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir==3))
+                        call save_npy('den_stern_pw.npy',denIn1%pw)
+                        call save_npy('den_stern_mt.npy',denIn1%mt)
+                        call save_npy('den_stern_mtIm.npy',denIn1Im%mt)
                      ELSE
                         CALL dfpt_sternheimer(fi_nosym, xcpot_nosym, sphhar_nosym, stars_nosym, starsq, nococonv_nosym, qpts_loc, fmpi_nosym, results_nosym, q_results, enpara_nosym, hybdat_nosym, &
                                              rho_nosym, vTot_nosym, grRho3(iDir), grVtot3(iDir), grVext3(iDir), q_list(iQ), iDtype, iDir, &
@@ -588,19 +608,31 @@ CONTAINS
                      CALL timestop("Sternheimer")
                   END IF
 
+                  call save_npy('den_test_pw.npy',denIn1%pw)
+                  call save_npy('den_test_mt.npy',denIn1%mt)
+                  call save_npy('den_test_mtIm.npy',denIn1Im%mt)
+                  
                   IF (fmpi%irank==0) WRITE(*,*) '-------------------------'
                   CALL timestart("Dynmat")
                   ! Once the first order quantities are converged, we can construct all
                   ! additional necessary quantities and from that the dynamical matrix.
                   IF (fi%juPhon%l_efield) THEN
-                     !print*, shape(denIn1%mt)
-                     !stop
-                     CALL dfpt_dielecten_row_HF(fi_nosym,stars_nosym,starsq,sphhar_nosym,fmpi_nosym,denIn1,denIn1Im,results_nosym, results1,3 *(iDtype-1)+iDir,diel_tensor(3 *(iDtype-1)+iDir,:),iDtype,iDir)
-                     !CALL dfpt_dielecten_occ1(fi,fmpi,results1,we1_data,eig1_data,diel_tensor_occ1,3 *(iDtype-1)+iDir)
-                     call save_npy("integralpart.npy",diel_tensor(:,:))
-                     call save_npy("diel_tensor_occ1.npy",diel_tensor_occ1(:,:))
-                     diel_tensor(:,:) = diel_tensor(:,:) + diel_tensor_occ1(:,:)
-                     !print*, 'diel_tensor(:,:)',diel_tensor(:,:)
+                     IF (fmpi%irank==0) THEN
+                        !print*, shape(denIn1%mt)
+                        !stop
+                        call save_npy('den_test_pw.npy',denIn1%pw)
+                        call save_npy('den_test_mt.npy',denIn1%mt)
+                        call save_npy('den_test_mtIm.npy',denIn1Im%mt)
+                        !print*,"shape(denIn1%pw)",shape(denIn1%pw)
+                        !print*,"shape(denIn1%mt)",shape(denIn1%mt)
+                        !print*,"shape(denIn1Im%mt)",shape(denIn1Im%mt)
+                        CALL dfpt_dielecten_row_HF(fi_nosym,stars_nosym,starsq,sphhar_nosym,fmpi_nosym,denIn1,denIn1Im,results_nosym, results1,3 *(iDtype-1)+iDir,diel_tensor(iDir,:),iDtype,iDir)
+                        !CALL dfpt_dielecten_occ1(fi,fmpi,results1,we1_data,eig1_data,diel_tensor_occ1,3 *(iDtype-1)+iDir)
+                        call save_npy("integralpart.npy",diel_tensor(:,:))
+                        call save_npy("diel_tensor_occ1.npy",diel_tensor_occ1(:,:))
+                        diel_tensor(:,:) = diel_tensor(:,:) + diel_tensor_occ1(:,:)
+                        !print*, 'diel_tensor(:,:)',diel_tensor(:,:)
+                     END IF
                   ELSE
                      IF(.TRUE.) THEN
                         CALL dfpt_dynmat_row(fi_nosym, stars_nosym, starsq, sphhar_nosym, xcpot_nosym, nococonv_nosym, hybdat_nosym, fmpi_nosym, qpts_loc, q_list(iQ), iDtype, iDir, &
@@ -636,9 +668,19 @@ CONTAINS
                CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
 #endif      
             END DO
-            diel_tensor(:,:) = dielten_iden(:,:) - (fpi_const/fi%cell%omtil)*diel_tensor(:,:)
-            call save_npy("dielten_iden.npy",dielten_iden(:,:))
-            call save_npy("diel_tensor.npy",diel_tensor(:,:))
+            IF (fi%juPhon%l_efield .AND. fmpi%irank==0) THEN
+               diel_tensor(:,:) = dielten_iden(:,:) - (fpi_const/fi%cell%omtil)*diel_tensor(:,:)
+               open( 110, file="diel_tensor", status='replace', action='write', form='formatted')
+               write(110,*) "qlim: ", fi%juPhon%qlim 
+               !write(*,*) "Linewidth q-Point", qpts%bk(:,iQ) 
+               DO row  = 1 , 3
+                   write(110,*) diel_tensor(row,:)
+                   write(*,*) diel_tensor(row,:)
+               END DO 
+               close(110)
+               !call save_npy("dielten_iden.npy",dielten_iden(:,:))
+               !call save_npy("diel_tensor.npy",diel_tensor(:,:))
+            END IF
             IF (fi%juPhon%l_efield) THEN
                PRINT*,"STOP"
                STOP

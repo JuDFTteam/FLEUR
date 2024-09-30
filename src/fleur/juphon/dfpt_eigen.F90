@@ -397,7 +397,11 @@ CONTAINS
 !#ifdef CPP_MPI
                      !CALL MPI_BARRIER(fmpi%mpi_comm,iErr) ! Synchronizes the RMA operations
 !#endif
-
+            !write(doc_tring,"(i0,a,i0,a,i0)")iDtype,"_",iDir,'_',fmpi%irank
+            !tempMat2
+            !'vext_pw_'//TRIM(int2str(fmpi%irank))//".npy"
+            print*,tempMat2
+            call save_npy('tempMat2_before_mpicomm_rank'//TRIM(int2str(fmpi%irank))//".npy",tempMat2)
             ! Output results
             CALL timestart("EV1 output")
 

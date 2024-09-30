@@ -130,7 +130,7 @@ CONTAINS
       CALL workDenReal%init(starsq,atoms,sphhar,vacuum,noco,input%jspins,0)
       CALL workDenImag%init(starsq,atoms,sphhar,vacuum,noco,input%jspins,0)
       IF (juphon%l_efield) THEN 
-         print*,"efield true"
+         !print*,"efield true"
          !print*, "l_xc", l_xc
          atomsefield = atoms
          !print*,' atomsefield%zatom(:)',  atomsefield%zatom(:)

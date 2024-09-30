@@ -47,6 +47,11 @@ module m_dfpt_dielecten
             print*,"shape(denIn1%pw)",shape(denIn1%pw)
             print*,"shape(denIn1%mt)",shape(denIn1%mt)
             print*,"shape(denIn1Im%mt)",shape(denIn1Im%mt)
+
+            call save_npy("den_dielten1_pw.npy",denIn1%pw)
+            call save_npy("den_dielten1_mt.npy",denIn1%mt)
+            call save_npy("den_dielten1_mtIm.npy",denIn1Im%mt)
+            
             !print*, "dieltensor_row", dieltensor_HF
             write(intiDtype, '(I5)') iDtype
             write(intiDir, '(I5)') iDir
@@ -72,9 +77,12 @@ module m_dfpt_dielecten
             call save_npy(den_string_pw,denIn1_pw)
             call save_npy(den_string_mt,denIn1_mt(:,:,:))
             call save_npy(den_string_mtIm,denIn1_mt_Im(:,:,:))
+            print*,"maxvaml diff_mt",maxval(denIn1_mt-denIn1%mt(:,0:,:,1))
+            print*,"maxvaml diff_mtIm",maxval(denIn1_mt_Im-denIn1Im%mt(:,0:,:,1))
+            stop
             !print*, 'Maximum val den', maxval(denIn1_mt(:,:,1))
             write(400 + fmpi%irank , *)
-            do iDtype_col = 1, fi%atoms%ntype
+            do iDtype_col = 1, 1
                 print*,"iDtype_col",iDtype_col 
                 do iDir_col = 1, 3
                     print*,"iDir_col",iDir_col
@@ -97,7 +105,7 @@ module m_dfpt_dielecten
                     !print*, 'DIFFERENCE MAX real', maxval(vExt1%mt(:,:,1,1)-vExt1%mt(:,:,2,1))
                     !print*, 'DIFFERENCE MAX imag', maxval(vExt1Im%mt(:,:,1,1)-vExt1Im%mt(:,:,2,1))
                     !stop
-                    !print*,'shape Vext1', shape(vExt1%pw)
+                    !print*,'shape Vext1', shape(vExt1%pw)z
                     !print*,'shape Vext1im', shape(vExt1Im%pw)
                     ! IR integral:
                     write(intiDtype_col, '(I5)') iDtype_col

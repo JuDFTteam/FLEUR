@@ -56,6 +56,15 @@ CONTAINS
 
       !changes for efield:
       real                              :: qvec_ext(3),qvec_int(3),det,inv_bmat(3,3),qvec_norm(3)
+      !for dielectric tensor debug:
+      character(len=100)                 :: filename,filename_Im,den_string,den_string_pw_start,den_string_mt_start,den_string_mt_Im_start,&
+                                             den_string_pw_final,den_string_mt_final,den_string_mt_Im_final,den_string_mt,den_string_mtIm,&
+                                             vtot_string_pw_final,vtot_string_mt_final,vtot_string_mt_Im_final,&
+                                             vext_string_pw,vext_string_mt,vext_string_mt_Im
+      character(len=5)                   :: intiDtype
+      character(len=5)                   :: intiDir, irank
+      character(len=100) :: file_name
+      logical :: opened
 
 #ifdef CPP_MPI
       INTEGER :: ierr
@@ -200,22 +209,55 @@ CONTAINS
          ! Vext1 for the starting perturbation
          ! Veff1 every other time
          CALL timestart("Generation of potential perturbation")
-         !print*, 'strho',strho
+         print*, 'strho 1',strho
          !STOP
+         write(intiDtype, '(I5)') iDtype
+         write(intiDir, '(I5)') iDir
+         write(irank, '(I5)') fmpi%irank
+         den_string = '_'//  trim(adjustl(intiDtype)) // '_'//trim(adjustl(intiDir))//'_'//trim(adjustl(irank))
+         !write(doc_tring,"(i0,a,i0,a,i0)")iDtype,"_",iDir,'_',fmpi%irank
+         print*,'den_string',den_string
          IF (strho) THEN
+            print*,"I'm in strho"
             write(oUnit, *) "vExt1", iDir
+            !inquire(unit=oUnit, name=file_name, opened=opened)
             sigma_loc = cmplx(0.0,0.0)
+            !if (opened) then
+            !   print *, "Unit", oUnit, "is associated with file:", trim(file_name)
+            !else
+            !   print *, "Unit", oUnit, "is not associated with an open file."
+            !end if
             !IF (iDir==3) sigma_loc = -sigma_disc
             print*, "vor dem eigentlichen Ausfuehren"
             !print*, 'vTot1 pw', vTot1%pw
             !print*, 'vTot1 mt', vTot1%mt
             !call save_npy("ylm.npy",ylm(:))
+            print*,'shape(vTot1%mt)',shape(vTot1%mt)
             CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                            fi%juphon,fi%cell,fmpi,fi%noco,nococonv,rho_loc0,vTot,&
                            starsq,denIn1Im,vTot1,.FALSE.,vTot1Im,denIn1,iDtype,iDir,[1,1],sigma_loc)!-?
                            ! Last variable: [m,n] dictates with [1/0, 1/0], whether or not we take
                            ! V1*Theta and V*Theta1 into account respectively. For [1,1] all is
                            ! contained.
+            !print*,'maxval(vTot1%mt(:,:,1,1))',maxval(vTot1%mt(:,:,1,1))
+            !print*,'maxval(vTot1%mt(:,:,2,1))',maxval(vTot1%mt(:,:,2,1))
+            !print*,'max diff mt re',maxval(vTot1%mt(:,:,1,1)-vTot1%mt(:,:,2,1))
+            !print*,'maxval(vTot1Im%mt(:,:,1,1))',maxval(vTot1Im%mt(:,:,1,1))
+            !print*,'maxval(vTot1Im%mt(:,:,2,1))',maxval(vTot1Im%mt(:,:,2,1))
+            !print*,'max diff mt Im',maxval(vTot1Im%mt(:,:,1,1)-vTot1Im%mt(:,:,2,1))
+            den_string_pw_start = 'denIn1_pw' //trim(adjustl(den_string))// '_start.npy'
+            den_string_mt_start = 'denIn1_mt' //trim(adjustl(den_string))// '_start.npy'
+            den_string_mt_Im_start ='denIn1_mt_Im' //trim(adjustl(den_string))// '_start.npy'
+            vext_string_pw = 'vext_pw' //trim(adjustl(den_string))// '.npy'
+            ! 'vext_pw_'//TRIM(int2str(fmpi%irank))//".npy"
+            vext_string_mt = 'vext_mt' //trim(adjustl(den_string))// '.npy'
+            vext_string_mt_Im = 'vext_mtIm' //trim(adjustl(den_string))// '.npy'
+            !call save_npy(den_string_pw_start,denOut1%pw(:,:))
+            !call save_npy(den_string_mt_start,denOut1%mt(:,:,:,1))
+            !call save_npy(den_string_mt_Im_start,denOut1Im%mt(:,:,:,1))
+            call save_npy(vext_string_pw,vTot1%pw(:,:))
+            call save_npy(vext_string_mt,vTot1%mt(:,:,:,1))
+            call save_npy(vext_string_mt_Im,vTot1Im%mt(:,:,:,1))
             IF (l_minusq) THEN
                sigma_loc = cmplx(0.0,0.0)
                !IF (iDir==3) sigma_loc = -sigma_disc
@@ -224,6 +266,7 @@ CONTAINS
                               starsmq,denIn1mIm,vTot1m,.FALSE.,vTot1mIm,denIn1m,iDtype,iDir,[1,1],sigma_loc)!-?
             END IF
          ELSE
+            !print*,'in second iteration'
             write(oUnit, *) "vEff1", iDir
             sigma_loc = cmplx(0.0,0.0)
             !IF (iDir==3) sigma_loc = -sigma_disc2
@@ -242,6 +285,22 @@ CONTAINS
          ! For the calculation of the dynamical matrix, we need VC1 additionally
          IF (final_SH_it) THEN
             write(oUnit, *) "vC1", iDir
+            !print*,'maxval(vTot1%mt(:,:,1,1))',maxval(vTot1%mt(:,:,1,1))
+            !print*,'maxval(vTot1%mt(:,:,2,1))',maxval(vTot1%mt(:,:,2,1))
+            !print*,'max diff mt re',maxval(vTot1%mt(:,:,1,1)-vTot1%mt(:,:,2,1))
+            !print*,'maxval(vTot1Im%mt(:,:,1,1))',maxval(vTot1Im%mt(:,:,1,1))
+            !print*,'maxval(vTot1Im%mt(:,:,2,1))',maxval(vTot1Im%mt(:,:,2,1))
+            !print*,'max diff mt Im',maxval(vTot1Im%mt(:,:,1,1)-vTot1Im%mt(:,:,2,1))
+            den_string_pw_final = 'denIn1_pw' //trim(adjustl(den_string))// '_final.npy'
+            den_string_mt_final = 'denIn1_mt' //trim(adjustl(den_string))// '_final.npy'
+            den_string_mt_Im_final ='denIn1_mt_Im' //trim(adjustl(den_string))// '_final.npy'
+            vtot_string_pw_final = 'vtot1_pw' //trim(adjustl(den_string))// '_final.npy'
+            vtot_string_mt_final = 'vtot1_mt' //trim(adjustl(den_string))// '_final.npy'
+            vtot_string_mt_Im_final ='vtot1_mt_Im' //trim(adjustl(den_string))// '_final.npy'
+
+            !call save_npy(vtot_string_pw_final,denOut1%pw(:,:))
+            !call save_npy(vtot_string_mt_final,vTot1%mt(:,:,:,1))
+            !call save_npy(vtot_string_mt_Im_final,vTot1Im%mt(:,:,:,1))
             sigma_loc = cmplx(0.0,0.0)
             !IF (iDir==3) sigma_loc = -sigma_disc2
             CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
@@ -255,7 +314,7 @@ CONTAINS
          CALL MPI_BARRIER(fmpi%mpi_comm, ierr)
 #endif
 
-         ! Add the potential gradient to the potential perturbation in the displaced MT
+            !Add the potential gradient to the potential perturbation in the displaced MT for phonon case:
          IF (strho.AND.fi%juphon%l_phonon) THEN
             vTot1%mt(:,0:,iDtype,1) = vTot1%mt(:,0:,iDtype,1) + grVext%mt(:,0:,iDtype,1)
             IF (fi%input%jspins==2) vTot1%mt(:,0:,iDtype,2) = vTot1%mt(:,0:,iDtype,2) + grVext%mt(:,0:,iDtype,1)
@@ -291,7 +350,7 @@ CONTAINS
                                 vTot, rho, bqpt, eig_id, q_eig_id, dfpt_eig_id, iDir, iDtype, killcont, l_real, .FALSE., dfpt_eig_id2)
          END IF
          CALL timestop("dfpt eigen")
-
+         print*,"results1",shape(results1%eig)
          IF (l_minusq) THEN
             CALL timestart("dfpt minus eigen")
             IF (.NOT.final_SH_it) THEN
@@ -394,6 +453,27 @@ CONTAINS
          ! If a starting density perturbation was to be generated, subtract the density
          ! gradient and exit here; no mixing yet!
          IF (strho) THEN
+            !here starting
+            !print*,'Im in strho'
+            !print*,'maxval(vTot1%mt(:,:,1,1))',maxval(vTot1%mt(:,:,1,1))
+            !print*,'maxval(vTot1%mt(:,:,2,1))',maxval(vTot1%mt(:,:,2,1))
+            !print*,'max diff mt re',maxval(vTot1%mt(:,:,1,1)-vTot1%mt(:,:,2,1))
+            !print*,'maxval(vTot1Im%mt(:,:,1,1))',maxval(vTot1Im%mt(:,:,1,1))
+            !print*,'maxval(vTot1Im%mt(:,:,2,1))',maxval(vTot1Im%mt(:,:,2,1))
+            !print*,'max diff mt Im',maxval(vTot1Im%mt(:,:,1,1)-vTot1Im%mt(:,:,2,1))
+            den_string_pw_start = 'denIn1_pw' //trim(adjustl(den_string))// '_start.npy'
+            den_string_mt_start = 'denIn1_mt' //trim(adjustl(den_string))// '_start.npy'
+            den_string_mt_Im_start = 'denIn1_mt_Im' //trim(adjustl(den_string))// '_start.npy'
+            
+            call save_npy(den_string_pw_start,denOut1%pw(:,:))
+            call save_npy(den_string_mt_start,denOut1%mt(:,:,:,1))
+            call save_npy(den_string_mt_Im_start,denOut1Im%mt(:,:,:,1))
+            print*,"stop"
+            stop
+            !print*,'shape(denOut1%pw)',shape(denOut1%pw)
+            !print*,'shape(denOut1%mt)',shape(denOut1%mt)
+            !print*,'shape(denOut1Im%mt)',shape(denOut1Im%mt)
+
             strho = .FALSE.
             denIn1 = denOut1
             denIn1Im = denOut1Im
@@ -524,6 +604,8 @@ CONTAINS
       END DO scfloop ! DO WHILE (l_cont)
 
       CALL add_usage_data("Iterations", iter)
-
+      call save_npy(den_string_pw_final,denOut1%pw)
+      call save_npy(den_string_mt_final,denOut1%mt)
+      call save_npy(den_string_mt_Im_final,denOut1Im%mt)
    END SUBROUTINE dfpt_sternheimer
 END MODULE m_dfpt_sternheimer
