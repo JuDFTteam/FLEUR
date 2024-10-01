@@ -69,7 +69,7 @@ CONTAINS
          lapwPr = lapw
          fjgjPr = fjgj
       END IF
-      !$acc data copyin(fjgjPr,fjgjPr%fj,fjgjPr%gj)
+      !$acc data present(fjgjPr,fjgjPr%fj,fjgjPr%gj)
       size_ab = maxval(lapw%nv)
 
       IF (fmpi%n_size==1) Then

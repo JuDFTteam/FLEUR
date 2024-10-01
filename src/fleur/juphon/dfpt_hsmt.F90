@@ -301,7 +301,7 @@ CONTAINS
       DO ilSpinPr = MERGE(1,iSpin,noco%l_noco), MERGE(2,iSpin,noco%l_noco)
          CALL timestart("fjgj coefficients")
          CALL fjgjq%calculate(input,atoms,cell,lapwq,noco,usdus,iDtype_col,ilSpinPr)
-         !$acc update device(fjgjq%fj,fjgjq%gj)
+         !!$acc update device(fjgjq%fj,fjgjq%gj)
          CALL timestop("fjgj coefficients")
          DO ilSpin = ilSpinPr, MERGE(2,iSpin,noco%l_noco)
             CALL timestart("fjgjq coefficients")
