@@ -50,7 +50,6 @@ CONTAINS
       !changes for efield:
       l_ef = .FALSE. 
       IF (PRESENT(l_efield)) l_ef = .TRUE.
-      print*,"l_ef", l_ef
 
       ! Dimensioning of stars
       IF (fmpi%irank==0) THEN

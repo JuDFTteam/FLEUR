@@ -233,11 +233,11 @@ contains
     ELSE IF (.NOT.l_2ndord) THEN
       ! For DFPT there is a) an imaginary part to the potential and b) a different treatment
       ! for the ionic 1/r (now 1/r^2) contribution.
-      call vmts( input, fmpi, stars, sphhar, atoms, sym, cell, juphon,  dosf, vCoul%pw(:,ispin), &
+      call vmts( input, fmpi, stars, sphhar, atoms, sym, cell, juphon, dosf, vCoul%pw(:,ispin), &
                  den%mt(:,0:,:,ispin), vCoul%potdenType, vCoul%mt(:,0:,:,ispin), &
                  dfptdenimag%mt(:,0:,:,ispin), dfptvCoulimag%mt(:,0:,:,ispin), iDtype, iDir )
     ELSE
-      call vmts( input, fmpi, stars, sphhar, atoms, sym, cell, juphon,  dosf, vCoul%pw(:,ispin), &
+      call vmts( input, fmpi, stars, sphhar, atoms, sym, cell, juphon, dosf, vCoul%pw(:,ispin), &
                  den%mt(:,0:,:,ispin), vCoul%potdenType, vCoul%mt(:,0:,:,ispin), &
                  dfptdenimag%mt(:,0:,:,ispin), dfptvCoulimag%mt(:,0:,:,ispin), iDtype, iDir, iDir2, mat2ord )
     END IF
