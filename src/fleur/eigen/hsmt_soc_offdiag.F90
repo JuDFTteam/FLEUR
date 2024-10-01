@@ -49,7 +49,8 @@ CONTAINS
     CALL timestart("offdiagonal soc-setup")
 
     !$acc update self(hmat(1,1)%data_c,hmat(2,1)%data_c,hmat(1,2)%data_c,hmat(2,2)%data_c)
-
+    !$acc update self(fjgj%fj,fjgj%gj)
+                
     DO l = 0,atoms%lmaxd
        fleg1(l) = REAL(l+l+1)/REAL(l+1)
        fleg2(l) = REAL(l)/REAL(l+1)

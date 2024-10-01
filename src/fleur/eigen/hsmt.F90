@@ -79,7 +79,6 @@ CONTAINS
        DO ilSpinPr=MERGE(1,isp,noco%l_noco),MERGE(2,isp,noco%l_noco)
           CALL timestart("fjgj coefficients")
           CALL fjgj%calculate(input,atoms,cell,lapw,noco,usdus,n,ilSpinPr)
-          !!$acc update self(fjgj%fj,fjgj%gj)
           CALL timestop("fjgj coefficients")
           DO ilSpin=ilSpinPr,MERGE(2,isp,noco%l_noco)
             IF (.NOT.noco%l_noco) THEN
