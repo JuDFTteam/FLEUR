@@ -165,6 +165,9 @@ CONTAINS
             CALL dfpt_ph_linewidth(fi,qpts,results,resultsq,results1,eigenVals,gmat,iQ,nbasfcnq_min, ph_linewidth) 
         END IF 
 
+#ifdef CPP_MPI
+        CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
+#endif
     END SUBROUTINE dfpt_elph_mat
 
 
