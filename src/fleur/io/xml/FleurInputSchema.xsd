@@ -1126,6 +1126,8 @@
       <xsd:attribute name="startq" type="xsd:positiveInteger" use="optional"/>
       <xsd:attribute name="stopq" type="xsd:nonNegativeInteger" use="optional"/>
       <xsd:attribute name="qmode" type="xsd:nonNegativeInteger" use="optional"/>
+      <xsd:attribute name="i_integration" type="xsd:nonNegativeInteger" use="optional"/>
+      <xsd:attribute name="smearingGauss" type="FleurDouble" use="optional"/>
       <xsd:attribute name="l_phonon" type="FleurBool" use="optional"/>
       <xsd:attribute name="l_efield" type="FleurBool" use="optional"/>
       <xsd:attribute name="l_cheatsym" type="FleurBool" use="optional"/>

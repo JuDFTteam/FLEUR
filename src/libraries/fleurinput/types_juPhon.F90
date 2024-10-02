@@ -43,6 +43,8 @@ MODULE m_types_juPhon
       INTEGER :: stopq  = 0          ! Stop  the q-loop at a specific point
       INTEGER :: qmode  = 0          ! 0: Single-shot calculation for qlist
                                      ! 1: Reads q from fullsym_* input files
+      INTEGER :: i_integration = 1 
+      REAL    :: smearingGauss = 1e-7 
       LOGICAL :: l_phonon = .TRUE.
       LOGICAL :: l_efield = .FALSE.
       LOGICAL :: l_cheatsym = .FALSE.
@@ -157,6 +159,8 @@ CONTAINS
       CALL mpi_bc(this%startq, rank, mpi_comm)
       CALL mpi_bc(this%stopq, rank, mpi_comm)
       CALL mpi_bc(this%qmode, rank, mpi_comm)
+      CALL mpi_bc(this%i_integration, rank, mpi_comm)
+      CALL mpi_bc(this%smearingGauss, rank, mpi_comm)
       CALL mpi_bc(this%singleQpt, rank, mpi_comm)
       CALL mpi_bc(this%qvec, rank, mpi_comm)
       CALL mpi_bc(this%l_phonon, rank, mpi_comm)
@@ -347,6 +351,19 @@ CONTAINS
          IF (numberNodes == 1) THEN
            this%qmode  = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@qmode'))
          END IF
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@i_integration')
+
+         IF (numberNodes == 1) THEN
+           this%i_integration  = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@i_integration'))
+         END IF
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@smearingGauss')
+
+         IF (numberNodes == 1) THEN
+           this%smearingGauss  = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@smearingGauss'))
+         END IF
+
          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_phonon')
 
          IF (numberNodes == 1) THEN
