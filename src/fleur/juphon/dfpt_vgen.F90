@@ -82,6 +82,8 @@ CONTAINS
       vxc = vTot
       exc = vTot
       dfptvCoulimag = dfptvTot
+      dfptvefield = dfptvTot
+      dfptvefieldimag = dfptvTot
 
       IF (fmpi%irank==0) WRITE (oUnit,FMT=8000)
       IF (fmpi%irank==0) WRITE (oUnit,FMT=8001)
@@ -94,6 +96,9 @@ CONTAINS
       CALL vxc%resetPotDen()
       CALL exc%resetPotDen()
       CALL dfptvCoulimag%resetPotDen()
+      CALL dfptvefield%resetPotDen()
+      CALL dfptvefieldimag%resetPotDen()
+
 
       ALLOCATE(vx%pw_w,mold=vTot%pw)
       vx%pw_w = 0.0
@@ -137,7 +142,7 @@ CONTAINS
          CALL dfptvefield%copy_both_spin(dfptvTot)
          CALL dfptvefieldimag%copy_both_spin(dfptvTotimag)
          IF (l_xc) THEN
-            CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,juphon,starsq,cell,sphhar,atoms,.TRUE.,workdenReal,vCoul,sigma_loc,&
+            CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,juphon,starsq,cell,sphhar,atomsefield,.TRUE.,workdenReal,vCoul,sigma_loc,&
                      & dfptdenimag=workdenImag,dfptvCoulimag=dfptvCoulimag,dfptden0=workden,stars2=stars,iDtype=iDtype,iDir=iDir)
             dfptvTot%pw = dfptvTot%pw + vCoul%pw
             dfptvTot%mt = dfptvTot%mt + vCoul%mt
