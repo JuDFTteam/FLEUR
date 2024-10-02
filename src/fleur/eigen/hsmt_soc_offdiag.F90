@@ -106,11 +106,11 @@ CONTAINS
           dplegend(:NVEC_rem,0) = 0.0
 
           !--->          update overlap and l-diagonal hamiltonian matrix
-          !!$acc kernels &
-          !!$acc copyin(atoms,atoms%lmax,xlegend,cph,angso)&
-          !!$acc create(plegend,dplegend,fct)&
-          !!$acc present(fjgj,fjgj%fj,fjgj%gj)&
-          !!$acc present(hmat(1,1)%data_c,hmat(2,1)%data_c,hmat(1,2)%data_c,hmat(2,2)%data_c)
+          !$acc kernels &
+          !$acc copyin(atoms,atoms%lmax,xlegend,cph,angso,plegend,dplegend)&
+          !$acc create(fct)&
+          !$acc present(fjgj,fjgj%fj,fjgj%gj)&
+          !$acc present(hmat(1,1)%data_c,hmat(2,1)%data_c,hmat(1,2)%data_c,hmat(2,2)%data_c)
           DO  l = 1,atoms%lmax(n)
              !--->       legendre polynomials
              l3 = MODULO(l, 3)
@@ -138,7 +138,7 @@ CONTAINS
              ENDDO
           !--->          end loop over l
           ENDDO
-          !!$acc end kernels
+          !$acc end kernels
        ENDDO
     !--->    end loop over ki
     ENDDO
@@ -151,7 +151,7 @@ CONTAINS
     CALL timestop("offdiagonal soc-setup")
 
     if (atoms%nlo(n)>0) call hsmt_soc_offdiag_LO(n,atoms,cell,fmpi,nococonv,lapw,sym,td,usdus,fjgj,hmat)
-    !$acc update device(hmat(1,1)%data_c,hmat(2,1)%data_c,hmat(1,2)%data_c,hmat(2,2)%data_c)
+    !!$acc update device(hmat(1,1)%data_c,hmat(2,1)%data_c,hmat(1,2)%data_c,hmat(2,2)%data_c)
     RETURN
   END SUBROUTINE hsmt_soc_offdiag
 
