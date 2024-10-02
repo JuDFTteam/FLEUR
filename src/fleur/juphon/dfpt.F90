@@ -613,7 +613,7 @@ CONTAINS
             !   DEALLOCATE(sym_dynvec)
             !END IF
             CALL timestop("q-point")
-            IF (fi_nosym%juphon%l_elph) CALL dfpt_elph_mat(fi_nosym,xcpot_nosym,sphhar_nosym,stars_nosym,nococonv_nosym,qpts,fmpi,results_nosym, q_results, results1, enpara_nosym,hybdat_nosym,rho_nosym,vTot_nosym,grRho3,grVtot3, &
+            IF (fi_nosym%juphon%l_elph) CALL dfpt_elph_mat(fi_nosym,xcpot_nosym,sphhar_nosym,stars_nosym,nococonv_nosym,qpts_loc,fmpi,results_nosym, q_results, results1, enpara_nosym,hybdat_nosym,rho_nosym,vTot_nosym,grRho3,grVtot3, &
             &                                                q_list(iQ),eig_id,q_eig_id,l_real,den_elph,denIm_elph,eigenVecs,eigenVals)
             IF (fmpi%irank==0) DEALLOCATE(eigenVals, eigenVecs, eigenFreqs, E2ndOrdII)
          END DO
