@@ -35,7 +35,7 @@ CONTAINS
     !     ..
     !     .. Local Scalars ..
     REAL tnn(3),ski(3), fjkiln,gjkiln
-    INTEGER kii,ki,kj,l,nn,j1,j2,ll,l3,kj_off,kj_vec,jv
+    INTEGER kii,ki,kj,l,nn,j1,j2,ll,l3,kj_off,kj_vec,jv,n
     INTEGER NVEC_rem  !remainder
     INTEGER, PARAMETER :: NVEC = 128
     !     ..
@@ -129,11 +129,20 @@ CONTAINS
                   fjgj%gj(ki,l,j1,1)*fjgj%fj(kj_off:kj_vec,l,j2,1) *td%rsoc%rsoppd(n,l,j1,j2) + &
                   fjgj%gj(ki,l,j1,1)*fjgj%gj(kj_off:kj_vec,l,j2,1) *td%rsoc%rsopdpd(n,l,j1,j2)) &
                   * angso(:NVEC_rem,j1,j2)
-
-                  hmat(1,1)%data_c(kj_off:kj_vec,kii)=hmat(1,1)%data_c(kj_off:kj_vec,kii) + chi(1,1,j1,j2)*fct(:NVEC_rem)
-                  hmat(1,2)%data_c(kj_off:kj_vec,kii)=hmat(1,2)%data_c(kj_off:kj_vec,kii) + chi(1,2,j1,j2)*fct(:NVEC_rem)
-                  hmat(2,1)%data_c(kj_off:kj_vec,kii)=hmat(2,1)%data_c(kj_off:kj_vec,kii) + chi(2,1,j1,j2)*fct(:NVEC_rem)
-                  hmat(2,2)%data_c(kj_off:kj_vec,kii)=hmat(2,2)%data_c(kj_off:kj_vec,kii) + chi(2,2,j1,j2)*fct(:NVEC_rem)
+                  
+                  DO n=1,NVEC
+                    hmat(1,1)%data_c(kj_off+n-1,kii)=hmat(1,1)%data_c(kj_off+n-1,kii) + chi(1,1,j1,j2)*fct(n)
+                  ENDDO
+                  DO n=1,NVEC
+                    hmat(1,2)%data_c(kj_off+n-1,kii)=hmat(1,2)%data_c(kj_off+n-1,kii) + chi(1,2,j1,j2)*fct(:NVEC_rem)
+                  ENDDO
+                  DO n=1,NVEC
+                    hmat(2,1)%data_c(kj_off+n-1,kii)=hmat(2,1)%data_c(kj_off+n-1,kii) + chi(2,1,j1,j2)*fct(:NVEC_rem)
+                  ENDDO
+                  DO n=1,NVEC
+                    hmat(2,2)%data_c(kj_off+n-1,kii)=hmat(2,2)%data_c(kj_off+n-1,kii) + chi(2,2,j1,j2)*fct(:NVEC_rem)
+                  ENDDO
+                  
                 ENDDO
              ENDDO
           !--->          end loop over l
