@@ -7,7 +7,7 @@ endif()
 if (__check_external)
    #Only External ELPA
     #First check if we can compile with ELPA
-    try_compile(FLEUR_USE_ELPA ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_ELPA.f90
+    try_compile(FLEUR_USE_ELPA ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_LIST_DIR}/test_ELPA.f90
     LINK_LIBRARIES ${FLEUR_LIBRARIES} OUTPUT_VARIABLE compile_output)
 	if ("$ENV{VERBOSE}")
         message("ELPA compile test: ${FLEUR_USE_ELPA}\nLINK_LIBRARIES ${FLEUR_LIBRARIES}\n${compile_output}")
@@ -18,7 +18,7 @@ if (__check_external)
         else()
             set(TEST_LIBRARIES "-lelpa;${FLEUR_LIBRARIES}")
         endif()
-        try_compile(FLEUR_USE_ELPA ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_ELPA.f90
+        try_compile(FLEUR_USE_ELPA ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_LIST_DIR}/test_ELPA.f90
         LINK_LIBRARIES ${TEST_LIBRARIES} OUTPUT_VARIABLE compile_output)
 	    if ("$ENV{VERBOSE}")
             message("ELPA compile test: ${FLEUR_USE_ELPA}\nLINK_LIBRARIES ${TEST_LIBRARIES}\n${compile_output}")
@@ -42,7 +42,7 @@ if (__check_external)
         #LINK_LIBRARIES ${FLEUR_LIBRARIES})
         #try_compile(FLEUR_USE_ELPA_201705003 ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_ELPA_201705003.f90
         #LINK_LIBRARIES ${FLEUR_LIBRARIES})
-        try_compile(FLEUR_USE_ELPA_20180525 ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_ELPA_20180525.f90
+        try_compile(FLEUR_USE_ELPA_20180525 ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_LIST_DIR}/test_ELPA_20180525.f90
         LINK_LIBRARIES ${FLEUR_LIBRARIES})
         message("Version check for ELPA:")
         #message("OLD ELPA      : ${FLEUR_USE_ELPA_OLD}")

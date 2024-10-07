@@ -17,7 +17,7 @@ CONTAINS
     use magma
     use openacc
 #endif
-    use m_types
+    use m_types_mat
     IMPLICIT NONE
 
     ! ... Arguments ...

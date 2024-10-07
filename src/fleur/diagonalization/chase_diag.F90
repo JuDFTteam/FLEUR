@@ -130,8 +130,9 @@ CONTAINS
     USE m_types_mat
     USE m_judft
     USE iso_c_binding
+#ifdef CPP_CHASE
     USE m_eig66_io
-
+#endif
     !Simple driver to solve Generalized Eigenvalue Problem using the ChASE library
     IMPLICIT NONE
 
