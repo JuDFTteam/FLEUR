@@ -430,7 +430,7 @@ CONTAINS
                print*,i_iden
                dielten_iden(i_iden,i_iden) = CMPLX(1,0)
             END DO
-            IF (fmpi%irank) WRITE(*,*) "Scf calculation for electric field perturbation"
+            IF (fmpi%irank==0) WRITE(*,*) "Scf calculation for electric field perturbation"
             DO iDir = 1,3 !for all cartesian directions
                !Define "qlim"-vector in internal coordinates
                qvec_ext(:) = 0.0
@@ -501,11 +501,11 @@ CONTAINS
                !print*, 'diel_tensor(:,:)',diel_tensor(:,:)
             END IF
             call timestop("diel_tensor")
-            IF (fmpi%irank) WRITE(*,*) "Scf calculation for electric field perturbation finished"
+            IF (fmpi%irank==0) WRITE(*,*) "Scf calculation for electric field perturbation finished"
             print*,"STOP"
             STOP
          ELSE IF (fi%juPhon%l_phonon) THEN
-            IF (fmpi%irank) WRITE(*,*) "Scf calculation for phonon perturbation"
+            IF (fmpi%irank==0) WRITE(*,*) "Scf calculation for phonon perturbation"
             DO iQ = fi%juPhon%startq, MERGE(fi%juPhon%stopq,SIZE(q_list),fi%juPhon%stopq/=0)
                CALL timestart("q-point")
                !IF (.NOT.fi%juPhon%qmode==0) THEN
