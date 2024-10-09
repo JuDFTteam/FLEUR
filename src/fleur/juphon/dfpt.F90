@@ -32,6 +32,8 @@ CONTAINS
       USE m_dfpt_gradient
       USE m_dfpt_elph_mat
       USE m_npy
+      use m_inv3
+      USE m_dfpt_dielecten
 
       TYPE(t_mpi),        INTENT(IN)     :: fmpi
       TYPE(t_fleurinput), INTENT(IN)     :: fi
@@ -107,6 +109,16 @@ CONTAINS
       COMPLEX, ALLOCATABLE :: dyn_mat(:,:,:), dyn_mat_r(:,:,:), dyn_mat_q_full(:,:,:), dyn_mat_pathq(:,:), sym_dynvec(:,:,:), sym_dyn_mat(:,:,:)
       REAL,    ALLOCATABLE :: e2_vm(:,:,:)
 
+      !For e-field:
+      COMPLEX            :: diel_tensor(3,3) !sdall i put this in an if statement?
+      !REAL, ALLOCATABLE    :: diel_tensor_occ1(:,:)!check if this makes sense
+      !REAL, ALLOCATABLE    :: we1_data(:,:,:,:),eig1_data(:,:,:,:)
+      COMPLEX :: dielten_iden(3,3)   
+      INTEGER              :: i_iden, row
+      !INTEGER              :: no_iDtype
+      !changes for efield:
+      real                  :: qvec_ext(3),qvec_int(3),det,inv_bmat(3,3),qvec_norm(3)
+
       INTEGER :: ngdp, iSpin, iQ, iDir, iDtype, nspins, zlim, iVac, lh, iDir2, sym_count
       INTEGER :: iStar, xInd, yInd, zInd, q_eig_id, ikpt, ierr, qm_eig_id, iArray
       INTEGER :: dfpt_eig_id, dfpt_eig_id2, dfpt_eigm_id, dfpt_eigm_id2
@@ -145,7 +157,6 @@ CONTAINS
       l_minusq = .FALSE.
 
       nspins = MERGE(2, 1, fi%noco%l_noco)
-
       IF (fi%juPhon%l_jpCheck) THEN
           ! This function will be used to check the validity of juPhon's
           ! input. I.e. check, whether all prohibited switches are off and,
@@ -216,7 +227,6 @@ CONTAINS
          ! Read qpoints from the juPhon qlist in inp.xml
          qpts_loc = qpts
          qpts_loc%bk(:, :SIZE(fi%juPhon%qvec,2)) = fi%juPhon%qvec
-
          ALLOCATE(q_list(SIZE(fi%juPhon%qvec,2)))
          q_list = (/(iArray, iArray=1,SIZE(fi%juPhon%qvec,2), 1)/)
       END IF
@@ -411,215 +421,297 @@ CONTAINS
             ALLOCATE(den_elph(3*fi_nosym%atoms%ntype))
             ALLOCATE(denIm_elph(3*fi_nosym%atoms%ntype))
          END IF 
-
-         DO iQ = fi%juPhon%startq, MERGE(fi%juPhon%stopq,SIZE(q_list),fi%juPhon%stopq/=0)
-            CALL timestart("q-point")
-            !IF (.NOT.fi%juPhon%qmode==0) THEN
-            !   CALL make_sym_list(fi_fullsym%sym, qpts_loc%bk(:,q_list(iQ)),sym_count,sym_list)
-            !   ALLOCATE(sym_dynvec(3*fi_nosym%atoms%ntype,3*fi_nosym%atoms%ntype-1,sym_count))
-            !END IF
-            kqpts = fi%kpts
-            ! Modify this from kpts only in DFPT case.
-            DO ikpt = 1, fi%kpts%nkpt
-               kqpts%bk(:, ikpt) = kqpts%bk(:, ikpt) + qpts_loc%bk(:,q_list(iQ))
+         IF (fi%juPhon%l_efield) THEN
+            !ALLOCATE(diel_tensor(3,3))
+            diel_tensor = CMPLX(0,0)
+            !ALLOCATE(dielten_iden(3,3))
+            dielten_iden = CMPLX(0,0)
+            DO i_iden = 1,3
+               print*,i_iden
+               dielten_iden(i_iden,i_iden) = CMPLX(1,0)
             END DO
-
-            IF (l_minusq) THEN
-               kqmpts = fi%kpts
+            IF (fmpi%irank) WRITE(*,*) "Scf calculation for electric field perturbation"
+            DO iDir = 1,3 !for all cartesian directions
+               !Define "qlim"-vector in internal coordinates
+               qvec_ext(:) = 0.0
+               qvec_ext(iDir) = fi%juPhon%qlim
+               call inv3(fi%cell%bmat,inv_bmat(:,:),det)
+               qvec_int = matmul(qvec_ext,transpose(inv_bmat))
+               
+               kqpts = fi%kpts
                ! Modify this from kpts only in DFPT case.
                DO ikpt = 1, fi%kpts%nkpt
-                  kqmpts%bk(:, ikpt) = kqmpts%bk(:, ikpt) - qpts_loc%bk(:,q_list(iQ))
+                  kqpts%bk(:, ikpt) = kqpts%bk(:, ikpt) + qvec_int
                END DO
-            END IF
 
-            CALL timestart("Eii2")
-            CALL CalcIIEnerg2(fi_nosym%atoms, fi_nosym%cell, qpts_loc, stars_nosym, fi_nosym%input, q_list(iQ), ngdp, recG, E2ndOrdII)
-            CALL timestop("Eii2")
-
-            write(9991,*) "Eii2 old:", E2ndOrdII
-            E2ndOrdII = CMPLX(0.0,0.0)
-            DO iDtype = 1, fi_nosym%atoms%ntype
-               DO iDir2 = 1, 3
-                  DO iDir = 1, 3
-                     E2ndOrdII(3*(iDtype-1)+iDir2,3*(iDtype-1)+iDir) = e2_vm(iDtype,iDir2,iDir)
-                  END DO
-               END DO
-            END DO
-            CALL timestart("Eigenstuff at k+q")
-
-            ! This was an additional eig_id to test a specific shift from k to k+q in the dynmat setup. We leave it in
-            ! for now, as it might be tested again in the future.
-            !q_eig_id = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, fi%input%jspins, fi%noco%l_noco, &
-            !                  .NOT.fi%INPUT%eig66(1), fi%input%l_real, fi%noco%l_soc, fi%input%eig66(1), .FALSE., fmpi%n_size)
-
-            ! Get the eigenstuff at k+q
-            CALL q_results%reset_results(fi%input)
-
-            CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv, mpdata, &
-                     hybdat, 1, q_eig_id, q_results, rho, vTot, vxc, hub1data, &
-                     qpts_loc%bk(:,q_list(iQ)))
-
-            ! Fermi level and occupancies
-            CALL timestart("determination of fermi energy")
-            CALL fermie(q_eig_id, fmpi, kqpts, fi%input, fi%noco, enpara%epara_min, fi%cell, q_results)
-            CALL timestop("determination of fermi energy")
-
-#ifdef CPP_MPI
-            CALL MPI_BCAST(q_results%ef, 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
-            CALL MPI_BCAST(q_results%w_iks, SIZE(q_results%w_iks), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
-#endif
-
-            CALL timestop("Eigenstuff at k+q")
-
-            IF (l_minusq) THEN
-               CALL timestart("Eigenstuff at k-q")
-               !qm_eig_id = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, fi%input%jspins, fi%noco%l_noco, &
-               !                  .NOT.fi%INPUT%eig66(1), fi%input%l_real, fi%noco%l_soc, fi%input%eig66(1), .FALSE., fmpi%n_size)
-
-               CALL qm_results%reset_results(fi%input)
-
+               CALL timestart("Eigenstuff at k+q")
+               ! Get the eigenstuff at k+q
+               CALL q_results%reset_results(fi%input)
+   
                CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv, mpdata, &
-                        hybdat, 1, qm_eig_id, qm_results, rho, vTot, vxc, hub1data, &
-                        -qpts_loc%bk(:,q_list(iQ)))
-
+                        hybdat, 1, q_eig_id, q_results, rho, vTot, vxc, hub1data, &
+                        qvec_int)
+   
                ! Fermi level and occupancies
                CALL timestart("determination of fermi energy")
-               CALL fermie(qm_eig_id, fmpi, kqmpts, fi%input, fi%noco, enpara%epara_min, fi%cell, qm_results)
+               CALL fermie(q_eig_id, fmpi, kqpts, fi%input, fi%noco, enpara%epara_min, fi%cell, q_results)
                CALL timestop("determination of fermi energy")
-
+   
 #ifdef CPP_MPI
-               CALL MPI_BCAST(qm_results%ef, 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
-               CALL MPI_BCAST(qm_results%w_iks, SIZE(qm_results%w_iks), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
+               CALL MPI_BCAST(q_results%ef, 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
+               CALL MPI_BCAST(q_results%w_iks, SIZE(q_results%w_iks), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
 #endif
+   
+               CALL timestop("Eigenstuff at k+q")
 
-               CALL timestop("Eigenstuff at k-q")
-            END IF
+               IF (fmpi%irank==0) THEN
+                  WRITE(*,*) 'Starting calculation for:'
+                  WRITE(*,*) ' direction = ', iDir
+                  WRITE(*,*) ' q         = ', qvec_int
+               END IF
+               CALL starsq%reset_stars()
+               CALL denIn1%reset_dfpt()
+               CALL denIn1Im%reset_dfpt()
+               CALL vTot1%reset_dfpt()
+               CALL vTot1Im%reset_dfpt()
+               CALL vC1%reset_dfpt()
+               CALL vC1Im%reset_dfpt()
+               CALL results1%reset_results(fi_nosym%input)
+               IF (fmpi%irank==0) WRITE(*,*) '-------------------------'
 
-            DO iDtype = 1, fi_nosym%atoms%ntype
-               CALL timestart("Typeloop")
-               DO iDir = 1, 3
-                  CALL timestart("Dirloop")
-                  !IF (.NOT.fi%juPhon%qmode==0.AND.fmpi%irank==0) THEN
-                  !   IF (iDtype==1.AND.iDir==2) sym_dyn_mat(iQ, 1, :) = dyn_mat(iQ, 1, :)
-                  !   IF (3 *(iDtype-1)+iDir>1) THEN
-                  !      CALL cheat_dynmat(fi_fullsym%atoms, fi_fullsym%sym, fi_fullsym%cell%amat, qpts_loc%bk(:,q_list(iQ)), iDtype, iDir, sym_count, sym_list(:sym_count), sym_dynvec, dyn_mat(iQ,:,:), sym_dyn_mat(iQ,:,:), l_cheated)
-                  !   END IF
-                  !   IF (l_cheated) WRITE(*,*) "Following row was cheated!"
-                  !   IF (l_cheated) write(*,*) sym_dyn_mat(iQ,3 *(iDtype-1)+iDir,:)
-                  !END IF
-                  dfpt_tag = ''
-                  WRITE(dfpt_tag,'(a1,i0,a2,i0,a2,i0)') 'q', q_list(iQ), '_b', iDtype, '_j', iDir
-
-                  IF (fmpi%irank==0) THEN
-                     WRITE(*,*) 'Starting calculation for:'
-                     WRITE(*,*) ' q         = ', qpts_loc%bk(:,q_list(iQ))
-                     WRITE(*,*) ' atom      = ', iDtype
-                     WRITE(*,*) ' direction = ', iDir
-                  END IF
-
-                  !IF (fmpi_nosym%irank==0) THEN
-                     CALL starsq%reset_stars()
-                     IF (l_minusq) CALL starsmq%reset_stars()
-                     CALL denIn1%reset_dfpt()
-                     CALL denIn1Im%reset_dfpt()
-                     CALL vTot1%reset_dfpt()
-                     CALL vTot1Im%reset_dfpt()
-                     IF (l_minusq) CALL vTot1m%reset_dfpt()
-                     IF (l_minusq) CALL vTot1mIm%reset_dfpt()
-                     CALL vC1%reset_dfpt()
-                     CALL vC1Im%reset_dfpt()
-                     CALL results1%reset_results(fi_nosym%input)
-                  !END IF
-
-                  IF (fmpi%irank==0) WRITE(*,*) '-------------------------'
-                  ! This is where the magic happens. The Sternheimer equation is solved
-                  ! iteratively, providing the scf part of dfpt calculations.
-                  IF (l_minusq) THEN
-                     CALL timestart("Sternheimer with -q")
-                     CALL dfpt_sternheimer(fi_nosym, xcpot_nosym, sphhar_nosym, stars_nosym, starsq, nococonv_nosym, qpts_loc, fmpi_nosym, results_nosym, q_results, enpara_nosym, hybdat_nosym, &
-                                          rho_nosym, vTot_nosym, grRho3(iDir), grVtot3(iDir), grVext3(iDir), q_list(iQ), iDtype, iDir, &
-                                          dfpt_tag, eig_id, l_real, results1, dfpt_eig_id, dfpt_eig_id2, q_eig_id, &
-                                          denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, MERGE(sigma_ext,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir==3), &
-                                          MERGE(sigma_coul,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir==3),&
-                                          starsmq, qm_results, dfpt_eigm_id, dfpt_eigm_id2, qm_eig_id, results1m, vTot1m, vTot1mIm)
-                     CALL timestop("Sternheimer with -q")
-                  ELSE
-                     CALL timestart("Sternheimer")
-                     CALL dfpt_sternheimer(fi_nosym, xcpot_nosym, sphhar_nosym, stars_nosym, starsq, nococonv_nosym, qpts_loc, fmpi_nosym, results_nosym, q_results, enpara_nosym, hybdat_nosym, &
-                                          rho_nosym, vTot_nosym, grRho3(iDir), grVtot3(iDir), grVext3(iDir), q_list(iQ), iDtype, iDir, &
-                                          dfpt_tag, eig_id, l_real, results1, dfpt_eig_id, dfpt_eig_id2, q_eig_id, &
-                                          denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, MERGE(sigma_ext,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir==3), &
-                                          MERGE(sigma_coul,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir==3))
-                     CALL timestop("Sternheimer")
-                  END IF
-
-                  IF (fmpi%irank==0) WRITE(*,*) '-------------------------'
-                  CALL timestart("Dynmat")
-                  ! Once the first order quantities are converged, we can construct all
-                  ! additional necessary quantities and from that the dynamical matrix.
-                  IF (.TRUE.) THEN
-                     CALL dfpt_dynmat_row(fi_nosym, stars_nosym, starsq, sphhar_nosym, xcpot_nosym, nococonv_nosym, hybdat_nosym, fmpi_nosym, qpts_loc, q_list(iQ), iDtype, iDir, &
-                                          eig_id, dfpt_eig_id, dfpt_eig_id2, enpara_nosym, results_nosym, results1, l_real,&
-                                          rho_nosym, vTot_nosym, grRho3, grVext3, grVC3, &
-                                          denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_mat(iQ,3 *(iDtype-1)+iDir,:), E2ndOrdII, sigma_ext, sigma_gext)
-                  ELSE
-                     CALL dfpt_dynmat_row(fi_nosym, stars_nosym, starsq, sphhar_nosym, xcpot_nosym, nococonv_nosym, hybdat_nosym, fmpi_nosym, qpts_loc, q_list(iQ), iDtype, iDir, &
-                                          eig_id, dfpt_eig_id, dfpt_eig_id2, enpara_nosym, results_nosym, results1, l_real,&
-                                          rho_nosym, vTot_nosym, grRho3, grVext3, grVC3, &
-                                          denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_mat(iQ,3 *(iDtype-1)+iDir,:), E2ndOrdII, sigma_ext, sigma_gext, q_eig_id)
-                  END IF
-                  CALL timestop("Dynmat")
-                  dyn_mat(iQ,3 *(iDtype-1)+iDir,:) = dyn_mat(iQ,3 *(iDtype-1)+iDir,:) + conjg(E2ndOrdII(3 *(iDtype-1)+iDir,:))
-                  !IF (.NOT.fi%juPhon%qmode==0) THEN
-                  !   CALL make_sym_dynvec(fi_fullsym%atoms, fi_fullsym%sym, fi_fullsym%cell%amat, qpts_loc%bk(:,q_list(iQ)), iDtype, iDir, sym_count, sym_list(:sym_count), dyn_mat(iQ,3 *(iDtype-1)+iDir,:), sym_dynvec)
-                  !END IF
-
-                  IF (fi_nosym%juphon%l_elph) THEN 
-                     den_elph(iDir+3*(iDtype-1)) = denIn1
-                     denIm_elph(iDir+3*(iDtype-1)) = denIn1Im
-                  END IF 
-
-                  IF (fmpi%irank==0) write(*,*) "dynmat row for ", dfpt_tag
-                  IF (fmpi%irank==0) write(*,*) dyn_mat(iQ,3 *(iDtype-1)+iDir,:)
-                  !IF (fmpi%irank==0.AND.l_cheated) write(*,*) "The cheat:"
-                  !IF (fmpi%irank==0.AND.l_cheated) write(*,*) sym_dyn_mat(iQ,3 *(iDtype-1)+iDir,:)
-                  !l_cheated = .FALSE.
-                  IF (fmpi%irank==0) WRITE(9339,*) dyn_mat(iQ,3 *(iDtype-1)+iDir,:)
-                  IF (fmpi_nosym%irank == 0 .AND. fi_nosym%juphon%l_rm_qhdf) call system("rm "//TRIM(dfpt_tag)//".hdf")
-                  CALL timestop("Dirloop")
-               END DO
-               CALL timestop("Typeloop")
-
-#if defined(CPP_MPI)
-               CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
-#endif
+               CALL timestart("Sternheimer")
+               CALL dfpt_sternheimer(fi_nosym, xcpot_nosym, sphhar_nosym, stars_nosym, starsq, nococonv_nosym, qpts_loc, fmpi_nosym, results_nosym, q_results, enpara_nosym, hybdat_nosym, &
+                                    rho_nosym, vTot_nosym, grRho3(iDir), grVtot3(iDir), grVext3(iDir), 1, 1, iDir, &
+                                    dfpt_tag, eig_id, l_real, results1, dfpt_eig_id, dfpt_eig_id2, q_eig_id, &
+                                    denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, MERGE(sigma_ext,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir==3), &
+                                    MERGE(sigma_coul,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir==3))
+               CALL timestop("Sternheimer")
+               IF (fmpi%irank==0) WRITE(*,*) '-------------------------'   
+               CALL dfpt_dielecten_row_HF(fi_nosym,stars_nosym,starsq,sphhar_nosym,fmpi_nosym,denIn1,denIn1Im,results_nosym, results1,3 *(iDtype-1)+iDir,diel_tensor(iDir,:),iDtype,iDir)
             END DO
-
+            CALL timestart("diel_tensor")
             IF (fmpi%irank==0) THEN
-               WRITE(*,*) '-------------------------'
-               CALL timestart("Dynmat diagonalization")
-               CALL DiagonalizeDynMat(fi_nosym%atoms, qpts_loc%bk(:,q_list(iQ)), fi%juPhon%calcEigenVec, dyn_mat(iQ,:,:), eigenVals, eigenVecs, q_list(iQ),.TRUE.,"raw",fi_nosym%juphon%l_sumrule)
-               CALL timestop("Dynmat diagonalization")
-
-               CALL timestart("Frequency calculation")
-               CALL CalculateFrequencies(fi_nosym%atoms, q_list(iQ), eigenVals, eigenFreqs,"raw")
-               CALL timestop("Frequency calculation")
-               write(9991,*) "Eii2 new:", E2ndOrdII
-               !DEALLOCATE(eigenVals, eigenVecs, eigenFreqs, E2ndOrdII)
+               CALL dfpt_dielecten_row_HF(fi_nosym,stars_nosym,starsq,sphhar_nosym,fmpi_nosym,denIn1,denIn1Im,results_nosym, results1,3 *(iDtype-1)+iDir,diel_tensor(iDir,:),iDtype,iDir)
+               !CALL dfpt_dielecten_occ1(fi,fmpi,results1,we1_data,eig1_data,diel_tensor_occ1,3 *(iDtype-1)+iDir)
+               !call save_npy("integralpart.npy",diel_tensor(:,:))
+               !call save_npy("diel_tensor_occ1.npy",diel_tensor_occ1(:,:))
+               !diel_tensor(:,:) = diel_tensor(:,:) + diel_tensor_occ1(:,:)
+               diel_tensor(:,:) = dielten_iden(:,:) - (fpi_const/fi%cell%omtil)*diel_tensor(:,:)
+               call save_npy("diel_tensor.npy",diel_tensor(:,:))
+               !print*, 'diel_tensor(:,:)',diel_tensor(:,:)
             END IF
-            !CALL close_eig(q_eig_id)
-            !IF (l_minusq) CALL close_eig(qm_eig_id)
-            !IF (.NOT.fi%juPhon%qmode==0) THEN
-            !   DEALLOCATE(sym_dynvec)
-            !END IF
-            CALL timestop("q-point")
-            IF (fi_nosym%juphon%l_elph) CALL dfpt_elph_mat(fi_nosym,xcpot_nosym,sphhar_nosym,stars_nosym,nococonv_nosym,qpts_loc,fmpi,results_nosym, q_results, results1, enpara_nosym,hybdat_nosym,rho_nosym,vTot_nosym,grRho3,grVtot3, &
-            &                                                q_list(iQ),eig_id,q_eig_id,l_real,den_elph,denIm_elph,eigenVecs,eigenVals)
-            IF (fmpi%irank==0) DEALLOCATE(eigenVals, eigenVecs, eigenFreqs, E2ndOrdII)
-         END DO
+            call timestop("diel_tensor")
+            IF (fmpi%irank) WRITE(*,*) "Scf calculation for electric field perturbation finished"
+            print*,"STOP"
+            STOP
+         ELSE IF (fi%juPhon%l_phonon) THEN
+            IF (fmpi%irank) WRITE(*,*) "Scf calculation for phonon perturbation"
+            DO iQ = fi%juPhon%startq, MERGE(fi%juPhon%stopq,SIZE(q_list),fi%juPhon%stopq/=0)
+               CALL timestart("q-point")
+               !IF (.NOT.fi%juPhon%qmode==0) THEN
+               !   CALL make_sym_list(fi_fullsym%sym, qpts_loc%bk(:,q_list(iQ)),sym_count,sym_list)
+               !   ALLOCATE(sym_dynvec(3*fi_nosym%atoms%ntype,3*fi_nosym%atoms%ntype-1,sym_count))
+               !END IF
+               kqpts = fi%kpts
+               ! Modify this from kpts only in DFPT case.
+               DO ikpt = 1, fi%kpts%nkpt
+                  kqpts%bk(:, ikpt) = kqpts%bk(:, ikpt) + qpts_loc%bk(:,q_list(iQ))
+               END DO
+   
+               IF (l_minusq) THEN
+                  kqmpts = fi%kpts
+                  ! Modify this from kpts only in DFPT case.
+                  DO ikpt = 1, fi%kpts%nkpt
+                     kqmpts%bk(:, ikpt) = kqmpts%bk(:, ikpt) - qpts_loc%bk(:,q_list(iQ))
+                  END DO
+               END IF
+   
+               CALL timestart("Eii2")
+               CALL CalcIIEnerg2(fi_nosym%atoms, fi_nosym%cell, qpts_loc, stars_nosym, fi_nosym%input, q_list(iQ), ngdp, recG, E2ndOrdII)
+               CALL timestop("Eii2")
+   
+               write(9991,*) "Eii2 old:", E2ndOrdII
+               E2ndOrdII = CMPLX(0.0,0.0)
+               DO iDtype = 1, fi_nosym%atoms%ntype
+                  DO iDir2 = 1, 3
+                     DO iDir = 1, 3
+                        E2ndOrdII(3*(iDtype-1)+iDir2,3*(iDtype-1)+iDir) = e2_vm(iDtype,iDir2,iDir)
+                     END DO
+                  END DO
+               END DO
+               CALL timestart("Eigenstuff at k+q")
+   
+               ! This was an additional eig_id to test a specific shift from k to k+q in the dynmat setup. We leave it in
+               ! for now, as it might be tested again in the future.
+               !q_eig_id = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, fi%input%jspins, fi%noco%l_noco, &
+               !                  .NOT.fi%INPUT%eig66(1), fi%input%l_real, fi%noco%l_soc, fi%input%eig66(1), .FALSE., fmpi%n_size)
+   
+               ! Get the eigenstuff at k+q
+               CALL q_results%reset_results(fi%input)
+   
+               CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv, mpdata, &
+                        hybdat, 1, q_eig_id, q_results, rho, vTot, vxc, hub1data, &
+                        qpts_loc%bk(:,q_list(iQ)))
+   
+               ! Fermi level and occupancies
+               CALL timestart("determination of fermi energy")
+               CALL fermie(q_eig_id, fmpi, kqpts, fi%input, fi%noco, enpara%epara_min, fi%cell, q_results)
+               CALL timestop("determination of fermi energy")
+   
+#ifdef CPP_MPI
+               CALL MPI_BCAST(q_results%ef, 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
+               CALL MPI_BCAST(q_results%w_iks, SIZE(q_results%w_iks), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
+#endif
+   
+               CALL timestop("Eigenstuff at k+q")
+   
+               IF (l_minusq) THEN
+                  CALL timestart("Eigenstuff at k-q")
+                  !qm_eig_id = open_eig(fmpi%mpi_comm, lapw_dim_nbasfcn, fi%input%neig, fi%kpts%nkpt, fi%input%jspins, fi%noco%l_noco, &
+                  !                  .NOT.fi%INPUT%eig66(1), fi%input%l_real, fi%noco%l_soc, fi%input%eig66(1), .FALSE., fmpi%n_size)
+   
+                  CALL qm_results%reset_results(fi%input)
+   
+                  CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv, mpdata, &
+                           hybdat, 1, qm_eig_id, qm_results, rho, vTot, vxc, hub1data, &
+                           -qpts_loc%bk(:,q_list(iQ)))
+   
+                  ! Fermi level and occupancies
+                  CALL timestart("determination of fermi energy")
+                  CALL fermie(qm_eig_id, fmpi, kqmpts, fi%input, fi%noco, enpara%epara_min, fi%cell, qm_results)
+                  CALL timestop("determination of fermi energy")
+   
+#ifdef CPP_MPI
+                  CALL MPI_BCAST(qm_results%ef, 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
+                  CALL MPI_BCAST(qm_results%w_iks, SIZE(qm_results%w_iks), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
+#endif
+   
+                  CALL timestop("Eigenstuff at k-q")
+               END IF
+   
+               DO iDtype = 1, fi_nosym%atoms%ntype
+                  CALL timestart("Typeloop")
+                  DO iDir = 1, 3
+                     CALL timestart("Dirloop")
+                     !IF (.NOT.fi%juPhon%qmode==0.AND.fmpi%irank==0) THEN
+                     !   IF (iDtype==1.AND.iDir==2) sym_dyn_mat(iQ, 1, :) = dyn_mat(iQ, 1, :)
+                     !   IF (3 *(iDtype-1)+iDir>1) THEN
+                     !      CALL cheat_dynmat(fi_fullsym%atoms, fi_fullsym%sym, fi_fullsym%cell%amat, qpts_loc%bk(:,q_list(iQ)), iDtype, iDir, sym_count, sym_list(:sym_count), sym_dynvec, dyn_mat(iQ,:,:), sym_dyn_mat(iQ,:,:), l_cheated)
+                     !   END IF
+                     !   IF (l_cheated) WRITE(*,*) "Following row was cheated!"
+                     !   IF (l_cheated) write(*,*) sym_dyn_mat(iQ,3 *(iDtype-1)+iDir,:)
+                     !END IF
+                     dfpt_tag = ''
+                     WRITE(dfpt_tag,'(a1,i0,a2,i0,a2,i0)') 'q', q_list(iQ), '_b', iDtype, '_j', iDir
+   
+                     IF (fmpi%irank==0) THEN
+                        WRITE(*,*) 'Starting calculation for:'
+                        WRITE(*,*) ' q         = ', qpts_loc%bk(:,q_list(iQ))
+                        WRITE(*,*) ' atom      = ', iDtype
+                        WRITE(*,*) ' direction = ', iDir
+                     END IF
+                     !IF (fmpi_nosym%irank==0) THEN
+                        CALL starsq%reset_stars()
+                        IF (l_minusq) CALL starsmq%reset_stars()
+                        CALL denIn1%reset_dfpt()
+                        CALL denIn1Im%reset_dfpt()
+                        CALL vTot1%reset_dfpt()
+                        CALL vTot1Im%reset_dfpt()
+                        IF (l_minusq) CALL vTot1m%reset_dfpt()
+                        IF (l_minusq) CALL vTot1mIm%reset_dfpt()
+                        CALL vC1%reset_dfpt()
+                        CALL vC1Im%reset_dfpt()
+                        CALL results1%reset_results(fi_nosym%input)
+                     !END IF
+   
+                     IF (fmpi%irank==0) WRITE(*,*) '-------------------------'
+                     ! This is where the magic happens. The Sternheimer equation is solved
+                     ! iteratively, providing the scf part of dfpt calculations.
+                     IF (l_minusq) THEN
+                        CALL timestart("Sternheimer with -q")
+                        CALL dfpt_sternheimer(fi_nosym, xcpot_nosym, sphhar_nosym, stars_nosym, starsq, nococonv_nosym, qpts_loc, fmpi_nosym, results_nosym, q_results, enpara_nosym, hybdat_nosym, &
+                                             rho_nosym, vTot_nosym, grRho3(iDir), grVtot3(iDir), grVext3(iDir), q_list(iQ), iDtype, iDir, &
+                                             dfpt_tag, eig_id, l_real, results1, dfpt_eig_id, dfpt_eig_id2, q_eig_id, &
+                                             denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, MERGE(sigma_ext,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir==3), &
+                                             MERGE(sigma_coul,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir==3),&
+                                             starsmq, qm_results, dfpt_eigm_id, dfpt_eigm_id2, qm_eig_id, results1m, vTot1m, vTot1mIm)
+                        CALL timestop("Sternheimer with -q")
+                     ELSE
+                        CALL timestart("Sternheimer")
+                        CALL dfpt_sternheimer(fi_nosym, xcpot_nosym, sphhar_nosym, stars_nosym, starsq, nococonv_nosym, qpts_loc, fmpi_nosym, results_nosym, q_results, enpara_nosym, hybdat_nosym, &
+                                             rho_nosym, vTot_nosym, grRho3(iDir), grVtot3(iDir), grVext3(iDir), q_list(iQ), iDtype, iDir, &
+                                             dfpt_tag, eig_id, l_real, results1, dfpt_eig_id, dfpt_eig_id2, q_eig_id, &
+                                             denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, MERGE(sigma_ext,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir==3), &
+                                             MERGE(sigma_coul,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir==3))
+                        CALL timestop("Sternheimer")
+                     END IF
+   
+                     IF (fmpi%irank==0) WRITE(*,*) '-------------------------'
+                     CALL timestart("Dynmat")
+                     ! Once the first order quantities are converged, we can construct all
+                     ! additional necessary quantities and from that the dynamical matrix.
+                     IF (.TRUE.) THEN
+                        CALL dfpt_dynmat_row(fi_nosym, stars_nosym, starsq, sphhar_nosym, xcpot_nosym, nococonv_nosym, hybdat_nosym, fmpi_nosym, qpts_loc, q_list(iQ), iDtype, iDir, &
+                                             eig_id, dfpt_eig_id, dfpt_eig_id2, enpara_nosym, results_nosym, results1, l_real,&
+                                             rho_nosym, vTot_nosym, grRho3, grVext3, grVC3, &
+                                             denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_mat(iQ,3 *(iDtype-1)+iDir,:), E2ndOrdII, sigma_ext, sigma_gext)
+                     ELSE
+                        CALL dfpt_dynmat_row(fi_nosym, stars_nosym, starsq, sphhar_nosym, xcpot_nosym, nococonv_nosym, hybdat_nosym, fmpi_nosym, qpts_loc, q_list(iQ), iDtype, iDir, &
+                                             eig_id, dfpt_eig_id, dfpt_eig_id2, enpara_nosym, results_nosym, results1, l_real,&
+                                             rho_nosym, vTot_nosym, grRho3, grVext3, grVC3, &
+                                             denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_mat(iQ,3 *(iDtype-1)+iDir,:), E2ndOrdII, sigma_ext, sigma_gext, q_eig_id)
+                     END IF
+                     CALL timestop("Dynmat")
+                     dyn_mat(iQ,3 *(iDtype-1)+iDir,:) = dyn_mat(iQ,3 *(iDtype-1)+iDir,:) + conjg(E2ndOrdII(3 *(iDtype-1)+iDir,:))
+                     !IF (.NOT.fi%juPhon%qmode==0) THEN
+                     !   CALL make_sym_dynvec(fi_fullsym%atoms, fi_fullsym%sym, fi_fullsym%cell%amat, qpts_loc%bk(:,q_list(iQ)), iDtype, iDir, sym_count, sym_list(:sym_count), dyn_mat(iQ,3 *(iDtype-1)+iDir,:), sym_dynvec)
+                     !END IF
+   
+                     IF (fi_nosym%juphon%l_elph) THEN 
+                        den_elph(iDir+3*(iDtype-1)) = denIn1
+                        denIm_elph(iDir+3*(iDtype-1)) = denIn1Im
+                     END IF 
+   
+                     IF (fmpi%irank==0) write(*,*) "dynmat row for ", dfpt_tag
+                     IF (fmpi%irank==0) write(*,*) dyn_mat(iQ,3 *(iDtype-1)+iDir,:)
+                     !IF (fmpi%irank==0.AND.l_cheated) write(*,*) "The cheat:"
+                     !IF (fmpi%irank==0.AND.l_cheated) write(*,*) sym_dyn_mat(iQ,3 *(iDtype-1)+iDir,:)
+                     !l_cheated = .FALSE.
+                     IF (fmpi%irank==0) WRITE(9339,*) dyn_mat(iQ,3 *(iDtype-1)+iDir,:)
+                     IF (fmpi_nosym%irank == 0 .AND. fi_nosym%juphon%l_rm_qhdf) call system("rm "//TRIM(dfpt_tag)//".hdf")
+                     CALL timestop("Dirloop")
+                  END DO
+                  CALL timestop("Typeloop")
+   
+#if defined(CPP_MPI)
+                  CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
+#endif
+               END DO
+   
+               IF (fmpi%irank==0) THEN
+                  WRITE(*,*) '-------------------------'
+                  CALL timestart("Dynmat diagonalization")
+                  CALL DiagonalizeDynMat(fi_nosym%atoms, qpts_loc%bk(:,q_list(iQ)), fi%juPhon%calcEigenVec, dyn_mat(iQ,:,:), eigenVals, eigenVecs, q_list(iQ),.TRUE.,"raw",fi_nosym%juphon%l_sumrule)
+                  CALL timestop("Dynmat diagonalization")
+   
+                  CALL timestart("Frequency calculation")
+                  CALL CalculateFrequencies(fi_nosym%atoms, q_list(iQ), eigenVals, eigenFreqs,"raw")
+                  CALL timestop("Frequency calculation")
+                  write(9991,*) "Eii2 new:", E2ndOrdII
+                  !DEALLOCATE(eigenVals, eigenVecs, eigenFreqs, E2ndOrdII)
+               END IF
+               !CALL close_eig(q_eig_id)
+               !IF (l_minusq) CALL close_eig(qm_eig_id)
+               !IF (.NOT.fi%juPhon%qmode==0) THEN
+               !   DEALLOCATE(sym_dynvec)
+               !END IF
+               CALL timestop("q-point")
+               IF (fi_nosym%juphon%l_elph) CALL dfpt_elph_mat(fi_nosym,xcpot_nosym,sphhar_nosym,stars_nosym,nococonv_nosym,qpts,fmpi,results_nosym, q_results, results1, enpara_nosym,hybdat_nosym,rho_nosym,vTot_nosym,grRho3,grVtot3, &
+               &                                                q_list(iQ),eig_id,q_eig_id,l_real,den_elph,denIm_elph,eigenVecs,eigenVals)
+               IF (fmpi%irank==0) DEALLOCATE(eigenVals, eigenVecs, eigenFreqs, E2ndOrdII)
+            END DO
+         END IF
       END IF
-
-
       ! If the Dynmats-Files were already created, we can read them in and do postprocessing.
       ! a) Transform the q-Mesh onto real space.
       ! b) Transform it back onto a dense q-path.
