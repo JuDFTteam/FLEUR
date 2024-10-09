@@ -22,7 +22,7 @@ class Elpa(AutotoolsPackage, CudaPackage, ROCmPackage):
 
     license("LGPL-3.0-only")
 
-    version("2024.05.001", branch="master_pre_stage")
+    version("2024.05.001", md5="0b7a61297546a2aad81f8a9197bec04d")
 
     version(
         "2023.11.001-patched",
@@ -50,8 +50,8 @@ class Elpa(AutotoolsPackage, CudaPackage, ROCmPackage):
     variant("mpi", default=True, description="Activates MPI support")
 
 
-    depends_on("autoconf", type="build", when="@2024.03.001:")
-    depends_on("automake", type="build", when="@2024.03.001:")
+    #depends_on("autoconf", type="build", when="@2024.03.001:")
+    #depends_on("automake", type="build", when="@2024.03.001:")
 
     depends_on("blas")
     depends_on("lapack")
