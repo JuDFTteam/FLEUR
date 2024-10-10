@@ -133,7 +133,7 @@ CONTAINS
 
        CALL timestart("fjgj coefficients")
        CALL fjgj%calculate(input,atoms,cell,lapw,noco,usdus,iType,jspin)
-       !!$acc update device (fjgj%fj,fjgj%gj)
+       !$acc update device (fjgj%fj,fjgj%gj)
        CALL timestop("fjgj coefficients")
 
        CALL setabc1lo(atoms,iType,usdus,jspin,alo1,blo1,clo1)
