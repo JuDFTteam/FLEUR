@@ -62,7 +62,7 @@ CONTAINS
             !   For the tetragonal method it could happen that at a tetra we have two occupied and two unoccupied at nu
             !   In order to get the correct interpolation we also need the contribution at the unoccupied states from nu'
 
-            CASE(1,2)
+            CASE(1)
                 
                 ! Cut out all contributions coming from nu-> unoccuppied 
                 DO ispin = 1 , fi%input%jspins
@@ -107,7 +107,6 @@ CONTAINS
                 
                 DO gridPoint=1,fi%banddos%ndos_points
                     eGrid(gridPoint)=emin+(emax-emin)/(fi%banddos%ndos_points-1.0)*(gridPoint-1.0)
-                    IF (ABS(eGrid(gridPoint)) .LT. 1e-8) nZero = gridPoint 
                     gauss(gridPoint) = 1/SQRT(tpi_const*fi%juphon%smearingGauss ) *EXP( -eGrid(gridPoint)**2/(2*fi%juphon%smearingGauss))
                 END DO
 
@@ -115,18 +114,63 @@ CONTAINS
                     IF (eigenVals(iMode) .GE. 0.0 ) THEN 
                         
                         ! If omega becomes negative the deltra distribution is never satisfied as IM(eig,eigq) = 0.0 
-                        IF (fi%juphon%i_integration == 1) CALL dos_bin_transport(fi%input%jspins,fi%kpts%wtkpt,eGrid,results%eig(:size(gmat,2),:,:)  &
-                        &                                                      ,resultsq%eig(:nbasfcnq_min,:,:), REAL(gmat(:nbasfcnq_min,:,:,:,iMode)), linewidth, -SQRT(eigenVals(iMode)))
-                        
-                        IF (fi%juphon%i_integration ==2) CALL dos_bin_double(fi%input%jspins,fi%kpts%wtkpt,eGrid,results%eig(:size(gmat,2),:,:)  &
-                        &                                                      ,resultsq%eig(:nbasfcnq_min,:,:), REAL(gmat(:nbasfcnq_min,:,:,:,iMode)), linewidth, results%ef)
-                        
-                        
+                        CALL dos_bin_transport(fi%input%jspins,fi%kpts%wtkpt,eGrid,results%eig(:size(gmat,2),:,:)  &
+                        &                      ,resultsq%eig(:nbasfcnq_min,:,:), REAL(gmat(:nbasfcnq_min,:,:,:,iMode)), linewidth, -SQRT(eigenVals(iMode)))
                         
                         DO ispin = 1 , fi%input%jspins
                             CALL intgz0(gauss*linewidth(:,ispin), eGrid(2)-eGrid(1) , size(gauss) , intOut,.FALSE.)
                             ! factor two for spin deg. is calculated in dos_bin 
-                            ph_linewidth(iMode) =  ph_linewidth(iMode) +  pi_const * SQRT(eigenVals(iMode))/fi%kpts%nkpt*intOut
+                            ph_linewidth(iMode) =  ph_linewidth(iMode) +  pi_const /fi%kpts%nkpt*intOut
+                        END DO 
+                    ELSE
+                        write(*,*) '-------------------------'
+                        write(*,*) 'linewidth: Eigenvalue imaginary --> Phonon linewidth set to zero'
+                        write(*,*) '-------------------------'
+                    END IF 
+                END DO 
+            
+
+            CASE(2)
+
+                ! Cut out all contributions coming from nu-> unoccuppied 
+                DO ispin = 1 , fi%input%jspins
+                    DO nk = 1 , fi%kpts%nkpt
+                        noccbd  = COUNT(results%w_iks(:,nk,ispin)*2.0/fi%input%jspins>1.e-8)
+                        DO nu = 1 , size(gmat,2)
+                            allowed = 1. 
+                            IF (nu .GT. noccbd) allowed = 0.  
+                            gmat(:,nu,nk,ispin,:) = allowed * gmat(:,nu,nk,ispin,:) 
+                        END DO  ! nu 
+                    END DO ! nk 
+                END DO !ispin
+
+                eMin = - 4 * fi%input%tkb
+                eMax =   4 * fi%input%tkb
+                ALLOCATE(linewidth(fi%banddos%ndos_points,fi%input%jspins))  
+                ALLOCATE(eGrid(fi%banddos%ndos_points))  
+                ALLOCATE(ph_linewidth(3*fi%atoms%ntype))
+                ALLOCATE(gauss(fi%banddos%ndos_points))
+                gauss = 0.0 
+                linewidth = 0.0 
+                ph_linewidth = 0.0 
+                eGrid = 0.0
+
+
+                DO gridPoint=1,fi%banddos%ndos_points
+                    eGrid(gridPoint)=emin+(emax-emin)/(fi%banddos%ndos_points-1.0)*(gridPoint-1.0)
+                    IF (ABS(eGrid(gridPoint)) .LT. 1e-8) nZero = gridPoint 
+                END DO
+
+                DO iMode = 1 , 3*fi%atoms%ntype
+                    IF (eigenVals(iMode) .GE. 0.0 ) THEN 
+                        ! Gaussian Smearing is already done in routine, in case of double delta distribution
+                        ! Warning still needs to be tested 
+                        CALL dos_bin_double(fi%input%jspins,fi%kpts%wtkpt,eGrid,results%eig(:size(gmat,2),:,:)  &
+                        &     ,resultsq%eig(:nbasfcnq_min,:,:), REAL(gmat(:nbasfcnq_min,:,:,:,iMode)), fi%juphon%smearingGauss ,linewidth, results%ef)
+
+                        DO ispin = 1 , fi%input%jspins
+                            ! factor two for spin deg. is calculated in dos_bin 
+                            ph_linewidth(iMode) =  ph_linewidth(iMode) +  pi_const * SQRT(eigenVals(iMode))/fi%kpts%nkpt*linewidth(nZero,ispin)
                         END DO 
                     ELSE
                         write(*,*) '-------------------------'
