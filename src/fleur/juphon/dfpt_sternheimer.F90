@@ -55,9 +55,6 @@ CONTAINS
       INTEGER,         OPTIONAL, INTENT(IN)    :: dfpt_eigm_id, dfpt_eigm_id2
       TYPE(t_potden),  OPTIONAL, INTENT(INOUT) :: vTot1m, vTot1mIm
 
-            !changes for efield:
-      real                              :: qvec_ext(3),qvec_int(3),det,inv_bmat(3,3),qvec_norm(3)
-
 #ifdef CPP_MPI
       INTEGER :: ierr
 #endif
@@ -86,24 +83,12 @@ CONTAINS
       CALL rho_loc0%resetPotDen()
       !CAll dummy_gr%copyPotDen(grRho)
       !CAll dummy_gr%resetpotden()
-
+      
       banddosdummy = fi%banddos
       ! Calculate the q-shifted G-vectors and related quantities like the perturbed step function
-      IF  (fi%juPhon%l_efield) THEN
-         qvec_ext = qpts%bk(:,iQ)
-         print*,'qvec_ext',qvec_ext
-         qvec_ext(iDir) = fi%juPhon%qlim
-         print*,'qvec_ext',qvec_ext
-         call inv3(fi%cell%bmat,inv_bmat(:,:),det)
-         qvec_int = matmul(qvec_ext,transpose(inv_bmat))
-         print*,'qvec_int',qvec_int 
-         CALL make_stars(starsq, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, qvec_int, iDtype, iDir,fi%juPhon%l_efield)
-      ELSE
-         CALL make_stars(starsq, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, qpts%bk(:,iQ), iDtype, iDir)
-      END IF
+      CALL make_stars(starsq, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, qpts%bk(:,iQ), iDtype, iDir,fi%juPhon%l_efield)
       starsq%ufft = stars%ufft
-      !print*,"starsq", starsq%gq(:,1)
-      !stop
+
       ! Initialize the density perturbation; denIn1Im is only for the imaginary MT part
       CALL denIn1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN, l_dfpt=.TRUE.)
       CALL denIn1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN, l_dfpt=.FALSE.)
@@ -140,7 +125,7 @@ CONTAINS
       iter = 0
       iterm = 0
       l_cont = (iter < fi%input%itmax)
-      
+      !stop
       IF (fmpi%irank==0.AND.l_exist) CALL readDensity(starsq, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
                                                       fi%input, fi%sym, archiveType, CDN_INPUT_DEN_const, 0, &
                                                       results%ef, results%last_distance, l_dummy, denIn1,  &
@@ -163,18 +148,15 @@ CONTAINS
 
       CALL vC1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
       CALL vC1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
-      !stop
-      IF (fi%juPhon%l_efield) then
-         bqpt = qvec_int
-      ELSE
-         bqpt = qpts%bk(:, iQ)
-      END IF 
+
+      bqpt = qpts%bk(:, iQ)
+
       IF (l_minusq) THEN
          CALL vTot1m%init(starsmq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
          CALL vTot1mIm%init(starsmq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
          bmqpt = -qpts%bk(:, iQ)
       END IF
-      !stop
+
       l_lastIter = .FALSE.
       scfloop: DO WHILE (l_cont)
          IF (onedone) iter = iter + 1
@@ -193,7 +175,6 @@ CONTAINS
             CALL denIn1m%distribute(fmpi%mpi_comm)
             CALL denIn1mIm%distribute(fmpi%mpi_comm)
          END IF
-         !stop
          ! Generate the potential perturbation:
          ! Vext1 for the starting perturbation
          ! Veff1 every other time

@@ -110,14 +110,9 @@ CONTAINS
       REAL,    ALLOCATABLE :: e2_vm(:,:,:)
 
       !For e-field:
-      COMPLEX            :: diel_tensor(3,3) !sdall i put this in an if statement?
-      !REAL, ALLOCATABLE    :: diel_tensor_occ1(:,:)!check if this makes sense
-      !REAL, ALLOCATABLE    :: we1_data(:,:,:,:),eig1_data(:,:,:,:)
-      COMPLEX :: dielten_iden(3,3)   
-      INTEGER              :: i_iden, row
-      !INTEGER              :: no_iDtype
-      !changes for efield:
+      COMPLEX, ALLOCATABLE            :: diel_tensor(:,:) !sdall i put this in an if statement?
       real                  :: qvec_ext(3),qvec_int(3),det,inv_bmat(3,3),qvec_norm(3)
+      TYPE(t_kpts)         :: qintpts
 
       INTEGER :: ngdp, iSpin, iQ, iDir, iDtype, nspins, zlim, iVac, lh, iDir2, sym_count
       INTEGER :: iStar, xInd, yInd, zInd, q_eig_id, ikpt, ierr, qm_eig_id, iArray
@@ -422,28 +417,28 @@ CONTAINS
             ALLOCATE(denIm_elph(3*fi_nosym%atoms%ntype))
          END IF 
          IF (fi%juPhon%l_efield) THEN
-            !ALLOCATE(diel_tensor(3,3))
+            ALLOCATE(diel_tensor(3,3))
             diel_tensor = CMPLX(0,0)
-            !ALLOCATE(dielten_iden(3,3))
-            dielten_iden = CMPLX(0,0)
-            DO i_iden = 1,3
-               print*,i_iden
-               dielten_iden(i_iden,i_iden) = CMPLX(1,0)
-            END DO
             IF (fmpi%irank==0) WRITE(*,*) "Scf calculation for electric field perturbation"
             DO iDir = 1,3 !for all cartesian directions
                !Define "qlim"-vector in internal coordinates
+               dfpt_tag = ''
+               WRITE(dfpt_tag,'(a1,i0,a2,i0)') 'q', 1, '_j', iDir
                qvec_ext(:) = 0.0
                qvec_ext(iDir) = fi%juPhon%qlim
                call inv3(fi%cell%bmat,inv_bmat(:,:),det)
                qvec_int = matmul(qvec_ext,transpose(inv_bmat))
-               
                kqpts = fi%kpts
                ! Modify this from kpts only in DFPT case.
                DO ikpt = 1, fi%kpts%nkpt
                   kqpts%bk(:, ikpt) = kqpts%bk(:, ikpt) + qvec_int
                END DO
-
+               !change qpts_loc to qvec_int
+               qintpts = qpts
+               DEALLOCATE(qintpts%bk)
+               ALLOCATE(qintpts%bk(3,1))
+               qintpts%bk(:,1) = qvec_int
+         
                CALL timestart("Eigenstuff at k+q")
                ! Get the eigenstuff at k+q
                CALL q_results%reset_results(fi%input)
@@ -480,30 +475,20 @@ CONTAINS
                IF (fmpi%irank==0) WRITE(*,*) '-------------------------'
 
                CALL timestart("Sternheimer")
-               CALL dfpt_sternheimer(fi_nosym, xcpot_nosym, sphhar_nosym, stars_nosym, starsq, nococonv_nosym, qpts_loc, fmpi_nosym, results_nosym, q_results, enpara_nosym, hybdat_nosym, &
+               CALL dfpt_sternheimer(fi_nosym, xcpot_nosym, sphhar_nosym, stars_nosym, starsq, nococonv_nosym, qintpts, fmpi_nosym, results_nosym, q_results, enpara_nosym, hybdat_nosym, &
                                     rho_nosym, vTot_nosym, grRho3(iDir), grVtot3(iDir), grVext3(iDir), 1, 1, iDir, &
                                     dfpt_tag, eig_id, l_real, results1, dfpt_eig_id, dfpt_eig_id2, q_eig_id, &
                                     denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, MERGE(sigma_ext,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir==3), &
                                     MERGE(sigma_coul,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir==3))
                CALL timestop("Sternheimer")
                IF (fmpi%irank==0) WRITE(*,*) '-------------------------'   
-               CALL dfpt_dielecten_row_HF(fi_nosym,stars_nosym,starsq,sphhar_nosym,fmpi_nosym,denIn1,denIn1Im,results_nosym, results1,3 *(iDtype-1)+iDir,diel_tensor(iDir,:),iDtype,iDir)
+               CALL dfpt_dielecten_HF_int(fi_nosym,stars_nosym,starsq,sphhar_nosym,fmpi_nosym,denIn1,denIn1Im,results_nosym, results1,diel_tensor(iDir,:))
             END DO
             CALL timestart("diel_tensor")
             IF (fmpi%irank==0) THEN
-               CALL dfpt_dielecten_row_HF(fi_nosym,stars_nosym,starsq,sphhar_nosym,fmpi_nosym,denIn1,denIn1Im,results_nosym, results1,3 *(iDtype-1)+iDir,diel_tensor(iDir,:),iDtype,iDir)
-               !CALL dfpt_dielecten_occ1(fi,fmpi,results1,we1_data,eig1_data,diel_tensor_occ1,3 *(iDtype-1)+iDir)
-               !call save_npy("integralpart.npy",diel_tensor(:,:))
-               !call save_npy("diel_tensor_occ1.npy",diel_tensor_occ1(:,:))
-               !diel_tensor(:,:) = diel_tensor(:,:) + diel_tensor_occ1(:,:)
-               diel_tensor(:,:) = dielten_iden(:,:) - (fpi_const/fi%cell%omtil)*diel_tensor(:,:)
-               call save_npy("diel_tensor.npy",diel_tensor(:,:))
-               !print*, 'diel_tensor(:,:)',diel_tensor(:,:)
-            END IF
-            call timestop("diel_tensor")
-            IF (fmpi%irank==0) WRITE(*,*) "Scf calculation for electric field perturbation finished"
-            print*,"STOP"
-            STOP
+               WRITE(*,*) "Scf calculation for electric field perturbation finished"
+               CALL dfpt_dielecten_final(fi_nosym,diel_tensor(:,:))
+            END IF 
          ELSE IF (fi%juPhon%l_phonon) THEN
             IF (fmpi%irank==0) WRITE(*,*) "Scf calculation for phonon perturbation"
             DO iQ = fi%juPhon%startq, MERGE(fi%juPhon%stopq,SIZE(q_list),fi%juPhon%stopq/=0)

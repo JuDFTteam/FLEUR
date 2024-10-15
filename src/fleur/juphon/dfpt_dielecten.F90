@@ -9,7 +9,7 @@ module m_dfpt_dielecten
 
     contains
 
-        subroutine dfpt_dielecten_row_HF(fi,stars,starsq,sphhar,fmpi,denIn1,denIn1Im,results,results1,no_row,dieltensor_row,iDtype,iDir)
+        subroutine dfpt_dielecten_HF_int(fi,stars,starsq,sphhar,fmpi,denIn1,denIn1Im,results,results1,dieltensor_row)
 
 
             
@@ -20,8 +20,6 @@ module m_dfpt_dielecten
             type(t_results), intent(in)        :: results, results1
             TYPE(t_mpi),        intent(in)     :: fmpi
             complex, intent(inout)             :: dieltensor_row(:)
-            integer, intent(in)                :: no_row
-            integer, intent(in)                :: iDtype,iDir
 
 
 
@@ -69,6 +67,35 @@ module m_dfpt_dielecten
 
             dieltensor_row(:)= dieltensor_HF(:)
             
-        end subroutine dfpt_dielecten_row_HF
+        end subroutine dfpt_dielecten_HF_int
+
+        subroutine dfpt_dielecten_final(fi, dielecten)
+
+            type(t_fleurinput), intent(in)    :: fi
+            complex, intent(inout)   :: dielecten(:,:)
+            integer                  :: iDir, j 
+            complex                  :: dielten_iden(3,3) 
+
+            dielten_iden(:,:) =0
+            DO j = 1,3
+                dielten_iden(j,j) = CMPLX(1,0)
+             END DO
+            dielecten(:,:) = dielten_iden(:,:) - (fpi_const/fi%cell%omtil)*dielecten(:,:)
+            open( 110, file="diel_tensor", status='replace', action='write', form='formatted')
+            write(*,*) '-------------------------' 
+            write(*,*) "Dielectric tensor" 
+            do iDir = 1,3
+               do j = 1,2
+                  write(110,'(2es16.8)', ADVANCE='NO') dielecten(iDir,j) 
+                  write(110, '(A)', ADVANCE='NO') ' ' 
+                  write(*,'(2es16.8)', ADVANCE='NO') dielecten(iDir,j)
+                  write(*, '(A)', ADVANCE='NO') ' ' 
+               end do
+               write(110,'(2es16.8)')dielecten(iDir,3)
+               write(*,'(2es16.8)')dielecten(iDir,3)
+            end do
+            close(110)
+            write(*,*) '-------------------------' 
+        end subroutine dfpt_dielecten_final
 
 end module 
