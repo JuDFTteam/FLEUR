@@ -102,7 +102,7 @@ CONTAINS
         CALL rho_loc%copyPotDen(rho)
         IF (fmpi%irank==0) WRITE(*,*) 'Generating Potentials for Electron-Phonon Matrix Elements'
         
-        DO iDtype=1,fi%atoms%ntype
+        DO iDtype=1,fi%atoms%nat
             DO iDir=1,3
                 CALL denIn1_loc%copyPotDen(denIn1(iDir+3*(iDtype-1)))
                 CALL denIn1Im_loc%copyPotDen(denIn1Im(iDir+3*(iDtype-1)))
@@ -132,14 +132,14 @@ CONTAINS
                 CALL timestop("Generate electron-phonon matrix element")
 
                 IF (.NOT. ALLOCATED(gmat)) THEN
-                    ALLOCATE(gmat(size(gmatCart,1),size(gmatCart,2),size(gmatCart,3),size(gmatCart,4),3*fi%atoms%ntype))
+                    ALLOCATE(gmat(size(gmatCart,1),size(gmatCart,2),size(gmatCart,3),size(gmatCart,4),3*fi%atoms%nat))
                     gmat=CMPLX(0.0,0.0)
                 END IF 
                 !TODO Read in the eigenvecotrs from Dynmats, here we can take them from memory
                 IF (fmpi%irank==0) THEN 
                     ! Numerics saves the day 
                     ! Think about Gamma if Frequencies are approximately zero
-                    DO iMode = 1 , 3*fi%atoms%ntype
+                    DO iMode = 1 , 3*fi%atoms%nat
                         IF (eigenVals(iMode) .LT. 0.0 ) THEN 
                             gmat(:,:,:,:,iMode) = gmat(:,:,:,:,iMode) + eigenVecs(iPerturb,iMode)* -1*ImagUnit / SQRT(2* atomic_mass_array(fi%atoms%nz(CEILING(iPerturb/3.0))) * SQRT(ABS(eigenVals(iMode)))) * gmatCart(:,:,:,:) 
                         ELSE
@@ -157,11 +157,11 @@ CONTAINS
 
 
         ! Construct the Superconduction temperature 
-
+#ifdef CPP_MPI
+        CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
+#endif
         !Set this code block behind a logical in the future 
         IF (fmpi%irank==0) THEN
-
-
             CALL dfpt_ph_linewidth(fi,qpts,results,resultsq,results1,eigenVals,gmat,iQ,nbasfcnq_min, ph_linewidth) 
         END IF 
 
