@@ -162,6 +162,7 @@ CONTAINS
       CALL mpi_bc(this%qvec, rank, mpi_comm)
       CALL mpi_bc(this%l_phonon, rank, mpi_comm)
       CALL mpi_bc(this%l_efield, rank, mpi_comm)
+      CALL mpi_bc(this%qlim,rank,mpi_comm)
       CALL mpi_bc(this%l_cheatsym, rank, mpi_comm)
       CALL mpi_bc(this%l_procc, rank, mpi_comm)
       CALL mpi_bc(this%l_prodyn, rank, mpi_comm)
