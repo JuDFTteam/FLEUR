@@ -17,7 +17,7 @@ MODULE m_dfpt_elph_linewidth
     IMPLICIT NONE
 
 CONTAINS
-    SUBROUTINE dfpt_ph_linewidth(fi,qpts,results,resultsq,results1,eigenVals,gmat,iQ,nbasfcnq_min,ph_linewidth)
+    SUBROUTINE dfpt_ph_linewidth(fi,qpts,results,resultsq,results1,eigenVals,gmat,iQ,nbasfcnq_min,nuWindow,ph_linewidth)
         ! This subroutine calculates the phonon linewdith
         ! Currently implemented is the linewidth calcualtion with smearing 
 
@@ -34,9 +34,10 @@ CONTAINS
         COMPLEX,ALLOCATABLE,INTENT(INOUT) :: gmat(:,:,:,:,:)
         INTEGER, INTENT(IN) :: iQ
         INTEGER, INTENT(IN) :: nbasfcnq_min
+        INTEGER, INTENT(IN) :: nuWindow(2,2)
         REAL, ALLOCATABLE, INTENT(OUT)    :: ph_linewidth(:)
 
-        INTEGER :: iNupr,nu, ispin , gridPoint , nk , nZero , iMode , noccbd
+        INTEGER :: iNupr,nu, ispin , gridPoint , nk , nZero , iMode , noccbd, ind, indPr
         REAL :: emin, emax , x ,xq , allowed
         REAL, ALLOCATABLE :: eGrid(:),linewidth(:,:)
         COMPLEX,ALLOCATABLE:: kInt_gmat(:,:,:,:) !(nu',nu,jsp,normal_mode)
@@ -65,34 +66,36 @@ CONTAINS
             CASE(1)
                 
                 ! Cut out all contributions coming from nu-> unoccuppied 
-                DO ispin = 1 , fi%input%jspins
-                    DO nk = 1 , fi%kpts%nkpt
-                        noccbd  = COUNT(results%w_iks(:,nk,ispin)*2.0/fi%input%jspins>1.e-8)
-                        DO nu = 1 , size(gmat,2)
-                            allowed = 1. 
-                            IF (nu .GT. noccbd) allowed = 0.  
-                            gmat(:,nu,nk,ispin,:) = allowed * gmat(:,nu,nk,ispin,:) 
-                        END DO  ! nu 
-                    END DO ! nk 
-                END DO !ispin 
+                !DO ispin = 1 , fi%input%jspins
+                !    DO nk = 1 , fi%kpts%nkpt
+                !        noccbd  = COUNT(results%w_iks(:,nk,ispin)*2.0/fi%input%jspins>1.e-8)
+                !        DO nu = 1 , size(gmat,2)
+                !            allowed = 1. 
+                !            IF (nu .GT. noccbd) allowed = 0.  
+                !            gmat(:,nu,nk,ispin,:) = allowed * gmat(:,nu,nk,ispin,:) 
+                !        END DO  ! nu 
+                !    END DO ! nk 
+                !END DO !ispin 
 
                 ! mutliply with fermi function 
                 IF (fi%juphon%i_integration == 1 ) THEN 
                     DO ispin = 1 , fi%input%jspins
                         DO nk = 1 , fi%kpts%nkpt
-                            noccbd  = COUNT(results%w_iks(:,nk,ispin)*2.0/fi%input%jspins>1.e-8)
-                            DO nu = 1 , noccbd  
+                            !noccbd  = COUNT(results%w_iks(:,nk,ispin)*2.0/fi%input%jspins>1.e-8)
+                            DO nu = nuWindow(1,1) , nuWindow(1,2)  
+                                ind =  nu - nuWindow(1,1) + 1 
                                 x = (results%eig(nu,nk,ispin)-results%ef)/fi%input%tkb
-                                DO iNupr = 1 , size(gmat,1)
+                                DO iNupr = nuWindow(2,1) , nuwindow(2,2)
+                                    indPr = iNupr- nuWindow(2,1) + 1 
                                     xq = (resultsq%eig(iNupr,nk,ispin)-results%ef)/fi%input%tkb
-                                    gmat(iNupr,nu,nk,ispin,:) = gmat(iNupr,nu,nk,ispin,:)*(sfermi(x) - sfermi(xq))
+                                    gmat(indPr,ind,nk,ispin,:) = gmat(indPr,ind,nk,ispin,:)*(sfermi(x) - sfermi(xq))
                                 END DO ! iNupr 
                             END DO  ! nu 
                         END DO ! nk 
                     END DO 
                 END IF 
 
-
+ 
                 eMin = - 4 * fi%input%tkb
                 eMax =   4 * fi%input%tkb
                 ALLOCATE(linewidth(fi%banddos%ndos_points,fi%input%jspins))  
@@ -114,13 +117,13 @@ CONTAINS
                     IF (eigenVals(iMode) .GE. 0.0 ) THEN 
                         
                         ! If omega becomes negative the deltra distribution is never satisfied as IM(eig,eigq) = 0.0 
-                        CALL dos_bin_transport(fi%input%jspins,fi%kpts%wtkpt,eGrid,results%eig(:size(gmat,2),:,:)  &
-                        &                      ,resultsq%eig(:nbasfcnq_min,:,:), REAL(gmat(:nbasfcnq_min,:,:,:,iMode)), linewidth, -SQRT(eigenVals(iMode)))
+                        CALL dos_bin_transport(fi%input%jspins,fi%kpts%wtkpt,eGrid,results%eig(nuWindow(1,1):nuWindow(1,2),:,:)  &
+                        &                      ,resultsq%eig(nuWindow(2,1):nuWindow(2,2),:,:), REAL(gmat(:,:,:,:,iMode)), linewidth, -SQRT(eigenVals(iMode)))
                         
                         DO ispin = 1 , fi%input%jspins
                             CALL intgz0(gauss*linewidth(:,ispin), eGrid(2)-eGrid(1) , size(gauss) , intOut,.FALSE.)
                             ! factor two for spin deg. is calculated in dos_bin 
-                            ph_linewidth(iMode) =  ph_linewidth(iMode) +  pi_const /fi%kpts%nkpt*intOut
+                            ph_linewidth(iMode) =  ph_linewidth(iMode) +  tpi_const /fi%kpts%nkpt*intOut
                         END DO 
                     ELSE
                         write(*,*) '-------------------------'
@@ -170,7 +173,7 @@ CONTAINS
 
                         DO ispin = 1 , fi%input%jspins
                             ! factor two for spin deg. is calculated in dos_bin 
-                            ph_linewidth(iMode) =  ph_linewidth(iMode) +  pi_const * SQRT(eigenVals(iMode))/fi%kpts%nkpt*linewidth(nZero,ispin)
+                            ph_linewidth(iMode) =  ph_linewidth(iMode) +  tpi_const * SQRT(eigenVals(iMode))/fi%kpts%nkpt*linewidth(nZero,ispin)
                         END DO 
                     ELSE
                         write(*,*) '-------------------------'
