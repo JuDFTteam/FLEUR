@@ -17,7 +17,7 @@ MODULE m_dfpt_elph_linewidth
     IMPLICIT NONE
 
 CONTAINS
-    SUBROUTINE dfpt_ph_linewidth(fi,qpts,results,resultsq,results1,eigenVals,gmat,iQ,nbasfcnq_min,nuWindow,ph_linewidth)
+    SUBROUTINE dfpt_ph_linewidth(fi,fmpi,qpts,results,resultsq,results1,eigenVals,gmat,iQ,nbasfcnq_min,nuWindow,ph_linewidth)
         ! This subroutine calculates the phonon linewdith
         ! Currently implemented is the linewidth calcualtion with smearing 
 
@@ -28,6 +28,7 @@ CONTAINS
         USE m_intgr, ONLY : intgz0
 
         TYPE(t_fleurinput), INTENT(IN) :: fi 
+        TYPE(t_mpi), INTENT(IN) :: fmpi
         TYPE(t_kpts), INTENT(IN) :: qpts
         TYPE(t_results), INTENT(IN) :: results,resultsq, results1
         REAL,ALLOCATABLE,INTENT(IN) :: eigenVals(:)
@@ -37,13 +38,16 @@ CONTAINS
         INTEGER, INTENT(IN) :: nuWindow(2,2)
         REAL, ALLOCATABLE, INTENT(OUT)    :: ph_linewidth(:)
 
-        INTEGER :: iNupr,nu, ispin , gridPoint , nk , nZero , iMode , noccbd, ind, indPr
+        INTEGER :: iNupr,nu, ispin , gridPoint , nk , nk_i ,  nZero , iMode , noccbd, ind, indPr
         REAL :: emin, emax , x ,xq , allowed
         REAL, ALLOCATABLE :: eGrid(:),linewidth(:,:)
         COMPLEX,ALLOCATABLE:: kInt_gmat(:,:,:,:) !(nu',nu,jsp,normal_mode)
 
         REAL , ALLOCATABLE :: gauss(:) 
         REAL :: intOut
+#ifdef CPP_MPI
+        INTEGER :: ierr
+#endif 
 
 
         gmat(:,:,:,:,:) = ABS(gmat(:,:,:,:,:))**2 
@@ -80,7 +84,8 @@ CONTAINS
                 ! mutliply with fermi function 
                 IF (fi%juphon%i_integration == 1 ) THEN 
                     DO ispin = 1 , fi%input%jspins
-                        DO nk = 1 , fi%kpts%nkpt
+                        DO nk_i = 1 , size(fmpi%k_list)
+                            nk = fmpi%k_list(nk_i)
                             !noccbd  = COUNT(results%w_iks(:,nk,ispin)*2.0/fi%input%jspins>1.e-8)
                             DO nu = nuWindow(1,1) , nuWindow(1,2)  
                                 ind =  nu - nuWindow(1,1) + 1 
@@ -88,7 +93,7 @@ CONTAINS
                                 DO iNupr = nuWindow(2,1) , nuwindow(2,2)
                                     indPr = iNupr- nuWindow(2,1) + 1 
                                     xq = (resultsq%eig(iNupr,nk,ispin)-results%ef)/fi%input%tkb
-                                    gmat(indPr,ind,nk,ispin,:) = gmat(indPr,ind,nk,ispin,:)*(sfermi(x) - sfermi(xq))
+                                    gmat(indPr,ind,nk_i,ispin,:) = gmat(indPr,ind,nk_i,ispin,:)*(sfermi(x) - sfermi(xq))
                                 END DO ! iNupr 
                             END DO  ! nu 
                         END DO ! nk 
@@ -117,18 +122,27 @@ CONTAINS
                     IF (eigenVals(iMode) .GE. 0.0 ) THEN 
                         
                         ! If omega becomes negative the deltra distribution is never satisfied as IM(eig,eigq) = 0.0 
-                        CALL dos_bin_transport(fi%input%jspins,fi%kpts%wtkpt,eGrid,results%eig(nuWindow(1,1):nuWindow(1,2),:,:)  &
+                        CALL dos_bin_transport(fmpi,fi%input%jspins,fi%kpts%wtkpt,eGrid,results%eig(nuWindow(1,1):nuWindow(1,2),:,:)  &
                         &                      ,resultsq%eig(nuWindow(2,1):nuWindow(2,2),:,:), REAL(gmat(:,:,:,:,iMode)), linewidth, -SQRT(eigenVals(iMode)))
-                        
-                        DO ispin = 1 , fi%input%jspins
-                            CALL intgz0(gauss*linewidth(:,ispin), eGrid(2)-eGrid(1) , size(gauss) , intOut,.FALSE.)
-                            ! factor two for spin deg. is calculated in dos_bin 
-                            ph_linewidth(iMode) =  ph_linewidth(iMode) +  tpi_const /fi%kpts%nkpt*intOut
-                        END DO 
+
+
+#ifdef CPP_MPI
+                        CALL MPI_ALLREDUCE(MPI_IN_PLACE,linewidth,size(linewidth),MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)
+                        CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
+#endif 
+                        IF (fmpi%irank == 0 ) THEN 
+                            DO ispin = 1 , fi%input%jspins
+                                CALL intgz0(gauss*linewidth(:,ispin), eGrid(2)-eGrid(1) , size(gauss) , intOut,.FALSE.)
+                                ! factor two for spin deg. is calculated in dos_bin 
+                                ph_linewidth(iMode) =  ph_linewidth(iMode) +  tpi_const /fi%kpts%nkpt*intOut
+                            END DO 
+                        END IF 
                     ELSE
-                        write(*,*) '-------------------------'
-                        write(*,*) 'linewidth: Eigenvalue imaginary --> Phonon linewidth set to zero'
-                        write(*,*) '-------------------------'
+                        IF (fmpi%irank ==0 ) THEN 
+                            write(*,*) '-------------------------'
+                            write(*,*) 'linewidth: Eigenvalue imaginary --> Phonon linewidth set to zero'
+                            write(*,*) '-------------------------'
+                        END IF 
                     END IF 
                 END DO 
             
@@ -208,23 +222,25 @@ CONTAINS
 
         END SELECT
 
-        IF ( iQ .EQ. fi%juPhon%startq ) THEN 
-            open( 110, file="linewidth", status='replace', action='write', form='formatted')
-            write(110,*) "q-Point", qpts%bk(:,iQ) 
-            write(*,*) '-------------------------'
-            write(*,*) "Linewidth q-Point", qpts%bk(:,iQ) 
-            write(110,*) ph_linewidth(:) 
-            write(*,*) ph_linewidth(:) 
-            write(*,*) '-------------------------'
-        
-        ELSE
-            open( 110, file="linewidth", status="old", position="append", action="write")
-            write(110,*) "q-Point", qpts%bk(:,iQ) 
-            write(*,*) '-------------------------'
-            write(*,*) "Linewidth q-Point", qpts%bk(:,iQ) 
-            write(110,*) ph_linewidth(:) 
-            write(*,*) ph_linewidth(:) 
-            write(*,*) '-------------------------'
+        IF (fmpi%irank == 0 ) THEN 
+            IF ( iQ .EQ. fi%juPhon%startq ) THEN 
+                open( 110, file="linewidth", status='replace', action='write', form='formatted')
+                write(110,*) "q-Point", qpts%bk(:,iQ) 
+                write(*,*) '-------------------------'
+                write(*,*) "Linewidth q-Point", qpts%bk(:,iQ) 
+                write(110,*) ph_linewidth(:) 
+                write(*,*) ph_linewidth(:) 
+                write(*,*) '-------------------------'
+            
+            ELSE
+                open( 110, file="linewidth", status="old", position="append", action="write")
+                write(110,*) "q-Point", qpts%bk(:,iQ) 
+                write(*,*) '-------------------------'
+                write(*,*) "Linewidth q-Point", qpts%bk(:,iQ) 
+                write(110,*) ph_linewidth(:) 
+                write(*,*) ph_linewidth(:) 
+                write(*,*) '-------------------------'
+            END IF 
         END IF 
 
                     

@@ -56,8 +56,8 @@ CONTAINS
         INTEGER,INTENT(IN)         :: iQ,eig_id,q_eig_id
         LOGICAL,INTENT(IN)         :: l_real
         TYPE(t_potden), ALLOCATABLE,  INTENT(IN)     :: denIn1(:) , denIn1Im(:)
-        COMPLEX, ALLOCATABLE, INTENT(IN) :: eigenVecs(:,:) ! Only allocated on irank 0
-        REAL,ALLOCATABLE, INTENT(IN) :: eigenVals(:) ! Only allocated on irank 0
+        COMPLEX, ALLOCATABLE, INTENT(INOUT) :: eigenVecs(:,:) ! Only allocated on irank 0
+        REAL,ALLOCATABLE, INTENT(INOUT) :: eigenVals(:) ! Only allocated on irank 0
 
         
         TYPE(t_potden) :: vTot1,vTot1Im,denIn1_loc, denIn1Im_loc, rho_loc
@@ -98,6 +98,15 @@ CONTAINS
         ! perturbed matrices.
         ! In this order: V1_pw_pw, T1_pw, S1_pw, V1_MT, ikGH0_MT, ikGS0_MT
         killcont = [1,1,1,1,1,1]
+        
+        !Up to now only irank == 0 knows the eigenvecs plus eigenvals 
+        IF (.NOT. ALLOCATED(eigenVecs)) ALLOCATE(eigenVecs(3*fi%atoms%nat,3*fi%atoms%nat))
+        IF (.NOT. ALLOCATED(eigenVals)) ALLOCATE(eigenVals(3*fi%atoms%nat))
+
+#ifdef CPP_MPI
+        CALL MPI_BCAST(eigenVecs, size(eigenVecs), MPI_DOUBLE_COMPLEX, 0, fmpi%mpi_comm, ierr)
+        CALL MPI_BCAST(eigenVals, size(eigenVals), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
+#endif 
 
         CALL rho_loc%copyPotDen(rho)
         IF (fmpi%irank==0) WRITE(*,*) 'Generating Potentials for Electron-Phonon Matrix Elements'
@@ -141,21 +150,24 @@ CONTAINS
                     gmat=CMPLX(0.0,0.0)
                 END IF 
                 !TODO Read in the eigenvecotrs from Dynmats, here we can take them from memory
-                IF (fmpi%irank==0) THEN 
+                !IF (fmpi%irank==0) THEN 
                     ! Numerics saves the day 
                     ! Think about Gamma if Frequencies are approximately zero
-                    DO iMode = 1 , 3*fi%atoms%nat
-                        IF (eigenVals(iMode) .LT. 0.0 ) THEN 
-                            gmat(:,:,:,:,iMode) = gmat(:,:,:,:,iMode) + eigenVecs(iPerturb,iMode)* -1*ImagUnit / SQRT(2* atomic_mass_array(fi%atoms%nz(CEILING(iPerturb/3.0))) * SQRT(ABS(eigenVals(iMode)))) * gmatCart(:,:,:,:) 
-                        ELSE
-                            gmat(:,:,:,:,iMode) = gmat(:,:,:,:,iMode) + eigenVecs(iPerturb,iMode) / SQRT(2* atomic_mass_array(fi%atoms%nz(CEILING(iPerturb/3.0))) * SQRT(eigenVals(iMode))) * gmatCart(:,:,:,:) 
-                        END IF 
-                    END DO  
-                END IF 
+                DO iMode = 1 , 3*fi%atoms%nat
+                    IF (eigenVals(iMode) .LT. 0.0 ) THEN 
+                        gmat(:,:,:,:,iMode) = gmat(:,:,:,:,iMode) + eigenVecs(iPerturb,iMode)* (-1*ImagUnit) / SQRT(2* atomic_mass_array(fi%atoms%nz(CEILING(iPerturb/3.0))) * SQRT(ABS(eigenVals(iMode)))) * gmatCart(:,:,:,:) 
+                    ELSE
+                        gmat(:,:,:,:,iMode) = gmat(:,:,:,:,iMode) + eigenVecs(iPerturb,iMode) / SQRT(2* atomic_mass_array(fi%atoms%nz(CEILING(iPerturb/3.0))) * SQRT(eigenVals(iMode))) * gmatCart(:,:,:,:) 
+                    END IF 
+                END DO  
+                !END IF 
+
                 
                 CALL starsq%reset_stars()
-                CALL denIn1_loc%resetpotden()
-                CALL denIn1Im_loc%resetpotden()
+                CALL denIn1_loc%reset_dfpt()
+                CALL denIn1Im_loc%reset_dfpt()
+                CALL vTot1%reset_dfpt()
+                CALL vTot1Im%reset_dfpt()
                 DEALLOCATE(gmatCart)
             END DO !iDir 
         END DO !iDtype 
@@ -166,9 +178,8 @@ CONTAINS
         CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
 #endif
         !Set this code block behind a logical in the future 
-        IF (fmpi%irank==0) THEN
-            CALL dfpt_ph_linewidth(fi,qpts,results,resultsq,results1,eigenVals,gmat,iQ,nbasfcnq_min,nuWindow, ph_linewidth) 
-        END IF 
+        CALL dfpt_ph_linewidth(fi,fmpi,qpts,results,resultsq,results1,eigenVals,gmat,iQ,nbasfcnq_min,nuWindow, ph_linewidth) 
+         
 
 #ifdef CPP_MPI
         CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
@@ -254,7 +265,7 @@ CONTAINS
         CALL vx%copyPotDen(vTot)
         ALLOCATE(vx%pw_w, mold=vx%pw)
         vx%pw_w = vTot%pw_w
-        ALLOCATE(gmatBuffer(nuWindow(2,2)-nuWindow(2,1)+1,nuWindow(1,2)-nuWindow(1,1)+1,fi%kpts%nkpt,fi%input%jspins))
+        ALLOCATE(gmatBuffer(nuWindow(2,2)-nuWindow(2,1)+1,nuWindow(1,2)-nuWindow(1,1)+1,size(fmpi%k_list),fi%input%jspins))
         gmatBuffer=0.0 
 
         ! Get the (lm) matrix elements for V1 and H0
@@ -376,7 +387,7 @@ CONTAINS
 
                 gmat%data_c(:nbasfcnq,:noccbd_max) = gmatH(:nbasfcnq,:noccbd_max) + gmatS(:nbasfcnq,:noccbd_max)
 
-                gmatBuffer(:,:,nk,jsp) = gmat%data_c(nuWindow(2,1):nuWindow(2,2), nuWindow(1,1):nuWindow(1,2))
+                gmatBuffer(:,:,nk_i,jsp) = gmat%data_c(nuWindow(2,1):nuWindow(2,2), nuWindow(1,1):nuWindow(1,2))
 
                 CALL timestop("Matrix multiplication")
                 IF (ALLOCATED(ev_list)) DEALLOCATE(ev_list)
@@ -403,10 +414,10 @@ CONTAINS
             END DO !nk_i
         END DO !jsp
 
-#ifdef CPP_MPI
-        CALL MPI_ALLREDUCE(MPI_IN_PLACE,gmatBuffer,size(gmatBuffer),MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
-        CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
-#endif
+!#ifdef CPP_MPI
+!        CALL MPI_ALLREDUCE(MPI_IN_PLACE,gmatBuffer,size(gmatBuffer),MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
+!        CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
+!#endif
 
     END SUBROUTINE matrix_element
 
@@ -515,6 +526,13 @@ CONTAINS
 
             write(2200,*) "final nu window", nuWindow(1,:)
             write(2200,*) "final iNupr window", nuWindow(2,:)
+
+             ! This is a first thing --> revert when talked with gustav 
+            !nuWindow(:,1) = MIN(nuWindow(1,1),nuWindow(2,1))
+            !nuWindow(:,2) = MAX(nuWindow(1,2),nuWindow(2,2))
+
+            write(2200,*) "minval nu window", nuWindow(1,:)
+            write(2200,*) "maxval iNupr window", nuWindow(2,:)
         END IF 
 
 

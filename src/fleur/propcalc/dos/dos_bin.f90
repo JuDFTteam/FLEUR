@@ -35,13 +35,16 @@ CONTAINS
       END DO
    END SUBROUTINE dos_bin
 
-   SUBROUTINE dos_bin_transport(jspins,wtkpt,egrid,eig,eigq,matrix_element,g,energyShift)
+   SUBROUTINE dos_bin_transport(fmpi,jspins,wtkpt,egrid,eig,eigq,matrix_element,g,energyShift)
       !! This subroutine generates the idos,
       !! Almost identical to upper subroutine
       !! However, we have have e1 and e2 
       !! Evaluation of delta-distribution is $\delta(\epsilon_{\nu , k }  - shift - \epsilon_{\nu' , k+q })$
+      USE m_types_mpi
+
       IMPLICIT NONE 
 
+      TYPE(t_mpi),INTENT(IN) :: fmpi
       INTEGER, INTENT(IN)  :: jspins
       REAL,    INTENT(IN)  :: wtkpt(:),egrid(:)
       REAL, INTENT(IN)     :: eig(:,:,:) , eigq(:,:,:) , matrix_element(:,:,:,:) !(nu',nu,kpts,jspin)
@@ -51,7 +54,7 @@ CONTAINS
 
 
       REAL :: de, wk , emin, shift  , degen
-      INTEGER :: jsp, nk , nu , iNupr , i 
+      INTEGER :: jsp, nk , nk_i , nu , iNupr , i 
       !LOGICAL :: l_deg
 
 
@@ -68,14 +71,15 @@ CONTAINS
       IF (PRESENT(energyShift)) shift=energyShift
       emin = MINVAL(egrid)
       DO jsp = 1, SIZE(matrix_element,4)
-         DO nk = 1 , size(matrix_element,3)
+         DO nk_i = 1 , size(matrix_element,3)
+            nk = fmpi%k_list(nk_i)
             wk = wtkpt(nk) / de 
                DO nu = 1 , SIZE(matrix_element,2)
                   DO iNupr = 1 , size(matrix_element,1)
                      ! make sure if we hit emin we are at the first bin
                      i = NINT((eig(nu,nk,jsp) -eigq(iNupr,nk,jsp) -shift - emin)/de) + 1
                      IF ( (i.LE.size(g,1)) .AND. (i.GE.1) ) THEN 
-                        g(i,jsp) = g(i,jsp) + wk*matrix_element(iNupr,nu,nk,jsp)* 2.0/jspins
+                        g(i,jsp) = g(i,jsp) + wk*matrix_element(iNupr,nu,nk_i,jsp)* 2.0/jspins
                      END IF 
                   END DO ! iNupr
                END DO ! nu 
