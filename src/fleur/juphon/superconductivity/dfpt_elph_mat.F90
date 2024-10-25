@@ -487,7 +487,7 @@ CONTAINS
                         eig = results%eig(nu,nk_i,jsp)  
                         IF ( ABS(eig - efermi)  .LT.   8*fi%input%tkb ) THEN  
                             ! eigenvalue is within energy window 
-                            IF ( ABS(eig - efermi) .LT. 1e-8 ) THEN 
+                            IF ( (eig - efermi) .LT. 1e-8 ) THEN 
                                 ! This is the lower end of the window 
                                 IF( nu .LT. nuWindow(1,1)) nuWindow(1,1) = nu 
                             ELSE
@@ -501,7 +501,7 @@ CONTAINS
                         eigq = resultsq%eig(iNupr,nk_i,jsp)
                         IF ( ABS(eigq - efermi)  .LT.   8*fi%input%tkb ) THEN 
                             ! eigenvalue is within energy window 
-                            IF ( ABS(eigq - efermi) .LT. 1e-8 ) THEN 
+                            IF ( (eigq - efermi) .LT. 1e-8 ) THEN 
                                 ! This is the lower end of the window 
                                 IF( iNupr .LT. nuWindow(2,1)) nuWindow(2,1) = iNupr 
                             ELSE
