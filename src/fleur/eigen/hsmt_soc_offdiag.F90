@@ -48,14 +48,17 @@ CONTAINS
 
     CALL timestart("offdiagonal soc-setup")
 
-    !$acc update self(hmat(1,1)%data_c,hmat(2,1)%data_c,hmat(1,2)%data_c,hmat(2,2)%data_c)
+    !!$acc update self(hmat(1,1)%data_c,hmat(2,1)%data_c,hmat(1,2)%data_c,hmat(2,2)%data_c)
 
     DO l = 0,atoms%lmaxd
        fleg1(l) = REAL(l+l+1)/REAL(l+1)
        fleg2(l) = REAL(l)/REAL(l+1)
        fl2p1(l) = REAL(l+l+1)/fpi_const
     END DO
-    !!$acc data copyin(td,td%rsoc%rsopp,td%rsoc%rsopdp,td%rsoc%rsoppd,td%rsoc%rsopdpd)
+    !$acc data copyin(td,td%rsoc%rsopp,td%rsoc%rsopdp,td%rsoc%rsoppd,td%rsoc%rsopdpd) &
+    !$acc &present(hmat,hmat(1,1)%data_c,hmat(1,2)%data_c,hmat(2,1)%data_c,hmat(2,2)%data_c)&
+    !$acc &copyin(nococonv,nococonv%alph,nococonv%beta,lapw,lapw%gk,lapw%gvec,lapw%nv)&
+    !$acc &copyin(fmpi,atoms,atoms%taual,atoms%firstatom,atom%neq)
     !CPP_OMP PARALLEL DEFAULT(NONE)&
     !CPP_OMP SHARED(n,lapw,atoms,td,fjgj,nococonv,fl2p1,fleg1,fleg2,hmat,fmpi)&
     !CPP_OMP PRIVATE(kii,ki,ski,kj,plegend,dplegend,l,j1,j2,angso,chi)&
@@ -69,6 +72,8 @@ CONTAINS
     ALLOCATE(dot(NVEC))
     ALLOCATE(angso(NVEC,2,2))
     !CPP_OMP DO SCHEDULE(DYNAMIC,1)
+    !$acc kernels create(cph,xlegend,plegend,dplegend,fct,dot,angso)
+    !$acc loop gang private (cph,xlegend,plegend,dplegend,fct,dot,angso)
     DO  ki =  fmpi%n_rank+1, lapw%nv(1), fmpi%n_size
        kii=(ki-1)/fmpi%n_size+1
 
@@ -105,11 +110,6 @@ CONTAINS
           dplegend(:NVEC_rem,0) = 0.0
 
           !--->          update overlap and l-diagonal hamiltonian matrix
-          !!$acc kernels &
-          !!$acc copyin(atoms,atoms%lmax,xlegend,cph,angso)&
-          !!$acc create(plegend,dplegend,fct)&
-          !!$acc present(fjgj,fjgj%fj,fjgj%gj)&
-          !!$acc present(hmat(1,1)%data_c,hmat(2,1)%data_c,hmat(1,2)%data_c,hmat(2,2)%data_c)
           DO  l = 1,atoms%lmax(n)
              !--->       legendre polynomials
              l3 = MODULO(l, 3)
@@ -137,10 +137,11 @@ CONTAINS
              ENDDO
           !--->          end loop over l
           ENDDO
-          !!$acc end kernels
        ENDDO
     !--->    end loop over ki
     ENDDO
+    !$acc end kernels
+    !$acc end data
     !CPP_OMP END DO
     !--->       end loop over atom types (ntype)
     DEALLOCATE(xlegend,plegend,dplegend)

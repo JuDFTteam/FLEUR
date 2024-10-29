@@ -116,7 +116,7 @@ SUBROUTINE mpi_bc_nococonv(this,mpi_comm,irank)
    CALL mpi_bc(this%b_con,rank,mpi_comm)
 
  END SUBROUTINE mpi_bc_nococonv
-
+   !$acc routine seq
    function chi_pass(nococonv, n)
       CLASS(t_nococonv), INTENT(IN)  :: nococonv
       INTEGER, INTENT(IN)           :: n
@@ -125,6 +125,7 @@ SUBROUTINE mpi_bc_nococonv(this,mpi_comm,irank)
    end function
 
    pure function chi_explicit(nococonv, alpha, beta) result(chi)
+   !$acc routine seq
       class(t_nococonv), intent(in) :: nococonv
       REAL, INTENT(IN) :: alpha, beta
       COMPLEX         :: chi(2, 2)
