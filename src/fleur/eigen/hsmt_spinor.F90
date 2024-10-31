@@ -69,7 +69,7 @@ CONTAINS
     COMPLEX  :: isigma_x(2,2),isigma_y(2,2),isigma_z(2,2),d(2,2)
 
     !     isigma= i * sigma, where sigma is Pauli matrix
-    isigma = CMPLX(0.0,0.0)
+    isigma(:,:,:) = CMPLX(0.0,0.0)
 
     isigma(1,2,1)=CMPLX(0.0,1.0)  !     (0  1)   ( 0  i)
     isigma(2,1,1)=CMPLX(0.0,1.0)  ! i * (1  0) = ( i  0)
@@ -82,8 +82,8 @@ CONTAINS
     !--->       spin-coordinateframe
     !chi=conjg(nococonv%umat(n))
 
-    chi=nococonv%umat(n)
-    
+    !chi=nococonv%umat(n)
+    chi=chi_explicit_nopass(nococonv%alph(n),nococonv%beta(n))
    
     isigma_x=MATMUL(conjg(transpose(chi)), MATMUL(isigma(:,:,1),chi))
     isigma_y=MATMUL(conjg(transpose(chi)), MATMUL(isigma(:,:,2),chi))
