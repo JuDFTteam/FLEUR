@@ -8,7 +8,7 @@ if (CLI_FLEUR_USE_GPU)
    if(${CLI_FLEUR_USE_GPU} MATCHES "acc-gcc")
       set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fopenacc ")
    elseif(${CLI_FLEUR_USE_GPU} MATCHES "acc")
-      set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -acc -cudalib=cublas,cufft,cusolver,cusparse -Minfo=accel -lnvToolsExt")
+      set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -acc -cudaforlibs -cudalib=cublas,cufft,cusolver,cusparse -Minfo=accel -lnvToolsExt")
    elseif(${CLI_Fortran_FLAGS} MATCHES "omp")
       #We try to use OMP offloading
       set(FLEUR_MPI_DEFINITIONS ${FLEUR_MPI_DEFINITIONS} "CPP_OMP_GPU='$omp'")

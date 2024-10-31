@@ -613,8 +613,14 @@ CONTAINS
             !   DEALLOCATE(sym_dynvec)
             !END IF
             CALL timestop("q-point")
-            IF (fi_nosym%juphon%l_elph) CALL dfpt_elph_mat(fi_nosym,xcpot_nosym,sphhar_nosym,stars_nosym,nococonv_nosym,qpts_loc,fmpi,results_nosym, q_results, results1, enpara_nosym,hybdat_nosym,rho_nosym,vTot_nosym,grRho3,grVtot3, &
-            &                                                q_list(iQ),eig_id,q_eig_id,l_real,den_elph,denIm_elph,eigenVecs,eigenVals)
+            IF (fi_nosym%juphon%l_elph) THEN 
+               CALL dfpt_elph_mat(fi_nosym,xcpot_nosym,sphhar_nosym,stars_nosym,nococonv_nosym,qpts_loc,fmpi,results_nosym, q_results, results1, enpara_nosym,hybdat_nosym,rho_nosym,vTot_nosym,grRho3,grVtot3, &
+               &                                                q_list(iQ),eig_id,q_eig_id,l_real,den_elph,denIm_elph,eigenVecs,eigenVals)
+               DO iDir = 1 , 3*fi_nosym%atoms%nat ! previously here was ntypes for no symmetry they are equal 
+                  CALL den_elph(iDir)%reset_dfpt()
+                  CALL denIm_elph(iDir)%reset_dfpt()
+               END DO 
+            END IF 
             IF (fmpi%irank==0) DEALLOCATE(eigenVals, eigenVecs, eigenFreqs, E2ndOrdII)
          END DO
       END IF

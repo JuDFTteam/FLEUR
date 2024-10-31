@@ -31,9 +31,9 @@ CONTAINS
       TYPE(t_nococonv), INTENT(IN) :: nococonv
       TYPE(t_cell),     INTENT(IN) :: cell
       TYPE(t_atoms),    INTENT(IN) :: atoms
-      TYPE(t_lapw),TARGET,INTENT(IN) :: lapw
+      TYPE(t_lapw),     INTENT(IN) :: lapw
       TYPE(t_tlmplm),   INTENT(IN) :: td
-      TYPE(t_fjgj),TARGET,INTENT(IN) :: fjgj
+      TYPE(t_fjgj),     INTENT(IN) :: fjgj
 
       INTEGER,          INTENT(IN) :: n, ilSpinPr, ilSpin, igSpinPr, igSpin
       COMPLEX,          INTENT(IN) :: chi
@@ -41,8 +41,8 @@ CONTAINS
 
       CLASS(t_mat),INTENT(INOUT)     ::hmat
 
-      TYPE(t_lapw), OPTIONAL, TARGET, INTENT(IN) :: lapwq ! Additional set of lapw, in case
-      TYPE(t_fjgj), OPTIONAL, TARGET, INTENT(IN) :: fjgjq ! the left and right ones differ.
+      TYPE(t_lapw), OPTIONAL, INTENT(IN) :: lapwq ! Additional set of lapw, in case
+      TYPE(t_fjgj), OPTIONAL, INTENT(IN) :: fjgjq ! the left and right ones differ.
 
       INTEGER :: nn, na, ab_size, l, ll, size_ab_select
       INTEGER :: size_data_c, size_ab, size_ab2 !these data-dimensions are not available so easily in openacc, hence we store them
@@ -55,21 +55,21 @@ CONTAINS
       COMPLEX, ALLOCATABLE :: abCoeffs(:,:), ab2(:,:), h_loc(:,:), data_c(:,:)
 
       COMPLEX, ALLOCATABLE :: abCoeffsPr(:,:)
-      TYPE(t_lapw),POINTER :: lapwPr
-      TYPE(t_fjgj),POINTER :: fjgjPr
+      TYPE(t_lapw) :: lapwPr
+      TYPE(t_fjgj) :: fjgjPr
 
       CALL timestart("non-spherical setup")
 
       l_samelapw = .FALSE.
       IF (.NOT.PRESENT(lapwq)) l_samelapw = .TRUE.
       IF (.NOT.l_samelapw) THEN
-         lapwPr => lapwq
-         fjgjPr => fjgjq
+         lapwPr = lapwq
+         fjgjPr = fjgjq
       ELSE
-         lapwPr => lapw
-         fjgjPr => fjgj
+         lapwPr = lapw
+         fjgjPr = fjgj
       END IF
-      !$acc data present(fjgjPr,fjgjPr%fj,fjgjPr%gj)
+      !$acc data copyin(fjgjPr,fjgjPr%fj,fjgjPr%gj)
       size_ab = maxval(lapw%nv)
 
       IF (fmpi%n_size==1) Then

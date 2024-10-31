@@ -91,7 +91,7 @@ CONTAINS
       !$acc&   copyin(fmpi%n_size,fmpi%n_rank)&
       !$acc&   copyin(input%l_useapw)&
       !$acc&   copyin(usdus%dus,usdus%uds,usdus%us,usdus%ddn,usdus%duds)&
-      !$acc&   present(fjgj,fjgj%fj,fjgj%gj)&
+      !$acc&   present(fjgj)&
       !$acc&   present(hmat,smat,hmat%data_c,hmat%data_r,smat%data_r,smat%data_c)
 
       !$acc parallel default(none)
