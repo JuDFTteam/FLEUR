@@ -42,9 +42,9 @@ CONTAINS
     !     .. Local Arrays ..
     REAL fleg1(0:atoms%lmaxd),fleg2(0:atoms%lmaxd),fl2p1(0:atoms%lmaxd)
     COMPLEX:: chi(2,2,2,2)
-    REAL, ALLOCATABLE :: plegend(:,:),dplegend(:,:)
-    REAL, ALLOCATABLE :: xlegend(:), dot(:)
-    COMPLEX, ALLOCATABLE :: cph(:),fct(:),angso(:,:,:)
+    REAL :: plegend(NVEC,0:2),dplegend(NVEC,0:2)
+    REAL :: xlegend(NVEC), dot(NVEC)
+    COMPLEX :: cph(NVEC),fct(NVEC),angso(NVEC,2,2)
 
     CALL timestart("offdiagonal soc-setup")
 
@@ -62,13 +62,6 @@ CONTAINS
     !CPP_OMP PRIVATE(kii,ki,ski,kj,plegend,dplegend,l,j1,j2,angso,chi)&
     !CPP_OMP PRIVATE(cph,dot,nn,tnn,fct,xlegend,l3,fjkiln,gjkiln,NVEC_rem)&
     !CPP_OMP PRIVATE(kj_off,kj_vec,jv)
-    ALLOCATE(cph(NVEC))
-    ALLOCATE(xlegend(NVEC))
-    ALLOCATE(plegend(NVEC,0:2))
-    ALLOCATE(dplegend(NVEC,0:2))
-    ALLOCATE(fct(NVEC))
-    ALLOCATE(dot(NVEC))
-    ALLOCATE(angso(NVEC,2,2))
     !CPP_OMP DO SCHEDULE(DYNAMIC,1)
     DO  ki =  fmpi%n_rank+1, lapw%nv(1), fmpi%n_size
        kii=(ki-1)/fmpi%n_size+1

@@ -49,6 +49,7 @@ CONTAINS
    END SUBROUTINE hsmt_spinor
 
   SUBROUTINE hsmt_spinor_soc(n,ki,nococonv,lapw,chi_so,angso,kj_start,kj_end)
+    !$acc routine seq
     !!Generalization of hsmt_spinor to SOC case. 
     USE m_types
     use m_constants
