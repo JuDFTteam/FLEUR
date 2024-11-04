@@ -114,8 +114,10 @@ CONTAINS
         ! Introduce Energy Window for states
         ! Reduce memory and computational effort
         bqpt = qpts%bk(:, iQ)
+        CALL timestart("Generating the energy window")
         CALL energy_window(fi,fmpi,results,resultsq,nococonv,bqpt,nuWindow)
-
+        CALL timestop("Generating the energy window")
+        
         DO iDtype=1,fi%atoms%nat
             DO iDir=1,3
                 CALL denIn1_loc%copyPotDen(denIn1(iDir+3*(iDtype-1)))
@@ -177,13 +179,22 @@ CONTAINS
 #ifdef CPP_MPI
         CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
 #endif
+        CALL timestart("Linewidth elph")
         !Set this code block behind a logical in the future 
         CALL dfpt_ph_linewidth(fi,fmpi,qpts,results,resultsq,results1,eigenVals,gmat,iQ,nbasfcnq_min,nuWindow, ph_linewidth) 
-         
+        CALL timestop("Linewidth elph")
 
 #ifdef CPP_MPI
         CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
 #endif
+
+        DEALLOCATE(ph_linewidth)
+        DEALLOCATE(gmat)
+        IF (.NOT. fmpi%irank==0) THEN 
+            DEALLOCATE(eigenVals)
+            DEALLOCATE(eigenVecs)
+        END IF 
+
     END SUBROUTINE dfpt_elph_mat
 
 
@@ -398,7 +409,7 @@ CONTAINS
                 IF (ALLOCATED(gmatS)) DEALLOCATE(gmatS)
                 IF (ALLOCATED(tempVec)) DEALLOCATE(tempVec)
                 IF (ALLOCATED(tempMat1)) DEALLOCATE(tempMat1)
-                IF (ALLOCATED(zmatk)) THEN
+                IF (ALLOCATED(zMatk)) THEN
                     CALL zMatk%free()
                     DEALLOCATE(zMatk)
                  END IF
