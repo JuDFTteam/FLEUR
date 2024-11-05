@@ -101,8 +101,8 @@ CONTAINS
                 END IF 
 
  
-                eMin = - 4 * fi%input%tkb
-                eMax =   4 * fi%input%tkb
+                eMin = - 8 * fi%input%tkb
+                eMax =   8 * fi%input%tkb
                 ALLOCATE(linewidth(fi%banddos%ndos_points,fi%input%jspins))  
                 ALLOCATE(eGrid(fi%banddos%ndos_points))  
                 ALLOCATE(ph_linewidth(3*fi%atoms%ntype))
@@ -115,7 +115,7 @@ CONTAINS
                 
                 DO gridPoint=1,fi%banddos%ndos_points
                     eGrid(gridPoint)=emin+(emax-emin)/(fi%banddos%ndos_points-1.0)*(gridPoint-1.0)
-                    gauss(gridPoint) = 1/SQRT(tpi_const*fi%juphon%smearingGauss ) *EXP( -eGrid(gridPoint)**2/(2*fi%juphon%smearingGauss))
+                    gauss(gridPoint) = 1/SQRT(tpi_const*fi%juphon%smearingGauss**2) *EXP( -eGrid(gridPoint)**2/(2*fi%juphon%smearingGauss)**2)
                 END DO
 
                 DO iMode = 1 , 3*fi%atoms%ntype
