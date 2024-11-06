@@ -232,8 +232,7 @@ CONTAINS
               DO j1=1,2
                 DO j2=1,2
                   !DO j2=j1,j1
-                  !---> update l-diagon
-                  al hamiltonian matrix with LAPW,LO contribution
+                  !---> update l-diagonal hamiltonian matrix with LAPW,LO contribution
                   !$acc loop vector independent private(kj,fct,cross_k)
                   DO kj = 1,lapw%nv(j2)
                     cross_k(1)=lapw%gk(2,ki,1)*lapw%gk(3,kj,1)- lapw%gk(3,ki,1)*lapw%gk(2,kj,1)
