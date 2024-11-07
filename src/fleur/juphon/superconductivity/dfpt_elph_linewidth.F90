@@ -25,7 +25,8 @@ CONTAINS
         USE m_smooth
         USE m_dfpt_fermie, ONLY : sfermi
         USE m_dfpt_tetra
-        USE m_intgr, ONLY : intgz0
+        !USE m_intgr, ONLY : intgz0
+        USE m_smooth
 
         TYPE(t_fleurinput), INTENT(IN) :: fi 
         TYPE(t_mpi), INTENT(IN) :: fmpi
@@ -115,7 +116,8 @@ CONTAINS
                 
                 DO gridPoint=1,fi%banddos%ndos_points
                     eGrid(gridPoint)=emin+(emax-emin)/(fi%banddos%ndos_points-1.0)*(gridPoint-1.0)
-                    gauss(gridPoint) = 1/SQRT(tpi_const*fi%juphon%smearingGauss**2) *EXP( -eGrid(gridPoint)**2/(2*fi%juphon%smearingGauss)**2)
+                    IF (ABS(eGrid(gridPoint)) .LT. 1e-8) nZero = gridPoint 
+                    !gauss(gridPoint) = 1/SQRT(tpi_const*fi%juphon%smearingGauss**2) *EXP( -0.5*eGrid(gridPoint)**2/(fi%juphon%smearingGauss)**2)
                 END DO
 
                 DO iMode = 1 , 3*fi%atoms%ntype
@@ -132,9 +134,13 @@ CONTAINS
 #endif 
                         IF (fmpi%irank == 0 ) THEN 
                             DO ispin = 1 , fi%input%jspins
-                                CALL intgz0(gauss*linewidth(:,ispin), eGrid(2)-eGrid(1) , size(gauss) , intOut,.FALSE.)
-                                ! factor two for spin deg. is calculated in dos_bin 
-                                ph_linewidth(iMode) =  ph_linewidth(iMode) +  tpi_const /fi%kpts%nkpt*intOut
+                                CALL smooth(eGrid,linewidth(:,ispin),fi%juPhon%smearingGauss,size(eGrid))
+                            END DO 
+
+
+                            DO ispin = 1 , fi%input%jspins
+
+                                ph_linewidth(iMode) =  ph_linewidth(iMode) +  tpi_const /fi%kpts%nkpt*linewidth(nZero,ispin)
                             END DO 
                         END IF 
                     ELSE
