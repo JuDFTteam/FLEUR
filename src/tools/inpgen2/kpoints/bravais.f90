@@ -11,9 +11,7 @@
 ! (idsyst,idtype)                                              gb`05   !
 !----------------------------------------------------------------------!
       CONTAINS
-      SUBROUTINE bravais(
-     >                   amat,
-     <                   idsyst,idtype)
+      SUBROUTINE bravais(amat,idsyst,idtype)
 
       USE m_constants
 
@@ -31,11 +29,11 @@
 
       CHARACTER (len=12) :: c_sy(7)
       CHARACTER (len=15) :: c_ty(6)
-      c_sy = (/'cubic       ','tetragonal  ','orthorhombic',
-     +         'hexagonal   ','trigonal    ','monoclinic  ',
-     +         'triclinic   '/)
-      c_ty = (/'primitive      ','body centered  ','face centered  ',
-     +         'A-face centered','B-face centered','C-face centered'/)
+      c_sy = (/'cubic       ','tetragonal  ','orthorhombic',&
+              'hexagonal   ','trigonal    ','monoclinic  ',&
+              'triclinic   '/)
+      c_ty = (/'primitive      ','body centered  ','face centered  ',&
+              'A-face centered','B-face centered','C-face centered'/)
 
       a(:) = amat(:,1) ; b(:) = amat(:,2) ; c(:) = amat(:,3)
       sa = SQRT( DOT_PRODUCT( a, a) )
@@ -76,12 +74,16 @@
       ENDIF
 
       IF (idsyst == 99) THEN                  ! continue the search
-
       IF (l_ab.OR.l_bc.OR.l_ac)  THEN         ! two sides equal
-                                              ! hexagonal or tetragonal or base-centered
+        ! hexagonal or tetragonal or base-centered
         IF (al_be.AND.be_ga) THEN             ! all angles equal
           IF ( ABS(al) < eps )  THEN          ! alpha = 90  deg
             idsyst = 2 ; idtype = 1           !       --> simple tetragonal
+            if (.not.l_ab) THEN
+              call judft_warn(&
+              "Tetragonal systems should have a==b and c different (x==y,z different), they will be treated orthorhombic if this warning is ignored")
+              idsyst = 3 ; idtype = 1
+            endif  
           ELSE
             IF (l_ab) THEN
              idsyst = 6 ; idtype = 6          ! special monoclinic - C
@@ -129,9 +131,7 @@
           ENDIF
         ELSEIF (.NOT.(al_be.OR.be_ga.OR.al_ga)) THEN ! all angles different
           e = a + b - c ; f = b + c - a ; g = a + c - b
-          IF ( (DOT_PRODUCT( e, f) == 0).AND.
-     +         (DOT_PRODUCT( e, g) == 0).AND.
-     +         (DOT_PRODUCT( g, f) == 0) )  THEN
+          IF ( (DOT_PRODUCT( e, f) == 0).AND.(DOT_PRODUCT( e, g) == 0).AND.(DOT_PRODUCT( g, f) == 0) )  THEN
              idsyst = 3 ; idtype = 3          ! --> face-centered orthorhombic
           ELSE
              idsyst = 7 ; idtype = 1         ! triclinic
@@ -144,8 +144,7 @@
 
       ENDIF
      
-      IF ((idsyst == 99).OR.(idtype == 99) ) CALL juDFT_error("bravais!"
-     +     ,calledby ="bravais")
+      IF ((idsyst == 99).OR.(idtype == 99) ) CALL juDFT_error("bravais!",calledby ="bravais")
  10   WRITE(oUnit,*) c_ty(idtype),' ',c_sy(idsyst)
 
       END SUBROUTINE bravais

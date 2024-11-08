@@ -91,7 +91,7 @@ spack:
         cppflags: -O3
         cxxflags: -tp=host -O3
         fflags: -tp=host -O3
-      operating_system: rocky8
+      operating_system: rocky9
       target: x86_64
       modules: [Stages/2024, NVHPC/24.3-CUDA-12, OpenMPI]
       environment: {}
