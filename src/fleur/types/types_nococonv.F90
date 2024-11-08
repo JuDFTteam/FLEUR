@@ -44,7 +44,7 @@ MODULE m_types_nococonv
       procedure :: update_b_cons
       procedure :: mpi_bc => mpi_bc_nococonv
    end TYPE
-   public :: t_nococonv
+   public :: t_nococonv,chi_explicit_nopass
 CONTAINS
 
 SUBROUTINE update_b_cons(nococonv,atoms,noco,vtot,den)
@@ -128,11 +128,18 @@ SUBROUTINE mpi_bc_nococonv(this,mpi_comm,irank)
       class(t_nococonv), intent(in) :: nococonv
       REAL, INTENT(IN) :: alpha, beta
       COMPLEX         :: chi(2, 2)
-      chi(1, 1) =  EXP( ImagUnit*alpha/2)*COS(beta/2)
-      chi(2, 1) = -EXP( ImagUnit*alpha/2)*SIN(beta/2)
-      chi(1, 2) =  EXP(-ImagUnit*alpha/2)*SIN(beta/2)
-      chi(2, 2) =  EXP(-ImagUnit*alpha/2)*COS(beta/2)
-      chi=transpose(conjg(chi))
+      chi=chi_explicit_nopass(alpha,beta)
+   end function
+
+   pure function chi_explicit_nopass(alpha, beta) result(chi)
+   !$acc routine seq
+   REAL, INTENT(IN) :: alpha, beta
+   COMPLEX         :: chi(2, 2)
+   chi(1, 1) =  EXP( ImagUnit*alpha/2)*COS(beta/2)
+   chi(2, 1) = -EXP( ImagUnit*alpha/2)*SIN(beta/2)
+   chi(1, 2) =  EXP(-ImagUnit*alpha/2)*SIN(beta/2)
+   chi(2, 2) =  EXP(-ImagUnit*alpha/2)*COS(beta/2)
+   chi=transpose(conjg(chi))
    end function
 
    function denmat_to_mag_mat(nococonv, mat) result(mag)
