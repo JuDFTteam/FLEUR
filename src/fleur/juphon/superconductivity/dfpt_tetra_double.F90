@@ -5,7 +5,7 @@
 !--------------------------------------------------------------------------------
 
 
-MODULE m_dfpt_tetra
+MODULE m_dfpt_tetra_double
   
 
 #ifdef CPP_MPI
@@ -17,7 +17,7 @@ MODULE m_dfpt_tetra
     IMPLICIT NONE 
 
 CONTAINS 
-    SUBROUTINE dfpt_tetra_int(fi,results,resultsq,results1,gmat,nbasfcnq_min,k_int)
+    SUBROUTINE dfpt_tetra_double(fi,results,resultsq,results1,gmat,nbasfcnq_min,k_int)
         !
         ! subroutine that calculates k integration of type
         ! \sum_k F(k) \delta(\Omega - \varepsilon_{k,\nu'}) \delta( E - \varepsilon_{k,\nu}) 
@@ -168,7 +168,7 @@ CONTAINS
         !Consider the weight of one tetra
         k_int(:,:,:,:) = k_int(:,:,:,:) / fi%kpts%ntet
         
-    END SUBROUTINE dfpt_tetra_int
+    END SUBROUTINE dfpt_tetra_double
 
     SUBROUTINE tetra_area(eigk,eigq,efermi,voltet,gmat,area,icase)
         ! In notation of the Paper "P.B. Allen, phys. stat. sol. (b) 120,629 (1983)" 
@@ -381,4 +381,4 @@ CONTAINS
 
 
 
-END MODULE m_dfpt_tetra
+END MODULE m_dfpt_tetra_double

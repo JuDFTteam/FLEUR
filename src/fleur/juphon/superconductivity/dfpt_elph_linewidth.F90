@@ -24,9 +24,10 @@ CONTAINS
         USE m_dosbin
         USE m_smooth
         USE m_dfpt_fermie, ONLY : sfermi
-        USE m_dfpt_tetra
+        USE m_dfpt_tetra_double
         !USE m_intgr, ONLY : intgz0
         USE m_smooth
+        USE m_dfpt_tetra_single
 
         TYPE(t_fleurinput), INTENT(IN) :: fi 
         TYPE(t_mpi), INTENT(IN) :: fmpi
@@ -43,6 +44,7 @@ CONTAINS
         REAL :: emin, emax , x ,xq , allowed
         REAL, ALLOCATABLE :: eGrid(:),linewidth(:,:)
         COMPLEX,ALLOCATABLE:: kInt_gmat(:,:,:,:) !(nu',nu,jsp,normal_mode)
+        REAL,ALLOCATABLE :: gmatCollect(:,:,:,:,:)
 
         REAL , ALLOCATABLE :: gauss(:) 
         REAL :: intOut
@@ -207,7 +209,7 @@ CONTAINS
             CASE(3)
 
                 CALL timestart("k-Integration el-ph")
-                CALL dfpt_tetra_int(fi,results,resultsq, results1, gmat,nbasfcnq_min,kInt_gmat)
+                CALL dfpt_tetra_double(fi,results,resultsq, results1, gmat,nbasfcnq_min,kInt_gmat)
                 CALL timestop("k-Integration el-ph")
 
                 DEALLOCATE(gmat)
@@ -224,6 +226,46 @@ CONTAINS
                     END DO 
                 END DO 
                 
+            CASE(4)
+                ALLOCATE(ph_linewidth(3*fi%atoms%ntype))
+                ph_linewidth = 0.0 
+                ALLOCATE(gmatCollect(size(gmat,1),size(gmat,2),fi%kpts%nkpt,size(gmat,4),size(gmat,5)))
+                gmatCollect = 0.0
+                
+                
+                DO ispin = 1 , fi%input%jspins
+                    DO nk_i = 1 , size(fmpi%k_list)
+                        nk = fmpi%k_list(nk_i)
+                        DO nu = nuWindow(1,1) , nuWindow(1,2)  
+                            ind =  nu - nuWindow(1,1) + 1 
+                            x = (results%eig(nu,nk,ispin)-results%ef)/fi%input%tkb
+                            DO iNupr = nuWindow(2,1) , nuwindow(2,2)
+                                indPr = iNupr- nuWindow(2,1) + 1 
+                                xq = (resultsq%eig(iNupr,nk,ispin)-results%ef)/fi%input%tkb
+                                gmat(indPr,ind,nk_i,ispin,:) = gmat(indPr,ind,nk_i,ispin,:)*(sfermi(x) - sfermi(xq))
+                            END DO ! iNupr 
+                        END DO  ! nu 
+                    END DO ! nk 
+                END DO 
+
+
+                DO nk_i = 1 , size(fmpi%k_list)
+                    nk = fmpi%k_list(nk_i)
+                    gmatCollect(:,:,nk,:,:) = REAL(gmat(:,:,nk_i,:,:))
+                END DO 
+#ifdef CPP_MPI
+                CALL MPI_ALLREDUCE(MPI_IN_PLACE,gmatCollect,size(gmatCollect),MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)
+                CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
+#else 
+                gmatCollect = REAL(gmat)         
+#endif 
+                !DEALLOCATE(gmat)
+                IF (fmpi%irank==0) THEN 
+                    CALL timestart("k-Integration el-ph")
+                    CALL dfpt_tetra_single(fi,results,resultsq,results1,gmatCollect,eigenVals,nuWindow)
+                    CALL timestop("k-Integration el-ph")
+                END IF 
+
 
 
         END SELECT
