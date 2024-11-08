@@ -30,7 +30,6 @@ CONTAINS
         USE m_vgen
         USE m_make_stars
         USE m_dfpt_vgen
-        USE m_dfpt_tetra
         USE m_eig66_io, ONLY : write_eig, read_eig
         USE m_dosbin
         USE m_smooth
