@@ -32,6 +32,9 @@ CONTAINS
     REAL   :: den
     INTEGER:: nk,grid(3)
     character(len=40)::name=""
+
+    CALL timestart('make_kpoints')
+
     !defaults
     l_soc_or_ss=l_socorss
 
@@ -130,6 +133,9 @@ CONTAINS
     ENDIF
 
     if (len_trim(name)>0) kpts%kptsName=name
+
+    CALL timestop('make_kpoints')
+
   END SUBROUTINE make_kpoints
 
   SUBROUTINE set_special_points(kpts,str)

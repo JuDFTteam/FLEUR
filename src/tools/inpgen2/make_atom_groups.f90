@@ -27,6 +27,8 @@ CONTAINS
     REAL                 :: tr(3)
     REAL,PARAMETER       :: eps7=1.e-7,eps12=1e-12
 
+    CALL timestart('make_atom_groups')
+
     ALLOCATE(natype(SIZE(atomid)),natrep(SIZE(atomid)),ity(SIZE(atomid)))
 
     ntypm = 1
@@ -98,6 +100,8 @@ CONTAINS
 
     !Generate postions in cartesian coordinates
     atoms%pos(:,:) = MATMUL( cell%amat , atoms%taual(:,:) )
+
+    CALL timestop('make_atom_groups')
 
   END SUBROUTINE make_atom_groups
 END MODULE m_make_atom_groups

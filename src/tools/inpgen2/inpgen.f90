@@ -121,6 +121,8 @@ PROGRAM inpgen
 
       CALL judft_init(oUnit,.FALSE.)
 
+      CALL timestart("inpgen")
+
       !Start program and greet user
       CALL inpgen_help()
       call inpgen_version()
@@ -440,6 +442,8 @@ PROGRAM inpgen
       CALL xsf_WRITE_atoms(55,atoms,input%film,cell%amat)
       CLOSE (55)
       CLOSE(oUnit)
+
+      CALL timestop("inpgen")
 
       CALL juDFT_end("All done")
 

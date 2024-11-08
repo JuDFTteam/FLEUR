@@ -39,6 +39,7 @@ CONTAINS
     INTEGER,ALLOCATABLE :: inpgen_atom_for_type(:)
     REAL,ALLOCATABLE    :: mag_mom_tmp(:,:)
 
+    CALL timestart('make_crystal')
 
     !generate basic atom type
     !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -148,7 +149,7 @@ CONTAINS
        ENDDO
     ENDDO
 
-    RETURN
+    CALL timestop('make_crystal')
 
   END SUBROUTINE make_crystal
 END MODULE m_make_crystal
