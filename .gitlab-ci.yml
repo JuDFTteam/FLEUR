@@ -1,21 +1,27 @@
+# You can override the included template(s) by including variable overrides
+# SAST customization: https://docs.gitlab.com/ee/user/application_security/sast/#customizing-the-sast-settings
+# Secret Detection customization: https://docs.gitlab.com/ee/user/application_security/secret_detection/pipeline/#customization
+# Dependency Scanning customization: https://docs.gitlab.com/ee/user/application_security/dependency_scanning/#customizing-the-dependency-scanning-settings
+# Container Scanning customization: https://docs.gitlab.com/ee/user/application_security/container_scanning/#customizing-the-container-scanning-settings
+# Note that environment variables can be set in several places
+# See https://docs.gitlab.com/ee/ci/variables/#cicd-variable-precedence
 variables:
-  GIT_CLONE_PATH: ${CI_BUILDS_DIR}/${CI_PROJECT_NAME}
-
+  GIT_CLONE_PATH: "${CI_BUILDS_DIR}/${CI_PROJECT_NAME}"
 stages:
-   - build
-   - fast-test
-   - test
-   - perf
-   - html
-   - deploy
-
+- build
+- fast-test
+- test
+- perf
+- html
+- deploy
 include:
-   - "packaging/CI/test-template.yml"
-   - "packaging/CI/gfortran-hdf.yml"
-   - "packaging/CI/gfortran-serial.yml"
-   - "packaging/CI/gfortran-12.yml"
-   - "packaging/CI/oneAPI.yml"
-   - "packaging/CI/NVHPC.yml"
-   - "packaging/CI/html.yml"
-   - "packaging/CI/AiiDA.yml"
-   - "packaging/CI/CB.yml"
+- packaging/CI/test-template.yml
+- packaging/CI/gfortran-hdf.yml
+- packaging/CI/gfortran-serial.yml
+- packaging/CI/gfortran-12.yml
+- packaging/CI/oneAPI.yml
+- packaging/CI/NVHPC.yml
+- packaging/CI/html.yml
+- packaging/CI/AiiDA.yml
+- packaging/CI/CB.yml
+- template: Security/Secret-Detection.gitlab-ci.yml
