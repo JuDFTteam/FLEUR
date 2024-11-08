@@ -194,7 +194,7 @@ CONTAINS
           if (NVEC_rem<0 ) exit
 
           !Set up spinors...
-          CALL hsmt_spinor_soc(n,nococonv,lapw,chi,isigma)
+          CALL hsmt_spinor_soc(n,nococonv,chi,isigma)
           DO jv = 1,NVEC_rem
             kj = kj_off - 1 + jv
             cross_k(1)=lapw%gk(2,ki,1)*lapw%gk(3,kj,1)- lapw%gk(3,ki,1)*lapw%gk(2,kj,1)
@@ -202,7 +202,7 @@ CONTAINS
             cross_k(3)=lapw%gk(1,ki,1)*lapw%gk(2,kj,1)- lapw%gk(2,ki,1)*lapw%gk(1,kj,1)
             DO j1=1,2
               DO j2=1,2
-                angso(iv,j1,j2)= (isigma(j1,j2,1)*cross_k(1)+&
+                angso(jv,j1,j2)= (isigma(j1,j2,1)*cross_k(1)+&
                             isigma(j1,j2,2)*cross_k(2)+ isigma(j1,j2,3)*cross_k(3))
               ENDDO
             ENDDO
