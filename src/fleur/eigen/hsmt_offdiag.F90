@@ -43,7 +43,7 @@ CONTAINS
 
     CALL timestart("offdiagonal setup")
 
-    CALL hsmt_spinor_soc(n,1,nococonv,lapw,chi)
+    CALL hsmt_spinor_soc(n,nococonv,chi)
 
 
 

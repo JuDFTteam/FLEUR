@@ -159,7 +159,7 @@ CONTAINS
 #ifdef _OPENACC
                   !$acc data copyin(l, iatm, iatm2, itype, lm_0, bandoi, bandof, psize, atom_phase, atom_phase1, atom_phase2, ioffset, ik, jsp)
 
-                  !$acc parallel loop default(none) collapse(2)&
+                  !$acc parallel loop default(none) collapse(2) copyin(fi,fi%atoms,fi%atoms%firstAtom(itype))&
                   !$acc present(lmstart, cmt_ikqpt, cmt_nk, cprod,&
                   !$acc         l, iatm, iatm2, itype, lm_0, bandoi, bandof, psize, atom_phase, atom_phase1, atom_phase2, ioffset, ik, jsp, &
                   !$acc         mpdata, mpdata%num_radbasfn, radfun_per_l, mpdata%l1, mpdata%l2, mpdata%n1, mpdata%n2,&
