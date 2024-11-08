@@ -403,7 +403,7 @@ CONTAINS
                     blo1(lo,j1)*fjgj%gj(kj,l,j2,1) *td%rsoc%rsopdpd(n,l,j1,j2)+ &
                     clo1(lo,j1)*fjgj%fj(kj,l,j2,1) *td%rsoc%rsopplo(n,lo,j1,j2) + &
                     clo1(lo,j1)*fjgj%gj(kj,l,j2,1) *td%rsoc%rsopdplo(n,lo,j1,j2)) &
-                    *  (isigma(j1,j2,1)*cross_k(1)+isigma(j1,j2,2)*cross_k(2)+ isigma(j1,j2,2)*cross_k(3))
+                    *  (isigma(j1,j2,1)*cross_k(1)+isigma(j1,j2,2)*cross_k(2)+ isigma(j1,j2,3)*cross_k(3))
                     h11(kj,locol_loc)=h11(kj,locol_loc) + chi(1,1,j1,j2)*fct
                     h12(kj,locol_loc)=h12(kj,locol_loc) + chi(1,2,j1,j2)*fct
                     h21(kj,locol_loc)=h21(kj,locol_loc) + chi(2,1,j1,j2)*fct
@@ -430,7 +430,7 @@ CONTAINS
                         clo1(lo,j1)*alo1(ilo,j2) *td%rsoc%rsopplo(n,lo,j1,j2) + &
                         clo1(lo,j1)*blo1(ilo,j2) *td%rsoc%rsopdplo(n,lo,j1,j2)+ &
                         clo1(lo,j1)*clo1(ilo,j2) *td%rsoc%rsoploplop(n,lo,ilo,j1,j2)) &
-                       *  (isigma(j1,j2,1)*cross_k(1)+isigma(j1,j2,2)*cross_k(2)+ isigma(j1,j2,2)*cross_k(3))
+                       *  (isigma(j1,j2,1)*cross_k(1)+isigma(j1,j2,2)*cross_k(2)+ isigma(j1,j2,3)*cross_k(3))
                         h11(lorow,locol_loc)=h11(lorow,locol_loc) + chi(1,1,j1,j2)*fct
                         h12(lorow,locol_loc)=h12(lorow,locol_loc) + chi(1,2,j1,j2)*fct
                         h21(lorow,locol_loc)=h21(lorow,locol_loc) + chi(2,1,j1,j2)*fct
