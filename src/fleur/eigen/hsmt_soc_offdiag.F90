@@ -99,7 +99,7 @@ CONTAINS
                     fjgj%fj(ki,l,j1,1)*fjgj%gj(kj,l,j2,1) *td%rsoc%rsopdp(n,l,j1,j2) + &
                     fjgj%gj(ki,l,j1,1)*fjgj%fj(kj,l,j2,1) *td%rsoc%rsoppd(n,l,j1,j2) + &
                     fjgj%gj(ki,l,j1,1)*fjgj%gj(kj,l,j2,1) *td%rsoc%rsopdpd(n,l,j1,j2)) &
-                    * (isigma(j1,j2,1)*cross_k(1)+isigma(j1,j2,2)*cross_k(2)+ isigma(j1,j2,2)*cross_k(3))
+                    * (isigma(j1,j2,1)*cross_k(1)+isigma(j1,j2,2)*cross_k(2)+ isigma(j1,j2,3)*cross_k(3))
                 ENDDO
               ENDDO
           ENDDO ! loop over l
