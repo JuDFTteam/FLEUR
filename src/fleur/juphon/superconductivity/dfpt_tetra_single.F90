@@ -18,11 +18,11 @@ MODULE m_dfpt_tetra_single
     
     CONTAINS 
 
-    SUBROUTINE dfpt_tetra_single(fi,results,resultsq,results1,gmat,shift,nuWindow)!,kInt)
+    SUBROUTINE dfpt_tetra_single(fi,results,resultsq,results1,gmat,shift,nuWindow,linewidth)
 
         USE m_npy
         !
-        ! This routine calculates /int F(k,k+q) \delta(\epsilon_k - \epsilon_{k+q} - \omega)
+        ! This routine calculates /int F(k,k+q) \delta(\omega + \epsilon_k  - \epsilon_{k+q})
         ! At the corners of the tetrahedons we put \tilde{\epsilon} = \epsilon_k - \epsilon_{k+q}
         ! Thereby reducing the problem to the hypersurface \omega crossing the hypersurface of \epsilon_k - \epsilon_{k+q}
         ! Implementation done as in: "Journal of Physics C: Solid State Physics 12.15 (1979): 2991"
@@ -34,7 +34,7 @@ MODULE m_dfpt_tetra_single
         REAL, ALLOCATABLE,  INTENT(IN) :: gmat(:,:,:,:,:) ! iNupr,nu,kpts,sigma , iMode
         REAL,               INTENT(IN) :: shift(:) ! eigenvalues dynmat
         INTEGER,            INTENT(IN) :: nuWindow(2,2)
-        !REAL, ALLOCATABLE,  INTENT(OUT):: kInt
+        REAL,  INTENT(INOUT):: linewidth(:,:)
 
         REAL, ALLOCATABLE :: eig_nondeg(:,:,:) 
         REAL :: eig(4), tmpMat(4), valArea
@@ -42,8 +42,9 @@ MODULE m_dfpt_tetra_single
 
 
         ALLOCATE(eig_nondeg(size(gmat,1)*size(gmat,2),fi%kpts%nkpt,fi%input%jspins))
-
-        eig_nondeg = 10000000 
+        !ALLOCATE(kInt(size(gmat,5),fi%input%jspins))
+        !kInt = 0.0 
+        eig_nondeg = 0.0 
 
 
         ! Film has tetra 3 corners
@@ -58,13 +59,12 @@ MODULE m_dfpt_tetra_single
                     DO iNupr = nuWindow(2,1), nuWindow(2,2)
                         indPr = iNupr- nuWindow(2,1) + 1
                         comInd = (ind-1) * (nuWindow(2,2) - nuWindow(2,1)+1) + (indPr)  
-                        write(2100,*)  "commInd" , comInd , "indPr" , indPr , "ind" , ind , "indMax" , nuWindow(2,2) - nuWindow(2,2)+1
                         DO i=1, ncorners !corners
                             icorn = fi%kpts%ntetra(i,itet)
-                            eig_nondeg(comInd,icorn,ispin) = results%eig(nu,icorn,ispin) - resultsq%eig(iNupr,icorn,ispin) 
+                            eig_nondeg(comInd,icorn,ispin) =  resultsq%eig(iNupr,icorn,ispin)  - results%eig(nu,icorn,ispin) 
                             DO j = i+1,ncorners !corner
                                 jcorn = fi%kpts%ntetra(j,itet)
-                                eig_nondeg(comInd,jcorn,ispin) = results%eig(nu,jcorn,ispin) - resultsq%eig(iNupr,jcorn,ispin) 
+                                eig_nondeg(comInd,jcorn,ispin) =  resultsq%eig(iNupr,jcorn,ispin) - results%eig(nu,jcorn,ispin) 
                                 IF (abs(eig_nondeg(comInd,icorn,ispin)-eig_nondeg(comInd,jcorn,ispin)).LT.fi%juPhon%eDiffcut) THEN 
                                     eig_nondeg(comInd,icorn,ispin) = eig_nondeg(comInd,icorn,ispin) + i*fi%juPhon%eDiffcut*itet 
                                     eig_nondeg(comInd,jcorn,ispin) = eig_nondeg(comInd,jcorn,ispin) - i*fi%juPhon%eDiffcut*itet  
@@ -79,7 +79,7 @@ MODULE m_dfpt_tetra_single
         CALL timestop("Tetrahedon Degeneracy Test k")
 
         CALL timestart("Tetra int")
-        DO iMode = 1 , size(gmat,5)
+        DO iMode = 1 , size(gmat,5) 
             IF (shift(iMode) .LT. 0) THEN
                 WRITE(*,*) '-------------------------'
                 WRITE(*,*) 'linewidth: Eigenvalue imaginary --> Phonon linewidth set to zero'
@@ -95,14 +95,14 @@ MODULE m_dfpt_tetra_single
                         DO indPr = 1, size(gmat,1)
                             !indPr = iNupr- nuWindow(2,1) + 1
                             comInd = (ind-1) * (nuWindow(2,2) - nuWindow(2,1)+1) + (indPr)  
-                            write(2101,*)  "commInd" , comInd , "indPr" , indPr , "ind" , ind , "indMax" , nuWindow(2,2) - nuWindow(2,2)+1
                             DO i = 1 , ncorners
                                 icorn = fi%kpts%ntetra(i,itet)
                                 eig(i) = eig_nondeg(comInd,icorn,ispin)
                                 tmpMat(i) = gmat(indPr,ind,icorn,ispin,iMode)  
                             END DO !corners
-                            CALL tetra_area(eig,tmpMat,shift(iMode),valArea)
-                        END DO !iNuPr
+                            CALL tetra_area(eig,tmpMat,SQRT(shift(iMode)),valArea)
+                            linewidth(iMode,ispin) = linewidth(iMode,ispin) + 2.0/fi%input%jspins * fi%kpts%voltet(itet) * valArea 
+                       END DO !iNuPr
                     END DO !nu
                 END DO  !itet
             END DO !ispin 
@@ -120,7 +120,7 @@ MODULE m_dfpt_tetra_single
         REAL, INTENT(OUT)   :: valArea 
 
 
-        REAL :: interSect(4), tmpVec(3)
+        REAL :: interSect(4), tmpVec(3) , tmpVec2(3)
         REAL :: prefactor,scaling 
 
         INTEGER :: ind 
@@ -133,29 +133,81 @@ MODULE m_dfpt_tetra_single
 
         IF ( (eig(1) .LT. shift) .AND. (eig(2) .GE. shift)  ) THEN 
             ! tmpVec contains f_{2,1} , f_{3,1} , f_{4,1} 
-            tmpVec(1) = (shift - eig(1)) / (eig(2)- eig(1))
-            tmpVec(1) = (shift - eig(1)) / (eig(3)- eig(1))
-            tmpVec(1) = (shift - eig(1)) / (eig(3)- eig(1))
+            tmpVec(1) = (shift - eig(1)) / (eig(2) - eig(1))
+            tmpVec(2) = (shift - eig(1)) / (eig(3) - eig(1))
+            tmpVec(3) = (shift - eig(1)) / (eig(4) - eig(1))
 
+            ! n^i
             scaling = tmpVec(1)*tmpVec(2)*tmpVec(3)
             
+            ! g^i
             prefactor = 3* scaling / (  shift - eig(1)  )
 
+            ! I^i_k
             interSect(1) = 1/3 * (  (1-tmpVec(1)) + (1-tmpVec(2)) + (1-tmpVec(3)) )
-            interSect(2) = 1/3 * tmpVec(2)
-            interSect(3) = 1/3 * tmpVec(3)
-            interSect(4) = 1/3 * tmpVec(4)
+            interSect(2) = 1/3 * tmpVec(1)
+            interSect(3) = 1/3 * tmpVec(2)
+            interSect(4) = 1/3 * tmpVec(3)
 
 
             DO ind = 1 , 4 
-                valArea = valArea + scaling* interSect(ind)*tmpMat(ind) 
+                valArea = valArea + prefactor* interSect(ind)*tmpMat(ind) 
             END DO 
 
         ELSE IF ( (eig(2) .LT. shift) .AND. (eig(3) .GE. shift)  ) THEN 
 
+            ! tmpVec contains f_{2,1} , f_{3,1} , f_{4,1} 
+            tmpVec(1) = (shift - eig(1)) / (eig(2) - eig(1))
+            tmpVec(2) = (shift - eig(1)) / (eig(3) - eig(1))
+            tmpVec(3) = (shift - eig(1)) / (eig(4) - eig(1))
+
+
+
+            ! tmpVec2 contains f{1,2} , f_{3,2} , f_{4,2}
+            tmpVec2(1) = (shift - eig(2)) / (eig(1)- eig(2))
+            tmpVec2(2) = (shift - eig(2)) / (eig(3)- eig(2))
+            tmpVec2(3) = (shift - eig(2)) / (eig(4)- eig(2))
+
+            ! n^i
+            scaling = tmpVec2(3)*tmpVec2(2) + tmpVec(3)*(1-tmpVec2(3))*tmpVec2(2) + tmpVec(3)*tmpVec(2)*(1-tmpVec(2))
+
+            ! g^i
+            prefactor = 3 / (eig(4) - eig(1)) * ((1-tmpVec2(2))*tmpVec(2) + tmpVec2(2)*(1-tmpVec2(3)))
+
+            ! I^i_k
+            interSect(1) = (1-tmpVec(3)) / 3 + (1-tmpVec(2))*tmpVec(2)*(1-tmpVec2(2)) / (scaling * (eig(4) - eig(1))) 
+            interSect(2) = (1-tmpVec2(2))/3 + (1-tmpVec2(3))**2*tmpVec2(2) /  (scaling * (eig(4) - eig(1))) 
+            interSect(3) = tmpVec2(2)/3 + tmpVec(2)**2*(1-tmpVec2(2)) / (scaling * (eig(4) - eig(1)))
+            interSect(4) = tmpVec(3)/3 + tmpVec2(3)*(1-tmpVec2(3))*tmpVec2(2) / (scaling * (eig(4) - eig(1)))
+
+            DO ind = 1 , 4 
+                valArea = valArea + prefactor* interSect(ind)*tmpMat(ind) 
+            END DO 
+
 
         ELSE IF ( (eig(3) .LT. shift) .AND. (eig(4) .GE. shift)  ) THEN 
-                      
+                   
+            ! tmpVec contains f_{1,4} , f_{2,4} , f_{3,4} 
+            tmpVec(1) = (shift - eig(4)) / (eig(1)- eig(4))
+            tmpVec(2) = (shift - eig(4)) / (eig(2)- eig(4))
+            tmpVec(3) = (shift - eig(4)) / (eig(3)- eig(4))
+            
+            ! n^i
+            scaling = 1 - tmpVec(1)*tmpVec(2)*tmpVec(3)
+
+            !g^i
+            prefactor = 3 * (1-scaling) / (  eig(4) - shift )
+
+            print * , "This should be positive" , (  eig(4) - shift )
+            ! I^i_k
+            interSect(1) = tmpVec(1) / 3
+            interSect(2) = tmpVec(2) / 3
+            interSect(3) = tmpVec(3) / 3
+            interSect(4) = ((1-tmpVec(1)) + (1-tmpVec(2)) + (1-tmpVec(3)) ) / 3
+
+            DO ind = 1 , 4 
+                valArea = valArea + prefactor* interSect(ind)*tmpMat(ind) 
+            END DO 
 
         ELSE 
             valArea = 0.0 

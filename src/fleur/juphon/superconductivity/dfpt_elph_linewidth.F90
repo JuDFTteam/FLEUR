@@ -42,7 +42,7 @@ CONTAINS
 
         INTEGER :: iNupr,nu, ispin , gridPoint , nk , nk_i ,  nZero , iMode , noccbd, ind, indPr
         REAL :: emin, emax , x ,xq , allowed
-        REAL, ALLOCATABLE :: eGrid(:),linewidth(:,:)
+        REAL, ALLOCATABLE :: eGrid(:),linewidth(:,:) , kInt(:,:)
         COMPLEX,ALLOCATABLE:: kInt_gmat(:,:,:,:) !(nu',nu,jsp,normal_mode)
         REAL,ALLOCATABLE :: gmatCollect(:,:,:,:,:)
 
@@ -227,9 +227,12 @@ CONTAINS
                 END DO 
                 
             CASE(4)
+                ALLOCATE(linewidth(3*fi%atoms%ntype,fi%input%jspins))
                 ALLOCATE(ph_linewidth(3*fi%atoms%ntype))
-                ph_linewidth = 0.0 
                 ALLOCATE(gmatCollect(size(gmat,1),size(gmat,2),fi%kpts%nkpt,size(gmat,4),size(gmat,5)))
+
+                ph_linewidth = 0.0 
+                linewidth = 0.0 
                 gmatCollect = 0.0
                 
                 
@@ -259,12 +262,22 @@ CONTAINS
 #else 
                 gmatCollect = REAL(gmat)         
 #endif 
+                CALL save_npy("gmatCollect.npy",gmatCollect)
                 !DEALLOCATE(gmat)
                 IF (fmpi%irank==0) THEN 
                     CALL timestart("k-Integration el-ph")
-                    CALL dfpt_tetra_single(fi,results,resultsq,results1,gmatCollect,eigenVals,nuWindow)
+                    CALL dfpt_tetra_single(fi,results,resultsq,results1,gmatCollect,eigenVals,nuWindow,linewidth)
                     CALL timestop("k-Integration el-ph")
                 END IF 
+
+
+                DO iMode = 1 , 3*fi%atoms%ntype
+                    DO ispin = 1 , fi%input%jspins
+                        ph_linewidth(iMode) = ph_linewidth(iMode) + tpi_const/fi%kpts%ntet * linewidth(iMode,ispin)
+
+
+                    END DO 
+                END DO 
 
 
 
