@@ -75,7 +75,6 @@ MODULE m_dfpt_tetra_single
                 END DO !nu 
             END DO !itet 
         END DO !ispin 
-        call save_npy("eig_nondeg.npy", eig_nondeg)
         CALL timestop("Tetrahedon Degeneracy Test k")
 
         CALL timestart("Tetra int")
@@ -101,7 +100,7 @@ MODULE m_dfpt_tetra_single
                                 tmpMat(i) = gmat(indPr,ind,icorn,ispin,iMode)  
                             END DO !corners
                             CALL tetra_area(eig,tmpMat,SQRT(shift(iMode)),valArea)
-                            linewidth(iMode,ispin) = linewidth(iMode,ispin) + 2.0/fi%input%jspins * fi%kpts%voltet(itet) * valArea 
+                            linewidth(iMode,ispin) = linewidth(iMode,ispin) + 2.0/fi%input%jspins * fi%kpts%voltet(itet)/fi%kpts%ntet * valArea 
                        END DO !iNuPr
                     END DO !nu
                 END DO  !itet
@@ -131,7 +130,7 @@ MODULE m_dfpt_tetra_single
 
         ! Case 1 
 
-        IF ( (eig(1) .LT. shift) .AND. (eig(2) .GE. shift)  ) THEN 
+        IF ( (eig(1) .LT. shift) .AND. (eig(2) .GE. shift)  ) THEN
             ! tmpVec contains f_{2,1} , f_{3,1} , f_{4,1} 
             tmpVec(1) = (shift - eig(1)) / (eig(2) - eig(1))
             tmpVec(2) = (shift - eig(1)) / (eig(3) - eig(1))
@@ -144,10 +143,10 @@ MODULE m_dfpt_tetra_single
             prefactor = 3* scaling / (  shift - eig(1)  )
 
             ! I^i_k
-            interSect(1) = 1/3 * (  (1-tmpVec(1)) + (1-tmpVec(2)) + (1-tmpVec(3)) )
-            interSect(2) = 1/3 * tmpVec(1)
-            interSect(3) = 1/3 * tmpVec(2)
-            interSect(4) = 1/3 * tmpVec(3)
+            interSect(1) = (  (1-tmpVec(1)) + (1-tmpVec(2)) + (1-tmpVec(3)) ) / 3
+            interSect(2) = tmpVec(1) / 3
+            interSect(3) = tmpVec(2) / 3
+            interSect(4) = tmpVec(3) / 3
 
 
             DO ind = 1 , 4 
@@ -175,10 +174,10 @@ MODULE m_dfpt_tetra_single
             prefactor = 3 / (eig(4) - eig(1)) * ((1-tmpVec2(2))*tmpVec(2) + tmpVec2(2)*(1-tmpVec2(3)))
 
             ! I^i_k
-            interSect(1) = (1-tmpVec(3)) / 3 + (1-tmpVec(2))*tmpVec(2)*(1-tmpVec2(2)) / (scaling * (eig(4) - eig(1))) 
-            interSect(2) = (1-tmpVec2(2))/3 + (1-tmpVec2(3))**2*tmpVec2(2) /  (scaling * (eig(4) - eig(1))) 
-            interSect(3) = tmpVec2(2)/3 + tmpVec(2)**2*(1-tmpVec2(2)) / (scaling * (eig(4) - eig(1)))
-            interSect(4) = tmpVec(3)/3 + tmpVec2(3)*(1-tmpVec2(3))*tmpVec2(2) / (scaling * (eig(4) - eig(1)))
+            interSect(1) = (1-tmpVec(3)) / 3 + (1-tmpVec(2))*tmpVec(2)*(1-tmpVec2(2)) / (prefactor * (eig(4) - eig(1))) 
+            interSect(2) = (1-tmpVec2(2))/3 + (1-tmpVec2(3))**2*tmpVec2(2) /  (prefactor * (eig(4) - eig(1))) 
+            interSect(3) = tmpVec2(2)/3 + tmpVec(2)**2*(1-tmpVec2(2)) / (prefactor * (eig(4) - eig(1)))
+            interSect(4) = tmpVec(3)/3 + tmpVec2(3)*(1-tmpVec2(3))*tmpVec2(2) / (prefactor * (eig(4) - eig(1)))
 
             DO ind = 1 , 4 
                 valArea = valArea + prefactor* interSect(ind)*tmpMat(ind) 
@@ -198,7 +197,6 @@ MODULE m_dfpt_tetra_single
             !g^i
             prefactor = 3 * (1-scaling) / (  eig(4) - shift )
 
-            print * , "This should be positive" , (  eig(4) - shift )
             ! I^i_k
             interSect(1) = tmpVec(1) / 3
             interSect(2) = tmpVec(2) / 3

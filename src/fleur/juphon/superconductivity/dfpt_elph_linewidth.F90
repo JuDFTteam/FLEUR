@@ -262,7 +262,6 @@ CONTAINS
 #else 
                 gmatCollect = REAL(gmat)         
 #endif 
-                CALL save_npy("gmatCollect.npy",gmatCollect)
                 !DEALLOCATE(gmat)
                 IF (fmpi%irank==0) THEN 
                     CALL timestart("k-Integration el-ph")

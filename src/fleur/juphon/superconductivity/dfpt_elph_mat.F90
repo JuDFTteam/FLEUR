@@ -299,7 +299,6 @@ CONTAINS
                 
                 nbasfcn  = MERGE(lapw%nv(1)+lapw%nv(2)+2*fi%atoms%nlotot,lapw%nv(1)+fi%atoms%nlotot,fi%noco%l_noco)
                 nbasfcnq = MERGE(lapwq%nv(1)+lapwq%nv(2)+2*fi%atoms%nlotot,lapwq%nv(1)+fi%atoms%nlotot,fi%noco%l_noco)
-                IF (fmpi%irank==0) write(2000,*) "nbasfcnq", nbasfcn ,"nbasfcn" , nbasfcn , "k-Point" , nk
                 IF (fmpi%n_size == 1) THEN
                     ALLOCATE (t_mat::zMatk)
                     ALLOCATE (t_mat::zMatq)
