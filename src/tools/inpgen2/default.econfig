@@ -114,4 +114,4 @@
 &atom desc="Fermium (Fm)" z=100 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10 5p6 4f14 5d10|6s2 6p6 7s2 5f12" lo="6s 6p" /
 &atom desc="Mendelevium (Md)" z=101 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10 5p6 4f14 5d10|6s2 6p6 7s2 5f13" lo="6s 6p" /
 &atom desc="Nobelium (No)" z=102 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10 5p6 4f14 5d10|6s2 6p6 7s2 5f14" lo="6s 6p" /
-&atom desc="Lawrencium (Lr)" z=103 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10 5p6 6s2 4f14 5d10 6p6|7s2 5f14 6d1" lo="6s 6p" /
+&atom desc="Lawrencium (Lr)" z=103 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10 5p6 4f14 5d10|6s2 6p6 7s2 5f14 6d1" lo="6s 6p" /
