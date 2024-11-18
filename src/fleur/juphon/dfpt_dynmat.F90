@@ -622,7 +622,7 @@ CONTAINS
       TYPE(t_usdus)             :: ud, uddummy
       TYPE(t_lapw)              :: lapw, lapwq
       TYPE(t_hub1data)          :: hub1datadummy
-      TYPE (t_mat)              :: zMat, zMat1, zMatq, zMat2
+      CLASS (t_mat), ALLOCATABLE :: zMat, zMat1, zMatq, zMat2
       CLASS(t_mat), ALLOCATABLE :: hmat1,smat1,hmat1q,smat1q,hmat2,smat2,vmat2
 
       ! Variables for HF or fi%hybinp functional calculation
@@ -682,6 +682,18 @@ CONTAINS
 
             nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*fi%atoms%nlotot,lapw%nv(1)+fi%atoms%nlotot,fi%noco%l_noco)
             nbasfcnq = MERGE(lapwq%nv(1)+lapwq%nv(2)+2*fi%atoms%nlotot,lapwq%nv(1)+fi%atoms%nlotot,fi%noco%l_noco)
+
+            IF (fmpi%n_size == 1) THEN
+               ALLOCATE (t_mat::zMat)
+               ALLOCATE (t_mat::zMat1)
+               ALLOCATE (t_mat::zMat2)
+               IF (PRESENT(q_eig_id)) ALLOCATE (t_mat::zMatq)
+            ELSE
+               ALLOCATE (t_mpimat::zMat)
+               ALLOCATE (t_mpimat::zMat1)
+               ALLOCATE (t_mpimat::zMat2)
+               IF (PRESENT(q_eig_id)) ALLOCATE (t_mpimat::zMatq)
+            END IF
 
             CALL zMat%init(l_real,nbasfcn,noccbd)
             CALL zMat1%init(.FALSE.,nbasfcnq,noccbd)
@@ -809,12 +821,16 @@ CONTAINS
 #endif
             CALL timestop("EV output")
 
-            !IF (allocated(zmat)) THEN
-             CALL zMat%free()
-             CALL zMat1%free()
-             CALL zMat2%free()
-              !deallocate(zMat)
-            !ENDIF
+            IF (ALLOCATED(zmat)) THEN
+               CALL zMat%free()
+               IF (PRESENT(q_eig_id)) CALL zMatq%free()
+               CALL zMat1%free()
+               CALL zMat2%free()
+               DEALLOCATE(zMat)
+               IF (PRESENT(q_eig_id)) DEALLOCATE(zMatq)
+               DEALLOCATE(zMat1)
+               DEALLOCATE(zMat2)
+            END IF
          END DO  k_loop
       END DO ! spin loop ends
 #ifdef CPP_MPI
