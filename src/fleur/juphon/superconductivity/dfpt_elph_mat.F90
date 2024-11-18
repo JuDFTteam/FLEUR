@@ -239,7 +239,8 @@ CONTAINS
 #endif 
 
         INTEGER :: jsp, nk_i, nk ,noccbd,noccbdq,nbasfcn,nbasfcnq , i , neigk,neigq, nu , noccbd_max,nbasfcnq_max
-        INTEGER :: tmp1
+        INTEGER :: tmp1 ,  dealloc_stat
+        character(len=300)        :: errmsg
         REAL :: bkpt(3)
         REAL, ALLOCATABLE :: eigk(:),eigq(:)
         COMPLEX, ALLOCATABLE :: gmatH(:,:),gmatS(:,:),tempVec(:),tempMat1(:)
@@ -393,12 +394,19 @@ CONTAINS
                     gmatS(:nbasfcnq,nu) = -eigk(nu)*tempMat1(:nbasfcnq)
 
                 END DO !nu
+                CALL timestop("Matrix multiplication")
 
                 gmat%data_c(:nbasfcnq,:noccbd_max) = gmatH(:nbasfcnq,:noccbd_max) + gmatS(:nbasfcnq,:noccbd_max)
 
                 gmatBuffer(:,:,nk_i,jsp) = gmat%data_c(nuWindow(2,1):nuWindow(2,2), nuWindow(1,1):nuWindow(1,2))
 
-                CALL timestop("Matrix multiplication")
+                
+                CALL smat%free()
+                CALL hmat%free()
+                DEALLOCATE(hmat,smat, stat=dealloc_stat, errmsg=errmsg)
+                IF(dealloc_stat /= 0) CALL juDFT_error("Deallocation failed for hmat or smat", hint=errmsg, calledby="dfpt_elph_mat.F90")
+
+                
                 IF (ALLOCATED(ev_list)) DEALLOCATE(ev_list)
                 IF (ALLOCATED(q_ev_list)) DEALLOCATE(q_ev_list)
                 IF (ALLOCATED(eigk)) DEALLOCATE(eigk)
