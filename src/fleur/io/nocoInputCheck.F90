@@ -27,7 +27,7 @@ MODULE m_nocoInputCheck
       TYPE(t_vacuum), INTENT(IN)    :: vacuum
       TYPE(t_noco),   INTENT(IN)    :: noco
 
-      INTEGER itype
+      INTEGER itype,n
       LOGICAL l_relax_any,error(sym%nop)
 
 !---> make sure second variation is switched off
@@ -130,6 +130,24 @@ MODULE m_nocoInputCheck
       CALL juDFT_error("You use l_soc='T' and l_ss='T'.",hint="In a spin-spiral calculation SOC cannot be used. These are incompatible features. Please see the documentation for details.",calledby='nocoInputCheck')
     END IF
 
+    if (noco%l_noco) THEN
+      write(ounit,*) 
+      write(ounit,*) 
+      write(ounit,*) "Non-collinear setup"
+      write(ounit,*) "============================================"
+      write(ounit,*) "Spin-Spiral:",noco%l_ss
+      if (noco%l_ss) write(ounit,*) "q-vector   :",noco%qss_inp
+      write(ounit,*) "SOC:        ",noco%l_soc
+
+      write(ounit,*) "    n|Species            | FFN    |constr. |rel.SQA |+U-Offdiag"
+      write(ounit,*) "---------------------------------------------------------------"
+      DO n=1,atoms%ntype
+         write(ounit,"(i6,'|',a20,'|',3(l,6x,'|'),l)") n,atoms%speciesName(n),noco%l_unrestrictMT(n),noco%l_constrained(n),noco%l_alignMT(n),noco%l_spinoffd_ldau(n)
+      ENDDO
+      write(ounit,*) "---------------------------------------------------------------"
+      write(ounit,*) 
+      write(ounit,*) 
+   endif     
    END SUBROUTINE nocoInputCheck
 
 END MODULE m_nocoInputCheck

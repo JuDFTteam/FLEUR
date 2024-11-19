@@ -24,4 +24,5 @@ src/fleur/cdn/slab_dim.f90
 src/fleur/cdn/slabgeom.f90
 src/fleur/cdn/vacden.F90
 src/fleur/cdn/nIJ_mat.f90
+src/fleur/cdn/relax_moment.F90
 )

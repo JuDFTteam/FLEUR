@@ -179,7 +179,7 @@ CONTAINS
     INTEGER:: n,i,j
     CHARACTER(LEN=18):: attributes(6)
     complex,allocatable :: jq(:,:,:)
-    real,allocatable    :: jr(:,:,:)
+    real,allocatable    :: jr(:,:,:),m(:)
     INTEGER,allocatable :: R(:,:)
 
 
@@ -204,7 +204,11 @@ CONTAINS
                RESHAPE((/1,1,5,5,5,6,4,18,4,4,2,15/),(/6,2/)))
     ENDDO
     
-    call this%jij_q(fi%atoms,results%M,Jq)
+    allocate(m(fi%atoms%ntype))
+    DO i=1,fi%atoms%ntype
+      m(i)=sqrt(dot_product(results%m(:,i),results%m(:,i)))
+    ENDDO  
+    call this%jij_q(fi%atoms,M,Jq)
 
     call this%fourier_transform(fi%atoms,fi%sym,jq,jr,R)
 

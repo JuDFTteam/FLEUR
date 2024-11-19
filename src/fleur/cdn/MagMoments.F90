@@ -35,7 +35,7 @@ module m_magmoments
         if (.not.present(moments).and..not.present(den)) return !No data provided
         if (present(moments)) call priv_print_spin_density_at_nucleus(input,atoms,moments)
         if (present(results))then 
-           if (.not.allocated(results%m)) allocate(results%m(atoms%ntype))
+           if (.not.allocated(results%m)) allocate(results%m(3,atoms%ntype))
         endif
 
 
@@ -85,7 +85,8 @@ module m_magmoments
            global_m=nococonv%denmat_to_mag(up,down,off_diag)
 
            call priv_print_mt_moment(itype,noco%l_noco,l_offdiag,noco%l_soc,local_m(1:3),global_m(1:3),"smm")
-           if (present(results))  results%m(itype)=sqrt(dot_product(local_m(1:3),local_m(1:3)))
+           if (present(results))   results%m(:,itype)=global_m(1:3)
+                  
         enddo   
      
         CALL closeXMLElement('magneticMomentsInMTSpheres')

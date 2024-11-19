@@ -14,7 +14,7 @@ MODULE m_relaxation
    IMPLICIT NONE
 
    PRIVATE
-   PUBLIC relaxation !This is the interface. Below there are internal subroutines for bfgs, simple mixing, CG ...
+   PUBLIC relaxation,simple_bfgs !This is the interface. Below there are internal subroutines for bfgs, simple mixing, CG ...
 
 CONTAINS
    SUBROUTINE relaxation(fmpi,input,atoms,cell,sym ,vacuum,force_new,energies_new)
