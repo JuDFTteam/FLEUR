@@ -65,16 +65,15 @@ CONTAINS
         Allocate(z(size(hmat%data_r,1),ne))
         h=hmat%data_r
 
-        allocate(work(1),iwork(1))
-        call ssyevx('V','I','U',size(h,1),h,size(h,1),0.0,0.0,1,ne,0.0,nev,eigval,z,size(z,1),work,-1,iwork,liwork,ifail,info)
+        allocate(work(1),iwork(5*size(h,1)))
+        call ssyevx('V','I','U',size(h,1),h,size(h,1),0.0,0.0,1,ne,1.0E-8_sp,nev,eigval,z,size(z,1),work,-1,iwork,ifail,info)
         lwork=work(1)
-        liwork=iwork(1)
-        deallocate(work,iwork)
-        allocate(work(lwork),iwork(liwork))
+        deallocate(work)
+        allocate(work(lwork))
 
-        call ssyevx('V','I','U',size(h,1),h,size(h,1),0.0,0.0,1,ne,0.0,nev,eigval,z,size(z,1),work,lwork,iwork,liwork,ifail,info)
+        call ssyevx('V','I','U',size(h,1),h,size(h,1),0.0,0.0,1,ne,1.0E-8_sp,nev,eigval,z,size(z,1),work,lwork,iwork,ifail,info)
         
-        eig=eigval(:ne)
+        eig(:ne)=eigval(:ne)
         zmat%data_r=z(:,:ne)
         deallocate(h,z,eigval,work,iwork)
        END BLOCK
