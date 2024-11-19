@@ -4,6 +4,7 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 module m_make_magnetism
+    USE m_judft
     implicit none
     contains
     subroutine make_magnetism(input,noco,atoms,mag_mom)
@@ -16,7 +17,9 @@ module m_make_magnetism
         TYPE(t_atoms),INTENT(INOUT):: atoms 
         REAL,INTENT(IN)            :: mag_mom(0:,:)
 
-        INTEGER:: n 
+        INTEGER:: n
+
+        CALL timestart('make_magnetism')
 
         !Magnetic defaults for noco
         ALLOCATE ( noco%alph_inp(atoms%ntype), noco%beta_inp(atoms%ntype))
@@ -36,11 +39,15 @@ module m_make_magnetism
         Allocate(atoms%bmu(atoms%ntype))
         atoms%bmu=0.0
 
-        if (all(abs(mag_mom)<1E-5)) RETURN !No magnetic moments given
+        IF (all(abs(mag_mom)<1E-5)) THEN
+            CALL timestop('make_magnetism')
+           RETURN !No magnetic moments given
+        END IF
         input%jspins=2
         !check if we have a collinear setup
         if (all(abs(mag_mom(2:,:))<1E-5).and.all(mag_mom(0,:)==0)) THEN
             atoms%bmu(:)=mag_mom(1,:)
+            CALL timestop('make_magnetism')
             RETURN
         endif
 
@@ -57,5 +64,8 @@ module m_make_magnetism
                 atoms%bmu(n)=mag_mom(3,n)
             endif      
         ENDDO
+
+        CALL timestop('make_magnetism')
+
     END subroutine
 END module            

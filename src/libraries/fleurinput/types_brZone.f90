@@ -60,6 +60,8 @@ MODULE m_types_brZone
       INTEGER :: addSym, i
       REAL    :: binv(3,3)
 
+      CALL timestart('initBZone')
+
       CALL bravais(cell%amat,bz%idsyst,bz%idtype)
 
       bz%nsym = MERGE(sym%nop2,sym%nop,film)
@@ -99,6 +101,7 @@ MODULE m_types_brZone
       ! faces of the irreducible wedge of the brillouin zone (IBZ).
       bz%rltv=TRANSPOSE(cell%bmat)
       CALL brzone2(bz%rltv,bz%nsym,bz%ccr,mface_const,nbsz_const,nv48_const,bz%cpoint,bz%xvec,bz%ncorn,bz%nedge,bz%nface,bz%fnorm,bz%fdist)
+      CALL timestop('initBZone')
    END SUBROUTINE initBZone
 
 END MODULE m_types_brZone

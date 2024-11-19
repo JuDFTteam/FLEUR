@@ -47,7 +47,7 @@ contains
             WRITE(oUnit,*) "Multiple OMPs on one core: There are " // int2str(count(cpu(i) == cpu)) // &
                            " on cpu " // int2str(cpu(i))
 
-            l_problem = .True. 
+            if (judft_was_argument("-debugtime")) l_problem = .True. 
             exit
          endif
       enddo

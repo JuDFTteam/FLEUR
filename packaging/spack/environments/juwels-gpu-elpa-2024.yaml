@@ -1,6 +1,4 @@
 # This is a Spack Environment file.
-##docu Config for a specific computer: JURECA@JSC
-##docu GPU version, using 2024 stage of modules
 #
 # It describes a set of packages to be installed, along with
 # configuration settings.
@@ -19,7 +17,7 @@ spack:
     netlib-lapack:
       externals:
       - spec: netlib-lapack@2.0
-        prefix: /p/software/jurecadc/stages/2024/software/NVHPC/24.3-CUDA-12/Linux_x86_64/24.3/compilers/
+        prefix: /p/software/juwelsbooster/stages/2024/software/NVHPC/24.3-CUDA-12/Linux_x86_64/24.3/compilers/
     mpi:
       require: openmpi
     libtool:
@@ -82,10 +80,10 @@ spack:
   - compiler:
       spec: nvhpc@=24.3
       paths:
-        cc: /p/software/jurecadc/stages/2024/software/NVHPC/24.3-CUDA-12/Linux_x86_64/24.3/compilers/bin/nvc
-        cxx: /p/software/jurecadc/stages/2024/software/NVHPC/24.3-CUDA-12/Linux_x86_64/24.3/compilers/bin/nvc++
-        f77: /p/software/jurecadc/stages/2024/software/NVHPC/24.3-CUDA-12/Linux_x86_64/24.3/compilers/bin/nvfortran
-        fc: /p/software/jurecadc/stages/2024/software/NVHPC/24.3-CUDA-12/Linux_x86_64/24.3/compilers/bin/nvfortran
+        cc: /p/software/juwelsbooster/stages/2024/software/NVHPC/24.3-CUDA-12/Linux_x86_64/24.3/compilers/bin/nvc
+        cxx: /p/software/juwelsbooster/stages/2024/software/NVHPC/24.3-CUDA-12/Linux_x86_64/24.3/compilers/bin/nvc++
+        f77: /p/software/juwelsbooster/stages/2024/software/NVHPC/24.3-CUDA-12/Linux_x86_64/24.3/compilers/bin/nvfortran
+        fc: /p/software/juwelsbooster/stages/2024/software/NVHPC/24.3-CUDA-12/Linux_x86_64/24.3/compilers/bin/nvfortran
       flags:
         cflags: -tp=host -O3
         cppflags: -O3
@@ -96,3 +94,4 @@ spack:
       modules: [Stages/2024, NVHPC/24.3-CUDA-12, OpenMPI]
       environment: {}
       extra_rpaths: []
+

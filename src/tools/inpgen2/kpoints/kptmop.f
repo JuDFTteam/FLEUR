@@ -129,6 +129,9 @@ c
 c
 c-----------------------------------------------------------------------
 c
+
+      CALL timestart('kptmop')
+
       ALLOCATE (fract(mkpt,3),vkrep(3,mkpt),ikpn(48,mkpt),irrkpn(mkpt))
       ALLOCATE (nkrep(mkpt),iostar(mkpt),iside(mface))
 
@@ -490,6 +493,6 @@ c
 !
       DEALLOCATE (fract,vkrep,ikpn,irrkpn,nkrep,iostar,iside)
 
-      RETURN
+      CALL timestop('kptmop')
       END SUBROUTINE kptmop
       END MODULE m_kptmop

@@ -18,7 +18,7 @@ MODULE m_dfpt_elph_mat
 #define CPP_zgemv zgemv
 #endif
 
-    USE m_types
+    USE m_types 
     USE m_constants
     USE m_npy 
 
@@ -32,6 +32,10 @@ CONTAINS
         USE m_dfpt_vgen
         USE m_dfpt_tetra
         USE m_eig66_io, ONLY : write_eig, read_eig
+        USE m_dosbin
+        USE m_smooth
+        USE m_dfpt_fermie, ONLY : sfermi
+        USE m_dfpt_elph_linewidth
 
 
 
@@ -65,9 +69,8 @@ CONTAINS
         COMPLEX :: sigma_loc(2)
         COMPLEX,ALLOCATABLE:: gmatCart(:,:,:,:) !(nu',nu,kpoints,jsp)
         COMPLEX,ALLOCATABLE:: gmat(:,:,:,:,:) !(nu',nu,kpoints,jsp,normal_mode)
-        COMPLEX,ALLOCATABLE:: kInt_gmat(:,:,:,:) !(nu',nu,jsp,normal_mode)
-        REAL, ALLOCATABLE :: ph_linewidth(:,:) !(jsp,normal_mode)
-        INTEGER :: nbasfcnq_min ,iNupr,nu, ispin 
+        REAL, ALLOCATABLE :: ph_linewidth(:) !(normal_mode)
+        INTEGER :: nbasfcnq_min 
 
 
 #ifdef CPP_MPI
@@ -99,7 +102,7 @@ CONTAINS
         CALL rho_loc%copyPotDen(rho)
         IF (fmpi%irank==0) WRITE(*,*) 'Generating Potentials for Electron-Phonon Matrix Elements'
         
-        DO iDtype=1,fi%atoms%ntype
+        DO iDtype=1,fi%atoms%nat
             DO iDir=1,3
                 CALL denIn1_loc%copyPotDen(denIn1(iDir+3*(iDtype-1)))
                 CALL denIn1Im_loc%copyPotDen(denIn1Im(iDir+3*(iDtype-1)))
@@ -129,14 +132,14 @@ CONTAINS
                 CALL timestop("Generate electron-phonon matrix element")
 
                 IF (.NOT. ALLOCATED(gmat)) THEN
-                    ALLOCATE(gmat(size(gmatCart,1),size(gmatCart,2),size(gmatCart,3),size(gmatCart,4),3*fi%atoms%ntype))
+                    ALLOCATE(gmat(size(gmatCart,1),size(gmatCart,2),size(gmatCart,3),size(gmatCart,4),3*fi%atoms%nat))
                     gmat=CMPLX(0.0,0.0)
                 END IF 
                 !TODO Read in the eigenvecotrs from Dynmats, here we can take them from memory
                 IF (fmpi%irank==0) THEN 
                     ! Numerics saves the day 
                     ! Think about Gamma if Frequencies are approximately zero
-                    DO iMode = 1 , 3*fi%atoms%ntype
+                    DO iMode = 1 , 3*fi%atoms%nat
                         IF (eigenVals(iMode) .LT. 0.0 ) THEN 
                             gmat(:,:,:,:,iMode) = gmat(:,:,:,:,iMode) + eigenVecs(iPerturb,iMode)* -1*ImagUnit / SQRT(2* atomic_mass_array(fi%atoms%nz(CEILING(iPerturb/3.0))) * SQRT(ABS(eigenVals(iMode)))) * gmatCart(:,:,:,:) 
                         ELSE
@@ -154,50 +157,17 @@ CONTAINS
 
 
         ! Construct the Superconduction temperature 
-
+#ifdef CPP_MPI
+        CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
+#endif
         !Set this code block behind a logical in the future 
         IF (fmpi%irank==0) THEN
-
-            gmat(:,:,:,:,:) = ABS(gmat(:,:,:,:,:))**2 
-            CALL timestart("k-Integration el-ph")
-            call dfpt_tetra_int(fi,results,resultsq, results1, gmat,nbasfcnq_min,kInt_gmat)
-            CALL timestop("k-Integration el-ph")
-            
-            DEALLOCATE(gmat)
-            ALLOCATE(ph_linewidth(fi%input%jspins, 3*fi%atoms%ntype))
-            
-            ph_linewidth = 0.0 
-            DO iMode = 1 , 3*fi%atoms%ntype
-                DO nu = 1 , size(kInt_gmat,2)
-                    DO iNupr = 1 , nbasfcnq_min
-                        ph_linewidth(:,iMode) =  ph_linewidth(:,iMode) + tpi_const * eigenVals(iMode)/fi%kpts%nkpt*REAL(kInt_gmat(iNupr,nu,:,iMode))
-                    END DO 
-                END DO 
-            END DO 
-            
-            !CALL save_npy("linewidth.npy", ph_linewidth)
-
-            IF ( iQ .EQ. fi%juPhon%startq ) THEN 
-                open( 110, file="linewidth", status='replace', action='write', form='formatted')
-                write(110,*) "q-Point", qpts%bk(:,iQ) 
-                write(*,*) "Linewidth q-Point", qpts%bk(:,iQ) 
-                DO ispin  = 1 , fi%input%jspins
-                    write(110,*) ph_linewidth(ispin,:) 
-                    write(*,*) ph_linewidth(ispin,:) 
-                END DO 
-            ELSE
-                open( 110, file="linewidth", status="old", position="append", action="write")
-                write(110,*) "q-Point", qpts%bk(:,iQ) 
-                write(*,*) "Linewidth q-Point", qpts%bk(:,iQ) 
-                DO ispin  = 1 , fi%input%jspins
-                    write(110,*) ph_linewidth(ispin,:) 
-                    write(*,*) ph_linewidth(ispin,:) 
-                END DO
-            END IF 
- 
-                        
-            close(110)
+            CALL dfpt_ph_linewidth(fi,qpts,results,resultsq,results1,eigenVals,gmat,iQ,nbasfcnq_min, ph_linewidth) 
         END IF 
+
+#ifdef CPP_MPI
+        CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
+#endif
     END SUBROUTINE dfpt_elph_mat
 
 
