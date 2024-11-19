@@ -197,10 +197,10 @@ CONTAINS
             END IF
 
             IF (ANY(nk==k_selection)) THEN
-               CALL save_npy(int2str(eig_id)//"_"//int2str(nk)//"_h0.npy",hmat%data_r)
-               CALL save_npy(int2str(eig_id)//"_"//int2str(nk)//"_s0.npy",smat%data_r)
-               CALL save_npy(int2str(eig_id)//"_"//int2str(nk)//"_vk.npy",lapw%vk)
-               CALL save_npy(int2str(eig_id)//"_"//int2str(nk)//"_gvec.npy",lapw%gvec)
+!               CALL save_npy(int2str(eig_id)//"_"//int2str(nk)//"_h0.npy",hmat%data_r)
+!               CALL save_npy(int2str(eig_id)//"_"//int2str(nk)//"_s0.npy",smat%data_r)
+!               CALL save_npy(int2str(eig_id)//"_"//int2str(nk)//"_vk.npy",lapw%vk)
+!               CALL save_npy(int2str(eig_id)//"_"//int2str(nk)//"_gvec.npy",lapw%gvec)
                write(9530,*) nk, lapw%bkpt, qphon
             END IF
             nvBuffer(nk,jsp) = lapw%nv(jsp)

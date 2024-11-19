@@ -175,7 +175,7 @@ CONTAINS
                 END DO 
             END DO 
             
-            CALL save_npy("linewidth.npy", ph_linewidth)
+            !CALL save_npy("linewidth.npy", ph_linewidth)
 
             IF ( iQ .EQ. fi%juPhon%startq ) THEN 
                 open( 110, file="linewidth", status='replace', action='write', form='formatted')
