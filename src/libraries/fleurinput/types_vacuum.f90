@@ -13,14 +13,14 @@ MODULE m_types_vacuum
   TYPE,EXTENDS(t_fleurinput_base):: t_vacuum
      !Stuff for the vacuum
   INTEGER ::nmz=250
-  INTEGER ::nmzd=250
+  INTEGER,PARAMETER ::nmzd=250
   INTEGER ::nmzxy=100
-  INTEGER ::nmzxyd=100
+  INTEGER,PARAMETER ::nmzxyd=100
   INTEGER :: nvac=2
-  INTEGER :: nvacd=2
+  INTEGER,PARAMETER :: nvacd=2
   INTEGER,allocatable :: mrot2(:,:)
   REAL,allocatable    :: tau2(:)
-  REAL :: delz=0.1
+  REAL,PARAMETER :: delz=0.1  !nmzd*delz should be 25.0 a.u.
   REAL :: dvac=0.0
 CONTAINS
   PROCEDURE :: read_xml
