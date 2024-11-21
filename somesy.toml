@@ -1,0 +1,262 @@
+[project]
+name = "FLEUR"
+version = "7.2"
+description = "FLEUR is an all-electron DFT code based on the full-potential linearized augmented plane-wave method (FLAPW). It is mainly developed at the Forschungsentrum Jülich, Germany and available for the materials research community."
+homepage = "https://www.flapw,de"
+keywords = ["DFT","All-electron","FLAPW","Density functional theory","FLEUR"]
+license = "MIT"
+repository = "https://iffgit.fz-juelich.de/fleur/fleur"
+
+[[project.people]]
+given-names = "Daniel"
+family-names = "Wortmann"
+email = "d.wortmann@fz-juelich.de"
+affiliation ="Peter Grünberg Institut,Forschungszentrum Jülich, 52428 Jülich, Germany"
+orcid = "https://orcid.org/0000-0002-2248-1904"
+author= true
+maintainer = true
+publication_author = true
+
+[[project.people]]
+given-names ="Gregor"
+family-names ="Michalicek"
+email = "g.michalicek@fz-juelich.de"
+affiliation ="Peter Grünberg Institut,Forschungszentrum Jülich, 52428 Jülich, Germany"
+orcid="https://orcid.org/0000-0003-4719-188X"
+author= true
+maintainer = true
+publication_author = true
+
+[[project.people]]
+given-names  = "Nadjib"
+family-names  = "Baadji"
+email="Baadji_not_provided@not_valid.de"
+orcid = "https://orcid.org/0000-0002-0630-2398"
+author= true
+
+[[project.people]]
+given-names  = "Wejdan"
+family-names  = "Beida"
+email="Beida_not_provided@not_valid.de"
+affiliation ="Peter Grünberg Institut,Forschungszentrum Jülich, 52428 Jülich, Germany"
+orcid = "https://orcid.org/0009-0009-3909-8619"
+author= true
+
+[[project.people]]
+given-names  = "Markus"
+family-names  = "Betzinger"
+email="Betzinger_not_provided@not_valid.de"
+author= true
+
+[[project.people]]
+given-names  = "Gustav"
+family-names  = "Bihlmayer"
+email= "g.bihlmayer@fz-juelich.de"
+affiliation ="Peter Grünberg Institut,Forschungszentrum Jülich, 52428 Jülich, Germany"
+orcid = "https://orcid.org/0000-0002-6615-1122"
+author= true
+publication_author = true
+
+[[project.people]]
+given-names  = "Thomas"
+family-names  = "Bornhake"
+email="Bornhake_not_provided@not_valid.de"
+affiliation ="Peter Grünberg Institut,Forschungszentrum Jülich, 52428 Jülich, Germany"
+orcid = "https://orcid.org/0009-0002-8467-7029"
+author= true
+
+[[project.people]]
+given-names  = "Jens"
+family-names  = "Bröder"
+email="Broeder_not_provided@not_valid.de"
+orcid = "https://orcid.org/0000-0001-7939-226X"
+author= true
+
+[[project.people]]
+given-names  = "Tobias"
+family-names  = "Burnus"
+email="Burnus_not_provided@not_valid.de"
+orcid = "https://orcid.org/0000-0002-3206-2797"
+author= true
+
+[[project.people]]
+given-names  = "Jussi"
+family-names  = "Enkovaara"
+email="Enkovaara_not_provided@not_valid.de"
+orcid = "https://orcid.org/0000-0002-7596-2891"
+author= true
+
+[[project.people]]
+given-names  = "Frank"
+family-names  = "Freimuth"
+email="Freimuth_not_provided@not_valid.de"
+orcid = "https://orcid.org/0000-0001-6193-5991"
+author= true
+
+[[project.people]]
+given-names  = "Christoph"
+family-names  = "Friedrich"
+email="Friedrich_not_provided@not_valid.de"
+affiliation ="Peter Grünberg Institut,Forschungszentrum Jülich, 52428 Jülich, Germany"
+orcid = "https://orcid.org/0000-0002-3315-7536"
+author= true
+
+[[project.people]]
+given-names  = "Christian-Roman"
+family-names  = "Gerhorst"
+email="Gerhorst_not_provided@not_valid.de"
+orcid = "https://orcid.org/0000-0001-8984-4258"
+author= true
+
+[[project.people]]
+given-names  = "Sabastian"
+family-names  = "Granberg Cauchi"
+email="Cauchi_not_provided@not_valid.de"
+orcid = "https://orcid.org/0000-0003-0805-3564"
+author= true
+
+[[project.people]]
+given-names  = "Uliana"
+family-names  = "Grytsiuk"
+email="Grytsiuk_not_provided@not_valid.de"
+orcid = "https://orcid.org/0000-0003-3231-6192"
+author= true
+
+[[project.people]]
+given-names  = "Andrea"
+family-names  = "Hanke"
+email="Hanke_not_provided@not_valid.de"
+orcid = "https://orcid.org/0000-0003-3439-3706"
+author= true
+
+[[project.people]]
+given-names  = "Jan-Philipp"
+family-names  = "Hanke"
+email="Hanke_not_provided@not_valid.de"
+orcid = "https://orcid.org/0000-0002-2113-7829"
+author= true
+
+[[project.people]]
+given-names  = "Marcus"
+family-names  = "Heide"
+email="Heide_not_provided@not_valid.de"
+author= true
+
+[[project.people]]
+given-names  = "Stefan"
+family-names  = "Heinze"
+email="Heinze_not_provided@not_valid.de"
+orcid = "https://orcid.org/0000-0001-5852-0082"
+author= true
+
+[[project.people]]
+given-names  = "Robin"
+family-names  = "Hilgers"
+email="Hilgers_not_provided@not_valid.de"
+orcid = "https://orcid.org/0000-0002-3443-5032"
+author= true
+
+[[project.people]]
+given-names  = "Henning"
+family-names  = "Janssen"
+email="Jannssen_not_provided@not_valid.de"
+orcid = "https://orcid.org/0000-0003-3558-9487"
+author= true
+
+[[project.people]]
+given-names  = "Daniel Aaaron"
+family-names  = "Klüppelberg"
+email="Klueppelberg_not_provided@not_valid.de"
+author= true
+
+
+[[project.people]]
+given-names  = "Roman"
+family-names  = "Kovacik"
+email="Kovacik_not_provided@not_valid.de"
+orcid = "https://orcid.org/0000-0002-2780-547X"
+author= true
+
+[[project.people]]
+given-names  = "Philipp"
+family-names  = "Kurz"
+email="Kurz_not_provided@not_valid.de"
+author= true
+
+[[project.people]]
+given-names  = "Marjana"
+family-names  = "Lezaic"
+email="Lezaic_not_provided@not_valid.de"
+affiliation ="Peter Grünberg Institut,Forschungszentrum Jülich, 52428 Jülich, Germany"
+orcid = "https://orcid.org/0000-0002-7318-9444"
+author= true
+
+[[project.people]]
+given-names  = "Georg K. H."
+family-names  = "Madsen"
+email="Madsen_not_provided@not_valid.de"
+orcid = "https://orcid.org/0000-0001-9844-9145"
+author= true
+
+[[project.people]]
+given-names  = "Yuriy"
+family-names  = "Mokrousov"
+email="Mokrousov_not_provided@not_valid.de"
+affiliation ="Peter Grünberg Institut,Forschungszentrum Jülich, 52428 Jülich, Germany"
+orcid = "https://orcid.org/0000-0003-1072-2421"
+author= true
+
+[[project.people]]
+given-names  = "Alexander"
+family-names  = "Neukirchen"
+email="Neukirchen_not_provided@not_valid.de"
+orcid = "https://orcid.org/0000-0002-0971-8735"
+author= true
+
+[[project.people]]
+given-names  = "Matthias"
+family-names  = "Redies"
+email="Redies_not_provided@not_valid.de"
+orcid = "https://orcid.org/0000-0002-6780-6821"
+author= true
+
+[[project.people]]
+given-names  = "Stefan"
+family-names  = "Rost"
+email="Rost_not_provided@not_valid.de"
+orcid = "https://orcid.org/0000-0002-3887-4040"
+author= true
+
+[[project.people]]
+given-names  = "Martin"
+family-names  = "Schlipf"
+email="Schlipf_not_provided@not_valid.de"
+orcid = "https://orcid.org/0000-0003-3198-0497"
+author= true
+
+[[project.people]]
+given-names  = "Arno"
+family-names  = "Schindlmayr"
+email="Schindlmayr_not_provided@not_valid.de"
+orcid = "https://orcid.org/0000-0002-4855-071X"
+author= true
+
+[[project.people]]
+given-names  = "Miriam"
+family-names  = "Winkelmann"
+email="Winkelmann_not_provided@not_valid.de"
+orcid = "https://orcid.org/0000-0002-1072-7516"
+author= true
+
+[[project.people]]
+given-names  = "Stefan"
+family-names  = "Blügel"
+email= "s.bluegel@fz-juelich.de"
+affiliation ="Peter Grünberg Institut,Forschungszentrum Jülich, 52428 Jülich, Germany"
+orcid = "https://orcid.org/0000-0001-9987-4733"
+author= true
+publication_author = true
+
+
+[config]
+verbose = true     # show detailed information about what somesy is doing
