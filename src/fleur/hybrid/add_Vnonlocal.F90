@@ -106,7 +106,7 @@ CONTAINS
          ALLOCATE (t_mpimat::z, tmp)
       END IF
 
-      CALL z%init(hmat%l_real, nbasfcn, hybdat%nbands(nk, jsp), fmpi%sub_comm, .false.)
+      CALL z%init(hmat%l_real, nbasfcn, hybdat%nbands(nk, jsp), fmpi%sub_comm, MPIMAT_ROWCYCLIC)
       list = [(i, i= fmpi%n_rank+1,hybdat%nbands(nk,jsp), fmpi%n_size )]
       call read_z(fi%atoms, fi%cell, hybdat, fi%kpts, fi%sym, fi%noco, nococonv,  fi%input, nk, jsp, z, list=list)
 
@@ -127,7 +127,7 @@ CONTAINS
          if(nbasfcn /= vx%global_size2) call juDFT_error("these dimension should match. is this a spin issue?")
       end select
       !z%matsize1 = MIN(z%matsize1, hybdat%v_x(nk, jsp)%matsize2)
-      call tmp%init(hmat%l_real, nbasfcn, hybdat%nbands(nk, jsp), fmpi%sub_comm, .false.)
+      call tmp%init(hmat%l_real, nbasfcn, hybdat%nbands(nk, jsp), fmpi%sub_comm,MPIMAT_ROWCYCLIC)
       IF (hybdat%v_x(nk, jsp)%l_real) then
          CALL hybdat%v_x(nk, jsp)%multiply(z, tmp)
       else

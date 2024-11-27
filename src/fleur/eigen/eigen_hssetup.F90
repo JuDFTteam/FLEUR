@@ -69,7 +69,7 @@ ALLOCATE (t_mpimat::smat(nspins, nspins), hmat(nspins, nspins))
 END IF
 DO i = 1, nspins
 DO j = 1, nspins
-CALL smat(i, j)%init(fi%input%l_real, lapw%nv(i) + fi%atoms%nlotot, lapw%nv(j) + fi%atoms%nlotot, fmpi%sub_comm, .false.)
+CALL smat(i, j)%init(fi%input%l_real, lapw%nv(i) + fi%atoms%nlotot, lapw%nv(j) + fi%atoms%nlotot, fmpi%sub_comm, MPIMAT_ROWCYCLIC)
 CALL hmat(i, j)%init(smat(i, j))
 END DO
 END DO
@@ -192,7 +192,7 @@ IF (fmpi%n_size == 1) THEN
    ALLOCATE (smat(nspins, nspins), hmat(nspins, nspins))
    DO i = 1, nspins
       DO j = 1, nspins
-         CALL smat(i, j)%init(fi%input%l_real, lapw%nv(i) + fi%atoms%nlotot, lapw%nv(j) + fi%atoms%nlotot, fmpi%sub_comm, .false.)
+         CALL smat(i, j)%init(fi%input%l_real, lapw%nv(i) + fi%atoms%nlotot, lapw%nv(j) + fi%atoms%nlotot, fmpi%sub_comm, MPIMAT_ROWCYCLIC)
          CALL hmat(i, j)%init(smat(i, j))
       END DO
    END DO
@@ -265,7 +265,7 @@ ELSE
    ALLOCATE (smat_mpi(nspins, nspins), hmat_mpi(nspins, nspins))
    DO i = 1, nspins
       DO j = 1, nspins
-         CALL smat_mpi(i, j)%init(fi%input%l_real, lapw%nv(i) + fi%atoms%nlotot, lapw%nv(j) + fi%atoms%nlotot, fmpi%sub_comm, .false.)
+         CALL smat_mpi(i, j)%init(fi%input%l_real, lapw%nv(i) + fi%atoms%nlotot, lapw%nv(j) + fi%atoms%nlotot, fmpi%sub_comm, MPIMAT_ROWCYCLIC)
          CALL hmat_mpi(i, j)%init(smat_mpi(i, j))
       END DO
    END DO

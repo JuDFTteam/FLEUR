@@ -1,42 +1,22 @@
-set(fleur_F77 ${fleur_F77}
-)
-set(fleur_F90 ${fleur_F90}
+set(diag_files ${fleur_F90}
+src/fleur/diagonalization/types_solver.f90
 src/fleur/diagonalization/eigen_diag.F90
-src/fleur/diagonalization/lapack_diag.F90
-src/fleur/diagonalization/lapack_singlePrec_diag.F90
+src/fleur/diagonalization/lapack.F90
 src/fleur/diagonalization/dummy_diag.F90
 src/fleur/diagonalization/magma.F90
 src/fleur/diagonalization/scalapack.F90
-src/fleur/diagonalization/chase_diag.F90
-src/fleur/diagonalization/symmetrize_matrix.f90
-src/fleur/diagonalization/cusolver_diag.F90
-src/fleur/diagonalization/elemental.F90
+src/fleur/diagonalization/chase.F90
+src/fleur/diagonalization/cuda.F90
 src/fleur/diagonalization/available_solvers.F90
 src/fleur/diagonalization/writeout.F90
-src/fleur/diagonalization/elpa_20180525_onenode.F90
-src/fleur/diagonalization/elsi.F90)
-if (FLEUR_USE_ELPA_20180525)
- set(fleur_F90 ${fleur_F90} src/fleur/diagonalization/elpa_20180525.F90)
- set(diag_test_files src/fleur/diagonalization/elpa_20180525.F90)
-else()
- set(fleur_F90 ${fleur_F90} src/fleur/diagonalization/elpa.F90)
- set(diag_test_files src/fleur/diagonalization/elpa.F90)
-endif()
+src/fleur/diagonalization/elsi.F90
+src/fleur/diagonalization/elpa.F90)
+
+set(fleur_F90 ${fleur_F90} ${diag_files})
 
 if (FLEUR_USE_HDF5)	
-set(diag_test_files ${diag_test_files}
+set(diag_test_files ${diag_test_files} ${diag_files}
 src/fleur/diagonalization/diag_test.F90
-src/fleur/diagonalization/eigen_diag.F90
-src/fleur/diagonalization/lapack_diag.F90
-src/fleur/diagonalization/magma.F90
-src/fleur/diagonalization/scalapack.F90
-#src/fleur/diagonalization/chase_diag.F90
-#src/fleur/diagonalization/symmetrize_matrix.f90
-src/fleur/diagonalization/cusolver_diag.F90
-src/fleur/diagonalization/elemental.F90
-src/fleur/diagonalization/available_solvers.F90
-src/fleur/diagonalization/writeout.F90
-src/fleur/diagonalization/elpa_20180525_onenode.F90
 src/fleur/types/types_mat.F90
 src/fleur/types/types_mpimat.F90
 src/fleur/types/types_setup.F90

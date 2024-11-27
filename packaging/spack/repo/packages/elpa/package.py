@@ -200,5 +200,5 @@ class Elpa(AutotoolsPackage, CudaPackage, ROCmPackage):
         options.append("--without-threading-support-check-during-build")
 
         return options
-    def autoreconf(self, spec, prefix):
-        which("bash")("autogen.sh")
+#    def autoreconf(self, spec, prefix):
+#        which("bash")("autogen.sh")
