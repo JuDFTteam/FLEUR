@@ -118,6 +118,8 @@ CONTAINS
       INTEGER               :: idum
       CHARACTER(len=1)     ::  check
 
+      CHARACTER(len=50) :: xcpotName, xcName, xName, cName
+      INTEGER           :: xIndex, cIndex, commaIndex
       CHARACTER(len=20) :: speciesName
       CHARACTER(len=150) :: format
       CHARACTER(len=20) :: mixingScheme
@@ -180,9 +182,24 @@ CONTAINS
 
       SELECT TYPE (xcpot)
       CLASS IS (t_xcpot_inbuild_nf)
-         !   <xcFunctional name="pbe" relativisticCorrections="F">
-135      FORMAT('      <xcFunctional name="', a, '" relativisticCorrections="', l1, '"/>')
-         WRITE (fileNum, 135) trim(xcpot%get_name()), xcpot%relativistic_correction()
+         xcpotName = TRIM(ADJUSTL(xcpot%inbuild_name))
+         IF (xcpotName(1:5).EQ.'LibXC') THEN
+            xcName = "LibXC"
+            xIndex = index(xcpotName, 'Exch:')
+            cIndex = index(xcpotName, 'Cor:')
+            commaIndex = index(xcpotName, ',')
+            xName = TRIM(ADJUSTL(xcpotName(xIndex+5:commaIndex-1)))
+            cName = TRIM(ADJUSTL(xcpotName(cIndex+4:LEN(TRIM(xcpotName) ))))
+            WRITE (fileNum, '(a)') '      <xcFunctional name="LibXC" relativisticCorrections="F">'
+            !         <LibXCName  exchange="lda_x" correlation="lda_c_vwn"/> 
+133         FORMAT('         <LibXCName exchange="', a, '" correlation="', a, '"/>')
+            WRITE (fileNum, 133) TRIM(xName), TRIM(cName)
+            WRITE (fileNum, '(a)') '      </xcFunctional>'
+         ELSE
+            !      <xcFunctional name="pbe" relativisticCorrections="F">
+135         FORMAT('      <xcFunctional name="', a, '" relativisticCorrections="', l1, '"/>')
+            WRITE (fileNum, 135) trim(xcpot%get_name()), xcpot%relativistic_correction()
+         END IF
       END SELECT
 
 !      <magnetism jspins="1" l_noco="F" l_J="F" swsp="F" lflip="F"/>
