@@ -89,7 +89,7 @@
 &atom desc="Iridium (Ir)" z=77 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 4d10|4f14 5s2 5p6 6s2 5d7" lo="5s 5s 5p 5p 4f 4f" /
 &atom desc="Platinum (Pt)" z=78 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 4d10 4f14|5s2 5p6 6s1 5d9" lo="5s 5p 5p" /
 &atom desc="Gold (Au)" z=79 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 4d10 4f14|5s2 5p6 6s1 5d10" lo="5s 5p 5p" /
-&atom desc="Mercury (Hg)" z=80 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 4d10 4f14 5s2|5p6 6s2 5d10" lo="6s 5p 5p" /
+&atom desc="Mercury (Hg)" z=80 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 4d10 4f14|5s2 5p6 6s2 5d10" lo="5s 5p 5p" /
 &atom desc="Thallium (Tl)" z=81 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 4d10 4f14 5s2|5p6 6s2 5d10 6p1" lo="5p 5p" /
 &atom desc="Lead (Pb)" z=82 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 4d10 4f14 5s2|5p6 6s2 5d10 6p2" lo="5p 5p" /
 &atom desc="Bismuth (Bi)" z=83 econfig="1s2 2s2 2p6 3s2 3p6 4s2 3d10 4p6 5s2 4d10 4f14|5p6 6s2 5d10 6p3" lo="5p 5p" /
