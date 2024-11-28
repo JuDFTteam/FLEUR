@@ -294,10 +294,10 @@ contains
                ne = ne + 1
                !eig(ne)=eig2(i)
             end do
-            allocate (t_mpimat::ev)
-            call ev%init(ev_dist%l_real, ev_dist%global_size1, ev_dist%global_size1, &
-                         ev_dist%blacsdata%mpi_com, MPIMAT_ROWCYCLIC)
-            call ev%copy(ev_dist, 1, 1)
+            allocate (t_mpimat::zmat)
+            call zmat%init(ev_dist%l_real, ev_dist%global_size1, ev_dist%global_size1, &
+                           ev_dist%blacsdata%mpi_com, MPIMAT_ROWCYCLIC)
+            call zmat%copy(ev_dist, 1, 1)
          class DEFAULT
             call judft_error("Wrong type (1) in scalapack")
          end select
@@ -368,20 +368,30 @@ contains
       integer :: m, n, info
 #ifdef CPP_SCALAPACK
 
-      n = smat%global_size1
-      m = zmat%global_size2
-      ! --> recover the generalized eigenvectors z by solving z' = l^t * z
-      if (smat%l_real) then
-         call pdtrtrs('U', 'N', 'N', n, m, smat%data_r, 1, 1, smat%blacsdata%blacs_desc, &
-                      zmat%data_r, 1, 1, smat%blacsdata%blacs_desc, info)
-      else
-         call pztrtrs('U', 'N', 'N', n, m, smat%data_c, 1, 1, smat%blacsdata%blacs_desc, &
-                      zmat%data_c, 1, 1, smat%blacsdata%blacs_desc, info)
-      end if
-      if (info .ne. 0) then
-         write (oUnit, *) 'Error in p?trtrs: info =', info
-         call juDFT_error("Recovery failed", calledby="scalapack_recover")
-      end if
+      select type (smat)
+      type is (t_mpimat)
+         select type (hmat)
+         type is (t_mpimat)
+            n = smat%global_size1
+            m = zmat%global_size2
+            ! --> recover the generalized eigenvectors z by solving z' = l^t * z
+            if (smat%l_real) then
+               call pdtrtrs('U', 'N', 'N', n, m, smat%data_r, 1, 1, smat%blacsdata%blacs_desc, &
+                            zmat%data_r, 1, 1, smat%blacsdata%blacs_desc, info)
+            else
+               call pztrtrs('U', 'N', 'N', n, m, smat%data_c, 1, 1, smat%blacsdata%blacs_desc, &
+                            zmat%data_c, 1, 1, smat%blacsdata%blacs_desc, info)
+            end if
+            if (info .ne. 0) then
+               write (oUnit, *) 'Error in p?trtrs: info =', info
+               call juDFT_error("Recovery failed", calledby="scalapack_recover")
+            end if
+         class default
+            call judft_bug("Wrong matrix type in scalapack")
+         end select
+      class default
+         call judft_bug("Wrong matrix type in scalapack")
+      end select
 #endif
    end subroutine
 
