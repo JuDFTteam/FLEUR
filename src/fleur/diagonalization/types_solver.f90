@@ -78,7 +78,7 @@ contains
       if (self%use_sp) then
          call self%solve_std_sp(hmat, ne, eig, zmat)
       else
-         call self%solve_std_sp(hmat, ne, eig, zmat)
+         call self%solve_std_dp(hmat, ne, eig, zmat)
       end if
    end subroutine
 
@@ -122,8 +122,8 @@ contains
    subroutine backtrans(self, smat, zmat)
       implicit none
       class(t_solver)                     :: self
-      class(t_mat), intent(INOUT)          :: smat
-      class(t_mat), allocatable, intent(INOUT):: zmat
+      class(t_mat), intent(INOUT)         :: smat
+      class(t_mat), intent(INOUT)         :: zmat
 
       call judft_bug("Not implemented", calledby="backtrans")
    end subroutine

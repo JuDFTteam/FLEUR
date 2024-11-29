@@ -108,11 +108,13 @@ contains
             real, allocatable     :: rwork(:)
             integer, allocatable  :: iwork(:)
             ! Workspace query
-            call dsyevr('V', 'I', 'U', n, hmat%data_r, n, 0.0, 0.0, 1, ne, abstol, m, eigTemp, zmat%data_r, n, &
+            call dsyevr('V', 'I', 'U', n, hmat%data_r, size(hmat%data_r,1),&
+             0.0, 0.0, 1, ne, abstol, m, eigTemp, zmat%data_r, size(zmat%data_r,1), &
                         isuppz, rwork_dum, -1, liwork, -1, info)
             lrwork = rwork_dum(1)
             allocate (rwork(lrwork), iwork(liwork(1)))
-            call dsyevr('V', 'I', 'U', n, hmat%data_r, n, 0.0, 0.0, 1, ne, abstol, m, eigTemp, zmat%data_r, n, &
+            call dsyevr('V', 'I', 'U', n, hmat%data_r, size(hmat%data_r,1), &
+            0.0, 0.0, 1, ne, abstol, m, eigTemp, zmat%data_r, size(zmat%data_r,1), &
                         isuppz, rwork, lrwork, iwork, liwork(1), info)
          end block
       else
@@ -124,12 +126,14 @@ contains
             real, allocatable     :: rwork(:)
             integer, allocatable  :: iwork(:)
             ! Workspace query
-            call zheevr('V', 'I', 'U', n, hmat%data_c, n, 0.0, 0.0, 1, ne, abstol, m, eigTemp, zmat%data_c, n, isuppz, work_dum, &
+            call zheevr('V', 'I', 'U', n, hmat%data_c, size(hmat%data_c,1), &
+            0.0, 0.0, 1, ne, abstol, m, eigTemp, zmat%data_c, size(zmat%data_c,1), isuppz, work_dum, &
                         -1, rwork_dum, -1, liwork, -1, info)
             lwork = work_dum(1)
             lrwork = rwork_dum(1)
             allocate (work(lwork), rwork(lrwork), iwork(liwork(1)))
-            call zheevr('V', 'I', 'U', n, hmat%data_c, n, 0.0, 0.0, 1, ne, abstol, m, eigTemp, zmat%data_c, n, isuppz, work, &
+            call zheevr('V', 'I', 'U', n, hmat%data_c, size(hmat%data_c,1), &
+            0.0, 0.0, 1, ne, abstol, m, eigTemp, zmat%data_c, size(zmat%data_c,1), isuppz, work, &
                         lwork, rwork, lrwork, iwork, liwork(1), info)
          end block
       end if
@@ -146,8 +150,8 @@ contains
       real, intent(OUT)           :: eig(:)
 
       integer, parameter:: sp = selected_real_kind(6)
-      integer          :: info, m, n
-      real(sp)         :: eigTemp(hmat%matsize1)
+      integer          :: info, m, n ,lwork
+      real(sp)         :: eigval(hmat%matsize1)
 
       n = hmat%matsize1
       if (n /= hmat%matsize2) call judft_error("Non-square matrix in lapack_diag")
@@ -155,49 +159,49 @@ contains
       call zmat%alloc(hmat%l_real, n, ne)
 
       if (hmat%l_real) then
-         block  !workspace locally
-            integer:: isuppz(2*n), lrwork, liwork(1)
-            real(sp)   :: rwork_dum(1)
-            real(sp), allocatable     :: rwork(:), h(:, :), z(:, :)
-            integer(sp), allocatable  :: iwork(:)
-            !Make Matrix sp
-            allocate (h(n, n))
-            h = hmat%data_r
-            allocate (z(n, ne))
-            ! Workspace query
-            call ssyevr('V', 'I', 'U', n, h, n, 0.0, 0.0, 1, ne, 1.e-8_sp, m, eigTemp, z, n, &
-                        isuppz, rwork_dum, -1, liwork, -1, info)
-            lrwork = rwork_dum(1)
-            allocate (rwork(lrwork), iwork(liwork(1)))
-            call ssyevr('V', 'I', 'U', n, h, n, 0.0, 0.0, 1, ne, 1.e-8_sp, m, eigTemp, z, n, isuppz, &
-                        rwork, lrwork, iwork, liwork(1), info)
-            zmat%data_r = z
-         end block
+         BLOCK
+            REAL(kind=sp),allocatable:: h(:,:),z(:,:),eigval(:),work(:)
+            integer,allocatable      :: iwork(:),ifail(:)
+            Allocate(h(size(hmat%data_r,1),size(hmat%data_r,2)))
+            Allocate(eigval(size(hmat%data_r,1)),ifail(size(hmat%data_r,1)))
+            Allocate(z(size(hmat%data_r,1),ne))
+            h=hmat%data_r
+    
+            allocate(work(1),iwork(5*size(h,1)))
+            call ssyevx('V','I','U',size(h,1),h,size(h,1),0.0,0.0,1,ne,1.0E-8_sp,m,eigval,z,size(z,1),work,-1,iwork,ifail,info)
+            lwork=work(1)
+            deallocate(work)
+            allocate(work(lwork))
+    
+            call ssyevx('V','I','U',size(h,1),h,size(h,1),0.0,0.0,1,ne,1.0E-8_sp,m,eigval,z,size(z,1),work,lwork,iwork,ifail,info)
+            
+            eig(:ne)=eigval(:ne)
+            zmat%data_r=z(:,:ne)
+            deallocate(h,z,eigval,work,iwork)
+           END BLOCK
       else
-         block  !workspace locally
-            integer:: isuppz(2*n), lwork, lrwork, liwork(1)
-            complex(sp):: work_dum(1)
-            real(sp)   :: rwork_dum(1)
-            complex(sp), allocatable  :: work(:), h(:, :), z(:, :)
-            real(sp), allocatable     :: rwork(:)
-            integer, allocatable  :: iwork(:)
-            !Make Matrix sp
-            allocate (h(n, n))
-            h = hmat%data_c
-            allocate (z(n, ne))
-            ! Workspace query
-            call cheevr('V', 'I', 'U', n, h, n, 0.0, 0.0, 1, ne, 1.e-8_sp, m, eigTemp, z, n, isuppz, &
-                        work_dum, -1, rwork_dum, -1, liwork, -1, info)
-            lwork = work_dum(1)
-            lrwork = rwork_dum(1)
-            allocate (work(lwork), rwork(lrwork), iwork(liwork(1)))
-            call cheevr('V', 'I', 'U', n, h, n, 0.0, 0.0, 1, ne, 1.e-8_sp, m, eigTemp, z, n, &
-                        isuppz, work, lwork, rwork, lrwork, iwork, &
-                        liwork(1), info)
-            zmat%data_c = z
-         end block
+         BLOCK
+            COMPLEX(kind=sp),allocatable:: h(:,:),z(:,:),work(:)
+            REAL(kind=sp),allocatable:: eigval(:),rwork(:)
+            integer,allocatable      :: iwork(:),ifail(:)
+            Allocate(h(size(hmat%data_c,1),size(hmat%data_c,2)))
+            Allocate(eigval(size(hmat%data_c,1)),ifail(size(hmat%data_c,1)))
+            Allocate(z(size(hmat%data_c,1),ne),rwork(7*size(hmat%data_c,1)))
+            h=hmat%data_c
+    
+            allocate(work(1),iwork(5*size(hmat%data_c,1)))
+            call cheevx('V','I','U',size(h,1),h,size(h,1),0.0,0.0,1,ne,0.0,m,eigval,z,size(z,1),work,-1,rwork,iwork,ifail,info)
+            lwork=work(1)
+            deallocate(work)
+            allocate(work(lwork))
+    
+            call cheevx('V','I','U',size(h,1),h,size(h,1),0.0,0.0,1,ne,0.0,m,eigval,z,size(z,1),work,lwork,rwork,iwork,ifail,info)
+            eig=eigval(:ne)
+            zmat%data_c=z(:,:ne)
+            deallocate(h,z,eigval,work,rwork,iwork)
+            END BLOCK   
       end if
-      eig(:min(size(eig), size(eigTemp))) = eigTemp(:min(size(eig), size(eigTemp)))
+      
    end subroutine lapack_diag_sp
 
    subroutine lapack_reduction(self, hmat, smat)
@@ -212,20 +216,20 @@ contains
          call judft_error("Matices not square in lapack_reduction")
       if (smat%l_real) then
          ! Perform Cholesky decomposition of B to obtain L (B = L * L^T)
-         call dpotrf('U', n, smat%data_r, n, info)
+         call dpotrf('U', n, smat%data_r, size(smat%data_r,1), info)
          if (info /= 0) call juDFT_error("Error in Cholesky decomposition of B")
 
          ! Transform A to A' = L^-1 * A * L^-T using chegst
-         call dsygst(1, "U", n, hmat%data_r, n, smat%data_r, n, info)
+         call dsygst(1, "U", n, hmat%data_r, size(hmat%data_r,1), smat%data_r, size(smat%data_r,1), info)
          if (info /= 0) call juDFT_error("Error in dsygst")
 
       else
          ! Perform Cholesky decomposition of B to obtain L (B = L * L^T)
-         call zpotrf('U', n, smat%data_c, n, info)
+         call zpotrf('U', n, smat%data_c, size(smat%data_c,1), info)
          if (info /= 0) call juDFT_error("Error in Cholesky decomposition of B")
 
          ! Transform A to A' = L^-1 * A * L^-T using chegst
-         call zhegst(1, "U", n, hmat%data_c, n, smat%data_c, n, info)
+         call zhegst(1, "U", n, hmat%data_c, size(hmat%data_c,1), smat%data_c, size(smat%data_c,1), info)
          if (info /= 0) call juDFT_error("Error in zhegst")
       end if
 

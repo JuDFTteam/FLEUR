@@ -12,8 +12,12 @@ module m_chase
    use m_types_mat
    use m_types_mpimat
    use m_types_solver
+   use , INTRINSIC :: iso_c_binding,ONLY: c_char
 #ifdef CPP_MPI
    use mpi
+#endif
+#ifdef CPP_CHASE
+   use chase_diag  !this is the interface to chase provided in the chase library
 #endif
    implicit none
 
@@ -37,12 +41,12 @@ contains
       solver%available = .false.
 #endif
       solver%parallel = .true.
-      solver%serial = .false.
-      solver%generalized = .true.
-      solver%standard = .false.
-      solver%single_precision = .false.
-      solver%transform = .true.
-      solver%GPU = .false.
+      solver%serial = .true.
+      solver%generalized = .false.
+      solver%standard = .true.
+      solver%single_precision = .true.
+      solver%transform = .false.
+      solver%GPU = .true.
    end function
 
    subroutine chase_diag_dp(self, hmat, ne, eig, zmat)
@@ -81,42 +85,46 @@ contains
    subroutine chase_serial_dp(hmat, ne, eig, zmat)
       !Simple driver to solve Standard Eigenvalue Problem using ChASE routine
       implicit none
-      type(t_mat), intent(INOUT)  :: hmat
+      type(t_mat), intent(INOUT),VOLATILE,ASYNCHRONOUS  :: hmat
       integer, intent(INOUT)      :: ne
       class(t_mat), allocatable, intent(OUT)    :: zmat
       real, intent(OUT)           :: eig(:)
 
       !These chase parameters might to be adjusted
       real, parameter ::   tol = 1e-10
-      character, parameter ::  mode = 'R', opt = 'S'
+      character(kind=c_char), parameter ::  mode = 'R', opt = 'S',qr='C'
       integer, parameter  :: deg = 20
 #ifdef CPP_CHASE
       integer :: nex !extra search space
       integer :: init  !status variable
       !chase will modify these variables in call to xchase even though these are not arguments!!
-      real, allocatable, asynchronous :: zr(:, :), eigval(:)
-      complex, allocatable, asynchronous :: zc(:, :)
-      nex = 0.2*ne
-      allocate (eigval(ne))
+      real, allocatable, asynchronous,VOLATILE :: zr(:, :), eigval(:)
+      complex, allocatable, asynchronous,VOLATILE :: zc(:, :)
+      nex = 0.4*ne
+      allocate (eigval(ne+nex))
       allocate (t_mat::zmat)
       call zmat%init(hmat%l_real, hmat%matsize1, ne)
-
       call hmat%u2l() !chase needs full matrix not only upper part!
       if (hmat%l_real) then
          allocate (zr(hmat%matsize1, ne + nex))
          ! Initialize of ChASE
-         call dchase_init(hmat%matsize1, ne, nex, hmat%data_r, zr, eigval, init)
+         print *,"Chase:",ne,nex,size(hmat%data_r,1)
+         
+         call dchase_init(size(hmat%data_r,1), ne, nex, hmat%data_r, size(hmat%data_r,1),zr, eigval, init)
+         !print *,"A:",eigval
          !Solve eigenvalue problem
-         call dchase(deg, tol, mode, opt)
+         call dchase(deg, tol, mode, opt,qr)
          ! finalize and clean up
          call dchase_finalize(init)
+         print *,"B:",eigval
+         
          zmat%data_r = zr(:, :ne)
       else
          allocate (zc(hmat%matsize1, ne + nex))
          ! Initialize of ChASE
-         call zchase_init(hmat%matsize1, ne, nex, hmat%data_c, zc, eigval, init)
+         call zchase_init(hmat%matsize1, ne, nex, hmat%data_c, size(hmat%data_c,1), zc, eigval, init)
          !Solve eigenvalue problem
-         call zchase(deg, tol, mode, opt)
+         call zchase(deg, tol, mode, opt,qr)
          ! finalize and clean up
          call zchase_finalize(init)
          zmat%data_c = zc(:, :ne)
@@ -136,7 +144,7 @@ contains
       integer, parameter:: sp = selected_real_kind(6)
       !These chase parameters might to be adjusted
       real(sp), parameter ::   tol = 1e-6
-      character, parameter ::  mode = 'R', opt = 'S'
+      character, parameter ::  mode = 'R', opt = 'S', qr='N'
       integer, parameter  :: deg = 20
 
 #ifdef CPP_CHASE
@@ -158,9 +166,9 @@ contains
          allocate (hr(hmat%matsize1, hmat%matsize2))
          hr = hmat%data_r  !cast to sp
          ! Initialize of ChASE
-         call schase_init(hmat%matsize1, ne, nex, hr, zr, eigval, init)
+         call schase_init(hmat%matsize1, ne, nex, hr,size(hr,1), zr, eigval, init)
          !Solve eigenvalue problem
-         call schase(deg, tol, mode, opt)
+         call schase(deg, tol, mode, opt,qr)
          ! finalize and clean up
          call schase_finalize(init)
          zmat%data_r = zr(:, :ne)
@@ -169,9 +177,9 @@ contains
          allocate (hc(hmat%matsize1, hmat%matsize2))
          hc = hmat%data_c
          ! Initialize of ChASE
-         call cchase_init(hmat%matsize1, ne, nex, hc, zc, eigval, init)
+         call cchase_init(hmat%matsize1, ne, nex, hc, size(hc,1),zc, eigval, init)
          !Solve eigenvalue problem
-         call cchase(deg, tol, mode, opt)
+         call cchase(deg, tol, mode, opt,qr)
          ! finalize and clean up
          call cchase_finalize(init)
          zmat%data_c = zc(:, :ne)
@@ -190,7 +198,7 @@ contains
 
       !These chase parameters might to be adjusted
       real, parameter ::   tol = 1e-10
-      character, parameter ::  mode = 'R', opt = 'S'
+      character, parameter ::  mode = 'R', opt = 'S', qr='N'
       character, parameter ::  grid_major = "C" !major of 2D MPI grid. Row major: grid_major=’R’, column major: grid_major=’C’
       integer, parameter  :: deg = 20
 #ifdef CPP_CHASE
@@ -224,7 +232,7 @@ contains
          call pdchase_init_blockcyclic(hmat%global_size1, ne, nex, mbsize, nbsize, hmat%data_r, hmat%matsize1, &
                                        ztemp%data_r, eigval, dim0, dim1, grid_major, irsrc, icsrc, comm_2d, init)
 !Solve eigenvalue problem
-         call dchase(deg, tol, mode, opt)
+         call dchase(deg, tol, mode, opt,qr)
          ! finalize and clean up
          call dchase_finalize(init)
       else
@@ -232,7 +240,7 @@ contains
          call pzchase_init_blockcyclic(hmat%global_size1, ne, nex, mbsize, nbsize, hmat%data_c, hmat%matsize1, &
                                        ztemp%data_c, eigval, dim0, dim1, grid_major, irsrc, icsrc, comm_2d, init)
          !Solve eigenvalue problem
-         call zchase(deg, tol, mode, opt)
+         call zchase(deg, tol, mode, opt,qr)
          ! finalize and clean up
          call zchase_finalize(init)
       end if
@@ -271,12 +279,12 @@ contains
       !create 2d communicator
       call MPI_COMM_group(parent_comm, group, ierr)
       call MPI_Group_incl(group, isize, map2d, group_2d, ierr)
-      call MPI_COMM_create_group(parent_comm, group_2d, comm_2d, ierr)
+      call MPI_COMM_create_group(parent_comm, 1,group_2d, comm_2d, ierr)
 
       !create 1d communicator
       call MPI_COMM_group(parent_comm, group, ierr)
       call MPI_Group_incl(group, size(map1d), map1d, group_1d, ierr)
-      call MPI_COMM_create_group(parent_comm, group_1d, comm_1d, ierr)
+      call MPI_COMM_create_group(parent_comm, 1,group_1d, comm_1d, ierr)
 
       call MPI_group_free(group_2d, ierr)
       call MPI_group_free(group_1d, ierr)

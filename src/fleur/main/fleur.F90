@@ -69,7 +69,6 @@ CONTAINS
       USE m_writeCFOutput
       USE m_mpi_bc_tool
       USE m_eig66_io
-      USE m_chase_diag
       USE m_writeBasis
       USE m_RelaxSpinAxisMagn
       USE m_dfpt
@@ -232,9 +231,6 @@ CONTAINS
       ! TODO: Isn't this comment kind of lost here?
       ! Rotate cdn to local frame if specified.
 
-#ifdef CPP_CHASE
-      CALL init_chase(fmpi, fi%input, fi%atoms, fi%kpts, fi%noco, l_real)
-#endif
 
       CALL timestop("Open/allocate eigenvector storage")
 
@@ -274,9 +270,6 @@ CONTAINS
 8100        FORMAT(/, 10x, '   iter=  ', i5)
          END IF !fmpi%irank==0
 
-#ifdef CPP_CHASE
-         CALL chase_distance(results%last_distance)
-#endif
 
          CALL inDen%distribute(fmpi%mpi_comm)
          CALL nococonv%mpi_bc(fmpi%mpi_comm)

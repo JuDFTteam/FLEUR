@@ -54,7 +54,7 @@ contains
       else
          ! We do a reduction, to a standard problem, then solve the standard problem and transform back
          call timestart("Reduction to S-EVP")
-         call solver%transformer%to_std(smat, hmat)
+         call solver%transformer%to_std(hmat, smat)
          call timestop("Reduction to S-EVP")
          call timestart("Diagonalization")
          call solver%solve_std(hmat, ne, eig, ev)

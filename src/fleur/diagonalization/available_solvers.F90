@@ -76,22 +76,21 @@ contains
       if (present(gpu)) use_gpu = gpu
 
       name = trim(juDFT_string_for_argument("-diag"))
-
-      if (len(name) .gt. 0) then
+      if (len_trim(name) .gt. 0) then
          !solver was specified on command line
-         if (index("+", name) .gt. 0) then
+         if (index(name,"+") .gt. 0) then
             ! trensformation + standard solver
-            trans = name(:index("+", name))
-            name = name(index("+", name) + 1:)
+            trans = name(:index(name,"+")-1)
+            name = name(index(name,"+") + 1:)
             do i = 1, size(all_solvers)
                if (all_solvers(i)%s%name .eq. trans) use_transform => all_solvers(i)%s
             end do
             if (.not. associated(use_transform)) call judft_error("Transformation not found: "//trans)
          end if
          !check if "-sp" was given
-         if (index("-", name) .gt. 0) then
-            use_single_precision = name(index("-", name) + 1:) .eq. "sp"
-            name = name(:index("-", name))
+         if (index(name,"-") .gt. 0) then
+            use_single_precision = name(index(name,"-") + 1:) .eq. "sp"
+            name = name(:index(name,"-")-1)
          end if
          !select solver from name
          do i = 1, size(all_solvers)
@@ -156,7 +155,7 @@ contains
          end if
       else
          !we use a standard solver+transform
-         if (.not. associated(use_transform) .or. diag_solver%standard) &
+         if (.not. associated(use_transform) .and. diag_solver%standard) &
             call judft_error("No standard solver available or missing transform")
          if (parallel) then
             if (.not. (diag_solver%parallel .and. use_transform%parallel)) &
@@ -211,7 +210,7 @@ contains
       do i = 1, size(all_solvers)
          if (all_solvers(i)%s%available .and. all_solvers(i)%s%standard) then
             if (all_solvers(i)%s%single_precision) then
-               write (*, '(a,a)', ADVANCE="no") all_solvers(i)%s%name, trim(all_solvers(i)%s%name)//"_sp"
+               write (*, '(a,a)', ADVANCE="no") all_solvers(i)%s%name, trim(all_solvers(i)%s%name)//"-sp"
             else
                write (*, '(a)', ADVANCE="no") all_solvers(i)%s%name
             end if

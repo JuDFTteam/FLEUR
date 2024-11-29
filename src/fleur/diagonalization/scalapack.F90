@@ -370,7 +370,7 @@ contains
 
       select type (smat)
       type is (t_mpimat)
-         select type (hmat)
+         select type (zmat)
          type is (t_mpimat)
             n = smat%global_size1
             m = zmat%global_size2
