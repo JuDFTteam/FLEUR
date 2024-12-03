@@ -64,7 +64,7 @@ CONTAINS
 
         TYPE(t_stars) :: starsq
         INTEGER :: iDtype, iDir, killcont(6) ,iMode , iPerturb
-        REAL :: bqpt(3)
+        REAL :: bqpt(3), massInElectronMasses
         COMPLEX :: sigma_loc(2)
         COMPLEX,ALLOCATABLE:: gmatCart(:,:,:,:) !(nu',nu,kpoints,jsp)
         COMPLEX,ALLOCATABLE:: gmat(:,:,:,:,:) !(nu',nu,kpoints,jsp,normal_mode)
@@ -92,6 +92,10 @@ CONTAINS
                       & 231.04, 238.03, 237.00, 244.00, 243.00, 247.00, 247.00, 251.00, 252.00, & ! up to einsteinium
                       & 257.00, 258.00, 259.00, 262.00, 267.00, 269.00, 270.00, 272.00, 273.00, & ! up to hassium
                       & 277.00, 281.00, 281.00, 285.00, 286.00, 289.00, 288.00, 293.00, 294.00, 294.00]
+
+
+        massInElectronMasses = 1836.15
+        atomic_mass_array = atomic_mass_array * massInElectronMasses
 
         ! killcont can be used to blot out certain contricutions to the
         ! perturbed matrices.
