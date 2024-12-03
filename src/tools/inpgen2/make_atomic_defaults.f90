@@ -39,6 +39,9 @@ CONTAINS
 
       CHARACTER(len=1) :: lotype(0:3)=(/'s','p','d','f'/)
       TYPE(t_atompar):: ap(atoms%ntype)
+
+      CALL timestart('make_atomic_defaults')
+
       element_species=0
 
       ALLOCATE(atoms%nz(atoms%ntype))
@@ -205,6 +208,7 @@ CONTAINS
 
       END DO
 
+      CALL timestop('make_atomic_defaults')
 
     END SUBROUTINE make_atomic_defaults
   END MODULE m_make_atomic_defaults

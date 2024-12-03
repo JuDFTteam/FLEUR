@@ -71,7 +71,7 @@ CONTAINS
         ALLOCATE(tmp_gmat(ncorners))
 
     
-        CALL save_npy("gmat_in_call.npy",gmat)
+        !CALL save_npy("gmat_in_call.npy",gmat)
         eigk_nondeg=0
         eigq_nondeg=0
 

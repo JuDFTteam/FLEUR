@@ -29,6 +29,9 @@
 
       CHARACTER (len=12) :: c_sy(7)
       CHARACTER (len=15) :: c_ty(6)
+
+      CALL timestart('bravais')
+
       c_sy = (/'cubic       ','tetragonal  ','orthorhombic',&
               'hexagonal   ','trigonal    ','monoclinic  ',&
               'triclinic   '/)
@@ -146,6 +149,8 @@
      
       IF ((idsyst == 99).OR.(idtype == 99) ) CALL juDFT_error("bravais!",calledby ="bravais")
  10   WRITE(oUnit,*) c_ty(idtype),' ',c_sy(idsyst)
+
+      CALL timestop('bravais')
 
       END SUBROUTINE bravais
       END MODULE m_bravais
