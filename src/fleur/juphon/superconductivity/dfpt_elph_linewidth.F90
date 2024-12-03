@@ -142,7 +142,7 @@ CONTAINS
 
                             DO ispin = 1 , fi%input%jspins
 
-                                ph_linewidth(iMode) =  ph_linewidth(iMode) +  tpi_const /fi%kpts%nkpt*linewidth(nZero,ispin)
+                                ph_linewidth(iMode) =  ph_linewidth(iMode) +  tpi_const * linewidth(nZero,ispin)
                             END DO 
                         END IF 
                     ELSE
@@ -195,7 +195,7 @@ CONTAINS
 
                         DO ispin = 1 , fi%input%jspins
                             ! factor two for spin deg. is calculated in dos_bin 
-                            ph_linewidth(iMode) =  ph_linewidth(iMode) +  tpi_const * SQRT(eigenVals(iMode))/fi%kpts%nkpt*linewidth(nZero,ispin)
+                            ph_linewidth(iMode) =  ph_linewidth(iMode) +  tpi_const * SQRT(eigenVals(iMode)) * linewidth(nZero,ispin)
                         END DO 
                     ELSE
                         write(*,*) '-------------------------'
@@ -220,7 +220,7 @@ CONTAINS
                     DO ispin = 1 , fi%input%jspins
                         DO nu = 1 , size(kInt_gmat,2)
                             DO iNupr = 1 , nbasfcnq_min
-                                ph_linewidth(iMode) =  ph_linewidth(iMode) + tpi_const/fi%input%jspins * SQRT(eigenVals(iMode))/fi%kpts%nkpt*REAL(kInt_gmat(iNupr,nu,ispin,iMode))
+                                ph_linewidth(iMode) =  ph_linewidth(iMode) + tpi_const* 2/fi%input%jspins * SQRT(eigenVals(iMode))*REAL(kInt_gmat(iNupr,nu,ispin,iMode))
                             END DO 
                         END DO 
                     END DO 
@@ -272,9 +272,7 @@ CONTAINS
 
                 DO iMode = 1 , 3*fi%atoms%ntype
                     DO ispin = 1 , fi%input%jspins
-                        ph_linewidth(iMode) = ph_linewidth(iMode) + tpi_const/fi%kpts%ntet * linewidth(iMode,ispin)
-
-
+                        ph_linewidth(iMode) = ph_linewidth(iMode) + tpi_const * linewidth(iMode,ispin)
                     END DO 
                 END DO 
 
