@@ -15,58 +15,76 @@ module m_available_solvers
    use m_magma
    use m_cuda_diag
    use m_elpa
+   use m_nvlamath
    implicit none
    private
-   type:: solverlist
-      class(t_solver), pointer::s
-   end type
-   type(solverlist), allocatable :: all_solvers(:)
-   integer :: first_real_solver = 4
+   integer :: first_real_solver = 4,num_solvers=11
    public:: t_solver, parallel_solver_available, select_solver, print_solver, list_solvers
 
 contains
 
-   subroutine init()
-      if (allocated(all_solvers)) return
-      allocate (all_solvers(10))
-      all_solvers(1)%s => get_solver_stop()
-      all_solvers(2)%s => get_solver_dummy()
-      all_solvers(3)%s => get_solver_debugout()!These solvers are not "real solvers and should not be selected automatically
-      all_solvers(4)%s => get_solver_lapack()
-      all_solvers(5)%s => get_solver_scalapack()
-      all_solvers(6)%s => get_solver_chase()
-      all_solvers(7)%s => get_solver_elsi()
-      all_solvers(8)%s => get_solver_magma()
-      all_solvers(9)%s => get_solver_cuda()
-      all_solvers(10)%s => get_solver_elpa()
-      !t_solver_elpa()/)
+   function all_solvers(i)
+      integer,INTENT(in) :: i
+      CLASS(t_solver),allocatable :: all_solvers
+      select case (i)
+      case(1)
+         all_solvers=get_solver_stop()
+      case(2)
+         all_solvers=get_solver_dummy()
+      case(3)
+         all_solvers=get_solver_debugout()
+      case(4)
+         all_solvers=get_solver_lapack()
+      case(5)
+         all_solvers=get_solver_scalapack()
+      case(6)
+         all_solvers=get_solver_chase()
+      case(7)
+         all_solvers=get_solver_elsi()
+      case(8)
+         all_solvers=get_solver_magma()
+      case(9)
+         all_solvers=get_solver_cuda()
+      case(10)
+         all_solvers=get_solver_elpa()
+      case(11)
+         all_solvers=get_solver_nvlamath()
+      case default
+         call judft_bug("Illegal request for solver")
+      end select
+   end function   
 
-   end subroutine
+   function select_by_name(name)
+      character(len=*),intent(in):: name
+      CLASS(t_solver),allocatable :: select_by_name
+
+      integer:: i
+      DO i=1,num_solvers
+         select_by_name=all_solvers(i)
+         if (trim(name)==trim(select_by_name%name)) return
+      enddo 
+      call judft_error("No Solver/transform could be selected:"//name)
+   end function               
 
    logical function parallel_solver_available()
       integer ::i
-      call init()
       parallel_solver_available = .false.
       !make an explit loop here
-      do i = 1, size(all_solvers)
-         parallel_solver_available = parallel_solver_available .or. (all_solvers(i)%s%available .and. all_solvers(i)%s%parallel)
+      do i = 1, num_solvers
+         parallel_solver_available = parallel_solver_available .or. (all_solvers(i)%available .and. all_solvers(i)%parallel)
       end do
    end function parallel_solver_available
 
-   function select_solver(parallel, gpu, single_precision) result(diag_solver)
+   subroutine select_solver(parallel, gpu, single_precision,diag_solver,diag_transform)
       use m_juDFT
       logical, intent(IN)           :: parallel
       logical, intent(in), optional  :: single_precision, gpu
-      class(t_solver), pointer  :: diag_solver
+      class(t_solver), INTENT(OUT),allocatable  :: diag_solver,diag_transform
 
       logical :: use_single_precision, use_gpu, generalized, fit
       character(len=30):: name, trans
       integer :: i
-      class(t_solver), pointer :: use_transform
-      call init()
-      diag_solver => null()
-      use_transform => null()
-
+   
       use_single_precision = .false.
       if (present(single_precision)) use_single_precision = single_precision
       use_gpu = .false.
@@ -82,10 +100,7 @@ contains
             ! trensformation + standard solver
             trans = name(:index(name,"+")-1)
             name = name(index(name,"+") + 1:)
-            do i = 1, size(all_solvers)
-               if (all_solvers(i)%s%name .eq. trans) use_transform => all_solvers(i)%s
-            end do
-            if (.not. associated(use_transform)) call judft_error("Transformation not found: "//trans)
+            diag_transform=select_by_name(trans)
          end if
          !check if "-sp" was given
          if (index(name,"-") .gt. 0) then
@@ -93,52 +108,55 @@ contains
             name = name(:index(name,"-")-1)
          end if
          !select solver from name
-         do i = 1, size(all_solvers)
-            if (all_solvers(i)%s%name .eq. name) diag_solver => all_solvers(i)%s
-         end do
-         !check if name was found
-         if (.not. associated(diag_solver)) call judft_error("Solver not found: "//name)
+         diag_solver=select_by_name(name)
       else
          !defaults
-         do i = first_real_solver, size(all_solvers)
-            fit = all_solvers(i)%s%available
+         do i = first_real_solver, num_solvers
+            diag_solver=all_solvers(i)
+            fit = diag_solver%available
             !Check if solver fits the requirements
-            if (use_gpu) fit = fit .and. all_solvers(i)%s%gpu
+            if (use_gpu) fit = fit .and. diag_solver%gpu
             if (parallel) then
-               fit = fit .and. all_solvers(i)%s%parallel
+               fit = fit .and. diag_solver%parallel
             else
-               fit = fit .and. all_solvers(i)%s%serial
+               fit = fit .and. diag_solver%serial
             end if
-            if (use_single_precision) fit = fit .and. all_solvers(i)%s%single_precision
+            if (use_single_precision) fit = fit .and. diag_solver%single_precision
             if (fit) exit
          end do
-         if (i .le. size(all_solvers)) diag_solver => all_solvers(i)%s
+         if (.not.fit) call judft_error("No default solver found.")
          diag_solver%use_sp = use_single_precision
       end if
 
+      print *,diag_solver%name,diag_transform%name
+
       !Check if a default tansformation must be selected as well
-      if (.not. diag_solver%generalized .or. diag_solver%use_sp .and. &
-          .not. associated(use_transform)) &
+      if ((.not. diag_solver%generalized .or. diag_solver%use_sp) .and. &
+          .not. allocated(diag_transform)) &
          then
-         do i = first_real_solver, size(all_solvers)
-            fit = all_solvers(i)%s%available .and. all_solvers(i)%s%transform
+         do i = first_real_solver, num_solvers
+            diag_transform=all_solvers(i)
+            fit = diag_transform%available .and. diag_transform%transform
             !Check if solver fits the requirements
-            if (use_gpu) fit = fit .and. all_solvers(i)%s%gpu
+            if (use_gpu) fit = fit .and. diag_transform%gpu
             if (parallel) then
-               fit = fit .and. all_solvers(i)%s%parallel
+               fit = fit .and. diag_transform%parallel
             else
-               fit = fit .and. all_solvers(i)%s%serial
+               fit = fit .and. diag_transform%serial
             end if
             if (fit) exit
          end do
-         if (i .le. size(all_solvers)) use_transform => all_solvers(i)%s
+         if (.not.fit) call judft_error("No transform found")
       end if
 
       ! check if selected solvers are OK
-      generalized = .not. associated(use_transform)
-      if (.not. associated(use_transform)) then
+      generalized = .not. allocated(diag_transform)
+      if (.not. allocated(diag_transform)) then
          ! we use a generalized solver
-         if (.not. diag_solver%generalized) call judft_error("No generalized solver available")
+         if (.not. diag_solver%generalized) then 
+            print *,diag_solver%name,diag_solver%generalized
+            call judft_error("No generalized solver available")
+         endif
          if (parallel) then
             if (.not. (diag_solver%parallel)) &
                call judft_error("No parallel solver available for your problem", &
@@ -155,41 +173,39 @@ contains
          end if
       else
          !we use a standard solver+transform
-         if (.not. associated(use_transform) .and. diag_solver%standard) &
+         if (.not. allocated(diag_transform) .and. diag_solver%standard) &
             call judft_error("No standard solver available or missing transform")
          if (parallel) then
-            if (.not. (diag_solver%parallel .and. use_transform%parallel)) &
+            if (.not. (diag_solver%parallel .and. diag_transform%parallel)) &
                call judft_error("No parallel solver available for your problem", &
                                 hint="You might have selected the wrong solver with the -diag option")
          else
-            if (.not. (diag_solver%serial .and. use_transform%serial)) &
+            if (.not. (diag_solver%serial .and. diag_transform%serial)) &
                call judft_error("No serial solver available for your problem", &
                                 hint="You might have selected the wrong solver with the -diag option")
          end if
          if (use_gpu) then
-            if (.not. (diag_solver%gpu .and. use_transform%gpu)) &
+            if (.not. (diag_solver%gpu .and. diag_transform%gpu)) &
                call judft_warn("No GPU solver available for your problem", &
                                hint="You might have selected the wrong solver with the -diag option")
          end if
-         diag_solver%transformer => use_transform
       end if
-   end function select_solver
+   end subroutine select_solver
 
    function print_solver(parallel)
       logical, intent(IN):: parallel
       character(len=30):: print_solver
-      class(t_solver), allocatable:: s
+      class(t_solver), allocatable:: s,t
 
-      s = select_solver(parallel)
+      call select_solver(parallel,diag_solver=s,diag_transform=t)
       print_solver = s%name
       if (s%use_sp) print_solver = print_solver//"-sp"
-      if (associated(s%transformer)) print_solver = s%transformer%name//'+'//print_solver
+      if (allocated(t)) print_solver = t%name//'+'//print_solver
    end function
 
    subroutine list_solvers()
       integer:: i
-
-      call init()
+      class(t_solver),allocatable::s
 
       write (*, '(a)') "Hints on choosing the diagonalization method (see the docu for more details):"
       write (*, '(a)') "  The `-diag` option takes a string as an argument that:"
@@ -199,29 +215,11 @@ contains
          "    Or the string combines (with '+') a solver of the standard problem (NAME_STD) with a transformation (NAME_TRANS):"
       write (*, '(a)') "      '-diag NAME_TRANS+NAME_STD'"
       write (*, '(a)') ""
-      write (*, '(a)') "List of available solvers/transforms:"
-      write (*, '(a)', ADVANCE="no") "  GEV-Solvers: "
-      do i = 1, size(all_solvers)
-         if (all_solvers(i)%s%available .and. all_solvers(i)%s%generalized) &
-            write (*, '(a)', ADVANCE="no") all_solvers(i)%s%name
-      end do
-      write (*, *)
-      write (*, '(a)', ADVANCE="no") "  STD-Solvers: "
-      do i = 1, size(all_solvers)
-         if (all_solvers(i)%s%available .and. all_solvers(i)%s%standard) then
-            if (all_solvers(i)%s%single_precision) then
-               write (*, '(a,a)', ADVANCE="no") all_solvers(i)%s%name, trim(all_solvers(i)%s%name)//"-sp"
-            else
-               write (*, '(a)', ADVANCE="no") all_solvers(i)%s%name
-            end if
-         end if
-      end do
-
-      write (*, *)
-      write (*, '(a)', ADVANCE="no") "  Transforms : "
-      do i = 1, size(all_solvers)
-         if (all_solvers(i)%s%available .and. all_solvers(i)%s%transform) &
-            write (*, '(a)', ADVANCE="no") all_solvers(i)%s%name
+      write (*, '(a)') "List of solvers/transforms:"
+      write (*, '(a)') "   Name   available  serial  parallel  GEV  STD STD-SP  Transform  GPU: "
+      do i = 1, num_solvers
+         s=all_solvers(i)
+         write(*,'(a10,4x,l,7x,l,6x,l,6x,l,3x,l,2x,l,9x,l,6x,l)') s%name,s%available,s%serial,s%parallel,s%generalized,s%standard,s%single_precision,s%transform,s%gpu
       end do
       write (*, *)
    end subroutine

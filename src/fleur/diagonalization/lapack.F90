@@ -11,11 +11,11 @@ module m_lapack
    private
    type, extends(t_solver)::t_solver_lapack
    contains
-      procedure        :: solve_std_dp => lapack_diag  !solver for standard eigenvalue problem
-      procedure        :: solve_std_sp => lapack_diag_sp  !solver for standard eigenvalue problem
-      procedure        :: solve_gev => lapack_gev  !solver for generalized eigenvalue problem
-      procedure        :: to_std => lapack_reduction     !transform the H of the generalized problem to a std problem
-      procedure        :: backtrans => lapack_recover  !transform the Eigenvalue back to the generalized problem
+   procedure        :: solve_std_dp => lapack_diag  !solver for standard eigenvalue problem
+   procedure        :: solve_std_sp => lapack_diag_sp  !solver for standard eigenvalue problem
+   procedure        :: solve_gev => lapack_gev  !solver for generalized eigenvalue problem
+   procedure        :: to_std => lapack_reduction     !transform the H of the generalized problem to a std problem
+   procedure        :: backtrans => lapack_recover  !transform the Eigenvalue back to the generalized problem
    end type
    public :: t_solver_lapack, get_solver_lapack
 

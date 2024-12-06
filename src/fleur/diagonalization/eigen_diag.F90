@@ -1,14 +1,18 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2024 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 module m_eigen_diag
+   !! Module provides the high level entry point for solving a generalized eigenvalue problem
+   !! The solver actually used is determined by a call to [[select_solver]] from [[m_available_solvers]].
    use m_juDFT
    use m_available_solvers
    use m_types_mpimat
    use m_types_mat
+   use m_types_solver
+   use m_lapack
    implicit none
    private
    public :: eigen_diag
@@ -16,20 +20,21 @@ module m_eigen_diag
 contains
 
    subroutine eigen_diag(hmat, smat, ne, eig, ev)
+      !! Solve generalized eigenvalue problem
 #ifdef CPP_MPI
       use mpi
 #endif
       implicit none
-      class(t_mat), intent(INOUT) :: smat, hmat
-      class(t_mat), allocatable, intent(OUT)   :: ev         ! eigenvectors
-      integer, intent(INOUT) :: ne         ! number of eigenpairs searched (and found) on this node
-      !   on input, overall number of eigenpairs searched,
-      !   on output, local number of eigenpairs found
-      real, intent(OUT)   :: eig(:)     ! eigenvalues
+      class(t_mat), intent(INOUT) :: smat, hmat !! overlapp matrix and Hamiltonian
+      class(t_mat), allocatable, intent(OUT)   :: ev         !! eigenvectors
+      integer, intent(INOUT) :: ne         !! number of eigenpairs searched (and found) on this node
+      !!   on input, overall number of eigenpairs searched,
+      !!   on output, local number of eigenpairs found
+      real, intent(OUT)   :: eig(:)     !! eigenvalues (must be allocated to size ne before)
 
       !Locals
-      logical                    :: parallel
-      class(t_solver), pointer    :: solver
+      logical                       :: parallel
+      class(t_solver),allocatable   :: solver,transform
 
       select type (smat)
       class IS (t_mpimat)
@@ -40,9 +45,9 @@ contains
          parallel = .false.
       end select
 
-      solver => select_solver(parallel)
-
-      if (.not. associated(solver%transformer)) then
+      call select_solver(parallel,diag_solver=solver,diag_transform=transform)
+      
+      if (.not. allocated(transform)) then
          ! We solve directly the generalized eigenvalue problem
          if (solver%generalized) then
             call timestart("Diagonalization")
@@ -54,16 +59,16 @@ contains
       else
          ! We do a reduction, to a standard problem, then solve the standard problem and transform back
          call timestart("Reduction to S-EVP")
-         call solver%transformer%to_std(hmat, smat)
+         call transform%to_std(hmat, smat)
          call timestop("Reduction to S-EVP")
          call timestart("Diagonalization")
+         print *,"Solver:",solver%name
          call solver%solve_std(hmat, ne, eig, ev)
          call timestop("Diagonalization")
          call timestart("Backtransform of eigenvectors")
-         call solver%transformer%backtrans(smat, ev)
+         call transform%backtrans(smat, ev)
          call timestop("Backtransform of eigenvectors")
       end if
-
    end subroutine
 
 end module m_eigen_diag

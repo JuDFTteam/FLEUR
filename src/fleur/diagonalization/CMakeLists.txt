@@ -10,7 +10,8 @@ src/fleur/diagonalization/cuda.F90
 src/fleur/diagonalization/available_solvers.F90
 src/fleur/diagonalization/writeout.F90
 src/fleur/diagonalization/elsi.F90
-src/fleur/diagonalization/elpa.F90)
+src/fleur/diagonalization/elpa.F90
+src/fleur/diagonalization/nvlamath.F90)
 
 set(fleur_F90 ${fleur_F90} ${diag_files})
 

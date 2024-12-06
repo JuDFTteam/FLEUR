@@ -100,7 +100,7 @@ contains
       !chase will modify these variables in call to xchase even though these are not arguments!!
       real, allocatable, asynchronous,VOLATILE :: zr(:, :), eigval(:)
       complex, allocatable, asynchronous,VOLATILE :: zc(:, :)
-      nex = 0.4*ne
+      nex = 0.2*ne
       allocate (eigval(ne+nex))
       allocate (t_mat::zmat)
       call zmat%init(hmat%l_real, hmat%matsize1, ne)
@@ -108,15 +108,12 @@ contains
       if (hmat%l_real) then
          allocate (zr(hmat%matsize1, ne + nex))
          ! Initialize of ChASE
-         print *,"Chase:",ne,nex,size(hmat%data_r,1)
          
          call dchase_init(size(hmat%data_r,1), ne, nex, hmat%data_r, size(hmat%data_r,1),zr, eigval, init)
-         !print *,"A:",eigval
          !Solve eigenvalue problem
          call dchase(deg, tol, mode, opt,qr)
          ! finalize and clean up
          call dchase_finalize(init)
-         print *,"B:",eigval
          
          zmat%data_r = zr(:, :ne)
       else

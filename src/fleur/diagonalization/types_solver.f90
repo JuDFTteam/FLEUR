@@ -21,7 +21,6 @@ module m_types_solver
       logical :: transform
       logical :: GPU
       logical :: use_sp = .false.
-      class(t_solver), pointer:: transformer => null()
    contains
       procedure        :: solve_std  !solver for standard eigenvalue problem
       procedure        :: solve_std_dp  !solver for standard eigenvalue problem (double precision)

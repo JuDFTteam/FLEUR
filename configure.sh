@@ -68,6 +68,7 @@ gitupdate=0
 debug=0
 error=""
 external_lib=""
+conf_spack=0
 
 
 echo -e "${RED}------------ Welcome to the FLEUR configuration script -------------${NC}"
