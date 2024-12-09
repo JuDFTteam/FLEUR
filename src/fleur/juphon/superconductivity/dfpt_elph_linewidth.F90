@@ -168,7 +168,7 @@ CONTAINS
                         CALL MPI_ALLREDUCE(MPI_IN_PLACE,linewidth,size(linewidth),MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)
                         CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
 #endif 
-                        STOP
+                        
                         IF (fmpi%irank == 0 ) THEN 
                             DO ispin = 1 , fi%input%jspins
                                 ! factor two for spin deg. is calculated in dos_bin 
