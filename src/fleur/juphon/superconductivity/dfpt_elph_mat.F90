@@ -118,7 +118,7 @@ CONTAINS
         ! Reduce memory and computational effort
         bqpt = qpts%bk(:, iQ)
         CALL timestart("Generating the energy window")
-        CALL energy_window(fi,fmpi,results,resultsq,nococonv,bqpt,nuWindow)
+        CALL energy_window(fi,fmpi,results,resultsq,nococonv,bqpt,eigenVals,nuWindow)
         CALL timestop("Generating the energy window")
         
         DO iDtype=1,fi%atoms%nat
@@ -443,7 +443,7 @@ CONTAINS
     END SUBROUTINE matrix_element
 
 
-    SUBROUTINE energy_window(fi,fmpi,results,resultsq,nococonv,bqpt,nuWindow)
+    SUBROUTINE energy_window(fi,fmpi,results,resultsq,nococonv,bqpt,eigenVals,nuWindow)
         ! This subroutine calculates the state window for the el-ph calculation 
         ! Since we only states close to the fermi level contribute, we will introduce 
         ! For the k and k+q states an effective window that is needed for the calculation
@@ -455,10 +455,11 @@ CONTAINS
         TYPE(t_results), INTENT(IN) :: results,resultsq
         TYPE(t_nococonv), INTENT(IN) :: nococonv
         REAL, INTENT(IN) :: bqpt(3)
+        REAL, INTENT(IN) :: eigenVals(:)
         INTEGER,INTENT(OUT) :: nuWindow(2,2)
 
         REAL :: eig,eigq
-        REAL :: efermi, smearing 
+        REAL :: efermi, smearing, borderWindow 
 
         INTEGER :: nbasfcn,nbasfcnq , nu , iNupr, jsp, nk_i
         TYPE(t_lapw)   :: lapw,lapwq
@@ -506,6 +507,9 @@ CONTAINS
         
         END IF 
         
+        ! If the Phonon freq. become larger, then we should set our window to that 
+        borderWindow = fi%input%tkb
+        IF ( MAXVAL(SQRT(ABS(eigenVals))) .GT. fi%input%tkb ) borderWindow =  MAXVAL(SQRT(ABS(eigenVals)))
 
         IF (fmpi%irank==0) THEN 
             DO jsp = 1, MERGE(1,fi%input%jspins,fi%noco%l_noco)
@@ -517,7 +521,7 @@ CONTAINS
 
                     DO nu = 1 , nbasfcn 
                         eig = results%eig(nu,nk_i,jsp)  
-                        IF ( ABS(eig - efermi)  .LT.   8*fi%input%tkb ) THEN  
+                        IF ( ABS(eig - efermi)  .LT.   8*borderWindow ) THEN  
                             ! eigenvalue is within energy window 
                             IF ( (eig - efermi) .LT. 1e-8 ) THEN 
                                 ! This is the lower end of the window 
@@ -531,7 +535,7 @@ CONTAINS
 
                     DO iNupr= 1, nbasfcnq
                         eigq = resultsq%eig(iNupr,nk_i,jsp)
-                        IF ( ABS(eigq - efermi)  .LT.   8*fi%input%tkb ) THEN 
+                        IF ( ABS(eigq - efermi)  .LT.   8*borderWindow ) THEN 
                             ! eigenvalue is within energy window 
                             IF ( (eigq - efermi) .LT. 1e-8 ) THEN 
                                 ! This is the lower end of the window 
@@ -549,8 +553,8 @@ CONTAINS
             write(2200,*) "final iNupr window", nuWindow(2,:)
 
              ! This is a first thing --> revert when talked with gustav 
-            !nuWindow(:,1) = MIN(nuWindow(1,1),nuWindow(2,1))
-            !nuWindow(:,2) = MAX(nuWindow(1,2),nuWindow(2,2))
+            nuWindow(:,1) = MIN(nuWindow(1,1),nuWindow(2,1))
+            nuWindow(:,2) = MAX(nuWindow(1,2),nuWindow(2,2))
 
             write(2200,*) "minval nu window", nuWindow(1,:)
             write(2200,*) "maxval iNupr window", nuWindow(2,:)

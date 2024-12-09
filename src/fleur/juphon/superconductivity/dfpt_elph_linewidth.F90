@@ -46,7 +46,7 @@ CONTAINS
         COMPLEX,ALLOCATABLE:: kInt_gmat(:,:,:,:) !(nu',nu,jsp,normal_mode)
         REAL,ALLOCATABLE :: gmatCollect(:,:,:,:,:)
 
-        REAL , ALLOCATABLE :: gauss(:) 
+
         REAL :: intOut
 #ifdef CPP_MPI
         INTEGER :: ierr
@@ -58,9 +58,10 @@ CONTAINS
 
         SELECT CASE(fi%juphon%i_integration)
 
-            ! 1 = Full calculation of linewidth with one delta function via Gaussian Smearing 
-            ! 2 = Double delta approximation of linewidth calculated with Gaussian Smearing
+            ! 1 = Full calculation of linewidth with one delta function via smearing 
+            ! 2 = Double delta approximation of linewidth calculated with  smearing
             ! 3 = Double delta approximation of linewidth with Tetra Method 
+            ! 3 = Full calculation of linewidth with Tetra Method 
 
 
             !   For the different integration methods we need different sizes of the gmat 
@@ -72,24 +73,11 @@ CONTAINS
 
             CASE(1)
                 
-                ! Cut out all contributions coming from nu-> unoccuppied 
-                !DO ispin = 1 , fi%input%jspins
-                !    DO nk = 1 , fi%kpts%nkpt
-                !        noccbd  = COUNT(results%w_iks(:,nk,ispin)*2.0/fi%input%jspins>1.e-8)
-                !        DO nu = 1 , size(gmat,2)
-                !            allowed = 1. 
-                !            IF (nu .GT. noccbd) allowed = 0.  
-                !            gmat(:,nu,nk,ispin,:) = allowed * gmat(:,nu,nk,ispin,:) 
-                !        END DO  ! nu 
-                !    END DO ! nk 
-                !END DO !ispin 
-
                 ! mutliply with fermi function 
                 IF (fi%juphon%i_integration == 1 ) THEN 
                     DO ispin = 1 , fi%input%jspins
                         DO nk_i = 1 , size(fmpi%k_list)
                             nk = fmpi%k_list(nk_i)
-                            !noccbd  = COUNT(results%w_iks(:,nk,ispin)*2.0/fi%input%jspins>1.e-8)
                             DO nu = nuWindow(1,1) , nuWindow(1,2)  
                                 ind =  nu - nuWindow(1,1) + 1 
                                 x = (results%eig(nu,nk,ispin)-results%ef)/fi%input%tkb
@@ -109,8 +97,6 @@ CONTAINS
                 ALLOCATE(linewidth(fi%banddos%ndos_points,fi%input%jspins))  
                 ALLOCATE(eGrid(fi%banddos%ndos_points))  
                 ALLOCATE(ph_linewidth(3*fi%atoms%ntype))
-                ALLOCATE(gauss(fi%banddos%ndos_points))
-                gauss = 0.0 
                 linewidth = 0.0 
                 ph_linewidth = 0.0 
                 eGrid = 0.0 
@@ -119,7 +105,6 @@ CONTAINS
                 DO gridPoint=1,fi%banddos%ndos_points
                     eGrid(gridPoint)=emin+(emax-emin)/(fi%banddos%ndos_points-1.0)*(gridPoint-1.0)
                     IF (ABS(eGrid(gridPoint)) .LT. 1e-8) nZero = gridPoint 
-                    !gauss(gridPoint) = 1/SQRT(tpi_const*fi%juphon%smearingGauss**2) *EXP( -0.5*eGrid(gridPoint)**2/(fi%juphon%smearingGauss)**2)
                 END DO
 
                 DO iMode = 1 , 3*fi%atoms%ntype
@@ -157,25 +142,11 @@ CONTAINS
 
             CASE(2)
 
-                ! Cut out all contributions coming from nu-> unoccuppied 
-                DO ispin = 1 , fi%input%jspins
-                    DO nk = 1 , fi%kpts%nkpt
-                        noccbd  = COUNT(results%w_iks(:,nk,ispin)*2.0/fi%input%jspins>1.e-8)
-                        DO nu = 1 , size(gmat,2)
-                            allowed = 1. 
-                            IF (nu .GT. noccbd) allowed = 0.  
-                            gmat(:,nu,nk,ispin,:) = allowed * gmat(:,nu,nk,ispin,:) 
-                        END DO  ! nu 
-                    END DO ! nk 
-                END DO !ispin
-
-                eMin = - 4 * fi%input%tkb
-                eMax =   4 * fi%input%tkb
+                eMin = - 8 * fi%input%tkb
+                eMax =   8 * fi%input%tkb
                 ALLOCATE(linewidth(fi%banddos%ndos_points,fi%input%jspins))  
                 ALLOCATE(eGrid(fi%banddos%ndos_points))  
                 ALLOCATE(ph_linewidth(3*fi%atoms%ntype))
-                ALLOCATE(gauss(fi%banddos%ndos_points))
-                gauss = 0.0 
                 linewidth = 0.0 
                 ph_linewidth = 0.0 
                 eGrid = 0.0
@@ -189,18 +160,27 @@ CONTAINS
                 DO iMode = 1 , 3*fi%atoms%ntype
                     IF (eigenVals(iMode) .GE. 0.0 ) THEN 
                         ! Gaussian Smearing is already done in routine, in case of double delta distribution
-                        ! Warning still needs to be tested 
-                        CALL dos_bin_double(fi%input%jspins,fi%kpts%wtkpt,eGrid,results%eig(:size(gmat,2),:,:)  &
-                        &     ,resultsq%eig(:nbasfcnq_min,:,:), REAL(gmat(:nbasfcnq_min,:,:,:,iMode)), fi%juphon%smearingGauss ,linewidth, results%ef)
+                        CALL dos_bin_double(fmpi,fi%input%jspins,fi%kpts%wtkpt,eGrid,results%eig(nuWindow(1,1):nuWindow(1,2),:,:)  &
+                        &                   ,resultsq%eig(nuWindow(2,1):nuWindow(2,2),:,:), REAL(gmat(:,:,:,:,iMode))  & 
+                        &                   , fi%juphon%smearingGauss ,linewidth, results%ef)
 
-                        DO ispin = 1 , fi%input%jspins
-                            ! factor two for spin deg. is calculated in dos_bin 
-                            ph_linewidth(iMode) =  ph_linewidth(iMode) +  tpi_const * SQRT(eigenVals(iMode)) * linewidth(nZero,ispin)
-                        END DO 
+#ifdef CPP_MPI
+                        CALL MPI_ALLREDUCE(MPI_IN_PLACE,linewidth,size(linewidth),MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)
+                        CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
+#endif 
+                        STOP
+                        IF (fmpi%irank == 0 ) THEN 
+                            DO ispin = 1 , fi%input%jspins
+                                ! factor two for spin deg. is calculated in dos_bin 
+                                ph_linewidth(iMode) =  ph_linewidth(iMode) +  tpi_const * SQRT(eigenVals(iMode)) * linewidth(nZero,ispin)
+                            END DO 
+                        END IF 
                     ELSE
-                        write(*,*) '-------------------------'
-                        write(*,*) 'linewidth: Eigenvalue imaginary --> Phonon linewidth set to zero'
-                        write(*,*) '-------------------------'
+                        IF (fmpi%irank == 0 ) THEN 
+                            write(*,*) '-------------------------'
+                            write(*,*) 'linewidth: Eigenvalue imaginary --> Phonon linewidth set to zero'
+                            write(*,*) '-------------------------'
+                        END IF 
                     END IF 
                 END DO 
             
