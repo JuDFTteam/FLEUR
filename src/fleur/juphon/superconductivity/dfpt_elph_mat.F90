@@ -146,6 +146,9 @@ CONTAINS
                     
                 CALL timestop("Generating Potential Perturbation")
 
+                ! Add the gradient to potential 
+                vTot1%mt(:,0:,iDtype,:) = vTot1%mt(:,0:,iDtype,:) + grVtot(iDir)%mt(:,0:,iDtype,:)
+
                 CALL timestart("Generate electron-phonon matrix element")
                 CALL matrix_element(fi,sphhar,results,resultsq,fmpi,enpara,nococonv,starsq,vTot1,vTot1Im,vTot,rho_loc,bqpt,eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatCart,nbasfcnq_min,nuWindow)
                 CALL timestop("Generate electron-phonon matrix element")
