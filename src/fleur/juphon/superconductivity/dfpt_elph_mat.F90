@@ -69,7 +69,7 @@ CONTAINS
         COMPLEX,ALLOCATABLE:: gmatCart(:,:,:,:) !(nu',nu,kpoints,jsp)
         COMPLEX,ALLOCATABLE:: gmat(:,:,:,:,:) !(nu',nu,kpoints,jsp,normal_mode)
         REAL, ALLOCATABLE :: ph_linewidth(:) !(normal_mode)
-        INTEGER :: nbasfcnq_min , nuWindow(2,2)
+        INTEGER ::  nuWindow(2,2)  ! ,nbasfcnq_min
 
 
 #ifdef CPP_MPI
@@ -150,7 +150,7 @@ CONTAINS
                 vTot1%mt(:,0:,iDtype,:) = vTot1%mt(:,0:,iDtype,:) + grVtot(iDir)%mt(:,0:,iDtype,:)
 
                 CALL timestart("Generate electron-phonon matrix element")
-                CALL matrix_element(fi,sphhar,results,resultsq,fmpi,enpara,nococonv,starsq,vTot1,vTot1Im,vTot,rho_loc,bqpt,eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatCart,nbasfcnq_min,nuWindow)
+                CALL matrix_element(fi,sphhar,results,resultsq,fmpi,enpara,nococonv,starsq,vTot1,vTot1Im,vTot,rho_loc,bqpt,eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatCart,nuWindow) ! nbasfcnq_min
                 CALL timestop("Generate electron-phonon matrix element")
 
                 IF (.NOT. ALLOCATED(gmat)) THEN
@@ -187,7 +187,7 @@ CONTAINS
 #endif
         CALL timestart("Linewidth elph")
         !Set this code block behind a logical in the future 
-        CALL dfpt_ph_linewidth(fi,fmpi,qpts,results,resultsq,results1,eigenVals,gmat,iQ,nbasfcnq_min,nuWindow, ph_linewidth) 
+        CALL dfpt_ph_linewidth(fi,fmpi,qpts,results,resultsq,results1,eigenVals,gmat,iQ,nuWindow, ph_linewidth) !nbasfcnq_min 
         CALL timestop("Linewidth elph")
 
 #ifdef CPP_MPI
@@ -204,7 +204,7 @@ CONTAINS
     END SUBROUTINE dfpt_elph_mat
 
 
-    SUBROUTINE matrix_element(fi,sphhar,results, resultsq,fmpi,enpara,nococonv,starsq,v1real,v1imag,vTot,inden,bqpt,eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatBuffer,nbasfcnq_min,nuWindow)
+    SUBROUTINE matrix_element(fi,sphhar,results, resultsq,fmpi,enpara,nococonv,starsq,v1real,v1imag,vTot,inden,bqpt,eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatBuffer,nuWindow)
         ! This routine is very similar to dfpt_eigen
         ! However, we do not need the gmat which is slightly different to z1
         ! Output needs to be different 
@@ -229,7 +229,7 @@ CONTAINS
         INTEGER, INTENT(IN) :: eig_id, q_eig_id,iDir, iDtype ,killcont(6) 
         LOGICAL, INTENT(IN) :: l_real
         COMPLEX,ALLOCATABLE,INTENT(INOUT) :: gmatBuffer(:,:,:,:) !(nu',nu,kpoints,jsp)
-        INTEGER,INTENT(INOUT):: nbasfcnq_min
+        !INTEGER,INTENT(INOUT):: nbasfcnq_min
         INTEGER, INTENT(IN) :: nuWindow(2,2)
 
 
@@ -245,7 +245,7 @@ CONTAINS
         INTEGER :: ierr
 #endif 
 
-        INTEGER :: jsp, nk_i, nk ,noccbd,noccbdq,nbasfcn,nbasfcnq , i , neigk,neigq, nu , noccbd_max,nbasfcnq_max
+        INTEGER :: jsp, nk_i, nk ,noccbd,noccbdq,nbasfcn,nbasfcnq , i , neigk,neigq, nu , noccbd_max !, nbasfcnq_max
         INTEGER :: tmp1 ,  dealloc_stat
         character(len=300)        :: errmsg
         REAL :: bkpt(3)
@@ -256,29 +256,30 @@ CONTAINS
 
 
         ! lapw and lapwq can be different if k and k+q do not align
-        nbasfcnq_max = lapwq%dim_nvd()
-        noccbd_max = 0 
-        nbasfcnq_min = 1000000000! ridiculous but should ensure 
-        IF (fmpi%irank==0) THEN 
-            DO jsp = 1, MERGE(1,fi%input%jspins,fi%noco%l_noco)
-                DO nk_i = 1, fi%kpts%nkpt
-                    CALL lapw%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, nk_i, fi%cell, fmpi)
-                    CALL lapwq%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, nk_i, fi%cell, fmpi, bqpt)
-                    noccbd  = COUNT(results%w_iks(:,nk_i,jsp)*2.0/fi%input%jspins>1.e-8)
-                    nbasfcnq = MERGE(lapwq%nv(1)+lapwq%nv(2)+2*fi%atoms%nlotot,lapwq%nv(1)+fi%atoms%nlotot,fi%noco%l_noco)
-                    IF (noccbd.GT.noccbd_max) noccbd_max = noccbd
-                    ! maybe we can reduce the calculation to nbasfcnq_min --> saves memory and time 
-                    IF (nbasfcnq .LT. nbasfcnq_min) nbasfcnq_min =nbasfcnq
-                END DO !nk_i
-            END DO !jsp 
-        END IF 
+        !nbasfcnq_max = lapwq%dim_nvd()
+        !noccbd_max = 0 
+        !nbasfcnq_min = 1000000000! ridiculous but should ensure 
+        !IF (fmpi%irank==0) THEN 
+        !    DO jsp = 1, MERGE(1,fi%input%jspins,fi%noco%l_noco)
+        !        DO nk_i = 1, fi%kpts%nkpt
+        !            CALL lapw%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, nk_i, fi%cell, fmpi)
+        !            CALL lapwq%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, nk_i, fi%cell, fmpi, bqpt)
+        !            noccbd  = COUNT(results%w_iks(:,nk_i,jsp)*2.0/fi%input%jspins>1.e-8)
+        !            nbasfcnq = MERGE(lapwq%nv(1)+lapwq%nv(2)+2*fi%atoms%nlotot,lapwq%nv(1)+fi%atoms%nlotot,fi%noco%l_noco)
+        !            IF (noccbd.GT.noccbd_max) noccbd_max = noccbd
+        !            ! maybe we can reduce the calculation to nbasfcnq_min --> saves memory and time 
+        !            IF (nbasfcnq .LT. nbasfcnq_min) nbasfcnq_min =nbasfcnq
+        !        END DO !nk_i
+        !    END DO !jsp 
+        !END IF 
 
         noccbd_max = nuWindow(1,2)
+        print * , "My rank " , fmpi%irank , "I think noccbdmax is " , noccbd_max
 
-#ifdef CPP_MPI
-        CALL MPI_BCAST(noccbd_max, 1, MPI_INTEGER, 0, fmpi%mpi_comm, ierr)
-        CALL MPI_BCAST(nbasfcnq_min, 1, MPI_INTEGER, 0, fmpi%mpi_comm, ierr)
-#endif 
+!#ifdef CPP_MPI
+!        CALL MPI_BCAST(noccbd_max, 1, MPI_INTEGER, 0, fmpi%mpi_comm, ierr)
+!        CALL MPI_BCAST(nbasfcnq_min, 1, MPI_INTEGER, 0, fmpi%mpi_comm, ierr)
+!#endif 
 
         CALL vx%copyPotDen(vTot)
         ALLOCATE(vx%pw_w, mold=vx%pw)

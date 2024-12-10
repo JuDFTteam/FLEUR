@@ -17,7 +17,7 @@ MODULE m_dfpt_elph_linewidth
     IMPLICIT NONE
 
 CONTAINS
-    SUBROUTINE dfpt_ph_linewidth(fi,fmpi,qpts,results,resultsq,results1,eigenVals,gmat,iQ,nbasfcnq_min,nuWindow,ph_linewidth)
+    SUBROUTINE dfpt_ph_linewidth(fi,fmpi,qpts,results,resultsq,results1,eigenVals,gmat,iQ,nuWindow,ph_linewidth)
         ! This subroutine calculates the phonon linewdith
         ! Currently implemented is the linewidth calcualtion with smearing 
 
@@ -36,7 +36,7 @@ CONTAINS
         REAL,ALLOCATABLE,INTENT(IN) :: eigenVals(:)
         COMPLEX,ALLOCATABLE,INTENT(INOUT) :: gmat(:,:,:,:,:)
         INTEGER, INTENT(IN) :: iQ
-        INTEGER, INTENT(IN) :: nbasfcnq_min
+        !INTEGER, INTENT(IN) :: nbasfcnq_min
         INTEGER, INTENT(IN) :: nuWindow(2,2)
         REAL, ALLOCATABLE, INTENT(OUT)    :: ph_linewidth(:)
 
@@ -188,23 +188,46 @@ CONTAINS
 
             CASE(3)
 
-                CALL timestart("k-Integration el-ph")
-                CALL dfpt_tetra_double(fi,results,resultsq, results1, gmat,nbasfcnq_min,kInt_gmat)
-                CALL timestop("k-Integration el-ph")
+                ALLOCATE(linewidth(3*fi%atoms%ntype,fi%input%jspins))
+                ALLOCATE(ph_linewidth(3*fi%atoms%ntype))
+                ALLOCATE(gmatCollect(size(gmat,1),size(gmat,2),fi%kpts%nkpt,size(gmat,4),size(gmat,5)))
 
-                DEALLOCATE(gmat)
-                ALLOCATE(ph_linewidth( 3*fi%atoms%ntype))
-                
                 ph_linewidth = 0.0 
-                DO iMode = 1 , 3*fi%atoms%ntype
-                    DO ispin = 1 , fi%input%jspins
-                        DO nu = 1 , size(kInt_gmat,2)
-                            DO iNupr = 1 , nbasfcnq_min
-                                ph_linewidth(iMode) =  ph_linewidth(iMode) + tpi_const* 2/fi%input%jspins * SQRT(eigenVals(iMode))*REAL(kInt_gmat(iNupr,nu,ispin,iMode))
-                            END DO 
-                        END DO 
-                    END DO 
+                linewidth = 0.0 
+                gmatCollect = 0.0 
+
+                DO nk_i = 1 , size(fmpi%k_list)
+                    nk = fmpi%k_list(nk_i)
+                    gmatCollect(:,:,nk,:,:) = REAL(gmat(:,:,nk_i,:,:))
                 END DO 
+#ifdef CPP_MPI
+                CALL MPI_ALLREDUCE(MPI_IN_PLACE,gmatCollect,size(gmatCollect),MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)
+                CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
+#else 
+                gmatCollect = REAL(gmat)         
+#endif 
+
+                IF (fmpi%irank==0) THEN 
+                    CALL timestart("k-Integration el-ph")
+                    CALL dfpt_tetra_double(fi,results,resultsq, results1, CMPLX(gmatCollect,0),nuWindow,linewidth)
+                    CALL timestop("k-Integration el-ph")
+
+                    !DEALLOCATE(gmat) If deallocation happens here, one musst remove the deallocation in dfpt_elph_mat
+                    
+                    DO iMode = 1 , 3*fi%atoms%ntype
+                        IF (eigenVals(iMode) .GE. 0.0 ) THEN 
+                            DO ispin = 1 , fi%input%jspins
+                                ! factor two for spin deg already accounted for
+                                ph_linewidth(iMode) =  ph_linewidth(iMode) +  tpi_const * SQRT(eigenVals(iMode)) * linewidth(iMode,ispin)
+                            END DO 
+                        ELSE
+                            write(*,*) '-------------------------'
+                            write(*,*) 'linewidth: Eigenvalue imaginary --> Phonon linewidth set to zero'
+                            write(*,*) '-------------------------'
+                        END IF 
+                    END DO 
+                END IF 
+                
                 
             CASE(4)
                 ALLOCATE(linewidth(3*fi%atoms%ntype,fi%input%jspins))

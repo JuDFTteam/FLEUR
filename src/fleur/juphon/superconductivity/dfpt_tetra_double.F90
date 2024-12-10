@@ -17,7 +17,7 @@ MODULE m_dfpt_tetra_double
     IMPLICIT NONE 
 
 CONTAINS 
-    SUBROUTINE dfpt_tetra_double(fi,results,resultsq,results1,gmat,nbasfcnq_min,k_int)
+    SUBROUTINE dfpt_tetra_double(fi,results,resultsq,results1,gmat,nuWindow,linewidth)
         !
         ! subroutine that calculates k integration of type
         ! \sum_k F(k) \delta(\Omega - \varepsilon_{k,\nu'}) \delta( E - \varepsilon_{k,\nu}) 
@@ -36,28 +36,19 @@ CONTAINS
         TYPE(t_results), INTENT(IN)    :: results
         TYPE(t_results), INTENT(IN)    :: resultsq
         TYPE(t_results), INTENT(IN)    :: results1
-        COMPLEX, ALLOCATABLE,INTENT(INOUT) :: gmat(:,:,:,:,:)  !(nu',nu,kpoints,jsp,normal_mode)
-        INTEGER, INTENT(IN) :: nbasfcnq_min
-        COMPLEX, ALLOCATABLE, INTENT(INOUT) :: k_int(:,:,:,:)
+        COMPLEX,INTENT(IN) :: gmat(:,:,:,:,:)  !(nu',nu,kpoints,jsp,normal_mode)
+        INTEGER, INTENT(IN) :: nuWindow(2,2)
+        REAL, INTENT(INOUT) :: linewidth(:,:)
         
-        INTEGER :: noccbd_max, iMode ,icase, ncorners, ispin ,itet , nu , i , icorn , j , jcorn , iNupr
-        REAL, ALLOCATABLE :: eigk(:,:,:),eigq(:,:,:),eigk_nondeg(:,:,:),eigq_nondeg(:,:,:),eigkVal(:),eigqVal(:)
+        INTEGER :: noccbd_max, iMode ,icase, ncorners, ispin ,itet , nu , i , icorn , j , jcorn , iNupr, ind
+        REAL, ALLOCATABLE :: eigk_nondeg(:,:,:),eigq_nondeg(:,:,:),eigkVal(:),eigqVal(:)
         COMPLEX :: area 
         COMPLEX,ALLOCATABLE :: tmp_gmat(:)
         REAL :: efermi 
 
 
-        ALLOCATE(eigk(size(gmat,2),fi%kpts%nkpt,fi%input%jspins)) ! Not sure about noco logic  
-        ALLOCATE(eigq(nbasfcnq_min,fi%kpts%nkpt,fi%input%jspins))
-        ALLOCATE(eigk_nondeg,mold=eigk)
-        ALLOCATE(eigq_nondeg,mold=eigq)
-
-        eigk(:,:,:) = results%eig(:size(gmat,2),:,:)
-        eigq(:,:,:) = resultsq%eig(:nbasfcnq_min,:,:)
-        
-
-        ALLOCATE(k_int(nbasfcnq_min,size(gmat,2),size(gmat,4),size(gmat,5) ) )
-        k_int = 0 
+        ALLOCATE(eigk_nondeg(size(gmat,2),fi%kpts%nkpt,fi%input%jspins))
+        ALLOCATE(eigq_nondeg(size(gmat,1),fi%kpts%nkpt,fi%input%jspins))
 
         ! Consider renormalization of fermi energy
         efermi = results%ef + results1%ef
@@ -71,7 +62,6 @@ CONTAINS
         ALLOCATE(tmp_gmat(ncorners))
 
     
-        !CALL save_npy("gmat_in_call.npy",gmat)
         eigk_nondeg=0
         eigq_nondeg=0
 
@@ -88,10 +78,6 @@ CONTAINS
         !voltetra = fi%kpts%voltet * volbz / fi%kpts%ntet
 
 
-        eigk_nondeg(:,:,:)=eigk(:,:,:)
-        eigq_nondeg(:,:,:)=eigq(:,:,:)
-
-        
         !
         ! This part is from /dos/tetra_dos.F90
         ! care for degeneracy shift the edges 
@@ -99,19 +85,19 @@ CONTAINS
         
         
         CALL timestart("Tetrahedon Degeneracy Test k")
-        ! for the states nu (occupied states (mostly))
-        ! we need some unoccupied states at some corners 
-        ! e.g. e1, e2 , e3 occupied and e4 is unoccupied
         DO ispin = 1 , MERGE(1,fi%input%jspins,fi%noco%l_noco)
             DO itet = 1 , fi%kpts%ntet
-                DO nu = 1, size(eigk,1) 
+                DO nu = nuWindow(1,1), nuWindow(1,2) 
+                    ind = nu - nuWindow(1,1) + 1 
                     DO i=1, ncorners !corners
                         icorn = fi%kpts%ntetra(i,itet)
+                        eigk_nondeg(ind,icorn,ispin) =  results%eig(nu,icorn,ispin)  
                         DO j = i+1,ncorners !corner
                             jcorn = fi%kpts%ntetra(j,itet)
-                            IF (abs(eigk_nondeg(nu,icorn,ispin)-eigk_nondeg(nu,jcorn,ispin)).LT.fi%juPhon%eDiffcut) THEN 
-                                eigk_nondeg(nu,icorn,ispin) = eigk_nondeg(nu,icorn,ispin) + i*fi%juPhon%eDiffcut*itet ! maybe just rewrite this as fi%juPhon%edifCut only 
-                                eigk_nondeg(nu,jcorn,ispin) = eigk_nondeg(nu,jcorn,ispin) - i*fi%juPhon%eDiffcut*itet  
+                            eigk_nondeg(ind,jcorn,ispin) =  results%eig(nu,jcorn,ispin)  
+                            IF (abs(eigk_nondeg(ind,icorn,ispin)-eigk_nondeg(ind,jcorn,ispin)).LT.fi%juPhon%eDiffcut) THEN 
+                                eigk_nondeg(ind,icorn,ispin) = eigk_nondeg(ind,icorn,ispin) + i*fi%juPhon%eDiffcut*itet ! maybe just rewrite this as fi%juPhon%edifCut only 
+                                eigk_nondeg(ind,jcorn,ispin) = eigk_nondeg(ind,jcorn,ispin) - i*fi%juPhon%eDiffcut*itet  
                             END IF     
                         END DO !j
                     END DO !i
@@ -121,18 +107,21 @@ CONTAINS
         CALL timestop("Tetrahedon Degeneracy Test k")
 
         
-        ! for the states iNupr (occupied and unoccupied nu')
+
         CALL timestart("Tetrahedon Degeneracy Test k+q")
         DO ispin = 1 , MERGE(1,fi%input%jspins,fi%noco%l_noco)
             DO itet = 1 , fi%kpts%ntet
-                DO iNupr = 1, nbasfcnq_min
+                DO iNupr = nuWindow(2,1), nuWindow(2,2)
+                    ind = iNupr - nuWindow(2,1) + 1
                     DO i=1,ncorners !corners
                         icorn = fi%kpts%ntetra(i,itet)
+                        eigq_nondeg(ind,icorn,ispin) =  resultsq%eig(iNupr,icorn,ispin)  
                         DO j = i+1,ncorners !corner
                             jcorn = fi%kpts%ntetra(j,itet)
-                            IF (abs(eigq_nondeg(iNupr,icorn,ispin)-eigq_nondeg(iNupr,jcorn,ispin)).LT.fi%juPhon%eDiffcut) THEN
-                                eigq_nondeg(iNupr,icorn,ispin) = eigq_nondeg(iNupr,icorn,ispin) + i*fi%juPhon%eDiffcut*itet
-                                eigq_nondeg(iNupr,jcorn,ispin) = eigq_nondeg(iNupr,jcorn,ispin) - i*fi%juPhon%eDiffcut*itet   
+                            eigq_nondeg(ind,jcorn,ispin) =  resultsq%eig(iNupr,jcorn,ispin)  
+                            IF (abs(eigq_nondeg(ind,icorn,ispin)-eigq_nondeg(ind,jcorn,ispin)).LT.fi%juPhon%eDiffcut) THEN
+                                eigq_nondeg(ind,icorn,ispin) = eigq_nondeg(ind,icorn,ispin) + i*fi%juPhon%eDiffcut*itet
+                                eigq_nondeg(ind,jcorn,ispin) = eigq_nondeg(ind,jcorn,ispin) - i*fi%juPhon%eDiffcut*itet   
                             END IF     
                         END DO !j
                     END DO !i
@@ -146,7 +135,7 @@ CONTAINS
             DO ispin = 1 , MERGE(1,fi%input%jspins,fi%noco%l_noco)
                 DO itet = 1 , fi%kpts%ntet
                     DO nu = 1 ,size(gmat,2)
-                        DO iNupr = 1,nbasfcnq_min
+                        DO iNupr = 1,size(gmat,1)
                             DO i=1,ncorners !corners
                                 icorn = fi%kpts%ntetra(i,itet)
                                 eigkVal(i)  = eigk_nondeg(nu,icorn,ispin)
@@ -154,7 +143,7 @@ CONTAINS
                                 tmp_gmat(i) = gmat(iNupr,nu,icorn,ispin,iMode) ! we give the nu' nu element for the k points at the tetra corners
                             END DO !corners
                             call tetra_area(eigkVal,eigqVal,results%ef,fi%kpts%voltet(itet),tmp_gmat,area,icase) !results%ef voltetra(itet)
-                            k_int(iNupr,nu,ispin,iMode) = k_int(iNupr,nu,ispin,iMode) +  area 
+                            linewidth(iMode,ispin) = linewidth(iMode,ispin) +  2.0/fi%input%jspins * 1/fi%kpts%ntet * REAL(area)  
                         END DO !iNupr
                     END DO !nu
                 END DO !itet
@@ -162,11 +151,6 @@ CONTAINS
         END DO !iMode
         CALL timestop("Area of Intersection")
         
-
-        !This is needed if not fi%kpts%voltet is taken
-        !k_int(:,:,:,:) = fi%cell%omtil/(tpi_const)**3 * k_int(:,:,:,:)
-        !Consider the weight of one tetra
-        k_int(:,:,:,:) = k_int(:,:,:,:) / fi%kpts%ntet
         
     END SUBROUTINE dfpt_tetra_double
 
