@@ -39,6 +39,7 @@ CONTAINS
       USE m_get_mt_perturbation
       USE m_dfpt_vgen_finalize
       USE m_dfpt_vefield
+      USE m_checkdopall
 
       IMPLICIT NONE
 
@@ -138,9 +139,10 @@ CONTAINS
       IF (juphon%l_efield) THEN
          atomsefield = atoms
          atomsefield%zatom(:) = 0.0 ! find out if this is actually needed
-         CALL dfpt_vefield(juphon,atoms,sym,sphhar,cell,dfptvefield,dfptvefieldimag,iDir)
+         CALL dfpt_vefield(juphon,starsq,atoms,sym,sphhar,cell,dfptvefield,dfptvefieldimag,iDir,1)
          CALL dfptvefield%copy_both_spin(dfptvTot)
          CALL dfptvefieldimag%copy_both_spin(dfptvTotimag)
+         CALL checkDOPALL(input, sphhar, starsq,atoms, sym, vacuum, cell,dfptvefield,1, dfptvefieldimag   )
          IF (l_xc) THEN
             CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,juphon,starsq,cell,sphhar,atomsefield,.TRUE.,workdenReal,vCoul,sigma_loc,&
                      & dfptdenimag=workdenImag,dfptvCoulimag=dfptvCoulimag,dfptden0=workden,stars2=stars,iDtype=iDtype,iDir=iDir)
