@@ -4,12 +4,16 @@ module m_dfpt_dielecten
     use m_convol
     use m_dfpt_dynmat
     use m_npy
+    USE m_make_stars
+    use m_inv3
+
+
 
     implicit none
 
     contains
 
-        subroutine dfpt_dielecten_HF_int(fi,stars,starsq,sphhar,fmpi,denIn1,denIn1Im,results,results1,dieltensor_row)
+        subroutine dfpt_dielecten_HF_int(fi,stars,starsq,sphhar,fmpi,denIn1,denIn1Im,results,results1,dieltensor_row,iDir_den,q_sign)
 
 
             
@@ -20,18 +24,29 @@ module m_dfpt_dielecten
             type(t_results), intent(in)        :: results, results1
             TYPE(t_mpi),        intent(in)     :: fmpi
             complex, intent(inout)             :: dieltensor_row(:)
+            integer, intent(in)                :: q_sign
 
 
 
             type(t_potden)                     :: vExt1, vExt1Im
-            complex, allocatable               :: pwwq2(:),tempval_pw,tempval_mt, denIn1_pw(:), dieltensor_HF(:),dieltensor_occu(:),dieltensor_(:)
+            type(t_stars)                      :: starsq_vext
+            complex, allocatable               :: pwwq2(:),tempval_pw,tempval_mt, denIn1_pw(:), dieltensor_HF(:)
             real, allocatable                  :: denIn1_mt(:,:,:),denIn1_mt_Im(:,:,:) 
             integer                            :: iDir_col,iType
+            integer                            :: iDir_den
+            complex                            :: diel_tensor_int_IR(3),diel_tensor_int_MT(3)
+            complex, allocatable                :: diel_tensor_int_MT_atom(:,:)
+            character(len=20)                  :: status_string,densave_string,vextsave_string
+            character(len=20)                   :: filename_string
+            real                                         :: qvec_ext(3),qvec_int(3),det,inv_bmat(3,3) 
+                                    
             
             ALLOCATE(pwwq2(starsq%ng3))
             ALLOCATE(denIn1_pw(starsq%ng3))
             ALLOCATE(denIn1_mt(fi%atoms%jmtd,0:sphhar%nlhd,fi%atoms%ntype),denIn1_mt_Im(fi%atoms%jmtd,0:sphhar%nlhd,fi%atoms%ntype))
-            ALLOCATE(dieltensor_HF(SIZE(dieltensor_row)),dieltensor_occu(SIZE(dieltensor_row)))
+            ALLOCATE(dieltensor_HF(SIZE(dieltensor_row)))
+            allocate(diel_tensor_int_MT_atom(3,fi%atoms%ntype))
+            !print*,"diel_tensor_int_MT_atom",shape(diel_tensor_int_MT_atom)
             dieltensor_HF(:) = CMPLX(0.0,0.0)
             !print*, "Im in dfpt_dielecten"
 
@@ -39,31 +54,89 @@ module m_dfpt_dielecten
             denIn1_pw  = (denIn1%pw(:,1)+denIn1%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
             denIn1_mt = (denIn1%mt(:,0:,:,1)+denIn1%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
             denIn1_mt_Im = (denIn1Im%mt(:,0:,:,1)+denIn1Im%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
-            
+            write(densave_string,"(a,i0,a)")"den1_pw_",iDir_den,".npy"
+            call save_npy(densave_string, denIn1_pw)
+            write(densave_string,"(a,i0,a)")"den1_mt_",iDir_den,".npy"
+            call save_npy(densave_string, denIn1_mt)
+            write(densave_string,"(a,i0,a)")"den1_mtIm_",iDir_den,".npy"
+            call save_npy(densave_string, denIn1_mt_Im)
+            !call save_npy('denIn1_pw_', vec)
             ! \rho(1)V_{ext}(1) integral (HF)
-            
+            diel_tensor_int_IR = CMPLX(0.0,0.0)
+            diel_tensor_int_MT = CMPLX(0.0,0.0)
+            diel_tensor_int_MT_atom = cmplx(0.0,0.0)
             do iDir_col = 1, 3   
-                
-                !interstitial
+                ! call make_stars 
                 tempval_pw = CMPLX(0.0,0.0)
-                call vExt1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
-                call vExt1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
-                call dfpt_vefield(fi%juPhon,fi%atoms,fi%sym,sphhar,fi%cell,vExt1,vExt1Im,iDir_col)
+                qvec_ext(:) = 0.0
+                qvec_int(:) = 0.0
+                qvec_ext(iDir_col) = fi%juPhon%qlim
+                call inv3(fi%cell%bmat,inv_bmat(:,:),det)
+                qvec_int = matmul(qvec_ext,transpose(inv_bmat))
+                CALL starsq_vext%reset_stars()
+                CALL make_stars(starsq_vext, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, qvec_int, 1, iDir_col,fi%juPhon%l_efield)
+                starsq_vext%ufft = starsq%ufft
+                !print*,"starsq_vedxt",starsq_vext%center
+                
+                !call inv3(fi%cell%bmat,inv_bmat(:,:),det)
+                !qvec_int = matmul(qvec_ext,transpose(inv_bmat))
+                !starsq_vext = starsq
+                !starsq_vext%center =qvec_int
+                !print*,"qvec_int",qvec_int
+                !print*,"starsq%center",starsq%center
+                !print*,"starsq_vext%center",starsq_vext%center
+                call vExt1%init(starsq_vext, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
+                call vExt1Im%init(starsq_vext, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
+                call dfpt_vefield(fi%juPhon,starsq_vext,fi%atoms,fi%sym,sphhar,fi%cell,vExt1,vExt1Im,iDir_col,q_sign)
+                write(vextsave_string,"(a,i0,a)")"vext1_pw_",iDir_col,".npy"
+                call save_npy(vextsave_string, vExt1%pw)
+                write(vextsave_string,"(a,i0,a)")"vext1_mt_",iDir_col,".npy"
+                call save_npy(vextsave_string, vExt1%mt(:,:,:,1))
+                write(vextsave_string,"(a,i0,a)")"vext1_mtIm_",iDir_col,".npy"
+                call save_npy(vextsave_string, vExt1Im%mt(:,:,:,1))
+                if (iDir_col .eq. iDir_den) then
+                    !interstitial
 
-                ! IR integral:
-                pwwq2 = CMPLX(0.0,0.0)
-                CALL dfpt_convol_big(1, starsq, stars, vExt1%pw(:,1), CMPLX(1.0,0.0)*stars%ufft, pwwq2)
-                CALL dfpt_int_pw(starsq, fi%cell, denIn1_pw, pwwq2, tempval_pw)
-                dieltensor_HF(iDir_col) = dieltensor_HF(iDir_col) + tempval_pw
-
+                    ! IR integral:
+                    pwwq2 = CMPLX(0.0,0.0)
+                    CALL dfpt_convol_big(1, starsq, stars, vExt1%pw(:,1), CMPLX(1.0,0.0)*stars%ufft, pwwq2)
+                    CALL dfpt_int_pw(starsq, fi%cell, denIn1_pw, pwwq2, tempval_pw)
+                    dieltensor_HF(iDir_col) = dieltensor_HF(iDir_col) + tempval_pw 
+                    diel_tensor_int_IR(iDir_col) =  diel_tensor_int_IR(iDir_col) + tempval_pw
+                end if 
 
                 !Muffin-tin 
+                print*,"den1_dir",iDir_den
+                print*,"iDir_col",iDir_col
                 do iType = 1, fi%atoms%ntype
-                    tempval_mt = CMPLX(0.0,0.0)               
+                    tempval_mt = CMPLX(0.0,0.0) 
                     call dfpt_int_mt(fi%atoms, sphhar, fi%sym, iType, denIn1_mt, denIn1_mt_Im, vExt1%mt(:,0:,:,1), vExt1Im%mt(:,0:,:,1), tempval_mt)
                     dieltensor_HF(iDir_col) = dieltensor_HF(iDir_col) + tempval_mt
+                    diel_tensor_int_MT(iDir_col) =  diel_tensor_int_MT(iDir_col) + tempval_mt
+                    !print*,"diel_tensor_int_MT",diel_tensor_int_MT
+                    diel_tensor_int_MT_atom(iDir_col,iType) = diel_tensor_int_MT_atom(iDir_col,iType) + tempval_mt
+                    !print*,"diel_tensor_int_MT_atom(iDir_col,iType)",diel_tensor_int_MT_atom(iDir_col,iType)
                 end do
             end do
+            status_string = 'old'
+            if (iDir_den == 1) status_string = 'replace'
+            open(113, file="diel_tensor_int", status=status_string, position='append', action='write', form='formatted')
+            write(113,'(6es16.8)') dieltensor_HF(:)
+            close(113)
+            open(111, file="diel_tensor_int_IR", status=status_string, position='append',action='write', form='formatted')
+            write(111,'(6es16.8)') diel_tensor_int_IR(:)
+            close(111)
+            open(112, file="diel_tensor_int_MT", status=status_string, position='append', action='write', form='formatted')
+            write(112,'(6es16.8)') diel_tensor_int_MT(:)
+            close(112)
+            if (fi%atoms%ntype >1) then
+                do iType = 1,fi%atoms%ntype
+                    write(filename_string, '(A,I0)') "diel_tensor_int_MT_", iType
+                    open(112+itype, file=filename_string, status=status_string, position='append', action='write', form='formatted')
+                    write(112+itype,'(6es16.8)') diel_tensor_int_MT_atom(:,iType)
+                    close(112+itype)
+                end do
+            end if 
 
             dieltensor_row(:)= dieltensor_HF(:)
             
@@ -81,6 +154,8 @@ module m_dfpt_dielecten
                 dielten_iden(j,j) = CMPLX(1,0)
              END DO
             dielecten(:,:) = dielten_iden(:,:) - (fpi_const/fi%cell%omtil)*dielecten(:,:)
+            !print*,"(fpi_const/fi%cell%omtil)",(fpi_const/fi%cell%omtil)
+            !print*,"(fpi_const/fi%cell%vol)",(fpi_const/fi%cell%vol)
             open( 110, file="diel_tensor", status='replace', action='write', form='formatted')
             write(*,*) '-------------------------' 
             write(*,*) "Dielectric tensor" 
