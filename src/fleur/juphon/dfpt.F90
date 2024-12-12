@@ -425,6 +425,7 @@ CONTAINS
                dfpt_tag = ''
                WRITE(dfpt_tag,'(a1,i0,a2,i0)') 'q', 1, '_j', iDir
                qvec_ext(:) = 0.0
+               qvec_int(:) = 0.0
                qvec_ext(iDir) = fi%juPhon%qlim
                call inv3(fi%cell%bmat,inv_bmat(:,:),det)
                qvec_int = matmul(qvec_ext,transpose(inv_bmat))
@@ -482,7 +483,7 @@ CONTAINS
                                     MERGE(sigma_coul,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir==3))
                CALL timestop("Sternheimer")
                IF (fmpi%irank==0) WRITE(*,*) '-------------------------'   
-               CALL dfpt_dielecten_HF_int(fi_nosym,stars_nosym,starsq,sphhar_nosym,fmpi_nosym,denIn1,denIn1Im,results_nosym, results1,diel_tensor(iDir,:))
+               CALL dfpt_dielecten_HF_int(fi_nosym,stars_nosym,starsq,sphhar_nosym,fmpi_nosym,denIn1,denIn1Im,results_nosym, results1,diel_tensor(iDir,:),iDir,1)
             END DO
             CALL timestart("diel_tensor")
             IF (fmpi%irank==0) THEN
