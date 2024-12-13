@@ -21,10 +21,11 @@ MODULE m_dfpt_tetra_single
     SUBROUTINE dfpt_tetra_single(fi,results,resultsq,results1,gmat,shift,nuWindow,linewidth)
 
         USE m_npy
+        USE m_dfpt_tetra_double, only : degeneracyCheck 
         !
         ! This routine calculates /int F(k,k+q) \delta(\omega + \epsilon_k  - \epsilon_{k+q})
-        ! At the corners of the tetrahedons we put \tilde{\epsilon} = \epsilon_k - \epsilon_{k+q}
-        ! Thereby reducing the problem to the hypersurface \omega crossing the hypersurface of \epsilon_k - \epsilon_{k+q}
+        ! At the corners of the tetrahedons we put \tilde{\epsilon} = \epsilon_{k+q} - \epsilon_{k}
+        ! Thereby reducing the problem to the hypersurface \omega crossing the hypersurface of \epsilon_{k+q} - \epsilon_{k}
         ! Implementation done as in: "Journal of Physics C: Solid State Physics 12.15 (1979): 2991"
 
         TYPE(t_fleurinput), INTENT(IN) :: fi 
@@ -51,7 +52,7 @@ MODULE m_dfpt_tetra_single
         ! Bulk tetra has 4 corners (if layered system 2 corners will be degenerate)
         ncorners=SIZE(fi%kpts%ntetra,1)
 
-        CALL timestart("Tetrahedon Degeneracy Test k")
+        CALL timestart("Setup Tetraheda Corners")
         DO ispin = 1 , MERGE(1,fi%input%jspins,fi%noco%l_noco)
             DO itet = 1 , fi%kpts%ntet
                 DO nu = nuWindow(1,1), nuWindow(1,2) 
@@ -62,20 +63,20 @@ MODULE m_dfpt_tetra_single
                         DO i=1, ncorners !corners
                             icorn = fi%kpts%ntetra(i,itet)
                             eig_nondeg(comInd,icorn,ispin) =  resultsq%eig(iNupr,icorn,ispin)  - results%eig(nu,icorn,ispin) 
-                            DO j = i+1,ncorners !corner
-                                jcorn = fi%kpts%ntetra(j,itet)
-                                eig_nondeg(comInd,jcorn,ispin) =  resultsq%eig(iNupr,jcorn,ispin) - results%eig(nu,jcorn,ispin) 
-                                IF (abs(eig_nondeg(comInd,icorn,ispin)-eig_nondeg(comInd,jcorn,ispin)).LT.fi%juPhon%eDiffcut) THEN 
-                                    eig_nondeg(comInd,icorn,ispin) = eig_nondeg(comInd,icorn,ispin) + i*fi%juPhon%eDiffcut*itet 
-                                    eig_nondeg(comInd,jcorn,ispin) = eig_nondeg(comInd,jcorn,ispin) - i*fi%juPhon%eDiffcut*itet  
-                                END IF     
-                            END DO !j
+                            !DO j = i+1,ncorners !corner
+                            !    jcorn = fi%kpts%ntetra(j,itet)
+                            !    eig_nondeg(comInd,jcorn,ispin) =  resultsq%eig(iNupr,jcorn,ispin) - results%eig(nu,jcorn,ispin) 
+                            !    IF (abs(eig_nondeg(comInd,icorn,ispin)-eig_nondeg(comInd,jcorn,ispin)).LT.fi%juPhon%eDiffcut) THEN 
+                            !        eig_nondeg(comInd,icorn,ispin) = eig_nondeg(comInd,icorn,ispin) + i*fi%juPhon%eDiffcut*itet 
+                            !        eig_nondeg(comInd,jcorn,ispin) = eig_nondeg(comInd,jcorn,ispin) - i*fi%juPhon%eDiffcut*itet  
+                            !    END IF     
+                            !END DO !j
                         END DO !i
                     END DO !iNupr
                 END DO !nu 
             END DO !itet 
         END DO !ispin 
-        CALL timestop("Tetrahedon Degeneracy Test k")
+        CALL timestop("Setup Tetraheda Corners")
 
         CALL timestart("Tetra int")
         DO iMode = 1 , size(gmat,5) 
@@ -99,6 +100,9 @@ MODULE m_dfpt_tetra_single
                                 eig(i) = eig_nondeg(comInd,icorn,ispin)
                                 tmpMat(i) = gmat(indPr,ind,icorn,ispin,iMode)  
                             END DO !corners
+                            CALL timestart("Tetrahedon Degeneracy Test")
+                            CALL degeneracyCheck(eig,fi%juPhon%eDiffcut)
+                            CALL timestop("Tetrahedon Degeneracy Test")
                             CALL tetra_area(eig,tmpMat,SQRT(shift(iMode)),valArea)
                             linewidth(iMode,ispin) = linewidth(iMode,ispin) + 2.0/fi%input%jspins * fi%kpts%voltet(itet)/fi%kpts%ntet * valArea 
                        END DO !iNuPr

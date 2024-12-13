@@ -274,7 +274,6 @@ CONTAINS
         !END IF 
 
         noccbd_max = nuWindow(1,2)
-        print * , "My rank " , fmpi%irank , "I think noccbdmax is " , noccbd_max
 
 !#ifdef CPP_MPI
 !        CALL MPI_BCAST(noccbd_max, 1, MPI_INTEGER, 0, fmpi%mpi_comm, ierr)
@@ -562,6 +561,9 @@ CONTAINS
 
             write(2200,*) "minval nu window", nuWindow(1,:)
             write(2200,*) "maxval iNupr window", nuWindow(2,:)
+
+        ! This is not the ideal check 
+        IF ( (nuWindow(1,2) -nuWindow(1,1)+1) .EQ. size(results%eig,1)  ) CALL juDFT_warn("The phonon calculation appears to have not converged. All states contribute to electron-phonon coupling",calledby="dfpt_elph_mat")
         END IF 
 
 

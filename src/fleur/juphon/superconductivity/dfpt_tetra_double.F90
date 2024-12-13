@@ -12,8 +12,6 @@ MODULE m_dfpt_tetra_double
     USE mpi
 #endif
     USE m_juDFT
-    USE m_types
-    USE m_constants
     IMPLICIT NONE 
 
 CONTAINS 
@@ -27,8 +25,6 @@ CONTAINS
         ! 
         ! Here no NOCO spin logic is implemented
         USE m_types
-        USE m_types_kpts
-        USE m_types_juPhon
         USE m_constants
         USE m_npy
         TYPE(t_fleurinput), INTENT(IN) :: fi
@@ -40,15 +36,15 @@ CONTAINS
         INTEGER, INTENT(IN) :: nuWindow(2,2)
         REAL, INTENT(INOUT) :: linewidth(:,:)
         
-        INTEGER :: noccbd_max, iMode ,icase, ncorners, ispin ,itet , nu , i , icorn , j , jcorn , iNupr, ind
+        INTEGER :: noccbd_max, iMode ,icase, ncorners, ispin ,itet , nu , i , icorn , j , jcorn , iNupr, ind, indPr
         REAL, ALLOCATABLE :: eigk_nondeg(:,:,:),eigq_nondeg(:,:,:),eigkVal(:),eigqVal(:)
         COMPLEX :: area 
         COMPLEX,ALLOCATABLE :: tmp_gmat(:)
         REAL :: efermi 
 
 
-        ALLOCATE(eigk_nondeg(size(gmat,2),fi%kpts%nkpt,fi%input%jspins))
-        ALLOCATE(eigq_nondeg(size(gmat,1),fi%kpts%nkpt,fi%input%jspins))
+        !ALLOCATE(eigk_nondeg(size(gmat,2),fi%kpts%nkpt,fi%input%jspins))
+        !ALLOCATE(eigq_nondeg(size(gmat,1),fi%kpts%nkpt,fi%input%jspins))
 
         ! Consider renormalization of fermi energy
         efermi = results%ef + results1%ef
@@ -84,64 +80,72 @@ CONTAINS
         ! If no tetra has degeneracy then k+q also contains no dengenerate corners
         
         
-        CALL timestart("Tetrahedon Degeneracy Test k")
-        DO ispin = 1 , MERGE(1,fi%input%jspins,fi%noco%l_noco)
-            DO itet = 1 , fi%kpts%ntet
-                DO nu = nuWindow(1,1), nuWindow(1,2) 
-                    ind = nu - nuWindow(1,1) + 1 
-                    DO i=1, ncorners !corners
-                        icorn = fi%kpts%ntetra(i,itet)
-                        eigk_nondeg(ind,icorn,ispin) =  results%eig(nu,icorn,ispin)  
-                        DO j = i+1,ncorners !corner
-                            jcorn = fi%kpts%ntetra(j,itet)
-                            eigk_nondeg(ind,jcorn,ispin) =  results%eig(nu,jcorn,ispin)  
-                            IF (abs(eigk_nondeg(ind,icorn,ispin)-eigk_nondeg(ind,jcorn,ispin)).LT.fi%juPhon%eDiffcut) THEN 
-                                eigk_nondeg(ind,icorn,ispin) = eigk_nondeg(ind,icorn,ispin) + i*fi%juPhon%eDiffcut*itet ! maybe just rewrite this as fi%juPhon%edifCut only 
-                                eigk_nondeg(ind,jcorn,ispin) = eigk_nondeg(ind,jcorn,ispin) - i*fi%juPhon%eDiffcut*itet  
-                            END IF     
-                        END DO !j
-                    END DO !i
-                END DO !nu 
-            END DO !itet 
-        END DO !ispin 
-        CALL timestop("Tetrahedon Degeneracy Test k")
+        !CALL timestart("Tetrahedon Degeneracy Test k")
+        !DO ispin = 1 , MERGE(1,fi%input%jspins,fi%noco%l_noco)
+        !    DO itet = 1 , fi%kpts%ntet
+        !        DO nu = nuWindow(1,1), nuWindow(1,2) 
+        !            ind = nu - nuWindow(1,1) + 1 
+        !            DO i=1, ncorners !corners
+        !                icorn = fi%kpts%ntetra(i,itet)
+        !                eigk_nondeg(ind,icorn,ispin) =  results%eig(nu,icorn,ispin)  
+        !                DO j = i+1,ncorners !corner
+        !                    jcorn = fi%kpts%ntetra(j,itet)
+        !                    eigk_nondeg(ind,jcorn,ispin) =  results%eig(nu,jcorn,ispin)  
+        !                    IF (abs(eigk_nondeg(ind,icorn,ispin)-eigk_nondeg(ind,jcorn,ispin)).LT.1.0e-7) THEN 
+        !                        print * , "I lifted the degeneracy" , abs(eigk_nondeg(ind,icorn,ispin)-eigk_nondeg(ind,jcorn,ispin))
+        !                        eigk_nondeg(ind,icorn,ispin) = eigk_nondeg(ind,icorn,ispin) + 1.0e-7*itet ! maybe just rewrite this as fi%juPhon%edifCut only 
+        !                        eigk_nondeg(ind,jcorn,ispin) = eigk_nondeg(ind,jcorn,ispin) - 1.0e-7*itet  
+        !                        print * , "Now" , abs(eigk_nondeg(ind,icorn,ispin)-eigk_nondeg(ind,jcorn,ispin))
+        !                    END IF     
+        !                END DO !j
+        !            END DO !i
+        !        END DO !nu 
+        !    END DO !itet 
+        !END DO !ispin 
+        !CALL timestop("Tetrahedon Degeneracy Test k")
 
         
 
-        CALL timestart("Tetrahedon Degeneracy Test k+q")
-        DO ispin = 1 , MERGE(1,fi%input%jspins,fi%noco%l_noco)
-            DO itet = 1 , fi%kpts%ntet
-                DO iNupr = nuWindow(2,1), nuWindow(2,2)
-                    ind = iNupr - nuWindow(2,1) + 1
-                    DO i=1,ncorners !corners
-                        icorn = fi%kpts%ntetra(i,itet)
-                        eigq_nondeg(ind,icorn,ispin) =  resultsq%eig(iNupr,icorn,ispin)  
-                        DO j = i+1,ncorners !corner
-                            jcorn = fi%kpts%ntetra(j,itet)
-                            eigq_nondeg(ind,jcorn,ispin) =  resultsq%eig(iNupr,jcorn,ispin)  
-                            IF (abs(eigq_nondeg(ind,icorn,ispin)-eigq_nondeg(ind,jcorn,ispin)).LT.fi%juPhon%eDiffcut) THEN
-                                eigq_nondeg(ind,icorn,ispin) = eigq_nondeg(ind,icorn,ispin) + i*fi%juPhon%eDiffcut*itet
-                                eigq_nondeg(ind,jcorn,ispin) = eigq_nondeg(ind,jcorn,ispin) - i*fi%juPhon%eDiffcut*itet   
-                            END IF     
-                        END DO !j
-                    END DO !i
-                END DO !iNpur
-            END DO !itet 
-        END DO !ispin 
-        CALL timestop("Tetrahedon Degeneracy Test k+q")
+        !CALL timestart("Tetrahedon Degeneracy Test k+q")
+        !DO ispin = 1 , MERGE(1,fi%input%jspins,fi%noco%l_noco)
+        !    DO itet = 1 , fi%kpts%ntet
+        !        DO iNupr = nuWindow(2,1), nuWindow(2,2)
+        !            ind = iNupr - nuWindow(2,1) + 1
+        !            DO i=1,ncorners !corners
+        !                icorn = fi%kpts%ntetra(i,itet)
+        !                eigq_nondeg(ind,icorn,ispin) =  resultsq%eig(iNupr,icorn,ispin)  
+        !                DO j = i+1,ncorners !corner
+        !                    jcorn = fi%kpts%ntetra(j,itet)
+        !                    eigq_nondeg(ind,jcorn,ispin) =  resultsq%eig(iNupr,jcorn,ispin)  
+        !                    IF (abs(eigq_nondeg(ind,icorn,ispin)-eigq_nondeg(ind,jcorn,ispin)).LT.1.0e-7) THEN
+        !                        eigq_nondeg(ind,icorn,ispin) = eigq_nondeg(ind,icorn,ispin) + i*1.0e-7*itet
+        !                        eigq_nondeg(ind,jcorn,ispin) = eigq_nondeg(ind,jcorn,ispin) - i*1.0e-7*itet   
+        !                    END IF     
+        !                END DO !j
+        !            END DO !i
+        !        END DO !iNpur
+        !    END DO !itet 
+        !END DO !ispin 
+        !CALL timestop("Tetrahedon Degeneracy Test k+q")
 
         CALL timestart("Area of Intersection")
         DO iMode = 1 , size(gmat,5)
             DO ispin = 1 , MERGE(1,fi%input%jspins,fi%noco%l_noco)
                 DO itet = 1 , fi%kpts%ntet
-                    DO nu = 1 ,size(gmat,2)
-                        DO iNupr = 1,size(gmat,1)
+                    DO nu = nuWindow(1,1), nuWindow(1,2) 
+                        ind = nu - nuWindow(1,1) + 1 
+                        DO iNupr = nuWindow(2,1), nuWindow(2,2)
+                            indPr = iNupr - nuWindow(2,1) + 1
                             DO i=1,ncorners !corners
                                 icorn = fi%kpts%ntetra(i,itet)
-                                eigkVal(i)  = eigk_nondeg(nu,icorn,ispin)
-                                eigqVal(i) = eigq_nondeg(iNupr,icorn,ispin)
-                                tmp_gmat(i) = gmat(iNupr,nu,icorn,ispin,iMode) ! we give the nu' nu element for the k points at the tetra corners
+                                eigkVal(i)  =  results%eig(nu,icorn,ispin)  
+                                eigqVal(i) = resultsq%eig(iNupr,icorn,ispin)
+                                tmp_gmat(i) = gmat(indPr,ind,icorn,ispin,iMode) ! we give the nu' nu element for the k points at the tetra corners
                             END DO !corners
+                            CALL timestart("Tetrahedon Degeneracy Test")
+                            CALL degeneracyCheck(eigkVal,fi%juPhon%eDiffcut)
+                            CALL degeneracyCheck(eigqVal,fi%juPhon%eDiffcut)
+                            CALL timestop("Tetrahedon Degeneracy Test")
                             call tetra_area(eigkVal,eigqVal,results%ef,fi%kpts%voltet(itet),tmp_gmat,area,icase) !results%ef voltetra(itet)
                             linewidth(iMode,ispin) = linewidth(iMode,ispin) +  2.0/fi%input%jspins * 1/fi%kpts%ntet * REAL(area)  
                         END DO !iNupr
@@ -184,7 +188,7 @@ CONTAINS
         call sorting(eigk,r_arr2=eigq,c_arr2=gmat)
 
         
-        IF ( eigk(1) .LT. efermi  .AND. efermi .LT. eigk(2) ) THEN 
+        IF ( (eigk(1) .LT. efermi)  .AND. (efermi .LT. eigk(2)) ) THEN 
             !case=1
             prefac= ( efermi - eigq(1) ) / ( efermi - eigk(1) )
 
@@ -211,7 +215,7 @@ CONTAINS
             
             icase = 1 
 
-        ELSE IF ( eigk(2) .LT. efermi  .AND. efermi .LT. eigk(3) ) THEN 
+        ELSE IF ( (eigk(2) .LT. efermi)  .AND. (efermi .LT. eigk(3)) ) THEN 
             !case=2 
             !!!
             !!! This contribution I_0
@@ -257,7 +261,7 @@ CONTAINS
             area = 6 * voltet * (f*intersection_val * interpol_mat - f2*intersection_val2 * interpol_mat2)
 
             icase = 2
-        ELSE IF ( eigk(3) .LT. efermi  .AND. efermi .LT. eigk(4) ) THEN 
+        ELSE IF ( (eigk(3) .LT. efermi)  .AND. (efermi .LT. eigk(4)) ) THEN 
             !case=3 
             prefac= ( efermi - eigq(4) ) / ( efermi - eigk(4) )
 
@@ -300,12 +304,12 @@ CONTAINS
 
         CALL sorting(arr_sort,c_arr2=arr_mat)
 
-        IF ( arr_sort(1) .LT. prefac .AND. prefac .LT. arr_sort(2) ) THEN
+        IF ( (arr_sort(1) .LT. prefac) .AND. (prefac .LT. arr_sort(2)) ) THEN
             intersection_val = (prefac - arr_sort(1)) / ((arr_sort(2) - arr_sort(1)) * (arr_sort(3) - arr_sort(1)))
             
             interpol_mat = 2* arr_mat(1) + (prefac - arr_sort(1))/(arr_sort(2)-arr_sort(1)) * ( arr_mat(2) - arr_mat(1)) &
                             +(prefac - arr_sort(1))/(arr_sort(3)-arr_sort(1)) * (arr_mat(3)-arr_mat(1)) 
-        ELSE IF ( arr_sort(2) .LT. prefac .AND. prefac .LT. arr_sort(3) ) THEN
+        ELSE IF ( (arr_sort(2) .LT. prefac) .AND. (prefac .LT. arr_sort(3)) ) THEN
             intersection_val = (arr_sort(3) - prefac ) / ((arr_sort(3) - arr_sort(2)) * (arr_sort(3) - arr_sort(1)))
 
             interpol_mat = 2* arr_mat(3) + (arr_sort(3) - prefac )/( arr_sort(3)-arr_sort(2)) * ( arr_mat(2) - arr_mat(3)) &
@@ -358,7 +362,23 @@ CONTAINS
     END SUBROUTINE sorting
 
 
+    SUBROUTINE degeneracyCheck(eig,degTol)
 
+        REAL, INTENT(INOUT) :: eig(4)
+        REAL, INTENT(IN)    :: degTol ! Tolerance for degeneracy 
+
+        INTEGER :: icorn, jcorn 
+
+        DO icorn = 1 , size(eig)
+            DO jcorn = icorn, size(eig)
+                IF ( abs(eig(icorn)-eig(jcorn)) .LT. degTol ) THEN  
+                    eig(icorn) = eig(icorn) + icorn*degTol
+                    eig(jcorn) = eig(jcorn) - icorn*degTol
+                END IF 
+            END DO 
+        END DO 
+
+    END SUBROUTINE degeneracyCheck    
 
 
 

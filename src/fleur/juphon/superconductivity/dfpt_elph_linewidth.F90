@@ -74,22 +74,20 @@ CONTAINS
             CASE(1)
                 
                 ! mutliply with fermi function 
-                IF (fi%juphon%i_integration == 1 ) THEN 
-                    DO ispin = 1 , fi%input%jspins
-                        DO nk_i = 1 , size(fmpi%k_list)
-                            nk = fmpi%k_list(nk_i)
-                            DO nu = nuWindow(1,1) , nuWindow(1,2)  
-                                ind =  nu - nuWindow(1,1) + 1 
-                                x = (results%eig(nu,nk,ispin)-results%ef)/fi%input%tkb
-                                DO iNupr = nuWindow(2,1) , nuwindow(2,2)
-                                    indPr = iNupr- nuWindow(2,1) + 1 
-                                    xq = (resultsq%eig(iNupr,nk,ispin)-results%ef)/fi%input%tkb
-                                    gmat(indPr,ind,nk_i,ispin,:) = gmat(indPr,ind,nk_i,ispin,:)*(sfermi(x) - sfermi(xq))
-                                END DO ! iNupr 
-                            END DO  ! nu 
-                        END DO ! nk 
-                    END DO 
-                END IF 
+                DO ispin = 1 , fi%input%jspins
+                    DO nk_i = 1 , size(fmpi%k_list)
+                        nk = fmpi%k_list(nk_i)
+                        DO nu = nuWindow(1,1) , nuWindow(1,2)  
+                            ind =  nu - nuWindow(1,1) + 1 
+                            x = (results%eig(nu,nk,ispin)-results%ef)/fi%input%tkb
+                            DO iNupr = nuWindow(2,1) , nuwindow(2,2)
+                                indPr = iNupr- nuWindow(2,1) + 1 
+                                xq = (resultsq%eig(iNupr,nk,ispin)-results%ef)/fi%input%tkb
+                                gmat(indPr,ind,nk_i,ispin,:) = gmat(indPr,ind,nk_i,ispin,:)*(sfermi(x) - sfermi(xq)) 
+                            END DO ! iNupr 
+                        END DO  ! nu 
+                    END DO ! nk 
+                END DO ! ispin
 
  
                 eMin = - 8 * fi%input%tkb
