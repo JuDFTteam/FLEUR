@@ -227,7 +227,7 @@ PROGRAM inpgen
          Call Cell%Init(Dot_product(Atoms%Volmts(:),Atoms%Neq(:)))
          call atoms%init(cell)
          Call Sym%Init(Cell,Input%Film)
-         CALL xcpot%init(atoms%ntype)
+         !CALL xcpot%init(atoms%ntype) ! This caused problems if xcpot is LibXC. Here it seems not needed. 
          CALL enpara%init_enpara(atoms,input%jspins,input%film,enparaXML)
       ELSEIF(judft_was_argument("-f")) THEN
          !read the input
