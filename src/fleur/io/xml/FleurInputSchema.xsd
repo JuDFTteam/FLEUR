@@ -690,6 +690,8 @@
       <xsd:attribute name="fermiSmearingEnergy" type="FleurDouble" use="optional"/>
       <xsd:attribute name="fermiSmearingTemp" type="FleurDouble" use="optional"/>
       <xsd:attribute default="F" name="l_bloechl" type="FleurBool" use="optional"/>
+      <xsd:attribute default="0.0" name="charge_excited" type="FleurDouble" use="optional"/>
+      <xsd:attribute default="0.0" name="charge_shift" type="FleurDouble" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="SOCType">

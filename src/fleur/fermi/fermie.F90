@@ -59,14 +59,15 @@ CONTAINS
     !     ..
     !     .. Local Scalars ..
     REAL del  ,spindg,ssc ,ws,zc,weight,efermi,seigv
-    INTEGER i,idummy,j,jsp,k,l,n,nbands,nstef,nv,nmat,nspins
+    INTEGER i,idummy,j,jsp,k,l,n,nbands,nstef,nv,nmat,nspins,ex
     INTEGER n_help,m_spins,mspin,sslice(2)
-    LOGICAL :: l_output
+    LOGICAL :: l_output,l_output_stored
     !     ..
     !     .. Local Arrays ..
     !
     INTEGER :: idxeig(SIZE(results%w_iks)),idxjsp(SIZE(results%w_iks)),idxkpt(SIZE(results%w_iks)),INDEX(SIZE(results%w_iks))
     REAL    :: e(SIZE(results%w_iks)),we(SIZE(results%w_iks))
+    real,allocatable :: w_iks(:,:,:)
     CHARACTER(LEN=20)    :: attributes(5)
 
     !--- J constants
@@ -203,68 +204,99 @@ CONTAINS
                                 "the lowest energy parameter, you probably have picked up"//&
                                 " a ghoststate")
        END IF
-       !
-       !---> DETERMINE EF BY SUMMING WEIGHTS
-       !
-       weight = input%zelec/spindg
-       seigv=0.0
-       IF(m_spins /= 1) weight = weight/2.0  -(mspin-1.5)*input%fixed_moment
-       ws = 0.0e0
-       l = 0
-       DO WHILE ((ws+del).LT.weight)
-          l = l + 1
-          IF (l.GT.n) THEN
-             IF ( fmpi%irank == 0 .and. l_output) THEN
-                WRITE (oUnit,FMT=8010) n,ws,weight
-             END IF
-             CALL juDFT_error("Not enough wavefunctions",calledby="fermie")
-8010         FORMAT (/,10x,'error: not enough wavefunctions.',i10,2d20.10)
-          END IF
-          ws = ws + we(INDEX(l))
-          seigv =seigv + e(INDEX(l))*we(INDEX(l))*spindg
-          !IF (l_output) WRITE (oUnit,FMT='(2f10.7)') e(index(l)),we(index(l))
-       END DO
-       results%ef = -100000.0
-       IF(l.GT.0) THEN
-          results%ef = e(INDEX(l))
-       END IF
-       nstef = l
-       zc = input%zelec
-       IF(m_spins /= 1) THEN
-          zc = zc/2.0-(mspin-1.5)*input%fixed_moment
-          idxjsp = 1 !assume single spin in following calculations
-          if (l_output) then 
-             IF (mspin == 1) THEN
-                WRITE(oUnit,*) "Fixed total moment calculation"
-                WRITE(oUnit,*) "Moment:",input%fixed_moment
-                write(oUnit,*) "First Spin:"
-             ELSE
-                WRITE(oUnit,*) "Second Spin:"
-             ENDIF
-          end if 
-       ENDIF
 
-       IF ( fmpi%irank == 0 .and. l_output) WRITE (oUnit,FMT=8020) results%ef,nstef,seigv,ws,ssc
+       DO ex=merge(1,4,input%charge_excited>0.0),1,-1
+         !
+         !---> DETERMINE EF BY SUMMING WEIGHTS
+         !
+         weight = input%zelec/spindg
+         select case(ex)
+         case(4)
+            weight = weight+input%charge_excited/spindg
+            l_output_stored=l_output
+            l_output=.false.
+         case(3)
+            weight = weight-(input%charge_excited+input%charge_shift)/spindg
+         case(2)   
+            weight = weight-input%charge_shift/spindg
+         end select
 
-       !+po
-       results%ts = 0.0
-       !-po
-       results%w_iks(:,:,sslice(1):sslice(2)) = 0.0
-       results%bandgap = 0.0
-       IF(input%bz_integration==BZINT_METHOD_HIST) THEN
-          CALL ferhis(input,kpts,fmpi,index,idxeig,idxkpt,idxjsp,nspins, n,&
-               nstef,ws,spindg,weight,e,results%neig(:,sslice(1):sslice(2)),&
-               we, noco,cell,results%ef,results%seigv,results%w_iks(:,:,sslice(1):sslice(2)),results,l_output)
-       ELSE IF (input%bz_integration==BZINT_METHOD_GAUSS) THEN
-          CALL fergwt(kpts,input,fmpi,results%neig(:,sslice(1):sslice(2)), results%eig(:,:,sslice(1):sslice(2)),&
-                      results%ef,results%w_iks(:,:,sslice(1):sslice(2)),results%seigv,l_output)
-       ELSE IF (input%bz_integration==BZINT_METHOD_TRIA) THEN
-          CALL fertri(input,noco,kpts,fmpi%irank, results%neig(:,sslice(1):sslice(2)),nspins,zc,results%eig(:,:,sslice(1):sslice(2)),spindg,&
-               results%ef,results%seigv,results%w_iks(:,:,sslice(1):sslice(2)),l_output)
-       ELSE IF (input%bz_integration==BZINT_METHOD_TETRA) THEN
-          CALL fertetra(input,noco,kpts,fmpi,results%neig(:,sslice(1):sslice(2)), results%eig(:,:,sslice(1):sslice(2)),&
+         seigv=0.0
+         IF(m_spins /= 1) weight = weight/2.0  -(mspin-1.5)*input%fixed_moment
+         ws = 0.0e0
+         l = 0
+         DO WHILE ((ws+del).LT.weight)
+            l = l + 1
+            IF (l.GT.n) THEN
+               IF ( fmpi%irank == 0 .and. l_output) THEN
+                  WRITE (oUnit,FMT=8010) n,ws,weight
+               END IF
+               CALL juDFT_error("Not enough wavefunctions",calledby="fermie")
+   8010         FORMAT (/,10x,'error: not enough wavefunctions.',i10,2d20.10)
+            END IF
+            ws = ws + we(INDEX(l))
+            seigv =seigv + e(INDEX(l))*we(INDEX(l))*spindg
+            !IF (l_output) WRITE (oUnit,FMT='(2f10.7)') e(index(l)),we(index(l))
+         END DO
+         results%ef = -100000.0
+         IF(l.GT.0) THEN
+            results%ef = e(INDEX(l))
+         END IF
+         nstef = l
+         zc = input%zelec
+         IF(m_spins /= 1) THEN
+            zc = zc/2.0-(mspin-1.5)*input%fixed_moment
+            idxjsp = 1 !assume single spin in following calculations
+            if (l_output) then 
+               IF (mspin == 1) THEN
+                  WRITE(oUnit,*) "Fixed total moment calculation"
+                  WRITE(oUnit,*) "Moment:",input%fixed_moment
+                  write(oUnit,*) "First Spin:"
+               ELSE
+                  WRITE(oUnit,*) "Second Spin:"
+               ENDIF
+            end if 
+         ENDIF
+
+         IF ( fmpi%irank == 0 .and. l_output) WRITE (oUnit,FMT=8020) results%ef,nstef,seigv,ws,ssc
+
+         !+po
+         results%ts = 0.0
+         !-po
+         results%w_iks(:,:,sslice(1):sslice(2)) = 0.0
+         results%bandgap = 0.0
+         IF(input%bz_integration==BZINT_METHOD_HIST) THEN
+            CALL ferhis(input,kpts,fmpi,index,idxeig,idxkpt,idxjsp,nspins, n,&
+                  nstef,ws,spindg,weight,e,results%neig(:,sslice(1):sslice(2)),&
+                  we, noco,cell,results%ef,results%seigv,results%w_iks(:,:,sslice(1):sslice(2)),results,l_output)
+         ELSE IF (input%bz_integration==BZINT_METHOD_GAUSS) THEN
+            CALL fergwt(kpts,input,fmpi,results%neig(:,sslice(1):sslice(2)), results%eig(:,:,sslice(1):sslice(2)),&
                         results%ef,results%w_iks(:,:,sslice(1):sslice(2)),results%seigv,l_output)
-       ENDIF
+         ELSE IF (input%bz_integration==BZINT_METHOD_TRIA) THEN
+            CALL fertri(input,noco,kpts,fmpi%irank, results%neig(:,sslice(1):sslice(2)),nspins,zc,results%eig(:,:,sslice(1):sslice(2)),spindg,&
+                  results%ef,results%seigv,results%w_iks(:,:,sslice(1):sslice(2)),l_output)
+         ELSE IF (input%bz_integration==BZINT_METHOD_TETRA) THEN
+            CALL fertetra(input,noco,kpts,fmpi,results%neig(:,sslice(1):sslice(2)), results%eig(:,:,sslice(1):sslice(2)),&
+                           results%ef,results%w_iks(:,:,sslice(1):sslice(2)),results%seigv,l_output)
+         ENDIF
+
+         select case(ex)
+         case(4)
+            w_iks=results%w_iks
+         case(3)
+            w_iks=w_iks+results%w_iks
+         case(2)
+            w_iks=w_iks-results%w_iks
+            l_output=l_output_stored
+         end select   
+      enddo !loop over possible excited occupations
+
+      if (allocated(w_iks)) then 
+         if (l_output) write(oUnit,*) "Non-standard occupation:"
+         if (l_output) write(oUnit,*) "charge_exited:",input%charge_excited
+         if (l_output) write(oUnit,*) "charge_shift:",input%charge_shift
+         results%w_iks=w_iks
+      endif   
 
        IF (mspin == 2 .AND. l_output) THEN
           WRITE(oUnit,*) "Different Fermi-energies for both spins:"
