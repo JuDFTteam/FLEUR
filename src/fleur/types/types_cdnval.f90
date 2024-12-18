@@ -509,7 +509,7 @@ SUBROUTINE cdnvalJob_init(thisCdnvalJob,mpi,input,kpts,noco,results,jspin)
    LOGICAL, INTENT(IN)             :: l_empty
 
    INTEGER, ALLOCATABLE :: compact_ev_list(:)
-   INTEGER              :: nk, evlen, evlen2
+   INTEGER              :: nk, evlen, evlen2, iState
    LOGICAL, ALLOCATABLE :: l_nonzero(:)
 
    nk    = thisCdnvalJob%k_list(ikpt)
@@ -522,7 +522,11 @@ SUBROUTINE cdnvalJob_init(thisCdnvalJob,mpi,input,kpts,noco,results,jspin)
       ALLOCATE(compact_ev_list(evlen2))
       compact_ev_list=thiscdnvalJob%ev_list(:thisCdnvalJob%noccbd(nk))
    ELSE
-      l_nonzero = thisCdnvalJob%weights(thiscdnvalJob%ev_list(:thisCdnvalJob%noccbd(nk)),nk)>1.e-8
+      l_nonzero = .TRUE.
+      DO iState = evlen, 1, -1
+         IF (ABS(thisCdnvalJob%weights(thiscdnvalJob%ev_list(iState),nk)).GT.1.0e-8) EXIT
+         l_nonzero(iState) = .FALSE.
+      END DO
       evlen2 = COUNT(l_nonzero)
       ALLOCATE(compact_ev_list(evlen2))
       compact_ev_list = PACK(thiscdnvalJob%ev_list(:thisCdnvalJob%noccbd(nk)), l_nonzero)
