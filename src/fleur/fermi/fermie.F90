@@ -67,7 +67,7 @@ CONTAINS
     !
     INTEGER :: idxeig(SIZE(results%w_iks)),idxjsp(SIZE(results%w_iks)),idxkpt(SIZE(results%w_iks)),INDEX(SIZE(results%w_iks))
     REAL    :: e(SIZE(results%w_iks)),we(SIZE(results%w_iks))
-    real,allocatable :: w_iks(:,:,:)
+    real,allocatable :: w_iks(:,:,:),we_stored(:)
     CHARACTER(LEN=20)    :: attributes(5)
 
     !--- J constants
@@ -215,10 +215,13 @@ CONTAINS
             weight = weight+input%charge_excited/spindg
             l_output_stored=l_output
             l_output=.false.
+            we_stored=we
          case(3)
             weight = weight-(input%charge_excited+input%charge_shift)/spindg
+            we_stored=we
          case(2)   
             weight = weight-input%charge_shift/spindg
+            we_stored=we
          end select
 
          seigv=0.0
@@ -283,11 +286,15 @@ CONTAINS
          select case(ex)
          case(4)
             w_iks=results%w_iks
+            we=we_stored
          case(3)
             w_iks=w_iks+results%w_iks
+            we=we_stored
          case(2)
             w_iks=w_iks-results%w_iks
+            we=we_stored
             l_output=l_output_stored
+            results%seigv=0.0
          end select   
       enddo !loop over possible excited occupations
 
