@@ -71,6 +71,7 @@ MODULE m_types_input
   LOGICAL:: evonly=.FALSE.
   !     LOGICAL:: l_inpXML=.TRUE.
   REAL :: fixed_moment = 0.0
+  real :: charge_excited =0.0 , charge_shift=0.0
   LOGICAL :: l_onlyMtStDen=.FALSE.
   CHARACTER(LEN=100) :: comment="FLEUR calculation without a title"
   LOGICAL :: l_core_confpot=.TRUE. !Former CPP_CORE
@@ -172,6 +173,9 @@ SUBROUTINE mpi_bc_input(this,mpi_comm,irank)
    CALL mpi_bc(this%rdmftStatesAbove,rank,mpi_comm)
    CALL mpi_bc(this%rdmftFunctional,rank,mpi_comm)
    CALL mpi_bc(this%lResMax,rank,mpi_comm)
+   CALL mpi_bc(this%charge_excited,rank,mpi_comm)
+   CALL mpi_bc(this%charge_shift,rank,mpi_comm)
+   
 END SUBROUTINE mpi_bc_input
 
 SUBROUTINE read_xml_input(this,xml)
@@ -328,6 +332,12 @@ SUBROUTINE read_xml_input(this,xml)
    END IF
    xPathA = trim(xpathb)//'/@l_bloechl'
    IF (xml%versionNumber > 31) this%l_bloechl = evaluateFirstBoolOnly(xml%GetAttributeValue(xPathA))
+
+   xPathA = trim(xpathb)//'/@charge_excited'
+   IF (xml%versionNumber > 37) this%charge_excited = evaluateFirstOnly(xml%GetAttributeValue(xPathA))
+   xPathA = trim(xpathb)//'/@charge_shift'
+   IF (xml%versionNumber > 37) this%charge_shift = evaluateFirstOnly(xml%GetAttributeValue(xPathA))
+
 
    this%film =  xml%GetNumberOfNodes('/fleurInput/cell/filmLattice')==1
    ! Read in optional geometry optimization parameters
