@@ -68,6 +68,7 @@ CONTAINS
     INTEGER :: idxeig(SIZE(results%w_iks)),idxjsp(SIZE(results%w_iks)),idxkpt(SIZE(results%w_iks)),INDEX(SIZE(results%w_iks))
     REAL    :: e(SIZE(results%w_iks)),we(SIZE(results%w_iks))
     real,allocatable :: w_iks(:,:,:),we_stored(:)
+    real              :: seigv_stored,ef_stored(3)
     CHARACTER(LEN=20)    :: attributes(5)
 
     !--- J constants
@@ -287,13 +288,21 @@ CONTAINS
          case(4)
             w_iks=results%w_iks
             we=we_stored
+            ef_stored(3)=results%ef
+            seigv_stored=results%seigv
+            results%seigv=0.0
          case(3)
             w_iks=w_iks+results%w_iks
+            ef_stored(2)=results%ef
             we=we_stored
+            seigv_stored=results%seigv+seigv_stored
+            results%seigv=0.0
          case(2)
             w_iks=w_iks-results%w_iks
             we=we_stored
             l_output=l_output_stored
+            ef_stored(1)=results%ef
+            seigv_stored=-1*results%seigv+seigv_stored
             results%seigv=0.0
          end select   
       enddo !loop over possible excited occupations
@@ -302,7 +311,11 @@ CONTAINS
          if (l_output) write(oUnit,*) "Non-standard occupation:"
          if (l_output) write(oUnit,*) "charge_exited:",input%charge_excited
          if (l_output) write(oUnit,*) "charge_shift:",input%charge_shift
+         if (l_output) write(oUnit,*) "ef(+charge):",ef_stored(3)
+         if (l_output) write(oUnit,*) "ef(-charge-shift):",ef_stored(2)
+         if (l_output) write(oUnit,*) "ef(-shift):",ef_stored(1)
          results%w_iks=w_iks
+         results%seigv=seigv_stored
       endif   
 
        IF (mspin == 2 .AND. l_output) THEN
