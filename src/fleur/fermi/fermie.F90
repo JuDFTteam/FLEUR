@@ -205,7 +205,7 @@ CONTAINS
                                 " a ghoststate")
        END IF
 
-       DO ex=merge(1,4,input%charge_excited>0.0),1,-1
+       DO ex=merge(4,1,abs(input%charge_excited)>0.0),1,-1
          !
          !---> DETERMINE EF BY SUMMING WEIGHTS
          !
