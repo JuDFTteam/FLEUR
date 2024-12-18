@@ -377,10 +377,10 @@ contains
             ! --> recover the generalized eigenvectors z by solving z' = l^t * z
             if (smat%l_real) then
                call pdtrtrs('U', 'N', 'N', n, m, smat%data_r, 1, 1, smat%blacsdata%blacs_desc, &
-                            zmat%data_r, 1, 1, smat%blacsdata%blacs_desc, info)
+                            zmat%data_r, 1, 1, zmat%blacsdata%blacs_desc, info)
             else
                call pztrtrs('U', 'N', 'N', n, m, smat%data_c, 1, 1, smat%blacsdata%blacs_desc, &
-                            zmat%data_c, 1, 1, smat%blacsdata%blacs_desc, info)
+                            zmat%data_c, 1, 1, zmat%blacsdata%blacs_desc, info)
             end if
             if (info .ne. 0) then
                write (oUnit, *) 'Error in p?trtrs: info =', info
