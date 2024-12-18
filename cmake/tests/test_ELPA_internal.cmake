@@ -32,7 +32,7 @@ BUILD_IN_SOURCE true
 #GIT_REPOSITORY https://gitlab.mpcdf.mpg.de/elpa/elpa.git
 #GIT_TAG release_2024_05_001
 URL https://elpa.mpcdf.mpg.de/software/tarball-archive/Releases/2024.05.001/elpa-2024.05.001.tar.gz
-    
+PATCH_COMMAND patch -p1 < ${CMAKE_SOURCE_DIR}/cmake/patch/elpa-make-transform-public.patch
 CONFIGURE_COMMAND sh ${conffile}
 BUILD_COMMAND make
 INSTALL_COMMAND ""
@@ -45,5 +45,5 @@ else()
 endif()    
 include_directories("${CMAKE_CURRENT_BINARY_DIR}/elpa/src/ELPA/modules")
 set(FLEUR_USE_ELPA TRUE)
-set(FLEUR_MPI_DEFINITIONS ${FLEUR_MPI_DEFINITIONS} "CPP_ELPA")
+set(FLEUR_MPI_DEFINITIONS ${FLEUR_MPI_DEFINITIONS} "CPP_ELPA" "CPP_ELPA_PATCH" "CPP_ELPA_SP")
 set(FLEUR_USE_INTERNAL_ELPA true)
