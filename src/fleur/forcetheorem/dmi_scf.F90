@@ -29,12 +29,11 @@ MODULE m_types_dmi_scf
 CONTAINS
 
 
-  SUBROUTINE dmi_init(this,q,theta,phi,ef_shifts,ntype)
+  SUBROUTINE dmi_init(this,theta,phi,ef_shifts,ntype)
     USE m_calculator
     USE m_constants
     IMPLICIT NONE
     CLASS(t_forcetheo_dmi_scf),INTENT(INOUT):: this
-    REAL,INTENT(in)                     :: q(:,:)
     REAL,INTENT(IN)                     :: theta(:),phi(:),ef_shifts(:)
     INTEGER,INTENT(IN)                  :: ntype
     this%l_needs_vectors=.false.
@@ -111,10 +110,10 @@ CONTAINS
     TYPE(t_fleurinput),INTENT(IN)   :: fi
     TYPE(t_results),INTENT(IN)      :: results
     !Locals
-    INTEGER:: n,q,i,nef,ierr
+    INTEGER:: n,i,nef,ierr
     CHARACTER(LEN=20):: attributes(6)
     CHARACTER(LEN=16) :: atom_name
-    IF (this%q_done==0) RETURN
+    IF (this%work) RETURN
     IF (this%l_io) THEN
        !Now output the results
        CALL closeXMLElement('Forcetheorem_Loop')
@@ -161,7 +160,7 @@ CONTAINS
     CLASS(t_forcetheo_dmi_scf),INTENT(INOUT):: this
     TYPE(t_mpi),INTENT(in):: fmpi
 
-    INTEGER:: i,q,ierr,n
+    INTEGER:: i,ierr,n
 #ifdef CPP_MPI
     CALL mpi_bc(this%theta,0,fmpi%mpi_comm)
     CALL mpi_bc(this%phi,0,fmpi%mpi_comm)
