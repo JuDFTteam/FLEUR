@@ -68,10 +68,13 @@ contains
 
    logical function parallel_solver_available()
       integer ::i
+      class(t_solver),allocatable::s
+
       parallel_solver_available = .false.
       !make an explit loop here
       do i = 1, num_solvers
-         parallel_solver_available = parallel_solver_available .or. (all_solvers(i)%available .and. all_solvers(i)%parallel)
+         s=all_solvers(i)
+         parallel_solver_available = parallel_solver_available .or. (s%available .and. s%parallel)
       end do
    end function parallel_solver_available
 
