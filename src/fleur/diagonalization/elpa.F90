@@ -22,7 +22,9 @@ module m_elpa
       procedure        :: to_std => elpa_to_std
       procedure        :: backtrans => elpa_recover  !transform the Eigenvalue back to the generalized problem
    end type
+#ifdef CPP_ELPA   
    class(elpa_t), pointer :: elpa_obj
+#endif   
    logical,save:: firstcall=.true.   
    public get_solver_elpa
 
@@ -341,8 +343,6 @@ solver%single_precision = .true.
       class(t_solver_elpa) :: self
       class(t_mat), intent(INOUT)  :: hmat, smat
       integer            :: err,n
-
-      integer :: err
       logical :: decomposed
 
       call create_elpa_obj(hmat)
