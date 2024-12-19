@@ -58,12 +58,14 @@ solver%single_precision = .true.
 
 
    subroutine create_elpa_obj(hmat)
+      !$ use omp_lib
       implicit none
       class(t_mat), intent(IN)              :: hmat
       
 #ifdef CPP_ELPA
       integer           :: np, myid
       integer           :: err
+      TYPE(t_mpimat) :: tmp
       
       if (firstcall) then
          err = elpa_init(20180525)
@@ -71,40 +73,48 @@ solver%single_precision = .true.
          elpa_obj=>null()
       end if
       if (associated(elpa_obj)) return
-      select type (hmat)
-      type IS (t_mpimat)
-            call MPI_BARRIER(hmat%blacsdata%mpi_com, err)
-            call MPI_COMM_SIZE(hmat%blacsdata%mpi_com, np, err)
-            call MPI_COMM_RANK(hmat%blacsdata%mpi_com, myid, err)
-            elpa_obj => elpa_allocate()
+      elpa_obj => elpa_allocate()
 
-            ! Blocking factor
-            if (hmat%blacsdata%blacs_desc(5) .ne. hmat%blacsdata%blacs_desc(6)) &
-               call judft_error("Different block sizes for rows/columns not supported")
-            call elpa_obj%set("na", hmat%global_size1, err)
-            call elpa_obj%set("local_nrows", hmat%matsize1, err)
-            call elpa_obj%set("local_ncols", hmat%matsize2, err)
-            call elpa_obj%set("nblk", hmat%blacsdata%blacs_desc(5), err)
-            call elpa_obj%set("mpi_comm_parent", hmat%blacsdata%mpi_com, err)
-            call elpa_obj%set("process_row", hmat%blacsdata%myrow, err)
-            call elpa_obj%set("process_col", hmat%blacsdata%mycol, err)
-            call elpa_obj%set("blacs_context", hmat%blacsdata%blacs_desc(2), err)
-            call elpa_obj%set("timings", 1, err)
-            err = elpa_obj%setup()
-
+      !Some settings are set for all matrices
+      call elpa_obj%set("local_nrows", hmat%matsize1, err)
+      call elpa_obj%set("local_ncols", hmat%matsize2, err)
 #if defined(CPP_GPU)||defined(_OPENACC)
-            call elpa_obj%set("gpu_hermitian_multiply", 1, err)
-            !call elpa_obj%set("cannon_for_generalized",0,err)
-            call elpa_obj%set("nvidia-gpu", 1, err)
-            call elpa_obj%setup_gpu()
-            !print *, "ELPA for GPU"
-            !if (myid .eq. 0) call elpa_obj%store_settings("save_to_disk.txt", err)
+      call elpa_obj%set("gpu_hermitian_multiply", 1, err)
+      !call elpa_obj%set("cannon_for_generalized",0,err)
+      call elpa_obj%set("nvidia-gpu", 1, err)
+      call elpa_obj%setup_gpu()
 #else
-            call elpa_obj%set("solver", ELPA_SOLVER_2STAGE)
+      call elpa_obj%set("solver", ELPA_SOLVER_2STAGE)
 #endif
-      class DEFAULT
-         call judft_error("Wrong type (2) in elpa")
+      !$ call elpa_obj%set("omp_threads", omp_get_num_threads(),err)
+      call elpa_obj%set("timings", 1, err)
+      !Some other settings depend on matrix type
+      select type (hmat)
+      type is (t_mpimat)
+         call MPI_BARRIER(hmat%blacsdata%mpi_com, err)
+         call MPI_COMM_SIZE(hmat%blacsdata%mpi_com, np, err)
+         call MPI_COMM_RANK(hmat%blacsdata%mpi_com, myid, err)
+         ! Blocking factor
+         if (hmat%blacsdata%blacs_desc(5) .ne. hmat%blacsdata%blacs_desc(6)) &
+            call judft_error("Different block sizes for rows/columns not supported")
+         call elpa_obj%set("na", hmat%global_size1, err)
+         call elpa_obj%set("nblk", hmat%blacsdata%blacs_desc(5), err)
+         call elpa_obj%set("mpi_comm_parent", hmat%blacsdata%mpi_com, err)
+         call elpa_obj%set("process_row", hmat%blacsdata%myrow, err)
+         call elpa_obj%set("process_col", hmat%blacsdata%mycol, err)
+         call elpa_obj%set("blacs_context", hmat%blacsdata%blacs_desc(2), err)
+      type is (t_mat)
+         call judft_bug("Elpa solver not available for non-distributed matrices")
+         call elpa_obj%set("na", hmat%matsize1, err)
+         call elpa_obj%set("nblk", hmat%matsize1, err)
+         call elpa_obj%set("mpi_comm_parent", MPI_COMM_SELF, err)
+         call elpa_obj%set("process_row", 1, err)
+         call elpa_obj%set("process_col", 1, err)
+         !Generate a blacs context for this PE only
+         call tmp%init(.true.,1,1,MPI_COMM_SELF,MPIMAT_2D_BLOCK_CYCLIC)
+         call elpa_obj%set("blacs_context", tmp%blacsdata%blacs_desc(2), err)
       end select
+      err = elpa_obj%setup()
 #endif
    end subroutine
 
@@ -123,39 +133,38 @@ solver%single_precision = .true.
       integer           :: err
       integer           :: i
       real, allocatable      :: eig2(:)
-      type(t_mpimat)        :: ev_dist
+      class(t_mpimat),allocatable        :: ev_dist
       !Update elpa object
       call create_elpa_obj(hmat)
       call elpa_obj%set("nev", ne, err)
-      
+      allocate(ev_dist,mold=hmat)
+
       call timestart("ELPA GEV")
       select type(hmat)
-            type is (t_mpimat)  !we need some data from t_mpimat
-            
+         type is (t_mpimat)  !we need some data from t_mpimat
             allocate (eig2(hmat%global_size1), stat=err) ! The eigenvalue array
-            if (err .ne. 0) call juDFT_error('Failed to allocated "eig2"', calledby='elpa')
+         type is (t_mat)
+            allocate (eig2(hmat%matsize1), stat=err) ! The eigenvalue array
+      end select         
+      if (err .ne. 0) call juDFT_error('Failed to allocated "eig2"', calledby='elpa')
 
-            call ev_dist%init(hmat)! Eigenvectors
-            if (err .ne. 0) call juDFT_error('Failed to allocated "ev_dist"', calledby='elpa')
+      call ev_dist%init(hmat)! Eigenvectors
+      if (err .ne. 0) call juDFT_error('Failed to allocated "ev_dist"', calledby='elpa')
 
-            call hmat%u2l()
-            call smat%u2l()
-            call elpa_obj%timer_start("ELPA")
-            if (hmat%l_real) then
-               call elpa_obj%generalized_eigenvectors(hmat%data_r, smat%data_r, eig2, ev_dist%data_r, .false., err)
-            else
-               call elpa_obj%generalized_eigenvectors(hmat%data_c, smat%data_c, eig2, ev_dist%data_c, .false., err)
-            end if
-            call elpa_obj%timer_stop("ELPA")
-            !if (myid .eq. 0) call elpa_obj%print_times("ELPA")
-            call MPI_BARRIER(hmat%blacsdata%mpi_com, err)
-            !CALL elpa_uninit()
-            ! END of ELPA stuff
-            !
-            !     Each process has all eigenvalues in output
-            eig(:ne) = eig2(:ne)
-            deallocate (eig2)
-            !
+      call hmat%u2l()
+      call smat%u2l()
+      call elpa_obj%timer_start("ELPA")
+      if (hmat%l_real) then
+         call elpa_obj%generalized_eigenvectors(hmat%data_r, smat%data_r, eig2, ev_dist%data_r, .false., err)
+      else
+         call elpa_obj%generalized_eigenvectors(hmat%data_c, smat%data_c, eig2, ev_dist%data_c, .false., err)
+      end if
+      call elpa_obj%timer_stop("ELPA")
+      eig(:ne) = eig2(:ne)
+      deallocate (eig2)
+      
+      select type(hmat)
+         type is (t_mpimat)
             !
             !     Redistribute eigenvectors  from ScaLAPACK distribution to each process, i.e. for
             !     process i these are eigenvectors i+1, np+i+1, 2*np+i+1...
@@ -172,8 +181,15 @@ solver%single_precision = .true.
             allocate (t_mpimat::zmat)
             call zmat%init(hmat%l_real, hmat%global_size1,hmat%global_size1 , hmat%blacsdata%mpi_com, MPIMAT_ROWCYCLIC)
             call zmat%copy(ev_dist, 1, 1)
-         end select
-
+         type is (t_mat)
+            allocate(t_mat::zmat)
+            call zmat%init(hmat%l_real,hmat%matsize1,ne)
+            if (zmat%l_real) THEN
+               zmat%data_r(:,:)=ev_dist%data_r(:,:ne)
+            else      
+               zmat%data_c(:,:)=ev_dist%data_c(:,:ne)
+            endif
+      end select   
       call timestop("ELPA GEV")
       call elpa_deallocate(elpa_obj)
       if (associated(elpa_obj)) elpa_obj=>null()
@@ -201,45 +217,45 @@ solver%single_precision = .true.
       
       call timestart("ELPA STD")
       select type(hmat)
-            type is (t_mpimat)  !we need some data from t_mpimat
-            
+         type is (t_mpimat)  !we need some data from t_mpimat
             allocate (eig2(hmat%global_size1), stat=err) ! The eigenvalue array
-            if (err .ne. 0) call juDFT_error('Failed to allocated "eig2"', calledby='elpa')
+         type is (t_mat)   
+            allocate (eig2(hmat%matsize1), stat=err) ! The eigenvalue array
+      end select
+      if (err .ne. 0) call juDFT_error('Failed to allocated "eig2"', calledby='elpa')
 
-            call zmat%init(hmat)! Eigenvectors
-            if (err .ne. 0) call juDFT_error('Failed to allocated "zmat"', calledby='elpa')
+      call zmat%init(hmat)! Eigenvectors
+      if (err .ne. 0) call juDFT_error('Failed to allocated "zmat"', calledby='elpa')
 
-            call hmat%u2l()
-            call elpa_obj%timer_start("ELPA")
-            if (hmat%l_real) then
-               call elpa_obj%eigenvectors(hmat%data_r, eig2, zmat%data_r, err)
-            else
-               call elpa_obj%eigenvectors(hmat%data_c, eig2, zmat%data_c, err)
-            end if
-            call elpa_obj%timer_stop("ELPA")
-            !if (myid .eq. 0) call elpa_obj%print_times("ELPA")
-            call MPI_BARRIER(hmat%blacsdata%mpi_com, err)
-            !CALL elpa_uninit()
-            ! END of ELPA stuff
-            !
-            !     Each process has all eigenvalues in output
-            eig(:ne) = eig2(:ne)
-            deallocate (eig2)
-            !
-            !
-            !     Redistribute eigenvectors  from ScaLAPACK distribution to each process, i.e. for
-            !     process i these are eigenvectors i+1, np+i+1, 2*np+i+1...
-            !     Only num=num2/np eigenvectors per process
-            !
-            call MPI_COMM_RANK(hmat%blacsdata%mpi_com, myid, err)
-            num = ne
-            ne = 0
-            do i = myid + 1, num, np
-               ne = ne + 1
-            end do
-            !
-            end select
-
+      call hmat%u2l()
+      call elpa_obj%timer_start("ELPA")
+      if (hmat%l_real) then
+         call elpa_obj%eigenvectors(hmat%data_r, eig2, zmat%data_r, err)
+      else
+         call elpa_obj%eigenvectors(hmat%data_c, eig2, zmat%data_c, err)
+      end if
+      call elpa_obj%timer_stop("ELPA")
+      ! END of ELPA stuff
+      !
+      !     Each process has all eigenvalues in output
+      eig(:ne) = eig2(:ne)
+      deallocate (eig2)
+      select type (hmat)
+         type is (t_mpimat)
+         !
+         !
+         !     Redistribute eigenvectors  from ScaLAPACK distribution to each process, i.e. for
+         !     process i these are eigenvectors i+1, np+i+1, 2*np+i+1...
+         !     Only num=num2/np eigenvectors per process
+         !
+         call MPI_COMM_RANK(hmat%blacsdata%mpi_com, myid, err)
+         num = ne
+         ne = 0
+         do i = myid + 1, num, np
+            ne = ne + 1
+         end do
+         !
+      end select
       call timestop("ELPA STD")
 #endif
    end subroutine
@@ -266,42 +282,41 @@ solver%single_precision = .true.
       call timestart("ELPA STD-SP")
       select type(hmat)
             type is (t_mpimat)  !we need some data from t_mpimat
-            
             allocate (eig2(hmat%global_size1), stat=err) ! The eigenvalue array
-            if (err .ne. 0) call juDFT_error('Failed to allocated "eig2"', calledby='elpa')
+            type is (t_mat)
+            allocate (eig2(hmat%matsize1), stat=err) ! The eigenvalue array
+      end select
+      if (err .ne. 0) call juDFT_error('Failed to allocated "eig2"', calledby='elpa')
 
-            call zmat%init(hmat)! Eigenvectors
-            if (err .ne. 0) call juDFT_error('Failed to allocated "zmat"', calledby='elpa')
+      call zmat%init(hmat)! Eigenvectors
+      if (err .ne. 0) call juDFT_error('Failed to allocated "zmat"', calledby='elpa')
 
-            call hmat%u2l()
-            call elpa_obj%timer_start("ELPA")
-            if (hmat%l_real) then
-               block
-                  real(kind=sp),allocatable:: mat(:,:),z(:,:)
-                  mat=hmat%data_r
-                  allocate(z(size(zmat%data_r,1),size(zmat%data_r,2)))
-                  call elpa_obj%eigenvectors(mat, eig2, z, err)
-                  zmat%data_r=z
-               end block
-            else
-               block
-                  complex(kind=sp),allocatable:: mat(:,:),z(:,:)
-                  mat=hmat%data_c
-                  allocate(z(size(zmat%data_c,1),size(zmat%data_c,2)))
-                  call elpa_obj%eigenvectors(mat, eig2, z, err)
-                  zmat%data_c=z
-               end block
-            end if
-            call elpa_obj%timer_stop("ELPA")
-            !if (myid .eq. 0) call elpa_obj%print_times("ELPA")
-            call MPI_BARRIER(hmat%blacsdata%mpi_com, err)
-            !CALL elpa_uninit()
-            ! END of ELPA stuff
-            !
-            !     Each process has all eigenvalues in output
-            eig(:ne) = eig2(:ne)
-            deallocate (eig2)
-            !
+      call hmat%u2l()
+      call elpa_obj%timer_start("ELPA")
+      if (hmat%l_real) then
+         block
+            real(kind=sp),allocatable:: mat(:,:),z(:,:)
+            mat=hmat%data_r
+            allocate(z(size(zmat%data_r,1),size(zmat%data_r,2)))
+            call elpa_obj%eigenvectors(mat, eig2, z, err)
+            zmat%data_r=z
+         end block
+      else
+         block
+            complex(kind=sp),allocatable:: mat(:,:),z(:,:)
+            mat=hmat%data_c
+            allocate(z(size(zmat%data_c,1),size(zmat%data_c,2)))
+            call elpa_obj%eigenvectors(mat, eig2, z, err)
+            zmat%data_c=z
+         end block
+      end if
+      call elpa_obj%timer_stop("ELPA")
+      !     Each process has all eigenvalues in output
+      eig(:ne) = eig2(:ne)
+      deallocate (eig2)
+      
+      select type (hmat)
+      type is (t_mpimat)
             !
             !     Redistribute eigenvectors  from ScaLAPACK distribution to each process, i.e. for
             !     process i these are eigenvectors i+1, np+i+1, 2*np+i+1...
@@ -314,7 +329,7 @@ solver%single_precision = .true.
                ne = ne + 1
             end do
             !
-            end select
+      end select
 
       call timestop("ELPA STD-SP")
 #endif

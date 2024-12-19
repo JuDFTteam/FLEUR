@@ -128,8 +128,7 @@ contains
          diag_solver%use_sp = use_single_precision
       end if
 
-      print *,diag_solver%name,diag_transform%name
-
+      
       !Check if a default tansformation must be selected as well
       if ((.not. diag_solver%generalized .or. diag_solver%use_sp) .and. &
           .not. allocated(diag_transform)) &
