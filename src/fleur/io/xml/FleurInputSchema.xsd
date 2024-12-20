@@ -1055,6 +1055,7 @@
        <xsd:element name="MAE" type="MAEType"/>
        <xsd:element name="spinSpiralDispersion" type="QListType"/>
        <xsd:element name="DMI" type="DMIType"/>
+       <xsd:element name="DMI-SCF" type="DMISCFType"/>
        <xsd:element name="Jij" type="JijType"/>
      </xsd:choice>
    </xsd:complexType>
@@ -1068,6 +1069,12 @@
      <xsd:all>
        <xsd:element  maxOccurs="1" minOccurs="1" name="qVectors" type="QListType"/>
      </xsd:all>
+     <xsd:attribute name="theta" type="FleurDoubleVecType" use="required"/>
+     <xsd:attribute name="phi" type="FleurDoubleVecType" use="required"/>
+     <xsd:attribute name="ef_shift" type="FleurDoubleVecType" use="optional"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="DMISCFType">
      <xsd:attribute name="theta" type="FleurDoubleVecType" use="required"/>
      <xsd:attribute name="phi" type="FleurDoubleVecType" use="required"/>
      <xsd:attribute name="ef_shift" type="FleurDoubleVecType" use="optional"/>

@@ -4,7 +4,7 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
-MODULE m_types_dmi
+MODULE m_types_dmi_scf
   USE m_types
   USE m_types_forcetheo
   USE m_judft
@@ -24,17 +24,16 @@ MODULE m_types_dmi
      PROCEDURE :: postprocess => dmi_postprocess
      PROCEDURE :: init   => dmi_init !not overloaded
      PROCEDURE :: dist   => dmi_dist !not overloaded
-  END TYPE t_forcetheo_dmi
+  END TYPE t_forcetheo_dmi_scf
   PUBLIC t_forcetheo_dmi_scf
 CONTAINS
 
 
-  SUBROUTINE dmi_init(this,q,theta,phi,ef_shifts,ntype)
+  SUBROUTINE dmi_init(this,theta,phi,ef_shifts,ntype)
     USE m_calculator
     USE m_constants
     IMPLICIT NONE
-    CLASS(t_forcetheo_dmi),INTENT(INOUT):: this
-    REAL,INTENT(in)                     :: q(:,:)
+    CLASS(t_forcetheo_dmi_scf),INTENT(INOUT):: this
     REAL,INTENT(IN)                     :: theta(:),phi(:),ef_shifts(:)
     INTEGER,INTENT(IN)                  :: ntype
     this%l_needs_vectors=.false.
@@ -60,7 +59,7 @@ CONTAINS
   SUBROUTINE dmi_start(this,potden,l_io)
     USE m_types_potden
     IMPLICIT NONE
-    CLASS(t_forcetheo_dmi),INTENT(INOUT):: this
+    CLASS(t_forcetheo_dmi_scf),INTENT(INOUT):: this
     TYPE(t_potden) ,INTENT(INOUT)       :: potden
     LOGICAL,INTENT(IN)                  :: l_io
     CALL this%t_forcetheo%start(potden,l_io) !call routine of basis type
@@ -73,7 +72,7 @@ CONTAINS
     USE m_types_nococonv
     USE m_types_mpi
     IMPLICIT NONE
-    CLASS(t_forcetheo_dmi),INTENT(INOUT):: this
+    CLASS(t_forcetheo_dmi_scf),INTENT(INOUT):: this
     TYPE(t_mpi), INTENT(IN)             :: fmpi
     LOGICAL,INTENT(IN)                  :: lastiter
     TYPE(t_atoms),INTENT(IN)            :: atoms
@@ -111,10 +110,10 @@ CONTAINS
     TYPE(t_fleurinput),INTENT(IN)   :: fi
     TYPE(t_results),INTENT(IN)      :: results
     !Locals
-    INTEGER:: n,q,i,nef,ierr
+    INTEGER:: n,i,nef,ierr
     CHARACTER(LEN=20):: attributes(6)
     CHARACTER(LEN=16) :: atom_name
-    IF (this%q_done==0) RETURN
+    IF (this%work) RETURN
     IF (this%l_io) THEN
        !Now output the results
        CALL closeXMLElement('Forcetheorem_Loop')
@@ -158,10 +157,10 @@ CONTAINS
 #endif
     USE m_types_mpi
     IMPLICIT NONE
-    CLASS(t_forcetheo_dmi),INTENT(INOUT):: this
+    CLASS(t_forcetheo_dmi_scf),INTENT(INOUT):: this
     TYPE(t_mpi),INTENT(in):: fmpi
 
-    INTEGER:: i,q,ierr,n
+    INTEGER:: i,ierr,n
 #ifdef CPP_MPI
     CALL mpi_bc(this%theta,0,fmpi%mpi_comm)
     CALL mpi_bc(this%phi,0,fmpi%mpi_comm)
@@ -174,7 +173,8 @@ CONTAINS
      USE m_types
      USE m_ssomat
     IMPLICIT NONE
-    CLASS(t_forcetheo_dmi),INTENT(INOUT):: this
+    LOGICAL ::skip
+    CLASS(t_forcetheo_dmi_scf),INTENT(INOUT):: this
     !Stuff that might be used...
     TYPE(t_mpi),INTENT(IN)         :: fmpi
 
@@ -190,10 +190,10 @@ CONTAINS
     TYPE(t_potden),INTENT(IN)      :: v
     TYPE(t_results),INTENT(IN)     :: results
     INTEGER,INTENT(IN)             :: eig_id
-   
+    skip=.false.
     CALL ssomat(this%evsum(:,:),this%h_so(:,:,:),this%theta,this%phi,eig_id,atoms,kpts,sym,&
                 cell,noco,nococonv, input,fmpi,  enpara,v,results,this%ef+results%ef)
-   
+    skip=.true.
   END FUNCTION  dmi_eval
 
 
