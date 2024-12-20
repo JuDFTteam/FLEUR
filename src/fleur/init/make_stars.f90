@@ -49,7 +49,9 @@ CONTAINS
 
       !changes for efield:
       l_ef = .FALSE. 
-      IF (PRESENT(l_efield)) l_ef = .TRUE.
+      IF (PRESENT(l_efield)) THEN
+         l_ef = l_efield
+      END IF
 
       ! Dimensioning of stars
       IF (fmpi%irank==0) THEN
