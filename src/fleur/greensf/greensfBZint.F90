@@ -122,16 +122,13 @@ MODULE m_greensfBZint
                   im = -im
                ENDIF
 
-#ifndef CPP_NOTYPEPROCINOMP
+
                !$omp parallel default(none) &
                !$omp shared(sym,kpts,atoms,greensfBZintCoeffs,im,nococonv,noco,atomType,imatSize,nBands) &
                !$omp shared(l_intersite,l,lp,natom,natomp,spin_ind,iop,atomDiff,i_elem,i_elemLO,ikpt,nLO,l_sphavg) &
                !$omp private(imat,iBand,imSym)
-#endif
                ALLOCATE(imSym(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const),source=cmplx_0)
-#ifndef CPP_NOTYPEPROCINOMP
                !$omp do collapse(2)
-#endif
                DO imat = 1, imatSize
                   DO iBand = 1, nBands
 
@@ -152,22 +149,14 @@ MODULE m_greensfBZint
                         imSym = rotMMPmat(imSym,nococonv%phi,nococonv%theta,0.0,l,lp=lp,inverse=.TRUE.)
                      ENDIF
 
-#ifndef CPP_NOTYPEPROCINOMP
                      !$omp critical
                      CALL greensfBZintCoeffs%add_contribution(i_elem, i_elemLO, iBand, nLO, imat, l_sphavg, imSym)
                      !$omp end critical
-#else
-                     CALL greensfBZintCoeffs%add_contribution(i_elem, i_elemLO, iBand, nLO, imat, l_sphavg, imSym)
-#endif
                   ENDDO
                ENDDO
-#ifndef CPP_NOTYPEPROCINOMP
                !$omp end do
                DEALLOCATE(imSym)
                !$omp end parallel
-#else
-               DEALLOCATE(imSym)
-#endif
 
             ENDDO
          ENDDO !natom

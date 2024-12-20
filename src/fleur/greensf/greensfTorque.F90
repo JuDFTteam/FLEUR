@@ -140,19 +140,15 @@ MODULE m_greensfTorque
             CALL gf_rot%rotate_euler_angles(atoms,nococonv%phi,nococonv%theta,0.0)
          ENDIF
 
-#ifndef CPP_NOTYPEPROCINOMP
          !$OMP parallel default(none) &
          !$OMP shared(sphhar,atoms,input,gf_rot,f,g,flo,bxc) &
          !$OMP shared(l,lp,atomType,torque) &
          !$OMP private(lh,m,mu,mp,lhmu,phaseFactor,weight,ispin,ipm,iz,alpha,jr) &
          !$OMP private(realIntegral,integrand,g_ii,mag_ii)
-#endif
          ALLOCATE(integrand(atoms%jmtd,3),source=cmplx_0)
          ALLOCATE(g_ii(atoms%jmtd,gf_rot%contour%nz),source=cmplx_0)
          ALLOCATE(mag_ii(atoms%jmtd,gf_rot%contour%nz),source=cmplx_0)
-#ifndef CPP_NOTYPEPROCINOMP
          !$OMP do collapse(2)
-#endif
          DO lh = 0, atoms%lmaxd
             DO m = -l, l
                IF(MOD(lh+l+lp,2) .NE. 0) CYCLE
@@ -200,24 +196,16 @@ MODULE m_greensfTorque
 
                   DO alpha = 1, 3 !(x,y,z)
                      CALL intgr3(REAL(integrand(:,alpha)),atoms%rmsh(:,atomType),atoms%dx(atomType),atoms%jri(atomType),realIntegral)
-#ifndef CPP_NOTYPEPROCINOMP
                      !$OMP critical
                      torque(alpha,atomType) = torque(alpha,atomType) + realIntegral
                      !$OMP end critical
-#else
-                     torque(alpha,atomType) = torque(alpha,atomType) + realIntegral
-#endif
                   ENDDO
                ENDDO
             ENDDO
          ENDDO
-#ifndef CPP_NOTYPEPROCINOMP
          !$OMP end do
          DEALLOCATE(integrand,g_ii,mag_ii)
          !$OMP end parallel
-#else
-         DEALLOCATE(integrand,g_ii,mag_ii)
-#endif
 
       ENDDO
       CALL timestop("Green's Function Torque: Integration")
