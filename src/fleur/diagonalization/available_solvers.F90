@@ -23,9 +23,9 @@ module m_available_solvers
 
 contains
 
-   function all_solvers(i)
+   subroutine assign_solver(i,all_solvers)
       integer,INTENT(in) :: i
-      CLASS(t_solver),allocatable :: all_solvers
+      CLASS(t_solver),allocatable,INTENT(OUT) :: all_solvers
       select case (i)
       case(1)
          all_solvers=get_solver_stop()
@@ -52,7 +52,7 @@ contains
       case default
          call judft_bug("Illegal request for solver")
       end select
-   end function   
+   end subroutine   
 
    function select_by_name(name)
       character(len=*),intent(in):: name
@@ -60,7 +60,7 @@ contains
 
       integer:: i
       DO i=1,num_solvers
-         select_by_name=all_solvers(i)
+         call assign_solver(i,select_by_name)
          if (trim(name)==trim(select_by_name%name)) return
       enddo 
       call judft_error("No Solver/transform could be selected:"//name)
@@ -73,7 +73,7 @@ contains
       parallel_solver_available = .false.
       !make an explit loop here
       do i = 1, num_solvers
-         s=all_solvers(i)
+         call assign_solver(i,s)
          parallel_solver_available = parallel_solver_available .or. (s%available .and. s%parallel)
       end do
    end function parallel_solver_available
@@ -115,7 +115,7 @@ contains
       else
          !defaults
          do i = first_real_solver, num_solvers
-            diag_solver=all_solvers(i)
+            call assign_solver(i,diag_solver)
             fit = diag_solver%available
             !Check if solver fits the requirements
             if (use_gpu) fit = fit .and. diag_solver%gpu
@@ -137,7 +137,7 @@ contains
           .not. allocated(diag_transform)) &
          then
          do i = first_real_solver, num_solvers
-            diag_transform=all_solvers(i)
+            call assign_solver(i,diag_transform)
             fit = diag_transform%available .and. diag_transform%transform
             !Check if solver fits the requirements
             if (use_gpu) fit = fit .and. diag_transform%gpu
@@ -220,7 +220,7 @@ contains
       write (*, '(a)') "List of solvers/transforms:"
       write (*, '(a)') "   Name   available  serial  parallel  GEV  STD STD-SP  Transform  GPU: "
       do i = 1, num_solvers
-         s=all_solvers(i)
+         call assign_solver(i,s)
          write(*,'(a10,4x,l,7x,l,6x,l,6x,l,3x,l,2x,l,9x,l,6x,l)') s%name,s%available,s%serial,s%parallel,s%generalized,s%standard,s%single_precision,s%transform,s%gpu
       end do
       write (*, *)
