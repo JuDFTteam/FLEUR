@@ -1,105 +1,74 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2024 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
-MODULE m_eigen_diag
-  USE m_juDFT
-  USE m_available_solvers
-  IMPLICIT NONE
-  PRIVATE
-  PUBLIC :: eigen_diag
+module m_eigen_diag
+   !! Module provides the high level entry point for solving a generalized eigenvalue problem
+   !! The solver actually used is determined by a call to [[select_solver]] from [[m_available_solvers]].
+   use m_juDFT
+   use m_available_solvers
+   use m_types_mpimat
+   use m_types_mat
+   use m_types_solver
+   use m_lapack
+   implicit none
+   private
+   public :: eigen_diag
 
-CONTAINS
+contains
 
-  SUBROUTINE eigen_diag(solver,hmat,smat,ne,eig,ev,ikpt,jsp,iter)
-    USE m_lapack_diag
-    USE m_lapack_singlePrec_diag
-    USE m_dummy_diag
-    USE m_magma
-    USE m_elpa
-    USE m_elpa_onenode
-    USE m_scalapack
-    USE m_elemental
-    USE m_chase_diag
-    USE m_types_mpimat
-    USE m_elsi
-!    USE m_matrix_copy
-    USE m_cusolver_diag
-    USE m_judft_usage
-    USE m_writeout
+   subroutine eigen_diag(hmat, smat, ne, eig, ev)
+      !! Solve generalized eigenvalue problem
 #ifdef CPP_MPI
-    use mpi
-#endif    
-    IMPLICIT NONE
-    INTEGER,                   INTENT(INOUT) :: solver
-    CLASS(t_mat),              INTENT(INOUT) :: smat,hmat
-    CLASS(t_mat), ALLOCATABLE, INTENT(OUT)   :: ev         ! eigenvectors
-    INTEGER,                   INTENT(INOUT) :: ne         ! number of eigenpairs searched (and found) on this node
-                                                           !   on input, overall number of eigenpairs searched,
-                                                           !   on output, local number of eigenpairs found
-    REAL,                      INTENT(OUT)   :: eig(:)     ! eigenvalues
-
-    !Only for chase
-    INTEGER,OPTIONAL,          INTENT(IN)    :: ikpt
-    INTEGER,OPTIONAL,          INTENT(IN)    :: jsp
-    INTEGER,OPTIONAL,          INTENT(IN)    :: iter
-
-    !Locals
-    LOGICAL :: parallel
-
-    SELECT TYPE(smat)
-       CLASS IS (t_mpimat)
-#ifdef CPP_MPI
-       parallel=smat%blacsdata%mpi_com/=MPI_COMM_SELF
+      use mpi
 #endif
-       CLASS default
-       parallel=.FALSE.
-    END SELECT
+      implicit none
+      class(t_mat), intent(INOUT) :: smat, hmat !! overlapp matrix and Hamiltonian
+      class(t_mat), allocatable, intent(OUT)   :: ev         !! eigenvectors
+      integer, intent(INOUT) :: ne         !! number of eigenpairs searched (and found) on this node
+      !!   on input, overall number of eigenpairs searched,
+      !!   on output, local number of eigenpairs found
+      real, intent(OUT)   :: eig(:)     !! eigenvalues (must be allocated to size ne before)
 
+      !Locals
+      logical                       :: parallel
+      class(t_solver),allocatable   :: solver,transform
 
-    solver=select_solver(solver,parallel)
+      select type (smat)
+      class IS (t_mpimat)
+#ifdef CPP_MPI
+         parallel = smat%blacsdata%mpi_com /= MPI_COMM_SELF
+#endif
+      class default
+         parallel = .false.
+      end select
 
-    CALL timestart("Diagonalization")
-    !Select the solver
-    CALL add_usage_data("diag-solver", solver)
-    SELECT CASE (solver)
-    CASE (diag_elpa)
-       CALL elpa_diag(hmat,smat,ne,eig,ev)
-    CASE (diag_elpa_1node)
-       CALL elpa_diag_onenode(hmat,smat,ne,eig,ev)
-    CASE (diag_elemental)
-       !CALL ELEMENTAL(hmat,smat,ne,eig,ev)
-    CASE (diag_scalapack)
-       CALL scalapack(hmat,smat,ne,eig,ev)
-    CASE (diag_magma)
-       CALL magma_diag(hmat,smat,ne,eig,ev)
-    CASE (diag_cusolver)
-       CALL cusolver_diag(hmat,smat,ne,eig,ev)
-    CASE (diag_lapack)
-       CALL lapack_diag(hmat,smat,ne,eig,ev)
-      CASE (diag_lapack_singlePrec)
-         CALL lapack_singlePrec_diag(hmat,smat,ne,eig,ev)
-      CASE (diag_dummy)
-         CALL dummy_diag(hmat,smat,ne,eig,ev)
-      CASE (diag_elsielpa)
-       CALL elsi_diag(1,hmat,smat,ne,eig,ev)
-    CASE (diag_elsichase)
-       CALL elsi_diag(9,hmat,smat,ne,eig,ev)
-    CASE (diag_chase)
-       IF (.NOT.(PRESENT(ikpt).AND.PRESENT(jsp).AND.PRESENT(iter))) CALL judft_error("Optional arguments must be present for chase in eigen_diag")
-       CALL chase_diag(hmat,smat,ikpt,jsp,iter,ne,eig,ev)
-    CASE (diag_debugout)
-       CALL diag_writeout(smat,hmat)
-    case (diag_stop)
-       call JUDFT_error("FLEUR stopped as `-eig stop` is selected")   
-    CASE default
-       CALL judft_error("No solver available to diagonalize matrix")
-    END SELECT
-    CALL timestop("Diagonalization")
+      call select_solver(parallel,diag_solver=solver,diag_transform=transform)
+      
+      if (.not. allocated(transform)) then
+         ! We solve directly the generalized eigenvalue problem
+         if (solver%generalized) then
+            call timestart("Diagonalization")
+            call solver%solve_gev(hmat, smat, ne, eig, ev)
+            call timestop("Diagonalization")
+         else
+            call judft_bug("Generalized solver not available?")
+         end if
+      else
+         ! We do a reduction, to a standard problem, then solve the standard problem and transform back
+         call timestart("Reduction to S-EVP")
+         call transform%to_std(hmat, smat)
+         call timestop("Reduction to S-EVP")
+         call timestart("Diagonalization")
+         print *,"Solver:",solver%name
+         call solver%solve_std(hmat, ne, eig, ev)
+         call timestop("Diagonalization")
+         call timestart("Backtransform of eigenvectors")
+         call transform%backtrans(smat, ev)
+         call timestop("Backtransform of eigenvectors")
+      end if
+   end subroutine
 
-  END SUBROUTINE eigen_diag
-
-
-END MODULE m_eigen_diag
+end module m_eigen_diag

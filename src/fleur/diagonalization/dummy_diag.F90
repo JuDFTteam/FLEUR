@@ -5,92 +5,105 @@
 ! @authors: Miriam Hinzen, Gregor Michalicek
 ! Added MPI implementation, DW 2018
 !--------------------------------------------------------------------------------
-MODULE m_dummy_diag
-  USE m_judft
-  USE m_constants
-  IMPLICIT NONE
-  PRIVATE
-  
-  PUBLIC dummy_diag
+module m_dummy_diag
+   use m_judft
+   use m_constants
+   use m_types_solver
+   implicit none
+   private
+   type, extends(t_solver):: t_solver_dummy
+   contains
+      procedure        :: solve_gev => dummy_diag  !solver for generalized eigenvalue problem
+   end type
 
-CONTAINS
+   public t_solver_dummy, get_solver_dummy
 
-  SUBROUTINE dummy_diag(hmat,smat,ne,eig,zmat)
-   !Dummy diver: does not solve actual eigenvalue problem but simply returns a set of orthogonal vectors. 
-   !Could be useful for performance testing workloads in which we do not want to look at the diagonalization.
-   ! A Cholesky decomp is still done to be able to do a back transform so that the resulting vector are orthonormal
-   ! with respect to overlapp matrix.
-    
-    USE m_types_mat
-    USE m_judft
+contains
 
-    IMPLICIT NONE
+   function get_solver_dummy() result(solver)
+      type(t_solver_dummy), pointer::solver
+      allocate (solver)
+      solver%name = "dummy"
+      solver%available = .true.
+      solver%parallel = .false.
+      solver%serial = .true.
+      solver%generalized = .true.
+      solver%standard = .false.
+      solver%single_precision = .false.
+      solver%transform = .false.
+      solver%GPU = .true.
+      solver%use_sp = .false.
+   end function
 
-    TYPE(t_mat),               INTENT(INOUT) :: hmat,smat
-    INTEGER,                   INTENT(INOUT) :: ne
-    CLASS(t_mat), ALLOCATABLE, INTENT(OUT)   :: zmat
-    REAL,                      INTENT(OUT)   :: eig(:)
+   subroutine dummy_diag(self, hmat, smat, ne, eig, zmat)
+      !Dummy diver: does not solve actual eigenvalue problem but simply returns a set of orthogonal vectors.
+      !Could be useful for performance testing workloads in which we do not want to look at the diagonalization.
+      ! A Cholesky decomp is still done to be able to do a back transform so that the resulting vector are orthonormal
+      ! with respect to overlapp matrix.
 
-    INTEGER            :: nev,lwork,liwork,n
-    INTEGER            :: info
+      use m_types_mat
+      use m_judft
 
-    
-    
-    ALLOCATE(t_mat::zmat)
-    CALL zmat%alloc(hmat%l_real,hmat%matsize1,ne)
+      implicit none
+      class(t_solver_dummy)                  :: self
+      class(t_mat), intent(INOUT) :: hmat, smat
+      integer, intent(INOUT) :: ne
+      class(t_mat), allocatable, intent(OUT)   :: zmat
+      real, intent(OUT)   :: eig(:)
 
-    
-    IF (hmat%l_real) THEN
-       ! --> start with Cholesky factorization of b ( so that b = l * l^t)
-       ! --> b is overwritten by l
-       CALL dpotrf('U',smat%matsize1,smat%data_r,SIZE(smat%data_r,1),info)
-       IF (info.NE.0) THEN
-          WRITE (*,*) 'Error in dpotrf: info =',info
-          CALL juDFT_error("Diagonalization failed",calledby="lapack_singlePrec_diag")
-       ENDIF
+      integer            :: nev, lwork, liwork, n
+      integer            :: info
 
+      allocate (t_mat::zmat)
+      call zmat%alloc(hmat%l_real, hmat%matsize1, ne)
 
-       ! --> solve a' * z' = eig * z' for eigenvalues eig between lb und ub
-       zmat%data_r=0.0
-       DO n=1,ne
-         eig(ne)=-0.1+ne*1E-5
-         zmat%data_r(ne,ne)=1.0
-       enddo    
-       ! --> recover the generalized eigenvectors z by solving z' = l^t * z
-       CALL dtrtrs('U','N','N',hmat%matsize1,nev,smat%data_r,smat%matsize1,zMat%data_r,zmat%matsize1,info)
-       IF (info.NE.0) THEN
-          WRITE (oUnit,*) 'Error in dtrtrs: info =',info
-          CALL juDFT_error("Diagonalization failed",calledby="lapack_singlePrec_diag")
-       ENDIF
-       
+      if (hmat%l_real) then
+         ! --> start with Cholesky factorization of b ( so that b = l * l^t)
+         ! --> b is overwritten by l
+         call dpotrf('U', smat%matsize1, smat%data_r, size(smat%data_r, 1), info)
+         if (info .ne. 0) then
+            write (*, *) 'Error in dpotrf: info =', info
+            call juDFT_error("Diagonalization failed", calledby="lapack_singlePrec_diag")
+         end if
 
-    ELSE
+         ! --> solve a' * z' = eig * z' for eigenvalues eig between lb und ub
+         zmat%data_r = 0.0
+         do n = 1, ne
+            eig(ne) = -0.1 + ne*1e-5
+            zmat%data_r(ne, ne) = 1.0
+         end do
+         ! --> recover the generalized eigenvectors z by solving z' = l^t * z
+         call dtrtrs('U', 'N', 'N', hmat%matsize1, nev, smat%data_r, smat%matsize1, zMat%data_r, zmat%matsize1, info)
+         if (info .ne. 0) then
+            write (oUnit, *) 'Error in dtrtrs: info =', info
+            call juDFT_error("Diagonalization failed", calledby="lapack_singlePrec_diag")
+         end if
 
-       ! --> start with Cholesky factorization of b ( so that b = l * l^t)
-       ! --> b is overwritten by l
-       CALL zpotrf('U',smat%matsize1,smat%data_c,SIZE(smat%data_c,1),info)
-       IF (info.NE.0) THEN
-          WRITE (*,*) 'Error in zpotrf: info =',info
-          CALL juDFT_error("Diagonalization failed",calledby="chase_diag")
-       ENDIF
+      else
 
-       
-       ! --> solve a' * z' = eig * z' for eigenvalues eig between lb und ub
-       zmat%data_c=0.0
-       DO n=1,ne
-         eig(ne)=-0.1+ne*1E-5
-         zmat%data_c(ne,ne)=1.0
-       enddo    
-       
-       ! --> recover the generalized eigenvectors z by solving z' = l^t * z
-       CALL ztrtrs('U','N','N',hmat%matsize1,nev,smat%data_c,smat%matsize1,zMat%data_c,zmat%matsize1,info)
-       IF (info.NE.0) THEN
-          WRITE (oUnit,*) 'Error in ztrtrs: info =',info
-          CALL juDFT_error("Diagonalization failed",calledby="chase_diag")
-       ENDIF
+         ! --> start with Cholesky factorization of b ( so that b = l * l^t)
+         ! --> b is overwritten by l
+         call zpotrf('U', smat%matsize1, smat%data_c, size(smat%data_c, 1), info)
+         if (info .ne. 0) then
+            write (*, *) 'Error in zpotrf: info =', info
+            call juDFT_error("Diagonalization failed", calledby="chase_diag")
+         end if
 
+         ! --> solve a' * z' = eig * z' for eigenvalues eig between lb und ub
+         zmat%data_c = 0.0
+         do n = 1, ne
+            eig(ne) = -0.1 + ne*1e-5
+            zmat%data_c(ne, ne) = 1.0
+         end do
 
-    ENDIF
-  END SUBROUTINE dummy_diag
+         ! --> recover the generalized eigenvectors z by solving z' = l^t * z
+         call ztrtrs('U', 'N', 'N', hmat%matsize1, nev, smat%data_c, smat%matsize1, zMat%data_c, zmat%matsize1, info)
+         if (info .ne. 0) then
+            write (oUnit, *) 'Error in ztrtrs: info =', info
+            call juDFT_error("Diagonalization failed", calledby="chase_diag")
+         end if
 
-  END MODULE m_dummy_diag
+      end if
+   end subroutine dummy_diag
+
+end module m_dummy_diag

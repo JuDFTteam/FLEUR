@@ -33,7 +33,7 @@ CONTAINS
       IF (SIZE(mat)>1)  mPr = mPr + lapwq%nv(2) + atoms%nlotot
 
       IF (.NOT.PRESENT(mat_final_templ)) THEN
-         CALL mat_final%init(mat(1,1)%l_real,mPr,m,fmpi%diag_sub_comm,.TRUE.) !here the .true. creates a block-cyclic scalapack distribution
+         CALL mat_final%init(mat(1,1)%l_real,mPr,m,fmpi%diag_sub_comm,MPIMAT_2D_BLOCK_CYCLIC) !here the .true. creates a block-cyclic scalapack distribution
       ELSE
          CALL mat_final%init(mat_final_templ)
       END IF

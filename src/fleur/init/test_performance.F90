@@ -69,7 +69,7 @@ contains
         REAL,INTENT(OUT) :: time(:)
         INTEGER,INTENT(IN)  :: N
       
-        INTEGER          :: ne,n_threads,solver=0,i,j
+        INTEGER          :: ne,n_threads,i,j
         CLASS(t_mat), ALLOCATABLE :: ev         ! eigenvectors
         REAL :: eig(N) 
         class(t_mat),allocatable :: hmat,smat,h,s
@@ -81,7 +81,7 @@ contains
 
         if (isize>1) THEN
             allocate(t_mpimat:: hmat,smat,h,s)
-            CALL hmat%init(.true., N,N, MPI_COMM_WORLD, .true.)
+            CALL hmat%init(.true., N,N, MPI_COMM_WORLD, MPIMAT_2D_BLOCK_CYCLIC)
         ELSE 
             allocate(t_mat:: hmat,smat,h,s)
             CALL hmat%init(.true., N,N)
@@ -108,7 +108,7 @@ contains
             s%data_r=smat%data_r
             call omp_set_num_threads(n_threads)
             time(n_threads)=omp_get_wtime()
-            call eigen_diag(solver,h,s,ne,eig,ev)
+            call eigen_diag(h,s,ne,eig,ev)
             time(n_threads)=omp_get_wtime()-time(n_threads)
         ENDDO    
         

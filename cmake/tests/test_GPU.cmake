@@ -38,6 +38,19 @@ if (CLI_FLEUR_USE_GPU)
       set(FLEUR_MPI_DEFINITIONS ${FLEUR_MPI_DEFINITIONS} "CPP_GPU_CUDA")
       set(FLEUR_DEFINITIONS ${FLEUR_DEFINITIONS} "CPP_GPU_CUDA")
    endif()   
+
+
+   #check for nvlamath
+   try_compile(FLEUR_USE_NVLAMATH ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_nvlamath.F90 OUTPUT_VARIABLE compile_output)
+   if ("$ENV{VERBOSE}")
+      message("NVLAMATH compile test: ${FLEUR_USE_NVLAMATH}\n${compile_output}")
+   endif()
+   if (FLEUR_USE_NVLAMATH)
+      set(FLEUR_MPI_DEFINITIONS ${FLEUR_MPI_DEFINITIONS} "CPP_GPU_NVLAMATH")
+      set(FLEUR_DEFINITIONS ${FLEUR_DEFINITIONS} "CPP_GPU_NVLAMATH")
+   endif()   
+
+
 else()
    set(FLEUR_USE_GPU FALSE)
    #if we do not use GPU-code we should use OpenMP-on the CPU instead

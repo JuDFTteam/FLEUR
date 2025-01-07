@@ -1,10 +1,6 @@
 #First check if we can compile with MAGMA
-if (CLI_FLEUR_USE_MAGMA)
-   message("Set FLEUR_USE_MAGMA to environment, skipping test")
-   set(FLEUR_USE_MAGMA ${CLI_FLEUR_USE_MAGMA})
-else()
+
 try_compile(FLEUR_USE_MAGMA ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_MAGMA.f90 LINK_LIBRARIES ${FLEUR_LIBRARIES})
-endif()
 foreach(test_string "-lmagma" "-L$ENV{MAGMA_LIB};-lmagma")
         if (NOT FLEUR_USE_MAGMA)
                 message("Magma test:${test_string}")
@@ -20,8 +16,51 @@ foreach(test_string "-lmagma" "-L$ENV{MAGMA_LIB};-lmagma")
 endforeach()
 
 
+if (DEFINED CLI_FLEUR_USE_MAGMA)
+   if (CLI_FLEUR_USE_MAGMA)
+      if (NOT FLEUR_USE_MAGMA)
+         if (NOT EXISTS "${PROJECT_SOURCE_DIR}/.git")
+            message(FATAL_ERROR "You asked for MAGMA to be used, but it cannot be found.\n"
+            "Please either provide correct include and link directories for MAGMA manually, or use a git-version of FLEUR to download MAGMA automatically")
+         endif()     
+         message(WARNING "You asked for MAGMA but cmake couldn't find it. We will try to download and compile MAGMA along with FLEUR")
+         if(NOT EXISTS "${PROJECT_SOURCE_DIR}/external/magma-git/src" )
+            find_package(Git REQUIRED)
+            execute_process(COMMAND ${GIT_EXECUTABLE} submodule init external/magma-git WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} RESULT_VARIABLE _res_init OUTPUT_QUIET ERROR_QUIET)
+            execute_process(COMMAND ${GIT_EXECUTABLE} submodule update  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} RESULT_VARIABLE _res_update OUTPUT_QUIET ERROR_QUIET)
+            if (_res_init GREATER 0 OR _res_update GREATER 0)
+               message(FATAL_ERROR "MAGMA source could not be downloaded.\n"
+                           "We tried: 'git submodule init external/magma-git && git submodule update' and resulted in error" )
+            endif()
+	      endif()
+         STRING(REGEX MATCH ".*:cc(..)" CC_MODE "${CLI_FLEUR_USE_GPU}")
+         if (CC_MODE)
+            set(GPU_TARGET "sm_${CC_MODE}")
+         endif()
+         #We have to change the CMakeLists.txt of MAGMA
+         execute_process(COMMAND "sed" "-e s/CMAKE_SOURCE_DIR/CMAKE_CURRENT_SOURCE_DIR/" INPUT_FILE "${PROJECT_SOURCE_DIR}/external/magma-git/CMakeLists.txt" OUTPUT_FILE "${PROJECT_SOURCE_DIR}/external/magma-git/CMakeLists.txt_mod" )
+         execute_process(COMMAND "mv" "${PROJECT_SOURCE_DIR}/external/magma-git/CMakeLists.txt_mod" "${PROJECT_SOURCE_DIR}/external/magma-git/CMakeLists.txt" )
+         #Create the Cmake.source.cuda file used by MAGMA
+         file(WRITE "${PROJECT_SOURCE_DIR}/external/magma-git/make.inc" "BACKEND=cuda\nFORT= true")
+         execute_process(COMMAND "make" "GPU_TARGET=${GPU_TARGET}" "generate" WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/external/magma-git")
+         add_subdirectory (external/magma-git)
+         set(FLEUR_USE_MAGMA TRUE)
+         set(FLEUR_COMPILE_MAGMA true)
+         include_directories("${CMAKE_CURRENT_BINARY_DIR}/modules/external")
+         include_directories("${CMAKE_CURRENT_BINARY_DIR}/modules/external/static")
+      endif()
+   else()
+      if (FLEUR_USE_MAGMA)
+         message("MAGMA library found, but you explicitely asked not to use it")
+	      set(FLEUR_USE_MAGMA FALSE)
+      endif()
+   endif()
+endif()
+
+
 message("MAGMA Library found:${FLEUR_USE_MAGMA}")
 
 if (FLEUR_USE_MAGMA)
    set(FLEUR_DEFINITIONS ${FLEUR_DEFINITIONS} "CPP_MAGMA")
+   set(FLEUR_MPI_DEFINITIONS ${FLEUR_DEFINITIONS} "CPP_MAGMA")
 endif()

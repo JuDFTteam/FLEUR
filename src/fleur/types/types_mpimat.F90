@@ -15,6 +15,13 @@ MODULE m_types_mpimat
    !PRIVATE
    INTEGER, PARAMETER    :: DEFAULT_BLOCKSIZE = 64
    INTEGER, PARAMETER   :: dlen_ = 9
+   !Constants defining different distributions:
+   !INTEGER, PARAMETER   :: MPIMAT_2D_BLOCK_CYCLIC=1
+   !INTEGER, PARAMETER   :: MPIMAT_ROWCYCLIC=2
+   !INTEGER, PARAMETER   :: MPIMAT_COLUMN_BLOCK_CYCLIC=3
+   !
+   ! These are now defined in t_mat base type!
+   
 
 #ifdef __INTEL_COMPILER
    LOGICAL:: use_pdgemr2d=.true.
@@ -650,19 +657,16 @@ CONTAINS
 
    !>Initialization of the distributed matrix.
   !!
-  !! The argument l_2d controls the kind of distribution used:
-  !!  - TRUE: the matrix is a Scalapack BLOCK-CYCLIC distribution
-  !!  - FALSE: the matrix is distributed in a one-dimensional column cyclic distribution with blocksize 1
-  !! as used in the parallel matrix setup of FLEUR
-   SUBROUTINE mpimat_init(mat, l_real, matsize1, matsize2, mpi_subcom, l_2d, nb_x, nb_y, mat_name)
+  !! The argument dist_type controls the kind of distribution used. See head of file for possible values
+   SUBROUTINE mpimat_init(mat, l_real, matsize1, matsize2, mpi_subcom, dist_type, nb_x, nb_y, mat_name)
 #ifdef CPP_MPI
       use mpi
 #endif
       IMPLICIT NONE
       CLASS(t_mpimat)                      :: mat
       INTEGER, INTENT(IN), OPTIONAL        :: matsize1, matsize2, mpi_subcom
-      LOGICAL, INTENT(IN), OPTIONAL        :: l_real, l_2d
-      INTEGER, INTENT(IN), OPTIONAL        :: nb_y, nb_x
+      LOGICAL, INTENT(IN), OPTIONAL        :: l_real
+      INTEGER, INTENT(IN), OPTIONAL        :: dist_type,nb_y, nb_x
       character(len=*), intent(in), optional :: mat_name
 
 #ifdef CPP_SCALAPACK
@@ -682,13 +686,13 @@ CONTAINS
          nby = priv_get_blocksize()
          IF (PRESENT(nb_x)) nbx = nb_x
          IF (PRESENT(nb_y)) nby = nb_y
-         IF (.NOT. (PRESENT(matsize1) .AND. PRESENT(matsize2) .AND. PRESENT(mpi_subcom) .AND. PRESENT(l_real) .AND. PRESENT(l_2d))) &
+         IF (.NOT. (PRESENT(matsize1) .AND. PRESENT(matsize2) .AND. PRESENT(mpi_subcom) .AND. PRESENT(l_real) .AND. PRESENT(dist_type))) &
             CALL judft_error("Optional arguments must be present in mpimat_init")
          mat%global_size1 = matsize1
          mat%global_size2 = matsize2
          mat%blacsdata%no_use = 1
       end if
-      CALL priv_create_blacsgrid(mpi_subcom, l_2d, matsize1, matsize2, nbx, nby, &
+      CALL priv_create_blacsgrid(mpi_subcom, dist_type, matsize1, matsize2, nbx, nby, &
                                  mat%blacsdata, mat%matsize1, mat%matsize2)
 
       mat%blacsdata%mpi_com = mpi_subcom
@@ -745,7 +749,7 @@ CONTAINS
       END SELECT
    END SUBROUTINE mpimat_init_template
 
-   SUBROUTINE priv_create_blacsgrid(mpi_subcom, l_2d, m1, m2, nbc, nbr, blacsdata, local_size1, local_size2)
+   SUBROUTINE priv_create_blacsgrid(mpi_subcom, dist_type, m1, m2, nbc, nbr, blacsdata, local_size1, local_size2)
 #ifdef CPP_SCALAPACK
       USE mpi
 #endif
@@ -753,7 +757,7 @@ CONTAINS
       INTEGER, INTENT(IN) :: mpi_subcom
       INTEGER, INTENT(IN) :: m1, m2
       INTEGER, INTENT(INOUT)::nbc, nbr
-      LOGICAL, INTENT(IN) :: l_2d
+      INTEGER, INTENT(IN) :: dist_type
       type(t_blacsdata), INTENT(OUT)::blacsdata
       INTEGER, INTENT(OUT):: local_size1, local_size2
 
@@ -776,7 +780,8 @@ CONTAINS
 
          ! compute processor grid, as square as possible
          ! If not square with more rows than columns
-         IF (l_2d) THEN
+         select case (dist_type)
+         case(MPIMAT_2D_BLOCK_CYCLIC)
             distloop: DO j = INT(SQRT(REAL(np))), 1, -1
                IF ((np/j)*j == np) THEN
                   blacsdata%npcol = np/j
@@ -784,12 +789,15 @@ CONTAINS
                   EXIT distloop
                END IF
             END DO distloop
-         ELSE
+         case(MPIMAT_ROWCYCLIC)   
             nbc = 1
             nbr = MAX(m1, m2)
             blacsdata%npcol = np
             blacsdata%nprow = 1
-         END IF
+         case(MPIMAT_COLUMN_BLOCK_CYCLIC)
+            blacsdata%npcol = 1
+            blacsdata%nprow = np
+         end select   
 
          ALLOCATE (iblacsnums(np), ihelp(np), iusermap(blacsdata%nprow, blacsdata%npcol))
 
