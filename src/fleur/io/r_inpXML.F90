@@ -1174,15 +1174,15 @@ CONTAINS
       ALLOCATE (sym%invsatnr(atoms%nat),sym%d_wgn(-3:3,-3:3,3,sym%nop))
 
       !some settings for film calculations
-      vacuum%nmzd = 250
-      vacuum%nmzxyd = 100
-      vacuum%nvac = 2
+      !vacuum%nmzd = 250
+      !vacuum%nmzxyd = 100
+      !vacuum%nvac = 2
       cell%z1 = vacuum%dvac/2
       vacuum%nmz = vacuum%nmzd
-      vacuum%delz = 25.0/vacuum%nmz
+      !vacuum%delz = 25.0/vacuum%nmz
       IF (vacuum%nmz.GT.vacuum%nmzd) CALL juDFT_error("nmzd",calledby ="inped")
       vacuum%nmzxy = vacuum%nmzxyd
-      IF (vacuum%nmzxy.GT.vacuum%nmzxyd) CALL juDFT_error("nmzxyd",calledby ="inped")
+      !IF (vacuum%nmzxy.GT.vacuum%nmzxyd) CALL juDFT_error("nmzxyd",calledby ="inped")
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! End of cell section
