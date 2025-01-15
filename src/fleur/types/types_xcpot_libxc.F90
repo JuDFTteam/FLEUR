@@ -473,6 +473,7 @@ CONTAINS
       INTEGER, INTENT(IN)         :: jspins, ngrid
       TYPE(t_gradients), INTENT(INOUT):: grad
       !For libxc we only need the sigma array...
+      if (allocated(grad%gr).and..not.allocated(grad%sigma)) return !externally allocated grad%gr
       IF (ALLOCATED(grad%sigma)) DEALLOCATE (grad%sigma, grad%gr, grad%laplace, grad%vsigma)
       ALLOCATE (grad%sigma(MERGE(1, 3, jspins == 1), ngrid))
       ALLOCATE (grad%gr(3, ngrid, jspins))
