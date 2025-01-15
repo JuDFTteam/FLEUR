@@ -113,7 +113,7 @@ CONTAINS
     IF (numberNodes.EQ.1) THEN
        IF (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@b_field')>0) THEN
           this%b_field=evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'//@b_field'))
-          if (abs(this%l_b)>1E-15) this%l_b_field=.TRUE.
+          if (abs(this%b_field)>1E-15) this%l_b_field=.TRUE.
        ENDIF
        
        this%efield%zsigma = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@zsigma'))
