@@ -70,6 +70,9 @@ CONTAINS
             if (allocated(grad%laplace)) grad%laplace(i,j)=0.0
           endif
         endif
+        if (allocated(grad%sigma)) then
+         where (abs(grad%sigma(:,i))<1E-5) grad%sigma(:,i)=0.0
+        endif 
       ENDDO
     ENDDO
 
