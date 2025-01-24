@@ -28,7 +28,7 @@ MODULE m_types_juPhon
       !REAL    :: eDiffcut  = 1e-7   ! Cutoff for energy differences
       REAL    :: eDiffcut  = 1e-5   ! Cutoff for energy differences
       REAL    :: fDiffcut  = 1e-7    ! Cutoff for occupation differences
-      REAL    :: qlim      = 0.3         ! qlim value
+      REAL    :: qlim      = 1/16    ! qlim value
       REAL    :: qpt_ph(3)           ! Debug q
 
       LOGICAL :: e1term = .TRUE.     ! Calculate the eigenenergy response
@@ -46,6 +46,7 @@ MODULE m_types_juPhon
                                      ! 1: Reads q from fullsym_* input files
       LOGICAL :: l_phonon = .TRUE.
       LOGICAL :: l_efield = .FALSE.
+      LOGICAL :: l_borneffcharge = .FALSE.
       LOGICAL :: l_cheatsym = .FALSE.
       LOGICAL :: l_procc = .TRUE.
       LOGICAL :: l_prodyn = .TRUE.
@@ -162,6 +163,7 @@ CONTAINS
       CALL mpi_bc(this%qvec, rank, mpi_comm)
       CALL mpi_bc(this%l_phonon, rank, mpi_comm)
       CALL mpi_bc(this%l_efield, rank, mpi_comm)
+      CALL mpi_bc(this%l_borneffcharge, rank, mpi_comm)
       CALL mpi_bc(this%qlim,rank,mpi_comm)
       CALL mpi_bc(this%l_cheatsym, rank, mpi_comm)
       CALL mpi_bc(this%l_procc, rank, mpi_comm)
