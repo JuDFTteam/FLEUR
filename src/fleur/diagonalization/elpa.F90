@@ -135,7 +135,7 @@ solver%single_precision = .true.
       integer           :: err
       integer           :: i
       real, allocatable      :: eig2(:)
-      class(t_mpimat),allocatable        :: ev_dist
+      class(t_mat),allocatable        :: ev_dist
       !Update elpa object
       call create_elpa_obj(hmat)
       call elpa_obj%set("nev", ne, err)
