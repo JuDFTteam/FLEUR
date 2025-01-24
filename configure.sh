@@ -69,7 +69,7 @@ debug=0
 error=""
 external_lib=""
 conf_spack=0
-
+command="$0 $*"
 
 echo -e "${RED}------------ Welcome to the FLEUR configuration script -------------${NC}"
 
@@ -94,7 +94,7 @@ fi
 if test -d $DIR/.git
 then
     #Check if hook is installed and install it if needed
-    if test -h $DIR/.git/hooks/pre-commit
+    if test -e $DIR/.git/hooks/pre-commit
     then
         echo "Git version found"
     else
@@ -109,6 +109,8 @@ fi
 if [ -n "$label" ]
 then
     buildname="build.$label"
+    . $DIR/cmake/io_configs.sh
+    store_config 
 else
     buildname="build"
 fi
