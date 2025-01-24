@@ -52,6 +52,7 @@ MODULE m_types_juPhon
       LOGICAL :: l_prodyn = .TRUE.
 
       REAL, ALLOCATABLE :: qvec(:,:)
+      REAL, ALLOCATABLE :: qvec_efield(:,:)
 
       INTEGER :: singleQpt       = 1
 
@@ -123,6 +124,7 @@ MODULE m_types_juPhon
    CONTAINS
       PROCEDURE :: read_xml => read_xml_juPhon
       PROCEDURE :: mpi_bc => mpi_bc_juPhon
+      PROCEDURE :: init => init_juPhon
    END TYPE t_juPhon
 
    PUBLIC t_juPhon
@@ -161,6 +163,7 @@ CONTAINS
       CALL mpi_bc(this%qmode, rank, mpi_comm)
       CALL mpi_bc(this%singleQpt, rank, mpi_comm)
       CALL mpi_bc(this%qvec, rank, mpi_comm)
+      CALL mpi_bc(this%qvec_efield, rank, mpi_comm)
       CALL mpi_bc(this%l_phonon, rank, mpi_comm)
       CALL mpi_bc(this%l_efield, rank, mpi_comm)
       CALL mpi_bc(this%l_borneffcharge, rank, mpi_comm)
@@ -357,6 +360,7 @@ CONTAINS
          IF (numberNodes == 1) THEN
            this%qmode  = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@qmode'))
          END IF
+
          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_phonon')
 
          IF (numberNodes == 1) THEN
@@ -367,6 +371,12 @@ CONTAINS
 
          IF (numberNodes == 1) THEN
            this%l_efield    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_efield'))
+         END IF
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_borneffcharge')
+
+         IF (numberNodes == 1) THEN
+           this%l_borneffcharge    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_borneffcharge'))
          END IF
 
          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_cheatsym')
@@ -396,5 +406,29 @@ CONTAINS
       ENDIF
 
    END SUBROUTINE read_xml_juPhon
+
+   SUBROUTINE init_juPhon(this,cell)
+
+    USE m_types_cell
+    USE m_inv3
+
+      CLASS(t_juPhon),     INTENT(INOUT) :: this
+      TYPE(t_cell),    INTENT(IN)     :: cell
+      INTEGER                            :: iDir
+      REAL                               :: qvec_ext(3), qvec_int(3),det,inv_bmat(3,3)!, qvec_full_int(3,3)
+      !PRINT*,"hallo"
+      !qvec_full_int(3,3) = 0.0
+      allocate(this%qvec_efield(3,3))
+      DO iDir = 1,3
+        qvec_ext(:) = 0.0
+        qvec_int(:) = 0.0
+        qvec_ext(iDir) = this%qlim
+        call inv3(cell%bmat,inv_bmat(:,:),det)
+        qvec_int = matmul(qvec_ext,transpose(inv_bmat))
+        this%qvec_efield(iDir,:) = qvec_int
+      END DO
+
+
+   END SUBROUTINE init_juPhon
 
 END MODULE m_types_juPhon
