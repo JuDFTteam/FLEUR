@@ -901,15 +901,15 @@ CONTAINS
                      i2 = kvac2(ikG,jspin) - kvac2(ikGPr,jspin)
                      i3 = 0
                      ig3 = stars%ig(i1,i2,i3)
-                     ind2 = stars%ig2(ig3)
+                     ind2 = stars%i2g(i1,i2)
                      !IF (ind2 .ne.stars%ig2(ig3)) CYCLE
                      IF (iabs(i1).GT.stars%mx1) CYCLE
                      IF (iabs(i2).GT.stars%mx2) CYCLE
                      IF (ig3.EQ.0)  CYCLE
-                     phs = stars%rgphs(i1,i2,i3)
-                     ig3p = stars%ig(-i1,-i2,i3)
-                     phsp = stars%rgphs(-i1,-i2,i3)
-                     ind2p = stars%ig2(ig3p)
+                     phs = conjg(stars%r2gphs(i1,i2))
+                     ig3p = stars%i2g(-i1,-i2)
+                     phsp = conjg(stars%r2gphs(-i1,-i2))
+                     ind2p = stars%i2g(-i1,-i2)
                      aa = 0.0
                      bb = 0.0
                      ba = 0.0
