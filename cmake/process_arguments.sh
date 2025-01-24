@@ -126,6 +126,7 @@ Alternatively, you can try to specify the compiler toolchain using the -c option
                 This is a good option if you have a correct MPI installation available.
   intel      -- use the Intel oneAPI compilers (ifx,icx,icpx).
   intel-old  -- use the classic intel compilers (ifort, icc, icc)
+  intel-mpi  -- use mpi compiler wrappers with intel compilers (mpiifx,mpiicx,mpiicpx)
   nvidia     -- use the NVHPC compilers
   gfortran   -- use the compilers from the GNU collection
 
