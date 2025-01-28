@@ -172,7 +172,9 @@ solver%single_precision = .true.
             !     process i these are eigenvectors i+1, np+i+1, 2*np+i+1...
             !     Only num=num2/np eigenvectors per process
             !
-            call MPI_COMM_RANK(hmat%blacsdata%mpi_com, myid, err)
+         call MPI_COMM_RANK(hmat%blacsdata%mpi_com, myid, err)
+         call MPI_COMM_SIZE(hmat%blacsdata%mpi_com, np, err)
+            
             num = ne
             ne = 0
             do i = myid + 1, num, np
@@ -251,6 +253,8 @@ solver%single_precision = .true.
          !     Only num=num2/np eigenvectors per process
          !
          call MPI_COMM_RANK(hmat%blacsdata%mpi_com, myid, err)
+         call MPI_COMM_SIZE(hmat%blacsdata%mpi_com, np, err)
+         
          num = ne
          ne = 0
          do i = myid + 1, num, np
