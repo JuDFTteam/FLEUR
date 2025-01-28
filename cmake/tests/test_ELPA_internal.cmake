@@ -26,17 +26,32 @@ file(APPEND ${conffile} "echo 'Building ELPA in: ' $PWD \n")
 file(APPEND ${conffile} "./configure ${elpa_flags}")
 
 include(ExternalProject)
-ExternalProject_Add(ELPA
-PREFIX elpa/
-BUILD_IN_SOURCE true
-#GIT_REPOSITORY https://gitlab.mpcdf.mpg.de/elpa/elpa.git
-#GIT_TAG release_2024_05_001
-URL https://elpa.mpcdf.mpg.de/software/tarball-archive/Releases/2024.05.001/elpa-2024.05.001.tar.gz
-PATCH_COMMAND patch -p1 < ${CMAKE_SOURCE_DIR}/cmake/patch/elpa-make-transform-public.patch
-CONFIGURE_COMMAND sh ${conffile}
-BUILD_COMMAND make
-INSTALL_COMMAND ""
-)
+if (FLEUR_COMPILE_SCALAPACK)
+    ExternalProject_Add(ELPA
+    PREFIX elpa/
+    BUILD_IN_SOURCE true
+    #GIT_REPOSITORY https://gitlab.mpcdf.mpg.de/elpa/elpa.git
+    #GIT_TAG release_2024_05_001
+    URL https://elpa.mpcdf.mpg.de/software/tarball-archive/Releases/2024.05.001/elpa-2024.05.001.tar.gz
+    PATCH_COMMAND patch -p1 < ${CMAKE_SOURCE_DIR}/cmake/patch/elpa-make-transform-public.patch
+    CONFIGURE_COMMAND sh ${conffile}
+    BUILD_COMMAND make
+    INSTALL_COMMAND ""
+    DEPENDS scalapack
+    )
+else()
+    ExternalProject_Add(ELPA
+    PREFIX elpa/
+    BUILD_IN_SOURCE true
+    #GIT_REPOSITORY https://gitlab.mpcdf.mpg.de/elpa/elpa.git
+    #GIT_TAG release_2024_05_001
+    URL https://elpa.mpcdf.mpg.de/software/tarball-archive/Releases/2024.05.001/elpa-2024.05.001.tar.gz
+    PATCH_COMMAND patch -p1 < ${CMAKE_SOURCE_DIR}/cmake/patch/elpa-make-transform-public.patch
+    CONFIGURE_COMMAND sh ${conffile}
+    BUILD_COMMAND make
+    INSTALL_COMMAND ""
+    )
+endif()
 #Now make ELPA known to FLEUR
 if (FLEUR_USE_OPENMP)
     set(FLEUR_LIBRARIES "-L${CMAKE_BINARY_DIR}/elpa/src/ELPA/.libs;-lelpa_openmp;${FLEUR_LIBRARIES}")
