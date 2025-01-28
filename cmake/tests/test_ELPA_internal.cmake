@@ -18,6 +18,9 @@ set(elpa_flags " --enable-shared=no --enable-c-tests=no --enable-cpp-tests=no --
 if (FLEUR_USE_OPENMP)
     set(elpa_flags "${elpa_flags} --enable-openmp")
 endif()
+if (FLEUR_COMPILE_SCALAPACK)
+    file(APPEND ${conffile} "export SCALAPACK_LDFLAGS=-L${CMAKE_BINARY_DIR}/external/SCALAPACK-git/lib")
+endif    
 if (FLEUR_USE_GPU)
     set(elpa_flags "${elpa_flags} --with-nvidia-gpu-support-only")
 endif()
