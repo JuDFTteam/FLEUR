@@ -14,7 +14,12 @@ file(APPEND ${conffile} ="${CMAKE_Fortran_FLAGS} ${CMAKE_Fortran_FLAGS_RELEASE} 
 file(APPEND ${conffile} "export CFLAGS")
 file(APPEND ${conffile} ="${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_RELEASE}" "\n")
 
-set(elpa_flags " --enable-shared=no --enable-c-tests=no --enable-cpp-tests=no --enable-single-precision  --enable-runtime-threading-support-checks --enable-allow-thread-limiting --without-threading-support-check-during-build")
+set(elpa_flags " --enable-shared=no --enable-c-tests=no --enable-cpp-tests=no --enable-single-precision --disable-avx512-kernels ")
+set(elpa_flags "${elpa_flags} --enable-runtime-threading-support-checks --enable-allow-thread-limiting --without-threading-support-check-during-build")
+
+if (DEFINED ENV{ELPA_CONF})
+    set(elpa_flags "${elpa_flags} $ENV{ELPA_CONF}")
+endif
 if (FLEUR_USE_OPENMP)
     set(elpa_flags "${elpa_flags} --enable-openmp")
 endif()
