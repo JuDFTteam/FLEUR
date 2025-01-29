@@ -19,13 +19,13 @@ set(elpa_flags "${elpa_flags} --enable-runtime-threading-support-checks --enable
 
 if (DEFINED ENV{ELPA_CONF})
     set(elpa_flags "${elpa_flags} $ENV{ELPA_CONF}")
-endif
+endif()
 if (FLEUR_USE_OPENMP)
     set(elpa_flags "${elpa_flags} --enable-openmp")
 endif()
 if (FLEUR_COMPILE_SCALAPACK)
     file(APPEND ${conffile} "export SCALAPACK_LDFLAGS=-L${CMAKE_BINARY_DIR}/external/SCALAPACK-git/lib")
-endif    
+endif()   
 if (FLEUR_USE_GPU)
     set(elpa_flags "${elpa_flags} --with-nvidia-gpu-support-only")
 endif()
