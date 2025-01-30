@@ -30,8 +30,7 @@ if (FLEUR_USE_GPU)
     #check the cc string
      #Check if a CC is given
     if ("${FLEUR_CC_MODE}" STREQUAL "80")
-    set(elpa_flags "${elpa_flags} --enable-nvidia-gpu --enable-nvidia-sm80-gpu-kernels 
-    --with-NVIDIA-sm_80-support-only --enable-gpu-streams=nvidia --with-NVIDIA-GPU-compute-capability=sm_80")
+        set(elpa_flags "${elpa_flags} --enable-nvidia-gpu --enable-nvidia-sm80-gpu-kernels --with-NVIDIA-sm_80-support-only --enable-gpu-streams=nvidia --with-NVIDIA-GPU-compute-capability=sm_80")
     else()
         set(elpa_flags "${elpa_flags} --enable-nvidia-gpu --enable-gpu-streams=nvidia --with-NVIDIA-GPU-compute-capability=sm_${FLEUR_CC_MODE}")
     endif()        
