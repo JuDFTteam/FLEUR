@@ -1122,6 +1122,7 @@
       <xsd:attribute name="l_scf" type="FleurBool" use="optional"/>
       <xsd:attribute name="l_elph" type="FleurBool" use="optional"/>
       <xsd:attribute name="l_sumrule" type="FleurBool" use="optional"/>
+      <xsd:attribute name="i_ref" type="xsd:positiveInteger" use="optional"/>
       <xsd:attribute name="l_rm_qhdf" type="FleurBool" use="optional"/>
       <xsd:attribute name="startq" type="xsd:positiveInteger" use="optional"/>
       <xsd:attribute name="stopq" type="xsd:nonNegativeInteger" use="optional"/>

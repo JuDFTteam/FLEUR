@@ -6,7 +6,7 @@ module m_dfpt_dynmat_eig
 
   contains
 
-  subroutine DiagonalizeDynMat(atoms, qvec, calcEv, dynMat, w, a, iqpt, l_scalemass, add_tag,l_sumrule)
+  subroutine DiagonalizeDynMat(atoms, qvec, calcEv, dynMat, w, a, iqpt, l_scalemass, add_tag,l_sumrule, i_ref)
 
     USE m_juDFT_stop
     implicit none
@@ -25,6 +25,7 @@ module m_dfpt_dynmat_eig
     logical, intent(in) :: l_scalemass
     character(len=*), intent(in) :: add_tag
     logical, intent(in) :: l_sumrule
+    integer, intent(in) :: i_ref
 
     ! Array parameters
 
@@ -118,7 +119,7 @@ module m_dfpt_dynmat_eig
     end do
 
     IF (l_sumrule) THEN
-      IF (iqpt/=1) THEN
+      IF (iqpt/=i_ref) THEN
         ALLOCATE(dynmat0,mold=dynmat)
         OPEN( 110, file="dynMatq=gamma", status="old")
         DO iread = 1, 3 + 3*atoms%nat ! Loop over dynmat rows

@@ -308,8 +308,8 @@ CONTAINS
 
       IF (l_vext) THEN 
          DO ispin = 1 , input%jspins
-            write(oUnit,*) "I am here calling with q point" , tmp_qvec
-            CALL checkDOPALL(input, sphhar, local_starsq ,atoms, sym, vacuum, cell,local_dfptvTot,ispin, local_dfptvTotimag   )
+            if (fmpi%irank==0) write(oUnit,*) "I am here calling with q point" , tmp_qvec
+            if (fmpi%irank==0) CALL checkDOPALL(input, sphhar, local_starsq ,atoms, sym, vacuum, cell,local_dfptvTot,ispin, local_dfptvTotimag   )
          END DO 
       END IF 
 

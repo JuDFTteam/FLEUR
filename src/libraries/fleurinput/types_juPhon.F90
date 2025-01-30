@@ -39,6 +39,7 @@ MODULE m_types_juPhon
       LOGICAL :: l_scf  = .TRUE.     ! Do a self-consistency run for dynmats
       LOGICAL :: l_elph = .FALSE.    ! Calculate electron-phonon matrix elements
       LOGICAL :: l_sumrule  = .FALSE. ! Apply sumrule for dynmats
+      INTEGER :: i_ref = 1            ! Reference for sumrule 
       LOGICAL :: l_rm_qhdf  = .FALSE. ! Apply sumrule for dynmats
       INTEGER :: startq = 1          ! Start the q-loop at a specific point
       INTEGER :: stopq  = 0          ! Stop  the q-loop at a specific point
@@ -154,6 +155,7 @@ CONTAINS
       CALL mpi_bc(this%l_scf, rank, mpi_comm)
       CALL mpi_bc(this%l_elph, rank, mpi_comm)
       CALL mpi_bc(this%l_sumrule, rank, mpi_comm)
+      CALL mpi_bc(this%i_ref, rank, mpi_comm)
       CALL mpi_bc(this%l_rm_qhdf, rank, mpi_comm)
       CALL mpi_bc(this%startq, rank, mpi_comm)
       CALL mpi_bc(this%stopq, rank, mpi_comm)
@@ -331,6 +333,12 @@ CONTAINS
 
          IF (numberNodes == 1) THEN
            this%l_sumrule  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_sumrule'))
+         END IF
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@i_ref')
+      
+         IF (numberNodes == 1) THEN
+           this%i_ref  = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@i_ref'))
          END IF
 
          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_rm_qhdf')
