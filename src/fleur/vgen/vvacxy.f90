@@ -31,13 +31,16 @@ contains
       logical,        intent(in)     :: l_dfptvgen
 
       complex                        :: alph0, alphaz, betaz, test, phas
-      real                           :: g, vcons, z, e_m, e_p,arg
+      real                           :: g, vcons, z, e_m, e_p,arg, zsigma
       integer                        :: imz, ip, irec2, ivac, ncsh,irec2r, start_star
       real                           :: fra(vacuum%nmzxyd), frb(vacuum%nmzxyd), fia(vacuum%nmzxyd), fib(vacuum%nmzxyd)
       real                           :: alpha(vacuum%nmzxyd,2,2,stars%ng2), beta(vacuum%nmzxyd,2,2,stars%ng2)
 
+      zsigma = 0.0 
+      if ( .not. l_dfptvgen ) zsigma=field%efield%zsigma
+
       if ( allocated( field%efield%rhoef ) .or. field%efield%dirichlet ) then
-         ncsh = field%efield%zsigma / vacuum%delz + 1.01
+         ncsh = zsigma / vacuum%delz + 1.01
          ! if nmzxy < ncsh, the inhomogenous field cannot be represented.
          ! if nmzxy > ncsh, the boundary condition is wrong - and the
          ! potential is very wavy - try it yourself, if you don't believe.
@@ -65,7 +68,7 @@ contains
          do irec2 = start_star, stars%ng2
             g = stars%sk2(irec2)
             vcons = tpi_const / g
-            if ( allocated( field%efield%rhoef ) ) then
+            if ( allocated( field%efield%rhoef ) .and. (.not. l_dfptvgen) ) then
                vxy(ncsh:vacuum%nmzxy,irec2,1) = field%efield%rhoef(irec2-1, 1)
                if ( vacuum%nvac == 2 ) then
                   vxy(ncsh:vacuum%nmzxy,irec2,2) = field%efield%rhoef(irec2-1, 2)
@@ -73,14 +76,14 @@ contains
             else
                vxy(ncsh:vacuum%nmzxy,irec2,1:vacuum%nvac) = 0.0
             end if
-            vcons = 2.0 * vcons / sinh( g * 2.0 * ( field%efield%zsigma + cell%z1 ) )
+            vcons = 2.0 * vcons / sinh( g * 2.0 * ( zsigma + cell%z1 ) )
             do ivac = 1, vacuum%nvac
                z = cell%z1
                do imz = 1, ncsh-1
                   ! as "z" > 0 in this subroutine, the integrand is the same
                   ! for both ivac -- but the integral bounds are reversed
-                  e_m = sinh( g * ( field%efield%zsigma + cell%z1 - z ) )
-                  e_p = sinh( g * ( field%efield%zsigma + cell%z1 + z ) )
+                  e_m = sinh( g * ( zsigma + cell%z1 - z ) )
+                  e_p = sinh( g * ( zsigma + cell%z1 + z ) )
                   fra(ncsh-imz) = real(  rhtxy(imz,irec2,ivac) ) * e_m
                   fia(ncsh-imz) = aimag( rhtxy(imz,irec2,ivac) ) * e_m
                   frb(imz)      = real(  rhtxy(imz,irec2,ivac) ) * e_p
@@ -116,12 +119,12 @@ contains
                do imz = 1, ncsh-1
                   betaz  = cmplx( beta(imz,ivac,1,irec2), beta(imz,ivac,2,irec2) )
                   alphaz = cmplx( alpha(ncsh-imz,ivac,1,irec2), alpha(ncsh-imz,ivac,2,irec2) )
-                  e_m = sinh( g * ( field%efield%zsigma + cell%z1 - z ) )
-                  e_p = sinh( g * ( field%efield%zsigma + cell%z1 + z ) )
+                  e_m = sinh( g * ( zsigma + cell%z1 - z ) )
+                  e_p = sinh( g * ( zsigma + cell%z1 + z ) )
                   test = e_m * ( alph0 + betaz ) + e_p * alphaz
                   if ( 2.0 * test == test ) test = cmplx( 0.0, 0.0 )
                   vxy(imz,irec2,ivac) = vxy(imz,irec2,ivac) + vcons * test
-                  if ( allocated( field%efield%c1 ) ) then
+                  if ( allocated( field%efield%c1 ) .and.  (.not. l_dfptvgen) ) then
                      e_m = exp_safe( - g * z )
                      e_p = exp_safe(   g * z )
                      if ( ivac == 1 ) then ! z > 0
@@ -151,8 +154,8 @@ contains
                   z = z + vacuum%delz
                end do 
                ! add external field, if segmented
-               if ( allocated( field%efield%rhoef ) ) then
-                  z = cell%z1 + field%efield%zsigma
+               if ( allocated( field%efield%rhoef ) .and. (.not. l_dfptvgen) ) then
+                  z = cell%z1 + zsigma
                   e_m = exp_safe( - g * z )
                   e_p = exp_safe(   g * z )
                   ! the equation has a minus sign as "rhtxy" contains the electron density

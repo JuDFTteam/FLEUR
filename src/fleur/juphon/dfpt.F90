@@ -307,7 +307,7 @@ CONTAINS
          !IF (iDir==3) sigma_loc  = sigma_ext
          CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, fi%juphon, local_stars, fi_nosym%cell, &
                          & sphhar_nosym, local_atoms, .FALSE., local_imagrhodummy, local_grVext3(iDir), sigma_loc, &
-                         & dfptdenimag=local_imagrhodummy, dfptvCoulimag=local_grvextdummy,dfptden0=local_imagrhodummy,stars2=local_stars,iDtype=0,iDir=iDir)
+                         & dfptdenimag=local_imagrhodummy, dfptvCoulimag=local_grvextdummy,dfptden0=local_imagrhodummy,stars2=local_stars,iDtype=0,iDir=iDir,l_gr=.TRUE.)
          DO iSpin = 1 , fi_nosym%input%jspins
             CALL checkDOPALL(fi_nosym%input, sphhar_nosym, local_stars ,local_atoms, fi_nosym%sym, fi_nosym%vacuum, fi_nosym%cell,local_grVext3(iDir),iSpin,local_grvextdummy)
          END DO 
@@ -382,13 +382,13 @@ CONTAINS
          IF (iDir==3) sigma_loc  = sigma_coul
          CALL dfpt_vgen(hybdat_nosym, fi_nosym%field, fi_nosym%input, xcpot_nosym, fi_nosym%atoms, sphhar_nosym, stars_nosym, fi_nosym%vacuum, fi_nosym%sym, &
                         fi%juphon, fi_nosym%cell, fmpi_nosym, fi_nosym%noco, nococonv_nosym, rho_nosym, vTot_nosym, &
-                        stars_nosym, imagrhodummy, grVtot3(iDir), .TRUE., grvextdummy, grRho3(iDir), 0, iDir, [0,0], sigma_loc)
+                        stars_nosym, imagrhodummy, grVtot3(iDir), .TRUE., grvextdummy, grRho3(iDir), 0, iDir, [0,0], sigma_loc,l_gr=.TRUE.)
          write(oUnit, *) "grVC", iDir
          sigma_loc  = cmplx(0.0,0.0)
          IF (iDir==3) sigma_loc  = sigma_coul
          CALL dfpt_vgen(hybdat_nosym, fi_nosym%field, fi_nosym%input, xcpot_nosym, fi_nosym%atoms, sphhar_nosym, stars_nosym, fi_nosym%vacuum, fi_nosym%sym, &
                         fi%juphon, fi_nosym%cell, fmpi_nosym, fi_nosym%noco, nococonv_nosym, rho_nosym, vTot_nosym, &
-                        stars_nosym, imagrhodummy, grVC3(iDir), .FALSE., grvextdummy, grRho3(iDir), 0, iDir, [0,0], sigma_loc)
+                        stars_nosym, imagrhodummy, grVC3(iDir), .FALSE., grvextdummy, grRho3(iDir), 0, iDir, [0,0], sigma_loc,l_gr=.TRUE.)
       END DO
 
          DO iDir2 = 1, 3

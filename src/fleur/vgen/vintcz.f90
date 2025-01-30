@@ -119,7 +119,7 @@ CONTAINS
          ! a boundary condition for DFPT q=0.
          !IF (l_dfptvgen) vintcz = vintcz - diff_vmz1dh*z/(2*dh) + diff_vmz1dh/2
 
-         IF (field%efield%dirichlet .AND. vslope /= 0.0) THEN
+         IF ( (field%efield%dirichlet .AND. vslope /= 0.0) .AND. (.NOT. l_dfptvgen)) THEN
             vintcz = vintcz + vslope * (dh-z)
          END IF
          !     ---->    (g.ne.0)  coefficients
@@ -142,7 +142,7 @@ CONTAINS
                g = stars%sk2(nrec2)
                g3 = stars%sk3(ig3n)
                vcons1 = fpi_const*psq(ig3n)*c_ph / (g3*g3)
-               IF (field%efield%dirichlet) THEN
+               IF (field%efield%dirichlet .AND. (.NOT. l_dfptvgen)) THEN
                   e_m = 0.0
                   e_p = 0.0
                   vcons1  = vcons1/(g*SINH(g*2*(dh+field%efield%zsigma)))
@@ -180,7 +180,7 @@ CONTAINS
             END IF ! ig3d /= 0
          END DO
          !  ----> v4(z)
-         IF (field%efield%dirichlet) THEN
+         IF (field%efield%dirichlet .AND. (.NOT. l_dfptvgen) ) THEN
             e_m = SINH(g*(field%efield%zsigma+dh - z))
             e_p = SINH(g*(field%efield%zsigma+dh + z))
             test = e_m*alphm(nrec2,2) + e_p*alphm(nrec2,1)

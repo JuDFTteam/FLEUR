@@ -15,7 +15,7 @@ MODULE m_types_field
   PRIVATE
   TYPE:: t_efield
      REAL    :: zsigma  = 10.0  ! Distance to the charged plates
-     REAL    :: sigma   ! charge at the plates
+     REAL    :: sigma = 0.0   ! charge at the plates
      REAL    :: sig_b(2)=  0.0  ! Extra charge for the top/bottom plate
      REAL,    ALLOCATABLE :: sigEF(:,:,:) ! (nx, ny, nvac)
      COMPLEX, ALLOCATABLE :: rhoEF(:,:)   ! (g_||, nvac)

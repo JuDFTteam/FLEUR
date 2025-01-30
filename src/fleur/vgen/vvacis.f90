@@ -24,7 +24,7 @@ contains
       logical,        intent(in)  :: l_dfptvgen, l_corr
 
       complex                     :: arg, c_ph, sumr(2)
-      real                        :: g, qz, signu,  vcons, z, e_m, arg_r, arg_i, e_p
+      real                        :: g, qz, signu,  vcons, z, e_m, arg_r, arg_i, e_p, zsigma
       integer                     :: ig3n, imz, ivac, k1, k2, kz, nrec2, start_star
       complex                     :: newdp, newdm, newdp2, newdm2, test
 
@@ -39,6 +39,8 @@ contains
          if (norm2(stars%center)>1e-8) start_star = 1 
       end if
 
+      zsigma = 0.0 
+      if ((.not. l_dfptvgen)) zsigma=field%efield%zsigma
       vxy(:,start_star:,:) = cmplx( 0., 0. )
 
       do  nrec2 = start_star, stars%ng2
@@ -46,8 +48,8 @@ contains
          k2 = stars%kv2(2,nrec2)
          g = stars%sk2(nrec2)
          if ( field%efield%dirichlet ) then
-            vcons = 2.0 * tpi_const / ( g * sinh( g * 2.0 * ( field%efield%zsigma + cell%z1 ) ) )
-            arg_r = g * ( cell%z1 + field%efield%zsigma + cell%z1 )
+            vcons = 2.0 * tpi_const / ( g * sinh( g * 2.0 * ( zsigma + cell%z1 ) ) )
+            arg_r = g * ( cell%z1 + zsigma + cell%z1 )
          else ! neumann
             vcons = tpi_const / g
             arg_r = exp_safe( - 2 * cell%z1 * g )
@@ -73,15 +75,15 @@ contains
                      arg = exp( - ImagUnit *  qz * cell%z1 ) / ( 2 * ( g ** 2 + qz ** 2 ) ) * psq(ig3n)
                      if ( ivac == 1 ) then
                         sumr(ivac) = sumr(ivac) + c_ph * exp( - arg_r ) * arg * ( &                           ! c_ph not tested in this case
-                            ( - exp( 2 * g * ( field%efield%zsigma + cell%z1 ) ) + exp( 2 * ( ImagUnit  * qz * cell%z1 + arg_r ) ) ) * ( g - ImagUnit *  qz ) &
+                            ( - exp( 2 * g * ( zsigma + cell%z1 ) ) + exp( 2 * ( ImagUnit  * qz * cell%z1 + arg_r ) ) ) * ( g - ImagUnit *  qz ) &
                           + ( - exp( 2 * g * cell%z1 ) + exp( 2 * ImagUnit  * qz * cell%z1 ) )                                       * ( g + ImagUnit *  qz ) )
                      else
                         sumr(ivac) = sumr(ivac) + c_ph * arg * ( &
                              exp(   arg_r ) * ( g + ImagUnit *  qz ) &
                            + exp( - arg_r ) * ( g - ImagUnit *  qz ) &
                        + 2 * exp( 2 * ImagUnit * qz * cell%z1 ) &
-                        * ( - g * cosh( g * ( - field%efield%zsigma ) ) &
-                        + ImagUnit *  qz * sinh( - g * field%efield%zsigma ) ) )
+                        * ( - g * cosh( g * ( - zsigma ) ) &
+                        + ImagUnit *  qz * sinh( - g * zsigma ) ) )
                      end if
                   else
                      arg = g + signu * ImagUnit *  qz
@@ -105,7 +107,7 @@ contains
             z = 0 ! moved cell%z1 into above equations
             do imz = 1, vacuum%nmzxy
                if ( field%efield%dirichlet ) then
-                  e_m = sinh( g * ( field%efield%zsigma - z ) )
+                  e_m = sinh( g * ( zsigma - z ) )
                else ! neumann
                   e_m = exp_safe( - g * z )
                end if

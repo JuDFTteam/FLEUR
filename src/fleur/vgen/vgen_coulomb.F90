@@ -13,7 +13,7 @@ module m_vgen_coulomb
 contains
 
   subroutine vgen_coulomb( ispin, fmpi,    input, field, vacuum, sym, juphon, stars, &
-             cell, sphhar, atoms, dosf, den, vCoul, sigma_disc, results, dfptdenimag, dfptvCoulimag, dfptden0, stars2, iDtype, iDir, iDir2, sigma_disc2 )
+             cell, sphhar, atoms, dosf, den, vCoul, sigma_disc, results, dfptdenimag, dfptvCoulimag, dfptden0, stars2, iDtype, iDir, iDir2, sigma_disc2, l_gr )
     !----------------------------------------------------------------------------
     ! FLAPW potential generator
     !----------------------------------------------------------------------------
@@ -63,19 +63,20 @@ contains
     INTEGER, OPTIONAL, INTENT(IN)                :: iDtype, iDir ! DFPT: Type and direction of displaced atom
     INTEGER, OPTIONAL, INTENT(IN)                :: iDir2 ! DFPT: 2nd direction for 2nd order VC
     COMPLEX, OPTIONAL, INTENT(IN)                :: sigma_disc2(2)
+    LOGICAL, OPTIONAL, INTENT(IN)                :: l_gr
 
     complex                                      :: vintcza, xint, rhobar,vslope
     integer                                      :: i, i3, irec2, irec3, ivac, j, js, k, k3
     integer                                      :: lh, n, nzst1, first_star
     integer                                      :: imz, imzxy, ichsmrg, ivfft
-    integer                                      :: l, nat
-    real                                         :: ani, g3, z
+    integer                                      :: l, nat, ncsh , iDir3
+    real                                         :: ani, g3, z , sigmaa(2)
     complex                                      :: sig1dh, vz1dh, vmz1dh, vmz1dh_is
     complex                                      :: mat2ord(5,3,3), sigma_loc(2), sigma_loc2(2)
     complex, allocatable                         :: alphm(:,:), psq(:)
     real,    allocatable                         :: af1(:), bf1(:)
     LOGICAL :: l_dfptvgen ! If this is true, we handle things differently!
-    LOGICAL :: l_2ndord, l_corr
+    LOGICAL :: l_2ndord, l_corr, do_gr
 
 #ifdef CPP_MPI
     integer:: ierr
@@ -87,7 +88,10 @@ contains
     vmz1dh_is = cmplx(0.0,0.0)
     sigma_loc = sigma_disc
     sigma_loc2 = MERGE(sigma_disc,cmplx(0.0,0.0),PRESENT(sigma_disc2))
-
+    do_gr = .FALSE. 
+    IF(PRESENT(l_gr)) do_gr = l_gr
+    iDir3 = 0 
+    IF (PRESENT(iDir)) iDir3 = iDir 
     vintcza = cmplx(0.0,0.0)
     sig1dh = cmplx(0.0,0.0)
     vz1dh = cmplx(0.0,0.0)
@@ -128,10 +132,10 @@ contains
           ! start at star 1 instead of 2 for this!
           if (.not.l_2ndord) then
             !call vvac( vacuum, stars, cell,  input, field, psq, den%vac(:,1,:,ispin), vCoul%vac(:,1,:,ispin), rhobar, sig1dh, vz1dh,vslope,.FALSE..AND.l_dfptvgen,vmz1dh,sigma_disc )
-            call vvac( vacuum, stars, cell,  input, field, psq, den%vac(:,1,:,ispin), vCoul%vac(:,1,:,ispin), rhobar, sig1dh, vz1dh,vslope,l_corr,vmz1dh,sigma_disc )
+            call vvac( vacuum, stars, cell,  input, field, psq, den%vac(:,1,:,ispin), vCoul%vac(:,1,:,ispin), rhobar, sig1dh, vz1dh,vslope,l_corr,vmz1dh,sigma_disc,l_dfptvgen)
           else
             !call vvac( vacuum, stars, cell,  input, field, psq, den%vac(:,1,:,ispin), vCoul%vac(:,1,:,ispin), rhobar, sig1dh, vz1dh,vslope,.TRUE.,vmz1dh,sigma_disc,sigma_disc2 )
-            call vvac( vacuum, stars, cell,  input, field, psq, den%vac(:,1,:,ispin), vCoul%vac(:,1,:,ispin), rhobar, sig1dh, vz1dh,vslope,l_corr,vmz1dh,sigma_disc,sigma_disc2 )
+            call vvac( vacuum, stars, cell,  input, field, psq, den%vac(:,1,:,ispin), vCoul%vac(:,1,:,ispin), rhobar, sig1dh, vz1dh,vslope,l_corr,vmz1dh,sigma_disc,l_dfptvgen,sigma_disc2 )
           end if
         end if
         call vvacis( stars, vacuum, cell, psq, input, field, vCoul%vac(:vacuum%nmzxyd,:,:,ispin), l_dfptvgen, l_corr )
@@ -243,6 +247,31 @@ contains
     END IF
     call timestop( "MT-spheres" )
 
+    ! if we calculate the Gradient and the Efield is turned on we have to manually add the Efield 
+    IF ( do_gr .and. input%film .and. iDir3 == 3  ) THEN
+      sigmaa(1) = ( field%efield%sigma + field%efield%sig_b(1) ) / cell%area
+      sigmaa(2) = ( field%efield%sigma + field%efield%sig_b(2) ) / cell%area
+      
+      IF ( (sigmaa(1) + sigmaa(2)) .LT.  1E-8 ) THEN
+        write(10,*) "I am correcting"
+        ! Asymmetric setup in which an Efield contribution exists inside the film  
+        vCoul%pw(1,:) = vCoul%pw(1,:) -   fpi_const * sigmaa(1) !/ cell%omtil  
+
+        vCoul%mt(:,0,:,:) =  vCoul%mt(:,0,:,:) -   fpi_const * sigmaa(1) * sfp_const !/cell%omtil 
+      END IF
+      
+      ! vacuum contribution
+      ! obtain mesh point (ncsh) of charge sheet for external electric field
+      ncsh = field%efield%zsigma / vacuum%delz + 1.01
+      DO i = 1 , ncsh 
+        ! vacuum 1 
+        vCoul%vac(i,1,1,:) = vCoul%vac(i,1,1,:) - fpi_const * sigmaa(1)
+
+        ! vacuum 2 
+        vCoul%vac(i,1,2,:) = vCoul%vac(i,1,2,:) + fpi_const * sigmaa(2) 
+      END DO 
+
+    END IF
     if( vCoul%potdenType == POTDEN_TYPE_POTYUK ) return
 
     if ( fmpi%irank == 0 ) then
