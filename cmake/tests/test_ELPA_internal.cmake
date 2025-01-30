@@ -27,11 +27,18 @@ if (FLEUR_COMPILE_SCALAPACK)
     file(APPEND ${conffile} "export SCALAPACK_LDFLAGS=-L${CMAKE_BINARY_DIR}/external/SCALAPACK-git/lib")
 endif()   
 if (FLEUR_USE_GPU)
-    set(elpa_flags "${elpa_flags} --with-nvidia-gpu-support-only")
+    #check the cc string
+     #Check if a CC is given
+    if ("${FLEUR_CC_MODE}" STREQUAL "80")
+    set(elpa_flags "${elpa_flags} --enable-nvidia-gpu --enable-nvidia-sm80-gpu-kernels 
+    --with-NVIDIA-sm_80-support-only --enable-gpu-streams=nvidia --with-NVIDIA-GPU-compute-capability=sm_80")
+    else()
+        set(elpa_flags "${elpa_flags} --enable-nvidia-gpu --enable-gpu-streams=nvidia --with-NVIDIA-GPU-compute-capability=sm_${FLEUR_CC_MODE}")
+    endif()        
 endif()
 file(APPEND ${conffile} "echo 'Building ELPA in: ' $PWD \n")
 
-file(APPEND ${conffile} "./configure ${elpa_flags}")
+file(APPEND ${conffile} "./configure ${elpa_flags} \n")
 
 include(ExternalProject)
 if (FLEUR_COMPILE_SCALAPACK)

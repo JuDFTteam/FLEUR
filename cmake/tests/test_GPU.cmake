@@ -21,6 +21,7 @@ if (CLI_FLEUR_USE_GPU)
    message("CC:${CC_MODE} ${CMAKE_MATCH_1}")
    if (CC_MODE)
        set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -gpu=${CMAKE_MATCH_1}")
+       STRING(REGEX MATCH "cc(..)" FLEUR_CC_MODE "${CC_MODE}")
    endif()
    #Now check for cusolverDN library
    try_compile(FLEUR_USE_CUSOLVER ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_cusolverdn.F90 OUTPUT_VARIABLE compile_output)
