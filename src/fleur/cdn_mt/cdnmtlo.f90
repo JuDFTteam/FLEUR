@@ -30,6 +30,7 @@ CONTAINS
       USE m_types
       USE m_radsra
       USE m_radsrdn
+      USE m_intgr
 
       IMPLICIT NONE
 
@@ -56,10 +57,11 @@ CONTAINS
       INTEGER, PARAMETER :: lcf=3
 
       INTEGER :: j,l,lh,lo,lop,lp,nodedum,llp,iSpin,jsp_start,jsp_end
-      REAL    :: dsdum,usdum,c_1,c_2,dus,ddn,c
+      REAL    :: dsdum,usdum,c_1,c_2,dus,ddn,c, radThomson, tempFactor
       COMPLEX :: ctemp
 
       REAL :: filo(atoms%jmtd,2)
+      REAL :: denThomson(atoms%jmtd,-1:3)
 
       REAL, ALLOCATABLE :: flo(:,:,:,:),glo(:,:)
       REAL, ALLOCATABLE :: fPr(:,:,:),gPr(:,:,:)
@@ -120,6 +122,7 @@ CONTAINS
                IF(atoms%l_dulo(lo,itype)) j = 1
                CALL radsrdn(ello(lo,iSpin),l,vr(:,iSpin),atoms%rmsh(1,itype),atoms%dx(itype), &
                             atoms%jri(itype),c,usdum,dsdum,ddn,nodedum,glo,filo,flo(:,:,lo,iSpin),dus,j)
+
                ! filo is a dummy array
                DO j=1,atoms%jri(itype)
                   flo(j,1,lo,iSpin) = glo(j,1)
@@ -131,6 +134,9 @@ CONTAINS
             END IF
          END DO
       END DO
+
+      radThomson = atoms%zatom(iType) / (c_light(1.0)**2)
+      denThomson = 0.0
 
       ! Add the contribution of LO-LAPW and LO-LO cross-terms to the spherical
       ! charge density inside the Muffin Tins.
@@ -168,6 +174,19 @@ CONTAINS
                   moments%rhoLRes(j,0,llp,itype,4) = moments%rhoLRes(j,0,llp,itype,4) + c_2 * AIMAG(ctemp)
                END IF
             END IF
+
+            IF(PRESENT(moments)) THEN
+               ! This is part of the calculation of the hyperfine field contributions from the valence electrons
+               IF (ilSpinPr==ilSpin) THEN
+                  tempFactor = 0.5*radThomson / (4.0*pi_const*(atoms%rmsh(j,iType)**2.0) * ((atoms%rmsh(j,iType)+0.5*radThomson)**2.0)) !This is a smeared out delta distribution
+                  denThomson(j,-1) = denThomson(j,-1) + c_2 * tempFactor * ((fPr(j,1,l)*flo(j,1,lo,ilSpin)) * REAL(denCoeffs%mt_lou_coeff(lo,itype,0,ilSpinPr,ilSpin)) + &
+                                                                            (gPr(j,1,l)*flo(j,1,lo,ilSpin)) * REAL(denCoeffs%mt_lou_coeff(lo,itype,1,ilSpinPr,ilSpin)))
+                  IF(l.LE.3) THEN
+                     denThomson(j,l) = denThomson(j,l) + c_2 * tempFactor * ((fPr(j,1,l)*flo(j,1,lo,ilSpin)) * REAL(denCoeffs%mt_lou_coeff(lo,itype,0,ilSpinPr,ilSpin)) + &
+                                                                             (gPr(j,1,l)*flo(j,1,lo,ilSpin)) * REAL(denCoeffs%mt_lou_coeff(lo,itype,1,ilSpinPr,ilSpin)))
+                  END IF
+               END IF
+            END IF
          END DO
          DO lop = 1,atoms%nlo(itype)
             IF (atoms%llo(lop,itype)==l) THEN
@@ -184,10 +203,33 @@ CONTAINS
                         moments%rhoLRes(j,0,llp,itype,4) = moments%rhoLRes(j,0,llp,itype,4) + AIMAG(ctemp)
                      END IF
                   END IF
+
+                  IF(PRESENT(moments)) THEN
+                     ! This is part of the calculation of the hyperfine field contributions from the valence electrons
+                     IF (ilSpinPr==ilSpin) THEN
+                        tempFactor = 0.5*radThomson / (4.0*pi_const*(atoms%rmsh(j,iType)**2.0) * ((atoms%rmsh(j,iType)+0.5*radThomson)**2.0)) !This is a smeared out delta distribution
+                        denThomson(j,-1) = denThomson(j,-1) + c_2 * tempFactor * (flo(j,1,lop,ilSpinPr)*flo(j,1,lo,ilSpin)) * REAL(denCoeffs%mt_lolo_coeff(lop,lo,itype,ilSpinPr,ilSpin))
+                        IF(l.LE.3) THEN
+                           denThomson(j,l) = denThomson(j,l) + c_2 * tempFactor * (flo(j,1,lop,ilSpinPr)*flo(j,1,lo,ilSpin)) * REAL(denCoeffs%mt_lolo_coeff(lop,lo,itype,ilSpinPr,ilSpin))
+                        END IF
+                     END IF
+                  END IF
                END DO
             END IF
          END DO
       END DO
+
+      IF(PRESENT(moments)) THEN
+         ! This is part of the calculation of the hyperfine field contributions from the valence electrons
+         IF (ilSpinPr==ilSpin) THEN
+            CALL intgr3(denThomson(:,-1),atoms%rmsh(:,iType),atoms%dx(iType),atoms%jri(iType),tempFactor)
+            moments%hypFineContribs(-1,iType,ilspin,1) = moments%hypFineContribs(-1,iType,ilspin,1) + tempFactor
+            DO l = 0, 3
+               CALL intgr3(denThomson(:,l),atoms%rmsh(:,iType),atoms%dx(iType),atoms%jri(iType),tempFactor)
+               moments%hypFineContribs(l,iType,ilspin,1) = moments%hypFineContribs(l,iType,ilspin,1) + tempFactor
+            END DO
+         END IF
+      END IF
 
       ! Add the contribution of LO-LAPW and LO-LO cross-terms to the non-spherical
       ! charge density inside the Muffin Tins.

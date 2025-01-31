@@ -98,6 +98,7 @@ PRIVATE
       REAL, ALLOCATABLE    :: svdn(:,:)
 
       REAL, ALLOCATABLE    :: rhoLRes(:,:,:,:,:)
+      REAL, ALLOCATABLE    :: hypFineContribs(:,:,:,:)
 
       CONTAINS
          PROCEDURE,PASS :: init => moments_init
@@ -411,6 +412,9 @@ SUBROUTINE moments_init(thisMoments,mpi,input,sphhar,atoms)
       ALLOCATE(thisMoments%rhoLRes(atoms%jmtd,0:sphhar%nlhd,0:(input%lResMax*(input%lResMax+1))/2+input%lResMax,atoms%ntype,4))
       thisMoments%rhoLRes = 0.0
    END IF
+
+   ALLOCATE(thisMoments%hypFineContribs(-1:3,atoms%ntype,input%jspins,1))  ! Contributions to the Hyperfine field. The last index is supposed to be for the term. At the moment only the contact term is implemented.
+   thisMoments%hypFineContribs = 0.0
 
 END SUBROUTINE moments_init
 
