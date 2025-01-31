@@ -35,7 +35,7 @@ contains
       solver%GPU = .false.
    end function
 
-   subroutine lapack_gev(self, hmat, smat, ne, eig, zmat)
+   subroutine lapack_gev(self, hmat, smat, ne, eig, zmat, ikpt)
       !Simple driver to solve Generalized Eigenvalue Problem using LAPACK routine
       implicit none
       class(t_solver_lapack)            :: self
@@ -43,6 +43,7 @@ contains
       integer, intent(INOUT)      :: ne
       class(t_mat), allocatable, intent(OUT)    :: zmat
       real, intent(OUT)           :: eig(:)
+      integer, intent(IN)         :: ikpt
 
       integer            :: lwork, info, m
       integer, allocatable:: ifail(:), iwork(:)
@@ -62,7 +63,10 @@ contains
                      0.0, 0.0, 1, ne, abstol, m, eigTemp, zmat%data_r, size(zmat%data_r, 1), dumrwork, -1, iwork, ifail, info)
          lwork = dumrwork(1)
          allocate (rwork(lwork))
-         if (info .ne. 0) call judft_error("Diagonalization via LAPACK failed (Workspace)", no=info)
+         if (info .ne. 0) THEN
+            WRITE(*,*) 'Error for k-point ', ikpt
+            call judft_error("Diagonalization via LAPACK failed (Workspace)", no=info)
+         END IF
          call dsygvx(1, 'V', 'I', 'U', hmat%matsize1, hmat%data_r, size(hmat%data_r, 1), smat%data_r, size(smat%data_r, 1), &
                      0.0, 0.0, 1, ne, abstol, m, eigTemp, zmat%data_r, size(zmat%data_r, 1), rwork, lwork, iwork, ifail, info)
       else
@@ -72,14 +76,23 @@ contains
                      0.0, 0.0, 1, ne, abstol, m, eigTemp, zmat%data_c, size(zmat%data_c, 1), dumwork, -1, rwork, iwork, ifail, info)
          lwork = dumwork(1)
          allocate (work(lwork))
-         if (info .ne. 0) call judft_error("Diagonalization via LAPACK failed (Workspace)", no=info)
+         if (info .ne. 0) THEN
+            WRITE(*,*) 'Error for k-point ', ikpt
+            call judft_error("Diagonalization via LAPACK failed (Workspace)", no=info)
+         END IF
          !Perform diagonalization
          call zhegvx(1, 'V', 'I', 'U', hmat%matsize1, hmat%data_c, size(hmat%data_c, 1), smat%data_c, size(smat%data_c, 1), &
                      0.0, 0.0, 1, ne, abstol, m, eigTemp, zmat%data_c, size(zmat%data_c, 1), work, lwork, rwork, iwork, ifail, info)
       end if
       eig(:min(size(eig), size(eigTemp))) = eigTemp(:min(size(eig), size(eigTemp)))
-      if (info .ne. 0) call judft_error("Diagonalization via LAPACK failed(zhegvx/dsygvx)", no=info)
-      if (m .ne. ne) call judft_error("Diagonalization via LAPACK failed failed without explicit errorcode.")
+      if (info .ne. 0) THEN
+         WRITE(*,*) 'Error for k-point ', ikpt
+         call judft_error("Diagonalization via LAPACK failed(zhegvx/dsygvx)", no=info)
+      END IF
+      if (m .ne. ne) THEN
+         WRITE(*,*) 'Error for k-point ', ikpt
+         call judft_error("Diagonalization via LAPACK failed failed without explicit errorcode.")
+      END IF
    end subroutine lapack_gev
 
    subroutine lapack_diag(self, hmat, ne, eig, zmat)

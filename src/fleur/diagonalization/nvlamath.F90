@@ -38,7 +38,7 @@ contains
       solver%GPU = .true.
    end function
 
-   subroutine nvlamath_gev(self, hmat, smat, ne, eig, zmat)
+   subroutine nvlamath_gev(self, hmat, smat, ne, eig, zmat, ikpt)
       !Simple driver to solve Generalized Eigenvalue Problem using nvlamath routine
       implicit none
       class(t_solver_nvlamath)            :: self
@@ -46,6 +46,7 @@ contains
       integer, intent(INOUT)      :: ne
       class(t_mat), allocatable, intent(OUT)    :: zmat
       real, intent(OUT)           :: eig(:)
+      integer, intent(IN)         :: ikpt
 
       integer            :: lwork, info, m
       integer, allocatable:: ifail(:), iwork(:)

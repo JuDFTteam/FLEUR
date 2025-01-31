@@ -33,7 +33,7 @@ contains
       solver%GPU = .false.
    end function
 
-   subroutine elsi_gev(self, hmat, smat, ne, eig, zmat)
+   subroutine elsi_gev(self, hmat, smat, ne, eig, zmat, ikpt)
 
       use m_juDFT
       use m_types_mpimat
@@ -48,6 +48,7 @@ contains
       class(t_mat), allocatable, intent(OUT)::zmat
       real, intent(out)              :: eig(:)
       integer, intent(INOUT)         :: ne
+      integer, intent(IN)            :: ikpt
 
       integer, parameter             :: solver = 1 !Use ELPA
 

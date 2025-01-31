@@ -58,7 +58,7 @@ contains
 #endif      
    end subroutine   
 
-   subroutine magma_gev(self, hmat, smat, ne, eig, zmat)
+   subroutine magma_gev(self, hmat, smat, ne, eig, zmat, ikpt)
 
       use m_types_mat
       implicit none
@@ -69,6 +69,7 @@ contains
       integer, intent(INOUT)      :: ne
       class(t_mat), allocatable, intent(OUT)    :: zmat
       real, intent(OUT)           :: eig(:)
+      integer, intent(IN)         :: ikpt
 
 #ifdef CPP_MAGMA
 

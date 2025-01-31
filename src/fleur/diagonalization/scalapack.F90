@@ -45,7 +45,7 @@ contains
       solver%GPU = .false.
    end function
 
-   subroutine scalapack_gev(self, hmat, smat, ne, eig, zmat)
+   subroutine scalapack_gev(self, hmat, smat, ne, eig, zmat, ikpt)
       !
       !----------------------------------------------------
       !- Parallel eigensystem solver - driver routine; gb99
@@ -68,6 +68,7 @@ contains
       class(t_mat), allocatable, intent(OUT)::zmat
       real, intent(out)              :: eig(:)
       integer, intent(INOUT)         :: ne
+      integer, intent(IN)            :: ikpt
 
 #ifdef CPP_SCALAPACK
       !...  Local variables
@@ -134,6 +135,7 @@ contains
                allocate (work2_c(lwork2), stat=err)
             end if
             if (err .ne. 0) then
+               WRITE(*,*) 'Error for k-point ', ikpt
                write (*, *) 'work2  :', err, lwork2
                call juDFT_error('Failed to allocated "work2"', calledby='chani')
             end if
@@ -141,21 +143,25 @@ contains
             liwork = 6*max(max(hmat%global_size1, hmat%blacsdata%nprow*hmat%blacsdata%npcol + 1), 4)
             allocate (iwork(liwork), stat=err)
             if (err .ne. 0) then
+               WRITE(*,*) 'Error for k-point ', ikpt
                write (*, *) 'iwork  :', err, liwork
                call juDFT_error('Failed to allocated "iwork"', calledby='chani')
             end if
             allocate (ifail(hmat%global_size1), stat=err)
             if (err .ne. 0) then
+               WRITE(*,*) 'Error for k-point ', ikpt
                write (*, *) 'ifail  :', err, hmat%global_size1
                call juDFT_error('Failed to allocated "ifail"', calledby='chani')
             end if
             allocate (iclustr(2*hmat%blacsdata%nprow*hmat%blacsdata%npcol), stat=err)
             if (err .ne. 0) then
+               WRITE(*,*) 'Error for k-point ', ikpt
                write (*, *) 'iclustr:', err, 2*hmat%blacsdata%nprow*hmat%blacsdata%npcol
                call juDFT_error('Failed to allocated "iclustr"', calledby='chani')
             end if
             allocate (gap(hmat%blacsdata%nprow*hmat%blacsdata%npcol), stat=err)
             if (err .ne. 0) then
+               WRITE(*,*) 'Error for k-point ', ikpt
                write (*, *) 'gap    :', err, hmat%blacsdata%nprow*hmat%blacsdata%npcol
                call juDFT_error('Failed to allocated "gap"', calledby='chani')
             end if
@@ -173,6 +179,7 @@ contains
                   deallocate (work2_r)
                   allocate (work2_r(lwork2 + 20*hmat%global_size1), stat=err) ! Allocate even more in case of clusters
                   if (err .ne. 0) then
+                     WRITE(*,*) 'Error for k-point ', ikpt
                      write (*, *) 'work2  :', err, lwork2
                      call juDFT_error('Failed to allocated "work2"', calledby='chani')
                   end if
@@ -183,6 +190,7 @@ contains
                ! Allocate more in case of clusters
                allocate (rwork(lrwork + 10*hmat%global_size1), stat=ierr)
                if (err /= 0) then
+                  WRITE(*,*) 'Error for k-point ', ikpt
                   write (*, *) 'ERROR: chani.F: Allocating rwork failed'
                   call juDFT_error('Failed to allocated "rwork"', calledby='chani')
                end if
@@ -197,6 +205,7 @@ contains
                   deallocate (work2_c)
                   allocate (work2_c(lwork2), stat=err)
                   if (err /= 0) then
+                     WRITE(*,*) 'Error for k-point ', ikpt
                      write (*, *) 'ERROR: chani.F: Allocating rwork failed:', lwork2
                      call juDFT_error('Failed to allocated "work2"', calledby='chani')
                   end if
@@ -207,6 +216,7 @@ contains
                   ! Allocate even more in case of clusters
                   allocate (rwork(lrwork + 20*hmat%global_size1), stat=err)
                   if (err /= 0) then
+                     WRITE(*,*) 'Error for k-point ', ikpt
                      write (*, *) 'ERROR: chani.F: Allocating rwork failed: ', lrwork + 20*hmat%global_size1
                      call juDFT_error('Failed to allocated "rwork"', calledby='chani')
                   end if
@@ -217,6 +227,7 @@ contains
                deallocate (iwork)
                allocate (iwork(liwork), stat=err)
                if (err /= 0) then
+                  WRITE(*,*) 'Error for k-point ', ikpt
                   write (*, *) 'ERROR: chani.F: Allocating iwork failed: ', liwork
                   call juDFT_error('Failed to allocated "iwork"', calledby='chani')
                end if
@@ -260,9 +271,11 @@ contains
                end if
                if (mod(ierr/8, 2) .ne. 0) then
                   !WRITE(oUnit,*) myid,' PDSTEBZ failed to compute eigenvalues'
+                  WRITE(*,*) 'Warning for k-point ', ikpt
                   call judft_warn("SCALAPACK failed to solve eigenvalue problem", calledby="scalapack.f90")
                end if
                if (mod(ierr/16, 2) .ne. 0) then
+                  WRITE(*,*) 'Warning for k-point ', ikpt
                   !WRITE(oUnit,*) myid,' B was not positive definite, Cholesky failed at',ifail(1)
                   call judft_warn("SCALAPACK failed: B was not positive definite. "//new_line("a")// &
                                   "Order of the smallest minor which is not positive definite:"//int2str(ifail(1)) &
@@ -299,9 +312,11 @@ contains
                            ev_dist%blacsdata%mpi_com, MPIMAT_ROWCYCLIC)
             call zmat%copy(ev_dist, 1, 1)
          class DEFAULT
+            WRITE(*,*) 'Error for k-point ', ikpt
             call judft_error("Wrong type (1) in scalapack")
          end select
       class DEFAULT
+         WRITE(*,*) 'Error for k-point ', ikpt
          call judft_error("Wrong type (2) in scalapack")
       end select
       call ev_dist%free()

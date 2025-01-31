@@ -19,7 +19,7 @@ module m_eigen_diag
 
 contains
 
-   subroutine eigen_diag(hmat, smat, ne, eig, ev)
+   subroutine eigen_diag(hmat, smat, ne, eig, ev, ikpt)
       !! Solve generalized eigenvalue problem
 #ifdef CPP_MPI
       use mpi
@@ -31,6 +31,7 @@ contains
       !!   on input, overall number of eigenpairs searched,
       !!   on output, local number of eigenpairs found
       real, intent(OUT)   :: eig(:)     !! eigenvalues (must be allocated to size ne before)
+      integer, intent(IN) :: ikpt     !! The index of the k-point, just to have more information for debugging
 
       !Locals
       logical                       :: parallel
@@ -51,7 +52,7 @@ contains
          ! We solve directly the generalized eigenvalue problem
          if (solver%generalized) then
             call timestart("Diagonalization")
-            call solver%solve_gev(hmat, smat, ne, eig, ev)
+            call solver%solve_gev(hmat, smat, ne, eig, ev, ikpt)
             call timestop("Diagonalization")
          else
             call judft_bug("Generalized solver not available?")

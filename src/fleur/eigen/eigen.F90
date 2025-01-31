@@ -241,7 +241,7 @@ CONTAINS
             !     eig ...... all eigenvalues, output
             !     zMat ..... local eigenvectors, output
             if (fmpi%pe_diag) THEN
-              CALL eigen_diag(hmat,smat,ne_all,eig,zMat)
+              CALL eigen_diag(hmat,smat,ne_all,eig,zMat,nk)
             ELSE
               ne_all=0
             endif

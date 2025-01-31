@@ -55,13 +55,14 @@ contains
 
    end function
 
-   subroutine solve_stop(self, hmat, smat, ne, eig, zmat)
+   subroutine solve_stop(self, hmat, smat, ne, eig, zmat, ikpt)
       implicit none
       class(t_solver_stop)       :: self
       class(t_mat), intent(INOUT)  :: hmat, smat
       integer, intent(INOUT)       :: ne
       class(t_mat), allocatable, intent(OUT)    :: zmat
       real, intent(OUT)           :: eig(:)
+      integer, intent(IN)         :: ikpt
 
       call judft_error("FLEUR stopped as -diag stop was choosen")
    end subroutine
@@ -81,13 +82,14 @@ contains
       end if
    end subroutine
 
-   subroutine solve_gev(self, hmat, smat, ne, eig, zmat)
+   subroutine solve_gev(self, hmat, smat, ne, eig, zmat, ikpt)
       implicit none
       class(t_solver)                    :: self
       class(t_mat), intent(INOUT)          :: hmat, smat
       integer, intent(INOUT)               :: ne
       class(t_mat), allocatable, intent(OUT):: zmat
       real, intent(OUT)                    :: eig(:)
+      integer, intent(IN)                  :: ikpt
 
       call judft_bug("Not implemented", calledby="solve_std")
    end subroutine

@@ -21,7 +21,7 @@ contains
       solver%GPU = .false.
    end function
 
-   subroutine diag_writeout(self, hmat, smat, ne, eig, zmat)
+   subroutine diag_writeout(self, hmat, smat, ne, eig, zmat, ikpt)
       !Dummy diver: does not solve actual eigenvalue problem but simply returns a set of orthogonal vectors.
       !Could be useful for performance testing workloads in which we do not want to look at the diagonalization.
       ! A Cholesky decomp is still done to be able to do a back transform so that the resulting vector are orthonormal
@@ -41,6 +41,7 @@ contains
       integer, intent(INOUT) :: ne
       class(t_mat), allocatable, intent(OUT)   :: zmat
       real, intent(OUT)   :: eig(:)
+      integer, intent(IN) :: ikpt
 
       !small subroutine that does only wite the matrix to a file
       integer:: i, ii, irank, ierr, matsize

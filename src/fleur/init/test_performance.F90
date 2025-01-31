@@ -108,7 +108,7 @@ contains
             s%data_r=smat%data_r
             call omp_set_num_threads(n_threads)
             time(n_threads)=omp_get_wtime()
-            call eigen_diag(h,s,ne,eig,ev)
+            call eigen_diag(h,s,ne,eig,ev,1)
             time(n_threads)=omp_get_wtime()-time(n_threads)
         ENDDO    
         

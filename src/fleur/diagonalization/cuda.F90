@@ -46,7 +46,7 @@ contains
       solver%GPU = .true.
    end function
 
-   subroutine cuda_gev(self, hmat, smat, ne, eig, zmat)
+   subroutine cuda_gev(self, hmat, smat, ne, eig, zmat, ikpt)
     !!Simple driver to solve Generalized Eigenvalue Problem using CuSolverDN
       implicit none
       class(t_solver_cuda) ::self
@@ -54,6 +54,7 @@ contains
       integer, intent(INOUT)      :: ne
       class(t_mat), allocatable, intent(OUT)    :: zmat
       real, intent(OUT)           :: eig(:)
+      integer, intent(IN)         :: ikpt
 
 #ifdef CPP_CUSOLVER
       integer                 :: istat, ne_found, lwork_d, devinfo(1)

@@ -124,7 +124,7 @@ solver%single_precision = .true.
 #endif
    end subroutine
 
-   subroutine elpa_gev(self, hmat, smat, ne, eig, zmat)
+   subroutine elpa_gev(self, hmat, smat, ne, eig, zmat, ikpt)
       use m_types_mat
       use m_judft
 
@@ -134,6 +134,7 @@ solver%single_precision = .true.
       integer, intent(INOUT) :: ne
       class(t_mat), allocatable, intent(OUT)   :: zmat
       real, intent(OUT)   :: eig(:)
+      integer, intent(IN) :: ikpt
 #ifdef CPP_ELPA
       integer           :: num, np, myid,kernel
       integer           :: err
