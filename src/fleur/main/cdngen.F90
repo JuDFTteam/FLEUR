@@ -103,8 +103,9 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
 
 
    !Local Scalars
-   REAL                  :: fix, qtot, dummy,eFermiPrev
-   INTEGER               :: jspin, ierr
+   REAL                  :: fix, qtot, dummy, eFermiPrev
+   REAL                  :: e0, a0, cautog, bohrMagInCGS
+   INTEGER               :: jspin, ierr, iType
    INTEGER               :: dim_idx
    INTEGER               :: i_gf,iContour,n
 
@@ -191,6 +192,25 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
                   hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,jDOS,greensfImagPart)
    END DO
    CALL timestop("cdngen: cdnval")
+
+   IF ((fmpi%irank.EQ.0).AND.(input%kcrel.EQ.1).AND.(input%jspins.EQ.2)) THEN
+      ! Print out valence contributions to the hyperfine field
+      a0 = bohr_to_angstrom_const * 1.0e-8
+      e0 = 1.6021892e-19 * 2.997930e+09
+      cautog = e0 / (a0*a0)
+      bohrMagInCGS = 1.0/(2.0*c_light(1.0))
+      WRITE(oUnit,*) ''
+      WRITE(ounit,*) ' Hyperfine field valence contributions (contact term) in kG '
+      WRITE(ounit,*) ' ========================================================== '
+      WRITE(ounit,*) ' atom type                          contribution'
+      WRITE(ounit,*) '                total         s           p           d           f'
+      DO iType = 1, atoms%ntype
+         moments%hypFineContribs(:,iType,1,1) = moments%hypFineContribs(:,iType,1,1) - moments%hypFineContribs(:,iType,2,1)
+         moments%hypFineContribs(:,iType,1,1) = moments%hypFineContribs(:,iType,1,1) * cautog * 0.001 * sfp_const * bohrMagInCGS * 8.0 * pi_const / 3.0
+         WRITE(oUnit,'(i7,5x,5f12.5)') iType, moments%hypFineContribs(-1:3,iType,1,1)
+      END DO
+      WRITE(ounit,*) ' ========================================================== '
+   END IF
 
    call val_den%copyPotDen(outDen)
    ! calculate kinetic energy density for MetaGGAs
