@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <fleurOutput fleurOutputVersion="0.37">
-   <programVersion version="fleur 39">
-      <compilationInfo date="2024-08-22T16:56:03" user="micha" host="iff1745" flag="MAKE_Fortran_FLAGS" link="LEUR_LIBRARIES"/>
-      <gitInfo version="MaX-R7.1-187-g7dadf0d7f-dirty" branch="develop" lastCommitHash="7dadf0d7fdc2c925a1e145fa5f9c7f39184b55d5"/>
+   <programVersion version="fleur 40">
+      <compilationInfo date="2025-01-31T13:32:23" user="micha" host="iff1745" flag="I/Users/micha/hdf5/current/hdf5/include -fiopenmp -qmkl  -assume byterecl -no-wrap-margin -I/Users/micha/FLEUR" link="lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64;-lwannier;-L/Users/micha/Wannier90/wannier90-2.1.0/;-L/Users/mic"/>
+      <gitInfo version="MaX-R7.2-117-g5fc8dfcc1-dirty" branch="develop" lastCommitHash="5fc8dfcc187f2eb7f41bda65df6f26813d2624a6"/>
       <targetComputerArchitectures>GEN</targetComputerArchitectures>
       <precision type="DOUBLE"/>
       <targetStructureClass> </targetStructureClass>
       <additionalCompilerFlags>CPP_MPI             CPP_HDF            CPP_WANN</additionalCompilerFlags>
    </programVersion>
    <parallelSetup>
-      <openMP ompThreads="1"/>
+      <openMP ompThreads="3"/>
       <mpi mpiProcesses="2"/>
-      <mem memoryPerNode="32637976 kB"/>
+      <mem memoryPerNode="32570148 kB"/>
    </parallelSetup>
-   <startDateAndTime date="2024/08/22" time="17:02:43" zone="+0200"/>
+   <startDateAndTime date="2025/01/31" time="13:37:03" zone="+0100"/>
    <!-- Now follows a dump of the inp.xml file after evaluating the Schema -->
   <fleurInput fleurInputVersion="0.38">
      <comment>
@@ -31,7 +31,7 @@
         <ldaU l_linMix="F" mixParam=".050000" spinf="1.000000" l_adjEnpara="F" l_spinoffd="F" l_nonsphDC="F" l_initialGuess="F"/>
      </calculationSetup>
      <cell>
-        <bzIntegration valenceElectrons="48.00000000" mode="hist" fermiSmearingEnergy=".00100000" l_bloechl="F">
+        <bzIntegration valenceElectrons="48.00000000" mode="hist" fermiSmearingEnergy=".00100000" l_bloechl="F" charge_excited="0.0" charge_shift="0.0">
            <kPointListSelection listName="default"/>
            <kPointLists>
               <kPointList name="default" count="1" nx="2" ny="2" nz="1" type="mesh">
@@ -176,52 +176,52 @@
             <atomicEP atomType="2" spin="1" branch="5d" branchLowest="-11.29" branchHighest="-0.05" value="-0.2902628390"/>
             <atomicEP atomType="2" spin="1" branch="5f" branchLowest="-2.61" branchHighest="1.94" value="0.0977857208"/>
             <loAtomicEP atomType="2" spin="1" branch="5p" branchLowest="-19.09" branchHighest="-2.08" value="-2.1429888289"/>
-            <vacuumEP vacuum="1" spin="1" vzIR="-0.2745822637" vzInf="0.0000000000" value="-0.2500000000"/>
+            <vacuumEP vacuum="1" spin="1" vzIR="-0.2643397926" vzInf="0.0000000000" value="-0.2500000000"/>
          </energyParameters>
          <eigenvalues>
             <eigenvaluesAt spin="1" ikpt="1" k_x="0.25000000" k_y="0.25000000" k_z="0.00000000">
-                      -2.4652866463       -2.4652866463       -2.4203471911       -2.4203471911       -2.4200110225
-                      -2.4200110225       -1.9966033852       -1.9966033852       -1.9957070901       -1.9957070901
-                      -1.9515990797       -1.9515990797       -1.9514145450       -1.9514145450       -1.9491476849
-                      -1.9491476849       -1.9487766276       -1.9487766276       -0.4882847072       -0.4882847072
-                      -0.4269515174       -0.4269515174       -0.4150511833       -0.4150511833       -0.4043169936
-                      -0.4043169936       -0.3949290445       -0.3949290445       -0.3628518111       -0.3628518111
-                      -0.3484533654       -0.3484533654       -0.3136719721       -0.3136719721       -0.3050195554
-                      -0.3050195554       -0.2907621929       -0.2907621929       -0.2813240762       -0.2813240762
-                      -0.2708512183       -0.2708512183       -0.2637576458       -0.2637576458       -0.2624295138
-                      -0.2624295138       -0.2330465413       -0.2330465413       -0.2099703074       -0.2099703074
-                      -0.1851251326       -0.1851251326       -0.0892070222       -0.0892070222        0.0256776811
-                       0.0256776811        0.0818782457        0.0818782457        0.1159262840        0.1159262840
-                       0.1826778640        0.1826778640        0.1958495034        0.1958495034        0.2302607380
-                       0.2302607380        0.2748724763        0.2748724763        0.2795243561        0.2795243561
-                       0.3210383437        0.3210383437        0.3722233967        0.3722233967        0.4024286213
-                       0.4024286213        0.4506230494        0.4506230494        0.4648758899        0.4648758899
-                       0.4755880353        0.4755880353        0.4805993917        0.4805993917        0.5563107191
-                       0.5563107191        0.5745899482        0.5745899482        0.6057875404        0.6057875404
-                       0.6438509335        0.6438509335        0.6544999760        0.6544999760        0.6882151455
-                       0.6882151455        0.7500009749        0.7500009749        0.7543292659        0.7543292659
-                       0.7910237497        0.7910237497        0.8369061174        0.8369061174        0.8566794071
-                       0.8566794071        0.8922880557        0.8922880557        0.9219189659        0.9219189659
-                       0.9483697619        0.9483697619        0.9670143933        0.9670143933        0.9761701218
-                       0.9761701218        0.9795550199        0.9795550199        0.9966301255        0.9966301255
-                       1.0601494949        1.0601494949        1.0684706469        1.0684706469        1.0860753051
-                       1.0860753051        1.0973138801        1.0973138801        1.1242736259        1.1242736259
-                       1.1493301564        1.1493301564        1.1757370482        1.1757370482        1.2333617497
-                       1.2333617497        1.2806175618        1.2806175618        1.3082282845        1.3082282845
-                       1.3235600031        1.3235600031        1.3660055567        1.3660055567        1.3866278385
-                       1.3866278385        1.3870857843        1.3870857843
+                      -2.4652845482       -2.4652845482       -2.4203478316       -2.4203478316       -2.4200201478
+                      -2.4200201478       -1.9966025141       -1.9966025141       -1.9957068645       -1.9957068645
+                      -1.9515998661       -1.9515998661       -1.9514148148       -1.9514148148       -1.9491516454
+                      -1.9491516454       -1.9487834123       -1.9487834123       -0.4882917196       -0.4882917196
+                      -0.4269554638       -0.4269554638       -0.4150567907       -0.4150567907       -0.4043218573
+                      -0.4043218573       -0.3949300867       -0.3949300867       -0.3628235528       -0.3628235528
+                      -0.3484085978       -0.3484085978       -0.3136088972       -0.3136088972       -0.3049948767
+                      -0.3049948767       -0.2907504486       -0.2907504486       -0.2812997314       -0.2812997314
+                      -0.2707653882       -0.2707653882       -0.2637417884       -0.2637417884       -0.2624503338
+                      -0.2624503338       -0.2331643642       -0.2331643642       -0.2099627498       -0.2099627498
+                      -0.1852704543       -0.1852704543       -0.0894892133       -0.0894892133        0.0253831848
+                       0.0253831848        0.0817953191        0.0817953191        0.1160179545        0.1160179545
+                       0.1830453130        0.1830453130        0.1946268736        0.1946268736        0.2306578914
+                       0.2306578914        0.2752560148        0.2752560148        0.2773639152        0.2773639152
+                       0.3216744008        0.3216744008        0.3729471366        0.3729471366        0.4022151097
+                       0.4022151097        0.4515032076        0.4515032076        0.4641642010        0.4641642010
+                       0.4754528834        0.4754528834        0.4799639829        0.4799639829        0.5554444557
+                       0.5554444557        0.5749148556        0.5749148556        0.6068331877        0.6068331877
+                       0.6439259281        0.6439259281        0.6533286550        0.6533286550        0.6876786968
+                       0.6876786968        0.7505829141        0.7505829141        0.7545474475        0.7545474475
+                       0.7910859092        0.7910859092        0.8366276880        0.8366276880        0.8557970497
+                       0.8557970497        0.8935183907        0.8935183907        0.9219473548        0.9219473548
+                       0.9480855267        0.9480855267        0.9676521600        0.9676521600        0.9766783883
+                       0.9766783883        0.9796225482        0.9796225482        0.9957887076        0.9957887076
+                       1.0605134789        1.0605134789        1.0684105780        1.0684105780        1.0852769542
+                       1.0852769542        1.0970688360        1.0970688360        1.1243771800        1.1243771800
+                       1.1509554429        1.1509554429        1.1773387839        1.1773387839        1.2326535975
+                       1.2326535975        1.2798444016        1.2798444016        1.3078118372        1.3078118372
+                       1.3235171015        1.3235171015        1.3656191321        1.3656191321        1.3863856815
+                       1.3863856815        1.3871497512        1.3871497512
             </eigenvaluesAt>
          </eigenvalues>
-         <bandgap value="0.6279363138" units="eV"/>
-         <sumValenceSingleParticleEnergies value="-48.3211892209" units="Htr"/>
-         <FermiEnergy value="-0.2330465413" units="Htr"/>
+         <bandgap value="0.6313480913" units="eV"/>
+         <sumValenceSingleParticleEnergies value="-48.3209510842" units="Htr"/>
+         <FermiEnergy value="-0.2331643642" units="Htr"/>
          <valenceDensity>
             <mtCharges spin="1">
-               <mtCharge atomType="1" total="14.3385928" s="0.5544807" p="6.4373724" d="7.2316396" f="0.0982363"/>
-               <mtCharge atomType="2" total="14.2011897" s="0.5322724" p="6.3110594" d="7.2854671" f="0.0636660"/>
+               <mtCharge atomType="1" total="14.3374882" s="0.5544279" p="6.4373738" d="7.2305790" f="0.0982439"/>
+               <mtCharge atomType="2" total="14.2030438" s="0.5326387" p="6.3109198" d="7.2871290" f="0.0636322"/>
             </mtCharges>
-            <spinDependentCharge spin="1" total="48.0000007" interstitial="4.9853244" mtSpheres="42.7409722" vacuum1="0.1368521"/>
-            <totalCharge value="48.0000007379"/>
+            <spinDependentCharge spin="1" total="48.0000007" interstitial="4.9829006" mtSpheres="42.7435759" vacuum1="0.1367621"/>
+            <totalCharge value="48.0000007452"/>
          </valenceDensity>
          <coreStates atomType="     1" atomicNumber=" 78" spin="1" kinEnergy="  20946.3747326590" eigValSum=" -11358.8985887478" lostElectrons=" 0.001073">
             <state n="1" l="0" j="0.5" energy="-2878.0795032694" weight="1.0000000000"/>
@@ -262,17 +262,17 @@
             <state n="4" l="3" j="3.5" energy="-2.5595897564" weight="4.0000000000"/>
          </coreStates>
          <allElectronCharges>
-            <spinDependentCharge spin="1" total="234.0000028" interstitial="4.9883223" mtSpheres="228.7379355" vacuum1="0.1368725"/>
-            <totalCharge value="234.0000027849"/>
+            <spinDependentCharge spin="1" total="234.0000028" interstitial="4.9858985" mtSpheres="228.7405391" vacuum1="0.1367826"/>
+            <totalCharge value="234.0000027921"/>
          </allElectronCharges>
-         <totalEnergy                                    value="   -55340.3363791159" units="Htr">
-            <sumOfEigenvalues                            value="   -34119.7375059855">
+         <totalEnergy                                    value="   -55340.3366424693" units="Htr">
+            <sumOfEigenvalues                            value="   -34119.7372678489">
                <coreElectrons value="-34071.4163167646"/>
-               <valenceElectrons value="-48.3211892209"/>
+               <valenceElectrons value="-48.3209510842"/>
             </sumOfEigenvalues>
             <densityCoulombPotentialIntegral value="-96064.8127121142"/>
-            <densityEffectivePotentialIntegral value="-97468.1165385022"/>
-            <chargeDenXCDenIntegral value="-1072.3022203433"/>
+            <densityEffectivePotentialIntegral value="-97468.1165510071"/>
+            <chargeDenXCDenIntegral value="-1072.3027343382"/>
             <FockExchangeEnergyValence value="0.0000000000"/>
             <FockExchangeEnergyCore value="0.0000000000"/>
             <atomTypeDependentContributions atomType="1">
@@ -284,13 +284,13 @@
                <MadelungTerm value="-25.8447770096"/>
             </atomTypeDependentContributions>
             <tkbTimesEntropy value="0.0000000000"/>
-            <freeEnergy value="-55340.3363791159"/>
-            <extrapolationTo0K value="-55340.3363791159"/>
+            <freeEnergy value="-55340.3366424693"/>
+            <extrapolationTo0K value="-55340.3366424693"/>
          </totalEnergy>
          <densityConvergence units="me/bohr^3">
-            <chargeDensity spin="1" distance="23.6306050078"/>
+            <chargeDensity spin="1" distance="23.6192115442"/>
          </densityConvergence>
       </iteration>
    </scfLoop>
-   <endDateAndTime date="2024/08/22" time="17:02:44" zone="+0200"/>
+   <endDateAndTime date="2025/01/31" time="13:37:03" zone="+0100"/>
 </fleurOutput>
