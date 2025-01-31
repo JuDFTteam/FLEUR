@@ -80,14 +80,7 @@ solver%single_precision = .true.
       !Some settings are set for all matrices
       call elpa_obj%set("local_nrows", hmat%matsize1, err)
       call elpa_obj%set("local_ncols", hmat%matsize2, err)
-#if defined(CPP_GPU)||defined(_OPENACC)
-      call elpa_obj%set("gpu_hermitian_multiply", 1, err)
-      !call elpa_obj%set("cannon_for_generalized",0,err)
-      call elpa_obj%set("nvidia-gpu", 1, err)
-      call elpa_obj%setup_gpu()
-#else
-      call elpa_obj%set("solver", ELPA_SOLVER_2STAGE)
-#endif
+
       !$ call elpa_obj%set("omp_threads", omp_get_num_threads(),err)
       call elpa_obj%set("timings", 1, err)
       !Some other settings depend on matrix type
@@ -117,6 +110,17 @@ solver%single_precision = .true.
          call elpa_obj%set("blacs_context", tmp%blacsdata%blacs_desc(2), err)
       end select
       err = elpa_obj%setup()
+
+#if defined(CPP_GPU)||defined(_OPENACC)
+      call elpa_obj%set("gpu_hermitian_multiply", 1, err)
+      !call elpa_obj%set("cannon_for_generalized",0,err)
+      call elpa_obj%set("nvidia-gpu", 1, err)
+      !call elpa_obj%set("verbose",1,err)
+      err=elpa_obj%setup_gpu()
+      !print *,"ELPA-GPU-err:",err
+#else
+      call elpa_obj%set("solver", ELPA_SOLVER_2STAGE)
+#endif
 #endif
    end subroutine
 
@@ -131,7 +135,7 @@ solver%single_precision = .true.
       class(t_mat), allocatable, intent(OUT)   :: zmat
       real, intent(OUT)   :: eig(:)
 #ifdef CPP_ELPA
-      integer           :: num, np, myid
+      integer           :: num, np, myid,kernel
       integer           :: err
       integer           :: i
       real, allocatable      :: eig2(:)
@@ -162,6 +166,15 @@ solver%single_precision = .true.
          call elpa_obj%generalized_eigenvectors(hmat%data_c, smat%data_c, eig2, ev_dist%data_c, .false., err)
       end if
       call elpa_obj%timer_stop("ELPA")
+      !Useful for debugging
+      !call mpi_comm_rank(MPI_COMM_WORLD,myid,err)
+      !if (myid == 0) then
+      !   call elpa_obj%get("complex_kernel", kernel)
+      !   print *, "elpa uses "//elpa_int_value_to_string("complex_kernel", kernel)//" kernel"
+      !   call elpa_obj%print_times("ELPA")
+      !endif
+
+      
       eig(:ne) = eig2(:ne)
       deallocate (eig2)
       
