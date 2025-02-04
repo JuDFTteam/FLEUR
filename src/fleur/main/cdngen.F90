@@ -195,31 +195,6 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    END DO
    CALL timestop("cdngen: cdnval")
 
-   IF ((fmpi%irank.EQ.0).AND.(input%kcrel.EQ.1).AND.(input%jspins.EQ.2)) THEN
-      ! Print out valence contributions to the hyperfine field
-      a0 = bohr_to_angstrom_const * 1.0e-8
-      e0 = 1.6021892e-19 * 2.997930e+09
-      cautog = e0 / (a0*a0)
-      bohrMagInCGS = 1.0/(2.0*c_light(1.0))
-      WRITE(oUnit,*) ''
-      WRITE(ounit,*) ' Hyperfine field valence contributions in kG '
-      WRITE(ounit,*) ' ========================================================== '
-      WRITE(ounit,*) ' atom type                          contribution'
-      WRITE(ounit,*) '                total         s           p           d           f'
-      DO iType = 1, atoms%ntype
-         moments%hypFineContribs(:,iType,1,1) = moments%hypFineContribs(:,iType,1,1) - moments%hypFineContribs(:,iType,2,1)
-         hyperfineResults(:) = moments%hypFineContribs(:,iType,1,1) * cautog * 0.001 * sfp_const * bohrMagInCGS * 8.0 * pi_const / 3.0
-         WRITE(oUnit,'(i7,5x,5f12.5,5x,a)') iType, hyperfineResults(-1:3), 'contact term'
-         hyperfineResultsTotal(:) = hyperfineResults(:)
-         moments%hypFineContribs(:,iType,1,3) = moments%hypFineContribs(:,iType,1,3) + moments%hypFineContribs(:,iType,2,3)
-         hyperfineResults(:) = moments%hypFineContribs(:,iType,1,3) * cautog * 0.001 / c_light(1.0)
-         WRITE(oUnit,'(i7,5x,5f12.5,5x,a)') iType, hyperfineResults(-1:3), 'orbital term'
-         hyperfineResultsTotal(:) = hyperfineResultsTotal(:) + hyperfineResults(:)
-         WRITE(oUnit,'(i7,5x,5f12.5,5x,a)') iType, hyperfineResultsTotal(-1:3), 'all terms'
-      END DO
-      WRITE(ounit,*) ' ========================================================== '
-   END IF
-
    call val_den%copyPotDen(outDen)
    ! calculate kinetic energy density for MetaGGAs
    if(xcpot%exc_is_metagga()) then
@@ -271,6 +246,31 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    !IF (sliceplot%iplot.NE.0) THEN
    !   CALL makeplots(stars, atoms, sphhar, vacuum, input, fmpi , sym, cell, noco,nococonv, outDen, PLOT_OUTDEN_Y_CORE, sliceplot)
    !END IF
+
+   IF ((fmpi%irank.EQ.0).AND.(input%kcrel.EQ.1).AND.(input%jspins.EQ.2)) THEN
+      ! Print out valence contributions to the hyperfine field
+      a0 = bohr_to_angstrom_const * 1.0e-8
+      e0 = 1.6021892e-19 * 2.997930e+09
+      cautog = e0 / (a0*a0)
+      bohrMagInCGS = 1.0/(2.0*c_light(1.0))
+      WRITE(oUnit,*) ''
+      WRITE(ounit,*) ' Hyperfine field valence contributions in kG '
+      WRITE(ounit,*) ' ========================================================== '
+      WRITE(ounit,*) ' atom type                          contribution'
+      WRITE(ounit,*) '                total         s           p           d           f'
+      DO iType = 1, atoms%ntype
+         moments%hypFineContribs(:,iType,1,1) = moments%hypFineContribs(:,iType,1,1) - moments%hypFineContribs(:,iType,2,1)
+         hyperfineResults(:) = moments%hypFineContribs(:,iType,1,1) * cautog * 0.001 * sfp_const * bohrMagInCGS * 8.0 * pi_const / 3.0
+         WRITE(oUnit,'(i7,5x,5f12.5,5x,a)') iType, hyperfineResults(-1:3), 'contact term'
+         hyperfineResultsTotal(:) = hyperfineResults(:)
+         moments%hypFineContribs(:,iType,1,3) = moments%hypFineContribs(:,iType,1,3) + moments%hypFineContribs(:,iType,2,3)
+         hyperfineResults(:) = moments%hypFineContribs(:,iType,1,3) * cautog * 0.001 / c_light(1.0)
+         WRITE(oUnit,'(i7,5x,5f12.5,5x,a)') iType, hyperfineResults(-1:3), 'orbital term'
+         hyperfineResultsTotal(:) = hyperfineResultsTotal(:) + hyperfineResults(:)
+         WRITE(oUnit,'(i7,5x,5f12.5,5x,a)') iType, hyperfineResultsTotal(-1:3), 'all terms'
+      END DO
+      WRITE(ounit,*) ' ========================================================== '
+   END IF
 
    CALL timestart("cdngen: cdncore")
    if(xcpot%exc_is_MetaGGA()) then
