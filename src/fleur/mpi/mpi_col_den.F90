@@ -344,6 +344,10 @@ CONTAINS
        CALL dcopy(n, r_b, 1, orb%uu(:,:,:,jspin), 1)
        CALL MPI_ALLREDUCE(orb%dd(:,:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION, MPI_SUM,MPI_COMM_WORLD,ierr)
        CALL dcopy(n, r_b, 1, orb%dd(:,:,:,jspin), 1)
+       CALL MPI_ALLREDUCE(orb%ud(:,:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION, MPI_SUM,MPI_COMM_WORLD,ierr)
+       CALL dcopy(n, r_b, 1, orb%ud(:,:,:,jspin), 1)
+       CALL MPI_ALLREDUCE(orb%du(:,:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION, MPI_SUM,MPI_COMM_WORLD,ierr)
+       CALL dcopy(n, r_b, 1, orb%du(:,:,:,jspin), 1)
        DEALLOCATE (r_b)
 
        ALLOCATE (c_b(n))

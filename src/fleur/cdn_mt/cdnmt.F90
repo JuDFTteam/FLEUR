@@ -61,9 +61,9 @@ CONTAINS
 
       INTEGER, PARAMETER :: lcf=3
 
-      INTEGER :: itype,na,nd,l,lp,llp ,lh,j,ispin,noded,nodeu,llpb,natom,jj,n_dos
+      INTEGER :: itype,na,nd,l,m,lp,llp ,lh,j,ispin,noded,nodeu,llpb,natom,jj,n_dos
       INTEGER :: ilo,ilop,i,i_hia,i_exc
-      REAL    :: wronk,qmtt, radThomson, tempFactor
+      REAL    :: wronk,qmtt, radThomson, tempFactor, sumlm
       COMPLEX :: cs, rho21
       LOGICAL :: l_hia,l_performSpinavg
 
@@ -71,6 +71,8 @@ CONTAINS
       REAL,ALLOCATABLE  :: vr0(:,:)
       CHARACTER(LEN=20) :: attributes(6)
       REAL              :: denThomson(atoms%jmtd,-1:3)
+      REAL              :: overlapR3(atoms%jmtd,2,2)
+      REAL              :: ovlpInt(2,2)
 
       REAL, ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:)
 
@@ -89,7 +91,7 @@ CONTAINS
          !$OMP SHARED(atoms,jsp_start,jsp_end,enpara,vr,denCoeffs,sphhar,l_performSpinavg)&
          !$OMP SHARED(orb,noco,denCoeffsOffdiag,jspd,input,sym)&
          !$OMP PRIVATE(itype,na,ispin,l,rho21,f,g,nodeu,noded,wronk,i,j,qmtllo,qmtt,nd,lh,lp,llp,llpb,cs)&
-         !$OMP PRIVATE(l_hia,vrTmp,vr0,denThomson,radThomson,tempFactor)
+         !$OMP PRIVATE(l_hia,vrTmp,vr0,denThomson,radThomson,tempFactor,overlapR3,ovlpInt,sumlm)
          IF (noco%l_mperp) THEN
             ALLOCATE ( f(atoms%jmtd,2,0:atoms%lmaxd,jspd),g(atoms%jmtd,2,0:atoms%lmaxd,jspd) )
          ELSE
@@ -134,6 +136,8 @@ CONTAINS
                   CALL radfun(l,itype,ispin,enpara%el0(l,itype,ispin),vrTmp,atoms,&
                               f(1,1,l,ispin),g(1,1,l,ispin),usdus, nodeu,noded,wronk)
 
+                  overlapR3 = 0.0
+
                   llp = (l*(l+1))/2 + l
 
                   DO j = 1,atoms%jri(itype)
@@ -161,6 +165,12 @@ CONTAINS
                            denThomson(j,l) = denThomson(j,l) + (g(j,1,l,ispin)*f(j,1,l,ispin)) * tempFactor * REAL(denCoeffs%mt_coeff(l,itype,1,0,ispin,ispin))
                            denThomson(j,l) = denThomson(j,l) + (g(j,1,l,ispin)*g(j,1,l,ispin)) * tempFactor * REAL(denCoeffs%mt_coeff(l,itype,1,1,ispin,ispin))
                         END IF
+                        IF (noco%l_soc) THEN
+                           overlapR3(j,1,1) = (f(j,1,l,ispin)*f(j,1,l,ispin)+f(j,2,l,ispin)*f(j,2,l,ispin)) / (atoms%rmsh(j,iType)**3.0)
+                           overlapR3(j,1,2) = (f(j,1,l,ispin)*g(j,1,l,ispin)+f(j,2,l,ispin)*g(j,2,l,ispin)) / (atoms%rmsh(j,iType)**3.0)
+                           overlapR3(j,2,1) = overlapR3(j,1,2)
+                           overlapR3(j,2,2) = (g(j,1,l,ispin)*g(j,1,l,ispin)+g(j,2,l,ispin)*g(j,2,l,ispin)) / (atoms%rmsh(j,iType)**3.0)
+                        END IF
                      END IF
 
                      IF(PRESENT(hub1data).AND.l<=lmaxU_const) THEN
@@ -170,6 +180,24 @@ CONTAINS
                                                              * 1.0/(atoms%neq(itype)*sfp_const)
                      END IF
                   END DO
+
+                  IF(PRESENT(moments)) THEN
+                     ! This is part of the calculation of the hyperfine field contributions from the valence electrons
+                     IF (noco%l_soc) THEN
+                        CALL intgr3(overlapR3(:,1,1),atoms%rmsh(:,iType),atoms%dx(iType),atoms%jri(iType),ovlpInt(1,1))
+                        CALL intgr3(overlapR3(:,1,2),atoms%rmsh(:,iType),atoms%dx(iType),atoms%jri(iType),ovlpInt(1,2))
+                        ovlpInt(2,1) = ovlpInt(1,2)
+                        CALL intgr3(overlapR3(:,2,2),atoms%rmsh(:,iType),atoms%dx(iType),atoms%jri(iType),ovlpInt(2,2))
+                        DO m = -l, l
+                           sumlm = m * (orb%uu(l,m,itype,ispin) * ovlpInt(1,1) + orb%ud(l,m,itype,ispin) * ovlpInt(1,2) + &
+                                        orb%du(l,m,itype,ispin) * ovlpInt(2,1) + orb%dd(l,m,itype,ispin) * ovlpInt(2,2))
+                           moments%hypFineContribs(-1,iType,ispin,3) = moments%hypFineContribs(-1,iType,ispin,3) + sumlm
+                           IF(l.LE.3) THEN
+                              moments%hypFineContribs(l,iType,ispin,3) = moments%hypFineContribs(l,iType,ispin,3) + sumlm
+                           END IF
+                        END DO
+                     END IF
+                  END IF
                END DO
 
                IF (PRESENT(moments)) THEN
@@ -192,7 +220,7 @@ CONTAINS
                END DO
                IF (.NOT.PRESENT(rhoIm)) THEN !DFT case
                   CALL timestart("cdnmt LO diagonal")
-                  CALL cdnmtlo(itype,ispin,ispin,input,atoms,sphhar,sym,usdus,noco,&
+                  CALL cdnmtlo(itype,ispin,ispin,input,atoms,sphhar,sym,usdus,orb,noco,&
                                enpara%ello0(:,itype,:),vr0(:,:),denCoeffs,&
                                f(:,:,0:,ispin),g(:,:,0:,ispin),&
                                rho(:,0:,itype,ispin),qmtllo,moments=moments)
@@ -208,7 +236,7 @@ CONTAINS
                   moments%chmom(itype,ispin) = qmtt
                ELSE !DFPT case
                   CALL timestart("cdnmt LO diagonal")
-                  CALL cdnmtlo(itype,ispin,ispin,input,atoms,sphhar,sym,usdus,noco,&
+                  CALL cdnmtlo(itype,ispin,ispin,input,atoms,sphhar,sym,usdus,orb,noco,&
                                enpara%ello0(:,itype,:),vr0(:,:),denCoeffs,&
                                f(:,:,0:,ispin),g(:,:,0:,ispin),&
                                rho(:,0:,itype,ispin),qmtllo,&
@@ -328,7 +356,7 @@ CONTAINS
                   !the offdiagonal magnetism.
                   IF (.NOT.PRESENT(rhoIm)) THEN !DFT case
                      CALL timestart("cdnmt LO off-diagonal")
-                     CALL cdnmtlo(itype,2,1,input,atoms,sphhar,sym,usdus,noco,&
+                     CALL cdnmtlo(itype,2,1,input,atoms,sphhar,sym,usdus,orb,noco,&
                                   enpara%ello0(:,itype,:),vr0(:,:),denCoeffs,&
                                   f(:,:,0:,1),g(:,:,0:,1),&
                                   rho(:,0:,itype,3),qmtllo,moments=moments,&
@@ -337,12 +365,12 @@ CONTAINS
                      CALL timestop("cdnmt LO off-diagonal")
                   ELSE
                      CALL timestart("cdnmt LO off-diagonal")
-                     CALL cdnmtlo(itype,2,1,input,atoms,sphhar,sym,usdus,noco,&
+                     CALL cdnmtlo(itype,2,1,input,atoms,sphhar,sym,usdus,orb,noco,&
                                   enpara%ello0(:,itype,:),vr0(:,:),denCoeffs,&
                                   f(:,:,0:,1),g(:,:,0:,1),&
                                   rho(:,0:,itype,3),qmtllo,&
                                   rhoIm=rhoIm(:,0:,itype,3), f2=f(:,:,0:,2), g2=g(:,:,0:,2))
-                     CALL cdnmtlo(itype,1,2,input,atoms,sphhar,sym,usdus,noco,&
+                     CALL cdnmtlo(itype,1,2,input,atoms,sphhar,sym,usdus,orb,noco,&
                                   enpara%ello0(:,itype,:),vr0(:,:),denCoeffs,&
                                   f(:,:,0:,2),g(:,:,0:,2),&
                                   rho(:,0:,itype,4),qmtllo,&

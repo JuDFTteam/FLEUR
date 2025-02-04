@@ -17,6 +17,8 @@ PRIVATE
    TYPE t_orb
       REAL, ALLOCATABLE    :: uu(:,:,:,:)
       REAL, ALLOCATABLE    :: dd(:,:,:,:)
+      REAL, ALLOCATABLE    :: ud(:,:,:,:)
+      REAL, ALLOCATABLE    :: du(:,:,:,:)
       COMPLEX, ALLOCATABLE :: uup(:,:,:,:)
       COMPLEX, ALLOCATABLE :: uum(:,:,:,:)
       COMPLEX, ALLOCATABLE :: ddp(:,:,:,:)
@@ -98,6 +100,8 @@ PRIVATE
       REAL, ALLOCATABLE    :: svdn(:,:)
 
       REAL, ALLOCATABLE    :: rhoLRes(:,:,:,:,:)
+
+      ! Arrays for hyperfine field contributions
       REAL, ALLOCATABLE    :: hypFineContribs(:,:,:,:)
 
       CONTAINS
@@ -148,6 +152,8 @@ SUBROUTINE orb_init(thisOrb, atoms, noco, jsp_start, jsp_end)
 
    IF(ALLOCATED(thisOrb%uu)) DEALLOCATE(thisOrb%uu)
    IF(ALLOCATED(thisOrb%dd)) DEALLOCATE(thisOrb%dd)
+   IF(ALLOCATED(thisOrb%ud)) DEALLOCATE(thisOrb%ud)
+   IF(ALLOCATED(thisOrb%du)) DEALLOCATE(thisOrb%du)
    IF(ALLOCATED(thisOrb%uup)) DEALLOCATE(thisOrb%uup)
    IF(ALLOCATED(thisOrb%uum)) DEALLOCATE(thisOrb%uum)
    IF(ALLOCATED(thisOrb%ddp)) DEALLOCATE(thisOrb%ddp)
@@ -175,6 +181,8 @@ SUBROUTINE orb_init(thisOrb, atoms, noco, jsp_start, jsp_end)
 
    ALLOCATE(thisOrb%uu(0:dim1,-atoms%lmaxd:atoms%lmaxd,dim2,jsp_start:jsp_end))
    ALLOCATE(thisOrb%dd(0:dim1,-atoms%lmaxd:atoms%lmaxd,dim2,jsp_start:jsp_end))
+   ALLOCATE(thisOrb%ud(0:dim1,-atoms%lmaxd:atoms%lmaxd,dim2,jsp_start:jsp_end))
+   ALLOCATE(thisOrb%du(0:dim1,-atoms%lmaxd:atoms%lmaxd,dim2,jsp_start:jsp_end))
    ALLOCATE(thisOrb%uup(0:dim1,-atoms%lmaxd:atoms%lmaxd,dim2,jsp_start:jsp_end))
    ALLOCATE(thisOrb%uum(0:dim1,-atoms%lmaxd:atoms%lmaxd,dim2,jsp_start:jsp_end))
    ALLOCATE(thisOrb%ddp(0:dim1,-atoms%lmaxd:atoms%lmaxd,dim2,jsp_start:jsp_end))
@@ -193,6 +201,8 @@ SUBROUTINE orb_init(thisOrb, atoms, noco, jsp_start, jsp_end)
 
    thisOrb%uu = 0.0
    thisOrb%dd = 0.0
+   thisOrb%ud = 0.0
+   thisOrb%du = 0.0
    thisOrb%uup = CMPLX(0.0,0.0)
    thisOrb%uum = CMPLX(0.0,0.0)
    thisOrb%ddp = CMPLX(0.0,0.0)
@@ -413,7 +423,7 @@ SUBROUTINE moments_init(thisMoments,mpi,input,sphhar,atoms)
       thisMoments%rhoLRes = 0.0
    END IF
 
-   ALLOCATE(thisMoments%hypFineContribs(-1:3,atoms%ntype,input%jspins,1))  ! Contributions to the Hyperfine field. The last index is supposed to be for the term. At the moment only the contact term is implemented.
+   ALLOCATE(thisMoments%hypFineContribs(-1:3,atoms%ntype,input%jspins,3))  ! Contributions to the Hyperfine field. The last index is supposed to be for the term. At the moment only the contact term is implemented.
    thisMoments%hypFineContribs = 0.0
 
 END SUBROUTINE moments_init

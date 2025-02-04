@@ -109,6 +109,8 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    INTEGER               :: dim_idx
    INTEGER               :: i_gf,iContour,n
 
+   REAL                  :: hyperfineResults(-1:3), hyperfineResultsTotal(-1:3)
+
    TYPE(t_eigdos_list),allocatable :: eigdos(:)
 
 #ifdef CPP_HDF
@@ -200,14 +202,20 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
       cautog = e0 / (a0*a0)
       bohrMagInCGS = 1.0/(2.0*c_light(1.0))
       WRITE(oUnit,*) ''
-      WRITE(ounit,*) ' Hyperfine field valence contributions (contact term) in kG '
+      WRITE(ounit,*) ' Hyperfine field valence contributions in kG '
       WRITE(ounit,*) ' ========================================================== '
       WRITE(ounit,*) ' atom type                          contribution'
       WRITE(ounit,*) '                total         s           p           d           f'
       DO iType = 1, atoms%ntype
          moments%hypFineContribs(:,iType,1,1) = moments%hypFineContribs(:,iType,1,1) - moments%hypFineContribs(:,iType,2,1)
-         moments%hypFineContribs(:,iType,1,1) = moments%hypFineContribs(:,iType,1,1) * cautog * 0.001 * sfp_const * bohrMagInCGS * 8.0 * pi_const / 3.0
-         WRITE(oUnit,'(i7,5x,5f12.5)') iType, moments%hypFineContribs(-1:3,iType,1,1)
+         hyperfineResults(:) = moments%hypFineContribs(:,iType,1,1) * cautog * 0.001 * sfp_const * bohrMagInCGS * 8.0 * pi_const / 3.0
+         WRITE(oUnit,'(i7,5x,5f12.5,5x,a)') iType, hyperfineResults(-1:3), 'contact term'
+         hyperfineResultsTotal(:) = hyperfineResults(:)
+         moments%hypFineContribs(:,iType,1,3) = moments%hypFineContribs(:,iType,1,3) + moments%hypFineContribs(:,iType,2,3)
+         hyperfineResults(:) = moments%hypFineContribs(:,iType,1,3) * cautog * 0.001 / c_light(1.0)
+         WRITE(oUnit,'(i7,5x,5f12.5,5x,a)') iType, hyperfineResults(-1:3), 'orbital term'
+         hyperfineResultsTotal(:) = hyperfineResultsTotal(:) + hyperfineResults(:)
+         WRITE(oUnit,'(i7,5x,5f12.5,5x,a)') iType, hyperfineResultsTotal(-1:3), 'all terms'
       END DO
       WRITE(ounit,*) ' ========================================================== '
    END IF

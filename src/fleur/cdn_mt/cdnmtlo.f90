@@ -12,7 +12,7 @@ MODULE m_cdnmtlo
    !! cdnval.
    !! Philipp Kurz 99/04
 CONTAINS
-   SUBROUTINE cdnmtlo(itype,ilSpinPr,ilSpin,input,atoms,sphhar,sym,usdus,noco, &
+   SUBROUTINE cdnmtlo(itype,ilSpinPr,ilSpin,input,atoms,sphhar,sym,usdus,orb,noco, &
                       ello,vr,denCoeffs,f,g,rho,qmtllo,moments,rhoIm,f2,g2)
       !! Current situation:
       !!
@@ -39,6 +39,7 @@ CONTAINS
       TYPE(t_atoms),      INTENT(IN) :: atoms
       TYPE(t_sym),        INTENT(IN) :: sym
       TYPE(t_usdus),      INTENT(IN) :: usdus
+      TYPE(t_orb),        INTENT(IN) :: orb
       TYPE(t_noco),       INTENT(IN) :: noco
       TYPE (t_denCoeffs), INTENT(IN) :: denCoeffs
 
@@ -56,12 +57,15 @@ CONTAINS
 
       INTEGER, PARAMETER :: lcf=3
 
-      INTEGER :: j,l,lh,lo,lop,lp,nodedum,llp,iSpin,jsp_start,jsp_end
-      REAL    :: dsdum,usdum,c_1,c_2,dus,ddn,c, radThomson, tempFactor
+      INTEGER :: j,l,m,lh,lo,lop,lp,nodedum,llp,iSpin,jsp_start,jsp_end
+      REAL    :: dsdum,usdum,c_1,c_2,dus,ddn,c, radThomson, tempFactor, sumlm
       COMPLEX :: ctemp
 
       REAL :: filo(atoms%jmtd,2)
       REAL :: denThomson(atoms%jmtd,-1:3)
+      REAL :: overlapR3(atoms%jmtd,atoms%nlod,2)
+      REAL :: overlapR3LO(atoms%jmtd,atoms%nlod,atoms%nlod)
+      REAL :: ovlpInt(2)
 
       REAL, ALLOCATABLE :: flo(:,:,:,:),glo(:,:)
       REAL, ALLOCATABLE :: fPr(:,:,:),gPr(:,:,:)
@@ -137,6 +141,8 @@ CONTAINS
 
       radThomson = atoms%zatom(iType) / (c_light(1.0)**2)
       denThomson = 0.0
+      overlapR3 = 0.0
+      overlapR3LO = 0.0
 
       ! Add the contribution of LO-LAPW and LO-LO cross-terms to the spherical
       ! charge density inside the Muffin Tins.
@@ -181,9 +187,13 @@ CONTAINS
                   tempFactor = 0.5*radThomson / (4.0*pi_const*(atoms%rmsh(j,iType)**2.0) * ((atoms%rmsh(j,iType)+0.5*radThomson)**2.0)) !This is a smeared out delta distribution
                   denThomson(j,-1) = denThomson(j,-1) + c_2 * tempFactor * ((fPr(j,1,l)*flo(j,1,lo,ilSpin)) * REAL(denCoeffs%mt_lou_coeff(lo,itype,0,ilSpinPr,ilSpin)) + &
                                                                             (gPr(j,1,l)*flo(j,1,lo,ilSpin)) * REAL(denCoeffs%mt_lou_coeff(lo,itype,1,ilSpinPr,ilSpin)))
-                  IF(l.LE.3) THEN
+                  IF (l.LE.3) THEN
                      denThomson(j,l) = denThomson(j,l) + c_2 * tempFactor * ((fPr(j,1,l)*flo(j,1,lo,ilSpin)) * REAL(denCoeffs%mt_lou_coeff(lo,itype,0,ilSpinPr,ilSpin)) + &
                                                                              (gPr(j,1,l)*flo(j,1,lo,ilSpin)) * REAL(denCoeffs%mt_lou_coeff(lo,itype,1,ilSpinPr,ilSpin)))
+                  END IF
+                  IF (noco%l_soc) THEN
+                     overlapR3(j,lo,1) = (fPr(j,1,l)*flo(j,1,lo,ilSpin)+fPr(j,2,l)*flo(j,2,lo,ilSpin)) / (atoms%rmsh(j,iType)**3.0)
+                     overlapR3(j,lo,2) = (gPr(j,1,l)*flo(j,1,lo,ilSpin)+gPr(j,2,l)*flo(j,2,lo,ilSpin)) / (atoms%rmsh(j,iType)**3.0)
                   END IF
                END IF
             END IF
@@ -212,11 +222,40 @@ CONTAINS
                         IF(l.LE.3) THEN
                            denThomson(j,l) = denThomson(j,l) + c_2 * tempFactor * (flo(j,1,lop,ilSpinPr)*flo(j,1,lo,ilSpin)) * REAL(denCoeffs%mt_lolo_coeff(lop,lo,itype,ilSpinPr,ilSpin))
                         END IF
+                        IF (noco%l_soc) THEN
+                           overlapR3LO(j,lo,lop) = (flo(j,1,lo,ilSpinPr)*flo(j,1,lop,ilSpin)+flo(j,2,lo,ilSpinPr)*flo(j,2,lop,ilSpin)) / ((atoms%rmsh(j,iType)**3.0) * atoms%neq(itype))
+                        END IF
                      END IF
                   END IF
                END DO
             END IF
          END DO
+         IF(PRESENT(moments)) THEN
+            ! This is part of the calculation of the hyperfine field contributions from the valence electrons
+            IF ((noco%l_soc).AND.(ilSpinPr==ilSpin)) THEN
+               CALL intgr3(overlapR3(:,lo,1),atoms%rmsh(:,iType),atoms%dx(iType),atoms%jri(iType),ovlpInt(1))
+               CALL intgr3(overlapR3(:,lo,2),atoms%rmsh(:,iType),atoms%dx(iType),atoms%jri(iType),ovlpInt(2))
+               DO m = -l, l
+                  sumlm = m * (orb%uulo(lo,m,itype,ilSpin) * ovlpInt(1) + orb%dulo(lo,m,itype,ilSpin) * ovlpInt(2))
+                  moments%hypFineContribs(-1,iType,ilSpin,3) = moments%hypFineContribs(-1,iType,ilSpin,3) + sumlm
+                  IF(l.LE.3) THEN
+                     moments%hypFineContribs(l,iType,ilSpin,3) = moments%hypFineContribs(l,iType,ilSpin,3) + sumlm
+                  END IF
+               END DO
+               DO lop = 1,atoms%nlo(itype)
+                  IF (atoms%llo(lop,itype)==l) THEN
+                     CALL intgr3(overlapR3LO(:,lo,lop),atoms%rmsh(:,iType),atoms%dx(iType),atoms%jri(iType),ovlpInt(1))
+                     DO m = -l, l
+                        sumlm = m * (orb%z(lo,lop,m,itype,ilSpin) * ovlpInt(1))
+                        moments%hypFineContribs(-1,iType,ilSpin,3) = moments%hypFineContribs(-1,iType,ilSpin,3) + sumlm
+                        IF(l.LE.3) THEN
+                           moments%hypFineContribs(l,iType,ilSpin,3) = moments%hypFineContribs(l,iType,ilSpin,3) + sumlm
+                        END IF
+                     END DO
+                  END IF
+               END DO
+            END IF
+         END IF
       END DO
 
       IF(PRESENT(moments)) THEN
