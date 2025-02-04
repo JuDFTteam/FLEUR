@@ -30,8 +30,8 @@ CONTAINS
       TYPE(t_atoms),   INTENT(IN)    :: atoms
       TYPE(t_vacuum),  INTENT(IN)    :: vacuum
 
-      REAL maxAbsForceDist
-      INTEGER i, jsp, n, nat1, ierr
+      REAL maxAbsForceDist , driftForce
+      INTEGER i, jsp, n, nat1, ierr, iAtom , iDir 
       REAL eps_force
       LOGICAL :: l_new, l_forceConverged
       REAL forcetot(3,atoms%ntype)
@@ -126,7 +126,17 @@ CONTAINS
                             atoms%taual,sym%tau,forcetot,atoms%label)
       END IF
 
-    
+    ! here remove drift force
+      IF (l_forceConverged .and. input%l_f .and. fmpi%irank == 0 ) THEN    
+         DO iDir = 1,3 
+            driftForce = 0.0
+            DO iAtom= 1 , atoms%ntype
+               driftForce =  driftForce + forcetot(iDir,iAtom)
+            END DO 
+            forcetot(iDir,:) = forcetot(iDir,:) - driftForce / atoms%ntype
+            write(110,*) "Drift force direction" , iDir , "value", driftForce 
+         END DO 
+      END IF  
 
       IF (l_forceConverged.AND.input%l_f) CALL relaxation(fmpi,input,atoms,cell,sym ,vacuum,forcetot,results%tote)
 
