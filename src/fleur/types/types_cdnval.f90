@@ -40,26 +40,6 @@ PRIVATE
    END TYPE t_orb
 
    TYPE t_denCoeffs
-      ! spherical
-      REAL, ALLOCATABLE    :: uu(:,:,:)
-      REAL, ALLOCATABLE    :: dd(:,:,:)
-      REAL, ALLOCATABLE    :: du(:,:,:)
-
-      ! nonspherical
-      REAL, ALLOCATABLE    :: uunmt(:,:,:,:)
-      REAL, ALLOCATABLE    :: ddnmt(:,:,:,:)
-      REAL, ALLOCATABLE    :: dunmt(:,:,:,:)
-      REAL, ALLOCATABLE    :: udnmt(:,:,:,:)
-
-      ! spherical - LOs
-      REAL, ALLOCATABLE    :: aclo(:,:,:)
-      REAL, ALLOCATABLE    :: bclo(:,:,:)
-      REAL, ALLOCATABLE    :: cclo(:,:,:,:)
-
-      ! nonspherical - LOs
-      REAL, ALLOCATABLE    :: acnmt(:,:,:,:,:)
-      REAL, ALLOCATABLE    :: bcnmt(:,:,:,:,:)
-      REAL, ALLOCATABLE    :: ccnmt(:,:,:,:,:)
 
       ! Refactored version for DFPT and more generalization:
       COMPLEX, ALLOCATABLE :: mt_coeff(:,:,:,:,:,:)!(l,iAtom,iOrdPr,iOrd,ilSpinPr,ilSpin)
@@ -237,23 +217,6 @@ SUBROUTINE denCoeffs_init(thisDenCoeffs, atoms, sphhar, jsp_start, jsp_end)
 
    llpd = (atoms%lmaxd*(atoms%lmaxd+3)) / 2
 
-   ALLOCATE (thisDenCoeffs%uu(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end))
-   ALLOCATE (thisDenCoeffs%dd(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end))
-   ALLOCATE (thisDenCoeffs%du(0:atoms%lmaxd,atoms%ntype,jsp_start:jsp_end))
-
-   ALLOCATE (thisDenCoeffs%uunmt(0:llpd,sphhar%nlhd,atoms%ntype,jsp_start:jsp_end))
-   ALLOCATE (thisDenCoeffs%ddnmt(0:llpd,sphhar%nlhd,atoms%ntype,jsp_start:jsp_end))
-   ALLOCATE (thisDenCoeffs%dunmt(0:llpd,sphhar%nlhd,atoms%ntype,jsp_start:jsp_end))
-   ALLOCATE (thisDenCoeffs%udnmt(0:llpd,sphhar%nlhd,atoms%ntype,jsp_start:jsp_end))
-
-   ALLOCATE (thisDenCoeffs%aclo(atoms%nlod,atoms%ntype,jsp_start:jsp_end))
-   ALLOCATE (thisDenCoeffs%bclo(atoms%nlod,atoms%ntype,jsp_start:jsp_end))
-   ALLOCATE (thisDenCoeffs%cclo(atoms%nlod,atoms%nlod,atoms%ntype,jsp_start:jsp_end))
-
-   ALLOCATE (thisDenCoeffs%acnmt(0:atoms%lmaxd,atoms%nlod,sphhar%nlhd,atoms%ntype,jsp_start:jsp_end))
-   ALLOCATE (thisDenCoeffs%bcnmt(0:atoms%lmaxd,atoms%nlod,sphhar%nlhd,atoms%ntype,jsp_start:jsp_end))
-   ALLOCATE (thisDenCoeffs%ccnmt(atoms%nlod,atoms%nlod,sphhar%nlhd,atoms%ntype,jsp_start:jsp_end))
-
    ! Refactored version for DFPT and more generalization:
    llpd = ((atoms%lmaxd+1)**2)-1
    ALLOCATE(thisDenCoeffs%mt_coeff(0:atoms%lmaxd,atoms%ntype,0:1,0:1,jsp_start:jsp_end,jsp_start:jsp_end))
@@ -266,22 +229,6 @@ SUBROUTINE denCoeffs_init(thisDenCoeffs, atoms, sphhar, jsp_start, jsp_end)
    ALLOCATE(thisDenCoeffs%nmt_lou_coeff(0:atoms%lmaxd,atoms%nlod,sphhar%nlhd,atoms%ntype,0:1,jsp_start:jsp_end,jsp_start:jsp_end))
    ALLOCATE(thisDenCoeffs%nmt_lolo_coeff(atoms%nlod,atoms%nlod,sphhar%nlhd,atoms%ntype,jsp_start:jsp_end,jsp_start:jsp_end))
 
-   thisDenCoeffs%uu = 0.0
-   thisDenCoeffs%dd = 0.0
-   thisDenCoeffs%du = 0.0
-
-   thisDenCoeffs%uunmt = 0.0
-   thisDenCoeffs%ddnmt = 0.0
-   thisDenCoeffs%dunmt = 0.0
-   thisDenCoeffs%udnmt = 0.0
-
-   thisDenCoeffs%aclo = 0.0
-   thisDenCoeffs%bclo = 0.0
-   thisDenCoeffs%cclo = 0.0
-
-   thisDenCoeffs%acnmt = 0.0
-   thisDenCoeffs%bcnmt = 0.0
-   thisDenCoeffs%ccnmt = 0.0
 
    ! Refactored version for DFPT and more generalization:
    thisDenCoeffs%mt_coeff = CMPLX(0.0,0.0)!(l,iAtom,iOrdPr,iOrd,ilSpinPr,ilSpin)

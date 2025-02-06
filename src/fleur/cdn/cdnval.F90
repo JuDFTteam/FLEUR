@@ -31,7 +31,6 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    USE m_constants
    USE m_eig66_io
    USE m_genMTBasis
-   USE m_calcDenCoeffs
    USE m_mcdinit
    USE m_sympsi
    USE m_eparas      ! energy parameters and partial charges
