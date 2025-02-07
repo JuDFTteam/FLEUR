@@ -225,6 +225,7 @@ contains
 
     NAMELIST /atom/ id,z,rmt,dx,jri,lmax,lnonsph,ncst,econfig,bmu,lo,element,name
 
+    element = ''
     id=-9999.9;z=-1.0;rmt=0.0;dx=0.0;jri=0;lmax=0;lnonsph=0;ncst=-1;lo='';econfig='';name='';bmu=-9999.0
 
     BACKSPACE(fh)
@@ -244,7 +245,12 @@ contains
     nz=-1
     IF (element.NE."") THEN
        nz=element_to_z(element)
-       IF (z>-1.AND.nz.NE.FLOOR(z)) CALL judft_error("z and z of specified element differ")
+       IF (z>-1.AND.nz.NE.FLOOR(z)) THEN
+          WRITE(*,'(a,a)') 'element: ', element
+          WRITE(*,'(a,f10.4)') '                  z = ', z
+          WRITE(*,'(a,i6)')    'specified element z = ', nz
+          CALL judft_error("z and z of specified element differ")
+       END IF
     ELSE
        nz=FLOOR(z)
     ENDIF

@@ -166,9 +166,9 @@ CONTAINS
       endif
       do ikpt = 1, fi%kpts%nkpt 
          if(any(ikpt == fmpi%k_list))then 
-            call coul(ikpt)%init(.False., hybdat%nbasm(ikpt), hybdat%nbasm(ikpt), fmpi%sub_comm, .false.)
+            call coul(ikpt)%init(.False., hybdat%nbasm(ikpt), hybdat%nbasm(ikpt), fmpi%sub_comm, MPIMAT_ROWCYCLIC)
          else
-            call coul(ikpt)%init(.False., 1, 1, fmpi%sub_comm, .false.)
+            call coul(ikpt)%init(.False., 1, 1, fmpi%sub_comm, MPIMAT_ROWCYCLIC)
          endif 
       enddo
       call timestop("coulomb allocation") 

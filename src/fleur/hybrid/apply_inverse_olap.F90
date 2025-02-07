@@ -108,7 +108,7 @@ contains
       class is (t_mpimat)
 #ifdef CPP_SCALAPACK
          allocate(t_mpimat::coul_submtx)
-         call coul_submtx%init(.False., mpdata%n_g(ikpt), mpdata%n_g(ikpt), fmpi%sub_comm, .True.)
+         call coul_submtx%init(.False., mpdata%n_g(ikpt), mpdata%n_g(ikpt), fmpi%sub_comm, MPIMAT_2D_BLOCK_CYCLIC)
          select type(coul_submtx)
          class is (t_mpimat)
             ! copy bottom right corner of coulomb to coul_submtx

@@ -30,14 +30,15 @@ CONTAINS
       TYPE(t_atoms),   INTENT(IN)    :: atoms
       TYPE(t_vacuum),  INTENT(IN)    :: vacuum
 
-      REAL maxAbsForceDist
-      INTEGER i, jsp, n, nat1, ierr
+      REAL maxAbsForceDist , driftForce
+      INTEGER i, jsp, n, nat1, ierr, iAtom , iDir 
       REAL eps_force
-      LOGICAL :: l_new, l_forceConverged
+      LOGICAL :: l_new, l_forceConverged, l_problem 
       REAL forcetot(3,atoms%ntype)
       CHARACTER(LEN=20) :: attributes(7)
 
       ! Write spin-dependent forces
+      l_problem = .FALSE. 
 
       IF (fmpi%irank==0) THEN
          DO n = 1, atoms%ntype
@@ -126,7 +127,21 @@ CONTAINS
                             atoms%taual,sym%tau,forcetot,atoms%label)
       END IF
 
-    
+
+      IF (l_forceConverged .and. fmpi%irank == 0 .and. input%l_f .and. input%l_driftForce) THEN    
+         DO iDir = 1,3 
+            IF ( ANY( atoms%relax(iDir,:)==1 ) .AND. ANY(atoms%relax(iDir,:) ==0 ) ) l_problem = .TRUE. ! Not all atoms along iDir are relaxed   
+            driftForce = 0.0
+            DO iAtom= 1 , atoms%ntype
+               driftForce =  driftForce + forcetot(iDir,iAtom)
+            END DO 
+            forcetot(iDir,:) = forcetot(iDir,:) - driftForce / atoms%ntype
+            IF (l_problem) call juDFT_warn("Not all atoms along one direction are being relaxed. Take the driftForce&
+            & correction with caution and consider relaxing all atoms.",calledby="force_w.F90")
+            write(oUnit,*) "Force direction" , iDir , "corrected by driftForce", driftForce / atoms%ntype  
+         END DO 
+      END IF  
+
 
       IF (l_forceConverged.AND.input%l_f) CALL relaxation(fmpi,input,atoms,cell,sym ,vacuum,forcetot,results%tote)
 

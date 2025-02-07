@@ -82,7 +82,7 @@ CONTAINS
       INTEGER jsp,nk,ne_all,ne_found,neigd2,dim_mat
       INTEGER nk_i,n_size,n_rank
       LOGICAL l_needs_vectors
-      INTEGER :: solver=0
+
       ! Local Arrays
       INTEGER              :: ierr
       INTEGER              :: neigBuffer(fi%kpts%nkpt,fi%input%jspins)
@@ -180,7 +180,7 @@ CONTAINS
                IF (hmat_out%l_real) THEN
                   dim_mat = SIZE(smat%data_r(:,1))
 
-                  CALL smat_out%init(.TRUE., dim_mat, dim_mat, fmpi%sub_comm, .false.)
+                  CALL smat_out%init(.TRUE., dim_mat, dim_mat, fmpi%sub_comm, MPIMAT_ROWCYCLIC)
                   CALL hmat_out%init(smat_out)
 
                   hmat_out%data_r(:dim_mat,:dim_mat) = hmat%data_r
@@ -188,7 +188,7 @@ CONTAINS
                ELSE
                   dim_mat = SIZE(smat%data_c(:,1))
 
-                  CALL smat_out%init(.FALSE., dim_mat, dim_mat, fmpi%sub_comm, .false.)
+                  CALL smat_out%init(.FALSE., dim_mat, dim_mat, fmpi%sub_comm, MPIMAT_ROWCYCLIC)
                   CALL hmat_out%init(smat_out)
 
                   hmat_out%data_c(:dim_mat,:dim_mat) = hmat%data_c
@@ -241,7 +241,7 @@ CONTAINS
             !     eig ...... all eigenvalues, output
             !     zMat ..... local eigenvectors, output
             if (fmpi%pe_diag) THEN
-              CALL eigen_diag(solver,hmat,smat,ne_all,eig,zMat,nk,jsp,iter)
+              CALL eigen_diag(hmat,smat,ne_all,eig,zMat,nk)
             ELSE
               ne_all=0
             endif

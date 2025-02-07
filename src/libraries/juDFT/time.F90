@@ -253,6 +253,8 @@ CONTAINS
       WRITE (*, "(3a,f20.2,5x,a)") startstop, name, " at:", cputime() - debugtimestart, memory_usage_string()
 #endif
 
+#if false
+! Somehow this doesn't compile at the moment, at least with the ifx compiler
 #ifdef CPP_DEBUG
       IF(TRIM(ADJUSTL(name)).EQ."Iteration") THEN
          IF(TRIM(ADJUSTL(startstop)).EQ."started") THEN
@@ -261,6 +263,7 @@ CONTAINS
             fpErrorDetectionReturnCode = stopFPErrorDetection()
          END IF
       END IF
+#endif
 #endif
 
    END SUBROUTINE priv_debug_output

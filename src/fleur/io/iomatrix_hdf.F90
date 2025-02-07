@@ -28,7 +28,7 @@ CONTAINS
        mpi_comm=0
     END SELECT
     CALL io_datadim(did,dim)
-    CALL mat%init(DIM(1)==1,DIM(2),DIM(3),mpi_comm,.TRUE.)
+    CALL mat%init(DIM(1)==1,DIM(2),DIM(3),mpi_comm,MPIMAT_2D_BLOCK_CYCLIC)
     SELECT TYPE(mat)
     TYPE is (t_mat)
        IF (mat%l_real) THEN

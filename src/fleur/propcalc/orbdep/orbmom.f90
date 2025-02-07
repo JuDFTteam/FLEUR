@@ -41,6 +41,11 @@ CONTAINS
                                                                CONJG(eigVecCoeffs%abcof(i,lm,0,natom,ispin))
                    orb%dd(l,m,n,ispin) = orb%dd(l,m,n,ispin) + we(i)*eigVecCoeffs%abcof(i,lm,1,natom,ispin)*&
                                                                CONJG(eigVecCoeffs%abcof(i,lm,1,natom,ispin))
+                   ! coeff. for special uses
+                   orb%ud(l,m,n,ispin) = orb%ud(l,m,n,ispin) + we(i)*eigVecCoeffs%abcof(i,lm,0,natom,ispin)*&
+                                                               CONJG(eigVecCoeffs%abcof(i,lm,1,natom,ispin))
+                   orb%du(l,m,n,ispin) = orb%du(l,m,n,ispin) + we(i)*eigVecCoeffs%abcof(i,lm,1,natom,ispin)*&
+                                                               CONJG(eigVecCoeffs%abcof(i,lm,0,natom,ispin))
                    ! coeff. for l+ <M'|l+|M> with respect to M ->
                    IF (m.NE.l) THEN
                       orb%uup(l,m,n,ispin) = orb%uup(l,m,n,ispin) + we(i)*eigVecCoeffs%abcof(i,lm,0,natom,ispin)*&

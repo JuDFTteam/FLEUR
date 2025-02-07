@@ -27,6 +27,8 @@ contains
        ALLOCATE(t_forcetheo_jij::forcetheo)
     CASE(4)
        ALLOCATE(t_forcetheo_ssdisp::forcetheo)
+    case(5)
+       ALLOCATE(t_forcetheo_dmi_scf::forcetheo)
     CASE default
        ALLOCATE(t_forcetheo::forcetheo)
        forcetheo=t_forcetheo()
@@ -41,6 +43,8 @@ contains
        CALL forcetheo%init(forcetheo_data%qvec,forcetheo_data%theta(1),atoms)
     TYPE IS(t_forcetheo_ssdisp)
        CALL forcetheo%init(forcetheo_data%qvec)
+    TYPE is (t_forcetheo_dmi_scf)
+       call forcetheo%init(forcetheo_data%theta,forcetheo_data%phi,forcetheo_data%ef,atoms%ntype)   
     END SELECT
   end subroutine make_forcetheo
 end MODULE m_make_forcetheo

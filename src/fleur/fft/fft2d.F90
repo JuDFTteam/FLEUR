@@ -39,24 +39,16 @@ CONTAINS
        	!  ---> put stars onto the fft-grid
        	CALL grid%putFieldOnGrid(stars,fg,cell,firstderiv=firstderiv,secondderiv=secondderiv,l_2d=.TRUE.)
     	ELSE
-       	grid%grid=cmplx(afft2,bfft2)
+       	grid%grid(:)=cmplx(afft2,bfft2)
     	END IF
-
-    	CALL grid%perform_fft(forward=(isn<0))
-    
+ 
+      CALL grid%perform_fft(forward=(isn<0))
     	IF (isn>0) THEN
         	afft2 =  REAL(grid%grid)
         	bfft2 = AIMAG(grid%grid)
       ELSE
          CALL grid%takeFieldFromGrid(stars,fg,l_2d=.TRUE.)
-         !Scaling by stars%nstr is already done in previous call
-         !IF (PRESENT(scaled)) THEN
-         !   IF (.not.scaled) fg3 = fg3*stars%nstr
-         !ENDIF
       END IF   
-    	IF (isn<0) THEN
-       	!  ---> collect stars from the fft-grid
-			CALL grid%takeFieldFromGrid(stars, fg, l_2d=.TRUE.)
-    	END IF
+    	
   END SUBROUTINE fft2d
 END MODULE m_fft2d
