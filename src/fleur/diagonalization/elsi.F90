@@ -117,7 +117,7 @@ contains
       select type (evec)
       type IS (t_mat)
          allocate (t_mat::zmat)
-         call zamt%init(evec%l_real, evec%matsize1, ne)
+         call zmat%init(evec%l_real, evec%matsize1, ne)
          if (evec%l_real) then
             zmat%data_r = evec%data_r(:, :ne)
          else
@@ -125,7 +125,7 @@ contains
          end if
       type IS (t_mpimat)
          allocate (t_mpimat::zmat)
-         call zmat%init(evec%l_real, evec%global_size1, evec%global_size1, evec%blacsdata%mpi_com, .false.)
+         call zmat%init(evec%l_real, evec%global_size1, evec%global_size1, evec%blacsdata%mpi_com, MPIMAT_ROWCYCLIC)
          call zmat%copy(evec, 1, 1)
          !determine ev assigned to this rank
          nev = ne
