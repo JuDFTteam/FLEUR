@@ -75,7 +75,7 @@ CONTAINS
       COMPLEX :: coef, cil, cmv
       COMPLEX :: temp(ne)
 
-      INTEGER :: jmem,l,lh,llp,llpmax,lm,lmp,lp,lv,m, mp,mv,na,natom,nn,ns,nt,lphi,lplow
+      INTEGER :: jmem,l,lh,llp,llpmax,lm,lmp,lp,lv,m, mp,mv,na,natom,nn,ns,nt,lphi,lplow,icoef,jcoef
 
       LOGICAL :: l_minusq
 
@@ -84,7 +84,7 @@ CONTAINS
       DO ns=1,sym%nsymt
          !$OMP parallel do default(none) &
          !$OMP private(lh,lp,l,lv,mp,m,mv,lm,lmp,llp,llpmax,lphi,lplow) &
-         !$OMP private(cil,jmem,cmv,coef,temp,na,nt,nn,natom) &
+         !$OMP private(cil,jmem,cmv,coef,temp,na,nt,nn,natom,icoef,jcoef) &
          !$OMP shared(sym,we,we1,ne,ns,atoms,sphhar,eigVecCoeffs,eigVecCoeffs1,denCoeffs,ilSpinPr,ilSpin,l_dfpt,l_less_effort,qpoint,l_minusq,eigVecCoeffs1m)
          ! !$OMP collapse(2)
          DO lh = 1, sphhar%nlh(ns)
@@ -141,49 +141,25 @@ CONTAINS
                               nt= nt+1
                               IF (sym%ntypsy(nt)==ns) THEN
                                  ! uu/du
-                                 temp(:) = coef * we(:) * eigVecCoeffs1%abcof(:,lm,0,nt,ilSpin) ! If not DFPT, this is the base case for rhonmt(21)
-                                 IF (lmp/=lm.AND.l_less_effort) temp(:) = temp(:) * 2.0
-                                 IF (l_dfpt) THEN
-                                    IF (.NOT.l_minusq) temp(:) = temp(:) * 2.0
-                                    IF (norm2(qpoint)<=1e-8) THEN
-                                       temp(:) = temp(:) + coef * we1(:) * eigVecCoeffs%abcof(:,lm,0,nt,ilSpin)
+                                 DO icoef=lbound(eigVecCoeffs1%abcof,3),ubound(eigVecCoeffs1%abcof,3) !Loop over radial functions/abcofs (usually 0=u and 1=\dot u)
+                                    temp(:) = coef * we(:) * eigVecCoeffs1%abcof(:,lm,icoef,nt,ilSpin) ! If not DFPT, this is the base case for rhonmt(21)
+                                    IF (lmp/=lm.AND.l_less_effort) temp(:) = temp(:) * 2.0
+                                    IF (l_dfpt) THEN
+                                       IF (.NOT.l_minusq) temp(:) = temp(:) * 2.0
+                                       IF (norm2(qpoint)<=1e-8) THEN
+                                          temp(:) = temp(:) + coef * we1(:) * eigVecCoeffs%abcof(:,lm,0,nt,ilSpin)
+                                       END IF
                                     END IF
-                                 END IF
-                                 denCoeffs%nmt_coeff(llp,lh,nn,0,0,ilSpinPr,ilSpin) = denCoeffs%nmt_coeff(llp,lh,nn,0,0,ilSpinPr,ilSpin) &
-                                                                        & + dot_product(eigVecCoeffs%abcof(:ne,lmp,0,nt,ilSpinPr),temp(:ne))
-                                 denCoeffs%nmt_coeff(llp,lh,nn,1,0,ilSpinPr,ilSpin) = denCoeffs%nmt_coeff(llp,lh,nn,1,0,ilSpinPr,ilSpin) &
-                                                                        & + dot_product(eigVecCoeffs%abcof(:ne,lmp,1,nt,ilSpinPr),temp(:ne))
-
-                                 IF (l_minusq) THEN
-                                    denCoeffs%nmt_coeff(llp,lh,nn,0,0,ilSpinPr,ilSpin) = denCoeffs%nmt_coeff(llp,lh,nn,0,0,ilSpinPr,ilSpin) &
-                                                                           & + dot_product(eigVecCoeffs1m%abcof(:ne,lmp,0,nt,ilSpinPr), &
-                                                                           & eigVecCoeffs%abcof(:,lm,0,nt,ilSpin))
-                                    denCoeffs%nmt_coeff(llp,lh,nn,1,0,ilSpinPr,ilSpin) = denCoeffs%nmt_coeff(llp,lh,nn,1,0,ilSpinPr,ilSpin) &
-                                                                           & + dot_product(eigVecCoeffs1m%abcof(:ne,lmp,1,nt,ilSpinPr), &
-                                                                           & eigVecCoeffs%abcof(:,lm,0,nt,ilSpin))
-                                 END IF
-
-                                 ! dd/ud
-                                 temp(:) = coef * we(:) * eigVecCoeffs1%abcof(:,lm,1,nt,ilSpin)
-                                 IF (lmp/=lm.AND.l_less_effort) temp(:) = temp(:) * 2.0
-                                 IF (l_dfpt) THEN
-                                    IF (.NOT.l_minusq) temp(:) = temp(:) * 2.0
-                                    IF (norm2(qpoint)<=1e-8) THEN
-                                       temp(:) = temp(:) + coef * we1(:) * eigVecCoeffs%abcof(:,lm,1,nt,ilSpin)
-                                    END IF
-                                 END IF
-                                 denCoeffs%nmt_coeff(llp,lh,nn,1,1,ilSpinPr,ilSpin) = denCoeffs%nmt_coeff(llp,lh,nn,1,1,ilSpinPr,ilSpin) &
-                                                                        & + dot_product(eigVecCoeffs%abcof(:ne,lmp,1,nt,ilSpinPr),temp(:ne))
-                                 denCoeffs%nmt_coeff(llp,lh,nn,0,1,ilSpinPr,ilSpin) = denCoeffs%nmt_coeff(llp,lh,nn,0,1,ilSpinPr,ilSpin) &
-                                                                        & + dot_product(eigVecCoeffs%abcof(:ne,lmp,0,nt,ilSpinPr),temp(:ne))
-                                 IF (l_minusq) THEN
-                                    denCoeffs%nmt_coeff(llp,lh,nn,1,1,ilSpinPr,ilSpin) = denCoeffs%nmt_coeff(llp,lh,nn,1,1,ilSpinPr,ilSpin) &
-                                                                           & + dot_product(eigVecCoeffs1m%abcof(:ne,lmp,1,nt,ilSpinPr), &
-                                                                           & eigVecCoeffs%abcof(:,lm,1,nt,ilSpin))
-                                    denCoeffs%nmt_coeff(llp,lh,nn,0,1,ilSpinPr,ilSpin) = denCoeffs%nmt_coeff(llp,lh,nn,0,1,ilSpinPr,ilSpin) &
-                                                                           & + dot_product(eigVecCoeffs1m%abcof(:ne,lmp,0,nt,ilSpinPr), &
-                                                                           & eigVecCoeffs%abcof(:,lm,1,nt,ilSpin))
-                                 END IF
+                                    DO jcoef=lbound(eigVecCoeffs1%abcof,3),ubound(eigVecCoeffs1%abcof,3) !Loop over radial functions/abcofs (usually 0=u and 1=\dot u)
+                                       denCoeffs%nmt_coeff(llp,lh,nn,jcoef,icoef,ilSpinPr,ilSpin) = denCoeffs%nmt_coeff(llp,lh,nn,jcoef,icoef,ilSpinPr,ilSpin) &
+                                                                     & + dot_product(eigVecCoeffs%abcof(:ne,lmp,jcoef,nt,ilSpinPr),temp(:ne))
+                                       IF (l_minusq) THEN
+                                          denCoeffs%nmt_coeff(llp,lh,nn,jcoef,icoef,ilSpinPr,ilSpin) = denCoeffs%nmt_coeff(llp,lh,nn,jcoef,icoef,ilSpinPr,ilSpin) &
+                                                                        & + dot_product(eigVecCoeffs1m%abcof(:ne,lmp,jcoef,nt,ilSpinPr), &
+                                                                        & eigVecCoeffs%abcof(:,lm,icoef,nt,ilSpin))
+                                       END IF
+                                    ENDDO   
+                                 ENDDO   
                               ENDIF ! (sym%ntypsy(nt)==ns)
                            ENDDO ! na
                            natom = natom + atoms%neq(nn)

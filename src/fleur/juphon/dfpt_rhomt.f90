@@ -59,7 +59,7 @@ CONTAINS
 
       TYPE(t_eigVecCoeffs), OPTIONAL, INTENT(IN) :: eigVecCoeffs1m !! \(A_{l,m,\lambda}^{\sigma_{\alpha},\nu\boldsymbol{k}\boldsymbol{-q},j,\beta~(1)}\)
 
-      INTEGER i,l,lm,itype,na,natom,lo,lop,m
+      INTEGER i,l,lm,itype,na,natom,lo,lop,m,icoef,jcoef
 
       COMPLEX :: temp
 
@@ -74,46 +74,22 @@ CONTAINS
                DO m = -l,l
                   lm = l* (l+1) + m
                   DO i = 1,ne
-                     ! uu/du
-                     temp = we(i) * eigVecCoeffs1%abcof(i,lm,0,natom,ilSpin) ! If not DFPT, this is the base case for rhomt(21)
-                     IF (l_dfpt) THEN
-                        IF (.NOT.l_minusq) temp = temp * 2.0
-                        IF (norm2(qpoint)<=1e-8) THEN
-                           temp = temp + we1(i) * eigVecCoeffs%abcof(i,lm,0,natom,ilSpin)
+                     DO icoef=lbound(eigVecCoeffs1%abcof,3),ubound(eigVecCoeffs1%abcof,3) !Loop over radial functions/abcofs (usually 0=u and 1=\dot u)
+                        temp = we(i) * eigVecCoeffs1%abcof(i,lm,icoef,natom,ilSpin) ! If not DFPT, this is the base case for rhomt(21)
+                        IF (l_dfpt) THEN
+                           IF (.NOT.l_minusq) temp = temp * 2.0
+                           IF (norm2(qpoint)<=1e-8) temp = temp + we1(i) * eigVecCoeffs%abcof(i,lm,icoef,natom,ilSpin)
                         END IF
-                     END IF
-                     denCoeffs%mt_coeff(l,itype,0,0,ilSpinPr, ilSpin) = denCoeffs%mt_coeff(l,itype,0,0,ilSpinPr, ilSpin) &
-                                                                    & + CONJG(eigVecCoeffs%abcof(i,lm,0,natom,ilSpinPr)) * temp
-                     denCoeffs%mt_coeff(l,itype,1,0,ilSpinPr, ilSpin) = denCoeffs%mt_coeff(l,itype,1,0,ilSpinPr, ilSpin) &
-                                                                    & + CONJG(eigVecCoeffs%abcof(i,lm,1,natom,ilSpinPr)) * temp
-                     IF (l_minusq) THEN
-                        denCoeffs%mt_coeff(l,itype,0,0,ilSpinPr, ilSpin) = denCoeffs%mt_coeff(l,itype,0,0,ilSpinPr, ilSpin) &
-                                                                       & + CONJG(eigVecCoeffs1m%abcof(i,lm,0,natom,ilSpinPr)) &
-                                                                       & * eigVecCoeffs%abcof(i,lm,0,natom,ilSpin)
-                        denCoeffs%mt_coeff(l,itype,1,0,ilSpinPr, ilSpin) = denCoeffs%mt_coeff(l,itype,1,0,ilSpinPr, ilSpin) &
-                                                                       & + CONJG(eigVecCoeffs1m%abcof(i,lm,1,natom,ilSpinPr)) &
-                                                                       & * eigVecCoeffs%abcof(i,lm,0,natom,ilSpin)
-                     END IF
-                     ! ud/dd
-                     temp = we(i) * eigVecCoeffs1%abcof(i,lm,1,natom,ilSpin)
-                     IF (l_dfpt) THEN
-                        IF (.NOT.l_minusq) temp = temp * 2.0
-                        IF (norm2(qpoint)<=1e-8) THEN
-                           temp = temp + we1(i) * eigVecCoeffs%abcof(i,lm,1,natom,ilSpin)
-                        END IF
-                     END IF
-                     denCoeffs%mt_coeff(l,itype,0,1,ilSpinPr, ilSpin) = denCoeffs%mt_coeff(l,itype,0,1,ilSpinPr, ilSpin) &
-                                                                    & + CONJG(eigVecCoeffs%abcof(i,lm,0,natom,ilSpinPr)) * temp
-                     denCoeffs%mt_coeff(l,itype,1,1,ilSpinPr, ilSpin) = denCoeffs%mt_coeff(l,itype,1,1,ilSpinPr, ilSpin) &
-                                                                    & + CONJG(eigVecCoeffs%abcof(i,lm,1,natom,ilSpinPr)) * temp
-                     IF (l_minusq) THEN
-                        denCoeffs%mt_coeff(l,itype,0,1,ilSpinPr, ilSpin) = denCoeffs%mt_coeff(l,itype,0,1,ilSpinPr, ilSpin) &
-                                                                       & + CONJG(eigVecCoeffs1m%abcof(i,lm,0,natom,ilSpinPr)) &
-                                                                       & * eigVecCoeffs%abcof(i,lm,1,natom,ilSpin)
-                        denCoeffs%mt_coeff(l,itype,1,1,ilSpinPr, ilSpin) = denCoeffs%mt_coeff(l,itype,1,1,ilSpinPr, ilSpin) &
-                                                                       & + CONJG(eigVecCoeffs1m%abcof(i,lm,1,natom,ilSpinPr)) &
-                                                                       & * eigVecCoeffs%abcof(i,lm,1,natom,ilSpin)
-                     END IF
+                        DO jcoef=lbound(eigVecCoeffs1%abcof,3),ubound(eigVecCoeffs1%abcof,3) !Loop over radial functions (usually 0 and 1)
+                           denCoeffs%mt_coeff(l,itype,jcoef,icoef,ilSpinPr, ilSpin) = denCoeffs%mt_coeff(l,itype,jcoef,icoef,ilSpinPr, ilSpin) &
+                                                                     & + CONJG(eigVecCoeffs%abcof(i,lm,jcoef,natom,ilSpinPr)) * temp
+                           IF (l_minusq) THEN
+                              denCoeffs%mt_coeff(l,itype,jcoef,icoef,ilSpinPr, ilSpin) = denCoeffs%mt_coeff(l,itype,jcoef,icoef,ilSpinPr, ilSpin) &
+                                                                        & + CONJG(eigVecCoeffs1m%abcof(i,lm,jcoef,natom,ilSpinPr)) &
+                                                                        & * eigVecCoeffs%abcof(i,lm,0,natom,ilSpin)
+                           END IF
+                        ENDDO
+                     ENDDO   
                   END DO
                END DO
             END DO
