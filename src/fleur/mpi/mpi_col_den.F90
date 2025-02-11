@@ -83,17 +83,7 @@ CONTAINS
        DEALLOCATE (c_b)
     ENDIF
 
-    ! -> Collect uu(),ud() and dd()
-    n = (atoms%lmaxd+1)*atoms%ntype
-    ALLOCATE(r_b(n))
-    CALL MPI_ALLREDUCE(denCoeffs%uu(0:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-    CALL dcopy(n, r_b, 1, denCoeffs%uu(0:,:,jspin), 1)
-    CALL MPI_ALLREDUCE(denCoeffs%du(0:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-    CALL dcopy(n, r_b, 1, denCoeffs%du(0:,:,jspin), 1)
-    CALL MPI_ALLREDUCE(denCoeffs%dd(0:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-    CALL dcopy(n, r_b, 1, denCoeffs%dd(0:,:,jspin), 1)
-    DEALLOCATE (r_b)
-
+    
     ! Refactored stuff
     n = 4*(atoms%lmaxd+1)*atoms%ntype
     ALLOCATE(c_b(n))
@@ -101,19 +91,7 @@ CONTAINS
     CALL zcopy(n, c_b, 1, denCoeffs%mt_coeff(0:,:,0:1,0:1,jspin,jspin), 1)
     DEALLOCATE (c_b)
 
-    !--> Collect uunmt,udnmt,dunmt,ddnmt
-    n = (((atoms%lmaxd*(atoms%lmaxd+3))/2)+1)*sphhar%nlhd*atoms%ntype
-    ALLOCATE(r_b(n))
-    CALL MPI_ALLREDUCE(denCoeffs%uunmt(0:,:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-    CALL dcopy(n, r_b, 1, denCoeffs%uunmt(0:,:,:,jspin), 1)
-    CALL MPI_ALLREDUCE(denCoeffs%udnmt(0:,:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-    CALL dcopy(n, r_b, 1, denCoeffs%udnmt(0:,:,:,jspin), 1)
-    CALL MPI_ALLREDUCE(denCoeffs%dunmt(0:,:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-    CALL dcopy(n, r_b, 1, denCoeffs%dunmt(0:,:,:,jspin), 1)
-    CALL MPI_ALLREDUCE(denCoeffs%ddnmt(0:,:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-    CALL dcopy(n, r_b, 1, denCoeffs%ddnmt(0:,:,:,jspin), 1)
-    DEALLOCATE (r_b)
-
+    
     ! Refactored stuff
     n = 4*((atoms%lmaxd+1)**2)*sphhar%nlhd*atoms%ntype
     ALLOCATE(c_b(n))
@@ -269,10 +247,6 @@ CONTAINS
 
        n=atoms%nlod*atoms%ntype
        ALLOCATE (r_b(n))
-       CALL MPI_ALLREDUCE(denCoeffs%aclo(:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM, MPI_COMM_WORLD,ierr)
-       CALL dcopy(n, r_b, 1, denCoeffs%aclo(:,:,jspin), 1)
-       CALL MPI_ALLREDUCE(denCoeffs%bclo(:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM, MPI_COMM_WORLD,ierr)
-       CALL dcopy(n, r_b, 1, denCoeffs%bclo(:,:,jspin), 1)
        IF (PRESENT(regCharges)) THEN
          CALL MPI_ALLREDUCE(regCharges%enerlo(:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
          CALL dcopy(n, r_b, 1, regCharges%enerlo(:,:,jspin), 1)
@@ -290,12 +264,7 @@ CONTAINS
        CALL zcopy(n, c_b, 1, denCoeffs%mt_lou_coeff(:,:,0:1,jspin,jspin), 1)
        DEALLOCATE (c_b)
 
-       n = atoms%nlod * atoms%nlod * atoms%ntype
-       ALLOCATE (r_b(n))
-       CALL MPI_ALLREDUCE(denCoeffs%cclo(:,:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM, MPI_COMM_WORLD,ierr)
-       CALL dcopy(n, r_b, 1, denCoeffs%cclo(:,:,:,jspin), 1)
-       DEALLOCATE (r_b)
-
+       
        ! Refactored stuff
        n = atoms%nlod * atoms%nlod * atoms%ntype
        ALLOCATE (c_b(n))
@@ -303,14 +272,7 @@ CONTAINS
        CALL zcopy(n, c_b, 1, denCoeffs%mt_lolo_coeff(:,:,:,jspin,jspin), 1)
        DEALLOCATE (c_b)
 
-       n = (atoms%lmaxd+1) * atoms%ntype * atoms%nlod * sphhar%nlhd
-       ALLOCATE (r_b(n))
-       CALL MPI_ALLREDUCE(denCoeffs%acnmt(0:,:,:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM, MPI_COMM_WORLD,ierr)
-       CALL dcopy(n, r_b, 1, denCoeffs%acnmt(0:,:,:,:,jspin), 1)
-       CALL MPI_ALLREDUCE(denCoeffs%bcnmt(0:,:,:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM, MPI_COMM_WORLD,ierr)
-       CALL dcopy(n, r_b, 1, denCoeffs%bcnmt(0:,:,:,:,jspin), 1)
-       DEALLOCATE (r_b)
-
+       
        ! Refactored stuff
        n=2*atoms%nlod*atoms%ntype*(atoms%lmaxd+1)*sphhar%nlhd
        ALLOCATE (c_b(n))
@@ -319,13 +281,7 @@ CONTAINS
        CALL MPI_ALLREDUCE(denCoeffs%nmt_lou_coeff(0:,:,:,:,0:1,jspin,jspin),c_b,n,MPI_DOUBLE_COMPLEX,MPI_SUM, MPI_COMM_WORLD,ierr)
        CALL zcopy(n, c_b, 1, denCoeffs%nmt_lou_coeff(0:,:,:,:,0:1,jspin,jspin), 1)
        DEALLOCATE (c_b)
-
-       n = atoms%ntype * sphhar%nlhd * atoms%nlod**2
-       ALLOCATE (r_b(n))
-       CALL MPI_ALLREDUCE(denCoeffs%ccnmt(:,:,:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM, MPI_COMM_WORLD,ierr)
-       CALL dcopy(n, r_b, 1, denCoeffs%ccnmt(:,:,:,:,jspin), 1)
-       DEALLOCATE (r_b)
-
+       
        ! Refactored stuff
        n = atoms%ntype * sphhar%nlhd * atoms%nlod**2
        ALLOCATE (c_b(n))
@@ -485,19 +441,7 @@ CONTAINS
 
           IF (denCoeffsOffdiag%l_fmpl) THEN
 
-             !-->        Full magnetization plots: Collect uunmt21, etc.
-             n = (atoms%lmaxd+1)**2 *sphhar%nlhd*atoms%ntype
-             ALLOCATE(c_b(n))
-             CALL MPI_ALLREDUCE(denCoeffsOffdiag%uunmt21,c_b,n,MPI_DOUBLE_COMPLEX,MPI_SUM,MPI_COMM_WORLD,ierr)
-             CALL zcopy(n, c_b, 1, denCoeffsOffdiag%uunmt21, 1)
-             CALL MPI_ALLREDUCE(denCoeffsOffdiag%udnmt21,c_b,n,MPI_DOUBLE_COMPLEX,MPI_SUM,MPI_COMM_WORLD,ierr)
-             CALL zcopy(n, c_b, 1, denCoeffsOffdiag%udnmt21, 1)
-             CALL MPI_ALLREDUCE(denCoeffsOffdiag%dunmt21,c_b,n,MPI_DOUBLE_COMPLEX,MPI_SUM,MPI_COMM_WORLD,ierr)
-             CALL zcopy(n, c_b, 1, denCoeffsOffdiag%dunmt21, 1)
-             CALL MPI_ALLREDUCE(denCoeffsOffdiag%ddnmt21,c_b,n,MPI_DOUBLE_COMPLEX,MPI_SUM,MPI_COMM_WORLD,ierr)
-             CALL zcopy(n, c_b, 1, denCoeffsOffdiag%ddnmt21, 1)
-             DEALLOCATE (c_b)
-
+             
              ! Refactored stuff
              n = 4*((atoms%lmaxd+1)**2)*sphhar%nlhd*atoms%ntype
              ALLOCATE(c_b(n))
