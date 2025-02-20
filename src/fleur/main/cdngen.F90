@@ -12,7 +12,7 @@ CONTAINS
 SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
                   kpts,atoms,sphhar,stars,sym,juphon,gfinp,hub1inp,&
                   enpara,cell,noco,nococonv,vTot,results ,coreSpecInput,&
-                  archiveType, xcpot,outDen,EnergyDen,greensFunction,hub1data,vxc,exc)
+                  archiveType, xcpot,outDen,EnergyDen,core_den,greensFunction,hub1data,vxc,exc)
 
    !*****************************************************
    !    Charge density generator
@@ -82,6 +82,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_hub1data),OPTIONAL,INTENT(INOUT)    :: hub1data
    CLASS(t_xcpot),INTENT(IN)     :: xcpot
    TYPE(t_potden),INTENT(INOUT)     :: outDen, EnergyDen
+   TYPE(t_potden),INTENT(OUT),optional       :: core_den
    TYPE(t_potden),INTENT(INOUT),OPTIONAL:: vxc, exc
 
    !Scalar Arguments
@@ -98,7 +99,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_jDOS),TARGET            :: jDOS
    TYPE(t_cdnvalJob)       :: cdnvalJob
    TYPE(t_greensfImagPart) :: greensfImagPart
-   TYPE(t_potden)          :: val_den, core_den
+   TYPE(t_potden)          :: val_den
    TYPE(t_greensfContourData) :: contour(gfinp%numberContours)
 
 

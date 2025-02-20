@@ -48,7 +48,7 @@ SUBROUTINE initRelax(noco,nococonv,atoms,input,vacuum,sphhar,stars,sym ,cell,den
 
    END SUBROUTINE initRelax
 
-   SUBROUTINE precond_noco(it,vacuum,sphhar,stars,sym ,cell,noco,nococonv,input,atoms,inden,outden,fsm)
+   SUBROUTINE precond_noco(it,vacuum,sphhar,stars,sym ,cell,noco,nococonv,input,atoms,inden,outden,coreden,fsm)
      use m_types_mixvector
      INTEGER,INTENT(IN)               :: it
      TYPE(t_input),     INTENT(IN)    :: input
@@ -61,26 +61,27 @@ SUBROUTINE initRelax(noco,nococonv,atoms,input,vacuum,sphhar,stars,sym ,cell,den
      TYPE(t_sym),       INTENT(IN)    :: sym
       
      TYPE(t_cell),      INTENT(IN)    :: cell
-     TYPE(t_potden),    INTENT(IN)    :: inden
+     TYPE(t_potden),    INTENT(INOUT) :: inden,coreden
      TYPE(t_potden),    INTENT(INOUT) :: outden
      TYPE(t_mixvector), INTENT(INOUT)   :: fsm
 
-     if (.not.(noco%l_noco.and.any(noco%l_alignMT))) return
+     if (.not.(noco%l_noco)) return
 
      select case (noco%mag_mixing_scheme)
      case(1)
        if (it>1) return
-       call precond_noco_anglerotate(vacuum,sphhar,stars,sym ,cell,noco,nococonv,input,atoms,inden,outden,fsm)
+       call precond_noco_anglerotate(vacuum,sphhar,stars,sym ,cell,noco,nococonv,input,atoms,inden,outden,coreden,fsm)
      case(2)
-       call precond_noco_anglerotate(vacuum,sphhar,stars,sym ,cell,noco,nococonv,input,atoms,inden,outden,fsm)
+       call precond_noco_anglerotate(vacuum,sphhar,stars,sym ,cell,noco,nococonv,input,atoms,inden,outden,coreden,fsm)
      case(3)
        call precond_noco_densitymatrix(vacuum,sphhar,stars,sym ,cell,noco,nococonv,input,atoms,inden,outden,fsm)
      end select
    END subroutine precond_noco
 
    !Preconditioner to control relaxation of the direction of the magnetic moment
-   SUBROUTINE precond_noco_anglerotate(vacuum,sphhar,stars,sym ,cell,noco,nococonv,input,atoms,inden,outden,fsm)
+   SUBROUTINE precond_noco_anglerotate(vacuum,sphhar,stars,sym ,cell,noco,nococonv,input,atoms,inden,outden,coreden,fsm)
      use m_types_mixvector
+     use m_magmoments
      TYPE(t_input),     INTENT(IN)    :: input
      TYPE(t_atoms),     INTENT(IN)    :: atoms
      TYPE(t_noco),      INTENT(IN)    :: noco
@@ -91,49 +92,87 @@ SUBROUTINE initRelax(noco,nococonv,atoms,input,vacuum,sphhar,stars,sym ,cell,den
      TYPE(t_sym),       INTENT(IN)    :: sym
       
      TYPE(t_cell),      INTENT(IN)    :: cell
-     TYPE(t_potden),    INTENT(IN)    :: inden
+     TYPE(t_potden),    INTENT(INOUT) :: inden,coreden
      TYPE(t_potden),    INTENT(INOUT) :: outden
      TYPE(t_mixvector), INTENT(OUT)   :: fsm
 
-     real,dimension(atoms%ntype) :: dphi,dtheta,zeros
-     TYPE(t_potden)              :: delta_den,outden_rot
-     integer                     :: n
+     real,dimension(atoms%ntype) :: dphi,dtheta,zeros,theta,phi
+     TYPE(t_potden)              :: delta_den,outden_rot,valden
+     type(t_mixvector)           :: sm
+     integer                     :: n,i
+     
+     REAL                          :: moments_in(3,atoms%ntype),moments_out(3,atoms%ntype),axes(3),angle(atoms%ntype)
      zeros(:) = 0.0
-     !Put outden in local frame of inden
-     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,-nococonv%alphPrev,zeros,outden)
-     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,zeros,-nococonv%betaPrev,outden)
-     !rotation angle
-     CALL gimmeAngles(input,atoms,noco,vacuum,sphhar,stars,outden,dPhi,dtheta)
-     !dphi   = dphi  *(noco%mix_RelaxWeightOffD-1.0)
-     dtheta = dtheta *(noco%mix_RelaxWeightOffD-1.0)
+     call valden%subPotDen(outDen, coreden)
+     
+    !Determine avaraged Magnetisation vectors
+     call nococonv%avg_moments(inden,atoms,moments_in,theta,phi)
+     call nococonv%avg_moments(outden,atoms,moments_out,theta,phi)
+     !Determine angle and rotation axis
+     DO i=1,atoms%ntype
+      moments_in(:,i)=moments_in(:,i)/sqrt(dot_product(moments_in(:,i),moments_in(:,i)))
+      moments_out(:,i)=moments_out(:,i)/sqrt(dot_product(moments_out(:,i),moments_out(:,i)))
+      axes(:)=cross_product(moments_in(:,i),moments_out(:,i))
+      print *,"A:",i,axes
+      call pol_angle(axes(1),axes(2),axes(3), theta(i), phi(i))
+      angle(i)=acos(dot_product(moments_in(:,i),moments_out(:,i)))
+      print *,"angle:",angle(i)
+     enddo
+     
+     if (.false.) THEN
+        !First rotate core-density into direction of valence density
+        call flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,-phi,-theta,coreden,toGlobal=.false.)
+        call flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,-1*angle,zeros,coreden,toGlobal=.true.)
+        call flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,-phi,-theta,coreden,toGlobal=.true.)
+     
+        !Reconstruct total density
+        call outden%addPotDen(valden,coreden)
+     endif
+     !Rotate outden such that the rotation axis points in z-direction
 
-     !if (any(abs(dphi)>2.0).or.any(abs(dtheta)>2.0)) THEN
-     !   print *,"No precond"
-      ! dphi=0.0
-       !dtheta=0.0
-     !endif
-
-     !Scale Off-diagonal parts
-     !DO n=1,atoms%ntype
-      !  outden%mt(:,0:,n,3)=outden%mt(:,0:,n,3)*noco%mix_RelaxWeightOffD(n)
-       !outden%mt(:,0:,n,4)=outden%mt(:,0:,n,4)*noco%mix_RelaxWeightOffD(n)
-     !ENDDO
-
-     !CALL cureTooSmallAngles(atoms,dphi,dtheta)
-     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,zeros,dtheta,outden)
-     !CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,dphi,zeros,outden)
-     !Rotate back in global frame
-     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,zeros,nococonv%betaPrev,outden)
-     CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,nococonv%alphPrev,zeros,outden)
-
-     CALL gimmeAngles(input,atoms,noco,vacuum,sphhar,stars,outden,dPhi,dtheta)
-  
-     call delta_den%subPotDen(outden,inden)
-     !CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,-dphi,zeros,delta_den)
-     !CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,zeros,-dtheta,delta_den)
-
+   !  write(ounit,*)"inden"
+   !  CALL spinMoments( input, atoms, noco,nococonv,den=inDen)
+   !  write(ounit,*)"outden"
+   !  CALL spinMoments( input, atoms, noco,nococonv,den=outDen)
+         
+     call flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,-phi,-theta,outden,toGlobal=.false.)   
+   !  write(ounit,*)"outden(in rot frame)"
+   !  CALL spinMoments( input, atoms, noco,nococonv,den=outDen)
+     
+     !rotate by angle
+     call flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,-angle,zeros,outden,toGlobal=.true.)
+   !  write(ounit,*)"outden(rotated frame)"
+   !  CALL spinMoments( input, atoms, noco,nococonv,den=outDen)
+     !Rotate back
+     call flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,-phi,-theta,outden,toGlobal=.true.)
+   !  write(ounit,*)"outden(precond)"
+   !  CALL spinMoments( input, atoms, noco,nococonv,den=outDen)
+     
+     
+     call nococonv%avg_moments(outden,atoms,moments_out,theta,phi)
+     !Determine angle and rotation axis
+     DO i=1,atoms%ntype
+       moments_out(:,i)=moments_out(:,i)/sqrt(dot_product(moments_out(:,i),moments_out(:,i)))
+      axes(:)=cross_product(moments_in(:,i),moments_out(:,i))
+      print *,"A:",i,axes
+      call pol_angle(axes(1),axes(2),axes(3), theta(i), phi(i))
+      angle(i)=acos(dot_product(moments_in(:,i),moments_out(:,i)))
+      print *,"angle:",angle(i)
+     enddo
+     call sm%alloc()
      call fsm%alloc()
-     call fsm%from_density(delta_den,vacuum%nmzxyd)
+     call fsm%from_density(outden,vacuum%nmzxyd)
+     call sm%from_density(inden,vacuum%nmzxyd)
+
+     fsm=fsm-sm
+
+     contains 
+     function cross_product(a,b)
+      real :: a(3),b(3),cross_product(3)
+      cross_product(1)=a(2)*b(3)-a(3)*b(2)
+      cross_product(2)=a(3)*b(1)-a(1)*b(3)
+      cross_product(3)=a(1)*b(2)-a(2)*b(1)
+     end function 
 
    END SUBROUTINE precond_noco_anglerotate
 
@@ -312,6 +351,7 @@ SUBROUTINE toGlobalSpinFrame(noco,nococonv,vacuum,sphhar,stars&
 
    if (l_irank0) then
      zeros(:)=0.0
+     print *,"togobal:",merge(nococonv%alph,zeros,noco%l_alignMT),merge(nococonv%beta,zeros,noco%l_alignMT)
      CAlL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,merge(nococonv%alph,zeros,noco%l_alignMT),merge(nococonv%beta,zeros,noco%l_alignMT),Den,toGlobal=.true.)
      !CAlL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,zeros,merge(nococonv%beta,zeros,noco%l_alignMT),Den)
      !CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,merge(nococonv%alph,zeros,noco%l_alignMT),zeros,Den)
