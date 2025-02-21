@@ -35,13 +35,13 @@ if (__check_external)
     message("External ELPA Library found:${FLEUR_USE_ELPA}")
     #if ELPA was found also check for patch and SP
     if (FLEUR_USE_ELPA)
-        trycompile(FLEUR_USE_ELPA_PATCH ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_LIST_DIR}/test_ELPA_transform.f90
+        try_compile(FLEUR_USE_ELPA_PATCH ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_LIST_DIR}/test_ELPA_transform.f90
             LINK_LIBRARIES ${FLEUR_LIBRARIES} OUTPUT_VARIABLE compile_output)
         if (FLEUR_USE_ELPA_PATCH)
                 message("  ELPA Library patch for transform:${FLEUR_USE_ELPA_PATCH}")
                 set(FLEUR_MPI_DEFINITIONS ${FLEUR_MPI_DEFINITIONS} "CPP_ELPA_PATCH")
         endif()
-        trycompile(FLEUR_USE_ELPA_SP ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_LIST_DIR}/test_ELPA_sp.f90
+        try_compile(FLEUR_USE_ELPA_SP ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_LIST_DIR}/test_ELPA_sp.f90
             LINK_LIBRARIES ${FLEUR_LIBRARIES} OUTPUT_VARIABLE compile_output)
         if (FLEUR_USE_ELPA_SP)
                 message("  ELPA Library Single Precision found:${FLEUR_USE_ELPA_SP}")
