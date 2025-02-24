@@ -455,6 +455,25 @@ CONTAINS
                   tempval = CMPLX(0.0,0.0)
                END DO
                IF (fmpi%irank==0) write(9989,*) "End spin loop"
+
+               IF (fi%input%film .AND. iDir_row == 3  ) THEN 
+                  rho_vac = (rho%vac(:,:,:,1)+rho%vac(:,:,:,fi%input%jspins))/(3.0-fi%input%jspins)
+                  !IF (.NOT. ALLOCATED(local_rho_vac)) ALLOCATE(local_rho_vac(fi%vacuum%nmzd,local_stars%ng2,2))
+                  local_rho_vac(:,:stars%ng2,:) = rho_vac(:,:,:)
+
+                  CALL dfpt_int_vac_sf(stars,fi%vacuum,fi%cell,local_rho_vac,local_vExt1%vac(:,:,:,1),tempval)
+                  IF (fmpi%irank==0) write(9989,FMT=8000) "    SF VAC rho V1ext0       ", tempval
+                  tempval = CMPLX(0.0,0.0)
+                 
+                  rho_pw = (rho%pw(:,1)+rho%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
+                  local_rho_pw = 0.0 
+                  local_rho_pw(:stars%ng3) = rho_pw(:)
+                  ! here all convol
+                  CALL dfpt_int_pw_sf(stars,fi%vacuum,fi%cell,local_rho_pw,local_vExt1%pw(:,1),tempval)
+                  IF (fmpi%irank==0) write(9989,FMT=8000) "    SF IR rho V1ext0       ", tempval
+                  tempval = CMPLX(0.0,0.0)
+               END IF 
+
             END IF
 
             IF (fmpi%irank==0) write(9990,FMT=8001) qvec, iDtype_row, iDir_row, iDtype_col, iDir_col
@@ -645,6 +664,95 @@ CONTAINS
       vac_int = vac_int + tvact
 
    END SUBROUTINE dfpt_int_vac
+
+   SUBROUTINE dfpt_int_vac_sf(stars,vacuum,cell,vac_conj,vac_pure,sf_vac_int)
+      USE m_types 
+      USE m_constants
+      
+      IMPLICIT NONE 
+
+      TYPE(t_stars),INTENT(IN) :: stars
+      TYPE(t_vacuum),INTENT(IN) :: vacuum 
+      TYPE(t_cell), INTENT(IN) :: cell 
+
+      COMPLEX, INTENT(IN) :: vac_conj(:,:,:), vac_pure(:,:,:)
+
+      COMPLEX, INTENT(OUT) :: sf_vac_int
+
+      REAL :: facv,tvacRe,tvacIm , facn
+      COMPLEX :: tvact, dpzc
+      REAL :: dpzRe, dpzIm
+      INTEGER :: ivac, k2 
+
+
+      facv=2.0/vacuum%nvac
+      facn = -1.0 ! asign the direction of the normal vector 
+      tvacre = 0.
+      tvacim = 0.
+      dpzc = CMPLX(0.0,0.0)
+      tvact  = CMPLX(0.0,0.0)
+
+      DO ivac = 1 , vacuum%nvac 
+         IF (ivac == 2 ) facn = 1.0
+         DO k2 = 1, stars%ng2
+            dpzc = stars%nstr2(k2) * CONJG(vac_conj(1,k2,ivac)) * vac_pure(1,k2,ivac)
+            tvact = tvact + cell%area * dpzc * facv * facn 
+         END DO 
+      END DO 
+
+      sf_vac_int = sf_vac_int - tvact ! Sign before integral
+
+   END SUBROUTINE dfpt_int_vac_sf
+
+   SUBROUTINE dfpt_int_pw_sf(stars,vacuum,cell,pw_conj,pw_pure,sf_int)
+      USE m_types 
+      USE m_constants
+      
+      IMPLICIT NONE 
+
+      TYPE(t_stars),INTENT(IN) :: stars
+      TYPE(t_vacuum),INTENT(IN) :: vacuum
+      TYPE(t_cell), INTENT(IN) :: cell
+      
+
+      COMPLEX, INTENT(IN) :: pw_conj(:), pw_pure(:)
+
+      COMPLEX, INTENT(OUT) :: sf_int
+
+      REAL :: facn, qzh, pref, facv  
+      COMPLEX :: fft_conj(stars%ng2) , fft_pure(stars%ng2)
+      INTEGER :: ig3, ig2, ivac 
+
+      sf_int = 0.0 
+      pref = 1.0 ! exponent fourier trafo
+      facn = 1.0 ! direciton of normal vector
+      facv=2.0/vacuum%nvac 
+      
+    
+
+
+      DO ivac = 1 , vacuum%nvac
+         fft_conj = CMPLX(0.0,0.0)
+         fft_pure = CMPLX(0.0,0.0)
+         IF (ivac == 2 ) pref = -1.0
+         IF (ivac == 2 ) facn = -1.0
+         DO ig3 = 1, stars%ng3   
+            ! Sum over all G_perp and map to G_||
+            ! Fourier Trafo at +-Dvac/2
+            qzh = pref * stars%kv3(3,ig3) * cell%bmat(3,3) * cell%z1
+            ig2 = stars%ig2(ig3)
+            fft_conj(ig2) = fft_conj(ig2) + pw_conj(ig3) * cmplx( cos(qzh), sin(qzh))  
+
+            fft_pure(ig2) = fft_conj(ig2) + pw_pure(ig3) * cmplx( cos(qzh), sin(qzh))  
+         END DO 
+
+         sf_int = sf_int - facn * facv * cell%area * DOT_PRODUCT(fft_conj(:stars%ng2),fft_pure(:stars%ng2))
+      END DO 
+
+
+
+   END SUBROUTINE dfpt_int_pw_sf
+
 
    SUBROUTINE dfpt_dynmat_eigen(fi, results, results1, fmpi, enpara, nococonv, &
                                 stars, starsq, sphhar, inden, hub1data, vx, v, v1real, v1imag, &
