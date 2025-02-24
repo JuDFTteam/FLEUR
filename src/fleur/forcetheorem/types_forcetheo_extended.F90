@@ -9,4 +9,5 @@ MODULE m_types_forcetheo_extended
   USE m_types_ssdisp
   USE m_types_dmi
   USE m_types_jij
+  USE m_types_dmi_scf
 END MODULE m_types_forcetheo_extended

@@ -892,14 +892,14 @@ CONTAINS
 
       DO i = 1, nspins
          DO j = 1, nspins
-            CALL smat1(i, j)%init(.FALSE., lapw%nv(i) + fi%atoms%nlotot, lapw%nv(j) + fi%atoms%nlotot, fmpi%sub_comm, .false.)
+            CALL smat1(i, j)%init(.FALSE., lapw%nv(i) + fi%atoms%nlotot, lapw%nv(j) + fi%atoms%nlotot, fmpi%sub_comm, MPIMAT_ROWCYCLIC)
             CALL hmat1(i, j)%init(smat1(i, j))
-            CALL smat1q(i, j)%init(.FALSE., lapwq%nv(i) + fi%atoms%nlotot, lapw%nv(j) + fi%atoms%nlotot, fmpi%sub_comm, .false.)
+            CALL smat1q(i, j)%init(.FALSE., lapwq%nv(i) + fi%atoms%nlotot, lapw%nv(j) + fi%atoms%nlotot, fmpi%sub_comm, MPIMAT_ROWCYCLIC)
             CALL hmat1q(i, j)%init(smat1q(i, j))
-            CALL smat2(i, j)%init(.FALSE., lapw%nv(i) + fi%atoms%nlotot, lapw%nv(j) + fi%atoms%nlotot, fmpi%sub_comm, .false.)
+            CALL smat2(i, j)%init(.FALSE., lapw%nv(i) + fi%atoms%nlotot, lapw%nv(j) + fi%atoms%nlotot, fmpi%sub_comm, MPIMAT_ROWCYCLIC)
             CALL hmat2(i, j)%init(smat2(i, j))
             IF (PRESENT(vmat2_final)) THEN
-               CALL vmat2(i, j)%init(.FALSE., lapwq%nv(i) + fi%atoms%nlotot, lapw%nv(j) + fi%atoms%nlotot, fmpi%sub_comm, .false.)
+               CALL vmat2(i, j)%init(.FALSE., lapwq%nv(i) + fi%atoms%nlotot, lapw%nv(j) + fi%atoms%nlotot, fmpi%sub_comm, MPIMAT_ROWCYCLIC)
             END IF
          END DO
       END DO

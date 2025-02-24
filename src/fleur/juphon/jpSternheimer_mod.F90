@@ -1073,14 +1073,14 @@ module m_jpSternheimer
           ! After the Sternheimer equation is converged we jump out of the convergence loop having written out the effective
           ! potential variation, the change of the Kohn--Sham wavefunctions and the variation of the density to hard disk
           if ( sternFinIt ) then
-            CALL save_npy("overconverged_den_mt_old_1.npy",rho1MTplus(:,:,:,1))
-            CALL save_npy("overconverged_den_pw_old_1.npy",rho1IRDSplus(:,1))
+            !CALL save_npy("overconverged_den_mt_old_1.npy",rho1MTplus(:,:,:,1))
+            !CALL save_npy("overconverged_den_pw_old_1.npy",rho1IRDSplus(:,1))
             !CALL save_npy("overconverged_den_mt_old_2.npy",rho1MTplus(:,:,:,2))
             !CALL save_npy("overconverged_den_pw_old_2.npy",rho1IRDSplus(:,2) + grRho0IR(:,2))
             !CALL save_npy("overconverged_den_mt_old_3.npy",rho1MTplus(:,:,:,3))
             !CALL save_npy("overconverged_den_pw_old_3.npy",rho1IRDSplus(:,3) + grRho0IR(:,3))
-            CALL save_npy("intheend_gradrho_pw.npy",grRho0IR)
-            CALL save_npy("intheend_gradrho_mt.npy",grRho0MT(:,:,1,:))
+            !CALL save_npy("intheend_gradrho_pw.npy",grRho0IR)
+            !CALL save_npy("intheend_gradrho_mt.npy",grRho0MT(:,:,1,:))
             write(*, '(a)') 'Sternheimer self-consistency cycle terminated!'
             exit
           end if
@@ -1109,8 +1109,8 @@ module m_jpSternheimer
 
 
               IF (.NOT.stern1stIt.AND..NOT.l_dummy.AND..NOT.stern2ndIt) THEN
-               CALL save_npy("old_rho1_mixed_mt.npy",rho1MTplus(:, :, :, 1))
-               CALL save_npy("old_rho1_mixed_pw.npy",rho1IRDSplus(:, 1))
+               !CALL save_npy("old_rho1_mixed_mt.npy",rho1MTplus(:, :, :, 1))
+               !CALL save_npy("old_rho1_mixed_pw.npy",rho1IRDSplus(:, 1))
 
                !STOP
               END IF
@@ -1118,8 +1118,8 @@ module m_jpSternheimer
           end do ! idir
 
           if (all(converged)) then
-            CALL save_npy("converged_den_mt_old_1.npy",rho1MTplus(:,:,:,1))
-            CALL save_npy("converged_den_pw_old_1.npy",rho1IRDSplus(:,1))
+            !CALL save_npy("converged_den_mt_old_1.npy",rho1MTplus(:,:,:,1))
+            !CALL save_npy("converged_den_pw_old_1.npy",rho1IRDSplus(:,1))
             !CALL save_npy("converged_den_mt_old_2.npy",rho1MTplus(:,:,:,2))
             !CALL save_npy("converged_den_pw_old_2.npy",rho1IRDSplus(:,2))
             !CALL save_npy("converged_den_mt_old_3.npy",rho1MTplus(:,:,:,3))
@@ -1444,7 +1444,7 @@ module m_jpSternheimer
       call GenVeff1( input, stars, cell, atoms, harSw, extSw, xcSw, vExtFull, ngdp, qpoint, rho0IRpw, rho0MTsh, rho1PW, rho1MT, &
         & grRho0MT, gdp, vEff1IRsh, vEff1MT, vxc1IRKern, ylm, dKernMTGPts, gWghts, iDatom, iDtype, iqpt, ngpqdp, gpqdp, vHarNum )
 
-       CALL save_npy("old_v1_start_pw.npy",vEff1IRsh)
+       !CALL save_npy("old_v1_start_pw.npy",vEff1IRsh)
 
       if (.false.) then
         close(109)
@@ -1497,7 +1497,7 @@ module m_jpSternheimer
         end do
       end do
 
-      CALL save_npy("old_v1plus_start_mt.npy",sumVMTs)
+      !CALL save_npy("old_v1plus_start_mt.npy",sumVMTs)
 
       !STOP
 

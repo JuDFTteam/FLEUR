@@ -123,6 +123,7 @@ MODULE m_types_juPhon
    CONTAINS
       PROCEDURE :: read_xml => read_xml_juPhon
       PROCEDURE :: mpi_bc => mpi_bc_juPhon
+      PROCEDURE :: precheck_juPhon
    END TYPE t_juPhon
 
    PUBLIC t_juPhon
@@ -181,7 +182,7 @@ CONTAINS
       TYPE(t_xml), INTENT(INOUT)     :: xml
 
       INTEGER::numberNodes
-      CHARACTER(len=100) :: xPathA
+      CHARACTER(len=100) :: xPathA,valueString
 
       numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon')
 
@@ -402,6 +403,29 @@ CONTAINS
          this%qvec=xml%read_q_list('/fleurInput/output/juPhon/qVectors')
       ENDIF
 
+      ! Before we exit check needed parameters 
+      IF (this%l_dfpt) CALL this%precheck_juPhon(xml)
+      
    END SUBROUTINE read_xml_juPhon
 
+   SUBROUTINE precheck_juPhon(this,xml)
+    USE m_types_xml
+    USE m_judft 
+
+    IMPLICIT NONE 
+
+    CLASS(t_juPhon), INTENT(IN) :: this
+    TYPE(t_xml), INTENT(INOUT)  :: xml 
+
+    INTEGER :: numberNodes
+    CHARACTER(len=100) :: xPathA,valueString
+
+    xPathA = '/fleurInput/calculationSetup/cutoffs/@numbands'
+    numberNodes = xml%GetNumberOfNodes(xPathA)
+    IF(numberNodes.EQ.1) THEN
+      valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))))) 
+      IF(.NOT. TRIM(ADJUSTL(valueString)).EQ.'all') CALL juDFT_error("numbands is not set to all", calledby="types_juPhon.F90")
+    END IF 
+
+   END SUBROUTINE precheck_juPhon
 END MODULE m_types_juPhon

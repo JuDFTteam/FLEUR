@@ -39,6 +39,9 @@ CONTAINS
 
       CHARACTER(len=1) :: lotype(0:3)=(/'s','p','d','f'/)
       TYPE(t_atompar):: ap(atoms%ntype)
+
+      CALL timestart('make_atomic_defaults')
+
       element_species=0
 
       ALLOCATE(atoms%nz(atoms%ntype))
@@ -85,13 +88,13 @@ CONTAINS
       !Now set the defaults
       DO n=1,atoms%ntype
          id=NINT((atoms%zatom(n)-atoms%nz(n))*100)
-         IF (id>0) THEN
+!         IF (id>0) THEN
             ap(n)=find_atompar(atoms%nz(n),atoms%rmt(n),profile,id)
             !This specific atom also has a rmt given?
 !            IF (ap(n)%id==id.AND.ap(n)%rmt>0.0) atoms%rmt(n)=ap(n)%rmt
-         ELSE
-            ap(n)=find_atompar(atoms%nz(n),atoms%rmt(n),profile)   
-         ENDIF
+!         ELSE
+!            ap(n)=find_atompar(atoms%nz(n),atoms%rmt(n),profile)   
+!         ENDIF
          IF (ap(n)%rmt>0.0) atoms%rmt(n)=ap(n)%rmt
          CALL ap(n)%add_defaults()
          atoms%speciesName(n)=ap(n)%desc
@@ -205,6 +208,7 @@ CONTAINS
 
       END DO
 
+      CALL timestop('make_atomic_defaults')
 
     END SUBROUTINE make_atomic_defaults
   END MODULE m_make_atomic_defaults

@@ -31,6 +31,7 @@ CONTAINS
       USE m_types_orbcomp
       USE m_types_jDOS
       USE m_types_mcd
+      USE m_intgr
 
       IMPLICIT NONE
 
@@ -54,20 +55,24 @@ CONTAINS
       INTEGER, INTENT (IN) :: jsp_start,jsp_end,jspd
 
       REAL, INTENT    (IN) :: vr(atoms%jmtd,atoms%ntype,jspd)
-      REAL, INTENT (INOUT) :: rho(:,0:,:,:)!(toms%jmtd,0:sphhar%nlhd,atoms%ntype,jspd)
+      REAL, INTENT (INOUT) :: rho(:,0:,:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,jspd)
+
       REAL, OPTIONAL, INTENT(INOUT) :: rhoIm(:,0:,:,:)
 
       INTEGER, PARAMETER :: lcf=3
 
-      INTEGER :: itype,na,nd,l,lp,llp ,lh,j,ispin,noded,nodeu,llpb,natom,jj,n_dos
+      INTEGER :: itype,na,nd,l,m,lp,llp ,lh,j,ispin,noded,nodeu,llpb,natom,jj,n_dos
       INTEGER :: ilo,ilop,i,i_hia,i_exc
-      REAL    :: wronk,qmtt
+      REAL    :: wronk,qmtt, radThomson, tempFactor, sumlm
       COMPLEX :: cs, rho21
       LOGICAL :: l_hia,l_performSpinavg
 
       REAL              :: qmtl(0:atoms%lmaxd,jspd,atoms%ntype),qmtllo(0:atoms%lmaxd),vrTmp(atoms%jmtd)
       REAL,ALLOCATABLE  :: vr0(:,:)
       CHARACTER(LEN=20) :: attributes(6)
+      REAL              :: denThomson(atoms%jmtd,-1:3)
+      REAL              :: overlapR3(atoms%jmtd,2,2)
+      REAL              :: ovlpInt(2,2)
 
       REAL, ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:)
 
@@ -86,7 +91,7 @@ CONTAINS
          !$OMP SHARED(atoms,jsp_start,jsp_end,enpara,vr,denCoeffs,sphhar,l_performSpinavg)&
          !$OMP SHARED(orb,noco,denCoeffsOffdiag,jspd,input,sym)&
          !$OMP PRIVATE(itype,na,ispin,l,rho21,f,g,nodeu,noded,wronk,i,j,qmtllo,qmtt,nd,lh,lp,llp,llpb,cs)&
-         !$OMP PRIVATE(l_hia,vrTmp,vr0)
+         !$OMP PRIVATE(l_hia,vrTmp,vr0,denThomson,radThomson,tempFactor,overlapR3,ovlpInt,sumlm)
          IF (noco%l_mperp) THEN
             ALLOCATE ( f(atoms%jmtd,2,0:atoms%lmaxd,jspd),g(atoms%jmtd,2,0:atoms%lmaxd,jspd) )
          ELSE
@@ -96,6 +101,7 @@ CONTAINS
 
          !$OMP DO
          DO itype = 1,atoms%ntype
+            radThomson = atoms%zatom(iType) / (c_light(1.0)**2)
             if (atoms%l_nonpolbas(itype)) THEN
                if (.not.allocated(vr0)) allocate(vr0(atoms%jmtd,jspd))
                vr0(:,1)=(vr(:,itype,1)+vr(:,itype,2))/2
@@ -107,6 +113,7 @@ CONTAINS
             na = atoms%firstAtom(itype)
 
             DO ispin = jsp_start,jsp_end
+               denThomson = 0.0
                !Spherical component
                CALL timestart("cdnmt spherical diagonal")
                DO l = 0,atoms%lmax(itype)
@@ -128,6 +135,9 @@ CONTAINS
 
                   CALL radfun(l,itype,ispin,enpara%el0(l,itype,ispin),vrTmp,atoms,&
                               f(1,1,l,ispin),g(1,1,l,ispin),usdus, nodeu,noded,wronk)
+
+                  overlapR3 = 0.0
+
                   llp = (l*(l+1))/2 + l
 
                   DO j = 1,atoms%jri(itype)
@@ -138,9 +148,31 @@ CONTAINS
                      rho(j,0,itype,ispin) = rho(j,0,itype,ispin) + REAL(cs)/(atoms%neq(itype)*sfp_const)
                      IF (l<=input%lResMax.AND.PRESENT(moments)) THEN !DFT case
                         moments%rhoLRes(j,0,llp,itype,ispin) = moments%rhoLRes(j,0,llp,itype,ispin) + REAL(cs)/(atoms%neq(itype)*sfp_const)
-                     ELSE IF (.NOT.PRESENT(moments)) THEN
+                     ELSE IF (PRESENT(rhoIm)) THEN
                         rhoIm(j,0,itype,ispin) = rhoIm(j,0,itype,ispin) + AIMAG(cs)/(atoms%neq(itype)*sfp_const)
                      END IF
+
+                     IF(PRESENT(moments)) THEN
+                        ! This is part of the calculation of the hyperfine field contributions from the valence electrons
+                        tempFactor = 0.5*radThomson / (4.0*pi_const*(atoms%rmsh(j,iType)**2.0) * ((atoms%rmsh(j,iType)+0.5*radThomson)**2.0)) !This is a smeared out delta distribution
+                        denThomson(j,-1) = denThomson(j,-1) + (f(j,1,l,ispin)*f(j,1,l,ispin)) * tempFactor * REAL(denCoeffs%mt_coeff(l,itype,0,0,ispin,ispin))
+                        denThomson(j,-1) = denThomson(j,-1) + (f(j,1,l,ispin)*g(j,1,l,ispin)) * tempFactor * REAL(denCoeffs%mt_coeff(l,itype,0,1,ispin,ispin))
+                        denThomson(j,-1) = denThomson(j,-1) + (g(j,1,l,ispin)*f(j,1,l,ispin)) * tempFactor * REAL(denCoeffs%mt_coeff(l,itype,1,0,ispin,ispin))
+                        denThomson(j,-1) = denThomson(j,-1) + (g(j,1,l,ispin)*g(j,1,l,ispin)) * tempFactor * REAL(denCoeffs%mt_coeff(l,itype,1,1,ispin,ispin))
+                        IF(l.LE.3) THEN
+                           denThomson(j,l) = denThomson(j,l) + (f(j,1,l,ispin)*f(j,1,l,ispin)) * tempFactor * REAL(denCoeffs%mt_coeff(l,itype,0,0,ispin,ispin))
+                           denThomson(j,l) = denThomson(j,l) + (f(j,1,l,ispin)*g(j,1,l,ispin)) * tempFactor * REAL(denCoeffs%mt_coeff(l,itype,0,1,ispin,ispin))
+                           denThomson(j,l) = denThomson(j,l) + (g(j,1,l,ispin)*f(j,1,l,ispin)) * tempFactor * REAL(denCoeffs%mt_coeff(l,itype,1,0,ispin,ispin))
+                           denThomson(j,l) = denThomson(j,l) + (g(j,1,l,ispin)*g(j,1,l,ispin)) * tempFactor * REAL(denCoeffs%mt_coeff(l,itype,1,1,ispin,ispin))
+                        END IF
+                        IF (noco%l_soc) THEN
+                           overlapR3(j,1,1) = (f(j,1,l,ispin)*f(j,1,l,ispin)+f(j,2,l,ispin)*f(j,2,l,ispin)) / (atoms%rmsh(j,iType)**3.0)
+                           overlapR3(j,1,2) = (f(j,1,l,ispin)*g(j,1,l,ispin)+f(j,2,l,ispin)*g(j,2,l,ispin)) / (atoms%rmsh(j,iType)**3.0)
+                           overlapR3(j,2,1) = overlapR3(j,1,2)
+                           overlapR3(j,2,2) = (g(j,1,l,ispin)*g(j,1,l,ispin)+g(j,2,l,ispin)*g(j,2,l,ispin)) / (atoms%rmsh(j,iType)**3.0)
+                        END IF
+                     END IF
+
                      IF(PRESENT(hub1data).AND.l<=lmaxU_const) THEN
                         hub1data%cdn_atomic(j,l,itype,ispin) = hub1data%cdn_atomic(j,l,itype,ispin) &
                                                              + REAL(denCoeffs%mt_coeff(l,itype,0,0,ispin,ispin)) &
@@ -148,7 +180,37 @@ CONTAINS
                                                              * 1.0/(atoms%neq(itype)*sfp_const)
                      END IF
                   END DO
+
+                  IF(PRESENT(moments)) THEN
+                     ! This is part of the calculation of the hyperfine field contributions from the valence electrons
+                     IF (noco%l_soc) THEN
+                        CALL intgr3(overlapR3(:,1,1),atoms%rmsh(:,iType),atoms%dx(iType),atoms%jri(iType),ovlpInt(1,1))
+                        CALL intgr3(overlapR3(:,1,2),atoms%rmsh(:,iType),atoms%dx(iType),atoms%jri(iType),ovlpInt(1,2))
+                        ovlpInt(2,1) = ovlpInt(1,2)
+                        CALL intgr3(overlapR3(:,2,2),atoms%rmsh(:,iType),atoms%dx(iType),atoms%jri(iType),ovlpInt(2,2))
+                        DO m = -l, l
+                           sumlm = m * (orb%uu(l,m,itype,ispin) * ovlpInt(1,1) + orb%ud(l,m,itype,ispin) * ovlpInt(1,2) + &
+                                        orb%du(l,m,itype,ispin) * ovlpInt(2,1) + orb%dd(l,m,itype,ispin) * ovlpInt(2,2))
+                           moments%hypFineContribs(-1,iType,ispin,3) = moments%hypFineContribs(-1,iType,ispin,3) + sumlm
+                           IF(l.LE.3) THEN
+                              moments%hypFineContribs(l,iType,ispin,3) = moments%hypFineContribs(l,iType,ispin,3) + sumlm
+                           END IF
+                        END DO
+                     END IF
+                  END IF
                END DO
+
+               IF (PRESENT(moments)) THEN
+                  ! This is part of the calculation of the hyperfine field contributions from the valence electrons
+                  CALL intgr3(denThomson(:,-1),atoms%rmsh(:,iType),atoms%dx(iType),atoms%jri(iType),tempFactor)
+                  moments%hypFineContribs(-1,iType,ispin,1) = moments%hypFineContribs(-1,iType,ispin,1) + tempFactor
+                  moments%hypFineContribs(-1,iType,ispin,1) = moments%hypFineContribs(-1,iType,ispin,1) / (atoms%neq(itype)*sfp_const)
+                  DO l = 0, 3
+                     CALL intgr3(denThomson(:,l),atoms%rmsh(:,iType),atoms%dx(iType),atoms%jri(iType),tempFactor)
+                     moments%hypFineContribs(l,iType,ispin,1) = moments%hypFineContribs(l,iType,ispin,1) + tempFactor
+                     moments%hypFineContribs(l,iType,ispin,1) = moments%hypFineContribs(l,iType,ispin,1) / (atoms%neq(itype)*sfp_const)
+                  END DO
+               END IF
                CALL timestop("cdnmt spherical diagonal")
 
                !Add the contribution of LO-LO and LAPW-LO cross-terms to rho and
@@ -156,9 +218,9 @@ CONTAINS
                DO l = 0,atoms%lmaxd
                   qmtllo(l) = 0.0
                END DO
-               IF (PRESENT(moments)) THEN !DFT case
+               IF (.NOT.PRESENT(rhoIm)) THEN !DFT case
                   CALL timestart("cdnmt LO diagonal")
-                  CALL cdnmtlo(itype,ispin,ispin,input,atoms,sphhar,sym,usdus,noco,&
+                  CALL cdnmtlo(itype,ispin,ispin,input,atoms,sphhar,sym,usdus,orb,noco,&
                                enpara%ello0(:,itype,:),vr0(:,:),denCoeffs,&
                                f(:,:,0:,ispin),g(:,:,0:,ispin),&
                                rho(:,0:,itype,ispin),qmtllo,moments=moments)
@@ -174,7 +236,7 @@ CONTAINS
                   moments%chmom(itype,ispin) = qmtt
                ELSE !DFPT case
                   CALL timestart("cdnmt LO diagonal")
-                  CALL cdnmtlo(itype,ispin,ispin,input,atoms,sphhar,sym,usdus,noco,&
+                  CALL cdnmtlo(itype,ispin,ispin,input,atoms,sphhar,sym,usdus,orb,noco,&
                                enpara%ello0(:,itype,:),vr0(:,:),denCoeffs,&
                                f(:,:,0:,ispin),g(:,:,0:,ispin),&
                                rho(:,0:,itype,ispin),qmtllo,&
@@ -220,7 +282,7 @@ CONTAINS
                            rho(j,lh,itype,ispin) = rho(j,lh,itype,ispin)+ REAL(cs)/atoms%neq(itype)
                            IF ((l<=input%lResMax).AND.(lp<=input%lResMax).AND.PRESENT(moments)) THEN !DFT case
                               moments%rhoLRes(j,lh,llp,itype,ispin) = moments%rhoLRes(j,lh,llp,itype,ispin) + REAL(cs)/atoms%neq(itype)
-                           ELSE IF (.NOT.PRESENT(moments)) THEN
+                           ELSE IF (PRESENT(rhoIm)) THEN
                               rhoIm(j,lh,itype,ispin) = rhoIm(j,lh,itype,ispin)+ AIMAG(cs)/atoms%neq(itype)
                            END IF
                         END DO
@@ -269,7 +331,7 @@ CONTAINS
                            + denCoeffs%mt_coeff(l,itype,1,1,2,1)*(g(j,1,l,2)*g(j,1,l,1)+g(j,2,l,2)*g(j,2,l,1))
                         rho21 = cs/(atoms%neq(itype)*sfp_const)
                         rho(j,0,itype,3) = rho(j,0,itype,3) +  REAL(rho21)
-                        IF (PRESENT(moments)) THEN
+                        IF (.NOT.PRESENT(rhoIm)) THEN
                            rho(j,0,itype,4) = rho(j,0,itype,4) + AIMAG(rho21)
                         ELSE
                            rhoIm(j,0,itype,3) = rhoIm(j,0,itype,3) + AIMAG(rho21)
@@ -292,9 +354,9 @@ CONTAINS
                   !New feature: LOs for the offdiagonal density.
                   !Add the contribution of LO-LO and LAPW-LO cross-terms to rho for
                   !the offdiagonal magnetism.
-                  IF (PRESENT(moments)) THEN !DFT case
+                  IF (.NOT.PRESENT(rhoIm)) THEN !DFT case
                      CALL timestart("cdnmt LO off-diagonal")
-                     CALL cdnmtlo(itype,2,1,input,atoms,sphhar,sym,usdus,noco,&
+                     CALL cdnmtlo(itype,2,1,input,atoms,sphhar,sym,usdus,orb,noco,&
                                   enpara%ello0(:,itype,:),vr0(:,:),denCoeffs,&
                                   f(:,:,0:,1),g(:,:,0:,1),&
                                   rho(:,0:,itype,3),qmtllo,moments=moments,&
@@ -303,12 +365,12 @@ CONTAINS
                      CALL timestop("cdnmt LO off-diagonal")
                   ELSE
                      CALL timestart("cdnmt LO off-diagonal")
-                     CALL cdnmtlo(itype,2,1,input,atoms,sphhar,sym,usdus,noco,&
+                     CALL cdnmtlo(itype,2,1,input,atoms,sphhar,sym,usdus,orb,noco,&
                                   enpara%ello0(:,itype,:),vr0(:,:),denCoeffs,&
                                   f(:,:,0:,1),g(:,:,0:,1),&
                                   rho(:,0:,itype,3),qmtllo,&
                                   rhoIm=rhoIm(:,0:,itype,3), f2=f(:,:,0:,2), g2=g(:,:,0:,2))
-                     CALL cdnmtlo(itype,1,2,input,atoms,sphhar,sym,usdus,noco,&
+                     CALL cdnmtlo(itype,1,2,input,atoms,sphhar,sym,usdus,orb,noco,&
                                   enpara%ello0(:,itype,:),vr0(:,:),denCoeffs,&
                                   f(:,:,0:,2),g(:,:,0:,2),&
                                   rho(:,0:,itype,4),qmtllo,&

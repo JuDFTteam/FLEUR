@@ -5,6 +5,7 @@ elseif(${CLI_FLEUR_USE_ELPA} MATCHES "external")
     set(__check_external 1)
 endif()    
 if (__check_external)
+   message("Checking for external ELPA")
    #Only External ELPA
     #First check if we can compile with ELPA
     try_compile(FLEUR_USE_ELPA ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_LIST_DIR}/test_ELPA.f90
@@ -27,41 +28,28 @@ if (__check_external)
             set(FLEUR_LIBRARIES "${TEST_LIBRARIES}")
         endif()
     endif()
-
-    
-    #Now check for version of elpa
+   
     if (FLEUR_USE_ELPA)
-        set(FLEUR_USE_ELPA false)
-        #try_compile(FLEUR_USE_ELPA_OLD ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_ELPA_OLD.f90
-        #LINK_LIBRARIES ${FLEUR_LIBRARIES})
-        #try_compile(FLEUR_USE_ELPA_NEW ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_ELPA_NEW.f90
-        #LINK_LIBRARIES ${FLEUR_LIBRARIES})
-        #try_compile(FLEUR_USE_ELPA_201605003 ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_ELPA_201605003.f90
-        #LINK_LIBRARIES ${FLEUR_LIBRARIES})
-        #try_compile(FLEUR_USE_ELPA_201605004 ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_ELPA_201605004.f90
-        #LINK_LIBRARIES ${FLEUR_LIBRARIES})
-        #try_compile(FLEUR_USE_ELPA_201705003 ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_ELPA_201705003.f90
-        #LINK_LIBRARIES ${FLEUR_LIBRARIES})
-        try_compile(FLEUR_USE_ELPA_20180525 ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_LIST_DIR}/test_ELPA_20180525.f90
-        LINK_LIBRARIES ${FLEUR_LIBRARIES})
-        message("Version check for ELPA:")
-        #message("OLD ELPA      : ${FLEUR_USE_ELPA_OLD}")
-        #message("NEW ELPA      : ${FLEUR_USE_ELPA_NEW}")
-        #message("201605003 ELPA: ${FLEUR_USE_ELPA_201605003}")
-        #message("201605004 ELPA: ${FLEUR_USE_ELPA_201605004}")
-        #message("201705003 ELPA: ${FLEUR_USE_ELPA_201705003}")
-        message("20180525  ELPA: ${FLEUR_USE_ELPA_20180525}")
-        #Set preprocessor switches
-        if (FLEUR_USE_ELPA_201705003)
-            set(FLEUR_USE_ELPA TRUE)
-            set(FLEUR_MPI_DEFINITIONS ${FLEUR_MPI_DEFINITIONS} "CPP_ELPA" "CPP_ELPA2" "CPP_ELPA_201705003")
-        endif()
-          if (FLEUR_USE_ELPA_20180525)
-            set(FLEUR_USE_ELPA TRUE)
-            set(FLEUR_MPI_DEFINITIONS ${FLEUR_MPI_DEFINITIONS} "CPP_ELPA" "CPP_ELPA2" "CPP_ELPA_201705003")
-        endif()
-    endif() 
+        set(FLEUR_MPI_DEFINITIONS ${FLEUR_MPI_DEFINITIONS} "CPP_ELPA")
+    endif()
     message("External ELPA Library found:${FLEUR_USE_ELPA}")
+    #if ELPA was found also check for patch and SP
+    if (FLEUR_USE_ELPA)
+        try_compile(FLEUR_USE_ELPA_PATCH ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_LIST_DIR}/test_ELPA_transform.f90
+            LINK_LIBRARIES ${FLEUR_LIBRARIES} OUTPUT_VARIABLE compile_output)
+        if (FLEUR_USE_ELPA_PATCH)
+                message("  ELPA Library patch for transform:${FLEUR_USE_ELPA_PATCH}")
+                set(FLEUR_MPI_DEFINITIONS ${FLEUR_MPI_DEFINITIONS} "CPP_ELPA_PATCH")
+        endif()
+        try_compile(FLEUR_USE_ELPA_SP ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_LIST_DIR}/test_ELPA_sp.f90
+            LINK_LIBRARIES ${FLEUR_LIBRARIES} OUTPUT_VARIABLE compile_output)
+        if (FLEUR_USE_ELPA_SP)
+                message("  ELPA Library Single Precision found:${FLEUR_USE_ELPA_SP}")
+                set(FLEUR_MPI_DEFINITIONS ${FLEUR_MPI_DEFINITIONS} "CPP_ELPA_SP")
+        endif()
+    endif()    
+
 elseif(NOT (${CLI_FLEUR_USE_ELPA} MATCHES "(NO|No|no)"))
+    message("Use internal ELPA compilation")
     include(cmake/tests/test_ELPA_internal.cmake)
 endif()    

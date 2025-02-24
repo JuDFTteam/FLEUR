@@ -17,6 +17,7 @@ if (CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
    set_source_files_properties(${CMAKE_SOURCE_DIR}/src/fleur/io/eig66_mpi.F90 PROPERTIES COMPILE_FLAGS -g0)
    set_source_files_properties(${CMAKE_SOURCE_DIR}/src/fleur/vgen/mt_tofrom_grid.F90 PROPERTIES COMPILE_FLAGS -O1)
    set_source_files_properties(${CMAKE_SOURCE_DIR}/src/fleur/vgen/psqpw.F90 PROPERTIES COMPILE_FLAGS -O1)
+   set_source_files_properties(${CMAKE_SOURCE_DIR}/src/fleur/vgen/mpmom.F90 PROPERTIES COMPILE_FLAGS -O1)
    set_source_files_properties(${CMAKE_SOURCE_DIR}/src/fleur/cdn/cdnovlp.F90 PROPERTIES COMPILE_FLAGS -O1)
    
    if (CMAKE_Fortran_COMPILER_VERSION VERSION_LESS "14.1.0.0")

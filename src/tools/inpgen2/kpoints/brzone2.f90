@@ -80,6 +80,8 @@ SUBROUTINE brzone2(rcmt,nsym,idrot,mface,nbsz,nv48,&
 
    ! 0. Initializations
 
+   CALL timestart('brzone2')
+
    pi = pimach()
 
    maxRecDist = 0.0
@@ -562,6 +564,8 @@ SUBROUTINE brzone2(rcmt,nsym,idrot,mface,nbsz,nv48,&
    END IF
 
    DEALLOCATE (planeCorners,dvec,ddist,nPlaneCorners,isIBZPlane)
+
+   CALL timestop('brzone2')
 
 END SUBROUTINE brzone2
 

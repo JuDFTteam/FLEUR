@@ -1,4 +1,4 @@
-//#ifdef CPP_DEBUG // This is commented out because at the moment this symbol is not defined for the compilation of c files.
+#ifdef CPP_DEBUG // This is commented out because at the moment this symbol is not defined for the compilation of c files.
 
 #include <fenv.h>
 
@@ -12,4 +12,4 @@ int stopFPErrorDetection()
    return fedisableexcept(FE_INVALID | FE_DIVBYZERO | FE_OVERFLOW);
 }
 
-//#endif
+#endif
