@@ -81,11 +81,29 @@ PRIVATE
       ! Refactored version:
       COMPLEX, ALLOCATABLE :: abcof(:,:,:,:,:)!(nu,lm,iOrd,iAtom,ilSpin)
 
+      ! Yamashita_add kined_coff
+      COMPLEX, ALLOCATABLE :: kexabcof(:,:,:,:,:) ! 
+      COMPLEX, ALLOCATABLE :: keyabcof(:,:,:,:,:) ! 
+      COMPLEX, ALLOCATABLE :: kezabcof(:,:,:,:,:) ! 
+      REAL, ALLOCATABLE :: KEDU(:,:) ! 
+      REAL, ALLOCATABLE :: KEDD(:,:) ! 
+ 
+
       CONTAINS
          PROCEDURE,PASS :: init => eigVecCoeffs_init
          PROCEDURE,PASS :: rotate_to_rep_atom => rotate_eigveccoeffs_to_rep_atom
-   END TYPE t_eigVecCoeffs
+ END TYPE t_eigVecCoeffs
 
+! TYPE t_kinEDCoeffs
+
+!      COMPLEX, ALLOCATABLE :: kexyabcof(:,:,:,:,:,:) ! 
+!      COMPLEX, ALLOCATABLE :: kezabcof(:,:,:,:,:,:) ! 
+!      REAL, ALLOCATABLE :: KEDU(:,:) ! 
+!      REAL, ALLOCATABLE :: KEDD(:,:) ! 
+
+!      CONTAINS
+!      PROCEDURE,PASS :: init => kinEDCoeffs_init
+! END TYPE
 
 
    TYPE t_moments
@@ -126,7 +144,7 @@ PRIVATE
          PROCEDURE,PASS :: init => gVacMap_init
    END TYPE t_gVacMap
 
-PUBLIC t_orb, t_denCoeffs,  t_eigVecCoeffs
+PUBLIC t_orb, t_denCoeffs,  t_eigVecCoeffs!, t_kinEDCoeffs
 PUBLIC  t_moments,  t_cdnvalJob, t_gVacMap
 
 CONTAINS
@@ -285,6 +303,62 @@ SUBROUTINE denCoeffs_init(thisDenCoeffs, atoms, sphhar, jsp_start, jsp_end)
 END SUBROUTINE denCoeffs_init
 
 
+!SUBROUTINE kinEDCoeffs_init(thiskinEDCoeffs,input,atoms,jspin,noccbd,l_bothSpins)
+
+  ! USE m_types_setup
+
+  ! IMPLICIT NONE
+
+  ! CLASS(t_kinEDCoeffs), INTENT(INOUT) :: thiskinEDCoeffs
+
+  ! TYPE(t_atoms),         INTENT(IN)    :: atoms
+  ! TYPE(t_input),         INTENT(IN)    :: input
+
+  ! INTEGER,               INTENT(IN)    :: jspin, noccbd
+  ! LOGICAL,               INTENT(IN)    :: l_bothSpins
+
+  ! INTEGER :: l,m,lm
+
+ !  IF(ALLOCATED(thiskinEDCoeffs%kexyabcof)) DEALLOCATE(thiskinEDCoeffs%kexyabcof)
+!   IF(ALLOCATED(thiskinEDCoeffs%kezabcof)) DEALLOCATE(thiskinEDCoeffs%kezabcof)
+!   IF(ALLOCATED(thiskinEDCoeffs%KEDU)) DEALLOCATE(thiskinEDCoeffs%KEDU)
+!   IF(ALLOCATED(thiskinEDCoeffs%KEDD)) DEALLOCATE(thiskinEDCoeffs%KEDD)
+
+!   IF (l_bothSpins) THEN
+!      ALLOCATE (thiskinEDCoeffs%kexyabcof(noccbd,0:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,0:15,atoms%nat,input%jspins))
+!      ALLOCATE (thiskinEDCoeffs%kezabcof(noccbd,0:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,0:7,atoms%nat,input%jspins))
+!   ELSE
+!      ALLOCATE (thiskinEDCoeffs%kexyabcof(noccbd,0:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,0:15,atoms%nat,jspin:jspin))
+!      ALLOCATE (thiskinEDCoeffs%kezabcof(noccbd,0:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,0:7,atoms%nat,jspin:jspin))
+!   ENDIF 
+
+!   ALLOCATE (thiskinEDCoeffs%KEDU(0:atoms%lmaxd*(atoms%lmaxd+2),-1:1))
+!   ALLOCATE (thiskinEDCoeffs%KEDD(0:atoms%lmaxd*(atoms%lmaxd+2),-1:1))
+
+!   thiskinEDCoeffs%kexyabcof = CMPLX(0.0,0.0)
+!   thiskinEDCoeffs%kezabcof = CMPLX(0.0,0.0)
+!   thiskinEDCoeffs%KEDU=0
+!   thiskinEDCoeffs%KEDD=0
+
+!   DO l=0,atoms%lmaxd
+!    DO m = -l,l
+!     lm = l * (l+1) + m
+
+!     thiskinEDCoeffs%KEDU(lm,1)=-SQRT(REAL(((l+m+1)*(l+m+2)))/((2*l+1)*(2*l+3)))
+!     thiskinEDCoeffs%KEDD(lm,1)=SQRT(REAL((l-m)*(l-m-1))/((2*l-1)*(2*l+1)))
+
+!     thiskinEDCoeffs%KEDU(lm,-1)=SQRT(REAL((l-m+1)*(l-m+2))/((2*l+1)*(2*l+3)))
+!     thiskinEDCoeffs%KEDD(lm,-1)=-SQRT(REAL((l+m)*(l+m-1))/((2*l-1)*(2*l+1)))
+
+!     thiskinEDCoeffs%KEDU(lm,0)=SQRT(REAL((l+m+1)*(l-m+1))/((2*l+1)*(2*l+3)))
+!     thiskinEDCoeffs%KEDD(lm,0)=SQRT(REAL((l+m)*(l-m))/((2*l-1)*(2*l+1)))
+
+!    ENDDO
+!   ENDDO
+
+
+!END SUBROUTINE kinEDCoeffs_init       
+
 
 
 SUBROUTINE eigVecCoeffs_init(thisEigVecCoeffs,input,atoms,jspin,noccbd,l_bothSpins)
@@ -301,19 +375,62 @@ SUBROUTINE eigVecCoeffs_init(thisEigVecCoeffs,input,atoms,jspin,noccbd,l_bothSpi
    INTEGER,               INTENT(IN)    :: jspin, noccbd
    LOGICAL,               INTENT(IN)    :: l_bothSpins
 
+   INTEGER :: l,m,lm
+
    IF(ALLOCATED(thisEigVecCoeffs%ccof)) DEALLOCATE(thisEigVecCoeffs%ccof)
    IF(ALLOCATED(thisEigVecCoeffs%abcof)) DEALLOCATE(thisEigVecCoeffs%abcof)
+   IF(ALLOCATED(thisEigVecCoeffs%kexabcof)) DEALLOCATE(thisEigVecCoeffs%kexabcof)
+   IF(ALLOCATED(thisEigVecCoeffs%keyabcof)) DEALLOCATE(thisEigVecCoeffs%keyabcof)
+   IF(ALLOCATED(thisEigVecCoeffs%kezabcof)) DEALLOCATE(thisEigVecCoeffs%kezabcof)
+   IF(ALLOCATED(thisEigVecCoeffs%KEDU)) DEALLOCATE(thisEigVecCoeffs%KEDU)
+   IF(ALLOCATED(thisEigVecCoeffs%KEDD)) DEALLOCATE(thisEigVecCoeffs%KEDD)
+
+
 
    IF (l_bothSpins) THEN
       ALLOCATE (thisEigVecCoeffs%ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat,input%jspins))
       ALLOCATE (thisEigVecCoeffs%abcof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),0:1,atoms%nat,input%jspins))
+      ALLOCATE (thisEigVecCoeffs%kexabcof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),0:15,atoms%nat,input%jspins))
+      ALLOCATE (thisEigVecCoeffs%keyabcof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),0:15,atoms%nat,input%jspins))
+      ALLOCATE (thisEigVecCoeffs%kezabcof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),0:7,atoms%nat,input%jspins))
    ELSE
       ALLOCATE (thisEigVecCoeffs%ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat,jspin:jspin))
       ALLOCATE (thisEigVecCoeffs%abcof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),0:1,atoms%nat,jspin:jspin))
-   END IF
+      ALLOCATE (thisEigVecCoeffs%kexabcof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),0:15,atoms%nat,jspin:jspin))
+      ALLOCATE (thisEigVecCoeffs%keyabcof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),0:15,atoms%nat,jspin:jspin))
+      ALLOCATE (thisEigVecCoeffs%kezabcof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),0:7,atoms%nat,jspin:jspin))
+   ENDIF 
+
 
    thisEigVecCoeffs%ccof = CMPLX(0.0,0.0)
    thisEigVecCoeffs%abcof = CMPLX(0.0,0.0)
+
+   ALLOCATE (thisEigVecCoeffs%KEDU(0:atoms%lmaxd*(atoms%lmaxd+2),-1:1))
+   ALLOCATE (thisEigVecCoeffs%KEDD(0:atoms%lmaxd*(atoms%lmaxd+2),-1:1))
+
+   thisEigVecCoeffs%kexabcof = CMPLX(0.0,0.0)
+   thisEigVecCoeffs%keyabcof = CMPLX(0.0,0.0)
+   thisEigVecCoeffs%kezabcof = CMPLX(0.0,0.0)
+   thisEigVecCoeffs%KEDU=0
+   thisEigVecCoeffs%KEDD=0
+
+
+    DO l=0,atoms%lmaxd
+     DO m = -l,l
+      lm = l * (l+1) + m
+
+      thisEigVecCoeffs%KEDU(lm,1)=-SQRT(REAL(((l+m+1)*(l+m+2)))/((2*l+1)*(2*l+3)))
+      thisEigVecCoeffs%KEDD(lm,1)=SQRT(REAL((l-m)*(l-m-1))/((2*l-1)*(2*l+1)))
+
+      thisEigVecCoeffs%KEDU(lm,-1)=SQRT(REAL((l-m+1)*(l-m+2))/((2*l+1)*(2*l+3)))
+      thisEigVecCoeffs%KEDD(lm,-1)=-SQRT(REAL((l+m)*(l+m-1))/((2*l-1)*(2*l+1)))
+
+      thisEigVecCoeffs%KEDU(lm,0)=SQRT(REAL((l+m+1)*(l-m+1))/((2*l+1)*(2*l+3)))
+      thisEigVecCoeffs%KEDD(lm,0)=SQRT(REAL((l+m)*(l-m))/((2*l-1)*(2*l+1)))
+
+     ENDDO
+    ENDDO
+
 
 END SUBROUTINE eigVecCoeffs_init
 
@@ -522,7 +639,7 @@ SUBROUTINE cdnvalJob_init(thisCdnvalJob,mpi,input,kpts,noco,results,jspin)
       ALLOCATE(compact_ev_list(evlen2))
       compact_ev_list=thiscdnvalJob%ev_list(:thisCdnvalJob%noccbd(nk))
    ELSE
-      l_nonzero = thisCdnvalJob%weights(thiscdnvalJob%ev_list(:thisCdnvalJob%noccbd(nk)),nk)>1.e-8
+      l_nonzero = ABS(thisCdnvalJob%weights(thiscdnvalJob%ev_list(:thisCdnvalJob%noccbd(nk)),nk))>1.e-8
       evlen2 = COUNT(l_nonzero)
       ALLOCATE(compact_ev_list(evlen2))
       compact_ev_list = PACK(thiscdnvalJob%ev_list(:thisCdnvalJob%noccbd(nk)), l_nonzero)

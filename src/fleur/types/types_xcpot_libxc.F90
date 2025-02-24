@@ -63,7 +63,7 @@ CONTAINS
     DO j=1,size(rh,2)
       DO i=1,size(rh,1)
         if (abs(rh(i,j))<density_cutoff) THEN
-          rh(i,j)=density_cutoff
+          !rh(i,j)=density_cutoff
           if (present(grad)) Then
             if (allocated(grad%sigma)) grad%sigma(:,i)=0.0 !if one spin is small, apply cutoff to all gradients!
             if (allocated(grad%gr)) grad%gr(:,i,j)=0.0

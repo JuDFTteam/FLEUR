@@ -23,7 +23,7 @@ SUBROUTINE calcDenCoeffs(atoms,sphhar,sym,we,noccbd,eigVecCoeffs,ispin,denCoeffs
    TYPE(t_atoms),        INTENT(IN)    :: atoms
    TYPE(t_sphhar),       INTENT(IN)    :: sphhar
    TYPE(t_sym),          INTENT(IN)    :: sym
-   TYPE(t_eigVecCoeffs), INTENT(IN)    :: eigVecCoeffs
+   TYPE(t_eigVecCoeffs), INTENT(INOUT)    :: eigVecCoeffs
    TYPE(t_denCoeffs),    INTENT(INOUT) :: denCoeffs
 
    INTEGER,              INTENT(IN)    :: noccbd
@@ -34,6 +34,8 @@ SUBROUTINE calcDenCoeffs(atoms,sphhar,sym,we,noccbd,eigVecCoeffs,ispin,denCoeffs
    !--->          set up coefficients for the spherical and
    CALL timestart("cdnval: rhomt")
    CALL rhomt(atoms,we,noccbd,eigVecCoeffs,denCoeffs,ispin)
+   ! Yamashita_add
+   CALL kedmt(atoms,we,noccbd,eigVecCoeffs,denCoeffs,ispin)
    CALL timestop("cdnval: rhomt")
 
    !--->          non-spherical m.t. density

@@ -186,7 +186,8 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    DO jspin = 1,merge(1,input%jspins,noco%l_mperp.OR.banddos%l_jDOS)
       CALL cdnvalJob%init(fmpi,input,kpts,noco,results,jspin)
       IF (sliceplot%slice) CALL cdnvalJob%select_slice(sliceplot,results,input,kpts,noco,jspin)
-      CALL cdnval(eig_id,fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,enpara,stars,vacuum,&
+      !WRITE(11111,*) "MAIN"
+      CALL cdnval(xcpot,eig_id,fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,enpara,stars,vacuum,&
                   sphhar,sym,vTot ,cdnvalJob,outDen,regCharges,dos,vacdos,results,moments,gfinp,&
                   hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,jDOS,greensfImagPart)
    END DO
@@ -196,7 +197,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    ! calculate kinetic energy density for MetaGGAs
    if(xcpot%exc_is_metagga()) then
       CALL calc_EnergyDen(eig_id, fmpi, kpts, noco, nococonv,input, banddos, cell, atoms, enpara, stars,&
-                             vacuum,  sphhar, sym, gfinp, hub1inp, vTot,   results, EnergyDen)
+                             vacuum,  sphhar, sym, gfinp, hub1inp, vTot,   results, EnergyDen,xcpot)
    endif
 
    IF (banddos%dos.or.banddos%band.or.input%cdinf) THEN

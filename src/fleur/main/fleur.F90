@@ -55,7 +55,7 @@ CONTAINS
       USE m_xmlOutput
       USE m_juDFT_time
       USE m_calc_hybrid
-      USE m_rdmft
+      !USE m_rdmft
       USE m_io_hybrid
       USE m_wann_optional
       USE m_wannier
@@ -548,9 +548,9 @@ CONTAINS
             IF (fi%input%l_rdmft) THEN
                SELECT TYPE (xcpot)
                TYPE IS (t_xcpot_inbuild)
-                  CALL rdmft(eig_id, fmpi, fi, enpara, stars, &
-                             sphhar, vTot, vCoul, nococonv, xcpot, mpdata, hybdat, &
-                             results, archiveType, outDen)
+                  !CALL rdmft(eig_id, fmpi, fi, enpara, stars, &
+                  !           sphhar, vTot, vCoul, nococonv, xcpot, mpdata, hybdat, &
+                  !           results, archiveType, outDen)
                END SELECT
             END IF
 

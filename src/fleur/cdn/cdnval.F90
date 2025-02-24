@@ -13,7 +13,7 @@ use mpi
 
 CONTAINS
 
-SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,enpara,stars,&
+SUBROUTINE cdnval(xcpot,eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,enpara,stars,&
                   vacuum,sphhar,sym,vTot ,cdnvalJob,den,regCharges,dos,vacdos,results,&
                   moments,gfinp,hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,jDOS,greensfImagPart)
 
@@ -70,6 +70,11 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    USE m_dfpt_rhomt
    USE m_dfpt_rhonmt
    USE m_nIJmat
+!   USE m_metagga
+
+   USE m_pw_tofrom_grid
+   use m_types_xcpot
+   USE m_types_fftGrid
 
    IMPLICIT NONE
 
@@ -119,6 +124,9 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    REAL                  :: bkpt(3)
    INTEGER, ALLOCATABLE  :: ev_list(:)
    REAL,    ALLOCATABLE  :: f(:,:,:,:),g(:,:,:,:),flo(:,:,:,:) ! radial functions
+   
+   INTEGER :: I
+   INTEGER         :: griddim
 
    TYPE (t_lapw)              :: lapw
    TYPE (t_orb)               :: orb
@@ -132,6 +140,15 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    TYPE (t_tlmplm)            :: tlmplm
    TYPE (t_greensfBZintCoeffs):: greensfBZintCoeffs
    TYPE(t_scalarGF), ALLOCATABLE :: scalarGF(:)
+   TYPE (t_mat)               :: zPrime
+   TYPE (t_potden)            :: kinEDen ! Local Type Yamashita_add
+!   TYPE (t_kinED)             :: kinED
+!   TYPE(t_xcpot_inbuild) :: xcpot_tmp
+!   CLASS(t_xcpot)            :: xcpot
+   CLASS(t_xcpot),INTENT(IN)  :: xcpot
+   TYPE(t_gradients) :: grad
+   LOGICAL :: lda_atom(atoms%ntype),l_libxc, perform_MetaGGA
+   TYPE(t_fftgrid) :: fftgrid
 
    CALL timestart("cdnval")
 
@@ -225,6 +242,10 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
 #ifdef CPP_MPI   
    CALL MPI_ALLREDUCE(MPI_IN_PLACE,max_length_k_list,1,MPI_INTEGER,MPI_MAX,fmpi%mpi_comm,ierr)
 #endif
+
+
+
+   !WRITE(5432,*) 'SIZE(k_list)', SIZE(cdnvalJob%k_list)
    DO ikpt_i = 1,size(cdnvalJob%k_list)
       ikpt=cdnvalJob%k_list(ikpt_i)
       bkpt=kpts%bk(:,ikpt)
@@ -232,6 +253,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
       CALL lapw%init(input,noco,nococonv, kpts,atoms,sym,ikpt,cell, fmpi)
       skip_t = skip_tt
       ev_list=cdnvaljob%compact_ev_list(ikpt_i,l_empty)
+    !  WRITE(5432,*) 'SIZE(ev_list)', SIZE(ev_list)
       noccbd = SIZE(ev_list)
       we  = cdnvalJob%weights(ev_list,ikpt)
       eig = results%eig(ev_list,ikpt,jsp)
@@ -253,6 +275,9 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
 
       ! valence density in the atomic spheres
       CALL eigVecCoeffs%init(input,atoms,jspin,noccbd,noco%l_mperp.OR.banddos%l_jDOS)
+!      CALL KEDMT((input,atoms,jspin,noccbd,noco%l_mperp.OR.banddos%l_jDOS))
+
+
 
       DO ispin = jsp_start, jsp_end
          IF (input%l_f) CALL force%init2(noccbd,input,atoms)
@@ -296,6 +321,8 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
             ENDIF
          ENDIF
          CALL dfpt_rhomt(atoms,we,we,noccbd,ispin,ispin,[0.0,0.0,0.0],.FALSE.,eigVecCoeffs,eigVecCoeffs,denCoeffs)
+         CALL kedmt(atoms,we,noccbd,eigVecCoeffs,denCoeffs,ispin,&
+                 &input,vTot,enpara,fmpi,usdus,hub1data)
          CALL dfpt_rhonmt(atoms,sphhar,we,we,noccbd,ispin,ispin,[0.0,0.0,0.0],.FALSE.,.TRUE.,sym,eigVecCoeffs,eigVecCoeffs,denCoeffs)
          CALL dfpt_rhomtlo(atoms,noccbd,we,we,ispin,ispin,[0.0,0.0,0.0],.FALSE.,eigVecCoeffs,eigVecCoeffs,denCoeffs)
          CALL dfpt_rhonmtlo(atoms,sphhar,sym,noccbd,we,we,eigVecCoeffs,eigVecCoeffs,denCoeffs,ispin,ispin,.FALSE.,[0.0,0.0,0.0])
@@ -333,10 +360,53 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
 
       ! valence density in the interstitial and vacuum region has to be called only once (if jspin=1) in the non-collinear case
       IF (.NOT.((jspin.EQ.2).AND.noco%l_noco)) THEN
-         ! valence density in the interstitial region
          CALL pwden(stars,kpts,banddos ,input,fmpi,noco,nococonv,cell,atoms,sym,ikpt,&
                     jspin,lapw,noccbd,ev_list,we,eig,den,results,force%f_b8,zMat,dos)
+         ! valence density in the interstitial region
          ! charge of each valence state in this k-point of the SBZ in the layer interstitial region of the film
+
+
+!----------------- Yamashita_add   
+
+!          DO i=1,3
+
+!           CALL KEDis_init1(i,zMat,bkpt,lapw,cell,zPrime)
+!           CALL pwden(stars,kpts,banddos,input,fmpi,noco,nococonv,cell,atoms,sym,&
+!                    ikpt,jspin,lapw,noccbd,ev_list,we,eig,kinEDen,results,force%f_b8,zPrime,dos)
+
+!          ENDDO
+
+          !lda_atom=.FALSE.; l_libxc=.FALSE. 
+          !lda_atom=atoms%lda_atom
+             
+          !xcpot_tmp%l_inbuild = .TRUE.
+          !xcpot_tmp%inbuild_name="pz"
+          !xcpot_tmp%l_relativistic=.FALSE.
+          !xcpot_tmp%icorr=2
+        
+          !IF(ANY(lda_atom)) THEN
+          !  CALL xcpot_tmp%init(atoms%ntype)
+          !ENDIF
+
+
+!          IF(ikpt_i==size(cdnvalJob%k_list))THEN
+
+
+!          CALL init_pw_grid(stars,sym,cell,xcpot)
+!          CALL pw_to_grid(.FALSE., input%jspins, noco%l_noco, stars, &
+!                     cell, kinEDen%pw,grad,xcpot,kinED%is)
+!          CALL finish_pw_grid()
+
+!            DO I=1,size(kinED%is,DIM=1)
+!             WRITE(11111,"(I5,F15.9)") I,kinED%is(I-1,1)*0.5
+!             WRITE(22222,"(I5,F15.9)") I,kinED%is(I-1,2)
+!            ENDDO  
+!          ENDIF        
+
+  
+!-----------------
+
+
          IF (PRESENT(slab).AND.banddos%l_slab) CALL q_int_sl(jspin,ikpt,stars,atoms,sym,cell,noccbd,ev_list,lapw,slab ,zMat)
          ! valence density in the vacuum region
          IF (input%film) THEN
@@ -392,5 +462,70 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    CALL timestop("cdnval")
 
 END SUBROUTINE cdnval
+
+! =========== YAMASHITA ADD
+   SUBROUTINE KEDis_init1(i,zMat,kpt,lapw,cell,zPrime)
+
+   USE m_types
+   USE m_constants
+
+   IMPLICIT NONE
+   INTEGER,INTENT(IN) :: i
+   TYPE (t_mat),INTENT(IN) ::  zMat
+   TYPE(t_lapw),INTENT(IN) :: lapw
+   TYPE (t_mat),INTENT(OUT) :: zPrime
+   !TYPE(t_kpts),INTENT(IN) :: kpts
+   TYPE(t_cell),INTENT(IN)      :: cell 
+   REAL, intent(in)         :: kpt(3)
+
+   !DO i=1,3
+    CALL set_zPrime1(I, zMat, kpt, lapw, cell, zPrime)   
+    
+   ! zPrime=zPrime+zPrimei1
+
+   !ENDDO
+
+
+   END SUBROUTINE
+
+   subroutine set_zPrime1(dim_idx, zMat, kpt, lapw, cell, zPrime)
+      USE m_types
+      USE m_constants
+      implicit none
+      INTEGER, intent(in)      :: dim_idx
+      TYPE (t_mat), intent(in) :: zMat
+      REAL, intent(in)         :: kpt(3)
+      TYPE(t_lapw), intent(in) :: lapw
+      TYPE(t_cell), intent(in) :: cell
+      TYPE (t_mat)             :: zPrime
+
+      REAL                     :: k_plus_g(3), fac
+      INTEGER                  :: basis_idx
+
+      call zPrime%free()
+      call zPrime%init(zMat)
+
+      do basis_idx = 1,size(lapw%gvec,dim=2)
+         k_plus_g = kpt + lapw%gvec(:,basis_idx,1)
+         k_plus_g = internal_to_rez1(cell, k_plus_g)
+
+         fac = k_plus_g(dim_idx)
+         if(zPrime%l_real) then
+            zPrime%data_r(basis_idx,:) =            fac * zMat%data_r(basis_idx,:)
+         else
+            zPrime%data_c(basis_idx,:) = ImagUnit * fac * zMat%data_c(basis_idx,:)
+         endif
+      enddo
+   end subroutine set_zPrime1
+
+   function internal_to_rez1(cell, vec) result(res)
+     use m_types
+     implicit none
+     type(t_cell), intent(in) :: cell
+     real, intent(in)      :: vec(3)
+     real                  :: res(3)
+     res = matmul(transpose(cell%bmat), vec)
+   end function internal_to_rez1
+
 
 END MODULE m_cdnval

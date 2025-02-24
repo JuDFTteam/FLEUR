@@ -51,6 +51,10 @@ MODULE m_types_potden
      procedure :: collect
   END TYPE t_potden
 
+  TYPE KED_Yamashita
+   COMPLEX,ALLOCATABLE :: KEDpw(:,:) 
+  END TYPE          
+
 CONTAINS
   subroutine collect(this,fmpi_comm,the_other)
     use m_mpi_bc_tool

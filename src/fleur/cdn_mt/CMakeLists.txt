@@ -9,6 +9,7 @@ src/fleur/cdn_mt/abcof.F90
 src/fleur/cdn_mt/abcrot2.f90
 src/fleur/cdn_mt/cdnmt.F90
 src/fleur/cdn_mt/cdncore.F90
+src/fleur/cdn_mt/kedmt.f90
 src/fleur/cdn_mt/denMultipoleExp.f90
 #src/fleur/cdn_mt/magMoms.f90cd ../b  
 src/fleur/cdn_mt/magDiMom.f90

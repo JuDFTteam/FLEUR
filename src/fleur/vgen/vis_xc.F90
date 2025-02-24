@@ -73,7 +73,7 @@ CONTAINS
       ALLOCATE(v_x,mold=rho)
 
       call timestart("apply_cutoffs")
-      CALL xcpot%apply_cutoffs(1.E-6,rho,grad)
+      CALL xcpot%apply_cutoffs(1E-4,rho,grad) !1.E-6 original
       call timestop("apply_cutoffs")
 #ifdef CPP_LIBXC
       if(perform_MetaGGA .and. kinED%set) then

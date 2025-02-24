@@ -363,6 +363,8 @@ CONTAINS
             IF (.NOT.l_dfpt) THEN
                DO ir = 0, chargeDen%gridLength - 1
                   chargeDen%grid(ir) = chargeDen%grid(ir) + wtf(nu) * ABS(state%grid(ir))**2
+                  !Here could be important
+                  !chargeDen%grid(ir) = chargeDen%grid(ir) + wtf(nu) * ABS(state%grid(ir))**2
                END DO
             ELSE
                IF (.NOT.l_minusq) THEN

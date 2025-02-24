@@ -60,6 +60,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
    TYPE(t_results),       INTENT(INOUT) :: results
    TYPE(t_potden),        INTENT(INOUT) :: outDen
 
+
    INTEGER,               INTENT(IN)    :: eig_id
    INTEGER,               INTENT(IN)    :: archiveType
    TYPE(t_potden)                       :: EnergyDen
@@ -323,9 +324,9 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
             WRITE(*,*) 'Note: some optional flags may have to be reset in rdmft before the cdnval call'
             WRITE(*,*) 'This is not yet implemented!'
             CALL singleStateDen%init(stars,fi%atoms,sphhar,fi%vacuum,fi%noco,fi%input%jspins,POTDEN_TYPE_DEN)
-            CALL cdnval(eig_id,fmpi,fi%kpts,jsp,fi%noco,nococonv,fi%input,fi%banddos,fi%cell,fi%atoms,enpara,stars,fi%vacuum,&
-                        sphhar,fi%sym,vTot, cdnvalJob,singleStateDen,regCharges,dos,vacdos,results,moments,&
-                        fi%gfinp,fi%hub1inp)
+!            CALL cdnval(eig_id,fmpi,fi%kpts,jsp,fi%noco,nococonv,fi%input,fi%banddos,fi%cell,fi%atoms,enpara,stars,fi%vacuum,&
+!                        sphhar,fi%sym,vTot, cdnvalJob,singleStateDen,regCharges,dos,vacdos,results,moments,&
+!                        fi%gfinp,fi%hub1inp)
 
             ! Store the density on disc (These are probably way too many densities to keep them in memory)
             filename = ''
@@ -445,9 +446,9 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
 
       DO jspin = 1,jspmax
          CALL cdnvalJob%init(fmpi,fi%input,fi%kpts,fi%noco,results,jspin)
-         CALL cdnval(eig_id,fmpi,fi%kpts,jspin,fi%noco,nococonv,fi%input,fi%banddos,fi%cell,fi%atoms,enpara,stars,fi%vacuum,&
-                     sphhar,fi%sym,vTot, cdnvalJob,overallDen,regCharges,dos,vacdos,results,moments,&
-                     fi%gfinp,fi%hub1inp)
+!         CALL cdnval(eig_id,fmpi,fi%kpts,jspin,fi%noco,nococonv,fi%input,fi%banddos,fi%cell,fi%atoms,enpara,stars,fi%vacuum,&
+!                     sphhar,fi%sym,vTot, cdnvalJob,overallDen,regCharges,dos,vacdos,results,moments,&
+!                     fi%gfinp,fi%hub1inp)
       END DO
 
       CALL cdncore(fmpi, fi%input,fi%vacuum,fi%noco,nococonv,fi%sym,&
