@@ -57,7 +57,7 @@ CONTAINS
       TYPE(t_atoms)    :: local_atoms
       TYPE(t_hub1data) :: hub1data
 
-      INTEGER :: col_index, row_index, iDtype_col, iDir_col, iType, iDir, iSpin
+      INTEGER :: col_index, row_index, iDtype_col, iDir_col, iType, iDir, iSpin, ivac
       COMPLEX :: tempval
       LOGICAL :: bare_mode
 
@@ -461,15 +461,17 @@ CONTAINS
                   !IF (.NOT. ALLOCATED(local_rho_vac)) ALLOCATE(local_rho_vac(fi%vacuum%nmzd,local_stars%ng2,2))
                   local_rho_vac(:,:stars%ng2,:) = rho_vac(:,:,:)
 
-                  CALL dfpt_int_vac_sf(stars,fi%vacuum,fi%cell,local_rho_vac,local_vExt1%vac(:,:,:,1),tempval)
+                  CALL dfpt_int_vac_sf(local_stars,fi%vacuum,fi%cell,local_rho_vac,local_vExt1%vac(:,:,:,1),tempval,iDir_col)
+                  dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
                   IF (fmpi%irank==0) write(9989,FMT=8000) "    SF VAC rho V1ext0       ", tempval
                   tempval = CMPLX(0.0,0.0)
-                 
+               
                   rho_pw = (rho%pw(:,1)+rho%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
                   local_rho_pw = 0.0 
                   local_rho_pw(:stars%ng3) = rho_pw(:)
                   ! here all convol
-                  CALL dfpt_int_pw_sf(stars,fi%vacuum,fi%cell,local_rho_pw,local_vExt1%pw(:,1),tempval)
+                  CALL dfpt_int_pw_sf(local_stars,fi%vacuum,fi%cell,local_rho_pw,local_vExt1%pw(:,1),tempval)
+                  dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
                   IF (fmpi%irank==0) write(9989,FMT=8000) "    SF IR rho V1ext0       ", tempval
                   tempval = CMPLX(0.0,0.0)
                END IF 
@@ -665,7 +667,7 @@ CONTAINS
 
    END SUBROUTINE dfpt_int_vac
 
-   SUBROUTINE dfpt_int_vac_sf(stars,vacuum,cell,vac_conj,vac_pure,sf_vac_int)
+   SUBROUTINE dfpt_int_vac_sf(stars,vacuum,cell,vac_conj,vac_pure,sf_vac_int,iDir_col)
       USE m_types 
       USE m_constants
       
@@ -674,16 +676,18 @@ CONTAINS
       TYPE(t_stars),INTENT(IN) :: stars
       TYPE(t_vacuum),INTENT(IN) :: vacuum 
       TYPE(t_cell), INTENT(IN) :: cell 
+      INTEGER, INTENT(IN) :: iDir_col
 
       COMPLEX, INTENT(IN) :: vac_conj(:,:,:), vac_pure(:,:,:)
 
-      COMPLEX, INTENT(OUT) :: sf_vac_int
+      COMPLEX, INTENT(INOUT) :: sf_vac_int
 
       REAL :: facv,tvacRe,tvacIm , facn
       COMPLEX :: tvact, dpzc
       REAL :: dpzRe, dpzIm
-      INTEGER :: ivac, k2 
+      INTEGER :: k2, ivac  
 
+      sf_vac_int=CMPLX(0.0,0.0)
 
       facv=2.0/vacuum%nvac
       facn = -1.0 ! asign the direction of the normal vector 
@@ -693,14 +697,14 @@ CONTAINS
       tvact  = CMPLX(0.0,0.0)
 
       DO ivac = 1 , vacuum%nvac 
-         IF (ivac == 2 ) facn = 1.0
-         DO k2 = 1, stars%ng2
-            dpzc = stars%nstr2(k2) * CONJG(vac_conj(1,k2,ivac)) * vac_pure(1,k2,ivac)
-            tvact = tvact + cell%area * dpzc * facv * facn 
-         END DO 
+         ! direction of n is already carried in gradient, but only for z-dir because of vacua 
+         IF (ivac == 2 .AND. .NOT. iDir_col==3  ) facn = 1.0
+         dpzc = dpzc + cell%area * DOT_PRODUCT(vac_conj(1,:stars%ng2,ivac),vac_pure(1,:stars%ng2,ivac))
+         
+         tvact = tvact + dpzc * facv * facn
       END DO 
-
-      sf_vac_int = sf_vac_int - tvact ! Sign before integral
+      ! minus before integral and direction of the normal vector cancel
+      sf_vac_int = tvact 
 
    END SUBROUTINE dfpt_int_vac_sf
 
@@ -717,15 +721,15 @@ CONTAINS
 
       COMPLEX, INTENT(IN) :: pw_conj(:), pw_pure(:)
 
-      COMPLEX, INTENT(OUT) :: sf_int
+      COMPLEX, INTENT(INOUT) :: sf_int
 
       REAL :: facn, qzh, pref, facv  
       COMPLEX :: fft_conj(stars%ng2) , fft_pure(stars%ng2)
-      INTEGER :: ig3, ig2, ivac 
+      INTEGER :: ig3, ig2, ivac  
 
-      sf_int = 0.0 
+      sf_int = CMPLX(0.0,0.0)
       pref = 1.0 ! exponent fourier trafo
-      facn = 1.0 ! direciton of normal vector
+      facn = -1.0 ! direciton of normal vector
       facv=2.0/vacuum%nvac 
       
     
@@ -735,7 +739,7 @@ CONTAINS
          fft_conj = CMPLX(0.0,0.0)
          fft_pure = CMPLX(0.0,0.0)
          IF (ivac == 2 ) pref = -1.0
-         IF (ivac == 2 ) facn = -1.0
+         IF (ivac == 2 ) facn = 1.0
          DO ig3 = 1, stars%ng3   
             ! Sum over all G_perp and map to G_||
             ! Fourier Trafo at +-Dvac/2
@@ -745,8 +749,8 @@ CONTAINS
 
             fft_pure(ig2) = fft_conj(ig2) + pw_pure(ig3) * cmplx( cos(qzh), sin(qzh))  
          END DO 
-
-         sf_int = sf_int - facn * facv * cell%area * DOT_PRODUCT(fft_conj(:stars%ng2),fft_pure(:stars%ng2))
+      
+         sf_int = sf_int + facn * facv * cell%area * DOT_PRODUCT(fft_conj(:stars%ng2),fft_pure(:stars%ng2))
       END DO 
 
 
