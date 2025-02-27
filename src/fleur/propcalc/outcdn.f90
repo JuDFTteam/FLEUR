@@ -8,12 +8,14 @@ MODULE m_outcdn
 CONTAINS
 
    SUBROUTINE outcdn(p, n, na, iv, iflag, jsp, l_potential, stars, vacuum, &
-                     sphhar, atoms, sym, cell,   potDen, xdnout)
+                     sphhar, atoms, sym, cell,   potDen, xdnout,potDenIm,lattvec_index)
       USE m_types
       USE m_constants
       USE m_angle
       USE m_starf, ONLY : starf2,starf3
       USE m_ylm
+      USE m_checkdopall
+
 
       !--------------------------------------------------------------------------
       ! Calculates the charge density at a given point p(i=1,3).
@@ -42,6 +44,14 @@ CONTAINS
 
       ! Logical argument
       LOGICAL, INTENT (IN) :: l_potential
+
+      !for responses:
+      TYPE(t_potden), OPTIONAL, INTENT(IN)    :: potDenIm
+      !TYPE(t_input), OPTIONAL ,   INTENT(IN) :: input
+
+      INTEGER, OPTIONAL, INTENT(IN)       :: lattvec_index(3)
+
+      LOGICAL                         :: l_dfpt
 
       ! Local scalars
       REAL delta,s,sx,xd1,xd2,xx1,xx2,rrr,phi
