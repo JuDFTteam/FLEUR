@@ -440,21 +440,6 @@ CONTAINS
       CALL grVext3(3)%distribute(fmpi%mpi_comm)
       CALL timestop("Gradient generation")
       
-
-            !! save some vacuum stuff 
-      if (fmpi%irank==0) THEN
-         call save_npy("grVext_x.npy",grVext3(1)%vac)
-         call save_npy("grVext_z.npy",grVext3(3)%vac)
-         call save_npy("grVtot_x.npy",grVtot3(1)%vac)
-         call save_npy("grVtot_z.npy",grVtot3(3)%vac)
-         call save_npy("grVC_x.npy",grVC3(1)%vac)
-         call save_npy("grVC_z.npy",grVC3(3)%vac)
-         call save_npy("vTot_gs.npy",vTot%vac)
-         call save_npy("grRho_x.npy",grRho3(1)%vac)
-         call save_npy("grRho_z.npy",grRho3(3)%vac)
-         call save_npy("rho_gs.npy",rho_nosym%vac)
-      END if
-
       
       CALL test_vac_stuff(fi_nosym,stars_nosym,sphhar_nosym,rho_nosym,vTot_nosym,grRho3,grVtot3,grVC3,grVext3,grrhodummy,grid)
 
@@ -628,33 +613,7 @@ CONTAINS
                                           MERGE(sigma_coul,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir==3))
                      CALL timestop("Sternheimer")
                   END IF
-
-                  vTot1%mt(:,0:,iDtype,:) = vTot1%mt(:,0:,iDtype,:) - grVtot3(idir)%mt(:,0:,iDtype,:)
-
-                  if (fmpi%irank==0) call save_npy("vTot1_"//int2str(iDir)//"_atom_"//int2str(iDtype)//".npy",vTot1%vac)
-
-                  if (fmpi%irank==0) THEN
-                     write(oUnit, * ) "Begin checkdop vTot1 for Atom" , iDtype , "Direction", iDir
-                     DO iSpin = 1 , fi_nosym%input%jspins
-                        CALL checkDOPALL(fi_nosym%input, sphhar_nosym, starsq ,fi_nosym%atoms, fi_nosym%sym, fi_nosym%vacuum, fi_nosym%cell,vTot1,iSpin,vTot1Im)
-                     END DO 
-                     write(oUnit, * ) "End checkdop vTot1 for Atom" , iDtype , "Direction", iDir
-                     
-                     write(oUnit, * ) "Begin checkdop vC1 for Atom" , iDtype , "Direction", iDir
-                     DO iSpin = 1 , fi_nosym%input%jspins
-                        CALL checkDOPALL(fi_nosym%input, sphhar_nosym, starsq ,fi_nosym%atoms, fi_nosym%sym, fi_nosym%vacuum, fi_nosym%cell,vC1,iSpin,vC1Im)
-                     END DO 
-                     write(oUnit, * ) "End checkdop vC1 for Atom" , iDtype , "Direction", iDir
-
-                  end if 
-
-                  if (fmpi%irank==0) call save_npy("vC1_"//int2str(iDir)//"_atom_"//int2str(iDtype)//".npy",vC1%vac)
-
-
-
-                  vTot1%mt(:,0:,iDtype,:) = vTot1%mt(:,0:,iDtype,:) + grVtot3(iDir)%mt(:,0:,iDtype,:)
-
-
+                  
                   IF (fmpi%irank==0) WRITE(*,*) '-------------------------'
                   CALL timestart("Dynmat")
                   ! Once the first order quantities are converged, we can construct all
