@@ -747,7 +747,7 @@ CONTAINS
             ig2 = stars%ig2(ig3)
             fft_conj(ig2) = fft_conj(ig2) + pw_conj(ig3) * cmplx( cos(qzh), sin(qzh))  
 
-            fft_pure(ig2) = fft_conj(ig2) + pw_pure(ig3) * cmplx( cos(qzh), sin(qzh))  
+            fft_pure(ig2) = fft_pure(ig2) + pw_pure(ig3) * cmplx( cos(qzh), sin(qzh))  
          END DO 
       
          sf_int = sf_int + facn * facv * cell%area * DOT_PRODUCT(fft_conj(:stars%ng2),fft_pure(:stars%ng2))
