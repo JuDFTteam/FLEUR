@@ -50,6 +50,7 @@ MODULE m_types_juPhon
       LOGICAL :: l_cheatsym = .FALSE.
       LOGICAL :: l_procc = .TRUE.
       LOGICAL :: l_prodyn = .TRUE.
+      LOGICAL :: l_symVacLevel = .FALSE. ! Symmetrize the vacua levels  
 
       REAL, ALLOCATABLE :: qvec(:,:)
 
@@ -167,6 +168,7 @@ CONTAINS
       CALL mpi_bc(this%l_cheatsym, rank, mpi_comm)
       CALL mpi_bc(this%l_procc, rank, mpi_comm)
       CALL mpi_bc(this%l_prodyn, rank, mpi_comm)
+      CALL mpi_bc(this%l_symVacLevel, rank, mpi_comm)
 
    END SUBROUTINE mpi_bc_juPhon
 
@@ -392,6 +394,12 @@ CONTAINS
 
          IF (numberNodes == 1) THEN
            this%l_prodyn    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_prodyn'))
+         END IF
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_symVacLevel')
+
+         IF (numberNodes == 1) THEN
+           this%l_symVacLevel    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_symVacLevel'))
          END IF
 
          this%qpt_ph(1) = 0.0
