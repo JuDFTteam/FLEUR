@@ -10,7 +10,7 @@ CONTAINS
 
    SUBROUTINE dfpt_vgen(hybdat,field,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
                    juphon,cell,fmpi,noco,nococonv,den,vTot,&
-                   &starsq,dfptdenimag,dfptvTot,l_xc,dfptvTotimag,dfptdenreal,iDtype,iDir,killcont,sigma_disc,fi,do_vext,local_dfptvTot,local_dfptvTotimag,local_stars,local_starsq,l_gr) !qvec
+                   &starsq,dfptdenimag,dfptvTot,l_xc,dfptvTotimag,dfptdenreal,iDtype,iDir,killcont,sigma_disc,fi,do_vext,local_dfptvTot,local_dfptvTotimag,local_stars,local_starsq) !qvec
       !--------------------------------------------------------------------------
       ! FLAPW potential perturbation generator (main routine)
       !
@@ -72,13 +72,13 @@ CONTAINS
       TYPE(t_fleurinput), OPTIONAL,INTENT(IN) :: fi
       LOGICAL, INTENT(IN) :: l_xc
       LOGICAL,OPTIONAL,INTENT(IN) :: do_vext
-      LOGICAL, OPTIONAL, INTENT(IN) :: l_gr
+
       TYPE(t_fleurinput) :: local_fi
       TYPE(t_potden) :: local_potden,local_potdenq 
       TYPE(t_potden) :: local_vCoul,local_workdenReal,local_workdenImag,local_workden,local_dfptvCoulimag
       TYPE(t_potden) :: local_dfptdenreal,local_den1Rot,local_den1imRot,local_den,local_denRot,local_dfptdenimag,local_vTot
       TYPE(t_atoms) :: local_atoms
-      LOGICAL :: l_vext, do_gr
+      LOGICAL :: l_vext
       INTEGER :: ispin
       REAL :: tmp_qvec(3)
       COMPLEX :: constantShift
@@ -102,8 +102,7 @@ CONTAINS
       exc = vTot
       dfptvCoulimag = dfptvTot
 
-      do_gr =.FALSE. 
-      IF (PRESENT(l_gr)) do_gr = l_gr
+
 
       l_vext = .FALSE.
 
@@ -210,10 +209,10 @@ CONTAINS
         sigma_loc = sigma_disc
         IF (l_vext) THEN 
         CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,juphon,local_starsq,cell,sphhar,local_atoms,.TRUE.,local_workdenReal,local_vCoul,sigma_loc,&
-                        & dfptdenimag=local_workdenImag,dfptvCoulimag=local_dfptvCoulimag,dfptden0=local_workden,stars2=local_stars,iDtype=iDtype,iDir=iDir,l_gr=do_gr)
+                        & dfptdenimag=local_workdenImag,dfptvCoulimag=local_dfptvCoulimag,dfptden0=local_workden,stars2=local_stars,iDtype=iDtype,iDir=iDir)
         ELSE 
          CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,juphon,starsq,cell,sphhar,atoms,.TRUE.,workdenReal,vCoul,sigma_loc,&
-         & dfptdenimag=workdenImag,dfptvCoulimag=dfptvCoulimag,dfptden0=workden,stars2=stars,iDtype=iDtype,iDir=iDir,l_gr=do_gr)
+         & dfptdenimag=workdenImag,dfptvCoulimag=dfptvCoulimag,dfptden0=workden,stars2=stars,iDtype=iDtype,iDir=iDir)
         END IF 
       ! b)
       IF (l_vext) THEN

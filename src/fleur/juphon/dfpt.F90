@@ -307,7 +307,7 @@ CONTAINS
          !IF (iDir==3) sigma_loc  = sigma_ext
          CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, fi%juphon, local_stars, fi_nosym%cell, &
                          & sphhar_nosym, local_atoms, .FALSE., local_imagrhodummy, local_grVext3(iDir), sigma_loc, &
-                         & dfptdenimag=local_imagrhodummy, dfptvCoulimag=local_grvextdummy,dfptden0=local_imagrhodummy,stars2=local_stars,iDtype=0,iDir=iDir,l_gr=.TRUE.)
+                         & dfptdenimag=local_imagrhodummy, dfptvCoulimag=local_grvextdummy,dfptden0=local_imagrhodummy,stars2=local_stars,iDtype=0,iDir=iDir)
          DO iSpin = 1 , fi_nosym%input%jspins
             CALL checkDOPALL(fi_nosym%input, sphhar_nosym, local_stars ,local_atoms, fi_nosym%sym, fi_nosym%vacuum, fi_nosym%cell,local_grVext3(iDir),iSpin,local_grvextdummy)
          END DO 
@@ -382,13 +382,13 @@ CONTAINS
          IF (iDir==3) sigma_loc  = sigma_coul
          CALL dfpt_vgen(hybdat_nosym, fi_nosym%field, fi_nosym%input, xcpot_nosym, fi_nosym%atoms, sphhar_nosym, stars_nosym, fi_nosym%vacuum, fi_nosym%sym, &
                         fi%juphon, fi_nosym%cell, fmpi_nosym, fi_nosym%noco, nococonv_nosym, rho_nosym, vTot_nosym, &
-                        stars_nosym, imagrhodummy, grVtot3(iDir), .TRUE., grvextdummy, grRho3(iDir), 0, iDir, [0,0], sigma_loc,l_gr=.TRUE.)
+                        stars_nosym, imagrhodummy, grVtot3(iDir), .TRUE., grvextdummy, grRho3(iDir), 0, iDir, [0,0], sigma_loc)
          write(oUnit, *) "grVC", iDir
          sigma_loc  = cmplx(0.0,0.0)
          IF (iDir==3) sigma_loc  = sigma_coul
          CALL dfpt_vgen(hybdat_nosym, fi_nosym%field, fi_nosym%input, xcpot_nosym, fi_nosym%atoms, sphhar_nosym, stars_nosym, fi_nosym%vacuum, fi_nosym%sym, &
                         fi%juphon, fi_nosym%cell, fmpi_nosym, fi_nosym%noco, nococonv_nosym, rho_nosym, vTot_nosym, &
-                        stars_nosym, imagrhodummy, grVC3(iDir), .FALSE., grvextdummy, grRho3(iDir), 0, iDir, [0,0], sigma_loc,l_gr=.TRUE.)
+                        stars_nosym, imagrhodummy, grVC3(iDir), .FALSE., grvextdummy, grRho3(iDir), 0, iDir, [0,0], sigma_loc)
       END DO
 
          DO iDir2 = 1, 3
@@ -439,6 +439,22 @@ CONTAINS
       CALL grVext3(2)%distribute(fmpi%mpi_comm)
       CALL grVext3(3)%distribute(fmpi%mpi_comm)
       CALL timestop("Gradient generation")
+      
+
+            !! save some vacuum stuff 
+      if (fmpi%irank==0) THEN
+         call save_npy("grVext_x.npy",grVext3(1)%vac)
+         call save_npy("grVext_z.npy",grVext3(3)%vac)
+         call save_npy("grVtot_x.npy",grVtot3(1)%vac)
+         call save_npy("grVtot_z.npy",grVtot3(3)%vac)
+         call save_npy("grVC_x.npy",grVC3(1)%vac)
+         call save_npy("grVC_z.npy",grVC3(3)%vac)
+         call save_npy("vTot_gs.npy",vTot%vac)
+         call save_npy("grRho_x.npy",grRho3(1)%vac)
+         call save_npy("grRho_z.npy",grRho3(3)%vac)
+         call save_npy("rho_gs.npy",rho_nosym%vac)
+      END if
+
       
       CALL test_vac_stuff(fi_nosym,stars_nosym,sphhar_nosym,rho_nosym,vTot_nosym,grRho3,grVtot3,grVC3,grVext3,grrhodummy,grid)
 
@@ -612,6 +628,32 @@ CONTAINS
                                           MERGE(sigma_coul,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir==3))
                      CALL timestop("Sternheimer")
                   END IF
+
+                  vTot1%mt(:,0:,iDtype,:) = vTot1%mt(:,0:,iDtype,:) - grVtot3(idir)%mt(:,0:,iDtype,:)
+
+                  if (fmpi%irank==0) call save_npy("vTot1_"//int2str(iDir)//"_atom_"//int2str(iDtype)//".npy",vTot1%vac)
+
+                  if (fmpi%irank==0) THEN
+                     write(oUnit, * ) "Begin checkdop vTot1 for Atom" , iDtype , "Direction", iDir
+                     DO iSpin = 1 , fi_nosym%input%jspins
+                        CALL checkDOPALL(fi_nosym%input, sphhar_nosym, starsq ,fi_nosym%atoms, fi_nosym%sym, fi_nosym%vacuum, fi_nosym%cell,vTot1,iSpin,vTot1Im)
+                     END DO 
+                     write(oUnit, * ) "End checkdop vTot1 for Atom" , iDtype , "Direction", iDir
+                     
+                     write(oUnit, * ) "Begin checkdop vC1 for Atom" , iDtype , "Direction", iDir
+                     DO iSpin = 1 , fi_nosym%input%jspins
+                        CALL checkDOPALL(fi_nosym%input, sphhar_nosym, starsq ,fi_nosym%atoms, fi_nosym%sym, fi_nosym%vacuum, fi_nosym%cell,vC1,iSpin,vC1Im)
+                     END DO 
+                     write(oUnit, * ) "End checkdop vC1 for Atom" , iDtype , "Direction", iDir
+
+                  end if 
+
+                  if (fmpi%irank==0) call save_npy("vC1_"//int2str(iDir)//"_atom_"//int2str(iDtype)//".npy",vC1%vac)
+
+
+
+                  vTot1%mt(:,0:,iDtype,:) = vTot1%mt(:,0:,iDtype,:) + grVtot3(iDir)%mt(:,0:,iDtype,:)
+
 
                   IF (fmpi%irank==0) WRITE(*,*) '-------------------------'
                   CALL timestart("Dynmat")

@@ -13,7 +13,7 @@ module m_vgen_coulomb
 contains
 
   subroutine vgen_coulomb( ispin, fmpi,    input, field, vacuum, sym, juphon, stars, &
-             cell, sphhar, atoms, dosf, den, vCoul, sigma_disc, results, dfptdenimag, dfptvCoulimag, dfptden0, stars2, iDtype, iDir, iDir2, sigma_disc2, l_gr )
+             cell, sphhar, atoms, dosf, den, vCoul, sigma_disc, results, dfptdenimag, dfptvCoulimag, dfptden0, stars2, iDtype, iDir, iDir2, sigma_disc2 )
     !----------------------------------------------------------------------------
     ! FLAPW potential generator
     !----------------------------------------------------------------------------
@@ -63,7 +63,6 @@ contains
     INTEGER, OPTIONAL, INTENT(IN)                :: iDtype, iDir ! DFPT: Type and direction of displaced atom
     INTEGER, OPTIONAL, INTENT(IN)                :: iDir2 ! DFPT: 2nd direction for 2nd order VC
     COMPLEX, OPTIONAL, INTENT(IN)                :: sigma_disc2(2)
-    LOGICAL, OPTIONAL, INTENT(IN)                :: l_gr
 
     complex                                      :: vintcza, xint, rhobar,vslope
     integer                                      :: i, i3, irec2, irec3, ivac, j, js, k, k3
@@ -84,12 +83,13 @@ contains
 
     l_dfptvgen = PRESENT(stars2)
     l_2ndord = PRESENT(iDir2)
-    l_corr = ALL(ABS(den%vac)<1e-12)
+    l_corr = .FALSE. 
+    IF (PRESENT(iDtype)) l_corr = (iDtype==0) !   ALL(ABS(den%vac)<1e-12)
     vmz1dh_is = cmplx(0.0,0.0)
     sigma_loc = sigma_disc
     sigma_loc2 = MERGE(sigma_disc,cmplx(0.0,0.0),PRESENT(sigma_disc2))
     do_gr = .FALSE. 
-    IF(PRESENT(l_gr)) do_gr = l_gr
+    IF(PRESENT(iDtype)) do_gr = (iDtype==0)
     iDir3 = 0 
     IF (PRESENT(iDir)) iDir3 = iDir 
     vintcza = cmplx(0.0,0.0)
