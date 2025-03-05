@@ -52,7 +52,6 @@ fortitude:
   stage: html
   needs: []
   script:
-    - curl -LsSf https://github.com/PlasmaFAIR/fortitude/releases/latest/download/fortitude-installer.sh | sh
     - fortitude check --output-format="gitlab" src >codequality.yml
   artifacts:
     reports:
