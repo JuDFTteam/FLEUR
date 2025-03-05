@@ -47,6 +47,21 @@ intel-maqao:
     - if: $CI_TASKS =~ /all/    
   
 
+fortitude:
+  image: iffregistry.fz-juelich.de/fleur/fleur:ford
+  stage: html
+  needs: []
+  script:
+    - curl -LsSf https://github.com/PlasmaFAIR/fortitude/releases/latest/download/fortitude-installer.sh | sh
+    - fortitude check --output-format="gitlab" src >codequality.yml
+  artifacts:
+    reports:
+      codequality: codequality.yml
+  rules:
+    - if: $CI_TASKS =~ /doc/
+    - if: $CI_TASKS =~ /all/
+
+
 ford:
   image: iffregistry.fz-juelich.de/fleur/fleur:ford
   stage: html
