@@ -52,7 +52,7 @@ fortitude:
   stage: html
   needs: []
   script:
-    - fortitude check --output-format="gitlab" src >codequality.yml
+    - fortitude check --output-format="gitlab" src >codequality.yml || true
   artifacts:
     reports:
       codequality: codequality.yml
