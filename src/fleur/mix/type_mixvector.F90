@@ -159,9 +159,9 @@ CONTAINS
                   ENDIF
                else   
                   vec%vec_pw(pw_start(js):pw_start(js) + stars%ng3 - 1) = REAL(den%pw(:, jspin))
-                  IF ((.NOT. sym%invs).OR.PRESENT(denIm)) THEN
-                     vec%vec_pw(pw_start(js) + stars%ng3:pw_start(js) + 2*stars%ng3 - 1) = AIMAG(den%pw(:, jspin))
-                  ENDIF
+                  IF (js>2.or.(.NOT. sym%invs).OR.PRESENT(denIm)) THEN
+                               vec%vec_pw(pw_start(js) + stars%ng3:pw_start(js) + 2*stars%ng3 - 1) = AIMAG(den%pw(:, jspin))
+                  endif             
                endif   
                IF ((js == 3).AND.PRESENT(denIm)) THEN
                   vec%vec_pw(pw_start(js) + 2*stars%ng3:pw_start(js) + 3*stars%ng3 - 1) =  REAL(den%pw(:, 4))
