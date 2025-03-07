@@ -57,8 +57,10 @@ fortitude:
     reports:
       codequality: codequality.yml
   rules:
-    - if: $CI_TASKS =~ /doc/
-    - if: $CI_TASKS =~ /all/
+    - if: $CI_TASKS
+      when: never
+    - if: $CI_TASKS =~ /all/    
+    - when: on_success
 
 
 ford:
