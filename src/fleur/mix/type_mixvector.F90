@@ -349,17 +349,17 @@ CONTAINS
                      den%mt(:atoms%jri(n), l, n, js) = vec%vec_mt(ii:ii + atoms%jri(n) - 1)
                      ii = ii + atoms%jri(n)
                   ENDDO
-               ENDDO
-               !Restore up/down density
-               if (js==2.and.l_noco) then 
-                  block
-                     real,allocatable:: tmp(:,:,:)
-                     tmp=den%mt(:, :, : , 1)
-                     den%mt(:, :, : , 1)=den%mt(:, :, : , 1)+den%mt(:, :, : , 2)
-                     den%mt(:, :, : , 2)=tmp-den%mt(:, :, : , 2)
-                  end block
-               endif      
                
+                  !Restore up/down density
+                  if (js==2.and.l_noco) then 
+                     block
+                        real,allocatable:: tmp(:,:)
+                        tmp=den%mt(:, :, n , 1)
+                        den%mt(:, :, n , 1)=den%mt(:, :, n , 1)+den%mt(:, :, n , 2)
+                        den%mt(:, :, n , 2)=tmp-den%mt(:, :, n , 2)
+                     end block
+                  endif      
+               ENDDO
                IF (l_dfpt) THEN
                   DO n = mt_rank + 1, atoms%ntype, mt_size
                      DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
