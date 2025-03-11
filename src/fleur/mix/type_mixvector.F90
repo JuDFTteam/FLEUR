@@ -259,6 +259,8 @@ CONTAINS
                         ENDDO
                      ENDDO
                   ENDIF
+           
+                  
                ELSE ! DFPT mixing
                   DO n = mt_rank + 1, atoms%ntype, mt_size
                      DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
@@ -330,15 +332,6 @@ CONTAINS
                      den%pw(:, 4) = CMPLX(vec%vec_pw(pw_start(js) + 2*stars%ng3:pw_start(js) + 3*stars%ng3 - 1), vec%vec_pw(pw_start(js) + 3*stars%ng3:pw_start(js) + 4*stars%ng3 - 1))
                   END IF
                ENDIF
-               !Restore up/down density
-               if (js==2.and.l_noco) then 
-                  block
-                     complex,allocatable:: tmp(:)
-                     tmp=den%pw(:,1)
-                     den%pw( : , 1)=den%pw( : , 1)+den%pw( : , 2)
-                     den%pw( : , 2)=tmp-den%pw( : , 2)
-                  end block
-               endif      
                
             ENDIF
             IF (mt_here .AND. (js < 3 .OR. l_mtnocopot)) THEN
@@ -349,16 +342,6 @@ CONTAINS
                      den%mt(:atoms%jri(n), l, n, js) = vec%vec_mt(ii:ii + atoms%jri(n) - 1)
                      ii = ii + atoms%jri(n)
                   ENDDO
-               
-                  !Restore up/down density
-                  if (js==2.and.l_noco) then 
-                     block
-                        real,allocatable:: tmp(:,:)
-                        tmp=den%mt(:, :, n , 1)
-                        den%mt(:, :, n , 1)=den%mt(:, :, n , 1)+den%mt(:, :, n , 2)
-                        den%mt(:, :, n , 2)=tmp-den%mt(:, :, n , 2)
-                     end block
-                  endif      
                ENDDO
                IF (l_dfpt) THEN
                   DO n = mt_rank + 1, atoms%ntype, mt_size
@@ -404,15 +387,7 @@ CONTAINS
                                                        SHAPE(den%vac(:nmzxyd, 2:, iv, js)))
                      ii = ii + 2*nmzxyd*(SIZE(den%vac,2)-1)
                   ENDIF
-                  !Restore up/down density
-                  if (js==2.and.l_noco) then 
-                     block
-                        complex,allocatable:: tmp(:,:,:)
-                        tmp=den%vac(:, :, : , 1)
-                        den%vac(:, :, : , 1)=den%vac(:, :, : , 1)+den%vac(:, :, : , 2)
-                        den%vac(:, :, : , 2)=tmp-den%vac(:, :, : , 2)
-                     end block
-                  endif 
+                 
                   IF (js > 2) THEN
                      vacOffdiagTemp(:) = vec%vec_vac(ii + 1:ii + SIZE(den%vac, 1))
                      DO i = 1, SIZE(den%vac, 1)
@@ -443,6 +418,33 @@ CONTAINS
       ELSE
          CALL den%collect(mix_mpi_comm,denIm)
       END IF
+
+      !Restore up/down density
+      if (l_noco) then 
+         block
+            complex,allocatable:: tmp(:)
+            tmp=den%pw(:,1)
+            den%pw( : , 1)=den%pw( : , 1)+den%pw( : , 2)
+            den%pw( : , 2)=tmp-den%pw( : , 2)
+         end block
+      endif      
+      if (l_noco) then 
+         block
+            real,allocatable:: tmp(:,:,:)
+            tmp=den%mt(:, :, : , 1)
+            den%mt(:, :, : , 1)=den%mt(:, :, : , 1)+den%mt(:, :, : , 2)
+            den%mt(:, :, : , 2)=tmp-den%mt(:, :, : , 2)
+         end block
+      endif      
+      
+      if (allocated(den%vac).and.l_noco) then 
+         block
+            complex,allocatable:: tmp(:,:,:)
+            tmp=den%vac(:, :, : , 1)
+            den%vac(:, :, : , 1)=den%vac(:, :, : , 1)+den%vac(:, :, : , 2)
+            den%vac(:, :, : , 2)=tmp-den%vac(:, :, : , 2)
+         end block
+      endif 
 
    END SUBROUTINE mixvector_to_density
 
