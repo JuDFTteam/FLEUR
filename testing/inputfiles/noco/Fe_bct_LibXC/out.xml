@@ -1,19 +1,18 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <fleurOutput fleurOutputVersion="0.37">
    <programVersion version="fleur 40">
-      <compilationInfo date="2025-01-31T13:32:23" user="micha" host="iff1745" flag="I/Users/micha/hdf5/current/hdf5/include -fiopenmp -qmkl  -assume byterecl -no-wrap-margin -I/Users/micha/FLEUR" link="lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64;-lwannier;-L/Users/micha/Wannier90/wannier90-2.1.0/;-L/Users/mic"/>
-      <gitInfo version="MaX-R7.2-117-g5fc8dfcc1-dirty" branch="develop" lastCommitHash="5fc8dfcc187f2eb7f41bda65df6f26813d2624a6"/>
+      <compilationInfo date="2025-02-27T14:28:10" user="wortmann" host="iff1149" flag="-fiopenmp -qmkl  -assume byterecl -no-wrap-margin -I/Users/wortmann/FLEUR/fleur/build/external/libxc-git" link="usr/lib64/libxml2.so"/>
+      <gitInfo version="MaX-R7.2-127-ga3e28396b-dirty" branch="MagPrecond" lastCommitHash="a3e28396b2ec759023f41840d28b6bffb96ed9a8"/>
       <targetComputerArchitectures>GEN</targetComputerArchitectures>
       <precision type="DOUBLE"/>
       <targetStructureClass> </targetStructureClass>
-      <additionalCompilerFlags>CPP_MPI             CPP_HDF            CPP_WANN</additionalCompilerFlags>
+      <additionalCompilerFlags>CPP_HDF</additionalCompilerFlags>
    </programVersion>
    <parallelSetup>
-      <openMP ompThreads="3"/>
-      <mpi mpiProcesses="2"/>
-      <mem memoryPerNode="32570148 kB"/>
+      <openMP ompThreads="8"/>
+      <mem memoryPerNode="32336508 kB"/>
    </parallelSetup>
-   <startDateAndTime date="2025/01/31" time="14:24:13" zone="+0100"/>
+   <startDateAndTime date="2025/03/05" time="14:44:33" zone="+0100"/>
    <!-- Now follows a dump of the inp.xml file after evaluating the Schema -->
   <fleurInput fleurInputVersion="0.38">
      <comment>
@@ -326,10 +325,9 @@
             <extrapolationTo0K value="-2545.5959932482"/>
          </totalEnergy>
          <densityConvergence units="me/bohr^3">
-            <chargeDensity spin="1" distance="14.9616118484"/>
-            <chargeDensity spin="2" distance="12.9551346810"/>
-            <overallChargeDensity distance="25.9048964083"/>
-            <spinDensity distance="10.5975010960"/>
+            <chargeDensity distance="12.9524482042"/>
+            <Magnetization direction="mz" distance="5.2987505480"/>
+            <Magnetization direction="mx,my" distance="0.0000000010"/>
          </densityConvergence>
       </iteration>
       <iteration numberForCurrentRun="    2" overallNumber="    2">
@@ -420,14 +418,14 @@
             <state n="2" l="1" j="1.5" energy="-24.9115622026" weight="2.0000000000"/>
             <state n="3" l="0" j="0.5" energy="-2.8751527132" weight="1.0000000000"/>
          </coreStates>
-         <coreStates atomType="     1" atomicNumber=" 26" spin="2" kinEnergy="    588.4472421073" eigValSum="   -363.9698892536" lostElectrons=" 0.000564">
+         <coreStates atomType="     1" atomicNumber=" 26" spin="2" kinEnergy="    588.4472421074" eigValSum="   -363.9698892536" lostElectrons=" 0.000564">
             <state n="1" l="0" j="0.5" energy="-256.5918950673" weight="1.0000000000"/>
             <state n="2" l="0" j="0.5" energy="-29.4824331151" weight="1.0000000000"/>
             <state n="2" l="1" j="0.5" energy="-25.3418440938" weight="1.0000000000"/>
             <state n="2" l="1" j="1.5" energy="-24.8823243169" weight="2.0000000000"/>
             <state n="3" l="0" j="0.5" energy="-2.7890683434" weight="1.0000000000"/>
          </coreStates>
-         <coreStates atomType="     2" atomicNumber=" 26" spin="2" kinEnergy="    588.4472421073" eigValSum="   -363.9698892536" lostElectrons=" 0.000564">
+         <coreStates atomType="     2" atomicNumber=" 26" spin="2" kinEnergy="    588.4472421074" eigValSum="   -363.9698892536" lostElectrons=" 0.000564">
             <state n="1" l="0" j="0.5" energy="-256.5918950673" weight="1.0000000000"/>
             <state n="2" l="0" j="0.5" energy="-29.4824331151" weight="1.0000000000"/>
             <state n="2" l="1" j="0.5" energy="-25.3418440938" weight="1.0000000000"/>
@@ -474,10 +472,9 @@
             <extrapolationTo0K value="-2545.5953082637"/>
          </totalEnergy>
          <densityConvergence units="me/bohr^3">
-            <chargeDensity spin="1" distance="13.8369014784"/>
-            <chargeDensity spin="2" distance="12.2836840836"/>
-            <overallChargeDensity distance="24.2034278523"/>
-            <spinDensity distance="9.9444232901"/>
+            <chargeDensity distance="12.1017139262"/>
+            <Magnetization direction="mz" distance="4.9722116451"/>
+            <Magnetization direction="mx,my" distance="0.0000000010"/>
          </densityConvergence>
       </iteration>
       <iteration numberForCurrentRun="    3" overallNumber="    3">
@@ -605,7 +602,7 @@
                <valenceElectrons value="-15.5865876303"/>
             </sumOfEigenvalues>
             <densityCoulombPotentialIntegral value="-3904.5035934890"/>
-            <densityEffectivePotentialIntegral value="-4049.4840548573"/>
+            <densityEffectivePotentialIntegral value="-4049.4840548572"/>
             <chargeDenXCDenIntegral value="-111.6920221038"/>
             <FockExchangeEnergyValence value="0.0000000000"/>
             <FockExchangeEnergyCore value="0.0000000000"/>
@@ -622,12 +619,11 @@
             <extrapolationTo0K value="-2545.6004647372"/>
          </totalEnergy>
          <densityConvergence units="me/bohr^3">
-            <chargeDensity spin="1" distance="6.1890870239"/>
-            <chargeDensity spin="2" distance="7.2179537372"/>
-            <overallChargeDensity distance="12.7597553473"/>
-            <spinDensity distance="4.2421636178"/>
+            <chargeDensity distance="6.3798776737"/>
+            <Magnetization direction="mz" distance="2.1210818089"/>
+            <Magnetization direction="mx,my" distance="0.0000000003"/>
          </densityConvergence>
       </iteration>
    </scfLoop>
-   <endDateAndTime date="2025/01/31" time="14:24:17" zone="+0100"/>
+   <endDateAndTime date="2025/03/05" time="14:44:34" zone="+0100"/>
 </fleurOutput>

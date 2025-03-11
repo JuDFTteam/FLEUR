@@ -478,12 +478,13 @@ CONTAINS
          CALL MPI_BARRIER(fmpi%mpi_comm, ierr)
 #endif
 
+
          ! Mix input and output densities
          CALL timestart("DFPT mixing")
          CALL mix_charge(field2, fmpi, (iter == fi%input%itmax .OR. judft_was_argument("-mix_io")), starsq, &
                          fi%atoms, sphhar, fi%vacuum, fi%input, fi%sym, fi%juphon, fi%cell, fi%noco, nococonv, &
-                         archiveType, xcpot, iter, denIn1, denOut1, results1, .FALSE., fi%sliceplot,&
-                         denIn1Im, denOut1Im, dfpt_tag)
+                         archiveType, xcpot, iter, denIn1, denOut1, results1,l_runhia=.false.,sliceplot=fi%sliceplot,&
+                         inDenIm=denIn1Im, outDenIm=denOut1Im, dfpt_tag=dfpt_tag)
          CALL timestop("DFPT mixing")
 
          IF (fi%juphon%l_phonon) denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
@@ -494,8 +495,8 @@ CONTAINS
             CALL timestart("DFPT mixing")
             CALL mix_charge(field2, fmpi, (iter == fi%input%itmax .OR. judft_was_argument("-mix_io")), starsmq, &
                             fi%atoms, sphhar, fi%vacuum, fi%input, fi%sym, fi%juphon, fi%cell, fi%noco, nococonv, &
-                            archiveType, xcpot, iterm, denIn1m, denOut1m, results1m, .FALSE., fi%sliceplot,&
-                            denIn1mIm, denOut1mIm, dfpt_tag//"m")
+                            archiveType, xcpot, iterm, denIn1m, denOut1m, results1m, l_runhia=.false.,sliceplot=fi%sliceplot,&
+                            inDenIm=denIn1Im, outDenIm=denOut1Im, dfpt_tag=dfpt_tag)
             CALL timestop("DFPT mixing")
 
             IF (fi%juphon%l_phonon) denIn1m%mt(:,0:,iDtype,:) = denIn1m%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
