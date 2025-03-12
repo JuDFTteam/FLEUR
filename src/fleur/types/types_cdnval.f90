@@ -42,7 +42,6 @@ PRIVATE
    TYPE t_denCoeffs
 
       ! Refactored version for DFPT and more generalization:
-      COMPLEX, ALLOCATABLE :: mt_coeff(:,:,:,:,:,:)!(l,iAtom,iOrdPr,iOrd,ilSpinPr,ilSpin)
       COMPLEX, ALLOCATABLE :: mt_ulo_coeff(:,:,:,:,:)!(lo,iAtom,iOrd,ilSpinPr,ilSpin)
       COMPLEX, ALLOCATABLE :: mt_lou_coeff(:,:,:,:,:)!(lo,iAtom,iOrd,ilSpinPr,ilSpin)
       COMPLEX, ALLOCATABLE :: mt_lolo_coeff(:,:,:,:,:)!(lop,lo,iAtom,ilSpinPr,ilSpin)
@@ -219,19 +218,17 @@ SUBROUTINE denCoeffs_init(thisDenCoeffs, atoms, sphhar, jsp_start, jsp_end)
 
    ! Refactored version for DFPT and more generalization:
    llpd = ((atoms%lmaxd+1)**2)-1
-   ALLOCATE(thisDenCoeffs%mt_coeff(0:atoms%lmaxd,atoms%ntype,0:1,0:1,jsp_start:jsp_end,jsp_start:jsp_end))
    ALLOCATE(thisDenCoeffs%mt_ulo_coeff(atoms%nlod,atoms%ntype,0:1,jsp_start:jsp_end,jsp_start:jsp_end))
    ALLOCATE(thisDenCoeffs%mt_lou_coeff(atoms%nlod,atoms%ntype,0:1,jsp_start:jsp_end,jsp_start:jsp_end))
    ALLOCATE(thisDenCoeffs%mt_lolo_coeff(atoms%nlod,atoms%nlod,atoms%ntype,jsp_start:jsp_end,jsp_start:jsp_end))
 
-   ALLOCATE(thisDenCoeffs%nmt_coeff(0:llpd,sphhar%nlhd,atoms%ntype,0:1,0:1,jsp_start:jsp_end,jsp_start:jsp_end))
+   ALLOCATE(thisDenCoeffs%nmt_coeff(0:llpd,0:sphhar%nlhd,atoms%ntype,0:1,0:1,jsp_start:jsp_end,jsp_start:jsp_end))
    ALLOCATE(thisDenCoeffs%nmt_ulo_coeff(0:atoms%lmaxd,atoms%nlod,sphhar%nlhd,atoms%ntype,0:1,jsp_start:jsp_end,jsp_start:jsp_end))
    ALLOCATE(thisDenCoeffs%nmt_lou_coeff(0:atoms%lmaxd,atoms%nlod,sphhar%nlhd,atoms%ntype,0:1,jsp_start:jsp_end,jsp_start:jsp_end))
    ALLOCATE(thisDenCoeffs%nmt_lolo_coeff(atoms%nlod,atoms%nlod,sphhar%nlhd,atoms%ntype,jsp_start:jsp_end,jsp_start:jsp_end))
 
 
    ! Refactored version for DFPT and more generalization:
-   thisDenCoeffs%mt_coeff = CMPLX(0.0,0.0)!(l,iAtom,iOrdPr,iOrd,ilSpinPr,ilSpin)
    thisDenCoeffs%mt_ulo_coeff = CMPLX(0.0,0.0)!(lo,iAtom,iOrd,ilSpinPr,ilSpin)
    thisDenCoeffs%mt_lou_coeff = CMPLX(0.0,0.0)!(lo,iAtom,iOrd,ilSpinPr,ilSpin)
    thisDenCoeffs%mt_lolo_coeff = CMPLX(0.0,0.0)!(lop,lo,iAtom,ilSpinPr,ilSpin)

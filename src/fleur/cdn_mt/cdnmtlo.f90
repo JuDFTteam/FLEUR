@@ -13,7 +13,7 @@ MODULE m_cdnmtlo
    !! Philipp Kurz 99/04
 CONTAINS
    SUBROUTINE cdnmtlo(itype,ilSpinPr,ilSpin,input,atoms,sphhar,sym,usdus,orb,noco, &
-                      ello,vr,denCoeffs,f,g,rho,qmtllo,moments,rhoIm,f2,g2)
+                      ello,vr,denCoeffs,f,g,rho,moments,rhoIm,f2,g2)
       !! Current situation:
       !!
       !! Renamed the routine from rhosphnlo to cdnmtlo and adjusted it to handle
@@ -47,7 +47,6 @@ CONTAINS
       REAL,    INTENT (IN) :: vr(:,:)
       REAL,    INTENT (IN) :: ello(:,:)
       REAL,    INTENT (IN) :: f(:,:,0:), g(:,:,0:)
-      REAL,    INTENT (INOUT) :: qmtllo(0:)
       REAL,    INTENT (INOUT) :: rho(:,0:)
 
       REAL, OPTIONAL, INTENT(INOUT) :: rhoIm(:,0:)
@@ -85,32 +84,11 @@ CONTAINS
          gPr = g
       END IF
 
-      IF (ilSpinPr==ilSpin) THEN
-         DO lo = 1,atoms%nlo(itype)
-            l = atoms%llo(lo,itype)
-            ctemp = (denCoeffs%mt_ulo_coeff(lo,itype,0,ilSpinPr,ilSpin)+denCoeffs%mt_lou_coeff(lo,itype,0,ilSpinPr,ilSpin)) &
-                & * usdus%uulon(lo,itype,ilSpin) &
-                & + (denCoeffs%mt_ulo_coeff(lo,itype,1,ilSpinPr,ilSpin)+denCoeffs%mt_lou_coeff(lo,itype,1,ilSpinPr,ilSpin)) &
-                & * usdus%dulon(lo,itype,ilSpin)
-            qmtllo(l) = qmtllo(l) + REAL(ctemp) * c_1
-            DO lop = 1,atoms%nlo(itype)
-               IF (atoms%llo(lop,itype).EQ.l) THEN
-                  ctemp = denCoeffs%mt_lolo_coeff(lop,lo,itype,ilSpinPr,ilSpin) * usdus%uloulopn(lop,lo,itype,ilSpin)
-                  qmtllo(l) = qmtllo(l) + REAL(ctemp) * c_1
-               END IF
-            END DO
-         END DO
-      END IF
-
       jsp_start = MERGE(ilSpin,1,ilSpinPr==ilSpin)
       jsp_end   = MERGE(ilSpin,2,ilSpinPr==ilSpin)
 
-      IF (noco%l_mperp) THEN
-         ALLOCATE ( flo(atoms%jmtd,2,atoms%nlod,input%jspins) )
-      ELSE
-         ALLOCATE ( flo(atoms%jmtd,2,atoms%nlod,jsp_start:jsp_end) )
-      END IF
-
+      ALLOCATE ( flo(atoms%jmtd,2,atoms%nlod,jsp_start:jsp_end) )
+      
       ALLOCATE ( glo(atoms%jmtd,2) )
 
       ! Calculate the local orbital radial functions

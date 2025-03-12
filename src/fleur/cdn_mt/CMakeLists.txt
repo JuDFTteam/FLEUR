@@ -4,13 +4,13 @@ set(fleur_F90 ${fleur_F90}
 #src/fleur/cdn_mt/abccoflo.f90
 src/fleur/cdn_mt/abclocdn.F90
 src/fleur/cdn_mt/abclocdn1.F90
+src/fleur/cdn_mt/l-like.F90
 #src/fleur/cdn_mt/abclocdn_pulay.F90
 src/fleur/cdn_mt/abcof.F90
 src/fleur/cdn_mt/abcrot2.f90
-src/fleur/cdn_mt/cdnmt.F90
+#src/fleur/cdn_mt/cdnmt.F90
 src/fleur/cdn_mt/cdncore.F90
 src/fleur/cdn_mt/denMultipoleExp.f90
-#src/fleur/cdn_mt/magMoms.f90cd ../b  
 src/fleur/cdn_mt/magDiMom.f90
 #src/fleur/cdn_mt/orbMagMoms.f90
 src/fleur/cdn_mt/orb_comp2.f90
@@ -23,11 +23,14 @@ src/fleur/cdn_mt/resMoms.f90
 #src/fleur/cdn_mt/rhonmt.f90
 #src/fleur/cdn_mt/rhonmt21.F90
 #rc/fleur/cdn_mt/rhonmtlo.f90
-src/fleur/cdn_mt/cdnmtlo.f90
+#src/fleur/cdn_mt/cdnmtlo.f90
 #src/fleur/cdn_mt/setabc1locdn.f90
 src/fleur/cdn_mt/setabc1locdn1.f90
 #src/fleur/cdn_mt/calcDenCoeffs.f90
 src/fleur/cdn_mt/magnMomFromDen.f90
 src/fleur/cdn_mt/alignSpinAxisMagn.F90
 src/fleur/cdn_mt/magMultipoles.F90
+src/fleur/cdn_mt/denmat_to_full.F90
+src/fleur/cdn_mt/types_denmatrix.F90
+src/fleur/cdn_mt/types_radfun.F90
 )

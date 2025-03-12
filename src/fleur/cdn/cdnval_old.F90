@@ -47,7 +47,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    USE m_greensfCalcImagPart
    USE m_local_hamiltonian
    USE m_greensfCalcScalarProducts
-   !USE m_cdnmt       ! calculate the density and orbital moments etc.
+   USE m_cdnmt       ! calculate the density and orbital moments etc.
    USE m_orbmom      ! coeffd for orbital moments
    USE m_qmtsl       ! These subroutines divide the input%film into banddos%layers
    USE m_qintsl      ! (slabs) and intergate the DOS in these banddos%layers
@@ -63,9 +63,6 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    USE m_types_jDOS
    USE m_types_vacDOS
    USE m_types_orbcomp
-   USE m_denmat_to_full
-   USE m_types_denmatrix
-   USE m_types_radfun
 #ifdef CPP_MPI
    USE m_mpi_col_den ! collect density data from parallel nodes
 #endif
@@ -123,7 +120,8 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
 
    TYPE (t_lapw)              :: lapw
    TYPE (t_orb)               :: orb
-   TYPE (t_denmatrix),allocatable      :: denmatrix(:,:,:)
+   TYPE (t_denCoeffs)         :: denCoeffs
+   TYPE (t_denCoeffsOffdiag)  :: denCoeffsOffdiag
    TYPE (t_force)             :: force
    TYPE (t_eigVecCoeffs)      :: eigVecCoeffs
    TYPE (t_usdus)             :: usdus
@@ -132,7 +130,6 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    TYPE (t_tlmplm)            :: tlmplm
    TYPE (t_greensfBZintCoeffs):: greensfBZintCoeffs
    TYPE(t_scalarGF), ALLOCATABLE :: scalarGF(:)
-   TYPE(t_radfun)            :: radfun
 
    CALL timestart("cdnval")
 
@@ -143,8 +140,6 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    IF (input%l_f.AND.(input%f_level.GE.3)) THEN
       CALL init_sf(sym,cell,atoms)
    END IF
-
-   
 
    IF (noco%l_mperp.OR.banddos%l_jDOS) THEN
       ! when the off-diag. part of the density matrix, i.e. m_x and
@@ -158,7 +153,6 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
       jsp_end   = jspin
    END IF
 
-   allocate(denmatrix(jsp_start:jsp_end,jsp_start:jsp_end,atoms%ntype))
    !Do we need to consider the unoccupied states
    l_empty = banddos%dos.or.banddos%band
    IF(gfinp%n>0 .AND. PRESENT(greensfImagPart)) THEN
@@ -171,9 +165,12 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
 
    ! Initializations
    CALL usdus%init(atoms,input%jspins)
+   CALL denCoeffs%init(atoms,sphhar,jsp_start,jsp_end)
+   ! The last entry in denCoeffsOffdiag%init is l_fmpl. It is meant as a switch to a plot of the full magnet.
+   ! density without the atomic sphere approximation for the magnet. density.
+   CALL denCoeffsOffdiag%init(atoms,noco,sphhar,banddos%l_jDOS,any(noco%l_unrestrictMT).OR.noco%l_mperp)
    CALL force%init1(input,atoms)
    CALL orb%init(atoms,noco,jsp_start,jsp_end)
-
 
    !Greens function always considers the empty states
    IF(gfinp%n>0 .AND. PRESENT(greensfImagPart)) THEN
@@ -185,6 +182,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    ENDIF
 
 
+   IF (denCoeffsOffdiag%l_fmpl.AND.(.NOT.noco%l_mperp)) CALL juDFT_error("for fmpl set noco%l_mperp = T!" ,calledby ="cdnval")
    IF (banddos%l_mcd.AND..NOT.PRESENT(mcd)) CALL juDFT_error("mcd is missing",calledby ="cdnval")
 
    ! calculation of core spectra (EELS) initializations -start-
@@ -208,6 +206,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
          CALL genMTBasis(atoms,enpara,vTot,fmpi,iType,ispin,usdus,f(:,:,0:,ispin),g(:,:,0:,ispin),flo(:,:,:,ispin),&
                          hub1data=hub1data)
       END DO
+      IF (noco%l_mperp.OR.banddos%l_jDOS) CALL denCoeffsOffdiag%addRadFunScalarProducts(atoms,f,g,flo,iType)
       IF (banddos%l_mcd) CALL mcd_init(atoms,banddos,input,vTot%mt(:,0,:,:),g,f,mcd,iType,jspin)
       IF (l_coreSpec) CALL corespec_rme(atoms,input,iType,29,input%jspins,jspin,results%ef,&
                                         atoms%msh,vTot%mt(:,0,:,:),f,g)
@@ -263,7 +262,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
          IF (atoms%n_v.GT.0) CALL nIJ_mat(input,atoms,noccbd,usdus,ispin,we,eigVecCoeffs,cell,kpts,ikpt,den%nIJ_llp_mmp(:,:,:,ispin),enpara,vTot)
          IF (atoms%n_u.GT.0.AND.noco%l_mperp.AND.(ispin==jsp_end)) THEN
             call timestart("n_mat21")
-            !CALL n_mat21(atoms,sym,noccbd,we,denCoeffsOffdiag,eigVecCoeffs,den%mmpMat(:,:,:,3))
+            CALL n_mat21(atoms,sym,noccbd,we,denCoeffsOffdiag,eigVecCoeffs,den%mmpMat(:,:,:,3))
             call timestop("n_mat21")
 
          ENDIF
@@ -276,7 +275,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
          call timestop("eparas")
          IF (noco%l_mperp.AND.(ispin==jsp_end)) then
            call timestart("qal_21")
-           !CALL qal_21(atoms,banddos,input,noccbd,ev_list,nococonv,eigVecCoeffs,denCoeffsOffdiag,ikpt,dos)
+           CALL qal_21(atoms,banddos,input,noccbd,ev_list,nococonv,eigVecCoeffs,denCoeffsOffdiag,ikpt,dos)
            call timestop("qal_21")
          endif
 
@@ -290,13 +289,14 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
          !Decomposition into total angular momentum states
          IF(banddos%dos.AND.banddos%l_jDOS) THEN
             IF(PRESENT(jDOS).AND.ispin==jsp_end) THEN
-               !CALL jDOS_comp(ikpt,noccbd,ev_list,we,atoms,banddos,input,usdus,&
-               !               denCoeffsOffdiag,eigVecCoeffs,jDOS)
+               CALL jDOS_comp(ikpt,noccbd,ev_list,we,atoms,banddos,input,usdus,&
+                              denCoeffsOffdiag,eigVecCoeffs,jDOS)
             ENDIF
          ENDIF
-         call denmatrix(ispin,ispin,itype)%rhonmt(atoms, sphhar, we, noccbd, itype, ispin,ispin, sym, eigVecCoeffs, eigVecCoeffs)
-         call denmatrix(ispin,ispin,itype)%mpi_collect()
-         
+         CALL rhonmt(atoms,sphhar,we,we,noccbd,ispin,ispin,[0.0,0.0,0.0],.FALSE.,.TRUE.,sym,eigVecCoeffs,eigVecCoeffs,denCoeffs)
+         !CALL dfpt_rhomtlo(atoms,noccbd,we,we,ispin,ispin,[0.0,0.0,0.0],.FALSE.,eigVecCoeffs,eigVecCoeffs,denCoeffs)
+         CALL rhonmtlo(atoms,sphhar,sym,noccbd,we,we,eigVecCoeffs,eigVecCoeffs,denCoeffs,ispin,ispin,.FALSE.,[0.0,0.0,0.0])
+
          IF (noco%l_soc) CALL orbmom(atoms,noccbd,we,ispin,eigVecCoeffs,orb)
          IF (input%l_f) THEN
            call local_ham(sphhar,atoms,sym,noco,nococonv,enpara,fmpi,vtot,vtot,den,input,hub1inp,hub1data,tlmplm,usdus,0.0)
@@ -307,10 +307,12 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
                                           noccbd,results%ef,banddos%sig_dos,eig,we,eigVecCoeffs)
       END DO ! end loop over ispin
       IF (noco%l_mperp) then
-        call timestart("denmatrix")
-        call denmatrix(2,1,itype)%rhonmt(atoms, sphhar, we, noccbd, itype, 2,1, sym, eigVecCoeffs, eigVecCoeffs)
-        call denmatrix(2,1,itype)%mpi_collect()
-        call timestop("denmatrix")
+        call timestart("denCoeffsOffdiag%calcCoefficients")
+        !CALL dfpt_rhomt(atoms,we,we,noccbd,2,1,[0.0,0.0,0.0],.FALSE.,eigVecCoeffs,eigVecCoeffs,denCoeffs)
+        CALL rhonmt(atoms,sphhar,we,we,noccbd,2,1,[0.0,0.0,0.0],.FALSE.,.FALSE.,sym,eigVecCoeffs,eigVecCoeffs,denCoeffs)
+        !CALL dfpt_rhomtlo(atoms,noccbd,we,we,2,1,[0.0,0.0,0.0],.FALSE.,eigVecCoeffs,eigVecCoeffs,denCoeffs)
+        CALL rhonmtlo(atoms,sphhar,sym,noccbd,we,we,eigVecCoeffs,eigVecCoeffs,denCoeffs,2,1,.FALSE.,[0.0,0.0,0.0])
+        call timestop("denCoeffsOffdiag%calcCoefficients")
       endif
 
       IF(gfinp%n>0 .AND. PRESENT(greensfImagPart)) THEN
@@ -353,7 +355,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    ENDDO
    DO ispin = jsp_start,jsp_end
       CALL mpi_col_den(fmpi,sphhar,atoms ,stars,vacuum,input,noco,ispin,dos,vacdos,&
-                       results,den,regCharges,mcd,slab,orbcomp,jDOS)
+                       results,denCoeffs,orb,denCoeffsOffdiag,den,regCharges,mcd,slab,orbcomp,jDOS)
    END DO
 #endif
 
@@ -368,12 +370,10 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    ENDIF
 
    IF (fmpi%irank==0) THEN
-      CALL timestart("denmatrix_to_full")
-      DO itype=1,atoms%ntype
-         call radfun%generate_radial_functions(atoms, input, enpara, hub1data, fmpi, vtot, iType)
-         call denmatrix_to_full_density(itype,input,sphhar,atoms,sym,radfun,denmatrix(:,:,itype),den%mt,moments=moments)
-      ENDDO   
-      CALL timestop("denmatrix_to_full")
+      CALL timestart("cdnmt")
+      CALL cdnmt(input%jspins,input,atoms,sym,sphhar,noco,jsp_start,jsp_end,enpara,banddos,&
+                 vTot%mt(:,0,:,:),denCoeffs,usdus,orb,denCoeffsOffdiag,den%mt,hub1inp,moments=moments,jDOS=jDOS,hub1data=hub1data)
+      CALL timestop("cdnmt")
       IF (l_coreSpec) CALL corespec_ddscs(jspin,input%jspins)
       DO ispin = jsp_start,jsp_end
          IF (input%cdinf) THEN

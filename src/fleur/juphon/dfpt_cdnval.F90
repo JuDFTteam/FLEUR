@@ -24,14 +24,14 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
    USE m_abcof
    USE m_pwden
    USE m_vacden
-   USE m_cdnmt       ! calculate the density and orbital moments etc.
+   !USE m_cdnmt       ! calculate the density and orbital moments etc.
    USE m_types_dos
    USE m_types_vacdos
 #ifdef CPP_MPI
    USE m_mpi_col_den ! collect density data from parallel nodes
 #endif
-   USE m_dfpt_rhomt
-   USE m_dfpt_rhonmt
+   
+   !USE m_rhonmt
    USE m_genMTBasis
    USE m_npy
 
@@ -269,39 +269,39 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
          END IF
 
          IF (l_minusq) THEN
-            CALL dfpt_rhomt(atoms,we,we1,noccbd,ispin,ispin,-bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs,eigVecCoeffs1m)
-            CALL dfpt_rhonmt(atoms,sphhar,we,we1,noccbd,ispin,ispin,-bqpt,.TRUE.,.FALSE.,sym,eigVecCoeffs,eigVecCoeffs1,denCoeffs,eigVecCoeffs1m)
-            CALL dfpt_rhomtlo(atoms,noccbd,we,we1,ispin,ispin,-bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs,eigVecCoeffs1m)
-            CALL dfpt_rhonmtlo(atoms,sphhar,sym,noccbd,we,we1,eigVecCoeffs,eigVecCoeffs1,denCoeffs,ispin,ispin,.TRUE.,-bqpt,eigVecCoeffs1m)
+            !CALL dfpt_rhomt(atoms,we,we1,noccbd,ispin,ispin,-bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs,eigVecCoeffs1m)
+            !CALL rhonmt(atoms,sphhar,we,we1,noccbd,ispin,ispin,-bqpt,.TRUE.,.FALSE.,sym,eigVecCoeffs,eigVecCoeffs1,denCoeffs,eigVecCoeffs1m)
+            !CALL rhomtlo(atoms,noccbd,we,we1,ispin,ispin,-bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs,eigVecCoeffs1m)
+            !CALL rhonmtlo(atoms,sphhar,sym,noccbd,we,we1,eigVecCoeffs,eigVecCoeffs1,denCoeffs,ispin,ispin,.TRUE.,-bqpt,eigVecCoeffs1m)
          ELSE
-            CALL dfpt_rhomt(atoms,we,we1,noccbd,ispin,ispin,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
-            CALL dfpt_rhonmt(atoms,sphhar,we,we1,noccbd,ispin,ispin,bqpt,.TRUE.,.FALSE.,sym,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
-            CALL dfpt_rhomtlo(atoms,noccbd,we,we1,ispin,ispin,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
-            CALL dfpt_rhonmtlo(atoms,sphhar,sym,noccbd,we,we1,eigVecCoeffs,eigVecCoeffs1,denCoeffs,ispin,ispin,.TRUE.,bqpt)
+            !CALL dfpt_rhomt(atoms,we,we1,noccbd,ispin,ispin,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
+            !CALL rhonmt(atoms,sphhar,we,we1,noccbd,ispin,ispin,bqpt,.TRUE.,.FALSE.,sym,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
+            !CALL rhomtlo(atoms,noccbd,we,we1,ispin,ispin,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
+            !CALL rhonmtlo(atoms,sphhar,sym,noccbd,we,we1,eigVecCoeffs,eigVecCoeffs1,denCoeffs,ispin,ispin,.TRUE.,bqpt)
          END IF
       END DO ! end loop over ispin
       IF (noco%l_mperp) then
          IF (.NOT.l_minusq) THEN
             call timestart("denCoeffsOffdiag%calcCoefficients")
-            CALL dfpt_rhomt(atoms,we,we1,noccbd,2,1,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs,eigVecCoeffs1m)
-            CALL dfpt_rhonmt(atoms,sphhar,we,we1,noccbd,2,1,bqpt,.TRUE.,.FALSE.,sym,eigVecCoeffs,eigVecCoeffs1,denCoeffs,eigVecCoeffs1m)
-            CALL dfpt_rhomtlo(atoms,noccbd,we,we1,2,1,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs,eigVecCoeffs1m)
-            CALL dfpt_rhonmtlo(atoms,sphhar,sym,noccbd,we,we1,eigVecCoeffs,eigVecCoeffs1,denCoeffs,2,1,.TRUE.,bqpt,eigVecCoeffs1m)
-            CALL dfpt_rhomt(atoms,we,we1,noccbd,1,2,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs,eigVecCoeffs1m)
-            CALL dfpt_rhonmt(atoms,sphhar,we,we1,noccbd,1,2,bqpt,.TRUE.,.FALSE.,sym,eigVecCoeffs,eigVecCoeffs1,denCoeffs,eigVecCoeffs1m)
-            CALL dfpt_rhomtlo(atoms,noccbd,we,we1,1,2,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs,eigVecCoeffs1m)
-            CALL dfpt_rhonmtlo(atoms,sphhar,sym,noccbd,we,we1,eigVecCoeffs,eigVecCoeffs1,denCoeffs,1,2,.TRUE.,bqpt,eigVecCoeffs1m)
+            !CALL dfpt_rhomt(atoms,we,we1,noccbd,2,1,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs,eigVecCoeffs1m)
+            !CALL rhonmt(atoms,sphhar,we,we1,noccbd,2,1,bqpt,.TRUE.,.FALSE.,sym,eigVecCoeffs,eigVecCoeffs1,denCoeffs,eigVecCoeffs1m)
+            !CALL rhomtlo(atoms,noccbd,we,we1,2,1,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs,eigVecCoeffs1m)
+            !CALL rhonmtlo(atoms,sphhar,sym,noccbd,we,we1,eigVecCoeffs,eigVecCoeffs1,denCoeffs,2,1,.TRUE.,bqpt,eigVecCoeffs1m)
+            !CALL dfpt_rhomt(atoms,we,we1,noccbd,1,2,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs,eigVecCoeffs1m)
+            !CALL rhonmt(atoms,sphhar,we,we1,noccbd,1,2,bqpt,.TRUE.,.FALSE.,sym,eigVecCoeffs,eigVecCoeffs1,denCoeffs,eigVecCoeffs1m)
+            !CALL rhomtlo(atoms,noccbd,we,we1,1,2,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs,eigVecCoeffs1m)
+            !CALL rhonmtlo(atoms,sphhar,sym,noccbd,we,we1,eigVecCoeffs,eigVecCoeffs1,denCoeffs,1,2,.TRUE.,bqpt,eigVecCoeffs1m)
             call timestop("denCoeffsOffdiag%calcCoefficients")
          ELSE
             call timestart("denCoeffsOffdiag%calcCoefficients")
-            CALL dfpt_rhomt(atoms,we,we1,noccbd,2,1,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
-            CALL dfpt_rhonmt(atoms,sphhar,we,we1,noccbd,2,1,bqpt,.TRUE.,.FALSE.,sym,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
-            CALL dfpt_rhomtlo(atoms,noccbd,we,we1,2,1,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
-            CALL dfpt_rhonmtlo(atoms,sphhar,sym,noccbd,we,we1,eigVecCoeffs,eigVecCoeffs1,denCoeffs,2,1,.TRUE.,bqpt)
-            CALL dfpt_rhomt(atoms,we,we1,noccbd,1,2,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
-            CALL dfpt_rhonmt(atoms,sphhar,we,we1,noccbd,1,2,bqpt,.TRUE.,.FALSE.,sym,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
-            CALL dfpt_rhomtlo(atoms,noccbd,we,we1,1,2,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
-            CALL dfpt_rhonmtlo(atoms,sphhar,sym,noccbd,we,we1,eigVecCoeffs,eigVecCoeffs1,denCoeffs,1,2,.TRUE.,bqpt)
+            !CALL dfpt_rhomt(atoms,we,we1,noccbd,2,1,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
+            !CALL rhonmt(atoms,sphhar,we,we1,noccbd,2,1,bqpt,.TRUE.,.FALSE.,sym,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
+            !CALL rhomtlo(atoms,noccbd,we,we1,2,1,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
+            !CALL rhonmtlo(atoms,sphhar,sym,noccbd,we,we1,eigVecCoeffs,eigVecCoeffs1,denCoeffs,2,1,.TRUE.,bqpt)
+            !CALL dfpt_rhomt(atoms,we,we1,noccbd,1,2,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
+            !CALL rhonmt(atoms,sphhar,we,we1,noccbd,1,2,bqpt,.TRUE.,.FALSE.,sym,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
+            !CALL rhomtlo(atoms,noccbd,we,we1,1,2,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
+            !CALL rhonmtlo(atoms,sphhar,sym,noccbd,we,we1,eigVecCoeffs,eigVecCoeffs1,denCoeffs,1,2,.TRUE.,bqpt)
             call timestop("denCoeffsOffdiag%calcCoefficients")
          END IF
       endif
@@ -332,8 +332,8 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
 
    IF (fmpi%irank==0) THEN
       CALL timestart("cdnmt")
-      CALL cdnmt(input%jspins,input,atoms,sym,sphhar,noco,jsp_start,jsp_end,enpara,banddosdummy,&
-                 vTot%mt(:,0,:,:),denCoeffs,usdus,orbdummy,denCoeffsOffdiag,den%mt,hub1inp,rhoIm=denIm%mt)
+      !TODO CALL cdnmt(input%jspins,input,atoms,sym,sphhar,noco,jsp_start,jsp_end,enpara,banddosdummy,&
+      !           vTot%mt(:,0,:,:),denCoeffs,usdus,orbdummy,denCoeffsOffdiag,den%mt,hub1inp,rhoIm=denIm%mt)
       CALL timestop("cdnmt")
    END IF
 

@@ -15,7 +15,7 @@ MODULE m_mpi_col_den
 #endif
 CONTAINS
   SUBROUTINE mpi_col_den(fmpi,sphhar,atoms ,stars,vacuum,input,noco,jspin,dos,vacdos,&
-                         results,denCoeffs,orb,denCoeffsOffdiag,den,regCharges,mcd,slab,orbcomp,jDOS)
+                         results,den,regCharges,mcd,slab,orbcomp,jDOS)
 
     USE m_types
     USE m_constants
@@ -44,8 +44,6 @@ CONTAINS
     ! ..  Array Arguments ..
 
     TYPE (t_orb),               INTENT(INOUT) :: orb
-    TYPE (t_denCoeffs),         INTENT(INOUT) :: denCoeffs
-    TYPE (t_denCoeffsOffdiag),  INTENT(INOUT) :: denCoeffsOffdiag
     TYPE (t_dos),               INTENT(INOUT) :: dos
     TYPE (t_vacdos),            INTENT(INOUT) :: vacdos
     TYPE (t_regionCharges), OPTIONAL, INTENT(INOUT) :: regCharges
@@ -84,21 +82,8 @@ CONTAINS
     ENDIF
 
     
-    ! Refactored stuff
-    n = 4*(atoms%lmaxd+1)*atoms%ntype
-    ALLOCATE(c_b(n))
-    CALL MPI_ALLREDUCE(denCoeffs%mt_coeff(0:,:,0:1,0:1,jspin,jspin),c_b,n,MPI_DOUBLE_COMPLEX,MPI_SUM,MPI_COMM_WORLD,ierr)
-    CALL zcopy(n, c_b, 1, denCoeffs%mt_coeff(0:,:,0:1,0:1,jspin,jspin), 1)
-    DEALLOCATE (c_b)
-
     
-    ! Refactored stuff
-    n = 4*((atoms%lmaxd+1)**2)*sphhar%nlhd*atoms%ntype
-    ALLOCATE(c_b(n))
-    CALL MPI_ALLREDUCE(denCoeffs%nmt_coeff(0:,:,:,0:1,0:1,jspin,jspin),c_b,n,MPI_DOUBLE_COMPLEX,MPI_SUM,MPI_COMM_WORLD,ierr)
-    CALL zcopy(n, c_b, 1, denCoeffs%nmt_coeff(0:,:,:,0:1,0:1,jspin,jspin), 1)
-    DEALLOCATE (c_b)
-
+    
     IF (PRESENT(regCharges)) THEN
       !--> ener & sqal
       n=4*atoms%ntype
@@ -255,40 +240,7 @@ CONTAINS
        END IF
        DEALLOCATE (r_b)
 
-       ! Refactored stuff
-       n=2*atoms%nlod*atoms%ntype
-       ALLOCATE (c_b(n))
-       CALL MPI_ALLREDUCE(denCoeffs%mt_ulo_coeff(:,:,0:1,jspin,jspin),c_b,n,MPI_DOUBLE_COMPLEX,MPI_SUM, MPI_COMM_WORLD,ierr)
-       CALL zcopy(n, c_b, 1, denCoeffs%mt_ulo_coeff(:,:,0:1,jspin,jspin), 1)
-       CALL MPI_ALLREDUCE(denCoeffs%mt_lou_coeff(:,:,0:1,jspin,jspin),c_b,n,MPI_DOUBLE_COMPLEX,MPI_SUM, MPI_COMM_WORLD,ierr)
-       CALL zcopy(n, c_b, 1, denCoeffs%mt_lou_coeff(:,:,0:1,jspin,jspin), 1)
-       DEALLOCATE (c_b)
-
        
-       ! Refactored stuff
-       n = atoms%nlod * atoms%nlod * atoms%ntype
-       ALLOCATE (c_b(n))
-       CALL MPI_ALLREDUCE(denCoeffs%mt_lolo_coeff(:,:,:,jspin,jspin),c_b,n,MPI_DOUBLE_COMPLEX,MPI_SUM, MPI_COMM_WORLD,ierr)
-       CALL zcopy(n, c_b, 1, denCoeffs%mt_lolo_coeff(:,:,:,jspin,jspin), 1)
-       DEALLOCATE (c_b)
-
-       
-       ! Refactored stuff
-       n=2*atoms%nlod*atoms%ntype*(atoms%lmaxd+1)*sphhar%nlhd
-       ALLOCATE (c_b(n))
-       CALL MPI_ALLREDUCE(denCoeffs%nmt_ulo_coeff(0:,:,:,:,0:1,jspin,jspin),c_b,n,MPI_DOUBLE_COMPLEX,MPI_SUM, MPI_COMM_WORLD,ierr)
-       CALL zcopy(n, c_b, 1, denCoeffs%nmt_ulo_coeff(0:,:,:,:,0:1,jspin,jspin), 1)
-       CALL MPI_ALLREDUCE(denCoeffs%nmt_lou_coeff(0:,:,:,:,0:1,jspin,jspin),c_b,n,MPI_DOUBLE_COMPLEX,MPI_SUM, MPI_COMM_WORLD,ierr)
-       CALL zcopy(n, c_b, 1, denCoeffs%nmt_lou_coeff(0:,:,:,:,0:1,jspin,jspin), 1)
-       DEALLOCATE (c_b)
-       
-       ! Refactored stuff
-       n = atoms%ntype * sphhar%nlhd * atoms%nlod**2
-       ALLOCATE (c_b(n))
-       CALL MPI_ALLREDUCE(denCoeffs%nmt_lolo_coeff(:,:,:,:,jspin,jspin),c_b,n,MPI_DOUBLE_COMPLEX,MPI_SUM, MPI_COMM_WORLD,ierr)
-       CALL zcopy(n, c_b, 1, denCoeffs%nmt_lolo_coeff(:,:,:,:,jspin,jspin), 1)
-       DEALLOCATE (c_b)
-
     ENDIF
 
     ! ->  Now the SOC - stuff: orb, orblo and orblo
@@ -373,108 +325,7 @@ CONTAINS
        ENDIF ! input%film
 
 
-       IF (noco%l_mperp) THEN
-
-          ! -->     for (spin)-off diagonal part of muffin-tin
-          n = (atoms%lmaxd+1) * atoms%ntype ! TODO: Why not from 0: in l-index?
-          ALLOCATE(c_b(n))
-          CALL MPI_ALLREDUCE(denCoeffsOffdiag%uu21(:,:),c_b,n,MPI_DOUBLE_COMPLEX, MPI_SUM,MPI_COMM_WORLD,ierr)
-          CALL zcopy(n, c_b, 1, denCoeffsOffdiag%uu21(:,:), 1)
-          CALL MPI_ALLREDUCE(denCoeffsOffdiag%ud21(:,:),c_b,n,MPI_DOUBLE_COMPLEX, MPI_SUM,MPI_COMM_WORLD,ierr)
-          CALL zcopy(n, c_b, 1, denCoeffsOffdiag%ud21(:,:), 1)
-          CALL MPI_ALLREDUCE(denCoeffsOffdiag%du21(:,:),c_b,n,MPI_DOUBLE_COMPLEX, MPI_SUM,MPI_COMM_WORLD,ierr)
-          CALL zcopy(n, c_b, 1, denCoeffsOffdiag%du21(:,:), 1)
-          CALL MPI_ALLREDUCE(denCoeffsOffdiag%dd21(:,:),c_b,n,MPI_DOUBLE_COMPLEX, MPI_SUM,MPI_COMM_WORLD,ierr)
-          CALL zcopy(n, c_b, 1, denCoeffsOffdiag%dd21(:,:), 1)
-          DEALLOCATE (c_b)
-
-          ! Refactored stuff
-          n = 4*(atoms%lmaxd+1)*atoms%ntype
-          ALLOCATE(c_b(n))
-          CALL MPI_ALLREDUCE(denCoeffs%mt_coeff(0:,:,0:1,0:1,2,1),c_b,n,MPI_DOUBLE_COMPLEX,MPI_SUM,MPI_COMM_WORLD,ierr)
-          CALL zcopy(n, c_b, 1, denCoeffs%mt_coeff(0:,:,0:1,0:1,2,1), 1)
-          CALL MPI_ALLREDUCE(denCoeffs%mt_coeff(0:,:,0:1,0:1,1,2),c_b,n,MPI_DOUBLE_COMPLEX,MPI_SUM,MPI_COMM_WORLD,ierr)
-          CALL zcopy(n, c_b, 1, denCoeffs%mt_coeff(0:,:,0:1,0:1,1,2), 1)
-          DEALLOCATE (c_b)
-
-          ! -->     lo,u coeff's:
-          n = atoms%nlod * atoms%ntype
-          ALLOCATE(c_b(n))
-          CALL MPI_ALLREDUCE(denCoeffsOffdiag%uulo21(:,:),c_b,n,MPI_DOUBLE_COMPLEX, MPI_SUM,MPI_COMM_WORLD,ierr)
-          CALL zcopy(n, c_b, 1, denCoeffsOffdiag%uulo21(:,:), 1)
-          CALL MPI_ALLREDUCE(denCoeffsOffdiag%ulou21(:,:),c_b,n,MPI_DOUBLE_COMPLEX, MPI_SUM,MPI_COMM_WORLD,ierr)
-          CALL zcopy(n, c_b, 1, denCoeffsOffdiag%ulou21(:,:), 1)
-          CALL MPI_ALLREDUCE(denCoeffsOffdiag%dulo21(:,:),c_b,n,MPI_DOUBLE_COMPLEX, MPI_SUM,MPI_COMM_WORLD,ierr)
-          CALL zcopy(n, c_b, 1, denCoeffsOffdiag%dulo21(:,:), 1)
-          CALL MPI_ALLREDUCE(denCoeffsOffdiag%ulod21(:,:),c_b,n,MPI_DOUBLE_COMPLEX, MPI_SUM,MPI_COMM_WORLD,ierr)
-          CALL zcopy(n, c_b, 1, denCoeffsOffdiag%ulod21(:,:), 1)
-          DEALLOCATE (c_b)
-
-          ! Refactored stuff
-          n=2*atoms%nlod*atoms%ntype
-          ALLOCATE (c_b(n))
-          CALL MPI_ALLREDUCE(denCoeffs%mt_ulo_coeff(:,:,0:1,2,1),c_b,n,MPI_DOUBLE_COMPLEX,MPI_SUM, MPI_COMM_WORLD,ierr)
-          CALL zcopy(n, c_b, 1, denCoeffs%mt_ulo_coeff(:,:,0:1,2,1), 1)
-          CALL MPI_ALLREDUCE(denCoeffs%mt_lou_coeff(:,:,0:1,2,1),c_b,n,MPI_DOUBLE_COMPLEX,MPI_SUM, MPI_COMM_WORLD,ierr)
-          CALL zcopy(n, c_b, 1, denCoeffs%mt_lou_coeff(:,:,0:1,2,1), 1)
-          CALL MPI_ALLREDUCE(denCoeffs%mt_ulo_coeff(:,:,0:1,1,2),c_b,n,MPI_DOUBLE_COMPLEX,MPI_SUM, MPI_COMM_WORLD,ierr)
-          CALL zcopy(n, c_b, 1, denCoeffs%mt_ulo_coeff(:,:,0:1,1,2), 1)
-          CALL MPI_ALLREDUCE(denCoeffs%mt_lou_coeff(:,:,0:1,1,2),c_b,n,MPI_DOUBLE_COMPLEX,MPI_SUM, MPI_COMM_WORLD,ierr)
-          CALL zcopy(n, c_b, 1, denCoeffs%mt_lou_coeff(:,:,0:1,1,2), 1)
-          DEALLOCATE (c_b)
-
-          ! -->     lo,lo' coeff's:
-          n = atoms%nlod*atoms%nlod*atoms%ntype
-          ALLOCATE(c_b(n))
-          CALL MPI_ALLREDUCE(denCoeffsOffdiag%uloulop21,c_b,n,MPI_DOUBLE_COMPLEX, MPI_SUM,MPI_COMM_WORLD,ierr)
-          CALL zcopy(n, c_b, 1, denCoeffsOffdiag%uloulop21, 1)
-          DEALLOCATE (c_b)
-
-          ! Refactored stuff
-          n = atoms%nlod * atoms%nlod * atoms%ntype
-          ALLOCATE (c_b(n))
-          CALL MPI_ALLREDUCE(denCoeffs%mt_lolo_coeff(:,:,:,2,1),c_b,n,MPI_DOUBLE_COMPLEX,MPI_SUM, MPI_COMM_WORLD,ierr)
-          CALL zcopy(n, c_b, 1, denCoeffs%mt_lolo_coeff(:,:,:,2,1), 1)
-          CALL MPI_ALLREDUCE(denCoeffs%mt_lolo_coeff(:,:,:,1,2),c_b,n,MPI_DOUBLE_COMPLEX,MPI_SUM, MPI_COMM_WORLD,ierr)
-          CALL zcopy(n, c_b, 1, denCoeffs%mt_lolo_coeff(:,:,:,1,2), 1)
-          DEALLOCATE (c_b)
-
-          IF (denCoeffsOffdiag%l_fmpl) THEN
-
-             
-             ! Refactored stuff
-             n = 4*((atoms%lmaxd+1)**2)*sphhar%nlhd*atoms%ntype
-             ALLOCATE(c_b(n))
-             CALL MPI_ALLREDUCE(denCoeffs%nmt_coeff(0:,:,:,0:1,0:1,2,1),c_b,n,MPI_DOUBLE_COMPLEX,MPI_SUM,MPI_COMM_WORLD,ierr)
-             CALL zcopy(n, c_b, 1, denCoeffs%nmt_coeff(0:,:,:,0:1,0:1,2,1), 1)
-             CALL MPI_ALLREDUCE(denCoeffs%nmt_coeff(0:,:,:,0:1,0:1,1,2),c_b,n,MPI_DOUBLE_COMPLEX,MPI_SUM,MPI_COMM_WORLD,ierr)
-             CALL zcopy(n, c_b, 1, denCoeffs%nmt_coeff(0:,:,:,0:1,0:1,1,2), 1)
-             DEALLOCATE (c_b)
-
-             ! Refactored stuff
-             n=2*atoms%nlod*atoms%ntype*(atoms%lmaxd+1)*sphhar%nlhd
-             ALLOCATE (c_b(n))
-             CALL MPI_ALLREDUCE(denCoeffs%nmt_ulo_coeff(0:,:,:,:,0:1,2,1),c_b,n,MPI_DOUBLE_COMPLEX,MPI_SUM, MPI_COMM_WORLD,ierr)
-             CALL zcopy(n, c_b, 1, denCoeffs%nmt_ulo_coeff(0:,:,:,:,0:1,2,1), 1)
-             CALL MPI_ALLREDUCE(denCoeffs%nmt_lou_coeff(0:,:,:,:,0:1,2,1),c_b,n,MPI_DOUBLE_COMPLEX,MPI_SUM, MPI_COMM_WORLD,ierr)
-             CALL zcopy(n, c_b, 1, denCoeffs%nmt_lou_coeff(0:,:,:,:,0:1,2,1), 1)
-             CALL MPI_ALLREDUCE(denCoeffs%nmt_ulo_coeff(0:,:,:,:,0:1,1,2),c_b,n,MPI_DOUBLE_COMPLEX,MPI_SUM, MPI_COMM_WORLD,ierr)
-             CALL zcopy(n, c_b, 1, denCoeffs%nmt_ulo_coeff(0:,:,:,:,0:1,1,2), 1)
-             CALL MPI_ALLREDUCE(denCoeffs%nmt_lou_coeff(0:,:,:,:,0:1,1,2),c_b,n,MPI_DOUBLE_COMPLEX,MPI_SUM, MPI_COMM_WORLD,ierr)
-             CALL zcopy(n, c_b, 1, denCoeffs%nmt_lou_coeff(0:,:,:,:,0:1,1,2), 1)
-             DEALLOCATE (c_b)
-
-             ! Refactored stuff
-             n = atoms%ntype * sphhar%nlhd * atoms%nlod**2
-             ALLOCATE (c_b(n))
-             CALL MPI_ALLREDUCE(denCoeffs%nmt_lolo_coeff(:,:,:,:,2,1),c_b,n,MPI_DOUBLE_COMPLEX,MPI_SUM, MPI_COMM_WORLD,ierr)
-             CALL zcopy(n, c_b, 1, denCoeffs%nmt_lolo_coeff(:,:,:,:,2,1), 1)
-             CALL MPI_ALLREDUCE(denCoeffs%nmt_lolo_coeff(:,:,:,:,1,2),c_b,n,MPI_DOUBLE_COMPLEX,MPI_SUM, MPI_COMM_WORLD,ierr)
-             CALL zcopy(n, c_b, 1, denCoeffs%nmt_lolo_coeff(:,:,:,:,1,2), 1)
-             DEALLOCATE (c_b)
-
-          ENDIF ! fmpl
-       ENDIF  ! mperp
+     
     ENDIF   ! noco
 
     !+lda+U
