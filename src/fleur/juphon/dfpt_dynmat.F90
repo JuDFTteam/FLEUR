@@ -355,7 +355,7 @@ CONTAINS
             tempval = CMPLX(0.0,0.0)
 
             DO iSpin = 1, fi%input%jspins
-               IF (fmpi%irank==0) write(9989,FMT=8000) "Loop spin:", iSpin
+               IF (fmpi%irank==0) write(9989,*) "Loop spin:", iSpin
                ! TODO: Ensure, that vTot/denIn1 is diagonal here, not 2x2.
                pwwq2 = CMPLX(0.0,0.0)
                CALL dfpt_convol_big(2, stars, starsq, vTot%pw(:, iSpin), theta1full(0:, iDtype_col, iDir_col), pwwq2)
