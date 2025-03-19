@@ -113,10 +113,9 @@ SUBROUTINE initRelax(noco,nococonv,atoms,input,vacuum,sphhar,stars,sym ,cell,den
       moments_in(:,i)=moments_in(:,i)/sqrt(dot_product(moments_in(:,i),moments_in(:,i)))
       moments_out(:,i)=moments_out(:,i)/sqrt(dot_product(moments_out(:,i),moments_out(:,i)))
       axes(:)=cross_product(moments_in(:,i),moments_out(:,i))
-      print *,"A:",i,axes
       call pol_angle(axes(1),axes(2),axes(3), theta(i), phi(i))
       angle(i)=acos(dot_product(moments_in(:,i),moments_out(:,i)))
-      print *,"angle:",angle(i)
+      
      enddo
      
      if (.false.) THEN
@@ -154,10 +153,9 @@ SUBROUTINE initRelax(noco,nococonv,atoms,input,vacuum,sphhar,stars,sym ,cell,den
      DO i=1,atoms%ntype
        moments_out(:,i)=moments_out(:,i)/sqrt(dot_product(moments_out(:,i),moments_out(:,i)))
       axes(:)=cross_product(moments_in(:,i),moments_out(:,i))
-      print *,"A:",i,axes
       call pol_angle(axes(1),axes(2),axes(3), theta(i), phi(i))
       angle(i)=acos(dot_product(moments_in(:,i),moments_out(:,i)))
-      print *,"angle:",angle(i)
+      
      enddo
      call sm%alloc()
      call fsm%alloc()
@@ -351,7 +349,6 @@ SUBROUTINE toGlobalSpinFrame(noco,nococonv,vacuum,sphhar,stars&
 
    if (l_irank0) then
      zeros(:)=0.0
-     print *,"togobal:",merge(nococonv%alph,zeros,noco%l_alignMT),merge(nococonv%beta,zeros,noco%l_alignMT)
      CAlL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,merge(nococonv%alph,zeros,noco%l_alignMT),merge(nococonv%beta,zeros,noco%l_alignMT),Den,toGlobal=.true.)
      !CAlL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,zeros,merge(nococonv%beta,zeros,noco%l_alignMT),Den)
      !CALL flipcdn(atoms,input,vacuum,sphhar,stars,sym,noco ,cell,merge(nococonv%alph,zeros,noco%l_alignMT),zeros,Den)
