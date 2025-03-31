@@ -133,7 +133,7 @@ CONTAINS
 
       ! Desym-tests:
       INTEGER :: grid(3), iread
-      REAL    :: dr_re(fi%vacuum%nmzd), dr_im(fi%vacuum%nmzd), drr_dummy(fi%vacuum%nmzd), numbers(3*fi%atoms%nat,6*fi%atoms%nat)
+      REAL    :: dr_re(fi%vacuum%nmzd), dr_im(fi%vacuum%nmzd), drr_dummy(fi%vacuum%nmzd), numbers(3*fi%atoms%nat,6*fi%atoms%nat), constantShift
       complex                           :: sigma_loc(2), sigma_ext(2), sigma_coul(2), sigma_gext(3,2)
 
       ALLOCATE(e2_vm(fi%atoms%nat,3,3))
@@ -316,6 +316,21 @@ CONTAINS
 
          call cast_smaller_grid(grVext3(iDir),local_grVext3(iDir),stars_nosym,fi_nosym%input )
       END DO
+      IF (fi_nosym%juphon%l_symVacLevel .AND. fmpi%irank==0) THEN 
+         DO iDir= 1 , 3
+            constantShift = 0.0 
+            DO ispin = 1 , fi_nosym%input%jspins
+               if (fi_nosym%input%film) constantShift =  (grVext3(iDir)%vac(fi_nosym%vacuum%nmzd,1,1,ispin)  - grVext3(iDir)%vac(fi_nosym%vacuum%nmzd,1,2,ispin)) / 2               
+               grVext3(iDir)%pw(1,:) = grVext3(iDir)%pw(1,:) + constantShift
+               grVext3(iDir)%mt(:,0,:,:) = grVext3(iDir)%mt(:,0,:,:) + constantShift * sfp_const 
+               if (fi_nosym%input%film) grVext3(iDir)%vac(:,1,:,:) = grVext3(iDir)%vac(:,1,:,:) + constantShift
+            END DO 
+            DO iSpin = 1 , fi_nosym%input%jspins
+               CALL checkDOPALL(fi_nosym%input, sphhar_nosym, stars ,fi_nosym%atoms, fi_nosym%sym, fi_nosym%vacuum, fi_nosym%cell,grVext3(iDir),iSpin)
+            END DO 
+            write(oUnit,*) "grVext corrected for iDir" , iDir   
+         END DO 
+   END IF
       !CALL vext_dummy%reset_dfpt() ! this is needed as copyPotden does not deallocate in its routine and we work with different stars
       !CALL vext_dummy%copyPotDen(vTot_nosym)
       !CALL vext_dummy%resetPotDen()

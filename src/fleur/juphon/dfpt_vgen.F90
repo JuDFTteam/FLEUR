@@ -256,43 +256,44 @@ CONTAINS
                         cell,fmpi,noco,den,denRot,EnergyDen,dfptvTot,vx,vxc,exc, &
                         & den1Rot=den1Rot, den1Rotimag=den1imRot, dfptvTotimag=dfptvTotimag,starsq=starsq)
 
+      IF (juphon%l_symVacLevel .AND. .NOT. iDtype==0) THEN 
+         IF (.NOT. l_vext) THEN 
+            constantShift = 0.0 
+            DO ispin = 1 , input%jspins
+               if (input%film) constantShift =  (dfptvTot%vac(vacuum%nmzd,1,1,ispin)  - dfptvTot%vac(vacuum%nmzd,1,2,ispin)) / 2
+               
+               dfptvTot%pw(1,:) = dfptvTot%pw(1,:) + constantShift
+
+               dfptvTot%mt(:,0,:,:) = dfptvTot%mt(:,0,:,:) + constantShift * sfp_const 
+
+               if (input%film) dfptvTot%vac(:,1,:,:) = dfptvTot%vac(:,1,:,:) + constantShift
+
+            END DO 
+            CALL dfptvTot%distribute(fmpi%mpi_comm)
+            CALL dfptvTotimag%distribute(fmpi%mpi_comm)
+         ELSE 
+            constantShift = 0.0 
+            DO ispin = 1, input%jspins
+               if (input%film) constantShift =  (local_dfptvTot%vac(vacuum%nmzd,1,1,ispin)  - local_dfptvTot%vac(vacuum%nmzd,1,2,ispin)) / 2
+            
+               local_dfptvTot%pw(1,ispin) = local_dfptvTot%pw(1,ispin) + constantShift
+
+               local_dfptvTot%mt(:,0,:,ispin) = local_dfptvTot%mt(:,0,:,ispin) + constantShift * sfp_const 
+
+               if (input%film) local_dfptvTot%vac(:,1,:,ispin) = local_dfptvTot%vac(:,1,:,ispin) + constantShift
+            END DO 
+            CALL local_dfptvTot%distribute(fmpi%mpi_comm)
+            CALL local_dfptvTotimag%distribute(fmpi%mpi_comm)
+         END IF 
+      END IF 
+
+
       IF (iDtype/=0.AND.ANY(killcont/=0)) THEN
          ! d)
          ! NOTE: This is so different from the base case, that we build a new subroutine.
          IF (.NOT. l_vext) THEN 
-            IF (juphon%l_symVacLevel) THEN 
-               constantShift = 0.0 
-               DO ispin = 1 , input%jspins
-                  if (input%film) constantShift =  (dfptvTot%vac(vacuum%nmzd,1,1,ispin)  - dfptvTot%vac(vacuum%nmzd,1,2,ispin)) / 2
-                  
-                  dfptvTot%pw(1,:) = dfptvTot%pw(1,:) + constantShift
-
-                  dfptvTot%mt(:,0,:,:) = dfptvTot%mt(:,0,:,:) + constantShift * sfp_const 
-
-                  if (input%film) dfptvTot%vac(:,1,:,:) = dfptvTot%vac(:,1,:,:) + constantShift
-
-               END DO 
-               CALL dfptvTot%distribute(fmpi%mpi_comm)
-               CALL dfptvTotimag%distribute(fmpi%mpi_comm)
-            END IF 
-            
             CALL dfpt_vgen_finalize(fmpi,atoms,stars,sym,juphon,noco,nococonv,input,sphhar,vTot,dfptvTot,dfptvTotimag,denRot,den1Rot,den1imRot,starsq,killcont)
          ELSE
-            IF (juphon%l_symVacLevel) THEN 
-               constantShift = 0.0 
-               DO ispin = 1, input%jspins
-                  if (input%film) constantShift =  (local_dfptvTot%vac(vacuum%nmzd,1,1,ispin)  - local_dfptvTot%vac(vacuum%nmzd,1,2,ispin)) / 2
-               
-                  local_dfptvTot%pw(1,ispin) = local_dfptvTot%pw(1,ispin) + constantShift
-
-                  local_dfptvTot%mt(:,0,:,ispin) = local_dfptvTot%mt(:,0,:,ispin) + constantShift * sfp_const 
-
-                  if (input%film) local_dfptvTot%vac(:,1,:,ispin) = local_dfptvTot%vac(:,1,:,ispin) + constantShift
-               END DO 
-               CALL local_dfptvTot%distribute(fmpi%mpi_comm)
-               CALL local_dfptvTotimag%distribute(fmpi%mpi_comm)
-            END IF 
-         
             CALL dfpt_vgen_finalize(fmpi,local_atoms,local_stars,sym,juphon,noco,nococonv,input,sphhar,local_vTot,local_dfptvTot,local_dfptvTotimag,&
                                   & local_denRot,local_den1Rot,local_den1imRot,local_starsq,killcont)
          END IF 

@@ -252,6 +252,7 @@ contains
       end do
       sigma_disc(1) = sigma_disc(1) + rht(1,1)
       sigma_disc(2) = sigma_disc(2) - rht(1,2)
+      sigma_disc = 0.0 
 8010  format (/,10x,'                     1000 * normalization const. ='&
             &       ,5x,2f11.6)
     end if ! fmpi%irank == 0
