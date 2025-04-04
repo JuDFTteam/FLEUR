@@ -15,7 +15,7 @@ CONTAINS
 
 SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,enpara,stars,&
                   vacuum,sphhar,sym,vTot ,cdnvalJob,den,regCharges,dos,vacdos,results,&
-                  moments,gfinp,hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,jDOS,greensfImagPart)
+                  moments,gfinp,hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,jDOS,greensfImagPart,hyperfine)
 
    !************************************************************************************
    !     This is the FLEUR valence density generator
@@ -70,6 +70,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    USE m_dfpt_rhomt
    USE m_dfpt_rhonmt
    USE m_nIJmat
+   USE m_types_hyperfine
 
    IMPLICIT NONE
 
@@ -104,6 +105,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    TYPE(t_orbcomp),        OPTIONAL, INTENT(INOUT) :: orbcomp
    TYPE(t_jDOS),           OPTIONAL, INTENT(INOUT) :: jDOS
    TYPE(t_greensfImagPart),OPTIONAL, INTENT(INOUT) :: greensfImagPart
+   TYPE(t_hyperfine),      OPTIONAL, INTENT(INOUT) :: hyperfine
 
    ! Scalar Arguments
    INTEGER,               INTENT(IN)    :: eig_id, jspin
@@ -300,6 +302,8 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
          CALL dfpt_rhomtlo(atoms,noccbd,we,we,ispin,ispin,[0.0,0.0,0.0],.FALSE.,eigVecCoeffs,eigVecCoeffs,denCoeffs)
          CALL dfpt_rhonmtlo(atoms,sphhar,sym,noccbd,we,we,eigVecCoeffs,eigVecCoeffs,denCoeffs,ispin,ispin,.FALSE.,[0.0,0.0,0.0])
 
+         IF (PRESENT(hyperfine)) CALL hyperfine%calcDipolTermCoeffs(atoms, eigVecCoeffs, noccbd, we, ispin)
+
          IF (noco%l_soc) CALL orbmom(atoms,noccbd,we,ispin,eigVecCoeffs,orb)
          IF (input%l_f) THEN
            call local_ham(sphhar,atoms,sym,noco,nococonv,enpara,fmpi,vtot,vtot,den,input,hub1inp,hub1data,tlmplm,usdus,0.0)
@@ -358,7 +362,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
    ENDDO
    DO ispin = jsp_start,jsp_end
       CALL mpi_col_den(fmpi,sphhar,atoms ,stars,vacuum,input,noco,ispin,dos,vacdos,&
-                       results,denCoeffs,orb,denCoeffsOffdiag,den,regCharges,mcd,slab,orbcomp,jDOS)
+                       results,denCoeffs,orb,denCoeffsOffdiag,den,regCharges,mcd,slab,orbcomp,jDOS,hyperfine)
    END DO
 #endif
 
@@ -374,6 +378,7 @@ SUBROUTINE cdnval(eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms
 
    IF (fmpi%irank==0) THEN
       CALL timestart("cdnmt")
+      IF (PRESENT(hyperfine)) CALL hyperfine%calcDipolRadFunIntegrals(atoms, enpara, vTot, fmpi, usdus, jsp_start, jsp_end)
       CALL cdnmt(input%jspins,input,atoms,sym,sphhar,noco,jsp_start,jsp_end,enpara,banddos,&
                  vTot%mt(:,0,:,:),denCoeffs,usdus,orb,denCoeffsOffdiag,den%mt,hub1inp,moments=moments,jDOS=jDOS,hub1data=hub1data)
       CALL timestop("cdnmt")
