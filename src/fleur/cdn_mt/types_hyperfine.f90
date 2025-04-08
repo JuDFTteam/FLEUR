@@ -76,6 +76,7 @@ MODULE m_types_hyperfine
 
       USE m_juDFT
       USE m_types
+      USE mpi
 
       CLASS(t_hyperfine), INTENT(INOUT) :: thisHF
       TYPE(t_mpi),        INTENT(IN)    :: fmpi
