@@ -551,37 +551,54 @@ MODULE m_types_hyperfine
 
       LOGICAL :: isSmaller
 
-      IF ((fmpi%irank.EQ.0).AND.thisHF%l_hyperfine) THEN
+      IF ((fmpi%irank.EQ.0) ) THEN !.AND.thisHF%l_hyperfine) THEN
          WRITE(oUnit,*) ''
          WRITE(ounit,*) ' Isomer shift output (contact charge density) '
          WRITE(ounit,*) ' ============================================================== '
-         WRITE(ounit,*) ' atom type     radius of nucleus (Bohr)     charge density value (e/Bohr^3) '
+         WRITE(ounit,*) ' atom type     radius of nucleus (Bohr)   smallest radial mesh point (Bohr)   charge density value (e/Bohr^3) '
          DO iType = 1, atoms%ntype
             indefInteg = 0.0
             nucRad = r0_const*(atomicMasses_const(atoms%nz(iType))**(1.0/3.0))
-            iRad = 0
-            isSmaller = .TRUE.
-            DO WHILE (isSmaller)
-               iRad = iRad + 1
-               IF (atoms%rmsh(iRad,iType).GE.nucRad) isSmaller = .FALSE.
-            END DO
-            ! Poor man's solution: linear interpolation. :)
-            alpha = (nucRad - atoms%rmsh(iRad-1,iType)) / (atoms%rmsh(iRad,iType) - atoms%rmsh(iRad-1,iType))
-            smallRadDenVal = (den%mt(iRad-1,0,iType,1) + den%mt(iRad-1,0,iType,2)) / ((atoms%rmsh(iRad-1,iType)**2.0)*sfp_const)
-            largeRadDenVal = (den%mt(iRad,0,iType,1) + den%mt(iRad,0,iType,2)) / ((atoms%rmsh(iRad,iType)**2.0)*sfp_const)
-            contactDenVal = (1.0-alpha)*smallRadDenVal + alpha*largeRadDenVal
+            IF (atoms%rmsh(1,iType).LT.nucRad) THEN
+               iRad = 0
+               isSmaller = .TRUE.
+               DO WHILE (isSmaller)
+                  iRad = iRad + 1
+                  IF (atoms%rmsh(iRad,iType).GE.nucRad) isSmaller = .FALSE.
+               END DO
+               ! Poor man's solution: linear interpolation. :)
+               alpha = (nucRad - atoms%rmsh(iRad-1,iType)) / (atoms%rmsh(iRad,iType) - atoms%rmsh(iRad-1,iType))
+               IF (input%jspins.EQ.1) THEN
+                  smallRadDenVal = den%mt(iRad-1,0,iType,1) / ((atoms%rmsh(iRad-1,iType)**2.0)*sfp_const)
+                  largeRadDenVal = den%mt(iRad,0,iType,1) / ((atoms%rmsh(iRad,iType)**2.0)*sfp_const)
+               ELSE
+                  smallRadDenVal = (den%mt(iRad-1,0,iType,1) + den%mt(iRad-1,0,iType,2)) / ((atoms%rmsh(iRad-1,iType)**2.0)*sfp_const)
+                  largeRadDenVal = (den%mt(iRad,0,iType,1) + den%mt(iRad,0,iType,2)) / ((atoms%rmsh(iRad,iType)**2.0)*sfp_const)
+               END IF
+               contactDenVal = (1.0-alpha)*smallRadDenVal + alpha*largeRadDenVal
 
-            sphrDen = 0.0
-            sphrDen(:) = den%mt(:,0,iType,1) + den%mt(:,0,iType,2)
-            CALL intgr2(sphrDen(:),atoms%rmsh(:,iType),atoms%dx(iType),atoms%jri(iType),indefInteg)
+!               WRITE(oUnit,*) alpha, smallRadDenVal, largeRadDenVal, atoms%rmsh(iRad-1,iType), atoms%rmsh(iRad,iType)
 
-            ! Again linear interpolation. :)
-            smallRadDenVal = indefInteg(iRad-1)*sfp_const / ((4.0/3.0)*pi_const*(atoms%rmsh(iRad-1,iType)**3.0))
-            largeRadDenVal = indefInteg(iRad)*sfp_const / ((4.0/3.0)*pi_const*(atoms%rmsh(iRad,iType)**3.0))
-            averageDen = (1.0-alpha)*smallRadDenVal + alpha*largeRadDenVal
-            averageDen = averageDen
-            WRITE(oUnit,'(i7,10x,f15.8,20x,f15.8,5x,a)') iType, nucRad, contactDenVal, 'density at radius of nuncleus'
-            WRITE(oUnit,'(i7,10x,15x,20x,f15.8,5x,a)') iType, averageDen, 'average density over nuncleus'
+               sphrDen = 0.0
+               IF (input%jspins.EQ.1) THEN
+                  sphrDen(:) = den%mt(:,0,iType,1)
+               ELSE
+                  sphrDen(:) = den%mt(:,0,iType,1) + den%mt(:,0,iType,2)
+               END IF
+               indefInteg = 0.0
+               CALL intgr2(sphrDen(:),atoms%rmsh(:,iType),atoms%dx(iType),atoms%jri(iType),indefInteg)
+
+               ! Again linear interpolation. :)
+               smallRadDenVal = indefInteg(iRad-1)*sfp_const / ((4.0/3.0)*pi_const*(atoms%rmsh(iRad-1,iType)**3.0))
+               largeRadDenVal = indefInteg(iRad)*sfp_const / ((4.0/3.0)*pi_const*(atoms%rmsh(iRad,iType)**3.0))
+               averageDen = (1.0-alpha)*smallRadDenVal + alpha*largeRadDenVal
+               averageDen = averageDen
+
+               WRITE(oUnit,'(i7,10x,f15.8,15x,f15.8,20x,f17.8,5x,a)') iType, nucRad, atoms%rmsh(1,iType), contactDenVal, 'density at radius of nuncleus'
+               WRITE(oUnit,'(i7,10x,15x,50x,f17.8,5x,a)') iType, averageDen, 'average density over nuncleus'
+            ELSE
+               WRITE(oUnit,'(i7,10x,f15.8,20x,a)') iType, nucRad, 'smallest radial mesh point outside radius of nucleus'
+            END IF
          END DO
          WRITE(ounit,*) ' ============================================================== '
       END IF

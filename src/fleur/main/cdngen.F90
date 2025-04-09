@@ -262,8 +262,6 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
 
    CALL outDen%distribute(fmpi%mpi_comm)
 
-   CALL hyperfine%calcPrintIsomerShifts(input,atoms,fmpi,outDen)
-
    IF(.FALSE.) CALL denMultipoleExp(input, fmpi, atoms, sphhar, stars, sym, juphon, cell,   outDen) ! There should be a switch in the inp file for this
    IF(fmpi%irank.EQ.0) THEN
       IF(input%lResMax>0) CALL resMoms(sym,input,atoms,sphhar,noco,nococonv,outDen,moments%rhoLRes) ! There should be a switch in the inp file for this
@@ -292,6 +290,9 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
       !Generate and save the new nocoinp file if the directions of the local
       !moments are relaxed or a constraint B-field is calculated.
    END IF
+
+   CALL hyperfine%calcPrintIsomerShifts(input,atoms,fmpi,outDen)
+
    Perform_metagga = Allocated(Energyden%Mt) &
                    .And. (Xcpot%Exc_is_metagga() .Or. Xcpot%Vx_is_metagga())
    If(Perform_metagga) Then
