@@ -22,7 +22,6 @@ CONTAINS
 
     INTEGER :: n
 
-    
     IF (.NOT.field%l_b_field) RETURN !no B-field specified
 
     IF (input%jspins.NE.2) CALL judft_error("B-fields can only be used in spin-polarized calculations")
@@ -39,7 +38,10 @@ CONTAINS
     ENDDO
 
     !Vacuum
-    vTot%vac(:,1,:,1)=vTot%vac(:,1,:,1)-field%b_field/2.
-    vTot%vac(:,1,:,2)=vTot%vac(:,1,:,2)+field%b_field/2.
+    IF (input%film) THEN
+       vTot%vac(:,1,:,1)=vTot%vac(:,1,:,1)-field%b_field/2.
+       vTot%vac(:,1,:,2)=vTot%vac(:,1,:,2)+field%b_field/2.
+    END IF
+
   END SUBROUTINE bfield
 END MODULE m_bfield
