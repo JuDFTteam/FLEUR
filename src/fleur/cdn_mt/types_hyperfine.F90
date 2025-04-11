@@ -74,9 +74,11 @@ MODULE m_types_hyperfine
 
    SUBROUTINE hyperfineCollect(thisHF, fmpi, atoms, iSpin)
 
+#ifdef CPP_MPI
+      USE mpi
+#endif
       USE m_juDFT
       USE m_types
-      USE mpi
 
       CLASS(t_hyperfine), INTENT(INOUT) :: thisHF
       TYPE(t_mpi),        INTENT(IN)    :: fmpi
@@ -88,6 +90,7 @@ MODULE m_types_hyperfine
       INTEGER :: length, ierr
       COMPLEX, ALLOCATABLE :: cBuffer(:)
 
+#ifdef CPP_MPI
       IF (.NOT.thisHF%l_hyperfine) RETURN
 
       length = 2 * 2 * (atoms%lmaxd+1)**2 * atoms%ntype
@@ -125,6 +128,7 @@ MODULE m_types_hyperfine
       CALL MPI_ALLREDUCE(thisHF%dipolSumBCoeffsLOLO(:,:,-atoms%lmaxd:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,:,iSpin),cBuffer,length,MPI_DOUBLE_COMPLEX,MPI_SUM,MPI_COMM_WORLD,ierr)
       CALL zcopy(length, cBuffer, 1, thisHF%dipolSumBCoeffsLOLO(:,:,-atoms%lmaxd:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,:,iSpin), 1)
       DEALLOCATE(cBuffer)
+#endif
 
    END SUBROUTINE hyperfineCollect
 
