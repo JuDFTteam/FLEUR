@@ -23,8 +23,8 @@ CONTAINS
     TYPE(t_potden),INTENT(INOUT)::vtot
     TYPE(t_nococonv):: nococonv
     INTEGER :: n
-    COMPLEX :: bdummy
-    REAL :: b(4)
+    COMPLEX :: bComplexTemp
+    REAL :: bExternal(4)
 
     
     IF (.NOT.field%l_b_field) RETURN !no B-field specified
@@ -33,25 +33,33 @@ CONTAINS
     !IF (noco%l_noco) CALL judft_error("B-fields not implemented in noco case")
     
     !Interstitial
-    vTot%pw_w(:,1)=vTot%pw_w(:,1)-((field%b_field/2.0)*stars%ustep(:))
-    vTot%pw_w(:,2)=vTot%pw_w(:,2)+((field%b_field/2.0)*stars%ustep(:))
+    vTot%pw_w(:,1)=vTot%pw_w(:,1)-((field%b_field/2.0)*stars%ustep(:)*stars%nstr(:))
+    vTot%pw_w(:,2)=vTot%pw_w(:,2)+((field%b_field/2.0)*stars%ustep(:)*stars%nstr(:))
 
     !MT-spheres
     DO n=1,atoms%ntype
-       b(1) = -field%b_field / 2
-       b(2) = field%b_field / 2
-       CALL nococonv%rotdenmat(nococonv%alph(n), nococonv%beta(n), b(1), b(2), bdummy, .false.)
-       b(3) = REAL(bdummy)
-       b(4) = AIMAG(bdummy)
-       vTot%mt(:atoms%jri(n),0,n,1) = vTot%mt(:atoms%jri(n),0,n,1) + (b(1) * 2.0 - field%b_field_mt(n)) / 2.0 * atoms%rmsh(:atoms%jri(n),n) / sfp_const
-       vTot%mt(:atoms%jri(n),0,n,2) = vTot%mt(:atoms%jri(n),0,n,2) + (b(2) * 2.0 + field%b_field_mt(n)) / 2.0 * atoms%rmsh(:atoms%jri(n),n) / sfp_const
-       vTot%mt(:atoms%jri(n),0,n,3) = vTot%mt(:atoms%jri(n),0,n,3) + (b(3)) * atoms%rmsh(:atoms%jri(n),n) / sfp_const
-       vTot%mt(:atoms%jri(n),0,n,4) = vTot%mt(:atoms%jri(n),0,n,4) + (b(4)) * atoms%rmsh(:atoms%jri(n),n) / sfp_const
+       bExternal(1) = -field%b_field / 2
+       bExternal(2) = field%b_field / 2
+
+       IF (noco%l_noco) THEN
+          CALL nococonv%rotdenmat(nococonv%alph(n), nococonv%beta(n), bExternal(1), bExternal(2), bComplexTemp, .false.)
+          bExternal(3) = REAL(bComplexTemp)
+          bExternal(4) = AIMAG(bComplexTemp)
+       END IF
+
+       vTot%mt(:atoms%jri(n),0,n,1) = vTot%mt(:atoms%jri(n),0,n,1) + (bExternal(1) * 2.0 - field%b_field_mt(n)) / 2.0! * atoms%rmsh(:atoms%jri(n),n) / sfp_const
+       vTot%mt(:atoms%jri(n),0,n,2) = vTot%mt(:atoms%jri(n),0,n,2) + (bExternal(2) * 2.0 + field%b_field_mt(n)) / 2.0! * atoms%rmsh(:atoms%jri(n),n) / sfp_const
+
+       IF (noco%l_noco) THEN
+          vTot%mt(:atoms%jri(n),0,n,3) = vTot%mt(:atoms%jri(n),0,n,3) + (bExternal(3))! * atoms%rmsh(:atoms%jri(n),n) / sfp_const
+          vTot%mt(:atoms%jri(n),0,n,4) = vTot%mt(:atoms%jri(n),0,n,4) + (bExternal(4))! * atoms%rmsh(:atoms%jri(n),n) / sfp_const
+       END IF
     ENDDO
+
     !Vacuum
-    if (input%film) THEN
-      vTot%vac(:,1,:,1)=vTot%vac(:,1,:,1)-field%b_field/2.
-      vTot%vac(:,1,:,2)=vTot%vac(:,1,:,2)+field%b_field/2.
-    endif
+    IF (input%film) THEN
+       vTot%vac(:,1,:,1)=vTot%vac(:,1,:,1)-field%b_field/2.
+       vTot%vac(:,1,:,2)=vTot%vac(:,1,:,2)+field%b_field/2.
+    END IF
   END SUBROUTINE bfield
 END MODULE m_bfield
