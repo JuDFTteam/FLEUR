@@ -47,12 +47,12 @@ CONTAINS
           bExternal(4) = AIMAG(bComplexTemp)
        END IF
 
-       vTot%mt(:atoms%jri(n),0,n,1) = vTot%mt(:atoms%jri(n),0,n,1) + (bExternal(1) * 2.0 - field%b_field_mt(n)) / 2.0! * atoms%rmsh(:atoms%jri(n),n) / sfp_const
-       vTot%mt(:atoms%jri(n),0,n,2) = vTot%mt(:atoms%jri(n),0,n,2) + (bExternal(2) * 2.0 + field%b_field_mt(n)) / 2.0! * atoms%rmsh(:atoms%jri(n),n) / sfp_const
+       vTot%mt(:atoms%jri(n),0,n,1) = vTot%mt(:atoms%jri(n),0,n,1) + sfp_const * (bExternal(1) * 2.0 - field%b_field_mt(n)) / 2.0
+       vTot%mt(:atoms%jri(n),0,n,2) = vTot%mt(:atoms%jri(n),0,n,2) + sfp_const * (bExternal(2) * 2.0 + field%b_field_mt(n)) / 2.0
 
        IF (noco%l_noco) THEN
-          vTot%mt(:atoms%jri(n),0,n,3) = vTot%mt(:atoms%jri(n),0,n,3) + (bExternal(3))! * atoms%rmsh(:atoms%jri(n),n) / sfp_const
-          vTot%mt(:atoms%jri(n),0,n,4) = vTot%mt(:atoms%jri(n),0,n,4) + (bExternal(4))! * atoms%rmsh(:atoms%jri(n),n) / sfp_const
+          vTot%mt(:atoms%jri(n),0,n,3) = vTot%mt(:atoms%jri(n),0,n,3) + sfp_const * (bExternal(3))
+          vTot%mt(:atoms%jri(n),0,n,4) = vTot%mt(:atoms%jri(n),0,n,4) + sfp_const * (bExternal(4))
        END IF
     ENDDO
 
