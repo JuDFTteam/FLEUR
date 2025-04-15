@@ -10,7 +10,10 @@ CONTAINS
     USE m_spratm
     USE m_ccdnup
     USE m_cdn_io
-    USE m_types
+    USE m_types_input
+    USE m_types_atoms
+    USE m_types_sphhar
+    
     IMPLICIT NONE
     
     TYPE(t_input),INTENT(IN)     :: input
@@ -29,6 +32,8 @@ CONTAINS
     REAL dxx,rnot,sume,t2,t2b,z,t1,rr,d,v1,v2
     INTEGER i,j,jatom,jspin,k,n,ncmsh
     LOGICAL exetab
+
+    LOGICAL l_core_confpot
     !     ..
     !     .. Local Arrays ..
     REAL br(atoms%jmtd,atoms%ntype),brd(atoms%msh),etab(100,atoms%ntype),&
@@ -41,6 +46,7 @@ CONTAINS
     !
     ! setup potential and field
     !
+    l_core_confpot=input%l_core_confpot !Make a local copy to avoid IEC on ifx
     IF (input%jspins.EQ.1) THEN
        DO n = 1,atoms%ntype
           DO j = 1,atoms%jmtd
@@ -85,8 +91,7 @@ CONTAINS
           vrd(j) = vr(j,jatom)
           brd(j) = br(j,jatom)
        END DO
-
-       IF (input%l_core_confpot) THEN
+       IF (l_core_confpot) THEN
           !--->    linear extension of the potential with slope t1 / a.u.
           rr = atoms%rmt(jatom)
           d = EXP(atoms%dx(jatom))
@@ -101,7 +106,8 @@ CONTAINS
        ENDIF
        IF (atoms%jri(jatom).LT.ncmsh) THEN
           DO i = atoms%jri(jatom) + 1,ncmsh
-             IF (input%l_core_confpot) THEN
+             
+            IF (l_core_confpot) THEN
                 rr = d*rr
                 v1 = rr*( t2  + rr*t1 )
                 v2 = rr*( t2b + rr*t1 )

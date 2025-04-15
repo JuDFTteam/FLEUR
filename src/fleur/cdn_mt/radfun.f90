@@ -21,7 +21,8 @@ CONTAINS
     USE m_constants, ONLY : c_light
     USE m_radsra
     USE m_radsrd
-    USE m_types
+    USE m_types_usdus
+    USE m_types_atoms
     IMPLICIT NONE
     TYPE(t_usdus),INTENT(INOUT):: usdus
     TYPE(t_atoms),INTENT(IN)   :: atoms

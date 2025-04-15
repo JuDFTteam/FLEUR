@@ -67,7 +67,6 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
 #ifndef CPP_OLDINTEL
    TYPE(t_cdnvalJob)                    :: cdnvalJob
    TYPE(t_potden)                       :: singleStateDen, overallDen, overallVCoul, vTotTemp
-   TYPE(t_regionCharges)                :: regCharges
    TYPE(t_dos)                          :: dos
    TYPE(t_vacdos)                       :: vacdos
    TYPE(t_moments)                      :: moments
@@ -271,8 +270,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
    zintn_rSSDen(:,:,:) = 0.0
    vmdSSDen(:,:,:) = 0.0
 
-   CALL regCharges%init(fi%input,fi%atoms)
-   CALL dos%init(fi%input,fi%atoms,fi%kpts,fi%banddos,results%eig)
+   !CALL dos%init(fi%input,fi%atoms,fi%kpts,fi%banddos,noco,results%eig) TODO
    CALL vacdos%init(fi%input,fi%atoms,fi%kpts,fi%banddos,results%eig)
    CALL moments%init(fmpi,fi%input,sphhar,fi%atoms)
    CALL overallDen%init(stars,fi%atoms,sphhar,fi%vacuum,fi%noco,fi%input%jspins,POTDEN_TYPE_DEN)
@@ -324,7 +322,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
             WRITE(*,*) 'This is not yet implemented!'
             CALL singleStateDen%init(stars,fi%atoms,sphhar,fi%vacuum,fi%noco,fi%input%jspins,POTDEN_TYPE_DEN)
             CALL cdnval(eig_id,fmpi,fi%kpts,jsp,fi%noco,nococonv,fi%input,fi%banddos,fi%cell,fi%atoms,enpara,stars,fi%vacuum,&
-                        sphhar,fi%sym,vTot, cdnvalJob,singleStateDen,regCharges,dos,vacdos,results,moments,&
+                        sphhar,fi%sym,vTot, cdnvalJob,singleStateDen,dos,vacdos,results,moments,&
                         fi%gfinp,fi%hub1inp)
 
             ! Store the density on disc (These are probably way too many densities to keep them in memory)
@@ -446,7 +444,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
       DO jspin = 1,jspmax
          CALL cdnvalJob%init(fmpi,fi%input,fi%kpts,fi%noco,results,jspin)
          CALL cdnval(eig_id,fmpi,fi%kpts,jspin,fi%noco,nococonv,fi%input,fi%banddos,fi%cell,fi%atoms,enpara,stars,fi%vacuum,&
-                     sphhar,fi%sym,vTot, cdnvalJob,overallDen,regCharges,dos,vacdos,results,moments,&
+                     sphhar,fi%sym,vTot, cdnvalJob,overallDen,dos,vacdos,results,moments,&
                      fi%gfinp,fi%hub1inp)
       END DO
 

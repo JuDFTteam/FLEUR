@@ -22,11 +22,11 @@ CONTAINS
       IF(PRESENT(energyShift)) shift = energyShift
       emin = minval(e)
       ! put weights in the right bins
-      DO js=1, size(qal,3)
+      DO js=1, size(g,2)
          DO k = 1 , size(qal,2)
             wk = wtkpt(k)/de
             DO j = 1 , size(eig,1)
-               i = NINT((eig(j,k,js)-shift-emin)/de) + 1
+               i = NINT((eig(j,k,min(2,js))-shift-emin)/de) + 1   !no third energy in noco case
                IF ( (i.LE.size(g,1)) .AND. (i.GE.1) ) THEN
                   g(i,js) = g(i,js) + wk*qal(j,k,js)* 2.0/jspins
                END IF

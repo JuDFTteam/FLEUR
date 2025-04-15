@@ -10,34 +10,7 @@ MODULE m_types_cdnval
 !use m_types_mcd
 !use m_types_slab
 
-IMPLICIT NONE
 
-PRIVATE
-
-   TYPE t_orb
-      REAL, ALLOCATABLE    :: uu(:,:,:,:)
-      REAL, ALLOCATABLE    :: dd(:,:,:,:)
-      REAL, ALLOCATABLE    :: ud(:,:,:,:)
-      REAL, ALLOCATABLE    :: du(:,:,:,:)
-      COMPLEX, ALLOCATABLE :: uup(:,:,:,:)
-      COMPLEX, ALLOCATABLE :: uum(:,:,:,:)
-      COMPLEX, ALLOCATABLE :: ddp(:,:,:,:)
-      COMPLEX, ALLOCATABLE :: ddm(:,:,:,:)
-
-      REAL, ALLOCATABLE    :: uulo(:,:,:,:)
-      REAL, ALLOCATABLE    :: dulo(:,:,:,:)
-      COMPLEX, ALLOCATABLE :: uulop(:,:,:,:)
-      COMPLEX, ALLOCATABLE :: uulom(:,:,:,:)
-      COMPLEX, ALLOCATABLE :: dulop(:,:,:,:)
-      COMPLEX, ALLOCATABLE :: dulom(:,:,:,:)
-
-      REAL, ALLOCATABLE    :: z(:,:,:,:,:)
-      COMPLEX, ALLOCATABLE :: p(:,:,:,:,:)
-      COMPLEX, ALLOCATABLE :: m(:,:,:,:,:)
-
-      CONTAINS
-         PROCEDURE,PASS :: init => orb_init
-   END TYPE t_orb
 
    TYPE t_denCoeffs
 
@@ -115,91 +88,6 @@ PUBLIC  t_moments,  t_cdnvalJob, t_gVacMap
 
 CONTAINS
 
-SUBROUTINE orb_init(thisOrb, atoms, noco, jsp_start, jsp_end)
-
-   USE m_types_setup
-
-   IMPLICIT NONE
-
-   CLASS(t_orb), INTENT(INOUT)    :: thisOrb
-   TYPE(t_atoms), INTENT(IN)      :: atoms
-   TYPE(t_noco), INTENT(IN)       :: noco
-   INTEGER, INTENT(IN)            :: jsp_start
-   INTEGER, INTENT(IN)            :: jsp_end
-
-   INTEGER                        :: dim1, dim2, dim3
-
-   IF(ALLOCATED(thisOrb%uu)) DEALLOCATE(thisOrb%uu)
-   IF(ALLOCATED(thisOrb%dd)) DEALLOCATE(thisOrb%dd)
-   IF(ALLOCATED(thisOrb%ud)) DEALLOCATE(thisOrb%ud)
-   IF(ALLOCATED(thisOrb%du)) DEALLOCATE(thisOrb%du)
-   IF(ALLOCATED(thisOrb%uup)) DEALLOCATE(thisOrb%uup)
-   IF(ALLOCATED(thisOrb%uum)) DEALLOCATE(thisOrb%uum)
-   IF(ALLOCATED(thisOrb%ddp)) DEALLOCATE(thisOrb%ddp)
-   IF(ALLOCATED(thisOrb%ddm)) DEALLOCATE(thisOrb%ddm)
-
-   IF(ALLOCATED(thisOrb%uulo)) DEALLOCATE(thisOrb%uulo)
-   IF(ALLOCATED(thisOrb%dulo)) DEALLOCATE(thisOrb%dulo)
-   IF(ALLOCATED(thisOrb%uulop)) DEALLOCATE(thisOrb%uulop)
-   IF(ALLOCATED(thisOrb%uulom)) DEALLOCATE(thisOrb%uulom)
-   IF(ALLOCATED(thisOrb%dulop)) DEALLOCATE(thisOrb%dulop)
-   IF(ALLOCATED(thisOrb%dulom)) DEALLOCATE(thisOrb%dulom)
-
-   IF(ALLOCATED(thisOrb%z)) DEALLOCATE(thisOrb%z)
-   IF(ALLOCATED(thisOrb%p)) DEALLOCATE(thisOrb%p)
-   IF(ALLOCATED(thisOrb%m)) DEALLOCATE(thisOrb%m)
-
-   dim1 = 0
-   dim2 = 1
-   dim3 = 1
-   IF (noco%l_soc) THEN
-      dim1 = atoms%lmaxd
-      dim2 = atoms%ntype
-      dim3 = atoms%nlod
-   END IF
-
-   ALLOCATE(thisOrb%uu(0:dim1,-atoms%lmaxd:atoms%lmaxd,dim2,jsp_start:jsp_end))
-   ALLOCATE(thisOrb%dd(0:dim1,-atoms%lmaxd:atoms%lmaxd,dim2,jsp_start:jsp_end))
-   ALLOCATE(thisOrb%ud(0:dim1,-atoms%lmaxd:atoms%lmaxd,dim2,jsp_start:jsp_end))
-   ALLOCATE(thisOrb%du(0:dim1,-atoms%lmaxd:atoms%lmaxd,dim2,jsp_start:jsp_end))
-   ALLOCATE(thisOrb%uup(0:dim1,-atoms%lmaxd:atoms%lmaxd,dim2,jsp_start:jsp_end))
-   ALLOCATE(thisOrb%uum(0:dim1,-atoms%lmaxd:atoms%lmaxd,dim2,jsp_start:jsp_end))
-   ALLOCATE(thisOrb%ddp(0:dim1,-atoms%lmaxd:atoms%lmaxd,dim2,jsp_start:jsp_end))
-   ALLOCATE(thisOrb%ddm(0:dim1,-atoms%lmaxd:atoms%lmaxd,dim2,jsp_start:jsp_end))
-
-   ALLOCATE(thisOrb%uulo(dim3,-atoms%llod:atoms%llod,dim2,jsp_start:jsp_end))
-   ALLOCATE(thisOrb%dulo(dim3,-atoms%llod:atoms%llod,dim2,jsp_start:jsp_end))
-   ALLOCATE(thisOrb%uulop(dim3,-atoms%llod:atoms%llod,dim2,jsp_start:jsp_end))
-   ALLOCATE(thisOrb%uulom(dim3,-atoms%llod:atoms%llod,dim2,jsp_start:jsp_end))
-   ALLOCATE(thisOrb%dulop(dim3,-atoms%llod:atoms%llod,dim2,jsp_start:jsp_end))
-   ALLOCATE(thisOrb%dulom(dim3,-atoms%llod:atoms%llod,dim2,jsp_start:jsp_end))
-
-   ALLOCATE(thisOrb%z(dim3,dim3,-atoms%llod:atoms%llod,dim2,jsp_start:jsp_end))
-   ALLOCATE(thisOrb%p(dim3,dim3,-atoms%llod:atoms%llod,dim2,jsp_start:jsp_end))
-   ALLOCATE(thisOrb%m(dim3,dim3,-atoms%llod:atoms%llod,dim2,jsp_start:jsp_end))
-
-   thisOrb%uu = 0.0
-   thisOrb%dd = 0.0
-   thisOrb%ud = 0.0
-   thisOrb%du = 0.0
-   thisOrb%uup = CMPLX(0.0,0.0)
-   thisOrb%uum = CMPLX(0.0,0.0)
-   thisOrb%ddp = CMPLX(0.0,0.0)
-   thisOrb%ddm = CMPLX(0.0,0.0)
-
-   thisOrb%uulo = 0.0
-   thisOrb%dulo = 0.0
-   thisOrb%uulop = CMPLX(0.0,0.0)
-   thisOrb%uulom = CMPLX(0.0,0.0)
-   thisOrb%dulop = CMPLX(0.0,0.0)
-   thisOrb%dulom = CMPLX(0.0,0.0)
-
-   thisOrb%z = 0.0
-   thisOrb%p = CMPLX(0.0,0.0)
-   thisOrb%m = CMPLX(0.0,0.0)
-
-END SUBROUTINE orb_init
-
 SUBROUTINE denCoeffs_init(thisDenCoeffs, atoms, sphhar, jsp_start, jsp_end)
 
    USE m_types_setup
@@ -245,7 +133,7 @@ END SUBROUTINE denCoeffs_init
 SUBROUTINE eigVecCoeffs_init(thisEigVecCoeffs,input,atoms,jspin,noccbd,l_bothSpins)
 
    USE m_types_setup
-
+   use m_types_radfun
    IMPLICIT NONE
 
    CLASS(t_eigVecCoeffs), INTENT(INOUT) :: thisEigVecCoeffs
@@ -256,15 +144,24 @@ SUBROUTINE eigVecCoeffs_init(thisEigVecCoeffs,input,atoms,jspin,noccbd,l_bothSpi
    INTEGER,               INTENT(IN)    :: jspin, noccbd
    LOGICAL,               INTENT(IN)    :: l_bothSpins
 
+   type(t_radfun):: radfun
+   integer :: n_r,itype
+   !Count number of radial functions
+   n_r=0
+   DO itype=1,atoms%ntype
+      call radfun%init(atoms,input,itype)
+      n_r=max(maxval(radfun%n_r),n_r)
+   ENDDO   
+
    IF(ALLOCATED(thisEigVecCoeffs%ccof)) DEALLOCATE(thisEigVecCoeffs%ccof)
    IF(ALLOCATED(thisEigVecCoeffs%abcof)) DEALLOCATE(thisEigVecCoeffs%abcof)
 
    IF (l_bothSpins) THEN
       ALLOCATE (thisEigVecCoeffs%ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat,input%jspins))
-      ALLOCATE (thisEigVecCoeffs%abcof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),0:1,atoms%nat,input%jspins))
+      ALLOCATE (thisEigVecCoeffs%abcof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),n_r,atoms%nat,input%jspins))
    ELSE
       ALLOCATE (thisEigVecCoeffs%ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat,jspin:jspin))
-      ALLOCATE (thisEigVecCoeffs%abcof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),0:1,atoms%nat,jspin:jspin))
+      ALLOCATE (thisEigVecCoeffs%abcof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),n_r,atoms%nat,jspin:jspin))
    END IF
 
    thisEigVecCoeffs%ccof = CMPLX(0.0,0.0)

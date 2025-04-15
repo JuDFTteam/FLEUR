@@ -14,24 +14,24 @@ MODULE m_nmat
    !     Extension to multiple U per atom type by G.M. 2017
    !     ************************************************************
    CONTAINS
-   SUBROUTINE n_mat(atoms,sym,ne,usdus,jspin,we,eigVecCoeffs,n_mmp)
-
+   SUBROUTINE n_mat(atoms,radfun,sym,ne,we,abc,abc1,n_mmp,ntype,jsp,jsp1)
+      USE m_types_radfun
+      USE m_types_abc
       USE m_types
       USE m_constants
       USE m_symMMPmat
 
       IMPLICIT NONE
-
-      TYPE(t_usdus),       INTENT(IN)     :: usdus
       TYPE(t_sym),         INTENT(IN)     :: sym
       TYPE(t_atoms),       INTENT(IN)     :: atoms
-      TYPE(t_eigVecCoeffs),INTENT(IN)     :: eigVecCoeffs
-      INTEGER,             INTENT(IN)     :: ne,jspin
+      TYPE(t_radfun),      INTENT(IN)     :: radfun
+      TYPE(t_abc)         ,INTENT(IN)     :: abc,abc1
+      INTEGER,             INTENT(IN)     :: ne,ntype,jsp,jsp1
       REAL,                INTENT(IN)     :: we(:)!(input%neig)
       COMPLEX,             INTENT(INOUT)  :: n_mmp(-lmaxU_const:,-lmaxU_const:,:)
 
       INTEGER i,l,m,lp,mp,n,natom,i_u,i_denmat
-      INTEGER ilo,ilop,ll1,lmp,lm
+      INTEGER ll1,lmp,lm,j,jj
       COMPLEX c_0
 
       COMPLEX n_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)
@@ -49,9 +49,9 @@ MODULE m_nmat
             n = atoms%lda_u(i_u)%atomType
             l = atoms%lda_u(i_u)%l
          endif
-
+         if (n/=ntype) cycle !Only for atom types we currently have abc coefficients for
          ll1 = (l+1)*l
-         DO natom = atoms%firstAtom(n), atoms%firstAtom(n) + atoms%neq(n) - 1
+         DO natom = 1, atoms%neq(n) 
             n_tmp = cmplx_0
             !
             !  prepare n_mat in local frame (in noco-calculations this depends
@@ -61,51 +61,21 @@ MODULE m_nmat
                lm = ll1+m
                DO mp = -l,l
                   lmp = ll1+mp
-                  c_0 = cmplx_0
+                  c_0 = 0.0
                   DO i = 1,ne
-                     c_0 = c_0 +  we(i) * ( usdus%ddn(l,n,jspin) *&
-                                 conjg(eigVecCoeffs%abcof(i,lmp,1,natom,jspin))*eigVecCoeffs%abcof(i,lm,1,natom,jspin) &
-                               + conjg(eigVecCoeffs%abcof(i,lmp,0,natom,jspin))*eigVecCoeffs%abcof(i,lm,0,natom,jspin) )
-                  ENDDO
+                     DO j=1,size(abc%cof,3)
+                        DO jj=1,size(abc1%cof,3)
+                        c_0 = c_0 +  we(i) *  conjg(abc%cof(i,lmp,j,natom))*abc%cof(i,lm,jj,natom)*radfun%integral(j, jj, l, jsp, jsp1)
+                        ENDDO
+                     ENDDO
+                  ENDDO      
                   n_tmp(m,mp) = c_0
                ENDDO
             ENDDO
             !
-            !  add local orbital contribution (if there is one) (untested so far)
-            !
-            DO ilo = 1, atoms%nlo(n)
-               IF (atoms%llo(ilo,n).EQ.l) THEN
-                  DO m = -l,l
-                     lm = ll1+m
-                     DO mp = -l,l
-                        lmp = ll1+mp
-                        c_0 = cmplx_0
-                        DO i = 1,ne
-                           c_0 = c_0 +  we(i) * ( usdus%uulon(ilo,n,jspin) * (&
-                                       conjg(eigVecCoeffs%abcof(i,lmp,0,natom,jspin))*eigVecCoeffs%ccof(m,i,ilo,natom,jspin) &
-                                     + conjg(eigVecCoeffs%ccof(mp,i,ilo,natom,jspin))*eigVecCoeffs%abcof(i,lm,0,natom,jspin) )&
-                                     + usdus%dulon(ilo,n,jspin) * (&
-                                       conjg(eigVecCoeffs%abcof(i,lmp,1,natom,jspin))*eigVecCoeffs%ccof(m,i,ilo,natom,jspin) &
-                                     + conjg(eigVecCoeffs%ccof(mp,i,ilo,natom,jspin))*eigVecCoeffs%abcof(i,lm,1,natom,jspin)))
-                        ENDDO
-                        DO ilop = 1, atoms%nlo(n)
-                           IF (atoms%llo(ilop,n).EQ.l) THEN
-                              DO i = 1,ne
-                                 c_0 = c_0 +  we(i) * usdus%uloulopn(ilo,ilop,n,jspin) *&
-                                             conjg(eigVecCoeffs%ccof(mp,i,ilop,natom,jspin)) *eigVecCoeffs%ccof(m,i,ilo,natom,jspin)
-                              ENDDO
-                           ENDIF
-                        ENDDO
-                        n_tmp(m,mp) = n_tmp(m,mp) + c_0
-                     ENDDO
-                  ENDDO
-               ENDIF
-            ENDDO
-            !
             !  n_mmp should be rotated by D_mm' ; compare force_a21
             !
-            n_mmp(:,:,i_denmat) = n_mmp(:,:,i_denmat) + symMMPmat(conjg(n_tmp),sym,natom,l) * 1.0/atoms%neq(n)
-            !n_mmp(:,:,i_denmat) = n_mmp(:,:,i_denmat) + conjg(n_tmp) * 1.0/atoms%neq(n)
+            n_mmp(:,:,i_denmat) = n_mmp(:,:,i_denmat) + symMMPmat(conjg(n_tmp),sym,natom+atoms%firstatom(n)-1,l) * 1.0/atoms%neq(n)
          ENDDO ! sum  over equivalent atoms
       END DO !loop over u parameters
 

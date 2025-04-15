@@ -95,16 +95,16 @@ CONTAINS
     !
     ! --> sum up & print
     DO l = 0,atoms%lmax(itype)
-       qmtl(l)  = qmtl(l)  / atoms%neq(itype)
-       qmtlx(l) = qmtlx(l) / atoms%neq(itype)
-       qmtly(l) = qmtly(l) / atoms%neq(itype)
-       qmtt =  qmtt  + qmtl(l)
-       qmttx = qmttx + qmtlx(l)
-       qmtty = qmtty + qmtly(l)
-    ENDDO
-    clmom(1) = qmttx
-    clmom(2) = qmtty
-    clmom(3) = qmtt
+      qmtl(l)  = qmtl(l)  / atoms%neq(itype)
+      qmtlx(l) = qmtlx(l) / atoms%neq(itype)
+      qmtly(l) = qmtly(l) / atoms%neq(itype)
+      qmtt =  qmtt  + qmtl(l)
+      qmttx = qmttx + qmtlx(l)
+      qmtty = qmtty + qmtly(l)
+   ENDDO
+   clmom(1) = qmttx
+   clmom(2) = qmtty
+   clmom(3) = qmtt
 
 ! The following output was commented out, because the subroutine is now  used in parallel.
 ! Jan. 2019   U.Alekseeva

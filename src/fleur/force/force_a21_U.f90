@@ -5,7 +5,7 @@
 !--------------------------------------------------------------------------------
 MODULE m_forcea21U
 CONTAINS
-   SUBROUTINE force_a21_U(atoms,itype,isp,we,ne,usdus,v_mmp,eigVecCoeffs,aveccof,bveccof,cveccof,a21)
+   SUBROUTINE force_a21_U(atoms,itype,isp,we,ne,usdus,v_mmp,abc,aveccof,bveccof,cveccof,a21)
       !--------------------------------------------------------------------------
       ! This subroutine calculates the lda+U contribution to the HF forces,
       ! similar to the A21 term, according to eqn. (22) of F. Tran et al.
@@ -16,12 +16,13 @@ CONTAINS
       USE m_types_setup
       USE m_types_usdus
       USE m_types_cdnval
+      USE m_types_abc
 
       IMPLICIT NONE
 
       TYPE(t_usdus),        INTENT(IN) :: usdus
       TYPE(t_atoms),        INTENT(IN) :: atoms
-      TYPE(t_eigVecCoeffs), INTENT(IN) :: eigVecCoeffs
+      TYPE(t_abc), INTENT(IN) :: abc
 
       INTEGER, INTENT (IN)    :: itype,isp,ne
 
@@ -33,7 +34,7 @@ CONTAINS
       REAL,    INTENT(INOUT) :: a21(:,:) !(3,atoms%nat)
 
       COMPLEX v_a, v_b, v_c, p1, p2, p3
-      INTEGER lo, lop, l, lp, mp, lm, lmp, iatom, ie, i, m, i_u
+      INTEGER lo, lop, l, lp, mp, lm, lmp, iatom, ie, i, m, i_u, n_lo
 
       !--- ABBREVIATIONS --------------------------------------------------------
       ! ccof       : coefficient of the local orbital function (u_lo*Y_lm)
@@ -60,8 +61,8 @@ CONTAINS
                DO iatom = atoms%firstAtom(itype), atoms%firstAtom(itype) + atoms%neq(itype) - 1
                   DO ie = 1,ne
                      DO i = 1,3
-                        p1 = (CONJG(eigVecCoeffs%abcof(ie,lm,0,iatom,isp)) * v_a) * aveccof(i,ie,lmp,iatom)
-                        p2 = (CONJG(eigVecCoeffs%abcof(ie,lm,1,iatom,isp)) * v_b) * bveccof(i,ie,lmp,iatom)
+                        p1 = (CONJG(abc%cof(ie,lm,1,iatom-atoms%firstAtom(itype)+1)) * v_a) * aveccof(i,ie,lmp,iatom)
+                        p2 = (CONJG(abc%cof(ie,lm,2,iatom-atoms%firstAtom(itype)+1)) * v_b) * bveccof(i,ie,lmp,iatom)
                         a21(i,iatom) = a21(i,iatom) + 2.0*AIMAG(p1 + p2) * we(ie)/atoms%neq(itype)
                      END DO
                   END DO
@@ -74,6 +75,7 @@ CONTAINS
 
           DO lo = 1,atoms%nlo(itype)
             IF (l == atoms%llo(lo,itype)) THEN
+               n_lo=2+count(atoms%llo(:lo,itype)==l)
                DO m = -l,l
                   lm = l* (l+1) + m
                   DO mp = -l,l
@@ -84,11 +86,11 @@ CONTAINS
                      DO iatom =  atoms%firstAtom(itype), atoms%firstAtom(itype) + atoms%neq(itype) - 1
                         DO ie = 1,ne
                            DO i = 1,3
-                              p1 = v_a * (CONJG(eigVecCoeffs%ccof(m,ie,lo,iatom,isp)) * cveccof(i,mp,ie,lo,iatom))
-                              p2 = v_b * (CONJG(eigVecCoeffs%abcof(ie,lm,0,iatom,isp)) * cveccof(i,mp,ie,lo,iatom) + &
-                                          CONJG(eigVecCoeffs%ccof(m,ie,lo,iatom,isp)) * aveccof(i,ie,lmp,iatom))
-                              p3 = v_c * (CONJG(eigVecCoeffs%abcof(ie,lm,1,iatom,isp)) * cveccof(i,mp,ie,lo,iatom) + &
-                                          CONJG(eigVecCoeffs%ccof(m,ie,lo,iatom,isp)) * bveccof(i,ie,lmp,iatom))
+                              p1 = v_a * (CONJG(abc%cof(ie,lm,n_lo,iatom-atoms%firstAtom(itype)+1)) * cveccof(i,mp,ie,lo,iatom))
+                              p2 = v_b * (CONJG(abc%cof(ie,lm,1,iatom-atoms%firstAtom(itype)+1)) * cveccof(i,mp,ie,lo,iatom) + &
+                                          CONJG(abc%cof(ie,lm,n_lo,iatom-atoms%firstAtom(itype)+1)) * aveccof(i,ie,lmp,iatom))
+                              p3 = v_c * (CONJG(abc%cof(ie,lm,2,iatom-atoms%firstAtom(itype)+1)) * cveccof(i,mp,ie,lo,iatom) + &
+                                          CONJG(abc%cof(ie,lm,n_lo,iatom-atoms%firstAtom(itype)+1)) * bveccof(i,ie,lmp,iatom))
                               a21(i,iatom) = a21(i,iatom) + 2.0*AIMAG(p1 + p2 + p3)*we(ie)/atoms%neq(itype)
                            END DO
                         END DO

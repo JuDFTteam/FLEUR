@@ -1,7 +1,7 @@
 MODULE m_forcea12
 CONTAINS
-   SUBROUTINE force_a12(atoms,nobd,sym,cell ,we,jsp,ne,usdus,eigVecCoeffs, &
-                        acoflo,bcoflo,e1cof,e2cof,f_a12,results)
+   SUBROUTINE force_a12(atoms,nobd,sym,cell ,we,jsp,ne,usdus,abc, &
+                        acoflo,bcoflo,e1cof,e2cof,f_a12,results,itype)
       !--------------------------------------------------------------------------
       ! Pulay 1st term force contribution à la Rici et al.
       !
@@ -10,7 +10,7 @@ CONTAINS
       USE m_types_setup
       USE m_types_misc
       USE m_types_usdus
-      USE m_types_cdnval
+      USE m_types_abc
       USE m_constants
       USE m_juDFT
 
@@ -21,8 +21,9 @@ CONTAINS
       TYPE(t_cell),         INTENT(IN)    :: cell
        
       TYPE(t_usdus),        INTENT(IN)    :: usdus
-      TYPE(t_eigVecCoeffs), INTENT(IN)    :: eigVecCoeffs
+      TYPE(t_abc),          INTENT(IN)    :: abc
       TYPE(t_results),      INTENT(INOUT) :: results
+      INTEGER,              INTENT(IN)    :: itype
 
       INTEGER, INTENT(IN) :: nobd
       INTEGER, INTENT(IN) :: jsp, ne
@@ -60,7 +61,7 @@ CONTAINS
 
       CALL timestart("force_a12")
 
-      DO n = 1, atoms%ntype
+      n = itype
          natom = atoms%firstAtom(n)
          IF (atoms%l_geo(n)) THEN
             forc_a12(:) = czero
@@ -78,8 +79,8 @@ CONTAINS
                   DO m1 = -l1, l1
                      lm1 = l1*(l1+1) + m1
                      DO ie = 1, ne
-                        acof_flapw(ie,lm1) = eigVecCoeffs%abcof(ie,lm1,0,natrun,jsp)
-                        bcof_flapw(ie,lm1) = eigVecCoeffs%abcof(ie,lm1,1,natrun,jsp)
+                        acof_flapw(ie,lm1) = abc%cof(ie,lm1,1,natrun-natom+1)
+                        bcof_flapw(ie,lm1) = abc%cof(ie,lm1,2,natrun-natom+1)
                      END DO
                   END DO
                END DO
@@ -229,8 +230,7 @@ CONTAINS
             END DO
 
          END IF
-      END DO
-
+      
       ! The result is written in force_a8.
 
       CALL timestop("force_a12")

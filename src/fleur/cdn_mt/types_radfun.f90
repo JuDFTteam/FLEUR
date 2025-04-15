@@ -12,14 +12,16 @@ module m_types_radfun
       integer, private:: itype = 0
       integer, allocatable:: n_r(:) !! number of radial functions per l-chanel
       real, allocatable:: r(:, :, :, :,:) !!radial function (index,jmtd,1:2,l,spin)
+      real, allocatable:: integral(:,:,:,:,:) !! int of r over MT sphere (index,index,l,spin,spin)
    contains
       procedure, pass :: init
       procedure, pass :: generate_radial_functions
    end type
    public:: t_radfun
 contains
-   subroutine init(this, atoms, input, itype)
-      use m_types
+   pure subroutine init(this, atoms, input, itype)
+      use m_types_atoms
+      use m_types_input
       implicit none
       class(t_radfun), intent(inout):: this
       type(t_atoms), intent(IN)   :: atoms
@@ -28,9 +30,11 @@ contains
 
       integer:: l, lo
       this%itype = itype
-      do l = 1, atoms%lmax(itype)
+      if (allocated(this%n_r)) deallocate(this%n_r)
+      allocate(this%n_r(0:atoms%lmaxd))
+      do l = 0, atoms%lmax(itype)
          this%n_r(l) = 2
-         if (input%l_useapw) call judft_bug("APW not implemented")
+         !if (input%l_useapw) call judft_bug("APW not implemented")
          do lo = 1, atoms%nlo(itype)
             if (l /= atoms%llo(lo, itype)) cycle !no LO for this l
             this%n_r(l) = this%n_r(l) + 1
@@ -40,7 +44,14 @@ contains
 
    subroutine generate_radial_functions(this, atoms, input, enpara, hub1data, fmpi, vtot, iType)
       use m_genMTBasis
-      use m_types
+      use m_types_atoms
+      use m_types_input
+      use m_types_enpara
+      use m_types_hub1data
+      use m_types_mpi
+      use m_types_potden
+      use m_types_usdus
+      use m_intgr
       implicit none
       class(t_radfun), intent(inout)         ::this
       type(t_atoms), intent(IN)      :: atoms
@@ -58,19 +69,25 @@ contains
       real            :: g(atoms%jmtd, 2, 0:atoms%lmaxd)
       real            :: flo(atoms%jmtd, 2, atoms%nlod)
 
-      integer:: ispin, l, n, lo
-
+      integer:: ispin, jspin, i,j, l, n, lo
+      real,allocatable:: rf(:)
+      real :: ovlp
+   
+      call usdus%init(atoms,input%jspins)
+   
       !check if data is already available
       if (this%itype == itype .and. allocated(this%r)) return
       !init type
-      if (allocated(this%r)) deallocate (this%r)
       call this%init(atoms, input, itype)
 
-      allocate (this%r(maxval(this%n_r), atoms%jmtd, 2, atoms%lmaxd, input%jspins))
-
+      if (allocated(this%r)) deallocate (this%r)
+      allocate (this%r(maxval(this%n_r), atoms%jmtd, 2,0:atoms%lmaxd, input%jspins))
+      if (allocated(this%integral)) deallocate (this%integral)
+      allocate (this%integral(maxval(this%n_r), maxval(this%n_r),0:atoms%lmaxd, input%jspins,input%jspins))
+      this%integral=0.0;this%r=0.0
       do ispin = 1, input%jspins
          call genMTBasis(atoms, enpara, vTot, fmpi, iType, ispin, usdus, f, g, flo, hub1data, l_writeArg=.false.)
-         do l = 1, atoms%lmax(itype)
+         do l = 0, atoms%lmax(itype)
             this%R(1, 1:atoms%jri(itype), 1:2, l, ispin) = f(1:atoms%jri(itype), 1:2, l)
             this%R(2, 1:atoms%jri(itype), 1:2, l, ispin) = g(1:atoms%jri(itype), 1:2, l)
             n = 2
@@ -82,6 +99,27 @@ contains
             end do
          end do
       end do
+
+
+      !Calculate the overlaps
+      DO ispin=1,input%jspins
+         DO jspin=1,ispin
+            DO l=0,atoms%lmax(itype)
+               DO i=1,this%n_r(l)
+                  DO j=1,i
+                     rf=this%r(i,1:atoms%jri(itype),1,l,ispin)*this%r(j,1:atoms%jri(itype),1,l,jspin)&
+                     +this%r(i,1:atoms%jri(itype),2,l,ispin)*this%r(j,1:atoms%jri(itype),2,l,jspin)
+                     CALL intgr0(rf,atoms%rmsh(1,itype),atoms%dx(itype),atoms%jri(itype),ovlp)
+                     this%integral(i,j,l,ispin,jspin)=ovlp
+                     this%integral(j,i,l,ispin,jspin)=ovlp
+                     this%integral(i,j,l,jspin,ispin)=ovlp
+                     this%integral(j,i,l,jspin,ispin)=ovlp
+                  enddo
+               enddo
+            ENDDO
+         ENDDO
+      ENDDO         
+               
    end subroutine
 
    

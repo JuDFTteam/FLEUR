@@ -1,4 +1,5 @@
 MODULE m_qal21
+   !TODO: Obsolete routine
   !***********************************************************************
   ! Calculates qal21  needed to determine the off-diagonal parts of the
   ! DOS

@@ -115,7 +115,6 @@ CONTAINS
       ! local
       INTEGER                         :: jspin
 
-      TYPE(t_regionCharges)           :: regCharges
       TYPE(t_dos)                     :: dos
       TYPE(t_vacdos)                  :: vacdos
 
@@ -125,8 +124,7 @@ CONTAINS
       TYPE(t_potden)                  :: aux_den, real_den
 
 
-      CALL regCharges%init(input, atoms)
-      CALL dos%init(input,        atoms, kpts, banddos,results%eig)
+      CALL dos%init(input,        atoms, kpts, banddos,.false.,results%eig) 
       CALL vacdos%init(input,        atoms, kpts, banddos,results%eig)
 !      CALL moments%init(input,    atoms)
       CALL moments%init(fmpi,input,sphhar,atoms)
@@ -141,7 +139,7 @@ CONTAINS
 
          CALL cdnval(eig_id, fmpi, kpts, jspin, noco,nococonv, input, banddos, cell, atoms, &
             enpara, stars, vacuum,  sphhar, sym, vTot,   cdnvalJob, &
-            EnergyDen, regCharges, dos, vacdos,tmp_results, moments, gfinp, hub1inp)
+            EnergyDen,  dos, vacdos,tmp_results, moments, gfinp, hub1inp)
       ENDDO
 
    END SUBROUTINE calc_EnergyDen

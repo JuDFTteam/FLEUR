@@ -15,7 +15,6 @@ src/fleur/cdn_mt/magDiMom.f90
 #src/fleur/cdn_mt/orbMagMoms.f90
 src/fleur/cdn_mt/orb_comp2.f90
 src/fleur/cdn_mt/jDOS.f90
-src/fleur/cdn_mt/radfun.f90
 src/fleur/cdn_mt/resMoms.f90
 #src/fleur/cdn_mt/rhomt.f90
 #src/fleur/cdn_mt/rhomt21.f90
@@ -32,5 +31,6 @@ src/fleur/cdn_mt/alignSpinAxisMagn.F90
 src/fleur/cdn_mt/magMultipoles.F90
 src/fleur/cdn_mt/denmat_to_full.F90
 src/fleur/cdn_mt/types_denmatrix.F90
-src/fleur/cdn_mt/types_radfun.F90
+src/fleur/cdn_mt/types_radfun.f90
+src/fleur/cdn_mt/radfun.f90
 )

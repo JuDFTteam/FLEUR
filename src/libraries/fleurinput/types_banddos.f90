@@ -250,7 +250,7 @@ CONTAINS
     !Create a list of all atoms and all types for which the DOS is calculated
     ALLOCATE(dos_atomlist(xml%get_nat()),source=0)
     allocate(dos_typelist(xml%get_ntype()),source=0)
-
+    dos_typelist=0
     na=0
     n_dos_atom=0
     n_dos_type=0

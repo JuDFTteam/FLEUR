@@ -88,7 +88,6 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    INTEGER, INTENT (IN)             :: eig_id, archiveType
 
    ! Local type instances
-   TYPE(t_regionCharges)          :: regCharges
    TYPE(t_dos),TARGET             :: dos
    TYPE(t_vacdos),TARGET          :: vacdos
    TYPE(t_moments)                :: moments
@@ -119,11 +118,10 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    LOGICAL               :: l_error,Perform_metagga
 
    ! Initialization section
-   CALL regCharges%init(input,atoms)
    CALL moments%init(fmpi,input,sphhar,atoms)
    !initalize data for DOS
    if (noco%l_noco) results%eig(:,:,2)=results%eig(:,:,1)
-   CALL dos%init(input,atoms,kpts,banddos,results%eig)
+   CALL dos%init(input,atoms,kpts,banddos,noco%l_noco.or.banddos%l_jDOS,results%eig)
    CALL vacdos%init(input,atoms,kpts,banddos,results%eig)
    CALL mcd%init(banddos,input,atoms,kpts,results%eig)
    CALL slab%init(banddos,atoms,cell,input,kpts)
@@ -190,7 +188,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
       CALL cdnvalJob%init(fmpi,input,kpts,noco,results,jspin)
       IF (sliceplot%slice) CALL cdnvalJob%select_slice(sliceplot,results,input,kpts,noco,jspin)
       CALL cdnval(eig_id,fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,enpara,stars,vacuum,&
-                  sphhar,sym,vTot ,cdnvalJob,outDen,regCharges,dos,vacdos,results,moments,gfinp,&
+                  sphhar,sym,vTot ,cdnvalJob,outDen,dos,vacdos,results,moments,gfinp,&
                   hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,jDOS,greensfImagPart)
    END DO
    CALL timestop("cdngen: cdnval")
@@ -296,8 +294,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
       enddo
    ENDIF
 
-   CALL enpara%calcOutParams(input,atoms,vacuum,regCharges)
-
+  
    IF (fmpi%irank == 0) CALL openXMLElementNoAttributes('allElectronCharges')
    CALL qfix(fmpi,stars,nococonv,atoms,sym,vacuum,sphhar,input,cell ,outDen,noco%l_noco,.TRUE.,l_par=.TRUE.,force_fix=.TRUE.,fix=fix)
    IF (fmpi%irank == 0) CALL closeXMLElement('allElectronCharges')

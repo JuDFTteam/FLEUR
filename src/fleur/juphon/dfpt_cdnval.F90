@@ -84,7 +84,7 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
    REAL,    ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:),flo(:,:,:,:) ! radial functions
 
    TYPE (t_lapw)              :: lapw, lapwq, lapwmq
-   TYPE (t_orb)               :: orbdummy
+   !TYPE (t_orb)               :: orbdummy
    TYPE (t_denCoeffs)         :: denCoeffs
    TYPE (t_denCoeffsOffdiag)  :: denCoeffsOffdiag
    TYPE (t_eigVecCoeffs)      :: eigVecCoeffs, eigVecCoeffs1, eigVecCoeffsPref, eigVecCoeffs1m
@@ -326,7 +326,7 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
 #ifdef CPP_MPI
    DO ispin = jsp_start,jsp_end
       CALL mpi_col_den(fmpi,sphhar,atoms,stars,vacuum,input,noco,ispin,dosdummy,vacdosdummy,&
-                       resultsdummy,denCoeffs,orbdummy,denCoeffsOffdiag,den)
+                       resultsdummy,denCoeffs,denCoeffsOffdiag,den)
    END DO
 #endif
 

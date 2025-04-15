@@ -39,7 +39,13 @@ CONTAINS
       !! respectively. The former also appears in the complex phase factor.
 
       USE m_constants, ONLY : fpi_const,tpi_const
-      USE m_types
+      USE m_types_sym
+      USE m_types_cell
+      USE m_types_atoms
+      USE m_types_lapw
+      USE m_types_noco
+      USE m_types_nococonv
+      USE m_hsmt_fjgj
       USE m_ylm
       USE m_hsmt_fjgj
       USE m_matmul_dgemm

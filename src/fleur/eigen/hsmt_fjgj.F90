@@ -18,7 +18,7 @@ MODULE m_hsmt_fjgj
 
 CONTAINS
   subroutine alloc(fjgj,nvd,lmaxd,isp,noco)
-    USE m_types
+    USE m_types_noco
     CLASS(t_fjgj),INTENT(OUT) :: fjgj
     INTEGER,INTENT(IN)        :: nvd,lmaxd,isp
     TYPE(t_noco),INTENT(IN)   :: noco
@@ -37,7 +37,15 @@ CONTAINS
     USE m_constants, ONLY : fpi_const
     USE m_sphbes
     USE m_dsphbs
-    USE m_types
+    USE m_types_input
+    USE m_types_cell
+    USE m_types_noco
+    USE m_types_atoms
+    USE m_types_lapw
+    USE m_types_usdus
+    
+    
+    
     IMPLICIT NONE
     CLASS(t_fjgj),INTENT(INOUT) :: fjgj
     TYPE(t_input),INTENT(IN)    :: input
