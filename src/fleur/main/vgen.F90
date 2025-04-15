@@ -131,7 +131,7 @@ CONTAINS
       CALL vgen_xcpot(hybdat,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
                       cell,fmpi,noco,den,denRot,EnergyDen,vTot,vx,vxc,exc,results=results)
 
-      CALL bfield(input,stars,noco,atoms,field,vTot)
+      CALL bfield(input,stars,noco,atoms,field,vTot,nococonv)
       if (any(noco%l_constrained)) call vgen_constraint(atoms,noco,nococonv,vtot)
 
       ! d)
