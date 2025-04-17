@@ -49,7 +49,7 @@ include(src/fleur/rdmft/CMakeLists.txt)
 include(src/fleur/greensf/CMakeLists.txt)
 include(src/fleur/tetra/CMakeLists.txt)
 include(src/fleur/juphon/CMakeLists.txt)
-
+include(src/fleur/mt_cdn/CMakeLists.txt)
 include(docs/CMakeLists.txt)
 
 

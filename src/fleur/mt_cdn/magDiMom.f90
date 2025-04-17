@@ -71,7 +71,7 @@ SUBROUTINE magDiMom(sym,input,atoms,sphhar,noco,nococonv,l_fmpl2,rho,magDipoles,
                cdn11 = rho(i,ilh,iType,1)
                cdn22 = rho(i,ilh,iType,2)
                cdn21 = CMPLX(rho(i,ilh,iType,3),rho(i,ilh,iType,4))
-               CALL rot_den_mat(nococonv%alph(iType),nococonv%beta(iType),cdn11,cdn22,cdn21)
+               CALL nococonv%rotdenmat(nococonv%alph(iType),nococonv%beta(iType),cdn11,cdn22,cdn21)
                inRho(i,ilh,iType,1) = cdn11 + cdn22
                inRho(i,ilh,iType,2) = 2.0 * REAL(cdn21)
                ! Note: The minus sign in the following line is temporary to adjust for differences in the offdiagonal

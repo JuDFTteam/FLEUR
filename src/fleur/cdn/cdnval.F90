@@ -33,9 +33,6 @@ CONTAINS
       USE m_genMTBasis
       USE m_mcdinit
       USE m_sympsi
-      USE m_eparas      ! energy parameters and partial charges
-      USE m_qal21       ! off-diagonal part of partial charges
-      USE m_abcof
       USE m_nmat        ! calculate density matrix for LDA + U
       USE m_nmat21
       USE m_vacden

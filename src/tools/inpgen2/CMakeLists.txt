@@ -124,8 +124,8 @@ ${FLEUR_SRC}/math/ylm4.F90
 ${FLEUR_SRC}/cdn/slab_dim.f90
 ${FLEUR_SRC}/cdn/slabgeom.f90
 ${FLEUR_SRC}/propcalc/dos/nstm3.f90
-${FLEUR_SRC}/cdn/int_21.f90
-${FLEUR_SRC}/cdn/int_21lo.f90
+${FLEUR_SRC}/eigen/int_21.f90
+${FLEUR_SRC}/eigen/int_21lo.f90
 
 ${FLEUR_SRC}/xc-pot/gaunt.f90
 #${FLEUR_SRC}/math/grule.f90
