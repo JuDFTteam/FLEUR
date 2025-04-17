@@ -90,13 +90,23 @@ if [[ ! -z \"\${juDFT_PYTHON}\" ]]; then
   PYTHON_EXECUTABLE=\${juDFT_PYTHON}
 fi
 mkdir -p Testing
+
+if [ -r Testing/env ]
+then 
+   source Testing/env/bin/activate
+else
+   $PYTHON_EXECUTABLE -m venv create Testing/env
+   source Testing/env/bin/activate
+   pip install pytest_html pytest py
+fi   
+
 if [ \"$1\" = \"-perf\" ]
 then
 shift
 $PYTHON_EXECUTABLE ${CMAKE_SOURCE_DIR}/testing/performance/scripts/perf.py \"$@\"
 exit 0
 else
-PYTHONDONTWRITEBYTECODE=1 PYTEST_ADDOPTS=$PYTEST_ADDOPTS $PYTHON_EXECUTABLE -m pytest \"$@\" | tee -i Testing/pytest_session.stdout
+PYTHONDONTWRITEBYTECODE=1 PYTEST_ADDOPTS=$PYTEST_ADDOPTS python -m pytest \"$@\" | tee -i Testing/pytest_session.stdout
 fi
 exit \${PIPESTATUS[0]}")
 add_custom_target(pytest ALL

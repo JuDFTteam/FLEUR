@@ -107,7 +107,7 @@ contains
          end if
          !check if "-sp" was given
          if (index(name,"-") .gt. 0) then
-            use_single_precision = name(index(name,"-") + 1:) .eq. "sp"
+            use_single_precision = trim(name(index(name,"-") + 1:)) .eq. "sp"
             name = name(:index(name,"-")-1)
          end if
          !select solver from name
@@ -128,9 +128,9 @@ contains
             if (fit) exit
          end do
          if (.not.fit) call judft_error("No default solver found.")
-         diag_solver%use_sp = use_single_precision
       end if
 
+      diag_solver%use_sp = use_single_precision
       
       !Check if a default tansformation must be selected as well
       if ((.not. diag_solver%generalized .or. diag_solver%use_sp) .and. &
@@ -200,9 +200,9 @@ contains
       class(t_solver), allocatable:: s,t
 
       call select_solver(parallel,diag_solver=s,diag_transform=t)
-      print_solver = s%name
-      if (s%use_sp) print_solver = print_solver//"-sp"
-      if (allocated(t)) print_solver = t%name//'+'//print_solver
+      print_solver = trim(s%name)
+      if (s%use_sp) print_solver = trim(print_solver)//"-sp"
+      if (allocated(t)) print_solver = t%name//'+'//trim(print_solver)
    end function
 
    subroutine list_solvers()

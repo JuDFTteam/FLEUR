@@ -17,7 +17,7 @@ contains
 
   SUBROUTINE mix_charge( field,   fmpi, l_writehistory,&
        stars, atoms, sphhar, vacuum, input, sym, juphon, cell, noco, nococonv,&
-         archiveType, xcpot, iteration, inDen, outDen, results, l_runhia, sliceplot,&
+         archiveType, xcpot, iteration, inDen, outDen, results, coreDen, l_runhia, sliceplot,&
          inDenIm, outDenIm, dfpt_tag)
 
     use m_juDFT
@@ -65,7 +65,8 @@ contains
     LOGICAL,           INTENT(IN)    :: l_runhia
 
     type(t_potden), OPTIONAL, INTENT(INOUT) :: inDenIm, outDenIm
-
+    
+    type(t_potden), OPTIONAL , intent(inout) :: coreDen
     CHARACTER(len=20), OPTIONAL, INTENT(IN) :: dfpt_tag
 
     real                             :: fix
@@ -133,8 +134,13 @@ contains
 
     IF (.NOT.l_dfpt) THEN
       ! Preconditioner for relaxation of Magnetic moments
-      call precond_noco(it,vacuum,sphhar,stars,sym ,cell,noco,nococonv,input,atoms,inden,outden,fsm(it))
+      CALL timestart("Preconditioner(M)")
+      !if (results%last_distance<0.5) 
+      call precond_noco(it,vacuum,sphhar,stars,sym ,cell,noco,nococonv,input,atoms,inden,outden,coreden,fsm(it))
+      CALL timestop("Preconditioner(M)")
     END IF
+
+
 
     ! KERKER PRECONDITIONER
     IF( input%preconditioning_param /= 0 .AND. .NOT.l_dfpt)  THEN

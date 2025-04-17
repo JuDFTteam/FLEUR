@@ -1,0 +1,7 @@
+[check]
+fix = true
+preview = true
+ignore = ["C121", "C131" ]
+line-length = 192
+#exit-zero = true
+#output-format="gitlab"

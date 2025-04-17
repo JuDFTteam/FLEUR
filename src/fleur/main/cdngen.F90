@@ -12,7 +12,7 @@ CONTAINS
 SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
                   kpts,atoms,sphhar,stars,sym,juphon,gfinp,hub1inp,&
                   enpara,cell,noco,nococonv,vTot,results ,coreSpecInput,&
-                  archiveType, xcpot,outDen,EnergyDen,greensFunction,hub1data,vxc,exc)
+                  archiveType, xcpot,outDen,EnergyDen,core_den,greensFunction,hub1data,vxc,exc)
 
    !*****************************************************
    !    Charge density generator
@@ -50,6 +50,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    USE m_types_greensfContourData
    USE m_types_eigdos
    USE m_types_dos
+   USE m_types_hyperfine
 
    USE m_force_sf ! Klueppelberg (force level 3)
 
@@ -82,6 +83,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_hub1data),OPTIONAL,INTENT(INOUT)    :: hub1data
    CLASS(t_xcpot),INTENT(IN)     :: xcpot
    TYPE(t_potden),INTENT(INOUT)     :: outDen, EnergyDen
+   TYPE(t_potden),INTENT(OUT),optional       :: core_den
    TYPE(t_potden),INTENT(INOUT),OPTIONAL:: vxc, exc
 
    !Scalar Arguments
@@ -97,18 +99,16 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_jDOS),TARGET            :: jDOS
    TYPE(t_cdnvalJob)       :: cdnvalJob
    TYPE(t_greensfImagPart) :: greensfImagPart
-   TYPE(t_potden)          :: val_den, core_den
+   TYPE(t_potden)          :: val_den
    TYPE(t_greensfContourData) :: contour(gfinp%numberContours)
+   TYPE(t_hyperfine)       :: hyperfine
 
 
    !Local Scalars
    REAL                  :: fix, qtot, dummy, eFermiPrev
-   REAL                  :: e0, a0, cautog, bohrMagInCGS
-   INTEGER               :: jspin, ierr, iType
+   INTEGER               :: jspin, ierr
    INTEGER               :: dim_idx
    INTEGER               :: i_gf,iContour,n
-
-   REAL                  :: hyperfineResults(-1:3), hyperfineResultsTotal(-1:3)
 
    TYPE(t_eigdos_list),allocatable :: eigdos(:)
 
@@ -148,7 +148,6 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    endif
 
 
-
    CALL outDen%init(stars,    atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN)
    CALL EnergyDen%init(stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_EnergyDen)
 
@@ -176,6 +175,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
       hub1data%cdn_atomic = 0.0
    ENDIF
 
+   CALL hyperfine%init(input, atoms)
 
    IF (fmpi%irank == 0) CALL openXMLElementNoAttributes('valenceDensity')
 
@@ -245,30 +245,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    !   CALL makeplots(stars, atoms, sphhar, vacuum, input, fmpi , sym, cell, noco,nococonv, outDen, PLOT_OUTDEN_Y_CORE, sliceplot)
    !END IF
 
-   IF ((fmpi%irank.EQ.0).AND.(input%kcrel.EQ.1).AND.(input%jspins.EQ.2)) THEN
-      ! Print out valence contributions to the hyperfine field
-      a0 = bohr_to_angstrom_const * 1.0e-8
-      e0 = 1.6021892e-19 * 2.997930e+09
-      cautog = e0 / (a0*a0)
-      bohrMagInCGS = 1.0/(2.0*c_light(1.0))
-      WRITE(oUnit,*) ''
-      WRITE(ounit,*) ' Hyperfine field valence contributions in kG '
-      WRITE(ounit,*) ' ========================================================== '
-      WRITE(ounit,*) ' atom type                          contribution'
-      WRITE(ounit,*) '                total         s           p           d           f'
-      DO iType = 1, atoms%ntype
-         moments%hypFineContribs(:,iType,1,1) = moments%hypFineContribs(:,iType,1,1) - moments%hypFineContribs(:,iType,2,1)
-         hyperfineResults(:) = moments%hypFineContribs(:,iType,1,1) * cautog * 0.001 * sfp_const * bohrMagInCGS * 8.0 * pi_const / 3.0
-         WRITE(oUnit,'(i7,5x,5f12.5,5x,a)') iType, hyperfineResults(-1:3), 'contact term'
-         hyperfineResultsTotal(:) = hyperfineResults(:)
-         moments%hypFineContribs(:,iType,1,3) = moments%hypFineContribs(:,iType,1,3) + moments%hypFineContribs(:,iType,2,3)
-         hyperfineResults(:) = moments%hypFineContribs(:,iType,1,3) * cautog * 0.001 / c_light(1.0)
-         WRITE(oUnit,'(i7,5x,5f12.5,5x,a)') iType, hyperfineResults(-1:3), 'orbital term'
-         hyperfineResultsTotal(:) = hyperfineResultsTotal(:) + hyperfineResults(:)
-         WRITE(oUnit,'(i7,5x,5f12.5,5x,a)') iType, hyperfineResultsTotal(-1:3), 'all terms'
-      END DO
-      WRITE(ounit,*) ' ========================================================== '
-   END IF
+   CALL hyperfine%printValenceHyperfine(input, atoms, fmpi, moments)
 
    CALL timestart("cdngen: cdncore")
    if(xcpot%exc_is_MetaGGA()) then
@@ -310,6 +287,9 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
       !Generate and save the new nocoinp file if the directions of the local
       !moments are relaxed or a constraint B-field is calculated.
    END IF
+
+   CALL hyperfine%calcPrintIsomerShifts(input,atoms,fmpi,outDen)
+
    Perform_metagga = Allocated(Energyden%Mt) &
                    .And. (Xcpot%Exc_is_metagga() .Or. Xcpot%Vx_is_metagga())
    If(Perform_metagga) Then

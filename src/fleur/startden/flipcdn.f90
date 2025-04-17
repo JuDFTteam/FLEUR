@@ -123,7 +123,6 @@ MODULE m_flipcdn
            den%mmpMat(:,:,:,3)=0.0
         endif
       endif
-
       !$OMP parallel PRIVATE(rhodummy,rhodumms,j,rhodummyR,lh,itype,na) DEFAULT(none) &
       !$OMP SHARED(noco,den,zeros,atoms,sphhar,input,sym,l_flip,scalespin,toGlobal,nococonv) &
       !$OMP FIRSTPRIVATE(rotAngleTheta,rotAnglePhi)
@@ -168,8 +167,8 @@ MODULE m_flipcdn
       END DO
       !$OMP end do
       !$OMP end parallel
-
       IF (input%l_onlyMtStDen) THEN
+      
       !!This Segment takes care that no interstitial magnetization is written in the the density. Meaning: Off diagonal elements of density matrix set to 0 and diagonal elements of density matrix are equal to their mean value.
          den%pw(:,2)=(den%pw(:,1)+den%pw(:,2))*0.5 !mean value
          den%pw(:,1)=den%pw(:,2)
@@ -177,9 +176,8 @@ MODULE m_flipcdn
             den%pw(:,3)=CMPLX(0.0,0.0)
          END IF
       END IF
-
-
       ! for LDA+U: flip density matrix
+      if (allocated(den%mmpMat)) THEN
       IF (input%lflip.AND.ANY(ABS(den%mmpMat) > 1e-12).AND.atoms%n_u+atoms%n_hia+atoms%n_opc>0) THEN
          DO i_u = 1, atoms%n_u+atoms%n_hia+atoms%n_opc
             if(i_u> atoms%n_u+atoms%n_hia) then
@@ -221,12 +219,11 @@ MODULE m_flipcdn
             END IF
          END DO
       END IF
-
+      ENDIF
       ! write the spin-polarized density
        IF(input%lflip) CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,CDN_INPUT_DEN_const,&
                                          1,-1.0,0.0,-1.0,-1.0,.FALSE.,den)
        IF(opt) optDen%mt=den%mt
-
       ! read enpara and  flip lines
       INQUIRE(file='enpara',exist=n_exist)
       IF (n_exist) THEN
@@ -272,7 +269,7 @@ MODULE m_flipcdn
 
 
       IF(PRESENT(optDen)) optDen=den
-
+ 
    END SUBROUTINE flipcdn
 
 END MODULE m_flipcdn

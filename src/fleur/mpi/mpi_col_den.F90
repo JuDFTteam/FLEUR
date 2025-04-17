@@ -25,6 +25,7 @@ CONTAINS
     use m_types_orbcomp
     use m_types_jDOS
     use m_types_vacdos
+    use m_types_hyperfine
     IMPLICIT NONE
 
     TYPE(t_results),INTENT(INOUT):: results
@@ -47,10 +48,11 @@ CONTAINS
     TYPE (t_dos),               INTENT(INOUT) :: dos
     TYPE (t_vacdos),            INTENT(INOUT) :: vacdos
     TYPE (t_regionCharges), OPTIONAL, INTENT(INOUT) :: regCharges
-    TYPE (t_mcd),     OPTIONAL, INTENT(INOUT) :: mcd
-    TYPE (t_slab),    OPTIONAL, INTENT(INOUT) :: slab
-    TYPE (t_orbcomp), OPTIONAL, INTENT(INOUT) :: orbcomp
-    TYPE (t_jDOS),    OPTIONAL, INTENT(INOUT) :: jDOS
+    TYPE (t_mcd),       OPTIONAL, INTENT(INOUT) :: mcd
+    TYPE (t_slab),      OPTIONAL, INTENT(INOUT) :: slab
+    TYPE (t_orbcomp),   OPTIONAL, INTENT(INOUT) :: orbcomp
+    TYPE (t_jDOS),      OPTIONAL, INTENT(INOUT) :: jDOS
+    TYPE (t_hyperfine), OPTIONAL, INTENT(INOUT) :: hyperfine
     ! ..
     ! ..  Local Scalars ..
     INTEGER :: n, i
@@ -369,6 +371,8 @@ CONTAINS
       DEALLOCATE (c_b)
    ENDIF
    !-lda+U
+
+   IF (PRESENT(hyperfine)) CALL hyperfine%collect(fmpi,atoms,jspin)
 
     CALL timestop("mpi_col_den")
 

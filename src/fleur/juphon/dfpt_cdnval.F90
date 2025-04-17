@@ -281,7 +281,7 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
          END IF
       END DO ! end loop over ispin
       IF (noco%l_mperp) then
-         IF (.NOT.l_minusq) THEN
+         IF (.NOT.l_minusq) THEN ! not sure about this seems to be if l_minusq
             call timestart("denCoeffsOffdiag%calcCoefficients")
             !CALL dfpt_rhomt(atoms,we,we1,noccbd,2,1,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs,eigVecCoeffs1m)
             !CALL rhonmt(atoms,sphhar,we,we1,noccbd,2,1,bqpt,.TRUE.,.FALSE.,sym,eigVecCoeffs,eigVecCoeffs1,denCoeffs,eigVecCoeffs1m)

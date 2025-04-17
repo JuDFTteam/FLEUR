@@ -11,6 +11,7 @@ src/fleur/cdn_mt/abcrot2.f90
 #src/fleur/cdn_mt/cdnmt.F90
 src/fleur/cdn_mt/cdncore.F90
 src/fleur/cdn_mt/denMultipoleExp.f90
+src/fleur/cdn_mt/types_hyperfine.F90
 src/fleur/cdn_mt/magDiMom.f90
 #src/fleur/cdn_mt/orbMagMoms.f90
 src/fleur/cdn_mt/orb_comp2.f90

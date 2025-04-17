@@ -456,32 +456,32 @@ END MODULE m_hsmt_soc_offdiag
 
 #if false
    !Code snipplet useful for debugging only
-                  fct(:NVEC_rem)  =cph(:NVEC_rem) * dplegend(:NVEC_rem,l3)*fl2p1(l)*(&
-                  fjkiln*fjgj%fj(kj_off:kj_vec,l,j2,1) *td%rsoc%rsopp(n,l,j1,j2) ) &
-                  * angso(:NVEC_rem,j1,j2) 
+      !            fct(:NVEC_rem)  =cph(:NVEC_rem) * dplegend(:NVEC_rem,l3)*fl2p1(l)*(&
+      !            fjkiln*fjgj%fj(kj_off:kj_vec,l,j2,1) *td%rsoc%rsopp(n,l,j1,j2) ) &
+      !            * angso(:NVEC_rem,j1,j2) 
              
-                  BLOCK
-                    use m_anglso
-                    USE m_ylm
-                    INTEGER :: m1,m2,is1,is2,lm1,lm2
-                    COMPLEX :: soangl(0:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2,-atoms%lmaxd:atoms%lmaxd,2),angso2
-                    COMPLEX :: ylm1( (atoms%lmaxd+1)**2 ), ylm2( (atoms%lmaxd+1)**2 )
-                    INTEGER :: ispjsp(2)
-                    if (kj_off/=kj_vec) call judft_error("DEBUG Problem")
-                    DATA ispjsp/1,-1/
-                         CALL ylm4(l,lapw%gk(:,ki,1),ylm1)
-                         CALL ylm4(l,lapw%gk(:,kj,1),ylm2)
-                         angso2=0.0
-                         is1=ispjsp(j1)
-                         is2=ispjsp(j2)
-                         DO m1=-l,l
-                            lm1=l*(l+1)+m1+1
-                            DO m2=-l,l
-                              lm2=l*(l+1)+m2+1
-                              angso2=angso2+ylm1(lm1)*conjg(ylm2(lm2))* &
-                                 anglso(nococonv%beta(n),nococonv%alph(n),l,m1,is1,l,m2,is2)
-                           ENDDO
-                        ENDDO
-                        fct(1)=angso2*fjgj%fj(ki,l,j1,1)*fjgj%fj(kj_off,l,j2,1) *td%rsoc%rsopp(n,l,j1,j2)
-                  END BLOCK     
+      !            BLOCK
+      !              use m_anglso
+      !              USE m_ylm
+      !              INTEGER :: m1,m2,is1,is2,lm1,lm2
+      !              COMPLEX :: soangl(0:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2,-atoms%lmaxd:atoms%lmaxd,2),angso2
+      !              COMPLEX :: ylm1( (atoms%lmaxd+1)**2 ), ylm2( (atoms%lmaxd+1)**2 )
+      !              INTEGER :: ispjsp(2)
+      !              if (kj_off/=kj_vec) call judft_error("DEBUG Problem")
+      !              DATA ispjsp/1,-1/
+      !                   CALL ylm4(l,lapw%gk(:,ki,1),ylm1)
+      !                   CALL ylm4(l,lapw%gk(:,kj,1),ylm2)
+      !                   angso2=0.0
+      !                   is1=ispjsp(j1)
+      !                   is2=ispjsp(j2)
+      !                   DO m1=-l,l
+      !                      lm1=l*(l+1)+m1+1
+      !                      DO m2=-l,l
+      !                        lm2=l*(l+1)+m2+1
+      !                        angso2=angso2+ylm1(lm1)*conjg(ylm2(lm2))* &
+      !                           anglso(nococonv%beta(n),nococonv%alph(n),l,m1,is1,l,m2,is2)
+      !                     ENDDO
+      !                  ENDDO
+      !                  fct(1)=angso2*fjgj%fj(ki,l,j1,1)*fjgj%fj(kj_off,l,j2,1) *td%rsoc%rsopp(n,l,j1,j2)
+      !            END BLOCK     
 #endif

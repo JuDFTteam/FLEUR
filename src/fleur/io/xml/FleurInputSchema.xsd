@@ -765,6 +765,7 @@
    <xsd:complexType name="GeometryOptimizerType">
       <xsd:attribute name="l_f" type="FleurBool" use="required"/>
       <xsd:attribute name="f_level" type="xsd:integer" use="optional" default="-1"/>
+      <xsd:attribute name="l_driftForce" type="FleurBool" use="optional" default="F"/>
       <xsd:attribute name="forcealpha" type="FleurDouble" use="optional" default="0" />
       <xsd:attribute name="epsdisp" type="FleurDouble" use="optional" default="0.001"/>
       <xsd:attribute name="epsforce" type="FleurDouble" use="optional" default="0.001"/>
