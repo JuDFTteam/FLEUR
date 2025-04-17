@@ -54,7 +54,7 @@ CONTAINS
       type(t_atoms), intent(in):: atoms
       type(t_radfun),intent(in):: radfun
       real, intent(in):: we(:)
-      real,intent(out)::clmom(3)
+      real,intent(inout)::clmom(3)
 
       integer, intent(in) :: itype,jsp
       integer:: natom, l, m, lm, i, j, jj
@@ -69,31 +69,30 @@ CONTAINS
             !     -----> sum over m
             DO m = -l, l
                lm = l*(l + 1) + m
-               !     -----> sum over occupied bands
-               DO i = 1, size(we)
+                  !loop over radial functions
                   DO j = 1, radfun%n_r(l)
                      DO jj = 1, radfun%n_r(l)
 
                         ! coeff. for lz ->
-                        orb%lz(j, jj, l, m) = orb%lz(j, jj, l, m) + &
-                                              we(i)*abc%cof(i, lm, j, natom)*CONJG(abc%cof(i, lm, jj, natom))
+                        orb%lz(j, jj, l, m) = orb%lz(j, jj, l, m) + sum(& ! sum over occupied bands
+                                              we(:)*abc%cof(:, lm, j, natom)*CONJG(abc%cof(:, lm, jj, natom)))
                         ! coeff. for l+ <M'|l+|M> with respect to M ->
-                        IF (m .NE. l) THEN
-                           orb%lp(j, jj, l, m) = orb%lp(j, jj, l, m) + &
-                                                 we(i)*abc%cof(i, lm, j, natom)*CONJG(abc%cof(i, lm + 1, jj, natom))
+                        IF (m < l) THEN
+                           orb%lp(j, jj, l, m) = orb%lp(j, jj, l, m) +sum( & ! sum over occupied bands
+                                                 we(:)*abc%cof(:, lm, j, natom)*CONJG(abc%cof(:, lm + 1, jj, natom)))
                         ELSE
                            orb%lp(j, jj, l, m) = 0.0
                         END IF
                         ! coeff. for l- <M'|l-|M> with respect to M ->
-                        IF (m .NE. -l) THEN
-                           orb%lm(j, jj, l, m) = orb%lm(j, jj, l, m) + &
-                                                 we(i)*abc%cof(i, lm, j, natom)*CONJG(abc%cof(i, lm - 1, jj, natom))
+                        IF (m > -l) THEN
+                           orb%lm(j, jj, l, m) = orb%lm(j, jj, l, m) + sum(& ! sum over occupied bands
+                                                 we(:)*abc%cof(:, lm, j, natom)*CONJG(abc%cof(:, lm - 1, jj, natom)))
                         ELSE
                            orb%lm(j, jj, l, m) = 0.0
                         END IF
                      end do
                   end do
-               END DO
+               
             END DO
          END DO
       end do
@@ -109,17 +108,16 @@ CONTAINS
                   orbz = orbz+ m * orb%lz(j,jj,l,m) *radfun%integral(j,jj,l,jsp,jsp)
                   ! lx,ly
                   orbp = orbp+SQRT(REAL((l-m)*(l+m+1))) * ( orb%lp(j,jj,l,m) *radfun%integral(j,jj,l,jsp,jsp))
-                  orbm = orbp+SQRT(REAL((l+m)*(l-m+1))) * ( orb%lm(j,jj,l,m) *radfun%integral(j,jj,l,jsp,jsp))
+                  orbm = orbm+SQRT(REAL((l+m)*(l-m+1))) * ( orb%lm(j,jj,l,m) *radfun%integral(j,jj,l,jsp,jsp))
                enddo
             ENDDO
-         ENDDO
-         qmtlz(l)  = orbz/ atoms%neq(itype)
+         enddo
+         qmtlz(l) = orbz/ atoms%neq(itype)
          qmtlx(l) = 0.5*( REAL(orbp)+ REAL(orbm))/ atoms%neq(itype)
          qmtly(l) = 0.5*(AIMAG(orbp)-AIMAG(orbm))/ atoms%neq(itype)
       ENDDO
-
-      clmom(1) = sum(qmtlx)
-      clmom(2) = sum(qmtly)
-      clmom(3) = sum(qmtlz)
+      clmom(1) = clmom(1)+ sum(qmtlx)
+      clmom(2) = clmom(2)+ sum(qmtly)
+      clmom(3) = clmom(3)+ sum(qmtlz)
    end subroutine
 end module
