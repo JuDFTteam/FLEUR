@@ -367,9 +367,12 @@ CONTAINS
          DO itype = 1, atoms%ntype
             call radfun%generate_radial_functions(atoms, input, enpara, hub1data, fmpi, vtot, iType)
             call print_l_like_charge(lbound(denmatrix, 1), atoms, radfun, denmatrix, itype)
-
-            call denmatrix_to_full_density(lbound(denmatrix, 1), itype, input, &
-                                           sphhar, atoms, noco, sym, radfun, denmatrix(:, :, itype), den%mt, moments=moments)
+            DO ispin = jsp_start, jsp_end
+               do ispinpr=jsp_start, ispin
+                  call denmatrix(ispin,ispinpr,itype)%to_full_density(ispin,ispinpr, itype, input, &
+                                           sphhar, atoms, noco, sym, radfun,  den%mt, moments=moments)
+               enddo
+            enddo
          END DO
          CALL timestop("denmatrix_to_full")
          IF (l_coreSpec) CALL corespec_ddscs(jspin, input%jspins)
