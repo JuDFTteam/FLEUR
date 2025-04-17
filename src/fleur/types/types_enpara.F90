@@ -545,7 +545,7 @@ CONTAINS
 #else
     irank=0
 #endif
-
+   return !No more mixing of enparas since these are not calculated anymore
     IF (irank==0) THEN
        maxdist2=0.0
        DO jsp=1,SIZE(enpara%el0,3)
