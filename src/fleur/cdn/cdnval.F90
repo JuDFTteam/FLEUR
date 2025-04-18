@@ -60,7 +60,6 @@ CONTAINS
       USE m_types_jDOS
       USE m_types_vacDOS
       USE m_types_orbcomp
-      USE m_denmat_to_full
       USE m_types_denmatrix
       USE m_types_radfun
       use m_l_like

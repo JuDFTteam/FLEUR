@@ -325,8 +325,9 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
 
 #ifdef CPP_MPI
    DO ispin = jsp_start,jsp_end
-      CALL mpi_col_den(fmpi,sphhar,atoms,stars,vacuum,input,noco,ispin,dosdummy,vacdosdummy,&
-                       resultsdummy,denCoeffs,denCoeffsOffdiag,den)
+      call judft_bug("MPI_col_den incorrect in dfpt_cdnval")
+      !CALL mpi_col_den(fmpi,sphhar,atoms,stars,vacuum,input,noco,ispin,dosdummy,vacdosdummy,&
+      !                 resultsdummy,denCoeffs,denCoeffsOffdiag,den)
    END DO
 #endif
 

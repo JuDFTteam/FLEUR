@@ -15,7 +15,7 @@ MODULE m_mpi_col_den
 #endif
 CONTAINS
   SUBROUTINE mpi_col_den(fmpi,sphhar,atoms ,stars,vacuum,input,noco,jspin,dos,vacdos,&
-                         results,den,regCharges,mcd,slab,orbcomp,jDOS)
+                         results,den,mcd,slab,orbcomp,jDOS,hyperfine)
 
     USE m_types
     USE m_constants
@@ -44,10 +44,9 @@ CONTAINS
     ! ..
     ! ..  Array Arguments ..
 
-    TYPE (t_orb),               INTENT(INOUT) :: orb
     TYPE (t_dos),               INTENT(INOUT) :: dos
     TYPE (t_vacdos),            INTENT(INOUT) :: vacdos
-    TYPE (t_regionCharges), OPTIONAL, INTENT(INOUT) :: regCharges
+    !TYPE (t_regionCharges), OPTIONAL, INTENT(INOUT) :: regCharges
     TYPE (t_mcd),       OPTIONAL, INTENT(INOUT) :: mcd
     TYPE (t_slab),      OPTIONAL, INTENT(INOUT) :: slab
     TYPE (t_orbcomp),   OPTIONAL, INTENT(INOUT) :: orbcomp
@@ -85,7 +84,7 @@ CONTAINS
 
     
     
-    
+#if false    
     IF (PRESENT(regCharges)) THEN
       !--> ener & sqal
       n=4*atoms%ntype
@@ -107,7 +106,7 @@ CONTAINS
          DEALLOCATE (r_b)
        END IF
     END IF
-
+#endif
     !collect DOS stuff
     n = SIZE(dos%jsym,1)*SIZE(dos%jsym,2)
     ALLOCATE(i_b(n))
@@ -234,77 +233,20 @@ CONTAINS
 
        n=atoms%nlod*atoms%ntype
        ALLOCATE (r_b(n))
+#if false       
        IF (PRESENT(regCharges)) THEN
          CALL MPI_ALLREDUCE(regCharges%enerlo(:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
          CALL dcopy(n, r_b, 1, regCharges%enerlo(:,:,jspin), 1)
          CALL MPI_ALLREDUCE(regCharges%sqlo(:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
          CALL dcopy(n, r_b, 1, regCharges%sqlo(:,:,jspin), 1)
        END IF
+#endif       
        DEALLOCATE (r_b)
 
        
     ENDIF
 
-    ! ->  Now the SOC - stuff: orb, orblo and orblo
-    IF (noco%l_soc) THEN
-       ! orb
-       n=(atoms%lmaxd+1)*(2*atoms%lmaxd+1)*atoms%ntype
-       ALLOCATE (r_b(n))
-       CALL MPI_ALLREDUCE(orb%uu(:,:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION, MPI_SUM,MPI_COMM_WORLD,ierr)
-       CALL dcopy(n, r_b, 1, orb%uu(:,:,:,jspin), 1)
-       CALL MPI_ALLREDUCE(orb%dd(:,:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION, MPI_SUM,MPI_COMM_WORLD,ierr)
-       CALL dcopy(n, r_b, 1, orb%dd(:,:,:,jspin), 1)
-       CALL MPI_ALLREDUCE(orb%ud(:,:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION, MPI_SUM,MPI_COMM_WORLD,ierr)
-       CALL dcopy(n, r_b, 1, orb%ud(:,:,:,jspin), 1)
-       CALL MPI_ALLREDUCE(orb%du(:,:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION, MPI_SUM,MPI_COMM_WORLD,ierr)
-       CALL dcopy(n, r_b, 1, orb%du(:,:,:,jspin), 1)
-       DEALLOCATE (r_b)
-
-       ALLOCATE (c_b(n))
-       CALL MPI_ALLREDUCE(orb%uup(:,:,:,jspin),c_b,n,MPI_DOUBLE_COMPLEX, MPI_SUM,MPI_COMM_WORLD,ierr)
-       CALL zcopy(n, c_b, 1, orb%uup(:,:,:,jspin), 1)
-       CALL MPI_ALLREDUCE(orb%ddp(:,:,:,jspin),c_b,n,MPI_DOUBLE_COMPLEX, MPI_SUM,MPI_COMM_WORLD,ierr)
-       CALL zcopy(n, c_b, 1, orb%ddp(:,:,:,jspin), 1)
-       CALL MPI_ALLREDUCE(orb%uum(:,:,:,jspin),c_b,n,MPI_DOUBLE_COMPLEX, MPI_SUM,MPI_COMM_WORLD,ierr)
-       CALL zcopy(n, c_b, 1, orb%uum(:,:,:,jspin), 1)
-       CALL MPI_ALLREDUCE(orb%ddm(:,:,:,jspin),c_b,n,MPI_DOUBLE_COMPLEX, MPI_SUM,MPI_COMM_WORLD,ierr)
-       CALL zcopy(n, c_b, 1, orb%ddm(:,:,:,jspin), 1)
-       DEALLOCATE (c_b)
-
-       n = atoms%nlod * (2*atoms%llod+1) * atoms%ntype
-       ALLOCATE (r_b(n))
-       CALL MPI_ALLREDUCE(orb%uulo(:,:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION, MPI_SUM,MPI_COMM_WORLD,ierr)
-       CALL dcopy(n, r_b, 1, orb%uulo(:,:,:,jspin), 1)
-       CALL MPI_ALLREDUCE(orb%dulo(:,:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION, MPI_SUM,MPI_COMM_WORLD,ierr)
-       CALL dcopy(n, r_b, 1, orb%dulo(:,:,:,jspin), 1)
-       DEALLOCATE (r_b)
-
-       ALLOCATE (c_b(n))
-       CALL MPI_ALLREDUCE(orb%uulop(:,:,:,jspin),c_b,n,MPI_DOUBLE_COMPLEX, MPI_SUM,MPI_COMM_WORLD,ierr)
-       CALL zcopy(n, c_b, 1, orb%uulop(:,:,:,jspin), 1)
-       CALL MPI_ALLREDUCE(orb%dulop(:,:,:,jspin),c_b,n,MPI_DOUBLE_COMPLEX, MPI_SUM,MPI_COMM_WORLD,ierr)
-       CALL zcopy(n, c_b, 1, orb%dulop(:,:,:,jspin), 1)
-       CALL MPI_ALLREDUCE(orb%uulom(:,:,:,jspin),c_b,n,MPI_DOUBLE_COMPLEX, MPI_SUM,MPI_COMM_WORLD,ierr)
-       CALL zcopy(n, c_b, 1, orb%uulom(:,:,:,jspin), 1)
-       CALL MPI_ALLREDUCE(orb%dulom(:,:,:,jspin),c_b,n,MPI_DOUBLE_COMPLEX, MPI_SUM,MPI_COMM_WORLD,ierr)
-       CALL zcopy(n, c_b, 1, orb%dulom(:,:,:,jspin), 1)
-       DEALLOCATE (c_b)
-
-       n = atoms%nlod * atoms%nlod * (2*atoms%llod+1) * atoms%ntype
-       ALLOCATE (r_b(n))
-       CALL MPI_ALLREDUCE(orb%z(:,:,:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION, MPI_SUM,MPI_COMM_WORLD,ierr)
-       CALL dcopy(n, r_b, 1, orb%z(:,:,:,:,jspin), 1)
-       DEALLOCATE (r_b)
-
-       ALLOCATE (c_b(n))
-       CALL MPI_ALLREDUCE(orb%p(:,:,:,:,jspin),c_b,n,MPI_DOUBLE_COMPLEX, MPI_SUM,MPI_COMM_WORLD,ierr)
-       CALL zcopy(n, c_b, 1, orb%p(:,:,:,:,jspin), 1)
-       CALL MPI_ALLREDUCE(orb%m(:,:,:,:,jspin),c_b,n,MPI_DOUBLE_COMPLEX, MPI_SUM,MPI_COMM_WORLD,ierr)
-       CALL zcopy(n, c_b, 1, orb%m(:,:,:,:,jspin), 1)
-       DEALLOCATE (c_b)
-
-    ENDIF
-
+    
     ! -> Collect the noco stuff:
     IF ( noco%l_noco .AND. jspin.EQ.1 ) THEN
 

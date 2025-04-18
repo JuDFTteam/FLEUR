@@ -22,9 +22,11 @@ module m_types_denmatrix
 contains
 
    subroutine mpi_collect(this)
+      use mpi
       implicit none
       class(t_denmatrix), intent(inout):: this
 #ifdef CPP_MPI
+      integer:: ierr
       CALL MPI_ALLREDUCE(MPI_IN_PLACE, this%mat, size(this%mat), MPI_DOUBLE_COMPLEX, MPI_SUM, MPI_COMM_WORLD, ierr)
 #endif
    end subroutine
