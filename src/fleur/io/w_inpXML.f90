@@ -172,6 +172,8 @@ CONTAINS
          mixingScheme = 'Broyden2'
       CASE (7)
          mixingScheme = 'Anderson'
+      CASE (9)
+         mixingScheme = 'Pulay'
       CASE DEFAULT
          mixingScheme = 'errorUnknownMixing'
       END SELECT
