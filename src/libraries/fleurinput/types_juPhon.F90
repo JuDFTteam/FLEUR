@@ -28,7 +28,7 @@ MODULE m_types_juPhon
       !REAL    :: eDiffcut  = 1e-7   ! Cutoff for energy differences
       REAL    :: eDiffcut  = 1e-5   ! Cutoff for energy differences
       REAL    :: fDiffcut  = 1e-7    ! Cutoff for occupation differences
-      REAL    :: qlim      = 1/16    ! qlim value
+      REAL    :: qlim      = 1./16     ! qlim value
       REAL    :: qpt_ph(3)           ! Debug q
 
       LOGICAL :: e1term = .TRUE.     ! Calculate the eigenenergy response
@@ -423,8 +423,13 @@ CONTAINS
         qvec_ext(:) = 0.0
         qvec_int(:) = 0.0
         qvec_ext(iDir) = this%qlim
+        !print*,'cell%bmat',cell%bmat
+        !print*,'cell%amat',cell%amat
         call inv3(cell%bmat,inv_bmat(:,:),det)
         qvec_int = matmul(qvec_ext,transpose(inv_bmat))
+        !print*,"qvec_int",qvec_int
+        !print*,"qvec_int new",matmul(cell%amat,qvec_ext)
+
         this%qvec_efield(iDir,:) = qvec_int
       END DO
 

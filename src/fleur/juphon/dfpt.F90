@@ -34,6 +34,8 @@ CONTAINS
       USE m_npy
       use m_inv3
       USE m_dfpt_dielecten
+      USE m_dfpt_born_effcharge
+      use m_dfpt_vefield
 
       TYPE(t_mpi),        INTENT(IN)     :: fmpi
       TYPE(t_fleurinput), INTENT(IN)     :: fi
@@ -58,7 +60,7 @@ CONTAINS
       TYPE(t_potden)                :: grvextdummy, imagrhodummy, rho_nosym, vTot_nosym, vext_dummy, vC_dummy
       TYPE(t_potden)                :: grRho3(3), grVtot3(3), grVC3(3), grVext3(3)
       TYPE(t_potden)                :: grgrVC3x3(3,3), grgrvextnum(3,3)
-      TYPE(t_potden)                :: denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, vTot1m, vTot1mIm ! q-quantities
+      TYPE(t_potden)                :: denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, vTot1m, vTot1mIm  ! q-quantities
       TYPE(t_potden), ALLOCATABLE   :: den_elph(:) , denIm_elph(:)
       TYPE(t_results)               :: q_results, results1, qm_results, results1m
       TYPE(t_kpts)                  :: qpts_loc
@@ -111,8 +113,13 @@ CONTAINS
 
       !For e-field:
       COMPLEX, ALLOCATABLE            :: diel_tensor(:,:) !sdall i put this in an if statement?
-      real                  :: qvec_ext(3),qvec_int(3),det,inv_bmat(3,3),qvec_norm(3)
+      real                  :: qvec_int(3)
       TYPE(t_kpts)         :: qintpts
+      COMPLEX,ALLOCATABLE :: born_eff_charge(:,:,:)
+      COMPLEX,ALLOCATABLE :: born_eff_charge_contributions(:,:,:,:)
+
+      INTEGER              :: q_start, q_stop
+      REAL, ALLOCATABLE                 :: qvecs(:,:)
 
       INTEGER :: ngdp, iSpin, iQ, iDir, iDtype, nspins, zlim, iVac, lh, iDir2, sym_count
       INTEGER :: iStar, xInd, yInd, zInd, q_eig_id, ikpt, ierr, qm_eig_id, iArray
@@ -219,11 +226,22 @@ CONTAINS
          !ALLOCATE(sym_list(fi_fullsym%sym%nop))
          !sym_list = 0
       ELSE
-         ! Read qpoints from the juPhon qlist in inp.xml
+         IF (fi%juPhon%l_borneffcharge) THEN
+            ALLOCATE(qvecs(3,3))
+            qvecs = fi%juPhon%qvec_efield
+         ELSE 
+            ALLOCATE(qvecs(3,SIZE(fi%juPhon%qvec,2)))
+            qvecs = fi%juPhon%qvec
+         END IF 
          qpts_loc = qpts
-         qpts_loc%bk(:, :SIZE(fi%juPhon%qvec,2)) = fi%juPhon%qvec
-         ALLOCATE(q_list(SIZE(fi%juPhon%qvec,2)))
-         q_list = (/(iArray, iArray=1,SIZE(fi%juPhon%qvec,2), 1)/)
+         qpts_loc%bk(:, :SIZE(qvecs,2)) = qvecs
+         ALLOCATE(q_list(SIZE(qvecs,2)))
+         q_list = (/(iArray, iArray=1,SIZE(qvecs,2), 1)/)
+         !fi%juPhon%qvec= fi%juPhon%qvec_efield
+         !   qpts_loc = qpts
+         !   qpts_loc%bk(:, :SIZE(fi%juPhon%qvec,2)) = fi%juPhon%qvec
+         !   ALLOCATE(q_list(SIZE(fi%juPhon%qvec,2)))
+         !   q_list = (/(iArray, iArray=1,SIZE(fi%juPhon%qvec,2), 1)/)
       END IF
 
       ! Generate the gradients of the density and the various potentials, that will be used at different points in the programm.
@@ -329,6 +347,11 @@ CONTAINS
          END DO
       END IF
 
+
+      !call fi%juPhon%init(fi%cell)
+
+
+
       ! Coulomb/Effective potential gradients
       DO iDir = 1, 3
          CALL sh_to_lh(fi_nosym%sym, fi_nosym%atoms, sphhar_nosym, SIZE(rho_nosym%mt,4), 2, grrhodummy(:, :, :, :, iDir), grRho3(iDir)%mt, imagrhodummy%mt)
@@ -406,6 +429,7 @@ CONTAINS
       dyn_mat = cmplx(0.0,0.0)
       ALLOCATE(sym_dyn_mat(SIZE(q_list),3*fi_nosym%atoms%ntype,3*fi_nosym%atoms%ntype))
       sym_dyn_mat = cmplx(0.0,0.0)
+      !l_dfpt_scf = .FALSE.
       IF (l_dfpt_scf) THEN
          ! Do the self-consistency calculations for each specified q, for all atoms and for
          ! all three cartesian directions.
@@ -416,7 +440,26 @@ CONTAINS
             ALLOCATE(den_elph(3*fi_nosym%atoms%ntype))
             ALLOCATE(denIm_elph(3*fi_nosym%atoms%ntype))
          END IF 
+         !print*,"q+"
+         !CALL dfpt_vefield_int(fi,stars,sphhar,fmpi,rho,1)
+         !print*,"stars%center",stars%center
+         !print*,"q-"
+         !CALL dfpt_vefield_int(fi,stars,sphhar,fmpi,rho,-1)
+         !print*,"stars%center",stars%center
+         !CALL dfpt_vefield_realspace_MT(fi,stars,sphhar,fmpi,rho,1)
+         
+         !stop
+         !do iDtype= 1,fi_nosym%atoms%ntype
+         !!   print*,"fi_nosym%atoms%taual(:,iDtype)",fi_nosym%atoms%taual(:,iDtype)
+         !   print*,"fi_nosym%atoms%pos(:,iDtype)",fi_nosym%atoms%pos(:,iDtype)
+         !end do
+         !stop
          IF (fi%juPhon%l_efield) THEN
+            ALLOCATE(born_eff_charge(fi_nosym%atoms%ntype,3,3))
+            ALLOCATE(born_eff_charge_contributions(fi_nosym%atoms%ntype,3,3,1+fi_nosym%atoms%ntype))
+            born_eff_charge = CMPLX(0.0)
+            !print*,"born_eff_charge",born_eff_charge(:,:,1)
+            born_eff_charge_contributions = CMPLX(0.0)
             ALLOCATE(diel_tensor(3,3))
             diel_tensor = CMPLX(0,0)
             IF (fmpi%irank==0) WRITE(*,*) "Scf calculation for electric field perturbation"
@@ -424,13 +467,8 @@ CONTAINS
                !Define "qlim"-vector in internal coordinates
                dfpt_tag = ''
                WRITE(dfpt_tag,'(a1,i0,a2,i0)') 'q', 1, '_j', iDir
-               qvec_ext(:) = 0.0
-               qvec_int(:) = 0.0
-               qvec_ext(iDir) = fi%juPhon%qlim
-               call inv3(fi%cell%bmat,inv_bmat(:,:),det)
-               qvec_int = matmul(qvec_ext,transpose(inv_bmat))
+               qvec_int = fi%juPhon%qvec_efield(iDir,:)
                kqpts = fi%kpts
-               ! Modify this from kpts only in DFPT case.
                DO ikpt = 1, fi%kpts%nkpt
                   kqpts%bk(:, ikpt) = kqpts%bk(:, ikpt) + qvec_int
                END DO
@@ -482,17 +520,45 @@ CONTAINS
                                     denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, MERGE(sigma_ext,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir==3), &
                                     MERGE(sigma_coul,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir==3))
                CALL timestop("Sternheimer")
-               IF (fmpi%irank==0) WRITE(*,*) '-------------------------'   
-               CALL dfpt_dielecten_HF_int(fi_nosym,stars_nosym,starsq,sphhar_nosym,fmpi_nosym,denIn1,denIn1Im,results_nosym, results1,diel_tensor(iDir,:),iDir,1)
+               IF (fmpi%irank==0) WRITE(*,*) '-------------------------'  
+               CALL dfpt_dielecten_HF_int(fi_nosym,stars_nosym,starsq,sphhar_nosym,fmpi_nosym,denIn1,denIn1Im,results_nosym, results1,diel_tensor(iDir,:),rho,iDir,1)
+               IF (fi%juPhon%l_borneffcharge) THEN
+                  !print*,"before bornfeffcharge"
+                  !print*,"born_eff_charge(:,:,iQ)",born_eff_charge(:,:,iDir)
+                  CALL dfpt_born_eff_charge_element_nef(fi_nosym,stars_nosym,starsq,sphhar_nosym,fmpi_nosym,rho_nosym,denIn1,denIn1Im,grRho3(iDir),born_eff_charge(:,:,iDir),born_eff_charge_contributions(:,:,iDir,:),iDir,1,hybdat_nosym,xcpot_nosym,nococonv_nosym,vTot_nosym)
+                  !stop
+               END IF
             END DO
             CALL timestart("diel_tensor")
             IF (fmpi%irank==0) THEN
                WRITE(*,*) "Scf calculation for electric field perturbation finished"
                CALL dfpt_dielecten_final(fi_nosym,diel_tensor(:,:))
             END IF 
+
+            IF (fi%juPhon%l_borneffcharge) THEN
+               CALL dfpt_born_eff_charge_final(fi,born_eff_charge,born_eff_charge_contributions(:,:,:,:))
+            END IF
+
+            DEALLOCATE(born_eff_charge)
+            DEALLOCATE(born_eff_charge_contributions)
          ELSE IF (fi%juPhon%l_phonon) THEN
+
+            ALLOCATE(born_eff_charge(fi_nosym%atoms%ntype,3,3))
+            ALLOCATE(born_eff_charge_contributions(fi_nosym%atoms%ntype,3,3,4+fi_nosym%atoms%ntype))
+            born_eff_charge = CMPLX(0.0)
+            born_eff_charge_contributions = CMPLX(0.0)
             IF (fmpi%irank==0) WRITE(*,*) "Scf calculation for phonon perturbation"
-            DO iQ = fi%juPhon%startq, MERGE(fi%juPhon%stopq,SIZE(q_list),fi%juPhon%stopq/=0)
+            IF (fi%juPhon%l_borneffcharge) WRITE(*,*)"for Born effective charge" 
+
+            IF (fi%juPhon%l_borneffcharge) THEN
+               q_start = 1
+               q_stop  = 3
+            ELSE
+               q_start = fi%juPhon%startq
+               q_stop = MERGE(fi%juPhon%stopq,SIZE(q_list),fi%juPhon%stopq/=0)
+            END IF 
+
+            DO iQ = q_start, q_stop
                CALL timestart("q-point")
                !IF (.NOT.fi%juPhon%qmode==0) THEN
                !   CALL make_sym_list(fi_fullsym%sym, qpts_loc%bk(:,q_list(iQ)),sym_count,sym_list)
@@ -632,6 +698,10 @@ CONTAINS
                         CALL timestop("Sternheimer")
                      END IF
    
+                     IF (fi%juPhon%l_borneffcharge) THEN
+                        CALL dfpt_born_eff_charge_element(fi_nosym,stars_nosym,starsq,sphhar_nosym,fmpi_nosym,rho_nosym,denIn1,denIn1Im,grRho3(iDir),born_eff_charge(iDtype,iDir,iQ),born_eff_charge_contributions(iDtype,iDir,iQ,:),iDir,iDtype,iQ,1)
+                     END IF
+
                      IF (fmpi%irank==0) WRITE(*,*) '-------------------------'
                      CALL timestart("Dynmat")
                      ! Once the first order quantities are converged, we can construct all
@@ -671,9 +741,13 @@ CONTAINS
    
 #if defined(CPP_MPI)
                   CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
-#endif
+#endif         
                END DO
-   
+
+               IF (fi%juPhon%l_borneffcharge) THEN
+                  CALL dfpt_born_eff_charge_final(fi,born_eff_charge,born_eff_charge_contributions(:,:,:,:))
+               END IF
+               !stop
                IF (fmpi%irank==0) THEN
                   WRITE(*,*) '-------------------------'
                   CALL timestart("Dynmat diagonalization")
@@ -696,6 +770,8 @@ CONTAINS
                &                                                q_list(iQ),eig_id,q_eig_id,l_real,den_elph,denIm_elph,eigenVecs,eigenVals)
                IF (fmpi%irank==0) DEALLOCATE(eigenVals, eigenVecs, eigenFreqs, E2ndOrdII)
             END DO
+            DEALLOCATE(born_eff_charge)
+            DEALLOCATE(born_eff_charge_contributions)
          END IF
       END IF
       ! If the Dynmats-Files were already created, we can read them in and do postprocessing.
