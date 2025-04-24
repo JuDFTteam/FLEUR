@@ -550,7 +550,7 @@ CONTAINS
    END SUBROUTINE matrixsplit
 
    SUBROUTINE savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, fmpi , sym, cell, &
-                     noco, nococonv,score, potnorm, denName, denf, denA1, denA2, denA3,denf_im)
+                     noco, nococonv,score, potnorm, denName, denf, denA1, denA2, denA3,denf_im,name_string)
       USE m_outcdn
       USE m_xsf_io
 #ifdef CPP_MPI
@@ -602,6 +602,7 @@ CONTAINS
       TYPE(t_potden),    OPTIONAL, INTENT(IN) :: denA2
       TYPE(t_potden),    OPTIONAL, INTENT(IN) :: denA3
       TYPE(t_potden),    OPTIONAL, INTENT(IN) :: denf_im
+      character(len=20), INTENT(IN),OPTIONAL  :: name_string
 
       REAL    :: tec, qint, phi0, angss
       INTEGER :: i, j, ix, iy, iz, na, nplo, iv, iflag, nfile
@@ -814,7 +815,7 @@ CONTAINS
 
 
 
-         WRITE (oUnit,*) "checkdopall in savxsf"
+         !WRITE (oUnit,*) "checkdopall in savxsf"
          ! find out what the problem ist
          CALL checkDOPALL(input, sphhar, stars,atoms, sym, vacuum, cell,denf,1,denf_im) 
          !print*,"sum(denf%pw)",sum(denf%pw)
@@ -1078,7 +1079,7 @@ CONTAINS
    END SUBROUTINE matrixplot
 
    SUBROUTINE procplot(stars, atoms, sphhar, sliceplot,vacuum, input, fmpi , sym, cell, &
-                       noco, nococonv,denmat, plot_const,denmat_im)
+                       noco, nococonv,denmat, plot_const,denmat_im,name_string)
 
       ! According to iplot, we process which exact plots we make after we assured
       ! that we do any. n-th digit (from the back) of iplot ==1 --> plot with
@@ -1102,6 +1103,7 @@ CONTAINS
       TYPE(t_potden),    INTENT(IN)    :: denmat
       INTEGER,           INTENT(IN)    :: plot_const
       TYPE(t_potden),    INTENT(IN), OPTIONAL    :: denmat_im
+      character(len=20), INTENT(IN),OPTIONAL  :: name_string
 
       INTEGER            :: i
       REAL               :: factor
@@ -1115,10 +1117,14 @@ CONTAINS
          factor = 1.0
          IF(sliceplot%slice) denName='slice'
          IF(.NOT.sliceplot%slice) THEN
-            IF (PRESENT(denmat_im)) THEN
-               denName = 'den1'
-            ELSE 
-               denName = 'denIn'
+            IF (PRESENT(name_string)) THEN
+               denName = name_string
+            ELSE
+               IF (PRESENT(denmat_im)) THEN
+                  denName = 'den1'
+               ELSE 
+                  denName = 'denIn'
+               END IF 
             END IF 
          END IF
          score = .FALSE.
@@ -1248,10 +1254,16 @@ CONTAINS
       IF (plot_const.EQ.2) THEN
          IF(any(noco%l_alignMT)) CALL juDFT_warn("l_RelaxMT=T and plotting potentials can lead to wrong potentials visualized inside the MT",calledby="plot.f90")
          factor = 2.0
-         IF (PRESENT(denmat_im)) THEN
-            denName = 'vTot1'
+         !print*,"dsadsd"
+         !print*,name_string
+         IF (PRESENT(name_string)) THEN
+            denName = name_string
          ELSE
-            denName = 'vTot'
+            IF (PRESENT(denmat_im)) THEN
+               denName = 'vTot1'
+            ELSE
+               denName = 'vTot'
+            END IF
          END IF
          score = .FALSE.
          potnorm = .TRUE.
@@ -1315,7 +1327,7 @@ CONTAINS
    END SUBROUTINE procplot
 
    SUBROUTINE makeplots(stars, atoms, sphhar, vacuum, input, fmpi,   sym, cell, &
-                        noco, nococonv,denmat, plot_const, sliceplot,denmat_im)
+                        noco, nococonv,denmat, plot_const, sliceplot,denmat_im,name_string)
       USE m_Relaxspinaxismagn
       ! Checks, based on the iplot switch that is given in the input, whether or
       ! not plots should be made. Before the plot command is processed, we check
@@ -1340,6 +1352,7 @@ CONTAINS
       INTEGER,           INTENT(IN)    :: plot_const
       TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
       TYPE(t_potden),    INTENT(INOUT), OPTIONAL :: denmat_im
+      character(len=20), INTENT(IN),OPTIONAL  :: name_string
       LOGICAL :: allowplot
       INTEGER :: ierr
 #ifdef CPP_MPI
@@ -1358,8 +1371,13 @@ CONTAINS
       IF (allowplot) THEN
          CALL toGlobalSpinFrame(noco, nococonv, vacuum, sphhar, stars, sym,   cell, input, atoms, Denmat,fmpi,.true.)
          CALL checkplotinp(fmpi)
+         IF (PRESENT(name_string)) THEN
          CALL procplot(stars, atoms, sphhar,sliceplot, vacuum, input,fmpi,   sym, cell, &
-                       noco, nococonv, denmat, plot_const,denmat_im)
+                       noco, nococonv, denmat, plot_const,denmat_im,name_string)
+         ELSE
+            CALL procplot(stars, atoms, sphhar,sliceplot, vacuum, input,fmpi,   sym, cell, &
+            noco, nococonv, denmat, plot_const,denmat_im)
+         END IF
          CALL toLocalSpinFrame(fmpi,vacuum, sphhar, stars, sym,   cell, noco, nococonv, input, atoms,.false., denmat,.true.)
       END IF
       CALL timestop("Plotting iplot plots")

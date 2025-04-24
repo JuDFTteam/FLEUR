@@ -303,7 +303,7 @@ CONTAINS
             CALL dfptvefield%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
             CALL dfptvefieldimag%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
 
-            CALL dfpt_vefield(fi%juphon,starsq,fi%atoms,fi%sym,sphhar,fi%cell,dfptvefield,dfptvefieldimag,iDir,-1)
+            CALL dfpt_vefield(fi%juphon,starsq,fi%atoms,fi%sym,sphhar,fi%cell,dfptvefield,dfptvefieldimag,iDir,1)
 
             print*,"sum(dfptvefield%pw)",sum(dfptvefield%pw)
             CALL checkDOPALL(fi%input, sphhar, starsq,fi%atoms, fi%sym, fi%vacuum, fi%cell,dfptvefield,1, dfptvefieldimag)
