@@ -766,8 +766,14 @@ CONTAINS
                !   DEALLOCATE(sym_dynvec)
                !END IF
                CALL timestop("q-point")
-               IF (fi_nosym%juphon%l_elph) CALL dfpt_elph_mat(fi_nosym,xcpot_nosym,sphhar_nosym,stars_nosym,nococonv_nosym,qpts,fmpi,results_nosym, q_results, results1, enpara_nosym,hybdat_nosym,rho_nosym,vTot_nosym,grRho3,grVtot3, &
-               &                                                q_list(iQ),eig_id,q_eig_id,l_real,den_elph,denIm_elph,eigenVecs,eigenVals)
+               IF (fi_nosym%juphon%l_elph) THEN 
+                  CALL dfpt_elph_mat(fi_nosym,xcpot_nosym,sphhar_nosym,stars_nosym,nococonv_nosym,qpts_loc,fmpi,results_nosym, q_results, results1, enpara_nosym,hybdat_nosym,rho_nosym,vTot_nosym,grRho3,grVtot3, &
+                  &                                                q_list(iQ),eig_id,q_eig_id,l_real,den_elph,denIm_elph,eigenVecs,eigenVals)
+                  DO iDir = 1 , 3*fi_nosym%atoms%nat ! previously here was ntypes for no symmetry they are equal 
+                     CALL den_elph(iDir)%reset_dfpt()
+                     CALL denIm_elph(iDir)%reset_dfpt()
+                  END DO 
+               END IF 
                IF (fmpi%irank==0) DEALLOCATE(eigenVals, eigenVecs, eigenFreqs, E2ndOrdII)
             END DO
             DEALLOCATE(born_eff_charge)
@@ -991,14 +997,14 @@ CONTAINS
             END DO !y-loop
          END DO !z-loop
 
-         CALL save_npy("sym_on_rhopw.npy",rho%pw)
-         CALL save_npy("sym_off_rhopw.npy",rho_nosym%pw)
-         CALL save_npy("sym_on_rhomt.npy",rho%mt)
-         CALL save_npy("sym_off_rhomt.npy",rho_nosym%mt)
-         CALL save_npy("sym_on_vpw.npy",vTot%pw)
-         CALL save_npy("sym_off_vpw.npy",vTot_nosym%pw)
-         CALL save_npy("sym_on_vmt.npy",vTot%mt)
-         CALL save_npy("sym_off_vmt.npy",vTot_nosym%mt)
+!         CALL save_npy("sym_on_rhopw.npy",rho%pw)
+!         CALL save_npy("sym_off_rhopw.npy",rho_nosym%pw)
+!         CALL save_npy("sym_on_rhomt.npy",rho%mt)
+!         CALL save_npy("sym_off_rhomt.npy",rho_nosym%mt)
+!         CALL save_npy("sym_on_vpw.npy",vTot%pw)
+!         CALL save_npy("sym_off_vpw.npy",vTot_nosym%pw)
+!         CALL save_npy("sym_on_vmt.npy",vTot%mt)
+!         CALL save_npy("sym_off_vmt.npy",vTot_nosym%mt)
       END IF
    END SUBROUTINE
 
@@ -1141,32 +1147,32 @@ CONTAINS
          END DO !y-loop   
       END IF!!!!!
       
-      IF (fi_nosym%input%film)CALL save_npy("rhovac.npy",rho_nosym%vac(:,:,:,1))
-      IF (fi_nosym%input%film)CALL save_npy("rhogr1vac.npy",grRho3(1)%vac(:,:,:,1))
-      IF (fi_nosym%input%film)CALL save_npy("rhogr2vac.npy",grRho3(2)%vac(:,:,:,1))
-      IF (fi_nosym%input%film)CALL save_npy("rhogr3vac.npy",grRho3(3)%vac(:,:,:,1))
-      CALL save_npy("rhogr3pw.npy",grRho3(3)%pw(:,1))
-      IF (fi_nosym%input%film)CALL save_npy("vcgr1vac.npy",grVC3(1)%vac(:,:,:,1))
-      IF (fi_nosym%input%film)CALL save_npy("vcgr2vac.npy",grVC3(2)%vac(:,:,:,1))
-      IF (fi_nosym%input%film)CALL save_npy("vcgr3vac.npy",grVC3(3)%vac(:,:,:,1))
-      IF (fi_nosym%input%film)CALL save_npy("vextgr1vac.npy",grVext3(1)%vac(:,:,:,1))
-      IF (fi_nosym%input%film)CALL save_npy("vextgr2vac.npy",grVext3(2)%vac(:,:,:,1))
-      IF (fi_nosym%input%film)CALL save_npy("vextgr3vac.npy",grVext3(3)%vac(:,:,:,1))
-      CALL save_npy("vextgr1pw.npy",grVext3(1)%pw(:,1))
-      CALL save_npy("vextgr2pw.npy",grVext3(2)%pw(:,1))
-      CALL save_npy("vextgr3pw.npy",grVext3(3)%pw(:,1))
-      IF (fi_nosym%input%film)CALL save_npy("vtotgr1vac.npy",grVtot3(1)%vac(:,:,:,1))
-      IF (fi_nosym%input%film)CALL save_npy("vtotgr2vac.npy",grVtot3(2)%vac(:,:,:,1))
-      IF (fi_nosym%input%film)CALL save_npy("vtotgr3vac.npy",grVtot3(3)%vac(:,:,:,1))
-      IF (fi_nosym%input%film)CALL save_npy("vtotgr1vacnum.npy",grVtotvac(:,:,:,1))
-      IF (fi_nosym%input%film)CALL save_npy("vtotgr2vacnum.npy",grVtotvac(:,:,:,2))
-      IF (fi_nosym%input%film)CALL save_npy("vtotgr3vacnum.npy",grVtotvac(:,:,:,3))
-      CALL save_npy("vtotgr1pw.npy",grVtot3(1)%pw(:,1))
-      CALL save_npy("vtotgr2pw.npy",grVtot3(2)%pw(:,1))
-      CALL save_npy("vtotgr3pw.npy",grVtot3(3)%pw(:,1))
-      CALL save_npy("vtotgr1pwnum.npy",grVtotpw(:,1))
-      CALL save_npy("vtotgr2pwnum.npy",grVtotpw(:,2))
-      CALL save_npy("vtotgr3pwnum.npy",grVtotpw(:,3))
+      ! IF (fi_nosym%input%film)CALL save_npy("rhovac.npy",rho_nosym%vac(:,:,:,1))
+      ! IF (fi_nosym%input%film)CALL save_npy("rhogr1vac.npy",grRho3(1)%vac(:,:,:,1))
+      ! IF (fi_nosym%input%film)CALL save_npy("rhogr2vac.npy",grRho3(2)%vac(:,:,:,1))
+      ! IF (fi_nosym%input%film)CALL save_npy("rhogr3vac.npy",grRho3(3)%vac(:,:,:,1))
+      ! CALL save_npy("rhogr3pw.npy",grRho3(3)%pw(:,1))
+      ! IF (fi_nosym%input%film)CALL save_npy("vcgr1vac.npy",grVC3(1)%vac(:,:,:,1))
+      ! IF (fi_nosym%input%film)CALL save_npy("vcgr2vac.npy",grVC3(2)%vac(:,:,:,1))
+      ! IF (fi_nosym%input%film)CALL save_npy("vcgr3vac.npy",grVC3(3)%vac(:,:,:,1))
+      ! IF (fi_nosym%input%film)CALL save_npy("vextgr1vac.npy",grVext3(1)%vac(:,:,:,1))
+      ! IF (fi_nosym%input%film)CALL save_npy("vextgr2vac.npy",grVext3(2)%vac(:,:,:,1))
+      ! IF (fi_nosym%input%film)CALL save_npy("vextgr3vac.npy",grVext3(3)%vac(:,:,:,1))
+      ! CALL save_npy("vextgr1pw.npy",grVext3(1)%pw(:,1))
+      ! CALL save_npy("vextgr2pw.npy",grVext3(2)%pw(:,1))
+      ! CALL save_npy("vextgr3pw.npy",grVext3(3)%pw(:,1))
+      ! IF (fi_nosym%input%film)CALL save_npy("vtotgr1vac.npy",grVtot3(1)%vac(:,:,:,1))
+      ! IF (fi_nosym%input%film)CALL save_npy("vtotgr2vac.npy",grVtot3(2)%vac(:,:,:,1))
+      ! IF (fi_nosym%input%film)CALL save_npy("vtotgr3vac.npy",grVtot3(3)%vac(:,:,:,1))
+      ! IF (fi_nosym%input%film)CALL save_npy("vtotgr1vacnum.npy",grVtotvac(:,:,:,1))
+      ! IF (fi_nosym%input%film)CALL save_npy("vtotgr2vacnum.npy",grVtotvac(:,:,:,2))
+      ! IF (fi_nosym%input%film)CALL save_npy("vtotgr3vacnum.npy",grVtotvac(:,:,:,3))
+      ! CALL save_npy("vtotgr1pw.npy",grVtot3(1)%pw(:,1))
+      ! CALL save_npy("vtotgr2pw.npy",grVtot3(2)%pw(:,1))
+      ! CALL save_npy("vtotgr3pw.npy",grVtot3(3)%pw(:,1))
+      ! CALL save_npy("vtotgr1pwnum.npy",grVtotpw(:,1))
+      ! CALL save_npy("vtotgr2pwnum.npy",grVtotpw(:,2))
+      ! CALL save_npy("vtotgr3pwnum.npy",grVtotpw(:,3))
    END SUBROUTINE
 
 END MODULE m_dfpt

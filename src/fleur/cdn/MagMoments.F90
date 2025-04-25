@@ -70,7 +70,7 @@ module m_magmoments
               if (size(den%mt,4)==4) THEN
                  CALL intgr3(den%mt(:,0,iType,3),atoms%rmsh(:,iType),atoms%dx(iType),atoms%jri(iType),off1)
                  CALL intgr3(den%mt(:,0,iType,4),atoms%rmsh(:,iType),atoms%dx(iType),atoms%jri(iType),off2)
-                 off_diag=cmplx(off1,off2)*sfp_const
+                 off_diag=cmplx(off1,-off2)*sfp_const
                  l_offdiag=.true.
               endif
            endif   

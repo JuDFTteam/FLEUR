@@ -160,22 +160,21 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
                IF (twod) THEN
                   iStar=stars%i2g(x,y)
                   fct=stars%r2gphs(x,y)
+                  IF (iStar .EQ. 0) CYCLE
+                  if(stars%sk2(istar)>gCutoffInternal) CYCLE
                ELSE   
                   iStar = stars%ig(x, y, z)
                   fct=stars%rgphs(x, y, z)
-               endif   
+                  IF (iStar .EQ. 0) CYCLE
+                  l_insph = stars%sk3(iStar) .LE. gCutoffInternal
+                  IF (PRESENT(gzCutoff)) gvec = matmul(real([x,y,z]),cell%bmat) 
+                  IF (PRESENT(gzCutoff)) l_insph = (SQRT(DOT_PRODUCT(gvec(:2),gvec(:2))).LE.gCutoffInternal).AND.(ABS(gvec(3)).LE.gzCutoff)
+                  IF (.NOT.l_insph) CYCLE
+                  endif   
                if (present(firstderiv)) THEN
                   fct=fct*cmplx(0.0,-1*dot_product(firstderiv,matmul(real([x,y,z]),cell%bmat)))
                   if (present(secondderiv)) fct=fct*cmplx(0.0,-1*dot_product(secondderiv,matmul(real([x,y,z]),cell%bmat)))
                endif
-               IF (iStar .EQ. 0) CYCLE
-               l_insph = stars%sk3(iStar) .LE. gCutoffInternal
-               IF (PRESENT(gzCutoff)) gvec = matmul(real([x,y,z]),cell%bmat) 
-               IF (PRESENT(gzCutoff)) l_insph = (SQRT(DOT_PRODUCT(gvec(:2),gvec(:2))).LE.gCutoffInternal).AND.(ABS(gvec(3)).LE.gzCutoff)
-               IF (.NOT.l_insph) CYCLE
-               IF (twod) THEN
-                  if(stars%sk2(istar)>gCutoffInternal) CYCLE
-               ENDIF   
                xGrid = MODULO(x, this%dimensions(1))
                this%grid(xGrid + this%dimensions(1)*yGrid + layerDim*zGrid) = field(iStar)*fct
             END DO
@@ -218,13 +217,15 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
                IF(twod) THEN
                   iStar = stars%i2g(x, y)
                   fct = conjg(stars%r2gphs(x,y))
+                  IF (iStar .EQ. 0) CYCLE
+                  l_insph = (stars%sk2(stars%i2g(x, y)).LE.gCutoffInternal)
                ELSE   
                   iStar = stars%ig(x, y, z)
                   fct=CONJG(stars%rgphs(x, y, z))
+                  IF (iStar .EQ. 0) CYCLE
+                  l_insph = stars%sk3(iStar) .LE. gCutoffInternal
+                  IF (PRESENT(gzCutoff)) l_insph = (stars%sk2(stars%i2g(x, y)).LE.gCutoffInternal).AND.(stars%ab3(iStar).LE.gzCutoff)
                ENDIF   
-               IF (iStar .EQ. 0) CYCLE
-               l_insph = stars%sk3(iStar) .LE. gCutoffInternal
-               IF (PRESENT(gzCutoff)) l_insph = (stars%sk2(stars%i2g(x, y)).LE.gCutoffInternal).AND.(stars%ab3(iStar).LE.gzCutoff)
                IF (.NOT.l_insph) CYCLE
                xGrid = MODULO(x, this%dimensions(1))
                field(iStar) = field(iStar) + this%grid(xGrid + this%dimensions(1)*yGrid + layerDim*zGrid) * fct

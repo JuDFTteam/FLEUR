@@ -1,62 +1,94 @@
-MODULE m_writeout
-CONTAINS
+module m_writeout
+   use m_types_solver
+   private
+   type, extends(t_solver):: t_solver_debugout
+   contains
+      procedure        :: solve_gev => diag_writeout  !solver for generalized eigenvalue problem
+   end type
+   public :: t_solver_debugout, get_solver_debugout
+contains
+   function get_solver_debugout() result(solver)
+      type(t_solver_debugout), pointer::solver
+      allocate (solver)
+      solver%name = "debugout"
+      solver%available = .true.
+      solver%parallel = .true.
+      solver%serial = .true.
+      solver%generalized = .true.
+      solver%standard = .false.
+      solver%single_precision = .false.
+      solver%transform = .false.
+      solver%GPU = .false.
+   end function
 
-  SUBROUTINE diag_writeout(smat,hmat)
-    USE m_types_mat
-    USE m_judft
-    USE m_io_matrix
-    USE m_types_mpimat
+   subroutine diag_writeout(self, hmat, smat, ne, eig, zmat, ikpt)
+      !Dummy diver: does not solve actual eigenvalue problem but simply returns a set of orthogonal vectors.
+      !Could be useful for performance testing workloads in which we do not want to look at the diagonalization.
+      ! A Cholesky decomp is still done to be able to do a back transform so that the resulting vector are orthonormal
+      ! with respect to overlapp matrix.
+
+      use m_types_mat
+      use m_judft
+      use m_io_matrix
+      use m_types_mpimat
 #ifdef CPP_MPI
-    USE mpi
+      use mpi
 #endif
-    IMPLICIT NONE
-    CLASS(t_mat),INTENT(INOUT) :: hmat,smat
-    !small subroutine that does only wite the matrix to a file
-    INTEGER:: i,ii,irank,ierr,matsize
-    CHARACTER(len=20)::filename
+
+      implicit none
+      class(t_solver_debugout)      :: self
+      class(t_mat), intent(INOUT) :: hmat, smat
+      integer, intent(INOUT) :: ne
+      class(t_mat), allocatable, intent(OUT)   :: zmat
+      real, intent(OUT)   :: eig(:)
+      integer, intent(IN) :: ikpt
+
+      !small subroutine that does only wite the matrix to a file
+      integer:: i, ii, irank, ierr, matsize
+      character(len=20)::filename
 #ifdef CPP_MPI
-    CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,ierr)
+      call MPI_COMM_RANK(MPI_COMM_WORLD, irank, ierr)
 #else
-    irank=0
+      irank = 0
 #endif
 
-    SELECT TYPE(hmat)
-    TYPE is (t_mpimat)
-       matsize=hmat%global_size1
-    CLASS default
-       matsize=hmat%matsize1
-    END SELECT
-    !First write binary file
+      select type (hmat)
+      type is (t_mpimat)
+         matsize = hmat%global_size1
+      class default
+         matsize = hmat%matsize1
+      end select
+      !First write binary file
 #ifdef CPP_HDF
-    i=open_matrix(hmat%l_real,matsize,2,2,"hs_mat")
+      i = open_matrix(hmat%l_real, matsize, 2, 2, "hs_mat")
 #else
-    i=open_matrix(hmat%l_real,hmat%matsize1,1,2,"hs_mat")
+      i = open_matrix(hmat%l_real, hmat%matsize1, 1, 2, "hs_mat")
 #endif
-    CALL write_matrix(hmat,1,i)
-    CALL write_matrix(smat,2,i)
-    CALL close_matrix(i)
+      call write_matrix(hmat, 1, i)
+      call write_matrix(smat, 2, i)
+      call close_matrix(i)
 
-    !Now the formatted matrix
-    WRITE(filename,"(a,i0)") "hmat",irank
-    OPEN(999,file=TRIM(filename))
-    WRITE(filename,"(a,i0)") "smat",irank
-    OPEN(998,file=TRIM(filename))
-    DO i=1,hmat%matsize2
-       DO ii=1,hmat%matsize1
-          IF (hmat%l_real) THEN
-             WRITE(999,"(2i6,f15.6)") ii,i,hmat%data_r(ii,i)
-             WRITE(998,"(2i6,f15.6)") ii,i,smat%data_r(ii,i)
-          ELSE
-             WRITE(999,"(2i6,2f15.6)") ii,i,hmat%data_c(ii,i)
-             WRITE(998,"(2i6,2f15.6)") ii,i,smat%data_c(ii,i)
-          ENDIF
-       END DO
-    ENDDO
-    CLOSE(999)
-    CLOSE(998)
+      !Now the formatted matrix
+      write (filename, "(a,i0)") "hmat", irank
+      open (999, file=trim(filename))
+      write (filename, "(a,i0)") "smat", irank
+      open (998, file=trim(filename))
+      do i = 1, hmat%matsize2
+         do ii = 1, hmat%matsize1
+            if (hmat%l_real) then
+               write (999, "(2i6,f15.6)") ii, i, hmat%data_r(ii, i)
+               write (998, "(2i6,f15.6)") ii, i, smat%data_r(ii, i)
+            else
+               write (999, "(2i6,2f15.6)") ii, i, hmat%data_c(ii, i)
+               write (998, "(2i6,2f15.6)") ii, i, smat%data_c(ii, i)
+            end if
+         end do
+      end do
+      close (999)
+      close (998)
 #ifdef CPP_MPI
-    CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+      call MPI_BARRIER(MPI_COMM_WORLD, ierr)
 #endif
-    CALL judft_error("STOP in eigen_diag:debug_diag")
-  END SUBROUTINE diag_writeout
-END MODULE m_writeout
+      call judft_error("STOP in eigen_diag:debug_diag")
+   end subroutine diag_writeout
+end module m_writeout

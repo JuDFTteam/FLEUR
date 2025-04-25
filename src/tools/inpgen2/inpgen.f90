@@ -121,6 +121,8 @@ PROGRAM inpgen
 
       CALL judft_init(oUnit,.FALSE.)
 
+      CALL timestart("inpgen")
+
       !Start program and greet user
       CALL inpgen_help()
       call inpgen_version()
@@ -225,7 +227,7 @@ PROGRAM inpgen
          Call Cell%Init(Dot_product(Atoms%Volmts(:),Atoms%Neq(:)))
          call atoms%init(cell)
          Call Sym%Init(Cell,Input%Film)
-         CALL xcpot%init(atoms%ntype)
+         !CALL xcpot%init(atoms%ntype) ! This caused problems if xcpot is LibXC. Here it seems not needed. 
          CALL enpara%init_enpara(atoms,input%jspins,input%film,enparaXML)
       ELSEIF(judft_was_argument("-f")) THEN
          !read the input
@@ -440,6 +442,8 @@ PROGRAM inpgen
       CALL xsf_WRITE_atoms(55,atoms,input%film,cell%amat)
       CLOSE (55)
       CLOSE(oUnit)
+
+      CALL timestop("inpgen")
 
       CALL juDFT_end("All done")
 

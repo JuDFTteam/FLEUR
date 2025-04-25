@@ -3,83 +3,81 @@
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
-PROGRAM diag_test
-  USE m_judft
-  USE m_types_mat
-  USE m_types_mpimat
-  USE m_eigen_diag
-  USE m_io_matrix
-  USE m_hdf_tools
+program diag_test
+   use m_judft
+   use m_types_mat
+   use m_types_mpimat
+   use m_eigen_diag
+   use m_io_matrix
+   use m_hdf_tools
 #ifdef CPP_MPI
-  USE mpi
+   use mpi
 #endif
-  IMPLICIT NONE
+   implicit none
 
-  INTEGER            :: matsize,ne,mode,fid
-  INTEGER            :: err,isize
-  CHARACTER(len=50)  :: filename
-  CLASS(t_mat),ALLOCATABLE :: hmat,smat,ev
-  REAL,ALLOCATABLE   :: eig(:)
-  LOGICAL            :: l_exist,l_real
-  REAL               :: t1,t2
+   integer            :: matsize, ne, mode, fid
+   integer            :: err, isize
+   character(len=50)  :: filename
+   class(t_mat), allocatable :: hmat, smat, ev
+   real, allocatable   :: eig(:)
+   logical            :: l_exist, l_real
+   real               :: t1, t2
 #ifdef CPP_MPI
-  CALL MPI_INIT_THREAD(MPI_THREAD_FUNNELED,isize,err)
-  CALL MPI_COMM_SIZE(MPI_COMM_WORLD,isize,err)
-  IF (isize>1) THEN
-     ALLOCATE(t_mpimat::hmat)
-     ALLOCATE(t_mpimat::smat)
-     SELECT TYPE(hmat)
-     TYPE is (t_mpimat)
-        ALLOCATE(hmat%blacsdata)
-        hmat%blacsdata%mpi_com=MPI_COMM_WORLD
-        SELECT TYPE(smat)
-        TYPE is (t_mpimat)
-           smat%blacsdata=>hmat%blacsdata
-        END SELECT
-     END SELECT
-  END IF
+   call MPI_INIT_THREAD(MPI_THREAD_FUNNELED, isize, err)
+   call MPI_COMM_SIZE(MPI_COMM_WORLD, isize, err)
+   if (isize > 1) then
+      allocate (t_mpimat::hmat)
+      allocate (t_mpimat::smat)
+      select type (hmat)
+      type is (t_mpimat)
+         allocate (hmat%blacsdata)
+         hmat%blacsdata%mpi_com = MPI_COMM_WORLD
+         select type (smat)
+         type is (t_mpimat)
+            smat%blacsdata => hmat%blacsdata
+         end select
+      end select
+   end if
 #endif
-  IF (.NOT.ALLOCATED(hmat)) THEN
-     ALLOCATE(t_mat::hmat)
-     ALLOCATE(t_mat::smat)
-  ENDIF
+   if (.not. allocated(hmat)) then
+      allocate (t_mat::hmat)
+      allocate (t_mat::smat)
+   end if
 
+   ! get filename
+   filename = judft_string_for_argument("-file")
+   inquire (file=trim(filename)//".hdf", exist=l_exist)
+   if (.not. l_exist) call judft_error("File specified does not exist")
+   call hdf_init()
 
-  ! get filename
-  filename=judft_string_for_argument("-file")
-  INQUIRE(file=trim(filename)//".hdf",exist=l_exist)
-  IF (.NOT.l_exist) CALL judft_error("File specified does not exist")
-  call hdf_init()  
+   !l_real,matsize is actually only needed if file is created
+   fid = open_matrix(l_real, matsize, 2, 2, trim(filename))
 
-  !l_real,matsize is actually only needed if file is created
-  fid=open_matrix(l_real,matsize,2,2,trim(filename))
+   call read_matrix(hmat, 1, fid)
+   call read_matrix(smat, 2, fid)
+   select type (hmat)
+   type is (t_mpimat)
+      select type (smat)
+      type is (t_mpimat)
+         smat%blacsdata => hmat%blacsdata!make sure we use same blacs-grids
+      end select
+      ne = 0.15*hmat%global_size1
+      allocate (eig(hmat%global_size1))
+   class default
+      ne = 0.15*hmat%matsize1
+      allocate (eig(hmat%matsize1))
+   end select
 
-  CALL read_matrix(hmat,1,fid)
-  CALL read_matrix(smat,2,fid)
-  SELECT TYPE(hmat)
-  TYPE is (t_mpimat)
-     SELECT TYPE(smat)
-     TYPE is (t_mpimat)
-        smat%blacsdata=>hmat%blacsdata!make sure we use same blacs-grids
-     END SELECT
-     ne=0.15*hmat%global_size1
-     ALLOCATE(eig(hmat%global_size1))
-  CLASS default
-     ne=0.15*hmat%matsize1
-     ALLOCATE(eig(hmat%matsize1))
-  END SELECT
-  
-  CALL cpu_TIME(t1)
-  mode=0
-  CALL eigen_diag(mode,hmat,smat,ne,eig,ev)
-  CALL cpu_TIME(t2)
-  PRINT *,"No of eigenvalues:",ne
-  PRINT *,eig(:ne)
+   call cpu_time(t1)
+   mode = 0
+   call eigen_diag(mode, hmat, smat, ne, eig, ev)
+   call cpu_time(t2)
+   print *, "No of eigenvalues:", ne
+   print *, eig(:ne)
 
-  PRINT *,"Time used:",t2-t1
+   print *, "Time used:", t2 - t1
 
-  CALL close_matrix(fid)
+   call close_matrix(fid)
 
-END PROGRAM diag_test
-  
-  
+end program diag_test
+

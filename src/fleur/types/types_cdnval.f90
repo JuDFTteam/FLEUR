@@ -17,6 +17,8 @@ PRIVATE
    TYPE t_orb
       REAL, ALLOCATABLE    :: uu(:,:,:,:)
       REAL, ALLOCATABLE    :: dd(:,:,:,:)
+      REAL, ALLOCATABLE    :: ud(:,:,:,:)
+      REAL, ALLOCATABLE    :: du(:,:,:,:)
       COMPLEX, ALLOCATABLE :: uup(:,:,:,:)
       COMPLEX, ALLOCATABLE :: uum(:,:,:,:)
       COMPLEX, ALLOCATABLE :: ddp(:,:,:,:)
@@ -99,6 +101,9 @@ PRIVATE
 
       REAL, ALLOCATABLE    :: rhoLRes(:,:,:,:,:)
 
+      ! Arrays for hyperfine field contributions
+      REAL, ALLOCATABLE    :: hypFineContribs(:,:,:,:)
+
       CONTAINS
          PROCEDURE,PASS :: init => moments_init
    END TYPE t_moments
@@ -147,6 +152,8 @@ SUBROUTINE orb_init(thisOrb, atoms, noco, jsp_start, jsp_end)
 
    IF(ALLOCATED(thisOrb%uu)) DEALLOCATE(thisOrb%uu)
    IF(ALLOCATED(thisOrb%dd)) DEALLOCATE(thisOrb%dd)
+   IF(ALLOCATED(thisOrb%ud)) DEALLOCATE(thisOrb%ud)
+   IF(ALLOCATED(thisOrb%du)) DEALLOCATE(thisOrb%du)
    IF(ALLOCATED(thisOrb%uup)) DEALLOCATE(thisOrb%uup)
    IF(ALLOCATED(thisOrb%uum)) DEALLOCATE(thisOrb%uum)
    IF(ALLOCATED(thisOrb%ddp)) DEALLOCATE(thisOrb%ddp)
@@ -174,6 +181,8 @@ SUBROUTINE orb_init(thisOrb, atoms, noco, jsp_start, jsp_end)
 
    ALLOCATE(thisOrb%uu(0:dim1,-atoms%lmaxd:atoms%lmaxd,dim2,jsp_start:jsp_end))
    ALLOCATE(thisOrb%dd(0:dim1,-atoms%lmaxd:atoms%lmaxd,dim2,jsp_start:jsp_end))
+   ALLOCATE(thisOrb%ud(0:dim1,-atoms%lmaxd:atoms%lmaxd,dim2,jsp_start:jsp_end))
+   ALLOCATE(thisOrb%du(0:dim1,-atoms%lmaxd:atoms%lmaxd,dim2,jsp_start:jsp_end))
    ALLOCATE(thisOrb%uup(0:dim1,-atoms%lmaxd:atoms%lmaxd,dim2,jsp_start:jsp_end))
    ALLOCATE(thisOrb%uum(0:dim1,-atoms%lmaxd:atoms%lmaxd,dim2,jsp_start:jsp_end))
    ALLOCATE(thisOrb%ddp(0:dim1,-atoms%lmaxd:atoms%lmaxd,dim2,jsp_start:jsp_end))
@@ -192,6 +201,8 @@ SUBROUTINE orb_init(thisOrb, atoms, noco, jsp_start, jsp_end)
 
    thisOrb%uu = 0.0
    thisOrb%dd = 0.0
+   thisOrb%ud = 0.0
+   thisOrb%du = 0.0
    thisOrb%uup = CMPLX(0.0,0.0)
    thisOrb%uum = CMPLX(0.0,0.0)
    thisOrb%ddp = CMPLX(0.0,0.0)
@@ -412,6 +423,9 @@ SUBROUTINE moments_init(thisMoments,mpi,input,sphhar,atoms)
       thisMoments%rhoLRes = 0.0
    END IF
 
+   ALLOCATE(thisMoments%hypFineContribs(-1:3,atoms%ntype,input%jspins,3))  ! Contributions to the Hyperfine field. The last index is supposed to be for the term. At the moment only the contact term is implemented.
+   thisMoments%hypFineContribs = 0.0
+
 END SUBROUTINE moments_init
 
 
@@ -509,7 +523,7 @@ SUBROUTINE cdnvalJob_init(thisCdnvalJob,mpi,input,kpts,noco,results,jspin)
    LOGICAL, INTENT(IN)             :: l_empty
 
    INTEGER, ALLOCATABLE :: compact_ev_list(:)
-   INTEGER              :: nk, evlen, evlen2
+   INTEGER              :: nk, evlen, evlen2, iState
    LOGICAL, ALLOCATABLE :: l_nonzero(:)
 
    nk    = thisCdnvalJob%k_list(ikpt)
@@ -522,7 +536,11 @@ SUBROUTINE cdnvalJob_init(thisCdnvalJob,mpi,input,kpts,noco,results,jspin)
       ALLOCATE(compact_ev_list(evlen2))
       compact_ev_list=thiscdnvalJob%ev_list(:thisCdnvalJob%noccbd(nk))
    ELSE
-      l_nonzero = thisCdnvalJob%weights(thiscdnvalJob%ev_list(:thisCdnvalJob%noccbd(nk)),nk)>1.e-8
+      l_nonzero = .TRUE.
+      DO iState = evlen, 1, -1
+         IF (ABS(thisCdnvalJob%weights(thiscdnvalJob%ev_list(iState),nk)).GT.1.0e-8) EXIT
+         l_nonzero(iState) = .FALSE.
+      END DO
       evlen2 = COUNT(l_nonzero)
       ALLOCATE(compact_ev_list(evlen2))
       compact_ev_list = PACK(thiscdnvalJob%ev_list(:thisCdnvalJob%noccbd(nk)), l_nonzero)

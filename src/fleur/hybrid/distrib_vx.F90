@@ -62,9 +62,9 @@ contains
       endif
 
       if(any(nk == fmpi%k_list)) then 
-         CALL hybdat%v_x(nk, jsp)%init(fi%sym%invs, mat_sz, mat_sz, fmpi%sub_comm, .false.)
+         CALL hybdat%v_x(nk, jsp)%init(fi%sym%invs, mat_sz, mat_sz, fmpi%sub_comm, MPIMAT_ROWCYCLIC)
       else
-         call hybdat%v_x(nk, jsp)%init(fi%sym%invs, 1,1, fmpi%sub_comm, .false.)
+         call hybdat%v_x(nk, jsp)%init(fi%sym%invs, 1,1, fmpi%sub_comm, MPIMAT_ROWCYCLIC)
       endif
 
       call copy_vx_to_distr(fmpi, vx_loc, nk, mat_sz, vx_tmp, hybdat%v_x(nk, jsp))

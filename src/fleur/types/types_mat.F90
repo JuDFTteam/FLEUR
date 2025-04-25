@@ -8,6 +8,9 @@ MODULE m_types_mat
    use m_constants
    IMPLICIT NONE
    PRIVATE
+   INTEGER, PARAMETER   :: MPIMAT_2D_BLOCK_CYCLIC=1
+   INTEGER, PARAMETER   :: MPIMAT_ROWCYCLIC=2
+   INTEGER, PARAMETER   :: MPIMAT_COLUMN_BLOCK_CYCLIC=3
    !<This is the basic type to store and manipulate real/complex rank-2 matrices
    !!
    !! In its simple implementation here, it contains a fields for the matrix-size and
@@ -54,7 +57,7 @@ MODULE m_types_mat
       procedure        :: leastsq => t_mat_leastsq
       procedure        :: add
    END type t_mat
-   PUBLIC t_mat
+   PUBLIC t_mat,MPIMAT_2D_BLOCK_CYCLIC,MPIMAT_ROWCYCLIC,MPIMAT_COLUMN_BLOCK_CYCLIC
 CONTAINS
    subroutine add(mat,mat2,alpha_c,alpha_r)
 #ifdef _OPENACC
@@ -613,12 +616,12 @@ CONTAINS
       END IF
    END SUBROUTINE t_mat_add_transpose
 
-   SUBROUTINE t_mat_init(mat, l_real, matsize1, matsize2, mpi_subcom, l_2d, nb_x, nb_y, mat_name)
+   SUBROUTINE t_mat_init(mat, l_real, matsize1, matsize2, mpi_subcom, dist_type, nb_x, nb_y, mat_name)
       CLASS(t_mat) :: mat
       LOGICAL, INTENT(IN), OPTIONAL        :: l_real
       INTEGER, INTENT(IN), OPTIONAL        :: matsize1, matsize2
       INTEGER, INTENT(IN), OPTIONAL        :: mpi_subcom, nb_x, nb_y !not needed here, only for allowing overloading this in t_mpimat
-      LOGICAL, INTENT(IN), OPTIONAL        :: l_2d                 !not needed here either
+      INTEGER, INTENT(IN), OPTIONAL        :: dist_type                 !not needed here either
       character(len=*),intent(in),optional :: mat_name
 
       CALL mat%alloc(l_real, matsize1, matsize2, mat_name=mat_name)

@@ -690,6 +690,8 @@
       <xsd:attribute name="fermiSmearingEnergy" type="FleurDouble" use="optional"/>
       <xsd:attribute name="fermiSmearingTemp" type="FleurDouble" use="optional"/>
       <xsd:attribute default="F" name="l_bloechl" type="FleurBool" use="optional"/>
+      <xsd:attribute default="0.0" name="charge_excited" type="FleurDouble" use="optional"/>
+      <xsd:attribute default="0.0" name="charge_shift" type="FleurDouble" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="SOCType">
@@ -763,6 +765,7 @@
    <xsd:complexType name="GeometryOptimizerType">
       <xsd:attribute name="l_f" type="FleurBool" use="required"/>
       <xsd:attribute name="f_level" type="xsd:integer" use="optional" default="-1"/>
+      <xsd:attribute name="l_driftForce" type="FleurBool" use="optional" default="F"/>
       <xsd:attribute name="forcealpha" type="FleurDouble" use="optional" default="0" />
       <xsd:attribute name="epsdisp" type="FleurDouble" use="optional" default="0.001"/>
       <xsd:attribute name="epsforce" type="FleurDouble" use="optional" default="0.001"/>
@@ -1053,6 +1056,7 @@
        <xsd:element name="MAE" type="MAEType"/>
        <xsd:element name="spinSpiralDispersion" type="QListType"/>
        <xsd:element name="DMI" type="DMIType"/>
+       <xsd:element name="DMI-SCF" type="DMISCFType"/>
        <xsd:element name="Jij" type="JijType"/>
      </xsd:choice>
    </xsd:complexType>
@@ -1066,6 +1070,12 @@
      <xsd:all>
        <xsd:element  maxOccurs="1" minOccurs="1" name="qVectors" type="QListType"/>
      </xsd:all>
+     <xsd:attribute name="theta" type="FleurDoubleVecType" use="required"/>
+     <xsd:attribute name="phi" type="FleurDoubleVecType" use="required"/>
+     <xsd:attribute name="ef_shift" type="FleurDoubleVecType" use="optional"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="DMISCFType">
      <xsd:attribute name="theta" type="FleurDoubleVecType" use="required"/>
      <xsd:attribute name="phi" type="FleurDoubleVecType" use="required"/>
      <xsd:attribute name="ef_shift" type="FleurDoubleVecType" use="optional"/>
@@ -1127,6 +1137,8 @@
       <xsd:attribute name="startq" type="xsd:positiveInteger" use="optional"/>
       <xsd:attribute name="stopq" type="xsd:nonNegativeInteger" use="optional"/>
       <xsd:attribute name="qmode" type="xsd:nonNegativeInteger" use="optional"/>
+      <xsd:attribute name="i_integration" type="xsd:nonNegativeInteger" use="optional"/>
+      <xsd:attribute name="smearingGauss" type="FleurDouble" use="optional"/>
       <xsd:attribute name="l_phonon" type="FleurBool" use="optional"/>
       <xsd:attribute name="l_efield" type="FleurBool" use="optional"/>
       <xsd:attribute name="l_borneffcharge" type="FleurBool" use="optional"/>
@@ -1253,6 +1265,8 @@
          <xsd:enumeration value="(6d3/2)"/>
          <xsd:enumeration value="(6d5/2)"/>
          <xsd:enumeration value="(7s1/2)"/>
+         <xsd:enumeration value="(7p1/2)"/>
+         <xsd:enumeration value="(7p3/2)"/>
       </xsd:restriction>
    </xsd:simpleType>
 

@@ -44,6 +44,8 @@ MODULE m_types_juPhon
       INTEGER :: stopq  = 0          ! Stop  the q-loop at a specific point
       INTEGER :: qmode  = 0          ! 0: Single-shot calculation for qlist
                                      ! 1: Reads q from fullsym_* input files
+      INTEGER :: i_integration = 1 
+      REAL    :: smearingGauss = 1e-7 
       LOGICAL :: l_phonon = .TRUE.
       LOGICAL :: l_efield = .FALSE.
       LOGICAL :: l_borneffcharge = .FALSE.
@@ -125,6 +127,7 @@ MODULE m_types_juPhon
       PROCEDURE :: read_xml => read_xml_juPhon
       PROCEDURE :: mpi_bc => mpi_bc_juPhon
       PROCEDURE :: init => init_juPhon
+      PROCEDURE :: precheck_juPhon
    END TYPE t_juPhon
 
    PUBLIC t_juPhon
@@ -161,6 +164,8 @@ CONTAINS
       CALL mpi_bc(this%startq, rank, mpi_comm)
       CALL mpi_bc(this%stopq, rank, mpi_comm)
       CALL mpi_bc(this%qmode, rank, mpi_comm)
+      CALL mpi_bc(this%i_integration, rank, mpi_comm)
+      CALL mpi_bc(this%smearingGauss, rank, mpi_comm)
       CALL mpi_bc(this%singleQpt, rank, mpi_comm)
       CALL mpi_bc(this%qvec, rank, mpi_comm)
       CALL mpi_bc(this%qvec_efield, rank, mpi_comm)
@@ -184,7 +189,7 @@ CONTAINS
       TYPE(t_xml), INTENT(INOUT)     :: xml
 
       INTEGER::numberNodes
-      CHARACTER(len=100) :: xPathA
+      CHARACTER(len=100) :: xPathA,valueString
 
       numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon')
 
@@ -361,6 +366,18 @@ CONTAINS
            this%qmode  = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@qmode'))
          END IF
 
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@i_integration')
+
+         IF (numberNodes == 1) THEN
+           this%i_integration  = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@i_integration'))
+         END IF
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@smearingGauss')
+
+         IF (numberNodes == 1) THEN
+           this%smearingGauss  = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@smearingGauss'))
+         END IF
+
          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_phonon')
 
          IF (numberNodes == 1) THEN
@@ -405,6 +422,9 @@ CONTAINS
          this%qvec=xml%read_q_list('/fleurInput/output/juPhon/qVectors')
       ENDIF
 
+      ! Before we exit check needed parameters 
+      IF (this%l_dfpt) CALL this%precheck_juPhon(xml)
+      
    END SUBROUTINE read_xml_juPhon
 
    SUBROUTINE init_juPhon(this,cell)
@@ -436,4 +456,24 @@ CONTAINS
 
    END SUBROUTINE init_juPhon
 
+   SUBROUTINE precheck_juPhon(this,xml)
+    USE m_types_xml
+    USE m_judft 
+
+    IMPLICIT NONE 
+
+    CLASS(t_juPhon), INTENT(IN) :: this
+    TYPE(t_xml), INTENT(INOUT)  :: xml 
+
+    INTEGER :: numberNodes
+    CHARACTER(len=100) :: xPathA,valueString
+
+    xPathA = '/fleurInput/calculationSetup/cutoffs/@numbands'
+    numberNodes = xml%GetNumberOfNodes(xPathA)
+    IF(numberNodes.EQ.1) THEN
+      valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))))) 
+      IF(.NOT. TRIM(ADJUSTL(valueString)).EQ.'all') CALL juDFT_error("numbands is not set to all", calledby="types_juPhon.F90")
+    END IF 
+
+   END SUBROUTINE precheck_juPhon
 END MODULE m_types_juPhon

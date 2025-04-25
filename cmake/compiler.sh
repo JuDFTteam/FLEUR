@@ -81,6 +81,12 @@ intel_old(){
    export CXX=${CXX:=icpc}
 }
 
+intel_mpi(){
+   export FC=${FC:=mpiifx}
+   export CC=${CC:=mpiicx}
+   export CXX=${CXX:=mpiicpx}
+}
+
 intel(){
    export FC=${FC:=ifx}
    export CC=${CC:=icx}
@@ -103,6 +109,7 @@ configure_compiler(){
    if [[ $compiler == "nvidia" ]] ; then nvidia ; fi
    if [[ $compiler == "intel" ]] ; then intel ; fi
    if [[ $compiler == "intel_old" ]] ; then intel_old ; fi
+   if [[ $compiler == "intel_mpi" ]] ; then intel_mpi ; fi
    if [[ $compiler == "gfortran" ]] ; then gfortran ; fi
    if [[ $compiler == "mpi" ]] ; then mpi_wrapper ; fi   
    if [[ $compiler == "interactive" ]] ; then interactive_compiler_selection ; fi   

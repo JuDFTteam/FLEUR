@@ -69,7 +69,6 @@ CONTAINS
       USE m_writeCFOutput
       USE m_mpi_bc_tool
       USE m_eig66_io
-      USE m_chase_diag
       USE m_writeBasis
       USE m_RelaxSpinAxisMagn
       USE m_dfpt
@@ -99,7 +98,7 @@ CONTAINS
 
       TYPE(t_field)    :: field2
       TYPE(t_potden)   :: vTot, vx, vCoul, vxc, exc
-      TYPE(t_potden)   :: inDen, outDen, EnergyDen, sliceDen
+      TYPE(t_potden)   :: inDen, outDen, EnergyDen, sliceDen,coreden
       TYPE(t_hub1data) :: hub1data
 
       TYPE(t_greensf), ALLOCATABLE :: greensFunction(:)
@@ -243,9 +242,6 @@ CONTAINS
       ! TODO: Isn't this comment kind of lost here?
       ! Rotate cdn to local frame if specified.
 
-#ifdef CPP_CHASE
-      CALL init_chase(fmpi, fi%input, fi%atoms, fi%kpts, fi%noco, l_real)
-#endif
 
       CALL timestop("Open/allocate eigenvector storage")
 
@@ -285,9 +281,6 @@ CONTAINS
 8100        FORMAT(/, 10x, '   iter=  ', i5)
          END IF !fmpi%irank==0
 
-#ifdef CPP_CHASE
-         CALL chase_distance(results%last_distance)
-#endif
 
          CALL inDen%distribute(fmpi%mpi_comm)
          CALL nococonv%mpi_bc(fmpi%mpi_comm)
@@ -566,7 +559,7 @@ CONTAINS
             CALL cdngen(eig_id, fmpi, input_soc, fi%banddos, fi%sliceplot, fi%vacuum, &
                         fi%kpts, fi%atoms, sphhar, stars, fi%sym, fi%juphon, fi%gfinp, fi%hub1inp, &
                         enpara, fi%cell, fi%noco, nococonv, vTot, results,   fi%corespecinput, &
-                        archiveType, xcpot, outDen, EnergyDen, greensFunction, hub1data,vxc,exc)
+                        archiveType, xcpot, outDen, EnergyDen, coreden,greensFunction, hub1data,vxc,exc)
             ! The density matrix for DFT+Hubbard1 only changes in hubbard1_setup and is kept constant otherwise
             outDen%mmpMat(:, :, fi%atoms%n_u + 1:fi%atoms%n_u + fi%atoms%n_hia, :) = inDen%mmpMat(:, :, fi%atoms%n_u + 1:fi%atoms%n_u + fi%atoms%n_hia, :)
 
@@ -639,11 +632,6 @@ CONTAINS
 ! !$             END IF
 
             ! total energy
-
-            ! Rotating from local MT frame in global frame for mixing
-            ! TODO: Should this be done before the total energy calculation already?
-            CALL toGlobalSpinFrame(fi%noco, nococonv, fi%vacuum, sphhar, stars, fi%sym, fi%cell, fi%input, fi%atoms, inDen,  fmpi)
-            CALL toGlobalSpinFrame(fi%noco, nococonv, fi%vacuum, sphhar, stars, fi%sym, fi%cell, fi%input, fi%atoms, outDen, fmpi, .TRUE.)
             CALL timestart('determination of total energy')
             CALL totale(fmpi, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, fi%input, fi%noco, fi%cell,   &
                         xcpot, hybdat, vTot, vCoul, iter, inDen, results)
@@ -654,16 +642,23 @@ CONTAINS
 
          CALL enpara%mix(fmpi%mpi_comm, fi%atoms, fi%vacuum, fi%input, vTot)
          field2 = fi%field
-
+         ! Rotating from local MT frame in global frame for mixing
+         ! TODO: Should this be done before the total energy calculation already?
+         
+         CALL toGlobalSpinFrame(fi%noco, nococonv, fi%vacuum, sphhar, stars, fi%sym, fi%cell, fi%input, fi%atoms, inDen,  fmpi)
+         CALL toGlobalSpinFrame(fi%noco, nococonv, fi%vacuum, sphhar, stars, fi%sym, fi%cell, fi%input, fi%atoms, outDen, fmpi, .TRUE.)
+         
          ! mix input and output densities
          CALL mix_charge(field2, fmpi, (iter == fi%input%itmax .OR. judft_was_argument("-mix_io")), stars, &
                          fi%atoms, sphhar, fi%vacuum, fi%input, fi%sym, fi%juphon, fi%cell, fi%noco, nococonv, &
-                         archiveType, xcpot, iter, inDen, outDen, results, hub1data%l_runthisiter, fi%sliceplot)
-
+                         archiveType, xcpot, iter, inDen, outDen,  results, coreDen, hub1data%l_runthisiter, fi%sliceplot)
+         
          ! Rotating to the local MT frame
          CALL toLocalSpinFrame(fmpi, fi%vacuum, sphhar, stars, fi%sym, fi%cell, fi%noco, &
                                nococonv, fi%input, fi%atoms, .TRUE., inDen, .TRUE.)
-
+     
+   
+                         
          IF (fmpi%irank==0) THEN
             WRITE (oUnit, FMT=8130) iter
 8130        FORMAT(/, 5x, '******* it=', i3, '  is completed********', /,/)

@@ -15,7 +15,7 @@ MODULE m_mpi_col_den
 #endif
 CONTAINS
   SUBROUTINE mpi_col_den(fmpi,sphhar,atoms ,stars,vacuum,input,noco,jspin,dos,vacdos,&
-                         results,denCoeffs,orb,denCoeffsOffdiag,den,regCharges,mcd,slab,orbcomp,jDOS)
+                         results,denCoeffs,orb,denCoeffsOffdiag,den,regCharges,mcd,slab,orbcomp,jDOS,hyperfine)
 
     USE m_types
     USE m_constants
@@ -25,6 +25,7 @@ CONTAINS
     use m_types_orbcomp
     use m_types_jDOS
     use m_types_vacdos
+    use m_types_hyperfine
     IMPLICIT NONE
 
     TYPE(t_results),INTENT(INOUT):: results
@@ -49,10 +50,11 @@ CONTAINS
     TYPE (t_dos),               INTENT(INOUT) :: dos
     TYPE (t_vacdos),            INTENT(INOUT) :: vacdos
     TYPE (t_regionCharges), OPTIONAL, INTENT(INOUT) :: regCharges
-    TYPE (t_mcd),     OPTIONAL, INTENT(INOUT) :: mcd
-    TYPE (t_slab),    OPTIONAL, INTENT(INOUT) :: slab
-    TYPE (t_orbcomp), OPTIONAL, INTENT(INOUT) :: orbcomp
-    TYPE (t_jDOS),    OPTIONAL, INTENT(INOUT) :: jDOS
+    TYPE (t_mcd),       OPTIONAL, INTENT(INOUT) :: mcd
+    TYPE (t_slab),      OPTIONAL, INTENT(INOUT) :: slab
+    TYPE (t_orbcomp),   OPTIONAL, INTENT(INOUT) :: orbcomp
+    TYPE (t_jDOS),      OPTIONAL, INTENT(INOUT) :: jDOS
+    TYPE (t_hyperfine), OPTIONAL, INTENT(INOUT) :: hyperfine
     ! ..
     ! ..  Local Scalars ..
     INTEGER :: n, i
@@ -344,6 +346,10 @@ CONTAINS
        CALL dcopy(n, r_b, 1, orb%uu(:,:,:,jspin), 1)
        CALL MPI_ALLREDUCE(orb%dd(:,:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION, MPI_SUM,MPI_COMM_WORLD,ierr)
        CALL dcopy(n, r_b, 1, orb%dd(:,:,:,jspin), 1)
+       CALL MPI_ALLREDUCE(orb%ud(:,:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION, MPI_SUM,MPI_COMM_WORLD,ierr)
+       CALL dcopy(n, r_b, 1, orb%ud(:,:,:,jspin), 1)
+       CALL MPI_ALLREDUCE(orb%du(:,:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION, MPI_SUM,MPI_COMM_WORLD,ierr)
+       CALL dcopy(n, r_b, 1, orb%du(:,:,:,jspin), 1)
        DEALLOCATE (r_b)
 
        ALLOCATE (c_b(n))
@@ -570,6 +576,8 @@ CONTAINS
       DEALLOCATE (c_b)
    ENDIF
    !-lda+U
+
+   IF (PRESENT(hyperfine)) CALL hyperfine%collect(fmpi,atoms,jspin)
 
     CALL timestop("mpi_col_den")
 

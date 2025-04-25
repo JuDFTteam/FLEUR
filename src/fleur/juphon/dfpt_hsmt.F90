@@ -95,7 +95,7 @@ CONTAINS
 
       DO i = 1, nspins
          DO j = 1, nspins
-            CALL s1mat_tmp(i, j)%init(.FALSE., lapwq%nv(i) + atoms%nlotot, lapw%nv(j) + atoms%nlotot, fmpi%sub_comm, .false.)
+            CALL s1mat_tmp(i, j)%init(.FALSE., lapwq%nv(i) + atoms%nlotot, lapw%nv(j) + atoms%nlotot, fmpi%sub_comm, MPIMAT_ROWCYCLIC)
             CALL h1mat_tmp(i, j)%init(s1mat_tmp(i, j))
          END DO
       END DO
@@ -280,14 +280,14 @@ CONTAINS
 
       DO i = 1, nspins
          DO j = 1, nspins
-            CALL s1mat_tmp(i, j)%init(.FALSE., lapw%nv(i) + atoms%nlotot, lapw%nv(j) + atoms%nlotot, fmpi%sub_comm, .false.)
+            CALL s1mat_tmp(i, j)%init(.FALSE., lapw%nv(i) + atoms%nlotot, lapw%nv(j) + atoms%nlotot, fmpi%sub_comm, MPIMAT_ROWCYCLIC)
             CALL h1mat_tmp(i, j)%init(s1mat_tmp(i, j))
-            CALL s1qmat_tmp(i, j)%init(.FALSE., lapwq%nv(i) + atoms%nlotot, lapw%nv(j) + atoms%nlotot, fmpi%sub_comm, .false.)
+            CALL s1qmat_tmp(i, j)%init(.FALSE., lapwq%nv(i) + atoms%nlotot, lapw%nv(j) + atoms%nlotot, fmpi%sub_comm, MPIMAT_ROWCYCLIC)
             CALL h1qmat_tmp(i, j)%init(s1qmat_tmp(i, j))
             IF (.NOT.PRESENT(vmat2)) THEN
-               CALL s2mat_tmp(i, j)%init(.FALSE., lapw%nv(i) + atoms%nlotot, lapw%nv(j) + atoms%nlotot, fmpi%sub_comm, .false.) 
+               CALL s2mat_tmp(i, j)%init(.FALSE., lapw%nv(i) + atoms%nlotot, lapw%nv(j) + atoms%nlotot, fmpi%sub_comm, MPIMAT_ROWCYCLIC) 
             ELSE
-               CALL s2mat_tmp(i, j)%init(.FALSE., lapwq%nv(i) + atoms%nlotot, lapw%nv(j) + atoms%nlotot, fmpi%sub_comm, .false.)
+               CALL s2mat_tmp(i, j)%init(.FALSE., lapwq%nv(i) + atoms%nlotot, lapw%nv(j) + atoms%nlotot, fmpi%sub_comm, MPIMAT_ROWCYCLIC)
             END IF
             CALL h2mat_tmp(i, j)%init(s2mat_tmp(i, j))
          END DO
@@ -301,7 +301,7 @@ CONTAINS
       DO ilSpinPr = MERGE(1,iSpin,noco%l_noco), MERGE(2,iSpin,noco%l_noco)
          CALL timestart("fjgj coefficients")
          CALL fjgjq%calculate(input,atoms,cell,lapwq,noco,usdus,iDtype_col,ilSpinPr)
-         !!$acc update device(fjgjq%fj,fjgjq%gj)
+         !$acc update device(fjgjq%fj,fjgjq%gj)
          CALL timestop("fjgj coefficients")
          DO ilSpin = ilSpinPr, MERGE(2,iSpin,noco%l_noco)
             CALL timestart("fjgjq coefficients")

@@ -674,6 +674,7 @@
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="chargeDensity" type="DensityDistanceType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="overallChargeDensity" type="DensityDistanceType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="spinDensity" type="DensityDistanceType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="Magnetization" type="MagnetizationDistanceType"/>
       </xsd:sequence>
       <xsd:attribute name="units" type="xsd:string" use="optional"/>
    </xsd:complexType>
@@ -691,6 +692,12 @@
 
    <xsd:complexType name="DensityDistanceType">
       <xsd:attribute name="spin" type="xsd:integer" use="optional"/>
+      <xsd:attribute name="distance" type="xsd:double" use="required"/>
+      <xsd:attribute name="units" type="xsd:string" use="optional"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="MagnetizationDistanceType">
+      <xsd:attribute name="direction" type="xsd:string" use="optional"/>
       <xsd:attribute name="distance" type="xsd:double" use="required"/>
       <xsd:attribute name="units" type="xsd:string" use="optional"/>
    </xsd:complexType>

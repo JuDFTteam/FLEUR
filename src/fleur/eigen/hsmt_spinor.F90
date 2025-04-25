@@ -48,52 +48,42 @@ CONTAINS
 
    END SUBROUTINE hsmt_spinor
 
-  SUBROUTINE hsmt_spinor_soc(n,ki,nococonv,lapw,chi_so,angso,kj_start,kj_end)
+  SUBROUTINE hsmt_spinor_soc(n,nococonv,chi_so,isigma_xyz)
+    !$acc routine seq
     !!Generalization of hsmt_spinor to SOC case. 
     USE m_types
     use m_constants
 
     TYPE(t_nococonv),INTENT(IN)  :: nococonv
-    TYPE(t_lapw),INTENT(IN)      :: lapw
     INTEGER,INTENT(IN)           :: n   !!index of atom
-    INTEGER,INTENT(IN)           :: ki  !! index of first k+G in angso
     COMPLEX,INTENT(out)          :: chi_so(:,:,:,:) !! Transformation from local to global spin
-    COMPLEX,INTENT(out),OPTIONAL :: angso(:,:,:)    !! $$\vec\sigma(\vec{k_{ki}}\times\vec{k)$$
-    INTEGER,INTENT(in), OPTIONAL :: kj_start,kj_end !! indices for the second k+G in angso
-
-    REAL     :: cross_k(3)
-    INTEGER  :: j1,j2,kj
+    COMPLEX,INTENT(OUT),optional :: isigma_xyz(:,:,:)
+    
+    INTEGER  :: j1,j2
     COMPLEX  :: isigma(2,2,3)
     COMPLEX  :: chi(2,2)
-    COMPLEX  :: isigma_x(2,2),isigma_y(2,2),isigma_z(2,2),d(2,2)
 
-    !     isigma= i * sigma, where sigma is Pauli matrix
-    isigma = CMPLX(0.0,0.0)
-
-    isigma(1,2,1)=CMPLX(0.0,1.0)  !     (0  1)   ( 0  i)
-    isigma(2,1,1)=CMPLX(0.0,1.0)  ! i * (1  0) = ( i  0)
-    isigma(1,2,2)=CMPLX(1.0,0.0)  !     (0 -i)   ( 0  1) 
-    isigma(2,1,2)=CMPLX(-1.0,0.0) ! i * (i  0) = (-1  0) 
-    isigma(1,1,3)=CMPLX(0.0,1.0)  !     (1  0)   ( i  0)
-    isigma(2,2,3)=CMPLX(0.0,-1.0) ! i * (0 -1) = ( 0 -i)
 
     !--->       set up the spinors of this atom within global
     !--->       spin-coordinateframe
-    !chi=conjg(nococonv%umat(n))
+    chi=chi_explicit_nopass(nococonv%alph(n),nococonv%beta(n))
+    
+    if (present(isigma_xyz)) THEN
+      !     isigma= i * sigma, where sigma is Pauli matrix
+      isigma(:,:,:) = CMPLX(0.0,0.0)
 
-    chi=nococonv%umat(n)
-    
+      isigma(1,2,1)=CMPLX(0.0,1.0)  !     (0  1)   ( 0  i)
+      isigma(2,1,1)=CMPLX(0.0,1.0)  ! i * (1  0) = ( i  0)
+      isigma(1,2,2)=CMPLX(1.0,0.0)  !     (0 -i)   ( 0  1) 
+      isigma(2,1,2)=CMPLX(-1.0,0.0) ! i * (i  0) = (-1  0) 
+      isigma(1,1,3)=CMPLX(0.0,1.0)  !     (1  0)   ( i  0)
+      isigma(2,2,3)=CMPLX(0.0,-1.0) ! i * (0 -1) = ( 0 -i)
+
+      isigma_xyz(:,:,1)=MATMUL(conjg(transpose(chi)), MATMUL(isigma(:,:,1),chi))
+      isigma_xyz(:,:,2)=MATMUL(conjg(transpose(chi)), MATMUL(isigma(:,:,2),chi))
+      isigma_xyz(:,:,3)=MATMUL(conjg(transpose(chi)), MATMUL(isigma(:,:,3),chi))
+    ENDIF  
    
-    isigma_x=MATMUL(conjg(transpose(chi)), MATMUL(isigma(:,:,1),chi))
-    isigma_y=MATMUL(conjg(transpose(chi)), MATMUL(isigma(:,:,2),chi))
-    isigma_z=MATMUL(conjg(transpose(chi)), MATMUL(isigma(:,:,3),chi))
-    !isigma_x=MATMUL(chi, MATMUL(isigma(:,:,1),conjg(transpose(chi))))
-    !isigma_y=MATMUL(chi, MATMUL(isigma(:,:,2),conjg(transpose(chi))))
-    !isigma_z=MATMUL(chi, MATMUL(isigma(:,:,3),conjg(transpose(chi))))
-    
-    
-    
-    
     !chi=conjg(nococonv%umat(n))
     DO j1=1,2
        DO j2=1,2
@@ -103,22 +93,7 @@ CONTAINS
           chi_so(1,2,j1,j2)=chi(1,j1)*CONJG(chi(2,j2))
        ENDDO
     ENDDO
-    IF (.not.present(angso)) RETURN !only chis are needed
-    !In the first variation SOC case the off-diagonal spinors are needed
-    IF (present(angso)) THEN
-      IF ((.not.present(kj_start)).or.((.not.present(kj_end)))) RETURN
-    ENDIF
-    DO kj = kj_start,kj_end
-       cross_k(1)=lapw%gk(2,ki,1)*lapw%gk(3,kj,1)- lapw%gk(3,ki,1)*lapw%gk(2,kj,1)
-       cross_k(2)=lapw%gk(3,ki,1)*lapw%gk(1,kj,1)- lapw%gk(1,ki,1)*lapw%gk(3,kj,1)
-       cross_k(3)=lapw%gk(1,ki,1)*lapw%gk(2,kj,1)- lapw%gk(2,ki,1)*lapw%gk(1,kj,1)
-       DO j1=1,2
-          DO j2=1,2
-             angso(kj-kj_start+1,j1,j2)= (isigma_x(j1,j2)*cross_k(1)+&
-                     isigma_y(j1,j2)*cross_k(2)+ isigma_z(j1,j2)*cross_k(3))
-          ENDDO
-       ENDDO
-    ENDDO
+    
 
   END SUBROUTINE hsmt_spinor_soc
 

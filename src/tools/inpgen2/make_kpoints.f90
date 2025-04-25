@@ -32,6 +32,9 @@ CONTAINS
     REAL   :: den
     INTEGER:: nk,grid(3)
     character(len=40)::name=""
+
+    CALL timestart('make_kpoints')
+
     !defaults
     l_soc_or_ss=l_socorss
 
@@ -130,6 +133,9 @@ CONTAINS
     ENDIF
 
     if (len_trim(name)>0) kpts%kptsName=name
+
+    CALL timestop('make_kpoints')
+
   END SUBROUTINE make_kpoints
 
   SUBROUTINE set_special_points(kpts,str)
@@ -207,6 +213,9 @@ CONTAINS
     INTEGER :: i,ii,iArray(1)
     INTEGER,ALLOCATABLE:: nk(:)
     REAL,ALLOCATABLE :: segmentLengths(:)
+
+    CALL timestart('init_special_kpoint')
+
     IF (kpts%numSpecialPoints<2) CALL add_special_points_default(kpts,film,cell)
     kpts%nkpt=MAX(kpts%nkpt,kpts%numSpecialPoints)
     !all sepecial kpoints are now set already
@@ -258,6 +267,7 @@ CONTAINS
     ENDDO
     kpts%bk(:,kpts%nkpt)=kpts%specialPoints(:,kpts%numSpecialPoints)
     kpts%specialPointIndices(kpts%numSpecialPoints)=kpts%nkpt
+    CALL timestop('init_special_kpoint')
   END SUBROUTINE init_special
 
 
@@ -422,6 +432,8 @@ CONTAINS
     REAL as
     REAL binv(3,3)
 
+    CALL timestart('init_kpoints_by_grid')
+
     kpts%kptsKind = KPTS_KIND_MESH
 
     IF (l_gamma) THEN
@@ -505,6 +517,8 @@ CONTAINS
 
     kpts%nkpt3(:) = grid(:)
 
+    CALL timestop('init_kpoints_by_grid')
+
   END SUBROUTINE init_by_grid
 
   SUBROUTINE add_special_points_default(kpts,film,cell,l_check)
@@ -521,6 +535,9 @@ CONTAINS
     REAL, PARAMETER :: f13 = 1./3., f23 = 2./3.
 
     INTEGER:: idsyst,idtype
+
+    CALL timestart('add_special_kpoints_default')
+
     CALL bravais(cell%amat,idsyst,idtype)
 
     IF(PRESENT(l_check)) l_check =.FALSE.
@@ -739,5 +756,6 @@ CONTAINS
           CALL judft_error("Not enough special points given and no default found")
        END IF
     END IF
+    CALL timestop('add_special_kpoints_default')
   END SUBROUTINE add_special_points_default
 END MODULE m_make_kpoints

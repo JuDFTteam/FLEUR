@@ -1,5 +1,5 @@
 #First check if we can compile with ScaLAPACK
-try_compile(FLEUR_USE_SCALAPACK ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_SCALAPACK.f90
+try_compile(FLEUR_USE_SCALAPACK ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_LIST_DIR}/test_SCALAPACK.f90
 LINK_LIBRARIES ${FLEUR_LIBRARIES}
             )
 
@@ -8,7 +8,7 @@ foreach(test_string "-lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64" "-lscalapac
 if (NOT FLEUR_USE_SCALAPACK)
      message("Test for SCALAPACK with:${test_string}")
      set(TEST_LIBRARIES "${test_string};${FLEUR_LIBRARIES}")
-     try_compile(FLEUR_USE_SCALAPACK ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_SCALAPACK.f90
+     try_compile(FLEUR_USE_SCALAPACK ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_LIST_DIR}/test_SCALAPACK.f90
            LINK_LIBRARIES ${TEST_LIBRARIES} OUTPUT_VARIABLE compile_output
             )
     if ("$ENV{VERBOSE}")

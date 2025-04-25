@@ -85,22 +85,28 @@ General options:
 Command line options to disable recommended libraries:
   -hdf5 false       : do not use HDF5. 
   -scalapack false  : do not use the SCALAPACK library
+  -mpi      false   : do not compile the MPI parallel version
+
+Some external libraries can be used.
+If these are not found and the corresponding option is set to 'true' the build process will try to download 
+and compile the library automatically:
+
+Diagonalization libraries:
+  -elsi     [TRUE|FALSE} : use the ELSI library
+  -elpa     [TRUE|FALSE] : use the ELPA library (Use the environment variable ELPA_CONF to specify options to the ELPA configure script!)
+  -chase    [TRUE|FALSE] : use the CHASE library
+  -magma    [TRUE|FALSE] : use the Magma library (no test,experimental)
+Additional features:
+  -libxc    [TRUE|FALSE] : use libxc library
+  -libxml2   true        : try to download libxml2 and compile it (experimental). No 'false' option exists here as the libxml2 is required.
+  -wannier  [TRUE|FALSE] : use Wannier90 library
+  
 
 Command line options to switch on/off features. These options overwrite the results of
 the test and might lead to the configuration to fail.
-  -elsi     [TRUE|FALSE} : use the ELSI library
-  -wannier  [TRUE|FALSE] : use Wannier90 library
-  -mpi      [TRUE|FALSE] : compile the MPI parallel version
-  -libxc    [TRUE|FALSE] : use libxc library
   -edsolver [TRUE|FALSE] : use the Exact Diagonalization library by Jindrich Kolorenc
-  -libxml2   true        : try to download libxml2 and compile it (experimental)
-  -magma     true        : use the Magma library (no test,experimental)
+  
 
-
-Command line option to compile external libraries:
-  -external # : download and compile external libraries before building FLEUR
-                currently 'xml2', 'elpa' and 'chase' are possible options. The switch
-                can be specified multiple times
 
 Options to specify Fortran/Linker flags. Usually it is better to use the enviroment variables as
 given below.
@@ -126,6 +132,7 @@ Alternatively, you can try to specify the compiler toolchain using the -c option
                 This is a good option if you have a correct MPI installation available.
   intel      -- use the Intel oneAPI compilers (ifx,icx,icpx).
   intel-old  -- use the classic intel compilers (ifort, icc, icc)
+  intel-mpi  -- use mpi compiler wrappers with intel compilers (mpiifx,mpiicx,mpiicpx)
   nvidia     -- use the NVHPC compilers
   gfortran   -- use the compilers from the GNU collection
 

@@ -21,7 +21,7 @@ set(fleurinp_src ${fleurinp_src}
 ${CMAKE_SOURCE_DIR}/src/fleur/io/xml/dropInputSchema.c 
 ${CMAKE_SOURCE_DIR}/src/fleur/io/xml/dropOutputSchema.c ${CMAKE_SOURCE_DIR}/src/fleur/io/xml/inputSchema_old.h ${CMAKE_SOURCE_DIR}/src/fleur/io/xml/outputSchema_old.h ${CMAKE_SOURCE_DIR}/src/fleur/io/xml/xmlInterfaceWrapper.c
 ${CMAKE_SOURCE_DIR}/src/fleur/math/d_wigner.F90 ${CMAKE_SOURCE_DIR}/src/fleur/math/inv3.f90 ${CMAKE_SOURCE_DIR}/src/fleur/math/grule.f90 ${CMAKE_SOURCE_DIR}/src/fleur/global/sort.f90 ${CMAKE_SOURCE_DIR}/src/fleur/global/atom_shells.f90 ${CMAKE_SOURCE_DIR}/src/tools/inpgen2/kpoints/tetcon.f90 
-${CMAKE_SOURCE_DIR}/src/tools/inpgen2/kpoints/triang.f ${CMAKE_SOURCE_DIR}/src/tools/inpgen2/kpoints/bravais.f ${CMAKE_SOURCE_DIR}/src/tools/inpgen2/kpoints/brzone2.f90
+${CMAKE_SOURCE_DIR}/src/tools/inpgen2/kpoints/triang.f ${CMAKE_SOURCE_DIR}/src/tools/inpgen2/kpoints/bravais.f90 ${CMAKE_SOURCE_DIR}/src/tools/inpgen2/kpoints/brzone2.f90
 ${CMAKE_SOURCE_DIR}/src/fleur/hybrid/map_to_unit.f90
 ${CMAKE_BINARY_DIR}/include/inputSchema.h ${CMAKE_BINARY_DIR}/include/outputSchema.h 
 )
