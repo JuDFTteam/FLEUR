@@ -22,7 +22,9 @@ module m_types_denmatrix
 contains
 
    subroutine mpi_collect(this)
+#ifdef CPP_MPI
       use mpi
+#endif      
       implicit none
       class(t_denmatrix), intent(inout):: this
 #ifdef CPP_MPI
