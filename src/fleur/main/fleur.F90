@@ -285,30 +285,6 @@ CONTAINS
          CALL inDen%distribute(fmpi%mpi_comm)
          CALL nococonv%mpi_bc(fmpi%mpi_comm)
 
-
-
-         IF (.FALSE.) THEN
-            iDir = 1
-            iDtype = 1
-            CALL make_stars(starsq, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, fi%juPhon%qvec_efield(iDir,:), iDtype, iDir,fi%juPhon%l_efield)
-            starsq%ufft = stars%ufft
-
-            CALL dfptvefield%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
-            CALL dfptvefieldimag%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
-
-            CALL dfpt_vefield(fi%juphon,starsq,fi%atoms,fi%sym,sphhar,fi%cell,dfptvefield,dfptvefieldimag,iDir,1)
-
-            print*,"sum(dfptvefield%pw)",sum(dfptvefield%pw)
-            CALL checkDOPALL(fi%input, sphhar, starsq,fi%atoms, fi%sym, fi%vacuum, fi%cell,dfptvefield,1, dfptvefieldimag)
-
-            nococonv_int = nococonv
-            sliceplot_int = fi%sliceplot
-
-            sliceplot_int%iplot = 4
-            CALL makeplots(starsq, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi, fi%sym, fi%cell, fi%noco, nococonv_int, dfptvefield, PLOT_POT_TOT, sliceplot_int,dfptvefieldimag)
-            print*,"Plotting response done"
-            stop
-         END IF 
          ! Plot the input density if specified
          IF (fi%sliceplot%iplot .NE. 0) THEN
             IF (.NOT.fi%sliceplot%slice) THEN

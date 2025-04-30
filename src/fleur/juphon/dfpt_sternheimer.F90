@@ -203,7 +203,6 @@ CONTAINS
          ! Vext1 for the starting perturbation
          ! Veff1 every other time
          CALL timestart("Generation of potential perturbation")
-         print*,"strho",strho
          IF (strho) THEN
             write(oUnit, *) "vExt1", iDir
             sigma_loc = cmplx(0.0,0.0)
@@ -246,47 +245,6 @@ CONTAINS
                            fi%juphon,fi%cell,fmpi,fi%noco,nococonv,rho_loc,vTot,&
                            starsq,denIn1Im,vC1,.FALSE.,vC1Im,denIn1,iDtype,iDir,[0,0],sigma_loc)
             
-            IF (.FALSE.) THEN
-               IF (.TRUE.) THEN
-                  iDir_col = 1
-                  qvec_int=fi%juPhon%qvec_efield(iDir_col,:)
-                  print*,"qvec_int",qvec_int
-                  CALL starsq_vext%reset_stars()
-                  CALL make_stars(starsq_vext, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, qvec_int, 1, iDir_col,fi%juPhon%l_efield)
-                  starsq_vext%ufft = starsq%ufft
-                  call vExt1_ef%init(starsq_vext, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
-                  call vExt1Im_ef%init(starsq_vext, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
-                  call dfpt_vefield(fi%juPhon,starsq_vext,fi%atoms,fi%sym,sphhar,fi%cell,vExt1_ef,vExt1Im_ef,iDir_col,1)
-                  !denIn1%pw(:,1) =denIn1%pw(:,1)*vExt1_ef%pw(:,1)
-                  !denIn1%mt(:,:,:,1) = 0.0!denIn1%mt(:,:,:,1)*vExt1_ef%mt(:,:,:,1)
-                  !denIn1Im%mt(:,:,:,1) = 0.0!denIn1Im%mt(:,:,:,1)*vExt1Im_ef%mt(:,:,:,1)
-                  IF (.TRUE.) THEN
-                     sliceplot_int%iplot = 4
-                     name_string = 'testing'
-                     print*,name_string
-                     CALL makeplots(starsq, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi, fi%sym, fi%cell, fi%noco, nococonv_int, vExt1_ef, PLOT_POT_TOT, sliceplot_int,vExt1Im_ef)
-                     !stop
-                  END IF
-               END IF
-               WRITE (oUnit,*) "Checkdopall for den1"
-               CALL checkDOPALL(fi%input, sphhar, starsq,fi%atoms, fi%sym, fi%vacuum, fi%cell,denIn1,1, denIn1Im)
-               sliceplot_int%iplot = 2
-               print*,"now doing denresponse"
-
-               CALL makeplots(starsq, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi , fi%sym, fi%cell, &
-                              fi%noco,nococonv_int, denIn1, PLOT_INPDEN, sliceplot_int,denIn1Im)
-               print*,"plotting done"            
-               stop
-            END IF
-            IF (.TRUE.) THEN
-               write(densave_string,"(a,i0,a,i0,a)")"den1_final_pw_iDir",iDir,".npy"
-               call save_npy(densave_string, denIn1%pw)
-               write(densave_string,"(a,i0,a,i0,a)")"den1_final_mt_",iDir,".npy"
-               call save_npy(densave_string, denIn1%mt(:,:,:,1))
-               write(densave_string,"(a,i0,a,i0,a)")"den1_final_mtIm_",iDir,".npy"
-               call save_npy(densave_string, denIn1Im%mt(:,:,:,1))
-            END IF
-
          END IF
 
          CALL timestop("Generation of potential perturbation")
@@ -434,17 +392,10 @@ CONTAINS
          ! If a starting density perturbation was to be generated, subtract the density
          ! gradient and exit here; no mixing yet!
          IF (strho) THEN
-            print*, "strho",strho
             strho = .FALSE.
             denIn1 = denOut1
             denIn1Im = denOut1Im
 
-            !write(densave_string,"(a,i0,a)")"den1_it1_pw_",iDir,".npy"
-            !call save_npy(densave_string, denIn1%pw)
-            !write(densave_string,"(a,i0,a)")"den1_it1_mt_",iDir,".npy"
-            !call save_npy(densave_string, denIn1%mt(:,:,:,1))
-            !write(densave_string,"(a,i0,a)")"den1_it1_mtIm_",iDir,".npy"
-            !call save_npy(densave_string, denIn1Im%mt(:,:,:,1))
 
             IF (fi%juphon%l_phonon) denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
             IF (fmpi%irank==0) write(*,*) "Starting perturbation generated."
@@ -455,15 +406,6 @@ CONTAINS
                IF (fi%juphon%l_phonon) denIn1m%mt(:,0:,iDtype,:) = denIn1m%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
             END IF
 
-            !IF (fmpi%irank == 0 ) write(4501,*) "STRHO", "Type", iDtype, "Direction", iDir
-            !IF (fmpi%irank == 0 ) write(4500,*) "STRHO","Type",iDtype, "Direction", iDir
-            !CALL dfpt_potden_offset(1,fmpi,starsq,fi%cell,fi%atoms,denIn1,denIn1Im,.TRUE.,.TRUE.)
-            !CALL dfpt_potden_offset(1,fmpi,starsq,fi%cell,fi%atoms,denIn1,denIn1Im,.FALSE.,.TRUE.)
-            !IF (fmpi%irank == 0 ) write(4551,*) "STRHO", "Type", iDtype, "Direction", iDir
-            !IF (fmpi%irank == 0 ) write(4550,*) "STRHO","Type",iDtype, "Direction", iDir
-            !CALL dfpt_surface_offset(1,fmpi,starsq,stars,fi%cell,fi%atoms,denIn1,denIn1Im,rho,grRho,iDtype,.TRUE.,.TRUE.)
-            !CALL dfpt_surface_offset(1,fmpi,starsq,stars,fi%cell,fi%atoms,denIn1,denIn1Im,rho,grRho,iDtype,.FALSE.,.TRUE.)
-            
             CYCLE scfloop
          END IF
 
