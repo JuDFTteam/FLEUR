@@ -77,7 +77,7 @@ CONTAINS
 
     jspin = merge(jsp, 3, jsp == jsp1)
     DO i = 1, size(abc%cof, 1)
-       DO l = 0, 3
+       DO l = 0, atoms%lmax(itype)
           suma = CMPLX(0., 0.)
           DO m = -l, l
              lm = l*(l + 1) + m

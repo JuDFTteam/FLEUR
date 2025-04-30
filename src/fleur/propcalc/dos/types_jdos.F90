@@ -26,7 +26,7 @@ MODULE m_types_jdos
    END TYPE t_jDOS
 CONTAINS
 
-   SUBROUTINE calc_jDOS(jDOS,ikpt, noccbd, ev_list, we, atoms, banddos, input, radfun,abc_u,abc_d)
+   SUBROUTINE calc_jDOS(jDOS, ikpt, noccbd, ev_list, we, atoms, banddos, input, radfun, abc_u, abc_d)
       use m_types_atoms
       use m_types_banddos
       use m_types_input
@@ -38,15 +38,15 @@ CONTAINS
       TYPE(t_banddos), INTENT(IN)     :: banddos
       TYPE(t_input), INTENT(IN)     :: input
       TYPE(t_radfun), INTENT(IN)     :: radfun
-      TYPE(t_abc), INTENT(IN)     :: abc_u,abc_d
+      TYPE(t_abc), INTENT(IN)     :: abc_u, abc_d
       INTEGER, INTENT(IN)     :: ikpt
       INTEGER, INTENT(IN)     :: noccbd
       INTEGER, INTENT(IN)     :: ev_list(:)
       REAL, INTENT(IN)     :: we(:)
-      
+
       INTEGER, PARAMETER :: lmax = 3 !Maximum l considered in j decomposition
 
-      INTEGER :: n_dos,jcof,icof
+      INTEGER :: n_dos, jcof, icof
       INTEGER :: iType, iBand, nn, iAtom, l, jj, j_ind, lmup, lmdown, spin, ilo, ilop
       REAL    :: j, mj, mup, mdown
       REAL    :: facup, facdown, summed, cf
@@ -66,13 +66,13 @@ CONTAINS
             DO l = 0, lmax
             IF (l == 0) THEN
                !s-states (are not split up by SOC)
-                  DO j = 1, radfun%n_r(l)
-                     DO jj = 1, radfun%n_r(l)
-                        c(0) = c(0) + abc_u%cof(iband, 0, j, iatom)*conjg(abc_u%cof(iband, 0, jj, iatom))*radfun%integral(j, jj, 0, 1, 1)
-                        c(0) = c(0) + abc_d%cof(iband, 0, j, iatom)*conjg(abc_d%cof(iband, 0, jj, iatom))*radfun%integral(j, jj, 0, 2, 2)
+               DO j = 1, radfun%n_r(l)
+                  DO jj = 1, radfun%n_r(l)
+                   c(0) = c(0) + abc_u%cof(iband, 0, j, iatom)*conjg(abc_u%cof(iband, 0, jj, iatom))*radfun%integral(j, jj, 0, 1, 1)
+                   c(0) = c(0) + abc_d%cof(iband, 0, j, iatom)*conjg(abc_d%cof(iband, 0, jj, iatom))*radfun%integral(j, jj, 0, 2, 2)
 
-                     end do
                   end do
+               end do
             ELSE
                DO jj = 1, 2
                   j_ind = j_ind + 1
@@ -84,46 +84,47 @@ CONTAINS
 
                      mup = mj - 0.5
                      mdown = mj + 0.5
-                     DO icof=1,radfun%n_r(l)
-                        DO jcof=1,radfun%n_r(l)
-                        
-                     IF (input%jspins .EQ. 1) THEN
-                        mdown = mdown*(-1)
-                        spin = 1
-                     ELSE
-                        spin = 2
-                     END IF
+                     DO icof = 1, radfun%n_r(l)
+                        DO jcof = 1, radfun%n_r(l)
 
-                     IF (ABS(mup) <= l) THEN
-                        lmup = l*(l + 1) + INT(mup)
-                        facup = clebsch(REAL(l), 0.5, mup, 0.5, j, mj)
-                        aup = facup*abc_u%cof(iBand, lmup, icof, iAtom)
-                        bup = facup*abc_u%cof(iBand, lmup, jcof, iAtom)
-                     ELSE
-                        aup = 0.0
-                        bup = 0.0
-                     END IF
+                           IF (input%jspins .EQ. 1) THEN
+                              mdown = mdown*(-1)
+                              spin = 1
+                           ELSE
+                              spin = 2
+                           END IF
 
-                     IF (ABS(mdown) <= l) THEN
-                        lmdown = l*(l + 1) + INT(mdown)
-                        facdown = clebsch(REAL(l), 0.5, mdown, -0.5, j, mj)
-                        adown = facup*abc_d%cof(iBand, lmup, icof, iAtom)
-                        bdown = facup*abc_d%cof(iBand, lmup, jcof, iAtom)
-                     ELSE
-                        adown = 0.0
-                        bdown = 0.0
-                     END IF
+                           IF (ABS(mup) <= l) THEN
+                              lmup = l*(l + 1) + INT(mup)
+                              facup = clebsch(REAL(l), 0.5, mup, 0.5, j, mj)
+                              aup = facup*abc_u%cof(iBand, lmup, icof, iAtom)
+                              bup = facup*abc_u%cof(iBand, lmup, jcof, iAtom)
+                           ELSE
+                              aup = 0.0
+                              bup = 0.0
+                           END IF
 
-                     !c := norm of facup |up> + facdown |down>
-                     !We have to write it out explicitely because
-                     !of the offdiagonal scalar products that appear
-                     c(j_ind) = c(j_ind) &
-                                + aup*CONJG(bup)*radfun%integral(icof,jcof,l,1,1) &
-                                + adown*CONJG(bdown)*radfun%integral(icof,jcof,l,2,2)& 
-                                + aup*CONJG(bdown)*radfun%integral(icof,jcof,l,1,2) &
-                                + adown*CONJG(bup)*radfun%integral(icof,jcof,l,2,1) 
-                  enddo
-               enddo
+                           IF (ABS(mdown) <= l) THEN
+                              lmdown = l*(l + 1) + INT(mdown)
+                              facdown = clebsch(REAL(l), 0.5, mdown, -0.5, j, mj)
+                              adown = -1*facdown*abc_d%cof(iBand, lmdown, icof, iAtom)
+                              bdown = -1*facdown*abc_d%cof(iBand, lmdown, jcof, iAtom)
+                           ELSE
+                              adown = 0.0
+                              bdown = 0.0
+                           END IF
+
+                           !c := norm of facup |up> + facdown |down>
+                           !We have to write it out explicitely because
+                           !of the offdiagonal scalar products that appear
+                           c(j_ind) = c(j_ind) &
+                                      + aup*CONJG(bup)*radfun%integral(icof, jcof, l, 1, 1) &
+                                      + adown*CONJG(bdown)*radfun%integral(icof, jcof, l, 2, 2) &
+                                      + aup*CONJG(bdown)*radfun%integral(icof, jcof, l, 1, 2) &
+                                      + adown*CONJG(bup)*radfun%integral(icof, jcof, l, 2, 1)
+                        end do
+                     end do
+                     
                      mj = mj + 1
                   END DO
                END DO

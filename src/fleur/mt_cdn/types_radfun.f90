@@ -103,7 +103,7 @@ contains
 
       !Calculate the overlaps
       DO ispin=1,input%jspins
-         DO jspin=1,ispin
+         DO jspin=1,input%jspins
             DO l=0,atoms%lmax(itype)
                DO i=1,this%n_r(l)
                   DO j=1,i
@@ -112,8 +112,6 @@ contains
                      CALL intgr0(rf,atoms%rmsh(1,itype),atoms%dx(itype),atoms%jri(itype),ovlp)
                      this%integral(i,j,l,ispin,jspin)=ovlp
                      this%integral(j,i,l,ispin,jspin)=ovlp
-                     this%integral(i,j,l,jspin,ispin)=ovlp
-                     this%integral(j,i,l,jspin,ispin)=ovlp
                   enddo
                enddo
             ENDDO
