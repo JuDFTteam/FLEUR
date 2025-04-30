@@ -20,18 +20,40 @@ MODULE m_types_abc
 
    PRIVATE
 
+   
    TYPE t_abc
-
-      ! Refactored version:
-      COMPLEX, ALLOCATABLE :: cof(:, :, :, :)!(nu,lm,iOrd,iAtom)
-
+   !! A derived type for the AB+(C) coeffs
+   !! 
+   !! This type is used to store and calculate the "large AB" coefficients as 
+   !! well as the coefficients for the local orbitals in a unified way.
+     
+      COMPLEX, ALLOCATABLE :: cof(:, :, :, :) !(nu,lm,iOrd,iAtom)
+      !! This array stores coefficients with the following dimensions:
+      !! - `nu`: Number of states or bands.
+      !! - `lm`: Angular momentum quantum numbers.
+      !! - `iOrd`: index of the radial function, 
+      !!                   i.e. 1="u", the former "A" coefficient
+      !!                        2="\dot{u}", the former "B" coefficient
+      !!                        3="LO", the former "C" coefficient     
+      !!                        4="LO", the former "C" coefficient      
+      !! - `iAtom`: Atom index.
    CONTAINS
-      PROCEDURE, PASS :: init => abc_init
-      PROCEDURE, PASS :: calc_abc
+      PROCEDURE, PASS :: init => abc_init !!
+
+      PROCEDURE, PASS :: calc_abc 
+      !! Calculates the abc coefficients, previously called "abcof".
+      
       PROCEDURE, PASS :: calc_force_abc
+      !! Calculates the force-related abc coefficients, previously called "to_pulay".      
+      
       PROCEDURE, PASS :: rotate
-!      PROCEDURE, PASS :: rotate_to_rep_atom => rotate_eigveccoeffs_to_rep_atom
+      !! Rotates the coefficients or data within the t_abc type.
+      !> \brief Rotates coefficients to the representative atom.
+      !! (Currently commented out in the code.)
+      !! PROCEDURE, PASS :: rotate_to_rep_atom => rotate_eigveccoeffs_to_rep_atom
+
    END TYPE t_abc
+
 
    PUBLIC t_abc
 
