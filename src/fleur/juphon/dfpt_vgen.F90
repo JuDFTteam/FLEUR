@@ -10,7 +10,7 @@ CONTAINS
 
    SUBROUTINE dfpt_vgen(hybdat,field,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
                    juphon,cell,fmpi,noco,nococonv,den,vTot,&
-                   &starsq,dfptdenimag,dfptvTot,l_xc,dfptvTotimag,dfptdenreal,iDtype,iDir,killcont,sigma_disc,fi,do_vext,local_dfptvTot,local_dfptvTotimag,local_stars,local_starsq,l_gr) !qvec
+                   &starsq,dfptdenimag,dfptvTot,l_xc,dfptvTotimag,dfptdenreal,iDtype,iDir,killcont,sigma_disc,fi,do_vext,local_dfptvTot,local_dfptvTotimag,local_stars,local_starsq) !qvec
       !--------------------------------------------------------------------------
       ! FLAPW potential perturbation generator (main routine)
       !
@@ -72,15 +72,15 @@ CONTAINS
       TYPE(t_fleurinput), OPTIONAL,INTENT(IN) :: fi
       LOGICAL, INTENT(IN) :: l_xc
       LOGICAL,OPTIONAL,INTENT(IN) :: do_vext
-      LOGICAL, OPTIONAL, INTENT(IN) :: l_gr
       TYPE(t_fleurinput) :: local_fi
       TYPE(t_potden) :: local_potden,local_potdenq 
       TYPE(t_potden) :: local_vCoul,local_workdenReal,local_workdenImag,local_workden,local_dfptvCoulimag
       TYPE(t_potden) :: local_dfptdenreal,local_den1Rot,local_den1imRot,local_den,local_denRot,local_dfptdenimag,local_vTot
       TYPE(t_atoms) :: local_atoms
-      LOGICAL :: l_vext, do_gr
+      LOGICAL :: l_vext
       INTEGER :: ispin
       REAL :: tmp_qvec(3)
+      complex :: constantShift
 
       TYPE(t_stars),  OPTIONAL, INTENT(IN)    :: starsq
       TYPE(t_potden), OPTIONAL, INTENT(INOUT) :: dfptdenimag, dfptvTotimag, dfptdenreal
@@ -101,8 +101,6 @@ CONTAINS
       exc = vTot
       dfptvCoulimag = dfptvTot
 
-      do_gr =.FALSE. 
-      IF (PRESENT(l_gr)) do_gr = l_gr
 
       l_vext = .FALSE.
 
@@ -209,10 +207,10 @@ CONTAINS
         sigma_loc = sigma_disc
         IF (l_vext) THEN 
         CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,juphon,local_starsq,cell,sphhar,local_atoms,.TRUE.,local_workdenReal,local_vCoul,sigma_loc,&
-                        & dfptdenimag=local_workdenImag,dfptvCoulimag=local_dfptvCoulimag,dfptden0=local_workden,stars2=local_stars,iDtype=iDtype,iDir=iDir,l_gr=do_gr)
+                        & dfptdenimag=local_workdenImag,dfptvCoulimag=local_dfptvCoulimag,dfptden0=local_workden,stars2=local_stars,iDtype=iDtype,iDir=iDir)
         ELSE 
          CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,juphon,starsq,cell,sphhar,atoms,.TRUE.,workdenReal,vCoul,sigma_loc,&
-         & dfptdenimag=workdenImag,dfptvCoulimag=dfptvCoulimag,dfptden0=workden,stars2=stars,iDtype=iDtype,iDir=iDir,l_gr=do_gr)
+         & dfptdenimag=workdenImag,dfptvCoulimag=dfptvCoulimag,dfptden0=workden,stars2=stars,iDtype=iDtype,iDir=iDir)
         END IF 
       ! b)
       IF (l_vext) THEN
@@ -255,6 +253,40 @@ CONTAINS
          IF (l_xc) CALL vgen_xcpot(hybdat,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
                         cell,fmpi,noco,den,denRot,EnergyDen,dfptvTot,vx,vxc,exc, &
                         & den1Rot=den1Rot, den1Rotimag=den1imRot, dfptvTotimag=dfptvTotimag,starsq=starsq)
+
+      IF (juphon%l_symVacLevel .AND. (norm2(starsq%center) .LT. 1e-8) ) THEN 
+         IF (.NOT. l_vext) THEN
+            !IF (.FALSE.) THEN  
+            constantShift = 0.0 
+            DO ispin = 1 , input%jspins
+               if (input%film) constantShift =  (dfptvTot%vac(vacuum%nmzd,1,1,ispin)  - dfptvTot%vac(vacuum%nmzd,1,2,ispin)) / 2
+               
+               dfptvTot%pw(1,:) = dfptvTot%pw(1,:) + constantShift
+
+               dfptvTot%mt(:,0,:,:) = dfptvTot%mt(:,0,:,:) + constantShift * sfp_const 
+
+               if (input%film) dfptvTot%vac(:,1,:,:) = dfptvTot%vac(:,1,:,:) + constantShift
+
+            END DO 
+            CALL dfptvTot%distribute(fmpi%mpi_comm)
+            CALL dfptvTotimag%distribute(fmpi%mpi_comm)
+            !END IF 
+         ELSE 
+            constantShift = 0.0 
+            DO ispin = 1, input%jspins
+               if (input%film) constantShift =  (local_dfptvTot%vac(vacuum%nmzd,1,1,ispin)  - local_dfptvTot%vac(vacuum%nmzd,1,2,ispin)) / 2
+            
+               local_dfptvTot%pw(1,ispin) = local_dfptvTot%pw(1,ispin) + constantShift
+
+               local_dfptvTot%mt(:,0,:,ispin) = local_dfptvTot%mt(:,0,:,ispin) + constantShift * sfp_const 
+
+               if (input%film) local_dfptvTot%vac(:,1,:,ispin) = local_dfptvTot%vac(:,1,:,ispin) + constantShift
+            END DO 
+            CALL local_dfptvTot%distribute(fmpi%mpi_comm)
+            CALL local_dfptvTotimag%distribute(fmpi%mpi_comm)
+         END IF 
+      END IF 
+
 
       IF (iDtype/=0.AND.ANY(killcont/=0)) THEN
          ! d)

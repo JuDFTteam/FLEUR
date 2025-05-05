@@ -19,8 +19,9 @@ CONTAINS
       USE m_dfpt_vgen
       USE m_vgen_coulomb
       USE m_dfpt_eii2
-      USE m_dfpt_crank_gvecs
+      !USE m_dfpt_crank_gvecs
       USE m_types_fleurinput
+      USE m_stepf
 
       TYPE(t_fleurinput), INTENT(IN)    :: fi
       TYPE(t_stars),      INTENT(IN)    :: stars, starsq
@@ -53,8 +54,8 @@ CONTAINS
       TYPE(t_fftgrid) :: fftgrid_dummy,local_fftgrid_dummy
       TYPE(t_potden)  :: rho_dummy, rho1_dummy, vExt1, vExt1Im, grgrVCq, grgrVCqIm 
       TYPE(t_potden)  :: local_vExt1 , local_vExt1Im , local_rho1_dummy
-      TYPE(t_stars)   :: local_stars,local_starsq
-      TYPE(t_atoms)    :: local_atoms
+      TYPE(t_stars)   :: local_stars,local_starsq, stars2
+      TYPE(t_atoms)    :: atoms_dummy
       TYPE(t_hub1data) :: hub1data
 
       INTEGER :: col_index, row_index, iDtype_col, iDir_col, iType, iDir, iSpin
@@ -113,6 +114,13 @@ CONTAINS
       CALL stepf_analytical(fi%sym, stars, fi%atoms, fi%input, fi%cell, fmpi, fftgrid_dummy, [0.0,0.0,0.0], iDtype_row, iDir_row, 1, theta1full0)
       !CALL stepf_analytical(fi%sym, stars, fi%atoms, fi%input, fi%cell, fmpi, fftgrid_dummy, [0.0,0.0,0.0], iDtype_row, iDir_row, 2, theta2)
 
+      
+      ! Create vacuum stepfunction in the case of a film setup, for covolution with the respoonse of the step function 
+      stars2 = stars
+      atoms_dummy = fi%atoms
+      atoms_dummy%ntype = 0  
+      call stepf(fi%sym,stars2,atoms_dummy,fi%input,fi%cell,fi%vacuum,fmpi)
+
       DO iType = 1, fi%atoms%ntype
          DO iDir = 1, 3
             fftgrid_dummy%grid = theta1full(0:, iType, iDir)
@@ -120,12 +128,13 @@ CONTAINS
             theta1_pw(:, iType, iDir) = theta1_pw(:, iType, iDir) * 3 * starsq%mx1 * 3 * starsq%mx2 * 3 * starsq%mx3
             CALL fftgrid_dummy%perform_fft(forward=.false.)
             theta1full(0:, iType, iDir) = fftgrid_dummy%grid
-
+            IF (fi%input%film) theta1full(0:, iType, iDir) = theta1full(0:, iType, iDir) * stars2%ufft(0:)
             fftgrid_dummy%grid = theta1full0(0:, iType, iDir)
             CALL fftgrid_dummy%takeFieldFromGrid(stars, theta1_pw0(:, iType, iDir))
             theta1_pw0(:, iType, iDir) = theta1_pw0(:, iType, iDir) * 3 * stars%mx1 * 3 * stars%mx2 * 3 * stars%mx3
             CALL fftgrid_dummy%perform_fft(forward=.false.)
             theta1full0(0:, iType, iDir) = fftgrid_dummy%grid
+            IF (fi%input%film) theta1full0(0:, iType, iDir) = theta1full0(0:, iType, iDir) * stars2%ufft(0:)
          END DO
       END DO
 
@@ -263,6 +272,10 @@ CONTAINS
 
             CALL stepf_analytical(fi%sym, local_starsq, fi%atoms, fi%input, fi%cell, fmpi, local_fftgrid_dummy, qvec, iDtype_row, iDir_row, 1, local_theta1full)
             CALL stepf_analytical(fi%sym, local_stars, fi%atoms, fi%input, fi%cell, fmpi, local_fftgrid_dummy, [0.0,0.0,0.0], iDtype_row, iDir_row, 1, local_theta1full0)
+            ! Create vacuum stepfunction in the case of a film setup, for covolution with the respoonse of the step function 
+            stars2 = local_stars
+            call stepf(fi%sym,stars2,atoms_dummy,fi%input,fi%cell,fi%vacuum,fmpi)
+
 
             DO iType = 1, fi%atoms%ntype
                DO iDir = 1, 3
@@ -270,13 +283,14 @@ CONTAINS
                   CALL local_fftgrid_dummy%takeFieldFromGrid(local_starsq, local_theta1_pw(:, iType, iDir))
                   local_theta1_pw(:, iType, iDir) = local_theta1_pw(:, iType, iDir) * 3 * local_starsq%mx1 * 3 * local_starsq%mx2 * 3 * local_starsq%mx3
                   CALL local_fftgrid_dummy%perform_fft(forward=.false.)
-                  local_theta1full(0:, iType, iDir) = local_fftgrid_dummy%grid
-      
+                  local_theta1full(0:, iType, iDir) = local_fftgrid_dummy%grid 
+                  IF (fi%input%film) local_theta1full(0:, iType, iDir) = local_theta1full(0:, iType, iDir) * stars2%ufft(0:)
                   local_fftgrid_dummy%grid = local_theta1full0(0:, iType, iDir)
                   CALL fftgrid_dummy%takeFieldFromGrid(local_stars, local_theta1_pw0(:, iType, iDir))
                   local_theta1_pw0(:, iType, iDir) = local_theta1_pw0(:, iType, iDir) * 3 * local_stars%mx1 * 3 * local_stars%mx2 * 3 * local_stars%mx3
                   CALL local_fftgrid_dummy%perform_fft(forward=.false.)
                   local_theta1full0(0:, iType, iDir) = local_fftgrid_dummy%grid
+                  IF (fi%input%film) local_theta1full0(0:, iType, iDir) = local_theta1full0(0:, iType, iDir) * stars2%ufft(0:)
                END DO
             END DO
 
@@ -355,7 +369,7 @@ CONTAINS
             tempval = CMPLX(0.0,0.0)
 
             DO iSpin = 1, fi%input%jspins
-               IF (fmpi%irank==0) write(9989,FMT=8000) "Loop spin:", iSpin
+               IF (fmpi%irank==0) write(9989,*) "Loop spin:", iSpin
                ! TODO: Ensure, that vTot/denIn1 is diagonal here, not 2x2.
                pwwq2 = CMPLX(0.0,0.0)
                CALL dfpt_convol_big(2, stars, starsq, vTot%pw(:, iSpin), theta1full(0:, iDtype_col, iDir_col), pwwq2)
@@ -455,6 +469,19 @@ CONTAINS
                   tempval = CMPLX(0.0,0.0)
                END DO
                IF (fmpi%irank==0) write(9989,*) "End spin loop"
+
+               IF (fi%input%film .AND. iDir_row == 3  ) THEN 
+                  rho_vac = (rho%vac(:,:,:,1)+rho%vac(:,:,:,fi%input%jspins))/(3.0-fi%input%jspins)
+                  local_rho_vac(:,:stars%ng2,:) = rho_vac(:,:,:)
+                  rho_pw = (rho%pw(:,1)+rho%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
+                  local_rho_pw = 0.0 
+                  local_rho_pw(:stars%ng3) = rho_pw(:)
+
+                  CALL dfpt_sf_vac(stars,fi%vacuum,fi%cell,local_rho_pw,local_vExt1%pw(:,1),rho_vac,local_vExt1%vac(:,:,:,1),tempval,iDir_col)
+                  dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
+                  IF (fmpi%irank==0) write(9989,FMT=8000) "    SF VAC Element rho V1ext0       ", tempval
+                  tempval = CMPLX(0.0,0.0)
+               END IF 
             END IF
 
             IF (fmpi%irank==0) write(9990,FMT=8001) qvec, iDtype_row, iDir_row, iDtype_col, iDir_col
@@ -645,6 +672,55 @@ CONTAINS
       vac_int = vac_int + tvact
 
    END SUBROUTINE dfpt_int_vac
+
+   SUBROUTINE dfpt_sf_vac(stars,vacuum,cell,pw_conj,pw_pure,vac_conj,vac_pure,sf_int,iDir_col)
+
+      USE m_npy
+
+      TYPE(t_stars), INTENT(IN) :: stars
+      TYPE(t_vacuum), INTENT(IN) :: vacuum
+      TYPE(t_cell), INTENT(IN) :: cell 
+      COMPLEX, INTENT(IN) :: pw_conj(:), pw_pure(:)
+      COMPLEX, INTENT(IN) :: vac_conj(:,:,:), vac_pure(:,:,:)
+      COMPLEX, INTENT(OUT) :: sf_int
+      INTEGER, INTENT(IN) :: iDir_col 
+
+
+      REAL :: facv ! accounts for vacua symmetry
+      REAL :: qzh, pref , facn 
+      COMPLEX :: fft_conj(stars%ng2) , fft_pure(stars%ng2)  
+      INTEGER :: iVac , ig2, ig3 
+
+      sf_int = CMPLX(0.0,0.0)
+      facv = 2.0/vacuum%nvac
+      pref = 1.0 ! direction fourier trafo  
+      
+      facn = 1.0 
+
+
+
+      DO iVac = 1 , vacuum%nvac
+         ! IR - Part 
+         fft_conj = CMPLX(0.0,0.0)
+         fft_pure = CMPLX(0.0,0.0)
+         IF (iVac == 2 ) pref = -1.0 
+         IF (iVac == 2)  facn =  -1.0 
+         DO ig3 = 1, stars%ng3   
+            ! Sum over all G_perp and map to G_||
+            ! Fourier Trafo at +-Dvac/2
+            qzh = pref * stars%kv3(3,ig3) * cell%bmat(3,3) * cell%z1
+            ig2 = stars%ig2(ig3)
+            fft_conj(ig2) = fft_conj(ig2) + pw_conj(ig3) * cmplx( cos(qzh), sin(qzh))  
+            fft_pure(ig2) = fft_pure(ig2) + pw_pure(ig3) * cmplx( cos(qzh), sin(qzh))  
+         END DO 
+      
+         sf_int = sf_int - facn * facv * cell%area  *  DOT_PRODUCT(fft_conj(:stars%ng2),fft_pure(:stars%ng2))
+
+         ! Vacuum part
+         sf_int = sf_int + facn * facv * cell%area * DOT_PRODUCT(vac_conj(1,:stars%ng2,ivac),vac_pure(1,:stars%ng2,ivac))
+      END DO 
+
+   END SUBROUTINE 
 
    SUBROUTINE dfpt_dynmat_eigen(fi, results, results1, fmpi, enpara, nococonv, &
                                 stars, starsq, sphhar, inden, hub1data, vx, v, v1real, v1imag, &

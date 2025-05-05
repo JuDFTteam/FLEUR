@@ -13,7 +13,7 @@ module m_vgen_coulomb
 contains
 
   subroutine vgen_coulomb( ispin, fmpi,    input, field, vacuum, sym, juphon, stars, &
-             cell, sphhar, atoms, dosf, den, vCoul, sigma_disc, results, dfptdenimag, dfptvCoulimag, dfptden0, stars2, iDtype, iDir, iDir2, sigma_disc2, l_gr )
+             cell, sphhar, atoms, dosf, den, vCoul, sigma_disc, results, dfptdenimag, dfptvCoulimag, dfptden0, stars2, iDtype, iDir, iDir2, sigma_disc2 )
     !----------------------------------------------------------------------------
     ! FLAPW potential generator
     !----------------------------------------------------------------------------
@@ -63,7 +63,6 @@ contains
     INTEGER, OPTIONAL, INTENT(IN)                :: iDtype, iDir ! DFPT: Type and direction of displaced atom
     INTEGER, OPTIONAL, INTENT(IN)                :: iDir2 ! DFPT: 2nd direction for 2nd order VC
     COMPLEX, OPTIONAL, INTENT(IN)                :: sigma_disc2(2)
-    LOGICAL, OPTIONAL, INTENT(IN)                :: l_gr
 
     complex                                      :: vintcza, xint, rhobar,vslope
     integer                                      :: i, i3, irec2, irec3, ivac, j, js, k, k3
@@ -76,7 +75,7 @@ contains
     complex, allocatable                         :: alphm(:,:), psq(:)
     real,    allocatable                         :: af1(:), bf1(:)
     LOGICAL :: l_dfptvgen ! If this is true, we handle things differently!
-    LOGICAL :: l_2ndord, l_corr, do_gr
+    LOGICAL :: l_2ndord, l_corr
 
 #ifdef CPP_MPI
     integer:: ierr
@@ -84,12 +83,11 @@ contains
 
     l_dfptvgen = PRESENT(stars2)
     l_2ndord = PRESENT(iDir2)
-    l_corr = ALL(ABS(den%vac)<1e-12)
+    !l_corr = ALL(ABS(den%vac)<1e-12)
+    l_corr =   .FALSE. !ALL(ABS(den%vac)<1e-12)
     vmz1dh_is = cmplx(0.0,0.0)
     sigma_loc = sigma_disc
     sigma_loc2 = MERGE(sigma_disc,cmplx(0.0,0.0),PRESENT(sigma_disc2))
-    do_gr = .FALSE. 
-    IF(PRESENT(l_gr)) do_gr = l_gr
     iDir3 = 0 
     IF (PRESENT(iDir)) iDir3 = iDir 
     vintcza = cmplx(0.0,0.0)
@@ -248,30 +246,32 @@ contains
     call timestop( "MT-spheres" )
 
     ! if we calculate the Gradient and the Efield is turned on we have to manually add the Efield 
-    IF ( do_gr .and. input%film .and. iDir3 == 3  ) THEN
-      sigmaa(1) = ( field%efield%sigma + field%efield%sig_b(1) ) / cell%area
-      sigmaa(2) = ( field%efield%sigma + field%efield%sig_b(2) ) / cell%area
-      
-      IF ( (sigmaa(1) + sigmaa(2)) .LT.  1E-8 ) THEN
-        write(10,*) "I am correcting"
-        ! Asymmetric setup in which an Efield contribution exists inside the film  
-        vCoul%pw(1,:) = vCoul%pw(1,:) -   fpi_const * sigmaa(1) !/ cell%omtil  
+    IF (PRESENT(iDtype)) THEN 
+      IF ( (iDtype .eq. 0) .and. input%film .and. iDir3 == 3  ) THEN
+        sigmaa(1) = ( field%efield%sigma + field%efield%sig_b(1) ) / cell%area
+        sigmaa(2) = ( field%efield%sigma + field%efield%sig_b(2) ) / cell%area
+        
+        IF ( (sigmaa(1) + sigmaa(2)) .LT.  1E-8 ) THEN
+          write(10,*) "I am correcting"
+          ! Asymmetric setup in which an Efield contribution exists inside the film  
+          vCoul%pw(1,:) = vCoul%pw(1,:) -   fpi_const * sigmaa(1) !/ cell%omtil  
 
-        vCoul%mt(:,0,:,:) =  vCoul%mt(:,0,:,:) -   fpi_const * sigmaa(1) * sfp_const !/cell%omtil 
+          vCoul%mt(:,0,:,:) =  vCoul%mt(:,0,:,:) -   fpi_const * sigmaa(1) * sfp_const !/cell%omtil 
+        END IF
+        
+        ! vacuum contribution
+        ! obtain mesh point (ncsh) of charge sheet for external electric field
+        ncsh = field%efield%zsigma / vacuum%delz + 1.01
+        DO i = 1 , ncsh 
+          ! vacuum 1 
+          vCoul%vac(i,1,1,:) = vCoul%vac(i,1,1,:) - fpi_const * sigmaa(1)
+
+          ! vacuum 2 
+          vCoul%vac(i,1,2,:) = vCoul%vac(i,1,2,:) + fpi_const * sigmaa(2) 
+        END DO 
+
       END IF
-      
-      ! vacuum contribution
-      ! obtain mesh point (ncsh) of charge sheet for external electric field
-      ncsh = field%efield%zsigma / vacuum%delz + 1.01
-      DO i = 1 , ncsh 
-        ! vacuum 1 
-        vCoul%vac(i,1,1,:) = vCoul%vac(i,1,1,:) - fpi_const * sigmaa(1)
-
-        ! vacuum 2 
-        vCoul%vac(i,1,2,:) = vCoul%vac(i,1,2,:) + fpi_const * sigmaa(2) 
-      END DO 
-
-    END IF
+    END IF 
     if( vCoul%potdenType == POTDEN_TYPE_POTYUK ) return
 
     if ( fmpi%irank == 0 ) then

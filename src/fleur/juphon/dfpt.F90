@@ -134,7 +134,7 @@ CONTAINS
       ! Desym-tests:
       INTEGER :: grid(3), iread
       REAL    :: dr_re(fi%vacuum%nmzd), dr_im(fi%vacuum%nmzd), drr_dummy(fi%vacuum%nmzd), numbers(3*fi%atoms%nat,6*fi%atoms%nat)
-      complex                           :: sigma_loc(2), sigma_ext(2), sigma_coul(2), sigma_gext(3,2)
+      complex                           :: sigma_loc(2), sigma_ext(2), sigma_coul(2), sigma_gext(3,2), constantShift
 
       ALLOCATE(e2_vm(fi%atoms%nat,3,3))
 
@@ -302,20 +302,39 @@ CONTAINS
 
 
          ! Generate the external potential gradient.
-         write(oUnit, *) "grVext", iDir
+         write(oUnit, *) "local grVext", iDir
          sigma_loc  = cmplx(0.0,0.0)
          !IF (iDir==3) sigma_loc  = sigma_ext
          CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, fi%juphon, local_stars, fi_nosym%cell, &
                          & sphhar_nosym, local_atoms, .FALSE., local_imagrhodummy, local_grVext3(iDir), sigma_loc, &
-                         & dfptdenimag=local_imagrhodummy, dfptvCoulimag=local_grvextdummy,dfptden0=local_imagrhodummy,stars2=local_stars,iDtype=0,iDir=iDir,l_gr=.TRUE.)
+                         & dfptdenimag=local_imagrhodummy, dfptvCoulimag=local_grvextdummy,dfptden0=local_imagrhodummy,stars2=local_stars,iDtype=0,iDir=iDir)
          DO iSpin = 1 , fi_nosym%input%jspins
-            CALL checkDOPALL(fi_nosym%input, sphhar_nosym, local_stars ,local_atoms, fi_nosym%sym, fi_nosym%vacuum, fi_nosym%cell,local_grVext3(iDir),iSpin,local_grvextdummy)
+            IF (fmpi%irank==0)  CALL checkDOPALL(fi_nosym%input, sphhar_nosym, local_stars ,local_atoms, fi_nosym%sym, fi_nosym%vacuum, fi_nosym%cell,local_grVext3(iDir),iSpin,local_grvextdummy)
          END DO 
-         write(oUnit,*) "grVext was called for iDir" , iDir
+         write(oUnit,*) "local grVext was called for iDir" , iDir
          IF (iDir==3) sigma_gext(iDir,:) = sigma_loc
 
          call cast_smaller_grid(grVext3(iDir),local_grVext3(iDir),stars_nosym,fi_nosym%input )
+         ! DO iSpin = 1 , fi_nosym%input%jspins
+         !    IF (fmpi%irank==0) CALL checkDOPALL(fi_nosym%input, sphhar_nosym, stars_nosym ,fi_nosym%atoms, fi_nosym%sym, fi_nosym%vacuum, fi_nosym%cell,grVext3(iDir),iSpin,vext_dummy)
+         ! END DO 
+         ! write(oUnit,*) "grVext was called for iDir" , iDir
       END DO
+      IF (fi_nosym%juphon%l_symVacLevel .AND. fmpi%irank==0) THEN 
+         DO iDir= 1 , 3
+            constantShift = 0.0 
+            DO ispin = 1 , fi_nosym%input%jspins
+               if (fi_nosym%input%film) constantShift =  (grVext3(iDir)%vac(fi_nosym%vacuum%nmzd,1,1,ispin)  - grVext3(iDir)%vac(fi_nosym%vacuum%nmzd,1,2,ispin)) / 2               
+               grVext3(iDir)%pw(1,:) = grVext3(iDir)%pw(1,:) + constantShift
+               grVext3(iDir)%mt(:,0,:,:) = grVext3(iDir)%mt(:,0,:,:) + constantShift * sfp_const 
+               if (fi_nosym%input%film) grVext3(iDir)%vac(:,1,:,:) = grVext3(iDir)%vac(:,1,:,:) + constantShift
+            END DO 
+            ! DO iSpin = 1 , fi_nosym%input%jspins
+            !    CALL checkDOPALL(fi_nosym%input, sphhar_nosym, stars ,fi_nosym%atoms, fi_nosym%sym, fi_nosym%vacuum, fi_nosym%cell,grVext3(iDir),iSpin)
+            ! END DO 
+            ! write(oUnit,*) "grVext corrected for iDir" , iDir   
+         END DO 
+      END IF
       !CALL vext_dummy%reset_dfpt() ! this is needed as copyPotden does not deallocate in its routine and we work with different stars
       !CALL vext_dummy%copyPotDen(vTot_nosym)
       !CALL vext_dummy%resetPotDen()
@@ -382,13 +401,21 @@ CONTAINS
          IF (iDir==3) sigma_loc  = sigma_coul
          CALL dfpt_vgen(hybdat_nosym, fi_nosym%field, fi_nosym%input, xcpot_nosym, fi_nosym%atoms, sphhar_nosym, stars_nosym, fi_nosym%vacuum, fi_nosym%sym, &
                         fi%juphon, fi_nosym%cell, fmpi_nosym, fi_nosym%noco, nococonv_nosym, rho_nosym, vTot_nosym, &
-                        stars_nosym, imagrhodummy, grVtot3(iDir), .TRUE., grvextdummy, grRho3(iDir), 0, iDir, [0,0], sigma_loc,l_gr=.TRUE.)
-         write(oUnit, *) "grVC", iDir
-         sigma_loc  = cmplx(0.0,0.0)
+                        stars_nosym, imagrhodummy, grVtot3(iDir), .TRUE., grvextdummy, grRho3(iDir), 0, iDir, [0,0], sigma_loc)
+         ! DO iSpin = 1 , fi_nosym%input%jspins
+         !    if (fmpi%irank==0) CALL checkDOPALL(fi_nosym%input, sphhar_nosym, stars ,local_atoms, fi_nosym%sym, fi_nosym%vacuum, fi_nosym%cell,grVtot3(iDir),iSpin,grvextdummy)
+         ! END DO 
+         ! write(oUnit, *) "grVeff called Direction", iDir
+         ! write(oUnit, *) "grVC", iDir
+         ! sigma_loc  = cmplx(0.0,0.0)
          IF (iDir==3) sigma_loc  = sigma_coul
          CALL dfpt_vgen(hybdat_nosym, fi_nosym%field, fi_nosym%input, xcpot_nosym, fi_nosym%atoms, sphhar_nosym, stars_nosym, fi_nosym%vacuum, fi_nosym%sym, &
                         fi%juphon, fi_nosym%cell, fmpi_nosym, fi_nosym%noco, nococonv_nosym, rho_nosym, vTot_nosym, &
-                        stars_nosym, imagrhodummy, grVC3(iDir), .FALSE., grvextdummy, grRho3(iDir), 0, iDir, [0,0], sigma_loc,l_gr=.TRUE.)
+                        stars_nosym, imagrhodummy, grVC3(iDir), .FALSE., grvextdummy, grRho3(iDir), 0, iDir, [0,0], sigma_loc)
+         ! DO iSpin = 1 , fi_nosym%input%jspins
+         !    if (fmpi%irank==0) CALL checkDOPALL(fi_nosym%input, sphhar_nosym, stars ,local_atoms, fi_nosym%sym, fi_nosym%vacuum, fi_nosym%cell,grVC3(iDir),iSpin,grvextdummy)
+         ! END DO
+         ! write(oUnit, *) "grVC called Direction", iDir
       END DO
 
          DO iDir2 = 1, 3
@@ -612,6 +639,13 @@ CONTAINS
                                           MERGE(sigma_coul,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir==3))
                      CALL timestop("Sternheimer")
                   END IF
+
+                  ! IF (fmpi%irank==0) THEN 
+                  !    DO iSpin = 1 , fi_nosym%input%jspins
+                  !       CALL checkDOPALL(fi_nosym%input, sphhar_nosym, starsq ,fi_nosym%atoms, fi_nosym%sym, fi_nosym%vacuum, fi_nosym%cell,vTot1,iSpin,vTot1Im)
+                  !    END DO 
+                  !    write(oUnit,*) "vTot1 was called for iDir" , iDir , "and iDtype" , iDtype
+                  ! END IF 
 
                   IF (fmpi%irank==0) WRITE(*,*) '-------------------------'
                   CALL timestart("Dynmat")

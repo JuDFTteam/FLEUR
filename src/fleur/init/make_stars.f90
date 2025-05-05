@@ -40,7 +40,7 @@ CONTAINS
 
       REAL, OPTIONAL, INTENT(IN) :: qvec(3)
       INTEGER, OPTIONAL, INTENT(IN) :: iDtype, iDir
-
+      TYPE(t_stars) :: stars2
       INTEGER :: ierr
 
       TYPE(t_fftgrid) :: fftgrid
@@ -69,12 +69,10 @@ CONTAINS
 
       CALL timestart("stepf")
       IF (PRESENT(qvec)) THEN
-         IF (fmpi%irank == 0) THEN
-            ALLOCATE (stars%ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1))
-            ALLOCATE (stars%ufft1(0:27*stars%mx1*stars%mx2*stars%mx3-1),stars%ustep(stars%ng3))
-            CALL stepf_analytical(sym, stars, atoms, input, cell, fmpi, fftgrid, qvec, iDtype, iDir, 1)
-            CALL stepf_stars(stars,fftgrid,qvec)
-         END IF
+         ALLOCATE (stars%ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1))
+         ALLOCATE (stars%ufft1(0:27*stars%mx1*stars%mx2*stars%mx3-1),stars%ustep(stars%ng3))  
+         CALL stepf_analytical(sym, stars, atoms, input, cell, fmpi, fftgrid, qvec, iDtype, iDir, 1)
+         CALL stepf_stars(fmpi, stars,fftgrid,sym,input,atoms,cell,vacuum,qvec)
       ELSE
          ALLOCATE (stars%ufft(0:27*stars%mx1*stars%mx2*stars%mx3-1))
          ALLOCATE (stars%ustep(stars%ng3))
