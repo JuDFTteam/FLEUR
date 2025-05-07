@@ -477,7 +477,7 @@ CONTAINS
                   local_rho_pw = 0.0 
                   local_rho_pw(:stars%ng3) = rho_pw(:)
 
-                  CALL dfpt_sf_vac(stars,fi%vacuum,fi%cell,local_rho_pw,local_vExt1%pw(:,1),rho_vac,local_vExt1%vac(:,:,:,1),tempval,iDir_col)
+                  CALL dfpt_sf_vac(local_stars,fi%vacuum,fi%cell,local_rho_pw,local_vExt1%pw(:,1),rho_vac,local_vExt1%vac(:,:,:,1),tempval,iDir_col)
                   dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
                   IF (fmpi%irank==0) write(9989,FMT=8000) "    SF VAC Element rho V1ext0       ", tempval
                   tempval = CMPLX(0.0,0.0)
