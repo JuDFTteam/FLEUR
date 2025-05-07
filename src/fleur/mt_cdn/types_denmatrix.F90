@@ -75,7 +75,7 @@ contains
       END DO
    end function
 
-   subroutine rhonmt(this, atoms, sphhar, we, ne, itype, sym, abc, abc1, abc1m)
+   subroutine rhonmt(this, atoms, sphhar, we, ne, itype, sym, l_less_effort,abc, abc1, abc1m)
     !! Subroutine to construct all non-spherical MT density coefficients (for a
     !! density perturbation) without LOs in one routine. The spin input dictates,
     !! which element is gonna be built.
@@ -118,6 +118,7 @@ contains
       type(t_atoms), intent(IN)    :: atoms
 
       integer, intent(IN)    :: ne, itype
+      logical, intent(IN)    :: l_less_effort
       real, intent(IN)    :: we(ne)    !! \(\tilde{f}_{\nu\boldsymbol{k}}\)
       !real, intent(IN)    :: we1(ne)   !! \(\tilde{f}_{\nu\boldsymbol{k}\boldsymbol{q}}^{j,\beta~(1)}\)
       !logical, intent(IN)    :: l_dfpt
@@ -133,10 +134,9 @@ contains
       integer :: jmem, l, lh, llp, llpmax, lm, lmp, lp, lv, m, mp, mv, na, natom, nn, ns, nt, lphi, lplow, icoef, jcoef, mpp,lpp,lpmin0,lpmax0,lpmin,lo,lop,lpmax
       integer :: n_l(atoms%nlod)
       !TODO these are needed for DFPT!?
-      logical :: l_minusq, l_less_effort, l_gamma, l_dfpt
+      logical :: l_minusq, l_gamma, l_dfpt
       real, allocatable:: we1(:)!(nobd)
       l_minusq = present(abc1m)
-      l_less_effort = .true. !TODO In case of LOs this does not work
       l_gamma = .false.
       l_dfpt = .false.
       this%l_triang = l_less_effort

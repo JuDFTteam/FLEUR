@@ -298,7 +298,7 @@ CONTAINS
 
                   !Now calculate the density matrix as needed to construct the charge
                   call denmatrix(ispin, ispinpr, itype)%rhonmt(atoms, sphhar, we, noccbd, itype, &
-                                                               sym, abc(ispin, abc_itype), abc(ispinpr, abc_itype))
+                                                               sym, ispin==ispinpr, abc(ispin, abc_itype), abc(ispinpr, abc_itype))
                   !call denmatrix(ispin,ispin,itype)%mpi_collect() TODO
                end do !loop over ispinpr
                IF (input%l_f) THEN
