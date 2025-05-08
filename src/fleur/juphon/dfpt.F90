@@ -36,6 +36,7 @@ CONTAINS
       USE m_dfpt_dielecten
       USE m_dfpt_born_effcharge
       use m_dfpt_vefield
+      USE m_dfpt_potdenLocal
 
       TYPE(t_mpi),        INTENT(IN)     :: fmpi
       TYPE(t_fleurinput), INTENT(IN)     :: fi
@@ -98,6 +99,11 @@ CONTAINS
 
       CLASS(t_xcpot),     ALLOCATABLE :: xcpot_fullsym
       CLASS(t_forcetheo), ALLOCATABLE :: forcetheo_fullsym
+
+      ! starsLocal type variables
+      TYPE(t_stars) :: starsLocal
+      TYPE(t_potden):: imagrhodummyLocal,grvextdummyLocal
+      TYPE(t_atoms) :: atomsLocal
 
       INTEGER,          ALLOCATABLE :: recG(:, :)
       INTEGER                       :: ngdp2km
@@ -251,6 +257,15 @@ CONTAINS
       CALL timestart("Gradient generation")
       ALLOCATE(grrhodummy(fi_nosym%atoms%jmtd, (fi_nosym%atoms%lmaxd+1)**2, fi_nosym%atoms%nat, SIZE(rho_nosym%mt,4), 3))
 
+      ! For the gradient of the external Potential we need a higher cutoff in the expansion, in order to confine the multipole moments in the MTs
+      ! This is crucial for the Film-Mode and will be visible in the z-Eigenmodes.  
+      CALL create_typesLocal(fi_nosym,fmpi_nosym,fi_nosym%sym,fi_nosym%cell,fi_nosym%input,sphhar_nosym, fi_nosym%vacuum , fi_nosym%noco ,starsLocal, grVext3(1),atomsLocal)
+      CALL grVext3(2)%copyPotDen(grVext3(1))
+      CALL grVext3(3)%copyPotDen(grVext3(1))
+      CALL imagrhodummyLocal%copyPotDen(grVext3(1))
+      CALL grvextdummyLocal%copyPotDen(grVext3(1))
+
+
       CALL imagrhodummy%copyPotDen(rho_nosym)
       CALL imagrhodummy%resetPotDen()
       CALL grvextdummy%copyPotDen(rho_nosym)
@@ -273,22 +288,21 @@ CONTAINS
          DO iDir2 = 1, 3
             CALL grgrvextnum(iDir2,iDir)%copyPotDen(vTot_nosym)
             CALL grgrvextnum(iDir2,iDir)%resetPotDen()
-            CALL grgrVC3x3(iDir2,iDir)%copyPotDen(vTot_nosym)
+            CALL grgrVC3x3(iDir2,iDir)%copyPotDen(grVext3(1))
             CALL grgrVC3x3(iDir2,iDir)%resetPotDen()
          END DO
-         CALL grVext3(iDir)%copyPotDen(vTot_nosym)
-         CALL grVext3(iDir)%resetPotDen()
+         !CALL grVext3(iDir)%copyPotDen(vTot_nosym)
+         !CALL grVext3(iDir)%resetPotDen()
          CALL grVtot3(iDir)%copyPotDen(vTot_nosym)
          CALL grVtot3(iDir)%resetPotDen()
          CALL grVC3(iDir)%copyPotDen(vTot_nosym)
          CALL grVC3(iDir)%resetPotDen()
          ! Generate the external potential gradient.
-         write(oUnit, *) "grVext", iDir
          sigma_loc  = cmplx(0.0,0.0)
          !IF (iDir==3) sigma_loc  = sigma_ext
-         CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, fi%juphon, stars_nosym, fi_nosym%cell, &
-                         & sphhar_nosym, fi_nosym%atoms, .FALSE., imagrhodummy, grVext3(iDir), sigma_loc, &
-                         & dfptdenimag=imagrhodummy, dfptvCoulimag=grvextdummy,dfptden0=imagrhodummy,stars2=stars_nosym,iDtype=0,iDir=iDir)
+         CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, fi%juphon, starsLocal, fi_nosym%cell, &
+                         & sphhar_nosym, atomsLocal, .FALSE., imagrhodummyLocal, grVext3(iDir), sigma_loc, &
+                         & dfptdenimag=imagrhodummyLocal, dfptvCoulimag=grvextdummyLocal,dfptden0=imagrhodummyLocal,stars2=starsLocal,iDtype=0,iDir=iDir)
          IF (iDir==3) sigma_gext(iDir,:) = sigma_loc
       END DO
       !CALL vext_dummy%copyPotDen(vTot_nosym)
@@ -373,13 +387,15 @@ CONTAINS
       DO iDir2 = 1, 3
          DO iDir = 1, 3
             CALL imagrhodummy%resetPotDen()
+            CALL imagrhodummyLocal%resetpotden()
+            CALL grvextdummyLocal%resetpotden()
             sigma_loc = cmplx(0.0,0.0)
 
             !IF (iDir2==3) sigma_loc = sigma_gext(iDir,:)
             !IF (iDir==3) sigma_loc = sigma_gext(iDir2,:)
-            CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, fi%juphon, stars_nosym, fi_nosym%cell, &
-                        & sphhar_nosym, fi_nosym%atoms, .TRUE., imagrhodummy, grgrVC3x3(iDir2,iDir), sigma_loc, &
-                        & dfptdenimag=imagrhodummy, dfptvCoulimag=grvextdummy,dfptden0=imagrhodummy,stars2=stars_nosym,iDtype=0,iDir=iDir,iDir2=iDir2, &
+            CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, fi%juphon, starsLocal, fi_nosym%cell, &
+                        & sphhar_nosym, atomsLocal, .TRUE., imagrhodummyLocal, grgrVC3x3(iDir2,iDir), sigma_loc, &
+                        & dfptdenimag=imagrhodummyLocal, dfptvCoulimag=grvextdummyLocal,dfptden0=imagrhodummyLocal,stars2=starsLocal,iDtype=0,iDir=iDir,iDir2=iDir2, &
                         & sigma_disc2=MERGE(sigma_ext,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir2==3.AND.iDir==3.AND..FALSE.))
             CALL dfpt_e2_madelung(fi_nosym%atoms,fi_nosym%input%jspins,imagrhodummy%mt(:,0,:,:),grgrVC3x3(iDir2,iDir)%mt(:,0,:,1),e2_vm(:,iDir2,iDir))
          END DO
