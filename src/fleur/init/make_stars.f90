@@ -12,7 +12,7 @@ MODULE m_make_stars
    PRIVATE
    PUBLIC :: make_stars
 CONTAINS
-   SUBROUTINE make_stars(stars,sym,atoms,vacuum,sphhar,input,cell,noco,fmpi,qvec,iDtype,iDir,l_efield)
+   SUBROUTINE make_stars(stars,sym,atoms,vacuum,sphhar,input,cell,noco,fmpi,qvec,iDtype,iDir,l_efield,gmaxzLocal)
       USE m_stepf
       USE m_types_sym
       USE m_types_atoms
@@ -41,6 +41,7 @@ CONTAINS
       INTEGER, OPTIONAL, INTENT(IN) :: iDtype, iDir
 
       LOGICAL, OPTIONAL, INTENT(IN) :: l_efield
+      REAL, OPTIONAL, INTENT(IN)    :: gmaxzLocal ! Cutoff for Vext responses in DFPT (Film) 
       LOGICAL       :: l_ef
 
       INTEGER :: ierr
@@ -58,6 +59,7 @@ CONTAINS
          CALL timestart("star-setup")
          stars%gmax=input%gmax
          IF (ABS(input%gmaxz).GE.1e-8) stars%gmaxz=input%gmaxz
+         IF (PRESENT(gmaxzLocal)) stars%gmaxz= gmaxzLocal
          IF (PRESENT(qvec)) THEN
             CALL stars%dim(sym,cell,input%film,qvec)
             CALL stars%init(cell,sym,input%film,input%rkmax,qvec)

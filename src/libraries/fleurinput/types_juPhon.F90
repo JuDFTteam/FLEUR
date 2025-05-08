@@ -29,6 +29,7 @@ MODULE m_types_juPhon
       REAL    :: eDiffcut  = 1e-5   ! Cutoff for energy differences
       REAL    :: fDiffcut  = 1e-7    ! Cutoff for occupation differences
       REAL    :: qlim      = 1./16     ! qlim value
+      REAL    :: gmaxzLocal   = 0.0  ! Local Gmaxz cutoff for film 
       REAL    :: qpt_ph(3)           ! Debug q
 
       LOGICAL :: e1term = .TRUE.     ! Calculate the eigenenergy response
@@ -173,6 +174,7 @@ CONTAINS
       CALL mpi_bc(this%l_efield, rank, mpi_comm)
       CALL mpi_bc(this%l_borneffcharge, rank, mpi_comm)
       CALL mpi_bc(this%qlim,rank,mpi_comm)
+      CALL mpi_bc(this%gmaxzLocal,rank,mpi_comm)
       CALL mpi_bc(this%l_cheatsym, rank, mpi_comm)
       CALL mpi_bc(this%l_procc, rank, mpi_comm)
       CALL mpi_bc(this%l_prodyn, rank, mpi_comm)
@@ -286,6 +288,12 @@ CONTAINS
 
          IF (numberNodes == 1) THEN
            this%qlim  = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@qlim'))
+         END IF
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@gmaxzLocal')
+
+         IF (numberNodes == 1) THEN
+           this%gmaxzLocal  = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@gmaxzLocal'))
          END IF
 
          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@singleQpt')
