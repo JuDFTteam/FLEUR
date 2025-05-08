@@ -93,7 +93,7 @@ CONTAINS
          END DO ! iband
 
          CALL ylm4(lmax,kGreal(:,kn),ylm(:,kn))
-         iatom = 1
+         iatom = sum(neq(:itype-1))+1
          !DO itype = 1,ntype
             r = sqrt(normsq)*rmt(itype)
 
@@ -108,7 +108,7 @@ CONTAINS
 
       force_a12 = 0.0
 
-      iatom = 1
+      iatom =sum(neq(:itype-1))+1
       !DO itype = 1,ntype !No longer loop over atoms
          r2vol = rmt(itype)**2/omtil
          DO ieq = sum(neq(:itype-1))+1,sum(neq(:itype-1))+neq(itype)
