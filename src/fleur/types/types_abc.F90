@@ -124,7 +124,7 @@ CONTAINS
       INTEGER :: inv_f, ie, ilo, kspin, iintsp, nintsp, nvmax, lo, inap, abSize, n_l(0:atoms%lmaxd), nbasf
       REAL    :: tmk, qss(3), s2h
       COMPLEX :: phase, c_1, c_2, term1, ctmp
-      LOGICAL :: l_force, l_useinversionsym
+      LOGICAL ::  l_useinversionsym
 
 ! Local arrays
       REAL    :: fg(3), fk(3), fkp(3), fkr(3)
@@ -157,7 +157,7 @@ CONTAINS
 ! Initializations
       acof_size = size(this%cof, 1)
 !$acc enter data create(abTemp,fjgj,fjgj%fj,fjgj%gj,work_c,abcoeffs)
-      l_force = .FALSE.
+      
 
 !Use inversion symmetry explicitely
       l_useinversionsym = any(sym%invsat == 2)!.and.(.not.noco%l_soc).and.(.not.present(nat_start))
@@ -421,7 +421,7 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
       INTEGER :: inv_f, ie, ilo, kspin, iintsp, nintsp, nvmax, lo, inap, abSize, n_l(0:atoms%lmaxd), nbasf
       REAL    :: tmk, qss(3), s2h
       COMPLEX :: phase, c_1, c_2, term1, ctmp
-      LOGICAL :: l_force, l_useinversionsym
+      LOGICAL ::  l_useinversionsym
 
 ! Local arrays
       REAL    :: fg(3), fk(3), fkp(3), fkr(3), fgr(3), fgp(3)
@@ -463,7 +463,7 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
 ! Initializations
       acof_size = size(this%cof, 1)
 !$acc enter data create(abTemp,fjgj,fjgj%fj,fjgj%gj,work_c,abcoeffs)
-      l_force = .FALSE.
+
 
 !Use inversion symmetry explicitely
       l_useinversionsym = any(sym%invsat == 2)!.and.(.not.noco%l_soc).and.(.not.present(nat_start))
@@ -628,18 +628,16 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
 !                                     l,m           l,-m                    l
 ! rotate, but in the sums in hsoham only products A*  A   enter and the (-1) cancels.
 !                                                  lm  lm
-         DO iAtom_l = 1, atoms%neq(itype)
-            iatom = iatom_l - 1 + atoms%firstAtom(itype)
+         DO iAtom = atoms%firstatom(itype),atoms%firstAtom(itype)+atoms%neq(itype)-1
             IF (sym%invsat(iAtom) .EQ. 1) THEN
                jAtom = sym%invsatnr(iAtom)
-               jatom_l = jatom - atoms%firstAtom(itype) + 1
                DO ilo = 1, atoms%nlo(iType)
                   l = atoms%llo(ilo, iType)
                   DO m = -l, l
                      inv_f = (-1)**(m + l)
-                        force%acoflo(m, :, ilo, jatom_l) = inv_f*CONJG(force%acoflo(-m, :, ilo, iatom_l))
-                        force%bcoflo(m, :, ilo, jatom_l) = inv_f*CONJG(force%bcoflo(-m, :, ilo, iatom_l))
-                        force%cveccof(:, m, :, ilo, jatom_l) = -inv_f*CONJG(force%cveccof(:, -m, :, ilo, iatom_l))
+                        force%acoflo(m, :, ilo, jatom) = inv_f*CONJG(force%acoflo(-m, :, ilo, iatom))
+                        force%bcoflo(m, :, ilo, jatom) = inv_f*CONJG(force%bcoflo(-m, :, ilo, iatom))
+                        force%cveccof(:, m, :, ilo, jatom) = -inv_f*CONJG(force%cveccof(:, -m, :, ilo, iatom))
                   END DO
                END DO
                DO l = 0, atoms%lmax(iType)
@@ -647,12 +645,11 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
                      lm = l*(l + 1) + m
                      lmp = l*(l + 1) - m
                      inv_f = (-1)**(m + l)
-                     IF (atoms%l_geo(iType) .AND. l_force) THEN
-                        force%e1cof(:ne, lm, jatom_l) = inv_f*CONJG(force%e1cof(:ne, lmp, iatom_l))
-                        force%e2cof(:ne, lm, jatom_l) = inv_f*CONJG(force%e2cof(:ne, lmp, iatom_l))
-                        force%aveccof(:, :ne, lm, jatom_l) = -inv_f*CONJG(force%aveccof(:, :ne, lmp, iatom_l))
-                        force%bveccof(:, :ne, lm, jatom_l) = -inv_f*CONJG(force%bveccof(:, :ne, lmp, iatom_l))
-                     END IF
+                        force%e1cof(:ne, lm, jatom) = inv_f*CONJG(force%e1cof(:ne, lmp, iatom))
+                        force%e2cof(:ne, lm, jatom) = inv_f*CONJG(force%e2cof(:ne, lmp, iatom))
+                        force%aveccof(:, :ne, lm, jatom) = -inv_f*CONJG(force%aveccof(:, :ne, lmp, iatom))
+                        force%bveccof(:, :ne, lm, jatom) = -inv_f*CONJG(force%bveccof(:, :ne, lmp, iatom))
+                   
                   END DO
                END DO                   
             END IF
