@@ -192,7 +192,7 @@ CONTAINS
       denIn1Local_pw = CMPLX(0.0,0.0)
       denIn1Local_pw(:starsq%ng3)  = (denIn1%pw(:,1)+denIn1%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
       IF (fi%input%film) denIn1Local_vac = CMPLX(0.0,0.0)
-      IF (fi%input%film) denIn1_vac(:,:starsq%ng2,:) = (denIn1%vac(:,:,:,1)+denIn1%vac(:,:,:,fi%input%jspins))/(3.0-fi%input%jspins)
+      IF (fi%input%film) denIn1Local_vac(:,:starsq%ng2,:) = (denIn1%vac(:,:,:,1)+denIn1%vac(:,:,:,fi%input%jspins))/(3.0-fi%input%jspins)
 
 
       DO iDtype_col = 1, fi%atoms%ntype
@@ -443,7 +443,8 @@ CONTAINS
                   rhoLocal_pw(:stars%ng3) = (rho%pw(:,1)+rho%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
 
                   CALL dfpt_sf_vac(starsLocal,fi%vacuum,fi%cell,rhoLocal_pw,vExt1%pw(:,1),rhoLocal_vac,vExt1%vac(:,:,:,1),tempval,iDir_col)
-                  dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
+                  ! The SF Element seems to be broken atm. Needs a fix
+                  !dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
                   IF (fmpi%irank==0) write(9989,FMT=8000) "    SF VAC Element rho V1ext0       ", tempval
                   tempval = CMPLX(0.0,0.0)
                END IF

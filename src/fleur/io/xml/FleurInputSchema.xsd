@@ -1146,6 +1146,7 @@
       <xsd:attribute name="l_cheatsym" type="FleurBool" use="optional"/>
       <xsd:attribute name="l_procc" type="FleurBool" use="optional"/>
       <xsd:attribute name="l_prodyn" type="FleurBool" use="optional"/>
+      <xsd:attribute name="l_symVacLevel" type="FleurBool" use="optional" default="F" />
    </xsd:complexType>
 
    <xsd:complexType name="OutputType">
