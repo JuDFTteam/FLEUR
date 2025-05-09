@@ -144,7 +144,7 @@ CONTAINS
       ! Desym-tests:
       INTEGER :: grid(3), iread
       REAL    :: dr_re(fi%vacuum%nmzd), dr_im(fi%vacuum%nmzd), drr_dummy(fi%vacuum%nmzd), numbers(3*fi%atoms%nat,6*fi%atoms%nat)
-      complex                           :: sigma_loc(2), sigma_ext(2), sigma_coul(2), sigma_gext(3,2)
+      complex                           :: sigma_loc(2), sigma_ext(2), sigma_coul(2), sigma_gext(3,2), constantShift
 
       ALLOCATE(e2_vm(fi%atoms%nat,3,3))
 
@@ -305,6 +305,18 @@ CONTAINS
                          & dfptdenimag=imagrhodummyLocal, dfptvCoulimag=grvextdummyLocal,dfptden0=imagrhodummyLocal,stars2=starsLocal,iDtype=0,iDir=iDir)
          IF (iDir==3) sigma_gext(iDir,:) = sigma_loc
       END DO
+
+      IF (fi_nosym%input%film .AND. fi_nosym%juphon%l_symVacLevel .AND. fmpi%irank==0) THEN 
+         DO iDir= 1 , 3
+            constantShift = 0.0 
+            DO ispin = 1 , fi_nosym%input%jspins
+               constantShift =  (grVext3(iDir)%vac(fi_nosym%vacuum%nmzd,1,1,ispin)  - grVext3(iDir)%vac(fi_nosym%vacuum%nmzd,1,2,ispin)) / 2               
+               grVext3(iDir)%pw(1,:) = grVext3(iDir)%pw(1,:) + constantShift
+               grVext3(iDir)%mt(:,0,:,:) = grVext3(iDir)%mt(:,0,:,:) + constantShift * sfp_const 
+               grVext3(iDir)%vac(:,1,:,:) = grVext3(iDir)%vac(:,1,:,:) + constantShift
+            END DO   
+         END DO 
+      END IF
       !CALL vext_dummy%copyPotDen(vTot_nosym)
       !CALL vext_dummy%resetPotDen()
       ! Density gradient
