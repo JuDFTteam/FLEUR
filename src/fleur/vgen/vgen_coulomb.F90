@@ -83,10 +83,10 @@ contains
 
     l_dfptvgen = PRESENT(stars2)
     l_2ndord = PRESENT(iDir2)
-    l_corr = ALL(ABS(den%vac)<1e-12)
+    l_corr = .FALSE. !ALL(ABS(den%vac)<1e-12)
     vmz1dh_is = cmplx(0.0,0.0)
-    sigma_loc = sigma_disc
-    sigma_loc2 = MERGE(sigma_disc,cmplx(0.0,0.0),PRESENT(sigma_disc2))
+    sigma_loc = CMPLX(0.0,0.0) !sigma_disc
+    sigma_loc2 = CMPLX(0.0,0.0) !MERGE(sigma_disc,cmplx(0.0,0.0),PRESENT(sigma_disc2))
 
     vintcza = cmplx(0.0,0.0)
     sig1dh = cmplx(0.0,0.0)
