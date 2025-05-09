@@ -1,3 +1,5 @@
+
+!--------------
 ! Copyright (c) 2018 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
@@ -20,7 +22,6 @@ SUBROUTINE magDiMom(sym,input,atoms,sphhar,noco,nococonv,l_fmpl2,rho,magDipoles,
    USE m_constants
    USE m_types
    USE m_juDFT
-   USE m_rotdenmat
    USE m_lattHarmsSphHarmsConv
    USE m_gaunt
    USE m_intgr
