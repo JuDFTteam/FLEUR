@@ -34,7 +34,6 @@ CONTAINS
       USE m_mcdinit
       USE m_sympsi
       USE m_nmat        ! calculate density matrix for LDA + U
-      USE m_nmat21
       USE m_vacden
       USE m_pwden
       USE m_forcea8
@@ -48,7 +47,6 @@ CONTAINS
       !USE m_orbmom      ! coeffd for orbital moments
       USE m_qmtsl       ! These subroutines divide the input%film into banddos%layers
       USE m_qintsl      ! (slabs) and intergate the DOS in these banddos%layers
-      USE m_orbcomp     ! calculate orbital composition (like p_x,p_y,p_z)
       USE m_jDOS
       USE m_corespec, only: l_cs    ! calculation of core spectra (EELS)
       USE m_corespec_io, only: corespec_init
@@ -69,7 +67,6 @@ CONTAINS
 #ifdef CPP_MPI
       USE m_mpi_col_den ! collect density data from parallel nodes
 #endif
-      USE m_rhonmt
       USE m_nIJmat
 
       IMPLICIT NONE

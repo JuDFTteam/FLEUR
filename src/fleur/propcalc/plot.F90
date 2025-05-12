@@ -116,8 +116,7 @@ CONTAINS
                           denmat, cden, mxden, myden, mzden)
       USE m_fft2d
       USE m_fft3d
-      USE m_rotdenmat
-
+  
       !--------------------------------------------------------------------------
       ! Takes a 2x2 density matrix and rearranges it into four plottable seperate
       ! ones, i.e. ((rho_11, rho_12),(rho_21, rho_22)) ---> n, mx, my, mz.
