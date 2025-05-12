@@ -22,7 +22,7 @@ MODULE m_vacden
    !
    !     Philipp Kurz 99/07
    !***********************************************************************
-   implicit none (type,external)
+   implicit none
 
    !******** ABBREVIATIONS ************************************************
    !     qvac     : vacuum charge of each eigenstate, needed in in cdnval
