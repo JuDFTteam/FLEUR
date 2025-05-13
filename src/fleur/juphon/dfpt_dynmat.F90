@@ -152,10 +152,10 @@ CONTAINS
       END DO
 
       ! Create Local stepfunctions 
-
+      theta1fullLocal = CMPLX(0.0,0.0)
+      theta1full0Local = CMPLX(0.0,0.0)
       CALL stepf_analytical(fi%sym, starsqLocal, atomsLocal, fi%input, fi%cell, fmpi, fftgrid_dummy, qvec, iDtype_row, iDir_row, 1, theta1fullLocal)
       CALL stepf_analytical(fi%sym, starsLocal, atomsLocal, fi%input, fi%cell, fmpi, fftgrid_dummy, [0.0,0.0,0.0], iDtype_row, iDir_row, 1, theta1full0Local)
-      
 
       DO iType = 1, fi%atoms%ntype
          DO iDir = 1, 3
