@@ -21,7 +21,7 @@ MODULE m_types_mpimat
    !INTEGER, PARAMETER   :: MPIMAT_COLUMN_BLOCK_CYCLIC=3
    !
    ! These are now defined in t_mat base type!
-   LOGICAL :: firstcall = .true.
+   LOGICAL :: firstCopyCall = .true.
 
 #ifdef __INTEL_COMPILER
    LOGICAL:: use_pdgemr2d=.true.
@@ -440,8 +440,8 @@ CONTAINS
 
 #ifdef CPP_SCALAPACK
 
-      if (firstcall) then 
-         firstcall = .false.
+      if (firstCopyCall) then 
+         firstCopyCall = .false.
          if (judft_was_argument("-use_scalapack_redist")) then
             use_pdgemr2d = .true.
          else
