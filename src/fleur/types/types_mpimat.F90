@@ -8,11 +8,12 @@ MODULE m_types_mpimat
    USE m_judft
    USE m_types_mat
    USE m_constants
+   implicit none (type,external)
 #ifdef CPP_MPI
    USE mpi
 #endif
    IMPLICIT NONE
-   !PRIVATE
+   PRIVATE
    INTEGER, PARAMETER    :: DEFAULT_BLOCKSIZE = 64
    INTEGER, PARAMETER   :: dlen_ = 9
    !Constants defining different distributions:
@@ -74,7 +75,7 @@ MODULE m_types_mpimat
 #endif      
    END TYPE t_mpimat
 
-   PUBLIC t_mpimat, mingeselle
+   PUBLIC t_blacsdata, t_mpimat, mingeselle
 
 CONTAINS
    SUBROUTINE t_mpimat_lproblem(mat, vec)
