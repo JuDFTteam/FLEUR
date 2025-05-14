@@ -8,7 +8,6 @@ MODULE m_types_mpimat
    USE m_judft
    USE m_types_mat
    USE m_constants
-   implicit none (type,external)
 #ifdef CPP_MPI
    USE mpi
 #endif
