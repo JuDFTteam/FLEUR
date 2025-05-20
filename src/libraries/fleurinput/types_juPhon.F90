@@ -424,6 +424,8 @@ CONTAINS
            this%l_prodyn    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_prodyn'))
          END IF
 
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_symVacLevel')
+
          IF (numberNodes == 1) THEN
           this%l_symVacLevel    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_symVacLevel'))
          END IF
