@@ -11,7 +11,10 @@ module m_elpa
    use m_types_mat
 #ifdef CPP_ELPA
    use elpa
-#endif      
+#endif     
+#ifdef CPP_MPI 
+   use mpi 
+#endif
    implicit none
    private
    type, extends(t_solver):: t_solver_elpa
