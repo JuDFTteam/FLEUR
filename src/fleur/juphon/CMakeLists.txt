@@ -1,24 +1,11 @@
 set(fleur_F90 ${fleur_F90}
 src/fleur/juphon/dfpt.F90
 src/fleur/juphon/dfpt_check.F90
-#src/fleur/juphon/dfpt_test.F90
-#src/fleur/juphon/dfpt_init.F90
 src/fleur/juphon/dfpt_sternheimer.F90
 src/fleur/juphon/dfpt_dynmat.F90
 src/fleur/juphon/jpGrVeff0_mod.F90
-#src/fleur/juphon/jpSternheimer_mod.F90
-#src/fleur/juphon/jpSternhHF_mod.F90
-#src/fleur/juphon/jpSternhPulaySurface_mod.F90
 src/fleur/juphon/dfpt_eii2.F90
-#src/fleur/juphon/jpSetupDynMat_mod.F90
 src/fleur/juphon/dfpt_dynmat_eig.F90
-#src/fleur/juphon/jpSetupDynMatSF_mod.F90
-#src/fleur/juphon/jpIOnMixing_mod.F90
-#src/fleur/juphon/broyd_io.F90
-#src/fleur/juphon/stdmix_old.f90
-#src/fleur/juphon/jpVeff1_mod.F90
-#src/fleur/juphon/jpDens1stVar_mod.F90
-#src/fleur/juphon/ylm4_old.f90
 src/fleur/juphon/dfpt_vgen.F90
 src/fleur/juphon/get_int_perturbation.f90
 src/fleur/juphon/get_mt_perturbation.f90
