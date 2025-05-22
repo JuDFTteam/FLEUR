@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -396,7 +396,7 @@ CONTAINS
             CALL timestop("Updating energy parameters")
 
             IF (.NOT. fi%input%eig66(1)) THEN
-               CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv, mpdata, &
+               CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv,  &
                           hybdat, iter, eig_id, results, inDen, vToT, vx, hub1data)
             END IF
             ! TODO: What is commented out here and should it perhaps be removed?

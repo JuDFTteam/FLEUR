@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -30,7 +30,7 @@ CONTAINS
    ! e) The latter are the actual output for the routine when used for DFPT. They are saved
    !    the same way as the eigenvalues before, but for a shifted eig_id.
    SUBROUTINE eigen(fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,&
-                    mpdata,hybdat,iter,eig_id,results,inden,v,vx,hub1data,&
+                    hybdat,iter,eig_id,results,inden,v,vx,hub1data,&
                     bqpt, hmat_out, smat_out)
 
       USE m_types
@@ -58,7 +58,6 @@ CONTAINS
       CLASS(t_xcpot),INTENT(IN)    :: xcpot
       TYPE(t_mpi),INTENT(IN)       :: fmpi
       CLASS(t_forcetheo),INTENT(IN):: forcetheo
-      TYPE(t_mpdata), intent(inout):: mpdata
       TYPE(t_hybdat), INTENT(INOUT):: hybdat
       TYPE(t_enpara),INTENT(INOUT) :: enpara
       TYPE(t_nococonv),INTENT(IN)  :: nococonv
@@ -173,7 +172,7 @@ CONTAINS
             CALL lapw%init(fi%input,fi%noco,nococonv, kpts_mod, fi%atoms, fi%sym, nk, fi%cell, fmpi, bqpt)
 
             call timestart("Setup of H&S matrices")
-            CALL eigen_hssetup(jsp,fmpi,fi,mpdata,results,inDen,vx,xcpot,enpara,nococonv,stars,sphhar,hybdat,ud,td,v,lapw,nk,smat,hmat)
+            CALL eigen_hssetup(jsp,fmpi,fi,results,inDen,vx,xcpot,enpara,nococonv,stars,sphhar,hybdat,ud,td,v,lapw,nk,smat,hmat)
             CALL timestop("Setup of H&S matrices")
 
             IF (PRESENT(hmat_out)) THEN

@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2021 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -510,7 +510,7 @@ CONTAINS
                ! Get the eigenstuff at k+q
                CALL q_results%reset_results(fi%input)
    
-               CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv, mpdata, &
+               CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv, &
                         hybdat, 1, q_eig_id, q_results, rho, vTot, vxc, hub1data, &
                         qvec_int)
    
@@ -629,7 +629,7 @@ CONTAINS
                ! Get the eigenstuff at k+q
                CALL q_results%reset_results(fi%input)
    
-               CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv, mpdata, &
+               CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv,  &
                         hybdat, 1, q_eig_id, q_results, rho, vTot, vxc, hub1data, &
                         qpts_loc%bk(:,q_list(iQ)))
    
@@ -652,7 +652,7 @@ CONTAINS
    
                   CALL qm_results%reset_results(fi%input)
    
-                  CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv, mpdata, &
+                  CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv,  &
                            hybdat, 1, qm_eig_id, qm_results, rho, vTot, vxc, hub1data, &
                            -qpts_loc%bk(:,q_list(iQ)))
    
