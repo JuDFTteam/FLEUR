@@ -116,11 +116,30 @@ def list():
     fleuristconf.list()
 
 
+@cmd_main.group('plot')
+def group_plot():
+    """
+    The 'plot' command group contains commands to generate plots from the FLEUR output.
+    """
 
-
-
-
-
+@group_plot.command('times')
+@click.option("-f","--file",help="Name of the file to plot",default="judft_times.json")
+@click.option("-o","--output",help="Name of the output file",default="juDFT_times_plot.html")
+def times(file,output):
+    """
+    Generate a sunburst plot from the FLEUR timing output.
+    """
+    try:
+        import times2sunburst
+    except ImportError:
+        click.secho("Could not import the times2sunburst module. Probably not all required python modules are available.\nPlease try to install plotly,pandas and numpy.",fg='red')
+        sys.exit()
+    
+    try:
+        times2sunburst.generate_sunburst_plot(file,output)
+    except Exception as e:
+        click.secho(f"Error generating sunburst plot: {e}",fg='red')
+        sys.exit()
 
 
 if __name__ == '__main__':
