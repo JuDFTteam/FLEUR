@@ -22,6 +22,7 @@ def generate_sunburst_plot(json_file, output_file="juDFT_times_plot.html",scalin
 
     # Convert JSON data to a format suitable for Plotly
     def flatten_json(data, parent="",runtime=0,scaling_data=None):
+        scaling=0
         rows = []
         timer=data['timername']
         total=float(data['totaltime'])
