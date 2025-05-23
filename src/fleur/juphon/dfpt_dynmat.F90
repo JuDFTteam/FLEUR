@@ -462,7 +462,7 @@ CONTAINS
                   local_rho_vac(:,:stars%ng2,:) = rho_vac(:,:,:)
 
                   CALL dfpt_int_vac_sf(local_stars,fi%vacuum,fi%cell,local_rho_vac,local_vExt1%vac(:,:,:,1),tempval,iDir_col)
-                  dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
+                  !dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
                   IF (fmpi%irank==0) write(9989,FMT=8000) "    SF VAC rho V1ext0       ", tempval
                   tempval = CMPLX(0.0,0.0)
                
@@ -471,8 +471,16 @@ CONTAINS
                   local_rho_pw(:stars%ng3) = rho_pw(:)
                   ! here all convol
                   CALL dfpt_int_pw_sf(local_stars,fi%vacuum,fi%cell,local_rho_pw,local_vExt1%pw(:,1),tempval)
-                  dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
+                  !dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
                   IF (fmpi%irank==0) write(9989,FMT=8000) "    SF IR rho V1ext0       ", tempval
+                  tempval = CMPLX(0.0,0.0)
+                  
+                  !CALL save_npy("local_vExt_vac.npy",local_vExt1%vac)
+                  !CALL save_npy("rho_vac.npy",rho_vac)
+                  
+                  CALL dfpt_sf_vac(stars,fi%vacuum,fi%cell,local_rho_pw,local_vExt1%pw(:,1),rho_vac,local_vExt1%vac(:,:,:,1),tempval,iDir_col)
+                  dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
+                  IF (fmpi%irank==0) write(9989,FMT=8000) "    SF VAC Element rho V1ext0       ", tempval
                   tempval = CMPLX(0.0,0.0)
                END IF 
 
@@ -756,6 +764,80 @@ CONTAINS
 
 
    END SUBROUTINE dfpt_int_pw_sf
+
+
+
+   SUBROUTINE dfpt_sf_vac(stars,vacuum,cell,pw_conj,pw_pure,vac_conj,vac_pure,sf_int,iDir_col)
+
+      USE m_npy
+
+      TYPE(t_stars), INTENT(IN) :: stars
+      TYPE(t_vacuum), INTENT(IN) :: vacuum
+      TYPE(t_cell), INTENT(IN) :: cell 
+      COMPLEX, INTENT(IN) :: pw_conj(:), pw_pure(:)
+      COMPLEX, INTENT(IN) :: vac_conj(:,:,:), vac_pure(:,:,:)
+      COMPLEX, INTENT(OUT) :: sf_int
+      INTEGER, INTENT(IN) :: iDir_col 
+
+
+      REAL :: facv ! accounts for vacua symmetry
+      REAL :: sf_int_1(2)
+      REAL :: qzh, pref , facn 
+      COMPLEX :: fft_conj(stars%ng2) , fft_pure(stars%ng2)  
+      INTEGER :: iVac , ig2, ig3 
+
+      sf_int = CMPLX(0.0,0.0)
+      facv = 2.0/vacuum%nvac
+      pref = 1.0 ! direction fourier trafo  
+      
+      facn = 1.0 
+
+      sf_int_1 = 0.0
+
+
+      DO iVac = 1 , vacuum%nvac
+         ! IR - Part 
+         fft_conj = CMPLX(0.0,0.0)
+         fft_pure = CMPLX(0.0,0.0)
+         IF (iVac == 2 ) pref = -1.0 
+         IF (iVac == 2)  facn =  -1.0 
+         DO ig3 = 1, stars%ng3   
+            ! Sum over all G_perp and map to G_||
+            ! Fourier Trafo at +-Dvac/2
+            qzh = pref * stars%kv3(3,ig3) * cell%bmat(3,3) * cell%z1
+            ig2 = stars%ig2(ig3)
+            fft_conj(ig2) = fft_conj(ig2) + pw_conj(ig3) * cmplx( cos(qzh), sin(qzh))  
+            fft_pure(ig2) = fft_pure(ig2) + pw_pure(ig3) * cmplx( cos(qzh), sin(qzh))  
+         END DO 
+      
+         !CALL save_npy("rho_sf_pw_"//int2str(iVac)//".npy",fft_conj)
+         !CALL save_npy("v1ext_sf_pw_"//int2str(iVac)//".npy",fft_pure)
+         sf_int = sf_int - facn * facv * cell%area  *  DOT_PRODUCT(fft_conj(:stars%ng2),fft_pure(:stars%ng2))
+         sf_int_1(iVac) = sf_int_1(iVac)  - facn * facv * cell%area  *  DOT_PRODUCT(fft_conj(:stars%ng2),fft_pure(:stars%ng2))
+         !write(6543,*) "PW iVac" , iVac , "value " , REAL( - facv * cell%area  *  DOT_PRODUCT(fft_conj(:stars%ng2),fft_pure(:stars%ng2)))
+         !write(6543,*) "sf_int" , REAL(sf_int) 
+         !write(6544,*) "sf_int" , REAL(sf_int) 
+
+         ! Vacuum part
+         !CALL save_npy("rho_sf_vac_"//int2str(iVac)//".npy",vac_conj(1,:stars%ng2,ivac))
+         !CALL save_npy("v1ext_sf_vac_"//int2str(iVac)//".npy",vac_pure(1,:stars%ng2,ivac))
+
+         sf_int = sf_int + facn * facv * cell%area * DOT_PRODUCT(vac_conj(1,:stars%ng2,ivac),vac_pure(1,:stars%ng2,ivac))
+         sf_int_1(iVac) = sf_int_1(iVac) + facn * facv * cell%area * DOT_PRODUCT(vac_conj(1,:stars%ng2,ivac),vac_pure(1,:stars%ng2,ivac))
+         !write(6543,*) "Vac iVac" , iVac , "value " ,  REAL(+ facn * facv * cell%area * DOT_PRODUCT(vac_conj(1,:stars%ng2,ivac),vac_pure(1,:stars%ng2,ivac)))
+         !write(6543,*) "sf_int" , REAL(sf_int) 
+         !write(6544,*) "sf_int" , REAL(sf_int) 
+      END DO 
+
+      !write(6543,*) "iDir_col", iDir_col
+      !write(6543,*) "sf value Dvac/2" , sf_int_1(1)
+      !write(6543,*) "sf value -Dvac/2" , sf_int_1(2)
+      !write(6543,*) "sf value" , sf_int
+
+
+
+
+   END SUBROUTINE 
 
 
    SUBROUTINE dfpt_dynmat_eigen(fi, results, results1, fmpi, enpara, nococonv, &

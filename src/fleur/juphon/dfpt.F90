@@ -308,10 +308,10 @@ CONTAINS
          CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, fi%juphon, local_stars, fi_nosym%cell, &
                          & sphhar_nosym, local_atoms, .FALSE., local_imagrhodummy, local_grVext3(iDir), sigma_loc, &
                          & dfptdenimag=local_imagrhodummy, dfptvCoulimag=local_grvextdummy,dfptden0=local_imagrhodummy,stars2=local_stars,iDtype=0,iDir=iDir)
-         DO iSpin = 1 , fi_nosym%input%jspins
-            CALL checkDOPALL(fi_nosym%input, sphhar_nosym, local_stars ,local_atoms, fi_nosym%sym, fi_nosym%vacuum, fi_nosym%cell,local_grVext3(iDir),iSpin,local_grvextdummy)
-         END DO 
-         write(oUnit,*) "grVext was called for iDir" , iDir
+         !DO iSpin = 1 , fi_nosym%input%jspins
+         !   CALL checkDOPALL(fi_nosym%input, sphhar_nosym, local_stars ,local_atoms, fi_nosym%sym, fi_nosym%vacuum, fi_nosym%cell,local_grVext3(iDir),iSpin,local_grvextdummy)
+         !END DO 
+         !write(oUnit,*) "grVext was called for iDir" , iDir
          IF (iDir==3) sigma_gext(iDir,:) = sigma_loc
 
          call cast_smaller_grid(grVext3(iDir),local_grVext3(iDir),stars_nosym,fi_nosym%input )
@@ -330,7 +330,10 @@ CONTAINS
             END DO 
             write(oUnit,*) "grVext corrected for iDir" , iDir   
          END DO 
-   END IF
+      END IF
+#ifdef CPP_MPI
+      CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
+#endif 
       !CALL vext_dummy%reset_dfpt() ! this is needed as copyPotden does not deallocate in its routine and we work with different stars
       !CALL vext_dummy%copyPotDen(vTot_nosym)
       !CALL vext_dummy%resetPotDen()

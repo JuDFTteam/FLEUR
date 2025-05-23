@@ -256,8 +256,9 @@ CONTAINS
                         cell,fmpi,noco,den,denRot,EnergyDen,dfptvTot,vx,vxc,exc, &
                         & den1Rot=den1Rot, den1Rotimag=den1imRot, dfptvTotimag=dfptvTotimag,starsq=starsq)
 
-      IF (juphon%l_symVacLevel .AND. .NOT. iDtype==0) THEN 
-         IF (.NOT. l_vext) THEN 
+      IF (juphon%l_symVacLevel .AND. (norm2(starsq%center) .LT. 1e-8) ) THEN 
+         IF (.NOT. l_vext) THEN
+            !IF (.FALSE.) THEN  
             constantShift = 0.0 
             DO ispin = 1 , input%jspins
                if (input%film) constantShift =  (dfptvTot%vac(vacuum%nmzd,1,1,ispin)  - dfptvTot%vac(vacuum%nmzd,1,2,ispin)) / 2
@@ -271,6 +272,7 @@ CONTAINS
             END DO 
             CALL dfptvTot%distribute(fmpi%mpi_comm)
             CALL dfptvTotimag%distribute(fmpi%mpi_comm)
+            !END IF 
          ELSE 
             constantShift = 0.0 
             DO ispin = 1, input%jspins
