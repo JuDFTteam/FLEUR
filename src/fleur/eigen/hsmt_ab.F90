@@ -98,6 +98,7 @@ CONTAINS
       call blas_matmul(3,lapw%nv(igSpin),3,bmrot,lapw%vk(:,:,igspin),gkrot)
       CALL ylm4_batched(lmax,gkrot,ylm)
       call timestop("init")
+      call timestart("loop")
 #ifndef _OPENACC
       !$OMP PARALLEL DO DEFAULT(none) &
       !$OMP& SHARED(lapw,lmax,c_ph,igSpin,abCoeffs,fjgj,abclo,cell,atoms,sym) &
@@ -110,7 +111,6 @@ CONTAINS
       !$acc end kernels
 #endif
       
-      call timestart("loop")
       !$acc data copyin(atoms,atoms%llo,atoms%llod,atoms%nlo,cell,cell%omtil,atoms%rmt) if (l_abclo)
       !$acc parallel loop present(fjgj,fjgj%fj,fjgj%gj,abCoeffs) vector_length(32)&
       !$acc copyin(lmax,lapw,lapw%nv,lapw%vk,lapw%kvec,bmrot,c_ph, sym, sym%invsat,l_abclo, ylm) &
@@ -150,10 +150,11 @@ CONTAINS
       END DO !k-loop
       !$acc end parallel loop
       !$acc end data
-      call timestop("loop")
 #ifndef _OPENACC
       !$OMP END PARALLEL DO
 #endif
+      call timestop("loop")
+
 
       IF (.NOT.l_apw) ab_size=ab_size*2
    END SUBROUTINE hsmt_ab
