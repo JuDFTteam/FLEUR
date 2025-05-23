@@ -5,7 +5,6 @@
 !--------------------------------------------------------------------------------
 MODULE m_hsmt_ab
    !! Module to produce matching coefficients.
-   implicit none
 
    USE m_juDFT
 
