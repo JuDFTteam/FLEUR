@@ -70,10 +70,11 @@ contains
     integer                                      :: imz, imzxy, ichsmrg, ivfft
     integer                                      :: l, nat
     real                                         :: ani, g3, z
-    complex                                      :: sig1dh, vz1dh, vmz1dh, vmz1dh_is
+    complex                                      :: sig1dh, vz1dh, vmz1dh, vmz1dh_is, constantShift
     complex                                      :: mat2ord(5,3,3), sigma_loc(2), sigma_loc2(2)
     complex, allocatable                         :: alphm(:,:), psq(:)
     real,    allocatable                         :: af1(:), bf1(:)
+    real                                         :: gaussian, sigma ! smoothing function in case of DFPT + Film 
     LOGICAL :: l_dfptvgen ! If this is true, we handle things differently!
     LOGICAL :: l_2ndord, l_corr
 
@@ -93,8 +94,10 @@ contains
     vz1dh = cmplx(0.0,0.0)
     vmz1dh = cmplx(0.0,0.0)
     vslope = cmplx(0.0,0.0)
+    constantShift = cmplx(0.0,0.0)
 
     allocate ( alphm(stars%ng2,2), af1(3*stars%mx3), bf1(3*stars%mx3), psq(stars%ng3)  )
+    sigma = (cell%amat(3,3) - 2*cell%z1)/8.0
     vCoul%iter = den%iter
 
     ! PSEUDO-CHARGE DENSITY COEFFICIENTS
@@ -137,6 +140,7 @@ contains
         call vvacis( stars, vacuum, cell, psq, input, field, vCoul%vac(:vacuum%nmzxyd,:,:,ispin), l_dfptvgen, l_corr )
         call vvacxy( stars, vacuum, cell, sym, input, field, den%vac(:vacuum%nmzxyd,:,:,ispin), vCoul%vac(:vacuum%nmzxyd,:,:,ispin), alphm, l_dfptvgen )
         call timestop( "Vacuum" )
+        if ( l_dfptvgen .AND. juphon%l_symVacLevel ) constantShift =  (vCoul%vac(vacuum%nmzd,1,1,ispin)  - vCoul%vac(vacuum%nmzd,1,2,ispin)) / 2
       end if
 
       ! INTERSTITIAL POTENTIAL
@@ -158,6 +162,7 @@ contains
           do i3 = 0, ivfft - 1
             i = i + 1
             z = cell%amat(3,3) * i3 * ani
+            if (l_dfptvgen) gaussian = 1 - exp( -(z-cell%amat(3,3)/2.0)**2 / ( 2 * sigma**2 )    )
             if ( z > cell%amat(3,3) / 2. ) z = z - cell%amat(3,3)
             if (.not.l_2ndord) then
               vintcza = vintcz( stars, vacuum, cell,  input, field, z, irec2, psq, &
@@ -167,7 +172,11 @@ contains
             vintcza = vintcz( stars, vacuum, cell,  input, field, z, irec2, psq, &
                               vCoul%vac(:,:,:,ispin), &
                                 rhobar, sig1dh, vz1dh, alphm, vslope, sigma_disc, l_dfptvgen, l_corr, vmz1dh-vmz1dh_is, sigma_disc2 )
-            end if
+            end if 
+            if (l_dfptvgen) THEN 
+              if (juphon%l_symVacLevel .AND. (irec2 == 1) ) vintcza = vintcza + constantShift
+              vintcza = vintcza * gaussian
+            end if 
             af1(i) = real( vintcza )
             bf1(i) = aimag( vintcza )
           end do
@@ -202,6 +211,7 @@ contains
             end if
           end do
         end do
+        if (l_dfptvgen .AND. juphon%l_symVacLevel) vCoul%vac(:,1,:,ispin) = vCoul%vac(:,1,:,ispin) + constantShift
         sigma_disc = sigma_loc
       ! in case of a bulk system:
       else if ( .not. input%film ) then

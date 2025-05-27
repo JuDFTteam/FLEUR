@@ -219,24 +219,6 @@ CONTAINS
       IF (l_xc) CALL vgen_xcpot(hybdat,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
                      cell,fmpi,noco,den,denRot,EnergyDen,dfptvTot,vx,vxc,exc, &
                      & den1Rot=den1Rot, den1Rotimag=den1imRot, dfptvTotimag=dfptvTotimag,starsq=starsq)
-
-
-      IF (input%film .AND. juphon%l_symVacLevel .AND. (norm2(starsq%center) .LT. 1e-8)) THEN 
-         constantShift = 0.0 
-         DO ispin = 1 , input%jspins
-            constantShift =  (dfptvTot%vac(vacuum%nmzd,1,1,ispin)  - dfptvTot%vac(vacuum%nmzd,1,2,ispin)) / 2
-            
-            dfptvTot%pw(1,:) = dfptvTot%pw(1,:) + constantShift
-
-            dfptvTot%mt(:,0,:,:) = dfptvTot%mt(:,0,:,:) + constantShift * sfp_const 
-
-            dfptvTot%vac(:,1,:,:) = dfptvTot%vac(:,1,:,:) + constantShift
-
-         END DO 
-         CALL dfptvTot%distribute(fmpi%mpi_comm)
-         CALL dfptvTotimag%distribute(fmpi%mpi_comm)
-      END IF 
-      
       
       IF (iDtype/=0.AND.ANY(killcont/=0)) THEN
          ! d)
