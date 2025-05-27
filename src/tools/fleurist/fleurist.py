@@ -125,7 +125,8 @@ def group_plot():
 @group_plot.command('times')
 @click.option("-f","--file",help="Name of the file to plot",default="judft_times.json")
 @click.option("-o","--output",help="Name of the output file",default="juDFT_times_plot.html")
-def times(file,output):
+@click.option("-s","--scalingfile",help="Name of the second juDFT_times file for calculating scaling",default=None)
+def times(file,output,scalingfile):
     """
     Generate a sunburst plot from the FLEUR timing output.
     """
@@ -136,7 +137,7 @@ def times(file,output):
         sys.exit()
     
     try:
-        times2sunburst.generate_sunburst_plot(file,output)
+        times2sunburst.generate_sunburst_plot(file,output,scalingFile=scalingfile)
     except Exception as e:
         click.secho(f"Error generating sunburst plot: {e}",fg='red')
         sys.exit()
