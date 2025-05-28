@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -10,6 +10,7 @@
 #ifndef CPP_PAGESIZE
 #define CPP_PAGESIZE 4096
 #endif
+#define CPP_MEMINFO
 MODULE m_judft_sysinfo
   IMPLICIT NONE
 
@@ -78,7 +79,7 @@ end function
     LOGICAL,INTENT(IN),OPTIONAL :: maxmem
     CHARACTER(len=100):: memory_usage_string
     INTEGER:: fid=543
-    INTEGER*8:: idum,rss
+    INTEGER*8:: idum,rss,found
     LOGICAL:: firstcall=.TRUE.
     LOGICAL:: available=.FALSE.
     CHARACTER(len=40)::line
@@ -94,13 +95,44 @@ end function
 
     IF (firstcall) THEN
        firstcall=.FALSE.
+#ifdef CPP_MEMINFO       
        OPEN(fid,FILE="/proc/self/statm",status='old',action='read',iostat=idum)
+#else       
+       OPEN(fid,FILE="/proc/meminfo",status='old',action='read',iostat=idum)
+#endif       
        available=(idum==0)
+       
     ENDIF
     IF (available) THEN
+#ifdef CPP_MEMINFO
+       !Read memory usage from /proc/meminfo
+       rewind(fid)
+       found=0
+       DO while (found<3)
+          READ(fid,'(a)',iostat=idum) line
+          IF (idum==0) THEN
+             !Find the line with "MemTotal:"
+             IF (INDEX(line,"MemTotal:")>0) THEN
+                memory_usage_string=TRIM(memory_usage_string)//" Total: "//TRIM(ADJUSTL(line(10:)))
+                found=found+1
+             ENDIF
+             !Find the line with "MemFree:"
+             IF (INDEX(line,"MemFree:")>0) THEN
+               memory_usage_string=TRIM(memory_usage_string)//" Free: "//TRIM(ADJUSTL(line(10:)))
+               found=found+1
+            ENDIF      
+            IF (INDEX(line,"MemAvailable:")>0) THEN
+               memory_usage_string=TRIM(memory_usage_string)//" Avail: "//TRIM(ADJUSTL(line(16:)))
+               found=found+1
+            ENDIF      
+          ENDIF
+         enddo
+#else
+       !Read memory usage from /proc/self/statm         
        REWIND(fid)
        READ(fid,*) idum,rss
        WRITE(memory_usage_string,"(2f8.3,a)") (CPP_PAGESIZE/(1024.*1024.*1024.))*idum,(CPP_PAGESIZE/(1024.*1024.*1024.))*rss," GB"
+#endif
     ELSE
        memory_usage_string=""
     ENDIF
