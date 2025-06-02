@@ -108,7 +108,8 @@ end function
        !Read memory usage from /proc/meminfo
        rewind(fid)
        found=0
-       DO while (found<3)
+       idum=0
+       DO while (found<3.and.idum==0)
           READ(fid,'(a)',iostat=idum) line
           IF (idum==0) THEN
              !Find the line with "MemTotal:"
