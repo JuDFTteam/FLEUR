@@ -109,6 +109,7 @@ end function
        rewind(fid)
        found=0
        idum=0
+       memory_usage_string=""
        DO while (found<3.and.idum==0)
           READ(fid,'(a)',iostat=idum) line
           IF (idum==0) THEN
