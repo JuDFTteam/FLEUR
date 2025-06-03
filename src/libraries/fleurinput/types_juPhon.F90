@@ -28,6 +28,8 @@ MODULE m_types_juPhon
       !REAL    :: eDiffcut  = 1e-7   ! Cutoff for energy differences
       REAL    :: eDiffcut  = 1e-5   ! Cutoff for energy differences
       REAL    :: fDiffcut  = 1e-7    ! Cutoff for occupation differences
+      REAL    :: qlim      = 1./16     ! qlim value
+      REAL    :: gmaxzLocal   = 0.0  ! Local Gmaxz cutoff for film 
       REAL    :: qpt_ph(3)           ! Debug q
 
       LOGICAL :: e1term = .TRUE.     ! Calculate the eigenenergy response
@@ -47,11 +49,14 @@ MODULE m_types_juPhon
       REAL    :: smearingGauss = 1e-7 
       LOGICAL :: l_phonon = .TRUE.
       LOGICAL :: l_efield = .FALSE.
+      LOGICAL :: l_borneffcharge = .FALSE.
       LOGICAL :: l_cheatsym = .FALSE.
       LOGICAL :: l_procc = .TRUE.
       LOGICAL :: l_prodyn = .TRUE.
+      LOGICAL :: l_symVacLevel = .FALSE. ! Symmetrize the vacua levels  
 
       REAL, ALLOCATABLE :: qvec(:,:)
+      REAL, ALLOCATABLE :: qvec_efield(:,:)
 
       INTEGER :: singleQpt       = 1
 
@@ -123,6 +128,7 @@ MODULE m_types_juPhon
    CONTAINS
       PROCEDURE :: read_xml => read_xml_juPhon
       PROCEDURE :: mpi_bc => mpi_bc_juPhon
+      PROCEDURE :: init => init_juPhon
       PROCEDURE :: precheck_juPhon
    END TYPE t_juPhon
 
@@ -164,11 +170,16 @@ CONTAINS
       CALL mpi_bc(this%smearingGauss, rank, mpi_comm)
       CALL mpi_bc(this%singleQpt, rank, mpi_comm)
       CALL mpi_bc(this%qvec, rank, mpi_comm)
+      CALL mpi_bc(this%qvec_efield, rank, mpi_comm)
       CALL mpi_bc(this%l_phonon, rank, mpi_comm)
       CALL mpi_bc(this%l_efield, rank, mpi_comm)
+      CALL mpi_bc(this%l_borneffcharge, rank, mpi_comm)
+      CALL mpi_bc(this%qlim,rank,mpi_comm)
+      CALL mpi_bc(this%gmaxzLocal,rank,mpi_comm)
       CALL mpi_bc(this%l_cheatsym, rank, mpi_comm)
       CALL mpi_bc(this%l_procc, rank, mpi_comm)
       CALL mpi_bc(this%l_prodyn, rank, mpi_comm)
+      CALL mpi_bc(this%l_symVacLevel, rank, mpi_comm)
 
    END SUBROUTINE mpi_bc_juPhon
 
@@ -275,6 +286,18 @@ CONTAINS
            this%fDiffcut  = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@fDiffcut'))
          END IF
 
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@qlim')
+
+         IF (numberNodes == 1) THEN
+           this%qlim  = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@qlim'))
+         END IF
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@gmaxzLocal')
+
+         IF (numberNodes == 1) THEN
+           this%gmaxzLocal  = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@gmaxzLocal'))
+         END IF
+
          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@singleQpt')
 
          IF (numberNodes == 1) THEN
@@ -377,6 +400,12 @@ CONTAINS
            this%l_efield    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_efield'))
          END IF
 
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_borneffcharge')
+
+         IF (numberNodes == 1) THEN
+           this%l_borneffcharge    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_borneffcharge'))
+         END IF
+
          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_cheatsym')
 
          IF (numberNodes == 1) THEN
@@ -395,6 +424,12 @@ CONTAINS
            this%l_prodyn    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_prodyn'))
          END IF
 
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_symVacLevel')
+
+         IF (numberNodes == 1) THEN
+          this%l_symVacLevel    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_symVacLevel'))
+         END IF
+
          this%qpt_ph(1) = 0.0
          this%qpt_ph(2) = 0.0
          this%qpt_ph(3) = 0.0
@@ -407,6 +442,35 @@ CONTAINS
       IF (this%l_dfpt) CALL this%precheck_juPhon(xml)
       
    END SUBROUTINE read_xml_juPhon
+
+   SUBROUTINE init_juPhon(this,cell)
+
+    USE m_types_cell
+    USE m_inv3
+
+      CLASS(t_juPhon),     INTENT(INOUT) :: this
+      TYPE(t_cell),    INTENT(IN)     :: cell
+      INTEGER                            :: iDir
+      REAL                               :: qvec_ext(3), qvec_int(3),det,inv_bmat(3,3)!, qvec_full_int(3,3)
+      !PRINT*,"hallo"
+      !qvec_full_int(3,3) = 0.0
+      allocate(this%qvec_efield(3,3))
+      DO iDir = 1,3
+        qvec_ext(:) = 0.0
+        qvec_int(:) = 0.0
+        qvec_ext(iDir) = this%qlim
+        !print*,'cell%bmat',cell%bmat
+        !print*,'cell%amat',cell%amat
+        call inv3(cell%bmat,inv_bmat(:,:),det)
+        qvec_int = matmul(qvec_ext,transpose(inv_bmat))
+        !print*,"qvec_int",qvec_int
+        !print*,"qvec_int new",matmul(cell%amat,qvec_ext)
+
+        this%qvec_efield(iDir,:) = qvec_int
+      END DO
+
+
+   END SUBROUTINE init_juPhon
 
    SUBROUTINE precheck_juPhon(this,xml)
     USE m_types_xml

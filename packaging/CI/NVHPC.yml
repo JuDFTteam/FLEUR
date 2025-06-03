@@ -3,8 +3,10 @@ image:
   entrypoint: ["/usr/bin/bash -i -c"]
 
 build-nvhpc-cpu:
-  image: iffregistry.fz-juelich.de/fleur/fleur:NVHPC
+  image:  
   stage: build
+  tags:
+      - rtx2080ti
   artifacts:
      paths:
        - build

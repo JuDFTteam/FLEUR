@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -72,7 +72,10 @@ CONTAINS
       USE m_writeBasis
       USE m_RelaxSpinAxisMagn
       USE m_dfpt
- 
+      !For vTot1 efield WIP
+      USE m_make_stars
+      USE m_dfpt_vefield
+      USE m_checkdopall
 
 !$    USE omp_lib
 
@@ -100,6 +103,14 @@ CONTAINS
 
       TYPE(t_greensf), ALLOCATABLE :: greensFunction(:)
       TYPE(t_log_message)  :: log
+
+
+      ! response plotting debugging
+      TYPE(t_stars)                   :: starsq
+      TYPE(t_potden)                   :: dfptvefield, dfptvefieldimag   
+      INTEGER                         :: iDir, iDtype
+      TYPE(t_sliceplot)   :: sliceplot_int
+      TYPE(t_nococonv)    :: nococonv_int
 
       INTEGER :: eig_id, archiveType, num_threads
       INTEGER :: iter, iterHF, i, n, i_gf
@@ -282,7 +293,7 @@ CONTAINS
             ELSE
                CALL sliceDen%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN)
                IF (fmpi%irank .EQ. 0) CALL readDensity(stars, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
-                                                       fi%input, fi%sym,  CDN_ARCHIVE_TYPE_CDN_const, &
+                                                       fi%input, fi%sym,  archiveType, &
                                                        CDN_INPUT_DEN_const, 0, rdummy, tempDistance, l_dummy, sliceDen, inFilename='cdn_slice')
                CALL sliceden%distribute(fmpi%mpi_comm)
                call nococonv%mpi_bc(fmpi%mpi_comm)
@@ -385,7 +396,7 @@ CONTAINS
             CALL timestop("Updating energy parameters")
 
             IF (.NOT. fi%input%eig66(1)) THEN
-               CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv, mpdata, &
+               CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv,  &
                           hybdat, iter, eig_id, results, inDen, vToT, vx, hub1data)
             END IF
             ! TODO: What is commented out here and should it perhaps be removed?

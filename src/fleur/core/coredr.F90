@@ -1,6 +1,6 @@
 MODULE m_coredr
 CONTAINS
-  SUBROUTINE coredr(input,atoms,seig, rho,sphhar, vrs, qints,rhc)
+  SUBROUTINE coredr(input,atoms,seig, rho,sphhar, vrs, qints,rhc,l_useOtherCoreSolver)
     !     *******************************************************
     !     *****   set up the core densities for compounds   *****
     !     *****   for relativistic core                     *****
@@ -27,6 +27,7 @@ CONTAINS
     REAL   , INTENT (IN) :: vrs(atoms%jmtd,atoms%ntype,input%jspins)
     REAL,    INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
     REAL,    INTENT (OUT) :: rhc(atoms%msh,atoms%ntype,input%jspins),qints(atoms%ntype,input%jspins)
+    LOGICAL, INTENT (INOUT) :: l_useOtherCoreSolver(atoms%ntype)
     !     ..
     !     .. Local Scalars ..
     REAL dxx,rnot,sume,t2,t2b,z,t1,rr,d,v1,v2
@@ -60,32 +61,40 @@ CONTAINS
              vr(j,n) = (vrs(j,n,1)+vrs(j,n,input%jspins))/2.
              br(j,n) = (vrs(j,n,input%jspins)-vrs(j,n,1))/2.
           END DO
+          IF(MAXVAL(ABS(br(1:atoms%jmtd,n))).LT.1.0e-8) l_useOtherCoreSolver(n) = .TRUE. ! Use the other solver in case of a nonmagnetic atom in a magnetic calculation.
        END DO
     END IF
     !
     ! setup eigenvalues
+    CALL etabinit(atoms,input, vr, etab,ntab,ltab,nkmust)
     exetab = .FALSE.
     INQUIRE (file='core.dat',exist=exetab)
     IF (exetab) THEN
        OPEN (58,file='core.dat',form='formatted',status='old')
        REWIND 58
        DO n = 1,atoms%ntype
+          IF (l_useOtherCoreSolver(n)) CYCLE
           READ (58,FMT=*) nkmust(n)
           DO k = 1,nkmust(n)
-             READ (58,FMT='(f12.6,2i3)') etab(k,n),ntab(k,n),&
-                  &                                               ltab(k,n)
-
+             READ (58,FMT='(f12.6,2i3)') etab(k,n),ntab(k,n),ltab(k,n)
           END DO
        END DO
     ELSE
-       OPEN (58,file='core.dat',form='formatted',status='new')
-       CALL etabinit(atoms,input, vr, etab,ntab,ltab,nkmust)
+       OPEN (58,file='core.dat',form='formatted',status='new')   
     END IF
     !
     ncmsh = atoms%msh
     seig = 0.
     ! ---> set up densities
     DO jatom = 1,atoms%ntype
+
+       IF (l_useOtherCoreSolver(jatom)) THEN
+          IF (jatom.EQ.1) REWIND 58
+          DO k = 1,nkmust(jatom)
+             WRITE (58,FMT='(f12.6,2i3)') etab(k,jatom),ntab(k,jatom), ltab(k,jatom)
+          END DO
+          CYCLE
+       END IF
        !
        DO j = 1,atoms%jri(jatom)
           vrd(j) = vr(j,jatom)

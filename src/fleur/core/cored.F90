@@ -1,6 +1,6 @@
 MODULE m_cored
 CONTAINS
-   SUBROUTINE cored(input, jspin, atoms, rho,  sphhar, l_CoreDenPresent, vr, qint, rhc, tec, seig, EnergyDen)
+   SUBROUTINE cored(input, jspin, atoms, rho,  sphhar, l_CoreDenPresent, vr, qint, rhc, tec, seig, l_useOtherCoreSolver, EnergyDen)
       !     *******************************************************
       !     *****   set up the core densities for compounds.  *****
       !     *****                      d.d.koelling           *****
@@ -30,7 +30,9 @@ CONTAINS
       REAL, INTENT(INOUT)           :: rhc(atoms%msh,atoms%ntype,input%jspins)
       REAL, INTENT(INOUT)           :: qint(atoms%ntype,input%jspins)
       REAL, INTENT(INOUT)           :: tec(atoms%ntype,input%jspins)
+      LOGICAL, INTENT (INOUT), OPTIONAL :: l_useOtherCoreSolver(atoms%ntype)
       REAL, INTENT(INOUT), OPTIONAL :: EnergyDen(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
+
       !     ..
       !     .. Local Scalars ..
       REAL eig,fj,fl,fn,qOutside,rad,rhos,rhs,sea,sume,t2
@@ -46,13 +48,21 @@ CONTAINS
       INTEGER kappa(maxval(atoms%econf%num_states)),nprnc(maxval(atoms%econf%num_states))
       CHARACTER(LEN=20) :: attributes(6)
       REAL stateEnergies(29)
+      LOGICAL l_useThisCoreSolver(atoms%ntype)
       !     ..
+
+      l_useThisCoreSolver = .TRUE.
+      IF(PRESENT(l_useOtherCoreSolver)) THEN
+         l_useThisCoreSolver = l_useOtherCoreSolver
+      END IF
 
       c = c_light(1.0)
       seig = 0.
       !
       IF (input%frcor.and. l_CoreDenPresent) THEN
          DO  n = 1,atoms%ntype
+            IF(.NOT.l_useThisCoreSolver(n)) CYCLE
+
             rnot = atoms%rmsh(1,n) ; dxx = atoms%dx(n)
             ncmsh = NINT( LOG( (atoms%rmt(n)+10.0)/rnot ) / dxx + 1 )
             ncmsh = MIN( ncmsh, atoms%msh )
@@ -78,6 +88,8 @@ CONTAINS
 
       !     ---> set up densities
       DO  jatom = 1,atoms%ntype
+         IF(.NOT.l_useThisCoreSolver(jatom)) CYCLE
+
          sume = 0.
          z = atoms%zatom(jatom)
          !         rn = rmt(jatom)

@@ -1123,6 +1123,8 @@
       <xsd:attribute name="eps_pert" type="FleurDouble" use="optional"/>
       <xsd:attribute name="eDiffcut" type="FleurDouble" use="optional"/>
       <xsd:attribute name="fDiffcut" type="FleurDouble" use="optional"/>
+      <xsd:attribute name="qlim" type="FleurDouble" use="optional"/>  
+      <xsd:attribute name="gmaxzLocal" type="FleurDouble" use="optional"/>  
       <xsd:attribute name="singleQpt" type="xsd:positiveInteger" use="optional"/>
       <xsd:attribute name="e1term" type="FleurBool" use="optional"/>
       <xsd:attribute name="f1term" type="FleurBool" use="optional"/>
@@ -1140,9 +1142,11 @@
       <xsd:attribute name="smearingGauss" type="FleurDouble" use="optional"/>
       <xsd:attribute name="l_phonon" type="FleurBool" use="optional"/>
       <xsd:attribute name="l_efield" type="FleurBool" use="optional"/>
+      <xsd:attribute name="l_borneffcharge" type="FleurBool" use="optional"/>
       <xsd:attribute name="l_cheatsym" type="FleurBool" use="optional"/>
       <xsd:attribute name="l_procc" type="FleurBool" use="optional"/>
       <xsd:attribute name="l_prodyn" type="FleurBool" use="optional"/>
+      <xsd:attribute name="l_symVacLevel" type="FleurBool" use="optional" default="F" />
    </xsd:complexType>
 
    <xsd:complexType name="OutputType">

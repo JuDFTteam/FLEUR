@@ -109,7 +109,7 @@ gfortran-coverage:
     juDFT_MPI: "mpirun -n {mpi_procs} --allow-run-as-root "
   before_script:
       - cd $CI_PROJECT_DIR
-      - pip install lcov_cobertura
+      - pip install --break-system-packages lcov_cobertura
       - FLEUR_INCLUDEDIR="/opt/include /usr/include" FLEUR_LIBRARIES="-L/opt/lib;-ldl;-L/usr/lib;-L/usr/lib/x86_64-linux-gnu;-lscalapack-openmpi;-lfftw3" ./configure.sh -c mpi -l coverage -flags --coverage 
       - cd build.coverage
       - make -j 4

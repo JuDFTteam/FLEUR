@@ -549,13 +549,15 @@ CONTAINS
    END SUBROUTINE matrixsplit
 
    SUBROUTINE savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, fmpi , sym, cell, &
-                     noco, nococonv,score, potnorm, denName, denf, denA1, denA2, denA3)
+                     noco, nococonv,score, potnorm, denName, denf, denA1, denA2, denA3,denf_im,name_string)
       USE m_outcdn
       USE m_xsf_io
 #ifdef CPP_MPI
       USE mpi
 #endif
       USE m_polangle
+      USE m_checkdopall
+
       ! Takes one/several t_potden variable(s), i.e. scalar fields in MT-sphere/
       ! plane wave representation and makes it/them into plottable .xsf file(s)
       ! according to a scheme given in plot_inp.
@@ -598,13 +600,15 @@ CONTAINS
       TYPE(t_potden),    OPTIONAL, INTENT(IN) :: denA1
       TYPE(t_potden),    OPTIONAL, INTENT(IN) :: denA2
       TYPE(t_potden),    OPTIONAL, INTENT(IN) :: denA3
+      TYPE(t_potden),    OPTIONAL, INTENT(IN) :: denf_im
+      character(len=20), INTENT(IN),OPTIONAL  :: name_string
 
       REAL    :: tec, qint, phi0, angss
       INTEGER :: i, j, ix, iy, iz, na, nplo, iv, iflag, nfile
       INTEGER :: nplot, nt, jm, jspin, numInDen, numOutFiles
       LOGICAL :: twodim, cartesian, xsf, polar,unwind
 
-      TYPE(t_potden),     ALLOCATABLE :: den(:)
+      TYPE(t_potden),     ALLOCATABLE :: den(:),denIm(:)
       REAL,               ALLOCATABLE :: xdnout(:)
       REAL,               ALLOCATABLE :: tempResults(:,:,:,:)
       REAL,               ALLOCATABLE :: points(:,:,:,:)
@@ -619,13 +623,16 @@ CONTAINS
 
       REAL,               PARAMETER   :: eps = 1.0e-15
 
+      INTEGER                            :: lattvec_index(3)
+
       !NAMELIST /plot/twodim,cartesian,unwind,vec1,vec2,vec3,grid,zero,phi0,filename
 
       integer:: ierr
+      LOGICAL :: l_dfpt
 
       unwind = .FALSE.
       nfile = 120
-
+      l_dfpt = .FALSE.
       IF (PRESENT(denA2)) THEN
          ALLOCATE(den(4))
          den(1)          = denf
@@ -640,7 +647,15 @@ CONTAINS
          den(2)          = denA1
          numInDen        = 2
          numOutFiles     = 2
-      ELSE
+      ELSE IF (PRESENT(denf_im)) THEN
+         ALLOCATE(den(1),denIm(1))
+         print*,"Imaginary part"
+         den(1)          = denf
+         denIm(1)        = denf_im
+         l_dfpt          = .TRUE.
+         numInDen        = 1
+         numOutFiles     = 1
+      ELSE 
          ALLOCATE(den(1))
          den(1)          = denf
          numInDen        = 1
@@ -720,24 +735,24 @@ CONTAINS
 
       ! Loop over all plots
       DO nplo = 1, size(sliceplot%plot)
-        twodim=sliceplot%plot(nplo)%twodim
-        cartesian=sliceplot%plot(nplo)%cartesian
-        grid=sliceplot%plot(nplo)%grid
-        IF(.NOT.(MODULO(grid(3),fmpi%isize)).EQ.0) CALL juDFT_error('Your grid z component doesnt fit the # of MPI processed. ',calledby='plot.F90')
-        ALLOCATE(tempResults(0:grid(1)-1, 0:grid(2)-1,0:grid(3)-1,numOutFiles))
-        ALLOCATE(points(0:grid(1)-1, 0:grid(2)-1,0:grid(3)-1,3))
-        ALLOCATE(tempVecs(0:grid(1)-1, 0:grid(2)-1,0:grid(3)-1,6))
-        vec1=sliceplot%plot(nplo)%vec1
-        vec2=sliceplot%plot(nplo)%vec2
-        vec3=sliceplot%plot(nplo)%vec3
-        zero=sliceplot%plot(nplo)%zero
-        filename=sliceplot%plot(nplo)%filename
+         twodim=sliceplot%plot(nplo)%twodim
+         cartesian=sliceplot%plot(nplo)%cartesian
+         grid=sliceplot%plot(nplo)%grid
+         IF(.NOT.(MODULO(grid(3),fmpi%isize)).EQ.0) CALL juDFT_error('Your grid z component doesnt fit the # of MPI processed. ',calledby='plot.F90')
+         ALLOCATE(tempResults(0:grid(1)-1, 0:grid(2)-1,0:grid(3)-1,numOutFiles))
+         ALLOCATE(points(0:grid(1)-1, 0:grid(2)-1,0:grid(3)-1,3))
+         ALLOCATE(tempVecs(0:grid(1)-1, 0:grid(2)-1,0:grid(3)-1,6))
+         vec1=sliceplot%plot(nplo)%vec1
+         vec2=sliceplot%plot(nplo)%vec2
+         vec3=sliceplot%plot(nplo)%vec3
+         zero=sliceplot%plot(nplo)%zero
+         filename=sliceplot%plot(nplo)%filename
 
-        IF(.NOT.sliceplot%plot(nplo)%edgesAllSides) THEN
-           vec1 = vec1 * float(grid(1)) / float(grid(1)+1)
-           vec2 = vec2 * float(grid(2)) / float(grid(2)+1)
-           IF(.NOT.input%film) vec3 = vec3 * float(grid(3)) / float(grid(3)+1)
-        END IF
+         IF(.NOT.sliceplot%plot(nplo)%edgesAllSides) THEN
+            vec1 = vec1 * float(grid(1)) / float(grid(1)+1)
+            vec2 = vec2 * float(grid(2)) / float(grid(2)+1)
+            IF(.NOT.input%film) vec3 = vec3 * float(grid(3)) / float(grid(3)+1)
+         END IF
 
          IF (xsf.AND.sliceplot%plot(nplo)%vecField.AND.(fmpi%irank.EQ.0)) THEN
             OPEN(nfile+10,file=TRIM(denName)//'_A_vec_'//TRIM(filename)//'.xsf',form='formatted')
@@ -796,6 +811,13 @@ CONTAINS
 #ifdef CPP_MPI
      CALL MPI_BARRIER(fmpi%mpi_comm,ierr)
 #endif
+
+
+
+         !WRITE (oUnit,*) "checkdopall in savxsf"
+         ! find out what the problem ist
+         CALL checkDOPALL(input, sphhar, stars,atoms, sym, vacuum, cell,denf,1,denf_im) 
+         !print*,"sum(denf%pw)",sum(denf%pw)
          CALL timestart("loop over points")
          !print*, "loop over points", fmpi%irank
          !loop over all points
@@ -807,9 +829,9 @@ CONTAINS
          DO iz = strt,fin
             !$OMP PARALLEL DO DEFAULT(none) &
             !$OMP& SHARED(iz,grid,zero,vec1,vec2,vec3,twodim,input,cell ,numInDen,potnorm) &
-            !$OMP& SHARED(stars,vacuum,sphhar,atoms,sym,den,sliceplot,noco,points) &
+            !$OMP& SHARED(stars,vacuum,sphhar,atoms,sym,den,denIm,l_dfpt,sliceplot,noco,points) &
             !$OMP& SHARED(unwind,polar,tempResults,tempVecs,nplo,qssc,xsf,NumOutFiles) &
-            !$OMP& PRIVATE(ix,point,nt,na,pt,iv,iflag,xdnout,angss,help,phi0)
+            !$OMP& PRIVATE(ix,point,nt,na,pt,lattvec_index,iv,iflag,xdnout,angss,help,phi0)
             DO iy = 0, grid(2)-1
                DO ix = 0, grid(1)-1
 
@@ -820,7 +842,8 @@ CONTAINS
                   ! Set region specific parameters for point
 
                   ! Get MT sphere for point if point is in MT sphere
-                  CALL getMTSphere(input,cell,atoms ,point,nt,na,pt)
+                  lattvec_index(:) = 0.0
+                  CALL getMTSphere(input,cell,atoms ,point,nt,na,pt,lattvec_index)
                   IF (na.NE.0) THEN
                   ! In MT sphere
                      iv = 0
@@ -838,9 +861,15 @@ CONTAINS
                   END IF
 
                   DO i = 1, numInDen
-                     CALL outcdn(pt,nt,na,iv,iflag,1,potnorm,stars,&
+                     IF (l_dfpt) THEN
+                        CALL outcdn(pt,nt,na,iv,iflag,1,potnorm,stars,&
                                  vacuum,sphhar,atoms,sym,cell ,&
-                                 den(i),xdnout(i))
+                                 den(i),xdnout(i),denIm(i),lattvec_index)
+                     ELSE
+                        CALL outcdn(pt,nt,na,iv,iflag,1,potnorm,stars,&
+                        vacuum,sphhar,atoms,sym,cell ,&
+                        den(i),xdnout(i))
+                     END IF
                   END DO
 
                   IF (sliceplot%plot(nplo)%onlyMT.AND.(iflag.NE.1)) THEN
@@ -1049,7 +1078,7 @@ CONTAINS
    END SUBROUTINE matrixplot
 
    SUBROUTINE procplot(stars, atoms, sphhar, sliceplot,vacuum, input, fmpi , sym, cell, &
-                       noco, nococonv,denmat, plot_const)
+                       noco, nococonv,denmat, plot_const,denmat_im,name_string)
 
       ! According to iplot, we process which exact plots we make after we assured
       ! that we do any. n-th digit (from the back) of iplot ==1 --> plot with
@@ -1072,6 +1101,8 @@ CONTAINS
       TYPE(t_nococonv),  INTENT(IN)    :: nococonv
       TYPE(t_potden),    INTENT(IN)    :: denmat
       INTEGER,           INTENT(IN)    :: plot_const
+      TYPE(t_potden),    INTENT(IN), OPTIONAL    :: denmat_im
+      character(len=20), INTENT(IN),OPTIONAL  :: name_string
 
       INTEGER            :: i
       REAL               :: factor
@@ -1084,7 +1115,17 @@ CONTAINS
       IF (plot_const.EQ.1) THEN
          factor = 1.0
          IF(sliceplot%slice) denName='slice'
-         IF(.NOT.sliceplot%slice) denName = 'denIn'
+         IF(.NOT.sliceplot%slice) THEN
+            IF (PRESENT(name_string)) THEN
+               denName = name_string
+            ELSE
+               IF (PRESENT(denmat_im)) THEN
+                  denName = 'den1'
+               ELSE 
+                  denName = 'denIn'
+               END IF 
+            END IF 
+         END IF
          score = .FALSE.
          potnorm = .FALSE.
          IF (input%jspins.EQ.2) THEN
@@ -1099,7 +1140,7 @@ CONTAINS
             END IF
          ELSE
             CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, fmpi  , sym, cell, &
-                        noco, nococonv,score, potnorm, denName, denmat)
+                        noco, nococonv,score, potnorm, denName, denmat,denf_im=denmat_im)
          END IF
       END IF
 
@@ -1212,7 +1253,17 @@ CONTAINS
       IF (plot_const.EQ.2) THEN
          IF(any(noco%l_alignMT)) CALL juDFT_warn("l_RelaxMT=T and plotting potentials can lead to wrong potentials visualized inside the MT",calledby="plot.f90")
          factor = 2.0
-         denName = 'vTot'
+         !print*,"dsadsd"
+         !print*,name_string
+         IF (PRESENT(name_string)) THEN
+            denName = name_string
+         ELSE
+            IF (PRESENT(denmat_im)) THEN
+               denName = 'vTot1'
+            ELSE
+               denName = 'vTot'
+            END IF
+         END IF
          score = .FALSE.
          potnorm = .TRUE.
          IF (input%jspins.EQ.2) THEN
@@ -1227,7 +1278,7 @@ CONTAINS
             END IF
          ELSE
             CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input,fmpi  , sym, cell, &
-                        noco, nococonv, score, potnorm, denName, denmat)
+                        noco, nococonv, score, potnorm, denName, denmat,denf_im=denmat_im)
          END IF
       END IF
 
@@ -1275,7 +1326,7 @@ CONTAINS
    END SUBROUTINE procplot
 
    SUBROUTINE makeplots(stars, atoms, sphhar, vacuum, input, fmpi,   sym, cell, &
-                        noco, nococonv,denmat, plot_const, sliceplot)
+                        noco, nococonv,denmat, plot_const, sliceplot,denmat_im,name_string)
       USE m_Relaxspinaxismagn
       ! Checks, based on the iplot switch that is given in the input, whether or
       ! not plots should be made. Before the plot command is processed, we check
@@ -1299,6 +1350,8 @@ CONTAINS
       TYPE(t_potden),    INTENT(INOUT) :: denmat
       INTEGER,           INTENT(IN)    :: plot_const
       TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
+      TYPE(t_potden),    INTENT(INOUT), OPTIONAL :: denmat_im
+      character(len=20), INTENT(IN),OPTIONAL  :: name_string
       LOGICAL :: allowplot
       INTEGER :: ierr
 #ifdef CPP_MPI
@@ -1317,15 +1370,20 @@ CONTAINS
       IF (allowplot) THEN
          CALL toGlobalSpinFrame(noco, nococonv, vacuum, sphhar, stars, sym,   cell, input, atoms, Denmat,fmpi,.true.)
          CALL checkplotinp(fmpi)
+         IF (PRESENT(name_string)) THEN
          CALL procplot(stars, atoms, sphhar,sliceplot, vacuum, input,fmpi,   sym, cell, &
-                       noco, nococonv, denmat, plot_const)
+                       noco, nococonv, denmat, plot_const,denmat_im,name_string)
+         ELSE
+            CALL procplot(stars, atoms, sphhar,sliceplot, vacuum, input,fmpi,   sym, cell, &
+            noco, nococonv, denmat, plot_const,denmat_im)
+         END IF
          CALL toLocalSpinFrame(fmpi,vacuum, sphhar, stars, sym,   cell, noco, nococonv, input, atoms,.false., denmat,.true.)
       END IF
       CALL timestop("Plotting iplot plots")
 
    END SUBROUTINE makeplots
 
-   SUBROUTINE getMTSphere(input, cell, atoms,   point, iType, iAtom, pt)
+   SUBROUTINE getMTSphere(input, cell, atoms,   point, iType, iAtom, pt,lattvec_index)
 
       ! Old subroutine originally from plotdop.f90, which is needed in savxsf.
 
@@ -1335,20 +1393,22 @@ CONTAINS
        
       INTEGER,       INTENT(OUT)   :: iType, iAtom
       REAL,          INTENT(OUT)   :: pt(3)
+      INTEGER,  OPTIONAL,     INTENT(INOUT)   :: lattvec_index(3)
       REAL,          INTENT(IN)    :: point(3)
 
       INTEGER                      :: ii1, ii2, ii3, i1, i2, i3, nq
       REAL                         :: s
 
-      ii1 = 3
-      ii2 = 3
-      ii3 = 3
+      ii1 = 9
+      ii2 = 9
+      ii3 = 9
       IF (input%film ) ii3 = 0
-       
-
       DO i1 = -ii1, ii1
          DO i2 = -ii2, ii2
             DO i3 = -ii3, ii3
+               lattvec_index(1) = i1
+               lattvec_index(2) = i2
+               lattvec_index(3) = i3
                pt = point+MATMUL(cell%amat,(/i1,i2,i3/))
                iAtom = 0
                DO iType = 1, atoms%ntype
