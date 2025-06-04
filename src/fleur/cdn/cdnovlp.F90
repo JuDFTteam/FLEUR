@@ -14,7 +14,6 @@ MODULE m_cdnovlp
    USE m_phasy1
    implicit none
 
-   IMPLICIT NONE
    PRIVATE
    PUBLIC :: cdnovlp 
 CONTAINS
@@ -90,7 +89,6 @@ CONTAINS
          
           USE m_constants
           USE m_qpwtonmt
-          USE m_dcylbs
            
           USE m_diflgr
           USE m_types
