@@ -23,8 +23,8 @@ c***************************************c
       use m_constants
       use m_types
        
-      use m_cylbes
-      use m_dcylbs
+      !use m_cylbes
+      !use m_dcylbs
       use m_intgr, only : intgz0
       use m_d2fdz2
 
@@ -212,8 +212,8 @@ c...for the k-point
             irec2 = ig2(irec3)
             zks = sk2(irec2)*z1
             arg = phi2(irec2)
-            call cylbes(odi%mb,zks,bess)
-            call dcylbs(odi%mb,zks,bess,dbss)
+            !call cylbes(odi%mb,zks,bess)
+            !call dcylbs(odi%mb,zks,bess,dbss)
             do m = -odi%mb,odi%mb
                wronk1 = uz(l,m)*dudz(l,m) -
      -              udz(l,m)*duz(l,m)
@@ -269,8 +269,8 @@ c...for the b-point
             irec2 = ig2(irec3)
             zks = sk2(irec2)*z1
             arg = phi2(irec2)
-            call cylbes(odi%mb,zks,bess)
-            call dcylbs(odi%mb,zks,bess,dbss)
+            !call cylbes(odi%mb,zks,bess)
+            !call dcylbs(odi%mb,zks,bess,dbss)
             do m = -odi%mb,odi%mb
                wronk1 = uz_b(l,m)*dudz_b(l,m) -
      -              udz_b(l,m)*duz_b(l,m)
@@ -338,7 +338,7 @@ c  now actually computing the uHu matrix
          ! cyl. Bessel at G(k+b1)
          zks = zks0*zmsh(i)
          besss(:) = 0.
-         call cylbes(odi%M,zks,besss)
+         !call cylbes(odi%M,zks,besss)
          do m = -odi%M,odi%M
             gbess(m,i) = besss(m)
          enddo
@@ -346,7 +346,7 @@ c  now actually computing the uHu matrix
          ! cyl. Bessel at G(k+b2)
          zks = zks0_b*zmsh(i)
          besss(:) = 0.
-         call cylbes(odi%M,zks,besss)
+         !call cylbes(odi%M,zks,besss)
          do m = -odi%M,odi%M
             gbess_b(m,i) = besss(m)
          enddo

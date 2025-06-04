@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -12,6 +12,7 @@ MODULE m_cdnovlp
    USE m_force_a4_add
    USE m_sphbes
    USE m_phasy1
+   implicit none
 
    IMPLICIT NONE
    PRIVATE
@@ -89,7 +90,6 @@ CONTAINS
          
           USE m_constants
           USE m_qpwtonmt
-          USE m_cylbes
           USE m_dcylbs
            
           USE m_diflgr
