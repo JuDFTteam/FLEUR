@@ -21,7 +21,7 @@ def generate_sunburst_plot(json_file, output_file="juDFT_times_plot.html",scalin
         scaling_data= None
 
     # Convert JSON data to a format suitable for Plotly
-    def flatten_json(data, parent="",runtime=0,scaling_data=None):
+    def flatten_json(data, parent="",runtime=0,sector_time=0,scaling_data=None):
         scaling=0
         rows = []
         timer=data['timername']
@@ -32,13 +32,20 @@ def generate_sunburst_plot(json_file, output_file="juDFT_times_plot.html",scalin
         else:
             variance=0
             ncalls=1    
-        if runtime==0: runtime=total
+        if runtime==0: 
+            runtime=total
+            sector_time=total
         if scaling_data:
             scaling=scaling_data['totaltime']/total
         percent=total/runtime*100
         current_path = f"{parent}/{timer}" if parent else timer
-        if total>runtime*0.001:
-            rows.append({"id": current_path, "label": timer, "parent": parent, "runtime": total,"percent": f'{percent:.2f}%',"calls":ncalls, "variance": variance, "scaling": scaling})
+        total=min(total,sector_time)
+        if total>runtime*0.01 and total>sector_time*0.01    :
+            if timer == "Total Run":
+                timer="" #reset parent timer
+            else:
+                rows.append({"id": current_path, "label": timer, "parent": parent, "runtime": total,"percent": f'{percent:.2f}%',"calls":ncalls, "variance": variance, "scaling": scaling})
+                print(rows[-1])
             if 'subtimers' in data:
                 if scaling_data:
                     sbtimer_scaling=scaling_data['subtimers']
@@ -47,7 +54,7 @@ def generate_sunburst_plot(json_file, output_file="juDFT_times_plot.html",scalin
                         subtimer_scale=sbtimer_scaling.pop(0)
                     else:
                         subtimer_scale=None  
-                    rows.extend(flatten_json(subtimer, timer,runtime,subtimer_scale))
+                    rows.extend(flatten_json(subtimer, timer,runtime,total,subtimer_scale))
         
         return rows
 
@@ -64,10 +71,10 @@ def generate_sunburst_plot(json_file, output_file="juDFT_times_plot.html",scalin
         df,
         names="label",
         parents="parent",
-        values="runtime",
-        hover_data=["percent", "calls","variance"], color=color,
+        values="runtime",color=color,
+        hover_data=["percent", "calls","variance"], 
         title="FLEUR runtime breakdown" ,branchvalues="total" )
-
+    fig.show()
     # Save the plot to an HTML file
     fig.write_html(output_file)
     print(f"Sunburst plot saved to {output_file}")
