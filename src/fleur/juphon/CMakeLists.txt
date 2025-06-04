@@ -3,7 +3,6 @@ src/fleur/juphon/dfpt.F90
 src/fleur/juphon/dfpt_check.F90
 src/fleur/juphon/dfpt_sternheimer.F90
 src/fleur/juphon/dfpt_dynmat.F90
-src/fleur/juphon/jpGrVeff0_mod.F90
 src/fleur/juphon/dfpt_eii2.F90
 src/fleur/juphon/dfpt_dynmat_eig.F90
 src/fleur/juphon/dfpt_vgen.F90

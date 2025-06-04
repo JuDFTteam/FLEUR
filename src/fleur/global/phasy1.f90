@@ -14,7 +14,6 @@ MODULE m_phasy1
    USE m_types
    implicit none
 
-   IMPLICIT NONE
    private
    public :: phasy1, phasy2, phasy1nSym
 
