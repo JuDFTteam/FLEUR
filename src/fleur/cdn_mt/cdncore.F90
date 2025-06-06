@@ -103,14 +103,16 @@ SUBROUTINE cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
    IF (fmpi%irank==0) THEN
       IF (input%kcrel==0) THEN
          DO jspin = 1,input%jspins
-            IF(PRESENT(EnergyDen)) THEN
-               CALL cored(input,jspin,atoms,outDen%mt,sphhar,l_CoreDenPresent,vr0(:,:,jspin), qint,rh ,tec,seig, EnergyDen=EnergyDen%mt)
-            ELSE
-               CALL cored(input,jspin,atoms,outDen%mt,sphhar,l_CoreDenPresent,vr0(:,:,jspin), qint,rh ,tec,seig)
-            ENDIF
+            DO iType = 1, atoms%ntype
+               IF(PRESENT(EnergyDen)) THEN
+                  CALL cored(input,jspin,iType,atoms,outDen%mt,sphhar,l_CoreDenPresent,vr0(:,:,jspin), qint,rh ,tec,seig, EnergyDen=EnergyDen%mt)
+               ELSE
+                  CALL cored(input,jspin,iType,atoms,outDen%mt,sphhar,l_CoreDenPresent,vr0(:,:,jspin), qint,rh ,tec,seig)
+               ENDIF
 
-            rhTemp(:,:,jspin) = rh(:,:,jspin)
-            results%seigc = results%seigc + seig
+               rhTemp(:,iType,jspin) = rh(:,iType,jspin)
+               results%seigc = results%seigc + seig
+            END DO
          END DO
       ELSE
          IF(PRESENT(EnergyDen)) call juDFT_error("Energyden not implemented for relativistic core calculations")
@@ -120,9 +122,11 @@ SUBROUTINE cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
          results%seigc = results%seigc + seig
          IF(ANY(l_useOtherCoreSolver(:))) THEN
             DO jspin = 1,input%jspins
-               CALL cored(input,jspin,atoms,rhoTemp,sphhar,l_CoreDenPresent,vr0(:,:,jspin),qint,rh,tec,seig,l_useOtherCoreSolver=l_useOtherCoreSolver)
+               DO iType = 1, atoms%ntype
+                  CALL cored(input,jspin,iType,atoms,rhoTemp,sphhar,l_CoreDenPresent,vr0(:,:,jspin),qint,rh,tec,seig,l_useOtherCoreSolver=l_useOtherCoreSolver)
+                  results%seigc = results%seigc + seig
+               END DO
             END DO
-            results%seigc = results%seigc + seig
             DO iType = 1, atoms%ntype
                IF (l_useOtherCoreSolver(iType)) THEN
                   outDen%mt(1:atoms%jmtd,0:sphhar%nlhd,iType,1) = rhoTemp(1:atoms%jmtd,0:sphhar%nlhd,iType,1)
