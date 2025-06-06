@@ -29,7 +29,6 @@ CONTAINS
     !     .. Local Scalars ..
     REAL dxx,rnot,sume,t2,t2b,z,t1,rr,d,v1,v2
     INTEGER i,j,jatom,jspin,k,n,ncmsh
-    LOGICAL exetab
     !     ..
     !     .. Local Arrays ..
     REAL br(atoms%jmtd,atoms%ntype),brd(atoms%msh),etab(100,atoms%ntype),&
@@ -61,34 +60,11 @@ CONTAINS
     !
     ! setup eigenvalues
     CALL etabinit(atoms,input, vr, etab,ntab,ltab,nkmust)
-    exetab = .FALSE.
-    INQUIRE (file='core.dat',exist=exetab)
-    IF (exetab) THEN
-       OPEN (58,file='core.dat',form='formatted',status='old')
-       REWIND 58
-       DO n = 1,atoms%ntype
-          IF (l_useOtherCoreSolver(n)) CYCLE
-          READ (58,FMT=*) nkmust(n)
-          DO k = 1,nkmust(n)
-             READ (58,FMT='(f12.6,2i3)') etab(k,n),ntab(k,n),ltab(k,n)
-          END DO
-       END DO
-    ELSE
-       OPEN (58,file='core.dat',form='formatted',status='new')   
-    END IF
     !
     ncmsh = atoms%msh
     seig = 0.
     ! ---> set up densities
     DO jatom = 1,atoms%ntype
-
-       IF (l_useOtherCoreSolver(jatom)) THEN
-          IF (jatom.EQ.1) REWIND 58
-          DO k = 1,nkmust(jatom)
-             WRITE (58,FMT='(f12.6,2i3)') etab(k,jatom),ntab(k,jatom), ltab(k,jatom)
-          END DO
-          CYCLE
-       END IF
        !
        DO j = 1,atoms%jri(jatom)
           vrd(j) = vr(j,jatom)
@@ -122,12 +98,6 @@ CONTAINS
              ENDIF
           END DO
        END IF
-
-       !        rr = rmsh(1,jatom)
-       !        do i =1, ncmsh
-       !          rr = d*rr
-       !         write(*,'(3f20.10)') rr,vrd(i),brd(i)
-       !        enddo
 
        !
        rnot = atoms%rmsh(1,jatom)
@@ -163,12 +133,6 @@ CONTAINS
           END DO
        END IF
        !
-       ! store atomic eigenvalues to file.58
-       IF (jatom.EQ.1) REWIND 58
-       WRITE (58,FMT=*) nkmust(jatom)
-       DO k = 1,nkmust(jatom)
-          WRITE (58,FMT='(f12.6,2i3)') etab(k,jatom),ntab(k,jatom), ltab(k,jatom)
-       END DO
        !---->update spherical charge density rho with the core density.
        CALL ccdnup(atoms,sphhar,input,jatom, rho, sume,vrs,rhochr,rhospn, tecs,qints)
 
