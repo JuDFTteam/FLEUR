@@ -50,13 +50,13 @@ SUBROUTINE cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
    COMPLEX                          :: rho21
    LOGICAL, PARAMETER               :: l_st=.FALSE.
    LOGICAL                          :: l_coreDenPresent
+   LOGICAL                          :: l_useOtherCoreSolver
 
    REAL                             :: rhoTemp(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
    REAL                             :: rh(atoms%msh,atoms%ntype,input%jspins)
    REAL                             :: qint(atoms%ntype,input%jspins)
    REAL                             :: tec(atoms%ntype,input%jspins)
    REAL                             :: rhTemp(atoms%msh,atoms%ntype,input%jspins)
-   LOGICAL                          :: l_useOtherCoreSolver(atoms%ntype)
    REAL ,ALLOCATABLE                :: vr0(:,:,:)
 
    results%seigc = 0.0
@@ -102,8 +102,8 @@ SUBROUTINE cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
    !add in core density
    IF (fmpi%irank==0) THEN
       IF (input%kcrel==0) THEN
-         DO jspin = 1,input%jspins
-            DO iType = 1, atoms%ntype
+         DO iType = 1, atoms%ntype
+            DO jspin = 1,input%jspins
                IF(PRESENT(EnergyDen)) THEN
                   CALL cored(input,jspin,iType,atoms,outDen%mt,sphhar,l_CoreDenPresent,vr0(:,:,jspin), qint,rh ,tec,seig, EnergyDen=EnergyDen%mt)
                ELSE
@@ -120,22 +120,18 @@ SUBROUTINE cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
          rhoTemp = outDen%mt
          DO iType = 1, atoms%ntype
             CALL coredr(input,atoms,iType,seig, outDen%mt,sphhar,vr0,qint,rh,l_useOtherCoreSolver)
-         END DO
-         results%seigc = results%seigc + seig
-         IF(ANY(l_useOtherCoreSolver(:))) THEN
-            DO jspin = 1,input%jspins
-               DO iType = 1, atoms%ntype
+            results%seigc = results%seigc + seig
+            IF (l_useOtherCoreSolver) THEN
+               DO jspin = 1,input%jspins
                   CALL cored(input,jspin,iType,atoms,rhoTemp,sphhar,l_CoreDenPresent,vr0(:,:,jspin),qint,rh,tec,seig,l_useOtherCoreSolver=l_useOtherCoreSolver)
                   results%seigc = results%seigc + seig
                END DO
-            END DO
-            DO iType = 1, atoms%ntype
-               IF (l_useOtherCoreSolver(iType)) THEN
+               IF (l_useOtherCoreSolver) THEN
                   outDen%mt(1:atoms%jmtd,0:sphhar%nlhd,iType,1) = rhoTemp(1:atoms%jmtd,0:sphhar%nlhd,iType,1)
                   outDen%mt(1:atoms%jmtd,0:sphhar%nlhd,iType,input%jspins) = rhoTemp(1:atoms%jmtd,0:sphhar%nlhd,iType,input%jspins)
                END IF
-            END DO
-         END IF
+            END IF
+         END DO
       END IF
    END IF
    DO jspin = 1,input%jspins

@@ -25,7 +25,7 @@ CONTAINS
     REAL   , INTENT (IN)    :: vrs(atoms%jmtd,atoms%ntype,input%jspins)
     REAL,    INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
     REAL,    INTENT (OUT)   :: rhc(atoms%msh,atoms%ntype,input%jspins),qints(atoms%ntype,input%jspins)
-    LOGICAL, INTENT (INOUT) :: l_useOtherCoreSolver(atoms%ntype)
+    LOGICAL, INTENT (INOUT) :: l_useOtherCoreSolver
     !     ..
     !     .. Local Scalars ..
     REAL dxx,rnot,sume,t2,t2b,z,t1,rr,d,v1,v2
@@ -42,6 +42,9 @@ CONTAINS
     !
     ! setup potential and field
     !
+    
+    seig = 0.0
+    
     IF (input%jspins.EQ.1) THEN
        DO j = 1,atoms%jmtd
           vr(j,iType) = vrs(j,iType,1)
@@ -52,14 +55,16 @@ CONTAINS
           vr(j,iType) = (vrs(j,iType,1)+vrs(j,iType,input%jspins))/2.
           br(j,iType) = (vrs(j,iType,input%jspins)-vrs(j,iType,1))/2.
        END DO
-       IF(MAXVAL(ABS(br(1:atoms%jmtd,iType))).LT.1.0e-8) l_useOtherCoreSolver(iType) = .TRUE. ! Use the other solver in case of a nonmagnetic atom in a magnetic calculation.
+       IF(MAXVAL(ABS(br(1:atoms%jmtd,iType))).LT.1.0e-8) THEN
+          l_useOtherCoreSolver = .TRUE. ! Use the other solver in case of a nonmagnetic atom in a magnetic calculation.
+          RETURN
+       END IF
     END IF
     !
     ! setup eigenvalues
     CALL etabinit(atoms,input, vr, etab,ntab,ltab,nkmust)
     !
     ncmsh = atoms%msh
-    seig = 0.0
     ! ---> set up densities
 
     DO j = 1,atoms%jri(iType)

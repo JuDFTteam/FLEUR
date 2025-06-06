@@ -30,7 +30,7 @@ CONTAINS
       REAL, INTENT(INOUT)           :: rhc(atoms%msh,atoms%ntype,input%jspins)
       REAL, INTENT(INOUT)           :: qint(atoms%ntype,input%jspins)
       REAL, INTENT(INOUT)           :: tec(atoms%ntype,input%jspins)
-      LOGICAL, INTENT (INOUT), OPTIONAL :: l_useOtherCoreSolver(atoms%ntype)
+      LOGICAL, INTENT (INOUT), OPTIONAL :: l_useOtherCoreSolver
       REAL, INTENT(INOUT), OPTIONAL :: EnergyDen(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
 
       !     ..
@@ -48,7 +48,7 @@ CONTAINS
       INTEGER kappa(maxval(atoms%econf%num_states)),nprnc(maxval(atoms%econf%num_states))
       CHARACTER(LEN=20) :: attributes(6)
       REAL stateEnergies(29)
-      LOGICAL l_useThisCoreSolver(atoms%ntype)
+      LOGICAL l_useThisCoreSolver
       !     ..
 
       l_useThisCoreSolver = .TRUE.
@@ -59,7 +59,7 @@ CONTAINS
       c = c_light(1.0)
       seig = 0.0
       !
-      IF(.NOT.l_useThisCoreSolver(iType)) RETURN
+      IF(.NOT.l_useThisCoreSolver) RETURN
       
       IF (input%frcor.and.l_CoreDenPresent) THEN
          rnot = atoms%rmsh(1,iType) ; dxx = atoms%dx(iType)
