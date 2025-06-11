@@ -12,7 +12,9 @@ build-nvhpc-cpu:
        - build
      expire_in: 12h
   script:
-    - /bin/bash -i -c "cd $CI_PROJECT_DIR; LDFLAGS='-Wl,--copy-dt-needed-entries' ./configure.sh -c auto ; cd build; make"
+    - set +e;source compiler-select nvhpc;set -e
+    - cd $CI_PROJECT_DIR
+    - ./configure.sh  -c nvidia -gpu acc:cc60 -make -link "/opt/nvidia_hpc_sdk/Linux_x86_64/23.9/compilers/lib/liblapack.a /opt/nvidia_hpc_sdk/Linux_x86_64/23.9/compilers/lib/libblas.a"
   allow_failure: true
   rules:
       - if: $CI_TASKS =~ /nvidia/     
