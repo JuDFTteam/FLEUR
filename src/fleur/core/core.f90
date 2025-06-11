@@ -16,6 +16,7 @@ MODULE m_core
       USE m_corehff
       USE m_nwrfst
       USE m_rinvgj
+      USE m_intgr
 
       IMPLICIT NONE
 
@@ -27,15 +28,17 @@ MODULE m_core
       REAL,    INTENT (INOUT) :: ectab(100)
 
       REAL    :: bhf,bsum,btot,dvstep,ec,elim,qcor,spcor,tolvar,vz,xmj,ec_sv
+      REAL    :: isoShift, alpha, smallRadDenVal, largeRadDenVal, averageDen, nucRad
       INTEGER :: i,ic,ic1,ic2,ie,iflag,ii,ilshell,imin,ir,ish,istart,iter
       INTEGER :: itermax,iv,j,jv,kap1,kap2,l,lll,muem05,n,ncor,nmatch,node
-      INTEGER :: nqn,nrmax,nsh,nsol,nval,nvar,nzero,s,t
-      LOGICAL :: ferro
+      INTEGER :: nqn,nrmax,nsh,nsol,nval,nvar,nzero,s,t,iRad
+      LOGICAL :: ferro, isSmaller
 
-      REAL :: bb(mrad),bhff(15),dedv(4,4),dv(4),dvde(4,4),err(4),errnew(4)
+      REAL :: bb(mrad),bhff(15),isomerShift(15),dedv(4,4),dv(4),dvde(4,4),err(4),errnew(4)
       REAL :: fc(2,2,mrad),fck(2,2,mrad),gc(2,2,mrad),gck(2,2,mrad)
       REAL :: piw(2,2),pow(2,2),qiw(2,2),qow(2,2),rc(mrad),rc2(mrad)
       REAL :: rchr(mrad),rspn(mrad),var(4),varnew(4),vv(mrad)
+      REAL :: indefInteg(mrad)
       INTEGER kap(2)
       CHARACTER txtl(0:3)
       CHARACTER*3 txtk(4)
@@ -80,8 +83,17 @@ MODULE m_core
       END IF
 
       WRITE (oUnit,FMT='(/,''  ATOMIC NUMBER  : '',F6.2,/,''  CORE ELECTRONS : '',I5,/,''  VAL. ELECTRONS : '',I5)') zz,ncor,nval
-      WRITE (oUnit,FMT='(  /,''  MESH    RC(1)  : '',F12.6,//10x,''MUE  KAP ITER    ENERGY '',''(Hart)'', " HF (KG) ")') rc(1)
+      WRITE (oUnit,FMT='(  /,''  MESH    RC(1)  : '',F12.6,//10x,''MUE  KAP ITER    ENERGY '',''(Hart)'', " HF (KG)      IS (e/Bohr^3)")') rc(1)
 
+      nucRad = r0_const*(atomicMasses_const(NINT(zz))**(1.0/3.0))
+      iRad = 0
+      isSmaller = .TRUE.
+      DO WHILE (isSmaller)
+         iRad = iRad + 1
+         WRITE(*,*) nucRad, rc(iRad), iRad
+         IF (rc(iRad).GE.nucRad) isSmaller = .FALSE.
+      END DO
+      alpha = (nucRad - rc(iRad-1)) / (rc(iRad) - rc(iRad-1))
 
       ! ---------------------------------------
       ! INITIALIZE QUANTUM NUMBERS  NQN  AND  L
@@ -95,6 +107,7 @@ MODULE m_core
          l = lqntab(ilshell)
          nsh = 2* (2*l+1)
          bhff(ilshell) = 0.0
+         isomerShift(ilShell) = 0.0
          ish = 0
          
          DO muem05 = -l - 1,+l ! \mu  - loop
@@ -301,13 +314,30 @@ MODULE m_core
                DO ir = 1,jtop
                   rhochr(ir) = rhochr(ir) + rchr(ir)
                   rhospn(ir) = rhospn(ir) + rspn(ir)
+!                  rrchr(ir) = rc(ir)*rchr(ir)
                END DO
+
+               !-----------------
+               ! ISOMER SHIFT
+               !-----------------
+               indefInteg = 0.0
+               CALL intgr2(rchr(:),rc(:),dx,jtop,indefInteg)
+
+!               smallRadDenVal = indefInteg(iRad-1)*sfp_const / ((4.0/3.0)*pi_const*(rc(iRad-1)**3.0))
+!               largeRadDenVal = indefInteg(iRad)*sfp_const / ((4.0/3.0)*pi_const*(rc(iRad)**3.0))
+               smallRadDenVal = indefInteg(iRad-1) / ((4.0/3.0)*pi_const*(rc(iRad-1)**3.0))
+               largeRadDenVal = indefInteg(iRad) / ((4.0/3.0)*pi_const*(rc(iRad)**3.0))
+               averageDen = (1.0-alpha)*smallRadDenVal + alpha*largeRadDenVal
+               isoShift = averageDen
+               
                
                !-----------------
                ! HYPERFINE FIELD
                !-----------------
+               
                CALL corehff(mrad,kap1,kap2,xmj,s,nsol,bhf,gck,fck,rc,dx,jtop)
                bhff(ilshell) = bhff(ilshell) + bhf
+               isomerShift(ilshell) = isomerShift(ilshell) + isoShift
                
                ! final info
                ectab(ic) = ec + 2*ec_sv
@@ -352,9 +382,9 @@ MODULE m_core
             
          END DO ! \mu  - loop end
          
-         WRITE (oUnit,FMT='(I4,A1,20X,F16.3)') nqn,txtl(l),bhff(ilshell)
+         WRITE (oUnit,FMT='(I4,A1,26X,2F16.3)') nqn,txtl(l),bhff(ilshell),isomerShift(ilshell)
          btot = bhff(ilshell) + btot
-         
+
       END DO ! nl  - loop end
       
       WRITE (oUnit,FMT='(''HFTOT:'',20X,F16.3)') btot
