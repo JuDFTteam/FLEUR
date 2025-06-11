@@ -90,7 +90,6 @@ MODULE m_core
       isSmaller = .TRUE.
       DO WHILE (isSmaller)
          iRad = iRad + 1
-         WRITE(*,*) nucRad, rc(iRad), iRad
          IF (rc(iRad).GE.nucRad) isSmaller = .FALSE.
       END DO
       alpha = (nucRad - rc(iRad-1)) / (rc(iRad) - rc(iRad-1))
@@ -387,7 +386,7 @@ MODULE m_core
 
       END DO ! nl  - loop end
       
-      WRITE (oUnit,FMT='(''HFTOT:'',20X,F16.3)') btot
+      WRITE (oUnit,FMT='(''HFTOT:'',25X,F16.3)') btot
 
       qcor = rsimp(mrad,rhochr,rc,jtop,dx)
       WRITE (oUnit,FMT=8020) 'charge',qcor
