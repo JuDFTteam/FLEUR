@@ -888,6 +888,7 @@ CONTAINS
 
       WRITE (oUnit,*) '------------------------------------------------------'
 
+      CALL timestop("juPhon DFPT")
       CALL juDFT_end("Phonon calculation finished.",fmpi%irank)
 
     END SUBROUTINE dfpt
