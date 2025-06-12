@@ -238,8 +238,9 @@ module m_dfpt_dynmat_eig
 
   end subroutine diagonalizeDynMat
 
-  subroutine CalculateFrequencies( atoms, iqpt, eigenVals, eigenFreqs, add_tag )
+  subroutine CalculateFrequencies( atoms, iqpt, eigenVals, eigenFreqs, add_tag, qvec )
 
+    USE m_xmlOutput
     implicit none
 
     ! Type parameter
@@ -252,6 +253,7 @@ module m_dfpt_dynmat_eig
     real,                       intent(in)  :: eigenVals(:)
     complex,          allocatable, intent(out) :: eigenFreqs(:)
     character(len=*), intent(in) :: add_tag
+    real,             intent(in) :: qvec(3)
 
     ! Scalar variables
     integer                                 :: itype
@@ -264,7 +266,7 @@ module m_dfpt_dynmat_eig
     ! Array variables
     character(len=50)                         :: filenameTemp
     REAL                                      :: atomic_mass_array(118)
-
+    CHARACTER(LEN=20)                         :: attributes(5)
     ! TODO: This is ridiculous. Remove asap.
     if (iqpt < 10) then
       write(filenameTemp, '("dynMatq=000",i1)') iqpt
@@ -340,6 +342,18 @@ module m_dfpt_dynmat_eig
     end do ! itype
     close( 109 )
 
+    ! write into out.xml
+    CALL openXMLElementNoAttributes('Phonons')
+    CALL openXMLElementNoAttributes('dynMat')
+    attributes = ''
+    WRITE(attributes(1),'(i0)') iqpt
+    WRITE(attributes(2),'(f15.8)') qvec(1)
+    WRITE(attributes(3),'(f15.8)') qvec(2)
+    WRITE(attributes(4),'(f15.8)') qvec(3)
+    attributes(5) = '1/cm'
+    CALL writeXMLElementPoly('frequencies',(/'iqpt', 'q_x ' , "q_y " , "q_z ",'unit'/), attributes, REAL(eigenFreqs) )
+    CALL closeXMLElement('dynMat')
+    CALL closeXMLElement('Phonons')
   end subroutine CalculateFrequencies
 
 end module m_dfpt_dynmat_eig

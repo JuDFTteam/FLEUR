@@ -442,9 +442,8 @@ CONTAINS
                   rhoLocal_vac(:,:stars%ng2,:) = (rho%vac(:,:,:,1)+rho%vac(:,:,:,fi%input%jspins))/(3.0-fi%input%jspins)
                   rhoLocal_pw(:stars%ng3) = (rho%pw(:,1)+rho%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
 
-                  CALL dfpt_sf_vac(starsLocal,fi%vacuum,fi%cell,rhoLocal_pw,vExt1%pw(:,1),rhoLocal_vac,vExt1%vac(:,:,:,1),tempval,iDir_col)
-                  ! The SF Element seems to be broken atm. Needs a fix
-                  !dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
+                  CALL dfpt_sf_vac(starsLocal,fi%vacuum,fi%cell,rhoLocal_pw,vExt1%pw(:,1),rhoLocal_vac,vExt1%vac(:,:,:,1),tempval)
+                  dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
                   IF (fmpi%irank==0) write(9989,FMT=8000) "    SF VAC Element rho V1ext0       ", tempval
                   tempval = CMPLX(0.0,0.0)
                END IF
@@ -641,15 +640,14 @@ CONTAINS
 
    END SUBROUTINE dfpt_int_vac
 
-   SUBROUTINE dfpt_sf_vac(stars,vacuum,cell,pw_conj,pw_pure,vac_conj,vac_pure,sf_int,iDir_col)
+   SUBROUTINE dfpt_sf_vac(stars,vacuum,cell,pw_conj,pw_pure,vac_conj,vac_pure,sf_int)
 
       TYPE(t_stars), INTENT(IN) :: stars
       TYPE(t_vacuum), INTENT(IN) :: vacuum
       TYPE(t_cell), INTENT(IN) :: cell 
       COMPLEX, INTENT(IN) :: pw_conj(:), pw_pure(:)
       COMPLEX, INTENT(IN) :: vac_conj(:,:,:), vac_pure(:,:,:)
-      COMPLEX, INTENT(OUT) :: sf_int
-      INTEGER, INTENT(IN) :: iDir_col 
+      COMPLEX, INTENT(INOUT) :: sf_int
 
       REAL :: facv ! accounts for vacua symmetry
       REAL :: qzh, pref , facn 
@@ -660,7 +658,6 @@ CONTAINS
       facv = 2.0/vacuum%nvac
       pref = 1.0 ! direction fourier trafo  
       facn = 1.0 
-
       DO iVac = 1 , vacuum%nvac
          ! IR - Part 
          fft_conj = CMPLX(0.0,0.0)
