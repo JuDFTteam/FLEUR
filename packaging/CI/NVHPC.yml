@@ -21,7 +21,7 @@ build-nvhpc-cpu:
       - if: $CI_TASKS =~ /all/    
  
 test-nvhpc-cpu:
- image: 
+  image: 
   extends: .test-fleur
   tags:
      - rtx2080ti
