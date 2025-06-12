@@ -42,7 +42,6 @@ src/fleur/juphon/desymmetrizer.f90
 src/fleur/juphon/dfpt_eigen.F90
 src/fleur/juphon/dfpt_dynmat_sym.f90
 src/fleur/juphon/dfpt_gradient.f90
-src/fleur/juphon/dfpt_potden_offset.F90
 src/fleur/juphon/dfpt_vefield.F90
 src/fleur/juphon/dfpt_dielecten.F90
 src/fleur/juphon/dfpt_born_effcharge.F90
