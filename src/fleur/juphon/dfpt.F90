@@ -783,7 +783,7 @@ CONTAINS
                   CALL timestop("Dynmat diagonalization")
    
                   CALL timestart("Frequency calculation")
-                  CALL CalculateFrequencies(fi_nosym%atoms, q_list(iQ), eigenVals, eigenFreqs,"raw")
+                  CALL CalculateFrequencies(fi_nosym%atoms, q_list(iQ), eigenVals, eigenFreqs,"raw",qpts_loc%bk(:,q_list(iQ)))
                   CALL timestop("Frequency calculation")
                   write(9991,*) "Eii2 new:", E2ndOrdII
                   !DEALLOCATE(eigenVals, eigenVecs, eigenFreqs, E2ndOrdII)
@@ -858,7 +858,7 @@ CONTAINS
                CALL timestop("Dynmat diagonalization")
 
                CALL timestart("Frequency calculation")
-               CALL CalculateFrequencies(fi_nosym%atoms, iQ, eigenVals, eigenFreqs,TRIM(dynfiletag))
+               CALL CalculateFrequencies(fi_nosym%atoms, iQ, eigenVals, eigenFreqs,TRIM(dynfiletag),fi_nosym%kpts%bk(:,iQ))
                CALL timestop("Frequency calculation")
 
                IF (l_dfpt_dos) eigenValsFull(:,iQ,1) = eigenFreqs(:)
