@@ -21,10 +21,16 @@ build-nvhpc-cpu:
       - if: $CI_TASKS =~ /all/    
  
 test-nvhpc-cpu:
-  image: iffregistry.fz-juelich.de/fleur/fleur:NVHPC
+ image: 
   extends: .test-fleur
+  tags:
+     - rtx2080ti
   variables:
     BUILD_FOLDER: build
+    LD_LIBRARY_PATH: /opt/nvidia_hpc_sdk/Linux_x86_64/23.9/cuda/12.2/targets/x86_64-linux/lib:${LD_LIBRARY_PATH}
+  before_script:
+    - pip install pytest-html
+    - set +e; source compiler-select nvhpc  ;set -e
   needs: 
     - build-nvhpc-cpu
   allow_failure: true
