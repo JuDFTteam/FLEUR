@@ -22,7 +22,8 @@ def read_tests(testset):
         "dos":pytest.mark.dos,
         "edsolver":pytest.mark.edsolver,
         "spinspiral":pytest.mark.spinspiral,
-        "hdf":pytest.mark.hdf
+        "hdf":pytest.mark.hdf,
+        "dfpt":pytest.mark.dfpt
     }
     import os
     import re

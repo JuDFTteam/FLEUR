@@ -52,6 +52,13 @@ Testset: Forces
 |+|Bulk VO2, Relaxation, different force levels         |forces/VO2_force_levels|bulk
 |+|Bulk H2O, Relaxtion using BFGS|forces/H2ORelaxBFGS|bulk
 
+Testset: DFPT
+-------------------
+||Description|directory name|marks|Remarks
+|-|-----------|--------------|------|----
+|+|Cu bulk fcc|dfpt/CuBulk|libxc
+
+
 Testset: Noco
 ----------
 ||Description|directory name|marks|Remarks
