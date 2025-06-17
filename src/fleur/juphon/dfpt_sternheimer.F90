@@ -521,7 +521,7 @@ CONTAINS
          l_cont = l_cont .AND. (iter < fi%input%itmax)
          l_cont = l_cont .AND. ((fi%input%mindistance <= results1%last_distance))
 
-         final_SH_it = fi%input%mindistance > results1%last_distance
+         final_SH_it = (fi%input%mindistance > results1%last_distance) .OR. (iter == fi%input%itmax)
          l_cont = l_cont .OR. final_SH_it ! DO one more iteration so V1, z1 and rho1 match
 
       END DO scfloop ! DO WHILE (l_cont)

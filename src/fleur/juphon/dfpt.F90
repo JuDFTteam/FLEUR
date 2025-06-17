@@ -306,17 +306,6 @@ CONTAINS
          IF (iDir==3) sigma_gext(iDir,:) = sigma_loc
       END DO
 
-      IF (fi_nosym%input%film .AND. fi_nosym%juphon%l_symVacLevel .AND. fmpi%irank==0) THEN 
-         DO iDir= 1 , 3
-            constantShift = 0.0 
-            DO ispin = 1 , fi_nosym%input%jspins
-               constantShift =  (grVext3(iDir)%vac(fi_nosym%vacuum%nmzd,1,1,ispin)  - grVext3(iDir)%vac(fi_nosym%vacuum%nmzd,1,2,ispin)) / 2               
-               grVext3(iDir)%pw(1,:) = grVext3(iDir)%pw(1,:) + constantShift
-               grVext3(iDir)%mt(:,0,:,:) = grVext3(iDir)%mt(:,0,:,:) + constantShift * sfp_const 
-               grVext3(iDir)%vac(:,1,:,:) = grVext3(iDir)%vac(:,1,:,:) + constantShift
-            END DO   
-         END DO 
-      END IF
       !CALL vext_dummy%copyPotDen(vTot_nosym)
       !CALL vext_dummy%resetPotDen()
       ! Density gradient
