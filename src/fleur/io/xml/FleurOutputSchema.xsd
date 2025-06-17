@@ -183,6 +183,7 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="ldaUDensityMatrixConvergence" type="LDAUDensityMatrixConvergenceType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="densityConvergence" type="DensityConvergenceType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="timing" type="TimingType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="Phonons" type="PhononsType"/>
       </xsd:sequence>
    </xsd:group>
 
@@ -734,6 +735,31 @@
          <xsd:enumeration value="DMI"/>
       </xsd:restriction>
    </xsd:simpleType>
+
+
+   <xsd:complexType name="PhononsType">
+      <xsd:sequence>
+         <xsd:element maxOccurs="unbounded" minOccurs="1" name="dynMat" type="dynMatType"/>
+      </xsd:sequence>
+   </xsd:complexType>
+
+   <xsd:complexType name="dynMatType">
+      <xsd:sequence>
+         <xsd:element maxOccurs="unbounded" minOccurs="1" name="frequencies" type="frequenciesType"/>
+      </xsd:sequence>
+   </xsd:complexType>
+
+   <xsd:complexType name="frequenciesType">
+      <xsd:simpleContent>
+         <xsd:extension base="DoubleVecType">
+            <xsd:attribute name="iqpt" type="xsd:integer" use="optional"/>
+            <xsd:attribute name="q_x" type="xsd:double" use="optional"/>
+            <xsd:attribute name="q_y" type="xsd:double" use="optional"/>
+            <xsd:attribute name="q_z" type="xsd:double" use="optional"/>
+            <xsd:attribute name="unit" type="xsd:string" use="optional"/>
+         </xsd:extension>
+      </xsd:simpleContent>
+   </xsd:complexType>
 
    <!-- Cannot be in the FleurInputSchema.xsd since we still support older FleurInputSchemas -->
    <xsd:simpleType name="FleurDouble4DVecType">
