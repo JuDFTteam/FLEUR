@@ -3,12 +3,17 @@
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
+#ifdef _OPENACC
+#define CPP_OMP noomp
+#else
+#define CPP_OMP $omp
+#endif
 MODULE m_hsmt_ab
    !! Module to produce matching coefficients.
-
    USE m_juDFT
+   implicit none
 
-   IMPLICIT NONE
+
 
 CONTAINS
 
@@ -99,23 +104,19 @@ CONTAINS
       CALL ylm4_batched(lmax,gkrot,ylm)
       call timestop("init")
       call timestart("loop")
-#ifndef _OPENACC
-      !$OMP PARALLEL DO DEFAULT(none) &
-      !$OMP& SHARED(lapw,lmax,c_ph,igSpin,abCoeffs,fjgj,abclo,cell,atoms,sym) &
-      !$OMP& SHARED(l_abclo,alo1,blo1,clo1,ab_size,na,n,ilSpin,bmrot, ylm) &
-      !$OMP& PRIVATE(k,l,ll1,m,lm,term,invsfct,lo,nkvec) &
-      !$OMP& PRIVATE(lmMin,lmMax)
-#else
+      !CPP_OMP PARALLEL DO DEFAULT(none) &
+      !CPP_OMP& SHARED(lapw,lmax,c_ph,igSpin,abCoeffs,fjgj) &
+      !CPP_OMP& SHARED(ab_size,ilSpin,ylm) &
+      !CPP_OMP& PRIVATE(k,l,lmMin,lmMax)
+#ifdef _OPENACC
       !$acc kernels present(abCoeffs) default(none)
       abCoeffs(:,:)=0.0
       !$acc end kernels
 #endif
-      
-      !$acc data copyin(atoms,atoms%llo,atoms%llod,atoms%nlo,cell,cell%omtil,atoms%rmt) if (l_abclo)
-      !$acc parallel loop present(fjgj,fjgj%fj,fjgj%gj,abCoeffs) vector_length(32)&
-      !$acc copyin(lmax,lapw,lapw%nv,lapw%vk,lapw%kvec,bmrot,c_ph, sym, sym%invsat,l_abclo, ylm) &
-      !$acc present(abclo,alo1,blo1,clo1)&
-      !$acc private(k,l,lm,invsfct,lo,term,lmMin,lmMax)  default(none)
+      !$acc data copyin(c_ph,ylm)
+      !$acc kernels present(fjgj,fjgj%fj,fjgj%gj,abCoeffs,c_ph, ylm)&
+      !$acc copyin(lmax,ab_size,igSpin,ilSpin,lapw,lapw%nv) &
+      !$acc private(k,l,lmMin,lmMax)  default(none)
       DO k = 1,lapw%nv(igSpin)
          !$acc  loop vector private(l,lmMin,lmMax)
          DO l = 0,lmax
@@ -125,34 +126,43 @@ CONTAINS
             abCoeffs(ab_size+lmMin:ab_size+lmMax,k) = fjgj%gj(k,l,ilSpin,igSpin)*c_ph(k,igSpin) * CONJG(ylm(lmMin:lmMax, k))
          END DO
          !$acc end loop
+      enddo
+      !$acc end kernels
+      !CPP_OMP END PARALLEL DO
 
-         IF (l_abclo) THEN
-            ! Determine also the abc coeffs for LOs
-            invsfct=MERGE(1,2,sym%invsat(na).EQ.0)
-            term = fpi_const/SQRT(cell%omtil)* ((atoms%rmt(n)**2)/2)
-            ! !$acc loop vector private(lo,l,nkvec,ll1,m,lm)
-            DO lo = 1,atoms%nlo(n)
-               l = atoms%llo(lo,n)
-               DO nkvec=1,invsfct*(2*l+1)
-                  IF (lapw%kvec(nkvec,lo,na)==k) THEN !This k-vector is used in LO
-                     ll1 = l*(l+1) + 1
-                     DO m = -l,l
-                        lm = ll1 + m
-                        abclo(1,m+atoms%llod+1,nkvec,lo) = term*c_ph(k,igSpin)*CONJG(ylm(lm,k))*alo1(lo)
-                        abclo(2,m+atoms%llod+1,nkvec,lo) = term*c_ph(k,igSpin)*CONJG(ylm(lm,k))*blo1(lo)
-                        abclo(3,m+atoms%llod+1,nkvec,lo) = term*c_ph(k,igSpin)*CONJG(ylm(lm,k))*clo1(lo)
-                     END DO
-                  END IF
+      IF (l_abclo) THEN
+         ! Determine also the abc coeffs for LOs
+         invsfct=MERGE(1,2,sym%invsat(na).EQ.0)
+         term = fpi_const/SQRT(cell%omtil)* ((atoms%rmt(n)**2)/2)
+         !$acc kernels present(abclo,alo1,blo1,clo1,c_ph,ylm) default(none)
+         !$acc copyin(atoms,atoms%nlo,atoms%llo,invsfct,lapw,lapw%kvec,term,igSpin) 
+         !$acc loop private(lo,l)
+         DO lo = 1,atoms%nlo(n)
+            l = atoms%llo(lo,n)
+            !$acc loop private(nkvec,ll1)
+            !CPP_OMP parallel do default(none) &
+            !CPP_OMP& shared(lapw,abclo,alo1,blo1,clo1,term,c_ph,igSpin,l,invsfct) &
+            !CPP_OMP& private(nkvec,ll1,m,lm)
+            DO nkvec=1,invsfct*(2*l+1)
+               k=lapw%kvec(nkvec,lo,na)
+               ll1 = l*(l+1) + 1
+               !$acc loop private(m,lm)
+               DO m = -l,l
+                  lm = ll1 + m
+                  abclo(1,m+atoms%llod+1,nkvec,lo) = term*c_ph(k,igSpin)*CONJG(ylm(lm,k))*alo1(lo)
+                  abclo(2,m+atoms%llod+1,nkvec,lo) = term*c_ph(k,igSpin)*CONJG(ylm(lm,k))*blo1(lo)
+                  abclo(3,m+atoms%llod+1,nkvec,lo) = term*c_ph(k,igSpin)*CONJG(ylm(lm,k))*clo1(lo)
                END DO
+               !$acc end loop
             END DO
-            ! !$acc end loop
-         END IF
-      END DO !k-loop
-      !$acc end parallel loop
+            !CPP_OMP end parallel do
+            !$acc end loop
+         END DO
+         !$acc end loop
+         !$acc end kernels
+      END IF
       !$acc end data
-#ifndef _OPENACC
-      !$OMP END PARALLEL DO
-#endif
+
       call timestop("loop")
 
 
