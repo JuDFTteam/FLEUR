@@ -16,4 +16,5 @@ src/fleur/mt_cdn/radfun.f90
 src/fleur/mt_cdn/resMoms.f90
 src/fleur/mt_cdn/types_denmatrix.F90
 src/fleur/mt_cdn/types_radfun.f90
+src/fleur/mt_cdn/types_hyperfine.F90
 )
