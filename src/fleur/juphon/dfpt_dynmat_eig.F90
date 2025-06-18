@@ -1,7 +1,10 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_dfpt_dynmat_eig
-
   use m_types
-
   implicit none
 
   contains
@@ -347,9 +350,9 @@ module m_dfpt_dynmat_eig
     CALL openXMLElementNoAttributes('dynMat')
     attributes = ''
     WRITE(attributes(1),'(i0)') iqpt
-    WRITE(attributes(2),'(f15.8)') qvec(1)
-    WRITE(attributes(3),'(f15.8)') qvec(2)
-    WRITE(attributes(4),'(f15.8)') qvec(3)
+    WRITE(attributes(2),'(f0.8)') qvec(1)
+    WRITE(attributes(3),'(f0.8)') qvec(2)
+    WRITE(attributes(4),'(f0.8)') qvec(3)
     attributes(5) = '1/cm'
     CALL writeXMLElementPoly('frequencies',(/'iqpt', 'q_x ' , "q_y " , "q_z ",'unit'/), attributes, REAL(eigenFreqs) )
     CALL closeXMLElement('dynMat')
