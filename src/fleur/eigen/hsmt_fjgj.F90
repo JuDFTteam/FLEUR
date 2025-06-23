@@ -35,7 +35,7 @@ CONTAINS
    end subroutine
 
    subroutine finalize_fjgj(fjgj)
-      CLASS(t_fjgj), INTENT(INOUT) :: fjgj
+      TYPE(t_fjgj), INTENT(INOUT) :: fjgj
       !$acc exit data delete(fjgj%fj, fjgj%gj)
       !$acc exit data delete(fjgj)
    
