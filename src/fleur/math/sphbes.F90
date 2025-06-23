@@ -1,6 +1,6 @@
 !--------------------------------------------------------------------------------
 ! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
-! This file is part of FLEUR and available as free software under the conditions 
+! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_sphbes
@@ -17,7 +17,6 @@ MODULE m_sphbes
 
 CONTAINS
    SUBROUTINE sphbes(lmax, x, fj)
-!$acc routine
 !c********************************************************************
 !c calculate spherical Bessel functions and derivatives of sqrt(e)*r
 !c                                   P. Marksteiner and E. Badralexe
@@ -105,7 +104,6 @@ CONTAINS
 !     needed (call sphbes to generate these)
 !                                            m. weinert
 !********************************************************************
-!$acc routine
 !     ..
 !     .. Arguments ..
       INTEGER, INTENT(IN) :: lmax
@@ -146,8 +144,8 @@ CONTAINS
       ! Arguments
       INTEGER, INTENT(IN) :: lmax             ! Maximum order of spherical Bessel functions
       REAL, INTENT(IN) :: xvec(:)             ! Vector of arguments for the spherical Bessel functions
-      REAL, INTENT(OUT) :: fj(0:lmax, :)      ! 2D array to store spherical Bessel functions for all orders and arguments
-      REAL, INTENT(OUT) :: dfj(0:lmax, :)     ! 2D array to store derivatives of spherical Bessel functions
+      REAL, Allocatable, INTENT(OUT) :: fj(:, :)      ! 2D array to store spherical Bessel functions for all orders and arguments
+      REAL, Allocatable, INTENT(OUT) :: dfj(:, :)     ! 2D array to store derivatives of spherical Bessel functions
 
       ! Parameters
       REAL, PARAMETER :: small = 1.0e-03, xlim = 1.0e-04
@@ -157,12 +155,20 @@ CONTAINS
       REAL :: fac, quot, x, x2
       REAL :: aux(0:INT(lmax + 10 + MAXVAL(xvec))) ! Temporary array for downward recursion
 
+      if (allocated(fj)) deallocate (fj)
+      if (allocated(dfj)) deallocate (dfj)
+      allocate (fj(0:lmax, SIZE(xvec)))
+      allocate (dfj(0:lmax, SIZE(xvec)))
+      !$acc enter data create(fj, dfj)
       ! Get the size of the input vector
       nx = SIZE(xvec)
 
       !CPP_OMP PARALLEL DO default(none) shared(lmax, xvec, fj, dfj, small, xlim)&
       !CPP_OMP & private(i, l, min, n, aux, fac, quot, x)
       ! Loop over each value in the input vector
+      !$acc kernels copyin(lmax, xvec, small, xlim) &
+      !$acc create(aux)present(fj,dfj) &
+      !$acc loop independent private(i, l, min, n, fac, quot, x)
       DO i = 1, nx
          x = xvec(i)
 
@@ -239,6 +245,6 @@ CONTAINS
          END IF
       END DO
       !CPP_OMP END PARALLEL DO
-
+      !$acc end kernels
    END SUBROUTINE d_sphbes
 END MODULE m_sphbes

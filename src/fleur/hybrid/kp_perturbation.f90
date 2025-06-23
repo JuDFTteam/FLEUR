@@ -1,5 +1,11 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_kp_perturbation
    USE m_types_hybdat
+   implicit none
 
 CONTAINS
 
@@ -8,7 +14,6 @@ CONTAINS
                              proj_ibsc, olap_ibsc)
 
       USE m_sphbes
-      USE m_dsphbs
       USE m_constants
       USE m_ylm
       USE m_gaunt

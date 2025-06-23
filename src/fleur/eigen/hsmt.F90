@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -73,13 +73,11 @@ CONTAINS
     ENDIF
 
     CALL fjgj%alloc(MAXVAL(lapw%nv),atoms%lmaxd,isp,noco)
-    !$acc data copyin(fjgj) create(fjgj%fj,fjgj%gj)
     igSpinPr=1;igSpin=1;chi_one=1.0 !Defaults in non-noco case
     DO n=1,atoms%ntype
        DO ilSpinPr=MERGE(1,isp,noco%l_noco),MERGE(2,isp,noco%l_noco)
           CALL timestart("fjgj coefficients")
           CALL fjgj%calculate(input,atoms,cell,lapw,noco,usdus,n,ilSpinPr)
-          !$acc update device(fjgj%fj,fjgj%gj)
           CALL timestop("fjgj coefficients")
           DO ilSpin=ilSpinPr,MERGE(2,isp,noco%l_noco)
             IF (.NOT.noco%l_noco) THEN
@@ -134,7 +132,6 @@ CONTAINS
           ENDDO
         ENDDO
       END DO
-      !$acc end data
       if (noco%l_noco.AND..NOT.noco%l_ss) then
          !$acc exit data delete(smat_tmp%data_c,smat_tmp%data_r,hmat_tmp%data_c,hmat_tmp%data_r)
          !$acc exit data delete(smat_tmp,hmat_tmp)

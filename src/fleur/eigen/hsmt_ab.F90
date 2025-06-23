@@ -122,8 +122,8 @@ CONTAINS
          DO l = 0,lmax
             lmMin = l*(l+1) + 1 - l
             lmMax = l*(l+1) + 1 + l
-            abCoeffs(lmMin:lmMax, k)                = fjgj%fj(k,l,ilSpin,igSpin)*c_ph(k,igSpin) * CONJG(ylm(lmMin:lmMax, k))
-            abCoeffs(ab_size+lmMin:ab_size+lmMax,k) = fjgj%gj(k,l,ilSpin,igSpin)*c_ph(k,igSpin) * CONJG(ylm(lmMin:lmMax, k))
+            abCoeffs(lmMin:lmMax, k)                = fjgj%fj(l,k,ilSpin,igSpin)*c_ph(k,igSpin) * CONJG(ylm(lmMin:lmMax, k))
+            abCoeffs(ab_size+lmMin:ab_size+lmMax,k) = fjgj%gj(l,k,ilSpin,igSpin)*c_ph(k,igSpin) * CONJG(ylm(lmMin:lmMax, k))
          END DO
          !$acc end loop
       enddo
@@ -139,10 +139,11 @@ CONTAINS
          !$acc loop private(lo,l)
          DO lo = 1,atoms%nlo(n)
             l = atoms%llo(lo,n)
-            !$acc loop private(nkvec,ll1)
+            !$acc loop private(nkvec,ll1,k)
             !CPP_OMP parallel do default(none) &
-            !CPP_OMP& shared(lapw,abclo,alo1,blo1,clo1,term,c_ph,igSpin,l,invsfct) &
-            !CPP_OMP& private(nkvec,ll1,m,lm)
+            !CPP_OMP& shared(atoms,lapw,abclo,alo1,blo1,clo1,term,c_ph,igSpin,l,invsfct,ylm) &
+            !CPP_OMP& shared(na,lo) &
+            !CPP_OMP& private(nkvec,ll1,m,lm,k)
             DO nkvec=1,invsfct*(2*l+1)
                k=lapw%kvec(nkvec,lo,na)
                ll1 = l*(l+1) + 1

@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -99,8 +99,8 @@ CONTAINS
 
          con = fpi_const/SQRT(cell%omtil)* ((atoms%rmt(ntyp))**2)/2.0
 
-         !$acc kernels present(smat,smat%data_c,smat%data_r)&
-         !$acc & copyin(fjgj,fjgj%fj,fjgj%gj,fjgjPr,fjgjPr%fj,fjgjPr%gj,l,lapw,lapw%kvec(:,:,na),lapwPr,lapwPr%kvec(:,:,na),ud,clo1(:),dotp,cph(:),cphPr(:),atoms,lapw%index_lo(:,na),lapw%gk(:,:,:)) &
+         !$acc kernels present(smat,smat%data_c,smat%data_r,fjgj,fjgj%fj,fjgj%gj,fjgjPr,fjgjPr%fj,fjgjPr%gj)&
+         !$acc & copyin(l,lapw,lapw%kvec(:,:,na),lapwPr,lapwPr%kvec(:,:,na),ud,clo1(:),dotp,cph(:),cphPr(:),atoms,lapw%index_lo(:,na),lapw%gk(:,:,:)) &
          !$acc & copyin(lapwPr%index_lo(:,na),lapwPr%gk(:,:,:),ud%dulon(:,ntyp,isp),ud%ddn(:,ntyp,isp),ud%uulon(:,ntyp,isp),ud%uloulopn(:,:,ntyp,isp),blo1(:)) &
          !$acc & copyin(atoms,atoms%nlo(ntyp),lapw%nv(:),lapwPr%nv(:),atoms%llo(:,ntyp),alo1(:), fmpi, fmpi%n_size, fmpi%n_rank)&
          !$acc & default(none)
@@ -124,9 +124,9 @@ CONTAINS
                   !$acc loop vector private(fact2,dotp) independent
                   DO k = fmpi%n_rank + 1, lapw%nv(igSpin), fmpi%n_size
                      fact2 = con * fl2p1 * ( &
-                           & fjgj%fj(k,l,isp,igSpin)*(alo1(lo) &
+                           & fjgj%fj(l,k,isp,igSpin)*(alo1(lo) &
                                                   & + clo1(lo)*ud%uulon(lo,ntyp,isp)) + &
-                           & fjgj%gj(k,l,isp,igSpin)*(blo1(lo)*ud%ddn(l,ntyp,isp) &
+                           & fjgj%gj(l,k,isp,igSpin)*(blo1(lo)*ud%ddn(l,ntyp,isp) &
                                                   & + clo1(lo)*ud%dulon(lo,ntyp,isp)) )
                      dotp = dot_PRODUCT(lapw%gk(:,k,igSpin),lapwPr%gk(:,kp,igSpinPr))
 
@@ -151,9 +151,9 @@ CONTAINS
                   !$acc loop vector private(fact2,dotp,kp) independent
                   DO kp = 1,lapwPr%nv(igSpinPr)
                      fact2 = con * fl2p1 * ( &
-                           & fjgjPr%fj(kp,l,isp,igSpinPr)*(alo1(lo) &
+                           & fjgjPr%fj(l,kp,isp,igSpinPr)*(alo1(lo) &
                                                      & + clo1(lo)*ud%uulon(lo,ntyp,isp)) + &
-                           & fjgjPr%gj(kp,l,isp,igSpinPr)*(blo1(lo)*ud%ddn(l,ntyp,isp) &
+                           & fjgjPr%gj(l,kp,isp,igSpinPr)*(blo1(lo)*ud%ddn(l,ntyp,isp) &
                                                      & + clo1(lo)*ud%dulon(lo,ntyp,isp)) )
                      dotp = dot_PRODUCT(lapw%gk(:,k,igSpin),lapwPr%gk(:,kp,igSpinPr))
 

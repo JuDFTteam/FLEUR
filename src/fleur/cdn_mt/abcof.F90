@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2020 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -97,7 +97,7 @@ CONTAINS
 
     ! Initializations
     acof_size=size(acof,1)
-    !$acc enter data create(abTemp,fjgj,fjgj%fj,fjgj%gj,work_c,abcoeffs)
+    !$acc enter data create(abTemp,work_c,abcoeffs)
     acof(:,:,:)   = CMPLX(0.0,0.0)
     bcof(:,:,:)   = CMPLX(0.0,0.0)
     ccof(:,:,:,:) = CMPLX(0.0,0.0)
@@ -133,7 +133,6 @@ CONTAINS
 
        CALL timestart("fjgj coefficients")
        CALL fjgj%calculate(input,atoms,cell,lapw,noco,usdus,iType,jspin)
-       !$acc update device (fjgj%fj,fjgj%gj)
        CALL timestop("fjgj coefficients")
 
        CALL setabc1lo(atoms,iType,usdus,jspin,alo1,blo1,clo1)
@@ -204,9 +203,7 @@ CONTAINS
 
              ! Calculation of a, b coefficients for LAPW basis functions
              CALL timestart("hsmt_ab")
-             !!$acc data copyin(fjgj,fjgj%fj,fjgj%gj) copyout(abcoeffs)
              CALL hsmt_ab(sym,atoms,noco,nococonv,jspin,iintsp,iType,iAtom,cell,lapw,fjgj,abCoeffs,abSize,.FALSE.)
-             !!$acc end data
              abSize = abSize / 2
              CALL timestop("hsmt_ab")
 
@@ -340,8 +337,8 @@ CONTAINS
              END IF
        END DO ! loop over interstitial spin
     END DO ! loop over atoms
-    !$acc exit data delete(abTemp,fjgj%fj,fjgj%gj,work_c,abcoeffs)
-    !$acc exit data delete(fjgj)
+    !$acc exit data delete(abTemp,work_c,abcoeffs)
+    
     DEALLOCATE(work_c)
     IF(l_force) THEN
        DEALLOCATE(helpMat_force)

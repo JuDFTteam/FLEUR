@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -87,19 +87,21 @@ CONTAINS
 
        !--->          update overlap and l-diagonal hamiltonian matrix
        s=atoms%lnonsph(iType)+1
-       DO  l = 0,atoms%lnonsph(iType)
+       
           DO kj = 1,ki
-             fct  =cph(kj) * plegend(kj,l)*fl2p1(l)*(&
-                  fjgj%fj(ki,l,ispin,iintsp)*fjgj%fj(kj,l,jspin,jintsp) *td%h_off(l,l,iType,ispin,jspin) + &
-                  fjgj%fj(ki,l,ispin,iintsp)*fjgj%gj(kj,l,jspin,jintsp) *td%h_off(l,l+s,iType,ispin,jspin) + &
-                  fjgj%gj(ki,l,ispin,iintsp)*fjgj%fj(kj,l,jspin,jintsp) *td%h_off(l+s,l,iType,ispin,jspin) + &
-                  fjgj%gj(ki,l,ispin,iintsp)*fjgj%gj(kj,l,jspin,jintsp) *td%h_off(l+s,l+s,iType,ispin,jspin)* sqrt(usdus%ddn(l,iType,ispin)*usdus%ddn(l,iType,jspin)))
+            fct=0.0
+            DO  l = 0,atoms%lnonsph(iType)
+             fct  =fct+cph(kj) * plegend(kj,l)*fl2p1(l)*(&
+                  fjgj%fj(l,ki,ispin,iintsp)*fjgj%fj(l,kj,jspin,jintsp) *td%h_off(l,l,iType,ispin,jspin) + &
+                  fjgj%fj(l,ki,ispin,iintsp)*fjgj%gj(l,kj,jspin,jintsp) *td%h_off(l,l+s,iType,ispin,jspin) + &
+                  fjgj%gj(l,ki,ispin,iintsp)*fjgj%fj(l,kj,jspin,jintsp) *td%h_off(l+s,l,iType,ispin,jspin) + &
+                  fjgj%gj(l,ki,ispin,iintsp)*fjgj%gj(l,kj,jspin,jintsp) *td%h_off(l+s,l+s,iType,ispin,jspin)* sqrt(usdus%ddn(l,iType,ispin)*usdus%ddn(l,iType,jspin)))
+             enddo
              hmat(1,1)%data_c(kj,kii)=hmat(1,1)%data_c(kj,kii) + CONJG(chi(1,1,iintsp,jintsp)*fct)
              hmat(1,2)%data_c(kj,kii)=hmat(1,2)%data_c(kj,kii) + CONJG(chi(1,2,iintsp,jintsp)*fct)
              hmat(2,1)%data_c(kj,kii)=hmat(2,1)%data_c(kj,kii) + CONJG(chi(2,1,iintsp,jintsp)*fct)
              hmat(2,2)%data_c(kj,kii)=hmat(2,2)%data_c(kj,kii) + CONJG(chi(2,2,iintsp,jintsp)*fct)
-          ENDDO
-          !--->          end loop over l
+ 
        ENDDO
        !--->    end loop over ki
     ENDDO

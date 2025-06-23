@@ -4,122 +4,131 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_hsmt_fjgj
-  USE m_juDFT
-  IMPLICIT NONE
+   USE m_juDFT
+   IMPLICIT NONE
 
-  PRIVATE
-  TYPE t_fjgj
-    REAL,ALLOCATABLE    :: fj(:,:,:,:),gj(:,:,:,:)
-  CONTAINS
-    procedure :: alloc
-    procedure :: calculate => hsmt_fjgj_cpu
-  END TYPE
-  PUBLIC t_fjgj
+   PRIVATE
+   TYPE t_fjgj
+      REAL, ALLOCATABLE    :: fj(:, :, :, :), gj(:, :, :, :)
+   CONTAINS
+      procedure :: alloc
+      procedure :: calculate => hsmt_fjgj
+      final :: finalize_fjgj
+   END TYPE
+   PUBLIC t_fjgj
 
 CONTAINS
-  subroutine alloc(fjgj,nvd,lmaxd,isp,noco)
-    USE m_types
-    CLASS(t_fjgj),INTENT(OUT) :: fjgj
-    INTEGER,INTENT(IN)        :: nvd,lmaxd,isp
-    TYPE(t_noco),INTENT(IN)   :: noco
+   subroutine alloc(fjgj, nvd, lmaxd, isp, noco)
+      USE m_types
+      CLASS(t_fjgj), INTENT(OUT) :: fjgj
+      INTEGER, INTENT(IN)        :: nvd, lmaxd, isp
+      TYPE(t_noco), INTENT(IN)   :: noco
 
-    ALLOCATE(fjgj%fj(nvd,0:lmaxd,merge(1,isp,noco%l_noco):merge(2,isp,noco%l_noco),MERGE(2,1,noco%l_ss)))
-    ALLOCATE(fjgj%gj(nvd,0:lmaxd,merge(1,isp,noco%l_noco):merge(2,isp,noco%l_noco),MERGE(2,1,noco%l_ss)))
+      ALLOCATE (fjgj%fj(0:lmaxd, nvd, merge(1, isp, noco%l_noco):merge(2, isp, noco%l_noco), MERGE(2, 1, noco%l_ss)))
+      ALLOCATE (fjgj%gj(0:lmaxd, nvd, merge(1, isp, noco%l_noco):merge(2, isp, noco%l_noco), MERGE(2, 1, noco%l_ss)))
+      !$acc enter data copyin(fjgj)
+      !$acc enter data create(fjgj%fj, fjgj%gj)
+      !$acc kernels
+      fjgj%fj = 0.0
+      fjgj%gj = 0.0
+      !$acc end kernels
+   end subroutine
 
-    fjgj%fj = 0.0
-    fjgj%gj = 0.0
+   subroutine finalize_fjgj(fjgj)
+      CLASS(t_fjgj), INTENT(INOUT) :: fjgj
+      !$acc exit data delete(fjgj%fj, fjgj%gj)
+      !$acc exit data delete(fjgj)
+   
+      IF (ALLOCATED(fjgj%fj)) DEALLOCATE(fjgj%fj)
+      IF (ALLOCATED(fjgj%gj)) DEALLOCATE(fjgj%gj)      
+   end subroutine finalize_fjgj
 
-  end subroutine
+   SUBROUTINE hsmt_fjgj(fjgj, input, atoms, cell, lapw, noco, usdus, n, ispin)
+      !Calculate the fj&gj array which contain the part of the A,B matching coeff. depending on the
+      !radial functions at the MT boundary as contained in usdus
+      USE m_constants, ONLY: fpi_const
+      USE m_sphbes
+      USE m_types
+      IMPLICIT NONE
+      CLASS(t_fjgj), INTENT(INOUT) :: fjgj
+      TYPE(t_input), INTENT(IN)    :: input
+      TYPE(t_cell), INTENT(IN)     :: cell
+      TYPE(t_noco), INTENT(IN)     :: noco
+      TYPE(t_atoms), INTENT(IN)    :: atoms
+      TYPE(t_lapw), INTENT(IN)     :: lapw
+      TYPE(t_usdus), INTENT(IN)    :: usdus
+      !     ..
+      !     .. Scalar Arguments ..
+      INTEGER, INTENT(IN) :: ispin, n
 
-  SUBROUTINE hsmt_fjgj_cpu(fjgj,input,atoms,cell,lapw,noco,usdus,n,ispin)
-    !Calculate the fj&gj array which contain the part of the A,B matching coeff. depending on the
-    !radial functions at the MT boundary as contained in usdus
-    USE m_constants, ONLY : fpi_const
-    USE m_sphbes
-    USE m_dsphbs
-    USE m_types
-    IMPLICIT NONE
-    CLASS(t_fjgj),INTENT(INOUT) :: fjgj
-    TYPE(t_input),INTENT(IN)    :: input
-    TYPE(t_cell),INTENT(IN)     :: cell
-    TYPE(t_noco),INTENT(IN)     :: noco
-    TYPE(t_atoms),INTENT(IN)    :: atoms
-    TYPE(t_lapw),INTENT(IN)     :: lapw
-    TYPE(t_usdus),INTENT(IN)    :: usdus
-    !     ..
-    !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: ispin,n
+      !     ..
+      !     .. Local Scalars ..
 
-    !     ..
-    !     .. Local Scalars ..
-    REAL con1,ff,gg,gs
+      INTEGER k, l, lo, intspin, jspin, jspinStart, jSpinEnd
+      LOGICAL l_socfirst
+      !     .. Local Arrays ..
+      REAL ws(0:atoms%lmax(n),input%jspins)
+      REAL, allocatable:: gs(:)
+      REAL, allocatable:: gb(:, :), fb(:, :)
+      LOGICAL apw(0:atoms%lmaxd)
+      !     ..
+      l_socfirst = noco%l_soc .AND. noco%l_noco .AND. (.NOT. noco%l_ss)
 
-    INTEGER k,l,lo,intspin,jspin, jspinStart, jSpinEnd
-    LOGICAL l_socfirst
-    !     .. Local Arrays ..
-    REAL ws(input%jspins)
-    REAL gb(0:atoms%lmaxd), fb(0:atoms%lmaxd)
-    LOGICAL apw(0:atoms%lmaxd)
-    !     ..
-    l_socfirst = noco%l_soc .AND. noco%l_noco .AND. (.NOT. noco%l_ss)
-    con1 = fpi_const/SQRT(cell%omtil)
-    DO l = 0,atoms%lmax(n)
-       apw(l)=ANY(atoms%l_dulo(:atoms%nlo(n),n))
-       IF ((input%l_useapw).AND.(atoms%lapw_l(n).GE.l)) apw(l) = .FALSE.
-    ENDDO
-    DO lo = 1,atoms%nlo(n)
-       IF (atoms%l_dulo(lo,n)) apw(atoms%llo(lo,n)) = .TRUE.
-    ENDDO
+      DO l = 0, atoms%lmax(n)
+         apw(l) = ANY(atoms%l_dulo(:atoms%nlo(n), n))
+         IF ((input%l_useapw) .AND. (atoms%lapw_l(n) .GE. l)) apw(l) = .FALSE.
+      END DO
+      DO lo = 1, atoms%nlo(n)
+         IF (atoms%l_dulo(lo, n)) apw(atoms%llo(lo, n)) = .TRUE.
+      END DO
 
-    jspinStart = ispin
-    jspinEnd = ispin
-    IF (any(noco%l_constrained).or.l_socfirst.OR.any(noco%l_unrestrictMT).OR.any(noco%l_spinoffd_ldau)) THEN
-       jspinStart = 1
-       jspinEnd = input%jspins
-    END IF
+      IF (any(noco%l_constrained) .or. l_socfirst .OR. any(noco%l_unrestrictMT) .OR. any(noco%l_spinoffd_ldau)) THEN
+         jspinStart = 1
+         jspinEnd = input%jspins
+      ELSE
+         jspinEnd = ispin
+         jspinStart = ispin
+      END IF
 
-    DO intspin=1,MERGE(2,1,noco%l_ss)
-!#ifndef _OPENACC
-       !$OMP PARALLEL DO DEFAULT(NONE) &
-       !$OMP PRIVATE(l,gs,fb,gb,ws,ff,gg,jspin)&
-       !$OMP SHARED(lapw,atoms,con1,usdus,l_socfirst,noco,input)&
-       !$OMP SHARED(fjgj,intspin,n,ispin,apw,jspinStart,jspinEnd)
-!#else
-       !!$acc parallel loop present(fjgj,fjgj%fj,fjgj%gj) private(l,gs,fb,gb,ws,ff,gg,jspin)
-!#endif
-       DO k = 1,lapw%nv(intspin)
-          gs = lapw%rk(k,intspin)*atoms%rmt(n)
-          CALL sphbes(atoms%lmax(n),gs, fb)
-          CALL dsphbs(atoms%lmax(n),gs,fb, gb)
-!          !$OMP SIMD PRIVATE(ws,ff,gg)
-          !!$acc parallel loop vector PRIVATE(ws,ff,gg) present(fjgj,fjgj%fj,fjgj%gj)
-          DO l = 0,atoms%lmax(n)
-             !---> set up wronskians for the matching conditions for each ntype
-             DO jspin = jspinStart, jspinEnd
-                ws(jspin) = con1/(usdus%uds(l,n,jspin)*usdus%dus(l,n,jspin)&
-                            - usdus%us(l,n,jspin)*usdus%duds(l,n,jspin))
-             END DO
-             ff = fb(l)
-             gg = lapw%rk(k,intspin)*gb(l)
-             DO jspin = jspinStart, jspinEnd
-                IF ( apw(l) ) THEN
-                   fjgj%fj(k,l,jspin,intspin) = 1.0*con1 * ff / usdus%us(l,n,jspin)
-                   fjgj%gj(k,l,jspin,intspin) = 0.0
-                ELSE
-                   fjgj%fj(k,l,jspin,intspin) = ws(jspin) * ( usdus%uds(l,n,jspin)*gg - usdus%duds(l,n,jspin)*ff )
-                   fjgj%gj(k,l,jspin,intspin) = ws(jspin) * ( usdus%dus(l,n,jspin)*ff - usdus%us(l,n,jspin)*gg )
-                ENDIF
-             END DO
-          ENDDO
-          !!$acc end parallel loop
-!          !$OMP END SIMD
-       ENDDO ! k = 1, lapw%nv
-!#ifdef _OPENACC
-       !!$acc end parallel loop
-!#else
-       !$OMP END PARALLEL DO
-!#endif
-    ENDDO
-    RETURN
-  END SUBROUTINE hsmt_fjgj_cpu
+      DO intspin = 1, MERGE(2, 1, noco%l_ss)
+         gs = lapw%rk(:lapw%nv(intspin), intspin)*atoms%rmt(n)
+
+         CALL d_sphbes(atoms%lmax(n), gs, fb, gb)
+         !CPP_OMP PARALLEL DO default(none) shared(atoms, lapw, usdus, fjgj, cell,fb, gb, apw,  n, intspin, jspinStart, jspinEnd) &
+         !CPP_OMP PRIVATE( l, jspin, ws)
+         !$acc kernels copyin(lapw,lapw%nv,atoms,atoms%lmax,jspinStart,jspinEnd,cell,usdus)&
+         !$acc copyin(usdus%us,usdus%usdus,usdus%us,usdus%duds,usdus%uds,usdus%dus,apw)&
+         !$acc create(ws) present(fb,gb,apw,fjgj,fjgj%fj,fjgj%gj) default(none)
+         !$acc loop private(k)
+         DO k = 1, lapw%nv(intspin)
+            !---> set up wronskians for the matching conditions for each ntype
+            !$acc loop vector private(l, jspin)
+            DO l = 0, atoms%lmax(n)
+               DO jspin = jspinStart, jspinEnd
+                  ws(l, jspin) = (fpi_const/SQRT(cell%omtil))/(usdus%uds(l, n, jspin)*usdus%dus(l, n, jspin) &
+                                                               - usdus%us(l, n, jspin)*usdus%duds(l, n, jspin))
+               END DO
+            end do
+            !$acc end loop
+            DO jspin = jspinStart, jspinEnd
+               !$acc loop private(l)
+               DO l = 0, atoms%lmax(n)
+                  IF (apw(l)) THEN
+                     fjgj%fj(l, k, jspin, intspin) = 1.0*fpi_const/SQRT(cell%omtil)*fb(l, k)/usdus%us(l, n, jspin)
+                     fjgj%gj(l, k, jspin, intspin) = 0.0
+                  ELSE
+                     fjgj%fj(l, k, jspin, intspin) = ws(l,jspin)*(usdus%uds(l, n, jspin)*lapw%rk(k, intspin)*gb(l, k) &
+                                                                - usdus%duds(l, n, jspin)*fb(l, k))
+                     fjgj%gj(l, k, jspin, intspin) = ws(l,jspin)*(usdus%dus(l, n, jspin)*fb(l, k) &
+                                                                - usdus%us(l, n, jspin)*lapw%rk(k, intspin)*gb(l, k))
+                  END IF
+               END DO
+               !$acc end loop
+            END DO
+         END DO
+         !$acc end kernels
+      END DO
+      !$acc exit data delete(fb, gb)
+      RETURN
+   END SUBROUTINE hsmt_fjgj
 END MODULE m_hsmt_fjgj

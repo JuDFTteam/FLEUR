@@ -7,12 +7,12 @@ src/fleur/math/inwint.f
 src/fleur/math/outint.f
 src/fleur/math/points.f
 src/fleur/math/qsf.f
-src/fleur/math/sphbes.f
 src/fleur/math/sphpts.f
 src/fleur/math/difcub.f
 )
 set(fleur_F90 ${fleur_F90}
 src/fleur/math/inv3.f90
+src/fleur/math/sphbes.F90
 src/fleur/math/qranf.f90
 src/fleur/math/differentiate.f90
 src/fleur/math/SphBessel.f90

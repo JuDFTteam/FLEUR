@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2022 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -102,8 +102,6 @@ CONTAINS
 
       CALL fjgj%alloc(MAXVAL(lapw%nv),atoms%lmaxd,iSpin,noco)
       CALL fjgjq%alloc(MAXVAL(lapwq%nv),atoms%lmaxd,iSpin,noco)
-      !!$acc data copyin(fjgj) create(fjgj%fj,fjgj%gj)
-      !!$acc data copyin(fjgjq) create(fjgjq%fj,fjgjq%gj)
       igSpinPr = 1; igSpin = 1; chi_one = 1.0 ! Defaults in non-noco case
       DO n = 1, atoms%ntype
          DO ilSpinPr = MERGE(1,iSpin,noco%l_noco), MERGE(2,iSpin,noco%l_noco)
@@ -295,8 +293,6 @@ CONTAINS
 
       CALL fjgj%alloc(MAXVAL(lapw%nv),atoms%lmaxd,iSpin,noco)
       CALL fjgjq%alloc(MAXVAL(lapwq%nv),atoms%lmaxd,iSpin,noco)
-      !$acc data copyin(fjgj) create(fjgj%fj,fjgj%gj)
-      !$acc data copyin(fjgjq) create(fjgjq%fj,fjgjq%gj)
       igSpinPr = 1; igSpin = 1; chi_one = 1.0 ! Defaults in non-noco case
       DO ilSpinPr = MERGE(1,iSpin,noco%l_noco), MERGE(2,iSpin,noco%l_noco)
          CALL timestart("fjgj coefficients")

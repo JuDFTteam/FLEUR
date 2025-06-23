@@ -1,5 +1,5 @@
-! -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+!--------------------------------------------------------------------------------
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -91,7 +91,7 @@ CONTAINS
       !$acc&   copyin(fmpi%n_size,fmpi%n_rank)&
       !$acc&   copyin(input%l_useapw)&
       !$acc&   copyin(usdus%dus,usdus%uds,usdus%us,usdus%ddn,usdus%duds)&
-      !$acc&   present(fjgj)&
+      !$acc&   present(fjgj,fjgj%fj,fjgj%gj)&
       !$acc&   present(hmat,smat,hmat%data_c,hmat%data_r,smat%data_r,smat%data_c)
 
       !$acc parallel default(none)
@@ -112,8 +112,8 @@ CONTAINS
 
             !$acc loop seq
             DO  l = 0,atoms%lmax(n)
-               fjkiln = fjgj%fj(ikG,l,isp,igSpin)
-               gjkiln = fjgj%gj(ikG,l,isp,igSpin)
+               fjkiln = fjgj%fj(l,ikG,isp,igSpin)
+               gjkiln = fjgj%gj(l,ikG,isp,igSpin)
                IF (input%l_useapw) THEN
                   w1 = 0.5 * ( usdus%uds(l,n,isp)*usdus%dus(l,n,isp) + usdus%us(l,n,isp)*usdus%duds(l,n,isp) )
                   apw_lo1 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( gjkiln * w1 + fjkiln * usdus%us(l,n,isp)  * usdus%dus(l,n,isp) )
@@ -136,25 +136,25 @@ CONTAINS
                             & - fleg2(l-1)*plegend(modulo(l-2,3))
                END IF ! l
 
-               fct  = plegend(l3) * fl2p1(l) * ( fjkiln*fjgj%fj(ikGPr,l,isp,igSpinPr) &
-                                             & + gjkiln*fjgj%gj(ikGPr,l,isp,igSpinPr)*ddnln )
+               fct  = plegend(l3) * fl2p1(l) * ( fjkiln*fjgj%fj(l,ikGPr,isp,igSpinPr) &
+                                             & + gjkiln*fjgj%gj(l,ikGPr,isp,igSpinPr)*ddnln )
                !IF (.NOT.l_fullj) THEN
                IF (.TRUE.) THEN
-                  fct2 = plegend(l3)*fl2p1(l) * 0.5 * ( gjkiln*fjgj%fj(ikGPr,l,isp,igSpinPr) &
-                                                    & + fjkiln*fjgj%gj(ikGPr,l,isp,igSpinPr) )
+                  fct2 = plegend(l3)*fl2p1(l) * 0.5 * ( gjkiln*fjgj%fj(l,ikGPr,isp,igSpinPr) &
+                                                    & + fjkiln*fjgj%gj(l,ikGPr,isp,igSpinPr) )
                ELSE
-                  fct2 = plegend(l3)*fl2p1(l) * gjkiln*fjgj%fj(ikGPr,l,isp,igSpinPr)
+                  fct2 = plegend(l3)*fl2p1(l) * gjkiln*fjgj%fj(l,ikGPr,isp,igSpinPr)
                END IF
 
                VecHelpS = VecHelpS + fct
                VecHelpH = VecHelpH + fct*elall + fct2
 
                IF (input%l_useapw) THEN
-                  VecHelpH = VecHelpH + plegend(l3) * ( apw_lo1*fjgj%fj(ikGPr,l,isp,igSpinPr) &
+                  VecHelpH = VecHelpH + plegend(l3) * ( apw_lo1*fjgj%fj(l,ikGPr,isp,igSpinPr) &
                                                     & + apw_lo2*fjgj%gj(l,ikGPr,isp,igSpinPr) )
                END IF ! useapw
             END DO ! l
-            !$end acc
+            !$acc end loop 
             ! Set up phase factors
             cph_re = 0.0
             cph_im = 0.0
@@ -316,8 +316,8 @@ CONTAINS
             END DO ! ikGPr
 
             DO  l = 0,atoms%lmax(n)
-               fjkiln = fjgj%fj(ikG,l,isp,igSpin)
-               gjkiln = fjgj%gj(ikG,l,isp,igSpin)
+               fjkiln = fjgj%fj(l,ikG,isp,igSpin)
+               gjkiln = fjgj%gj(l,ikG,isp,igSpin)
 
                IF (input%l_useapw) THEN
                   w1 = 0.5 * ( usdus%uds(l,n,isp)*usdus%dus(l,n,isp) + usdus%us(l,n,isp)*usdus%duds(l,n,isp) )
@@ -352,15 +352,15 @@ CONTAINS
                                       & - fleg2(l-1)*plegend(:NVEC_REM,modulo(l-2,3))
                END IF ! l
 
-               fct(:NVEC_REM)  = plegend(:NVEC_REM,l3) * fl2p1(l) * ( fjkiln*fjgjPr%fj(kj_off:kj_vec,l,isp,igSpinPr) &
-                                                                  & + gjkiln*fjgjPr%gj(kj_off:kj_vec,l,isp,igSpinPr)*ddnln )
+               fct(:NVEC_REM)  = plegend(:NVEC_REM,l3) * fl2p1(l) * ( fjkiln*fjgjPr%fj(l,kj_off:kj_vec,isp,igSpinPr) &
+                                                                  & + gjkiln*fjgjPr%gj(l,kj_off:kj_vec,isp,igSpinPr)*ddnln )
 
                !IF (.NOT.l_fullj) THEN
                IF (.TRUE.) THEN
-                  fct2(:NVEC_REM) = plegend(:NVEC_REM,l3) * fl2p1(l) * 0.5 * ( gjkiln*fjgjPr%fj(kj_off:kj_vec,l,isp,igSpinPr) &
-                                                                           & + fjkiln*fjgjPr%gj(kj_off:kj_vec,l,isp,igSpinPr) )
+                  fct2(:NVEC_REM) = plegend(:NVEC_REM,l3) * fl2p1(l) * 0.5 * ( gjkiln*fjgjPr%fj(l,kj_off:kj_vec,isp,igSpinPr) &
+                                                                           & + fjkiln*fjgjPr%gj(l,kj_off:kj_vec,isp,igSpinPr) )
                ELSE
-                  fct2(:NVEC_REM) = plegend(:NVEC_REM,l3) * fl2p1(l) * gjkiln*fjgjPr%fj(kj_off:kj_vec,l,isp,igSpinPr)
+                  fct2(:NVEC_REM) = plegend(:NVEC_REM,l3) * fl2p1(l) * gjkiln*fjgjPr%fj(l,kj_off:kj_vec,isp,igSpinPr)
                END IF
 
                VecHelpS(:NVEC_REM) = VecHelpS(:NVEC_REM) + fct(:NVEC_REM)
@@ -369,8 +369,8 @@ CONTAINS
                !IF (input%l_useapw.OR.(l_fullj.AND.l==0)) THEN
                !IF (input%l_useapw.OR.l_fullj) THEN ! correction
                IF (input%l_useapw) THEN
-                  VecHelpH(:NVEC_REM) = VecHelpH(:NVEC_REM) + plegend(:NVEC_REM,l3) * ( apw_lo1*fjgjPr%fj(kj_off:kj_vec,l,isp,igSpinPr) + &
-                                                                                      & apw_lo2*fjgjPr%gj(kj_off:kj_vec,l,isp,igSpinPr) )
+                  VecHelpH(:NVEC_REM) = VecHelpH(:NVEC_REM) + plegend(:NVEC_REM,l3) * ( apw_lo1*fjgjPr%fj(l,kj_off:kj_vec,isp,igSpinPr) + &
+                                                                                      & apw_lo2*fjgjPr%gj(l,kj_off:kj_vec,isp,igSpinPr) )
                END IF ! useapw
             END DO ! l
             ! Set up phase factors
