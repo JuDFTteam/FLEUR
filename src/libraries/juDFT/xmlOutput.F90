@@ -83,7 +83,7 @@ MODULE m_judft_xmlOutput
       CHARACTER(LEN=1000) :: gitdescTemp,githashTemp,gitbranchTemp,compile_dateTemp,compile_userTemp,compile_hostTemp
       CHARACTER(LEN=1000) :: compile_flagsTemp,link_flagsTemp
       CHARACTER(LEN=20) :: attributes(7)
-      CHARACTER(len=4), PARAMETER :: outputFileVersion_const = '0.37'
+      CHARACTER(len=4), PARAMETER :: outputFileVersion_const = '0.38'
 
       maintag=tag
 
