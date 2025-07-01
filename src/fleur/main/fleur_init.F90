@@ -172,12 +172,13 @@ CONTAINS
       CALL lapw_dim(fi%kpts, fi%cell, fi%input, fi%noco, nococonv,   forcetheo, fi%atoms, nbasfcn, fi%juPhon)
       CALL fi%input%init(fi%noco, fi%hybinp%l_hybrid,fi%sym%invs,fi%atoms%n_denmat,fi%atoms%n_hia,lapw_dim_nbasfcn)
       CALL fi%hybinp%init(fi%atoms, fi%cell, fi%input,   fi%sym, xcpot)
+      CALL fi%juPhon%init(fi%cell)
       l_timeReversalCheck = .FALSE.
       IF(.NOT.fi%banddos%band.AND..NOT.fi%banddos%dos) THEN
          IF(fi%noco%l_soc.OR.fi%noco%l_ss) l_timeReversalCheck = .TRUE.
       END IF
       CALL fi%kpts%init(fi%sym, fi%input%film, fi%hybinp%l_hybrid .or. fi%input%l_rdmft, l_timeReversalCheck)
-      CALL fi%kpts%initTetra(fi%input, fi%cell, fi%sym, fi%noco%l_soc .OR. fi%noco%l_ss)
+      CALL fi%kpts%initTetra(fi%input, fi%cell, fi%sym, fi%noco%l_soc .OR. fi%noco%l_ss,fi%juphon)
       IF (fmpi%irank == 0) CALL fi%gfinp%init(fi%atoms, fi%sym, fi%noco, fi%cell, fi%input)
       CALL fi%gfinp%mpi_bc(fmpi%mpi_comm) !THis has to be rebroadcasted because there could be new gf elements after init_gfinp
       CALL convn(fmpi%irank == 0, fi%atoms, stars)

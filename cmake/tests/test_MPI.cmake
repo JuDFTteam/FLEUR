@@ -1,5 +1,5 @@
 #Check if we can compile with MPI
-try_compile(FLEUR_USE_MPI ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_MPI.f90
+try_compile(FLEUR_USE_MPI ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_LIST_DIR}/test_MPI.f90
 LINK_LIBRARIES ${FLEUR_LIBRARIES}
             )
 

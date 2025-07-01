@@ -41,8 +41,7 @@ CONTAINS
         REAL,    ALLOCATABLE :: fftwork(:), vre(:), v1re(:), v1im(:)
         COMPLEX, ALLOCATABLE :: v1full(:)
 
-        iPhonon = 0
-        IF (juphon%l_phonon) iPhonon = 1
+        iPhonon = MERGE(1,0,juphon%l_phonon)
 
         ifft3 = 27*stars%mx1*stars%mx2*stars%mx3 !TODO: What if starsq/=stars in that regard?
 

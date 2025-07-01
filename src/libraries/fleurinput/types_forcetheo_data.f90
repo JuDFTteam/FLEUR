@@ -27,11 +27,11 @@ MODULE m_types_forcetheo_data
   PRIVATE
   PUBLIC:: t_forcetheo_data
   TYPE,EXTENDS(t_fleurinput_base) :: t_forcetheo_data
-     INTEGER :: mode=0 !MAE=1,DMI=2,Jij=3,ssdisp=4
+     INTEGER :: mode=0 !MAE=1,DMI=2,Jij=3,ssdisp=4,dmi-scf=5
      REAL,ALLOCATABLE:: qvec(:,:) !DMI,Jij,ssdisp
-     REAL,ALLOCATABLE:: theta(:)  !DMI,MAE,jij(1st only)
+     REAL,ALLOCATABLE:: theta(:)  !DMI,MAE,jij(1st only),DMI-scf
      REAL,ALLOCATABLE:: phi(:)    !MAE
-     REAL,ALLOCATABLE :: ef(:)  !DMI
+     REAL,ALLOCATABLE :: ef(:)  !DMI,DMI-scf
 
    CONTAINS
      PROCEDURE :: read_xml=>read_xml_forcetheo_data
@@ -75,23 +75,23 @@ CONTAINS
        CALL evaluateList(this%phi,str)
     ENDIF
     IF (xml%GetNumberOfNodes('/fleurInput/forceTheorem/DMI')==1) THEN
-       this%mode=2
-       this%qvec=xml%read_q_list('/fleurInput/forceTheorem/DMI/qVectors')
-       str=xml%GetAttributeValue('/fleurInput/forceTheorem/DMI/@theta')
-       CALL evaluateList(this%theta,str)
-       str=xml%GetAttributeValue('/fleurInput/forceTheorem/DMI/@phi')
-       CALL evaluateList(this%phi,str)
-       if (xml%versionNumber>=34) THEN
-         if (xml%GetNumberOfNodes('/fleurInput/forceTheorem/DMI/@ef_shift')==1) THEN
-           str=xml%GetAttributeValue('/fleurInput/forceTheorem/DMI/@ef_shift')
-           CALL evaluateList(this%ef,str)
-         ELSE
-           this%ef=(/0.0/)
-         ENDIF
-       else
-         this%ef=(/0.0/)
-       endif
-    ENDIF
+      this%mode=2
+      this%qvec=xml%read_q_list('/fleurInput/forceTheorem/DMI/qVectors')
+      str=xml%GetAttributeValue('/fleurInput/forceTheorem/DMI/@theta')
+      CALL evaluateList(this%theta,str)
+      str=xml%GetAttributeValue('/fleurInput/forceTheorem/DMI/@phi')
+      CALL evaluateList(this%phi,str)
+      if (xml%versionNumber>=34) THEN
+        if (xml%GetNumberOfNodes('/fleurInput/forceTheorem/DMI/@ef_shift')==1) THEN
+          str=xml%GetAttributeValue('/fleurInput/forceTheorem/DMI/@ef_shift')
+          CALL evaluateList(this%ef,str)
+        ELSE
+          this%ef=(/0.0/)
+        ENDIF
+      else
+        this%ef=(/0.0/)
+      endif
+   ENDIF
     IF (xml%GetNumberOfNodes('/fleurInput/forceTheorem/Jij')==1) THEN
        this%mode=3
        this%qvec=xml%read_q_list('/fleurInput/forceTheorem/Jij/qVectors')
@@ -101,6 +101,23 @@ CONTAINS
     IF (xml%GetNumberOfNodes('/fleurInput/forceTheorem/spinSpiralDispersion')==1) THEN
        this%mode=4
        this%qvec=xml%read_q_list('/fleurInput/forceTheorem/spinSpiralDispersion')
+    ENDIF
+    IF (xml%GetNumberOfNodes('/fleurInput/forceTheorem/DMI-SCF')==1) THEN
+      this%mode=5
+      str=xml%GetAttributeValue('/fleurInput/forceTheorem/DMI-SCF/@theta')
+      CALL evaluateList(this%theta,str)
+      str=xml%GetAttributeValue('/fleurInput/forceTheorem/DMI-SCF/@phi')
+      CALL evaluateList(this%phi,str)
+      if (xml%versionNumber>=34) THEN
+        if (xml%GetNumberOfNodes('/fleurInput/forceTheorem/DMI-SCF/@ef_shift')==1) THEN
+          str=xml%GetAttributeValue('/fleurInput/forceTheorem/DMI-SCF/@ef_shift')
+          CALL evaluateList(this%ef,str)
+        ELSE
+          this%ef=(/0.0/)
+        ENDIF
+      else
+        this%ef=(/0.0/)
+      endif
     ENDIF
   END SUBROUTINE read_xml_forcetheo_data
 

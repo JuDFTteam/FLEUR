@@ -44,7 +44,7 @@ CONTAINS
 
       DO i = 1, nspins
          DO j = 1, nspins
-            CALL smat(i, j)%init(.FALSE., lapwq%nv(i) + fi%atoms%nlotot, lapw%nv(j) + fi%atoms%nlotot, fmpi%sub_comm, .false.)
+            CALL smat(i, j)%init(.FALSE., lapwq%nv(i) + fi%atoms%nlotot, lapw%nv(j) + fi%atoms%nlotot, fmpi%sub_comm, MPIMAT_ROWCYCLIC)
             CALL hmat(i, j)%init(smat(i, j))
          END DO
       END DO

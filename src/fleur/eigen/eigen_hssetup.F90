@@ -1,21 +1,22 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_eigen_hssetup
-CONTAINS
+   implicit none
+   CONTAINS
 #ifndef _OPENACC
-   !> The setup of the Hamiltonian and Overlap matrices are performed here
-  !!
-  !! The following steps are executed:
-  !! 1. The matrices are a allocated (in the fi%noco-case these are 2x2-arrays of matrices)
-  !! 2. The Interstitial contribution is calculated (in hs_int())
-  !! 3. The MT-part is calculated (in hsmt() )
-  !! 4. The vacuum part is added (in hsvac())
-  !! 5. The matrices are copied to the final matrix, in the fi%noco-case the full matrix is constructed from the 4-parts.
-SUBROUTINE eigen_hssetup(isp, fmpi, fi, mpdata, results, den, vx, xcpot, enpara, nococonv, stars, sphhar, hybdat, &
+      !> The setup of the Hamiltonian and Overlap matrices are performed here
+     !!
+     !! The following steps are executed:
+     !! 1. The matrices are a allocated (in the fi%noco-case these are 2x2-arrays of matrices)
+     !! 2. The Interstitial contribution is calculated (in hs_int())
+     !! 3. The MT-part is calculated (in hsmt() )
+     !! 4. The vacuum part is added (in hsvac())
+     !! 5. The matrices are copied to the final matrix, in the fi%noco-case the full matrix is constructed from the 4-parts.
+SUBROUTINE eigen_hssetup(isp, fmpi, fi, results, den, vx, xcpot, enpara, nococonv, stars, sphhar, hybdat, &
    ud, td, v, lapw, nk, smat_final, hmat_final)
 USE m_types
 USE m_types_mpimat
@@ -31,7 +32,6 @@ IMPLICIT NONE
 INTEGER, INTENT(IN)           :: isp
 TYPE(t_mpi), INTENT(IN)       :: fmpi
 type(t_fleurinput), intent(in)    :: fi
-type(t_mpdata), intent(inout):: mpdata
 type(t_results), intent(inout):: results
 class(t_xcpot), intent(in)   :: xcpot
 TYPE(t_stars), INTENT(IN)     :: stars
@@ -69,7 +69,7 @@ ALLOCATE (t_mpimat::smat(nspins, nspins), hmat(nspins, nspins))
 END IF
 DO i = 1, nspins
 DO j = 1, nspins
-CALL smat(i, j)%init(fi%input%l_real, lapw%nv(i) + fi%atoms%nlotot, lapw%nv(j) + fi%atoms%nlotot, fmpi%sub_comm, .false.)
+CALL smat(i, j)%init(fi%input%l_real, lapw%nv(i) + fi%atoms%nlotot, lapw%nv(j) + fi%atoms%nlotot, fmpi%sub_comm, MPIMAT_ROWCYCLIC)
 CALL hmat(i, j)%init(smat(i, j))
 END DO
 END DO
@@ -141,7 +141,7 @@ CALL timestop("Matrix redistribution")
 
 END SUBROUTINE eigen_hssetup
 #else
-   SUBROUTINE eigen_hssetup(isp, fmpi, fi, mpdata, results, den, vx, xcpot, enpara, nococonv, stars, sphhar, hybdat, &
+   SUBROUTINE eigen_hssetup(isp, fmpi, fi,  results, den, vx, xcpot, enpara, nococonv, stars, sphhar, hybdat, &
       ud, td, v, lapw, nk, smat_final, hmat_final)
 USE m_types
 USE m_types_mpimat
@@ -157,7 +157,6 @@ IMPLICIT NONE
 INTEGER, INTENT(IN)           :: isp
 TYPE(t_mpi), INTENT(IN)       :: fmpi
 type(t_fleurinput), intent(in)    :: fi
-type(t_mpdata), intent(inout):: mpdata
 type(t_results), intent(inout):: results
 class(t_xcpot), intent(in)   :: xcpot
 TYPE(t_stars), INTENT(IN)     :: stars
@@ -192,7 +191,7 @@ IF (fmpi%n_size == 1) THEN
    ALLOCATE (smat(nspins, nspins), hmat(nspins, nspins))
    DO i = 1, nspins
       DO j = 1, nspins
-         CALL smat(i, j)%init(fi%input%l_real, lapw%nv(i) + fi%atoms%nlotot, lapw%nv(j) + fi%atoms%nlotot, fmpi%sub_comm, .false.)
+         CALL smat(i, j)%init(fi%input%l_real, lapw%nv(i) + fi%atoms%nlotot, lapw%nv(j) + fi%atoms%nlotot, fmpi%sub_comm, MPIMAT_ROWCYCLIC)
          CALL hmat(i, j)%init(smat(i, j))
       END DO
    END DO
@@ -265,7 +264,7 @@ ELSE
    ALLOCATE (smat_mpi(nspins, nspins), hmat_mpi(nspins, nspins))
    DO i = 1, nspins
       DO j = 1, nspins
-         CALL smat_mpi(i, j)%init(fi%input%l_real, lapw%nv(i) + fi%atoms%nlotot, lapw%nv(j) + fi%atoms%nlotot, fmpi%sub_comm, .false.)
+         CALL smat_mpi(i, j)%init(fi%input%l_real, lapw%nv(i) + fi%atoms%nlotot, lapw%nv(j) + fi%atoms%nlotot, fmpi%sub_comm, MPIMAT_ROWCYCLIC)
          CALL hmat_mpi(i, j)%init(smat_mpi(i, j))
       END DO
    END DO

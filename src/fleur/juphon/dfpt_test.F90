@@ -9,7 +9,7 @@ MODULE m_dfpt_test
    USE m_vgen_coulomb
    USE m_vgen_xcpot
    USE m_jpGrVeff0, ONLY : GenGrVeff0
-   USE m_dfpt_init
+   USE m_dfpt_gradient
    USE m_npy
 
    IMPLICIT NONE

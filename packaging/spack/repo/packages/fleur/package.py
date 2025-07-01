@@ -39,7 +39,7 @@ class Fleur(CudaPackage, Package):
     variant("openmp", default=True, description="Enable OpenMP support")
     variant("amd", default=False, description="Use some patch for AMD processors")
     variant("cuda",default=False,description="Use OpenACC on top of CUDA for NVIDIA GPUs")
-    variant("cuda_arch",default=80 ,description="specify the CUDA architecture to build for")
+    variant("cuda_arch",default="80" ,description="specify the CUDA architecture to build for")
     variant("build_type",default="RelWithDebInfo",description="The build type to build",values=("Debug", "Release", "RelWithDebInfo"))
     
     depends_on("cmake", type="build")

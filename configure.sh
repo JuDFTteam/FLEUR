@@ -68,7 +68,8 @@ gitupdate=0
 debug=0
 error=""
 external_lib=""
-
+conf_spack=0
+command="$0 $*"
 
 echo -e "${RED}------------ Welcome to the FLEUR configuration script -------------${NC}"
 
@@ -93,13 +94,19 @@ fi
 if test -d $DIR/.git
 then
     #Check if hook is installed and install it if needed
-    if test -h $DIR/.git/hooks/pre-commit
+    if test -e $DIR/.git/hooks/pre-commit
     then
-        echo "Git version found"
+        echo "Git version found, pre-commit hook installed"
     else
-        mkdir -p $DIR/.git/hooks
-        ln -s $DIR/tests/git-hooks/pre-commit $DIR/.git/hooks
-        echo "Git version found, hook installed"
+        if `which pre-commit` 
+        then
+            cd $DIR; pre-commit install ; cd -
+        else
+            echo -e "${RED}pre-commit not found${NC}"
+            echo "Please install pre-commit in your system"
+            echo "Please check https://pre-commit.com/"
+            echo "and install it with pip or conda"
+        fi
     fi
 fi
 
@@ -108,6 +115,8 @@ fi
 if [ -n "$label" ]
 then
     buildname="build.$label"
+    . $DIR/cmake/io_configs.sh
+    store_config 
 else
     buildname="build"
 fi

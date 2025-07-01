@@ -80,7 +80,6 @@ ${FLEUR_SRC}/math/inv3.f90
 ${FLEUR_SRC}/io/w_inpXML.f90
 
 kpoints/divi.f
-#kpoints/bravais.f
 #kpoints/brzone2.f90
 kpoints/kpttet.f
 kpoints/kptmop.f

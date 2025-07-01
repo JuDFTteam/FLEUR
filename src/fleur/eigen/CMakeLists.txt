@@ -28,7 +28,7 @@ src/fleur/eigen/tlo.f90
 src/fleur/eigen/vacfun.F90
 src/fleur/eigen/eigen_redist_matrix.F90
 src/fleur/eigen/hs_int_direct.F90
-)
+src/fleur/eigen/symmetrize_matrix.f90)
 #if (FLEUR_USE_GPU)
 #   set(fleur_F90 ${fleur_F90}
 #src/fleur/eigen/hsmt_nonsph_GPU.F90)

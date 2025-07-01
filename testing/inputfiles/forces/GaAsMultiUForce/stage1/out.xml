@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <fleurOutput fleurOutputVersion="0.37">
-   <programVersion version="fleur 39">
-      <compilationInfo date="2024-08-22T16:56:03" user="micha" host="iff1745" flag="MAKE_Fortran_FLAGS" link="LEUR_LIBRARIES"/>
-      <gitInfo version="MaX-R7.1-187-g7dadf0d7f-dirty" branch="develop" lastCommitHash="7dadf0d7fdc2c925a1e145fa5f9c7f39184b55d5"/>
+   <programVersion version="fleur 40">
+      <compilationInfo date="2025-01-31T13:32:23" user="micha" host="iff1745" flag="I/Users/micha/hdf5/current/hdf5/include -fiopenmp -qmkl  -assume byterecl -no-wrap-margin -I/Users/micha/FLEUR" link="lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64;-lwannier;-L/Users/micha/Wannier90/wannier90-2.1.0/;-L/Users/mic"/>
+      <gitInfo version="MaX-R7.2-117-g5fc8dfcc1-dirty" branch="develop" lastCommitHash="5fc8dfcc187f2eb7f41bda65df6f26813d2624a6"/>
       <targetComputerArchitectures>GEN</targetComputerArchitectures>
       <precision type="DOUBLE"/>
       <targetStructureClass> </targetStructureClass>
       <additionalCompilerFlags>CPP_MPI             CPP_HDF            CPP_WANN</additionalCompilerFlags>
    </programVersion>
    <parallelSetup>
-      <openMP ompThreads="1"/>
+      <openMP ompThreads="3"/>
       <mpi mpiProcesses="2"/>
-      <mem memoryPerNode="32637976 kB"/>
+      <mem memoryPerNode="32570148 kB"/>
    </parallelSetup>
-   <startDateAndTime date="2024/08/22" time="17:02:46" zone="+0200"/>
+   <startDateAndTime date="2025/01/31" time="14:07:52" zone="+0100"/>
    <!-- Now follows a dump of the inp.xml file after evaluating the Schema -->
   <fleurInput fleurInputVersion="0.38">
      <comment>
@@ -29,7 +29,7 @@
         <expertModes gw="0" pot8="F" isec1="99" secvar="F" vdW="NONE" vdW_tol="0.0005" eig66="F" lpr="0" warp_factor="1.0"/>
      </calculationSetup>
      <cell>
-        <bzIntegration valenceElectrons="28.00000000" mode="hist" fermiSmearingEnergy=".00100000" l_bloechl="F">
+        <bzIntegration valenceElectrons="28.00000000" mode="hist" fermiSmearingEnergy=".00100000" l_bloechl="F" charge_excited="0.0" charge_shift="0.0">
            <kPointListSelection listName="default"/>
            <kPointLists>
            <kPointList name="default" count="6" nx="3" ny="3" nz="3" type="mesh">
@@ -255,28 +255,28 @@
          </totalEnergy>
          <ldaUDensityMatrix>
             <densityMatrixFor spin="1" atomType="1" uIndex="1" l="1" U="-5.00000000" J="0.90000000">
-               (+0.20816,-0.00000) (+0.00982,-0.00982) (-0.00000,+0.01389)
-               (+0.00982,+0.00982) (+0.20816,-0.00000) (-0.00982,+0.00982)
-               (-0.00000,-0.01389) (-0.00982,-0.00982) (+0.20816,-0.00000)
+               (+0.20816,+0.00000) (-0.00825,-0.00825) (-0.00000,+0.01166)
+               (-0.00825,+0.00825) (+0.20816,-0.00000) (+0.00825,+0.00825)
+               (-0.00000,-0.01166) (+0.00825,-0.00825) (+0.20816,-0.00000)
             </densityMatrixFor>
             <densityMatrixFor spin="1" atomType="1" uIndex="2" l="2" U="8.00000000" J="0.90000000">
-               (+1.97547,+0.00000) (+0.00052,-0.00064) (-0.00010,+0.00057) (-0.00019,-0.00006) (-0.00578,+0.00000)
-               (+0.00052,+0.00064) (+1.98125,-0.00000) (+0.00034,-0.00023) (-0.00000,+0.00046) (+0.00006,+0.00019)
-               (-0.00010,-0.00057) (+0.00034,+0.00023) (+1.96969,+0.00000) (-0.00023,+0.00034) (+0.00010,+0.00057)
-               (-0.00019,+0.00006) (+0.00000,-0.00046) (-0.00023,-0.00034) (+1.98125,-0.00000) (-0.00064,+0.00052)
-               (-0.00578,+0.00000) (+0.00006,-0.00019) (+0.00010,-0.00057) (-0.00064,-0.00052) (+1.97547,+0.00000)
+               (+1.97547,+0.00000) (-0.00107,+0.00045) (-0.00124,+0.00044) (-0.00053,-0.00098) (-0.00578,+0.00000)
+               (-0.00107,-0.00045) (+1.98125,-0.00000) (+0.00040,-0.00084) (-0.00000,+0.00009) (-0.00098,-0.00053)
+               (-0.00124,-0.00044) (+0.00040,+0.00084) (+1.96969,+0.00000) (+0.00084,-0.00040) (+0.00124,+0.00044)
+               (-0.00053,+0.00098) (+0.00000,-0.00009) (+0.00084,+0.00040) (+1.98125,-0.00000) (-0.00045,+0.00107)
+               (-0.00578,+0.00000) (-0.00098,+0.00053) (+0.00124,-0.00044) (-0.00045,-0.00107) (+1.97547,+0.00000)
             </densityMatrixFor>
             <densityMatrixFor spin="1" atomType="2" uIndex="3" l="2" U="5.50000000" J="0.90000000">
-               (+1.99656,-0.00000) (-0.00007,+0.00006) (-0.00001,+0.00001) (-0.00008,-0.00008) (-0.00151,-0.00000)
-               (-0.00007,-0.00006) (+1.99807,+0.00000) (+0.00001,-0.00000) (-0.00000,-0.00014) (+0.00008,+0.00008)
-               (-0.00001,-0.00001) (+0.00001,+0.00000) (+1.99505,-0.00000) (-0.00000,+0.00001) (+0.00001,+0.00001)
-               (-0.00008,+0.00008) (+0.00000,+0.00014) (-0.00000,-0.00001) (+1.99807,+0.00000) (+0.00006,-0.00007)
-               (-0.00151,-0.00000) (+0.00008,-0.00008) (+0.00001,-0.00001) (+0.00006,+0.00007) (+1.99656,-0.00000)
+               (+1.99656,+0.00000) (-0.00012,-0.00029) (+0.00013,+0.00013) (+0.00003,+0.00013) (-0.00151,+0.00000)
+               (-0.00012,+0.00029) (+1.99807,-0.00000) (-0.00013,+0.00000) (-0.00000,+0.00026) (+0.00013,+0.00003)
+               (+0.00013,-0.00013) (-0.00013,-0.00000) (+1.99505,+0.00000) (-0.00000,+0.00013) (-0.00013,+0.00013)
+               (+0.00003,-0.00013) (+0.00000,-0.00026) (-0.00000,-0.00013) (+1.99807,-0.00000) (+0.00029,+0.00012)
+               (-0.00151,+0.00000) (+0.00013,-0.00003) (-0.00013,-0.00013) (+0.00029,-0.00012) (+1.99656,+0.00000)
             </densityMatrixFor>
             <densityMatrixFor spin="1" atomType="2" uIndex="4" l="1" U="-6.50000000" J="0.90000000">
-               (+0.66314,-0.00000) (+0.02602,-0.02602) (-0.00000,+0.03679)
-               (+0.02602,+0.02602) (+0.66314,-0.00000) (-0.02602,+0.02602)
-               (-0.00000,-0.03679) (-0.02602,-0.02602) (+0.66314,+0.00000)
+               (+0.66314,+0.00000) (+0.00132,+0.00132) (-0.00000,-0.00186)
+               (+0.00132,-0.00132) (+0.66314,+0.00000) (-0.00132,-0.00132)
+               (-0.00000,+0.00186) (-0.00132,+0.00132) (+0.66314,+0.00000)
             </densityMatrixFor>
          </ldaUDensityMatrix>
          <densityConvergence units="me/bohr^3">
@@ -284,5 +284,5 @@
          </densityConvergence>
       </iteration>
    </scfLoop>
-   <endDateAndTime date="2024/08/22" time="17:02:46" zone="+0200"/>
+   <endDateAndTime date="2025/01/31" time="14:07:52" zone="+0100"/>
 </fleurOutput>

@@ -68,6 +68,19 @@ CONTAINS
     LOGICAL,INTENT(IN)                  :: l_io
     this%q_done=0
     CALL this%t_forcetheo%start(potden,l_io) !call routine of basis type
+
+    IF (SIZE(potden%pw,2)<2) RETURN
+    !Average out magnetic part of potential/charge in INT+Vacuum
+    potden%pw(:,1)=(potden%pw(:,1)+potden%pw(:,2))/2.0
+    potden%pw(:,2)=potden%pw(:,1)
+    potden%vac(:,:,:,1)=(potden%vac(:,:,:,1)+potden%vac(:,:,:,2))/2.0
+    potden%vac(:,:,:,2)=potden%vac(:,:,:,1)
+    !Off diagonal part
+    IF (SIZE(potden%pw,2)==3) THEN
+       potden%pw(:,3)=0.0
+       potden%vac(:,:,:,3)=0.0
+    END IF
+
   END SUBROUTINE  dmi_start
 
   LOGICAL FUNCTION dmi_next_job(this,fmpi,lastiter,atoms,noco,nococonv)

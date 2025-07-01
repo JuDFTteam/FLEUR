@@ -1,0 +1,27 @@
+repos:
+  - repo: https://github.com/Materials-Data-Science-and-Informatics/somesy
+    rev: "v0.7.3"
+    hooks:
+      - id: somesy
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0  # Use the ref you want to point at
+    hooks:
+    -   id: check-added-large-files
+    -   id: check-case-conflict
+    -   id: check-merge-conflict
+    -   id: check-toml
+    -   id: check-xml
+    -   id: check-yaml
+  - repo: https://iffgit.fz-juelich.de/fleur/fleur-pre-commit
+    rev: V0.1.0
+    hooks:
+    -   id: check-copyright
+    -   id: check-implicit-none
+    -   id: check-stop  
+
+#  - repo: https://github.com/fortran-lang/fprettify
+#    rev: "v0.3.7"
+#    hooks:
+#      - id: fprettify
+#        args: []
+

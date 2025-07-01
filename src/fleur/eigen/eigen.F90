@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -30,7 +30,7 @@ CONTAINS
    ! e) The latter are the actual output for the routine when used for DFPT. They are saved
    !    the same way as the eigenvalues before, but for a shifted eig_id.
    SUBROUTINE eigen(fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,&
-                    mpdata,hybdat,iter,eig_id,results,inden,v,vx,hub1data,&
+                    hybdat,iter,eig_id,results,inden,v,vx,hub1data,&
                     bqpt, hmat_out, smat_out)
 
       USE m_types
@@ -58,7 +58,6 @@ CONTAINS
       CLASS(t_xcpot),INTENT(IN)    :: xcpot
       TYPE(t_mpi),INTENT(IN)       :: fmpi
       CLASS(t_forcetheo),INTENT(IN):: forcetheo
-      TYPE(t_mpdata), intent(inout):: mpdata
       TYPE(t_hybdat), INTENT(INOUT):: hybdat
       TYPE(t_enpara),INTENT(INOUT) :: enpara
       TYPE(t_nococonv),INTENT(IN)  :: nococonv
@@ -82,7 +81,7 @@ CONTAINS
       INTEGER jsp,nk,ne_all,ne_found,neigd2,dim_mat
       INTEGER nk_i,n_size,n_rank
       LOGICAL l_needs_vectors
-      INTEGER :: solver=0
+
       ! Local Arrays
       INTEGER              :: ierr
       INTEGER              :: neigBuffer(fi%kpts%nkpt,fi%input%jspins)
@@ -173,14 +172,14 @@ CONTAINS
             CALL lapw%init(fi%input,fi%noco,nococonv, kpts_mod, fi%atoms, fi%sym, nk, fi%cell, fmpi, bqpt)
 
             call timestart("Setup of H&S matrices")
-            CALL eigen_hssetup(jsp,fmpi,fi,mpdata,results,inDen,vx,xcpot,enpara,nococonv,stars,sphhar,hybdat,ud,td,v,lapw,nk,smat,hmat)
+            CALL eigen_hssetup(jsp,fmpi,fi,results,inDen,vx,xcpot,enpara,nococonv,stars,sphhar,hybdat,ud,td,v,lapw,nk,smat,hmat)
             CALL timestop("Setup of H&S matrices")
 
             IF (PRESENT(hmat_out)) THEN
                IF (hmat_out%l_real) THEN
                   dim_mat = SIZE(smat%data_r(:,1))
 
-                  CALL smat_out%init(.TRUE., dim_mat, dim_mat, fmpi%sub_comm, .false.)
+                  CALL smat_out%init(.TRUE., dim_mat, dim_mat, fmpi%sub_comm, MPIMAT_ROWCYCLIC)
                   CALL hmat_out%init(smat_out)
 
                   hmat_out%data_r(:dim_mat,:dim_mat) = hmat%data_r
@@ -188,7 +187,7 @@ CONTAINS
                ELSE
                   dim_mat = SIZE(smat%data_c(:,1))
 
-                  CALL smat_out%init(.FALSE., dim_mat, dim_mat, fmpi%sub_comm, .false.)
+                  CALL smat_out%init(.FALSE., dim_mat, dim_mat, fmpi%sub_comm, MPIMAT_ROWCYCLIC)
                   CALL hmat_out%init(smat_out)
 
                   hmat_out%data_c(:dim_mat,:dim_mat) = hmat%data_c
@@ -197,10 +196,10 @@ CONTAINS
             END IF
 
             IF (ANY(nk==k_selection)) THEN
-               CALL save_npy(int2str(eig_id)//"_"//int2str(nk)//"_h0.npy",hmat%data_r)
-               CALL save_npy(int2str(eig_id)//"_"//int2str(nk)//"_s0.npy",smat%data_r)
-               CALL save_npy(int2str(eig_id)//"_"//int2str(nk)//"_vk.npy",lapw%vk)
-               CALL save_npy(int2str(eig_id)//"_"//int2str(nk)//"_gvec.npy",lapw%gvec)
+!               CALL save_npy(int2str(eig_id)//"_"//int2str(nk)//"_h0.npy",hmat%data_r)
+!               CALL save_npy(int2str(eig_id)//"_"//int2str(nk)//"_s0.npy",smat%data_r)
+!               CALL save_npy(int2str(eig_id)//"_"//int2str(nk)//"_vk.npy",lapw%vk)
+!               CALL save_npy(int2str(eig_id)//"_"//int2str(nk)//"_gvec.npy",lapw%gvec)
                write(9530,*) nk, lapw%bkpt, qphon
             END IF
             nvBuffer(nk,jsp) = lapw%nv(jsp)
@@ -241,7 +240,7 @@ CONTAINS
             !     eig ...... all eigenvalues, output
             !     zMat ..... local eigenvectors, output
             if (fmpi%pe_diag) THEN
-              CALL eigen_diag(solver,hmat,smat,ne_all,eig,zMat,nk,jsp,iter)
+              CALL eigen_diag(hmat,smat,ne_all,eig,zMat,nk)
             ELSE
               ne_all=0
             endif

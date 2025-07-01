@@ -44,6 +44,9 @@ CONTAINS
 
     INTEGER :: n
     REAL    :: min_dtild, kmaxGmaxFactor, kmaxGmaxXCFactor
+
+    CALL timestart('make_defaults')
+
     !
     !input
     !
@@ -166,5 +169,8 @@ CONTAINS
     mpinp%linear_dep_tol = 1e-4
     CALL input%init(noco,hybinp%l_hybrid,sym%invs,atoms%n_denmat,atoms%n_hia)
     hybinp%bands1 = CEILING(0.75*input%gw_neigd)
+
+    CALL timestop('make_defaults')
+
   END SUBROUTINE make_defaults
 END MODULE m_make_defaults

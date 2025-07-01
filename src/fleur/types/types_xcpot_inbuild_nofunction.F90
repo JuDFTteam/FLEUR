@@ -121,6 +121,9 @@ CONTAINS
             xcpot%icorr = n
          ENDIF
       ENDDO
+      IF (xcpot%inbuild_name(1:5).EQ.('LibXC')) THEN
+         xcpot%icorr = -1
+      END IF
       if (xcpot%icorr == 0) CALL judft_error("Unknown xc-potential:"//xcpot%inbuild_name, calledby="types_xcpot.F90")
       IF (xcpot%l_relativistic) THEN
          xcpot%DATA%krla = 1

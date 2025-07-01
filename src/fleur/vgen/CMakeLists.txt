@@ -2,8 +2,7 @@ set(fleur_F77 ${fleur_F77}
 src/fleur/vgen/dylm3.f
 src/fleur/vgen/grdrsvac.f
 src/fleur/vgen/mkgz.f
-src/fleur/vgen/modcyli.f
-src/fleur/vgen/modcylk.f
+
 )
 set(fleur_F90 ${fleur_F90}
 src/fleur/vgen/vgen_constraint.F90

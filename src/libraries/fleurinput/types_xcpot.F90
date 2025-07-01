@@ -43,7 +43,7 @@ MODULE m_types_xcpot
       !For inbuild
 
       LOGICAL          :: l_inbuild = .FALSE.
-      CHARACTER(len=10):: inbuild_name = "vwn"
+      CHARACTER(len=50):: inbuild_name = "vwn"
       LOGICAL          :: l_relativistic = .FALSE.
 
    CONTAINS

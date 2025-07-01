@@ -14,7 +14,7 @@ contains
     implicit none
     integer,intent(in)             :: irank,jspins,nmzxyd
     real,intent(in)                :: vol
-    type(t_mixvector),INTENT(IN)   :: fsm
+    type(t_mixvector),INTENT(INOUT)   :: fsm
     TYPE(t_potden),INTENT(INOUT)   :: inden,outden
     TYPE(t_results),INTENT(INOUT)  :: results
     type(t_mixvector),INTENT(OUT)  :: fsm_mag
@@ -23,9 +23,11 @@ contains
     REAL            :: dist(6) !1:up,2:down,3:spinoff,4:total,5:magnet,6:noco
     TYPE(t_mixvector)::fmMet
     character(len=100)::attributes(2)
+    logical           :: l_noco
 
+    l_noco=SIZE(outden%pw,2)>2
     CALL fmMet%alloc()
-    IF (jspins==2) THEN
+    IF (jspins==2.and..not.l_noco) THEN
        CALL fsm_mag%alloc()
        ! calculate Magnetisation-difference
        CALL fsm_mag%from_density(outden,nmzxyd,swapspin=.TRUE.)
@@ -36,50 +38,77 @@ contains
     fmMet=fsm%apply_metric(.FALSE.)
 
     dist(:) = 0.0
-    DO js = 1,jspins
-       dist(js) = fsm%multiply_dot_mask(fmMet,(/.true.,.true.,.true.,.false./),js)
-    END DO
-    IF (SIZE(outden%pw,2)>2) dist(6) = fsm%multiply_dot_mask(fmMet,(/.TRUE.,.TRUE.,.TRUE.,.FALSE./),3)
-    IF (jspins.EQ.2) THEN
-       dist(3) = fmMet%multiply_dot_mask(fsm_mag,(/.true.,.true.,.true.,.false./),1)
-       dist(4) = dist(1) + dist(2) + 2.0e0*dist(3)
-       dist(5) = dist(1) + dist(2) - 2.0e0*dist(3)
-    ENDIF
-
+    if (.not.l_noco) THEN
+      DO js = 1,jspins
+          dist(js) = fsm%multiply_dot_mask(fmMet,(/.true.,.true.,.true.,.false./),js)
+      END DO
+      IF (jspins.EQ.2) THEN
+         dist(3) = fmMet%multiply_dot_mask(fsm_mag,(/.true.,.true.,.true.,.false./),1)
+         dist(4) = dist(1) + dist(2) + 2.0e0*dist(3)
+         dist(5) = dist(1) + dist(2) - 2.0e0*dist(3)
+      ENDIF
+    else
+      dist(4) = fsm%multiply_dot_mask(fmMet,(/.true.,.true.,.true.,.false./),1)
+      dist(1) = fsm%multiply_dot_mask(fmMet,(/.true.,.true.,.true.,.false./),2)
+      dist(2) = fsm%multiply_dot_mask(fmMet,(/.true.,.true.,.true.,.false./),3)
+     endif      
+    
     results%last_distance=maxval(1000*SQRT(ABS(dist/vol)))
     if (irank>0) return
+    
     !calculate the distance of charge densities for each spin
     CALL openXMLElement('densityConvergence',(/'units'/),(/'me/bohr^3'/))
 
-    DO js = 1,jspins
-       attributes = ''
-       WRITE(attributes(1),'(i0)') js
-       WRITE(attributes(2),'(f20.10)') 1000*SQRT(ABS(dist(js)/vol))
-       CALL writeXMLElementForm('chargeDensity',(/'spin    ','distance'/),attributes,reshape((/4,8,1,20/),(/2,2/)))
-       WRITE (oUnit,FMT=7900) js,inDen%iter,1000*SQRT(ABS(dist(js)/vol))
-    END DO
+    if (l_noco) THEN 
+      !New output in noco case
+      attributes = ''
+      WRITE(attributes(1),'(f20.10)') 1000*SQRT(ABS(dist(4)/vol))
+      CALL writeXMLElementForm('chargeDensity',(/'distance'/),attributes(1:1),reshape((/8,20/),(/1,2/)))
+      WRITE (oUnit,FMT=8000) inDen%iter,1000*SQRT(ABS(dist(4)/vol))
+      !mz
+      WRITE(attributes(1),'(a)') "mz"
+      WRITE(attributes(2),'(f20.10)') 1000*SQRT(ABS(dist(1)/vol))
+      CALL writeXMLElementForm('Magnetization',(/'direction','distance '/),attributes,reshape((/9,8,2,20/),(/2,2/)))
+      WRITE (oUnit,FMT=7910) "mz",inDen%iter,1000*SQRT(ABS(dist(1)/vol))
+      !mx,my
+      WRITE(attributes(1),'(a)') "mx,my"
+      WRITE(attributes(2),'(f20.10)') 1000*SQRT(ABS(dist(2)/vol))
+      CALL writeXMLElementForm('Magnetization',(/'direction','distance '/),attributes,reshape((/9,8,5,20/),(/2,2/)))
+      WRITE (oUnit,FMT=7910) "mx,my",inDen%iter,1000*SQRT(ABS(dist(2)/vol))
+   else  
 
-    IF (SIZE(outden%pw,2)>2) WRITE (oUnit,FMT=7900) 3,inDen%iter,1000*SQRT(ABS(dist(6)/vol))
+      DO js = 1,jspins
+         attributes = ''
+         WRITE(attributes(1),'(i0)') js
+         WRITE(attributes(2),'(f20.10)') 1000*SQRT(ABS(dist(js)/vol))
+         CALL writeXMLElementForm('chargeDensity',(/'spin    ','distance'/),attributes,reshape((/4,8,1,20/),(/2,2/)))
+         WRITE (oUnit,FMT=7900) js,inDen%iter,1000*SQRT(ABS(dist(js)/vol))
+      END DO
 
-    !calculate the distance of total charge and spin density
-    !|rho/m(o) - rho/m(i)| = |rh1(o) -rh1(i)|+ |rh2(o) -rh2(i)| +/_
-    !                        +/_2<rh2(o) -rh2(i)|rh1(o) -rh1(i)>
-    IF (jspins.EQ.2) THEN
-       CALL writeXMLElementFormPoly('overallChargeDensity',(/'distance'/),&
-            (/1000*SQRT(ABS(dist(4)/vol))/),reshape((/10,20/),(/1,2/)))
-       CALL writeXMLElementFormPoly('spinDensity',(/'distance'/),&
-            (/1000*SQRT(ABS(dist(5)/vol))/),reshape((/19,20/),(/1,2/)))
-       WRITE (oUnit,FMT=8000) inDen%iter,1000*SQRT(ABS(dist(4)/vol))
-       WRITE (oUnit,FMT=8010) inDen%iter,1000*SQRT(ABS(dist(5)/vol))
+         
+      !calculate the distance of total charge and spin density
+      !|rho/m(o) - rho/m(i)| = |rh1(o) -rh1(i)|+ |rh2(o) -rh2(i)| +/_
+      !                        +/_2<rh2(o) -rh2(i)|rh1(o) -rh1(i)>
+      IF (jspins.EQ.2) THEN
+         CALL writeXMLElementFormPoly('overallChargeDensity',(/'distance'/),&
+               (/1000*SQRT(ABS(dist(4)/vol))/),reshape((/10,20/),(/1,2/)))
+         CALL writeXMLElementFormPoly('spinDensity',(/'distance'/),&
+               (/1000*SQRT(ABS(dist(5)/vol))/),reshape((/19,20/),(/1,2/)))
+         WRITE (oUnit,FMT=8000) inDen%iter,1000*SQRT(ABS(dist(4)/vol))
+         WRITE (oUnit,FMT=8010) inDen%iter,1000*SQRT(ABS(dist(5)/vol))
 
-       !dist/vol should always be >= 0 ,
-       !but for dist=0 numerically you might obtain dist/vol < 0
-       !(e.g. when calculating non-magnetic systems with jspins=2).
-    END IF
-    CALL closeXMLElement('densityConvergence')
+         !dist/vol should always be >= 0 ,
+         !but for dist=0 numerically you might obtain dist/vol < 0
+         !(e.g. when calculating non-magnetic systems with jspins=2).
+      END IF
+   endif   
+   CALL closeXMLElement('densityConvergence')
+   
+    
 
 
-7900  FORMAT (/,'---->    distance of charge densities for spin ',i2,'                 it=',i5,':',f13.6,' me/bohr**3')
+7900  FORMAT (/,'---->    distance of charge densities for spin ',i2,'                 it=',i5,':',f13.6,' me/bohr**3  ',2f13.6)
+7910  FORMAT (/,'---->    distance of magnetisation for direction ',a5,'   it=',i5,':',f13.6,' me/bohr**3  ',2f13.6)
 8000 FORMAT (/,'---->    distance of charge densities for it=',i5,':', f13.6,' me/bohr**3')
 8010 FORMAT (/,'---->    distance of spin densities for it=',i5,':', f13.6,' me/bohr**3')
 8020 FORMAT (4d25.14)

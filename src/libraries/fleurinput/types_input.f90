@@ -34,6 +34,7 @@ MODULE m_types_input
   !     f_level == 2: Kinetic energy surface term evaluated with IR functions
   !     f_level == 3: Surface term for density and potential discontinuity at the MT boundaries
   !     level 3 needs a large gmax cutoff, which backfires at the rest of the calculation
+  LOGICAL :: l_driftForce = .FALSE. 
   LOGICAL :: eonly =.FALSE.
   LOGICAL :: ctail =.TRUE.
   INTEGER :: coretail_lmax =0
@@ -71,6 +72,7 @@ MODULE m_types_input
   LOGICAL:: evonly=.FALSE.
   !     LOGICAL:: l_inpXML=.TRUE.
   REAL :: fixed_moment = 0.0
+  real :: charge_excited =0.0 , charge_shift=0.0
   LOGICAL :: l_onlyMtStDen=.FALSE.
   CHARACTER(LEN=100) :: comment="FLEUR calculation without a title"
   LOGICAL :: l_core_confpot=.TRUE. !Former CPP_CORE
@@ -122,6 +124,7 @@ SUBROUTINE mpi_bc_input(this,mpi_comm,irank)
    CALL mpi_bc(this%vdW,rank,mpi_comm)
    CALL mpi_bc(this%vdW_tol,rank,mpi_comm)
    CALL mpi_bc(this%f_level,rank,mpi_comm)
+   CALL mpi_bc(this%l_driftForce,rank,mpi_comm)
    CALL mpi_bc(this%eonly,rank,mpi_comm)
    CALL mpi_bc(this%ctail,rank,mpi_comm)
    CALL mpi_bc(this%coretail_lmax,rank,mpi_comm)
@@ -172,6 +175,9 @@ SUBROUTINE mpi_bc_input(this,mpi_comm,irank)
    CALL mpi_bc(this%rdmftStatesAbove,rank,mpi_comm)
    CALL mpi_bc(this%rdmftFunctional,rank,mpi_comm)
    CALL mpi_bc(this%lResMax,rank,mpi_comm)
+   CALL mpi_bc(this%charge_excited,rank,mpi_comm)
+   CALL mpi_bc(this%charge_shift,rank,mpi_comm)
+   
 END SUBROUTINE mpi_bc_input
 
 SUBROUTINE read_xml_input(this,xml)
@@ -329,6 +335,12 @@ SUBROUTINE read_xml_input(this,xml)
    xPathA = trim(xpathb)//'/@l_bloechl'
    IF (xml%versionNumber > 31) this%l_bloechl = evaluateFirstBoolOnly(xml%GetAttributeValue(xPathA))
 
+   xPathA = trim(xpathb)//'/@charge_excited'
+   IF (xml%versionNumber > 38) this%charge_excited = evaluateFirstOnly(xml%GetAttributeValue(xPathA))
+   xPathA = trim(xpathb)//'/@charge_shift'
+   IF (xml%versionNumber > 38) this%charge_shift = evaluateFirstOnly(xml%GetAttributeValue(xPathA))
+
+
    this%film =  xml%GetNumberOfNodes('/fleurInput/cell/filmLattice')==1
    ! Read in optional geometry optimization parameters
    xPathA = '/fleurInput/calculationSetup/geometryOptimization'
@@ -336,6 +348,7 @@ SUBROUTINE read_xml_input(this,xml)
    IF (numberNodes.EQ.1) THEN
       this%l_f = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_f'))
       if (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@f_level')>0) this%f_level = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@f_level'))
+      IF (xml%versionNumber > 38) this%l_driftForce = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_driftForce'))
       this%forcealpha = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@forcealpha'))
       this%epsdisp = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@epsdisp'))
       this%epsforce = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@epsforce'))
