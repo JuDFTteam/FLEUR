@@ -229,7 +229,17 @@ CONTAINS
                END DO
             END IF
          END IF
-         ! Compute derivatives of spherical Bessel functions
+      END DO
+      !CPP_OMP END PARALLEL DO
+      !$acc end kernels
+      
+      ! Compute derivatives of spherical Bessel functions
+      !CPP_OMP PARALLEL DO default(none) shared(lmax, fj, xvec, dfj, xlim) &
+      !CPP_OMP & private(i, l, x, fac)
+      !$acc kernels copyin(lmax, xvec,xlim)present(fj,dfj)
+      !$acc loop independent private(i, l, x, fac)
+      DO i = 1, nx
+         x = xvec(i)
          IF (x < xlim) THEN
             fac = 1.0/3.0
             dfj(0, i) = -fj(1, i)
@@ -243,7 +253,7 @@ CONTAINS
                dfj(l, i) = fj(l - 1, i) - (l + 1)*fj(l, i)/x
             END DO
          END IF
-      END DO
+      enddo   
       !CPP_OMP END PARALLEL DO
       !$acc end kernels
    END SUBROUTINE d_sphbes
