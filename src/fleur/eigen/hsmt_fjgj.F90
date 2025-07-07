@@ -102,14 +102,17 @@ CONTAINS
          !$acc loop private(k)
          DO k = 1, lapw%nv(intspin)
             !---> set up wronskians for the matching conditions for each ntype
-            !$acc loop vector private(l, jspin)
-            DO l = 0, atoms%lmax(n)
-               DO jspin = jspinStart, jspinEnd
+            !$acc loop seq 
+            DO jspin = jspinStart, jspinEnd
+               !$acc loop vector private(l)
+               DO l = 0, atoms%lmax(n)
                   ws(l, jspin) = (fpi_const/SQRT(cell%omtil))/(usdus%uds(l, n, jspin)*usdus%dus(l, n, jspin) &
                                                                - usdus%us(l, n, jspin)*usdus%duds(l, n, jspin))
                END DO
+               !$acc end loop
             end do
             !$acc end loop
+            !$acc loop seq 
             DO jspin = jspinStart, jspinEnd
                !$acc loop private(l)
                DO l = 0, atoms%lmax(n)
@@ -125,6 +128,7 @@ CONTAINS
                END DO
                !$acc end loop
             END DO
+            !$acc end loop
          END DO
          !$acc end kernels
       END DO
