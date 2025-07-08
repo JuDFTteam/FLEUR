@@ -96,12 +96,12 @@ SUBROUTINE update_b_cons(nococonv,atoms,noco,vtot,den)
       WRITE(attributes(2),'(f15.8)') nococonv%b_con(1,itype)
       WRITE(attributes(3),'(f15.8)') nococonv%b_con(2,itype)
       label="BConstraint"
-      CALL writeXMLElementFormPoly(label,(/'atomType','BConX','BConY'/),&
+      CALL writeXMLElementFormPoly(label,(/'atomType','BConX   ','BConY   '/),&
                         attributes,reshape((/8,7,7,6,15,15/),(/2,3/)))
       WRITE(attributes(2),'(f15.8)') b_con_outx
       WRITE(attributes(3),'(f15.8)') b_con_outy
       label="DeltaBConstraint"
-      CALL writeXMLElementFormPoly(label,(/'atomType ','DBConX','DBConY'/),&
+      CALL writeXMLElementFormPoly(label,(/'atomType ','DBConX   ','DBConY   '/),&
                         attributes,reshape((/8,9,9,6,15,15/),(/2,3/)))
 
    !--->    mix input and output constraint fields
