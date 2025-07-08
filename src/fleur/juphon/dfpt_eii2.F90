@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_dfpt_eii2
 
   use m_types
@@ -488,7 +493,7 @@ module m_dfpt_eii2
 
     use m_gaunt, only : gaunt1
     use m_sphbes
-    use m_jpGrVeff0, only : Phasy1nSym
+    use m_phasy1, only : Phasy1nSym
 
     implicit none
 

@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2021 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -974,7 +974,7 @@ CONTAINS
       USE m_types_mpimat
       USE m_dfpt_hs_int
       USE m_dfpt_hsmt
-      USE m_dfpt_eigen_redist_matrix
+      USE m_eigen_redist_matrix
 
       IMPLICIT NONE
 
@@ -1067,13 +1067,13 @@ CONTAINS
       IF (PRESENT(vmat2_final)) ALLOCATE (vmat2_final, mold=vmat2(1, 1))
 
       CALL timestart("Matrix redistribution")
-      CALL dfpt_eigen_redist_matrix(fmpi, lapw, lapw, fi%atoms, smat1, smat1_final)
-      CALL dfpt_eigen_redist_matrix(fmpi, lapw, lapw, fi%atoms, hmat1, hmat1_final, smat1_final)
-      CALL dfpt_eigen_redist_matrix(fmpi, lapwq, lapw, fi%atoms, smat1q, smat1q_final)
-      CALL dfpt_eigen_redist_matrix(fmpi, lapwq, lapw, fi%atoms, hmat1q, hmat1q_final, smat1q_final)
-      CALL dfpt_eigen_redist_matrix(fmpi, lapw, lapw, fi%atoms, smat2, smat2_final)
-      CALL dfpt_eigen_redist_matrix(fmpi, lapw, lapw, fi%atoms, hmat2, hmat2_final, smat2_final)
-      IF (PRESENT(vmat2_final)) CALL dfpt_eigen_redist_matrix(fmpi, lapw, lapw, fi%atoms, vmat2, vmat2_final)
+      CALL eigen_redist_matrix(fmpi, lapw,  fi%atoms, smat1, smat1_final)
+      CALL eigen_redist_matrix(fmpi, lapw,  fi%atoms, hmat1, hmat1_final, smat1_final)
+      CALL eigen_redist_matrix(fmpi, lapw, fi%atoms, smat1q, smat1q_final,lapwq=lapwq)
+      CALL eigen_redist_matrix(fmpi, lapw, fi%atoms, hmat1q, hmat1q_final, smat1q_final)
+      CALL eigen_redist_matrix(fmpi, lapw,  fi%atoms, smat2, smat2_final)
+      CALL eigen_redist_matrix(fmpi, lapw,  fi%atoms, hmat2, hmat2_final, smat2_final)
+      IF (PRESENT(vmat2_final)) CALL eigen_redist_matrix(fmpi, lapw, fi%atoms, vmat2, vmat2_final)
       CALL timestop("Matrix redistribution")
    END SUBROUTINE
 END MODULE m_dfpt_dynmat
