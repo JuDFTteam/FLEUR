@@ -176,6 +176,7 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="allElectronCharges" type="ChargeDensityType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="magneticMomentsInMTSpheres" type="MTMagneticMomentsType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="orbitalMomentsInMTSpheres" type="MTOrbMagneticMomentsType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="constrainingField" type="BConstraintType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="rdmft" type="RDMFTOutType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="totalEnergy" type="TotalEnergyType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="totalForcesOnRepresentativeAtoms" type="OutTotalForcesType"/>
@@ -448,6 +449,26 @@
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="localMagMoment" type="MagneticMomentVecType"/>         
       </xsd:sequence>
       <xsd:attribute name="units" type="xsd:string" use="optional"/>
+   </xsd:complexType>
+
+    <xsd:complexType name="BConstraintType">
+      <xsd:sequence maxOccurs="unbounded">
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="BConstraint" type="BConType"/>
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="DeltaBConstrain" type="DBConType"/>         
+      </xsd:sequence>
+      <xsd:attribute name="units" type="xsd:string" use="optional"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="BConType">
+      <xsd:attribute name="atomType" type="xsd:integer" use="required"/>
+      <xsd:attribute name="BConX" type="xsd:double" use="required"/>
+      <xsd:attribute name="BConY" type="xsd:double" use="required"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="DBConType">
+      <xsd:attribute name="atomType" type="xsd:integer" use="required"/>
+      <xsd:attribute name="DBConX" type="xsd:double" use="required"/>
+      <xsd:attribute name="DBConY" type="xsd:double" use="required"/>
    </xsd:complexType>
 
    <xsd:complexType name="MTOrbMagneticMomentsType">
