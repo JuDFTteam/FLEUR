@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<fleurOutput fleurOutputVersion="0.37">
-   <programVersion version="fleur 40">
-      <compilationInfo date="2025-06-16T16:31:51" user="bornhake" host="iff1146" flag="-fiopenmp -qmkl  -assume byterecl -no-wrap-margin -I/Data/ias-1/bornhake/clean_code/build.local/external/libxc" link="lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64;/usr/lib64/libxml2.so"/>
-      <gitInfo version="MaX-R7.2-269-gaa97a4abf-dirty" branch="develop" lastCommitHash="aa97a4abfbbf0a2457d0e99cba3a7ad0f4bc4669"/>
+<fleurOutput fleurOutputVersion="0.38">
+   <programVersion version="fleur 41">
+      <compilationInfo date="2025-07-09T16:27:35" user="bornhake" host="iff1146" flag="-fiopenmp -qmkl  -assume byterecl -no-wrap-margin -I/Data/ias-1/bornhake/clean_code/build.local/external/libxc" link="lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64;/usr/lib64/libxml2.so"/>
+      <gitInfo version="MaX-R8.0-8-g21b5249d2-dirty" branch="develop" lastCommitHash="21b5249d2acade2cca566658004cbc3a6cc20b0d"/>
       <targetComputerArchitectures>GEN</targetComputerArchitectures>
       <precision type="DOUBLE"/>
       <targetStructureClass> </targetStructureClass>
@@ -13,7 +13,7 @@
       <mpi mpiProcesses="1"/>
       <mem memoryPerNode="32336492 kB"/>
    </parallelSetup>
-   <startDateAndTime date="2025/06/16" time="17:03:39" zone="+0200"/>
+   <startDateAndTime date="2025/07/09" time="16:30:32" zone="+0200"/>
    <!-- Now follows a dump of the inp.xml file after evaluating the Schema -->
   <fleurInput fleurInputVersion="0.38">
      <comment>
@@ -29,11 +29,11 @@
   <magnetism jspins="1" l_noco="F" l_ss="F" l_J="F" swsp="F" lflip="F" l_onlyMtStDen="F" fixed_moment="0.0"/>
         <soc l_soc="F" theta="0.0" phi="0.0" spav="F" off="F" soc66="T"/>
         <expertModes spex="0" secvar="F" vdW="NONE" vdW_tol="0.0005" pot8="F" eig66="F" lpr="0" isec1="99" warp_factor="1.0"/>
-        <geometryOptimization l_f="F" forcealpha="1.0" forcemix="BFGS" epsdisp="0.00001" epsforce="0.00001" f_level="-1" l_driftForce="F" qfix="0" force_converged="0.00001"/>
+        <geometryOptimization l_f="F" forcealpha="1.0" forcemix="BFGS" epsdisp="0.00001" epsforce="0.00001" f_level="-1" qfix="0" force_converged="0.00001"/>
         <ldaU l_linMix="F" mixParam="0.05" spinf="1.0" l_adjEnpara="F" l_spinoffd="F" l_nonsphDC="F" l_initialGuess="F"/>
      </calculationSetup>
      <cell>
-        <bzIntegration valenceElectrons="11.0" mode="hist" fermiSmearingEnergy="0.0005" l_bloechl="F" charge_excited="0.0" charge_shift="0.0">
+        <bzIntegration valenceElectrons="11.0" mode="hist" fermiSmearingEnergy="0.0005" l_bloechl="F">
            <kPointListSelection listName="default-1"/>
            <kPointLists>
               <kPointList name="default-1" count="1" nx="1" ny="1" nz="1" type="mesh">
@@ -82,10 +82,10 @@
         <plotting iplot="0" polar="F" format="1">
            <plot TwoD="T" vec1="  1.0  0.0  0.0" vec2="  0.0  1.0  0.0" vec3="  0.0  0.0  1.0" zero="  0.0  0.0  0.0" file="plot" cartesian="F" grid="30 30 30" onlyMT="F" typeMT="0" vecField="F" edgesAllSides="T"/>
         </plotting>
-       <juPhon l_dfpt="T" startq="2" l_rm_qhdf="T" l_symVacLevel="F">
+       <juPhon l_dfpt="T" startq="2" l_rm_qhdf="T">
            <qVectors>
               <q> 0.0/16 0.0/16 0.0/16 </q>
-              <q> 0.0/16 1.0/16 1.0/16 </q>
+              <q> 0.0/16 4.0/16 4.0/16 </q>
            </qVectors>
         </juPhon>
         <chargeDensitySlicing numkpt="0" minEigenval="0.0" maxEigenval="0.0" nnne="0" pallst="F"/>
@@ -120,9 +120,9 @@
    <!-- END of dump of the inp.xml file -->
    <numericalParameters>
       <atomsInCell nat="1" ntype="1" jmtd="981" n_u="0" n_hia="0" n_opc="0"/>
-      <basis nvd="27" lmaxd="6" nlotot="0"/>
+      <basis nvd="31" lmaxd="6" nlotot="0"/>
       <density ng3="893" ng2="0"/>
-      <bands numbands="27"/>
+      <bands numbands="31"/>
       <volumes unitCell="73.5496552" interstitial="23.2465197">
          <mtVolume atomType="1" mtRadius="2.29000000" mtVolume="50.30313549"/>
       </volumes>
@@ -172,24 +172,24 @@
             <totalCharge value="29.0000000040"/>
          </allElectronCharges>
          <eigenvalues>
-            <eigenvaluesAt spin="1" ikpt="1" k_x="0.00000000" k_y="0.06250000" k_z="0.06250000">
-                      -0.0751920218        0.0512054610        0.0612400937        0.0978025999        0.1012817000
-                       0.1526415315        1.1639448024        1.2201262362        1.2269829616        1.2540343956
-                       1.5247016951        1.6709582517        1.6773043791        1.6834970225        2.0322537646
-                       2.0705678154        2.0826734816        2.6220167714        2.6261343926        2.7968291676
-                       3.2413806693        3.2427852984        3.3313295330        3.7783334228        3.8403554050
-                       3.8479330520        4.6069855465
+            <eigenvaluesAt spin="1" ikpt="1" k_x="0.00000000" k_y="0.25000000" k_z="0.25000000">
+                       0.0035523610        0.0722313428        0.0736440547        0.0785243194        0.1238347739
+                       0.1589710505        0.9497477254        0.9807474411        1.0634345770        1.1421999852
+                       1.2037545653        1.7253078342        1.7326507417        2.0846851360        2.1417504753
+                       2.2698410782        2.2871508855        2.2952327386        2.4664271608        3.0282619914
+                       3.1895687769        3.1977982567        3.4348235609        3.4716863412        3.7152152017
+                       3.7246250033        4.1399660744
             </eigenvaluesAt>
          </eigenvalues>
-         <bandgap value="27.5189639178" units="eV"/>
-         <sumValenceSingleParticleEnergies value="0.6253171972" units="Htr"/>
-         <FermiEnergy value="0.1526415315" units="Htr"/>
+         <bandgap value="21.5181295364" units="eV"/>
+         <sumValenceSingleParticleEnergies value="0.8625447543" units="Htr"/>
+         <FermiEnergy value="0.1589710505" units="Htr"/>
          <Phonons>
             <dynMat>
-               <frequencies iqpt="2" q_x="0.00000000" q_y="0.06250000" q_z="0.06250000" unit="1/cm">0.0000000000       48.5368030252 *******************</frequencies>
+               <frequencies iqpt="2" q_x=".00000000" q_y=".25000000" q_z=".25000000" unit="1/cm">-81.9715880456      169.2639440310   560788.6805331357</frequencies>
             </dynMat>
          </Phonons>
       </iteration>
    </scfLoop>
-   <endDateAndTime date="2025/06/16" time="17:03:40" zone="+0200"/>
+   <endDateAndTime date="2025/07/09" time="16:30:33" zone="+0200"/>
 </fleurOutput>

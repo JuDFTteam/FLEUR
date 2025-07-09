@@ -354,7 +354,7 @@ module m_dfpt_dynmat_eig
     WRITE(attributes(3),'(f0.8)') qvec(2)
     WRITE(attributes(4),'(f0.8)') qvec(3)
     attributes(5) = '1/cm'
-    CALL writeXMLElementPoly('frequencies',(/'iqpt', 'q_x ' , "q_y " , "q_z ",'unit'/), attributes, REAL(eigenFreqs) )
+    CALL writeXMLElementPoly('frequencies',(/'iqpt', 'q_x ' , "q_y " , "q_z ",'unit'/), attributes, REAL(eigenFreqs)+AIMAG(eigenFreqs))
     CALL closeXMLElement('dynMat')
     CALL closeXMLElement('Phonons')
   end subroutine CalculateFrequencies

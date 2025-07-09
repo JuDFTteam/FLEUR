@@ -240,6 +240,8 @@ CONTAINS
             qvecs = fi%juPhon%qvec
          END IF 
          qpts_loc = qpts
+         DEALLOCATE(qpts_loc%bk)
+         ALLOCATE(qpts_loc%bk,mold=qvecs)
          qpts_loc%bk(:, :SIZE(qvecs,2)) = qvecs
          ALLOCATE(q_list(SIZE(qvecs,2)))
          q_list = (/(iArray, iArray=1,SIZE(qvecs,2), 1)/)

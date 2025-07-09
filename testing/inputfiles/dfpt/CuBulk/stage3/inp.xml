@@ -69,7 +69,7 @@
      <juPhon l_dfpt="T" startq="2" l_rm_qhdf="T">
          <qVectors>
             <q> 0.0/16 0.0/16 0.0/16 </q>
-            <q> 0.0/16 1.0/16 1.0/16 </q>
+            <q> 0.0/16 4.0/16 4.0/16 </q>
          </qVectors>
       </juPhon>
       <chargeDensitySlicing numkpt="0" minEigenval="0.0" maxEigenval="0.0" nnne="0" pallst="F"/>
