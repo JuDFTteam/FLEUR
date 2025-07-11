@@ -56,7 +56,7 @@ Testset: DFPT
 -------------------
 ||Description|directory name|marks|Remarks
 |-|-----------|--------------|------|----
-| |Cu bulk fcc|dfpt/CuBulk|libxc |not ready yet
+|+|Cu bulk fcc|dfpt/CuBulk|libxc | parlty ready
 
 
 Testset: Noco
