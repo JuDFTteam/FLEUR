@@ -443,31 +443,52 @@ CONTAINS
       
    END SUBROUTINE read_xml_juPhon
 
-   SUBROUTINE init_juPhon(this,cell)
+   SUBROUTINE init_juPhon(this,cell,input)
 
     USE m_types_cell
+    USE m_types_input
     USE m_inv3
 
       CLASS(t_juPhon),     INTENT(INOUT) :: this
       TYPE(t_cell),    INTENT(IN)     :: cell
+      TYPE(t_input),   intent(in)     :: input
       INTEGER                            :: iDir
-      REAL                               :: qvec_ext(3), qvec_int(3),det,inv_bmat(3,3)!, qvec_full_int(3,3)
-      !PRINT*,"hallo"
-      !qvec_full_int(3,3) = 0.0
-      allocate(this%qvec_efield(3,3))
-      DO iDir = 1,3
-        qvec_ext(:) = 0.0
-        qvec_int(:) = 0.0
-        qvec_ext(iDir) = this%qlim
-        !print*,'cell%bmat',cell%bmat
-        !print*,'cell%amat',cell%amat
-        call inv3(cell%bmat,inv_bmat(:,:),det)
-        qvec_int = matmul(qvec_ext,transpose(inv_bmat))
-        !print*,"qvec_int",qvec_int
-        !print*,"qvec_int new",matmul(cell%amat,qvec_ext)
+      REAL                               :: qvec_ext(3), qvec_int(3),det,inv_bmat(3,3)
 
-        this%qvec_efield(iDir,:) = qvec_int
-      END DO
+
+      integer :: iq 
+      real :: tmp_vec(3)
+
+      if (this%l_efield) then  
+        allocate(this%qvec_efield(3,3))
+        do iDir = 1,3
+          qvec_ext(:) = 0.0
+          qvec_int(:) = 0.0
+          qvec_ext(iDir) = this%qlim
+          call inv3(cell%bmat,inv_bmat(:,:),det)
+          qvec_int = matmul(qvec_ext,transpose(inv_bmat))
+          this%qvec_efield(iDir,:) = qvec_int
+        end do 
+      end if 
+
+      if (input%film) then
+        ! Due to stability we do not calculate the Gamma-Point in the case of 
+        ! Film-DFPT but slighlty next to it  
+       do iq = 1 , size(this%qvec,2)
+        if (norm2(this%qvec(:,iq)) .LT. 1e-8 ) then 
+                  tmp_vec=0.0
+                  if (iq == 1 ) then ! starting q-Point --> interpolate to iQ+1
+                     tmp_vec = this%qvec(:,iq+1) - this%qvec(:,iq) 
+                  ELSE ! interpolate to iQ-1 
+                     tmp_vec = this%qvec(:,iq-1) - this%qvec(:,iq) 
+                  ENd IF 
+                  ! construct a vector with length 1 
+                  tmp_vec = tmp_vec / norm2(tmp_vec)
+                  ! add to the gamma point
+                  this%qvec(:,iq) = this%qvec(:,iq) + this%qlim*tmp_vec  
+          end if  
+        end do 
+      end if 
 
 
    END SUBROUTINE init_juPhon

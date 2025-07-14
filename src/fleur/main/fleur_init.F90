@@ -169,10 +169,10 @@ CONTAINS
       CALL storeStructureIfNew(fi%input, stars, fi%atoms, fi%cell, fi%vacuum,  fi%sym, fmpi, sphhar, fi%noco)
       CALL make_stars(stars, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi)
       CALL make_forcetheo(forcetheo_data, fi%cell, fi%sym, fi%atoms, forcetheo)
+      CALL fi%juPhon%init(fi%cell,fi%input) ! This is needed for the dim of lapw basis 
       CALL lapw_dim(fi%kpts, fi%cell, fi%input, fi%noco, nococonv,   forcetheo, fi%atoms, nbasfcn, fi%juPhon)
       CALL fi%input%init(fi%noco, fi%hybinp%l_hybrid,fi%sym%invs,fi%atoms%n_denmat,fi%atoms%n_hia,lapw_dim_nbasfcn)
       CALL fi%hybinp%init(fi%atoms, fi%cell, fi%input,   fi%sym, xcpot)
-      CALL fi%juPhon%init(fi%cell)
       l_timeReversalCheck = .FALSE.
       IF(.NOT.fi%banddos%band.AND..NOT.fi%banddos%dos) THEN
          IF(fi%noco%l_soc.OR.fi%noco%l_ss) l_timeReversalCheck = .TRUE.

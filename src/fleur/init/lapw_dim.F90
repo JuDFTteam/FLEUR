@@ -65,8 +65,9 @@ CONTAINS
 
     !Determine the q-vector(s) to use
     IF (juPhon%l_dfpt) THEN
-       ALLOCATE(q_vectors(3,SIZE(juPhon%qvec,2)))
-       q_vectors=juPhon%qvec
+       ALLOCATE(q_vectors(3,SIZE(juPhon%qvec,2)+1))
+       q_vectors = 0.0 ! with this we force the gamma point to be within the dim search 
+       q_vectors(:,:size(juPhon%qvec,2))=juPhon%qvec
     ELSE
        SELECT TYPE(forcetheo)
        TYPE IS (t_forcetheo_ssdisp)
@@ -84,7 +85,7 @@ CONTAINS
        END SELECT
     END IF
 
-    if (any(abs(nococonv%qss-q_vectors(:,1))>1E-4)) CALL judft_warn("q-vector for self-consistency should be first in list for force-theorem")
+    if (.not. juPhon%l_dfpt .AND. any(abs(nococonv%qss-q_vectors(:,1))>1E-4)) CALL judft_warn("q-vector for self-consistency should be first in list for force-theorem")
 
 
     nvd = 0 ; nv2d = 0
