@@ -471,7 +471,7 @@ CONTAINS
         end do 
       end if 
 
-      if (input%film) then
+      if (input%film .and. allocated(this%qvec)) then
         ! Due to stability we do not calculate the Gamma-Point in the case of 
         ! Film-DFPT but slighlty next to it  
        do iq = 1 , size(this%qvec,2)
