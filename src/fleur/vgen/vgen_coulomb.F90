@@ -68,15 +68,15 @@ contains
     integer                                      :: i, i3, irec2, irec3, ivac, j, js, k, k3
     integer                                      :: lh, n, nzst1, first_star
     integer                                      :: imz, imzxy, ichsmrg, ivfft
-    integer                                      :: l, nat
-    real                                         :: ani, g3, z
+    integer                                      :: l, nat , ncsh
+    real                                         :: ani, g3, z , sigmaa(2)
     complex                                      :: sig1dh, vz1dh, vmz1dh, vmz1dh_is, constantShift
     complex                                      :: mat2ord(5,3,3), sigma_loc(2), sigma_loc2(2)
     complex, allocatable                         :: alphm(:,:), psq(:)
     real,    allocatable                         :: af1(:), bf1(:)
     real                                         :: gaussian, sigma ! smoothing function in case of DFPT + Film 
     LOGICAL :: l_dfptvgen ! If this is true, we handle things differently!
-    LOGICAL :: l_2ndord, l_corr
+    LOGICAL :: l_2ndord, l_corr , l_gradientEfield
 
 #ifdef CPP_MPI
     integer:: ierr
@@ -88,6 +88,10 @@ contains
     vmz1dh_is = cmplx(0.0,0.0)
     sigma_loc = CMPLX(0.0,0.0) !sigma_disc
     sigma_loc2 = CMPLX(0.0,0.0) !MERGE(sigma_disc,cmplx(0.0,0.0),PRESENT(sigma_disc2))
+    l_gradientEfield = .FALSE. 
+    if (present(iDtype)) then 
+      if (iDtype==0 .and. .not. ALL(ABS(den%pw)<1e-12)) l_gradientEfield = .TRUE. 
+    end if
 
     vintcza = cmplx(0.0,0.0)
     sig1dh = cmplx(0.0,0.0)
@@ -131,10 +135,10 @@ contains
           ! start at star 1 instead of 2 for this!
           if (.not.l_2ndord) then
             !call vvac( vacuum, stars, cell,  input, field, psq, den%vac(:,1,:,ispin), vCoul%vac(:,1,:,ispin), rhobar, sig1dh, vz1dh,vslope,.FALSE..AND.l_dfptvgen,vmz1dh,sigma_disc )
-            call vvac( vacuum, stars, cell,  input, field, psq, den%vac(:,1,:,ispin), vCoul%vac(:,1,:,ispin), rhobar, sig1dh, vz1dh,vslope,l_corr,vmz1dh,sigma_disc )
+            call vvac( vacuum, stars, cell,  input, field, psq, den%vac(:,1,:,ispin), vCoul%vac(:,1,:,ispin), rhobar, sig1dh, vz1dh,vslope,l_corr,vmz1dh,sigma_disc,l_dfptvgen )
           else
             !call vvac( vacuum, stars, cell,  input, field, psq, den%vac(:,1,:,ispin), vCoul%vac(:,1,:,ispin), rhobar, sig1dh, vz1dh,vslope,.TRUE.,vmz1dh,sigma_disc,sigma_disc2 )
-            call vvac( vacuum, stars, cell,  input, field, psq, den%vac(:,1,:,ispin), vCoul%vac(:,1,:,ispin), rhobar, sig1dh, vz1dh,vslope,l_corr,vmz1dh,sigma_disc,sigma_disc2 )
+            call vvac( vacuum, stars, cell,  input, field, psq, den%vac(:,1,:,ispin), vCoul%vac(:,1,:,ispin), rhobar, sig1dh, vz1dh,vslope,l_corr,vmz1dh,sigma_disc,l_dfptvgen,sigma_disc2 )
           end if
         end if
         call vvacis( stars, vacuum, cell, psq, input, field, vCoul%vac(:vacuum%nmzxyd,:,:,ispin), l_dfptvgen, l_corr )
@@ -213,6 +217,27 @@ contains
         end do
         if (l_dfptvgen .AND. juphon%l_symVacLevel) vCoul%vac(:,1,:,ispin) = vCoul%vac(:,1,:,ispin) + constantShift
         sigma_disc = sigma_loc
+        if (l_gradientEfield) then 
+          if (iDir == 3 ) then 
+                sigmaa(1) = ( field%efield%sigma + field%efield%sig_b(1) ) / cell%area
+                sigmaa(2) = ( field%efield%sigma + field%efield%sig_b(2) ) / cell%area
+                
+                if ( (sigmaa(1) + sigmaa(2)) .lt.  1E-8 ) then 
+                  ! Asymmetric setup in which an Efield contribution exists inside the film  
+                  vCoul%pw(1,:) = vCoul%pw(1,:) -   fpi_const * sigmaa(1) !/ cell%omtil  
+                end if 
+                
+                ! vacuum contribution
+                ! obtain mesh point (ncsh) of charge sheet for external electric field
+                ncsh = field%efield%zsigma / vacuum%delz + 1.01
+                do i = 1 , ncsh 
+                  ! vacuum 1 
+                  vCoul%vac(i,1,1,:) = vCoul%vac(i,1,1,:) - fpi_const * sigmaa(1)
+                  ! vacuum 2 
+                  vCoul%vac(i,1,2,:) = vCoul%vac(i,1,2,:) + fpi_const * sigmaa(2) 
+                end do 
+            end if
+        end if 
       ! in case of a bulk system:
       else if ( .not. input%film ) then
         if ( vCoul%potdenType == POTDEN_TYPE_POTYUK ) then
