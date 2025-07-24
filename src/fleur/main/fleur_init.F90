@@ -229,7 +229,16 @@ CONTAINS
          CALL setStartingDensity(fi%noco%l_noco)
       END IF
 
-      if(fi%hybinp%l_hybrid) call load_hybrid_data(fi, fmpi, hybdat, mpdata)
+      if(fi%hybinp%l_hybrid) THEN
+         call load_hybrid_data(fi, fmpi, hybdat, mpdata)
+         CALL load_state_weights_hybrid(fi, fmpi, results)
+#ifdef CPP_MPI
+         IF (ALLOCATED(results%w_iks)) THEN
+            CALL MPI_BCAST(results%w_iks, SIZE(results%w_iks), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr(1))
+         END IF
+#endif
+         hybdat%results = results
+      END IF
 
       !new check mode will only run the init-part of FLEUR
       IF (judft_was_argument("-check")) THEN  

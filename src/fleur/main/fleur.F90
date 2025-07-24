@@ -76,6 +76,7 @@ CONTAINS
       USE m_make_stars
       USE m_dfpt_vefield
       USE m_checkdopall
+      USE m_store_load_hybrid
 
 !$    USE omp_lib
 
@@ -466,6 +467,7 @@ CONTAINS
                CALL fermie(eig_id, fmpi, fi%kpts, fi%input, fi%noco, enpara%epara_min, fi%cell, results)
                IF (fi%hybinp%l_hybrid) hybdat%results = results
             ENDIF
+            IF (fi%hybinp%l_hybrid) CALL store_state_weights_hybrid(fi, fmpi, results)
 #ifdef CPP_MPI
             CALL MPI_BCAST(results%ef, 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
             CALL MPI_BCAST(results%w_iks, SIZE(results%w_iks), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
