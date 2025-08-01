@@ -135,7 +135,7 @@ CONTAINS
       REAL, ALLOCATABLE :: realCoeffs(:, :), imagCoeffs(:, :), workTrans_r(:, :)
       REAL, ALLOCATABLE :: fgpl(:, :)
       COMPLEX, ALLOCATABLE :: s2h_e(:, :)
-      COMPLEX, ALLOCATABLE :: work_c(:, :), workTrans_c(:, :), workTrans_cf(:, :)
+      COMPLEX, ALLOCATABLE :: work_c(:, :), workTrans_c(:, :), workTrans_cf(:, :),work_lo(:)
       COMPLEX, ALLOCATABLE :: abCoeffs(:, :)
       COMPLEX, ALLOCATABLE :: abTemp(:, :)
       COMPLEX, ALLOCATABLE :: helpMat_force(:, :)
@@ -153,10 +153,11 @@ CONTAINS
       ALLOCATE (abTemp(SIZE(this%cof, 1), 0:2*SIZE(this%cof, 2) - 1))
       ALLOCATE (fgpl(3, MAXVAL(lapw%nv)))
       ALLOCATE (work_c(MAXVAL(lapw%nv), ne))
+      ALLOCATE (work_lo(ne))
 
 ! Initializations
       acof_size = size(this%cof, 1)
-!$acc enter data create(abTemp,fjgj,fjgj%fj,fjgj%gj,work_c,abcoeffs)
+!$acc enter data create(abTemp,fjgj,fjgj%fj,fjgj%gj,work_c,work_lo,abcoeffs)
       
 
 !Use inversion symmetry explicitely
@@ -296,16 +297,16 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
                   nbasf = lapw%nv(iintsp) + lapw%index_lo(lo, iatom) + nkvec
                   if (noco%l_noco) Then
                      if (noco%l_ss) THEN
-                        work_c(:ne, 1) = ccchi(iintsp, jspin)*zMat%data_c((iintsp - 1)*(lapw%nv(1) + atoms%nlotot) + nbasf, :ne)
+                        work_lo(:ne) = ccchi(iintsp, jspin)*zMat%data_c((iintsp - 1)*(lapw%nv(1) + atoms%nlotot) + nbasf, :ne)
                      else
-                        work_c(:ne, 1) = ccchi(1, jspin)*zMat%data_c(nbasf, :ne) + &
+                        work_lo(:ne) = ccchi(1, jspin)*zMat%data_c(nbasf, :ne) + &
                                          ccchi(2, jspin)*zMat%data_c(lapw%nv(1) + atoms%nlotot + nbasf, :ne)
                      END IF
                   ELSE
                      if (zmat%l_real) Then
-                        work_c(:ne, 1) = zmat%data_r(nbasf, :ne)
+                        work_lo(:ne) = zmat%data_r(nbasf, :ne)
                      else
-                        work_c(:ne, 1) = zmat%data_c(nbasf, :ne)
+                        work_lo(:ne) = zmat%data_c(nbasf, :ne)
                      end if
                   end if
 
@@ -317,7 +318,7 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
                   DO m = -l, l
                      lm = l*(l + 1) + m
                      DO i = 1, ne
-                        ctmp = term1*conjg(ylm(lm + 1))*work_c(i, 1)
+                        ctmp = term1*conjg(ylm(lm + 1))*work_lo(i)
                         this%cof(i, lm, 1, iatom_l) = this%cof(i, lm, 1, iatom_l) + ctmp*alo1(lo, jspin)
                         this%cof(i, lm, 2, iatom_l) = this%cof(i, lm, 2, iatom_l) + ctmp*blo1(lo, jspin)
                         this%cof(i, lm, n_l(l), iatom_l) = this%cof(i, lm, n_l(l), iatom_l) + ctmp*clo1(lo, jspin)
