@@ -455,6 +455,8 @@ CONTAINS
          !end do
          !stop
          IF (fi%juPhon%l_efield) THEN
+            !print*,"I make it here"
+            
             ALLOCATE(born_eff_charge(fi_nosym%atoms%ntype,3,3))
             ALLOCATE(born_eff_charge_contributions(fi_nosym%atoms%ntype,3,3,1+fi_nosym%atoms%ntype))
             born_eff_charge = CMPLX(0.0)
@@ -463,7 +465,7 @@ CONTAINS
             ALLOCATE(diel_tensor(3,3))
             diel_tensor = CMPLX(0,0)
             IF (fmpi%irank==0) WRITE(*,*) "Scf calculation for electric field perturbation"
-            DO iDir = 1,3 !for all cartesian directions
+            DO iDir =1,3 !for all cartesian directions
                !Define "qlim"-vector in internal coordinates
                dfpt_tag = ''
                WRITE(dfpt_tag,'(a1,i0,a2,i0)') 'q', 1, '_j', iDir
@@ -512,7 +514,8 @@ CONTAINS
                CALL vC1Im%reset_dfpt()
                CALL results1%reset_results(fi_nosym%input)
                IF (fmpi%irank==0) WRITE(*,*) '-------------------------'
-
+               !print*,"before sternheimer"
+               !stop
                CALL timestart("Sternheimer")
                CALL dfpt_sternheimer(fi_nosym, xcpot_nosym, sphhar_nosym, stars_nosym, starsq, nococonv_nosym, qintpts, fmpi_nosym, results_nosym, q_results, enpara_nosym, hybdat_nosym, &
                                     rho_nosym, vTot_nosym, grRho3(iDir), grVtot3(iDir), grVext3(iDir), 1, 1, iDir, &
@@ -520,6 +523,8 @@ CONTAINS
                                     denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, MERGE(sigma_ext,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir==3), &
                                     MERGE(sigma_coul,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir==3))
                CALL timestop("Sternheimer")
+               !print*,"sum(denIn1%pw)",sum(denIn1%pw)
+               !print*,"sum(denIn1%mt)",sum(denIn1%mt)
                IF (fmpi%irank==0) WRITE(*,*) '-------------------------'  
                CALL dfpt_dielecten_HF_int(fi_nosym,stars_nosym,starsq,sphhar_nosym,fmpi_nosym,denIn1,denIn1Im,results_nosym, results1,diel_tensor(iDir,:),rho,iDir,1)
                IF (fi%juPhon%l_borneffcharge) THEN
@@ -532,7 +537,8 @@ CONTAINS
             CALL timestart("diel_tensor")
             IF (fmpi%irank==0) THEN
                WRITE(*,*) "Scf calculation for electric field perturbation finished"
-               CALL dfpt_dielecten_final(fi_nosym,diel_tensor(:,:))
+               !CALL dfpt_dielecten_final(fi_nosym,diel_tensor(:,:))
+               CALL dfpt_dielecten_final_new(fi_nosym,diel_tensor(:,:))
             END IF 
 
             IF (fi%juPhon%l_borneffcharge) THEN
