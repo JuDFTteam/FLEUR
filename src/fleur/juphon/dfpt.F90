@@ -373,13 +373,13 @@ CONTAINS
       DO iDir = 1, 3
          CALL sh_to_lh(fi_nosym%sym, fi_nosym%atoms, sphhar_nosym, SIZE(rho_nosym%mt,4), 2, grrhodummy(:, :, :, :, iDir), grRho3(iDir)%mt, imagrhodummy%mt)
          CALL imagrhodummy%resetPotDen()
-         write(oUnit, *) "grVeff", iDir
+         if (fmpi%irank==0) write(oUnit, *) "grVeff", iDir
          sigma_loc  = cmplx(0.0,0.0)
          IF (iDir==3) sigma_loc  = sigma_coul
          CALL dfpt_vgen(hybdat_nosym, fi_nosym%field, fi_nosym%input, xcpot_nosym, fi_nosym%atoms, sphhar_nosym, stars_nosym, fi_nosym%vacuum, fi_nosym%sym, &
                         fi%juphon, fi_nosym%cell, fmpi_nosym, fi_nosym%noco, nococonv_nosym, rho_nosym, vTot_nosym, &
                         stars_nosym, imagrhodummy, grVtot3(iDir), .TRUE., grvextdummy, grRho3(iDir), 0, iDir, [0,0], sigma_loc)
-         write(oUnit, *) "grVC", iDir
+         if (fmpi%irank==0) write(oUnit, *) "grVC", iDir
          sigma_loc  = cmplx(0.0,0.0)
          IF (iDir==3) sigma_loc  = sigma_coul
          CALL dfpt_vgen(hybdat_nosym, fi_nosym%field, fi_nosym%input, xcpot_nosym, fi_nosym%atoms, sphhar_nosym, stars_nosym, fi_nosym%vacuum, fi_nosym%sym, &
@@ -877,10 +877,7 @@ CONTAINS
 
       DEALLOCATE(recG)
 
-      WRITE (oUnit,*) '------------------------------------------------------'
-
-      CALL timestop("juPhon DFPT")
-      CALL juDFT_end("Phonon calculation finished.",fmpi%irank)
+      if (fmpi%irank==0) WRITE (oUnit,*) '------------------------------------------------------'
 
     END SUBROUTINE dfpt
 

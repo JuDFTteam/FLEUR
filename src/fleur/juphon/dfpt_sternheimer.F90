@@ -203,7 +203,7 @@ CONTAINS
          ! Veff1 every other time
          CALL timestart("Generation of potential perturbation")
          IF (strho) THEN
-            write(oUnit, *) "vExt1", iDir
+            if (fmpi%irank==0) write(oUnit, *) "vExt1", iDir
             sigma_loc = cmplx(0.0,0.0)
             !IF (iDir==3) sigma_loc = -sigma_disc
             CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
@@ -220,7 +220,7 @@ CONTAINS
                               starsmq,denIn1mIm,vTot1m,.FALSE.,vTot1mIm,denIn1m,iDtype,iDir,[1,1],sigma_loc)!-?
             END IF
          ELSE
-            write(oUnit, *) "vEff1", iDir
+            if (fmpi%irank==0) write(oUnit, *) "vEff1", iDir
             sigma_loc = cmplx(0.0,0.0)
             !IF (iDir==3) sigma_loc = -sigma_disc2
             CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
@@ -237,7 +237,7 @@ CONTAINS
 
          ! For the calculation of the dynamical matrix, we need VC1 additionally
          IF (final_SH_it) THEN
-            write(oUnit, *) "vC1", iDir
+            if (fmpi%irank==0) write(oUnit, *) "vC1", iDir
             sigma_loc = cmplx(0.0,0.0)
             !IF (iDir==3) sigma_loc = -sigma_disc2
             CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
