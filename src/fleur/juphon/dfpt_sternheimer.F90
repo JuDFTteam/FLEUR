@@ -144,7 +144,6 @@ CONTAINS
          onedone = .NOT.strho  ! Was at least one iteration done yet?
          final_SH_it = .FALSE. ! Is the density perturbation converged and the last SH run started?
       END IF
-      print*,"strho",strho
 #ifdef CPP_MPI
       CALL MPI_BCAST(strho,1,MPI_LOGICAL,0,fmpi%mpi_comm,ierr)
       CALL MPI_BCAST(onedone,1,MPI_LOGICAL,0,fmpi%mpi_comm,ierr)
@@ -155,16 +154,11 @@ CONTAINS
       iter = 0
       iterm = 0
       l_cont = (iter < fi%input%itmax)
-      !stop
-      print*,"l_exist",l_exist
-      IF (fmpi%irank==0) print*,"irank0"
-      IF (fmpi%irank==0.AND.l_exist) print*,"true"
       IF (fmpi%irank==0.AND.l_exist) CALL readDensity(starsq, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
                                                       fi%input, fi%sym, archiveType, CDN_INPUT_DEN_const, 0, &
                                                       results%ef, results%last_distance, l_dummy, denIn1,  &
                                                       inFilename=TRIM(dfpt_tag),denIm=denIn1Im)
-      !stop
-                                                      IF (fmpi%irank==0.AND.l_exist.AND.l_minusq) CALL readDensity(starsmq, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
+      IF (fmpi%irank==0.AND.l_exist.AND.l_minusq) CALL readDensity(starsmq, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
                                                       fi%input, fi%sym, archiveType, CDN_INPUT_DEN_const, 0, &
                                                       results%ef, results%last_distance, l_dummy, denIn1m,  &
                                                       inFilename=TRIM(dfpt_tag)//'m',denIm=denIn1mIm)
@@ -212,7 +206,6 @@ CONTAINS
          ! Vext1 for the starting perturbation
          ! Veff1 every other time
          CALL timestart("Generation of potential perturbation")
-         print*,"strho",strho
          IF (strho) THEN
             !print*,"doing vext1 in 1st perturbation"
             write(oUnit, *) "vExt1", iDir
@@ -246,7 +239,6 @@ CONTAINS
                               starsmq,denIn1mIm,vTot1m,.TRUE.,vTot1mIm,denIn1m,iDtype,iDir,[1,1],sigma_loc)
             END IF
          END IF
-         print*,"sum(vTot1%pw) in sternheimer",sum(vTot1%pw)
          ! For the calculation of the dynamical matrix, we need VC1 additionally
          IF (final_SH_it) THEN
             write(oUnit, *) "vC1", iDir
@@ -334,8 +326,6 @@ CONTAINS
          ! Calculate the perturbed expansion coefficients z1 --> saved to results1
          CALL timestart("dfpt eigen")
          IF (.NOT.final_SH_it) THEN
-            print*,"sum(vTot1%pw) in sternheimer",sum(vTot1%pw)
-            print*,"sum(vTot1%pw) in sternheimer",vTot1%pw
             CALL dfpt_eigen(fi, sphhar, results, resultsq, results1, fmpi, enpara, nococonv, starsq, vTot1, vTot1Im, &
                                 vTot, rho, bqpt, eig_id, q_eig_id, dfpt_eig_id, iDir, iDtype, killcont, l_real, .TRUE.)
          ELSE
@@ -448,7 +438,6 @@ CONTAINS
          ! If a starting density perturbation was to be generated, subtract the density
          ! gradient and exit here; no mixing yet!
          IF (strho) THEN
-            print*, "strho",strho
             strho = .FALSE.
             !print*,"sum(denOut1%pw(:,:))",sum(denOut1%pw(:,:))
             denIn1 = denOut1

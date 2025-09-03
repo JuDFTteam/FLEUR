@@ -537,7 +537,6 @@ CONTAINS
             CALL timestart("diel_tensor")
             IF (fmpi%irank==0) THEN
                WRITE(*,*) "Scf calculation for electric field perturbation finished"
-               !CALL dfpt_dielecten_final(fi_nosym,diel_tensor(:,:))
                CALL dfpt_dielecten_final_new(fi_nosym,diel_tensor(:,:))
             END IF 
 

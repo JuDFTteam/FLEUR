@@ -84,7 +84,7 @@ module m_dfpt_dielecten
                 ! call make_stars 
                 tempval_pw = CMPLX(0.0,0.0)
                 qvec_int=fi%juPhon%qvec_efield(iDir_col,:)
-                print*,"qvec_int",qvec_int
+                !print*,"qvec_int",qvec_int
                 CALL starsq_vext%reset_stars()
                 CALL make_stars(starsq_vext, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, qvec_int, 1, iDir_col,fi%juPhon%l_efield)
                 starsq_vext%ufft = starsq%ufft
@@ -110,16 +110,7 @@ module m_dfpt_dielecten
                 call save_npy(vextsave_string, vExt1Im%mt(:,:,:,1))
                 if (iDir_col .eq. iDir_den) then
                     !interstitial
-                    print*,"sum(denIn1_pw)",sum(denIn1_pw(:))
-                    ! IR integral:
                     pwwq2 = CMPLX(0.0,0.0)
-                    !print*,"shape(stars%ig(:,:,:))",shape(stars%ig(:,:,:))
-                    !print*,"stars%nstr",stars%nstr
-                    !print*,"shape(starsq%ig(:,:,:))",shape(starsq%ig(:,:,:))
-                    !print*,"starsq%nstr",starsq%nstr
-                    !print*,"stars%ng3",stars%ng3
-                    !print*,"starsq%ng3",starsq%ng3
-                    !print*,"starsq_vext%ng3",starsq_vext%ng3
                     
                     CALL dfpt_convol_big(1, starsq , stars, vExt1%pw(:,1), CMPLX(1.0,0.0)*stars%ufft, pwwq2)!starsq
                     call save_npy("pwwq2.npy",pwwq2)
@@ -131,8 +122,8 @@ module m_dfpt_dielecten
                     !end if 
 
                     !Muffin-tin 
-                    print*,"den1_dir",iDir_den
-                    print*,"iDir_col",iDir_col
+                    !print*,"den1_dir",iDir_den
+                    !print*,"iDir_col",iDir_col
                     do iType = 1, fi%atoms%ntype
                         tempval_mt = CMPLX(0.0,0.0) 
             
@@ -173,36 +164,6 @@ module m_dfpt_dielecten
             
         end subroutine dfpt_dielecten_HF_int
 
-        subroutine dfpt_dielecten_final(fi, dielecten)
-
-            type(t_fleurinput), intent(in)    :: fi
-            complex, intent(inout)   :: dielecten(:,:)
-            integer                  :: iDir, j 
-            complex                  :: dielten_iden(3,3) 
-
-            dielten_iden(:,:) =0
-            DO j = 1,3
-                dielten_iden(j,j) = CMPLX(1,0)
-             END DO
-            dielecten(:,:) = dielten_iden(:,:) - (fpi_const/fi%cell%omtil)*dielecten(:,:)
-            !print*,"(fpi_const/fi%cell%omtil)",(fpi_const/fi%cell%omtil)
-            !print*,"(fpi_const/fi%cell%vol)",(fpi_const/fi%cell%vol)
-            open( 110, file="diel_tensor_old", status='replace', action='write', form='formatted')
-            write(*,*) '-------------------------' 
-            write(*,*) "Dielectric tensor" 
-            do iDir = 1,3
-               do j = 1,2
-                  write(110,'(2es16.8)', ADVANCE='NO') dielecten(iDir,j) 
-                  write(110, '(A)', ADVANCE='NO') ' ' 
-                  write(*,'(2es16.8)', ADVANCE='NO') dielecten(iDir,j)
-                  write(*, '(A)', ADVANCE='NO') ' ' 
-               end do
-               write(110,'(2es16.8)')dielecten(iDir,3)
-               write(*,'(2es16.8)')dielecten(iDir,3)
-            end do
-            close(110)
-            write(*,*) '-------------------------' 
-        end subroutine dfpt_dielecten_final
 
         subroutine dfpt_dielecten_final_new(fi, dielecten)
 
@@ -224,7 +185,6 @@ module m_dfpt_dielecten
             dielecten(:,:) = cmplx(0.0,0.0)
             !print*,"dielecten_inv.real(:,:)",real(dielecten_inv)
             call inv3(real(dielecten_inv),dielecten_r,det)
-            print*,"dielecten_r",dielecten_r
             dielecten = dielecten_r
             !print*,"(fpi_const/fi%cell%omtil)",(fpi_const/fi%cell%omtil)
             !print*,"(fpi_const/fi%cell%vol)",(fpi_const/fi%cell%vol)
