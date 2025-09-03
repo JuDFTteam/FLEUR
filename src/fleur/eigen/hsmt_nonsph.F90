@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -59,7 +59,7 @@ CONTAINS
       TYPE(t_fjgj) :: fjgjPr
 
       CALL timestart("non-spherical setup")
-
+      CALL timestart("nonsph-init")
       l_samelapw = .FALSE.
       IF (.NOT.PRESENT(lapwq)) l_samelapw = .TRUE.
       IF (.NOT.l_samelapw) THEN
@@ -125,7 +125,7 @@ CONTAINS
       data_c(:, :)=0.0
       !$acc end kernels
 #endif
-
+      CALL timestop("nonsph-init")
       DO nn = 1,atoms%neq(n)
          na = atoms%firstAtom(n) - 1 + nn
          IF ((sym%invsat(na)==0) .OR. (sym%invsat(na)==1)) THEN
@@ -139,7 +139,7 @@ CONTAINS
             CALL hsmt_ab(sym, atoms, noco, nococonv, ilSpin, igSpin, n, na, cell, &
                        & lapw, fjgj, abCoeffs, ab_size, .TRUE.)
             CALL timestop("hsmt_ab_1")
-
+            CALL timestart("zgemm1")
             IF (l_samelapw.AND.(ilSpinPr==ilSpin)) THEN
                !!$acc update device(ab)
                !$acc host_data use_device(abCoeffs,ab1,h_loc)
@@ -155,6 +155,7 @@ CONTAINS
                             & cmplx(0.0, 0.0), ab1, size_ab)
                !$acc end host_data
             END IF
+            CALL timestop("zgemm1")
 
             ! ab1 = MATMUL(TRANSPOSE(abCoeffs(:ab_size,:lapw%nv(igSpin))),h_loc(:ab_size,:ab_size,n,ilSpin))
             ! In locally diagonal case:
@@ -163,6 +164,7 @@ CONTAINS
             ! ab1 = a^H * t (potential matrix in lmp lm etc.)
             ! .NOT.l_samelapw:
             ! ab1 = a^H * t^H
+            CALL timestart("select")
 
             ! Of these ab1 coeffs only a part is needed in case of MPI parallelism
             !$acc kernels default(none) present(ab_select,ab1)copyin(fmpi)
@@ -172,11 +174,13 @@ CONTAINS
                ab_select(:, :) = ab1(:, :) !All of ab1 needed
             END IF
             !$acc end kernels
+            CALL timestop("select")
 
             IF (igSpinPr==igSpin) THEN
                IF (ilSpinPr==ilSpin) THEN
                   IF (l_samelapw) THEN
                      IF (fmpi%n_size==1) THEN !use z-herk trick on single PE
+                        CALL timestart("zherk")
                         !$acc host_data use_device(data_c,ab1)
                         IF (set0 .and. nn == 1) THEN
                            !CPP_data_c = CMPLX(0.0,0.0)
@@ -190,7 +194,11 @@ CONTAINS
                         ! conjgsolve:
                         ! data_c += Rchi * a^H * H * a
                         ! [only upper triangle]
+                        CALL timestop("zherk")
+
                      ELSE ! zgemm case
+                        CALL timestart("zgemm2")
+
                         !$acc host_data use_device(data_c,ab1,ab_select)
                         IF (set0 .and. nn == 1) THEN
                            !CPP_data_c = CMPLX(0.0,0.0)
@@ -203,6 +211,8 @@ CONTAINS
                                         & CMPLX(1.0, 0.0), CPP_data_c, size_data_c)
                         END IF
                         !$acc end host_data
+                        CALL timestop("zgemm2")
+
                         ! conjgsolve:
                         ! ab_select = a^H * L
                         ! ab1 = a^H * L
@@ -215,6 +225,7 @@ CONTAINS
                                 & lapwPr, fjgjPr, abCoeffsPr, ab_size, .TRUE.)
                      !!$acc update device (abCoeffsPr)
                      CALL timestop("hsmt_ab_2")
+                     CALL timestart("zgemm3")
 
                      !$acc host_data use_device(abCoeffsPr,data_c,ab1,ab_select)
                      IF (set0 .and. nn == 1) THEN
@@ -227,6 +238,8 @@ CONTAINS
                                      & CMPLX(1.0, 0.0), CPP_data_c, SIZE_data_c)
                      END IF
                      !$acc end host_data
+                     CALL timestop("zgemm3")
+
                      ! data_c += chi * aq * abselect^H
                      !         = chi * aq^H * t * a
                   END IF
@@ -239,6 +252,7 @@ CONTAINS
                              & lapwPr, fjgjPr, abCoeffsPr, ab_size, .TRUE.)
                   !!$acc update device(abCoeffsPr)
                   CALL timestop("hsmt_ab_3")
+                  CALL timestart("zgemm4")
 
                   !$acc host_data use_device(abCoeffsPr,data_c,ab1,ab_select)
                   IF (set0 .and. nn == 1) THEN
@@ -252,6 +266,8 @@ CONTAINS
                                   & CMPLX(1.0, 0.0), CPP_data_c, SIZE_data_c)
                   END IF
                   !$acc end host_data
+                  CALL timestop("zgemm4")
+
                   ! conjgsolve:
                   ! ab_select = a^H * t
                   ! abCoeffs = a'
@@ -271,6 +287,8 @@ CONTAINS
                           & lapwPr, fjgjPr, abCoeffsPr, ab_size, .TRUE.)
                CALL timestop("hsmt_ab_4")
                IF (ilSpinPr==ilSpin) THEN
+                  CALL timestart("zgemm5")
+
                   IF (l_samelapw) THEN
                      !!$acc update device (abCoeffs)
                      !$acc host_data use_device(abCoeffsPr,h_loc,ab2)
@@ -307,7 +325,9 @@ CONTAINS
                      ! data_c += cchi * abCoeffs^H *  abselect^H
                      !         = cchi * aqPr'^H * t * a
                   END IF
+                  call timestop("zgemm5")
                ELSE
+                  call timestart("zgemm6")
                   !$acc host_data use_device(abCoeffsPr,ab1,data_c,ab_select)
                   IF (set0 .AND. nn == 1) THEN
                      !CPP_data_c = CMPLX(0.0,0.0)
@@ -330,6 +350,7 @@ CONTAINS
                   ! abCoeffs = aqPr'
                   ! data_c += chi * abCoeffs^H * ab_select^H
                   !         = chi * aqPr'^H * t * a
+                  call timestop("zgemm6")
                END IF
             END IF
          END IF

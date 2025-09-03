@@ -166,12 +166,12 @@ CONTAINS
        this%amat(1,2) = evaluateFirst(valueString)
        this%amat(2,2) = evaluateFirst(valueString)
      endif
+     this%amat=this%amat*scale
      IF (dvac>0) THEN
         if (any(abs(this%amat(1:2,3))>1E-10).or.any(abs(this%amat(3,1:2))>1E-10)) CALL judft_error("In film mode the Bravais-Lattice must be 2D")
         if (abs(this%amat(3,3))>1E10) print *,"WARNING, in film-mode the z-coordinate of the Bravais matrix is ignored. Consider using the 2D matrix input"
         this%amat(3,3)=dtild
      ENDIF
-     this%amat=this%amat*scale
 
    END SUBROUTINE read_xml_cell
 

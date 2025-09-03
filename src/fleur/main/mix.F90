@@ -76,6 +76,7 @@ contains
     LOGICAL                          :: l_densitymatrix, l_firstItU, l_firstItV, l_densitymatrixV, ldavLinMix, l_dfpt
     INTEGER                          :: it,maxiter
     INTEGER                          :: indStart_noDenmatmixing, indEnd_noDenmatmixing
+    LOGICAL                          :: l_exist
 
 
     CALL timestart("Charge Density Mixing")
@@ -263,22 +264,31 @@ contains
 
     call timestart("Density output")
     !write out mixed density (but not for a plotting run)
-    IF ((fmpi%irank==0).AND.(sliceplot%iplot==0).AND..NOT.l_dfpt) THEN
-      CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,CDN_INPUT_DEN_const,&
-         1,results%last_distance,results%ef,results%last_mmpmatDistance,results%last_occDistance,.TRUE.,inDen,b_constr=nococonv%b_con)
-    ELSE IF ((fmpi%irank==0).AND.(sliceplot%iplot==0).AND.l_dfpt) THEN
-      CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,CDN_INPUT_DEN_const,&
-         1,results%last_distance,results%ef,results%last_mmpmatDistance,results%last_occDistance,.TRUE.,inDen,inFilename=dfpt_tag,denIm=inDenIm)
+    IF ((fmpi%irank==0).AND.(sliceplot%iplot==0)) THEN
+       IF (.NOT.l_dfpt) THEN
+          IF (fmpi%irank==0.and..NOT.judft_was_argument("-store_all").AND..NOT.l_dfpt) THEN
+             INQUIRE(file='cdn_old.hdf',exist=l_exist)
+             IF (l_exist) CALL system("rm cdn_old.hdf")
+             CALL system("mv cdn.hdf cdn_old.hdf")
+          END IF
+          CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,CDN_INPUT_DEN_const,&
+               1,results%last_distance,results%ef,results%last_mmpmatDistance,results%last_occDistance,.TRUE.,inDen,b_constr=nococonv%b_con)
+          CALL writeCoreDensity(input,atoms,outDen%mtCore,inDen%tec,inDen%qint)
+       ELSE
+          CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,CDN_INPUT_DEN_const,&
+               1,results%last_distance,results%ef,results%last_mmpmatDistance,results%last_occDistance,.TRUE.,inDen,inFilename=dfpt_tag,denIm=inDenIm)
+       END IF
     END IF
 
 #ifdef CPP_HDF
     ! TODO: Could be a neat option for DFPT as well.
     IF (fmpi%irank==0.and.judft_was_argument("-last_extra").AND..NOT.l_dfpt) THEN
-       CALL system("rm cdn_last.hdf")
+       INQUIRE(file='cdn_last.hdf',exist=l_exist)
+       IF (l_exist) CALL system("rm cdn_last.hdf")
        CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,CDN_INPUT_DEN_const,&
             1,results%last_distance,results%ef,results%last_mmpmatDistance,results%last_occDistance,.TRUE.,&
             inDen,inFilename='cdn_last')
-       CALL writeCoreDensity(input,atoms,inDen%mtCore,inDen%tec,inDen%qint,'cdn_last')
+       CALL writeCoreDensity(input,atoms,outDen%mtCore,inDen%tec,inDen%qint,'cdn_last')
     END IF
 #endif
     call timestop("Density output")

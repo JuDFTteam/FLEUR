@@ -2,7 +2,7 @@ FROM intel/oneapi-hpckit
 MAINTAINER d.wortmann@fz-juelich.de
 
 RUN apt-get update && apt-get -y install libxml2-dev xxd cmake python3-pip
-RUN  /usr/bin/python3 -m pip install pytest masci-tools pytest-html py
+RUN  /usr/bin/python3 -m pip install --break-system-packages pytest masci-tools pytest-html py python3-venv
 
 RUN curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh | sh
 #install maqao

@@ -4,7 +4,7 @@ module m_dfpt_born_effcharge
     use m_convol
     use m_dfpt_dynmat
     use m_dfpt_vefield
-    use m_dfpt_potden_offset
+    !use m_dfpt_potden_offset
     USE m_intgr, ONLY: intgr3
     USE m_step_function
     use m_inv3

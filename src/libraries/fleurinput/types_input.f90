@@ -336,9 +336,9 @@ SUBROUTINE read_xml_input(this,xml)
    IF (xml%versionNumber > 31) this%l_bloechl = evaluateFirstBoolOnly(xml%GetAttributeValue(xPathA))
 
    xPathA = trim(xpathb)//'/@charge_excited'
-   IF (xml%versionNumber > 37) this%charge_excited = evaluateFirstOnly(xml%GetAttributeValue(xPathA))
+   IF (xml%versionNumber > 38) this%charge_excited = evaluateFirstOnly(xml%GetAttributeValue(xPathA))
    xPathA = trim(xpathb)//'/@charge_shift'
-   IF (xml%versionNumber > 37) this%charge_shift = evaluateFirstOnly(xml%GetAttributeValue(xPathA))
+   IF (xml%versionNumber > 38) this%charge_shift = evaluateFirstOnly(xml%GetAttributeValue(xPathA))
 
 
    this%film =  xml%GetNumberOfNodes('/fleurInput/cell/filmLattice')==1
@@ -348,7 +348,7 @@ SUBROUTINE read_xml_input(this,xml)
    IF (numberNodes.EQ.1) THEN
       this%l_f = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_f'))
       if (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@f_level')>0) this%f_level = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@f_level'))
-      IF (xml%versionNumber > 37) this%l_driftForce = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_driftForce'))
+      IF (xml%versionNumber > 38) this%l_driftForce = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_driftForce'))
       this%forcealpha = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@forcealpha'))
       this%epsdisp = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@epsdisp'))
       this%epsforce = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@epsforce'))

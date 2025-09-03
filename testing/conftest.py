@@ -370,7 +370,7 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "xml: test with xml")
     config.addinivalue_line("markers", "noxml: test with no xml")
     config.addinivalue_line("markers", "gpu: this test will a GPU capbale fleur version")
-
+    
     config.addinivalue_line("markers", "noci: this test will not be run on CI ")
     # the reason for this is that it is not run in the old set.
 
@@ -402,7 +402,8 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "noco: tests testing the noco part")
     config.addinivalue_line("markers", "forcetheorem: test forcetheorem modes")
     config.addinivalue_line("markers", "extra: tests for extra and experimental features")
- 
+    config.addinivalue_line("markers", "dfpt: test for DFPT features")
+
     # main libs
     config.addinivalue_line("markers", "hdf: tests needing hdf")
     config.addinivalue_line("markers", "libxc: test for fleur using libxc")

@@ -95,8 +95,9 @@ CONTAINS
                sym%tau, rcc, sym%invtab, sf3)
             END IF
             !print*,"sf3",sf3
-            xdnout=dot_product(aimag(potDen%pw(:,jsp)*sf3(:)),stars%nstr)
-            !print*,"xdnout",xdnout
+            !WIP make correct for DFPT, same as for MT part
+            xdnout=dot_product(real(potDen%pw(:,jsp)*sf3(:)),stars%nstr)
+            !print*,"xdnout IR",xdnout
             !print*,"before return"
             !stop
             RETURN
@@ -248,8 +249,9 @@ CONTAINS
          xd2 = xd2*exp(CMPLX(0.0,1.0)*tpi_const*dot_product( stars%center,(/-lattvec_index(1),-lattvec_index(2),-lattvec_index(3)/)))
          !print*,"xd2",xd2
       END IF
-      xd1_r = aimag(xd1)
-      xd2_r = aimag(xd2)
+      !WIP: introduce some kind of switch in case dfpt real and imag part
+      xd1_r = real(xd1)
+      xd2_r = real(xd2)
       IF (jr.EQ.atoms%jri(n)) THEN
          xdnout = xd1_r
       ELSE

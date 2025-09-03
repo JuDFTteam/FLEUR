@@ -312,6 +312,12 @@ PROGRAM inpgen
             call timestop("Hybrid setup BZ")
          endif
       END DO
+      IF (input%film) THEN
+         input%preconditioning_param = 0.8
+         WRITE(*,*) ''
+         WRITE(*,*) "New default for film systems: Activating Kerker preconditioner to suppress charge sloshing."
+         WRITE(*,*) ''
+      END IF
 
       IF(ALL(kptsSelection(:).EQ.'')) THEN
          kptsSelection(1) = kpts(1)%kptsName ! This may actually be wrong, but it is a backup solution.

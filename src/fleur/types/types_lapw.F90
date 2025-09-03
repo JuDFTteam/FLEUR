@@ -632,7 +632,7 @@ CONTAINS
       !     ..
       !     .. Local Scalars ..
       COMPLEX term1, norm
-      REAL th, con1, linindq, linindqStart, linindqEnd, numK, stepSize
+      REAL th, con1, linindq, linindqStart, linindqEnd, numK, stepSize, rnorm
       INTEGER l, lo, mind, ll1, lm, iintsp, k, nkmin, lmp, m, nintsp, k_start, k_end, minIndex, maxIndex, increment
       INTEGER nApproach, nApproachEnd
       LOGICAL linind, enough, l_lo1, l_norm
@@ -770,6 +770,10 @@ CONTAINS
             DO WHILE (.NOT.enough)
                enough = .FALSE.
                k = k + increment
+               rnorm = DOT_PRODUCT(lapw%gk(:,k,1),lapw%gk(:,k,1)) ! Norm of k+G+q for first spin.
+               IF (rnorm.LT.1.0e-4) CYCLE ! Avoid K with too small norm, because this leads to a pathologic overlap matrix
+               rnorm = DOT_PRODUCT(lapw%gk(:,k,nintsp),lapw%gk(:,k,nintsp)) ! The same test for a possible other spin
+               IF (rnorm.LT.1.0e-4) CYCLE ! Avoid K with too small norm, because this leads to a pathologic overlap matrix
                IF ((k.GT.MAX(k_start,k_end)).OR.(k.LT.MIN(k_start,k_end))) THEN
                   IF (nApproach.GT.nApproachEnd) THEN
                      WRITE (oUnit, FMT=*) 'vec_for_lo did not find enough linearly independent'

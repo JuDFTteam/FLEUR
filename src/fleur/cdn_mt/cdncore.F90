@@ -50,6 +50,7 @@ SUBROUTINE cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
    COMPLEX                          :: rho21
    LOGICAL, PARAMETER               :: l_st=.FALSE.
    LOGICAL                          :: l_coreDenPresent
+   LOGICAL                          :: l_useOtherCoreSolver
 
    REAL                             :: rh(atoms%msh,atoms%ntype,input%jspins)
    REAL                             :: qint(atoms%ntype,input%jspins)
@@ -100,20 +101,31 @@ SUBROUTINE cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
    !add in core density
    IF (fmpi%irank==0) THEN
       IF (input%kcrel==0) THEN
-         DO jspin = 1,input%jspins
-            IF(PRESENT(EnergyDen)) THEN
-               CALL cored(input,jspin,atoms,outDen%mt,sphhar,l_CoreDenPresent,vr0(:,:,jspin), qint,rh ,tec,seig, EnergyDen%mt)
-            ELSE
-               CALL cored(input,jspin,atoms,outDen%mt,sphhar,l_CoreDenPresent,vr0(:,:,jspin), qint,rh ,tec,seig)
-            ENDIF
+         DO iType = 1, atoms%ntype
+            DO jspin = 1,input%jspins
+               IF(PRESENT(EnergyDen)) THEN
+                  CALL cored(input,jspin,iType,atoms,outDen%mt,sphhar,l_CoreDenPresent,vr0(:,:,jspin), qint,rh ,tec,seig, EnergyDen=EnergyDen%mt)
+               ELSE
+                  CALL cored(input,jspin,iType,atoms,outDen%mt,sphhar,l_CoreDenPresent,vr0(:,:,jspin), qint,rh ,tec,seig)
+               ENDIF
 
-            rhTemp(:,:,jspin) = rh(:,:,jspin)
-            results%seigc = results%seigc + seig
+               rhTemp(:,iType,jspin) = rh(:,iType,jspin)
+               results%seigc = results%seigc + seig
+            END DO
          END DO
       ELSE
          IF(PRESENT(EnergyDen)) call juDFT_error("Energyden not implemented for relativistic core calculations")
-         CALL coredr(input,atoms,seig, outDen%mt,sphhar,vr0,qint,rh)
-         results%seigc = results%seigc + seig
+         DO iType = 1, atoms%ntype
+            l_useOtherCoreSolver = .FALSE.
+            CALL coredr(input,atoms,iType,seig, outDen%mt,sphhar,vr0,qint,rh,l_useOtherCoreSolver)
+            results%seigc = results%seigc + seig
+            IF (l_useOtherCoreSolver) THEN
+               DO jspin = 1,input%jspins
+                  CALL cored(input,jspin,iType,atoms,outDen%mt,sphhar,l_CoreDenPresent,vr0(:,:,jspin),qint,rh,tec,seig,l_useOtherCoreSolver=l_useOtherCoreSolver)
+                  results%seigc = results%seigc + seig
+               END DO
+            END IF
+         END DO
       END IF
    END IF
    DO jspin = 1,input%jspins

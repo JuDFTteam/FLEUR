@@ -87,7 +87,9 @@ CONTAINS
       TYPE(t_atoms)                    :: atomsefield 
 
       complex                           :: sigma_loc(2)
-
+      COMPLEX :: constantShift
+      INTEGER :: ispin 
+      
       vCoul = dfptvTot
       vx = vTot
       vxc = vTot
@@ -187,8 +189,6 @@ CONTAINS
          END IF
          !print*,"sum dfptvTot in dfpt_vgen ef", sum(dfptvTot%pw(:,1))
       ELSE !standard phonon case
-         !print*,"phonon case"
-         !print*,"sum dfptvTot in dfpt_vgen pho", sum(dfptvTot%pw(:,1))
          CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,juphon,starsq,cell,sphhar,atoms,.TRUE.,workdenReal,vCoul,sigma_loc,&
                      & dfptdenimag=workdenImag,dfptvCoulimag=dfptvCoulimag,dfptden0=workden,stars2=stars,iDtype=iDtype,iDir=iDir)
          ! b)
@@ -204,7 +204,6 @@ CONTAINS
       CALL den1imRot%init(starsq,atoms,sphhar,vacuum,noco,input%jspins,0)
       den1Rot=dfptdenreal
       den1imRot=dfptdenimag
-      !print*,"sum dfptvTot in dfpt_vgen", sum(dfptvTot%pw(:,1))
       IF (noco%l_noco) THEN
          CALL rotate_int_den_to_local(sym,stars,atoms,sphhar,vacuum,cell,input,noco ,denRot)
          IF (any(noco%l_unrestrictMT)) CALL rotate_mt_den_to_local(atoms,sphhar,sym,noco,denrot)
@@ -217,10 +216,10 @@ CONTAINS
       END IF
 
       ! Skip vxc if we want only vC/vExt
-         IF (l_xc) CALL vgen_xcpot(hybdat,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
-                        cell,fmpi,noco,den,denRot,EnergyDen,dfptvTot,vx,vxc,exc, &
-                        & den1Rot=den1Rot, den1Rotimag=den1imRot, dfptvTotimag=dfptvTotimag,starsq=starsq)
-
+      IF (l_xc) CALL vgen_xcpot(hybdat,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
+                     cell,fmpi,noco,den,denRot,EnergyDen,dfptvTot,vx,vxc,exc, &
+                     & den1Rot=den1Rot, den1Rotimag=den1imRot, dfptvTotimag=dfptvTotimag,starsq=starsq)
+      
       IF (iDtype/=0.AND.ANY(killcont/=0)) THEN
          ! d)
          ! NOTE: This is so different from the base case, that we build a new subroutine.

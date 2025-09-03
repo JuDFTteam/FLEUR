@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -76,6 +76,7 @@ CONTAINS
       USE m_make_stars
       USE m_dfpt_vefield
       USE m_checkdopall
+      USE m_store_load_hybrid
 
 !$    USE omp_lib
 
@@ -285,30 +286,6 @@ CONTAINS
          CALL inDen%distribute(fmpi%mpi_comm)
          CALL nococonv%mpi_bc(fmpi%mpi_comm)
 
-
-
-         IF (.FALSE.) THEN
-            iDir = 1
-            iDtype = 1
-            CALL make_stars(starsq, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, fi%juPhon%qvec_efield(iDir,:), iDtype, iDir,fi%juPhon%l_efield)
-            starsq%ufft = stars%ufft
-
-            CALL dfptvefield%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
-            CALL dfptvefieldimag%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
-
-            CALL dfpt_vefield(fi%juphon,starsq,fi%atoms,fi%sym,sphhar,fi%cell,dfptvefield,dfptvefieldimag,iDir,1)
-
-            print*,"sum(dfptvefield%pw)",sum(dfptvefield%pw)
-            CALL checkDOPALL(fi%input, sphhar, starsq,fi%atoms, fi%sym, fi%vacuum, fi%cell,dfptvefield,1, dfptvefieldimag)
-
-            nococonv_int = nococonv
-            sliceplot_int = fi%sliceplot
-
-            sliceplot_int%iplot = 4
-            CALL makeplots(starsq, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi, fi%sym, fi%cell, fi%noco, nococonv_int, dfptvefield, PLOT_POT_TOT, sliceplot_int,dfptvefieldimag)
-            print*,"Plotting response done"
-            stop
-         END IF 
          ! Plot the input density if specified
          IF (fi%sliceplot%iplot .NE. 0) THEN
             IF (.NOT.fi%sliceplot%slice) THEN
@@ -317,7 +294,7 @@ CONTAINS
             ELSE
                CALL sliceDen%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN)
                IF (fmpi%irank .EQ. 0) CALL readDensity(stars, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
-                                                       fi%input, fi%sym,  CDN_ARCHIVE_TYPE_CDN_const, &
+                                                       fi%input, fi%sym,  archiveType, &
                                                        CDN_INPUT_DEN_const, 0, rdummy, tempDistance, l_dummy, sliceDen, inFilename='cdn_slice')
                CALL sliceden%distribute(fmpi%mpi_comm)
                call nococonv%mpi_bc(fmpi%mpi_comm)
@@ -420,7 +397,7 @@ CONTAINS
             CALL timestop("Updating energy parameters")
 
             IF (.NOT. fi%input%eig66(1)) THEN
-               CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv, mpdata, &
+               CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv,  &
                           hybdat, iter, eig_id, results, inDen, vToT, vx, hub1data)
             END IF
             ! TODO: What is commented out here and should it perhaps be removed?
@@ -490,6 +467,7 @@ CONTAINS
                CALL fermie(eig_id, fmpi, fi%kpts, fi%input, fi%noco, enpara%epara_min, fi%cell, results)
                IF (fi%hybinp%l_hybrid) hybdat%results = results
             ENDIF
+            IF (fi%hybinp%l_hybrid) CALL store_state_weights_hybrid(fi, fmpi, results)
 #ifdef CPP_MPI
             CALL MPI_BCAST(results%ef, 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
             CALL MPI_BCAST(results%w_iks, SIZE(results%w_iks), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
@@ -610,6 +588,7 @@ CONTAINS
                 CALL timestart("juPhon DFPT")
                 CALL dfpt(fi, sphhar, stars, nococonv, fi%kpts, fmpi, results, enpara, outDen, vTot, vxc, eig_id, xcpot, hybdat, mpdata, forcetheo)
                 CALL timestop("juPhon DFPT")
+                CALL juDFT_end("Phonon calculation finished.",fmpi%irank)
             END IF
 
             !CRYSTAL FIELD OUTPUT
@@ -687,7 +666,7 @@ CONTAINS
                l_cont = l_cont .AND. (fi%input%mindistance <= results%last_distance)
                CALL check_time_for_next_iteration(iterHF, l_cont)
             ELSE
-               l_cont = l_cont .AND. (iter < 50) ! Security stop for non-converging nested PBE calculations
+               l_cont = l_cont .AND. (iter < 100) ! Security stop for non-converging nested PBE calculations
             END IF
 
             IF (hybdat%l_subvxc) THEN
