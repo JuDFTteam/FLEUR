@@ -182,7 +182,7 @@ module m_dfpt_dielecten
             !print*,"(fpi_const/fi%cell%vol)",(fpi_const/fi%cell%vol)
             open( 110, file="diel_tensor", status='replace', action='write', form='formatted')
             write(*,*) '-------------------------' 
-            write(*,*) "High Fequency Dielectric tensor (new_formula)" 
+            write(*,*) "High Fequency Dielectric tensor" 
             do iDir = 1,3
                do j = 1,2
                   write(110,'(2es16.8)', ADVANCE='NO') real(dielecten(iDir,j)) 
