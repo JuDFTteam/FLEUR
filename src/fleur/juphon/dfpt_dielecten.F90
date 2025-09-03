@@ -6,8 +6,6 @@ module m_dfpt_dielecten
     use m_npy
     USE m_make_stars
     use m_inv3
-    use m_dfpt_potden_offset
-
 
 
     implicit none
@@ -71,12 +69,6 @@ module m_dfpt_dielecten
             diel_tensor_int_IR = CMPLX(0.0,0.0)
             diel_tensor_int_MT = CMPLX(0.0,0.0)
             diel_tensor_int_MT_atom = cmplx(0.0,0.0)
-
-            !get unit cell integrals:
-            !offset_out = 0.0
-            !call  dfpt_potden_offset(1,fmpi,starsq,fi%cell,fi%atoms,denIn1,denIn1Im,.FALSE.,.TRUE.,offset_out)
-            !offset_out = cmplx(0.0,1.0)
-            !print*,"offset_out",offset_out
 
 
 
