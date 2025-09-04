@@ -96,11 +96,17 @@ then
     #Check if hook is installed and install it if needed
     if test -e $DIR/.git/hooks/pre-commit
     then
-        echo "Git version found"
+        echo "Git version found, pre-commit hook installed"
     else
-        mkdir -p $DIR/.git/hooks
-        ln -s $DIR/tests/git-hooks/pre-commit $DIR/.git/hooks
-        echo "Git version found, hook installed"
+        if `which pre-commit` 
+        then
+            cd $DIR; pre-commit install ; cd -
+        else
+            echo -e "${RED}pre-commit not found${NC}"
+            echo "Please install pre-commit in your system"
+            echo "Please check https://pre-commit.com/"
+            echo "and install it with pip or conda"
+        fi
     fi
 fi
 

@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_vacden
    USE m_juDFT
    ! Legacy comments:
@@ -17,6 +22,7 @@ MODULE m_vacden
    !
    !     Philipp Kurz 99/07
    !***********************************************************************
+   implicit none
 
    !******** ABBREVIATIONS ************************************************
    !     qvac     : vacuum charge of each eigenstate, needed in in cdnval
@@ -69,8 +75,6 @@ CONTAINS
       USE m_constants
       USE m_grdchlh
       USE m_qsf
-      USE m_cylbes
-      USE m_dcylbs
       USE m_vacuz
       USE m_vacudz
       USE m_types
@@ -710,7 +714,8 @@ CONTAINS
                               uei = ue(banddos%izlay(jj,1),ikG,jspin)
                               uj = u(banddos%izlay(jj,1),ikGPr,jspin)
                               uej = ue(banddos%izlay(jj,1),ikGPr,jspin)
-                              vacdos%qvlay(ev_list(n),jj,ivac,ikpt,jspin) = REAL((aa*ui*uj + bb*uei*uej+ab*uei*uj+ba*ui**uej)*factorx*factory)
+                              vacdos%qvlay(ev_list(n),jj,ivac,ikpt,jspin) = vacdos%qvlay(ev_list(n),jj,ivac,ikpt,jspin)& 
+                                                                        +REAL((aa*ui*uj + bb*uei*uej+ab*uei*uj+ba*ui**uej)*factorx*factory)
                            END IF
                         END DO
                      END DO

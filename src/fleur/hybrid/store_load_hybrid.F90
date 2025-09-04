@@ -9,7 +9,7 @@ module m_store_load_hybrid
    use m_types_mpimat
    use m_distrib_vx
 
-   character(len=*), parameter :: hybstore_fname = "hybrid.h5"
+   character(len=*), parameter :: hybstore_fname = "hybrid.hdf"
    public store_hybrid_data, load_hybrid_data
 #ifdef CPP_HDF
    private open_file, open_datasetr, write_int_2d, close_dataset, close_file
@@ -38,7 +38,7 @@ contains
 
       if(.not. hybdat%l_subvxc) then
          call timestart("load_hybrid_data")
-         if (fmpi%is_root()) INQUIRE (file='hybrid.h5', exist=l_exist)
+         if (fmpi%is_root()) INQUIRE (file=hybstore_fname, exist=l_exist)
          call mpi_bc(l_exist, 0, fmpi%mpi_comm)
 
 
@@ -195,6 +195,66 @@ contains
 #endif
    end subroutine store_hybrid_data
 
+   subroutine Load_state_weights_hybrid(fi, fmpi, results)
+      implicit none
+      type(t_fleurinput), intent(in)     :: fi
+      type(t_mpi), intent(in)            :: fmpi
+      type(t_results), intent(inout)     :: results
+
+      LOGICAL :: l_exist
+      character(len=:), allocatable :: dset_name
+      type(t_mat) :: vx_tmp
+#ifdef CPP_HDF
+      integer(HID_T)   :: dset_id
+      INTEGER(HID_T)   :: file_id
+
+      call timestart("load_state_weights_hybrid")
+
+      if(fmpi%irank == 0) then
+         INQUIRE (file=hybstore_fname, exist=l_exist)
+         IF (l_exist) THEN
+            file_id = open_file()
+
+            dset_id = open_dataset(file_id, "w_iks")
+            IF (.NOT. ALLOCATED(results%w_iks)) allocate(results%w_iks(fi%input%neig, fi%kpts%nkpt, fi%input%jspins))
+            call read_dbl_3d(dset_id, results%w_iks)
+            call close_dataset(dset_id)
+
+            call close_file(file_id)
+         END IF
+      endif
+
+      call timestop("load_state_weights_hybrid")
+#endif
+   end subroutine load_state_weights_hybrid
+
+   subroutine store_state_weights_hybrid(fi, fmpi, results)
+      implicit none
+      type(t_fleurinput), intent(in)     :: fi
+      type(t_mpi), intent(in)            :: fmpi
+      type(t_results), intent(in)        :: results
+
+      character(len=:), allocatable :: dset_name
+      type(t_mat) :: vx_tmp
+#ifdef CPP_HDF
+      integer(HID_T)   :: dset_id
+      INTEGER(HID_T)   :: file_id
+
+      call timestart("store_state_weights_hybrid")
+
+      if(fmpi%irank == 0) then
+         file_id = open_file()
+
+         dset_id = open_dataset(file_id, "w_iks", [fi%input%neig, fi%kpts%nkpt, fi%input%jspins], H5T_NATIVE_DOUBLE)
+         call write_dbl_3d(dset_id, results%w_iks)
+         call close_dataset(dset_id)
+      endif
+
+      if(fmpi%irank == 0) call close_file(file_id)
+      call timestop("store_state_weights_hybrid")
+#endif
+   end subroutine store_state_weights_hybrid
+
    subroutine collect_vx(fi, fmpi, hybdat, nk, jsp, vx_tmp)
       use m_glob_tofrom_loc
       implicit none 
@@ -271,7 +331,7 @@ contains
       logical :: file_exist
       integer :: error
 
-      INQUIRE (file='hybrid.h5', exist=file_exist)
+      INQUIRE (file=hybstore_fname, exist=file_exist)
 
       if (file_exist) then
          CALL h5fopen_f(hybstore_fname, H5F_ACC_RDWR_F, file_id, error)
@@ -405,6 +465,32 @@ contains
       CALL h5dread_f(dset_id, H5T_NATIVE_DOUBLE, mtx, data_dims, ierr)
       if (ierr /= 0) call juDFT_error("can't read int 2d")
    end subroutine read_dbl_2d
+
+   subroutine write_dbl_3d(dset_id, mtx)
+      implicit none
+      INTEGER(HID_T), intent(in)         :: dset_id
+      real, intent(in)                   :: mtx(:, :,:)
+
+      INTEGER(HSIZE_T), DIMENSION(3)     :: data_dims
+      integer                            :: ierr
+
+      data_dims = shape(mtx)
+      CALL h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, mtx, data_dims, ierr)
+      if (ierr /= 0) call juDFT_error("can't write 2d real mtx")
+   end subroutine write_dbl_3d
+
+   subroutine read_dbl_3d(dset_id, mtx)
+      implicit none
+      INTEGER(HID_T), intent(in)     :: dset_id
+      real, intent(inout)            :: mtx(:, :,:)
+
+      INTEGER(HSIZE_T), DIMENSION(3)     :: data_dims
+      integer                            :: ierr
+
+      data_dims = shape(mtx)
+      CALL h5dread_f(dset_id, H5T_NATIVE_DOUBLE, mtx, data_dims, ierr)
+      if (ierr /= 0) call juDFT_error("can't read int 2d")
+   end subroutine read_dbl_3d
 
    function get_dims(dset_id) result(dims)
       implicit none

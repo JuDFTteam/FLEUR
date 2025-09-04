@@ -21,8 +21,8 @@ c***************************************************************
       use m_constants, only : pimach
        
        
-      use m_cylbes
-      use m_dcylbs
+      !use m_cylbes
+      !use m_dcylbs
       use m_intgr, only : intgz0
 
       implicit none
@@ -187,8 +187,8 @@ c...for the k-point
             irec2 = ig2(irec3)
             zks = sk2(irec2)*z1
             arg = phi2(irec2)
-            call cylbes(odi%mb,zks,bess)
-            call dcylbs(odi%mb,zks,bess,dbss)
+            !call cylbes(odi%mb,zks,bess)
+            !call dcylbs(odi%mb,zks,bess,dbss)
             do m = -odi%mb,odi%mb
                wronk1 = uz(l,m)*dudz(l,m) -
      -              udz(l,m)*duz(l,m)
@@ -232,8 +232,8 @@ c...for the b-point
             irec2 = ig2(irec3)
             zks = sk2(irec2)*z1
             arg = phi2(irec2)
-            call cylbes(odi%mb,zks,bess)
-            call dcylbs(odi%mb,zks,bess,dbss)
+            !call cylbes(odi%mb,zks,bess)
+            !call dcylbs(odi%mb,zks,bess,dbss)
             do m = -odi%mb,odi%mb
                wronk1 = uz_b(l,m)*dudz_b(l,m) -
      -              udz_b(l,m)*duz_b(l,m)
@@ -270,7 +270,7 @@ c  now actually computing the Mmn matrix
          zz = z1+(i-1)*delz
          zks = 0.0!zks0*zz
          besss(:) = 0.
-         call cylbes(odi%M,zks,besss)
+         !call cylbes(odi%M,zks,besss)
          do m = 0,0!-odi%M,odi%M
             gbess(m,i) = 1.0 !besss(m)
 c           gbess(i) = 1.

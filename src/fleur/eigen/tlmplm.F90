@@ -83,7 +83,7 @@ CONTAINS
             ENDIF
             IF (alpha_hybrid.NE.0) vr0=vr0-alpha_hybrid*vx%mt(:,:,n,iSpinV)
          ELSE
-            vr0(:,0)=vr0(:,0)-0.5*nococonv%b_con(iSpinV-2,n) !Add constraining field
+           ! vr0(:,0)=vr0(:,0)-0.5*nococonv%b_con(iSpinV-2,n) !Add constraining field done already in potential setup
          END IF
       ELSE
          vr0=v1

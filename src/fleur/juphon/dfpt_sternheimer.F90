@@ -15,7 +15,6 @@ MODULE m_dfpt_sternheimer
    USE m_constants
    USE m_cdn_io
    USE m_eig66_io
-   USE m_dfpt_potden_offset
    USE m_inv3
    use m_npy
    USE m_plot
@@ -144,7 +143,6 @@ CONTAINS
          onedone = .NOT.strho  ! Was at least one iteration done yet?
          final_SH_it = .FALSE. ! Is the density perturbation converged and the last SH run started?
       END IF
-      print*,"strho",strho
 #ifdef CPP_MPI
       CALL MPI_BCAST(strho,1,MPI_LOGICAL,0,fmpi%mpi_comm,ierr)
       CALL MPI_BCAST(onedone,1,MPI_LOGICAL,0,fmpi%mpi_comm,ierr)
@@ -155,16 +153,11 @@ CONTAINS
       iter = 0
       iterm = 0
       l_cont = (iter < fi%input%itmax)
-      !stop
-      print*,"l_exist",l_exist
-      IF (fmpi%irank==0) print*,"irank0"
-      IF (fmpi%irank==0.AND.l_exist) print*,"true"
       IF (fmpi%irank==0.AND.l_exist) CALL readDensity(starsq, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
                                                       fi%input, fi%sym, archiveType, CDN_INPUT_DEN_const, 0, &
                                                       results%ef, results%last_distance, l_dummy, denIn1,  &
                                                       inFilename=TRIM(dfpt_tag),denIm=denIn1Im)
-      !stop
-                                                      IF (fmpi%irank==0.AND.l_exist.AND.l_minusq) CALL readDensity(starsmq, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
+      IF (fmpi%irank==0.AND.l_exist.AND.l_minusq) CALL readDensity(starsmq, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
                                                       fi%input, fi%sym, archiveType, CDN_INPUT_DEN_const, 0, &
                                                       results%ef, results%last_distance, l_dummy, denIn1m,  &
                                                       inFilename=TRIM(dfpt_tag)//'m',denIm=denIn1mIm)
@@ -212,10 +205,8 @@ CONTAINS
          ! Vext1 for the starting perturbation
          ! Veff1 every other time
          CALL timestart("Generation of potential perturbation")
-         print*,"strho",strho
          IF (strho) THEN
-            !print*,"doing vext1 in 1st perturbation"
-            write(oUnit, *) "vExt1", iDir
+            if (fmpi%irank==0) write(oUnit, *) "vExt1", iDir
             sigma_loc = cmplx(0.0,0.0)
             !IF (iDir==3) sigma_loc = -sigma_disc
             CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
@@ -232,7 +223,7 @@ CONTAINS
                               starsmq,denIn1mIm,vTot1m,.FALSE.,vTot1mIm,denIn1m,iDtype,iDir,[1,1],sigma_loc)!-?
             END IF
          ELSE
-            write(oUnit, *) "vEff1", iDir
+            if (fmpi%irank==0) write(oUnit, *) "vEff1", iDir
             sigma_loc = cmplx(0.0,0.0)
             !IF (iDir==3) sigma_loc = -sigma_disc2
             CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
@@ -246,57 +237,15 @@ CONTAINS
                               starsmq,denIn1mIm,vTot1m,.TRUE.,vTot1mIm,denIn1m,iDtype,iDir,[1,1],sigma_loc)
             END IF
          END IF
-         print*,"sum(vTot1%pw) in sternheimer",sum(vTot1%pw)
          ! For the calculation of the dynamical matrix, we need VC1 additionally
          IF (final_SH_it) THEN
-            write(oUnit, *) "vC1", iDir
+            if (fmpi%irank==0) write(oUnit, *) "vC1", iDir
             sigma_loc = cmplx(0.0,0.0)
             !IF (iDir==3) sigma_loc = -sigma_disc2
             CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                            fi%juphon,fi%cell,fmpi,fi%noco,nococonv,rho_loc,vTot,&
                            starsq,denIn1Im,vC1,.FALSE.,vC1Im,denIn1,iDtype,iDir,[0,0],sigma_loc)
             
-            IF (.FALSE.) THEN
-               IF (.TRUE.) THEN
-                  iDir_col = 1
-                  qvec_int=fi%juPhon%qvec_efield(iDir_col,:)
-                  print*,"qvec_int",qvec_int
-                  CALL starsq_vext%reset_stars()
-                  CALL make_stars(starsq_vext, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, qvec_int, 1, iDir_col,fi%juPhon%l_efield)
-                  starsq_vext%ufft = starsq%ufft
-                  call vExt1_ef%init(starsq_vext, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
-                  call vExt1Im_ef%init(starsq_vext, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
-                  call dfpt_vefield(fi%juPhon,starsq_vext,fi%atoms,fi%sym,sphhar,fi%cell,vExt1_ef,vExt1Im_ef,iDir_col,1)
-                  !denIn1%pw(:,1) =denIn1%pw(:,1)*vExt1_ef%pw(:,1)
-                  !denIn1%mt(:,:,:,1) = 0.0!denIn1%mt(:,:,:,1)*vExt1_ef%mt(:,:,:,1)
-                  !denIn1Im%mt(:,:,:,1) = 0.0!denIn1Im%mt(:,:,:,1)*vExt1Im_ef%mt(:,:,:,1)
-                  IF (.TRUE.) THEN
-                     sliceplot_int%iplot = 4
-                     name_string = 'testing'
-                     print*,name_string
-                     CALL makeplots(starsq, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi, fi%sym, fi%cell, fi%noco, nococonv_int, vExt1_ef, PLOT_POT_TOT, sliceplot_int,vExt1Im_ef)
-                     !stop
-                  END IF
-               END IF
-               WRITE (oUnit,*) "Checkdopall for den1"
-               CALL checkDOPALL(fi%input, sphhar, starsq,fi%atoms, fi%sym, fi%vacuum, fi%cell,denIn1,1, denIn1Im)
-               sliceplot_int%iplot = 2
-               print*,"now doing denresponse"
-
-               CALL makeplots(starsq, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi , fi%sym, fi%cell, &
-                              fi%noco,nococonv_int, denIn1, PLOT_INPDEN, sliceplot_int,denIn1Im)
-               print*,"plotting done"            
-               stop
-            END IF
-            IF (.TRUE.) THEN
-               write(densave_string,"(a,i0,a,i0,a)")"den1_final_pw_iDir",iDir,".npy"
-               call save_npy(densave_string, denIn1%pw)
-               write(densave_string,"(a,i0,a,i0,a)")"den1_final_mt_",iDir,".npy"
-               call save_npy(densave_string, denIn1%mt(:,:,:,1))
-               write(densave_string,"(a,i0,a,i0,a)")"den1_final_mtIm_",iDir,".npy"
-               call save_npy(densave_string, denIn1Im%mt(:,:,:,1))
-            END IF
-
          END IF
 
          CALL timestop("Generation of potential perturbation")
@@ -334,8 +283,6 @@ CONTAINS
          ! Calculate the perturbed expansion coefficients z1 --> saved to results1
          CALL timestart("dfpt eigen")
          IF (.NOT.final_SH_it) THEN
-            print*,"sum(vTot1%pw) in sternheimer",sum(vTot1%pw)
-            print*,"sum(vTot1%pw) in sternheimer",vTot1%pw
             CALL dfpt_eigen(fi, sphhar, results, resultsq, results1, fmpi, enpara, nococonv, starsq, vTot1, vTot1Im, &
                                 vTot, rho, bqpt, eig_id, q_eig_id, dfpt_eig_id, iDir, iDtype, killcont, l_real, .TRUE.)
          ELSE
@@ -448,18 +395,11 @@ CONTAINS
          ! If a starting density perturbation was to be generated, subtract the density
          ! gradient and exit here; no mixing yet!
          IF (strho) THEN
-            print*, "strho",strho
             strho = .FALSE.
             !print*,"sum(denOut1%pw(:,:))",sum(denOut1%pw(:,:))
             denIn1 = denOut1
             denIn1Im = denOut1Im
 
-            !write(densave_string,"(a,i0,a)")"den1_it1_pw_",iDir,".npy"
-            !call save_npy(densave_string, denIn1%pw)
-            !write(densave_string,"(a,i0,a)")"den1_it1_mt_",iDir,".npy"
-            !call save_npy(densave_string, denIn1%mt(:,:,:,1))
-            !write(densave_string,"(a,i0,a)")"den1_it1_mtIm_",iDir,".npy"
-            !call save_npy(densave_string, denIn1Im%mt(:,:,:,1))
 
             IF (fi%juphon%l_phonon) denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
             IF (fmpi%irank==0) write(*,*) "Starting perturbation generated."
@@ -470,15 +410,6 @@ CONTAINS
                IF (fi%juphon%l_phonon) denIn1m%mt(:,0:,iDtype,:) = denIn1m%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
             END IF
 
-            !IF (fmpi%irank == 0 ) write(4501,*) "STRHO", "Type", iDtype, "Direction", iDir
-            !IF (fmpi%irank == 0 ) write(4500,*) "STRHO","Type",iDtype, "Direction", iDir
-            !CALL dfpt_potden_offset(1,fmpi,starsq,fi%cell,fi%atoms,denIn1,denIn1Im,.TRUE.,.TRUE.)
-            !CALL dfpt_potden_offset(1,fmpi,starsq,fi%cell,fi%atoms,denIn1,denIn1Im,.FALSE.,.TRUE.)
-            !IF (fmpi%irank == 0 ) write(4551,*) "STRHO", "Type", iDtype, "Direction", iDir
-            !IF (fmpi%irank == 0 ) write(4550,*) "STRHO","Type",iDtype, "Direction", iDir
-            !CALL dfpt_surface_offset(1,fmpi,starsq,stars,fi%cell,fi%atoms,denIn1,denIn1Im,rho,grRho,iDtype,.TRUE.,.TRUE.)
-            !CALL dfpt_surface_offset(1,fmpi,starsq,stars,fi%cell,fi%atoms,denIn1,denIn1Im,rho,grRho,iDtype,.FALSE.,.TRUE.)
-            
             CYCLE scfloop
          END IF
 
@@ -497,14 +428,6 @@ CONTAINS
                denIn1mIm = denOut1mIm
                IF (fi%juphon%l_phonon) denIn1m%mt(:,0:,iDtype,:) = denIn1m%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
             END IF
-            !IF (fmpi%irank == 0 ) write(4501,*) "NOT ONEDONE", "Type", iDtype, "Direction", iDir
-            !IF (fmpi%irank == 0 ) write(4500,*) "NOT ONEDONE","Type",iDtype, "Direction", iDir
-            !CALL dfpt_potden_offset(1,fmpi,starsq,fi%cell,fi%atoms,denIn1,denIn1Im,.TRUE.,.TRUE.)
-            !CALL dfpt_potden_offset(1,fmpi,starsq,fi%cell,fi%atoms,denIn1,denIn1Im,.FALSE.,.TRUE.)
-            !IF (fmpi%irank == 0 ) write(4551,*) "NOT ONEDONE", "Type", iDtype, "Direction", iDir
-            !IF (fmpi%irank == 0 ) write(4550,*) "NOT ONEDONE","Type",iDtype, "Direction", iDir
-            !CALL dfpt_surface_offset(1,fmpi,starsq,stars,fi%cell,fi%atoms,denIn1,denIn1Im,rho,grRho,iDtype,.TRUE.,.TRUE.)
-            !CALL dfpt_surface_offset(1,fmpi,starsq,stars,fi%cell,fi%atoms,denIn1,denIn1Im,rho,grRho,iDtype,.FALSE.,.TRUE.)
             CYCLE scfloop
          END IF
 
@@ -530,22 +453,6 @@ CONTAINS
             CALL denIn1mIm%distribute(fmpi%mpi_comm)
          END IF
 
-         
-         ! we mix denOut1 into denIn1 therefore we need to correct denOut1 
-         ! but denOut1 does not contains the gradient. Gradient cancellation is already done for
-         ! give dummy_gr
-         !IF (fmpi%irank == 0 ) write(4551,*) "Iteration", iter, "Type", iDtype, "Direction", iDir
-         !IF (fmpi%irank == 0 ) write(4550,*) "Iteration", iter,"Type",iDtype, "Direction", iDir
-         !CALL dfpt_surface_offset(1,fmpi,starsq,stars,fi%cell,fi%atoms,denOut1,denOut1Im,rho,dummy_gr,iDtype,.TRUE.,.TRUE.)
-         !CALL dfpt_surface_offset(1,fmpi,starsq,stars,fi%cell,fi%atoms,denOut1,denOut1Im,rho,dummy_gr,iDtype,.FALSE.,.TRUE.)
-         
-         ! we need to account for the gradient if we do not take surface terms with us
-         !denOut1%mt(:,0:,iDtype,:) = denOut1%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
-         !IF (fmpi%irank == 0 ) write(4501,*) "Iteration", iter, "Type", iDtype, "Direction", iDir
-         !IF (fmpi%irank == 0 ) write(4500,*) "Iteration", iter,"Type",iDtype, "Direction", iDir
-         !CALL dfpt_potden_offset(1,fmpi,starsq,fi%cell,fi%atoms,denOut1,denOut1Im,.TRUE.,.TRUE.)
-         !CALL dfpt_potden_offset(1,fmpi,starsq,fi%cell,fi%atoms,denOut1,denOut1Im,.FALSE.,.TRUE.)
-         !denOut1%mt(:,0:,iDtype,:) = denOut1%mt(:,0:,iDtype,:) + grRho%mt(:,0:,iDtype,:)
 
 
 #ifdef CPP_MPI
@@ -620,7 +527,7 @@ CONTAINS
          l_cont = l_cont .AND. (iter < fi%input%itmax)
          l_cont = l_cont .AND. ((fi%input%mindistance <= results1%last_distance))
 
-         final_SH_it = fi%input%mindistance > results1%last_distance
+         final_SH_it = (fi%input%mindistance > results1%last_distance) .OR. (iter == fi%input%itmax)
          l_cont = l_cont .OR. final_SH_it ! DO one more iteration so V1, z1 and rho1 match
 
       END DO scfloop ! DO WHILE (l_cont)

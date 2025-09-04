@@ -33,9 +33,9 @@ MODULE m_constants
   REAL,             PARAMETER :: bohr_to_angstrom_const=0.529177210903 ! value from https://physics.nist.gov/cgi-bin/cuu/Value?bohrrada0
                                                                        ! 0.529177210903(80)
   REAL,             PARAMETER :: eVac0Default_const = -0.25
-  CHARACTER(len=9), PARAMETER :: version_const = 'fleur 40'
-  CHARACTER(len=49), PARAMETER :: version_const_MaX = '     MaX-Release 7.2          (www.max-centre.eu)'
-  CHARACTER(len=4), PARAMETER :: inputFileVersion_const = '0.38'
+  CHARACTER(len=9), PARAMETER :: version_const = 'fleur 41'
+  CHARACTER(len=49), PARAMETER :: version_const_MaX = '     MaX-Release 8.0          (www.max-centre.eu)'
+  CHARACTER(len=4), PARAMETER :: inputFileVersion_const = '0.39'
   ! outputFileVersion_const is defined in juDFT/xmlOutput.f90
   ! For version number update also update version numbers in files io/xml/FleurInputSchema.xsd, io/xml/FleurOutputSchema.xsd, fleurInput/types_xml, and update the files
   ! io/xml/inputSchema.h.backup, io/xml/outputSchema.h.backup, dropInputSchema.c, dropOutputSchema.c, inputSchema_old.h, outputSchema_old.h.
@@ -106,6 +106,14 @@ MODULE m_constants
   INTEGER,DIMENSION(29),PARAMETER :: coreStateKappaList_const=(/&
        -1,-1, 1,-2,-1, 1,-2,-1, 2,-3, 1,-2,-1, 2,-3,&
        1,-2,-1, 3,-4, 2,-3, 1,-2,-1, 3,-4, 2,-3/)
+
+  ! Nonrelativistic notation for core electron states
+  CHARACTER(4),DIMENSION(18),PARAMETER :: nr_coreStateList_const=(/&
+       '(1s)','(2s)','(2p)','(3s)','(3p)','(4s)','(3d)','(4p)','(5s)','(4d)','(5p)','(6s)','(4f)','(5d)','(6p)','(7s)','(5f)','(6d)' /)
+ 
+  INTEGER,DIMENSION(29),PARAMETER :: coreStateToNRList_const=(/&
+       1, 2, 3, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 10, 10, 11, 11, 12, 13, 13, 14, 14, 15, 15, 16, 17, 17, 18, 18 /)
+  
 
   REAL, DIMENSION(118), PARAMETER :: atomicMasses_const = (/  1.01,   4.00,   6.94,   9.01,  10.81,  12.01,  14.01,  16.00,  19.00, & ! up to fluorine
                                                              20.18,  22.99,  24.31,  26.98,  28.09,  30.97,  32.06,  35.45,  39.95, & ! up to argon

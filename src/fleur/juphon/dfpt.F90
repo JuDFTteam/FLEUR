@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2021 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -36,6 +36,7 @@ CONTAINS
       USE m_dfpt_dielecten
       USE m_dfpt_born_effcharge
       use m_dfpt_vefield
+      USE m_dfpt_potdenLocal
 
       TYPE(t_mpi),        INTENT(IN)     :: fmpi
       TYPE(t_fleurinput), INTENT(IN)     :: fi
@@ -99,6 +100,11 @@ CONTAINS
       CLASS(t_xcpot),     ALLOCATABLE :: xcpot_fullsym
       CLASS(t_forcetheo), ALLOCATABLE :: forcetheo_fullsym
 
+      ! starsLocal type variables
+      TYPE(t_stars) :: starsLocal
+      TYPE(t_potden):: imagrhodummyLocal,grvextdummyLocal
+      TYPE(t_atoms) :: atomsLocal
+
       INTEGER,          ALLOCATABLE :: recG(:, :)
       INTEGER                       :: ngdp2km
       complex,           allocatable :: E2ndOrdII(:, :)
@@ -138,7 +144,7 @@ CONTAINS
       ! Desym-tests:
       INTEGER :: grid(3), iread
       REAL    :: dr_re(fi%vacuum%nmzd), dr_im(fi%vacuum%nmzd), drr_dummy(fi%vacuum%nmzd), numbers(3*fi%atoms%nat,6*fi%atoms%nat)
-      complex                           :: sigma_loc(2), sigma_ext(2), sigma_coul(2), sigma_gext(3,2)
+      complex                           :: sigma_loc(2), sigma_ext(2), sigma_coul(2), sigma_gext(3,2), constantShift
 
       ALLOCATE(e2_vm(fi%atoms%nat,3,3))
 
@@ -234,6 +240,8 @@ CONTAINS
             qvecs = fi%juPhon%qvec
          END IF 
          qpts_loc = qpts
+         DEALLOCATE(qpts_loc%bk)
+         ALLOCATE(qpts_loc%bk,mold=qvecs)
          qpts_loc%bk(:, :SIZE(qvecs,2)) = qvecs
          ALLOCATE(q_list(SIZE(qvecs,2)))
          q_list = (/(iArray, iArray=1,SIZE(qvecs,2), 1)/)
@@ -250,6 +258,15 @@ CONTAINS
       ! This is done to ensure good continuity.
       CALL timestart("Gradient generation")
       ALLOCATE(grrhodummy(fi_nosym%atoms%jmtd, (fi_nosym%atoms%lmaxd+1)**2, fi_nosym%atoms%nat, SIZE(rho_nosym%mt,4), 3))
+
+      ! For the gradient of the external Potential we need a higher cutoff in the expansion, in order to confine the multipole moments in the MTs
+      ! This is crucial for the Film-Mode and will be visible in the z-Eigenmodes.  
+      CALL create_typesLocal(fi_nosym,fmpi_nosym,fi_nosym%sym,fi_nosym%cell,fi_nosym%input,sphhar_nosym, fi_nosym%vacuum , fi_nosym%noco ,starsLocal, grVext3(1),atomsLocal)
+      CALL grVext3(2)%copyPotDen(grVext3(1))
+      CALL grVext3(3)%copyPotDen(grVext3(1))
+      CALL imagrhodummyLocal%copyPotDen(grVext3(1))
+      CALL grvextdummyLocal%copyPotDen(grVext3(1))
+
 
       CALL imagrhodummy%copyPotDen(rho_nosym)
       CALL imagrhodummy%resetPotDen()
@@ -273,24 +290,24 @@ CONTAINS
          DO iDir2 = 1, 3
             CALL grgrvextnum(iDir2,iDir)%copyPotDen(vTot_nosym)
             CALL grgrvextnum(iDir2,iDir)%resetPotDen()
-            CALL grgrVC3x3(iDir2,iDir)%copyPotDen(vTot_nosym)
+            CALL grgrVC3x3(iDir2,iDir)%copyPotDen(grVext3(1))
             CALL grgrVC3x3(iDir2,iDir)%resetPotDen()
          END DO
-         CALL grVext3(iDir)%copyPotDen(vTot_nosym)
-         CALL grVext3(iDir)%resetPotDen()
+         !CALL grVext3(iDir)%copyPotDen(vTot_nosym)
+         !CALL grVext3(iDir)%resetPotDen()
          CALL grVtot3(iDir)%copyPotDen(vTot_nosym)
          CALL grVtot3(iDir)%resetPotDen()
          CALL grVC3(iDir)%copyPotDen(vTot_nosym)
          CALL grVC3(iDir)%resetPotDen()
          ! Generate the external potential gradient.
-         write(oUnit, *) "grVext", iDir
          sigma_loc  = cmplx(0.0,0.0)
          !IF (iDir==3) sigma_loc  = sigma_ext
-         CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, fi%juphon, stars_nosym, fi_nosym%cell, &
-                         & sphhar_nosym, fi_nosym%atoms, .FALSE., imagrhodummy, grVext3(iDir), sigma_loc, &
-                         & dfptdenimag=imagrhodummy, dfptvCoulimag=grvextdummy,dfptden0=imagrhodummy,stars2=stars_nosym,iDtype=0,iDir=iDir)
+         CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, fi%juphon, starsLocal, fi_nosym%cell, &
+                         & sphhar_nosym, atomsLocal, .FALSE., imagrhodummyLocal, grVext3(iDir), sigma_loc, &
+                         & dfptdenimag=imagrhodummyLocal, dfptvCoulimag=grvextdummyLocal,dfptden0=imagrhodummyLocal,stars2=starsLocal,iDtype=0,iDir=iDir)
          IF (iDir==3) sigma_gext(iDir,:) = sigma_loc
       END DO
+
       !CALL vext_dummy%copyPotDen(vTot_nosym)
       !CALL vext_dummy%resetPotDen()
       ! Density gradient
@@ -356,13 +373,13 @@ CONTAINS
       DO iDir = 1, 3
          CALL sh_to_lh(fi_nosym%sym, fi_nosym%atoms, sphhar_nosym, SIZE(rho_nosym%mt,4), 2, grrhodummy(:, :, :, :, iDir), grRho3(iDir)%mt, imagrhodummy%mt)
          CALL imagrhodummy%resetPotDen()
-         write(oUnit, *) "grVeff", iDir
+         if (fmpi%irank==0) write(oUnit, *) "grVeff", iDir
          sigma_loc  = cmplx(0.0,0.0)
          IF (iDir==3) sigma_loc  = sigma_coul
          CALL dfpt_vgen(hybdat_nosym, fi_nosym%field, fi_nosym%input, xcpot_nosym, fi_nosym%atoms, sphhar_nosym, stars_nosym, fi_nosym%vacuum, fi_nosym%sym, &
                         fi%juphon, fi_nosym%cell, fmpi_nosym, fi_nosym%noco, nococonv_nosym, rho_nosym, vTot_nosym, &
                         stars_nosym, imagrhodummy, grVtot3(iDir), .TRUE., grvextdummy, grRho3(iDir), 0, iDir, [0,0], sigma_loc)
-         write(oUnit, *) "grVC", iDir
+         if (fmpi%irank==0) write(oUnit, *) "grVC", iDir
          sigma_loc  = cmplx(0.0,0.0)
          IF (iDir==3) sigma_loc  = sigma_coul
          CALL dfpt_vgen(hybdat_nosym, fi_nosym%field, fi_nosym%input, xcpot_nosym, fi_nosym%atoms, sphhar_nosym, stars_nosym, fi_nosym%vacuum, fi_nosym%sym, &
@@ -373,13 +390,15 @@ CONTAINS
       DO iDir2 = 1, 3
          DO iDir = 1, 3
             CALL imagrhodummy%resetPotDen()
+            CALL imagrhodummyLocal%resetpotden()
+            CALL grvextdummyLocal%resetpotden()
             sigma_loc = cmplx(0.0,0.0)
 
             !IF (iDir2==3) sigma_loc = sigma_gext(iDir,:)
             !IF (iDir==3) sigma_loc = sigma_gext(iDir2,:)
-            CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, fi%juphon, stars_nosym, fi_nosym%cell, &
-                        & sphhar_nosym, fi_nosym%atoms, .TRUE., imagrhodummy, grgrVC3x3(iDir2,iDir), sigma_loc, &
-                        & dfptdenimag=imagrhodummy, dfptvCoulimag=grvextdummy,dfptden0=imagrhodummy,stars2=stars_nosym,iDtype=0,iDir=iDir,iDir2=iDir2, &
+            CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, fi%juphon, starsLocal, fi_nosym%cell, &
+                        & sphhar_nosym, atomsLocal, .TRUE., imagrhodummyLocal, grgrVC3x3(iDir2,iDir), sigma_loc, &
+                        & dfptdenimag=imagrhodummyLocal, dfptvCoulimag=grvextdummyLocal,dfptden0=imagrhodummyLocal,stars2=starsLocal,iDtype=0,iDir=iDir,iDir2=iDir2, &
                         & sigma_disc2=MERGE(sigma_ext,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir2==3.AND.iDir==3.AND..FALSE.))
             CALL dfpt_e2_madelung(fi_nosym%atoms,fi_nosym%input%jspins,imagrhodummy%mt(:,0,:,:),grgrVC3x3(iDir2,iDir)%mt(:,0,:,1),e2_vm(:,iDir2,iDir))
          END DO
@@ -484,7 +503,7 @@ CONTAINS
                ! Get the eigenstuff at k+q
                CALL q_results%reset_results(fi%input)
    
-               CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv, mpdata, &
+               CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv, &
                         hybdat, 1, q_eig_id, q_results, rho, vTot, vxc, hub1data, &
                         qvec_int)
    
@@ -537,7 +556,6 @@ CONTAINS
             CALL timestart("diel_tensor")
             IF (fmpi%irank==0) THEN
                WRITE(*,*) "Scf calculation for electric field perturbation finished"
-               !CALL dfpt_dielecten_final(fi_nosym,diel_tensor(:,:))
                CALL dfpt_dielecten_final_new(fi_nosym,diel_tensor(:,:))
             END IF 
 
@@ -607,7 +625,7 @@ CONTAINS
                ! Get the eigenstuff at k+q
                CALL q_results%reset_results(fi%input)
    
-               CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv, mpdata, &
+               CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv,  &
                         hybdat, 1, q_eig_id, q_results, rho, vTot, vxc, hub1data, &
                         qpts_loc%bk(:,q_list(iQ)))
    
@@ -630,7 +648,7 @@ CONTAINS
    
                   CALL qm_results%reset_results(fi%input)
    
-                  CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv, mpdata, &
+                  CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv,  &
                            hybdat, 1, qm_eig_id, qm_results, rho, vTot, vxc, hub1data, &
                            -qpts_loc%bk(:,q_list(iQ)))
    
@@ -761,7 +779,7 @@ CONTAINS
                   CALL timestop("Dynmat diagonalization")
    
                   CALL timestart("Frequency calculation")
-                  CALL CalculateFrequencies(fi_nosym%atoms, q_list(iQ), eigenVals, eigenFreqs,"raw")
+                  CALL CalculateFrequencies(fi_nosym%atoms, q_list(iQ), eigenVals, eigenFreqs,"raw",qpts_loc%bk(:,q_list(iQ)))
                   CALL timestop("Frequency calculation")
                   write(9991,*) "Eii2 new:", E2ndOrdII
                   !DEALLOCATE(eigenVals, eigenVecs, eigenFreqs, E2ndOrdII)
@@ -836,7 +854,7 @@ CONTAINS
                CALL timestop("Dynmat diagonalization")
 
                CALL timestart("Frequency calculation")
-               CALL CalculateFrequencies(fi_nosym%atoms, iQ, eigenVals, eigenFreqs,TRIM(dynfiletag))
+               CALL CalculateFrequencies(fi_nosym%atoms, iQ, eigenVals, eigenFreqs,TRIM(dynfiletag),fi_nosym%kpts%bk(:,iQ))
                CALL timestop("Frequency calculation")
 
                IF (l_dfpt_dos) eigenValsFull(:,iQ,1) = eigenFreqs(:)
@@ -864,9 +882,7 @@ CONTAINS
 
       DEALLOCATE(recG)
 
-      WRITE (oUnit,*) '------------------------------------------------------'
-
-      CALL juDFT_end("Phonon calculation finished.",fmpi%irank)
+      if (fmpi%irank==0) WRITE (oUnit,*) '------------------------------------------------------'
 
     END SUBROUTINE dfpt
 

@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -69,6 +69,7 @@ CONTAINS
 
     CALL print_argument("-no_cdn_hdf")
     CALL print_argument("-last_extra")
+    CALL print_argument("-store_all")
     CALL print_argument("-sd")
     CALL print_argument("-delden")
     CALL print_argument("-storeSF")
@@ -124,6 +125,7 @@ CONTAINS
          )
     CALL new_argument(0,"-serial_diag","Use serial diagonalization in parallel code","")
     CALL new_argument(0,"-disable_progress_thread","Do not use progress_thread","")
+    CALL new_argument(0,"-use_scalapack_redist","Use Scalapack for redistributing the matices","")   
     !Debugging
     CALL new_argument(0,"-warn_only","Continue execution after a warning message","")
     CALL new_argument(0,"-trace","Try to generate a stacktrace in case of an error","")
@@ -140,6 +142,7 @@ CONTAINS
     !HDF density
     CALL new_argument(0,"-no_cdn_hdf","Disable HDF charge density mode (activated by default if HDF5 is available)","")
     CALL new_argument(0,"-last_extra","Generate an additional file cdn_last.hdf that contains only the last density","")
+    CALL new_argument(0,"-store_all","Store all densities (for every iteration) in the cdn.hdf file.","")
     CALL new_argument(2,"-sd","use starting density N, where N is the index of the density according to -info","")
     CALL new_argument(1,"-delden","delete densities (either an index N, a range N-M or the keyword 'allbutlast' should be given)","")
     CALL new_argument(0,"-storeSF","Store the stepfunction in the charge density file to avoid its recalculation when restarting Fleur.","")

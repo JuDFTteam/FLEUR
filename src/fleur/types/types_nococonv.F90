@@ -52,6 +52,7 @@ SUBROUTINE update_b_cons(nococonv,atoms,noco,vtot,den)
    use m_types_noco
    use m_types_potden
    use m_intgr
+   use m_xmlOutput
    CLASS(t_nococonv),INTENT(INOUT):: nococonv
    type(t_atoms),intent(in)       :: atoms
    type(t_potden),intent(in)      :: vtot
@@ -63,6 +64,10 @@ SUBROUTINE update_b_cons(nococonv,atoms,noco,vtot,den)
    real :: b_xc(maxval(atoms%jri)),b_xc_av,scale,b_con_outx,b_con_outy
    real :: mag(0:3),up,down,off1,off2
    complex:: off_diag
+   
+   character(len=15) :: attributes(3),label 
+
+   if (any(noco%l_constrained))  CALL openXMLElement('constrainingField',(/'units'/),(/'Htr'/))
 
    DO itype=1,atoms%ntype
       if (.not.noco%l_constrained(itype)) cycle
@@ -84,12 +89,27 @@ SUBROUTINE update_b_cons(nococonv,atoms,noco,vtot,den)
       scale = -ABS(b_xc_av/mag(3))
       b_con_outx = scale*mag(1)
       b_con_outy = scale*mag(2)
-      !--->    mix input and output constraint fields
+      !--->    write the output constraint B-field (B_con)
       WRITE  (oUnit,"('  -->',10x,' input B_con_x=',f12.6,' input B_con_y=',f12.6)") nococonv%b_con(1,itype),nococonv%b_con(2,itype)
       WRITE  (oUnit,"('  -->',10x,' delta B_con_x=',f12.6,' delta B_con_y=',f12.6)") b_con_outx,b_con_outy
+      WRITE(attributes(1),'(i0)') iType
+      WRITE(attributes(2),'(f15.8)') nococonv%b_con(1,itype)
+      WRITE(attributes(3),'(f15.8)') nococonv%b_con(2,itype)
+      label="BConstraint"
+      CALL writeXMLElementFormPoly(label,(/'atomType','BConX   ','BConY   '/),&
+                        attributes,reshape((/8,7,7,6,15,15/),(/2,3/)))
+      WRITE(attributes(2),'(f15.8)') b_con_outx
+      WRITE(attributes(3),'(f15.8)') b_con_outy
+      label="DeltaBConstraint"
+      CALL writeXMLElementFormPoly(label,(/'atomType ','DBConX   ','DBConY   '/),&
+                        attributes,reshape((/8,9,9,6,15,15/),(/2,3/)))
+
+   !--->    mix input and output constraint fields
       nococonv%b_con(1,itype) = nococonv%b_con(1,itype) + noco%mix_b*b_con_outx
       nococonv%b_con(2,itype) = nococonv%b_con(2,itype) + noco%mix_b*b_con_outy
    END DO   
+
+   if (any(noco%l_constrained))  CALL closeXMLElement('constrainingField')
 END SUBROUTINE 
 
 SUBROUTINE mpi_bc_nococonv(this,mpi_comm,irank)

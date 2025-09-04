@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2023 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -98,16 +98,21 @@ CONTAINS
       ALLOCATE(abCoeffs(0:2*atoms%lnonsph(ntyp)*(atoms%lnonsph(ntyp)+2)+1,MAXVAL(lapw%nv)))       
       !$acc data create(abcoeffs,abclo,abcoeffsPr,abcloPr)
       !$acc data copyin(alo1,blo1,clo1,fjgjPr,fjgjpr%fj,fjgjpr%gj,tlmplm,tlmplm%h_loc_LO,tlmplm%h_lo)
+      call timestart("hsmt_ab")
       CALL hsmt_ab(sym,atoms,noco,nococonv,ilSpinPr,igSpinPr,ntyp,na,cell,lapwPr,fjgjPr,abCoeffsPr(:,:),ab_size_Pr,.TRUE.,abcloPr,alo1(:,ilSpinPr),blo1(:,ilSpinPr),clo1(:,ilSpinPr))
-
+      call timestop("hsmt_ab")
       !we need the "unprimed" abcoeffs
       IF (ilSpin==ilSpinPr.AND.igSpinPr==igSpin.AND.l_samelapw) THEN
+         call timestart("abcoeffs copy")
          !$acc kernels present(abcoeffs,abcoeffsPr,abclo,abcloPr)
          if (l_fullj) abcoeffs=abcoeffsPr 
          abclo=abcloPr
          !$acc end kernels
+         call timestop("abcoeffs copy")
       ELSE     
+         call timestart("hsmt_ab2")
          CALL hsmt_ab(sym,atoms,noco,nococonv,ilSpin,igSpin,ntyp,na,cell,lapw,fjgj,abCoeffs(:,:),ab_size,.TRUE.,abclo,alo1(:,ilSpin),blo1(:,ilSpin),clo1(:,ilSpin))
+         call timestop("hsmt_ab2")
       END IF
    
 

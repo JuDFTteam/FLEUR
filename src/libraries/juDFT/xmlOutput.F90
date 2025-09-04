@@ -1,10 +1,11 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_judft_xmlOutput  
+   implicit none
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!
@@ -15,8 +16,6 @@ MODULE m_judft_xmlOutput
 !!!                                         GM'16
 !!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-   IMPLICIT NONE
 
    PRIVATE
    INTEGER, SAVE :: currentElementIndex
@@ -84,7 +83,7 @@ MODULE m_judft_xmlOutput
       CHARACTER(LEN=1000) :: gitdescTemp,githashTemp,gitbranchTemp,compile_dateTemp,compile_userTemp,compile_hostTemp
       CHARACTER(LEN=1000) :: compile_flagsTemp,link_flagsTemp
       CHARACTER(LEN=20) :: attributes(7)
-      CHARACTER(len=4), PARAMETER :: outputFileVersion_const = '0.37'
+      CHARACTER(len=4), PARAMETER :: outputFileVersion_const = '0.38'
 
       maintag=tag
 
@@ -564,7 +563,7 @@ MODULE m_judft_xmlOutput
            TYPE IS(INTEGER)
                WRITE(charAttributeValues(i),'(i0)') attributeValues(i)
             TYPE IS(REAL)
-               WRITE(charAttributeValues(i),'(f19.10)') attributeValues(i)
+               WRITE(charAttributeValues(i),'(f0.10)') attributeValues(i)
             TYPE IS(LOGICAL)
                WRITE(charAttributeValues(i),'(l1)') attributeValues(i)
             TYPE IS(CHARACTER(LEN=*))

@@ -11,7 +11,7 @@ module m_vvac
    ! for general symmetry.          c.l.fu, r.podloucky             *
    ! ****************************************************************
 contains
-   subroutine vvac(vacuum, stars, cell, input, field, psq, rht, vnew, rhobar, sig1dh, vz1dh, vslope, l_bind, vmz1dh, sigma_disc, sigma_disc2)
+   subroutine vvac(vacuum, stars, cell, input, field, psq, rht, vnew, rhobar, sig1dh, vz1dh, vslope, l_bind, vmz1dh, sigma_disc,l_dfptvgen, sigma_disc2)
       !! Calculates the \(\boldsymbol{G}_{||}=0\) part of the vacuum Coulomb potential.
       !! There are two possible cases for Dirichlet and von Neumann boundary conditions, respectively.
       !! von Neumann case:
@@ -40,6 +40,7 @@ contains
       complex,        intent(out) :: vslope
       logical,        intent(in)  :: l_bind
       complex,        intent(out) :: vmz1dh
+      logical,        intent(in)  :: l_dfptvgen
       complex,        intent(in)  :: sigma_disc(2)
 
       complex, optional, intent(in) :: sigma_disc2(2)
@@ -60,9 +61,11 @@ contains
 
       ! obtain mesh point (ncsh) of charge sheet for external electric field
       ncsh = field%efield%zsigma / vacuum%delz + 1.01
-      sigmaa(1) = ( field%efield%sigma + field%efield%sig_b(1) ) / cell%area
-      sigmaa(2) = ( field%efield%sigma + field%efield%sig_b(2) ) / cell%area
-
+      sigmaa = 0.0 
+      if (.not. l_dfptvgen) then 
+         sigmaa(1) = ( field%efield%sigma + field%efield%sig_b(1) ) / cell%area
+         sigmaa(2) = ( field%efield%sigma + field%efield%sig_b(2) ) / cell%area
+      end if 
       ! g=0 vacuum potential due to neutral charge density
       ! inside slab and zero charge density outside
 
@@ -101,7 +104,7 @@ contains
 
       ivac = 1 ! upper vacuum
 
-      if ( field%efield%dirichlet ) then ! Dirichlet
+      if ( field%efield%dirichlet .and. .not. l_dfptvgen ) then ! Dirichlet
          vnew(ncsh+1:vacuum%nmz,ivac) = field%efield%sig_b(1)
          call qsf( vacuum%delz, REAL(rht(:,ivac)), sig, ncsh, 1 )
          sig(1:ncsh) = sig(ncsh) - sig(1:ncsh)

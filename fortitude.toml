@@ -1,7 +1,7 @@
 [check]
 fix = true
 preview = true
-ignore = ["C121", "C131" ]
+ignore = ["C121", "C131", "C003" ]
 line-length = 192
 #exit-zero = true
 #output-format="gitlab"

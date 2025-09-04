@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -12,7 +12,7 @@ MODULE m_types_mpimat
    USE mpi
 #endif
    IMPLICIT NONE
-   !PRIVATE
+   PRIVATE
    INTEGER, PARAMETER    :: DEFAULT_BLOCKSIZE = 64
    INTEGER, PARAMETER   :: dlen_ = 9
    !Constants defining different distributions:
@@ -21,7 +21,7 @@ MODULE m_types_mpimat
    !INTEGER, PARAMETER   :: MPIMAT_COLUMN_BLOCK_CYCLIC=3
    !
    ! These are now defined in t_mat base type!
-   
+   LOGICAL :: firstCopyCall = .true.
 
 #ifdef __INTEL_COMPILER
    LOGICAL:: use_pdgemr2d=.true.
@@ -74,7 +74,7 @@ MODULE m_types_mpimat
 #endif      
    END TYPE t_mpimat
 
-   PUBLIC t_mpimat, mingeselle
+   PUBLIC t_blacsdata, t_mpimat, mingeselle
 
 CONTAINS
    SUBROUTINE t_mpimat_lproblem(mat, vec)
@@ -439,6 +439,15 @@ CONTAINS
       end select
 
 #ifdef CPP_SCALAPACK
+
+      if (firstCopyCall) then 
+         firstCopyCall = .false.
+         if (judft_was_argument("-use_scalapack_redist")) then
+            use_pdgemr2d = .true.
+         else
+            use_pdgemr2d = .false.
+         end if
+      end if
       SELECT TYPE (mat1)
       TYPE IS (t_mpimat)
          if (mat1%is_column_cyclic().and..not.mat%is_column_cyclic().and..not.use_pdgemr2d) THEN
