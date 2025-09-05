@@ -160,12 +160,15 @@ module m_dfpt_dielecten
         subroutine dfpt_dielecten_final_new(fi, dielecten)
 
             !USE m_inv3
+            USE m_xmlOutput
             type(t_fleurinput), intent(in)    :: fi
             complex, intent(inout)   :: dielecten(:,:)
             integer                  :: iDir, j 
             complex                  :: dielten_iden(3,3) 
             complex                  :: dielecten_inv(3,3)
             real                     :: det,dielecten_r(3,3)
+            CHARACTER(LEN=20)        :: attributes(1)
+
 
             dielecten_inv(:,:)= 0
             DO j = 1,3
@@ -182,7 +185,7 @@ module m_dfpt_dielecten
             !print*,"(fpi_const/fi%cell%vol)",(fpi_const/fi%cell%vol)
             open( 110, file="diel_tensor", status='replace', action='write', form='formatted')
             write(*,*) '-------------------------' 
-            write(*,*) "High Fequency Dielectric tensor (new_formula)" 
+            write(*,*) "High Frequency Dielectric tensor" 
             do iDir = 1,3
                do j = 1,2
                   write(110,'(2es16.8)', ADVANCE='NO') real(dielecten(iDir,j)) 
@@ -195,6 +198,20 @@ module m_dfpt_dielecten
             end do
             close(110)
             write(*,*) '-------------------------' 
+
+            !save in out.xml
+            CALL openXMLElementNoAttributes('Phonons')
+            CALL openXMLElementNoAttributes('efield')
+            attributes = ''
+            !WRITE(attributes(1),'(i0)') test
+            WRITE(attributes(1),'(f15.8)') fi%juPhon%qlim
+            !WRITE(attributes(3),'(f15.8)') qvec(2)
+            !WRITE(attributes(4),'(f15.8)') qvec(3)
+            !attributes(5) = '1/cm'
+            CALL writeXMLElementPoly('dielconst',(/'qlim'/), attributes,real(dielecten(:,1)))
+            CALL closeXMLElement('efield')
+            CALL closeXMLElement('Phonons')
+
         end subroutine dfpt_dielecten_final_new
 
 end module 
