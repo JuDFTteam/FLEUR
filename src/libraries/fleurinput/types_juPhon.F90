@@ -93,6 +93,8 @@ CONTAINS
       CALL mpi_bc(this%qlim,rank,mpi_comm)
       CALL mpi_bc(this%gmaxzLocal,rank,mpi_comm)
       CALL mpi_bc(this%l_symVacLevel, rank, mpi_comm)
+      CALL mpi_bc(this%eDiffcut, rank, mpi_comm)
+      CALL mpi_bc(this%fDiffcut, rank, mpi_comm)
 
    END SUBROUTINE mpi_bc_juPhon
 
