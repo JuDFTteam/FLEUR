@@ -559,7 +559,6 @@ CONTAINS
                CALL dfpt_dielecten_final_new(fi_nosym,diel_tensor(:,:))
             END IF 
             CALL timestop("diel_tensor")
-
             IF (fi%juPhon%l_borneffcharge) THEN
                CALL dfpt_born_eff_charge_final(fi,born_eff_charge,born_eff_charge_contributions(:,:,:,:))
             END IF

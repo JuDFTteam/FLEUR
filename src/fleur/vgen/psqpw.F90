@@ -17,7 +17,7 @@ module m_psqpw
 contains
 
   subroutine psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym, juphon,  &
-       &     den, ispin, l_xyav, potdenType, psq, sigma_disc, rhoimag, stars2, iDtype, iDir, rho0, qpw0, iDir2, mat2ord )
+       &     den, ispin, l_xyav, potdenType, psq, sigma_disc, rhoimag, stars2, iDtype, iDir, rho0, iDir2 )
 
 #ifdef CPP_MPI
     use mpi
@@ -54,14 +54,12 @@ contains
     complex,            intent(out) :: psq(stars%ng3)
     complex,            intent(out) :: sigma_disc(2)
 
-    REAL, OPTIONAL, INTENT(IN)      :: rhoimag(atoms%jmtd,0:sphhar%nlhd,atoms%ntype), rho0(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
+    type(t_potden),optional,intent(in) :: rhoimag, rho0
 
     TYPE(t_stars), OPTIONAL, INTENT(IN) :: stars2
-    COMPLEX, OPTIONAL, INTENT(IN)   :: qpw0(:)
 
     INTEGER, OPTIONAL, INTENT(IN)   :: iDtype, iDir ! DFPT: Type and direction of displaced atom
     INTEGER, OPTIONAL, INTENT(IN)   :: iDir2
-    COMPLEX, OPTIONAL, INTENT(IN)   :: mat2ord(5,3,3)
 
     complex                         :: psint, sa, sl, sm, qvac, fact, fc
     real                            :: f, fpo, gz, p, rmtl, s, fJ, gr, g
@@ -92,19 +90,10 @@ contains
 
     ! Calculate multipole moments
     call timestart("mpmom")
-    IF (.NOT.l_dfptvgen) THEN
-        call mpmom( input, fmpi, atoms, sphhar, stars, sym, juphon, cell,   qpw, rho, potdenType, qlm )
-    ELSE IF (PRESENT(iDir2)) THEN
-        ! DFPT case:
-        ! Additional contributions to qlm due to surface corrections.
-        call mpmom( input, fmpi, atoms, sphhar, stars, sym, juphon, cell,   qpw, rho, potdenType, qlm, &
-                  & rhoimag=rhoimag, stars2=stars2, iDtype=iDtype, iDir=iDir, rho0=rho0, qpw0=qpw0, iDir2=iDir2, mat2ord=mat2ord )
-    ELSE
-        ! DFPT case:
-        ! Additional contributions to qlm due to surface corrections.
-        call mpmom( input, fmpi, atoms, sphhar, stars, sym, juphon, cell,   qpw, rho, potdenType, qlm, &
-                  & rhoimag=rhoimag, stars2=stars2, iDtype=iDtype, iDir=iDir, rho0=rho0, qpw0=qpw0 )
-    END IF
+    ! DFPT case:
+    ! Additional contributions to qlm due to surface corrections.
+    call mpmom( input, fmpi, atoms, sphhar, stars, sym, juphon, cell,   qpw, rho, potdenType, qlm, ispin, &
+              & rhoimag=rhoimag, stars2=stars2, iDtype=iDtype, iDir=iDir, rho0=rho0, iDir2=iDir2 )
     call timestop("mpmom")
 
     psq(:) = cmplx( 0.0, 0.0 )
