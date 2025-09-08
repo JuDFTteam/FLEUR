@@ -29,7 +29,6 @@ CONTAINS
       USE m_types
       USE m_constants
       USE m_rotate_int_den_tofrom_local
-      USE m_bfield
       USE m_vgen_coulomb
       USE m_vgen_xcpot
       USE m_vgen_finalize
@@ -131,7 +130,6 @@ CONTAINS
       CALL vgen_xcpot(hybdat,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
                       cell,fmpi,noco,den,denRot,EnergyDen,vTot,vx,vxc,exc,results=results)
 
-      CALL bfield(input,stars,noco,atoms,field,vTot)
       if (any(noco%l_constrained)) call vgen_constraint(atoms,noco,nococonv,vtot)
 
       ! d)

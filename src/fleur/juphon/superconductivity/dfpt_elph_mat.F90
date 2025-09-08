@@ -161,15 +161,15 @@ CONTAINS
                 !IF (fmpi%irank==0) THEN 
                     ! Numerics saves the day 
                     ! Think about Gamma if Frequencies are approximately zero
-                DO iMode = 1 , 3*fi%atoms%nat
-                    IF (eigenVals(iMode) .LT. 0.0 ) THEN 
-                        gmat(:,:,:,:,iMode) = gmat(:,:,:,:,iMode) + eigenVecs(iPerturb,iMode)* (-1*ImagUnit) / SQRT(2* atomic_mass_array(fi%atoms%nz(CEILING(iPerturb/3.0))) * SQRT(ABS(eigenVals(iMode)))) * gmatCart(:,:,:,:) 
-                    ELSE
-                        gmat(:,:,:,:,iMode) = gmat(:,:,:,:,iMode) + eigenVecs(iPerturb,iMode) / SQRT(2* atomic_mass_array(fi%atoms%nz(CEILING(iPerturb/3.0))) * SQRT(eigenVals(iMode))) * gmatCart(:,:,:,:) 
-                    END IF 
-                END DO  
-                !END IF 
-
+                    DO iMode = 1 , 3*fi%atoms%nat
+                        IF (eigenVals(iMode) .LT. 0.0 ) THEN 
+                            gmat(:,:,:,:,iMode) = gmat(:,:,:,:,iMode) + eigenVecs(iPerturb,iMode) * &
+                            &                   ( (-1*ImagUnit) / SQRT(2* atomic_mass_array(fi%atoms%nz(CEILING(iPerturb/3.0))) * SQRT(ABS(eigenVals(iMode)))) ) * gmatCart(:,:,:,:) 
+                        ELSE
+                            gmat(:,:,:,:,iMode) = gmat(:,:,:,:,iMode) + eigenVecs(iPerturb,iMode) / SQRT(2* atomic_mass_array(fi%atoms%nz(CEILING(iPerturb/3.0))) * SQRT(eigenVals(iMode))) * gmatCart(:,:,:,:) 
+                        END IF 
+                    END DO  
+                END IF 
                 
                 CALL starsq%reset_stars()
                 CALL denIn1_loc%reset_dfpt()

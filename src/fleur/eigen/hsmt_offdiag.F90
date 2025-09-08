@@ -8,7 +8,7 @@ MODULE m_hsmt_offdiag
   USE m_juDFT
   IMPLICIT NONE
 CONTAINS
-  SUBROUTINE hsmt_offdiag(n,atoms,fmpi,nococonv,lapw,td,usdus,fjgj,ispin,jspin,iintsp,jintsp,hmat)
+  SUBROUTINE hsmt_offdiag(iType,atoms,fmpi,nococonv,lapw,td,usdus,fjgj,ispin,jspin,iintsp,jintsp,hmat)
     USE m_constants, ONLY : fpi_const,tpi_const
     USE m_types
     USE m_hsmt_spinor
@@ -25,12 +25,12 @@ CONTAINS
 
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: n,ispin,jspin,iintsp,jintsp
+    INTEGER, INTENT (IN) :: iType,ispin,jspin,iintsp,jintsp
     !     ..
     !     ..
     !     .. Local Scalars ..
     REAL tnn(3),ski(3)
-    INTEGER kii,ki,kj,l,nn,s
+    INTEGER kii,ki,kj,l,iAtom,s
     COMPLEX :: fct
     !     ..
     !     .. Local Arrays ..
@@ -43,7 +43,7 @@ CONTAINS
 
     CALL timestart("offdiagonal setup")
 
-    CALL hsmt_spinor_soc(n,nococonv,chi)
+    CALL hsmt_spinor_soc(iType,nococonv,chi)
 
 
 
@@ -55,7 +55,7 @@ CONTAINS
     END DO
     !$OMP PARALLEL DEFAULT(SHARED)&
     !$OMP PRIVATE(kii,ki,ski,kj,plegend,l)&
-    !$OMP PRIVATE(cph,nn,tnn)&
+    !$OMP PRIVATE(cph,iAtom,tnn)&
     !$OMP PRIVATE(fct,s)
     ALLOCATE(cph(MAXVAL(lapw%nv)))
     ALLOCATE(plegend(MAXVAL(lapw%nv),0:atoms%lmaxd))
@@ -70,14 +70,14 @@ CONTAINS
        DO kj = 1,ki
           plegend(kj,1) = DOT_PRODUCT(lapw%gk(:,kj,jintsp),lapw%gk(:,ki,iintsp))
        END DO
-       DO l = 1,atoms%lmax(n) - 1
+       DO l = 1,atoms%lmax(iType) - 1
           plegend(:ki,l+1) = fleg1(l)*plegend(:ki,1)*plegend(:ki,l) - fleg2(l)*plegend(:ki,l-1)
        END DO
        !--->             set up phase factors
        cph = 0.0
        ski = lapw%gvec(:,ki,iintsp) + qssbti
-       DO nn = atoms%firstAtom(n), atoms%firstAtom(n) + atoms%neq(n) - 1
-          tnn = tpi_const*atoms%taual(:,nn)
+       DO iAtom = atoms%firstAtom(iType), atoms%firstAtom(iType) + atoms%neq(iType) - 1
+          tnn = tpi_const*atoms%taual(:,iAtom)
           DO kj = 1,ki
              cph(kj) = cph(kj) +&
                   CMPLX(COS(DOT_PRODUCT(ski-lapw%gvec(:,kj,jintsp)+qssbtj,tnn)),&
@@ -86,14 +86,14 @@ CONTAINS
        END DO
 
        !--->          update overlap and l-diagonal hamiltonian matrix
-       s=atoms%lnonsph(n)+1
-       DO  l = 0,atoms%lnonsph(n)
+       s=atoms%lnonsph(iType)+1
+       DO  l = 0,atoms%lnonsph(iType)
           DO kj = 1,ki
              fct  =cph(kj) * plegend(kj,l)*fl2p1(l)*(&
-                  fjgj%fj(ki,l,ispin,iintsp)*fjgj%fj(kj,l,jspin,jintsp) *td%h_off(l,l,n,ispin,jspin) + &
-                  fjgj%fj(ki,l,ispin,iintsp)*fjgj%gj(kj,l,jspin,jintsp) *td%h_off(l,l+s,n,ispin,jspin) + &
-                  fjgj%gj(ki,l,ispin,iintsp)*fjgj%fj(kj,l,jspin,jintsp) *td%h_off(l+s,l,n,ispin,jspin) + &
-                  fjgj%gj(ki,l,ispin,iintsp)*fjgj%gj(kj,l,jspin,jintsp) *td%h_off(l+s,l+s,n,ispin,jspin)* sqrt(usdus%ddn(l,n,ispin)*usdus%ddn(l,n,jspin)))
+                  fjgj%fj(ki,l,ispin,iintsp)*fjgj%fj(kj,l,jspin,jintsp) *td%h_off(l,l,iType,ispin,jspin) + &
+                  fjgj%fj(ki,l,ispin,iintsp)*fjgj%gj(kj,l,jspin,jintsp) *td%h_off(l,l+s,iType,ispin,jspin) + &
+                  fjgj%gj(ki,l,ispin,iintsp)*fjgj%fj(kj,l,jspin,jintsp) *td%h_off(l+s,l,iType,ispin,jspin) + &
+                  fjgj%gj(ki,l,ispin,iintsp)*fjgj%gj(kj,l,jspin,jintsp) *td%h_off(l+s,l+s,iType,ispin,jspin)* sqrt(usdus%ddn(l,iType,ispin)*usdus%ddn(l,iType,jspin)))
              hmat(1,1)%data_c(kj,kii)=hmat(1,1)%data_c(kj,kii) + CONJG(chi(1,1,iintsp,jintsp)*fct)
              hmat(1,2)%data_c(kj,kii)=hmat(1,2)%data_c(kj,kii) + CONJG(chi(1,2,iintsp,jintsp)*fct)
              hmat(2,1)%data_c(kj,kii)=hmat(2,1)%data_c(kj,kii) + CONJG(chi(2,1,iintsp,jintsp)*fct)

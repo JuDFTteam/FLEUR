@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -81,7 +81,7 @@ CONTAINS
 
       ! We skip the initialization for speed
       ! abCoeffs=0.0
-
+      call timestart("init")
       np = sym%invtab(sym%ngopr(na))
       CALL lapw%phase_factors(igSpin, atoms%taual(:, na), nococonv%qss, c_ph(:, igSpin))
       bmrot = TRANSPOSE(MATMUL(1.0 * sym%mrot(:, :, np), cell%bmat))
@@ -97,7 +97,8 @@ CONTAINS
       !CALL dgemm("N","N", 3, lapw%nv(igSpin), 3, 1.0, bmrot, 3, lapw%vk(:,:,igSpin), 3, 0.0, gkrot, 3)
       call blas_matmul(3,lapw%nv(igSpin),3,bmrot,lapw%vk(:,:,igspin),gkrot)
       CALL ylm4_batched(lmax,gkrot,ylm)
-
+      call timestop("init")
+      call timestart("loop")
 #ifndef _OPENACC
       !$OMP PARALLEL DO DEFAULT(none) &
       !$OMP& SHARED(lapw,lmax,c_ph,igSpin,abCoeffs,fjgj,abclo,cell,atoms,sym) &
@@ -109,7 +110,7 @@ CONTAINS
       abCoeffs(:,:)=0.0
       !$acc end kernels
 #endif
-
+      
       !$acc data copyin(atoms,atoms%llo,atoms%llod,atoms%nlo,cell,cell%omtil,atoms%rmt) if (l_abclo)
       !$acc parallel loop present(fjgj,fjgj%fj,fjgj%gj,abCoeffs) vector_length(32)&
       !$acc copyin(lmax,lapw,lapw%nv,lapw%vk,lapw%kvec,bmrot,c_ph, sym, sym%invsat,l_abclo, ylm) &
@@ -149,10 +150,11 @@ CONTAINS
       END DO !k-loop
       !$acc end parallel loop
       !$acc end data
-
 #ifndef _OPENACC
       !$OMP END PARALLEL DO
 #endif
+      call timestop("loop")
+
 
       IF (.NOT.l_apw) ab_size=ab_size*2
    END SUBROUTINE hsmt_ab

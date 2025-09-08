@@ -206,6 +206,8 @@ CONTAINS
                                 " a ghoststate")
        END IF
 
+       if (abs(input%charge_excited)>0.0) &
+         call judft_warn("Use the exited charge feature only in spin-polarized calculations")
        DO ex=merge(4,1,abs(input%charge_excited)>0.0),1,-1
          !
          !---> DETERMINE EF BY SUMMING WEIGHTS

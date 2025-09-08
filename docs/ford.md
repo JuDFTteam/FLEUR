@@ -1,9 +1,10 @@
 exclude_dir: ../docs
 exclude_dir: ../cmake
-exclude_dir: ../tests
+exclude_dir: ../testing
 exclude_dir: ../build
 exclude_dir: ../build.debug
 exclude_dir: ../external
+exclude_dir: ../packaging
 exclude: jpSetupDynMatDeprecated_mod.F90
 exclude: soc_or_ssdw.f90
 exclude: jpSternhHF_mod.F90
@@ -30,7 +31,7 @@ source: true
 graph: true
 graph_maxnodes: 100
 graph_maxdepth: 10
-search: true
+search: false
 preprocess: false
 macro: TEST
        LOGIC=.true.

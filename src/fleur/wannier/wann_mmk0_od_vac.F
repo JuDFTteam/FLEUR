@@ -29,8 +29,8 @@ c***************************************************************
       use m_constants, only : pimach
       use m_types
        
-      use m_cylbes
-      use m_dcylbs
+      !use m_cylbes
+      !use m_dcylbs
       USE m_types
 
       implicit none
@@ -142,8 +142,8 @@ c     ..local scalars..
             irec2 = ig2(irec3)
             zks = sk2(irec2)*z1
             arg = phi2(irec2)
-            call cylbes(odi%mb,zks,bess)
-            call dcylbs(odi%mb,zks,bess,dbss)
+            !call cylbes(odi%mb,zks,bess)
+            !call dcylbs(odi%mb,zks,bess,dbss)
             do m = -odi%mb,odi%mb
                wronk1 = uz(l,m)*dudz(l,m) -
      -              udz(l,m)*duz(l,m)
