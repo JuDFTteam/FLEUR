@@ -169,7 +169,7 @@ CONTAINS
                             gmat(:,:,:,:,iMode) = gmat(:,:,:,:,iMode) + eigenVecs(iPerturb,iMode) / SQRT(2* atomic_mass_array(fi%atoms%nz(CEILING(iPerturb/3.0))) * SQRT(eigenVals(iMode))) * gmatCart(:,:,:,:) 
                         END IF 
                     END DO  
-                END IF 
+                !END IF 
                 
                 CALL starsq%reset_stars()
                 CALL denIn1_loc%reset_dfpt()
