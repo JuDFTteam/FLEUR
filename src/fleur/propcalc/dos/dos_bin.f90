@@ -1,4 +1,5 @@
 MODULE m_dosbin
+
 #ifdef CPP_MPI
    USE mpi 
 #endif
