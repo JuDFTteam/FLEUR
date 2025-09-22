@@ -163,7 +163,7 @@ CONTAINS
          !print*,"doing efield shit"
          atomsefield = atoms
          atomsefield%zatom(:) = 0.0 ! find out if this is actually needed
-         CALL dfpt_vefield(juphon,starsq,atoms,sym,sphhar,cell,dfptvefield,dfptvefieldimag,iDir,-1)
+         CALL dfpt_vefield(juphon,starsq,atoms,sym,sphhar,cell,dfptvefield,dfptvefieldimag,iDir,1)
          !dfptvefield%pw = CMPLX(0.0,0.0)
          !dfptvefield%mt = 0.0
          !dfptvefieldimag % mt = 0.0

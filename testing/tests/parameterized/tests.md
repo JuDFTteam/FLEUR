@@ -13,23 +13,26 @@ To create a test please append the corrsponding table.
 Testset: Basic
 ------
 
-||Description|directory name|marks|Remarks
-|-|-----------|--------------|------|----
-|+|Bulk Cu one iteration,bandstructure|basic/CuBand|
-|+|Bulk Cu one iteration|basic/CuBulk|fast,bulk
-|+|Bulk Cu one iteration,DOS|basic/CuDOS|fast,bulk,dos
-|+|Bulk Cu one iteration,DOS,Orbital decomp.|basic/CuOrb|fast,bulk,dos,orbcomp
-| |Bulk Co, DOS,MCD|basic/CoMCD|bulk,dos,mcd|MCD disabled
-|+|Bulk Co, bandstructure, unfolding|basic/CoUnfold|band,bulk
-|+|Bulk Fe, Kerker preconditioner|basic/Fe_Kerker|bulk
-|+|Bulk Fe fcc with relativistic core solver|basic/Fe_fcc_kcrel|
-|+|Si with LOs|basic/SiLO|bulk
-|+|Bulk PTO|basic/PTO|bulk
-|+|Bulk PTO, SOC|basic/PTO-SOC|bulk,soc
-|+|Bulk Fe, Tetrahedon method|basic/Fe_Tetra_noSYM|bulk
-| |LDA+U with Around mean field double counting and magnetism|basic/NiOldaUAMF|bulk,ldau|LDA+U AMF disabled
-|+|LDA+U with fully localized double counting and magnetism|basic/NiOldaUFLL|bulk,ldau
-|+|Crystal field output|basic/CrystalFieldOutput|bulk
+||Description|directory name|marks|Remarks|CmdLine|MPI
+|-|-----------|--------------|------|----|-|-|-
+|+|Bulk Cu one iteration,bandstructure|basic/CuBand||||
+|+|Bulk Cu one iteration,ELPA|basic/CuBulk|mpi,elpa|Test for ELPA|-diag elpa|2
+|+|Bulk Cu one iteration,ScaLapack|basic/CuBulk|mpi|Test for ELPA|-diag scalapack|2
+|+|Bulk Cu one iteration,Chase|basic/CuBulk|mpi,chase|Test for ELPA|-diag chase|2
+|+|Bulk Cu one iteration|basic/CuBulk|fast,bulk||||
+|+|Bulk Cu one iteration,DOS|basic/CuDOS|fast,bulk,dos||||
+|+|Bulk Cu one iteration,DOS,Orbital decomp.|basic/CuOrb|fast,bulk,dos,orbcomp||||
+| |Bulk Co, DOS,MCD|basic/CoMCD|bulk,dos,mcd|MCD disabled||||
+|+|Bulk Co, bandstructure, unfolding|basic/CoUnfold|band,bulk||||
+|+|Bulk Fe, Kerker preconditioner|basic/Fe_Kerker|bulk||||
+|+|Bulk Fe fcc with relativistic core solver|basic/Fe_fcc_kcrel||||
+|+|Si with LOs|basic/SiLO|bulk||||
+|+|Bulk PTO|basic/PTO|bulk||||
+|+|Bulk PTO, SOC|basic/PTO-SOC|bulk,soc||||
+|+|Bulk Fe, Tetrahedon method|basic/Fe_Tetra_noSYM|bulk||||
+| |LDA+U with Around mean field double counting and magnetism|basic/NiOldaUAMF|bulk,ldau|LDA+U AMF disabled||||
+|+|LDA+U with fully localized double counting and magnetism|basic/NiOldaUFLL|bulk,ldau||||
+|+|Crystal field output|basic/CrystalFieldOutput|bulk||||
 
 Testset: Films
 ----------------
@@ -51,6 +54,14 @@ Testset: Forces
 |+|Bulk VO2, Relaxation         |forces/VO2_forces|bulk
 |+|Bulk VO2, Relaxation, different force levels         |forces/VO2_force_levels|bulk
 |+|Bulk H2O, Relaxtion using BFGS|forces/H2ORelaxBFGS|bulk
+
+Testset: DFPT
+-------------------
+||Description|directory name|marks|Remarks
+|-|-----------|--------------|------|----
+|+|Cu bulk fcc|dfpt/CuBulk|libxc | partly ready
+|+|C bulk fcc|dfpt/CBulk|libxc | partly ready
+
 
 Testset: Noco
 ----------

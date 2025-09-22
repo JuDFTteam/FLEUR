@@ -4,7 +4,7 @@ module m_vmts
 #endif
 contains
 
-  subroutine vmts( input, fmpi, stars, sphhar, atoms, sym, cell, juphon, dosf, vpw, rho, potdenType, vr, rhoIm, vrIm, iDtype, iDir, iDir2, mat2ord )
+  subroutine vmts( input, fmpi, stars, sphhar, atoms, sym, cell, juphon, dosf, vpw, rho, potdenType, vr, ispin,  rhoIm, vrIm, iDtype, iDir, iDir2)
 
   !-------------------------------------------------------------------------
   ! This subroutine calculates the lattice harmonics expansion coefficients
@@ -57,11 +57,11 @@ contains
     real,           intent(in)        :: rho(:,0:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
     integer,        intent(in)        :: potdenType
     real,           intent(out)       :: vr(:,0:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
-    REAL,    OPTIONAL, INTENT(IN)     :: rhoIm(:,0:,:)
-    REAL,    OPTIONAL, INTENT(OUT)    :: vrIm(:,0:,:)
+    integer,        intent(in)        :: ispin
+    type(t_potden), optional, intent(in) :: rhoIm
+    type(t_potden), optional, intent(inout) :: vrIm  
     INTEGER, OPTIONAL, INTENT(IN)     :: iDtype, iDir
     INTEGER, OPTIONAL, INTENT(IN)     :: iDir2
-    COMPLEX, OPTIONAL, INTENT(IN)     :: mat2ord(5,3,3)
 
     complex                           :: cp, sm
     integer                           :: i, jm, k, l, lh, n, nd, lm, m, imax, lmax, iMem, ptsym
@@ -193,12 +193,12 @@ contains
                                            + green_2(1:imax) *            integral_1(1:imax)   )
         IF (l_dfptvgen) THEN
            ! Integrate the imaginary part of the density perturbation as well.
-           integrand_1(1:imax) = green_1(1:imax) * rhoIm(1:imax,lh,n)
-           integrand_2(1:imax) = green_2(1:imax) * rhoIm(1:imax,lh,n)
+           integrand_1(1:imax) = green_1(1:imax) * rhoIm%mt(1:imax,lh,n,ispin)
+           integrand_2(1:imax) = green_2(1:imax) * rhoIm%mt(1:imax,lh,n,ispin)
            call intgr2( integrand_1(1:imax), atoms%rmsh(1,n), atoms%dx(n), imax, integral_1(1:imax) )
            call intgr2( integrand_2(1:imax), atoms%rmsh(1,n), atoms%dx(n), imax, integral_2(1:imax) )
            termsR = integral_2(imax) + ( AIMAG(vtl(lh,n)) / green_factor - integral_1(imax) * green_2(imax) ) / green_1(imax)
-           vrIm(1:imax,lh,n) = green_factor * (   green_1(1:imax) * ( termsR - integral_2(1:imax) ) &
+           vrIm%mt(1:imax,lh,n,ispin) = green_factor * (   green_1(1:imax) * ( termsR - integral_2(1:imax) ) &
                                                 + green_2(1:imax) *            integral_1(1:imax)   )
         END IF
       end do
@@ -242,7 +242,7 @@ contains
                      m = sphhar%mlh(iMem, lh, ptsym)
                      lm = l*(l+1) + m + 1
                      IF ((n.EQ.iDtype).OR.(0.EQ.iDtype)) vr(1:atoms%jri(n),lh,n) = vr(1:atoms%jri(n),lh,n) + &
-                                                         conjg(sphhar%clnu(iMem, lh, ptsym)) * mat2ord(lm-4,iDir2,iDir) * pref * &
+                                                         conjg(sphhar%clnu(iMem, lh, ptsym)) * mat2ord(iDir2,iDir,lm-4) * pref * &
                                                          ( 1 - (atoms%rmsh(1:atoms%jri(n), n) / atoms%rmt(n))**5) / atoms%rmsh(1:atoms%jri(n),n)**3
                   END DO
                END DO

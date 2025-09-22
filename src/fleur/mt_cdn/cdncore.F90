@@ -1,10 +1,11 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2018 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_cdncore
+   implicit none
 
 CONTAINS
 
@@ -50,13 +51,12 @@ SUBROUTINE cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
    COMPLEX                          :: rho21
    LOGICAL, PARAMETER               :: l_st=.FALSE.
    LOGICAL                          :: l_coreDenPresent
+   LOGICAL                          :: l_useOtherCoreSolver
 
-   REAL                             :: rhoTemp(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
    REAL                             :: rh(atoms%msh,atoms%ntype,input%jspins)
    REAL                             :: qint(atoms%ntype,input%jspins)
    REAL                             :: tec(atoms%ntype,input%jspins)
    REAL                             :: rhTemp(atoms%msh,atoms%ntype,input%jspins)
-   LOGICAL                          :: l_useOtherCoreSolver(atoms%ntype)
    REAL ,ALLOCATABLE                :: vr0(:,:,:)
 
    results%seigc = 0.0
@@ -102,34 +102,31 @@ SUBROUTINE cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
    !add in core density
    IF (fmpi%irank==0) THEN
       IF (input%kcrel==0) THEN
-         DO jspin = 1,input%jspins
-            IF(PRESENT(EnergyDen)) THEN
-               CALL cored(input,jspin,atoms,outDen%mt,sphhar,l_CoreDenPresent,vr0(:,:,jspin), qint,rh ,tec,seig, EnergyDen=EnergyDen%mt)
-            ELSE
-               CALL cored(input,jspin,atoms,outDen%mt,sphhar,l_CoreDenPresent,vr0(:,:,jspin), qint,rh ,tec,seig)
-            ENDIF
+         DO iType = 1, atoms%ntype
+            DO jspin = 1,input%jspins
+               IF(PRESENT(EnergyDen)) THEN
+                  CALL cored(input,jspin,iType,atoms,outDen%mt,sphhar,l_CoreDenPresent,vr0(:,:,jspin), qint,rh ,tec,seig, EnergyDen=EnergyDen%mt)
+               ELSE
+                  CALL cored(input,jspin,iType,atoms,outDen%mt,sphhar,l_CoreDenPresent,vr0(:,:,jspin), qint,rh ,tec,seig)
+               ENDIF
 
-            rhTemp(:,:,jspin) = rh(:,:,jspin)
-            results%seigc = results%seigc + seig
+               rhTemp(:,iType,jspin) = rh(:,iType,jspin)
+               results%seigc = results%seigc + seig
+            END DO
          END DO
       ELSE
          IF(PRESENT(EnergyDen)) call juDFT_error("Energyden not implemented for relativistic core calculations")
-         l_useOtherCoreSolver = .FALSE.
-         rhoTemp = outDen%mt
-         CALL coredr(input,atoms,seig, outDen%mt,sphhar,vr0,qint,rh,l_useOtherCoreSolver)
-         results%seigc = results%seigc + seig
-         IF(ANY(l_useOtherCoreSolver(:))) THEN
-            DO jspin = 1,input%jspins
-               CALL cored(input,jspin,atoms,rhoTemp,sphhar,l_CoreDenPresent,vr0(:,:,jspin),qint,rh,tec,seig,l_useOtherCoreSolver=l_useOtherCoreSolver)
-            END DO
+         DO iType = 1, atoms%ntype
+            l_useOtherCoreSolver = .FALSE.
+            CALL coredr(input,atoms,iType,seig, outDen%mt,sphhar,vr0,qint,rh,l_useOtherCoreSolver)
             results%seigc = results%seigc + seig
-            DO iType = 1, atoms%ntype
-               IF (l_useOtherCoreSolver(iType)) THEN
-                  outDen%mt(1:atoms%jmtd,0:sphhar%nlhd,iType,1) = rhoTemp(1:atoms%jmtd,0:sphhar%nlhd,iType,1)
-                  outDen%mt(1:atoms%jmtd,0:sphhar%nlhd,iType,input%jspins) = rhoTemp(1:atoms%jmtd,0:sphhar%nlhd,iType,input%jspins)
-               END IF
-            END DO
-         END IF
+            IF (l_useOtherCoreSolver) THEN
+               DO jspin = 1,input%jspins
+                  CALL cored(input,jspin,iType,atoms,outDen%mt,sphhar,l_CoreDenPresent,vr0(:,:,jspin),qint,rh,tec,seig,l_useOtherCoreSolver=l_useOtherCoreSolver)
+                  results%seigc = results%seigc + seig
+               END DO
+            END IF
+         END DO
       END IF
    END IF
    DO jspin = 1,input%jspins

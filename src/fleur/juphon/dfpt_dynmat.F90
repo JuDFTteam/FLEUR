@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2021 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -442,9 +442,8 @@ CONTAINS
                   rhoLocal_vac(:,:stars%ng2,:) = (rho%vac(:,:,:,1)+rho%vac(:,:,:,fi%input%jspins))/(3.0-fi%input%jspins)
                   rhoLocal_pw(:stars%ng3) = (rho%pw(:,1)+rho%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
 
-                  CALL dfpt_sf_vac(starsLocal,fi%vacuum,fi%cell,rhoLocal_pw,vExt1%pw(:,1),rhoLocal_vac,vExt1%vac(:,:,:,1),tempval,iDir_col)
-                  ! The SF Element seems to be broken atm. Needs a fix
-                  !dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
+                  CALL dfpt_sf_vac(starsLocal,fi%vacuum,fi%cell,rhoLocal_pw,vExt1%pw(:,1),rhoLocal_vac,vExt1%vac(:,:,:,1),tempval)
+                  dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
                   IF (fmpi%irank==0) write(9989,FMT=8000) "    SF VAC Element rho V1ext0       ", tempval
                   tempval = CMPLX(0.0,0.0)
                END IF
@@ -641,15 +640,14 @@ CONTAINS
 
    END SUBROUTINE dfpt_int_vac
 
-   SUBROUTINE dfpt_sf_vac(stars,vacuum,cell,pw_conj,pw_pure,vac_conj,vac_pure,sf_int,iDir_col)
+   SUBROUTINE dfpt_sf_vac(stars,vacuum,cell,pw_conj,pw_pure,vac_conj,vac_pure,sf_int)
 
       TYPE(t_stars), INTENT(IN) :: stars
       TYPE(t_vacuum), INTENT(IN) :: vacuum
       TYPE(t_cell), INTENT(IN) :: cell 
       COMPLEX, INTENT(IN) :: pw_conj(:), pw_pure(:)
       COMPLEX, INTENT(IN) :: vac_conj(:,:,:), vac_pure(:,:,:)
-      COMPLEX, INTENT(OUT) :: sf_int
-      INTEGER, INTENT(IN) :: iDir_col 
+      COMPLEX, INTENT(INOUT) :: sf_int
 
       REAL :: facv ! accounts for vacua symmetry
       REAL :: qzh, pref , facn 
@@ -660,7 +658,6 @@ CONTAINS
       facv = 2.0/vacuum%nvac
       pref = 1.0 ! direction fourier trafo  
       facn = 1.0 
-
       DO iVac = 1 , vacuum%nvac
          ! IR - Part 
          fft_conj = CMPLX(0.0,0.0)
@@ -749,7 +746,7 @@ CONTAINS
       TYPE(t_usdus)             :: ud, uddummy
       TYPE(t_lapw)              :: lapw, lapwq
       TYPE(t_hub1data)          :: hub1datadummy
-      TYPE (t_mat)              :: zMat, zMat1, zMatq, zMat2
+      CLASS (t_mat), ALLOCATABLE :: zMat, zMat1, zMatq, zMat2
       CLASS(t_mat), ALLOCATABLE :: hmat1,smat1,hmat1q,smat1q,hmat2,smat2,vmat2
 
       ! Variables for HF or fi%hybinp functional calculation
@@ -809,6 +806,18 @@ CONTAINS
 
             nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*fi%atoms%nlotot,lapw%nv(1)+fi%atoms%nlotot,fi%noco%l_noco)
             nbasfcnq = MERGE(lapwq%nv(1)+lapwq%nv(2)+2*fi%atoms%nlotot,lapwq%nv(1)+fi%atoms%nlotot,fi%noco%l_noco)
+
+            IF (fmpi%n_size == 1) THEN
+               ALLOCATE (t_mat::zMat)
+               ALLOCATE (t_mat::zMat1)
+               ALLOCATE (t_mat::zMat2)
+               IF (PRESENT(q_eig_id)) ALLOCATE (t_mat::zMatq)
+            ELSE
+               ALLOCATE (t_mpimat::zMat)
+               ALLOCATE (t_mpimat::zMat1)
+               ALLOCATE (t_mpimat::zMat2)
+               IF (PRESENT(q_eig_id)) ALLOCATE (t_mpimat::zMatq)
+            END IF
 
             CALL zMat%init(l_real,nbasfcn,noccbd)
             CALL zMat1%init(.FALSE.,nbasfcnq,noccbd)
@@ -936,12 +945,16 @@ CONTAINS
 #endif
             CALL timestop("EV output")
 
-            !IF (allocated(zmat)) THEN
-             CALL zMat%free()
-             CALL zMat1%free()
-             CALL zMat2%free()
-              !deallocate(zMat)
-            !ENDIF
+            IF (ALLOCATED(zmat)) THEN
+               CALL zMat%free()
+               IF (PRESENT(q_eig_id)) CALL zMatq%free()
+               CALL zMat1%free()
+               CALL zMat2%free()
+               DEALLOCATE(zMat)
+               IF (PRESENT(q_eig_id)) DEALLOCATE(zMatq)
+               DEALLOCATE(zMat1)
+               DEALLOCATE(zMat2)
+            END IF
          END DO  k_loop
       END DO ! spin loop ends
 #ifdef CPP_MPI
@@ -977,7 +990,7 @@ CONTAINS
       USE m_types_mpimat
       USE m_dfpt_hs_int
       USE m_dfpt_hsmt
-      USE m_dfpt_eigen_redist_matrix
+      USE m_eigen_redist_matrix
 
       IMPLICIT NONE
 
@@ -1070,13 +1083,13 @@ CONTAINS
       IF (PRESENT(vmat2_final)) ALLOCATE (vmat2_final, mold=vmat2(1, 1))
 
       CALL timestart("Matrix redistribution")
-      CALL dfpt_eigen_redist_matrix(fmpi, lapw, lapw, fi%atoms, smat1, smat1_final)
-      CALL dfpt_eigen_redist_matrix(fmpi, lapw, lapw, fi%atoms, hmat1, hmat1_final, smat1_final)
-      CALL dfpt_eigen_redist_matrix(fmpi, lapwq, lapw, fi%atoms, smat1q, smat1q_final)
-      CALL dfpt_eigen_redist_matrix(fmpi, lapwq, lapw, fi%atoms, hmat1q, hmat1q_final, smat1q_final)
-      CALL dfpt_eigen_redist_matrix(fmpi, lapw, lapw, fi%atoms, smat2, smat2_final)
-      CALL dfpt_eigen_redist_matrix(fmpi, lapw, lapw, fi%atoms, hmat2, hmat2_final, smat2_final)
-      IF (PRESENT(vmat2_final)) CALL dfpt_eigen_redist_matrix(fmpi, lapw, lapw, fi%atoms, vmat2, vmat2_final)
+      CALL eigen_redist_matrix(fmpi, lapw,  fi%atoms, smat1, smat1_final)
+      CALL eigen_redist_matrix(fmpi, lapw,  fi%atoms, hmat1, hmat1_final, smat1_final)
+      CALL eigen_redist_matrix(fmpi, lapw, fi%atoms, smat1q, smat1q_final,lapwq=lapwq)
+      CALL eigen_redist_matrix(fmpi, lapw, fi%atoms, hmat1q, hmat1q_final, smat1q_final)
+      CALL eigen_redist_matrix(fmpi, lapw,  fi%atoms, smat2, smat2_final)
+      CALL eigen_redist_matrix(fmpi, lapw,  fi%atoms, hmat2, hmat2_final, smat2_final)
+      IF (PRESENT(vmat2_final)) CALL eigen_redist_matrix(fmpi, lapw, fi%atoms, vmat2, vmat2_final)
       CALL timestop("Matrix redistribution")
    END SUBROUTINE
 END MODULE m_dfpt_dynmat

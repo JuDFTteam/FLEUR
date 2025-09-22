@@ -7,6 +7,7 @@ MODULE m_dfpt
    USE m_juDFT
    USE m_constants
    USE m_types
+   implicit none
 
    IMPLICIT NONE
 
@@ -240,6 +241,8 @@ CONTAINS
             qvecs = fi%juPhon%qvec
          END IF 
          qpts_loc = qpts
+         DEALLOCATE(qpts_loc%bk)
+         ALLOCATE(qpts_loc%bk,mold=qvecs)
          qpts_loc%bk(:, :SIZE(qvecs,2)) = qvecs
          ALLOCATE(q_list(SIZE(qvecs,2)))
          q_list = (/(iArray, iArray=1,SIZE(qvecs,2), 1)/)
@@ -306,17 +309,6 @@ CONTAINS
          IF (iDir==3) sigma_gext(iDir,:) = sigma_loc
       END DO
 
-      IF (fi_nosym%input%film .AND. fi_nosym%juphon%l_symVacLevel .AND. fmpi%irank==0) THEN 
-         DO iDir= 1 , 3
-            constantShift = 0.0 
-            DO ispin = 1 , fi_nosym%input%jspins
-               constantShift =  (grVext3(iDir)%vac(fi_nosym%vacuum%nmzd,1,1,ispin)  - grVext3(iDir)%vac(fi_nosym%vacuum%nmzd,1,2,ispin)) / 2               
-               grVext3(iDir)%pw(1,:) = grVext3(iDir)%pw(1,:) + constantShift
-               grVext3(iDir)%mt(:,0,:,:) = grVext3(iDir)%mt(:,0,:,:) + constantShift * sfp_const 
-               grVext3(iDir)%vac(:,1,:,:) = grVext3(iDir)%vac(:,1,:,:) + constantShift
-            END DO   
-         END DO 
-      END IF
       !CALL vext_dummy%copyPotDen(vTot_nosym)
       !CALL vext_dummy%resetPotDen()
       ! Density gradient
@@ -382,13 +374,13 @@ CONTAINS
       DO iDir = 1, 3
          CALL sh_to_lh(fi_nosym%sym, fi_nosym%atoms, sphhar_nosym, SIZE(rho_nosym%mt,4), 2, grrhodummy(:, :, :, :, iDir), grRho3(iDir)%mt, imagrhodummy%mt)
          CALL imagrhodummy%resetPotDen()
-         write(oUnit, *) "grVeff", iDir
+         if (fmpi%irank==0) write(oUnit, *) "grVeff", iDir
          sigma_loc  = cmplx(0.0,0.0)
          IF (iDir==3) sigma_loc  = sigma_coul
          CALL dfpt_vgen(hybdat_nosym, fi_nosym%field, fi_nosym%input, xcpot_nosym, fi_nosym%atoms, sphhar_nosym, stars_nosym, fi_nosym%vacuum, fi_nosym%sym, &
                         fi%juphon, fi_nosym%cell, fmpi_nosym, fi_nosym%noco, nococonv_nosym, rho_nosym, vTot_nosym, &
                         stars_nosym, imagrhodummy, grVtot3(iDir), .TRUE., grvextdummy, grRho3(iDir), 0, iDir, [0,0], sigma_loc)
-         write(oUnit, *) "grVC", iDir
+         if (fmpi%irank==0) write(oUnit, *) "grVC", iDir
          sigma_loc  = cmplx(0.0,0.0)
          IF (iDir==3) sigma_loc  = sigma_coul
          CALL dfpt_vgen(hybdat_nosym, fi_nosym%field, fi_nosym%input, xcpot_nosym, fi_nosym%atoms, sphhar_nosym, stars_nosym, fi_nosym%vacuum, fi_nosym%sym, &
@@ -483,6 +475,8 @@ CONTAINS
          !end do
          !stop
          IF (fi%juPhon%l_efield) THEN
+            !print*,"I make it here"
+            
             ALLOCATE(born_eff_charge(fi_nosym%atoms%ntype,3,3))
             ALLOCATE(born_eff_charge_contributions(fi_nosym%atoms%ntype,3,3,1+fi_nosym%atoms%ntype))
             born_eff_charge = CMPLX(0.0)
@@ -491,7 +485,7 @@ CONTAINS
             ALLOCATE(diel_tensor(3,3))
             diel_tensor = CMPLX(0,0)
             IF (fmpi%irank==0) WRITE(*,*) "Scf calculation for electric field perturbation"
-            DO iDir = 1,3 !for all cartesian directions
+            DO iDir =1,3 !for all cartesian directions
                !Define "qlim"-vector in internal coordinates
                dfpt_tag = ''
                WRITE(dfpt_tag,'(a1,i0,a2,i0)') 'q', 1, '_j', iDir
@@ -540,7 +534,8 @@ CONTAINS
                CALL vC1Im%reset_dfpt()
                CALL results1%reset_results(fi_nosym%input)
                IF (fmpi%irank==0) WRITE(*,*) '-------------------------'
-
+               !print*,"before sternheimer"
+               !stop
                CALL timestart("Sternheimer")
                CALL dfpt_sternheimer(fi_nosym, xcpot_nosym, sphhar_nosym, stars_nosym, starsq, nococonv_nosym, qintpts, fmpi_nosym, results_nosym, q_results, enpara_nosym, hybdat_nosym, &
                                     rho_nosym, vTot_nosym, grRho3(iDir), grVtot3(iDir), grVext3(iDir), 1, 1, iDir, &
@@ -548,6 +543,8 @@ CONTAINS
                                     denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, MERGE(sigma_ext,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir==3), &
                                     MERGE(sigma_coul,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir==3))
                CALL timestop("Sternheimer")
+               !print*,"sum(denIn1%pw)",sum(denIn1%pw)
+               !print*,"sum(denIn1%mt)",sum(denIn1%mt)
                IF (fmpi%irank==0) WRITE(*,*) '-------------------------'  
                CALL dfpt_dielecten_HF_int(fi_nosym,stars_nosym,starsq,sphhar_nosym,fmpi_nosym,denIn1,denIn1Im,results_nosym, results1,diel_tensor(iDir,:),rho,iDir,1)
                IF (fi%juPhon%l_borneffcharge) THEN
@@ -560,9 +557,9 @@ CONTAINS
             CALL timestart("diel_tensor")
             IF (fmpi%irank==0) THEN
                WRITE(*,*) "Scf calculation for electric field perturbation finished"
-               CALL dfpt_dielecten_final(fi_nosym,diel_tensor(:,:))
+               CALL dfpt_dielecten_final_new(fi_nosym,diel_tensor(:,:))
             END IF 
-
+            CALL timestop("diel_tensor")
             IF (fi%juPhon%l_borneffcharge) THEN
                CALL dfpt_born_eff_charge_final(fi,born_eff_charge,born_eff_charge_contributions(:,:,:,:))
             END IF
@@ -783,7 +780,7 @@ CONTAINS
                   CALL timestop("Dynmat diagonalization")
    
                   CALL timestart("Frequency calculation")
-                  CALL CalculateFrequencies(fi_nosym%atoms, q_list(iQ), eigenVals, eigenFreqs,"raw")
+                  CALL CalculateFrequencies(fi_nosym%atoms, q_list(iQ), eigenVals, eigenFreqs,"raw",qpts_loc%bk(:,q_list(iQ)))
                   CALL timestop("Frequency calculation")
                   write(9991,*) "Eii2 new:", E2ndOrdII
                   !DEALLOCATE(eigenVals, eigenVecs, eigenFreqs, E2ndOrdII)
@@ -858,7 +855,7 @@ CONTAINS
                CALL timestop("Dynmat diagonalization")
 
                CALL timestart("Frequency calculation")
-               CALL CalculateFrequencies(fi_nosym%atoms, iQ, eigenVals, eigenFreqs,TRIM(dynfiletag))
+               CALL CalculateFrequencies(fi_nosym%atoms, iQ, eigenVals, eigenFreqs,TRIM(dynfiletag),fi_nosym%kpts%bk(:,iQ))
                CALL timestop("Frequency calculation")
 
                IF (l_dfpt_dos) eigenValsFull(:,iQ,1) = eigenFreqs(:)
@@ -886,9 +883,7 @@ CONTAINS
 
       DEALLOCATE(recG)
 
-      WRITE (oUnit,*) '------------------------------------------------------'
-
-      CALL juDFT_end("Phonon calculation finished.",fmpi%irank)
+      if (fmpi%irank==0) WRITE (oUnit,*) '------------------------------------------------------'
 
     END SUBROUTINE dfpt
 

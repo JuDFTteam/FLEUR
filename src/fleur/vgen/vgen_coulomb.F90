@@ -68,15 +68,15 @@ contains
     integer                                      :: i, i3, irec2, irec3, ivac, j, js, k, k3
     integer                                      :: lh, n, nzst1, first_star
     integer                                      :: imz, imzxy, ichsmrg, ivfft
-    integer                                      :: l, nat
-    real                                         :: ani, g3, z
+    integer                                      :: l, nat , ncsh
+    real                                         :: ani, g3, z , sigmaa(2)
     complex                                      :: sig1dh, vz1dh, vmz1dh, vmz1dh_is, constantShift
-    complex                                      :: mat2ord(5,3,3), sigma_loc(2), sigma_loc2(2)
+    complex                                      :: sigma_loc(2), sigma_loc2(2)
     complex, allocatable                         :: alphm(:,:), psq(:)
     real,    allocatable                         :: af1(:), bf1(:)
     real                                         :: gaussian, sigma ! smoothing function in case of DFPT + Film 
     LOGICAL :: l_dfptvgen ! If this is true, we handle things differently!
-    LOGICAL :: l_2ndord, l_corr
+    LOGICAL :: l_2ndord, l_corr , l_gradientEfield
 
 #ifdef CPP_MPI
     integer:: ierr
@@ -88,6 +88,10 @@ contains
     vmz1dh_is = cmplx(0.0,0.0)
     sigma_loc = CMPLX(0.0,0.0) !sigma_disc
     sigma_loc2 = CMPLX(0.0,0.0) !MERGE(sigma_disc,cmplx(0.0,0.0),PRESENT(sigma_disc2))
+    l_gradientEfield = .FALSE. 
+    if (present(iDtype)) then 
+      if (iDtype==0 .and. .not. ALL(ABS(den%pw)<1e-12)) l_gradientEfield = .TRUE. 
+    end if
 
     vintcza = cmplx(0.0,0.0)
     sig1dh = cmplx(0.0,0.0)
@@ -102,22 +106,12 @@ contains
 
     ! PSEUDO-CHARGE DENSITY COEFFICIENTS
     call timestart( "psqpw" )
-    if (.not.l_dfptvgen) then
-        call psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym,   &
-            & juphon, den, ispin, .false., vCoul%potdenType, psq, sigma_loc )
-    else if (.not.l_2ndord) then
-        ! If we do DFPT, the MT density perturbation has an imaginary part that needs to be explicitly carried
-        ! as another variable dfptdenimag%mt and results in the same component for the Coulomb potential later on.
-        ! Also, the ionic qlm behave differently.
-        call psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym,   &
-            & juphon, den, ispin, .false., vCoul%potdenType, psq, sigma_loc,&
-            & dfptdenimag%mt(:,:,:,ispin), stars2, iDtype, iDir, dfptden0%mt(:,:,:,ispin), dfptden0%pw(:,ispin) )
-    else
-        call make_mat_2nd(mat2ord)
-        call psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym,   &
-            & juphon, den, ispin, .false., vCoul%potdenType, psq, sigma_loc,&
-            & dfptdenimag%mt(:,:,:,ispin), stars2, iDtype, iDir, dfptden0%mt(:,:,:,ispin), dfptden0%pw(:,ispin), iDir2, mat2ord )
-    end if
+    ! If we do DFPT, the MT density perturbation has an imaginary part that needs to be explicitly carried
+    !     ! as another variable dfptdenimag%mt and results in the same component for the Coulomb potential later on.
+    !     ! Also, the ionic qlm behave differently.
+    call psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym,   &
+          & juphon, den, ispin, .false., vCoul%potdenType, psq, sigma_loc,&
+          & dfptdenimag, stars2, iDtype, iDir, dfptden0, iDir2 )
     call timestop( "psqpw" )
 
     ! VACUUM POTENTIAL
@@ -129,13 +123,7 @@ contains
           ! If we do DPFT AND q/=0, there is no G_||+q_||=0 part! So all components are
           ! handled by the G_||/=0 parts in vvacis/vvacxy, that are told to explicitly
           ! start at star 1 instead of 2 for this!
-          if (.not.l_2ndord) then
-            !call vvac( vacuum, stars, cell,  input, field, psq, den%vac(:,1,:,ispin), vCoul%vac(:,1,:,ispin), rhobar, sig1dh, vz1dh,vslope,.FALSE..AND.l_dfptvgen,vmz1dh,sigma_disc )
-            call vvac( vacuum, stars, cell,  input, field, psq, den%vac(:,1,:,ispin), vCoul%vac(:,1,:,ispin), rhobar, sig1dh, vz1dh,vslope,l_corr,vmz1dh,sigma_disc )
-          else
-            !call vvac( vacuum, stars, cell,  input, field, psq, den%vac(:,1,:,ispin), vCoul%vac(:,1,:,ispin), rhobar, sig1dh, vz1dh,vslope,.TRUE.,vmz1dh,sigma_disc,sigma_disc2 )
-            call vvac( vacuum, stars, cell,  input, field, psq, den%vac(:,1,:,ispin), vCoul%vac(:,1,:,ispin), rhobar, sig1dh, vz1dh,vslope,l_corr,vmz1dh,sigma_disc,sigma_disc2 )
-          end if
+          call vvac( vacuum, stars, cell,  input, field, psq, den%vac(:,1,:,ispin), vCoul%vac(:,1,:,ispin), rhobar, sig1dh, vz1dh,vslope,l_corr,vmz1dh,sigma_disc,l_dfptvgen )
         end if
         call vvacis( stars, vacuum, cell, psq, input, field, vCoul%vac(:vacuum%nmzxyd,:,:,ispin), l_dfptvgen, l_corr )
         call vvacxy( stars, vacuum, cell, sym, input, field, den%vac(:vacuum%nmzxyd,:,:,ispin), vCoul%vac(:vacuum%nmzxyd,:,:,ispin), alphm, l_dfptvgen )
@@ -164,15 +152,9 @@ contains
             z = cell%amat(3,3) * i3 * ani
             if (l_dfptvgen) gaussian = 1 - exp( -(z-cell%amat(3,3)/2.0)**2 / ( 2 * sigma**2 )    )
             if ( z > cell%amat(3,3) / 2. ) z = z - cell%amat(3,3)
-            if (.not.l_2ndord) then
-              vintcza = vintcz( stars, vacuum, cell,  input, field, z, irec2, psq, &
-                                vCoul%vac(:,:,:,ispin), &
-                                rhobar, sig1dh, vz1dh, alphm, vslope, sigma_disc, l_dfptvgen, l_corr, vmz1dh-vmz1dh_is )
-            else
             vintcza = vintcz( stars, vacuum, cell,  input, field, z, irec2, psq, &
                               vCoul%vac(:,:,:,ispin), &
-                                rhobar, sig1dh, vz1dh, alphm, vslope, sigma_disc, l_dfptvgen, l_corr, vmz1dh-vmz1dh_is, sigma_disc2 )
-            end if 
+                                rhobar, sig1dh, vz1dh, alphm, vslope, sigma_disc, l_dfptvgen, l_corr, vmz1dh-vmz1dh_is )
             if (l_dfptvgen) THEN 
               if (juphon%l_symVacLevel .AND. (irec2 == 1) ) vintcza = vintcza + constantShift
               vintcza = vintcza * gaussian
@@ -213,6 +195,27 @@ contains
         end do
         if (l_dfptvgen .AND. juphon%l_symVacLevel) vCoul%vac(:,1,:,ispin) = vCoul%vac(:,1,:,ispin) + constantShift
         sigma_disc = sigma_loc
+        if (l_gradientEfield) then 
+          if (iDir == 3 ) then 
+                sigmaa(1) = ( field%efield%sigma + field%efield%sig_b(1) ) / cell%area
+                sigmaa(2) = ( field%efield%sigma + field%efield%sig_b(2) ) / cell%area
+                
+                if ( (sigmaa(1) + sigmaa(2)) .lt.  1E-8 ) then 
+                  ! Asymmetric setup in which an Efield contribution exists inside the film  
+                  vCoul%pw(1,:) = vCoul%pw(1,:) -   fpi_const * sigmaa(1) !/ cell%omtil  
+                end if 
+                
+                ! vacuum contribution
+                ! obtain mesh point (ncsh) of charge sheet for external electric field
+                ncsh = field%efield%zsigma / vacuum%delz + 1.01
+                do i = 1 , ncsh 
+                  ! vacuum 1 
+                  vCoul%vac(i,1,1,:) = vCoul%vac(i,1,1,:) - fpi_const * sigmaa(1)
+                  ! vacuum 2 
+                  vCoul%vac(i,1,2,:) = vCoul%vac(i,1,2,:) + fpi_const * sigmaa(2) 
+                end do 
+            end if
+        end if 
       ! in case of a bulk system:
       else if ( .not. input%film ) then
         if ( vCoul%potdenType == POTDEN_TYPE_POTYUK ) then
@@ -237,20 +240,9 @@ contains
     CALL MPI_BARRIER(fmpi%mpi_comm,ierr) !should be totally useless, but ...
 #endif
 
-    IF (.NOT.l_dfptvgen) THEN
-      call vmts( input, fmpi, stars, sphhar, atoms, sym, cell, juphon, dosf, vCoul%pw(:,ispin), &
-                 den%mt(:,0:,:,ispin), vCoul%potdenType, vCoul%mt(:,0:,:,ispin) )
-    ELSE IF (.NOT.l_2ndord) THEN
-      ! For DFPT there is a) an imaginary part to the potential and b) a different treatment
-      ! for the ionic 1/r (now 1/r^2) contribution.
-      call vmts( input, fmpi, stars, sphhar, atoms, sym, cell, juphon, dosf, vCoul%pw(:,ispin), &
-                 den%mt(:,0:,:,ispin), vCoul%potdenType, vCoul%mt(:,0:,:,ispin), &
-                 dfptdenimag%mt(:,0:,:,ispin), dfptvCoulimag%mt(:,0:,:,ispin), iDtype, iDir )
-    ELSE
-      call vmts( input, fmpi, stars, sphhar, atoms, sym, cell, juphon, dosf, vCoul%pw(:,ispin), &
-                 den%mt(:,0:,:,ispin), vCoul%potdenType, vCoul%mt(:,0:,:,ispin), &
-                 dfptdenimag%mt(:,0:,:,ispin), dfptvCoulimag%mt(:,0:,:,ispin), iDtype, iDir, iDir2, mat2ord )
-    END IF
+    call vmts( input, fmpi, stars, sphhar, atoms, sym, cell, juphon, dosf, vCoul%pw(:,ispin), &
+               den%mt(:,0:,:,ispin), vCoul%potdenType, vCoul%mt(:,0:,:,ispin), ispin, &
+               dfptdenimag, dfptvCoulimag, iDtype, iDir, iDir2 )
     call timestop( "MT-spheres" )
 
     if( vCoul%potdenType == POTDEN_TYPE_POTYUK ) return
@@ -282,37 +274,4 @@ contains
       end if CALCULATE_DENSITY_POTENTIAL_INTEGRAL
     end if !irank==0
   end subroutine vgen_coulomb
-
-  subroutine make_mat_2nd(mat2ord)
-     use m_constants
-     complex, intent(out) :: mat2ord(5,3,3)
-     mat2ord = cmplx(0.0,0.0)
-
-     mat2ord(1,1,1) =  sqrt(3.0/2.0)
-     mat2ord(1,1,2) =  sqrt(3.0/2.0)*ImagUnit
-     mat2ord(1,2,1) =  sqrt(3.0/2.0)*ImagUnit
-     mat2ord(1,2,2) = -sqrt(3.0/2.0)
-
-     mat2ord(2,1,3) =  sqrt(3.0/2.0)
-     mat2ord(2,2,3) =  sqrt(3.0/2.0)*ImagUnit   
-     mat2ord(2,3,1) =  sqrt(3.0/2.0)
-     mat2ord(2,3,2) =  sqrt(3.0/2.0)*ImagUnit  
-
-     mat2ord(3,1,1) = -1.0! - 0.5 ! TODO: What the hell is this value???
-     mat2ord(3,2,2) = -1.0! - 0.5 ! TODO: What the hell is this value???
-     mat2ord(3,3,3) =  2.0! - 0.5 ! TODO: What the hell is this value???
-
-     mat2ord(4,1,3) = -sqrt(3.0/2.0)
-     mat2ord(4,2,3) =  sqrt(3.0/2.0)*ImagUnit   
-     mat2ord(4,3,1) = -sqrt(3.0/2.0)
-     mat2ord(4,3,2) =  sqrt(3.0/2.0)*ImagUnit  
-
-     mat2ord(5,1,1) =  sqrt(3.0/2.0)
-     mat2ord(5,1,2) = -sqrt(3.0/2.0)*ImagUnit
-     mat2ord(5,2,1) = -sqrt(3.0/2.0)*ImagUnit
-     mat2ord(5,2,2) = -sqrt(3.0/2.0)
-
-     mat2ord = sqrt(4.0*pi_const/5.0) * mat2ord
-  end subroutine
-
 end module m_vgen_coulomb

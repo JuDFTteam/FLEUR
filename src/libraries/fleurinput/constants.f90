@@ -33,9 +33,9 @@ MODULE m_constants
   REAL,             PARAMETER :: bohr_to_angstrom_const=0.529177210903 ! value from https://physics.nist.gov/cgi-bin/cuu/Value?bohrrada0
                                                                        ! 0.529177210903(80)
   REAL,             PARAMETER :: eVac0Default_const = -0.25
-  CHARACTER(len=9), PARAMETER :: version_const = 'fleur 40'
-  CHARACTER(len=49), PARAMETER :: version_const_MaX = '     MaX-Release 7.2          (www.max-centre.eu)'
-  CHARACTER(len=4), PARAMETER :: inputFileVersion_const = '0.38'
+  CHARACTER(len=9), PARAMETER :: version_const = 'fleur 41'
+  CHARACTER(len=49), PARAMETER :: version_const_MaX = '     MaX-Release 8.0          (www.max-centre.eu)'
+  CHARACTER(len=4), PARAMETER :: inputFileVersion_const = '0.39'
   ! outputFileVersion_const is defined in juDFT/xmlOutput.f90
   ! For version number update also update version numbers in files io/xml/FleurInputSchema.xsd, io/xml/FleurOutputSchema.xsd, fleurInput/types_xml, and update the files
   ! io/xml/inputSchema.h.backup, io/xml/outputSchema.h.backup, dropInputSchema.c, dropOutputSchema.c, inputSchema_old.h, outputSchema_old.h.
@@ -107,6 +107,14 @@ MODULE m_constants
        -1,-1, 1,-2,-1, 1,-2,-1, 2,-3, 1,-2,-1, 2,-3,&
        1,-2,-1, 3,-4, 2,-3, 1,-2,-1, 3,-4, 2,-3/)
 
+  ! Nonrelativistic notation for core electron states
+  CHARACTER(4),DIMENSION(18),PARAMETER :: nr_coreStateList_const=(/&
+       '(1s)','(2s)','(2p)','(3s)','(3p)','(4s)','(3d)','(4p)','(5s)','(4d)','(5p)','(6s)','(4f)','(5d)','(6p)','(7s)','(5f)','(6d)' /)
+ 
+  INTEGER,DIMENSION(29),PARAMETER :: coreStateToNRList_const=(/&
+       1, 2, 3, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 10, 10, 11, 11, 12, 13, 13, 14, 14, 15, 15, 16, 17, 17, 18, 18 /)
+  
+
   REAL, DIMENSION(118), PARAMETER :: atomicMasses_const = (/  1.01,   4.00,   6.94,   9.01,  10.81,  12.01,  14.01,  16.00,  19.00, & ! up to fluorine
                                                              20.18,  22.99,  24.31,  26.98,  28.09,  30.97,  32.06,  35.45,  39.95, & ! up to argon
                                                              39.10,  40.08,  44.96,  47.87,  50.94,  52.00,  54.94,  55.85,  58.93, & ! up to cobalt
@@ -120,6 +128,8 @@ MODULE m_constants
                                                             231.04, 238.03, 237.00, 244.00, 243.00, 247.00, 247.00, 251.00, 252.00, & ! up to einsteinium
                                                             257.00, 258.00, 259.00, 262.00, 267.00, 269.00, 270.00, 272.00, 273.00, & ! up to hassium
                                                             277.00, 281.00, 281.00, 285.00, 286.00, 289.00, 288.00, 293.00, 294.00, 294.00/)
+
+  real, parameter :: massInElectronMasses = 1836.15 ! Ratio of proton to electron mass 
 
   CHARACTER(4),DIMENSION(6),PARAMETER :: nobleGasConfigList_const=(/'[He]','[Ne]','[Ar]','[Kr]','[Xe]','[Rn]'/)
 
@@ -144,6 +154,33 @@ MODULE m_constants
   integer, parameter, dimension(3)    :: dirvecz = [0, 0, 1]
   integer, parameter, dimension(3, 3) :: id3x3   = reshape([dirvecx, dirvecy, dirvecz], [3, 3])
 
+  complex, dimension(3,3,5) :: mat2ord = reshape([ &
+                                                            ! Tensor 1
+                                                            cmplx(sqrt(3.0/2.0), 0.0),  cmplx(0.0, sqrt(3.0/2.0)),  cmplx(0.0, 0.0), &
+                                                            cmplx(0.0, sqrt(3.0/2.0)),  cmplx(-sqrt(3.0/2.0), 0.0), cmplx(0.0, 0.0), &
+                                                            cmplx(0.0, 0.0),            cmplx(0.0, 0.0),            cmplx(0.0, 0.0), &
+
+                                                            ! Tensor 2
+                                                            cmplx(0.0, 0.0),            cmplx(0.0, 0.0),            cmplx(sqrt(3.0/2.0), 0.0), &
+                                                            cmplx(0.0, 0.0),            cmplx(0.0, 0.0),            cmplx(0.0, sqrt(3.0/2.0)), &
+                                                            cmplx(sqrt(3.0/2.0), 0.0),  cmplx(0.0, sqrt(3.0/2.0)),  cmplx(0.0, 0.0), &
+
+                                                            ! Tensor 3
+                                                            cmplx(-1.0, 0.0),          cmplx(0.0, 0.0),            cmplx(0.0, 0.0), &
+                                                            cmplx(0.0, 0.0),            cmplx(-1.0, 0.0),           cmplx(0.0, 0.0), &
+                                                            cmplx(0.0, 0.0),            cmplx(0.0, 0.0),            cmplx(2.0, 0.0), &
+
+                                                            ! Tensor 4
+                                                            cmplx(0.0, 0.0),            cmplx(0.0, 0.0),            cmplx(-sqrt(3.0/2.0), 0.0), &
+                                                            cmplx(0.0, 0.0),            cmplx(0.0, 0.0),            cmplx(0.0, sqrt(3.0/2.0)), &
+                                                            cmplx(-sqrt(3.0/2.0), 0.0), cmplx(0.0, sqrt(3.0/2.0)),  cmplx(0.0, 0.0), &
+
+                                                            ! Tensor 5
+                                                            cmplx(sqrt(3.0/2.0), 0.0),  cmplx(0.0, -sqrt(3.0/2.0)), cmplx(0.0, 0.0), &
+                                                            cmplx(0.0, -sqrt(3.0/2.0)), cmplx(-sqrt(3.0/2.0), 0.0), cmplx(0.0, 0.0), &
+                                                            cmplx(0.0, 0.0),            cmplx(0.0, 0.0),            cmplx(0.0, 0.0) &
+                                                          ], [3,3,5]) * sqrt(4.0*pi_const/5.0)
+                                                  
 CONTAINS
 
   REAL PURE FUNCTION pimach()

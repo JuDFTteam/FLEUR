@@ -1,6 +1,6 @@
 set(fleur_F90 ${fleur_F90}
 #${CMAKE_SOURCE_DIR}/src/fleur/propcalc/dos/Ek_write_sl.f90
-${CMAKE_SOURCE_DIR}/src/fleur/propcalc/dos/dos_bin.f90
+${CMAKE_SOURCE_DIR}/src/fleur/propcalc/dos/dos_bin.F90
 ${CMAKE_SOURCE_DIR}/src/fleur/propcalc/dos/cdninf.f90
 ${CMAKE_SOURCE_DIR}/src/fleur/propcalc/dos/smooth.f90
 ${CMAKE_SOURCE_DIR}/src/fleur/propcalc/dos/gnuplot.F90
