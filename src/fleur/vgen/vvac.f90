@@ -11,7 +11,7 @@ module m_vvac
    ! for general symmetry.          c.l.fu, r.podloucky             *
    ! ****************************************************************
 contains
-   subroutine vvac(vacuum, stars, cell, input, field, psq, rht, vnew, rhobar, sig1dh, vz1dh, vslope, l_bind, vmz1dh, sigma_disc,l_dfptvgen, sigma_disc2)
+   subroutine vvac(vacuum, stars, cell, input, field, psq, rht, vnew, rhobar, sig1dh, vz1dh, vslope, l_bind, vmz1dh, sigma_disc,l_dfptvgen)
       !! Calculates the \(\boldsymbol{G}_{||}=0\) part of the vacuum Coulomb potential.
       !! There are two possible cases for Dirichlet and von Neumann boundary conditions, respectively.
       !! von Neumann case:
@@ -43,7 +43,7 @@ contains
       logical,        intent(in)  :: l_dfptvgen
       complex,        intent(in)  :: sigma_disc(2)
 
-      complex, optional, intent(in) :: sigma_disc2(2)
+      !complex, optional, intent(in) :: sigma_disc2(2)
 
       complex                     :: sumq, newdp, newdm, newdp2, newdm2
       real                        :: bj0, bj1, qzh, sigmaa(2)
