@@ -2,9 +2,8 @@ FROM --platform=linux/amd64 ubuntu:24.04
 MAINTAINER d.wortmann@fz-juelich.de
 
 RUN DEBIAN_FRONTEND="noninteractive" apt update && DEBIAN_FRONTEND="noninteractive" apt install -y\
-  curl python3 git gfortran hdf5-tools libfftw3-dev g++ libblas-dev libblas-dev libxml2-dev cmake doxygen tetex-brev dvi2ps  libopenmpi-dev libscalapack-openmpi-dev vim gdb lcov libxml2-utils python3-pip python3-pytest
+  curl python3 git gfortran hdf5-tools libfftw3-dev g++ libblas-dev libblas-dev libxml2-dev cmake doxygen tetex-brev dvi2ps  libopenmpi-dev libscalapack-openmpi-dev vim gdb lcov libxml2-utils python3-pip python3-venv
 
-RUN pip3 install --break-system-packages pytest-html py #spglib==2.2.0 
 #RUN pip3 install --break-system-packages masci-tools
 RUN mkdir /opt/lib
 RUN mkdir /opt/include
