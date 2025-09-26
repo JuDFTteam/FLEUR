@@ -129,6 +129,8 @@ MODULE m_constants
                                                             257.00, 258.00, 259.00, 262.00, 267.00, 269.00, 270.00, 272.00, 273.00, & ! up to hassium
                                                             277.00, 281.00, 281.00, 285.00, 286.00, 289.00, 288.00, 293.00, 294.00, 294.00/)
 
+  real, parameter :: massInElectronMasses = 1836.15 ! Ratio of proton to electron mass 
+
   CHARACTER(4),DIMENSION(6),PARAMETER :: nobleGasConfigList_const=(/'[He]','[Ne]','[Ar]','[Kr]','[Xe]','[Rn]'/)
 
   INTEGER,DIMENSION(6),PARAMETER :: nobleGasNumStatesList_const=(/1, 4, 7, 12, 17, 24/)
@@ -152,6 +154,33 @@ MODULE m_constants
   integer, parameter, dimension(3)    :: dirvecz = [0, 0, 1]
   integer, parameter, dimension(3, 3) :: id3x3   = reshape([dirvecx, dirvecy, dirvecz], [3, 3])
 
+  complex, dimension(3,3,5) :: mat2ord = reshape([ &
+                                                            ! Tensor 1
+                                                            cmplx(sqrt(3.0/2.0), 0.0),  cmplx(0.0, sqrt(3.0/2.0)),  cmplx(0.0, 0.0), &
+                                                            cmplx(0.0, sqrt(3.0/2.0)),  cmplx(-sqrt(3.0/2.0), 0.0), cmplx(0.0, 0.0), &
+                                                            cmplx(0.0, 0.0),            cmplx(0.0, 0.0),            cmplx(0.0, 0.0), &
+
+                                                            ! Tensor 2
+                                                            cmplx(0.0, 0.0),            cmplx(0.0, 0.0),            cmplx(sqrt(3.0/2.0), 0.0), &
+                                                            cmplx(0.0, 0.0),            cmplx(0.0, 0.0),            cmplx(0.0, sqrt(3.0/2.0)), &
+                                                            cmplx(sqrt(3.0/2.0), 0.0),  cmplx(0.0, sqrt(3.0/2.0)),  cmplx(0.0, 0.0), &
+
+                                                            ! Tensor 3
+                                                            cmplx(-1.0, 0.0),          cmplx(0.0, 0.0),            cmplx(0.0, 0.0), &
+                                                            cmplx(0.0, 0.0),            cmplx(-1.0, 0.0),           cmplx(0.0, 0.0), &
+                                                            cmplx(0.0, 0.0),            cmplx(0.0, 0.0),            cmplx(2.0, 0.0), &
+
+                                                            ! Tensor 4
+                                                            cmplx(0.0, 0.0),            cmplx(0.0, 0.0),            cmplx(-sqrt(3.0/2.0), 0.0), &
+                                                            cmplx(0.0, 0.0),            cmplx(0.0, 0.0),            cmplx(0.0, sqrt(3.0/2.0)), &
+                                                            cmplx(-sqrt(3.0/2.0), 0.0), cmplx(0.0, sqrt(3.0/2.0)),  cmplx(0.0, 0.0), &
+
+                                                            ! Tensor 5
+                                                            cmplx(sqrt(3.0/2.0), 0.0),  cmplx(0.0, -sqrt(3.0/2.0)), cmplx(0.0, 0.0), &
+                                                            cmplx(0.0, -sqrt(3.0/2.0)), cmplx(-sqrt(3.0/2.0), 0.0), cmplx(0.0, 0.0), &
+                                                            cmplx(0.0, 0.0),            cmplx(0.0, 0.0),            cmplx(0.0, 0.0) &
+                                                          ], [3,3,5]) * sqrt(4.0*pi_const/5.0)
+                                                  
 CONTAINS
 
   REAL PURE FUNCTION pimach()

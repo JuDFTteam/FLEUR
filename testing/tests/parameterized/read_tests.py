@@ -39,10 +39,23 @@ def read_tests(testset):
                 m=s.split("|")
                 #Split the table: 
                 #m[0]: empty, m[1]=+ due to start of line
-                #m[2]: description, m[3]:directory name, m[4]: marks for pytest
+                #m[2]: description, m[3]:directory name, m[4]: marks for pytest, m[5]: cmdline, m[6]: mpi_procs
                 dir=m[3]
                 desc=m[2]
-                #use name of directory for testsetname & test-id 
+                if (len(m)>5):
+                    cmdline=m[5].split(",")
+                    if (len(cmdline)==1 and cmdline[0].strip()==""):
+                        cmdline=None
+                else:
+                    cmdline=None
+                if(len(m)>6):
+                    if (m[6].strip().isdigit()):
+                        mpi_procs=int(m[6])
+                    else:
+                        mpi_procs=None
+                else:
+                    mpi_procs=None
+                #use name of directory for testsetname & test-id
                 testsetname,id=dir.split("/")
                 #extract marks
                 marks=[]
@@ -52,6 +65,6 @@ def read_tests(testset):
                         marks.append(mark_list[mark])
                 #only use this test if it matches the testset-name given
                 if testsetname==testset:
-                    test_list.append(pytest.param(dir,desc,marks=marks,id=id))    
+                    test_list.append(pytest.param(dir,desc,cmdline,mpi_procs,marks=marks,id=id))    
     return test_list                        
 

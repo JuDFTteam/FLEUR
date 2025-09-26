@@ -1124,7 +1124,7 @@ def check_hdf(test_logger):
 def default_fleur_test(test_logger,check_all_outxml,execute_fleur,validate_out_xml_file,check_hdf):
     """returns the default_fleur_test function
     """
-    def _default_fleur_test(testname,files=None,checks=None,hdf_checks=[],clean=False):
+    def _default_fleur_test(testname,files=None,checks=None,hdf_checks=[],clean=False,cmdline_args=None,mpi_procs=None):
         """ docu
         """
         test_logger.info(f"Starting a default fleur test for {testname}")           
@@ -1143,7 +1143,7 @@ def default_fleur_test(test_logger,check_all_outxml,execute_fleur,validate_out_x
             rm_files=[]
             if clean: rm_files=['.']
             ref_out_xml=os.path.join(test_file_folder,"out.xml")
-            res_files = execute_fleur(test_file_folder,rm_files=rm_files)
+            res_files = execute_fleur(test_file_folder,rm_files=rm_files,cmdline_param=cmdline_args,mpi_procs=mpi_procs)
             should_files = ['out.xml', 'out']
             if files: should_files=should_files+files
             res_file_names = list(res_files.keys())

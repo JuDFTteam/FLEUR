@@ -1,4 +1,9 @@
 MODULE m_dosbin
+
+#ifdef CPP_MPI
+   USE mpi 
+#endif
+
 CONTAINS
    SUBROUTINE dos_bin(jspins, wtkpt, e, eig, qal, g, energyShift)
       !! This subroutine generates the idos, the ldos, the partial
@@ -35,13 +40,16 @@ CONTAINS
       END DO
    END SUBROUTINE dos_bin
 
-   SUBROUTINE dos_bin_transport(jspins,wtkpt,egrid,eig,eigq,matrix_element,g,energyShift)
+   SUBROUTINE dos_bin_transport(fmpi,jspins,wtkpt,egrid,eig,eigq,matrix_element,g,energyShift)
       !! This subroutine generates the idos,
       !! Almost identical to upper subroutine
       !! However, we have have e1 and e2 
       !! Evaluation of delta-distribution is $\delta(\epsilon_{\nu , k }  - shift - \epsilon_{\nu' , k+q })$
+      USE m_types_mpi
+
       IMPLICIT NONE 
 
+      TYPE(t_mpi),INTENT(IN) :: fmpi
       INTEGER, INTENT(IN)  :: jspins
       REAL,    INTENT(IN)  :: wtkpt(:),egrid(:)
       REAL, INTENT(IN)     :: eig(:,:,:) , eigq(:,:,:) , matrix_element(:,:,:,:) !(nu',nu,kpts,jspin)
@@ -51,7 +59,7 @@ CONTAINS
 
 
       REAL :: de, wk , emin, shift  , degen
-      INTEGER :: jsp, nk , nu , iNupr , i 
+      INTEGER :: jsp, nk , nk_i , nu , iNupr , i 
       !LOGICAL :: l_deg
 
 
@@ -68,14 +76,15 @@ CONTAINS
       IF (PRESENT(energyShift)) shift=energyShift
       emin = MINVAL(egrid)
       DO jsp = 1, SIZE(matrix_element,4)
-         DO nk = 1 , size(matrix_element,3)
+         DO nk_i = 1 , size(matrix_element,3)
+            nk = fmpi%k_list(nk_i)
             wk = wtkpt(nk) / de 
                DO nu = 1 , SIZE(matrix_element,2)
                   DO iNupr = 1 , size(matrix_element,1)
                      ! make sure if we hit emin we are at the first bin
                      i = NINT((eig(nu,nk,jsp) -eigq(iNupr,nk,jsp) -shift - emin)/de) + 1
                      IF ( (i.LE.size(g,1)) .AND. (i.GE.1) ) THEN 
-                        g(i,jsp) = g(i,jsp) + wk*matrix_element(iNupr,nu,nk,jsp)* 2.0/jspins
+                        g(i,jsp) = g(i,jsp) + wk*matrix_element(iNupr,nu,nk_i,jsp)* 2.0/jspins
                      END IF 
                   END DO ! iNupr
                END DO ! nu 
@@ -84,16 +93,18 @@ CONTAINS
 
    END SUBROUTINE dos_bin_transport
 
-   SUBROUTINE dos_bin_double(jspins,wtkpt,egrid,eig,eigq,matrix_element,smearing,g,energyShift)
+   SUBROUTINE dos_bin_double(fmpi,jspins,wtkpt,egrid,eig,eigq,matrix_element,smearing,g,energyShift)
       !! This subroutine calculates the idos 
       !! Here we have to evalulation we have to take, one for k and one for k'
-      !! We already do gaussian smearing in this routine
+      !! \delta(eig - shift) \delta(eigq - shift)
 
-      !! WARNING: still needs to be tested
       USE m_constants
+      USE m_types_mpi
+      USE m_smooth
       
       IMPLICIT NONE 
 
+      TYPE(t_mpi) , INTENT(IN) :: fmpi
       INTEGER, INTENT(IN) :: jspins 
       REAL,    INTENT(IN)  :: wtkpt(:),egrid(:)
       REAL, INTENT(IN)     :: eig(:,:,:) , eigq(:,:,:) , matrix_element(:,:,:,:) !(nu',nu,kpts,jspin)
@@ -103,15 +114,13 @@ CONTAINS
 
 
       REAL :: de, wk , emin, shift  
-      REAL, ALLOCATABLE :: gauss(:) , gaussq(:)
-      INTEGER :: jsp, nk , nu , iNupr , i , j , grid2 
-      LOGICAL :: l_true
+      REAL, ALLOCATABLE :: gridk(:) , gridq(:)
+      INTEGER :: jsp, nk, nk_i , nu , iNupr , i , j  
 
-      ALLOCATE(gauss(size(egrid)))
-      ALLOCATE(gaussq(size(egrid)))
-      gauss = 0.0
-      gaussq = 0.0
+      ALLOCATE(gridk(size(egrid)))
+      ALLOCATE(gridq(size(egrid)))
 
+      
 
 
       de = abs(egrid(2)-egrid(1))
@@ -121,14 +130,25 @@ CONTAINS
       IF (PRESENT(energyShift)) shift=energyShift
       emin = MINVAL(egrid)
       DO jsp = 1, SIZE(matrix_element,4)
-         DO nk = 1 , size(matrix_element,3)
+         DO nk_i = 1 , size(matrix_element,3)
+            nk = fmpi%k_list(nk_i)
             wk = wtkpt(nk) / de 
                DO nu = 1 , SIZE(matrix_element,2)
-                  gauss(:) =  1/SQRT(tpi_const*smearing) *EXP( -(eGrid(:)-eig(nu,nk,jsp) + energyShift )**2/(2*smearing)) 
-                  DO iNupr = 1 , size(matrix_element,1)
-                     gaussq(:) = 1/SQRT(tpi_const*smearing) *EXP( -(eGrid(:)-eigq(iNupr,nk,jsp) + energyShift )**2/(2*smearing)) 
-                     g(:,jsp) = g(:,jsp) + wk*matrix_element(iNupr,nu,nk,jsp) * gauss(:) * gaussq(:) * 2.0/jspins 
-                  END DO ! iNupr
+                  gridk = 0.0 
+                  i = NINT((eig(nu,nk,jsp) -shift - emin)/de) + 1
+                  IF ( (i.LE.size(gridk,1)) .AND. (i.GE.1) ) THEN
+                        DO iNupr = 1 , size(matrix_element,1)
+                           gridq = 0.0 
+                           j = NINT((eigq(iNupr,nk,jsp) -shift - emin)/de) + 1
+                           IF ( (j.LE.size(gridq,1)) .AND. (j.GE.1) ) THEN
+                              gridk(i) = gridk(i) + wk*matrix_element(iNupr,nu,nk_i,jsp)* 2.0/jspins
+                              CALL smooth(egrid,gridk,smearing,size(egrid))
+                              gridq(j) = gridq(j) + 1
+                              CALL smooth(egrid,gridq,smearing,size(egrid))
+                              g(:,jsp) = g(:,jsp) + gridk(:)*gridq(:) 
+                           END IF !gridq
+                        END DO ! iNupr
+                     END IF ! gridk
                END DO ! nu 
          END DO  ! k 
       END DO  ! jsp 
