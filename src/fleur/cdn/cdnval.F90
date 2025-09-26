@@ -125,7 +125,7 @@ CONTAINS
       TYPE(t_tlmplm)            :: tlmplm
       TYPE(t_greensfBZintCoeffs):: greensfBZintCoeffs
       TYPE(t_scalarGF), ALLOCATABLE :: scalarGF(:)
-      TYPE(t_radfun)             :: radfun
+      TYPE(t_radfun)             :: radfun(atoms%ntype)
       TYPE(t_abc), allocatable    :: abc(:, :)
 
       CALL timestart("cdnval")
@@ -224,12 +224,13 @@ CONTAINS
 
       jsp = MERGE(1, jspin, noco%l_noco)
       call timestop("init")
-
+      
       max_length_k_list = size(cdnvalJob%k_list)
 #ifdef CPP_MPI
       CALL MPI_ALLREDUCE(MPI_IN_PLACE, max_length_k_list, 1, MPI_INTEGER, MPI_MAX, fmpi%mpi_comm, ierr)
 #endif
       DO ikpt_i = 1, size(cdnvalJob%k_list)
+         call timestart("init k-loop")
          ikpt = cdnvalJob%k_list(ikpt_i)
          bkpt = kpts%bk(:, ikpt)
 
@@ -253,32 +254,37 @@ CONTAINS
          CALL MPI_BARRIER(fmpi%mpi_comm, iErr) ! Synchronizes the RMA operations
 #endif
 
+         call timestop("init k-loop")
          IF (noccbd .LE. 0) CYCLE ! Note: This jump has to be after the MPI_BARRIER is called
-
+         call timestart("Atoms loop")
          ! valence density in the atomic spheres
+         !$OMP PARALLEL DO DEFAULT(NONE) PRIVATE(itype, ispin, ispinpr, ispin123, abc_itype, abc) &
+         !$OMP SHARED(radfun, atoms, input, enpara, hub1data, fmpi, vTot, noccbd, ev_list, we) &
+         !$OMP SHARED( eig, usdus, noco, nococonv, sym, jsp_start, jsp_end,force, cell,lapw,zmat,den,dos,banddos,ikpt,mcd,jdos,moments,denmatrix,sphhar,hub1inp,tlmplm,results,jspin,nbasfcn,bkpt,orbcomp,orb) 
+
          DO itype = 1, atoms%ntype
             abc_itype=min(itype,size(abc,2)) !abc might be only needed for a single itype
-            call radfun%generate_radial_functions(atoms, input, enpara, hub1data, fmpi, vtot, iType)
+            call radfun(itype)%generate_radial_functions(atoms, input, enpara, hub1data, fmpi, vtot, iType)
             DO ispin = jsp_start, jsp_end
                IF (input%l_f) CALL force%init2(noccbd, input, atoms)
-               call abc(ispin, abc_itype)%init(input, atoms, radfun, noccbd, itype)
+               call abc(ispin, abc_itype)%init(input, atoms, radfun(itype), noccbd, itype)
                call abc(ispin, abc_itype)%calc_abc(input, atoms, sym, cell, lapw, noccbd, usdus, noco, nococonv, ispin, itype, zMat)
                DO ispinpr = jsp_start, ispin
                   ispin123 = merge(ispin, 3, ispin == ispinpr) !sometimes the "3rd" spin is the off-diagonal part
                   !Calculate the density matrix for LDA+U and related methods
                   IF (atoms%n_u + atoms%n_opc .GT. 0) THEN
-                     CALL n_mat(atoms, radfun, sym, noccbd, we, abc(ispin, abc_itype), &
+                     CALL n_mat(atoms, radfun(itype), sym, noccbd, we, abc(ispin, abc_itype), &
                                 abc(ispinpr, abc_itype), den%mmpMat(:, :, :, ispin123), itype, ispin, ispinpr)
                   END IF
 
                   ! Determine weights for DOS and Bandstructures
-                  call dos%calc_mt_dos(abc(ispin, abc_itype), abc(ispinpr, abc_itype), banddos, radfun, &
+                  call dos%calc_mt_dos(abc(ispin, abc_itype), abc(ispinpr, abc_itype), banddos, radfun(itype), &
                                        atoms, ev_list, itype, ikpt, ispin, ispinpr)
                   if (ispin == ispinpr) THEN
                      !No off-diagonal contributions yet
                      call mcd%calc_mt_mcd(banddos, atoms, ev_list, abc(ispin, abc_itype), itype, ikpt, ispin)
                      IF (banddos%l_orb) &
-                        call orbcomp%calc_orb_comp(atoms, banddos, radfun, abc(ispin, abc_itype), abc(ispin, abc_itype), &
+                        call orbcomp%calc_orb_comp(atoms, banddos, radfun(itype), abc(ispin, abc_itype), abc(ispin, abc_itype), &
                                                    ev_list, itype, ikpt, ispin, ispin)
                      !IF(l_coreSpec) CALL corespec_dos(atoms,usdus,ispin,atoms%lmaxd*(atoms%lmaxd+2),kpts%nkpt,ikpt,input%neig,&
                      !                                 noccbd,results%ef,banddos%sig_dos,eig,we,eigVecCoeffs) !TODO
@@ -286,11 +292,11 @@ CONTAINS
                   !Decomposition into total angular momentum states
                   IF (banddos%dos .AND. banddos%l_jDOS) THEN
                      IF (PRESENT(jDOS) .AND. ispinpr == jsp_end) THEN
-                        call jDOS%calc_jDOS(ikpt, noccbd, ev_list, we, atoms, banddos, input, radfun, abc(1, abc_itype), abc(2, abc_itype))
+                        call jDOS%calc_jDOS(ikpt, noccbd, ev_list, we, atoms, banddos, input, radfun(itype), abc(1, abc_itype), abc(2, abc_itype))
                      END IF
                   END IF
 
-                  IF (noco%l_soc .and. ispin == ispinpr) CALL orb%calc_orbmom(abc(ispin, abc_itype), atoms, radfun, we, itype, &
+                  IF (noco%l_soc .and. ispin == ispinpr) CALL orb%calc_orbmom(abc(ispin, abc_itype), atoms, radfun(itype), we, itype, &
                                                                               ispin, moments%clmom(:, itype, ispin))  !TODO MPI collect is missing here
 
                   !Now calculate the density matrix as needed to construct the charge
@@ -312,6 +318,9 @@ CONTAINS
 
             END DO ! end loop over ispin
          END DO !loop over itypes
+         !$OMP END PARALLEL DO
+         call timestop("Atoms loop")
+         call timestart("valence density in the interstitial and vacuum region")
          IF (atoms%n_v.GT.0) CALL nIJ_mat(lbound(abc,2),input,atoms,noccbd,usdus,we,abc,cell,kpts,ikpt,den%nIJ_llp_mmp,enpara,vTot) 
 
          ! valence density in the interstitial and vacuum region has to be called only once (if jspin=1) in the non-collinear case
@@ -327,8 +336,9 @@ CONTAINS
                CALL vacden(vacuum, stars, input, cell, atoms, noco, nococonv, banddos, &
                            we, ikpt, jspin, REAL(vTot%vac(:, 1, :, :)), noccbd, ev_list, lapw, enpara%evac, den, zMat, vacdos, dos)
             END IF
+            
          END IF
-
+         call timestop("valence density in the interstitial and vacuum region")
          IF (input%l_sympsi .and. allocated(dos%jsym)) THEN
             CALL sympsi(lapw, jspin, sym, noccbd, cell, eig, noco, dos%jsym(:, ikpt, jspin), zMat)
          END IF
@@ -356,18 +366,24 @@ CONTAINS
       END IF
 
       IF (fmpi%irank == 0) THEN
-         CALL timestart("denmatrix_to_full")
+         call timestart("print l-like charge")  
          DO itype = 1, atoms%ntype
-            call radfun%generate_radial_functions(atoms, input, enpara, hub1data, fmpi, vtot, iType)
-            call print_l_like_charge(lbound(denmatrix, 1), atoms, radfun, denmatrix, itype)
+            call print_l_like_charge(lbound(denmatrix, 1), atoms, radfun(itype), denmatrix, itype)
+         ENDDO
+         call timestop("print l-like charge")
+         CALL timestart("denmatrix_to_full")
+         !$OMP PARALLEL DO PRIVATE(itype, ispin, ispinpr) DEFAULT(NONE) SHARED(radfun,jsp_start,jsp_end,denmatrix, atoms, fmpi,hub1data,enpara,den, input, sphhar, noco, sym, vTot, moments)
+         DO itype = 1, atoms%ntype
             DO ispin = jsp_start, jsp_end
                do ispinpr=jsp_start, ispin
                   call denmatrix(ispin,ispinpr,itype)%to_full_density(ispin,ispinpr, itype, input, &
-                                           sphhar, atoms, noco, sym, radfun,  den%mt, moments=moments)
+                                           sphhar, atoms, noco, sym, radfun(itype),  den%mt, moments=moments)
                enddo
             enddo
          END DO
+         !$OMP END PARALLEL DO
          CALL timestop("denmatrix_to_full")
+         call timestart("write mtCharges")
          IF (l_coreSpec) CALL corespec_ddscs(jspin, input%jspins)
          DO ispin = jsp_start, jsp_end
             IF (input%cdinf) THEN
@@ -378,6 +394,7 @@ CONTAINS
             IF (input%l_f) CALL force_a8(input, atoms, sym, sphhar, ispin, vTot%mt(:, :, :, ispin), den%mt, force, fmpi, results)
          END DO
          CALL closeXMLElement('mtCharges')
+         call timestop("write mtCharges")
       END IF
 
       CALL timestop("cdnval")
