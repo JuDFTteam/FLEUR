@@ -6,7 +6,6 @@
 MODULE m_denMultipoleExp
    implicit none
 
-IMPLICIT NONE
 
 CONTAINS
 

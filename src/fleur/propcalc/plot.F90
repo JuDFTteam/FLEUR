@@ -9,7 +9,6 @@ MODULE m_plot
    USE m_constants
    implicit none
 
-   IMPLICIT NONE
 
    !-----------------------------------------------------------------------------
    ! A general purpose plotting routine for FLEUR.

@@ -9,8 +9,6 @@ MODULE m_dfpt
    USE m_types
    implicit none
 
-   IMPLICIT NONE
-
 CONTAINS
    SUBROUTINE dfpt(fi, sphhar, stars, nococonv, qpts, fmpi, results, enpara, &
                  & rho, vTot, vxc, eig_id, xcpot, hybdat, mpdata, forcetheo)
