@@ -36,8 +36,7 @@ contains
          this%n_r(l) = 2
          !if (input%l_useapw) call judft_bug("APW not implemented")
          do lo = 1, atoms%nlo(itype)
-            if (l /= atoms%llo(lo, itype)) cycle !no LO for this l
-            this%n_r(l) = this%n_r(l) + 1
+            if (l == atoms%llo(lo, itype)) this%n_r(l) = this%n_r(l) + 1 !LO for this l
          end do
       end do
    end subroutine
@@ -72,7 +71,7 @@ contains
       integer:: ispin, jspin, i,j, l, n, lo
       real,allocatable:: rf(:)
       real :: ovlp
-   
+      call timestart("generate radial functions")
       call usdus%init(atoms,input%jspins)
    
       !check if data is already available
@@ -81,21 +80,21 @@ contains
       call this%init(atoms, input, itype)
 
       if (allocated(this%r)) deallocate (this%r)
-      allocate (this%r(maxval(this%n_r), atoms%jmtd, 2,0:atoms%lmaxd, input%jspins))
+      allocate (this%r( atoms%jmtd, 2,maxval(this%n_r),0:atoms%lmaxd, input%jspins))
       if (allocated(this%integral)) deallocate (this%integral)
       allocate (this%integral(maxval(this%n_r), maxval(this%n_r),0:atoms%lmaxd, input%jspins,input%jspins))
       this%integral=0.0;this%r=0.0
       do ispin = 1, input%jspins
          call genMTBasis(atoms, enpara, vTot, fmpi, iType, ispin, usdus, f, g, flo, hub1data, l_writeArg=.false.)
          do l = 0, atoms%lmax(itype)
-            this%R(1, 1:atoms%jri(itype), 1:2, l, ispin) = f(1:atoms%jri(itype), 1:2, l)
-            this%R(2, 1:atoms%jri(itype), 1:2, l, ispin) = g(1:atoms%jri(itype), 1:2, l)
+            this%R( 1:atoms%jri(itype), 1:2, 1,l, ispin) = f(1:atoms%jri(itype), 1:2, l)
+            this%R( 1:atoms%jri(itype), 1:2, 2,l, ispin) = g(1:atoms%jri(itype), 1:2, l)
             n = 2
             if (input%l_useapw) call judft_bug("APW not implemented")
             do lo = 1, atoms%nlo(itype)
                if (l /= atoms%llo(lo, itype)) cycle !no LO for this l
                n = n + 1
-               this%R(n, 1:atoms%jri(itype), 1:2, l, ispin) = flo(1:atoms%jri(itype), 1:2, lo)
+               this%R( 1:atoms%jri(itype), 1:2, n,l, ispin) = flo(1:atoms%jri(itype), 1:2, lo)
             end do
          end do
       end do
@@ -107,8 +106,8 @@ contains
             DO l=0,atoms%lmax(itype)
                DO i=1,this%n_r(l)
                   DO j=1,i
-                     rf=this%r(i,1:atoms%jri(itype),1,l,ispin)*this%r(j,1:atoms%jri(itype),1,l,jspin)&
-                     +this%r(i,1:atoms%jri(itype),2,l,ispin)*this%r(j,1:atoms%jri(itype),2,l,jspin)
+                     rf=this%r(1:atoms%jri(itype),1,i,l,ispin)*this%r(1:atoms%jri(itype),1,j,l,jspin)&
+                     +this%r(1:atoms%jri(itype),2,i,l,ispin)*this%r(1:atoms%jri(itype),2,j,l,jspin)
                      CALL intgr0(rf,atoms%rmsh(1,itype),atoms%dx(itype),atoms%jri(itype),ovlp)
                      this%integral(i,j,l,ispin,jspin)=ovlp
                      this%integral(j,i,l,ispin,jspin)=ovlp
@@ -117,7 +116,7 @@ contains
             ENDDO
          ENDDO
       ENDDO         
-               
+      call timestop("generate radial functions")        
    end subroutine
 
    

@@ -136,14 +136,17 @@ contains
       !TODO these are needed for DFPT!?
       logical :: l_minusq, l_gamma, l_dfpt
       real, allocatable:: we1(:)!(nobd)
+      call timestart("rhonmt")
       l_minusq = present(abc1m)
       l_gamma = .false.
       l_dfpt = .false.
       this%l_triang = l_less_effort
       ns = sym%ntypsy(atoms%firstAtom(itype))
+      !$OMP PARALLEL DO DEFAULT(NONE) PRIVATE(lh, lv, jmem, mv, cmv, l, m, lm, mp, lphi, lplow, lp, icoef, nt, temp,cil,lmp,coef) &
+      !$OMP SHARED(this, atoms, sphhar, we, we1, ne, ns, itype, sym, abc, abc1, abc1m, l_minusq, l_gamma, l_dfpt, n_l) collapse(2)
       do lh = 0, sphhar%nlh(ns)
-         lv = sphhar%llh(lh, ns)
          do jmem = 1, sphhar%nmem(lh, ns)
+            lv = sphhar%llh(lh, ns)
             mv = sphhar%mlh(jmem, lh, ns)
             cmv = conjg(sphhar%clnu(jmem, lh, ns))
             do l = 0, atoms%lmax(itype)
@@ -180,10 +183,10 @@ contains
                            end if
                            do jcoef = 1, size(abc%cof, 3) !Loop over radial functions/cofs (usually 0=u and 1=\dot u)
                               this%mat(jcoef, icoef, l, lp, lh) = this%mat(jcoef, icoef, l, lp, lh) &
-                                                    & + dot_product(abc%cof(:ne, lmp, jcoef, nt), temp(:ne))
+                                                    & + dot_product(abc%cof(:, lmp, jcoef, nt), temp(:))
                               if (l_minusq) then
                                  this%mat(jcoef, icoef, l, lp, lh) = this%mat(jcoef, icoef, l, lp, lh) &
-                                                          & + dot_product(abc1m%cof(:ne, lmp, jcoef, nt), &
+                                                          & + dot_product(abc1m%cof(:, lmp, jcoef, nt), &
                                                                & abc%cof(:, lm, icoef, nt))
                               end if
                            end do
@@ -196,6 +199,8 @@ contains
             end do ! jmem
          end do ! l
       end do ! lh
+      !$OMP END PARALLEL DO
+      call timestop("rhonmt")
    end subroutine rhonmt
 
    subroutine to_full_density(denmat, ispin, ispinpr, itype, input, sphhar, atoms, noco, sym, radfun, rho, rhoIm, moments)
@@ -238,26 +243,28 @@ contains
 
                !if (lh > 0 .and. atoms%l_outputCFpot(itype) .and. atoms%l_outputCFremove4f(itype) &
                !    .and. (l == lcf .and. lp == lcf)) cycle !Exclude non-spherical contributions for CF
-
+               !$OMP SIMD PRIVATE(j,cs,i, ii)
                do j = 1, atoms%jri(itype)
                   cs = 0.0
                   do i = 1, radfun%n_r(l) !Loop over radial functions
                      do ii = 1, radfun%n_r(lp)
                         cs = cs + denmat%mat(ii, i, l, lp, lh) &   !density matrix
-                             *(radfun%r(i, j, 1, l, ispinpr)*radfun%R(ii, j, 1, lp, ispin) &  !large components
-                               + radfun%R(i, j, 2, l, ispinpr)*radfun%R(ii, j, 2, lp, ispin))    !small components
+                             *(radfun%R( j, 1,i, l, ispinpr)*radfun%R( j, 1, ii,lp, ispin) &  !large components
+                               + radfun%R(j, 2,i, l, ispinpr)*radfun%R( j, 2,ii, lp, ispin))    !small components
                      end do
                   end do
+                  
                   rho(j, lh, itype, spin) = rho(j, lh, itype, spin) + real(cs)/atoms%neq(itype)
                   if (spin == 3) rho(j, lh, itype, 4) = rho(j, lh, itype, 4) + aimag(cs)/atoms%neq(itype) !Store imaginary part as 4th spin
                   if (present(rhoIm)) rhoIm(j, lh) = rhoIm(j, lh) + aimag(cs)/atoms%neq(itype)
                   if ((l <= input%lResMax) .and. (lp <= input%lResMax) .and. ispin == ispinpr .and. present(moments)) &
                    moments%rhoLRes(j, lh, llp, itype, ispin) = moments%rhoLRes(j, lh, llp, itype, ispin) + real(cs)/atoms%neq(itype)
-
                end do
+               !$OMP END SIMD
             end do
          end do
 
       END DO
+     
    end subroutine to_full_density
 end module m_types_denmatrix
