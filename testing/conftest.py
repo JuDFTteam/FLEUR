@@ -406,6 +406,7 @@ def pytest_configure(config):
 
     # main libs
     config.addinivalue_line("markers", "hdf: tests needing hdf")
+    config.addinivalue_line("markers", "mpi: tests needing mpi")
     config.addinivalue_line("markers", "libxc: test for fleur using libxc")
     config.addinivalue_line("markers", "wannier: test for fleur using wannier") # TODO account for differnet wannier versions?
     config.addinivalue_line("markers", "wannier4: test for fleur using wannier 4D calculations")
