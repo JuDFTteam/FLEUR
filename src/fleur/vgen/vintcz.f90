@@ -6,7 +6,7 @@ MODULE m_vintcz
   !     modified for thick films to avoid underflows gb`06
   !---------------------------------------------------------------
 CONTAINS
-   COMPLEX FUNCTION vintcz(stars,vacuum,cell,input,field,z,nrec2,psq,vnew,rhobar,sig1dh,vz1dh,alphm,vslope,sigma_disc,l_dfptvgen,l_corr,diff_vmz1dh,sigma_disc2)
+   COMPLEX FUNCTION vintcz(stars,vacuum,cell,input,field,z,nrec2,psq,vnew,rhobar,sig1dh,vz1dh,alphm,vslope,sigma_disc,l_dfptvgen,l_corr,diff_vmz1dh)
       USE m_constants
       USE m_types
 
@@ -29,7 +29,7 @@ CONTAINS
       LOGICAL,        INTENT(IN) :: l_dfptvgen, l_corr
       COMPLEX,        INTENT(IN) :: diff_vmz1dh
 
-      complex, optional, intent(in) :: sigma_disc2(2)
+      !complex, optional, intent(in) :: sigma_disc2(2)
       !REAL,           INTENT(IN) :: vz(:,:) !(vacuum%nmzd,2,jspins)
 
       COMPLEX                    :: argr,sumrr,vcons1,test,c_ph,phas

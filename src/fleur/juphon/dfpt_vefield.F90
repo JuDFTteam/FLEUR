@@ -13,6 +13,8 @@ module m_dfpt_vefield
             USE m_types_cell
             use m_inv3
             use m_phasy1
+            use m_npy
+
 
 
 
@@ -41,15 +43,15 @@ module m_dfpt_vefield
             integer                                         :: int
             complex                                      :: phas
             complex                           :: pylm(( atoms%lmaxd + 1 ) ** 2, atoms%ntype),pylm_m(( atoms%lmaxd + 1 ) ** 2, atoms%ntype)
+            character(len=20)                   :: densave_string
 
 
             !print*,'q_sign',q_sign
             qlim = juphon%qlim 
 
             !interstitial region
-
             dfptvefield%pw(:,1) = 0.0
-            dfptvefield%pw(1,1) = q_sign*cmplx(0.0,1/(2*qlim))
+            dfptvefield%pw(1,1) = cmplx(0.0,1/(2*qlim))!
             
             
             !MT-region
@@ -66,8 +68,10 @@ module m_dfpt_vefield
             qvec_int = matmul(qvec_ext,transpose(inv_bmat))
             starsq_m = starsq
             starsq_m%center = -starsq%center
+            !print*,"starsq%center",starsq%center
             call phasy1( atoms, starsq, sym, cell, 1, pylm )
-            !call phasy1( atoms, starsq_m, sym, cell, 1, pylm_m )            !for minus solution
+            call phasy1( atoms, starsq_m, sym, cell, 1, pylm_m )            !for minus solution
+            !call save_npy('pylm.npy', pylm)
             do n =1, atoms%ntype
                 lmax = atoms%lmax(n)
                 imax = atoms%jri(n)
@@ -76,7 +80,7 @@ module m_dfpt_vefield
                     call sphbes(lmax,qlim*atoms%rmsh(i,n),sbf(:,i))
                 end do
                 do l = 0,lmax
-                    pref =  q_sign*fpi_const*(ImagUnit**(l+1))/2
+                    !pref =  -q_sign*fpi_const*(ImagUnit**(l+1))/2!q_sign*
                     ll1 = l*(l+1)+1
                     do m =-l,l
                         lm = ll1 + m 
@@ -93,7 +97,19 @@ module m_dfpt_vefield
             !dfptvefield%pw(:,:) = dfptvefield%pw(:,:)
             dfptvefield%mt(:,:,:,1) = resultreal(:,:,:,1) 
             dfptvefieldimag%mt(:,:,:,1) = resultimag(:,:,:,1) 
+
+            !do n = 1,atoms%ntype
+
+            !write(densave_string,"(a,i0,a)")"vext1_it1_pw_",iDir,".npy"
+            !call save_npy(densave_string, dfptvefield%pw(:,1))
+            !write(densave_string,"(a,i0,a)")"vext1_it1_mt_",iDir,".npy"
+            !call save_npy(densave_string, dfptvefield%mt(:,:,:,1))
+            !write(densave_string,"(a,i0,a)")"vext1_it1_mtIm_",iDir,".npy"
+            !call save_npy(densave_string, dfptvefieldimag%mt(:,:,:,1))
+            !stop
             !print*,"max(dfptvefieldimag%mt(:,:,:,1))",dfptvefieldimag%mt(:,:,:,1)
         end subroutine dfpt_vefield
+
+
 
 end module m_dfpt_vefield

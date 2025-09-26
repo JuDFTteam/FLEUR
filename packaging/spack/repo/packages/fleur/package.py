@@ -3,6 +3,8 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
+from spack_repo.builtin.build_systems.cuda import CudaPackage
+from spack_repo.builtin.build_systems.generic import Package
 from spack.package import *
 
 
@@ -42,6 +44,11 @@ class Fleur(CudaPackage, Package):
     variant("cuda_arch",default="80" ,description="specify the CUDA architecture to build for")
     variant("build_type",default="RelWithDebInfo",description="The build type to build",values=("Debug", "Release", "RelWithDebInfo"))
     
+
+    # The following dependencies are required for building FLEUR
+    depends_on("c", type="build")  # C compiler
+    depends_on("cxx", type="build")  # C++ compiler
+    depends_on("fortran", type="build")  # Fortran compiler
     depends_on("cmake", type="build")
     depends_on("python@3:", type="build")
     depends_on("blas")

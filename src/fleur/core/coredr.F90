@@ -1,6 +1,12 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_coredr
+   implicit none
 CONTAINS
-  SUBROUTINE coredr(input,atoms,seig, rho,sphhar, vrs, qints,rhc,l_useOtherCoreSolver)
+  SUBROUTINE coredr(input,atoms,iType,seig, rho,sphhar, vrs, qints,rhc,l_useOtherCoreSolver)
     !     *******************************************************
     !     *****   set up the core densities for compounds   *****
     !     *****   for relativistic core                     *****
@@ -21,20 +27,18 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)     :: atoms
     !
     !     .. Scalar Arguments ..
-    REAL seig
+    INTEGER, INTENT(IN)  :: iType
+    REAL,    INTENT(OUT) :: seig
     !     ..
     !     .. Array Arguments ..
-    REAL   , INTENT (IN) :: vrs(atoms%jmtd,atoms%ntype,input%jspins)
+    REAL   , INTENT (IN)    :: vrs(atoms%jmtd,atoms%ntype,input%jspins)
     REAL,    INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
-    REAL,    INTENT (OUT) :: rhc(atoms%msh,atoms%ntype,input%jspins),qints(atoms%ntype,input%jspins)
-    LOGICAL, INTENT (INOUT) :: l_useOtherCoreSolver(atoms%ntype)
+    REAL,    INTENT (OUT)   :: rhc(atoms%msh,atoms%ntype,input%jspins),qints(atoms%ntype,input%jspins)
+    LOGICAL, INTENT (INOUT) :: l_useOtherCoreSolver
     !     ..
     !     .. Local Scalars ..
     REAL dxx,rnot,sume,t2,t2b,z,t1,rr,d,v1,v2
-    INTEGER i,j,jatom,jspin,k,n,ncmsh
-    LOGICAL exetab
-
-    LOGICAL l_core_confpot
+    INTEGER i,j,jspin,k,ncmsh
     !     ..
     !     .. Local Arrays ..
     REAL br(atoms%jmtd,atoms%ntype),brd(atoms%msh),etab(100,atoms%ntype),&
@@ -47,138 +51,99 @@ CONTAINS
     !
     ! setup potential and field
     !
-    l_core_confpot=input%l_core_confpot !Make a local copy to avoid IEC on ifx
+    
+    seig = 0.0
+    
     IF (input%jspins.EQ.1) THEN
-       DO n = 1,atoms%ntype
-          DO j = 1,atoms%jmtd
-             vr(j,n) = vrs(j,n,1)
-             br(j,n) = 0.0
-          END DO
+       DO j = 1,atoms%jmtd
+          vr(j,iType) = vrs(j,iType,1)
+          br(j,iType) = 0.0
        END DO
     ELSE
-       DO n = 1,atoms%ntype
-          DO j = 1,atoms%jmtd
-             vr(j,n) = (vrs(j,n,1)+vrs(j,n,input%jspins))/2.
-             br(j,n) = (vrs(j,n,input%jspins)-vrs(j,n,1))/2.
-          END DO
-          IF(MAXVAL(ABS(br(1:atoms%jmtd,n))).LT.1.0e-8) l_useOtherCoreSolver(n) = .TRUE. ! Use the other solver in case of a nonmagnetic atom in a magnetic calculation.
+       DO j = 1,atoms%jmtd
+          vr(j,iType) = (vrs(j,iType,1)+vrs(j,iType,input%jspins))/2.
+          br(j,iType) = (vrs(j,iType,input%jspins)-vrs(j,iType,1))/2.
        END DO
+       IF(MAXVAL(ABS(br(1:atoms%jmtd,iType))).LT.1.0e-8) THEN
+          l_useOtherCoreSolver = .TRUE. ! Use the other solver in case of a nonmagnetic atom in a magnetic calculation.
+          RETURN
+       END IF
     END IF
     !
     ! setup eigenvalues
     CALL etabinit(atoms,input, vr, etab,ntab,ltab,nkmust)
-    exetab = .FALSE.
-    INQUIRE (file='core.dat',exist=exetab)
-    IF (exetab) THEN
-       OPEN (58,file='core.dat',form='formatted',status='old')
-       REWIND 58
-       DO n = 1,atoms%ntype
-          IF (l_useOtherCoreSolver(n)) CYCLE
-          READ (58,FMT=*) nkmust(n)
-          DO k = 1,nkmust(n)
-             READ (58,FMT='(f12.6,2i3)') etab(k,n),ntab(k,n),ltab(k,n)
-          END DO
-       END DO
-    ELSE
-       OPEN (58,file='core.dat',form='formatted',status='new')   
-    END IF
     !
     ncmsh = atoms%msh
-    seig = 0.
     ! ---> set up densities
-    DO jatom = 1,atoms%ntype
 
-       IF (l_useOtherCoreSolver(jatom)) THEN
-          IF (jatom.EQ.1) REWIND 58
-          DO k = 1,nkmust(jatom)
-             WRITE (58,FMT='(f12.6,2i3)') etab(k,jatom),ntab(k,jatom), ltab(k,jatom)
-          END DO
-          CYCLE
-       END IF
-       !
-       DO j = 1,atoms%jri(jatom)
-          vrd(j) = vr(j,jatom)
-          brd(j) = br(j,jatom)
+    DO j = 1,atoms%jri(iType)
+       vrd(j) = vr(j,iType)
+       brd(j) = br(j,iType)
+    END DO
+
+    IF (input%l_core_confpot) THEN
+       !--->    linear extension of the potential with slope t1 / a.u.
+       rr = atoms%rmt(iType)
+       d = EXP(atoms%dx(iType))
+       t1=0.125
+       !         t2  = vrd(jri(iType))/rr - rr*t1
+       !         t2b = brd(jri(iType))/rr - rr*t1
+       t2  = vrs(atoms%jri(iType),iType,1)     /rr - rr*t1
+       t2b = vrs(atoms%jri(iType),iType,input%jspins)/rr - rr*t1
+    ELSE
+       t2 = vrd(atoms%jri(iType))/ (atoms%jri(iType)-ncmsh)
+       t2b = brd(atoms%jri(iType))/ (atoms%jri(iType)-ncmsh)
+    ENDIF
+    IF (atoms%jri(iType).LT.ncmsh) THEN
+       DO i = atoms%jri(iType) + 1,ncmsh
+          IF (input%l_core_confpot) THEN
+             rr = d*rr
+             v1 = rr*( t2  + rr*t1 )
+             v2 = rr*( t2b + rr*t1 )
+             vrd(i) = 0.5*(v2 + v1)
+             brd(i) = 0.5*(v2 - v1)
+          ELSE
+             vrd(i) = vrd(atoms%jri(iType)) + t2* (i-atoms%jri(iType))
+             brd(i) = brd(atoms%jri(iType)) + t2b* (i-atoms%jri(iType))
+          ENDIF
        END DO
-       IF (l_core_confpot) THEN
-          !--->    linear extension of the potential with slope t1 / a.u.
-          rr = atoms%rmt(jatom)
-          d = EXP(atoms%dx(jatom))
-          t1=0.125
-          !         t2  = vrd(jri(jatom))/rr - rr*t1
-          !         t2b = brd(jri(jatom))/rr - rr*t1
-          t2  = vrs(atoms%jri(jatom),jatom,1)     /rr - rr*t1
-          t2b = vrs(atoms%jri(jatom),jatom,input%jspins)/rr - rr*t1
-       ELSE
-          t2 = vrd(atoms%jri(jatom))/ (atoms%jri(jatom)-ncmsh)
-          t2b = brd(atoms%jri(jatom))/ (atoms%jri(jatom)-ncmsh)
-       ENDIF
-       IF (atoms%jri(jatom).LT.ncmsh) THEN
-          DO i = atoms%jri(jatom) + 1,ncmsh
-             
-            IF (l_core_confpot) THEN
-                rr = d*rr
-                v1 = rr*( t2  + rr*t1 )
-                v2 = rr*( t2b + rr*t1 )
-                vrd(i) = 0.5*(v2 + v1)
-                brd(i) = 0.5*(v2 - v1)
-             ELSE
-                vrd(i) = vrd(atoms%jri(jatom)) + t2* (i-atoms%jri(jatom))
-                brd(i) = brd(atoms%jri(jatom)) + t2b* (i-atoms%jri(jatom))
-             ENDIF
-          END DO
-       END IF
+    END IF
 
-       !        rr = rmsh(1,jatom)
-       !        do i =1, ncmsh
-       !          rr = d*rr
-       !         write(*,'(3f20.10)') rr,vrd(i),brd(i)
-       !        enddo
+    !
+    rnot = atoms%rmsh(1,iType)
+    z = atoms%zatom(iType)
+    dxx = atoms%dx(iType)
 
-       !
-       rnot = atoms%rmsh(1,jatom)
-       z = atoms%zatom(jatom)
-       dxx = atoms%dx(jatom)
+    CALL spratm(atoms%msh,vrd,brd,z,rnot,dxx,ncmsh,etab(1,iType),ntab(1,iType),ltab(1,iType), sume,rhochr,rhospn)
 
-       CALL spratm(atoms%msh,vrd,brd,z,rnot,dxx,ncmsh,&
-            etab(1,jatom),ntab(1,jatom),ltab(1,jatom), sume,rhochr,rhospn)
-
-       seig = seig + atoms%neq(jatom)*sume
-       !
-       !     rho_up=2(ir) = (rhochr(ir)  + rhospn(ir))*0.5
-       !     rho_dw=1(ir) = (rhochr(ir)  - rhospn(ir))*0.5
-       !
-       IF (input%jspins.EQ.2) THEN
-          DO j = 1,atoms%jri(jatom)
-             rhcs(j,jatom,input%jspins) = (rhochr(j)+rhospn(j))*0.5
-             rhcs(j,jatom,1) = (rhochr(j)-rhospn(j))*0.5
-          END DO
-       ELSE
-          DO j = 1,atoms%jri(jatom)
-             rhcs(j,jatom,1) = rhochr(j)
-          END DO
-       END IF
-       IF (input%jspins.EQ.2) THEN
-          DO j = 1,atoms%msh
-             rhc(j,jatom,input%jspins) = (rhochr(j)+rhospn(j))*0.5
-             rhc(j,jatom,1) = (rhochr(j)-rhospn(j))*0.5
-          ENDDO
-       ELSE
-          DO j = 1,atoms%msh
-             rhc(j,jatom,1) = rhochr(j)
-          END DO
-       END IF
-       !
-       ! store atomic eigenvalues to file.58
-       IF (jatom.EQ.1) REWIND 58
-       WRITE (58,FMT=*) nkmust(jatom)
-       DO k = 1,nkmust(jatom)
-          WRITE (58,FMT='(f12.6,2i3)') etab(k,jatom),ntab(k,jatom), ltab(k,jatom)
+    seig = seig + atoms%neq(iType)*sume
+    !
+    !     rho_up=2(ir) = (rhochr(ir)  + rhospn(ir))*0.5
+    !     rho_dw=1(ir) = (rhochr(ir)  - rhospn(ir))*0.5
+    !
+    IF (input%jspins.EQ.2) THEN
+       DO j = 1,atoms%jri(iType)
+          rhcs(j,iType,input%jspins) = (rhochr(j)+rhospn(j))*0.5
+          rhcs(j,iType,1) = (rhochr(j)-rhospn(j))*0.5
        END DO
-       !---->update spherical charge density rho with the core density.
-       CALL ccdnup(atoms,sphhar,input,jatom, rho, sume,vrs,rhochr,rhospn, tecs,qints)
-
-    END DO ! loop over atoms (jatom)
+    ELSE
+       DO j = 1,atoms%jri(iType)
+          rhcs(j,iType,1) = rhochr(j)
+       END DO
+    END IF
+    IF (input%jspins.EQ.2) THEN
+       DO j = 1,atoms%msh
+          rhc(j,iType,input%jspins) = (rhochr(j)+rhospn(j))*0.5
+          rhc(j,iType,1) = (rhochr(j)-rhospn(j))*0.5
+       ENDDO
+    ELSE
+       DO j = 1,atoms%msh
+          rhc(j,iType,1) = rhochr(j)
+       END DO
+    END IF
+    !
+    !---->update spherical charge density rho with the core density.
+    CALL ccdnup(atoms,sphhar,input,iType, rho, sume,vrs,rhochr,rhospn, tecs,qints)
     !
     !----> store core charge densities
     CALL writeCoreDensity(input,atoms,rhcs,tecs,qints)

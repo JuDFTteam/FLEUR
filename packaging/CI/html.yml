@@ -2,7 +2,6 @@ pages:
   image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
   stage: deploy
   needs: 
-    - doxygen
     - gfortran-coverage
     - ford
     - intel-maqao
@@ -74,25 +73,6 @@ ford:
   artifacts:
     paths:
       - public
-  rules:
-      - if: $CI_TASKS =~ /doc/    
-      - if: $CI_TASKS =~ /all/    
-
-doxygen:
-  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
-  stage: html
-  needs: []
-  script:
-    - cd $CI_PROJECT_DIR ;FLEUR_INCLUDEDIR="/opt/include /usr/include" FLEUR_LIBRARIES="-L/opt/lib;-ldl;-L/usr/lib;-L/usr/lib/x86_64-linux-gnu;-lscalapack-openmpi;-lfftw3" ./configure.sh -c mpi
-    - cd $CI_PROJECT_DIR/build ; make doc
-    - mkdir ../public
-    - mv docs/html/ ../public/doxygen
-  artifacts:
-    paths:
-      - public
-      - build/fleur
-      - build/fleur_MPI
-      - build/inpgen
   rules:
       - if: $CI_TASKS =~ /doc/    
       - if: $CI_TASKS =~ /all/    

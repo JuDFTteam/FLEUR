@@ -76,6 +76,7 @@ CONTAINS
       USE m_make_stars
       USE m_dfpt_vefield
       USE m_checkdopall
+      USE m_store_load_hybrid
 
 !$    USE omp_lib
 
@@ -466,6 +467,7 @@ CONTAINS
                CALL fermie(eig_id, fmpi, fi%kpts, fi%input, fi%noco, enpara%epara_min, fi%cell, results)
                IF (fi%hybinp%l_hybrid) hybdat%results = results
             ENDIF
+            IF (fi%hybinp%l_hybrid) CALL store_state_weights_hybrid(fi, fmpi, results)
 #ifdef CPP_MPI
             CALL MPI_BCAST(results%ef, 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
             CALL MPI_BCAST(results%w_iks, SIZE(results%w_iks), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
@@ -586,6 +588,7 @@ CONTAINS
                 CALL timestart("juPhon DFPT")
                 CALL dfpt(fi, sphhar, stars, nococonv, fi%kpts, fmpi, results, enpara, outDen, vTot, vxc, eig_id, xcpot, hybdat, mpdata, forcetheo)
                 CALL timestop("juPhon DFPT")
+                CALL juDFT_end("Phonon calculation finished.",fmpi%irank)
             END IF
 
             !CRYSTAL FIELD OUTPUT
@@ -663,7 +666,7 @@ CONTAINS
                l_cont = l_cont .AND. (fi%input%mindistance <= results%last_distance)
                CALL check_time_for_next_iteration(iterHF, l_cont)
             ELSE
-               l_cont = l_cont .AND. (iter < 50) ! Security stop for non-converging nested PBE calculations
+               l_cont = l_cont .AND. (iter < 100) ! Security stop for non-converging nested PBE calculations
             END IF
 
             IF (hybdat%l_subvxc) THEN

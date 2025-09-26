@@ -75,8 +75,6 @@ CONTAINS
       USE m_constants
       USE m_grdchlh
       USE m_qsf
-      USE m_cylbes
-      USE m_dcylbs
       USE m_vacuz
       USE m_vacudz
       USE m_types

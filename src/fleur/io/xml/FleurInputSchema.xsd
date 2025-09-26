@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" version="0.38">
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" version="0.39">
 
    <xsd:element name="fleurInput" type="FleurInputType"/>
 
@@ -21,7 +21,7 @@
 
    <xsd:simpleType name="FleurVersionType">
       <xsd:restriction base="xsd:string">
-         <xsd:enumeration value="0.38"/>
+         <xsd:enumeration value="0.39"/>
       </xsd:restriction>
    </xsd:simpleType>
 
@@ -1111,23 +1111,13 @@
       </xsd:all>
       <xsd:attribute name="l_dfpt" type="FleurBool" use="optional"/>
       <xsd:attribute name="l_jpCheck" type="FleurBool" use="optional"/>
-      <xsd:attribute name="l_jpTest" type="FleurBool" use="optional"/>
-      <xsd:attribute name="l_potout" type="FleurBool" use="optional"/>
-      <xsd:attribute name="l_eigout" type="FleurBool" use="optional"/>
-      <xsd:attribute name="l_symTsh" type="FleurBool" use="optional"/>
-      <xsd:attribute name="l_symTdm" type="FleurBool" use="optional"/>
-      <xsd:attribute name="l_bfkq" type="FleurBool" use="optional"/>
-      <xsd:attribute name="jplPlus" type="xsd:positiveInteger" use="optional"/>
-      <xsd:attribute name="kgqmax" type="FleurDouble" use="optional"/>
-      <xsd:attribute name="gqmax" type="FleurDouble" use="optional"/>
-      <xsd:attribute name="eps_pert" type="FleurDouble" use="optional"/>
+      <!--xsd:attribute name="l_jpTest" type="FleurBool" use="optional"/-->
+      <!--xsd:attribute name="l_potout" type="FleurBool" use="optional"/-->
+      <!--xsd:attribute name="l_eigout" type="FleurBool" use="optional"/-->
       <xsd:attribute name="eDiffcut" type="FleurDouble" use="optional"/>
       <xsd:attribute name="fDiffcut" type="FleurDouble" use="optional"/>
       <xsd:attribute name="qlim" type="FleurDouble" use="optional"/>  
       <xsd:attribute name="gmaxzLocal" type="FleurDouble" use="optional"/>  
-      <xsd:attribute name="singleQpt" type="xsd:positiveInteger" use="optional"/>
-      <xsd:attribute name="e1term" type="FleurBool" use="optional"/>
-      <xsd:attribute name="f1term" type="FleurBool" use="optional"/>
       <xsd:attribute name="l_intp" type="FleurBool" use="optional"/>
       <xsd:attribute name="l_band" type="FleurBool" use="optional"/>
       <xsd:attribute name="l_dos" type="FleurBool" use="optional"/>
@@ -1143,9 +1133,6 @@
       <xsd:attribute name="l_phonon" type="FleurBool" use="optional"/>
       <xsd:attribute name="l_efield" type="FleurBool" use="optional"/>
       <xsd:attribute name="l_borneffcharge" type="FleurBool" use="optional"/>
-      <xsd:attribute name="l_cheatsym" type="FleurBool" use="optional"/>
-      <xsd:attribute name="l_procc" type="FleurBool" use="optional"/>
-      <xsd:attribute name="l_prodyn" type="FleurBool" use="optional"/>
       <xsd:attribute name="l_symVacLevel" type="FleurBool" use="optional" default="F" />
    </xsd:complexType>
 
