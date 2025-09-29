@@ -228,7 +228,7 @@ CONTAINS
                      ! TODO: This part of the correction had no effect whatsoever yet.
                      !       Reactivate for misbehaving materials and see if there are
                      !       changes.
-                     ELSE IF (iNuPr<=noccbdmin.AND.nu<=noccbdmin) THEN
+                     ELSE IF (iNuPr<=noccbdq) THEN
                         wtfq = resultsq%w_iks(iNupr,nk,jsp)/fi%kpts%wtkpt(nk)
                         tempMat2(iNupr) = 1.0/(eigq(iNupr)-eigk(nu))*tempMat1(iNupr) &
                                       & *(1.0-wtfq)
@@ -244,7 +244,7 @@ CONTAINS
                         tempMat2(iNupr) = 0.0
                      ELSE IF (ABS(eigq(iNupr)-eigk(nu))<fi%juPhon%eDiffCut) THEN
                         tempMat2(iNupr) = 0.0
-                     ELSE IF (iNuPr<=noccbdmin.AND.nu<=noccbdmin) THEN
+                     ELSE IF (iNuPr<=noccbdq) THEN
                         wtfq = resultsq%w_iks(iNupr,nk,jsp)/fi%kpts%wtkpt(nk)
                         tempMat2(iNupr) = 1.0/(eigq(iNupr)-eigk(nu))*tempMat1(iNupr) &
                                        & *(1.0-wtfq)
@@ -304,7 +304,7 @@ CONTAINS
                      ! TODO: This part of the correction had no effect whatsoever yet.
                      !       Reactivate for misbehaving materials and see if there are
                      !       changes.
-                     ELSE IF (iNuPr<=noccbdmin.AND.nu<=noccbdmin) THEN
+                     ELSE IF (iNuPr<=noccbdq) THEN
                         wtfq = resultsq%w_iks(iNupr,nk,jsp)/fi%kpts%wtkpt(nk)
                         tempMat2(iNupr) = -eigk(nu)/(eigq(iNupr)-eigk(nu))*tempMat1(iNupr) &
                                       & *(1.0-wtfq) &
@@ -321,7 +321,7 @@ CONTAINS
                         tempMat2(iNupr) = 0.0
                      ELSE IF (ABS(eigq(iNupr)-eigk(nu))<fi%juPhon%eDiffCut) THEN
                         tempMat2(iNupr) = 0.5*tempMat1(iNupr)
-                     ELSE IF (iNuPr<=noccbdmin.AND.nu<=noccbdmin) THEN
+                     ELSE IF (iNuPr<=noccbdq) THEN
                         wtfq = resultsq%w_iks(iNupr,nk,jsp)/fi%kpts%wtkpt(nk)
 
                         tempMat2(iNupr) = -eigk(nu)/(eigq(iNupr)-eigk(nu))*tempMat1(iNupr) &

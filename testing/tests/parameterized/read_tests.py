@@ -23,8 +23,12 @@ def read_tests(testset):
         "edsolver":pytest.mark.edsolver,
         "spinspiral":pytest.mark.spinspiral,
         "hdf":pytest.mark.hdf,
-        "dfpt":pytest.mark.dfpt
-    }
+        "dfpt":pytest.mark.dfpt,
+        "mpi":pytest.mark.mpi,
+        "elpa":pytest.mark.elpa,
+        "scalapack":pytest.mark.scalapack,
+        "chase":pytest.mark.chase
+        }
     import os
     import re
     test_list=[]
