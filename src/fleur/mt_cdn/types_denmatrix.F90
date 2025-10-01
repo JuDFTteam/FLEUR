@@ -30,9 +30,10 @@ contains
 #ifdef CPP_MPI
       integer:: ierr
       CALL MPI_ALLREDUCE(MPI_IN_PLACE, this%mat, size(this%mat), MPI_DOUBLE_COMPLEX, MPI_SUM, MPI_COMM_WORLD, ierr)
+      if (ierr /= MPI_SUCCESS) call judft_error("MPI_ALLREDUCE in mpi_collect failed", calledby="mpi_collect")
 #endif
    end subroutine
-   pure subroutine init(this, itype, atoms, input, sphhar)
+   subroutine init(this, itype, atoms, input, sphhar)
       use m_types
       use m_types_radfun
       implicit none
@@ -143,7 +144,7 @@ contains
       this%l_triang = l_less_effort
       ns = sym%ntypsy(atoms%firstAtom(itype))
       !$OMP PARALLEL DO DEFAULT(NONE) PRIVATE(lh, lv, jmem, mv, cmv, l, m, lm, mp, lphi, lplow, lp, icoef, nt, temp,cil,lmp,coef) &
-      !$OMP SHARED(this, atoms, sphhar, we, we1, ne, ns, itype, sym, abc, abc1, abc1m, l_minusq, l_gamma, l_dfpt, n_l) collapse(2)
+      !$OMP SHARED(this, atoms, sphhar, we, we1, ne, ns, itype, sym, abc, abc1, abc1m, l_minusq, l_gamma, l_dfpt, n_l)
       do lh = 0, sphhar%nlh(ns)
          do jmem = 1, sphhar%nmem(lh, ns)
             lv = sphhar%llh(lh, ns)
