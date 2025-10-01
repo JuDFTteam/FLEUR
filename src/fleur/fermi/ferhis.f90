@@ -7,7 +7,7 @@
 MODULE m_ferhis
 CONTAINS
   SUBROUTINE ferhis(input,kpts,fmpi, index,idxeig,idxkpt,idxjsp,nspins,n,&
-                    nstef,ws,spindg,weight, e,ne,we, noco,cell,ef,seigv,w_iks,results,l_output)
+                    nstef,ws,spindg,weight,energies,ne,we, noco,cell,ef,seigv,w_iks,results,l_output)
     !***********************************************************************
     !
     !     This subroutine determines the fermi energy and the sum of the
@@ -73,13 +73,13 @@ CONTAINS
     LOGICAL, INTENT(IN) :: l_output
     !     ..
     !     .. Array Arguments ..
-    INTEGER, INTENT (IN) :: idxeig(:)!(input%neig*kpts%nkpt*dimension%jspd)
-    INTEGER, INTENT (IN) :: idxjsp(:)!(input%neig*kpts%nkpt*dimension%jspd)
-    INTEGER, INTENT (IN) :: idxkpt(:)!(input%neig*kpts%nkpt*dimension%jspd)
-    INTEGER, INTENT (IN) ::  INDEX(:)!(input%neig*kpts%nkpt*dimension%jspd)
+    INTEGER, INTENT (IN) ::   idxeig(:)!(input%neig*kpts%nkpt*dimension%jspd)
+    INTEGER, INTENT (IN) ::   idxjsp(:)!(input%neig*kpts%nkpt*dimension%jspd)
+    INTEGER, INTENT (IN) ::   idxkpt(:)!(input%neig*kpts%nkpt*dimension%jspd)
+    INTEGER, INTENT (IN) ::    INDEX(:)!(input%neig*kpts%nkpt*dimension%jspd)
     INTEGER, INTENT (IN) ::     ne(:,:)!(kpts%nkpt,dimension%jspd)
-    REAL,    INTENT (IN) ::      e(:)!(kpts%nkpt*input%neig*dimension%jspd)
-    REAL,    INTENT (INOUT) ::  we(:)!(kpts%nkpt*input%neig*dimension%jspd)
+    REAL,    INTENT (IN) :: energies(:)!(kpts%nkpt*input%neig*dimension%jspd)
+    REAL,    INTENT (INOUT) ::    we(:)!(kpts%nkpt*input%neig*dimension%jspd)
 
     !--- J constants
     !--- J constants
@@ -101,7 +101,7 @@ CONTAINS
     !
     !     eig        : array of eigenvalues within all energy-windows
     !     wtkpt      : list of the weights of each k-point (from inp-file)
-    !     e          : linear list of the eigenvalues within the highest
+    !     energies   : linear list of the eigenvalues within the highest
     !                  energy-window
     !     we         : list of weights of the eigenvalues in e
     !     w          : array of weights (output, needed to calculate the
@@ -129,7 +129,7 @@ CONTAINS
 
     efermi = ef
     IF (nstef.LT.n) THEN
-       gap = e(INDEX(nstef+1)) - ef
+       gap = energies(INDEX(nstef+1)) - ef
        results%bandgap = gap*hartree_to_ev_const
        IF ( fmpi%irank == 0 .and. l_output) THEN
           attributes = ''
@@ -158,7 +158,7 @@ CONTAINS
           !
           !--->    STATES ABOVE EF AVAILABLE           
           !
-          ef = 0.5* (e(INDEX(nstef+1))+ef)
+          ef = 0.5* (energies(INDEX(nstef+1))+ef)
           emax = ef + 8.0*tkb
           emin = ef - 8.0*tkb
           w_near_ef = 0.0
@@ -166,10 +166,10 @@ CONTAINS
           inkem = 0
           ink_loop: DO ink = 1,n
 
-             IF (e(INDEX(ink)).LT.emin) THEN
+             IF (energies(INDEX(ink)).LT.emin) THEN
                 inkem = ink
                 w_below_emin = w_below_emin + we(INDEX(ink))
-             ELSE IF (e(INDEX(ink)).GT.emax) THEN
+             ELSE IF (energies(INDEX(ink)).GT.emax) THEN
                 EXIT ink_loop
              END IF
 
@@ -188,7 +188,7 @@ CONTAINS
              !--->            ADJUST FERMI-ENERGY BY NEWTON-METHOD
              !
              nocst = ink - 1
-             CALL ef_newton(n,fmpi%irank, inkem,nocst,index,tkb,e, w_near_ef,ef,we)
+             CALL ef_newton(n,fmpi%irank, inkem,nocst,index,tkb,energies, w_near_ef,ef,we)
              !
              IF ( fmpi%irank == 0 .and. l_output) THEN
                 WRITE (oUnit,FMT=8030) ef,spindg*weight, spindg*w_below_emin,spindg* (w_below_emin+w_near_ef)
@@ -289,7 +289,7 @@ CONTAINS
     !
     !
 
-    seigv = seigv+spindg*DOT_PRODUCT(e(INDEX(:nocst)),we(INDEX(:nocst)))
+    seigv = seigv+spindg*DOT_PRODUCT(energies(INDEX(:nocst)),we(INDEX(:nocst)))
     seigvTemp = seigv
     IF (noco%l_soc .AND. (.NOT. noco%l_noco)) THEN
        seigvTemp = seigvTemp / 2.0
