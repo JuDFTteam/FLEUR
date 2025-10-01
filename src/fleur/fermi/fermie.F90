@@ -58,7 +58,7 @@ CONTAINS
     !REAL,    INTENT (OUT):: w(:,:,:) !(input%neig,kpts%nkpt,dimension%jspd)
     !     ..
     !     .. Local Scalars ..
-    REAL del  ,spindg,ssc ,ws,zc,weight,efermi,seigv
+    REAL del  ,spindg,ssc ,ws,zc,weight,efermi,seigv,bandgap
     INTEGER i,idummy,j,jsp,k,l,n,nbands,nstef,nv,nmat,nspins,ex
     INTEGER n_help,m_spins,mspin,sslice(2)
     LOGICAL :: l_output,l_output_stored
@@ -337,7 +337,25 @@ CONTAINS
        WRITE(attributes(2),'(a)') 'Htr'
        IF (fmpi%irank.EQ.0) CALL writeXMLElement('FermiEnergy',(/'value','units'/),attributes(1:2))
     END IF
- ENDIF   
+
+    !Code to calculate the direct bandgap
+    DO j=1,nspins
+      bandgap = 1E99
+      kloop:DO k=1,kpts%nkpt
+         DO n=1,results%neig(k,j)
+            if (results%eig(n,k,j).GT.results%ef) EXIT
+         ENDDO
+         !Now n is the index of the lowest unoccupied state
+         if (n>1.and.n.LE.results%neig(k,j)) THEN
+            bandgap=min(bandgap,results%eig(n,k,j)-results%eig(n-1,k,j))
+      else
+            exit kloop
+         endif
+      ENDDO kloop
+      if (k==kpts%nkpt+1) write(oUnit,*) "Direct bandgap for spin ",j,": ",bandgap," Htr"
+   enddo 
+
+   END IF   
 
     RETURN
 8020 FORMAT (/,'FERMIE:',/,&
