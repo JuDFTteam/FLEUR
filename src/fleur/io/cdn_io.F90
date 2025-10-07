@@ -530,7 +530,7 @@ CONTAINS
             currentStepfunctionIndex,date,time,distance,fermiEnergy,mmpmatDistance,&
             occDistance,l_qfix,den%iter+relCdnIndex,den,denIm)
        ELSE
-          if (any(noco%l_constrained)) THEN
+          if (any(noco%l_constrained).or.any(noco%l_fixedMoment)) THEN
             CALL writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
                currentStarsIndex, currentLatharmsIndex, currentStructureIndex,&
                currentStepfunctionIndex,date,time,distance,fermiEnergy,mmpmatDistance,&

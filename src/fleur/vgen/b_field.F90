@@ -26,8 +26,8 @@ CONTAINS
     COMPLEX :: bOffdiag
     REAL :: bExternal(4)
 
-    
-    IF (.NOT.field%l_b_field) RETURN !no B-field specified
+
+    IF (.NOT.field%l_b_field.and..not.any(noco%l_fixedMoment)) RETURN !no B-field specified
 
     IF (input%jspins.NE.2) CALL judft_error("B-fields can only be used in spin-polarized calculations")
     !IF (noco%l_noco) CALL judft_error("B-fields not implemented in noco case")
@@ -49,8 +49,8 @@ CONTAINS
           bExternal(4) = AIMAG(bOffdiag)
        END IF
 
-       vTot%mt(:atoms%jri(iType),0,iType,1) = vTot%mt(:atoms%jri(iType),0,iType,1) + sfp_const * (bExternal(1) * 2.0 - field%b_field_mt(iType)) / 2.0
-       vTot%mt(:atoms%jri(iType),0,iType,2) = vTot%mt(:atoms%jri(iType),0,iType,2) + sfp_const * (bExternal(2) * 2.0 + field%b_field_mt(iType)) / 2.0
+       vTot%mt(:atoms%jri(iType),0,iType,1) = vTot%mt(:atoms%jri(iType),0,iType,1) + sfp_const * (bExternal(1) * 2.0 - field%b_field_mt(iType)-nococonv%b_con(3,iType)) / 2.0
+       vTot%mt(:atoms%jri(iType),0,iType,2) = vTot%mt(:atoms%jri(iType),0,iType,2) + sfp_const * (bExternal(2) * 2.0 + field%b_field_mt(iType)+nococonv%b_con(3,iType)) / 2.0
 
        IF (noco%l_noco) THEN
           vTot%mt(:atoms%jri(iType),0,iType,3) = vTot%mt(:atoms%jri(iType),0,iType,3) + sfp_const * bExternal(3)

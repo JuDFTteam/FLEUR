@@ -30,6 +30,7 @@ MODULE m_types_noco
 
     REAL, ALLOCATABLE   :: mix_RelaxWeightOffD(:)
     LOGICAL, ALLOCATABLE :: l_constrained(:)
+    LOGICAL, allocatable :: l_fixedMoment(:)
     LOGICAL, ALLOCATABLE :: l_unrestrictMT(:)
     LOGICAL, ALLOCATABLE :: l_spinoffd_ldau(:)
     LOGICAL,allocatable  :: l_alignMT(:)
@@ -125,12 +126,13 @@ MODULE m_types_noco
       ntype=xml%GetNumberOfNodes('/fleurInput/atomGroups/atomGroup')
       ALLOCATE(this%l_constrained(ntype),this%mix_RelaxWeightOffD(ntype))
       ALLOCATE(this%l_unrestrictMT(ntype),this%l_alignMT(ntype))
-      ALLOCATE(this%l_spinoffd_ldau(ntype))
+      ALLOCATE(this%l_spinoffd_ldau(ntype),this%l_fixedMoment(ntype))
       this%l_unrestrictMT=.false.
       this%l_constrained=.false.
       this%mix_RelaxWeightOffD=1.0
       this%l_alignMT=.false.
       this%l_spinoffd_ldau=.false.
+      this%l_fixedMoment=.false.
       ALLOCATE(this%alph_inp(ntype),this%beta_inp(ntype))
       this%alph_inp=0.0;this%beta_inp=0.0
       ALLOCATE(this%socscale(ntype))
@@ -179,6 +181,8 @@ MODULE m_types_noco
          numberNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathB)))
          IF (numberNodes.GE.1) THEN
            if (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathB))//'/@l_constrained')>0) this%l_constrained(iType) = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@l_constrained'))
+           if (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathB))//'/@l_fixedMoment')>0) this%l_fixedMoment(iType) = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@l_fixedMoment'))
+           print *, 'Fixed moment for atom type ', itype, ' is ', this%l_fixedMoment(iType)
            if (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathB))//'/@l_mtNocoPot')>0) this%l_unrestrictMT(iType) = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@l_mtNocoPot'))
            if (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathB))//'/@l_relaxSQA')>0) this%l_alignMT(iType) = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@l_relaxSQA'))
            this%alph_inp(iType) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@alpha'))
