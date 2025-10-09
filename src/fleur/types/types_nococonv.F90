@@ -124,7 +124,7 @@ SUBROUTINE update_b_cons(nococonv,atoms,noco,vtot,den)
          WRITE(attributes(2),'(f15.8)') nococonv%b_con(3,itype)
          WRITE(attributes(3),'(f15.8)') b_con_outz
          label="LongitudinalConstraint"
-         CALL writeXMLElementFormPoly(label,(/'atomType','BConZ   ','DBConZ   '/),&
+         CALL writeXMLElementFormPoly(label,(/'atomType','BConZ   ','DBConZ  '/),&
                            attributes,reshape((/8,7,7,6,15,15/),(/2,3/)))
          nococonv%b_con(3,itype) = nococonv%b_con(3,itype) + noco%mix_b*b_con_outz                  
       end if
