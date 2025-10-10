@@ -214,4 +214,63 @@ module m_dfpt_dielecten
 
         end subroutine dfpt_dielecten_final_new
 
+
+        subroutine dfpt_dielecten_final_old(fi, dielecten)
+
+            !USE m_inv3
+            USE m_xmlOutput
+            type(t_fleurinput), intent(in)    :: fi
+            complex, intent(inout)   :: dielecten(:,:)
+            integer                  :: iDir, j 
+            complex                  :: dielten_iden(3,3) 
+            complex                  :: dielecten_inv(3,3)
+            real                     :: det,dielecten_r(3,3)
+            CHARACTER(LEN=20)        :: attributes(1)
+
+            !dielecten(:,:) = cmplx(0.0,0.0)
+            dielecten_inv(:,:)= 0
+            DO j = 1,3
+                !print*,"dielecten",real(dielecten(j,j))
+                !print*,"fpi_const",fpi_const
+                !print*,"fi%cell%omtil",fi%cell%omtil
+                dielecten_inv(j,j) = CMPLX(1,0) - (4*fpi_const/fi%cell%omtil)*real(dielecten(j,j))
+                !print*,"dielecten_inv(j,j)",dielecten_inv(j,j)
+             END DO
+            !print*,"dielecten(:,:)",dielecten(:,:)
+            !dielecten_inv(:,:) = dielten_iden(:,:) + (4*fpi_const/fi%cell%omtil)*real(dielecten(:,:))
+            !print*,"dielecten_inv",dielecten_inv
+            dielecten = dielecten_inv
+            !print*,"(fpi_const/fi%cell%omtil)",(fpi_const/fi%cell%omtil)
+            !print*,"(fpi_const/fi%cell%vol)",(fpi_const/fi%cell%vol)
+            open( 110, file="diel_tensor_old", status='replace', action='write', form='formatted')
+            write(*,*) '-------------------------' 
+            write(*,*) "High Frequency Dielectric tensor (old formula)" 
+            do iDir = 1,3
+               do j = 1,2
+                  write(110,'(2es16.8)', ADVANCE='NO') real(dielecten(iDir,j)) 
+                  write(110, '(A)', ADVANCE='NO') ' ' 
+                  write(*,'(2es16.8)', ADVANCE='NO') real(dielecten(iDir,j))
+                  write(*, '(A)', ADVANCE='NO') ' ' 
+               end do
+               write(110,'(2es16.8)')real(dielecten(iDir,3))
+               write(*,'(2es16.8)')real(dielecten(iDir,3))
+            end do
+            close(110)
+            write(*,*) '-------------------------' 
+
+            !save in out.xml
+            !CALL openXMLElementNoAttributes('Phonons')
+            !CALL openXMLElementNoAttributes('efield')
+            !attributes = ''
+            !WRITE(attributes(1),'(i0)') test
+            !WRITE(attributes(1),'(f15.8)') fi%juPhon%qlim
+            !WRITE(attributes(3),'(f15.8)') qvec(2)
+            !WRITE(attributes(4),'(f15.8)') qvec(3)
+            !attributes(5) = '1/cm'
+            !CALL writeXMLElementPoly('dielconst',(/'qlim'/), attributes,real(dielecten(:,1)))
+            !CALL closeXMLElement('efield')
+            !CALL closeXMLElement('Phonons')
+
+        end subroutine dfpt_dielecten_final_old
+
 end module 
