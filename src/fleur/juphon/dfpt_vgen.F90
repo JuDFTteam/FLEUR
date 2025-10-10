@@ -158,27 +158,13 @@ CONTAINS
       ! NOTE: The normal stars are also passed as an optional argument, because
       !       they are needed for surface-qlm.
       sigma_loc = sigma_disc
-      !print*,"Im before if"
       IF (juphon%l_efield) THEN
-         !print*,"doing efield shit"
          atomsefield = atoms
          atomsefield%zatom(:) = 0.0 ! find out if this is actually needed
          CALL dfpt_vefield(juphon,starsq,atoms,sym,sphhar,cell,dfptvefield,dfptvefieldimag,iDir,1)
-         !dfptvefield%pw = CMPLX(0.0,0.0)
-         !dfptvefield%mt = 0.0
-         !dfptvefieldimag % mt = 0.0
          CALL dfptvefield%copy_both_spin(dfptvTot)
          CALL dfptvefieldimag%copy_both_spin(dfptvTotimag)
-         IF (.FALSE.) THEN
-            !dfptvefield%pw = cmplx(0.0,0.0)
-            print*,"trying to plot vext1 it1"
-            WRITE (oUnit,*) "Check if checkdopall is done for plot pot"
-            print*,"sum(dfptvefield%pw)",sum(dfptvefield%pw)
-            CALL checkDOPALL(input, sphhar, starsq,atoms, sym, vacuum, cell,dfptvefield,1, dfptvefieldimag)
-            sliceplot_int%iplot = 4
-            CALL makeplots(starsq, atoms, sphhar, vacuum, input, fmpi, sym, cell, noco, nococonv_int, dfptvTot, PLOT_POT_TOT, sliceplot_int)
-            stop
-         END IF
+
          
          IF (l_xc) THEN
             CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,juphon,starsq,cell,sphhar,atomsefield,.TRUE.,workdenReal,vCoul,sigma_loc,&
