@@ -488,7 +488,7 @@ CONTAINS
                !Define "qlim"-vector in internal coordinates
                dfpt_tag = ''
                WRITE(dfpt_tag,'(a1,i0,a2,i0)') 'q', 1, '_j', iDir
-               qvec_int = fi%juPhon%qvec_efield(iDir,:)
+               qvec_int = fi%juPhon%qvec_efield(:,iDir)
                kqpts = fi%kpts
                DO ikpt = 1, fi%kpts%nkpt
                   kqpts%bk(:, ikpt) = kqpts%bk(:, ikpt) + qvec_int

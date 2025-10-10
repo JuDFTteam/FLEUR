@@ -18,7 +18,7 @@ MODULE m_types_juPhon
       !LOGICAL :: l_eigout  = .FALSE. ! Write out eigenstuff
       REAL    :: eDiffcut  = 1e-5   ! Cutoff for energy differences
       REAL    :: fDiffcut  = 1e-7    ! Cutoff for occupation differences
-      REAL    :: qlim      = 1./16     ! qlim value
+      REAL    :: qlim      = 1./100     ! qlim value
       REAL    :: gmaxzLocal   = 0.0  ! Local Gmaxz cutoff for film 
 
       LOGICAL :: l_intp = .FALSE.    ! Interpolate the q-set onto another one
