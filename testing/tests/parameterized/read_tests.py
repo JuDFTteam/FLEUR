@@ -34,23 +34,26 @@ def read_tests(testset):
     test_list=[]
     with open(os.path.dirname(os.path.abspath(__file__))+"/tests.md") as file:
         for s in file:
+            m=s.split("|")
+            testMarker = " "
+            if (len(m) > 1):
+                testMarker = m[1].strip()
             #all active tests should be in lines starting with |+|
-            if s.startswith("|+|"):
-                m=s.split("|")
+            if testMarker == "+":
                 #Split the table: 
                 #m[0]: empty, m[1]=+ due to start of line
-                #m[2]: description, m[3]:directory name, m[4]: marks for pytest, m[5]: cmdline, m[6]: mpi_procs
-                dir=m[3]
-                desc=m[2]
+                #m[2]: description, m[3]:directory name, m[4]: marks for pytest, m[5]: Remarks, m[6]: cmdline, m[7]: mpi_procs
+                dir=m[3].strip()
+                desc=m[2].strip()
                 if (len(m)>5):
                     cmdline=m[5].split(",")
                     if (len(cmdline)==1 and cmdline[0].strip()==""):
                         cmdline=None
                 else:
                     cmdline=None
-                if(len(m)>6):
-                    if (m[6].strip().isdigit()):
-                        mpi_procs=int(m[6])
+                if(len(m)>7):
+                    if (m[7].strip().isdigit()):
+                        mpi_procs=int(m[7].strip())
                     else:
                         mpi_procs=None
                 else:
