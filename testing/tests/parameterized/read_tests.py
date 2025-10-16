@@ -45,8 +45,10 @@ def read_tests(testset):
                 #m[2]: description, m[3]:directory name, m[4]: marks for pytest, m[5]: Remarks, m[6]: cmdline, m[7]: mpi_procs
                 dir=m[3].strip()
                 desc=m[2].strip()
-                if (len(m)>5):
-                    cmdline=m[5].split(",")
+                if (len(m)>6):
+                    cmdline=m[6].split(",")
+                    for i in range(len(cmdline)):
+                       cmdline[i] = cmdline[i].strip()
                     if (len(cmdline)==1 and cmdline[0].strip()==""):
                         cmdline=None
                 else:
