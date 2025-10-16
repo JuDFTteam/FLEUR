@@ -80,6 +80,7 @@ MODULE m_types_noco
      CALL mpi_bc(this%mix_b,rank,mpi_comm)
      CALL mpi_bc(this%socscale,rank,mpi_comm)
      CALL mpi_bc(this%l_spinoffd_ldau,rank,mpi_comm)
+     CALL mpi_bc(this%l_fixedMoment,rank,mpi_comm)
 
    END SUBROUTINE mpi_bc_noco
 
