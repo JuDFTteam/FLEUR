@@ -33,6 +33,7 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="precision" type="PrecisionType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="targetStructureClass" type="TargetStructureClassType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="additionalCompilerFlags" type="AdditionalCompilerFlagsType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="programExecution" type="ProgramExecutionType"/>
       </xsd:all>
       <xsd:attribute name="version" type="xsd:string" use="required"/>
    </xsd:complexType>
@@ -62,6 +63,10 @@
    <xsd:simpleType name="AdditionalCompilerFlagsType">
       <xsd:list itemType="xsd:string"/>
    </xsd:simpleType>
+   
+   <xsd:complexType name="ProgramExecutionType">
+      <xsd:attribute name="commandLine" type="xsd:string" use="required"/>
+   </xsd:complexType>
 
    <xsd:complexType name="ParallelSetupType">
       <xsd:sequence>
