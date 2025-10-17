@@ -59,8 +59,8 @@ Testset: DFPT
 -------------------
 |     | Description | directory name | marks | Remarks      | CmdLine | MPI |
 | --- | ----------- | -------------- | ----- | ------------ | ------- | --- |
-| +   | Cu bulk fcc | dfpt/CuBulk    | libxc | partly ready |         |   2 |
-| +   | C bulk fcc  | dfpt/CBulk     | libxc | partly ready |         |   2 |
+| +   | Cu bulk fcc | dfpt/CuBulk    | libxc | partly ready |         |   1 |
+| +   | C bulk fcc  | dfpt/CBulk     | libxc | partly ready |         |   1 |
 
 
 Testset: Noco
