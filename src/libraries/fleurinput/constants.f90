@@ -154,7 +154,7 @@ MODULE m_constants
   integer, parameter, dimension(3)    :: dirvecz = [0, 0, 1]
   integer, parameter, dimension(3, 3) :: id3x3   = reshape([dirvecx, dirvecy, dirvecz], [3, 3])
 
-  real,parameter:: sqrt32=sqrt(3.0/2.0)
+  real,private,parameter:: sqrt32=sqrt(3.0/2.0)
   complex, dimension(3,3,5) :: mat2ord  !initialization below due to problems with nvhpc
   
   DATA mat2ord / &
