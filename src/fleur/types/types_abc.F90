@@ -37,6 +37,7 @@ MODULE m_types_abc
       !!                        3="LO", the former "C" coefficient     
       !!                        4="LO", the former "C" coefficient      
       !! - `iAtom`: Atom index.
+      Integer,allocatable :: n_r(:)
    CONTAINS
       PROCEDURE, PASS :: init => abc_init !!
 
@@ -52,6 +53,8 @@ MODULE m_types_abc
       !! (Currently commented out in the code.)
       !! PROCEDURE, PASS :: rotate_to_rep_atom => rotate_eigveccoeffs_to_rep_atom
 
+      procedure, PASS :: rot_to_unrotated
+
    END TYPE t_abc
 
 
@@ -59,23 +62,23 @@ MODULE m_types_abc
 
 CONTAINS
 
-   SUBROUTINE abc_init(this, input, atoms, radfun, noccbd, itype)
+   SUBROUTINE abc_init(this, input, atoms, n_r_in , noccbd, itype)
 
       USE m_types_atoms
       USE m_types_input
 
-      use m_types_radfun
       IMPLICIT NONE
 
       CLASS(t_abc), INTENT(INOUT) :: this
-      TYPE(t_radfun), INTENT(IN)   :: radfun
+      INTEGER, INTENT(IN)   :: n_r_in(:)
       TYPE(t_atoms), INTENT(IN)    :: atoms
       TYPE(t_input), INTENT(IN)    :: input
 
       INTEGER, INTENT(IN)    :: itype, noccbd
 
       IF (ALLOCATED(this%cof)) DEALLOCATE (this%cof)
-      ALLOCATE (this%cof(noccbd, 0:atoms%lmax(itype)*(atoms%lmax(itype) + 2), maxval(radfun%n_r), atoms%neq(itype)))
+      this%n_r=n_r_in
+      ALLOCATE (this%cof(noccbd, 0:atoms%lmax(itype)*(atoms%lmax(itype) + 2), maxval(this%n_r), atoms%neq(itype)))
       this%cof = CMPLX(0.0, 0.0)
 
    END SUBROUTINE abc_init
@@ -695,6 +698,57 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
       END DO
 
    END function rotate
+
+   subroutine rot_to_unrotated(abc,hybinp, atoms,  sym,itype)
+!     ***************************************************************
+!     * This routine transforms a/b/cof which are given wrt rotated *
+!     * MT functions (according to invsat/ngopr) into a/b/cof wrt   *
+!     * unrotated MT functions. Needed for GW calculations.         *
+!     *                                                             *
+!     * Christoph Friedrich Mar/2005                                *
+!     ***************************************************************
+      USE m_types_hybinp
+      USE m_types_sym
+      USE m_types_atoms
+      USE m_juDFT
+      IMPLICIT NONE
+      CLASS(t_abc), INTENT(INOUT) :: abc
+      TYPE(t_hybinp), INTENT(IN) :: hybinp
+      TYPE(t_sym), INTENT(IN)    :: sym
+      TYPE(t_atoms), INTENT(IN)  :: atoms
+      INTEGER, INTENT(IN) :: itype
+
+      INTEGER na, iatom, iop,  i, l, ifac,j
+      call timestart("hyb_abcrot")
+      IF (.NOT. ALLOCATED(hybinp%d_wgn2)) THEN    !calculate sym%d_wgn only once
+         PRINT *, "calculate wigner-matrix"
+         call judft_error('WIGNER MATRIX should be available in hybinp part')
+      ENDIF
+
+      !$OMP PARALLEL DO default(none) private(na,iatom, itype, iop, ifac, l, i,j) &
+      !$OMP shared(atoms, sym, abc,  hybinp)
+      do na = 1, atoms%neq(itype)
+         iatom=atoms%firstAtom(itype)+na-1
+         iop = sym%ngopr(iatom)
+         !                                    l                        l    l
+         ! inversion of spherical harmonics: Y (pi-theta,pi+phi) = (-1)  * Y (theta,phi)
+         !                                    m                             m
+         ifac = 1
+         IF (sym%invsat(iatom) == 2) THEN
+            iop = sym%ngopr(sym%invsatnr(iatom))
+            ifac = -1
+         ENDIF
+         DO l = 1, atoms%lmax(itype)
+            DO j=1,abc%n_r(l)
+               DO i = 1, size(abc%cof,1)
+                  abc%cof(i, l**2:l*(l + 2), j,na) = ifac**l*matmul(conjg(hybinp%d_wgn2(-l:l, -l:l, l, iop)), abc%cof(i, l**2:l*(l + 2), j,na))
+               ENDDO
+            ENDDO
+         ENDDO
+      ENDDO
+      !$OMP end parallel do
+      call timestop("hyb_abcrot")
+   END SUBROUTINE rot_to_unrotated
 
    subroutine fill_work_array(zmat, noco, atoms, lapw, ccchi, iintsp, nvmax, jspin, ne, work_c)
       use m_types_mat

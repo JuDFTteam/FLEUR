@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_calc_cmt
 
 contains
@@ -5,8 +10,7 @@ contains
                        sym,   zmat_ikp, jsp, ik, c_phase, cmt_out, submpi)
       use m_types
       use m_judft
-      USE m_hyb_abcrot
-      USE m_abcof
+      USE m_types_abc
       use m_constants
       use m_trafo, only: waveftrafo_gen_cmt
       use m_io_hybrid
@@ -31,7 +35,7 @@ contains
 
       complex, intent(inout)       :: cmt_out(:,:,:)
       type(t_hybmpi), intent(in), optional :: submpi
-      complex, allocatable :: acof(:,:,:), bcof(:,:,:), ccof(:,:,:,:)
+      Type(t_abc):: abc
       complex, allocatable :: cmt(:,:,:)
       type(t_noco)         :: nocoHyb
 
@@ -39,7 +43,7 @@ contains
       integer :: iatom, iatom2, itype, indx, i, j, idum, iop, l, ll, lm, m, lm1, lm2
       integer :: map_lo(atoms%nlod)
       integer, allocatable :: start_idx(:), psize(:)
-      integer :: my_psz, my_start, ierr
+      integer :: my_psz, my_start, ierr,na
 
       REAL :: rdum, rfac
       complex :: cdum, cexp1, cexp2, cfac
@@ -62,9 +66,6 @@ contains
       endif
 
       call timestart("alloc abccof")
-      allocate(acof(my_psz, 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), stat=ok(1), source=cmplx_0)
-      allocate(bcof(my_psz, 0:atoms%lmaxd*(atoms%lmaxd+2), atoms%nat), stat=ok(2), source=cmplx_0)
-      allocate(ccof(-atoms%llod:atoms%llod, my_psz, atoms%nlod, atoms%nat), stat=ok(3), source=cmplx_0)
       allocate(cmt(nbands, hybdat%maxlmindx, atoms%nat), stat=ok(4), source=cmplx_0)
       if(any(ok /= 0)) then
          call judft_error("Error in allocating abcof arrays")
@@ -88,54 +89,29 @@ contains
       endif
 
       nocoHyb = noco
-      IF (hybinp%l_hybrid .AND. noco%l_soc) nocoHyb%l_soc = .FALSE.
-      CALL abcof(input, atoms, sym, cell, lapw_ikp, my_psz, hybdat%usdus, nocoHyb, nococonv, jsp, acof, bcof, ccof, mat_ptr)
-
-      CALL hyb_abcrot(hybinp, atoms, my_psz, sym, acof, bcof, ccof)
-
+      
       call timestart("copy to cmt")
-      !$OMP parallel do default(none) private(iatom, itype, indx, l, ll, cdum, idum, map_lo, j, m, lm, i) &
-      !$OMP shared(atoms, mpdata, cmt, acof, bcof, ccof, my_start, my_psz)
-      DO iatom = 1,atoms%nat 
-         itype = atoms%itype(iatom)
-
-         indx = 0
-         DO l = 0, atoms%lmax(itype)
-            ll = l*(l + 1)
-            cdum = ImagUnit**l
-
-            ! determine number of local orbitals with quantum number l
-            ! map returns the number of the local orbital of quantum
-            ! number l in the list of all local orbitals of the atom type
-            idum = 0
-            map_lo = 0
-            IF (mpdata%num_radfun_per_l(l, itype) > 2) THEN
-               DO j = 1, atoms%nlo(itype)
-                  IF (atoms%llo(j, itype) == l) THEN
-                     idum = idum + 1
-                     map_lo(idum) = j
-                  END IF
+      DO itype=1,atoms%ntype 
+         call abc%init(input, atoms, mpdata%num_radfun_per_l(:, itype), my_psz, itype)
+         call abc%calc_abc(input, atoms, sym, cell, lapw_ikp, my_psz, hybdat%usdus, nocohyb, nococonv, jsp, itype, mat_ptr)
+         call abc%rot_to_unrotated(hybinp, atoms, sym, itype)
+         DO na=1,atoms%neq(itype)
+            iatom=atoms%firstAtom(itype)+na-1
+            indx=0
+            DO l=0,atoms%lmax(itype)
+               ll=l*(l+1)
+               cdum=ImagUnit**l  
+               DO m=-l,l
+                  lm=ll+m
+                  DO i=1,abc%n_r(l)
+                     indx=indx+1
+                     cmt(my_start:my_start+my_psz-1,indx,iatom)=cdum*abc%cof(:,lm,i,na)
+                  END DO
                END DO
-            END IF
-
-            DO m = -l, l
-               lm = ll + m
-               DO i = 1, mpdata%num_radfun_per_l(l, itype)
-                  indx = indx + 1
-                  IF (i == 1) THEN
-                     cmt(my_start:my_start+my_psz-1, indx, iatom) = cdum*acof(:, lm, iatom)
-                  ELSE IF (i == 2) THEN
-                     cmt(my_start:my_start+my_psz-1, indx, iatom) = cdum*bcof(:, lm, iatom)
-                  ELSE
-                     idum = i - 2
-                     cmt(my_start:my_start+my_psz-1, indx, iatom) = cdum*ccof(m, :, map_lo(idum), iatom)
-                  END IF
-               END DO
-            END DO
-         END DO
-      END DO
-      !$OMP end parallel do
-
+            ENDDO
+         ENDDO
+      ENDDO
+      
       call timestop("copy to cmt")
 
 #ifdef CPP_MPI
