@@ -406,6 +406,7 @@ def pytest_configure(config):
 
     # main libs
     config.addinivalue_line("markers", "hdf: tests needing hdf")
+    config.addinivalue_line("markers", "mpi: tests needing mpi")
     config.addinivalue_line("markers", "libxc: test for fleur using libxc")
     config.addinivalue_line("markers", "wannier: test for fleur using wannier") # TODO account for differnet wannier versions?
     config.addinivalue_line("markers", "wannier4: test for fleur using wannier 4D calculations")
@@ -762,7 +763,7 @@ def get_mpi_command(env, mpi_procs, parallel):
         mpi_procs = env.get('juDFT_NPROCS', '')
 
     if mpiruncmd is None and parallel:
-        mpiruncmd = 'mpirun -n {mpi_procs} '
+        mpiruncmd = 'mpirun -np {mpi_procs} '
 
     if mpiruncmd is not None:
         if mpiruncmd.strip() != 'time' and len(mpiruncmd.strip()) > 0:

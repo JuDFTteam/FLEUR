@@ -44,11 +44,13 @@
       CHARACTER(LEN=20), INTENT (OUT) :: atomLabel(natmax)
 
 !===> data
-      REAL,             PARAMETER :: eps=1.e-7
-      CHARACTER(len=1), PARAMETER :: cops(-1:3)=(/'2','3','4','6','1'/)
+      REAL,             PARAMETER :: eps = 1.e-7
+      REAL,             PARAMETER :: eps12 = 1.e-12
+      CHARACTER(len=1), PARAMETER :: cops(-1:3) = (/'2','3','4','6','1'/)
 
 !===> Local Variables
       INTEGER :: n, ng, op, nbuffer, ios,nop2
+      REAL    :: x_c, y_c
       REAL    :: shift(3),rdummy(3,3),z_max,z_min,mat(3,3),x(3)
       LOGICAL :: oldfleurset,l_symfile,l_gen,hybinp
       CHARACTER(len=10)        :: chtmp
@@ -333,15 +335,29 @@
 
       IF (film) THEN
 
-        z_max = MAXVAL( atompos(3,1:abs(natin)) )  ! check the outmost atomic position
-        z_min = MINVAL( atompos(3,1:abs(natin)) )  
-        z_max = 2 * (MAX(z_max,-z_min) + 3.0)      ! how much space do we need in z-dir.
-        a3(3) = MAX( a3(3), z_max/(aa*scale(3)) )  ! adjust a3(3) so that it fits
+         IF ((abs(a3(1))>eps12 .or. abs(a3(2))>eps12) .and. abs(a1(3))<eps12 .and. abs(a2(3))<eps12) THEN
+            !-> correct film with non-orthogonal z-axis
+            WRITE(*,*) 'film and non-orthogonal z-axis specified - Adjusting unit cell to get orthogonal z axis.'
+            x_c = (-a1(2)*a3(2) + a2(2)*a3(1))/(a1(1)*a2(2) - a1(2)*a2(1))
+            y_c = ( a1(1)*a3(2) - a2(1)*a3(1))/(a1(1)*a2(2) - a1(2)*a2(1))
+            write(*,*) x_c, y_c
+            DO n = 1, abs(natin)
+              atompos(1,n) = atompos(1,n) + atompos(3,n) * x_c / a3(3)
+              atompos(2,n) = atompos(2,n) + atompos(3,n) * y_c / a3(3)
+            END DO
+            a3(1) = 0.0
+            a3(2) = 0.0
+         ENDIF
 
-        IF(.NOT.cartesian) THEN
-           atompos(3,1:abs(natin)) =                  ! rescale to internal coordinates
-     +     atompos(3,1:abs(natin))/(a3(3)*aa*scale(3))
-        END IF
+
+         z_max = MAXVAL( atompos(3,1:abs(natin)) )  ! check the outmost atomic position
+         z_min = MINVAL( atompos(3,1:abs(natin)) )  
+         z_max = 2 * (MAX(z_max,-z_min) + 3.0)      ! how much space do we need in z-dir.
+         a3(3) = MAX( a3(3), z_max/(aa*scale(3)) )  ! adjust a3(3) so that it fits
+
+         IF(.NOT.cartesian) THEN
+            atompos(3,1:abs(natin)) = atompos(3,1:abs(natin))/(a3(3)*aa*scale(3)) ! rescale to internal coordinates
+         END IF
 
       ENDIF
 

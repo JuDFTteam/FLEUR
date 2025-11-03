@@ -283,7 +283,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
       IF (fmpi%irank == 0) THEN
          CALL spinMoments(input,atoms,noco,nococonv,den=outDen,results=results)
          CALL orbMoments(input,atoms,noco,nococonv,moments)
-         if (any(noco%l_constrained)) call nococonv%update_b_cons(atoms,noco,vtot,outDen)
+         if (any(noco%l_constrained).or.any(noco%l_fixedMoment)) call nococonv%update_b_cons(atoms,noco,vtot,outDen)
       END IF
 
       if (sym%nop==1.and..not.input%film) call magMultipoles(fmpi,sym,juphon,stars, atoms,cell, sphhar, vacuum, input, noco,nococonv,outden)
@@ -304,7 +304,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
 #ifdef CPP_MPI
    CALL MPI_BCAST(nococonv%alph,atoms%ntype,MPI_DOUBLE_PRECISION,0,fmpi%mpi_comm,ierr)
    CALL MPI_BCAST(nococonv%beta,atoms%ntype,MPI_DOUBLE_PRECISION,0,fmpi%mpi_comm,ierr)
-   CALL MPI_BCAST(nococonv%b_con,atoms%ntype*2,MPI_DOUBLE_PRECISION,0,fmpi%mpi_comm,ierr)
+   CALL MPI_BCAST(nococonv%b_con,atoms%ntype*3,MPI_DOUBLE_PRECISION,0,fmpi%mpi_comm,ierr)
    CALL MPI_BCAST(nococonv%qss,3,MPI_DOUBLE_PRECISION,0,fmpi%mpi_comm,ierr)
 #endif
 

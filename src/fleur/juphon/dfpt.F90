@@ -349,7 +349,7 @@ CONTAINS
             DO xInd = -stars_nosym%mx1, stars_nosym%mx1
                iStar = stars_nosym%ig(xInd, yInd, 0)
                IF (iStar.EQ.0) CYCLE
-               iStar = stars_nosym%ig2(iStar)
+               iStar = stars_nosym%i2g(xInd, yInd)
                grRho3(1)%vac(:,iStar,:,:) = rho_nosym%vac(:,iStar,:,:) * cmplx(0.0,dot_product([1.0,0.0,0.0],matmul(real([xInd,yInd,0]),fi_nosym%cell%bmat)))
                grRho3(2)%vac(:,iStar,:,:) = rho_nosym%vac(:,iStar,:,:) * cmplx(0.0,dot_product([0.0,1.0,0.0],matmul(real([xInd,yInd,0]),fi_nosym%cell%bmat)))
                DO iVac = 1, fi_nosym%vacuum%nvac

@@ -467,12 +467,13 @@
 
    <xsd:complexType name="AtomicNocoParamsType">
       <xsd:attribute name="l_constrained" type="FleurBool" use="optional"/>
+      <xsd:attribute name="l_fixedMoment" type="FleurBool" use="optional"/>
       <xsd:attribute name="l_mtNocoPot" type="FleurBool" use="optional"/>
       <xsd:attribute name="l_relaxSQA" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="l_magn" type="FleurBool" use="optional"/>
       <xsd:attribute default="0.0" name="M" type="FleurDouble" use="optional"/>
-      <xsd:attribute name="alpha" type="FleurDouble" use="required"/>
-      <xsd:attribute name="beta" type="FleurDouble" use="required"/>
+      <xsd:attribute name="alpha" type="FleurDouble" use="optional" default="0.0"/>
+      <xsd:attribute name="beta" type="FleurDouble" use="optional" default="0.0"/>
       <xsd:attribute name="b_cons_x" type="FleurDouble" use="optional"/>
       <xsd:attribute name="b_cons_y" type="FleurDouble" use="optional"/>
    </xsd:complexType>

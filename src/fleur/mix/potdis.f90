@@ -177,7 +177,7 @@ CONTAINS
                          af2(i,1) = 0.
                          bf2(i,1) = 0.
                       ELSE
-                         id2 = stars%ig2(id3)
+                         id2 = stars%i2g(k1,k2)
                          phase = stars%rgphs(k1,k2,0)
                          IF (id2.EQ.1) THEN
                             af2(i,1) = rhv0(ip,ivac,num,1)

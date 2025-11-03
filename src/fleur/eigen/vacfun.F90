@@ -156,6 +156,7 @@ CONTAINS
             IF (ind3.EQ.0) CYCLE
             phase = stars%rgphs(i1,i2,i3)
             ind2 = stars%ig2(ind3)
+            ind2 = stars%i2g(i1,i2)
             IF (ind2.EQ.0) THEN
                WRITE (oUnit,FMT=8000) ik,jk
    8000         FORMAT (' **** error in map2 for 2-d stars',2i5)
@@ -171,6 +172,7 @@ CONTAINS
                !--->       the integrals, i.e. the integrand is from infinity inward
 
                !--->       tuuv
+
                DO  i = 1,vacuum%nmzxy
                   x(np1-i) = u(i,ik,jspin1)*u(i,jk,jspin2)*REAL(vxy(i,ind2,ivac,ipot))
                enddo
@@ -284,7 +286,7 @@ CONTAINS
             ind3 = stars%ig(i1,i2,i3)
             IF (ind3.EQ.0) CYCLE
             phase = stars%rgphs(i1,i2,i3)
-            ind2 = stars%ig2(ind3)
+            ind2 = stars%i2g(i1,i2)
             IF (ind2.EQ.0) THEN
                WRITE (oUnit,FMT=8001) ik,jk
    8001         FORMAT (' **** error in map2 for 2-d stars',2i5)

@@ -58,7 +58,7 @@ CONTAINS
     !REAL,    INTENT (OUT):: w(:,:,:) !(input%neig,kpts%nkpt,dimension%jspd)
     !     ..
     !     .. Local Scalars ..
-    REAL del  ,spindg,ssc ,ws,zc,weight,efermi,seigv
+    REAL del  ,spindg,ssc ,ws,zc,weight,efermi,seigv,bandgap
     INTEGER i,idummy,j,jsp,k,l,n,nbands,nstef,nv,nmat,nspins,ex
     INTEGER n_help,m_spins,mspin,sslice(2)
     LOGICAL :: l_output,l_output_stored
@@ -66,7 +66,7 @@ CONTAINS
     !     .. Local Arrays ..
     !
     INTEGER :: idxeig(SIZE(results%w_iks)),idxjsp(SIZE(results%w_iks)),idxkpt(SIZE(results%w_iks)),INDEX(SIZE(results%w_iks))
-    REAL    :: e(SIZE(results%w_iks)),we(SIZE(results%w_iks))
+    REAL    :: energies(SIZE(results%w_iks)),we(SIZE(results%w_iks))
     real,allocatable :: w_iks(:,:,:),we_stored(:)
     real              :: seigv_stored,ef_stored(3)
     CHARACTER(LEN=20)    :: attributes(5)
@@ -87,7 +87,7 @@ CONTAINS
     !
     !     eig        : array of eigenvalues
     !     wtkpt      : list of the weights of each k-point (from inp-file)
-    !     e          : linear list of the eigenvalues
+    !     energies   : linear list of the eigenvalues
     !     we         : list of weights of the eigenvalues in e
     !     zelec      : number of electrons
     !     spindg     : spindegeneracy (2 in nonmagnetic calculations)
@@ -99,7 +99,7 @@ CONTAINS
     DATA del/1.0e-6/
 
     ! initiliaze e
-    e = 0
+    energies = 0
 
     ! Logical that controls the output
     IF (.NOT.present(l_output_param)) THEN
@@ -181,7 +181,7 @@ CONTAINS
              !--->          CONECTION TO THE ORIGINAL ARRAYS
              !
              DO  j = 1,results%neig(k,jsp)
-                e(n+j) = results%eig(j,k,jsp)
+                energies(n+j) = results%eig(j,k,jsp)
                 we(n+j) = kpts%wtkpt(k)
                 idxeig(n+j) = j+n_help
                 idxkpt(n+j) = k
@@ -192,13 +192,13 @@ CONTAINS
           END DO
        END DO
 
-       CALL sort(index(:n),e)
+       CALL sort(index(:n),energies)
 
        !     Check if no deep eigenvalue is found
-       IF (e_min-MINVAL(e(1:n))>1.0) THEN
+       IF (e_min-MINVAL(energies(1:n))>1.0) THEN
           if (l_output) then
              WRITE(oUnit,*) 'WARNING: Too low eigenvalue detected:'
-             WRITE(oUnit,*) 'min E=', MINVAL(e(1:n)),' min(enpara)=',e_min
+             WRITE(oUnit,*) 'min E=', MINVAL(energies(1:n)),' min(enpara)=',e_min
           endif
           CALL juDFT_warn("Too low eigenvalue detected",calledby="fermi", &
                           hint ="If the lowest eigenvalue is more than 1Htr below "//&
@@ -241,12 +241,12 @@ CONTAINS
    8010         FORMAT (/,10x,'error: not enough wavefunctions.',i10,2d20.10)
             END IF
             ws = ws + we(INDEX(l))
-            seigv =seigv + e(INDEX(l))*we(INDEX(l))*spindg
-            !IF (l_output) WRITE (oUnit,FMT='(2f10.7)') e(index(l)),we(index(l))
+            seigv =seigv + energies(INDEX(l))*we(INDEX(l))*spindg
+            !IF (l_output) WRITE (oUnit,FMT='(2f10.7)') energies(index(l)),we(index(l))
          END DO
          results%ef = -100000.0
          IF(l.GT.0) THEN
-            results%ef = e(INDEX(l))
+            results%ef = energies(INDEX(l))
          END IF
          nstef = l
          zc = input%zelec
@@ -273,7 +273,7 @@ CONTAINS
          results%bandgap = 0.0
          IF(input%bz_integration==BZINT_METHOD_HIST) THEN
             CALL ferhis(input,kpts,fmpi,index,idxeig,idxkpt,idxjsp,nspins, n,&
-                  nstef,ws,spindg,weight,e,results%neig(:,sslice(1):sslice(2)),&
+                  nstef,ws,spindg,weight,energies,results%neig(:,sslice(1):sslice(2)),&
                   we, noco,cell,results%ef,results%seigv,results%w_iks(:,:,sslice(1):sslice(2)),results,l_output)
          ELSE IF (input%bz_integration==BZINT_METHOD_GAUSS) THEN
             CALL fergwt(kpts,input,fmpi,results%neig(:,sslice(1):sslice(2)), results%eig(:,:,sslice(1):sslice(2)),&
@@ -337,7 +337,25 @@ CONTAINS
        WRITE(attributes(2),'(a)') 'Htr'
        IF (fmpi%irank.EQ.0) CALL writeXMLElement('FermiEnergy',(/'value','units'/),attributes(1:2))
     END IF
- ENDIF   
+
+    !Code to calculate the direct bandgap
+    DO j=1,nspins
+      bandgap = 1E99
+      kloop:DO k=1,kpts%nkpt
+         DO n=1,results%neig(k,j)
+            if (results%eig(n,k,j).GT.results%ef) EXIT
+         ENDDO
+         !Now n is the index of the lowest unoccupied state
+         if (n>1.and.n.LE.results%neig(k,j)) THEN
+            bandgap=min(bandgap,results%eig(n,k,j)-results%eig(n-1,k,j))
+      else
+            exit kloop
+         endif
+      ENDDO kloop
+      if (k==kpts%nkpt+1) write(oUnit,*) "Direct bandgap for spin ",j,": ",bandgap," Htr"
+   enddo 
+
+   END IF   
 
     RETURN
 8020 FORMAT (/,'FERMIE:',/,&
