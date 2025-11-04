@@ -868,6 +868,7 @@
       <xsd:attribute name="storeEVData" type="FleurBool" use="optional" default="T"/>
       <xsd:attribute name="all_atoms" type="FleurBool" use="optional" default="T"/>
       <xsd:attribute name="orbcomp" type="FleurBool" use="optional" default="F"/>
+      <xsd:attribute name="globalspin" type="FleurBool" use="optional" default="F"/>
       <xsd:attribute name="jDOS" type="FleurBool" use="optional" default="F"/>
       <xsd:attribute name="minEnergy" type="FleurDouble" use="optional" default="-0.5"/>
       <xsd:attribute name="maxEnergy" type="FleurDouble" use="optional" default="0.5"/>
