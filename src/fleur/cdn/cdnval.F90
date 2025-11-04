@@ -5,12 +5,11 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_cdnval
-   implicit none
-
    USE m_juDFT
 #ifdef CPP_MPI
    use mpi
 #endif
+   implicit none
 
 CONTAINS
 
