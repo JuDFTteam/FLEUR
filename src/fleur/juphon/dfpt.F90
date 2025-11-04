@@ -866,7 +866,7 @@ CONTAINS
             CALL dos%init(fi_nosym%input,fi_nosym%atoms,fi_nosym%kpts,fi_nosym%banddos,.false.,eigenValsFull)
             allocate(eigdos(1))
             eigdos(1)%p=>dos
-            CALL make_dos(fi_nosym%kpts,fi_nosym%atoms,fi_nosym%vacuum,fi_nosym%input,fi_nosym%banddos,fi_nosym%sliceplot,fi_nosym%noco,fi_nosym%sym,fi_nosym%cell,results,eigdos,fi%juPhon )
+            CALL make_dos(fi_nosym%kpts,fi_nosym%atoms,fi_nosym%vacuum,fi_nosym%input,fi_nosym%banddos,fi_nosym%sliceplot,fi_nosym%noco,nococonv,fi_nosym%sym,fi_nosym%cell,results,eigdos,fi%juPhon )
          END IF ! dos
       END IF ! Band/Dos stuff
 

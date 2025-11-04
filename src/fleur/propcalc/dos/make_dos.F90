@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -12,7 +12,7 @@ MODULE m_make_dos
   !
 CONTAINS
   SUBROUTINE make_dos(kpts,atoms,vacuum,input,banddos,&
-                      sliceplot,noco,sym,cell,results,eigdos,juPhon )
+                      sliceplot,noco,nococonv,sym,cell,results,eigdos,juPhon )
     USE m_types
     USE m_constants
     USE m_cdn_io
@@ -32,6 +32,7 @@ CONTAINS
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_vacuum),INTENT(IN)    :: vacuum
     TYPE(t_noco),INTENT(IN)      :: noco
+    TYPE(t_nococonv),INTENT(IN)  :: nococonv
     TYPE(t_sym),INTENT(IN)       :: sym
     TYPE(t_cell),INTENT(IN)      :: cell
     TYPE(t_kpts),INTENT(IN)      :: kpts
@@ -86,6 +87,7 @@ CONTAINS
 #endif
     DO n=1,size(eigdos)
       call eigdos(n)%p%sym_weights()
+      call eigdos(n)%p%postprocessing(noco,nococonv,banddos)
     ENDDO  
     IF (banddos%band) THEN
 !      CALL writeBandDOSData(banddosFile_id,input,atoms,cell,kpts,results,banddos,dos,vacuum)

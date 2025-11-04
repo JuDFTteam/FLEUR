@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2020 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -23,8 +23,20 @@ MODULE m_types_jdos
       PROCEDURE      :: get_weight_name
       PROCEDURE      :: get_spins
       PROCEDURE      :: calc_jDOS
+      procedure      :: postprocessing
    END TYPE t_jDOS
 CONTAINS
+   subroutine postprocessing(this, noco,nococonv, banddos)
+      use m_types_atoms
+      use m_types_noco
+      use m_types_nococonv
+      use m_types_banddos
+      class(t_jDOS), intent(inout):: this
+      TYPE(t_noco), INTENT(IN)    :: noco
+      TYPE(t_nococonv), INTENT(IN)    :: nococonv
+      TYPE(t_banddos), INTENT(IN)    :: banddos
+      return !currently no postprocessing needed for jdos
+   end subroutine postprocessing    
 
    SUBROUTINE calc_jDOS(jDOS, ikpt, noccbd, ev_list, we, atoms, banddos, input, radfun, abc_u, abc_d)
       use m_types_atoms
@@ -47,8 +59,8 @@ CONTAINS
       INTEGER, PARAMETER :: lmax = 3 !Maximum l considered in j decomposition
 
       INTEGER :: n_dos, jcof, icof
-      INTEGER :: iType, iBand, nn, iAtom, l, jj, j_ind, lmup, lmdown, spin, ilo, ilop
-      REAL    :: j, mj, mup, mdown
+      INTEGER :: jjj, iType, iBand, nn, iAtom, l, jj, j_ind, lmup, lmdown, spin, ilo, ilop
+      REAL    :: j,mj, mup, mdown
       REAL    :: facup, facdown, summed, cf
       COMPLEX :: aup, bup, cup, adown, bdown, cdown, cupp, cdownp
       REAL    :: c(0:lmax*2)
@@ -66,10 +78,10 @@ CONTAINS
             DO l = 0, lmax
             IF (l == 0) THEN
                !s-states (are not split up by SOC)
-               DO j = 1, radfun%n_r(l)
+               DO jjj = 1, radfun%n_r(l)
                   DO jj = 1, radfun%n_r(l)
-                   c(0) = c(0) + abc_u%cof(iband, 0, j, iatom)*conjg(abc_u%cof(iband, 0, jj, iatom))*radfun%integral(j, jj, 0, 1, 1)
-                   c(0) = c(0) + abc_d%cof(iband, 0, j, iatom)*conjg(abc_d%cof(iband, 0, jj, iatom))*radfun%integral(j, jj, 0, 2, 2)
+                   c(0) = c(0) + abc_u%cof(iband, 0, jjj, iatom)*conjg(abc_u%cof(iband, 0, jj, iatom))*radfun%integral(jjj, jj, 0, 1, 1)
+                   c(0) = c(0) + abc_d%cof(iband, 0, jjj, iatom)*conjg(abc_d%cof(iband, 0, jj, iatom))*radfun%integral(jjj, jj, 0, 2, 2)
 
                   end do
                end do

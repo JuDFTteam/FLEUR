@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2020 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -23,9 +23,21 @@ MODULE m_types_orbcomp
       PROCEDURE      :: get_weight_name
       PROCEDURE      :: sym_weights
       PROCEDURE      :: calc_orb_comp
+      PROCEDURE      :: postprocessing
    END TYPE t_orbcomp
 CONTAINS
 
+ subroutine postprocessing(this, noco,nococonv, banddos)
+      use m_types_atoms
+      use m_types_noco
+      use m_types_nococonv
+      use m_types_banddos
+      class(t_orbcomp), intent(inout):: this
+      TYPE(t_noco), INTENT(IN)    :: noco
+      TYPE(t_nococonv), INTENT(IN)    :: nococonv
+      TYPE(t_banddos), INTENT(IN)    :: banddos
+      return !currently no postprocessing needed for orbcomp
+   end subroutine postprocessing 
    subroutine set_coefficients()
     !! Here the coefficients and factor for the linear combinations are defined that
     !! generate the correct orbital resolved DOS

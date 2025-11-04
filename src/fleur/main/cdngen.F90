@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -204,7 +204,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
       IF (fmpi%irank == 0) THEN
          CALL timestart("cdngen: dos")
          CALL make_dos(kpts,atoms,vacuum,input,banddos,&
-                      sliceplot,noco,sym,cell,results,eigdos )
+                      sliceplot,noco,nococonv,sym,cell,results,eigdos )
          CALL timestop("cdngen: dos")
       END IF
    END IF

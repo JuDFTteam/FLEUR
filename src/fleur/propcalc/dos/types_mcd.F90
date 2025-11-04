@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2020 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -27,9 +27,20 @@ MODULE m_types_mcd
       PROCEDURE      :: get_num_weights
       PROCEDURE      :: get_weight_name
       PROCEDURE      :: calc_mt_mcd
+      procedure      :: postprocessing
    END TYPE t_mcd
 contains
-
+   subroutine postprocessing(this, noco,nococonv, banddos)
+      use m_types_atoms
+      use m_types_noco
+      use m_types_nococonv
+      use m_types_banddos
+      class(t_mcd), intent(inout):: this
+      TYPE(t_noco), INTENT(IN)    :: noco
+      TYPE(t_nococonv), INTENT(IN)    :: nococonv
+      TYPE(t_banddos), INTENT(IN)    :: banddos
+      return !currently no postprocessing needed for mcd
+   end subroutine postprocessing 
    subroutine calc_mt_mcd(mcd, banddos, atoms, ev_list, abc, itype, ikpt, jsp)
       use m_types_atoms
       use m_types_banddos

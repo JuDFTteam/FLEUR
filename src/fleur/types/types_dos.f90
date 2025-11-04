@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2018 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -25,36 +25,41 @@ MODULE m_types_dos
       PROCEDURE      :: get_weight_name
       PROCEDURE      :: sym_weights
       PROCEDURE      :: calc_mt_dos
+      PROCEDURE      :: postprocessing
    END TYPE t_dos
 
 CONTAINS
 
-   subroutine rotate_mt_dos(dos, nococonv, atoms, banddos)
+   subroutine postprocessing(this, noco,nococonv, banddos)
       use m_types_atoms
+      use m_types_noco
       use m_types_nococonv
       use m_types_banddos
-      class(t_dos), intent(inout):: dos
-      TYPE(t_atoms), INTENT(IN)    :: atoms
+      class(t_dos), intent(inout):: this
+      TYPE(t_noco), INTENT(IN)    :: noco
       TYPE(t_nococonv), INTENT(IN)    :: nococonv
       TYPE(t_banddos), INTENT(IN)    :: banddos
 
 
       integer:: n_dos,ikpt,i,l
       complex:: qal21
-      DO n_dos = 1, size(dos%qal, 2)
-         if (banddos%dos_typelist(n_dos) == 0) cycle !this is not a  MT DOS
-         do ikpt = 1, size(dos%qal, 4)
-            DO i = 1, size(dos%qal, 3)
-               DO l = 0, 3
-                  qal21 = cmplx(dos%qal(l, n_dos, i, ikpt, 3), dos%qal(l, n_dos, i, ikpt, 4))
-                  CALL nococonv%rotdenmat(nococonv%alph(banddos%dos_typelist(n_dos)), nococonv%beta(banddos%dos_typelist(n_dos)), &
-                                   dos%qal(l, n_dos, i, ikpt, 1), dos%qal(l, n_dos, i, ikpt, 2), qal21,.true.)
-                  dos%qal(l, n_dos, i, ikpt, 3) = real(qal21)
-                  dos%qal(l, n_dos, i, ikpt, 4) = aimag(qal21)
+      if (.not.noco%l_noco) return
+      if (banddos%global_frame) THEN !Only if global frame is requested do the transformation
+         DO n_dos = 1, size(this%qal, 2)
+            if (banddos%dos_typelist(n_dos) == 0) cycle !this is not a  MT DOS
+            do ikpt = 1, size(this%qal, 4)
+               DO i = 1, size(this%qal, 3)
+                  DO l = 0, 3
+                     qal21 = cmplx(this%qal(l, n_dos, i, ikpt, 3), this%qal(l, n_dos, i, ikpt, 4))
+                     CALL nococonv%rotdenmat(nococonv%alph(banddos%dos_typelist(n_dos)), nococonv%beta(banddos%dos_typelist(n_dos)), &
+                                   this%qal(l, n_dos, i, ikpt, 1), this%qal(l, n_dos, i, ikpt, 2), qal21,.true.)
+                     this%qal(l, n_dos, i, ikpt, 3) = real(qal21)
+                     this%qal(l, n_dos, i, ikpt, 4) = aimag(qal21)
+                  END DO
                END DO
             END DO
-         end do
-      END DO
+         END DO
+      endif   
    end subroutine
 
    subroutine calc_mt_dos(dos, abc, abc1, banddos, radfun, atoms, ev_list, itype, ikpt, jsp, jsp1)

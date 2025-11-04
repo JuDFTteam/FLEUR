@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2018 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -20,6 +20,7 @@ MODULE m_types_eigdos
     procedure(get_weight_name),DEFERRED    :: get_weight_name
     procedure(get_num_weights),DEFERRED    :: get_num_weights
     procedure(get_weight_eig),DEFERRED     :: get_weight_eig !should be overwritten in derived type
+    procedure(postprocessing),DEFERRED     :: postprocessing
     procedure          :: get_spins
     procedure          :: get_neig
     procedure          :: get_eig
@@ -36,6 +37,20 @@ MODULE m_types_eigdos
   type::t_eigdos_list
     class(t_eigdos),POINTER:: p
   end type
+
+  INTERFACE
+    subroutine postprocessing(this,noco,nococonv,banddos)
+      use m_types_banddos
+      use m_types_noco
+      use m_types_nococonv
+      import t_eigdos
+      
+      class(t_eigdos),intent(inout):: this
+      type(t_banddos),intent(in)   :: banddos
+      type(t_noco),intent(in)      :: noco
+      type(t_nococonv),intent(in)  :: nococonv
+    end subroutine
+  END interface
 
   INTERFACE
     function get_weight_eig(this,id)

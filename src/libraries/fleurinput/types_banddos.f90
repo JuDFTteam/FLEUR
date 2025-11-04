@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -18,7 +18,7 @@ MODULE m_types_banddos
      INTEGER :: ndos_points=1301
      LOGICAL :: l_storeEVData = .TRUE.
 
-
+     LOGICAL :: global_frame = .FALSE.
      LOGICAL :: vacdos =.FALSE.
      INTEGER :: layers=0
      INTEGER :: nstars=0
@@ -111,6 +111,7 @@ CONTAINS
     CALL mpi_bc(this%dos_atomlist,rank,mpi_comm)
     CALL mpi_bc(this%dos_typelist,rank,mpi_comm)
     CALL mpi_bc(this%map_atomtype,rank,mpi_comm)
+    CALL mpi_bc(this%global_frame,rank,mpi_comm)
 
   END SUBROUTINE mpi_bc_banddos
   SUBROUTINE read_xml_banddos(this,xml)
@@ -138,6 +139,7 @@ CONTAINS
        this%e2_dos = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@minEnergy'))
        this%e1_dos = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@maxEnergy'))
        this%sig_dos = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@sigma'))
+       this%global_frame = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@global_frame'))
        this%ndos_points=evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@numberPoints'))
     END IF
 
