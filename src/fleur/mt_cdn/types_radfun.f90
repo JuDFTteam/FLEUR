@@ -41,7 +41,7 @@ contains
       end do
    end subroutine
 
-   subroutine generate_radial_functions(this, atoms, input, enpara, hub1data, fmpi, vtot, iType)
+   subroutine generate_radial_functions(this, atoms, input, enpara, fmpi, vtot, iType, hub1data)
       use m_genMTBasis
       use m_types_atoms
       use m_types_input
@@ -56,7 +56,7 @@ contains
       type(t_atoms), intent(IN)      :: atoms
       type(t_input), intent(IN)    :: input
       type(t_enpara), intent(IN)   :: enpara
-      type(t_hub1data), intent(IN) :: hub1data
+      type(t_hub1data), intent(IN),optional :: hub1data
       type(t_mpi), intent(IN)     :: fmpi
       type(t_potden), intent(IN)   :: vtot
       integer, intent(in)                    :: itype

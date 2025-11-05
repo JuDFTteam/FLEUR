@@ -1,16 +1,15 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2022 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_dfpt_cdnval
-
-USE m_juDFT
+   USE m_juDFT
 #ifdef CPP_MPI
-use mpi
+   USE mpi
 #endif
-
+   implicit none
 CONTAINS
 
 SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddosdummy,cell,atoms,enpara,stars,&
@@ -21,9 +20,11 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
    USE m_types
    USE m_constants
    USE m_eig66_io
-   USE m_abcof
+   USE m_types_abc
+   USE m_types_denmatrix
    USE m_pwden
    USE m_vacden
+   use m_types_radfun
    !USE m_cdnmt       ! calculate the density and orbital moments etc.
    USE m_types_dos
    USE m_types_vacdos
@@ -72,7 +73,7 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
    TYPE(t_cdnvalJob), OPTIONAL, INTENT(IN)    :: cdnvalJob1m
 
    ! Local Scalars
-   INTEGER :: ikpt,ikpt_i,jsp_start,jsp_end,ispin,jsp,iType,ikG,iqdir
+   INTEGER :: ikpt,ikpt_i,jsp_start,jsp_end,ispin,ispinpr,jsp,iType,ikG,iqdir
    INTEGER :: iErr,nbands,noccbd,nbands1,iLo,l,imLo,ikLo,ikGLo,nbands1m
    INTEGER :: skip_t,skip_tt,nbasfcn,nbasfcnq,nbasfcnmq
    REAL    :: gExt(3), q_loop(3), bkpt(3)
@@ -84,10 +85,10 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
    REAL,    ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:),flo(:,:,:,:) ! radial functions
 
    TYPE (t_lapw)              :: lapw, lapwq, lapwmq
-   !TYPE (t_orb)               :: orbdummy
-   TYPE (t_denCoeffs)         :: denCoeffs
-   TYPE (t_denCoeffsOffdiag)  :: denCoeffsOffdiag
-   TYPE (t_eigVecCoeffs)      :: eigVecCoeffs, eigVecCoeffs1, eigVecCoeffsPref, eigVecCoeffs1m
+   
+   type(t_radfun)       :: radfun(atoms%ntype)
+   TYPE (t_denmatrix),allocatable  :: denmatrix(:,:,:)
+   TYPE (t_abc),allocatable        :: abc(:),abc1(:),abcpref(:),abc1m(:)
    TYPE (t_usdus)             :: usdus
    TYPE (t_mat)               :: zMat, zMat1, zMatPref, zMat1m
    TYPE(t_kpts)               :: kpts_mod
@@ -117,14 +118,20 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
 
    ! Initializations
    CALL usdus%init(atoms,input%jspins)
-   CALL denCoeffs%init(atoms,sphhar,jsp_start,jsp_end)
-   ! The last entry in denCoeffsOffdiag%init is l_fmpl. It is meant as a switch to a plot of the full magnet.
-   ! density without the atomic sphere approximation for the magnet. density.
-   CALL denCoeffsOffdiag%init(atoms,noco,sphhar,banddosdummy%l_jDOS,any(noco%l_unrestrictMT).OR.noco%l_mperp)
-   !CALL orbdummy%init(atoms,noco,jsp_start,jsp_end)
-
-   IF (denCoeffsOffdiag%l_fmpl.AND.(.NOT.noco%l_mperp)) CALL juDFT_error("for fmpl set noco%l_mperp = T!" ,calledby ="cdnval")
-
+   allocate (denmatrix(jsp_start:jsp_end, jsp_start:jsp_end, atoms%ntype))
+   DO ispin = jsp_start, jsp_end
+      DO jsp = jsp_start, jsp_end
+         DO itype = 1, atoms%ntype
+            call denmatrix(ispin, jsp, itype)%init(itype, atoms, input, sphhar)
+         end do
+      end do
+   end do
+   allocate (abc(jsp_start:jsp_end))
+   allocate (abc1(jsp_start:jsp_end))
+   if (juphon%l_phonon) allocate (abcpref(jsp_start:jsp_end))
+   if (l_minusq)allocate (abc1m(jsp_start:jsp_end))
+   
+      
    DO iType = 1, atoms%ntype
       DO ispin = 1, input%jspins
          CALL genMTBasis(atoms,enpara,vTot,fmpi,iType,ispin,usdus,f(:,:,0:,ispin),g(:,:,0:,ispin),flo(:,:,:,ispin))
@@ -190,7 +197,7 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
 
       CALL zMat%init(l_real,nbasfcn,noccbd)
       CALL zMat1%init(.FALSE.,nbasfcnq,noccbd)
-      CALL zMatPref%init(.FALSE.,nbasfcn,noccbd)
+      if (juphon%l_phonon) CALL zMatPref%init(.FALSE.,nbasfcn,noccbd)
 
       IF (l_minusq) THEN
          CALL zMat1m%init(.FALSE.,nbasfcnmq,noccbd)
@@ -236,76 +243,50 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
 
       IF (noccbd.LE.0) CYCLE ! Note: This jump has to be after the MPI_BARRIER is called
 
-      ! valence density in the atomic spheres
-      CALL eigVecCoeffs%init(input,atoms,jspin,noccbd,noco%l_mperp)
-      CALL eigVecCoeffs1%init(input,atoms,jspin,noccbd,noco%l_mperp)
-      IF (juphon%l_phonon) CALL eigVecCoeffsPref%init(input,atoms,jspin,noccbd,noco%l_mperp)
-
-      IF (l_minusq) CALL eigVecCoeffs1m%init(input,atoms,jspin,noccbd,noco%l_mperp)
-
-      DO ispin = jsp_start, jsp_end
-         ! TODO: Does this spin logic hold for noco?
-         CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,noco,nococonv,ispin,&
-                    eigVecCoeffs%abcof(:,0:,0,:,ispin),eigVecCoeffs%abcof(:,0:,1,:,ispin),&
-                    eigVecCoeffs%ccof(-atoms%llod:,:,:,:,ispin),zMat)
-         CALL abcof(input,atoms,sym,cell,lapwq,noccbd,usdus,noco,nococonv,ispin,&
-                    eigVecCoeffs1%abcof(:,0:,0,:,ispin),eigVecCoeffs1%abcof(:,0:,1,:,ispin),&
-                    eigVecCoeffs1%ccof(-atoms%llod:,:,:,:,ispin),zMat1)
-         IF (juphon%l_phonon) CALL abcof(input,atoms,sym,cell,lapw,noccbd,usdus,noco,nococonv,ispin,&
-                                   eigVecCoeffsPref%abcof(:,0:,0,:,ispin),eigVecCoeffsPref%abcof(:,0:,1,:,ispin),&
-                                   eigVecCoeffsPref%ccof(-atoms%llod:,:,:,:,ispin),zMatPref)
-         IF (l_minusq) CALL abcof(input,atoms,sym,cell,lapwmq,noccbd,usdus,noco,nococonv,ispin,&
-                                  eigVecCoeffs1m%abcof(:,0:,0,:,ispin),eigVecCoeffs1m%abcof(:,0:,1,:,ispin),&
-                                  eigVecCoeffs1m%ccof(-atoms%llod:,:,:,:,ispin),zMat1m)
-
-         IF (juphon%l_phonon) THEN
-            eigVecCoeffs1%abcof(:,0:,:,iDtype,ispin) = eigVecCoeffs1%abcof(:,0:,:,iDtype,ispin) + eigVecCoeffsPref%abcof(:,0:,:,iDtype,ispin)
-            eigVecCoeffs1%ccof(-atoms%llod:,:,:,iDtype,ispin) = eigVecCoeffs1%ccof(-atoms%llod:,:,:,iDtype,ispin) + eigVecCoeffsPref%ccof(-atoms%llod:,:,:,iDtype,ispin)
-         END IF
-
-         IF (l_minusq.AND.juphon%l_phonon) THEN
-            eigVecCoeffs1m%abcof(:,0:,:,iDtype,ispin) = eigVecCoeffs1m%abcof(:,0:,:,iDtype,ispin) + eigVecCoeffsPref%abcof(:,0:,:,iDtype,ispin)
-            eigVecCoeffs1m%ccof(-atoms%llod:,:,:,iDtype,ispin) = eigVecCoeffs1m%ccof(-atoms%llod:,:,:,iDtype,ispin) + eigVecCoeffsPref%ccof(-atoms%llod:,:,:,iDtype,ispin)
-         END IF
-
-         IF (l_minusq) THEN
-            !CALL dfpt_rhomt(atoms,we,we1,noccbd,ispin,ispin,-bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs,eigVecCoeffs1m)
-            !CALL rhonmt(atoms,sphhar,we,we1,noccbd,ispin,ispin,-bqpt,.TRUE.,.FALSE.,sym,eigVecCoeffs,eigVecCoeffs1,denCoeffs,eigVecCoeffs1m)
-            !CALL rhomtlo(atoms,noccbd,we,we1,ispin,ispin,-bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs,eigVecCoeffs1m)
-            !CALL rhonmtlo(atoms,sphhar,sym,noccbd,we,we1,eigVecCoeffs,eigVecCoeffs1,denCoeffs,ispin,ispin,.TRUE.,-bqpt,eigVecCoeffs1m)
-         ELSE
-            !CALL dfpt_rhomt(atoms,we,we1,noccbd,ispin,ispin,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
-            !CALL rhonmt(atoms,sphhar,we,we1,noccbd,ispin,ispin,bqpt,.TRUE.,.FALSE.,sym,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
-            !CALL rhomtlo(atoms,noccbd,we,we1,ispin,ispin,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
-            !CALL rhonmtlo(atoms,sphhar,sym,noccbd,we,we1,eigVecCoeffs,eigVecCoeffs1,denCoeffs,ispin,ispin,.TRUE.,bqpt)
-         END IF
-      END DO ! end loop over ispin
-      IF (noco%l_mperp) then
-         IF (.NOT.l_minusq) THEN ! not sure about this seems to be if l_minusq
-            call timestart("denCoeffsOffdiag%calcCoefficients")
-            !CALL dfpt_rhomt(atoms,we,we1,noccbd,2,1,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs,eigVecCoeffs1m)
-            !CALL rhonmt(atoms,sphhar,we,we1,noccbd,2,1,bqpt,.TRUE.,.FALSE.,sym,eigVecCoeffs,eigVecCoeffs1,denCoeffs,eigVecCoeffs1m)
-            !CALL rhomtlo(atoms,noccbd,we,we1,2,1,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs,eigVecCoeffs1m)
-            !CALL rhonmtlo(atoms,sphhar,sym,noccbd,we,we1,eigVecCoeffs,eigVecCoeffs1,denCoeffs,2,1,.TRUE.,bqpt,eigVecCoeffs1m)
-            !CALL dfpt_rhomt(atoms,we,we1,noccbd,1,2,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs,eigVecCoeffs1m)
-            !CALL rhonmt(atoms,sphhar,we,we1,noccbd,1,2,bqpt,.TRUE.,.FALSE.,sym,eigVecCoeffs,eigVecCoeffs1,denCoeffs,eigVecCoeffs1m)
-            !CALL rhomtlo(atoms,noccbd,we,we1,1,2,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs,eigVecCoeffs1m)
-            !CALL rhonmtlo(atoms,sphhar,sym,noccbd,we,we1,eigVecCoeffs,eigVecCoeffs1,denCoeffs,1,2,.TRUE.,bqpt,eigVecCoeffs1m)
-            call timestop("denCoeffsOffdiag%calcCoefficients")
-         ELSE
-            call timestart("denCoeffsOffdiag%calcCoefficients")
-            !CALL dfpt_rhomt(atoms,we,we1,noccbd,2,1,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
-            !CALL rhonmt(atoms,sphhar,we,we1,noccbd,2,1,bqpt,.TRUE.,.FALSE.,sym,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
-            !CALL rhomtlo(atoms,noccbd,we,we1,2,1,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
-            !CALL rhonmtlo(atoms,sphhar,sym,noccbd,we,we1,eigVecCoeffs,eigVecCoeffs1,denCoeffs,2,1,.TRUE.,bqpt)
-            !CALL dfpt_rhomt(atoms,we,we1,noccbd,1,2,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
-            !CALL rhonmt(atoms,sphhar,we,we1,noccbd,1,2,bqpt,.TRUE.,.FALSE.,sym,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
-            !CALL rhomtlo(atoms,noccbd,we,we1,1,2,bqpt,.TRUE.,eigVecCoeffs,eigVecCoeffs1,denCoeffs)
-            !CALL rhonmtlo(atoms,sphhar,sym,noccbd,we,we1,eigVecCoeffs,eigVecCoeffs1,denCoeffs,1,2,.TRUE.,bqpt)
-            call timestop("denCoeffsOffdiag%calcCoefficients")
-         END IF
-      endif
-
+      DO itype = 1, atoms%ntype
+         call radfun(itype)%generate_radial_functions(atoms, input, enpara, fmpi, vtot, iType)
+         DO ispin = jsp_start, jsp_end
+            call abc(ispin)%init(input, atoms, radfun(itype)%n_r, noccbd, itype)
+            call abc(ispin)%calc_abc(input, atoms, sym, cell, lapw, noccbd, usdus, noco, nococonv, ispin, itype, zMat)
+            call abc1(ispin)%init(input, atoms, radfun(itype)%n_r, noccbd, itype)
+            call abc1(ispin)%calc_abc(input, atoms, sym, cell, lapwq, noccbd, usdus, noco, nococonv, ispin, itype, zMat1)
+            DO ispinpr = ispin,ispin !TODO no real noco here
+                                       !In future this could perhaps be generalized according to code in cdnval. The two following if statements have to be understood in this context then.
+               
+               IF (juphon%l_phonon.and.idtype==itype) THEN
+                  call abcpref(ispin)%init(input, atoms, radfun(itype)%n_r, noccbd, itype)
+                  call abcpref(ispin)%calc_abc(input, atoms, sym, cell, lapw, noccbd, usdus, noco, nococonv, ispin, itype, zMatPref)
+                  abc1(ispin)%cof=abc(ispin)%cof+abcpref(ispin)%cof
+               END IF
+               IF (l_minusq) THEN
+                  call abc1m(ispin)%init(input, atoms, radfun(itype)%n_r, noccbd, itype)
+                  call abc1m(ispin)%calc_abc(input, atoms, sym, cell, lapwmq, noccbd, usdus, noco, nococonv, ispin, itype, zMat1m)
+                  if (juphon%l_phonon.and.idtype==itype) then
+                     abc1m(ispin)%cof=abc(ispin)%cof+abcpref(ispin)%cof
+                  end if
+               END IF
+               if (l_minusq) then
+                  CALL judft_bug("dfpt_cdnval: abc1m used to calculate density matrix")
+               else
+                  !Now calculate the density matrix as needed to construct the charge
+                  call denmatrix(ispin,ispinpr,itype)%rhonmt(atoms, sphhar, we, noccbd, itype,sym, ispin==ispinpr, abc(ispin), abc1(ispinpr))
+               end if
+            ENDDO
+         enddo
+      ENDDO
+      IF (fmpi%irank==0) THEN
+         CALL timestart("denmatrix%to_full_density")
+         DO itype = 1, atoms%ntype
+            DO ispin = jsp_start, jsp_end
+               DO ispinpr = ispin,ispin
+                  call denmatrix(ispin,ispinpr,itype)%to_full_density(ispin,ispinpr, itype, input, &
+                              sphhar, atoms, noco, sym, radfun(itype),  den%mt, rhoIm=denIm%mt)
+               ENDDO               
+            enddo
+         END DO      
+         CALL timestop("denmatrix%to_full_density")
+      END IF
+            
       ! valence density in the interstitial and vacuum region has to be called only once (if jspin=1) in the non-collinear case
       IF (.NOT.((jspin.EQ.2).AND.noco%l_noco)) THEN
          ! valence density in the interstitial region
@@ -331,12 +312,7 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
    END DO
 #endif
 
-   IF (fmpi%irank==0) THEN
-      CALL timestart("cdnmt")
-      !TODO CALL cdnmt(input%jspins,input,atoms,sym,sphhar,noco,jsp_start,jsp_end,enpara,banddosdummy,&
-      !           vTot%mt(:,0,:,:),denCoeffs,usdus,orbdummy,denCoeffsOffdiag,den%mt,hub1inp,rhoIm=denIm%mt)
-      CALL timestop("cdnmt")
-   END IF
+
 
    CALL timestop("dfpt_cdnval")
 

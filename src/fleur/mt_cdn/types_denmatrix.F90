@@ -228,7 +228,7 @@ contains
       type(t_radfun), intent(in)      :: radfun
       real, intent(inout)             :: rho(:, 0:, :, :)
 
-      real, intent(inout), optional    :: rhoIm(:, 0:)
+      real, intent(inout), optional    :: rhoIm(:, 0:,:,:)
       type(t_moments), optional, intent(INOUT) :: moments
 
       integer :: lh, l, lp, llp, j, i, ii, spin
@@ -257,7 +257,7 @@ contains
                   
                   rho(j, lh, itype, spin) = rho(j, lh, itype, spin) + real(cs)/atoms%neq(itype)
                   if (spin == 3) rho(j, lh, itype, 4) = rho(j, lh, itype, 4) + aimag(cs)/atoms%neq(itype) !Store imaginary part as 4th spin
-                  if (present(rhoIm)) rhoIm(j, lh) = rhoIm(j, lh) + aimag(cs)/atoms%neq(itype)
+                  if (present(rhoIm)) rhoIm(j, lh, itype, spin) = rhoIm(j, lh, itype, spin) + aimag(cs)/atoms%neq(itype)
                   if ((l <= input%lResMax) .and. (lp <= input%lResMax) .and. ispin == ispinpr .and. present(moments)) &
                    moments%rhoLRes(j, lh, llp, itype, ispin) = moments%rhoLRes(j, lh, llp, itype, ispin) + real(cs)/atoms%neq(itype)
                end do

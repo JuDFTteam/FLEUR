@@ -259,12 +259,12 @@ CONTAINS
          call timestart("Atoms loop")
          ! valence density in the atomic spheres
          !$OMP PARALLEL DO DEFAULT(NONE) PRIVATE(itype, ispin, ispinpr, ispin123, abc_itype, abc) &
-         !$OMP SHARED(radfun, atoms, input, enpara, hub1data, fmpi, vTot, noccbd, ev_list, we) &
-         !$OMP SHARED( eig, usdus, noco, nococonv, sym, jsp_start, jsp_end,force, cell,lapw,zmat,den,dos,banddos,ikpt,mcd,jdos,moments,denmatrix,sphhar,hub1inp,tlmplm,results,jspin,nbasfcn,bkpt,orbcomp,orb) 
+         !$OMP SHARED(radfun, atoms, input, enpara,  fmpi, vTot, noccbd, ev_list, we) &
+         !$OMP SHARED( eig, usdus, noco, nococonv, hub1data,sym, jsp_start, jsp_end,force, cell,lapw,zmat,den,dos,banddos,ikpt,mcd,jdos,moments,denmatrix,sphhar,hub1inp,tlmplm,results,jspin,nbasfcn,bkpt,orbcomp,orb) 
 
          DO itype = 1, atoms%ntype
             abc_itype=min(itype,size(abc,2)) !abc might be only needed for a single itype
-            call radfun(itype)%generate_radial_functions(atoms, input, enpara, hub1data, fmpi, vtot, iType)
+            call radfun(itype)%generate_radial_functions(atoms, input, enpara, fmpi, vtot, iType)
             DO ispin = jsp_start, jsp_end
                IF (input%l_f) CALL force%init2(noccbd, input, atoms)
                call abc(ispin, abc_itype)%init(input, atoms, radfun(itype)%n_r, noccbd, itype)
