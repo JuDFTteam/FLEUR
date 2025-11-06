@@ -4,7 +4,6 @@ set(fleur_F90 ${fleur_F90}
 src/fleur/mt_cdn/alignSpinAxisMagn.F90
 src/fleur/mt_cdn/cdncore.F90
 src/fleur/mt_cdn/denMultipoleExp.f90
-src/fleur/mt_cdn/jDOS.f90
 src/fleur/mt_cdn/l-like.F90
 src/fleur/mt_cdn/magDiMom.f90
 src/fleur/mt_cdn/MagMoments.F90

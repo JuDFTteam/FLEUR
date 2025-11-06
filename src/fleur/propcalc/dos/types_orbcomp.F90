@@ -134,7 +134,7 @@ CONTAINS
             abc1_rot=abc1%rotate(banddos%alpha(mt), banddos%beta(mt), banddos%gamma(mt),3)
             abc => abc_rot
             abc1 => abc1_rot
-            !CALL abcrot2(ityp, mt, atoms, banddos, eigVecCoeffs, jspin, acof, bcof, ccof) ! rotate ab-coeffs
+          
          ELSE
             abc => abc_in
             abc1 => abc1_in

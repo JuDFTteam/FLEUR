@@ -47,10 +47,10 @@ CONTAINS
       !USE m_orbmom      ! coeffd for orbital moments
       USE m_qmtsl       ! These subroutines divide the input%film into banddos%layers
       USE m_qintsl      ! (slabs) and intergate the DOS in these banddos%layers
-      USE m_jDOS
-      USE m_corespec, only: l_cs    ! calculation of core spectra (EELS)
-      USE m_corespec_io, only: corespec_init
-      USE m_corespec_eval, only: corespec_gaunt, corespec_rme, corespec_dos, corespec_ddscs
+      
+!      USE m_corespec, only: l_cs    ! calculation of core spectra (EELS)
+!      USE m_corespec_io, only: corespec_init
+!      USE m_corespec_eval, only: corespec_gaunt, corespec_rme, corespec_dos, corespec_ddscs
       USE m_xmlOutput
       USE m_types_dos
       USE m_types_mcd
@@ -187,10 +187,11 @@ CONTAINS
       ! calculation of core spectra (EELS) initializations -start-
       l_coreSpec = .FALSE.
       IF (PRESENT(coreSpecInput)) THEN
-         CALL corespec_init(input, atoms, coreSpecInput)
-         IF (l_cs .AND. (fmpi%isize .NE. 1)) CALL juDFT_error('EELS + fmpi not implemented', calledby='cdnval')
-         IF (l_cs .AND. jspin .EQ. 1) CALL corespec_gaunt()
-         l_coreSpec = l_cs
+         !TODO check this code
+         !CALL corespec_init(input, atoms, coreSpecInput)
+         !IF (l_cs .AND. (fmpi%isize .NE. 1)) CALL juDFT_error('EELS + fmpi not implemented', calledby='cdnval')
+         !IF (l_cs .AND. jspin .EQ. 1) CALL corespec_gaunt()
+         !l_coreSpec = l_cs
       END IF
       ! calculation of core spectra (EELS) initializations -end-
 
@@ -287,7 +288,7 @@ CONTAINS
                         call orbcomp%calc_orb_comp(atoms, banddos, radfun(itype), abc(ispin, abc_itype), abc(ispin, abc_itype), &
                                                    ev_list, itype, ikpt, ispin, ispin)
                      !IF(l_coreSpec) CALL corespec_dos(atoms,usdus,ispin,atoms%lmaxd*(atoms%lmaxd+2),kpts%nkpt,ikpt,input%neig,&
-                     !                                 noccbd,results%ef,banddos%sig_dos,eig,we,eigVecCoeffs) !TODO
+                     !                                 noccbd,results%ef,banddos%sig_dos,eig,we,egVecCoeffs) !TODO
                   end if
                   !Decomposition into total angular momentum states
                   IF (banddos%dos .AND. banddos%l_jDOS) THEN
@@ -405,7 +406,7 @@ CONTAINS
 ! nstm3? functionality in gvacmap
 !
 ! layer charge of each valence state in this k-point of the SBZ from the mt-sphere region of the film
-   !IF (PRESENT(slab).and.banddos%l_slab) CALL q_mt_sl(ispin,atoms,sym,noccbd,ev_list,ikpt,noccbd,skip_t,noccbd,eigVecCoeffs,usdus,slab) !TODO
+   !IF (PRESENT(slab).and.banddos%l_slab) CALL q_mt_sl(ispin,atoms,sym,noccbd,ev_list,ikpt,noccbd,skip_t,noccbd,egVecCoeffs,usdus,slab) !TODO
 !
 !
    !TODO: this has to be added again...
@@ -413,7 +414,7 @@ CONTAINS
    !IF(greensfImagPart%l_calc) THEN
    !do ispin = MERGE(1,jsp_start,gfinp%l_mperp),MERGE(3,jsp_end,gfinp%l_mperp)
    !  CALL greensfBZint(ikpt,noccbd,ispin,gfinp,sym,atoms,noco,nococonv,input,kpts,&
-   !                    scalarGF,eigVecCoeffs,greensfBZintCoeffs) !TODO
+   !                    scalarGF,egVecCoeffs,greensfBZintCoeffs) !TODO
    !  CALL greensfCalcImagPart_single_kpt(ikpt,ikpt_i,ev_list,ispin,gfinp,atoms,input,kpts,noco,fmpi,&
    !                    results,greensfBZintCoeffs,greensfImagPart)
    !enddo
