@@ -59,7 +59,7 @@ CONTAINS
     !     ..
     !     .. Local Scalars ..
     REAL del  ,spindg,ssc ,ws,zc,weight,efermi,seigv,bandgap
-    INTEGER i,idummy,j,jsp,k,l,n,nbands,nstef,nv,nmat,nspins,ex
+    INTEGER i,idummy,j,jsp,k,l,n,nbands,nstef,nv,nmat,nspins,ex,min_kpt
     INTEGER n_help,m_spins,mspin,sslice(2)
     LOGICAL :: l_output,l_output_stored
     !     ..
@@ -341,18 +341,25 @@ CONTAINS
     !Code to calculate the direct bandgap
     DO j=1,nspins
       bandgap = 1E99
+      min_kpt=1
       kloop:DO k=1,kpts%nkpt
          DO n=1,results%neig(k,j)
             if (results%eig(n,k,j).GT.results%ef) EXIT
          ENDDO
          !Now n is the index of the lowest unoccupied state
          if (n>1.and.n.LE.results%neig(k,j)) THEN
-            bandgap=min(bandgap,results%eig(n,k,j)-results%eig(n-1,k,j))
-      else
+            if (bandgap>results%eig(n,k,j)-results%eig(n-1,k,j)) then
+               bandgap=results%eig(n,k,j)-results%eig(n-1,k,j)
+               min_kpt=k
+            end if
+         else
             exit kloop
          endif
       ENDDO kloop
-      if (k==kpts%nkpt+1) write(oUnit,*) "Direct bandgap for spin ",j,": ",bandgap," Htr"
+      if (k==kpts%nkpt+1) then 
+         write(oUnit,*) "Direct bandgap for spin ",j,": ",bandgap," Htr"
+         write(oUnit,*) "at k-point ",min_kpt," with k-vector ",kpts%bk(:,min_kpt)
+      endif
    enddo 
 
    END IF   
