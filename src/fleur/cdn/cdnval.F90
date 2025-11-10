@@ -300,12 +300,12 @@ CONTAINS
                   END IF
 
                   IF (noco%l_soc .and. ispin == ispinpr) CALL orb%calc_orbmom(abc(ispin, abc_itype), atoms, radfun(itype), we, itype, &
-                                                                              ispin, moments%clmom(:, itype, ispin))  !TODO MPI collect is missing here
+                                                                              ispin, moments%clmom(:, itype, ispin))  
 
                   !Now calculate the density matrix as needed to construct the charge
                   call denmatrix(ispin, ispinpr, itype)%rhonmt(atoms, sphhar, we, noccbd, itype, &
                                                                sym, ispin==ispinpr, abc(ispin, abc_itype), abc(ispinpr, abc_itype))
-                  !call denmatrix(ispin,ispin,itype)%mpi_collect() TODO
+                  call denmatrix(ispin,ispin,itype)%mpi_collect(fmpi)
                end do !loop over ispinpr
                IF (input%l_f) THEN
                   !Calculate force contributions
@@ -404,13 +404,6 @@ CONTAINS
 
    END SUBROUTINE cdnval
 
-!TODO:
-! nstm3? functionality in gvacmap
-!
-! layer charge of each valence state in this k-point of the SBZ from the mt-sphere region of the film
-  
-!
-!
    !TODO: this has to be added again...
    !IF(gfinp%n>0 .AND. PRESENT(greensfImagPart)) THEN
    !IF(greensfImagPart%l_calc) THEN

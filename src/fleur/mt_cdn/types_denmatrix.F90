@@ -21,15 +21,17 @@ module m_types_denmatrix
 
 contains
 
-   subroutine mpi_collect(this)
+   subroutine mpi_collect(this,mpi)
+      use m_types_mpi
 #ifdef CPP_MPI
       use mpi
 #endif      
       implicit none
       class(t_denmatrix), intent(inout):: this
+      type(t_mpi), intent(in):: mpi
 #ifdef CPP_MPI
       integer:: ierr
-      CALL MPI_ALLREDUCE(MPI_IN_PLACE, this%mat, size(this%mat), MPI_DOUBLE_COMPLEX, MPI_SUM, MPI_COMM_WORLD, ierr)
+      CALL MPI_ALLREDUCE(MPI_IN_PLACE, this%mat, size(this%mat), MPI_DOUBLE_COMPLEX, MPI_SUM, mpi%mpi_comm, ierr)
       if (ierr /= MPI_SUCCESS) call judft_error("MPI_ALLREDUCE in mpi_collect failed", calledby="mpi_collect")
 #endif
    end subroutine
