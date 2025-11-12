@@ -60,13 +60,8 @@ CONTAINS
          stars%gmax=input%gmax
          IF (ABS(input%gmaxz).GE.1e-8) stars%gmaxz=input%gmaxz
          IF (PRESENT(gmaxzLocal)) stars%gmaxz= gmaxzLocal
-         IF (PRESENT(qvec)) THEN
-            CALL stars%dim(sym,cell,input%film,qvec)
-            CALL stars%init(cell,sym,input%film,input%rkmax,qvec)
-         ELSE
-            CALL stars%dim(sym,cell,input%film)
-            CALL stars%init(cell,sym,input%film,input%rkmax)
-         END IF
+         CALL stars%dim(sym,cell,input%film,qvec)
+         CALL stars%init(cell,sym,input%film,input%rkmax,qvec)
          CALL timestop("star-setup")
       END IF
 
