@@ -28,10 +28,10 @@ contains
 #endif      
       implicit none
       class(t_denmatrix), intent(inout):: this
-      type(t_mpi), intent(in):: mpi
+      type(t_mpi), intent(in):: fmpi
 #ifdef CPP_MPI
       integer:: ierr
-      CALL MPI_ALLREDUCE(MPI_IN_PLACE, this%mat, size(this%mat), MPI_DOUBLE_COMPLEX, MPI_SUM, mpi%mpi_comm, ierr)
+      CALL MPI_ALLREDUCE(MPI_IN_PLACE, this%mat, size(this%mat), MPI_DOUBLE_COMPLEX, MPI_SUM, fmpi%mpi_comm, ierr)
       if (ierr /= MPI_SUCCESS) call judft_error("MPI_ALLREDUCE in mpi_collect failed", calledby="mpi_collect")
 #endif
    end subroutine
