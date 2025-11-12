@@ -21,7 +21,7 @@ module m_types_denmatrix
 
 contains
 
-   subroutine mpi_collect(this,mpi)
+   subroutine mpi_collect(this,fmpi)
       use m_types_mpi
 #ifdef CPP_MPI
       use mpi
