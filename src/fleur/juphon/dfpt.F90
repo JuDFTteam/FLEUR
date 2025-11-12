@@ -836,6 +836,16 @@ CONTAINS
          ALLOCATE(dyn_mat_r(fi_fullsym%kpts%nkptf,3*fi%atoms%nat,3*fi%atoms%nat))
          CALL ft_dyn(fi_fullsym%atoms, fi_fullsym%kpts, fi_fullsym%sym, fi_fullsym%cell%amat, dyn_mat, dyn_mat_r, dyn_mat_q_full)
          
+         ! In order to call the normal diagonalisation routines
+         ! The FCM must be not-normalized --> otherwise we find the wrong unit
+         ! Either change here or in dfpt_dynmat_eig.F90 if tag != raw 
+
+         do iDir = 1, 3*fi%atoms%nat
+            do iDir2 = 1, 3*fi%atoms%nat
+               dyn_mat_r(:,iDir, iDir2) = dyn_mat_r(:,iDir, iDir2) * massInElectronMasses* SQRT(atomicMasses_const(fi%atoms%nz(CEILING(iDir/3.0)))*atomicMasses_const(fi%atoms%nz(CEILING(iDir2/3.0))))
+            end do
+         end do
+
          ! b/c) reciprocal space transformation for bands/dense grid
          IF (l_dfpt_band.OR.l_dfpt_full) THEN
             IF (l_dfpt_band) THEN
@@ -850,7 +860,7 @@ CONTAINS
                CALL ift_dyn(fi_fullsym%atoms,fi_fullsym%kpts,fi_fullsym%sym,fi_fullsym%cell%amat,fi_nosym%kpts%bk(:,iQ),dyn_mat_r,dyn_mat_pathq)
                WRITE(*,*) '-------------------------'
                CALL timestart("Dynmat diagonalization")
-               CALL DiagonalizeDynMat(fi_nosym%atoms, fi_nosym%kpts%bk(:,iQ), fi%juPhon%calcEigenVec, dyn_mat_pathq, eigenVals, eigenVecs, iQ,.FALSE.,TRIM(dynfiletag),fi_nosym%juphon%l_sumrule)
+               CALL DiagonalizeDynMat(fi_nosym%atoms, fi_nosym%kpts%bk(:,iQ), fi%juPhon%calcEigenVec, dyn_mat_pathq, eigenVals, eigenVecs, iQ,.TRUE.,TRIM(dynfiletag),.FALSE.)
                CALL timestop("Dynmat diagonalization")
 
                CALL timestart("Frequency calculation")
