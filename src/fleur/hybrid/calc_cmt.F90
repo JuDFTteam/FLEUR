@@ -39,7 +39,7 @@ contains
       complex, allocatable :: cmt(:,:,:)
       type(t_noco)         :: nocoHyb
 
-      integer :: ikp, nbands, ok(4) ! index of parent k-point
+      integer :: ikp, nbands, ok ! index of parent k-point
       integer :: iatom, iatom2, itype, indx, i, j, idum, iop, l, ll, lm, m, lm1, lm2
       integer :: map_lo(atoms%nlod)
       integer, allocatable :: start_idx(:), psize(:)
@@ -66,9 +66,9 @@ contains
       endif
 
       call timestart("alloc abccof")
-      allocate(cmt(nbands, hybdat%maxlmindx, atoms%nat), stat=ok(4), source=cmplx_0)
-      if(any(ok /= 0)) then
-         call judft_error("Error in allocating abcof arrays")
+      allocate(cmt(nbands, hybdat%maxlmindx, atoms%nat), stat=ok, source=cmplx_0)
+      if(ok /= 0) then
+         call judft_error("Error in allocating cmt arrays")
       endif
       call timestop("alloc abccof")
 

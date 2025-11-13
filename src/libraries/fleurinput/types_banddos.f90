@@ -139,7 +139,7 @@ CONTAINS
        this%e2_dos = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@minEnergy'))
        this%e1_dos = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@maxEnergy'))
        this%sig_dos = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@sigma'))
-       this%global_frame = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@globalspin'))
+       if (xml%GetNumberOfNodes('/fleurInput/output/bandDOS/@globalspin')>0) this%global_frame = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@globalspin'))
        this%ndos_points=evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@numberPoints'))
     END IF
 

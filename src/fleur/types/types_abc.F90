@@ -70,14 +70,15 @@ CONTAINS
       IMPLICIT NONE
 
       CLASS(t_abc), INTENT(INOUT) :: this
-      INTEGER, INTENT(IN)   :: n_r_in(:)
+      INTEGER, INTENT(IN)   :: n_r_in(0:)
       TYPE(t_atoms), INTENT(IN)    :: atoms
       TYPE(t_input), INTENT(IN)    :: input
 
       INTEGER, INTENT(IN)    :: itype, noccbd
 
-      IF (ALLOCATED(this%cof)) DEALLOCATE (this%cof)
-      this%n_r=n_r_in
+      IF (ALLOCATED(this%cof)) DEALLOCATE (this%cof,this%n_r)
+      allocate(this%n_r(0:size(n_r_in)-1))
+      this%n_r(0:)=n_r_in(0:)
       ALLOCATE (this%cof(noccbd, 0:atoms%lmax(itype)*(atoms%lmax(itype) + 2), maxval(this%n_r), atoms%neq(itype)))
       this%cof = CMPLX(0.0, 0.0)
 
@@ -725,8 +726,8 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
          call judft_error('WIGNER MATRIX should be available in hybinp part')
       ENDIF
 
-      !$OMP PARALLEL DO default(none) private(na,iatom, itype, iop, ifac, l, i,j) &
-      !$OMP shared(atoms, sym, abc,  hybinp)
+      !$OMP PARALLEL DO default(none) private(na,iatom, iop, ifac, l, i,j) &
+      !$OMP shared(atoms, sym, abc, itype, hybinp)
       do na = 1, atoms%neq(itype)
          iatom=atoms%firstAtom(itype)+na-1
          iop = sym%ngopr(iatom)
