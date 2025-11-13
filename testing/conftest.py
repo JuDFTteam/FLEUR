@@ -363,7 +363,6 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "fleur: test running fleur")
     config.addinivalue_line("markers", "serial: test running fleur serial")
     config.addinivalue_line("markers", "mpi: test running fleur in parallel")
-    config.addinivalue_line("markers", "mpionly: test which need a MPI capable fleur to run.")
     config.addinivalue_line("markers", "fast: tests which take < 1 sec to execute")
     config.addinivalue_line("markers", "slow: tests which take < 1 min to execute")
     config.addinivalue_line("markers", "very_slow: tests which take > 1 min to execute")
@@ -763,7 +762,7 @@ def get_mpi_command(env, mpi_procs, parallel):
         mpi_procs = env.get('juDFT_NPROCS', '')
 
     if mpiruncmd is None and parallel:
-        mpiruncmd = 'mpirun -n {mpi_procs} '
+        mpiruncmd = 'mpirun -np {mpi_procs} '
 
     if mpiruncmd is not None:
         if mpiruncmd.strip() != 'time' and len(mpiruncmd.strip()) > 0:

@@ -16,9 +16,9 @@ Testset: Basic
 |     | Description                                  | directory name           | marks                 | Remarks            | CmdLine         | MPI |
 | --- | -------------------------------------------- | ------------------------ | --------------------- | ------------------ | --------------- | --- |
 | +   | Bulk Cu one iteration,bandstructure          | basic/CuBand             |                       |                    |                 | 2   |
-| +   | Bulk Cu one iteration,ELPA                   | basic/CuBulk             | mpi,elpa              | Test for ELPA      | -diag elpa      | 2   |
-| +   | Bulk Cu one iteration,ScaLapack              | basic/CuBulk             | mpi                   | Test for ELPA      | -diag scalapack | 2   |
-| +   | Bulk Cu one iteration,Chase                  | basic/CuBulk             | mpi,chase             | Test for ELPA      | -diag chase     | 2   |
+| +   | Bulk Cu one iteration,ELPA                   | basic/CuBulk             | mpi,elpa              | Test for ELPA      | -diag,elpa      | 2   |
+| +   | Bulk Cu one iteration,ScaLapack              | basic/CuBulk             | mpi                   | Test for ELPA      | -diag,scalapack | 2   |
+| +   | Bulk Cu one iteration,Chase                  | basic/CuBulk             | mpi,chase             | Test for ELPA      | -diag,chase     | 2   |
 | +   | Bulk Cu one iteration                        | basic/CuBulk             | fast,bulk             |                    |                 | 2   |
 | +   | Bulk Cu one iteration,DOS                    | basic/CuDOS              | fast,bulk,dos         |                    |                 | 2   |
 | +   | Bulk Cu one iteration,DOS,Orbital decomp.    | basic/CuOrb              | fast,bulk,dos,orbcomp |                    |                 | 2   |
@@ -59,8 +59,8 @@ Testset: DFPT
 -------------------
 |     | Description | directory name | marks | Remarks      | CmdLine | MPI |
 | --- | ----------- | -------------- | ----- | ------------ | ------- | --- |
-| +   | Cu bulk fcc | dfpt/CuBulk    | libxc | partly ready |         |   2 |
-| +   | C bulk fcc  | dfpt/CBulk     | libxc | partly ready |         |   2 |
+| +   | Cu bulk fcc | dfpt/CuBulk    | libxc | partly ready |         |   1 |
+| +   | C bulk fcc  | dfpt/CBulk     | libxc | partly ready |         |   1 |
 
 
 Testset: Noco

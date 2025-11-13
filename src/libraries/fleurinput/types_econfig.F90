@@ -32,9 +32,12 @@ MODULE m_types_econfig
      PROCEDURE :: get_state_l
      PROCEDURE :: get_states_for_orbital
      PROCEDURE :: get_core
+     PROCEDURE :: mag_moment
   END TYPE t_econfig
   PUBLIC :: t_econfig
 CONTAINS
+
+   
 
   SUBROUTINE get_core(econf,nst,nprnc,kappa,occupation,l_valence)
     CLASS(t_econfig),INTENT(IN)  :: econf
@@ -357,6 +360,16 @@ CONTAINS
        IF (ABS(p)<1E-8) EXIT
     END DO
   END SUBROUTINE set_initial_moment
+
+  pure real function mag_moment(econf)
+   class(t_econfig), intent(in) :: econf
+   integer :: n
+
+   mag_moment = 0.0
+   do n=1,econf%num_states
+      mag_moment = mag_moment + econf%occupation(n,1) - econf%occupation(n,2)
+   end do
+  end function
 
   pure logical function is_polarized(econf)
    class(t_econfig), intent(in) :: econf

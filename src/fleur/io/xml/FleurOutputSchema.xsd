@@ -33,6 +33,7 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="precision" type="PrecisionType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="targetStructureClass" type="TargetStructureClassType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="additionalCompilerFlags" type="AdditionalCompilerFlagsType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="programExecution" type="ProgramExecutionType"/>
       </xsd:all>
       <xsd:attribute name="version" type="xsd:string" use="required"/>
    </xsd:complexType>
@@ -62,6 +63,10 @@
    <xsd:simpleType name="AdditionalCompilerFlagsType">
       <xsd:list itemType="xsd:string"/>
    </xsd:simpleType>
+   
+   <xsd:complexType name="ProgramExecutionType">
+      <xsd:attribute name="commandLine" type="xsd:string" use="required"/>
+   </xsd:complexType>
 
    <xsd:complexType name="ParallelSetupType">
       <xsd:sequence>
@@ -455,6 +460,7 @@
       <xsd:sequence maxOccurs="unbounded">
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="BConstraint" type="BConType"/>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="DeltaBConstrain" type="DBConType"/>         
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="LongitudinalCon" type="LongConType"/>         
       </xsd:sequence>
       <xsd:attribute name="units" type="xsd:string" use="optional"/>
    </xsd:complexType>
@@ -463,6 +469,12 @@
       <xsd:attribute name="atomType" type="xsd:integer" use="required"/>
       <xsd:attribute name="BConX" type="xsd:double" use="required"/>
       <xsd:attribute name="BConY" type="xsd:double" use="required"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="LongConType">
+      <xsd:attribute name="atomType" type="xsd:integer" use="required"/>
+      <xsd:attribute name="BconZ" type="xsd:double" use="required"/>
+      <xsd:attribute name="DBconZ" type="xsd:double" use="required"/>
    </xsd:complexType>
 
    <xsd:complexType name="DBConType">

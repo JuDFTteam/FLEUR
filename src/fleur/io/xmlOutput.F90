@@ -52,6 +52,7 @@ MODULE m_xmlOutput
       CHARACTER(LEN=1000) :: gitdescTemp,githashTemp,gitbranchTemp,compile_dateTemp,compile_userTemp,compile_hostTemp
       CHARACTER(LEN=1000) :: compile_flagsTemp,link_flagsTemp,line
       CHARACTER(LEN=20) :: attributes(7)
+      CHARACTER(LEN=1000) :: commandLine
       
       CALL startxmloutput(TRIM(filename_add)//"out.xml","fleurOutput")
       CALL openXMLElement('programVersion',(/'version'/),(/version_const/))
@@ -84,6 +85,9 @@ MODULE m_xmlOutput
       IF (numFlags.GE.1) THEN
          CALL writeXMLElementNoAttributes('additionalCompilerFlags',flags(1:numFlags))
       END IF
+      CALL get_command(commandLine)
+      CALL writeXMLElement('programExecution',(/"commandLine"/),(/TRIM(commandLine)/))
+      
       CALL closeXMLElement('programVersion')
 
       CALL openXMLElementNoAttributes('parallelSetup')

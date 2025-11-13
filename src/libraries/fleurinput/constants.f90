@@ -154,32 +154,31 @@ MODULE m_constants
   integer, parameter, dimension(3)    :: dirvecz = [0, 0, 1]
   integer, parameter, dimension(3, 3) :: id3x3   = reshape([dirvecx, dirvecy, dirvecz], [3, 3])
 
-  complex, dimension(3,3,5) :: mat2ord = reshape([ &
-                                                            ! Tensor 1
-                                                            cmplx(sqrt(3.0/2.0), 0.0),  cmplx(0.0, sqrt(3.0/2.0)),  cmplx(0.0, 0.0), &
-                                                            cmplx(0.0, sqrt(3.0/2.0)),  cmplx(-sqrt(3.0/2.0), 0.0), cmplx(0.0, 0.0), &
-                                                            cmplx(0.0, 0.0),            cmplx(0.0, 0.0),            cmplx(0.0, 0.0), &
-
-                                                            ! Tensor 2
-                                                            cmplx(0.0, 0.0),            cmplx(0.0, 0.0),            cmplx(sqrt(3.0/2.0), 0.0), &
-                                                            cmplx(0.0, 0.0),            cmplx(0.0, 0.0),            cmplx(0.0, sqrt(3.0/2.0)), &
-                                                            cmplx(sqrt(3.0/2.0), 0.0),  cmplx(0.0, sqrt(3.0/2.0)),  cmplx(0.0, 0.0), &
-
-                                                            ! Tensor 3
-                                                            cmplx(-1.0, 0.0),          cmplx(0.0, 0.0),            cmplx(0.0, 0.0), &
-                                                            cmplx(0.0, 0.0),            cmplx(-1.0, 0.0),           cmplx(0.0, 0.0), &
-                                                            cmplx(0.0, 0.0),            cmplx(0.0, 0.0),            cmplx(2.0, 0.0), &
-
-                                                            ! Tensor 4
-                                                            cmplx(0.0, 0.0),            cmplx(0.0, 0.0),            cmplx(-sqrt(3.0/2.0), 0.0), &
-                                                            cmplx(0.0, 0.0),            cmplx(0.0, 0.0),            cmplx(0.0, sqrt(3.0/2.0)), &
-                                                            cmplx(-sqrt(3.0/2.0), 0.0), cmplx(0.0, sqrt(3.0/2.0)),  cmplx(0.0, 0.0), &
-
-                                                            ! Tensor 5
-                                                            cmplx(sqrt(3.0/2.0), 0.0),  cmplx(0.0, -sqrt(3.0/2.0)), cmplx(0.0, 0.0), &
-                                                            cmplx(0.0, -sqrt(3.0/2.0)), cmplx(-sqrt(3.0/2.0), 0.0), cmplx(0.0, 0.0), &
-                                                            cmplx(0.0, 0.0),            cmplx(0.0, 0.0),            cmplx(0.0, 0.0) &
-                                                          ], [3,3,5]) * sqrt(4.0*pi_const/5.0)
+  real,private,parameter:: sqrt32=sqrt(3.0/2.0)
+  real,private,parameter:: nsqrt32=-1.*sqrt(3.0/2.0)
+  complex, dimension(3,3,5) :: mat2ord  !initialization below due to problems with nvhpc
+  
+  DATA mat2ord / &
+       ! Tensor 1
+       (sqrt32, 0.0),  (0.0, sqrt32),  (0.0, 0.0), &
+       (0.0, sqrt32),  (nsqrt32, 0.0), (0.0, 0.0), &
+       (0.0, 0.0),            (0.0, 0.0),            (0.0, 0.0), &
+       ! Tensor 2
+       (0.0, 0.0),            (0.0, 0.0),            (sqrt32, 0.0), &
+       (0.0, 0.0),            (0.0, 0.0),            (0.0, sqrt32), &
+       (sqrt32, 0.0),  (0.0, sqrt32),  (0.0, 0.0), &
+       ! Tensor 3
+       (-1.0, 0.0),           (0.0, 0.0),            (0.0, 0.0), &
+       (0.0, 0.0),            (-1.0, 0.0),           (0.0, 0.0), &
+       (0.0, 0.0),            (0.0, 0.0),            (2.0, 0.0), &
+       ! Tensor 4
+       (0.0, 0.0),            (0.0, 0.0),            (nsqrt32, 0.0), &
+       (0.0, 0.0),            (0.0, 0.0),            (0.0, sqrt32), &
+       (nsqrt32, 0.0), (0.0, sqrt32),  (0.0, 0.0), &
+       ! Tensor 5
+       (sqrt32, 0.0),  (0.0, nsqrt32), (0.0, 0.0), &
+       (0.0, nsqrt32), (nsqrt32, 0.0), (0.0, 0.0), &
+       (0.0, 0.0),            (0.0, 0.0),            (0.0, 0.0) /
                                                   
 CONTAINS
 
