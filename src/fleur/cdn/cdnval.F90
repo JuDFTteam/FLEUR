@@ -305,7 +305,6 @@ CONTAINS
                   !Now calculate the density matrix as needed to construct the charge
                   call denmatrix(ispin, ispinpr, itype)%rhonmt(atoms, sphhar, we, noccbd, itype, &
                                                                sym, ispin==ispinpr, abc(ispin, abc_itype), abc(ispinpr, abc_itype))
-                  call denmatrix(ispin,ispin,itype)%mpi_collect(fmpi)
                end do !loop over ispinpr
                IF (input%l_f) THEN
                   !Calculate force contributions
@@ -355,6 +354,11 @@ CONTAINS
       DO ispin = jsp_start, jsp_end
          CALL mpi_col_den(fmpi, sphhar, atoms, stars, vacuum, input, noco, ispin, dos, vacdos, &
                           results, den, mcd, slab, orbcomp, jDOS)
+         DO ispinpr = jsp_start, ispin
+            DO itype = 1, atoms%ntype
+               call denmatrix(ispin, ispinpr, itype)%mpi_collect(fmpi)
+            end do
+         END DO
       END DO
 #endif
 
