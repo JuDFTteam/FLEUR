@@ -37,7 +37,7 @@ MODULE m_types_juPhon
       LOGICAL :: l_phonon = .TRUE.    
       LOGICAL :: l_efield = .FALSE.
       LOGICAL :: l_borneffcharge = .FALSE.
-      LOGICAL :: l_symVacLevel = .FALSE. ! Symmetrize the vacua levels  
+      LOGICAL :: l_symVacLevel = .TRUE. ! Symmetrize the vacua levels  
 
       REAL, ALLOCATABLE :: qvec(:,:)
       REAL, ALLOCATABLE :: qvec_efield(:,:)
@@ -301,7 +301,7 @@ CONTAINS
         end do 
       end if 
 
-      if (input%film .and. allocated(this%qvec)) then
+      if (input%film .and. allocated(this%qvec) .and. (size(this%qvec,2) > 1)) then
         ! Due to stability we do not calculate the Gamma-Point in the case of 
         ! Film-DFPT but slighlty next to it  
        do iq = 1 , size(this%qvec,2)
