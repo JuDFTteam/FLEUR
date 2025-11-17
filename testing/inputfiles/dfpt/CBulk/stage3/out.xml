@@ -99,10 +99,7 @@
      <!-- We include the file relax.xml here to enable relaxations (see documentation) -->
   
    </fleurInput>
-  <!--
-   Command line when calling inpgen (only for documentation purposes):
-   /Users/hanrath/fleur/build/inpgen -f inpC -nosym
-  
+  <!-- 
    Initial (original) inpgen input (only for documentation purposes):
    Diamond
   

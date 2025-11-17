@@ -82,18 +82,3 @@
    <!-- We include the file relax.xml here to enable relaxations (see documentation) -->
    <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="relax.xml"> <xi:fallback/> </xi:include>
  </fleurInput>
-
- <!--
- Command line when calling inpgen (only for documentation purposes):
- /Users/hanrath/fleur/build/inpgen -f inpC -nosym
-
- Initial (original) inpgen input (only for documentation purposes):
- Diamond
-
- &lattice latsys='cF' a=6.74 /
-
-  2
-  6  0.125  0.125  0.125
-  6 -0.125 -0.125 -0.125
- -->
-

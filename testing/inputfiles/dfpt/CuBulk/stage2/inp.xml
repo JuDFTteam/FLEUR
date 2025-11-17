@@ -78,26 +78,3 @@
   <!-- We include the file relax.xml here to enable relaxations (see documentation) -->
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="relax.xml"> <xi:fallback/> </xi:include>
 </fleurInput>
-
-<!--
-Command line when calling inpgen (only for documentation purposes):
-/Local/bornhake/to_merge_or_not_to_merge/build/inpgen -f fit_inp.txt -inc all -nosym
-
-Initial (original) inpgen input (only for documentation purposes):
-Cu fcc
-
-0.0 1.0 1.0 ! a1
-1.0 0.0 1.0 ! a2
-1.0 1.0 0.0 ! a3
-6.650896828 ! aa
-0.5 0.5 0.5 ! scale
-
-1 ! num atoms
-29.1 0.0 0.0 0.0
-
-&atom element="Cu" id=29.1 lmax=6 lnonsph=4 jri=981 rmt=0.95*2.29000000 /
-&comp kmax=3.0 gmax=9.0 gmaxxc=9.0 ctail=F  /
-&exco xctyp='vwn' /
-&kpt div1=1 div2=1 div3=1 tkb=0.0005 /
-
--->

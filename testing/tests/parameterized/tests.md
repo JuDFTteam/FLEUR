@@ -57,10 +57,11 @@ Testset: Forces
 
 Testset: DFPT
 -------------------
-|     | Description | directory name | marks | Remarks      | CmdLine | MPI |
-| --- | ----------- | -------------- | ----- | ------------ | ------- | --- |
-| +   | Cu bulk fcc | dfpt/CuBulk    | libxc | partly ready |         |   1 |
-| +   | C bulk fcc  | dfpt/CBulk     | libxc | partly ready |         |   1 |
+|     | Description   | directory name    | marks | Remarks      | CmdLine | MPI |
+| --- | ------------- | ----------------- | ----- | ------------ | ------- | --- |
+| +   | Cu bulk fcc   | dfpt/CuBulk       | libxc | partly ready |         |   1 |
+| +   | C bulk fcc    | dfpt/CBulk        | libxc | partly ready |         |   1 |
+| +   | Graphene Film | dfpt/GrapheneFilm | libxc | partly ready |         |   1 |
 
 
 Testset: Noco

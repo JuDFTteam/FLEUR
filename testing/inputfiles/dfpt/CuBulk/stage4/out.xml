@@ -95,9 +95,7 @@
   
   </fleurInput>
   <!--
-  Command line when calling inpgen (only for documentation purposes):
-  /Local/bornhake/to_merge_or_not_to_merge/build/inpgen -f fit_inp.txt -inc all -nosym
-  
+
   Initial (original) inpgen input (only for documentation purposes):
   Cu fcc
   
