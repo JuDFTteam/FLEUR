@@ -2,6 +2,7 @@ MODULE m_dfpt_dynmat_sym
    USE m_juDFT
    USE m_types
    USE m_constants
+   !USE m_npy
 
    IMPLICIT NONE
 CONTAINS
@@ -38,49 +39,68 @@ CONTAINS
 
       ! Create an array that maps the q coordinates to the index of their q vector
       ! in the full BZ
-      DO j1 = 0, qpts%nkpt3(1)-1
-         q_full(1) = j1*1.0/qpts%nkpt3(1)
-         DO j2 = 0, qpts%nkpt3(2)-1
-            q_full(2) = j2*1.0/qpts%nkpt3(2)
-            DO j3 = 0, qpts%nkpt3(3)-1
-               q_full(3) = j3*1.0/qpts%nkpt3(3)
-               DO iq = 1, qpts%nkptf
-                  IF (norm2(q_full-qpts%bkf(:,iq))<1e-8) qvec_to_index(j1, j2, j3) = iq
-               END DO
-            END DO
-         END DO
-      END DO
+      ! DO j1 = 0, qpts%nkpt3(1)-1
+      !    q_full(1) = j1*1.0/qpts%nkpt3(1)
+      !    DO j2 = 0, qpts%nkpt3(2)-1
+      !       q_full(2) = j2*1.0/qpts%nkpt3(2)
+      !       DO j3 = 0, qpts%nkpt3(3)-1
+      !          q_full(3) = j3*1.0/qpts%nkpt3(3)
+      !          DO iq = 1, qpts%nkptf
+      !             IF (norm2(q_full-qpts%bkf(:,iq))<1e-8) THEN 
+      !                qvec_to_index(j1, j2, j3) = iq
+      !             end if 
+      !          END DO
+      !       END DO
+      !    END DO
+      ! END DO
+
 
       r_lim(2,:) = qpts%nkpt3(:)/2
       r_lim(1,:) = r_lim(2,:) - qpts%nkpt3(:) + 1
 
       dyn_mat_r(:,:,:) = cmplx(0.0,0.0)
 
-      DO j1 = 0, qpts%nkpt3(1)-1
-         q_full(1) = j1*1.0/qpts%nkpt3(1)
-         DO j2 = 0, qpts%nkpt3(2)-1
-            q_full(2) = j2*1.0/qpts%nkpt3(2)
-            DO j3 = 0, qpts%nkpt3(3)-1
-               q_full(3) = j3*1.0/qpts%nkpt3(3)
-               ! Get q vector index and that of its representative in the irreducible wedge
-               iqfull = qvec_to_index(j1, j2, j3)
-               iq = qpts%bkp(iqfull)
-               ! Fold vector back to 1st BZ if necessary
-               q_full_BZ(:)=q_full(:)
-               q_full_BZ = qpts%to_first_bz(q_full)
-               isym = qpts%bksym(iqfull)
-               CALL sym%get_sym_operation_int_coord(isym,mrot,invmrot,trans,l_inv)
-               if (l_inv) isym = isym - sym%nop ! the corresponding symmetry operation 
-               dyn_mat_qsym(:,:) = cmplx(0.0,0.0)
-               CALL rotate_dynmat(atoms,sym,isym,mrot,invmrot,l_inv,amat,qpts%bk(:,iq),dyn_mat_q(iq,:,:),dyn_mat_qsym)
-               dyn_mat_qsym(:,:) = dyn_mat_qsym(:,:)
-               dyn_mat_q_full(iqfull,:,:) = dyn_mat_qsym
+      DO iqfull = 1, qpts%nkptf
+         ! Get q vector index and that of its representative in the irreducible wedge
+         iq = qpts%bkp(iqfull)
+         ! Fold vector back to 1st BZ if necessary
+         q_full = qpts%bkf(:,iqfull)
+         isym = qpts%bksym(iqfull)
+         CALL sym%get_sym_operation_int_coord(isym,mrot,invmrot,trans,l_inv)
+         if (l_inv) isym = isym - sym%nop ! the corresponding symmetry operation 
+         dyn_mat_qsym(:,:) = cmplx(0.0,0.0)
+         CALL rotate_dynmat(atoms,sym,isym,mrot,invmrot,l_inv,amat,qpts%bk(:,iq),dyn_mat_q(iq,:,:),dyn_mat_qsym)
+         dyn_mat_qsym(:,:) = dyn_mat_qsym(:,:)
+         dyn_mat_q_full(iqfull,:,:) = dyn_mat_qsym
 
-               ! Perform the actual FT onto the lattice vector grid
-               CALL ft_dyn_direct(r_lim,1,q_full,dyn_mat_qsym,dyn_mat_r)
-            END DO
-         END DO
+         ! Perform the actual FT onto the lattice vector grid
+         CALL ft_dyn_direct(r_lim,1,q_full,dyn_mat_qsym,dyn_mat_r)
       END DO
+      !   DO j1 = 0, qpts%nkpt3(1)-1
+      !    q_full(1) = j1*1.0/qpts%nkpt3(1)
+      !    DO j2 = 0, qpts%nkpt3(2)-1
+      !       q_full(2) = j2*1.0/qpts%nkpt3(2)
+      !       DO j3 = 0, qpts%nkpt3(3)-1
+      !          q_full(3) = j3*1.0/qpts%nkpt3(3)
+      !          ! Get q vector index and that of its representative in the irreducible wedge
+      !          iqfull = qvec_to_index(j1, j2, j3)
+      !          iq = qpts%bkp(iqfull)
+      !          ! Fold vector back to 1st BZ if necessary
+      !          q_full_BZ(:)=q_full(:)
+      !          q_full_BZ = qpts%to_first_bz(q_full)
+      !          isym = qpts%bksym(iqfull)
+      !          CALL sym%get_sym_operation_int_coord(isym,mrot,invmrot,trans,l_inv)
+      !          if (l_inv) isym = isym - sym%nop ! the corresponding symmetry operation 
+      !          dyn_mat_qsym(:,:) = cmplx(0.0,0.0)
+      !          CALL rotate_dynmat(atoms,sym,isym,mrot,invmrot,l_inv,amat,qpts%bk(:,iq),dyn_mat_q(iq,:,:),dyn_mat_qsym)
+      !          dyn_mat_qsym(:,:) = dyn_mat_qsym(:,:)
+      !          dyn_mat_q_full(iqfull,:,:) = dyn_mat_qsym
+
+      !          ! Perform the actual FT onto the lattice vector grid
+      !          CALL ft_dyn_direct(r_lim,1,q_full,dyn_mat_qsym,dyn_mat_r)
+      !       END DO
+      !    END DO
+      ! END DO
       dyn_mat_r(:,:,:)=dyn_mat_r(:,:,:)/qpts%nkptf
    END SUBROUTINE
 

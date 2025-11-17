@@ -809,7 +809,9 @@ CONTAINS
       ! b) Transform it back onto a dense q-path.
       ! c) Transform it back to a denser grid
       ! d) Perform a DOS calculation for the denser grid.
-      IF (fmpi%irank==0) THEN ! Band/Dos stuff
+      IF (fmpi%irank==0 .AND. (fi_nosym%juPhon%l_band .OR. fi_nosym%juPhon%l_band)) THEN ! Band/Dos stuff
+         IF (fi%juPhon%qmode .NE. 1) CALL juDFT_error("qmode not set to 1, while calculating interpolation. & 
+                                          & Is this intended?.", calledby="dfpt.F90")
          ! 0) Read
          DO iQ = 1, fi_fullsym%kpts%nkpt ! Loop over dynmat files to read
             IF (iQ<=9) THEN
@@ -860,7 +862,7 @@ CONTAINS
                CALL ift_dyn(fi_fullsym%atoms,fi_fullsym%kpts,fi_fullsym%sym,fi_fullsym%cell%amat,fi_nosym%kpts%bk(:,iQ),dyn_mat_r,dyn_mat_pathq)
                WRITE(*,*) '-------------------------'
                CALL timestart("Dynmat diagonalization")
-               CALL DiagonalizeDynMat(fi_nosym%atoms, fi_nosym%kpts%bk(:,iQ), fi%juPhon%calcEigenVec, dyn_mat_pathq, eigenVals, eigenVecs, iQ,.TRUE.,TRIM(dynfiletag),.FALSE.)
+               CALL DiagonalizeDynMat(fi_nosym%atoms, fi_nosym%kpts%bk(:,iQ), fi%juPhon%calcEigenVec, dyn_mat_pathq, eigenVals, eigenVecs, iQ,.TRUE.,TRIM(dynfiletag),fi%juPhon%l_sumrule)
                CALL timestop("Dynmat diagonalization")
 
                CALL timestart("Frequency calculation")
