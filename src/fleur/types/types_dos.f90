@@ -30,7 +30,7 @@ MODULE m_types_dos
 
 CONTAINS
 
-   subroutine postprocessing(this, noco,nococonv, banddos)
+   subroutine postprocessing(this, noco,nococonv, banddos, alldos, ef)
       use m_types_atoms
       use m_types_noco
       use m_types_nococonv
@@ -39,7 +39,8 @@ CONTAINS
       TYPE(t_noco), INTENT(IN)    :: noco
       TYPE(t_nococonv), INTENT(IN)    :: nococonv
       TYPE(t_banddos), INTENT(IN)    :: banddos
-
+      class(t_eigdos_list), intent(in), optional :: alldos(:)
+      real, intent(in), optional :: ef
 
       integer:: n_dos,ikpt,i,l
       complex:: qal21

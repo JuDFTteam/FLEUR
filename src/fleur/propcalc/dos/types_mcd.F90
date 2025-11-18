@@ -30,7 +30,7 @@ MODULE m_types_mcd
       procedure      :: postprocessing
    END TYPE t_mcd
 contains
-   subroutine postprocessing(this, noco,nococonv, banddos)
+   subroutine postprocessing(this, noco,nococonv, banddos,alldos, ef)
       use m_types_atoms
       use m_types_noco
       use m_types_nococonv
@@ -39,6 +39,8 @@ contains
       TYPE(t_noco), INTENT(IN)    :: noco
       TYPE(t_nococonv), INTENT(IN)    :: nococonv
       TYPE(t_banddos), INTENT(IN)    :: banddos
+      class(t_eigdos_list), intent(in), optional :: alldos(:)
+      real, intent(in), optional :: ef
       return !currently no postprocessing needed for mcd
    end subroutine postprocessing 
    subroutine calc_mt_mcd(mcd, banddos, atoms, ev_list, abc, itype, ikpt, jsp)

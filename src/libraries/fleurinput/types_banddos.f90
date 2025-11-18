@@ -47,6 +47,8 @@ MODULE m_types_banddos
 
      LOGICAL :: l_jDOS = .FALSE.
 
+     LOGICAL :: l_jointDOS = .FALSE.
+
      LOGICAL :: l_slab=.false.
 
      LOGICAL,ALLOCATABLE :: dos_atom(:) ! for each atom (not type) switch on DOS
@@ -79,6 +81,7 @@ CONTAINS
     CALL mpi_bc(this%l_mcd ,rank,mpi_comm)
     CALL mpi_bc(this%l_orb ,rank,mpi_comm)
     CALL mpi_bc(this%l_jDOS,rank,mpi_comm)
+    CALL mpi_bc(this%l_jointDOS,rank,mpi_comm)
     CALL mpi_bc(this%vacdos ,rank,mpi_comm)
     CALL mpi_bc(this%e1_dos,rank,mpi_comm)
     CALL mpi_bc(this%e2_dos,rank,mpi_comm)
@@ -135,6 +138,7 @@ CONTAINS
        ENDIF
        this%l_orb=evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@orbcomp'))
        this%l_jDOS=evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@jDOS'))
+       if (xml%GetNumberOfNodes('/fleurInput/output/bandDOS/@jointDOS')>0) this%l_jointDOS=evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@jointDOS'))
        all_atoms=evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@all_atoms'))
        this%e2_dos = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@minEnergy'))
        this%e1_dos = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@maxEnergy'))

@@ -27,7 +27,7 @@ MODULE m_types_orbcomp
    END TYPE t_orbcomp
 CONTAINS
 
- subroutine postprocessing(this, noco,nococonv, banddos)
+ subroutine postprocessing(this, noco,nococonv, banddos,alldos, ef)
       use m_types_atoms
       use m_types_noco
       use m_types_nococonv
@@ -36,6 +36,8 @@ CONTAINS
       TYPE(t_noco), INTENT(IN)    :: noco
       TYPE(t_nococonv), INTENT(IN)    :: nococonv
       TYPE(t_banddos), INTENT(IN)    :: banddos
+      class(t_eigdos_list), intent(in), optional :: alldos(:)
+      real, intent(in), optional :: ef
       return !currently no postprocessing needed for orbcomp
    end subroutine postprocessing 
    subroutine set_coefficients()

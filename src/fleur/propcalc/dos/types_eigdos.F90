@@ -39,16 +39,19 @@ MODULE m_types_eigdos
   end type
 
   INTERFACE
-    subroutine postprocessing(this,noco,nococonv,banddos)
+    subroutine postprocessing(this,noco,nococonv,banddos,alldos,ef)
       use m_types_banddos
       use m_types_noco
       use m_types_nococonv
+      import t_eigdos_list
       import t_eigdos
       
       class(t_eigdos),intent(inout):: this
       type(t_banddos),intent(in)   :: banddos
       type(t_noco),intent(in)      :: noco
       type(t_nococonv),intent(in)  :: nococonv
+      class(t_eigdos_list),intent(in),optional    :: alldos(:)
+      real, intent(in),optional           :: ef
     end subroutine
   END interface
 

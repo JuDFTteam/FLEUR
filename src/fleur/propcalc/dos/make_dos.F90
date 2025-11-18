@@ -87,7 +87,7 @@ CONTAINS
 #endif
     DO n=1,size(eigdos)
       call eigdos(n)%p%sym_weights()
-      call eigdos(n)%p%postprocessing(noco,nococonv,banddos)
+      call eigdos(n)%p%postprocessing(noco,nococonv,banddos,eigdos,eFermi)
     ENDDO  
     IF (banddos%band) THEN
 !      CALL writeBandDOSData(banddosFile_id,input,atoms,cell,kpts,results,banddos,dos,vacuum)

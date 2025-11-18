@@ -24,6 +24,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    use m_types_slab
    use m_types_orbcomp
    use m_types_jdos
+   use m_types_jointdos
    USE m_types
    USE m_constants
    USE m_juDFT
@@ -97,6 +98,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_slab),TARGET            :: slab
    TYPE(t_orbcomp),TARGET         :: orbcomp
    TYPE(t_jDOS),TARGET            :: jDOS
+   TYPE(t_jointDOS),TARGET       :: jointDOS
    TYPE(t_cdnvalJob)       :: cdnvalJob
    TYPE(t_greensfImagPart) :: greensfImagPart
    TYPE(t_potden)          :: val_den
@@ -127,11 +129,15 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    CALL slab%init(banddos,atoms,cell,input,kpts)
    CALL orbcomp%init(input,banddos,atoms,kpts,results%eig)
    CALL jDOS%init(input,banddos,atoms,kpts,results%eig)
+   CALL jointDOS%init(input,atoms,kpts,banddos,noco%l_noco,results%eig)
 
    if (banddos%dos.or.banddos%band.or.input%cdinf) then
      allocate(eigdos(count((/banddos%dos.or.banddos%band.or.input%cdinf,banddos%vacdos,banddos%l_mcd,banddos%l_slab,banddos%l_orb,banddos%l_jDOS/))))
      n=2
      eigdos(1)%p=>dos
+     if (banddos%l_jointDOS) THEN
+       eigdos(n)%p=>jointDOS; n=n+1;
+     endif
      if (banddos%vacdos) THEN
        eigdos(n)%p=>vacdos; n=n+1;
      endif
