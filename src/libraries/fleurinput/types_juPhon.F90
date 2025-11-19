@@ -301,11 +301,12 @@ CONTAINS
         end do 
       end if 
 
-      if (input%film .and. allocated(this%qvec) .and. (size(this%qvec,2) > 1)) then
-        ! Due to stability we do not calculate the Gamma-Point in the case of 
-        ! Film-DFPT but slighlty next to it  
-       do iq = 1 , size(this%qvec,2)
-        if (norm2(this%qvec(:,iq)) .LT. 1e-8 ) then 
+      if (input%film .and. allocated(this%qvec)) then
+         if (size(this%qvec,2) > 1) THEN
+            ! Due to stability we do not calculate the Gamma-Point in the case of 
+            ! Film-DFPT but slighlty next to it  
+            do iq = 1 , size(this%qvec,2)
+               if (norm2(this%qvec(:,iq)) .LT. 1e-8 ) then 
                   tmp_vec=0.0
                   if (iq == 1 ) then ! starting q-Point --> interpolate to iQ+1
                      tmp_vec = this%qvec(:,iq+1) - this%qvec(:,iq) 
@@ -316,8 +317,9 @@ CONTAINS
                   tmp_vec = tmp_vec / norm2(tmp_vec)
                   ! add to the gamma point
                   this%qvec(:,iq) = this%qvec(:,iq) + this%qlim*tmp_vec  
-          end if  
-        end do 
+               end if  
+            end do
+         end if
       end if 
 
 
