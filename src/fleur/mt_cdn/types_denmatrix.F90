@@ -145,8 +145,8 @@ contains
       l_dfpt = .false.
       this%l_triang = l_less_effort
       ns = sym%ntypsy(atoms%firstAtom(itype))
-      !$OMP PARALLEL DO DEFAULT(NONE) PRIVATE(lh, lv, jmem, mv, cmv, l, m, lm, mp, lphi, lplow, lp, icoef, nt, temp,cil,lmp,coef) &
-      !$OMP SHARED(this, atoms, sphhar, we, we1, ne, ns, itype, sym, abc, abc1, abc1m, l_minusq, l_gamma, l_dfpt, n_l)
+      !!$OMP PARALLEL DO DEFAULT(NONE) PRIVATE(lh, lv, jmem, mv, cmv, l, m, lm, mp, lphi, lplow, lp, icoef, nt, temp,cil,lmp,coef) &
+      !!$OMP SHARED(this, atoms, sphhar, we, we1, ne, ns, itype, sym, abc, abc1, abc1m, l_minusq, l_gamma, l_dfpt, n_l)
       do lh = 0, sphhar%nlh(ns)
          do jmem = 1, sphhar%nmem(lh, ns)
             lv = sphhar%llh(lh, ns)
@@ -202,7 +202,7 @@ contains
             end do ! jmem
          end do ! l
       end do ! lh
-      !$OMP END PARALLEL DO
+      !!$OMP END PARALLEL DO
       call timestop("rhonmt")
    end subroutine rhonmt
 
