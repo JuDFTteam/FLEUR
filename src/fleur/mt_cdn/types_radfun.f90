@@ -31,7 +31,7 @@ contains
       integer:: l, lo
       this%itype = itype
       if (allocated(this%n_r)) deallocate(this%n_r)
-      allocate(this%n_r(0:atoms%lmaxd))
+      allocate(this%n_r(0:atoms%lmaxd),source=0)
       do l = 0, atoms%lmax(itype)
          this%n_r(l) = 2
          !if (input%l_useapw) call judft_bug("APW not implemented")
@@ -80,10 +80,10 @@ contains
          call this%init(atoms, input, itype)
 
          if (allocated(this%r)) deallocate (this%r)
-         allocate (this%r( atoms%jmtd, 2,maxval(this%n_r),0:atoms%lmaxd, input%jspins))
+         allocate (this%r( atoms%jmtd, 2,maxval(this%n_r),0:atoms%lmaxd, input%jspins),source=0.0)
          if (allocated(this%integral)) deallocate (this%integral)
-         allocate (this%integral(maxval(this%n_r), maxval(this%n_r),0:atoms%lmaxd, input%jspins,input%jspins))
-         this%integral=0.0;this%r=0.0
+         allocate (this%integral(maxval(this%n_r), maxval(this%n_r),0:atoms%lmaxd, input%jspins,input%jspins),source=0.0)
+         
          do ispin = 1, input%jspins
             call genMTBasis(atoms, enpara, vTot, fmpi, iType, ispin, usdus, f, g, flo, hub1data, l_writeArg=.false.)
             do l = 0, atoms%lmax(itype)
