@@ -7,6 +7,7 @@ MODULE m_cdngen
 #ifdef CPP_MPI
    USE mpi
 #endif
+   implicit none
 CONTAINS
 
 SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
@@ -123,34 +124,36 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    CALL moments%init(fmpi,input,sphhar,atoms)
    !initalize data for DOS
    if (noco%l_noco) results%eig(:,:,2)=results%eig(:,:,1)
-   CALL dos%init(input,atoms,kpts,banddos,noco%l_noco.or.banddos%l_jDOS,results%eig)
-   CALL vacdos%init(input,atoms,kpts,banddos,results%eig)
-   CALL mcd%init(banddos,input,atoms,kpts,results%eig)
-   CALL slab%init(banddos,atoms,cell,input,kpts)
-   CALL orbcomp%init(input,banddos,atoms,kpts,results%eig)
-   CALL jDOS%init(input,banddos,atoms,kpts,results%eig)
-   CALL jointDOS%init(input,atoms,kpts,banddos,noco%l_noco,results%eig)
-
+   
    if (banddos%dos.or.banddos%band.or.input%cdinf) then
-     allocate(eigdos(count((/banddos%dos.or.banddos%band.or.input%cdinf,banddos%vacdos,banddos%l_mcd,banddos%l_slab,banddos%l_orb,banddos%l_jDOS/))))
+     allocate(eigdos(count((/banddos%dos.or.banddos%band.or.input%cdinf,banddos%l_jointDOS,banddos%vacdos,banddos%l_mcd,banddos%l_slab,banddos%l_orb,banddos%l_jDOS/))))
      n=2
+     CALL dos%init(input,atoms,kpts,banddos,noco%l_noco.or.banddos%l_jDOS,results%eig)
      eigdos(1)%p=>dos
      if (banddos%l_jointDOS) THEN
+       CALL jointDOS%init(input,atoms,kpts,banddos,noco%l_noco,results%eig)
        eigdos(n)%p=>jointDOS; n=n+1;
      endif
      if (banddos%vacdos) THEN
+       CALL vacdos%init(input,atoms,kpts,banddos,results%eig)
        eigdos(n)%p=>vacdos; n=n+1;
      endif
      if (banddos%l_mcd) THEN
+       CALL mcd%init(banddos,input,atoms,kpts,results%eig)
        eigdos(n)%p=>mcd; n=n+1
      endif
      if (banddos%l_slab) THEN
+       CALL slab%init(banddos,atoms,cell,input,kpts)
        eigdos(n)%p=>slab; n=n+1
      endif
      if (banddos%l_orb) THEN
+       CALL orbcomp%init(input,banddos,atoms,kpts,results%eig)
        eigdos(n)%p=>orbcomp; n=n+1
      endif
-     if (banddos%l_jdos) eigdos(n)%p=>jDOS
+     if (banddos%l_jdos) then
+         CALL jDOS%init(input,banddos,atoms,kpts,results%eig)
+         eigdos(n)%p=>jDOS
+     endif   
    endif
 
 
