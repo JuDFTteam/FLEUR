@@ -195,7 +195,7 @@ CONTAINS
 
       INTEGER :: ntype, l, i, ind,ispin
       character :: spdfg(0:4) = ["s", "p", "d", "f", "g"]
-      thisDOS%name_of_dos = "Local"
+      thisDOS%name_of_dos = "jointDOS"
       thisDOS%eig = eig
       ispin= merge(2,input%jspins,l_noco)
       ALLOCATE (thisDOS%qis((input%neig*input%neig)/4+1, kpts%nkpt, ispin))
