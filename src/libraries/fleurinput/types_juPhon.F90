@@ -27,7 +27,7 @@ MODULE m_types_juPhon
       LOGICAL :: l_scf  = .TRUE.     ! Do a self-consistency run for dynmats
       LOGICAL :: l_elph = .FALSE.    ! Calculate electron-phonon matrix elements
       LOGICAL :: l_sumrule  = .FALSE. ! Apply sumrule for dynmats
-      LOGICAL :: l_rm_qhdf  = .FALSE. ! Remove q*hdf files, after convergence
+      LOGICAL :: l_rm_qhdf  = .TRUE. ! Remove q*hdf files, after convergence
       INTEGER :: startq = 1          ! Start the q-loop at a specific point
       INTEGER :: stopq  = 0          ! Stop  the q-loop at a specific point
       INTEGER :: qmode  = 0          ! 0: Single-shot calculation for qlist
@@ -289,7 +289,7 @@ CONTAINS
       integer :: iq 
       real :: tmp_vec(3)
 
-      if (this%l_efield) then  
+      if (this%l_efield .or. this%l_borneffcharge) then  
         allocate(this%qvec_efield(3,3))
         do iDir = 1,3
           qvec_ext(:) = 0.0

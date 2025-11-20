@@ -96,7 +96,6 @@ module m_dfpt_born_effcharge
 
                     CALL vExt1pho%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
                     CALL vExt1Impho%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
-                    
                     sigma_loc = cmplx(0.0,0.0)
                     print*,"right before it"
                     CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
@@ -147,13 +146,13 @@ module m_dfpt_born_effcharge
         end subroutine dfpt_born_eff_charge_element_nef
 
 
-        subroutine dfpt_born_eff_charge_element(fi,stars,starsq,sphhar,fmpi,rho,denIn1,denIn1Im,grRho,BEC_element,BEC_contributions_element,iDir_den,iDType,iQ,q_sign)
+        subroutine dfpt_born_eff_charge_element(fi,stars,starsq,sphhar,fmpi,rho,rho_core,denIn1,denIn1Im,grRho,BEC_element,BEC_contributions_element,iDir_den,iDType,iQ,q_sign)
 
 
             type(t_fleurinput), intent(in)     :: fi
             type(t_sphhar),    intent(in)      :: sphhar
             TYPE(t_stars),      INTENT(IN)     :: stars, starsq
-            type(t_potden), intent(inout)         :: rho
+            type(t_potden), intent(inout)         :: rho, rho_core
             type(t_potden), intent(inout)         :: denIn1,denIn1Im
             type(t_potden),optional, intent(in)     ::grRho
             TYPE(t_mpi),        intent(in)     :: fmpi
@@ -179,13 +178,14 @@ module m_dfpt_born_effcharge
             !print*,"shape(BEC_row(:))",shape(BEC_row)
             !print*,BEC_row(:)
             !print*,"shape(denIn1%mt)",shape(denIn1%mt)
+            !print*,"BEC_contributions_element(:)",BEC_contributions_element(:)
             
             ALLOCATE(pwwq2(starsq%ng3))
             ALLOCATE(denIn1_pw(starsq%ng3))
             ALLOCATE(rho_pw(stars%ng3),pww2(stars%ng3))
             ALLOCATE(denIn1_mt(fi%atoms%jmtd,0:sphhar%nlhd,fi%atoms%ntype),denIn1_mt_Im(fi%atoms%jmtd,0:sphhar%nlhd,fi%atoms%ntype))
             ALLOCATE(rho_mt(fi%atoms%jmtd,0:sphhar%nlhd,fi%atoms%ntype))
-            ALLOCATE(theta1full0(0:27*stars%mx1*stars%mx2*stars%mx3-1,fi%atoms%ntype,3))
+            ALLOCATE(theta1full0(0:27*stars%mx1*stars%mx2*stars%mx3-1,fi%atoms%ntype,3)) !Why the hell 27?
             ALLOCATE(theta1full(0:27*starsq%mx1*starsq%mx2*starsq%mx3-1,fi%atoms%ntype,3))
             ALLOCATE(theta1_pw0(stars%ng3,fi%atoms%ntype,3))
             ALLOCATE(theta1_pw(starsq%ng3,fi%atoms%ntype,3))
@@ -228,35 +228,55 @@ module m_dfpt_born_effcharge
             call dfpt_vefield(fi%juPhon,starsq_vext,fi%atoms,fi%sym,sphhar,fi%cell,vExt1,vExt1Im,iQ,q_sign)
             !interstitial
             pwwq2 = CMPLX(0.0,0.0)
-            print*,"I make it this far"
+            !print*,"I make it this far"
+            !print*,"sum(vExt1%pw(:,1))",sum(vExt1%pw(:,1))
             CALL dfpt_convol_big(1, starsq, stars, vExt1%pw(:,1), CMPLX(1.0,0.0)*stars%ufft, pwwq2)
-            call save_npy("pwwq2.npy",pwwq2)
+            !call save_npy("pwwq2.npy",pwwq2)
+            !print*,"sum(pwwq2)",sum(pwwq2)
+            !print*,"sum(denIn1_pw)",sum(denIn1_pw)
             CALL dfpt_int_pw(starsq, fi%cell, denIn1_pw, pwwq2, tempval_pw)
             !print*,"I make it this far 1/2"
             !print*,"BEC_element",BEC_element
             !print*,"tempval_pw",tempval_pw
-            BEC_element = BEC_element + tempval_pw 
+            !stop
+            BEC_element = BEC_element + 2*tempval_pw 
             BEC_contributions_element(1) = BEC_contributions_element(1) + tempval_pw
             !print*,"I make it this far 2"
             do iType = 1, fi%atoms%ntype
                 tempval_mt = CMPLX(0.0,0.0) 
                 call dfpt_int_mt(fi%atoms, sphhar, fi%sym, iType, denIn1_mt, denIn1_mt_Im, vExt1%mt(:,0:,:,1), vExt1Im%mt(:,0:,:,1), tempval_mt)
-                BEC_element =  BEC_element + tempval_mt
+                BEC_element =  BEC_element + 2*tempval_mt
                 BEC_contributions_element(2) =  BEC_contributions_element(2) + tempval_mt
                 BEC_contributions_element(4+iType) =  BEC_contributions_element(4+iType) + tempval_mt
             end do
-
+            !fi%atoms%econf%valence_electrons
+            print*,"fi%atoms%econf%valence_electrons",fi%atoms%econf(iDtype)%valence_electrons
+            print*,"fi%atoms%econf%core_electrons",fi%atoms%econf(iDtype)%core_electrons
+            !stop
             !surface integral MT
             if (iQ .eq. iDir_den) then
-                print*,"shape(rho%mt)",shape(rho%mt)
+                !print*,"shape(rho%mt)",shape(rho%mt)
                 call intgr3(rho%mt(:,0,iDType,1),fi%atoms%rmsh(1,iDType),fi%atoms%dx(iDType),fi%atoms%jri(iDType),int_mt_r)
-                denIn1Im%mt = 0.0
+                !call intgr3(rho%mt(:,0,iDType,1)-rho_core%mt(:,0,iDType,1),fi%atoms%rmsh(1,iDType),fi%atoms%dx(iDType),fi%atoms%jri(iDType),int_mt_r)
+                !print*,"rho MT VAL", int_mt_r*sfp_const
+                !int_mt_r =0.0
+                !call intgr3(rho_core%mt(:,0,iDType,1),fi%atoms%rmsh(1,iDType),fi%atoms%dx(iDType),fi%atoms%jri(iDType),int_mt_r)
+                !print*,"rho MT CORE", int_mt_r*sfp_const
+                !stop
+                !denIn1Im%mt = 0.0
                 !call dfpt_potden_offset(1,fmpi,starsq,fi%cell,fi%atoms,rho,denIn1Im,.FALSE.,.TRUE.,offset_out)
                 !call  dfpt_potden_offset(1,fmpi,starsq,fi%cell,fi%atoms,rho,denIn1Im,.FALSE.,.TRUE.,offset_out)
                 !print*,"offset_out",offset_out
                 !CALL intgr3(denIn1_mt_Im(:,0,iDType),fi%atoms%rmsh(1,iDType),fi%atoms%dx(iDType),fi%atoms%jri(iDType),int_mt_Im)
-                BEC_element = BEC_element-int_mt_r!+int_mt_Im)
-                BEC_contributions_element(3) =  BEC_contributions_element(3)  -int_mt_r!+int_mt_Im)
+                BEC_element = BEC_element+fi%atoms%zatom(iDType)-int_mt_r*sfp_const!+int_mt_Im)
+                !BEC_element = BEC_element+fi%atoms%econf(iDType)%valence_electrons-int_mt_r*sfp_const!+int_mt_Im)
+                !print*,"sfp_const",sfp_const
+                BEC_contributions_element(3) =  BEC_contributions_element(3)  -int_mt_r*sfp_const!+int_mt_Im)
+                !print*,"shape(BEC_contributions)",shape(BEC_contributions_element)
+                !print*,"BEC_contributions_element before",BEC_contributions_element(8)
+                !BEC_contributions_element(8) =  BEC_contributions_element(8)  +fi%atoms%zatom(iDType)
+                BEC_contributions_element(8) =  BEC_contributions_element(8)  +fi%atoms%econf(iDType)%valence_electrons
+                !print*,"BEC_contributions_element after",BEC_contributions_element(8)
 
             end if 
             !surface integral IR
@@ -284,11 +304,10 @@ module m_dfpt_born_effcharge
 
             CALL dfpt_convol_big(1, stars, stars, rho_pw, theta1full(0:,iDtype,iDir_den), pww2)
             CALL dfpt_int_pw(stars, fi%cell, pww2, vExt1%pw(:,1), tempval_SF_IR)
-            BEC_element= BEC_element+ tempval_SF_IR
+            BEC_element = BEC_element+ 2*tempval_SF_IR
             BEC_contributions_element(4) =  BEC_contributions_element(4) + tempval_SF_IR
 
             !calculate gradient integral:
-            print*,"doing gradient shit"
             tempval_grrho = 0.0 
             grRho_mt = (grRho%mt(:,0:,:,1)+grRho%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
             !print*,"grho",grRho_mt
@@ -315,7 +334,7 @@ module m_dfpt_born_effcharge
             character(len=20)         :: atom_string
 
 
-            born_eff_charge(:,:,:) = -born_eff_charge(:,:,:)
+            !born_eff_charge(:,:,:) = -born_eff_charge(:,:,:)
             
             atom_string = 'atom No:'
 
@@ -351,13 +370,14 @@ module m_dfpt_born_effcharge
                 call write_born_effective_charge(112, "born_eff_charge_MT_2", -born_eff_charge_contributions(:,:,:,3), atom_string, fi)
             ELSE
                 call write_born_effective_charge(112, "born_eff_charge", born_eff_charge, atom_string, fi)
-                call write_born_effective_charge(113, "born_eff_charge_IR", -born_eff_charge_contributions(:,:,:,1), atom_string, fi)
-                call write_born_effective_charge(114, "born_eff_charge_MT", -born_eff_charge_contributions(:,:,:,2), atom_string, fi)
-                call write_born_effective_charge(115, "born_eff_charge_SF-MT", -born_eff_charge_contributions(:,:,:,3), atom_string, fi)
-                call write_born_effective_charge(116, "born_eff_charge_SF-IR", -born_eff_charge_contributions(:,:,:,4), atom_string, fi)
-                call write_born_effective_charge(117, "born_eff_charge_MT_1", -born_eff_charge_contributions(:,:,:,5), atom_string, fi)
-                call write_born_effective_charge(118, "born_eff_charge_MT_2", -born_eff_charge_contributions(:,:,:,6), atom_string, fi)
-                call write_born_effective_charge(119, "born_eff_charge_grRho", -born_eff_charge_contributions(:,:,:,7), atom_string, fi)
+                call write_born_effective_charge(113, "born_eff_charge_IR", born_eff_charge_contributions(:,:,:,1), atom_string, fi)
+                call write_born_effective_charge(114, "born_eff_charge_MT", born_eff_charge_contributions(:,:,:,2), atom_string, fi)
+                call write_born_effective_charge(115, "born_eff_charge_SF-MT", born_eff_charge_contributions(:,:,:,3), atom_string, fi)
+                call write_born_effective_charge(116, "born_eff_charge_SF-IR", born_eff_charge_contributions(:,:,:,4), atom_string, fi)
+                call write_born_effective_charge(117, "born_eff_charge_MT_1", born_eff_charge_contributions(:,:,:,5), atom_string, fi)
+                call write_born_effective_charge(118, "born_eff_charge_MT_2", born_eff_charge_contributions(:,:,:,6), atom_string, fi)
+                call write_born_effective_charge(119, "born_eff_charge_grRho", born_eff_charge_contributions(:,:,:,7), atom_string, fi)
+                call write_born_effective_charge(120, "born_eff_charge_Zbare", born_eff_charge_contributions(:,:,:,8), atom_string, fi)
             END IF
         
         end subroutine dfpt_born_eff_charge_final
@@ -377,24 +397,24 @@ module m_dfpt_born_effcharge
             write(*,*) filename
             
             do iDType = 1, fi%atoms%ntype
-                write(*,'(A,I4)') atom_string, iDType
+                !write(*,'(A,I4)') atom_string, iDType
                 write(file_id,'(A,I4)') atom_string, iDType
         
                 do iDir = 1, 3
                     do j = 1, 2
                         write(file_id, '(2es16.8)', ADVANCE='NO') BEC_contribution(iDType, iDir, j)
                         write(file_id, '(A)', ADVANCE='NO') ' '
-                        write(*, '(2es16.8)', ADVANCE='NO') BEC_contribution(iDType, iDir, j)
-                        write(*, '(A)', ADVANCE='NO') ' '
+                        !write(*, '(2es16.8)', ADVANCE='NO') BEC_contribution(iDType, iDir, j)
+                        !write(*, '(A)', ADVANCE='NO') ' '
                     end do
         
                     write(file_id, '(2es16.8)') BEC_contribution(iDType, iDir, 3)
-                    write(*, '(2es16.8)') BEC_contribution(iDType, iDir, 3)
+                    !write(*, '(2es16.8)') BEC_contribution(iDType, iDir, 3)
                 end do
             end do
         
             close(file_id)
-            write(*,*) '-------------------------'
+            !write(*,*) '-------------------------'
         end subroutine write_born_effective_charge
         
 end module 

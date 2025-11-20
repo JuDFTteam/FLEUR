@@ -54,6 +54,7 @@ CONTAINS
       TYPE(t_kpts),       INTENT(IN)  :: qpts !Possibly replace this by fi_nosym%kpts [read correctly!]
 
       TYPE(t_potden),   INTENT(INOUT) :: rho
+      TYPE(t_potden),   INTENT(INOUT) :: rho_core
       TYPE(t_potden),   INTENT(IN)    :: vTot, vxc
       INTEGER,          INTENT(IN)    :: eig_id
 
@@ -569,7 +570,7 @@ CONTAINS
          ELSE IF (fi%juPhon%l_phonon) THEN
 
             ALLOCATE(born_eff_charge(fi_nosym%atoms%ntype,3,3))
-            ALLOCATE(born_eff_charge_contributions(fi_nosym%atoms%ntype,3,3,4+fi_nosym%atoms%ntype))
+            ALLOCATE(born_eff_charge_contributions(fi_nosym%atoms%ntype,3,3,7+fi_nosym%atoms%ntype))
             born_eff_charge = CMPLX(0.0)
             born_eff_charge_contributions = CMPLX(0.0)
             IF (fmpi%irank==0) WRITE(*,*) "Scf calculation for phonon perturbation"
@@ -724,7 +725,7 @@ CONTAINS
                      END IF
    
                      IF (fi%juPhon%l_borneffcharge) THEN
-                        CALL dfpt_born_eff_charge_element(fi_nosym,stars_nosym,starsq,sphhar_nosym,fmpi_nosym,rho_nosym,denIn1,denIn1Im,grRho3(iDir),born_eff_charge(iDtype,iDir,iQ),born_eff_charge_contributions(iDtype,iDir,iQ,:),iDir,iDtype,iQ,1)
+                        CALL dfpt_born_eff_charge_element(fi_nosym,stars_nosym,starsq,sphhar_nosym,fmpi_nosym,rho_nosym,rho_core,denIn1,denIn1Im,grRho3(iDir),born_eff_charge(iDtype,iDir,iQ),born_eff_charge_contributions(iDtype,iDir,iQ,:),iDir,iDtype,iQ,1)
                      END IF
 
                      IF (fmpi%irank==0) WRITE(*,*) '-------------------------'
