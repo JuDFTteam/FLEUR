@@ -120,11 +120,7 @@ CONTAINS
       DEALLOCATE (r_b)
     END IF
     if (vacdos%l_initialized) then
-      n = SIZE(vacdos%qis,1)*SIZE(vacdos%qis,2)
-      ALLOCATE(r_b(n))
-      CALL MPI_REDUCE(vacdos%qis(:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,0, MPI_COMM_WORLD,ierr)
-      IF (fmpi%irank.EQ.0) CALL dcopy(n, r_b, 1, vacdos%qis(:,:,jspin), 1)
-      DEALLOCATE (r_b)
+      
       n = SIZE(vacdos%qvac,1)*SIZE(vacdos%qvac,2)*SIZE(vacdos%qvac,3)
       ALLOCATE(r_b(n))
       CALL MPI_REDUCE(vacdos%qvac(:,:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,0, MPI_COMM_WORLD,ierr)
