@@ -257,10 +257,10 @@ CONTAINS
          IF (noccbd .LE. 0) CYCLE ! Note: This jump has to be after the MPI_BARRIER is called
          call timestart("Atoms loop")
          ! valence density in the atomic spheres
-         !$OMP PARALLEL DO DEFAULT(NONE) PRIVATE(itype, ispin, ispinpr, ispin123, abc_itype, abc) &
-         !$OMP SHARED(radfun, atoms, input, enpara,  fmpi, vTot, noccbd, ev_list, we) &
-         !$OMP SHARED( eig, usdus, slab,noco, nococonv, hub1data,sym, jsp_start, jsp_end,force, cell,lapw,zmat,den,dos,banddos,ikpt,mcd,jdos,moments,denmatrix,sphhar,hub1inp,tlmplm,results,jspin,nbasfcn,bkpt,orbcomp,orb) 
-
+         !!$OMP PARALLEL DO DEFAULT(NONE) PRIVATE(itype, ispin, ispinpr, ispin123, abc_itype, abc) &
+         !!$OMP SHARED(radfun, atoms, input, enpara,  fmpi, vTot, noccbd, ev_list, we) &
+         !!$OMP SHARED( eig, usdus, slab,noco, nococonv, hub1data,sym, jsp_start, jsp_end,force, cell,lapw,zmat,den,dos,banddos,ikpt,mcd,jdos,moments,denmatrix,sphhar,hub1inp,tlmplm,results,jspin,nbasfcn,bkpt,orbcomp,orb) 
+         !orb probably should be private
          DO itype = 1, atoms%ntype
             abc_itype=min(itype,size(abc,2)) !abc might be only needed for a single itype
             call radfun(itype)%generate_radial_functions(atoms, input, enpara, fmpi, vtot, iType)
@@ -314,7 +314,7 @@ CONTAINS
 
             END DO ! end loop over ispin
          END DO !loop over itypes
-         !$OMP END PARALLEL DO
+         !!$OMP END PARALLEL DO
          call timestop("Atoms loop")
          call timestart("valence density in the interstitial and vacuum region")
          IF (atoms%n_v.GT.0) CALL nIJ_mat(lbound(abc,2),input,atoms,noccbd,usdus,we,abc,cell,kpts,ikpt,den%nIJ_llp_mmp,enpara,vTot) 

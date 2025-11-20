@@ -65,7 +65,7 @@ SUBROUTINE init(thisOrb, radfun, lmax)
       !! Computes the orbital momentum coefficients \(L_z\), \(L_+\), and \(L_-\)
       !! for a given atom type and spin channel. The results are accumulated into
       !! the provided `clmom` array.
-   USE m_types_atoms
+      USE m_types_atoms
       USE m_types_abc
       USE m_types_radfun
       IMPLICIT NONE
