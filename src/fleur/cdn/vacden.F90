@@ -517,7 +517,7 @@ CONTAINS
                      ab=ab + we(n)*CONJG(ac(ikG,n,ispin))*bc(ikG,n,ispin)
                      ba=ba + we(n)*CONJG(bc(ikG,n,ispin))*ac(ikG,n,ispin)
                      qout = REAL(CONJG(ac(ikG,n,ispin))*ac(ikG,n,ispin)+tei(ikG,ispin)*CONJG(bc(ikG,n,ispin))*bc(ikG,n,ispin))
-                     vacdos%qvac(ev_list(n),ivac,ikpt,ispin) = vacdos%qvac(ev_list(n),ivac,ikpt,ispin) + qout*cell%area
+                     if (vacdos%l_initialized) vacdos%qvac(ev_list(n),ivac,ikpt,ispin) = vacdos%qvac(ev_list(n),ivac,ikpt,ispin) + qout*cell%area
                      dos%qTot(ev_list(n),ikpt,ispin) = dos%qTot(ev_list(n),ikpt,ispin) + qout*cell%area
                   END DO
                   DO jz = 1,vacuum%nmz
@@ -550,8 +550,8 @@ CONTAINS
                      ba = ba + we(n)*CONJG(bc(ikG,n,jspin))*ac1(ikG,n,jspin)
                   END IF
                   qout = REAL(CONJG(ac(ikG,n,jspin))*ac(ikG,n,jspin)+tei(ikG,jspin)*CONJG(bc(ikG,n,jspin))*bc(ikG,n,jspin))
-                  vacdos%qvac(ev_list(n),ivac,ikpt,jspin) = vacdos%qvac(ev_list(n),ivac,ikpt,jspin) + qout*cell%area
-                  dos%qTot(ev_list(n),ikpt,jspin) = dos%qTot(ev_list(n),ikpt,jspin) + qout*cell%area
+                  if(vacdos%l_initialized) vacdos%qvac(ev_list(n),ivac,ikpt,jspin) = vacdos%qvac(ev_list(n),ivac,ikpt,jspin) + qout*cell%area
+                  if (dos%l_initialized) dos%qTot(ev_list(n),ikpt,jspin) = dos%qTot(ev_list(n),ikpt,jspin) + qout*cell%area
                END DO
                DO  jz = 1,vacuum%nmz
                   ui = u(jz,ikG,jspin)
