@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 
 ! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
@@ -13,6 +18,7 @@ MODULE m_mpi_col_den
 #ifdef CPP_MPI
    use mpi
 #endif
+   implicit none
 CONTAINS
   SUBROUTINE mpi_col_den(fmpi,sphhar,atoms ,stars,vacuum,input,noco,jspin,dos,vacdos,&
                          results,den,mcd,slab,orbcomp,jDOS,hyperfine)
@@ -83,88 +89,74 @@ CONTAINS
     ENDIF
 
     
-    
-#if false    
-    IF (PRESENT(regCharges)) THEN
-      !--> ener & sqal
-      n=4*atoms%ntype
+    !collect DOS stuff
+    if (dos%l_initialized) then
+      n = SIZE(dos%jsym,1)*SIZE(dos%jsym,2)
+      ALLOCATE(i_b(n))
+      CALL MPI_REDUCE(dos%jsym(:,:,jspin),i_b,n,MPI_INTEGER,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+      IF (fmpi%irank.EQ.0) THEN
+         DO i = 1, SIZE(dos%jsym,2)
+            dos%jsym(:,i,jspin) = i_b((i-1)*SIZE(dos%jsym,1)+1:i*SIZE(dos%jsym,1))
+         END DO
+      END IF
+      DEALLOCATE (i_b)
+
+      n = SIZE(dos%qis,1)*SIZE(dos%qis,2)
       ALLOCATE(r_b(n))
-      CALL MPI_ALLREDUCE(regCharges%ener(0:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-      CALL dcopy(n, r_b, 1, regCharges%ener(0:,:,jspin), 1)
-      CALL MPI_ALLREDUCE(regCharges%sqal(0:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-      CALL dcopy(n, r_b, 1, regCharges%sqal(0:,:,jspin), 1)
+      CALL MPI_REDUCE(dos%qis(:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+      IF (fmpi%irank.EQ.0) CALL dcopy(n, r_b, 1, dos%qis(:,:,jspin), 1)
       DEALLOCATE (r_b)
 
-      !--> svac & pvac
-      IF ( input%film ) THEN
-         n=SIZE(regCharges%svac,1)
-         ALLOCATE(r_b(n))
-         CALL MPI_ALLREDUCE(regCharges%svac(:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-         CALL dcopy(n, r_b, 1, regCharges%svac(:,jspin), 1)
-         CALL MPI_ALLREDUCE(regCharges%pvac(:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-         CALL dcopy(n, r_b, 1, regCharges%pvac(:,jspin), 1)
-         DEALLOCATE (r_b)
-       END IF
+      n = SIZE(dos%qTot,1)*SIZE(dos%qTot,2)
+      ALLOCATE(r_b(n))
+      CALL MPI_REDUCE(dos%qTot(:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+      IF (fmpi%irank.EQ.0) CALL dcopy(n, r_b, 1, dos%qTot(:,:,jspin), 1)
+      DEALLOCATE (r_b)
+
+      n = SIZE(dos%qal,1)*SIZE(dos%qal,2)*SIZE(dos%qal,3)*SIZE(dos%qal,4)
+      ALLOCATE(r_b(n))
+      CALL MPI_REDUCE(dos%qal(0:,:,:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+      IF (fmpi%irank.EQ.0) CALL dcopy(n, r_b, 1, dos%qal(0:,:,:,:,jspin), 1)
+      DEALLOCATE (r_b)
     END IF
-#endif
-    !collect DOS stuff
-    n = SIZE(dos%jsym,1)*SIZE(dos%jsym,2)
-    ALLOCATE(i_b(n))
-    CALL MPI_REDUCE(dos%jsym(:,:,jspin),i_b,n,MPI_INTEGER,MPI_SUM,0, MPI_COMM_WORLD,ierr)
-    IF (fmpi%irank.EQ.0) THEN
-       DO i = 1, SIZE(dos%jsym,2)
-          dos%jsym(:,i,jspin) = i_b((i-1)*SIZE(dos%jsym,1)+1:i*SIZE(dos%jsym,1))
-       END DO
-    END IF
-    DEALLOCATE (i_b)
+    if (vacdos%l_initialized) then
+      n = SIZE(vacdos%qis,1)*SIZE(vacdos%qis,2)
+      ALLOCATE(r_b(n))
+      CALL MPI_REDUCE(vacdos%qis(:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+      IF (fmpi%irank.EQ.0) CALL dcopy(n, r_b, 1, vacdos%qis(:,:,jspin), 1)
+      DEALLOCATE (r_b)
+      n = SIZE(vacdos%qvac,1)*SIZE(vacdos%qvac,2)*SIZE(vacdos%qvac,3)
+      ALLOCATE(r_b(n))
+      CALL MPI_REDUCE(vacdos%qvac(:,:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+      IF (fmpi%irank.EQ.0) CALL dcopy(n, r_b, 1, vacdos%qvac(:,:,:,jspin), 1)
+      DEALLOCATE (r_b)
 
-    n = SIZE(dos%qis,1)*SIZE(dos%qis,2)
-    ALLOCATE(r_b(n))
-    CALL MPI_REDUCE(dos%qis(:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,0, MPI_COMM_WORLD,ierr)
-    IF (fmpi%irank.EQ.0) CALL dcopy(n, r_b, 1, dos%qis(:,:,jspin), 1)
-    DEALLOCATE (r_b)
+      n = SIZE(vacdos%qvlay,1)*SIZE(vacdos%qvlay,2)*SIZE(vacdos%qvlay,3)*SIZE(vacdos%qvlay,4)
+      ALLOCATE(r_b(n))
+      CALL MPI_REDUCE(vacdos%qvlay(:,:,:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+      IF (fmpi%irank.EQ.0) CALL dcopy(n, r_b, 1, vacdos%qvlay(:,:,:,:,jspin), 1)
+      DEALLOCATE (r_b)
 
-    n = SIZE(dos%qTot,1)*SIZE(dos%qTot,2)
-    ALLOCATE(r_b(n))
-    CALL MPI_REDUCE(dos%qTot(:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,0, MPI_COMM_WORLD,ierr)
-    IF (fmpi%irank.EQ.0) CALL dcopy(n, r_b, 1, dos%qTot(:,:,jspin), 1)
-    DEALLOCATE (r_b)
-
-    n = SIZE(dos%qal,1)*SIZE(dos%qal,2)*SIZE(dos%qal,3)*SIZE(dos%qal,4)
-    ALLOCATE(r_b(n))
-    CALL MPI_REDUCE(dos%qal(0:,:,:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,0, MPI_COMM_WORLD,ierr)
-    IF (fmpi%irank.EQ.0) CALL dcopy(n, r_b, 1, dos%qal(0:,:,:,:,jspin), 1)
-    DEALLOCATE (r_b)
-
-    n = SIZE(vacdos%qvac,1)*SIZE(vacdos%qvac,2)*SIZE(vacdos%qvac,3)
-    ALLOCATE(r_b(n))
-    CALL MPI_REDUCE(vacdos%qvac(:,:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,0, MPI_COMM_WORLD,ierr)
-    IF (fmpi%irank.EQ.0) CALL dcopy(n, r_b, 1, vacdos%qvac(:,:,:,jspin), 1)
-    DEALLOCATE (r_b)
-
-    n = SIZE(vacdos%qvlay,1)*SIZE(vacdos%qvlay,2)*SIZE(vacdos%qvlay,3)*SIZE(vacdos%qvlay,4)
-    ALLOCATE(r_b(n))
-    CALL MPI_REDUCE(vacdos%qvlay(:,:,:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,0, MPI_COMM_WORLD,ierr)
-    IF (fmpi%irank.EQ.0) CALL dcopy(n, r_b, 1, vacdos%qvlay(:,:,:,:,jspin), 1)
-    DEALLOCATE (r_b)
-
-    n = SIZE(vacdos%qstars,1)*SIZE(vacdos%qstars,2)*SIZE(vacdos%qstars,3)*SIZE(vacdos%qstars,4)*SIZE(vacdos%qstars,5)
-    ALLOCATE(c_b(n))
-    CALL MPI_REDUCE(vacdos%qstars(:,:,:,:,:,jspin),c_b,n,MPI_DOUBLE_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
-    IF (fmpi%irank.EQ.0) CALL zcopy(n, c_b, 1, vacdos%qstars(:,:,:,:,:,jspin), 1)
-    DEALLOCATE (c_b)
-
+      n = SIZE(vacdos%qstars,1)*SIZE(vacdos%qstars,2)*SIZE(vacdos%qstars,3)*SIZE(vacdos%qstars,4)*SIZE(vacdos%qstars,5)
+      ALLOCATE(c_b(n))
+      CALL MPI_REDUCE(vacdos%qstars(:,:,:,:,:,jspin),c_b,n,MPI_DOUBLE_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+      IF (fmpi%irank.EQ.0) CALL zcopy(n, c_b, 1, vacdos%qstars(:,:,:,:,:,jspin), 1)
+      DEALLOCATE (c_b)
+    endif
     ! Collect mcd%mcd
     IF (PRESENT(mcd)) THEN
+      if (mcd%l_initialized) then
        n = SIZE(mcd%mcd,1)*SIZE(mcd%mcd,2)*SIZE(mcd%mcd,3)*SIZE(mcd%mcd,4)
        ALLOCATE(r_b(n))
        CALL MPI_REDUCE(mcd%mcd(:,:,:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,0, MPI_COMM_WORLD,ierr)
        IF (fmpi%irank.EQ.0) CALL dcopy(n, r_b, 1, mcd%mcd(:,:,:,:,jspin), 1)
        DEALLOCATE (r_b)
+      endif
     END IF
 
     ! Collect slab - qintsl and qmtsl
     IF (PRESENT(slab)) THEN
+      if (slab%l_initialized) then
        n = SIZE(slab%qintsl,1)*SIZE(slab%qintsl,2)*SIZE(slab%qintsl,3)
        ALLOCATE(r_b(n))
        CALL MPI_REDUCE(slab%qintsl(:,:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,0, MPI_COMM_WORLD,ierr)
@@ -176,10 +168,12 @@ CONTAINS
        CALL MPI_REDUCE(slab%qmtsl(:,:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,0, MPI_COMM_WORLD,ierr)
        IF (fmpi%irank.EQ.0) CALL dcopy(n, r_b, 1, slab%qmtsl(:,:,:,jspin), 1)
        DEALLOCATE (r_b)
+      endif
     END IF
 
     ! Collect orbcomp - comp and qmtp
     IF (PRESENT(orbcomp)) THEN
+      if (orbcomp%l_initialized) then
        n = SIZE(orbcomp%comp,1)*SIZE(orbcomp%comp,2)*SIZE(orbcomp%comp,3)*SIZE(orbcomp%comp,4)
        ALLOCATE(r_b(n))
        CALL MPI_REDUCE(orbcomp%comp(:,:,:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,0, MPI_COMM_WORLD,ierr)
@@ -191,11 +185,12 @@ CONTAINS
        CALL MPI_REDUCE(orbcomp%qmtp(:,:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,0, MPI_COMM_WORLD,ierr)
        IF (fmpi%irank.EQ.0) CALL dcopy(n, r_b, 1, orbcomp%qmtp(:,:,:,jspin), 1)
        DEALLOCATE (r_b)
+      endif 
     END IF
 
     !+jDOS
     IF(PRESENT(jDOS)) THEN
-      IF(jspin.EQ.1) THEN
+      IF(jdos%l_initialized.and.jspin.EQ.1) THEN
 
         n = SIZE(jDOS%comp)
         ALLOCATE(r_b(n))
