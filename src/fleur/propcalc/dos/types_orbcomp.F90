@@ -120,7 +120,7 @@ CONTAINS
 
       INTEGER:: n, i, n_orb, l, j, jj, n_dos, mt, natom, jspin
       complex:: sc, lin_comb, lin_comb1
-
+      if (.not.orbcomp%l_initialized) return !not initialized
       call set_coefficients()
       jspin = merge(jsp, 3, jsp == jsp1)
 
@@ -237,6 +237,7 @@ CONTAINS
       TYPE(t_atoms), INTENT(IN)    :: atoms
       TYPE(t_kpts), INTENT(IN)    :: kpts
       REAL, INTENT(IN)                      :: eig(:, :, :)
+      thisOrbcomp%l_initialized = .TRUE.
       thisOrbcomp%n_dos_to_na = banddos%dos_atomlist
       IF ((banddos%l_orb) .AND. banddos%dos) THEN
          ALLOCATE (thisOrbcomp%comp(input%neig, 23, size(banddos%dos_atomlist), kpts%nkpt, input%jspins))

@@ -96,10 +96,10 @@ CONTAINS
       TYPE(t_moments), INTENT(INOUT) :: moments
       TYPE(t_hub1data), OPTIONAL, INTENT(INOUT) :: hub1data
       TYPE(t_coreSpecInput), OPTIONAL, INTENT(IN)    :: coreSpecInput
-      TYPE(t_mcd), OPTIONAL, INTENT(INOUT) :: mcd
-      TYPE(t_slab), OPTIONAL, INTENT(INOUT) :: slab
-      TYPE(t_orbcomp), OPTIONAL, INTENT(INOUT) :: orbcomp
-      TYPE(t_jDOS), OPTIONAL, INTENT(INOUT) :: jDOS
+      TYPE(t_mcd), INTENT(INOUT) :: mcd
+      TYPE(t_slab), INTENT(INOUT) :: slab
+      TYPE(t_orbcomp), INTENT(INOUT) :: orbcomp
+      TYPE(t_jDOS), INTENT(INOUT) :: jDOS
       TYPE(t_greensfImagPart), OPTIONAL, INTENT(INOUT) :: greensfImagPart
 
       ! Scalar Arguments
@@ -182,8 +182,7 @@ CONTAINS
          END IF
       END IF
 
-      IF (banddos%l_mcd .AND. .NOT. PRESENT(mcd)) CALL juDFT_error("mcd is missing", calledby="cdnval")
-
+     
       ! calculation of core spectra (EELS) initializations -start-
       l_coreSpec = .FALSE.
       IF (PRESENT(coreSpecInput)) THEN
@@ -283,22 +282,17 @@ CONTAINS
                   if (ispin == ispinpr) THEN
                      !No off-diagonal contributions yet
                      call mcd%calc_mt_mcd(banddos, atoms, ev_list, abc(ispin, abc_itype), itype, ikpt, ispin)
-                     IF (banddos%l_orb) &
-                        call orbcomp%calc_orb_comp(atoms, banddos, radfun(itype), abc(ispin, abc_itype), abc(ispin, abc_itype), &
+                     call orbcomp%calc_orb_comp(atoms, banddos, radfun(itype), abc(ispin, abc_itype), abc(ispin, abc_itype), &
                                                    ev_list, itype, ikpt, ispin, ispin)
                      !IF(l_coreSpec) CALL corespec_dos(atoms,usdus,ispin,atoms%lmaxd*(atoms%lmaxd+2),kpts%nkpt,ikpt,input%neig,&
                      !                                 noccbd,results%ef,banddos%sig_dos,eig,we,egVecCoeffs) 
                      ! ToDO this code has to be adjusted to not use the egVecCoeffs anymore
 
-                     IF (PRESENT(slab).and.banddos%l_slab) CALL q_mt_sl(itype,ispin,ikpt,atoms,ev_list,noccbd,abc(ispin,abc_itype),radfun(itype),slab)                            
+                     CALL slab%calc_mt_slab(itype,ispin,ikpt,atoms,ev_list,noccbd,abc(ispin,abc_itype),radfun(itype))                            
                   end if
                   !Decomposition into total angular momentum states
-                  IF (banddos%dos .AND. banddos%l_jDOS) THEN
-                     IF (PRESENT(jDOS) .AND. ispinpr == jsp_end) THEN
-                        call jDOS%calc_jDOS(ikpt, noccbd, ev_list, we, atoms, banddos, input, radfun(itype), abc(1, abc_itype), abc(2, abc_itype))
-                     END IF
-                  END IF
-
+                  IF (banddos%l_jdos.and.ispinpr == jsp_end) call jDOS%calc_jDOS(ikpt, noccbd, ev_list, we, atoms, banddos, input, radfun(itype), abc(1, abc_itype), abc(2, abc_itype))
+                     
                   IF (noco%l_soc .and. ispin == ispinpr) CALL orb%calc_orbmom(abc(ispin, abc_itype), atoms, radfun(itype), we, itype, &
                                                                               ispin, moments%clmom(:, itype, ispin))  
 
@@ -331,8 +325,7 @@ CONTAINS
             CALL pwden(stars, kpts, banddos, input, fmpi, noco, nococonv, cell, atoms, sym, ikpt, &
                        jspin, lapw, noccbd, ev_list, we, eig, den, results, force%f_b8, zMat, dos)
             ! charge of each valence state in this k-point of the SBZ in the layer interstitial region of the film
-            IF (PRESENT(slab) .AND. banddos%l_slab) &
-               CALL q_int_sl(jspin, ikpt, stars, atoms, sym, cell, noccbd, ev_list, lapw, slab, zMat)
+            CALL slab%calc_int_slab(jspin, ikpt, stars, atoms, sym, cell, noccbd, ev_list, lapw, zMat)
             ! valence density in the vacuum region
             IF (input%film) THEN
                CALL vacden(vacuum, stars, input, cell, atoms, noco, nococonv, banddos, &

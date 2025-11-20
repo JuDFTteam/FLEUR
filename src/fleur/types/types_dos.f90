@@ -80,6 +80,8 @@ CONTAINS
     complex:: suma
     INTEGER:: i, l, lm, j, n_dos, m, natom,jj
     Integer:: jspin
+    
+    if (.not. dos%l_initialized) return !DOS not initialized, skip calculation
 
     jspin = merge(jsp, 3, jsp == jsp1)
     DO i = 1, size(abc%cof, 1)
@@ -196,6 +198,7 @@ CONTAINS
 
       INTEGER :: ntype, l, i, ind,ispin
       character :: spdfg(0:4) = ["s", "p", "d", "f", "g"]
+      thisDOS%l_initialized = .TRUE.
       thisDOS%name_of_dos = "Local"
       thisDOS%neq = atoms%neq(banddos%dos_typelist)
       thisDOS%eig = eig

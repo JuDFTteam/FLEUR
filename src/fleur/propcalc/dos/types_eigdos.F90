@@ -12,6 +12,7 @@ MODULE m_types_eigdos
 
   TYPE,abstract :: t_eigdos
     CHARACTER(len=20)            :: name_of_dos="unnamed"
+    LOGICAL                      :: l_initialized=.FALSE.
     !each eigenvalue might be described by weights
     REAL,ALLOCATABLE             :: eig(:,:,:)
     REAL,ALLOCATABLE             :: dos_grid(:) !This is the grid the DOS part uses internally (FOR IO use the routine below)

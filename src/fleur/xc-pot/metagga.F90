@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2018 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -136,10 +136,10 @@ CONTAINS
 
          ! replace brillouin weights with auxillary weights
          CALL calc_EnergyDen_auxillary_weights(eig_id, kpts, jspin, cdnvalJob%weights)
-
-         CALL cdnval(eig_id, fmpi, kpts, jspin, noco,nococonv, input, banddos, cell, atoms, &
-            enpara, stars, vacuum,  sphhar, sym, vTot,   cdnvalJob, &
-            EnergyDen,  dos, vacdos,tmp_results, moments, gfinp, hub1inp)
+         call judft_bug("calc_EnergyDen: not implemented yet")
+         !CALL cdnval(eig_id, fmpi, kpts, jspin, noco,nococonv, input, banddos, cell, atoms, &
+         !   enpara, stars, vacuum,  sphhar, sym, vTot,   cdnvalJob, &
+         !   EnergyDen,  dos, vacdos,tmp_results, moments, gfinp, hub1inp)
       ENDDO
 
    END SUBROUTINE calc_EnergyDen

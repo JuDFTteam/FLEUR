@@ -66,7 +66,7 @@ CONTAINS
       REAL    :: facup, facdown, summed, cf
       COMPLEX :: aup, bup, cup, adown, bdown, cdown, cupp, cdownp
       REAL    :: c(0:lmax*2)
-
+      if (.not. jDOS%l_initialized) return
       DO iAtom = 1, atoms%nat
          iType = atoms%itype(iAtom)
          if (.not. banddos%dos_atom(iAtom)) cycle
@@ -229,7 +229,7 @@ CONTAINS
       TYPE(t_atoms), INTENT(IN)    :: atoms
       TYPE(t_kpts), INTENT(IN)    :: kpts
       REAL, INTENT(IN)                      :: eig(:, :, :)
-
+      thisjDOS%l_initialized = .TRUE.
       thisjDOS%n_dos_to_na = banddos%dos_atomlist
       IF (banddos%l_jdos .AND. banddos%dos) THEN
          ALLOCATE (thisjDOS%comp(input%neig, 0:3, 2, size(banddos%dos_atomlist), kpts%nkpt), source=0.0)

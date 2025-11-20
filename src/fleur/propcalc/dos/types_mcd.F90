@@ -58,7 +58,7 @@ contains
 
       integer:: i, n_dos, l, m, lm, icore, ipol, index,natom
       complex:: sumaa, sumbb, sumab, sumba
-      IF (.not. banddos%l_mcd) return !nothing to be done here
+      IF (.not. mcd%l_initialized) return !nothing to be done here
       DO i = 1, size(ev_list)              ! skip in next loop
          DO n_dos = 1, size(banddos%dos_typelist)
             if (banddos%dos_typelist(n_dos) /= itype) cycle !This dos not for this atom
@@ -266,7 +266,7 @@ contains
       integer :: ntype !no of types for which MCD is calculated
       INTEGER :: numInvolvedAtomTypes, i
       LOGICAL :: involvedAtomTypes(atoms%ntype)
-
+      thisMCD%l_initialized = .TRUE.
       ALLOCATE (thisMCD%atomTypeIndices(atoms%ntype))
       thisMCD%atomTypeIndices = 0
       involvedAtomTypes = .FALSE.

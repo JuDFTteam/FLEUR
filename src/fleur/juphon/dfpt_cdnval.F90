@@ -209,15 +209,16 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
       IF (l_minusq) CALL read_eig(dfpt_eigm_id,ikpt,jsp,list=ev_list,neig=nbands1m,zmat=zMat1m)
 
       ! TODO: Implement correct spin logic here! Only collinear operational for now!
-      DO ikG = 1, lapw%nv(jsp)
-         gExt = MATMUL(lapw%vk(:, ikG, jsp),cell%bmat)
-         IF (zMat%l_real) THEN
-            zMatPref%data_c(ikG,:) = ImagUnit * gExt(idir) * zMat%data_r(ikG, :)
-         ELSE
-            zMatPref%data_c(ikG,:) = ImagUnit * gExt(idir) * zMat%data_c(ikG, :)
-         END IF
-      END DO
-
+      if (juphon%l_phonon) then
+         DO ikG = 1, lapw%nv(jsp)
+            gExt = MATMUL(lapw%vk(:, ikG, jsp),cell%bmat)
+            IF (zMat%l_real) THEN
+               zMatPref%data_c(ikG,:) = ImagUnit * gExt(idir) * zMat%data_r(ikG, :)
+            ELSE
+               zMatPref%data_c(ikG,:) = ImagUnit * gExt(idir) * zMat%data_c(ikG, :)
+            END IF
+         END DO
+      endif
       ! TODO: LOs matching coefficients are unperturbed for now, because they derailed
       !       the calculation. Find out why; forces can use the perturbation!
       !DO ikG = lapw%nv(jsp) + 1, lapw%nv(jsp) + atoms%nlo(iDtype)

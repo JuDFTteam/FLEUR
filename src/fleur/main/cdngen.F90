@@ -29,7 +29,6 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    USE m_types
    USE m_constants
    USE m_juDFT
-   !USE m_prpqfftmap
    USE m_cdnval
    USE m_plot
    USE m_cdn_io
@@ -126,34 +125,8 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    if (noco%l_noco) results%eig(:,:,2)=results%eig(:,:,1)
    
    if (banddos%dos.or.banddos%band.or.input%cdinf) then
-     allocate(eigdos(count((/banddos%dos.or.banddos%band.or.input%cdinf,banddos%l_jointDOS,banddos%vacdos,banddos%l_mcd,banddos%l_slab,banddos%l_orb,banddos%l_jDOS/))))
-     n=2
-     CALL dos%init(input,atoms,kpts,banddos,noco%l_noco.or.banddos%l_jDOS,results%eig)
-     eigdos(1)%p=>dos
-     if (banddos%l_jointDOS) THEN
-       CALL jointDOS%init(input,atoms,kpts,banddos,noco%l_noco,results%eig)
-       eigdos(n)%p=>jointDOS; n=n+1;
-     endif
-     if (banddos%vacdos) THEN
-       CALL vacdos%init(input,atoms,kpts,banddos,results%eig)
-       eigdos(n)%p=>vacdos; n=n+1;
-     endif
-     if (banddos%l_mcd) THEN
-       CALL mcd%init(banddos,input,atoms,kpts,results%eig)
-       eigdos(n)%p=>mcd; n=n+1
-     endif
-     if (banddos%l_slab) THEN
-       CALL slab%init(banddos,atoms,cell,input,kpts)
-       eigdos(n)%p=>slab; n=n+1
-     endif
-     if (banddos%l_orb) THEN
-       CALL orbcomp%init(input,banddos,atoms,kpts,results%eig)
-       eigdos(n)%p=>orbcomp; n=n+1
-     endif
-     if (banddos%l_jdos) then
-         CALL jDOS%init(input,banddos,atoms,kpts,results%eig)
-         eigdos(n)%p=>jDOS
-     endif   
+     CALL initialize_eigdos_types(eigdos, dos, jointDOS, vacdos, mcd, slab, orbcomp, jDOS, &
+                                   input, atoms, kpts, banddos, noco, results, cell)
    endif
 
 
@@ -323,5 +296,103 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    END IF
 
 END SUBROUTINE cdngen
+
+SUBROUTINE initialize_eigdos_types(eigdos, dos, jointDOS, vacdos, mcd, slab, orbcomp, jDOS, &
+                                    input, atoms, kpts, banddos, noco, results, cell)
+   !*****************************************************
+   ! Initialize all eigenvalue/DOS types and populate
+   ! the eigdos pointer array
+   !*****************************************************
+   USE m_types_eigdos
+   USE m_types_dos
+   USE m_types_jointdos
+   USE m_types_vacdos
+   USE m_types_mcd
+   USE m_types_slab
+   USE m_types_orbcomp
+   USE m_types_jdos
+   use m_types
+   
+   IMPLICIT NONE
+   
+   ! Arguments
+   TYPE(t_eigdos_list), ALLOCATABLE, INTENT(INOUT) :: eigdos(:)
+   TYPE(t_dos), TARGET, INTENT(INOUT)              :: dos
+   TYPE(t_jointDOS), TARGET, INTENT(INOUT)         :: jointDOS
+   TYPE(t_vacdos), TARGET, INTENT(INOUT)           :: vacdos
+   TYPE(t_mcd), TARGET, INTENT(INOUT)              :: mcd
+   TYPE(t_slab), TARGET, INTENT(INOUT)             :: slab
+   TYPE(t_orbcomp), TARGET, INTENT(INOUT)          :: orbcomp
+   TYPE(t_jDOS), TARGET, INTENT(INOUT)             :: jDOS
+   TYPE(t_input), INTENT(IN)                       :: input
+   TYPE(t_atoms), INTENT(IN)                       :: atoms
+   TYPE(t_kpts), INTENT(IN)                        :: kpts
+   TYPE(t_banddos), INTENT(IN)                     :: banddos
+   TYPE(t_noco), INTENT(IN)                        :: noco
+   TYPE(t_results), INTENT(IN)                     :: results
+   TYPE(t_cell), INTENT(IN)                        :: cell
+   
+   ! Local variables
+   INTEGER :: n, num_types
+   LOGICAL :: type_flags(7)
+   
+   ! Determine which types need to be initialized
+   type_flags(1) = banddos%dos .OR. banddos%band .OR. input%cdinf
+   type_flags(2) = banddos%l_jointDOS
+   type_flags(3) = banddos%vacdos
+   type_flags(4) = banddos%l_mcd
+   type_flags(5) = banddos%l_slab
+   type_flags(6) = banddos%l_orb
+   type_flags(7) = banddos%l_jDOS
+   
+   ! Count number of types to allocate
+   num_types = COUNT(type_flags)
+   ALLOCATE(eigdos(num_types))
+
+   
+   
+   ! Initialize DOS (always first)
+   n = 1
+   CALL dos%init(input, atoms, kpts, banddos, noco%l_noco .OR. banddos%l_jDOS, results%eig)
+   eigdos(1)%p => dos
+   n = 2
+   
+   ! Initialize optional types
+   IF (banddos%l_jointDOS) THEN
+      CALL jointDOS%init(input, atoms, kpts, banddos, noco%l_noco, results%eig)
+      eigdos(n)%p => jointDOS
+      n = n + 1
+   END IF
+   
+   CALL vacdos%init(input, atoms, kpts, banddos, results%eig)
+   IF (banddos%vacdos) THEN
+      eigdos(n)%p => vacdos
+      n = n + 1
+   END IF
+   
+   IF (banddos%l_mcd) THEN
+      CALL mcd%init(banddos, input, atoms, kpts, results%eig)
+      eigdos(n)%p => mcd
+      n = n + 1
+   END IF
+   
+   IF (banddos%l_slab) THEN
+      CALL slab%init(banddos, atoms, cell, input, kpts)
+      eigdos(n)%p => slab
+      n = n + 1
+   END IF
+   
+   IF (banddos%l_orb) THEN
+      CALL orbcomp%init(input, banddos, atoms, kpts, results%eig)
+      eigdos(n)%p => orbcomp
+      n = n + 1
+   END IF
+   
+   IF (banddos%l_jdos) THEN
+      CALL jDOS%init(input, banddos, atoms, kpts, results%eig)
+      eigdos(n)%p => jDOS
+   END IF
+   
+END SUBROUTINE initialize_eigdos_types
 
 END MODULE m_cdngen
