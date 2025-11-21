@@ -27,16 +27,15 @@ CONTAINS
       INTEGER :: j1, j2, j3
       REAL    :: q_full(3), q_full_BZ(3), trans(3)
 
-      INTEGER, ALLOCATABLE :: qvec_to_index(:,:,:)
+      ! INTEGER, ALLOCATABLE :: qvec_to_index(:,:,:)
       COMPLEX, ALLOCATABLE :: dyn_mat_qsym(:,:)
 
       dyn_dim = 3*atoms%nat
 
-      allocate(qvec_to_index(0:qpts%nkpt3(1)-1,0:qpts%nkpt3(2)-1,0:qpts%nkpt3(3)-1))
+      !allocate(qvec_to_index(0:qpts%nkpt3(1)-1,0:qpts%nkpt3(2)-1,0:qpts%nkpt3(3)-1))
       allocate(dyn_mat_qsym(dyn_dim,dyn_dim))
       allocate(dyn_mat_q_full(qpts%nkptf,dyn_dim,dyn_dim))
-      qvec_to_index = 0
-
+      !qvec_to_index = 0 
       ! Create an array that maps the q coordinates to the index of their q vector
       ! in the full BZ
       ! DO j1 = 0, qpts%nkpt3(1)-1
@@ -159,8 +158,8 @@ CONTAINS
       REAL,          INTENT(IN)    :: bqpt(3)
       COMPLEX,       INTENT(IN)    :: dyn(:,:)
       COMPLEX,       INTENT(INOUT) :: dyn_mat_qsym(:,:)
-
-      INTEGER :: iAtom, jAtom
+      
+      INTEGER :: iAtom, jAtom , iAtom_map, jAtom_map
       INTEGER :: iAlpha, iBeta, iAlpha_map, iBeta_map
       REAL    :: invamat(3,3), phas, det , pos_map(3)
       COMPLEX :: brot(3,3), temp_mat_1(3,3), temp_mat_2(3,3)
@@ -186,7 +185,7 @@ CONTAINS
          IF (l_inv) pos_map = -1 * pos_map ! Inversion does not exist in real space, 
                                            ! we have to introduce a minus that negates the minus of mrot
          ! Calculate the phase factor f(alpha)
-         phas= tpi_const*(dot_product(bqpt(:),atoms%taual(:,iAtom)) - dot_product(bqpt(:), pos_map(:))) 
+         phas= tpi_const*(dot_product(bqpt(:),atoms%taual(:,jAtom)) - dot_product(bqpt(:), pos_map(:))) 
          phase_fac=cmplx(cos(phas),sin(phas))
          phase_map(iAtom)=phase_fac
       END DO
@@ -196,14 +195,16 @@ CONTAINS
       DO iAtom=1, atoms%nat
          iAlpha = 3*(iAtom-1)
          iAlpha_map = 3*(map(iAtom)-1)
+         iAtom_map = map(iAtom)
          DO jAtom=1, atoms%nat
             iBeta = 3*(jAtom-1)
             iBeta_map = 3*(map(jAtom)-1)
+            jAtom_map = map(jAtom)
             temp_mat_1 = dyn(iAlpha+1:iAlpha+3,iBeta+1:iBeta+3)
             if (l_inv) temp_mat_1 = conjg(temp_mat_1) ! inversion maps q -> -q  , which results into a conjugate
             temp_mat_2 = MATMUL(brot,temp_mat_1)
             temp_mat_1 = MATMUL(temp_mat_2,TRANSPOSE(brot))
-            phase_fac=phase_map(iAtom)*conjg(phase_map(jAtom))
+            phase_fac=phase_map(iAtom_map)*conjg(phase_map(jAtom_map))
 
             dyn_mat_qsym(iAlpha_map+1:iAlpha_map+3,iBeta_map+1:iBeta_map+3) &
           = dyn_mat_qsym(iAlpha_map+1:iAlpha_map+3,iBeta_map+1:iBeta_map+3) + phase_fac*temp_mat_1
