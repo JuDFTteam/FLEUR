@@ -1,0 +1,221 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
+MODULE m_types_jointdos
+   use m_judft
+   use m_types_eigdos
+   implicit none
+   PRIVATE
+   public t_jointdos
+   TYPE, extends(t_eigdos):: t_jointDOS
+      REAL, ALLOCATABLE :: qis(:, :, :)  !i,kpt,spin
+      REAL, ALLOCATABLE :: qal(:, :, :, :, :) !l,ndos,i,kpt,spin
+      REAL, ALLOCATABLE :: qTot(:, :, :)  !i,kpt,spin
+      CHARACTER(LEN=20), ALLOCATABLE :: weight_names(:)
+
+   CONTAINS
+      PROCEDURE, PASS :: init => jointDOS_init
+      PROCEDURE      :: get_weight_eig
+      PROCEDURE      :: get_num_weights
+      PROCEDURE      :: get_weight_name
+      procedure      :: postprocessing
+   END TYPE t_jointDOS
+CONTAINS
+   subroutine postprocessing(this, noco,nococonv, banddos, alldos, ef)
+      use m_types_atoms
+      use m_types_noco
+      use m_types_nococonv
+      use m_types_banddos
+      use m_types_dos
+      class(t_jointDOS), intent(inout):: this
+      class(t_eigdos_list), intent(in),optional    :: alldos(:)
+      TYPE(t_noco), INTENT(IN)        :: noco
+      TYPE(t_nococonv), INTENT(IN)    :: nococonv
+      TYPE(t_banddos), INTENT(IN)    :: banddos
+      real, intent(in),optional       :: ef
+      type(t_dos),pointer :: dos 
+      integer :: ikpt, ispin, jspin, ii, ntype, l, i, j, iispin,n 
+      
+      !find a DOS of type t_dos from the given alldos for the postprocessing
+      dosloop:DO n=1,size(alldos)
+         if (.not. associated(alldos(n)%p)) cycle
+         associate(d=>alldos(n)%p)
+         select type(d)
+            type is (t_dos)
+               dos=>d
+               exit dosloop
+         end select
+         end associate
+      end do dosloop
+      if (n>size(alldos)) then
+         call judft_error("No eigdos of type t_dos found for jointDOS postprocessing")
+      end if
+
+      !calculate the eigdos from the DOS
+      DO ikpt=1,size(dos%qis,2)
+         if (size(dos%qis,3)<3) then !collinear case
+            DO ispin=1,size(dos%qis,3)
+               DO jspin=1,ispin
+                  ii=0
+                  DO i=1,size(dos%qis,1)
+                     if (dos%eig(i,ikpt,ispin) < ef) then  !valid initial state
+                        DO j=1,size(dos%qis,1)
+                           if (dos%eig(j,ikpt,jspin) > ef) then !valid final state
+                              ii=ii+1
+                              if (ispin==jspin) then
+                                 iispin=ispin
+                              else
+                                 iispin=3
+                              end if   
+                              this%eig(ii,ikpt,iispin)=this%eig(ii,ikpt,iispin)+dos%eig(j,ikpt,jspin)-dos%eig(i,ikpt,ispin)
+                              !add contribution to jointDOS
+                              this%qis(ii,ikpt,iispin)=this%qis(ii,ikpt,iispin)+dos%qis(i,ikpt,ispin)*dos%qis(j,ikpt,jspin)
+                              this%qTot(ii,ikpt,iispin)=this%qTot(ii,ikpt,iispin)+dos%qTot(i,ikpt,ispin)*dos%qTot(j,ikpt,jspin)
+                              DO ntype=1,size(banddos%dos_typelist)
+                                 DO l=0,3
+                                    this%qal(l,ntype,ii,ikpt,iispin)=this%qal(l,ntype,ii,ikpt,iispin)+&
+                                                      dos%qal(l,ntype,i,ikpt,ispin)*dos%qal(l,ntype,j,ikpt,jspin)
+                                 ENDDO
+                              ENDDO
+                           endif
+                        enddo
+                     endif  
+                  enddo
+               enddo   
+            enddo   
+         else  !noncollinear case
+            ii=0
+            DO i=1,size(dos%qis,1)  
+               if (dos%eig(i,ikpt,1) < ef) then !valid initial state
+                  if (dos%eig(i,ikpt,1) >ef) then !valid final state
+                     ii=ii+1
+                     this%eig(ii,ikpt,:)=dos%eig(j,ikpt,1)-dos%eig(i,ikpt,1)
+                     !add contribution to jointDOS (charge and magnetisation components)
+                     this%qis(ii,ikpt,1:2)=this%qis(ii,ikpt,1:2)+charge_mag(dos%qis(i,ikpt,:),dos%qis(j,ikpt,:))
+                     this%qTot(ii,ikpt,1:2)=this%qTot(ii,ikpt,1:2)+charge_mag(dos%qTot(i,ikpt,:),dos%qTot(j,ikpt,:))
+                     DO ntype=1,size(banddos%dos_typelist)
+                        DO l=0,3
+                           this%qal(l,ntype,ii,ikpt,1:2)=this%qal(l,ntype,ii,ikpt,1:2)+&
+                                             charge_mag(dos%qal(l,ntype,i,ikpt,:),dos%qal(l,ntype,j,ikpt,:))
+                        ENDDO
+                     ENDDO
+                  endif
+               end if
+            ENDDO
+         ENDIF
+      ENDDO
+   
+   contains 
+       function charge_mag(vec1,vec2)
+          real :: charge_mag(2)
+          real, intent(in):: vec1(:)
+          real, intent(in):: vec2(:)
+          real :: rho1,mz1,rho2,mz2
+          !distribution into charge and magnetisation parts (mz only, other components are directly given in density matrix vector), factor 1/2 included later
+          rho1=vec1(1)+vec1(2)
+          mz1=vec1(1)-vec1(2)
+          rho2=vec2(1)+vec2(2)
+          mz2=vec2(1)-vec2(2)
+          charge_mag(1)= 0.25*rho1*rho2  !charge part
+          charge_mag(2)= 0.25*mz1*mz2+vec1(3)*vec2(3)+vec1(4)*vec2(4) !mag part
+      end function charge_mag    
+   end subroutine postprocessing
+   
+   
+   integer function get_num_weights(this)
+      class(t_jointDOS), intent(in):: this
+      get_num_weights = 0
+      if (allocated(this%weight_names)) get_num_weights = size(this%weight_names)
+   end function
+
+   character(len=20) function get_weight_name(this, id) !TODO
+      class(t_jointDOS), intent(in):: this
+      INTEGER, intent(in)         :: id
+      if (.not. allocated(this%weight_names)) call judft_error("No weight names in t_jointDOS")
+      if (id > size(this%weight_names)) call judft_error("Not enough weight names in t_jointDOS")
+      get_weight_name = this%weight_names(id)
+   end function
+
+   integer function get_num_spins(this)
+      class(t_jointDOS), intent(in):: this
+      get_num_spins = size(this%qis, 3)
+   end function
+
+   function get_weight_eig(this, id)
+      class(t_jointDOS), intent(in):: this
+      INTEGER, intent(in)     :: id
+      real, allocatable:: get_weight_eig(:, :, :)
+
+      INTEGER :: ind, l, ntype, i
+      allocate (get_weight_eig, mold=this%qis)
+
+      if (id == 1) THEN
+         get_weight_eig = this%qTot
+         if (all(this%qis == 0.0)) then
+            get_weight_eig = 1.0
+         END IF
+      END IF
+      if (id == 2) THEN
+         get_weight_eig = this%qis
+         if (all(get_weight_eig == 0.0)) then
+            !No INT dos calculated so far...
+            get_weight_eig = 1.0
+            DO ntype = 1, size(this%qal, 2)
+               DO l = 0, 3
+                  get_weight_eig = get_weight_eig - this%qal(l, ntype, :, :, :)
+               END DO
+            END DO
+         end if
+      end if
+      ind = 2
+      DO ntype = 1, size(this%qal, 2)
+         DO l = 0, 3
+            ind = ind + 1
+            if (ind == id) get_weight_eig = this%qal(l, ntype, :, :, :)
+         END DO
+      END DO
+   end function
+
+   SUBROUTINE jointDOS_init(thisDOS, input, atoms, kpts, banddos, l_noco, eig)
+      USE m_types_input
+      USE m_types_atoms
+      USE m_types_banddos
+      USE m_types_kpts
+      USE m_types_noco
+      IMPLICIT NONE
+      CLASS(t_jointDOS), INTENT(INOUT) :: thisDOS
+      TYPE(t_input), INTENT(IN)    :: input
+      TYPE(t_atoms), INTENT(IN)    :: atoms
+      LOGICAL, INTENT(IN)          :: l_noco
+      TYPE(t_kpts), INTENT(IN)    :: kpts
+      TYPE(t_banddos), INTENT(IN)    :: banddos
+      real, intent(in)                       :: eig(:, :, :)
+
+      INTEGER :: ntype, l, i, ind,ispin
+      character :: spdfg(0:4) = ["s", "p", "d", "f", "g"]
+      thisDOS%name_of_dos = "jointDOS"
+      thisDOS%eig = eig
+      ispin= merge(2,input%jspins,l_noco)
+      ALLOCATE (thisDOS%qis((input%neig*input%neig)/4+1, kpts%nkpt, ispin))
+      ALLOCATE (thisDOS%qal(0:3, size(banddos%dos_typelist), (input%neig*input%neig)/4+1, kpts%nkpt,ispin))
+      ALLOCATE (thisDOS%qTot((input%neig*input%neig)/4+1, kpts%nkpt, ispin))
+
+      thisDOS%qis = 0.0
+      thisDOS%qal = 0.0
+      thisDOS%qTot = 0.0
+
+      allocate (thisDOS%weight_names(3 + 4*size(banddos%dos_typelist)))
+      thisDOS%weight_names(1) = "Total"
+      thisDOS%weight_names(2) = "INT"
+      ind = 2
+      DO ntype = 1, size(banddos%dos_typelist)
+         DO l = 0, 3
+            ind = ind + 1
+            write (thisDOS%weight_names(ind), "(a,i0,a)") "MT:", banddos%dos_typelist(ntype), spdfg(l)
+         END DO
+      END DO
+
+   END SUBROUTINE jointDOS_init
+end MODULE m_types_jointdos

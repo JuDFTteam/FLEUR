@@ -29,7 +29,6 @@ include(src/fleur/diagonalization/CMakeLists.txt)
 include(src/fleur/eigen_soc/CMakeLists.txt)
 include(src/fleur/math/CMakeLists.txt)
 include(src/fleur/fft/CMakeLists.txt)
-include(src/fleur/propcalc/orbdep/CMakeLists.txt)
 include(src/fleur/propcalc/CMakeLists.txt)
 include(src/fleur/cdn_mt/CMakeLists.txt)
 include(src/fleur/propcalc/dos/CMakeLists.txt)
@@ -49,8 +48,7 @@ include(src/fleur/rdmft/CMakeLists.txt)
 include(src/fleur/greensf/CMakeLists.txt)
 include(src/fleur/tetra/CMakeLists.txt)
 include(src/fleur/juphon/CMakeLists.txt)
-
-include(docs/CMakeLists.txt)
+include(src/fleur/mt_cdn/CMakeLists.txt)
 
 
 set(fleur_SRC ${fleur_F90} ${fleur_F77})

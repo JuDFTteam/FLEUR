@@ -1,4 +1,10 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_qmtsl
+   implicit none
 CONTAINS
   !***********************************************************************
   ! Calculates the mt-spheres contribution to the layer charge for states
@@ -8,144 +14,52 @@ CONTAINS
   !
   !***********************************************************************
   !
-  SUBROUTINE q_mt_sl(jsp,atoms,sym,nobd,ev_list,ikpt,ne,skip_t,noccbd,eigVecCoeffs,usdus,slab)
+  SUBROUTINE q_mt_sl(itype,jsp,ikpt,atoms,ev_list,ne,abc,radfun,slab)
     USE m_types_setup
-    USE m_types_usdus
-    USE m_types_cdnval, ONLY: t_eigVecCoeffs
+    USE m_types_abc
+    USE m_types_radfun
     USE m_types_slab
     IMPLICIT NONE
-    TYPE(t_usdus),INTENT(IN)        :: usdus
     TYPE(t_atoms),INTENT(IN)        :: atoms
-    TYPE(t_sym),INTENT(IN)          :: sym
-    TYPE(t_eigVecCoeffs),INTENT(IN) :: eigVecCoeffs
+    TYPE(t_abc),INTENT(IN)          :: abc
     TYPE(t_slab), INTENT(INOUT)     :: slab
+    TYPE(t_radfun), INTENT(IN)      :: radfun
     !     ..
     !     .. Scalar Arguments ..
-    INTEGER, INTENT (IN) :: nobd,jsp
-    INTEGER, INTENT (IN) :: ne,ikpt ,skip_t,noccbd
+    INTEGER, INTENT (IN) :: jsp,itype
+    INTEGER, INTENT (IN) :: ne,ikpt 
 
-    INTEGER, INTENT (IN) :: ev_list(nobd)
+    INTEGER, INTENT (IN) :: ev_list(:)
 
     !     ..
     !     .. Local Scalars ..
-    INTEGER i,l,lo ,natom,nn,ntyp,nt1,nt2,m
-    INTEGER lm,n,ll1,ipol,icore,index,nl
-    REAL fac,sabd,ss,qq
-    COMPLEX suma,sumb,sumab,sumba
-    !     ..
-    !     .. Local Arrays ..
-    REAL, ALLOCATABLE :: qlo(:,:,:),qmt(:,:),qmtlo(:,:)
-    REAL, ALLOCATABLE :: qaclo(:,:,:),qbclo(:,:,:),qmttot(:,:)
-    !     ..
-    !     .. Intrinsic Functions ..
-    INTRINSIC conjg,cmplx
+    INTEGER:: i,l,natom,m,j,jj
+    INTEGER:: lm,ll1,nl
+    REAL :: sabd
+    
 
 
-    ALLOCATE ( qlo(nobd,atoms%nlod,atoms%ntype),qmt(atoms%ntype,SIZE(slab%qmtsl,2)) )
-    ALLOCATE ( qaclo(nobd,atoms%nlod,atoms%ntype),qbclo(nobd,atoms%nlod,atoms%ntype) )
-    ALLOCATE ( qmttot(atoms%ntype,SIZE(slab%qmtsl,2)),qmtlo(atoms%ntype,SIZE(slab%qmtsl,2)) )
-    !
-    !--->    l-decomposed density for each valence state
-    !
-    !         DO 140 i = (skip_t+1),ne    ! this I need for all states
-    DO i = 1,ne              ! skip in next loop
-       DO n = 1,atoms%ntype
-          nt1 = atoms%firstAtom(n)
-          fac = 1./atoms%neq(n)
-          nt2 = nt1 + atoms%neq(n) - 1
-          sabd = 0.0
-          DO l = 0,atoms%lmax(n)
-             suma = CMPLX(0.,0.)
-             sumb = CMPLX(0.,0.)
-             ll1 = l* (l+1)
-             DO m = -l,l
-                lm = ll1 + m
-                DO natom = nt1,nt2
-                   suma = suma + eigVecCoeffs%abcof(i,lm,0,natom,jsp)*CONJG(eigVecCoeffs%abcof(i,lm,0,natom,jsp))
-                   sumb = sumb + eigVecCoeffs%abcof(i,lm,1,natom,jsp)*CONJG(eigVecCoeffs%abcof(i,lm,1,natom,jsp))
-                ENDDO
-             enddo
-             ss = suma + sumb*usdus%ddn(l,n,jsp)
-             sabd = sabd + ss
-          enddo
-          qmt(n,i) = sabd*fac
-       enddo
-    enddo
-    !
-    !---> initialize qlo
-    !
-    qlo=0.0
-    qaclo=0.0
-    qbclo=0.0
-    !
-    !---> density for each local orbital and valence state
-    !
-    natom = 0
-    DO natom = 1, atoms%nat
-       ntyp = atoms%itype(natom)
-       DO lo = 1,atoms%nlo(ntyp)
-          l = atoms%llo(lo,ntyp)
-          ll1 = l* (l+1)
-          DO i = 1,ne
-             DO m = -l,l
-                lm = ll1 + m
-                qlo(i,lo,ntyp) = qlo(i,lo,ntyp) +&
-                     eigVecCoeffs%ccof(m,i,lo,natom,jsp)*CONJG(eigVecCoeffs%ccof(m,i,lo,natom,jsp))
-                qbclo(i,lo,ntyp) = qbclo(i,lo,ntyp) +&
-                     eigVecCoeffs%abcof(i,lm,1,natom,jsp)*CONJG(eigVecCoeffs%ccof(m,i,lo,natom,jsp)) +&
-                     eigVecCoeffs%ccof(m,i,lo,natom,jsp)*CONJG(eigVecCoeffs%abcof(i,lm,1,natom,jsp))
-                qaclo(i,lo,ntyp) = qaclo(i,lo,ntyp) +&
-                     eigVecCoeffs%abcof(i,lm,0,natom,jsp)*CONJG(eigVecCoeffs%ccof(m,i,lo,natom,jsp)) +&
-                     eigVecCoeffs%ccof(m,i,lo,natom,jsp)*CONJG(eigVecCoeffs%abcof(i,lm,0,natom,jsp))
-             ENDDO
-          ENDDO
-       ENDDO
-    ENDDO
-    DO ntyp = 1,atoms%ntype
-       natom = atoms%firstAtom(ntyp)
-       IF (sym%invsat(natom).EQ.1) THEN
-          DO lo = 1,atoms%nlo(ntyp)
-             DO i = 1,ne
-                qlo(i,lo,ntyp) = 2*qlo(i,lo,ntyp)
-             ENDDO
-          ENDDO
-       ENDIF
-    ENDDO
-    !
-    !--->  l-decomposed density for each valence state
-    !--->      ( a contribution from local orbitals)
-    !--->                       and
-    !--->  total  l-decomposed density for each valence state
-    !
-    DO i = 1,ne
-       DO ntyp = 1,atoms%ntype
-          fac = 1.0/atoms%neq(ntyp)
-          qq = 0.0
-          DO lo = 1,atoms%nlo(ntyp)
-             qq = qq + qlo(i,lo,ntyp)*usdus%uloulopn(lo,lo,ntyp,jsp) +&
-                  qaclo(i,lo,ntyp)*usdus%uulon(lo,ntyp,jsp)     +&
-                  qbclo(i,lo,ntyp)*usdus%dulon(lo,ntyp,jsp)
-          ENDDO
-          qmtlo(ntyp,i) = qq*fac
-          qmttot(ntyp,i) = qmt(ntyp,i) + qmtlo(ntyp,i)
-       ENDDO
-    ENDDO
-    !
-    DO i = 1,ne
+    
+    DO i = 1,ne  
+      sabd = 0.0  !sum over l,m,natoms,j,jj
+      DO l = 0,atoms%lmax(itype)
+         ll1 = l* (l+1)
+         DO m = -l,l
+            lm = ll1 + m
+            DO natom = 1, atoms%neq(itype)
+            DO j = 1, radfun%n_r(l)
+               DO jj = 1, radfun%n_r(l)
+                  sabd = sabd + abc%cof(i, lm, j, natom)*CONJG(abc%cof(i, lm, jj, natom))*radfun%integral(j, jj, l, jsp, jsp)
+               END DO
+            END DO
+            ENDDO
+         enddo
+      enddo
+      !Map to slabs
        DO nl = 1,slab%nsl
-          qq = 0.0
-          DO ntyp = 1,atoms%ntype
-             qq = qq + qmttot(ntyp,i)*slab%nmtsl(ntyp,nl)
-          ENDDO
-          slab%qmtsl(nl,ev_list(i),ikpt,jsp) = qq
+          slab%qmtsl(nl,ev_list(i),ikpt,jsp) = sabd/atoms%neq(itype)*slab%nmtsl(itype,nl)
        ENDDO
     ENDDO
-    !        DO ntyp = 1,ntype
-    !        write(*,*) qmttot(ntyp,1)
-    !        write(*,*) (nmtsl(ntyp,nl),nl=1,nsl)
-    !        ENDDO
-    !
-    DEALLOCATE ( qlo,qmt,qmtlo,qaclo,qbclo,qmttot )
-
+    
   END SUBROUTINE q_mt_sl
 END MODULE m_qmtsl

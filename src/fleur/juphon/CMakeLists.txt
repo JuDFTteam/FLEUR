@@ -18,8 +18,6 @@ src/fleur/juphon/dfpt_hsvac.F90
 src/fleur/juphon/dfpt_tlmplm.F90
 src/fleur/juphon/dfpt_eigen_hssetup.F90
 src/fleur/juphon/matrix_pref.F90
-src/fleur/juphon/dfpt_rhomt.f90
-src/fleur/juphon/dfpt_rhonmt.f90
 src/fleur/juphon/dfpt_cdnval.F90
 src/fleur/juphon/dfpt_cdngen.F90
 src/fleur/juphon/dfpt_fermie.F90

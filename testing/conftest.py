@@ -1095,8 +1095,11 @@ def check_all_outxml(test_logger,check_outxml):
             ["mtCharge","total",-1,0.001],
             ["state","energy",-1,0.0001], #check core state
             ["densityConvergence/spinDensity","distance",-1,0.001],
-            ["magneticMoment","moment",-1.,0.001]
-            ]
+            ["magneticMoment","moment",-1.,0.001],
+            ["forceTotal","F_x",-1,0.001],
+            ["forceTotal","F_y",-1,0.001],
+            ["forceTotal","F_z",-1,0.001]
+        ]
         return check_outxml(filepath,reffilepath,checks,skip_noref=True)
     return _check_all_outxml        
 
