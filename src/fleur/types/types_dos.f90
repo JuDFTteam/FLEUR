@@ -201,12 +201,21 @@ CONTAINS
       thisDOS%l_initialized = .TRUE.
       thisDOS%name_of_dos = "Local"
       thisDOS%neq = atoms%neq(banddos%dos_typelist)
-      thisDOS%eig = eig
       ispin= merge(4,input%jspins,l_noco)
       ALLOCATE (thisDOS%jsym(input%neig, kpts%nkpt, ispin))
       ALLOCATE (thisDOS%qis(input%neig, kpts%nkpt, ispin))
       ALLOCATE (thisDOS%qal(0:3, size(banddos%dos_typelist), input%neig, kpts%nkpt,ispin))
       ALLOCATE (thisDOS%qTot(input%neig, kpts%nkpt, ispin))
+      if (l_noco) then
+         Allocate (thisDOS%eig(input%neig, kpts%nkpt, 4))
+         thisDOS%eig (:, :, 1) = eig(:, :, 1)
+         thisDOS%eig (:, :, 2) = eig(:, :, 1)
+         thisDOS%eig (:, :, 3) = eig(:, :, 1)
+         thisDOS%eig (:, :, 4) = eig(:, :, 1)
+      else 
+         thisDOS%eig = eig
+      end if
+
 
       thisDOS%jsym = 0
       thisDOS%qis = 0.0

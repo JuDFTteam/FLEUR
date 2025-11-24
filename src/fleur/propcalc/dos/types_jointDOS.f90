@@ -89,19 +89,22 @@ CONTAINS
             ii=0
             DO i=1,size(dos%qis,1)  
                if (dos%eig(i,ikpt,1) < ef) then !valid initial state
-                  if (dos%eig(i,ikpt,1) >ef) then !valid final state
-                     ii=ii+1
-                     this%eig(ii,ikpt,:)=dos%eig(j,ikpt,1)-dos%eig(i,ikpt,1)
-                     !add contribution to jointDOS (charge and magnetisation components)
-                     this%qis(ii,ikpt,1:2)=this%qis(ii,ikpt,1:2)+charge_mag(dos%qis(i,ikpt,:),dos%qis(j,ikpt,:))
-                     this%qTot(ii,ikpt,1:2)=this%qTot(ii,ikpt,1:2)+charge_mag(dos%qTot(i,ikpt,:),dos%qTot(j,ikpt,:))
-                     DO ntype=1,size(banddos%dos_typelist)
-                        DO l=0,3
-                           this%qal(l,ntype,ii,ikpt,1:2)=this%qal(l,ntype,ii,ikpt,1:2)+&
-                                             charge_mag(dos%qal(l,ntype,i,ikpt,:),dos%qal(l,ntype,j,ikpt,:))
+                  DO j=i,size(dos%qis,1)
+                     if (dos%eig(j,ikpt,1) >ef) then !valid final state
+                        ii=ii+1
+                        this%eig(ii,ikpt,:)=dos%eig(j,ikpt,1)-dos%eig(i,ikpt,1)
+                        print *, "jDOS:",ii,"=", i, "->", j,this%eig(ii,ikpt,1)
+                        !add contribution to jointDOS (charge and magnetisation components)
+                        this%qis(ii,ikpt,1:2)=this%qis(ii,ikpt,1:2)+charge_mag(dos%qis(i,ikpt,:),dos%qis(j,ikpt,:))
+                        this%qTot(ii,ikpt,1:2)=this%qTot(ii,ikpt,1:2)+charge_mag(dos%qTot(i,ikpt,:),dos%qTot(j,ikpt,:))
+                        DO ntype=1,size(banddos%dos_typelist)
+                           DO l=0,3
+                              this%qal(l,ntype,ii,ikpt,1:2)=this%qal(l,ntype,ii,ikpt,1:2)+&
+                                                charge_mag(dos%qal(l,ntype,i,ikpt,:),dos%qal(l,ntype,j,ikpt,:))
+                           ENDDO
                         ENDDO
-                     ENDDO
-                  endif
+                     endif
+                  enddo
                end if
             ENDDO
          ENDIF
@@ -196,17 +199,17 @@ CONTAINS
       INTEGER :: ntype, l, i, ind,ispin
       character :: spdfg(0:4) = ["s", "p", "d", "f", "g"]
       thisDOS%name_of_dos = "jointDOS"
-      thisDOS%eig = eig
+      
       ispin= merge(2,input%jspins,l_noco)
       ALLOCATE (thisDOS%qis((input%neig*input%neig)/4+1, kpts%nkpt, ispin))
       ALLOCATE (thisDOS%qal(0:3, size(banddos%dos_typelist), (input%neig*input%neig)/4+1, kpts%nkpt,ispin))
       ALLOCATE (thisDOS%qTot((input%neig*input%neig)/4+1, kpts%nkpt, ispin))
-
+      ALLOCATE (thisDOS%eig((input%neig*input%neig)/4+1, kpts%nkpt, ispin))
       thisDOS%qis = 0.0
       thisDOS%qal = 0.0
       thisDOS%qTot = 0.0
 
-      allocate (thisDOS%weight_names(3 + 4*size(banddos%dos_typelist)))
+      allocate (thisDOS%weight_names(2 + 4*size(banddos%dos_typelist)))
       thisDOS%weight_names(1) = "Total"
       thisDOS%weight_names(2) = "INT"
       ind = 2
