@@ -1051,6 +1051,8 @@ def check_outxml(test_logger):
             attrib=check[1]
             index=check[2]
             tol=check[3]
+            vector=check[4]
+                            
             try:            
                 e2=refxml.findall(".//"+element)[index]
                 if attrib:
@@ -1066,13 +1068,32 @@ def check_outxml(test_logger):
                 except:
                     test_logger.error(f"Element,index,attrib not found: {element} {index} {attrib} in out.xml")
                     return False
-                if abs(float(e1)-float(e2))>tol:
-                    test_logger.info(f"Check failed for {element} {index} {attrib}")
-                    test_logger.info(f"Value: {e1}  Reference: {e2} Tol: {tol}")
-                    ok=False
+                if vector == "list":
+                    vals_ref = list(map(float, e2.text.split()))   
+                    vals = list(map(float, e1.text.split()))   
+                    
+                    if len(vals_ref) != len(vals):
+                        test_logger.error(f"Length mismatch for {element}: {len(vals)} vs {len(vals_ref)}")
+                        ok = False
+                        continue
+
+                    for iter in range(len(vals)):
+                        freqref = vals_ref[iter]
+                        freq    = vals[iter]
+                        if abs(freqref-freq) > tol:
+                            test_logger.info(f"Check failed for {element}[{iter}]")
+                            test_logger.info(f"Value: {freq}  Reference: {freqref}  Tol: {tol}")
+                            ok=False
+                    if ok:
+                        test_logger.info(f"Check passed for {element} text list")     
                 else:
-                    test_logger.info(f"Check passed for {element} {index} {attrib}")           
-        return ok
+                    if abs(float(e1)-float(e2))>tol:
+                        test_logger.info(f"Check failed for {element} {index} {attrib}")
+                        test_logger.info(f"Value: {e1}  Reference: {e2} Tol: {tol}")
+                        ok=False
+                    else:
+                        test_logger.info(f"Check passed for {element} {index} {attrib}")           
+        return ok 
     return _check_outxml
 
 @pytest.fixture
@@ -1087,18 +1108,20 @@ def check_all_outxml(test_logger,check_outxml):
         from xml.etree import ElementTree
         refxml=ElementTree.parse(reffilepath)
         checks=[
-            ["FermiEnergy","value",-1,0.0001],
-            ["bandgap","value",-1,0.001],
-            ["totalEnergy","value",-1,0.0001],
-            ["sumValenceSingleParticleEnergies","value",-1,0.0001],
-            ["chargeDensity","distance",-1,0.001], #last spind only
-            ["mtCharge","total",-1,0.001],
-            ["state","energy",-1,0.0001], #check core state
-            ["densityConvergence/spinDensity","distance",-1,0.001],
-            ["magneticMoment","moment",-1.,0.001],
-            ["forceTotal","F_x",-1,0.001],
-            ["forceTotal","F_y",-1,0.001],
-            ["forceTotal","F_z",-1,0.001]
+            ["FermiEnergy","value",-1,0.0001,None],
+            ["bandgap","value",-1,0.001,None],
+            ["totalEnergy","value",-1,0.0001,None],
+            ["sumValenceSingleParticleEnergies","value",-1,0.0001,None],
+            ["chargeDensity","distance",-1,0.001,None], #last spind only
+            ["mtCharge","total",-1,0.001,None],
+            ["state","energy",-1,0.0001,None], #check core state
+            ["densityConvergence/spinDensity","distance",-1,0.001,None],
+            ["magneticMoment","moment",-1.,0.001,None],
+            ["forceTotal","F_x",-1,0.001,None],
+            ["forceTotal","F_y",-1,0.001,None],
+            ["forceTotal","F_z",-1,0.001,None],
+            ["frequencies",None,-1,0.001,"list"], 
+            ["dielconst",None,-1,0.001,"list"] 
         ]
         return check_outxml(filepath,reffilepath,checks,skip_noref=True)
     return _check_all_outxml        
