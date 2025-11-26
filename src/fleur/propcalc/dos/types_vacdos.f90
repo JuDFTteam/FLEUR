@@ -109,6 +109,7 @@ SUBROUTINE dos_init(thisDOS,input,atoms,kpts,banddos,eig)
   character :: spdfg(0:4)=["s","p","d","f","g"]
   thisDOS%name_of_dos="Vacuum"
   thisDOS%eig=eig
+  thisDOS%l_initialized=.true.
   ALLOCATE(thisDOS%qvac(input%neig,2,kpts%nkpt,input%jspins))
   ALLOCATE(thisDOS%qvlay(input%neig,banddos%layers,2,kpts%nkpt,input%jspins))
   ALLOCATE(thisDOS%qstars(banddos%nstars,input%neig,banddos%layers,2,kpts%nkpt,input%jspins))
