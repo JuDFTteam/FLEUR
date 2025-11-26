@@ -123,6 +123,10 @@ CONTAINS
           mz2=vec2(1)-vec2(2)
           charge_mag(1)= 0.25*rho1*rho2  !charge part
           charge_mag(2)= 0.25*mz1*mz2+vec1(3)*vec2(3)+vec1(4)*vec2(4) !mag part
+          !Convert to sum and difference 
+          rho1=charge_mag(1)
+          charge_mag(1) = 0.5*(rho1+charge_mag(2))
+          charge_mag(2) = 0.5*(rho1-charge_mag(2))
       end function charge_mag    
    end subroutine postprocessing
    
