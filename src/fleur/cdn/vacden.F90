@@ -518,7 +518,7 @@ CONTAINS
                      ba=ba + we(n)*CONJG(bc(ikG,n,ispin))*ac(ikG,n,ispin)
                      qout = REAL(CONJG(ac(ikG,n,ispin))*ac(ikG,n,ispin)+tei(ikG,ispin)*CONJG(bc(ikG,n,ispin))*bc(ikG,n,ispin))
                      if (vacdos%l_initialized) vacdos%qvac(ev_list(n),ivac,ikpt,ispin) = vacdos%qvac(ev_list(n),ivac,ikpt,ispin) + qout*cell%area
-                     dos%qTot(ev_list(n),ikpt,ispin) = dos%qTot(ev_list(n),ikpt,ispin) + qout*cell%area
+                     if (dos%l_initialized) dos%qTot(ev_list(n),ikpt,ispin) = dos%qTot(ev_list(n),ikpt,ispin) + qout*cell%area
                   END DO
                   DO jz = 1,vacuum%nmz
                      ui = u(jz,ikG,ispin)
