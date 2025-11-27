@@ -1,0 +1,467 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<fleurOutput fleurOutputVersion="0.38">
+   <programVersion version="fleur 41">
+      <compilationInfo date="2025-11-24T16:57:03" user="bornhake" host="iff1146" flag="-fiopenmp -qmkl  -assume byterecl -no-wrap-margin -I/Data/ias-1/bornhake/clean_code/build.local/external/libxc" link="lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64;/usr/lib64/libxml2.so"/>
+      <gitInfo version="MaX-R8.0-108-g325827233" branch="dfpt_reference" lastCommitHash="325827233f93b33dcb6cb005dbfcf7c7cb324c2c"/>
+      <targetComputerArchitectures>GEN</targetComputerArchitectures>
+      <precision type="DOUBLE"/>
+      <targetStructureClass> </targetStructureClass>
+      <additionalCompilerFlags>CPP_MPI             CPP_HDF</additionalCompilerFlags>
+      <programExecution commandLine="/Data/ias-1/bornhake/clean_code/build.local/fleur_MPI"/>
+   </programVersion>
+   <parallelSetup>
+      <openMP ompThreads="1"/>
+      <mpi mpiProcesses="1"/>
+      <mem memoryPerNode="32336496 kB"/>
+   </parallelSetup>
+   <startDateAndTime date="2025/11/26" time="16:39:42" zone="+0100"/>
+   <!-- Now follows a dump of the inp.xml file after evaluating the Schema -->
+  <fleurInput fleurInputVersion="0.39">
+     <comment>
+        Cu fcc
+     </comment>
+     <calculationSetup>
+        <cutoffs Kmax="3.0" Gmax="9.0" GmaxXC="9.0" numbands="0" Gmaxz="0.0"/>
+        <scfLoop itmax="4" minDistance="0.00001" maxIterBroyd="15" imix="Anderson" alpha="0.05" precondParam="0.0" spinf="2.0"/>
+        <coreElectrons ctail="F" frcor="F" kcrel="0" coretail_lmax="0" l_core_confpot="T"/>
+        <xcFunctional name="LibXC" relativisticCorrections="F">
+           <LibXCName exchange="LDA_X" correlation="LDA_C_VWN"/>
+        </xcFunctional>
+        <magnetism jspins="1" l_noco="F" l_ss="F" l_J="F" swsp="F" lflip="F" l_onlyMtStDen="F" fixed_moment="0.0"/>
+        <soc l_soc="F" theta="0.0" phi="0.0" spav="F" off="F" soc66="T"/>
+        <expertModes spex="0" secvar="F" vdW="NONE" vdW_tol="0.0005" pot8="F" eig66="F" lpr="0" isec1="99" warp_factor="1.0"/>
+        <geometryOptimization l_f="F" forcealpha="1.0" forcemix="BFGS" epsdisp="0.00001" epsforce="0.00001" f_level="-1" l_driftForce="F" qfix="0" force_converged="0.00001"/>
+        <ldaU l_linMix="F" mixParam="0.05" spinf="1.0" l_adjEnpara="F" l_spinoffd="F" l_nonsphDC="F" l_initialGuess="F"/>
+     </calculationSetup>
+     <cell>
+        <bzIntegration valenceElectrons="11.0" mode="hist" fermiSmearingEnergy="0.0005" l_bloechl="F" charge_excited="0.0" charge_shift="0.0">
+           <kPointListSelection listName="default-1"/>
+           <kPointLists>
+              <kPointList name="default-1" count="8" nx="2" ny="2" nz="2" type="mesh">
+                 <kPoint weight="     1.0000000000000" label="">   0.00/2.00    0.00/2.00    0.00/2.00</kPoint>
+                 <kPoint weight="     1.0000000000000" label="">   0.00/2.00    0.00/2.00    1.00/2.00</kPoint>
+                 <kPoint weight="     1.0000000000000" label="">   0.00/2.00    1.00/2.00    0.00/2.00</kPoint>
+                 <kPoint weight="     1.0000000000000" label="">   0.00/2.00    1.00/2.00    1.00/2.00</kPoint>
+                 <kPoint weight="     1.0000000000000" label="">   1.00/2.00    0.00/2.00    0.00/2.00</kPoint>
+                 <kPoint weight="     1.0000000000000" label="">   1.00/2.00    0.00/2.00    1.00/2.00</kPoint>
+                 <kPoint weight="     1.0000000000000" label="">   1.00/2.00    1.00/2.00    0.00/2.00</kPoint>
+                 <kPoint weight="     1.0000000000000" label="">   1.00/2.00    1.00/2.00    1.00/2.00</kPoint>
+              </kPointList>
+           </kPointLists>
+        </bzIntegration>
+        <symmetryOperations>
+           <symOp>
+              <row-1>1 0 0 .0000000000</row-1>
+              <row-2>0 1 0 .0000000000</row-2>
+              <row-3>0 0 1 .0000000000</row-3>
+           </symOp>
+        </symmetryOperations>
+        <bulkLattice scale="1.0">
+           <bravaisMatrix>
+              <row-1>    0.0000000000000000     3.3254484139999998     3.3254484139999998</row-1>
+              <row-2>    3.3254484139999998     0.0000000000000000     3.3254484139999998</row-2>
+              <row-3>    3.3254484139999998     3.3254484139999998     0.0000000000000000</row-3>
+           </bravaisMatrix>
+        </bulkLattice>
+     </cell>
+     <atomSpecies>
+        <species name="Cu-1" element="Cu" atomicNumber="29">
+           <mtSphere radius="2.29" gridPoints="981" logIncrement="0.013"/>
+           <atomicCutoffs lmax="6" lnonsphr="4"/>
+           <electronConfig flipSpins="F">
+              <coreConfig>(1s1/2) (2s1/2) (2p1/2) (2p3/2) (3s1/2) (3p1/2) (3p3/2)</coreConfig>
+              <valenceConfig>(4s1/2) (3d3/2) (3d5/2)</valenceConfig>
+              <stateOccupation state="(4s1/2)" spinUp="0.5" spinDown="0.5"/>
+           </electronConfig>
+           <energyParameters s="4" p="4" d="3" f="4"/>
+        </species>
+     </atomSpecies>
+     <atomGroups>
+        <atomGroup species="Cu-1">
+           <relPos label="                   1" wannier="F">.0000000000 .0000000000 .0000000000</relPos>
+           <force calculate="T" relaxXYZ="TTT"/>
+        </atomGroup>
+     </atomGroups>
+     <output dos="F" band="F" slice="F" coreSpec="F" wannier="F" eig66="F">
+        <checks vchk="F" cdinf="F" disp="F" sympsi="F"/>
+        <bandDOS minEnergy="-.5*Htr" maxEnergy="0.5*Htr" sigma="0.015" storeEVData="T" all_atoms="T" orbcomp="F" jDOS="F" numberPoints="1321"/>
+        <vacuumDOS vacdos="F" integ="F" star="F" nstars="0" locx1="0.0" locy1="0.0" locx2="0.0" locy2="0.0" nstm="0" tworkf="0.0"/>
+        <unfoldingBand unfoldBand="F" supercellX="1" supercellY="1" supercellZ="1" useOlap="T"/>
+        <plotting iplot="0" polar="F" format="1">
+           <plot TwoD="T" vec1="  1.0  0.0  0.0" vec2="  0.0  1.0  0.0" vec3="  0.0  0.0  1.0" zero="  0.0  0.0  0.0" file="plot" cartesian="F" grid="30 30 30" onlyMT="F" typeMT="0" vecField="F" edgesAllSides="T"/>
+        </plotting>
+        <chargeDensitySlicing numkpt="0" minEigenval="0.0" maxEigenval="0.0" nnne="0" pallst="F"/>
+        <specialOutput eonly="F" form66="F" bmt="F"/>
+        <magneticCircularDichroism mcd="F" energyLo="-10.0" energyUp="0.0"/>
+     </output>
+    <!-- We include the file relax.xml here to enable relaxations (see documentation) -->
+  
+  </fleurInput>
+   <!-- END of dump of the inp.xml file -->
+   <numericalParameters>
+      <atomsInCell nat="1" ntype="1" jmtd="981" n_u="0" n_hia="0" n_opc="0"/>
+      <basis nvd="40" lmaxd="6" nlotot="0"/>
+      <density ng3="893" ng2="0"/>
+      <bands numbands="9"/>
+      <volumes unitCell="73.5496552" interstitial="23.2465197">
+         <mtVolume atomType="1" mtRadius="2.29000000" mtVolume="50.30313549"/>
+      </volumes>
+      <kPointList weightScale="1.00000000" count="         8">
+         <kPoint weight="0.125000">0.000000            0.000000            0.000000</kPoint>
+         <kPoint weight="0.125000">0.000000            0.000000            0.500000</kPoint>
+         <kPoint weight="0.125000">0.000000            0.500000            0.000000</kPoint>
+         <kPoint weight="0.125000">0.000000            0.500000            0.500000</kPoint>
+         <kPoint weight="0.125000">0.500000            0.000000            0.000000</kPoint>
+         <kPoint weight="0.125000">0.500000            0.000000            0.500000</kPoint>
+         <kPoint weight="0.125000">0.500000            0.500000            0.000000</kPoint>
+         <kPoint weight="0.125000">0.500000            0.500000            0.500000</kPoint>
+      </kPointList>
+   </numericalParameters>
+   <scfLoop>
+      <iteration numberForCurrentRun="    1" overallNumber="    1">
+         <energyParameters units="Htr">
+            <atomicEP atomType="1" spin="1" branch="4s" branchLowest="-3.70" branchHighest="1.55" value="0.1471125338"/>
+            <atomicEP atomType="1" spin="1" branch="4p" branchLowest="-2.15" branchHighest="2.16" value="0.2951711961"/>
+            <atomicEP atomType="1" spin="1" branch="3d" branchLowest="-9.99" branchHighest="0.37" value="0.2659995351"/>
+            <atomicEP atomType="1" spin="1" branch="4f" branchLowest="-9.99" branchHighest="3.66" value="0.6203980834"/>
+         </energyParameters>
+         <eigenvalues>
+            <eigenvaluesAt spin="1" ikpt="1" k_x="0.00000000" k_y="0.00000000" k_z="0.00000000">
+                      -0.0561170786        0.2675047172        0.2675047176        0.2675047178        0.3097417350
+                       0.3097417351        1.1676216497        1.2906959869        1.2906959879
+            </eigenvaluesAt>
+            <eigenvaluesAt spin="1" ikpt="2" k_x="0.00000000" k_y="0.00000000" k_z="0.50000000">
+                       0.1478328568        0.2631112394        0.2631112397        0.2650193113        0.3318512514
+                       0.3318512538        0.5148831221        1.1077659129        1.1765511431
+            </eigenvaluesAt>
+            <eigenvaluesAt spin="1" ikpt="3" k_x="0.00000000" k_y="0.50000000" k_z="0.00000000">
+                       0.1478328562        0.2631112393        0.2631112398        0.2650193125        0.3318512514
+                       0.3318512526        0.5148831197        1.1077659128        1.1765511480
+            </eigenvaluesAt>
+            <eigenvaluesAt spin="1" ikpt="4" k_x="0.00000000" k_y="0.50000000" k_z="0.50000000">
+                       0.1598412594        0.1912886815        0.3295946192        0.3383070740        0.3383070752
+                       0.3649457211        0.6387555285        0.8165459216        0.8165459240
+            </eigenvaluesAt>
+            <eigenvaluesAt spin="1" ikpt="5" k_x="0.50000000" k_y="0.00000000" k_z="0.00000000">
+                       0.1478328562        0.2631112393        0.2631112398        0.2650193125        0.3318512514
+                       0.3318512526        0.5148831197        1.1077659128        1.1765511480
+            </eigenvaluesAt>
+            <eigenvaluesAt spin="1" ikpt="6" k_x="0.50000000" k_y="0.00000000" k_z="0.50000000">
+                       0.1598412594        0.1912886815        0.3295946192        0.3383070740        0.3383070752
+                       0.3649457211        0.6387555285        0.8165459216        0.8165459240
+            </eigenvaluesAt>
+            <eigenvaluesAt spin="1" ikpt="7" k_x="0.50000000" k_y="0.50000000" k_z="0.00000000">
+                       0.1598412594        0.1912886816        0.3295946189        0.3383070739        0.3383070740
+                       0.3649457222        0.6387555274        0.8165459232        0.8165459256
+            </eigenvaluesAt>
+            <eigenvaluesAt spin="1" ikpt="8" k_x="0.50000000" k_y="0.50000000" k_z="0.50000000">
+                       0.1478328579        0.2631112398        0.2631112398        0.2650193093        0.3318512530
+                       0.3318512542        0.5148831263        1.1077659127        1.1765511368
+            </eigenvaluesAt>
+         </eigenvalues>
+         <bandgap value="0.0000000000" units="eV"/>
+         <sumValenceSingleParticleEnergies value="2.8776745515" units="Htr"/>
+         <FermiEnergy value="0.3391117933" units="Htr"/>
+         <valenceDensity>
+            <mtCharges spin="1">
+               <mtCharge atomType="1" total="9.9832760" s="0.4256362" p="0.5810978" d="8.9523890" f="0.0095435"/>
+            </mtCharges>
+            <spinDependentCharge spin="1" total="11.0000000" interstitial="1.0167240" mtSpheres="9.9832760"/>
+            <totalCharge value="11.0000000000"/>
+         </valenceDensity>
+         <coreStates atomType="     1" atomicNumber=" 29" spin="1" kinEnergy="   1585.7743526878" eigValSum="   -944.4035907488" lostElectrons=" 0.005780">
+            <state n="1" l="0" j="0.5" energy="-324.0364026037" weight="1.0000000000"/>
+            <state n="2" l="0" j="0.5" energy="-38.4582544275" weight="1.0000000000"/>
+            <state n="2" l="1" j="0.5" energy="-33.6721293666" weight="1.0000000000"/>
+            <state n="2" l="1" j="1.5" energy="-32.9206882501" weight="2.0000000000"/>
+            <state n="3" l="0" j="0.5" energy="-3.7075036713" weight="1.0000000000"/>
+            <state n="3" l="1" j="0.5" energy="-2.2253828112" weight="1.0000000000"/>
+            <state n="3" l="1" j="1.5" energy="-2.1303729970" weight="2.0000000000"/>
+         </coreStates>
+         <allElectronCharges>
+            <spinDependentCharge spin="1" total="29.0000000" interstitial="1.0225044" mtSpheres="27.9774956"/>
+            <totalCharge value="29.0000000077"/>
+         </allElectronCharges>
+         <totalEnergy                                    value="    -1652.4213106331" units="Htr">
+            <sumOfEigenvalues                            value="     -941.5259161973">
+               <coreElectrons value="-944.4035907488"/>
+               <valenceElectrons value="2.8776745515"/>
+            </sumOfEigenvalues>
+            <densityCoulombPotentialIntegral value="-2536.0946517763"/>
+            <densityEffectivePotentialIntegral value="-2622.4584765930"/>
+            <chargeDenXCDenIntegral value="-65.2285228329"/>
+            <FockExchangeEnergyValence value="0.0000000000"/>
+            <FockExchangeEnergyCore value="0.0000000000"/>
+            <atomTypeDependentContributions atomType="1">
+               <electronNucleiInteractionDifferentMTs value="1991.6311362048"/>
+               <MadelungTerm value="-8.4468861029"/>
+            </atomTypeDependentContributions>
+            <tkbTimesEntropy value="0.0003379209"/>
+            <freeEnergy value="-1652.4216485540"/>
+            <extrapolationTo0K value="-1652.4214795936"/>
+         </totalEnergy>
+         <densityConvergence units="me/bohr^3">
+            <chargeDensity spin="1" distance="42.6351350860"/>
+         </densityConvergence>
+      </iteration>
+      <iteration numberForCurrentRun="    2" overallNumber="    2">
+         <energyParameters units="Htr">
+            <atomicEP atomType="1" spin="1" branch="4s" branchLowest="-3.73" branchHighest="1.55" value="0.1462622033"/>
+            <atomicEP atomType="1" spin="1" branch="4p" branchLowest="-2.18" branchHighest="2.15" value="0.2949556198"/>
+            <atomicEP atomType="1" spin="1" branch="3d" branchLowest="-9.99" branchHighest="0.35" value="0.2501639997"/>
+            <atomicEP atomType="1" spin="1" branch="4f" branchLowest="-9.99" branchHighest="3.65" value="0.6206577890"/>
+         </energyParameters>
+         <eigenvalues>
+            <eigenvaluesAt spin="1" ikpt="1" k_x="0.00000000" k_y="0.00000000" k_z="0.00000000">
+                      -0.0579782164        0.2497305649        0.2497305670        0.2497305670        0.2904834825
+                       0.2904834831        1.1672017220        1.2885532416        1.2885532427
+            </eigenvaluesAt>
+            <eigenvaluesAt spin="1" ikpt="2" k_x="0.00000000" k_y="0.00000000" k_z="0.50000000">
+                       0.1379507230        0.2456901603        0.2456901606        0.2633010698        0.3116363277
+                       0.3116363296        0.5020786029        1.1077717303        1.1729078059
+            </eigenvaluesAt>
+            <eigenvaluesAt spin="1" ikpt="3" k_x="0.00000000" k_y="0.50000000" k_z="0.00000000">
+                       0.1379507225        0.2456901599        0.2456901609        0.2633010709        0.3116363276
+                       0.3116363286        0.5020786006        1.1077717302        1.1729078104
+            </eigenvaluesAt>
+            <eigenvaluesAt spin="1" ikpt="4" k_x="0.00000000" k_y="0.50000000" k_z="0.50000000">
+                       0.1484564618        0.1766337612        0.3095107408        0.3177968254        0.3177968259
+                       0.3626921508        0.6285365501        0.8139096666        0.8139096731
+            </eigenvaluesAt>
+            <eigenvaluesAt spin="1" ikpt="5" k_x="0.50000000" k_y="0.00000000" k_z="0.00000000">
+                       0.1379507225        0.2456901599        0.2456901609        0.2633010709        0.3116363276
+                       0.3116363286        0.5020786006        1.1077717302        1.1729078104
+            </eigenvaluesAt>
+            <eigenvaluesAt spin="1" ikpt="6" k_x="0.50000000" k_y="0.00000000" k_z="0.50000000">
+                       0.1484564618        0.1766337612        0.3095107408        0.3177968254        0.3177968259
+                       0.3626921508        0.6285365501        0.8139096666        0.8139096731
+            </eigenvaluesAt>
+            <eigenvaluesAt spin="1" ikpt="7" k_x="0.50000000" k_y="0.50000000" k_z="0.00000000">
+                       0.1484564609        0.1766337598        0.3095107403        0.3177968253        0.3177968254
+                       0.3626921538        0.6285365479        0.8139096729        0.8139096750
+            </eigenvaluesAt>
+            <eigenvaluesAt spin="1" ikpt="8" k_x="0.50000000" k_y="0.50000000" k_z="0.50000000">
+                       0.1379507239        0.2456901604        0.2456901610        0.2633010680        0.3116363291
+                       0.3116363300        0.5020786067        1.1077717301        1.1729078002
+            </eigenvaluesAt>
+         </eigenvalues>
+         <bandgap value="0.0000000000" units="eV"/>
+         <sumValenceSingleParticleEnergies value="2.7071466371" units="Htr"/>
+         <FermiEnergy value="0.3186015445" units="Htr"/>
+         <valenceDensity>
+            <mtCharges spin="1">
+               <mtCharge atomType="1" total="10.0077985" s="0.4109830" p="0.5822161" d="8.9911679" f="0.0094865"/>
+            </mtCharges>
+            <spinDependentCharge spin="1" total="11.0000000" interstitial="0.9922015" mtSpheres="10.0077985"/>
+            <totalCharge value="11.0000000000"/>
+         </valenceDensity>
+         <coreStates atomType="     1" atomicNumber=" 29" spin="1" kinEnergy="   1586.1701793707" eigValSum="   -944.9720702162" lostElectrons=" 0.005596">
+            <state n="1" l="0" j="0.5" energy="-324.0757019295" weight="1.0000000000"/>
+            <state n="2" l="0" j="0.5" energy="-38.4961516086" weight="1.0000000000"/>
+            <state n="2" l="1" j="0.5" energy="-33.7104658718" weight="1.0000000000"/>
+            <state n="2" l="1" j="1.5" energy="-32.9589756047" weight="2.0000000000"/>
+            <state n="3" l="0" j="0.5" energy="-3.7312687764" weight="1.0000000000"/>
+            <state n="3" l="1" j="0.5" energy="-2.2483785478" weight="1.0000000000"/>
+            <state n="3" l="1" j="1.5" energy="-2.1530585822" weight="2.0000000000"/>
+         </coreStates>
+         <allElectronCharges>
+            <spinDependentCharge spin="1" total="29.0000000" interstitial="0.9977977" mtSpheres="28.0022023"/>
+            <totalCharge value="29.0000000075"/>
+         </allElectronCharges>
+         <totalEnergy                                    value="    -1652.4100736123" units="Htr">
+            <sumOfEigenvalues                            value="     -942.2649235791">
+               <coreElectrons value="-944.9720702162"/>
+               <valenceElectrons value="2.7071466371"/>
+            </sumOfEigenvalues>
+            <densityCoulombPotentialIntegral value="-2536.4834042099"/>
+            <densityEffectivePotentialIntegral value="-2622.7900139440"/>
+            <chargeDenXCDenIntegral value="-65.1853334149"/>
+            <FockExchangeEnergyValence value="0.0000000000"/>
+            <FockExchangeEnergyCore value="0.0000000000"/>
+            <atomTypeDependentContributions atomType="1">
+               <electronNucleiInteractionDifferentMTs value="1990.9206210994"/>
+               <MadelungTerm value="-8.5875073579"/>
+            </atomTypeDependentContributions>
+            <tkbTimesEntropy value="0.0003379209"/>
+            <freeEnergy value="-1652.4104115332"/>
+            <extrapolationTo0K value="-1652.4102425727"/>
+         </totalEnergy>
+         <densityConvergence units="me/bohr^3">
+            <chargeDensity spin="1" distance="34.2245946819"/>
+         </densityConvergence>
+      </iteration>
+      <iteration numberForCurrentRun="    3" overallNumber="    3">
+         <energyParameters units="Htr">
+            <atomicEP atomType="1" spin="1" branch="4s" branchLowest="-3.82" branchHighest="1.51" value="0.1424849541"/>
+            <atomicEP atomType="1" spin="1" branch="4p" branchLowest="-2.26" branchHighest="2.12" value="0.2936732095"/>
+            <atomicEP atomType="1" spin="1" branch="3d" branchLowest="-9.99" branchHighest="0.27" value="0.1872896768"/>
+            <atomicEP atomType="1" spin="1" branch="4f" branchLowest="-9.99" branchHighest="3.63" value="0.6211855108"/>
+         </energyParameters>
+         <eigenvalues>
+            <eigenvaluesAt spin="1" ikpt="1" k_x="0.00000000" k_y="0.00000000" k_z="0.00000000">
+                      -0.0654728993        0.1818163005        0.1818163260        0.1818163261        0.2177352228
+                       0.2177352385        1.1650126455        1.2798332453        1.2798332459
+            </eigenvaluesAt>
+            <eigenvaluesAt spin="1" ikpt="2" k_x="0.00000000" k_y="0.00000000" k_z="0.50000000">
+                       0.0963627302        0.1790085579        0.1790085725        0.2355757117        0.2355757127
+                       0.2565159008        0.4577994448        1.1074396250        1.1586285110
+            </eigenvaluesAt>
+            <eigenvaluesAt spin="1" ikpt="3" k_x="0.00000000" k_y="0.50000000" k_z="0.00000000">
+                       0.0963627299        0.1790085577        0.1790085727        0.2355757107        0.2355757130
+                       0.2565159015        0.4577994430        1.1074396250        1.1586285141
+            </eigenvaluesAt>
+            <eigenvaluesAt spin="1" ikpt="4" k_x="0.00000000" k_y="0.50000000" k_z="0.50000000">
+                       0.1019318296        0.1192890086        0.2339724720        0.2406835287        0.2406835326
+                       0.3538142959        0.5934308423        0.8035413031        0.8035414030
+            </eigenvaluesAt>
+            <eigenvaluesAt spin="1" ikpt="5" k_x="0.50000000" k_y="0.00000000" k_z="0.00000000">
+                       0.0963627299        0.1790085577        0.1790085727        0.2355757107        0.2355757130
+                       0.2565159015        0.4577994430        1.1074396250        1.1586285141
+            </eigenvaluesAt>
+            <eigenvaluesAt spin="1" ikpt="6" k_x="0.50000000" k_y="0.00000000" k_z="0.50000000">
+                       0.1019318296        0.1192890086        0.2339724720        0.2406835287        0.2406835326
+                       0.3538142959        0.5934308423        0.8035413031        0.8035414030
+            </eigenvaluesAt>
+            <eigenvaluesAt spin="1" ikpt="7" k_x="0.50000000" k_y="0.50000000" k_z="0.00000000">
+                       0.1019318091        0.1192889843        0.2339724729        0.2406835311        0.2406835313
+                       0.3538143396        0.5934308087        0.8035414147        0.8035414160
+            </eigenvaluesAt>
+            <eigenvaluesAt spin="1" ikpt="8" k_x="0.50000000" k_y="0.50000000" k_z="0.50000000">
+                       0.0963627307        0.1790085581        0.1790085729        0.2355757120        0.2355757134
+                       0.2565158996        0.4577994474        1.1074396247        1.1586285072
+            </eigenvaluesAt>
+         </eigenvalues>
+         <bandgap value="-0.0000000000" units="eV"/>
+         <sumValenceSingleParticleEnergies value="2.0492001073" units="Htr"/>
+         <FermiEnergy value="0.2570652070" units="Htr"/>
+         <valenceDensity>
+            <mtCharges spin="1">
+               <mtCharge atomType="1" total="10.1957307" s="0.3573026" p="0.4398819" d="9.3796615" f="0.0069544"/>
+            </mtCharges>
+            <spinDependentCharge spin="1" total="11.0000000" interstitial="0.8042693" mtSpheres="10.1957307"/>
+            <totalCharge value="11.0000000000"/>
+         </valenceDensity>
+         <coreStates atomType="     1" atomicNumber=" 29" spin="1" kinEnergy="   1587.5627524815" eigValSum="   -947.0487577476" lostElectrons=" 0.004974">
+            <state n="1" l="0" j="0.5" energy="-324.2167149290" weight="1.0000000000"/>
+            <state n="2" l="0" j="0.5" energy="-38.6336941133" weight="1.0000000000"/>
+            <state n="2" l="1" j="0.5" energy="-33.8493504393" weight="1.0000000000"/>
+            <state n="2" l="1" j="1.5" energy="-33.0977080005" weight="2.0000000000"/>
+            <state n="3" l="0" j="0.5" energy="-3.8197214332" weight="1.0000000000"/>
+            <state n="3" l="1" j="0.5" energy="-2.3341079405" weight="1.0000000000"/>
+            <state n="3" l="1" j="1.5" energy="-2.2376870087" weight="2.0000000000"/>
+         </coreStates>
+         <allElectronCharges>
+            <spinDependentCharge spin="1" total="29.0000000" interstitial="0.8092431" mtSpheres="28.1907569"/>
+            <totalCharge value="29.0000000064"/>
+         </allElectronCharges>
+         <totalEnergy                                    value="    -1652.3986068875" units="Htr">
+            <sumOfEigenvalues                            value="     -944.9995576403">
+               <coreElectrons value="-947.0487577476"/>
+               <valenceElectrons value="2.0492001073"/>
+            </sumOfEigenvalues>
+            <densityCoulombPotentialIntegral value="-2537.9951364980"/>
+            <densityEffectivePotentialIntegral value="-2624.0952728898"/>
+            <chargeDenXCDenIntegral value="-65.0294556761"/>
+            <FockExchangeEnergyValence value="0.0000000000"/>
+            <FockExchangeEnergyCore value="0.0000000000"/>
+            <atomTypeDependentContributions atomType="1">
+               <electronNucleiInteractionDifferentMTs value="1988.3330815619"/>
+               <MadelungTerm value="-9.1342166500"/>
+            </atomTypeDependentContributions>
+            <tkbTimesEntropy value="0.0002811676"/>
+            <freeEnergy value="-1652.3988880551"/>
+            <extrapolationTo0K value="-1652.3987474713"/>
+         </totalEnergy>
+         <densityConvergence units="me/bohr^3">
+            <chargeDensity spin="1" distance="14.1104034612"/>
+         </densityConvergence>
+      </iteration>
+      <iteration numberForCurrentRun="    4" overallNumber="    4">
+         <energyParameters units="Htr">
+            <atomicEP atomType="1" spin="1" branch="4s" branchLowest="-3.76" branchHighest="1.53" value="0.1425610135"/>
+            <atomicEP atomType="1" spin="1" branch="4p" branchLowest="-2.21" branchHighest="2.14" value="0.2922431831"/>
+            <atomicEP atomType="1" spin="1" branch="3d" branchLowest="-9.99" branchHighest="0.32" value="0.2245261231"/>
+            <atomicEP atomType="1" spin="1" branch="4f" branchLowest="-9.99" branchHighest="3.64" value="0.6186418715"/>
+         </energyParameters>
+         <eigenvalues>
+            <eigenvaluesAt spin="1" ikpt="1" k_x="0.00000000" k_y="0.00000000" k_z="0.00000000">
+                      -0.0631007595        0.2217791059        0.2217791234        0.2217791235        0.2607201263
+                       0.2607201365        1.1641036578        1.2831386697        1.2831386839
+            </eigenvaluesAt>
+            <eigenvaluesAt spin="1" ikpt="2" k_x="0.00000000" k_y="0.00000000" k_z="0.50000000">
+                       0.1205247850        0.2182865668        0.2182865770        0.2585524563        0.2805426646
+                       0.2805426647        0.4822882159        1.1055519514        1.1650798198
+            </eigenvaluesAt>
+            <eigenvaluesAt spin="1" ikpt="3" k_x="0.00000000" k_y="0.50000000" k_z="0.00000000">
+                       0.1205247847        0.2182865668        0.2182865772        0.2585524571        0.2805426630
+                       0.2805426653        0.4822882139        1.1055519514        1.1650798231
+            </eigenvaluesAt>
+            <eigenvaluesAt spin="1" ikpt="4" k_x="0.00000000" k_y="0.50000000" k_z="0.50000000">
+                       0.1291718728        0.1528298066        0.2786646345        0.2862650796        0.2862650817
+                       0.3570298387        0.6124548419        0.8076802707        0.8076803287
+            </eigenvaluesAt>
+            <eigenvaluesAt spin="1" ikpt="5" k_x="0.50000000" k_y="0.00000000" k_z="0.00000000">
+                       0.1205247847        0.2182865668        0.2182865772        0.2585524571        0.2805426630
+                       0.2805426653        0.4822882139        1.1055519514        1.1650798231
+            </eigenvaluesAt>
+            <eigenvaluesAt spin="1" ikpt="6" k_x="0.50000000" k_y="0.00000000" k_z="0.50000000">
+                       0.1291718728        0.1528298066        0.2786646345        0.2862650796        0.2862650817
+                       0.3570298387        0.6124548419        0.8076802707        0.8076803287
+            </eigenvaluesAt>
+            <eigenvaluesAt spin="1" ikpt="7" k_x="0.50000000" k_y="0.50000000" k_z="0.00000000">
+                       0.1291718587        0.1528297899        0.2786646353        0.2862650809        0.2862650810
+                       0.3570298652        0.6124548230        0.8076803405        0.8076803421
+            </eigenvaluesAt>
+            <eigenvaluesAt spin="1" ikpt="8" k_x="0.50000000" k_y="0.50000000" k_z="0.50000000">
+                       0.1205247857        0.2182865669        0.2182865772        0.2585524550        0.2805426650
+                       0.2805426658        0.4822882190        1.1055519510        1.1650798152
+            </eigenvaluesAt>
+         </eigenvalues>
+         <bandgap value="0.0000000000" units="eV"/>
+         <sumValenceSingleParticleEnergies value="2.4359860074" units="Htr"/>
+         <FermiEnergy value="0.2870697997" units="Htr"/>
+         <valenceDensity>
+            <mtCharges spin="1">
+               <mtCharge atomType="1" total="10.0418922" s="0.3904198" p="0.5839730" d="9.0450208" f="0.0093962"/>
+            </mtCharges>
+            <spinDependentCharge spin="1" total="11.0000000" interstitial="0.9581078" mtSpheres="10.0418922"/>
+            <totalCharge value="11.0000000000"/>
+         </valenceDensity>
+         <coreStates atomType="     1" atomicNumber=" 29" spin="1" kinEnergy="   1586.6086495842" eigValSum="   -945.7423887819" lostElectrons=" 0.005356">
+            <state n="1" l="0" j="0.5" energy="-324.1236260075" weight="1.0000000000"/>
+            <state n="2" l="0" j="0.5" energy="-38.5456442179" weight="1.0000000000"/>
+            <state n="2" l="1" j="0.5" energy="-33.7599938495" weight="1.0000000000"/>
+            <state n="2" l="1" j="1.5" energy="-33.0084951388" weight="2.0000000000"/>
+            <state n="3" l="0" j="0.5" energy="-3.7670116032" weight="1.0000000000"/>
+            <state n="3" l="1" j="0.5" energy="-2.2831002117" weight="1.0000000000"/>
+            <state n="3" l="1" j="1.5" energy="-2.1874141118" weight="2.0000000000"/>
+         </coreStates>
+         <allElectronCharges>
+            <spinDependentCharge spin="1" total="29.0000000" interstitial="0.9634633" mtSpheres="28.0365367"/>
+            <totalCharge value="29.0000000068"/>
+         </allElectronCharges>
+         <totalEnergy                                    value="    -1652.3989877734" units="Htr">
+            <sumOfEigenvalues                            value="     -943.3064027745">
+               <coreElectrons value="-945.7423887819"/>
+               <valenceElectrons value="2.4359860074"/>
+            </sumOfEigenvalues>
+            <densityCoulombPotentialIntegral value="-2537.2502066019"/>
+            <densityEffectivePotentialIntegral value="-2623.4834257033"/>
+            <chargeDenXCDenIntegral value="-65.1298853883"/>
+            <FockExchangeEnergyValence value="0.0000000000"/>
+            <FockExchangeEnergyCore value="0.0000000000"/>
+            <atomTypeDependentContributions atomType="1">
+               <electronNucleiInteractionDifferentMTs value="1989.9892346533"/>
+               <MadelungTerm value="-8.8317873597"/>
+            </atomTypeDependentContributions>
+            <tkbTimesEntropy value="0.0003379209"/>
+            <freeEnergy value="-1652.3993256943"/>
+            <extrapolationTo0K value="-1652.3991567339"/>
+         </totalEnergy>
+         <densityConvergence units="me/bohr^3">
+            <chargeDensity spin="1" distance="23.3795647171"/>
+         </densityConvergence>
+      </iteration>
+   </scfLoop>
+   <endDateAndTime date="2025/11/26" time="16:39:42" zone="+0100"/>
+</fleurOutput>

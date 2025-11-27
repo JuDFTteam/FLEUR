@@ -57,12 +57,13 @@ Testset: Forces
 
 Testset: DFPT
 -------------------
-|     | Description   | directory name    | marks | Remarks      | CmdLine | MPI |
-| --- | ------------- | ----------------- | ----- | ------------ | ------- | --- |
-| +   | Cu bulk fcc   | dfpt/CuBulk       | libxc | partly ready |         |   1 |
-| +   | C bulk fcc    | dfpt/CBulk        | libxc | partly ready |         |   1 |
-| +   | Graphene Film | dfpt/GrapheneFilm | libxc | partly ready |         |   1 |
-| +   | V bulk bcc    | dfpt/VBulkMPI     | libxc | partly ready |         |   2 |
+|     | Description   | directory name              | marks | Remarks      | CmdLine | MPI |
+| --- | ----------------------- | ----------------- | ----- | ------------ | ------- | --- |
+| +   | Cu bulk fcc, Gamma only | dfpt/CuBulkGamma  | libxc | partly ready |         |   1 |
+| +   | Cu bulk fcc, K-mesh     | dfpt/CuBulkKmesh  | libxc | partly ready |         |   1 |
+| +   | C bulk fcc              | dfpt/CBulk        | libxc | partly ready |         |   1 |
+| +   | Graphene Film           | dfpt/GrapheneFilm | libxc | partly ready |         |   1 |
+| +   | V bulk bcc, mpi         | dfpt/VBulkMPI     | libxc | partly ready |         |   2 |
 
 
 Testset: Noco
