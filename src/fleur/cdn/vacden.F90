@@ -861,7 +861,7 @@ CONTAINS
                         uei = ue(jz,ikG,1)
                         uei2 = ue(jz,ikGPr,2)
                         tempCmplx = aa*ui2*ui + bb*uei2*uei + ab*ui2*uei + ba*uei2*ui
-                        den%vac(jz,1,ivac,3) = den%vac(jz,1,ivac,3) + CONJG(tempCmplx) !!!! MAGIC MINUS
+                        den%vac(jz,1,ivac,3) = den%vac(jz,1,ivac,3) + tempCmplx 
                      END DO
                   ELSE
                      !--->                warping part
@@ -881,7 +881,7 @@ CONTAINS
                         uei = ue(jz,ikG,1)
                         uej = ue(jz,ikGPr,2)
                         t1 = aa*ui*uj+bb*uei*uej+ba*ui*uej+ab*uei*uj
-                        den%vac(jz,ind2,ivac,3) = den%vac(jz, ind2,ivac,3) + conjg(t1*phs/stars%nstr2(ind2))
+                        den%vac(jz,ind2,ivac,3) = den%vac(jz, ind2,ivac,3) + t1*phs/stars%nstr2(ind2)
                      END DO
                   END IF
                END DO
