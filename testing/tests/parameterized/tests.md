@@ -88,6 +88,7 @@ Testset: Noco
 | +   | Iron LO's and SOC test in FFN                 | noco/FeFFNLOsSOC        | bulk,soc,hdf                 |                   |         | 2   |
 | +   | Fe monolayer fcc (110): SS                    | noco/FePt_film_SSFT     | film,spinspiral,forcetheorem |                   |         | 2   |
 | +   | Fe monolayer fcc (110): SS +LO                | noco/FePt_film_SSFT_LO  | film,spinspiral,forcetheorem |                   |         | 2   |
+| +   | Mn Monolayer SS q=1,0,0                       | noco/MnFilmSS           | film,spinspiral              |                   |         | 2   |
 |     | Fe bcc, Flipcdn and noco in MT,x-dir          | noco/Fe_bcc_FlipcdnXLDA | bulk                         | produces warnings |         | 2   |
 |     | Fe bcc, Flipcdn and noco in MT,y-dir          | noco/Fe_bcc_FlipcdnYLDA | bulk                         | produces warnings |         | 2   |
 | +   | relaxation feature of FFN in the MT           | noco/RelaxMT            | bulk,hdf                     |                   |         | 2   |
