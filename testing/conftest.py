@@ -1110,7 +1110,7 @@ def check_all_outxml(test_logger,check_outxml):
         checks=[
             ["FermiEnergy","value",-1,0.0001,None],
             ["bandgap","value",-1,0.001,None],
-            ["totalEnergy","value",-1,0.0001,None],
+            ["totalEnergy","value",-1,0.00003,None],
             ["sumValenceSingleParticleEnergies","value",-1,0.0001,None],
             ["chargeDensity","distance",-1,0.001,None], #last spind only
             ["mtCharge","total",-1,0.001,None],
