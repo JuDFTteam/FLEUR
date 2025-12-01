@@ -818,8 +818,10 @@ CONTAINS
                OPEN( 3001, file="dynMatq=000"//int2str(iQ), status="old")
             ELSEIF(iQ<=99) THEN 
                OPEN( 3001, file="dynMatq=00"//int2str(iQ), status="old")
-            ELSE 
+            ELSEIF(iQ<=999) THEN 
                OPEN( 3001, file="dynMatq=0"//int2str(iQ), status="old")
+            ELSE 
+               OPEN( 3001, file="dynMatq="//int2str(iQ), status="old")
             END IF
             DO iread = 1, 3 + 3*fi%atoms%nat ! Loop over dynmat rows
                IF (iread<4) THEN
