@@ -95,8 +95,10 @@ def generate_dict(
        Bravais Matrix of the system. 
    highsym_qpts : list or array-like
        Labels for q-points along the path.
+       example : [ [0,"$\Gamma$"] , [91,"M"] , [144,"K"] , [249,"$\Gamma$"] ]
    atom_pos_red : array-like
        Atomic positions in reduced (fractional) coordinates.
+       example graphene: [[0,0,0],[1/3,-1/3,0]]
    atom_pos_car : array-like
        Atomic positions in Cartesian coordinates.
    formula : str
