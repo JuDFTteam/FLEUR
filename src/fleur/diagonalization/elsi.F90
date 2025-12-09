@@ -50,7 +50,7 @@ contains
       integer, intent(INOUT)         :: ne
       integer, intent(IN)            :: ikpt
 
-      integer, parameter             :: solver = 1 !Use ELPA
+      integer, parameter             :: solver = 1 !Use 1 for ELPA, 9 for ChASE. See ELSI manual for more solvers.
 
 #ifdef CPP_ELSI
       !...  Local variables
