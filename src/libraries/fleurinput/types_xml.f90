@@ -114,7 +114,7 @@ CONTAINS
       USE iso_c_binding
 
       CLASS(t_xml), INTENT(INOUT) :: xml
-      CHARACTER(len=100), INTENT(IN) :: filename_add
+      CHARACTER(len=*), INTENT(IN) :: filename_add
       LOGICAL, OPTIONAL, INTENT(inout):: old_version
 
       LOGICAL                        :: l_allow_old
