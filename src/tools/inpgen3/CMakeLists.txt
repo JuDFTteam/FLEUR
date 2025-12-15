@@ -49,8 +49,8 @@ super_check.f90
 make_kpoints.f90
 Profiles/types_Profile.f90
 mod_symdata.f
-inpgen_make_inp.f90
-inpgen_make_kpts.f90
+inpgen_make_inp.F90
+inpgen_make_kpts.F90
 
 ${CMAKE_BINARY_DIR}/include/buildinfo.h
 
@@ -144,7 +144,7 @@ add_executable(inpgen3 ${externallibs}
 ) 
 
 add_library(fleurinpgen SHARED ${externallibs}
-  inpgen_lib.f90
+  inpgen_lib.F90
   ${INPGEN3_SOURCES}
 ) 
 
