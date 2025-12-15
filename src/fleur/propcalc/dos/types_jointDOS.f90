@@ -29,6 +29,7 @@ CONTAINS
       use m_types_nococonv
       use m_types_banddos
       use m_types_dos
+      use m_sort 
       class(t_jointDOS), intent(inout):: this
       class(t_eigdos_list), intent(in),optional    :: alldos(:)
       TYPE(t_noco), INTENT(IN)        :: noco
@@ -37,7 +38,7 @@ CONTAINS
       real, intent(in),optional       :: ef
       type(t_dos),pointer :: dos 
       integer :: ikpt, ispin, jspin, ii, ntype, l, i, j, iispin,n 
-      
+      integer :: idx(size(this%eig,1))
       !find a DOS of type t_dos from the given alldos for the postprocessing
       dosloop:DO n=1,size(alldos)
          if (.not. associated(alldos(n)%p)) cycle
@@ -83,6 +84,16 @@ CONTAINS
                         enddo
                      endif  
                   enddo
+                  !Sort the results according to excitation energy
+                  CALL sort(idx(:ii),this%eig(:ii,ikpt,iispin))
+                  this%eig(:ii,ikpt,iispin)=this%eig(idx(:ii),ikpt,iispin)
+                  this%qis(:ii,ikpt,iispin)=this%qis(idx(:ii),ikpt,iispin)
+                  this%qTot(:ii,ikpt,iispin)=this%qTot(idx(:ii),ikpt,iispin)
+                  DO ntype=1,size(banddos%dos_typelist)
+                     DO l=0,3
+                        this%qal(l,ntype,:ii,ikpt,iispin)=this%qal(l,ntype,idx(:ii),ikpt,iispin)
+                     ENDDO
+                  ENDDO
                enddo   
             enddo   
          else  !noncollinear case
@@ -107,7 +118,18 @@ CONTAINS
                   enddo
                end if
             ENDDO
+            !Sort the results according to excitation energy
+            CALL sort(idx(:ii),this%eig(:ii,ikpt,1))
+            this%eig(:ii,ikpt,:)=this%eig(idx(:ii),ikpt,:)
+            this%qis(:ii,ikpt,:)=this%qis(idx(:ii),ikpt,:)
+            this%qTot(:ii,ikpt,:)=this%qTot(idx(:ii),ikpt,:)
+            DO ntype=1,size(banddos%dos_typelist)
+               DO l=0,3
+                  this%qal(l,ntype,:ii,ikpt,:)=this%qal(l,ntype,idx(:ii),ikpt,:)
+               ENDDO
+            ENDDO
          ENDIF
+            
       ENDDO
    
    contains 
@@ -116,17 +138,27 @@ CONTAINS
           real, intent(in):: vec1(:)
           real, intent(in):: vec2(:)
           real :: rho1,mz1,rho2,mz2
+          real, parameter :: eps_rho = 1.0e-10
+
           !distribution into charge and magnetisation parts (mz only, other components are directly given in density matrix vector), factor 1/2 included later
           rho1=vec1(1)+vec1(2)
           mz1=vec1(1)-vec1(2)
           rho2=vec2(1)+vec2(2)
           mz2=vec2(1)-vec2(2)
+          if (abs(rho1) < eps_rho.or. abs(rho2) < eps_rho) THEN
+               charge_mag(1)=0.0
+               charge_mag(2)=0.0
+               return
+          endif
           charge_mag(1)= 0.25*rho1*rho2  !charge part
           charge_mag(2)= 0.25*mz1*mz2+vec1(3)*vec2(3)+vec1(4)*vec2(4) !mag part
           !Convert to sum and difference 
           rho1=charge_mag(1)
           charge_mag(1) = 0.5*(rho1+charge_mag(2))
           charge_mag(2) = 0.5*(rho1-charge_mag(2))
+
+          
+
       end function charge_mag    
    end subroutine postprocessing
    

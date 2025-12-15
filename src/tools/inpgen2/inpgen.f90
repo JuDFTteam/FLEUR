@@ -56,8 +56,11 @@ PROGRAM inpgen
 
       REAL,    ALLOCATABLE :: atompos(:, :),atomid(:),mag_mom(:,:)
       CHARACTER(len=20), ALLOCATABLE :: atomLabel(:)
+      REAL,    ALLOCATABLE :: mag_mom_xsf(:,:)
+      INTEGER :: nat
+      REAL, PARAMETER      :: a0_bohr = 0.52917720859 ! same as in xsf_io
       LOGICAL               :: l_fullinput,l_explicit,l_inpxml,l_include(4)
-
+      
       TYPE(t_input)    :: input
       TYPE(t_atoms)    :: atoms
       TYPE(t_cell)     :: cell
@@ -442,10 +445,20 @@ PROGRAM inpgen
          END SELECT
       END DO
       WRITE(*,*) '================================================================================'
-
       ! Structure in  xsf-format
       OPEN (55,file="struct.xsf")
-      CALL xsf_WRITE_atoms(55,atoms,input%film,cell%amat)
+
+      IF (ALLOCATED(mag_mom)) THEN
+         ! Assume mag_mom has 3 components per atom, like positions do.
+         nat = atoms%nat
+         ALLOCATE(mag_mom_xsf(3,nat))
+         mag_mom_xsf(1:3,1:nat) = mag_mom(1:3,1:nat) * a0_bohr
+
+         CALL xsf_WRITE_atoms(55,atoms,input%film,cell%amat,mag_mom_xsf)
+      ELSE
+         ! Fallback: no moments available, write plain structure
+         CALL xsf_WRITE_atoms(55,atoms,input%film,cell%amat)
+      END IF
       CLOSE (55)
       CLOSE(oUnit)
 
