@@ -24,6 +24,28 @@ include("cmake/Files_and_Targets.txt")
 
 include("cmake/filespecific.cmake")
 include("cmake/pytest_setup.cmake")
+
+#Also build inpgen2
+add_subdirectory("src/tools/inpgen2")
+# HACK! to ensure buildinfo.h gets regenerated before inpgen2 gets built
+if (FLEUR_USE_SERIAL)
+   add_dependencies("inpgen2" fleur)
+endif()
+if (FLEUR_USE_MPI)
+   add_dependencies("inpgen2" fleur_MPI)
+endif ()
+
+#Also build inpgen3
+add_subdirectory("src/tools/inpgen3")
+# HACK! to ensure buildinfo.h gets regenerated before inpgen2 gets built
+if (FLEUR_USE_SERIAL)
+   add_dependencies("inpgen3" fleur)
+endif()
+if (FLEUR_USE_MPI)
+   add_dependencies("inpgen3" fleur_MPI)
+endif ()
+
+
 include("cmake/ReportConfig.txt")
 
 #install(TARGETS fleur inpgen DESTINATION bin)
