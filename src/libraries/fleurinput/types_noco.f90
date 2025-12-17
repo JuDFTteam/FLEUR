@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -183,7 +183,6 @@ MODULE m_types_noco
          IF (numberNodes.GE.1) THEN
            if (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathB))//'/@l_constrained')>0) this%l_constrained(iType) = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@l_constrained'))
            if (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathB))//'/@l_fixedMoment')>0) this%l_fixedMoment(iType) = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@l_fixedMoment'))
-           print *, 'Fixed moment for atom type ', itype, ' is ', this%l_fixedMoment(iType)
            if (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathB))//'/@l_mtNocoPot')>0) this%l_unrestrictMT(iType) = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@l_mtNocoPot'))
            if (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathB))//'/@l_relaxSQA')>0) this%l_alignMT(iType) = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@l_relaxSQA'))
            this%alph_inp(iType) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@alpha'))
