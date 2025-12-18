@@ -1132,6 +1132,7 @@
       <xsd:attribute name="smearingGauss" type="FleurDouble" use="optional"/>
       <xsd:attribute name="l_phonon" type="FleurBool" use="optional"/>
       <xsd:attribute name="l_efield" type="FleurBool" use="optional"/>
+      <xsd:attribute name="l_efield_scr" type="FleurBool" use="optional"/>
       <xsd:attribute name="l_borneffcharge" type="FleurBool" use="optional"/>
       <xsd:attribute name="l_symVacLevel" type="FleurBool" use="optional" default="F" />
    </xsd:complexType>

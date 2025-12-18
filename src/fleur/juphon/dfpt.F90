@@ -556,8 +556,13 @@ CONTAINS
             END DO
             CALL timestart("diel_tensor")
             IF (fmpi%irank==0) THEN
-               WRITE(*,*) "Scf calculation for electric field perturbation finished"
+               IF (fi%juPhon%l_efield_scr) THEN
+                  WRITE(*,*) "Scf calculation for screened electric field perturbation finished"
+                  CALL dfpt_dielecten_final_old(fi_nosym,diel_tensor(:,:))
+               ELSE
+                  WRITE(*,*) "Scf calculation for bare electric field perturbation finished"
                CALL dfpt_dielecten_final_new(fi_nosym,diel_tensor(:,:))
+               END IF
                !CALL dfpt_dielecten_final_old(fi_nosym,diel_tensor(:,:))
             END IF 
             CALL timestop("diel_tensor")

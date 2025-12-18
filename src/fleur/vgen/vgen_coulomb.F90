@@ -232,10 +232,11 @@ contains
     call timestop("interstitial")
     end if ! fmpi%irank == 0
 
-    !if (juphon%l_dfpt .AND. juphon%l_efield) then 
-    !  !print*,"removing G=0 component"
-    !  vCoul%pw(ispin,:)=0.0
-    !end if
+    !remove G=0 component to get "screened" efield perturbation
+    IF (juphon%l_dfpt .AND. juphon%l_efield_scr) then 
+      vCoul%pw(ispin,:)=0.0
+    end if
+    
     ! MUFFIN-TIN POTENTIAL
     call timestart( "MT-spheres" )
 #ifdef CPP_MPI
