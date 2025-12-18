@@ -47,24 +47,13 @@ module m_dfpt_dielecten
             ALLOCATE(denIn1_mt(fi%atoms%jmtd,0:sphhar%nlhd,fi%atoms%ntype),denIn1_mt_Im(fi%atoms%jmtd,0:sphhar%nlhd,fi%atoms%ntype))
             ALLOCATE(dieltensor_HF(SIZE(dieltensor_row)))
             allocate(diel_tensor_int_MT_atom(3,fi%atoms%ntype))
-            !print*,"diel_tensor_int_MT_atom",shape(diel_tensor_int_MT_atom)
             dieltensor_HF(:) = CMPLX(0.0,0.0)
-            !print*, "Im in dfpt_dielecten"
 
             !remove spin dependence
             denIn1_pw  = (denIn1%pw(:,1)+denIn1%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
             denIn1_mt = (denIn1%mt(:,0:,:,1)+denIn1%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
             denIn1_mt_Im = (denIn1Im%mt(:,0:,:,1)+denIn1Im%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
 
-
-            
-            !write(densave_string,"(a,i0,a)")"den1_diel_pw_",iDir_den,".npy"
-            !call save_npy(densave_string, denIn1_pw)
-            !write(densave_string,"(a,i0,a)")"den1_diel_mt_",iDir_den,".npy"
-            !call save_npy(densave_string, denIn1_mt)
-            !write(densave_string,"(a,i0,a)")"den1_diel_mtIm_",iDir_den,".npy"
-            !call save_npy(densave_string, denIn1_mt_Im)
-            !call save_npy('denIn1_pw_', vec)
             ! \rho(1)V_{ext}(1) integral (HF)
             diel_tensor_int_IR = CMPLX(0.0,0.0)
             diel_tensor_int_MT = CMPLX(0.0,0.0)
@@ -76,30 +65,16 @@ module m_dfpt_dielecten
                 ! call make_stars 
                 tempval_pw = CMPLX(0.0,0.0)
                 qvec_int=fi%juPhon%qvec_efield(iDir_col,:)
-                !print*,"qvec_int",qvec_int
+
                 CALL starsq_vext%reset_stars()
                 CALL make_stars(starsq_vext, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, qvec_int, 1, iDir_col,fi%juPhon%l_efield)
                 starsq_vext%ufft = starsq%ufft
-                !print*,"starsq_vedxt",starsq_vext%center
-                
-                !call inv3(fi%cell%bmat,inv_bmat(:,:),det)
-                !qvec_int = matmul(qvec_ext,transpose(inv_bmat))
-                !starsq_vext = starsq
-                !starsq_vext%center =qvec_int
-                !print*,"qvec_int",qvec_int
-                !print*,"starsq%center",starsq%center
-                !print*,"starsq_vext%center",starsq_vext%center
+
                 call vExt1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
                 call vExt1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
                 call dfpt_vefield(fi%juPhon,starsq,fi%atoms,fi%sym,sphhar,fi%cell,vExt1,vExt1Im,iDir_col,1)
 
-                
-                write(vextsave_string,"(a,i0,a)")"vext1_pw_",iDir_col,".npy"
-                call save_npy(vextsave_string, vExt1%pw)
-                write(vextsave_string,"(a,i0,a)")"vext1_mt_",iDir_col,".npy"
-                call save_npy(vextsave_string, vExt1%mt(:,:,:,1))
-                write(vextsave_string,"(a,i0,a)")"vext1_mtIm_",iDir_col,".npy"
-                call save_npy(vextsave_string, vExt1Im%mt(:,:,:,1))
+
                 if (iDir_col .eq. iDir_den) then
                     !interstitial
                     pwwq2 = CMPLX(0.0,0.0)
@@ -111,21 +86,17 @@ module m_dfpt_dielecten
                     
                     dieltensor_HF(iDir_col) = dieltensor_HF(iDir_col) + tempval_pw 
                     diel_tensor_int_IR(iDir_col) =  diel_tensor_int_IR(iDir_col) + tempval_pw
-                    !end if 
+
 
                     !Muffin-tin 
-                    !print*,"den1_dir",iDir_den
-                    !print*,"iDir_col",iDir_col
                     do iType = 1, fi%atoms%ntype
                         tempval_mt = CMPLX(0.0,0.0) 
             
-                        !call dfpt_int_mt(fi%atoms, sphhar, fi%sym, iType, vExt1%mt(:,0:,:,1),vExt1Im%mt(:,0:,:,1), vExt1%mt(:,0:,:,1), vExt1Im%mt(:,0:,:,1), tempval_mt)!denIn1_mt
                         call dfpt_int_mt(fi%atoms, sphhar, fi%sym, iType, denIn1_mt, denIn1_mt_Im, vExt1%mt(:,0:,:,1), vExt1Im%mt(:,0:,:,1), tempval_mt)!denIn1_mt
                         dieltensor_HF(iDir_col) = dieltensor_HF(iDir_col) + tempval_mt
                         diel_tensor_int_MT(iDir_col) =  diel_tensor_int_MT(iDir_col) + tempval_mt
-                        !print*,"diel_tensor_int_MT",diel_tensor_int_MT
                         diel_tensor_int_MT_atom(iDir_col,iType) = diel_tensor_int_MT_atom(iDir_col,iType) + tempval_mt
-                        !print*,"diel_tensor_int_MT_atom(iDir_col,iType)",diel_tensor_int_MT_atom(iDir_col,iType)
+                        
                     end do
                 end if 
             end do

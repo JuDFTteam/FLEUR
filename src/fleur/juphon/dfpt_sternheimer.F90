@@ -431,19 +431,6 @@ CONTAINS
             CYCLE scfloop
          END IF
 
-         ! No longer exit here.
-         !IF (final_SH_it) THEN
-         !   denIn1 = denOut1
-         !   denIn1Im = denOut1Im
-         !   l_cont = .FALSE.
-         !   IF (fmpi%irank==0) write(*,*) "Final Sternheimer iteration finished."
-         !   CALL timestop("Sternheimer Iteration")
-         !   IF (l_minusq) THEN
-         !      denIn1m = denOut1m
-         !      denIn1mIm = denOut1mIm
-         !   END IF
-         !   CYCLE scfloop
-         !END IF
 
          CALL denIn1%distribute(fmpi%mpi_comm)
          CALL denIn1Im%distribute(fmpi%mpi_comm)
