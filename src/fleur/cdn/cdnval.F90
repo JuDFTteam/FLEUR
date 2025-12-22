@@ -317,7 +317,7 @@ CONTAINS
          !!$OMP END PARALLEL DO
          call timestop("Atoms loop")
          call timestart("valence density in the interstitial and vacuum region")
-         IF (atoms%n_v.GT.0) CALL nIJ_mat(lbound(abc,2),input,atoms,noccbd,usdus,we,abc,cell,kpts,ikpt,den%nIJ_llp_mmp,enpara,vTot) 
+         IF (atoms%n_v.GT.0) CALL nIJ_mat(lbound(abc,1),input,atoms,noccbd,usdus,we,abc,cell,kpts,ikpt,den%nIJ_llp_mmp,enpara,vTot) 
 
          ! valence density in the interstitial and vacuum region has to be called only once (if jspin=1) in the non-collinear case
          IF (.NOT. ((jspin .EQ. 2) .AND. noco%l_noco)) THEN

@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_nIJmat
 
    !------------------------------------------------------------------------------ !
@@ -27,7 +32,7 @@ CONTAINS
       TYPE(t_usdus), INTENT(IN)    :: usdus
       TYPE(t_input), INTENT(IN)    :: input
       TYPE(t_atoms), INTENT(IN)    :: atoms
-      TYPE(t_abc), INTENT(IN)      :: abc(:, firstspin:)
+      TYPE(t_abc), INTENT(IN)      :: abc(firstspin:,:)
       TYPE(t_kpts), INTENT(IN)     :: kpts
       TYPE(t_cell), INTENT(IN)     :: cell
       INTEGER, INTENT(IN)          :: ne,  kptindx
@@ -50,7 +55,7 @@ CONTAINS
       CALL usdustemp%init(atoms, input%jspins)
       CALL timestart("nIJ_mat")
 
-      DO jspin = lbound(abc, 2), ubound(abc, 2)
+      DO jspin = lbound(abc, 1), ubound(abc, 1)
          i_pair = 1
          DO i_v = 1, atoms%n_v
             natom1 = atoms%lda_v(i_v)%atomIndex
@@ -76,10 +81,10 @@ CONTAINS
                      lm1atom2 = ll1atom2 + matom2
                      c_0 = cmplx_0
                      Do i = 1, ne
-                        A1 = abc(itype1, jspin)%cof(i, lm1atom1, 1, natom1)
-                        B1 = abc(itype1, jspin)%cof(i, lm1atom1, 2, natom1)
-                        A2 = abc(itype2, jspin)%cof(i, lm1atom2, 1, natom2)
-                        B2 = abc(itype2, jspin)%cof(i, lm1atom2, 2, natom2)
+                        A1 = abc(jspin,itype1)%cof(i, lm1atom1, 1, natom1)
+                        B1 = abc(jspin,itype1)%cof(i, lm1atom1, 2, natom1)
+                        A2 = abc(jspin,itype2)%cof(i, lm1atom2, 1, natom2)
+                        B2 = abc(jspin,itype2)%cof(i, lm1atom2, 2, natom2)
                         c_0 = c_0 + we(i)*(conjg(A2)*A1 + conjg(A2)*B1*norm1_W + &
                                            conjg(B2)*A1*norm2_W + conjg(B2)*B1*norm1_W*norm2_W)*power_factor*exponent
                      END DO
