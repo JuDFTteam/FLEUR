@@ -173,6 +173,7 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="bandgap" type="SingleValueType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="sumValenceSingleParticleEnergies" type="SingleValueType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="FermiEnergy" type="SingleValueType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="FixedTotalMoment" type="FixedTotalMomentType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="valenceDensity" type="ChargeDensityType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="onSiteExchangeSplitting" type="OnSiteExchangeSplittingType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="noncollinearTorque" type="GFTorqueType"/>
@@ -347,6 +348,12 @@
 
    <xsd:complexType name="SingleValueType">
       <xsd:attribute name="value" type="xsd:double" use="required"/>
+      <xsd:attribute name="units" type="xsd:string" use="optional"/>
+   </xsd:complexType>
+   
+   <xsd:complexType name="FixedTotalMomentType">
+      <xsd:attribute name="fermiEnergyUp" type="xsd:double" use="required"/>
+      <xsd:attribute name="fermiEnergyDown" type="xsd:double" use="required"/>
       <xsd:attribute name="units" type="xsd:string" use="optional"/>
    </xsd:complexType>
 
