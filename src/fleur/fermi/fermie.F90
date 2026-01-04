@@ -157,7 +157,7 @@ CONTAINS
     IF (fmpi%irank == 0 .and. .NOT.judft_was_argument("-minimalOutput") .and. l_output) CALL closeXMLElement('eigenvalues')
   IF (fmpi%irank == 0) THEN
 
-    IF (ABS(input%fixed_moment)<1E-6) THEN
+    IF (.NOT.input%isFixedMomentCalc) THEN
        !this is a standard calculation
        m_spins=1
     else

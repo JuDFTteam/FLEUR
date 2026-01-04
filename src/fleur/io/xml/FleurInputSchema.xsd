@@ -132,7 +132,7 @@
       <xsd:attribute default="F" name="swsp" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="lflip" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="l_onlyMtStDen" type="FleurBool" use="optional"/>
-      <xsd:attribute default="0.0" name="fixed_moment" type="FleurDouble" use="optional"/>
+      <xsd:attribute name="fixed_moment" type="FleurDouble" use="optional"/>
    </xsd:complexType>
 
    <xsd:simpleType name="SpinNumberType">
