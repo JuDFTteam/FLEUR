@@ -12,7 +12,7 @@ MODULE m_dfpt
 
 CONTAINS
    SUBROUTINE dfpt(fi, sphhar, stars, nococonv, qpts, fmpi, results, enpara, &
-                 & rho, vTot, vxc, eig_id, xcpot, hybdat, mpdata, forcetheo)
+                 & rho,rho_core, vTot, vxc, eig_id, xcpot, hybdat, mpdata, forcetheo)
       USE m_dfpt_check
       !USE m_dfpt_test
       USE m_dfpt_sternheimer
