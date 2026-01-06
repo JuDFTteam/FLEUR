@@ -69,7 +69,7 @@ CONTAINS
     REAL    :: energies(SIZE(results%w_iks)),we(SIZE(results%w_iks))
     REAL    :: fixedMomentFermiEnergies(2) 
     real,allocatable :: w_iks(:,:,:),we_stored(:)
-    real              :: seigv_stored,ef_stored(3)
+    real              :: seigv_stored,ef_stored(3), spinDepTS(2)
     CHARACTER(LEN=20)    :: attributes(5)
 
     !--- J constants
@@ -165,6 +165,7 @@ CONTAINS
        m_spins=2
     END IF
 
+    spinDepTS = 0.0
     results%seigv = 0.0e0
     do mspin=1,m_spins
        IF (m_spins    == 1) THEN
@@ -275,7 +276,10 @@ CONTAINS
          IF(input%bz_integration==BZINT_METHOD_HIST) THEN
             CALL ferhis(input,kpts,fmpi,index,idxeig,idxkpt,idxjsp,nspins, n,&
                   nstef,ws,spindg,weight,energies,results%neig(:,sslice(1):sslice(2)),&
-                  we, noco,cell,results%ef,results%seigv,results%w_iks(:,:,sslice(1):sslice(2)),results,l_output)
+                  we, noco,cell,results%ef,results%seigv,results%w_iks(:,:,sslice(1):sslice(2)),results,spinDepTS(sslice(1):sslice(2)),l_output)
+            IF (mspin.EQ.2) THEN
+               results%ts = spinDepTS(1) + spinDepTS(2)
+            END IF
          ELSE IF (input%bz_integration==BZINT_METHOD_GAUSS) THEN
             CALL fergwt(kpts,input,fmpi,results%neig(:,sslice(1):sslice(2)), results%eig(:,:,sslice(1):sslice(2)),&
                         results%ef,results%w_iks(:,:,sslice(1):sslice(2)),results%seigv,l_output)
