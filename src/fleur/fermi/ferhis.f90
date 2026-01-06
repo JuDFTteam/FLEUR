@@ -282,7 +282,7 @@ CONTAINS
        entropy = entropy + spinDepEntropy(js)
     END DO
     DO js = 1,nspins
-       spinDepTS(js) = spinDepEntropy(js) * tkb
+       spinDepTS(js) = -spinDepEntropy(js) * tkb
     END DO
     entropy = -spindg*entropy
     results%ts = tkb*entropy
