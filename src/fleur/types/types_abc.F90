@@ -519,23 +519,38 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
                fgpl(:, iLAPW) = MATMUL(fgr, cell%bmat)
             END DO
       
+            !$acc enter data create(workTrans_cf,helpMat_force,s2h_e)
+            !$acc kernels 
             workTrans_cf = CMPLX(0.0, 0.0)
             helpMat_force = CMPLX(0.0, 0.0)
-      
-            CALL zgemm("N", "T", ne, abSize, nvmax, CMPLX(1.0, 0.0), s2h_e, ne, abCoeffs, size(abcoeffs, 1), &
+            !acc end kernels
+
+!$acc host_data use_device(s2h_e,abCoeffs,force%e1cof,force%e2cof)
+            CALL zgemm_acc("N", "T", ne, abSize, nvmax, CMPLX(1.0, 0.0), s2h_e, ne, abCoeffs, size(abcoeffs, 1), &
                        CMPLX(1.0, 0.0), force%e1cof(:, :, iAtom), ne)
-            CALL zgemm("N", "T", ne, abSize, nvmax, CMPLX(1.0, 0.0), s2h_e, ne, abCoeffs(1 + abSize, 1), &
+            CALL zgemm_acc("N", "T", ne, abSize, nvmax, CMPLX(1.0, 0.0), s2h_e, ne, abCoeffs(1 + abSize, 1), &
                        size(abcoeffs, 1), CMPLX(1.0, 0.0), force%e2cof(:, :, iAtom), ne)
+!$acc end host_data
+!$acc update self(force%e1cof,force%e2cof)
             DO i = 1, 3
+               !$acc kernels copyin(work_c,fgpl) present(workTrans_cf,helpMat_force,force) default(none)
                DO iLAPW = 1, nvmax
                   workTrans_cf(:, iLAPW) = work_c(iLAPW, :)*fgpl(i, iLAPW)
                END DO
+               !$acc end kernels
       
-               CALL zgemm("N", "T", ne, abSize, nvmax, CMPLX(1.0, 0.0), workTrans_cf, ne, &
+               !$acc host_data use_device(workTrans_cf,abCoeffs,helpMat_force,force%aveccof,force%bveccof)
+               CALL zgemm_acc("N", "T", ne, abSize, nvmax, CMPLX(1.0, 0.0), workTrans_cf, ne, &
                           abCoeffs, size(abCoeffs, 1), CMPLX(0.0, 0.0), helpMat_force, ne)
+               !$acc end host_data
+               !$acc update self(helpMat_force)
                force%aveccof(i, :, :, iAtom) = force%aveccof(i, :, :, iAtom) + helpMat_force(:, :)
-               CALL zgemm("N", "T", ne, abSize, nvmax, CMPLX(1.0, 0.0), workTrans_cf, ne, &
+               
+               !$acc host_data use_device(workTrans_cf,abCoeffs,helpMat_force,force%bveccof)
+               CALL zgemm_acc("N", "T", ne, abSize, nvmax, CMPLX(1.0, 0.0), workTrans_cf, ne, &
                           abCoeffs(1 + abSize, 1), size(abcoeffs, 1), CMPLX(0.0, 0.0), helpMat_force, ne)
+               !$acc end host_data
+               !$acc update self(helpMat_force)
                force%bveccof(i, :, :, iAtom) = force%bveccof(i, :, :, iAtom) + helpMat_force(:, :)
             END DO
             CALL timestop("force contributions")
@@ -612,6 +627,7 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
             CALL timestop("local orbitals")
          END DO ! loop over interstitial spin
       END DO ! loop over atoms
+!$acc exit data delete(workTrans_cf,helpMat_force,s2h_e)
 !$acc exit data delete(abTemp,fjgj%fj,fjgj%gj,work_c,abcoeffs)
 !$acc exit data delete(fjgj)
       DEALLOCATE (work_c)
