@@ -30,7 +30,7 @@ CONTAINS
    ! e) The latter are the actual output for the routine when used for DFPT. They are saved
    !    the same way as the eigenvalues before, but for a shifted eig_id.
    SUBROUTINE eigen(fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,&
-                    hybdat,iter,eig_id,results,inden,v,vx,hub1data,&
+                    hybdat,iter,eig_id,results,inden,pot,potx,hub1data,&
                     bqpt, hmat_out, smat_out)
 
       USE m_types
@@ -65,8 +65,8 @@ CONTAINS
       TYPE(t_sphhar),INTENT(IN)    :: sphhar
       TYPE(t_potden),INTENT(IN)    :: inden !
       TYPE(t_hub1data),INTENT(INOUT):: hub1data
-      TYPE(t_potden), INTENT(IN)   :: vx
-      TYPE(t_potden),INTENT(IN)    :: v
+      TYPE(t_potden), INTENT(IN)   :: potx
+      TYPE(t_potden),INTENT(IN)    :: pot
 
 !    EXTERNAL MPI_BCAST    !only used by band_unfolding to broadcast the gvec
 
@@ -145,7 +145,7 @@ CONTAINS
       ALLOCATE(eigBuffer(fi%input%neig,fi%kpts%nkpt,fi%input%jspins))
       ALLOCATE(nvBuffer(fi%kpts%nkpt,MERGE(1,fi%input%jspins,fi%noco%l_noco)),nvBufferTemp(fi%kpts%nkpt,MERGE(1,fi%input%jspins,fi%noco%l_noco)))
 
-      !IF (fmpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/),(/iter,v%iter/),&
+      !IF (fmpi%irank.EQ.0) CALL openXMLElementFormPoly('iteration',(/'numberForCurrentRun','overallNumber      '/),(/iter,pot%iter/),&
       !                                                RESHAPE((/19,13,5,5/),(/2,2/)))
 
       ! Set up and solve the eigenvalue problem
@@ -153,7 +153,7 @@ CONTAINS
       !     set up k-point independent t(l'm',lm) matrices
 
       alpha_hybrid = MERGE(xcpot%get_exchange_weight(),0.0,hybdat%l_subvxc)
-      CALL local_ham(sphhar,fi%atoms,fi%sym,fi%noco,nococonv,enpara,fmpi,v,vx,inden,fi%input,fi%hub1inp,hub1data,td,ud,alpha_hybrid)
+      CALL local_ham(sphhar,fi%atoms,fi%sym,fi%noco,nococonv,enpara,fmpi,pot,potx,inden,fi%input,fi%hub1inp,hub1data,td,ud,alpha_hybrid)
       neigBuffer = 0
       results%neig = 0
       results%eig = 1.0e300
@@ -172,7 +172,7 @@ CONTAINS
             CALL lapw%init(fi%input,fi%noco,nococonv, kpts_mod, fi%atoms, fi%sym, nk, fi%cell, fmpi, bqpt)
 
             call timestart("Setup of H&S matrices")
-            CALL eigen_hssetup(jsp,fmpi,fi,results,inDen,vx,xcpot,enpara,nococonv,stars,sphhar,hybdat,ud,td,v,lapw,nk,smat,hmat)
+            CALL eigen_hssetup(jsp,fmpi,fi,results,inDen,potx,xcpot,enpara,nococonv,stars,sphhar,hybdat,ud,td,pot,lapw,nk,smat,hmat)
             CALL timestop("Setup of H&S matrices")
 
             IF (PRESENT(hmat_out)) THEN
