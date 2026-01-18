@@ -7,6 +7,7 @@ MODULE m_dfpt
    USE m_juDFT
    USE m_constants
    USE m_types
+   USE m_types_BEC
 
    IMPLICIT NONE
 
@@ -68,6 +69,7 @@ CONTAINS
       TYPE(t_kpts)                  :: qpts_loc
       TYPE(t_kpts)                  :: kqpts, kqmpts ! basically kpts, but with q added onto each one.
       TYPE(t_dos),TARGET            :: dos
+      TYPE(t_BEC)                   :: BEC
       
       TYPE(t_eigdos_list),allocatable :: eigdos(:)
 
@@ -113,7 +115,7 @@ CONTAINS
       real,              allocatable :: eigenVals(:), eigenValsFull(:,:,:)
       complex,           allocatable :: eigenVecs(:, :)
 
-      COMPLEX, ALLOCATABLE :: grrhodummy(:, :, :, :, :)
+      COMPLEX, ALLOCATABLE :: grrhodummy(:, :, :, :, :),grrho_val(:, :, :, :, :)
 
       COMPLEX, ALLOCATABLE :: dyn_mat(:,:,:), dyn_mat_r(:,:,:), dyn_mat_q_full(:,:,:), dyn_mat_pathq(:,:), sym_dynvec(:,:,:), sym_dyn_mat(:,:,:)
       REAL,    ALLOCATABLE :: e2_vm(:,:,:)
@@ -259,6 +261,7 @@ CONTAINS
       ! This is done to ensure good continuity.
       CALL timestart("Gradient generation")
       ALLOCATE(grrhodummy(fi_nosym%atoms%jmtd, (fi_nosym%atoms%lmaxd+1)**2, fi_nosym%atoms%nat, SIZE(rho_nosym%mt,4), 3))
+      ALLOCATE(grrho_val(fi_nosym%atoms%jmtd, (fi_nosym%atoms%lmaxd+1)**2, fi_nosym%atoms%nat, SIZE(rho_nosym%mt,4), 3))
 
       ! For the gradient of the external Potential we need a higher cutoff in the expansion, in order to confine the multipole moments in the MTs
       ! This is crucial for the Film-Mode and will be visible in the z-Eigenmodes.  
@@ -314,6 +317,7 @@ CONTAINS
       ! Density gradient
       DO iSpin = 1, SIZE(rho_nosym%mt,4)
          CALL mt_gradient_new(fi_nosym%atoms, sphhar_nosym, fi_nosym%sym, rho_nosym%mt(:, :, :, iSpin), grrhodummy(:, :, :, iSpin, :))
+         CALL mt_gradient_new(fi_nosym%atoms, sphhar_nosym, fi_nosym%sym, (rho_nosym%mt(:, :, :, iSpin)-rho_core%mt(:,:,:,iSpin)), grrho_val(:, :, :, iSpin, :))
       END DO
       DO zInd = -stars_nosym%mx3, stars_nosym%mx3
          DO yInd = -stars_nosym%mx2, stars_nosym%mx2
@@ -561,7 +565,7 @@ CONTAINS
                   CALL dfpt_dielecten_final_old(fi_nosym,diel_tensor(:,:))
                ELSE
                   WRITE(*,*) "Scf calculation for bare electric field perturbation finished"
-               CALL dfpt_dielecten_final_new(fi_nosym,diel_tensor(:,:))
+                  CALL dfpt_dielecten_final_new(fi_nosym,diel_tensor(:,:))
                END IF
                !CALL dfpt_dielecten_final_old(fi_nosym,diel_tensor(:,:))
             END IF 
@@ -573,17 +577,22 @@ CONTAINS
             DEALLOCATE(born_eff_charge)
             DEALLOCATE(born_eff_charge_contributions)
          ELSE IF (fi%juPhon%l_phonon) THEN
-
+            if (fi%juPhon%l_borneffcharge) then
+               CALL BEC%init(fi_nosym)
+               print*,"BEC%BEC_element",BEC%BEC_element
+               print*,"after init"
+               stop
+            end if
             ALLOCATE(born_eff_charge(fi_nosym%atoms%ntype,3,3))
-            ALLOCATE(born_eff_charge_contributions(fi_nosym%atoms%ntype,3,3,7+fi_nosym%atoms%ntype))
+            ALLOCATE(born_eff_charge_contributions(fi_nosym%atoms%ntype,3,3,8+fi_nosym%atoms%ntype))
             born_eff_charge = CMPLX(0.0)
             born_eff_charge_contributions = CMPLX(0.0)
             IF (fmpi%irank==0) WRITE(*,*) "Scf calculation for phonon perturbation"
-            IF (fi%juPhon%l_borneffcharge) WRITE(*,*)"for Born effective charge" 
+            IF (fi%juPhon%l_borneffcharge .AND. fmpi%irank==0) WRITE(*,*)"for Born effective charge" 
 
             IF (fi%juPhon%l_borneffcharge) THEN
                q_start = 1
-               q_stop  = 3
+               q_stop  = 1
             ELSE
                q_start = fi%juPhon%startq
                q_stop = MERGE(fi%juPhon%stopq,SIZE(q_list),fi%juPhon%stopq/=0)
@@ -706,7 +715,7 @@ CONTAINS
                         CALL vC1Im%reset_dfpt()
                         CALL results1%reset_results(fi_nosym%input)
                      !END IF
-   
+                     !write(9989,FMT=8000) "SF rho Vext1 efield                 ", tempval_SF
                      IF (fmpi%irank==0) WRITE(*,*) '-------------------------'
                      ! This is where the magic happens. The Sternheimer equation is solved
                      ! iteratively, providing the scf part of dfpt calculations.
@@ -728,19 +737,20 @@ CONTAINS
                                              MERGE(sigma_coul,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir==3))
                         CALL timestop("Sternheimer")
                      END IF
-   
-                     IF (fi%juPhon%l_borneffcharge) THEN
-                        CALL dfpt_born_eff_charge_element(fi_nosym,stars_nosym,starsq,sphhar_nosym,fmpi_nosym,rho_nosym,rho_core,denIn1,denIn1Im,grRho3(iDir),born_eff_charge(iDtype,iDir,iQ),born_eff_charge_contributions(iDtype,iDir,iQ,:),iDir,iDtype,iQ,1)
+                     !print*,"sum(denIn1%pw) 1",sum(denIn1%pw)
+                     !print*,"sum(denIn1%mt) 1",sum(denIn1%mt)
+                     !print*,"sum(denIn1Im%mt) 1",sum(denIn1Im%mt)
+                     IF (fi%juPhon%l_borneffcharge .AND. fmpi%irank==0) THEN
+                        CALL dfpt_born_eff_charge_element(fi_nosym,stars_nosym,starsq,sphhar_nosym,fmpi_nosym,rho_nosym,rho_core,denIn1,denIn1Im,grRho3(iDir),grrho_val(:,:,:,:,iDir),born_eff_charge(iDtype,iDir,iQ),born_eff_charge_contributions(iDtype,iDir,iQ,:),iDir,iDtype,iQ,1)
                      END IF
-
                      IF (fmpi%irank==0) WRITE(*,*) '-------------------------'
                      CALL timestart("Dynmat")
                      ! Once the first order quantities are converged, we can construct all
                      ! additional necessary quantities and from that the dynamical matrix.
-                        CALL dfpt_dynmat_row(fi_nosym, stars_nosym, starsq, sphhar_nosym, xcpot_nosym, nococonv_nosym, hybdat_nosym, fmpi_nosym, qpts_loc, q_list(iQ), iDtype, iDir, &
-                                             eig_id, dfpt_eig_id, dfpt_eig_id2, enpara_nosym, results_nosym, results1, l_real,&
-                                             rho_nosym, vTot_nosym, grRho3, grVext3, grVC3, &
-                                             denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_mat(iQ,3 *(iDtype-1)+iDir,:), E2ndOrdII, sigma_ext, sigma_gext)
+                     CALL dfpt_dynmat_row(fi_nosym, stars_nosym, starsq, sphhar_nosym, xcpot_nosym, nococonv_nosym, hybdat_nosym, fmpi_nosym, qpts_loc, q_list(iQ), iDtype, iDir, &
+                                          eig_id, dfpt_eig_id, dfpt_eig_id2, enpara_nosym, results_nosym, results1, l_real,&
+                                          rho_nosym, vTot_nosym, grRho3, grVext3, grVC3, &
+                                          denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_mat(iQ,3 *(iDtype-1)+iDir,:), E2ndOrdII, sigma_ext, sigma_gext)
 
                      CALL timestop("Dynmat")
                      dyn_mat(iQ,3 *(iDtype-1)+iDir,:) = dyn_mat(iQ,3 *(iDtype-1)+iDir,:) + conjg(E2ndOrdII(3 *(iDtype-1)+iDir,:))
@@ -753,8 +763,8 @@ CONTAINS
                         denIm_elph(iDir+3*(iDtype-1)) = denIn1Im
                      END IF 
    
-                     IF (fmpi%irank==0) write(*,*) "dynmat row for ", dfpt_tag
-                     IF (fmpi%irank==0) write(*,*) dyn_mat(iQ,3 *(iDtype-1)+iDir,:)
+                     !IF (fmpi%irank==0) write(*,*) "dynmat row for ", dfpt_tag
+                     !IF (fmpi%irank==0) write(*,*) dyn_mat(iQ,3 *(iDtype-1)+iDir,:)
                      !IF (fmpi%irank==0.AND.l_cheated) write(*,*) "The cheat:"
                      !IF (fmpi%irank==0.AND.l_cheated) write(*,*) sym_dyn_mat(iQ,3 *(iDtype-1)+iDir,:)
                      !l_cheated = .FALSE.
@@ -769,7 +779,7 @@ CONTAINS
 #endif         
                END DO
 
-               IF (fi%juPhon%l_borneffcharge) THEN
+               IF ((fi%juPhon%l_borneffcharge .AND. fmpi%irank==0)) THEN
                   CALL dfpt_born_eff_charge_final(fi,born_eff_charge,born_eff_charge_contributions(:,:,:,:))
                END IF
                !stop
