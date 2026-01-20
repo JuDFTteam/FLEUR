@@ -73,7 +73,7 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
    TYPE(t_cdnvalJob), OPTIONAL, INTENT(IN)    :: cdnvalJob1m
 
    ! Local Scalars
-   INTEGER :: ikpt,ikpt_i,jsp_start,jsp_end,ispin,ispinpr,jsp,iType,ikG,iqdir
+   INTEGER :: ikpt,ikpt_i,jsp_start,jsp_end,ispin,ispinpr,jsp,itype,ikG,iqdir
    INTEGER :: iErr,nbands,noccbd,nbands1,iLo,l,imLo,ikLo,ikGLo,nbands1m
    INTEGER :: skip_t,skip_tt,nbasfcn,nbasfcnq,nbasfcnmq
    REAL    :: gExt(3), q_loop(3), bkpt(3)
@@ -132,9 +132,9 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
    if (l_minusq)allocate (abc1m(jsp_start:jsp_end))
    
       
-   DO iType = 1, atoms%ntype
+   DO itype = 1, atoms%ntype
       DO ispin = 1, input%jspins
-         CALL genMTBasis(atoms,enpara,vTot,fmpi,iType,ispin,usdus,f(:,:,0:,ispin),g(:,:,0:,ispin),flo(:,:,:,ispin))
+         CALL genMTBasis(atoms,enpara,vTot,fmpi,itype,ispin,usdus,f(:,:,0:,ispin),g(:,:,0:,ispin),flo(:,:,:,ispin))
       END DO
    END DO
    DEALLOCATE (f,g,flo)
@@ -245,7 +245,7 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
       IF (noccbd.LE.0) CYCLE ! Note: This jump has to be after the MPI_BARRIER is called
 
       DO itype = 1, atoms%ntype
-         call radfun(itype)%generate_radial_functions(atoms, input, enpara, fmpi, vtot, iType)
+         call radfun(itype)%generate_radial_functions(atoms, input, enpara, fmpi, vtot, itype)
          DO ispin = jsp_start, jsp_end
             call abc(ispin)%init(input, atoms, radfun(itype)%n_r, noccbd, itype)
             call abc(ispin)%calc_abc(input, atoms, sym, cell, lapw, noccbd, usdus, noco, nococonv, ispin, itype, zMat)
@@ -257,37 +257,25 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
                IF (juphon%l_phonon.and.idtype==itype) THEN
                   call abcpref(ispin)%init(input, atoms, radfun(itype)%n_r, noccbd, itype)
                   call abcpref(ispin)%calc_abc(input, atoms, sym, cell, lapw, noccbd, usdus, noco, nococonv, ispin, itype, zMatPref)
-                  abc1(ispin)%cof=abc(ispin)%cof+abcpref(ispin)%cof
+                  abc1(ispin)%cof=abc1(ispin)%cof+abcpref(ispin)%cof
                END IF
                IF (l_minusq) THEN
                   call abc1m(ispin)%init(input, atoms, radfun(itype)%n_r, noccbd, itype)
                   call abc1m(ispin)%calc_abc(input, atoms, sym, cell, lapwmq, noccbd, usdus, noco, nococonv, ispin, itype, zMat1m)
                   if (juphon%l_phonon.and.idtype==itype) then
-                     abc1m(ispin)%cof=abc(ispin)%cof+abcpref(ispin)%cof
+                     abc1m(ispin)%cof=abc1m(ispin)%cof+abcpref(ispin)%cof
                   end if
                END IF
                if (l_minusq) then
                   CALL judft_bug("dfpt_cdnval: abc1m used to calculate density matrix")
                else
                   !Now calculate the density matrix as needed to construct the charge
-                  call denmatrix(ispin,ispinpr,itype)%rhonmt(atoms, sphhar, we, noccbd, itype,sym, ispin==ispinpr, abc(ispin), abc1(ispinpr))
+                  call denmatrix(ispin,ispinpr,itype)%rhonmt(atoms, sphhar, we, noccbd, itype,sym, .false., abc(ispin), abc1(ispinpr),bqpt=bqpt,we1=we1)
                end if
             ENDDO
          enddo
       ENDDO
-      IF (fmpi%irank==0) THEN
-         CALL timestart("denmatrix%to_full_density")
-         DO itype = 1, atoms%ntype
-            DO ispin = jsp_start, jsp_end
-               DO ispinpr = ispin,ispin
-                  call denmatrix(ispin,ispinpr,itype)%to_full_density(ispin,ispinpr, itype, input, &
-                              sphhar, atoms, noco, sym, radfun(itype),  den%mt, rhoIm=denIm%mt)
-               ENDDO               
-            enddo
-         END DO      
-         CALL timestop("denmatrix%to_full_density")
-      END IF
-            
+
       ! valence density in the interstitial and vacuum region has to be called only once (if jspin=1) in the non-collinear case
       IF (.NOT.((jspin.EQ.2).AND.noco%l_noco)) THEN
          ! valence density in the interstitial region
@@ -306,13 +294,37 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
    END DO ! end of k-point loop
 
 #ifdef CPP_MPI
-   DO ispin = jsp_start,jsp_end
+   ! collect density from pwden vacden
+   ! collect denmatrix%mat from mpi 
+   CALL MPI_BARRIER(fmpi%MPI_COMM, ierr)
+   DO ispin = jsp_start, jsp_end
       CALL mpi_col_den(fmpi,sphhar,atoms,stars,vacuum,input,noco,ispin,dosdummy,vacdosdummy,&
                        resultsdummy,den)
+      DO ispinpr = jsp_start, ispin
+         DO itype = 1, atoms%ntype
+            call denmatrix(ispin, ispinpr, itype)%mpi_collect(fmpi)
+         end do
+      END DO
    END DO
 #endif
 
 
+   IF (fmpi%irank==0) THEN
+      CALL timestart("denmatrix%to_full_density")
+      DO itype = 1, atoms%ntype
+         DO ispin = jsp_start, jsp_end
+            DO ispinpr = ispin,ispin
+               call denmatrix(ispin,ispinpr,itype)%to_full_density(ispin,ispinpr, itype, input, &
+                           sphhar, atoms, noco, sym, radfun(itype),  den%mt, rhoIm=denIm%mt)
+            ENDDO               
+         enddo
+      END DO      
+      CALL timestop("denmatrix%to_full_density")
+   END IF
+
+
+   call den%distribute(fmpi%mpi_comm)
+   call denIm%distribute(fmpi%mpi_comm)
 
    CALL timestop("dfpt_cdnval")
 

@@ -78,7 +78,7 @@ contains
       END DO
    end function
 
-   subroutine rhonmt(this, atoms, sphhar, we, ne, itype, sym, l_less_effort,abc, abc1, abc1m)
+   subroutine rhonmt(this, atoms, sphhar, we, ne, itype, sym, l_less_effort,abc, abc1, we1, bqpt, abc1m)
     !! Subroutine to construct all non-spherical MT density coefficients (for a
     !! density perturbation) without LOs in one routine. The spin input dictates,
     !! which element is gonna be built.
@@ -130,19 +130,21 @@ contains
       type(t_abc), intent(IN)    :: abc1 !! \(A_{l,m,\lambda}^{\sigma_{\alpha},\nu\boldsymbol{k}\boldsymbol{q},j,\beta~(1)}\)
 
       type(t_abc), optional, intent(IN) :: abc1m !! \(A_{l,m,\lambda}^{\sigma_{\alpha},\nu\boldsymbol{k}\boldsymbol{-q},j,\beta~(1)}\)
+      real, optional , intent(in)   :: bqpt(3)
+      real, optional, intent(in)    :: we1(ne)   !! \(\tilde{f}_{\nu\boldsymbol{k}\boldsymbol{q}}^{j,\beta~(1)}\)
 
       complex :: coef, cil, cmv
       complex :: temp(ne)
       real:: fact
       integer :: jmem, l, lh, llp, llpmax, lm, lmp, lp, lv, m, mp, mv, na, natom, nn, ns, nt, lphi, lplow, icoef, jcoef, mpp,lpp,lpmin0,lpmax0,lpmin,lo,lop,lpmax
       integer :: n_l(atoms%nlod)
-      !TODO these are needed for DFPT!?
       logical :: l_minusq, l_gamma, l_dfpt
-      real, allocatable:: we1(:)!(nobd)
+
       call timestart("rhonmt")
+      l_gamma = .false. 
+      l_dfpt = present(bqpt)
       l_minusq = present(abc1m)
-      l_gamma = .false.
-      l_dfpt = .false.
+      if (l_dfpt) l_gamma = (norm2(bqpt)<=1e-8) 
       this%l_triang = l_less_effort
       ns = sym%ntypsy(atoms%firstAtom(itype))
       !!$OMP PARALLEL DO DEFAULT(NONE) PRIVATE(lh, lv, jmem, mv, cmv, l, m, lm, mp, lphi, lplow, lp, icoef, nt, temp,cil,lmp,coef) &
@@ -182,7 +184,7 @@ contains
                            if (lmp /= lm .and. this%l_triang) temp(:) = temp(:)*2.0
                            if (l_dfpt) then
                               if (.not. l_minusq) temp(:) = temp(:)*2.0
-                              if (l_gamma) temp(:) = temp(:) + coef*we1(:)*abc%cof(:, lm, 0, nt)
+                              if (l_gamma) temp(:) = temp(:) + coef*we1(:)*abc%cof(:, lm, icoef, nt)
                            end if
                            do jcoef = 1, size(abc%cof, 3) !Loop over radial functions/cofs (usually 0=u and 1=\dot u)
                               this%mat(jcoef, icoef, l, lp, lh) = this%mat(jcoef, icoef, l, lp, lh) &
