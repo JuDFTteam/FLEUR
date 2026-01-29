@@ -336,6 +336,7 @@ CONTAINS
 
     INTEGER :: numberNodes
     CHARACTER(len=100) :: xPathA,valueString
+    LOGICAL :: l_flag
 
     xPathA = '/fleurInput/calculationSetup/cutoffs/@numbands'
     numberNodes = xml%GetNumberOfNodes(xPathA)
@@ -343,6 +344,14 @@ CONTAINS
       valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))))) 
       IF(.NOT. TRIM(ADJUSTL(valueString)).EQ.'all') CALL juDFT_error("numbands is not set to all", calledby="types_juPhon.F90")
     END IF 
+
+    xPathA = '/fleurInput/calculationSetup/coreElectrons/@ctail'
+    numberNodes = xml%GetNumberOfNodes(xPathA)
+    IF(numberNodes.EQ.1) THEN
+      l_flag = evaluateFirstBoolOnly(xml%GetAttributeValue(xPathA))
+    IF(l_flag) CALL juDFT_error("ctail is not set to false. Currently not implemented.", calledby="types_juPhon.F90")
+    END IF 
+
 
    END SUBROUTINE precheck_juPhon
 END MODULE m_types_juPhon
