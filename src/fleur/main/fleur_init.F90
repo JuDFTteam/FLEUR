@@ -83,7 +83,7 @@ CONTAINS
       CHARACTER(LEN=40)             :: kptsSelection(3)
       CHARACTER(LEN=300)            :: line
       REAL                          :: a1(3), a2(3), a3(3)
-      REAL                          :: dtild, phi_add
+      REAL                          :: dtild, phi_add, matricesSize
       LOGICAL                       :: l_found, l_kpts, l_exist, l_krla, l_timeReversalCheck
 
 #ifdef CPP_MPI
@@ -221,6 +221,19 @@ CONTAINS
 #else
       CALL add_usage_data("gpu_per_node", 0)
 #endif
+
+      IF (fmpi%irank .EQ. 0) THEN
+         matricesSize = nbasfcn*nbasfcn*2*8 ! factor 2 because of H + S, factor 8 because of size of REAL in bytes
+         IF (fi%noco%l_noco) THEN
+            matricesSize = matricesSize * 8 ! factor 8 because of all spins in one matrix, complex data.
+         ELSE IF (.NOT.fi%input%l_real) THEN
+            matricesSize = matricesSize * 2 ! factor 2 because of complex data
+         END IF
+         matricesSize = matricesSize / 1024.0 / 1024.0
+         WRITE(*,*) ''
+         WRITE(*,'(a,f9.2,a)') ' Approximate size of matrices (H+S) per k-point: ', matricesSize, ' MB'
+         WRITE(*,*) ''
+      END IF
 
       CALL results%init(fi%input, fi%atoms, fi%kpts, fi%noco)
 
