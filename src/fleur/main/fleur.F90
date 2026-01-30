@@ -132,10 +132,11 @@ CONTAINS
       CALL optional(fmpi, fi%atoms, sphhar, fi%vacuum, stars, fi%input, &
                     fi%sym, fi%cell, fi%sliceplot, xcpot, fi%noco)
 
-      IF (fi%input%l_wann .AND. (fmpi%irank == 0) .AND. (.NOT. wann%l_bs_comf)) THEN
+      IF (fi%input%l_wann .AND. (.NOT. wann%l_bs_comf)) THEN
          ! TODO: If this warning is commented out, can it be erased?
          !IF(fmpi%isize.NE.1) CALL juDFT_error('No Wannier+MPI at the moment',calledby = 'fleur')
-         CALL wann_optional(fmpi, fi%input, fi%kpts, fi%atoms, fi%sym, fi%cell,   fi%noco, wann)
+         if (fmpi%irank==0) CALL wann_optional(fmpi, fi%input, fi%kpts, fi%atoms, fi%sym, fi%cell,   fi%noco, wann)
+         CALL juDFT_end("wann_optional done",fmpi%irank) 
       END IF
 
       iter = 0
