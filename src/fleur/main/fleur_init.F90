@@ -231,7 +231,7 @@ CONTAINS
          END IF
          matricesSize = matricesSize / 1024.0 / 1024.0
          WRITE(*,*) ''
-         WRITE(*,'(a,f9.2,a)') ' Approximate size of matrices (H+S) per k-point: ', matricesSize, ' MB'
+         WRITE(*,'(a,f12.2,a)') ' Approximate size of matrices (H+S) per k-point: ', matricesSize, ' MB'
          WRITE(*,*) ''
       END IF
 
