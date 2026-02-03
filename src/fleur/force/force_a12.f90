@@ -1,4 +1,10 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_forcea12
+   implicit none
 CONTAINS
    SUBROUTINE force_a12(atoms, nobd, sym, cell, we, jsp, ne, usdus, abc, &
                         acoflo, bcoflo, e1cof, e2cof, f_a12, results, itype)
@@ -39,11 +45,11 @@ CONTAINS
       REAL, PARAMETER :: zero = 0.0
       COMPLEX, PARAMETER :: czero = CMPLX(0.0, 0.0)
       COMPLEX a12, cil1, cil2
-      INTEGER i, ie, irinv, is, isinv, it, j, l, l1, l2, lm1, lm2, m1, m2, n, natom, natrun, ilo, m
+      INTEGER i, ie, is, isinv, it, l1, l2, lm1, lm2, m1, m2, n, natom, natrun, ilo
 
       ! Local arrays
       COMPLEX forc_a12(3), gv(3)
-      COMPLEX acof_flapw(nobd, 0:atoms%lmaxd*(atoms%lmaxd + 2)), bcof_flapw(nobd, 0:atoms%lmaxd*(atoms%lmaxd + 2))
+      COMPLEX,allocatable :: acof_flapw(:,:), bcof_flapw(:,:)
       REAL aaa(2), bbb(2), ccc(2), ddd(2), eee(2), fff(2), gvint(3), starsum(3), vec(3), vecsum(3)
 
       ! Statement functions
@@ -74,8 +80,8 @@ CONTAINS
             ! they vanish at the MT-boundary. Therefore, the LO-contribution
             ! to the a and b coefficients has to be subtracted before
             ! calculating a12.
-            acof_flapw(:, :) = abc%cof(:, :, 1, natrun - natom + 1)
-            bcof_flapw(:, :) = abc%cof(:, :, 2, natrun - natom + 1)
+            acof_flapw = abc%cof(:, :, 1, natrun - natom + 1)
+            bcof_flapw = abc%cof(:, :, 2, natrun - natom + 1)
            
             DO ilo = 1, atoms%nlo(n)
                l1 = atoms%llo(ilo,n)
@@ -168,7 +174,7 @@ CONTAINS
             !c  work; to be lucid we take the inverse:
             !                isinv = invtab(is)
                !!               isinv = is
-            ! Rotation is alreadt done in to_pulay, here we work only in the
+            ! Rotation is already done in to_pulay, here we work only in the
             ! coordinate system of the representative atom (natom):
                !!
 
