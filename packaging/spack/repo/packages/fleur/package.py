@@ -61,6 +61,7 @@ class Fleur(CudaPackage, Package):
     depends_on("scalapack", when="+scalapack")
     depends_on("libxc", when="+libxc")
     depends_on("hdf5+hl+fortran", when="+hdf5")
+    depends_on("hdf5@1.12", when="+hdf5 %nvhpc") #nvhpc has problems with mpi_f08 in newer HDF5 version
     depends_on("magma+fortran", when="+magma")
     depends_on("wannier90", when="+wannier90")
     depends_on("spfft+fortran~openmp", when="+spfft~openmp")
@@ -84,6 +85,7 @@ class Fleur(CudaPackage, Package):
 
     def setup_build_environment(self, env):
         spec = self.spec
+        env.set("VERBOSE","1")
         if spec.satisfies("+mpi"):
             env.set("CC", spec["mpi"].mpicc, force=True)
             env.set("FC", spec["mpi"].mpifc, force=True)
