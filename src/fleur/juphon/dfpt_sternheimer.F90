@@ -132,11 +132,6 @@ CONTAINS
          archiveType = CDN_ARCHIVE_TYPE_NOCO_const
       END IF
 
-
-
-      l_exist = .FALSE. !REMOVE FROM BRANCH
-      
-      
       
       IF (fmpi%irank == 0) THEN
          strho = .NOT.l_exist  ! There is no density perturbation file yet --> starting density perturbation
