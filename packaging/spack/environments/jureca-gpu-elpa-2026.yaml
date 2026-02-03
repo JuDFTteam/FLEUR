@@ -16,7 +16,7 @@ spack:
   concretizer:
     unify: true
   repos:
-    fleur: /p/home/jusers/wortmann1/jureca/fleur/packaging/spack/repo
+    fleur: ${FLEUR_SOURCE}/packaging/spack/repo
   packages:
     openblas:
       externals:
