@@ -13,6 +13,14 @@ spack:
   repos:
     fleur: ${FLEUR_SOURCE}/packaging/spack/repo
   packages:
+    cuda:
+      externals:
+      - spec: cuda@13.0.48
+        prefix: /e/software/default/stages/2026/software/CUDA/13
+    pkgconf:
+      externals:
+      - spec: pkgconf@1.7.3
+        prefix: /usr
     gmake:
       externals:
       - spec: gmake@4.4.1
@@ -23,12 +31,11 @@ spack:
       externals:
       - spec: libtool@2.4.6
         prefix: /usr
-    cuda:
+    libxml2:
+      buildable: false
       externals:
-      - spec: cuda@13.0.48
-        prefix: /e/software/default/stages/2026/software/CUDA/13
-      - spec: cuda@13.0.48
-        prefix: /e/software/default/stages/2026/software/nvidia-compilers/25.9-CUDA-13/Linux_aarch64/25.9/compilers
+      - spec: libxml2@2.14
+        modules: [libxml2/2.14.3]
     cmake:
       externals:
       - spec: cmake@4.0.3
@@ -52,7 +59,7 @@ spack:
       externals:
       - spec: nvhpc@25.9~blas~lapack~mpi
         prefix: /e/software/default/stages/2026/software/nvidia-compilers/25.9-CUDA-13/Linux_aarch64/25.9/compilers
-        modules: [nvidia-compilers, OpenMPI, OpenBLAS]
+        modules: [nvidia-compilers, CUDA, OpenMPI, OpenBLAS, Python]
         extra_attributes:
           compilers:
             c: /e/software/default/stages/2026/software/nvidia-compilers/25.9-CUDA-13/Linux_aarch64/25.9/compilers/bin/nvc
