@@ -5,6 +5,8 @@ module m_dfpt_vefield
     contains
     
         subroutine dfpt_vefield(juphon,starsq,atoms,sym,sphhar,cell,dfptvefield,dfptvefieldimag,iDir,q_sign)
+            !Currently only spin=1
+            
             use m_types
             use m_ylm
             use m_sphbes
@@ -51,7 +53,7 @@ module m_dfpt_vefield
 
             !interstitial region
             dfptvefield%pw(:,1) = 0.0
-            dfptvefield%pw(1,1) = cmplx(0.0,1/(2*qlim))!
+            dfptvefield%pw(1,1) = q_sign*cmplx(0.0,1/(2*qlim))!
             
             
             !MT-region
@@ -84,7 +86,7 @@ module m_dfpt_vefield
                     ll1 = l*(l+1)+1
                     do m =-l,l
                         lm = ll1 + m 
-                        v1efield_mt(1:imax,lm,n,1) = ImagUnit/(qlim*2)*sbf(l,1:imax)*(pylm(lm,n))
+                        v1efield_mt(1:imax,lm,n,1) = q_sign*ImagUnit/(qlim*2)*sbf(l,1:imax)*(pylm(lm,n))
                     end do
                 end do
                 deallocate(sbf)
