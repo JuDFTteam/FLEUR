@@ -207,20 +207,16 @@ module m_dfpt_born_effcharge
 
             tempval_pw = CMPLX(0.0,0.0)
 
-            qvec_int= fi%juPhon%qvec_efield(iQ,:)
-            CALL starsq_vext%reset_stars()
-            CALL make_stars(starsq_vext, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, qvec_int, 1, iQ,.true.)
-            starsq_vext%ufft = starsq%ufft !why again
-            call vExt1%init(starsq_vext, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
-            call vExt1Im%init(starsq_vext, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
-            call dfpt_vefield(fi%juPhon,starsq_vext,fi%atoms,fi%sym,sphhar,fi%cell,vExt1,vExt1Im,iQ,q_sign)
+            call vExt1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
+            call vExt1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
+            call dfpt_vefield(fi%juPhon,starsq,fi%atoms,fi%sym,sphhar,fi%cell,vExt1,vExt1Im,iQ,q_sign)
 
             !interstitial
             pwwq2 = CMPLX(0.0,0.0)
             CALL dfpt_convol_big(1, starsq, stars, vExt1%pw(:,1), CMPLX(1.0,0.0)*stars%ufft, pwwq2)
             CALL dfpt_int_pw(starsq, fi%cell, denIn1_pw, pwwq2, tempval_pw)
             !call dfpt_checkdopall(fi, sphhar, starsq,vExt1,vExt1Im,denIn1,denIn1Im) 
-            print*,"convol(theta*vext1)*n1",tempval_pw
+            !print*,"convol(theta*vext1)*n1",tempval_pw
             BEC_element = BEC_element + 2*tempval_pw 
             BEC_contributions_element(1) = BEC_contributions_element(1) + tempval_pw
             BEC_contributions_element(8+fi%atoms%nat) =  BEC_contributions_element(8+fi%atoms%nat) +2*tempval_pw 
@@ -278,7 +274,7 @@ module m_dfpt_born_effcharge
             pwwq2 = CMPLX(0.0,0.0)
             theta1full = CMPLX(0.0,0.0)
             !CALL stepf_analytical(fi%sym, stars, fi%atoms, fi%input, fi%cell, fmpi, fftgrid_dummy, [0.0,0.0,0.0], iDType, iDir_den, 1, theta1full0(0:,:,:))
-            CALL stepf_analytical(fi%sym, starsq, fi%atoms, fi%input, fi%cell, fmpi, fftgrid_dummy,fi%juPhon%qvec_efield(iQ,:), iDType, iDir_den, 1, theta1full)   
+            CALL stepf_analytical(fi%sym, starsq, fi%atoms, fi%input, fi%cell, fmpi, fftgrid_dummy,q_sign*fi%juPhon%qvec_efield(:,iQ), iDType, iDir_den, 1, theta1full)   
             DO iType = 1, fi%atoms%ntype
                 DO iDir = 1, 3
                     fftgrid_dummy%grid = theta1full(0:, iType, iDir)

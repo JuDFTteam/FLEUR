@@ -286,12 +286,13 @@ CONTAINS
     USE m_types_cell
     USE m_types_input
     USE m_inv3
+    USE m_constants
 
       CLASS(t_juPhon),     INTENT(INOUT) :: this
       TYPE(t_cell),    INTENT(IN)     :: cell
       TYPE(t_input),   intent(in)     :: input
       INTEGER                            :: iDir
-      REAL                               :: qvec_ext(3), qvec_int(3),det,inv_bmat(3,3)
+      REAL                               :: qvec_ext(3), qvec_int(3)
 
 
       integer :: iq 
@@ -303,10 +304,9 @@ CONTAINS
           qvec_ext(:) = 0.0
           qvec_int(:) = 0.0
           qvec_ext(iDir) = this%qlim
-          call inv3(cell%bmat,inv_bmat(:,:),det)
-          qvec_int = matmul(qvec_ext,transpose(inv_bmat))
-          this%qvec_efield(iDir,:) = qvec_int
-        end do 
+          qvec_int = matmul(qvec_ext,cell%amat)/(tpi_const) ! tpi_const is in principle irrelevant, but included for consistency with the previous q vectors
+          this%qvec_efield(:,iDir) = qvec_int
+        end do
       end if 
 
       if (input%film .and. allocated(this%qvec)) then

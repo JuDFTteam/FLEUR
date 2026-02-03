@@ -64,8 +64,7 @@ module m_dfpt_dielecten
             do iDir_col = 1, 3   
                 ! call make_stars 
                 tempval_pw = CMPLX(0.0,0.0)
-                qvec_int=fi%juPhon%qvec_efield(iDir_col,:)
-
+                qvec_int=fi%juPhon%qvec_efield(:,iDir_col)
                 CALL starsq_vext%reset_stars()
                 CALL make_stars(starsq_vext, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, qvec_int, 1, iDir_col,fi%juPhon%l_efield)
                 starsq_vext%ufft = starsq%ufft
@@ -89,7 +88,7 @@ module m_dfpt_dielecten
 
 
                     !Muffin-tin 
-                    do iType = 1, fi%atoms%ntype
+                    do iType = 1, fi%atoms%nat
                         tempval_mt = CMPLX(0.0,0.0) 
             
                         call dfpt_int_mt(fi%atoms, sphhar, fi%sym, iType, denIn1_mt, denIn1_mt_Im, vExt1%mt(:,0:,:,1), vExt1Im%mt(:,0:,:,1), tempval_mt)!denIn1_mt
