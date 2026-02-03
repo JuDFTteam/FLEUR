@@ -559,16 +559,14 @@ CONTAINS
                END IF
             END DO
             CALL timestart("diel_tensor")
-            IF (fmpi%irank==0) THEN
-               IF (fi%juPhon%l_efield_scr) THEN
-                  WRITE(*,*) "Scf calculation for screened electric field perturbation finished"
-                  CALL dfpt_dielecten_final_old(fi_nosym,diel_tensor(:,:))
-               ELSE
-                  WRITE(*,*) "Scf calculation for bare electric field perturbation finished"
-                  CALL dfpt_dielecten_final_new(fi_nosym,diel_tensor(:,:))
-               END IF
-               !CALL dfpt_dielecten_final_old(fi_nosym,diel_tensor(:,:))
-            END IF 
+            IF (fi%juPhon%l_efield_scr) THEN
+               WRITE(*,*) "Scf calculation for screened electric field perturbation finished"
+               CALL dfpt_dielecten_final_old(fi_nosym,diel_tensor(:,:))
+            ELSE
+               WRITE(*,*) "Scf calculation for bare electric field perturbation finished"
+               CALL dfpt_dielecten_final_new(fi_nosym,diel_tensor(:,:))
+            END IF
+            !CALL dfpt_dielecten_final_old(fi_nosym,diel_tensor(:,:))
             CALL timestop("diel_tensor")
             IF (fi%juPhon%l_borneffcharge) THEN
                CALL dfpt_born_eff_charge_final(fi,born_eff_charge,born_eff_charge_contributions(:,:,:,:))
@@ -579,20 +577,17 @@ CONTAINS
          ELSE IF (fi%juPhon%l_phonon) THEN
             if (fi%juPhon%l_borneffcharge) then
                CALL BEC%init(fi_nosym)
-               print*,"BEC%BEC_element",BEC%BEC_element
-               print*,"after init"
-               stop
             end if
-            ALLOCATE(born_eff_charge(fi_nosym%atoms%ntype,3,3))
-            ALLOCATE(born_eff_charge_contributions(fi_nosym%atoms%ntype,3,3,8+fi_nosym%atoms%ntype))
-            born_eff_charge = CMPLX(0.0)
+            !ALLOCATE(born_eff_charge(fi_nosym%atoms%ntype,3,3))
+            ALLOCATE(born_eff_charge_contributions(fi_nosym%atoms%nat,3,3,8+fi_nosym%atoms%nat))
+            !born_eff_charge = CMPLX(0.0)
             born_eff_charge_contributions = CMPLX(0.0)
             IF (fmpi%irank==0) WRITE(*,*) "Scf calculation for phonon perturbation"
             IF (fi%juPhon%l_borneffcharge .AND. fmpi%irank==0) WRITE(*,*)"for Born effective charge" 
 
             IF (fi%juPhon%l_borneffcharge) THEN
                q_start = 1
-               q_stop  = 1
+               q_stop  = 3
             ELSE
                q_start = fi%juPhon%startq
                q_stop = MERGE(fi%juPhon%stopq,SIZE(q_list),fi%juPhon%stopq/=0)
@@ -737,11 +732,8 @@ CONTAINS
                                              MERGE(sigma_coul,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir==3))
                         CALL timestop("Sternheimer")
                      END IF
-                     !print*,"sum(denIn1%pw) 1",sum(denIn1%pw)
-                     !print*,"sum(denIn1%mt) 1",sum(denIn1%mt)
-                     !print*,"sum(denIn1Im%mt) 1",sum(denIn1Im%mt)
-                     IF (fi%juPhon%l_borneffcharge .AND. fmpi%irank==0) THEN
-                        CALL dfpt_born_eff_charge_element(fi_nosym,stars_nosym,starsq,sphhar_nosym,fmpi_nosym,rho_nosym,rho_core,denIn1,denIn1Im,grRho3(iDir),grrho_val(:,:,:,:,iDir),born_eff_charge(iDtype,iDir,iQ),born_eff_charge_contributions(iDtype,iDir,iQ,:),iDir,iDtype,iQ,1)
+                     IF (fi%juPhon%l_borneffcharge) THEN
+                        CALL dfpt_born_eff_charge_element(fi_nosym,stars_nosym,starsq,sphhar_nosym,fmpi_nosym,rho_nosym,rho_core,denIn1,denIn1Im,grRho3(iDir),grrho_val(:,:,:,:,iDir),BEC%BEC_element(iDtype,iDir,iQ),born_eff_charge_contributions(iDtype,iDir,iQ,:),iDir,iDtype,iQ,1)
                      END IF
                      IF (fmpi%irank==0) WRITE(*,*) '-------------------------'
                      CALL timestart("Dynmat")
@@ -780,7 +772,7 @@ CONTAINS
                END DO
 
                IF ((fi%juPhon%l_borneffcharge .AND. fmpi%irank==0)) THEN
-                  CALL dfpt_born_eff_charge_final(fi,born_eff_charge,born_eff_charge_contributions(:,:,:,:))
+                  CALL dfpt_born_eff_charge_final(fi,BEC%BEC_element,born_eff_charge_contributions(:,:,:,:))
                END IF
                !stop
                IF (fmpi%irank==0) THEN
@@ -811,7 +803,7 @@ CONTAINS
                END IF 
                IF (fmpi%irank==0) DEALLOCATE(eigenVals, eigenVecs, eigenFreqs, E2ndOrdII)
             END DO
-            DEALLOCATE(born_eff_charge)
+            !DEALLOCATE(born_eff_charge)
             DEALLOCATE(born_eff_charge_contributions)
          END IF
       END IF
