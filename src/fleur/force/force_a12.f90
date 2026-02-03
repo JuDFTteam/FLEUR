@@ -45,7 +45,7 @@ CONTAINS
       REAL, PARAMETER :: zero = 0.0
       COMPLEX, PARAMETER :: czero = CMPLX(0.0, 0.0)
       COMPLEX a12, cil1, cil2
-      INTEGER i, ie, is, isinv, it, l1, l2, lm1, lm2, m1, m2, n, natom, natrun, ilo
+      INTEGER i, ie, is, isinv, it, l1, l2, lm1, lm2, m1, m2, n, natom, natrun, ilo,j,l,m
 
       ! Local arrays
       COMPLEX forc_a12(3), gv(3)
