@@ -53,7 +53,7 @@ if (CLI_FLEUR_USE_GPU)
    endif()   
 
    #check for nvToolsExt (Use the simple lapack test here that should compile here)
-   set(TEST_LIBRARIES "-lnvToolsExt";${FLEUR_LIBRARIES}")
+   set(TEST_LIBRARIES "-lnvToolsExt";${FLEUR_LIBRARIES})
    try_compile(FLEUR_USE_NVTOOLSEXT ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_lapack.F90 LINK_LIBRARIES ${TEST_LIBRARIES} OUTPUT_VARIABLE compile_output)
    if ("$ENV{VERBOSE}")
       message("NVTOOLSEXT compile test: ${FLEUR_USE_NVTOOLSEXT}\n${compile_output}")
