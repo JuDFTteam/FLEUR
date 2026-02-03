@@ -9,7 +9,7 @@ MODULE m_checkdopall
 CONTAINS
 
 SUBROUTINE checkDOPAll(input,sphhar,stars,atoms,sym,vacuum ,&
-                       cell,potden,ispin,potdenIm)
+                       cell,potden,ispin,potdenIm,type_string)
 
    USE m_sphpts
    USE m_checkdop
@@ -31,16 +31,18 @@ SUBROUTINE checkDOPAll(input,sphhar,stars,atoms,sym,vacuum ,&
    TYPE(t_cell),INTENT(IN)      :: cell
    TYPE(t_potden),INTENT(IN)    :: potden
    TYPE(t_potden),INTENT(IN),OPTIONAL :: potdenIm
+   character(len=*),optional   :: type_string
 
    INTEGER, INTENT(IN)          :: ispin
 
    INTEGER                      :: npd, nat, n, ivac
    REAL                         :: signum
-
+   Logical                      :: l_save_npy
    REAL                         :: xp(3,(atoms%lmaxd+1+MOD(atoms%lmaxd+1,2))*(2*atoms%lmaxd+1))!(3,dimension%nspd)
+   character(len=20)            :: checkdopsave_string
 
    CALL timestart("checkDOPAll")
-
+   l_save_npy= present(type_string)
    IF ((input%film)) THEN
       !--->             vacuum boundaries
       npd = MIN(SIZE(xp,2),25)
@@ -63,8 +65,14 @@ SUBROUTINE checkDOPAll(input,sphhar,stars,atoms,sym,vacuum ,&
       nat = atoms%firstAtom(n)
       CALL sphpts(xp,SIZE(xp,2),atoms%rmt(n),atoms%pos(1,nat))
       IF (PRESENT(potdenIm)) THEN
-         CALL checkdop(xp,SIZE(xp,2),n,nat,0,-1,ispin,&
+         IF (l_save_npy) THEN
+            write(checkdopsave_string,"(a,i0,a)") trim(type_string)//"_at", n, ".npy"
+            CALL checkdop(xp,SIZE(xp,2),n,nat,0,-1,ispin,&
+                      atoms,sphhar,stars,sym,vacuum,cell ,potden,potdenIm,checkdopsave_string)
+         ELSE
+            CALL checkdop(xp,SIZE(xp,2),n,nat,0,-1,ispin,&
                       atoms,sphhar,stars,sym,vacuum,cell ,potden,potdenIm)
+         END IF
       ELSE
          CALL checkdop(xp,SIZE(xp,2),n,nat,0,-1,ispin,&
                       atoms,sphhar,stars,sym,vacuum,cell ,potden)

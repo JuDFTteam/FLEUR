@@ -1,7 +1,7 @@
       MODULE m_checkdop
       CONTAINS
         SUBROUTINE checkdop(p,np,n,na,ivac,iflag,jsp,atoms,sphhar,stars,sym,&
-                            vacuum,cell,potden,potdenIm)
+                            vacuum,cell,potden,potdenIm,checkdopsave_string)
           ! ************************************************************
           !     subroutines checks the continuity of coulomb           *
           !     potential or valence charge density                    *
@@ -37,18 +37,21 @@
           !+odim
           !     .. Array Arguments ..
           REAL,    INTENT (IN) :: p(:,:)!(3,DIMENSION%nspd)
+          character(len=20),optional   :: checkdopsave_string
           !     ..
           !     .. Local Scalars ..
           REAL av,dms,rms,s,ir2,help,phi,helpIm
           INTEGER i,j,k,lh,mem,nd,lm,ll1,nopa ,gz,m
           COMPLEX ic
-          LOGICAL l_cdn, l_dfpt
+          LOGICAL l_cdn, l_dfpt,l_save_npy
+          COMPLEX data_npy(8,2)
           !     ..
           !     .. Local Arrays ..
           COMPLEX sf2(stars%ng2),sf3(stars%ng3),ylm( (atoms%lmaxd+1)**2 )
           REAL rcc(3),v1(SIZE(p,2)),v2(SIZE(p,2)),x(3),ri(3), v1Im(SIZE(p,2)), v2Im(SIZE(p,2))
           l_dfpt = .FALSE.
           l_dfpt = PRESENT(potdenIm)
+          l_save_npy = PRESENT(checkdopsave_string)
           l_cdn = .FALSE. ! By default we assume that the input is a potential.
           IF (potden%potdenType.LE.0) CALL juDFT_error('unknown potden type', calledby='checkdop')
           IF (potden%potdenType.GT.1000) l_cdn = .TRUE. ! potdenTypes > 1000 are reserved for densities
@@ -121,10 +124,12 @@
                    END IF
              END DO
              CALL fitchk(v1(:np),v2(:np),av,rms,dms)
+             IF (l_dfpt) WRITE (oUnit,*) "       Real Part:"
              WRITE (oUnit,FMT=8030) av,rms,dms
              IF (l_dfpt) THEN
                CALL fitchk(v1Im(:np),v2Im(:np),av,rms,dms)
-               WRITE (oUnit,*) "Imaginary Part:"
+               WRITE (oUnit,*) ""
+               WRITE (oUnit,*) "       Imaginary Part:"
                WRITE (oUnit,FMT=8030) av,rms,dms
              END IF 
              RETURN
@@ -206,11 +211,20 @@
                 END IF
              END IF
          END DO 
+         IF (l_save_npy) THEN
+          data_npy(:,1) = v1(1:8)+cmplx(0.,1.)*v1Im(1:8)
+          data_npy(:,2) = v2(1:8)+cmplx(0.,1.)*v2Im(1:8)
+          !data_npy = 0.0
+          call save_npy(checkdopsave_string, data_npy)
+         END IF
+          
           CALL fitchk(v1(:np),v2(:np),av,rms,dms)
+          IF (l_dfpt) WRITE (oUnit,*) "       Real Part:"
           WRITE (oUnit,FMT=8030) av,rms,dms
           IF (l_dfpt) THEN
                CALL fitchk(v1Im(:np),v2Im(:np),av,rms,dms)
-               WRITE (oUnit,*) "Imaginary Part:"
+               WRITE (oUnit,*) ""
+               WRITE (oUnit,*) "       Imaginary Part:"
                WRITE (oUnit,FMT=8030) av,rms,dms
           END IF 
 8000      FORMAT (/,'    int.-vac. boundary (potential): ivac=',i2,/,t10,&
