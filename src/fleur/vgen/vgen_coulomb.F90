@@ -234,7 +234,7 @@ contains
 
     !remove G=0 component to get "screened" efield perturbation
     IF (juphon%l_dfpt .AND. juphon%l_efield_scr) then 
-      vCoul%pw(ispin,:)=0.0
+      vCoul%pw(1,:)=0.0
     end if
     
     ! MUFFIN-TIN POTENTIAL
