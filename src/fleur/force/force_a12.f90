@@ -66,6 +66,8 @@ CONTAINS
       phi(l, m) = l*SQRT(REAL((l - m + 1)*(l + m + 1))/REAL((2*l + 1)*(2*l + 3)))
 
       CALL timestart("force_a12")
+      allocate(acof_flapw(size(abc%cof),0:ubound(abc%cof))  )
+      allocate(bcof_flapw(size(abc%cof),0:ubound(abc%cof))  )
 
       n = itype
       natom = atoms%firstAtom(n)
@@ -80,8 +82,8 @@ CONTAINS
             ! they vanish at the MT-boundary. Therefore, the LO-contribution
             ! to the a and b coefficients has to be subtracted before
             ! calculating a12.
-            acof_flapw = abc%cof(:, :, 1, natrun - natom + 1)
-            bcof_flapw = abc%cof(:, :, 2, natrun - natom + 1)
+            acof_flapw(:,:) = abc%cof(:, 0:, 1, natrun - natom + 1)
+            bcof_flapw(:,:) = abc%cof(:, 0:, 2, natrun - natom + 1)
            
             DO ilo = 1, atoms%nlo(n)
                l1 = atoms%llo(ilo,n)
