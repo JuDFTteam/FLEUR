@@ -66,8 +66,8 @@ CONTAINS
       phi(l, m) = l*SQRT(REAL((l - m + 1)*(l + m + 1))/REAL((2*l + 1)*(2*l + 3)))
 
       CALL timestart("force_a12")
-      allocate(acof_flapw(size(abc%cof),0:ubound(abc%cof))  )
-      allocate(bcof_flapw(size(abc%cof),0:ubound(abc%cof))  )
+      allocate(acof_flapw(size(abc%cof,1),0:ubound(abc%cof,2))  )
+      allocate(bcof_flapw(size(abc%cof,1),0:ubound(abc%cof,2))  )
 
       n = itype
       natom = atoms%firstAtom(n)
