@@ -11,7 +11,7 @@ spack:
   concretizer:
     unify: true
   repos:
-    fleur: /e/home/jusers/wortmann1/jupiter/jureap53/fleur/packaging/spack/repo
+    fleur: ${FLEUR_SOURCE}/packaging/spack/repo
   packages:
     mpich:
       externals:
