@@ -353,5 +353,23 @@ CONTAINS
     END IF 
 
 
+    xPathA = '/fleurInput/calculationSetup/soc/@l_soc'
+    numberNodes = xml%GetNumberOfNodes(xPathA)
+    IF(numberNodes.EQ.1) THEN
+      l_flag = evaluateFirstBoolOnly(xml%GetAttributeValue(xPathA))
+    IF(l_flag) CALL juDFT_error("SOC + DFPT is not supported yet. Please redo the calculation without SOC.", calledby="types_juPhon.F90")
+    END IF 
+
+
+
+    xPathA = '/fleurInput/calculationSetup/magnetism/@l_noco'
+    numberNodes = xml%GetNumberOfNodes(xPathA)
+    IF(numberNodes.EQ.1) THEN
+      l_flag = evaluateFirstBoolOnly(xml%GetAttributeValue(xPathA))
+    IF(l_flag) CALL juDFT_error("NOCO + DFPT is not supported yet. If possible, fall back to collinear calculation.", calledby="types_juPhon.F90")
+    END IF 
+
+
+
    END SUBROUTINE precheck_juPhon
 END MODULE m_types_juPhon
