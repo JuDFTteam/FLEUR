@@ -65,6 +65,4 @@ spack:
             c: /e/software/default/stages/2026/software/nvidia-compilers/25.9-CUDA-13/Linux_aarch64/25.9/compilers/bin/nvc
             cxx: /e/software/default/stages/2026/software/nvidia-compilers/25.9-CUDA-13/Linux_aarch64/25.9/compilers/bin/nvc++
             fortran: /e/software/default/stages/2026/software/nvidia-compilers/25.9-CUDA-13/Linux_aarch64/25.9/compilers/bin/nvfortran
-  develop:
-    fleur:
-      spec: fleur@=develop
+  
