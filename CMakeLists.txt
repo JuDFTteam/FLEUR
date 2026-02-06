@@ -15,7 +15,6 @@ set(CMAKE_Fortran_FLAGS "")
 project(FLEUR LANGUAGES C CXX Fortran)
 string(STRIP "${CMAKE_Fortran_FLAGS} ${CMAKE_Fortran_FLAGS_backup}" CMAKE_Fortran_FLAGS)
 
-include("cmake/fleurist_setup.cmake")
 include("cmake/CompilerConfig.txt")
 
 include("cmake/Generate_Schema.cmake")
@@ -45,6 +44,8 @@ if (FLEUR_USE_MPI)
    add_dependencies("inpgen3" fleur_MPI)
 endif ()
 
+#Build fleuriste TUI/CLI
+add_subdirectory("src/tools/inpgen3/fleuriste")
 
 include("cmake/ReportConfig.txt")
 
