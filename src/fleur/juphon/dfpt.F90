@@ -464,22 +464,7 @@ CONTAINS
             ALLOCATE(den_elph(3*fi_nosym%atoms%ntype))
             ALLOCATE(denIm_elph(3*fi_nosym%atoms%ntype))
          END IF 
-         !print*,"q+"
-         !CALL dfpt_vefield_int(fi,stars,sphhar,fmpi,rho,1)
-         !print*,"stars%center",stars%center
-         !print*,"q-"
-         !CALL dfpt_vefield_int(fi,stars,sphhar,fmpi,rho,-1)
-         !print*,"stars%center",stars%center
-         !CALL dfpt_vefield_realspace_MT(fi,stars,sphhar,fmpi,rho,1)
-         
-         !stop
-         !do iDtype= 1,fi_nosym%atoms%ntype
-         !!   print*,"fi_nosym%atoms%taual(:,iDtype)",fi_nosym%atoms%taual(:,iDtype)
-         !   print*,"fi_nosym%atoms%pos(:,iDtype)",fi_nosym%atoms%pos(:,iDtype)
-         !end do
-         !stop
          IF (fi%juPhon%l_efield) THEN
-            !print*,"I make it here"
             
             ALLOCATE(born_eff_charge(fi_nosym%atoms%ntype,3,3))
             ALLOCATE(born_eff_charge_contributions(fi_nosym%atoms%ntype,3,3,1+fi_nosym%atoms%ntype))
@@ -552,12 +537,13 @@ CONTAINS
                IF (fmpi%irank==0) WRITE(*,*) '-------------------------'  
                CALL dfpt_dielecten_HF_int(fi_nosym,stars_nosym,starsq,sphhar_nosym,fmpi_nosym,denIn1,denIn1Im,results_nosym, results1,diel_tensor(iDir,:),rho,iDir,1)
                IF (fi%juPhon%l_borneffcharge) THEN
-                  !print*,"before bornfeffcharge"
-                  !print*,"born_eff_charge(:,:,iQ)",born_eff_charge(:,:,iDir)
                   CALL dfpt_born_eff_charge_element_nef(fi_nosym,stars_nosym,starsq,sphhar_nosym,fmpi_nosym,rho_nosym,denIn1,denIn1Im,grRho3(iDir),born_eff_charge(:,:,iDir),born_eff_charge_contributions(:,:,iDir,:),iDir,1,hybdat_nosym,xcpot_nosym,nococonv_nosym,vTot_nosym)
-                  !stop
                END IF
+#if defined(CPP_MPI)
+   CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
+#endif         
             END DO
+            IF (fmpi%irank==0) THEN
             CALL timestart("diel_tensor")
             IF (fi%juPhon%l_efield_scr) THEN
                WRITE(*,*) "Scf calculation for screened electric field perturbation finished"
@@ -566,12 +552,11 @@ CONTAINS
                WRITE(*,*) "Scf calculation for bare electric field perturbation finished"
                CALL dfpt_dielecten_final_new(fi_nosym,diel_tensor(:,:))
             END IF
-            !CALL dfpt_dielecten_final_old(fi_nosym,diel_tensor(:,:))
             CALL timestop("diel_tensor")
             IF (fi%juPhon%l_borneffcharge) THEN
                CALL dfpt_born_eff_charge_final(fi,born_eff_charge,born_eff_charge_contributions(:,:,:,:))
             END IF
-
+            END IF
             DEALLOCATE(born_eff_charge)
             DEALLOCATE(born_eff_charge_contributions)
          ELSE IF (fi%juPhon%l_phonon) THEN
