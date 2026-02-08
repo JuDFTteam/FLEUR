@@ -544,18 +544,18 @@ CONTAINS
 #endif         
             END DO
             IF (fmpi%irank==0) THEN
-            CALL timestart("diel_tensor")
-            IF (fi%juPhon%l_efield_scr) THEN
-               WRITE(*,*) "Scf calculation for screened electric field perturbation finished"
-               CALL dfpt_dielecten_final_old(fi_nosym,diel_tensor(:,:))
-            ELSE
-               WRITE(*,*) "Scf calculation for bare electric field perturbation finished"
-               CALL dfpt_dielecten_final_new(fi_nosym,diel_tensor(:,:))
-            END IF
-            CALL timestop("diel_tensor")
-            IF (fi%juPhon%l_borneffcharge) THEN
-               CALL dfpt_born_eff_charge_final(fi,born_eff_charge,born_eff_charge_contributions(:,:,:,:))
-            END IF
+               CALL timestart("diel_tensor")
+               IF (fi%juPhon%l_efield_scr) THEN
+                  WRITE(*,*) "Scf calculation for screened electric field perturbation finished"
+                  CALL dfpt_dielecten_final_old(fi_nosym,diel_tensor(:,:))
+               ELSE
+                  WRITE(*,*) "Scf calculation for bare electric field perturbation finished"
+                  CALL dfpt_dielecten_final_new(fi_nosym,diel_tensor(:,:))
+               END IF
+               CALL timestop("diel_tensor")
+               IF (fi%juPhon%l_borneffcharge) THEN
+                  CALL dfpt_born_eff_charge_final(fi,born_eff_charge,born_eff_charge_contributions(:,:,:,:))
+               END IF
             END IF
             DEALLOCATE(born_eff_charge)
             DEALLOCATE(born_eff_charge_contributions)
@@ -759,7 +759,6 @@ CONTAINS
                IF ((fi%juPhon%l_borneffcharge .AND. fmpi%irank==0)) THEN
                   CALL dfpt_born_eff_charge_final(fi,BEC%BEC_element,born_eff_charge_contributions(:,:,:,:))
                END IF
-               !stop
                IF (fmpi%irank==0) THEN
                   WRITE(*,*) '-------------------------'
                   CALL timestart("Dynmat diagonalization")

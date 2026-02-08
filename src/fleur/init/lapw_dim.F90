@@ -5,7 +5,9 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_lapwdim
+
 CONTAINS
+
    SUBROUTINE lapw_dim(kpts,cell,input,noco,nococonv,forcetheo,atoms,nbasfcn,juPhon)
       !
       !*********************************************************************
@@ -32,11 +34,11 @@ CONTAINS
       INTEGER               :: nvd,nv2d,addx,addy,addz
       TYPE(t_lapw) :: lapw
 
-      INTEGER j1,j2,j3,mk1,mk2,mk3,iofile,ksfft,q,nk,nv,nv2,qpho
+      INTEGER j1,j2,j3,mk1,mk2,mk3,iofile,ksfft,q,nk,nv,nv2
       INTEGER ispin,nvh(2),nv2h(2)
 
-      REAL arltv1,arltv2,arltv3,rkm,rk2,r2,s(3),gmaxp,qss(3),q_dfpt(3)
-      REAL,ALLOCATABLE:: q_vectors(:,:),q_dfpt_vectors(:,:)
+      REAL arltv1,arltv2,arltv3,rkm,rk2,r2,s(3),gmaxp,qss(3)
+      REAL,ALLOCATABLE:: q_vectors(:,:)
       REAL            :: bkpt(3)
       ! ..
       !
@@ -66,19 +68,16 @@ CONTAINS
       !Determine the q-vector(s) to use
       IF (juPhon%l_dfpt) THEN
          IF (juPhon%l_efield .OR. juPhon%l_borneffcharge) THEN
-            ALLOCATE(q_dfpt_vectors(3,SIZE(juPhon%qvec_efield,2)+1))
-            q_dfpt_vectors = 0.0
-            q_dfpt_vectors(:,:size(juPhon%qvec_efield,2))=juPhon%qvec_efield
+            ALLOCATE(q_vectors(3,SIZE(juPhon%qvec_efield,2)+1))
+            q_vectors = 0.0
+            q_vectors(:,:size(juPhon%qvec_efield,2))=juPhon%qvec_efield
          ElSE
-            ALLOCATE(q_dfpt_vectors(3,SIZE(juPhon%qvec,2)+1))
-            q_dfpt_vectors = 0.0
-            q_dfpt_vectors(:,:size(juPhon%qvec,2))=juPhon%qvec
+            ALLOCATE(q_vectors(3,SIZE(juPhon%qvec,2)+1))
+            q_vectors = 0.0 ! with this we force the gamma point to be within the dim search 
+            q_vectors(:,:size(juPhon%qvec,2))=juPhon%qvec
          END IF
-         ALLOCATE(q_vectors(3,1))
-         q_vectors=0.0
+         q_vectors= 2*q_vectors ! To get right qvec in i.e. line 113 and bellow
       ELSE
-         ALLOCATE(q_dfpt_vectors(3,1))
-         q_dfpt_vectors = 0.0
          SELECT TYPE(forcetheo)
          TYPE IS (t_forcetheo_ssdisp)
             ALLOCATE(q_vectors(3,SIZE(forcetheo%qvec,2)))
@@ -99,55 +98,52 @@ CONTAINS
 
 
       nvd = 0 ; nv2d = 0
-      DO qpho=1,SIZE(q_dfpt_vectors,2)
-         q_dfpt=q_dfpt_vectors(:,qpho)
-         DO q=1,SIZE(q_vectors,2)
-            qss=q_vectors(:,q)
-            DO nk=1,kpts%nkpt
-               bkpt=kpts%bk(:,nk)
-               !print*,"shape(bkpt)",shape(bkpt)
-               !---> obtain vectors
-               !---> in a spin-spiral calculation different basis sets are used for
-               !---> the two spin directions, because the cutoff radius is defined
-               !---> by |G + k +/- qss/2| < rkmax.
-               DO ispin = 1,2
-                  addX = abs(NINT((bkpt(1) + (2*ispin - 3)/2.0*qss(1)+q_dfpt(1))/arltv1))
-                  addY = abs(NINT((bkpt(2) + (2*ispin - 3)/2.0*qss(2)+q_dfpt(2))/arltv2))
-                  addZ = abs(NINT((bkpt(3) + (2*ispin - 3)/2.0*qss(3)+q_dfpt(3))/arltv2))
-                  nv = 0
-                  nv2 = 0
-                  DO j1 = -mk1-addX,mk1+addX
-                     s(1) = bkpt(1) + j1 + (2*ispin - 3)/2.0*qss(1) + q_dfpt(1)
-                     DO j2 = -mk2-addY,mk2+addY
-                        s(2) = bkpt(2) + j2 + (2*ispin - 3)/2.0*qss(2) + q_dfpt(2)
-                        !--->          nv2 for films
-                        s(3) = 0.0
+      DO q=1,SIZE(q_vectors,2)
+         qss=q_vectors(:,q) !Note: In Lapw%init q_vectors for noco and DFPT is treated separately
+         DO nk=1,kpts%nkpt
+            bkpt=kpts%bk(:,nk)
+            !---> obtain vectors
+            !---> in a spin-spiral calculation different basis sets are used for
+            !---> the two spin directions, because the cutoff radius is defined
+            !---> by |G + k +/- qss/2| < rkmax.
+            DO ispin = 1,2
+               addX = abs(NINT((bkpt(1) + (2*ispin - 3)/2.0*qss(1))/arltv1)) 
+               addY = abs(NINT((bkpt(2) + (2*ispin - 3)/2.0*qss(2))/arltv2))
+               addZ = abs(NINT((bkpt(3) + (2*ispin - 3)/2.0*qss(3))/arltv2))
+               nv = 0
+               nv2 = 0
+               DO j1 = -mk1-addX,mk1+addX
+                  s(1) = bkpt(1) + j1 + (2*ispin - 3)/2.0*qss(1)
+                  DO j2 = -mk2-addY,mk2+addY
+                     s(2) = bkpt(2) + j2 + (2*ispin - 3)/2.0*qss(2)
+                     !--->          nv2 for films
+                     s(3) = 0.0
+                     !r2 = dotirp(s,s,cell%bbmat)
+                     r2 = dot_product(matmul(s,cell%bbmat),s)
+                     IF (r2.LE.rk2) nv2 = nv2 + 1
+                     DO j3 = -mk3-addz,mk3+addz
+                        s(3) = bkpt(3) + j3 + (2*ispin - 3)/2.0*qss(3)
                         !r2 = dotirp(s,s,cell%bbmat)
                         r2 = dot_product(matmul(s,cell%bbmat),s)
-                        IF (r2.LE.rk2) nv2 = nv2 + 1
-                        DO j3 = -mk3-addz,mk3+addz
-                           s(3) = bkpt(3) + j3 + (2*ispin - 3)/2.0*qss(3)+q_dfpt(3)
-                           !r2 = dotirp(s,s,cell%bbmat)
-                           r2 = dot_product(matmul(s,cell%bbmat),s)
-                           IF (r2.LE.rk2) THEN
-                              nv = nv + 1
-                           END IF
-                        END DO
+                        IF (r2.LE.rk2) THEN
+                           nv = nv + 1
+                        END IF
                      END DO
                   END DO
-                  nvh(ispin)  = nv
-                  nv2h(ispin) = nv2
                END DO
-               nvd=MAX(nvd,MAX(nvh(1),nvh(2)))
-               nv2d=MAX(nv2d,MAX(nv2h(1),nv2h(2)))
+         
+               nvh(ispin)  = nv
+               nv2h(ispin) = nv2
+            END DO
+            nvd=MAX(nvd,MAX(nvh(1),nvh(2)))
+            nv2d=MAX(nv2d,MAX(nv2h(1),nv2h(2)))
 
-            ENDDO !k-loop
-         ENDDO !q-loop
-      ENDDO !qpho-loop
+         ENDDO !k-loop
+      ENDDO !q-loop
+
       nbasfcn = nvd + atoms%nat*atoms%nlod*(2*atoms%llod+1)
       IF (noco%l_noco) nbasfcn = 2*nbasfcn
       call lapw%init_dim(nvd,nv2d,nbasfcn)
    END SUBROUTINE lapw_dim
 
-  
 END MODULE m_lapwdim
