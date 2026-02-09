@@ -82,7 +82,7 @@ SUBROUTINE dfpt_cdngen(eig_id,dfpt_eig_id,fmpi,input,banddosdummy,vacuum,&
    if (noco%l_noco) resultsdummy%eig(:,:,2)=resultsdummy%eig(:,:,1)
    if (noco%l_noco) resultsdummy1%eig(:,:,2)=resultsdummy1%eig(:,:,1)
    if (noco%l_noco.and.l_minusq) resultsdummy1%eig(:,:,2)=resultsdummy1%eig(:,:,1)
-   CALL dosdummy%init(input,atoms,kpts,banddosdummy,resultsdummy%eig)
+   CALL dosdummy%init(input,atoms,kpts,banddosdummy,.false.,resultsdummy%eig)
    CALL vacdosdummy%init(input,atoms,kpts,banddosdummy,resultsdummy%eig)
 
    CALL timestart("dfpt_cdngen: cdnval")

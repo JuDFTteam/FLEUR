@@ -15,7 +15,9 @@ MODULE m_setabc1lo
 !*********************************************************************
       CONTAINS
       SUBROUTINE setabc1lo(atoms, ntyp,ud,usp, alo1,blo1,clo1)
-      USE m_types
+      USE m_types_atoms
+      USE m_types_usdus
+      
       IMPLICIT NONE
 
       TYPE(t_atoms),INTENT(IN)   :: atoms

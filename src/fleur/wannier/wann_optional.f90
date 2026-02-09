@@ -153,9 +153,7 @@ CONTAINS
          l_stopopt=.true.
     ENDIF
 
-
-    IF(l_stopopt)  CALL juDFT_end("wann_optional done",fmpi%irank) 
-
     call timestop("wann_optional")
+    !IF(l_stopopt)  CALL juDFT_end("wann_optional done",fmpi%irank)
   END SUBROUTINE wann_optional
 END MODULE m_wann_optional

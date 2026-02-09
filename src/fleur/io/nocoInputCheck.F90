@@ -50,7 +50,7 @@ MODULE m_nocoInputCheck
       IF (input%l_f) THEN
          WRITE (oUnit,*) 'This non-collinear version of the flapw program'
          WRITE (oUnit,*) 'does not support force calculations.'
-         CALL juDFT_error("force calculations not supported!!!",calledby="nocoInputCheck")
+         CALL juDFT_warn("force calculations not supported!!!",calledby="nocoInputCheck")
       END IF
 
 

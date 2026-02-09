@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.5)
 #Some stuff might be defined in config file
 if (EXISTS "${CMAKE_BINARY_DIR}/config.cmake")
    include("${CMAKE_BINARY_DIR}/config.cmake")
@@ -15,7 +15,6 @@ set(CMAKE_Fortran_FLAGS "")
 project(FLEUR LANGUAGES C CXX Fortran)
 string(STRIP "${CMAKE_Fortran_FLAGS} ${CMAKE_Fortran_FLAGS_backup}" CMAKE_Fortran_FLAGS)
 
-include("cmake/fleurist_setup.cmake")
 include("cmake/CompilerConfig.txt")
 
 include("cmake/Generate_Schema.cmake")
@@ -24,6 +23,30 @@ include("cmake/Files_and_Targets.txt")
 
 include("cmake/filespecific.cmake")
 include("cmake/pytest_setup.cmake")
+
+#Also build inpgen2
+add_subdirectory("src/tools/inpgen2")
+# HACK! to ensure buildinfo.h gets regenerated before inpgen2 gets built
+if (FLEUR_USE_SERIAL)
+   add_dependencies("inpgen2" fleur)
+endif()
+if (FLEUR_USE_MPI)
+   add_dependencies("inpgen2" fleur_MPI)
+endif ()
+
+#Also build inpgen3
+add_subdirectory("src/tools/inpgen3")
+# HACK! to ensure buildinfo.h gets regenerated before inpgen2 gets built
+if (FLEUR_USE_SERIAL)
+   add_dependencies("inpgen3" fleur)
+endif()
+if (FLEUR_USE_MPI)
+   add_dependencies("inpgen3" fleur_MPI)
+endif ()
+
+#Build fleuriste TUI/CLI
+add_subdirectory("src/tools/inpgen3/fleuriste")
+
 include("cmake/ReportConfig.txt")
 
 #install(TARGETS fleur inpgen DESTINATION bin)

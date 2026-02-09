@@ -652,7 +652,7 @@ CONTAINS
       REAL :: facv ! accounts for vacua symmetry
       REAL :: qzh, pref , facn 
       COMPLEX :: fft_conj(stars%ng2) , fft_pure(stars%ng2)  
-      INTEGER :: iVac , ig2, ig3 
+      INTEGER :: iVac , iStar2, iStar3 
 
       sf_int = CMPLX(0.0,0.0)
       facv = 2.0/vacuum%nvac
@@ -664,13 +664,13 @@ CONTAINS
          fft_pure = CMPLX(0.0,0.0)
          IF (iVac == 2 ) pref = -1.0 
          IF (iVac == 2)  facn =  -1.0 
-         DO ig3 = 1, stars%ng3   
+         DO iStar3 = 1, stars%ng3   
             ! Sum over all G_perp and map to G_||
             ! Fourier Trafo at +-Dvac/2
-            qzh = pref * stars%kv3(3,ig3) * cell%bmat(3,3) * cell%z1
-            ig2 = stars%ig2(ig3)
-            fft_conj(ig2) = fft_conj(ig2) + pw_conj(ig3) * cmplx( cos(qzh), sin(qzh))  
-            fft_pure(ig2) = fft_pure(ig2) + pw_pure(ig3) * cmplx( cos(qzh), sin(qzh))  
+            qzh = pref * stars%kv3(3,iStar3) * cell%bmat(3,3) * cell%z1
+            iStar2 = stars%i2g(stars%kv3(1,iStar3),stars%kv3(2,iStar3)) !! Attention, this might only work in the case of no symmetries.
+            fft_conj(iStar2) = fft_conj(iStar2) + pw_conj(iStar3) * cmplx( cos(qzh), sin(qzh))  
+            fft_pure(iStar2) = fft_pure(iStar2) + pw_pure(iStar3) * cmplx( cos(qzh), sin(qzh))  
          END DO 
       
          sf_int = sf_int - facn * facv * cell%area  *  DOT_PRODUCT(fft_conj(:stars%ng2),fft_pure(:stars%ng2))
@@ -746,7 +746,7 @@ CONTAINS
       TYPE(t_usdus)             :: ud, uddummy
       TYPE(t_lapw)              :: lapw, lapwq
       TYPE(t_hub1data)          :: hub1datadummy
-      TYPE (t_mat)              :: zMat, zMat1, zMatq, zMat2
+      CLASS (t_mat), ALLOCATABLE :: zMat, zMat1, zMatq, zMat2
       CLASS(t_mat), ALLOCATABLE :: hmat1,smat1,hmat1q,smat1q,hmat2,smat2,vmat2
 
       ! Variables for HF or fi%hybinp functional calculation
@@ -806,6 +806,18 @@ CONTAINS
 
             nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*fi%atoms%nlotot,lapw%nv(1)+fi%atoms%nlotot,fi%noco%l_noco)
             nbasfcnq = MERGE(lapwq%nv(1)+lapwq%nv(2)+2*fi%atoms%nlotot,lapwq%nv(1)+fi%atoms%nlotot,fi%noco%l_noco)
+
+            IF (fmpi%n_size == 1) THEN
+               ALLOCATE (t_mat::zMat)
+               ALLOCATE (t_mat::zMat1)
+               ALLOCATE (t_mat::zMat2)
+               IF (PRESENT(q_eig_id)) ALLOCATE (t_mat::zMatq)
+            ELSE
+               ALLOCATE (t_mpimat::zMat)
+               ALLOCATE (t_mpimat::zMat1)
+               ALLOCATE (t_mpimat::zMat2)
+               IF (PRESENT(q_eig_id)) ALLOCATE (t_mpimat::zMatq)
+            END IF
 
             CALL zMat%init(l_real,nbasfcn,noccbd)
             CALL zMat1%init(.FALSE.,nbasfcnq,noccbd)
@@ -933,12 +945,16 @@ CONTAINS
 #endif
             CALL timestop("EV output")
 
-            !IF (allocated(zmat)) THEN
-             CALL zMat%free()
-             CALL zMat1%free()
-             CALL zMat2%free()
-              !deallocate(zMat)
-            !ENDIF
+            IF (ALLOCATED(zmat)) THEN
+               CALL zMat%free()
+               IF (PRESENT(q_eig_id)) CALL zMatq%free()
+               CALL zMat1%free()
+               CALL zMat2%free()
+               DEALLOCATE(zMat)
+               IF (PRESENT(q_eig_id)) DEALLOCATE(zMatq)
+               DEALLOCATE(zMat1)
+               DEALLOCATE(zMat2)
+            END IF
          END DO  k_loop
       END DO ! spin loop ends
 #ifdef CPP_MPI

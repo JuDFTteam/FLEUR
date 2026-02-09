@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -250,7 +250,7 @@ CONTAINS
          ENDIF
 
          IF ((noco%l_noco).AND.(ikpt.LE.fmpi%isize)) THEN
-            dos%qis = 0.0
+            if (dos%l_initialized) dos%qis = 0.0
          END IF
       END IF
 

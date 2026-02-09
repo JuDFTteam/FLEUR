@@ -38,7 +38,7 @@ MODULE m_types_juPhon
       LOGICAL :: l_efield = .FALSE.
       LOGICAL :: l_efield_scr = .FALSE.
       LOGICAL :: l_borneffcharge = .FALSE.
-      LOGICAL :: l_symVacLevel = .FALSE. ! Symmetrize the vacua levels  
+      LOGICAL :: l_symVacLevel = .TRUE. ! Symmetrize the vacua levels  
 
       REAL, ALLOCATABLE :: qvec(:,:)
       REAL, ALLOCATABLE :: qvec_efield(:,:)
@@ -310,10 +310,11 @@ CONTAINS
       end if 
 
       if (input%film .and. allocated(this%qvec)) then
-        ! Due to stability we do not calculate the Gamma-Point in the case of 
-        ! Film-DFPT but slighlty next to it  
-       do iq = 1 , size(this%qvec,2)
-        if (norm2(this%qvec(:,iq)) .LT. 1e-8 ) then 
+         if (size(this%qvec,2) > 1) THEN
+            ! Due to stability we do not calculate the Gamma-Point in the case of 
+            ! Film-DFPT but slighlty next to it  
+            do iq = 1 , size(this%qvec,2)
+               if (norm2(this%qvec(:,iq)) .LT. 1e-8 ) then 
                   tmp_vec=0.0
                   if (iq == 1 ) then ! starting q-Point --> interpolate to iQ+1
                      tmp_vec = this%qvec(:,iq+1) - this%qvec(:,iq) 
@@ -324,8 +325,9 @@ CONTAINS
                   tmp_vec = tmp_vec / norm2(tmp_vec)
                   ! add to the gamma point
                   this%qvec(:,iq) = this%qvec(:,iq) + this%qlim*tmp_vec  
-          end if  
-        end do 
+               end if  
+            end do
+         end if
       end if 
 
 
@@ -342,6 +344,7 @@ CONTAINS
 
     INTEGER :: numberNodes
     CHARACTER(len=100) :: xPathA,valueString
+    LOGICAL :: l_flag
 
     xPathA = '/fleurInput/calculationSetup/cutoffs/@numbands'
     numberNodes = xml%GetNumberOfNodes(xPathA)
@@ -349,6 +352,32 @@ CONTAINS
       valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))))) 
       IF(.NOT. TRIM(ADJUSTL(valueString)).EQ.'all') CALL juDFT_error("numbands is not set to all", calledby="types_juPhon.F90")
     END IF 
+
+    xPathA = '/fleurInput/calculationSetup/coreElectrons/@ctail'
+    numberNodes = xml%GetNumberOfNodes(xPathA)
+    IF(numberNodes.EQ.1) THEN
+      l_flag = evaluateFirstBoolOnly(xml%GetAttributeValue(xPathA))
+    IF(l_flag) CALL juDFT_error("ctail is not set to false. Currently not implemented.", calledby="types_juPhon.F90")
+    END IF 
+
+
+    xPathA = '/fleurInput/calculationSetup/soc/@l_soc'
+    numberNodes = xml%GetNumberOfNodes(xPathA)
+    IF(numberNodes.EQ.1) THEN
+      l_flag = evaluateFirstBoolOnly(xml%GetAttributeValue(xPathA))
+    IF(l_flag) CALL juDFT_error("SOC + DFPT is not supported yet. Please redo the calculation without SOC.", calledby="types_juPhon.F90")
+    END IF 
+
+
+
+    xPathA = '/fleurInput/calculationSetup/magnetism/@l_noco'
+    numberNodes = xml%GetNumberOfNodes(xPathA)
+    IF(numberNodes.EQ.1) THEN
+      l_flag = evaluateFirstBoolOnly(xml%GetAttributeValue(xPathA))
+    IF(l_flag) CALL juDFT_error("NOCO + DFPT is not supported yet. If possible, fall back to collinear calculation.", calledby="types_juPhon.F90")
+    END IF 
+
+
 
    END SUBROUTINE precheck_juPhon
 END MODULE m_types_juPhon

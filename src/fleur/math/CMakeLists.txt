@@ -10,6 +10,8 @@ src/fleur/math/qsf.f
 src/fleur/math/sphbes.f
 src/fleur/math/sphpts.f
 src/fleur/math/difcub.f
+src/fleur/math/rcerf.f
+src/fleur/math/diflgr.f
 )
 set(fleur_F90 ${fleur_F90}
 src/fleur/math/inv3.f90

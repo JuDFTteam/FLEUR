@@ -150,15 +150,9 @@ contains
         DO j = 1,3
             dielecten_inv(j,j) = CMPLX(1,0) + (4*fpi_const/fi%cell%omtil)*real(dielecten(j,j))
             END DO
-        !print*,"dielecten(:,:)",dielecten(:,:)
-        !dielecten_inv(:,:) = dielten_iden(:,:) + (4*fpi_const/fi%cell%omtil)*real(dielecten(:,:))
-        !print*,"dielecten_inv",dielecten_inv
         dielecten(:,:) = cmplx(0.0,0.0)
-        !print*,"dielecten_inv.real(:,:)",real(dielecten_inv)
         call inv3(real(dielecten_inv),dielecten_r,det)
         dielecten = dielecten_r
-        !print*,"(fpi_const/fi%cell%omtil)",(fpi_const/fi%cell%omtil)
-        !print*,"(fpi_const/fi%cell%vol)",(fpi_const/fi%cell%vol)
         open( 110, file="diel_tensor", status='replace', action='write', form='formatted')
         write(*,*) '-------------------------' 
         write(*,*) "High Frequency Dielectric tensor" 
@@ -179,11 +173,7 @@ contains
         CALL openXMLElementNoAttributes('Phonons')
         CALL openXMLElementNoAttributes('efield')
         attributes = ''
-        !WRITE(attributes(1),'(i0)') test
         WRITE(attributes(1),'(f15.8)') fi%juPhon%qlim
-        !WRITE(attributes(3),'(f15.8)') qvec(2)
-        !WRITE(attributes(4),'(f15.8)') qvec(3)
-        !attributes(5) = '1/cm'
         CALL writeXMLElementPoly('dielconst',(/'qlim'/), attributes,real(dielecten(:,1)))
         CALL closeXMLElement('efield')
         CALL closeXMLElement('Phonons')
@@ -203,21 +193,11 @@ contains
         real                     :: det,dielecten_r(3,3)
         CHARACTER(LEN=20)        :: attributes(1)
 
-        !dielecten(:,:) = cmplx(0.0,0.0)
         dielecten_inv(:,:)= 0
         DO j = 1,3
-            !print*,"dielecten",real(dielecten(j,j))
-            !print*,"fpi_const",fpi_const
-            !print*,"fi%cell%omtil",fi%cell%omtil
             dielecten_inv(j,j) = CMPLX(1,0) - (4*fpi_const/fi%cell%omtil)*real(dielecten(j,j))
-            !print*,"dielecten_inv(j,j)",dielecten_inv(j,j)
             END DO
-        !print*,"dielecten(:,:)",dielecten(:,:)
-        !dielecten_inv(:,:) = dielten_iden(:,:) + (4*fpi_const/fi%cell%omtil)*real(dielecten(:,:))
-        !print*,"dielecten_inv",dielecten_inv
         dielecten = dielecten_inv
-        !print*,"(fpi_const/fi%cell%omtil)",(fpi_const/fi%cell%omtil)
-        !print*,"(fpi_const/fi%cell%vol)",(fpi_const/fi%cell%vol)
         open( 110, file="diel_tensor_old", status='replace', action='write', form='formatted')
         write(*,*) '-------------------------' 
         write(*,*) "High Frequency Dielectric tensor (old formula)" 
@@ -233,19 +213,6 @@ contains
         end do
         close(110)
         write(*,*) '-------------------------' 
-
-        !save in out.xml
-        !CALL openXMLElementNoAttributes('Phonons')
-        !CALL openXMLElementNoAttributes('efield')
-        !attributes = ''
-        !WRITE(attributes(1),'(i0)') test
-        !WRITE(attributes(1),'(f15.8)') fi%juPhon%qlim
-        !WRITE(attributes(3),'(f15.8)') qvec(2)
-        !WRITE(attributes(4),'(f15.8)') qvec(3)
-        !attributes(5) = '1/cm'
-        !CALL writeXMLElementPoly('dielconst',(/'qlim'/), attributes,real(dielecten(:,1)))
-        !CALL closeXMLElement('efield')
-        !CALL closeXMLElement('Phonons')
 
     end subroutine dfpt_dielecten_final_old
 

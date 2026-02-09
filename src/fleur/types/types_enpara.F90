@@ -30,9 +30,7 @@ MODULE m_types_enpara
      PROCEDURE :: read
      PROCEDURE :: write
      PROCEDURE :: mix
-#ifndef CPP_INPGEN
-     PROCEDURE :: calcOutParams
-#endif     
+ 
   END TYPE t_enpara
 
 
@@ -41,7 +39,9 @@ MODULE m_types_enpara
 
 CONTAINS
   SUBROUTINE init_enpara(this,atoms,jspins,film,enparaXML)
-    USE m_types_setup
+   USE m_types_atoms
+   USE m_types_enparaxml
+    
     USE m_constants
     CLASS(t_enpara),INTENT(inout):: this
     TYPE(t_atoms),INTENT(IN)     :: atoms
@@ -346,7 +346,7 @@ CONTAINS
   END SUBROUTINE update
 
   SUBROUTINE READ(enpara,atoms,jspins,film,l_required)
-    USE m_types_setup
+    USE m_types_atoms
     USE m_constants
     IMPLICIT NONE
     CLASS(t_enpara),INTENT(INOUT):: enpara
@@ -455,7 +455,7 @@ CONTAINS
 
     ! write enpara-file
     !
-    USE m_types_setup
+    USE m_types_atoms
     USE m_constants
     IMPLICIT NONE
     CLASS(t_enpara),INTENT(IN) :: enpara
@@ -545,7 +545,7 @@ CONTAINS
 #else
     irank=0
 #endif
-
+   return !No more mixing of enparas since these are not calculated anymore
     IF (irank==0) THEN
        maxdist2=0.0
        DO jsp=1,SIZE(enpara%el0,3)
@@ -645,46 +645,6 @@ CONTAINS
 
   END SUBROUTINE mix
 
-#ifndef CPP_INPGEN
-  SUBROUTINE calcOutParams(enpara,input,atoms,vacuum,regCharges)
-    USE m_types_setup
-    USE m_types_regionCharges
-    IMPLICIT NONE
-    CLASS(t_enpara),INTENT(INOUT)    :: enpara
-    TYPE(t_input),INTENT(IN)         :: input
-    TYPE(t_atoms),INTENT(IN)         :: atoms
-    TYPE(t_vacuum),INTENT(IN)        :: vacuum
-    TYPE(t_regionCharges),INTENT(IN) :: regCharges
-
-    INTEGER :: ispin, n, ilo, iVac, l
-
-    enpara%el1(:,:,:) = enpara%el0(:,:,:)
-    enpara%ello1(:,:,:) = enpara%ello0(:,:,:)
-    enpara%evac1(:,:) = enpara%evac(:,:)
-
-    DO ispin = 1,input%jspins
-       DO n=1,atoms%ntype
-          DO l = 0, 3
-             IF (regCharges%sqal(l,n,ispin).NE.0.0) enpara%el1(l,n,ispin)=regCharges%ener(l,n,ispin)/regCharges%sqal(l,n,ispin)
-          END DO
-          IF (atoms%nlo(n)>0) THEN
-             DO ilo = 1, atoms%nlo(n)
-                IF (regCharges%sqlo(ilo,n,ispin).NE.0.0) THEN
-                   enpara%ello1(ilo,n,ispin)=regCharges%enerlo(ilo,n,ispin)/regCharges%sqlo(ilo,n,ispin)
-                END IF
-             END DO
-          END IF
-       END DO
-       IF (input%film) THEN
-          DO iVac = 1, vacuum%nvac
-             IF (regCharges%svac(iVac,ispin).NE.0.0) THEN
-                enpara%evac1(iVac,ispin)=regCharges%pvac(iVac,ispin)/regCharges%svac(iVac,ispin)
-             END IF
-          END DO
-       END IF
-    END DO
-  END SUBROUTINE calcOutParams
-#endif
 SUBROUTINE priv_write(lo,l,n,jsp,nqn,e_lo,e_up,e)
     !subroutine to write energy parameters to output
     USE m_constants

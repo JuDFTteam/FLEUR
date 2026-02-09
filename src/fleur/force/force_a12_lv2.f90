@@ -25,7 +25,7 @@ CONTAINS
    SUBROUTINE force_a12_lv2(jsp,jspd,nobd,neigd,ntypd,ntype,natd,nbasfcn,nop,&
                             nvd,lmaxd,omtil,nv,neq,k1,k2,k3,invarind,invarop,&
                             invtab,mrot,ngopr,amat,bmat,eig,rmt,taual,we,bkpt,&
-                            zMat,f_a12,force )
+                            zMat,f_a12,force,itype )
 
       INTEGER, INTENT (IN) :: jsp,jspd,nobd,neigd,ntypd,ntype,natd
       INTEGER, INTENT (IN) :: nbasfcn,nop,nvd,lmaxd
@@ -40,8 +40,8 @@ CONTAINS
       TYPE(t_mat), INTENT(IN)             :: zMat
       COMPLEX, INTENT (INOUT) :: f_a12(3,ntypd)
       REAL   , INTENT (INOUT) :: force(3,ntypd,jspd)
-
-      INTEGER :: lmax,kn,iband,iatom,itype,ieq,l,m,lm,t,lp,mp,lmp,it,is
+      INTEGER,INTENT(IN)      :: itype
+      INTEGER :: lmax,kn,iband,iatom,ieq,l,m,lm,t,lp,mp,lmp,it,is
       INTEGER :: isinv,i
       REAL    :: normsq,r,r2vol
       COMPLEX :: img,noband,fpil
@@ -93,25 +93,25 @@ CONTAINS
          END DO ! iband
 
          CALL ylm4(lmax,kGreal(:,kn),ylm(:,kn))
-         iatom = 1
-         DO itype = 1,ntype
+         iatom = sum(neq(:itype-1))+1
+         !DO itype = 1,ntype
             r = sqrt(normsq)*rmt(itype)
 
             CALL sphbes(lmax,r,bsl(:,kn,itype))
-            DO ieq = 1,neq(itype)
+            DO ieq = sum(neq(:itype-1))+1,sum(neq(:itype-1))+neq(itype)
                expf(kn,iatom) = exp(tpi_const*img*dot_product(kG(:,kn),taual(:,iatom)))
 
                iatom = iatom + 1
             END DO ! ieq
-         END DO ! itype
+         !END DO ! itype
       END DO ! kn
 
       force_a12 = 0.0
 
-      iatom = 1
-      DO itype = 1,ntype
+      iatom =sum(neq(:itype-1))+1
+      !DO itype = 1,ntype !No longer loop over atoms
          r2vol = rmt(itype)**2/omtil
-         DO ieq = 1,neq(itype)
+         DO ieq = sum(neq(:itype-1))+1,sum(neq(:itype-1))+neq(itype)
 
             gv  = 0.0
             ppw = 0.0
@@ -209,7 +209,7 @@ CONTAINS
          END DO ! ieq
          force(:,itype,jsp) = force(:,itype,jsp) + force_a12(:,itype)
          f_a12(:,itype)     = f_a12(:,itype)     + force_a12(:,itype)
-      END DO ! itype
+      !END DO ! itype
 
       DEALLOCATE ( bsl,ylm,ppw,fpw )
       DEALLOCATE ( G,kG,kGreal,expf,kineticfactor )

@@ -85,7 +85,7 @@ contains
    subroutine chase_serial_dp(hmat, ne, eig, zmat)
       !Simple driver to solve Standard Eigenvalue Problem using ChASE routine
       implicit none
-      type(t_mat), intent(INOUT),VOLATILE,ASYNCHRONOUS  :: hmat
+      type(t_mat), intent(INOUT),VOLATILE  :: hmat
       integer, intent(INOUT)      :: ne
       class(t_mat), allocatable, intent(OUT)    :: zmat
       real, intent(OUT)           :: eig(:)
@@ -98,8 +98,8 @@ contains
       integer :: nex !extra search space
       integer :: init  !status variable
       !chase will modify these variables in call to xchase even though these are not arguments!!
-      real, allocatable, asynchronous,VOLATILE :: zr(:, :), eigval(:)
-      complex, allocatable, asynchronous,VOLATILE :: zc(:, :)
+      real, allocatable, VOLATILE :: zr(:, :), eigval(:)
+      complex, allocatable, VOLATILE :: zc(:, :)
       nex = 0.2*ne
       allocate (eigval(ne+nex))
       allocate (t_mat::zmat)
@@ -148,8 +148,8 @@ contains
       integer :: nex !extra search space
       integer :: init  !status variable
       !chase will modify these variables in call to xchase even though these are not arguments!!
-      real(sp), allocatable, asynchronous :: zr(:, :), eigval(:)
-      complex(sp), allocatable, asynchronous :: zc(:, :)
+      real(sp), allocatable, volatile :: zr(:, :), eigval(:)
+      complex(sp), allocatable, volatile :: zc(:, :)
       real(sp), allocatable :: hr(:, :)
       complex(sp), allocatable :: hc(:, :)
       nex = 0.2*ne
@@ -204,8 +204,8 @@ contains
       integer :: nex !extra search space
       integer :: init  !status variable
       !chase will modify these variables in call to xchase even though these are not arguments!!
-      real, allocatable, asynchronous :: eigval(:)
-      type(t_mpimat), asynchronous :: ztemp
+      real, allocatable, volatile :: eigval(:)
+      type(t_mpimat), volatile :: ztemp
       nex = 0.2*ne
       allocate (eigval(ne))
 

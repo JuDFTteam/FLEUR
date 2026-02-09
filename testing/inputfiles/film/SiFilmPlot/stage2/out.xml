@@ -1,30 +1,33 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<fleurOutput fleurOutputVersion="0.36">
-   <programVersion version="fleur 36">
-      <compilationInfo date="2023-03-14T12:07:29" user="wortmann" host="iff255" flag="-qopenmp -r8 -mkl  -assume byterecl -no-wrap-margin" link="/usr/lib64/libxml2.so"/>
-      <gitInfo version="MaX-R6.1-362-g9f21fe13a-dirty" branch="Noco-tests" lastCommitHash="9f21fe13a006e3fd31ef6591dd10b8a27297a32b"/>
+<fleurOutput fleurOutputVersion="0.38">
+   <programVersion version="fleur 41">
+      <compilationInfo date="2025-10-24T15:19:47" user="micha" host="iff1745" flag="I/Users/micha/hdf5/current/hdf5/include -fiopenmp -qmkl  -assume byterecl -no-wrap-margin -I/Users/micha/FLEUR" link="lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64;-lwannier;-L/Users/micha/Wannier90/wannier90-2.1.0/;-L/Users/mic"/>
+      <gitInfo version="MaX-R8.0-82-g333b07a24-dirty" branch="develop" lastCommitHash="333b07a246ec588672316ebbae357b7fbcf04df6"/>
       <targetComputerArchitectures>GEN</targetComputerArchitectures>
       <precision type="DOUBLE"/>
       <targetStructureClass> </targetStructureClass>
+      <additionalCompilerFlags>CPP_MPI             CPP_HDF            CPP_WANN</additionalCompilerFlags>
+      <programExecution commandLine="../build/fleur_MPI"/>
    </programVersion>
    <parallelSetup>
       <openMP ompThreads="1"/>
-      <mem memoryPerNode="7892704 kB"/>
+      <mpi mpiProcesses="1"/>
+      <mem memoryPerNode="32570148 kB"/>
    </parallelSetup>
-   <startDateAndTime date="2023/03/14" time="16:11:12" zone="+0100"/>
+   <startDateAndTime date="2025/10/28" time="14:30:22" zone="+0100"/>
    <!-- Now follows a dump of the inp.xml file after evaluating the Schema -->
-  <fleurInput fleurInputVersion="0.34">
+  <fleurInput fleurInputVersion="0.38">
      <comment>
         Si (111) film 6 layers
      </comment>
      <calculationSetup>
-        <cutoffs Kmax="3.60000000" Gmax="11.00000000" GmaxXC="9.20000000" numbands="0"/>
+        <cutoffs Kmax="3.60000000" Gmax="11.00000000" GmaxXC="9.20000000" numbands="0" Gmaxz="0.0"/>
         <scfLoop itmax="1" minDistance=".00000000" maxIterBroyd="99" imix="Anderson" alpha=".05000000" spinf="2.00000000" precondParam="0.0"/>
         <coreElectrons ctail="T" frcor="F" kcrel="0" coretail_lmax="0" l_core_confpot="T"/>
         <xcFunctional name="pbe" relativisticCorrections="F"/>
         <magnetism jspins="1" l_noco="F" l_J="F" swsp="F" lflip="F" l_ss="F" l_onlyMtStDen="F" fixed_moment="0.0"/>
         <soc theta=".00000000" phi=".00000000" l_soc="F" spav="F" off="F" soc66="T"/>
-        <expertModes gw="0" pot8="F" isec1="99" secvar="F" eig66="F" lpr="0" warp_factor="1.0"/>
+        <expertModes gw="0" pot8="F" isec1="99" secvar="F" vdW="NONE" vdW_tol="0.0005" eig66="F" lpr="0" warp_factor="1.0"/>
      </calculationSetup>
      <cell>
         <bzIntegration valenceElectrons="24.00000000" mode="hist" fermiSmearingEnergy=".00100000" l_bloechl="F">
@@ -127,9 +130,9 @@
         </atomGroup>
      </atomGroups>
      <output dos="F" band="F" slice="F" coreSpec="F" wannier="F" eig66="F">
-        <checks vchk="F" cdinf="F" disp="F"/>
+        <checks vchk="F" cdinf="F" disp="F" sympsi="F"/>
         <plotting iplot="2" polar="F" format="1">
-           <plot cartesian="F" TwoD="F" grid="10 10 30" vec1="1.0 0.0 0.0" vec2="0.0 1.0 0.0" vec3="0.0 0.0 1.0" zero="0.0 0.0 -0.5" file="plot" vecField="F" onlyMT="F" typeMT="0"/>
+           <plot cartesian="F" TwoD="F" grid="10 10 30" vec1="1.0 0.0 0.0" vec2="0.0 1.0 0.0" vec3="0.0 0.0 1.0" zero="0.0 0.0 -0.5" file="plot" vecField="F" onlyMT="F" typeMT="0" edgesAllSides="T"/>
         </plotting>
          <chargeDensitySlicing numkpt="0" minEigenval="-0.28" maxEigenval="-0.14" nnne="0" pallst="T"/>
         <specialOutput eonly="F" bmt="F" form66="F"/>
@@ -156,5 +159,5 @@
       <iteration numberForCurrentRun="    1" overallNumber="    2">
       </iteration>
    </scfLoop>
-   <endDateAndTime date="2023/03/14" time="16:11:13" zone="+0100"/>
+   <endDateAndTime date="2025/10/28" time="14:30:24" zone="+0100"/>
 </fleurOutput>

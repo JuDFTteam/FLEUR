@@ -354,7 +354,7 @@ CONTAINS
             DO xInd = -stars_nosym%mx1, stars_nosym%mx1
                iStar = stars_nosym%ig(xInd, yInd, 0)
                IF (iStar.EQ.0) CYCLE
-               iStar = stars_nosym%ig2(iStar)
+               iStar = stars_nosym%i2g(xInd, yInd)
                grRho3(1)%vac(:,iStar,:,:) = rho_nosym%vac(:,iStar,:,:) * cmplx(0.0,dot_product([1.0,0.0,0.0],matmul(real([xInd,yInd,0]),fi_nosym%cell%bmat)))
                grRho3(2)%vac(:,iStar,:,:) = rho_nosym%vac(:,iStar,:,:) * cmplx(0.0,dot_product([0.0,1.0,0.0],matmul(real([xInd,yInd,0]),fi_nosym%cell%bmat)))
                DO iVac = 1, fi_nosym%vacuum%nvac
@@ -796,7 +796,9 @@ CONTAINS
       ! b) Transform it back onto a dense q-path.
       ! c) Transform it back to a denser grid
       ! d) Perform a DOS calculation for the denser grid.
-      IF (fmpi%irank==0) THEN ! Band/Dos stuff
+      IF (fmpi%irank==0 .AND. (fi_nosym%juPhon%l_band .OR. fi_nosym%juPhon%l_band)) THEN ! Band/Dos stuff
+         IF (fi%juPhon%qmode .NE. 1) CALL juDFT_error("qmode not set to 1, while calculating interpolation. & 
+                                          & Is this intended?.", calledby="dfpt.F90")
          ! 0) Read
          DO iQ = 1, fi_fullsym%kpts%nkpt ! Loop over dynmat files to read
             IF (iQ<=9) THEN
@@ -823,6 +825,16 @@ CONTAINS
          ALLOCATE(dyn_mat_r(fi_fullsym%kpts%nkptf,3*fi%atoms%nat,3*fi%atoms%nat))
          CALL ft_dyn(fi_fullsym%atoms, fi_fullsym%kpts, fi_fullsym%sym, fi_fullsym%cell%amat, dyn_mat, dyn_mat_r, dyn_mat_q_full)
          
+         ! In order to call the normal diagonalisation routines
+         ! The FCM must be not-normalized --> otherwise we find the wrong unit
+         ! Either change here or in dfpt_dynmat_eig.F90 if tag != raw 
+
+         do iDir = 1, 3*fi%atoms%nat
+            do iDir2 = 1, 3*fi%atoms%nat
+               dyn_mat_r(:,iDir, iDir2) = dyn_mat_r(:,iDir, iDir2) * massInElectronMasses* SQRT(atomicMasses_const(fi%atoms%nz(CEILING(iDir/3.0)))*atomicMasses_const(fi%atoms%nz(CEILING(iDir2/3.0))))
+            end do
+         end do
+
          ! b/c) reciprocal space transformation for bands/dense grid
          IF (l_dfpt_band.OR.l_dfpt_full) THEN
             IF (l_dfpt_band) THEN
@@ -837,7 +849,7 @@ CONTAINS
                CALL ift_dyn(fi_fullsym%atoms,fi_fullsym%kpts,fi_fullsym%sym,fi_fullsym%cell%amat,fi_nosym%kpts%bk(:,iQ),dyn_mat_r,dyn_mat_pathq)
                WRITE(*,*) '-------------------------'
                CALL timestart("Dynmat diagonalization")
-               CALL DiagonalizeDynMat(fi_nosym%atoms, fi_nosym%kpts%bk(:,iQ), fi%juPhon%calcEigenVec, dyn_mat_pathq, eigenVals, eigenVecs, iQ,.FALSE.,TRIM(dynfiletag),fi_nosym%juphon%l_sumrule)
+               CALL DiagonalizeDynMat(fi_nosym%atoms, fi_nosym%kpts%bk(:,iQ), fi%juPhon%calcEigenVec, dyn_mat_pathq, eigenVals, eigenVecs, iQ,.TRUE.,TRIM(dynfiletag),fi%juPhon%l_sumrule)
                CALL timestop("Dynmat diagonalization")
 
                CALL timestart("Frequency calculation")
@@ -851,10 +863,10 @@ CONTAINS
          END IF ! bands/interpolation
          IF (l_dfpt_dos) THEN
             fi_nosym%banddos%dos = .TRUE.
-            CALL dos%init(fi_nosym%input,fi_nosym%atoms,fi_nosym%kpts,fi_nosym%banddos,eigenValsFull)
+            CALL dos%init(fi_nosym%input,fi_nosym%atoms,fi_nosym%kpts,fi_nosym%banddos,.false.,eigenValsFull)
             allocate(eigdos(1))
             eigdos(1)%p=>dos
-            CALL make_dos(fi_nosym%kpts,fi_nosym%atoms,fi_nosym%vacuum,fi_nosym%input,fi_nosym%banddos,fi_nosym%sliceplot,fi_nosym%noco,fi_nosym%sym,fi_nosym%cell,results,eigdos,fi%juPhon )
+            CALL make_dos(fi_nosym%kpts,fi_nosym%atoms,fi_nosym%vacuum,fi_nosym%input,fi_nosym%banddos,fi_nosym%sliceplot,fi_nosym%noco,nococonv,fi_nosym%sym,fi_nosym%cell,results,eigdos,fi%juPhon )
          END IF ! dos
       END IF ! Band/Dos stuff
 

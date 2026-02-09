@@ -8,7 +8,12 @@ MODULE m_genMTBasis
 CONTAINS
 
   SUBROUTINE genMTBasis(atoms,enpara,vTot,fmpi,iType,jspin,usdus,f,g,flo,hub1data,l_writeArg)
-    USE m_types
+   USE m_types_atoms
+   USE m_types_enpara
+   USE m_types_potden
+   USE m_types_mpi
+   USE m_types_usdus
+   USE m_types_hub1data
     USE m_constants
     USE m_radfun
     USE m_radflo

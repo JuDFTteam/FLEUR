@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2019 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -7,8 +7,8 @@ MODULE m_plot
    USE m_types
    USE m_juDFT
    USE m_constants
+   implicit none
 
-   IMPLICIT NONE
 
    !-----------------------------------------------------------------------------
    ! A general purpose plotting routine for FLEUR.
@@ -116,8 +116,7 @@ CONTAINS
                           denmat, cden, mxden, myden, mzden)
       USE m_fft2d
       USE m_fft3d
-      USE m_rotdenmat
-
+  
       !--------------------------------------------------------------------------
       ! Takes a 2x2 density matrix and rearranges it into four plottable seperate
       ! ones, i.e. ((rho_11, rho_12),(rho_21, rho_22)) ---> n, mx, my, mz.

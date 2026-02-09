@@ -1,0 +1,50 @@
+easyblock = 'CMakeMake'
+
+name = 'FLEUR'
+version = 'MaX-R8.0'  
+homepage = 'https://iffgit.fz-juelich.de/fleur/fleur'
+description = """FLEUR (Full-potential Linearized augmented plane wave) is
+an ab initio code for calculating the electronic structure of solids."""
+
+toolchain = {'name': 'GCCcore', 'version': '.13.3.0'}
+
+sources = [
+    {
+        "filename": "fleur-%(version)s.tar.gz",
+        "extract_cmd": "mkdir -p %(builddir)s/%(version)s && tar xzvf %s --strip-components=1 -C $_",
+        "source_urls": ["https://iffgit.fz-juelich.de/fleur/fleur/-/archive/%(version)s"],
+    }
+]
+
+dependencies = [
+    ('Intel', EXTERNAL_MODULE),
+    ('IntelMPI', EXTERNAL_MODULE),
+    ('HDF5/1.14.5', EXTERNAL_MODULE),
+    ('imkl/2024.2.0', EXTERNAL_MODULE),
+    ('Wannier90/1.2', EXTERNAL_MODULE),
+    ('lxml/5.3.0', EXTERNAL_MODULE)
+]
+
+builddependencies = [
+    ('Intel', EXTERNAL_MODULE),
+    ('CMake', EXTERNAL_MODULE),
+    ('IntelMPI', EXTERNAL_MODULE)
+]
+
+configure_cmd = 'cd %(builddir)s/%(version)s && echo $PWD && FC=mpiifx CC=mpiicx CXX=mpiicpx ./configure.sh'
+build_cmd = 'cd %(builddir)s/%(version)s/build && echo $PWD && make -j16'
+
+skipsteps = ['install']
+buildopts = ' && mkdir -p %(installdir)s && cp -r * %(installdir)s/'
+separate_build_dir = True
+modextrapaths = {
+    'PATH': '',
+}
+
+sanity_check_paths = {
+    'files': ['fleur_MPI'],
+    'dirs': [],
+}
+
+moduleclass = 'chem'
+

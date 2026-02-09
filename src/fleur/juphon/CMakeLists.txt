@@ -18,8 +18,6 @@ src/fleur/juphon/dfpt_hsvac.F90
 src/fleur/juphon/dfpt_tlmplm.F90
 src/fleur/juphon/dfpt_eigen_hssetup.F90
 src/fleur/juphon/matrix_pref.F90
-src/fleur/juphon/dfpt_rhomt.f90
-src/fleur/juphon/dfpt_rhonmt.f90
 src/fleur/juphon/dfpt_cdnval.F90
 src/fleur/juphon/dfpt_cdngen.F90
 src/fleur/juphon/dfpt_fermie.F90
@@ -33,6 +31,7 @@ src/fleur/juphon/dfpt_born_effcharge.F90
 src/fleur/juphon/dfpt_potdenLocal.F90
 src/fleur/juphon/dfpt_dynmat_nonanalytic.F90
 src/fleur/juphon/superconductivity/dfpt_elph_mat.F90
-src/fleur/juphon/superconductivity/dfpt_tetra.F90
+src/fleur/juphon/superconductivity/dfpt_tetra_double.F90
+src/fleur/juphon/superconductivity/dfpt_tetra_single.F90
 src/fleur/juphon/superconductivity/dfpt_elph_linewidth.F90
 )
