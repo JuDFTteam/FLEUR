@@ -1,19 +1,20 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <fleurOutput fleurOutputVersion="0.38">
    <programVersion version="fleur 41">
-      <compilationInfo date="2025-09-05T09:42:44" user="hanrath" host="iff1835" flag="-fiopenmp -qmkl  -assume byterecl -no-wrap-margin -I/Data/ias-1/hanrath/fleur-versions/local/dfpt_efield_new/b" link="lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64;/usr/lib64/libxml2.so"/>
-      <gitInfo version="MaX-R8.0-29-ga293fd104-dirty" branch="dfpt_efield_new" lastCommitHash="a293fd1040565360d451c2278bf07a528758a0ca"/>
+      <compilationInfo date="2026-02-09T14:21:43" user="hanrath" host="iff1835" flag="-fiopenmp -qmkl  -assume byterecl -no-wrap-margin -I/Data/ias-1/hanrath/fleur-versions/local/dfpt_efield_new-m" link="lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64;/usr/lib64/libxml2.so"/>
+      <gitInfo version="MaX-R8.0-53-gc1dfbe123-dirty" branch="dfpt_efield_new" lastCommitHash="c1dfbe1230f0d26f5418cc2d0631f6cb02fd7579"/>
       <targetComputerArchitectures>GEN</targetComputerArchitectures>
       <precision type="DOUBLE"/>
       <targetStructureClass> </targetStructureClass>
       <additionalCompilerFlags>CPP_MPI             CPP_HDF</additionalCompilerFlags>
+      <programExecution commandLine="/Data/ias-1/hanrath/fleur-versions/local/dfpt_efield_new-merge/build/fleur_MPI"/>
    </programVersion>
    <parallelSetup>
       <openMP ompThreads="6"/>
       <mpi mpiProcesses="1"/>
-      <mem memoryPerNode="15859920 kB"/>
+      <mem memoryPerNode="15856660 kB"/>
    </parallelSetup>
-   <startDateAndTime date="2025/09/08" time="13:59:39" zone="+0200"/>
+   <startDateAndTime date="2026/02/10" time="13:50:34" zone="+0100"/>
    <!-- Now follows a dump of the inp.xml file after evaluating the Schema -->
   <fleurInput fleurInputVersion="0.39">
       <comment>
@@ -26,7 +27,7 @@
          <xcFunctional name="LibXC" relativisticCorrections="F">
             <LibXCName exchange="lda_x" correlation="lda_c_vwn"/>
          </xcFunctional>
-         <magnetism jspins="1" l_noco="F" l_ss="F" l_J="F" swsp="F" lflip="F" l_onlyMtStDen="F" fixed_moment="0.0"/>
+         <magnetism jspins="1" l_noco="F" l_ss="F" l_J="F" swsp="F" lflip="F" l_onlyMtStDen="F"/>
          <soc l_soc="F" theta=".00000000" phi=".00000000" spav="F" off="F" soc66="T"/>
          <expertModes spex="0" secvar="F" vdW="NONE" vdW_tol="0.0005" pot8="F" eig66="F" lpr="0" isec1="99" warp_factor="1.0"/>
          <geometryOptimization l_f="F" forcealpha="1.00000000" forcemix="BFGS" epsdisp=".00001000" epsforce=".00001000" f_level="-1" l_driftForce="F" qfix="0" force_converged="0.00001"/>
@@ -81,7 +82,7 @@
       </atomGroups>
       <output dos="F" band="F" slice="F" coreSpec="F" wannier="F" eig66="F">
          <checks vchk="F" cdinf="F" disp="F" sympsi="F"/>
-         <bandDOS minEnergy="-.50000000*Htr" maxEnergy=".50000000*Htr" sigma=".01500000" storeEVData="T" all_atoms="T" orbcomp="F" jDOS="F" numberPoints="1321"/>
+         <bandDOS minEnergy="-.50000000*Htr" maxEnergy=".50000000*Htr" sigma=".01500000" storeEVData="T" all_atoms="T" orbcomp="F" globalspin="F" jDOS="F" jointDOS="F" numberPoints="1321"/>
          <vacuumDOS vacdos="F" integ="F" star="F" nstars="0" locx1=".00000" locy1=".00000" locx2=".00000" locy2=".00000" nstm="0" tworkf=".00000"/>
          <unfoldingBand unfoldBand="F" supercellX="1" supercellY="1" supercellZ="1" useOlap="T"/>
          <plotting iplot="0" polar="F" format="1">
@@ -99,16 +100,6 @@
      <!-- We include the file relax.xml here to enable relaxations (see documentation) -->
   
    </fleurInput>
-  <!-- 
-   Initial (original) inpgen input (only for documentation purposes):
-   Diamond
-  
-   &lattice latsys='cF' a=6.74 /
-  
-    2
-    6  0.125  0.125  0.125
-    6 -0.125 -0.125 -0.125
-   -->
    <!-- END of dump of the inp.xml file -->
    <numericalParameters>
       <atomsInCell nat="2" ntype="2" jmtd="471" n_u="0" n_hia="0" n_opc="0"/>
@@ -167,7 +158,7 @@
             <totalCharge value="12.0000000030"/>
          </allElectronCharges>
          <eigenvalues>
-            <eigenvaluesAt spin="1" ikpt="1" k_x="-0.00000000" k_y="0.00534235" k_z="0.00534235">
+            <eigenvaluesAt spin="1" ikpt="1" k_x="0.00000000" k_y="0.00534235" k_z="0.00534235">
                       -0.3649367153        0.4990022325        0.4990039051        0.4991384263        0.6784366178
                        0.6787741320        0.6787787558        0.9390412386        1.1268791820        1.4317927496
                        1.4381315208        1.4555033449        1.4555065710        1.4615367902        1.6903811207
@@ -180,7 +171,7 @@
          <sumValenceSingleParticleEnergies value="2.2644156971" units="Htr"/>
          <FermiEnergy value="0.4991384263" units="Htr"/>
          <eigenvalues>
-            <eigenvaluesAt spin="1" ikpt="1" k_x="0.00534235" k_y="-0.00000000" k_z="0.00534235">
+            <eigenvaluesAt spin="1" ikpt="1" k_x="0.00534235" k_y="0.00000000" k_z="0.00534235">
                       -0.3649367153        0.4990022325        0.4990039047        0.4991384266        0.6784366186
                        0.6787741320        0.6787787551        0.9390412386        1.1268791820        1.4317927496
                        1.4381315210        1.4555033449        1.4555065700        1.4615367910        1.6903811207
@@ -207,10 +198,10 @@
          <FermiEnergy value="0.4991367458" units="Htr"/>
          <Phonons>
             <efield>
-               <dielconst qlim="0.01000000">105.5065557016        0.0000000000        0.0000000000</dielconst>
+               <dielconst qlim="0.01000000">104.8461398171        0.0000000000        0.0000000000</dielconst>
             </efield>
          </Phonons>
       </iteration>
    </scfLoop>
-   <endDateAndTime date="2025/09/08" time="13:59:40" zone="+0200"/>
+   <endDateAndTime date="2026/02/10" time="13:50:35" zone="+0100"/>
 </fleurOutput>
