@@ -24,25 +24,21 @@ include("cmake/Files_and_Targets.txt")
 include("cmake/filespecific.cmake")
 include("cmake/pytest_setup.cmake")
 
-#Also build inpgen2
+# Also build inpgen2+3
 add_subdirectory("src/tools/inpgen2")
-# HACK! to ensure buildinfo.h gets regenerated before inpgen2 gets built
+add_subdirectory("src/tools/inpgen3")
+# To ensure that buildinfo.h gets regenerated before inpgen2+3 are build, add dependency on fleur/fleur_MPI
 if (FLEUR_USE_SERIAL)
    add_dependencies("inpgen2" fleur)
+   add_dependencies("inpgen3" fleur)
+   add_dependencies("fleurinpgen" fleur)
 endif()
 if (FLEUR_USE_MPI)
    add_dependencies("inpgen2" fleur_MPI)
+   add_dependencies("inpgen3" fleur_MPI)
+   add_dependencies("fleurinpgen" fleur_MPI)
 endif ()
 
-#Also build inpgen3
-add_subdirectory("src/tools/inpgen3")
-# HACK! to ensure buildinfo.h gets regenerated before inpgen2 gets built
-if (FLEUR_USE_SERIAL)
-   add_dependencies("inpgen3" fleur)
-endif()
-if (FLEUR_USE_MPI)
-   add_dependencies("inpgen3" fleur_MPI)
-endif ()
 
 #Build fleuriste TUI/CLI
 add_subdirectory("src/tools/inpgen3/fleuriste")
