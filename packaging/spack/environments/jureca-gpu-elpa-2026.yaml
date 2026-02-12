@@ -11,8 +11,7 @@
 spack:
   # add package specs to the `specs` list
   specs:
-  - fleur@develop+cuda+elpa+mpi+hdf5 cuda_arch=80 %nvhpc 
-  - elpa~openmp+cuda cuda_arch=80 %nvhpc
+  - fleur@develop+cuda+elpa+mpi+hdf5 cuda_arch=80 %nvhpc %elpa~openmp+cuda cuda_arch=80 %nvhpc
   view: true
   concretizer:
     unify: true
