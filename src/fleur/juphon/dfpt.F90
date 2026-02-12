@@ -38,6 +38,7 @@ CONTAINS
       USE m_dfpt_born_effcharge
       use m_dfpt_vefield
       USE m_dfpt_potdenLocal
+      USE m_dfpt_generate_gradient
 
       TYPE(t_mpi),        INTENT(IN)     :: fmpi
       TYPE(t_fleurinput), INTENT(IN)     :: fi
@@ -260,155 +261,17 @@ CONTAINS
       ! density gradient) by a Weinert construction, just like the potentials are from the density.
       ! This is done to ensure good continuity.
       CALL timestart("Gradient generation")
-      ALLOCATE(grrhodummy(fi_nosym%atoms%jmtd, (fi_nosym%atoms%lmaxd+1)**2, fi_nosym%atoms%nat, SIZE(rho_nosym%mt,4), 3))
-      ALLOCATE(grrho_val(fi_nosym%atoms%jmtd, (fi_nosym%atoms%lmaxd+1)**2, fi_nosym%atoms%nat, SIZE(rho_nosym%mt,4), 3))
 
-      ! For the gradient of the external Potential we need a higher cutoff in the expansion, in order to confine the multipole moments in the MTs
-      ! This is crucial for the Film-Mode and will be visible in the z-Eigenmodes.  
-      CALL create_typesLocal(fi_nosym,fmpi_nosym,fi_nosym%sym,fi_nosym%cell,fi_nosym%input,sphhar_nosym, fi_nosym%vacuum , fi_nosym%noco ,starsLocal, grVext3(1),atomsLocal)
-      CALL grVext3(2)%copyPotDen(grVext3(1))
-      CALL grVext3(3)%copyPotDen(grVext3(1))
-      CALL imagrhodummyLocal%copyPotDen(grVext3(1))
-      CALL grvextdummyLocal%copyPotDen(grVext3(1))
-
-
-      CALL imagrhodummy%copyPotDen(rho_nosym)
-      CALL imagrhodummy%resetPotDen()
-      CALL grvextdummy%copyPotDen(rho_nosym)
-
-      CALL vext_dummy%copyPotDen(vTot_nosym)
-      CALL vext_dummy%resetPotDen()
-      CALL vC_dummy%copyPotDen(vTot_nosym)
-      CALL vC_dummy%resetPotDen()
-      sigma_loc  = cmplx(0.0,0.0)
-      sigma_ext  = cmplx(0.0,0.0)
-      sigma_coul = cmplx(0.0,0.0)
-      sigma_gext = cmplx(0.0,0.0)
-      CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, fi%juphon, stars_nosym, fi_nosym%cell, &
-                         & sphhar_nosym, fi_nosym%atoms, .FALSE., imagrhodummy, vext_dummy, sigma_ext)
-      CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, fi%juphon, stars_nosym, fi_nosym%cell, &
-                         & sphhar_nosym, fi_nosym%atoms, .FALSE., rho_nosym, vC_dummy, sigma_coul)
-      DO iDir = 1, 3
-         CALL grRho3(iDir)%copyPotDen(rho_nosym)
-         CALL grRho3(iDir)%resetPotDen()
-         DO iDir2 = 1, 3
-            CALL grgrvextnum(iDir2,iDir)%copyPotDen(vTot_nosym)
-            CALL grgrvextnum(iDir2,iDir)%resetPotDen()
-            CALL grgrVC3x3(iDir2,iDir)%copyPotDen(grVext3(1))
-            CALL grgrVC3x3(iDir2,iDir)%resetPotDen()
-         END DO
-         !CALL grVext3(iDir)%copyPotDen(vTot_nosym)
-         !CALL grVext3(iDir)%resetPotDen()
-         CALL grVtot3(iDir)%copyPotDen(vTot_nosym)
-         CALL grVtot3(iDir)%resetPotDen()
-         CALL grVC3(iDir)%copyPotDen(vTot_nosym)
-         CALL grVC3(iDir)%resetPotDen()
-         ! Generate the external potential gradient.
-         sigma_loc  = cmplx(0.0,0.0)
-         !IF (iDir==3) sigma_loc  = sigma_ext
-         CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, fi%juphon, starsLocal, fi_nosym%cell, &
-                         & sphhar_nosym, atomsLocal, .FALSE., imagrhodummyLocal, grVext3(iDir), sigma_loc, &
-                         & dfptdenimag=imagrhodummyLocal, dfptvCoulimag=grvextdummyLocal,dfptden0=imagrhodummyLocal,stars2=starsLocal,iDtype=0,iDir=iDir)
-         IF (iDir==3) sigma_gext(iDir,:) = sigma_loc
-      END DO
-
-      !CALL vext_dummy%copyPotDen(vTot_nosym)
-      !CALL vext_dummy%resetPotDen()
-      ! Density gradient
-      DO iSpin = 1, SIZE(rho_nosym%mt,4)
-         CALL mt_gradient_new(fi_nosym%atoms, sphhar_nosym, fi_nosym%sym, rho_nosym%mt(:, :, :, iSpin), grrhodummy(:, :, :, iSpin, :))
-         CALL mt_gradient_new(fi_nosym%atoms, sphhar_nosym, fi_nosym%sym, (rho_nosym%mt(:, :, :, iSpin)-rho_core%mt(:,:,:,iSpin)), grrho_val(:, :, :, iSpin, :))
-      END DO
-      DO zInd = -stars_nosym%mx3, stars_nosym%mx3
-         DO yInd = -stars_nosym%mx2, stars_nosym%mx2
-            DO xInd = -stars_nosym%mx1, stars_nosym%mx1
-               iStar = stars_nosym%ig(xInd, yInd, zInd)
-               IF (iStar.EQ.0) CYCLE
-               grRho3(1)%pw(iStar,:) = rho_nosym%pw(iStar,:) * cmplx(0.0,dot_product([1.0,0.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat)))
-               grRho3(2)%pw(iStar,:) = rho_nosym%pw(iStar,:) * cmplx(0.0,dot_product([0.0,1.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat)))
-               grRho3(3)%pw(iStar,:) = rho_nosym%pw(iStar,:) * cmplx(0.0,dot_product([0.0,0.0,1.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat)))
-               grgrvextnum(1,1)%pw(iStar,:) = vext_dummy%pw(iStar,:) * cmplx(0.0,dot_product([1.0,0.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat))) &
-                                                                   * cmplx(0.0,dot_product([1.0,0.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat)))
-               grgrvextnum(1,2)%pw(iStar,:) = vext_dummy%pw(iStar,:) * cmplx(0.0,dot_product([1.0,0.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat))) &
-                                                                   * cmplx(0.0,dot_product([0.0,1.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat)))
-               grgrvextnum(1,3)%pw(iStar,:) = vext_dummy%pw(iStar,:) * cmplx(0.0,dot_product([1.0,0.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat))) &
-                                                                   * cmplx(0.0,dot_product([0.0,0.0,1.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat)))
-               grgrvextnum(2,1)%pw(iStar,:) = vext_dummy%pw(iStar,:) * cmplx(0.0,dot_product([0.0,1.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat))) &
-                                                                   * cmplx(0.0,dot_product([1.0,0.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat)))
-               grgrvextnum(2,2)%pw(iStar,:) = vext_dummy%pw(iStar,:) * cmplx(0.0,dot_product([0.0,1.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat))) &
-                                                                   * cmplx(0.0,dot_product([0.0,1.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat)))
-               grgrvextnum(2,3)%pw(iStar,:) = vext_dummy%pw(iStar,:) * cmplx(0.0,dot_product([0.0,1.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat))) &
-                                                                   * cmplx(0.0,dot_product([0.0,0.0,1.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat)))
-               grgrvextnum(3,1)%pw(iStar,:) = vext_dummy%pw(iStar,:) * cmplx(0.0,dot_product([0.0,0.0,1.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat))) &
-                                                                   * cmplx(0.0,dot_product([1.0,0.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat)))
-               grgrvextnum(3,2)%pw(iStar,:) = vext_dummy%pw(iStar,:) * cmplx(0.0,dot_product([0.0,0.0,1.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat))) &
-                                                                   * cmplx(0.0,dot_product([0.0,1.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat)))
-               grgrvextnum(3,3)%pw(iStar,:) = vext_dummy%pw(iStar,:) * cmplx(0.0,dot_product([0.0,0.0,1.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat))) &
-                                                                   * cmplx(0.0,dot_product([0.0,0.0,1.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat)))
-            END DO
-         END DO
-      END DO
-
-      IF (fi_nosym%input%film) THEN
-         DO yInd = -stars_nosym%mx2, stars_nosym%mx2
-            DO xInd = -stars_nosym%mx1, stars_nosym%mx1
-               iStar = stars_nosym%ig(xInd, yInd, 0)
-               IF (iStar.EQ.0) CYCLE
-               iStar = stars_nosym%i2g(xInd, yInd)
-               grRho3(1)%vac(:,iStar,:,:) = rho_nosym%vac(:,iStar,:,:) * cmplx(0.0,dot_product([1.0,0.0,0.0],matmul(real([xInd,yInd,0]),fi_nosym%cell%bmat)))
-               grRho3(2)%vac(:,iStar,:,:) = rho_nosym%vac(:,iStar,:,:) * cmplx(0.0,dot_product([0.0,1.0,0.0],matmul(real([xInd,yInd,0]),fi_nosym%cell%bmat)))
-               DO iVac = 1, fi_nosym%vacuum%nvac
-                  DO iSpin = 1, SIZE(rho_nosym%vac,4)
-                     zlim = MERGE(fi_nosym%vacuum%nmz,fi_nosym%vacuum%nmzxy,iStar==1)
-                     CALL grdchlh(fi_nosym%vacuum%delz, REAL(rho_nosym%vac(:zlim,iStar,iVac,iSpin)),dr_re(:zlim),drr_dummy(:zlim))
-                     CALL grdchlh(fi_nosym%vacuum%delz,AIMAG(rho_nosym%vac(:zlim,iStar,iVac,iSpin)),dr_im(:zlim),drr_dummy(:zlim))
-                     grRho3(3)%vac(:,iStar,iVac,iSpin) = (3-2*iVac)*(dr_re + ImagUnit * dr_im)
-                  END DO
-               END DO
-            END DO
-         END DO
-      END IF
-
-
-      !call fi%juPhon%init(fi%cell)
-
-
-
-      ! Coulomb/Effective potential gradients
-      DO iDir = 1, 3
-         CALL sh_to_lh(fi_nosym%sym, fi_nosym%atoms, sphhar_nosym, SIZE(rho_nosym%mt,4), 2, grrhodummy(:, :, :, :, iDir), grRho3(iDir)%mt, imagrhodummy%mt)
-         CALL imagrhodummy%resetPotDen()
-         if (fmpi%irank==0) write(oUnit, *) "grVeff", iDir
-         sigma_loc  = cmplx(0.0,0.0)
-         IF (iDir==3) sigma_loc  = sigma_coul
-         CALL dfpt_vgen(hybdat_nosym, fi_nosym%field, fi_nosym%input, xcpot_nosym, fi_nosym%atoms, sphhar_nosym, stars_nosym, fi_nosym%vacuum, fi_nosym%sym, &
-                        fi%juphon, fi_nosym%cell, fmpi_nosym, fi_nosym%noco, nococonv_nosym, rho_nosym, vTot_nosym, &
-                        stars_nosym, imagrhodummy, grVtot3(iDir), .TRUE., grvextdummy, grRho3(iDir), 0, iDir, [0,0], sigma_loc)
-         if (fmpi%irank==0) write(oUnit, *) "grVC", iDir
-         sigma_loc  = cmplx(0.0,0.0)
-         IF (iDir==3) sigma_loc  = sigma_coul
-         CALL dfpt_vgen(hybdat_nosym, fi_nosym%field, fi_nosym%input, xcpot_nosym, fi_nosym%atoms, sphhar_nosym, stars_nosym, fi_nosym%vacuum, fi_nosym%sym, &
-                        fi%juphon, fi_nosym%cell, fmpi_nosym, fi_nosym%noco, nococonv_nosym, rho_nosym, vTot_nosym, &
-                        stars_nosym, imagrhodummy, grVC3(iDir), .FALSE., grvextdummy, grRho3(iDir), 0, iDir, [0,0], sigma_loc)
-      END DO
-
-      DO iDir2 = 1, 3
-         DO iDir = 1, 3
-            CALL imagrhodummy%resetPotDen()
-            CALL imagrhodummyLocal%resetpotden()
-            CALL grvextdummyLocal%resetpotden()
-            sigma_loc = cmplx(0.0,0.0)
-
-            !IF (iDir2==3) sigma_loc = sigma_gext(iDir,:)
-            !IF (iDir==3) sigma_loc = sigma_gext(iDir2,:)
-            CALL vgen_coulomb(1, fmpi_nosym, fi_nosym%input, fi_nosym%field, fi_nosym%vacuum, fi_nosym%sym, fi%juphon, starsLocal, fi_nosym%cell, &
-                        & sphhar_nosym, atomsLocal, .TRUE., imagrhodummyLocal, grgrVC3x3(iDir2,iDir), sigma_loc, &
-                        & dfptdenimag=imagrhodummyLocal, dfptvCoulimag=grvextdummyLocal,dfptden0=imagrhodummyLocal,stars2=starsLocal,iDtype=0,iDir=iDir,iDir2=iDir2, &
-                        & sigma_disc2=MERGE(sigma_ext,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir2==3.AND.iDir==3.AND..FALSE.))
+      call dfpt_generate_gradient(fi_nosym,fmpi_nosym,sphhar_nosym,hybdat_nosym,xcpot_nosym,nococonv_nosym,stars_nosym,rho_nosym,vTot_nosym,grRho3,grVtot3,grVC3,grVext3,grgrVC3x3)
+      
+      call imagrhodummy%copyPotDen(rho_nosym)
+      call imagrhodummy%resetpotden()
+      do iDir = 1 ,3
+         do iDir2 = 1 ,3  
             CALL dfpt_e2_madelung(fi_nosym%atoms,fi_nosym%input%jspins,imagrhodummy%mt(:,0,:,:),grgrVC3x3(iDir2,iDir)%mt(:,0,:,1),e2_vm(:,iDir2,iDir))
-         END DO
-      END DO
-   
+         end do 
+      end do 
+      
       ! Reactivate if second order properties need to be analyzed 
       !CALL save_npy("radii.npy",fi_nosym%atoms%rmsh(:,1))
       !DO iDir2 = 1, 3
@@ -740,8 +603,8 @@ CONTAINS
                         denIm_elph(iDir+3*(iDtype-1)) = denIn1Im
                      END IF 
    
-                     !IF (fmpi%irank==0) write(*,*) "dynmat row for ", dfpt_tag
-                     !IF (fmpi%irank==0) write(*,*) dyn_mat(iQ,3 *(iDtype-1)+iDir,:)
+                     IF (fmpi%irank==0) write(*,*) "dynmat row for ", dfpt_tag
+                     IF (fmpi%irank==0) write(*,*) dyn_mat(iQ,3 *(iDtype-1)+iDir,:)
                      !IF (fmpi%irank==0.AND.l_cheated) write(*,*) "The cheat:"
                      !IF (fmpi%irank==0.AND.l_cheated) write(*,*) sym_dyn_mat(iQ,3 *(iDtype-1)+iDir,:)
                      !l_cheated = .FALSE.
