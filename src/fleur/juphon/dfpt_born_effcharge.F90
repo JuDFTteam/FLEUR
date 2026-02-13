@@ -156,17 +156,18 @@ contains
     end subroutine dfpt_born_eff_charge_element_nef
 
 
-    subroutine dfpt_born_eff_charge_element(fi,stars,starsq,sphhar,fmpi,rho,rho_core,denIn1,denIn1Im,grRho,grrho_val,BEC_element,BEC_contributions_element,iDir_den,iDType,iQ,q_sign)
+    subroutine dfpt_born_eff_charge_element(fi,stars,starsq,sphhar,fmpi,rho,denIn1,denIn1Im,grRho,BEC_element,BEC_contributions_element,iDir_den,iDType,iQ,q_sign)
 
 
         type(t_fleurinput), intent(in)     :: fi
         type(t_sphhar),    intent(in)      :: sphhar
         TYPE(t_stars),      INTENT(IN)     :: stars, starsq
-        type(t_potden), intent(inout)         :: rho, rho_core
+        type(t_potden), intent(in)         :: rho
+        ! type(t_potden), intent(inout)         :: rho_core
         type(t_potden), intent(inout)         :: denIn1,denIn1Im
         type(t_potden),optional, intent(in)     ::grRho
         TYPE(t_mpi),        intent(in)     :: fmpi
-        complex, intent(in)                 :: grrho_val(:,:,:,:)
+        !complex, intent(in)                 :: grrho_val(:,:,:,:)
         complex, intent(inout)             :: BEC_element
         complex, intent(inout)             :: BEC_contributions_element(:)
         integer, intent(in)                :: iDir_den,iQ,q_sign,iDType

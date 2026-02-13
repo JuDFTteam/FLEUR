@@ -30,8 +30,9 @@ CONTAINS
       TYPE(t_mpi),        INTENT(IN)    :: fmpi
       TYPE(t_kpts),       INTENT(IN)    :: qpts
 
-      TYPE(t_potden), INTENT(INOUT) :: rho, vTot
-      TYPE(t_potden), INTENT(INOUT) :: grRho3(3), grVext3(3), grVC3(3)
+      TYPE(t_potden), INTENT(IN) :: rho
+      TYPE(t_potden), INTENT(IN)    :: vTot
+      TYPE(t_potden), INTENT(in) :: grRho3(3), grVext3(3), grVC3(3)
       TYPE(t_potden), INTENT(INOUT) :: denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im
 
       TYPE(t_enpara),   INTENT(INOUT) :: enpara
