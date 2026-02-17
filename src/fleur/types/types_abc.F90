@@ -161,7 +161,7 @@ CONTAINS
 
 ! Initializations
       acof_size = size(this%cof, 1)
-!$acc enter data create(abTemp,fjgj,fjgj%fj,fjgj%gj,work_c,work_lo,abcoeffs)
+!$acc enter data create(abTemp,fjgj,fjgj%fj,fjgj%gj,work_c,abcoeffs)
       
 
 !Use inversion symmetry explicitely
@@ -204,7 +204,7 @@ CONTAINS
                ! perform sum over the two interstitial spin directions
                ! and take into account the spin boundary conditions
                ! (jspin counts the local spin directions inside each MT)
-               !$acc kernels copyin(atoms,zMat,zMat%data_c,ccchi,lapw) present(work_c) default(none)
+               !$acc kernels copyin(atoms,zMat,zMat%data_c,ccchi,lapw,lapw%nv) present(work_c) default(none)
                kspin = lapw%nv(1) + atoms%nlotot
                work_c(:nvmax, :) = ccchi(1, jspin)*zMat%data_c(:nvmax, :ne) + &
                                    ccchi(2, jspin)*zMat%data_c(kspin + 1:kspin + nvmax, :ne)
