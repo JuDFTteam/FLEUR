@@ -41,6 +41,7 @@ CONTAINS
       USE m_dfpt_phonon
       USE m_dfpt_borncharges
       USE m_dfpt_efield
+      USE m_dfpt_interpolation
 
       TYPE(t_mpi),        INTENT(IN)     :: fmpi
       TYPE(t_fleurinput), INTENT(IN)     :: fi
@@ -145,16 +146,6 @@ CONTAINS
       REAL    :: dr_re(fi%vacuum%nmzd), dr_im(fi%vacuum%nmzd), drr_dummy(fi%vacuum%nmzd), numbers(3*fi%atoms%nat,6*fi%atoms%nat)
       complex                           :: sigma_loc(2), sigma_ext(2), sigma_coul(2), sigma_gext(3,2), constantShift
 
-      ALLOCATE(e2_vm(fi%atoms%nat,3,3))
-
-      l_dfpt_scf   = fi%juPhon%l_scf
-
-      l_dfpt_band  = fi%juPhon%l_band
-      l_dfpt_full  = fi%juPhon%l_intp
-      l_dfpt_dos   = fi%juPhon%l_dos
-
-      l_cheated = .FALSE.
-
       l_real = fi%sym%invs.AND.(.NOT.fi%noco%l_soc).AND.(.NOT.fi%noco%l_noco).AND.fi%atoms%n_hia==0
 
       ! l_minusq is a hard false at the moment. It can be used to ignore +-q symmetries and
@@ -200,21 +191,6 @@ CONTAINS
                                 .NOT.fi%INPUT%eig66(1), .FALSE., fi%noco%l_soc, fi%INPUT%eig66(1), .FALSE., fmpi%n_size)
       END IF
 
-
-      IF (.NOT.fi%juPhon%qmode==0) THEN
-         ! Read qpoints from fullsym_inp.xml and fullsym_kpts.xml
-         inp_pref = ADJUSTL("fullsym_")
-         fmpi_fullsym%l_mpi_multithreaded = fmpi%l_mpi_multithreaded
-         fmpi_fullsym%mpi_comm = fmpi%mpi_comm
-         CALL fleur_init(fmpi_fullsym, fi_fullsym, sphhar_fullsym, stars_fullsym, nococonv_fullsym, forcetheo_fullsym, &
-                         enpara_fullsym, xcpot_fullsym, results_fullsym, wann_fullsym, hybdat_fullsym, mpdata_fullsym, &
-                         inp_pref)
-         qpts_loc = fi_fullsym%kpts
-
-         ALLOCATE(q_list(SIZE(qpts_loc%bk,2)))
-         q_list = (/(iArray, iArray=1,SIZE(qpts_loc%bk,2), 1)/)
-      END IF
-
       ! Generate the gradients of the density and the various potentials, that will be used at different points in the programm.
       ! The density gradient is calculated by numerical differentiation, while the potential gradients are constructed (from the
       ! density gradient) by a Weinert construction, just like the potentials are from the density.
@@ -223,7 +199,7 @@ CONTAINS
       call dfpt_generate_gradient(fi,fmpi,sphhar,hybdat,xcpot,nococonv,stars,rho,vTot,grRho3,grVtot3,grVC3,grVext3,grgrVext3x3)
       CALL timestop("Gradient generation")
 
-      if (l_dfpt_scf) then 
+      if (fi%juPhon%l_scf) then 
          if (fi%juPhon%l_efield) then 
             call timestart("dfpt efield")
             ! Do a scf calculation with an electric field as the external perturbation
@@ -247,86 +223,17 @@ CONTAINS
          end if 
       end if 
 
+#ifdef CPP_MPI
+      call MPI_BARRIER(fmpi%mpi_comm,ierr)
+#endif 
+      if ( fi%juPhon%l_band .or. fi%juPhon%l_dos .or. fi%juPhon%l_intp) then 
+         ! Do post processing of converged results 
+         ! Interpolate the dynamic matrix with FFT
+         call timestart("dfpt interpolation")
+         call dfpt_interpolation(fi,fmpi,nococonv,results)
+         call timestop("dfpt interpolation")
+      end if 
 
-      ! If the Dynmats-Files were already created, we can read them in and do postprocessing.
-      ! a) Transform the q-Mesh onto real space.
-      ! b) Transform it back onto a dense q-path.
-      ! c) Transform it back to a denser grid
-      ! d) Perform a DOS calculation for the denser grid.
-      IF (fmpi%irank==0 .AND. (fi%juPhon%l_band .OR. fi%juPhon%l_band)) THEN ! Band/Dos stuff
-         IF (fi%juPhon%qmode .NE. 1) CALL juDFT_error("qmode not set to 1, while calculating interpolation. & 
-                                          & Is this intended?.", calledby="dfpt.F90")
-         ! 0) Read
-         DO iQ = 1, fi_fullsym%kpts%nkpt ! Loop over dynmat files to read
-            IF (iQ<=9) THEN
-               OPEN( 3001, file="dynMatq=000"//int2str(iQ), status="old")
-            ELSEIF(iQ<=99) THEN 
-               OPEN( 3001, file="dynMatq=00"//int2str(iQ), status="old")
-            ELSE 
-               OPEN( 3001, file="dynMatq=0"//int2str(iQ), status="old")
-            END IF
-            DO iread = 1, 3 + 3*fi%atoms%nat ! Loop over dynmat rows
-               IF (iread<4) THEN
-                  READ( 3001,*) trash
-                  write(*,*) iread, trash
-               ELSE
-                  READ( 3001,*) numbers(iread-3,:)
-                  write(*,*) iread, numbers(iread-3,:)
-                  dyn_mat(iQ,iread-3,:) = CMPLX(numbers(iread-3,::2),numbers(iread-3,2::2))
-               END IF
-            END DO ! iread
-            CLOSE(3001)
-         END DO ! iQ
-
-         ! a) Real space transformation
-         ALLOCATE(dyn_mat_r(fi_fullsym%kpts%nkptf,3*fi%atoms%nat,3*fi%atoms%nat))
-         CALL ft_dyn(fi_fullsym%atoms, fi_fullsym%kpts, fi_fullsym%sym, fi_fullsym%cell%amat, dyn_mat, dyn_mat_r, dyn_mat_q_full)
-         
-         ! In order to call the normal diagonalisation routines
-         ! The FCM must be not-normalized --> otherwise we find the wrong unit
-         ! Either change here or in dfpt_dynmat_eig.F90 if tag != raw 
-
-         do iDir = 1, 3*fi%atoms%nat
-            do iDir2 = 1, 3*fi%atoms%nat
-               dyn_mat_r(:,iDir, iDir2) = dyn_mat_r(:,iDir, iDir2) * massInElectronMasses* SQRT(atomicMasses_const(fi%atoms%nz(CEILING(iDir/3.0)))*atomicMasses_const(fi%atoms%nz(CEILING(iDir2/3.0))))
-            end do
-         end do
-
-         ! b/c) reciprocal space transformation for bands/dense grid
-         IF (l_dfpt_band.OR.l_dfpt_full) THEN
-            IF (l_dfpt_band) THEN
-               dynfiletag = "band"
-            ELSE IF (l_dfpt_full) THEN
-               dynfiletag = "full"
-            ELSE
-               dynfiletag = "intp"
-            END IF
-            IF (l_dfpt_dos) ALLOCATE(eigenValsFull(3*fi%atoms%nat,fi%kpts%nkpt,fi%input%jspins))
-            DO iQ = 1, fi%kpts%nkpt
-               CALL ift_dyn(fi_fullsym%atoms,fi_fullsym%kpts,fi_fullsym%sym,fi_fullsym%cell%amat,fi%kpts%bk(:,iQ),dyn_mat_r,dyn_mat_pathq)
-               WRITE(*,*) '-------------------------'
-               CALL timestart("Dynmat diagonalization")
-               CALL DiagonalizeDynMat(fi%atoms, fi%kpts%bk(:,iQ), fi%juPhon%calcEigenVec, dyn_mat_pathq, eigenVals, eigenVecs, iQ,.TRUE.,TRIM(dynfiletag),fi%juPhon%l_sumrule)
-               CALL timestop("Dynmat diagonalization")
-
-               CALL timestart("Frequency calculation")
-               CALL CalculateFrequencies(fi%atoms, iQ, eigenVals, eigenFreqs,TRIM(dynfiletag),fi%kpts%bk(:,iQ))
-               CALL timestop("Frequency calculation")
-
-               IF (l_dfpt_dos) eigenValsFull(:,iQ,1) = eigenFreqs(:)
-
-               DEALLOCATE(eigenVals, eigenVecs, eigenFreqs, dyn_mat_pathq)
-            END DO ! iQ
-         END IF ! bands/interpolation
-         IF (l_dfpt_dos) THEN
-            fiLocal = fi
-            fiLocal%banddos%dos = .TRUE.
-            CALL dos%init(fi%input,fi%atoms,fi%kpts,fi%banddos,.false.,eigenValsFull)
-            allocate(eigdos(1))
-            eigdos(1)%p=>dos
-            CALL make_dos(fi%kpts,fi%atoms,fi%vacuum,fi%input,fi%banddos,fi%sliceplot,fi%noco,nococonv,fi%sym,fi%cell,results,eigdos,fi%juPhon )
-         END IF ! dos
-      END IF ! Band/Dos stuff
 
       CALL close_eig(q_eig_id)
       CALL close_eig(dfpt_eig_id)
