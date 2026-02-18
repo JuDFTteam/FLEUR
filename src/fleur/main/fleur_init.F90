@@ -223,14 +223,15 @@ CONTAINS
 #endif
 
       IF (fmpi%irank .EQ. 0) THEN
-         matricesSize = nbasfcn*nbasfcn*2*8 ! factor 2 because of H + S, factor 8 because of size of REAL in bytes
+         matricesSize = REAL(nbasfcn)*REAL(nbasfcn)*2.0*8.0 ! factor 2 because of H + S, factor 8 because of size of REAL in bytes
          IF (fi%noco%l_noco) THEN
-            matricesSize = matricesSize * 8 ! factor 8 because of all spins in one matrix, complex data.
+            matricesSize = matricesSize * 8.0 ! factor 8 because of all spins in one matrix, complex data.
          ELSE IF (.NOT.fi%input%l_real) THEN
-            matricesSize = matricesSize * 2 ! factor 2 because of complex data
+            matricesSize = matricesSize * 2.0 ! factor 2 because of complex data
          END IF
          matricesSize = matricesSize / 1024.0 / 1024.0
          WRITE(*,*) ''
+         WRITE(*,'(a,i8)') ' Number of basis functions: ', nbasfcn
          WRITE(*,'(a,f12.2,a)') ' Approximate size of matrices (H+S) per k-point: ', matricesSize, ' MB'
          WRITE(*,*) ''
       END IF
