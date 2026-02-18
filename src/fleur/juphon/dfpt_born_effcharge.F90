@@ -289,7 +289,7 @@ contains
                 CALL fftgrid_dummy%perform_fft(forward=.false.)
                 theta1full(0:, iType, iDir) = fftgrid_dummy%grid
             END DO
-            END DO
+        END DO
 
         tempval_SF_IR = CMPLX(0.0,0.0)
         !print*,"sum(rho_pw)",sum(rho_pw)
@@ -328,7 +328,111 @@ contains
     end subroutine dfpt_born_eff_charge_element
 
 
-    subroutine dfpt_checkdopall(fi, sphhar, starsq,vExt1,vExt1Im,denIn1,denIn1Im)
+
+    subroutine dfpt_born_eff_charge_final(fi,born_eff_charge,born_eff_charge_contributions)
+
+        type(t_fleurinput), intent(in)    :: fi
+        complex, intent(inout)   :: born_eff_charge(:,:,:)
+        complex, intent(inout)   :: born_eff_charge_contributions(:,:,:,:)
+        integer                  :: iDType,iDir, j 
+        complex                  :: dielten_iden(3,3) 
+        character(len=20)        :: atom_string
+        character(len=20)        :: filename
+        integer                  ::i, file_int
+
+
+        !born_eff_charge(:,:,:) = -born_eff_charge(:,:,:)
+        
+        atom_string = 'atom No:'
+
+        open( 111, file="born_eff_charge", status='replace', action='write', form='formatted')
+        write(*,*) '-------------------------' 
+        write(*,*) "Born Effective Charge" 
+        do iDType = 1, fi%atoms%ntype
+            !write(*, '(A,I4,1X,A)', ADVANCE='NO') atom_string, iDType,fi%atoms%speciesName(iDType)
+            write(*,'(A,I4,1X,A)') atom_string, iDType,fi%atoms%speciesName(iDType)
+            write(111,'(A,I4,1X,A)') atom_string, iDType,fi%atoms%speciesName(iDType)
+            do iDir = 1,3
+                do j = 1,2
+                    write(111,'(es16.8)', ADVANCE='NO') real(born_eff_charge(iDType,iDir,j)) 
+                    write(111, '(A)', ADVANCE='NO') ' ' 
+                    write(*,'(es16.8)', ADVANCE='NO') real(born_eff_charge(iDType,iDir,j))
+                    write(*, '(A)', ADVANCE='NO') ' ' 
+                end do
+            write(111,'(es16.8)')real(born_eff_charge(iDType,iDir,3))
+            write(*,'(es16.8)')real(born_eff_charge(iDType,iDir,3))
+            end do
+        end do
+        close(111)
+        write(*,*) '-------------------------' 
+
+        !born_eff_charge_IR(:,:,:) = -born_eff_charge_IR(:,:,:)
+        
+        atom_string = 'atom No:'
+
+        IF (fi%juPhon%l_efield) THEN
+            call write_born_effective_charge(112, "born_eff_charge", born_eff_charge, atom_string, fi)
+            call write_born_effective_charge(112, "born_eff_charge_MT", -born_eff_charge_contributions(:,:,:,1), atom_string, fi)
+            call write_born_effective_charge(112, "born_eff_charge_MT_1", -born_eff_charge_contributions(:,:,:,2), atom_string, fi)
+            call write_born_effective_charge(112, "born_eff_charge_MT_2", -born_eff_charge_contributions(:,:,:,3), atom_string, fi)
+        ELSE
+            call write_born_effective_charge(112, "born_eff_charge_cmplx", born_eff_charge, atom_string, fi)
+            call write_born_effective_charge(113, "born_eff_charge_IR", born_eff_charge_contributions(:,:,:,1), atom_string, fi)
+            call write_born_effective_charge(114, "born_eff_charge_MT", born_eff_charge_contributions(:,:,:,2), atom_string, fi)
+            call write_born_effective_charge(115, "born_eff_charge_SF-MT", born_eff_charge_contributions(:,:,:,3), atom_string, fi)
+            call write_born_effective_charge(116, "born_eff_charge_SF-IR", born_eff_charge_contributions(:,:,:,4), atom_string, fi)
+            call write_born_effective_charge(117, "born_eff_charge_grRho", born_eff_charge_contributions(:,:,:,5), atom_string, fi)
+            call write_born_effective_charge(118, "born_eff_charge_Zbare", born_eff_charge_contributions(:,:,:,6), atom_string, fi)
+            call write_born_effective_charge(119, "born_eff_charge_SF", born_eff_charge_contributions(:,:,:,7), atom_string, fi)
+            call write_born_effective_charge(120, "born_eff_charge_pulay_only", born_eff_charge_contributions(:,:,:,8), atom_string, fi)
+            DO i =1,fi%atoms%nat
+                file_int = 120+i
+                write(filename, '("born_eff_charge_MT_",i0)') i
+                !top
+                call write_born_effective_charge(120, filename, born_eff_charge_contributions(:,:,:,8+i), atom_string, fi)
+                !call write_born_effective_charge(121, "born_eff_charge_MT_2", born_eff_charge_contributions(:,:,:,9), atom_string, fi)
+            END DO
+
+        END IF
+    
+    end subroutine dfpt_born_eff_charge_final
+
+    subroutine write_born_effective_charge(file_id, filename, BEC_contribution, atom_string, fi)
+
+        integer, intent(in) :: file_id
+        character(len=*), intent(in) :: filename
+        complex, intent(in) :: BEC_contribution(:,:,:)
+        character(len=*), intent(in) :: atom_string
+        type(t_fleurinput), intent(in) :: fi
+    
+        integer :: iDType, iDir, j
+    
+        open(file_id, file=filename, status='replace', action='write', form='formatted')
+        !write(*,*) '-------------------------'
+        !write(*,*) filename
+        
+        do iDType = 1, fi%atoms%ntype
+            !write(*,'(A,I4)') atom_string, iDType
+            write(file_id,'(A,I4,1X,A)') atom_string, iDType,fi%atoms%speciesName(iDType)
+    
+            do iDir = 1, 3
+                do j = 1, 2
+                    write(file_id, '(2es16.8)', ADVANCE='NO') BEC_contribution(iDType, iDir, j)
+                    write(file_id, '(A)', ADVANCE='NO') ' '
+                    !write(*, '(2es16.8)', ADVANCE='NO') BEC_contribution(iDType, iDir, j)
+                    !write(*, '(A)', ADVANCE='NO') ' '
+                end do
+    
+                write(file_id, '(2es16.8)') BEC_contribution(iDType, iDir, 3)
+                !write(*, '(2es16.8)') BEC_contribution(iDType, iDir, 3)
+            end do
+        end do
+    
+        close(file_id)
+        !write(*,*) '-------------------------'
+    end subroutine write_born_effective_charge
+
+        subroutine dfpt_checkdopall(fi, sphhar, starsq,vExt1,vExt1Im,denIn1,denIn1Im)
         
         type(t_fleurinput), intent(in)     :: fi
         type(t_sphhar),    intent(in)      :: sphhar
@@ -387,132 +491,6 @@ contains
     
     end subroutine dfpt_checkdopall
 
-    subroutine product_MT(fi,sphhar, product, productIm)
-        
-        type(t_fleurinput), intent(in)     :: fi
-        type(t_sphhar),    intent(in)      :: sphhar
-        real, intent(inout)                :: product(:,:,:,:)
-        real, intent(inout)                :: productIm(:,:,:,:)
-
-
-        integer                        :: nd,nat,lhPr,lPr, lh,l
-        print*,"in here"
-        nat=1
-        nd =  fi%sym%ntypsy(nat) !fix nat
-        do lhPr = 0,sphhar%nlh(fi%sym%ntypsy(nat))
-            lPr = sphhar%llh(lh,nd)
-            do lh= 0,sphhar%nlh(fi%sym%ntypsy(nat))
-                l = sphhar%llh(lh,nd)
-            end do
-        end do
-
-    
-    end subroutine product_MT
-
-
-
-    subroutine dfpt_born_eff_charge_final(fi,born_eff_charge,born_eff_charge_contributions)
-
-        type(t_fleurinput), intent(in)    :: fi
-        complex, intent(inout)   :: born_eff_charge(:,:,:)
-        complex, intent(inout)   :: born_eff_charge_contributions(:,:,:,:)
-        integer                  :: iDType,iDir, j 
-        complex                  :: dielten_iden(3,3) 
-        character(len=20)        :: atom_string
-        character(len=20)        :: filename
-        integer                  ::i, file_int
-
-
-        !born_eff_charge(:,:,:) = -born_eff_charge(:,:,:)
-        
-        atom_string = 'atom No:'
-
-        open( 112, file="born_eff_charge", status='replace', action='write', form='formatted')
-        !write(*,*) '-------------------------' 
-        !write(*,*) "Born Effective Charge" 
-        do iDType = 1, fi%atoms%ntype
-            !write(*, '(A,I4,1X,A)', ADVANCE='NO') atom_string, iDType,fi%atoms%speciesName(iDType)
-            !write(112,'(A,I4)') atom_string, iDType
-            do iDir = 1,3
-            do j = 1,2
-                !write(112,'(2es16.8)', ADVANCE='NO') born_eff_charge(iDType,iDir,j) 
-                !write(112, '(A)', ADVANCE='NO') ' ' 
-                !write(*,'(2es16.8)', ADVANCE='NO') born_eff_charge(iDType,iDir,j)
-                !write(*, '(A)', ADVANCE='NO') ' ' 
-            end do
-            !write(112,'(2es16.8)')born_eff_charge(iDType,iDir,3)
-            !write(*,'(2es16.8)')born_eff_charge(iDType,iDir,3)
-            end do
-        end do
-        close(112)
-        !write(*,*) '-------------------------' 
-
-        !born_eff_charge_IR(:,:,:) = -born_eff_charge_IR(:,:,:)
-        
-        atom_string = 'atom No:'
-
-        !atom_string = 'atom No:'
-        IF (fi%juPhon%l_efield) THEN
-            call write_born_effective_charge(112, "born_eff_charge", born_eff_charge, atom_string, fi)
-            call write_born_effective_charge(112, "born_eff_charge_MT", -born_eff_charge_contributions(:,:,:,1), atom_string, fi)
-            call write_born_effective_charge(112, "born_eff_charge_MT_1", -born_eff_charge_contributions(:,:,:,2), atom_string, fi)
-            call write_born_effective_charge(112, "born_eff_charge_MT_2", -born_eff_charge_contributions(:,:,:,3), atom_string, fi)
-        ELSE
-            call write_born_effective_charge(112, "born_eff_charge", born_eff_charge, atom_string, fi)
-            call write_born_effective_charge(113, "born_eff_charge_IR", born_eff_charge_contributions(:,:,:,1), atom_string, fi)
-            call write_born_effective_charge(114, "born_eff_charge_MT", born_eff_charge_contributions(:,:,:,2), atom_string, fi)
-            call write_born_effective_charge(115, "born_eff_charge_SF-MT", born_eff_charge_contributions(:,:,:,3), atom_string, fi)
-            call write_born_effective_charge(116, "born_eff_charge_SF-IR", born_eff_charge_contributions(:,:,:,4), atom_string, fi)
-            call write_born_effective_charge(117, "born_eff_charge_grRho", born_eff_charge_contributions(:,:,:,5), atom_string, fi)
-            call write_born_effective_charge(118, "born_eff_charge_Zbare", born_eff_charge_contributions(:,:,:,6), atom_string, fi)
-            call write_born_effective_charge(119, "born_eff_charge_SF", born_eff_charge_contributions(:,:,:,7), atom_string, fi)
-            call write_born_effective_charge(120, "born_eff_charge_pulay_only", born_eff_charge_contributions(:,:,:,8), atom_string, fi)
-            DO i =1,fi%atoms%nat
-                file_int = 120+i
-                write(filename, '("born_eff_charge_MT_",i0)') i
-                !top
-                call write_born_effective_charge(120, filename, born_eff_charge_contributions(:,:,:,8+i), atom_string, fi)
-                !call write_born_effective_charge(121, "born_eff_charge_MT_2", born_eff_charge_contributions(:,:,:,9), atom_string, fi)
-            END DO
-
-        END IF
-    
-    end subroutine dfpt_born_eff_charge_final
-
-    subroutine write_born_effective_charge(file_id, filename, BEC_contribution, atom_string, fi)
-
-        integer, intent(in) :: file_id
-        character(len=*), intent(in) :: filename
-        complex, intent(in) :: BEC_contribution(:,:,:)
-        character(len=*), intent(in) :: atom_string
-        type(t_fleurinput), intent(in) :: fi
-    
-        integer :: iDType, iDir, j
-    
-        open(file_id, file=filename, status='replace', action='write', form='formatted')
-        !write(*,*) '-------------------------'
-        !write(*,*) filename
-        
-        do iDType = 1, fi%atoms%ntype
-            !write(*,'(A,I4)') atom_string, iDType
-            write(file_id,'(A,I4,1X,A)') atom_string, iDType,fi%atoms%speciesName(iDType)
-    
-            do iDir = 1, 3
-                do j = 1, 2
-                    write(file_id, '(2es16.8)', ADVANCE='NO') BEC_contribution(iDType, iDir, j)
-                    write(file_id, '(A)', ADVANCE='NO') ' '
-                    !write(*, '(2es16.8)', ADVANCE='NO') BEC_contribution(iDType, iDir, j)
-                    !write(*, '(A)', ADVANCE='NO') ' '
-                end do
-    
-                write(file_id, '(2es16.8)') BEC_contribution(iDType, iDir, 3)
-                !write(*, '(2es16.8)') BEC_contribution(iDType, iDir, 3)
-            end do
-        end do
-    
-        close(file_id)
-        !write(*,*) '-------------------------'
-    end subroutine write_born_effective_charge
 
         
 end module 
