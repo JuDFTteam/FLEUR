@@ -626,6 +626,76 @@ def job_generate(input_file, machine, partition, job_name, nodes, time_limit,
         click.secho(f"✓ Saved job script: {out_file}", fg='green')
 
 
+# ── Jupyter ──────────────────────────────────────────────────────────────────
+
+@cli.command()
+@click.option('--copy', '-c', 'copy_to', type=click.Path(), default=None,
+              help='Copy the notebook to a custom directory instead of CWD.')
+@click.option('--no-browser', is_flag=True, default=False,
+              help='Start Jupyter without opening a browser window.')
+@click.option('--copy-only', is_flag=True, default=False,
+              help='Copy the notebook to CWD without launching Jupyter.')
+def notebook(copy_to, no_browser, copy_only):
+    """Open the FLEURiste demo Jupyter notebook.
+
+    By default, this copies the demo notebook to the current working directory
+    and launches JupyterLab with it. This allows you to edit the notebook freely
+    without modifying the original template.
+
+    Use --copy to specify a different destination directory.
+    Use --copy-only to copy the notebook without launching Jupyter.
+
+    Examples:
+
+      fleuriste notebook                      # Copy to CWD and open
+      fleuriste notebook --copy-only          # Copy to CWD only
+      fleuriste notebook --copy /scratch/     # Copy to custom dir and open
+    """
+    import shutil
+
+    notebook_src = Path(__file__).parent / "notebooks" / "fleuriste_jupyter.ipynb"
+
+    if not notebook_src.exists():
+        raise click.ClickException(
+            f"Demo notebook not found at {notebook_src}.\n"
+            "  Reinstall fleuriste or check your installation."
+        )
+
+    # Determine destination
+    if copy_to is not None:
+        dest_dir = Path(copy_to)
+    else:
+        dest_dir = Path.cwd()
+
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    dest = dest_dir / notebook_src.name
+
+    # Copy the notebook
+    shutil.copy2(notebook_src, dest)
+    click.secho(f"✓ Copied to {dest}", fg='green')
+
+    if copy_only:
+        return
+
+    # Launch JupyterLab from the same venv as fleuriste (not the system one)
+    # This ensures ipywidgets/jupyterlab-widgets are available for rendering.
+    import sys
+    import subprocess
+
+    cmd = [sys.executable, "-m", "jupyterlab", str(dest)]
+    if no_browser:
+        cmd.append("--no-browser")
+
+    click.echo("Launching JupyterLab …")
+    try:
+        subprocess.Popen(cmd)
+    except FileNotFoundError:
+        raise click.ClickException(
+            "Could not launch JupyterLab.\n"
+            "  Install it with:  pip install jupyterlab"
+        )
+
+
 # ── Entry point ──────────────────────────────────────────────────────────────
 
 def main():

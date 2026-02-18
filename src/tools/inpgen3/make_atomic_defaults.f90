@@ -78,8 +78,9 @@ CONTAINS
       !Determine MT-radii
       CALL check_mt_radii(atoms,input,vacuum,cell ,profile,.false.,atoms%rmt)
 
-      atoms%rmt(:) = atoms%rmt(:) * profile%rmtFactor
       
+      atoms%rmt(:) = atoms%rmt(:) * profile%rmtFactor
+    
       !rounding
       atoms%rmt(:) = real(NINT(atoms%rmt(:)  * 100 ) / 100.)
 

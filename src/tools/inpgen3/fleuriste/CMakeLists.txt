@@ -7,7 +7,7 @@
 
 set(FLEURISTE_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 set(FLEURISTE_VENV    "${CMAKE_BINARY_DIR}/fleuriste-venv")
-set(FLEURISTE_STAMP   "${FLEURISTE_VENV}/.installed_stamp")
+set(FLEURISTE_STAMP   "${CMAKE_CURRENT_BINARY_DIR}/.fleuriste_installed_stamp")
 set(FLEURISTE_SCRIPT  "${CMAKE_BINARY_DIR}/fleuriste")
 
 # Collect the Python source files so that a rebuild is triggered when
@@ -25,6 +25,9 @@ file(WRITE "${FLEURISTE_SCRIPT_TEMPLATE}"
 # Thin wrapper that runs the FLEURiste CLI inside its virtual environment.
 
 FLEURISTE_VENV=\"${FLEURISTE_VENV}\"
+export FLEUR_BUILDDIR=\"${CMAKE_BINARY_DIR}\"
+export DYLD_LIBRARY_PATH=\"${CMAKE_BINARY_DIR}/src/tools/inpgen3:\\\${DYLD_LIBRARY_PATH:-}\"
+export LD_LIBRARY_PATH=\"${CMAKE_BINARY_DIR}/src/tools/inpgen3:\\\${LD_LIBRARY_PATH:-}\"
 
 if [ ! -d \"\$FLEURISTE_VENV\" ]; then
     echo \"Error: FLEURiste virtual environment not found at \$FLEURISTE_VENV\" >&2
@@ -43,8 +46,13 @@ add_custom_command(
     COMMAND "${FLEUR_PYTHON}" -m venv "${FLEURISTE_VENV}"
     # Upgrade pip inside the venv
     COMMAND "${FLEURISTE_VENV}/bin/pip" install --upgrade pip -q
-    # Install fleuriste (editable so source changes take effect immediately)
-    COMMAND "${FLEURISTE_VENV}/bin/pip" install -e "${FLEURISTE_SRC_DIR}" -q
+    # Install setuptools (required for editable installs)
+    COMMAND "${FLEURISTE_VENV}/bin/pip" install setuptools wheel -q
+    # Install fleuriste with jupyter extras into the venv
+    COMMAND "${FLEURISTE_VENV}/bin/pip" install "${FLEURISTE_SRC_DIR}[jupyter]" -q
+    # Install ipykernel and register this venv as a Jupyter kernel
+    COMMAND "${FLEURISTE_VENV}/bin/pip" install ipykernel -q
+    COMMAND "${FLEURISTE_VENV}/bin/python" -m ipykernel install --user --name fleuriste --display-name "Python FLEURiste"
     # Copy the wrapper script
     COMMAND "${CMAKE_COMMAND}" -E copy "${FLEURISTE_SCRIPT_TEMPLATE}" "${FLEURISTE_SCRIPT}"
     # Make script executable

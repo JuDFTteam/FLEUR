@@ -6,26 +6,44 @@ Provides functions to generate inp.xml and add k-points from Python.
 import ctypes
 import os
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional, Union, List
 
 
 class InpgenInterface:
     """Interface to FLEUR inpgen Fortran library."""
     
-    def __init__(self, lib_path: Optional[Union[str, Path]] = None):
+    def __init__(self, lib_path: Optional[Union[str, Path]] = None, quiet: bool = False):
         """
         Initialize the inpgen interface.
         
         Args:
             lib_path: Path to the shared library (.so or .dylib).
                      If None, searches in common locations.
+            quiet: If True, suppress console output (messages still collected in self.messages)
         """
+        self.quiet = quiet
+        self.messages: List[str] = []  # Collected log messages
+        
         if lib_path is None:
             lib_path = self._find_library()
         
         self.lib = ctypes.CDLL(str(lib_path))
         self._setup_functions()
-        print(f"✓ Loaded library: {lib_path}")
+        self._log(f"✓ Loaded library: {lib_path}")
+    
+    def _log(self, message: str):
+        """Log a message. Stores in self.messages and optionally prints."""
+        self.messages.append(message)
+        if not self.quiet:
+            print(message)
+    
+    def get_messages(self) -> str:
+        """Get all collected messages as a single string."""
+        return "\n".join(self.messages)
+    
+    def clear_messages(self):
+        """Clear the collected messages."""
+        self.messages.clear()
     
     def _find_library(self) -> Path:
         """Search for the inpgen library in common locations."""
@@ -48,6 +66,12 @@ class InpgenInterface:
             Path(__file__).parent / 'lib',
             Path(__file__).parent.parent.parent.parent / 'build' / 'lib',
         ]
+        
+        # Add build directory from environment (set by fleuriste wrapper)
+        builddir = os.environ.get('FLEUR_BUILDDIR')
+        if builddir:
+            search_paths.insert(0, Path(builddir) / 'src' / 'tools' / 'inpgen3')
+            search_paths.insert(1, Path(builddir))
         
         for path in search_paths:
             if not path.exists():
@@ -90,9 +114,9 @@ class InpgenInterface:
         # SUBROUTINE make_kpt_py(len_kpts_str, kpts_str, len_kpts_path, 
         #                        kpts_path, nosym) BIND(C, name="make_kpt")
         self.lib.make_kpt.argtypes = [
-            ctypes.c_size_t,      # len_kpts_str (INTEGER(C_SIZE_T))
+            ctypes.c_int,      # len_kpts_str (INTEGER(C_SIZE_T))
             ctypes.c_char_p,      # kpts_str (CHARACTER(KIND=c_char,len=*))
-            ctypes.c_size_t,      # len_kpts_path (INTEGER(C_SIZE_T))
+            ctypes.c_int,      # len_kpts_path (INTEGER(C_SIZE_T))
             ctypes.c_char_p,      # kpts_path (CHARACTER(KIND=c_char,len=*))
             ctypes.c_bool         # nosym (LOGICAL)
         ]
@@ -139,7 +163,7 @@ class InpgenInterface:
         len_simple = ctypes.c_int(len(simple_input))
         len_profile = ctypes.c_int(len(profile_name))
         
-        print(f"Calling make_inp with {len_simple} + {len_profile} chars input, profile='{profile_name}'")
+        self._log(f"Calling make_inp with {len_simple.value} chars input, profile='{profile_name}'")
         
         try:
             # Call Fortran function with lengths
@@ -150,9 +174,9 @@ class InpgenInterface:
                 len_profile,
                 ctypes.c_bool(nosym)
             )
-            print("✓ inp.xml generated successfully")
+            self._log("✓ inp.xml generated successfully")
         except Exception as e:
-            print(f"✗ Error generating inp.xml: {e}")
+            self._log(f"✗ Error generating inp.xml: {e}")
             raise
     
     def make_inp_from_file(self,
@@ -178,7 +202,7 @@ class InpgenInterface:
         with open(input_path, 'r') as f:
             simple_input = f.read()
         
-        print(f"Reading input from: {input_path}")
+        self._log(f"Reading input from: {input_path}")
         self.make_inp(simple_input, profile_name, nosym)
     
     def add_kpoints(self,
@@ -207,20 +231,20 @@ class InpgenInterface:
         len_kpts_str = len(c_kpts_str)
         len_kpts_path = len(c_kpts_path)
         
-        print(f"Adding k-points: '{kpts_str}' path='{kpts_path}'")
+        self._log(f"Adding k-points: '{kpts_str}' path='{kpts_path}'")
         
         try:
             # Call Fortran function with lengths
             self.lib.make_kpt(
-                ctypes.c_size_t(len_kpts_str),
-                c_kpts_str,
-                ctypes.c_size_t(len_kpts_path),
-                c_kpts_path,
+                ctypes.c_int(len_kpts_str),
+                ctypes.c_char_p(c_kpts_str),
+                ctypes.c_int(len_kpts_path),
+                ctypes.c_char_p(c_kpts_path),
                 ctypes.c_bool(nosym)
             )
-            print(f"✓ K-points added successfully")
+            self._log(f"✓ K-points added successfully")
         except Exception as e:
-            print(f"✗ Error adding k-points: {e}")
+            self._log(f"✗ Error adding k-points: {e}")
             raise
 
 

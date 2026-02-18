@@ -25,6 +25,21 @@ from .inpgen_gui import (
     generate_surface
 )
 
+# Lazy-import Jupyter interface (requires ipywidgets)
+def jupyter(*args, **kwargs):
+    """Create and return a FLEURisteJupyter GUI instance.
+
+    Shorthand for::
+
+        from fleuriste.jupyter_gui import FLEURisteJupyter
+        gui = FLEURisteJupyter(...)
+        gui.display()
+    """
+    from .jupyter_gui import FLEURisteJupyter
+    gui = FLEURisteJupyter(*args, **kwargs)
+    gui.display()
+    return gui
+
 __all__ = [
     "cli",
     "cli_main",
@@ -52,4 +67,5 @@ __all__ = [
     "parse_namelist_to_atoms",
     "get_elements_in_input",
     "add_magnetic_moments",
+    "jupyter",
 ]

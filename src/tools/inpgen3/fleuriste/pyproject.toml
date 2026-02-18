@@ -3,7 +3,7 @@ name = "fleuriste"
 version = "0.1.0"
 description = "Terminal-based GUI editor for FLEUR inp.xml files"
 readme = "README.md"
-license = {text = "MIT"}
+license = "MIT"
 authors = [
     {name = "FLEUR Team"}
 ]
@@ -23,8 +23,17 @@ dev = [
 plotting = [
     "textual-plotext>=0.2.0",
 ]
+jupyter = [
+    "ipywidgets>=8.0",
+    "jupyterlab-widgets>=3.0",
+    "widgetsnbextension>=4.0",
+    "matplotlib>=3.5",
+    "jupyterlab>=3.0",
+]
 full = [
     "textual-plotext>=0.2.0",
+    "ipywidgets>=8.0",
+    "matplotlib>=3.5",
 ]
 
 [project.scripts]
@@ -35,8 +44,11 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-py-modules = []
+py-modules = ["FleurInpgen"]
 
 [tool.setuptools.packages.find]
 where = [".."]
 include = ["fleuriste*"]
+
+[tool.setuptools.package-data]
+fleuriste = ["notebooks/*.ipynb", "notebooks/*.xml"]

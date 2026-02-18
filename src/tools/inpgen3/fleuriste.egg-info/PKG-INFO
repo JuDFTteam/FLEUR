@@ -1,3 +1,31 @@
+Metadata-Version: 2.4
+Name: fleuriste
+Version: 0.1.0
+Summary: Terminal-based GUI editor for FLEUR inp.xml files
+Author: FLEUR Team
+License-Expression: MIT
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: textual>=0.47.0
+Requires-Dist: click>=8.0
+Requires-Dist: numpy>=1.20.0
+Requires-Dist: ase>=3.22.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.21; extra == "dev"
+Provides-Extra: plotting
+Requires-Dist: textual-plotext>=0.2.0; extra == "plotting"
+Provides-Extra: jupyter
+Requires-Dist: ipywidgets>=8.0; extra == "jupyter"
+Requires-Dist: jupyterlab-widgets>=3.0; extra == "jupyter"
+Requires-Dist: widgetsnbextension>=4.0; extra == "jupyter"
+Requires-Dist: matplotlib>=3.5; extra == "jupyter"
+Requires-Dist: jupyterlab>=3.0; extra == "jupyter"
+Provides-Extra: full
+Requires-Dist: textual-plotext>=0.2.0; extra == "full"
+Requires-Dist: ipywidgets>=8.0; extra == "full"
+Requires-Dist: matplotlib>=3.5; extra == "full"
+
 # FLEURiste - FLEUR Input File Editor
 
 A terminal-based graphical editor for FLEUR `inp.xml` files, using the [Textual](https://textual.textualize.io/) framework.

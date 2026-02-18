@@ -1,0 +1,13 @@
+README.md
+pyproject.toml
+fleuriste.egg-info/PKG-INFO
+fleuriste.egg-info/SOURCES.txt
+fleuriste.egg-info/dependency_links.txt
+fleuriste.egg-info/entry_points.txt
+fleuriste.egg-info/requires.txt
+fleuriste.egg-info/top_level.txt
+pyjob/__init__.py
+pyjob/fleur_analyzer.py
+pyjob/parallelization.py
+pyjob/slurm_generator.py
+pyjob/slurm_gui.py
