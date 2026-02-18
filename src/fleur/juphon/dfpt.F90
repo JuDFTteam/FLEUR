@@ -7,7 +7,6 @@ MODULE m_dfpt
    USE m_juDFT
    USE m_constants
    USE m_types
-   USE m_types_BEC
 
    IMPLICIT NONE
 
@@ -36,8 +35,11 @@ CONTAINS
       use m_inv3
       USE m_dfpt_dielecten
       USE m_dfpt_born_effcharge
-      use m_dfpt_vefield
+      USE m_dfpt_vefield
       USE m_dfpt_potdenLocal
+      USE m_types_BEC
+      USE m_dfpt_NAC
+
 
       TYPE(t_mpi),        INTENT(IN)     :: fmpi
       TYPE(t_fleurinput), INTENT(IN)     :: fi
@@ -117,7 +119,7 @@ CONTAINS
 
       COMPLEX, ALLOCATABLE :: grrhodummy(:, :, :, :, :),grrho_val(:, :, :, :, :)
 
-      COMPLEX, ALLOCATABLE :: dyn_mat(:,:,:), dyn_mat_r(:,:,:), dyn_mat_q_full(:,:,:), dyn_mat_pathq(:,:), sym_dynvec(:,:,:), sym_dyn_mat(:,:,:)
+      COMPLEX, ALLOCATABLE :: dyn_mat(:,:,:), dyn_mat_r(:,:,:), dyn_mat_q_full(:,:,:), dyn_mat_pathq(:,:), sym_dynvec(:,:,:), sym_dyn_mat(:,:,:),dyn_mat_NAC(:,:)
       REAL,    ALLOCATABLE :: e2_vm(:,:,:)
 
       !For e-field:
@@ -133,7 +135,7 @@ CONTAINS
       INTEGER :: ngdp, iSpin, iQ, iDir, iDtype, nspins, zlim, iVac, lh, iDir2, sym_count
       INTEGER :: iStar, xInd, yInd, zInd, q_eig_id, ikpt, ierr, qm_eig_id, iArray
       INTEGER :: dfpt_eig_id, dfpt_eig_id2, dfpt_eigm_id, dfpt_eigm_id2
-      LOGICAL :: l_real, l_minusq, l_dfpt_scf, l_cheated
+      LOGICAL :: l_real, l_minusq, l_dfpt_scf, l_cheated, l_gamma
 
       LOGICAL :: l_dfpt_band, l_dfpt_dos, l_dfpt_full
 
@@ -584,6 +586,11 @@ CONTAINS
                !   CALL make_sym_list(fi_fullsym%sym, qpts_loc%bk(:,q_list(iQ)),sym_count,sym_list)
                !   ALLOCATE(sym_dynvec(3*fi_nosym%atoms%ntype,3*fi_nosym%atoms%ntype-1,sym_count))
                !END IF
+               !Introduce gamma switch for different treatment for LO-TO splitting
+               l_gamma =.FALSE.
+               IF  (sum(abs(qpts_loc%bk(:,q_list(iQ))))== 0.0) THEN
+                  l_gamma =.TRUE.
+               END IF
                kqpts = fi%kpts
                ! Modify this from kpts only in DFPT case.
                DO ikpt = 1, fi%kpts%nkpt
@@ -739,12 +746,6 @@ CONTAINS
                         den_elph(iDir+3*(iDtype-1)) = denIn1
                         denIm_elph(iDir+3*(iDtype-1)) = denIn1Im
                      END IF 
-   
-                     !IF (fmpi%irank==0) write(*,*) "dynmat row for ", dfpt_tag
-                     !IF (fmpi%irank==0) write(*,*) dyn_mat(iQ,3 *(iDtype-1)+iDir,:)
-                     !IF (fmpi%irank==0.AND.l_cheated) write(*,*) "The cheat:"
-                     !IF (fmpi%irank==0.AND.l_cheated) write(*,*) sym_dyn_mat(iQ,3 *(iDtype-1)+iDir,:)
-                     !l_cheated = .FALSE.
                      IF (fmpi%irank==0) WRITE(9339,*) dyn_mat(iQ,3 *(iDtype-1)+iDir,:)
                      IF (fmpi_nosym%irank == 0 .AND. fi_nosym%juphon%l_rm_qhdf) call system("rm "//TRIM(dfpt_tag)//".hdf")
                      CALL timestop("Dirloop")
@@ -761,6 +762,16 @@ CONTAINS
                END IF
                IF (fmpi%irank==0) THEN
                   WRITE(*,*) '-------------------------'
+                     !Introduce Non-analytic correction
+                  IF (fi_nosym%juPhon%l_polar .AND. l_gamma) THEN 
+                     IF (fmpi%irank==0)  WRITE(*,*) 'Add non-analytic correction at Gamma-Point'
+                     allocate(dyn_mat_NAC(3*fi_nosym%atoms%ntype,3*fi_nosym%atoms%ntype))
+                     dyn_mat_NAC =cmplx(0.,0.)
+                     CALL dfpt_NAC(fi_nosym,iDtype,iDir,dyn_mat_NAC)
+                     dyn_mat(iQ,:,:) = dyn_mat(iQ,:,:)+dyn_mat_NAC(:,:) 
+                     deallocate(dyn_mat_NAC)
+                     !stop
+                  END IF
                   CALL timestart("Dynmat diagonalization")
                   CALL DiagonalizeDynMat(fi_nosym%atoms, qpts_loc%bk(:,q_list(iQ)), fi%juPhon%calcEigenVec, dyn_mat(iQ,:,:), eigenVals, eigenVecs, q_list(iQ),.TRUE.,"raw",fi_nosym%juphon%l_sumrule)
                   CALL timestop("Dynmat diagonalization")

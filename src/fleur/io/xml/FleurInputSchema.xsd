@@ -3423,6 +3423,11 @@
             <xsd:documentation>Calculate Born effective charges.</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
+      <xsd:attribute name="l_polar" type="FleurBool" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Calculate Born effective charges.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
       <xsd:attribute name="l_symVacLevel" type="FleurBool" use="optional" default="F">
          <xsd:annotation>
             <xsd:documentation>Symmetrize vacuum level for film calculations.</xsd:documentation>
