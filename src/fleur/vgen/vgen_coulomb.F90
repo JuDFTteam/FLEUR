@@ -233,7 +233,7 @@ contains
     end if ! fmpi%irank == 0
 
     !remove G=0 component to get "screened" efield perturbation
-    IF (juphon%l_dfpt .AND. juphon%l_efield_scr) then 
+    IF (juphon%l_dfpt .AND. (juphon%l_efield_scr .OR. juphon%l_borneffcharge)) then 
       vCoul%pw(1,:)=0.0
     end if
     
