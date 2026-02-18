@@ -229,10 +229,10 @@ CONTAINS
          ELSE IF (.NOT.fi%input%l_real) THEN
             matricesSize = matricesSize * 2.0 ! factor 2 because of complex data
          END IF
-         matricesSize = matricesSize / 1024.0 / 1024.0
+         matricesSize = matricesSize / 1024.0 / 1024.0 /1024.0
          WRITE(*,*) ''
          WRITE(*,'(a,i8)') ' Number of basis functions: ', nbasfcn
-         WRITE(*,'(a,f12.2,a)') ' Approximate size of matrices (H+S) per k-point: ', matricesSize, ' MB'
+         WRITE(*,'(a,f13.3,a)') ' Approximate size of matrices (H+S) per k-point: ', matricesSize, ' GB'
          WRITE(*,*) ''
       END IF
 
