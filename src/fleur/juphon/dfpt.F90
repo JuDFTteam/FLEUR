@@ -13,7 +13,7 @@ MODULE m_dfpt
 
 CONTAINS
    SUBROUTINE dfpt(fi, sphhar, stars, nococonv, qpts, fmpi, results, enpara, &
-                 & rho,rho_core, vTot, vxc, eig_id, xcpot, hybdat, mpdata, forcetheo)
+                 & rho, vTot, vxc, eig_id, xcpot, hybdat, mpdata, forcetheo)
       USE m_dfpt_check
       USE m_dfpt_sternheimer
       USE m_dfpt_dynmat
@@ -59,92 +59,23 @@ CONTAINS
       TYPE(t_kpts),       INTENT(IN)  :: qpts !Possibly replace this by fi%kpts [read correctly!]
 
       TYPE(t_potden),   INTENT(INOUT) :: rho
-      TYPE(t_potden),   INTENT(INOUT) :: rho_core
       TYPE(t_potden),   INTENT(IN)    :: vTot, vxc
       INTEGER,          INTENT(IN)    :: eig_id
 
-      TYPE(t_hub1data) :: hub1data
-      TYPE(t_potden)                :: grvextdummy, imagrhodummy, vext_dummy, vC_dummy
       TYPE(t_potden)                :: grRho3(3), grVtot3(3), grVC3(3), grVext3(3)
-      TYPE(t_potden)                :: grgrVext3x3(3,3), grgrvextnum(3,3)
-      TYPE(t_potden)                :: denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, vTot1m, vTot1mIm  ! q-quantities
-      TYPE(t_potden), ALLOCATABLE   :: den_elph(:) , denIm_elph(:)
+      TYPE(t_potden)                :: grgrVext3x3(3,3)
       TYPE(t_results)               :: q_results, results1, qm_results, results1m
-      TYPE(t_kpts)                  :: qpts_loc
-      TYPE(t_kpts)                  :: kqpts, kqmpts ! basically kpts, but with q added onto each one.
-      TYPE(t_dos),TARGET            :: dos
-      TYPE(t_BEC)                   :: BEC
-      
-      TYPE(t_eigdos_list),allocatable :: eigdos(:)
 
-      ! Desymmetrized type variables:
-      TYPE(t_fleurinput) :: fiLocal
-      TYPE(t_stars)      :: starsq, starsmq
+      INTEGER :: nspins 
+      INTEGER :: q_eig_id, dfpt_eig_id, dfpt_eig_id2, qm_eig_id, dfpt_eigm_id, dfpt_eigm_id2
+      LOGICAL :: l_real, l_minusq 
 
-
-      CLASS(t_xcpot),     ALLOCATABLE :: xcpot_nosym
-      CLASS(t_forcetheo), ALLOCATABLE :: forcetheo_nosym
-
-      ! Full symmetrized type variables:
-      TYPE(t_mpi)        :: fmpi_fullsym
-      TYPE(t_fleurinput) :: fi_fullsym
-      TYPE(t_sphhar)     :: sphhar_fullsym
-      TYPE(t_stars)      :: stars_fullsym
-      TYPE(t_nococonv)   :: nococonv_fullsym
-      TYPE(t_enpara)     :: enpara_fullsym
-      TYPE(t_results)    :: results_fullsym
-      TYPE(t_wann)       :: wann_fullsym
-      TYPE(t_hybdat)     :: hybdat_fullsym
-      TYPE(t_mpdata)     :: mpdata_fullsym
-
-      CLASS(t_xcpot),     ALLOCATABLE :: xcpot_fullsym
-      CLASS(t_forcetheo), ALLOCATABLE :: forcetheo_fullsym
-
-      ! starsLocal type variables
-      TYPE(t_stars) :: starsLocal
-      TYPE(t_potden):: imagrhodummyLocal,grvextdummyLocal
-      TYPE(t_atoms) :: atomsLocal
-
-      INTEGER,          ALLOCATABLE :: recG(:, :)
-      INTEGER                       :: ngdp2km
-      complex,           allocatable :: E2ndOrdII(:, :)
-      complex,           allocatable :: eigenFreqs(:)
-      real,              allocatable :: eigenVals(:), eigenValsFull(:,:,:)
-      complex,           allocatable :: eigenVecs(:, :)
-
-      COMPLEX, ALLOCATABLE :: grrhodummy(:, :, :, :, :),grrho_val(:, :, :, :, :)
-
-      COMPLEX, ALLOCATABLE :: dyn_mat(:,:,:), dyn_mat_r(:,:,:), dyn_mat_q_full(:,:,:), dyn_mat_pathq(:,:), sym_dynvec(:,:,:), sym_dyn_mat(:,:,:)
-      REAL,    ALLOCATABLE :: e2_vm(:,:,:)
-
-      !For e-field:
-      COMPLEX, ALLOCATABLE            :: diel_tensor(:,:) !sdall i put this in an if statement?
-      real                  :: qvec_int(3)
-      TYPE(t_kpts)         :: qintpts
-      COMPLEX,ALLOCATABLE :: born_eff_charge(:,:,:)
-      COMPLEX,ALLOCATABLE :: born_eff_charge_contributions(:,:,:,:)
-
-      INTEGER              :: q_start, q_stop
-      REAL, ALLOCATABLE                 :: qvecs(:,:)
-
-      INTEGER :: ngdp, iSpin, iQ, iDir, iDtype, nspins, zlim, iVac, lh, iDir2, sym_count
-      INTEGER :: iStar, xInd, yInd, zInd, q_eig_id, ikpt, ierr, qm_eig_id, iArray
-      INTEGER :: dfpt_eig_id, dfpt_eig_id2, dfpt_eigm_id, dfpt_eigm_id2
-      LOGICAL :: l_real, l_minusq, l_dfpt_scf, l_cheated
-
-      LOGICAL :: l_dfpt_band, l_dfpt_dos, l_dfpt_full
-
-      CHARACTER(len=20)  :: dfpt_tag
-      CHARACTER(len=4)   :: dynfiletag
-      CHARACTER(len=100) :: inp_pref, trash
+#ifdef CPP_MPI
+      integer :: ierr
+#endif 
 
       INTEGER, ALLOCATABLE :: q_list(:)
-      INTEGER, ALLOCATABLE :: sym_list(:) ! For each q: Collect, which symmetries leave q unchanged.
-
-      ! Desym-tests:
-      INTEGER :: grid(3), iread
-      REAL    :: dr_re(fi%vacuum%nmzd), dr_im(fi%vacuum%nmzd), drr_dummy(fi%vacuum%nmzd), numbers(3*fi%atoms%nat,6*fi%atoms%nat)
-      complex                           :: sigma_loc(2), sigma_ext(2), sigma_coul(2), sigma_gext(3,2), constantShift
+      ! INTEGER, ALLOCATABLE :: sym_list(:) ! For each q: Collect, which symmetries leave q unchanged.
 
       l_real = fi%sym%invs.AND.(.NOT.fi%noco%l_soc).AND.(.NOT.fi%noco%l_noco).AND.fi%atoms%n_hia==0
 
@@ -155,15 +86,8 @@ CONTAINS
       l_minusq = .FALSE.
 
       nspins = MERGE(2, 1, fi%noco%l_noco)
-      IF (fi%juPhon%l_jpCheck) THEN
-          ! This function will be used to check the validity of juPhon's
-          ! input. I.e. check, whether all prohibited switches are off and,
-          ! once there is more expertise considering this topic, check whether
-          ! the cutoffs are chosen appropriately.
-          CALL dfpt_check(fi, xcpot)
-      END IF
-
-      IF (fi%sym%nop>1) CALL juDFT_error("DFPT breaks the symmetry. Please redo the calculation without symmetry.", calledby="dfpt.F90")
+     
+      if (fmpi%irank==0) call dfpt_check(fi, xcpot)
 
       ! q_results saves the eigen-info for k+q, results1 for the perturbed quantities
       CALL q_results%init(fi%input, fi%atoms, fi%kpts, fi%noco)

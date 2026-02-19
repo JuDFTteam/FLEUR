@@ -589,7 +589,7 @@ CONTAINS
                ! It is assumed that the density was converged beforehand.
                 CALL timestop("Iteration")
                 CALL timestart("juPhon DFPT")
-                CALL dfpt(fi, sphhar, stars, nococonv, fi%kpts, fmpi, results, enpara, outDen,coreden, vTot, vxc, eig_id, xcpot, hybdat, mpdata, forcetheo)
+                CALL dfpt(fi, sphhar, stars, nococonv, fi%kpts, fmpi, results, enpara, outDen, vTot, vxc, eig_id, xcpot, hybdat, mpdata, forcetheo)
                 CALL timestop("juPhon DFPT")
                 CALL juDFT_end("Phonon calculation finished.",fmpi%irank)
             END IF
