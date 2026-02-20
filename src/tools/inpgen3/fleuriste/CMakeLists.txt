@@ -8,7 +8,7 @@
 set(FLEURISTE_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 set(FLEURISTE_VENV    "${CMAKE_BINARY_DIR}/fleuriste-venv")
 set(FLEURISTE_STAMP   "${CMAKE_CURRENT_BINARY_DIR}/.fleuriste_installed_stamp")
-set(FLEURISTE_SCRIPT  "${CMAKE_BINARY_DIR}/fleuriste")
+set(FLEURISTE_SCRIPT  "${CMAKE_BINARY_DIR}/FLEURiste")
 
 # Collect the Python source files so that a rebuild is triggered when
 # any of them change.
