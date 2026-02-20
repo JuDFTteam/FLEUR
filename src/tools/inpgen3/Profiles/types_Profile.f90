@@ -31,16 +31,16 @@ MODULE m_types_profile
 
 
    TYPE :: t_profile
-      REAL :: kmax ! This is K_max
-      REAL :: kGmaxFactor ! G_max = G_maxXC = K_max * kGmaxFactor
-      REAL :: rmtFactor ! This is a postprocessing factor to reduce the MT radii after their initial calculation
-      REAL :: lmaxFactor ! lmax = Kmax * R_MT * lmaxfactor
-      REAL :: fermiSmearing ! The Fermi smearing energy
-      REAL :: kPDen ! The k-Point density
+      REAL :: kmax=4.5 ! This is K_max
+      REAL :: kGmaxFactor= 3.0 ! G_max = G_maxXC = K_max * kGmaxFactor
+      REAL :: rmtFactor=1.0 ! This is a postprocessing factor to reduce the MT radii after their initial calculation
+      REAL :: lmaxFactor=1.0 ! lmax = Kmax * R_MT * lmaxfactor
+      REAL :: fermiSmearing=0.001 ! The Fermi smearing energy
+      REAL :: kPDen=-1.0 ! The k-Point density
 
-      CHARACTER(LEN=20) :: profileName
-      CHARACTER(LEN=50) :: addLOSetup
-      CHARACTER(LEN=20) :: atomSetup
+      CHARACTER(LEN=20) :: profileName="default"
+      CHARACTER(LEN=50) :: addLOSetup=""
+      CHARACTER(LEN=20) :: atomSetup=""
 
       CONTAINS
 
@@ -124,14 +124,14 @@ MODULE m_types_profile
          IF (str.EQ."&profile") THEN
             BACKSPACE(558)
             name = "unknown"
-            kmax = 4.5
-            kGmaxFactor = 3.0
-            rmtFactor = 1.0
-            lmaxFactor = 1.0
-            addLOSetup = ""
-            fermiSmearing = 0.001
-            kPDen = -1.0
-            atomSetup = ""
+            kmax = this%kmax
+            kGmaxFactor = this%kGmaxFactor
+            rmtFactor = this%rmtFactor
+            lmaxFactor = this%lmaxFactor
+            addLOSetup = this%addLOSetup
+            fermiSmearing = this%fermiSmearing
+            kPDen = this%kPDen
+            atomSetup = this%atomSetup
             READ(558,profile,iostat=io_stat)
             IF (io_stat.EQ.0) THEN
                IF(profileName.EQ.TRIM(ADJUSTL(name))) THEN

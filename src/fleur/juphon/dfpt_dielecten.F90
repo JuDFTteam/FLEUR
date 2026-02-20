@@ -30,7 +30,7 @@ contains
         TYPE(t_mpi),        intent(in)     :: fmpi
         complex, intent(inout)             :: dieltensor_row(:)
         integer, intent(in)                :: q_sign
-        type(t_potden), intent(inout)         :: rho
+        type(t_potden), intent(in)         :: rho
 
 
 

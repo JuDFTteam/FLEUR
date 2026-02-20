@@ -21,18 +21,16 @@
       use m_inpgen_make_kpts
       use m_inpgen_make_inp   
       IMPLICIT NONE
-      type(c_ptr), INTENT(IN) :: simple_input
-      integer(c_int), INTENT(IN) :: len_simple_input
-      type(c_ptr), INTENT(IN) :: profileName
-      integer(c_int), INTENT(IN) :: len_profileName
-      LOGICAL, INTENT(IN) :: nosym
+      type(c_ptr), INTENT(IN),value :: simple_input
+      integer(c_int), INTENT(IN), value :: len_simple_input
+      type(c_ptr), INTENT(IN),value :: profileName
+      integer(c_int), INTENT(IN), value :: len_profileName
+      LOGICAL, INTENT(IN),value :: nosym
 
       CHARACTER(KIND=c_char,len=len_simple_input),pointer :: simple_input_f
       CHARACTER(KIND=c_char,len=len_profileName),pointer :: profileName_f
 
-      print *, "In make_inp_py with input of length:",len_simple_input,len_profileName
-      return
-
+   
       call c_f_pointer(simple_input,simple_input_f)
       call c_f_pointer(profileName,profileName_f)
 
@@ -54,15 +52,23 @@
       USE iso_c_binding
       use m_inpgen_make_kpts
       IMPLICIT NONE
-      INTEGER(C_SIZE_T), INTENT(IN) :: len_kpts_str,len_kpts_path
-      CHARACTER(KIND=c_char,Len=*), INTENT(IN) :: kpts_str
-      CHARACTER(KIND=c_char,Len=*), INTENT(IN) :: kpts_path
-      LOGICAL, INTENT(IN) :: nosym
-      CHARACTER(len=len_kpts_str) :: kpts_str_f
-      CHARACTER(len=len_kpts_path) :: kpts_path_f
+      INTEGER(c_int), INTENT(IN),value :: len_kpts_str,len_kpts_path
+      type(c_ptr), INTENT(IN),value :: kpts_str, kpts_path
+      LOGICAL, INTENT(IN),value :: nosym
+
     
-      kpts_str_f = kpts_str(:len_kpts_str)
-      kpts_path_f = kpts_path(:len_kpts_path)
+      CHARACTER(KIND=c_char,len=len_kpts_str),pointer :: kpts_str_f
+      CHARACTER(KIND=c_char,len=len_kpts_path),pointer :: kpts_path_f
+
+      print *, "In make_kpt_py with lengths:",len_kpts_str,len_kpts_path
+  
+      call c_f_pointer(kpts_str,kpts_str_f)
+      call c_f_pointer(kpts_path,kpts_path_f)
+
+      print *, "In make_kpt_py with kpts_str of length:",len_trim(kpts_str_f)
+      print*, "kpts_str:", kpts_str_f
+      print *, "In make_kpt_py with kpts_path of length:",len_trim(kpts_path_f)
+
 
       CALL add_kpoints(kpts_str_f,kpts_path_f,nosym)
 

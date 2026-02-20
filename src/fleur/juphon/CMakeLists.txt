@@ -1,5 +1,9 @@
 set(fleur_F90 ${fleur_F90}
 src/fleur/juphon/dfpt.F90
+src/fleur/juphon/dfpt_phonon.F90
+src/fleur/juphon/dfpt_efield.F90
+src/fleur/juphon/dfpt_borncharges.F90
+src/fleur/juphon/dfpt_interpolation.F90
 src/fleur/juphon/dfpt_check.F90
 src/fleur/juphon/dfpt_sternheimer.F90
 src/fleur/juphon/dfpt_dynmat.F90
@@ -25,6 +29,7 @@ src/fleur/juphon/desymmetrizer.f90
 src/fleur/juphon/dfpt_eigen.F90
 src/fleur/juphon/dfpt_dynmat_sym.f90
 src/fleur/juphon/dfpt_gradient.f90
+src/fleur/juphon/dfpt_generate_gradient.F90
 src/fleur/juphon/dfpt_vefield.F90
 src/fleur/juphon/dfpt_dielecten.F90
 src/fleur/juphon/dfpt_born_effcharge.F90
