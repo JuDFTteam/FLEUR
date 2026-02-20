@@ -16,7 +16,7 @@ module m_dfpt_generate_gradient
 
 contains 
 
-    subroutine dfpt_generate_gradient(fi,fmpi,sphhar,hybdat,xcpot,nococonv,stars,rho,vTot,grRho3,grVtot3,grVc3,grVext3,grgrVext3x3)
+    subroutine dfpt_generate_gradient(fi_ext,fmpi,sphhar,hybdat,xcpot,nococonv,stars,rho,vTot,grRho3,grVtot3,grVc3,grVext3,grgrVext3x3)
         
         use m_dfpt_vgen
         use m_vgen_coulomb
@@ -24,7 +24,7 @@ contains
         use m_dfpt_gradient 
         use m_grdchlh
 
-        type(t_fleurinput),intent(in) :: fi 
+        type(t_fleurinput),intent(in) :: fi_ext 
         type(t_mpi), intent(in)       :: fmpi
         type(t_sphhar),intent(in)     :: sphhar
         type(t_hybdat),intent(in)     :: hybdat
@@ -40,8 +40,8 @@ contains
         type(t_potden),intent(inout)     :: grgrVext3x3(3,3)
 
 
-
-        type(t_stars) :: starsLocal
+        type(t_fleurinput) :: fi !not nice, WIP
+        type(t_stars) :: starsLocal 
         type(t_potden) :: potdummy,potdummyLocal
         type(t_potden) :: rho_tmp ! a copy of the starting density. This is done to not mess with the starting density 
         type(t_atoms)  :: atomsLocal
@@ -49,12 +49,16 @@ contains
         complex :: sigma_loc(2)
 
         complex, allocatable :: grrhodummy(:, :, :, :, :) 
-        real    :: dr_re(fi%vacuum%nmzd), dr_im(fi%vacuum%nmzd), drr_dummy(fi%vacuum%nmzd)
+        real    :: dr_re(fi_ext%vacuum%nmzd), dr_im(fi_ext%vacuum%nmzd), drr_dummy(fi_ext%vacuum%nmzd)
 
         ! remove this asap should not be needed any longer
         sigma_loc = cmplx(0.0,0.0)
 
-
+        fi = fi_ext !WIP
+        IF (fi%juPhon%l_borneffcharge) THEN
+            fi%juPhon%l_phonon = .TRUE.
+        END IF
+        
         call rho_tmp%copyPotDen(rho)
 
         ALLOCATE(grrhodummy(fi%atoms%jmtd, (fi%atoms%lmaxd+1)**2, fi%atoms%nat, SIZE(rho%mt,4), 3))

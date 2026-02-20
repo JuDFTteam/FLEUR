@@ -24,6 +24,7 @@ contains
         use m_dfpt_sternheimer
         use m_dfpt_dynmat
         use m_dfpt_dynmat_eig
+        use m_dfpt_NAC
 
 
         type(t_fleurinput),intent(in) :: fi 
@@ -56,7 +57,7 @@ contains
         ! dynMat properties
         complex, allocatable :: dyn_mat(:,:,:)
         real, allocatable    :: eigenVals(:)
-        complex, allocatable :: eigenFreqs(:), eigenVecs(:,:)
+        complex, allocatable :: eigenFreqs(:), eigenVecs(:,:),dyn_mat_NAC(:,:)
 
         ! helper types
         type(t_potden) :: imagrhodummy 
@@ -66,7 +67,7 @@ contains
         integer :: iQ,iArray, q_start, q_stop , ikpt ,iDir, iDir2, iDtype
 
         character(len=20) :: dfpt_tag
-        logical :: l_real 
+        logical :: l_real, l_gamma 
 
         real,allocatable :: e2_vm(:,:,:) ! q=0 part of Eii(2) term
         complex,allocatable :: E2ndOrdII(:,:) ! Eii(2) potential
@@ -112,6 +113,11 @@ contains
         q_stop = merge(fi%juPhon%stopq,size(q_list),fi%juPhon%stopq/=0)
 
         do iQ = q_start, q_stop
+
+            l_gamma =.FALSE.
+            IF  (sum(abs(qpts%bk(:,q_list(iQ))))== 0.0) THEN
+                l_gamma =.TRUE.
+            END IF
             call timestart("q-Point")
             
             kqpts = fi%kpts
@@ -256,6 +262,16 @@ contains
             if (fmpi%irank==0) then
                 ! Diagonalize the dynMat 
                 write(*,*) '-------------------------'
+                !Introduce Non-analytic correction at gamma-point
+                IF (fi%juPhon%l_polar .AND. l_gamma) THEN 
+                    IF (fmpi%irank==0)  WRITE(*,*) 'Add non-analytic correction at Gamma-Point'
+                    allocate(dyn_mat_NAC(3*fi%atoms%ntype,3*fi%atoms%ntype))
+                    dyn_mat_NAC =cmplx(0.,0.)
+                    CALL dfpt_NAC(fi,iDtype,iDir,dyn_mat_NAC)
+                    dyn_mat(iQ,:,:) = dyn_mat(iQ,:,:)+dyn_mat_NAC(:,:) 
+                    deallocate(dyn_mat_NAC)
+                    !stop
+                END IF
                 call timestart("Dynmat diagonalization")
                 call DiagonalizeDynMat(fi%atoms, qpts%bk(:,q_list(iQ)), fi%juPhon%calcEigenVec, dyn_mat(iQ,:,:), eigenVals, eigenVecs, q_list(iQ),.TRUE.,"raw",fi%juphon%l_sumrule)
                 call timestop("Dynmat diagonalization")

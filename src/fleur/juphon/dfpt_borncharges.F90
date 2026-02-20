@@ -15,7 +15,7 @@ module m_dfpt_borncharges
 
 contains 
 
-    subroutine dfpt_borncharges(fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,rho,vTot,vxc,&
+    subroutine dfpt_borncharges(fi_ext,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,rho,vTot,vxc,&
                             grRho3,grVtot3,grVc3,grVext3, results,resultsq, results1, eig_id,q_eig_id, & 
                             dfpt_eig_id,dfpt_eig_id2,l_minusq,resultsqm,results1m,qm_eig_id, dfpt_eigm_id, dfpt_eigm_id2)
 
@@ -27,7 +27,7 @@ contains
 
 
 
-        type(t_fleurinput),intent(in) :: fi 
+        type(t_fleurinput),intent(in) :: fi_ext
         type(t_mpi),intent(in)        :: fmpi
         type(t_stars),intent(in)      :: stars
         type(t_sphhar),intent(in)     :: sphhar
@@ -56,6 +56,7 @@ contains
         type(t_stars)  :: starsq, starsmq
 
         ! BEC properties
+        type(t_fleurinput) :: fi
         type(t_BEC) :: bec
         complex,allocatable :: born_eff_charge_contributions(:,:,:,:)
         ! helper types
@@ -73,6 +74,12 @@ contains
         integer :: ierr
 #endif 
 
+        !set l_phonon to true, not nice WIP
+        fi= fi_ext
+        !print*,"fi%juphon%l_phonon 1",fi%juphon%l_phonon
+        fi%juphon%l_phonon=.TRUE.
+        !print*,"fi%juphon%l_phonon 2",fi%juphon%l_phonon
+
         sigma_coul = cmplx(0.0,0.0)
         sigma_ext = cmplx(0.0,0.0)
 
@@ -82,7 +89,9 @@ contains
         qpts = fi%kpts
         deallocate(qpts%bk)
         allocate(qpts%bk,mold=fi%juphon%qvec_efield) ! this is not nice. Maybe change the expected type in dfpt_sternheimer/make_stars
-        qpts%bk(:, :size(fi%juPhon%qvec,2)) = fi%juPhon%qvec_efield
+        qpts%bk(:, :size(fi%juPhon%qvec_efield,2)) = fi%juPhon%qvec_efield
+        !print*,"fi%juPhon%qvec_efield",fi%juPhon%qvec_efield
+        !stop
         allocate(q_list(size(fi%juPhon%qvec_efield,2)))  
         q_list = (/(iArray, iArray=1,SIZE(fi%juPhon%qvec_efield,2), 1)/)
 
@@ -95,7 +104,10 @@ contains
 
         do iQ = 1, 3 ! all cartesian directions
             call timestart("q-Point")
-            
+            !print*,"iQ"
+            !print*,"size(q_list)",size(q_list)
+            !print*,"qpts%bk(:,q_list(iQ))",qpts%bk(:,q_list(iQ))
+            !stop
             kqpts = fi%kpts
             do ikpt = 1, fi%kpts%nkpt
                 kqpts%bk(:, ikpt) = kqpts%bk(:, ikpt) + qpts%bk(:,q_list(iQ))
@@ -160,7 +172,7 @@ contains
 
                         if (fmpi%irank==0) then 
                             write(*,*) 'Starting calculation for:'
-                            write(*,*) ' q         = ', fi%juPhon%qvec(:,q_list(iQ))
+                            write(*,*) ' q         = ', qpts%bk(:,q_list(iQ))!fi%juPhon%qvec(:,q_list(iQ))
                             write(*,*) ' atom      = ', iDtype
                             write(*,*) ' direction = ', iDir
                         end if 

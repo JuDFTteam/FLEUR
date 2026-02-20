@@ -42,7 +42,6 @@ CONTAINS
       USE m_dfpt_efield
       USE m_dfpt_interpolation
       USE m_types_BEC
-      USE m_dfpt_NAC
 
 
       TYPE(t_mpi),        INTENT(IN)     :: fmpi
