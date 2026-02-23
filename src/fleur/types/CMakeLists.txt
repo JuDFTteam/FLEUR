@@ -17,6 +17,8 @@ src/fleur/types/types_greensf.F90
 src/fleur/types/types_hub1data.f90
 src/fleur/types/types_hybdat.F90
 src/fleur/types/types_hybmpi.F90
+src/fleur/types/types_rsoc.f90
+
 #src/fleur/types/types_jpPotden.F90
 src/fleur/types/types_lapw.F90
 src/fleur/types/types_mat.F90
