@@ -490,7 +490,7 @@ CONTAINS
       CHARACTER(len=30)::filename
 #ifdef CPP_MPI
       INTEGER::err,isize
-      LOGICAL:: l_mpi
+      LOGICAL:: l_mpi,l_out
       CALL mpi_initialized(l_mpi,err)
       if (l_mpi) CALL MPI_COMM_RANK(MPI_COMM_WORLD, irank, err)
 #endif
