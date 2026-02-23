@@ -31,7 +31,8 @@ contains
       integer:: l, lo
       this%itype = itype
       if (allocated(this%n_r)) deallocate(this%n_r)
-      this%n_r=atoms%num_radial_functions_per_l(itype)
+      allocate(this%n_r(0:atoms%lmaxd))
+      this%n_r(0:)=atoms%num_radial_functions_per_l(itype)
    end subroutine
 
    subroutine generate_radial_functions(this, atoms, input, enpara, fmpi, vtot, iType, hub1data)
