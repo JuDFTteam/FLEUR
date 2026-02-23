@@ -488,9 +488,10 @@ CONTAINS
       INTEGER :: irank = 0
       CHARACTER(len=:), allocatable :: json_str
       CHARACTER(len=30)::filename
+      LOGICAL :: l_out
 #ifdef CPP_MPI
       INTEGER::err,isize
-      LOGICAL:: l_mpi,l_out
+      LOGICAL:: l_mpi
       CALL mpi_initialized(l_mpi,err)
       if (l_mpi) CALL MPI_COMM_RANK(MPI_COMM_WORLD, irank, err)
 #endif
