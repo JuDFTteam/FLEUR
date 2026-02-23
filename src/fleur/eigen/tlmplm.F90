@@ -1,5 +1,11 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_tlmplm
    USE m_judft
+   implicit none
 
    IMPLICIT NONE
 
@@ -76,11 +82,8 @@ CONTAINS
       IF (.NOT.PRESENT(v1)) THEN
          vr0 = v%mt(:,:,n,iSpinV)
          IF (iSpinV<3) THEN
-            vr0(:,0)=0.0
-            IF (atoms%l_nonpolbas(n)) THEN
-               vr0(:,0)=v%mt(:,0,n,iSpinV)-(v%mt(:,0,n,1)+v%mt(:,0,n,2))/2.0
-               vr0(:,0)= vr0(:,0)/atoms%rmsh(:atoms%jri(n),n)*sfp_const
-            ENDIF
+            vr0(:,0)=v%mt(:,0,n,iSpinV)-enpara%vr(:,n,iSpinV)
+            vr0(:,0)= vr0(:,0)/atoms%rmsh(:atoms%jri(n),n)*sfp_const
             IF (alpha_hybrid.NE.0) vr0=vr0-alpha_hybrid*vx%mt(:,:,n,iSpinV)
          ELSE
            ! vr0(:,0)=vr0(:,0)-0.5*nococonv%b_con(iSpinV-2,n) !Add constraining field done already in potential setup
