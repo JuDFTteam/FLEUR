@@ -7,8 +7,6 @@ MODULE m_tlmplm
    USE m_judft
    implicit none
 
-   IMPLICIT NONE
-
 CONTAINS
    SUBROUTINE tlmplm(n,sphhar,atoms,sym,enpara,nococonv,&
        ilSpinPr,ilSpin,iSpinV,fmpi,v,vx,input,hub1inp,hub1data,td,ud,alpha_hybrid,one,l_dfpt,v1)
