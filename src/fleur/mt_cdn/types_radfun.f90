@@ -31,14 +31,7 @@ contains
       integer:: l, lo
       this%itype = itype
       if (allocated(this%n_r)) deallocate(this%n_r)
-      allocate(this%n_r(0:atoms%lmaxd),source=0)
-      do l = 0, atoms%lmax(itype)
-         this%n_r(l) = 2
-         !if (input%l_useapw) call judft_bug("APW not implemented")
-         do lo = 1, atoms%nlo(itype)
-            if (l == atoms%llo(lo, itype)) this%n_r(l) = this%n_r(l) + 1 !LO for this l
-         end do
-      end do
+      this%n_r=atoms%num_radial_functions_per_l(itype)
    end subroutine
 
    subroutine generate_radial_functions(this, atoms, input, enpara, fmpi, vtot, iType, hub1data)
