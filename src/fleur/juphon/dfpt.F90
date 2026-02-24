@@ -17,7 +17,7 @@ CONTAINS
       USE m_juDFT_stop, only : juDFT_error
       USE m_eig66_io, only : open_eig,close_eig
       USE m_dfpt_check
-      USE m_dfpt_gradient
+      USE m_dfpt_generate_gradient
       USE m_dfpt_phonon
       USE m_dfpt_borncharges
       USE m_dfpt_efield
