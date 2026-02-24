@@ -569,6 +569,8 @@ SUBROUTINE read_xml_atoms(this,xml)
     END DO
  ENDDO
 
+ this%lmaxd=MAXVAL(this%lmax)
+
  na = 1
  this%nlotot = 0
  DO n = 1, this%ntype
@@ -688,7 +690,6 @@ END DO
     END DO
  END DO
 
- this%lmaxd=MAXVAL(this%lmax)
 
  ALLOCATE(this%nlhtyp(xml%get_ntype()))
 
