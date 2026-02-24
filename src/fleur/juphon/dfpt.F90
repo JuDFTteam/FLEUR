@@ -7,37 +7,17 @@ MODULE m_dfpt
    USE m_juDFT
    USE m_constants
    USE m_types
-   USE m_types_BEC
 
    IMPLICIT NONE
 
 CONTAINS
    SUBROUTINE dfpt(fi, sphhar, stars, nococonv, qpts, fmpi, results, enpara, &
                  & rho, vTot, vxc, eig_id, xcpot, hybdat, mpdata, forcetheo)
-      USE m_dfpt_check
-      USE m_dfpt_sternheimer
-      USE m_dfpt_dynmat
-      USE m_dfpt_eii2,     only : CalcIIEnerg2, genPertPotDensGvecs, dfpt_e2_madelung
-      USE m_dfpt_dynmat_eig
+
       USE m_juDFT_stop, only : juDFT_error
-      USE m_vgen_coulomb
-      USE m_dfpt_vgen
-      USE m_fleur_init
-      USE m_eigen
-      USE m_fermie
-      USE m_grdchlh
-      USE m_dfpt_dynmat_sym
-      USE m_types_eigdos
-      USE m_make_dos
+      USE m_eig66_io, only : open_eig,close_eig
+      USE m_dfpt_check
       USE m_dfpt_gradient
-      USE m_dfpt_elph_mat
-      USE m_npy
-      use m_inv3
-      USE m_dfpt_dielecten
-      USE m_dfpt_born_effcharge
-      use m_dfpt_vefield
-      USE m_dfpt_potdenLocal
-      USE m_dfpt_generate_gradient
       USE m_dfpt_phonon
       USE m_dfpt_borncharges
       USE m_dfpt_efield
@@ -171,7 +151,7 @@ CONTAINS
 
       if (fmpi%irank==0) WRITE (oUnit,*) '------------------------------------------------------'
 
-    END SUBROUTINE dfpt
+   END SUBROUTINE dfpt
 
    SUBROUTINE dfpt_desym(fmpi_nosym,fi_nosym,sphhar_nosym,stars_nosym,nococonv_nosym,enpara_nosym,results_nosym,wann_nosym,hybdat_nosym,mpdata_nosym,xcpot_nosym,forcetheo_nosym,rho_nosym,vTot_nosym,grid,inp_pref,&
                          fi,sphhar,stars,nococonv,enpara,results,rho,vTot)
@@ -305,183 +285,8 @@ CONTAINS
                END DO !x-loop
             END DO !y-loop
          END DO !z-loop
-
-!         CALL save_npy("sym_on_rhopw.npy",rho%pw)
-!         CALL save_npy("sym_off_rhopw.npy",rho%pw)
-!         CALL save_npy("sym_on_rhomt.npy",rho%mt)
-!         CALL save_npy("sym_off_rhomt.npy",rho%mt)
-!         CALL save_npy("sym_on_vpw.npy",vTot%pw)
-!         CALL save_npy("sym_off_vpw.npy",vTot%pw)
-!         CALL save_npy("sym_on_vmt.npy",vTot%mt)
-!         CALL save_npy("sym_off_vmt.npy",vTot%mt)
-      END IF
-   END SUBROUTINE
-
-   SUBROUTINE test_vac_stuff(fi_nosym,stars_nosym,sphhar_nosym,rho_nosym,vTot_nosym,grRho3,grVtot3,grVC3,grVext3,grrhodummy,grid)
-      USE m_npy
-      USE m_outcdn
-      USE m_grdchlh
-      USE m_dfpt_gradient
-
-      TYPE(t_fleurinput), INTENT(IN) :: fi_nosym
-      TYPE(t_stars),      INTENT(IN) :: stars_nosym
-      TYPE(t_sphhar),     INTENT(IN) :: sphhar_nosym
-      TYPE(t_potden), INTENT(IN)    :: rho_nosym, vTot_nosym, grRho3(3), grVtot3(3), grVC3(3), grVext3(3)
-      INTEGER, INTENT(IN) :: grid(3)
-      COMPLEX, INTENT(INOUT) :: grrhodummy(:, :, :, :, :)
-
-      INTEGER :: ix, iy, iVac, iStar, iSpin, zlim, xInd, yInd, zInd
-      REAL    :: xdnout_grrho_up_pw, xdnout_grrho_up_vac, xdnout_grrho_down_pw, xdnout_grrho_down_vac
-      REAL    :: xdnout_grvc_up_pw, xdnout_grvc_up_vac, xdnout_grvc_down_pw, xdnout_grvc_down_vac
-      REAL    :: point_plus(3), point_minus(3)
-      REAL    :: dr_re(fi_nosym%vacuum%nmzd), dr_im(fi_nosym%vacuum%nmzd), drr_dummy(fi_nosym%vacuum%nmzd)
-
-      COMPLEX, ALLOCATABLE :: grVtotvac(:,:,:,:), grVtotpw(:,:)
-
-      ALLOCATE(grVtotpw(stars_nosym%ng3,3))
-      ALLOCATE(grVtotvac(fi_nosym%vacuum%nmz,stars_nosym%ng2,2,3))
-      DO iSpin = 1, SIZE(rho_nosym%mt,4)
-         CALL mt_gradient_new(fi_nosym%atoms, sphhar_nosym, fi_nosym%sym, vTot_nosym%mt(:, :, :, iSpin), grrhodummy(:, :, :, iSpin, :))
-      END DO
-
-      DO zInd = -stars_nosym%mx3, stars_nosym%mx3
-         DO yInd = -stars_nosym%mx2, stars_nosym%mx2
-            DO xInd = -stars_nosym%mx1, stars_nosym%mx1
-               iStar = stars_nosym%ig(xInd, yInd, zInd)
-               IF (iStar.EQ.0) CYCLE
-               grVtotpw(iStar,1) = vTot_nosym%pw(iStar,1) * cmplx(0.0,dot_product([1.0,0.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat)))
-               grVtotpw(iStar,2) = vTot_nosym%pw(iStar,1) * cmplx(0.0,dot_product([0.0,1.0,0.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat)))
-               grVtotpw(iStar,3) = vTot_nosym%pw(iStar,1) * cmplx(0.0,dot_product([0.0,0.0,1.0],matmul(real([xInd,yInd,zInd]),fi_nosym%cell%bmat)))
-            END DO
-         END DO
-      END DO
-
-      IF (fi_nosym%input%film) THEN
-         DO yInd = -stars_nosym%mx2, stars_nosym%mx2
-            DO xInd = -stars_nosym%mx1, stars_nosym%mx1
-               iStar = stars_nosym%ig(xInd, yInd, 0)
-               IF (iStar.EQ.0) CYCLE
-               iStar = stars_nosym%ig2(iStar)
-               grVtotvac(:,iStar,:,1) = vTot_nosym%vac(:,iStar,:,1) * cmplx(0.0,dot_product([1.0,0.0,0.0],matmul(real([xInd,yInd,0]),fi_nosym%cell%bmat)))
-               grVtotvac(:,iStar,:,2) = vTot_nosym%vac(:,iStar,:,1) * cmplx(0.0,dot_product([0.0,1.0,0.0],matmul(real([xInd,yInd,0]),fi_nosym%cell%bmat)))
-               DO iVac = 1, fi_nosym%vacuum%nvac
-                  DO iSpin = 1, SIZE(rho_nosym%vac,4)
-                     zlim = MERGE(fi_nosym%vacuum%nmz,fi_nosym%vacuum%nmzxy,iStar==1)
-                     CALL grdchlh(fi_nosym%vacuum%delz, REAL(vTot_nosym%vac(:zlim,iStar,iVac,1)),dr_re(:zlim),drr_dummy(:zlim))
-                     CALL grdchlh(fi_nosym%vacuum%delz,AIMAG(vTot_nosym%vac(:zlim,iStar,iVac,1)),dr_im(:zlim),drr_dummy(:zlim))
-                     grVtotvac(:,iStar,iVac,3) = (3-2*iVac)*(dr_re + ImagUnit * dr_im)
-                  END DO
-               END DO
-            END DO
-         END DO
       END IF
 
-      IF (.FALSE.) THEN!!!!! Test grRho/grVC on real space
-         DO iy = 0, grid(2)-1
-            DO ix = 0, grid(1)-1
-               point_plus = fi_nosym%cell%amat(:,1)*REAL(ix)/(grid(1)-1) + &
-                              fi_nosym%cell%amat(:,2)*REAL(iy)/(grid(2)-1) + &
-                              [0.0,0.0,fi_nosym%cell%z1]
-
-               point_minus = fi_nosym%cell%amat(:,1)*REAL(ix)/(grid(1)-1) + &
-                              fi_nosym%cell%amat(:,2)*REAL(iy)/(grid(2)-1) - &
-                              [0.0,0.0,fi_nosym%cell%z1]! - &
-                              !atom_shift
-               
-               ! IR rho:
-               CALL outcdn(point_plus,1,0,0,2,1,.FALSE.,stars_nosym,&
-                           fi_nosym%vacuum,sphhar_nosym,fi_nosym%atoms,fi_nosym%sym,fi_nosym%cell ,&
-                           rho_nosym,xdnout_grrho_up_pw)
-                           
-               ! Vac rho:
-               CALL outcdn(point_plus,1,0,1,0,1,.FALSE.,stars_nosym,&
-                           fi_nosym%vacuum,sphhar_nosym,fi_nosym%atoms,fi_nosym%sym,fi_nosym%cell ,&
-                           rho_nosym,xdnout_grrho_up_vac)
-                           
-               ! IR rho:
-               CALL outcdn(point_minus,1,0,0,2,1,.FALSE.,stars_nosym,&
-                           fi_nosym%vacuum,sphhar_nosym,fi_nosym%atoms,fi_nosym%sym,fi_nosym%cell ,&
-                           rho_nosym,xdnout_grrho_down_pw)
-                           
-               ! Vac rho:
-               CALL outcdn(point_minus,1,0,2,0,1,.FALSE.,stars_nosym,&
-                           fi_nosym%vacuum,sphhar_nosym,fi_nosym%atoms,fi_nosym%sym,fi_nosym%cell ,&
-                           rho_nosym,xdnout_grrho_down_vac)
-                           
-               write(5395,*) "Gridx/y:", ix, iy
-               write(5395,*) "Upper rho:", xdnout_grrho_up_vac, xdnout_grrho_up_pw
-               write(5395,*) "Lower rho:", xdnout_grrho_down_vac,xdnout_grrho_down_pw
-
-               ! IR grrho:
-               CALL outcdn(point_plus,1,0,0,2,1,.FALSE.,stars_nosym,&
-                           fi_nosym%vacuum,sphhar_nosym,fi_nosym%atoms,fi_nosym%sym,fi_nosym%cell ,&
-                           grRho3(3),xdnout_grrho_up_pw)
-               ! IR grvc:
-               CALL outcdn(point_plus,1,0,0,2,1,.FALSE.,stars_nosym,&
-                           fi_nosym%vacuum,sphhar_nosym,fi_nosym%atoms,fi_nosym%sym,fi_nosym%cell ,&
-                           grVC3(3),xdnout_grvc_up_pw)
-                           
-               ! IR grrho:
-               CALL outcdn(point_minus,1,0,0,2,1,.FALSE.,stars_nosym,&
-                           fi_nosym%vacuum,sphhar_nosym,fi_nosym%atoms,fi_nosym%sym,fi_nosym%cell ,&
-                           grRho3(3),xdnout_grrho_down_pw)
-               ! IR grvc:
-               CALL outcdn(point_minus,1,0,0,2,1,.FALSE.,stars_nosym,&
-                           fi_nosym%vacuum,sphhar_nosym,fi_nosym%atoms,fi_nosym%sym,fi_nosym%cell ,&
-                           grVC3(3),xdnout_grvc_down_pw)
-
-               ! Vac grrho:
-               CALL outcdn(point_plus,1,0,1,0,1,.FALSE.,stars_nosym,&
-                           fi_nosym%vacuum,sphhar_nosym,fi_nosym%atoms,fi_nosym%sym,fi_nosym%cell ,&
-                           grRho3(3),xdnout_grrho_up_vac)
-               ! Vac grvc:
-               CALL outcdn(point_plus,1,0,1,0,1,.FALSE.,stars_nosym,&
-                           fi_nosym%vacuum,sphhar_nosym,fi_nosym%atoms,fi_nosym%sym,fi_nosym%cell ,&
-                           grVC3(3),xdnout_grvc_up_vac)
-                           
-               ! Vac grrho:
-               CALL outcdn(point_minus,1,0,2,0,1,.FALSE.,stars_nosym,&
-                           fi_nosym%vacuum,sphhar_nosym,fi_nosym%atoms,fi_nosym%sym,fi_nosym%cell ,&
-                           grRho3(3),xdnout_grrho_down_vac)
-               ! Vac grvc:
-               CALL outcdn(point_minus,1,0,2,0,1,.FALSE.,stars_nosym,&
-                           fi_nosym%vacuum,sphhar_nosym,fi_nosym%atoms,fi_nosym%sym,fi_nosym%cell ,&
-                           grVC3(3),xdnout_grvc_down_vac)
-
-               write(5395,*) "Upper grrho:", xdnout_grrho_up_vac,xdnout_grrho_up_pw
-               write(5395,*) "Lower grrho:", xdnout_grrho_down_vac,xdnout_grrho_down_pw
-               write(5395,*) "Upper grvc: ", xdnout_grvc_up_vac,xdnout_grvc_up_pw
-               write(5395,*) "Lower grvc: ", xdnout_grvc_down_vac,xdnout_grvc_down_pw
-            END DO !x-loop
-         END DO !y-loop   
-      END IF!!!!!
-      
-      ! IF (fi%input%film)CALL save_npy("rhovac.npy",rho%vac(:,:,:,1))
-      ! IF (fi%input%film)CALL save_npy("rhogr1vac.npy",grRho3(1)%vac(:,:,:,1))
-      ! IF (fi%input%film)CALL save_npy("rhogr2vac.npy",grRho3(2)%vac(:,:,:,1))
-      ! IF (fi%input%film)CALL save_npy("rhogr3vac.npy",grRho3(3)%vac(:,:,:,1))
-      ! CALL save_npy("rhogr3pw.npy",grRho3(3)%pw(:,1))
-      ! IF (fi%input%film)CALL save_npy("vcgr1vac.npy",grVC3(1)%vac(:,:,:,1))
-      ! IF (fi%input%film)CALL save_npy("vcgr2vac.npy",grVC3(2)%vac(:,:,:,1))
-      ! IF (fi%input%film)CALL save_npy("vcgr3vac.npy",grVC3(3)%vac(:,:,:,1))
-      ! IF (fi%input%film)CALL save_npy("vextgr1vac.npy",grVext3(1)%vac(:,:,:,1))
-      ! IF (fi%input%film)CALL save_npy("vextgr2vac.npy",grVext3(2)%vac(:,:,:,1))
-      ! IF (fi%input%film)CALL save_npy("vextgr3vac.npy",grVext3(3)%vac(:,:,:,1))
-      ! CALL save_npy("vextgr1pw.npy",grVext3(1)%pw(:,1))
-      ! CALL save_npy("vextgr2pw.npy",grVext3(2)%pw(:,1))
-      ! CALL save_npy("vextgr3pw.npy",grVext3(3)%pw(:,1))
-      ! IF (fi%input%film)CALL save_npy("vtotgr1vac.npy",grVtot3(1)%vac(:,:,:,1))
-      ! IF (fi%input%film)CALL save_npy("vtotgr2vac.npy",grVtot3(2)%vac(:,:,:,1))
-      ! IF (fi%input%film)CALL save_npy("vtotgr3vac.npy",grVtot3(3)%vac(:,:,:,1))
-      ! IF (fi%input%film)CALL save_npy("vtotgr1vacnum.npy",grVtotvac(:,:,:,1))
-      ! IF (fi%input%film)CALL save_npy("vtotgr2vacnum.npy",grVtotvac(:,:,:,2))
-      ! IF (fi%input%film)CALL save_npy("vtotgr3vacnum.npy",grVtotvac(:,:,:,3))
-      ! CALL save_npy("vtotgr1pw.npy",grVtot3(1)%pw(:,1))
-      ! CALL save_npy("vtotgr2pw.npy",grVtot3(2)%pw(:,1))
-      ! CALL save_npy("vtotgr3pw.npy",grVtot3(3)%pw(:,1))
-      ! CALL save_npy("vtotgr1pwnum.npy",grVtotpw(:,1))
-      ! CALL save_npy("vtotgr2pwnum.npy",grVtotpw(:,2))
-      ! CALL save_npy("vtotgr3pwnum.npy",grVtotpw(:,3))
    END SUBROUTINE
 
 END MODULE m_dfpt
