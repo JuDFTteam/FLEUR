@@ -78,11 +78,11 @@ CONTAINS
       if (PRESENT(v1)) lh0=0  !DFPT code-path
 
       IF (.NOT.PRESENT(v1)) THEN
-         vr0 = v%mt(:,:,n,iSpinV)
+         vr0(:atoms%jri(n),0:) = v%mt(:atoms%jri(n),0:,n,iSpinV)
          IF (iSpinV<3) THEN
-            vr0(:,0)=v%mt(:,0,n,iSpinV)-enpara%vr(:,n,iSpinV)
-            vr0(:,0)= vr0(:,0)/atoms%rmsh(:atoms%jri(n),n)*sfp_const
-            IF (alpha_hybrid.NE.0) vr0=vr0-alpha_hybrid*vx%mt(:,:,n,iSpinV)
+            vr0(:atoms%jri(n),0)=v%mt(:atoms%jri(n),0,n,iSpinV)-enpara%vr(:atoms%jri(n),n,iSpinV)
+            vr0(:atoms%jri(n),0)= vr0(:atoms%jri(n),0)/atoms%rmsh(:atoms%jri(n),n)*sfp_const
+            IF (alpha_hybrid.NE.0) vr0(:atoms%jri(n),0:)=vr0(:atoms%jri(n),0:)-alpha_hybrid*vx%mt(:atoms%jri(n),0:,n,iSpinV)
          ELSE
            ! vr0(:,0)=vr0(:,0)-0.5*nococonv%b_con(iSpinV-2,n) !Add constraining field done already in potential setup
          END IF
