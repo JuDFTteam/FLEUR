@@ -64,13 +64,12 @@ module m_VYukawaFilm
     complex                           :: alphm(stars%ng2,2)
     real                              :: dh_prec
     real                              :: coshdh(stars%ng2)
-    complex                           :: sigma_loc(2)
  
     ! PSEUDO-CHARGE DENSITY
 
     call psqpw( fmpi, atoms, sphhar, stars, vacuum, cell, input, sym,   &
                 juphon, den, 1, .false., VYukawa%potdenType, &
-                psq, sigma_loc )
+                psq )
 
     ChooseVariant: if ( .true. ) then
 

@@ -29,7 +29,7 @@ CONTAINS
    SUBROUTINE dfpt_sternheimer(fi, xcpot, sphhar, stars, starsq, nococonv, qpts, fmpi, results, resultsq, enpara, hybdat, &
                                rho, vTot, grRho, grVtot, grVext, iQ, iDType, iDir, dfpt_tag, eig_id, &
                                l_real, results1, dfpt_eig_id, dfpt_eig_id2, q_eig_id, &
-                               denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, sigma_disc, sigma_disc2, &
+                               denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, &
                                starsmq, resultsmq, dfpt_eigm_id, dfpt_eigm_id2, qm_eig_id, results1m, vTot1m, vTot1mIm)
       TYPE(t_fleurinput), INTENT(IN)    :: fi
       CLASS(t_xcpot),     INTENT(IN)    :: xcpot
@@ -52,7 +52,7 @@ CONTAINS
 
       INTEGER,            INTENT(IN)    :: dfpt_eig_id, dfpt_eig_id2
 
-      complex,        intent(in)  :: sigma_disc(2), sigma_disc2(2)
+      !complex,        intent(in)  :: sigma_disc(2), sigma_disc2(2)
 
       TYPE(t_stars),   OPTIONAL, INTENT(INOUT) :: starsmq
       TYPE(t_results), OPTIONAL, INTENT(INOUT) :: resultsmq, results1m
@@ -76,7 +76,6 @@ CONTAINS
       REAL    :: bqpt(3), bmqpt(3)
       LOGICAL :: l_cont, l_exist, l_lastIter, l_dummy, strho, onedone, final_SH_it, l_minusq, l_existm
 
-      complex :: sigma_loc(2)
 
       TYPE(t_banddos)  :: banddosdummy
       TYPE(t_field)    :: field2
@@ -202,44 +201,34 @@ CONTAINS
          CALL timestart("Generation of potential perturbation")
          IF (strho) THEN
             if (fmpi%irank==0) write(oUnit, *) "vExt1", iDir
-            sigma_loc = cmplx(0.0,0.0)
-            !IF (iDir==3) sigma_loc = -sigma_disc
             CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                            fi%juphon,fi%cell,fmpi,fi%noco,nococonv_int,rho_loc0,vTot,&
-                           starsq,denIn1Im,vTot1,.FALSE.,vTot1Im,denIn1,iDtype,iDir,[1,1],sigma_loc)!-?
+                           starsq,denIn1Im,vTot1,.FALSE.,vTot1Im,denIn1,iDtype,iDir,[1,1])!-?
                            ! Last variable: [m,n] dictates with [1/0, 1/0], whether or not we take
                            ! V1*Theta and V*Theta1 into account respectively. For [1,1] all is
                            ! contained.
             IF (l_minusq) THEN
-               sigma_loc = cmplx(0.0,0.0)
-               !IF (iDir==3) sigma_loc = -sigma_disc
                CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                               fi%juphon,fi%cell,fmpi,fi%noco,nococonv,rho_loc0,vTot,&
-                              starsmq,denIn1mIm,vTot1m,.FALSE.,vTot1mIm,denIn1m,iDtype,iDir,[1,1],sigma_loc)!-?
+                              starsmq,denIn1mIm,vTot1m,.FALSE.,vTot1mIm,denIn1m,iDtype,iDir,[1,1])!-?
             END IF
          ELSE
             if (fmpi%irank==0) write(oUnit, *) "vEff1", iDir
-            sigma_loc = cmplx(0.0,0.0)
-            !IF (iDir==3) sigma_loc = -sigma_disc2
             CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                            fi%juphon,fi%cell,fmpi,fi%noco,nococonv,rho_loc,vTot,&
-                           starsq,denIn1Im,vTot1,.TRUE.,vTot1Im,denIn1,iDtype,iDir,[1,1],sigma_loc)
+                           starsq,denIn1Im,vTot1,.TRUE.,vTot1Im,denIn1,iDtype,iDir,[1,1])
             IF (l_minusq) THEN
-               sigma_loc = cmplx(0.0,0.0)
-               !IF (iDir==3) sigma_loc = -sigma_disc2
                CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                               fi%juphon,fi%cell,fmpi,fi%noco,nococonv,rho_loc,vTot,&
-                              starsmq,denIn1mIm,vTot1m,.TRUE.,vTot1mIm,denIn1m,iDtype,iDir,[1,1],sigma_loc)
+                              starsmq,denIn1mIm,vTot1m,.TRUE.,vTot1mIm,denIn1m,iDtype,iDir,[1,1])
             END IF
          END IF
          ! For the calculation of the dynamical matrix, we need VC1 additionally
          IF (final_SH_it) THEN
             if (fmpi%irank==0) write(oUnit, *) "vC1", iDir
-            sigma_loc = cmplx(0.0,0.0)
-            !IF (iDir==3) sigma_loc = -sigma_disc2
             CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                            fi%juphon,fi%cell,fmpi,fi%noco,nococonv,rho_loc,vTot,&
-                           starsq,denIn1Im,vC1,.FALSE.,vC1Im,denIn1,iDtype,iDir,[0,0],sigma_loc)
+                           starsq,denIn1Im,vC1,.FALSE.,vC1Im,denIn1,iDtype,iDir,[0,0])
             
          END IF
 

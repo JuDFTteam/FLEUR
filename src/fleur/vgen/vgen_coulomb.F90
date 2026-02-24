@@ -13,7 +13,7 @@ module m_vgen_coulomb
 contains
 
   subroutine vgen_coulomb( ispin, fmpi,    input, field, vacuum, sym, juphon, stars, &
-             cell, sphhar, atoms, dosf, den, vCoul, sigma_disc, results, dfptdenimag, dfptvCoulimag, dfptden0, stars2, iDtype, iDir, iDir2, sigma_disc2 )
+             cell, sphhar, atoms, dosf, den, vCoul, results, dfptdenimag, dfptvCoulimag, dfptden0, stars2, iDtype, iDir, iDir2 )
     !----------------------------------------------------------------------------
     ! FLAPW potential generator
     !----------------------------------------------------------------------------
@@ -54,7 +54,7 @@ contains
     LOGICAL,            INTENT(IN)               :: dosf
     type(t_potden),     intent(in)               :: den
     type(t_potden),     intent(inout)            :: vCoul
-    COMPLEX,            INTENT(INOUT)            :: sigma_disc(2)
+    !COMPLEX,            INTENT(INOUT)            :: sigma_disc(2)
     type(t_results),    intent(inout), optional  :: results
 
     TYPE(t_potden),     OPTIONAL, INTENT(IN)     :: dfptdenimag,  dfptden0
@@ -62,7 +62,7 @@ contains
     TYPE(t_stars),      OPTIONAL, INTENT(IN)     :: stars2
     INTEGER, OPTIONAL, INTENT(IN)                :: iDtype, iDir ! DFPT: Type and direction of displaced atom
     INTEGER, OPTIONAL, INTENT(IN)                :: iDir2 ! DFPT: 2nd direction for 2nd order VC
-    COMPLEX, OPTIONAL, INTENT(IN)                :: sigma_disc2(2)
+    !COMPLEX, OPTIONAL, INTENT(IN)                :: sigma_disc2(2)
 
     complex                                      :: vintcza, xint, rhobar,vslope
     integer                                      :: i, i3, irec2, irec3, ivac, j, js, k, k3
@@ -71,7 +71,7 @@ contains
     integer                                      :: l, nat , ncsh
     real                                         :: ani, g3, z , sigmaa(2)
     complex                                      :: sig1dh, vz1dh, vmz1dh, vmz1dh_is, constantShift
-    complex                                      :: sigma_loc(2), sigma_loc2(2)
+    !complex                                      :: sigma_loc(2), sigma_loc2(2)
     complex, allocatable                         :: alphm(:,:), psq(:)
     real,    allocatable                         :: af1(:), bf1(:)
     real                                         :: gaussian, sigma ! smoothing function in case of DFPT + Film 
@@ -84,10 +84,10 @@ contains
 
     l_dfptvgen = PRESENT(stars2)
     l_2ndord = PRESENT(iDir2)
-    l_corr = .FALSE. !ALL(ABS(den%vac)<1e-12)
-    vmz1dh_is = cmplx(0.0,0.0)
-    sigma_loc = CMPLX(0.0,0.0) !sigma_disc
-    sigma_loc2 = CMPLX(0.0,0.0) !MERGE(sigma_disc,cmplx(0.0,0.0),PRESENT(sigma_disc2))
+    !l_corr = .FALSE. !ALL(ABS(den%vac)<1e-12)
+    !vmz1dh_is = cmplx(0.0,0.0)
+    !sigma_loc = CMPLX(0.0,0.0) !sigma_disc
+    !sigma_loc2 = CMPLX(0.0,0.0) !MERGE(sigma_disc,cmplx(0.0,0.0),PRESENT(sigma_disc2))
     l_gradientEfield = .FALSE. 
     if (present(iDtype)) then 
       if (iDtype==0 .and. .not. ALL(ABS(den%pw)<1e-12)) l_gradientEfield = .TRUE. 
@@ -110,7 +110,7 @@ contains
     !     ! as another variable dfptdenimag%mt and results in the same component for the Coulomb potential later on.
     !     ! Also, the ionic qlm behave differently.
     call psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym,   &
-          & juphon, den, ispin, .false., vCoul%potdenType, psq, sigma_loc,&
+          & juphon, den, ispin, .false., vCoul%potdenType, psq,&
           & dfptdenimag, stars2, iDtype, iDir, dfptden0, iDir2 )
     call timestop( "psqpw" )
 
@@ -123,9 +123,9 @@ contains
           ! If we do DPFT AND q/=0, there is no G_||+q_||=0 part! So all components are
           ! handled by the G_||/=0 parts in vvacis/vvacxy, that are told to explicitly
           ! start at star 1 instead of 2 for this!
-          call vvac( vacuum, stars, cell,  input, field, psq, den%vac(:,1,:,ispin), vCoul%vac(:,1,:,ispin), rhobar, sig1dh, vz1dh,vslope,l_corr,vmz1dh,sigma_disc,l_dfptvgen )
+          call vvac( vacuum, stars, cell,  input, field, psq, den%vac(:,1,:,ispin), vCoul%vac(:,1,:,ispin), rhobar, sig1dh, vz1dh,vslope,vmz1dh,l_dfptvgen )
         end if
-        call vvacis( stars, vacuum, cell, psq, input, field, vCoul%vac(:vacuum%nmzxyd,:,:,ispin), l_dfptvgen, l_corr )
+        call vvacis( stars, vacuum, cell, psq, input, field, vCoul%vac(:vacuum%nmzxyd,:,:,ispin), l_dfptvgen )
         call vvacxy( stars, vacuum, cell, sym, input, field, den%vac(:vacuum%nmzxyd,:,:,ispin), vCoul%vac(:vacuum%nmzxyd,:,:,ispin), alphm, l_dfptvgen )
         call timestop( "Vacuum" )
         if ( l_dfptvgen .AND. juphon%l_symVacLevel ) constantShift =  (vCoul%vac(vacuum%nmzd,1,1,ispin)  - vCoul%vac(vacuum%nmzd,1,2,ispin)) / 2
@@ -154,7 +154,7 @@ contains
             if ( z > cell%amat(3,3) / 2. ) z = z - cell%amat(3,3)
             vintcza = vintcz( stars, vacuum, cell,  input, field, z, irec2, psq, &
                               vCoul%vac(:,:,:,ispin), &
-                                rhobar, sig1dh, vz1dh, alphm, vslope, sigma_disc, l_dfptvgen, l_corr, vmz1dh-vmz1dh_is )
+                                rhobar, sig1dh, vz1dh, alphm, vslope, l_dfptvgen )
             if (l_dfptvgen) THEN 
               if (juphon%l_symVacLevel .AND. (irec2 == 1) ) vintcza = vintcza + constantShift
               vintcza = vintcza * gaussian
@@ -194,7 +194,7 @@ contains
           end do
         end do
         if (l_dfptvgen .AND. juphon%l_symVacLevel) vCoul%vac(:,1,:,ispin) = vCoul%vac(:,1,:,ispin) + constantShift
-        sigma_disc = sigma_loc
+        !sigma_disc = sigma_loc
         if (l_gradientEfield) then 
           if (iDir == 3 ) then 
                 sigmaa(1) = ( field%efield%sigma + field%efield%sig_b(1) ) / cell%area

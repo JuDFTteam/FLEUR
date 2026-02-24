@@ -46,13 +46,9 @@ contains
         type(t_potden) :: rho_tmp ! a copy of the starting density. This is done to not mess with the starting density 
         type(t_atoms)  :: atomsLocal
         integer :: iDir, iDir2, iSpin, xInd, yInd, zInd, iStar , iVac, zlim
-        complex :: sigma_loc(2)
 
         complex, allocatable :: grrhodummy(:, :, :, :, :) 
         real    :: dr_re(fi%vacuum%nmzd), dr_im(fi%vacuum%nmzd), drr_dummy(fi%vacuum%nmzd)
-
-        ! remove this asap should not be needed any longer
-        sigma_loc = cmplx(0.0,0.0)
 
 
         call rho_tmp%copyPotDen(rho)
@@ -132,21 +128,19 @@ contains
         !  compute gradient external potential
         do iDir = 1 , 3 
             call vgen_coulomb(1, fmpi, fi%input, fi%field, fi%vacuum, fi%sym, fi%juphon, starsLocal, fi%cell, &
-                         & sphhar, atomsLocal, .FALSE., potdummyLocal, grVext3(iDir), sigma_loc, &
+                         & sphhar, atomsLocal, .FALSE., potdummyLocal, grVext3(iDir), &
                          & dfptdenimag=potdummyLocal, dfptvCoulimag=potdummyLocal,dfptden0=potdummyLocal,stars2=starsLocal,iDtype=0,iDir=iDir)
         end do 
 
         ! Coulomb/Effective potential gradients
         do iDir = 1, 3
             call potdummy%resetPotDen()
-            sigma_loc  = cmplx(0.0,0.0)
             call dfpt_vgen(hybdat, fi%field, fi%input, xcpot, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, &
                             fi%juphon, fi%cell, fmpi, fi%noco, nococonv, rho_tmp, vTot, &
-                            stars, potdummy, grVtot3(iDir), .TRUE., potdummy, grRho3(iDir), 0, iDir, [0,0], sigma_loc)
-            sigma_loc  = cmplx(0.0,0.0)
+                            stars, potdummy, grVtot3(iDir), .TRUE., potdummy, grRho3(iDir), 0, iDir, [0,0])
             call dfpt_vgen(hybdat, fi%field, fi%input, xcpot, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, &
                             fi%juphon, fi%cell, fmpi, fi%noco, nococonv, rho_tmp, vTot, &
-                            stars, potdummy, grVc3(iDir), .FALSE., potdummy, grRho3(iDir), 0, iDir, [0,0], sigma_loc)
+                            stars, potdummy, grVc3(iDir), .FALSE., potdummy, grRho3(iDir), 0, iDir, [0,0])
         end do 
 
 
@@ -154,12 +148,10 @@ contains
 
         do iDir2 = 1, 3
             do iDir = 1, 3
-                sigma_loc = cmplx(0.0,0.0)
                 call potdummyLocal%resetPotDen()
                 call vgen_coulomb(1, fmpi, fi%input, fi%field, fi%vacuum, fi%sym, fi%juphon, starsLocal, fi%cell, &
-                            & sphhar, atomsLocal, .TRUE., potdummyLocal, grgrVext3x3(iDir2,iDir), sigma_loc, &
-                            & dfptdenimag=potdummyLocal, dfptvCoulimag=potdummyLocal,dfptden0=potdummyLocal,stars2=starsLocal,iDtype=0,iDir=iDir,iDir2=iDir2, &
-                            & sigma_disc2=merge(sigma_loc,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir2==3.AND.iDir==3.AND..FALSE.))
+                            & sphhar, atomsLocal, .TRUE., potdummyLocal, grgrVext3x3(iDir2,iDir), &
+                            & dfptdenimag=potdummyLocal, dfptvCoulimag=potdummyLocal,dfptden0=potdummyLocal,stars2=starsLocal,iDtype=0,iDir=iDir,iDir2=iDir2)
             end do 
         end do 
 

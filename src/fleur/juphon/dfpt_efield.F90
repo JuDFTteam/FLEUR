@@ -59,15 +59,15 @@ contains
         logical :: l_real
         character(len=20) :: dfpt_tag
 
-        complex :: sigma_coul(2) , sigma_ext(2) ! this was a previous idea for discontinuities at the vac-ir boundary --> not used anylonger
+        !complex :: sigma_coul(2) , sigma_ext(2) ! this was a previous idea for discontinuities at the vac-ir boundary --> not used anylonger
 
 #ifdef CPP_MPI
         integer :: ierr
 #endif 
     
 
-        sigma_coul = cmplx(0.0,0.0)
-        sigma_ext  = cmplx(0.0,0.0)
+        !sigma_coul = cmplx(0.0,0.0)
+        !sigma_ext  = cmplx(0.0,0.0)
 
         l_real = fi%sym%invs.and.(.not.fi%noco%l_soc).and.(.not.fi%noco%l_noco).and.fi%atoms%n_hia==0 !change tomorra 
 
@@ -131,8 +131,7 @@ contains
             call dfpt_sternheimer(fi, xcpot, sphhar, stars, starsq, nococonv, qpts, fmpi, results, resultsq, enpara, hybdat, &
                                   rho, vTot, grRho3(iDir), grVtot3(iDir), grVext3(iDir), 1, 1, iDir, &
                                   dfpt_tag, eig_id, l_real, results1, dfpt_eig_id, dfpt_eig_id2, q_eig_id, &
-                                  den1, vTot1, den1Im, vTot1Im, vC1, vC1Im, merge(sigma_ext,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir==3), &
-                                  merge(sigma_coul,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir==3))
+                                  den1, vTot1, den1Im, vTot1Im, vC1, vC1Im)
             call timestop("Sternheimer")
             if (fmpi%irank==0) write(*,*) '-------------------------'  
             call dfpt_dielecten_HF_int(fi,stars,starsq,sphhar,fmpi,den1,den1Im,results, results1,diel_tensor(iDir,:),rho,iDir,1)

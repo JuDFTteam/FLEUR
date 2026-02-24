@@ -172,6 +172,7 @@ CONTAINS
 #endif
 
       IF (l_conv) THEN
+         if (fmpi%irank==0) write(oUnit,*)  "Structural relaxation: Done"
          CALL judft_end("Structural relaxation: Done",fmpi%irank)
       ELSE
          CALL mixing_history_reset(fmpi)
