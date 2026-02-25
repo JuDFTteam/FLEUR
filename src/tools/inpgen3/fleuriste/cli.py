@@ -626,6 +626,59 @@ def job_generate(input_file, machine, partition, job_name, nodes, time_limit,
         click.secho(f"✓ Saved job script: {out_file}", fg='green')
 
 
+# ── Analyse ──────────────────────────────────────────────────────────────────
+
+@cli.group()
+def analyse():
+    """Analysis tools for FLEUR output data."""
+    pass
+
+
+@analyse.command('times')
+@click.argument('json_file', type=click.Path(exists=True), default=None,
+                required=False)
+@click.option('--output', '-o', type=click.Path(), default='juDFT_times_plot.html',
+              show_default=True,
+              help='Output HTML file for the sunburst plot.')
+@click.option('--scaling', '-s', 'scaling_file', type=click.Path(exists=True),
+              default=None,
+              help='Optional second juDFT_times.json for scaling comparison.')
+def analyse_times(json_file, output, scaling_file):
+    """Generate a sunburst plot from a juDFT timing JSON file.
+
+    JSON_FILE defaults to juDFT_times.json in the current directory when
+    omitted.
+
+    Examples:
+
+      fleuriste analyse times
+      fleuriste analyse times juDFT_times.json -o timing.html
+      fleuriste analyse times juDFT_times.json --scaling juDFT_times_ref.json
+    """
+    if json_file is None:
+        default = Path.cwd() / "juDFT_times.json"
+        if default.exists():
+            json_file = str(default)
+        else:
+            raise click.ClickException(
+                "No juDFT_times.json found in the current directory. "
+                "Pass the file path as an argument."
+            )
+
+    from .times2sunburst import generate_sunburst_plot
+
+    click.echo(f"Reading timings from : {json_file}")
+    if scaling_file:
+        click.echo(f"Scaling reference    : {scaling_file}")
+
+    try:
+        generate_sunburst_plot(json_file, output_file=output, scalingFile=scaling_file)
+    except Exception as exc:
+        raise click.ClickException(str(exc))
+
+    click.secho(f"✓ Sunburst plot saved to {output}", fg='green')
+
+
 # ── Jupyter ──────────────────────────────────────────────────────────────────
 
 @cli.command()

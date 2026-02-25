@@ -66,6 +66,8 @@ CONTAINS
          q_full = qpts%bkf(:,iqfull)
          isym = qpts%bksym(iqfull)
          CALL sym%get_sym_operation_int_coord(isym,mrot,invmrot,trans,l_inv)
+         if (.not. all(trans == 0 )) call juDFT_error("dynMat interpolation with non symmorphic symmetries is currently not supported. & 
+                                                      Please redo the calculation of the IBZ and interpolation with a symmorphic group.",calledby="dfpt_dynmat_sym.f90")
          if (l_inv) isym = isym - sym%nop ! the corresponding symmetry operation 
          dyn_mat_qsym(:,:) = cmplx(0.0,0.0)
          CALL rotate_dynmat(atoms,sym,isym,mrot,invmrot,l_inv,amat,qpts%bk(:,iq),dyn_mat_q(iq,:,:),dyn_mat_qsym)

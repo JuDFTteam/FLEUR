@@ -65,7 +65,6 @@ CONTAINS
         TYPE(t_stars) :: starsq
         INTEGER :: iDtype, iDir, killcont(6) ,iMode , iPerturb
         REAL :: bqpt(3)
-        COMPLEX :: sigma_loc(2)
         COMPLEX,ALLOCATABLE:: gmatCart(:,:,:,:) !(nu',nu,kpoints,jsp)
         COMPLEX,ALLOCATABLE:: gmat(:,:,:,:,:) !(nu',nu,kpoints,jsp,normal_mode)
         REAL, ALLOCATABLE :: ph_linewidth(:) !(normal_mode)
@@ -121,10 +120,9 @@ CONTAINS
                 
                 CALL timestart("Generating Potential Perturbation")
                 IF (fmpi%irank==0) WRITE(oUnit, *) "vEff1", iDir
-                sigma_loc = cmplx(0.0,0.0)
                 CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                            fi%juphon,fi%cell,fmpi,fi%noco,nococonv,rho_loc,vTot,&
-                           starsq,denIn1Im_loc,vTot1,.TRUE.,vTot1Im,denIn1_loc,iDtype,iDir,[1,1],sigma_loc)
+                           starsq,denIn1Im_loc,vTot1,.TRUE.,vTot1Im,denIn1_loc,iDtype,iDir,[1,1])
                     
                 CALL timestop("Generating Potential Perturbation")
 

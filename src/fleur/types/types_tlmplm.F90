@@ -1,18 +1,14 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_types_tlmplm
+   use m_types_rsoc
   IMPLICIT NONE
   PRIVATE
-  TYPE t_rsoc
-     REAL,ALLOCATABLE,DIMENSION(:,:,:,:) :: rsopp,rsoppd,rsopdp,rsopdpd     !(atoms%ntype,atoms%lmaxd,2,2)
-     REAL,ALLOCATABLE,DIMENSION(:,:,:,:) :: rsoplop,rsoplopd,rsopdplo,rsopplo!(atoms%ntype,atoms%nlod,2,2)
-     REAL,ALLOCATABLE,DIMENSION(:,:,:,:,:) :: rsoploplop !(atoms%ntype,atoms%nlod,nlod,2,2)
-     COMPLEX,ALLOCATABLE,DIMENSION(:,:,:,:,:,:)::soangl
-  END TYPE t_rsoc
+ 
 
   TYPE t_tlmplm
      COMPLEX,ALLOCATABLE :: tdulo(:,:,:,:,:)
@@ -42,7 +38,7 @@ MODULE m_types_tlmplm
    CONTAINS
      PROCEDURE,PASS :: init => tlmplm_init
   END TYPE t_tlmplm
-  PUBLIC t_tlmplm,t_rsoc
+  PUBLIC t_tlmplm
 CONTAINS
   SUBROUTINE tlmplm_init(td,atoms,jspins,l_offdiag)
     USE m_judft

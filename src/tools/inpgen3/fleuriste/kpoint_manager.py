@@ -171,6 +171,45 @@ class KPointList:
         return None
 
 
+def _process_xincludes(elem: ET.Element, base_dir: Path) -> None:
+    """Process XInclude directives in-place.
+
+    Each ``<xi:include href="..."/>`` element whose referenced file exists is
+    replaced with the parsed root of that file.  If the file cannot be found
+    (or the href is a remote URL / text include) the xi:include element is left
+    untouched so that round-trip serialisation preserves it.
+    """
+    XI_INCLUDE = "{http://www.w3.org/2001/XInclude}include"
+
+    i = 0
+    while i < len(elem):
+        child = elem[i]
+        if child.tag == XI_INCLUDE:
+            href = child.get("href", "")
+            parse = child.get("parse", "xml")
+            replaced = False
+            # Only handle local XML includes (skip URLs and text-mode includes)
+            if href and parse == "xml" and not href.startswith(("http://", "https://", "ftp://")):
+                include_path = base_dir / href
+                if include_path.exists():
+                    try:
+                        included_root = ET.parse(str(include_path)).getroot()
+                        # Preserve the whitespace tail that was on the xi:include tag
+                        included_root.tail = child.tail
+                        elem.remove(child)
+                        elem.insert(i, included_root)
+                        # Recurse so nested xi:includes are also resolved
+                        _process_xincludes(included_root, include_path.parent)
+                        replaced = True
+                    except ET.ParseError:
+                        pass  # keep the xi:include element on parse failure
+            if not replaced:
+                i += 1
+        else:
+            _process_xincludes(child, base_dir)
+            i += 1
+
+
 class InpXMLManager:
     """Manager for FLEUR inp.xml files focusing on k-point operations."""
     
@@ -212,6 +251,8 @@ class InpXMLManager:
             raise FileNotFoundError(f"File not found: {self.xml_path}")
         
         self.tree = ET.parse(self.xml_path)
+        # Resolve xi:include directives; missing files are left as xi:include nodes
+        _process_xincludes(self.tree.getroot(), self.xml_path.parent)
         self.root = self.tree.getroot()
         self._parse_kpoints()
     

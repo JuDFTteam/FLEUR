@@ -1,5 +1,5 @@
 import json
-import plotly.express as px
+
 
 def generate_sunburst_plot(json_file, output_file="juDFT_times_plot.html",scalingFile=None):
     """
@@ -70,7 +70,15 @@ def generate_sunburst_plot(json_file, output_file="juDFT_times_plot.html",scalin
     flat_data = flatten_json(data,scaling_data=scaling_data)
 
     # Create a DataFrame for the sunburst plot
-    import pandas as pd
+    try:
+        import pandas as pd
+        import plotly.express as px
+    except ImportError as exc:
+        raise ImportError(
+            f"Generating the sunburst plot requires 'plotly' and 'pandas'. "
+            f"Install them with:  pip install plotly pandas\n"
+            f"({exc})"
+        ) from exc
     df = pd.DataFrame(flat_data)
     
     color="scaling" if scaling_data else "variance"

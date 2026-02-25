@@ -1,10 +1,19 @@
-MODULE m_dfpt_gradient
-   USE m_juDFT
-   USE m_constants
-   USE m_types
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 
-   IMPLICIT NONE
-CONTAINS
+
+module m_dfpt_gradient
+    use m_juDFT
+    use m_constants
+    use m_types
+
+    implicit none
+
+contains
+
     subroutine mt_gradient_new(atoms, sphhar, sym, r2FlhMt, GrFshMt)
 
       use m_gaunt, only : gaunt1
@@ -91,9 +100,9 @@ CONTAINS
           end do ! oqn_l
       end do ! itype
 
-   end subroutine mt_gradient_new
+    end subroutine mt_gradient_new
 
-   subroutine derivative_loc(f, itype, atoms, df)
+    subroutine derivative_loc(f, itype, atoms, df)
 
       integer,       intent(in)  :: itype
       type(t_atoms), intent(in)  :: atoms
@@ -148,56 +157,57 @@ CONTAINS
          df(1) = ( - 3*y0/2 + 2*y1 - y2/2 ) * f(1) / (h*r)
          df(2) = (y2-y0)/2                  * f(2) / (h*r*exp(h))
       endif
-   end subroutine derivative_loc
+    end subroutine derivative_loc
 
-    SUBROUTINE sh_to_lh(sym, atoms, sphhar, jspins, radfact, rhosh, rholhreal, rholhimag)
+    subroutine  sh_to_lh(sym, atoms, sphhar, jspins, radfact, rhosh, rholhreal, rholhimag)
 
-        ! WARNING: This routine will not fold back correctly for activated sym-
-        !          metry and gradients (rho in l=0 and lattice harmonics do not
-        !          allow l=1 --> gradient in l=1 is lost)
+      ! WARNING: This routine will not fold back correctly for activated sym-
+      !          metry and gradients (rho in l=0 and lattice harmonics do not
+      !          allow l=1 --> gradient in l=1 is lost)
 
-        TYPE(t_sym),    INTENT(IN)  :: sym
-        TYPE(t_atoms),  INTENT(IN)  :: atoms
-        TYPE(t_sphhar), INTENT(IN)  :: sphhar
-        INTEGER,        INTENT(IN)  :: jspins, radfact
-        COMPLEX,        INTENT(IN)  :: rhosh(:, :, :, :)
-        REAL,           INTENT(OUT) :: rholhreal(:, 0:, :, :), rholhimag(:, 0:, :, :)
+      TYPE(t_sym),    INTENT(IN)  :: sym
+      TYPE(t_atoms),  INTENT(IN)  :: atoms
+      TYPE(t_sphhar), INTENT(IN)  :: sphhar
+      INTEGER,        INTENT(IN)  :: jspins, radfact
+      COMPLEX,        INTENT(IN)  :: rhosh(:, :, :, :)
+      REAL,           INTENT(OUT) :: rholhreal(:, 0:, :, :), rholhimag(:, 0:, :, :)
 
-        INTEGER :: iSpin, iType, iAtom, ilh, iMem, ilm, iR
-        INTEGER :: ptsym, l, m
-        REAL    :: factor
+      INTEGER :: iSpin, iType, iAtom, ilh, iMem, ilm, iR
+      INTEGER :: ptsym, l, m
+      REAL    :: factor
 
-        rholhreal = 0.0
-        rholhimag = 0.0
+      rholhreal = 0.0
+      rholhimag = 0.0
 
-        DO iSpin = 1, jspins
-            DO iType = 1, atoms%ntype
-                iAtom = atoms%firstAtom(iType)
-                ptsym = sym%ntypsy(iAtom)
-                DO ilh = 0, sphhar%nlh(ptsym)
-                    l = sphhar%llh(iLH, ptsym)
-                    DO iMem = 1, sphhar%nmem(ilh, ptsym)
-                        m = sphhar%mlh(iMem, ilh, ptsym)
-                        ilm = l * (l+1) + m + 1
-                        DO iR = 1, atoms%jri(iType)
-                           IF ((radfact.EQ.0).AND.(l.EQ.0)) THEN
-                               factor = atoms%rmsh(iR, iType) / sfp_const
-                           ELSE IF (radfact.EQ.2) THEN
-                               factor = atoms%rmsh(iR, iType)**2
-                           ELSE
-                               factor = 1.0
-                           END IF
-                            rholhreal(iR, ilh, iType, iSpin) = &
-                          & rholhreal(iR, ilh, iType, iSpin) + &
-                          &  real(rhosh(iR, ilm, iatom, iSpin) * conjg(sphhar%clnu(iMem, ilh, ptsym))) * factor
-                            rholhimag(iR, ilh, iType, iSpin) = &
-                          & rholhimag(iR, ilh, iType, iSpin) + &
-                          & aimag(rhosh(iR, ilm, iatom, iSpin) * conjg(sphhar%clnu(iMem, ilh, ptsym))) * factor
-                        END DO
-                    END DO
-                END DO
-            END DO
-        END DO
+      DO iSpin = 1, jspins
+          DO iType = 1, atoms%ntype
+              iAtom = atoms%firstAtom(iType)
+              ptsym = sym%ntypsy(iAtom)
+              DO ilh = 0, sphhar%nlh(ptsym)
+                  l = sphhar%llh(iLH, ptsym)
+                  DO iMem = 1, sphhar%nmem(ilh, ptsym)
+                      m = sphhar%mlh(iMem, ilh, ptsym)
+                      ilm = l * (l+1) + m + 1
+                      DO iR = 1, atoms%jri(iType)
+                          IF ((radfact.EQ.0).AND.(l.EQ.0)) THEN
+                              factor = atoms%rmsh(iR, iType) / sfp_const
+                          ELSE IF (radfact.EQ.2) THEN
+                              factor = atoms%rmsh(iR, iType)**2
+                          ELSE
+                              factor = 1.0
+                          END IF
+                          rholhreal(iR, ilh, iType, iSpin) = &
+                        & rholhreal(iR, ilh, iType, iSpin) + &
+                        &  real(rhosh(iR, ilm, iatom, iSpin) * conjg(sphhar%clnu(iMem, ilh, ptsym))) * factor
+                          rholhimag(iR, ilh, iType, iSpin) = &
+                        & rholhimag(iR, ilh, iType, iSpin) + &
+                        & aimag(rhosh(iR, ilm, iatom, iSpin) * conjg(sphhar%clnu(iMem, ilh, ptsym))) * factor
+                      END DO
+                  END DO
+              END DO
+          END DO
+      END DO
 
-    END SUBROUTINE sh_to_lh
-END MODULE m_dfpt_gradient
+    end subroutine sh_to_lh
+
+end module m_dfpt_gradient

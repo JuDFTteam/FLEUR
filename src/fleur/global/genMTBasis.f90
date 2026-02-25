@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -46,7 +46,6 @@ CONTAINS
 
 
     LOGICAL    :: l_write,l_hia,l_performSpinavg
-    REAL       :: vrTmp(atoms%jmtd)
     INTEGER    :: i, info, addFunA, addFunB, iState, nQuantumNumber
     
     REAL, ALLOCATABLE :: coreFun(:,:)
@@ -78,15 +77,9 @@ CONTAINS
              l_hia=.TRUE.
           ENDIF
        ENDDO
-       !In the case of a spin-polarized calculation with Hubbard 1 we want to treat
-       !the correlated orbitals with a non-spin-polarized basis
-       IF((l_hia.AND.SIZE(vTot%mt,4).GT.1 .AND. l_performSpinavg).or.atoms%l_nonpolbas(itype)) THEN
-         vrTmp = (vTot%mt(:,0,iType,1) + vTot%mt(:,0,iType,2))/2.0
-       ELSE
-         vrTmp = vTot%mt(:,0,iType,jspin)
-       ENDIF
+  
    
-       CALL radfun(l,iType,jspin,enpara%el0(l,iType,jspin),vrTmp,atoms,&
+       CALL radfun(l,iType,jspin,enpara%el0(l,iType,jspin),enpara%vr(:,itype,jspin),atoms,&
             f(1,1,l),g(1,1,l),usdus,nodeu,noded,wronk)
        IF (l_write) THEN
           WRITE (oUnit,FMT=8010) l,enpara%el0(l,iType,jspin),usdus%us(l,iType,jspin),usdus%dus(l,iType,jspin),&
@@ -96,7 +89,7 @@ CONTAINS
 
     ! Generate the extra wavefunctions for the local orbitals, if there are any.
     IF (atoms%nlo(iType).GE.1) THEN
-       CALL radflo(atoms,iType,jspin,enpara%ello0(1,1,jspin),vrtmp,f,g,fmpi,&
+       CALL radflo(atoms,iType,jspin,enpara%ello0(1,1,jspin),enpara%vr(:,iType,jspin),f,g,fmpi,&
             usdus,usdus%uuilon(1,1,jspin),usdus%duilon(1,1,jspin),usdus%ulouilopn(1,1,1,jspin),flo)
     END IF
     
@@ -195,8 +188,8 @@ CONTAINS
           IF (l.LE.3) THEN
              IF (largestCoreMainQuantumNumbers(l).GT.0) THEN
                 coreFun = 0.0
-                energy = find_enpara(.TRUE.,l,iType,jspin,largestCoreMainQuantumNumbers(l),atoms,vrTmp,e_lo,e_up,.TRUE.)
-                CALL radsra(energy,l,vrTmp(:),atoms%rmsh(1,iType),atoms%dx(iType),atoms%jri(iType),c_light(1.0), us,dus,nodeu,coreFun(:,1),coreFun(:,2))
+                energy = find_enpara(.TRUE.,l,iType,jspin,largestCoreMainQuantumNumbers(l),atoms,enpara%vr(:,itype,jspin),e_lo,e_up,.TRUE.)
+                CALL radsra(energy,l,enpara%vr(:,itype,jspin),atoms%rmsh(1,iType),atoms%dx(iType),atoms%jri(iType),c_light(1.0), us,dus,nodeu,coreFun(:,1),coreFun(:,2))
                 DO iFunA = 1, nMTBasisFcts
                    productVals = 0.0
                    DO i = 1, atoms%jri(iType)

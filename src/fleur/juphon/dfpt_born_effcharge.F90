@@ -48,7 +48,7 @@ contains
         type(t_stars)                      :: starsq_vextpho
         TYPE(t_fftgrid)                    :: fftgrid_dummy
         complex, allocatable               :: pwwq2(:),pww2(:),denIn1_pw(:),rho_pw(:),theta1full0(:,:,:),theta1full(:,:,:),theta1_pw0(:,:,:),theta1_pw(:,:,:)
-        complex                            :: offset_out,tempval_pw,tempval_mt,tempval_SF_IR,tempval_grrho,sigma_loc(2)
+        complex                            :: offset_out,tempval_pw,tempval_mt,tempval_SF_IR,tempval_grrho
         real, allocatable                  :: denIn1_mt(:,:,:),denIn1_mt_Im(:,:,:),rho_mt(:,:,:), grRho_mt(:,:,:)!,mt_r(:,:),mt_Im(:,:)
         integer                            :: iType,iDir,iDtype
         real                               :: qvec_int(3),int_mt_r,int_mt_Im
@@ -106,11 +106,10 @@ contains
 
                 CALL vExt1pho%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
                 CALL vExt1Impho%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
-                sigma_loc = cmplx(0.0,0.0)
                 print*,"right before it"
                 CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                             juphon_int,fi%cell,fmpi,fi%noco,nococonv,rho_loc0,vTot,&
-                            starsq,den1Im_dummy,vExt1pho,.FALSE.,vExt1Impho,den1_dummy,iDtype,iDir,[1,1],sigma_loc,l_vextpho=.TRUE.)
+                            starsq,den1Im_dummy,vExt1pho,.FALSE.,vExt1Impho,den1_dummy,iDtype,iDir,[1,1],l_vextpho=.TRUE.)
                 
                 print*,"sum(vExt1pho%pw(:,1))", sum(vExt1pho%pw(:,1))
                 !stop

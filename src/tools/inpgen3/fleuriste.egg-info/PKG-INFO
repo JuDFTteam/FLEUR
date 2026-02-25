@@ -10,6 +10,8 @@ Requires-Dist: textual>=0.47.0
 Requires-Dist: click>=8.0
 Requires-Dist: numpy>=1.20.0
 Requires-Dist: ase>=3.22.0
+Requires-Dist: plotly>=5.0
+Requires-Dist: pandas>=1.3.0
 Provides-Extra: dev
 Requires-Dist: pytest>=7.0; extra == "dev"
 Requires-Dist: pytest-asyncio>=0.21; extra == "dev"

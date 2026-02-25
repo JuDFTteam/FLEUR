@@ -13,7 +13,7 @@ CONTAINS
    SUBROUTINE dfpt_dynmat_row(fi, stars, starsq, sphhar, xcpot, nococonv, hybdat, fmpi, qpts, iQ, iDtype_row, iDir_row, &
                               eig_id, dfpt_eig_id, dfpt_eig_id2, enpara, results, results1, l_real, &
                               rho, vTot, grRho3, grVext3, grVC3, denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_row, &
-                              E2ndOrdII, sigma_ext, sigma_gext, q_eig_id)
+                              E2ndOrdII, q_eig_id)
       USE m_step_function
       USE m_convol
       USE m_dfpt_vgen
@@ -46,7 +46,7 @@ CONTAINS
 
       COMPLEX, INTENT(INOUT) :: E2ndOrdII(:,:)
       
-      COMPLEX, OPTIONAL, INTENT(IN) :: sigma_ext(2), sigma_gext(3,2)
+      !COMPLEX, OPTIONAL, INTENT(IN) :: sigma_ext(2), sigma_gext(3,2)
      
       INTEGER, OPTIONAL, INTENT(IN) :: q_eig_id
 
@@ -65,8 +65,6 @@ CONTAINS
 
       REAL :: qvec(3)
       REAL :: e2_vm(fi%atoms%nat)
-
-      complex                           :: sigma_loc(2)
 
       COMPLEX, ALLOCATABLE :: dyn_row_HF(:), dyn_row_eigen(:), dyn_row_int(:)
       COMPLEX, ALLOCATABLE :: theta1full(:, :, :), theta1full0(:, :, :)!, theta2(:, :, :)
@@ -209,11 +207,9 @@ CONTAINS
             ! Get V_{ext}(1) for \alpha, i with gradient cancellation
             CALL vExt1%init(starsqLocal, atomsLocal, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
             CALL vExt1Im%init(starsqLocal, atomsLocal, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
-            sigma_loc = cmplx(0.0,0.0)
-            !IF (iDir_col==3) sigma_loc = -sigma_ext
             CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,starsLocal,fi%vacuum,fi%sym,&
                            fi%juphon,fi%cell,fmpi,fi%noco,nococonv,potdendummy,vTot,&
-                           starsqLocal,potden1dummy,vExt1,.FALSE.,vExt1Im,potden1dummy,iDtype_col,iDir_col,[0,0],sigma_loc)
+                           starsqLocal,potden1dummy,vExt1,.FALSE.,vExt1Im,potden1dummy,iDtype_col,iDir_col,[0,0])
 
             ! IR integral:
             pwwq2Local = CMPLX(0.0,0.0)
@@ -247,15 +243,11 @@ CONTAINS
                                 denIn1_mt(:,0:,iDtype_row) - &
                                 (grRho3(iDir_row)%mt(:,0:,iDtype_row,1)+grRho3(iDir_row)%mt(:,0:,iDtype_row,fi%input%jspins))/(3.0-fi%input%jspins)
 
-               sigma_loc = cmplx(0.0,0.0)
-               !IF (iDir_col==3) sigma_loc = sigma_gext(iDir_row,:)
-               !IF (iDir_row==3) sigma_loc = sigma_gext(iDir_col,:)
                CALL potden1dummy%resetpotden()
                CALL potdendummy%resetpotden()
                CALL vgen_coulomb(1, fmpi, fi%input, fi%field, fi%vacuum, fi%sym, fi%juphon, starsqLocal, fi%cell, &
-                         & sphhar, atomsLocal, .TRUE., potden1dummy, grgrVCq, sigma_loc, &
-                         & dfptdenimag=potden1dummy, dfptvCoulimag=grgrVCqIm,dfptden0=potden1dummy,stars2=starsLocal,iDtype=iDtype_col,iDir=iDir_col,iDir2=iDir_row, &
-                         & sigma_disc2=MERGE(sigma_ext,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir_col==3.AND.iDir_row==3.AND..FALSE.))
+                         & sphhar, atomsLocal, .TRUE., potden1dummy, grgrVCq, &
+                         & dfptdenimag=potden1dummy, dfptvCoulimag=grgrVCqIm,dfptden0=potden1dummy,stars2=starsLocal,iDtype=iDtype_col,iDir=iDir_col,iDir2=iDir_row)
                IF (iDtype_col==iDtype_row) THEN
                   e2_vm = 0.0
                   CALL dfpt_e2_madelung(fi%atoms,fi%input%jspins,potden1dummy%mt(:,0,:,:),grgrVCq%mt(:,0,:,1),e2_vm(:))
@@ -361,12 +353,10 @@ CONTAINS
                CALL vExt1%init(starsLocal, atomsLocal, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
                CALL vExt1Im%init(starsLocal, atomsLocal, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
                ! Get V_{ext}(1) for \alpha, i, q=0 with gradient cancellation
-               sigma_loc = cmplx(0.0,0.0)
-               !IF (iDir_col==3) sigma_loc = -sigma_ext
                CALL potdendummy%resetpotden()
                CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,starsLocal,fi%vacuum,fi%sym,&
                               fi%juphon,fi%cell,fmpi,fi%noco,nococonv,potdendummy,vTot,&
-                              starsLocal,potdendummy,vExt1,.FALSE.,vExt1Im,potdendummy,iDtype_col,iDir_col,[0,0],sigma_loc)
+                              starsLocal,potdendummy,vExt1,.FALSE.,vExt1Im,potdendummy,iDtype_col,iDir_col,[0,0])
 
                ! Integrals:
                !rho_pw = (grRho3(iDir_row)%pw(:,1)+grRho3(iDir_row)%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)

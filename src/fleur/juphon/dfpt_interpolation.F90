@@ -83,11 +83,13 @@ contains
             call juDFT_error("Invalid option for post-procession of dynMatfiles.", calledby="dfpt_interpolation.F90")
         end if 
 
+        IF (fi%juPhon%l_dos) allocate(eigenValsFull(3*fi%atoms%nat,fi%kpts%nkpt,fi%input%jspins))
+
         ! Read in the dynMats in the IBZ
         ! We currently rely on a seperate set of files fullsym_* that contain the symmetry
         ! Maybe we should change this in the future.
-    
         ! Read qpoints from fullsym_inp.xml and fullsym_kpts.xml
+        if (fi%juPhon%qmode .ne. 1 )   call juDFT_error("Invalid option for post-procession of dynMatfiles. qmode not set to 1", calledby="dfpt_interpolation.F90")
         inp_pref = ADJUSTL("fullsym_")
         fmpi_fullsym%l_mpi_multithreaded = fmpi%l_mpi_multithreaded
         fmpi_fullsym%mpi_comm = fmpi%mpi_comm
@@ -105,7 +107,7 @@ contains
 
         if (fmpi%irank==0) then 
             ! this was copied from dfpt.F90 durin refactor --> think about a more clever way
-            do iQ = 1, fi_fullsym%kpts%nkpt ! Loop over dynmat files to read
+            do iQ = 1, qpts%nkpt ! Loop over dynmat files to read
                 if (iQ<=9) THEN
                     open( 3001, file="dynMatq=000"//int2str(iQ), status="old")
                 else if(iQ<=99) THEN 
@@ -127,17 +129,17 @@ contains
             end do  ! iQ
 
             ! Real space transformation
-            ALLOCATE(dyn_mat_r(fi_fullsym%kpts%nkptf,3*fi%atoms%nat,3*fi%atoms%nat))
-            call ft_dyn(fi_fullsym%atoms, fi_fullsym%kpts, fi_fullsym%sym, fi_fullsym%cell%amat, dyn_mat, dyn_mat_r, dyn_mat_q_full)
+            ALLOCATE(dyn_mat_r(qpts%nkptf,3*fi%atoms%nat,3*fi%atoms%nat))
+            call ft_dyn(fi_fullsym%atoms, qpts, fi_fullsym%sym, fi_fullsym%cell%amat, dyn_mat, dyn_mat_r, dyn_mat_q_full)
             
             ! In order to call the normal diagonalisation routines
             ! The FCM must be not-normalized --> otherwise we find the wrong unit
             ! Either change here or in dfpt_dynmat_eig.F90 if tag != raw 
             do iDir = 1, 3*fi%atoms%nat
-            do iDir2 = 1, 3*fi%atoms%nat
-                dyn_mat_r(:,iDir, iDir2) = dyn_mat_r(:,iDir, iDir2) * massInElectronMasses* &
-                                            SQRT(atomicMasses_const(fi%atoms%nz(CEILING(iDir/3.0)))*atomicMasses_const(fi%atoms%nz(CEILING(iDir2/3.0))))
-            end do
+                do iDir2 = 1, 3*fi%atoms%nat
+                    dyn_mat_r(:,iDir, iDir2) = dyn_mat_r(:,iDir, iDir2) * massInElectronMasses*  &
+                                               SQRT(atomicMasses_const(fi%atoms%nz(CEILING(iDir/3.0)))*atomicMasses_const(fi%atoms%nz(CEILING(iDir2/3.0))))
+                end do
             end do
 
             ! interpolate to dense grid on a arbitrary q-point

@@ -72,14 +72,14 @@ contains
         real,allocatable :: e2_vm(:,:,:) ! q=0 part of Eii(2) term
         complex,allocatable :: E2ndOrdII(:,:) ! Eii(2) potential
 
-        complex :: sigma_coul(2) , sigma_ext(2) ! this was a previous idea for discontinuities at the vac-ir boundary --> not used anylonger
+        !complex :: sigma_coul(2) , sigma_ext(2) ! this was a previous idea for discontinuities at the vac-ir boundary --> not used anylonger
 
 #ifdef CPP_MPI
         integer :: ierr
 #endif 
 
-        sigma_coul = cmplx(0.0,0.0)
-        sigma_ext = cmplx(0.0,0.0)
+        !sigma_coul = cmplx(0.0,0.0)
+        !sigma_ext = cmplx(0.0,0.0)
 
         l_real = fi%sym%invs.and.(.not.fi%noco%l_soc).and.(.not.fi%noco%l_noco).and.fi%atoms%n_hia==0
 
@@ -226,8 +226,7 @@ contains
                             call dfpt_sternheimer(fi, xcpot, sphhar, stars, starsq, nococonv, qpts, fmpi, results, resultsq, enpara, hybdat, &
                                                 rho, vTot, grRho3(iDir), grVtot3(iDir), grVext3(iDir), q_list(iQ), iDtype, iDir, &
                                                 dfpt_tag, eig_id, l_real, results1, dfpt_eig_id, dfpt_eig_id2, q_eig_id, &
-                                                den1, vTot1, den1Im, vTot1Im, vC1, vC1Im, merge(sigma_ext,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir==3), &
-                                                merge(sigma_coul,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir==3),&
+                                                den1, vTot1, den1Im, vTot1Im, vC1, vC1Im, &
                                                 starsmq, resultsqm, dfpt_eigm_id, dfpt_eigm_id2, qm_eig_id, results1m, vTot1m, vTot1mIm)
                             call timestop("Sternheimer with -q")
                         else
@@ -235,8 +234,7 @@ contains
                             call dfpt_sternheimer(fi, xcpot, sphhar, stars, starsq, nococonv, qpts, fmpi, results, resultsq, enpara, hybdat, &
                                                 rho, vTot, grRho3(iDir), grVtot3(iDir), grVext3(iDir), q_list(iQ), iDtype, iDir, &
                                                 dfpt_tag, eig_id, l_real, results1, dfpt_eig_id, dfpt_eig_id2, q_eig_id, &
-                                                den1, vTot1, den1Im, vTot1Im, vC1, vC1Im, merge(sigma_ext,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir==3), &
-                                                merge(sigma_coul,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir==3))
+                                                den1, vTot1, den1Im, vTot1Im, vC1, vC1Im)
                             call timestop("Sternheimer")
                         end if 
 
@@ -246,7 +244,7 @@ contains
                         call dfpt_dynmat_row(fi, stars, starsq, sphhar, xcpot, nococonv, hybdat, fmpi, qpts, q_list(iQ), iDtype, iDir, &
                                             eig_id, dfpt_eig_id, dfpt_eig_id2, enpara, results, results1, l_real,&
                                             rho, vTot, grRho3, grVext3, grVC3, &
-                                            den1, vTot1, den1Im, vTot1Im, vC1, vC1Im, dyn_mat(iQ,3 *(iDtype-1)+iDir,:), E2ndOrdII, sigma_ext)
+                                            den1, vTot1, den1Im, vTot1Im, vC1, vC1Im, dyn_mat(iQ,3 *(iDtype-1)+iDir,:), E2ndOrdII)
 
                         call timestop("Dynmat")
                         dyn_mat(iQ,3 *(iDtype-1)+iDir,:) = dyn_mat(iQ,3 *(iDtype-1)+iDir,:) + conjg(E2ndOrdII(3 *(iDtype-1)+iDir,:))
