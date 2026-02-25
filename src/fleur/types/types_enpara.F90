@@ -153,6 +153,9 @@ CONTAINS
        elo_lo_local = 0.0
        elo_up_local = 0.0
 
+
+       enpara%vr(:,:,jsp)=v%mt(:,0,:,jsp)
+
        CALL mpiLoop%init(fmpi%irank,fmpi%isize,1,atoms%ntype)
        !$OMP PARALLEL DO DEFAULT(none) &
        !$OMP SHARED(mpiLoop,atoms,enpara,jsp,l_doneLocal,v,lo_doneLocal,e_lo_local,e_up_local,elo_lo_local,elo_up_local,el0Local,ello0Local) &
@@ -160,7 +163,6 @@ CONTAINS
        !! First calculate energy parameter from quantum numbers if these are given...
        !! l_done stores the index of those energy parameter updated
        DO n = mpiLoop%bunchMinIndex, mpiLoop%bunchMaxIndex
-          enpara%vr(:,n,jsp)=v%mt(:,0,n,jsp)
           if (atoms%l_nonpolbas(n)) enpara%vr(:,n,jsp)=(v%mt(:,0,n,1)+v%mt(:,0,n,2))/2
           DO l = 0,3
              IF( enpara%qn_el(l,n,jsp).ne.0) THEN
