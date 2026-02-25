@@ -76,9 +76,7 @@ contains
 
         !set l_phonon to true, not nice WIP
         fi= fi_ext
-        !print*,"fi%juphon%l_phonon 1",fi%juphon%l_phonon
         fi%juphon%l_phonon=.TRUE.
-        !print*,"fi%juphon%l_phonon 2",fi%juphon%l_phonon
 
         sigma_coul = cmplx(0.0,0.0)
         sigma_ext = cmplx(0.0,0.0)
