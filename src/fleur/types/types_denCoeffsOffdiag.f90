@@ -50,8 +50,7 @@ PRIVATE
 
       PROCEDURE,PASS :: init => denCoeffsOffdiag_init
       PROCEDURE      :: addRadFunScalarProducts
-      PROCEDURE      :: calcCoefficients
-
+      
    END TYPE t_denCoeffsOffdiag
 
 PUBLIC t_denCoeffsOffdiag
@@ -194,36 +193,5 @@ SUBROUTINE addRadFunScalarProducts(thisDenCoeffsOffdiag, atoms, f, g, flo, iType
    END DO
 
 END SUBROUTINE addRadFunScalarProducts
-
-SUBROUTINE calcCoefficients(thisDenCoeffsOffdiag,atoms,sphhar,sym,eigVecCoeffs,we,noccbd)
-   USE m_juDFT
-   USE m_types_setup
-   USE m_types_cdnval, ONLY: t_eigVecCoeffs
-   USE m_rhomt21     ! calculate (spin) off-diagonal MT-density coeff's
-   USE m_rhonmt21    ! -"-                       non-MT-density coeff's
-
-   IMPLICIT NONE
-
-   CLASS(t_denCoeffsOffdiag), INTENT(INOUT) :: thisDenCoeffsOffdiag
-   TYPE(t_atoms),             INTENT(IN)    :: atoms
-   TYPE(t_sphhar),            INTENT(IN)    :: sphhar
-   TYPE(t_sym),               INTENT(IN)    :: sym
-   TYPE(t_eigVecCoeffs),      INTENT(IN)    :: eigVecCoeffs
-   INTEGER,                   INTENT(IN)    :: noccbd
-   REAL,                      INTENT(IN)    :: we(noccbd)
-   CALL timestart("rhomt21")
-   CALL rhomt21(atoms,we,noccbd,eigVecCoeffs,thisDenCoeffsOffdiag%uu21,thisDenCoeffsOffdiag%ud21,&
-                thisDenCoeffsOffdiag%du21,thisDenCoeffsOffdiag%dd21,thisDenCoeffsOffdiag%uulo21,&
-                thisDenCoeffsOffdiag%dulo21,thisDenCoeffsOffdiag%ulou21,thisDenCoeffsOffdiag%ulod21,&
-                thisDenCoeffsOffdiag%uloulop21)
-    CALL timestop("rhomt21")
-   IF (thisDenCoeffsOffdiag%l_fmpl) THEN
-      CALL timestart("rhonmt21")
-      CALL rhonmt21(atoms,sphhar,we,noccbd,sym,eigVecCoeffs,thisDenCoeffsOffdiag%uunmt21,thisDenCoeffsOffdiag%udnmt21,&
-      thisDenCoeffsOffdiag%dunmt21,thisDenCoeffsOffdiag%ddnmt21)
-      CALL timestop("rhonmt21")                                                            
-   END IF
-
-END SUBROUTINE calcCoefficients
 
 END MODULE m_types_denCoeffsOffdiag

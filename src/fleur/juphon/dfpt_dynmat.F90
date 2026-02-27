@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2021 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -13,12 +13,13 @@ CONTAINS
    SUBROUTINE dfpt_dynmat_row(fi, stars, starsq, sphhar, xcpot, nococonv, hybdat, fmpi, qpts, iQ, iDtype_row, iDir_row, &
                               eig_id, dfpt_eig_id, dfpt_eig_id2, enpara, results, results1, l_real, &
                               rho, vTot, grRho3, grVext3, grVC3, denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_row, &
-                              E2ndOrdII, sigma_ext, sigma_gext, q_eig_id)
+                              E2ndOrdII, q_eig_id)
       USE m_step_function
       USE m_convol
       USE m_dfpt_vgen
       USE m_vgen_coulomb
       USE m_dfpt_eii2
+      USE m_dfpt_potdenLocal
 
       TYPE(t_fleurinput), INTENT(IN)    :: fi
       TYPE(t_stars),      INTENT(IN)    :: stars, starsq
@@ -29,8 +30,9 @@ CONTAINS
       TYPE(t_mpi),        INTENT(IN)    :: fmpi
       TYPE(t_kpts),       INTENT(IN)    :: qpts
 
-      TYPE(t_potden), INTENT(INOUT) :: rho, vTot
-      TYPE(t_potden), INTENT(INOUT) :: grRho3(3), grVext3(3), grVC3(3)
+      TYPE(t_potden), INTENT(IN) :: rho
+      TYPE(t_potden), INTENT(IN)    :: vTot
+      TYPE(t_potden), INTENT(in) :: grRho3(3), grVext3(3), grVC3(3)
       TYPE(t_potden), INTENT(INOUT) :: denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im
 
       TYPE(t_enpara),   INTENT(INOUT) :: enpara
@@ -44,13 +46,18 @@ CONTAINS
 
       COMPLEX, INTENT(INOUT) :: E2ndOrdII(:,:)
       
-      COMPLEX, OPTIONAL, INTENT(IN) :: sigma_ext(2), sigma_gext(3,2)
+      !COMPLEX, OPTIONAL, INTENT(IN) :: sigma_ext(2), sigma_gext(3,2)
      
       INTEGER, OPTIONAL, INTENT(IN) :: q_eig_id
 
       TYPE(t_fftgrid) :: fftgrid_dummy
       TYPE(t_potden)  :: rho_dummy, rho1_dummy, vExt1, vExt1Im, grgrVCq, grgrVCqIm
       TYPE(t_hub1data) :: hub1data
+
+      !  starsLocal type variables
+      TYPE(t_stars) :: starsLocal,starsqLocal
+      TYPE(t_potden):: potden1dummy,potdendummy
+      TYPE(t_atoms) :: atomsLocal
 
       INTEGER :: col_index, row_index, iDtype_col, iDir_col, iType, iDir, iSpin
       COMPLEX :: tempval
@@ -59,14 +66,19 @@ CONTAINS
       REAL :: qvec(3)
       REAL :: e2_vm(fi%atoms%nat)
 
-      complex                           :: sigma_loc(2)
-
       COMPLEX, ALLOCATABLE :: dyn_row_HF(:), dyn_row_eigen(:), dyn_row_int(:)
       COMPLEX, ALLOCATABLE :: theta1full(:, :, :), theta1full0(:, :, :)!, theta2(:, :, :)
       COMPLEX, ALLOCATABLE :: theta1_pw(:, :, :), theta1_pw0(:, :, :)!,theta2_pw(:, :, :)
       COMPLEX, ALLOCATABLE :: pww(:), pwwq(:), pww2(:), pwwq2(:)
       COMPLEX, ALLOCATABLE :: rho_pw(:), denIn1_pw(:), rho_vac(:,:,:), denIn1_vac(:,:,:)
       REAL,    ALLOCATABLE :: rho_mt(:,:,:), grRho_mt(:,:,:), denIn1_mt(:,:,:), denIn1_mt_Im(:,:,:)
+
+      !  local arrays for the external potential
+      COMPLEX, ALLOCATABLE :: pwwq2Local(:) , pww2Local(:)
+      COMPLEX, ALLOCATABLE :: denIn1Local_pw(:) , denIn1Local_vac(:,:,:),rhoLocal_pw(:) , rhoLocal_vac(:,:,:)
+      COMPLEX, ALLOCATABLE :: theta1fullLocal(:, :, :), theta1full0Local(:, :, :)
+      COMPLEX, ALLOCATABLE :: theta1Local_pw(:, :, :), theta1Local_pw0(:, :, :)!
+
 
       bare_mode = .FALSE.
 
@@ -91,12 +103,29 @@ CONTAINS
       CALL rho_dummy%resetPotDen()
       CALL rho1_dummy%resetPotDen()
 
-      CALL grgrVCq%copyPotDen(vTot1)
+      qvec = qpts%bk(:, iQ)
+
+      ! For the response of the external Potential we need a higher cutoff in the expansion, in order to confine the multipole moments in the MTs
+      ! This is crucial for the Film-Mode and will be visible in the z-Eigenmodes.  
+      CALL create_typesLocal(fi,fmpi,fi%sym,fi%cell,fi%input,sphhar, fi%vacuum , fi%noco ,starsqLocal, potden1dummy,atomsLocal,qvec=qvec,iDir=iDir_row,iDtype=iDtype_row)
+      CALL create_typesLocal(fi,fmpi,fi%sym,fi%cell,fi%input,sphhar, fi%vacuum , fi%noco ,starsLocal, potdendummy,atomsLocal)
+
+      ALLOCATE(pww2Local(starsLocal%ng3),pwwq2Local(starsqLocal%ng3))
+      ALLOCATE(denIn1Local_pw(starsqLocal%ng3),rhoLocal_pw(starsLocal%ng3))
+      IF (fi%input%film) THEN
+         ALLOCATE(denIn1Local_vac(fi%vacuum%nmzd,starsqLocal%ng2,2))
+         ALLOCATE(rhoLocal_vac(fi%vacuum%nmzd,starsLocal%ng2,2))
+      END IF
+      ALLOCATE(theta1fullLocal(0:27*starsqLocal%mx1*starsqLocal%mx2*starsqLocal%mx3-1,fi%atoms%ntype,3))
+      ALLOCATE(theta1full0Local(0:27*starsLocal%mx1*starsLocal%mx2*starsLocal%mx3-1,fi%atoms%ntype,3))
+      ALLOCATE(theta1Local_pw(starsqLocal%ng3,fi%atoms%ntype,3))
+      ALLOCATE(theta1Local_pw0(starsLocal%ng3,fi%atoms%ntype,3))
+
+      CALL grgrVCq%copyPotDen(potden1dummy)
       CALL grgrVCq%resetPotDen()
-      CALL grgrVCqIm%copyPotDen(vTot1)
+      CALL grgrVCqIm%copyPotDen(potden1dummy)
       CALL grgrVCqIm%resetPotDen()
 
-      qvec = qpts%bk(:, iQ)
 
       theta1full  = CMPLX(0.0,0.0)
       theta1full0 = CMPLX(0.0,0.0)
@@ -121,6 +150,29 @@ CONTAINS
          END DO
       END DO
 
+      ! Create Local stepfunctions 
+      theta1fullLocal = CMPLX(0.0,0.0)
+      theta1full0Local = CMPLX(0.0,0.0)
+      CALL stepf_analytical(fi%sym, starsqLocal, atomsLocal, fi%input, fi%cell, fmpi, fftgrid_dummy, qvec, iDtype_row, iDir_row, 1, theta1fullLocal)
+      CALL stepf_analytical(fi%sym, starsLocal, atomsLocal, fi%input, fi%cell, fmpi, fftgrid_dummy, [0.0,0.0,0.0], iDtype_row, iDir_row, 1, theta1full0Local)
+
+      DO iType = 1, fi%atoms%ntype
+         DO iDir = 1, 3
+            fftgrid_dummy%grid = theta1fullLocal(0:, iType, iDir)
+            CALL fftgrid_dummy%takeFieldFromGrid(starsqLocal, theta1Local_pw(:, iType, iDir))
+            theta1Local_pw(:, iType, iDir) = theta1Local_pw(:, iType, iDir) * 3 * starsqLocal%mx1 * 3 * starsqLocal%mx2 * 3 * starsqLocal%mx3
+            CALL fftgrid_dummy%perform_fft(forward=.false.)
+            theta1fullLocal(0:, iType, iDir) = fftgrid_dummy%grid
+
+            fftgrid_dummy%grid = theta1full0Local(0:, iType, iDir)
+            CALL fftgrid_dummy%takeFieldFromGrid(starsLocal, theta1Local_pw0(:, iType, iDir))
+            theta1Local_pw0(:, iType, iDir) = theta1Local_pw0(:, iType, iDir) * 3 * starsLocal%mx1 * 3 * starsLocal%mx2 * 3 * starsLocal%mx3
+            CALL fftgrid_dummy%perform_fft(forward=.false.)
+            theta1full0Local(0:, iType, iDir) = fftgrid_dummy%grid
+         END DO
+      END DO
+
+
       row_index = 3 * (iDtype_row - 1) + iDir_row
 
       dyn_row       = CMPLX(0.0,0.0)
@@ -135,6 +187,13 @@ CONTAINS
       denIn1_mt(:,0:,iDtype_row) = denIn1_mt(:,0:,iDtype_row) - (grRho3(iDir_row)%mt(:,0:,iDtype_row,1)+grRho3(iDir_row)%mt(:,0:,iDtype_row,fi%input%jspins))/(3.0-fi%input%jspins)
       denIn1_mt_Im = (denIn1Im%mt(:,0:,:,1)+denIn1Im%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
 
+      ! Local arrayys for v1Ext
+      denIn1Local_pw = CMPLX(0.0,0.0)
+      denIn1Local_pw(:starsq%ng3)  = (denIn1%pw(:,1)+denIn1%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
+      IF (fi%input%film) denIn1Local_vac = CMPLX(0.0,0.0)
+      IF (fi%input%film) denIn1Local_vac(:,:starsq%ng2,:) = (denIn1%vac(:,:,:,1)+denIn1%vac(:,:,:,fi%input%jspins))/(3.0-fi%input%jspins)
+
+
       DO iDtype_col = 1, fi%atoms%ntype
          DO iDir_col = 1, 3
             IF (fmpi%irank==0) write(9989,*) "------------------"
@@ -146,24 +205,22 @@ CONTAINS
             ! \rho(1)V_{ext}(1) integral over whole unit cell
 
             ! Get V_{ext}(1) for \alpha, i with gradient cancellation
-            CALL vExt1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
-            CALL vExt1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
-            sigma_loc = cmplx(0.0,0.0)
-            !IF (iDir_col==3) sigma_loc = -sigma_ext
-            CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
-                           fi%juphon,fi%cell,fmpi,fi%noco,nococonv,rho_dummy,vTot,&
-                           starsq,rho1_dummy,vExt1,.FALSE.,vExt1Im,rho1_dummy,iDtype_col,iDir_col,[0,0],sigma_loc)
+            CALL vExt1%init(starsqLocal, atomsLocal, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
+            CALL vExt1Im%init(starsqLocal, atomsLocal, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
+            CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,starsLocal,fi%vacuum,fi%sym,&
+                           fi%juphon,fi%cell,fmpi,fi%noco,nococonv,potdendummy,vTot,&
+                           starsqLocal,potden1dummy,vExt1,.FALSE.,vExt1Im,potden1dummy,iDtype_col,iDir_col,[0,0])
 
             ! IR integral:
-            pwwq2 = CMPLX(0.0,0.0)
-            CALL dfpt_convol_big(1, starsq, stars, vExt1%pw(:,1), CMPLX(1.0,0.0)*stars%ufft, pwwq2)
-            CALL dfpt_int_pw(starsq, fi%cell, denIn1_pw, pwwq2, tempval)
+            pwwq2Local = CMPLX(0.0,0.0)
+            CALL dfpt_convol_big(1, starsqLocal, starsLocal, vExt1%pw(:,1), CMPLX(1.0,0.0)*starsLocal%ufft, pwwq2Local)
+            CALL dfpt_int_pw(starsqLocal, fi%cell, denIn1Local_pw, pwwq2Local, tempval)
             dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
             IF (fmpi%irank==0) write(9989,FMT=8000) "IR rho1 V1ext new             ", tempval
             tempval = CMPLX(0.0,0.0)
 
             IF (fi%input%film) THEN
-               CALL dfpt_int_vac(starsq,fi%vacuum,fi%cell,denIn1_vac,vExt1%vac(:,:,:,1),tempval)
+               CALL dfpt_int_vac(starsqLocal,fi%vacuum,fi%cell,denIn1Local_vac,vExt1%vac(:,:,:,1),tempval)
                dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
                IF (fmpi%irank==0) write(9989,FMT=8000) "VAC rho1 V1ext             ", tempval
                tempval = CMPLX(0.0,0.0)
@@ -186,19 +243,17 @@ CONTAINS
                                 denIn1_mt(:,0:,iDtype_row) - &
                                 (grRho3(iDir_row)%mt(:,0:,iDtype_row,1)+grRho3(iDir_row)%mt(:,0:,iDtype_row,fi%input%jspins))/(3.0-fi%input%jspins)
 
-               sigma_loc = cmplx(0.0,0.0)
-               !IF (iDir_col==3) sigma_loc = sigma_gext(iDir_row,:)
-               !IF (iDir_row==3) sigma_loc = sigma_gext(iDir_col,:)
-               CALL vgen_coulomb(1, fmpi, fi%input, fi%field, fi%vacuum, fi%sym, fi%juphon, starsq, fi%cell, &
-                         & sphhar, fi%atoms, .TRUE., rho1_dummy, grgrVCq, sigma_loc, &
-                         & dfptdenimag=rho1_dummy, dfptvCoulimag=grgrVCqIm,dfptden0=rho1_dummy,stars2=stars,iDtype=iDtype_col,iDir=iDir_col,iDir2=iDir_row, &
-                         & sigma_disc2=MERGE(sigma_ext,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir_col==3.AND.iDir_row==3.AND..FALSE.))
+               CALL potden1dummy%resetpotden()
+               CALL potdendummy%resetpotden()
+               CALL vgen_coulomb(1, fmpi, fi%input, fi%field, fi%vacuum, fi%sym, fi%juphon, starsqLocal, fi%cell, &
+                         & sphhar, atomsLocal, .TRUE., potden1dummy, grgrVCq, &
+                         & dfptdenimag=potden1dummy, dfptvCoulimag=grgrVCqIm,dfptden0=potden1dummy,stars2=starsLocal,iDtype=iDtype_col,iDir=iDir_col,iDir2=iDir_row)
                IF (iDtype_col==iDtype_row) THEN
                   e2_vm = 0.0
-                  CALL dfpt_e2_madelung(fi%atoms,fi%input%jspins,rho1_dummy%mt(:,0,:,:),grgrVCq%mt(:,0,:,1),e2_vm(:))
+                  CALL dfpt_e2_madelung(fi%atoms,fi%input%jspins,potden1dummy%mt(:,0,:,:),grgrVCq%mt(:,0,:,1),e2_vm(:))
                   E2ndOrdII(row_index,col_index) = E2ndOrdII(row_index,col_index) - e2_vm(iDtype_col)
                   e2_vm = 0.0
-                  CALL dfpt_e2_madelung(fi%atoms,fi%input%jspins,rho1_dummy%mt(:,0,:,:),grgrVCqIm%mt(:,0,:,1),e2_vm(:))
+                  CALL dfpt_e2_madelung(fi%atoms,fi%input%jspins,potden1dummy%mt(:,0,:,:),grgrVCqIm%mt(:,0,:,1),e2_vm(:))
                   E2ndOrdII(row_index,col_index) = E2ndOrdII(row_index,col_index) - ImagUnit*e2_vm(iDtype_col)
                ELSE
                   E2ndOrdII(row_index,col_index) = E2ndOrdII(row_index,col_index) + fi%atoms%zatom(iDtype_row)*(grgrVCq%mt(1,0,iDtype_row,1)+ImagUnit*grgrVCqIm%mt(1,0,iDtype_row,1))/sfp_const
@@ -207,10 +262,13 @@ CONTAINS
                CALL grgrVCqIm%resetPotDen()
             ! Various V_ext integrals:
             ! IR:
-            rho_pw = (rho%pw(:,1)+rho%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
-            pwwq2 = CMPLX(0.0,0.0)
-            CALL dfpt_convol_big(2, stars, starsq, rho_pw, theta1full(0:, iDtype_row, iDir_row), pwwq2)
-            CALL dfpt_int_pw(starsq, fi%cell, pwwq2, vExt1%pw(:,1), tempval)
+            !rho_pw = (rho%pw(:,1)+rho%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
+            rhoLocal_pw = CMPLX(0.0,0.0)
+            rhoLocal_pw(:stars%ng3) = (rho%pw(:,1)+rho%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
+            
+            pwwq2Local = CMPLX(0.0,0.0)
+            CALL dfpt_convol_big(2, starsLocal, starsqLocal, rhoLocal_pw, theta1fullLocal(0:, iDtype_row, iDir_row), pwwq2Local)
+            CALL dfpt_int_pw(starsqLocal, fi%cell, pwwq2Local, vExt1%pw(:,1), tempval)
             dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
             IF (fmpi%irank==0) write(9989,FMT=8000) "IR Theta1 rho V1ext new       ", tempval
             tempval = CMPLX(0.0,0.0)
@@ -292,39 +350,44 @@ CONTAINS
             IF (fmpi%irank==0) write(9989,*) "End spin loop"
 
             IF (iDtype_row==iDtype_col) THEN
-               CALL vExt1%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
-               CALL vExt1Im%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
+               CALL vExt1%init(starsLocal, atomsLocal, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
+               CALL vExt1Im%init(starsLocal, atomsLocal, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
                ! Get V_{ext}(1) for \alpha, i, q=0 with gradient cancellation
-               sigma_loc = cmplx(0.0,0.0)
-               !IF (iDir_col==3) sigma_loc = -sigma_ext
-               CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
-                              fi%juphon,fi%cell,fmpi,fi%noco,nococonv,rho_dummy,vTot,&
-                              stars,rho_dummy,vExt1,.FALSE.,vExt1Im,rho_dummy,iDtype_col,iDir_col,[0,0],sigma_loc)
+               CALL potdendummy%resetpotden()
+               CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,starsLocal,fi%vacuum,fi%sym,&
+                              fi%juphon,fi%cell,fmpi,fi%noco,nococonv,potdendummy,vTot,&
+                              starsLocal,potdendummy,vExt1,.FALSE.,vExt1Im,potdendummy,iDtype_col,iDir_col,[0,0])
 
                ! Integrals:
-               rho_pw = (grRho3(iDir_row)%pw(:,1)+grRho3(iDir_row)%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
-               pww2 = CMPLX(0.0,0.0)
-               CALL dfpt_convol_big(1, stars, stars, vExt1%pw(:,1), CMPLX(1.0,0.0)*stars%ufft, pww2)
-               CALL dfpt_int_pw(stars, fi%cell, rho_pw, pww2, tempval)
+               !rho_pw = (grRho3(iDir_row)%pw(:,1)+grRho3(iDir_row)%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
+               rhoLocal_pw(:stars%ng3) = (grRho3(iDir_row)%pw(:,1)+grRho3(iDir_row)%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
+               pww2Local = CMPLX(0.0,0.0)
+               CALL dfpt_convol_big(1, starsLocal, starsLocal, vExt1%pw(:,1), CMPLX(1.0,0.0)*starsLocal%ufft, pww2Local)
+               CALL dfpt_int_pw(starsLocal, fi%cell, rhoLocal_pw, pww2Local, tempval)
                dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
                IF (fmpi%irank==0) write(9989,FMT=8000) "IR grRho V1ext0 new           ", tempval
                tempval = CMPLX(0.0,0.0)
 
                IF (fi%input%film) THEN
-                  rho_vac = (grRho3(iDir_row)%vac(:,:,:,1)+grRho3(iDir_row)%vac(:,:,:,fi%input%jspins))/(3.0-fi%input%jspins)
-                  CALL dfpt_int_vac(stars,fi%vacuum,fi%cell,rho_vac,vExt1%vac(:,:,:,1),tempval)
+                  !rho_vac = (grRho3(iDir_row)%vac(:,:,:,1)+grRho3(iDir_row)%vac(:,:,:,fi%input%jspins))/(3.0-fi%input%jspins)
+                  rhoLocal_vac = CMPLX(0.0,0.0)
+                  rhoLocal_vac(:,:stars%ng2,:)  = (grRho3(iDir_row)%vac(:,:,:,1)+grRho3(iDir_row)%vac(:,:,:,fi%input%jspins))/(3.0-fi%input%jspins)
+                  CALL dfpt_int_vac(starsLocal,fi%vacuum,fi%cell,rhoLocal_vac,vExt1%vac(:,:,:,1),tempval)
                   dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
                   IF (fmpi%irank==0) write(9989,FMT=8000) "VAC grRho V1ext0             ", tempval
                   tempval = CMPLX(0.0,0.0)
                END IF            
 
                rho_mt = (rho%mt(:,0:,:,1)+rho%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
-               rho_pw = -(rho%pw(:,1)+rho%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
+               !rho_pw = -(rho%pw(:,1)+rho%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
+               ! setting zero might not be necessary 
+               rhoLocal_pw= CMPLX(0.0,0.0)
+               rhoLocal_pw(:stars%ng3) = -(rho%pw(:,1)+rho%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
                DO iType = 1, fi%atoms%ntype
                   IF (fmpi%irank==0) write(9989,*) "Loop atom:", iType
-                  pww2 = CMPLX(0.0,0.0)
-                  CALL dfpt_convol_big(1, stars, stars, rho_pw, theta1full0(0:, iType, iDir_row), pww2)
-                  CALL dfpt_int_pw(stars, fi%cell, pww2, vExt1%pw(:,1), tempval)
+                  pww2Local = CMPLX(0.0,0.0)
+                  CALL dfpt_convol_big(1, starsLocal, starsLocal, rhoLocal_pw, theta1full0Local(0:, iType, iDir_row), pww2Local)
+                  CALL dfpt_int_pw(starsLocal, fi%cell, pww2Local, vExt1%pw(:,1), tempval)
                   dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
                   IF (fmpi%irank==0) write(9989,FMT=8000) "   IR Theta1 rho V1ext0 new      ", tempval
                   tempval = CMPLX(0.0,0.0)
@@ -363,6 +426,18 @@ CONTAINS
                   tempval = CMPLX(0.0,0.0)
                END DO
                IF (fmpi%irank==0) write(9989,*) "End spin loop"
+
+               IF (fi%input%film .AND. iDir_row == 3  ) THEN 
+                  rhoLocal_vac = CMPLX(0.0,0.0)
+                  rhoLocal_pw = CMPLX(0.0,0.0)
+                  rhoLocal_vac(:,:stars%ng2,:) = (rho%vac(:,:,:,1)+rho%vac(:,:,:,fi%input%jspins))/(3.0-fi%input%jspins)
+                  rhoLocal_pw(:stars%ng3) = (rho%pw(:,1)+rho%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
+
+                  CALL dfpt_sf_vac(starsLocal,fi%vacuum,fi%cell,rhoLocal_pw,vExt1%pw(:,1),rhoLocal_vac,vExt1%vac(:,:,:,1),tempval)
+                  dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
+                  IF (fmpi%irank==0) write(9989,FMT=8000) "    SF VAC Element rho V1ext0       ", tempval
+                  tempval = CMPLX(0.0,0.0)
+               END IF
             END IF
 
             IF (fmpi%irank==0) write(9990,FMT=8001) qvec, iDtype_row, iDir_row, iDtype_col, iDir_col
@@ -555,6 +630,46 @@ CONTAINS
       vac_int = vac_int + tvact
 
    END SUBROUTINE dfpt_int_vac
+
+   SUBROUTINE dfpt_sf_vac(stars,vacuum,cell,pw_conj,pw_pure,vac_conj,vac_pure,sf_int)
+
+      TYPE(t_stars), INTENT(IN) :: stars
+      TYPE(t_vacuum), INTENT(IN) :: vacuum
+      TYPE(t_cell), INTENT(IN) :: cell 
+      COMPLEX, INTENT(IN) :: pw_conj(:), pw_pure(:)
+      COMPLEX, INTENT(IN) :: vac_conj(:,:,:), vac_pure(:,:,:)
+      COMPLEX, INTENT(INOUT) :: sf_int
+
+      REAL :: facv ! accounts for vacua symmetry
+      REAL :: qzh, pref , facn 
+      COMPLEX :: fft_conj(stars%ng2) , fft_pure(stars%ng2)  
+      INTEGER :: iVac , iStar2, iStar3 
+
+      sf_int = CMPLX(0.0,0.0)
+      facv = 2.0/vacuum%nvac
+      pref = 1.0 ! direction fourier trafo  
+      facn = 1.0 
+      DO iVac = 1 , vacuum%nvac
+         ! IR - Part 
+         fft_conj = CMPLX(0.0,0.0)
+         fft_pure = CMPLX(0.0,0.0)
+         IF (iVac == 2 ) pref = -1.0 
+         IF (iVac == 2)  facn =  -1.0 
+         DO iStar3 = 1, stars%ng3   
+            ! Sum over all G_perp and map to G_||
+            ! Fourier Trafo at +-Dvac/2
+            qzh = pref * stars%kv3(3,iStar3) * cell%bmat(3,3) * cell%z1
+            iStar2 = stars%i2g(stars%kv3(1,iStar3),stars%kv3(2,iStar3)) !! Attention, this might only work in the case of no symmetries.
+            fft_conj(iStar2) = fft_conj(iStar2) + pw_conj(iStar3) * cmplx( cos(qzh), sin(qzh))  
+            fft_pure(iStar2) = fft_pure(iStar2) + pw_pure(iStar3) * cmplx( cos(qzh), sin(qzh))  
+         END DO 
+      
+         sf_int = sf_int - facn * facv * cell%area  *  DOT_PRODUCT(fft_conj(:stars%ng2),fft_pure(:stars%ng2))
+         ! Vacuum part
+         sf_int = sf_int + facn * facv * cell%area * DOT_PRODUCT(vac_conj(1,:stars%ng2,ivac),vac_pure(1,:stars%ng2,ivac))
+      END DO 
+
+   END SUBROUTINE 
 
    SUBROUTINE dfpt_dynmat_eigen(fi, results, results1, fmpi, enpara, nococonv, &
                                 stars, starsq, sphhar, inden, hub1data, vx, v, v1real, v1imag, &
@@ -866,7 +981,7 @@ CONTAINS
       USE m_types_mpimat
       USE m_dfpt_hs_int
       USE m_dfpt_hsmt
-      USE m_dfpt_eigen_redist_matrix
+      USE m_eigen_redist_matrix
 
       IMPLICIT NONE
 
@@ -908,14 +1023,14 @@ CONTAINS
 
       DO i = 1, nspins
          DO j = 1, nspins
-            CALL smat1(i, j)%init(.FALSE., lapw%nv(i) + fi%atoms%nlotot, lapw%nv(j) + fi%atoms%nlotot, fmpi%sub_comm, .false.)
+            CALL smat1(i, j)%init(.FALSE., lapw%nv(i) + fi%atoms%nlotot, lapw%nv(j) + fi%atoms%nlotot, fmpi%sub_comm, MPIMAT_ROWCYCLIC)
             CALL hmat1(i, j)%init(smat1(i, j))
-            CALL smat1q(i, j)%init(.FALSE., lapwq%nv(i) + fi%atoms%nlotot, lapw%nv(j) + fi%atoms%nlotot, fmpi%sub_comm, .false.)
+            CALL smat1q(i, j)%init(.FALSE., lapwq%nv(i) + fi%atoms%nlotot, lapw%nv(j) + fi%atoms%nlotot, fmpi%sub_comm, MPIMAT_ROWCYCLIC)
             CALL hmat1q(i, j)%init(smat1q(i, j))
-            CALL smat2(i, j)%init(.FALSE., lapw%nv(i) + fi%atoms%nlotot, lapw%nv(j) + fi%atoms%nlotot, fmpi%sub_comm, .false.)
+            CALL smat2(i, j)%init(.FALSE., lapw%nv(i) + fi%atoms%nlotot, lapw%nv(j) + fi%atoms%nlotot, fmpi%sub_comm, MPIMAT_ROWCYCLIC)
             CALL hmat2(i, j)%init(smat2(i, j))
             IF (PRESENT(vmat2_final)) THEN
-               CALL vmat2(i, j)%init(.FALSE., lapwq%nv(i) + fi%atoms%nlotot, lapw%nv(j) + fi%atoms%nlotot, fmpi%sub_comm, .false.)
+               CALL vmat2(i, j)%init(.FALSE., lapwq%nv(i) + fi%atoms%nlotot, lapw%nv(j) + fi%atoms%nlotot, fmpi%sub_comm, MPIMAT_ROWCYCLIC)
             END IF
          END DO
       END DO
@@ -959,13 +1074,13 @@ CONTAINS
       IF (PRESENT(vmat2_final)) ALLOCATE (vmat2_final, mold=vmat2(1, 1))
 
       CALL timestart("Matrix redistribution")
-      CALL dfpt_eigen_redist_matrix(fmpi, lapw, lapw, fi%atoms, smat1, smat1_final)
-      CALL dfpt_eigen_redist_matrix(fmpi, lapw, lapw, fi%atoms, hmat1, hmat1_final, smat1_final)
-      CALL dfpt_eigen_redist_matrix(fmpi, lapwq, lapw, fi%atoms, smat1q, smat1q_final)
-      CALL dfpt_eigen_redist_matrix(fmpi, lapwq, lapw, fi%atoms, hmat1q, hmat1q_final, smat1q_final)
-      CALL dfpt_eigen_redist_matrix(fmpi, lapw, lapw, fi%atoms, smat2, smat2_final)
-      CALL dfpt_eigen_redist_matrix(fmpi, lapw, lapw, fi%atoms, hmat2, hmat2_final, smat2_final)
-      IF (PRESENT(vmat2_final)) CALL dfpt_eigen_redist_matrix(fmpi, lapw, lapw, fi%atoms, vmat2, vmat2_final)
+      CALL eigen_redist_matrix(fmpi, lapw,  fi%atoms, smat1, smat1_final)
+      CALL eigen_redist_matrix(fmpi, lapw,  fi%atoms, hmat1, hmat1_final, smat1_final)
+      CALL eigen_redist_matrix(fmpi, lapw, fi%atoms, smat1q, smat1q_final,lapwq=lapwq)
+      CALL eigen_redist_matrix(fmpi, lapw, fi%atoms, hmat1q, hmat1q_final, smat1q_final)
+      CALL eigen_redist_matrix(fmpi, lapw,  fi%atoms, smat2, smat2_final)
+      CALL eigen_redist_matrix(fmpi, lapw,  fi%atoms, hmat2, hmat2_final, smat2_final)
+      IF (PRESENT(vmat2_final)) CALL eigen_redist_matrix(fmpi, lapw, fi%atoms, vmat2, vmat2_final)
       CALL timestop("Matrix redistribution")
    END SUBROUTINE
 END MODULE m_dfpt_dynmat

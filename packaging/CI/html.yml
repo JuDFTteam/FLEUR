@@ -2,7 +2,6 @@ pages:
   image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
   stage: deploy
   needs: 
-    - doxygen
     - gfortran-coverage
     - ford
     - intel-maqao
@@ -47,6 +46,22 @@ intel-maqao:
     - if: $CI_TASKS =~ /all/    
   
 
+fortitude:
+  image: iffregistry.fz-juelich.de/fleur/fleur:ford
+  stage: html
+  needs: []
+  script:
+    - fortitude check --output-format="gitlab" src >codequality.yml || true
+  artifacts:
+    reports:
+      codequality: codequality.yml
+  rules:
+    - if: $CI_TASKS
+      when: never
+    - if: $CI_TASKS =~ /all/    
+    - when: on_success
+
+
 ford:
   image: iffregistry.fz-juelich.de/fleur/fleur:ford
   stage: html
@@ -58,25 +73,6 @@ ford:
   artifacts:
     paths:
       - public
-  rules:
-      - if: $CI_TASKS =~ /doc/    
-      - if: $CI_TASKS =~ /all/    
-
-doxygen:
-  image: iffregistry.fz-juelich.de/fleur/fleur:gfortran
-  stage: html
-  needs: []
-  script:
-    - cd $CI_PROJECT_DIR ;FLEUR_INCLUDEDIR="/opt/include /usr/include" FLEUR_LIBRARIES="-L/opt/lib;-ldl;-L/usr/lib;-L/usr/lib/x86_64-linux-gnu;-lscalapack-openmpi;-lfftw3" ./configure.sh -c mpi
-    - cd $CI_PROJECT_DIR/build ; make doc
-    - mkdir ../public
-    - mv docs/html/ ../public/doxygen
-  artifacts:
-    paths:
-      - public
-      - build/fleur
-      - build/fleur_MPI
-      - build/inpgen
   rules:
       - if: $CI_TASKS =~ /doc/    
       - if: $CI_TASKS =~ /all/    
@@ -93,7 +89,7 @@ gfortran-coverage:
     juDFT_MPI: "mpirun -n {mpi_procs} --allow-run-as-root "
   before_script:
       - cd $CI_PROJECT_DIR
-      - pip install lcov_cobertura
+      - pip install --break-system-packages lcov_cobertura
       - FLEUR_INCLUDEDIR="/opt/include /usr/include" FLEUR_LIBRARIES="-L/opt/lib;-ldl;-L/usr/lib;-L/usr/lib/x86_64-linux-gnu;-lscalapack-openmpi;-lfftw3" ./configure.sh -c mpi -l coverage -flags --coverage 
       - cd build.coverage
       - make -j 4

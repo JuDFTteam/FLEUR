@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2022 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -13,7 +13,7 @@ CONTAINS
       USE m_dfpt_hs_int
       USE m_dfpt_hsmt
       USE m_dfpt_hsvac
-      USE m_dfpt_eigen_redist_matrix
+      USE m_eigen_redist_matrix
 
       IMPLICIT NONE
 
@@ -44,7 +44,7 @@ CONTAINS
 
       DO i = 1, nspins
          DO j = 1, nspins
-            CALL smat(i, j)%init(.FALSE., lapwq%nv(i) + fi%atoms%nlotot, lapw%nv(j) + fi%atoms%nlotot, fmpi%sub_comm, .false.)
+            CALL smat(i, j)%init(.FALSE., lapwq%nv(i) + fi%atoms%nlotot, lapw%nv(j) + fi%atoms%nlotot, fmpi%sub_comm, MPIMAT_ROWCYCLIC)
             CALL hmat(i, j)%init(smat(i, j))
          END DO
       END DO
@@ -94,8 +94,8 @@ CONTAINS
       ALLOCATE (hmat_final, mold=smat(1, 1))
 
       CALL timestart("Matrix redistribution")
-      CALL dfpt_eigen_redist_matrix(fmpi, lapwq, lapw, fi%atoms, smat, smat_final)
-      CALL dfpt_eigen_redist_matrix(fmpi, lapwq, lapw, fi%atoms, hmat, hmat_final, smat_final)
+      CALL eigen_redist_matrix(fmpi, lapw, fi%atoms, smat, smat_final,lapwq=lapwq)
+      CALL eigen_redist_matrix(fmpi, lapw, fi%atoms, hmat, hmat_final, smat_final)
       CALL timestop("Matrix redistribution")
 
    END SUBROUTINE dfpt_eigen_hssetup

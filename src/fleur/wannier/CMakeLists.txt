@@ -18,7 +18,6 @@ src/fleur/wannier/wann_gwf_auxbrav.F
 src/fleur/wannier/wann_gwf_auxovlp.F
 src/fleur/wannier/wann_gwf_commat.f
 src/fleur/wannier/wann_gwf_tools.f
-src/fleur/wannier/wann_gwf_write_mmnk.F
 src/fleur/wannier/wann_hopping.F
 src/fleur/wannier/wannier_to_lapw.F
 src/fleur/wannier/wann_ioncharge_gen.f

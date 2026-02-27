@@ -157,11 +157,12 @@ CONTAINS
       WRITE (fileNum, '(a)') '   <calculationSetup>'
 
 !      <cutoffs Kmax="3.60000" Gmax="11.000000" GmaxXC="9.200000" numbands="0"/>
-110   FORMAT('      <cutoffs Kmax="', f0.8, '" Gmax="', f0.8, '" GmaxXC="', f0.8, '" numbands="', i0, '"/>')
-      WRITE (fileNum, 110) input%rkmax, input%gmax, xcpot%gmaxxc, input%gw_neigd
+110   FORMAT('      <cutoffs Kmax="', a, '" Gmax="', a, '" GmaxXC="', a, '" numbands="', i0, '"/>')
+      
+      WRITE (fileNum, 110) fr(input%rkmax), fr(input%gmax), fr(xcpot%gmaxxc), input%gw_neigd
 
 !      <scfLoop itmax="9" maxIterBroyd="99" imix="Anderson" alpha="0.05" precondParam="0.0" spinf="2.00"/>
-120   FORMAT('      <scfLoop itmax="', i0, '" minDistance="', f0.8, '" maxIterBroyd="', i0, '" imix="', a, '" alpha="', f0.8, '" precondParam="', f3.1, '" spinf="', f0.8, '"/>')
+120   FORMAT('      <scfLoop itmax="', i0, '" minDistance="', a, '" maxIterBroyd="', i0, '" imix="', a, '" alpha="', a, '" precondParam="', a, '" spinf="', a, '"/>')
       SELECT CASE (input%imix)
       CASE (1)
          mixingScheme = 'straight'
@@ -171,10 +172,12 @@ CONTAINS
          mixingScheme = 'Broyden2'
       CASE (7)
          mixingScheme = 'Anderson'
+      CASE (9)
+         mixingScheme = 'Pulay'
       CASE DEFAULT
          mixingScheme = 'errorUnknownMixing'
       END SELECT
-      WRITE (fileNum, 120) input%itmax, input%minDistance, input%maxiter, TRIM(mixingScheme), input%alpha, input%preconditioning_param, input%spinf
+      WRITE (fileNum, 120) input%itmax, fr(input%minDistance), input%maxiter, TRIM(mixingScheme), fr(input%alpha), fr(input%preconditioning_param), fr(input%spinf)
 
 !      <coreElectrons ctail="T" frcor="F" kcrel="0" coretail_lmax="0" l_core_confpot="T"/>
 130   FORMAT('      <coreElectrons ctail="', l1, '" frcor="', l1, '" kcrel="', i0, '" coretail_lmax="', i0, '"/>')
@@ -207,24 +210,24 @@ CONTAINS
 141   FORMAT('      <magnetism jspins="', i0, '"/>')
       IF(l_explicit.OR.l_nocoOpt) THEN
          WRITE (fileNum, 140) input%jspins, noco%l_noco, noco%l_ss
-162      FORMAT('         <qss>', f0.10, ' ', f0.10, ' ', f0.10, '</qss>')
-         WRITE (fileNum, 162) noco%qss_inp
-164      FORMAT('         <mtNocoParams l_mperp="', l1, '" l_mtNocoPot="', l1,'" l_relaxSQA="', l1,'" mag_mixing_scheme="', i1, '" mix_RelaxWeightOffD="',f0.8,'" l_constrained="', l1,'" mix_constr="', f0.8,'"/>')
-         WRITE (fileNum, 164) noco%l_mperp,any(noco%l_unrestrictMT), any(noco%l_alignMT), noco%mag_mixing_scheme, minval(noco%mix_RelaxWeightOffD), any(noco%l_constrained), noco%mix_b
-166      FORMAT('         <sourceFreeMag l_sourceFree="', l1, '" l_scaleMag="', l1, '" mag_scale="', f0.8,'"/>')
-         WRITE (fileNum, 166) noco%l_sourceFree, noco%l_scaleMag, noco%mag_scale
+162      FORMAT('         <qss>', a, ' ', a, ' ', a, '</qss>')
+         WRITE (fileNum, 162) fr(noco%qss_inp(1)),fr(noco%qss_inp(2)),fr(noco%qss_inp(3))
+164      FORMAT('         <mtNocoParams l_mperp="', l1, '" l_mtNocoPot="', l1,'" l_relaxSQA="', l1,'" mag_mixing_scheme="', i1, '" mix_RelaxWeightOffD="',a,'" l_constrained="', l1,'" mix_constr="', a,'"/>')
+         WRITE (fileNum, 164) noco%l_mperp,any(noco%l_unrestrictMT), any(noco%l_alignMT), noco%mag_mixing_scheme, fr(minval(noco%mix_RelaxWeightOffD)), any(noco%l_constrained), fr(noco%mix_b)
+166      FORMAT('         <sourceFreeMag l_sourceFree="', l1, '" l_scaleMag="', l1, '" mag_scale="', a,'"/>')
+         WRITE (fileNum, 166) noco%l_sourceFree, noco%l_scaleMag, fr(noco%mag_scale)
          WRITE (fileNum, '(a)') '      </magnetism>'
       ELSE
          WRITE (fileNum, 141) input%jspins
       END IF
 
       !      <soc theta="0.00000" phi="0.00000" l_soc="F" spav="F" off="F" soc66="F"/>
-150   FORMAT('      <soc l_soc="', l1, '" theta="', f0.8, '" phi="', f0.8, '" spav="', l1, '"/>')
-      WRITE (fileNum, 150) noco%l_soc, noco%theta_inp, noco%phi_inp, noco%l_spav
+150   FORMAT('      <soc l_soc="', l1, '" theta="', a, '" phi="', a, '" spav="', l1, '"/>')
+      WRITE (fileNum, 150) noco%l_soc, fr(noco%theta_inp), fr(noco%phi_inp), noco%l_spav
 
       IF (l_explicit .OR. hybinp%l_hybrid) THEN
-155      FORMAT('      <prodBasis gcutm="', f0.8, '" tolerance="', f0.8, '" ewaldlambda="', i0, '" lexp="', i0, '" bands="', i0, '" fftcut="', f0.8, '"/>')
-         WRITE (fileNum, 155) mpinp%g_cutoff, mpinp%linear_dep_tol, hybinp%ewaldlambda, hybinp%lexp, hybinp%bands1, hybinp%fftcut
+155      FORMAT('      <prodBasis gcutm="', a, '" tolerance="', a, '" ewaldlambda="', i0, '" lexp="', i0, '" bands="', i0, '" fftcut="', a, '"/>')
+         WRITE (fileNum, 155) fr(mpinp%g_cutoff), fr(mpinp%linear_dep_tol), hybinp%ewaldlambda, hybinp%lexp, hybinp%bands1, fr(hybinp%fftcut)
       END IF
 
 
@@ -233,7 +236,7 @@ CONTAINS
       WRITE (fileNum, 180) input%gw, input%secvar
 
 !      <geometryOptimization l_f="F" xa="2.00000" thetad="330.00000" epsdisp="0.00001" epsforce="0.00001"/>
-190   FORMAT('      <geometryOptimization l_f="', l1, '" forcealpha="', f0.8, '" forcemix="', a, '" epsdisp="', f0.8, '" epsforce="', f0.8, '"/>')
+190   FORMAT('      <geometryOptimization l_f="', l1, '" forcealpha="', a, '" forcemix="', a, '" epsdisp="', a, '" epsforce="', a, '"/>')
       SELECT CASE (input%forcemix)
          CASE (0)
             mixingScheme = 'Straight'
@@ -244,7 +247,7 @@ CONTAINS
          CASE DEFAULT
             mixingScheme = 'errorUnknownMixing'
       END SELECT
-      WRITE (fileNum, 190) input%l_f, input%forcealpha, TRIM(mixingScheme), input%epsdisp, input%epsforce
+      WRITE (fileNum, 190) input%l_f, fr(input%forcealpha), TRIM(mixingScheme), fr(input%epsdisp), fr(input%epsforce)
 
       SELECT CASE (input%bz_integration)
          CASE (BZINT_METHOD_HIST)
@@ -260,19 +263,19 @@ CONTAINS
       END SELECT
 
 !      <ldaU l_linMix="F" mixParam="0.05" spinf="1.0" />
-195   FORMAT('      <ldaU l_linMix="', l1, '" mixParam="', f0.6, '" spinf="', f0.6, '"/>')
-      WRITE (fileNum, 195) input%ldauLinMix, input%ldauMixParam, input%ldauSpinf
+195   FORMAT('      <ldaU l_linMix="', l1, '" mixParam="', a, '" spinf="', a, '"/>')
+      WRITE (fileNum, 195) input%ldauLinMix, fr(input%ldauMixParam), fr(input%ldauSpinf)
 
       IF(atoms%n_hia>0 .OR. l_explicit) THEN
-196      FORMAT('      <ldaHIA itmaxHubbard1="', i0, '" minoccDistance="', f0.6, '" minmatDistance="', f0.6, '" beta="', f0.1, '" dftspinpol="', l1, '"/>')
-         WRITE (fileNum, 196) hub1inp%itmax, hub1inp%minoccDistance, hub1inp%minmatDistance, hub1inp%beta, hub1inp%l_dftspinpol
+196      FORMAT('      <ldaHIA itmaxHubbard1="', i0, '" minoccDistance="', a, '" minmatDistance="', a, '" beta="', a, '" dftspinpol="', l1, '"/>')
+         WRITE (fileNum, 196) hub1inp%itmax, fr(hub1inp%minoccDistance), fr(hub1inp%minmatDistance), fr(hub1inp%beta), hub1inp%l_dftspinpol
       ENDIF
 
       IF(l_gfOpt) THEN
 205      FORMAT('      <greensFunction l_mperp="', l1,'">')
          WRITE(fileNum, 205) gfinp%l_mperp
-206      FORMAT('         <realAxis ne="', i0, '" ellow="', f0.8, '" elup="', f0.8, '"/>')
-         WRITE(fileNum, 206) gfinp%ne, gfinp%ellow, gfinp%elup
+206      FORMAT('         <realAxis ne="', i0, '" ellow="', a, '" elup="', a, '"/>')
+         WRITE(fileNum, 206) gfinp%ne, fr(gfinp%ellow), fr(gfinp%elup)
          IF(gfinp%numberContours>0) THEN
             DO iContour = 1, gfinp%numberContours
                SELECT CASE(gfinp%contour(iContour)%shape)
@@ -309,8 +312,8 @@ CONTAINS
       WRITE (fileNum, '(a)') '   <cell>'
 
 !      <bzIntegration valenceElectrons="8.00000" mode="hist" fermiSmearingEnergy="0.00100">
-200   FORMAT('      <bzIntegration valenceElectrons="', f0.8, '" mode="', a, '" fermiSmearingEnergy="', f0.8, '">')
-      WRITE (fileNum, 200) input%zelec, TRIM(ADJUSTL(bzIntMode)), input%tkb
+200   FORMAT('      <bzIntegration valenceElectrons="', a, '" mode="', a, '" fermiSmearingEnergy="', a, '">')
+      WRITE (fileNum, 200) fr(input%zelec), TRIM(ADJUSTL(bzIntMode)), fr(input%tkb)
 
 210   FORMAT('         <kPointListSelection listName="', a, '"/>')
       WRITE (filenum, 210) TRIM(ADJUSTL(kptsSelection(1)))
@@ -348,8 +351,8 @@ CONTAINS
 !      <xsd:attribute name="dVac" type="xsd:double" use="required"/>
 !      <xsd:attribute name="dTilda" type="xsd:double" use="required"/>
 !      <filmLattice ...>
-241      FORMAT('      <filmLattice scale="', f0.8, '" dVac="', f0.8, '" dTilda="', f0.8, '">')
-         WRITE (fileNum, 241) 1.0, vacuum%dvac, cell%amat(3, 3)
+241      FORMAT('      <filmLattice scale="', a, '" dVac="', a, '" dTilda="', a, '">')
+         WRITE (fileNum, 241) "1.0", fr(vacuum%dvac), fr(cell%amat(3, 3))
          !       <bravaisMatrixFilm>
          WRITE (fileNum, '(a)') '         <bravaisMatrixFilm>'
       !            <row-1>0.00000 5.13000 </row-1>
@@ -360,8 +363,8 @@ CONTAINS
          WRITE (fileNum, 252) cell%amat(:2, 2)
          WRITE (fileNum, '(a)') '         </bravaisMatrixFilm>'
       ELSE
-242      FORMAT('      <bulkLattice scale="', f0.10, '">')
-WRITE (fileNum, 242) 1.0
+242      FORMAT('      <bulkLattice scale="', a, '">')
+WRITE (fileNum, 242) fr(1.0)
 !         <bravaisMatrix>
    WRITE (fileNum, '(a)') '         <bravaisMatrix>'
 !            <row-1>0.00000 5.13000 5.13000</row-1>
@@ -377,9 +380,9 @@ WRITE (fileNum, 242) 1.0
    ENDIF
 
       IF (input%film) THEN
-268      FORMAT('         <vacuumEnergyParameters vacuum="', i0, '" spinUp="', f0.8, '" spinDown="', f0.8, '"/>')
+268      FORMAT('         <vacuumEnergyParameters vacuum="', i0, '" spinUp="', a, '" spinDown="', a, '"/>')
          DO i = 1, vacuum%nvac
-            WRITE (fileNum, 268) i, enpara%evac0(i, 1), enpara%evac0(i, input%jspins)
+            WRITE (fileNum, 268) i, fr(enpara%evac0(i, 1)), fr(enpara%evac0(i, input%jspins))
          END DO
 
          WRITE (fileNum, '(a)') '      </filmLattice>'
@@ -425,8 +428,8 @@ WRITE (fileNum, 242) 1.0
          WRITE (fileNum, 300) TRIM(ADJUSTL(speciesName)), TRIM(ADJUSTL(namat_const(atoms%nz(iAtomType)))), atoms%nz(iAtomType)
 
 !         <mtSphere radius="2.160000" gridPoints="521" logIncrement="0.022000"/>
-310      FORMAT('         <mtSphere radius="', f0.8, '" gridPoints="', i0, '" logIncrement="', f0.8, '"/>')
-         WRITE (fileNum, 310) atoms%rmt(iAtomType), atoms%jri(iAtomType), atoms%dx(iAtomType)
+310      FORMAT('         <mtSphere radius="', a, '" gridPoints="', i0, '" logIncrement="', a, '"/>')
+         WRITE (fileNum, 310) fr(atoms%rmt(iAtomType)), atoms%jri(iAtomType), fr(atoms%dx(iAtomType))
 
 !         <atomicCutoffs lmax="8" lnonsphr="6"/>
 320      FORMAT('         <atomicCutoffs lmax="', i0, '" lnonsphr="', i0, '"/>')
@@ -444,9 +447,9 @@ WRITE (fileNum, 242) 1.0
             occ = atoms%econf(iAtomType)%occupation(i, :)
             IF (ABS(occ(1) - occ(2)) > 1E-5 .OR. ABS(occ(1) - ABS(atoms%econf(iAtomType)%kappa(i))) > 1E-5) THEN
                !State not fully occupied
-325            FORMAT('            <stateOccupation state="', a, '" spinUp="', f0.8, '" spinDown="', f0.8, '"/>')
+325            FORMAT('            <stateOccupation state="', a, '" spinUp="', a, '" spinDown="', a, '"/>')
                str = atoms%econf(iAtomType)%get_state_string(i)
-               WRITE (fileNum, 325) str, occ(1), occ(2)
+               WRITE (fileNum, 325) str, fr(occ(1)), fr(occ(2))
             END IF
          END DO
          WRITE (fileNum, '(a)') '         </electronConfig>'
@@ -464,15 +467,15 @@ WRITE (fileNum, 242) 1.0
          END IF
 
          IF (l_explicit) THEN
-328         FORMAT('         <modInitDen flipSpinPhi="', f0.8, '" flipSpinTheta="', f0.8, '" flipSpinScale="', l1, '"/>')
-            WRITE (fileNum, 328) atoms%flipSpinPhi(iAtomType), atoms%flipSpinTheta(iAtomType), atoms%flipSpinScale(iAtomType)
+328         FORMAT('         <modInitDen flipSpinPhi="', a, '" flipSpinTheta="', a, '" flipSpinScale="', l1, '"/>')
+            WRITE (fileNum, 328) fr(atoms%flipSpinPhi(iAtomType)), fr(atoms%flipSpinTheta(iAtomType)), atoms%flipSpinScale(iAtomType)
          END IF
 
          IF (uIndices(1, iAtomType) .NE. -1) THEN
 !         <ldaU l="2" U="5.5" J="0.9" l_amf="F"/>
             DO i_u = uIndices(1, iAtomType), uIndices(2, iAtomType)
-326            FORMAT('         <ldaU l="', i0, '" U="', f0.5, '" J="', f0.5, '" l_amf="', l1, '"/>')
-               WRITE (fileNum, 326) atoms%lda_u(i_u)%l, atoms%lda_u(i_u)%u, atoms%lda_u(i_u)%j, atoms%lda_u(i_u)%l_amf
+326            FORMAT('         <ldaU l="', i0, '" U="', a, '" J="', a, '" l_amf="', l1, '"/>')
+               WRITE (fileNum, 326) atoms%lda_u(i_u)%l, fr(atoms%lda_u(i_u)%u), fr(atoms%lda_u(i_u)%j), atoms%lda_u(i_u)%l_amf
             END DO
          END IF
 
@@ -578,10 +581,8 @@ WRITE (fileNum, 242) 1.0
          WRITE (fileNum, 360) atoms%l_geo(iAtomType), atoms%relax(1, iAtomType), atoms%relax(2, iAtomType), atoms%relax(3, iAtomType)
 
          IF (l_nocoOpt .OR. l_explicit) THEN
-362         FORMAT('         <nocoParams  alpha="', f0.8, '" beta="', &
-                   f0.8,  '"/>')
-            WRITE (fileNum, 362)  noco%alph_inp(iAtomType), &
-               noco%beta_inp(iAtomType)
+362         FORMAT('         <nocoParams  alpha="', a, '" beta="',a,  '"/>')
+            WRITE (fileNum, 362)  fr(noco%alph_inp(iAtomType)), fr(noco%beta_inp(iAtomType))
          END IF
 
          WRITE (fileNum, '(a)') '      </atomGroup>'
@@ -600,14 +601,14 @@ WRITE (fileNum, 242) 1.0
       WRITE (fileNum, 370) input%vchk, input%cdinf
 
 !      <densityOfStates ndir="0" minEnergy="-0.50000" maxEnergy="0.50000" sigma="0.01500"/>
-      WRITE(tempStringA,'(f0.8,a)') banddos%e2_dos, '*Htr'
-      WRITE(tempStringB,'(f0.8,a)') banddos%e1_dos, '*Htr'
-380   FORMAT('      <bandDOS minEnergy="', a, '" maxEnergy="', a, '" sigma="', f0.8, '" storeEVData="', l1, '"/>')
-      WRITE (fileNum, 380)  TRIM(ADJUSTL(tempStringA)), TRIM(ADJUSTL(tempStringB)), banddos%sig_dos, banddos%l_storeEVData
+      WRITE(tempStringA,'(a,a)') fr(banddos%e2_dos), '*Htr'
+      WRITE(tempStringB,'(a,a)') fr(banddos%e1_dos), '*Htr'
+380   FORMAT('      <bandDOS minEnergy="', a, '" maxEnergy="', a, '" sigma="', a, '" storeEVData="', l1, '"/>')
+      WRITE (fileNum, 380)  TRIM(ADJUSTL(tempStringA)), TRIM(ADJUSTL(tempStringB)), fr(banddos%sig_dos), banddos%l_storeEVData
 
 !      <vacuumDOS layers="0" integ="F" star="F" nstars="0" locx1="0.00" locy1="0.00" locx2="0.00" locy2="0.00" nstm="0" tworkf="0.000000"/>
-390   FORMAT('      <vacuumDOS vacdos="', l1, '" integ="', l1, '" star="', l1, '" nstars="', i0, '" locx1="', f0.5, '" locy1="', f0.5, '" locx2="', f0.5, '" locy2="', f0.5, '" nstm="', i0, '" tworkf="', f0.5, '"/>')
-      WRITE (fileNum, 390) banddos%vacdos, input%integ, banddos%starcoeff, banddos%nstars, banddos%locx(1), banddos%locy(1), banddos%locx(2), banddos%locy(2), 0, 0.0
+390   FORMAT('      <vacuumDOS vacdos="', l1, '" integ="', l1, '" star="', l1, '" nstars="', i0, '" locx1="', a, '" locy1="', a, '" locx2="', a, '" locy2="', a, '" nstm="', i0, '" tworkf="', a, '"/>')
+      WRITE (fileNum, 390) banddos%vacdos, input%integ, banddos%starcoeff, banddos%nstars, fr(banddos%locx(1)), fr(banddos%locy(1)), fr(banddos%locx(2)), fr(banddos%locy(2)), 0, fr(0.0)
 
 !      <unfoldingBand unfoldBand="F" supercellX="1" supercellY="1" supercellZ="1"/>
 395   FORMAT('      <unfoldingBand unfoldBand="', l1, '" supercellX="', i0, '" supercellY="', i0, '" supercellZ="', i0, '"/>')
@@ -631,16 +632,16 @@ WRITE (fileNum, 242) 1.0
       ENDIF
 
 !      <chargeDensitySlicing numkpt="0" minEigenval="0.000000" maxEigenval="0.000000" nnne="0" pallst="F"/>
-410   FORMAT('      <chargeDensitySlicing numkpt="', i0, '" minEigenval="', f0.8, '" maxEigenval="', f0.8, '" nnne="', i0, '" pallst="', l1, '"/>')
-      WRITE (fileNum, 410) sliceplot%kk, sliceplot%e1s, sliceplot%e2s, sliceplot%nnne, input%pallst
+410   FORMAT('      <chargeDensitySlicing numkpt="', i0, '" minEigenval="', a, '" maxEigenval="', a, '" nnne="', i0, '" pallst="', l1, '"/>')
+      WRITE (fileNum, 410) sliceplot%kk, fr(sliceplot%e1s), fr(sliceplot%e2s), sliceplot%nnne, input%pallst
 
 !      <specialOutput form66="F" eonly="F" bmt="F"/>
 420   FORMAT('      <specialOutput eonly="', l1, '"/>')
       WRITE (fileNum, 420) input%eonly
 
 !      <magneticCircularDichroism energyLo="-10.0" energyUp="0.0"/>
-430   FORMAT('      <magneticCircularDichroism mcd="',l1,'" energyLo="', f0.8, '" energyUp="', f0.8, '"/>')
-      WRITE (fileNum, 430) banddos%l_mcd,banddos%e_mcd_lo, banddos%e_mcd_up
+430   FORMAT('      <magneticCircularDichroism mcd="',l1,'" energyLo="', a, '" energyUp="', a, '"/>')
+      WRITE (fileNum, 430) banddos%l_mcd,fr(banddos%e_mcd_lo), fr(banddos%e_mcd_up)
 
       WRITE (fileNum, '(a)') '   </output>'
       IF (present(filename)) THEN
@@ -652,5 +653,28 @@ WRITE (fileNum, 242) 1.0
          CALL closeXMLElement('inputData')
       END IF
 
+      contains 
+      function fr(r)
+         real,intent(in):: r
+         character(len=:),allocatable::fr
+         
+         character(len=30):: temp 
+         integer          :: i 
+         write(temp,'(f0.13)') r
+         
+         !replace trailing "0" by blanks
+         DO i=30,1,-1
+            if (temp(i:i).ne."0".and.temp(i:i).ne." ") exit
+            temp(i:i)=" "
+         enddo
+         !Add a 0 again if last character is a "."
+         if (i>0.and.i<30) then 
+            if (temp(i:i)==".") temp(i+1:i+1)="0"
+         endif
+         if (temp(1:1)==".") temp="0"//temp
+   
+         fr=trim(adjustl(temp))
+      end function
+   
    END SUBROUTINE w_inpXML
 END MODULE m_winpXML

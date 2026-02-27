@@ -1,10 +1,11 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_eigen_redist_matrix
+   implicit none
 CONTAINS
   !> Collect Hamiltonian or overlap matrix to final form
   !!
@@ -14,24 +15,32 @@ CONTAINS
   !! In the non-collinear case, the 2x2 array of matrices is combined into the final matrix. Again a redistribution will happen in the parallel case
 
 
-  SUBROUTINE eigen_redist_matrix(fmpi,lapw,atoms,mat,mat_final,mat_final_templ)
+  SUBROUTINE eigen_redist_matrix(fmpi,lapw,atoms,mat,mat_final,mat_final_templ,lapwq)
    USE m_types
    USE m_types_mpimat
    IMPLICIT NONE
    TYPE(t_mpi),INTENT(IN)    :: fmpi
-    TYPE(t_lapw),INTENT(IN)   :: lapw
+   TYPE(t_lapw),INTENT(IN)   :: lapw
     TYPE(t_atoms),INTENT(IN)  :: atoms
     CLASS(t_mat),INTENT(INOUT):: mat(:,:)
     CLASS(t_mat),INTENT(INOUT):: mat_final
     CLASS(t_mat),INTENT(IN),OPTIONAL :: mat_final_templ
-
-    INTEGER:: m
+    TYPE(t_lapw),INTENT(IN),optional :: lapwq
+    INTEGER:: m,mPr
 
     !determine final matrix size and allocate the final matrix
     m=lapw%nv(1)+atoms%nlotot
     IF (SIZE(mat)>1) m=m+lapw%nv(2)+atoms%nlotot
+    !if a second lapw is given, use its size
+    if (present(lapwq)) then
+       mPr=lapwq%nv(1)+atoms%nlotot
+       IF (SIZE(mat)>1) mPr=mPr+lapwq%nv(2)+atoms%nlotot
+    else
+       mPr=m
+    ENDIF
+
     IF (.NOT.PRESENT(mat_final_templ)) THEN
-       CALL mat_final%init(mat(1,1)%l_real,m,m,fmpi%diag_sub_comm,.TRUE.) !here the .true. creates a block-cyclic scalapack distribution
+       CALL mat_final%init(mat(1,1)%l_real,mpr,m,fmpi%diag_sub_comm,MPIMAT_2D_BLOCK_CYCLIC)
     ELSE
        CALL mat_final%init(mat_final_templ)
     ENDIF

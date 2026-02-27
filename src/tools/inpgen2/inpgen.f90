@@ -56,8 +56,13 @@ PROGRAM inpgen
 
       REAL,    ALLOCATABLE :: atompos(:, :),atomid(:),mag_mom(:,:)
       CHARACTER(len=20), ALLOCATABLE :: atomLabel(:)
+      REAL,    ALLOCATABLE :: mag_mom_xsf(:,:)
+      INTEGER :: nat
+      INTEGER :: n1, n2, ncopy
+      INTEGER :: i
+      REAL, PARAMETER      :: a0_bohr = 0.52917720859 ! same as in xsf_io
       LOGICAL               :: l_fullinput,l_explicit,l_inpxml,l_include(4)
-
+      
       TYPE(t_input)    :: input
       TYPE(t_atoms)    :: atoms
       TYPE(t_cell)     :: cell
@@ -227,7 +232,7 @@ PROGRAM inpgen
          Call Cell%Init(Dot_product(Atoms%Volmts(:),Atoms%Neq(:)))
          call atoms%init(cell)
          Call Sym%Init(Cell,Input%Film)
-         CALL xcpot%init(atoms%ntype)
+         !CALL xcpot%init(atoms%ntype) ! This caused problems if xcpot is LibXC. Here it seems not needed. 
          CALL enpara%init_enpara(atoms,input%jspins,input%film,enparaXML)
       ELSEIF(judft_was_argument("-f")) THEN
          !read the input
@@ -312,6 +317,12 @@ PROGRAM inpgen
             call timestop("Hybrid setup BZ")
          endif
       END DO
+      IF (input%film) THEN
+         input%preconditioning_param = 0.8
+         WRITE(*,*) ''
+         WRITE(*,*) "New default for film systems: Activating Kerker preconditioner to suppress charge sloshing."
+         WRITE(*,*) ''
+      END IF
 
       IF(ALL(kptsSelection(:).EQ.'')) THEN
          kptsSelection(1) = kpts(1)%kptsName ! This may actually be wrong, but it is a backup solution.
@@ -436,10 +447,86 @@ PROGRAM inpgen
          END SELECT
       END DO
       WRITE(*,*) '================================================================================'
-
       ! Structure in  xsf-format
       OPEN (55,file="struct.xsf")
-      CALL xsf_WRITE_atoms(55,atoms,input%film,cell%amat)
+
+        IF (ALLOCATED(mag_mom)) THEN
+           ! mag_mom conventions:
+           !   * non-collinear: 3 components per atom 
+           !   * collinear:     1 component per atom 
+           !   * non-magnetic:  mag_mom not allocated
+           !
+           ! For writing struct.xsf we enforce:
+           !   - non-collinear -> (mx,my,mz)
+           !   - collinear     -> (0,0,m)  (moment along z)
+           nat = atoms%nat
+           n1  = SIZE(mag_mom,1)
+           n2  = SIZE(mag_mom,2)
+
+           ALLOCATE(mag_mom_xsf(3,nat))
+           mag_mom_xsf(:,:) = 0.0
+
+           IF (noco%l_noco) THEN
+              ! ---------- non-collinear: expect 3 components ----------
+              IF (n1 == 3) THEN
+                 ! (3, nAtomsProvided)
+                 DO i = 1, nat
+                    mag_mom_xsf(1,i) = mag_mom(1, 1 + MOD(i-1, n2))
+                    mag_mom_xsf(2,i) = mag_mom(2, 1 + MOD(i-1, n2))
+                    mag_mom_xsf(3,i) = mag_mom(3, 1 + MOD(i-1, n2))
+                 END DO
+              ELSEIF (n2 == 3) THEN
+                 ! (nAtomsProvided, 3)
+                 DO i = 1, nat
+                    mag_mom_xsf(1,i) = mag_mom(1 + MOD(i-1, n1), 1)
+                    mag_mom_xsf(2,i) = mag_mom(1 + MOD(i-1, n1), 2)
+                    mag_mom_xsf(3,i) = mag_mom(1 + MOD(i-1, n1), 3)
+                 END DO
+              ELSE
+                 ! Unexpected shape in non-collinear mode: copy what we can safely.
+                 ncopy = MIN(3,n1)
+                 mag_mom_xsf(1:ncopy,1:MIN(nat,n2)) = mag_mom(1:ncopy,1:MIN(nat,n2))
+              END IF
+
+           ELSE
+              ! ---------- collinear: one component -> enforce along z ----------
+              IF (n2 == 1) THEN
+                 ! (nAtomsProvided, 1)
+                 DO i = 1, nat
+                    mag_mom_xsf(3,i) = mag_mom(1 + MOD(i-1, n1), 1)
+                 END DO
+              ELSEIF (n1 == 1) THEN
+                 ! (1, nAtomsProvided)
+                 DO i = 1, nat
+                    mag_mom_xsf(3,i) = mag_mom(1, 1 + MOD(i-1, n2))
+                 END DO
+              ELSEIF (n2 == 3 .AND. n1 >= 1) THEN
+                 ! User may have provided 3 components even though we are collinear:
+                 ! take the z component.
+                 DO i = 1, nat
+                    mag_mom_xsf(3,i) = mag_mom(1 + MOD(i-1, n1), 3)
+                 END DO
+              ELSEIF (n1 == 3 .AND. n2 >= 1) THEN
+                 DO i = 1, nat
+                    mag_mom_xsf(3,i) = mag_mom(3, 1 + MOD(i-1, n2))
+                 END DO
+              ELSE
+                 ! Fallback: take first available component as collinear magnitude.
+                 DO i = 1, nat
+                    mag_mom_xsf(3,i) = mag_mom(1, 1 + MOD(i-1, n2))
+                 END DO
+              END IF
+           END IF
+
+           ! Keep legacy scaling (xsf vectors are interpreted in Angstrom units).
+           mag_mom_xsf(:,:) = mag_mom_xsf(:,:) * a0_bohr
+
+           CALL xsf_WRITE_atoms(55,atoms,input%film,cell%amat,mag_mom_xsf)
+        ELSE
+           CALL xsf_WRITE_atoms(55,atoms,input%film,cell%amat)
+        END IF
+
+
       CLOSE (55)
       CLOSE(oUnit)
 

@@ -4,7 +4,7 @@ module m_vmts
 #endif
 contains
 
-  subroutine vmts( input, fmpi, stars, sphhar, atoms, sym, cell,   dosf, vpw, rho, potdenType, vr, rhoIm, vrIm, iDtype, iDir, iDir2, mat2ord )
+  subroutine vmts( input, fmpi, stars, sphhar, atoms, sym, cell, juphon, dosf, vpw, rho, potdenType, vr, ispin,  rhoIm, vrIm, iDtype, iDir, iDir2)
 
   !-------------------------------------------------------------------------
   ! This subroutine calculates the lattice harmonics expansion coefficients
@@ -50,17 +50,18 @@ contains
     type(t_atoms),  intent(in)        :: atoms
     type(t_sym),    intent(in)        :: sym
     type(t_cell),   intent(in)        :: cell
+    type(t_juphon), intent(in)        :: juphon
      
     LOGICAL,        INTENT(IN)        :: dosf
     complex,        intent(in)        :: vpw(:)!(stars%ng3,input%jspins)
     real,           intent(in)        :: rho(:,0:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
     integer,        intent(in)        :: potdenType
     real,           intent(out)       :: vr(:,0:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
-    REAL,    OPTIONAL, INTENT(IN)     :: rhoIm(:,0:,:)
-    REAL,    OPTIONAL, INTENT(OUT)    :: vrIm(:,0:,:)
+    integer,        intent(in)        :: ispin
+    type(t_potden), optional, intent(in) :: rhoIm
+    type(t_potden), optional, intent(inout) :: vrIm  
     INTEGER, OPTIONAL, INTENT(IN)     :: iDtype, iDir
     INTEGER, OPTIONAL, INTENT(IN)     :: iDir2
-    COMPLEX, OPTIONAL, INTENT(IN)     :: mat2ord(5,3,3)
 
     complex                           :: cp, sm
     integer                           :: i, jm, k, l, lh, n, nd, lm, m, imax, lmax, iMem, ptsym
@@ -192,12 +193,12 @@ contains
                                            + green_2(1:imax) *            integral_1(1:imax)   )
         IF (l_dfptvgen) THEN
            ! Integrate the imaginary part of the density perturbation as well.
-           integrand_1(1:imax) = green_1(1:imax) * rhoIm(1:imax,lh,n)
-           integrand_2(1:imax) = green_2(1:imax) * rhoIm(1:imax,lh,n)
+           integrand_1(1:imax) = green_1(1:imax) * rhoIm%mt(1:imax,lh,n,ispin)
+           integrand_2(1:imax) = green_2(1:imax) * rhoIm%mt(1:imax,lh,n,ispin)
            call intgr2( integrand_1(1:imax), atoms%rmsh(1,n), atoms%dx(n), imax, integral_1(1:imax) )
            call intgr2( integrand_2(1:imax), atoms%rmsh(1,n), atoms%dx(n), imax, integral_2(1:imax) )
            termsR = integral_2(imax) + ( AIMAG(vtl(lh,n)) / green_factor - integral_1(imax) * green_2(imax) ) / green_1(imax)
-           vrIm(1:imax,lh,n) = green_factor * (   green_1(1:imax) * ( termsR - integral_2(1:imax) ) &
+           vrIm%mt(1:imax,lh,n,ispin) = green_factor * (   green_1(1:imax) * ( termsR - integral_2(1:imax) ) &
                                                 + green_2(1:imax) *            integral_1(1:imax)   )
         END IF
       end do
@@ -211,40 +212,42 @@ contains
          do n = 1, atoms%ntype
          vr(1:atoms%jri(n),0,n) = vr(1:atoms%jri(n),0,n) - sfp_const * ( 1.0 / atoms%rmsh(1:atoms%jri(n),n) - 1.0 / atoms%rmt(n) ) * atoms%zatom(n)
          end do
-      ELSE IF (.NOT.PRESENT(iDir2)) THEN
-         ! DFPT case:
-         ! l=1 contributions from the Coulomb singularity instead of l=0 (1/r -> 1/r^2)
-         DO n = MERGE(1,iDtype,iDtype==0), MERGE(atoms%ntype,iDtype,iDtype==0)
-            ptsym = sym%ntypsy(atoms%firstAtom(n))
-            pref = MERGE(atoms%zatom(n),-atoms%zatom(n),iDtype==0)
-            DO lh = 1, 3
-               l = sphhar%llh(lh, ptsym)
-               DO iMem = 1, sphhar%nmem(lh, ptsym)
-                  m = sphhar%mlh(iMem, lh, ptsym)
-                  lm = l*(l+1) + m + 1
-                  vr(1:atoms%jri(n),lh,n) = vr(1:atoms%jri(n),lh,n) + &
-                                             conjg(sphhar%clnu(iMem, lh, ptsym)) * c_im(iDir, lm - 1) * pref * &
-                                             ( 1 - (atoms%rmsh(1:atoms%jri(n), n) / atoms%rmt(n))**3) / atoms%rmsh(1:atoms%jri(n),n)**2
+      ELSE IF (juphon%l_phonon) THEN
+         IF (.NOT.PRESENT(iDir2)) THEN
+            ! DFPT(-phonon) case:
+            ! l=1 contributions from the Coulomb singularity instead of l=0 (1/r -> 1/r^2)
+            DO n = MERGE(1,iDtype,iDtype==0), MERGE(atoms%ntype,iDtype,iDtype==0)
+               ptsym = sym%ntypsy(atoms%firstAtom(n))
+               pref = MERGE(atoms%zatom(n),-atoms%zatom(n),iDtype==0)
+               DO lh = 1, 3
+                  l = sphhar%llh(lh, ptsym)
+                  DO iMem = 1, sphhar%nmem(lh, ptsym)
+                     m = sphhar%mlh(iMem, lh, ptsym)
+                     lm = l*(l+1) + m + 1
+                     vr(1:atoms%jri(n),lh,n) = vr(1:atoms%jri(n),lh,n) + &
+                                                conjg(sphhar%clnu(iMem, lh, ptsym)) * c_im(iDir, lm - 1) * pref * &
+                                                ( 1 - (atoms%rmsh(1:atoms%jri(n), n) / atoms%rmt(n))**3) / atoms%rmsh(1:atoms%jri(n),n)**2
+                  END DO
                END DO
             END DO
-         END DO
-      ELSE
-         ! DFPT 2nd order case:
-         ! l=2 contributions from the Coulomb singularity instead of l=0 (1/r -> 1/r^3)
-         DO n = 1, atoms%ntype!MERGE(1,iDtype,iDtype==0), MERGE(atoms%ntype,iDtype,iDtype==0)
-            ptsym = sym%ntypsy(atoms%firstAtom(n))
-            pref = -atoms%zatom(n)!MERGE(atoms%zatom(n),-atoms%zatom(n),iDtype==0)
-            DO lh = 4, 8
-               l = sphhar%llh(lh, ptsym)
-               DO iMem = 1, sphhar%nmem(lh, ptsym)
-                  m = sphhar%mlh(iMem, lh, ptsym)
-                  lm = l*(l+1) + m + 1
-                  IF ((n.EQ.iDtype).OR.(0.EQ.iDtype)) vr(1:atoms%jri(n),lh,n) = vr(1:atoms%jri(n),lh,n) + &
-                                                      conjg(sphhar%clnu(iMem, lh, ptsym)) * mat2ord(lm-4,iDir2,iDir) * pref * &
-                                                      ( 1 - (atoms%rmsh(1:atoms%jri(n), n) / atoms%rmt(n))**5) / atoms%rmsh(1:atoms%jri(n),n)**3
+         ELSE
+            ! DFPT 2nd order case:
+            ! l=2 contributions from the Coulomb singularity instead of l=0 (1/r -> 1/r^3)
+            DO n = 1, atoms%ntype!MERGE(1,iDtype,iDtype==0), MERGE(atoms%ntype,iDtype,iDtype==0)
+               ptsym = sym%ntypsy(atoms%firstAtom(n))
+               pref = -atoms%zatom(n)!MERGE(atoms%zatom(n),-atoms%zatom(n),iDtype==0)
+               DO lh = 4, 8
+                  l = sphhar%llh(lh, ptsym)
+                  DO iMem = 1, sphhar%nmem(lh, ptsym)
+                     m = sphhar%mlh(iMem, lh, ptsym)
+                     lm = l*(l+1) + m + 1
+                     IF ((n.EQ.iDtype).OR.(0.EQ.iDtype)) vr(1:atoms%jri(n),lh,n) = vr(1:atoms%jri(n),lh,n) + &
+                                                         conjg(sphhar%clnu(iMem, lh, ptsym)) * mat2ord(iDir2,iDir,lm-4) * pref * &
+                                                         ( 1 - (atoms%rmsh(1:atoms%jri(n), n) / atoms%rmt(n))**5) / atoms%rmsh(1:atoms%jri(n),n)**3
+                  END DO
                END DO
             END DO
-         END DO
+         END IF
       END IF
     end if
     end if

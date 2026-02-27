@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_vacden
    USE m_juDFT
    ! Legacy comments:
@@ -17,6 +22,7 @@ MODULE m_vacden
    !
    !     Philipp Kurz 99/07
    !***********************************************************************
+   implicit none
 
    !******** ABBREVIATIONS ************************************************
    !     qvac     : vacuum charge of each eigenstate, needed in in cdnval
@@ -69,8 +75,6 @@ CONTAINS
       USE m_constants
       USE m_grdchlh
       USE m_qsf
-      USE m_cylbes
-      USE m_dcylbs
       USE m_vacuz
       USE m_vacudz
       USE m_types
@@ -513,8 +517,8 @@ CONTAINS
                      ab=ab + we(n)*CONJG(ac(ikG,n,ispin))*bc(ikG,n,ispin)
                      ba=ba + we(n)*CONJG(bc(ikG,n,ispin))*ac(ikG,n,ispin)
                      qout = REAL(CONJG(ac(ikG,n,ispin))*ac(ikG,n,ispin)+tei(ikG,ispin)*CONJG(bc(ikG,n,ispin))*bc(ikG,n,ispin))
-                     vacdos%qvac(ev_list(n),ivac,ikpt,ispin) = vacdos%qvac(ev_list(n),ivac,ikpt,ispin) + qout*cell%area
-                     dos%qTot(ev_list(n),ikpt,ispin) = dos%qTot(ev_list(n),ikpt,ispin) + qout*cell%area
+                     if (vacdos%l_initialized) vacdos%qvac(ev_list(n),ivac,ikpt,ispin) = vacdos%qvac(ev_list(n),ivac,ikpt,ispin) + qout*cell%area
+                     if (dos%l_initialized) dos%qTot(ev_list(n),ikpt,ispin) = dos%qTot(ev_list(n),ikpt,ispin) + qout*cell%area
                   END DO
                   DO jz = 1,vacuum%nmz
                      ui = u(jz,ikG,ispin)
@@ -546,8 +550,8 @@ CONTAINS
                      ba = ba + we(n)*CONJG(bc(ikG,n,jspin))*ac1(ikG,n,jspin)
                   END IF
                   qout = REAL(CONJG(ac(ikG,n,jspin))*ac(ikG,n,jspin)+tei(ikG,jspin)*CONJG(bc(ikG,n,jspin))*bc(ikG,n,jspin))
-                  vacdos%qvac(ev_list(n),ivac,ikpt,jspin) = vacdos%qvac(ev_list(n),ivac,ikpt,jspin) + qout*cell%area
-                  dos%qTot(ev_list(n),ikpt,jspin) = dos%qTot(ev_list(n),ikpt,jspin) + qout*cell%area
+                  if(vacdos%l_initialized) vacdos%qvac(ev_list(n),ivac,ikpt,jspin) = vacdos%qvac(ev_list(n),ivac,ikpt,jspin) + qout*cell%area
+                  if (dos%l_initialized) dos%qTot(ev_list(n),ikpt,jspin) = dos%qTot(ev_list(n),ikpt,jspin) + qout*cell%area
                END DO
                DO  jz = 1,vacuum%nmz
                   ui = u(jz,ikG,jspin)
@@ -710,7 +714,8 @@ CONTAINS
                               uei = ue(banddos%izlay(jj,1),ikG,jspin)
                               uj = u(banddos%izlay(jj,1),ikGPr,jspin)
                               uej = ue(banddos%izlay(jj,1),ikGPr,jspin)
-                              vacdos%qvlay(ev_list(n),jj,ivac,ikpt,jspin) = REAL((aa*ui*uj + bb*uei*uej+ab*uei*uj+ba*ui**uej)*factorx*factory)
+                              vacdos%qvlay(ev_list(n),jj,ivac,ikpt,jspin) = vacdos%qvlay(ev_list(n),jj,ivac,ikpt,jspin)& 
+                                                                        +REAL((aa*ui*uj + bb*uei*uej+ab*uei*uj+ba*ui**uej)*factorx*factory)
                            END IF
                         END DO
                      END DO
@@ -801,8 +806,8 @@ CONTAINS
                      phs = stars%rgphs(i1,i2,i3)
                      ig3p = stars%ig(-i1,-i2,i3)
                      phsp = stars%rgphs(-i1,-i2,i3)
-                     ind2 = stars%ig2(ig3)
-                     ind2p = stars%ig2(ig3p)
+                     ind2 = stars%i2g(i1,i2)
+                     ind2p = stars%i2g(-i1,-i2)
                      aa = 0.0
                      bb = 0.0
                      ba = 0.0
@@ -837,7 +842,7 @@ CONTAINS
                   ig3 = stars%ig(i1,i2,i3)
                   IF (ig3.EQ.0)  CYCLE
                   phs = stars%rgphs(i1,i2,i3)
-                  ind2 = stars%ig2(ig3)
+                  ind2 = stars%i2g(i1,i2)
                   IF ( ind2.EQ.1) THEN
                      !--->                non-warping part (1st star G=0)
                      aa = 0.0
@@ -856,7 +861,7 @@ CONTAINS
                         uei = ue(jz,ikG,1)
                         uei2 = ue(jz,ikGPr,2)
                         tempCmplx = aa*ui2*ui + bb*uei2*uei + ab*ui2*uei + ba*uei2*ui
-                        den%vac(jz,1,ivac,3) = den%vac(jz,1,ivac,3) + CONJG(tempCmplx) !!!! MAGIC MINUS
+                        den%vac(jz,1,ivac,3) = den%vac(jz,1,ivac,3) + tempCmplx 
                      END DO
                   ELSE
                      !--->                warping part
@@ -876,7 +881,7 @@ CONTAINS
                         uei = ue(jz,ikG,1)
                         uej = ue(jz,ikGPr,2)
                         t1 = aa*ui*uj+bb*uei*uej+ba*ui*uej+ab*uei*uj
-                        den%vac(jz,ind2,ivac,3) = den%vac(jz, ind2,ivac,3) + conjg(t1*phs/stars%nstr2(ind2))
+                        den%vac(jz,ind2,ivac,3) = den%vac(jz, ind2,ivac,3) + t1*phs/stars%nstr2(ind2)
                      END DO
                   END IF
                END DO
@@ -901,15 +906,15 @@ CONTAINS
                      i2 = kvac2(ikG,jspin) - kvac2(ikGPr,jspin)
                      i3 = 0
                      ig3 = stars%ig(i1,i2,i3)
-                     ind2 = stars%ig2(ig3)
+                     ind2 = stars%i2g(i1,i2)
                      !IF (ind2 .ne.stars%ig2(ig3)) CYCLE
                      IF (iabs(i1).GT.stars%mx1) CYCLE
                      IF (iabs(i2).GT.stars%mx2) CYCLE
                      IF (ig3.EQ.0)  CYCLE
-                     phs = stars%rgphs(i1,i2,i3)
-                     ig3p = stars%ig(-i1,-i2,i3)
-                     phsp = stars%rgphs(-i1,-i2,i3)
-                     ind2p = stars%ig2(ig3p)
+                     phs = conjg(stars%r2gphs(i1,i2))
+                     ig3p = stars%i2g(-i1,-i2)
+                     phsp = conjg(stars%r2gphs(-i1,-i2))
+                     ind2p = stars%i2g(-i1,-i2)
                      aa = 0.0
                      bb = 0.0
                      ba = 0.0
@@ -940,7 +945,7 @@ CONTAINS
                      i2 = kvac2q(ikG,jspin) - kvac2(ikGPr,jspin)
                      i3 = 0
                      ig3 = stars%ig(i1,i2,i3)
-                     ind2 = stars%ig2(ig3)
+                     ind2 = stars%i2g(i1,i2)
                      IF ((ind2==1).AND.(norm2(stars%center)<1e-8)) CYCLE
                      IF (iabs(i1).GT.stars%mx1) CYCLE
                      IF (iabs(i2).GT.stars%mx2) CYCLE
@@ -997,9 +1002,9 @@ CONTAINS
                      IF (iabs(i2).GT.stars%mx2) CYCLE
                      ig3 = stars%ig(i1,i2,i3)
                      IF (ig3.EQ.0)  CYCLE
-                     ind2 = stars%ig2(ig3)
+                     ind2 = stars%i2g(i1,i2)
                      ig3p = stars%ig(-i1,-i2,i3)
-                     ind2p = stars%ig2(ig3p)
+                     ind2p = stars%i2g(-i1,-i2)
                      IF ((ind2.GE.2.AND.ind2.LE.banddos%nstars).OR.&
                         (ind2p.GE.2.AND.ind2p.LE.banddos%nstars)) THEN
                         phs = stars%rgphs(i1,i2,i3)

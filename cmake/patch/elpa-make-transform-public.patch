@@ -1,0 +1,91 @@
+diff -ru elpa-2024.05.001/src/elpa_api.F90 elpa-2024.05.001-patched/src/elpa_api.F90
+--- elpa-2024.05.001/src/elpa_api.F90	2024-07-04 13:30:46.000000000 +0200
++++ elpa-2024.05.001-patched/src/elpa_api.F90	2024-12-18 14:47:48.712918517 +0100
+@@ -369,6 +369,12 @@
+ 
+       procedure(elpa_solve_tridiagonal_d_i), deferred, public :: elpa_solve_tridiagonal_d
+       procedure(elpa_solve_tridiagonal_f_i), deferred, public :: elpa_solve_tridiagonal_f
++
++
++      procedure(elpa_transform_generalized_d_i), deferred,public :: elpa_transform_generalized_d
++      procedure(elpa_transform_generalized_dc_i), deferred,public :: elpa_transform_generalized_dc
++      procedure(elpa_transform_back_generalized_d_i),deferred,public:: elpa_transform_back_generalized_d
++      procedure(elpa_transform_back_generalized_dc_i),deferred,public:: elpa_transform_back_generalized_dc
+   end type elpa_t
+ 
+ #ifdef ENABLE_AUTOTUNING
+diff -ru elpa-2024.05.001/src/elpa_api_math_template.F90 elpa-2024.05.001-patched/src/elpa_api_math_template.F90
+--- elpa-2024.05.001/src/elpa_api_math_template.F90	2024-07-04 13:30:46.000000000 +0200
++++ elpa-2024.05.001-patched/src/elpa_api_math_template.F90	2024-12-18 14:47:35.175934062 +0100
+@@ -869,8 +869,8 @@
+     subroutine elpa_solve_tridiagonal_&
+           &ELPA_IMPL_SUFFIX&
+           &_i (self, d, e, q, error)
+-      use, intrinsic :: iso_c_binding
+-      import elpa_t
++          use, intrinsic :: iso_c_binding
++          import elpa_t
+       implicit none
+       class(elpa_t)                   :: self
+       real(kind=C_REAL_DATATYPE)        :: d(self%na), e(self%na)
+@@ -888,3 +888,31 @@
+     end subroutine
+   end interface
+ 
++
++  abstract interface 
++    subroutine elpa_transform_back_generalized_&
++    &ELPA_IMPL_SUFFIX&
++    &_i(self, b, q, error)
++      use, intrinsic :: iso_c_binding
++      import elpa_t
++      implicit none
++      class(elpa_t)  :: self
++      MATH_DATATYPE(kind=C_REAL_DATATYPE) :: b(self%local_nrows, *), q(self%local_nrows, *)
++      integer                :: error
++    end subroutine
++  end interface
++
++  abstract interface 
++    subroutine elpa_transform_generalized_&
++       &ELPA_IMPL_SUFFIX&
++       &_i(self, a, b, is_already_decomposed, error)
++          use, intrinsic :: iso_c_binding
++          import elpa_t
++          implicit none
++          class(elpa_t)  :: self
++          MATH_DATATYPE(kind=C_REAL_DATATYPE) :: a(self%local_nrows, *), b(self%local_nrows, *)
++          integer                :: error
++          logical                :: is_already_decomposed
++    end subroutine
++  end interface
++
+diff -ru elpa-2024.05.001/src/elpa_impl.F90 elpa-2024.05.001-patched/src/elpa_impl.F90
+--- elpa-2024.05.001/src/elpa_impl.F90	2024-07-09 07:46:03.000000000 +0200
++++ elpa-2024.05.001-patched/src/elpa_impl.F90	2024-12-18 14:47:18.804952862 +0100
+@@ -207,17 +207,17 @@
+ 
+      procedure, public :: associate_int => elpa_associate_int  !< public method to set some pointers
+ 
+-     procedure, private :: elpa_transform_generalized_d
+-     procedure, private :: elpa_transform_back_generalized_d
+-     procedure, private :: elpa_transform_generalized_dc
+-     procedure, private :: elpa_transform_back_generalized_dc
++     procedure, public :: elpa_transform_generalized_d
++     procedure, public :: elpa_transform_back_generalized_d
++     procedure, public :: elpa_transform_generalized_dc
++     procedure, public :: elpa_transform_back_generalized_dc
+ #ifdef WANT_SINGLE_PRECISION_REAL
+-     procedure, private :: elpa_transform_generalized_f
+-     procedure, private :: elpa_transform_back_generalized_f
++     procedure, public :: elpa_transform_generalized_f
++     procedure, public :: elpa_transform_back_generalized_f
+ #endif
+ #ifdef WANT_SINGLE_PRECISION_COMPLEX
+-     procedure, private :: elpa_transform_generalized_fc
+-     procedure, private :: elpa_transform_back_generalized_fc
++     procedure, public :: elpa_transform_generalized_fc
++     procedure, public :: elpa_transform_back_generalized_fc
+ #endif
+ 
+      procedure, public :: print_settings => elpa_print_settings

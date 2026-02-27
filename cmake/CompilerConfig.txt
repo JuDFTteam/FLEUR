@@ -3,7 +3,6 @@
 
 include("cmake/tests/test_GIT.cmake")
 include("cmake/tests/test_linker.cmake")
-include("cmake/tests/test_doxygen.cmake")
 include("cmake/tests/test_OpenMP.cmake")
 include("cmake/tests/test_precision.cmake")
 include("cmake/compilerflags.cmake")

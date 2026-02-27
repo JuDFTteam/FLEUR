@@ -17,6 +17,8 @@ src/fleur/eigen/hsmt_lo.F90
 src/fleur/eigen/local_hamiltonian.F90
 src/fleur/eigen/eigen_hssetup.F90
 src/fleur/eigen/hsmt.F90
+src/fleur/eigen/int_21.f90
+src/fleur/eigen/int_21lo.f90
 src/fleur/eigen/hsvac.F90
 src/fleur/eigen/orthoglo.F90
 src/fleur/eigen/rad_ovlp.f90
@@ -28,7 +30,7 @@ src/fleur/eigen/tlo.f90
 src/fleur/eigen/vacfun.F90
 src/fleur/eigen/eigen_redist_matrix.F90
 src/fleur/eigen/hs_int_direct.F90
-)
+src/fleur/eigen/symmetrize_matrix.f90)
 #if (FLEUR_USE_GPU)
 #   set(fleur_F90 ${fleur_F90}
 #src/fleur/eigen/hsmt_nonsph_GPU.F90)

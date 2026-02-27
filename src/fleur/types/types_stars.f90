@@ -143,7 +143,8 @@ CONTAINS
     REAL, OPTIONAL, INTENT(IN) :: qvec(3)
 
     INTEGER :: k1,k2,k3,n,n1,k
-    REAL    :: s,g(3),gmax2,sq
+    REAL    :: s,sShift,g(3),gShift(3),gmax2,sq
+    REAL    :: sk2Shift(stars%ng2)
     INTEGER :: kr(3,sym%nop),kv(3)
     COMPLEX :: phas(sym%nop)
     LOGICAL :: l_insph
@@ -268,23 +269,28 @@ CONTAINS
     stars%nstr2=0
     kv(3)=0
     k=0
+    gShift = 0.0
     !Generate 2D stars
     x_dim2: DO k1 = stars%mx1,-stars%mx1,-1
       kv(1) = k1
       y_dim2: DO k2 = stars%mx2,-stars%mx2,-1
         kv(2) = k2
         IF ( stars%i2g(k1,k2) .NE. 0 ) CYCLE y_dim2  ! belongs to another star
-        g(:2)=matmul(kv(:2),cell%bmat(:2,:2))
-        s=dot_product(g(:2),g(:2))
-        sq=s
+        g(:2) = matmul(kv(:2),cell%bmat(:2,:2))
+        gShift(1) = g(1) + 2.0e-10
+        gShift(2) = g(2) + 2.0e-9
+        s = dot_product(g(:2),g(:2))
+        sShift = dot_product(gShift(:2),gShift(:2))
+        sq = s
         IF (PRESENT(qvec)) THEN
           g(:2) = g(:2) + matmul(qvec(:2),cell%bmat(:2,:2))
-          sq=dot_product(g(:2),g(:2))
+          sq = dot_product(g(:2),g(:2))
         END IF
         if (sq>gmax2) cycle y_dim2 !not in sphere
-        k=k+1
-        stars%kv2(:,k)=kv(:2)
-        stars%sk2(k)=sqrt(s)
+        k = k + 1
+        stars%kv2(:,k) = kv(:2)
+        stars%sk2(k) = sqrt(s)
+        sk2Shift(k) = sqrt(sShift)
         IF (PRESENT(qvec)) THEN
              stars%gq2(:2,k)=g(:2)
              sk2q(k)=sqrt(sq)
@@ -300,7 +306,7 @@ CONTAINS
     ENDDO x_dim2
     if (k.ne.stars%ng2) call judft_error("BUG in init_stars: inconsistency in ng2")
     !sort for increasing length sk2
-    CALL sort(index(:stars%ng2),stars%sk2,gsk3(:stars%ng2))
+    CALL sort(index(:stars%ng2),stars%sk2,sk2Shift)
     stars%kv2(:,:)=stars%kv2(:,index(:stars%ng2))
     stars%sk2=stars%sk2(index(:stars%ng2))
     IF (PRESENT(qvec)) stars%gq2=stars%gq2(:,index(:stars%ng2))

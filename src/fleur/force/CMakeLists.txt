@@ -17,4 +17,5 @@ src/fleur/force/fix_by_gaussian.F90
 src/fleur/force/stern.f90
 src/fleur/force/relaxation.F90
 src/fleur/force/rotate_forces.f90
+src/fleur/force/addContribsA21A12.F90
 )

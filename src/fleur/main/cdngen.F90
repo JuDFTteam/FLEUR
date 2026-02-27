@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -7,12 +7,13 @@ MODULE m_cdngen
 #ifdef CPP_MPI
    USE mpi
 #endif
+   implicit none
 CONTAINS
 
 SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
                   kpts,atoms,sphhar,stars,sym,juphon,gfinp,hub1inp,&
                   enpara,cell,noco,nococonv,vTot,results ,coreSpecInput,&
-                  archiveType, xcpot,outDen,EnergyDen,greensFunction,hub1data,vxc,exc)
+                  archiveType, xcpot,outDen,EnergyDen,core_den,greensFunction,hub1data,vxc,exc)
 
    !*****************************************************
    !    Charge density generator
@@ -24,10 +25,10 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    use m_types_slab
    use m_types_orbcomp
    use m_types_jdos
+   use m_types_jointdos
    USE m_types
    USE m_constants
    USE m_juDFT
-   !USE m_prpqfftmap
    USE m_cdnval
    USE m_plot
    USE m_cdn_io
@@ -50,6 +51,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    USE m_types_greensfContourData
    USE m_types_eigdos
    USE m_types_dos
+   USE m_types_hyperfine
 
    USE m_force_sf ! Klueppelberg (force level 3)
 
@@ -82,13 +84,13 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_hub1data),OPTIONAL,INTENT(INOUT)    :: hub1data
    CLASS(t_xcpot),INTENT(IN)     :: xcpot
    TYPE(t_potden),INTENT(INOUT)     :: outDen, EnergyDen
+   TYPE(t_potden),INTENT(OUT),optional       :: core_den
    TYPE(t_potden),INTENT(INOUT),OPTIONAL:: vxc, exc
 
    !Scalar Arguments
    INTEGER, INTENT (IN)             :: eig_id, archiveType
 
    ! Local type instances
-   TYPE(t_regionCharges)          :: regCharges
    TYPE(t_dos),TARGET             :: dos
    TYPE(t_vacdos),TARGET          :: vacdos
    TYPE(t_moments)                :: moments
@@ -96,14 +98,16 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_slab),TARGET            :: slab
    TYPE(t_orbcomp),TARGET         :: orbcomp
    TYPE(t_jDOS),TARGET            :: jDOS
+   TYPE(t_jointDOS),TARGET       :: jointDOS
    TYPE(t_cdnvalJob)       :: cdnvalJob
    TYPE(t_greensfImagPart) :: greensfImagPart
-   TYPE(t_potden)          :: val_den, core_den
+   TYPE(t_potden)          :: val_den
    TYPE(t_greensfContourData) :: contour(gfinp%numberContours)
+   TYPE(t_hyperfine)       :: hyperfine
 
 
    !Local Scalars
-   REAL                  :: fix, qtot, dummy,eFermiPrev
+   REAL                  :: fix, qtot, dummy, eFermiPrev
    INTEGER               :: jspin, ierr
    INTEGER               :: dim_idx
    INTEGER               :: i_gf,iContour,n
@@ -116,36 +120,14 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    LOGICAL               :: l_error,Perform_metagga
 
    ! Initialization section
-   CALL regCharges%init(input,atoms)
    CALL moments%init(fmpi,input,sphhar,atoms)
    !initalize data for DOS
    if (noco%l_noco) results%eig(:,:,2)=results%eig(:,:,1)
-   CALL dos%init(input,atoms,kpts,banddos,results%eig)
-   CALL vacdos%init(input,atoms,kpts,banddos,results%eig)
-   CALL mcd%init(banddos,input,atoms,kpts,results%eig)
-   CALL slab%init(banddos,atoms,cell,input,kpts)
-   CALL orbcomp%init(input,banddos,atoms,kpts,results%eig)
-   CALL jDOS%init(input,banddos,atoms,kpts,results%eig)
-
+   
    if (banddos%dos.or.banddos%band.or.input%cdinf) then
-     allocate(eigdos(count((/banddos%dos.or.banddos%band.or.input%cdinf,banddos%vacdos,banddos%l_mcd,banddos%l_slab,banddos%l_orb,banddos%l_jDOS/))))
-     n=2
-     eigdos(1)%p=>dos
-     if (banddos%vacdos) THEN
-       eigdos(n)%p=>vacdos; n=n+1;
-     endif
-     if (banddos%l_mcd) THEN
-       eigdos(n)%p=>mcd; n=n+1
-     endif
-     if (banddos%l_slab) THEN
-       eigdos(n)%p=>slab; n=n+1
-     endif
-     if (banddos%l_orb) THEN
-       eigdos(n)%p=>orbcomp; n=n+1
-     endif
-     if (banddos%l_jdos) eigdos(n)%p=>jDOS
+     CALL initialize_eigdos_types(eigdos, dos, jointDOS, vacdos, mcd, slab, orbcomp, jDOS, &
+                                   input, atoms, kpts, banddos, noco, results, cell)
    endif
-
 
 
    CALL outDen%init(stars,    atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN)
@@ -175,6 +157,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
       hub1data%cdn_atomic = 0.0
    ENDIF
 
+   CALL hyperfine%init(input, atoms)
 
    IF (fmpi%irank == 0) CALL openXMLElementNoAttributes('valenceDensity')
 
@@ -187,7 +170,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
       CALL cdnvalJob%init(fmpi,input,kpts,noco,results,jspin)
       IF (sliceplot%slice) CALL cdnvalJob%select_slice(sliceplot,results,input,kpts,noco,jspin)
       CALL cdnval(eig_id,fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,enpara,stars,vacuum,&
-                  sphhar,sym,vTot ,cdnvalJob,outDen,regCharges,dos,vacdos,results,moments,gfinp,&
+                  sphhar,sym,vTot ,cdnvalJob,outDen,dos,vacdos,results,moments,gfinp,&
                   hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,jDOS,greensfImagPart)
    END DO
    CALL timestop("cdngen: cdnval")
@@ -203,7 +186,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
       IF (fmpi%irank == 0) THEN
          CALL timestart("cdngen: dos")
          CALL make_dos(kpts,atoms,vacuum,input,banddos,&
-                      sliceplot,noco,sym,cell,results,eigdos )
+                      sliceplot,noco,nococonv,sym,cell,results,eigdos )
          CALL timestop("cdngen: dos")
       END IF
    END IF
@@ -233,8 +216,8 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    IF (sliceplot%slice) THEN
       IF (fmpi%irank == 0) THEN
          IF(any(noco%l_alignMT)) CALL juDFT_error("Relaxation of SQA and sliceplot not implemented. To perfom a sliceplot of the correct cdn deactivate realaxation.", calledby = "cdngen" )
-         CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
-                           0,-1.0,0.0,-1.0,-1.0,.FALSE.,outDen,inFilename='cdn_slice')
+         CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym,archiveType,CDN_INPUT_DEN_const,&
+                           1,-1.0,0.0,-1.0,-1.0,.FALSE.,outDen,inFilename='cdn_slice')
       END IF
       call outDen%distribute(fmpi%mpi_comm)
       CALL juDFT_end("slice OK",fmpi%irank)
@@ -243,6 +226,8 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    !IF (sliceplot%iplot.NE.0) THEN
    !   CALL makeplots(stars, atoms, sphhar, vacuum, input, fmpi , sym, cell, noco,nococonv, outDen, PLOT_OUTDEN_Y_CORE, sliceplot)
    !END IF
+
+   CALL hyperfine%printValenceHyperfine(input, atoms, fmpi, moments)
 
    CALL timestart("cdngen: cdncore")
    if(xcpot%exc_is_MetaGGA()) then
@@ -268,8 +253,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
       enddo
    ENDIF
 
-   CALL enpara%calcOutParams(input,atoms,vacuum,regCharges)
-
+  
    IF (fmpi%irank == 0) CALL openXMLElementNoAttributes('allElectronCharges')
    CALL qfix(fmpi,stars,nococonv,atoms,sym,vacuum,sphhar,input,cell ,outDen,noco%l_noco,.TRUE.,l_par=.TRUE.,force_fix=.TRUE.,fix=fix)
    IF (fmpi%irank == 0) CALL closeXMLElement('allElectronCharges')
@@ -278,13 +262,16 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
       IF (fmpi%irank == 0) THEN
          CALL spinMoments(input,atoms,noco,nococonv,den=outDen,results=results)
          CALL orbMoments(input,atoms,noco,nococonv,moments)
-         if (any(noco%l_constrained)) call nococonv%update_b_cons(atoms,noco,vtot,outDen)
+         if (any(noco%l_constrained).or.any(noco%l_fixedMoment)) call nococonv%update_b_cons(atoms,noco,vtot,outDen)
       END IF
 
       if (sym%nop==1.and..not.input%film) call magMultipoles(fmpi,sym,juphon,stars, atoms,cell, sphhar, vacuum, input, noco,nococonv,outden)
       !Generate and save the new nocoinp file if the directions of the local
       !moments are relaxed or a constraint B-field is calculated.
    END IF
+
+   CALL hyperfine%calcPrintIsomerShifts(input,atoms,fmpi,outDen)
+
    Perform_metagga = Allocated(Energyden%Mt) &
                    .And. (Xcpot%Exc_is_metagga() .Or. Xcpot%Vx_is_metagga())
    If(Perform_metagga) Then
@@ -296,7 +283,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
 #ifdef CPP_MPI
    CALL MPI_BCAST(nococonv%alph,atoms%ntype,MPI_DOUBLE_PRECISION,0,fmpi%mpi_comm,ierr)
    CALL MPI_BCAST(nococonv%beta,atoms%ntype,MPI_DOUBLE_PRECISION,0,fmpi%mpi_comm,ierr)
-   CALL MPI_BCAST(nococonv%b_con,atoms%ntype*2,MPI_DOUBLE_PRECISION,0,fmpi%mpi_comm,ierr)
+   CALL MPI_BCAST(nococonv%b_con,atoms%ntype*3,MPI_DOUBLE_PRECISION,0,fmpi%mpi_comm,ierr)
    CALL MPI_BCAST(nococonv%qss,3,MPI_DOUBLE_PRECISION,0,fmpi%mpi_comm,ierr)
 #endif
 
@@ -309,5 +296,103 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    END IF
 
 END SUBROUTINE cdngen
+
+SUBROUTINE initialize_eigdos_types(eigdos, dos, jointDOS, vacdos, mcd, slab, orbcomp, jDOS, &
+                                    input, atoms, kpts, banddos, noco, results, cell)
+   !*****************************************************
+   ! Initialize all eigenvalue/DOS types and populate
+   ! the eigdos pointer array
+   !*****************************************************
+   USE m_types_eigdos
+   USE m_types_dos
+   USE m_types_jointdos
+   USE m_types_vacdos
+   USE m_types_mcd
+   USE m_types_slab
+   USE m_types_orbcomp
+   USE m_types_jdos
+   use m_types
+   
+   IMPLICIT NONE
+   
+   ! Arguments
+   TYPE(t_eigdos_list), ALLOCATABLE, INTENT(INOUT) :: eigdos(:)
+   TYPE(t_dos), TARGET, INTENT(INOUT)              :: dos
+   TYPE(t_jointDOS), TARGET, INTENT(INOUT)         :: jointDOS
+   TYPE(t_vacdos), TARGET, INTENT(INOUT)           :: vacdos
+   TYPE(t_mcd), TARGET, INTENT(INOUT)              :: mcd
+   TYPE(t_slab), TARGET, INTENT(INOUT)             :: slab
+   TYPE(t_orbcomp), TARGET, INTENT(INOUT)          :: orbcomp
+   TYPE(t_jDOS), TARGET, INTENT(INOUT)             :: jDOS
+   TYPE(t_input), INTENT(IN)                       :: input
+   TYPE(t_atoms), INTENT(IN)                       :: atoms
+   TYPE(t_kpts), INTENT(IN)                        :: kpts
+   TYPE(t_banddos), INTENT(IN)                     :: banddos
+   TYPE(t_noco), INTENT(IN)                        :: noco
+   TYPE(t_results), INTENT(IN)                     :: results
+   TYPE(t_cell), INTENT(IN)                        :: cell
+   
+   ! Local variables
+   INTEGER :: n, num_types
+   LOGICAL :: type_flags(7)
+   
+   ! Determine which types need to be initialized
+   type_flags(1) = banddos%dos .OR. banddos%band .OR. input%cdinf
+   type_flags(2) = banddos%l_jointDOS
+   type_flags(3) = banddos%vacdos
+   type_flags(4) = banddos%l_mcd
+   type_flags(5) = banddos%l_slab
+   type_flags(6) = banddos%l_orb
+   type_flags(7) = banddos%l_jDOS
+   
+   ! Count number of types to allocate
+   num_types = COUNT(type_flags)
+   ALLOCATE(eigdos(num_types))
+
+   
+   
+   ! Initialize DOS (always first)
+   n = 1
+   CALL dos%init(input, atoms, kpts, banddos, noco%l_noco .OR. banddos%l_jDOS, results%eig)
+   eigdos(1)%p => dos
+   n = 2
+   
+   ! Initialize optional types
+   IF (banddos%l_jointDOS) THEN
+      CALL jointDOS%init(input, atoms, kpts, banddos, noco%l_noco, results%eig)
+      eigdos(n)%p => jointDOS
+      n = n + 1
+   END IF
+   
+   CALL vacdos%init(input, atoms, kpts, banddos, results%eig)
+   IF (banddos%vacdos) THEN
+      eigdos(n)%p => vacdos
+      n = n + 1
+   END IF
+   
+   IF (banddos%l_mcd) THEN
+      CALL mcd%init(banddos, input, atoms, kpts, results%eig)
+      eigdos(n)%p => mcd
+      n = n + 1
+   END IF
+   
+   IF (banddos%l_slab) THEN
+      CALL slab%init(banddos, atoms, cell, input, kpts)
+      eigdos(n)%p => slab
+      n = n + 1
+   END IF
+   
+   IF (banddos%l_orb) THEN
+      CALL orbcomp%init(input, banddos, atoms, kpts, results%eig)
+      eigdos(n)%p => orbcomp
+      n = n + 1
+   END IF
+   
+   IF (banddos%l_jdos) THEN
+      CALL jDOS%init(input, banddos, atoms, kpts, results%eig)
+      eigdos(n)%p => jDOS
+   END IF
+   
+END SUBROUTINE initialize_eigdos_types
 
 END MODULE m_cdngen

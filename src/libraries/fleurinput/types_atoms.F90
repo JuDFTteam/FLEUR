@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -87,7 +87,8 @@ MODULE m_types_atoms
   INTEGER, ALLOCATABLE::lapw_l(:)
   !first LO with a given l (max(nlo
   INTEGER, ALLOCATABLE::lo1l(:, :)
-  !??
+  !max no of radial function per l and ntype 
+  INTEGER ::max_radial_functions=-1
   INTEGER, ALLOCATABLE::ulo_der(:, :)
   !no of LOs per l (max(nlo1),ntype
   INTEGER, ALLOCATABLE::nlol(:, :)
@@ -144,11 +145,24 @@ CONTAINS
   PROCEDURE :: same_species
   PROCEDURE :: read_xml => read_xml_atoms
   PROCEDURE :: mpi_bc=>mpi_bc_atoms
+  procedure :: num_radial_functions_per_l
 END TYPE t_atoms
 
 PUBLIC :: t_atoms,t_utype, readAtomAttribute
 
 CONTAINS
+
+
+pure  function num_radial_functions_per_l(this,itype)result(nrfpl)
+  class(t_atoms), intent(in):: this
+  integer, intent(in):: itype
+  INTEGER :: lo,nrfpl(0:this%lmaxd)
+  nrfpl=0
+  nrfpl(0:this%lmax(itype))=2 !u and \dot u
+  do lo=1,this%nlo(itype)
+     nrfpl(this%llo(lo,itype))=nrfpl(this%llo(lo,itype))+1
+  end do
+end function num_radial_functions_per_l
 SUBROUTINE mpi_bc_atoms(this,mpi_comm,irank)
  USE m_mpi_bc_tool
  CLASS(t_atoms),INTENT(INOUT)::this
@@ -467,7 +481,7 @@ SUBROUTINE read_xml_atoms(this,xml)
        CALL this%econf(n)%init(core,valence)
        numberNodes = xml%getNumberOfNodes(TRIM(ADJUSTL(xPaths))//'/electronConfig/stateOccupation')
        IF (numberNodes.GE.1) THEN
-          DO i = 1, numberNodes
+          DO i = 1, numberNodes 
              WRITE(xpath,"(a,a,i0,a)") TRIM(ADJUSTL(xPaths)),'/electronConfig/stateOccupation[',i,']'
              state=xml%getAttributeValue(TRIM(xpath)//'/@state')
              up=evaluateFirstOnly(xml%getAttributeValue(TRIM(xpath)//'/@spinUp'))
@@ -511,7 +525,7 @@ SUBROUTINE read_xml_atoms(this,xml)
     numberNodes = xml%getNumberOfNodes(TRIM(ADJUSTL(xPathg))//'/absPos')
     DO i = 1, numberNodes
        na = na + 1
-       STOP 'absPos not yet implemented!'
+       CALL judft_bug('absPos not yet implemented!')
     END DO
 
     numberNodes = xml%getNumberOfNodes(TRIM(ADJUSTL(xPathg))//'/filmPos')
@@ -555,6 +569,8 @@ SUBROUTINE read_xml_atoms(this,xml)
     END DO
  ENDDO
 
+ this%lmaxd=MAXVAL(this%lmax)
+
  na = 1
  this%nlotot = 0
  DO n = 1, this%ntype
@@ -563,7 +579,9 @@ SUBROUTINE read_xml_atoms(this,xml)
        this%nlotot = this%nlotot + this%neq(n) * ( 2*this%llo(l,n) + 1 )
     ENDDO
     na = na + this%neq(n)
+    this%max_radial_functions=max(this%max_radial_functions,maxval(this%num_radial_functions_per_l(n)))
  ENDDO
+
 
  ! Check the LO stuff and call setlomap (from inped):
  IF (SIZE(this%llo,1)>0) this%llod=MAXVAL(this%llo)
@@ -672,7 +690,6 @@ END DO
     END DO
  END DO
 
- this%lmaxd=MAXVAL(this%lmax)
 
  ALLOCATE(this%nlhtyp(xml%get_ntype()))
 

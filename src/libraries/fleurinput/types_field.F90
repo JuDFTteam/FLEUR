@@ -15,7 +15,7 @@ MODULE m_types_field
   PRIVATE
   TYPE:: t_efield
      REAL    :: zsigma  = 10.0  ! Distance to the charged plates
-     REAL    :: sigma   ! charge at the plates
+     REAL    :: sigma=0.0   ! charge at the plates
      REAL    :: sig_b(2)=  0.0  ! Extra charge for the top/bottom plate
      REAL,    ALLOCATABLE :: sigEF(:,:,:) ! (nx, ny, nvac)
      COMPLEX, ALLOCATABLE :: rhoEF(:,:)   ! (g_||, nvac)
@@ -113,7 +113,7 @@ CONTAINS
     IF (numberNodes.EQ.1) THEN
        IF (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@b_field')>0) THEN
           this%b_field=evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'//@b_field'))
-          this%l_b_field=.TRUE.
+          if (abs(this%b_field)>1E-15) this%l_b_field=.TRUE.
        ENDIF
        
        this%efield%zsigma = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@zsigma'))

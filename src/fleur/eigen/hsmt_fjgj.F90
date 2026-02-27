@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -18,7 +18,7 @@ MODULE m_hsmt_fjgj
 
 CONTAINS
   subroutine alloc(fjgj,nvd,lmaxd,isp,noco)
-    USE m_types
+    USE m_types_noco
     CLASS(t_fjgj),INTENT(OUT) :: fjgj
     INTEGER,INTENT(IN)        :: nvd,lmaxd,isp
     TYPE(t_noco),INTENT(IN)   :: noco
@@ -37,7 +37,15 @@ CONTAINS
     USE m_constants, ONLY : fpi_const
     USE m_sphbes
     USE m_dsphbs
-    USE m_types
+    USE m_types_input
+    USE m_types_cell
+    USE m_types_noco
+    USE m_types_atoms
+    USE m_types_lapw
+    USE m_types_usdus
+    
+    
+    
     IMPLICIT NONE
     CLASS(t_fjgj),INTENT(INOUT) :: fjgj
     TYPE(t_input),INTENT(IN)    :: input
@@ -79,14 +87,14 @@ CONTAINS
     END IF
 
     DO intspin=1,MERGE(2,1,noco%l_ss)
-#ifndef _OPENACC
+!#ifndef _OPENACC
        !$OMP PARALLEL DO DEFAULT(NONE) &
        !$OMP PRIVATE(l,gs,fb,gb,ws,ff,gg,jspin)&
        !$OMP SHARED(lapw,atoms,con1,usdus,l_socfirst,noco,input)&
        !$OMP SHARED(fjgj,intspin,n,ispin,apw,jspinStart,jspinEnd)
-#else
+!#else
        !!$acc parallel loop present(fjgj,fjgj%fj,fjgj%gj) private(l,gs,fb,gb,ws,ff,gg,jspin)
-#endif
+!#endif
        DO k = 1,lapw%nv(intspin)
           gs = lapw%rk(k,intspin)*atoms%rmt(n)
           CALL sphbes(atoms%lmax(n),gs, fb)
@@ -114,11 +122,11 @@ CONTAINS
           !!$acc end parallel loop
 !          !$OMP END SIMD
        ENDDO ! k = 1, lapw%nv
-#ifdef _OPENACC
+!#ifdef _OPENACC
        !!$acc end parallel loop
-#else
+!#else
        !$OMP END PARALLEL DO
-#endif
+!#endif
     ENDDO
     RETURN
   END SUBROUTINE hsmt_fjgj_cpu

@@ -54,7 +54,10 @@ CONTAINS
     USE m_radsra
     USE m_radsrdn
     USE m_differ
-    USE m_types
+    USE m_types_usdus
+    USE m_types_mpi
+    USE m_types_atoms
+    USE m_types_usdus
     IMPLICIT NONE
     TYPE(t_usdus),INTENT(INOUT):: usdus !lo part is calculated here
     TYPE(t_mpi),INTENT(IN)     :: fmpi
