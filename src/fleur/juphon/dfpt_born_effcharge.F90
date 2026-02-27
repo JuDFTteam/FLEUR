@@ -377,7 +377,7 @@ contains
                 attributes = ''
                 WRITE(attributes(1),'(i0)') iDType
                 WRITE(attributes(2),'(i0)') iDir
-                CALL writeXMLElementPoly('borneffcharge',(/ 'iDtype ' , 'iDir'/), attributes,real(born_eff_charge(iDType,iDir,:)))
+                CALL writeXMLElementPoly('borneffcharge',(/ 'iDtype' , 'iDir  '/), attributes,real(born_eff_charge(iDType,iDir,:)))
             end do
         end do
         CALL closeXMLElement('efield')
