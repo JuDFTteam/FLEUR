@@ -25,6 +25,7 @@ src/fleur/eigen/rad_ovlp.f90
 src/fleur/eigen/setabc1lo.f90
 src/fleur/eigen/slomat.F90
 src/fleur/eigen/tlmplm.F90
+src/fleur/eigen/tlmplm_vtau.F90
 #src/fleur/eigen/tlmplm_store.F90
 src/fleur/eigen/tlo.f90
 src/fleur/eigen/vacfun.F90

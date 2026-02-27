@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -130,12 +130,12 @@ CONTAINS
       !IF(errors(3) /= 0) call juDFT_error("Exchange energy functional not in LibXC")
       !IF(errors(4) /= 0) call juDFT_error("Correlation energy functional not in LibXC")
 
-      !check if any potental is a MetaGGA
+      !check if any potental is a MetaGGA -- now allowed for self-consistent MetaGGA
       IF (ANY([XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA] == xc_get_family(xcpot%vxc_func_x))) THEN
-         CALL juDFT_error("vxc_x: MetaGGA is not implemented for potentials")
+         WRITE(*,*) "MetaGGA potential functional detected - V_tau will be computed"
       ELSEIF (xcpot%func_vxc_id_c > 0) THEN
          IF (ANY([XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA] == xc_get_family(xcpot%vxc_func_c))) THEN
-            CALL juDFT_error("vxc_x: MetaGGA is not implemented for potentials")
+            WRITE(*,*) "MetaGGA correlation potential functional detected - V_tau will be computed"
          ENDIF
       ENDIF
 
@@ -296,7 +296,7 @@ CONTAINS
    END FUNCTION xcpot_get_exchange_weight
 
    !***********************************************************************
-   SUBROUTINE xcpot_get_vxc(xcpot,jspins,rh, vxc,vx, grad, kinenergyden_ks)
+   SUBROUTINE xcpot_get_vxc(xcpot,jspins,rh, vxc,vx, grad, kinenergyden_ks, vtau)
       USE, INTRINSIC :: IEEE_ARITHMETIC
       use iso_c_binding
       IMPLICIT NONE
@@ -308,16 +308,77 @@ CONTAINS
       ! optional arguments for GGA
       TYPE(t_gradients),OPTIONAL,INTENT(INOUT)::grad
       REAL, INTENT(IN), OPTIONAL     :: kinenergyden_ks(:, :)
+      ! optional output for MetaGGA: V_tau = dE_xc/d(tau)
+      REAL, INTENT(OUT), OPTIONAL    :: vtau(:, :)
 #ifdef CPP_LIBXC
       REAL,ALLOCATABLE  :: vxc_tmp(:,:),vx_tmp(:,:),vsigma(:,:), &
                            tmp_vsig(:,:), tmp_vlapl(:,:), tmp_vtau(:,:), &
                            kinED_libxc(:,:)
+      REAL,ALLOCATABLE  :: vtau_x(:,:), vtau_c(:,:), vlapl_x(:,:), vlapl_c(:,:)
+      REAL :: cut_ratio = 0.1
+      INTEGER :: cut_idx
       integer(kind=c_size_t)           :: idx
       !libxc uses the spin as a first index, hence we have to transpose....
       ALLOCATE (vxc_tmp(SIZE(vxc, 2), SIZE(vxc, 1))); vxc_tmp = 0.0
       ALLOCATE (vx_tmp(SIZE(vx, 2), SIZE(vx, 1))); vx_tmp = 0.0
 
-      IF (xcpot%needs_grad()) THEN
+      IF (PRESENT(vtau)) vtau = 0.0
+
+      IF (xcpot%vx_is_MetaGGA()) THEN
+         ! MetaGGA potential: calls xc_f90_mgga_vxc which returns vrho, vsigma, vlapl, vtau
+         IF (.NOT. PRESENT(grad)) CALL judft_error("Bug: You called get_vxc for a MetaGGA potential without providing derivatives")
+         IF (PRESENT(kinenergyden_ks)) THEN
+            ! Apply correction: tau_libxc = tau_KS + 0.25*laplacian(rho)
+            kinED_libxc = TRANSPOSE(kinenergyden_ks + 0.25*grad%laplace)
+
+            ! Core region cutoff (same as in get_exc)
+            cut_idx = 0  ! No core cutoff for potential - we need it everywhere
+
+            ALLOCATE(vsigma, mold=grad%vsigma)
+            ALLOCATE(vtau_x(SIZE(rh, 2), SIZE(rh, 1))); vtau_x = 0.0
+            ALLOCATE(vlapl_x(SIZE(rh, 2), SIZE(rh, 1))); vlapl_x = 0.0
+
+            CALL xc_f90_mgga_vxc(xcpot%vxc_func_x, SIZE(rh, 1, kind=c_size_t), &
+                                 TRANSPOSE(rh), grad%sigma, &
+                                 TRANSPOSE(grad%laplace), kinED_libxc, &
+                                 vx_tmp, vsigma, vlapl_x, vtau_x)
+
+            IF (xcpot%func_vxc_id_c > 0) THEN
+               ALLOCATE(vtau_c(SIZE(rh, 2), SIZE(rh, 1))); vtau_c = 0.0
+               ALLOCATE(vlapl_c(SIZE(rh, 2), SIZE(rh, 1))); vlapl_c = 0.0
+
+               CALL xc_f90_mgga_vxc(xcpot%vxc_func_c, SIZE(rh, 1, kind=c_size_t), &
+                                    TRANSPOSE(rh), grad%sigma, &
+                                    TRANSPOSE(grad%laplace), kinED_libxc, &
+                                    vxc_tmp, grad%vsigma, vlapl_c, vtau_c)
+
+               grad%vsigma = grad%vsigma + vsigma
+               vxc_tmp = vxc_tmp + vx_tmp
+               vtau_x = vtau_x + vtau_c
+               DEALLOCATE(vtau_c, vlapl_c)
+            ELSE
+               vxc_tmp = vx_tmp
+               grad%vsigma = vsigma
+            ENDIF
+
+            ! Return vtau if requested (transpose back from libxc convention)
+            IF (PRESENT(vtau)) THEN
+               vtau = TRANSPOSE(vtau_x)
+            ENDIF
+            DEALLOCATE(vtau_x, vlapl_x, kinED_libxc)
+         ELSE
+            ! First iteration fallback: use GGA potential (no tau available yet)
+            ALLOCATE (vsigma, mold=grad%vsigma)
+            CALL xc_f90_gga_vxc(xcpot%vxc_func_x, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), grad%sigma, vx_tmp, vsigma)
+            IF (xcpot%func_vxc_id_c > 0) THEN
+               CALL xc_f90_gga_vxc(xcpot%vxc_func_c, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), grad%sigma, vxc_tmp, grad%vsigma)
+               grad%vsigma = grad%vsigma + vsigma
+               vxc_tmp = vxc_tmp + vx_tmp
+            ELSE
+               vxc_tmp = vx_tmp
+            ENDIF
+         ENDIF
+      ELSEIF (xcpot%needs_grad()) THEN
          IF (.NOT. PRESENT(grad)) CALL judft_error("Bug: You called get_vxc for a GGA potential without providing derivatives")
          ALLOCATE (vsigma, mold=grad%vsigma)
          !where(abs(grad%sigma)<1E-9) grad%sigma=1E-9

@@ -44,6 +44,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    !USE m_Ekwritesl
    !USE m_banddos_io
    USE m_metagga
+   USE m_cdnval_kinEnergyDen
    !USE m_unfold_band_kpts
    USE m_denMultipoleExp
    use m_slater
@@ -176,10 +177,15 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    CALL timestop("cdngen: cdnval")
 
    call val_den%copyPotDen(outDen)
-   ! calculate kinetic energy density for MetaGGAs
-   if(xcpot%exc_is_metagga()) then
-      CALL calc_EnergyDen(eig_id, fmpi, kpts, noco, nococonv,input, banddos, cell, atoms, enpara, stars,&
-                             vacuum,  sphhar, sym, gfinp, hub1inp, vTot,   results, EnergyDen)
+   ! calculate kinetic energy density for MetaGGAs (direct approach)
+   ! τ(r) = (1/2) Σ_i f_i |∇ψ_i(r)|²
+   ! This replaces the broken energy-density approach (calc_EnergyDen).
+   if(xcpot%exc_is_metagga() .or. xcpot%vx_is_metagga()) then
+      DO jspin = 1, input%jspins
+         CALL cdnval_kinEnergyDen(eig_id, fmpi, kpts, jspin, noco, nococonv, input, &
+                                   cell, atoms, enpara, stars, vacuum, sphhar, sym, &
+                                   vTot, results, EnergyDen)
+      END DO
    endif
 
    IF (banddos%dos.or.banddos%band.or.input%cdinf) THEN
@@ -230,9 +236,11 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    CALL hyperfine%printValenceHyperfine(input, atoms, fmpi, moments)
 
    CALL timestart("cdngen: cdncore")
-   if(xcpot%exc_is_MetaGGA()) then
+   if(xcpot%exc_is_MetaGGA() .or. xcpot%vx_is_MetaGGA()) then
+      ! Pass EnergyDen as kinEnergyDen: core KED is added directly.
+      ! Do NOT also pass as EnergyDen (energy density) — we use the direct approach now.
       CALL cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
-                   stars,cell,sphhar,atoms,vTot,outDen,moments,results, EnergyDen)
+                   stars,cell,sphhar,atoms,vTot,outDen,moments,results, kinEnergyDen=EnergyDen)
    else
       CALL cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
                    stars,cell,sphhar,atoms,vTot,outDen,moments,results)

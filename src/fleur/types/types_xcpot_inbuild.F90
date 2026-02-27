@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -26,7 +26,7 @@ MODULE m_types_xcpot_inbuild
  CONTAINS
 
 
-   SUBROUTINE xcpot_get_vxc(xcpot,jspins,rh, vxc,vx, grad,kinEnergyDen_KS)
+   SUBROUTINE xcpot_get_vxc(xcpot,jspins,rh, vxc,vx, grad,kinEnergyDen_KS, vtau)
 !
       USE m_xcxal, ONLY : vxcxal
       USE m_xcwgn, ONLY : vxcwgn
@@ -56,6 +56,7 @@ MODULE m_types_xcpot_inbuild
       ! optional arguments for GGA
       TYPE(t_gradients),INTENT(INOUT),OPTIONAL::grad
       REAL, INTENT(IN), OPTIONAL            :: kinEnergyDen_KS(:,:)
+      REAL, INTENT(OUT), OPTIONAL           :: vtau(:,:)
 !c
 !c ---> local scalars
       INTEGER :: ngrid

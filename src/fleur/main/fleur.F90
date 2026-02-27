@@ -98,7 +98,7 @@ CONTAINS
       TYPE(t_input) :: input_soc
 
       TYPE(t_field)    :: field2
-      TYPE(t_potden)   :: vTot, vx, vCoul, vxc, exc
+      TYPE(t_potden)   :: vTot, vx, vCoul, vxc, exc, vTau
       TYPE(t_potden)   :: inDen, outDen, EnergyDen, sliceDen,coreden
       TYPE(t_hub1data) :: hub1data
 
@@ -206,6 +206,12 @@ CONTAINS
       CALL vx%init(stars,    fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT)
       CALL vxc%init(stars,   fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT)
       CALL exc%init(stars,   fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT)
+      ! V_tau for MetaGGA: stores dE_xc/d(tau) in lattice harmonics / star coefficients
+      IF (xcpot%exc_is_MetaGGA() .OR. xcpot%vx_is_MetaGGA()) THEN
+         CALL vTau%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT)
+         ALLOCATE(vTau%pw_w, mold=vTau%pw)
+         vTau%pw_w = 0.0
+      ENDIF
       CALL timestop("Initialize potentials")
 
       ! Initialize Green's function
@@ -352,7 +358,7 @@ CONTAINS
 
          CALL timestart("generation of potential")
          CALL vgen(hybdat, fi%field, fi%input, xcpot, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, fi%juphon, &
-                   fi%cell,   fi%sliceplot, fmpi, results, fi%noco, nococonv, EnergyDen, inDen, vTot, vx, vCoul, vxc, exc)
+                   fi%cell,   fi%sliceplot, fmpi, results, fi%noco, nococonv, EnergyDen, inDen, vTot, vx, vCoul, vxc, exc, vTau=vTau)
          CALL timestop("generation of potential")
 
          ! Scale the magnetization back.
@@ -401,7 +407,7 @@ CONTAINS
 
             IF (.NOT. fi%input%eig66(1)) THEN
                CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv,  &
-                          hybdat, iter, eig_id, results, inDen, vToT, vx, hub1data)
+                          hybdat, iter, eig_id, results, inDen, vToT, vx, hub1data, vTau=vTau)
             END IF
             ! TODO: What is commented out here and should it perhaps be removed?
 ! !$          eig_idList(pc) = eig_id
