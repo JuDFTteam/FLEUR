@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -9,7 +9,7 @@ MODULE m_vgen
 CONTAINS
 
    SUBROUTINE vgen(hybdat,field,input,xcpot,atoms,sphhar,stars,vacuum,sym,juphon,&
-                   cell ,sliceplot,fmpi,results,noco,nococonv,EnergyDen,den,vTot,vx,vCoul,vxc,exc)
+                   cell ,sliceplot,fmpi,results,noco,nococonv,EnergyDen,den,vTot,vx,vCoul,vxc,exc,vTau)
       !--------------------------------------------------------------------------
       ! FLAPW potential generator (main routine)
       !
@@ -59,6 +59,7 @@ CONTAINS
       TYPE(t_potden),    INTENT(IN)    :: EnergyDen
       TYPE(t_potden),    INTENT(INOUT) :: den
       TYPE(t_potden),    INTENT(INOUT) :: vTot, vx, vCoul, vxc, exc
+      TYPE(t_potden),    INTENT(INOUT), OPTIONAL :: vTau
 
       TYPE(t_potden)                   :: workden, denRot
 
@@ -126,7 +127,7 @@ CONTAINS
       END IF
 
       CALL vgen_xcpot(hybdat,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
-                      cell,fmpi,noco,den,denRot,EnergyDen,vTot,vx,vxc,exc,results=results)
+                      cell,fmpi,noco,den,denRot,EnergyDen,vTot,vx,vxc,exc,results=results,vTau=vTau)
 
       if (any(noco%l_constrained)) call vgen_constraint(atoms,noco,nococonv,vtot)
 
@@ -140,6 +141,9 @@ CONTAINS
       CALL vx%distribute(fmpi%mpi_comm)
       CALL vxc%distribute(fmpi%mpi_comm)
       CALL exc%distribute(fmpi%mpi_comm)
+      IF (PRESENT(vTau)) THEN
+         IF (ALLOCATED(vTau%mt)) CALL vTau%distribute(fmpi%mpi_comm)
+      ENDIF
 
       ! Klueppelberg (force level 3)
       IF (input%l_f.AND.(input%f_level.GE.3).AND.(fmpi%irank.EQ.0)) THEN

@@ -4,7 +4,7 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_metagga
-   PUBLIC  :: calc_EnergyDen
+   PUBLIC  :: calc_EnergyDen, set_kinED_direct
    PRIVATE :: calc_EnergyDen_auxillary_weights, &
               calc_kinEnergyDen_pw, &
               calc_kinEnergyDen_mt
@@ -319,6 +319,7 @@ CONTAINS
 
    subroutine set_kinED_mt(fmpi,   sphhar,    atoms, sym, noco,core_den, val_den, &
                            xcpot, EnergyDen, input, vTot,kinED)
+
       use m_types
       use m_mt_tofrom_grid
       implicit none
@@ -390,4 +391,80 @@ CONTAINS
       CALL finish_mt_grid()
    end subroutine set_kinED_mt
 #endif
+
+   subroutine set_kinED_direct(fmpi, sphhar, atoms, sym, xcpot, &
+                                input, noco, stars, vacuum, cell, kinEnergyDen, kinED)
+      !! Convert a pre-computed kinetic energy density from t_potden
+      !! (lattice harmonics / star coefficients) to t_kinED (real-space
+      !! integration grids) for use in XC functional evaluation.
+      !!
+      !! This replaces the indirect energy-density approach in set_kinED
+      !! (τ = ε_den − V·ρ) with a direct approach where τ has already
+      !! been computed from wavefunctions.
+      use m_types
+      use m_mt_tofrom_grid
+      use m_pw_tofrom_grid
+      implicit none
+      TYPE(t_mpi),INTENT(IN)       :: fmpi
+      TYPE(t_sphhar),INTENT(IN)    :: sphhar
+      TYPE(t_atoms),INTENT(IN)     :: atoms
+      TYPE(t_sym), INTENT(IN)      :: sym
+      CLASS(t_xcpot),INTENT(IN)    :: xcpot
+      TYPE(t_input),INTENT(IN)     :: input
+      TYPE(t_noco),INTENT(IN)      :: noco
+      TYPE(t_stars),INTENT(IN)     :: stars
+      TYPE(t_vacuum),INTENT(IN)    :: vacuum
+      TYPE(t_cell),INTENT(IN)      :: cell
+      TYPE(t_potden),INTENT(IN)    :: kinEnergyDen
+      TYPE(t_kinED),INTENT(OUT)    :: kinED
+
+      LOGICAL :: perform_MetaGGA
+      TYPE(t_gradients)            :: tmp_grad
+      INTEGER :: n, loc_n, n_start, n_stride
+#ifdef CPP_MPI
+      INTEGER :: ierr
+#endif
+
+      perform_MetaGGA = ALLOCATED(kinEnergyDen%mt) &
+                      .AND. (xcpot%exc_is_MetaGGA() .or. xcpot%vx_is_MetaGGA())
+      if(.not.perform_MetaGGA) return
+
+#ifdef CPP_LIBXC
+      ! ---------------------------------------------------------------
+      ! Interstitial: convert star coefficients to real-space grid
+      ! ---------------------------------------------------------------
+      CALL init_pw_grid(stars, sym, cell, xcpot)
+      CALL pw_to_grid(xcpot%needs_grad(), input%jspins, noco%l_noco, stars, &
+                      cell, kinEnergyDen%pw, tmp_grad, xcpot, kinED%is)
+      CALL finish_pw_grid()
+
+      ! ---------------------------------------------------------------
+      ! Muffin-tins: convert lattice harmonics to angular grid
+      ! ---------------------------------------------------------------
+#ifdef CPP_MPI
+      n_start=fmpi%irank+1
+      n_stride=fmpi%isize
+#else
+      n_start=1
+      n_stride=1
+#endif
+
+      CALL init_mt_grid(input%jspins, atoms, sphhar, xcpot%needs_grad(), sym)
+      call kinED%alloc_mt(atoms%nsp()*atoms%jmtd, input%jspins, &
+                          n_start, atoms%ntype, n_stride)
+      loc_n = 0
+      do n = n_start, atoms%ntype, n_stride
+         loc_n = loc_n + 1
+         CALL mt_to_grid(xcpot%needs_grad(), input%jspins, atoms, sym, sphhar, .TRUE., &
+                         kinEnergyDen%mt(:, 0:, n, :), n, noco, tmp_grad, kinED%mt(:,:,loc_n))
+      enddo
+      CALL finish_mt_grid()
+
+      kinED%set = .True.
+#else
+      CALL juDFT_error("MetaGGA require LibXC", &
+         hint="compile Fleur with LibXC (e.g. by giving '-external libxc' to ./configure")
+#endif
+   end subroutine set_kinED_direct
+
 END MODULE m_metagga

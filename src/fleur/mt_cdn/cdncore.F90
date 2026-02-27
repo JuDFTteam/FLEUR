@@ -10,7 +10,7 @@ MODULE m_cdncore
 CONTAINS
 
 SUBROUTINE cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
-                   stars,cell,sphhar,atoms,vTot,outDen,moments,results, EnergyDen)
+                   stars,cell,sphhar,atoms,vTot,outDen,moments,results, EnergyDen, kinEnergyDen)
 
    USE m_constants
    USE m_judft
@@ -45,6 +45,7 @@ SUBROUTINE cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
    TYPE(t_moments),    INTENT(INOUT)           :: moments
    TYPE(t_results),    INTENT(INOUT)           :: results
    TYPE(t_potden),     INTENT(INOUT), OPTIONAL :: EnergyDen
+   TYPE(t_potden),     INTENT(INOUT), OPTIONAL :: kinEnergyDen
 
    INTEGER                          :: jspin, n, iType, ierr
    REAL                             :: seig, rhoint, momint,rho11,rho22
@@ -104,8 +105,13 @@ SUBROUTINE cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
       IF (input%kcrel==0) THEN
          DO iType = 1, atoms%ntype
             DO jspin = 1,input%jspins
-               IF(PRESENT(EnergyDen)) THEN
+               IF(PRESENT(EnergyDen) .AND. PRESENT(kinEnergyDen)) THEN
+                  CALL cored(input,jspin,iType,atoms,outDen%mt,sphhar,l_CoreDenPresent,vr0(:,:,jspin), qint,rh ,tec,seig, &
+                             EnergyDen=EnergyDen%mt, kinEnergyDen=kinEnergyDen%mt)
+               ELSE IF(PRESENT(EnergyDen)) THEN
                   CALL cored(input,jspin,iType,atoms,outDen%mt,sphhar,l_CoreDenPresent,vr0(:,:,jspin), qint,rh ,tec,seig, EnergyDen=EnergyDen%mt)
+               ELSE IF(PRESENT(kinEnergyDen)) THEN
+                  CALL cored(input,jspin,iType,atoms,outDen%mt,sphhar,l_CoreDenPresent,vr0(:,:,jspin), qint,rh ,tec,seig, kinEnergyDen=kinEnergyDen%mt)
                ELSE
                   CALL cored(input,jspin,iType,atoms,outDen%mt,sphhar,l_CoreDenPresent,vr0(:,:,jspin), qint,rh ,tec,seig)
                ENDIF
@@ -116,6 +122,7 @@ SUBROUTINE cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
          END DO
       ELSE
          IF(PRESENT(EnergyDen)) call juDFT_error("Energyden not implemented for relativistic core calculations")
+         IF(PRESENT(kinEnergyDen)) call juDFT_error("kinEnergyDen not implemented for relativistic core calculations")
          DO iType = 1, atoms%ntype
             l_useOtherCoreSolver = .FALSE.
             CALL coredr(input,atoms,iType,seig, outDen%mt,sphhar,vr0,qint,rh,l_useOtherCoreSolver)

@@ -1,6 +1,12 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_cored
+   implicit none
 CONTAINS
-   SUBROUTINE cored(input, jspin, iType, atoms, rho,  sphhar, l_CoreDenPresent, vr, qint, rhc, tec, seig, l_useOtherCoreSolver, EnergyDen)
+   SUBROUTINE cored(input, jspin, iType, atoms, rho,  sphhar, l_CoreDenPresent, vr, qint, rhc, tec, seig, l_useOtherCoreSolver, EnergyDen, kinEnergyDen)
       !     *******************************************************
       !     *****   set up the core densities for compounds.  *****
       !     *****                      d.d.koelling           *****
@@ -13,6 +19,7 @@ CONTAINS
       USE m_types
       USE m_cdn_io
       USE m_xmlOutput
+      USE m_gradYlm, ONLY: Derivative
       IMPLICIT NONE
 
       TYPE(t_input),INTENT(IN)       :: input
@@ -32,17 +39,21 @@ CONTAINS
       REAL, INTENT(INOUT)           :: tec(atoms%ntype,input%jspins)
       LOGICAL, INTENT (INOUT), OPTIONAL :: l_useOtherCoreSolver
       REAL, INTENT(INOUT), OPTIONAL :: EnergyDen(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
+      REAL, INTENT(INOUT), OPTIONAL :: kinEnergyDen(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
 
       !     ..
       !     .. Local Scalars ..
       REAL eig,fj,fl,fn,qOutside,rad,rhos,rhs,sea,sume,t2
       REAL d,dxx,rn,rnot,z,t1,rr,r,lambd,c,bmu,weight, aux_weight
       INTEGER i,j,korb,ncmsh,nm,nm1,nst ,l,ierr
+      REAL fl_small  ! angular momentum of small component
       !     ..
       !     .. Local Arrays ..
 
       REAL rhcs(atoms%msh),rhoc(atoms%msh),rhoss(atoms%msh),vrd(atoms%msh),f(0:3)
       REAL rhcs_aux(atoms%msh), rhoss_aux(atoms%msh) !> quantities for energy density calculations
+      REAL tauss(atoms%jmtd)  !> direct kinetic energy density accumulator
+      REAL da_dr(atoms%jmtd), db_dr(atoms%jmtd) !> radial derivatives of core wavefunctions
       REAL occ(maxval(atoms%econf%num_states)),a(atoms%msh),b(atoms%msh),ain(atoms%msh),ahelp(atoms%msh)
       REAL occ_h(maxval(atoms%econf%num_states),2)
       INTEGER kappa(maxval(atoms%econf%num_states)),nprnc(maxval(atoms%econf%num_states))
@@ -107,6 +118,7 @@ CONTAINS
       DO j = 1,atoms%jri(iType)
          rhoss(j)     = 0.0
          if(present(EnergyDen)) rhoss_aux(j) = 0.0
+         if(present(kinEnergyDen)) tauss(j) = 0.0
          vrd(j) = vr(j,iType)
       ENDDO
       !
@@ -175,6 +187,38 @@ CONTAINS
                   rhoss_aux(j) = rhoss_aux(j) + (rhcs(j) * eig)
                ENDDO
             ENDIF
+
+            ! ---------------------------------------------------------------
+            ! Direct kinetic energy density: τ = (1/2)|∇ψ|²
+            !
+            ! For a core state with angular momentum l and radial functions
+            ! a(r) [large] and b(r) [small] where a(r) = r·R(r):
+            !
+            !   4πr² τ(r) = (1/2) weight × [
+            !     (da/dr - a/r)² + l(l+1) a²/r²        (large component)
+            !   + (db/dr - b/r)² + l̃(l̃+1) b²/r²      (small component)
+            !   ]
+            !
+            ! where l̃ = l-1 for j=l-1/2 (κ>0) and l̃ = l+1 for j=l+1/2 (κ<0)
+            ! ---------------------------------------------------------------
+            IF(present(kinEnergyDen)) THEN
+               ! Compute small-component angular momentum l̃
+               fl_small = fl - SIGN(1.0, REAL(kappa(korb)))
+
+               ! Compute radial derivatives da/dr and db/dr inside MT sphere
+               CALL Derivative(a(1:atoms%jri(iType)), iType, atoms, da_dr(1:atoms%jri(iType)))
+               CALL Derivative(b(1:atoms%jri(iType)), iType, atoms, db_dr(1:atoms%jri(iType)))
+
+               nm = atoms%jri(iType)
+               DO j = 1, nm
+                  r = atoms%rmsh(j, iType)
+                  tauss(j) = tauss(j) + 0.5 * weight * ( &
+                     ! Large component: radial derivative + angular gradient
+                     (da_dr(j) - a(j)/r)**2 + fl*(fl+1.0) * a(j)**2 / r**2 &
+                     ! Small component: radial derivative + angular gradient
+                   + (db_dr(j) - b(j)/r)**2 + fl_small*(fl_small+1.0) * b(j)**2 / r**2 )
+               ENDDO
+            ENDIF
          ENDIF
       ENDDO
 
@@ -190,6 +234,15 @@ CONTAINS
          DO j = 1,nm
             EnergyDen(j,0,iType,jspin) = EnergyDen(j,0,iType,jspin) &
                                         + rhoss_aux(j) /(input%jspins * sfp_const)
+         ENDDO
+      ENDIF
+
+      ! Add direct core KED to kinEnergyDen (L=0 component only, divided by sqrt(4π))
+      IF(present(kinEnergyDen)) THEN
+         nm = atoms%jri(iType)
+         DO j = 1, nm
+            kinEnergyDen(j, 0, iType, jspin) = kinEnergyDen(j, 0, iType, jspin) &
+                                              + tauss(j) / (input%jspins * sfp_const)
          ENDDO
       ENDIF
 

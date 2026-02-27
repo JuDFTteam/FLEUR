@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -17,7 +17,7 @@ MODULE m_vis_xc
    !     including gradient corrections. t.a. 1996.
    !     ******************************************************
 CONTAINS
-   SUBROUTINE vis_xc(stars,sym,cell,den,xcpot,input,noco,EnergyDen,kinED,vTot,vx,exc,vxc)
+   SUBROUTINE vis_xc(stars,sym,cell,den,xcpot,input,noco,EnergyDen,kinED,vTot,vx,exc,vxc,vTau)
 
       !     ******************************************************
       !     instead of visxcor.f: the different exchange-correlation
@@ -45,12 +45,14 @@ CONTAINS
       TYPE(t_cell),INTENT(IN)       :: cell
       TYPE(t_potden),INTENT(IN)  :: den, EnergyDen
       TYPE(t_potden),INTENT(INOUT)  :: vTot,vx,exc,vxc
+      TYPE(t_potden),INTENT(INOUT),OPTIONAL :: vTau
       TYPE(t_kinED),INTENT(IN)      ::kinED
 
       TYPE(t_gradients) :: grad
       REAL, ALLOCATABLE :: rho(:,:), ED_rs(:,:), vTot_rs(:,:)
       REAL, ALLOCATABLE :: rho_conv(:,:), ED_conv(:,:), vTot_conv(:,:)
       REAL, ALLOCATABLE :: v_x(:,:),v_xc(:,:),v_xc2(:,:),e_xc(:,:)
+      REAL, ALLOCATABLE :: v_tau(:,:)
       INTEGER           :: jspin, i, js
       LOGICAL           :: perform_MetaGGA, l_libxc
 
@@ -77,7 +79,12 @@ CONTAINS
       call timestop("apply_cutoffs")
 #ifdef CPP_LIBXC
       if(perform_MetaGGA .and. kinED%set) then
-         CALL xcpot%get_vxc(input%jspins,rho,v_xc, v_x,grad, kinEnergyDen_KS=kinED%is)
+         IF (PRESENT(vTau)) THEN
+            ALLOCATE(v_tau, mold=rho); v_tau = 0.0
+            CALL xcpot%get_vxc(input%jspins,rho,v_xc, v_x,grad, kinEnergyDen_KS=kinED%is, vtau=v_tau)
+         ELSE
+            CALL xcpot%get_vxc(input%jspins,rho,v_xc, v_x,grad, kinEnergyDen_KS=kinED%is)
+         ENDIF
       else
          CALL xcpot%get_vxc(input%jspins,rho,v_xc,v_x,grad)
       endif
@@ -112,6 +119,11 @@ CONTAINS
       CALL  pw_from_grid(stars,v_xc,vTot%pw,vTot%pw_w)
       CALL  pw_from_grid(stars,v_xc2,vxc%pw)
       CALL  pw_from_grid(stars,v_x,vx%pw,vx%pw_w)
+      ! Store V_tau star coefficients for MetaGGA Hamiltonian contribution
+      IF (PRESENT(vTau) .AND. ALLOCATED(v_tau)) THEN
+         CALL pw_from_grid(stars,v_tau,vTau%pw,vTau%pw_w)
+         DEALLOCATE(v_tau)
+      ENDIF
       call timestop("pw_from_grid")
 
       !calculate the ex.-cor energy density

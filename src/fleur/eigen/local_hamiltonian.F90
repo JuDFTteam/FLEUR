@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_local_Hamiltonian
    USE m_judft
    IMPLICIT NONE
@@ -11,7 +16,7 @@ MODULE m_local_Hamiltonian
   !*********************************************************************
 CONTAINS
    SUBROUTINE local_ham(sphhar,atoms,sym,noco,nococonv,enpara,&
-       fmpi,v,vx,inden,input,hub1inp,hub1data,td,ud,alpha_hybrid,l_dfptmod)
+       fmpi,v,vx,inden,input,hub1inp,hub1data,td,ud,alpha_hybrid,l_dfptmod,vTau)
       !! Should probably be called tlmplm_postprocess or something, as there is a
       !! lot more happening than only the Cholesky decomposition.
 
@@ -22,6 +27,7 @@ CONTAINS
       ! is positive-definite.
       USE m_spnorb
       USE m_tlmplm
+      USE m_tlmplm_vtau
       USE m_types
     
       TYPE(t_mpi),      INTENT(IN)    :: fmpi
@@ -43,6 +49,7 @@ CONTAINS
       REAL,    INTENT(IN) :: alpha_hybrid
 
       LOGICAL, INTENT(IN),OPTIONAL :: l_dfptmod
+      TYPE(t_potden), INTENT(IN), OPTIONAL :: vTau  ! MetaGGA V_tau potential
 
       ! Local Scalars
       INTEGER :: l,lm,j1,j2,jsp
@@ -60,10 +67,17 @@ CONTAINS
             one = MERGE(CONJG(one),one,j1<j2)
 
             !$OMP PARALLEL DO DEFAULT(NONE) PRIVATE(l,m,lm,s)&
-            !$OMP SHARED(atoms,sphhar,sym,enpara,nococonv,j1,j2,jsp,fmpi,v,vx,input,hub1inp,hub1data,td,ud,alpha_hybrid,one,l_dfptmod,noco)
+            !$OMP SHARED(atoms,sphhar,sym,enpara,nococonv,j1,j2,jsp,fmpi,v,vx,input,hub1inp,hub1data,td,ud,alpha_hybrid,one,l_dfptmod,noco,vTau)
             DO  n = 1,atoms%ntype
                IF (j1==j2.OR.noco%l_unrestrictMT(n).or.noco%l_constrained(n)) THEN
                   CALL tlmplm(n,sphhar,atoms,sym,enpara,nococonv,j1,j2,jsp,fmpi,v,vx,input,hub1inp,hub1data,td,ud,alpha_hybrid,one,PRESENT(l_dfptmod))
+                  ! Add MetaGGA V_tau contribution to local Hamiltonian
+                  IF (PRESENT(vTau)) THEN
+                     IF (ALLOCATED(vTau%mt) .AND. jsp < 3) THEN
+                        CALL tlmplm_vtau(n, sphhar, atoms, sym, enpara, nococonv, &
+                             j1, j2, jsp, fmpi, v, vTau, input, hub1data, td, ud)
+                     END IF
+                  END IF
                END IF
                !Copy local hamiltonian for non_spherical setup
                call restrict_to_lnonsph(td%h_loc(:,:,n,j1,j2),td%h_loc2(n),td%h_loc2_nonsph(n),td%h_loc_nonsph(:,:,n,j1,j2))

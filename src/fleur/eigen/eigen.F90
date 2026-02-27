@@ -31,7 +31,7 @@ CONTAINS
    !    the same way as the eigenvalues before, but for a shifted eig_id.
    SUBROUTINE eigen(fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,&
                     hybdat,iter,eig_id,results,inden,pot,potx,hub1data,&
-                    bqpt, hmat_out, smat_out)
+                    bqpt, hmat_out, smat_out, vTau)
 
       USE m_types
       USE m_constants
@@ -76,6 +76,7 @@ CONTAINS
 
       REAL,    OPTIONAL, INTENT(IN) :: bqpt(3)
       CLASS(t_mat), OPTIONAL, INTENT(INOUT) :: hmat_out, smat_out
+      TYPE(t_potden), OPTIONAL, INTENT(IN) :: vTau
 
       ! Local Scalars
       INTEGER jsp,nk,ne_all,ne_found,neigd2,dim_mat
@@ -153,7 +154,11 @@ CONTAINS
       !     set up k-point independent t(l'm',lm) matrices
 
       alpha_hybrid = MERGE(xcpot%get_exchange_weight(),0.0,hybdat%l_subvxc)
-      CALL local_ham(sphhar,fi%atoms,fi%sym,fi%noco,nococonv,enpara,fmpi,pot,potx,inden,fi%input,fi%hub1inp,hub1data,td,ud,alpha_hybrid)
+      IF (PRESENT(vTau)) THEN
+         CALL local_ham(sphhar,fi%atoms,fi%sym,fi%noco,nococonv,enpara,fmpi,pot,potx,inden,fi%input,fi%hub1inp,hub1data,td,ud,alpha_hybrid,vTau=vTau)
+      ELSE
+         CALL local_ham(sphhar,fi%atoms,fi%sym,fi%noco,nococonv,enpara,fmpi,pot,potx,inden,fi%input,fi%hub1inp,hub1data,td,ud,alpha_hybrid)
+      ENDIF
       neigBuffer = 0
       results%neig = 0
       results%eig = 1.0e300
@@ -172,7 +177,11 @@ CONTAINS
             CALL lapw%init(fi%input,fi%noco,nococonv, kpts_mod, fi%atoms, fi%sym, nk, fi%cell, fmpi, bqpt)
 
             call timestart("Setup of H&S matrices")
-            CALL eigen_hssetup(jsp,fmpi,fi,results,inDen,potx,xcpot,enpara,nococonv,stars,sphhar,hybdat,ud,td,pot,lapw,nk,smat,hmat)
+            IF (PRESENT(vTau)) THEN
+               CALL eigen_hssetup(jsp,fmpi,fi,results,inDen,potx,xcpot,enpara,nococonv,stars,sphhar,hybdat,ud,td,pot,lapw,nk,smat,hmat,vTau=vTau)
+            ELSE
+               CALL eigen_hssetup(jsp,fmpi,fi,results,inDen,potx,xcpot,enpara,nococonv,stars,sphhar,hybdat,ud,td,pot,lapw,nk,smat,hmat)
+            ENDIF
             CALL timestop("Setup of H&S matrices")
 
             IF (PRESENT(hmat_out)) THEN

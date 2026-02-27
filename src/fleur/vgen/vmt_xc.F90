@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
    !--------------------------------------------------------------------------------
    ! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
    ! This file is part of FLEUR and available as free software under the conditions
@@ -27,7 +32,7 @@ MODULE m_vmt_xc
 
    CONTAINS
       SUBROUTINE vmt_xc(fmpi,sphhar,atoms,&
-                        den,xcpot,input,sym,EnergyDen,kinED,noco,vTot,vx,exc,vxc)
+                        den,xcpot,input,sym,EnergyDen,kinED,noco,vTot,vx,exc,vxc,vTau)
 
          use m_libxc_postprocess_gga
          USE m_mt_tofrom_grid
@@ -45,6 +50,7 @@ MODULE m_vmt_xc
          TYPE(t_potden),INTENT(IN)      :: den,EnergyDen
          TYPE(t_noco), INTENT(IN)       :: noco
          TYPE(t_potden),INTENT(INOUT)   :: vTot,vx,exc,vxc
+         TYPE(t_potden),INTENT(INOUT),OPTIONAL :: vTau
          TYPE(t_kinED),INTENT(IN)       :: kinED
          !     ..
          !     .. Local Scalars ..
@@ -52,6 +58,7 @@ MODULE m_vmt_xc
          TYPE(t_xcpot_inbuild) :: xcpot_tmp
          TYPE(t_potden)        :: vTot_tmp
          REAL, ALLOCATABLE     :: ch(:,:),v_x(:,:),v_xc(:,:),e_xc(:,:)
+         REAL, ALLOCATABLE     :: v_tau(:,:)
          INTEGER               :: n,nsp,nt,jr, loc_n
          INTEGER               :: i, j, idx, cnt
          REAL                  :: divi
@@ -106,6 +113,9 @@ MODULE m_vmt_xc
          DO n = n_start,atoms%ntype,n_stride
             ALLOCATE(ch(nsp*atoms%jri(n),input%jspins),v_x(nsp*atoms%jri(n),input%jspins),&
                      v_xc(nsp*atoms%jri(n),input%jspins),e_xc(nsp*atoms%jri(n),input%jspins))
+            IF (PRESENT(vTau)) THEN
+               ALLOCATE(v_tau(nsp*atoms%jri(n),input%jspins)); v_tau = 0.0
+            ENDIF
             IF (xcpot%needs_grad()) CALL xcpot%alloc_gradients(SIZE(ch,1),input%jspins,grad)
             loc_n = loc_n + 1
 
@@ -115,8 +125,13 @@ MODULE m_vmt_xc
             !         calculate the ex.-cor. potential
 #ifdef CPP_LIBXC
             if(perform_MetaGGA .and. kinED%set) then
-              CALL xcpot%get_vxc(input%jspins,ch,v_xc&
-                   , v_x,grad, kinEnergyDen_KS=kinED%mt(:,:,loc_n))
+              if (PRESENT(vTau)) then
+                CALL xcpot%get_vxc(input%jspins,ch,v_xc&
+                     , v_x,grad, kinEnergyDen_KS=kinED%mt(:,:,loc_n), vtau=v_tau)
+              else
+                CALL xcpot%get_vxc(input%jspins,ch,v_xc&
+                     , v_x,grad, kinEnergyDen_KS=kinED%mt(:,:,loc_n))
+              endif
             else
                CALL xcpot%get_vxc(input%jspins,ch,v_xc&
                   , v_x,grad)
@@ -160,6 +175,11 @@ MODULE m_vmt_xc
             CALL mt_from_grid(atoms,sym,sphhar,n,input%jspins,v_xc,vxc%mt(:,0:,n,:))
             CALL mt_from_grid(atoms,sym,sphhar,n,input%jspins,v_x,vx%mt(:,0:,n,:))
 
+            ! Store V_tau for MetaGGA Hamiltonian contribution
+            IF (PRESENT(vTau) .AND. ALLOCATED(v_tau)) THEN
+               CALL mt_from_grid(atoms,sym,sphhar,n,input%jspins,v_tau,vTau%mt(:,0:,n,:))
+            ENDIF
+
             IF (ALLOCATED(exc%mt)) THEN
                !
                !           calculate the ex.-cor energy density
@@ -194,6 +214,7 @@ MODULE m_vmt_xc
                CALL mt_from_grid(atoms,sym,sphhar,n,1,e_xc,exc%mt(:,0:,n,:))
             ENDIF
             IF (lda_atom(n)) DEALLOCATE(xcl)
+            IF (ALLOCATED(v_tau)) DEALLOCATE(v_tau)
             DEALLOCATE (ch,v_x,v_xc,e_xc)
          ENDDO
 
@@ -203,6 +224,9 @@ MODULE m_vmt_xc
          CALL MPI_ALLREDUCE(MPI_IN_PLACE,vTot%mt,SIZE(vTot%mt),MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)
          CALL MPI_ALLREDUCE(MPI_IN_PLACE,exc%mt,SIZE(exc%mt),MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)
          CALL MPI_ALLREDUCE(MPI_IN_PLACE,vxc%mt,SIZE(vxc%mt),MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)
+         IF (PRESENT(vTau)) THEN
+            CALL MPI_ALLREDUCE(MPI_IN_PLACE,vTau%mt,SIZE(vTau%mt),MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)
+         ENDIF
 #endif
          !
          RETURN
