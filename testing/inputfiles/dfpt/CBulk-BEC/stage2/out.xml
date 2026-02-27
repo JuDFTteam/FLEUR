@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <fleurOutput fleurOutputVersion="0.38">
    <programVersion version="fleur 41">
-      <compilationInfo date="2026-02-09T14:21:43" user="hanrath" host="iff1835" flag="-fiopenmp -qmkl  -assume byterecl -no-wrap-margin -I/Data/ias-1/hanrath/fleur-versions/local/dfpt_efield_new-m" link="lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64;/usr/lib64/libxml2.so"/>
-      <gitInfo version="MaX-R8.0-53-gc1dfbe123-dirty" branch="dfpt_efield_new" lastCommitHash="c1dfbe1230f0d26f5418cc2d0631f6cb02fd7579"/>
+      <compilationInfo date="2026-02-25T21:00:00" user="hanrath" host="iff1835.iff.kfa-juelich.de" flag="-fiopenmp -qmkl  -assume byterecl -no-wrap-margin -fPIC -I/Data/ias-1/hanrath/fleur-versions/local/dfpt_efield" link="lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64;/usr/lib64/libxml2.so"/>
+      <gitInfo version="MaX-R8.0-284-gbba6e2751-dirty" branch="dfpt_efield_new" lastCommitHash="bba6e2751ca0857275392bf0677285ed1a346008"/>
       <targetComputerArchitectures>GEN</targetComputerArchitectures>
       <precision type="DOUBLE"/>
       <targetStructureClass> </targetStructureClass>
@@ -12,9 +12,9 @@
    <parallelSetup>
       <openMP ompThreads="6"/>
       <mpi mpiProcesses="1"/>
-      <mem memoryPerNode="15856660 kB"/>
+      <mem memoryPerNode="15856656 kB"/>
    </parallelSetup>
-   <startDateAndTime date="2026/02/10" time="13:50:34" zone="+0100"/>
+   <startDateAndTime date="2026/02/27" time="16:34:52" zone="+0100"/>
    <!-- Now follows a dump of the inp.xml file after evaluating the Schema -->
   <fleurInput fleurInputVersion="0.39">
       <comment>
@@ -88,7 +88,7 @@
          <plotting iplot="0" polar="F" format="1">
             <plot TwoD="T" vec1="  1.0  0.0  0.0" vec2="  0.0  1.0  0.0" vec3="  0.0  0.0  1.0" zero="  0.0  0.0  0.0" file="plot" cartesian="F" grid="30 30 30" onlyMT="F" typeMT="0" vecField="F" edgesAllSides="T"/>
          </plotting>
-         <juPhon l_dfpt="T" l_efield="T" l_phonon="F" l_borneffcharge="F" qlim="1/100" startq="1" l_symVacLevel="F">
+         <juPhon l_dfpt="T" l_efield="F" l_phonon="F" l_borneffcharge="T" qlim="1/100" startq="1" l_symVacLevel="F">
             <qVectors>
                <q> 0.0/16 0.0/16 0.0/16 </q>
             </qVectors>
@@ -198,10 +198,15 @@
          <FermiEnergy value="0.4991367458" units="Htr"/>
          <Phonons>
             <efield>
-               <dieltensor qlim="0.01000000">104.8461398171        0.0000000000        0.0000000000</dieltensor>
+               <borneffcharge iDtype="1" iDir="1">-12.0748835644       -0.0000059047        0.0000000874</borneffcharge>
+               <borneffcharge iDtype="1" iDir="2">-0.0000058848      -12.0748840118        0.0000702636</borneffcharge>
+               <borneffcharge iDtype="1" iDir="3">0.0000003738       -0.0000629476      -12.0747508583</borneffcharge>
+               <borneffcharge iDtype="2" iDir="1">-12.0748843553       -0.0000058603        0.0000002215</borneffcharge>
+               <borneffcharge iDtype="2" iDir="2">-0.0000058847      -12.0748840121       -0.0000699569</borneffcharge>
+               <borneffcharge iDtype="2" iDir="3">0.0000003738        0.0000636958      -12.0747508573</borneffcharge>
             </efield>
          </Phonons>
       </iteration>
    </scfLoop>
-   <endDateAndTime date="2026/02/10" time="13:50:35" zone="+0100"/>
+   <endDateAndTime date="2026/02/27" time="16:35:01" zone="+0100"/>
 </fleurOutput>

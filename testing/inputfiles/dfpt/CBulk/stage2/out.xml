@@ -197,7 +197,7 @@
          <FermiEnergy value="0.4886373284" units="Htr"/>
          <Phonons>
             <efield>
-               <dielconst qlim="0.10000000">64.4764822114        0.0000000000        0.0000000000</dielconst>
+               <dieltensor qlim="0.10000000">64.4764822114        0.0000000000        0.0000000000</dieltensor>
             </efield>
          </Phonons>
       </iteration>
