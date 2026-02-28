@@ -44,7 +44,6 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    !USE m_Ekwritesl
    !USE m_banddos_io
    USE m_metagga
-   USE m_cdnval_kinEnergyDen
    !USE m_unfold_band_kpts
    USE m_denMultipoleExp
    use m_slater
@@ -172,21 +171,13 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
       IF (sliceplot%slice) CALL cdnvalJob%select_slice(sliceplot,results,input,kpts,noco,jspin)
       CALL cdnval(eig_id,fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,enpara,stars,vacuum,&
                   sphhar,sym,vTot ,cdnvalJob,outDen,dos,vacdos,results,moments,gfinp,&
-                  hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,jDOS,greensfImagPart)
+                  hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,jDOS,greensfImagPart, &
+                  l_kinEnergyDen=(xcpot%exc_is_metagga() .or. xcpot%vx_is_metagga()), &
+                  kinEnergyDen=EnergyDen)
    END DO
    CALL timestop("cdngen: cdnval")
 
    call val_den%copyPotDen(outDen)
-   ! calculate kinetic energy density for MetaGGAs (direct approach)
-   ! τ(r) = (1/2) Σ_i f_i |∇ψ_i(r)|²
-   ! This replaces the broken energy-density approach (calc_EnergyDen).
-   if(xcpot%exc_is_metagga() .or. xcpot%vx_is_metagga()) then
-      DO jspin = 1, input%jspins
-         CALL cdnval_kinEnergyDen(eig_id, fmpi, kpts, jspin, noco, nococonv, input, &
-                                   cell, atoms, enpara, stars, vacuum, sphhar, sym, &
-                                   vTot, results, EnergyDen)
-      END DO
-   endif
 
    IF (banddos%dos.or.banddos%band.or.input%cdinf) THEN
       IF (fmpi%irank == 0) THEN
@@ -287,6 +278,9 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
      IF(any(noco%l_alignMT)) CALL juDFT_error("Relaxation of SQA and metagga not implemented.", calledby = "cdngen" )
      CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
                            0,-1.0,0.0,-1.0,-1.0,.FALSE.,core_den,inFilename='cdnc')
+     ! Persist kinetic energy density for restart
+     CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
+                           0,-1.0,0.0,-1.0,-1.0,.FALSE.,EnergyDen,inFilename='kinED')
    endif
 
 #ifdef CPP_MPI

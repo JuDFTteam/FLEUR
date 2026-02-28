@@ -38,6 +38,7 @@ src/fleur/vgen/write_xcstuff.f90
 src/fleur/vgen/VYukawaFilm.f90
 src/fleur/vgen/divergence.F90
 src/fleur/vgen/xcBfield.f90
+src/fleur/vgen/compute_aux_gga_mt.F90
 )
 
 include(src/fleur/vgen/vdW/CMakeLists.txt)

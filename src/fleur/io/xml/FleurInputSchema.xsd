@@ -869,6 +869,11 @@
                <xsd:documentation>Settings for printing GGA-related quantities.</xsd:documentation>
             </xsd:annotation>
          </xsd:element>
+         <xsd:element maxOccurs="1" minOccurs="0" name="AuxGGA" type="AuxGGAType">
+            <xsd:annotation>
+               <xsd:documentation>Auxiliary GGA functional for computing radial basis functions in MetaGGA calculations. Specify LibXC IDs for the GGA exchange and correlation. Recommended: RPBE (exchange=130 correlation=131) for SCAN.</xsd:documentation>
+            </xsd:annotation>
+         </xsd:element>
       </xsd:sequence>
       <xsd:attribute name="name" type="XCFunctionalEnum" use="required">
          <xsd:annotation>
@@ -989,6 +994,13 @@
             <xsd:documentation>LibXC correlation functional name for total energy evaluation. If not specified, uses the same as correlation.</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
+   </xsd:complexType>
+   <xsd:complexType name="AuxGGAType">
+      <xsd:annotation>
+         <xsd:documentation>Auxiliary GGA functional (LibXC IDs) for radial basis functions in MetaGGA calculations.</xsd:documentation>
+      </xsd:annotation>
+      <xsd:attribute name="exchange"    type="xsd:integer" use="required"/>
+      <xsd:attribute name="correlation" type="xsd:integer" use="required"/>
    </xsd:complexType>
    <xsd:complexType name="XCParamsType">
       <xsd:attribute name="igrd" type="xsd:integer" use="required">

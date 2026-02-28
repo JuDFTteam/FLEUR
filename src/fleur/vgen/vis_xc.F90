@@ -79,7 +79,7 @@ CONTAINS
       call timestop("apply_cutoffs")
 #ifdef CPP_LIBXC
       if(perform_MetaGGA .and. kinED%set) then
-         IF (PRESENT(vTau)) THEN
+         IF (xcpot%vx_is_MetaGGA()) THEN
             ALLOCATE(v_tau, mold=rho); v_tau = 0.0
             CALL xcpot%get_vxc(input%jspins,rho,v_xc, v_x,grad, kinEnergyDen_KS=kinED%is, vtau=v_tau)
          ELSE
@@ -120,7 +120,7 @@ CONTAINS
       CALL  pw_from_grid(stars,v_xc2,vxc%pw)
       CALL  pw_from_grid(stars,v_x,vx%pw,vx%pw_w)
       ! Store V_tau star coefficients for MetaGGA Hamiltonian contribution
-      IF (PRESENT(vTau) .AND. ALLOCATED(v_tau)) THEN
+      IF (xcpot%vx_is_MetaGGA() .AND. ALLOCATED(v_tau)) THEN
          CALL pw_from_grid(stars,v_tau,vTau%pw,vTau%pw_w)
          DEALLOCATE(v_tau)
       ENDIF

@@ -113,7 +113,7 @@ MODULE m_vmt_xc
          DO n = n_start,atoms%ntype,n_stride
             ALLOCATE(ch(nsp*atoms%jri(n),input%jspins),v_x(nsp*atoms%jri(n),input%jspins),&
                      v_xc(nsp*atoms%jri(n),input%jspins),e_xc(nsp*atoms%jri(n),input%jspins))
-            IF (PRESENT(vTau)) THEN
+            IF (xcpot%vx_is_MetaGGA()) THEN
                ALLOCATE(v_tau(nsp*atoms%jri(n),input%jspins)); v_tau = 0.0
             ENDIF
             IF (xcpot%needs_grad()) CALL xcpot%alloc_gradients(SIZE(ch,1),input%jspins,grad)
@@ -125,7 +125,7 @@ MODULE m_vmt_xc
             !         calculate the ex.-cor. potential
 #ifdef CPP_LIBXC
             if(perform_MetaGGA .and. kinED%set) then
-              if (PRESENT(vTau)) then
+              if (xcpot%vx_is_MetaGGA()) then
                 CALL xcpot%get_vxc(input%jspins,ch,v_xc&
                      , v_x,grad, kinEnergyDen_KS=kinED%mt(:,:,loc_n), vtau=v_tau)
               else
@@ -176,7 +176,7 @@ MODULE m_vmt_xc
             CALL mt_from_grid(atoms,sym,sphhar,n,input%jspins,v_x,vx%mt(:,0:,n,:))
 
             ! Store V_tau for MetaGGA Hamiltonian contribution
-            IF (PRESENT(vTau) .AND. ALLOCATED(v_tau)) THEN
+            IF (xcpot%vx_is_MetaGGA() .AND. ALLOCATED(v_tau)) THEN
                CALL mt_from_grid(atoms,sym,sphhar,n,input%jspins,v_tau,vTau%mt(:,0:,n,:))
             ENDIF
 
@@ -224,7 +224,7 @@ MODULE m_vmt_xc
          CALL MPI_ALLREDUCE(MPI_IN_PLACE,vTot%mt,SIZE(vTot%mt),MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)
          CALL MPI_ALLREDUCE(MPI_IN_PLACE,exc%mt,SIZE(exc%mt),MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)
          CALL MPI_ALLREDUCE(MPI_IN_PLACE,vxc%mt,SIZE(vxc%mt),MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)
-         IF (PRESENT(vTau)) THEN
+         IF (xcpot%vx_is_MetaGGA()) THEN
             CALL MPI_ALLREDUCE(MPI_IN_PLACE,vTau%mt,SIZE(vTau%mt),MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)
          ENDIF
 #endif

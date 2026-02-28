@@ -4,7 +4,6 @@ set(fleur_F90 ${fleur_F90}
 src/fleur/cdn/cdnovlp.F90
 src/fleur/cdn/cdntot.F90
 src/fleur/cdn/cdnval.F90
-src/fleur/cdn/cdnval_kinEnergyDen.F90
 src/fleur/cdn/pwden.F90
 src/fleur/cdn/pwden_kinEnergyDen.F90
 src/fleur/cdn/pwint.f90

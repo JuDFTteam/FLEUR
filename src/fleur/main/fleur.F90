@@ -63,6 +63,7 @@ CONTAINS
       USE m_dwigner
       USE m_ylm
       USE m_metagga
+      USE m_compute_aux_gga_mt
       USE m_plot
       USE m_usetup
       USE m_hubbard1_setup
@@ -101,6 +102,7 @@ CONTAINS
       TYPE(t_potden)   :: vTot, vx, vCoul, vxc, exc, vTau
       TYPE(t_potden)   :: inDen, outDen, EnergyDen, sliceDen,coreden
       TYPE(t_hub1data) :: hub1data
+      REAL, ALLOCATABLE :: auxGGA_vxc_sph(:,:,:) !< Auxiliary GGA XC potential for MGGA basis
 
       TYPE(t_greensf), ALLOCATABLE :: greensFunction(:)
       TYPE(t_log_message)  :: log
@@ -357,9 +359,37 @@ CONTAINS
          END IF
 
          CALL timestart("generation of potential")
+         ! Load persisted kinetic energy density for MetaGGA (if available)
+         IF (xcpot%exc_is_MetaGGA() .OR. xcpot%vx_is_MetaGGA()) THEN
+            IF (.NOT. ALLOCATED(EnergyDen%mt)) THEN
+               CALL EnergyDen%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_EnergyDen)
+               IF (fmpi%irank==0) THEN
+                  BLOCK
+                     REAL    :: rdummy
+                     LOGICAL :: l_dummy
+                     INQUIRE(FILE='kinED.hdf', EXIST=l_dummy)
+                     IF (l_dummy) THEN
+                        CALL readDensity(stars, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
+                             fi%input, fi%sym, CDN_ARCHIVE_TYPE_CDN_const, CDN_INPUT_DEN_const, &
+                             0, rdummy, rdummy, l_dummy, EnergyDen, inFilename='kinED')
+                     END IF
+                  END BLOCK
+               END IF
+               CALL EnergyDen%distribute(fmpi%mpi_comm)
+            END IF
+         END IF
          CALL vgen(hybdat, fi%field, fi%input, xcpot, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, fi%juphon, &
                    fi%cell,   fi%sliceplot, fmpi, results, fi%noco, nococonv, EnergyDen, inDen, vTot, vx, vCoul, vxc, exc, vTau=vTau)
          CALL timestop("generation of potential")
+
+         ! Compute auxiliary GGA XC potential for radial basis generation in MetaGGA
+         IF (xcpot%has_aux_gga()) THEN
+            CALL timestart("Auxiliary GGA for basis")
+            IF (.NOT. ALLOCATED(auxGGA_vxc_sph)) &
+               ALLOCATE(auxGGA_vxc_sph(fi%atoms%jmtd, fi%atoms%ntype, fi%input%jspins))
+            CALL compute_aux_gga_mt(xcpot, fi%atoms, sphhar, fi%sym, fi%input, fi%noco, fmpi, inDen, auxGGA_vxc_sph)
+            CALL timestop("Auxiliary GGA for basis")
+         ENDIF
 
          ! Scale the magnetization back.
          IF (ANY(fi%noco%l_unrestrictMT).AND.fi%noco%l_scaleMag) THEN
@@ -402,7 +432,11 @@ CONTAINS
             CALL timestart("eigen")
 
             CALL timestart("Updating energy parameters")
-            CALL enpara%update(fmpi, fi%atoms, fi%vacuum, fi%input, vToT, hub1data)
+            IF (xcpot%has_aux_gga()) THEN
+               CALL enpara%update(fmpi, fi%atoms, fi%vacuum, fi%input, vToT, hub1data, vxc=vxc, auxGGA_vxc_sph=auxGGA_vxc_sph)
+            ELSE
+               CALL enpara%update(fmpi, fi%atoms, fi%vacuum, fi%input, vToT, hub1data)
+            ENDIF
             CALL timestop("Updating energy parameters")
 
             IF (.NOT. fi%input%eig66(1)) THEN

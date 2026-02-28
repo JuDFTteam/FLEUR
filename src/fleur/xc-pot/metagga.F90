@@ -4,6 +4,7 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_metagga
+   implicit none
    PUBLIC  :: calc_EnergyDen, set_kinED_direct
    PRIVATE :: calc_EnergyDen_auxillary_weights, &
               calc_kinEnergyDen_pw, &
@@ -303,11 +304,11 @@ CONTAINS
 
       CALL init_pw_grid(stars,sym,cell,xcpot)
 
-      CALL pw_to_grid(xcpot%needs_grad(), input%jspins, noco%l_noco, stars, &
+      CALL pw_to_grid(.FALSE., input%jspins, noco%l_noco, stars, &
                       cell,  EnergyDen%pw, tmp_grad, xcpot,    ED_rs)
-      CALL pw_to_grid(xcpot%needs_grad(), input%jspins, noco%l_noco, stars, &
+      CALL pw_to_grid(.FALSE., input%jspins, noco%l_noco, stars, &
                       cell,  vTot%pw,      tmp_grad, xcpot,    vTot_rs)
-      CALL pw_to_grid(xcpot%needs_grad(), input%jspins, noco%l_noco, stars, &
+      CALL pw_to_grid(.FALSE., input%jspins, noco%l_noco, stars, &
                       cell,  den%pw,       tmp_grad, xcpot,   den_rs)
 
       CALL finish_pw_grid()
@@ -345,7 +346,7 @@ CONTAINS
       n_start=1
       n_stride=1
 #endif
-      CALL init_mt_grid(input%jspins,atoms,sphhar,xcpot%needs_grad(),sym)
+      CALL init_mt_grid(input%jspins,atoms,sphhar,.FALSE.,sym)
       loc_n = 0
       allocate(ED_rs(atoms%nsp()*atoms%jmtd, input%jspins))
       allocate(vTot_rs, mold=ED_rs)
@@ -368,19 +369,19 @@ CONTAINS
          do jr=1,atoms%jri(n)
             vTot_mt(jr,0:,:) = vTot%mt(jr,0:,n,:) * atoms%rmsh(jr,n)**2
          enddo
-         CALL mt_to_grid(xcpot%needs_grad(), input%jspins, atoms,sym, sphhar,.TRUE., EnergyDen%mt(:, 0:, n, :), &
+         CALL mt_to_grid(.FALSE., input%jspins, atoms,sym, sphhar,.TRUE., EnergyDen%mt(:, 0:, n, :), &
                          n,  noco,   tmp_grad,     ED_rs)
-         CALL mt_to_grid(xcpot%needs_grad(), input%jspins, atoms, sym,sphhar,.TRUE., vTot_mt(:,0:,:), &
+         CALL mt_to_grid(.FALSE., input%jspins, atoms, sym,sphhar,.TRUE., vTot_mt(:,0:,:), &
                          n,     noco,tmp_grad,     vTot_rs)
 
          tmp_sphhar%nlhd = sphhar%nlhd
          tmp_sphhar%nlh  = [(0, cnt=1,size(sphhar%nlh))]
 
-         CALL mt_to_grid(xcpot%needs_grad(), input%jspins, atoms, sym,tmp_sphhar,.TRUE., vTot_mt(:,0:0,:), &
+         CALL mt_to_grid(.FALSE., input%jspins, atoms, sym,tmp_sphhar,.TRUE., vTot_mt(:,0:0,:), &
                          n,    noco, tmp_grad,     vTot0_rs)
-         CALL mt_to_grid(xcpot%needs_grad(), input%jspins, atoms, sym,sphhar,.TRUE., &
+         CALL mt_to_grid(.FALSE., input%jspins, atoms, sym,sphhar,.TRUE., &
                          core_den%mt(:,0:,n,:), n,noco, tmp_grad, core_den_rs)
-         CALL mt_to_grid(xcpot%needs_grad(), input%jspins, atoms, sym,sphhar,.TRUE., &
+         CALL mt_to_grid(.FALSE., input%jspins, atoms, sym,sphhar,.TRUE., &
                          val_den%mt(:,0:,n,:), n,noco, tmp_grad, val_den_rs)
 
          call calc_kinEnergyDen_mt(ED_RS, vTot_rs, vTot0_rs, core_den_rs, val_den_rs, &
@@ -432,9 +433,10 @@ CONTAINS
 #ifdef CPP_LIBXC
       ! ---------------------------------------------------------------
       ! Interstitial: convert star coefficients to real-space grid
+      ! No gradients needed — we are only converting representations.
       ! ---------------------------------------------------------------
       CALL init_pw_grid(stars, sym, cell, xcpot)
-      CALL pw_to_grid(xcpot%needs_grad(), input%jspins, noco%l_noco, stars, &
+      CALL pw_to_grid(.FALSE., input%jspins, noco%l_noco, stars, &
                       cell, kinEnergyDen%pw, tmp_grad, xcpot, kinED%is)
       CALL finish_pw_grid()
 
@@ -449,13 +451,13 @@ CONTAINS
       n_stride=1
 #endif
 
-      CALL init_mt_grid(input%jspins, atoms, sphhar, xcpot%needs_grad(), sym)
+      CALL init_mt_grid(input%jspins, atoms, sphhar, .FALSE., sym)
       call kinED%alloc_mt(atoms%nsp()*atoms%jmtd, input%jspins, &
                           n_start, atoms%ntype, n_stride)
       loc_n = 0
       do n = n_start, atoms%ntype, n_stride
          loc_n = loc_n + 1
-         CALL mt_to_grid(xcpot%needs_grad(), input%jspins, atoms, sym, sphhar, .TRUE., &
+         CALL mt_to_grid(.FALSE., input%jspins, atoms, sym, sphhar, .TRUE., &
                          kinEnergyDen%mt(:, 0:, n, :), n, noco, tmp_grad, kinED%mt(:,:,loc_n))
       enddo
       CALL finish_mt_grid()
