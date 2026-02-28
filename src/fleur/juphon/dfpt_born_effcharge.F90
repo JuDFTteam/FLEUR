@@ -331,6 +331,8 @@ contains
 
     subroutine dfpt_born_eff_charge_final(fi,born_eff_charge,born_eff_charge_contributions)
 
+         USE m_xmlOutput
+
         type(t_fleurinput), intent(in)    :: fi
         complex, intent(inout)   :: born_eff_charge(:,:,:)
         complex, intent(inout)   :: born_eff_charge_contributions(:,:,:,:)
@@ -339,6 +341,7 @@ contains
         character(len=20)        :: atom_string
         character(len=20)        :: filename
         integer                  ::i, file_int
+        CHARACTER(LEN=20)        :: attributes(2)
 
 
         !born_eff_charge(:,:,:) = -born_eff_charge(:,:,:)
@@ -366,7 +369,19 @@ contains
         close(111)
         write(*,*) '-------------------------' 
 
-        !born_eff_charge_IR(:,:,:) = -born_eff_charge_IR(:,:,:)
+        !save in out.xml
+        CALL openXMLElementNoAttributes('Phonons')
+        CALL openXMLElementNoAttributes('efield')
+        do iDType = 1, fi%atoms%ntype 
+            do iDir = 1,3
+                attributes = ''
+                WRITE(attributes(1),'(i0)') iDType
+                WRITE(attributes(2),'(i0)') iDir
+                CALL writeXMLElementPoly('borneffcharge',(/ 'iDtype' , 'iDir  '/), attributes,real(born_eff_charge(iDType,iDir,:)))
+            end do
+        end do
+        CALL closeXMLElement('efield')
+        CALL closeXMLElement('Phonons')
         
         atom_string = 'atom No:'
 
