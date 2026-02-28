@@ -141,7 +141,7 @@ CONTAINS
       CALL vx%distribute(fmpi%mpi_comm)
       CALL vxc%distribute(fmpi%mpi_comm)
       CALL exc%distribute(fmpi%mpi_comm)
-      IF (PRESENT(vTau)) THEN
+      IF (xcpot%vx_is_MetaGGA()) THEN
          IF (ALLOCATED(vTau%mt)) CALL vTau%distribute(fmpi%mpi_comm)
       ENDIF
 

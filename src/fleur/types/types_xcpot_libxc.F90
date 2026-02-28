@@ -22,6 +22,8 @@ MODULE m_types_xcpot_libxc
 #ifdef CPP_LIBXC
       TYPE(xc_f90_func_t)      :: vxc_func_x, vxc_func_c
       TYPE(xc_f90_func_t)      :: exc_func_x, exc_func_c
+      TYPE(xc_f90_func_t)      :: aux_func_x, aux_func_c
+      LOGICAL                  :: l_has_aux = .FALSE.
 #endif
       INTEGER                  :: jspins
 
@@ -46,6 +48,7 @@ MODULE m_types_xcpot_libxc
       PROCEDURE        :: get_exc => xcpot_get_exc
       PROCEDURE        :: get_fxc => xcpot_get_fxc
       PROCEDURE, NOPASS :: alloc_gradients => xcpot_alloc_gradients
+      PROCEDURE        :: get_aux_vxc => xcpot_get_aux_vxc
       !Not             overloeaded...
       PROCEDURE        :: init => xcpot_init
       PROCEDURE,NOPASS :: apply_cutoffs
@@ -136,6 +139,22 @@ CONTAINS
       ELSEIF (xcpot%func_vxc_id_c > 0) THEN
          IF (ANY([XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA] == xc_get_family(xcpot%vxc_func_c))) THEN
             WRITE(*,*) "MetaGGA correlation potential functional detected - V_tau will be computed"
+         ENDIF
+      ENDIF
+
+      ! Initialize auxiliary GGA functional for radial basis generation in MetaGGA
+      xcpot%l_has_aux = (xcpot%func_aux_id_x > 0)
+      IF (xcpot%l_has_aux) THEN
+         WRITE(*,*) "Auxiliary GGA for radial basis: exchange=", xcpot%func_aux_id_x, &
+                    " correlation=", xcpot%func_aux_id_c
+         IF (jspins == 1) THEN
+            CALL xc_f90_func_init(xcpot%aux_func_x, xcpot%func_aux_id_x, XC_UNPOLARIZED)
+            IF (xcpot%func_aux_id_c > 0) &
+               CALL xc_f90_func_init(xcpot%aux_func_c, xcpot%func_aux_id_c, XC_UNPOLARIZED)
+         ELSE
+            CALL xc_f90_func_init(xcpot%aux_func_x, xcpot%func_aux_id_x, XC_POLARIZED)
+            IF (xcpot%func_aux_id_c > 0) &
+               CALL xc_f90_func_init(xcpot%aux_func_c, xcpot%func_aux_id_c, XC_POLARIZED)
          ENDIF
       ENDIF
 
@@ -546,6 +565,52 @@ CONTAINS
 
    END SUBROUTINE xcpot_alloc_gradients
 
+   !> Evaluate auxiliary GGA XC potential for radial basis generation in MetaGGA
+   SUBROUTINE xcpot_get_aux_vxc(xcpot, jspins, rh, vxc, vx, grad)
+      USE, INTRINSIC :: IEEE_ARITHMETIC
+      USE iso_c_binding
+      IMPLICIT NONE
+      CLASS(t_xcpot_libxc), INTENT(IN) :: xcpot
+      INTEGER, INTENT(IN)              :: jspins
+      REAL, INTENT(IN)                 :: rh(:, :)
+      REAL, INTENT(OUT)                :: vxc(:, :), vx(:, :)
+      TYPE(t_gradients), INTENT(INOUT) :: grad
+
+#ifdef CPP_LIBXC
+      REAL, ALLOCATABLE :: vxc_tmp(:,:), vx_tmp(:,:), vsigma(:,:)
+      integer(kind=c_size_t) :: npts
+
+      IF (.NOT. xcpot%l_has_aux) THEN
+         CALL judft_error("get_aux_vxc called but no auxiliary GGA configured")
+      ENDIF
+
+      npts = SIZE(rh, 1)
+      ALLOCATE(vxc_tmp(jspins, npts)); vxc_tmp = 0.0
+      ALLOCATE(vx_tmp(jspins, npts)); vx_tmp = 0.0
+      ALLOCATE(vsigma, mold=grad%vsigma); vsigma = 0.0
+
+      ! Exchange
+      CALL xc_f90_gga_vxc(xcpot%aux_func_x, npts, TRANSPOSE(rh), grad%sigma, vx_tmp, vsigma)
+
+      ! Correlation
+      IF (xcpot%func_aux_id_c > 0) THEN
+         CALL xc_f90_gga_vxc(xcpot%aux_func_c, npts, TRANSPOSE(rh), grad%sigma, vxc_tmp, grad%vsigma)
+         grad%vsigma = grad%vsigma + vsigma
+         vxc_tmp = vxc_tmp + vx_tmp
+      ELSE
+         vxc_tmp = vx_tmp
+         grad%vsigma = vsigma
+      ENDIF
+
+      vx = TRANSPOSE(vx_tmp)
+      vxc = TRANSPOSE(vxc_tmp)
+
+      DEALLOCATE(vxc_tmp, vx_tmp, vsigma)
+#else
+      CALL judft_error("Auxiliary GGA requires LibXC support")
+#endif
+   END SUBROUTINE xcpot_get_aux_vxc
+
    subroutine mpi_bc_xcpot_libxc(This, Mpi_comm, Irank)
       Use M_mpi_bc_tool
       Class(t_xcpot_libxc), Intent(Inout)::This
@@ -567,6 +632,8 @@ CONTAINS
       CALL mpi_bc(this%l_inbuild, rank, mpi_comm)
       CALL mpi_bc(rank, mpi_comm, this%inbuild_name)
       CALL mpi_bc(this%l_relativistic, rank, mpi_comm)
+      CALL mpi_bc(this%func_aux_id_x, rank, mpi_comm)
+      CALL mpi_bc(this%func_aux_id_c, rank, mpi_comm)
 
    END SUBROUTINE mpi_bc_xcpot_libxc
 #ifdef CPP_LIBXC

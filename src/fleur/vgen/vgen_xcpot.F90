@@ -4,12 +4,12 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_vgen_xcpot
-   implicit none
 
    USE m_juDFT
 #ifdef CPP_MPI
    use mpi
 #endif
+   implicit none
 
 CONTAINS
 

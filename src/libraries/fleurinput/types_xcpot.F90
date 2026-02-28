@@ -40,6 +40,7 @@ MODULE m_types_xcpot
       LOGICAL                  :: l_libxc = .FALSE.
       INTEGER                  :: func_vxc_id_c, func_vxc_id_x !> functionals to be used for potential & density convergence
       INTEGER                  :: func_exc_id_c, func_exc_id_x !> functionals to be used in exc- & totale-calculations
+      INTEGER                  :: func_aux_id_x = 0, func_aux_id_c = 0 !> auxiliary GGA for radial basis in MetaGGA
       !For inbuild
 
       LOGICAL          :: l_inbuild = .FALSE.
@@ -72,6 +73,8 @@ MODULE m_types_xcpot
       PROCEDURE,NOPASS :: apply_cutoffs
 
       PROCEDURE, NOPASS :: alloc_gradients => xcpot_alloc_gradients
+      PROCEDURE        :: has_aux_gga => xcpot_has_aux_gga
+      PROCEDURE        :: get_aux_vxc => xcpot_get_aux_vxc
       PROCEDURE        :: read_xml => read_xml_xcpot
       PROCEDURE        :: mpi_bc => mpi_bc_xcpot_abstract
    END TYPE t_xcpot
@@ -111,6 +114,8 @@ CONTAINS
     CALL mpi_bc(this%l_inbuild, rank, mpi_comm)
     CALL mpi_bc(rank, mpi_comm, this%inbuild_name)
     CALL mpi_bc(this%l_relativistic, rank, mpi_comm)
+    CALL mpi_bc(this%func_aux_id_x, rank, mpi_comm)
+    CALL mpi_bc(this%func_aux_id_c, rank, mpi_comm)
   end subroutine mpi_bc_xcpot_abstract
 
 
@@ -215,6 +220,12 @@ CONTAINS
       IF (this%l_inbuild .AND. this%l_libxc) CALL judft_error("You specified libxc and an inbuild xc-pot, please choose only one option")
       IF (.NOT. (this%l_inbuild .OR. this%l_libxc)) CALL judft_error("You specified no xc-pot")
 
+      !Read auxiliary GGA for MetaGGA radial basis generation
+      IF (xml%GetNumberOfNodes(trim(xpathC)//'/AuxGGA') == 1) THEN
+         this%func_aux_id_x = evaluateFirstOnly(xml%GetAttributeValue(trim(xpathC)//'/AuxGGA/@exchange'))
+         this%func_aux_id_c = evaluateFirstOnly(xml%GetAttributeValue(trim(xpathC)//'/AuxGGA/@correlation'))
+      ENDIF
+
    END SUBROUTINE read_xml_xcpot
 
    ! LDA
@@ -277,7 +288,8 @@ CONTAINS
       IMPLICIT NONE
       CLASS(t_xcpot), INTENT(IN):: xcpot
 
-      xcpot_needs_grad = xcpot%vc_is_gga()
+      xcpot_needs_grad = xcpot%vx_is_GGA() .OR. xcpot%vc_is_gga() &
+                    .OR. xcpot%vx_is_MetaGGA() .OR. xcpot%exc_is_MetaGGA()
    END FUNCTION xcpot_needs_grad
 
    FUNCTION xcpot_get_exchange_weight(xcpot) RESULT(a_ex)
@@ -364,5 +376,23 @@ CONTAINS
       grad%gggrd(:) = 0.0 ; grad%grgru(:) = 0.0 ; grad%grgrd(:) = 0.0
       
    END SUBROUTINE xcpot_alloc_gradients
+
+   LOGICAL FUNCTION xcpot_has_aux_gga(xcpot)
+      IMPLICIT NONE
+      CLASS(t_xcpot), INTENT(IN):: xcpot
+      xcpot_has_aux_gga = (xcpot%func_aux_id_x > 0)
+   END FUNCTION xcpot_has_aux_gga
+
+   SUBROUTINE xcpot_get_aux_vxc(xcpot, jspins, rh, vxc, vx, grad)
+      USE m_judft
+      IMPLICIT NONE
+      CLASS(t_xcpot), INTENT(IN)    :: xcpot
+      INTEGER, INTENT(IN)           :: jspins
+      REAL, INTENT(IN)              :: rh(:, :)
+      REAL, INTENT(OUT)             :: vxc(:, :), vx(:, :)
+      TYPE(t_gradients), INTENT(INOUT) :: grad
+      vxc = 0.0; vx = 0.0
+      CALL juDFT_error("get_aux_vxc not implemented for this xcpot type")
+   END SUBROUTINE xcpot_get_aux_vxc
 
 END MODULE m_types_xcpot
