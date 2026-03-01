@@ -41,7 +41,7 @@ contains
     tempval_denom = 0.0
     !print*,"diff", 7.053*borneffcharge-borneffcharge_dumb
     call read_dielten(fi,dielten)
-    call correct_BEC(dielten,borneffcharge)
+    !call correct_BEC(dielten,borneffcharge)
 
     !print*,"borneffcharge1",borneffcharge(1,:,:)
     !print*,"borneffcharge2",borneffcharge(2,:,:)
@@ -61,7 +61,7 @@ contains
     end do
     !print*,"tempval_denom",tempval_denom
     !tempval_BEC_fixed = sum(borneffcharge(iDtype,iDir_den,:)*qnorm_vec(:))
-    do itype=1,3
+    do itype=1,fi%atoms%ntype
         do iDir=1,3
             do iType_row=1,fi%atoms%ntype
                 do iDir_row=1,3
