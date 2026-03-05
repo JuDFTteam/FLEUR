@@ -265,10 +265,9 @@ contains
                     IF (fmpi%irank==0)  WRITE(*,*) 'Add non-analytic correction at Gamma-Point'
                     allocate(dyn_mat_NAC(3*fi%atoms%ntype,3*fi%atoms%ntype))
                     dyn_mat_NAC =cmplx(0.,0.)
-                    CALL dfpt_NAC(fi,iDtype,iDir,dyn_mat_NAC)
+                    CALL dfpt_NAC(fi,dyn_mat_NAC)
                     dyn_mat(iQ,:,:) = dyn_mat(iQ,:,:)+dyn_mat_NAC(:,:) 
                     deallocate(dyn_mat_NAC)
-                    !stop
                 END IF
                 call timestart("Dynmat diagonalization")
                 call DiagonalizeDynMat(fi%atoms, qpts%bk(:,q_list(iQ)), fi%juPhon%calcEigenVec, dyn_mat(iQ,:,:), eigenVals, eigenVecs, q_list(iQ),.TRUE.,"raw",fi%juphon%l_sumrule)
