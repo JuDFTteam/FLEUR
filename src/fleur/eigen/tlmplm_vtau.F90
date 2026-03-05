@@ -91,12 +91,15 @@ CONTAINS
       ALLOCATE(Dg(atoms%jmtd, 2, 0:atoms%lmaxd, 2)); Dg = 0.0
       ALLOCATE(dR_dr(atoms%jmtd))
 
+      CALL timestart("tlmplm_vtau")
+
       ! Load V_tau lattice harmonic coefficients
       vtau_lh(:jri, 0:) = vTau%mt(:jri, 0:, n, iSpinV)
 
       ! No lh=0 offset for V_tau (it doesn't get the enpara subtraction)
       lh0 = 0
 
+      CALL timestart("tlmplm_vtau: basis+derivatives")
       ! Generate radial basis functions using total potential (same as in tlmplm)
       DO i = MIN(ilSpinPr,ilSpin), MAX(ilSpinPr,ilSpin)
          CALL genMTBasis(atoms, enpara, v, fmpi, n, i, ud, &
@@ -123,11 +126,13 @@ CONTAINS
          END DO
       END DO
       DEALLOCATE(dR_dr)
+      CALL timestop("tlmplm_vtau: basis+derivatives")
 
       na = atoms%firstAtom(n)
       nsym = sym%ntypsy(na)
       nh = sphhar%nlh(nsym)
 
+      CALL timestart("tlmplm_vtau: radial integrals")
       ! Generate the gradient-weighted integrals:
       ! <nabla(u_{l'}) | V_tau^{lh} | nabla(u_l)> etc.
       ! for l <= l' [lower triangle], satisfying Gaunt selection rules.
@@ -198,8 +203,11 @@ CONTAINS
          END DO
       END DO
 
+      CALL timestop("tlmplm_vtau: radial integrals")
+
       ! Assemble the V_tau contribution into td%h_loc using the same
       ! angular coupling (Gaunt coefficients) as in tlmplm.
+      CALL timestart("tlmplm_vtau: assemble h_loc")
       s = td%h_loc2(n) ! Offset for udot elements
       ! (lm)' loop:
       DO lp = 0, atoms%lmax(n)
@@ -244,6 +252,9 @@ CONTAINS
             END DO
          END DO
       END DO
+
+      CALL timestop("tlmplm_vtau: assemble h_loc")
+      CALL timestop("tlmplm_vtau")
 
    END SUBROUTINE tlmplm_vtau
 END MODULE m_tlmplm_vtau

@@ -74,7 +74,6 @@ MODULE m_types_xcpot
 
       PROCEDURE, NOPASS :: alloc_gradients => xcpot_alloc_gradients
       PROCEDURE        :: has_aux_gga => xcpot_has_aux_gga
-      PROCEDURE        :: get_aux_vxc => xcpot_get_aux_vxc
       PROCEDURE        :: read_xml => read_xml_xcpot
       PROCEDURE        :: mpi_bc => mpi_bc_xcpot_abstract
    END TYPE t_xcpot
@@ -300,7 +299,7 @@ CONTAINS
       a_ex = -1
    END FUNCTION xcpot_get_exchange_weight
 
-   SUBROUTINE xcpot_get_vxc(xcpot, jspins, rh, vxc, vx, grad,kinEnergyDen_KS, vtau)
+   SUBROUTINE xcpot_get_vxc(xcpot, jspins, rh, vxc, vx, grad,kinEnergyDen_KS, vtau, l_aux)
       USE m_judft
       IMPLICIT NONE
 
@@ -313,6 +312,7 @@ CONTAINS
       TYPE(t_gradients), OPTIONAL, INTENT(INOUT)::grad
       REAL, INTENT(IN), OPTIONAL            :: kinEnergyDen_KS(:, :)
       REAL, INTENT(OUT), OPTIONAL           :: vtau(:, :)
+      LOGICAL, INTENT(IN), OPTIONAL         :: l_aux  !< Use auxiliary GGA functional
       vxc = 0.0
       vx = 0.0
       CALL juDFT_error("Can't use XC-parrent class")
@@ -382,17 +382,5 @@ CONTAINS
       CLASS(t_xcpot), INTENT(IN):: xcpot
       xcpot_has_aux_gga = (xcpot%func_aux_id_x > 0)
    END FUNCTION xcpot_has_aux_gga
-
-   SUBROUTINE xcpot_get_aux_vxc(xcpot, jspins, rh, vxc, vx, grad)
-      USE m_judft
-      IMPLICIT NONE
-      CLASS(t_xcpot), INTENT(IN)    :: xcpot
-      INTEGER, INTENT(IN)           :: jspins
-      REAL, INTENT(IN)              :: rh(:, :)
-      REAL, INTENT(OUT)             :: vxc(:, :), vx(:, :)
-      TYPE(t_gradients), INTENT(INOUT) :: grad
-      vxc = 0.0; vx = 0.0
-      CALL juDFT_error("get_aux_vxc not implemented for this xcpot type")
-   END SUBROUTINE xcpot_get_aux_vxc
 
 END MODULE m_types_xcpot

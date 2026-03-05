@@ -81,7 +81,7 @@ CONTAINS
          CALL xcpot%apply_cutoffs(1.E-6, ch, grad)
 
          ! Evaluate auxiliary GGA functional
-         CALL xcpot%get_aux_vxc(input%jspins, ch, v_xc, v_x, grad)
+         CALL xcpot%get_vxc(input%jspins, ch, v_xc, v_x, grad, l_aux=.TRUE.)
 
          ! Apply GGA postprocessing: v_xc -= 2*div(vsigma * grad(rho))
          CALL libxc_postprocess_gga_mt(xcpot, atoms, sym, sphhar, noco, n, v_xc, grad, atom_num=n)
