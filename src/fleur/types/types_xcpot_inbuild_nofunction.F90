@@ -210,7 +210,7 @@ CONTAINS
       IF (xcpot%is_name("vhse")) a_ex = amix_hse
    END FUNCTION xcpot_get_exchange_weight
 
-   SUBROUTINE xcpot_get_vxc(xcpot, jspins, rh, vxc, vx, grad, kinEnergyDen_KS, vtau)
+   SUBROUTINE xcpot_get_vxc(xcpot, jspins, rh, vxc, vx, grad, kinEnergyDen_KS, vtau, l_aux)
       !
       IMPLICIT NONE
 !c
@@ -232,6 +232,7 @@ CONTAINS
       TYPE(t_gradients), INTENT(INOUT), OPTIONAL::grad
       REAL, INTENT(IN), OPTIONAL            :: kinEnergyDen_KS(:, :)
       REAL, INTENT(OUT), OPTIONAL           :: vtau(:, :)
+      LOGICAL, INTENT(IN), OPTIONAL         :: l_aux
       CALL judft_error("BUG: dummy xcxpot type is not functional and should not be called")
 
    END SUBROUTINE xcpot_get_vxc

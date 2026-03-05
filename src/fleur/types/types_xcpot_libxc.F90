@@ -48,7 +48,6 @@ MODULE m_types_xcpot_libxc
       PROCEDURE        :: get_exc => xcpot_get_exc
       PROCEDURE        :: get_fxc => xcpot_get_fxc
       PROCEDURE, NOPASS :: alloc_gradients => xcpot_alloc_gradients
-      PROCEDURE        :: get_aux_vxc => xcpot_get_aux_vxc
       !Not             overloeaded...
       PROCEDURE        :: init => xcpot_init
       PROCEDURE,NOPASS :: apply_cutoffs
@@ -145,7 +144,7 @@ CONTAINS
       ! Initialize auxiliary GGA functional for radial basis generation in MetaGGA
       xcpot%l_has_aux = (xcpot%func_aux_id_x > 0)
       IF (xcpot%l_has_aux) THEN
-         WRITE(*,*) "Auxiliary GGA for radial basis: exchange=", xcpot%func_aux_id_x, &
+         WRITE(*,*) "Auxiliary Potential for radial basis: exchange=", xcpot%func_aux_id_x, &
                     " correlation=", xcpot%func_aux_id_c
          IF (jspins == 1) THEN
             CALL xc_f90_func_init(xcpot%aux_func_x, xcpot%func_aux_id_x, XC_UNPOLARIZED)
@@ -315,7 +314,7 @@ CONTAINS
    END FUNCTION xcpot_get_exchange_weight
 
    !***********************************************************************
-   SUBROUTINE xcpot_get_vxc(xcpot,jspins,rh, vxc,vx, grad, kinenergyden_ks, vtau)
+   SUBROUTINE xcpot_get_vxc(xcpot,jspins,rh, vxc,vx, grad, kinenergyden_ks, vtau, l_aux)
       USE, INTRINSIC :: IEEE_ARITHMETIC
       use iso_c_binding
       IMPLICIT NONE
@@ -329,86 +328,55 @@ CONTAINS
       REAL, INTENT(IN), OPTIONAL     :: kinenergyden_ks(:, :)
       ! optional output for MetaGGA: V_tau = dE_xc/d(tau)
       REAL, INTENT(OUT), OPTIONAL    :: vtau(:, :)
+      ! optional: use auxiliary GGA functional instead of primary functional
+      LOGICAL, INTENT(IN), OPTIONAL  :: l_aux
 #ifdef CPP_LIBXC
-      REAL,ALLOCATABLE  :: vxc_tmp(:,:),vx_tmp(:,:),vsigma(:,:), &
-                           tmp_vsig(:,:), tmp_vlapl(:,:), tmp_vtau(:,:), &
-                           kinED_libxc(:,:)
-      REAL,ALLOCATABLE  :: vtau_x(:,:), vtau_c(:,:), vlapl_x(:,:), vlapl_c(:,:)
-      REAL :: cut_ratio = 0.1
-      INTEGER :: cut_idx
-      integer(kind=c_size_t)           :: idx
+   REAL,ALLOCATABLE  :: vxc_tmp(:,:),vx_tmp(:,:),kinED_libxc(:,:)
+   TYPE(xc_f90_func_t) :: func_x, func_c
+   LOGICAL :: use_aux, has_c
+
+      use_aux = .FALSE.
+      IF (PRESENT(l_aux)) use_aux = l_aux
+      IF (.NOT. use_aux) use_aux = xcpot%vx_is_MetaGGA() .AND. (.NOT. PRESENT(kinenergyden_ks)) .AND. xcpot%l_has_aux
+
       !libxc uses the spin as a first index, hence we have to transpose....
       ALLOCATE (vxc_tmp(SIZE(vxc, 2), SIZE(vxc, 1))); vxc_tmp = 0.0
       ALLOCATE (vx_tmp(SIZE(vx, 2), SIZE(vx, 1))); vx_tmp = 0.0
 
       IF (PRESENT(vtau)) vtau = 0.0
 
-      IF (xcpot%vx_is_MetaGGA()) THEN
+      IF (use_aux) THEN
+         ! Auxiliary GGA evaluation for MetaGGA radial basis generation
+         IF (.NOT. xcpot%l_has_aux) &
+            CALL judft_error("get_vxc with l_aux=.TRUE. but no auxiliary GGA configured")
+         IF (.NOT. PRESENT(grad)) &
+            CALL judft_error("get_vxc with l_aux=.TRUE. requires gradients")
+         func_x = xcpot%aux_func_x
+         has_c = xcpot%func_aux_id_c > 0
+         IF (has_c) func_c = xcpot%aux_func_c
+         CALL eval_gga_vxc(func_x, func_c, has_c, grad%sigma, vx_tmp, vxc_tmp, grad%vsigma)
+      ELSEIF (xcpot%vx_is_MetaGGA()) THEN
          ! MetaGGA potential: calls xc_f90_mgga_vxc which returns vrho, vsigma, vlapl, vtau
          IF (.NOT. PRESENT(grad)) CALL judft_error("Bug: You called get_vxc for a MetaGGA potential without providing derivatives")
          IF (PRESENT(kinenergyden_ks)) THEN
             ! Apply correction: tau_libxc = tau_KS + 0.25*laplacian(rho)
             kinED_libxc = TRANSPOSE(kinenergyden_ks + 0.25*grad%laplace)
 
-            ! Core region cutoff (same as in get_exc)
-            cut_idx = 0  ! No core cutoff for potential - we need it everywhere
-
-            ALLOCATE(vsigma, mold=grad%vsigma)
-            ALLOCATE(vtau_x(SIZE(rh, 2), SIZE(rh, 1))); vtau_x = 0.0
-            ALLOCATE(vlapl_x(SIZE(rh, 2), SIZE(rh, 1))); vlapl_x = 0.0
-
-            CALL xc_f90_mgga_vxc(xcpot%vxc_func_x, SIZE(rh, 1, kind=c_size_t), &
-                                 TRANSPOSE(rh), grad%sigma, &
-                                 TRANSPOSE(grad%laplace), kinED_libxc, &
-                                 vx_tmp, vsigma, vlapl_x, vtau_x)
-
-            IF (xcpot%func_vxc_id_c > 0) THEN
-               ALLOCATE(vtau_c(SIZE(rh, 2), SIZE(rh, 1))); vtau_c = 0.0
-               ALLOCATE(vlapl_c(SIZE(rh, 2), SIZE(rh, 1))); vlapl_c = 0.0
-
-               CALL xc_f90_mgga_vxc(xcpot%vxc_func_c, SIZE(rh, 1, kind=c_size_t), &
-                                    TRANSPOSE(rh), grad%sigma, &
-                                    TRANSPOSE(grad%laplace), kinED_libxc, &
-                                    vxc_tmp, grad%vsigma, vlapl_c, vtau_c)
-
-               grad%vsigma = grad%vsigma + vsigma
-               vxc_tmp = vxc_tmp + vx_tmp
-               vtau_x = vtau_x + vtau_c
-               DEALLOCATE(vtau_c, vlapl_c)
-            ELSE
-               vxc_tmp = vx_tmp
-               grad%vsigma = vsigma
-            ENDIF
-
-            ! Return vtau if requested (transpose back from libxc convention)
-            IF (PRESENT(vtau)) THEN
-               vtau = TRANSPOSE(vtau_x)
-            ENDIF
-            DEALLOCATE(vtau_x, vlapl_x, kinED_libxc)
+            func_x = xcpot%vxc_func_x
+            has_c = xcpot%func_vxc_id_c > 0
+            IF (has_c) func_c = xcpot%vxc_func_c
+            CALL eval_mgga_vxc(func_x, func_c, has_c, grad%sigma, grad%laplace, kinED_libxc, vx_tmp, vxc_tmp, grad%vsigma, vtau)
+            DEALLOCATE(kinED_libxc)
          ELSE
-            ! First iteration fallback: use GGA potential (no tau available yet)
-            ALLOCATE (vsigma, mold=grad%vsigma)
-            CALL xc_f90_gga_vxc(xcpot%vxc_func_x, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), grad%sigma, vx_tmp, vsigma)
-            IF (xcpot%func_vxc_id_c > 0) THEN
-               CALL xc_f90_gga_vxc(xcpot%vxc_func_c, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), grad%sigma, vxc_tmp, grad%vsigma)
-               grad%vsigma = grad%vsigma + vsigma
-               vxc_tmp = vxc_tmp + vx_tmp
-            ELSE
-               vxc_tmp = vx_tmp
-            ENDIF
+            ! MetaGGA first iteration requires auxiliary GGA potential
+            CALL judft_error("MetaGGA requires an auxiliary GGA potential for first iteration (no kinenergyden_ks available)")
          ENDIF
       ELSEIF (xcpot%needs_grad()) THEN
          IF (.NOT. PRESENT(grad)) CALL judft_error("Bug: You called get_vxc for a GGA potential without providing derivatives")
-         ALLOCATE (vsigma, mold=grad%vsigma)
-         !where(abs(grad%sigma)<1E-9) grad%sigma=1E-9
-         CALL xc_f90_gga_vxc(xcpot%vxc_func_x, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), grad%sigma, vx_tmp, vsigma)
-         IF (xcpot%func_vxc_id_c > 0) THEN
-            CALL xc_f90_gga_vxc(xcpot%vxc_func_c, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), grad%sigma, vxc_tmp, grad%vsigma)
-            grad%vsigma = grad%vsigma + vsigma
-            vxc_tmp = vxc_tmp + vx_tmp
-         ELSE
-            vxc_tmp = vx_tmp
-         ENDIF
+         func_x = xcpot%vxc_func_x
+         has_c = xcpot%func_vxc_id_c > 0
+         IF (has_c) func_c = xcpot%vxc_func_c
+         CALL eval_gga_vxc(func_x, func_c, has_c, grad%sigma, vx_tmp, vxc_tmp, grad%vsigma)
       ELSE  !LDA potentials
          CALL xc_f90_lda_vxc(xcpot%vxc_func_x, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), vx_tmp)
          IF (xcpot%func_vxc_id_c > 0) THEN
@@ -418,6 +386,60 @@ CONTAINS
       ENDIF
       vx = TRANSPOSE(vx_tmp)
       vxc = TRANSPOSE(vxc_tmp)
+
+   CONTAINS
+
+      SUBROUTINE eval_gga_vxc(func_x, func_c, has_c, sigma, vx_out, vxc_out, vsigma_out)
+         TYPE(xc_f90_func_t), INTENT(IN) :: func_x, func_c
+         LOGICAL, INTENT(IN)             :: has_c
+         REAL, INTENT(IN)                :: sigma(:, :)
+         REAL, INTENT(OUT)               :: vx_out(:, :), vxc_out(:, :), vsigma_out(:, :)
+         REAL, ALLOCATABLE               :: vsigma_x(:, :)
+
+         ALLOCATE(vsigma_x, mold=vsigma_out); vsigma_x = 0.0
+         CALL xc_f90_gga_vxc(func_x, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), sigma, vx_out, vsigma_x)
+         IF (has_c) THEN
+            CALL xc_f90_gga_vxc(func_c, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), sigma, vxc_out, vsigma_out)
+            vsigma_out = vsigma_out + vsigma_x
+            vxc_out = vxc_out + vx_out
+         ELSE
+            vxc_out = vx_out
+            vsigma_out = vsigma_x
+         ENDIF
+      END SUBROUTINE eval_gga_vxc
+
+      SUBROUTINE eval_mgga_vxc(func_x, func_c, has_c, sigma, laplace, kinED, vx_out, vxc_out, vsigma_out, vtau_out)
+         TYPE(xc_f90_func_t), INTENT(IN) :: func_x, func_c
+         LOGICAL, INTENT(IN)             :: has_c
+         REAL, INTENT(IN)                :: sigma(:, :), laplace(:, :), kinED(:, :)
+         REAL, INTENT(OUT)               :: vx_out(:, :), vxc_out(:, :), vsigma_out(:, :)
+         REAL, INTENT(OUT), OPTIONAL     :: vtau_out(:, :)
+         REAL, ALLOCATABLE               :: vsigma_x(:, :), vtau_x(:, :), vtau_c(:, :), vlapl_x(:, :), vlapl_c(:, :)
+
+         ALLOCATE(vsigma_x, mold=vsigma_out); vsigma_x = 0.0
+         ALLOCATE(vtau_x(SIZE(rh, 2), SIZE(rh, 1))); vtau_x = 0.0
+         ALLOCATE(vlapl_x(SIZE(rh, 2), SIZE(rh, 1))); vlapl_x = 0.0
+
+         CALL xc_f90_mgga_vxc(func_x, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), sigma, TRANSPOSE(laplace), kinED, &
+                              vx_out, vsigma_x, vlapl_x, vtau_x)
+
+         IF (has_c) THEN
+            ALLOCATE(vtau_c(SIZE(rh, 2), SIZE(rh, 1))); vtau_c = 0.0
+            ALLOCATE(vlapl_c(SIZE(rh, 2), SIZE(rh, 1))); vlapl_c = 0.0
+            CALL xc_f90_mgga_vxc(func_c, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), sigma, TRANSPOSE(laplace), kinED, &
+                                 vxc_out, vsigma_out, vlapl_c, vtau_c)
+            vsigma_out = vsigma_out + vsigma_x
+            vxc_out = vxc_out + vx_out
+            vtau_x = vtau_x + vtau_c
+            DEALLOCATE(vtau_c, vlapl_c)
+         ELSE
+            vxc_out = vx_out
+            vsigma_out = vsigma_x
+         ENDIF
+
+         IF (PRESENT(vtau_out)) vtau_out = TRANSPOSE(vtau_x)
+         DEALLOCATE(vtau_x, vlapl_x)
+      END SUBROUTINE eval_mgga_vxc
 
 #endif
    END SUBROUTINE xcpot_get_vxc
@@ -564,52 +586,6 @@ CONTAINS
       ALLOCATE (grad%vsigma(MERGE(1, 3, jspins == 1), ngrid))
 
    END SUBROUTINE xcpot_alloc_gradients
-
-   !> Evaluate auxiliary GGA XC potential for radial basis generation in MetaGGA
-   SUBROUTINE xcpot_get_aux_vxc(xcpot, jspins, rh, vxc, vx, grad)
-      USE, INTRINSIC :: IEEE_ARITHMETIC
-      USE iso_c_binding
-      IMPLICIT NONE
-      CLASS(t_xcpot_libxc), INTENT(IN) :: xcpot
-      INTEGER, INTENT(IN)              :: jspins
-      REAL, INTENT(IN)                 :: rh(:, :)
-      REAL, INTENT(OUT)                :: vxc(:, :), vx(:, :)
-      TYPE(t_gradients), INTENT(INOUT) :: grad
-
-#ifdef CPP_LIBXC
-      REAL, ALLOCATABLE :: vxc_tmp(:,:), vx_tmp(:,:), vsigma(:,:)
-      integer(kind=c_size_t) :: npts
-
-      IF (.NOT. xcpot%l_has_aux) THEN
-         CALL judft_error("get_aux_vxc called but no auxiliary GGA configured")
-      ENDIF
-
-      npts = SIZE(rh, 1)
-      ALLOCATE(vxc_tmp(jspins, npts)); vxc_tmp = 0.0
-      ALLOCATE(vx_tmp(jspins, npts)); vx_tmp = 0.0
-      ALLOCATE(vsigma, mold=grad%vsigma); vsigma = 0.0
-
-      ! Exchange
-      CALL xc_f90_gga_vxc(xcpot%aux_func_x, npts, TRANSPOSE(rh), grad%sigma, vx_tmp, vsigma)
-
-      ! Correlation
-      IF (xcpot%func_aux_id_c > 0) THEN
-         CALL xc_f90_gga_vxc(xcpot%aux_func_c, npts, TRANSPOSE(rh), grad%sigma, vxc_tmp, grad%vsigma)
-         grad%vsigma = grad%vsigma + vsigma
-         vxc_tmp = vxc_tmp + vx_tmp
-      ELSE
-         vxc_tmp = vx_tmp
-         grad%vsigma = vsigma
-      ENDIF
-
-      vx = TRANSPOSE(vx_tmp)
-      vxc = TRANSPOSE(vxc_tmp)
-
-      DEALLOCATE(vxc_tmp, vx_tmp, vsigma)
-#else
-      CALL judft_error("Auxiliary GGA requires LibXC support")
-#endif
-   END SUBROUTINE xcpot_get_aux_vxc
 
    subroutine mpi_bc_xcpot_libxc(This, Mpi_comm, Irank)
       Use M_mpi_bc_tool
