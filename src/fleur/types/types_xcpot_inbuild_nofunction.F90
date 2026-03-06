@@ -258,7 +258,7 @@ CONTAINS
       CLASS(t_xcpot_inbuild_nf), INTENT(IN):: xcpot
       CHARACTER(len=*), INTENT(IN)  :: name
       IF (xcpot%icorr.EQ.-1) THEN
-         xcpot_is_name = 'lXC '
+         xcpot_is_name = .FALSE.
       ELSE
          xcpot_is_name = (TRIM(xc_names(xcpot%icorr)) == TRIM((name)))
       END IF
