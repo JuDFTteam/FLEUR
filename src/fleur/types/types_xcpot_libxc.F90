@@ -50,6 +50,7 @@ MODULE m_types_xcpot_libxc
       PROCEDURE, NOPASS :: alloc_gradients => xcpot_alloc_gradients
       !Not             overloeaded...
       PROCEDURE        :: init => xcpot_init
+      PROCEDURE        :: create_from_aux => xcpot_create_from_aux
       PROCEDURE,NOPASS :: apply_cutoffs
    END TYPE t_xcpot_libxc
    PUBLIC t_xcpot_libxc
@@ -256,6 +257,10 @@ CONTAINS
 #ifdef CPP_LIBXC
       TYPE(xc_f90_func_info_t)        :: xc_info
 
+      if (xcpot%l_bj) then
+         xcpot_vx_is_MetaGGA = .TRUE.
+         return
+      endif
       xc_info = xc_f90_func_get_info(xcpot%vxc_func_x)
       xcpot_vx_is_MetaGGA =  ANY([XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA]==xc_f90_func_info_get_family(xc_info))
 #else
@@ -355,17 +360,22 @@ CONTAINS
          has_c = xcpot%func_aux_id_c > 0
          IF (has_c) func_c = xcpot%aux_func_c
          CALL eval_gga_vxc(func_x, func_c, has_c, grad%sigma, vx_tmp, vxc_tmp, grad%vsigma)
-      ELSEIF (xcpot%vx_is_MetaGGA()) THEN
-         ! MetaGGA potential: calls xc_f90_mgga_vxc which returns vrho, vsigma, vlapl, vtau
-         IF (.NOT. PRESENT(grad)) CALL judft_error("Bug: You called get_vxc for a MetaGGA potential without providing derivatives")
+      ELSEIF (xcpot%vx_is_MetaGGA() .OR. xcpot%l_bj) THEN
+         ! MetaGGA potential (or BJ): calls xc_f90_mgga_vxc which returns vrho, vsigma, vlapl, vtau
+         IF (.NOT. PRESENT(grad)) CALL judft_error("Bug: You called get_vxc for a MetaGGA/BJ potential without providing derivatives")
          IF (PRESENT(kinenergyden_ks)) THEN
             ! Apply correction: tau_libxc = tau_KS + 0.25*laplacian(rho)
             kinED_libxc = TRANSPOSE(kinenergyden_ks + 0.25*grad%laplace)
 
-            func_x = xcpot%vxc_func_x
-            has_c = xcpot%func_vxc_id_c > 0
-            IF (has_c) func_c = xcpot%vxc_func_c
-            CALL eval_mgga_vxc(func_x, func_c, has_c, grad%sigma, grad%laplace, kinED_libxc, vx_tmp, vxc_tmp, grad%vsigma, vtau)
+            IF (xcpot%l_bj) THEN
+               ! Becke-Johnson exchange potential: BR89 + KED correction
+               CALL eval_BJ_vxc(grad%sigma, grad%laplace, kinED_libxc, vx_tmp, vxc_tmp, grad%vsigma, vtau)
+            ELSE
+               func_x = xcpot%vxc_func_x
+               has_c = xcpot%func_vxc_id_c > 0
+               IF (has_c) func_c = xcpot%vxc_func_c
+               CALL eval_mgga_vxc(func_x, func_c, has_c, grad%sigma, grad%laplace, kinED_libxc, vx_tmp, vxc_tmp, grad%vsigma, vtau)
+            ENDIF
             DEALLOCATE(kinED_libxc)
          ELSE
             ! MetaGGA first iteration requires auxiliary GGA potential
@@ -440,6 +450,55 @@ CONTAINS
          IF (PRESENT(vtau_out)) vtau_out = TRANSPOSE(vtau_x)
          DEALLOCATE(vtau_x, vlapl_x)
       END SUBROUTINE eval_mgga_vxc
+
+      !> Becke-Johnson exchange potential, Eq. (2) of
+      !! Tran, Blaha, Schwarz, J. Phys.: Condens. Matter 19, 196208 (2007)
+      !!
+      !! v_{x,σ}^{BJ}(r) = v_{x,σ}^{BR}(r) + (1/π)√(5/12) √(2τ_σ(r)/ρ_σ(r))
+      !!
+      !! The BR89 exchange potential is evaluated via eval_mgga_vxc.
+      !! The BJ correction term uses the KS kinetic energy density (kinenergyden_ks
+      !! from parent scope) and the density rh (also from parent scope).
+      SUBROUTINE eval_BJ_vxc(sigma, laplace, kinED, vx_out, vxc_out, vsigma_out, vtau_out)
+         USE m_constants
+         REAL, INTENT(IN)              :: sigma(:, :), laplace(:, :), kinED(:, :)
+         REAL, INTENT(OUT)             :: vx_out(:, :), vxc_out(:, :), vsigma_out(:, :)
+         REAL, INTENT(OUT), OPTIONAL   :: vtau_out(:, :)
+
+         INTEGER, PARAMETER   :: XC_MGGA_X_BR89_ID = 206
+         REAL, PARAMETER      :: BJ_prefactor = (1.0/pi_const) * SQRT(5.0/12.0)
+         TYPE(xc_f90_func_t)  :: br89_func
+         REAL    :: rho_sigma, tau_sigma
+         INTEGER :: i, jspin
+
+         ! Initialize BR89 exchange functional
+         IF (jspins == 1) THEN
+            CALL xc_f90_func_init(br89_func, XC_MGGA_X_BR89_ID, XC_UNPOLARIZED)
+         ELSE
+            CALL xc_f90_func_init(br89_func, XC_MGGA_X_BR89_ID, XC_POLARIZED)
+         ENDIF
+
+         ! Evaluate BR89 exchange potential via standard eval_mgga_vxc
+         CALL eval_mgga_vxc(br89_func, br89_func, .FALSE., sigma, laplace, kinED, &
+                            vx_out, vxc_out, vsigma_out, vtau_out)
+
+         CALL xc_f90_func_end(br89_func)
+
+         ! Add BJ correction: (1/π)√(5/12) √(2τ_σ(r)/ρ_σ(r))
+         ! using KS kinetic energy density from parent scope
+         DO jspin = 1, jspins
+            DO i = 1, SIZE(rh, 1)
+               rho_sigma = rh(i, jspin)
+               tau_sigma = kinenergyden_ks(i, jspin)
+               IF (rho_sigma > 1.0e-10 .AND. tau_sigma > 0.0) THEN
+                  vx_out(jspin, i) = vx_out(jspin, i) &
+                     + BJ_prefactor * SQRT(2.0 * tau_sigma / rho_sigma)
+                  vxc_out(jspin, i) = vxc_out(jspin, i) &
+                     + BJ_prefactor * SQRT(2.0 * tau_sigma / rho_sigma)
+               ENDIF
+            ENDDO
+         ENDDO
+      END SUBROUTINE eval_BJ_vxc
 
 #endif
    END SUBROUTINE xcpot_get_vxc
@@ -587,6 +646,36 @@ CONTAINS
 
    END SUBROUTINE xcpot_alloc_gradients
 
+   !> Create a new t_xcpot_libxc in which the auxiliary GGA functionals of a MetaGGA xcpot
+   !! are used to initialize the func_vxc_id_* and func_exc_id_* fields.
+   !! This is useful to evaluate the auxiliary GGA potential/energy as a standalone xcpot.
+   !! Overrides the error-stub in the base class t_xcpot.
+   FUNCTION xcpot_create_from_aux(xcpot) RESULT(aux_libxc)
+      USE m_judft
+      IMPLICIT NONE
+      CLASS(t_xcpot_libxc), INTENT(IN) :: xcpot
+      CLASS(t_xcpot), ALLOCATABLE      :: aux_libxc
+
+#ifdef CPP_LIBXC
+    
+      IF (.NOT. xcpot%l_has_aux) &
+         CALL judft_error("create_from_aux: no auxiliary GGA functional configured in this MetaGGA xcpot")
+
+      ALLOCATE(t_xcpot_libxc :: aux_libxc)
+      select type(aux_libxc)
+      type is (t_xcpot_libxc)
+         aux_libxc%l_libxc        = xcpot%l_libxc
+         aux_libxc%l_relativistic = xcpot%l_relativistic
+         CALL aux_libxc%init(xcpot%func_aux_id_x, xcpot%func_aux_id_c, &
+                          xcpot%func_aux_id_x, xcpot%func_aux_id_c, &
+                          xcpot%jspins)
+      end select !No other type possible due to the ALLOCATE statement above
+      
+#else
+      CALL judft_error("create_from_aux requires FLEUR compiled with libxc support")
+#endif
+   END FUNCTION xcpot_create_from_aux
+
    subroutine mpi_bc_xcpot_libxc(This, Mpi_comm, Irank)
       Use M_mpi_bc_tool
       Class(t_xcpot_libxc), Intent(Inout)::This
@@ -608,6 +697,7 @@ CONTAINS
       CALL mpi_bc(this%l_inbuild, rank, mpi_comm)
       CALL mpi_bc(rank, mpi_comm, this%inbuild_name)
       CALL mpi_bc(this%l_relativistic, rank, mpi_comm)
+      CALL mpi_bc(this%l_bj, rank, mpi_comm)
       CALL mpi_bc(this%func_aux_id_x, rank, mpi_comm)
       CALL mpi_bc(this%func_aux_id_c, rank, mpi_comm)
 

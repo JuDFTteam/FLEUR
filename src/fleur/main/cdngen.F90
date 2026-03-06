@@ -172,7 +172,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
       CALL cdnval(eig_id,fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,enpara,stars,vacuum,&
                   sphhar,sym,vTot ,cdnvalJob,outDen,dos,vacdos,results,moments,gfinp,&
                   hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,jDOS,greensfImagPart, &
-                  l_kinEnergyDen=(xcpot%exc_is_metagga() .or. xcpot%vx_is_metagga()), &
+                  l_kinEnergyDen=xcpot%is_MetaGGA(), &
                   kinEnergyDen=EnergyDen)
    END DO
    CALL timestop("cdngen: cdnval")
@@ -227,7 +227,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    CALL hyperfine%printValenceHyperfine(input, atoms, fmpi, moments)
 
    CALL timestart("cdngen: cdncore")
-   if(xcpot%exc_is_MetaGGA() .or. xcpot%vx_is_MetaGGA()) then
+   if(xcpot%is_MetaGGA()) then
       ! Pass EnergyDen as kinEnergyDen: core KED is added directly.
       ! Do NOT also pass as EnergyDen (energy density) — we use the direct approach now.
       CALL cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
@@ -271,12 +271,9 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
 
    CALL hyperfine%calcPrintIsomerShifts(input,atoms,fmpi,outDen)
 
-   Perform_metagga = Allocated(Energyden%Mt) &
-                   .And. (Xcpot%Exc_is_metagga() .Or. Xcpot%Vx_is_metagga())
+   Perform_metagga = Allocated(Energyden%Mt) .And. Xcpot%Is_MetaGGA()
    If(Perform_metagga) Then
      IF(any(noco%l_alignMT)) CALL juDFT_error("Relaxation of SQA and metagga not implemented.", calledby = "cdngen" )
-     CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
-                           0,-1.0,0.0,-1.0,-1.0,.FALSE.,core_den,inFilename='cdnc')
      ! Persist kinetic energy density for restart
      CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
                            0,-1.0,0.0,-1.0,-1.0,.FALSE.,EnergyDen,inFilename='kinED')

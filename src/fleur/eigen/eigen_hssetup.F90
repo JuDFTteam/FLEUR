@@ -80,14 +80,12 @@ CALL timestart("Interstitial part")
 !Generate interstitial part of Hamiltonian
 ALLOCATE(vpw_wTemp(SIZE(v%pw_w,1),SIZE(v%pw_w,2)))
 vpw_wTemp = merge(v%pw_w - xcpot%get_exchange_weight() * vx%pw_w, v%pw_w, hybdat%l_subvxc)
-IF (xcpot%vx_is_MetaGGA()) THEN
-   ALLOCATE(vtau_wTemp(SIZE(vTau%pw_w,1),SIZE(vTau%pw_w,2)))
-   vtau_wTemp = vTau%pw_w
-   CALL hs_int(fi%input, fi%noco, nococonv, stars, lapw, fmpi, fi%cell%bbmat, isp, vpw_wTemp, smat, hmat, vtau_pw_in=vtau_wTemp)
-   DEALLOCATE(vtau_wTemp)
+IF (xcpot%needs_MetaGGA_ham() .AND. PRESENT(vTau)) THEN
+   CALL hs_int(fi%input, fi%noco, nococonv, stars, lapw, fmpi, fi%cell%bbmat, isp, vpw_wTemp, smat, hmat, vtau_pw_in=vTau%pw_w)
 ELSE
    CALL hs_int(fi%input, fi%noco, nococonv, stars, lapw, fmpi, fi%cell%bbmat, isp, vpw_wTemp, smat, hmat)
-END IF
+ENDIF
+   
 DEALLOCATE(vpw_wTemp)
 
 CALL timestop("Interstitial part")
@@ -211,14 +209,13 @@ IF (fmpi%n_size == 1) THEN
    !Generate interstitial part of Hamiltonian
    ALLOCATE(vpw_wTemp(SIZE(v%pw_w,1),SIZE(v%pw_w,2)))
    vpw_wTemp = merge(v%pw_w - xcpot%get_exchange_weight() * vx%pw_w, v%pw_w, hybdat%l_subvxc)
-   IF (xcpot%vx_is_MetaGGA()) THEN
-      ALLOCATE(vtau_wTemp(SIZE(vTau%pw_w,1),SIZE(vTau%pw_w,2)))
-      vtau_wTemp = vTau%pw_w
-      CALL hs_int(fi%input, fi%noco, nococonv, stars, lapw, fmpi, fi%cell%bbmat, isp, vpw_wTemp, smat, hmat, vtau_pw_in=vtau_wTemp)
-      DEALLOCATE(vtau_wTemp)
+
+   IF (xcpot%needs_MetaGGA_ham() .AND. PRESENT(vTau)) THEN
+      CALL hs_int(fi%input, fi%noco, nococonv, stars, lapw, fmpi, fi%cell%bbmat, isp, vpw_wTemp, smat, hmat, vtau_pw_in=vTau%pw_w)
    ELSE
       CALL hs_int(fi%input, fi%noco, nococonv, stars, lapw, fmpi, fi%cell%bbmat, isp, vpw_wTemp, smat, hmat)
-   END IF
+   ENDIF
+      
    DEALLOCATE(vpw_wTemp)
 
    CALL timestop("Interstitial part")
@@ -291,14 +288,12 @@ ELSE
    !Generate interstitial part of Hamiltonian
    ALLOCATE(vpw_wTemp(SIZE(v%pw_w,1),SIZE(v%pw_w,2)))
    vpw_wTemp = merge(v%pw_w - xcpot%get_exchange_weight() * vx%pw_w, v%pw_w, hybdat%l_subvxc)
-   IF (xcpot%vx_is_MetaGGA()) THEN
-      ALLOCATE(vtau_wTemp(SIZE(vTau%pw_w,1),SIZE(vTau%pw_w,2)))
-      vtau_wTemp = vTau%pw_w
-      CALL hs_int(fi%input, fi%noco, nococonv, stars, lapw, fmpi, fi%cell%bbmat, isp, vpw_wTemp, smat_mpi, hmat_mpi, vtau_pw_in=vtau_wTemp)
-      DEALLOCATE(vtau_wTemp)
+   
+   IF (xcpot%needs_MetaGGA_ham() .AND. PRESENT(vTau)) THEN
+      CALL hs_int(fi%input, fi%noco, nococonv, stars, lapw, fmpi, fi%cell%bbmat, isp, vpw_wTemp, smat_mpi, hmat_mpi, vtau_pw_in=vTau%pw_w)
    ELSE
       CALL hs_int(fi%input, fi%noco, nococonv, stars, lapw, fmpi, fi%cell%bbmat, isp, vpw_wTemp, smat_mpi, hmat_mpi)
-   END IF
+   ENDIF
    DEALLOCATE(vpw_wTemp)
 
    CALL timestop("Interstitial part")

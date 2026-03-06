@@ -104,7 +104,10 @@ CONTAINS
       results%force=0.0
 
       CALL workDen%init(stars,atoms,sphhar,vacuum,noco,input%jspins,0)
-
+      if (xcpot%is_MetaGGA()) then 
+         ! In MetaGGA, vTau is needed for the XC potential, so we initialize it here. (and set it to zero).
+         CALL vtau%init(stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_POTTOT)
+      endif
       ! a)
       ! Sum up both spins in den into workden:
       CALL den%sum_both_spin(workden)
@@ -141,10 +144,8 @@ CONTAINS
       CALL vx%distribute(fmpi%mpi_comm)
       CALL vxc%distribute(fmpi%mpi_comm)
       CALL exc%distribute(fmpi%mpi_comm)
-      IF (xcpot%vx_is_MetaGGA()) THEN
-         IF (ALLOCATED(vTau%mt)) CALL vTau%distribute(fmpi%mpi_comm)
-      ENDIF
-
+      IF (ALLOCATED(vTau%mt)) CALL vTau%distribute(fmpi%mpi_comm)
+    
       ! Klueppelberg (force level 3)
       IF (input%l_f.AND.(input%f_level.GE.3).AND.(fmpi%irank.EQ.0)) THEN
          DO js = 1,input%jspins

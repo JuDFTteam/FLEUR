@@ -837,6 +837,11 @@
             <xsd:documentation>Enable relativistic corrections to the XC functional.</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
+      <xsd:attribute default="F" name="BeckeJohnson" type="FleurBool" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Use Becke-Johnson exchange potential (Eq. 2, Tran et al., J. Phys.: Condens. Matter 19, 196208, 2007). Replaces the standard MetaGGA exchange with v_x^BJ = v_x^BR89 + (1/pi)*sqrt(5/12)*sqrt(2*tau/rho).</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
    </xsd:complexType>
 
    <xsd:complexType name="ProdBasisIRType">

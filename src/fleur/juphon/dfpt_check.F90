@@ -1,9 +1,10 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_dfpt_check
+   implicit none
 
 IMPLICIT NONE
 
@@ -42,7 +43,7 @@ CONTAINS
         IF (xcpot%needs_grad()) CALL judft_error("GGA functionals are not supported yet.",calledby="dfpt_check.F90")
 
         !MetaGGA
-        IF (xcpot%exc_is_MetaGGA() .or. xcpot%vx_is_MetaGGA()) CALL judft_error("juPhon doesn't do MetaGGA functionals.",calledby="dfpt_check.F90")
+        IF (xcpot%is_MetaGGA()) CALL judft_error("juPhon doesn't do MetaGGA functionals.",calledby="dfpt_check.F90")
 
         !DFTU etc.
         IF ((fi%atoms%n_u.GT.0).OR.(fi%atoms%n_hia.GT.0).OR.(fi%atoms%n_opc.GT.0)) CALL judft_error("Currently juPhon doesn't support DFT+X.",calledby="dfpt_check.F90")

@@ -34,7 +34,7 @@ CONTAINS
       INTEGER,          INTENT(IN)    :: isp
       COMPLEX,          INTENT(IN)    :: vpw(:,:)
       CLASS(t_mat),     INTENT(INOUT) :: smat(:,:),hmat(:,:)
-      COMPLEX, OPTIONAL, INTENT(IN)   :: vtau_pw_in(:,:)
+      COMPLEX, optional, INTENT(IN)   :: vtau_pw_in(:,:)
 
       INTEGER :: iSpinPr, iSpin, igSpin, igSpinPr
       INTEGER :: iTkin, fact, iQss
@@ -44,10 +44,7 @@ CONTAINS
       COMPLEX, ALLOCATABLE :: vtau_temp(:)
 
       ALLOCATE(vpw_temp(SIZE(vpw,1)))
-      IF (PRESENT(vtau_pw_in)) THEN
-         ALLOCATE(vtau_temp(SIZE(vtau_pw_in,1)))
-      ENDIF
-
+      
       IF (noco%l_noco.AND.isp==2) RETURN !was done already
 
       DO iSpinPr=MERGE(1,isp,noco%l_noco),MERGE(2,isp,noco%l_noco)
@@ -60,14 +57,14 @@ CONTAINS
                iTkin    = 0       ! Offdiagonal part --> No T part.
                fact     = -1      ! (12)-element --> (-1) prefactor
                iQss     = 0       ! No spin-spiral considered (no T).
-               IF (PRESENT(vtau_pw_in)) vtau_temp = 0.0  ! No V_tau for off-diagonal
+               
             ELSE IF (iSpinPr.EQ.2.AND.iSpin.EQ.1) THEN
                vpw_temp = vpw(:, 3)
                l_smat   = .FALSE.
                iTkin    = 0
                fact     = 1
                iQss     = 0
-               IF (PRESENT(vtau_pw_in)) vtau_temp = 0.0  ! No V_tau for off-diagonal
+               
             ELSE
                vpw_temp = vpw(:, iSpin)
                l_smat   = .TRUE.
@@ -79,13 +76,13 @@ CONTAINS
                   iQss  = 1 ! Additional q-vectors in kinetic energy.
                END IF
                fact     = 1
-               IF (PRESENT(vtau_pw_in)) vtau_temp = vtau_pw_in(:, iSpin)
+               
             END IF
-            IF (PRESENT(vtau_pw_in)) THEN
+            IF (ispin==iSpinPr) THEN
                CALL hs_int_direct(fmpi, stars, bbmat, lapw%gvec(:,:,iSpinPr), lapw%gvec(:,:,iSpin), &
                                 & lapw%bkpt+iQss*(2*iSpinPr - 3)/2.0*nococonv%qss+lapw%qphon, lapw%bkpt+iQss*(2*iSpin - 3)/2.0*nococonv%qss+lapw%qphon, &
                                 & lapw%nv(iSpinPr), lapw%nv(iSpin), iTkin, fact, l_smat, .FALSE., vpw_temp, hmat(igSpinPr,igSpin), smat(igSpinPr,igSpin), &
-                                & vtau_pw=vtau_temp)
+                                & vtau_pw=vtau_pw_in(:,iSpin))
             ELSE
                CALL hs_int_direct(fmpi, stars, bbmat, lapw%gvec(:,:,iSpinPr), lapw%gvec(:,:,iSpin), &
                                 & lapw%bkpt+iQss*(2*iSpinPr - 3)/2.0*nococonv%qss+lapw%qphon, lapw%bkpt+iQss*(2*iSpin - 3)/2.0*nococonv%qss+lapw%qphon, &
