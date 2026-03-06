@@ -58,8 +58,7 @@ CONTAINS
 
       l_libxc=.FALSE.
 
-      perform_MetaGGA = ALLOCATED(EnergyDen%mt) &
-                      .AND. (xcpot%exc_is_MetaGGA() .or. xcpot%vx_is_MetaGGA())
+      perform_MetaGGA = ALLOCATED(EnergyDen%mt) .AND. xcpot%is_MetaGGA()
 
       call timestart("init_pw_grid")
       CALL init_pw_grid(stars,sym,cell,xcpot)

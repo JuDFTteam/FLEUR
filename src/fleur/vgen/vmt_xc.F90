@@ -50,7 +50,7 @@ MODULE m_vmt_xc
          TYPE(t_potden),INTENT(IN)      :: den,EnergyDen
          TYPE(t_noco), INTENT(IN)       :: noco
          TYPE(t_potden),INTENT(INOUT)   :: vTot,vx,exc,vxc
-         TYPE(t_potden),INTENT(INOUT),OPTIONAL :: vTau
+         TYPE(t_potden),INTENT(INOUT)   :: vTau
          TYPE(t_kinED),INTENT(IN)       :: kinED
          !     ..
          !     .. Local Scalars ..
@@ -71,8 +71,7 @@ MODULE m_vmt_xc
          REAL,ALLOCATABLE:: xcl(:,:)
          LOGICAL :: lda_atom(atoms%ntype),l_libxc, perform_MetaGGA
          !.....------------------------------------------------------------------
-         perform_MetaGGA = ALLOCATED(EnergyDen%mt) &
-                         .AND. (xcpot%exc_is_MetaGGA() .or. xcpot%vx_is_MetaGGA())
+         perform_MetaGGA = ALLOCATED(EnergyDen%mt) .AND. xcpot%is_MetaGGA()
          lda_atom=.FALSE.; l_libxc=.FALSE.
          SELECT TYPE(xcpot)
          TYPE IS(t_xcpot_inbuild)

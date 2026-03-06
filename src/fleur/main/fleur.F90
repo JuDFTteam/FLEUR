@@ -106,7 +106,7 @@ CONTAINS
 
       TYPE(t_greensf), ALLOCATABLE :: greensFunction(:)
       TYPE(t_log_message)  :: log
-
+      CLASS(t_xcpot),allocatable::xcpot_iter
 
       ! response plotting debugging
       TYPE(t_stars)                   :: starsq
@@ -180,6 +180,21 @@ CONTAINS
       IF (fmpi%irank==0) CALL readDensity(stars, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
                                               fi%input, fi%sym, archiveType, CDN_INPUT_DEN_const, 0, &
                                               results%ef, results%last_distance, l_qfix, inDen,b_constr=nococonv%b_con)
+                                              ! Load persisted kinetic energy density for MetaGGA (if available)
+      IF (xcpot%is_MetaGGA()) THEN
+         CALL EnergyDen%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_EnergyDen)
+         IF (fmpi%irank==0) THEN
+            INQUIRE(FILE='kinED.hdf', EXIST=l_dummy)
+            IF (l_dummy) THEN 
+               CALL readDensity(stars, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
+                             fi%input, fi%sym, CDN_ARCHIVE_TYPE_CDN_const, CDN_INPUT_DEN_const, &
+                             0, rdummy, rdummy, l_dummy, EnergyDen, inFilename='kinED')
+            ELSE 
+               EnergyDen%pw(1,:)=-1E99 ! Set to a very negative value to indicate that it is not loaded. 
+            ENDIF
+         ENDIF   
+         CALL EnergyDen%distribute(fmpi%mpi_comm)
+      END IF
       call mpi_bc(results%last_distance, 0, fmpi%mpi_comm)
 
       !IF (fi%noco%l_alignMT .AND. fmpi%irank .EQ. 0) THEN
@@ -209,11 +224,6 @@ CONTAINS
       CALL vxc%init(stars,   fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT)
       CALL exc%init(stars,   fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT)
       ! V_tau for MetaGGA: stores dE_xc/d(tau) in lattice harmonics / star coefficients
-      IF (xcpot%exc_is_MetaGGA() .OR. xcpot%vx_is_MetaGGA()) THEN
-         CALL vTau%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT)
-         ALLOCATE(vTau%pw_w, mold=vTau%pw)
-         vTau%pw_w = 0.0
-      ENDIF
       CALL timestop("Initialize potentials")
 
       ! Initialize Green's function
@@ -293,7 +303,18 @@ CONTAINS
 8100        FORMAT(/, 10x, '   iter=  ', i5)
          END IF !fmpi%irank==0
 
-
+         xcpot_iter = xcpot
+         if (xcpot%is_MetaGGA()) then
+            print *,"META-GGA calculation ",EnergyDen%pw(1,1)
+             ! In the first iteration, we do not have a valid kinetic energy density, so we use an auxiliary GGA potential for the XC part. 
+             ! This is needed to avoid NaNs in the potential and to get a reasonable starting density for the self-consistency loop. 
+             ! The auxiliary GGA potential is constructed from the input parameters and does not require a kinetic energy density.
+            !In this iteration we do not have a valid kinetic energy density, so we use AUX_GGA. 
+            if(real(EnergyDen%pw(1,1)) < -1E98) then 
+                xcpot_iter=xcpot%create_from_aux()
+                print *,"Using auxiliary GGA potential for the first iteration of MetaGGA calculation."
+            endif
+         endif
          CALL inDen%distribute(fmpi%mpi_comm)
          CALL nococonv%mpi_bc(fmpi%mpi_comm)
 
@@ -320,10 +341,10 @@ CONTAINS
          !HF
          IF (fi%hybinp%l_hybrid) THEN
             hybdat%l_calhf = (results%last_distance >= 0.0) .AND. (results%last_distance < fi%input%minDistance)
-            SELECT TYPE (xcpot)
+            SELECT TYPE (xcpot_iter)
             TYPE IS (t_xcpot_inbuild)
                CALL calc_hybrid(fi, mpdata, hybdat, fmpi, nococonv, stars, enpara, &
-                                hybdat%results, xcpot, vTot, iter, iterHF)
+                                hybdat%results, xcpot_iter, vTot, iter, iterHF)
             END SELECT
 
 #ifdef CPP_MPI
@@ -359,38 +380,12 @@ CONTAINS
          END IF
 
          CALL timestart("generation of potential")
-         ! Load persisted kinetic energy density for MetaGGA (if available)
-         IF (xcpot%exc_is_MetaGGA() .OR. xcpot%vx_is_MetaGGA()) THEN
-            IF (.NOT. ALLOCATED(EnergyDen%mt)) THEN
-               CALL EnergyDen%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_EnergyDen)
-               IF (fmpi%irank==0) THEN
-                  BLOCK
-                     REAL    :: rdummy
-                     LOGICAL :: l_dummy
-                     INQUIRE(FILE='kinED.hdf', EXIST=l_dummy)
-                     IF (l_dummy) THEN
-                        CALL readDensity(stars, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
-                             fi%input, fi%sym, CDN_ARCHIVE_TYPE_CDN_const, CDN_INPUT_DEN_const, &
-                             0, rdummy, rdummy, l_dummy, EnergyDen, inFilename='kinED')
-                     END IF
-                  END BLOCK
-               END IF
-               CALL EnergyDen%distribute(fmpi%mpi_comm)
-            END IF
-         END IF
-         CALL vgen(hybdat, fi%field, fi%input, xcpot, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, fi%juphon, &
+         
+         CALL vgen(hybdat, fi%field, fi%input, xcpot_iter, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, fi%juphon, &
                    fi%cell,   fi%sliceplot, fmpi, results, fi%noco, nococonv, EnergyDen, inDen, vTot, vx, vCoul, vxc, exc, vTau=vTau)
          CALL timestop("generation of potential")
 
-         ! Compute auxiliary GGA XC potential for radial basis generation in MetaGGA
-         IF (xcpot%has_aux_gga()) THEN
-            CALL timestart("Auxiliary GGA for basis")
-            IF (.NOT. ALLOCATED(auxGGA_vxc_sph)) &
-               ALLOCATE(auxGGA_vxc_sph(fi%atoms%jmtd, fi%atoms%ntype, fi%input%jspins))
-            CALL compute_aux_gga_mt(xcpot, fi%atoms, sphhar, fi%sym, fi%input, fi%noco, fmpi, inDen, auxGGA_vxc_sph)
-            CALL timestop("Auxiliary GGA for basis")
-         ENDIF
-
+     
          ! Scale the magnetization back.
          IF (ANY(fi%noco%l_unrestrictMT).AND.fi%noco%l_scaleMag) THEN
             CALL inDen%SpinsToChargeAndMagnetisation()
@@ -432,15 +427,22 @@ CONTAINS
             CALL timestart("eigen")
 
             CALL timestart("Updating energy parameters")
-            IF (xcpot%has_aux_gga()) THEN
-               CALL enpara%update(fmpi, fi%atoms, fi%vacuum, fi%input, vToT, hub1data, vxc=vxc, auxGGA_vxc_sph=auxGGA_vxc_sph)
+                ! Compute auxiliary GGA XC potential for radial basis generation in MetaGGA
+            IF (xcpot_iter%is_MetaGGA()) THEN
+               CALL timestart("Auxiliary GGA for basis")
+               IF (.NOT. ALLOCATED(auxGGA_vxc_sph)) &
+                  ALLOCATE(auxGGA_vxc_sph(fi%atoms%jmtd, fi%atoms%ntype, fi%input%jspins))
+               CALL compute_aux_gga_mt(xcpot, fi%atoms, sphhar, fi%sym, fi%input, fi%noco, fmpi, inDen, auxGGA_vxc_sph)
+               auxGGA_vxc_sph = auxGGA_vxc_sph - vxc%mt(:,0,:,:) ! Correction for potential to calculate the basis functions, since the auxiliary GGA potential is only used for the basis and not for the total energy calculation. The correction is only applied to the MT part of the potential, since the auxiliary GGA potential is only calculated in the MT spheres.
+               CALL timestop("Auxiliary GGA for basis")
+               CALL enpara%update(fmpi, fi%atoms, fi%vacuum, fi%input, vToT, hub1data, auxGGA_vxc_sph=auxGGA_vxc_sph)
             ELSE
                CALL enpara%update(fmpi, fi%atoms, fi%vacuum, fi%input, vToT, hub1data)
             ENDIF
             CALL timestop("Updating energy parameters")
 
             IF (.NOT. fi%input%eig66(1)) THEN
-               CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv,  &
+               CALL eigen(fi, fmpi, stars, sphhar, xcpot_iter, forcetheo, enpara, nococonv,  &
                           hybdat, iter, eig_id, results, inDen, vToT, vx, hub1data, vTau=vTau)
             END IF
             ! TODO: What is commented out here and should it perhaps be removed?
@@ -595,10 +597,10 @@ CONTAINS
             END IF
 
             IF (fi%input%l_rdmft) THEN
-               SELECT TYPE (xcpot)
+               SELECT TYPE (xcpot_iter)
                TYPE IS (t_xcpot_inbuild)
                   CALL rdmft(eig_id, fmpi, fi, enpara, stars, &
-                             sphhar, vTot, vCoul, nococonv, xcpot, mpdata, hybdat, &
+                             sphhar, vTot, vCoul, nococonv, xcpot_iter, mpdata, hybdat, &
                              results, archiveType, outDen)
                END SELECT
             END IF
@@ -637,7 +639,7 @@ CONTAINS
             !CRYSTAL FIELD OUTPUT
             IF(ANY(fi%atoms%l_outputCFpot(:)).OR.ANY(fi%atoms%l_outputCFcdn(:))) THEN
                CALL hub1data%mpi_bc(fmpi%mpi_comm)
-               CALL writeCFOutput(fi,stars,hybdat,sphhar,xcpot,EnergyDen,outDen,hub1data,nococonv,enpara,fmpi)
+               CALL writeCFOutput(fi,stars,hybdat,sphhar,xcpot_iter,EnergyDen,outDen,hub1data,nococonv,enpara,fmpi)
                CALL juDFT_end("Crystal Field Output written",fmpi%irank)
             END IF
 
@@ -646,7 +648,7 @@ CONTAINS
 ! !$             IF (disp) THEN
 ! !$                reap = .FALSE.
 ! !$                CALL timestart("generation of potential (total)")
-! !$                CALL vgen(fi%hybinp,reap,fi%input,xcpot, fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
+! !$                CALL vgen(fi%hybinp,reap,fi%input,xcpot_iter, fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
 ! !$                     fi%cell, fi%sliceplot,fmpi, results,fi%noco,outDen,inDenRot,vTot,vx,vCoul)
 ! !$                CALL timestop("generation of potential (total)")
 ! !$
@@ -656,7 +658,7 @@ CONTAINS
             ! total energy
             CALL timestart('determination of total energy')
             CALL totale(fmpi, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, fi%input, fi%noco, fi%cell,   &
-                        xcpot, hybdat, vTot, vCoul, iter, inDen, results)
+                        xcpot_iter, hybdat, vTot, vCoul, iter, inDen, results)
             CALL timestop('determination of total energy')
          END DO forcetheoloop
 

@@ -46,6 +46,7 @@ MODULE m_types_xcpot
       LOGICAL          :: l_inbuild = .FALSE.
       CHARACTER(len=50):: inbuild_name = "vwn"
       LOGICAL          :: l_relativistic = .FALSE.
+      LOGICAL          :: l_bj = .FALSE.  !> Use Becke-Johnson exchange potential (Eq. 2, Tran et al. 2007)
 
    CONTAINS
 
@@ -55,6 +56,8 @@ MODULE m_types_xcpot
       PROCEDURE        :: vx_is_LDA => xcpot_vx_is_LDA
       PROCEDURE        :: vx_is_GGA => xcpot_vx_is_GGA
       PROCEDURE        :: vx_is_MetaGGA => xcpot_vx_is_MetaGGA
+      PROCEDURE        :: is_MetaGGA => xcpot_is_MetaGGA
+      PROCEDURE        :: needs_MetaGGA_ham => xcpot_needs_MetaGGA_ham
 
       PROCEDURE(vc_is_LDA_abstract), DEFERRED :: vc_is_LDA
       PROCEDURE        :: vc_is_GGA => xcpot_vc_is_GGA
@@ -74,6 +77,7 @@ MODULE m_types_xcpot
 
       PROCEDURE, NOPASS :: alloc_gradients => xcpot_alloc_gradients
       PROCEDURE        :: has_aux_gga => xcpot_has_aux_gga
+      PROCEDURE        :: create_from_aux => xcpot_create_from_aux
       PROCEDURE        :: read_xml => read_xml_xcpot
       PROCEDURE        :: mpi_bc => mpi_bc_xcpot_abstract
    END TYPE t_xcpot
@@ -113,6 +117,7 @@ CONTAINS
     CALL mpi_bc(this%l_inbuild, rank, mpi_comm)
     CALL mpi_bc(rank, mpi_comm, this%inbuild_name)
     CALL mpi_bc(this%l_relativistic, rank, mpi_comm)
+    CALL mpi_bc(this%l_bj, rank, mpi_comm)
     CALL mpi_bc(this%func_aux_id_x, rank, mpi_comm)
     CALL mpi_bc(this%func_aux_id_c, rank, mpi_comm)
   end subroutine mpi_bc_xcpot_abstract
@@ -152,6 +157,9 @@ CONTAINS
          this%l_inbuild = .TRUE.
          this%inbuild_name = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathC))//'/@name')))
          this%l_relativistic = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathC))//'/@relativisticCorrections'))
+         IF (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathC))//'/@l_beckeJohnson') == 1) THEN
+            this%l_bj = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathC))//'/@l_beckeJohnson'))
+         ENDIF
       ENDIF
 
       if(this%inbuild_name == "LibXC" ) then
@@ -283,6 +291,18 @@ CONTAINS
       xcpot_exc_is_MetaGGA = .FALSE.
    END FUNCTION xcpot_exc_is_MetaGGA
 
+   LOGICAL FUNCTION xcpot_is_MetaGGA(xcpot)
+      IMPLICIT NONE
+      CLASS(t_xcpot), INTENT(IN):: xcpot
+      xcpot_is_MetaGGA = xcpot%vx_is_MetaGGA() .OR. xcpot%exc_is_MetaGGA() .OR. xcpot%l_bj
+   END FUNCTION xcpot_is_MetaGGA
+
+   LOGICAL FUNCTION xcpot_needs_MetaGGA_ham(xcpot)
+      IMPLICIT NONE
+      CLASS(t_xcpot), INTENT(IN):: xcpot
+      xcpot_needs_MetaGGA_ham = xcpot%is_MetaGGA() .AND. .NOT. xcpot%l_bj
+   END FUNCTION xcpot_needs_MetaGGA_ham
+
    LOGICAL FUNCTION xcpot_needs_grad(xcpot)
       IMPLICIT NONE
       CLASS(t_xcpot), INTENT(IN):: xcpot
@@ -382,5 +402,14 @@ CONTAINS
       CLASS(t_xcpot), INTENT(IN):: xcpot
       xcpot_has_aux_gga = (xcpot%func_aux_id_x > 0)
    END FUNCTION xcpot_has_aux_gga
+
+   !> Default implementation: always errors. Override in t_xcpot_libxc for MetaGGA use.
+   FUNCTION xcpot_create_from_aux(xcpot) RESULT(aux_libxc)
+      USE m_judft
+      IMPLICIT NONE
+      CLASS(t_xcpot), INTENT(IN)       :: xcpot
+      CLASS(t_xcpot), ALLOCATABLE      :: aux_libxc
+      CALL judft_error("create_from_aux is not supported for this xcpot type (only t_xcpot_libxc)")
+   END FUNCTION xcpot_create_from_aux
 
 END MODULE m_types_xcpot

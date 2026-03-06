@@ -154,7 +154,7 @@ CONTAINS
       !     set up k-point independent t(l'm',lm) matrices
 
       alpha_hybrid = MERGE(xcpot%get_exchange_weight(),0.0,hybdat%l_subvxc)
-      IF (xcpot%vx_is_MetaGGA()) THEN
+      IF (xcpot%needs_MetaGGA_ham()) THEN
          CALL local_ham(sphhar,fi%atoms,fi%sym,fi%noco,nococonv,enpara,fmpi,pot,potx,inden,fi%input,fi%hub1inp,hub1data,td,ud,alpha_hybrid,vTau=vTau)
       ELSE
          CALL local_ham(sphhar,fi%atoms,fi%sym,fi%noco,nococonv,enpara,fmpi,pot,potx,inden,fi%input,fi%hub1inp,hub1data,td,ud,alpha_hybrid)
@@ -177,11 +177,12 @@ CONTAINS
             CALL lapw%init(fi%input,fi%noco,nococonv, kpts_mod, fi%atoms, fi%sym, nk, fi%cell, fmpi, bqpt)
 
             call timestart("Setup of H&S matrices")
-            IF (xcpot%vx_is_MetaGGA()) THEN
+            IF (xcpot%needs_MetaGGA_ham()) THEN
                CALL eigen_hssetup(jsp,fmpi,fi,results,inDen,potx,xcpot,enpara,nococonv,stars,sphhar,hybdat,ud,td,pot,lapw,nk,smat,hmat,vTau=vTau)
             ELSE
                CALL eigen_hssetup(jsp,fmpi,fi,results,inDen,potx,xcpot,enpara,nococonv,stars,sphhar,hybdat,ud,td,pot,lapw,nk,smat,hmat)
             ENDIF
+            
             CALL timestop("Setup of H&S matrices")
 
             IF (PRESENT(hmat_out)) THEN
