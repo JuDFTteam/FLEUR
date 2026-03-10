@@ -34,7 +34,6 @@ CONTAINS
       USE m_types
       USE m_types_xcpot_libxc
       USE m_libxc_postprocess_gga
-      USE m_metagga
       IMPLICIT NONE
 
       CLASS(t_xcpot),INTENT(IN)     :: xcpot

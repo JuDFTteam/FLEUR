@@ -43,7 +43,6 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    USE m_make_dos
    !USE m_Ekwritesl
    !USE m_banddos_io
-   USE m_metagga
    !USE m_unfold_band_kpts
    USE m_denMultipoleExp
    use m_slater
