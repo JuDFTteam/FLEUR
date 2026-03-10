@@ -16,7 +16,6 @@ MODULE m_cdn_io
 #ifdef CPP_MPI
   use mpi
 #endif
-   implicit none
   
   USE m_juDFT
   USE m_loddop

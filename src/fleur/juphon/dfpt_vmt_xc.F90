@@ -15,7 +15,6 @@ CONTAINS
       USE m_mt_tofrom_grid
       USE m_types_xcpot_inbuild
       USE m_types
-      USE m_metagga
       IMPLICIT NONE
 
       CLASS(t_xcpot),INTENT(IN)      :: xcpot

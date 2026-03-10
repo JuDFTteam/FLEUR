@@ -520,7 +520,7 @@ CONTAINS
       ELSEIF (xcpot%exc_is_MetaGGA()) THEN
          IF (PRESENT(kinEnergyDen_KS)) THEN
             
-            kinEnergyDen_libXC = kinEnergyDen_KS 
+            kinEnergyDen_libXC = transpose(kinEnergyDen_KS )
 
             !only cut core of muffin tin
             cut_idx = MERGE(NINT(size(rh, 1)*cut_ratio), 0, is_mt)

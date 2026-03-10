@@ -62,7 +62,6 @@ CONTAINS
       USE m_bs_comfort
       USE m_dwigner
       USE m_ylm
-      USE m_metagga
       USE m_assign_enpara_potential
       USE m_plot
       USE m_usetup
