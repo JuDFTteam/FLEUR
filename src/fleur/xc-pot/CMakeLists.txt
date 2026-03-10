@@ -1,6 +1,5 @@
 set(fleur_F90 ${fleur_F90}
 src/fleur/xc-pot/libxc_postprocess_gga.f90
-src/fleur/xc-pot/metagga.F90
 src/fleur/xc-pot/potl0.f90
 src/fleur/xc-pot/mkgl0.f90
 src/fleur/xc-pot/grdchlh.f90

@@ -4,9 +4,7 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_dfpt_check
-   implicit none
-
-IMPLICIT NONE
+   IMPLICIT NONE
 
 CONTAINS
     SUBROUTINE dfpt_check(fi, xcpot)

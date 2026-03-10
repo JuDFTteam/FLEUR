@@ -1,10 +1,14 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_mt_tofrom_grid
-   USE m_types
+   use m_juDFT
+   USE m_types_atoms
+   USE m_types_sphhar
+   USE m_types_sym
+   implicit none
    PRIVATE
    REAL, PARAMETER    :: d_15 = 1.e-15
    REAL, ALLOCATABLE :: ylh(:, :, :), ylht(:, :, :), ylhtt(:, :, :)
@@ -56,6 +60,8 @@ CONTAINS
    SUBROUTINE mt_to_grid(dograds, jspins, atoms, sym,sphhar,rotch, den_mt, n, noco ,grad, ch)
       USE m_grdchlh
       USE m_mkgylm
+      use m_types_noco
+      use m_types_xcpot
       IMPLICIT NONE
       LOGICAL, INTENT(IN)          :: dograds
       TYPE(t_atoms), INTENT(IN)    :: atoms

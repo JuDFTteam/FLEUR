@@ -1,10 +1,10 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_pw_tofrom_grid
-   USE m_types
+   
    USE m_types_fftGrid
    PRIVATE
    REAL,PARAMETER:: d_15=1.e-15
@@ -17,7 +17,9 @@ MODULE m_pw_tofrom_grid
    PUBLIC :: init_pw_grid, pw_to_grid, pw_from_grid, finish_pw_grid
 CONTAINS
   SUBROUTINE init_pw_grid(stars,sym,cell,xcpot)
-    USE m_types
+    USE m_types_stars
+    USE m_types_sym
+    use m_types_cell
     use m_types_xcpot
     IMPLICIT NONE
     TYPE(t_stars),INTENT(IN)      :: stars
@@ -91,7 +93,10 @@ CONTAINS
     USE m_grdrsis
     USE m_polangle
     USE m_mkgxyz3
-    USE m_types
+    USE m_types_stars
+    USE m_types_cell
+    USE m_types_xcpot
+    USE m_types_xcpot_inbuild
     USE m_constants
     IMPLICIT NONE
 
@@ -384,7 +389,7 @@ CONTAINS
 
   SUBROUTINE pw_from_grid(stars,v_in,v_out_pw,v_out_pw_w)
     USE m_convol
-    USE m_types
+    USE m_types_stars
     IMPLICIT NONE
     TYPE(t_stars),INTENT(IN)      :: stars
     REAL,INTENT(INOUT)            :: v_in(0:,:)

@@ -16,8 +16,9 @@ MODULE m_vis_xc
    !     in the interstitial region    c.l.fu
    !     including gradient corrections. t.a. 1996.
    !     ******************************************************
+   implicit none
 CONTAINS
-   SUBROUTINE vis_xc(stars,sym,cell,den,xcpot,input,noco,EnergyDen,kinED,vTot,vx,exc,vxc,vTau)
+   SUBROUTINE vis_xc(stars,sym,cell,den,xcpot,input,noco,EnergyDen,vTot,vx,exc,vxc,vTau)
 
       !     ******************************************************
       !     instead of visxcor.f: the different exchange-correlation
@@ -34,7 +35,6 @@ CONTAINS
       USE m_types
       USE m_types_xcpot_libxc
       USE m_libxc_postprocess_gga
-      USE m_metagga
       IMPLICIT NONE
 
       CLASS(t_xcpot),INTENT(IN)     :: xcpot
@@ -46,13 +46,12 @@ CONTAINS
       TYPE(t_potden),INTENT(IN)  :: den, EnergyDen
       TYPE(t_potden),INTENT(INOUT)  :: vTot,vx,exc,vxc
       TYPE(t_potden),INTENT(INOUT),OPTIONAL :: vTau
-      TYPE(t_kinED),INTENT(IN)      ::kinED
 
-      TYPE(t_gradients) :: grad
+      TYPE(t_gradients) :: grad, tmp_grad_ked
       REAL, ALLOCATABLE :: rho(:,:), ED_rs(:,:), vTot_rs(:,:)
       REAL, ALLOCATABLE :: rho_conv(:,:), ED_conv(:,:), vTot_conv(:,:)
       REAL, ALLOCATABLE :: v_x(:,:),v_xc(:,:),v_xc2(:,:),e_xc(:,:)
-      REAL, ALLOCATABLE :: v_tau(:,:)
+      REAL, ALLOCATABLE :: v_tau(:,:), ked_rs(:,:)
       INTEGER           :: jspin, i, js
       LOGICAL           :: perform_MetaGGA, l_libxc
 
@@ -67,6 +66,8 @@ CONTAINS
       !Put the charge on the grid, in GGA case also calculate gradients
       call timestart("pw_to_grid")
       CALL pw_to_grid(xcpot%needs_grad(),input%jspins,noco%l_noco,stars,cell,den%pw,grad,xcpot,rho)
+      IF (perform_MetaGGA) &
+         CALL pw_to_grid(.FALSE.,input%jspins,noco%l_noco,stars,cell,EnergyDen%pw,tmp_grad_ked,xcpot,ked_rs)
       call timestop("pw_to_grid")
 
       ALLOCATE(v_xc,mold=rho)
@@ -77,12 +78,12 @@ CONTAINS
       CALL xcpot%apply_cutoffs(1.E-6,rho,grad)
       call timestop("apply_cutoffs")
 #ifdef CPP_LIBXC
-      if(perform_MetaGGA .and. kinED%set) then
+      if(perform_MetaGGA) then
          IF (xcpot%vx_is_MetaGGA()) THEN
             ALLOCATE(v_tau, mold=rho); v_tau = 0.0
-            CALL xcpot%get_vxc(input%jspins,rho,v_xc, v_x,grad, kinEnergyDen_KS=kinED%is, vtau=v_tau)
+            CALL xcpot%get_vxc(input%jspins,rho,v_xc, v_x,grad, kinEnergyDen_KS=ked_rs, vtau=v_tau)
          ELSE
-            CALL xcpot%get_vxc(input%jspins,rho,v_xc, v_x,grad, kinEnergyDen_KS=kinED%is)
+            CALL xcpot%get_vxc(input%jspins,rho,v_xc, v_x,grad, kinEnergyDen_KS=ked_rs)
          ENDIF
       else
          CALL xcpot%get_vxc(input%jspins,rho,v_xc,v_x,grad)
@@ -129,8 +130,8 @@ CONTAINS
       IF (ALLOCATED(exc%pw_w)) THEN
          ALLOCATE ( e_xc(SIZE(rho,1),1) ); e_xc=0.0
 #ifdef CPP_LIBXC
-         IF(kinED%set) THEN
-            CALL xcpot%get_exc(input%jspins,rho,e_xc(:,1),grad, kinED%is, mt_call=.False.)
+         IF(perform_MetaGGA) THEN
+            CALL xcpot%get_exc(input%jspins,rho,e_xc(:,1),grad, ked_rs, mt_call=.False.)
          ELSE
             CALL xcpot%get_exc(input%jspins,rho,e_xc(:,1),grad, mt_call=.False.)
          ENDIF

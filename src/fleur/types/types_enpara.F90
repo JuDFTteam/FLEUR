@@ -94,7 +94,7 @@ CONTAINS
   !> This subroutine adjusts the energy parameters to the potential. In particular, it
   !! calculated them in case of qn_el>-1,qn_ello>-1
   !! Before this was done in lodpot.F
-  SUBROUTINE update(enpara,fmpi,atoms,vacuum,input,v,hub1data,auxGGA_vxc_sph)
+  SUBROUTINE update(enpara,fmpi,atoms,vacuum,input,v,hub1data)
     USE m_types_atoms
     USE m_types_vacuum
     USE m_types_input
@@ -118,7 +118,6 @@ CONTAINS
     TYPE(t_vacuum),INTENT(IN)    :: vacuum
     TYPE(t_potden),INTENT(IN)    :: v
     TYPE(t_hub1data),INTENT(IN)  :: hub1data
-    REAL, INTENT(IN), OPTIONAL   :: auxGGA_vxc_sph(:,:,:) !< Auxiliary GGA XC spherical potential (jmtd,ntype,jspins)
 
 
     LOGICAL ::  l_enpara
@@ -154,19 +153,14 @@ CONTAINS
        elo_lo_local = 0.0
        elo_up_local = 0.0
 
-      DO n=1,atoms%ntype
-         enpara%vr(:,n,jsp)=v%mt(:,0,n,jsp)
-         if (atoms%l_nonpolbas(n)) enpara%vr(:,n,jsp)=(v%mt(:,0,n,1)+v%mt(:,0,n,2))/2
-         ! For MetaGGA: replace MGGA XC potential with auxiliary GGA XC potential
-         ! vr = v_Coulomb + v_xc^GGA = (v_Coulomb + v_xc^MGGA) - v_xc^MGGA + v_xc^GGA
-         IF (PRESENT(auxGGA_vxc_sph) ) THEN
-            enpara%vr(:,n,jsp) = enpara%vr(:,n,jsp) + auxGGA_vxc_sph(:,n,jsp)
-            IF (atoms%l_nonpolbas(n)) THEN
-               enpara%vr(:,n,jsp) = (v%mt(:,0,n,1)  + auxGGA_vxc_sph(:,n,1) &
-                                   + v%mt(:,0,n,2)  + auxGGA_vxc_sph(:,n,2)) / 2
-            ENDIF
-         ENDIF
-      endDO
+      IF (jsp == 1) THEN
+         ! Assign enpara%vr from the spherical (l=0) component of the total potential
+         DO n = 1, atoms%ntype
+            enpara%vr(:, n, jsp) = v%mt(:, 0, n, jsp)
+            IF (atoms%l_nonpolbas(n)) &
+               enpara%vr(:, n, jsp) = (v%mt(:, 0, n, 1) + v%mt(:, 0, n, 2)) / 2
+         END DO
+      END IF
 
        CALL mpiLoop%init(fmpi%irank,fmpi%isize,1,atoms%ntype)
        !$OMP PARALLEL DO DEFAULT(none) &

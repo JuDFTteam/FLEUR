@@ -32,6 +32,7 @@ contains
       LOGICAL              :: l_inbuild
       CHARACTER(len=10)    :: inbuild_name
       LOGICAL              :: l_relativistic
+      LOGICAL              :: l_bj
 
       !Finish setup of xcpot
       xcpot%l_libxc = (xcpot%inbuild_name == "LibXC")
@@ -49,6 +50,7 @@ contains
          l_inbuild      = .FALSE.
          inbuild_name   = xcpot%inbuild_name
          l_relativistic = xcpot%l_relativistic
+         l_bj           = xcpot%l_bj
 
          DEALLOCATE (xcpot)
          ALLOCATE (t_xcpot_libxc::xcpot)
@@ -56,7 +58,7 @@ contains
          xcpot%func_aux_id_c  = func_aux_id_c
          SELECT TYPE (xcpot)
          CLASS is (t_xcpot_libxc)!just allocated like this
-            CALL xcpot%init(func_vxc_id_x, func_vxc_id_c, func_exc_id_x, func_exc_id_c, input%jspins)
+            CALL xcpot%init(func_vxc_id_x, func_vxc_id_c, func_exc_id_x, func_exc_id_c, input%jspins, l_bj)
          END SELECT
          xcpot%gmaxxc         = gmaxxc
          xcpot%l_libxc        = l_libxc

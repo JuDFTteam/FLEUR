@@ -37,7 +37,6 @@ CONTAINS
       USE m_cdn_io
       USE m_convol
       USE m_intgr
-      USE m_metagga
       USE m_dfpt_vmt_xc
       USE m_dfpt_vis_xc
       USE m_dfpt_vvac_xc
@@ -66,7 +65,6 @@ CONTAINS
 
       ! Local type instances
       TYPE(t_potden)    :: workDen, veff
-      Type(t_kinED)     :: kinED
       REAL, ALLOCATABLE :: rhoc(:,:,:),rhoc_vx(:)
       REAL, ALLOCATABLE :: tec(:,:), qintc(:,:)
       ! Local Scalars
@@ -78,13 +76,6 @@ CONTAINS
 #endif
 
       l_dfptvgen = PRESENT(starsq)
-
-      ! Convert pre-computed kinetic energy density (t_potden) to
-      ! real-space integration grids (t_kinED) for XC functional evaluation.
-      ! This replaces the indirect approach (τ = ε_den − V·ρ) in set_kinED
-      ! with a direct approach where τ was computed from wavefunctions.
-      call set_kinED_direct(fmpi, sphhar, atoms, sym, xcpot, &
-           input, noco, stars, vacuum, cell, EnergyDen, kinED)
 
       IF (PRESENT(results)) THEN
          CALL veff%init(stars, atoms, sphhar, vacuum, noco, input%jspins, 1)
@@ -115,7 +106,7 @@ CONTAINS
          ! interstitial region
          CALL timestart("Vxc in interstitial")
          IF (.NOT.l_dfptvgen) THEN
-             CALL vis_xc(stars, sym, cell, den, xcpot, input, noco, EnergyDen,kinED, vTot, vx, exc, vxc, vTau=vTau)
+             CALL vis_xc(stars, sym, cell, den, xcpot, input, noco, EnergyDen, vTot, vx, exc, vxc, vTau=vTau)
          ELSE
              ! TODO: This is different enough to warrant a separate subroutine, right?
              CALL dfpt_vis_xc(stars, starsq, sym, cell, denRot, den1Rot, xcpot, input, vTot)
@@ -133,7 +124,7 @@ CONTAINS
 
       IF (.NOT.l_dfptvgen) THEN
           CALL vmt_xc(fmpi, sphhar, atoms, den, xcpot, input, sym, &
-                      EnergyDen,kinED, noco,vTot, vx, exc, vxc, vTau=vTau)
+                      EnergyDen, noco,vTot, vx, exc, vxc, vTau=vTau)
       ELSE
           CALL dfpt_vmt_xc(fmpi,sphhar,atoms,denRot,den1Rot,den1Rotimag,xcpot,input,sym,noco,vTot,dfptvTotimag)
       END IF

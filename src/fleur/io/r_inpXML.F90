@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -101,7 +101,7 @@ CONTAINS
       CHARACTER(len=150) :: format
       CHARACTER(len=20) :: mixingScheme
       CHARACTER(len=10) :: loType
-      LOGICAL :: kptGamma, l_relcor,ldummy
+      LOGICAL :: kptGamma, l_relcor,ldummy, l_bj_loc
       INTEGER :: iAtomType, startCoreStates, endCoreStates
       CHARACTER(len=100) :: xPosString, yPosString, zPosString
       CHARACTER(len=200) :: coreStatesString
@@ -716,7 +716,7 @@ CONTAINS
             CASE ('Muller')
                input%rdmftFunctional = 1
             CASE DEFAULT
-               STOP 'Error: unknown RDMFT functional selected!'
+               CALL judft_error('Error: unknown RDMFT functional selected!')
          END SELECT
       END IF
 
@@ -1254,7 +1254,11 @@ CONTAINS
       END IF
 
       !now initialize the xcpot variable
-      CALL setXCParameters(atoms,valueString,l_relcor,input%jspins,vxc_id_x,vxc_id_c,exc_id_x, exc_id_c, xcpot)
+      l_bj_loc = .FALSE.
+      IF (xmlGetNumberOfNodes('/fleurInput/xcFunctional/@BeckeJohnson') == 1) THEN
+         l_bj_loc = evaluateFirstBoolOnly(xmlGetAttributeValue('/fleurInput/xcFunctional/@BeckeJohnson'))
+      END IF
+      CALL setXCParameters(atoms,valueString,l_relcor,input%jspins,vxc_id_x,vxc_id_c,exc_id_x, exc_id_c, xcpot, l_bj_loc)
 
       xPathA = '/fleurInput/calculationSetup/cutoffs/@GmaxXC'
       numberNodes = xmlGetNumberOfNodes(xPathA)
@@ -2200,7 +2204,7 @@ CONTAINS
 
    END SUBROUTINE r_inpXML
 
-   SUBROUTINE setXCParameters(atoms,namex,relcor,jspins,vxc_id_x,vxc_id_c,exc_id_x,exc_id_c,xcpot)
+   SUBROUTINE setXCParameters(atoms,namex,relcor,jspins,vxc_id_x,vxc_id_c,exc_id_x,exc_id_c,xcpot,l_bj)
       USE m_juDFT
       USE m_types
       USE m_types_xcpot_inbuild
@@ -2211,6 +2215,7 @@ CONTAINS
       CHARACTER(LEN=*),     INTENT(IN)  :: namex
       LOGICAL,              INTENT(IN)  :: relcor
       INTEGER,              INTENT(IN)  :: jspins,vxc_id_c,vxc_id_x,exc_id_x,exc_id_c
+      LOGICAL,              INTENT(IN)  :: l_bj
       CLASS(t_xcpot),INTENT(OUT),ALLOCATABLE      :: xcpot
 
       IF (namex(1:5)=='LibXC') THEN
@@ -2224,7 +2229,7 @@ CONTAINS
       TYPE IS(t_xcpot_inbuild)
          CALL xcpot%init(namex(1:4),relcor,atoms%ntype)
       TYPE IS(t_xcpot_libxc)
-         CALL xcpot%init(jspins,vxc_id_x,vxc_id_c,exc_id_x,exc_id_c)
+         CALL xcpot%init(jspins,vxc_id_x,vxc_id_c,exc_id_x,exc_id_c,l_bj)
       END SELECT
 
       CALL set_xcpot_usage(xcpot)

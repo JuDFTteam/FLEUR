@@ -157,8 +157,9 @@ CONTAINS
          this%l_inbuild = .TRUE.
          this%inbuild_name = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathC))//'/@name')))
          this%l_relativistic = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathC))//'/@relativisticCorrections'))
-         IF (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathC))//'/@l_beckeJohnson') == 1) THEN
-            this%l_bj = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathC))//'/@l_beckeJohnson'))
+         IF (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathC))//'/@BeckeJohnson') == 1) THEN
+            this%l_bj = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathC))//'/@BeckeJohnson'))
+            print *, "Becke-Johnson potential enabled via XML input"
          ENDIF
       ENDIF
 
@@ -300,6 +301,7 @@ CONTAINS
    LOGICAL FUNCTION xcpot_needs_MetaGGA_ham(xcpot)
       IMPLICIT NONE
       CLASS(t_xcpot), INTENT(IN):: xcpot
+    
       xcpot_needs_MetaGGA_ham = xcpot%is_MetaGGA() .AND. .NOT. xcpot%l_bj
    END FUNCTION xcpot_needs_MetaGGA_ham
 

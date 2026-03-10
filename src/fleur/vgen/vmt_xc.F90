@@ -32,13 +32,12 @@ MODULE m_vmt_xc
 
    CONTAINS
       SUBROUTINE vmt_xc(fmpi,sphhar,atoms,&
-                        den,xcpot,input,sym,EnergyDen,kinED,noco,vTot,vx,exc,vxc,vTau)
+                        den,xcpot,input,sym,EnergyDen,noco,vTot,vx,exc,vxc,vTau)
 
          use m_libxc_postprocess_gga
          USE m_mt_tofrom_grid
          USE m_types_xcpot_inbuild
          USE m_types
-         USE m_metagga
          IMPLICIT NONE
 
          CLASS(t_xcpot),INTENT(IN)      :: xcpot
@@ -51,15 +50,14 @@ MODULE m_vmt_xc
          TYPE(t_noco), INTENT(IN)       :: noco
          TYPE(t_potden),INTENT(INOUT)   :: vTot,vx,exc,vxc
          TYPE(t_potden),INTENT(INOUT)   :: vTau
-         TYPE(t_kinED),INTENT(IN)       :: kinED
          !     ..
          !     .. Local Scalars ..
-         TYPE(t_gradients)     :: grad
+         TYPE(t_gradients)     :: grad, tmp_grad_ked
          TYPE(t_xcpot_inbuild) :: xcpot_tmp
          TYPE(t_potden)        :: vTot_tmp
          REAL, ALLOCATABLE     :: ch(:,:),v_x(:,:),v_xc(:,:),e_xc(:,:)
-         REAL, ALLOCATABLE     :: v_tau(:,:)
-         INTEGER               :: n,nsp,nt,jr, loc_n
+         REAL, ALLOCATABLE     :: v_tau(:,:), ked_rs(:,:)
+         INTEGER               :: n,nsp,nt,jr
          INTEGER               :: i, j, idx, cnt
          REAL                  :: divi
 
@@ -107,7 +105,6 @@ MODULE m_vmt_xc
          n_start=1
          n_stride=1
 #endif
-         loc_n = 0
          !TODO: MetaGGA
          DO n = n_start,atoms%ntype,n_stride
             ALLOCATE(ch(nsp*atoms%jri(n),input%jspins),v_x(nsp*atoms%jri(n),input%jspins),&
@@ -116,20 +113,24 @@ MODULE m_vmt_xc
                ALLOCATE(v_tau(nsp*atoms%jri(n),input%jspins)); v_tau = 0.0
             ENDIF
             IF (xcpot%needs_grad()) CALL xcpot%alloc_gradients(SIZE(ch,1),input%jspins,grad)
-            loc_n = loc_n + 1
+            IF (perform_MetaGGA) THEN
+               ALLOCATE(ked_rs(nsp*atoms%jri(n), input%jspins))
+               CALL mt_to_grid(.FALSE., input%jspins, atoms, sym, sphhar, .TRUE., &
+                               EnergyDen%mt(:,0:,n,:), n, noco, tmp_grad_ked, ked_rs)
+            END IF
 
             CALL mt_to_grid(xcpot%needs_grad(), input%jspins, atoms,sym,sphhar,.True.,den%mt(:,0:,n,:),n,noco,grad,ch)
 
             !
             !         calculate the ex.-cor. potential
 #ifdef CPP_LIBXC
-            if(perform_MetaGGA .and. kinED%set) then
+            if(perform_MetaGGA) then
               if (xcpot%vx_is_MetaGGA()) then
                 CALL xcpot%get_vxc(input%jspins,ch,v_xc&
-                     , v_x,grad, kinEnergyDen_KS=kinED%mt(:,:,loc_n), vtau=v_tau)
+                     , v_x,grad, kinEnergyDen_KS=ked_rs, vtau=v_tau)
               else
                 CALL xcpot%get_vxc(input%jspins,ch,v_xc&
-                     , v_x,grad, kinEnergyDen_KS=kinED%mt(:,:,loc_n))
+                     , v_x,grad, kinEnergyDen_KS=ked_rs)
               endif
             else
                CALL xcpot%get_vxc(input%jspins,ch,v_xc&
@@ -184,10 +185,10 @@ MODULE m_vmt_xc
                !           calculate the ex.-cor energy density
                !
 #ifdef CPP_LIBXC
-               IF(perform_MetaGGA .and. kinED%set) THEN
+               IF(perform_MetaGGA) THEN
                   CALL xcpot%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),&
                      e_xc(:nsp*atoms%jri(n),1),grad, &
-                     kinEnergyDen_KS=kinED%mt(:,:,loc_n), mt_call=.True.)
+                     kinEnergyDen_KS=ked_rs, mt_call=.True.)
                ELSE
                   CALL xcpot%get_exc(input%jspins,ch(:nsp*atoms%jri(n),:),&
                      e_xc(:nsp*atoms%jri(n),1),grad, mt_call=.True.)
@@ -214,6 +215,7 @@ MODULE m_vmt_xc
             ENDIF
             IF (lda_atom(n)) DEALLOCATE(xcl)
             IF (ALLOCATED(v_tau)) DEALLOCATE(v_tau)
+            IF (ALLOCATED(ked_rs)) DEALLOCATE(ked_rs)
             DEALLOCATE (ch,v_x,v_xc,e_xc)
          ENDDO
 

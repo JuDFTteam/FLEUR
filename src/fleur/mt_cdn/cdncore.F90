@@ -9,7 +9,7 @@ MODULE m_cdncore
 
 CONTAINS
 
-SUBROUTINE cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
+SUBROUTINE cdncore(fmpi ,input,vacuum,noco,nococonv,sym,enpara,&
                    stars,cell,sphhar,atoms,vTot,outDen,moments,results, EnergyDen, kinEnergyDen)
 
    USE m_constants
@@ -36,6 +36,7 @@ SUBROUTINE cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
    TYPE(t_noco),       INTENT(IN)              :: noco
    TYPE(t_nococonv),   INTENT(IN)              :: nococonv
    TYPE(t_sym),        INTENT(IN)              :: sym
+   TYPE(t_enpara),     INTENT(IN)              :: enpara
    TYPE(t_stars),      INTENT(IN)              :: stars
    TYPE(t_cell),       INTENT(IN)              :: cell
    TYPE(t_sphhar),     INTENT(IN)              :: sphhar
@@ -94,7 +95,7 @@ SUBROUTINE cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
       END IF
    END IF
 
-   vr0=vtot%mt(:,0,:,:)
+   vr0=enpara%vr(:,:,:)
    IF (.false.) THEN !there should be a imput switch here!!
       vr0(:,:,1)=0.5*(vr0(:,:,1)+vr0(:,:,2))
       vr0(:,:,2)=vr0(:,:,1)

@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2019 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -14,7 +14,17 @@ CONTAINS
       USE m_qfix
       USE m_spgrot
       USE m_constants
-      USE m_types
+      USE m_types_atoms
+      USE m_types_sym
+      USE m_types_cell
+      USE m_types_vacuum
+      USE m_types_sphhar
+      USE m_types_input
+      USE m_types_stars
+      USE m_types_nococonv
+      USE m_types_mpi
+      USE m_types_potden      
+      use m_types_noco
 
       REAL,           INTENT(IN)    :: shift(:,:)
       TYPE(t_mpi),    INTENT(IN)    :: fmpi
