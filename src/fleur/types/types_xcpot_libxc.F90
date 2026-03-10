@@ -81,17 +81,19 @@ CONTAINS
 
   end subroutine
 
-   SUBROUTINE xcpot_init(xcpot, func_vxc_id_x, func_vxc_id_c, func_exc_id_x, func_exc_id_c, jspins)
+   SUBROUTINE xcpot_init(xcpot, func_vxc_id_x, func_vxc_id_c, func_exc_id_x, func_exc_id_c, jspins, l_bj)
       USE m_judft
       IMPLICIT NONE
       CLASS(t_xcpot_libxc), INTENT(INOUT)    :: xcpot
       INTEGER, INTENT(IN)                 :: jspins, func_vxc_id_x, func_vxc_id_c, func_exc_id_x, func_exc_id_c
+      LOGICAL, INTENT(IN)                 :: l_bj
       LOGICAL                             :: same_functionals   ! are vxc and exc equal
       INTEGER                             :: errors(4)
 
 #ifdef CPP_LIBXC
       errors = -1
       xcpot%jspins = jspins
+      xcpot%l_bj = l_bj
       xcpot%func_vxc_id_x = func_vxc_id_x
       xcpot%func_exc_id_x = func_exc_id_x
       xcpot%func_vxc_id_c = func_vxc_id_c
@@ -336,7 +338,9 @@ CONTAINS
       ! optional: use auxiliary GGA functional instead of primary functional
       LOGICAL, INTENT(IN), OPTIONAL  :: l_aux
 #ifdef CPP_LIBXC
-   REAL,ALLOCATABLE  :: vxc_tmp(:,:),vx_tmp(:,:),kinED_libxc(:,:)
+   REAL, ALLOCATABLE :: vxc_tmp(:,:), vx_tmp(:,:)
+   REAL, ALLOCATABLE :: kinED_libxc(:,:), vtau_tmp(:,:)
+   REAL, ALLOCATABLE :: sigma(:,:), vsigma(:,:), laplace(:,:)
    TYPE(xc_f90_func_t) :: func_x, func_c
    LOGICAL :: use_aux, has_c
 
@@ -344,14 +348,15 @@ CONTAINS
       IF (PRESENT(l_aux)) use_aux = l_aux
       IF (.NOT. use_aux) use_aux = xcpot%vx_is_MetaGGA() .AND. (.NOT. PRESENT(kinenergyden_ks)) .AND. xcpot%l_has_aux
 
-      !libxc uses the spin as a first index, hence we have to transpose....
-      ALLOCATE (vxc_tmp(SIZE(vxc, 2), SIZE(vxc, 1))); vxc_tmp = 0.0
-      ALLOCATE (vx_tmp(SIZE(vx, 2), SIZE(vx, 1))); vx_tmp = 0.0
+      ! libxc uses spin as first index, hence transpose on output
+      ALLOCATE(vxc_tmp(SIZE(vxc, 2), SIZE(vxc, 1))); vxc_tmp = 0.0
+      ALLOCATE(vx_tmp(SIZE(vx, 2), SIZE(vx, 1))); vx_tmp = 0.0
+      ALLOCATE(vtau_tmp(SIZE(vx, 2), SIZE(vx, 1))); vtau_tmp = 0.0
 
       IF (PRESENT(vtau)) vtau = 0.0
 
+      ! Select exchange and correlation functionals
       IF (use_aux) THEN
-         ! Auxiliary GGA evaluation for MetaGGA radial basis generation
          IF (.NOT. xcpot%l_has_aux) &
             CALL judft_error("get_vxc with l_aux=.TRUE. but no auxiliary GGA configured")
          IF (.NOT. PRESENT(grad)) &
@@ -359,146 +364,112 @@ CONTAINS
          func_x = xcpot%aux_func_x
          has_c = xcpot%func_aux_id_c > 0
          IF (has_c) func_c = xcpot%aux_func_c
-         CALL eval_gga_vxc(func_x, func_c, has_c, grad%sigma, vx_tmp, vxc_tmp, grad%vsigma)
-      ELSEIF (xcpot%vx_is_MetaGGA() .OR. xcpot%l_bj) THEN
-         ! MetaGGA potential (or BJ): calls xc_f90_mgga_vxc which returns vrho, vsigma, vlapl, vtau
-         IF (.NOT. PRESENT(grad)) CALL judft_error("Bug: You called get_vxc for a MetaGGA/BJ potential without providing derivatives")
-         IF (PRESENT(kinenergyden_ks)) THEN
-            ! Apply correction: tau_libxc = tau_KS + 0.25*laplacian(rho)
-            kinED_libxc = TRANSPOSE(kinenergyden_ks + 0.25*grad%laplace)
-
-            IF (xcpot%l_bj) THEN
-               ! Becke-Johnson exchange potential: BR89 + KED correction
-               CALL eval_BJ_vxc(grad%sigma, grad%laplace, kinED_libxc, vx_tmp, vxc_tmp, grad%vsigma, vtau)
-            ELSE
-               func_x = xcpot%vxc_func_x
-               has_c = xcpot%func_vxc_id_c > 0
-               IF (has_c) func_c = xcpot%vxc_func_c
-               CALL eval_mgga_vxc(func_x, func_c, has_c, grad%sigma, grad%laplace, kinED_libxc, vx_tmp, vxc_tmp, grad%vsigma, vtau)
-            ENDIF
-            DEALLOCATE(kinED_libxc)
-         ELSE
-            ! MetaGGA first iteration requires auxiliary GGA potential
-            CALL judft_error("MetaGGA requires an auxiliary GGA potential for first iteration (no kinenergyden_ks available)")
-         ENDIF
-      ELSEIF (xcpot%needs_grad()) THEN
-         IF (.NOT. PRESENT(grad)) CALL judft_error("Bug: You called get_vxc for a GGA potential without providing derivatives")
+      ELSE
          func_x = xcpot%vxc_func_x
          has_c = xcpot%func_vxc_id_c > 0
          IF (has_c) func_c = xcpot%vxc_func_c
-         CALL eval_gga_vxc(func_x, func_c, has_c, grad%sigma, vx_tmp, vxc_tmp, grad%vsigma)
-      ELSE  !LDA potentials
-         CALL xc_f90_lda_vxc(xcpot%vxc_func_x, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), vx_tmp)
-         IF (xcpot%func_vxc_id_c > 0) THEN
-            CALL xc_f90_lda_vxc(xcpot%vxc_func_c, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), vxc_tmp)
-            vxc_tmp = vxc_tmp + vx_tmp
-         ENDIF
       ENDIF
+
+      ! Prepare gradient arrays (leave unallocated for LDA)
+      IF (PRESENT(grad)) THEN
+         sigma = grad%sigma
+         ALLOCATE(vsigma, mold=grad%vsigma); vsigma = 0.0
+         IF (ALLOCATED(grad%laplace)) laplace = grad%laplace
+      ENDIF
+
+      ! Prepare kinetic energy density for MetaGGA
+      IF (PRESENT(kinenergyden_ks)) kinED_libxc = transpose(kinenergyden_ks)
+
+      print*,"A"
+      ! Evaluate exchange functional (auto-detects LDA/GGA/MetaGGA)
+      CALL eval_vxc(func_x, vx_tmp, sigma, vsigma, laplace, kinED_libxc, vtau_tmp)
+
+      ! Accumulate correlation on top of exchange
+      vxc_tmp = vx_tmp
+      IF (has_c) CALL eval_vxc(func_c, vxc_tmp, sigma, vsigma, laplace, kinED_libxc, vtau_tmp)
+      ! Apply BJ correction if needed
+      IF (xcpot%l_bj .AND. PRESENT(kinenergyden_ks)) CALL eval_BJ_correction(vx_tmp, vxc_tmp)
+      ! Copy back gradient results
+      IF (PRESENT(grad) .AND. ALLOCATED(vsigma)) grad%vsigma = vsigma
       vx = TRANSPOSE(vx_tmp)
       vxc = TRANSPOSE(vxc_tmp)
+      IF (PRESENT(vtau)) vtau = TRANSPOSE(vtau_tmp)
 
    CONTAINS
 
-      SUBROUTINE eval_gga_vxc(func_x, func_c, has_c, sigma, vx_out, vxc_out, vsigma_out)
-         TYPE(xc_f90_func_t), INTENT(IN) :: func_x, func_c
-         LOGICAL, INTENT(IN)             :: has_c
-         REAL, INTENT(IN)                :: sigma(:, :)
-         REAL, INTENT(OUT)               :: vx_out(:, :), vxc_out(:, :), vsigma_out(:, :)
-         REAL, ALLOCATABLE               :: vsigma_x(:, :)
+      !> Unified evaluation of a single xc functional (exchange OR correlation).
+      !! Auto-detects LDA/GGA/MetaGGA family via libxc and calls the appropriate
+      !! xc_f90_*_vxc routine. Results are accumulated (added) into the output arrays.
+      !! Uses rh from host association (parent scope).
+      SUBROUTINE eval_vxc(func, vxc_out, sigma, vsigma_out, laplace, kinED, vtau_out)
+         TYPE(xc_f90_func_t), INTENT(IN)      :: func
+         REAL, INTENT(INOUT)                   :: vxc_out(:, :)    ! (spin, points) - accumulated
+         REAL, INTENT(IN), ALLOCATABLE         :: sigma(:, :)      ! (nsigma, npoints)
+         REAL, INTENT(INOUT), ALLOCATABLE      :: vsigma_out(:, :) ! (nsigma, npoints) - accumulated
+         REAL, INTENT(IN), ALLOCATABLE         :: laplace(:, :)    ! (npoints, jspin)
+         REAL, INTENT(IN), ALLOCATABLE         :: kinED(:, :)      ! kinetic energy density
+         REAL, INTENT(INOUT), ALLOCATABLE      :: vtau_out(:, :)   ! (spin, npoints) - accumulated
 
-         ALLOCATE(vsigma_x, mold=vsigma_out); vsigma_x = 0.0
-         CALL xc_f90_gga_vxc(func_x, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), sigma, vx_out, vsigma_x)
-         IF (has_c) THEN
-            CALL xc_f90_gga_vxc(func_c, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), sigma, vxc_out, vsigma_out)
-            vsigma_out = vsigma_out + vsigma_x
-            vxc_out = vxc_out + vx_out
+         REAL, ALLOCATABLE               :: vxc(:, :), vsigma(:, :), vtau(:, :), vlapl(:, :)
+         TYPE(xc_f90_func_info_t)        :: info
+         INTEGER                         :: family
+
+         ALLOCATE(vxc, mold=vxc_out); vxc = 0.0
+         info = xc_f90_func_get_info(func)
+         family = xc_f90_func_info_get_family(info)
+
+         IF (ANY([XC_FAMILY_LDA, XC_FAMILY_HYB_LDA] == family)) THEN
+            CALL xc_f90_lda_vxc(func, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), vxc)
+
+         ELSEIF (ANY([XC_FAMILY_GGA, XC_FAMILY_HYB_GGA] == family)) THEN
+            IF (.NOT. ALLOCATED(sigma)) CALL judft_error("eval_vxc: GGA functional requires sigma (gradients)")
+            ALLOCATE(vsigma, mold=vsigma_out); vsigma = 0.0
+            CALL xc_f90_gga_vxc(func, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), sigma, vxc, vsigma)
+            vsigma_out = vsigma_out + vsigma
+
+         ELSEIF (ANY([XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA] == family)) THEN
+            IF (.NOT. ALLOCATED(sigma)) CALL judft_error("eval_vxc: MetaGGA functional requires sigma (gradients)")
+            IF (.NOT. ALLOCATED(kinED)) CALL judft_error("eval_vxc: MetaGGA functional requires kinetic energy density")
+            ALLOCATE(vsigma, mold=vsigma_out); vsigma = 0.0
+            ALLOCATE(vtau, mold=vtau_out); vtau = 0.0
+            ALLOCATE(vlapl(SIZE(rh, 2), SIZE(rh, 1))); vlapl = 0.0
+            CALL xc_f90_mgga_vxc(func, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), sigma, &
+                                 TRANSPOSE(laplace), kinED, vxc, vsigma, vlapl, vtau)
+            vsigma_out = vsigma_out + vsigma
+            vtau_out = vtau_out + vtau
+
          ELSE
-            vxc_out = vx_out
-            vsigma_out = vsigma_x
-         ENDIF
-      END SUBROUTINE eval_gga_vxc
-
-      SUBROUTINE eval_mgga_vxc(func_x, func_c, has_c, sigma, laplace, kinED, vx_out, vxc_out, vsigma_out, vtau_out)
-         TYPE(xc_f90_func_t), INTENT(IN) :: func_x, func_c
-         LOGICAL, INTENT(IN)             :: has_c
-         REAL, INTENT(IN)                :: sigma(:, :), laplace(:, :), kinED(:, :)
-         REAL, INTENT(OUT)               :: vx_out(:, :), vxc_out(:, :), vsigma_out(:, :)
-         REAL, INTENT(OUT), OPTIONAL     :: vtau_out(:, :)
-         REAL, ALLOCATABLE               :: vsigma_x(:, :), vtau_x(:, :), vtau_c(:, :), vlapl_x(:, :), vlapl_c(:, :)
-
-         ALLOCATE(vsigma_x, mold=vsigma_out); vsigma_x = 0.0
-         ALLOCATE(vtau_x(SIZE(rh, 2), SIZE(rh, 1))); vtau_x = 0.0
-         ALLOCATE(vlapl_x(SIZE(rh, 2), SIZE(rh, 1))); vlapl_x = 0.0
-
-         CALL xc_f90_mgga_vxc(func_x, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), sigma, TRANSPOSE(laplace), kinED, &
-                              vx_out, vsigma_x, vlapl_x, vtau_x)
-
-         IF (has_c) THEN
-            ALLOCATE(vtau_c(SIZE(rh, 2), SIZE(rh, 1))); vtau_c = 0.0
-            ALLOCATE(vlapl_c(SIZE(rh, 2), SIZE(rh, 1))); vlapl_c = 0.0
-            CALL xc_f90_mgga_vxc(func_c, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), sigma, TRANSPOSE(laplace), kinED, &
-                                 vxc_out, vsigma_out, vlapl_c, vtau_c)
-            vsigma_out = vsigma_out + vsigma_x
-            vxc_out = vxc_out + vx_out
-            vtau_x = vtau_x + vtau_c
-            DEALLOCATE(vtau_c, vlapl_c)
-         ELSE
-            vxc_out = vx_out
-            vsigma_out = vsigma_x
+            CALL judft_error("Functional family not supported in eval_vxc")
          ENDIF
 
-         IF (PRESENT(vtau_out)) vtau_out = TRANSPOSE(vtau_x)
-         DEALLOCATE(vtau_x, vlapl_x)
-      END SUBROUTINE eval_mgga_vxc
+         vxc_out = vxc_out + vxc
+      END SUBROUTINE eval_vxc
 
-      !> Becke-Johnson exchange potential, Eq. (2) of
+      !> Becke-Johnson correction term, Eq. (2) of
       !! Tran, Blaha, Schwarz, J. Phys.: Condens. Matter 19, 196208 (2007)
       !!
-      !! v_{x,σ}^{BJ}(r) = v_{x,σ}^{BR}(r) + (1/π)√(5/12) √(2τ_σ(r)/ρ_σ(r))
-      !!
-      !! The BR89 exchange potential is evaluated via eval_mgga_vxc.
-      !! The BJ correction term uses the KS kinetic energy density (kinenergyden_ks
-      !! from parent scope) and the density rh (also from parent scope).
-      SUBROUTINE eval_BJ_vxc(sigma, laplace, kinED, vx_out, vxc_out, vsigma_out, vtau_out)
+      !! Adds (1/π)√(5/12) √(2τ_σ(r)/ρ_σ(r)) to already-evaluated vx and vxc.
+      !! Uses rh, jspins, kinenergyden_ks from host association (parent scope).
+      SUBROUTINE eval_BJ_correction(vx_out, vxc_out)
          USE m_constants
-         REAL, INTENT(IN)              :: sigma(:, :), laplace(:, :), kinED(:, :)
-         REAL, INTENT(OUT)             :: vx_out(:, :), vxc_out(:, :), vsigma_out(:, :)
-         REAL, INTENT(OUT), OPTIONAL   :: vtau_out(:, :)
+         REAL, INTENT(INOUT)    :: vx_out(:, :), vxc_out(:, :) ! (spin, points)
 
-         INTEGER, PARAMETER   :: XC_MGGA_X_BR89_ID = 206
-         REAL, PARAMETER      :: BJ_prefactor = (1.0/pi_const) * SQRT(5.0/12.0)
-         TYPE(xc_f90_func_t)  :: br89_func
-         REAL    :: rho_sigma, tau_sigma
+         REAL, PARAMETER :: BJ_prefactor = (1.0/pi_const) * SQRT(5.0/12.0)
+         REAL    :: rho_sigma, tau_sigma, bj_corr
          INTEGER :: i, jspin
 
-         ! Initialize BR89 exchange functional
-         IF (jspins == 1) THEN
-            CALL xc_f90_func_init(br89_func, XC_MGGA_X_BR89_ID, XC_UNPOLARIZED)
-         ELSE
-            CALL xc_f90_func_init(br89_func, XC_MGGA_X_BR89_ID, XC_POLARIZED)
-         ENDIF
-
-         ! Evaluate BR89 exchange potential via standard eval_mgga_vxc
-         CALL eval_mgga_vxc(br89_func, br89_func, .FALSE., sigma, laplace, kinED, &
-                            vx_out, vxc_out, vsigma_out, vtau_out)
-
-         CALL xc_f90_func_end(br89_func)
-
-         ! Add BJ correction: (1/π)√(5/12) √(2τ_σ(r)/ρ_σ(r))
-         ! using KS kinetic energy density from parent scope
          DO jspin = 1, jspins
             DO i = 1, SIZE(rh, 1)
                rho_sigma = rh(i, jspin)
                tau_sigma = kinenergyden_ks(i, jspin)
                IF (rho_sigma > 1.0e-10 .AND. tau_sigma > 0.0) THEN
-                  vx_out(jspin, i) = vx_out(jspin, i) &
-                     + BJ_prefactor * SQRT(2.0 * tau_sigma / rho_sigma)
-                  vxc_out(jspin, i) = vxc_out(jspin, i) &
-                     + BJ_prefactor * SQRT(2.0 * tau_sigma / rho_sigma)
+                  bj_corr = BJ_prefactor * SQRT(2.0 * tau_sigma / rho_sigma)
+                  vx_out(jspin, i) = vx_out(jspin, i) + bj_corr
+                  vxc_out(jspin, i) = vxc_out(jspin, i) + bj_corr
                ENDIF
             ENDDO
          ENDDO
-      END SUBROUTINE eval_BJ_vxc
+      END SUBROUTINE eval_BJ_correction
 
 #endif
    END SUBROUTINE xcpot_get_vxc
@@ -548,8 +519,8 @@ CONTAINS
          END IF
       ELSEIF (xcpot%exc_is_MetaGGA()) THEN
          IF (PRESENT(kinEnergyDen_KS)) THEN
-            ! apply correction in  eq (4) in https://doi.org/10.1063/1.1565316
-            kinEnergyDen_libXC = transpose(kinEnergyDen_KS + 0.25*grad%laplace)
+            
+            kinEnergyDen_libXC = kinEnergyDen_KS 
 
             !only cut core of muffin tin
             cut_idx = MERGE(NINT(size(rh, 1)*cut_ratio), 0, is_mt)
@@ -668,7 +639,7 @@ CONTAINS
          aux_libxc%l_relativistic = xcpot%l_relativistic
          CALL aux_libxc%init(xcpot%func_aux_id_x, xcpot%func_aux_id_c, &
                           xcpot%func_aux_id_x, xcpot%func_aux_id_c, &
-                          xcpot%jspins)
+                          xcpot%jspins, .false.)
       end select !No other type possible due to the ALLOCATE statement above
       
 #else
