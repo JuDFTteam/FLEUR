@@ -74,6 +74,7 @@ CONTAINS
 
       !check if we need a l=0 contribution
       lh0 = MERGE(1,0,iSpinV<3.and.alpha_hybrid==0)
+      lh0=0
       if (atoms%l_nonpolbas(n)) lh0=0 !non-spin-pol basis
       if (PRESENT(v1)) lh0=0  !DFPT code-path
 

@@ -5,6 +5,7 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_rdmft
+   implicit none
 
 CONTAINS
 
@@ -450,7 +451,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
          !            fi%gfinp,fi%hub1inp)
       END DO
 
-      CALL cdncore(fmpi, fi%input,fi%vacuum,fi%noco,nococonv,fi%sym,&
+      CALL cdncore(fmpi, fi%input,fi%vacuum,fi%noco,nococonv,fi%sym,enpara,&
                    stars,fi%cell,sphhar,fi%atoms,vTot,overallDen,moments,results)
       IF (fmpi%irank.EQ.0) THEN
          CALL qfix(fmpi,stars,nococonv,fi%atoms,fi%sym,fi%vacuum,sphhar,fi%input,fi%cell, overallDen,&

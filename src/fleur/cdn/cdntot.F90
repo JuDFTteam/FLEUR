@@ -1,7 +1,14 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_cdntot
 #ifdef CPP_MPI
    use mpi
 #endif
+   use m_judft
+   implicit none
 !     ********************************************************
 !     calculate the total charge density in the interstial.,
 !     vacuum, and mt regions      c.l.fu
@@ -15,7 +22,15 @@ CONTAINS
       USE m_constants
       USE m_qsf
       USE m_pwint
-      USE m_types
+      USE m_types_stars
+      USE m_types_atoms
+      USE m_types_sym
+      USE m_types_cell
+      USE m_types_vacuum
+      USE m_types_input
+      USE m_types_potden
+      use m_types_nococonv
+      USE m_types_mpi
       USE m_juDFT
       IMPLICIT NONE
       TYPE(t_stars),INTENT(IN)  :: stars
@@ -124,7 +139,16 @@ CONTAINS
 
    SUBROUTINE integrate_realspace(xcpot, atoms, sym, sphhar, input, &
                                   stars, cell,   vacuum, noco, mt, is, hint)
-      use m_types
+      use m_types_xcpot
+      use m_types_atoms
+      use m_types_sym
+      use m_types_cell
+      use m_types_sphhar
+      use m_types_input
+      use m_types_stars
+      use m_types_vacuum
+      use m_types_noco
+      use m_types_potden
       use m_mt_tofrom_grid
       use m_pw_tofrom_grid
       use m_constants
@@ -174,7 +198,15 @@ CONTAINS
    SUBROUTINE cdntot(stars,nococonv,atoms,sym,vacuum,input,cell ,&
                      den,l_printData,qtot,qistot,fmpi,l_par)
 
-      USE m_types
+      USE m_types_stars
+      USE m_types_atoms
+      USE m_types_sym
+      USE m_types_cell
+      USE m_types_vacuum
+      USE m_types_input
+      USE m_types_potden
+      use m_types_nococonv
+      use m_types_mpi
       USE m_juDFT
       IMPLICIT NONE
 
@@ -214,7 +246,9 @@ CONTAINS
    SUBROUTINE cdntot_writings(atoms,vacuum,input,l_printData,q,qis,qmt,qvac,qtot)
 
       USE m_constants
-      USE m_types
+      USE m_types_atoms
+      USE m_types_vacuum
+      USE m_types_input
       USE m_juDFT
       USE m_xmlOutput
       IMPLICIT NONE

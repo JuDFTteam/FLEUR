@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -32,9 +32,10 @@ MODULE m_mkgylm
    ! 
    ! Original script by T.A. 1996
    !-----------------------------------------------------------------------------
+   implicit none
 CONTAINS
    SUBROUTINE mkgylm(jspins,rv,thet,nsp, rh,rhdr,rhdt,rhdf,rhdrr,rhdtt,rhdff, rhdtf,rhdrt,rhdrf,grad,kt)
-      USE m_types
+      USE m_types_xcpot
       IMPLICIT NONE
       REAL, INTENT (IN)                :: rv
       REAL, INTENT (IN)                :: thet(:)

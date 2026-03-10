@@ -1,14 +1,25 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
       MODULE m_wrtdop
 !     ****************************************************
 !     write formatted density or potential onto unit 'nu'
 !     e. wimmer   march 1985
 !     ****************************************************
+   implicit none
       CONTAINS
         SUBROUTINE wrtdop(stars,vacuum,atoms,sphhar,input,sym,nu,&
                           it,fr,fpw,fvac)
 
           USE m_constants
-          USE m_types
+          USE m_types_stars
+          USE m_types_atoms
+          USE m_types_sym
+          USE m_types_vacuum
+          USE m_types_sphhar
+          USE m_types_input
 
           IMPLICIT NONE
 

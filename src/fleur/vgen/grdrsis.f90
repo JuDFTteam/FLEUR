@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -30,7 +30,7 @@ CONTAINS
     !       
     !.....-----------------------------------------------------------------
     USE m_constants
-    USE m_types
+    USE m_types_cell
     IMPLICIT NONE 
     TYPE(t_cell),INTENT(IN)   :: cell
     !     ..

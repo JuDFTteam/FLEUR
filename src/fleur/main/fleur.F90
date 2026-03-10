@@ -63,7 +63,7 @@ CONTAINS
       USE m_dwigner
       USE m_ylm
       USE m_metagga
-      USE m_compute_aux_gga_mt
+      USE m_assign_enpara_potential
       USE m_plot
       USE m_usetup
       USE m_hubbard1_setup
@@ -102,7 +102,6 @@ CONTAINS
       TYPE(t_potden)   :: vTot, vx, vCoul, vxc, exc, vTau
       TYPE(t_potden)   :: inDen, outDen, EnergyDen, sliceDen,coreden
       TYPE(t_hub1data) :: hub1data
-      REAL, ALLOCATABLE :: auxGGA_vxc_sph(:,:,:) !< Auxiliary GGA XC potential for MGGA basis
 
       TYPE(t_greensf), ALLOCATABLE :: greensFunction(:)
       TYPE(t_log_message)  :: log
@@ -305,7 +304,6 @@ CONTAINS
 
          xcpot_iter = xcpot
          if (xcpot%is_MetaGGA()) then
-            print *,"META-GGA calculation ",EnergyDen%pw(1,1)
              ! In the first iteration, we do not have a valid kinetic energy density, so we use an auxiliary GGA potential for the XC part. 
              ! This is needed to avoid NaNs in the potential and to get a reasonable starting density for the self-consistency loop. 
              ! The auxiliary GGA potential is constructed from the input parameters and does not require a kinetic energy density.
@@ -427,18 +425,10 @@ CONTAINS
             CALL timestart("eigen")
 
             CALL timestart("Updating energy parameters")
-                ! Compute auxiliary GGA XC potential for radial basis generation in MetaGGA
-            IF (xcpot_iter%is_MetaGGA()) THEN
-               CALL timestart("Auxiliary GGA for basis")
-               IF (.NOT. ALLOCATED(auxGGA_vxc_sph)) &
-                  ALLOCATE(auxGGA_vxc_sph(fi%atoms%jmtd, fi%atoms%ntype, fi%input%jspins))
-               CALL compute_aux_gga_mt(xcpot, fi%atoms, sphhar, fi%sym, fi%input, fi%noco, fmpi, inDen, auxGGA_vxc_sph)
-               auxGGA_vxc_sph = auxGGA_vxc_sph - vxc%mt(:,0,:,:) ! Correction for potential to calculate the basis functions, since the auxiliary GGA potential is only used for the basis and not for the total energy calculation. The correction is only applied to the MT part of the potential, since the auxiliary GGA potential is only calculated in the MT spheres.
-               CALL timestop("Auxiliary GGA for basis")
-               CALL enpara%update(fmpi, fi%atoms, fi%vacuum, fi%input, vToT, hub1data, auxGGA_vxc_sph=auxGGA_vxc_sph)
-            ELSE
-               CALL enpara%update(fmpi, fi%atoms, fi%vacuum, fi%input, vToT, hub1data)
-            ENDIF
+            CALL assign_enpara_potential(enpara, fmpi, fi%atoms, fi%input, vToT, &
+                                        xcpot_iter, vxc, inDen, sphhar, fi%sym, stars, &
+                                        fi%vacuum, fi%noco, EnergyDen)
+            CALL enpara%update(fmpi, fi%atoms, fi%vacuum, fi%input, vToT, hub1data)
             CALL timestop("Updating energy parameters")
 
             IF (.NOT. fi%input%eig66(1)) THEN

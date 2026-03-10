@@ -230,10 +230,10 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    if(xcpot%is_MetaGGA()) then
       ! Pass EnergyDen as kinEnergyDen: core KED is added directly.
       ! Do NOT also pass as EnergyDen (energy density) — we use the direct approach now.
-      CALL cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
+      CALL cdncore(fmpi ,input,vacuum,noco,nococonv,sym,enpara,&
                    stars,cell,sphhar,atoms,vTot,outDen,moments,results, kinEnergyDen=EnergyDen)
    else
-      CALL cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
+      CALL cdncore(fmpi ,input,vacuum,noco,nococonv,sym,enpara,&
                    stars,cell,sphhar,atoms,vTot,outDen,moments,results)
    endif
    call core_den%subPotDen(outDen, val_den)

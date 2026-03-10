@@ -16,7 +16,7 @@ MODULE m_local_Hamiltonian
   !*********************************************************************
 CONTAINS
    SUBROUTINE local_ham(sphhar,atoms,sym,noco,nococonv,enpara,&
-       fmpi,v,vx,inden,input,hub1inp,hub1data,td,ud,alpha_hybrid,l_dfptmod,vTau)
+       fmpi,v,vx,inden,input,hub1inp,hub1data,td,ud,alpha_hybrid,xcpot,l_dfptmod,vTau)
       !! Should probably be called tlmplm_postprocess or something, as there is a
       !! lot more happening than only the Cholesky decomposition.
 
@@ -48,6 +48,7 @@ CONTAINS
       
       REAL,    INTENT(IN) :: alpha_hybrid
 
+      CLASS(t_xcpot),   INTENT(IN), OPTIONAL :: xcpot
       LOGICAL, INTENT(IN),OPTIONAL :: l_dfptmod
       TYPE(t_potden), INTENT(IN), OPTIONAL :: vTau  ! MetaGGA V_tau potential
 
@@ -67,13 +68,13 @@ CONTAINS
             one = MERGE(CONJG(one),one,j1<j2)
 
             !$OMP PARALLEL DO DEFAULT(NONE) PRIVATE(l,m,lm,s)&
-            !$OMP SHARED(atoms,sphhar,sym,enpara,nococonv,j1,j2,jsp,fmpi,v,vx,input,hub1inp,hub1data,td,ud,alpha_hybrid,one,l_dfptmod,noco,vTau)
+            !$OMP SHARED(atoms,sphhar,sym,enpara,nococonv,j1,j2,jsp,fmpi,v,vx,input,hub1inp,hub1data,td,ud,alpha_hybrid,one,xcpot,l_dfptmod,noco,vTau)
             DO  n = 1,atoms%ntype
                IF (j1==j2.OR.noco%l_unrestrictMT(n).or.noco%l_constrained(n)) THEN
                   CALL tlmplm(n,sphhar,atoms,sym,enpara,nococonv,j1,j2,jsp,fmpi,v,vx,input,hub1inp,hub1data,td,ud,alpha_hybrid,one,PRESENT(l_dfptmod))
                   ! Add MetaGGA V_tau contribution to local Hamiltonian
-                  IF (PRESENT(vTau)) THEN
-                     IF (ALLOCATED(vTau%mt) .AND. jsp < 3) THEN
+                  IF (PRESENT(vTau) .AND. PRESENT(xcpot)) THEN
+                     IF (xcpot%needs_MetaGGA_ham() .AND. jsp < 3) THEN
                         CALL tlmplm_vtau(n, sphhar, atoms, sym, enpara, nococonv, &
                              j1, j2, jsp, fmpi, v, vTau, input, hub1data, td, ud)
                      END IF

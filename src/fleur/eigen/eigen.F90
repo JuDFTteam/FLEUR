@@ -155,9 +155,9 @@ CONTAINS
 
       alpha_hybrid = MERGE(xcpot%get_exchange_weight(),0.0,hybdat%l_subvxc)
       IF (xcpot%needs_MetaGGA_ham()) THEN
-         CALL local_ham(sphhar,fi%atoms,fi%sym,fi%noco,nococonv,enpara,fmpi,pot,potx,inden,fi%input,fi%hub1inp,hub1data,td,ud,alpha_hybrid,vTau=vTau)
+         CALL local_ham(sphhar,fi%atoms,fi%sym,fi%noco,nococonv,enpara,fmpi,pot,potx,inden,fi%input,fi%hub1inp,hub1data,td,ud,alpha_hybrid,xcpot=xcpot,vTau=vTau)
       ELSE
-         CALL local_ham(sphhar,fi%atoms,fi%sym,fi%noco,nococonv,enpara,fmpi,pot,potx,inden,fi%input,fi%hub1inp,hub1data,td,ud,alpha_hybrid)
+         CALL local_ham(sphhar,fi%atoms,fi%sym,fi%noco,nococonv,enpara,fmpi,pot,potx,inden,fi%input,fi%hub1inp,hub1data,td,ud,alpha_hybrid,xcpot=xcpot)
       ENDIF
       neigBuffer = 0
       results%neig = 0
