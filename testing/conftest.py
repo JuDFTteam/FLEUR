@@ -1121,7 +1121,10 @@ def check_all_outxml(test_logger,check_outxml):
             ["forceTotal","F_y",-1,0.001,None],
             ["forceTotal","F_z",-1,0.001,None],
             ["frequencies",None,-1,0.001,"list"], 
-            ["dielconst",None,-1,0.001,"list"] 
+            ["dieltensor",None,-1,0.001,"list"],
+            ["borneffcharge",None,-1,0.001,"list"] 
+            
+
         ]
         return check_outxml(filepath,reffilepath,checks,skip_noref=True)
     return _check_all_outxml        

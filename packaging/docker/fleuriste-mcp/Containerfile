@@ -1,0 +1,104 @@
+# ── FLEURiste MCP Server ─────────────────────────────────────────────────────
+# Multi-stage build:
+#   1. fortran-builder  – compile libfleurinpgen.so from the FLEUR source tree
+#   2. python-builder   – install fleuriste + MCP SDK into a venv
+#   3. runtime          – slim image with only the venv, library, and server
+# ---------------------------------------------------------------------------
+
+# ── Stage 1: build libfleurinpgen (Fortran shared library) ───────────────────
+FROM ubuntu:24.04 AS fortran-builder
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        gfortran gcc g++ cmake make xxd \
+        libxml2-dev liblapack-dev libblas-dev \
+        ca-certificates git && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /src
+COPY . /src
+
+# Configure with the top-level CMakeLists.txt – skip MPI/serial FLEUR builds,
+# only the fleurinpgen shared-library target and its deps are compiled.
+# buildinfo.h is now an independent target, so no full fleur build is needed.
+RUN sed -i 's/FATAL_ERROR "You should either compile/WARNING "Skipping full fleur build:/' \
+        /src/cmake/ReportConfig.txt && \
+    cmake -B /build -S /src \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_Fortran_COMPILER=gfortran \
+        -DCMAKE_C_COMPILER=gcc \
+        -DCMAKE_CXX_COMPILER=g++ \
+        -DCLI_FLEUR_USE_MPI=OFF \
+        -DCLI_FLEUR_USE_SERIAL=OFF \
+        -DFLEUR_USE_OPENMP=OFF \
+    && cmake --build /build --target fleurinpgen -j"$(nproc)"
+
+# ── Stage 2: build the Python venv with fleuriste + MCP SDK ─────────────────
+FROM python:3.12-slim AS python-builder
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends gcc g++ && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+
+# Copy the fleuriste package and the FleurInpgen ctypes wrapper
+COPY src/tools/inpgen3/fleuriste /build/src/tools/inpgen3/fleuriste
+COPY src/tools/inpgen3/FleurInpgen.py /build/src/tools/inpgen3/FleurInpgen.py
+
+# Install fleuriste + MCP SDK into a virtual-env so the runtime stage stays small
+RUN python -m venv /opt/fleuriste-venv && \
+    /opt/fleuriste-venv/bin/pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    /opt/fleuriste-venv/bin/pip install --no-cache-dir \
+        /build/src/tools/inpgen3/fleuriste \
+        "mcp[cli]>=1.0" \
+        uvicorn
+
+# ---------------------------------------------------------------------------
+FROM python:3.12-slim AS runtime
+
+LABEL maintainer="FLEUR Team" \
+      description="FLEURiste MCP Server – Model Context Protocol interface for FLEUR inp.xml editing"
+
+# Install only the shared-library runtime dependencies (no compilers)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        libxml2 liblapack3 libblas3 libgfortran5 && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy the pre-built virtual-env from the python-builder stage
+COPY --from=python-builder /opt/fleuriste-venv /opt/fleuriste-venv
+
+# Copy the compiled shared library from the fortran-builder stage.
+# Place it at the path that FleurInpgen.py expects via $FLEUR_BUILDDIR:
+#   $FLEUR_BUILDDIR/src/tools/inpgen3/libfleurinpgen.so
+COPY --from=fortran-builder /build/src/tools/inpgen3/libfleurinpgen.so \
+     /app/src/tools/inpgen3/libfleurinpgen.so
+
+# Copy the MCP server script
+COPY packaging/docker/fleuriste-mcp/mcp_server.py /app/mcp_server.py
+
+# Copy the FLEUR XSD schema so schema tools work out of the box
+COPY src/fleur/io/xml/FleurInputSchema.xsd /app/FleurInputSchema.xsd
+
+# Put venv on PATH and make the shared library findable
+ENV PATH="/opt/fleuriste-venv/bin:${PATH}" \
+    PYTHONUNBUFFERED=1 \
+    FLEURISTE_SCHEMA=/app/FleurInputSchema.xsd \
+    FLEURISTE_WORKDIR=/work \
+    FLEUR_BUILDDIR=/app \
+    LD_LIBRARY_PATH=/app/src/tools/inpgen3 \
+    MCP_TRANSPORT=streamable-http \
+    MCP_HOST=0.0.0.0 \
+    MCP_PORT=8000
+
+# The /work volume is where users mount their FLEUR calculation directories
+RUN mkdir -p /work
+VOLUME ["/work"]
+
+EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/mcp')" || exit 1
+
+ENTRYPOINT ["python", "/app/mcp_server.py"]
