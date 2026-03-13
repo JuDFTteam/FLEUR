@@ -1190,6 +1190,18 @@ class FLEURisteApp(App):
                 self.notify(f"File not found: {self.input_file}", severity="warning")
         except Exception as e:
             self.notify(f"Error loading k-points: {e}", severity="error")
+
+    def _save_kpoints_and_sync(self) -> None:
+        """Save k-point manager state to disk and reload XMLDocument to keep views in sync."""
+        if self._kpoint_manager is None:
+            return
+        self._kpoint_manager.save()
+        # Reload the XML Editor model so it reflects the saved kpoint changes
+        if self.document.file_path and self.document.file_path.exists():
+            try:
+                self.document.load(self.document.file_path)
+            except Exception:
+                pass
     
     def _refresh_kpoint_display(self):
         """Refresh the k-point display."""
@@ -1345,6 +1357,7 @@ class FLEURisteApp(App):
         try:
             if self._kpoint_manager.select_kpoint_list(self._selected_kpoint_list):
                 self.notify(f"Set '{self._selected_kpoint_list}' as active k-point list", severity="success")
+                self._save_kpoints_and_sync()
                 self._refresh_kpoint_display()
             else:
                 self.notify(f"Could not select '{self._selected_kpoint_list}'", severity="error")
@@ -1374,6 +1387,7 @@ class FLEURisteApp(App):
                     mod_str = modifiers.to_string().replace('@', '+') if modifiers.to_string() else "standard"
                     self.notify(f"Created mesh '{name}' ({nx}x{ny}x{nz}) [{mod_str}]", severity="success")
                     self._show_library_output(lib_output)
+                    self._save_kpoints_and_sync()
                     self._refresh_kpoint_display()
                 except Exception as e:
                     self.notify(f"Error creating mesh: {e}", severity="error")
@@ -1418,6 +1432,7 @@ class FLEURisteApp(App):
                     
                     lib_output = self._kpoint_manager.get_last_messages()
                     self._show_library_output(lib_output)
+                    self._save_kpoints_and_sync()
                     self._refresh_kpoint_display()
                 except Exception as e:
                     self.notify(f"Error creating k-points: {e}", severity="error")
@@ -1460,6 +1475,7 @@ class FLEURisteApp(App):
                     self.notify(f"Created path '{name}': {path_display} ({npoints} points)", 
                                severity="success")
                     self._show_library_output(lib_output)
+                    self._save_kpoints_and_sync()
                     self._refresh_kpoint_display()
                     
                 except Exception as e:
@@ -1483,6 +1499,7 @@ class FLEURisteApp(App):
             self._kpoint_manager.remove_kpoint_list(self._selected_kpoint_list)
             self.notify(f"Deleted list '{self._selected_kpoint_list}'", severity="success")
             self._selected_kpoint_list = None
+            self._save_kpoints_and_sync()
             self._refresh_kpoint_display()
         except Exception as e:
             self.notify(f"Error deleting list: {e}", severity="error")
@@ -1968,6 +1985,16 @@ class FLEURisteApp(App):
     
     def action_save(self) -> None:
         """Save the document."""
+        if self._active_view == "kpoint_manager":
+            if self._kpoint_manager is None:
+                self._update_status("No k-points loaded")
+                return
+            try:
+                self._save_kpoints_and_sync()
+                self._update_status(f"Saved: {self._kpoint_manager.xml_path.name}")
+            except Exception as e:
+                self._update_status(f"Error: {e}")
+            return
         if not self.document.root:
             self._update_status("No document to save")
             return
@@ -2180,11 +2207,13 @@ class FLEURisteApp(App):
             else:
                 partition_select.set_options([("(no partitions)", "")])
             
-            # Suggest modules from machine config
-            if self._job_machine.modules_needed:
+            # Suggest modules from selected/default partition
+            partition_value = partition_select.value if partition_select.value else None
+            suggested_modules = self._job_machine.get_effective_value("modules_needed", partition_value) or []
+            if suggested_modules:
                 modules_area = self.query_one("#job-module-list", TextArea)
                 if not modules_area.text.strip():
-                    modules_area.load_text("\n".join(self._job_machine.modules_needed[:3]))
+                    modules_area.load_text("\n".join(suggested_modules[:3]))
             
             # Update command suggestion
             self._update_job_command_suggestion()
@@ -2222,6 +2251,13 @@ class FLEURisteApp(App):
             info += f"\n[dim]Max runtime:[/dim] {max_runtime}"
         
         info_panel.update(info)
+
+        suggested_modules = self._job_machine.get_effective_value("modules_needed", partition) or []
+        if suggested_modules:
+            modules_area = self.query_one("#job-module-list", TextArea)
+            if not modules_area.text.strip():
+                modules_area.load_text("\n".join(suggested_modules[:3]))
+
         self._update_job_command_suggestion()
     
     def _update_job_command_suggestion(self):

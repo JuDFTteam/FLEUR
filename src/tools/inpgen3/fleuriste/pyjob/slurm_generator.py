@@ -19,33 +19,37 @@ class Partition:
     """
     Describes a SLURM partition/queue.
     
-    Partition-level settings override machine defaults when specified (not None).
+    All scheduling/resource settings are partition-specific.
     
     Attributes:
         name: Partition name (required)
+        account: Default SLURM account for this partition
         max_nodes: Maximum nodes available in this partition
         max_runtime: Maximum walltime (HH:MM:SS or D-HH:MM:SS)
-        cores_per_node: Override machine's cores_per_node (None = use machine default)
-        gpus_per_node: Override machine's gpus_per_node (None = use machine default)
-        memory_per_node_gb: Override machine's memory (None = use machine default)
-        gpu_type: Override machine's gpu_type (None = use machine default)
-        command: Command to run (None = use machine default)
-        shell_commands: Additional shell commands to run before main execution (None = use machine default)
+        cores_per_node: CPU cores per node in this partition
+        gpus_per_node: GPUs per node in this partition
+        memory_per_node_gb: RAM per node in this partition
+        gpu_type: GPU type (e.g., a100, v100)
+        command: Default command to run for this partition
+        shell_commands: Additional shell commands to run before main execution
+        modules_needed: Default modules for this partition
         default: Whether this is the default partition
         description: Human-readable description
     """
     
     name: str
+    account: Optional[str] = None
     max_nodes: int = 1
     max_runtime: str = "24:00:00"  # HH:MM:SS or D-HH:MM:SS
-    cores_per_node: Optional[int] = None  # None = use machine default
-    gpus_per_node: Optional[int] = None  # None = use machine default
-    memory_per_node_gb: Optional[int] = None  # None = use machine default
-    gpu_type: Optional[str] = None  # None = use machine default
-    gpu_syntax: Optional[str] = None  # "gpus" (--gpus=N) or "gres" (--gres=gpu:N)
-    use_mem_option: Optional[bool] = None  # None = use machine default; whether to use --mem in SLURM
-    command: Optional[str] = None  # Command to run (None = use machine default)
-    shell_commands: Optional[list] = None  # Additional shell commands (None = use machine default)
+    cores_per_node: int = 1
+    gpus_per_node: int = 0
+    memory_per_node_gb: int = 1
+    gpu_type: Optional[str] = None
+    gpu_syntax: str = "gpus"  # "gpus" (--gpus=N) or "gres" (--gres=gpu:N)
+    use_mem_option: bool = True  # whether to use --mem in SLURM
+    modules_needed: list = field(default_factory=list)
+    command: Optional[str] = None
+    shell_commands: list = field(default_factory=list)
     default: bool = False
     description: str = ""
     
@@ -63,11 +67,19 @@ class Partition:
             "max_cpus_per_node": "cores_per_node",
             "max_gpus_per_node": "gpus_per_node",
             "max_memory_gb": "memory_per_node_gb",
+            "modules_available": "modules_needed",
         }
         normalized = {}
         for key, value in data.items():
             norm_key = mapping.get(key, key)
             if norm_key in cls.__dataclass_fields__:
+                # Keep dataclass defaults when legacy JSON uses null
+                if value is None and norm_key in {
+                    "max_nodes", "max_runtime", "cores_per_node", "gpus_per_node",
+                    "memory_per_node_gb", "gpu_syntax", "use_mem_option",
+                    "modules_needed", "shell_commands",
+                }:
+                    continue
                 normalized[norm_key] = value
         return cls(**normalized)
 
@@ -75,35 +87,27 @@ class Partition:
 @dataclass
 class MachineConfig:
     """
-    Describes the properties of an HPC cluster/machine.
+    Describes an HPC cluster where only identity is machine-level.
     
-    Machine-level settings serve as defaults that can be overridden
-    at the partition level. When a partition specifies a value (not None),
-    it takes precedence over the machine default.
+    Only ``name`` and ``description`` are machine-wide properties.
+    All scheduling/resource settings are specified per partition.
     
     Example JSON structure:
     {
         "name": "gpu_cluster",
         "description": "Generic GPU compute cluster",
-        "account": "default",
-        "cores_per_node": 64,
-        "gpus_per_node": 4,
-        "memory_per_node_gb": 256,
-        "gpu_type": "a100",
-        "max_runtime": "24:00:00",
-        "max_nodes": 16,
-        "fleur_path": "/home/fleur_mpi",
-        "modules_needed": ["cuda/12.0", "python/3.10"],
         "partitions": [
             {
                 "name": "gpu",
+                "account": "default",
                 "max_nodes": 16,
                 "max_runtime": "24:00:00",
-                "cores_per_node": null,       // null = use machine default (64)
-                "gpus_per_node": null,        // null = use machine default (4)
-                "memory_per_node_gb": null,   // null = use machine default (256)
-                "gpu_type": "a100",           // can override machine default
-                "fleur_path": "/alt/fleur",   // can override machine default
+                "cores_per_node": 64,
+                "gpus_per_node": 4,
+                "memory_per_node_gb": 256,
+                "gpu_type": "a100",
+                "modules_needed": ["cuda/12.0", "python/3.10"],
+                "command": "srun fleur_MPI",
                 "description": "GPU partition"
             }
         ]
@@ -112,45 +116,15 @@ class MachineConfig:
     Attributes:
         name: Machine/cluster identifier (required)
         description: Human-readable description
-        account: Default SLURM account for job submission
-        cores_per_node: Default CPU cores per node
-        gpus_per_node: Default GPUs per node (0 for CPU-only)
-        memory_per_node_gb: Default RAM in GB per node
-        gpu_type: Default GPU type (e.g., "a100", "v100")
-        gpu_syntax: SLURM syntax for GPU requests: "gpus" (--gpus=N) or "gres" (--gres=gpu:N)
-        use_mem_option: Whether to include --mem in SLURM directives (some clusters don't use it)
-        max_runtime: Default maximum walltime (HH:MM:SS)
-        max_nodes: Default maximum nodes per job
-        partitions: List of available partitions (can override defaults)
-        modules_needed: List of modules to load for FLEUR jobs
-        command: Default command to run in job script
-        shell_commands: Additional shell commands to run before main execution
+        partitions: List of available partitions containing all machine settings
     """
     
     # Machine identification
     name: str
     description: str = ""
-    account: Optional[str] = None
-    
-    # Node hardware specs (defaults, can be overridden per partition)
-    cores_per_node: int = 1
-    gpus_per_node: int = 0
-    memory_per_node_gb: int = 1
-    gpu_type: Optional[str] = None
-    gpu_syntax: str = "gpus"  # "gpus" (--gpus=N) or "gres" (--gres=gpu:N)
-    use_mem_option: bool = True  # Whether to include --mem in SLURM directives
-    
-    # Default limits
-    max_runtime: str = "24:00:00"
-    max_nodes: int = 1
-    
-    # Partitions (can override machine defaults)
+
+    # Partitions (all operational settings are partition-level)
     partitions: list = field(default_factory=list)
-    
-    # Additional properties
-    modules_needed: list = field(default_factory=list)
-    command: Optional[str] = None  # Default command to run
-    shell_commands: list = field(default_factory=list)  # Additional shell commands
     
     def __post_init__(self):
         """Convert partition dicts to Partition objects if needed."""
@@ -164,54 +138,71 @@ class MachineConfig:
         data = {
             "name": self.name,
             "description": self.description,
-            "account": self.account,
-            "cores_per_node": self.cores_per_node,
-            "gpus_per_node": self.gpus_per_node,
-            "memory_per_node_gb": self.memory_per_node_gb,
-            "gpu_type": self.gpu_type,
-            "gpu_syntax": self.gpu_syntax,
-            "use_mem_option": self.use_mem_option,
-            "max_runtime": self.max_runtime,
-            "max_nodes": self.max_nodes,
             "partitions": [p.to_dict() for p in self.partitions],
-            "modules_needed": self.modules_needed,
-            "command": self.command,
-            "shell_commands": self.shell_commands,
         }
         return data
     
     @classmethod
     def from_dict(cls, data: dict) -> "MachineConfig":
-        """Create from dictionary, handling key name variations."""
+        """Create from dictionary, handling legacy machine-level keys."""
         # Handle alternate key names from JSON
         mapping = {
-            "default_max_runtime": "max_runtime",
-            "default_max_nodes": "max_nodes",
             "modules_available": "modules_needed",
         }
-        normalized = {}
-        for key, value in data.items():
-            norm_key = mapping.get(key, key)
-            if norm_key in cls.__dataclass_fields__:
-                normalized[norm_key] = value
+        legacy_partition_keys = {
+            "account", "cores_per_node", "gpus_per_node", "memory_per_node_gb",
+            "gpu_type", "gpu_syntax", "use_mem_option", "max_runtime", "max_nodes",
+            "modules_needed", "command", "shell_commands",
+            "default_max_runtime", "default_max_nodes", "modules_available",
+        }
+
+        normalized = {
+            "name": data.get("name"),
+            "description": data.get("description", ""),
+        }
+
+        partitions = data.get("partitions", [])
+
+        # If partitions are present, backfill missing partition values from legacy
+        # machine-level defaults for backward compatibility.
+        if partitions:
+            legacy_values = {}
+            for key in legacy_partition_keys:
+                if key in data:
+                    legacy_values[mapping.get(key, key)] = data[key]
+
+            migrated_partitions = []
+            for idx, part in enumerate(partitions):
+                if isinstance(part, dict):
+                    part_dict = dict(part)
+                    for key, value in legacy_values.items():
+                        if part_dict.get(key) is None and value is not None:
+                            part_dict[key] = value
+                    # If no default is set at all, mark the first as default.
+                    if "default" not in part_dict and idx == 0:
+                        part_dict["default"] = True
+                    migrated_partitions.append(part_dict)
+                else:
+                    migrated_partitions.append(part)
+            normalized["partitions"] = migrated_partitions
+        else:
+            # Legacy format with machine-level settings only: migrate into one default partition.
+            default_partition_data = {"name": "default", "default": True}
+            for key in legacy_partition_keys:
+                if key in data and data[key] is not None:
+                    default_partition_data[mapping.get(key, key)] = data[key]
+            normalized["partitions"] = [default_partition_data] if len(default_partition_data) > 2 else []
+
         return cls(**normalized)
     
     def get_effective_value(self, attr: str, partition_name: Optional[str] = None):
         """
-        Get effective value for an attribute, considering partition override.
-        
-        If partition specifies a non-None value, use it; otherwise use machine default.
+        Get effective value for an attribute from partition settings.
         """
-        machine_value = getattr(self, attr, None)
-        
-        if partition_name:
-            partition = self.get_partition(partition_name)
-            if partition:
-                part_value = getattr(partition, attr, None)
-                if part_value is not None:
-                    return part_value
-        
-        return machine_value
+        partition = self.get_partition(partition_name) if partition_name else self.get_default_partition()
+        if not partition:
+            return None
+        return getattr(partition, attr, None)
     
     def save(self, filepath: str) -> None:
         """Save machine configuration to a JSON file."""
@@ -255,29 +246,26 @@ class MachineConfig:
         """
         issues = []
         
-        # Get effective values (partition overrides machine defaults)
+        # Get effective values from selected/default partition
         max_cores = self.get_effective_value("cores_per_node", partition)
         max_gpus = self.get_effective_value("gpus_per_node", partition)
         max_mem = self.get_effective_value("memory_per_node_gb", partition)
-        
-        # Get partition for node limits
-        part = self.get_partition(partition) if partition else None
-        max_nodes = part.max_nodes if part else self.max_nodes
+        max_nodes = self.get_effective_value("max_nodes", partition)
         
         # Check cores
-        if cpus_per_task > max_cores:
+        if max_cores is not None and cpus_per_task > max_cores:
             issues.append(f"Warning: Requested {cpus_per_task} CPUs exceeds {max_cores} cores per node")
         
         # Check GPUs
-        if gpus > max_gpus:
+        if max_gpus is not None and gpus > max_gpus:
             issues.append(f"Warning: Requested {gpus} GPUs exceeds {max_gpus} GPUs per node")
         
         # Check memory
-        if memory_gb > max_mem:
+        if max_mem is not None and memory_gb > max_mem:
             issues.append(f"Warning: Requested {memory_gb}GB exceeds {max_mem}GB per node")
         
         # Check nodes
-        if nodes > max_nodes:
+        if max_nodes is not None and nodes > max_nodes:
             issues.append(f"Warning: Requested {nodes} nodes exceeds partition limit of {max_nodes}")
         
         return issues
@@ -287,45 +275,39 @@ class MachineConfig:
         lines = [
             f"Machine: {self.name}",
             f"Description: {self.description}" if self.description else "",
-            "",
-            "Hardware per Node (defaults):",
-            f"  - Cores: {self.cores_per_node}",
-            f"  - Memory: {self.memory_per_node_gb} GB",
-            f"  - GPUs: {self.gpus_per_node}" + (f" ({self.gpu_type})" if self.gpu_type else ""),
-            "",
-            f"Max Runtime: {self.max_runtime}",
-            f"Max Nodes: {self.max_nodes}",
         ]
         
         if self.partitions:
             lines.append("")
-            lines.append("Partitions (can override defaults):")
+            lines.append("Partitions:")
             for p in self.partitions:
                 default_marker = " (default)" if p.default else ""
                 lines.append(f"  - {p.name}{default_marker}:")
                 lines.append(f"      Max Nodes: {p.max_nodes}, Max Time: {p.max_runtime}")
-                # Show overrides
-                overrides = []
-                if p.cores_per_node is not None:
-                    overrides.append(f"cores={p.cores_per_node}")
-                if p.gpus_per_node is not None:
-                    overrides.append(f"gpus={p.gpus_per_node}")
-                if p.memory_per_node_gb is not None:
-                    overrides.append(f"mem={p.memory_per_node_gb}GB")
-                if p.gpu_type is not None:
-                    overrides.append(f"gpu_type={p.gpu_type}")
-                if overrides:
-                    lines.append(f"      Overrides: {', '.join(overrides)}")
+                lines.append(
+                    f"      Resources: cores={p.cores_per_node}, "
+                    f"gpus={p.gpus_per_node}, mem={p.memory_per_node_gb}GB"
+                    + (f", gpu_type={p.gpu_type}" if p.gpu_type else "")
+                )
+                if p.modules_needed:
+                    lines.append(f"      Modules: {', '.join(p.modules_needed)}")
                 if p.description:
                     lines.append(f"      {p.description}")
-        
-        if self.modules_needed:
-            lines.append("")
-            lines.append(f"Modules: {', '.join(self.modules_needed)}")
-        
+
         return "\n".join(line for line in lines if line is not None)
-        
-        return "\n".join(line for line in lines if line is not None)
+
+    # Backward-compatible aliases (resolve against default partition)
+    @property
+    def modules_needed(self) -> list:
+        return self.get_effective_value("modules_needed") or []
+
+    @property
+    def modules_available(self) -> list:
+        return self.modules_needed
+
+    @property
+    def default_max_runtime(self) -> str:
+        return self.get_effective_value("max_runtime") or "24:00:00"
 
 
 def get_machines_directory() -> Path:
@@ -446,6 +428,21 @@ class SlurmJobGenerator:
             default_part = self.machine.get_default_partition()
             if default_part:
                 self.config.partition = default_part.name
+
+        partition_obj = self.machine.get_partition(self.config.partition) if self.config.partition else None
+        if partition_obj:
+            if not self.config.account and partition_obj.account:
+                self.config.account = partition_obj.account
+            if not self.config.modules and partition_obj.modules_needed:
+                self.config.modules = list(partition_obj.modules_needed)
+            if not self.config.commands and partition_obj.command:
+                self.config.commands = [partition_obj.command]
+            self.config.gpu_syntax = partition_obj.gpu_syntax or self.config.gpu_syntax
+            self.config.use_mem_option = (
+                partition_obj.use_mem_option
+                if partition_obj.use_mem_option is not None
+                else self.config.use_mem_option
+            )
         
         # Validate and warn about resource issues
         gpu_count = 0
@@ -535,9 +532,7 @@ class SlurmJobGenerator:
         # Shell commands from machine config (machine + partition combined)
         if self.machine:
             partition = self.config.partition
-            # Get machine-level shell_commands
-            shell_commands = list(self.machine.shell_commands) if self.machine.shell_commands else []
-            # Add partition-level shell_commands (if any)
+            shell_commands = []
             if partition:
                 partition_obj = self.machine.get_partition(partition)
                 if partition_obj and partition_obj.shell_commands:
@@ -668,8 +663,12 @@ def interactive_mode(machine: Optional[MachineConfig] = None) -> SlurmJobConfig:
     
     # Show machine info if available
     if machine:
+        default_part = machine.get_default_partition()
+        p_cores = default_part.cores_per_node if default_part else "?"
+        p_gpus = default_part.gpus_per_node if default_part else "?"
+        p_mem = default_part.memory_per_node_gb if default_part else "?"
         print(f"Target Machine: {machine.name}")
-        print(f"  Cores/node: {machine.cores_per_node}, GPUs/node: {machine.gpus_per_node}, Memory/node: {machine.memory_per_node_gb}GB")
+        print(f"  Cores/node: {p_cores}, GPUs/node: {p_gpus}, Memory/node: {p_mem}GB")
         if machine.partitions:
             print(f"  Partitions: {', '.join(machine.list_partitions())}")
         print()
@@ -679,37 +678,46 @@ def interactive_mode(machine: Optional[MachineConfig] = None) -> SlurmJobConfig:
     
     # Resources with machine-aware defaults
     print("\n--- Resource Allocation ---")
-    if machine:
-        print(f"(Machine limits: {machine.cores_per_node} cores, {machine.memory_per_node_gb}GB memory per node)")
-    
-    nodes = int(input("Number of nodes [1]: ").strip() or "1")
-    ntasks = int(input("Number of tasks [1]: ").strip() or "1")
-    
-    default_cpus = min(4, machine.cores_per_node) if machine else 1
-    cpus_per_task = int(input(f"CPUs per task [{default_cpus}]: ").strip() or str(default_cpus))
-    
-    default_mem = "4G"
-    memory = input(f"Memory (e.g., 4G, 8000M) [{default_mem}]: ").strip() or default_mem
-    
-    default_time = machine.default_max_runtime if machine else "01:00:00"
-    time = input(f"Time limit (HH:MM:SS) [{default_time}]: ").strip() or default_time
-    
     # Partition
     print("\n--- Partition & Account ---")
+    selected_partition = None
     if machine and machine.partitions:
         default_part = machine.get_default_partition()
         default_name = default_part.name if default_part else ""
         print(f"Available partitions: {', '.join(machine.list_partitions())}")
         partition = input(f"Partition [{default_name}]: ").strip() or default_name or None
+        selected_partition = machine.get_partition(partition) if partition else default_part
     else:
         partition = input("Partition (leave empty for default): ").strip() or None
-    
-    account = input("Account (leave empty for default): ").strip() or None
+
+    if selected_partition:
+        print(
+            f"(Partition limits: {selected_partition.cores_per_node} cores, "
+            f"{selected_partition.memory_per_node_gb}GB memory per node)"
+        )
+
+    nodes = int(input("Number of nodes [1]: ").strip() or "1")
+    ntasks = int(input("Number of tasks [1]: ").strip() or "1")
+
+    default_cpus = min(4, selected_partition.cores_per_node) if selected_partition else 1
+    cpus_per_task = int(input(f"CPUs per task [{default_cpus}]: ").strip() or str(default_cpus))
+
+    default_mem = "4G"
+    memory = input(f"Memory (e.g., 4G, 8000M) [{default_mem}]: ").strip() or default_mem
+
+    default_time = selected_partition.max_runtime if selected_partition else "01:00:00"
+    time = input(f"Time limit (HH:MM:SS) [{default_time}]: ").strip() or default_time
+
+    default_account = selected_partition.account if selected_partition and selected_partition.account else ""
+    account = input(f"Account [{default_account}]: ").strip() or default_account or None
     
     # GPU
     print("\n--- GPU Options ---")
-    if machine and machine.gpus_per_node > 0:
-        print(f"(Machine has {machine.gpus_per_node} {machine.gpu_type or 'GPU'}(s) per node)")
+    if selected_partition and selected_partition.gpus_per_node > 0:
+        print(
+            f"(Partition has {selected_partition.gpus_per_node} "
+            f"{selected_partition.gpu_type or 'GPU'}(s) per node)"
+        )
     gpus = input("GPUs (e.g., 1, a100:2, leave empty for none): ").strip() or None
     
     # Email
@@ -718,8 +726,8 @@ def interactive_mode(machine: Optional[MachineConfig] = None) -> SlurmJobConfig:
     
     # Modules
     print("\n--- Modules ---")
-    if machine and machine.modules_available:
-        print(f"Common modules: {', '.join(machine.modules_available)}")
+    if selected_partition and selected_partition.modules_needed:
+        print(f"Common modules: {', '.join(selected_partition.modules_needed)}")
     modules_input = input("Modules to load (comma-separated, e.g., python/3.9,cuda/11.0): ").strip()
     modules = [m.strip() for m in modules_input.split(",")] if modules_input else []
     

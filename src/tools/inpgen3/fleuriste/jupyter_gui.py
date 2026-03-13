@@ -1612,8 +1612,9 @@ class JobGeneratorPanel:
                 cmd = mc.get_effective_value("command", partition)
                 if cmd:
                     commands = [cmd]
-                if hasattr(mc, "modules_needed") and mc.modules_needed:
-                    modules = list(mc.modules_needed)
+                modules_cfg = mc.get_effective_value("modules_needed", partition) or []
+                if modules_cfg:
+                    modules = list(modules_cfg)
             # Manual module/command overrides from text areas
             if self._modules_area.value.strip():
                 modules = [l for l in self._modules_area.value.splitlines() if l.strip()]
