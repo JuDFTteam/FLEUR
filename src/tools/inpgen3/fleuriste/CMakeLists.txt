@@ -9,6 +9,9 @@ set(FLEURISTE_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 set(FLEURISTE_VENV    "${CMAKE_BINARY_DIR}/fleuriste-venv")
 set(FLEURISTE_STAMP   "${CMAKE_CURRENT_BINARY_DIR}/.fleuriste_installed_stamp")
 set(FLEURISTE_SCRIPT  "${CMAKE_BINARY_DIR}/FLEURiste")
+set(FLEURISTE_STAGE_DIR "${CMAKE_CURRENT_BINARY_DIR}/fleuriste-stage/fleuriste")
+set(FLEURISTE_WHEEL_DIR "${CMAKE_CURRENT_BINARY_DIR}/fleuriste-wheel")
+set(FLEURISTE_INSTALL_WHEEL_SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/install_fleuriste_wheel.py")
 
 # Collect the Python source files so that a rebuild is triggered when
 # any of them change.
@@ -38,7 +41,24 @@ fi
 exec \"\$FLEURISTE_VENV/bin/fleuriste\" \"\$@\"
 ")
 
-# Step 1+2: create venv & pip-install the package into it.
+# Helper script: install newest wheel from a wheel directory.
+file(WRITE "${FLEURISTE_INSTALL_WHEEL_SCRIPT}"
+"#!/usr/bin/env python3
+import pathlib
+import subprocess
+import sys
+
+wheel_dir = pathlib.Path(sys.argv[1])
+pip_exe = sys.argv[2]
+wheels = sorted(wheel_dir.glob('fleuriste-*.whl'))
+if not wheels:
+    raise SystemExit(f'No fleuriste wheel found in {wheel_dir}')
+
+subprocess.check_call([pip_exe, 'install', '--force-reinstall', str(wheels[-1]), '-q'])
+")
+
+# Step 1+2: create venv and install package via wheel built from a staged copy.
+# This avoids setuptools metadata writes (e.g., SOURCES.txt) in the source tree.
 # The stamp file avoids re-running pip on every build.
 add_custom_command(
     OUTPUT  "${FLEURISTE_STAMP}" "${FLEURISTE_SCRIPT}"
@@ -46,10 +66,23 @@ add_custom_command(
     COMMAND "${FLEUR_PYTHON}" -m venv "${FLEURISTE_VENV}"
     # Upgrade pip inside the venv
     COMMAND "${FLEURISTE_VENV}/bin/pip" install --upgrade pip -q
-    # Install setuptools (required for editable installs)
-    COMMAND "${FLEURISTE_VENV}/bin/pip" install setuptools wheel -q
-    # Install fleuriste with jupyter extras into the venv
-    COMMAND "${FLEURISTE_VENV}/bin/pip" install "${FLEURISTE_SRC_DIR}[jupyter]" -q
+    # Install packaging tools
+    COMMAND "${FLEURISTE_VENV}/bin/pip" install setuptools wheel build -q
+    # Create fresh staged source copy in build tree
+    COMMAND "${CMAKE_COMMAND}" -E rm -rf "${FLEURISTE_STAGE_DIR}" "${FLEURISTE_WHEEL_DIR}"
+    COMMAND "${CMAKE_COMMAND}" -E copy_directory "${FLEURISTE_SRC_DIR}" "${FLEURISTE_STAGE_DIR}"
+        # Remove generated artifacts from staged copy to avoid recursive package contents
+        COMMAND "${CMAKE_COMMAND}" -E rm -rf
+            "${FLEURISTE_STAGE_DIR}/build"
+            "${FLEURISTE_STAGE_DIR}/fleuriste.egg-info"
+            "${FLEURISTE_STAGE_DIR}/__pycache__"
+            "${FLEURISTE_STAGE_DIR}/pyjob/__pycache__"
+    # Build wheel from staged source (never from source dir)
+    COMMAND "${FLEURISTE_VENV}/bin/python" -m build --wheel --outdir "${FLEURISTE_WHEEL_DIR}" "${FLEURISTE_STAGE_DIR}"
+    # Install the built wheel (pick newest wheel file in wheel dir)
+        COMMAND "${FLEURISTE_VENV}/bin/python" "${FLEURISTE_INSTALL_WHEEL_SCRIPT}" "${FLEURISTE_WHEEL_DIR}" "${FLEURISTE_VENV}/bin/pip"
+    # Install jupyter extra dependencies explicitly
+    COMMAND "${FLEURISTE_VENV}/bin/pip" install -q "ipywidgets>=8.0" "jupyterlab-widgets>=3.0" "widgetsnbextension>=4.0" "matplotlib>=3.5" "jupyterlab>=3.0"
     # Install ipykernel and register this venv as a Jupyter kernel
     COMMAND "${FLEURISTE_VENV}/bin/pip" install ipykernel -q
     COMMAND "${FLEURISTE_VENV}/bin/python" -m ipykernel install --user --name fleuriste --display-name "Python FLEURiste"
@@ -61,7 +94,7 @@ add_custom_command(
     COMMAND "${CMAKE_COMMAND}" -E touch "${FLEURISTE_STAMP}"
     DEPENDS ${FLEURISTE_PY_SOURCES}
             "${FLEURISTE_SRC_DIR}/pyproject.toml"
-    WORKING_DIRECTORY "${FLEURISTE_SRC_DIR}"
+    WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
     COMMENT "Creating FLEURiste virtual environment and installing dependencies"
 )
 
