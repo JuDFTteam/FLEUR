@@ -12,6 +12,7 @@ set(FLEURISTE_SCRIPT  "${CMAKE_BINARY_DIR}/FLEURiste")
 set(FLEURISTE_STAGE_DIR "${CMAKE_CURRENT_BINARY_DIR}/fleuriste-stage/fleuriste")
 set(FLEURISTE_WHEEL_DIR "${CMAKE_CURRENT_BINARY_DIR}/fleuriste-wheel")
 set(FLEURISTE_INSTALL_WHEEL_SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/install_fleuriste_wheel.py")
+set(FLEURISTE_INPGEN_WRAPPER "${FLEURISTE_SRC_DIR}/../FleurInpgen.py")
 
 # Collect the Python source files so that a rebuild is triggered when
 # any of them change.
@@ -71,6 +72,7 @@ add_custom_command(
     # Create fresh staged source copy in build tree
     COMMAND "${CMAKE_COMMAND}" -E rm -rf "${FLEURISTE_STAGE_DIR}" "${FLEURISTE_WHEEL_DIR}"
     COMMAND "${CMAKE_COMMAND}" -E copy_directory "${FLEURISTE_SRC_DIR}" "${FLEURISTE_STAGE_DIR}"
+    COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${FLEURISTE_INPGEN_WRAPPER}" "${CMAKE_CURRENT_BINARY_DIR}/fleuriste-stage/FleurInpgen.py"
         # Remove generated artifacts from staged copy to avoid recursive package contents
         COMMAND "${CMAKE_COMMAND}" -E rm -rf
             "${FLEURISTE_STAGE_DIR}/build"
@@ -93,6 +95,7 @@ add_custom_command(
     # Touch the stamp
     COMMAND "${CMAKE_COMMAND}" -E touch "${FLEURISTE_STAMP}"
     DEPENDS ${FLEURISTE_PY_SOURCES}
+            "${FLEURISTE_INPGEN_WRAPPER}"
             "${FLEURISTE_SRC_DIR}/pyproject.toml"
     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
     COMMENT "Creating FLEURiste virtual environment and installing dependencies"

@@ -11,6 +11,8 @@ from typing import Optional
 
 import click
 
+from .inpgen_loader import create_inpgen_interface
+
 
 def find_schema() -> Optional[Path]:
     """Try to find the FleurInputSchema.xsd file."""
@@ -100,13 +102,6 @@ def generate(input_source, fmt, profile, nosym, output, force, film):
       fleuriste generate struct.cif -F cif
       fleuriste generate struct.xyz -F xyz --film
     """
-    try:
-        from FleurInpgen import InpgenInterface
-    except ImportError:
-        raise click.ClickException(
-            "FleurInpgen not available. Build FLEUR with Python bindings."
-        )
-
     import os
 
     input_path = Path(input_source)
@@ -149,11 +144,13 @@ def generate(input_source, fmt, profile, nosym, output, force, film):
     original_dir = os.getcwd()
     try:
         os.chdir(str(output_dir))
-        inpgen = InpgenInterface(quiet=True)
+        inpgen = create_inpgen_interface(quiet=True)
         inpgen.make_inp(content, profile, nosym)
         messages = inpgen.get_messages()
         if messages.strip():
             click.echo(f"\n{messages}")
+    except RuntimeError as exc:
+        raise click.ClickException(str(exc)) from exc
     finally:
         os.chdir(original_dir)
 
@@ -318,17 +315,12 @@ def kpoints_create(ctx, name, grid, density, number, path, custom, gamma, symmet
                 f"Available: {', '.join(mgr.kpoint_lists.keys())}"
             )
         
-        try:
-            from FleurInpgen import InpgenInterface
-        except ImportError:
-            raise click.ClickException("FleurInpgen not available.")
-        
         full_string = f"{name}#{custom}"
         nosym = not symmetry
         
         mgr.clear_messages()
         try:
-            inpgen = InpgenInterface(quiet=True)
+            inpgen = create_inpgen_interface(quiet=True)
             inpgen.add_kpoints(full_string, kpts_path="", nosym=nosym)
             messages = inpgen.get_messages()
             if messages.strip():

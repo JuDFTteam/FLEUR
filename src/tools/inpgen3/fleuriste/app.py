@@ -6,6 +6,7 @@ Includes XML editor, K-Point manager, Inpgen, and Job Generator modes.
 """
 
 from pathlib import Path
+import os
 from typing import Optional, List, Dict
 
 from textual.app import App, ComposeResult
@@ -29,14 +30,9 @@ from .inpgen_gui import (
     INPGEN_PROFILES, STRUCTURE_FORMATS,
     ase_to_fleur_input, create_supercell, parse_namelist_to_atoms,
     get_elements_in_input, add_magnetic_moments, extract_magnetic_moments,
-    generate_surface, HAS_INPGEN, ASE_AVAILABLE
+    generate_surface, ASE_AVAILABLE
 )
-
-# Import InpgenInterface if available
-try:
-    from FleurInpgen import InpgenInterface
-except ImportError:
-    InpgenInterface = None
+from .inpgen_loader import create_inpgen_interface
 
 # Import pyjob components for Job Generator mode
 try:
@@ -947,11 +943,6 @@ class FLEURisteApp(App):
     @on(Button.Pressed, "#inpgen-btn-generate")
     def on_inpgen_generate(self):
         """Generate inp.xml from the input."""
-        if not HAS_INPGEN:
-            self.notify("FleurInpgen library not available", severity="error")
-            self._update_inpgen_output("Error: FleurInpgen library not available")
-            return
-        
         input_text = self.query_one("#inpgen-input-area", TextArea).text
         if not input_text.strip():
             self.notify("No input content. Load a file or enter namelist input.", severity="warning")
@@ -986,7 +977,7 @@ class FLEURisteApp(App):
             self._update_inpgen_output("Generating inp.xml...")
             
             # Use quiet=True to prevent console output, get messages via get_messages()
-            inpgen = InpgenInterface(quiet=True)
+            inpgen = create_inpgen_interface(quiet=True)
             inpgen.make_inp(input_text, self._inpgen_profile, self._inpgen_nosym)
             inpgen_output = inpgen.get_messages()
             
@@ -1505,10 +1496,80 @@ class FLEURisteApp(App):
             self.notify(f"Error deleting list: {e}", severity="error")
     
     # ==================== XML Editor Methods ====================
+
+    def _set_schema(self, schema_path: Path) -> bool:
+        """Load and set schema for XML editor/document linking."""
+        try:
+            self.schema = XSDParser(schema_path)
+            self.document.schema = self.schema
+            self.schema_path = schema_path
+            return True
+        except Exception as exc:
+            self.notify(f"Failed to load schema '{schema_path}': {exc}", severity="warning")
+            return False
+
+    def _schema_candidates_for_input(self, xml_path: Path) -> List[Path]:
+        """Return potential schema paths in priority order."""
+        candidates: List[Path] = []
+
+        if self.schema_path:
+            candidates.append(Path(self.schema_path))
+
+        candidates.extend([
+            xml_path.parent / "FleurInputSchema.xsd",
+            Path.cwd() / "FleurInputSchema.xsd",
+            Path.cwd() / "build" / "FleurInputSchema.xsd",
+        ])
+
+        unique: List[Path] = []
+        seen: set[str] = set()
+        for candidate in candidates:
+            key = str(candidate.resolve(strict=False))
+            if key not in seen:
+                seen.add(key)
+                unique.append(candidate)
+        return unique
+
+    def _ensure_schema_for_xml_editor(self, xml_path: Path):
+        """Ensure schema is loaded; generate it for inp.xml if missing."""
+        if self.schema is not None:
+            return
+
+        for candidate in self._schema_candidates_for_input(xml_path):
+            if candidate.exists() and self._set_schema(candidate):
+                return
+
+        if xml_path.name != "inp.xml":
+            return
+
+        try:
+            inpgen = create_inpgen_interface(quiet=True)
+            original_cwd = Path.cwd()
+            os.chdir(xml_path.parent)
+            try:
+                inpgen.dropxmlschema()
+            finally:
+                os.chdir(original_cwd)
+        except Exception as exc:
+            self.notify(
+                f"No FleurInputSchema.xsd found and schema generation failed: {exc}",
+                severity="warning",
+            )
+            return
+
+        generated_schema = xml_path.parent / "FleurInputSchema.xsd"
+        if generated_schema.exists() and self._set_schema(generated_schema):
+            self.notify(f"Generated schema: {generated_schema}", severity="information")
+        else:
+            self.notify(
+                "Schema generation completed, but FleurInputSchema.xsd was not found.",
+                severity="warning",
+            )
     
     def _load_file(self, path: Path):
         """Load an XML file."""
         try:
+            self._ensure_schema_for_xml_editor(path)
             self.document.load(path)
             self._populate_tree()
             self._update_status(f"Loaded: {path.name}")

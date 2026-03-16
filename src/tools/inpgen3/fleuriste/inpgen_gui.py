@@ -16,13 +16,11 @@ from typing import Optional, Tuple, Dict, List
 import os
 import numpy as np
 
+from .inpgen_loader import inpgen_python_module_available
+
 # Optional imports
-try:
-    from FleurInpgen import InpgenInterface
-    HAS_INPGEN = True
-except ImportError:
-    HAS_INPGEN = False
-    InpgenInterface = None
+HAS_INPGEN = inpgen_python_module_available()
+InpgenInterface = None
 
 try:
     from ase.io import read as ase_read
