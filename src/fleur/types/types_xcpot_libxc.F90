@@ -192,7 +192,10 @@ CONTAINS
       CLASS(t_xcpot_libxc), INTENT(IN):: xcpot
 #ifdef CPP_LIBXC
       TYPE(xc_f90_func_info_t)        :: xc_info
-
+      if (xcpot%func_vxc_id_x == 0) then
+         xcpot_vx_is_LDA = .false.
+         return
+      endif   
       xc_info = xc_f90_func_get_info(xcpot%vxc_func_x)
       xcpot_vx_is_LDA =  XC_FAMILY_LDA == xc_f90_func_info_get_family(xc_info)
 #else
@@ -206,6 +209,10 @@ CONTAINS
 #ifdef CPP_LIBXC
       TYPE(xc_f90_func_info_t)        :: xc_info
 
+      if (xcpot%func_vxc_id_c == 0) then
+         xcpot_vc_is_LDA = .false.
+         return
+      endif
       xc_info = xc_f90_func_get_info(xcpot%vxc_func_c)
       xcpot_vc_is_LDA =  XC_FAMILY_LDA == xc_f90_func_info_get_family(xc_info)
 #else
@@ -219,6 +226,10 @@ CONTAINS
 #ifdef CPP_LIBXC
       TYPE(xc_f90_func_info_t)        :: xc_info
 
+      if (xcpot%func_exc_id_x == 0) then
+         xcpot_exc_is_LDA = .false.
+         return
+      endif
       xc_info = xc_f90_func_get_info(xcpot%exc_func_x)
       xcpot_exc_is_LDA = (XC_FAMILY_LDA == xc_f90_func_info_get_family(xc_info))
 #else
@@ -233,6 +244,10 @@ CONTAINS
 #ifdef CPP_LIBXC
       TYPE(xc_f90_func_info_t)        :: xc_info
 
+      if (xcpot%func_vxc_id_c == 0) then
+         xcpot_vc_is_gga = .false.
+         return
+      endif
       xc_info = xc_f90_func_get_info(xcpot%vxc_func_c)
       xcpot_vc_is_gga =  ANY([XC_FAMILY_GGA, XC_FAMILY_HYB_GGA]==xc_f90_func_info_get_family(xc_info))
 #else
@@ -246,6 +261,10 @@ CONTAINS
 #ifdef CPP_LIBXC
       TYPE(xc_f90_func_info_t)        :: xc_info
 
+      if (xcpot%func_vxc_id_x == 0) then
+         xcpot_vx_is_gga = .false.
+         return
+      endif
       xc_info = xc_f90_func_get_info(xcpot%vxc_func_x)
       xcpot_vx_is_gga =  ANY([XC_FAMILY_GGA, XC_FAMILY_HYB_GGA]==xc_f90_func_info_get_family(xc_info))
 #else
@@ -258,7 +277,10 @@ CONTAINS
       CLASS(t_xcpot_libxc), INTENT(IN):: xcpot
 #ifdef CPP_LIBXC
       TYPE(xc_f90_func_info_t)        :: xc_info
-
+      if (xcpot%func_vxc_id_x == 0) then
+         xcpot_vx_is_MetaGGA = .false.
+         return
+      endif
       if (xcpot%l_bj) then
          xcpot_vx_is_MetaGGA = .TRUE.
          return
@@ -275,7 +297,10 @@ CONTAINS
       CLASS(t_xcpot_libxc), INTENT(IN):: xcpot
 #ifdef CPP_LIBXC
       TYPE(xc_f90_func_info_t)        :: xc_info
-
+      if (xcpot%func_exc_id_x == 0) then
+         xcpot_exc_is_gga = .false.
+         return
+      endif
       xc_info = xc_f90_func_get_info(xcpot%exc_func_x)
       xcpot_exc_is_gga =  ANY([XC_FAMILY_GGA, XC_FAMILY_HYB_GGA]==xc_f90_func_info_get_family(xc_info))
 #else
@@ -288,7 +313,10 @@ CONTAINS
    CLASS(t_xcpot_libxc),INTENT(IN):: xcpot
 #ifdef CPP_LIBXC
       TYPE(xc_f90_func_info_t)        :: xc_info
-
+      if (xcpot%func_exc_id_x == 0) then
+         xcpot_exc_is_MetaGGA = .false.
+         return
+      endif
       xc_info = xc_f90_func_get_info(xcpot%exc_func_x)
       xcpot_exc_is_MetaGGA=ANY([XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA]==xc_f90_func_info_get_family(xc_info))
 #else
@@ -301,7 +329,10 @@ CONTAINS
       CLASS(t_xcpot_libxc), INTENT(IN):: xcpot
 #ifdef CPP_LIBXC
       TYPE(xc_f90_func_info_t)        :: xc_info
-
+      if (xcpot%func_vxc_id_x == 0) then
+         xcpot_is_hybrid = .false.
+         return
+      endif
       xc_info = xc_f90_func_get_info(xcpot%vxc_func_x)
       xcpot_is_hybrid=ANY([XC_FAMILY_HYB_MGGA, XC_FAMILY_HYB_GGA]==xc_f90_func_info_get_family(xc_info))
 #else
@@ -380,7 +411,6 @@ CONTAINS
       ! Prepare kinetic energy density for MetaGGA
       IF (PRESENT(kinenergyden_ks)) kinED_libxc = transpose(kinenergyden_ks)
 
-      print*,"A"
       ! Evaluate exchange functional (auto-detects LDA/GGA/MetaGGA)
       CALL eval_vxc(func_x, vx_tmp, sigma, vsigma, laplace, kinED_libxc, vtau_tmp)
 
