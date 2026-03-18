@@ -566,7 +566,8 @@ MODULE m_types_hyperfine
          WRITE(ounit,*) ' atom type     radius of nucleus (Bohr)   smallest radial mesh point (Bohr)   charge density value (e/Bohr^3) '
          DO iType = 1, atoms%ntype
             indefInteg = 0.0
-            nucRad = r0_const*(atomicMasses_const(atoms%nz(iType))**(1.0/3.0))
+            nucRad = 0.0
+            if (atoms%nz(iType)>0) nucRad = r0_const*(atomicMasses_const(atoms%nz(iType))**(1.0/3.0))
             IF (atoms%rmsh(1,iType).LT.nucRad) THEN
                iRad = 0
                isSmaller = .TRUE.
