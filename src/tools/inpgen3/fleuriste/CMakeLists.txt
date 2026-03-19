@@ -5,6 +5,34 @@
 # generates a thin shell wrapper "fleuriste" that activates the venv and
 # forwards all arguments to the installed entry-point.
 
+# FLEURiste requires Python > 3.10 (i.e. 3.11+).
+set(FLEUR_USE_FLEURISTE FALSE)
+set(FLEUR_FLEURISTE_PYTHON_VERSION "not found")
+
+if (FLEUR_PYTHON)
+    execute_process(
+        COMMAND "${FLEUR_PYTHON}" -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')"
+        RESULT_VARIABLE _fleuriste_python_result
+        OUTPUT_VARIABLE _fleuriste_python_version
+        ERROR_QUIET
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if (_fleuriste_python_result EQUAL 0)
+        set(FLEUR_FLEURISTE_PYTHON_VERSION "${_fleuriste_python_version}")
+        if (FLEUR_FLEURISTE_PYTHON_VERSION VERSION_GREATER "3.10")
+            set(FLEUR_USE_FLEURISTE TRUE)
+        endif()
+    endif()
+endif()
+
+set(FLEUR_USE_FLEURISTE "${FLEUR_USE_FLEURISTE}" CACHE INTERNAL "Whether FLEURiste targets are enabled" FORCE)
+set(FLEUR_FLEURISTE_PYTHON_VERSION "${FLEUR_FLEURISTE_PYTHON_VERSION}" CACHE INTERNAL "Python version used for FLEURiste checks" FORCE)
+
+if (NOT FLEUR_USE_FLEURISTE)
+    message(WARNING "FLEURiste disabled: Python > 3.10 required, detected '${FLEUR_FLEURISTE_PYTHON_VERSION}' from '${FLEUR_PYTHON}'")
+    return()
+endif()
+
 set(FLEURISTE_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 set(FLEURISTE_VENV    "${CMAKE_BINARY_DIR}/fleuriste-venv")
 set(FLEURISTE_STAMP   "${CMAKE_CURRENT_BINARY_DIR}/.fleuriste_installed_stamp")
@@ -30,8 +58,8 @@ file(WRITE "${FLEURISTE_SCRIPT_TEMPLATE}"
 
 FLEURISTE_VENV=\"${FLEURISTE_VENV}\"
 export FLEUR_BUILDDIR=\"${CMAKE_BINARY_DIR}\"
-export DYLD_LIBRARY_PATH=\"${CMAKE_BINARY_DIR}/src/tools/inpgen3:\\\${DYLD_LIBRARY_PATH:-}\"
-export LD_LIBRARY_PATH=\"${CMAKE_BINARY_DIR}/src/tools/inpgen3:\\\${LD_LIBRARY_PATH:-}\"
+export DYLD_LIBRARY_PATH=\"${CMAKE_BINARY_DIR}/src/tools/inpgen3:\${DYLD_LIBRARY_PATH:-}\"
+export LD_LIBRARY_PATH=\"${CMAKE_BINARY_DIR}/src/tools/inpgen3:\${LD_LIBRARY_PATH:-}\"
 
 if [ ! -d \"\$FLEURISTE_VENV\" ]; then
     echo \"Error: FLEURiste virtual environment not found at \$FLEURISTE_VENV\" >&2

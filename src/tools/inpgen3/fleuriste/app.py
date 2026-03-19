@@ -534,6 +534,7 @@ class FLEURisteApp(App):
         self._job_parallelization = None
         self._job_updating_from_parallelization = False
         self._job_last_machine_command = ""
+        self._job_last_machine_modules = ""
         
         if schema_path:
             self.schema = XSDParser(schema_path)
@@ -2270,11 +2271,7 @@ class FLEURisteApp(App):
             
             # Suggest modules from selected/default partition
             partition_value = partition_select.value if partition_select.value else None
-            suggested_modules = self._job_machine.get_effective_value("modules_needed", partition_value) or []
-            if suggested_modules:
-                modules_area = self.query_one("#job-module-list", TextArea)
-                if not modules_area.text.strip():
-                    modules_area.load_text("\n".join(suggested_modules[:3]))
+            self._update_job_module_suggestion(partition_value)
             
             # Update command suggestion
             self._update_job_command_suggestion()
@@ -2313,13 +2310,23 @@ class FLEURisteApp(App):
         
         info_panel.update(info)
 
-        suggested_modules = self._job_machine.get_effective_value("modules_needed", partition) or []
-        if suggested_modules:
-            modules_area = self.query_one("#job-module-list", TextArea)
-            if not modules_area.text.strip():
-                modules_area.load_text("\n".join(suggested_modules[:3]))
+        self._update_job_module_suggestion(partition)
 
         self._update_job_command_suggestion()
+
+    def _update_job_module_suggestion(self, partition):
+        """Update module textarea with machine/partition modules without overwriting user edits."""
+        if not HAS_PYJOB or self._job_machine is None:
+            return
+
+        suggested_modules = self._job_machine.get_effective_value("modules_needed", partition) or []
+        suggested_text = "\n".join(suggested_modules[:3]) if suggested_modules else ""
+
+        modules_area = self.query_one("#job-module-list", TextArea)
+        current_text = modules_area.text.strip()
+        if (not current_text) or (current_text == self._job_last_machine_modules):
+            modules_area.load_text(suggested_text)
+            self._job_last_machine_modules = suggested_text
     
     def _update_job_command_suggestion(self):
         """Update command textarea with machine/partition command."""
