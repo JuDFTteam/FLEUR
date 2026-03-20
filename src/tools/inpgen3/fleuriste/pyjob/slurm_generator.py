@@ -309,6 +309,30 @@ class MachineConfig:
     def default_max_runtime(self) -> str:
         return self.get_effective_value("max_runtime") or "24:00:00"
 
+    @property
+    def max_nodes(self) -> int:
+        return self.get_effective_value("max_nodes") or 1
+
+    @property
+    def cores_per_node(self) -> int:
+        return self.get_effective_value("cores_per_node") or 1
+
+    @property
+    def gpus_per_node(self) -> int:
+        return self.get_effective_value("gpus_per_node") or 0
+
+    @property
+    def memory_per_node_gb(self) -> int:
+        return self.get_effective_value("memory_per_node_gb") or 1
+
+    @property
+    def account(self) -> Optional[str]:
+        return self.get_effective_value("account")
+
+    @property
+    def command(self) -> Optional[str]:
+        return self.get_effective_value("command")
+
 
 def get_machines_directory() -> Path:
     """Get the path to the machines configuration directory."""
