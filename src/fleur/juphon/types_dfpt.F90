@@ -32,19 +32,20 @@ module m_types_dfpt
 
 
     interface 
-        subroutine init_child(this,fi,nqpts)
-            import t_dfpt
+        subroutine init_child(this,fi,nqpts,dynMatNac)
             use m_types
+            import t_dfpt
             class(t_dfpt),intent(inout)    :: this
             type(t_fleurinput), intent(in) :: fi 
             integer, intent(in)            :: nqpts
+            complex,optional,intent(in)    ::dynMatNac(:,:)
         end subroutine init_child
     end interface 
 
     interface 
         subroutine q_indepent_properties(this,fi,fmpi,sphhar,hybdat,xcpot,nococonv,stars,rho,vTot,grRho3,grVtot3,grVC3,grVext3,grgrVext3x3)
-            import t_dfpt
             use m_types
+            import t_dfpt
             class(t_dfpt),intent(inout)   :: this       
             type(t_fleurinput), intent(in):: fi 
             type(t_mpi), intent(in)       :: fmpi
@@ -62,9 +63,9 @@ module m_types_dfpt
 
     interface 
         subroutine postprocessing_scf(this,fi,stars,starsq,sphhar,xcpot,nococonv,hybdat,fmpi,qpts,q_list,iQ,iDtype,iDir,eig_id,dfpt_eig_id, &
-                                          dfpt_eig_id2,enpara,results,results1,l_real,rho,vTot,grRho3,grVext3,grVc3,den1,vTot1,den1Im,vTot1Im,vC1)
-            import t_dfpt
+                                          dfpt_eig_id2,enpara,results,results1,l_real,rho,vTot,grRho3,grVext3,grVc3,den1,vTot1,den1Im,vTot1Im,vC1,vC1Im)
             use m_types
+            import t_dfpt
             class(t_dfpt),intent(inout)     :: this
             type(t_fleurinput), intent(in)  :: fi 
             type(t_stars),intent(in)        :: stars
@@ -80,31 +81,34 @@ module m_types_dfpt
             type(t_enpara),intent(inout)    :: enpara
             type(t_results),intent(inout)   :: results, results1
             logical,intent(in)              :: l_real
-            type(t_potden),intent(in)       :: rho,vTot,grRho3(3),grVext3,grVC3,den1,vTot1,den1Im,vTot1Im,vC1         
+            type(t_potden),intent(in)       :: rho,vTot,grRho3(3),grVext3(3),grVC3(3),den1,vTot1,den1Im,vTot1Im
+            type(t_potden),intent(inout)    :: vC1,vC1Im         
         end subroutine postprocessing_scf
     end interface 
 
 
     interface 
-        subroutine postprocessing_qpoint(this,fi,fmpi,qpts,iQ)
-            import t_dfpt
+        subroutine postprocessing_qpoint(this,fi,fmpi,qpts,iQ,q_list)
             use m_types
+            import t_dfpt
             class(t_dfpt),intent(inout)   :: this         
             type(t_fleurinput),intent(in) :: fi
             type(t_mpi),intent(in)        :: fmpi
             type(t_kpts),intent(in)       :: qpts
             integer,intent(in)            :: iQ
+            integer,intent(in)            :: q_list(:)
         end subroutine postprocessing_qpoint
     end interface 
 
- 
-    subroutine init_scf(this,l_phonon,qvec)
+contains
 
+    subroutine init_scf(this,fi,l_phonon,qvec)
         use m_types_fleurinput
 
-        type(t_dfpt), intent(inout) :: this
+        class(t_dfpt), intent(inout) :: this
+        type(t_fleurinput),intent(in) :: fi 
         logical, intent(in) :: l_phonon 
-        real, allocatable, intent(in) :: qvec(:,:)
+        real, intent(in) :: qvec(:,:)
         integer :: nqpts
 
         ! set up necessary input that seperates the different types of scf calculations 
@@ -117,8 +121,7 @@ module m_types_dfpt
 
         nqpts = size(qvec,2)
 
-        this%init_child(fi,nqpts)
-
+        call this%init_child(fi,nqpts)
     end subroutine
 
 
@@ -131,7 +134,7 @@ module m_types_dfpt
         use m_dfpt_generate_gradient
         use m_types
 
-        type(t_dfpt), intent(inout) :: this 
+        class(t_dfpt), intent(inout) :: this 
         type(t_fleurinput), intent(in)  :: fi 
         type(t_mpi), intent(in)         :: fmpi
         type(t_stars),intent(in)      :: stars
@@ -159,7 +162,14 @@ module m_types_dfpt
         type(t_kpts) :: kqpts, kmqpts , qpts 
         type(t_stars)  :: starsq, starsmq
 
+
+        type(t_hub1data) :: hub1data
         integer, allocatable :: q_list(:)
+        logical :: l_real, l_gamma
+        integer :: iArray , iQ , ikpt, iDtype, iDir , q_start, q_stop
+        character(len=20) :: dfpt_tag
+
+        
 
 #ifdef CPP_MPI
         integer :: ierr
@@ -177,12 +187,11 @@ module m_types_dfpt
         call timestart("Gradient generation")
         call dfpt_generate_gradient(fi,fmpi,sphhar,hybdat,xcpot,nococonv,stars,rho,vTot,grRho3,grVtot3,grVC3,grVext3,grgrVext3x3)
         call timestop("Gradient generation")
-        call dfpt_generate_gradient() 
 
         ! create a kpts type that contains the necessary q-vectors 
         qpts = fi%kpts
         deallocate(qpts%bk)
-        allocate(qpts%bk,mold=this%%qVectors) ! this is not nice. Maybe change the expected type in dfpt_sternheimer/make_stars
+        allocate(qpts%bk,mold=this%qVectors) ! this is not nice. Maybe change the expected type in dfpt_sternheimer/make_stars
         qpts%bk(:, :size(this%qVectors,2)) = this%qVectors
         allocate(q_list(size(this%qVectors,2)))  
         q_list = (/(iArray, iArray=1,SIZE(this%qVectors,2), 1)/)
@@ -196,7 +205,7 @@ module m_types_dfpt
             call timestart("q-Point")
 
             l_gamma =.FALSE.
-            if  (sum(abs(qpts%bk(:,q_list(iQ))))== 0.0) then
+            if  (norm2(qpts%bk(:,q_list(iQ))) .lt. 1e-8) then
                 l_gamma =.TRUE.
             end if 
             
@@ -309,12 +318,12 @@ module m_types_dfpt
 
                         
                         call this%postprocessing_scf(fi,stars,starsq,sphhar,xcpot,nococonv,hybdat,fmpi,qpts,q_list,iQ,iDtype,iDir,eig_id,dfpt_eig_id, &
-                                          dfpt_eig_id2,enpara,results,results1,l_real,rho,vTot,grRho3,grVext3,grVc3,den1,vTot1,den1Im,vTot1Im,vC1)
+                                          dfpt_eig_id2,enpara,results,results1,l_real,rho,vTot,grRho3,grVext3,grVc3,den1,vTot1,den1Im,vTot1Im,vC1,vC1Im)
 
                     end do ! iDir
                 call timestop("Typeloop")
             end do ! iDtype
-            call this%postprocessing_qpoint(fi,fmpi,qpts,iQ)
+            call this%postprocessing_qpoint(fi,fmpi,qpts,iQ,q_list)
         end do ! iQ
 
     end subroutine perform_scf

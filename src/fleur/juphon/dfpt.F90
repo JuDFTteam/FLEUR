@@ -23,6 +23,8 @@ CONTAINS
       USE m_dfpt_efield
       USE m_dfpt_interpolation
       USE m_types_BEC
+      use m_types_dfpt
+      use m_types_phonon
 
 
       TYPE(t_mpi),        INTENT(IN)     :: fmpi
@@ -52,6 +54,7 @@ CONTAINS
       INTEGER :: q_eig_id, dfpt_eig_id, dfpt_eig_id2, qm_eig_id, dfpt_eigm_id, dfpt_eigm_id2
       LOGICAL :: l_real, l_minusq,l_gamma 
 
+      class(t_dfpt), allocatable :: dfpt_obj
 #ifdef CPP_MPI
       integer :: ierr
 #endif 
@@ -121,6 +124,9 @@ CONTAINS
             call timestop("dfpt born effective charges")
          end if 
          if (fi%juPhon%l_phonon) then 
+            allocate(t_phonon :: dfpt_obj)
+            call dfpt_obj%init(fi,.true.,fi%juPhon%qvec)
+
             call timestart("dfpt phonons")
             ! Do a scf calculation for a phonon perturbation
             call dfpt_phonon(fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,rho,vTot,vxc,grRho3,grVtot3,grVC3,grVext3,grgrVext3x3, &
