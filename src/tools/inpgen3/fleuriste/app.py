@@ -535,6 +535,7 @@ class FLEURisteApp(App):
         self._job_updating_from_parallelization = False
         self._job_last_machine_command = ""
         self._job_last_machine_modules = ""
+        self._job_last_machine_account = ""
         
         if schema_path:
             self.schema = XSDParser(schema_path)
@@ -2194,7 +2195,7 @@ class FLEURisteApp(App):
         
         # Get form values
         job_name = self.query_one("#job-name", Input).value or "fleur_job"
-        account = self.query_one("#job-account", Input).value or None
+        account = self.query_one("#job-account", Input).value.strip() or None
         partition_select = self.query_one("#job-partition", Select)
         partition = partition_select.value if partition_select.value else None
         
@@ -2312,6 +2313,8 @@ class FLEURisteApp(App):
 
         self._update_job_module_suggestion(partition)
 
+        self._update_job_account_suggestion(partition)
+
         self._update_job_command_suggestion()
 
     def _update_job_module_suggestion(self, partition):
@@ -2327,6 +2330,19 @@ class FLEURisteApp(App):
         if (not current_text) or (current_text == self._job_last_machine_modules):
             modules_area.load_text(suggested_text)
             self._job_last_machine_modules = suggested_text
+
+    def _update_job_account_suggestion(self, partition):
+        """Update account input from machine/partition defaults without overwriting user edits."""
+        if not HAS_PYJOB or self._job_machine is None:
+            return
+
+        suggested_account = self._job_machine.get_effective_value("account", partition) or ""
+
+        account_input = self.query_one("#job-account", Input)
+        current_value = account_input.value.strip()
+        if (not current_value) or (current_value == self._job_last_machine_account):
+            account_input.value = suggested_account
+            self._job_last_machine_account = suggested_account
     
     def _update_job_command_suggestion(self):
         """Update command textarea with machine/partition command."""
@@ -2335,14 +2351,13 @@ class FLEURisteApp(App):
         
         partition_select = self.query_one("#job-partition", Select)
         partition = partition_select.value if partition_select.value else None
-        command = self._job_machine.get_effective_value("command", partition)
-        
-        if command:
-            command_area = self.query_one("#job-command-list", TextArea)
-            current_text = command_area.text.strip()
-            if not current_text or current_text == self._job_last_machine_command:
-                command_area.load_text(command)
-                self._job_last_machine_command = command
+        command = self._job_machine.get_effective_value("command", partition) or ""
+
+        command_area = self.query_one("#job-command-list", TextArea)
+        current_text = command_area.text.strip()
+        if (not current_text) or (current_text == self._job_last_machine_command):
+            command_area.load_text(command)
+            self._job_last_machine_command = command
     
     @on(Select.Changed, "#job-machine-select")
     def on_job_machine_changed(self, event: Select.Changed):
