@@ -126,12 +126,13 @@ CONTAINS
          if (fi%juPhon%l_phonon) then 
             allocate(t_phonon :: dfpt_obj)
             call dfpt_obj%init(fi,.true.,fi%juPhon%qvec)
-
-            call timestart("dfpt phonons")
-            ! Do a scf calculation for a phonon perturbation
-            call dfpt_phonon(fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,rho,vTot,vxc,grRho3,grVtot3,grVC3,grVext3,grgrVext3x3, &
-                             results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id,dfpt_eig_id2,l_minusq,qm_results,results1m,qm_eig_id,dfpt_eigm_id,dfpt_eigm_id2)
-            call timestop("dfpt phonons")
+            call dfpt_obj%perform_scf(fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,rho,vTot,vxc,results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id, &
+                                      dfpt_eig_id2,l_minusq,qm_results,results1m,qm_eig_id,dfpt_eigm_id,dfpt_eigm_id2)
+            ! call timestart("dfpt phonons")
+            ! ! Do a scf calculation for a phonon perturbation
+            ! call dfpt_phonon(fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,rho,vTot,vxc,grRho3,grVtot3,grVC3,grVext3,grgrVext3x3, &
+            !                  results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id,dfpt_eig_id2,l_minusq,qm_results,results1m,qm_eig_id,dfpt_eigm_id,dfpt_eigm_id2)
+            ! call timestop("dfpt phonons")
          end if 
       end if 
 

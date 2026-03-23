@@ -320,10 +320,13 @@ contains
                         call this%postprocessing_scf(fi,stars,starsq,sphhar,xcpot,nococonv,hybdat,fmpi,qpts,q_list,iQ,iDtype,iDir,eig_id,dfpt_eig_id, &
                                           dfpt_eig_id2,enpara,results,results1,l_real,rho,vTot,grRho3,grVext3,grVc3,den1,vTot1,den1Im,vTot1Im,vC1,vC1Im)
 
+                        if (fmpi%irank == 0 .and. fi%juphon%l_rm_qhdf) call system("rm "//trim(dfpt_tag)//".hdf")
+                        call timestop("Dirloop")
                     end do ! iDir
                 call timestop("Typeloop")
             end do ! iDtype
             call this%postprocessing_qpoint(fi,fmpi,qpts,iQ,q_list)
+            call timestop("q-Point")
         end do ! iQ
 
     end subroutine perform_scf
