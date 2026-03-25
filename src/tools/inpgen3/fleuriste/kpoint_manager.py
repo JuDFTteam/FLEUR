@@ -9,13 +9,7 @@ from pathlib import Path
 from dataclasses import dataclass, field
 from enum import Enum
 
-# Optional import for FleurInpgen - may not be available
-try:
-    from FleurInpgen import InpgenInterface
-    HAS_INPGEN = True
-except ImportError:
-    HAS_INPGEN = False
-    InpgenInterface = None
+from .inpgen_loader import create_inpgen_interface
 
 
 class KPointMode(Enum):
@@ -477,15 +471,11 @@ class InpXMLManager:
         # In FLEUR inpgen: nosym=True means no symmetry reduction
         nosym = not use_symmetry
         
-        # Call inpgen library to add k-points
-        if not HAS_INPGEN:
-            raise RuntimeError("FleurInpgen library not available. Cannot generate k-points.")
-        
         # Clear messages for this operation
         self.clear_messages()
         
         try:
-            inpgen = InpgenInterface(lib_path, quiet=True)
+            inpgen = create_inpgen_interface(lib_path=lib_path, quiet=True)
             inpgen.add_kpoints(kpts_str, kpts_path="", nosym=nosym)
             # Collect messages from inpgen
             for msg in inpgen.messages:
@@ -494,7 +484,7 @@ class InpXMLManager:
             self._log(f"✓ Generated k-points ({mode.value}) {symmetry_msg} using inpgen library")
         except Exception as e:
             self._log(f"✗ Error calling inpgen library: {e}")
-            raise
+            raise RuntimeError(f"Cannot generate k-points:\n{e}") from e
         
         # Reload the XML to get the updated k-points
         self.load()
@@ -614,15 +604,8 @@ class InpXMLManager:
         self.clear_messages()
         
         # Call inpgen library to add k-points (band mode always uses nosym=True)
-        if not HAS_INPGEN:
-            if special_points:
-                self._log("FleurInpgen not available, using manual path generation...")
-                return self._create_kpoint_path_manual(name, special_points, num_points)
-            else:
-                raise RuntimeError("FleurInpgen library not available and no special_points provided.")
-        
         try:
-            inpgen = InpgenInterface(lib_path, quiet=True)
+            inpgen = create_inpgen_interface(lib_path=lib_path, quiet=True)
             inpgen.add_kpoints(kpts_str, kpts_path=path_labels, nosym=True)
             # Collect messages from inpgen
             for msg in inpgen.messages:
@@ -635,7 +618,7 @@ class InpXMLManager:
                 # Fall back to manual generation if inpgen fails and we have special_points
                 return self._create_kpoint_path_manual(name, special_points, num_points)
             else:
-                raise ValueError(f"Cannot create path: inpgen failed and no special_points provided") from e
+                raise RuntimeError(f"Cannot create path: inpgen failed and no special_points provided\n{e}") from e
         
         # Reload the XML to get the updated k-points
         self.load()

@@ -11,6 +11,8 @@ from typing import Optional
 
 import click
 
+from .inpgen_loader import create_inpgen_interface
+
 
 def find_schema() -> Optional[Path]:
     """Try to find the FleurInputSchema.xsd file."""
@@ -40,7 +42,7 @@ def cli(ctx, schema, input_file):
     ctx.obj['input_file'] = input_file
 
     if ctx.invoked_subcommand is None:
-        ctx.invoke(tui, schema=schema, input_file=input_file)
+        click.echo(ctx.get_help())
 
 
 # ── TUI ──────────────────────────────────────────────────────────────────────
@@ -100,13 +102,6 @@ def generate(input_source, fmt, profile, nosym, output, force, film):
       fleuriste generate struct.cif -F cif
       fleuriste generate struct.xyz -F xyz --film
     """
-    try:
-        from FleurInpgen import InpgenInterface
-    except ImportError:
-        raise click.ClickException(
-            "FleurInpgen not available. Build FLEUR with Python bindings."
-        )
-
     import os
 
     input_path = Path(input_source)
@@ -149,11 +144,13 @@ def generate(input_source, fmt, profile, nosym, output, force, film):
     original_dir = os.getcwd()
     try:
         os.chdir(str(output_dir))
-        inpgen = InpgenInterface(quiet=True)
+        inpgen = create_inpgen_interface(quiet=True)
         inpgen.make_inp(content, profile, nosym)
         messages = inpgen.get_messages()
         if messages.strip():
             click.echo(f"\n{messages}")
+    except RuntimeError as exc:
+        raise click.ClickException(str(exc)) from exc
     finally:
         os.chdir(original_dir)
 
@@ -318,17 +315,12 @@ def kpoints_create(ctx, name, grid, density, number, path, custom, gamma, symmet
                 f"Available: {', '.join(mgr.kpoint_lists.keys())}"
             )
         
-        try:
-            from FleurInpgen import InpgenInterface
-        except ImportError:
-            raise click.ClickException("FleurInpgen not available.")
-        
         full_string = f"{name}#{custom}"
         nosym = not symmetry
         
         mgr.clear_messages()
         try:
-            inpgen = InpgenInterface(quiet=True)
+            inpgen = create_inpgen_interface(quiet=True)
             inpgen.add_kpoints(full_string, kpts_path="", nosym=nosym)
             messages = inpgen.get_messages()
             if messages.strip():
@@ -576,7 +568,7 @@ def job_generate(input_file, machine, partition, job_name, nodes, time_limit,
     gpus = None
 
     if machine_config:
-        modules = list(machine_config.modules_needed or [])
+        modules = list(machine_config.get_effective_value("modules_needed", partition) or [])
         command = machine_config.get_effective_value("command", partition)
         gpu_syntax = (
             machine_config.get_effective_value("gpu_syntax", partition)
@@ -624,6 +616,63 @@ def job_generate(input_file, machine, partition, job_name, nodes, time_limit,
         out_file = output or f"{job_name}.slurm"
         generator.save(out_file)
         click.secho(f"✓ Saved job script: {out_file}", fg='green')
+
+
+@job.command('discovermachine')
+@click.option('--output', '-o', type=click.Path(), default=None,
+              help='Output JSON path (default: ~/.fleuriste/machines/<cluster>.json).')
+@click.option('--machine-name', '-n', type=str, default=None,
+              help='Override machine name (default: SLURM ClusterName).')
+@click.option('--description', type=str, default=None,
+              help='Machine description (default: auto-generated with timestamp).')
+@click.option('--command', default='srun fleur_MPI', show_default=True,
+              help='Default command written for each partition.')
+@click.option('--modules', type=str, default=None,
+              help='Comma-separated modules written for each partition.')
+@click.option('--shell-commands', type=str, default=None,
+              help='Comma-separated shell commands written for each partition.')
+@click.option('--gpu-syntax', type=click.Choice(['gpus', 'gres']), default='gres',
+              show_default=True,
+              help='GPU request syntax stored in partition configs.')
+@click.option('--no-mem-option', is_flag=True, default=False,
+              help='Store use_mem_option=false for all partitions.')
+def job_discover_machine(output, machine_name, description, command, modules,
+                         shell_commands, gpu_syntax, no_mem_option):
+    """Discover machine partitions from SLURM and write machine config JSON.
+
+    Uses `sinfo` and `scontrol` to extract partition limits/resources and
+    stores a MachineConfig-compatible JSON with partition-centric settings.
+
+    Examples:
+      fleuriste job discovermachine
+      fleuriste job discovermachine -n juwels -o ~/.fleuriste/machines/juwels.json
+      fleuriste job discovermachine --modules Intel,ParaStationMPI,FLEUR --gpu-syntax gres
+    """
+    from .pyjob.slurm_machine_discovery import (
+        SlurmDiscoveryError,
+        write_discovered_machine_config,
+    )
+
+    def _parse_csv(value):
+        if not value:
+            return []
+        return [item.strip() for item in value.split(',') if item.strip()]
+
+    try:
+        out_path = write_discovered_machine_config(
+            output_path=output,
+            machine_name=machine_name,
+            description=description,
+            default_command=command,
+            modules_needed=_parse_csv(modules),
+            shell_commands=_parse_csv(shell_commands),
+            gpu_syntax=gpu_syntax,
+            use_mem_option=not no_mem_option,
+        )
+    except SlurmDiscoveryError as exc:
+        raise click.ClickException(f"SLURM discovery failed: {exc}")
+
+    click.secho(f"✓ Discovered machine config written to: {out_path}", fg='green')
 
 
 # ── Analyse ──────────────────────────────────────────────────────────────────

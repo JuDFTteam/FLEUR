@@ -6,6 +6,7 @@ Includes XML editor, K-Point manager, Inpgen, and Job Generator modes.
 """
 
 from pathlib import Path
+import os
 from typing import Optional, List, Dict
 
 from textual.app import App, ComposeResult
@@ -29,14 +30,9 @@ from .inpgen_gui import (
     INPGEN_PROFILES, STRUCTURE_FORMATS,
     ase_to_fleur_input, create_supercell, parse_namelist_to_atoms,
     get_elements_in_input, add_magnetic_moments, extract_magnetic_moments,
-    generate_surface, HAS_INPGEN, ASE_AVAILABLE
+    generate_surface, ASE_AVAILABLE
 )
-
-# Import InpgenInterface if available
-try:
-    from FleurInpgen import InpgenInterface
-except ImportError:
-    InpgenInterface = None
+from .inpgen_loader import create_inpgen_interface
 
 # Import pyjob components for Job Generator mode
 try:
@@ -538,6 +534,8 @@ class FLEURisteApp(App):
         self._job_parallelization = None
         self._job_updating_from_parallelization = False
         self._job_last_machine_command = ""
+        self._job_last_machine_modules = ""
+        self._job_last_machine_account = ""
         
         if schema_path:
             self.schema = XSDParser(schema_path)
@@ -947,11 +945,6 @@ class FLEURisteApp(App):
     @on(Button.Pressed, "#inpgen-btn-generate")
     def on_inpgen_generate(self):
         """Generate inp.xml from the input."""
-        if not HAS_INPGEN:
-            self.notify("FleurInpgen library not available", severity="error")
-            self._update_inpgen_output("Error: FleurInpgen library not available")
-            return
-        
         input_text = self.query_one("#inpgen-input-area", TextArea).text
         if not input_text.strip():
             self.notify("No input content. Load a file or enter namelist input.", severity="warning")
@@ -986,7 +979,7 @@ class FLEURisteApp(App):
             self._update_inpgen_output("Generating inp.xml...")
             
             # Use quiet=True to prevent console output, get messages via get_messages()
-            inpgen = InpgenInterface(quiet=True)
+            inpgen = create_inpgen_interface(quiet=True)
             inpgen.make_inp(input_text, self._inpgen_profile, self._inpgen_nosym)
             inpgen_output = inpgen.get_messages()
             
@@ -1190,6 +1183,18 @@ class FLEURisteApp(App):
                 self.notify(f"File not found: {self.input_file}", severity="warning")
         except Exception as e:
             self.notify(f"Error loading k-points: {e}", severity="error")
+
+    def _save_kpoints_and_sync(self) -> None:
+        """Save k-point manager state to disk and reload XMLDocument to keep views in sync."""
+        if self._kpoint_manager is None:
+            return
+        self._kpoint_manager.save()
+        # Reload the XML Editor model so it reflects the saved kpoint changes
+        if self.document.file_path and self.document.file_path.exists():
+            try:
+                self.document.load(self.document.file_path)
+            except Exception:
+                pass
     
     def _refresh_kpoint_display(self):
         """Refresh the k-point display."""
@@ -1345,6 +1350,7 @@ class FLEURisteApp(App):
         try:
             if self._kpoint_manager.select_kpoint_list(self._selected_kpoint_list):
                 self.notify(f"Set '{self._selected_kpoint_list}' as active k-point list", severity="success")
+                self._save_kpoints_and_sync()
                 self._refresh_kpoint_display()
             else:
                 self.notify(f"Could not select '{self._selected_kpoint_list}'", severity="error")
@@ -1374,6 +1380,7 @@ class FLEURisteApp(App):
                     mod_str = modifiers.to_string().replace('@', '+') if modifiers.to_string() else "standard"
                     self.notify(f"Created mesh '{name}' ({nx}x{ny}x{nz}) [{mod_str}]", severity="success")
                     self._show_library_output(lib_output)
+                    self._save_kpoints_and_sync()
                     self._refresh_kpoint_display()
                 except Exception as e:
                     self.notify(f"Error creating mesh: {e}", severity="error")
@@ -1418,6 +1425,7 @@ class FLEURisteApp(App):
                     
                     lib_output = self._kpoint_manager.get_last_messages()
                     self._show_library_output(lib_output)
+                    self._save_kpoints_and_sync()
                     self._refresh_kpoint_display()
                 except Exception as e:
                     self.notify(f"Error creating k-points: {e}", severity="error")
@@ -1460,6 +1468,7 @@ class FLEURisteApp(App):
                     self.notify(f"Created path '{name}': {path_display} ({npoints} points)", 
                                severity="success")
                     self._show_library_output(lib_output)
+                    self._save_kpoints_and_sync()
                     self._refresh_kpoint_display()
                     
                 except Exception as e:
@@ -1483,15 +1492,86 @@ class FLEURisteApp(App):
             self._kpoint_manager.remove_kpoint_list(self._selected_kpoint_list)
             self.notify(f"Deleted list '{self._selected_kpoint_list}'", severity="success")
             self._selected_kpoint_list = None
+            self._save_kpoints_and_sync()
             self._refresh_kpoint_display()
         except Exception as e:
             self.notify(f"Error deleting list: {e}", severity="error")
     
     # ==================== XML Editor Methods ====================
+
+    def _set_schema(self, schema_path: Path) -> bool:
+        """Load and set schema for XML editor/document linking."""
+        try:
+            self.schema = XSDParser(schema_path)
+            self.document.schema = self.schema
+            self.schema_path = schema_path
+            return True
+        except Exception as exc:
+            self.notify(f"Failed to load schema '{schema_path}': {exc}", severity="warning")
+            return False
+
+    def _schema_candidates_for_input(self, xml_path: Path) -> List[Path]:
+        """Return potential schema paths in priority order."""
+        candidates: List[Path] = []
+
+        if self.schema_path:
+            candidates.append(Path(self.schema_path))
+
+        candidates.extend([
+            xml_path.parent / "FleurInputSchema.xsd",
+            Path.cwd() / "FleurInputSchema.xsd",
+            Path.cwd() / "build" / "FleurInputSchema.xsd",
+        ])
+
+        unique: List[Path] = []
+        seen: set[str] = set()
+        for candidate in candidates:
+            key = str(candidate.resolve(strict=False))
+            if key not in seen:
+                seen.add(key)
+                unique.append(candidate)
+        return unique
+
+    def _ensure_schema_for_xml_editor(self, xml_path: Path):
+        """Ensure schema is loaded; generate it for inp.xml if missing."""
+        if self.schema is not None:
+            return
+
+        for candidate in self._schema_candidates_for_input(xml_path):
+            if candidate.exists() and self._set_schema(candidate):
+                return
+
+        if xml_path.name != "inp.xml":
+            return
+
+        try:
+            inpgen = create_inpgen_interface(quiet=True)
+            original_cwd = Path.cwd()
+            os.chdir(xml_path.parent)
+            try:
+                inpgen.dropxmlschema()
+            finally:
+                os.chdir(original_cwd)
+        except Exception as exc:
+            self.notify(
+                f"No FleurInputSchema.xsd found and schema generation failed: {exc}",
+                severity="warning",
+            )
+            return
+
+        generated_schema = xml_path.parent / "FleurInputSchema.xsd"
+        if generated_schema.exists() and self._set_schema(generated_schema):
+            self.notify(f"Generated schema: {generated_schema}", severity="information")
+        else:
+            self.notify(
+                "Schema generation completed, but FleurInputSchema.xsd was not found.",
+                severity="warning",
+            )
     
     def _load_file(self, path: Path):
         """Load an XML file."""
         try:
+            self._ensure_schema_for_xml_editor(path)
             self.document.load(path)
             self._populate_tree()
             self._update_status(f"Loaded: {path.name}")
@@ -1968,6 +2048,16 @@ class FLEURisteApp(App):
     
     def action_save(self) -> None:
         """Save the document."""
+        if self._active_view == "kpoint_manager":
+            if self._kpoint_manager is None:
+                self._update_status("No k-points loaded")
+                return
+            try:
+                self._save_kpoints_and_sync()
+                self._update_status(f"Saved: {self._kpoint_manager.xml_path.name}")
+            except Exception as e:
+                self._update_status(f"Error: {e}")
+            return
         if not self.document.root:
             self._update_status("No document to save")
             return
@@ -2105,7 +2195,7 @@ class FLEURisteApp(App):
         
         # Get form values
         job_name = self.query_one("#job-name", Input).value or "fleur_job"
-        account = self.query_one("#job-account", Input).value or None
+        account = self.query_one("#job-account", Input).value.strip() or None
         partition_select = self.query_one("#job-partition", Select)
         partition = partition_select.value if partition_select.value else None
         
@@ -2180,11 +2270,9 @@ class FLEURisteApp(App):
             else:
                 partition_select.set_options([("(no partitions)", "")])
             
-            # Suggest modules from machine config
-            if self._job_machine.modules_needed:
-                modules_area = self.query_one("#job-module-list", TextArea)
-                if not modules_area.text.strip():
-                    modules_area.load_text("\n".join(self._job_machine.modules_needed[:3]))
+            # Suggest modules from selected/default partition
+            partition_value = partition_select.value if partition_select.value else None
+            self._update_job_module_suggestion(partition_value)
             
             # Update command suggestion
             self._update_job_command_suggestion()
@@ -2222,7 +2310,39 @@ class FLEURisteApp(App):
             info += f"\n[dim]Max runtime:[/dim] {max_runtime}"
         
         info_panel.update(info)
+
+        self._update_job_module_suggestion(partition)
+
+        self._update_job_account_suggestion(partition)
+
         self._update_job_command_suggestion()
+
+    def _update_job_module_suggestion(self, partition):
+        """Update module textarea with machine/partition modules without overwriting user edits."""
+        if not HAS_PYJOB or self._job_machine is None:
+            return
+
+        suggested_modules = self._job_machine.get_effective_value("modules_needed", partition) or []
+        suggested_text = "\n".join(suggested_modules[:3]) if suggested_modules else ""
+
+        modules_area = self.query_one("#job-module-list", TextArea)
+        current_text = modules_area.text.strip()
+        if (not current_text) or (current_text == self._job_last_machine_modules):
+            modules_area.load_text(suggested_text)
+            self._job_last_machine_modules = suggested_text
+
+    def _update_job_account_suggestion(self, partition):
+        """Update account input from machine/partition defaults without overwriting user edits."""
+        if not HAS_PYJOB or self._job_machine is None:
+            return
+
+        suggested_account = self._job_machine.get_effective_value("account", partition) or ""
+
+        account_input = self.query_one("#job-account", Input)
+        current_value = account_input.value.strip()
+        if (not current_value) or (current_value == self._job_last_machine_account):
+            account_input.value = suggested_account
+            self._job_last_machine_account = suggested_account
     
     def _update_job_command_suggestion(self):
         """Update command textarea with machine/partition command."""
@@ -2231,14 +2351,13 @@ class FLEURisteApp(App):
         
         partition_select = self.query_one("#job-partition", Select)
         partition = partition_select.value if partition_select.value else None
-        command = self._job_machine.get_effective_value("command", partition)
-        
-        if command:
-            command_area = self.query_one("#job-command-list", TextArea)
-            current_text = command_area.text.strip()
-            if not current_text or current_text == self._job_last_machine_command:
-                command_area.load_text(command)
-                self._job_last_machine_command = command
+        command = self._job_machine.get_effective_value("command", partition) or ""
+
+        command_area = self.query_one("#job-command-list", TextArea)
+        current_text = command_area.text.strip()
+        if (not current_text) or (current_text == self._job_last_machine_command):
+            command_area.load_text(command)
+            self._job_last_machine_command = command
     
     @on(Select.Changed, "#job-machine-select")
     def on_job_machine_changed(self, event: Select.Changed):

@@ -315,6 +315,7 @@ class SlurmGeneratorApp(App):
         self.available_machines = load_machine_configs()
         self.fleur_analysis: Optional[FleurAnalysisResult] = None
         self.parallelization: Optional[ParallelizationResult] = None
+        self._last_machine_modules = ""
     
     def _get_machine_choices(self):
         """Build machine selection dropdown choices."""
@@ -528,11 +529,9 @@ class SlurmGeneratorApp(App):
             else:
                 partition_select.set_options([("(no partitions)", "")])
             
-            # Suggest modules from machine config
-            if self.machine.modules_needed:
-                modules_area = self.query_one("#module-list", TextArea)
-                if not modules_area.text.strip():
-                    modules_area.load_text("\n".join(self.machine.modules_needed[:3]))
+            # Suggest modules from selected/default partition
+            partition_value = partition_select.value if partition_select.value else None
+            self._update_module_suggestion(partition_value)
             
             # Suggest command from machine config (will be updated per partition)
             self._update_command_suggestion()
@@ -576,8 +575,24 @@ class SlurmGeneratorApp(App):
         
         info_panel.update(info)
         
+        self._update_module_suggestion(partition)
+
         # Update command suggestion for this partition
         self._update_command_suggestion()
+
+    def _update_module_suggestion(self, partition):
+        """Update module textarea with machine/partition modules without overwriting user edits."""
+        if self.machine is None:
+            return
+
+        suggested_modules = self.machine.get_effective_value("modules_needed", partition) or []
+        suggested_text = "\n".join(suggested_modules[:3]) if suggested_modules else ""
+
+        modules_area = self.query_one("#module-list", TextArea)
+        current_text = modules_area.text.strip()
+        if (not current_text) or (current_text == self._last_machine_modules):
+            modules_area.load_text(suggested_text)
+            self._last_machine_modules = suggested_text
     
     def _update_command_suggestion(self):
         """Update the command textarea with machine/partition command if user hasn't modified it."""
