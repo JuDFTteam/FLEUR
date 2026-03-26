@@ -141,10 +141,13 @@ add_custom_target(fleuriste ALL
 )
 
 # Keep the venv copy updated when fleurinpgen is rebuilt.
-add_custom_command(TARGET fleurinpgen POST_BUILD
+# This must be a local target because add_custom_command(TARGET ...) only works
+# in the directory where the target is created.
+add_custom_target(fleuriste_sync_lib
     COMMAND "${CMAKE_COMMAND}" -E make_directory "${FLEURISTE_VENV_LIB_DIR}"
     COMMAND "${CMAKE_COMMAND}" -E copy_if_different "$<TARGET_FILE:fleurinpgen>" "${FLEURISTE_VENV_LIB_DIR}/"
+    DEPENDS fleurinpgen
     COMMENT "Copying fleurinpgen shared library into FLEURiste venv"
 )
 
-add_dependencies(fleuriste fleurinpgen)
+add_dependencies(fleuriste fleurinpgen fleuriste_sync_lib)
