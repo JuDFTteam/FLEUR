@@ -35,6 +35,7 @@ endif()
 
 set(FLEURISTE_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 set(FLEURISTE_VENV    "${CMAKE_BINARY_DIR}/fleuriste-venv")
+set(FLEURISTE_VENV_LIB_DIR "${FLEURISTE_VENV}/lib")
 set(FLEURISTE_STAMP   "${CMAKE_CURRENT_BINARY_DIR}/.fleuriste_installed_stamp")
 set(FLEURISTE_SCRIPT  "${CMAKE_BINARY_DIR}/FLEURiste")
 set(FLEURISTE_STAGE_DIR "${CMAKE_CURRENT_BINARY_DIR}/fleuriste-stage/fleuriste")
@@ -58,8 +59,8 @@ file(WRITE "${FLEURISTE_SCRIPT_TEMPLATE}"
 
 FLEURISTE_VENV=\"${FLEURISTE_VENV}\"
 export FLEUR_BUILDDIR=\"${CMAKE_BINARY_DIR}\"
-export DYLD_LIBRARY_PATH=\"${CMAKE_BINARY_DIR}/src/tools/inpgen3:\${DYLD_LIBRARY_PATH:-}\"
-export LD_LIBRARY_PATH=\"${CMAKE_BINARY_DIR}/src/tools/inpgen3:\${LD_LIBRARY_PATH:-}\"
+export DYLD_LIBRARY_PATH=\"${FLEURISTE_VENV_LIB_DIR}:${CMAKE_BINARY_DIR}/src/tools/inpgen3:\${DYLD_LIBRARY_PATH:-}\"
+export LD_LIBRARY_PATH=\"${FLEURISTE_VENV_LIB_DIR}:${CMAKE_BINARY_DIR}/src/tools/inpgen3:\${LD_LIBRARY_PATH:-}\"
 
 if [ ! -d \"\$FLEURISTE_VENV\" ]; then
     echo \"Error: FLEURiste virtual environment not found at \$FLEURISTE_VENV\" >&2
@@ -97,6 +98,9 @@ add_custom_command(
     COMMAND "${FLEURISTE_VENV}/bin/pip" install --upgrade pip -q
     # Install packaging tools
     COMMAND "${FLEURISTE_VENV}/bin/pip" install setuptools wheel build -q
+    # Ensure venv lib dir exists and copy current fleurinpgen shared library into it
+    COMMAND "${CMAKE_COMMAND}" -E make_directory "${FLEURISTE_VENV_LIB_DIR}"
+    COMMAND "${CMAKE_COMMAND}" -E copy_if_different "$<TARGET_FILE:fleurinpgen>" "${FLEURISTE_VENV_LIB_DIR}/"
     # Create fresh staged source copy in build tree
     COMMAND "${CMAKE_COMMAND}" -E rm -rf "${FLEURISTE_STAGE_DIR}" "${FLEURISTE_WHEEL_DIR}"
     COMMAND "${CMAKE_COMMAND}" -E copy_directory "${FLEURISTE_SRC_DIR}" "${FLEURISTE_STAGE_DIR}"
@@ -125,6 +129,7 @@ add_custom_command(
     DEPENDS ${FLEURISTE_PY_SOURCES}
             "${FLEURISTE_INPGEN_WRAPPER}"
             "${FLEURISTE_SRC_DIR}/pyproject.toml"
+            fleurinpgen
     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
     COMMENT "Creating FLEURiste virtual environment and installing dependencies"
 )
@@ -134,3 +139,12 @@ add_custom_target(fleuriste ALL
     DEPENDS "${FLEURISTE_STAMP}" "${FLEURISTE_SCRIPT}"
     COMMENT "FLEURiste CLI ready: ${FLEURISTE_SCRIPT}"
 )
+
+# Keep the venv copy updated when fleurinpgen is rebuilt.
+add_custom_command(TARGET fleurinpgen POST_BUILD
+    COMMAND "${CMAKE_COMMAND}" -E make_directory "${FLEURISTE_VENV_LIB_DIR}"
+    COMMAND "${CMAKE_COMMAND}" -E copy_if_different "$<TARGET_FILE:fleurinpgen>" "${FLEURISTE_VENV_LIB_DIR}/"
+    COMMENT "Copying fleurinpgen shared library into FLEURiste venv"
+)
+
+add_dependencies(fleuriste fleurinpgen)

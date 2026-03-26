@@ -5,6 +5,7 @@ Provides functions to generate inp.xml and add k-points from Python.
 
 import ctypes
 import os
+import sys
 from pathlib import Path
 from typing import Optional, Union, List
 
@@ -24,6 +25,7 @@ POSSIBLE_LIBRARY_NAMES = [
 def get_library_search_paths() -> List[Path]:
     """Return default search paths for the FLEUR inpgen shared library."""
     search_paths = [
+        Path(sys.prefix) / 'lib',
         Path.cwd(),
         Path.cwd() / 'build' / 'lib',
         Path.cwd() / 'build' / 'src' / 'tools' / 'inpgen3',
@@ -34,6 +36,7 @@ def get_library_search_paths() -> List[Path]:
 
     builddir = os.environ.get('FLEUR_BUILDDIR')
     if builddir:
+        search_paths.insert(0, Path(builddir) / 'fleuriste-venv' / 'lib')
         search_paths.insert(0, Path(builddir) / 'src' / 'tools' / 'inpgen3')
         search_paths.insert(1, Path(builddir))
 
