@@ -282,6 +282,7 @@ CONTAINS
 
          allocate(this%qvec(0,0))
          this%qvec=xml%read_q_list('/fleurInput/output/juPhon/qVectors')
+         write(1255,*) size(this%qvec)
       ENDIF
 
       ! Before we exit check needed parameters 
@@ -315,6 +316,10 @@ CONTAINS
           qvec_int = matmul(qvec_ext,cell%amat)/(tpi_const) ! tpi_const is in principle irrelevant, but included for consistency with the previous q vectors
           this%qvec_efield(:,iDir) = qvec_int
         end do
+      end if 
+
+      if (this%l_phonon ) then 
+        if (size(this%qvec) .eq. 0 ) call juDFT_warn("No q-Points were given while trying to do a phonon calculation. Please insert q points",calledby="types_juPhon.F90")        
       end if 
 
       if (input%film .and. allocated(this%qvec)) then

@@ -18,9 +18,10 @@ CONTAINS
         CLASS(t_xcpot),     INTENT(IN) :: xcpot
 
         LOGICAL :: l_libxc
+        LOGICAL :: l_exist
 
         l_libxc = .FALSE.
-
+        l_exist = .FALSE.
         !Symmetry
         IF (fi%sym%nop.GT.1) CALL judft_error("juPhon uses only unit symmetry. Please redo the calculation without symmetry.",calledby="dfpt_check.F90")
 
@@ -58,5 +59,12 @@ CONTAINS
 
         !Hybrid/RDMFT
         IF (fi%hybinp%l_hybrid .OR. fi%input%l_rdmft) CALL judft_error("juPhon doesn't support hybrid or RDMFT.",calledby="dfpt_check.F90")
+
+        IF (fi%juPhon%l_polar) THEN
+            inquire(file="born_eff_charge", exist=l_exist)
+            IF (.NOT. l_exist) CALL judft_error("born_eff_charge file not present, required for LO-TO splitting",calledby="dfpt_check.F90")
+            inquire(file="diel_tensor", exist=l_exist)
+            IF (.NOT. l_exist) CALL judft_error("diel_tensor file not present, required for LO-TO splitting",calledby="dfpt_check.F90")
+        END IF
     END SUBROUTINE dfpt_check
 END MODULE m_dfpt_check
