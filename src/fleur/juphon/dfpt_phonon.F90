@@ -223,7 +223,7 @@ contains
                         ! iteratively, providing the scf part of dfpt calculations.
                         if (l_minusq) then 
                             call timestart("Sternheimer with -q")
-                            call dfpt_sternheimer(fi, xcpot, sphhar, stars, starsq, nococonv, qpts, fmpi, results, resultsq, enpara, hybdat, &
+                            call dfpt_sternheimer(fi, xcpot, sphhar, stars, starsq, nococonv, qpts, fmpi, results, resultsq, enpara, hybdat, fi%juPhon, &
                                                 rho, vTot, grRho3(iDir), grVtot3(iDir), grVext3(iDir), q_list(iQ), iDtype, iDir, &
                                                 dfpt_tag, eig_id, l_real, results1, dfpt_eig_id, dfpt_eig_id2, q_eig_id, &
                                                 den1, vTot1, den1Im, vTot1Im, vC1, vC1Im, &
@@ -231,7 +231,7 @@ contains
                             call timestop("Sternheimer with -q")
                         else
                             call timestart("Sternheimer")
-                            call dfpt_sternheimer(fi, xcpot, sphhar, stars, starsq, nococonv, qpts, fmpi, results, resultsq, enpara, hybdat, &
+                            call dfpt_sternheimer(fi, xcpot, sphhar, stars, starsq, nococonv, qpts, fmpi, results, resultsq, enpara, hybdat, fi%juPhon,&
                                                 rho, vTot, grRho3(iDir), grVtot3(iDir), grVext3(iDir), q_list(iQ), iDtype, iDir, &
                                                 dfpt_tag, eig_id, l_real, results1, dfpt_eig_id, dfpt_eig_id2, q_eig_id, &
                                                 den1, vTot1, den1Im, vTot1Im, vC1, vC1Im)
@@ -242,7 +242,7 @@ contains
                         ! Once the first order quantities are converged, we can construct all
                         ! additional necessary quantities and from that the dynamical matrix.
                         call dfpt_dynmat_row(fi, stars, starsq, sphhar, xcpot, nococonv, hybdat, fmpi, qpts, q_list(iQ), iDtype, iDir, &
-                                            eig_id, dfpt_eig_id, dfpt_eig_id2, enpara, results, results1, l_real,&
+                                            eig_id, dfpt_eig_id, dfpt_eig_id2, enpara, results, results1, l_real, fi%juphon,&
                                             rho, vTot, grRho3, grVext3, grVC3, &
                                             den1, vTot1, den1Im, vTot1Im, vC1, vC1Im, dyn_mat(iQ,3 *(iDtype-1)+iDir,:), E2ndOrdII)
 

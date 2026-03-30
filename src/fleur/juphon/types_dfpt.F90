@@ -32,13 +32,14 @@ module m_types_dfpt
 
 
     interface 
-        subroutine init_child(this,fi,nqpts,dynMatNac)
+        subroutine init_child(this,fi,nqpts,juPhon,dynMatNac)
             use m_types
             import t_dfpt
             class(t_dfpt),intent(inout)    :: this
             type(t_fleurinput), intent(in) :: fi 
             integer, intent(in)            :: nqpts
-            complex,optional,intent(in)    ::dynMatNac(:,:)
+            type(t_juPhon), intent(out)    :: juPhon 
+            complex,optional,intent(in)    :: dynMatNac(:,:)
         end subroutine init_child
     end interface 
 
@@ -63,7 +64,7 @@ module m_types_dfpt
 
     interface 
         subroutine postprocessing_scf(this,fi,stars,starsq,sphhar,xcpot,nococonv,hybdat,fmpi,qpts,q_list,iQ,iDtype,iDir,eig_id,dfpt_eig_id, &
-                                          dfpt_eig_id2,enpara,results,results1,l_real,rho,vTot,grRho3,grVext3,grVc3,den1,vTot1,den1Im,vTot1Im,vC1,vC1Im)
+                                          dfpt_eig_id2,enpara,results,results1,l_real,juPhon,rho,vTot,grRho3,grVext3,grVc3,den1,vTot1,den1Im,vTot1Im,vC1,vC1Im)
             use m_types
             import t_dfpt
             class(t_dfpt),intent(inout)     :: this
@@ -81,6 +82,7 @@ module m_types_dfpt
             type(t_enpara),intent(inout)    :: enpara
             type(t_results),intent(inout)   :: results, results1
             logical,intent(in)              :: l_real
+            type(t_juPhon),intent(in)       :: juPhon
             type(t_potden),intent(in)       :: rho,vTot,grRho3(3),grVext3(3),grVC3(3),den1,vTot1,den1Im,vTot1Im
             type(t_potden),intent(inout)    :: vC1,vC1Im         
         end subroutine postprocessing_scf
@@ -88,12 +90,13 @@ module m_types_dfpt
 
 
     interface 
-        subroutine postprocessing_qpoint(this,fi,fmpi,qpts,iQ,q_list)
+        subroutine postprocessing_qpoint(this,fi,fmpi,juPhon,qpts,iQ,q_list)
             use m_types
             import t_dfpt
             class(t_dfpt),intent(inout)   :: this         
             type(t_fleurinput),intent(in) :: fi
             type(t_mpi),intent(in)        :: fmpi
+            type(t_juPhon),intent(in)     :: juPhon
             type(t_kpts),intent(in)       :: qpts
             integer,intent(in)            :: iQ
             integer,intent(in)            :: q_list(:)
@@ -102,30 +105,30 @@ module m_types_dfpt
 
 contains
 
-    subroutine init_scf(this,fi,l_phonon,qvec)
+    subroutine init_scf(this,fi,juPhon,qvec)
         use m_types_fleurinput
-
+        use m_types_juPhon
         class(t_dfpt), intent(inout) :: this
         type(t_fleurinput),intent(in) :: fi 
-        logical, intent(in) :: l_phonon 
         real, intent(in) :: qvec(:,:)
+        type(t_juPhon),intent(out) :: juPhon
         integer :: nqpts
 
         ! set up necessary input that seperates the different types of scf calculations 
-
-        this%l_phonon = l_phonon
-        if (this%l_phonon) this%iDtypeLoop = fi%atoms%nat
 
         allocate(this%qVectors,mold=qvec)
         this%qVectors = qvec
 
         nqpts = size(qvec,2)
 
-        call this%init_child(fi,nqpts)
+        call this%init_child(fi,nqpts,juPhon)
+
+        if (juPhon%l_phonon) this%iDtypeLoop = fi%atoms%nat
+
     end subroutine
 
 
-    subroutine perform_scf(this,fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,rho,vTot,vxc,&
+    subroutine perform_scf(this,fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,juPhon,rho,vTot,vxc,&
                             results,resultsq, results1, eig_id,q_eig_id, & 
                             dfpt_eig_id,dfpt_eig_id2,l_minusq,resultsqm,results1m,qm_eig_id, dfpt_eigm_id, dfpt_eigm_id2)
         use m_eigen 
@@ -144,6 +147,7 @@ contains
         type(t_enpara),intent(inout)     :: enpara
         type(t_nococonv),intent(in)   :: nococonv
         type(t_hybdat),intent(inout)     :: hybdat
+        type(t_juPhon),intent(in)     :: juPhon
         type(t_potden),intent(in)     :: rho 
         type(t_potden),intent(in)     :: vTot
         type(t_potden),intent(in)     :: vxc
@@ -196,8 +200,8 @@ contains
         allocate(q_list(size(this%qVectors,2)))  
         q_list = (/(iArray, iArray=1,SIZE(this%qVectors,2), 1)/)
 
-        q_start = fi%juPhon%startq
-        q_stop = merge(fi%juPhon%stopq,size(q_list),fi%juPhon%stopq/=0)
+        q_start = juPhon%startq
+        q_stop = merge(juPhon%stopq,size(q_list),juPhon%stopq/=0)
 
         call this%q_indepent_properties(fi,fmpi,sphhar,hybdat,xcpot,nococonv,stars,rho,vTot,grRho3,grVtot3,grVC3,grVext3,grgrVext3x3)
 
@@ -273,7 +277,7 @@ contains
 
                         if (fmpi%irank==0) then 
                             write(*,*) 'Starting calculation for:'
-                            write(*,*) ' q         = ', fi%juPhon%qvec(:,q_list(iQ))
+                            write(*,*) ' q         = ', this%qVectors(:,q_list(iQ))
                             write(*,*) ' atom      = ', iDtype
                             write(*,*) ' direction = ', iDir
                         end if 
@@ -301,7 +305,7 @@ contains
                         ! iteratively, providing the scf part of dfpt calculations.
                         if (l_minusq) then 
                             call timestart("Sternheimer with -q")
-                            call dfpt_sternheimer(fi, xcpot, sphhar, stars, starsq, nococonv, qpts, fmpi, results, resultsq, enpara, hybdat, &
+                            call dfpt_sternheimer(fi, xcpot, sphhar, stars, starsq, nococonv, qpts, fmpi, results, resultsq, enpara, hybdat, juPhon, &
                                                 rho, vTot, grRho3(iDir), grVtot3(iDir), grVext3(iDir), q_list(iQ), iDtype, iDir, &
                                                 dfpt_tag, eig_id, l_real, results1, dfpt_eig_id, dfpt_eig_id2, q_eig_id, &
                                                 den1, vTot1, den1Im, vTot1Im, vC1, vC1Im, &
@@ -309,7 +313,7 @@ contains
                             call timestop("Sternheimer with -q")
                         else
                             call timestart("Sternheimer")
-                            call dfpt_sternheimer(fi, xcpot, sphhar, stars, starsq, nococonv, qpts, fmpi, results, resultsq, enpara, hybdat, &
+                            call dfpt_sternheimer(fi, xcpot, sphhar, stars, starsq, nococonv, qpts, fmpi, results, resultsq, enpara, hybdat, juPhon, &
                                                 rho, vTot, grRho3(iDir), grVtot3(iDir), grVext3(iDir), q_list(iQ), iDtype, iDir, &
                                                 dfpt_tag, eig_id, l_real, results1, dfpt_eig_id, dfpt_eig_id2, q_eig_id, &
                                                 den1, vTot1, den1Im, vTot1Im, vC1, vC1Im)
@@ -318,14 +322,14 @@ contains
 
                         
                         call this%postprocessing_scf(fi,stars,starsq,sphhar,xcpot,nococonv,hybdat,fmpi,qpts,q_list,iQ,iDtype,iDir,eig_id,dfpt_eig_id, &
-                                          dfpt_eig_id2,enpara,results,results1,l_real,rho,vTot,grRho3,grVext3,grVc3,den1,vTot1,den1Im,vTot1Im,vC1,vC1Im)
+                                          dfpt_eig_id2,enpara,results,results1,l_real,juPhon,rho,vTot,grRho3,grVext3,grVc3,den1,vTot1,den1Im,vTot1Im,vC1,vC1Im)
 
-                        if (fmpi%irank == 0 .and. fi%juphon%l_rm_qhdf) call system("rm "//trim(dfpt_tag)//".hdf")
+                        if (fmpi%irank == 0 .and. juPhon%l_rm_qhdf) call system("rm "//trim(dfpt_tag)//".hdf")
                         call timestop("Dirloop")
                     end do ! iDir
                 call timestop("Typeloop")
             end do ! iDtype
-            call this%postprocessing_qpoint(fi,fmpi,qpts,iQ,q_list)
+            call this%postprocessing_qpoint(fi,fmpi,juPhon,qpts,iQ,q_list)
             call timestop("q-Point")
         end do ! iQ
 

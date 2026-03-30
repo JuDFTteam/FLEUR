@@ -49,6 +49,7 @@ CONTAINS
       TYPE(t_potden)                :: grRho3(3), grVtot3(3), grVC3(3), grVext3(3)
       TYPE(t_potden)                :: grgrVext3x3(3,3)
       TYPE(t_results)               :: q_results, results1, qm_results, results1m
+      TYPE(t_juPhon)                :: juPhon
 
       INTEGER :: nspins 
       INTEGER :: q_eig_id, dfpt_eig_id, dfpt_eig_id2, qm_eig_id, dfpt_eigm_id, dfpt_eigm_id2
@@ -125,8 +126,8 @@ CONTAINS
          end if 
          if (fi%juPhon%l_phonon) then 
             allocate(t_phonon :: dfpt_obj)
-            call dfpt_obj%init(fi,.true.,fi%juPhon%qvec)
-            call dfpt_obj%perform_scf(fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,rho,vTot,vxc,results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id, &
+            call dfpt_obj%init(fi,juPhon,fi%juPhon%qvec)
+            call dfpt_obj%perform_scf(fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,juPhon,rho,vTot,vxc,results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id, &
                                       dfpt_eig_id2,l_minusq,qm_results,results1m,qm_eig_id,dfpt_eigm_id,dfpt_eigm_id2)
             ! call timestart("dfpt phonons")
             ! ! Do a scf calculation for a phonon perturbation

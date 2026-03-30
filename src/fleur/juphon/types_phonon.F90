@@ -87,11 +87,12 @@ module m_types_phonon
     end subroutine get_dynNAC
 
 
-    subroutine init_child_phonon(this,fi,nqpts,dynMatNac)
+    subroutine init_child_phonon(this,fi,nqpts,juPhon,dynMatNac)
         use m_types
         class(t_phonon), intent(inout) :: this
         type(t_fleurinput), intent(in) :: fi 
         integer, intent(in)  :: nqpts
+        type(t_juphon), intent(out)    :: juPhon 
         complex, optional, intent(in)  :: dynMatNac(:,:)
         
 
@@ -102,8 +103,13 @@ module m_types_phonon
         this%dynMat = cmplx(0.0,0.0)
         this%Eii2 = cmplx(0.0,0.0)
         this%dynMatNac = cmplx(0.0,0.0)
-        if (present(dynMatNac)) this%dynMatNac = dynMatNac
 
+        juPhon = fi%juphon 
+
+        juPhon%l_phonon = .true.
+        juPhon%l_efield = .false.
+        juPhon%l_borneffcharge = .false.
+        
     end subroutine init_child_phonon
 
 
@@ -163,7 +169,7 @@ module m_types_phonon
 
 
     subroutine postprocessing_scf_phonon(this,fi,stars,starsq,sphhar,xcpot,nococonv,hybdat,fmpi,qpts,q_list,iQ,iDtype,iDir,eig_id,dfpt_eig_id, &
-                                          dfpt_eig_id2,enpara,results,results1,l_real,rho,vTot,grRho3,grVext3,grVc3,den1,vTot1,den1Im,vTot1Im,vC1,vC1Im)
+                                          dfpt_eig_id2,enpara,results,results1,l_real,juPhon,rho,vTot,grRho3,grVext3,grVc3,den1,vTot1,den1Im,vTot1Im,vC1,vC1Im)
         
         
         use m_types
@@ -184,6 +190,7 @@ module m_types_phonon
         type(t_enpara),intent(inout)     :: enpara
         type(t_results),intent(inout)    :: results, results1
         logical,intent(in)               :: l_real
+        type(t_juPhon),intent(in)        :: juPhon
         type(t_potden),intent(in)        :: rho,vTot,grRho3(3),grVext3(3),grVC3(3),den1,vTot1,den1Im,vTot1Im
         type(t_potden),intent(inout)     :: vC1,vC1Im
 
@@ -197,7 +204,7 @@ module m_types_phonon
 
         call timestart("Dynmat row")
         call dfpt_dynmat_row(fi, stars, starsq, sphhar, xcpot, nococonv, hybdat, fmpi, qpts, q_list(iQ), iDtype, iDir, &
-                                eig_id, dfpt_eig_id, dfpt_eig_id2, enpara, results, results1, l_real,&
+                                eig_id, dfpt_eig_id, dfpt_eig_id2, enpara, results, results1, l_real, juPhon, &
                                 rho, vTot, grRho3, grVext3, grVC3, &
                                 den1, vTot1, den1Im, vTot1Im, vC1, vC1Im, dyn_mat(iQ,3 *(iDtype-1)+iDir,:), E2ndOrdII)
 
@@ -210,7 +217,7 @@ module m_types_phonon
 
     end subroutine postprocessing_scf_phonon
 
-    subroutine postprocessing_qpoint_phonon(this,fi,fmpi,qpts,iQ,q_list)
+    subroutine postprocessing_qpoint_phonon(this,fi,fmpi,juPhon,qpts,iQ,q_list)
 
         use m_types
         use m_dfpt_dynmat_eig
@@ -218,6 +225,7 @@ module m_types_phonon
         class(t_phonon), intent(inout) :: this
         type(t_fleurinput),intent(in)  :: fi 
         type(t_mpi),intent(in)         :: fmpi
+        type(t_juPhon),intent(in)      :: juPhon
         type(t_kpts),intent(in)        :: qpts
         integer,intent(in)             :: iQ
         integer, intent(in)            :: q_list(:)
@@ -234,13 +242,13 @@ module m_types_phonon
 
         if (fmpi%irank==0) then 
             ! Add NAC contribution
-            if (l_gamma .and. fi%juPhon%l_polar) then 
+            if (l_gamma .and. juPhon%l_polar) then 
                 call this%get_dynNAC(dynMatNac)
                 dyn_mat(iQ,:,:) = dyn_mat(iQ,:,:) + dynMatNac(:,:) 
             end if 
 
             call timestart("Dynmat diagonalization")
-            call DiagonalizeDynMat(fi%atoms, qpts%bk(:,q_list(iQ)), fi%juPhon%calcEigenVec, dyn_mat(iQ,:,:), eigenVals, eigenVecs, q_list(iQ),.TRUE.,"raw",fi%juphon%l_sumrule)
+            call DiagonalizeDynMat(fi%atoms, qpts%bk(:,q_list(iQ)), juPhon%calcEigenVec, dyn_mat(iQ,:,:), eigenVals, eigenVecs, q_list(iQ),.TRUE.,"raw",juphon%l_sumrule)
             call timestop("Dynmat diagonalization")
 
             call timestart("Frequency calculation")
