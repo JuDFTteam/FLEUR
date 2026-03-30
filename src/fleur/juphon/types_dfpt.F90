@@ -27,6 +27,7 @@ module m_types_dfpt
         procedure(postprocessing_scf), deferred :: postprocessing_scf 
         procedure(postprocessing_qpoint), deferred :: postprocessing_qpoint 
         procedure(q_indepent_properties), deferred :: q_indepent_properties 
+        procedure(write_outfiles), deferred :: write_outfiles
                 
     end type 
 
@@ -103,6 +104,18 @@ module m_types_dfpt
         end subroutine postprocessing_qpoint
     end interface 
 
+
+    interface 
+        subroutine write_outfiles(this,fi,fmpi,juPhon)
+            use m_types
+            import t_dfpt
+            class(t_dfpt),intent(inout)   :: this         
+            type(t_fleurinput),intent(in) :: fi
+            type(t_mpi),intent(in)        :: fmpi
+            type(t_juPhon),intent(in)     :: juPhon
+        end subroutine write_outfiles
+    end interface 
+
 contains
 
     subroutine init_scf(this,fi,juPhon,qvec)
@@ -170,7 +183,7 @@ contains
         type(t_hub1data) :: hub1data
         integer, allocatable :: q_list(:)
         logical :: l_real, l_gamma
-        integer :: iArray , iQ , ikpt, iDtype, iDir , q_start, q_stop
+        integer :: iArray , iQ , ikpt, iDtype, iDir , q_start, q_stop, iDir_start, iDir_end
         character(len=20) :: dfpt_tag
 
         
@@ -178,6 +191,9 @@ contains
 #ifdef CPP_MPI
         integer :: ierr
 #endif 
+
+        iDir_start = 1 
+        iDir_end   = 3
 
         l_real = fi%sym%invs.and.(.not.fi%noco%l_soc).and.(.not.fi%noco%l_noco).and.fi%atoms%n_hia==0
 
@@ -267,10 +283,16 @@ contains
                 call timestop("Eigenstuff at k-q")
             end if
 
-
+            if (juphon%l_efield) then 
+                ! the usual construction breaks drown in the case of an efield perturbation 
+                ! due to the definition of the electric field. Therefore we need to introduce 
+                ! this special handling of the files here. 
+                iDir_start = iQ
+                iDir_end   = iQ 
+            end if  
             do iDtype = 1 , this%iDtypeLoop ! change this to local variable that is called by a get function
                 call timestart("Typeloop")
-                    do iDir = 1 , 3 
+                    do iDir = iDir_start , iDir_end 
                         call timestart("Dirloop")
                         dfpt_tag = ''
                         write(dfpt_tag,'(a1,i0,a2,i0,a2,i0)') 'q', q_list(iQ), '_b', iDtype, '_j', iDir

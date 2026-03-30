@@ -33,6 +33,7 @@ module m_types_phonon
         procedure :: q_indepent_properties => q_indepent_properties_phonon
         procedure :: postprocessing_scf => postprocessing_scf_phonon
         procedure :: postprocessing_qpoint => postprocessing_qpoint_phonon
+        procedure :: write_outfiles => write_outfiles_phonon
     end type t_phonon
 
 
@@ -258,6 +259,16 @@ module m_types_phonon
 
     end subroutine postprocessing_qpoint_phonon
 
+    subroutine write_outfiles_phonon(this,fi,fmpi,juPhon)
+
+        use m_types 
+
+        class(t_phonon),intent(inout)   :: this         
+        type(t_fleurinput),intent(in) :: fi
+        type(t_mpi),intent(in)        :: fmpi
+        type(t_juPhon),intent(in)     :: juPhon
+
+    end subroutine write_outfiles_phonon
 
 
 

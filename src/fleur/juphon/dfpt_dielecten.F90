@@ -24,10 +24,10 @@ contains
         
         type(t_fleurinput), intent(in)     :: fi
         type(t_sphhar),    intent(in)      :: sphhar
-        TYPE(t_stars),      INTENT(IN)     :: stars, starsq
-        type(t_potden), intent(inout)         :: denIn1,denIn1Im
+        type(t_stars),     intent(in)      :: stars, starsq
+        type(t_potden), intent(in)         :: denIn1,denIn1Im
         type(t_results), intent(in)        :: results, results1
-        TYPE(t_mpi),        intent(in)     :: fmpi
+        type(t_mpi),        intent(in)     :: fmpi
         complex, intent(inout)             :: dieltensor_row(:)
         integer, intent(in)                :: q_sign
         type(t_potden), intent(in)         :: rho
@@ -85,7 +85,7 @@ contains
                 pwwq2 = CMPLX(0.0,0.0)
                 
                 CALL dfpt_convol_big(1, starsq , stars, vExt1%pw(:,1), CMPLX(1.0,0.0)*stars%ufft, pwwq2)!starsq
-                call save_npy("pwwq2.npy",pwwq2)
+                !call save_npy("pwwq2.npy",pwwq2)
                 !CALL dfpt_int_pw(starsq, fi%cell, vExt1%pw(:,1), pwwq2, tempval_pw)!denIn1_pw
                 CALL dfpt_int_pw(starsq, fi%cell, denIn1_pw, pwwq2, tempval_pw)!denIn1_pw
                 
