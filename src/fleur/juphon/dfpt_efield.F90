@@ -133,7 +133,7 @@ contains
 
             if (fmpi%irank==0) write(*,*) '-------------------------'
             call timestart("Sternheimer")
-            call dfpt_sternheimer(fi, xcpot, sphhar, stars, starsq, nococonv, qpts, fmpi, results, resultsq, enpara, hybdat, &
+            call dfpt_sternheimer(fi, xcpot, sphhar, stars, starsq, nococonv, qpts, fmpi, results, resultsq, enpara, hybdat, fi%juPhon, &
                                   rho, vTot, grRho3(iDir), grVtot3(iDir), grVext3(iDir), 1, 1, iDir, &
                                   dfpt_tag, eig_id, l_real, results1, dfpt_eig_id, dfpt_eig_id2, q_eig_id, &
                                   den1, vTot1, den1Im, vTot1Im, vC1, vC1Im)

@@ -23,6 +23,9 @@ CONTAINS
       USE m_dfpt_efield
       USE m_dfpt_interpolation
       USE m_types_BEC
+      use m_types_dfpt
+      use m_types_phonon
+      use m_types_efield
 
 
       TYPE(t_mpi),        INTENT(IN)     :: fmpi
@@ -47,11 +50,13 @@ CONTAINS
       TYPE(t_potden)                :: grRho3(3), grVtot3(3), grVC3(3), grVext3(3)
       TYPE(t_potden)                :: grgrVext3x3(3,3)
       TYPE(t_results)               :: q_results, results1, qm_results, results1m
+      TYPE(t_juPhon)                :: juPhon
 
       INTEGER :: nspins 
       INTEGER :: q_eig_id, dfpt_eig_id, dfpt_eig_id2, qm_eig_id, dfpt_eigm_id, dfpt_eigm_id2
       LOGICAL :: l_real, l_minusq,l_gamma 
 
+      class(t_dfpt), allocatable :: phonon_obj , efield_obj ! we might want to have multiple scf calculation in one fleur call
 #ifdef CPP_MPI
       integer :: ierr
 #endif 
@@ -109,8 +114,13 @@ CONTAINS
          if (fi%juPhon%l_efield) then 
             call timestart("dfpt efield")
             ! Do a scf calculation with an electric field as the external perturbation
-            call dfpt_efield(fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,rho,vTot,vxc,grRho3, &
-                             grVtot3,grVext3,results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id,dfpt_eig_id2)
+            allocate(t_efield_pert :: efield_obj)
+            call efield_obj%init(fi,juPhon,fi%juPhon%qvec_efield)
+            call efield_obj%perform_scf(fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,juPhon,rho,vTot,vxc,results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id, &
+                                     dfpt_eig_id2,l_minusq,qm_results,results1m,qm_eig_id,dfpt_eigm_id,dfpt_eigm_id2)
+            call efield_obj%write_outfiles(fi,fmpi,juPhon)
+            ! call dfpt_efield(fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,rho,vTot,vxc,grRho3, &
+            !                  grVtot3,grVext3,results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id,dfpt_eig_id2)
             call timestop("dfpt efield")
          end if 
          if (fi%juPhon%l_borneffcharge) then
@@ -121,11 +131,15 @@ CONTAINS
             call timestop("dfpt born effective charges")
          end if 
          if (fi%juPhon%l_phonon) then 
-            call timestart("dfpt phonons")
-            ! Do a scf calculation for a phonon perturbation
-            call dfpt_phonon(fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,rho,vTot,vxc,grRho3,grVtot3,grVC3,grVext3,grgrVext3x3, &
-                             results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id,dfpt_eig_id2,l_minusq,qm_results,results1m,qm_eig_id,dfpt_eigm_id,dfpt_eigm_id2)
-            call timestop("dfpt phonons")
+            allocate(t_phonon :: phonon_obj)
+            call phonon_obj%init(fi,juPhon,fi%juPhon%qvec)
+            call phonon_obj%perform_scf(fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,juPhon,rho,vTot,vxc,results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id, &
+                                      dfpt_eig_id2,l_minusq,qm_results,results1m,qm_eig_id,dfpt_eigm_id,dfpt_eigm_id2)
+            ! call timestart("dfpt phonons")
+            ! ! Do a scf calculation for a phonon perturbation
+            ! call dfpt_phonon(fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,rho,vTot,vxc,grRho3,grVtot3,grVC3,grVext3,grgrVext3x3, &
+            !                  results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id,dfpt_eig_id2,l_minusq,qm_results,results1m,qm_eig_id,dfpt_eigm_id,dfpt_eigm_id2)
+            ! call timestop("dfpt phonons")
          end if 
       end if 
 

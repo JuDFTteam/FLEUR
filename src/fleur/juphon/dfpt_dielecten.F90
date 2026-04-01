@@ -24,10 +24,10 @@ contains
         
         type(t_fleurinput), intent(in)     :: fi
         type(t_sphhar),    intent(in)      :: sphhar
-        TYPE(t_stars),      INTENT(IN)     :: stars, starsq
-        type(t_potden), intent(inout)         :: denIn1,denIn1Im
+        type(t_stars),     intent(in)      :: stars, starsq
+        type(t_potden), intent(in)         :: denIn1,denIn1Im
         type(t_results), intent(in)        :: results, results1
-        TYPE(t_mpi),        intent(in)     :: fmpi
+        type(t_mpi),        intent(in)     :: fmpi
         complex, intent(inout)             :: dieltensor_row(:)
         integer, intent(in)                :: q_sign
         type(t_potden), intent(in)         :: rho
