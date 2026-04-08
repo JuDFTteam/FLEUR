@@ -463,7 +463,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
       CALL overallVCoul%resetPotDen()
       ALLOCATE(overallVCoul%pw_w(size(overallVCoul%pw,1),size(overallVCoul%pw,2)))
       overallVCoul%pw_w(:,:) = 0.0
-      CALL vgen_coulomb(1,fmpi, fi%input,fi%field,fi%vacuum,fi%sym,fi%juphon,stars,fi%cell,sphhar,fi%atoms,.FALSE.,overallDen,overallVCoul)
+      CALL vgen_coulomb(1,fmpi, fi%input,fi%field,fi%vacuum,fi%sym,stars,fi%cell,sphhar,fi%atoms,.FALSE.,overallDen,overallVCoul)
       CALL convol(stars,overallVCoul%pw_w(:,1),overallVCoul%pw(:,1))   ! Is there a problem with a second spin?!
       CALL overallVCoul%distribute(fmpi%mpi_comm)
 

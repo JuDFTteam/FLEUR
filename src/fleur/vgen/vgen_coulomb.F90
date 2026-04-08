@@ -12,8 +12,8 @@ module m_vgen_coulomb
 #endif
 contains
 
-  subroutine vgen_coulomb( ispin, fmpi,    input, field, vacuum, sym, juphon, stars, &
-             cell, sphhar, atoms, dosf, den, vCoul, results, dfptdenimag, dfptvCoulimag, dfptden0, stars2, iDtype, iDir, iDir2 )
+  subroutine vgen_coulomb( ispin, fmpi,    input, field, vacuum, sym, stars, &
+             cell, sphhar, atoms, dosf, den, vCoul, results, sternheimerJob, juphon, dfptdenimag, dfptvCoulimag, dfptden0, stars2, iDtype, iDir, iDir2 )
     !----------------------------------------------------------------------------
     ! FLAPW potential generator
     !----------------------------------------------------------------------------
@@ -36,6 +36,7 @@ contains
     use m_convol
     use m_psqpw
     use m_cfft
+    use m_types_sternheimerJob
     implicit none
 
     integer,            intent(in)               :: ispin
@@ -46,7 +47,6 @@ contains
     type(t_field),      intent(in)               :: field
     type(t_vacuum),     intent(in)               :: vacuum
     type(t_sym),        intent(in)               :: sym
-    type(t_juphon),     intent(in)               :: juphon
     type(t_stars),      intent(in)               :: stars
     type(t_cell),       intent(in)               :: cell
     type(t_sphhar),     intent(in)               :: sphhar
@@ -56,6 +56,9 @@ contains
     type(t_potden),     intent(inout)            :: vCoul
     !COMPLEX,            INTENT(INOUT)            :: sigma_disc(2)
     type(t_results),    intent(inout), optional  :: results
+
+    type(t_sternheimerJob), optional, intent(in) :: sternheimerJob
+    type(t_juphon),     optional,     intent(in) :: juphon
 
     TYPE(t_potden),     OPTIONAL, INTENT(IN)     :: dfptdenimag,  dfptden0
     TYPE(t_potden),     OPTIONAL, INTENT(INOUT)  :: dfptvCoulimag
@@ -110,7 +113,7 @@ contains
     !     ! as another variable dfptdenimag%mt and results in the same component for the Coulomb potential later on.
     !     ! Also, the ionic qlm behave differently.
     call psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym,   &
-          & juphon, den, ispin, .false., vCoul%potdenType, psq,&
+          &  den, ispin, .false., vCoul%potdenType, psq, sternheimerJob,&
           & dfptdenimag, stars2, iDtype, iDir, dfptden0, iDir2 )
     call timestop( "psqpw" )
 
@@ -128,7 +131,9 @@ contains
         call vvacis( stars, vacuum, cell, psq, input, field, vCoul%vac(:vacuum%nmzxyd,:,:,ispin), l_dfptvgen )
         call vvacxy( stars, vacuum, cell, sym, input, field, den%vac(:vacuum%nmzxyd,:,:,ispin), vCoul%vac(:vacuum%nmzxyd,:,:,ispin), alphm, l_dfptvgen )
         call timestop( "Vacuum" )
-        if ( l_dfptvgen .AND. juphon%l_symVacLevel ) constantShift =  (vCoul%vac(vacuum%nmzd,1,1,ispin)  - vCoul%vac(vacuum%nmzd,1,2,ispin)) / 2
+        if ( l_dfptvgen ) then 
+          if (juphon%l_symVacLevel ) constantShift =  (vCoul%vac(vacuum%nmzd,1,1,ispin)  - vCoul%vac(vacuum%nmzd,1,2,ispin)) / 2
+        end if 
       end if
 
       ! INTERSTITIAL POTENTIAL
@@ -193,7 +198,9 @@ contains
             end if
           end do
         end do
-        if (l_dfptvgen .AND. juphon%l_symVacLevel) vCoul%vac(:,1,:,ispin) = vCoul%vac(:,1,:,ispin) + constantShift
+        if (l_dfptvgen) then 
+          if  (juphon%l_symVacLevel) vCoul%vac(:,1,:,ispin) = vCoul%vac(:,1,:,ispin) + constantShift
+        end if 
         !sigma_disc = sigma_loc
         if (l_gradientEfield) then 
           if (iDir == 3 ) then 
@@ -232,9 +239,11 @@ contains
     call timestop("interstitial")
     end if ! fmpi%irank == 0
 
+    if (l_dfptvgen) then 
     !remove G=0 component to get "screened" efield perturbation
-    IF (juphon%l_dfpt .AND. (juphon%l_efield_scr .OR. juphon%l_borneffcharge)) then 
-      vCoul%pw(1,:)=0.0
+      if (sternheimerJob%l_efield_screened .OR. sternheimerJob%l_BEC) then 
+        vCoul%pw(1,:)=0.0
+      end if 
     end if
     
     ! MUFFIN-TIN POTENTIAL
@@ -245,8 +254,8 @@ contains
     CALL MPI_BARRIER(fmpi%mpi_comm,ierr) !should be totally useless, but ...
 #endif
 
-    call vmts( input, fmpi, stars, sphhar, atoms, sym, cell, juphon, dosf, vCoul%pw(:,ispin), &
-               den%mt(:,0:,:,ispin), vCoul%potdenType, vCoul%mt(:,0:,:,ispin), ispin, &
+    call vmts( input, fmpi, stars, sphhar, atoms, sym, cell, dosf, vCoul%pw(:,ispin), &
+               den%mt(:,0:,:,ispin), vCoul%potdenType, vCoul%mt(:,0:,:,ispin), ispin, sternheimerJob, &
                dfptdenimag, dfptvCoulimag, iDtype, iDir, iDir2 )
     call timestop( "MT-spheres" )
 

@@ -26,6 +26,7 @@ CONTAINS
       use m_types_phonon
       use m_types_efield
       use m_types_BEC
+      use m_types_sternheimerJob
 
 
       TYPE(t_mpi),        INTENT(IN)     :: fmpi
@@ -57,6 +58,7 @@ CONTAINS
       LOGICAL :: l_real, l_minusq,l_gamma 
 
       class(t_dfpt), allocatable :: phonon_obj , efield_obj,BEC_obj ! we might want to have multiple scf calculation in one fleur call
+      type(t_sternheimerJob)     :: sternheimerJob
 #ifdef CPP_MPI
       integer :: ierr
 #endif 
@@ -102,13 +104,13 @@ CONTAINS
                                 .NOT.fi%INPUT%eig66(1), .FALSE., fi%noco%l_soc, fi%INPUT%eig66(1), .FALSE., fmpi%n_size)
       END IF
 
-      ! Generate the gradients of the density and the various potentials, that will be used at different points in the programm.
-      ! The density gradient is calculated by numerical differentiation, while the potential gradients are constructed (from the
-      ! density gradient) by a Weinert construction, just like the potentials are from the density.
-      ! This is done to ensure good continuity.
-      CALL timestart("Gradient generation")
-      call dfpt_generate_gradient(fi,fmpi,sphhar,hybdat,xcpot,nococonv,stars,rho,vTot,grRho3,grVtot3,grVC3,grVext3,grgrVext3x3)
-      CALL timestop("Gradient generation")
+      ! ! Generate the gradients of the density and the various potentials, that will be used at different points in the programm.
+      ! ! The density gradient is calculated by numerical differentiation, while the potential gradients are constructed (from the
+      ! ! density gradient) by a Weinert construction, just like the potentials are from the density.
+      ! ! This is done to ensure good continuity.
+      ! CALL timestart("Gradient generation")
+      ! call dfpt_generate_gradient(fi,fmpi,sphhar,hybdat,xcpot,nococonv,stars,rho,vTot,grRho3,grVtot3,grVC3,grVext3,grgrVext3x3)
+      ! CALL timestop("Gradient generation")
 
       if (fi%juPhon%l_scf) then 
          if (fi%juPhon%l_efield) then 
@@ -116,7 +118,8 @@ CONTAINS
             ! Do a scf calculation with an electric field as the external perturbation
             allocate(t_efield_pert :: efield_obj)
             call efield_obj%init(fi,juPhon,fi%juPhon%qvec_efield)
-            call efield_obj%perform_scf(fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,juPhon,rho,vTot,vxc,results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id, &
+            call sternheimerJob%init(fi,l_efield=.true.)
+            call efield_obj%perform_scf(sternheimerJob,fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,juPhon,rho,vTot,vxc,results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id, &
                                      dfpt_eig_id2,l_minusq,qm_results,results1m,qm_eig_id,dfpt_eigm_id,dfpt_eigm_id2)
             call efield_obj%write_outfiles(fi,fmpi,juPhon)
             ! call dfpt_efield(fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,rho,vTot,vxc,grRho3, &
@@ -128,7 +131,8 @@ CONTAINS
             ! Do a scf calculation for phonon for q-Vectors close to Gamma --> calculate the polar response
             allocate(t_BEC :: BEC_obj)
             call BEC_obj%init(fi,juPhon,fi%juPhon%qvec_efield)
-            call BEC_obj%perform_scf(fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,juPhon,rho,vTot,vxc,results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id, &
+            call sternheimerJob%init(fi,l_BEC=.true.)
+            call BEC_obj%perform_scf(sternheimerJob,fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,juPhon,rho,vTot,vxc,results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id, &
                                      dfpt_eig_id2,l_minusq,qm_results,results1m,qm_eig_id,dfpt_eigm_id,dfpt_eigm_id2)
             call BEC_obj%write_outfiles(fi,fmpi,juPhon)
             
@@ -139,7 +143,8 @@ CONTAINS
          if (fi%juPhon%l_phonon) then 
             allocate(t_phonon :: phonon_obj)
             call phonon_obj%init(fi,juPhon,fi%juPhon%qvec)
-            call phonon_obj%perform_scf(fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,juPhon,rho,vTot,vxc,results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id, &
+            call sternheimerJob%init(fi,l_phonon=.true.)
+            call phonon_obj%perform_scf(sternheimerJob,fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,juPhon,rho,vTot,vxc,results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id, &
                                       dfpt_eig_id2,l_minusq,qm_results,results1m,qm_eig_id,dfpt_eigm_id,dfpt_eigm_id2)
             ! call timestart("dfpt phonons")
             ! ! Do a scf calculation for a phonon perturbation

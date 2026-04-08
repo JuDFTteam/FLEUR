@@ -35,6 +35,7 @@ CONTAINS
         USE m_smooth
         USE m_dfpt_fermie, ONLY : sfermi
         USE m_dfpt_elph_linewidth
+        use m_types_sternheimerJob
 
 
 
@@ -63,6 +64,7 @@ CONTAINS
 
 
         TYPE(t_stars) :: starsq
+        type(t_sternheimerJob) :: sternheimerJob
         INTEGER :: iDtype, iDir, killcont(6) ,iMode , iPerturb
         REAL :: bqpt(3)
         COMPLEX,ALLOCATABLE:: gmatCart(:,:,:,:) !(nu',nu,kpoints,jsp)
@@ -83,6 +85,9 @@ CONTAINS
         ! In this order: V1_pw_pw, T1_pw, S1_pw, V1_MT, ikGH0_MT, ikGS0_MT
         killcont = [1,1,1,1,1,1]
         
+
+        call sternheimerJob%init(fi,l_phonon=.true.)
+
         !Up to now only irank == 0 knows the eigenvecs plus eigenvals 
         IF (.NOT. ALLOCATED(eigenVecs)) ALLOCATE(eigenVecs(3*fi%atoms%nat,3*fi%atoms%nat))
         IF (.NOT. ALLOCATED(eigenVals)) ALLOCATE(eigenVals(3*fi%atoms%nat))
@@ -120,7 +125,7 @@ CONTAINS
                 
                 CALL timestart("Generating Potential Perturbation")
                 IF (fmpi%irank==0) WRITE(oUnit, *) "vEff1", iDir
-                CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
+                CALL dfpt_vgen(sternheimerJob,hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                            fi%juphon,fi%cell,fmpi,fi%noco,nococonv,rho_loc,vTot,&
                            starsq,denIn1Im_loc,vTot1,.TRUE.,vTot1Im,denIn1_loc,iDtype,iDir,[1,1])
                     

@@ -16,14 +16,16 @@ module m_dfpt_generate_gradient
 
 contains 
 
-    subroutine dfpt_generate_gradient(fi_ext,fmpi,sphhar,hybdat,xcpot,nococonv,stars,rho,vTot,grRho3,grVtot3,grVc3,grVext3,grgrVext3x3)
+    subroutine dfpt_generate_gradient(sternheimerJob,fi_ext,fmpi,sphhar,hybdat,xcpot,nococonv,stars,rho,vTot,grRho3,grVtot3,grVc3,grVext3,grgrVext3x3)
         
         use m_dfpt_vgen
         use m_vgen_coulomb
         use m_dfpt_potdenLocal
         use m_dfpt_gradient 
         use m_grdchlh
+        use m_types_sternheimerJob
 
+        type(t_sternheimerjob),intent(in) :: sternheimerJob
         type(t_fleurinput),intent(in) :: fi_ext 
         type(t_mpi), intent(in)       :: fmpi
         type(t_sphhar),intent(in)     :: sphhar
@@ -131,18 +133,18 @@ contains
 
         !  compute gradient external potential
         do iDir = 1 , 3 
-            call vgen_coulomb(1, fmpi, fi%input, fi%field, fi%vacuum, fi%sym, fi%juphon, starsLocal, fi%cell, &
-                         & sphhar, atomsLocal, .FALSE., potdummyLocal, grVext3(iDir), &
+            call vgen_coulomb(1, fmpi, fi%input, fi%field, fi%vacuum, fi%sym, starsLocal, fi%cell, &
+                         & sphhar, atomsLocal, .FALSE., potdummyLocal, grVext3(iDir), sternheimerJob=sternheimerJob,juphon=fi%juPhon, &
                          & dfptdenimag=potdummyLocal, dfptvCoulimag=potdummyLocal,dfptden0=potdummyLocal,stars2=starsLocal,iDtype=0,iDir=iDir)
         end do 
 
         ! Coulomb/Effective potential gradients
         do iDir = 1, 3
             call potdummy%resetPotDen()
-            call dfpt_vgen(hybdat, fi%field, fi%input, xcpot, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, &
+            call dfpt_vgen(sternheimerJob,hybdat, fi%field, fi%input, xcpot, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, &
                             fi%juphon, fi%cell, fmpi, fi%noco, nococonv, rho_tmp, vTot, &
                             stars, potdummy, grVtot3(iDir), .TRUE., potdummy, grRho3(iDir), 0, iDir, [0,0])
-            call dfpt_vgen(hybdat, fi%field, fi%input, xcpot, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, &
+            call dfpt_vgen(sternheimerJob,hybdat, fi%field, fi%input, xcpot, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, &
                             fi%juphon, fi%cell, fmpi, fi%noco, nococonv, rho_tmp, vTot, &
                             stars, potdummy, grVc3(iDir), .FALSE., potdummy, grRho3(iDir), 0, iDir, [0,0])
         end do 
@@ -153,8 +155,8 @@ contains
         do iDir2 = 1, 3
             do iDir = 1, 3
                 call potdummyLocal%resetPotDen()
-                call vgen_coulomb(1, fmpi, fi%input, fi%field, fi%vacuum, fi%sym, fi%juphon, starsLocal, fi%cell, &
-                            & sphhar, atomsLocal, .TRUE., potdummyLocal, grgrVext3x3(iDir2,iDir), &
+                call vgen_coulomb(1, fmpi, fi%input, fi%field, fi%vacuum, fi%sym, starsLocal, fi%cell, &
+                            & sphhar, atomsLocal, .TRUE., potdummyLocal, grgrVext3x3(iDir2,iDir), sternheimerJob=sternheimerJob,juphon=fi%juPhon, &
                             & dfptdenimag=potdummyLocal, dfptvCoulimag=potdummyLocal,dfptden0=potdummyLocal,stars2=starsLocal,iDtype=0,iDir=iDir,iDir2=iDir2)
             end do 
         end do 

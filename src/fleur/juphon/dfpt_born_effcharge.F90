@@ -17,6 +17,7 @@ module m_dfpt_born_effcharge
     USE m_constants
     USE m_checkdopall
     USE m_types_fftGrid
+    use m_types_sternheimerJob
 
 
 
@@ -25,9 +26,10 @@ module m_dfpt_born_effcharge
 
 contains 
 
-    subroutine dfpt_born_eff_charge_element_nef(fi,stars,starsq,sphhar,fmpi,rho,denIn1,denIn1Im,grRho,BEC_element,BEC_contributions_element,iDir_den,q_sign,hybdat,xcpot,nococonv,vTot)
+    subroutine dfpt_born_eff_charge_element_nef(sternheimerJob,fi,stars,starsq,sphhar,fmpi,rho,denIn1,denIn1Im,grRho,BEC_element,BEC_contributions_element,iDir_den,q_sign,hybdat,xcpot,nococonv,vTot)
 
 
+        type(t_sternheimerJob), intent(in) :: sternheimerJob 
         type(t_fleurinput), intent(in)     :: fi
         type(t_sphhar),    intent(in)      :: sphhar
         TYPE(t_stars),      INTENT(IN)     :: stars, starsq
@@ -107,7 +109,7 @@ contains
                 CALL vExt1pho%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
                 CALL vExt1Impho%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
                 print*,"right before it"
-                CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
+                CALL dfpt_vgen(sternheimerJob,hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                             juphon_int,fi%cell,fmpi,fi%noco,nococonv,rho_loc0,vTot,&
                             starsq,den1Im_dummy,vExt1pho,.FALSE.,vExt1Impho,den1_dummy,iDtype,iDir,[1,1],l_vextpho=.TRUE.)
                 

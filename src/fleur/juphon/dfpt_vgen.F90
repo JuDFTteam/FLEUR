@@ -8,7 +8,7 @@ MODULE m_dfpt_vgen
 
 CONTAINS
 
-   SUBROUTINE dfpt_vgen(hybdat,field,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
+   SUBROUTINE dfpt_vgen(sternheimerJob,hybdat,field,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
                    juphon, cell,fmpi,noco,nococonv,den,vTot,&
                    &starsq,dfptdenimag,dfptvTot,l_xc,dfptvTotimag,dfptdenreal,iDtype,iDir,killcont, sliceplot,l_vextpho)
       !--------------------------------------------------------------------------
@@ -41,9 +41,11 @@ CONTAINS
       USE m_dfpt_vefield
       USE m_checkdopall
       USE m_plot
+      USE m_types_sternheimerJob
 
       IMPLICIT NONE
 
+      TYPE(t_sternheimerJob),INTENT(IN):: sternheimerJob
       CLASS(t_xcpot),    INTENT(IN)    :: xcpot
       TYPE(t_hybdat),    INTENT(IN)    :: hybdat
       TYPE(t_mpi),       INTENT(IN)    :: fmpi
@@ -125,7 +127,7 @@ CONTAINS
       ALLOCATE( dfptvTot%pw_w(size(dfptvTot%pw,1),size(dfptvTot%pw,2)))
       ALLOCATE( dfptvTotimag%pw_w(size(dfptvTotimag%pw,1),size(dfptvTotimag%pw,2)))
 
-      IF (juphon%l_efield) THEN
+      IF (sternheimerJob%l_efield) THEN
          ALLOCATE( dfptvefield%pw_w(size(dfptvefield%pw,1),size(dfptvefield%pw,2)))
          ALLOCATE( dfptvefieldimag%pw_w(size(dfptvefieldimag%pw,1),size(dfptvefieldimag%pw,2)))
       END IF 
@@ -155,7 +157,7 @@ CONTAINS
       CALL dfptdenimag%sum_both_spin(workdenImag)
       ! NOTE: The normal stars are also passed as an optional argument, because
       !       they are needed for surface-qlm.
-      IF (juphon%l_efield) THEN
+      IF (sternheimerJob%l_efield) THEN
          atomsefield = atoms
          atomsefield%zatom(:) = 0.0 ! find out if this is actually needed
          CALL dfpt_vefield(juphon,starsq,atoms,sym,sphhar,cell,dfptvefield,dfptvefieldimag,iDir,1)
@@ -164,16 +166,16 @@ CONTAINS
 
          
          IF (l_xc) THEN
-            CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,juphon,starsq,cell,sphhar,atomsefield,.TRUE.,workdenReal,vCoul,&
-                     & dfptdenimag=workdenImag,dfptvCoulimag=dfptvCoulimag,dfptden0=workden,stars2=stars,iDtype=iDtype,iDir=iDir)
+            CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,starsq,cell,sphhar,atomsefield,.TRUE.,workdenReal,vCoul, sternheimerJob=sternheimerJob,&
+                     & juphon=juphon,dfptdenimag=workdenImag,dfptvCoulimag=dfptvCoulimag,dfptden0=workden,stars2=stars,iDtype=iDtype,iDir=iDir)
             dfptvTot%pw = dfptvTot%pw + vCoul%pw
             dfptvTot%mt = dfptvTot%mt + vCoul%mt
             dfptvTotimag%mt = dfptvTotimag%mt + dfptvCoulimag%mt
          END IF
          !print*,"sum dfptvTot in dfpt_vgen ef", sum(dfptvTot%pw(:,1))
       ELSE !standard phonon case
-         CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,juphon,starsq,cell,sphhar,atoms,.TRUE.,workdenReal,vCoul,&
-                     & dfptdenimag=workdenImag,dfptvCoulimag=dfptvCoulimag,dfptden0=workden,stars2=stars,iDtype=iDtype,iDir=iDir)
+         CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,starsq,cell,sphhar,atoms,.TRUE.,workdenReal,vCoul, sternheimerJob=sternheimerJob,&
+                     & juphon=juphon,dfptdenimag=workdenImag,dfptvCoulimag=dfptvCoulimag,dfptden0=workden,stars2=stars,iDtype=iDtype,iDir=iDir)
          ! b)
 
          CALL vCoul%copy_both_spin(dfptvTot)
@@ -206,7 +208,7 @@ CONTAINS
       IF (iDtype/=0.AND.ANY(killcont/=0)) THEN
          ! d)
          ! NOTE: This is so different from the base case, that we build a new subroutine.
-         CALL dfpt_vgen_finalize(fmpi,atoms,stars,sym,juphon,noco,nococonv,input,sphhar,vTot,dfptvTot,dfptvTotimag,denRot,den1Rot,den1imRot,starsq,killcont)
+         CALL dfpt_vgen_finalize(sternheimerJob,fmpi,atoms,stars,sym,noco,nococonv,input,sphhar,vTot,dfptvTot,dfptvTotimag,denRot,den1Rot,den1imRot,starsq,killcont)
          !DEALLOCATE(vcoul%pw_w)
       ELSE
          ! TODO: Write here something for the gradient. It does not need pw(_w)-stuff.

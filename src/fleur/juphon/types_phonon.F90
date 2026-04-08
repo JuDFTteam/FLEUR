@@ -115,12 +115,15 @@ module m_types_phonon
 
 
 
-    subroutine q_indepent_properties_phonon(this,fi,fmpi,sphhar,hybdat,xcpot,nococonv,stars,rho,vTot,grRho3,grVtot3,grVC3,grVext3,grgrVext3x3)
+    subroutine q_indepent_properties_phonon(this,sternheimerJob,fi,fmpi,sphhar,hybdat,xcpot,nococonv,stars,rho,vTot,grRho3,grVtot3,grVC3,grVext3,grgrVext3x3)
         
         use m_types
         use m_dfpt_eii2    
+        use m_types_sternheimerJob
+
 
         class(t_phonon), intent(inout) :: this
+        type(t_sternheimerjob),intent(in) :: sternheimerJob 
         type(t_fleurinput), intent(in)  :: fi 
         type(t_mpi), intent(in)         :: fmpi
         type(t_stars),intent(in)      :: stars
@@ -169,14 +172,16 @@ module m_types_phonon
     end subroutine q_indepent_properties_phonon
 
 
-    subroutine postprocessing_scf_phonon(this,fi,stars,starsq,sphhar,xcpot,nococonv,hybdat,fmpi,qpts,q_list,iQ,iDtype,iDir,eig_id,dfpt_eig_id, &
+    subroutine postprocessing_scf_phonon(this,sternheimerJob,fi,stars,starsq,sphhar,xcpot,nococonv,hybdat,fmpi,qpts,q_list,iQ,iDtype,iDir,eig_id,dfpt_eig_id, &
                                           dfpt_eig_id2,enpara,results,results1,l_real,juPhon,rho,vTot,grRho3,grVext3,grVc3,den1,vTot1,den1Im,vTot1Im,vC1,vC1Im)
         
         
         use m_types
         use m_dfpt_dynmat
+        use m_types_sternheimerJob
 
         class(t_phonon),intent(inout) :: this
+        type(t_sternheimerjob),intent(in) :: sternheimerJob 
         type(t_fleurinput), intent(in)  :: fi 
         type(t_stars),intent(in)      :: stars
         type(t_stars),intent(in)      :: starsq
@@ -204,7 +209,7 @@ module m_types_phonon
         call this%get_dynMat(dyn_mat)
 
         call timestart("Dynmat row")
-        call dfpt_dynmat_row(fi, stars, starsq, sphhar, xcpot, nococonv, hybdat, fmpi, qpts, q_list(iQ), iDtype, iDir, &
+        call dfpt_dynmat_row(sternheimerJob, fi, stars, starsq, sphhar, xcpot, nococonv, hybdat, fmpi, qpts, q_list(iQ), iDtype, iDir, &
                                 eig_id, dfpt_eig_id, dfpt_eig_id2, enpara, results, results1, l_real, juPhon, &
                                 rho, vTot, grRho3, grVext3, grVC3, &
                                 den1, vTot1, den1Im, vTot1Im, vC1, vC1Im, dyn_mat(iQ,3 *(iDtype-1)+iDir,:), E2ndOrdII)

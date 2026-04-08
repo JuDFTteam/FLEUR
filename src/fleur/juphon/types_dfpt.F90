@@ -45,47 +45,52 @@ module m_types_dfpt
     end interface 
 
     interface 
-        subroutine q_indepent_properties(this,fi,fmpi,sphhar,hybdat,xcpot,nococonv,stars,rho,vTot,grRho3,grVtot3,grVC3,grVext3,grgrVext3x3)
+        subroutine q_indepent_properties(this,sternheimerJob,fi,fmpi,sphhar,hybdat,xcpot,nococonv,stars,rho,vTot,grRho3,grVtot3,grVC3,grVext3,grgrVext3x3)
             use m_types
+            use m_types_sternheimerJob
+
             import t_dfpt
-            class(t_dfpt),intent(inout)   :: this       
-            type(t_fleurinput), intent(in):: fi 
-            type(t_mpi), intent(in)       :: fmpi
-            type(t_stars),intent(in)      :: stars
-            type(t_sphhar),intent(in)     :: sphhar
-            class(t_xcpot),intent(in)     :: xcpot
-            type(t_nococonv),intent(in)   :: nococonv
-            type(t_hybdat),intent(inout)  :: hybdat
-            type(t_potden),intent(in)     :: rho 
-            type(t_potden),intent(in)     :: vTot
-            type(t_potden), intent(in)    :: grRho3(3), grVtot3(3), grVC3(3), grVext3(3),grgrVext3x3(3,3)
+            class(t_dfpt),intent(inout)       :: this      
+            type(t_sternheimerjob),intent(in) :: sternheimerJob 
+            type(t_fleurinput), intent(in)    :: fi 
+            type(t_mpi), intent(in)           :: fmpi
+            type(t_stars),intent(in)          :: stars
+            type(t_sphhar),intent(in)         :: sphhar
+            class(t_xcpot),intent(in)         :: xcpot
+            type(t_nococonv),intent(in)       :: nococonv
+            type(t_hybdat),intent(inout)      :: hybdat
+            type(t_potden),intent(in)         :: rho 
+            type(t_potden),intent(in)         :: vTot
+            type(t_potden), intent(in)        :: grRho3(3), grVtot3(3), grVC3(3), grVext3(3),grgrVext3x3(3,3)
         end subroutine q_indepent_properties
     end interface 
 
 
     interface 
-        subroutine postprocessing_scf(this,fi,stars,starsq,sphhar,xcpot,nococonv,hybdat,fmpi,qpts,q_list,iQ,iDtype,iDir,eig_id,dfpt_eig_id, &
+        subroutine postprocessing_scf(this,sternheimerJob,fi,stars,starsq,sphhar,xcpot,nococonv,hybdat,fmpi,qpts,q_list,iQ,iDtype,iDir,eig_id,dfpt_eig_id, &
                                           dfpt_eig_id2,enpara,results,results1,l_real,juPhon,rho,vTot,grRho3,grVext3,grVc3,den1,vTot1,den1Im,vTot1Im,vC1,vC1Im)
             use m_types
+            use m_types_sternheimerJob
             import t_dfpt
-            class(t_dfpt),intent(inout)     :: this
-            type(t_fleurinput), intent(in)  :: fi 
-            type(t_stars),intent(in)        :: stars
-            type(t_stars),intent(in)        :: starsq
-            type(t_sphhar),intent(in)       :: sphhar
-            class(t_xcpot),intent(in)       :: xcpot
-            type(t_nococonv),intent(in)     :: nococonv
-            type(t_hybdat),intent(inout)    :: hybdat
-            type(t_mpi), intent(in)         :: fmpi
-            type(t_kpts), intent(in)        :: qpts
-            integer, allocatable,intent(in) :: q_list(:)
-            integer, intent(in)             :: iQ,iDtype,iDir,eig_id,dfpt_eig_id,dfpt_eig_id2
-            type(t_enpara),intent(inout)    :: enpara
-            type(t_results),intent(inout)   :: results, results1
-            logical,intent(in)              :: l_real
-            type(t_juPhon),intent(in)       :: juPhon
-            type(t_potden),intent(in)       :: rho,vTot,grRho3(3),grVext3(3),grVC3(3),den1,vTot1,den1Im,vTot1Im
-            type(t_potden),intent(inout)    :: vC1,vC1Im         
+            class(t_dfpt),intent(inout)       :: this
+            type(t_sternheimerjob),intent(in) :: sternheimerJob 
+            type(t_fleurinput), intent(in)    :: fi 
+            type(t_stars),intent(in)          :: stars
+            type(t_stars),intent(in)          :: starsq
+            type(t_sphhar),intent(in)         :: sphhar
+            class(t_xcpot),intent(in)         :: xcpot
+            type(t_nococonv),intent(in)       :: nococonv
+            type(t_hybdat),intent(inout)      :: hybdat
+            type(t_mpi), intent(in)           :: fmpi
+            type(t_kpts), intent(in)          :: qpts
+            integer, allocatable,intent(in)   :: q_list(:)
+            integer, intent(in)               :: iQ,iDtype,iDir,eig_id,dfpt_eig_id,dfpt_eig_id2
+            type(t_enpara),intent(inout)      :: enpara
+            type(t_results),intent(inout)     :: results, results1
+            logical,intent(in)                :: l_real
+            type(t_juPhon),intent(in)         :: juPhon
+            type(t_potden),intent(in)         :: rho,vTot,grRho3(3),grVext3(3),grVC3(3),den1,vTot1,den1Im,vTot1Im
+            type(t_potden),intent(inout)      :: vC1,vC1Im         
         end subroutine postprocessing_scf
     end interface 
 
@@ -141,7 +146,7 @@ contains
     end subroutine
 
 
-    subroutine perform_scf(this,fi_ext,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,juPhon,rho,vTot,vxc,&
+    subroutine perform_scf(this,sternheimerJob,fi_ext,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,juPhon,rho,vTot,vxc,&
                             results,resultsq, results1, eig_id,q_eig_id, & 
                             dfpt_eig_id,dfpt_eig_id2,l_minusq,resultsqm,results1m,qm_eig_id, dfpt_eigm_id, dfpt_eigm_id2)
         use m_eigen 
@@ -149,8 +154,10 @@ contains
         use m_dfpt_sternheimer
         use m_dfpt_generate_gradient
         use m_types
+        use m_types_sternheimerJob
 
         class(t_dfpt), intent(inout) :: this 
+        type(t_sternheimerJob),intent(in) :: sternheimerJob
         type(t_fleurinput), intent(in)  :: fi_ext 
         type(t_mpi), intent(in)         :: fmpi
         type(t_stars),intent(in)      :: stars
@@ -185,7 +192,7 @@ contains
         type(t_hub1data) :: hub1data
         integer, allocatable :: q_list(:)
         logical :: l_real, l_gamma
-        integer :: iArray , iQ , ikpt, iDtype, iDir , q_start, q_stop, iDir_start, iDir_end
+        integer :: iArray , iQ , ikpt, iDtype, iDir , iJob
         character(len=20) :: dfpt_tag
 
         
@@ -198,12 +205,7 @@ contains
         if (juphon%l_borneffcharge) THEN
             fi%juPhon%l_phonon = .TRUE.
         end if
-        !this is 
-
-
-        iDir_start = 1 
-        iDir_end   = 3
-
+    
         l_real = fi%sym%invs.and.(.not.fi%noco%l_soc).and.(.not.fi%noco%l_noco).and.fi%atoms%n_hia==0
 
 
@@ -214,7 +216,7 @@ contains
         ! density gradient) by a Weinert construction, just like the potentials are from the density.
         ! This is done to ensure good continuity.
         call timestart("Gradient generation")
-        call dfpt_generate_gradient(fi,fmpi,sphhar,hybdat,xcpot,nococonv,stars,rho,vTot,grRho3,grVtot3,grVC3,grVext3,grgrVext3x3)
+        call dfpt_generate_gradient(sternheimerJob,fi,fmpi,sphhar,hybdat,xcpot,nococonv,stars,rho,vTot,grRho3,grVtot3,grVC3,grVext3,grgrVext3x3)
         call timestop("Gradient generation")
 
         ! create a kpts type that contains the necessary q-vectors 
@@ -225,13 +227,15 @@ contains
         allocate(q_list(size(this%qVectors,2)))  
         q_list = (/(iArray, iArray=1,SIZE(this%qVectors,2), 1)/)
 
-        q_start = juPhon%startq
-        q_stop = merge(juPhon%stopq,size(q_list),juPhon%stopq/=0)
+        ! q_start = juPhon%startq
+        ! q_stop = merge(juPhon%stopq,size(q_list),juPhon%stopq/=0)
 
-        call this%q_indepent_properties(fi,fmpi,sphhar,hybdat,xcpot,nococonv,stars,rho,vTot,grRho3,grVtot3,grVC3,grVext3,grgrVext3x3)
+        call this%q_indepent_properties(sternheimerJob,fi,fmpi,sphhar,hybdat,xcpot,nococonv,stars,rho,vTot,grRho3,grVtot3,grVC3,grVext3,grgrVext3x3)
 
-        do iQ = q_start, q_stop
-            call timestart("q-Point")
+        do iJob = 1 , size(sternheimerJob%iJobList)
+            iQ     = sternheimerJob%iQList(iJob)
+            iDtype = sternheimerJob%iDtypeList(iJob)
+            iDir   = sternheimerJob%iDirList(iJob)
 
             l_gamma =.FALSE.
             if  (norm2(qpts%bk(:,q_list(iQ))) .lt. 1e-8) then
@@ -292,77 +296,62 @@ contains
                 call timestop("Eigenstuff at k-q")
             end if
 
-            if (juphon%l_efield) then 
-                ! the usual construction breaks drown in the case of an efield perturbation 
-                ! due to the definition of the electric field. Therefore we need to introduce 
-                ! this special handling of the files here. 
-                iDir_start = iQ
-                iDir_end   = iQ 
-            end if  
-            do iDtype = 1 , this%iDtypeLoop ! change this to local variable that is called by a get function
-                call timestart("Typeloop")
-                    do iDir = iDir_start , iDir_end 
-                        call timestart("Dirloop")
-                        dfpt_tag = ''
-                        write(dfpt_tag,'(a1,i0,a2,i0,a2,i0)') 'q', q_list(iQ), '_b', iDtype, '_j', iDir
+            dfpt_tag = ''
+            write(dfpt_tag,'(a1,i0,a2,i0,a2,i0)') 'q', q_list(iQ), '_b', iDtype, '_j', iDir
 
-                        if (fmpi%irank==0) then 
-                            write(*,*) 'Starting calculation for:'
-                            write(*,*) ' q         = ', this%qVectors(:,q_list(iQ))
-                            write(*,*) ' atom      = ', iDtype
-                            write(*,*) ' direction = ', iDir
-                        end if 
+            if (fmpi%irank==0) then 
+                write(*,*) 'Starting calculation for:'
+                write(*,*) ' q         = ', this%qVectors(:,q_list(iQ))
+                write(*,*) ' atom      = ', iDtype
+                write(*,*) ' direction = ', iDir
+            end if 
 
-                        ! reset arrays 
-                        call starsq%reset_stars()
-                        call den1%reset_dfpt()
-                        call den1Im%reset_dfpt()
-                        call vTot1%reset_dfpt()
-                        call vTot1Im%reset_dfpt()
-                        call vC1%reset_dfpt()
-                        call vC1Im%reset_dfpt()
-                        call results1%reset_results(fi%input)
-                        if (l_minusq) then 
-                            call starsmq%reset_stars()
-                            call vTot1m%reset_dfpt()
-                            call vTot1mIm%reset_dfpt()
-                            call results1m%reset_results(fi%input)
-                            ! I am unsure why there is no vC1m 
-                        end if    
-                            
-                        if (fmpi%irank==0) write(*,*) '-------------------------'
-                        ! Legacy Comment: Dont dare to delete it
-                        ! This is where the magic happens. The Sternheimer equation is solved
-                        ! iteratively, providing the scf part of dfpt calculations.
-                        if (l_minusq) then 
-                            call timestart("Sternheimer with -q")
-                            call dfpt_sternheimer(fi, xcpot, sphhar, stars, starsq, nococonv, qpts, fmpi, results, resultsq, enpara, hybdat, juPhon, &
-                                                rho, vTot, grRho3(iDir), grVtot3(iDir), grVext3(iDir), q_list(iQ), iDtype, iDir, &
-                                                dfpt_tag, eig_id, l_real, results1, dfpt_eig_id, dfpt_eig_id2, q_eig_id, &
-                                                den1, vTot1, den1Im, vTot1Im, vC1, vC1Im, &
-                                                starsmq, resultsqm, dfpt_eigm_id, dfpt_eigm_id2, qm_eig_id, results1m, vTot1m, vTot1mIm)
-                            call timestop("Sternheimer with -q")
-                        else
-                            call timestart("Sternheimer")
-                            call dfpt_sternheimer(fi, xcpot, sphhar, stars, starsq, nococonv, qpts, fmpi, results, resultsq, enpara, hybdat, juPhon, &
-                                                rho, vTot, grRho3(iDir), grVtot3(iDir), grVext3(iDir), q_list(iQ), iDtype, iDir, &
-                                                dfpt_tag, eig_id, l_real, results1, dfpt_eig_id, dfpt_eig_id2, q_eig_id, &
-                                                den1, vTot1, den1Im, vTot1Im, vC1, vC1Im)
-                            call timestop("Sternheimer")
-                        end if 
+            ! reset arrays 
+            call starsq%reset_stars()
+            call den1%reset_dfpt()
+            call den1Im%reset_dfpt()
+            call vTot1%reset_dfpt()
+            call vTot1Im%reset_dfpt()
+            call vC1%reset_dfpt()
+            call vC1Im%reset_dfpt()
+            call results1%reset_results(fi%input)
+            if (l_minusq) then 
+                call starsmq%reset_stars()
+                call vTot1m%reset_dfpt()
+                call vTot1mIm%reset_dfpt()
+                call results1m%reset_results(fi%input)
+                ! I am unsure why there is no vC1m 
+            end if    
+                
+            if (fmpi%irank==0) write(*,*) '-------------------------'
+            ! Legacy Comment: Dont dare to delete it
+            ! This is where the magic happens. The Sternheimer equation is solved
+            ! iteratively, providing the scf part of dfpt calculations.
+            if (l_minusq) then 
+                call timestart("Sternheimer with -q")
+                call dfpt_sternheimer(sternheimerJob,fi, xcpot, sphhar, stars, starsq, nococonv, qpts, fmpi, results, resultsq, enpara, hybdat, juPhon, &
+                                    rho, vTot, grRho3(iDir), grVtot3(iDir), grVext3(iDir), q_list(iQ), iDtype, iDir, &
+                                    dfpt_tag, eig_id, l_real, results1, dfpt_eig_id, dfpt_eig_id2, q_eig_id, &
+                                    den1, vTot1, den1Im, vTot1Im, vC1, vC1Im, &
+                                    starsmq, resultsqm, dfpt_eigm_id, dfpt_eigm_id2, qm_eig_id, results1m, vTot1m, vTot1mIm)
+                call timestop("Sternheimer with -q")
+            else
+                call timestart("Sternheimer")
+                call dfpt_sternheimer(sternheimerJob,fi, xcpot, sphhar, stars, starsq, nococonv, qpts, fmpi, results, resultsq, enpara, hybdat, juPhon, &
+                                    rho, vTot, grRho3(iDir), grVtot3(iDir), grVext3(iDir), q_list(iQ), iDtype, iDir, &
+                                    dfpt_tag, eig_id, l_real, results1, dfpt_eig_id, dfpt_eig_id2, q_eig_id, &
+                                    den1, vTot1, den1Im, vTot1Im, vC1, vC1Im)
+                call timestop("Sternheimer")
+            end if 
 
-                        
-                        call this%postprocessing_scf(fi,stars,starsq,sphhar,xcpot,nococonv,hybdat,fmpi,qpts,q_list,iQ,iDtype,iDir,eig_id,dfpt_eig_id, &
-                                          dfpt_eig_id2,enpara,results,results1,l_real,juPhon,rho,vTot,grRho3,grVext3,grVc3,den1,vTot1,den1Im,vTot1Im,vC1,vC1Im)
+            
+            call this%postprocessing_scf(sternheimerJob,fi,stars,starsq,sphhar,xcpot,nococonv,hybdat,fmpi,qpts,q_list,iQ,iDtype,iDir,eig_id,dfpt_eig_id, &
+                                dfpt_eig_id2,enpara,results,results1,l_real,juPhon,rho,vTot,grRho3,grVext3,grVc3,den1,vTot1,den1Im,vTot1Im,vC1,vC1Im)
 
-                        if (fmpi%irank == 0 .and. juPhon%l_rm_qhdf) call system("rm "//trim(dfpt_tag)//".hdf")
-                        call timestop("Dirloop")
-                    end do ! iDir
-                call timestop("Typeloop")
-            end do ! iDtype
-            call this%postprocessing_qpoint(fi,fmpi,juPhon,qpts,iQ,q_list)
-            call timestop("q-Point")
-        end do ! iQ
+            if (fmpi%irank == 0 .and. juPhon%l_rm_qhdf) call system("rm "//trim(dfpt_tag)//".hdf")
+            
+            if (sternheimerjob%needs_postprocessing(iJob)) call this%postprocessing_qpoint(fi,fmpi,juPhon,qpts,iQ,q_list)
+        end do ! iJob 
 
     end subroutine perform_scf
     
