@@ -22,10 +22,10 @@ CONTAINS
       USE m_dfpt_borncharges
       USE m_dfpt_efield
       USE m_dfpt_interpolation
-      USE m_types_BEC
       use m_types_dfpt
       use m_types_phonon
       use m_types_efield
+      use m_types_BEC
 
 
       TYPE(t_mpi),        INTENT(IN)     :: fmpi
@@ -56,14 +56,14 @@ CONTAINS
       INTEGER :: q_eig_id, dfpt_eig_id, dfpt_eig_id2, qm_eig_id, dfpt_eigm_id, dfpt_eigm_id2
       LOGICAL :: l_real, l_minusq,l_gamma 
 
-      class(t_dfpt), allocatable :: phonon_obj , efield_obj ! we might want to have multiple scf calculation in one fleur call
+      class(t_dfpt), allocatable :: phonon_obj , efield_obj,BEC_obj ! we might want to have multiple scf calculation in one fleur call
 #ifdef CPP_MPI
       integer :: ierr
 #endif 
 
       INTEGER, ALLOCATABLE :: q_list(:)
       ! INTEGER, ALLOCATABLE :: sym_list(:) ! For each q: Collect, which symmetries leave q unchanged.
-
+      
       l_real = fi%sym%invs.AND.(.NOT.fi%noco%l_soc).AND.(.NOT.fi%noco%l_noco).AND.fi%atoms%n_hia==0
 
       ! l_minusq is a hard false at the moment. It can be used to ignore +-q symmetries and
@@ -126,8 +126,14 @@ CONTAINS
          if (fi%juPhon%l_borneffcharge) then
             call timestart("dfpt born effective charges") 
             ! Do a scf calculation for phonon for q-Vectors close to Gamma --> calculate the polar response
-            call dfpt_borncharges(fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,rho,vTot,vxc,grRho3,grVtot3,grVC3,grVext3, &
-                                    results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id,dfpt_eig_id2,l_minusq,qm_results,results1m,qm_eig_id,dfpt_eigm_id,dfpt_eigm_id2)
+            allocate(t_BEC :: BEC_obj)
+            call BEC_obj%init(fi,juPhon,fi%juPhon%qvec_efield)
+            call BEC_obj%perform_scf(fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,juPhon,rho,vTot,vxc,results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id, &
+                                     dfpt_eig_id2,l_minusq,qm_results,results1m,qm_eig_id,dfpt_eigm_id,dfpt_eigm_id2)
+            call BEC_obj%write_outfiles(fi,fmpi,juPhon)
+            
+            !call dfpt_borncharges(fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,rho,vTot,vxc,grRho3,grVtot3,grVC3,grVext3, &
+            !                        results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id,dfpt_eig_id2,l_minusq,qm_results,results1m,qm_eig_id,dfpt_eigm_id,dfpt_eigm_id2)
             call timestop("dfpt born effective charges")
          end if 
          if (fi%juPhon%l_phonon) then 

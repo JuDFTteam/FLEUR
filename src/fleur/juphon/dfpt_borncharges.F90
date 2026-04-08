@@ -22,7 +22,7 @@ contains
         use m_eigen
         use m_fermie
         use m_dfpt_sternheimer
-        use m_types_BEC
+        use m_types_BEC_old !This will be removed
         USE m_dfpt_born_effcharge
 
 
@@ -57,7 +57,7 @@ contains
 
         ! BEC properties
         type(t_fleurinput) :: fi
-        type(t_BEC) :: bec
+        type(t_BEC_old) :: bec
         complex,allocatable :: born_eff_charge_contributions(:,:,:,:)
         ! helper types
         type(t_hub1data) :: hub1data

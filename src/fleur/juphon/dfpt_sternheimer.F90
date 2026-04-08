@@ -381,7 +381,6 @@ CONTAINS
          ! gradient and exit here; no mixing yet!
          IF (strho) THEN
             strho = .FALSE.
-            !print*,"sum(denOut1%pw(:,:))",sum(denOut1%pw(:,:))
             denIn1 = denOut1
             denIn1Im = denOut1Im
 

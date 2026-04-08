@@ -163,7 +163,7 @@ contains
         TYPE(t_stars),      INTENT(IN)     :: stars, starsq
         type(t_potden), intent(in)         :: rho
         ! type(t_potden), intent(inout)         :: rho_core
-        type(t_potden), intent(inout)         :: denIn1,denIn1Im
+        type(t_potden), intent(in)         :: denIn1,denIn1Im
         type(t_potden),optional, intent(in)     ::grRho
         TYPE(t_mpi),        intent(in)     :: fmpi
         !complex, intent(in)                 :: grrho_val(:,:,:,:)
@@ -201,10 +201,10 @@ contains
         IF (.FALSE.) denIn1_mt(:,0:,iDType) = &
                             denIn1_mt(:,0:,iDType) - &
                             (grRho%mt(:,0:,iDType,1)+grRho%mt(:,0:,iDType,fi%input%jspins))/(3.0-fi%input%jspins)
-
-        IF (.FALSE.) denIn1%mt(:,0:,iDType,1) = &
-                            denIn1%mt(:,0:,iDType,1) - &
-                            (grRho%mt(:,0:,iDType,1)+grRho%mt(:,0:,iDType,fi%input%jspins))/(3.0-fi%input%jspins)
+        ! This is some debugging stuff 
+        !IF (.FALSE.) denIn1%mt(:,0:,iDType,1) = &
+        !                    denIn1%mt(:,0:,iDType,1) - &
+        !                    (grRho%mt(:,0:,iDType,1)+grRho%mt(:,0:,iDType,fi%input%jspins))/(3.0-fi%input%jspins)
         rho_pw = (rho%pw(:,1)+rho%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
         rho_mt = (rho%mt(:,0:,:,1)+rho%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
         

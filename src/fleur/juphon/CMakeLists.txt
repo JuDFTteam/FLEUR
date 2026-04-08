@@ -38,6 +38,7 @@ src/fleur/juphon/dfpt_NAC.F90
 src/fleur/juphon/types_dfpt.F90
 src/fleur/juphon/types_phonon.F90
 src/fleur/juphon/types_efield.F90
+src/fleur/juphon/types_BEC.F90
 src/fleur/juphon/superconductivity/dfpt_elph_mat.F90
 src/fleur/juphon/superconductivity/dfpt_tetra_double.F90
 src/fleur/juphon/superconductivity/dfpt_tetra_single.F90

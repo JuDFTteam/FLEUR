@@ -1,9 +1,9 @@
-MODULE m_types_BEC
+MODULE m_types_BEC_old
     ! type introduced to simplify Born effective charge output
     USE m_types
     IMPLICIT NONE
     PUBLIC
-    TYPE t_BEC
+    TYPE t_BEC_old
         complex, allocatable ::  BEC_element(:,:,:)
         complex, allocatable ::  BEC_contributions(:,:,:,:)
 
@@ -12,12 +12,12 @@ MODULE m_types_BEC
         !PROCEDURE :: init_BEC_contributions
         !GENERIC   :: init=>init_BEC_element,init_BEC_contributions
         PROCEDURE :: init
-    END TYPE t_BEC
+    END TYPE t_BEC_old
 
 CONTAINS
     SUBROUTINE init(this,fi)
         implicit none
-        class(t_BEC),INTENT(INOUT)        :: this
+        class(t_BEC_old),INTENT(INOUT)        :: this
         TYPE(t_fleurinput),INTENT(IN)     :: fi
 
         ALLOCATE(this%BEC_element(fi%atoms%nat,3,3))
@@ -27,4 +27,4 @@ CONTAINS
 
     END SUBROUTINE init
         
-END MODULE m_types_BEC
+END MODULE m_types_BEC_old

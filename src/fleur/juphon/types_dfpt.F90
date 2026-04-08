@@ -40,7 +40,7 @@ module m_types_dfpt
             type(t_fleurinput), intent(in) :: fi 
             integer, intent(in)            :: nqpts
             type(t_juPhon), intent(out)    :: juPhon 
-            complex,optional,intent(in)    :: dynMatNac(:,:)
+            complex,optional,intent(in)    :: dynMatNac(:,:) !Maybe change this in the future
         end subroutine init_child
     end interface 
 
@@ -141,7 +141,7 @@ contains
     end subroutine
 
 
-    subroutine perform_scf(this,fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,juPhon,rho,vTot,vxc,&
+    subroutine perform_scf(this,fi_ext,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,juPhon,rho,vTot,vxc,&
                             results,resultsq, results1, eig_id,q_eig_id, & 
                             dfpt_eig_id,dfpt_eig_id2,l_minusq,resultsqm,results1m,qm_eig_id, dfpt_eigm_id, dfpt_eigm_id2)
         use m_eigen 
@@ -151,7 +151,7 @@ contains
         use m_types
 
         class(t_dfpt), intent(inout) :: this 
-        type(t_fleurinput), intent(in)  :: fi 
+        type(t_fleurinput), intent(in)  :: fi_ext 
         type(t_mpi), intent(in)         :: fmpi
         type(t_stars),intent(in)      :: stars
         type(t_sphhar),intent(in)     :: sphhar
@@ -170,6 +170,8 @@ contains
         type(t_results),intent(inout)       :: results1 , results1m
         integer, intent(in) :: eig_id, q_eig_id, dfpt_eig_id,dfpt_eig_id2,qm_eig_id,dfpt_eigm_id,dfpt_eigm_id2
         logical, intent(in) :: l_minusq
+
+        type(t_fleurinput)         :: fi
 
         ! gradient variables 
         type(t_potden)   :: grRho3(3),grVtot3(3),grVc3(3),grVext3(3),grgrVext3x3(3,3)
@@ -191,6 +193,13 @@ contains
 #ifdef CPP_MPI
         integer :: ierr
 #endif 
+
+        fi = fi_ext
+        if (juphon%l_borneffcharge) THEN
+            fi%juPhon%l_phonon = .TRUE.
+        end if
+        !this is 
+
 
         iDir_start = 1 
         iDir_end   = 3
@@ -319,7 +328,7 @@ contains
                             call vTot1mIm%reset_dfpt()
                             call results1m%reset_results(fi%input)
                             ! I am unsure why there is no vC1m 
-                        end if 
+                        end if    
                             
                         if (fmpi%irank==0) write(*,*) '-------------------------'
                         ! Legacy Comment: Dont dare to delete it
