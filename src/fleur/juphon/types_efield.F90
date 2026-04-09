@@ -125,7 +125,7 @@ module m_types_efield
 
 
         call timestart("Dielecten row")
-        call dfpt_dielecten_HF_int(fi,stars,starsq,sphhar,fmpi,den1,den1Im,results, results1,diel_tensor(iDir,:),rho,iDir,1)
+        call dfpt_dielecten_HF_int(fi,stars,starsq,sphhar,fmpi,den1,den1Im,diel_tensor(iDir,:),rho,iDir,1)
         call timestop("Dielecten row")
         
         call this%set_dielecTen(diel_tensor)

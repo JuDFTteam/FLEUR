@@ -139,7 +139,7 @@ contains
                                   den1, vTot1, den1Im, vTot1Im, vC1, vC1Im)
             call timestop("Sternheimer")
             if (fmpi%irank==0) write(*,*) '-------------------------'  
-            call dfpt_dielecten_HF_int(fi,stars,starsq,sphhar,fmpi,den1,den1Im,results, results1,diel_tensor(iDir,:),rho,iDir,1)
+            call dfpt_dielecten_HF_int(fi,stars,starsq,sphhar,fmpi,den1,den1Im,diel_tensor(iDir,:),rho,iDir,1)
 
 
 

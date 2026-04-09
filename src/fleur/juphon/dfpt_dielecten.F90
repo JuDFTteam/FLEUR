@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2024 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -18,7 +18,7 @@ module m_dfpt_dielecten
 
 contains
 
-    subroutine dfpt_dielecten_HF_int(fi,stars,starsq,sphhar,fmpi,denIn1,denIn1Im,results,results1,dieltensor_row,rho,iDir_den,q_sign)
+    subroutine dfpt_dielecten_HF_int(fi,stars,starsq,sphhar,fmpi,denIn1,denIn1Im,dieltensor_row,rho,iDir_den,q_sign)
 
 
         
@@ -26,7 +26,6 @@ contains
         type(t_sphhar),    intent(in)      :: sphhar
         type(t_stars),     intent(in)      :: stars, starsq
         type(t_potden), intent(in)         :: denIn1,denIn1Im
-        type(t_results), intent(in)        :: results, results1
         type(t_mpi),        intent(in)     :: fmpi
         complex, intent(inout)             :: dieltensor_row(:)
         integer, intent(in)                :: q_sign
