@@ -103,14 +103,6 @@ CONTAINS
                                 .NOT.fi%INPUT%eig66(1), .FALSE., fi%noco%l_soc, fi%INPUT%eig66(1), .FALSE., fmpi%n_size)
       END IF
 
-      ! ! Generate the gradients of the density and the various potentials, that will be used at different points in the programm.
-      ! ! The density gradient is calculated by numerical differentiation, while the potential gradients are constructed (from the
-      ! ! density gradient) by a Weinert construction, just like the potentials are from the density.
-      ! ! This is done to ensure good continuity.
-      ! CALL timestart("Gradient generation")
-      ! call dfpt_generate_gradient(fi,fmpi,sphhar,hybdat,xcpot,nococonv,stars,rho,vTot,grRho3,grVtot3,grVC3,grVext3,grgrVext3x3)
-      ! CALL timestop("Gradient generation")
-
       if (fi%juPhon%l_scf) then 
          if (fi%juPhon%l_efield) then 
             call timestart("dfpt efield")
@@ -121,8 +113,6 @@ CONTAINS
             call efield_obj%perform_scf(sternheimerJob,fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,fi%juPhon,rho,vTot,vxc,results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id, &
                                      dfpt_eig_id2,l_minusq,qm_results,results1m,qm_eig_id,dfpt_eigm_id,dfpt_eigm_id2)
             call efield_obj%write_outfiles(fi,fmpi,fi%juPhon)
-            ! call dfpt_efield(fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,rho,vTot,vxc,grRho3, &
-            !                  grVtot3,grVext3,results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id,dfpt_eig_id2)
             call timestop("dfpt efield")
          end if 
          if (fi%juPhon%l_borneffcharge) then
@@ -134,23 +124,18 @@ CONTAINS
             call BEC_obj%perform_scf(sternheimerJob,fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,fi%juPhon,rho,vTot,vxc,results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id, &
                                      dfpt_eig_id2,l_minusq,qm_results,results1m,qm_eig_id,dfpt_eigm_id,dfpt_eigm_id2)
             call BEC_obj%write_outfiles(fi,fmpi,fi%juPhon)
-            
-            !call dfpt_borncharges(fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,rho,vTot,vxc,grRho3,grVtot3,grVC3,grVext3, &
-            !                        results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id,dfpt_eig_id2,l_minusq,qm_results,results1m,qm_eig_id,dfpt_eigm_id,dfpt_eigm_id2)
             call timestop("dfpt born effective charges")
          end if 
          if (fi%juPhon%l_phonon) then 
             allocate(t_phonon :: phonon_obj)
+            call timestart("dfpt phonons")
+            ! Do a scf calculation with atom displacements as the perturbation
             call phonon_obj%init(fi,fi%juPhon%qvec)
             call sternheimerJob%init(fi,l_phonon=.true.)
             call phonon_obj%perform_scf(sternheimerJob,fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,fi%juPhon,rho,vTot,vxc,results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id, &
                                       dfpt_eig_id2,l_minusq,qm_results,results1m,qm_eig_id,dfpt_eigm_id,dfpt_eigm_id2)
             call phonon_obj%write_outfiles(fi,fmpi,fi%juPhon)
-            ! call timestart("dfpt phonons")
-            ! ! Do a scf calculation for a phonon perturbation
-            ! call dfpt_phonon(fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,rho,vTot,vxc,grRho3,grVtot3,grVC3,grVext3,grgrVext3x3, &
-            !                  results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id,dfpt_eig_id2,l_minusq,qm_results,results1m,qm_eig_id,dfpt_eigm_id,dfpt_eigm_id2)
-            ! call timestop("dfpt phonons")
+            call timestop("dfpt phonons")
          end if 
       end if 
 

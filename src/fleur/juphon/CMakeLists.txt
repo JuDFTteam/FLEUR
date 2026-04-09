@@ -1,8 +1,5 @@
 set(fleur_F90 ${fleur_F90}
 src/fleur/juphon/dfpt.F90
-#src/fleur/juphon/dfpt_phonon.F90
-#src/fleur/juphon/dfpt_efield.F90
-#src/fleur/juphon/dfpt_borncharges.F90
 src/fleur/juphon/dfpt_interpolation.F90
 src/fleur/juphon/dfpt_check.F90
 src/fleur/juphon/dfpt_sternheimer.F90
