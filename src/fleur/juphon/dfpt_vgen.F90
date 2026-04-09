@@ -39,6 +39,7 @@ CONTAINS
       USE m_get_mt_perturbation
       USE m_dfpt_vgen_finalize
       USE m_dfpt_vefield
+      USE m_dfpt_vbfield
       USE m_checkdopall
       USE m_plot
 
@@ -128,7 +129,8 @@ CONTAINS
       IF (juphon%l_efield) THEN
          ALLOCATE( dfptvefield%pw_w(size(dfptvefield%pw,1),size(dfptvefield%pw,2)))
          ALLOCATE( dfptvefieldimag%pw_w(size(dfptvefieldimag%pw,1),size(dfptvefieldimag%pw,2)))
-      END IF 
+      else IF 
+         
 #endif
 
       ALLOCATE(vCoul%pw_w(SIZE(vCoul%pw,1),size(vCoul%pw,2)))
@@ -146,8 +148,6 @@ CONTAINS
          sliceplot_int = sliceplot
       END IF 
 
-
-
       ! a)
       ! Sum up both spins in den into workden:
       CALL den%sum_both_spin(workden)
@@ -162,7 +162,6 @@ CONTAINS
          CALL dfptvefield%copy_both_spin(dfptvTot)
          CALL dfptvefieldimag%copy_both_spin(dfptvTotimag)
 
-         
          IF (l_xc) THEN
             CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,juphon,starsq,cell,sphhar,atomsefield,.TRUE.,workdenReal,vCoul,&
                      & dfptdenimag=workdenImag,dfptvCoulimag=dfptvCoulimag,dfptden0=workden,stars2=stars,iDtype=iDtype,iDir=iDir)
@@ -170,7 +169,21 @@ CONTAINS
             dfptvTot%mt = dfptvTot%mt + vCoul%mt
             dfptvTotimag%mt = dfptvTotimag%mt + dfptvCoulimag%mt
          END IF
-         !print*,"sum dfptvTot in dfpt_vgen ef", sum(dfptvTot%pw(:,1))
+      else if (juphon%l_bfield) then
+         atomsefield = atoms
+         atomsefield%zatom(:) = 0.0 ! find out if this is actually needed, actually check that
+         CALL dfpt_vbfield(input,stars,noco,atoms,dfptvTot,dfptvTotimag)
+         !CALL dfptvefield%copy_both_spin(dfptvTot)
+         !CALL dfptvefieldimag%copy_both_spin(dfptvTotimag)
+
+         IF (l_xc) THEN
+            CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,juphon,starsq,cell,sphhar,atomsefield,.TRUE.,workdenReal,vCoul,&
+                     & dfptdenimag=workdenImag,dfptvCoulimag=dfptvCoulimag,dfptden0=workden,stars2=stars,iDtype=iDtype,iDir=iDir)
+            dfptvTot%pw = dfptvTot%pw + vCoul%pw
+            dfptvTot%mt = dfptvTot%mt + vCoul%mt
+            dfptvTotimag%mt = dfptvTotimag%mt + dfptvCoulimag%mt
+         end if 
+
       ELSE !standard phonon case
          CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,juphon,starsq,cell,sphhar,atoms,.TRUE.,workdenReal,vCoul,&
                      & dfptdenimag=workdenImag,dfptvCoulimag=dfptvCoulimag,dfptden0=workden,stars2=stars,iDtype=iDtype,iDir=iDir)

@@ -31,7 +31,10 @@ src/fleur/juphon/dfpt_dynmat_sym.f90
 src/fleur/juphon/dfpt_generate_gradient.F90
 src/fleur/juphon/dfpt_gradient.F90
 src/fleur/juphon/dfpt_vefield.F90
+src/fleur/juphon/dfpt_vbfield.F90
+src/fleur/juphon/dfpt_bfield.F90
 src/fleur/juphon/dfpt_dielecten.F90
+src/fleur/juphon/dfpt_magsusc.F90
 src/fleur/juphon/dfpt_born_effcharge.F90
 src/fleur/juphon/dfpt_potdenLocal.F90
 src/fleur/juphon/dfpt_NAC.F90

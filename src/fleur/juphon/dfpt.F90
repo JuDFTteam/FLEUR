@@ -26,6 +26,7 @@ CONTAINS
       use m_types_phonon
       use m_types_efield
       use m_types_BEC
+      use m_dfpt_bfield
 
 
       TYPE(t_mpi),        INTENT(IN)     :: fmpi
@@ -111,6 +112,18 @@ CONTAINS
       CALL timestop("Gradient generation")
 
       if (fi%juPhon%l_scf) then 
+         if (fi%juPhon%l_bfield) then 
+            call timestart("dfpt bfield")
+            ! Do a scf calculation with an electric field as the external perturbation
+            !allocate(t_efield_pert :: efield_obj)
+            !call efield_obj%init(fi,juPhon,fi%juPhon%qvec_efield)
+            !call efield_obj%perform_scf(fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,juPhon,rho,vTot,vxc,results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id, &
+            !                         dfpt_eig_id2,l_minusq,qm_results,results1m,qm_eig_id,dfpt_eigm_id,dfpt_eigm_id2)
+            !call efield_obj%write_outfiles(fi,fmpi,juPhon)
+            call dfpt_bfield(fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,rho,vTot,vxc,grRho3, &
+                              grVtot3,grVext3,results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id,dfpt_eig_id2)
+            call timestop("dfpt bfield")
+         end if 
          if (fi%juPhon%l_efield) then 
             call timestart("dfpt efield")
             ! Do a scf calculation with an electric field as the external perturbation

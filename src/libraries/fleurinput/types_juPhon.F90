@@ -39,6 +39,7 @@ MODULE m_types_juPhon
       LOGICAL :: l_efield_scr = .FALSE.
       LOGICAL :: l_borneffcharge = .FALSE.
       LOGICAL :: l_polar = .FALSE.
+      LOGICAL :: l_bfield = .FALSE.
       LOGICAL :: l_symVacLevel = .TRUE. ! Symmetrize the vacua levels  
 
       REAL, ALLOCATABLE :: qvec(:,:)
@@ -94,6 +95,7 @@ CONTAINS
       CALL mpi_bc(this%l_efield_scr, rank, mpi_comm)
       CALL mpi_bc(this%l_borneffcharge, rank, mpi_comm)
       CALL mpi_bc(this%l_polar, rank, mpi_comm)
+      CALL mpi_bc(this%l_bfield, rank, mpi_comm)
       CALL mpi_bc(this%qlim,rank,mpi_comm)
       CALL mpi_bc(this%gmaxzLocal,rank,mpi_comm)
       CALL mpi_bc(this%l_symVacLevel, rank, mpi_comm)
@@ -271,6 +273,12 @@ CONTAINS
 
          IF (numberNodes == 1) THEN
            this%l_polar    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_polar'))
+         END IF
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_bfield')
+
+         IF (numberNodes == 1) THEN
+           this%l_bfield    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_bfield'))
          END IF
 
          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_symVacLevel')
