@@ -52,24 +52,17 @@ module m_types_efield
     end subroutine get_dielecTen
 
 
-    subroutine init_child_efield(this,fi,nqpts,juPhon,dynMatNac)
+    subroutine init_child_efield(this,fi,nqpts,dynMatNac)
         use m_types
         class(t_efield_pert), intent(inout) :: this
         type(t_fleurinput), intent(in) :: fi 
         integer, intent(in)  :: nqpts
-        type(t_juphon), intent(out)    :: juPhon 
         complex, optional, intent(in)  :: dynMatNac(:,:)
         
 
         allocate(this%dielecTen(3,3))
 
         this%dielecTen = cmplx(0.0,0.0)
-        
-        juPhon = fi%juphon 
-
-        juPhon%l_phonon = .false.
-        juPhon%l_efield = .true.
-        juPhon%l_borneffcharge = .false.
         
     end subroutine init_child_efield
 
@@ -89,7 +82,7 @@ module m_types_efield
         type(t_hybdat),intent(inout)     :: hybdat
         type(t_potden),intent(in)     :: rho 
         type(t_potden),intent(in)     :: vTot
-        type(t_potden), intent(in) :: grRho3(3), grVtot3(3), grVC3(3), grVext3(3),grgrVext3x3(3,3)
+        type(t_potden), intent(inout) :: grRho3(3), grVtot3(3), grVC3(3), grVext3(3),grgrVext3x3(3,3)
 
     end subroutine q_indepent_properties_efield
 

@@ -14,9 +14,7 @@ module m_types_dfpt
     public :: t_dfpt
 
     type,abstract :: t_dfpt
-
-        integer :: iDtypeLoop = 1 ! perform scf loop over atom 
-        logical :: l_phonon = .true.  ! phonon type perturbation  
+  
         real, allocatable :: qVectors(:,:)
 
         contains 
@@ -33,13 +31,12 @@ module m_types_dfpt
 
 
     interface 
-        subroutine init_child(this,fi,nqpts,juPhon,dynMatNac)
+        subroutine init_child(this,fi,nqpts,dynMatNac)
             use m_types
             import t_dfpt
             class(t_dfpt),intent(inout)    :: this
             type(t_fleurinput), intent(in) :: fi 
             integer, intent(in)            :: nqpts
-            type(t_juPhon), intent(out)    :: juPhon 
             complex,optional,intent(in)    :: dynMatNac(:,:) !Maybe change this in the future
         end subroutine init_child
     end interface 
@@ -61,7 +58,7 @@ module m_types_dfpt
             type(t_hybdat),intent(inout)      :: hybdat
             type(t_potden),intent(in)         :: rho 
             type(t_potden),intent(in)         :: vTot
-            type(t_potden), intent(in)        :: grRho3(3), grVtot3(3), grVC3(3), grVext3(3),grgrVext3x3(3,3)
+            type(t_potden), intent(inout)        :: grRho3(3), grVtot3(3), grVC3(3), grVext3(3),grgrVext3x3(3,3)
         end subroutine q_indepent_properties
     end interface 
 
@@ -123,30 +120,26 @@ module m_types_dfpt
 
 contains
 
-    subroutine init_scf(this,fi,juPhon,qvec)
+    subroutine init_scf(this,fi,qvec)
         use m_types_fleurinput
         use m_types_juPhon
         class(t_dfpt), intent(inout) :: this
         type(t_fleurinput),intent(in) :: fi 
         real, intent(in) :: qvec(:,:)
-        type(t_juPhon),intent(out) :: juPhon
         integer :: nqpts
 
         ! set up necessary input that seperates the different types of scf calculations 
 
         allocate(this%qVectors,mold=qvec)
         this%qVectors = qvec
-
         nqpts = size(qvec,2)
 
-        call this%init_child(fi,nqpts,juPhon)
-
-        if (juPhon%l_phonon) this%iDtypeLoop = fi%atoms%nat
+        call this%init_child(fi,nqpts)
 
     end subroutine
 
 
-    subroutine perform_scf(this,sternheimerJob,fi_ext,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,juPhon,rho,vTot,vxc,&
+    subroutine perform_scf(this,sternheimerJob,fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,juPhon,rho,vTot,vxc,&
                             results,resultsq, results1, eig_id,q_eig_id, & 
                             dfpt_eig_id,dfpt_eig_id2,l_minusq,resultsqm,results1m,qm_eig_id, dfpt_eigm_id, dfpt_eigm_id2)
         use m_eigen 
@@ -158,7 +151,7 @@ contains
 
         class(t_dfpt), intent(inout) :: this 
         type(t_sternheimerJob),intent(in) :: sternheimerJob
-        type(t_fleurinput), intent(in)  :: fi_ext 
+        type(t_fleurinput), intent(in)  :: fi 
         type(t_mpi), intent(in)         :: fmpi
         type(t_stars),intent(in)      :: stars
         type(t_sphhar),intent(in)     :: sphhar
@@ -178,8 +171,6 @@ contains
         integer, intent(in) :: eig_id, q_eig_id, dfpt_eig_id,dfpt_eig_id2,qm_eig_id,dfpt_eigm_id,dfpt_eigm_id2
         logical, intent(in) :: l_minusq
 
-        type(t_fleurinput)         :: fi
-
         ! gradient variables 
         type(t_potden)   :: grRho3(3),grVtot3(3),grVc3(3),grVext3(3),grgrVext3x3(3,3)
 
@@ -192,7 +183,7 @@ contains
         type(t_hub1data) :: hub1data
         integer, allocatable :: q_list(:)
         logical :: l_real, l_gamma
-        integer :: iArray , iQ , ikpt, iDtype, iDir , iJob
+        integer :: iArray , iQ , ikpt, iDtype, iDir , iJob, jobNum
         character(len=20) :: dfpt_tag
 
         
@@ -201,23 +192,8 @@ contains
         integer :: ierr
 #endif 
 
-        fi = fi_ext
-        if (juphon%l_borneffcharge) THEN
-            fi%juPhon%l_phonon = .TRUE.
-        end if
     
         l_real = fi%sym%invs.and.(.not.fi%noco%l_soc).and.(.not.fi%noco%l_noco).and.fi%atoms%n_hia==0
-
-
-        ! calculate the gradients as this is currently a necessary input for the sternheimer in any perturbation 
-
-        ! Generate the gradients of the density and the various potentials, that will be used at different points in the programm.
-        ! The density gradient is calculated by numerical differentiation, while the potential gradients are constructed (from the
-        ! density gradient) by a Weinert construction, just like the potentials are from the density.
-        ! This is done to ensure good continuity.
-        call timestart("Gradient generation")
-        call dfpt_generate_gradient(sternheimerJob,fi,fmpi,sphhar,hybdat,xcpot,nococonv,stars,rho,vTot,grRho3,grVtot3,grVC3,grVext3,grgrVext3x3)
-        call timestop("Gradient generation")
 
         ! create a kpts type that contains the necessary q-vectors 
         qpts = fi%kpts
@@ -232,7 +208,8 @@ contains
 
         call this%q_indepent_properties(sternheimerJob,fi,fmpi,sphhar,hybdat,xcpot,nococonv,stars,rho,vTot,grRho3,grVtot3,grVC3,grVext3,grgrVext3x3)
 
-        do iJob = 1 , size(sternheimerJob%iJobList)
+        do jobNum = 1 , size(sternheimerJob%JobListMPI)
+            iJob   = sternheimerJob%JobListMPI(jobNum)
             iQ     = sternheimerJob%iQList(iJob)
             iDtype = sternheimerJob%iDtypeList(iJob)
             iDir   = sternheimerJob%iDirList(iJob)

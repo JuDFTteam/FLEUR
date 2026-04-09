@@ -15,7 +15,7 @@ module m_dfpt_borncharges
 
 contains 
 
-    subroutine dfpt_borncharges(fi_ext,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,rho,vTot,vxc,&
+    subroutine dfpt_borncharges(fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,rho,vTot,vxc,&
                             grRho3,grVtot3,grVc3,grVext3, results,resultsq, results1, eig_id,q_eig_id, & 
                             dfpt_eig_id,dfpt_eig_id2,l_minusq,resultsqm,results1m,qm_eig_id, dfpt_eigm_id, dfpt_eigm_id2)
 
@@ -27,7 +27,7 @@ contains
 
 
 
-        type(t_fleurinput),intent(in) :: fi_ext
+        type(t_fleurinput),intent(in) :: fi
         type(t_mpi),intent(in)        :: fmpi
         type(t_stars),intent(in)      :: stars
         type(t_sphhar),intent(in)     :: sphhar
@@ -56,7 +56,6 @@ contains
         type(t_stars)  :: starsq, starsmq
 
         ! BEC properties
-        type(t_fleurinput) :: fi
         type(t_BEC_old) :: bec
         complex,allocatable :: born_eff_charge_contributions(:,:,:,:)
         ! helper types
@@ -73,10 +72,6 @@ contains
 #ifdef CPP_MPI
         integer :: ierr
 #endif 
-
-        !set l_phonon to true, not nice WIP
-        fi= fi_ext
-        fi%juphon%l_phonon=.TRUE.
 
         !sigma_coul = cmplx(0.0,0.0)
         !sigma_ext = cmplx(0.0,0.0)

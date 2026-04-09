@@ -25,6 +25,10 @@ module m_types_sternheimerJob
         integer,allocatable :: iDtypeList(:)
         logical,allocatable :: needs_postprocessing(:)
 
+        ! List for task the MPI process has to perform 
+        integer,allocatable :: JobListMPI(:)     
+
+
         logical  :: l_phonon = .false.
         logical  :: l_BEC = .false.
         logical  :: l_efield = .false.
@@ -159,13 +163,15 @@ module m_types_sternheimerJob
         end if 
  
 
-        do iJob = 1 , jobSize
-            write(114,*) "jobNumber" , iJob
-            write(114,*) "iQ" , this%iQList(iJob)
-            write(114,*) "iDtype" , this%iDtypeList(iJob)
-            write(114,*) "iDir" , this%iDirList(iJob)
-            write(114,*) "postprocessing?" , this%needs_postprocessing(iJob)
-
+        ! This is a placeholder for future mpi parallelisation 
+        ! Please be careful when distributing the jobs
+        ! Carefully think about the distribution of the q points
+        ! As the postprocessing_q_point needs the full information of 
+        ! Sternheimer scf for that specific q point. This could lead to long
+        ! waiting times for some iranks. 
+        allocate(this%JobListMPI(jobSize))
+        do iJob = 1 , size(this%JobListMPI)
+            this%JobListMPI(iJob) =  iJob
         end do 
 
     end subroutine init_sternheimerJob 

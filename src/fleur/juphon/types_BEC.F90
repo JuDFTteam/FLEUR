@@ -56,12 +56,11 @@ module m_types_BEC
     end subroutine get_BEC
 
 
-    subroutine init_child_BEC(this,fi,nqpts,juPhon,dynMatNac)
+subroutine init_child_BEC(this,fi,nqpts,dynMatNac)
         use m_types
         class(t_BEC), intent(inout) :: this
         type(t_fleurinput), intent(in) :: fi 
         integer, intent(in)  :: nqpts
-        type(t_juphon), intent(out)    :: juPhon 
         complex, optional, intent(in)  :: dynMatNac(:,:)
         
 
@@ -71,18 +70,13 @@ module m_types_BEC
         this%borneffcharge = cmplx(0.0,0.0)
         this%borneffcharge_ctrb = cmplx(0.0,0.0)
         
-        juPhon = fi%juphon 
-
-        juPhon%l_phonon = .true.
-        juPhon%l_efield = .false.
-        juPhon%l_borneffcharge = .true.
-        
     end subroutine init_child_BEC
 
     subroutine q_indepent_properties_BEC(this,sternheimerJob,fi,fmpi,sphhar,hybdat,xcpot,nococonv,stars,rho,vTot,grRho3,grVtot3,grVC3,grVext3,grgrVext3x3)
         
         use m_types
         use m_types_sternheimerJob
+        use m_dfpt_generate_gradient
 
         class(t_BEC), intent(inout) :: this
         type(t_sternheimerjob),intent(in) :: sternheimerJob
@@ -95,7 +89,19 @@ module m_types_BEC
         type(t_hybdat),intent(inout)     :: hybdat
         type(t_potden),intent(in)     :: rho 
         type(t_potden),intent(in)     :: vTot
-        type(t_potden), intent(in) :: grRho3(3), grVtot3(3), grVC3(3), grVext3(3),grgrVext3x3(3,3)
+        type(t_potden), intent(inout) :: grRho3(3), grVtot3(3), grVC3(3), grVext3(3),grgrVext3x3(3,3)
+
+
+        ! calculate the gradients as this is currently a necessary input for the sternheimer in any perturbation 
+
+        ! Generate the gradients of the density and the various potentials, that will be used at different points in the programm.
+        ! The density gradient is calculated by numerical differentiation, while the potential gradients are constructed (from the
+        ! density gradient) by a Weinert construction, just like the potentials are from the density.
+        ! This is done to ensure good continuity.
+        call timestart("Gradient generation")
+        call dfpt_generate_gradient(sternheimerJob,fi,fmpi,sphhar,hybdat,xcpot,nococonv,stars,rho,vTot,grRho3,grVtot3,grVC3,grVext3,grgrVext3x3)
+        call timestop("Gradient generation")
+
 
     end subroutine q_indepent_properties_BEC
 

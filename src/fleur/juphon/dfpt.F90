@@ -51,7 +51,6 @@ CONTAINS
       TYPE(t_potden)                :: grRho3(3), grVtot3(3), grVC3(3), grVext3(3)
       TYPE(t_potden)                :: grgrVext3x3(3,3)
       TYPE(t_results)               :: q_results, results1, qm_results, results1m
-      TYPE(t_juPhon)                :: juPhon
 
       INTEGER :: nspins 
       INTEGER :: q_eig_id, dfpt_eig_id, dfpt_eig_id2, qm_eig_id, dfpt_eigm_id, dfpt_eigm_id2
@@ -117,11 +116,11 @@ CONTAINS
             call timestart("dfpt efield")
             ! Do a scf calculation with an electric field as the external perturbation
             allocate(t_efield_pert :: efield_obj)
-            call efield_obj%init(fi,juPhon,fi%juPhon%qvec_efield)
+            call efield_obj%init(fi,fi%juPhon%qvec_efield)
             call sternheimerJob%init(fi,l_efield=.true.)
-            call efield_obj%perform_scf(sternheimerJob,fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,juPhon,rho,vTot,vxc,results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id, &
+            call efield_obj%perform_scf(sternheimerJob,fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,fi%juPhon,rho,vTot,vxc,results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id, &
                                      dfpt_eig_id2,l_minusq,qm_results,results1m,qm_eig_id,dfpt_eigm_id,dfpt_eigm_id2)
-            call efield_obj%write_outfiles(fi,fmpi,juPhon)
+            call efield_obj%write_outfiles(fi,fmpi,fi%juPhon)
             ! call dfpt_efield(fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,rho,vTot,vxc,grRho3, &
             !                  grVtot3,grVext3,results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id,dfpt_eig_id2)
             call timestop("dfpt efield")
@@ -130,11 +129,11 @@ CONTAINS
             call timestart("dfpt born effective charges") 
             ! Do a scf calculation for phonon for q-Vectors close to Gamma --> calculate the polar response
             allocate(t_BEC :: BEC_obj)
-            call BEC_obj%init(fi,juPhon,fi%juPhon%qvec_efield)
+            call BEC_obj%init(fi,fi%juPhon%qvec_efield)
             call sternheimerJob%init(fi,l_BEC=.true.)
-            call BEC_obj%perform_scf(sternheimerJob,fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,juPhon,rho,vTot,vxc,results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id, &
+            call BEC_obj%perform_scf(sternheimerJob,fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,fi%juPhon,rho,vTot,vxc,results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id, &
                                      dfpt_eig_id2,l_minusq,qm_results,results1m,qm_eig_id,dfpt_eigm_id,dfpt_eigm_id2)
-            call BEC_obj%write_outfiles(fi,fmpi,juPhon)
+            call BEC_obj%write_outfiles(fi,fmpi,fi%juPhon)
             
             !call dfpt_borncharges(fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,rho,vTot,vxc,grRho3,grVtot3,grVC3,grVext3, &
             !                        results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id,dfpt_eig_id2,l_minusq,qm_results,results1m,qm_eig_id,dfpt_eigm_id,dfpt_eigm_id2)
@@ -142,10 +141,11 @@ CONTAINS
          end if 
          if (fi%juPhon%l_phonon) then 
             allocate(t_phonon :: phonon_obj)
-            call phonon_obj%init(fi,juPhon,fi%juPhon%qvec)
+            call phonon_obj%init(fi,fi%juPhon%qvec)
             call sternheimerJob%init(fi,l_phonon=.true.)
-            call phonon_obj%perform_scf(sternheimerJob,fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,juPhon,rho,vTot,vxc,results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id, &
+            call phonon_obj%perform_scf(sternheimerJob,fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,fi%juPhon,rho,vTot,vxc,results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id, &
                                       dfpt_eig_id2,l_minusq,qm_results,results1m,qm_eig_id,dfpt_eigm_id,dfpt_eigm_id2)
+            call phonon_obj%write_outfiles(fi,fmpi,fi%juPhon)
             ! call timestart("dfpt phonons")
             ! ! Do a scf calculation for a phonon perturbation
             ! call dfpt_phonon(fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,rho,vTot,vxc,grRho3,grVtot3,grVC3,grVext3,grgrVext3x3, &

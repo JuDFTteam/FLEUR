@@ -57,13 +57,7 @@ contains
         type(t_potden)                     :: den1_dummy,den1Im_dummy
 
         TYPE(t_potden)  :: rho_loc0
-        TYPE(t_juphon)                     :: juphon_int
 
-        
-        juphon_int = fi%juPhon
-        juphon_int%l_efield = .FALSE.
-        juphon_int%l_borneffcharge = .FALSE.
-        juphon_int%l_phonon = .TRUE.
         !CALL dfpt_vefield_int(fi,stars,sphhar,fmpi,rho,-1)
         !CALL dfpt_vefield_int(fi,stars,sphhar,fmpi,rho,-1)
         !stop
@@ -110,7 +104,7 @@ contains
                 CALL vExt1Impho%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
                 print*,"right before it"
                 CALL dfpt_vgen(sternheimerJob,hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
-                            juphon_int,fi%cell,fmpi,fi%noco,nococonv,rho_loc0,vTot,&
+                            fi%juPhon,fi%cell,fmpi,fi%noco,nococonv,rho_loc0,vTot,&
                             starsq,den1Im_dummy,vExt1pho,.FALSE.,vExt1Impho,den1_dummy,iDtype,iDir,[1,1],l_vextpho=.TRUE.)
                 
                 print*,"sum(vExt1pho%pw(:,1))", sum(vExt1pho%pw(:,1))

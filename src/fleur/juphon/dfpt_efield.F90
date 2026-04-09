@@ -14,7 +14,7 @@ module m_dfpt_efield
 
 contains 
 
-    subroutine dfpt_efield(fi_ext,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,rho,vTot,vxc,&
+    subroutine dfpt_efield(fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,rho,vTot,vxc,&
                             grRho3,grVtot3,grVext3,results,resultsq,results1, eig_id,q_eig_id, dfpt_eig_id,dfpt_eig_id2)
 
 
@@ -25,7 +25,7 @@ contains
         use m_dfpt_dielecten
 
 
-        type(t_fleurinput),intent(in) :: fi_ext 
+        type(t_fleurinput),intent(in) :: fi
         type(t_mpi),intent(in)        :: fmpi
         type(t_stars),intent(in)      :: stars
         type(t_sphhar),intent(in)     :: sphhar
@@ -50,7 +50,6 @@ contains
         type(t_stars)  :: starsq
 
         ! dielectric tensor 
-        type(t_fleurinput) :: fi
         complex :: diel_tensor(3,3)
 
         ! helper types
@@ -66,9 +65,6 @@ contains
         integer :: ierr
 #endif 
     
-        !set l_phonon to true, not nice WIP
-        fi= fi_ext
-        fi%juphon%l_phonon=.FALSE.
 
 
         !sigma_coul = cmplx(0.0,0.0)
