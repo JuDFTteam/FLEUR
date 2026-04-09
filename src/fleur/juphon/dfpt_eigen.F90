@@ -35,7 +35,7 @@ CONTAINS
       USE m_types_mpimat
       USE m_dfpt_tlmplm
       USE m_local_hamiltonian
-      USE m_types_sternheimerJob
+      
 
       IMPLICIT NONE
 

@@ -44,7 +44,7 @@ module m_types_dfpt
     interface 
         subroutine q_indepent_properties(this,sternheimerJob,fi,fmpi,sphhar,hybdat,xcpot,nococonv,stars,rho,vTot,grRho3,grVtot3,grVC3,grVext3,grgrVext3x3)
             use m_types
-            use m_types_sternheimerJob
+            
 
             import t_dfpt
             class(t_dfpt),intent(inout)       :: this      
@@ -67,7 +67,7 @@ module m_types_dfpt
         subroutine postprocessing_scf(this,sternheimerJob,fi,stars,starsq,sphhar,xcpot,nococonv,hybdat,fmpi,qpts,q_list,iQ,iDtype,iDir,eig_id,dfpt_eig_id, &
                                           dfpt_eig_id2,enpara,results,results1,l_real,juPhon,rho,vTot,grRho3,grVext3,grVc3,den1,vTot1,den1Im,vTot1Im,vC1,vC1Im)
             use m_types
-            use m_types_sternheimerJob
+            
             import t_dfpt
             class(t_dfpt),intent(inout)       :: this
             type(t_sternheimerjob),intent(in) :: sternheimerJob 
@@ -147,7 +147,7 @@ contains
         use m_dfpt_sternheimer
         use m_dfpt_generate_gradient
         use m_types
-        use m_types_sternheimerJob
+        
 
         class(t_dfpt), intent(inout) :: this 
         type(t_sternheimerJob),intent(in) :: sternheimerJob
@@ -202,9 +202,6 @@ contains
         qpts%bk(:, :size(this%qVectors,2)) = this%qVectors
         allocate(q_list(size(this%qVectors,2)))  
         q_list = (/(iArray, iArray=1,SIZE(this%qVectors,2), 1)/)
-
-        ! q_start = juPhon%startq
-        ! q_stop = merge(juPhon%stopq,size(q_list),juPhon%stopq/=0)
 
         call this%q_indepent_properties(sternheimerJob,fi,fmpi,sphhar,hybdat,xcpot,nococonv,stars,rho,vTot,grRho3,grVtot3,grVC3,grVext3,grgrVext3x3)
 

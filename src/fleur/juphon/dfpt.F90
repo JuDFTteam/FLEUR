@@ -26,7 +26,7 @@ CONTAINS
       use m_types_phonon
       use m_types_efield
       use m_types_BEC
-      use m_types_sternheimerJob
+      
 
 
       TYPE(t_mpi),        INTENT(IN)     :: fmpi

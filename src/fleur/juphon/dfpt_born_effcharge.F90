@@ -17,7 +17,7 @@ module m_dfpt_born_effcharge
     USE m_constants
     USE m_checkdopall
     USE m_types_fftGrid
-    use m_types_sternheimerJob
+    
 
 
 

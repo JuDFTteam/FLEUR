@@ -28,7 +28,7 @@ contains
     use m_sphbes
     use m_qsf
     USE m_mpi_reduce_tool
-    use m_types_sternheimerJob
+    
      
      
     use m_types

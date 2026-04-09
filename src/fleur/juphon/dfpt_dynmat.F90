@@ -20,7 +20,7 @@ CONTAINS
       USE m_vgen_coulomb
       USE m_dfpt_eii2
       USE m_dfpt_potdenLocal
-      USE m_types_sternheimerJob
+      
 
       TYPE(t_sternheimerJob),INTENT(IN) :: sternheimerJob
       TYPE(t_fleurinput), INTENT(IN)    :: fi

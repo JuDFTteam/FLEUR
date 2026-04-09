@@ -69,7 +69,7 @@ module m_types_efield
     subroutine q_indepent_properties_efield(this,sternheimerJob,fi,fmpi,sphhar,hybdat,xcpot,nococonv,stars,rho,vTot,grRho3,grVtot3,grVC3,grVext3,grgrVext3x3)
         
         use m_types
-        use m_types_sternheimerJob
+        
 
         class(t_efield_pert), intent(inout) :: this
         type(t_sternheimerjob),intent(in) :: sternheimerJob
@@ -92,7 +92,7 @@ module m_types_efield
         
         use m_types
         use m_dfpt_dielecten
-        use m_types_sternheimerJob
+        
 
         class(t_efield_pert),intent(inout) :: this
         type(t_sternheimerjob),intent(in) :: sternheimerJob 

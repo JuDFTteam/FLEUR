@@ -75,7 +75,7 @@ subroutine init_child_BEC(this,fi,nqpts,dynMatNac)
     subroutine q_indepent_properties_BEC(this,sternheimerJob,fi,fmpi,sphhar,hybdat,xcpot,nococonv,stars,rho,vTot,grRho3,grVtot3,grVC3,grVext3,grgrVext3x3)
         
         use m_types
-        use m_types_sternheimerJob
+        
         use m_dfpt_generate_gradient
 
         class(t_BEC), intent(inout) :: this
@@ -111,7 +111,7 @@ subroutine init_child_BEC(this,fi,nqpts,dynMatNac)
         
         use m_types
         use m_dfpt_born_effcharge
-        use m_types_sternheimerJob
+        
 
         class(t_BEC),intent(inout) :: this
         type(t_sternheimerjob),intent(in) :: sternheimerJob

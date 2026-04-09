@@ -36,7 +36,7 @@ contains
     use m_convol
     use m_psqpw
     use m_cfft
-    use m_types_sternheimerJob
+    
     implicit none
 
     integer,            intent(in)               :: ispin

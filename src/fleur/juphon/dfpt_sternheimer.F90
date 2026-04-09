@@ -20,7 +20,7 @@ MODULE m_dfpt_sternheimer
    USE m_plot
    USE m_checkdopall
    use m_dfpt_vefield
-   use m_types_sternheimerJob
+   
 
 
 

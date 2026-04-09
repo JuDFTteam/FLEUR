@@ -49,7 +49,7 @@ module m_types_sternheimerJob
 
     subroutine init_sternheimerJob(this,fi,l_phonon,l_BEC,l_efield)
 
-        use m_types
+        use m_types_fleurinput
         
         class(t_sternheimerJob),intent(inout) :: this
         type(t_fleurinput),intent(in) :: fi 
@@ -59,6 +59,7 @@ module m_types_sternheimerJob
 
 
         integer :: jobSize , iJob , iQ , iDtype, iDir
+        integer :: q_start, q_stop
         ! we currently work with logicals to circumvent circular dependence
         ! it would be nicer to work with select type(t_dfpt) 
         logical :: l_ph = .false. 
@@ -85,7 +86,12 @@ module m_types_sternheimerJob
             this%l_phonon = .true.
             this%l_IBScorrection = .true. 
 
-            jobSize = 3 * fi%atoms%nat * size(fi%juPhon%qvec,2)      
+            ! Introduce the option to calculate a fraction of the input 
+            ! Useful for restarting a calculation
+            q_start = fi%juPhon%startq
+            q_stop = merge(fi%juPhon%stopq,size(fi%juPhon%qvec,2),fi%juPhon%stopq/=0)
+
+            jobSize = 3 * fi%atoms%nat * (q_stop - q_start + 1 ) 
 
             allocate(this%iJobList(jobSize))
             allocate(this%iQList(jobSize))
@@ -93,10 +99,14 @@ module m_types_sternheimerJob
             allocate(this%iDtypeList(jobSize))
             allocate(this%needs_postprocessing(jobSize))
 
+            q_start = fi%juPhon%startq
+            q_stop = merge(fi%juPhon%stopq,size(fi%juPhon%qvec,2),fi%juPhon%stopq/=0)
+
+
             iJob = 1 
             this%needs_postprocessing(:) = .false. 
             
-            do iQ = 1 , size(fi%juPhon%qvec,2)      
+            do iQ = q_start , q_stop
                 do iDtype = 1 , fi%atoms%nat
                     do iDir = 1 , 3 
                         this%iJobList(iJob)   = iJob

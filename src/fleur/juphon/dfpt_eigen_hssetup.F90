@@ -14,7 +14,7 @@ CONTAINS
       USE m_dfpt_hsmt
       USE m_dfpt_hsvac
       USE m_eigen_redist_matrix
-      USE m_types_sternheimerJob
+      
 
       IMPLICIT NONE
 

@@ -23,7 +23,7 @@ contains
         use m_dfpt_potdenLocal
         use m_dfpt_gradient 
         use m_grdchlh
-        use m_types_sternheimerJob
+        
 
         type(t_sternheimerjob),intent(in) :: sternheimerJob
         type(t_fleurinput),intent(in) :: fi 

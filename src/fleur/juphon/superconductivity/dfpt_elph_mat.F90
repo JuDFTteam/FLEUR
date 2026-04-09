@@ -35,7 +35,7 @@ CONTAINS
         USE m_smooth
         USE m_dfpt_fermie, ONLY : sfermi
         USE m_dfpt_elph_linewidth
-        use m_types_sternheimerJob
+        
 
 
 
@@ -198,7 +198,7 @@ CONTAINS
         USE m_types_mpimat
         USE m_dfpt_tlmplm
         USE m_local_hamiltonian
-        USE m_types_sternheimerJob
+        
         USE m_eig66_io, ONLY : write_eig, read_eig
 
         IMPLICIT NONE 

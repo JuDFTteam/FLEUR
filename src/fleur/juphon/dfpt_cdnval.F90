@@ -28,7 +28,7 @@ SUBROUTINE dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,
    !USE m_cdnmt       ! calculate the density and orbital moments etc.
    USE m_types_dos
    USE m_types_vacdos
-   USE m_types_sternheimerJob
+   
 #ifdef CPP_MPI
    USE m_mpi_col_den ! collect density data from parallel nodes
 #endif

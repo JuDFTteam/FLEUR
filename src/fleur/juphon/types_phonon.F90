@@ -112,7 +112,7 @@ module m_types_phonon
         
         use m_types
         use m_dfpt_eii2    
-        use m_types_sternheimerJob
+        
         use m_dfpt_generate_gradient
 
 
@@ -181,7 +181,7 @@ module m_types_phonon
         
         use m_types
         use m_dfpt_dynmat
-        use m_types_sternheimerJob
+        
 
         class(t_phonon),intent(inout) :: this
         type(t_sternheimerjob),intent(in) :: sternheimerJob 

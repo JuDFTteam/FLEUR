@@ -27,7 +27,7 @@ contains
 
     use m_types
     USE m_constants
-    use m_types_sternheimerJob
+    
     implicit none
 
     type(t_input),   intent(in)   :: input
@@ -123,7 +123,7 @@ contains
     use m_DoubleFactorial
     use m_SphBessel
     use m_juDFT
-    use m_types_sternheimerJob
+    
 
     implicit none
 

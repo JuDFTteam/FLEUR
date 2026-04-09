@@ -23,7 +23,7 @@ SUBROUTINE dfpt_cdngen(sternheimerJob,eig_id,dfpt_eig_id,fmpi,input,banddosdummy
    USE m_cdn_io
    USE m_wrtdop
    USE m_cdncore
-   USE m_types_sternheimerJob
+   
 
    IMPLICIT NONE
 

@@ -44,7 +44,7 @@ CONTAINS
       USE m_hsmt_spinor
       USE m_hsmt_offdiag
       USE m_matrix_pref
-      USE m_types_sternheimerJob
+      
 
       IMPLICIT NONE
 

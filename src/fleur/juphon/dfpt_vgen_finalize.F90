@@ -20,7 +20,7 @@ CONTAINS
         USE m_get_int_perturbation
         USE m_get_mt_perturbation
         USE m_fft3d
-        USE m_types_sternheimerJob
+        
         !USE m_rotate_mt_den_tofrom_local
 
         IMPLICIT NONE

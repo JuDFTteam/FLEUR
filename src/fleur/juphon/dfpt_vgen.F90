@@ -41,7 +41,7 @@ CONTAINS
       USE m_dfpt_vefield
       USE m_checkdopall
       USE m_plot
-      USE m_types_sternheimerJob
+      
 
       IMPLICIT NONE
 

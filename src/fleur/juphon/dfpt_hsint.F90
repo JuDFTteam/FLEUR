@@ -11,7 +11,7 @@ CONTAINS
 
       USE m_types
       USE m_hs_int_direct
-      USE m_types_sternheimerJob
+      
 
       IMPLICIT NONE
 
