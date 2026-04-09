@@ -6,7 +6,7 @@ MODULE m_vintcz
   !     modified for thick films to avoid underflows gb`06
   !---------------------------------------------------------------
 CONTAINS
-   COMPLEX FUNCTION vintcz(stars,vacuum,cell,input,field,z,nrec2,psq,vnew,rhobar,sig1dh,vz1dh,alphm,vslope,sigma_disc,l_dfptvgen,l_corr,diff_vmz1dh)
+   COMPLEX FUNCTION vintcz(stars,vacuum,cell,input,field,z,nrec2,psq,vnew,rhobar,sig1dh,vz1dh,alphm,vslope,l_dfptvgen)
       USE m_constants
       USE m_types
 
@@ -25,9 +25,9 @@ CONTAINS
 
       COMPLEX,        INTENT(IN) :: psq(stars%ng3),vnew(:,:,:)!,vxy(:,:,:) !(vacuum%nmzxyd,stars%ng2-1,2)
       COMPLEX,        INTENT(IN) :: alphm(stars%ng2,2)
-      complex,        intent(in) :: sigma_disc(2)
-      LOGICAL,        INTENT(IN) :: l_dfptvgen, l_corr
-      COMPLEX,        INTENT(IN) :: diff_vmz1dh
+      !complex,        intent(in) :: sigma_disc(2)
+      LOGICAL,        INTENT(IN) :: l_dfptvgen !, l_corr
+      !COMPLEX,        INTENT(IN) :: diff_vmz1dh
 
       !complex, optional, intent(in) :: sigma_disc2(2)
       !REAL,           INTENT(IN) :: vz(:,:) !(vacuum%nmzd,2,jspins)
@@ -36,16 +36,16 @@ CONTAINS
       REAL                       :: bj0,dh,fit,g,g3,q,qdh,vcons2,zf
       REAL                       :: e_m,e_p,cos_q,sin_q
       INTEGER                    :: ig3n,im,iq,ivac,k1,k2,nrec2r
-      COMPLEX                    :: newdp, newdm, newdp2, newdm2
+      !COMPLEX                    :: newdp, newdm, newdp2, newdm2
       
       dh = cell%z1
       sumrr = (0.,0.)
       vintcz = (0.,0.)
 
-      newdp = CMPLX(0.0,0.0)
-      newdm = CMPLX(0.0,0.0)
-      newdp2 = CMPLX(0.0,0.0)
-      newdm2 = CMPLX(0.0,0.0)
+      ! newdp = CMPLX(0.0,0.0)
+      ! newdm = CMPLX(0.0,0.0)
+      ! newdp2 = CMPLX(0.0,0.0)
+      ! newdm2 = CMPLX(0.0,0.0)
       
       !--->    if z is in the vacuum, use vacuum representations (m.w.)
       IF (ABS(z).GE.cell%z1) THEN
@@ -80,11 +80,11 @@ CONTAINS
       ! For q/=0 in DFPT, there is no G+q=0, so all stars are treated in the G/=0 way.
       IF (nrec2==1.AND.((.NOT.l_dfptvgen).OR.norm2(stars%center)<1e-8)) THEN    !     ---->    g=0 coefficient
 
-         ! New discontinuity correction
-         IF (l_corr) THEN
-            newdp = - psq(1) * dh
-            newdp2 = -psq(1) * dh**2 
-         END IF
+         ! ! New discontinuity correction
+         ! IF (l_corr) THEN
+         !    newdp = - psq(1) * dh
+         !    newdp2 = -psq(1) * dh**2 
+         ! END IF
 
          DO  iq = -stars%mx3,stars%mx3
             IF (iq.EQ.0) CYCLE
@@ -98,22 +98,23 @@ CONTAINS
                sumrr = (EXP(argr)-EXP(ImagUnit*qdh))/ (q*q) + ImagUnit*COS(qdh)* (dh-z)/q + bj0* (z*z-dh*dh)/2.
                vintcz = vintcz + fpi_const*psq(ig3n)*sumrr
                
-               ! New discontinuity correction
-               IF (l_corr) THEN
-                  newdp = newdp + ImagUnit * psq(ig3n) * cmplx(cos(qdh), sin(qdh)) * dh / qdh
-                  newdp2 = newdp2 + psq(ig3n) * cmplx(cos(qdh), sin(qdh)) / q**2
-               END IF
+               ! ! New discontinuity correction
+               ! IF (l_corr) THEN
+               !    newdp = newdp + ImagUnit * psq(ig3n) * cmplx(cos(qdh), sin(qdh)) * dh / qdh
+               !    newdp2 = newdp2 + psq(ig3n) * cmplx(cos(qdh), sin(qdh)) / q**2
+               ! END IF
             END IF
          END DO
          !           -----> v2(z)
          vintcz = vintcz + vz1dh - fpi_const* (dh-z)*&
             &              (sig1dh-rhobar/2.* (dh-z))
-         ! Discontinuity correction
-         vintcz = vintcz - fpi_const * sigma_disc(1)*(dh-z)
-         !IF (PRESENT(sigma_disc2)) vintcz = vintcz + fpi_const * sigma_disc2(1)
+         
+         ! ! Discontinuity correction
+         ! vintcz = vintcz - fpi_const * sigma_disc(1)*(dh-z)
+         ! !IF (PRESENT(sigma_disc2)) vintcz = vintcz + fpi_const * sigma_disc2(1)
 
-         ! New discontinuity correction
-         IF (l_dfptvgen.AND.l_corr) vintcz = vintcz - fpi_const * newdp * (dh-z) + fpi_const * newdp2
+         ! ! New discontinuity correction
+         ! IF (l_dfptvgen.AND.l_corr) vintcz = vintcz - fpi_const * newdp * (dh-z) + fpi_const * newdp2
 
          ! Correct the interstitial potential by the mismatch we calculated as
          ! a boundary condition for DFPT q=0.
@@ -127,10 +128,10 @@ CONTAINS
          k1 = stars%kv2(1,nrec2)
          k2 = stars%kv2(2,nrec2)
 
-         newdp = cmplx(0.0,0.0)
-         newdm = cmplx(0.0,0.0)
-         newdp2 = cmplx(0.0,0.0)
-         newdm2 = cmplx(0.0,0.0)
+         !newdp = cmplx(0.0,0.0)
+         !newdm = cmplx(0.0,0.0)
+         !newdp2 = cmplx(0.0,0.0)
+         !newdm2 = cmplx(0.0,0.0)
 
          DO  iq = -stars%mx3,stars%mx3
             ig3n = stars%ig(k1,k2,iq)
@@ -166,15 +167,15 @@ CONTAINS
                         &                        (g - ImagUnit*q) * e_m * (cos_q - ImagUnit*sin_q) )
                   vintcz = vintcz + vcons1*sumrr
 
-                  ! New discontinuity correction
-                  IF (iq==0.AND.l_corr) newdp = newdp - psq(ig3n) * dh
-                  IF (iq/=0.AND.l_corr) newdp = newdp + ImagUnit * psq(ig3n) * cmplx(cos_q, sin_q) * dh / (q*dh)
-                  IF (iq==0.AND.l_corr) newdm = newdm - psq(ig3n) * dh
-                  IF (iq/=0.AND.l_corr) newdm = newdm - ImagUnit * psq(ig3n) * cmplx(cos_q,-sin_q) * dh / (q*dh)
-                  IF (iq==0.AND.l_corr) newdp2 = newdp2 - psq(ig3n) * dh**2
-                  IF (iq/=0.AND.l_corr) newdp2 = newdp2 + psq(ig3n) * cmplx(cos_q, sin_q) / q**2
-                  IF (iq==0.AND.l_corr) newdm2 = newdm2 + psq(ig3n) * dh**2
-                  IF (iq/=0.AND.l_corr) newdm2 = newdm2 - psq(ig3n) * cmplx(cos_q,-sin_q) / q**2
+                  ! ! New discontinuity correction
+                  ! IF (iq==0.AND.l_corr) newdp = newdp - psq(ig3n) * dh
+                  ! IF (iq/=0.AND.l_corr) newdp = newdp + ImagUnit * psq(ig3n) * cmplx(cos_q, sin_q) * dh / (q*dh)
+                  ! IF (iq==0.AND.l_corr) newdm = newdm - psq(ig3n) * dh
+                  ! IF (iq/=0.AND.l_corr) newdm = newdm - ImagUnit * psq(ig3n) * cmplx(cos_q,-sin_q) * dh / (q*dh)
+                  ! IF (iq==0.AND.l_corr) newdp2 = newdp2 - psq(ig3n) * dh**2
+                  ! IF (iq/=0.AND.l_corr) newdp2 = newdp2 + psq(ig3n) * cmplx(cos_q, sin_q) / q**2
+                  ! IF (iq==0.AND.l_corr) newdm2 = newdm2 + psq(ig3n) * dh**2
+                  ! IF (iq/=0.AND.l_corr) newdm2 = newdm2 - psq(ig3n) * cmplx(cos_q,-sin_q) / q**2
 
                END IF ! Neumann (vs. Dirichlet)
             END IF ! ig3d /= 0

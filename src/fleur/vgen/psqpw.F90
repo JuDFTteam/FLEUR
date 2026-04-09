@@ -16,8 +16,8 @@ module m_psqpw
 
 contains
 
-  subroutine psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym, juphon,  &
-       &     den, ispin, l_xyav, potdenType, psq, sigma_disc, rhoimag, stars2, iDtype, iDir, rho0, iDir2 )
+  subroutine psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym,  &
+       &     den, ispin, l_xyav, potdenType, psq, sternheimerJob, rhoimag, stars2, iDtype, iDir, rho0, iDir2 )
 
 #ifdef CPP_MPI
     use mpi
@@ -28,6 +28,7 @@ contains
     use m_sphbes
     use m_qsf
     USE m_mpi_reduce_tool
+    
      
      
     use m_types
@@ -43,7 +44,6 @@ contains
     type(t_cell),       intent(in)  :: cell
     type(t_input),      intent(in)  :: input
     type(t_sym),        intent(in)  :: sym
-    type(t_juphon),     intent(in)  :: juphon
     type(t_potden),     intent(in)  :: den
      
     logical,            intent(in)  :: l_xyav
@@ -52,8 +52,9 @@ contains
     !real,               intent(in)  :: rht(vacuum%nmzd,2)
     integer,            intent(in)  :: potdenType, ispin
     complex,            intent(out) :: psq(stars%ng3)
-    complex,            intent(out) :: sigma_disc(2)
+    !complex,            intent(out) :: sigma_disc(2)
 
+    type(t_sternheimerJob),optional,intent(in) :: sternheimerJob
     type(t_potden),optional,intent(in) :: rhoimag, rho0
 
     TYPE(t_stars), OPTIONAL, INTENT(IN) :: stars2
@@ -86,13 +87,13 @@ contains
     qpw = den%pw(:,ispin)
     rho = den%mt(:,:,:,ispin)
     IF (input%film) rht = den%vac(:,1,:,ispin)
-    sigma_disc = cmplx(0.0,0.0)
+    !sigma_disc = cmplx(0.0,0.0)
 
     ! Calculate multipole moments
     call timestart("mpmom")
     ! DFPT case:
     ! Additional contributions to qlm due to surface corrections.
-    call mpmom( input, fmpi, atoms, sphhar, stars, sym, juphon, cell,   qpw, rho, potdenType, qlm, ispin, &
+    call mpmom( input, fmpi, atoms, sphhar, stars, sym, cell,   qpw, rho, potdenType, qlm, ispin, sternheimerJob=sternheimerJob, &
               & rhoimag=rhoimag, stars2=stars2, iDtype=iDtype, iDir=iDir, rho0=rho0, iDir2=iDir2 )
     call timestop("mpmom")
 
@@ -230,18 +231,18 @@ contains
       if ( l_xyav ) return
       fact = ( qvac + psint ) / ( stars%nstr(1) * cell%vol )
       psq(1) = psq(1) - fact
-      ! Find discontinuity at the boundaries
-      do k = 1, stars%ng3
-         if ( stars%ig2(k) == 1 ) then
-            gz = stars%kv3(3,k) * cell%bmat(3,3)
-            fc = cmplx(cos(gz * cell%z1),sin(gz * cell%z1))
-            sigma_disc(1) = sigma_disc(1) - stars%nstr(k) * psq(k) * fc
-            sigma_disc(2) = sigma_disc(2) + stars%nstr(k) * psq(k) * conjg(fc)
-         end if
-      end do
-      sigma_disc(1) = sigma_disc(1) + rht(1,1)
-      sigma_disc(2) = sigma_disc(2) - rht(1,2)
-      sigma_disc = 0.0 
+      ! ! Find discontinuity at the boundaries
+      ! do k = 1, stars%ng3
+      !    if ( stars%ig2(k) == 1 ) then
+      !       gz = stars%kv3(3,k) * cell%bmat(3,3)
+      !       fc = cmplx(cos(gz * cell%z1),sin(gz * cell%z1))
+      !       sigma_disc(1) = sigma_disc(1) - stars%nstr(k) * psq(k) * fc
+      !       sigma_disc(2) = sigma_disc(2) + stars%nstr(k) * psq(k) * conjg(fc)
+      !    end if
+      ! end do
+      ! sigma_disc(1) = sigma_disc(1) + rht(1,1)
+      ! sigma_disc(2) = sigma_disc(2) - rht(1,2)
+      ! sigma_disc = 0.0 
 8010  format (/,10x,'                     1000 * normalization const. ='&
             &       ,5x,2f11.6)
     end if ! fmpi%irank == 0

@@ -2,7 +2,7 @@ FROM  --platform=linux/amd64 ubuntu:22.04
 MAINTAINER d.wortmann@fz-juelich.de
 
 RUN DEBIAN_FRONTEND="noninteractive" apt update && DEBIAN_FRONTEND="noninteractive" apt install -y\
-  curl python3 git gfortran-12 hdf5-tools libfftw3-dev g++ libopenblas-openmp-dev libxml2-dev cmake doxygen tetex-brev dvi2ps  libopenmpi-dev libscalapack-openmpi-dev vim gdb lcov libxml2-utils python3-pip
+  curl python3 git gfortran-12 hdf5-tools libfftw3-dev g++ libopenblas-openmp-dev libxml2-dev cmake tetex-brev dvi2ps  libopenmpi-dev libscalapack-openmpi-dev vim gdb lcov libxml2-utils python3-pip
 
 RUN pip3 install pytest masci-tools pytest-html py
 RUN mkdir /opt/lib

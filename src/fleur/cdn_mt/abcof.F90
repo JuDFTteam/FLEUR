@@ -10,10 +10,10 @@ CONTAINS
 
   ! The subroutine abcof calculates the A, B, and C coefficients for the
   ! eigenfunctions. Also some force contributions can be calculated.
-  SUBROUTINE abcof(input,atoms,sym, cell,lapw,ne,usdus,&
-                   noco,nococonv,jspin , acof,bcof,ccof,zMat,eig,force,nat_start,nat_stop)
+SUBROUTINE abcof(input,atoms,sym, cell,lapw,ne,usdus,&
+   noco,nococonv,jspin , acof,bcof,ccof,zMat,eig,force,nat_start,nat_stop)
 #ifdef _OPENACC
-    use cublas
+use cublas
 #define CPP_ACC acc
 #define CPP_OMP no_OMP_used
 #define zgemm_acc cublaszgemm
@@ -22,39 +22,39 @@ CONTAINS
 #define CPP_OMP OMP
 #define zgemm_acc zgemm
 #endif
-    USE m_juDFT
-    USE m_types
-    USE m_constants
-    USE m_ylm
-    USE m_setabc1lo
-    USE m_abclocdn
-    USE m_hsmt_fjgj
-    USE m_hsmt_ab
+USE m_juDFT
+USE m_types
+USE m_constants
+USE m_ylm
+USE m_setabc1lo
+USE m_abclocdn
+USE m_hsmt_fjgj
+USE m_hsmt_ab
 
-    IMPLICIT NONE
+IMPLICIT NONE
 
-    TYPE(t_input),INTENT(IN)             :: input
-    TYPE(t_usdus),INTENT(IN)             :: usdus
-    TYPE(t_lapw),INTENT(IN)              :: lapw
-     
-    TYPE(t_noco),INTENT(IN)              :: noco
-    TYPE(t_nococonv),INTENT(IN)          :: nococonv
-    TYPE(t_sym),INTENT(IN)               :: sym
-    TYPE(t_cell),INTENT(IN)              :: cell
-    TYPE(t_atoms),INTENT(IN)             :: atoms
-    TYPE(t_mat),INTENT(IN)               :: zMat
-    TYPE(t_force),OPTIONAL,INTENT(INOUT) :: force
+TYPE(t_input),INTENT(IN)             :: input
+TYPE(t_usdus),INTENT(IN)             :: usdus
+TYPE(t_lapw),INTENT(IN)              :: lapw
 
-    ! scalar arguments
-    INTEGER, INTENT(IN)        :: ne
-    INTEGER, INTENT(IN)        :: jspin
+TYPE(t_noco),INTENT(IN)              :: noco
+TYPE(t_nococonv),INTENT(IN)          :: nococonv
+TYPE(t_sym),INTENT(IN)               :: sym
+TYPE(t_cell),INTENT(IN)              :: cell
+TYPE(t_atoms),INTENT(IN)             :: atoms
+TYPE(t_mat),INTENT(IN)               :: zMat
+TYPE(t_force),OPTIONAL,INTENT(INOUT) :: force
 
-    ! array arguments
-    COMPLEX, INTENT(OUT)       :: acof(:,0:,:)!(nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
-    COMPLEX, INTENT(OUT)       :: bcof(:,0:,:)!(nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
-    COMPLEX, INTENT(OUT)       :: ccof(-atoms%llod:,:,:,:)!(-llod:llod,nobd,atoms%nlod,atoms%nat)
-    REAL, OPTIONAL, INTENT(IN) :: eig(:)!(input%neig)
-    INTEGER,OPTIONAL,INTENT(IN):: nat_start,nat_stop
+! scalar arguments
+INTEGER, INTENT(IN)        :: ne
+INTEGER, INTENT(IN)        :: jspin
+
+! array arguments
+COMPLEX, INTENT(OUT)       :: acof(:,0:,:)!(nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
+COMPLEX, INTENT(OUT)       :: bcof(:,0:,:)!(nobd,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
+COMPLEX, INTENT(OUT)       :: ccof(-atoms%llod:,:,:,:)!(-llod:llod,nobd,atoms%nlod,atoms%nat)
+REAL, OPTIONAL, INTENT(IN) :: eig(:)!(input%neig)
+INTEGER,OPTIONAL,INTENT(IN):: nat_start,nat_stop
 
     ! Local objects
     TYPE(t_fjgj) :: fjgj
@@ -104,16 +104,16 @@ CONTAINS
     l_force = .FALSE.
     IF(PRESENT(eig).AND.input%l_f) l_force = .TRUE.
     IF(l_force) THEN
-       force%acoflo  = CMPLX(0.0,0.0)
-       force%bcoflo  = CMPLX(0.0,0.0)
-       force%e1cof   = CMPLX(0.0,0.0)
-       force%e2cof   = CMPLX(0.0,0.0)
-       force%aveccof = CMPLX(0.0,0.0)
-       force%bveccof = CMPLX(0.0,0.0)
-       force%cveccof = CMPLX(0.0,0.0)
-       ALLOCATE(helpMat_force(ne,atoms%lmaxd*(atoms%lmaxd+2)+1))
-       ALLOCATE(workTrans_cf(ne,MAXVAL(lapw%nv)))
-       ALLOCATE(s2h_e(ne,MAXVAL(lapw%nv)))
+      force%acoflo  = CMPLX(0.0,0.0)
+      force%bcoflo  = CMPLX(0.0,0.0)
+      force%e1cof   = CMPLX(0.0,0.0)
+      force%e2cof   = CMPLX(0.0,0.0)
+      force%aveccof = CMPLX(0.0,0.0)
+      force%bveccof = CMPLX(0.0,0.0)
+      force%cveccof = CMPLX(0.0,0.0)
+      ALLOCATE(helpMat_force(ne,atoms%lmaxd*(atoms%lmaxd+2)+1))
+      ALLOCATE(workTrans_cf(ne,MAXVAL(lapw%nv)))
+      ALLOCATE(s2h_e(ne,MAXVAL(lapw%nv)))
     ENDIF
 
     !Use inversion symmetry explicitely
@@ -373,42 +373,42 @@ CONTAINS
             iAtom_l=iAtom-nat_start+1
           endif   
           IF (sym%invsat(iAtom).EQ.1) THEN
-             jAtom = sym%invsatnr(iAtom)
-             jatom_l=jatom
-             if (present(nat_start).and.present(nat_stop)) THEN
-               if (jatom<nat_start.or.jatom>nat_stop) call judft_bug("MPI distribution failed in 2nd variation SOC")
-               jAtom_l=jAtom-nat_start+1
-             endif
-             DO ilo = 1,atoms%nlo(iType)
-                l = atoms%llo(ilo,iType)
-                DO m = -l,l
-                   inv_f = (-1)**(m+l)
-                   DO ie = 1,ne
-                      ccof(m,ie,ilo,jatom_l) = inv_f * CONJG( ccof(-m,ie,ilo,iatom_l))
-                      IF(l_force) THEN
-                         force%acoflo(m,ie,ilo,jatom_l) = inv_f * CONJG(force%acoflo(-m,ie,ilo,iatom_l))
-                         force%bcoflo(m,ie,ilo,jatom_l) = inv_f * CONJG(force%bcoflo(-m,ie,ilo,iatom_l))
-                         force%cveccof(:,m,ie,ilo,jatom_l) = -inv_f * CONJG(force%cveccof(:,-m,ie,ilo,iatom_l))
-                      END IF
-                   END DO
-                END DO
-             END DO
-             DO l = 0,atoms%lmax(iType)
-                ll1 = l* (l+1)
-                DO m =-l,l
-                   lm  = ll1 + m
-                   lmp = ll1 - m
-                   inv_f = (-1)**(m+l)
-                   acof(:ne,lm,jatom_l) = inv_f * CONJG(acof(:ne,lmp,iatom_l))
-                   bcof(:ne,lm,jatom_l) = inv_f * CONJG(bcof(:ne,lmp,iatom_l))
-                   IF (atoms%l_geo(iType).AND.l_force) THEN
-                      force%e1cof(:ne,lm,jatom_l) = inv_f * CONJG(force%e1cof(:ne,lmp,iatom_l))
-                      force%e2cof(:ne,lm,jatom_l) = inv_f * CONJG(force%e2cof(:ne,lmp,iatom_l))
-                      force%aveccof(:,:ne,lm,jatom_l) = -inv_f * CONJG(force%aveccof(:,:ne,lmp,iatom_l))
-                      force%bveccof(:,:ne,lm,jatom_l) = -inv_f * CONJG(force%bveccof(:,:ne,lmp,iatom_l))
-                   END IF
-                END DO
-             END DO
+            jAtom = sym%invsatnr(iAtom)
+            jatom_l=jatom
+            if (present(nat_start).and.present(nat_stop)) THEN
+              if (jatom<nat_start.or.jatom>nat_stop) call judft_bug("MPI distribution failed in 2nd variation SOC")
+              jAtom_l=jAtom-nat_start+1
+            endif
+            DO ilo = 1,atoms%nlo(iType)
+               l = atoms%llo(ilo,iType)
+               DO m = -l,l
+                  inv_f = (-1)**(m+l)
+                  DO ie = 1,ne
+                     ccof(m,ie,ilo,jatom_l) = inv_f * CONJG( ccof(-m,ie,ilo,iatom_l))
+                     IF(l_force) THEN
+                        force%acoflo(m,ie,ilo,jatom_l) = inv_f * CONJG(force%acoflo(-m,ie,ilo,iatom_l))
+                        force%bcoflo(m,ie,ilo,jatom_l) = inv_f * CONJG(force%bcoflo(-m,ie,ilo,iatom_l))
+                        force%cveccof(:,m,ie,ilo,jatom_l) = -inv_f * CONJG(force%cveccof(:,-m,ie,ilo,iatom_l))
+                     END IF
+                  END DO
+               END DO
+            END DO
+            DO l = 0,atoms%lmax(iType)
+               ll1 = l* (l+1)
+               DO m =-l,l
+                  lm  = ll1 + m
+                  lmp = ll1 - m
+                  inv_f = (-1)**(m+l)
+                  acof(:ne,lm,jatom_l) = inv_f * CONJG(acof(:ne,lmp,iatom_l))
+                  bcof(:ne,lm,jatom_l) = inv_f * CONJG(bcof(:ne,lmp,iatom_l))
+                  IF (atoms%l_geo(iType).AND.l_force) THEN
+                     force%e1cof(:ne,lm,jatom_l) = inv_f * CONJG(force%e1cof(:ne,lmp,iatom_l))
+                     force%e2cof(:ne,lm,jatom_l) = inv_f * CONJG(force%e2cof(:ne,lmp,iatom_l))
+                     force%aveccof(:,:ne,lm,jatom_l) = -inv_f * CONJG(force%aveccof(:,:ne,lmp,iatom_l))
+                     force%bveccof(:,:ne,lm,jatom_l) = -inv_f * CONJG(force%bveccof(:,:ne,lmp,iatom_l))
+                  END IF
+               END DO
+            END DO
              
           END IF
        END DO
@@ -417,4 +417,72 @@ CONTAINS
     CALL timestop("abcof")
 
   END SUBROUTINE abcof
+
+  SUBROUTINE abcof_new(input,atoms,sym, cell,lapw,ne,usdus,&
+   noco,nococonv,ispin ,eigveccoefs,zMat,eig,force,nat_start,nat_stop)
+#ifdef _OPENACC
+use cublas
+#define CPP_ACC acc
+#define CPP_OMP no_OMP_used
+#define zgemm_acc cublaszgemm
+#else
+#define CPP_ACC No_acc_used
+#define CPP_OMP OMP
+#define zgemm_acc zgemm
+#endif
+USE m_juDFT
+USE m_types
+USE m_constants
+USE m_ylm
+USE m_setabc1lo
+USE m_abclocdn
+USE m_hsmt_fjgj
+USE m_hsmt_ab
+USE m_types_cdnval
+IMPLICIT NONE
+
+TYPE(t_input),INTENT(IN)             :: input
+TYPE(t_usdus),INTENT(IN)             :: usdus
+TYPE(t_lapw),INTENT(IN)              :: lapw
+
+TYPE(t_noco),INTENT(IN)              :: noco
+TYPE(t_nococonv),INTENT(IN)          :: nococonv
+TYPE(t_sym),INTENT(IN)               :: sym
+TYPE(t_cell),INTENT(IN)              :: cell
+TYPE(t_atoms),INTENT(IN)             :: atoms
+TYPE(t_mat),INTENT(IN)               :: zMat
+TYPE(t_force),OPTIONAL,INTENT(INOUT) :: force
+TYPE(t_eigVecCoeffs),intent(INOUT)     :: eigveccoefs
+
+! scalar arguments
+INTEGER, INTENT(IN)        :: ne
+INTEGER, INTENT(IN)        :: ispin
+
+! array arguments
+COMPLEX       :: ccof(-atoms%llod:atoms%llod,size(eigveccoefs%abcof,1),atoms%nlod,atoms%nat)!(-llod:llod,nobd,atoms%nlod,atoms%nat)
+REAL, OPTIONAL, INTENT(IN) :: eig(:)!(input%neig)
+INTEGER,OPTIONAL,INTENT(IN):: nat_start,nat_stop
+
+integer:: itype,lo,l,na,m,lm,n_l(0:atoms%lmaxd)
+
+call abcof(input,atoms,sym,cell,lapw,ne,usdus,noco,nococonv,ispin,&
+eigVecCoefs%abcof(:,0:,1,:,ispin),eigVecCoefs%abcof(:,0:,2,:,ispin),&
+ccof(-atoms%llod:,:,:,:),zMat,eig,force)
+
+!Now put the c-coef into the correct abcof
+DO itype=1,atoms%ntype
+   n_l=2
+   DO lo=1,atoms%nlo(itype)
+      l=atoms%llo(lo,itype)
+      n_l(l)=n_l(l)+1
+      do m=-l,l
+         lm=l*(l+1)+m
+         DO na=atoms%firstatom(itype),atoms%firstatom(itype)+atoms%neq(itype)-1
+            eigveccoefs%abcof(:,lm,n_l(l),na,ispin)=ccof(m,:,lo,na)
+         enddo
+      enddo
+   enddo
+enddo
+
+end subroutine abcof_new
 END MODULE m_abcof

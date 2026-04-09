@@ -517,8 +517,8 @@ CONTAINS
                      ab=ab + we(n)*CONJG(ac(ikG,n,ispin))*bc(ikG,n,ispin)
                      ba=ba + we(n)*CONJG(bc(ikG,n,ispin))*ac(ikG,n,ispin)
                      qout = REAL(CONJG(ac(ikG,n,ispin))*ac(ikG,n,ispin)+tei(ikG,ispin)*CONJG(bc(ikG,n,ispin))*bc(ikG,n,ispin))
-                     vacdos%qvac(ev_list(n),ivac,ikpt,ispin) = vacdos%qvac(ev_list(n),ivac,ikpt,ispin) + qout*cell%area
-                     dos%qTot(ev_list(n),ikpt,ispin) = dos%qTot(ev_list(n),ikpt,ispin) + qout*cell%area
+                     if (vacdos%l_initialized) vacdos%qvac(ev_list(n),ivac,ikpt,ispin) = vacdos%qvac(ev_list(n),ivac,ikpt,ispin) + qout*cell%area
+                     if (dos%l_initialized) dos%qTot(ev_list(n),ikpt,ispin) = dos%qTot(ev_list(n),ikpt,ispin) + qout*cell%area
                   END DO
                   DO jz = 1,vacuum%nmz
                      ui = u(jz,ikG,ispin)
@@ -550,8 +550,8 @@ CONTAINS
                      ba = ba + we(n)*CONJG(bc(ikG,n,jspin))*ac1(ikG,n,jspin)
                   END IF
                   qout = REAL(CONJG(ac(ikG,n,jspin))*ac(ikG,n,jspin)+tei(ikG,jspin)*CONJG(bc(ikG,n,jspin))*bc(ikG,n,jspin))
-                  vacdos%qvac(ev_list(n),ivac,ikpt,jspin) = vacdos%qvac(ev_list(n),ivac,ikpt,jspin) + qout*cell%area
-                  dos%qTot(ev_list(n),ikpt,jspin) = dos%qTot(ev_list(n),ikpt,jspin) + qout*cell%area
+                  if(vacdos%l_initialized) vacdos%qvac(ev_list(n),ivac,ikpt,jspin) = vacdos%qvac(ev_list(n),ivac,ikpt,jspin) + qout*cell%area
+                  if (dos%l_initialized) dos%qTot(ev_list(n),ikpt,jspin) = dos%qTot(ev_list(n),ikpt,jspin) + qout*cell%area
                END DO
                DO  jz = 1,vacuum%nmz
                   ui = u(jz,ikG,jspin)
@@ -861,7 +861,7 @@ CONTAINS
                         uei = ue(jz,ikG,1)
                         uei2 = ue(jz,ikGPr,2)
                         tempCmplx = aa*ui2*ui + bb*uei2*uei + ab*ui2*uei + ba*uei2*ui
-                        den%vac(jz,1,ivac,3) = den%vac(jz,1,ivac,3) + CONJG(tempCmplx) !!!! MAGIC MINUS
+                        den%vac(jz,1,ivac,3) = den%vac(jz,1,ivac,3) + tempCmplx 
                      END DO
                   ELSE
                      !--->                warping part
@@ -881,7 +881,7 @@ CONTAINS
                         uei = ue(jz,ikG,1)
                         uej = ue(jz,ikGPr,2)
                         t1 = aa*ui*uj+bb*uei*uej+ba*ui*uej+ab*uei*uj
-                        den%vac(jz,ind2,ivac,3) = den%vac(jz, ind2,ivac,3) + conjg(t1*phs/stars%nstr2(ind2))
+                        den%vac(jz,ind2,ivac,3) = den%vac(jz, ind2,ivac,3) + t1*phs/stars%nstr2(ind2)
                      END DO
                   END IF
                END DO

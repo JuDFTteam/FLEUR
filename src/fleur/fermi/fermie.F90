@@ -67,8 +67,9 @@ CONTAINS
     !
     INTEGER :: idxeig(SIZE(results%w_iks)),idxjsp(SIZE(results%w_iks)),idxkpt(SIZE(results%w_iks)),INDEX(SIZE(results%w_iks))
     REAL    :: energies(SIZE(results%w_iks)),we(SIZE(results%w_iks))
+    REAL    :: fixedMomentFermiEnergies(2) 
     real,allocatable :: w_iks(:,:,:),we_stored(:)
-    real              :: seigv_stored,ef_stored(3)
+    real              :: seigv_stored,ef_stored(3), spinDepTS(2)
     CHARACTER(LEN=20)    :: attributes(5)
 
     !--- J constants
@@ -156,7 +157,7 @@ CONTAINS
     IF (fmpi%irank == 0 .and. .NOT.judft_was_argument("-minimalOutput") .and. l_output) CALL closeXMLElement('eigenvalues')
   IF (fmpi%irank == 0) THEN
 
-    IF (ABS(input%fixed_moment)<1E-6) THEN
+    IF (.NOT.input%isFixedMomentCalc) THEN
        !this is a standard calculation
        m_spins=1
     else
@@ -164,6 +165,7 @@ CONTAINS
        m_spins=2
     END IF
 
+    spinDepTS = 0.0
     results%seigv = 0.0e0
     do mspin=1,m_spins
        IF (m_spins    == 1) THEN
@@ -274,7 +276,10 @@ CONTAINS
          IF(input%bz_integration==BZINT_METHOD_HIST) THEN
             CALL ferhis(input,kpts,fmpi,index,idxeig,idxkpt,idxjsp,nspins, n,&
                   nstef,ws,spindg,weight,energies,results%neig(:,sslice(1):sslice(2)),&
-                  we, noco,cell,results%ef,results%seigv,results%w_iks(:,:,sslice(1):sslice(2)),results,l_output)
+                  we, noco,cell,results%ef,results%seigv,results%w_iks(:,:,sslice(1):sslice(2)),results,spinDepTS(sslice(1):sslice(2)),l_output)
+            IF (mspin.EQ.2) THEN
+               results%ts = spinDepTS(1) + spinDepTS(2)
+            END IF
          ELSE IF (input%bz_integration==BZINT_METHOD_GAUSS) THEN
             CALL fergwt(kpts,input,fmpi,results%neig(:,sslice(1):sslice(2)), results%eig(:,:,sslice(1):sslice(2)),&
                         results%ef,results%w_iks(:,:,sslice(1):sslice(2)),results%seigv,l_output)
@@ -327,6 +332,7 @@ CONTAINS
                ,efermi-results%ef
        ENDIF
        efermi = results%ef
+       fixedMomentFermiEnergies(mspin) = efermi
     enddo
 
     IF (m_spins == 2) nspins = 2
@@ -335,7 +341,15 @@ CONTAINS
        attributes = ''
        WRITE(attributes(1),'(f20.10)') results%ef
        WRITE(attributes(2),'(a)') 'Htr'
-       IF (fmpi%irank.EQ.0) CALL writeXMLElement('FermiEnergy',(/'value','units'/),attributes(1:2))
+       IF (fmpi%irank.EQ.0) THEN
+          CALL writeXMLElement('FermiEnergy',(/'value','units'/),attributes(1:2))
+          IF (m_spins.EQ.2) THEN
+             WRITE(attributes(1),'(f20.10)') fixedMomentFermiEnergies(1)
+             WRITE(attributes(2),'(f20.10)') fixedMomentFermiEnergies(2)
+             WRITE(attributes(3),'(a)') 'Htr'
+             CALL writeXMLElement('FixedTotalMoment',(/'fermiEnergyUp  ','fermiEnergyDown', 'units          '/),attributes(1:3))
+          END IF
+       END IF
     END IF
 
     !Code to calculate the direct bandgap

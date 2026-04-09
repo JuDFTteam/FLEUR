@@ -84,7 +84,6 @@ CONTAINS
     !     ..
     it = 1
 
-
     !
     !     --->generate starting charge density
     !
@@ -110,12 +109,21 @@ CONTAINS
        CALL timestart("generation of start-density")
        IF (input%jspins.EQ.2) THEN
           DO atomsCounter=1, atoms%ntype
-             IF(.NOT.MAXVAL(ABS(atoms%econf(atomsCounter)%Occupation(:,1)-atoms%econf(atomsCounter)%Occupation(:,2))).EQ.0)stateCheck=.FALSE.
+             IF(.NOT.MAXVAL(ABS(atoms%econf(atomsCounter)%Occupation(:,1)-atoms%econf(atomsCounter)%Occupation(:,2))).EQ.0) THEN
+                stateCheck = .FALSE.
+             END IF
           END DO
        END IF
-       IF (stateCheck.AND.(input%jspins.EQ.2)) CALL juDFT_warn("You're setting up a spin-polarized calculation (jspins=2) without any actual polarization given in the systems occupation. You're sure you want that?", calledby = "optional")
+
+       IF(fmpi%irank.EQ.0) THEN
+          IF (stateCheck.AND.(input%jspins.EQ.2)) THEN
+             CALL juDFT_warn("Spin-polarized calculation (jspins=2) without any actual polarization given. Is this wanted?", calledby='optional')
+          END IF
+       END IF
+
        CALL stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
                   input,cell,xcpot,noco )
+
        !
        !input%total=strho
        CALL timestop("generation of start-density")

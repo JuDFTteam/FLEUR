@@ -8,7 +8,7 @@ MODULE m_vgen
 
 CONTAINS
 
-   SUBROUTINE vgen(hybdat,field,input,xcpot,atoms,sphhar,stars,vacuum,sym,juphon,&
+   SUBROUTINE vgen(hybdat,field,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
                    cell ,sliceplot,fmpi,results,noco,nococonv,EnergyDen,den,vTot,vx,vCoul,vxc,exc)
       !--------------------------------------------------------------------------
       ! FLAPW potential generator (main routine)
@@ -51,7 +51,6 @@ CONTAINS
       TYPE(t_noco),      INTENT(IN)    :: noco
       TYPE(t_nococonv),  INTENT(INOUT) :: nococonv
       TYPE(t_sym),       INTENT(IN)    :: sym
-      TYPE(t_juphon),    INTENT(IN)    :: juphon
       TYPE(t_stars),     INTENT(IN)    :: stars
       TYPE(t_cell),      INTENT(IN)    :: cell
       TYPE(t_sphhar),    INTENT(IN)    :: sphhar
@@ -64,7 +63,6 @@ CONTAINS
 
       INTEGER :: i, js
       REAL    :: b(3,atoms%ntype), dummy1(atoms%ntype), dummy2(atoms%ntype)
-      complex                           :: sigma_loc(2)
 
       IF (fmpi%irank == 0) THEN
          IF (noco%l_sourceFree) THEN
@@ -108,12 +106,11 @@ CONTAINS
       ! a)
       ! Sum up both spins in den into workden:
       CALL den%sum_both_spin(workden)
-      sigma_loc = cmplx(0.0,0.0)
-      CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,juphon,stars,cell,sphhar,atoms,.FALSE.,workden,vCoul,sigma_loc,results)
+      CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,stars,cell,sphhar,atoms,.FALSE.,workden,vCoul,results)
 
       !vdW Potential
       workden%vac = CMPLX(0.0,0.0)
-      IF (input%vdw>0) CALL fleur_vdW_mCallsen(fmpi,atoms,sphhar,stars,input,cell,sym ,juphon,vacuum,results,workden,vCoul%pw(:,1),vCoul%mt)
+      IF (input%vdw>0) CALL fleur_vdW_mCallsen(fmpi,atoms,sphhar,stars,input,cell,sym,vacuum,results,workden,vCoul%pw(:,1),vCoul%mt)
 
       ! b)
       CALL vCoul%copy_both_spin(vTot)
@@ -134,7 +131,7 @@ CONTAINS
 
       ! d)
       ! TODO: Check if this is needed for more potentials as well!
-      CALL vgen_finalize(fmpi ,field,cell,atoms,stars,vacuum,sym,juphon,noco,nococonv,input,xcpot,sphhar,vTot,vCoul,denRot,sliceplot)
+      CALL vgen_finalize(fmpi ,field,cell,atoms,stars,vacuum,sym,noco,nococonv,input,xcpot,sphhar,vTot,vCoul,denRot,sliceplot)
       !DEALLOCATE(vcoul%pw_w)
 
       CALL vTot%distribute(fmpi%mpi_comm)

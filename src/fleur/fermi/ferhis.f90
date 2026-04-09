@@ -7,7 +7,7 @@
 MODULE m_ferhis
 CONTAINS
   SUBROUTINE ferhis(input,kpts,fmpi, index,idxeig,idxkpt,idxjsp,nspins,n,&
-                    nstef,ws,spindg,weight,energies,ne,we, noco,cell,ef,seigv,w_iks,results,l_output)
+                    nstef,ws,spindg,weight,energies,ne,we, noco,cell,ef,seigv,w_iks,results,spinDepTS,l_output)
     !***********************************************************************
     !
     !     This subroutine determines the fermi energy and the sum of the
@@ -69,6 +69,7 @@ CONTAINS
     REAL,INTENT(IN)     ::  spindg,ws,weight
     REAL,INTENT(INOUT)  ::  ef,seigv
     REAL,INTENT(OUT)    ::  w_iks(:,:,:)
+    REAL,INTENT(OUT)    ::  spinDepTS(:)
     !     .. Scalar Arguments ..
     LOGICAL, INTENT(IN) :: l_output
     !     ..
@@ -92,7 +93,7 @@ CONTAINS
     INTEGER ink,inkem,j,js,k,kpt,nocc,nocst,i
 
     !     .. Local Arrays ..      
-    REAL :: qc(3)
+    REAL :: qc(3), spinDepEntropy(nspins)
     CHARACTER(LEN=20)    :: attributes(2)
 
     !     ..
@@ -268,15 +269,21 @@ CONTAINS
     !        here we have   w(n,kpt,js)= spindg*wghtkp(kpt)*f(e(kpt,n))
     !
     entropy = 0.0
+    spinDepEntropy = 0.0
     DO js = 1,nspins
        DO kpt = 1 , kpts%nkpt
           DO nocc=1,ne(kpt,js) 
              fermikn = w_iks(nocc,kpt,js)/kpts%wtkpt(kpt)
-             IF ( fermikn .GT. 0.0 .AND. fermikn .LT. 1.0 ) &
-                  entropy = entropy + kpts%wtkpt(kpt) * ( fermikn * LOG( fermikn) + ( 1.0 - fermikn) * LOG( 1.0 - fermikn) )
+             IF ( fermikn .GT. 0.0 .AND. fermikn .LT. 1.0 ) THEN
+                spinDepEntropy(js) = spinDepEntropy(js) + kpts%wtkpt(kpt) * ( fermikn * LOG( fermikn) + ( 1.0 - fermikn) * LOG( 1.0 - fermikn) )
+             END IF
           END DO
        END DO
-    ENDDO
+       entropy = entropy + spinDepEntropy(js)
+    END DO
+    DO js = 1,nspins
+       spinDepTS(js) = -spinDepEntropy(js) * tkb
+    END DO
     entropy = -spindg*entropy
     results%ts = tkb*entropy
     results%tkb_loc = tkb

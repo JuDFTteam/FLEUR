@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -114,7 +114,7 @@ CONTAINS
       USE iso_c_binding
 
       CLASS(t_xml), INTENT(INOUT) :: xml
-      CHARACTER(len=100), INTENT(IN) :: filename_add
+      CHARACTER(len=*), INTENT(IN) :: filename_add
       LOGICAL, OPTIONAL, INTENT(inout):: old_version
 
       LOGICAL                        :: l_allow_old

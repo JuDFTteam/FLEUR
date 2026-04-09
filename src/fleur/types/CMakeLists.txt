@@ -17,6 +17,8 @@ src/fleur/types/types_greensf.F90
 src/fleur/types/types_hub1data.f90
 src/fleur/types/types_hybdat.F90
 src/fleur/types/types_hybmpi.F90
+src/fleur/types/types_rsoc.f90
+
 #src/fleur/types/types_jpPotden.F90
 src/fleur/types/types_lapw.F90
 src/fleur/types/types_mat.F90
@@ -39,6 +41,9 @@ src/fleur/types/types_xcpot_inbuild.F90
 src/fleur/types/types_xcpot_inbuild_nofunction.F90
 src/fleur/types/types_xcpot_libxc.F90
 src/fleur/types/types_fftGrid.f90
+src/fleur/types/types_BEC_old.F90
+src/fleur/types/types_abc.F90
+src/fleur/types/types_orbmom.F90
 )
 
 set(inpgen_F90 ${inpgen_F90}

@@ -65,6 +65,10 @@ contains
       WRITE(attributes(1),'(f20.10)') 1000*SQRT(ABS(dist(4)/vol))
       CALL writeXMLElementForm('chargeDensity',(/'distance'/),attributes(1:1),reshape((/8,20/),(/1,2/)))
       WRITE (oUnit,FMT=8000) inDen%iter,1000*SQRT(ABS(dist(4)/vol))
+
+      WRITE(attributes(1),'(f20.10)') 1000*SQRT(ABS(dist(4)/vol))
+      CALL writeXMLElementForm('overallChargeDensity',(/'distance'/),attributes(1:1),reshape((/8,20/),(/1,2/)))
+
       !mz
       WRITE(attributes(1),'(a)') "mz"
       WRITE(attributes(2),'(f20.10)') 1000*SQRT(ABS(dist(1)/vol))

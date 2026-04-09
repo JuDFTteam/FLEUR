@@ -22,7 +22,7 @@ MODULE m_dfpt_eigen
 
 CONTAINS
 
-   SUBROUTINE dfpt_eigen(fi, sphhar, results, resultsq, results1, fmpi, enpara, nococonv, starsq, v1real, v1imag, vTot, inden, bqpt, &
+   SUBROUTINE dfpt_eigen(sternheimerJob,fi, sphhar, results, resultsq, results1, fmpi, enpara, nococonv, starsq, v1real, v1imag, vTot, inden, bqpt, &
                              eig_id, q_eig_id, dfpt_eig_id, iDir, iDtype, killcont, l_real, sh_den, dfpt_eig_id2)
 
       USE m_types
@@ -35,9 +35,11 @@ CONTAINS
       USE m_types_mpimat
       USE m_dfpt_tlmplm
       USE m_local_hamiltonian
+      
 
       IMPLICIT NONE
 
+      TYPE(t_sternheimerJob),INTENT(IN) :: sternheimerJob
       type(t_fleurinput), intent(in)    :: fi
       TYPE(t_sphhar),     INTENT(IN)       :: sphhar
       TYPE(t_results),INTENT(INOUT):: results, resultsq, results1
@@ -80,7 +82,8 @@ CONTAINS
       EXTERNAL zdotc
 
 
-
+#ifndef _OPENACC  
+!newer nvhpc versions fail here with ICE
       CALL vx%copyPotDen(vTot)
       ALLOCATE(vx%pw_w, mold=vx%pw)
       vx%pw_w = vTot%pw_w
@@ -143,7 +146,7 @@ CONTAINS
 
             ! Construct the perturbed Hamiltonian and Overlap matrix perturbations:
             CALL timestart("Setup of matrix perturbations")
-            CALL dfpt_eigen_hssetup(jsp,fmpi,fi,enpara,nococonv,starsq,ud,td,tdV1,vTot,v1real,lapw,lapwq,iDir,iDtype,hmat,smat,nk,killcont)
+            CALL dfpt_eigen_hssetup(sternheimerJob,jsp,fmpi,fi,enpara,nococonv,starsq,ud,td,tdV1,vTot,v1real,lapw,lapwq,iDir,iDtype,hmat,smat,nk,killcont)
             CALL timestop("Setup of matrix perturbations")
 
             IF (fmpi%n_size == 1) THEN
@@ -419,6 +422,7 @@ CONTAINS
             END IF
          END DO  k_loop
       END DO ! spin loop ends
+#endif  
       neigd2 = MIN(fi%input%neig,lapw%dim_nbasfcn())
 #ifdef CPP_MPI
       CALL MPI_ALLREDUCE(eigBuffer(:neigd2,:,:),results1%eig(:neigd2,:,:),neigd2*fi%kpts%nkpt*fi%input%jspins,MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)

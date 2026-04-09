@@ -1,10 +1,11 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.5)
 project(FLEUR LANGUAGES Fortran)
 
 #These options should be adjusted
 option(JUDFT_USE_MPI "Compile with MPI, will also work in serial" OFF)
 option(JUDFT_USE_HDF5 "Compile HDF5 tools" OFF)
 option(JUDFT_USE_GPU "Compile for GPU/CUDA support" OFF)
+option(JUDFT_USE_NVTX "Use NVTX for GPU profiling" OFF)
 option(JUDFT_USE_HDF5MPI "Is the HDF5 version able to do parallel IO" OFF)
 option(JUDFT_USE_COLLECT "Collect usage data" ON)
 option(JUDFT_USE_DEBUG "Set CPP_DEBUG when compiling code" OFF)
@@ -60,7 +61,9 @@ nvtx.F90
 )
 if (JUDFT_USE_GPU)
 target_compile_definitions(juDFT PUBLIC CPP_GPU)
-target_compile_definitions(juDFT PUBLIC CPP_NVTX) #Use by default
+if (JUDFT_USE_NVTX)
+  target_compile_definitions(juDFT PUBLIC CPP_NVTX)
+endif() 
 endif()
 if (JUDFT_USE_MPI)
   target_compile_definitions(juDFT PUBLIC CPP_MPI)

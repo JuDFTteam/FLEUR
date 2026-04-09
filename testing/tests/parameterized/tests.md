@@ -57,12 +57,15 @@ Testset: Forces
 
 Testset: DFPT
 -------------------
-|     | Description   | directory name    | marks | Remarks      | CmdLine | MPI |
-| --- | ------------- | ----------------- | ----- | ------------ | ------- | --- |
-| +   | Cu bulk fcc   | dfpt/CuBulk       | libxc | partly ready |         |   1 |
-| +   | C bulk fcc    | dfpt/CBulk        | libxc | partly ready |         |   1 |
-| +   | Graphene Film | dfpt/GrapheneFilm | libxc | partly ready |         |   1 |
-| +   | V bulk bcc    | dfpt/VBulkMPI     | libxc | partly ready |         |   2 |
+|     | Description   | directory name              | marks | Remarks      | CmdLine | MPI |
+| --- | ----------------------- | ----------------- | ----- | ------------ | ------- | --- |
+| +   | Cu bulk fcc, Gamma only | dfpt/CuBulkGamma  | libxc | partly ready |         |   1 |
+| +   | SiC bulk fcc, Gamma only BEC| dfpt/SiCBulk-BEC  | libxc | partly ready |         |   1 |
+| +   | Cu bulk fcc, K-mesh     | dfpt/CuBulkKmesh  | libxc | partly ready |         |   1 |
+| +   | C bulk fcc              | dfpt/CBulk        | libxc | partly ready |         |   1 |
+| +   | C bulk fcc BEC             | dfpt/CBulk-BEC        | libxc | partly ready |         |   1 |
+| +   | Graphene Film           | dfpt/GrapheneFilm | libxc | partly ready |         |   1 |
+| +   | V bulk bcc, mpi         | dfpt/VBulkMPI     | libxc | partly ready |         |   2 |
 
 
 Testset: Noco
@@ -87,6 +90,9 @@ Testset: Noco
 | +   | Iron LO's and SOC test in FFN                 | noco/FeFFNLOsSOC        | bulk,soc,hdf                 |                   |         | 2   |
 | +   | Fe monolayer fcc (110): SS                    | noco/FePt_film_SSFT     | film,spinspiral,forcetheorem |                   |         | 2   |
 | +   | Fe monolayer fcc (110): SS +LO                | noco/FePt_film_SSFT_LO  | film,spinspiral,forcetheorem |                   |         | 2   |
+| +   | Noco, Mn Monolayer SS q=1,0,0                 | noco/MnFilmSS           | film,spinspiral              |                   |         | 2   |
+| +   | Noco, Mn Monolayer mag. in X                  | noco/MnFilmX            | film                         |                   |         | 2   |
+| +   | Noco, Mn Monolayer mag. in Y                  | noco/MnFilmY            | film                         |                   |         | 2   |
 |     | Fe bcc, Flipcdn and noco in MT,x-dir          | noco/Fe_bcc_FlipcdnXLDA | bulk                         | produces warnings |         | 2   |
 |     | Fe bcc, Flipcdn and noco in MT,y-dir          | noco/Fe_bcc_FlipcdnYLDA | bulk                         | produces warnings |         | 2   |
 | +   | relaxation feature of FFN in the MT           | noco/RelaxMT            | bulk,hdf                     |                   |         | 2   |

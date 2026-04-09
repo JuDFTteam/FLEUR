@@ -7,22 +7,23 @@
 MODULE m_dfpt_hs_int
 CONTAINS
    ! Constructs the interstitial perturbed Hamiltonian and overlap matrix
-   SUBROUTINE dfpt_hs_int(noco, juphon, starsq, lapwq, lapw, fmpi, bbmat, isp, vpw, hmat, smat, killcont)
+   SUBROUTINE dfpt_hs_int(sternheimerJob,noco, starsq, lapwq, lapw, fmpi, bbmat, isp, vpw, hmat, smat, killcont)
 
       USE m_types
       USE m_hs_int_direct
+      
 
       IMPLICIT NONE
 
-      TYPE(t_noco),INTENT(IN)       :: noco
-      TYPE(t_juphon),INTENT(IN)     :: juphon
-      TYPE(t_stars),INTENT(IN)      :: starsq
-      REAL, INTENT(IN)              :: bbmat(3, 3)
-      TYPE(t_lapw),INTENT(IN)       :: lapwq, lapw
-      TYPE(t_mpi),INTENT(IN)        :: fmpi
-      INTEGER,INTENT(IN)            :: isp, killcont(3)
-      COMPLEX,INTENT(IN)            :: vpw(:, :)
-      CLASS(t_mat),INTENT(INOUT)    :: smat(:,:),hmat(:,:)
+      TYPE(t_sternheimerJob),INTENT(IN) :: sternheimerJob
+      TYPE(t_noco),INTENT(IN)           :: noco
+      TYPE(t_stars),INTENT(IN)          :: starsq
+      REAL, INTENT(IN)                  :: bbmat(3, 3)
+      TYPE(t_lapw),INTENT(IN)           :: lapwq, lapw
+      TYPE(t_mpi),INTENT(IN)            :: fmpi
+      INTEGER,INTENT(IN)                :: isp, killcont(3)
+      COMPLEX,INTENT(IN)                :: vpw(:, :)
+      CLASS(t_mat),INTENT(INOUT)        :: smat(:,:),hmat(:,:)
 
       INTEGER :: iSpinPr,iSpin, iMatPr, iMat, iTkin
       LOGICAL :: l_smat
@@ -58,7 +59,7 @@ CONTAINS
 
             IF (iSpinPr.EQ.iSpin) iTkin = 2 * killcont(2)
 
-            IF (.NOT.juphon%l_phonon) THEN
+            IF (.NOT.sternheimerJob%l_IBScorrection) THEN
                l_smat = .FALSE.
                iTkin = 0
             END IF

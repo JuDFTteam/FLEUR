@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -18,7 +18,7 @@ MODULE m_types_banddos
      INTEGER :: ndos_points=1301
      LOGICAL :: l_storeEVData = .TRUE.
 
-
+     LOGICAL :: global_frame = .FALSE.
      LOGICAL :: vacdos =.FALSE.
      INTEGER :: layers=0
      INTEGER :: nstars=0
@@ -46,6 +46,8 @@ MODULE m_types_banddos
      LOGICAL :: l_orb =.FALSE.
 
      LOGICAL :: l_jDOS = .FALSE.
+
+     LOGICAL :: l_jointDOS = .FALSE.
 
      LOGICAL :: l_slab=.false.
 
@@ -79,6 +81,7 @@ CONTAINS
     CALL mpi_bc(this%l_mcd ,rank,mpi_comm)
     CALL mpi_bc(this%l_orb ,rank,mpi_comm)
     CALL mpi_bc(this%l_jDOS,rank,mpi_comm)
+    CALL mpi_bc(this%l_jointDOS,rank,mpi_comm)
     CALL mpi_bc(this%vacdos ,rank,mpi_comm)
     CALL mpi_bc(this%e1_dos,rank,mpi_comm)
     CALL mpi_bc(this%e2_dos,rank,mpi_comm)
@@ -111,6 +114,7 @@ CONTAINS
     CALL mpi_bc(this%dos_atomlist,rank,mpi_comm)
     CALL mpi_bc(this%dos_typelist,rank,mpi_comm)
     CALL mpi_bc(this%map_atomtype,rank,mpi_comm)
+    CALL mpi_bc(this%global_frame,rank,mpi_comm)
 
   END SUBROUTINE mpi_bc_banddos
   SUBROUTINE read_xml_banddos(this,xml)
@@ -134,10 +138,12 @@ CONTAINS
        ENDIF
        this%l_orb=evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@orbcomp'))
        this%l_jDOS=evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@jDOS'))
+       if (xml%GetNumberOfNodes('/fleurInput/output/bandDOS/@jointDOS')>0) this%l_jointDOS=evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@jointDOS'))
        all_atoms=evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@all_atoms'))
        this%e2_dos = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@minEnergy'))
        this%e1_dos = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@maxEnergy'))
        this%sig_dos = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@sigma'))
+       if (xml%GetNumberOfNodes('/fleurInput/output/bandDOS/@globalspin')>0) this%global_frame = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@globalspin'))
        this%ndos_points=evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@numberPoints'))
     END IF
 
@@ -250,7 +256,7 @@ CONTAINS
     !Create a list of all atoms and all types for which the DOS is calculated
     ALLOCATE(dos_atomlist(xml%get_nat()),source=0)
     allocate(dos_typelist(xml%get_ntype()),source=0)
-
+    dos_typelist=0
     na=0
     n_dos_atom=0
     n_dos_type=0

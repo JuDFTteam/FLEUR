@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2020 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -18,7 +18,7 @@ MODULE m_types_juPhon
       !LOGICAL :: l_eigout  = .FALSE. ! Write out eigenstuff
       REAL    :: eDiffcut  = 1e-5   ! Cutoff for energy differences
       REAL    :: fDiffcut  = 1e-7    ! Cutoff for occupation differences
-      REAL    :: qlim      = 1./16     ! qlim value
+      REAL    :: qlim      = 1./100     ! qlim value
       REAL    :: gmaxzLocal   = 0.0  ! Local Gmaxz cutoff for film 
 
       LOGICAL :: l_intp = .FALSE.    ! Interpolate the q-set onto another one
@@ -27,16 +27,18 @@ MODULE m_types_juPhon
       LOGICAL :: l_scf  = .TRUE.     ! Do a self-consistency run for dynmats
       LOGICAL :: l_elph = .FALSE.    ! Calculate electron-phonon matrix elements
       LOGICAL :: l_sumrule  = .FALSE. ! Apply sumrule for dynmats
-      LOGICAL :: l_rm_qhdf  = .FALSE. ! Remove q*hdf files, after convergence
+      LOGICAL :: l_rm_qhdf  = .TRUE. ! Remove q*hdf files, after convergence
       INTEGER :: startq = 1          ! Start the q-loop at a specific point
       INTEGER :: stopq  = 0          ! Stop  the q-loop at a specific point
       INTEGER :: qmode  = 0          ! 0: Single-shot calculation for qlist
                                      ! 1: Reads q from fullsym_* input files
       INTEGER :: i_integration = 1   ! choose integration scheme for ph-linewidth (experimental)
       REAL    :: smearingGauss = 1e-7 ! Gaussian smearing for pot-response in Film DFPT 
-      LOGICAL :: l_phonon = .TRUE.    
+      LOGICAL :: l_phonon = .FALSE.    
       LOGICAL :: l_efield = .FALSE.
+      LOGICAL :: l_efield_scr = .FALSE.
       LOGICAL :: l_borneffcharge = .FALSE.
+      LOGICAL :: l_polar = .FALSE.
       LOGICAL :: l_symVacLevel = .TRUE. ! Symmetrize the vacua levels  
 
       REAL, ALLOCATABLE :: qvec(:,:)
@@ -89,7 +91,9 @@ CONTAINS
       CALL mpi_bc(this%qvec_efield, rank, mpi_comm)
       CALL mpi_bc(this%l_phonon, rank, mpi_comm)
       CALL mpi_bc(this%l_efield, rank, mpi_comm)
+      CALL mpi_bc(this%l_efield_scr, rank, mpi_comm)
       CALL mpi_bc(this%l_borneffcharge, rank, mpi_comm)
+      CALL mpi_bc(this%l_polar, rank, mpi_comm)
       CALL mpi_bc(this%qlim,rank,mpi_comm)
       CALL mpi_bc(this%gmaxzLocal,rank,mpi_comm)
       CALL mpi_bc(this%l_symVacLevel, rank, mpi_comm)
@@ -251,10 +255,22 @@ CONTAINS
            this%l_efield    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_efield'))
          END IF
 
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_efield_scr')
+
+         IF (numberNodes == 1) THEN
+           this%l_efield_scr    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_efield_scr'))
+         END IF
+
          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_borneffcharge')
 
          IF (numberNodes == 1) THEN
            this%l_borneffcharge    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_borneffcharge'))
+         END IF
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_polar')
+
+         IF (numberNodes == 1) THEN
+           this%l_polar    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_polar'))
          END IF
 
          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_symVacLevel')
@@ -278,27 +294,27 @@ CONTAINS
     USE m_types_cell
     USE m_types_input
     USE m_inv3
+    USE m_constants
 
       CLASS(t_juPhon),     INTENT(INOUT) :: this
       TYPE(t_cell),    INTENT(IN)     :: cell
       TYPE(t_input),   intent(in)     :: input
       INTEGER                            :: iDir
-      REAL                               :: qvec_ext(3), qvec_int(3),det,inv_bmat(3,3)
+      REAL                               :: qvec_ext(3), qvec_int(3)
 
 
       integer :: iq 
       real :: tmp_vec(3)
 
-      if (this%l_efield) then  
+      if (this%l_efield .or. this%l_borneffcharge) then  
         allocate(this%qvec_efield(3,3))
         do iDir = 1,3
           qvec_ext(:) = 0.0
           qvec_int(:) = 0.0
           qvec_ext(iDir) = this%qlim
-          call inv3(cell%bmat,inv_bmat(:,:),det)
-          qvec_int = matmul(qvec_ext,transpose(inv_bmat))
-          this%qvec_efield(iDir,:) = qvec_int
-        end do 
+          qvec_int = matmul(qvec_ext,cell%amat)/(tpi_const) ! tpi_const is in principle irrelevant, but included for consistency with the previous q vectors
+          this%qvec_efield(:,iDir) = qvec_int
+        end do
       end if 
 
       if (input%film .and. allocated(this%qvec)) then
@@ -336,6 +352,7 @@ CONTAINS
 
     INTEGER :: numberNodes
     CHARACTER(len=100) :: xPathA,valueString
+    LOGICAL :: l_flag
 
     xPathA = '/fleurInput/calculationSetup/cutoffs/@numbands'
     numberNodes = xml%GetNumberOfNodes(xPathA)
@@ -343,6 +360,12 @@ CONTAINS
       valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))))) 
       IF(.NOT. TRIM(ADJUSTL(valueString)).EQ.'all') CALL juDFT_error("numbands is not set to all", calledby="types_juPhon.F90")
     END IF 
+
+    if (this%l_phonon ) then 
+      if (allocated(this%qvec)) then 
+        if (size(this%qvec) .eq. 0 ) call juDFT_warn("No q-Points were given while trying to do a phonon calculation. Please insert q points",calledby="types_juPhon.F90")    
+      end if     
+    end if 
 
    END SUBROUTINE precheck_juPhon
 END MODULE m_types_juPhon

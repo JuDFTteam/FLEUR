@@ -202,7 +202,7 @@ CONTAINS
       END IF
 
       !Finalize the fmpi setup
-      CALL setupMPI(fi%kpts%nkpt, fi%input%neig, nbasfcn, fmpi)
+      CALL setupMPI(fi%kpts%nkpt, fi%input%neig, nbasfcn, fmpi, fi%input%l_real, fi%noco%l_noco)
 
       !Collect some usage info
       CALL add_usage_data("A-Types", fi%atoms%ntype)

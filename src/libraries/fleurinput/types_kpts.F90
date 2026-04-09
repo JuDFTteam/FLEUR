@@ -185,7 +185,7 @@ CONTAINS
       USE m_types_xml
       USE m_calculator
       CLASS(t_kpts), INTENT(inout):: this
-      CHARACTER(len=100), INTENT(IN) :: filename_add
+      CHARACTER(len=*), INTENT(IN) :: filename_add
       TYPE(t_xml), INTENT(INOUT) ::xml
       INTEGER, INTENT(IN), OPTIONAL :: kptsIndex
 

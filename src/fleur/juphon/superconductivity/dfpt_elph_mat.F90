@@ -35,6 +35,7 @@ CONTAINS
         USE m_smooth
         USE m_dfpt_fermie, ONLY : sfermi
         USE m_dfpt_elph_linewidth
+        
 
 
 
@@ -63,9 +64,9 @@ CONTAINS
 
 
         TYPE(t_stars) :: starsq
+        type(t_sternheimerJob) :: sternheimerJob
         INTEGER :: iDtype, iDir, killcont(6) ,iMode , iPerturb
         REAL :: bqpt(3)
-        COMPLEX :: sigma_loc(2)
         COMPLEX,ALLOCATABLE:: gmatCart(:,:,:,:) !(nu',nu,kpoints,jsp)
         COMPLEX,ALLOCATABLE:: gmat(:,:,:,:,:) !(nu',nu,kpoints,jsp,normal_mode)
         REAL, ALLOCATABLE :: ph_linewidth(:) !(normal_mode)
@@ -84,6 +85,9 @@ CONTAINS
         ! In this order: V1_pw_pw, T1_pw, S1_pw, V1_MT, ikGH0_MT, ikGS0_MT
         killcont = [1,1,1,1,1,1]
         
+
+        call sternheimerJob%init(fi,l_phonon=.true.)
+
         !Up to now only irank == 0 knows the eigenvecs plus eigenvals 
         IF (.NOT. ALLOCATED(eigenVecs)) ALLOCATE(eigenVecs(3*fi%atoms%nat,3*fi%atoms%nat))
         IF (.NOT. ALLOCATED(eigenVals)) ALLOCATE(eigenVals(3*fi%atoms%nat))
@@ -121,10 +125,9 @@ CONTAINS
                 
                 CALL timestart("Generating Potential Perturbation")
                 IF (fmpi%irank==0) WRITE(oUnit, *) "vEff1", iDir
-                sigma_loc = cmplx(0.0,0.0)
-                CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
+                CALL dfpt_vgen(sternheimerJob,hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                            fi%juphon,fi%cell,fmpi,fi%noco,nococonv,rho_loc,vTot,&
-                           starsq,denIn1Im_loc,vTot1,.TRUE.,vTot1Im,denIn1_loc,iDtype,iDir,[1,1],sigma_loc)
+                           starsq,denIn1Im_loc,vTot1,.TRUE.,vTot1Im,denIn1_loc,iDtype,iDir,[1,1])
                     
                 CALL timestop("Generating Potential Perturbation")
 
@@ -132,7 +135,7 @@ CONTAINS
                 vTot1%mt(:,0:,iDtype,:) = vTot1%mt(:,0:,iDtype,:) + grVtot(iDir)%mt(:,0:,iDtype,:)
 
                 CALL timestart("Generate electron-phonon matrix element")
-                CALL matrix_element(fi,sphhar,results,resultsq,fmpi,enpara,nococonv,starsq,vTot1,vTot1Im,vTot,rho_loc,bqpt,eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatCart,nuWindow) ! nbasfcnq_min
+                CALL matrix_element(sternheimerJob,fi,sphhar,results,resultsq,fmpi,enpara,nococonv,starsq,vTot1,vTot1Im,vTot,rho_loc,bqpt,eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatCart,nuWindow) ! nbasfcnq_min
                 CALL timestop("Generate electron-phonon matrix element")
 
                 IF (.NOT. ALLOCATED(gmat)) THEN
@@ -186,7 +189,7 @@ CONTAINS
     END SUBROUTINE dfpt_elph_mat
 
 
-    SUBROUTINE matrix_element(fi,sphhar,results, resultsq,fmpi,enpara,nococonv,starsq,v1real,v1imag,vTot,inden,bqpt,eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatBuffer,nuWindow)
+    SUBROUTINE matrix_element(sternheimerJob,fi,sphhar,results, resultsq,fmpi,enpara,nococonv,starsq,v1real,v1imag,vTot,inden,bqpt,eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatBuffer,nuWindow)
         ! This routine is very similar to dfpt_eigen
         ! However, we do not need the gmat which is slightly different to z1
         ! Output needs to be different 
@@ -195,10 +198,12 @@ CONTAINS
         USE m_types_mpimat
         USE m_dfpt_tlmplm
         USE m_local_hamiltonian
+        
         USE m_eig66_io, ONLY : write_eig, read_eig
 
         IMPLICIT NONE 
 
+        TYPE(t_sternheimerJob),INTENT(IN) :: sternheimerJob
         TYPE(t_fleurinput), INTENT(IN) :: fi 
         TYPE(t_sphhar), INTENT(IN) :: sphhar
         TYPE(t_results), INTENT(IN) :: results,resultsq
@@ -273,6 +278,8 @@ CONTAINS
         CALL dfpt_tlmplm(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,enpara,fi%hub1inp,hub1data,vTot,fmpi,tdV1,v1real,v1imag,.FALSE.)
         CALL local_ham(sphhar,fi%atoms,fi%sym,fi%noco,nococonv,enpara,fmpi,vTot,vx,inden,fi%input,fi%hub1inp,hub1data,td,ud,0.0,.TRUE.)
 
+#ifndef _OPENACC  
+!newer nvhpc versions fail here with ICE        
 
         DO jsp = 1, MERGE(1,fi%input%jspins,fi%noco%l_noco)
             DO nk_i = 1, size(fmpi%k_list)
@@ -321,7 +328,7 @@ CONTAINS
 
                 ! Construct the perturbed Hamiltonian and Overlap matrix perturbations:
                 CALL timestart("Setup of matrix perturbations")
-                CALL dfpt_eigen_hssetup(jsp,fmpi,fi,enpara,nococonv,starsq,ud,td,tdV1,vTot,v1real,lapw,lapwq,iDir,iDtype,hmat,smat,nk,killcont)
+                CALL dfpt_eigen_hssetup(sternheimerJob,jsp,fmpi,fi,enpara,nococonv,starsq,ud,td,tdV1,vTot,v1real,lapw,lapwq,iDir,iDtype,hmat,smat,nk,killcont)
                 CALL timestop("Setup of matrix perturbations")
     
                 IF (fmpi%n_size == 1) THEN
@@ -419,7 +426,7 @@ CONTAINS
 
             END DO !nk_i
         END DO !jsp
-
+#endif 
 !#ifdef CPP_MPI
 !        CALL MPI_ALLREDUCE(MPI_IN_PLACE,gmatBuffer,size(gmatBuffer),MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
 !        CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)

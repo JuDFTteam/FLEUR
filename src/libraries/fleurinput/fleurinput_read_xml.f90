@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_fleurinput_read_xml
   USE m_types_fleurinput
   IMPLICIT NONE
@@ -7,7 +12,7 @@ CONTAINS
        xcpot,forcetheo_data,kpts,kptsSelection,kptsArray,enparaXML,gfinp,hub1inp,juPhon,old_version)
     USE m_types_xml
     integer,INTENT(IN)             :: xmlOUTFileID
-    CHARACTER(len=100), INTENT(IN) :: filename_add
+    CHARACTER(len=*), INTENT(IN) :: filename_add
     TYPE(t_cell),INTENT(OUT),OPTIONAL::cell
     TYPE(t_sym),INTENT(OUT),OPTIONAL::sym
     TYPE(t_atoms),INTENT(OUT),OPTIONAL::atoms
@@ -40,6 +45,7 @@ CONTAINS
     CHARACTER(LEN=200) :: xPath
 
     !Call to init of xml type initialized XML reading and connects to inp.xml
+  
     call xml%init(filename_add,old_version)
 
     !Now read from inp.xml for all datatypes

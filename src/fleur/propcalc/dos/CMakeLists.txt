@@ -18,4 +18,5 @@ ${CMAKE_SOURCE_DIR}/src/fleur/propcalc/dos/types_orbcomp.F90
 ${CMAKE_SOURCE_DIR}/src/fleur/propcalc/dos/types_slab.F90
 ${CMAKE_SOURCE_DIR}/src/fleur/propcalc/dos/types_eigdos.F90
 ${CMAKE_SOURCE_DIR}/src/fleur/propcalc/dos/types_vacdos.f90
+${CMAKE_SOURCE_DIR}/src/fleur/propcalc/dos/types_jointDOS.f90
 )

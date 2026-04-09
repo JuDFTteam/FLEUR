@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -17,7 +17,12 @@ CONTAINS
     USE m_radsra
     USE m_radsrd
     USE m_radsrdn
-    USE m_types
+    USE m_types_enpara
+    USE m_types_input
+    USE m_types_atoms
+    USE m_types_rsoc
+    USE m_types_usdus
+    USE m_types_hub1data
     IMPLICIT NONE
     TYPE(t_enpara),INTENT(IN)   :: enpara
     TYPE(t_input),INTENT(IN)    :: input
@@ -62,8 +67,7 @@ CONTAINS
        ENDDO
        DO jspin = 1,input%jspins
           !TODO: here genMTBasis should be used
-         vrTmp = vr(:,jspin)
-         if (atoms%l_nonpolbas(ntyp)) vrTmp = (vr(:,1)+vr(:,2))/2.0
+          vrTmp = enpara%vr(:,ntyp,jspin)
           IF(l_hia.AND.input%jspins.EQ.2) THEN
              IF(PRESENT(hub1data)) THEN
                 IF(hub1data%l_performSpinavg) vrTmp = (vr(:,1)+vr(:,2))/2.0

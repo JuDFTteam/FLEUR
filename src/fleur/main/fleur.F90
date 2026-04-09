@@ -120,6 +120,7 @@ CONTAINS
       LOGICAL :: l_forceTheorem, l_lastIter, l_exist
       REAL    :: fix, sfscale, rdummy, tempDistance
       REAL    :: mmpmatDistancePrev, occDistancePrev
+      REAL    :: iterRuntime
       INTEGER :: tempI, tempK, tempJSP
 
 #ifdef CPP_MPI
@@ -131,10 +132,11 @@ CONTAINS
       CALL optional(fmpi, fi%atoms, sphhar, fi%vacuum, stars, fi%input, &
                     fi%sym, fi%cell, fi%sliceplot, xcpot, fi%noco)
 
-      IF (fi%input%l_wann .AND. (fmpi%irank == 0) .AND. (.NOT. wann%l_bs_comf)) THEN
+      IF (fi%input%l_wann .AND. (.NOT. wann%l_bs_comf)) THEN
          ! TODO: If this warning is commented out, can it be erased?
          !IF(fmpi%isize.NE.1) CALL juDFT_error('No Wannier+MPI at the moment',calledby = 'fleur')
-         CALL wann_optional(fmpi, fi%input, fi%kpts, fi%atoms, fi%sym, fi%cell,   fi%noco, wann)
+         if (fmpi%irank==0) CALL wann_optional(fmpi, fi%input, fi%kpts, fi%atoms, fi%sym, fi%cell,   fi%noco, wann)
+         if (wann%l_stopopt) CALL juDFT_end("wann_optional done",fmpi%irank) 
       END IF
 
       iter = 0
@@ -258,6 +260,7 @@ CONTAINS
       ! Start the scf loop.
       l_lastIter = .FALSE.
       scfloop: DO WHILE (l_cont)
+         iterRuntime = cputime()
          iter = iter + 1
          l_lastIter = l_lastIter.OR.(iter.EQ.fi%input%itmax)
          hub1data%overallIteration = hub1data%overallIteration + 1
@@ -348,7 +351,7 @@ CONTAINS
          END IF
 
          CALL timestart("generation of potential")
-         CALL vgen(hybdat, fi%field, fi%input, xcpot, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, fi%juphon, &
+         CALL vgen(hybdat, fi%field, fi%input, xcpot, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, &
                    fi%cell,   fi%sliceplot, fmpi, results, fi%noco, nococonv, EnergyDen, inDen, vTot, vx, vCoul, vxc, exc)
          CALL timestop("generation of potential")
 
@@ -629,14 +632,14 @@ CONTAINS
          
          ! mix input and output densities
          CALL mix_charge(field2, fmpi, (iter == fi%input%itmax .OR. judft_was_argument("-mix_io")), stars, &
-                         fi%atoms, sphhar, fi%vacuum, fi%input, fi%sym, fi%juphon, fi%cell, fi%noco, nococonv, &
+                         fi%atoms, sphhar, fi%vacuum, fi%input, fi%sym, fi%cell, fi%noco, nococonv, &
                          archiveType, xcpot, iter, inDen, outDen,  results, coreDen, hub1data%l_runthisiter, fi%sliceplot)
          
          ! Rotating to the local MT frame
          CALL toLocalSpinFrame(fmpi, fi%vacuum, sphhar, stars, fi%sym, fi%cell, fi%noco, &
                                nococonv, fi%input, fi%atoms, .TRUE., inDen, .TRUE.)
      
-   
+         iterRuntime = cputime() - iterRuntime
                          
          IF (fmpi%irank==0) THEN
             WRITE (oUnit, FMT=8130) iter
@@ -646,7 +649,7 @@ CONTAINS
                WRITE (*, *) "Iteration:", iter, " Distance:", results%last_distance, " hyb distance:", hybdat%results%last_distance
                call log%add("Hybrid-distance",float2str(hybdat%results%last_distance))
             ELSE
-               WRITE (*, *) "Iteration:", iter, " Distance:", results%last_distance
+               WRITE (*, '(a,i6,a,f17.8,a,f12.3,a)') " Iteration:", iter, "   Distance:", results%last_distance, " me/bohr^3   Runtime:", iterRuntime, " s"
             ENDIF
             call log%add("Distance",float2str(results%last_distance))
             call log%report(logmode_info)

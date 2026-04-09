@@ -17,6 +17,8 @@ src/fleur/eigen/hsmt_lo.F90
 src/fleur/eigen/local_hamiltonian.F90
 src/fleur/eigen/eigen_hssetup.F90
 src/fleur/eigen/hsmt.F90
+src/fleur/eigen/int_21.f90
+src/fleur/eigen/int_21lo.f90
 src/fleur/eigen/hsvac.F90
 src/fleur/eigen/orthoglo.F90
 src/fleur/eigen/rad_ovlp.f90

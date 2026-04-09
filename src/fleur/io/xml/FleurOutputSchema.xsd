@@ -173,6 +173,7 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="bandgap" type="SingleValueType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="sumValenceSingleParticleEnergies" type="SingleValueType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="FermiEnergy" type="SingleValueType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="FixedTotalMoment" type="FixedTotalMomentType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="valenceDensity" type="ChargeDensityType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="onSiteExchangeSplitting" type="OnSiteExchangeSplittingType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="noncollinearTorque" type="GFTorqueType"/>
@@ -347,6 +348,12 @@
 
    <xsd:complexType name="SingleValueType">
       <xsd:attribute name="value" type="xsd:double" use="required"/>
+      <xsd:attribute name="units" type="xsd:string" use="optional"/>
+   </xsd:complexType>
+   
+   <xsd:complexType name="FixedTotalMomentType">
+      <xsd:attribute name="fermiEnergyUp" type="xsd:double" use="required"/>
+      <xsd:attribute name="fermiEnergyDown" type="xsd:double" use="required"/>
       <xsd:attribute name="units" type="xsd:string" use="optional"/>
    </xsd:complexType>
 
@@ -773,7 +780,7 @@
    <xsd:complexType name="PhononsType">
       <xsd:sequence>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="dynMat" type="dynMatType"/>
-     <xsd:element maxOccurs="unbounded" minOccurs="0" name="efield" type="efieldType"/>
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="efield" type="efieldType"/> 
       </xsd:sequence>
    </xsd:complexType>
 
@@ -797,17 +804,28 @@
 
    <xsd:complexType name="efieldType">
       <xsd:sequence>
-        <xsd:element maxOccurs="unbounded" minOccurs="1" name="dielconst" type="dielconstType"/>
+        <xsd:element maxOccurs="unbounded" minOccurs="0" name="dieltensor" type="dieltensorType"/>
+        <xsd:element maxOccurs="unbounded" minOccurs="0" name="borneffcharge" type="borneffchargeType"/>
       </xsd:sequence>
    </xsd:complexType>
 
-   <xsd:complexType name="dielconstType">
+   <xsd:complexType name="dieltensorType">
       <xsd:simpleContent>
          <xsd:extension base="DoubleVecType">
             <xsd:attribute name="qlim" type="xsd:double" use="optional"/>
          </xsd:extension>
       </xsd:simpleContent>
    </xsd:complexType>
+
+      <xsd:complexType name="borneffchargeType">
+      <xsd:simpleContent>
+         <xsd:extension base="DoubleVecType">
+            <xsd:attribute name="iDtype" type="xsd:integer" use="optional"/>
+            <xsd:attribute name="iDir" type="xsd:integer" use="optional"/>
+         </xsd:extension>
+      </xsd:simpleContent>
+   </xsd:complexType>
+
    <!-- Cannot be in the FleurInputSchema.xsd since we still support older FleurInputSchemas -->
    <xsd:simpleType name="FleurDouble4DVecType">
       <xsd:restriction base="FleurDoubleVecType">
