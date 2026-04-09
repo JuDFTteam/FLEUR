@@ -271,10 +271,10 @@ CONTAINS
          ! Calculate the perturbed expansion coefficients z1 --> saved to results1
          CALL timestart("dfpt eigen")
          IF (.NOT.final_SH_it) THEN
-            CALL dfpt_eigen(fi, sphhar, results, resultsq, results1, fmpi, enpara, nococonv, starsq, vTot1, vTot1Im, &
+            CALL dfpt_eigen(sternheimerJob, fi, sphhar, results, resultsq, results1, fmpi, enpara, nococonv, starsq, vTot1, vTot1Im, &
                                 vTot, rho, bqpt, eig_id, q_eig_id, dfpt_eig_id, iDir, iDtype, killcont, l_real, .TRUE.)
          ELSE
-            CALL dfpt_eigen(fi, sphhar, results, resultsq, results1, fmpi, enpara, nococonv, starsq, vTot1, vTot1Im, &
+            CALL dfpt_eigen(sternheimerJob, fi, sphhar, results, resultsq, results1, fmpi, enpara, nococonv, starsq, vTot1, vTot1Im, &
                                 vTot, rho, bqpt, eig_id, q_eig_id, dfpt_eig_id, iDir, iDtype, killcont, l_real, .FALSE., dfpt_eig_id2)
          END IF
          CALL timestop("dfpt eigen")
@@ -282,10 +282,10 @@ CONTAINS
          IF (l_minusq) THEN
             CALL timestart("dfpt minus eigen")
             IF (.NOT.final_SH_it) THEN
-               CALL dfpt_eigen(fi, sphhar, results, resultsmq, results1m, fmpi, enpara, nococonv, starsmq, vTot1m, vTot1mIm, &
+               CALL dfpt_eigen(sternheimerJob, fi, sphhar, results, resultsmq, results1m, fmpi, enpara, nococonv, starsmq, vTot1m, vTot1mIm, &
                                    vTot, rho, bmqpt, eig_id, qm_eig_id, dfpt_eigm_id, iDir, iDtype, killcont, l_real, .TRUE.)
             ELSE
-               CALL dfpt_eigen(fi, sphhar, results, resultsmq, results1m, fmpi, enpara, nococonv, starsmq, vTot1m, vTot1mIm, &
+               CALL dfpt_eigen(sternheimerJob, fi, sphhar, results, resultsmq, results1m, fmpi, enpara, nococonv, starsmq, vTot1m, vTot1mIm, &
                                    vTot, rho, bmqpt, eig_id, qm_eig_id, dfpt_eigm_id, iDir, iDtype, killcont, l_real, .FALSE., dfpt_eigm_id2)
             END IF
             CALL timestop("dfpt minus eigen")
@@ -354,14 +354,13 @@ CONTAINS
          CALL denOut1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN, l_dfpt=.FALSE.)
          denOut1%iter = denIn1%iter
          IF (.NOT.l_minusq) THEN
-            CALL dfpt_cdngen(eig_id,dfpt_eig_id,fmpi,fi%input,banddosdummy,fi%vacuum,&
-                             fi%kpts,fi%atoms,sphhar,starsq,fi%sym,juPhon,fi%gfinp,fi%hub1inp,&
+            CALL dfpt_cdngen(sternheimerJob,eig_id,dfpt_eig_id,fmpi,fi%input,banddosdummy,fi%vacuum,&
+                             fi%kpts,fi%atoms,sphhar,starsq,fi%sym,fi%gfinp,fi%hub1inp,&
                              enpara,fi%cell,fi%noco,nococonv,vTot,results,results1,&
                              archiveType,xcpot,denOut1,denOut1Im,bqpt,iDtype,iDir,l_real)
-            !print*," in dfpt_cdng sum(denOut1%pw(:,:))",sum(denOut1%pw(:,:))
          ELSE
-            CALL dfpt_cdngen(eig_id,dfpt_eig_id,fmpi,fi%input,banddosdummy,fi%vacuum,&
-                             fi%kpts,fi%atoms,sphhar,starsq,fi%sym,juPhon,fi%gfinp,fi%hub1inp,&
+            CALL dfpt_cdngen(sternheimerJob,eig_id,dfpt_eig_id,fmpi,fi%input,banddosdummy,fi%vacuum,&
+                             fi%kpts,fi%atoms,sphhar,starsq,fi%sym,fi%gfinp,fi%hub1inp,&
                              enpara,fi%cell,fi%noco,nococonv,vTot,results,results1,&
                              archiveType,xcpot,denOut1,denOut1Im,bqpt,iDtype,iDir,l_real,&
                              qm_eig_id,dfpt_eigm_id,starsmq,results1m)
@@ -372,8 +371,8 @@ CONTAINS
             CALL timestart("generation of new charge density (total)")
             CALL denOut1m%init(starsmq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN, l_dfpt=.TRUE.)
             CALL denOut1mIm%init(starsmq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN, l_dfpt=.FALSE.)
-            CALL dfpt_cdngen(eig_id,dfpt_eigm_id,fmpi,fi%input,banddosdummy,fi%vacuum,&
-                             fi%kpts,fi%atoms,sphhar,starsmq,fi%sym,juPhon,fi%gfinp,fi%hub1inp,&
+            CALL dfpt_cdngen(sternheimerJob,eig_id,dfpt_eigm_id,fmpi,fi%input,banddosdummy,fi%vacuum,&
+                             fi%kpts,fi%atoms,sphhar,starsmq,fi%sym,fi%gfinp,fi%hub1inp,&
                              enpara,fi%cell,fi%noco,nococonv,vTot,results,results1m,&
                              archiveType,xcpot,denOut1m,denOut1mIm,-bqpt,iDtype,iDir,l_real,&
                              q_eig_id,dfpt_eig_id,starsq,results1)

@@ -9,7 +9,7 @@ MODULE m_dfpt_hsmt
    IMPLICIT NONE
 
 CONTAINS
-   SUBROUTINE dfpt_hsmt(atoms, sym, juphon, enpara, iSpin, iDir, iDtype, input, fmpi, &
+   SUBROUTINE dfpt_hsmt(sternheimerJob, atoms, sym, enpara, iSpin, iDir, iDtype, input, fmpi, &
                       & noco, nococonv, cell, lapw, lapwq, usdus, td, tdV1, hmat, smat, nk, killcont)
 
       !> Setup of the MT part of the Hamiltonian and the overlap perturbation matrices
@@ -44,22 +44,23 @@ CONTAINS
       USE m_hsmt_spinor
       USE m_hsmt_offdiag
       USE m_matrix_pref
+      USE m_types_sternheimerJob
 
       IMPLICIT NONE
 
-      TYPE(t_mpi),      INTENT(IN)    :: fmpi
-      TYPE(t_input),    INTENT(IN)    :: input
-      TYPE(t_noco),     INTENT(IN)    :: noco
-      TYPE(t_nococonv), INTENT(IN)    :: nococonv
-      TYPE(t_sym),      INTENT(IN)    :: sym
-      TYPE(t_juphon),   INTENT(IN)    :: juphon
-      TYPE(t_cell),     INTENT(IN)    :: cell
-      TYPE(t_atoms),    INTENT(IN)    :: atoms
-      TYPE(t_enpara),   INTENT(IN)    :: enpara
-      TYPE(t_lapw),     INTENT(IN)    :: lapw, lapwq
-      TYPE(t_tlmplm),   INTENT(IN)    :: td, tdV1
-      TYPE(t_usdus),    INTENT(IN)    :: usdus
-      CLASS(t_mat),     INTENT(INOUT) :: smat(:,:),hmat(:,:)
+      TYPE(t_sternheimerJob),INTENT(IN) :: sternheimerJob
+      TYPE(t_mpi),      INTENT(IN)      :: fmpi
+      TYPE(t_input),    INTENT(IN)      :: input
+      TYPE(t_noco),     INTENT(IN)      :: noco
+      TYPE(t_nococonv), INTENT(IN)      :: nococonv
+      TYPE(t_sym),      INTENT(IN)      :: sym
+      TYPE(t_cell),     INTENT(IN)      :: cell
+      TYPE(t_atoms),    INTENT(IN)      :: atoms
+      TYPE(t_enpara),   INTENT(IN)      :: enpara
+      TYPE(t_lapw),     INTENT(IN)      :: lapw, lapwq
+      TYPE(t_tlmplm),   INTENT(IN)      :: td, tdV1
+      TYPE(t_usdus),    INTENT(IN)      :: usdus
+      CLASS(t_mat),     INTENT(INOUT)   :: smat(:,:),hmat(:,:)
 
       INTEGER, INTENT(IN) :: iSpin, iDir, iDtype, nk, killcont(3)
 
@@ -117,7 +118,7 @@ CONTAINS
                CALL timestop("fjgjq coefficients")
 
                IF (.NOT.noco%l_noco) THEN
-                  IF (n.EQ.iDtype .AND. juphon%l_phonon) THEN
+                  IF (n.EQ.iDtype .AND. sternheimerJob%l_IBScorrection) THEN
                      CALL hsmt_nonsph(n,fmpi,sym,atoms,ilSpinPr,ilSpin,1,1,chi_one,noco,nococonv,cell,lapw,td,fjgj,h1mat_tmp(1,1),.TRUE.,lapwq,fjgjq)
                      CALL hsmt_sph(n,atoms,fmpi,ilSpinPr,input,nococonv,1,1,chi_one,lapw,enpara%el0,td%e_shift(n,ilSpinPr),usdus,fjgj,s1mat_tmp(1,1),h1mat_tmp(1,1),.TRUE.,.TRUE.,lapwq,fjgjq)
                      CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,usdus,td,fjgj,n,chi_one,ilSpinPr,ilSpin,igSpinPr,igSpin,h1mat_tmp(1,1),.FALSE.,.TRUE.,.TRUE.,s1mat_tmp(1,1),lapwq,fjgjq)
@@ -131,7 +132,7 @@ CONTAINS
                   ! TODO: Everything from here onwards  most certainly has the wrong spin logic.
                   IF (ilSpinPr==ilSpin) THEN !local spin-diagonal contribution
                      CALL hsmt_spinor(ilSpinPr,n,nococonv,chi)
-                     IF (n.EQ.iDtype .AND. juphon%l_phonon) THEN
+                     IF (n.EQ.iDtype .AND. sternheimerJob%l_IBScorrection) THEN
                         CALL hsmt_nonsph(n,fmpi,sym,atoms,ilSpinPr,ilSpinPr,1,1,chi_one,noco,nococonv,cell,lapw,td,fjgj,hmat_tmp,.TRUE.,lapwq,fjgjq)
                         CALL hsmt_sph(n,atoms,fmpi,ilSpinPr,input,nococonv,1,1,chi_one,lapw,enpara%el0,td%e_shift(n,ilSpinPr),usdus,fjgj,smat_tmp,hmat_tmp,.TRUE.,.TRUE.,lapwq,fjgjq)
                         CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,usdus,td,fjgj,n,chi_one,ilSpinPr,ilSpin,igSpinPr,igSpin,hmat_tmp,.TRUE.,.TRUE.,.TRUE.,smat_tmp,lapwq,fjgjq)
@@ -151,7 +152,7 @@ CONTAINS
                   ELSE IF (noco%l_unrestrictMT(n)) THEN
                      !2,1
                      CALL hsmt_spinor(3,n,nococonv,chi)
-                     IF (n.EQ.iDtype .AND. juphon%l_phonon) THEN
+                     IF (n.EQ.iDtype .AND. sternheimerJob%l_IBScorrection) THEN
                         CALL hsmt_nonsph(n,fmpi,sym,atoms,ilSpinPr,ilSpinPr,2,1,chi_one,noco,nococonv,cell,lapw,td,fjgj,hmat_tmp,.TRUE.,lapwq,fjgjq)
                         CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,usdus,td,fjgj,n,chi_one,2,1,igSpinPr,igSpin,hmat_tmp,.TRUE.,.TRUE.,.FALSE.,lapwq=lapwq,fjgjq=fjgjq)
                         CALL timestart("hsmt_distspins")
@@ -170,7 +171,7 @@ CONTAINS
 
                      !1,2
                      CALL hsmt_spinor(4,n,nococonv,chi)
-                     IF (n.EQ.iDtype .AND. juphon%l_phonon) THEN
+                     IF (n.EQ.iDtype .AND. sternheimerJob%l_IBScorrection) THEN
                         CALL hsmt_nonsph(n,fmpi,sym,atoms,ilSpinPr,ilSpinPr,1,2,chi_one,noco,nococonv,cell,lapw,td,fjgj,hmat_tmp,.TRUE.,lapwq,fjgjq)
                         CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,usdus,td,fjgj,n,chi_one,1,2,igSpinPr,igSpin,hmat_tmp,.TRUE.,.TRUE.,.FALSE.,lapwq=lapwq,fjgjq=fjgjq)
                         CALL timestart("hsmt_distspins")
@@ -194,7 +195,7 @@ CONTAINS
       !!$acc end data
 
       ! TODO: Does this need some ACC magic?
-      IF (juphon%l_phonon) THEN
+      IF (sternheimerJob%l_IBScorrection) THEN
          DO igSpinPr=MERGE(1,1,noco%l_noco),MERGE(2,1,noco%l_noco)
             DO igSpin=MERGE(1,1,noco%l_noco),MERGE(2,1,noco%l_noco)
                CALL matrix_pref(fmpi, atoms, cell%bmat, lapwq%gvec(:, :, igSpinPr), lapw%gvec(:,:,igSpin), lapwq, lapw, &

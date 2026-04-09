@@ -6,7 +6,7 @@
 
 MODULE m_dfpt_eigen_hssetup
 CONTAINS
-   SUBROUTINE dfpt_eigen_hssetup(isp, fmpi, fi, enpara, nococonv, starsq, &
+   SUBROUTINE dfpt_eigen_hssetup(sternheimerJob, isp, fmpi, fi, enpara, nococonv, starsq, &
                             ud, td, tdV1, vTot, vTot1, lapw, lapwq, iDir, iDtype, hmat_final, smat_final, nk, killcont)
       USE m_types
       USE m_types_mpimat
@@ -14,9 +14,11 @@ CONTAINS
       USE m_dfpt_hsmt
       USE m_dfpt_hsvac
       USE m_eigen_redist_matrix
+      USE m_types_sternheimerJob
 
       IMPLICIT NONE
 
+      TYPE(t_sternheimerJob),INTENT(IN)  :: sternheimerJob
       INTEGER,            INTENT(IN)     :: isp
       TYPE(t_mpi),        INTENT(IN)     :: fmpi
       type(t_fleurinput), INTENT(IN)     :: fi
@@ -53,7 +55,7 @@ CONTAINS
       ! h1 gets V1Theta(k+q,k), VTheta1(k+q,k) and TTheta1(k+q,k)
       ! s1 gets Theta1(k+q,k)
       CALL timestart("Interstitial part")
-      CALL dfpt_hs_int(fi%noco, fi%juphon, starsq, lapwq, lapw, fmpi, fi%cell%bbmat, isp, vTot1%pw_w, hmat, smat, killcont(1:3))
+      CALL dfpt_hs_int(sternheimerJob, fi%noco, starsq, lapwq, lapw, fmpi, fi%cell%bbmat, isp, vTot1%pw_w, hmat, smat, killcont(1:3))
       CALL timestop("Interstitial part")
 
       ! Interstitial part:
@@ -65,7 +67,7 @@ CONTAINS
             !$acc enter data copyin(hmat(i,j),smat(i,j))
             !$acc enter data copyin(hmat(i,j)%data_r,smat(i,j)%data_r,hmat(i,j)%data_c,smat(i,j)%data_c)
       END DO; END DO
-      CALL dfpt_hsmt(fi%atoms, fi%sym, fi%juphon, enpara, isp, iDir, iDtype, fi%input, fmpi, fi%noco, nococonv, fi%cell, lapw, lapwq, ud, td, tdV1, hmat, smat, nk, killcont(4:6))
+      CALL dfpt_hsmt(sternheimerJob, fi%atoms, fi%sym, enpara, isp, iDir, iDtype, fi%input, fmpi, fi%noco, nococonv, fi%cell, lapw, lapwq, ud, td, tdV1, hmat, smat, nk, killcont(4:6))
       DO i = 1, nspins; DO j = 1, nspins; if (hmat(1, 1)%l_real) THEN
             !$acc exit data copyout(hmat(i,j)%data_r,smat(i,j)%data_r) delete(hmat(i,j)%data_c,smat(i,j)%data_c)
             !$acc exist data delete(hmat(i,j),smat(i,j))

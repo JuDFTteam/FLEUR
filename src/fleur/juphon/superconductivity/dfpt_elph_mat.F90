@@ -135,7 +135,7 @@ CONTAINS
                 vTot1%mt(:,0:,iDtype,:) = vTot1%mt(:,0:,iDtype,:) + grVtot(iDir)%mt(:,0:,iDtype,:)
 
                 CALL timestart("Generate electron-phonon matrix element")
-                CALL matrix_element(fi,sphhar,results,resultsq,fmpi,enpara,nococonv,starsq,vTot1,vTot1Im,vTot,rho_loc,bqpt,eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatCart,nuWindow) ! nbasfcnq_min
+                CALL matrix_element(sternheimerJob,fi,sphhar,results,resultsq,fmpi,enpara,nococonv,starsq,vTot1,vTot1Im,vTot,rho_loc,bqpt,eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatCart,nuWindow) ! nbasfcnq_min
                 CALL timestop("Generate electron-phonon matrix element")
 
                 IF (.NOT. ALLOCATED(gmat)) THEN
@@ -189,7 +189,7 @@ CONTAINS
     END SUBROUTINE dfpt_elph_mat
 
 
-    SUBROUTINE matrix_element(fi,sphhar,results, resultsq,fmpi,enpara,nococonv,starsq,v1real,v1imag,vTot,inden,bqpt,eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatBuffer,nuWindow)
+    SUBROUTINE matrix_element(sternheimerJob,fi,sphhar,results, resultsq,fmpi,enpara,nococonv,starsq,v1real,v1imag,vTot,inden,bqpt,eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatBuffer,nuWindow)
         ! This routine is very similar to dfpt_eigen
         ! However, we do not need the gmat which is slightly different to z1
         ! Output needs to be different 
@@ -198,10 +198,12 @@ CONTAINS
         USE m_types_mpimat
         USE m_dfpt_tlmplm
         USE m_local_hamiltonian
+        USE m_types_sternheimerJob
         USE m_eig66_io, ONLY : write_eig, read_eig
 
         IMPLICIT NONE 
 
+        TYPE(t_sternheimerJob),INTENT(IN) :: sternheimerJob
         TYPE(t_fleurinput), INTENT(IN) :: fi 
         TYPE(t_sphhar), INTENT(IN) :: sphhar
         TYPE(t_results), INTENT(IN) :: results,resultsq
@@ -326,7 +328,7 @@ CONTAINS
 
                 ! Construct the perturbed Hamiltonian and Overlap matrix perturbations:
                 CALL timestart("Setup of matrix perturbations")
-                CALL dfpt_eigen_hssetup(jsp,fmpi,fi,enpara,nococonv,starsq,ud,td,tdV1,vTot,v1real,lapw,lapwq,iDir,iDtype,hmat,smat,nk,killcont)
+                CALL dfpt_eigen_hssetup(sternheimerJob,jsp,fmpi,fi,enpara,nococonv,starsq,ud,td,tdV1,vTot,v1real,lapw,lapwq,iDir,iDtype,hmat,smat,nk,killcont)
                 CALL timestop("Setup of matrix perturbations")
     
                 IF (fmpi%n_size == 1) THEN
