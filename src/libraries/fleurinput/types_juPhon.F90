@@ -44,6 +44,8 @@ MODULE m_types_juPhon
       REAL, ALLOCATABLE :: qvec(:,:)
       REAL, ALLOCATABLE :: qvec_efield(:,:)
 
+      INTEGER, ALLOCATABLE :: bandWindow(:)  ! Window of Blochstates we want to consider
+
       LOGICAL :: calcEigenVec    = .TRUE.
       
    CONTAINS
@@ -99,6 +101,8 @@ CONTAINS
       CALL mpi_bc(this%l_symVacLevel, rank, mpi_comm)
       CALL mpi_bc(this%eDiffcut, rank, mpi_comm)
       CALL mpi_bc(this%fDiffcut, rank, mpi_comm)
+      CALL mpi_bc(this%bandWindow, rank, mpi_comm)
+
 
    END SUBROUTINE mpi_bc_juPhon
 
@@ -113,6 +117,8 @@ CONTAINS
 
       INTEGER::numberNodes
       CHARACTER(len=100) :: xPathA,valueString
+      REAL, ALLOCATABLE :: tmp_arr(:)
+
 
       numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon')
 
@@ -277,6 +283,16 @@ CONTAINS
 
          IF (numberNodes == 1) THEN
           this%l_symVacLevel    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_symVacLevel'))
+         END IF
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@bandWindow')
+
+         IF (numberNodes == 1) THEN
+          allocate(this%bandWindow(2))
+          allocate(tmp_arr(2))
+          valueString = xml%GetAttributeValue('/fleurInput/output/juPhon/@bandWindow')
+          call evaluateList(tmp_arr,valueString)
+          this%bandWindow = tmp_arr
          END IF
 
 

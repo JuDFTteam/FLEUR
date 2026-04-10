@@ -341,6 +341,16 @@ CONTAINS
                CALL denIn1m%distribute(fmpi%mpi_comm)
             END IF
 
+            if (fmpi%irank==0 .and. fi%juphon%l_elph) then 
+               ! write out potential if necessary 
+               call writeDensity(starsq,fi%noco,fi%vacuum,fi%atoms,fi%cell,sphhar,fi%input,fi%sym ,archiveType,CDN_INPUT_DEN_const,&
+                                 1,resultsq%last_distance,resultsq%ef,resultsq%last_mmpmatDistance, resultsq%last_occDistance,.false.,vTot1,inFilename="pot1_"//dfpt_tag,denIm=vTot1Im)
+               if (l_minusq) then 
+                  call writeDensity(starsmq,fi%noco,fi%vacuum,fi%atoms,fi%cell,sphhar,fi%input,fi%sym ,archiveType,CDN_INPUT_DEN_const,&
+                                 1,resultsq%last_distance,resultsq%ef,resultsq%last_mmpmatDistance, resultsq%last_occDistance,.false.,vTot1m,inFilename="pot1m_"//dfpt_tag,denIm=vTot1mIm)
+               end if 
+            end if
+
             l_cont = .FALSE.
             IF (fmpi%irank==0) write(*,*) "Final Sternheimer iteration finished."
             CALL timestop("Sternheimer Iteration")

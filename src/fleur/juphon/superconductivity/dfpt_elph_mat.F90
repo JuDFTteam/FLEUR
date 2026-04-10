@@ -103,9 +103,9 @@ CONTAINS
         ! Introduce Energy Window for states
         ! Reduce memory and computational effort
         bqpt = qpts%bk(:, iQ)
-        CALL timestart("Generating the energy window")
-        CALL energy_window(fi,fmpi,results,resultsq,nococonv,bqpt,eigenVals,nuWindow)
-        CALL timestop("Generating the energy window")
+        ! CALL timestart("Generating the energy window")
+        ! CALL energy_window(fi,fmpi,results,resultsq,nococonv,bqpt,eigenVals,nuWindow)
+        ! CALL timestop("Generating the energy window")
         
         DO iDtype=1,fi%atoms%nat
             DO iDir=1,3
@@ -135,6 +135,8 @@ CONTAINS
                 vTot1%mt(:,0:,iDtype,:) = vTot1%mt(:,0:,iDtype,:) + grVtot(iDir)%mt(:,0:,iDtype,:)
 
                 CALL timestart("Generate electron-phonon matrix element")
+                ! currenlty this call will lead to segfalse here! 
+                ! reactivate in the future. 
                 CALL matrix_element(sternheimerJob,fi,sphhar,results,resultsq,fmpi,enpara,nococonv,starsq,vTot1,vTot1Im,vTot,rho_loc,bqpt,eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatCart,nuWindow) ! nbasfcnq_min
                 CALL timestop("Generate electron-phonon matrix element")
 
@@ -216,8 +218,7 @@ CONTAINS
         INTEGER, INTENT(IN) :: eig_id, q_eig_id,iDir, iDtype ,killcont(6) 
         LOGICAL, INTENT(IN) :: l_real
         COMPLEX,ALLOCATABLE,INTENT(INOUT) :: gmatBuffer(:,:,:,:) !(nu',nu,kpoints,jsp)
-        !INTEGER,INTENT(INOUT):: nbasfcnq_min
-        INTEGER, INTENT(IN) :: nuWindow(2,2)
+        INTEGER, INTENT(IN) :: nuWindow(2) ! Eigenstate value that we want to consider 
 
 
         TYPE(t_tlmplm)  :: td, tdV1
@@ -232,7 +233,7 @@ CONTAINS
         INTEGER :: ierr
 #endif 
 
-        INTEGER :: jsp, nk_i, nk ,noccbd,noccbdq,nbasfcn,nbasfcnq , i , neigk,neigq, nu , noccbd_max !, nbasfcnq_max
+        INTEGER :: jsp, nk_i, nk ,noccbd,noccbdq,nbasfcn,nbasfcnq , i , neigk,neigq, nu 
         INTEGER :: tmp1 ,  dealloc_stat
         character(len=300)        :: errmsg
         REAL :: bkpt(3)
@@ -241,36 +242,10 @@ CONTAINS
 
         INTEGER, ALLOCATABLE      :: ev_list(:), q_ev_list(:)
 
-
-        ! lapw and lapwq can be different if k and k+q do not align
-        !nbasfcnq_max = lapwq%dim_nvd()
-        !noccbd_max = 0 
-        !nbasfcnq_min = 1000000000! ridiculous but should ensure 
-        !IF (fmpi%irank==0) THEN 
-        !    DO jsp = 1, MERGE(1,fi%input%jspins,fi%noco%l_noco)
-        !        DO nk_i = 1, fi%kpts%nkpt
-        !            CALL lapw%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, nk_i, fi%cell, fmpi)
-        !            CALL lapwq%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, nk_i, fi%cell, fmpi, bqpt)
-        !            noccbd  = COUNT(results%w_iks(:,nk_i,jsp)*2.0/fi%input%jspins>1.e-8)
-        !            nbasfcnq = MERGE(lapwq%nv(1)+lapwq%nv(2)+2*fi%atoms%nlotot,lapwq%nv(1)+fi%atoms%nlotot,fi%noco%l_noco)
-        !            IF (noccbd.GT.noccbd_max) noccbd_max = noccbd
-        !            ! maybe we can reduce the calculation to nbasfcnq_min --> saves memory and time 
-        !            IF (nbasfcnq .LT. nbasfcnq_min) nbasfcnq_min =nbasfcnq
-        !        END DO !nk_i
-        !    END DO !jsp 
-        !END IF 
-
-        noccbd_max = nuWindow(1,2)
-
-!#ifdef CPP_MPI
-!        CALL MPI_BCAST(noccbd_max, 1, MPI_INTEGER, 0, fmpi%mpi_comm, ierr)
-!        CALL MPI_BCAST(nbasfcnq_min, 1, MPI_INTEGER, 0, fmpi%mpi_comm, ierr)
-!#endif 
-
         CALL vx%copyPotDen(vTot)
         ALLOCATE(vx%pw_w, mold=vx%pw)
         vx%pw_w = vTot%pw_w
-        ALLOCATE(gmatBuffer(nuWindow(2,2)-nuWindow(2,1)+1,nuWindow(1,2)-nuWindow(1,1)+1,size(fmpi%k_list),fi%input%jspins))
+
         gmatBuffer=0.0 
 
         ! Get the (lm) matrix elements for V1 and H0
@@ -306,18 +281,18 @@ CONTAINS
 
                 ! Initialize the expansion coefficient matrices at k and k+q
                 ! Then read all the stuff into it
-                CALL zMatk%init(l_real,nbasfcn,noccbd_max)
+                CALL zMatk%init(l_real,nbasfcn,nuWindow(2))
                 CALL zMatq%init(l_real,nbasfcnq,nbasfcnq)
 
 
                 ! We only need this for read in 
                 ! Data inside we do not care about
-                ALLOCATE(ev_list(noccbd_max))
-                ev_list = (/(i, i=1,noccbd_max, 1)/)
+                ALLOCATE(ev_list(nuWindow(2)))
+                ev_list = (/(i, i=1,nuWindow(2), 1)/)
                 ALLOCATE(q_ev_list(nbasfcnq))
                 q_ev_list = (/(i, i=1,nbasfcnq, 1)/)
 
-                ALLOCATE(eigk(noccbd_max))
+                ALLOCATE(eigk(nuWindow(2)))
                 ALLOCATE(eigq(nbasfcnq))
 
                 CALL timestart("Read eigenstuff at k/k+q")
@@ -338,10 +313,10 @@ CONTAINS
                 END IF
     
                 ! Initialize the electron-phonon matrix
-                CALL gmat%init(.FALSE.,nbasfcnq,noccbd_max)
-                gmat%data_c(:,:) = cmplx(0.0,0.0)
-                ALLOCATE(gmatH,mold=gmat%data_c)
-                ALLOCATE(gmatS,mold=gmat%data_c)
+                ! CALL gmat%init(.FALSE.,nbasfcnq,nuWindow(2))
+                ! gmat%data_c(:,:) = cmplx(0.0,0.0)
+                ALLOCATE(gmatH,mold=zMatq%data_c)
+                ALLOCATE(gmatS,mold=zMatq%data_c)
                 
                 gmatH = CMPLX(0.0,0.0)
                 gmatS = CMPLX(0.0,0.0)
@@ -353,7 +328,7 @@ CONTAINS
                 tempVec = cmplx(0.0,0.0)
                 tempMat1 = cmplx(0.0,0.0)
                 CALL timestart("Matrix multiplication")
-                DO nu = 1, noccbd_max ! this might need to be adjusted due to k-integration --> more states needed
+                DO nu = 1, nuWindow(2) 
                     IF (l_real) THEN ! l_real for zMatk
                         tempVec(:nbasfcnq) = MATMUL(hmat%data_c,zMatk%data_r(:nbasfcn,nu))
                     ELSE
@@ -392,10 +367,11 @@ CONTAINS
                 END DO !nu
                 CALL timestop("Matrix multiplication")
 
-                gmat%data_c(:nbasfcnq,:noccbd_max) = gmatH(:nbasfcnq,:noccbd_max) + gmatS(:nbasfcnq,:noccbd_max)
+                ! gmat%data_c(:nuWindow(2),:nuWindow(2)) = gmatH(:nuWindow(2),:nuWindow(2)) + gmatS(:nuWindow(2),:nuWindow(2))
 
-                gmatBuffer(:,:,nk_i,jsp) = gmat%data_c(nuWindow(2,1):nuWindow(2,2), nuWindow(1,1):nuWindow(1,2))
+                ! gmatBuffer(:,:,nk,jsp) = gmat%data_c(nuWindow(1):nuWindow(2), nuWindow(1):nuWindow(2))
 
+                gmatBuffer(:,:,nk,jsp) = gmatH(nuWindow(1):nuWindow(2),nuWindow(1):nuWindow(2)) + gmatS(nuWindow(1):nuWindow(2),nuWindow(1):nuWindow(2))
                 
                 CALL smat%free()
                 CALL hmat%free()
@@ -427,142 +403,12 @@ CONTAINS
             END DO !nk_i
         END DO !jsp
 #endif 
-!#ifdef CPP_MPI
-!        CALL MPI_ALLREDUCE(MPI_IN_PLACE,gmatBuffer,size(gmatBuffer),MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
-!        CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
-!#endif
+
+#ifdef CPP_MPI
+       CALL MPI_ALLREDUCE(MPI_IN_PLACE,gmatBuffer,size(gmatBuffer),MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
+#endif
+
 
     END SUBROUTINE matrix_element
-
-
-    SUBROUTINE energy_window(fi,fmpi,results,resultsq,nococonv,bqpt,eigenVals,nuWindow)
-        ! This subroutine calculates the state window for the el-ph calculation 
-        ! Since we only states close to the fermi level contribute, we will introduce 
-        ! For the k and k+q states an effective window that is needed for the calculation
-
-        IMPLICIT NONE 
-
-        TYPE(t_fleurinput), INTENT(IN) :: fi 
-        TYPE(t_mpi), INTENT(IN) :: fmpi
-        TYPE(t_results), INTENT(IN) :: results,resultsq
-        TYPE(t_nococonv), INTENT(IN) :: nococonv
-        REAL, INTENT(IN) :: bqpt(3)
-        REAL, INTENT(IN) :: eigenVals(:)
-        INTEGER,INTENT(OUT) :: nuWindow(2,2)
-
-        REAL :: eig,eigq
-        REAL :: efermi, smearing, borderWindow 
-
-        INTEGER :: nbasfcn,nbasfcnq , nu , iNupr, jsp, nk_i
-        TYPE(t_lapw)   :: lapw,lapwq
-
-
-#ifdef CPP_MPI
-        INTEGER :: ierr
-#endif 
-
-        nuWindow = 0 
-        efermi = results%ef 
-        !smearing = fi%juPhon%smearingGauss ! lets look into a 5 smearing window around efermi
-
-        
-        ! Preset the Windows 
-        IF (fmpi%irank == 0 ) THEN 
-            CALL lapw%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, 1, fi%cell, fmpi)
-            CALL lapwq%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, 1, fi%cell, fmpi, bqpt)
-
-            nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*fi%atoms%nlotot,lapw%nv(1)+fi%atoms%nlotot,fi%noco%l_noco)
-            nbasfcnq = MERGE(lapwq%nv(1)+lapwq%nv(2)+2*fi%atoms%nlotot,lapwq%nv(1)+fi%atoms%nlotot,fi%noco%l_noco)
-            
-            DO nu = 1, nbasfcn ! If 1 is already above fermi we have no electrons 
-                eig = results%eig(nu,1,1)
-                IF ( (eig-efermi) .GT. 1e-8 ) THEN 
-                    write(2200,*)  "eig that is above" , eig-efermi
-                    nuWindow(1,1) = nu - 1 
-                    nuWindow(1,2) = nu 
-                    EXIT
-                END IF
-            END DO 
-
-            DO iNupr = 1, nbasfcnq ! If 1 is already above fermi we have no electrons 
-                eigq = resultsq%eig(iNupr,1,1)
-                IF ( (eigq-efermi) .GT. 1e-8 ) THEN 
-                    write(2200,*) "eigq that is above" , eigq-efermi
-                    nuWindow(2,1) = iNupr - 1 
-                    nuWindow(2,2) = iNupr 
-                    EXIT
-                END IF 
-            END DO     
-
-            write(2200,*) "preguess nu window", nuWindow(1,:)
-            write(2200,*) "preguess iNupr window", nuWindow(2,:)
-        
-        END IF 
-        
-        ! If the Phonon freq. become larger, then we should set our window to that 
-        borderWindow = fi%input%tkb
-        IF ( MAXVAL(SQRT(ABS(eigenVals))) .GT. fi%input%tkb ) borderWindow =  MAXVAL(SQRT(ABS(eigenVals)))
-
-        IF (fmpi%irank==0) THEN 
-            DO jsp = 1, MERGE(1,fi%input%jspins,fi%noco%l_noco)
-                DO nk_i = 1, fi%kpts%nkpt
-                    CALL lapw%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, nk_i, fi%cell, fmpi)
-                    CALL lapwq%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, nk_i, fi%cell, fmpi, bqpt)
-                    nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*fi%atoms%nlotot,lapw%nv(1)+fi%atoms%nlotot,fi%noco%l_noco)
-                    nbasfcnq = MERGE(lapwq%nv(1)+lapwq%nv(2)+2*fi%atoms%nlotot,lapwq%nv(1)+fi%atoms%nlotot,fi%noco%l_noco)
-
-                    DO nu = 1 , nbasfcn 
-                        eig = results%eig(nu,nk_i,jsp)  
-                        IF ( ABS(eig - efermi)  .LT.   8*borderWindow ) THEN  
-                            ! eigenvalue is within energy window 
-                            IF ( (eig - efermi) .LT. 1e-8 ) THEN 
-                                ! This is the lower end of the window 
-                                IF( nu .LT. nuWindow(1,1)) nuWindow(1,1) = nu 
-                            ELSE
-                                ! This is the upper end of the window 
-                                IF( nu .GT. nuWindow(1,2)) nuWindow(1,2) = nu
-                            END IF 
-                        END IF
-                    END DO 
-
-                    DO iNupr= 1, nbasfcnq
-                        eigq = resultsq%eig(iNupr,nk_i,jsp)
-                        IF ( ABS(eigq - efermi)  .LT.   8*borderWindow ) THEN 
-                            ! eigenvalue is within energy window 
-                            IF ( (eigq - efermi) .LT. 1e-8 ) THEN 
-                                ! This is the lower end of the window 
-                                IF( iNupr .LT. nuWindow(2,1)) nuWindow(2,1) = iNupr 
-                            ELSE
-                                ! This is the upper end of the window 
-                                IF( iNupr .GT. nuWindow(2,2)) nuWindow(2,2) = iNupr
-                            END IF 
-                        END IF
-                    END DO 
-                END DO !nk_i
-            END DO !jsp 
-
-            write(2200,*) "final nu window", nuWindow(1,:)
-            write(2200,*) "final iNupr window", nuWindow(2,:)
-
-             ! This is a first thing --> revert when talked with gustav 
-            nuWindow(:,1) = MIN(nuWindow(1,1),nuWindow(2,1))
-            nuWindow(:,2) = MAX(nuWindow(1,2),nuWindow(2,2))
-
-            write(2200,*) "minval nu window", nuWindow(1,:)
-            write(2200,*) "maxval iNupr window", nuWindow(2,:)
-
-        ! This is not the ideal check 
-        IF ( (nuWindow(1,2) -nuWindow(1,1)+1) .EQ. size(results%eig,1)  ) CALL juDFT_warn("The phonon calculation appears to have not converged. All states contribute to electron-phonon coupling",calledby="dfpt_elph_mat")
-        END IF 
-
-
-
-#ifdef CPP_MPI
-        CALL MPI_BCAST(nuWindow, size(nuWindow), MPI_INTEGER, 0, fmpi%mpi_comm, ierr)
-#endif 
-
-
-    END SUBROUTINE energy_window
-
 
 END MODULE  m_dfpt_elph_mat

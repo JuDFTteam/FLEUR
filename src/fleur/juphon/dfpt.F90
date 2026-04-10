@@ -17,15 +17,12 @@ CONTAINS
       USE m_juDFT_stop, only : juDFT_error
       USE m_eig66_io, only : open_eig,close_eig
       USE m_dfpt_check
-      !USE m_dfpt_generate_gradient
-      !USE m_dfpt_phonon
-      !USE m_dfpt_borncharges
-      !USE m_dfpt_efield
       USE m_dfpt_interpolation
       use m_types_dfpt
       use m_types_phonon
       use m_types_efield
       use m_types_BEC
+      use m_dfpt_postprocess_pot
       
 
 
@@ -148,6 +145,13 @@ CONTAINS
          call timestart("dfpt interpolation")
          call dfpt_interpolation(fi,fmpi,nococonv,results)
          call timestop("dfpt interpolation")
+      end if 
+
+      if ( fi%juPhon%l_elph .and. .not. fi%juPhon%l_scf) then 
+         ! Construct the electron phonon matrix element from converged potentials
+         call timestart("construction of el-ph matrix elements")
+         call construct_elph_mat(fmpi,fi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,rho,vTot,vxc,results,eig_id,q_results,q_eig_id,l_real)
+         call timestop("construction of el-ph matrix elements")
       end if 
 
 
