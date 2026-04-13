@@ -591,7 +591,7 @@ CONTAINS
                 CALL timestart("juPhon DFPT")
                 CALL dfpt(fi, sphhar, stars, nococonv, fi%kpts, fmpi, results, enpara, outDen, vTot, vxc, eig_id, xcpot, hybdat, mpdata, forcetheo)
                 CALL timestop("juPhon DFPT")
-                CALL juDFT_end("Phonon calculation finished.",fmpi%irank)
+                CALL juDFT_end("DFPT calculation finished.",fmpi%irank)
             END IF
 
             !CRYSTAL FIELD OUTPUT

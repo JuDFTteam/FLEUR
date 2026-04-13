@@ -162,15 +162,22 @@ contains
                     CALL vTot1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
                     CALL vTot1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
 
-                    CALL timestart("pot1 IO")
-                    ! read in the potential perturbation 
-                    filename = TRIM("pot1_"//dfpt_tag)
-                    INQUIRE(FILE=TRIM(filename)//".hdf",EXIST=l_exist)
-                    if (l_exist) CALL readDensity(starsq, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
-                                                fi%input, fi%sym, CDN_ARCHIVE_TYPE_CDN1_const, CDN_INPUT_DEN_const, 0, &
-                                                resultsq%ef, resultsq%last_distance, l_dummy, vTot1,  &
-                                                inFilename=TRIM(filename),denIm=vTot1Im)
-                    CALL timestop("pot1 IO")                    
+                    if (fmpi%irank==0) then 
+                        call timestart("pot1 IO")
+                        ! read in the potential perturbation 
+                        filename = trim("pot1_"//dfpt_tag)
+                        inquire(file=trim(filename)//".hdf",EXIST=l_exist)
+                        if (l_exist) call readDensity(starsq, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
+                                                    fi%input, fi%sym, CDN_ARCHIVE_TYPE_CDN1_const, CDN_INPUT_DEN_const, 0, &
+                                                    resultsq%ef, resultsq%last_distance, l_dummy, vTot1,  &
+                                                    inFilename=trim(filename),denIm=vTot1Im)
+                        call timestop("pot1 IO")
+                    end if                     
+
+#ifdef CPP_MPI
+                    call vTot1%distribute(fmpi%mpi_comm)
+                    call vTot1Im%distribute(fmpi%mpi_comm)
+#endif 
 
                     ! construct electron-phonon element in cartesian basis 
                     call timestart("elph element")
@@ -187,15 +194,17 @@ contains
                                                 / sqrt(2* atomic_mass_array(fi%atoms%nz(ceiling(iPerturb/3.0))) * sqrt(eigenVals(iMode))) * gmatCart(:,:,:,:)          
                         end do 
                     end if 
+                    
+                    ! reset some variables 
+                    call starsq%reset_stars()
+                    call vTot1%reset_dfpt()
+                    call vTot1Im%reset_dfpt()
+
                 call timestop("Dirloop")
                 end do ! iDir
                 call timestop("Typeloop")
             end do ! iDtype
 
-            ! reset some variables 
-            call starsq%reset_stars()
-            call vTot1%reset_dfpt()
-            call vTot1Im%reset_dfpt()
             call timestop("q-point elph")
   
             ! Now do IO with el-ph matrix element 
@@ -216,20 +225,22 @@ contains
 
         integer, intent(in) :: natoms
         integer, intent(in)  :: iQ
-        complex, allocatable, intent(out) :: dynMat(:,:) 
+        complex, intent(out) :: dynMat(:,:) 
 
         integer :: iread 
         character(len=100) :: trash 
         real,allocatable    :: numbers(:,:)
 
-        allocate(numbers(3*natoms,3*natoms))
+        allocate(numbers(3*natoms,6*natoms))
         numbers = cmplx(0.0,0.0)
         if (iQ<=9) then
             open( 3001, file="dynMatq=000"//int2str(iQ), status="old")
         else if (iQ<=99) then  
             open( 3001, file="dynMatq=00"//int2str(iQ), status="old")
-        else 
+        else if (iQ<=999) then
             open( 3001, file="dynMatq=0"//int2str(iQ), status="old")
+        else 
+            open( 3001, file="dynMatq="//int2str(iQ), status="old")
         end if 
 
         
@@ -240,7 +251,7 @@ contains
             else
                 read( 3001,*) numbers(iread-3,:)
                 write(*,*) iread, numbers(iread-3,:)
-                dynMat(iread-3,:) = CMPLX(numbers(iread-3,::2),numbers(iread-3,2::2))
+                dynMat(iread-3,:) = cmplx(numbers(iread-3,::2),numbers(iread-3,2::2))
             end if
         end do ! iread
         close(3001)
