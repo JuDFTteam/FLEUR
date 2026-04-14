@@ -274,8 +274,13 @@ contains
                1,results%last_distance,results%ef,results%last_mmpmatDistance,results%last_occDistance,.TRUE.,inDen,b_constr=nococonv%b_con)
           CALL writeCoreDensity(input,atoms,outDen%mtCore,inDen%tec,inDen%qint)
        ELSE
+          INQUIRE(file=trim(dfpt_tag)//"_old.hdf",exist=l_exist)
+          IF (l_exist) CALL system("rm "//trim(dfpt_tag)//"_old.hdf")
+          INQUIRE(file=trim(dfpt_tag)//".hdf", exist=l_exist)
+          IF (l_exist) CALL system("mv "//trim(dfpt_tag)//".hdf "//trim(dfpt_tag)//"_old.hdf")
           CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,CDN_INPUT_DEN_const,&
                1,results%last_distance,results%ef,results%last_mmpmatDistance,results%last_occDistance,.TRUE.,inDen,inFilename=dfpt_tag,denIm=inDenIm)
+          IF (l_exist) CALL system("rm "//trim(dfpt_tag)//"_old.hdf")
        END IF
     END IF
 

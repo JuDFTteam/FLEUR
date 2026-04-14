@@ -256,7 +256,7 @@ CONTAINS
 #ifndef _OPENACC  
 !newer nvhpc versions fail here with ICE        
 
-        DO jsp = 1, MERGE(1,fi%input%jspins,fi%noco%l_noco)
+        DO jsp = 1, merge(1,fi%input%jspins,fi%noco%l_noco)
             DO nk_i = 1, size(fmpi%k_list)
                 nk=fmpi%k_list(nk_i)
 
@@ -271,6 +271,7 @@ CONTAINS
                 
                 nbasfcn  = MERGE(lapw%nv(1)+lapw%nv(2)+2*fi%atoms%nlotot,lapw%nv(1)+fi%atoms%nlotot,fi%noco%l_noco)
                 nbasfcnq = MERGE(lapwq%nv(1)+lapwq%nv(2)+2*fi%atoms%nlotot,lapwq%nv(1)+fi%atoms%nlotot,fi%noco%l_noco)
+                
                 IF (fmpi%n_size == 1) THEN
                     ALLOCATE (t_mat::zMatk)
                     ALLOCATE (t_mat::zMatq)

@@ -148,7 +148,7 @@ contains
                 call ift_dyn(fi_fullsym%atoms,fi_fullsym%kpts,fi_fullsym%sym,fi_fullsym%cell%amat,fi%kpts%bk(:,iQ),dyn_mat_r,dyn_mat_pathq)
                 WRITE(*,*) '-------------------------'
                 call timestart("Dynmat diagonalization")
-                call DiagonalizeDynMat(fi%atoms, fi%kpts%bk(:,iQ), fi%juPhon%calcEigenVec, dyn_mat_pathq, eigenVals, eigenVecs, iQ,.TRUE.,TRIM(dynfiletag),fi%juPhon%l_sumrule)
+                call DiagonalizeDynMat(fi%atoms, fi%kpts%bk(:,iQ), fi%juPhon%calcEigenVec, dyn_mat_pathq, eigenVals, eigenVecs, iQ,.TRUE.,TRIM(dynfiletag),fi%juPhon%l_sumrule,l_writeOutput=.true.)
                 call timestop("Dynmat diagonalization")
 
                 call timestart("Frequency calculation")

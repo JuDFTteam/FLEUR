@@ -257,7 +257,7 @@ module m_types_phonon
             end if 
 
             call timestart("Dynmat diagonalization")
-            call DiagonalizeDynMat(fi%atoms, qpts%bk(:,q_list(iQ)), juPhon%calcEigenVec, dyn_mat(iQ,:,:), eigenVals, eigenVecs, q_list(iQ),.TRUE.,"raw",juphon%l_sumrule)
+            call DiagonalizeDynMat(fi%atoms, qpts%bk(:,q_list(iQ)), juPhon%calcEigenVec, dyn_mat(iQ,:,:), eigenVals, eigenVecs, q_list(iQ),.TRUE.,"raw",juphon%l_sumrule,l_writeOutput=.true.)
             call timestop("Dynmat diagonalization")
 
             call timestart("Frequency calculation")

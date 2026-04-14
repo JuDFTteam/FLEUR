@@ -31,6 +31,8 @@ contains
         use m_dfpt_vgen
         use m_dfpt_elph_mat
         use m_fermie
+        use m_dfpt_generate_gradient
+        use m_dfpt_vgen
 
         type(t_mpi), intent(in)       :: fmpi
         type(t_fleurinput),intent(in) :: fi 
@@ -54,7 +56,11 @@ contains
         type(t_stars) :: starsq
         type(t_kpts)  :: kqpts , qpts
         type(t_sternheimerJob) :: sternheimerJob
-        type(t_potden) :: vTot1, vTot1Im
+        type(t_potden) :: vTot1, vTot1Im, den1, den1Im, rho_local
+        type(t_results) :: dummy_results
+
+
+        type(t_potden) :: grRho3(3), grVtot3(3), grVext3(3), grVc3(3),grgrVext3x3(3,3)
 
         integer :: ikpt, iQ ,iDir, iDtype, iPerturb ,iArray, iMode, killcont(6), bandWindowSize
         logical :: l_dummy , l_exist
@@ -80,6 +86,9 @@ contains
         killcont = [1,1,1,1,1,1]
 
         call sternheimerJob%init(fi,l_phonon=.true.)
+        call dummy_results%init(fi%input, fi%atoms, fi%kpts, fi%noco)
+
+        call rho_local%copyPotDen(rho)
         
          ! create a kpts type that contains the necessary q-vectors 
         qpts = fi%kpts
@@ -98,8 +107,9 @@ contains
         gmat = cmplx(0,0)
         gmatCart= cmplx(0.0,0.0)
 
-
-
+        call timestart("Gradient generation")
+        call dfpt_generate_gradient(sternheimerJob,fi,fmpi,sphhar,hybdat,xcpot,nococonv,stars,rho,vTot,grRho3,grVtot3,grVc3,grVext3,grgrVext3x3)
+        call timestop("Gradient generation")
 
         do iQ = 1 , size(q_list)
             call timestart("q-point elph")
@@ -117,6 +127,7 @@ contains
             call timestart("Eigenstuff at k+q")
             ! construct eigenfunction on the k+q grid 
             call resultsq%reset_results(fi%input)
+            call dummy_results%reset_results(fi%input)
    
             call eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv,  &
                      hybdat, 1, q_eig_id, resultsq, rho, vTot, vxc, hub1data, &
@@ -139,7 +150,7 @@ contains
                 ! Read in eigenvectors and eigenvalues for given q-point
                 ! Be careful only irank 0 has eigenVals and eigenVecs allocated 
                 call read_dynmats(fi%atoms%nat,iQ,dynMat)
-                CALL DiagonalizeDynMat(fi%atoms, qpts%bk(:,q_list(iQ)), fi%juPhon%calcEigenVec, dynMat(:,:), eigenVals, eigenVecs, q_list(iQ),.TRUE.,"raw",.FALSE.)
+                CALL DiagonalizeDynMat(fi%atoms, qpts%bk(:,q_list(iQ)), fi%juPhon%calcEigenVec, dynMat(:,:), eigenVals, eigenVecs, q_list(iQ),.false.,"raw",.false.,l_writeOutput=.false.)
                 call timestop("dynMat IO")
             end if 
 
@@ -156,36 +167,55 @@ contains
                     iPerturb = iDir+3*(iDtype-1)
 
 
-                    CALL make_stars(starsq, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, qpts%bk(:,iQ), iDtype, iDir,sternheimerJob%l_efield)
+                    call make_stars(starsq, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, qpts%bk(:,iQ), iDtype, iDir,sternheimerJob%l_efield)
                     starsq%ufft = stars%ufft
 
-                    CALL vTot1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
-                    CALL vTot1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
+                    call den1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
+                    call den1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
+
+                    call vTot1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
+                    call vTot1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
+                    
+                    ! allocate the pw_w part
+                    allocate( vTot1%pw_w(size(vTot1%pw,1),size(vTot1%pw,2)))
 
                     if (fmpi%irank==0) then 
-                        call timestart("pot1 IO")
-                        ! read in the potential perturbation 
-                        filename = trim("pot1_"//dfpt_tag)
+                        call timestart("den1 IO")
+                        ! We write out the density response in the sternheimer iteration 
+                        ! read in the densities
+                        filename = trim(dfpt_tag)
                         inquire(file=trim(filename)//".hdf",EXIST=l_exist)
                         if (l_exist) call readDensity(starsq, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
                                                     fi%input, fi%sym, CDN_ARCHIVE_TYPE_CDN1_const, CDN_INPUT_DEN_const, 0, &
-                                                    resultsq%ef, resultsq%last_distance, l_dummy, vTot1,  &
-                                                    inFilename=trim(filename),denIm=vTot1Im)
-                        call timestop("pot1 IO")
+                                                    dummy_results%ef, dummy_results%last_distance, l_dummy, den1,  &
+                                                    inFilename=trim(filename),denIm=den1Im)
+                        call timestop("den1 IO")
+                        
+                        ! add the gradient to the density that we store
+                        ! as we need den1 = z^(1) - grad as the input of dfpt_vgen
+                        den1%mt(:,0:,iDtype,:) = den1%mt(:,0:,iDtype,:) - grRho3(iDir)%mt(:,0:,iDtype,:)
                     end if                     
 
 #ifdef CPP_MPI
-                    call vTot1%distribute(fmpi%mpi_comm)
-                    call vTot1Im%distribute(fmpi%mpi_comm)
+                    call den1%distribute(fmpi%mpi_comm)
+                    call den1Im%distribute(fmpi%mpi_comm)
 #endif 
+                    call timestart("Generating Potential Perturbation")
+                    call dfpt_vgen(sternheimerJob,hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
+                                    fi%juPhon,fi%cell,fmpi,fi%noco,nococonv,rho_local,vTot,&
+                                    starsq,den1Im,vTot1,.TRUE.,vTot1Im,den1,iDtype,iDir,[1,1])
+                    call timestop("Generating Potential Perturbation")
+                    ! The matrix element needs the gradient correction in the MT 
+                    vTot1%mt(:,0:,iDtype,:) = vTot1%mt(:,0:,iDtype,:) + grVtot3(iDir)%mt(:,0:,iDtype,:)
 
-                    ! construct electron-phonon element in cartesian basis 
+                    ! construct the electron-phonon element in cartesian basis 
                     call timestart("elph element")
                     CALL matrix_element(sternheimerJob,fi,sphhar,results,resultsq,fmpi,enpara,nococonv,starsq,vTot1,vTot1Im,vTot,rho, qpts%bk(:, iQ),&
                                         eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatCart,fi%juPhon%bandWindow) 
 
                     call timestop("elph element")
 
+                    ! construct the electron-phonon element in the normal basis  
                     if (fmpi%irank == 0 ) then 
                         do iMode = 1 , 3*fi%atoms%nat    
                             pref = 1.0 
@@ -199,7 +229,9 @@ contains
                     call starsq%reset_stars()
                     call vTot1%reset_dfpt()
                     call vTot1Im%reset_dfpt()
-
+                    call den1%reset_dfpt()
+                    call den1Im%reset_dfpt()
+                    
                 call timestop("Dirloop")
                 end do ! iDir
                 call timestop("Typeloop")
@@ -232,7 +264,7 @@ contains
         real,allocatable    :: numbers(:,:)
 
         allocate(numbers(3*natoms,6*natoms))
-        numbers = cmplx(0.0,0.0)
+        numbers = 0.0
         if (iQ<=9) then
             open( 3001, file="dynMatq=000"//int2str(iQ), status="old")
         else if (iQ<=99) then  
