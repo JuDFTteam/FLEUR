@@ -92,7 +92,7 @@ CONTAINS
        IF( input%jspins == 2 ) CALL resDen%ChargeAndMagnetisationToSpins()
        ! fix the preconditioned density
        CALL outDen%addPotDen( resDen, inDen )
-       CALL qfix(fmpi,stars,nococonv, atoms, sym, vacuum, sphhar, input, cell,   outDen, noco%l_noco, .FALSE., l_par=.FALSE., force_fix=.TRUE., fix=fix )
+       CALL qfix(fmpi,stars,nococonv, atoms, sym, vacuum, sphhar, input, cell, field,  outDen, noco%l_noco, .FALSE., l_par=.FALSE., force_fix=.TRUE., fix=fix )
        CALL resDen%subPotDen( outDen, inDen )
        resDen%mmpMat = outDen%mmpMat - inDen%mmpMat
     END IF MPI0_c

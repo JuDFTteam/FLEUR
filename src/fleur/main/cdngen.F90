@@ -12,7 +12,7 @@ CONTAINS
 
 SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
                   kpts,atoms,sphhar,stars,sym,juphon,gfinp,hub1inp,&
-                  enpara,cell,noco,nococonv,vTot,results ,coreSpecInput,&
+                  enpara,cell,field,noco,nococonv,vTot,results ,coreSpecInput,&
                   archiveType, xcpot,outDen,EnergyDen,core_den,greensFunction,hub1data,vxc,exc)
 
    !*****************************************************
@@ -73,6 +73,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_juphon),INTENT(IN)        :: juphon
    TYPE(t_stars),INTENT(IN)         :: stars
    TYPE(t_cell),INTENT(IN)          :: cell
+   TYPE(t_field),INTENT(IN)         :: field
    TYPE(t_kpts),INTENT(IN)          :: kpts
    TYPE(t_sphhar),INTENT(IN)        :: sphhar
    TYPE(t_atoms),INTENT(IN)         :: atoms
@@ -255,7 +256,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
 
   
    IF (fmpi%irank == 0) CALL openXMLElementNoAttributes('allElectronCharges')
-   CALL qfix(fmpi,stars,nococonv,atoms,sym,vacuum,sphhar,input,cell ,outDen,noco%l_noco,.TRUE.,l_par=.TRUE.,force_fix=.TRUE.,fix=fix)
+   CALL qfix(fmpi,stars,nococonv,atoms,sym,vacuum,sphhar,input,cell,field,outDen,noco%l_noco,.TRUE.,l_par=.TRUE.,force_fix=.TRUE.,fix=fix)
    IF (fmpi%irank == 0) CALL closeXMLElement('allElectronCharges')
    IF (input%jspins == 2) THEN
       !Calculate and write out spin densities at the nucleus and magnetic moments in the spheres

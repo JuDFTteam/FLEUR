@@ -251,7 +251,7 @@ contains
 
     call timestart("qfix")
     !fix charge of the new density
-    IF (fmpi%irank==0.AND..NOT.l_dfpt) CALL qfix(fmpi,stars,nococonv,atoms,sym,vacuum, sphhar,input,cell ,inDen,noco%l_noco,.FALSE.,.FALSE.,.FALSE., fix)
+    IF (fmpi%irank==0.AND..NOT.l_dfpt) CALL qfix(fmpi,stars,nococonv,atoms,sym,vacuum, sphhar,input,cell,field,inDen,noco%l_noco,.FALSE.,.FALSE.,.FALSE., fix)
     call timestop("qfix")
 
     IF(vacuum%nvac.EQ.1) THEN

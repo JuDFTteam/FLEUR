@@ -187,7 +187,7 @@ CONTAINS
 
       !At some point this should be enabled for fi%noco as well
       IF (.NOT. fi%noco%l_noco) &
-         CALL transform_by_moving_atoms(fmpi, stars,fi%atoms, fi%vacuum, fi%cell, fi%sym, sphhar, fi%input,   fi%noco, nococonv)
+         CALL transform_by_moving_atoms(fmpi, stars,fi%atoms, fi%vacuum, fi%cell, fi%field, fi%sym, sphhar, fi%input,   fi%noco, nococonv)
 
       !
       !--> determine more dimensions
