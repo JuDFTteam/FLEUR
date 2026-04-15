@@ -9,9 +9,8 @@ c*************************c
       contains
 
       subroutine wann_gwf_commat(nkpts,nntot,bpt,nqpts,nntot_q,
-     >                           bpt_q,gb,gb_q,latt_const_q,
-     >                           l_unformatted,l_amn,l_mmn,l_dim,
-     >                           nparampts,param_vec)
+     >                           bpt_q,gb,gb_q,wann)
+      use m_types
       use m_wann_gwf_tools
       use m_wann_gwf_auxovlp
       use m_constants, only : pimach
@@ -20,11 +19,16 @@ c*************************c
       implicit none
       
       ! input parameters
-      logical,intent(in) :: l_unformatted,l_amn,l_mmn,l_dim(3)
-      integer,intent(in) :: nkpts,nntot,nqpts,nntot_q,nparampts
+      TYPE(t_wann), INTENT(IN) :: wann
+      integer,intent(in) :: nkpts,nntot,nqpts,nntot_q
       integer,intent(in) :: bpt(nntot,nkpts),bpt_q(nntot_q,nqpts)
       integer,intent(in) :: gb(3,nntot,nkpts),gb_q(3,nntot_q,nqpts)
-      real,   intent(in) :: latt_const_q,param_vec(3,nparampts)
+
+      ! local aliases for wann components
+      logical :: l_unformatted,l_amn,l_mmn,l_dim(3)
+      integer :: nparampts
+      real    :: latt_const_q
+      real, allocatable :: param_vec(:,:)
 
       ! allocatable arrays
       integer,allocatable :: gb_kq(:,:,:)
@@ -54,6 +58,17 @@ c*************************c
       character(len=32) :: fmt,fmt2
 
       call timestart("wann_gwf_commat")
+
+      ! initialize local aliases from wann type
+      l_unformatted = wann%l_unformatted
+      l_amn = wann%l_matrixamn
+      l_mmn = wann%l_matrixmmn
+      l_dim = wann%l_dim
+      nparampts = wann%nparampts
+      latt_const_q = wann%aux_latt_const
+      allocate(param_vec(3,nparampts))
+      param_vec = wann%param_vec(:,1:nparampts)/2.0
+
       write(*,*)'create HDWFs input for w90...'
 
 !      arr_len=3; shifty=0; shiftz=0
@@ -415,6 +430,7 @@ c*****************************c
  200  continue
       deallocate(feig,famn,fmmn,fmmn2)
       deallocate(amn_arti2)
+      deallocate(param_vec)
 
       call timestop("wann_gwf_commat")
       contains

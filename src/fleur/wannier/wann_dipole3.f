@@ -7,9 +7,9 @@
       module m_wann_dipole3
       contains
       subroutine wann_dipole3(
-     >               jspins_in,omtil,natd,pos,
-     >               amat,bmat,taual,num_wann,
-     >               ntype,neq,zatom,l_nocosoc)
+     >               jspins_in,
+     >               cell,atoms,num_wann,
+     >               l_nocosoc)
 c***************************************
 c     Calculate electronic polarization.
 c     Frank Freimuth
@@ -17,18 +17,13 @@ c***************************************
       use m_wann_dipole_electronic
       use m_wann_dipole_takehome
       use m_wann_dipole_ionic
+      USE m_types
 
       implicit none
       integer,intent(in)           :: jspins_in
-      real,intent(in)              :: omtil
-      integer,intent(in)           :: natd
-      real,intent(in)              :: pos(3,natd)
-      real,intent(in)              :: amat(3,3),bmat(3,3)
-      real,intent(in)              :: taual(3,natd)
+      TYPE(t_cell),INTENT(IN)      :: cell
+      TYPE(t_atoms),INTENT(IN)     :: atoms
       integer,intent(in)           :: num_wann(2)
-      integer,intent(in)           :: ntype
-      integer,intent(in)           :: neq(ntype)
-      real,intent(in)              :: zatom(ntype)
       logical,intent(in)           :: l_nocosoc
 
       integer                      :: jspins
@@ -57,8 +52,8 @@ c***************************************
 
       character(len=6)             :: filename
       logical                      :: l_file
-      real                         :: pos_inv(3,natd)
-      real                         :: taual_inv(3,natd)
+      real                         :: pos_inv(3,atoms%nat)
+      real                         :: taual_inv(3,atoms%nat)
       real                         :: coordinate
       integer                      :: nwf
       integer,allocatable          :: waind(:)
@@ -77,16 +72,14 @@ c***************************************
 c-----calculate ionic contribution
       ionic_moment=0.0
       call wann_dipole_ionic(
-     >         natd,pos,omtil,
-     >         amat,taual,ntype,
-     >         neq,zatom,.false.,
+     >         atoms,cell,.false.,
      >         .true.,
      <         ionic_moment)
 
 c-----calculate electronic contribution
       electronic_moment=0.0
       call wann_dipole_electronic(
-     >         natd,pos,omtil,
+     >         atoms,cell,
      >         jspins,.false.,num_wann,
      <         electronic_moment)
 
@@ -103,7 +96,7 @@ c-----sum up terms
       write(*,  fmt=555)final_moment(:)
       write(666,fmt=555)final_moment(:)
       final_polarization = final_moment /
-     /              omtil*elemchargmu/((bohrtocm)**2)
+     /              cell%omtil*elemchargmu/((bohrtocm)**2)
       write(*,  fmt=777)final_polarization(:)
       write(666,fmt=777)final_polarization(:)
 
@@ -115,7 +108,7 @@ c-----their host atom to a mirror host atom during the
 c-----Wannierization process.
       call wann_dipole_takehome(
      >         jspins,.false.,
-     >         amat,bmat,omtil,
+     >         cell,
      <         electronic_moment)
 
 c-----sum up terms
@@ -131,7 +124,7 @@ c-----sum up terms
       write(*,  fmt=555)final_moment(:)
       write(666,fmt=555)final_moment(:)
       final_polarization = final_moment /
-     /              omtil*elemchargmu/((bohrtocm)**2)
+     /              cell%omtil*elemchargmu/((bohrtocm)**2)
       write(*,  fmt=777)final_polarization(:)
       write(666,fmt=777)final_polarization(:)
 

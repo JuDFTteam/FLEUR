@@ -8,7 +8,7 @@
       use m_juDFT
       contains
       subroutine wann_dipole_electronic(
-     >               natd,pos,omtil,
+     >               atoms,cell,
      >               jspins,l_absolute,num_wann,
      <               electronic_moment)
 c*********************************************
@@ -31,12 +31,12 @@ c*********************************************
 
       USE m_constants
       use m_wann_readcenters
+      USE m_types
 
       implicit none
 
-      integer, intent(in)  :: natd
-      real,    intent(in)  :: pos(3,natd)
-      real,    intent(in)  :: omtil
+      TYPE(t_atoms),INTENT(IN)     :: atoms
+      TYPE(t_cell),INTENT(IN)      :: cell
       integer, intent(in)  :: jspins
       logical, intent(in)  :: l_absolute
       integer, intent(in)  :: num_wann(2)
@@ -109,7 +109,7 @@ c--------reading the proj.1 / proj.2 / proj file
          do k=1,num_wann(jspin)
            electronic_moment(:,jspin)=
      &     electronic_moment(:,jspin)+
-     +        pos(:,waind(k))-
+     +        atoms%pos(:,waind(k))-
      -        wann_centers(:,k)
          enddo
          deallocate(waind)
@@ -119,7 +119,8 @@ c--------reading the proj.1 / proj.2 / proj file
         write(666,fmt=555)jspin,electronic_moment(:,jspin)
         if(.not.l_absolute)then
            electronic_polarization=
-     &            electronic_moment/omtil*elemchargmu/((bohrtocm)**2)
+     &       electronic_moment/cell%omtil*
+     &       elemchargmu/((bohrtocm)**2)
            write(*,  fmt=777)jspin,electronic_polarization(:,jspin)
            write(666,fmt=777)jspin,electronic_polarization(:,jspin)
         endif

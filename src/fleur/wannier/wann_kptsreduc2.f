@@ -9,7 +9,7 @@
       contains
       subroutine wann_kptsreduc2(
      >               mhp,
-     >               nop,mrot,bmat,tau,film,
+     >               sym,cell,film,
      >               l_nocosoc)
 c*****************************************************************
 c     Apply the symmetries to reduce the number of k-points.
@@ -17,15 +17,14 @@ c     Frank Freimuth
 c*****************************************************************
 
       USE m_constants
+      USE m_types
 
       implicit none
 
+      TYPE(t_sym),  INTENT(IN) :: sym
+      TYPE(t_cell), INTENT(IN) :: cell
       integer, intent(in) :: mhp(3)
-      integer, intent(in) :: nop
       logical,intent(in)  :: film
-      real, intent(in)    :: bmat(3,3)
-      real,intent(in)     :: tau(3,nop)
-      integer, intent(in) :: mrot(3,3,nop)
       logical,intent(in)  :: l_nocosoc
 
       real,allocatable    :: weight(:)
@@ -50,7 +49,7 @@ c*****************************************************************
       integer             :: i,kk1,kk2,kk3
 
       call timestart("wann_kptsreduc2")
-      bbmat=matmul(bmat,transpose(bmat))
+      bbmat=matmul(cell%bmat,transpose(cell%bmat))
       write(oUnit,*) "Apply the symmetries to w90kpts"
 c**************************************************************
 c     The array 'mhp' specifies the Monkhorst-Pack mesh.
@@ -99,11 +98,11 @@ c         bkpt(:)=kpoints(:,ikpt)
          bkpt(1)=k1*mhp(2)*mhp(3)
          bkpt(2)=k2*mhp(1)*mhp(3)
          bkpt(3)=k3*mhp(1)*mhp(2)
-         do oper=1,nop
+         do oper=1,sym%nop
           do i=1,3
            brot(i)=0.0
            do k=1,3
-            brot(i)=brot(i)+mrot(k,i,oper)*bkpt(k)
+            brot(i)=brot(i)+sym%mrot(k,i,oper)*bkpt(k)
            enddo
           enddo
           ikpt2=0
@@ -130,11 +129,11 @@ c         bkpt(:)=kpoints(:,ikpt)
           enddo !kk3
          enddo !oper
          if(.not.l_nocosoc)then
-          do oper=1,nop
+          do oper=1,sym%nop
            do i=1,3
             brot(i)=0.0
             do k=1,3
-             brot(i)=brot(i)+mrot(k,i,oper)*bkpt(k)
+             brot(i)=brot(i)+sym%mrot(k,i,oper)*bkpt(k)
             enddo
            enddo
            ikpt2=0

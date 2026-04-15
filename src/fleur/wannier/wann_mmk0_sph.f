@@ -15,24 +15,23 @@ c***********************************************************************
       use m_juDFT
       CONTAINS
       SUBROUTINE wann_mmk0_sph(
-     >                  llod,noccbd,nlod,natd,ntypd,lmaxd,lmax,lmd,
-     >                  ntype,neq,nlo,llo,acof,bcof,ccof,
+     >                  atoms,noccbd,lmd,acof,bcof,ccof,
      >                  ddn,uulon,dulon,uloulopn,
      =                  mmn)
+      use m_types
       implicit none
+      TYPE(t_atoms), INTENT(IN) :: atoms
 c     .. scalar arguments ..
-      integer, intent (in) :: llod,nlod,natd,ntypd,lmaxd,lmd
-      integer, intent (in) :: ntype,noccbd
+      integer, intent (in) :: lmd
+      integer, intent (in) :: noccbd
 c     .. array arguments ..
-      integer, intent (in)  :: lmax(:) !(ntypd)
-      integer, intent (in)  :: neq(ntypd)
-      integer, intent (in)  :: nlo(ntypd),llo(nlod,ntypd)
-      real,    intent (in)  :: ddn(0:lmaxd,ntypd)
-      real,    intent (in)  :: uloulopn(nlod,nlod,ntypd)
-      real,    intent (in)  :: uulon(nlod,ntypd),dulon(nlod,ntypd)
-      complex, intent (in)  :: ccof(-llod:llod,noccbd,nlod,natd)
-      complex, intent (in)  :: acof(:,0:,:) !acof(noccbd,0:lmd,natd)
-      complex, intent (in)  :: bcof(:,0:,:) !bcof(noccbd,0:lmd,natd)
+      real,    intent (in)  :: ddn(0:,:)
+      real,    intent (in)  :: uloulopn(:,:,:)
+      real,    intent (in)  :: uulon(:,:),dulon(:,:)
+      complex, intent (in)  ::
+     >   ccof(-atoms%llod:,:,:,:)
+      complex, intent (in)  :: acof(:,0:,:)
+      complex, intent (in)  :: bcof(:,0:,:)
       complex, intent (inout) :: mmn(:,:)
 c     .. local scalars ..
       integer i,j,l,lo,lop,m,natom,nn,ntyp
@@ -48,16 +47,16 @@ C     .. intrinsic functions ..
 
       call timestart("wann_mmk0_sph")
 
-      allocate (qlo(noccbd,noccbd,nlod,nlod,ntypd), 
-     +          qaclo(noccbd,noccbd,nlod,ntypd),
-     +          qbclo(noccbd,noccbd,nlod,ntypd) )
+      allocate (qlo(noccbd,noccbd,atoms%nlod,atoms%nlod,atoms%ntype), 
+     +          qaclo(noccbd,noccbd,atoms%nlod,atoms%ntype),
+     +          qbclo(noccbd,noccbd,atoms%nlod,atoms%ntype) )
 c---> performs summations of the overlaps of the wavefunctions
       do 140 i = 1,noccbd            
        do 145 j = 1,noccbd
          nt1 = 1
-         do 130 n = 1,ntype
-            nt2 = nt1 + neq(n) - 1
-            do 120 l = 0,lmax(n)
+         do 130 n = 1,atoms%ntype
+            nt2 = nt1 + atoms%neq(n) - 1
+            do 120 l = 0,atoms%lmax(n)
                suma = cmplx(0.,0.)
                sumb = cmplx(0.,0.)
                ll1 = l* (l+1)
@@ -72,7 +71,7 @@ c---> performs summations of the overlaps of the wavefunctions
  110          continue
                mmn(i,j) = mmn(i,j) + (suma+sumb*ddn(l,n))
   120       continue
-            nt1 = nt1 + neq(n)
+            nt1 = nt1 + atoms%neq(n)
   130    continue
   145  continue   ! cycle by j-band
   140 continue  !  cycle by i-band
@@ -82,11 +81,11 @@ c---> initialize qlo arrays
       qbclo(:,:,:,:) = 0.0
 c---> prepare the coefficients
       natom = 0
-      do ntyp = 1,ntype
-         do nn = 1,neq(ntyp)
+      do ntyp = 1,atoms%ntype
+         do nn = 1,atoms%neq(ntyp)
             natom = natom + 1
-            do lo = 1,nlo(ntyp)
-               l = llo(lo,ntyp)
+            do lo = 1,atoms%nlo(ntyp)
+               l = atoms%llo(lo,ntyp)
                ll1 = l* (l+1)
                do m = -l,l
                   lm = ll1 + m
@@ -101,8 +100,8 @@ c---> prepare the coefficients
                    enddo
                   enddo
                enddo
-               do lop = 1,nlo(ntyp)
-                 if (llo(lop,ntyp).eq.l) then
+               do lop = 1,atoms%nlo(ntyp)
+                 if (atoms%llo(lop,ntyp).eq.l) then
                    do m = -l,l
                      do i = 1,noccbd
                       do j = 1,noccbd
@@ -120,9 +119,9 @@ c---> prepare the coefficients
 
 c---> perform summation of the coefficients with the integrals
 c---> of the radial basis functions
-      do ntyp = 1,ntype
-         do lo = 1,nlo(ntyp)
-            l = llo(lo,ntyp)
+      do ntyp = 1,atoms%ntype
+         do lo = 1,atoms%nlo(ntyp)
+            l = atoms%llo(lo,ntyp)
             do i = 1,noccbd
              do j = 1,noccbd
                mmn(i,j)= mmn(i,j)  + 
@@ -130,8 +129,8 @@ c---> of the radial basis functions
      +                        qbclo(i,j,lo,ntyp)*dulon(lo,ntyp)     )
              enddo
             enddo 
-            do lop = 1,nlo(ntyp)
-               if (llo(lop,ntyp).eq.l) then
+            do lop = 1,atoms%nlo(ntyp)
+               if (atoms%llo(lop,ntyp).eq.l) then
                do i = 1,noccbd
                 do j = 1,noccbd
                  mmn(i,j) = mmn(i,j)  + 

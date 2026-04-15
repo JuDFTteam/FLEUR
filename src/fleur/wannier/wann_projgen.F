@@ -8,34 +8,33 @@
          use m_juDFT
       contains
       subroutine wann_projgen(
-     >               ntype,neq,natd,zatom,l_nocosoc,wann)
+     >               atoms,l_nocosoc,wann)
 c*****************************************
 c     Generate the proj-file.
 c     Frank Freimuth
 c*****************************************
 
-      use m_types, only: t_wann
+      use m_types
       USE m_constants
 
       implicit none
 
-      integer, intent(in) :: ntype
-      integer, intent(in) :: neq(ntype)
-      integer, intent(in) :: natd
-      real,intent(in)     :: zatom(ntype)
+      type(t_atoms), intent(in) :: atoms
       logical,intent(in)  :: l_nocosoc
       type(t_wann), intent(in) :: wann
 
       integer             :: j,nat,n,at,k,num_proj
       integer             :: num_wann,kk
-      character(len=2)    :: symbol(100*ntype)
-      character(len=2)    :: symb(natd)
-      integer             :: lwf(100*ntype)
-      integer             :: mrwf(100*ntype)
-      integer             :: rwf(100*ntype)
-      real                :: alpha(100*ntype),beta(100*ntype)
-      real                :: gamma(100*ntype),zona(100*ntype)
-      real                :: regio(100*ntype)      
+      character(len=2)    :: symbol(100*atoms%ntype)
+      character(len=2)    :: symb(atoms%nat)
+      integer             :: lwf(100*atoms%ntype)
+      integer             :: mrwf(100*atoms%ntype)
+      integer             :: rwf(100*atoms%ntype)
+      real                :: alpha(100*atoms%ntype)
+      real                :: beta(100*atoms%ntype)
+      real                :: gamma(100*atoms%ntype)
+      real                :: zona(100*atoms%ntype)
+      real                :: regio(100*atoms%ntype)      
       character*2         :: namat(0:103)
       integer             :: projections(-5:5)
       integer             :: projspin
@@ -65,10 +64,10 @@ c*****************************************
 
 
       nat=0
-      do n=1,ntype
-         do at=1,neq(n)
+      do n=1,atoms%ntype
+         do at=1,atoms%neq(n)
             nat=nat+1
-            symb(nat)=namat(nint(zatom(n)))
+            symb(nat)=namat(nint(atoms%zatom(n)))
          enddo
       enddo
 

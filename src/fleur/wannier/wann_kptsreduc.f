@@ -8,7 +8,7 @@
       use m_juDFT
       contains
       subroutine wann_kptsreduc(
-     >               nop,mrot,bmat,tau,film,
+     >               sym,cell,film,
      >               l_nocosoc)
 c*****************************************************************
 c     Apply the symmetries to reduce the number of k-points.
@@ -16,14 +16,13 @@ c     Frank Freimuth
 c*****************************************************************
 
       USE m_constants
+      USE m_types
       USE m_types_kpts
       implicit none
 
-      integer, intent(in) :: nop
+      TYPE(t_sym),  INTENT(IN) :: sym
+      TYPE(t_cell), INTENT(IN) :: cell
       logical,intent(in)  :: film
-      real, intent(in)    :: bmat(3,3)
-      real,intent(in)     :: tau(3,nop)
-      integer, intent(in) :: mrot(3,3,nop)
       logical,intent(in)  :: l_nocosoc
 
       real,allocatable    :: weight(:)
@@ -50,7 +49,7 @@ c*****************************************************************
       
       inquire(file='onlysymor',exist=l_onlysymor)
 
-      bbmat=matmul(bmat,transpose(bmat))
+      bbmat=matmul(cell%bmat,transpose(cell%bmat))
       write(oUnit,*) "Apply the symmetries to w90kpts"
 c**********************************************************
 c     read in kpoints from w90kpts file
@@ -104,11 +103,12 @@ c***********************************************
          reduznumk=reduznumk+1
          irreduc(ikpt)=reduznumk
          bkpt(:)=kpoints(:,ikpt)         
-         do oper=1,nop
-           if (all(abs(tau(:,oper)).lt.1e-10).or..not.l_onlysymor)then
+         do oper=1,sym%nop
+           if (all(abs(sym%tau(:,oper)).lt.1e-10)
+     >         .or..not.l_onlysymor)then
              brot(:)=0.0
              do k=1,3
-               brot(:)=brot(:)+mrot(k,:,oper)*bkpt(k)
+               brot(:)=brot(:)+sym%mrot(k,:,oper)*bkpt(k)
              enddo
              do j=ikpt+1,nkpts
               if(mapk(j).ne.0)cycle
@@ -125,11 +125,12 @@ c              if(abs(kptslen(j)-kptslen(ikpt)).gt.1.e-8)cycle
            endif
          enddo
          if(.not.l_nocosoc)then
-          do oper=1,nop
-           if (all(abs(tau(:,oper)).lt.1e-10).or..not.l_onlysymor)then
+          do oper=1,sym%nop
+           if (all(abs(sym%tau(:,oper)).lt.1e-10)
+     >         .or..not.l_onlysymor)then
              brot(:)=0.0
              do k=1,3
-               brot(:)=brot(:)-mrot(k,:,oper)*bkpt(k)
+               brot(:)=brot(:)-sym%mrot(k,:,oper)*bkpt(k)
              enddo
              do j=ikpt+1,nkpts
               if(mapk(j).ne.0)cycle
@@ -202,7 +203,7 @@ c****************************************************
             brot(:)=0.0
             do k=1,3
                brot(:)=brot(:)+
-     + mrot(k,:,mapkoper(ikpt))*kpoints(k,mapk(ikpt))
+     + sym%mrot(k,:,mapkoper(ikpt))*kpoints(k,mapk(ikpt))
             enddo   
             write(oUnit,'(a19,3f9.6)')"rotated internal: ",
      +                                brot(:)/scale
@@ -213,7 +214,7 @@ c****************************************************
             brot(:)=0.0
             do k=1,3
                brot(:)=brot(:)-
-     + mrot(k,:,-mapkoper(ikpt))*kpoints(k,mapk(ikpt))
+     + sym%mrot(k,:,-mapkoper(ikpt))*kpoints(k,mapk(ikpt))
             enddo   
             write(oUnit,'(a19,3f9.6)')"rotated internal: ",
      +                                brot(:)/scale

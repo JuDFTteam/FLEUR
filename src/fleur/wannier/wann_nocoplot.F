@@ -7,10 +7,9 @@ c     +  to plot WFs in a meaningful way.            +
 c     +                                              +
 c     ++++++++++++++++++++++++++++++++++++++++++++++++
       CONTAINS
-      SUBROUTINE wann_nocoplot(atoms,slice,nnne,amat,bmat
-     >                        ,nkpts,film,natd,ntypd,jmtd
-     >                        ,ntype,neq,pos,jri,rmsh,alph,beta
-     >                        ,nqpts,qss,z1,zatom)
+      SUBROUTINE wann_nocoplot(atoms,cell,slice,nnne
+     >                        ,nkpts,film,alph,beta
+     >                        ,nqpts,qss)
 !    *****************************************************
       USE m_types
       USE m_xsf_io
@@ -20,15 +19,13 @@ c     ++++++++++++++++++++++++++++++++++++++++++++++++
       IMPLICIT NONE
 
       TYPE(t_atoms),INTENT(IN):: atoms
+      TYPE(t_cell), INTENT(IN):: cell
 
       LOGICAL, INTENT(IN) :: slice,film
-      INTEGER, INTENT(IN) :: nnne,nkpts,ntypd,jmtd,natd
-      INTEGER, INTENT(IN) :: ntype,neq(ntypd)
-      INTEGER, INTENT(IN) :: jri(ntypd),nqpts
-      REAL,    INTENT(IN) :: amat(3,3),bmat(3,3),qss(3,nqpts)
-      REAL,    INTENT(IN) :: rmsh(jmtd,ntypd)
-      REAL,    INTENT(IN) :: pos(3,natd),z1,zatom(:)
-      REAL,    INTENT(IN) :: alph(ntypd),beta(ntypd)
+      INTEGER, INTENT(IN) :: nnne,nkpts
+      INTEGER, INTENT(IN) :: nqpts
+      REAL,    INTENT(IN) :: qss(3,nqpts)
+      REAL,    INTENT(IN) :: alph(:),beta(:)
 
    
       LOGICAL :: twodim,xsf,cartesian
@@ -86,10 +83,10 @@ c     ++++++++++++++++++++++++++++++++++++++++++++++++
          IF (twodim) grid(3) = 1
          !calculate cartesian coordinates if needed
          IF (.NOT.cartesian) THEN
-            vec1=matmul(amat,vec1)
-            vec2=matmul(amat,vec2)
-            vec3=matmul(amat,vec3)
-            zero=matmul(amat,zero)
+            vec1=matmul(cell%amat,vec1)
+            vec2=matmul(cell%amat,vec2)
+            vec3=matmul(cell%amat,vec3)
+            zero=matmul(cell%amat,zero)
          ENDIF
          IF (filename =="default") WRITE(filename,'(a,i2)') "plot",1
       CLOSE(18)
@@ -130,11 +127,11 @@ c     ++++++++++++++++++++++++++++++++++++++++++++++++
             write (name3,24) ikpt,nbn,jspin
    24       format (i5.5,'.',i3.3,'.absv.',i1,'.xsf')
             OPEN(600+jspin,file=name1)
-            CALL xsf_WRITE_atoms(600+jspin,atoms,film,amat)
+            CALL xsf_WRITE_atoms(600+jspin,atoms,film,cell%amat)
             OPEN(602+jspin,file=name2)
-            CALL xsf_WRITE_atoms(602+jspin,atoms,film,amat)
+            CALL xsf_WRITE_atoms(602+jspin,atoms,film,cell%amat)
             OPEN(604+jspin,file=name3)
-            CALL xsf_WRITE_atoms(604+jspin,atoms,film,amat)
+            CALL xsf_WRITE_atoms(604+jspin,atoms,film,cell%amat)
             CALL xsf_WRITE_header(600+jspin,twodim,filename,(vec1),
      &       (vec2),(vec3),zero
      $           ,grid)
@@ -170,13 +167,14 @@ c     ++++++++++++++++++++++++++++++++++++++++++++++++
              DO  i1 = -ii1,ii1
               DO  i2 = -ii2,ii2
                DO  i3 = -ii3,ii3
-                pt = point+MATMUL(amat,(/i1,i2,i3/))
+                pt = point+MATMUL(cell%amat,(/i1,i2,i3/))
                 na = 0
-                DO nt = 1,ntype
-                 DO nq = 1,neq(nt)
+                DO nt = 1,atoms%ntype
+                 DO nq = 1,atoms%neq(nt)
                   na   = na + 1
-                  s  = SQRT(dot_PRODUCT(pos(:,na)-pt,pos(:,na)-pt))
-                  IF (s<rmsh(jri(nt),nt)) THEN
+                  s  = SQRT(dot_PRODUCT(
+     >                atoms%pos(:,na)-pt,atoms%pos(:,na)-pt))
+                  IF (s<atoms%rmsh(atoms%jri(nt),nt)) THEN
                     count_mt=count_mt+1
                     ! we are inside the MT with alph(nt),beta(nt)
                     ! set up transformation local -> global
@@ -187,7 +185,7 @@ c     ++++++++++++++++++++++++++++++++++++++++++++++++
                     
                     ! transform wfs to global frame
                     DO iintsp=1,2
-                       pt = matmul(bmat,rcc2)/tpi_const
+                       pt = matmul(cell%bmat,rcc2)/tpi_const
                        arg = -pi*real(2*iintsp-3)*( qss(1,iqpt)*rcc2(1)
      >                                             +qss(2,iqpt)*rcc2(2)
      >                                             +qss(3,iqpt)*rcc2(3))
@@ -216,7 +214,7 @@ c     ++++++++++++++++++++++++++++++++++++++++++++++++
              ENDDO !i1
 
              ! VACUUM region
-             IF (SQRT((pt(1))**2+(pt(2))**2)>=z1)THEN
+             IF (SQRT((pt(1))**2+(pt(2))**2)>=cell%z1)THEN
              count_vac=count_vac+1
              DO iintsp=1,2
                 phasfac=cmplx(1.,0.)

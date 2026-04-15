@@ -12,14 +12,14 @@ c********************************************************
       use m_juDFT
       contains
       subroutine wann_dipole2(
-     >               jspins,pos,omtil,natd,
+     >               jspins,atoms,cell,
      >               l_nocosoc)
       use m_wann_readcenters
+      USE m_types
       implicit none
       integer,intent(in) :: jspins
-      real,intent(in)    :: omtil
-      integer,intent(in) :: natd
-      real,intent(in)    :: pos(3,natd)
+      TYPE(t_atoms),INTENT(IN) :: atoms
+      TYPE(t_cell),INTENT(IN)  :: cell
       logical,intent(in) :: l_nocosoc
 
       integer            :: jspin,jspins2
@@ -68,12 +68,12 @@ c********************************************************
          enddo
          moment(:,jspin)=0.0
          do nwf=1,nwfs
-            distance(:,nwf)=pos(:,ind(nwf))-centers(:,nwf)
+            distance(:,nwf)=atoms%pos(:,ind(nwf))-centers(:,nwf)
             moment(:,jspin)=moment(:,jspin)+distance(:,nwf)
          enddo
          if((jspins.eq.1).and..not.l_nocosoc) 
      &                    moment(:,jspin)=moment(:,jspin)*2
-         moment(:,jspin)=moment(:,jspin)/omtil
+         moment(:,jspin)=moment(:,jspin)/cell%omtil
          moment(:,jspin)=moment(:,jspin)*elemchargmu/((bohrtocm)**2)
          write(204,*)"polarization due to shift of wannierorbitals"
          write(204,*)moment(:,jspin),"uC/cm2"
@@ -90,10 +90,10 @@ c********************************************************
          read(224,*)shifted
          do ishift=1,shifted
                read(224,*)ind1,ind2 !electron taken from 1 and moved to 2
-               moment2(:)=moment2(:)+pos(:,ind1)-pos(:,ind2)
+               moment2(:)=moment2(:)+atoms%pos(:,ind1)-atoms%pos(:,ind2)
          enddo
          close(224)
-         moment2(:)=moment2(:)/omtil
+         moment2(:)=moment2(:)/cell%omtil
          moment2(:)=moment2(:)*elemchargmu/(bohrtocm)**2
          write(204,*)"polarization due to electrons 
      &              being catched by other atoms"

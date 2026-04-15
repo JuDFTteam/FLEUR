@@ -3,6 +3,7 @@
       use m_juDFT
       CONTAINS
       SUBROUTINE wann_orbmag(
+     >      atoms,
      >      l_dulo,l_noco,l_ss,lmaxd,ntypd,
      >      neigd,natd,nop,nvd,jspd,nbasfcn,llod,nlod,ntype,
      >      nwdd,omtil,nlo,llo,lapw_l,invtab,mrot,ngopr,neq,lmax,
@@ -47,6 +48,7 @@
       integer stt(MPI_STATUS_SIZE)
 
 #endif
+      TYPE(t_atoms), INTENT(IN) :: atoms
       logical, intent (in) :: invs,invs2,film,slice,symor
       integer, intent (in) :: lmaxd,ntypd,neigd,nkptd,kk,nnne
       integer, intent (in) :: natd,nop,nvd,jspd,nbasfcn,nq2,nop2
@@ -485,14 +487,13 @@
          do jspin3=1,2
             jspin5=jspin3+2*(jspin4-1)
          call wann_ujugaunt(
-     >            llod,nntot,kdiff,lmax,ntype,ntypd,bbmat,
-     >            bmat,nlod,nlo,llo,flo(:,:,:,:,jspin3),
+     >            atoms,nntot,kdiff,bbmat,
+     >            bmat,flo(:,:,:,:,jspin3),
      >            flo(:,:,:,:,jspin4),
      >            ff(:,:,:,:,jspin3),
      >            ff(:,:,:,:,jspin4),
      >            gg(:,:,:,:,jspin3),
-     >            gg(:,:,:,:,jspin4),jri,rmsh,dx,jmtd,
-     >            lmaxd,lmd,
+     >            gg(:,:,:,:,jspin4),lmd,
      <            ujug(:,:,:,:,jspin5),
      >            ujdg(:,:,:,:,jspin5),
      >            djug(:,:,:,:,jspin5),
@@ -651,9 +652,8 @@
    !       MT contribution at k+b1        !
    !**************************************!
          jspin5=jspin+2*(jspin3-1)
-         call wann_mmkb_sph(nvd,llod,nv_b(jspin),nv(jspin3),nlod,
-     >                      natd,ntypd,lmd,jmtd,taual,nop,lmax,
-     >                      ntype,neq,nlo,llo,
+         call wann_mmkb_sph(atoms,nvd,nv_b(jspin),nv(jspin3),
+     >                      lmd,taual,nop,
      >                      acof_b,bcof_b,
      >                      ccof_b,bkpt,
      >                      acof(1:nv(jspin3),:,:,jspin3),
@@ -831,9 +831,8 @@
       !       MT contribution at k+b2        !
       !**************************************!
             jspin5=jspin4+2*(jspin_b-1)
-            call wann_mmkb_sph(nvd,llod,nv(jspin4),nv_b2(jspin_b),nlod,
-     >                      natd,ntypd,lmd,jmtd,taual,nop,lmax,
-     >                      ntype,neq,nlo,llo,
+            call wann_mmkb_sph(atoms,nvd,nv(jspin4),nv_b2(jspin_b),
+     >                      lmd,taual,nop,
      >                      acof(1:nv(jspin4),:,:,jspin4),
      >                      bcof(1:nv(jspin4),:,:,jspin4),
      >                      ccof(:,1:nv(jspin4),:,:,jspin4),bkpt_b2,

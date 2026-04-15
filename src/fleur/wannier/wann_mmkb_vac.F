@@ -16,12 +16,11 @@ c***************************************************************
       CONTAINS
       SUBROUTINE wann_mmkb_vac(
      >     vacchi,l_noco,nlotot,qss,
-     >     nbnd,z1,nmzd,nv2d,k1d,k2d,k3d,n3d,nvac,
-     >     ig,nmz,delz,ig2,area,bmat,
-     >     bbmat,evac,evac_b,bkpt,bkpt_b,vz,vz_b,
+     >     nbnd,cell,vacuum,nv2d,k1d,k2d,k3d,n3d,
+     >     ig,ig2,evac,evac_b,bkpt,bkpt_b,vz,vz_b,
      >     nslibd,nslibd_b,jspin,jspin_b,
      >     k1,k2,k3,k1_b,k2_b,k3_b,jspd,nvd,
-     >     nbasfcn,neigd,zMat,zMat_b,nv,nv_b,omtil,gb,
+     >     nbasfcn,neigd,zMat,zMat_b,nv,nv_b,gb,
      <     mmn)
 
       USE m_types
@@ -33,34 +32,28 @@ c***************************************************************
       implicit none
 
       TYPE(t_mat), INTENT(IN) :: zMat, zMat_b
+      TYPE(t_cell), INTENT(IN) :: cell
+      TYPE(t_vacuum), INTENT(IN) :: vacuum
 
 c     .. scalar Arguments..
       logical, intent (in) :: l_noco
       integer, intent (in) :: nlotot,jspin_b
       real,    intent (in) :: qss(3)
-      integer, intent (in) :: nmzd,nv2d,k1d,k2d,k3d,n3d,nbnd
-      integer, intent (in) :: nmz,nslibd,nslibd_b,nvac
+      integer, intent (in) :: nv2d,k1d,k2d,k3d,n3d,nbnd
+      integer, intent (in) :: nslibd,nslibd_b
       integer, intent (in) :: jspin,jspd,nvd
       integer, intent (in) :: nbasfcn,neigd
       integer, intent (in) :: gb(3)
-      real,    intent (in) :: delz,z1,omtil,area
       complex, intent (in) :: vacchi
 
 c     ..array arguments..
       real,    intent (in) :: bkpt(3),bkpt_b(3),evac(2),evac_b(2)
-!      integer, intent (in) :: ig(-k1d:k1d,-k2d:k2d,-k3d:k3d)
       integer, intent (in) :: ig(-k1d:,-k2d:,-k3d:)
-!      integer, intent (in) :: ig2(n3d)
-      integer, intent (in) :: ig2(:)!ig2(n3d)      
-!      integer, intent (in) :: nv(jspd),nv_b(jspd)
-      integer, intent (in) :: nv(:),nv_b(:)      
-      real,    intent (in) :: vz(nmzd,2),vz_b(nmzd,2)
-      real,    intent (in) :: bbmat(3,3),bmat(3,3)
-!      integer, intent (in) :: k1(nvd,jspd),k2(nvd,jspd),k3(nvd,jspd)
-      integer, intent (in) :: k1(:,:),k2(:,:),k3(:,:)      
-!      integer,intent(in)::k1_b(nvd,jspd),k2_b(nvd,jspd),k3_b(nvd,jspd)
-      integer,intent(in)::k1_b(:,:),k2_b(:,:),k3_b(:,:)      
-!      complex, intent (inout) :: mmn(nbnd,nbnd)
+      integer, intent (in) :: ig2(:)
+      integer, intent (in) :: nv(:),nv_b(:)
+      real,    intent (in) :: vz(:,:),vz_b(:,:)
+      integer, intent (in) :: k1(:,:),k2(:,:),k3(:,:)
+      integer,intent(in)::k1_b(:,:),k2_b(:,:),k3_b(:,:)
       complex, intent (inout) :: mmn(:,:)
 
 c     ..basis wavefunctions in the vacuum
@@ -75,7 +68,7 @@ c     ..basis wavefunctions in the vacuum
 c     ..local scalars..
       logical tail
       real wronk,arg,zks,tpi,vz0(2),vz0_b(2),scale,evacp,ev,const
-      real uu,ud,du,dd,xx(nmz),xximag(nmz)
+      real uu,ud,du,dd,xx(vacuum%nmz),xximag(vacuum%nmz)
       real :: uuimag,udimag,duimag,ddimag,qss1,qss2
       integer i,m,l,j,k,n,nv2,nv2_b,ivac,n2,n2_b,sign,ik
       integer :: lprime,np1,addnoco,addnoco2
@@ -83,30 +76,33 @@ c     ..local scalars..
       integer, allocatable :: kvac1(:),kvac2(:),map2(:)
       integer, allocatable :: kvac1_b(:),kvac2_b(:),map2_b(:)
       integer symvac,symvacvac
+
       call timestart("wann_mmkb_vac")
       allocate ( ac(nv2d,nslibd),bc(nv2d,nslibd),
      +           ac_b(nv2d,nslibd_b),bc_b(nv2d,nslibd_b),
      +           dt(nv2d),dte(nv2d),t(nv2d),te(nv2d),
-     +           tei(nv2d),u(nmzd,nv2d),ue(nmzd,nv2d),
+     +           tei(nv2d),u(vacuum%nmzd,nv2d),
+     +           ue(vacuum%nmzd,nv2d),
      +           dt_b(nv2d),dte_b(nv2d),t_b(nv2d),te_b(nv2d),
-     +           tei_b(nv2d),u_b(nmzd,nv2d),ue_b(nmzd,nv2d),
+     +           tei_b(nv2d),u_b(vacuum%nmzd,nv2d),
+     +           ue_b(vacuum%nmzd,nv2d),
      +           v(3),kvac1(nv2d),kvac2(nv2d),map2(nvd),
      +           kvac1_b(nv2d),kvac2_b(nv2d),map2_b(nvd) )
 
       tpi = 2 * pimach() ; ic = cmplx(0.,1.)
 
       tail = .true.
-      np1 = nmz + 1
+      np1 = vacuum%nmz + 1
 
 c.. determining the indexing array (in-plane stars)
 c.. for the k-point
 
       wronk = 2.0
-      const = 1.0 / ( sqrt(omtil)*wronk )
+      const = 1.0 / ( sqrt(cell%omtil)*wronk )
 
       do ivac = 1,2
-         vz0(ivac) = vz(nmz,ivac)
-         vz0_b(ivac) = vz_b(nmz,ivac)
+         vz0(ivac) = vz(vacuum%nmz,ivac)
+         vz0_b(ivac) = vz_b(vacuum%nmz,ivac)
       enddo
 
       n2 = 0 ; n2_b = 0
@@ -169,7 +165,7 @@ c.. and for the b-point
          !write(*,*)'ok',n2_b,nv2d,'jspin_b',jspin_b
 
 c...cycle by the vacua
-      do 140 ivac = 1,nvac
+      do 140 ivac = 1,vacuum%nvac
 
 
 
@@ -194,23 +190,25 @@ c.. the body of the routine
          v(1) = bkpt(1) + kvac1(ik) + qss1
          v(2) = bkpt(2) + kvac2(ik) + qss2
          v(3) = 0.
-         ev = evacp - 0.5*dot_product(v,matmul(bbmat,v))
-         call vacuz(ev,vz(1,ivac),vz0(ivac),nmz,delz,t(ik),dt(ik),
-     +        u(1,ik))
-         call vacudz(ev,vz(1,ivac),vz0(ivac),nmz,delz,te(ik),
-     +        dte(ik),tei(ik),ue(1,ik),dt(ik),
+         ev = evacp - 0.5*dot_product(v,matmul(cell%bbmat,v))
+         call vacuz(ev,vz(:,ivac),vz0(ivac),
+     +        vacuum%nmz,vacuum%delz,
+     +        t(ik),dt(ik),u(1,ik))
+         call vacudz(ev,vz(:,ivac),vz0(ivac),
+     +        vacuum%nmz,vacuum%delz,
+     +        te(ik),dte(ik),tei(ik),ue(1,ik),dt(ik),
      +        u(1,ik))
          scale = wronk/ (te(ik)*dt(ik)-dte(ik)*t(ik))
          te(ik) = scale*te(ik)
          dte(ik) = scale*dte(ik)
          tei(ik) = scale*tei(ik)
-         do j = 1,nmz
+         do j = 1,vacuum%nmz
             ue(j,ik) = scale*ue(j,ik)
          enddo
       enddo
 c-----> construct a and b coefficients for the k-point
        symvacvac=1
-       if (nvac==1) symvacvac=2
+       if (vacuum%nvac==1) symvacvac=2
        do symvac=1,symvacvac
          do i = 1,nv2d
             do n = 1,nslibd
@@ -227,8 +225,8 @@ c-----> construct a and b coefficients for the k-point
 
       do k = 1,nv(jspin)
          l = map2(k)
-         zks = k3(k,jspin)*bmat(3,3)*sign
-         arg = zks*z1
+         zks = k3(k,jspin)*cell%bmat(3,3)*sign
+         arg = zks*cell%z1
          c_1 = cmplx(cos(arg),sin(arg)) * const
          av = -c_1 * cmplx( dte(l),zks*te(l) )
          bv =  c_1 * cmplx(  dt(l),zks* t(l) )
@@ -253,17 +251,19 @@ c...now for the k+b point
          v(1) = bkpt_b(1) + kvac1_b(ik) + qss1
          v(2) = bkpt_b(2) + kvac2_b(ik) + qss2
          v(3) = 0.
-         ev = evacp - 0.5*dot_product(v,matmul(bbmat,v))
-         call vacuz(ev,vz_b(1,ivac),vz0_b(ivac),nmz,delz,t_b(ik),
+         ev = evacp - 0.5*dot_product(v,matmul(cell%bbmat,v))
+         call vacuz(ev,vz_b(:,ivac),vz0_b(ivac),
+     +        vacuum%nmz,vacuum%delz,
+     +        t_b(ik),dt_b(ik),u_b(1,ik))
+         call vacudz(ev,vz_b(:,ivac),vz0_b(ivac),
+     +        vacuum%nmz,vacuum%delz,
+     +        te_b(ik),dte_b(ik),tei_b(ik),ue_b(1,ik),
      +        dt_b(ik),u_b(1,ik))
-         call vacudz(ev,vz_b(1,ivac),vz0_b(ivac),nmz,delz,te_b(ik),
-     +        dte_b(ik),tei_b(ik),ue_b(1,ik),dt_b(ik),
-     +        u_b(1,ik))
          scale = wronk/ (te_b(ik)*dt_b(ik)-dte_b(ik)*t_b(ik))
          te_b(ik) = scale*te_b(ik)
          dte_b(ik) = scale*dte_b(ik)
          tei_b(ik) = scale*tei_b(ik)
-         do j = 1,nmz
+         do j = 1,vacuum%nmz
             ue_b(j,ik) = scale*ue_b(j,ik)
          enddo
       enddo
@@ -271,8 +271,8 @@ c-----> construct a and b coefficients for the k+b point
 
       do k = 1,nv_b(jspin_b)
          l = map2_b(k)
-         zks = k3_b(k,jspin_b)*bmat(3,3)*sign
-         arg = zks*z1
+         zks = k3_b(k,jspin_b)*cell%bmat(3,3)*sign
+         arg = zks*cell%z1
          c_1 = cmplx(cos(arg),sin(arg)) * const
          av = -c_1 * cmplx( dte_b(l),zks*te_b(l) )
          bv =  c_1 * cmplx( dt_b(l),zks*t_b(l) )
@@ -295,46 +295,50 @@ c-----> loop over basis functions
       do lprime = 1,nv2_b
       if (kvac1(l).eq.(kvac1_b(lprime)-gb(1))
      & .and. kvac2(l).eq.(kvac2_b(lprime)-gb(2)))then
-         zks = gb(3)*bmat(3,3)*sign
+         zks = gb(3)*cell%bmat(3,3)*sign
 
-         do i = 1,nmz
+         do i = 1,vacuum%nmz
              xx(np1-i) = u(i,l)*u_b(i,lprime)*
-     *          cos((z1+(i-1)*delz)*zks)
+     *          cos((cell%z1+(i-1)*vacuum%delz)*zks)
             xximag(np1-i) = u(i,l)*u_b(i,lprime)*
-     *          sin((z1+(i-1)*delz)*zks)
+     *          sin((cell%z1+(i-1)*vacuum%delz)*zks)
          enddo   
-         call intgz0(xx,delz,nmz,uu,tail)
-         call intgz0(xximag,delz,nmz,uuimag,tail)
+         call intgz0(xx,vacuum%delz,vacuum%nmz,uu,tail)
+         call intgz0(xximag,vacuum%delz,
+     +        vacuum%nmz,uuimag,tail)
 
-         do i = 1,nmz
+         do i = 1,vacuum%nmz
             xx(np1-i) = u(i,l)*ue_b(i,lprime)*
-     *   cos((z1+(i-1)*delz)*zks)
+     *   cos((cell%z1+(i-1)*vacuum%delz)*zks)
             xximag(np1-i) = u(i,l)*ue_b(i,lprime)*
-     *          sin((z1+(i-1)*delz)*zks)
+     *          sin((cell%z1+(i-1)*vacuum%delz)*zks)
          enddo   
-         call intgz0(xx,delz,nmz,ud,tail)
-         call intgz0(xximag,delz,nmz,udimag,tail)
+         call intgz0(xx,vacuum%delz,vacuum%nmz,ud,tail)
+         call intgz0(xximag,vacuum%delz,
+     +        vacuum%nmz,udimag,tail)
 
-         do i = 1,nmz
+         do i = 1,vacuum%nmz
             xx(np1-i) = ue(i,l)*u_b(i,lprime)*
-     *   cos((z1+(i-1)*delz)*zks)
+     *   cos((cell%z1+(i-1)*vacuum%delz)*zks)
             xximag(np1-i) = ue(i,l)*u_b(i,lprime)*
-     *          sin((z1+(i-1)*delz)*zks)
+     *          sin((cell%z1+(i-1)*vacuum%delz)*zks)
          enddo   
-         call intgz0(xx,delz,nmz,du,tail)
-         call intgz0(xximag,delz,nmz,duimag,tail)
-         do i = 1,nmz
+         call intgz0(xx,vacuum%delz,vacuum%nmz,du,tail)
+         call intgz0(xximag,vacuum%delz,
+     +        vacuum%nmz,duimag,tail)
+         do i = 1,vacuum%nmz
             xx(np1-i) = ue(i,l)*ue_b(i,lprime)*
-     *   cos((z1+(i-1)*delz)*zks)
+     *   cos((cell%z1+(i-1)*vacuum%delz)*zks)
             xximag(np1-i) = ue(i,l)*ue_b(i,lprime)*
-     *          sin((z1+(i-1)*delz)*zks)
+     *          sin((cell%z1+(i-1)*vacuum%delz)*zks)
          enddo   
-         call intgz0(xx,delz,nmz,dd,tail)
-         call intgz0(xximag,delz,nmz,ddimag,tail)
+         call intgz0(xx,vacuum%delz,vacuum%nmz,dd,tail)
+         call intgz0(xximag,vacuum%delz,
+     +        vacuum%nmz,ddimag,tail)
 
          do i = 1,nslibd
             do j = 1,nslibd_b
-               mmn(i,j) = mmn(i,j) + area*(
+               mmn(i,j) = mmn(i,j) + cell%area*(
      *  ac(l,i)*conjg(ac_b(lprime,j))*cmplx(uu,uuimag) +
      +  ac(l,i)*conjg(bc_b(lprime,j))*cmplx(ud,udimag) +
      *  bc(l,i)*conjg(ac_b(lprime,j))*cmplx(du,duimag) +

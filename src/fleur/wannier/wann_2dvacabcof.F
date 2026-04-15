@@ -12,8 +12,9 @@ c     Frank Freimuth, November 2006
 c********************************************************
       CONTAINS
       SUBROUTINE wann_2dvacabcof(
-     >nv2d,nslibd,nvac,nmzd,nmz,omtil,vz,nv,bkpt,z1,
-     >nvd,k1,k2,k3,evac,bbmat,delz,bmat,nbasfcn,neigd,zMat,
+     >cell,vacuum,
+     >nv2d,nslibd,vz,nv,bkpt,
+     >nvd,k1,k2,k3,evac,nbasfcn,neigd,zMat,
      <ac,bc,u,ue,addnoco,l_ss,qss,jspin)
 
       USE m_types
@@ -22,32 +23,24 @@ c********************************************************
 
       implicit none
 
+      TYPE(t_cell),   INTENT(IN) :: cell
+      TYPE(t_vacuum), INTENT(IN) :: vacuum
       TYPE(t_mat),INTENT(IN)   :: zMat
 
       logical,intent(in)::l_ss
       integer,intent(in)::nv2d,jspin,addnoco
       integer,intent(in)::nslibd
-      integer,intent(in)::nvac
-      integer,intent(in)::nmzd
-      integer,intent(in)::nmz
       integer,intent(in)::nbasfcn,neigd
-      real,intent(in)::omtil
-      real,intent(in)::vz(nmzd,2)
-      real,intent(in)::evac(2)
-      real,intent(in)::bbmat(3,3)
-      real,intent(in)::delz
-      real,intent(in)::bmat(3,3) 
-      real,intent(in)::z1
+      real,intent(in)::vz(vacuum%nmzd,2)
+      real,intent(in)::evac(:)
       integer,intent(in)::nv
       integer,intent(in)::nvd
-      integer,intent(in)::k1(nvd)
-      integer,intent(in)::k2(nvd)
-      integer,intent(in)::k3(nvd)
+      integer,intent(in)::k1(:),k2(:),k3(:)
       real,intent(in)::bkpt(3),qss(3)
       complex,intent(out)::ac(nv2d,nslibd,2)
       complex,intent(out)::bc(nv2d,nslibd,2)
-      real,intent(out)::u(nmzd,nv2d,nvac)
-      real,intent(out)::ue(nmzd,nv2d,nvac)
+      real,intent(out)::u(vacuum%nmzd,nv2d,vacuum%nvac)
+      real,intent(out)::ue(vacuum%nmzd,nv2d,vacuum%nvac)
 
       real wronk,const
       complex c_1,av,bv
@@ -61,11 +54,11 @@ c********************************************************
       call timestart("wann_2dvacabcof")
 
          wronk = 2.0
-         const = 1.0 / ( sqrt(omtil)*wronk )
+         const = 1.0 / ( sqrt(cell%omtil)*wronk )
          allocate (dt(nv2d),dte(nv2d),t(nv2d),te(nv2d),tei(nv2d))
 
          do ivac = 1,2
-            vz0(ivac) = vz(nmz,ivac)
+            vz0(ivac) = vz(vacuum%nmz,ivac)
          enddo
 
 
@@ -98,18 +91,21 @@ c********************************************************
         qss2=qss(2)/2.0
       endif
 
-         do ivac=1,nvac  
+         do ivac=1,vacuum%nvac  
             evacp=evac(ivac)
             sign=3-2*ivac
             do ik = 1,nv2
                v(1) = bkpt(1) + kvac1(ik)+qss1
                v(2) = bkpt(2) + kvac2(ik)+qss2
                v(3) = 0.
-               ev = evacp - 0.5*dot_product(matmul(v,bbmat),v)
-               call vacuz(ev,vz(1,ivac),vz0(ivac),nmz,delz,t(ik),
+               ev = evacp - 0.5*dot_product(
+     +              matmul(v,cell%bbmat),v)
+               call vacuz(ev,vz(1,ivac),vz0(ivac),
+     +           vacuum%nmz,vacuum%delz,t(ik),
      +        dt(ik),
      +        u(1,ik,ivac))
-               call vacudz(ev,vz(1,ivac),vz0(ivac),nmz,delz,te(ik),
+               call vacudz(ev,vz(1,ivac),vz0(ivac),
+     +           vacuum%nmz,vacuum%delz,te(ik),
      +        dte(ik),tei(ik),ue(1,ik,ivac),dt(ik),
      +        u(1,ik,ivac))
                scale = wronk/ (te(ik)*dt(ik)-
@@ -117,7 +113,7 @@ c********************************************************
                te(ik) = scale*te(ik)
                dte(ik) = scale*dte(ik)
                tei(ik) = scale*tei(ik)
-               do j = 1,nmz
+               do j = 1,vacuum%nmz
                   ue(j,ik,ivac) = scale*ue(j,ik,ivac)
                enddo
             enddo
@@ -134,7 +130,7 @@ c            enddo
       
             jvac=ivac
             symvacvac=1
-            if (nvac==1) symvacvac=2
+            if (vacuum%nvac==1) symvacvac=2
             do symvac=1,symvacvac
                if(symvac==2) then
                   sign=-1.0
@@ -150,8 +146,8 @@ c            enddo
 
                do k = 1,nv
                   l = map2(k)
-                  zks = k3(k)*bmat(3,3)*sign
-                  arg = zks*z1
+                  zks = k3(k)*cell%bmat(3,3)*sign
+                  arg = zks*cell%z1
                   c_1 = cmplx(cos(arg),sin(arg)) * const
                   av = -c_1 * cmplx( dte(l),zks*te(l) )
                   bv =  c_1 * cmplx(  dt(l),zks* t(l) )

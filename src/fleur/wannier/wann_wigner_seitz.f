@@ -8,14 +8,15 @@
       use m_juDFT
       contains
       subroutine wann_wigner_seitz(
-     >          l_get_rvecnum,num,amat,
+     >          l_get_rvecnum,num,cell,
      >          rvecnum_in,
      <          rvecnum,rvec,ndegen)
 
+      USE m_types
       implicit none
       logical, intent(in) :: l_get_rvecnum
       integer, intent(in) :: num(:)
-      real, intent(in)    :: amat(:,:)
+      TYPE(t_cell),INTENT(IN) :: cell
       integer,intent(in)  :: rvecnum_in
       integer, intent(out):: rvecnum
       integer, intent(out):: rvec(:,:)
@@ -32,7 +33,7 @@
       eps8=1.e-8
       rvecnum=0
 
-      metric=matmul(transpose(amat),amat)
+      metric=matmul(transpose(cell%amat),cell%amat)
 
       rvecnum = 0  
       do k1=-2*num(1),2*num(1)  

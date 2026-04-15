@@ -19,51 +19,48 @@ c****************************************c
       MODULE m_wann_uHu_sph
       contains
       subroutine wann_uHu_sph(
-     >        chi,nbnd,llod,nslibd,nslibd_b,nlod,natd,ntypd,lmd,jmtd,
-     >        taual,nop,lmax,
-     >        ntype,neq,nlo,llo,acof,bcof,ccof,bkpt_b2,
+     >        chi,nbnd,atoms,nslibd,nslibd_b,
+     >        acof,bcof,ccof,bkpt_b2,
      >        acof_b,bcof_b,ccof_b,bkpt_b,bkpt,gb_b,gb_b2,
      >        tuu,tud,tdu,tdd,tuulo,tulou,tdulo,tulod,tuloulo,
      >        kdiff,kdiff2,nntot,nntot2,uHu)
 
       USE m_juDFT
+      USE m_types
       use m_constants, only : pimach
    
       implicit none
 
 c     .. scalar arguments ..
-      integer, intent (in) :: llod,nlod,natd,ntypd,lmd,nbnd
+      integer, intent (in) :: nbnd
       integer, intent (in) :: nntot,nntot2
-      integer, intent (in) :: ntype,nslibd,nslibd_b,nop,jmtd
+      integer, intent (in) :: nslibd,nslibd_b
       complex, intent (in) :: chi
+      TYPE(t_atoms),INTENT(IN) :: atoms
 
 c     .. array arguments ..
-      integer, intent (in)  :: neq(:) !(ntypd)
-      integer, intent (in)  :: lmax(:) !(ntypd)
-      integer, intent (in)  :: nlo(:) !(ntypd)
-      integer, intent (in)  :: llo(:,:) !(nlod,ntypd)
       real,    intent (in)  :: bkpt_b(:) !(3)
       real,    intent (in)  :: bkpt_b2(:) !(3)
-      real,    intent (in)  :: taual(:,:) !(3,natd)
       real,    intent (in)  :: bkpt(:) !(3)
       integer, intent (in)  :: gb_b(:) !(3)
       integer, intent (in)  :: gb_b2(:) !(3)
-      complex, intent (in)  :: ccof(-llod:,:,:,:) !(-llod:llod,nslibd,nlod,natd)
-      complex, intent (in)  :: acof(:,0:,:) !(nslibd,0:lmd,natd)
-      complex, intent (in)  :: bcof(:,0:,:) !(nslibd,0:lmd,natd)
-      complex, intent (in)  :: ccof_b(-llod:,:,:,:) !(-llod:llod,nslibd_b,nlod,natd)
-      complex, intent (in)  :: acof_b(:,0:,:) !(nslibd_b,0:lmd,natd)
-      complex, intent (in)  :: bcof_b(:,0:,:) !(nslibd_b,0:lmd,natd)
+      complex, intent (in)  :: ccof(-atoms%llod:,:,:,:)
+      complex, intent (in)  :: acof(:,0:,:)
+      complex, intent (in)  :: bcof(:,0:,:)
+      complex, intent (in)  :: ccof_b(-atoms%llod:,:,:,:)
+      complex, intent (in)  :: acof_b(:,0:,:)
+      complex, intent (in)  :: bcof_b(:,0:,:)
 
       complex, intent (in)  :: tuu(0:,0:,:,:)
       complex, intent (in)  :: tud(0:,0:,:,:)
       complex, intent (in)  :: tdu(0:,0:,:,:)
       complex, intent (in)  :: tdd(0:,0:,:,:)
-      complex, intent (in)  :: tuulo(0:,:,-llod:,:,:)
-      complex, intent (in)  :: tulou(0:,:,-llod:,:,:)
-      complex, intent (in)  :: tdulo(0:,:,-llod:,:,:)
-      complex, intent (in)  :: tulod(0:,:,-llod:,:,:)
-      complex, intent (in)  :: tuloulo(:,-llod:,:,-llod:,:,:)
+      complex, intent (in)  :: tuulo(0:,:,-atoms%llod:,:,:)
+      complex, intent (in)  :: tulou(0:,:,-atoms%llod:,:,:)
+      complex, intent (in)  :: tdulo(0:,:,-atoms%llod:,:,:)
+      complex, intent (in)  :: tulod(0:,:,-atoms%llod:,:,:)
+      complex, intent (in)  :: tuloulo(:,
+     >    -atoms%llod:,:,-atoms%llod:,:,:)
 
       real, intent (in)     :: kdiff(:,:),kdiff2(:,:)
       complex,intent(inout) :: uHu(:,:)
@@ -71,11 +68,11 @@ c     .. array arguments ..
 
 c     .. local scalars ..
       integer i,lm,nn,n,na,j,lmp,l,lp,m,mp,lwn,lo,lop
-      integer ll,llp,lmd2
+      integer ll,llp,lmd,lmd2
       real rph,cph,tpi,sqpi16,th,t1nn,t2nn,t3nn
       integer nene,nene2,indexx
       complex :: fac1,fac2,fac3,fac4
-      complex :: mat(0:lmd,nslibd_b)
+      complex,allocatable :: mat(:,:)
 C     ..
 C     .. local arrays ..
       real bpt(3)
@@ -87,7 +84,9 @@ C     .. intrinsic functions ..
 
       tpi = 2* pimach()
       sqpi16 = 4*tpi*tpi
+      lmd = atoms%lmaxd*(atoms%lmaxd+2)
       lmd2 = lmd+1
+      allocate(mat(0:lmd,nslibd_b))
       
       na = 0
 
@@ -115,15 +114,15 @@ c      if(nene2.ne.1) stop 'nene2.ne.1'
 c      if(indexx.ne.nene) stop 'nene.ne.indexx'
 c      if(ANY(bpt2.ne.0.0)) stop 'bpt2.ne.0'
 
-      do n=1,ntype
-       lwn = lmax(n)
-         do nn = 1,neq(n) ! cycle by the atoms within the atom type
+      do n=1,atoms%ntype
+       lwn = atoms%lmax(n)
+         do nn = 1,atoms%neq(n) ! atoms within atom type
          na = na + 1
 c...set up phase factors ( 4pi e^{ib2\tau} 4pi e^{-ib1\tau} )
 
-         t1nn =  tpi*taual(1,na)
-         t2nn =  tpi*taual(2,na)
-         t3nn =  tpi*taual(3,na)
+         t1nn =  tpi*atoms%taual(1,na)
+         t2nn =  tpi*atoms%taual(2,na)
+         t3nn =  tpi*atoms%taual(3,na)
 
          th = (bpt2(1)-bpt(1))*t1nn
      >       +(bpt2(2)-bpt(2))*t2nn
@@ -165,11 +164,11 @@ c...apw-apw
      >                    bcof(1,0,na),nslibd,mat(0,1),lmd2,
      >                    cmplx(1.0),uHu,nbnd)
 
-         if(nlo(n).ge.1) then
+         if(atoms%nlo(n).ge.1) then
 
 c...apw-lo
-         do lo = 1,nlo(n)
-          l = llo(lo,n)
+         do lo = 1,atoms%nlo(n)
+          l = atoms%llo(lo,n)
           do m = -l, l
            
            do lp = 0, lwn
@@ -199,12 +198,12 @@ c...apw-lo
          enddo  ! lo
 
 c...lo-lo
-         do lo = 1,nlo(n)
-          l = llo(lo,n)
+         do lo = 1,atoms%nlo(n)
+          l = atoms%llo(lo,n)
           do m = -l, l
            
-           do lop = 1,nlo(n)
-            lp = llo(lop,n)
+           do lop = 1,atoms%nlo(n)
+            lp = atoms%llo(lop,n)
             do mp = -lp, lp
 
              fac1=cmplx(rph,cph)*tuloulo(lop,mp,lo,m,n,indexx)*chi
@@ -222,7 +221,7 @@ c...lo-lo
           enddo ! m
          enddo  ! lo
 
-         endif !(nlo(n).ge.1)
+         endif !(atoms%nlo(n).ge.1)
 
       enddo  ! atoms in the type
 

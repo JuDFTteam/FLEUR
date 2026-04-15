@@ -13,15 +13,17 @@ c*****************************************c
 #endif
       CONTAINS
       SUBROUTINE wann_uHu_soc(
-     >                  input,atoms,
-     >                  ntypd,jmtd,lmaxd,jspd,ntype,dx,rmsh,jri,lmax,
-     >                  natd,lmd,lmplmd,neq,irank,nlod,llod,loplod,
-     >                  ello,llo,nlo,lo1l,l_dulo,ulo_der,f,g,flo,f_b,
-     >                  g_b,flo_b,kdiff,kdiff2,nntot,nntot2,
-     >                  bmat,bbmat,vr,epar,jspin,
-     >                  jspin_b,jspins,l_spav,theta,phi,alph,beta,
-     >                  l_noco,l_skip_loc,
-     <                  tuu,tud,tdu,tdd,tuulo,tulou,tdulo,tulod,tuloulo)
+     >    input,atoms,cell,nococonv,
+     >    lmplmd,irank,
+     >    ello,f,g,flo,f_b,
+     >    g_b,flo_b,kdiff,kdiff2,
+     >    nntot,nntot2,
+     >    vr,epar,jspin,
+     >    jspin_b,l_spav,theta,phi,
+     >    l_noco,l_skip_loc,
+     >    tuu,tud,tdu,tdd,
+     >    tuulo,tulou,tdulo,
+     >    tulod,tuloulo)
 
       USE m_intgr, ONLY : intgr0
       USE m_sphbes
@@ -40,48 +42,82 @@ c*****************************************c
 C     .. Intrinsic Functions ..
       INTRINSIC abs,cmplx,max,mod
 
-      TYPE(t_input),INTENT(IN)   :: input
-      TYPE(t_atoms),INTENT(IN)   :: atoms
+      TYPE(t_input),INTENT(IN)    :: input
+      TYPE(t_atoms),INTENT(IN)    :: atoms
+      TYPE(t_cell),INTENT(IN)     :: cell
+      TYPE(t_nococonv),INTENT(IN) :: nococonv
 
 C     .. Scalar Arguments ..
       LOGICAL, INTENT (IN) :: l_noco,l_skip_loc
-      INTEGER, INTENT (IN) :: ntypd,jmtd,lmaxd,jspd,jspins
-      INTEGER, INTENT (IN) :: lmd,lmplmd,ntype,irank,jspin,jspin_b
-      INTEGER, INTENT (IN) :: nlod,llod,loplod,natd
+      INTEGER, INTENT (IN) :: lmplmd,irank,jspin,jspin_b
       INTEGER, INTENT (IN) :: nntot,nntot2
       REAL,    INTENT (IN) :: theta,phi
 C     ..
 C     .. Array Arguments ..
-      COMPLEX, INTENT (INOUT):: 
-     >       tdd(0:lmd,0:lmd,ntypd,nntot*nntot2),
-     >       tdu(0:lmd,0:lmd,ntypd,nntot*nntot2),
-     >       tud(0:lmd,0:lmd,ntypd,nntot*nntot2),
-     >       tuu(0:lmd,0:lmd,ntypd,nntot*nntot2)
       COMPLEX, INTENT (INOUT)::
-     >       tdulo(0:lmd,nlod,-llod:llod,ntypd,nntot*nntot2),
-     >       tuulo(0:lmd,nlod,-llod:llod,ntypd,nntot*nntot2),
-     >       tulou(0:lmd,nlod,-llod:llod,ntypd,nntot*nntot2),
-     >       tulod(0:lmd,nlod,-llod:llod,ntypd,nntot*nntot2),
-     >       tuloulo(nlod,-llod:llod,nlod,-llod:llod,ntypd,nntot*nntot2)
-      INTEGER, INTENT (IN) :: llo(nlod,ntypd),nlo(ntypd)
-      INTEGER, INTENT (IN) :: lo1l(0:llod,ntypd),neq(ntypd)
-      INTEGER, INTENT (IN) :: jri(ntypd),lmax(ntypd)
-      INTEGER, INTENT (IN) :: ulo_der(nlod,ntypd)
-      REAL,    INTENT (IN) :: alph(ntypd),beta(ntypd)
-      REAL,    INTENT (IN) :: dx(ntypd),rmsh(jmtd,ntypd)
-      REAL,    INTENT (IN) :: ello(nlod,ntypd,max(jspd,2))
-      REAL,    INTENT (IN) :: epar(0:lmaxd,ntypd,max(jspd,2))
-      REAL,    INTENT (IN) :: vr(jmtd,ntypd,jspd)
-      REAL,    INTENT (IN) :: f  (ntypd,jmtd,2,0:lmaxd),
-     >                        g  (ntypd,jmtd,2,0:lmaxd),
-     >                        f_b(ntypd,jmtd,2,0:lmaxd),
-     >                        g_b(ntypd,jmtd,2,0:lmaxd),
-     >                        flo  (ntypd,jmtd,2,nlod),
-     >                        flo_b(ntypd,jmtd,2,nlod)
-      REAL,    INTENT (IN) :: bmat(3,3),bbmat(3,3)
+     >  tdd(0:atoms%lmaxd*(atoms%lmaxd+2),
+     >    0:atoms%lmaxd*(atoms%lmaxd+2),
+     >    atoms%ntype,nntot*nntot2),
+     >  tdu(0:atoms%lmaxd*(atoms%lmaxd+2),
+     >    0:atoms%lmaxd*(atoms%lmaxd+2),
+     >    atoms%ntype,nntot*nntot2),
+     >  tud(0:atoms%lmaxd*(atoms%lmaxd+2),
+     >    0:atoms%lmaxd*(atoms%lmaxd+2),
+     >    atoms%ntype,nntot*nntot2),
+     >  tuu(0:atoms%lmaxd*(atoms%lmaxd+2),
+     >    0:atoms%lmaxd*(atoms%lmaxd+2),
+     >    atoms%ntype,nntot*nntot2)
+      COMPLEX, INTENT (INOUT)::
+     >  tdulo(
+     >    0:atoms%lmaxd*(atoms%lmaxd+2),
+     >    atoms%nlod,
+     >    -atoms%llod:atoms%llod,
+     >    atoms%ntype,nntot*nntot2),
+     >  tuulo(
+     >    0:atoms%lmaxd*(atoms%lmaxd+2),
+     >    atoms%nlod,
+     >    -atoms%llod:atoms%llod,
+     >    atoms%ntype,nntot*nntot2),
+     >  tulou(
+     >    0:atoms%lmaxd*(atoms%lmaxd+2),
+     >    atoms%nlod,
+     >    -atoms%llod:atoms%llod,
+     >    atoms%ntype,nntot*nntot2),
+     >  tulod(
+     >    0:atoms%lmaxd*(atoms%lmaxd+2),
+     >    atoms%nlod,
+     >    -atoms%llod:atoms%llod,
+     >    atoms%ntype,nntot*nntot2),
+     >  tuloulo(atoms%nlod,
+     >    -atoms%llod:atoms%llod,
+     >    atoms%nlod,
+     >    -atoms%llod:atoms%llod,
+     >    atoms%ntype,nntot*nntot2)
+      REAL, INTENT (IN) ::
+     >  ello(atoms%nlod,atoms%ntype,
+     >       max(input%jspins,2))
+      REAL, INTENT (IN) ::
+     >  epar(0:atoms%lmaxd,atoms%ntype,
+     >       max(input%jspins,2))
+      REAL, INTENT (IN) ::
+     >  vr(atoms%jmtd,atoms%ntype,
+     >     input%jspins)
+      REAL, INTENT (IN) ::
+     >  f(atoms%ntype,atoms%jmtd,
+     >    2,0:atoms%lmaxd),
+     >  g(atoms%ntype,atoms%jmtd,
+     >    2,0:atoms%lmaxd),
+     >  f_b(atoms%ntype,atoms%jmtd,
+     >      2,0:atoms%lmaxd),
+     >  g_b(atoms%ntype,atoms%jmtd,
+     >      2,0:atoms%lmaxd),
+     >  flo(atoms%ntype,atoms%jmtd,
+     >      2,atoms%nlod),
+     >  flo_b(atoms%ntype,atoms%jmtd,
+     >        2,atoms%nlod)
       REAL,    INTENT (IN) :: kdiff (3,nntot)
       REAL,    INTENT (IN) :: kdiff2(3,nntot2)
-      LOGICAL, INTENT (IN) :: l_dulo(nlod,ntypd),l_spav
+      LOGICAL, INTENT (IN) :: l_spav
 C     ..
 C     .. Local Scalars ..
       REAL gs,rk1,rk2,socscreen_fac
@@ -131,34 +167,59 @@ C     .. Local Arrays ..
        IF(irank.eq.0) write(*,*)'socscreen with factor',socscreen_fac
       ENDIF
 
-      allocate( dvd(0:lmaxd,0:lmaxd,0:lmaxd,0:lmaxd,0:lmaxd) )
-      allocate( dvu(0:lmaxd,0:lmaxd,0:lmaxd,0:lmaxd,0:lmaxd) )
-      allocate( uvd(0:lmaxd,0:lmaxd,0:lmaxd,0:lmaxd,0:lmaxd) )
-      allocate( uvu(0:lmaxd,0:lmaxd,0:lmaxd,0:lmaxd,0:lmaxd) )
-      allocate( p(jmtd,0:lmaxd,0:lmaxd), p_b(jmtd,0:lmaxd,0:lmaxd) )
-      allocate( q(jmtd,0:lmaxd,0:lmaxd), q_b(jmtd,0:lmaxd,0:lmaxd) )
-      allocate( x(jmtd) )
-      allocate( jlpp(0:lmaxd), jj1(0:lmaxd,jmtd), jj2(0:lmaxd,jmtd) )
-      allocate( v0(jmtd), vso(jmtd,2) )
-      allocate( angso(0:lmd,0:lmd,ntypd) )
-      allocate( yl1((lmaxd+1)**2), yl2((lmaxd+1)**2) )
+      allocate( dvd(0:atoms%lmaxd,
+     >  0:atoms%lmaxd,0:atoms%lmaxd,
+     >  0:atoms%lmaxd,0:atoms%lmaxd) )
+      allocate( dvu(0:atoms%lmaxd,
+     >  0:atoms%lmaxd,0:atoms%lmaxd,
+     >  0:atoms%lmaxd,0:atoms%lmaxd) )
+      allocate( uvd(0:atoms%lmaxd,
+     >  0:atoms%lmaxd,0:atoms%lmaxd,
+     >  0:atoms%lmaxd,0:atoms%lmaxd) )
+      allocate( uvu(0:atoms%lmaxd,
+     >  0:atoms%lmaxd,0:atoms%lmaxd,
+     >  0:atoms%lmaxd,0:atoms%lmaxd) )
+      allocate( p(atoms%jmtd,
+     >  0:atoms%lmaxd,0:atoms%lmaxd) )
+      allocate( p_b(atoms%jmtd,
+     >  0:atoms%lmaxd,0:atoms%lmaxd) )
+      allocate( q(atoms%jmtd,
+     >  0:atoms%lmaxd,0:atoms%lmaxd) )
+      allocate( q_b(atoms%jmtd,
+     >  0:atoms%lmaxd,0:atoms%lmaxd) )
+      allocate( x(atoms%jmtd) )
+      allocate( jlpp(0:atoms%lmaxd) )
+      allocate( jj1(0:atoms%lmaxd,atoms%jmtd) )
+      allocate( jj2(0:atoms%lmaxd,atoms%jmtd) )
+      allocate( v0(atoms%jmtd), vso(atoms%jmtd,2) )
+      allocate( angso(
+     >  0:atoms%lmaxd*(atoms%lmaxd+2),
+     >  0:atoms%lmaxd*(atoms%lmaxd+2),
+     >  atoms%ntype) )
+      allocate( yl1((atoms%lmaxd+1)**2) )
+      allocate( yl2((atoms%lmaxd+1)**2) )
 
       call cpu_time(t0)
       angso = cmplx(0.,0.)
 c*******************************************c
 c  set up < l m sp1 | sigma L | l mp sp2 >  c
 c*******************************************c
-       DO n=1,ntype
-        DO l=1,lmaxd              ! TODO: exclude s-states?
+       DO n=1,atoms%ntype
+        DO l=1,atoms%lmaxd       ! TODO: exclude s-states?
          ll=l*(l+1)
          DO m=-l,l
           lm = ll+m
           DO mp=-l,l
            lmp = ll+mp
            if(l_noco) then
-            angso(lm,lmp,n) = anglso(beta(n),alph(n),l,m,sp1,l,mp,sp2)
+            angso(lm,lmp,n) = anglso(
+     >        nococonv%beta(n),
+     >        nococonv%alph(n),
+     >        l,m,sp1,l,mp,sp2)
            else
-            angso(lm,lmp,n) = anglso(theta,phi,l,m,sp1,l,mp,sp2)
+            angso(lm,lmp,n) = anglso(
+     >        theta,phi,
+     >        l,m,sp1,l,mp,sp2)
            endif
           ENDDO
          ENDDO
@@ -172,7 +233,8 @@ c  begin 1st neighbor loop:   <k+b1|    c
 c***************************************c
       do ikpt_b=1,nntot
        bpt = kdiff(:,ikpt_b)
-       rk1 = sqrt(dot_product(bpt,matmul(bbmat,bpt)))
+       rk1 = sqrt(dot_product(bpt,
+     >   matmul(cell%bbmat,bpt)))
 !       rk1= sqrt(dotirp(bpt,bpt,bbmat))
 
 c***************************************c
@@ -182,23 +244,24 @@ c***************************************c
         indexx = ikpt_b2 + (ikpt_b-1)*nntot2
 
         bpt2 = kdiff2(:,ikpt_b2)
-        rk2 = sqrt(dot_product(bpt2,matmul(bbmat,bpt2)))
+        rk2 = sqrt(dot_product(bpt2,
+     >   matmul(cell%bbmat,bpt2)))
 !        rk2= sqrt(dotirp(bpt2,bpt2,bbmat))
 
       ! loop over atoms
-      DO 210 n = 1,ntype
-       lwn = lmax(n)
-       r0 = rmsh(1,n)
+      DO 210 n = 1,atoms%ntype
+       lwn = atoms%lmax(n)
+       r0 = atoms%rmsh(1,n)
 
        ! set up spherical Bessel functions
        ! jj1(l,b1*r) and jj2(l,b2*r)
        call cpu_time(t0)
-       do i=1,jri(n)
-          gs = rk1*rmsh(i,n)
+       do i=1,atoms%jri(n)
+          gs = rk1*atoms%rmsh(i,n)
           call sphbes(lwn,gs,jlpp)
           jj1(:,i) = jlpp(:)
 
-          gs = rk2*rmsh(i,n)
+          gs = rk2*atoms%rmsh(i,n)
           call sphbes(lwn,gs,jlpp)
           jj2(:,i) = jlpp(:)
        enddo
@@ -208,11 +271,11 @@ c***************************************c
        ! set up spherical harmonics
        ! yl1(lm) for b1 and yl2(lm) for b2
        yl1 = cmplx(0.,0.)
-       bkrot=MATMUL(bpt,bmat)
+       bkrot=MATMUL(bpt,cell%bmat)
        call ylm4(lwn,bkrot,yl1)
 
        yl2 = cmplx(0.,0.)
-       bkrot=MATMUL(bpt2,bmat)
+       bkrot=MATMUL(bpt2,cell%bmat)
        call ylm4(lwn,bkrot,yl2)
        call cpu_time(t0)
        t33 = t33 + t0-t1
@@ -220,7 +283,7 @@ c***************************************c
        ! set up products of radial functions and sph. Bessel
        DO ljj1 = 0, lwn
         DO l = 0, lwn
-         DO i=1,jri(n)
+         DO i=1,atoms%jri(n)
           p(i,l,ljj1) = f(n,i,1,l)*jj1(ljj1,i)
           q(i,l,ljj1) = g(n,i,1,l)*jj1(ljj1,i)
           p_b(i,l,ljj1) = f_b(n,i,1,l)*jj2(ljj1,i)
@@ -239,22 +302,26 @@ c****************************************************c
 
         ! construct vso
         v0 = 0.
-        IF (jspins.EQ.1) THEN
-           v0(1:jri(n)) = vr(1:jri(n),n,1)
+        IF (input%jspins.EQ.1) THEN
+           v0(1:atoms%jri(n)) =
+     >       vr(1:atoms%jri(n),n,1)
            e = ( epar(l,n,1) + epar(lp,n,1) )/2.
         ELSE
-           DO i = 1,jri(n)
-             v0(i) = (vr(i,n,1)+vr(i,n,jspins))/2.
+           DO i = 1,atoms%jri(n)
+             v0(i) = (vr(i,n,1)
+     >         +vr(i,n,input%jspins))/2.
            END DO
-           e = ( epar(l,n,1)+epar(l,n,jspins) 
-     >          +epar(lp,n,1)+epar(lp,n,jspins) )/4.
+           e = ( epar(l,n,1)
+     >       +epar(l,n,input%jspins)
+     >       +epar(lp,n,1)
+     >       +epar(lp,n,input%jspins) )/4.
         END IF
 
         CALL sointg(n,e,vr(:,n,:),v0,atoms,input,vso)  
 
         ! spin-averaging
         if(l_spav)then
-            DO i= 1,jmtd
+            DO i= 1,atoms%jmtd
              vso(i,1)= (vso(i,1)+vso(i,2))/2.
              vso(i,2)= vso(i,1)
            ENDDO        
@@ -275,29 +342,37 @@ c****************************************************c
      >           (mod(lmaxi+lh,2).eq.1).or.
      >           (mod(lmaxi2+l,2).eq.1) ) CYCLE
 
-               DO i=1,jri(n)
+               DO i=1,atoms%jri(n)
                 x(i) = p(i,lp,ljj1)*p_b(i,l,ljj2)*vso(i,jspin)
                ENDDO
-               call intgr0(x(1:jri(n)),r0,dx(n),jri(n),
-     >                     uvu(lh,l,lp,ljj2,ljj1))
+               call intgr0(
+     >           x(1:atoms%jri(n)),r0,
+     >           atoms%dx(n),atoms%jri(n),
+     >           uvu(lh,l,lp,ljj2,ljj1))
 
-               DO i=1,jri(n)
+               DO i=1,atoms%jri(n)
                 x(i) = q(i,lp,ljj1)*p_b(i,l,ljj2)*vso(i,jspin)
                ENDDO
-               call intgr0(x(1:jri(n)),r0,dx(n),jri(n),
-     >                     dvu(lh,l,lp,ljj2,ljj1))
+               call intgr0(
+     >           x(1:atoms%jri(n)),r0,
+     >           atoms%dx(n),atoms%jri(n),
+     >           dvu(lh,l,lp,ljj2,ljj1))
 
-               DO i=1,jri(n)
+               DO i=1,atoms%jri(n)
                 x(i) = p(i,lp,ljj1)*q_b(i,l,ljj2)*vso(i,jspin)
                ENDDO
-               call intgr0(x(1:jri(n)),r0,dx(n),jri(n),
-     >                     uvd(lh,l,lp,ljj2,ljj1))
+               call intgr0(
+     >           x(1:atoms%jri(n)),r0,
+     >           atoms%dx(n),atoms%jri(n),
+     >           uvd(lh,l,lp,ljj2,ljj1))
 
-               DO i=1,jri(n)
+               DO i=1,atoms%jri(n)
                 x(i) = q(i,lp,ljj1)*q_b(i,l,ljj2)*vso(i,jspin)
                ENDDO
-               call intgr0(x(1:jri(n)),r0,dx(n),jri(n),
-     >                     dvd(lh,l,lp,ljj2,ljj1))
+               call intgr0(
+     >           x(1:atoms%jri(n)),r0,
+     >           atoms%dx(n),atoms%jri(n),
+     >           dvd(lh,l,lp,ljj2,ljj1))
            ENDDO
           ENDDO
          ENDDO
@@ -349,7 +424,8 @@ c*********************************************************c
              mmax = min( ltil1,mtil1+1)
 
              gc1 = gaunt1(ltil1, ljj1, lp, 
-     >                    mtil1, mjj1, mp, lmaxd)
+     >                    mtil1, mjj1, mp,
+     >                    atoms%lmaxd)
              fac2 = fac1 * gc1 * (ImagUnit**lp)
 
         DO ljj2=0,lwn
@@ -376,7 +452,8 @@ c*********************************************************c
              lm = ll+m
 
              gc2 = gaunt1( l, ljj2, ltil1,
-     >                     m, mjj2, mtil2, lmaxd)
+     >                     m, mjj2, mtil2,
+     >                     atoms%lmaxd)
 
              ! set up prefactor
              cil = fac3 * (cci**l) * gc2 * conjg(angso(lmtil1,lmtil2,n))
@@ -412,22 +489,46 @@ c*********************************************************c
 c************** LOCAL ORBITAL CONTRIBUTION ***************c
 c   determine contributions to T-matrix due to loc. orb.  c
 c*********************************************************c
-       IF((nlo(n).GE.1).AND.(.NOT.l_skip_loc)) THEN
+       IF((atoms%nlo(n).GE.1).AND.
+     >    (.NOT.l_skip_loc)) THEN
 
           call wann_uHu_soc_tlo(
      >           input,atoms,
-     >           ntypd,jmtd,lmaxd,jspd,ntype,dx,rmsh,jri,lmax,
-     >           natd,lmd,irank,nlod,llod,loplod,ello,llo,nlo,
-     >           lo1l,l_dulo,ulo_der,flo,flo_b,kdiff,kdiff2,
+     >           atoms%ntype,atoms%jmtd,
+     >           atoms%lmaxd,
+     >           input%jspins,
+     >           atoms%ntype,atoms%dx,
+     >           atoms%rmsh,atoms%jri,
+     >           atoms%lmax,
+     >           atoms%nat,
+     >           atoms%lmaxd*(atoms%lmaxd+2),
+     >           irank,atoms%nlod,
+     >           atoms%llod,
+     >           atoms%nlod*(atoms%nlod+1)/2,
+     >           ello,atoms%llo,
+     >           atoms%nlo,
+     >           atoms%lo1l,atoms%l_dulo,
+     >           atoms%ulo_der,
+     >           flo,flo_b,kdiff,kdiff2,
      >           nntot,nntot2,
-     >           vr,epar,jspin,jspin_b,jspins,l_spav,theta,phi,
-     >           yl1,yl2,jj1,jj2,p,p_b,q,q_b,n,angso(0,0,n),
+     >           vr,epar,jspin,jspin_b,
+     >           input%jspins,l_spav,
+     >           theta,phi,
+     >           yl1,yl2,jj1,jj2,
+     >           p,p_b,q,q_b,n,
+     >           angso(0,0,n),
      >           l_socscreen,socscreen_fac,
-     >           tuulo(0,1,-llod,n,indexx),
-     >           tdulo(0,1,-llod,n,indexx),
-     >           tulou(0,1,-llod,n,indexx),
-     >           tulod(0,1,-llod,n,indexx),
-     >           tuloulo(1,-llod,1,-llod,n,indexx))
+     >           tuulo(0,1,
+     >             -atoms%llod,n,indexx),
+     >           tdulo(0,1,
+     >             -atoms%llod,n,indexx),
+     >           tulou(0,1,
+     >             -atoms%llod,n,indexx),
+     >           tulod(0,1,
+     >             -atoms%llod,n,indexx),
+     >           tuloulo(1,-atoms%llod,
+     >             1,-atoms%llod,
+     >             n,indexx))
 
           call cpu_time(t1)
           t66 = t66 + t1-t0

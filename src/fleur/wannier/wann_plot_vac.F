@@ -14,39 +14,43 @@ c
 c*************************************************************** 
       CONTAINS
       SUBROUTINE wann_plot_vac(point,
-     >     z1,nmzd,nv2d,n3d,nvac,
-     >     nmz,delz,bmat,bbmat,
+     >     cell,vacuum,
+     >     nv2d,
      >     evac,bkpt,vz,
      >     jspin,
      >     k1,k2,k3,nvd,
-     >     nbasfcn,neigd,nv,omtil,nslibd,ac,bc,u,ue,
+     >     nbasfcn,neigd,nv,nslibd,ac,bc,u,ue,
      <     value)
 
+      USE m_types
       use m_constants, only : pimach
       implicit none
 
+      TYPE(t_cell),   INTENT(IN) :: cell
+      TYPE(t_vacuum), INTENT(IN) :: vacuum
+
 c     .. scalar Arguments..
-      integer, intent (in) :: nmzd,nv2d,n3d,nslibd
-      integer, intent (in) :: nmz,nvac
+      integer, intent (in) :: nv2d,nslibd
       integer, intent (in) :: jspin,nvd
       integer, intent (in) :: nbasfcn,neigd
-      real,    intent (in) :: delz,z1,omtil,point(3)
+      real,    intent (in) :: point(3)
 
 c     ..array arguments..
-      real,    intent (in) :: bkpt(3),evac(2)
+      real,    intent (in) :: bkpt(3),evac(:)
       integer, intent (in) :: nv
-      real,    intent (in) :: vz(nmzd,2),bmat(3,3),bbmat(3,3)
-      integer, intent (in) :: k1(nvd),k2(nvd),k3(nvd)
+      real,    intent (in) :: vz(vacuum%nmzd,2)
+      integer, intent (in) :: k1(:),k2(:),k3(:)
       complex, intent (out) :: value
 
 c     ..basis wavefunctions in the vacuum
       complex, intent(in) :: ac(nv2d),bc(nv2d)
-      real,    intent(in) :: u(nmzd,nv2d),ue(nmzd,nv2d)
+      real,    intent(in) :: u(vacuum%nmzd,nv2d)
+      real,    intent(in) :: ue(vacuum%nmzd,nv2d)
 
 
 c     ..local scalars..
       real wronk,arg,zks,tpi,vz0(2),scale,evacp,ev,const
-      real uu,ud,du,dd,xx(nmz)
+      real uu,ud,du,dd,xx(vacuum%nmz)
       integer i,m,l,j,k,n,nv2,nv2_b,ivac,n2,n2_b,sign,ik
       integer lprime,np1
       complex av,bv,ic,c_1
@@ -60,13 +64,13 @@ c     ..intrinsic functions..
 
       tpi = 2 * pimach() ; ic = cmplx(0.,1.)
 
-      np1 = nmz + 1
+      np1 = vacuum%nmz + 1
 
 c.. determining the indexing array (in-plane stars)
 c.. for the k-point
 
       wronk = 2.0
-      const = 1.0 / ( sqrt(omtil)*wronk )
+      const = 1.0 / ( sqrt(cell%omtil)*wronk )
 
       n2 = 0 
 
@@ -95,21 +99,23 @@ c.. the body of the routine
 
       value=cmplx(0.0,0.0)
       value1=cmplx(0.0,0.0)
-c      print*,"difference=",(abs(point(3))-z1)/delz
-         i=(abs(point(3))-z1)/delz +1
+c      print*,"difference=",(abs(point(3))-cell%z1)/vacuum%delz
+         i=(abs(point(3))-cell%z1)/vacuum%delz +1
   
  
    
-         if (i.gt.nmz) then
-            i=nmz
+         if (i.gt.vacuum%nmz) then
+            i=vacuum%nmz
             print*,"i.gt.nmz in wann_plot_vac"
          endif
 
       do l = 1,nv2  !calculation for i
 
 
-         arg=(kvac1(l)*bmat(1,1)+kvac2(l)*bmat(2,1))*point(1)+
-     +    (kvac1(l)*bmat(1,2)+kvac2(l)*bmat(2,2))*point(2)
+         arg=(kvac1(l)*cell%bmat(1,1)+kvac2(l)*cell%bmat(2,1))
+     +       *point(1)+
+     +    (kvac1(l)*cell%bmat(1,2)+kvac2(l)*cell%bmat(2,2))
+     +       *point(2)
          c_1=cmplx(cos(arg),sin(arg))
             value =value+ (u(i,l)*ac(l)+ue(i,l)*bc(l))*c_1
 c            print*,"value=",value
@@ -127,14 +133,17 @@ c            print*,"value=",value
       i=i+1
       do l = 1,nv2
 
-         arg=(kvac1(l)*bmat(1,1)+kvac2(l)*bmat(2,1))*point(1)+
-     +    (kvac1(l)*bmat(1,2)+kvac2(l)*bmat(2,2))*point(2)
+         arg=(kvac1(l)*cell%bmat(1,1)+kvac2(l)*cell%bmat(2,1))
+     +       *point(1)+
+     +    (kvac1(l)*cell%bmat(1,2)+kvac2(l)*cell%bmat(2,2))
+     +       *point(2)
          c_1=cmplx(cos(arg),sin(arg))
             value1 =value1+ (u(i,l)*ac(l)+ue(i,l)*bc(l))*c_1
 
       enddo ! l
 
-      value=(value1-value)*((abs(point(3))-z1)/delz+2-i)+value
+      value=(value1-value)*
+     +  ((abs(point(3))-cell%z1)/vacuum%delz+2-i)+value
     
       deallocate (kvac1,kvac2,map2 )
       call timestop("wann_plot_vac")

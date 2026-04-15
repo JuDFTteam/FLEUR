@@ -7,12 +7,9 @@
       module m_wann_gabeffgagaunt
       contains
       SUBROUTINE wann_gabeffgagaunt(
-     >               vTot,
+     >               vTot,atoms,sphhar,sym,
      >               l_perpmagatlres,perpmagl,
-     >               neq,mlh,nlhd,nlh,ntypsy,llh,lmax,
-     >               nmem,ntype,ntypd,bbmat,bmat,
-     >               nlod,llod,nlo,llo,flo,f,g,jri,rmsh,dx,jmtd,
-     >               lmaxd,lmd,clnu,
+     >               flo,f,g,
      <               ujug,ujdg,djug,djdg,ujulog,djulog,
      <               ulojug,ulojdg,ulojulog)
 c*************************************************************************
@@ -30,48 +27,34 @@ c*************************************************************************
 
       IMPLICIT NONE
       TYPE(t_potden),    INTENT(IN) :: vTot
+      TYPE(t_atoms),     INTENT(IN) :: atoms
+      TYPE(t_sphhar),    INTENT(IN) :: sphhar
+      TYPE(t_sym),       INTENT(IN) :: sym
       logical, intent (in)  :: l_perpmagatlres
       integer, intent (in)  :: perpmagl
-      integer, intent (in)  :: neq(:) 
-      INTEGER, INTENT (IN)  :: mlh(:,0:,:)!(memd,0:nlhd,ntypsd)
-      INTEGER, INTENT (IN)  :: nlhd
-      integer, intent (in)  :: nlh(:)
-      integer, intent (in)  :: ntypsy(:)
-      integer, intent (in)  :: nmem(0:,:)
-      integer, intent (in)  :: ntype,ntypd
-      integer, intent (in)  :: llh(0:,:)
-      INTEGER, INTENT (IN)  :: lmaxd,jmtd,lmd
-      real,    intent (in)  :: bbmat(:,:)!(3,3)
-      real,    intent (in)  :: bmat(:,:)!(3,3)
-      integer, intent (in)  :: lmax(:)!(ntypd)
-      integer, intent (in)  :: nlod,llod
-      integer, intent (in)  :: jri(:)!(ntypd)
-      integer, intent (in)  :: nlo(:)!(ntypd)
-      integer, intent (in)  :: llo(:,:)!(nlod,ntypd)    
-      real,    intent (in)  :: f(:,:,:,0:,:)!(ntypd,jmtd,2,0:lmaxd,2)
-      real,    intent (in)  :: g(:,:,:,0:,:)!(ntypd,jmtd,2,0:lmaxd,2)
-      real,    intent (in)  :: flo(:,:,:,:,:)!(ntypd,jmtd,2,nlod,2)
-      real,    intent (in)  :: rmsh(:,:)!(jmtd,ntypd)
-      real,    intent (in)  :: dx(:)!(ntypd)
-      complex, intent (in)  :: clnu(:,0:,:)!(memd,0:nlhd,ntypsd)
+      real,    intent (in)  :: f(:,:,:,0:,:)
+      real,    intent (in)  :: g(:,:,:,0:,:)
+      real,    intent (in)  :: flo(:,:,:,:,:)
 
-      complex, intent (out) :: ujug(0:,0:,1:)!(0:lmd,0:lmd,1:ntype)
-      complex, intent (out) :: ujdg(0:,0:,1:)!(0:lmd,0:lmd,1:ntype)
-      complex, intent (out) :: djug(0:,0:,1:)!(0:lmd,0:lmd,1:ntype)
-      complex, intent (out) :: djdg(0:,0:,1:)!(0:lmd,0:lmd,1:ntype)
+      complex, intent (out) :: ujug(0:,0:,1:)
+      complex, intent (out) :: ujdg(0:,0:,1:)
+      complex, intent (out) :: djug(0:,0:,1:)
+      complex, intent (out) :: djdg(0:,0:,1:)
 
-      complex, intent (out) :: ujulog(0:,:,-llod:,:) !(0:lmd,nlod,-llod:llod,1:ntype)
-      complex, intent (out) :: djulog(0:,:,-llod:,:) !(0:lmd,nlod,-llod:llod,1:ntype)
-      complex, intent (out) :: ulojug(0:,:,-llod:,:) !(0:lmd,nlod,-llod:llod,1:ntype)
-      complex, intent (out) :: ulojdg(0:,:,-llod:,:) !(0:lmd,nlod,-llod:llod,1:ntype)
-      complex, intent (out) :: ulojulog(:,-llod:,:,-llod:,:) !(1:nlod,-llod:llod,1:nlod,-llod:llod,1:ntype)
+      complex, intent (out) :: ujulog(0:,:,-atoms%llod:,:)
+      complex, intent (out) :: djulog(0:,:,-atoms%llod:,:)
+      complex, intent (out) :: ulojug(0:,:,-atoms%llod:,:)
+      complex, intent (out) :: ulojdg(0:,:,-atoms%llod:,:)
+      complex, intent (out) :: ulojulog(:,-atoms%llod:,:,
+     >                                    -atoms%llod:,:)
 
       real, allocatable :: djd(:,:,:),ujd(:,:,:),uju(:,:,:)
       real, allocatable :: dju(:,:,:),loju(:,:,:),lojd(:,:,:)
       real, allocatable :: ujulo(:,:,:),djulo(:,:,:),ulojulo(:,:,:)
       integer :: i,lwn,n,lpp,lop,lo,l,lp,lmini,lmaxi,m,mp,llpp,mpp
       integer :: lmpp,lminp,lmaxp,lm,lpmp,na,ns,lh,j,jmem
-      real    :: rk,gs,jj(0:lmaxd,jmtd),x(jmtd)
+      real    :: rk,gs,jj(0:atoms%lmaxd,atoms%jmtd),
+     >           x(atoms%jmtd)
       complex :: factor,ic
       logical :: l_doit
       real,allocatable :: beff(:,:,:)
@@ -79,7 +62,7 @@ c*************************************************************************
       call timestart("wann_gabeffgagaunt")
       ic = cmplx(0.,1.)
 
-      allocate( beff(jmtd,0:nlhd,ntype) )
+      allocate( beff(atoms%jmtd,0:sphhar%nlhd,atoms%ntype) )
 
       if(.false.)then !from file
         open(777,file='beff',form='unformatted')
@@ -90,51 +73,53 @@ c*************************************************************************
 ! In vgen/vgen_finalize.F90 there is the line
 ! vTot%mt(:atoms%jri(n),0,n,js)  = atoms%rmsh(:atoms%jri(n),n)*vTot%mt(:atoms%jri(n),0,n,js)/sfp_const
 ! The following line removes this factor:
-        do n=1,ntype
-           beff(:jri(n),0,n)=beff(:jri(n),0,n)*sfp_const/rmsh(:jri(n),n)
+        do n=1,atoms%ntype
+           beff(:atoms%jri(n),0,n)=
+     +        beff(:atoms%jri(n),0,n)*sfp_const/
+     +        atoms%rmsh(:atoms%jri(n),n)
         enddo   
       endif   
 
       if(l_perpmagatlres)then
        na=1  
-       do n=1,ntype
-        ns=ntypsy(na)  
-        do lh = 0,nlh(ns)
-         lpp=llh(lh,ns)
+       do n=1,atoms%ntype
+        ns=sym%ntypsy(na)  
+        do lh = 0,sphhar%nlh(ns)
+         lpp=sphhar%llh(lh,ns)
          if(lpp.ne.perpmagl)then
            beff(:,lh,n)=0.0 
          endif
         enddo !lh 
-        na=na+neq(n)
+        na=na+atoms%neq(n)
        enddo !n
       endif !l_perpmagatlres  
 
-      allocate ( djd(0:lmaxd,0:lmaxd,0:nlhd),
-     +           dju(0:lmaxd,0:lmaxd,0:nlhd),
-     +           ujd(0:lmaxd,0:lmaxd,0:nlhd),
-     +           uju(0:lmaxd,0:lmaxd,0:nlhd), 
+      allocate ( djd(0:atoms%lmaxd,0:atoms%lmaxd,0:sphhar%nlhd),
+     +           dju(0:atoms%lmaxd,0:atoms%lmaxd,0:sphhar%nlhd),
+     +           ujd(0:atoms%lmaxd,0:atoms%lmaxd,0:sphhar%nlhd),
+     +           uju(0:atoms%lmaxd,0:atoms%lmaxd,0:sphhar%nlhd), 
 
-     +           ujulo(nlod,0:lmaxd,0:nlhd),
-     +           djulo(nlod,0:lmaxd,0:nlhd),
-     +           loju(nlod,0:lmaxd,0:nlhd),
-     +           lojd(nlod,0:lmaxd,0:nlhd),
-     +           ulojulo(nlod,nlod,0:nlhd) )
+     +           ujulo(atoms%nlod,0:atoms%lmaxd,0:sphhar%nlhd),
+     +           djulo(atoms%nlod,0:atoms%lmaxd,0:sphhar%nlhd),
+     +           loju(atoms%nlod,0:atoms%lmaxd,0:sphhar%nlhd),
+     +           lojd(atoms%nlod,0:atoms%lmaxd,0:sphhar%nlhd),
+     +           ulojulo(atoms%nlod,atoms%nlod,0:sphhar%nlhd) )
 
 
       na=1
-      do n=1,ntype
-       ns=ntypsy(na)  
-       lwn = lmax(n)
-       do lh = 0,nlh(ns)
-        lpp=llh(lh,ns)  
+      do n=1,atoms%ntype
+       ns=sym%ntypsy(na)  
+       lwn = atoms%lmax(n)
+       do lh = 0,sphhar%nlh(ns)
+        lpp=sphhar%llh(lh,ns)  
 c***************************************************************************
 c...the local orbitals overlaps
 c***************************************************************************
-        if (nlo(n).GE.1) then
-         do lop = 1,nlo(n)
-          do lo = 1,nlo(n)
-             l = llo(lo,n)
-             lp = llo(lop,n)
+        if (atoms%nlo(n).GE.1) then
+         do lop = 1,atoms%nlo(n)
+          do lo = 1,atoms%nlo(n)
+             l = atoms%llo(lo,n)
+             lp = atoms%llo(lop,n)
              lmini = abs(lp - l)
              lmaxi = lp + l
 c..the gaunt conditions
@@ -142,11 +127,13 @@ c..the gaunt conditions
      +             (lpp.gt.lmaxi)) then
                ulojulo(lo,lop,lh) = 0. 
              else 
-              do i = 1,jri(n)
+              do i = 1,atoms%jri(n)
                 x(i) = ( flo(n,i,1,lo,1)*flo(n,i,1,lop,2)+
      +                   flo(n,i,2,lo,1)*flo(n,i,2,lop,2) )*beff(i,lh,n)
               enddo 
-              call intgr3(x,rmsh(1:,n),dx(n),jri(n),ulojulo(lo,lop,lh))
+              call intgr3(x,atoms%rmsh(1:,n),
+     +           atoms%dx(n),atoms%jri(n),
+     +           ulojulo(lo,lop,lh))
              endif
           enddo
          enddo
@@ -166,38 +153,42 @@ c..gaunt conditions
            ujd(l,lp,lh) = 0.
            djd(l,lp,lh) = 0.
           else
-           do i = 1,jri(n)
+           do i = 1,atoms%jri(n)
                 x(i) = ( f(n,i,1,l,1)*f(n,i,1,lp,2)+
      +                   f(n,i,2,l,1)*f(n,i,2,lp,2) )*beff(i,lh,n)
            enddo      
-           call intgr3(x,rmsh(1:,n),dx(n),jri(n),uju(l,lp,lh))
+           call intgr3(x,atoms%rmsh(1:,n),
+     +        atoms%dx(n),atoms%jri(n),uju(l,lp,lh))
 
-           do i = 1,jri(n)
+           do i = 1,atoms%jri(n)
                 x(i) = ( g(n,i,1,l,1)*f(n,i,1,lp,2)+
      +                   g(n,i,2,l,1)*f(n,i,2,lp,2) )*beff(i,lh,n)
            enddo      
-           call intgr3(x,rmsh(1:,n),dx(n),jri(n),dju(l,lp,lh))
+           call intgr3(x,atoms%rmsh(1:,n),
+     +        atoms%dx(n),atoms%jri(n),dju(l,lp,lh))
 
-           do i = 1,jri(n)
+           do i = 1,atoms%jri(n)
                 x(i) = ( f(n,i,1,l,1)*g(n,i,1,lp,2)+
      +                   f(n,i,2,l,1)*g(n,i,2,lp,2) )*beff(i,lh,n)
            enddo      
-           call intgr3(x,rmsh(1:,n),dx(n),jri(n),ujd(l,lp,lh))
+           call intgr3(x,atoms%rmsh(1:,n),
+     +        atoms%dx(n),atoms%jri(n),ujd(l,lp,lh))
 
-           do i = 1,jri(n)
+           do i = 1,atoms%jri(n)
                 x(i) = ( g(n,i,1,l,1)*g(n,i,1,lp,2)+
      +                   g(n,i,2,l,1)*g(n,i,2,lp,2) )*beff(i,lh,n)
            enddo     
-           call intgr3(x,rmsh(1:,n),dx(n),jri(n),djd(l,lp,lh))
+           call intgr3(x,atoms%rmsh(1:,n),
+     +        atoms%dx(n),atoms%jri(n),djd(l,lp,lh))
           endif
          enddo ! l
 
 c********************************************************************
 c...overlaps of the lo's with the apws 
 c********************************************************************
-         if (nlo(n).GE.1) then
-          do lo = 1,nlo(n)
-             l = llo(lo,n)
+         if (atoms%nlo(n).GE.1) then
+          do lo = 1,atoms%nlo(n)
+             l = atoms%llo(lo,n)
              lmini = abs(lp-l)
              lmaxi = lp + l
 c..gaunt conditions
@@ -208,29 +199,37 @@ c..gaunt conditions
                 loju(lo,lp,lh) = 0.
                 lojd(lo,lp,lh) = 0.
              else
-              do i = 1,jri(n)
+              do i = 1,atoms%jri(n)
                x(i) = ( flo(n,i,1,lo,1)*f(n,i,1,lp,2)+
      +                  flo(n,i,2,lo,1)*f(n,i,2,lp,2) )*beff(i,lh,n)
               enddo 
-              call intgr3(x,rmsh(1:,n),dx(n),jri(n),loju(lo,lp,lh))
+              call intgr3(x,atoms%rmsh(1:,n),
+     +           atoms%dx(n),atoms%jri(n),
+     +           loju(lo,lp,lh))
 
-              do i = 1,jri(n)
+              do i = 1,atoms%jri(n)
                x(i) = ( flo(n,i,1,lo,1)*g(n,i,1,lp,2)+
      +                  flo(n,i,2,lo,1)*g(n,i,2,lp,2) )*beff(i,lh,n)
               enddo 
-              call intgr3(x,rmsh(1:,n),dx(n),jri(n),lojd(lo,lp,lh))
+              call intgr3(x,atoms%rmsh(1:,n),
+     +           atoms%dx(n),atoms%jri(n),
+     +           lojd(lo,lp,lh))
 
-              do i = 1,jri(n)
+              do i = 1,atoms%jri(n)
                x(i) = ( flo(n,i,1,lo,2)*f(n,i,1,lp,1)+
      +                  flo(n,i,2,lo,2)*f(n,i,2,lp,1) )*beff(i,lh,n)
               enddo 
-              call intgr3(x,rmsh(1:,n),dx(n),jri(n),ujulo(lo,lp,lh))
+              call intgr3(x,atoms%rmsh(1:,n),
+     +           atoms%dx(n),atoms%jri(n),
+     +           ujulo(lo,lp,lh))
 
-              do i = 1,jri(n)
+              do i = 1,atoms%jri(n)
                x(i) = ( flo(n,i,1,lo,2)*g(n,i,1,lp,1)+
      +                  flo(n,i,2,lo,2)*g(n,i,2,lp,1) )*beff(i,lh,n)
               enddo 
-              call intgr3(x,rmsh(1:,n),dx(n),jri(n),djulo(lo,lp,lh))
+              call intgr3(x,atoms%rmsh(1:,n),
+     +           atoms%dx(n),atoms%jri(n),
+     +           djulo(lo,lp,lh))
 
              endif
           enddo !lo  
@@ -250,16 +249,16 @@ c********************************************************************
            do lp = 0,lwn
             do mp = -lp,lp
              lpmp=lp*(lp+1)+mp  
-             do lh = 0,nlh(ns)
-               lpp=llh(lh,ns) 
+             do lh = 0,sphhar%nlh(ns)
+               lpp=sphhar%llh(lh,ns) 
                llpp = lpp*(lpp+1)
                mpp = mp - m
                lmpp = llpp + mpp 
                lmini = abs(l-lpp)
                lmaxi = l+lpp
                jmem=0
-               do j=1,nmem(lh,ns)
-                  if(mlh(j,lh,ns)==mpp)then
+               do j=1,sphhar%nmem(lh,ns)
+                  if(sphhar%mlh(j,lh,ns)==mpp)then
                      jmem=j
                      exit
                   endif
@@ -271,8 +270,8 @@ c********************************************************************
                l_doit=l_doit.and.(jmem.ne.0)
                if ( l_doit )then  
                   factor=ic**(l-lp)*
-     *               gaunt1(lp,lpp,l,mp,mpp,m,lmaxd)*
-     *               clnu(jmem,lh,ns)     
+     *               gaunt1(lp,lpp,l,mp,mpp,m,atoms%lmaxd)*
+     *               sphhar%clnu(jmem,lh,ns)     
                   ujug(lpmp,lm,n)=ujug(lpmp,lm,n)+
      +               factor*uju(lp,l,lh)
                   ujdg(lpmp,lm,n)=ujdg(lpmp,lm,n)+
@@ -291,14 +290,14 @@ c********************************************************************
 c******************************************************************
 c       multiply with the gaunt-coefficient (apw-lo)
 c******************************************************************
-       if(nlo(n).ge.1) then
+       if(atoms%nlo(n).ge.1) then
         ulojug(:,:,:,n)=cmplx(0.0,0.0) 
         ulojdg(:,:,:,n)=cmplx(0.0,0.0)
         ujulog(:,:,:,n)=cmplx(0.0,0.0)
         djulog(:,:,:,n)=cmplx(0.0,0.0)
 
-        do lo = 1,nlo(n)
-          l = llo(lo,n)
+        do lo = 1,atoms%nlo(n)
+          l = atoms%llo(lo,n)
           do m = -l,l
            lm=l*(l+1)+m
   
@@ -306,16 +305,16 @@ c******************************************************************
             do mp = -lp,lp
              lpmp=lp*(lp+1)+mp
   
-             do lh = 0,nlh(ns)
-               lpp=llh(lh,ns) 
+             do lh = 0,sphhar%nlh(ns)
+               lpp=sphhar%llh(lh,ns) 
                llpp = lpp*(lpp+1)
                mpp = mp - m  ! <mp|m+mpp>
                lmpp = llpp + mpp 
                lmini = abs(l-lpp)
                lmaxi = l+lpp
                jmem=0
-               do j=1,nmem(lh,ns)
-                  if(mlh(j,lh,ns)==mpp)then
+               do j=1,sphhar%nmem(lh,ns)
+                  if(sphhar%mlh(j,lh,ns)==mpp)then
                      jmem=j
                      exit
                   endif
@@ -327,8 +326,8 @@ c******************************************************************
                l_doit=l_doit.and.(jmem.ne.0)
                if ( l_doit )then  
                   factor=ic**(l-lp)*
-     *               gaunt1(lp,lpp,l,mp,mpp,m,lmaxd)*
-     *               clnu(jmem,lh,ns)     
+     *               gaunt1(lp,lpp,l,mp,mpp,m,atoms%lmaxd)*
+     *               sphhar%clnu(jmem,lh,ns)     
 
                   ujulog(lpmp,lo,m,n)=
      =               ujulog(lpmp,lo,m,n)+
@@ -344,8 +343,8 @@ c******************************************************************
                lmini = abs(lp-lpp)
                lmaxi = lp+lpp
                jmem=0
-               do j=1,nmem(lh,ns)
-                  if(mlh(j,lh,ns)==mpp)then
+               do j=1,sphhar%nmem(lh,ns)
+                  if(sphhar%mlh(j,lh,ns)==mpp)then
                      jmem=j
                      exit
                   endif
@@ -357,8 +356,8 @@ c******************************************************************
                l_doit=l_doit.and.(jmem.ne.0)
                if ( l_doit )then  
                   factor=ic**(lp-l)*
-     *               gaunt1(l,lpp,lp,m,mpp,mp,lmaxd)*
-     *               clnu(jmem,lh,ns)     
+     *               gaunt1(l,lpp,lp,m,mpp,mp,atoms%lmaxd)*
+     *               sphhar%clnu(jmem,lh,ns)     
 
                   ulojug(lpmp,lo,m,n)=
      =               ulojug(lpmp,lo,m,n)+
@@ -380,29 +379,29 @@ c******************************************************************
 c*************************************************************
 c         multiply with the gaunt-coefficient (lo-lo)
 c*************************************************************
-       if(nlo(n).ge.1) then
+       if(atoms%nlo(n).ge.1) then
 
         ulojulog(:,:,:,:,n)=cmplx(0.0,0.0) 
-        do lo = 1,nlo(n)
-          l = llo(lo,n)
+        do lo = 1,atoms%nlo(n)
+          l = atoms%llo(lo,n)
           do m = -l,l
            lm=l*(l+1)+m
   
-           do lop = 1,nlo(n)
-            lp = llo(lop,n)
+           do lop = 1,atoms%nlo(n)
+            lp = atoms%llo(lop,n)
             do mp = -lp,lp
              lpmp=lp*(lp+1)+mp
   
-             do lh = 0,nlh(ns)
-               lpp=llh(lh,ns) 
+             do lh = 0,sphhar%nlh(ns)
+               lpp=sphhar%llh(lh,ns) 
                llpp = lpp*(lpp+1)
                mpp = mp - m ! <mp|m+mpp>
                lmpp = llpp + mpp 
                lmini = abs(l-lpp)
                lmaxi = l+lpp
                jmem=0
-               do j=1,nmem(lh,ns)
-                  if(mlh(j,lh,ns)==mpp)then
+               do j=1,sphhar%nmem(lh,ns)
+                  if(sphhar%mlh(j,lh,ns)==mpp)then
                      jmem=j
                      exit
                   endif
@@ -414,8 +413,8 @@ c*************************************************************
                l_doit=l_doit.and.(jmem.ne.0)
                if ( l_doit )then  
                   factor=ic**(l-lp)*
-     *               gaunt1(lp,lpp,l,mp,mpp,m,lmaxd)*
-     *               clnu(jmem,lh,ns)     
+     *               gaunt1(lp,lpp,l,mp,mpp,m,atoms%lmaxd)*
+     *               sphhar%clnu(jmem,lh,ns)     
 
                   ulojulog(lop,mp,lo,m,n)=
      =               ulojulog(lop,mp,lo,m,n)+
@@ -430,7 +429,7 @@ c*************************************************************
        endif ! local orbitals on this atom
 
 
-       na=na+neq(n)  
+       na=na+atoms%neq(n)  
       enddo !ntype
       deallocate(djd,ujd,uju,dju)
       

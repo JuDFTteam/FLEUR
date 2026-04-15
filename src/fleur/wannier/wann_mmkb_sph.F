@@ -30,13 +30,14 @@ c***********************************************************************
 c   use BLAS matrix-matrix multiplication in apw-apw part to be faster
 c   J.-P. Hanke, Dec. 2015
 c***********************************************************************
-     >        nbnd,llod,nslibd,nslibd_b,nlod,natd,ntypd,lmd,jmtd,
-     >        taual,nop,lmax,
-     >        ntype,neq,nlo,llo,acof,bcof,ccof,bbpt,
+     >        atoms,nbnd,nslibd,nslibd_b,lmd,
+     >        taual,nop,
+     >        acof,bcof,ccof,bbpt,
      >        acof_b,bcof_b,ccof_b,gb,bkpt,ujug,ujdg,djug,djdg,ujulog,
      >        djulog,ulojug,ulojdg,ulojulog,kdiff,nntot,chi,
      =        mmn)
 
+      use m_types
       use m_juDFT
       use m_constants, only : pimach
       use m_sphbes
@@ -46,40 +47,45 @@ c***********************************************************************
     
       implicit none
 
+      TYPE(t_atoms), INTENT(IN) :: atoms
 c     .. scalar arguments ..
-      integer, intent (in) :: llod,nlod,natd,ntypd,lmd,nbnd
+      integer, intent (in) :: lmd,nbnd
       integer, intent (in) :: nntot
-      integer, intent (in) :: ntype,nslibd,nslibd_b,nop,jmtd
+      integer, intent (in) :: nslibd,nslibd_b,nop
 
 c     .. array arguments ..
-      integer, intent (in)  :: neq(:) !(ntypd)
-      integer, intent (in)  :: lmax(:) !(ntypd)
-      integer, intent (in)  :: nlo(:) !(ntypd)
-      integer, intent (in)  :: llo(:,:) !(nlod,ntypd)
-      complex, intent (in)  :: chi(ntypd)
+      complex, intent (in)  :: chi(:)
       real,    intent (in)  :: bbpt(:) !(3)
       real,    intent (in)  :: taual(:,:) !(3,natd)
       real,    intent (in)  :: bkpt(:) !(3)
       integer, intent (in)  :: gb(:) !(3)
-      complex, intent (in)  :: ccof(-llod:,:,:,:) !(-llod:llod,nslibd,nlod,natd)
-      complex, intent (in)  :: acof(:,0:,:) !(nslibd,0:lmd,natd)
-      complex, intent (in)  :: bcof(:,0:,:) !(nslibd,0:lmd,natd)
-      complex, intent (in)  :: ccof_b(-llod:,:,:,:) !(-llod:llod,nslibd_b,nlod,natd)
-      complex, intent (in)  :: acof_b(:,0:,:) !(nslibd_b,0:lmd,natd)
-      complex, intent (in)  :: bcof_b(:,0:,:) !(nslibd_b,0:lmd,natd)
+      complex, intent (in)  ::
+     >   ccof(-atoms%llod:,:,:,:)
+      complex, intent (in)  :: acof(:,0:,:)
+      complex, intent (in)  :: bcof(:,0:,:)
+      complex, intent (in)  ::
+     >   ccof_b(-atoms%llod:,:,:,:)
+      complex, intent (in)  :: acof_b(:,0:,:)
+      complex, intent (in)  :: bcof_b(:,0:,:)
 
-      complex, intent (in)  :: ujug(0:,0:,:,:) !(0:lmd,0:lmd,1:ntype,1:nntot)
-      complex, intent (in)  :: ujdg(0:,0:,:,:) !(0:lmd,0:lmd,1:ntype,1:nntot)
-      complex, intent (in)  :: djug(0:,0:,:,:) !(0:lmd,0:lmd,1:ntype,1:nntot)
-      complex, intent (in)  :: djdg(0:,0:,:,:) !(0:lmd,0:lmd,1:ntype,1:nntot)
-      complex, intent (in)  :: ujulog(0:,:,-llod:,:,:) !(0:lmd,nlod,-llod:llod,1:ntype,1:nntot)
-      complex, intent (in)  :: djulog(0:,:,-llod:,:,:) !(0:lmd,nlod,-llod:llod,1:ntype,1:nntot)
-      complex, intent (in)  :: ulojug(0:,:,-llod:,:,:) !(0:lmd,nlod,-llod:llod,1:ntype,1:nntot)
-      complex, intent (in)  :: ulojdg(0:,:,-llod:,:,:) !(0:lmd,nlod,-llod:llod,1:ntype,1:nntot)
-      complex, intent (in)  :: ulojulog(:,-llod:,:,-llod:,:,:) !(1:nlod,-llod:llod,1:nlod,-llod:llod,1:ntype,1:nntot)
+      complex, intent (in)  :: ujug(0:,0:,:,:)
+      complex, intent (in)  :: ujdg(0:,0:,:,:)
+      complex, intent (in)  :: djug(0:,0:,:,:)
+      complex, intent (in)  :: djdg(0:,0:,:,:)
+      complex, intent (in)  ::
+     >   ujulog(0:,:,-atoms%llod:,:,:)
+      complex, intent (in)  ::
+     >   djulog(0:,:,-atoms%llod:,:,:)
+      complex, intent (in)  ::
+     >   ulojug(0:,:,-atoms%llod:,:,:)
+      complex, intent (in)  ::
+     >   ulojdg(0:,:,-atoms%llod:,:,:)
+      complex, intent (in)  ::
+     >   ulojulog(:,-atoms%llod:,:,
+     >            -atoms%llod:,:,:)
 
-      real, intent (in)     :: kdiff(:,:) !(3,nntot)
-      complex,intent(inout) :: mmn(:,:)!nbnd,nbnd) !(nbnd,nbnd)
+      real, intent (in)     :: kdiff(:,:)
+      complex,intent(inout) :: mmn(:,:)
 
 
 c     .. local scalars ..
@@ -100,6 +106,7 @@ C     .. intrinsic functions ..
       intrinsic conjg,cmplx,sqrt,cos,sin
 
       call timestart("wann_mmkb_sph")
+
       ic = cmplx(0.,1.)
       tpi = 2* pimach()
       lmd2 = lmd+1
@@ -114,9 +121,9 @@ C     .. intrinsic functions ..
      +     ("cannot find matching nearest neighbor k",calledby
      +     ="wann_mmkb_sph")
 
-      do n=1,ntype
-       lwn = lmax(n)
-         do nn = 1,neq(n) ! cycle by the atoms within the atom type
+      do n=1,atoms%ntype
+       lwn = atoms%lmax(n)
+         do nn = 1,atoms%neq(n) ! cycle by the atoms within the atom type
          na = na + 1
 c...set up phase factors ( e^{ib\tau} )
 
@@ -167,10 +174,10 @@ c...contributions from the apws
 
 
 
-         if (nlo(n).ge.1) then 
+         if (atoms%nlo(n).ge.1) then 
          
-         do lo = 1,nlo(n) 
-          l = llo(lo,n)
+         do lo = 1,atoms%nlo(n) 
+          l = atoms%llo(lo,n)
           ll = l*(l+1)
           do m = -l,l
            lm = ll + m
@@ -212,14 +219,14 @@ c             if(fac4.ne.0)write(*,*)'fac4',lmp,lm
 
 c...contributions from lo*lo
           
-         do lo = 1,nlo(n)
-          l = llo(lo,n)
+         do lo = 1,atoms%nlo(n)
+          l = atoms%llo(lo,n)
           ll = l*(l+1)
           do m = -l,l
            lm = ll + m
 
-           do lop = 1,nlo(n)
-            lp = llo(lop,n)
+           do lop = 1,atoms%nlo(n)
+            lp = atoms%llo(lop,n)
             llp = lp*(lp+1)
             do mp = -lp,lp
              lmp = llp + mp

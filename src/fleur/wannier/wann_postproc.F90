@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -132,20 +132,19 @@ CONTAINS
 #else
        CALL wann_wannierize(&
             input%film,wann,fmpi,kpoints,fullnkpts,input%jspins,&
-            atoms%nat,atoms%pos,cell%amat,cell%bmat,atoms%ntype,atoms%neq,atoms%zatom)
+            atoms,cell)
 #endif
     ENDIF
 
     IF(wann%l_dipole2.AND.fmpi%irank==0)THEN
        CALL wann_dipole2(&
-            input%jspins,atoms%pos,cell%omtil,atoms%nat,&
+            input%jspins,atoms,cell,&
             (noco%l_soc.OR.noco%l_noco))
     ENDIF
 
     IF(wann%l_dipole.AND.fmpi%irank==0)THEN
        CALL wann_dipole(&
-            input%jspins,cell%omtil,atoms%nat,atoms%pos,cell%amat,&
-            atoms%ntype,atoms%neq,atoms%zatom)
+            input%jspins,cell,atoms)
     ENDIF
 
 #ifdef CPP_TOPO
@@ -226,12 +225,12 @@ CONTAINS
           ENDDO !r3
        ELSE !determine optimal r-mesh
           CALL wann_wigner_seitz(&
-               .TRUE.,num,cell%amat,0,&
+               .TRUE.,num,cell,0,&
                rvecnum,rvec,ndegen)
           ALLOCATE(rvec(3,rvecnum))
           ALLOCATE(ndegen(rvecnum))
           CALL wann_wigner_seitz(&
-               .FALSE.,num,cell%amat,rvecnum,&
+               .FALSE.,num,cell,rvecnum,&
                int_dummy,rvec,ndegen)
 
           OPEN(333,file='wig_vectors',recl=1000)
@@ -248,19 +247,15 @@ CONTAINS
     IF(wann%l_hopping.AND.fmpi%irank==0) THEN
        CALL wann_hopping(&
             rvecnum,rvec,kpoints,&
-            input%jspins,fullnkpts,wann%l_bzsym,input%film ,&
-            l_nocosoc,wann%band_min,wann%band_max,&
-            input%neig,wann%l_socmmn0,wann%l_ndegen,ndegen,&
-            wann%wan90version,wann%l_unformatted)
+            input%jspins,fullnkpts,wann,input%film ,&
+            l_nocosoc,input%neig,ndegen)
     ENDIF
 
     IF(wann%l_nablars.AND.fmpi%irank==0) THEN
        CALL wann_nabla_rs(&
             rvecnum,rvec,kpoints,&
-            input%jspins,fullnkpts,wann%l_bzsym,input%film  ,&
-            noco%l_soc,wann%band_min,wann%band_max,&
-            input%neig,.FALSE.,&
-            wann%wan90version)
+            input%jspins,fullnkpts,wann,input%film  ,&
+            noco%l_soc,input%neig,.FALSE.)
     ENDIF
 
     IF(wann%l_orbcomprs.AND.fmpi%irank==0)THEN
@@ -290,7 +285,7 @@ CONTAINS
 
     IF(wann%l_rmat)THEN
        CALL wann_rmat(&
-            cell%bmat,cell%amat,&
+            cell,&
             rvecnum,rvec,kpoints,&
             input%jspins,fullnkpts,wann%l_bzsym,input%film ,&
             l_nocosoc,wann%band_min,wann%band_max,&
@@ -380,16 +375,15 @@ CONTAINS
             rvecnum,rvec,kpoints,&
             input%jspins,fullnkpts,wann%l_bzsym,input%film  ,&
             (noco%l_soc.or.noco%l_noco),wann%band_min,wann%band_max,&
-            input%neig,.false.,atoms%ntype,atoms%neq,wann%l_ndegen,ndegen,&
+            input%neig,.false.,atoms,wann%l_ndegen,ndegen,&
             wann%wan90version,wann%l_unformatted)
      ENDIF
 
     IF (wann%l_nablapaulirs.AND.fmpi%irank==0)THEN
        CALL wann_nabla_pauli_rs(&
             rvecnum,rvec,kpoints,&
-            input%jspins,fullnkpts,wann%l_bzsym,input%film  ,&
-            noco%l_soc,wann%band_min,wann%band_max,&
-            input%neig,.FALSE.,wann%wan90version)
+            input%jspins,fullnkpts,wann,input%film  ,&
+            noco%l_soc,input%neig,.FALSE.)
     ENDIF
 
     IF (wann%l_pauli.AND.fmpi%irank==0)THEN
@@ -413,9 +407,8 @@ CONTAINS
     IF (wann%l_socmatrs.AND.fmpi%irank==0)THEN
        CALL wann_socmat_rs(&
             rvecnum,rvec,kpoints,&
-            input%jspins,fullnkpts,wann%l_bzsym,input%film  ,&
-            noco%l_soc,wann%band_min,wann%band_max,&
-            input%neig,.FALSE.,wann%wan90version)
+            input%jspins,fullnkpts,wann,input%film  ,&
+            noco%l_soc,input%neig,.FALSE.)
     ENDIF
 
       if (wann%l_socmatvecrs.and.fmpi%irank==0)then
@@ -534,11 +527,9 @@ CONTAINS
        !         write(*,*)'nococonv%beta',nococonv%beta
        !         nkqpts=fullnkpts
        !         if(l_sgwf) nkqpts=fullnkpts*fullnqpts
-       CALL wann_nocoplot(atoms,sliceplot%slice,sliceplot%nnne,&!nslibd&
-            cell%amat,cell%bmat,fullnkpts,input%film,&
-            atoms%nat,atoms%ntype,SIZE(atoms%rmsh,1),atoms%ntype,atoms%neq,atoms%pos,&
-            atoms%jri,atoms%rmsh,nococonv%alph,nococonv%beta,fullnqpts,nococonv%qss,&
-            cell%z1,atoms%zatom)
+       CALL wann_nocoplot(atoms,cell,sliceplot%slice,sliceplot%nnne,&
+            fullnkpts,input%film,&
+            nococonv%alph,nococonv%beta,fullnqpts,nococonv%qss)
     ENDIF
 
   END SUBROUTINE wann_postproc

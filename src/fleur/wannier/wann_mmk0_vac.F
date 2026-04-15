@@ -16,11 +16,10 @@ c***************************************************************
       CONTAINS
       SUBROUTINE wann_mmk0_vac(
      >     l_noco,nlotot,qss,
-     >     z1,nmzd,nv2d,k1d,k2d,k3d,n3d,nvac,
-     >     ig,nmz,delz,ig2,area,bmat,
-     >     bbmat,evac,bkpt,vz,
+     >     cell,vacuum,nv2d,k1d,k2d,k3d,n3d,
+     >     ig,ig2,evac,bkpt,vz,
      >     nslibd,jspin,k1,k2,k3,jspd,nvd,
-     >     nbasfcn,neigd,zMat,nv,omtil,
+     >     nbasfcn,neigd,zMat,nv,
      <     mmn)
 
       USE m_types
@@ -31,25 +30,25 @@ c***************************************************************
       implicit none
 
       TYPE(t_mat), INTENT(IN) :: zMat
+      TYPE(t_cell), INTENT(IN) :: cell
+      TYPE(t_vacuum), INTENT(IN) :: vacuum
 
 c     .. scalar Arguments..
       logical, intent (in) :: l_noco
       integer, intent (in) :: nlotot
       real,    intent (in) :: qss(:) !qss(3)
-      integer, intent (in) :: nmzd,nv2d,k1d,k2d,k3d,n3d
-      integer, intent (in) :: nmz,nslibd,nvac
+      integer, intent (in) :: nv2d,k1d,k2d,k3d,n3d
+      integer, intent (in) :: nslibd
       integer, intent (in) :: jspin,jspd,nvd
       integer, intent (in) :: nbasfcn,neigd
-      real,    intent (in) :: delz,z1,omtil,area
 
 c     ..array arguments..
       real,    intent (in) :: bkpt(:) !bkpt(3)
       real,    intent (in) :: evac(:) !evac(2)
-      integer, intent (in) :: ig(-k1d:,-k2d:,-k3d:) !ig(-k1d:k1d,-k2d:k2d,-k3d:k3d)
+      integer, intent (in) :: ig(-k1d:,-k2d:,-k3d:)
       integer, intent (in) :: ig2(:) !ig2(n3d)
       integer, intent (in) :: nv(:) !nv(jspd)
       real,    intent (in) :: vz(:,:) !vz(nmzd,2)
-      real,    intent (in) :: bbmat(3,3),bmat(3,3)
       integer, intent (in) :: k1(:,:) !k1(nvd,jspd)
       integer, intent (in) :: k2(:,:) !k2(nvd,jspd)
       integer, intent (in) :: k3(:,:) !k3(nvd,jspd)
@@ -71,9 +70,11 @@ c     ..local scalars..
 
       call timestart("wann_mmk0_vac")
 
+      call timestart("wann_mmk0_vac")
+
       allocate ( ac(nv2d,neigd),bc(nv2d,neigd),dt(nv2d),
      +           dte(nv2d),t(nv2d),te(nv2d),tei(nv2d),
-     +           u(nmzd,nv2d),ue(nmzd,nv2d),
+     +           u(vacuum%nmzd,nv2d),ue(vacuum%nmzd,nv2d),
      +           v(3),kvac1(nv2d),kvac2(nv2d),map2(nvd) )
 
       tpi = 2 * pimach() ; ic = cmplx(0.,1.)
@@ -81,10 +82,10 @@ c     ..local scalars..
 c.. determining the indexing array (in-plane stars)
 
       wronk = 2.0
-      const = 1.0 / ( sqrt(omtil)*wronk )
+      const = 1.0 / ( sqrt(cell%omtil)*wronk )
 
       do ivac = 1,2
-         vz0(ivac) = vz(nmz,ivac)
+         vz0(ivac) = vz(vacuum%nmz,ivac)
       enddo
 
       addnoco=0
@@ -112,7 +113,7 @@ c.. determining the indexing array (in-plane stars)
  40   continue
 
 c...cycle by the vacua
-      do 140 ivac = 1,nvac
+      do 140 ivac = 1,vacuum%nvac
 
 
        sign = 3. - 2.*ivac
@@ -136,24 +137,26 @@ c.. the body of the routine
          v(1) = bkpt(1) + kvac1(ik) + qss1
          v(2) = bkpt(2) + kvac2(ik) + qss2
          v(3) = 0.
-         ev = evacp - 0.5*dot_product(v,matmul(bbmat,v))
-         call vacuz(ev,vz(1:,ivac),vz0(ivac),nmz,delz,t(ik),dt(ik),
+         ev = evacp - 0.5*dot_product(v,matmul(cell%bbmat,v))
+         call vacuz(ev,vz(1:,ivac),vz0(ivac),
+     +        vacuum%nmz,vacuum%delz,t(ik),dt(ik),
      +        u(1,ik))
-         call vacudz(ev,vz(1:,ivac),vz0(ivac),nmz,delz,te(ik),
+         call vacudz(ev,vz(1:,ivac),vz0(ivac),
+     +        vacuum%nmz,vacuum%delz,te(ik),
      +        dte(ik),tei(ik),ue(1,ik),dt(ik),
      +        u(1,ik))
          scale = wronk/ (te(ik)*dt(ik)-dte(ik)*t(ik))
          te(ik) = scale*te(ik)
          dte(ik) = scale*dte(ik)
          tei(ik) = scale*tei(ik)
-         do j = 1,nmz
+         do j = 1,vacuum%nmz
             ue(j,ik) = scale*ue(j,ik)
          enddo
        enddo
 c-----> construct a and b coefficients
 
        symvacvac=1
-       if (nvac==1) symvacvac=2
+       if (vacuum%nvac==1) symvacvac=2
        do symvac=1,symvacvac
         do 60 n = 1,nslibd
             do 50 i = 1,nv2d
@@ -166,8 +169,8 @@ c-----> construct a and b coefficients
           
         do k = 1,nv(jspin)
           l = map2(k)
-          zks = k3(k,jspin)*bmat(3,3)*sign
-          arg = zks*z1
+          zks = k3(k,jspin)*cell%bmat(3,3)*sign
+          arg = zks*cell%z1
           c_1 = cmplx(cos(arg),sin(arg)) * const
           av = -c_1 * cmplx( dte(l),zks*te(l) )
           bv =  c_1 * cmplx(  dt(l),zks* t(l) )
@@ -189,7 +192,7 @@ c-----> loop over basis functions
          do i = 1,nslibd
             do j = 1,nslibd 
                mmn(i,j) = mmn(i,j) +
-     +               area*(ac(l,i)*conjg( ac(l,j))
+     +               cell%area*(ac(l,i)*conjg( ac(l,j))
      +              + tei(l)*bc(l,i)*conjg( bc(l,j)))
             enddo 
          enddo

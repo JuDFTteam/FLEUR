@@ -9,9 +9,9 @@
       contains 
       subroutine wann_socmat_rs(
      >          rvecnum,rvec,kpoints,
-     >          jspins_in,nkpts,l_bzsym,film,
-     >          l_soc,band_min,band_max,neigd,
-     >          l_socmmn0,wan90version)
+     >          jspins_in,nkpts,wann,film,
+     >          l_soc,neigd,
+     >          l_socmmn0)
 c*************************************************
 c     Calculate the matrix elements of SOC perturbation 
 c     in real space from the
@@ -21,6 +21,7 @@ c     FF, April 2010
 c*************************************************
       use m_constants
       use m_wann_read_umatrix
+      USE m_types
 
       implicit none
       integer, intent(in) :: rvecnum
@@ -29,11 +30,11 @@ c*************************************************
 
       integer, intent(in) :: jspins_in
       integer, intent(in) :: nkpts
-      logical,intent (in) :: l_bzsym,l_soc
+      TYPE(t_wann),INTENT(IN) :: wann
+      logical,intent (in) :: l_soc
       logical,intent(in)  :: film
-      integer,intent(in)  :: band_min(2),band_max(2),neigd
+      integer,intent(in)  :: neigd
       logical, intent(in) :: l_socmmn0
-      integer, intent(in) :: wan90version
 
 
       integer             :: ikpt,jspins
@@ -131,7 +132,7 @@ c****************************************************************
       do jspin=1,jspins  !spin loop
          call wann_read_umatrix2(
      >       nkpts,num_wann,num_bands,
-     >       um_format,jspin,wan90version,
+     >       um_format,jspin,wann%wan90version,
      <       have_disentangled,
      <       lwindow(:,:,jspin),
      <       ndimwin(:,jspin),

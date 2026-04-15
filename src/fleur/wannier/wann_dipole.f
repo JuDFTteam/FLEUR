@@ -8,23 +8,17 @@
       use m_juDFT
       contains
       subroutine wann_dipole(
-     >               jspins,omtil,natd,pos,
-     >               amat,
-     >               ntype,neq,zatom)
+     >               jspins,cell,atoms)
 c***************************************
 c     Calculate electronic polarization.
 c     Frank Freimuth
 c***************************************
       use m_wann_readcenters
+      USE m_types
       implicit none
       integer,intent(in)           :: jspins
-      real,intent(in)              :: omtil
-      integer,intent(in)           :: natd
-      real,intent(in)              :: pos(3,natd)
-      real,intent(in)              :: amat(3,3)
-      integer,intent(in)           :: ntype
-      integer,intent(in)           :: neq(ntype)
-      real,intent(in)              :: zatom(ntype)
+      TYPE(t_cell),INTENT(IN)        :: cell
+      TYPE(t_atoms),INTENT(IN)     :: atoms
 
       integer                      :: nwfs,i
       integer                      :: num_atoms,num_wann,num_wann2
@@ -69,23 +63,23 @@ c***************************************
       open(666,file='polarization_out')
 
       num_atoms=0
-      do j=1,ntype
-         do k=1,neq(j)
+      do j=1,atoms%ntype
+         do k=1,atoms%neq(j)
             num_atoms=num_atoms+1
          enddo
       enddo
 
       allocate( namat(num_atoms) )
       ind=0
-      do j=1,ntype
-         do k=1,neq(j)
+      do j=1,atoms%ntype
+         do k=1,atoms%neq(j)
             ind=ind+1
-            namat(ind)=namat2(nint(zatom(j)))
+            namat(ind)=namat2(nint(atoms%zatom(j)))
          enddo
       enddo
 
       do j=1,num_atoms
-         print*,namat(j)," pos3=",pos(3,j)
+         print*,namat(j)," pos3=",atoms%pos(3,j)
       enddo
 
       allocate( ioncharge(num_atoms) )
@@ -119,10 +113,10 @@ c***************************************
       ioni_polari=0.0
       do j=1,num_atoms
          ioni_polari(:)=
-     &        ioni_polari(:)+ioncharge(j)*pos(:,j)
+     &        ioni_polari(:)+ioncharge(j)*atoms%pos(:,j)
       enddo
 
-      ioni_polari=ioni_polari/omtil*elemchargmu/((bohrtocm)**2)
+      ioni_polari=ioni_polari/cell%omtil*elemchargmu/((bohrtocm)**2)
 
       print*,"ioni_polari=",ioni_polari,"uC/cm2"
       write(666,*) "ioni_polari=",ioni_polari,"uC/cm2"
@@ -193,7 +187,7 @@ c*************************************************
 
       if(jspins.eq.1) electroni_polari = electroni_polari*2.0
       electroni_polari=
-     &  electroni_polari/omtil*elemchargmu/((bohrtocm)**2)
+     &  electroni_polari/cell%omtil*elemchargmu/((bohrtocm)**2)
 
       do j=1,jspins
          print*,"spin ",j," electronic_polarization=",
@@ -221,8 +215,9 @@ c*************************************************
             do k=-5,5
               do polq=1,100
                shifted_polari(:)=ioni_polari(:)+
-     +                  elemchargmu/((bohrtocm)**2)/omtil *
-     *                  (amat(:,1)*k+amat(:,2)*j+amat(:,3)*i)*polq
+     +                  elemchargmu/((bohrtocm)**2)/cell%omtil *
+     *          (cell%amat(:,1)*k+cell%amat(:,2)*j+cell%amat(:,3)*i)
+     *          *polq
                size_polari=sqrt( (shifted_polari(1))**2 +
      +                           (shifted_polari(2))**2 +
      +                           (shifted_polari(3))**2 )

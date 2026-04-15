@@ -592,11 +592,12 @@ c***********************************************************************
          allocate ( ac(nv2d,nslibd,2),bc(nv2d,nslibd,2),
      +         u(nmzd,nv2d,nvac),ue(nmzd,nv2d,nvac))
          call wann_2dvacabcof(
-     >         nv2d,nslibd,nvac,nmzd,nmz,omtil,vz(:,:,jspin),
-     >         nv(jspin),bkpt,z1,
-     >         nvd,k1(:,jspin),k2(:,jspin),k3(:,jspin),evac(:,jspin),
-     >         bbmat,delz,bmat,nbasfcn,
-     >         neigd,zMat,
+     >         cell,vacuum,
+     >         nv2d,nslibd,vz(:,:,jspin),
+     >         nv(jspin),bkpt,
+     >         nvd,k1(:,jspin),k2(:,jspin),k3(:,jspin),
+     >         evac(:,jspin),
+     >         nbasfcn,neigd,zMat,
      <         ac,bc,u,ue)
       endif !preparations for vacuum
 c**************************************************************************
@@ -643,11 +644,7 @@ c**************************************************************************
                   IF (s<rmsh(jri(nt),nt)) THEN
                     CALL wann_real(
      >                   pt,nt,na,0,1,bkpt,nbn,
-     >                   n3d,nmzxyd,n2d,ntypsd,lmaxd,jmtd,
-     >                   natd,ntypd,nmzd,nop,nop2,mrot,tau,invtab,
-     >                   nq3,nvac,invs,z1,delz,nmz,nmzxy,nq2,
-     >                   lmax,rmsh,jri,pos,ngopr,ntypsy,nvd,
-     >                   omtil,amat,bmat,odi,ods,nlod,llod,nlo,llo,
+     >                   atoms,cell,sym,
      >                   ff,gg,flo,acof(nbn,:,:),bcof(nbn,:,:),
      >                   ccof(:,nbn,:,:),zMat,
      >               nv(jspin),k1(:,jspin),k2(:,jspin),k3(:,jspin),
@@ -669,10 +666,12 @@ c**************************************************************************
                 if (point(3).lt. 0.0)ivac=2
                 jvac=ivac
                 if(nvac==1)jvac=1
-                call wann_plot_vac(point,z1,nmzd,nv2d,n3d,nvac,
-     >            nmz,delz,bmat,bbmat,evac(:,jspin),bkpt,vz,jspin,
+                call wann_plot_vac(point,
+     >            cell,vacuum,
+     >            nv2d,evac(:,jspin),bkpt,vz,
+     >            jspin,
      >            k1(:,jspin),k2(:,jspin),k3(:,jspin),nvd, 
-     >            nbasfcn,neigd,nv(jspin),omtil,nslibd,
+     >            nbasfcn,neigd,nv(jspin),nslibd,
      >            ac(:,nbn,ivac),
      &             bc(:,nbn,ivac),
      &            u(:,:,jvac),ue(:,:,jvac),xdnout)
@@ -701,11 +700,7 @@ c     <              xdnout)
               IF (SQRT((pt(1))**2 + (pt(2))**2)>=z1) THEN
                 CALL wann_real(
      >               pt,0,0,1,0,bkpt,nbn,
-     >               n3d,nmzxyd,n2d,ntypsd,lmaxd,jmtd,
-     >               natd,ntypd,nmzd,nop,nop2,mrot,tau,invtab,
-     >               nq3,nvac,invs,z1,delz,nmz,nmzxy,nq2,
-     >               lmax,rmsh,jri,pos,ngopr,ntypsy,nvd,
-     >               omtil,amat,bmat,odi,ods,nlod,llod,nlo,llo,
+     >               atoms,cell,sym,
      >               ff,gg,flo,acof(nbn,:,:),bcof(nbn,:,:),
      >               ccof(:,nbn,:,:),zMat,
      >               nv(jspin),k1(:,jspin),k2(:,jspin),k3(:,jspin),
@@ -718,11 +713,7 @@ c     <              xdnout)
              END IF
              CALL wann_real(
      >             point,0,0,0,2,bkpt,nbn,
-     >             n3d,nmzxyd,n2d,ntypsd,lmaxd,jmtd,
-     >             natd,ntypd,nmzd,nop,nop2,mrot,tau,invtab,
-     >             nq3,nvac,invs,z1,delz,nmz,nmzxy,nq2,
-     >             lmax,rmsh,jri,pos,ngopr,ntypsy,nvd,
-     >             omtil,amat,bmat,odi,ods,nlod,llod,nlo,llo,
+     >             atoms,cell,sym,
      >             ff,gg,flo,acof(nbn,:,:),bcof(nbn,:,:),
      >             ccof(:,nbn,:,:),zMat,
      >               nv(jspin),k1(:,jspin),k2(:,jspin),k3(:,jspin),

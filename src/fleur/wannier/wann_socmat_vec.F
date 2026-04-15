@@ -9,9 +9,8 @@
       contains
       subroutine wann_socmat_vec(
      >               fmpi,enpara,input,noco,nococonv,atoms,
-     >               lmaxd,natd,neigd,
-     >               llod,jspd,
-     >               jspins,irank,
+     >               neigd,
+     >               jspins,
      >               vr,
      >               acof,bcof,chelp,
      <               hsomtx_vec)
@@ -36,21 +35,15 @@ c***********************************************************************
       TYPE(t_nococonv),INTENT(IN) :: nococonv
       TYPE(t_atoms),INTENT(IN)    :: atoms
 
-      integer, intent(in) :: lmaxd
-      integer, intent(in) :: natd
       integer, intent(in) :: neigd
 
-      integer, intent(in) :: llod
-      integer, intent(in) :: jspd
-
       integer, intent(in) :: jspins
-      integer, intent(in) :: irank
 
       real,    intent(in) :: vr(:,0:,:,:)    ! jmtd,0:nlhd,ntypd,jspd
 
       complex, intent(in) :: acof(:,0:,:,:) !acof(noccbd,0:lmd,natd,jspd)
       complex, intent(in) :: bcof(:,0:,:,:) !bcof(noccbd,0:lmd,natd,jspd)
-      complex, intent(in) :: chelp(-llod:,:,:,:,:) !chelp(-llod:llod,neigd,nlod,natd,jspd)
+      complex, intent(in) :: chelp(-atoms%llod:,:,:,:,:) !chelp(-llod:llod,neigd,nlod,natd,jspd)
 
       complex, intent(out):: hsomtx_vec(:,:,:,:,:) !(2,2,neigd,neigd,3)
 
@@ -75,14 +68,16 @@ c***********************************************************************
       theta= 0.0
       phi= 0.0
 
-      ALLOCATE ( ahelp(lmaxd*(lmaxd+2),natd,neigd,input%jspins) )
-      ALLOCATE ( bhelp(lmaxd*(lmaxd+2),natd,neigd,input%jspins) )
+      ALLOCATE ( ahelp(atoms%lmaxd*(atoms%lmaxd+2),atoms%nat,
+     +                   neigd,input%jspins) )
+      ALLOCATE ( bhelp(atoms%lmaxd*(atoms%lmaxd+2),atoms%nat,
+     +                   neigd,input%jspins) )
       allocate ( hsomtx(neigd,neigd,2,2) )
 
       do ispin=1,input%jspins
        DO ie = 1, neigd
-        DO na = 1, natd
-         DO l = 1, lmaxd
+        DO na = 1, atoms%nat
+         DO l = 1, atoms%lmaxd
           ll1 = l*(l+1)
           DO m = -l,l
              lm = ll1 + m
@@ -94,15 +89,15 @@ c***********************************************************************
        ENDDO !ie
       enddo !ispin
 
-      ALLOCATE(usdus%us(0:atoms%lmaxd,atoms%ntype,jspd),
-     +         usdus%dus(0:atoms%lmaxd,atoms%ntype,jspd),
-     +         usdus%uds(0:atoms%lmaxd,atoms%ntype,jspd),
-     +         usdus%duds(0:atoms%lmaxd,atoms%ntype,jspd),
-     +         usdus%ddn(0:atoms%lmaxd,atoms%ntype,jspd),
-     +         usdus%ulos(atoms%nlod,atoms%ntype,jspd),
-     +         usdus%dulos(atoms%nlod,atoms%ntype,jspd),
-     +         usdus%uulon(atoms%nlod,atoms%ntype,jspd),
-     +         usdus%dulon(atoms%nlod,atoms%ntype,jspd))
+      ALLOCATE(usdus%us(0:atoms%lmaxd,atoms%ntype,input%jspins),
+     +         usdus%dus(0:atoms%lmaxd,atoms%ntype,input%jspins),
+     +         usdus%uds(0:atoms%lmaxd,atoms%ntype,input%jspins),
+     +         usdus%duds(0:atoms%lmaxd,atoms%ntype,input%jspins),
+     +         usdus%ddn(0:atoms%lmaxd,atoms%ntype,input%jspins),
+     +         usdus%ulos(atoms%nlod,atoms%ntype,input%jspins),
+     +         usdus%dulos(atoms%nlod,atoms%ntype,input%jspins),
+     +         usdus%uulon(atoms%nlod,atoms%ntype,input%jspins),
+     +         usdus%dulon(atoms%nlod,atoms%ntype,input%jspins))
 
 
       CALL spnorb(
@@ -117,7 +112,8 @@ c***********************************************************************
      >        nococonv%phi,rsoc%soangl,compo)
 
         CALL hsoham(atoms,noco,input,nsz,neigd,chelp,rsoc,ahelp,
-     >            bhelp,1,natd,fmpi%n_rank,fmpi%n_size,fmpi%SUB_COMM,
+     >            bhelp,1,atoms%nat,fmpi%n_rank,fmpi%n_size,
+     >            fmpi%SUB_COMM,
      <            hsomtx)
 
         do i1 = 1,2

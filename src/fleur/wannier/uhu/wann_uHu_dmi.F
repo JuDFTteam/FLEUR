@@ -448,20 +448,18 @@ c      find symmetry-related elements in mmkb
 c********************************************************
          allocate(maptopair(3,fullnkpts,nntot))
          allocate(pair_to_do(fullnkpts,nntot))
-         call wann_mmnk_symm(input,kpts,
+         call wann_mmnk_symm(input,kpts,sym,
      >     fullnkpts,nntot,bpt,gb,wann%l_bzsym,
-     >     irreduc,mapkoper,l_p0,film,nop,invtab,mrot,
-     >     tau,
+     >     irreduc,mapkoper,l_p0,film,
      <     pair_to_do,maptopair,kdiff,.false.,param_file)
 
       ! do the same for q-points to construct GWFs
       if(l_gwf)then
          allocate(maptopair_q(3,fullnqpts,nntot_q))
          allocate(pair_to_do_q(fullnqpts,nntot_q))
-         call wann_mmnk_symm(input,kpts,
+         call wann_mmnk_symm(input,kpts,sym,
      >     fullnqpts,nntot_q,bpt_q,gb_q,wann%l_bzsym,
-     >     irreduc_q,mapqoper,l_p0,.false.,1,invtab(1),mrot(:,:,1),
-     >     tau,
+     >     irreduc_q,mapqoper,l_p0,.false.,
      <     pair_to_do_q,maptopair_q,qdiff,.true.,param_file)
       endif
 
@@ -851,21 +849,30 @@ c       na = na + neq(n)
          if(jspins.eq.1) jspin3=1
          call cpu_time(t0)
          call wann_uHu_tlmplm2(
-     >        memd,nlhd,ntypsd,ntypd,jmtd,lmaxd,jspd,ntype,dx,
-     >        rmsh,jri,lmax,ntypsy,natd,lnonsph,lmd,lmplmd,clnu,
-     >        mlh,nmem,llh,nlh,neq,irank,mlotot,mlolotot,
-     >        vTot%mt(:,:,:,jspin3),nlod,llod,loplod,
-     >        enpara%ello0(1,1,jspin3),
-     >        llo,nlo,lo1l,l_dulo,ulo_der,ff(:,:,:,:,jspin),
-     >        gg(:,:,:,:,jspin),flo(:,:,:,:,jspin),
-     >        ff(:,:,:,:,jspin_b),gg(:,:,:,:,jspin_b),
-     >        flo(:,:,:,:,jspin_b),kdiff,kdiff2,nntot,nntot2,bmat,bbmat,
-     >        vr(1,1,jspin3),enpara%el0(0,1,1),invsat,jspin,jspin_b,
-     >        l_skip_sph,l_skip_non,l_skip_loc,
-     <        tuu(:,:,:,:,doublespin),tud(:,:,:,:,doublespin),
-     >        tdu(:,:,:,:,doublespin),tdd(:,:,:,:,doublespin),
-     >        tuulo(:,:,:,:,:,doublespin),tulou(:,:,:,:,:,doublespin),
-     >        tdulo(:,:,:,:,:,doublespin),tulod(:,:,:,:,:,doublespin),
+     >        atoms,sphhar,cell,sym,
+     >        irank,mlotot,mlolotot,
+     >        vTot%mt(:,:,:,jspin3),
+     >        enpara%ello0(:,:,jspin3),
+     >        ff(:,:,:,:,jspin),
+     >        gg(:,:,:,:,jspin),
+     >        flo(:,:,:,:,jspin),
+     >        ff(:,:,:,:,jspin_b),
+     >        gg(:,:,:,:,jspin_b),
+     >        flo(:,:,:,:,jspin_b),
+     >        kdiff,kdiff2,nntot,nntot2,
+     >        vr(:,:,jspin3),
+     >        enpara%el0(:,:,:),
+     >        jspin,jspin_b,
+     >        l_skip_sph,l_skip_non,
+     >        l_skip_loc,
+     <        tuu(:,:,:,:,doublespin),
+     >        tud(:,:,:,:,doublespin),
+     >        tdu(:,:,:,:,doublespin),
+     >        tdd(:,:,:,:,doublespin),
+     >        tuulo(:,:,:,:,:,doublespin),
+     >        tulou(:,:,:,:,:,doublespin),
+     >        tdulo(:,:,:,:,:,doublespin),
+     >        tulod(:,:,:,:,:,doublespin),
      >        tuloulo(:,:,:,:,:,:,doublespin))
          call cpu_time(t1)
          t_myTlmplm = t_myTlmplm + t1-t0
@@ -891,20 +898,29 @@ c       na = na + neq(n)
      >              jspin_b,' >  for theta=',theta_i
          call cpu_time(t0)
          call wann_uHu_soc(
-     >     input,atoms,
-     >     ntypd,jmtd,lmaxd,jspd,
-     >     ntype,dx,rmsh,jri,lmax,natd,
-     >     lmd,lmplmd,neq,irank,
-     >     nlod,llod,loplod,enpara%ello0,llo,nlo,lo1l,l_dulo,ulo_der,
-     >     ff(:,:,:,:,jspin),gg(:,:,:,:,jspin),flo(:,:,:,:,jspin),
-     >     ff(:,:,:,:,jspin_b),gg(:,:,:,:,jspin_b),flo(:,:,:,:,jspin_b),
-     >     kdiff,kdiff2,nntot,nntot2,bmat,bbmat,
-     >     vr,enpara%el0,jspin,jspin5,jspins,
-     >     .true.,theta_i,phi_i,alph_i,beta_i,l_noco,l_skip_loc,
-     <     tuu_soc(:,:,:,:,tspin),tud_soc(:,:,:,:,tspin),
-     >     tdu_soc(:,:,:,:,tspin),tdd_soc(:,:,:,:,tspin),
-     >     tuulo_soc(:,:,:,:,:,tspin),tulou_soc(:,:,:,:,:,tspin),
-     >     tdulo_soc(:,:,:,:,:,tspin),tulod_soc(:,:,:,:,:,tspin),
+     >     input,atoms,cell,nococonv,
+     >     lmplmd,irank,
+     >     enpara%ello0,
+     >     ff(:,:,:,:,jspin),
+     >     gg(:,:,:,:,jspin),
+     >     flo(:,:,:,:,jspin),
+     >     ff(:,:,:,:,jspin_b),
+     >     gg(:,:,:,:,jspin_b),
+     >     flo(:,:,:,:,jspin_b),
+     >     kdiff,kdiff2,
+     >     nntot,nntot2,
+     >     vr,enpara%el0,
+     >     jspin,jspin5,
+     >     .true.,theta_i,phi_i,
+     >     l_noco,l_skip_loc,
+     <     tuu_soc(:,:,:,:,tspin),
+     >     tud_soc(:,:,:,:,tspin),
+     >     tdu_soc(:,:,:,:,tspin),
+     >     tdd_soc(:,:,:,:,tspin),
+     >     tuulo_soc(:,:,:,:,:,tspin),
+     >     tulou_soc(:,:,:,:,:,tspin),
+     >     tdulo_soc(:,:,:,:,:,tspin),
+     >     tulod_soc(:,:,:,:,:,tspin),
      >     tuloulo_soc(:,:,:,:,:,:,tspin))
          call cpu_time(t1)
          t_myTlmplm = t_myTlmplm + t1-t0
@@ -1278,8 +1294,7 @@ c**************************************c
          ! matrix elements < S | H_{SS} | S' > x chi
          call cpu_time(t0)
          call wann_uHu_sph(
-     >        chi,nbnd,llod,nslibd_b,nslibd_b2,nlod,natd,ntypd,
-     >        lmd,jmtd,taual,nop,lmax,ntype,neq,nlo,llo,
+     >        chi,nbnd,atoms,nslibd_b,nslibd_b2,
      >        acof_b,bcof_b,ccof_b,lapw_b2%bkpt,
      >        acof_b2,bcof_b2,ccof_b2,lapw_b%bkpt,lapw%bkpt,
      >        gb(:,ikpt_b,ikpt),(/0,0,0/),
@@ -1301,8 +1316,7 @@ c**************************************c
          ! matrix elements < S | H_{SS} | S' > x chi
          call cpu_time(t0)
          call wann_uHu_sph(
-     >        chi,nbnd,llod,nslibd_b,nslibd_b2,nlod,natd,ntypd,
-     >        lmd,jmtd,taual,nop,lmax,ntype,neq,nlo,llo,
+     >        chi,nbnd,atoms,nslibd_b,nslibd_b2,
      >        acof_b,bcof_b,ccof_b,lapw_b2%bkpt,
      >        acof_b2,bcof_b2,ccof_b2,lapw_b%bkpt,lapw%bkpt,
      >        gb(:,ikpt_b,ikpt),(/0,0,0/),
@@ -1321,8 +1335,7 @@ c**************************************c
          ! matrix elements < S | H_{SS''} | S' > x chi2 , S''=/=S
          call cpu_time(t0)
          call wann_uHu_sph(
-     >        chi2,nbnd,llod,nslibd_b,nslibd_b2,nlod,natd,ntypd,
-     >        lmd,jmtd,taual,nop,lmax,ntype,neq,nlo,llo,
+     >        chi2,nbnd,atoms,nslibd_b,nslibd_b2,
      >        acof_b,bcof_b,ccof_b,lapw_b2%bkpt,
      >        acof_b2,bcof_b2,ccof_b2,lapw_b%bkpt,lapw%bkpt,
      >        gb(:,ikpt_b,ikpt),(/0,0,0/),
@@ -1349,17 +1362,23 @@ c**************************************c
          if(.not.l_skip_int) then
             ! matrix elements < S | H_{SS} | S' > x chi
             call cpu_time(t0)
-            call wann_uHu_int(chi,nvd,k1d,k2d,k3d,n3d,
-     >  lapw_b%nv(jspin),lapw_b2%nv(jspin_b),nbnd,neigd,
-     >  nslibd_b,nslibd_b2,nbasfcn_b,nbasfcn_b2,addnoco,addnoco2,
-     >  lapw_b%k1(:,jspin),lapw_b%k2(:,jspin),lapw_b%k3(:,jspin),
+            call wann_uHu_int(cell,stars,
+     >  chi,nvd,
+     >  lapw_b%nv(jspin),lapw_b2%nv(jspin_b),
+     >  nbnd,neigd,
+     >  nslibd_b,nslibd_b2,
+     >  nbasfcn_b,nbasfcn_b2,
+     >  addnoco,addnoco2,
+     >  lapw_b%k1(:,jspin),lapw_b%k2(:,jspin),
+     >  lapw_b%k3(:,jspin),
      >  gb(:,ikpt_b,ikpt),
-     >  lapw_b2%k1(:,jspin_b),lapw_b2%k2(:,jspin_b),
+     >  lapw_b2%k1(:,jspin_b),
+     >  lapw_b2%k2(:,jspin_b),
      >  lapw_b2%k3(:,jspin_b),
-     >      (/0,0,0/), lapw%bkpt, bbmat,
-     >  vpw(:,jspin3),zMat_b,zMat_b2,rgphs,
-     >            ustep,ig,.true.,sign2,
-     >            uHu(:,:,iqpt_b,ikpt_b,i_rec))
+     >  (/0,0,0/), lapw%bkpt,
+     >  vpw(:,jspin3),zMat_b,zMat_b2,
+     >  .true.,sign2,
+     >  uHu(:,:,iqpt_b,ikpt_b,i_rec))
             call cpu_time(t1)
             t_int = t_int + t1 - t0
          endif
@@ -1369,18 +1388,21 @@ c**************************************c
             ! matrix elements < S | H_{SS} | S' > x chi
             call cpu_time(t0)
             call wann_uHu_vac(
-     >            chi,l_noco,l_soc,jspins,nlotot,qpt_i,nbnd,z1,
-     >            nmzxyd,nmzd,n2d,nv2d,k1d,k2d,k3d,n3d,nvac,ig,
-     >            rgphs,nmzxy,nmz,delz,ig2,nq2,kv2,area,bmat,bbmat,
+     >            vacuum,cell,stars,
+     >            chi,l_noco,l_soc,jspins,
+     >            nlotot,qpt_i,nbnd,
+     >            nv2d,
      >            evac(:,jspin),evac(:,jspin_b),
-     >   lapw_b%bkpt,lapw_b2%bkpt,
-     >            vzxy(:,:,:,jspin3),vz,nslibd_b,nslibd_b2,
+     >            lapw_b%bkpt,lapw_b2%bkpt,
+     >            vzxy(:,:,:,jspin3),vz,
+     >            nslibd_b,nslibd_b2,
      >            jspin,jspin_b,jspin,
-     >  lapw_b%k1,lapw_b%k2,lapw_b%k3,
-     >  lapw_b2%k1,lapw_b2%k2,lapw_b2%k3,
-     >      wannierspin,nvd,nbasfcn,neigd,
+     >            lapw_b%k1,lapw_b%k2,lapw_b%k3,
+     >            lapw_b2%k1,lapw_b2%k2,lapw_b2%k3,
+     >            wannierspin,nvd,nbasfcn,neigd,
      >            zMat_b,zMat_b2,
-     >  lapw_b%nv,lapw_b2%nv,omtil,gb(:,ikpt_b,ikpt),
+     >            lapw_b%nv,lapw_b2%nv,
+     >            gb(:,ikpt_b,ikpt),
      >            (/0,0,0/),sign2,
      >            uHu(:,:,iqpt_b,ikpt_b,i_rec))
             call cpu_time(t1)

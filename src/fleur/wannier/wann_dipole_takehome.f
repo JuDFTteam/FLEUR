@@ -9,7 +9,7 @@
       contains
       subroutine wann_dipole_takehome(
      >               jspins,l_absolute,
-     >               amat,bmat,omtil,
+     >               cell,
      <               electronic_moment)
 c***********************************************************
 c-----Check if the polarization may be reduced by adding 
@@ -21,11 +21,12 @@ c-----Wannierization process.
 c                            Frank Freimuth
 c***********************************************************
       use m_constants, only: pimach
+      USE m_types
       implicit none
 
       integer, intent(in) :: jspins
       logical, intent(in) :: l_absolute
-      real, intent(in)    :: amat(3,3),bmat(3,3),omtil
+      TYPE(t_cell),INTENT(IN)      :: cell
       real, intent(inout) :: electronic_moment(3,2)
 
       real,parameter      :: elemchargmu=1.60217646e-13
@@ -47,19 +48,20 @@ c***********************************************************
 
       do jspin=1,jspins
         int_electronic_moment(:,jspin)=
-     =      matmul( bmat,electronic_moment(:,jspin) )/tpi
+     =      matmul( cell%bmat,electronic_moment(:,jspin) )/tpi
         do k=1,3
            int_electronic_moment(k,jspin)=
      =       int_electronic_moment(k,jspin) -
      -       nint( int_electronic_moment(k,jspin) )  
         enddo
         electronic_moment(:,jspin) =
-     =         matmul(amat,int_electronic_moment(:,jspin))
+     =         matmul(cell%amat,int_electronic_moment(:,jspin))
         write(*,  fmt=555)jspin,electronic_moment(:,jspin)
         write(666,fmt=555)jspin,electronic_moment(:,jspin)
         if(.not.l_absolute)then
            electronic_polarization=
-     &            electronic_moment/omtil*elemchargmu/((bohrtocm)**2)
+     &       electronic_moment/cell%omtil*
+     &       elemchargmu/((bohrtocm)**2)
            write(*,  fmt=777)jspin,electronic_polarization(:,jspin)
            write(666,fmt=777)jspin,electronic_polarization(:,jspin)
         endif

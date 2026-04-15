@@ -8,21 +8,15 @@
       use m_judft
       contains
       subroutine wann_dipole_ionic(
-     >               natd,pos,omtil,
-     >               amat,taual,ntype,
-     >               neq,zatom,l_absolute,
+     >               atoms,cell,
+     >               l_absolute,
      >               l_invsubtract,
      <               ionic_moment)
       use m_wann_ioncharge_gen
+      USE m_types
       implicit none
-      real,intent(in)              :: omtil
-      integer,intent(in)           :: natd
-      real,intent(in)              :: pos(3,natd)
-      real,intent(in)              :: amat(3,3)
-      real,intent(in)              :: taual(3,natd)
-      integer,intent(in)           :: ntype
-      integer,intent(in)           :: neq(ntype)
-      real,intent(in)              :: zatom(ntype)
+      TYPE(t_atoms),INTENT(IN)     :: atoms
+      TYPE(t_cell),INTENT(IN)      :: cell
       logical,intent(in)           :: l_absolute
       logical,intent(in)           :: l_invsubtract
       real,intent(out)             :: ionic_moment(3)
@@ -37,8 +31,8 @@
       real,parameter               :: bohrtocm=0.529177e-8
       character(len=6)             :: filename
       logical                      :: l_file
-      real                         :: pos_inv(3,natd)
-      real                         :: taual_inv(3,natd)
+      real                         :: pos_inv(3,atoms%nat)
+      real                         :: taual_inv(3,atoms%nat)
       real                         :: coordinate
       real                         :: ionchargesum
 
@@ -52,8 +46,8 @@
 
 c-----count atoms
       num_atoms=0
-      do j=1,ntype
-         do k=1,neq(j)
+      do j=1,atoms%ntype
+         do k=1,atoms%neq(j)
             num_atoms=num_atoms+1
          enddo
       enddo
@@ -61,8 +55,7 @@ c-----count atoms
 c-----get charges of ions
       allocate( ioncharge(num_atoms) )
       call wann_ioncharge_gen(
-     >         num_atoms,ntype,natd,
-     >         neq,zatom,pos,
+     >         num_atoms,atoms,
      <         ioncharge)
       ionchargesum=sum(ioncharge(1:num_atoms))
       write(666,*)"ionchargesum=",ionchargesum
@@ -79,7 +72,7 @@ c-----end up at the same location. But this does not matter.
       if(l_invsubtract)then
         do j=1,num_atoms
           do k=1,3
-               coordinate=taual(k,j)
+               coordinate=atoms%taual(k,j)
                if(abs(coordinate).lt.0.125)then
                   taual_inv(k,j)=0.0
                elseif(abs(coordinate).lt.0.375)then
@@ -94,11 +87,11 @@ c-----end up at the same location. But this does not matter.
           enddo
         enddo
         do j=1,num_atoms
-           pos_inv(:,j)=matmul(amat,taual_inv(:,j))
+           pos_inv(:,j)=matmul(cell%amat,taual_inv(:,j))
         enddo
         do j=1,num_atoms
           print*,"old position:"
-          print*,pos(:,j)
+          print*,atoms%pos(:,j)
           print*,"new position:"
           print*,pos_inv(:,j)
           print*,"************************"
@@ -109,11 +102,12 @@ c-----compute the ionic moment
       ionic_moment=0.0
       do j=1,num_atoms
          ionic_moment(:)=
-     &        ionic_moment(:)+ioncharge(j)*(pos(:,j)-pos_inv(:,j))
+     &        ionic_moment(:)+ioncharge(j)*(atoms%pos(:,j)
+     &        -pos_inv(:,j))
       enddo
 
       ionic_polarization =
-     =   ionic_moment/omtil*elemchargmu/((bohrtocm)**2)
+     =   ionic_moment/cell%omtil*elemchargmu/((bohrtocm)**2)
 
       write(*,  fmt=555)ionic_moment(:)
       write(666,fmt=555)ionic_moment(:)

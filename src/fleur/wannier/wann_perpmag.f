@@ -9,10 +9,9 @@
             use m_juDFT
       contains
       SUBROUTINE wann_perpmag(
-     >               nbnd,neq,mlh,nlhd,nlh,ntypsy,llh,lmax,
-     >               nmem,ntype,ntypd,bbmat,bmat,
-     >               nlod,llod,nlo,llo,flo,f,g,jri,rmsh,dx,jmtd,
-     >               lmaxd,lmd,clnu,
+     >               nbnd,atoms,mlh,nlhd,nlh,ntypsy,llh,
+     >               nmem,bbmat,bmat,
+     >               flo,f,g,clnu,
      >               ujug,ujdg,djug,djdg,ujulog,djulog,
      >               ulojug,ulojdg,ulojulog,
      >               acof,bcof,ccof,
@@ -24,6 +23,7 @@ c
 c    Frank Freimuth, 2010
 c************************************************************************* 
 
+      use m_types
       use m_constants, only : pimach
       use m_sphbes
       use m_ylm
@@ -31,43 +31,38 @@ c*************************************************************************
       use m_gaunt, only: gaunt1
 
       IMPLICIT NONE
+
+      TYPE(t_atoms), INTENT(IN) :: atoms
+
       integer, intent (in) :: nbnd
-      integer, intent (in) :: neq(:) 
-      INTEGER, INTENT (IN) :: mlh(:,0:,:)!(memd,0:nlhd,ntypsd)
+      INTEGER, INTENT (IN) :: mlh(:,0:,:)
       INTEGER, INTENT (IN) :: nlhd
       integer, intent (in) :: nlh(:)
       integer, intent (in) :: ntypsy(:)
       integer, intent (in) :: nmem(:,:)
-      integer, intent (in) :: ntype,ntypd
       integer, intent (in) :: llh(:,:)
-      INTEGER, INTENT (IN) :: lmaxd,jmtd,lmd
-      real,    intent (in) :: bbmat(:,:)!(3,3)
-      real,    intent (in) :: bmat(:,:)!(3,3)
-      integer, intent (in) :: lmax(:)!(ntypd)
-      integer, intent (in) :: nlod,llod
-      integer, intent (in) :: jri(:)!(ntypd)
-      integer, intent (in) :: nlo(:)!(ntypd)
-      integer, intent (in) :: llo(:,:)!(nlod,ntypd)    
-      real,    intent (in) :: f(:,:,:,0:,:)!(ntypd,jmtd,2,0:lmaxd,2)
-      real,    intent (in) :: g(:,:,:,0:,:)!(ntypd,jmtd,2,0:lmaxd,2)
-      real,    intent (in) :: flo(:,:,:,:,:)!(ntypd,jmtd,2,nlod,2)
-      real,    intent (in) :: rmsh(:,:)!(jmtd,ntypd)
-      real,    intent (in) :: dx(:)!(ntypd)
-      complex, intent (in) :: clnu(:,0:,:)!(memd,0:nlhd,ntypsd)
-      complex, intent (in) :: ujug(0:,0:,1:)!(0:lmd,0:lmd,1:ntype)
-      complex, intent (in) :: ujdg(0:,0:,1:)!(0:lmd,0:lmd,1:ntype)
-      complex, intent (in) :: djug(0:,0:,1:)!(0:lmd,0:lmd,1:ntype)
-      complex, intent (in) :: djdg(0:,0:,1:)!(0:lmd,0:lmd,1:ntype)
+      real,    intent (in) :: bbmat(:,:)
+      real,    intent (in) :: bmat(:,:)
+      real,    intent (in) :: f(:,:,:,0:,:)
+      real,    intent (in) :: g(:,:,:,0:,:)
+      real,    intent (in) :: flo(:,:,:,:,:)
+      complex, intent (in) :: clnu(:,0:,:)
+      complex, intent (in) :: ujug(0:,0:,1:)
+      complex, intent (in) :: ujdg(0:,0:,1:)
+      complex, intent (in) :: djug(0:,0:,1:)
+      complex, intent (in) :: djdg(0:,0:,1:)
 
-      complex, intent (in) :: ujulog(0:,:,-llod:,:) !(0:lmd,nlod,-llod:llod,1:ntype)
-      complex, intent (in) :: djulog(0:,:,-llod:,:) !(0:lmd,nlod,-llod:llod,1:ntype)
-      complex, intent (in) :: ulojug(0:,:,-llod:,:) !(0:lmd,nlod,-llod:llod,1:ntype)
-      complex, intent (in) :: ulojdg(0:,:,-llod:,:) !(0:lmd,nlod,-llod:llod,1:ntype)
-      complex, intent (in) :: ulojulog(:,-llod:,:,-llod:,:) !(1:nlod,-llod:llod,1:nlod,-llod:llod,1:ntype)
+      complex, intent (in) :: ujulog(0:,:,-atoms%llod:,:)
+      complex, intent (in) :: djulog(0:,:,-atoms%llod:,:)
+      complex, intent (in) :: ulojug(0:,:,-atoms%llod:,:)
+      complex, intent (in) :: ulojdg(0:,:,-atoms%llod:,:)
+      complex, intent (in) ::
+     >    ulojulog(:,-atoms%llod:,:,-atoms%llod:,:)
 
-      complex, intent (in) :: acof(:,0:,:,:) !acof(noccbd,0:lmd,natd,jspd)
-      complex, intent (in) :: bcof(:,0:,:,:) !bcof(noccbd,0:lmd,natd,jspd)
-      complex, intent (in) :: ccof(-llod:,:,:,:,:)!ccof(-llod:llod,noccbd,nlod,natd,jspd)
+      complex, intent (in) :: acof(:,0:,:,:)
+      complex, intent (in) :: bcof(:,0:,:,:)
+      complex, intent (in) ::
+     >    ccof(-atoms%llod:,:,:,:,:)
 
       complex, intent (inout):: perpmag(:,:)
 
@@ -75,13 +70,13 @@ c*************************************************************************
 
       call timestart("wann_perpmag")
       nat=0
-      do n=1,ntype
-       do nn=1,neq(n)
+      do n=1,atoms%ntype
+       do nn=1,atoms%neq(n)
         nat=nat+1
-        do l=0,lmax(n)
+        do l=0,atoms%lmax(n)
          do m=-l,l  
           lm=l*(l+1)+m  
-          do lp=0,lmax(n)
+          do lp=0,atoms%lmax(n)
            do mp=-lp,lp
             lpmp=lp*(lp+1)+mp              
             do i=1,nbnd
@@ -98,13 +93,13 @@ c*************************************************************************
          enddo !m
         enddo !l
 
-        if(nlo(n).ge.1)then
-         do lo=1,nlo(n)
-          l=llo(lo,n)
+        if(atoms%nlo(n).ge.1)then
+         do lo=1,atoms%nlo(n)
+          l=atoms%llo(lo,n)
           do m=-l,l
            
-           do lop=1,nlo(n)
-            lp=llo(lop,n)
+           do lop=1,atoms%nlo(n)
+            lp=atoms%llo(lop,n)
             do mp=-lp,lp
 
              do i=1,nbnd
@@ -122,12 +117,12 @@ c*************************************************************************
          enddo !lo 
         endif !lo-lo
 
-        if(nlo(n).ge.1)then
-         do lo=1,nlo(n)
-          l=llo(lo,n)
+        if(atoms%nlo(n).ge.1)then
+         do lo=1,atoms%nlo(n)
+          l=atoms%llo(lo,n)
           do m=-l,l
            
-           do lp=0,lmax(n)
+           do lp=0,atoms%lmax(n)
             do mp=-lp,lp
             lpmp=lp*(lp+1)+mp   
 

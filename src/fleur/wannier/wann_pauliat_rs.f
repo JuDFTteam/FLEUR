@@ -12,11 +12,12 @@ c*************************************************
      >          rvecnum,rvec,kpoints,
      >          jspins_in,nkpts,l_bzsym,film,
      >          l_soc,band_min,band_max,neigd,
-     >          l_socmmn0,ntype,neq,l_ndegen,ndegen,
+     >          l_socmmn0,atoms,l_ndegen,ndegen,
      >          wan90version,l_unformatted)
 
       use m_constants, only:pimach
       use m_wann_read_umatrix
+      USE m_types
 
       implicit none
       integer, intent(in) :: rvecnum
@@ -28,8 +29,7 @@ c*************************************************
       logical,intent(in)  :: film
       integer,intent(in)  :: band_min(2),band_max(2),neigd
       logical, intent(in) :: l_socmmn0
-      integer, intent(in) :: ntype
-      integer, intent(in) :: neq(:)
+      TYPE(t_atoms),INTENT(IN) :: atoms
       logical, intent(in) :: l_ndegen
       integer, intent(in) :: ndegen(:)	
       integer, intent(in) :: wan90version
@@ -164,8 +164,8 @@ c        Read the file "WF1.socmmn0".
 c**************************************************** 
       allocate( paulimat(3,num_bands2,num_bands2,nkpts) )
       at=0
-      do itype=1,ntype
-       do nn=1,neq(itype)
+      do itype=1,atoms%ntype
+       do nn=1,atoms%neq(itype)
         at=at+1
         write(*,*)"atom=",at
         write(torquename,

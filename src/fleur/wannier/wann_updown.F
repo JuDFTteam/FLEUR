@@ -799,12 +799,9 @@ c****************************************************************
 
 
          call wann_gabeffgagaunt(
-     >            vTot,
+     >            vTot,atoms,sphhar,sym,
      >            wann%l_perpmagatlres,wann%perpmagl,
-     >            neq,mlh,nlhd,nlh,ntypsy,llh,lmax,
-     >            nmem,ntype,ntypd,bbmat,bmat,
-     >            nlod,llod,nlo,llo,flo,ff,gg,jri,rmsh,dx,jmtd,
-     >            lmaxd,lmd,clnu,
+     >            flo,ff,gg,
      <            ubeffug,ubeffdg,dbeffug,dbeffdg,ubeffulog,
      <            dbeffulog,
      <            ulobeffug,ulobeffdg,ulobeffulog)
@@ -944,12 +941,11 @@ c***********************************************************
         if (wann%l_bzsym.and.oper.ne.1) then  !rotate bkpt
            call wann_kptsrotate(
      >            atoms,
-     >            invsat,
+     >            sym,
      >            l_noco,l_soc,
      >            jspin,
-     >            oper,nop,mrot,nvd,
+     >            oper,
      >            shiftkpt(:,ikpt),
-     >          tau,
      >          lapw,    
 !     x            lapw%bkpt,lapw%k1(:,:),lapw%k2(:,:),lapw%k3(:,:),
      x            zMat(jspin),nsfactor)
@@ -1012,9 +1008,8 @@ c...for the lapws and local orbitals, summed by the basis functions
       if(wann%l_socmat)then
          call wann_socmat(
      >       fmpi,enpara,input,noco,nococonv,atoms,
-     >       lmaxd,natd,noccbd,
-     >       llod,jspd,
-     >       theta,phi,jspins,irank,
+     >       noccbd,
+     >       theta,phi,jspins,
      >       vTot%mt,
      >       acof,bcof,ccof,
      <       hsomtx_l)
@@ -1032,9 +1027,8 @@ c...for the lapws and local orbitals, summed by the basis functions
       if(wann%l_socmatvec)then
         call wann_socmat_vec(
      >       fmpi,enpara,input,noco,nococonv,atoms,
-     >       lmaxd,natd,noccbd,
-     >       llod,jspd,
-     >       jspins,irank,
+     >       noccbd,
+     >       jspins,
      >       vTot%mt,! vr,
      >       acof,bcof,ccof,
      <       hsomtxvec(:,:,:,:,:,ikpt))
@@ -1042,10 +1036,9 @@ c...for the lapws and local orbitals, summed by the basis functions
 
       if(wann%l_perpmag)then
          call wann_perpmag(
-     >            nslibd,neq,mlh,nlhd,nlh,ntypsy,llh,lmax,
-     >            nmem,ntype,ntypd,bbmat,bmat,
-     >            nlod,llod,nlo,llo,flo,ff,gg,jri,rmsh,dx,jmtd,
-     >            lmaxd,lmd,clnu,
+     >            nslibd,atoms,mlh,nlhd,nlh,ntypsy,llh,
+     >            nmem,bbmat,bmat,
+     >            flo,ff,gg,clnu,
      >            ubeffug,ubeffdg,dbeffug,dbeffdg,ubeffulog,
      >            dbeffulog,
      >            ulobeffug,ulobeffdg,ulobeffulog,
@@ -1055,14 +1048,12 @@ c...for the lapws and local orbitals, summed by the basis functions
       
       if(wann%l_torque)then
          call wann_torque(
-     >       amat,
-     >       ntype,lmaxd,lmax,natd,
-     >       neq,noccbd,lmd,natd,llod,nlod,
-     >       nlo,llo, 
+     >       atoms,
+     >       noccbd,
      >       acof,bcof,ccof,
      >       usdus%us,usdus%dus,usdus%duds,usdus%uds,
      >       usdus%ulos,usdus%dulos,
-     >       rmt,pos,wann%atomlist_num,wann%atomlist, 
+     >       wann%atomlist_num,wann%atomlist, 
      >       (l_soc.or.l_noco),nbnd,
      &       torque(:,:,:,:,ikpt))
       endif
@@ -1160,9 +1151,8 @@ c     Calculate matrix elements of the Pauli matrix.
 c***************************************************
       if(wann%l_mmn0at)then
         call wann_mmk0_updown_sph_at(
-     >      l_noco,alph,beta,
-     >      llod,noccbd,nlod,natd,ntypd,lmaxd,lmax,lmd,
-     >      ntype,neq,nlo,llo,
+     >      atoms,l_noco,alph,beta,
+     >      noccbd,lmd,
      >      radial1_ff,radial1_gg,radial1_fg,radial1_gf,
      >      acof(1:noccbd,:,:,:),
      >      bcof(1:noccbd,:,:,:),ccof(:,1:noccbd,:,:,:),
@@ -1225,9 +1215,8 @@ c$$$       enddo !i
 
 c---> spherical contribution to updown.mmn0-matrix
        call wann_mmk0_updown_sph(
-     >          l_noco,alph,beta,
-     >          llod,noccbd,nlod,natd,ntypd,lmaxd,lmax,lmd,
-     >          ntype,neq,nlo,llo,
+     >          atoms,l_noco,alph,beta,
+     >          noccbd,lmd,
      >          radial1_ff,radial1_gg,radial1_fg,radial1_gf,
      >          radial1_flo,radial1_glo,
      >          radial1_lof,radial1_log,

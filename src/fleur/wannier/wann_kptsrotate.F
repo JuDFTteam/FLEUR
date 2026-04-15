@@ -13,12 +13,11 @@ c****************************************
       contains
       subroutine wann_kptsrotate(
      >               atoms,
-     >               invsat,
+     >               sym,
      >               l_noco,l_soc,
      >               jspin_in,
-     >               oper,nop,mrot,nvd,
+     >               oper,
      >               shiftkpt,
-     >               tau,
      >               lapw,
 !     x               bkpt,k1,k2,k3,
      x               zMat,nsfactor)
@@ -29,16 +28,12 @@ c****************************************
 
       implicit none
       TYPE(t_atoms),INTENT(IN)             :: atoms
-      INTEGER, INTENT (IN)  :: invsat(:)
+      TYPE(t_sym),INTENT(IN)               :: sym
       logical,intent(in)    :: l_noco
       logical,intent(in)    :: l_soc
       integer,intent(in)    :: jspin_in
       integer,intent(in)    :: oper
-      integer,intent(in)    :: nop
-      integer,intent(in)    :: mrot(3,3,nop)
-      integer,intent(in)    :: nvd
       integer,intent(in)    :: shiftkpt(3)
-      real,intent(in)       :: tau(3,nop)
 !      real,intent(inout)    :: bkpt(3)
 !      integer,intent(inout) :: k1(:,:),k2(:,:),k3(:,:) !nvd,jspd
       TYPE(t_lapw),intent(inout)  :: lapw
@@ -62,12 +57,12 @@ c****************************************
 
       absoper=abs(oper)
 
-      call inv3(mrot(:,:,absoper),rotmat,determ)
-      shiftnonsymm(:)=matmul(rotmat,tau(:,absoper))
+      call inv3(sym%mrot(:,:,absoper),rotmat,determ)
+      shiftnonsymm(:)=matmul(rotmat,sym%tau(:,absoper))
 
-c      testmat=matmul(mrot(:,:,absoper),rotmat)
+c      testmat=matmul(sym%mrot(:,:,absoper),rotmat)
 c      print*,testmat
-c      testmat=matmul(rotmat,mrot(:,:,absoper))
+c      testmat=matmul(rotmat,sym%mrot(:,:,absoper))
 c      print*,testmat
 
       IF(.NOT.zMat%l_real) THEN
@@ -91,20 +86,20 @@ c      print*,testmat
           if(.not.(l_noco.and.(jspin.eq.2)))then
             bkrot(:)=0.0
             do k=1,3
-              bkrot(:)=bkrot(:)+mrot(k,:,absoper)*lapw%bkpt(k)
+              bkrot(:)=bkrot(:)+sym%mrot(k,:,absoper)*lapw%bkpt(k)
             enddo
             lapw%bkpt(:)=bkrot(:)
           endif
           do j=1,lapw%nv(jspin)  !rotate reciprocal vector
-               j1=mrot(1,1,absoper)*lapw%k1(j,jspin)+
-     +            mrot(2,1,absoper)*lapw%k2(j,jspin)+
-     +            mrot(3,1,absoper)*lapw%k3(j,jspin)
-               j2=mrot(1,2,absoper)*lapw%k1(j,jspin)+
-     +            mrot(2,2,absoper)*lapw%k2(j,jspin)+
-     +            mrot(3,2,absoper)*lapw%k3(j,jspin)
-               j3=mrot(1,3,absoper)*lapw%k1(j,jspin)+
-     +            mrot(2,3,absoper)*lapw%k2(j,jspin)+
-     +            mrot(3,3,absoper)*lapw%k3(j,jspin)
+               j1=sym%mrot(1,1,absoper)*lapw%k1(j,jspin)+
+     +            sym%mrot(2,1,absoper)*lapw%k2(j,jspin)+
+     +            sym%mrot(3,1,absoper)*lapw%k3(j,jspin)
+               j2=sym%mrot(1,2,absoper)*lapw%k1(j,jspin)+
+     +            sym%mrot(2,2,absoper)*lapw%k2(j,jspin)+
+     +            sym%mrot(3,2,absoper)*lapw%k3(j,jspin)
+               j3=sym%mrot(1,3,absoper)*lapw%k1(j,jspin)+
+     +            sym%mrot(2,3,absoper)*lapw%k2(j,jspin)+
+     +            sym%mrot(3,3,absoper)*lapw%k3(j,jspin)
                lapw%k1(j,jspin)=j1
                lapw%k2(j,jspin)=j2
                lapw%k3(j,jspin)=j3

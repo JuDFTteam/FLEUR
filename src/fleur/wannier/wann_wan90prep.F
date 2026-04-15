@@ -14,8 +14,7 @@ c                FF, September 2006
 c**********************************************************
       CONTAINS
       SUBROUTINE wann_wan90prep(input,kpts,
-     >      jspins,amat,bmat,natd,taual_inp,zatom,ntype,
-     >      ntypd,neq,l_bzsym,film,l_ms,l_sgwf,l_socgwf,
+     >      jspins,atoms,cell,l_bzsym,film,l_ms,l_sgwf,l_socgwf,
      >      aux_latt_const,param_file,l_dim,wan90version)
 
       USE m_wann_postproc_setup
@@ -33,17 +32,12 @@ c**********************************************************
 
       TYPE(t_input), INTENT(IN) :: input
       TYPE(t_kpts), INTENT(IN)  :: kpts
+      TYPE(t_atoms), INTENT(IN) :: atoms
+      TYPE(t_cell), INTENT(IN)  :: cell
       integer,intent(in)  :: jspins
-      integer,intent(in)  :: ntype
-      integer,intent(in)  :: ntypd
       logical,intent(in)  :: l_bzsym
       logical,intent(in)  :: film
-      real,intent(in)     :: amat(3,3),aux_latt_const
-      real,intent(in)     :: bmat(3,3)
-      integer,intent(in)  :: natd
-      real,intent(in)     :: taual_inp(3,natd)
-      real,intent(in)     :: zatom(ntype)
-      integer,intent(in)  :: neq(ntypd)
+      real,intent(in)     :: aux_latt_const
      
       integer,intent(in)  :: wan90version
 
@@ -51,7 +45,7 @@ c**********************************************************
       character(len=20),intent(in) :: param_file
 
       real             :: scale,scale_q
-      real             :: taual(3,natd)
+      real             :: taual(3,atoms%nat)
       real             :: amat_ang(3,3)
       real             :: bmat_ang(3,3)
       integer          :: at,j,n,bb
@@ -73,7 +67,7 @@ c**********************************************************
       real,allocatable :: qpoints(:,:)
       real             :: amat_ang_q(3,3),bmat_ang_q(3,3)
       real             :: amat_q(3,3),bmat_q(3,3)
-      real             :: taual_q(3,natd)
+      real             :: taual_q(3,atoms%nat)
       integer          :: nqpts=1,nqptd=1
       integer          :: numq(3)
       logical, intent(in) :: l_ms,l_sgwf,l_socgwf
@@ -139,15 +133,15 @@ c*********************************************************
      <         num)
 
 
-      taual=taual_inp
+      taual=atoms%taual
       if(film)then
-         do n=1,natd
-           taual(1,n)=taual_inp(1,n)+0.5
-           taual(2,n)=taual_inp(2,n)+0.5
+         do n=1,atoms%nat
+           taual(1,n)=atoms%taual(1,n)+0.5
+           taual(2,n)=atoms%taual(2,n)+0.5
          enddo
       elseif(film)then
-         do n=1,natd
-           taual(3,n)=taual_inp(3,n)+0.5
+         do n=1,atoms%nat
+           taual(3,n)=atoms%taual(3,n)+0.5
          enddo
       endif
 
@@ -194,14 +188,15 @@ c        proj file provides num_wann and num_bands
             endif
 
             call wann_write_win(win_filename,film,num_wann,num_bands,
-     >               num_iter,jspin,ntype,ntypd,natd,nkpts,neq,num,amat,
-     >               kpoints,zatom,taual,namat,3)
+     >               num_iter,jspin,atoms%ntype,atoms%ntype,atoms%nat,
+     >               nkpts,atoms%neq,num,cell%amat,
+     >               kpoints,atoms%zatom,taual,namat,3)
          enddo
 
       enddo!jspin
 
-      amat_ang=amat*bohr
-      bmat_ang=bmat/bohr
+      amat_ang=cell%amat*bohr
+      bmat_ang=cell%bmat/bohr
 
 c******************************************************
 c     call wannier90 routines to get bkpts
@@ -209,14 +204,14 @@ c******************************************************
 #ifdef CPP_WANN
       IF(wan90version.le.2)then !wanversion 1.1 and 1.2
         call wann_postproc_setup(
-     >         natd,nkpts,kpoints,amat_ang,bmat_ang,
-     >         num,num_bands,ntype,neq,
-     >         zatom,taual,namat,win_filename,'bkpts')
+     >         atoms%nat,nkpts,kpoints,amat_ang,bmat_ang,
+     >         num,num_bands,atoms%ntype,atoms%neq,
+     >         atoms%zatom,taual,namat,win_filename,'bkpts')
 	  else !wanversion 2.0
         call wann_postproc_setup2(
-     >         natd,nkpts,kpoints,amat_ang,bmat_ang,
-     >         num,num_bands,ntype,neq,
-     >         zatom,taual,namat,win_filename,'bkpts')
+     >         atoms%nat,nkpts,kpoints,amat_ang,bmat_ang,
+     >         num,num_bands,atoms%ntype,atoms%neq,
+     >         atoms%zatom,taual,namat,win_filename,'bkpts')
 	  endif
 #else
       WRITE(*,*) 'The code is supposed to perform the Wannier setup'
@@ -244,20 +239,21 @@ c******************************************************
       if(l_dim(3))taual_q(3,:)=0.0
 
       call wann_write_win('WF1_q',film,num_wann,num_bands,
-     >      num_iter,1,ntype,ntypd,natd,nqpts,neq,numq,amat_q,
-     >      qpoints,zatom,taual_q,namat,3)
+     >      num_iter,1,atoms%ntype,atoms%ntype,atoms%nat,nqpts,
+     >      atoms%neq,numq,amat_q,
+     >      qpoints,atoms%zatom,taual_q,namat,3)
 
 #ifdef CPP_WANN
       if(wan90version.le.2)then !wanversion 1.1 and 1.2
         call wann_postproc_setup(
-     >         natd,nqpts,qpoints,amat_ang_q,bmat_ang_q,
-     >         numq,num_bands,ntype,neq,
-     >         zatom,taual_q,namat,'WF1_q','bqpts')
+     >         atoms%nat,nqpts,qpoints,amat_ang_q,bmat_ang_q,
+     >         numq,num_bands,atoms%ntype,atoms%neq,
+     >         atoms%zatom,taual_q,namat,'WF1_q','bqpts')
 	  else !wanversion 2.0
         call wann_postproc_setup2(
-     >         natd,nqpts,qpoints,amat_ang_q,bmat_ang_q,
-     >         numq,num_bands,ntype,neq,
-     >         zatom,taual_q,namat,'WF1_q','bqpts')
+     >         atoms%nat,nqpts,qpoints,amat_ang_q,bmat_ang_q,
+     >         numq,num_bands,atoms%ntype,atoms%neq,
+     >         atoms%zatom,taual_q,namat,'WF1_q','bqpts')
 	  endif
 #else
       WRITE(*,*) 'The code is supposed to perform the Wannier setup'
@@ -283,7 +279,7 @@ c******************************************************
       enddo
 
       allocate(numkq(arr_len))
-      allocate(taual_kq(arr_len,natd))
+      allocate(taual_kq(arr_len,atoms%nat))
       allocate(amat_kq(arr_len,arr_len))
       allocate(bmat_kq(arr_len,arr_len))
 
@@ -298,8 +294,8 @@ c******************************************************
       ! set up amat_kq
       amat_kq = 0.0
       bmat_kq = 0.0
-      amat_kq(1:3,1:3) = amat(1:3,1:3)
-      bmat_kq(1:3,1:3) = bmat(1:3,1:3)
+      amat_kq(1:3,1:3) = cell%amat(1:3,1:3)
+      bmat_kq(1:3,1:3) = cell%bmat(1:3,1:3)
       if(l_dim(1)) amat_kq(4+shift(1),4+shift(1)) = amat_q(1,1)
       if(l_dim(1)) bmat_kq(4+shift(1),4+shift(1)) = bmat_q(1,1)
       if(l_dim(2)) amat_kq(4+shift(2),4+shift(2)) = amat_q(2,2)
@@ -308,16 +304,17 @@ c******************************************************
       if(l_dim(3)) bmat_kq(4+shift(3),4+shift(3)) = bmat_q(3,3)
 
       call wann_write_win('WF1_gwf',film,num_wann,num_bands,
-     >      0,1,ntype,ntypd,natd,nkqpts,neq,numkq,amat_kq,
-     >      kqpoints,zatom,taual_kq,namat,arr_len)
+     >      0,1,atoms%ntype,atoms%ntype,atoms%nat,nkqpts,
+     >      atoms%neq,numkq,amat_kq,
+     >      kqpoints,atoms%zatom,taual_kq,namat,arr_len)
 
 
       if(arr_len.eq.4) then
 #ifdef CPP_WANN4
          call wann_postproc_setup4(
-     >         natd,nkqpts,kqpoints,amat_kq*bohr,bmat_kq/bohr,
-     >         numkq,num_bands,ntype,neq,
-     >         zatom,taual_kq,namat,'WF1_gwf','bkqpts')
+     >         atoms%nat,nkqpts,kqpoints,amat_kq*bohr,bmat_kq/bohr,
+     >         numkq,num_bands,atoms%ntype,atoms%neq,
+     >         atoms%zatom,taual_kq,namat,'WF1_gwf','bkqpts')
 #else
       WRITE(*,*) 'The code is supposed to perform the Wannier-4 setup'
       WRITE(*,*) 'but the modified Wannier90-4 library is not linked.'
@@ -327,9 +324,9 @@ c******************************************************
       elseif(arr_len.eq.5) then
 #ifdef CPP_WANN5
          call wann_postproc_setup5(
-     >         natd,nkqpts,kqpoints,amat_kq*bohr,bmat_kq/bohr,
-     >         numkq,num_bands,ntype,neq,
-     >         zatom,taual_kq,namat,'WF1_gwf','bkqpts')
+     >         atoms%nat,nkqpts,kqpoints,amat_kq*bohr,bmat_kq/bohr,
+     >         numkq,num_bands,atoms%ntype,atoms%neq,
+     >         atoms%zatom,taual_kq,namat,'WF1_gwf','bkqpts')
 #else
       WRITE(*,*) 'The code is supposed to perform the Wannier-5 setup'
       WRITE(*,*) 'but the modified Wannier90-5 library is not linked.'

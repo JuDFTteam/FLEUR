@@ -8,9 +8,8 @@
       contains
       subroutine wann_socmat(
      >               fmpi,enpara,input,noco,nococonv,atoms,
-     >               lmaxd,natd,neigd,
-     >               llod,jspd,
-     >               theta_in,phi_in,jspins,irank,
+     >               neigd,
+     >               theta_in,phi_in,jspins,
      >               vr,
      >               acof,bcof,chelp,
      <               hsomtx)
@@ -35,25 +34,19 @@ c***********************************************************************
       TYPE(t_nococonv),INTENT(IN) :: nococonv
       TYPE(t_atoms),INTENT(IN)    :: atoms
 
-      integer, intent(in) :: lmaxd
-      integer, intent(in) :: natd
       integer, intent(in) :: neigd
-
-      integer, intent(in) :: llod
-      integer, intent(in) :: jspd
 
 
       real,    intent(in) :: theta_in
       real,    intent(in) :: phi_in
       integer, intent(in) :: jspins
-      integer, intent(in) :: irank
 
 
       real,    intent(in) :: vr(:,0:,:,:)    ! jmtd,0:nlhd,ntypd,jspd
 
       complex, intent(in) :: acof(:,0:,:,:) !acof(noccbd,0:lmd,natd,jspd)
       complex, intent(in) :: bcof(:,0:,:,:) !bcof(noccbd,0:lmd,natd,jspd)
-      complex, intent(in) :: chelp(-llod:,:,:,:,:) !chelp(-llod:llod,neigd,nlod,natd,jspd)
+      complex, intent(in) :: chelp(-atoms%llod:,:,:,:,:) !chelp(-llod:llod,neigd,nlod,natd,jspd)
 
       complex, intent(out):: hsomtx(:,:,:,:) !(neigd,neigd,2,2)
 
@@ -97,13 +90,15 @@ c***********************************************************************
         ! is equivalent to the def in the noco-routines
       ENDIF
 
-      ALLOCATE ( ahelp(lmaxd*(lmaxd+2),natd,neigd,input%jspins) )
-      ALLOCATE ( bhelp(lmaxd*(lmaxd+2),natd,neigd,input%jspins) )
+      ALLOCATE ( ahelp(atoms%lmaxd*(atoms%lmaxd+2),atoms%nat,
+     +                   neigd,input%jspins) )
+      ALLOCATE ( bhelp(atoms%lmaxd*(atoms%lmaxd+2),atoms%nat,
+     +                   neigd,input%jspins) )
 
       do ispin=1,input%jspins
        DO ie = 1, neigd
-        DO na = 1, natd
-         DO l = 1, lmaxd
+        DO na = 1, atoms%nat
+         DO l = 1, atoms%lmaxd
           ll1 = l*(l+1)
           DO m = -l,l
              lm = ll1 + m
@@ -115,15 +110,15 @@ c***********************************************************************
        ENDDO !ie
       enddo !ispin
 
-      ALLOCATE(usdus%us(0:atoms%lmaxd,atoms%ntype,jspd),
-     +         usdus%dus(0:atoms%lmaxd,atoms%ntype,jspd),
-     +         usdus%uds(0:atoms%lmaxd,atoms%ntype,jspd),
-     +         usdus%duds(0:atoms%lmaxd,atoms%ntype,jspd),
-     +         usdus%ddn(0:atoms%lmaxd,atoms%ntype,jspd),
-     +         usdus%ulos(atoms%nlod,atoms%ntype,jspd),
-     +         usdus%dulos(atoms%nlod,atoms%ntype,jspd),
-     +         usdus%uulon(atoms%nlod,atoms%ntype,jspd),
-     +         usdus%dulon(atoms%nlod,atoms%ntype,jspd))
+      ALLOCATE(usdus%us(0:atoms%lmaxd,atoms%ntype,input%jspins),
+     +         usdus%dus(0:atoms%lmaxd,atoms%ntype,input%jspins),
+     +         usdus%uds(0:atoms%lmaxd,atoms%ntype,input%jspins),
+     +         usdus%duds(0:atoms%lmaxd,atoms%ntype,input%jspins),
+     +         usdus%ddn(0:atoms%lmaxd,atoms%ntype,input%jspins),
+     +         usdus%ulos(atoms%nlod,atoms%ntype,input%jspins),
+     +         usdus%dulos(atoms%nlod,atoms%ntype,input%jspins),
+     +         usdus%uulon(atoms%nlod,atoms%ntype,input%jspins),
+     +         usdus%dulon(atoms%nlod,atoms%ntype,input%jspins))
 
 !      ALLOCATE( us(0:lmaxd,ntypd,jspd), dus(0:lmaxd,ntypd,jspd),
 !     +          uds(0:lmaxd,ntypd,jspd),duds(0:lmaxd,ntypd,jspd),
@@ -138,7 +133,8 @@ c***********************************************************************
       rsoc%soangl= conjg(rsoc%soangl)
 
       CALL hsoham(atoms,noco,input,nsz,neigd,chelp,rsoc,ahelp,
-     >            bhelp,1,natd,fmpi%n_rank,fmpi%n_size,fmpi%SUB_COMM,
+     >            bhelp,1,atoms%nat,fmpi%n_rank,fmpi%n_size,
+     >            fmpi%SUB_COMM,
      <            hsomtx)
 
       call timestop("wann_socmat")

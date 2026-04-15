@@ -8,21 +8,17 @@
       use m_juDFT
       contains
       subroutine wann_ioncharge_gen(
-     >               num_atoms,ntype,natd,
-     >               neq,zatom,pos,
+     >               num_atoms,atoms,
      <               ioncharge)
 c********************************************
 c     Utility routine used to set up or read 
 c     the file 'ioncharge'.
 c     Frank Freimuth
 c********************************************
+      USE m_types
       implicit none
       integer, intent(in)          :: num_atoms
-      integer, intent(in)          :: ntype
-      integer, intent(in)          :: natd
-      integer, intent(in)          :: neq(ntype)
-      real,    intent(in)          :: pos(3,natd)
-      real,    intent(in)          :: zatom(ntype)
+      TYPE(t_atoms), INTENT(IN)    :: atoms
       real,    intent(out)         :: ioncharge(num_atoms)
 
       character*2                  :: namat2(0:103)
@@ -48,10 +44,10 @@ c********************************************
 
       allocate( namat(num_atoms) )
       ind=0
-      do j=1,ntype
-         do k=1,neq(j)
+      do j=1,atoms%ntype
+         do k=1,atoms%neq(j)
             ind=ind+1
-            namat(ind)=namat2(nint(zatom(j)))
+            namat(ind)=namat2(nint(atoms%zatom(j)))
          enddo
       enddo
 
@@ -86,7 +82,7 @@ c********************************************
 
       write(666,*)"ionic charges:"
       do j=1,num_atoms
-         write(666,fmt=111)namat(j),ioncharge(j),pos(:,j)
+         write(666,fmt=111)namat(j),ioncharge(j),atoms%pos(:,j)
       enddo
  111  format(a2," ",f6.3," ",3f8.3)
 

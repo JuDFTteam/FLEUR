@@ -1,11 +1,12 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_wann_optional
   USE m_juDFT
+   implicit none
 CONTAINS
   SUBROUTINE wann_optional(fmpi,input,kpts,atoms,sym,cell ,noco,wann)
     !**************************************************
@@ -51,7 +52,7 @@ CONTAINS
        inquire(file='projgen_inp',exist=l_file)
        if(.not.l_file)CALL juDFT_error ("projgen_inp", calledby="wann_optional")
        if(fmpi%irank==0)then
-        CALL wann_projgen(atoms%ntype,atoms%neq,atoms%nat,atoms%zatom,l_nocosoc,wann)
+        CALL wann_projgen(atoms,l_nocosoc,wann)
        endif
 !       l_stopopt=.TRUE.
     ENDIF
@@ -73,7 +74,7 @@ CONTAINS
     !-----find Wannier-irreducible part of BZ
     IF(wann%l_kptsreduc)THEN
           if(fmpi%irank==0)then
-       CALL wann_kptsreduc(sym%nop,sym%mrot,cell%bmat,sym%tau,input%film, l_nocosoc)
+       CALL wann_kptsreduc(sym,cell,input%film, l_nocosoc)
               endif
        l_stopopt=.TRUE.
     ENDIF
@@ -81,7 +82,7 @@ CONTAINS
     !-----find Wannier-irreducible part of BZ
     IF(wann%l_kptsreduc2)THEN
           if(fmpi%irank==0)then
-       CALL wann_kptsreduc2(wann%mhp, sym%nop,sym%mrot,cell%bmat,sym%tau,input%film, l_nocosoc)
+       CALL wann_kptsreduc2(wann%mhp, sym,cell,input%film, l_nocosoc)
               endif
        l_stopopt=.TRUE.
     ENDIF
@@ -89,8 +90,7 @@ CONTAINS
     !-----generate WF1.win and bkpts
     IF(wann%l_prepwan90)THEN
           if(fmpi%irank==0)then
-       CALL wann_wan90prep(input,kpts, input%jspins,cell%amat,cell%bmat, atoms%nat,atoms%taual,&
-            atoms%zatom,atoms%ntype, atoms%ntype,atoms%neq,wann%l_bzsym,input%film,&
+       CALL wann_wan90prep(input,kpts, input%jspins,atoms,cell,wann%l_bzsym,input%film,&
             wann%l_ms,wann%l_sgwf,wann%l_socgwf, wann%aux_latt_const,wann%param_file,wann%l_dim, &
             wann%wan90version)
                    endif
@@ -102,15 +102,15 @@ CONTAINS
        num_wann(1)=wann%band_max(1)-wann%band_min(1)+1
        num_wann(2)=wann%band_max(2)-wann%band_min(2)+1
              if(fmpi%irank==0)then
-       CALL wann_dipole3(input%jspins,cell%omtil,atoms%nat,atoms%pos, cell%amat,cell%bmat,atoms%taual,&
-            num_wann, atoms%ntype,atoms%neq,atoms%zatom,l_nocosoc)
+       CALL wann_dipole3(input%jspins,&
+            cell,atoms,num_wann, l_nocosoc)
                    endif
 !       l_stopopt=.TRUE.
     ENDIF
 
     IF(wann%l_dipole2.AND..NOT.wann%l_wannierize)THEN
       if(fmpi%irank==0)then
-       CALL wann_dipole2(input%jspins,atoms%pos,cell%omtil,atoms%nat,l_nocosoc)
+       CALL wann_dipole2(input%jspins,atoms,cell,l_nocosoc)
       endif
 !       l_stopopt=.TRUE.
     ENDIF!-----calculate polarization, if not wannierize
@@ -119,8 +119,7 @@ CONTAINS
     !-----if wannierize, then calculate polarization later (after wannierize)
     IF(wann%l_dipole.AND..NOT.wann%l_wannierize)THEN
           if(fmpi%irank==0)then
-       CALL wann_dipole(input%jspins,cell%omtil,atoms%nat,atoms%pos, cell%amat,atoms%ntype,&
-            atoms%neq,atoms%zatom)
+       CALL wann_dipole(input%jspins,cell,atoms)
                    endif
 !       l_stopopt=.TRUE.
     ENDIF

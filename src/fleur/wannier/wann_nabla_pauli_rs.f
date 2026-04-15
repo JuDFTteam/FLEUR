@@ -16,12 +16,13 @@ c*************************************************
       contains 
       subroutine wann_nabla_pauli_rs(
      >               rvecnum,rvec,kpoints,
-     >               jspins_in,nkpts,l_bzsym,film,
-     >               l_soc,band_min,band_max,neigd,
-     >               l_socmmn0,wan90version)
+     >               jspins_in,nkpts,wann,film,
+     >               l_soc,neigd,
+     >               l_socmmn0)
 
       use m_constants
       use m_wann_read_umatrix
+      USE m_types
 c$$$      use m_wann_wigner_seitz
 
       implicit none
@@ -30,11 +31,11 @@ c$$$      use m_wann_wigner_seitz
       real,    intent(in) :: kpoints(:,:)
       integer, intent(in) :: jspins_in
       integer, intent(in) :: nkpts
-      logical,intent (in) :: l_bzsym,l_soc
+      TYPE(t_wann),INTENT(IN) :: wann
+      logical,intent (in) :: l_soc
       logical,intent(in)  :: film
-      integer,intent(in)  :: band_min(2),band_max(2),neigd
+      integer,intent(in)  :: neigd
       logical, intent(in) :: l_socmmn0
-      integer, intent(in) :: wan90version
 
       integer             :: ikpt,jspins
       integer             :: kpts
@@ -164,7 +165,7 @@ c****************************************************************
          allocate( ndimwin(nkpts) )
          call wann_read_umatrix2(
      >            nkpts,num_wann,num_bands,
-     >            um_format,jspin,wan90version,
+     >            um_format,jspin,wann%wan90version,
      <            have_disentangled,
      <            lwindow,ndimwin,
      <            u_matrix_opt,u_matrix)
@@ -237,7 +238,7 @@ c****************************************************************
          hwann=cmplx(0.0,0.0)
          wann_shift=0
          if(l_socmmn0)then
-            wann_shift=band_min(jspin)-1
+            wann_shift=wann%band_min(jspin)-1
          endif
          do k=1,num_kpts
           do m=1,num_wann

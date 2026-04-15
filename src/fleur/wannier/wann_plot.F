@@ -38,15 +38,12 @@
 !     +++++++++++++++++++++++++++++++++++++++++++++++++
       CONTAINS
       SUBROUTINE wann_plot(
-     >      vacuum,stars,cell,atoms,
-     >     nv2d,jspin,n3d,nmzxyd,n2d,ntypsd,
-     >     ntype,lmaxd,jmtd,ntypd,natd,nmzd,neq,nq3,nvac,
-     >     nmz,nmzxy,nq2,nop,nop2,volint,film,slice,symor,
-     >     invs,invs2,z1,delz,ngopr,ntypsy,jri,pos,zatom,
-     >     lmax,mrot,tau,rmsh,invtab,amat,bmat,bbmat,ikpt,nnne,kk,
-     >     nvd,nlod,llod,nv,lmd,bkpt,omtil,nlo,llo,k1,k2,k3,evac,vz,
+     >      vacuum,stars,cell,atoms,sym,
+     >     nv2d,jspin,ntypsd,
+     >     film,slice,ikpt,nnne,kk,
+     >     nvd,nv,lmd,bkpt,k1,k2,k3,evac,vz,
      >     nslibd,nbasfcn,neigd,ff,gg,flo,acof,bcof,ccof,zMat,
-     >     k1d,k2d,k3d,ig,ig2,sk2,phi2,l_noco,l_ss,qss,addnoco,
+     >     l_noco,l_ss,qss,addnoco,
      >     index_kq,l_sgwf)
 !    *****************************************************
       USE m_constants
@@ -58,43 +55,32 @@
    
       IMPLICIT NONE
 
-      
-       
       TYPE(t_vacuum),INTENT(IN)      :: vacuum
       TYPE(t_stars),INTENT(IN)       :: stars
       TYPE(t_cell),INTENT(IN)        :: cell
       TYPE(t_atoms),INTENT(IN)       :: atoms
+      TYPE(t_sym),INTENT(IN)         :: sym
       TYPE(t_mat),INTENT(IN)         :: zMat
 
 !     .. Scalar Arguments ..
-      INTEGER, INTENT (IN) :: n3d,nmzxyd,n2d,ntypsd,ikpt,jspin,nv2d
-      INTEGER, INTENT (IN) :: lmaxd,jmtd,ntypd,natd,nmzd
-      INTEGER, INTENT (IN) :: nq3,nvac,nmz,nmzxy,nq2,nop,nop2,ntype
-      INTEGER, INTENT (IN) :: nvd,nv,lmd,llod,nlod
+      INTEGER, INTENT (IN) :: ntypsd,ikpt,jspin,nv2d
+      INTEGER, INTENT (IN) :: nvd,nv,lmd
       INTEGER, INTENT (IN) :: nslibd,nbasfcn,neigd
       INTEGER, INTENT (IN) :: nnne,kk,addnoco,index_kq
-      LOGICAL, INTENT (IN) :: symor,invs,slice,invs2,film
+      LOGICAL, INTENT (IN) :: slice,film
       LOGICAL, INTENT (IN) :: l_noco,l_ss,l_sgwf
-      REAL,    INTENT (IN) :: z1,delz,volint,omtil
       REAL,    INTENT (IN) :: qss(3)
-      real,    intent (in) :: vz(nmzd,2)
+      real,    intent (in) :: vz(:,:)
 !     ..
 !     .. Array Arguments ..
-      INTEGER, INTENT (IN) :: ngopr(natd),ntypsy(natd),lmax(ntypd)
-      INTEGER, INTENT (IN) :: jri(ntypd),neq(ntypd),mrot(3,3,nop)
-      INTEGER, INTENT (IN) :: invtab(nop),nlo(ntypd),llo(nlod,ntypd)
-      INTEGER, INTENT (IN) :: k1(nvd),k2(nvd),k3(nvd)
-      REAL,    INTENT (IN) :: zatom(:),amat(3,3),bmat(3,3),pos(3,natd)
-      REAL,    INTENT (IN) :: rmsh(jmtd,ntypd),tau(3,nop),bkpt(3)
-      REAL,    INTENT (IN) :: ff(ntypd,jmtd,2,0:lmaxd),bbmat(3,3)
-      REAL,    INTENT (IN) :: gg(ntypd,jmtd,2,0:lmaxd),evac(2)
-      REAL,    INTENT (IN) :: flo(ntypd,jmtd,2,nlod)
-      COMPLEX, INTENT (IN) :: ccof(-llod:llod,nslibd,nlod,natd)
-      COMPLEX, INTENT (IN) :: acof(nslibd,0:lmd,natd)
-      COMPLEX, INTENT (IN) :: bcof(nslibd,0:lmd,natd)
-      integer, intent (in) :: k1d,k2d,k3d,ig2(n3d)
-      integer, intent (in) :: ig(-k1d:k1d,-k2d:k2d,-k3d:k3d)
-      real,    intent (in) :: sk2(n2d),phi2(n2d)
+      INTEGER, INTENT (IN) :: k1(:),k2(:),k3(:)
+      REAL,    INTENT (IN) :: bkpt(3),evac(2)
+      REAL,    INTENT (IN) :: ff(:,:,:,0:)
+      REAL,    INTENT (IN) :: gg(:,:,:,0:)
+      REAL,    INTENT (IN) :: flo(:,:,:,:)
+      COMPLEX, INTENT (IN) :: ccof(-atoms%llod:,:,:,:)
+      COMPLEX, INTENT (IN) :: acof(:,0:,:)
+      COMPLEX, INTENT (IN) :: bcof(:,0:,:)
     
 !     ..
 !     .. Local Scalars ..
@@ -111,8 +97,8 @@
       REAL    :: pt(3),vec1(3),vec2(3),vec3(3),zero(3)
       INTEGER :: grid(3)
       LOGICAL :: cartesian,xsf
-      REAL    :: rhocc(jmtd)
-      REAL    :: point(3),post(3,natd)
+      REAL    :: rhocc(atoms%jmtd)
+      REAL    :: point(3),post(3,atoms%nat)
       CHARACTER(len=30):: filename
       CHARACTER(len=20):: name1,name2,name3
       CHARACTER(len=10):: vandername
@@ -174,10 +160,13 @@ c make preparations for plotting in vacuum
 
       if(film)then
          allocate ( ac(nv2d,nslibd,2),bc(nv2d,nslibd,2),
-     +         u(nmzd,nv2d,nvac),ue(nmzd,nv2d,nvac))
+     +         u(vacuum%nmzd,nv2d,vacuum%nvac),
+     +         ue(vacuum%nmzd,nv2d,vacuum%nvac))
          call wann_2dvacabcof(
-     >         nv2d,nslibd,nvac,nmzd,nmz,omtil,vz,nv,bkpt,z1,
-     >         nvd,k1,k2,k3,evac,bbmat,delz,bmat,nbasfcn,neigd,zMat,
+     >         cell,vacuum,
+     >         nv2d,nslibd,vz,nv,bkpt,
+     >         nvd,k1,k2,k3,evac,
+     >         nbasfcn,neigd,zMat,
      <         ac,bc,u,ue,addnoco,l_ss,qss,jspin)
       endif
 
@@ -208,10 +197,10 @@ c make preparations for plotting in vacuum
          IF (twodim) grid(3) = 1
          !calculate cartesian coordinates if needed
          IF (.NOT.cartesian) THEN
-            vec1=matmul(amat,vec1)
-            vec2=matmul(amat,vec2)
-            vec3=matmul(amat,vec3)
-            zero=matmul(amat,zero)
+            vec1=matmul(cell%amat,vec1)
+            vec2=matmul(cell%amat,vec2)
+            vec3=matmul(cell%amat,vec3)
+            zero=matmul(cell%amat,zero)
          ENDIF
          !Open the file
          IF (filename =="default") WRITE(filename,'(a,i2)') "plot",nplo
@@ -226,11 +215,11 @@ c..loop by the bands
             write (name3,24) ikpt,nbn,jspin
    24       format (i5.5,'.',i3.3,'.absv.',i1,'.xsf')
             OPEN(55,file=name1)
-            CALL xsf_WRITE_atoms(55,atoms,film,amat)
+            CALL xsf_WRITE_atoms(55,atoms,film,cell%amat)
             OPEN(56,file=name2)
-            CALL xsf_WRITE_atoms(56,atoms,film,amat)
+            CALL xsf_WRITE_atoms(56,atoms,film,cell%amat)
             OPEN(57,file=name3)
-            CALL xsf_WRITE_atoms(57,atoms,film,amat)
+            CALL xsf_WRITE_atoms(57,atoms,film,cell%amat)
             CALL xsf_WRITE_header(55,twodim,filename,(vec1),
      &       (vec2),(vec3),zero
      $           ,grid)
@@ -258,7 +247,7 @@ c..loop by the bands
          ENDIF
 
          if(film)then
-           fas=-bkpt(3)*bmat(3,3)*z1
+           fas=-bkpt(3)*cell%bmat(3,3)*cell%z1
            factor=cmplx(cos(fas),sin(fas))
          else
            factor=cmplx(1.0,0.0)
@@ -280,24 +269,26 @@ c..loop by the bands
              DO  i1 = -ii1,ii1
               DO  i2 = -ii2,ii2
                DO  i3 = -ii3,ii3
-                pt = point+MATMUL(amat,(/i1,i2,i3/))
+                pt = point+MATMUL(cell%amat,(/i1,i2,i3/))
                 na = 0
-                DO nt = 1,ntype
-                 DO nq = 1,neq(nt)
+                DO nt = 1,atoms%ntype
+                 DO nq = 1,atoms%neq(nt)
                   na   = na + 1
-                  s  = SQRT(dot_PRODUCT(pos(:,na)-pt,pos(:,na)-pt))
-                  IF (s<rmsh(jri(nt),nt)) THEN
+                  s  = SQRT(dot_PRODUCT(
+     +                 atoms%pos(:,na)-pt,
+     +                 atoms%pos(:,na)-pt))
+                  IF (s<atoms%rmsh(atoms%jri(nt),nt)) THEN
                     CALL wann_real(
-     >                   pt,nt,na,0,1,bkpt,nbn,
-     >                   n3d,nmzxyd,n2d,ntypsd,lmaxd,jmtd,
-     >                   natd,ntypd,nmzd,nop,nop2,mrot,tau,invtab,
-     >                   nq3,nvac,invs,z1,delz,nmz,nmzxy,nq2,
-     >                   lmax,rmsh,jri,pos,ngopr,ntypsy,nvd,
-     >                   omtil,amat,bmat,nlod,llod,nlo,llo,
-     >                   ff,gg,flo,acof(nbn,:,:),bcof(nbn,:,:),
-     >                   ccof(:,nbn,:,:),zMat,
-     >                   nv,k1,k2,k3,lmd,nbasfcn,l_ss,qss,jspin,addnoco,
-     <                   xdnout)
+     >            pt,nt,na,0,1,bkpt,nbn,
+     >            atoms,cell,sym,
+     >            ff,gg,flo,
+     >            acof(nbn,:,:),
+     >            bcof(nbn,:,:),
+     >            ccof(:,nbn,:,:),zMat,
+     >            nv,k1,k2,k3,lmd,
+     >            nbasfcn,l_ss,qss,
+     >            jspin,addnoco,
+     <            xdnout)
                     xdnout=xdnout*factor
                    IF (xsf) THEN
                       WRITE(55,*) real(xdnout)
@@ -314,15 +305,18 @@ c..loop by the bands
               ENDDO
              ENDDO !i1
 !Check for point in vacuum
-             IF (film.AND.ABS(point(3))>=z1) THEN
+             IF (film.AND.ABS(point(3))>=cell%z1) THEN
                 ivac=1
                 if (point(3).lt. 0.0)ivac=2
                 jvac=ivac
-                if(nvac==1)jvac=1
-                call wann_plot_vac(point,z1,nmzd,nv2d,n3d,nvac,
-     >            nmz,delz,bmat,bbmat,evac,bkpt,vz,jspin,k1,k2,k3,nvd, 
-     >            nbasfcn,neigd,nv,omtil,nslibd,ac(:,nbn,ivac),
-     &             bc(:,nbn,ivac),
+                if(vacuum%nvac==1)jvac=1
+                call wann_plot_vac(point,
+     >            cell,vacuum,
+     >            nv2d,evac,bkpt,vz,
+     >            jspin,k1,k2,k3,nvd,
+     >            nbasfcn,neigd,nv,
+     >            nslibd,ac(:,nbn,ivac),
+     &            bc(:,nbn,ivac),
      &            u(:,:,jvac),ue(:,:,jvac),xdnout)
                 xdnout=xdnout*factor
                 if(real(xdnout).gt.9.0 .or.real(xdnout).lt.-9.0
@@ -353,16 +347,16 @@ c     <              xdnout)
             
             
              CALL wann_real(
-     >             point,0,0,0,2,bkpt,nbn,
-     >             n3d,nmzxyd,n2d,ntypsd,lmaxd,jmtd,
-     >             natd,ntypd,nmzd,nop,nop2,mrot,tau,invtab,
-     >             nq3,nvac,invs,z1,delz,nmz,nmzxy,nq2,
-     >             lmax,rmsh,jri,pos,ngopr,ntypsy,nvd,
-     >             omtil,amat,bmat,nlod,llod,nlo,llo,
-     >             ff,gg,flo,acof(nbn,:,:),bcof(nbn,:,:),
-     >             ccof(:,nbn,:,:),zMat,
-     >             nv,k1,k2,k3,lmd,nbasfcn,l_ss,qss,jspin,addnoco,
-     <             xdnout)
+     >            point,0,0,0,2,bkpt,nbn,
+     >            atoms,cell,sym,
+     >            ff,gg,flo,
+     >            acof(nbn,:,:),
+     >            bcof(nbn,:,:),
+     >            ccof(:,nbn,:,:),zMat,
+     >            nv,k1,k2,k3,lmd,
+     >            nbasfcn,l_ss,qss,
+     >            jspin,addnoco,
+     <            xdnout)
              xdnout=xdnout*factor
              IF (xsf) THEN
                 WRITE(55,*) real(xdnout)

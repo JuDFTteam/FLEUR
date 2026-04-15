@@ -8,9 +8,8 @@
          use m_judft
       CONTAINS
       SUBROUTINE wann_mmk0_updown_sph(
-     >               l_noco,alph,beta,
-     >               llod,noccbd,nlod,natd,ntypd,lmaxd,lmax,lmd,
-     >               ntype,neq,nlo,llo,
+     >               atoms,l_noco,alph,beta,
+     >               noccbd,lmd,
      >               radial1_ff,radial1_gg,
      >               radial1_fg,radial1_gf,
      >               radial1_flo,radial1_glo,
@@ -25,14 +24,13 @@ c     with the spin-up parts.
 c                           Frank Freimuth
 c************************************************************
       use m_constants
+      USE m_types
       implicit none
+      TYPE(t_atoms), INTENT(IN) :: atoms
       logical, intent (in)  :: l_noco
-      integer, intent (in)  :: llod,nlod,natd,ntypd,lmaxd,lmd
-      integer, intent (in)  :: lmax(:) !(ntypd)
-      integer, intent (in)  :: ntype,noccbd
-      REAL,    INTENT (IN)  :: alph(ntypd),beta(ntypd)
-      integer, intent (in)  :: neq(ntypd)
-      integer, intent (in)  :: nlo(ntypd),llo(nlod,ntypd)
+      integer, intent (in)  :: lmd
+      integer, intent (in)  :: noccbd
+      REAL,    INTENT (IN)  :: alph(:),beta(:)
       real,    intent (in)  :: radial1_ff(:,:,0:,0:,:)
       real,    intent (in)  :: radial1_gg(:,:,0:,0:,:)      
       real,    intent (in)  :: radial1_fg(:,:,0:,0:,:)
@@ -42,13 +40,13 @@ c************************************************************
       real,intent(in)       :: radial1_lof(:,:,:,0:,:)
       real,intent(in)       :: radial1_log(:,:,:,0:,:)
       real,intent(in)       :: radial1_lolo(:,:,:,:,:)
-      real,    intent (in)  :: ddn(0:lmaxd,ntypd,2)
-      real,    intent (in)  :: uloulopn(nlod,nlod,ntypd,2)
-      real,    intent (in)  :: uulon(nlod,ntypd,2),dulon(nlod,ntypd,2)
-      complex, intent (in)  :: ccof(-llod:llod,noccbd,nlod,natd,2)
-      complex, intent (in)  :: acof(noccbd,0:lmd,natd,2)
-      complex, intent (in)  :: bcof(noccbd,0:lmd,natd,2)
-      complex, intent (inout) :: mmn(noccbd,noccbd)
+      real,    intent (in)  :: ddn(0:,:,:)
+      real,    intent (in)  :: uloulopn(:,:,:,:)
+      real,    intent (in)  :: uulon(:,:,:),dulon(:,:,:)
+      complex, intent (in)  :: ccof(-atoms%llod:,:,:,:,:)
+      complex, intent (in)  :: acof(:,0:,:,:)
+      complex, intent (in)  :: bcof(:,0:,:,:)
+      complex, intent (inout) :: mmn(:,:)
 
       integer           :: i,j,l,lo,lop,m,natom,nn,ntyp
       integer           :: nt1,nt2,lm,n,ll1,i1spin,i2spin
@@ -61,25 +59,25 @@ c************************************************************
       COMPLEX           :: ccchi(2,2)
 
       call timestart("wann_mmk0_updown_sph")
-      allocate (qlo(noccbd,noccbd,nlod,nlod,ntypd), 
-     +          qaclo(noccbd,noccbd,nlod,ntypd),
-     +          qbclo(noccbd,noccbd,nlod,ntypd),
-     +          qcloa(noccbd,noccbd,nlod,ntypd),
-     +          qclob(noccbd,noccbd,nlod,ntypd))
+      allocate (qlo(noccbd,noccbd,atoms%nlod,atoms%nlod,atoms%ntype), 
+     +          qaclo(noccbd,noccbd,atoms%nlod,atoms%ntype),
+     +          qbclo(noccbd,noccbd,atoms%nlod,atoms%ntype),
+     +          qcloa(noccbd,noccbd,atoms%nlod,atoms%ntype),
+     +          qclob(noccbd,noccbd,atoms%nlod,atoms%ntype))
  
 c---> performs summations of the overlaps of the wavefunctions
       do i = 1,noccbd            
        do j = 1,noccbd
          nt1 = 1
-         do n = 1,ntype
+         do n = 1,atoms%ntype
           if(l_noco)then
             ccchi(1,1) = conjg( exp( ImagUnit*alph(n)/2)*cos(beta(n)/2))
             ccchi(1,2) = conjg(-exp( ImagUnit*alph(n)/2)*sin(beta(n)/2))
             ccchi(2,1) = conjg( exp(-ImagUnit*alph(n)/2)*sin(beta(n)/2))
             ccchi(2,2) = conjg( exp(-ImagUnit*alph(n)/2)*cos(beta(n)/2))
             endif
-            nt2 = nt1 + neq(n) - 1
-            do l = 0,lmax(n)
+            nt2 = nt1 + atoms%neq(n) - 1
+            do l = 0,atoms%lmax(n)
              if(.not.l_noco)then  
                suma = cmplx(0.,0.)
                sumb = cmplx(0.,0.)
@@ -149,7 +147,7 @@ c---> performs summations of the overlaps of the wavefunctions
              endif   
 
             enddo !l
-            nt1 = nt1 + neq(n)
+            nt1 = nt1 + atoms%neq(n)
          enddo !n   
        enddo   ! cycle by j-band
       enddo  !  cycle by i-band
@@ -163,11 +161,11 @@ c---> initialize qlo arrays
 
 c---> prepare the coefficients
       natom = 0
-      do ntyp = 1,ntype
-         do nn = 1,neq(ntyp)
+      do ntyp = 1,atoms%ntype
+         do nn = 1,atoms%neq(ntyp)
             natom = natom + 1
-            do lo = 1,nlo(ntyp)
-               l = llo(lo,ntyp)
+            do lo = 1,atoms%nlo(ntyp)
+               l = atoms%llo(lo,ntyp)
                ll1 = l* (l+1)
                do m = -l,l
                   lm = ll1 + m
@@ -189,8 +187,8 @@ c     +                acof(i,lm,natom,1)*conjg(ccof(m,j,lo,natom,2))+
                    enddo
                   enddo
                enddo
-               do lop = 1,nlo(ntyp)
-                 if (llo(lop,ntyp).eq.l) then
+               do lop = 1,atoms%nlo(ntyp)
+                 if (atoms%llo(lop,ntyp).eq.l) then
                    do m = -l,l
                      do i = 1,noccbd
                       do j = 1,noccbd
@@ -207,9 +205,9 @@ c     +                acof(i,lm,natom,1)*conjg(ccof(m,j,lo,natom,2))+
       enddo
 c---> perform summation of the coefficients with the integrals
 c---> of the radial basis functions
-      do ntyp = 1,ntype
-         do lo = 1,nlo(ntyp)
-            l = llo(lo,ntyp)
+      do ntyp = 1,atoms%ntype
+         do lo = 1,atoms%nlo(ntyp)
+            l = atoms%llo(lo,ntyp)
             do j = 1,noccbd
              do i = 1,noccbd
                mmn(i,j)= mmn(i,j)  + 
@@ -222,8 +220,8 @@ c---> of the radial basis functions
      +    qclob(i,j,lo,ntyp)*radial1_log(1,2,lo,l,ntyp)  
              enddo
             enddo 
-            do lop = 1,nlo(ntyp)
-               if (llo(lop,ntyp).eq.l) then
+            do lop = 1,atoms%nlo(ntyp)
+               if (atoms%llo(lop,ntyp).eq.l) then
                do j = 1,noccbd
                 do i = 1,noccbd
                  mmn(i,j) = mmn(i,j)  + 

@@ -9,10 +9,8 @@
       contains 
       subroutine wann_hopping(
      >          rvecnum,rvec,kpoints,
-     >          jspins_in,nkpts,l_bzsym,film,
-     >          l_soc,band_min,band_max,neigd,
-     >          l_socmmn0,l_ndegen,ndegen,wan90version,
-     >          l_unformatted)
+     >          jspins_in,nkpts,wann,film,
+     >          l_soc,neigd,ndegen)
 c****************************************************
 c     Calculate the hoppings using the information
 c     in file WF1.chk produced by wannier90.
@@ -22,6 +20,7 @@ c****************************************************
       use m_constants
       use m_wann_read_umatrix
       use m_juDFT
+      USE m_types
 c      use m_wann_get_mp
 c      use m_wann_get_kpts
 c      use m_wann_wigner_seitz
@@ -32,14 +31,11 @@ c      use m_wann_wigner_seitz
       real,    intent(in) :: kpoints(:,:)
       integer, intent(in) :: jspins_in
       integer, intent(in) :: nkpts
-      logical, intent(in) :: l_bzsym,l_soc
+      TYPE(t_wann),INTENT(IN) :: wann
+      logical, intent(in) :: l_soc
       logical, intent(in) :: film
-      integer, intent(in) :: band_min(2),band_max(2),neigd
-      logical, intent(in) :: l_socmmn0
-      logical, intent(in) :: l_ndegen
-      integer, intent(in) :: ndegen(:)
-      integer, intent(in) :: wan90version
-      logical, intent(in) :: l_unformatted	
+      integer, intent(in) :: neigd
+      integer, intent(in) :: ndegen(:)	
 
       integer             :: ikpt,jspins
       integer             :: kpts
@@ -142,7 +138,7 @@ c****************************************************************
          allocate( ndimwin(nkpts) )
          call wann_read_umatrix2(
      >               nkpts,num_wann,num_bands,
-     >               um_format,jspin,wan90version,
+     >               um_format,jspin,wann%wan90version,
      <               have_disentangled,
      <               lwindow,ndimwin,
      <               u_matrix_opt,u_matrix)
@@ -150,7 +146,7 @@ c****************************************************************
 c     read in eig-file
 c****************************************************************
          num_bands2=num_bands
-         if(l_soc.and.l_socmmn0)then
+         if(l_soc.and.wann%l_socmmn0)then
           num_bands2=neigd
          endif
          write(oUnit,*)"read in eig-file"
@@ -255,8 +251,8 @@ c****************************************************************
          allocate(hwann(num_wann,num_wann,num_kpts))
          hwann=cmplx(0.0,0.0)
          wann_shift=0
-         if(l_socmmn0)then
-            wann_shift=band_min(jspin)-1
+         if(wann%l_socmmn0)then
+            wann_shift=wann%band_min(jspin)-1
          endif
 
          do k=1,num_kpts
@@ -275,9 +271,9 @@ c****************************************************************
 
          num_wann2=num_wann
          wann_shift=0
-         if(l_socmmn0)then
+         if(wann%l_socmmn0)then
           num_wann2=neigd
-          wann_shift=band_min(jspin)-1
+          wann_shift=wann%band_min(jspin)-1
          endif
          write(oUnit,*)"num_wann2=",num_wann2
          write(oUnit,*)"num_wann=",num_wann
@@ -414,7 +410,7 @@ c***********************************************************
       enddo !rvecind
       hreal=hreal/cmplx(real(nkpts),0.0)
 
-      if(l_ndegen)then
+      if(wann%l_ndegen)then
         do rvecind=1,rvecnum
           do m2=1,num_wann
             do m1=1,num_wann
@@ -423,7 +419,7 @@ c***********************************************************
             enddo !m1
           enddo !m2
         enddo !rvecind  
-      endif !l_ndegen
+      endif !wann%l_ndegen
 
 c************************************************************
 c              calculate hoppings for soc
@@ -512,9 +508,9 @@ c$$$      endif
        deallocate(hrealsoc,hwannsoc)
       endif !l_soc  
 
-      if(l_unformatted)then
+      if(wann%l_unformatted)then
        if(l_soc)then  
-        if(l_ndegen)then		
+        if(wann%l_ndegen)then		
          open(321,file='hunfndegen',form='unformatted'
 #ifdef CPP_INTEL
      &                  ,convert='BIG_ENDIAN'
@@ -528,7 +524,7 @@ c$$$      endif
      &                   )
         endif	
        else
-        if(l_ndegen)then		
+        if(wann%l_ndegen)then		
          open(321,file='hunfndegen'//spinspin12(jspin),
      &                  form='unformatted'
 #ifdef CPP_INTEL
@@ -549,7 +545,7 @@ c$$$      endif
        write(321)rvec
        write(321)hreal	
       else	
-       if(l_ndegen)then
+       if(wann%l_ndegen)then
         open(321,file='hopping_ndegen'//spinspin12(jspin),
      &            form='formatted')
        else
@@ -567,7 +563,7 @@ c$$$      endif
            enddo
          enddo   
        enddo !rvecnum
-      endif !l_unformatted 	 
+      endif !wann%l_unformatted 	 
       close(321)
 
       deallocate(lwindow,u_matrix_opt,ndimwin)

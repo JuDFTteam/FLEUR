@@ -8,9 +8,7 @@
       use m_juDFT
       contains
       subroutine wann_amn(
-     >               chi,nslibd,nwfsd,ntypd,nlod,llod,llo,nlo,
-     >               lmaxd,jmtd,lmd,neq,natd,ikpt,nbnd,
-     >               rmsh,rmt,jri,dx,lmax,
+     >               atoms,chi,nslibd,nwfsd,lmd,ikpt,nbnd,
      >               us,dus,uds,duds,flo,
      >               ff,gg,acof,bcof,ccof,l_nocosoc,jspin,
      &               l_amn2_in,
@@ -63,21 +61,22 @@ c*********************************************************************
       use m_wann_tlmw
       use m_wann_rad_twf
       use m_eulerrot
+      use m_types
       implicit none
 
-      integer, intent (in)    :: nwfsd,nslibd,ntypd,nlod,llod
-      integer, intent (in)    :: jmtd,lmaxd,lmd,natd,ikpt,nbnd
-      integer, intent (in)    :: jri(ntypd),nlo(ntypd),llo(nlod,ntypd)
-      integer, intent (in)    :: neq(ntypd),lmax(ntypd),jspin
-      real,    intent (in)    :: rmsh(jmtd,ntypd),rmt(ntypd),dx(ntypd)
-      real,    intent (in)    :: us(0:lmaxd,ntypd),dus(0:lmaxd,ntypd)
-      real,    intent (in)    :: uds(0:lmaxd,ntypd),duds(0:lmaxd,ntypd)
-      real,    intent (in)    :: ff(ntypd,jmtd,2,0:lmaxd)
-      real,    intent (in)    :: gg(ntypd,jmtd,2,0:lmaxd)
-      real,    intent (in)    :: flo(ntypd,jmtd,2,nlod)
-      complex, intent (in)    :: acof(nslibd,0:lmd,natd)
-      complex, intent (in)    :: bcof(nslibd,0:lmd,natd)
-      complex, intent (in)    :: ccof(-llod:llod,nslibd,nlod,natd)
+      TYPE(t_atoms), INTENT(IN) :: atoms
+      integer, intent (in)    :: nwfsd,nslibd
+      integer, intent (in)    :: lmd,ikpt,nbnd
+      integer, intent (in)    :: jspin
+      real,    intent (in)    :: us(0:,:),dus(0:,:)
+      real,    intent (in)    :: uds(0:,:),duds(0:,:)
+      real,    intent (in)    :: ff(:,:,:,0:)
+      real,    intent (in)    :: gg(:,:,:,0:)
+      real,    intent (in)    :: flo(:,:,:,:)
+      complex, intent (in)    :: acof(:,0:,:)
+      complex, intent (in)    :: bcof(:,0:,:)
+      complex, intent (in)    ::
+     >   ccof(-atoms%llod:,:,:,:)
       logical, intent (in)    :: l_nocosoc
       logical, intent (inout) :: l_amn2_in
       complex, intent (inout) :: amn(nbnd,nwfsd)
@@ -85,7 +84,7 @@ c*********************************************************************
       complex, intent (in)    :: chi
 c...local
       integer          :: nwf,nwfs,nat,j,ntyp,ne,l,m,lm,iatom,i,mp,lo
-      integer          :: ind(nwfsd),ntp(natd),banddummy
+      integer          :: ind(nwfsd),ntp(atoms%nat),banddummy
       integer          :: lwf(nwfsd),mrwf(nwfsd),rwf(nwfsd),spi(nwfsd)
       real             :: alpha(nwfsd),beta(nwfsd),gamma(nwfsd)
       real             :: jwf(nwfsd),jmwf(nwfsd),pi
@@ -93,7 +92,8 @@ c...local
       real,allocatable :: weights(:)
       real             :: zona(nwfsd),regio(nwfsd),amx(3,3,nwfsd)
       real             :: rr,vl,vld,r0,vlo
-      real             :: rads(nwfsd,0:3,jmtd,2),vlpr(jmtd),vlprd(jmtd)
+      real             :: rads(nwfsd,0:3,atoms%jmtd,2)
+      real             :: vlpr(atoms%jmtd),vlprd(atoms%jmtd)
       complex          :: tlmwf(0:3,-3:3,nwfsd),tlmwft(0:3,-3:3,nwfsd)
       logical          :: l_oldproj,l_amn2,l_file
       complex          :: d_wgn(-3:3,-3:3,1:3),wign(-3:3,-3:3,3,nwfsd)
@@ -116,8 +116,8 @@ c..generates an array giving the atom type for each atom
       call timestart("gen ntp")
       ntp(:) = 0
       iatom = 0
-      do ntyp = 1,ntypd
-         do nat = 1,neq(ntyp)
+      do ntyp = 1,atoms%ntype
+         do nat = 1,atoms%neq(ntyp)
             iatom = iatom + 1
             ntp(iatom) = ntyp
          enddo
@@ -209,17 +209,18 @@ c..generating the radial twf function
       rads(:,:,:,:) = 0.
 
       call wann_rad_twf(
-     >         nwfs,jmtd,natd,ind,rwf,zona,regio,
-     >         us,dus,uds,duds,ff,gg,lmaxd,ikpt,
-     >         ntypd,ntp,jri,rmsh,dx,
-     >         nlod,flo,llo,nlo, 
+     >         atoms,
+     >         nwfs,ind,rwf,zona,regio,
+     >         us,dus,uds,duds,ff,gg,ikpt,
+     >         ntp,flo,
      <         rads)
 
       call timestart("write rads")
       open (100,file='rads')
-      do i = 1,jmtd
+      do i = 1,atoms%jmtd
 c       write (100,'(i3,2x,4f10.6)') i,rads(1,0:3,i,1)
-        write (100,'(f10.6,2x,4f10.6)') rmsh(i,1),rads(1,0:3,i,1)
+        write (100,'(f10.6,2x,4f10.6)') atoms%rmsh(i,1),
+     +       rads(1,0:3,i,1)
       enddo
       close(100)
       call timestop("write rads")
@@ -295,15 +296,15 @@ c...sum by wfs, each of them is localized at a certain mt
 c...sum by bands
          do ne = 1,nslibd
 c...sum by l,m
-            do l = 0,min(lmax(ntyp),3)
-               do j = 1,jri(ntyp)
+            do l = 0,min(atoms%lmax(ntyp),3)
+               do j = 1,atoms%jri(ntyp)
                   vlpr(j) = ff(ntyp,j,1,l)*rads(nwf,l,j,1)+
      +                      ff(ntyp,j,2,l)*rads(nwf,l,j,2) 
                   vlprd(j) = gg(ntyp,j,1,l)*rads(nwf,l,j,1) +
      +                       gg(ntyp,j,2,l)*rads(nwf,l,j,2)
                   if (rwf(nwf).gt.0)then
-                     vlpr(j) = vlpr(j)*rmsh(j,ntyp)
-                     vlprd(j) = vlprd(j)*rmsh(j,ntyp)
+                     vlpr(j) = vlpr(j)*atoms%rmsh(j,ntyp)
+                     vlprd(j) = vlprd(j)*atoms%rmsh(j,ntyp)
                   endif
 
                enddo
@@ -312,9 +313,11 @@ c..these integrations are not necessary if rads is the lin.comb.
 c..of the u_l and \dot{u}_l, but are necessary for other ways of
 c..constructing the radial part, therefore, we do it anyway
  
-               r0 = rmsh(1,ntyp)
-               call intgr3(vlpr,rmsh(1,ntyp),dx(ntyp),jri(ntyp),vl)
-               call intgr3(vlprd,rmsh(1,ntyp),dx(ntyp),jri(ntyp),vld)
+               r0 = atoms%rmsh(1,ntyp)
+               call intgr3(vlpr,atoms%rmsh(1,ntyp),
+     +            atoms%dx(ntyp),atoms%jri(ntyp),vl)
+               call intgr3(vlprd,atoms%rmsh(1,ntyp),
+     +            atoms%dx(ntyp),atoms%jri(ntyp),vld)
                do m = -l,l
                   lm = l*(l+1) + m
                   amn(ne,nwf) = amn(ne,nwf) +
@@ -325,20 +328,21 @@ c..constructing the radial part, therefore, we do it anyway
             enddo
 
 c..local orbitals
-            if (nlo(ntyp).ge.1) then
-               do lo = 1,nlo(ntyp)
-                  l = llo(lo,ntyp)
-                  do j = 1,jri(ntyp)
+            if (atoms%nlo(ntyp).ge.1) then
+               do lo = 1,atoms%nlo(ntyp)
+                  l = atoms%llo(lo,ntyp)
+                  do j = 1,atoms%jri(ntyp)
                      vlpr(j) = flo(ntyp,j,1,lo)*rads(nwf,l,j,1) +
      +                         flo(ntyp,j,2,lo)*rads(nwf,l,j,2)
                      if (rwf(nwf).gt.0)then
-                     vlpr(j) = vlpr(j)*rmsh(j,ntyp)
+                     vlpr(j) = vlpr(j)*atoms%rmsh(j,ntyp)
                      endif
                   enddo
 
 
-                  r0 = rmsh(1,ntyp)
-                  call intgr3(vlpr,rmsh(1,ntyp),dx(ntyp),jri(ntyp),vlo)
+                  r0 = atoms%rmsh(1,ntyp)
+                  call intgr3(vlpr,atoms%rmsh(1,ntyp),
+     +               atoms%dx(ntyp),atoms%jri(ntyp),vlo)
                   do m = -l,l
                      amn(ne,nwf) = amn(ne,nwf) +
      +          tlmwft(l,m,nwf)*conjg((ccof(m,ne,lo,nat)*vlo)*

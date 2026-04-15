@@ -16,10 +16,9 @@ c     calculated; map symmetry-related k-point-pairs to this
 c     minimal set.
 c     Frank Freimuth
 c******************************************************************
-      subroutine wann_mmnk_symm(input,kpts,
+      subroutine wann_mmnk_symm(input,kpts,sym,
      >               fullnkpts,nntot,bpt,gb,l_bzsym,
-     >               irreduc,mapkoper,l_p0,film,nop,
-     >               invtab,mrot,tau,
+     >               irreduc,mapkoper,l_p0,film,
      <               pair_to_do,maptopair,kdiff,l_q,param_file)
 
       USE m_constants
@@ -28,9 +27,7 @@ c******************************************************************
 
       TYPE(t_input),INTENT(IN)     :: input
       TYPE(t_kpts),INTENT(IN)      :: kpts
-      integer,intent(in) :: nop
-      integer,intent(in) :: mrot(3,3,nop)
-      integer,intent(in) :: invtab(nop)
+      TYPE(t_sym),INTENT(IN)       :: sym
       integer,intent(in) :: fullnkpts
       integer,intent(in) :: nntot
       integer,intent(in) :: bpt(nntot,fullnkpts)
@@ -39,7 +36,6 @@ c******************************************************************
       integer,intent(in) :: irreduc(fullnkpts)
       integer,intent(in) :: mapkoper(fullnkpts)
       logical,intent(in) :: l_p0,film
-      real,intent(in)    :: tau(3,nop)
 
       integer,intent(out):: pair_to_do(fullnkpts,nntot)
       integer,intent(out):: maptopair(3,fullnkpts,nntot)
@@ -57,7 +53,7 @@ c******************************************************************
       logical :: startloop,l_file
       real    :: kpoints(3,fullnkpts)
       real    :: kdiffvec(3)
-      integer :: multtab(nop,nop)
+      integer :: multtab(sym%nop,sym%nop)
       integer :: fullnkpts_tmp,kr
       real    :: scale
       real    :: brot(3)
@@ -76,12 +72,12 @@ c-----Test for nonsymmorphic space groups
       if(l_bzsym)then
        do ikpt=1,fullnkpts
          oper=abs(mapkoper(ikpt))
-         if( any( abs(tau(:,oper)).gt.1.e-6 ) ) l_testnosymm=.true.
+         if( any( abs(sym%tau(:,oper)).gt.1.e-6 ) ) l_testnosymm=.true.
        enddo
       endif
 
       if(l_bzsym)then
-         call close_pt(nop,mrot,multtab)
+         call close_pt(sym%nop,sym%mrot,multtab)
       endif
 
       do 10 ikpt = 1,fullnkpts  ! loop by k-points starts
@@ -97,7 +93,7 @@ c-----Test for nonsymmorphic space groups
               sign=1
            endif
            if(
-     &          any( abs(tau(:,oper)).gt.1.e-6 )
+     &          any( abs(sym%tau(:,oper)).gt.1.e-6 )
      &         )l_nosymm1=.true.
         endif
 
@@ -115,7 +111,7 @@ c-----Test for nonsymmorphic space groups
                sign_b=1
             endif
             if(
-     &          any( abs(tau(:,oper_b)).gt.1.e-6 )
+     &          any( abs(sym%tau(:,oper_b)).gt.1.e-6 )
      &         )l_nosymm2=.true.
          endif
 
@@ -175,13 +171,18 @@ c         if(all(gb(:,ikpt_b,ikpt).eq.0))then
                    brot(:)=0.0
                    do kr=1,3
                      brot(:)=brot(:)
-     &                 -sign_b*mrot(kr,:,oper)*gb(kr,ikpt_b,ikpt)
-     &                 +ngis_b*mrot(kr,:,oper_b)*gb(kr,repkpt_b,repkpt)
+     &                 -sign_b*sym%mrot(kr,:,oper)
+     &                          *gb(kr,ikpt_b,ikpt)
+     &                 +ngis_b*sym%mrot(kr,:,oper_b)
+     &                          *gb(kr,repkpt_b,repkpt)
                    enddo
                    if( any(   abs(brot).gt.1e-6       )   )cycle
                   endif
-                  if(sign*ngis*multtab(invtab(oper),repo).eq.
-     &               sign_b*ngis_b*multtab(invtab(oper_b),repo_b))then
+                  if(sign*ngis*
+     &              multtab(sym%invtab(oper),repo).eq.
+     &              sign_b*ngis_b*
+     &              multtab(sym%invtab(oper_b),repo_b))
+     &            then
                     maptopair(1,ikpt,ikpt_b)=repkpt
                     maptopair(2,ikpt,ikpt_b)=repkpt_b
                     maptopair(3,ikpt,ikpt_b)=2+(1-ngis*sign)/2

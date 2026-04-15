@@ -4,14 +4,12 @@
       public :: wann_torque
       contains
       subroutine wann_torque(
-     >               amat,
-     >               ntype,lmaxd,lmax,nat,
-     >               neq,noccbd,lmd,natd,llod,nlod, 
-     >               nlo,llo,
+     >               atoms,
+     >               noccbd,
      >               acof,bcof,ccof,
      >               us,dus,duds,uds,
      >               ulos,dulos,
-     >               rmt,pos,atomlist_num,atomlist, 
+     >               atomlist_num,atomlist, 
      >               l_soc,nbnd,
      &               torque)
 c******************************************************
@@ -19,51 +17,37 @@ c     Calculate matrix elements of the surface
 c     current operator.
 c     Frank Freimuth
 c******************************************************
-c      use m_dwigner
+      use m_types
       use m_constants, only:pimach
-c      use m_gaunt,only:gaunt1
-c      use m_wann_surfcurr_anglsum2
-c      use m_wann_gfactor
 
       implicit none
-      real,    intent(in) :: amat(:,:) !amat(3,3)
 
-      integer, intent(in) :: ntype
-      integer, intent(in) :: lmaxd
-      integer, intent(in) :: lmax(:) !lmax(ntype)
-      integer, intent(in) :: nat
+      TYPE(t_atoms), INTENT(IN) :: atoms
 
-      integer, intent(in) :: neq(:) !neq(ntype)
       integer, intent(in) :: noccbd
-      integer, intent(in) :: lmd,natd,llod,nlod
 
-      integer, intent(in) :: nlo(:) !nlo(ntype)
-      integer, intent(in) :: llo(:,:) !llo(nlod,ntype)
+      complex, intent(in) :: acof(:,0:,:,:)
+      complex, intent(in) :: bcof(:,0:,:,:)
+      complex, intent(in) :: ccof(-atoms%llod:,:,:,:,:)
 
-      complex, intent(in) :: acof(:,0:,:,:) !acof(noccbd,0:lmd,natd,jspins=2)
-      complex, intent(in) :: bcof(:,0:,:,:) !bcof(noccbd,0:lmd,natd,jspins=2)
-      complex, intent(in) :: ccof(-llod:,:,:,:,:) !ccof(-llod:llod,noccbd,nlod,natd,2)
+      real,    intent(in) :: us(0:,:,:)
+      real,    intent(in) :: dus(0:,:,:)
+      real,    intent(in) :: duds(0:,:,:)
+      real,    intent(in) :: uds(0:,:,:)
 
-      real,    intent(in) :: us(0:,:,:)    !us  (0:lmaxd,ntype,jspins=2)
-      real,    intent(in) :: dus(0:,:,:)   !dus (0:lmaxd,ntype,jspins=2)
-      real,    intent(in) :: duds(0:,:,:)  !duds(0:lmaxd,ntype,jspins=2)
-      real,    intent(in) :: uds(0:,:,:)   !uds (0:lmaxd,ntype,jspins=2)
+      real,    intent(in) :: ulos(:,:,:)
+      real,    intent(in) :: dulos(:,:,:)
 
-      real,    intent(in) :: ulos(:,:,:)   !ulos(nlod,ntype,jspins=2)
-      real,    intent(in) :: dulos(:,:,:)  !dulos(nlod,ntype,jspins=2)
-
-      real,    intent(in) :: rmt(:) !rmt(ntype)
-      real,    intent(in) :: pos(:,:)!pos(3,nat)
       integer, intent(in) :: atomlist_num
       integer, intent(in) :: atomlist(:)
 
       logical, intent(in) :: l_soc
       integer, intent(in) :: nbnd
 
-      complex, intent(out) :: torque(:,:,:,:) !noccbd,noccbd,3,atomlist_num
+      complex, intent(out) :: torque(:,:,:,:)
 
       integer             :: at,n,itype,nt,minat,maxat
-      integer             :: m,l,lm,j,i,jspin
+      integer             :: m,l,lm,j,i,jspin,lmd
       complex,allocatable :: surfcof(:,:,:,:)
       complex,allocatable :: surfder(:,:,:,:)
       complex,allocatable :: currmat(:,:,:,:)
@@ -79,18 +63,19 @@ c      use m_wann_gfactor
 
 
       call timestart("wann_torque")
-      allocate ( surfcof(noccbd,0:lmd,nat,2) )
-      allocate ( surfder(noccbd,0:lmd,nat,2) )  
+      lmd = (atoms%lmaxd+1)**2 - 1
+      allocate ( surfcof(noccbd,0:lmd,atoms%nat,2) )
+      allocate ( surfder(noccbd,0:lmd,atoms%nat,2) )  
 
       surfcof=0.0
       surfder=0.0
       do jspin=1,2
        nt=0
-       DO itype=1,ntype
+       DO itype=1,atoms%ntype
         minat=nt+1
-        maxat=nt+neq(itype)
+        maxat=nt+atoms%neq(itype)
         do at=minat,maxat  
-         do l=0,lmax(itype)  
+         do l=0,atoms%lmax(itype)  
           do m=-l,l  
            lm=l*(l+1)+m
            do j=1,noccbd
@@ -98,43 +83,43 @@ c      use m_wann_gfactor
      &        ( acof(j,lm,at,jspin)* us(l,itype,jspin)
      &                    +
      &          bcof(j,lm,at,jspin)* uds(l,itype,jspin) )*
-     &              rmt(itype)*ci**l
+     &              atoms%rmt(itype)*ci**l
 
             surfder(j,lm,at,jspin)=
      &        ( acof(j,lm,at,jspin)*dus(l,itype,jspin)
      &                    +
      &          bcof(j,lm,at,jspin)*duds(l,itype,jspin) )*
-     &              rmt(itype)*ci**l
+     &              atoms%rmt(itype)*ci**l
 
            enddo !j
           enddo !m 
          enddo !l 
-         do ilo=1,nlo(itype)
-          l=llo(ilo,itype)
+         do ilo=1,atoms%nlo(itype)
+          l=atoms%llo(ilo,itype)
           do m=-l,l
            lm=l*(l+1)+m
            do j=1,noccbd
 c              if(.false.)then
             surfcof(j,lm,at,jspin)=surfcof(j,lm,at,jspin)+
      &        ( ccof(m,j,ilo,at,jspin)* ulos(ilo,itype,jspin) )*
-     &              rmt(itype)*ci**l
+     &              atoms%rmt(itype)*ci**l
 
             surfder(j,lm,at,jspin)=surfder(j,lm,at,jspin)+
      &        ( ccof(m,j,ilo,at,jspin)*dulos(ilo,itype,jspin) )*
-     &              rmt(itype)*ci**l             
+     &              atoms%rmt(itype)*ci**l             
 c            endif
            enddo !j
           enddo !m   
          enddo !ilo
         enddo !at
-        nt=nt+neq(itype)
+        nt=nt+atoms%neq(itype)
        enddo !itype
       enddo !jspin
 
       allocate( currmat(noccbd,noccbd,2,2) )
       at=0
-      do itype=1,ntype
-       do iat=1,neq(itype)
+      do itype=1,atoms%ntype
+       do iat=1,atoms%neq(itype)
         at=at+1
         l_inthelist=.false.
         do list_ind=1,atomlist_num
@@ -147,7 +132,7 @@ c            endif
         currmat=cmplx(0.0,0.0)
         do spin2=1,2
          do spin1=1,2
-          do l=0,lmax(itype)
+          do l=0,atoms%lmax(itype)
            do m=-l,l
             lm=l*(l+1)+m
             do j=1,noccbd

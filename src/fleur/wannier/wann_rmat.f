@@ -8,7 +8,7 @@
       USE m_juDFT
       contains
       subroutine wann_rmat(
-     >          bmat,amat, 
+     >          cell,
      >          rvecnum,rvec,kpoints,
      >          jspins_in,nkpts,l_bzsym,film,
      >          l_nocosoc,band_min,band_max,neigd,
@@ -21,11 +21,11 @@ c     FF, 2009
 c***********************************************************
       use m_constants
       use m_wann_read_umatrix
+      USE m_types
 
       implicit none
 
-      real, intent(in) :: bmat(:,:)
-      real, intent(in) :: amat(:,:)
+      TYPE(t_cell),INTENT(IN)      :: cell
 
       integer, intent(in) :: rvecnum
       integer, intent(in) :: rvec(:,:)
@@ -159,7 +159,7 @@ c****************************************************************
      +            gb(2,nn,ikpt) - kpoints(2,ikpt)
            kdiff(3)=kpoints(3,bpt(nn,ikpt))+
      +            gb(3,nn,ikpt) - kpoints(3,ikpt)
-           kdiff=matmul(transpose(bmat),kdiff)
+           kdiff=matmul(transpose(cell%bmat),kdiff)
            l_worksout=.false.
            do nn2=1,nntot
              if (abs(kdiff(1)-bpunkt(1,nn2)).lt.1.e-5)then
@@ -267,7 +267,7 @@ c****************************************************************
      +            gb(2,nn,ikpt) - kpoints(2,ikpt)
            kdiff(3)=kpoints(3,bpt(nn,ikpt))+
      +            gb(3,nn,ikpt) - kpoints(3,ikpt)
-           kdiff=matmul(transpose(bmat),kdiff)          
+           kdiff=matmul(transpose(cell%bmat),kdiff)          
            do i=1,num_wann
             do j=1,num_wann
              if(j.eq.i)then
@@ -347,7 +347,7 @@ c****************************************************************
      +            gb(2,nn,ikpt) - kpoints(2,ikpt)
            kdiff(3)=kpoints(3,bpt(nn,ikpt))+
      +            gb(3,nn,ikpt) - kpoints(3,ikpt)
-           kdiff=matmul(transpose(bmat),kdiff)/real(nkpts)             
+           kdiff=matmul(transpose(cell%bmat),kdiff)/real(nkpts)             
            do i=1,num_wann
             do kk=1,3 
              posop(kk,i,i,rvecind_0)=posop(kk,i,i,rvecind_0)-

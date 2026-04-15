@@ -16,8 +16,7 @@ c****************************************************
       CONTAINS
       SUBROUTINE wann_wannierize(
      >          film,wann,fmpi,kpoints,fullnkpts,jspins,
-     >          natd,pos,
-     >          amat,bmat,ntype,neq,zatom)
+     >          atoms,cell)
       USE m_types
       use m_wann_read_umatrix
       implicit none
@@ -27,13 +26,8 @@ c****************************************************
       real, intent (in) :: kpoints(:,:)
       integer, intent(in) :: fullnkpts      
       integer,intent(in)  :: jspins
-      integer,intent(in)  :: natd
-      real,intent(in)     :: pos(3,natd)
-      real,intent(in)     :: amat(3,3)
-      real,intent(in)     :: bmat(3,3)
-      integer,intent(in)  :: ntype
-      integer,intent(in)  :: neq(ntype)
-      real,intent(in)     :: zatom(ntype)
+      TYPE(t_atoms), INTENT(IN) :: atoms
+      TYPE(t_cell), INTENT(IN)  :: cell
 
       integer             :: num_wann
       real,allocatable    :: centers(:,:)      
@@ -49,8 +43,8 @@ c****************************************************
       real                :: recip_lattice(3,3)
       integer             :: num_bands
       integer             :: num_atoms
-      real                :: atoms_cart(3,natd)
-      character(len=2)    :: atom_symbols(natd)
+      real                :: atoms_cart(3,atoms%nat)
+      character(len=2)    :: atom_symbols(atoms%nat)
       logical             :: gamma_only
       complex,allocatable :: M_matrix(:,:,:,:)
       complex,allocatable :: A_matrix(:,:,:)
@@ -135,7 +129,7 @@ c****************************************************
 
 
       gamma_only=.false.
-      atoms_cart=pos*bohr
+      atoms_cart=atoms%pos*bohr
 c**********************************************************
 c     read the bkpts file
 c**********************************************************
@@ -152,9 +146,9 @@ c**********************************************************
 c     information on atoms
 c**********************************************************
       num_atoms=0
-      do i=1,ntype
-         at=nint(zatom(i))
-         do j=1,neq(i)
+      do i=1,atoms%ntype
+         at=nint(atoms%zatom(i))
+         do j=1,atoms%neq(i)
             num_atoms=num_atoms+1
             atom_symbols(num_atoms)=namat(at)
          enddo !j
@@ -239,8 +233,8 @@ c********************************************************
       print*,"num_wann=",num_wann
       print*,"num_bands=",num_bands
 
-      real_lattice  = transpose(amat)*bohr
-      recip_lattice = bmat/bohr
+      real_lattice  = transpose(cell%amat)*bohr
+      recip_lattice = cell%bmat/bohr
 
       allocate( M_matrix(num_bands,num_bands,nntot,num_kpts) )
       allocate( A_matrix(num_bands,num_wann,num_kpts) )
