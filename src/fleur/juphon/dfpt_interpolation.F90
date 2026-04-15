@@ -130,7 +130,7 @@ contains
 
             ! Real space transformation
             ALLOCATE(dyn_mat_r(qpts%nkptf,3*fi%atoms%nat,3*fi%atoms%nat))
-            call ft_dyn(fi_fullsym%atoms, qpts, fi_fullsym%sym, fi_fullsym%cell%amat, dyn_mat, dyn_mat_r, dyn_mat_q_full)
+            call ft_dyn(fi_fullsym%atoms, qpts, fi_fullsym%sym, fi%cell%amat, dyn_mat, dyn_mat_r, dyn_mat_q_full)
             
             ! In order to call the normal diagonalisation routines
             ! The FCM must be not-normalized --> otherwise we find the wrong unit
@@ -145,7 +145,7 @@ contains
             ! interpolate to dense grid on a arbitrary q-point
             ! specified in the inp.xml kpts.xml
             do iQ = 1, fi%kpts%nkpt
-                call ift_dyn(fi_fullsym%atoms,fi_fullsym%kpts,fi_fullsym%sym,fi_fullsym%cell%amat,fi%kpts%bk(:,iQ),dyn_mat_r,dyn_mat_pathq)
+                call ift_dyn(fi_fullsym%atoms,fi_fullsym%kpts,fi_fullsym%sym,fi%cell%amat,fi%kpts%bk(:,iQ),dyn_mat_r,dyn_mat_pathq)
                 WRITE(*,*) '-------------------------'
                 call timestart("Dynmat diagonalization")
                 call DiagonalizeDynMat(fi%atoms, fi%kpts%bk(:,iQ), fi%juPhon%calcEigenVec, dyn_mat_pathq, eigenVals, eigenVecs, iQ,.TRUE.,TRIM(dynfiletag),fi%juPhon%l_sumrule,l_writeOutput=.true.)
