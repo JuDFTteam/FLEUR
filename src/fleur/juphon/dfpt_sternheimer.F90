@@ -153,15 +153,16 @@ CONTAINS
       l_cont = (iter < fi%input%itmax)
       IF (fmpi%irank==0.AND.l_exist) CALL readDensity(starsq, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
                                                       fi%input, fi%sym, archiveType, CDN_INPUT_DEN_const, 0, &
-                                                      results%ef, results%last_distance, l_dummy, denIn1,  &
+                                                      results1%ef, results1%last_distance, l_dummy, denIn1,  &
                                                       inFilename=TRIM(dfpt_tag),denIm=denIn1Im)
       IF (fmpi%irank==0.AND.l_exist.AND.l_minusq) CALL readDensity(starsmq, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
                                                       fi%input, fi%sym, archiveType, CDN_INPUT_DEN_const, 0, &
-                                                      results%ef, results%last_distance, l_dummy, denIn1m,  &
+                                                      results1m%ef, results1m%last_distance, l_dummy, denIn1m,  &
                                                       inFilename=TRIM(dfpt_tag)//'m',denIm=denIn1mIm)
 
       IF (fmpi%irank==0.AND..NOT.l_exist) denIn1%iter = 1
-      !stop
+      ! we store in q*hdf only the z(1) response of the density response. Add the gradient here. 
+      IF (fmpi%irank==0 .AND. l_exist .and. sternheimerJob%l_IBScorrection) denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
 #ifdef CPP_MPI
       CALL MPI_BCAST(denIn1%iter,1,MPI_INTEGER,0,fmpi%mpi_comm,ierr)
 #endif
