@@ -24,6 +24,7 @@ module m_types_sternheimerJob
         integer,allocatable :: iDirList(:)
         integer,allocatable :: iDtypeList(:)
         logical,allocatable :: needs_postprocessing(:)
+        logical,allocatable :: needs_eigen(:)
 
         ! List for task the MPI process has to perform 
         integer,allocatable :: JobListMPI(:)     
@@ -58,7 +59,7 @@ module m_types_sternheimerJob
         logical,optional,intent(in)   :: l_efield 
 
 
-        integer :: jobSize , iJob , iQ , iDtype, iDir
+        integer :: jobSize , iJob , iQ , iDtype, iDir, iQ_last
         integer :: q_start, q_stop
         ! we currently work with logicals to circumvent circular dependence
         ! it would be nicer to work with select type(t_dfpt) 
@@ -75,6 +76,7 @@ module m_types_sternheimerJob
         if (allocated(this%iDirList)) deallocate(this%iDirList)
         if (allocated(this%iDtypeList)) deallocate(this%iDtypeList)
         if (allocated(this%needs_postprocessing)) deallocate(this%needs_postprocessing)
+        if (allocated(this%needs_eigen)) deallocate(this%needs_eigen)
 
 
 
@@ -98,14 +100,20 @@ module m_types_sternheimerJob
             allocate(this%iDirList(jobSize))
             allocate(this%iDtypeList(jobSize))
             allocate(this%needs_postprocessing(jobSize))
+            allocate(this%needs_eigen(jobSize))
 
             q_start = fi%juPhon%startq
             q_stop = merge(fi%juPhon%stopq,size(fi%juPhon%qvec,2),fi%juPhon%stopq/=0)
 
 
             iJob = 1 
+            iQ_last = 1 
             this%needs_postprocessing(:) = .false. 
-            
+            this%needs_eigen(:) = .false. 
+            ! set first iJob to true 
+            this%needs_eigen(1) = .true. 
+
+
             do iQ = q_start , q_stop
                 do iDtype = 1 , fi%atoms%nat
                     do iDir = 1 , 3 
@@ -113,10 +121,12 @@ module m_types_sternheimerJob
                         this%iQList(iJob)     = iQ
                         this%iDtypeList(iJob) = iDtype 
                         this%iDirList(iJob)   = iDir 
-                        iJob = iJob + 1 
+                        if (iQ .ne. iQ_last) this%needs_eigen(iJob) = .true.
+                        iJob = iJob + 1
+                        iQ_last = iQ  
                     end do ! iDir 
                 end do !iDtype
-                this%needs_postprocessing(iJob-1) = .true. 
+                this%needs_postprocessing(iJob-1) = .true.
             end do !iQ 
         end if 
 
@@ -131,9 +141,11 @@ module m_types_sternheimerJob
             allocate(this%iDirList(jobSize))
             allocate(this%iDtypeList(jobSize))
             allocate(this%needs_postprocessing(jobSize))
+            allocate(this%needs_eigen(jobSize))
 
             iJob = 1 
             this%needs_postprocessing(:) = .false. 
+            this%needs_eigen(:) = .true. 
             
             do iDir = 1 , 3 
                 this%iJobList(iJob)   = iJob
@@ -155,10 +167,15 @@ module m_types_sternheimerJob
             allocate(this%iDirList(jobSize))
             allocate(this%iDtypeList(jobSize))
             allocate(this%needs_postprocessing(jobSize))
+            allocate(this%needs_eigen(jobSize))
+
 
             iJob = 1 
+            iQ_last = 1 
             this%needs_postprocessing(:) = .false. 
-            
+            this%needs_eigen(:) = .false. 
+            this%needs_eigen(1) = .true. 
+
             do iQ = 1 , 3 
                 do iDtype = 1 , fi%atoms%nat
                     do iDir = 1 , 3 
@@ -166,7 +183,9 @@ module m_types_sternheimerJob
                         this%iQList(iJob)     = iQ
                         this%iDtypeList(iJob) = iDtype 
                         this%iDirList(iJob)   = iDir 
+                        if (iQ .ne. iQ_last)  this%needs_eigen(iJob) = .true. 
                         iJob = iJob + 1
+                        iQ_last = iQ
                     end do !iDir
                 end do !iDtype 
             end do !iQ

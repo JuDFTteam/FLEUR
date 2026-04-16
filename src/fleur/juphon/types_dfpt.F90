@@ -227,48 +227,49 @@ contains
                     kmqpts%bk(:, ikpt) = kmqpts%bk(:, ikpt) - qpts%bk(:,q_list(iQ))
                 end do 
             end if 
-
-            call timestart("Eigenstuff at k+q")
-            ! Get the eigenstuff at k+q
-            call resultsq%reset_results(fi%input)
-
-            call eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv,  &
-                    hybdat, 1, q_eig_id, resultsq, rho, vTot, vxc, hub1data, &
-                    qpts%bk(:,q_list(iQ)))
-
-            ! Fermi level and occupancies
-            call timestart("determination of fermi energy")
-            call fermie(q_eig_id, fmpi, kqpts, fi%input, fi%noco, enpara%epara_min, fi%cell, resultsq)
-            call timestop("determination of fermi energy")
-
-#ifdef CPP_MPI
-            call MPI_BCAST(resultsq%ef, 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
-            call MPI_BCAST(resultsq%w_iks, size(resultsq%w_iks), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
-#endif
-            call timestop("Eigenstuff at k+q")
-
-
-            if (l_minusq) then
-                call timestart("Eigenstuff at k-q")
-                ! Solve eigenvalue equation on k-q grid
-                call resultsqm%reset_results(fi%input)
+            if (sternheimerJob%needs_eigen(iJob)) then 
+                call timestart("Eigenstuff at k+q")
+                ! Get the eigenstuff at k+q
+                call resultsq%reset_results(fi%input)
 
                 call eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv,  &
-                        hybdat, 1, qm_eig_id, resultsqm, rho, vTot, vxc, hub1data, &
-                        -qpts%bk(:,q_list(iQ)))
+                        hybdat, 1, q_eig_id, resultsq, rho, vTot, vxc, hub1data, &
+                        qpts%bk(:,q_list(iQ)))
 
                 ! Fermi level and occupancies
                 call timestart("determination of fermi energy")
-                call fermie(qm_eig_id, fmpi, kmqpts, fi%input, fi%noco, enpara%epara_min, fi%cell, resultsqm)
+                call fermie(q_eig_id, fmpi, kqpts, fi%input, fi%noco, enpara%epara_min, fi%cell, resultsq)
                 call timestop("determination of fermi energy")
 
 #ifdef CPP_MPI
-                call MPI_BCAST(resultsqm%ef, 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
-                call MPI_BCAST(resultsqm%w_iks, SIZE(resultsqm%w_iks), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
+                call MPI_BCAST(resultsq%ef, 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
+                call MPI_BCAST(resultsq%w_iks, size(resultsq%w_iks), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
+#endif
+                call timestop("Eigenstuff at k+q")
+
+
+                if (l_minusq) then
+                    call timestart("Eigenstuff at k-q")
+                    ! Solve eigenvalue equation on k-q grid
+                    call resultsqm%reset_results(fi%input)
+
+                    call eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv,  &
+                            hybdat, 1, qm_eig_id, resultsqm, rho, vTot, vxc, hub1data, &
+                            -qpts%bk(:,q_list(iQ)))
+
+                    ! Fermi level and occupancies
+                    call timestart("determination of fermi energy")
+                    call fermie(qm_eig_id, fmpi, kmqpts, fi%input, fi%noco, enpara%epara_min, fi%cell, resultsqm)
+                    call timestop("determination of fermi energy")
+
+#ifdef CPP_MPI
+                    call MPI_BCAST(resultsqm%ef, 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
+                    call MPI_BCAST(resultsqm%w_iks, SIZE(resultsqm%w_iks), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
 #endif
 
-                call timestop("Eigenstuff at k-q")
-            end if
+                    call timestop("Eigenstuff at k-q")
+                end if
+            end if 
 
             dfpt_tag = ''
             write(dfpt_tag,'(a1,i0,a2,i0,a2,i0)') 'q', q_list(iQ), '_b', iDtype, '_j', iDir
