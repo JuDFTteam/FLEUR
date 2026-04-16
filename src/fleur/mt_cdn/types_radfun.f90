@@ -35,7 +35,7 @@ contains
       this%n_r(0:)=atoms%num_radial_functions_per_l(itype)
    end subroutine
 
-   subroutine generate_radial_functions(this, atoms, input, enpara, fmpi, vtot, iType, hub1data)
+   subroutine generate_radial_functions(this, atoms, input, enpara, fmpi, vtot, iType, hub1data,usdus_out)
       use m_genMTBasis
       use m_types_atoms
       use m_types_input
@@ -52,8 +52,9 @@ contains
       type(t_enpara), intent(IN)   :: enpara
       type(t_hub1data), intent(IN),optional :: hub1data
       type(t_mpi), intent(IN)     :: fmpi
-      type(t_potden), intent(IN)   :: vtot
+      type(t_potden), intent(IN)             :: vtot
       integer, intent(in)                    :: itype
+      type(t_usdus), intent(OUT),optional    :: usdus_out
 
       !temp variables not really used but required by genMTBasis
       type(t_usdus) :: usdus
@@ -111,7 +112,11 @@ contains
             ENDDO
          ENDDO         
       end if
+      if (present(usdus_out)) then
+         usdus_out = usdus
+      end if   
       call timestop("generate radial functions")        
+
    end subroutine
 
    

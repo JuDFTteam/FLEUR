@@ -10,7 +10,7 @@ MODULE m_secvar_soc
     IMPLICIT NONE
 CONTAINS
 
-    SUBROUTINE secvar_soc_kpts(atoms, noco, nococonv, input, sym, cell, enpara, lapw, vtot, rsoc, usdus, fmpi, ikpt, eig_id, ne_out, eigval_out)
+    SUBROUTINE secvar_soc_kpts(atoms, noco, nococonv, input, sym, cell, enpara, lapw, vtot, rsoc, fmpi, ikpt, eig_id, ne_out, eigval_out)
         USE m_types_secvar
         USE m_types_matelements_soc
         USE m_types
@@ -25,7 +25,6 @@ CONTAINS
         TYPE(t_lapw),    INTENT(IN) :: lapw
         TYPE(t_potden),  INTENT(IN) :: vtot
         TYPE(t_rsoc),    INTENT(IN) :: rsoc
-        TYPE(t_usdus),   INTENT(IN) :: usdus
         TYPE(t_mpi),     INTENT(IN) :: fmpi
         INTEGER,         INTENT(IN) :: ikpt, eig_id
         INTEGER,         OPTIONAL, INTENT(OUT) :: ne_out
@@ -44,7 +43,7 @@ CONTAINS
         end if
 
         ! Initialize the SOC matrix element evaluator and compute matrix elements
-        CALL matelements%init(atoms, noco, input, sym, cell, enpara, lapw, vtot, rsoc, usdus, fmpi, nococonv)
+        CALL matelements%init(atoms, noco, input, sym, cell, enpara, lapw, vtot, rsoc,  fmpi, nococonv)
         CALL matelements%add_matrix_elements(secvar%zmat, secvar%mat)
 
         ! Add the first-variation eigenvalues on the diagonal
@@ -79,13 +78,11 @@ CONTAINS
 
         TYPE(t_lapw)  :: lapw
         TYPE(t_rsoc)  :: rsoc
-        TYPE(t_usdus) :: usdus
         INTEGER :: nk, nk_i
 #ifdef CPP_MPI
         INTEGER :: ierr
 #endif
 
-        CALL usdus%init(fi%atoms, fi%input%jspins)
 
         results%eig   = 1.0e300
         results%neig  = 0
@@ -101,7 +98,7 @@ CONTAINS
             nk = fmpi%k_list(nk_i)
             CALL lapw%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, nk, fi%cell, fmpi)
             CALL secvar_soc_kpts(fi%atoms, fi%noco, nococonv, fi%input, fi%sym, fi%cell, &
-                            enpara, lapw, vTot, rsoc, usdus, fmpi, nk, eig_id, &
+                            enpara, lapw, vTot, rsoc, fmpi, nk, eig_id, &
                             ne_out=results%neig(nk, 1), eigval_out=results%eig(:, nk, 1))
         END DO
 
