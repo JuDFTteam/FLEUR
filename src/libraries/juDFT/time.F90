@@ -209,27 +209,11 @@ CONTAINS
 #endif      
       IMPLICIT NONE
       CHARACTER(LEN=*), INTENT(IN):: startstop, name
-      INTEGER :: fpErrorDetectionReturnCode
 #ifdef CPP_MPI
       INTEGER :: irank, ierr
       LOGICAL :: l_mpi
 #endif
 
-#ifdef CPP_DEBUG
-      interface
-         function startFPErrorDetection() bind(C, name="startFPErrorDetection")
-            use iso_c_binding
-            INTEGER(c_int) startFPErrorDetection
-         end function startFPErrorDetection
-      end interface
-
-      interface
-         function stopFPErrorDetection() bind(C, name="stopFPErrorDetection")
-            use iso_c_binding
-            INTEGER(c_int) stopFPErrorDetection
-         end function stopFPErrorDetection
-      end interface
-#endif
 
       IF (.NOT. l_debug) RETURN
 #ifdef CPP_NVTX
@@ -253,18 +237,13 @@ CONTAINS
       WRITE (*, "(3a,f20.2,5x,a)") startstop, name, " at:", cputime() - debugtimestart, memory_usage_string()
 #endif
 
-#if false
-! Somehow this doesn't compile at the moment, at least with the ifx compiler
-#ifdef CPP_DEBUG
-      IF(TRIM(ADJUSTL(name)).EQ."Iteration") THEN
-         IF(TRIM(ADJUSTL(startstop)).EQ."started") THEN
-            fpErrorDetectionReturnCode = startFPErrorDetection()
-         ELSE IF(TRIM(ADJUSTL(startstop)).EQ."stopped") THEN
-            fpErrorDetectionReturnCode = stopFPErrorDetection()
-         END IF
-      END IF
-#endif
-#endif
+!      IF(TRIM(ADJUSTL(name)).EQ."Iteration") THEN
+!         IF(TRIM(ADJUSTL(startstop)).EQ."started") THEN
+!            call fp_error_check(.true.)
+!         ELSE IF(TRIM(ADJUSTL(startstop)).EQ."stopped") THEN
+!            call fp_error_check(.false.)
+!         END IF
+!      END IF
 
    END SUBROUTINE priv_debug_output
 

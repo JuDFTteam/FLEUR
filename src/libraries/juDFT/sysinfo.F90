@@ -16,7 +16,33 @@ MODULE m_judft_sysinfo
 
 
 CONTAINS
-  
+
+subroutine fp_error_check(onoff)
+   LOGICAL,INTENT(IN) :: onoff
+   Integer::errorStatus
+#ifdef CPP_DEBUG
+      interface
+         function startFPErrorDetection() bind(C, name="startFPErrorDetection")
+            use iso_c_binding
+            INTEGER(c_int) startFPErrorDetection
+         end function startFPErrorDetection
+      end interface
+
+      interface
+         function stopFPErrorDetection() bind(C, name="stopFPErrorDetection")
+            use iso_c_binding
+            INTEGER(c_int) stopFPErrorDetection
+         end function stopFPErrorDetection
+      end interface
+
+   if (onoff) then
+      errorStatus=startFPErrorDetection()
+   else
+      errorStatus=stopFPErrorDetection()
+   endif
+#endif
+end subroutine fp_error_check
+
 integer function num_openmp()
 !$  use omp_lib
 num_openmp=0
