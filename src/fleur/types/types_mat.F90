@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_types_mat
 #ifdef _OPENACC
    use openacc
@@ -1012,16 +1017,20 @@ CONTAINS
       END IF
    END SUBROUTINE t_mat_move
 
-   SUBROUTINE t_mat_copy(mat, mat1, n1, n2)
+   SUBROUTINE t_mat_copy(mat, mat1, n1, n2, m1, m2)
       IMPLICIT NONE
       CLASS(t_mat), INTENT(INOUT):: mat
       class(t_mat), INTENT(IN)   :: mat1
       INTEGER, INTENT(IN)        :: n1, n2
+      INTEGER, INTENT(IN), OPTIONAL :: m1, m2  !> offsets into source matrix
 
-      INTEGER:: i1, i2, j1, j2
+      INTEGER:: i1, i2, j1, j2, s1, s2
       logical:: both_on_gpu, tmp
 
       call timestart("t_mat_copy")
+
+      s1 = 1; if (present(m1)) s1 = m1
+      s2 = 1; if (present(m2)) s2 = m2
 
       if(.not. mat%allocated()) then
 #ifdef _OPENACC
@@ -1053,17 +1062,17 @@ CONTAINS
          call judft_error("you can only copy a t_mat to a t_mat")
       end select
 
-      i1 = mat%matsize1 - n1 + 1  !space available for first dimension
+      i1 = mat%matsize1 - n1 + 1  !space available for first dimension in target
       i2 = mat%matsize2 - n2 + 1
-      i1 = MIN(i1, mat1%matsize1)
-      i2 = MIN(i2, mat1%matsize2)
+      i1 = MIN(i1, mat1%matsize1 - s1 + 1)
+      i2 = MIN(i2, mat1%matsize2 - s2 + 1)
 
       if(both_on_GPU )then
          if(mat%l_real) then
             !$acc kernels present(mat, mat%data_r, mat1, mat1%data_r)
             do j1 = 1,i1 
                do j2 = 1,i2 
-                  mat%data_r(n1+j1-1, n2+j2-1) = mat1%data_r(j1,j2)
+                  mat%data_r(n1+j1-1, n2+j2-1) = mat1%data_r(s1+j1-1, s2+j2-1)
                enddo
             enddo
             !$acc end kernels
@@ -1071,16 +1080,16 @@ CONTAINS
             !$acc kernels present(mat, mat%data_c, mat1, mat1%data_c)
             do j1 = 1,i1 
                do j2 = 1,i2 
-                  mat%data_c(n1+j1-1, n2+j2-1) = mat1%data_c(j1,j2)
+                  mat%data_c(n1+j1-1, n2+j2-1) = mat1%data_c(s1+j1-1, s2+j2-1)
                enddo
             enddo
             !$acc end kernels
          endif
       else
          IF (mat%l_real) THEN
-            call dlacpy("N", i1, i2, mat1%data_r, size(mat1%data_r, 1),  mat%data_r(n1,n2), size(mat%data_r,1) )
+            call dlacpy("N", i1, i2, mat1%data_r(s1,s2), size(mat1%data_r, 1),  mat%data_r(n1,n2), size(mat%data_r,1) )
          ELSE
-            call zlacpy("N", i1, i2, mat1%data_c, size(mat1%data_c, 1),  mat%data_c(n1,n2), size(mat%data_c,1) )
+            call zlacpy("N", i1, i2, mat1%data_c(s1,s2), size(mat1%data_c, 1),  mat%data_c(n1,n2), size(mat%data_c,1) )
          END IF
       endif
 

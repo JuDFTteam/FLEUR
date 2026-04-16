@@ -12,4 +12,9 @@ src/fleur/eigen_soc/sorad.f90
 src/fleur/eigen_soc/spnorb.f90
 src/fleur/eigen_soc/vso.f90
 src/fleur/eigen_soc/ssomat.F90
+src/fleur/eigen_soc/types_secvar.F90
+src/fleur/eigen_soc/types_matelements.F90
+src/fleur/eigen_soc/types_matelements_soc.F90
+src/fleur/eigen_soc/secvar_soc.F90
+#src/fleur/eigen_soc/types_secvar_soc.F90
 )

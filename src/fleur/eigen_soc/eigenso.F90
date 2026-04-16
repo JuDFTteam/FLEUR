@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_eigenso
   !
   !*********************************************************************
@@ -86,11 +91,7 @@ CONTAINS
     ! now the definition of rotation matrices
     ! is equivalent to the def in the noco-routines
 
-    ALLOCATE(  usdus%us(0:fi%atoms%lmaxd,fi%atoms%ntype,fi%input%jspins), usdus%dus(0:fi%atoms%lmaxd,fi%atoms%ntype,fi%input%jspins),&
-         usdus%uds(0:fi%atoms%lmaxd,fi%atoms%ntype,fi%input%jspins),usdus%duds(0:fi%atoms%lmaxd,fi%atoms%ntype,fi%input%jspins),&
-         usdus%ddn(0:fi%atoms%lmaxd,fi%atoms%ntype,fi%input%jspins),&
-         usdus%ulos(fi%atoms%nlod,fi%atoms%ntype,fi%input%jspins),usdus%dulos(fi%atoms%nlod,fi%atoms%ntype,fi%input%jspins),&
-         usdus%uulon(fi%atoms%nlod,fi%atoms%ntype,fi%input%jspins),usdus%dulon(fi%atoms%nlod,fi%atoms%ntype,fi%input%jspins))
+    CALL usdus%init(fi%atoms, fi%input%jspins)
 
     IF (fi%input%l_wann.OR.l_socvec) THEN
        wannierspin = 2
@@ -148,7 +149,7 @@ CONTAINS
        IF (fmpi%n_rank==0) THEN
           IF (fi%input%eonly) THEN
              CALL write_eig(eig_id, nk,jspin,neig=nsz,neig_total=nsz, eig=eig_so(:nsz))
-             STOP 'jspin is undefined here (eigenso - eonly branch)'
+             call judft_bug('jspin is undefined here (eigenso - eonly branch)')
              eigBuffer(:nsz,nk,jspin) = eig_so(:nsz)
              neigBuffer(nk,jspin) = nsz
           ELSE

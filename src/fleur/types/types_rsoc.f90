@@ -1,9 +1,10 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 module m_types_rsoc
+   use m_judft
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: t_rsoc
@@ -56,26 +57,26 @@ module m_types_rsoc
   
     !     ..
     !     .. Local Scalars ..
-    INTEGER:: n,i,j,l,itype,ispin,jspin
+    INTEGER:: n,i,j,l,itype,ispin,jspin,ispin1,jspin1
     LOGICAL, SAVE :: first_k = .TRUE.
     TYPE(t_radfun) :: radfun
     REAL,ALLOCATABLE:: v0(:)
     REAL,ALLOCATABLE:: vso(:,:)
     REAL:: e
-    LOGICAL :: spav
-    
-    !Allocate space for SOC matrix elements; set to zero at the same time
-    ALLOCATE(rsoc%rso(atoms%max_radial_functions,atoms%max_radial_functions,atoms%ntype,atoms%lmaxd,2,2),source=0.0)
 
+    
+    allocate(vso(atoms%jmtd,2))
+   
     !Calculate radial soc-matrix elements
     DO itype = 1,atoms%ntype
        !
        !---> in case of jspins=1
        !
+       call radfun%init(atoms, input, itype)
        call radfun%generate_radial_functions( atoms, input, enpara, fmpi, vtot, iType)
        
        !Spin averaged potential
-       v0(:) = (vtot%mt(:,0,itype,1)+vtot%mt(:,0,itype,min(2,input%jspins)))/2.
+       v0= (vtot%mt(:,0,itype,1)+vtot%mt(:,0,itype,min(2,input%jspins)))/2.
          
        DO l=0,atoms%lmax(itype)
          !
@@ -84,7 +85,7 @@ module m_types_rsoc
          e = (enpara%el0(l,itype,1)+enpara%el0(l,itype,min(2,input%jspins)))/2.
 
          CALL sointg(itype,e,vtot%mt(:,0,itype,:),v0,atoms,input,vso)
-         IF (spav) THEN
+         IF (noco%l_spav) THEN
             DO i= 1,atoms%jmtd
                vso(i,1)= (vso(i,1)+vso(i,2))/2.
                vso(i,2)= vso(i,1)
@@ -98,12 +99,15 @@ module m_types_rsoc
          IF (l.GT.0) THEN ! there is no spin-orbit for s-states
             DO ispin = 1, 2
                DO jspin = 1, 2
+                  ispin1=min(input%jspins,ispin)
+                  jspin1=min(input%jspins,jspin)
+                   
                   DO i=1,radfun%n_r(l)
                      DO j=1,radfun%n_r(l)
                         rsoc%rso(i,j,itype,l,ispin,jspin) = radso( &
-                           radfun%r(i,:atoms%jri(itype),1,l,min(input%jspins,ispin)), &
-                           radfun%r(j,:atoms%jri(itype),1,l,min(input%jspins,jspin)), &
-                           (vso(:atoms%jri(itype),ispin)+vso(:atoms%jri(itype),jspin))*0.5, &
+                           radfun%r(:atoms%jri(itype),1,i,l,ispin1), &
+                           radfun%r(:atoms%jri(itype),1,j,l,jspin1), &
+                           (vso(:atoms%jri(itype),ispin1)+vso(:atoms%jri(itype),jspin1))*0.5, &
                            atoms%dx(itype), &
                            atoms%rmsh(1,itype))
                      ENDDO

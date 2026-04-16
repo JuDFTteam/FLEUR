@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -76,6 +76,22 @@ CONTAINS
 
       INTEGER, INTENT(IN)    :: itype, noccbd
 
+      IF (itype < 1 .OR. itype > atoms%ntype) THEN
+         CALL judft_error("abc_init: invalid atom type index", calledby="types_abc")
+      END IF
+      IF (noccbd < 1) THEN
+         CALL judft_error("abc_init: noccbd must be >= 1", calledby="types_abc")
+      END IF
+      IF (LBOUND(n_r_in,1) /= 0) THEN
+         CALL judft_error("abc_init: n_r_in must be 0-based", calledby="types_abc")
+      END IF
+      IF (UBOUND(n_r_in,1) < atoms%lmax(itype)) THEN
+         CALL judft_error("abc_init: n_r_in too small for atom lmax", calledby="types_abc")
+      END IF
+      IF (MAXVAL(n_r_in) < 1) THEN
+         CALL judft_error("abc_init: radial function count must be >= 1", calledby="types_abc")
+      END IF
+
       IF (ALLOCATED(this%cof)) DEALLOCATE (this%cof,this%n_r)
       allocate(this%n_r(0:size(n_r_in)-1))
       this%n_r(0:)=n_r_in(0:)
@@ -149,6 +165,36 @@ CONTAINS
 ! Checks
       IF (zmat%l_real) THEN
          IF (noco%l_noco) CALL judft_bug("BUG in abcof, l_noco but real?")
+      END IF
+      IF (.NOT.ALLOCATED(this%cof)) THEN
+         CALL judft_error("calc_abc: coefficients not initialized (call init first)", calledby="types_abc")
+      END IF
+      IF (.NOT.ALLOCATED(this%n_r)) THEN
+         CALL judft_error("calc_abc: radial-function metadata not initialized", calledby="types_abc")
+      END IF
+      IF (itype < 1 .OR. itype > atoms%ntype) THEN
+         CALL judft_error("calc_abc: invalid atom type index", calledby="types_abc")
+      END IF
+      IF (jspin < 1 .OR. jspin > input%jspins) THEN
+         CALL judft_error("calc_abc: invalid spin index", calledby="types_abc")
+      END IF
+      IF (ne < 1 .OR. ne > SIZE(this%cof,1)) THEN
+         CALL judft_error("calc_abc: ne out of bounds for initialized coefficient storage", calledby="types_abc")
+      END IF
+      IF (LBOUND(this%n_r,1) /= 0 .OR. UBOUND(this%n_r,1) < atoms%lmax(itype)) THEN
+         CALL judft_error("calc_abc: n_r metadata inconsistent with atom lmax", calledby="types_abc")
+      END IF
+      IF (LBOUND(this%cof,2) /= 0) THEN
+         CALL judft_error("calc_abc: coefficient lm dimension must be 0-based", calledby="types_abc")
+      END IF
+      IF (SIZE(this%cof,2) /= atoms%lmax(itype)*(atoms%lmax(itype) + 2) + 1) THEN
+         CALL judft_error("calc_abc: coefficient lm dimension inconsistent with atom lmax", calledby="types_abc")
+      END IF
+      IF (SIZE(this%cof,3) < MAXVAL(this%n_r(0:atoms%lmax(itype)))) THEN
+         CALL judft_error("calc_abc: coefficient radial dimension too small", calledby="types_abc")
+      END IF
+      IF (SIZE(this%cof,4) /= atoms%neq(itype)) THEN
+         CALL judft_error("calc_abc: coefficient atom dimension inconsistent with neq(itype)", calledby="types_abc")
       END IF
 
 ! Allocations
@@ -456,6 +502,36 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
 ! Checks
       IF (zmat%l_real) THEN
          IF (noco%l_noco) CALL judft_bug("BUG in abcof, l_noco but real?")
+      END IF
+      IF (.NOT.ALLOCATED(this%cof)) THEN
+         CALL judft_error("calc_force_abc: coefficients not initialized (call init first)", calledby="types_abc")
+      END IF
+      IF (.NOT.ALLOCATED(this%n_r)) THEN
+         CALL judft_error("calc_force_abc: radial-function metadata not initialized", calledby="types_abc")
+      END IF
+      IF (itype < 1 .OR. itype > atoms%ntype) THEN
+         CALL judft_error("calc_force_abc: invalid atom type index", calledby="types_abc")
+      END IF
+      IF (jspin < 1 .OR. jspin > input%jspins) THEN
+         CALL judft_error("calc_force_abc: invalid spin index", calledby="types_abc")
+      END IF
+      IF (ne < 1 .OR. ne > SIZE(this%cof,1)) THEN
+         CALL judft_error("calc_force_abc: ne out of bounds for initialized coefficient storage", calledby="types_abc")
+      END IF
+      IF (LBOUND(this%n_r,1) /= 0 .OR. UBOUND(this%n_r,1) < atoms%lmax(itype)) THEN
+         CALL judft_error("calc_force_abc: n_r metadata inconsistent with atom lmax", calledby="types_abc")
+      END IF
+      IF (LBOUND(this%cof,2) /= 0) THEN
+         CALL judft_error("calc_force_abc: coefficient lm dimension must be 0-based", calledby="types_abc")
+      END IF
+      IF (SIZE(this%cof,2) /= atoms%lmax(itype)*(atoms%lmax(itype) + 2) + 1) THEN
+         CALL judft_error("calc_force_abc: coefficient lm dimension inconsistent with atom lmax", calledby="types_abc")
+      END IF
+      IF (SIZE(this%cof,3) < MAXVAL(this%n_r(0:atoms%lmax(itype)))) THEN
+         CALL judft_error("calc_force_abc: coefficient radial dimension too small", calledby="types_abc")
+      END IF
+      IF (SIZE(this%cof,4) /= atoms%neq(itype)) THEN
+         CALL judft_error("calc_force_abc: coefficient atom dimension inconsistent with neq(itype)", calledby="types_abc")
       END IF
 
 ! Allocations

@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -47,6 +47,7 @@ CONTAINS
       USE m_writexcstuff
       USE m_eigen
       USE m_eigenso
+      USE m_secvar_soc
       USE m_fermie
       USE m_cdngen
       USE m_totale
@@ -428,10 +429,14 @@ CONTAINS
             END IF
             
             CALL timestart("2nd variation SOC")
-            IF (fi%noco%l_soc .AND. .NOT. fi%noco%l_noco .AND. .NOT. fi%INPUT%eig66(1)) THEN
+            IF (.false..and.fi%noco%l_soc .AND. .NOT. fi%noco%l_noco .AND. .NOT. fi%INPUT%eig66(1)) THEN
                IF (fi%hybinp%l_hybrid) hybdat%results = results !Store old eigenvalues for later call to fermie
                CALL eigenso(eig_id, fmpi, stars, sphhar, nococonv, vTot, enpara, results, fi%hub1inp, hub1data,fi)
-            ENDIF   
+            ENDIF
+            IF (fi%noco%l_soc .AND. .not. fi%noco%l_noco .AND. .NOT. fi%INPUT%eig66(1)) THEN
+               IF (fi%hybinp%l_hybrid) hybdat%results = results !Store old eigenvalues for later call to fermie
+               CALL secvar_soc(eig_id, fmpi, nococonv, vTot, enpara, fi, results)
+            ENDIF
             CALL timestop("2nd variation SOC")
             CALL timestop("H generation and diagonalization (total)")
 
