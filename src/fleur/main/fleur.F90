@@ -28,6 +28,7 @@ MODULE m_fleur
    !! one-dimensional        --- y.mokrousov   2002
    !! exchange parameters    --- m.lezaic      2004
    !!                            g.bihlmayer, s.bluegel 1999
+   implicit none
 
    IMPLICIT NONE
 CONTAINS
@@ -446,10 +447,8 @@ CONTAINS
 
             ! Fermi level and occupancies
             input_soc = fi%input
-            IF (fi%noco%l_soc .AND. (.NOT. fi%noco%l_noco)) THEN
-               input_soc = fi%input
-               input_soc%neig = 2*fi%input%neig
-            END IF
+            IF (fi%noco%l_soc .AND. (.NOT. fi%noco%l_noco)) input_soc%neig = 2*fi%input%neig
+            
 
             IF (fi%input%gw>0) THEN
                IF (fmpi%irank==0) THEN
@@ -463,18 +462,13 @@ CONTAINS
 
             CALL timestart("determination of fermi energy")
 
-            IF (fi%noco%l_soc .AND. (.NOT. fi%noco%l_noco)) THEN
-               input_soc%zelec = fi%input%zelec*2               
-               IF (fi%hybinp%l_hybrid) &
-                  CALL fermie(hybdat%eig_id, fmpi, fi%kpts, fi%input, fi%noco, enpara%epara_min, fi%cell, hybdat%results)
-               CALL fermie(eig_id, fmpi, fi%kpts, input_soc, fi%noco, enpara%epara_min, fi%cell, results)
-
-               results%seigv = results%seigv / 2.0
-               results%ts = results%ts / 2.0
-            ELSE
-               CALL fermie(eig_id, fmpi, fi%kpts, fi%input, fi%noco, enpara%epara_min, fi%cell, results)
+            CALL fermie(eig_id, fmpi, fi%kpts, input_soc, fi%noco, enpara%epara_min, fi%cell, results)
+            
+            IF (fi%noco%l_soc .AND. (.NOT. fi%noco%l_noco) .AND. fi%hybinp%l_hybrid) THEN
+               CALL fermie(hybdat%eig_id, fmpi, fi%kpts, fi%input, fi%noco, enpara%epara_min, fi%cell, hybdat%results)
+            else
                IF (fi%hybinp%l_hybrid) hybdat%results = results
-            ENDIF
+            endif   
             IF (fi%hybinp%l_hybrid) CALL store_state_weights_hybrid(fi, fmpi, results)
 #ifdef CPP_MPI
             CALL MPI_BCAST(results%ef, 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
