@@ -723,7 +723,8 @@ CONTAINS
       integer           :: m,n,k, lda, ldb, ldc
       character(len=1)  :: transA_i, transB_i
       type(t_mat)       :: tmp
-      logical           :: run_on_gpu 
+      logical           :: run_on_gpu, l_mixed
+      complex, allocatable :: mat1_c(:,:), mat2_c(:,:)
 
       call timestart("t_mat_multiply")
 
@@ -743,9 +744,11 @@ CONTAINS
          k = mat1%matsize1
       endif
 
-      if(mat1%l_real .neqv. mat2%l_real) call judft_error("can only multiply matricies of the same type")
+      l_mixed = mat1%l_real .neqv. mat2%l_real
 
-      if(mat1%l_real) then
+      if(l_mixed) then
+         run_on_gpu = .False.
+      elseif(mat1%l_real) then
 #ifdef _OPENACC
          run_on_gpu = acc_is_present(mat1%data_r) .and. acc_is_present(mat2%data_r)
          if(present(res)) then
@@ -790,7 +793,10 @@ CONTAINS
       IF (present(res)) THEN
          ! prepare res matrix
          if(res%allocated()) then
-            if(res%l_real .neqv. mat1%l_real) then
+            if(l_mixed) then
+               if(res%l_real) call juDFT_error("res must be complex for mixed real/complex multiply")
+               if(any(shape(res%data_c) /= [m,n])) call juDFT_error("res must be of the correct size!")
+            elseif(res%l_real .neqv. mat1%l_real) then
                call juDFT_error("res must be of the correct type")
             else
                if(res%l_real) then
@@ -807,14 +813,27 @@ CONTAINS
             call juDFT_error("res must be allocated")
          endif
 
-         ldc = merge(size(res%data_r, dim=1), size(res%data_c, dim=1), mat2%l_real)
+         ldc = size(res%data_c, dim=1)
+         if(.not. l_mixed) ldc = merge(size(res%data_r, dim=1), size(res%data_c, dim=1), mat2%l_real)
          if(ldc < max(1,m)) call judft_error("problem with ldc")
 
          if(run_on_gpu) then
             call perform_cublas_gemm(mat1%l_real, transA_i,transB_i,m,n,k, lda, ldb, ldc,&
                                     mat1%data_r, mat1%data_c, mat2%data_r, mat2%data_c, res%data_r, res%data_c)
          else
-            IF (mat1%l_real) THEN
+            IF (l_mixed) THEN
+               if(mat1%l_real) then
+                  allocate(mat1_c(size(mat1%data_r,1), size(mat1%data_r,2)))
+                  mat1_c = mat1%data_r
+                  call zgemm(transA_i,transB_i,m,n,k,cmplx_1, mat1_c, lda, mat2%data_c, ldb, cmplx_0, res%data_c, ldc)
+                  deallocate(mat1_c)
+               else
+                  allocate(mat2_c(size(mat2%data_r,1), size(mat2%data_r,2)))
+                  mat2_c = mat2%data_r
+                  call zgemm(transA_i,transB_i,m,n,k,cmplx_1, mat1%data_c, lda, mat2_c, ldb, cmplx_0, res%data_c, ldc)
+                  deallocate(mat2_c)
+               endif
+            ELSEIF (mat1%l_real) THEN
                call dgemm(transA_i,transB_i,m,n,k, 1.0, mat1%data_r, lda, mat2%data_r, ldb, 0.0, res%data_r, ldc)
             ELSE
                call zgemm(transA_i,transB_i,m,n,k,cmplx_1, mat1%data_c, lda, mat2%data_c, ldb, cmplx_0,res%data_c, ldc)
@@ -824,7 +843,8 @@ CONTAINS
          if (mat1%matsize1  /= mat1%matsize2 .or. mat2%matsize2 /= mat2%matsize1)&
             CALL judft_error("Cannot multiply matrices inplace because of non-matching dimensions", hint="This is a BUG in FLEUR, please report")
 
-         call tmp%alloc(mat1%l_real, n,n)
+         ! for mixed, result is always complex
+         call tmp%alloc(merge(.false., mat1%l_real, l_mixed), n,n)
          ldc = merge(size(tmp%data_r, dim=1), size(tmp%data_c, dim=1), tmp%l_real)
          if(ldc < max(1,m)) call judft_error("problem with ldc")
 
@@ -835,7 +855,22 @@ CONTAINS
             call mat1%copy(tmp,1,1)
             !$acc end data
          else
-            if (mat1%l_real) THEN
+            IF (l_mixed) THEN
+               if(mat1%l_real) then
+                  allocate(mat1_c(size(mat1%data_r,1), size(mat1%data_r,2)))
+                  mat1_c = mat1%data_r
+                  call zgemm(transA_i,transB_i,n,n,n,cmplx_1, mat1_c, lda, mat2%data_c, ldb, cmplx_0, tmp%data_c, ldc)
+                  deallocate(mat1_c)
+               else
+                  allocate(mat2_c(size(mat2%data_r,1), size(mat2%data_r,2)))
+                  mat2_c = mat2%data_r
+                  call zgemm(transA_i,transB_i,n,n,n,cmplx_1, mat1%data_c, lda, mat2_c, ldb, cmplx_0, tmp%data_c, ldc)
+                  deallocate(mat2_c)
+               endif
+               ! convert mat1 to complex to hold the result
+               call mat1%free()
+               call mat1%alloc(.false., n, n)
+            ELSEIF (mat1%l_real) THEN
                call dgemm(transA_i,transB_i,n,n,n, 1.0, mat1%data_r, lda, mat2%data_r, ldb, 0.0, tmp%data_r, ldc)
             ELSE
                call zgemm(transA_i,transB_i,n,n,n,cmplx_1, mat1%data_c, lda, mat2%data_c, ldb, cmplx_0, tmp%data_c, ldc)
