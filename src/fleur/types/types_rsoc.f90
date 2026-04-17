@@ -139,7 +139,7 @@ module m_types_rsoc
        first_k=.FALSE.
     ENDIF
 8000 FORMAT (' spin - orbit parameter HR  ')
-8001 FORMAT (8f8.4)
+8001 FORMAT (8f12.8)
 9000 FORMAT (5x,' p ',5x,' d ', 5x, ' f ')
     !
  contains 

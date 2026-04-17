@@ -99,6 +99,7 @@ CONTAINS
         end if
         num_bands = mat(1,1)%matsize1
 
+        
         DO n = 1,this%atoms%ntype
          call radfun%generate_radial_functions(this%atoms, this%input, this%enpara, this%fmpi, this%vtot, n,usdus_out=usdus)
          !calculate the abc coefficients for this atom type and both spins
@@ -133,6 +134,7 @@ CONTAINS
                                     mat(i1,j1)%data_c(i,j) = mat(i1,j1)%data_c(i,j) +&
                                     abc(i1)%cof(i,lm,icof,na)*this%rsoc%rso(icof,jcof,n,l,i1,j1)*cof_lm*radfun%integral(icof,jcof,l,i1_int,j1_int)
                                  ENDDO
+                                 
                               ENDDO
                            ENDDO
                         ENDDO

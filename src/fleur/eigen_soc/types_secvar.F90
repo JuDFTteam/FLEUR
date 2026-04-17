@@ -135,16 +135,15 @@ MODULE m_types_secvar
         use m_eig66_io
         CLASS(t_secvar), INTENT(INOUT) :: this
         type(t_mat) :: eig, backtransformed
-        integer :: jsp, jsp_in
+        integer :: jsp
 
         call eig%init(.false., this%ne_first, this%ne_second)
         call backtransformed%init(.false., this%nmat_first, this%ne_second)
         DO jsp=1,size(this%zmat)
-            jsp_in = jsp
             !Split the eigenvectors into a spin-up and down part
             call eig%copy(this%eigvec, 1, 1, m1=merge(1, this%ne_first+1, jsp==1), m2=1)
             !Now transform the eigenvectors back to the original LAPW basis
-            call this%zmat(jsp_in)%multiply(eig, backtransformed)
+            call this%zmat(jsp)%multiply(eig, backtransformed)
             !Store the backtransformed eigenvectors in the original matrix format
             call write_eig(this%eig_id, this%ikpt, jsp, neig=this%ne_second, neig_total=this%ne_second, eig=this%eigval, zmat=backtransformed)
         end do

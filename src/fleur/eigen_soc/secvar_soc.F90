@@ -91,8 +91,7 @@ CONTAINS
         !CALL spnorb(fi%atoms, fi%noco, nococonv, fi%input, fmpi, enpara, vTot%mt, usdus, rsoc, .TRUE.)
         call rsoc%init(fi%atoms)
         call rsoc%rad_matrix(fi%atoms, fi%noco, nococonv, fi%input, fmpi, enpara, vTot)
-
-
+        call rsoc%angles(fi%atoms,fmpi,nococonv%theta,nococonv%phi)
         ! Loop over k-points assigned to this MPI task
         DO nk_i = 1, SIZE(fmpi%k_list)
             nk = fmpi%k_list(nk_i)
@@ -101,14 +100,17 @@ CONTAINS
                             enpara, lapw, vTot, rsoc, fmpi, nk, eig_id, &
                             ne_out=results%neig(nk, 1), eigval_out=results%eig(:, nk, 1))
         END DO
-
+        
 #ifdef CPP_MPI
         CALL MPI_ALLREDUCE(MPI_IN_PLACE, results%neig(:, 1), &
                            fi%kpts%nkpt, MPI_INTEGER, MPI_SUM, fmpi%mpi_comm, ierr)
         CALL MPI_ALLREDUCE(MPI_IN_PLACE, results%eig(:2*fi%input%neig,:,1), &
                            2*fi%input%neig*fi%kpts%nkpt, MPI_DOUBLE_PRECISION, MPI_MIN, fmpi%mpi_comm, ierr)
 #endif
-
+        if (fi%input%jspins == 2) then
+           results%eig(:2*fi%input%neig,:,2) = results%eig(:2*fi%input%neig,:,1)
+           results%neig(:, 2) = results%neig(:, 1)
+        end if
     END SUBROUTINE secvar_soc
 
 END MODULE m_secvar_soc
