@@ -1,7 +1,7 @@
-! Copyright (c) 2024 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
-! This file is part of FLEUR and available as free software under the conditions
+!--------------------------------------------------------------------------------
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
-!
 !--------------------------------------------------------------------------------
 module m_elpa
    use m_judft
@@ -34,8 +34,8 @@ module m_elpa
 contains
 
    function get_solver_elpa() result(solver)
-      type(t_solver_elpa), pointer::solver
-      allocate (solver)
+      class(t_solver), allocatable :: solver
+      allocate(t_solver_elpa :: solver)
       solver%name = "elpa"
 #ifdef CPP_ELPA
       solver%available = .true.

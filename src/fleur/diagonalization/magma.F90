@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -30,8 +30,8 @@ module m_magma
 contains
 
    function get_solver_magma() result(solver)
-      type(t_solver_magma), pointer::solver
-      allocate (solver)
+      class(t_solver), allocatable :: solver
+      allocate(t_solver_magma :: solver)
       solver%name = "magma"
 #ifdef CPP_MAGMA
       solver%available = .true.
@@ -45,6 +45,7 @@ contains
       solver%single_precision = .true.
       solver%transform = .true.
       solver%GPU = .true.
+      solver%use_sp = .false.
    end function
 
    subroutine init()

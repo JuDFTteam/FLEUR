@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_writeout
    use m_types_solver
    private
@@ -8,8 +13,8 @@ module m_writeout
    public :: t_solver_debugout, get_solver_debugout
 contains
    function get_solver_debugout() result(solver)
-      type(t_solver_debugout), pointer::solver
-      allocate (solver)
+      class(t_solver), allocatable :: solver
+      allocate(t_solver_debugout :: solver)
       solver%name = "debugout"
       solver%available = .true.
       solver%parallel = .true.
@@ -19,6 +24,7 @@ contains
       solver%single_precision = .false.
       solver%transform = .false.
       solver%GPU = .false.
+      solver%use_sp = .false.
    end function
 
    subroutine diag_writeout(self, hmat, smat, ne, eig, zmat, ikpt)

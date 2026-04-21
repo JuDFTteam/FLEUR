@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2024 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -22,8 +22,8 @@ module m_lapack
 contains
 
    function get_solver_lapack() result(solver)
-      type(t_solver_lapack), pointer::solver
-      allocate (solver)
+      class(t_solver), allocatable :: solver
+      allocate(t_solver_lapack :: solver)
       solver%name = "lapack"
       solver%available = .true.
       solver%parallel = .false.
@@ -33,6 +33,7 @@ contains
       solver%single_precision = .true.
       solver%transform = .true.
       solver%GPU = .false.
+      solver%use_sp = .false.
    end function
 
    subroutine lapack_gev(self, hmat, smat, ne, eig, zmat, ikpt)

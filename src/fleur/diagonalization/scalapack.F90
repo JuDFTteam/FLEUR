@@ -28,8 +28,8 @@ module m_scalapack
 contains
 
    function get_solver_scalapack() result(solver)
-      type(t_solver_scalapack), pointer::solver
-      allocate (solver)
+      class(t_solver), allocatable :: solver
+      allocate(t_solver_scalapack :: solver)
       solver%name = "scalapack"
 #ifdef CPP_SCALAPACK
       solver%available = .true.
@@ -43,6 +43,7 @@ contains
       solver%single_precision = .false.
       solver%transform = .true.
       solver%GPU = .false.
+      solver%use_sp = .false.
    end function
 
    subroutine scalapack_gev(self, hmat, smat, ne, eig, zmat, ikpt)

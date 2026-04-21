@@ -1,8 +1,8 @@
-! Copyright (c) 2018 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
-! This file is part of FLEUR and available as free software under the conditions
+!--------------------------------------------------------------------------------
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
-!
-! @authors: Miriam Hinzen, Gregor Michalicek
+!--------------------------------------------------------------------------------
 ! Added MPI implementation, DW 2018
 !--------------------------------------------------------------------------------
 module m_chase
@@ -32,8 +32,8 @@ module m_chase
 contains
 
    function get_solver_chase() result(solver)
-      type(t_solver_chase), pointer::solver
-      allocate (solver)
+      class(t_solver), allocatable :: solver
+      allocate(t_solver_chase :: solver)
       solver%name = "chase"
 #ifdef CPP_CHASE
       solver%available = .true.
@@ -47,6 +47,7 @@ contains
       solver%single_precision = .true.
       solver%transform = .false.
       solver%GPU = .true.
+      solver%use_sp = .false.
    end function
 
    subroutine chase_diag_dp(self, hmat, ne, eig, zmat)
