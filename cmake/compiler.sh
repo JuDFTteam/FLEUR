@@ -106,6 +106,8 @@ gfortran(){
 }
 
 configure_compiler(){
+   compiler=${compiler//-/_}
+
    if [[ $compiler == "nvidia" ]] ; then nvidia ; fi
    if [[ $compiler == "intel" ]] ; then intel ; fi
    if [[ $compiler == "intel_old" ]] ; then intel_old ; fi
