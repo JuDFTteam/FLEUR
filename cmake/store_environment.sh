@@ -144,8 +144,28 @@ if [ "$CLI_USE_SCALAPACK" ]
 then
     echo "set(CLI_FLEUR_USE_SCALAPACK $CLI_USE_SCALAPACK)"  >>config.cmake
 fi
- 
-if [ "$CLI_PATCH_INTEL" ]
+
+if [ "$CLI_CPU_PROFILE" ]
 then
-    echo "set(CLI_PATCH_INTEL 1)"  >>config.cmake
+    echo "set(CLI_FLEUR_CPU_PROFILE $CLI_CPU_PROFILE)"  >>config.cmake
+fi
+
+if [ "$CLI_OPT_LEVEL" ]
+then
+    echo "set(CLI_FLEUR_OPT_LEVEL $CLI_OPT_LEVEL)"  >>config.cmake
+fi
+
+if [ "$CLI_ELPA_KERNEL_PROFILE" ]
+then
+    echo "set(CLI_FLEUR_ELPA_KERNEL_PROFILE $CLI_ELPA_KERNEL_PROFILE)"  >>config.cmake
+fi
+
+if [ "$CLI_STRICT_ARCH_FLAGS" ]
+then
+    echo "set(FLEUR_STRICT_ARCH_FLAGS $CLI_STRICT_ARCH_FLAGS)"  >>config.cmake
+fi
+
+if [ "$CLI_STRICT_COMPILER_CHECK" ]
+then
+    echo "set(FLEUR_STRICT_COMPILER_CHECK $CLI_STRICT_COMPILER_CHECK)"  >>config.cmake
 fi

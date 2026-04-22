@@ -18,8 +18,11 @@ file(APPEND ${conffile} ="${CMAKE_Fortran_FLAGS} ${CMAKE_Fortran_FLAGS_RELEASE} 
 file(APPEND ${conffile} "export CFLAGS")
 file(APPEND ${conffile} ="${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_RELEASE} ${LDFLAGS}" "\n")
 
-set(elpa_flags "--disable-c-tests --disable-cpp-tests --enable-shared=no --enable-c-tests=no --enable-cpp-tests=no --enable-single-precision --disable-avx512-kernels ")
+set(elpa_flags "--disable-c-tests --disable-cpp-tests --enable-shared=no --enable-c-tests=no --enable-cpp-tests=no --enable-single-precision")
 set(elpa_flags "${elpa_flags} --enable-runtime-threading-support-checks --enable-allow-thread-limiting --without-threading-support-check-during-build")
+if (DEFINED FLEUR_ELPA_KERNEL_FLAGS_SELECTED)
+    set(elpa_flags "${elpa_flags} ${FLEUR_ELPA_KERNEL_FLAGS_SELECTED}")
+endif()
 
 if (DEFINED ENV{ELPA_CONF})
     set(elpa_flags "${elpa_flags} $ENV{ELPA_CONF}")
@@ -36,6 +39,7 @@ if (FLEUR_USE_GPU)
         set(elpa_flags "${elpa_flags} --enable-nvidia-gpu-kernels --enable-gpu-streams=nvidia --with-NVIDIA-GPU-compute-capability=sm_${FLEUR_CC_MODE}")
     endif()        
 endif()
+message(STATUS "ELPA configure flags selected by FLEUR: ${elpa_flags}")
 file(APPEND ${conffile} "echo 'Building ELPA in: ' $PWD \n")
 
 file(APPEND ${conffile} "./configure ${elpa_flags} \n")

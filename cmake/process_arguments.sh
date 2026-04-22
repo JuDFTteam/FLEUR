@@ -32,12 +32,15 @@ do
     -flags) shift; CLI_FLAGS=$1;;
     -includedir) shift; CLI_INCLUDEDIR="$CLI_INCLUDEDIR $1";;
     -elpa) shift;CLI_ELPA=$1;;
+    -cpu_profile) shift;CLI_CPU_PROFILE=$1;;
+    -opt_level) shift;CLI_OPT_LEVEL=$1;;
+    -elpa_kernel_profile) shift;CLI_ELPA_KERNEL_PROFILE=$1;;
+    -relax_arch_flags) CLI_STRICT_ARCH_FLAGS=OFF;;
+    -relax_compiler_check) CLI_STRICT_COMPILER_CHECK=OFF;;
     -cmake_opts) shift;CMAKE_OPTIONS=$1;;
     -make) make_directly=1;;
     -ninja) use_ninja=1;;
     -warn_only) CLI_WARN_ONLY=1;;
-    -d) debug=1;;
-    -amd) CLI_PATCH_INTEL=1;;
     -spack) conf_spack=1;;
     -*) error="Unknown argument";;
     *)  break;;	# terminate while loop
@@ -72,15 +75,31 @@ General options:
   -l #          : label for the build. ${GREEN}It will be attached to the name of
                   the build directory.${NC}
                   This option can also be specified as last argument without -l
-  -d            : build a debugging version of FLEUR (adds .debug to label)
   -g            : do a git pull first if this is a git version
   -t            : generate all tests including those that run longer
   -b            : backup an old build directory if present
   -make         : do not stop after configure script but run make directly
   -cmake #      : cmake executable to use
   -cmake_opts # : additional options for cmake can be specified here directly
-  -amd          : apply some patches to the Intel MKL to run on AMD (very experiemental)
   -ninja        : use Ninja bild system instead of GNU make
+  -cpu_profile # : CPU profile for optimization flags (portable,native,x86_64_v2,x86_64_v3,x86_64_v4,avx2,zen2,zen3,zen4,armv8,a64fx)
+  -opt_level #   : optimization policy used by profile selection (safe,performance,debug)
+  -elpa_kernel_profile # : ELPA kernel profile (auto,generic,x86,avx2,avx512,arm,gpu)
+  -relax_arch_flags : do not fail configuration on architecture/profile mismatches
+  -relax_compiler_check : do not stop on old/unsupported compiler checks (warn instead)
+
+CPU profile reference:
+  portable   : maximize portability; avoid strict microarchitecture targeting
+  native     : optimize for the local build CPU
+  x86_64_v2  : baseline x86-64-v2 feature level
+  x86_64_v3  : baseline x86-64-v3 feature level (includes AVX2-class CPUs)
+  x86_64_v4  : baseline x86-64-v4 feature level (includes AVX-512-class CPUs)
+  avx2       : target AVX2-capable x86_64 CPUs
+  zen2       : tune for AMD Zen 2
+  zen3       : tune for AMD Zen 3
+  zen4       : tune for AMD Zen 4
+  armv8      : target Armv8-A systems (AArch64)
+  a64fx      : tune for Fujitsu A64FX
 
 Command line options to disable recommended libraries:
   -hdf5 false       : do not use HDF5. 

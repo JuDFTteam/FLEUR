@@ -18,3 +18,16 @@
 ##    Add linker stuff. Here you should add the -L and -l options needed for the linker to
 ##    find libraries. Please mind the format!
 #set(FLEUR_LIBRARIES ${FLEUR_LIBRARIES} "-L$ENV{HOME/somepath;-lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64")
+
+##    CPU/ELPA profile configuration (optional)
+##    These variables control architecture-aware compiler flags and ELPA kernel selection.
+##    Supported CPU profiles:
+##      portable, native, x86_64_v2, x86_64_v3, x86_64_v4, avx2, zen2, zen3, zen4, armv8, a64fx
+##    Supported optimization policies:
+##      safe, performance, debug
+##    Supported ELPA kernel profiles:
+##      auto, generic, x86, avx2, avx512, arm, gpu
+#set(FLEUR_CPU_PROFILE native)
+#set(FLEUR_OPT_LEVEL performance)
+#set(FLEUR_ELPA_KERNEL_PROFILE auto)
+#set(FLEUR_STRICT_COMPILER_CHECK OFF)

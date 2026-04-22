@@ -29,9 +29,6 @@ if (DEFINED FLEUR_USE_HDF5)
 endif()
 #In addition you might want to set
 set(JUDFT_COMPILEOPTS ${FLEUR_PRECISION_OPTION})
-if (CLI_PATCH_INTEL)
-   set(JUDFT_PATCH_INTEL ON CACHE BOOL "Apply patches to MKL for performance on AMD")
-endif()
 
 add_subdirectory(src/libraries/juDFT)
 

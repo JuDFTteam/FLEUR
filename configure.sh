@@ -75,6 +75,12 @@ echo -e "${RED}------------ Welcome to the FLEUR configuration script ----------
 
 . $DIR/cmake/process_arguments.sh
 
+case "$CLI_OPT_LEVEL" in
+    debug|Debug|DEBUG)
+        debug=1
+        ;;
+esac
+
 
 if [ $conf_spack -gt 0 ]
 then

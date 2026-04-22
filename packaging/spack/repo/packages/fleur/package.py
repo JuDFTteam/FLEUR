@@ -39,7 +39,6 @@ class Fleur(CudaPackage, Package):
     variant("spfft", default=False, description="Enable spfft support")
     variant("wannier90", default=False, description="Enable wannier90 support")
     variant("openmp", default=True, description="Enable OpenMP support")
-    variant("amd", default=False, description="Use some patch for AMD processors")
     variant("cuda",default=False,description="Use OpenACC on top of CUDA for NVIDIA GPUs")
     variant("cuda_arch",default="80" ,description="specify the CUDA architecture to build for")
     variant("debug", default=False, description="Build a debugging version in build.debug")
@@ -175,10 +174,8 @@ class Fleur(CudaPackage, Package):
             include_opt.append(
                 join_path(spec["elpa"].headers.include_flags[2:], "modules")
             )
-        if spec.satisfies("+amd"):
-            args.append("-amd")
         if spec.satisfies("+debug"):
-            args.append("-d")
+            args.extend(["-opt_level", "debug"])
         
         #Now add collected options
         args.append("-link")
