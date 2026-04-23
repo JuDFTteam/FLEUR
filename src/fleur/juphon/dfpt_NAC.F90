@@ -14,19 +14,26 @@ module m_dfpt_NAC
 
 contains
 
-    subroutine dfpt_NAC(fi,dyn_mat_NAC_row)
+    subroutine dfpt_NAC(fi,dyn_mat_NAC,qnorm_in)
 
     type(t_fleurinput), intent(in)     :: fi
-    complex, intent(inout)             :: dyn_mat_NAC_row(:,:)
-    real                    :: dielten(3,3),tempval_denom,tempval_BEC_fixed,tempval_NAC
-    real, allocatable       :: borneffcharge(:,:,:)
-    integer                 :: qnorm_vec(3), iDir,iDir1,iType,iType_row,iDir_row
+    complex, intent(inout)             :: dyn_mat_NAC(:,:)
+    real, intent(in),optional          :: qnorm_in (3)          
+    real                               :: qnorm_vec(3),dielten(3,3),tempval_denom,tempval_BEC_fixed,tempval_NAC
+    real, allocatable                  :: borneffcharge(:,:,:)
+    integer                            ::  iDir,iDir1,iType,iType_row,iDir_row
+    logical                            :: l_present
 
     allocate(borneffcharge(fi%atoms%ntype,3,3))
 
     call read_BEC(fi,borneffcharge)
-        
-    qnorm_vec(:) = [1,0,0]
+     
+    if (present(qnorm_in)) then
+        qnorm_vec = qnorm_in
+    else
+        qnorm_vec(:) = [0.5,0.0,0.5]/norm2([0.5,0.0,0.5])![0.577350269189626,0.577350269189626,0.577350269189626]
+    end if
+    !print*,"qnorm_vec",qnorm_vec
     tempval_denom = 0.0
 
     call read_dielten(fi,dielten)
@@ -43,7 +50,7 @@ contains
                 do iDir_row=1,3
                     tempval_NAC=0.0
                     tempval_NAC = tempval_NAC + sum(borneffcharge(itype,iDir,:)*qnorm_vec(:))*sum(borneffcharge(iType_row,iDir_row,:)*qnorm_vec(:))/tempval_denom
-                    dyn_mat_NAC_row(3 *(itype-1)+iDir,3 *(iType_row-1)+iDir_row) = (fpi_const/fi%cell%omtil)*tempval_NAC*cmplx(1.,0.)
+                    dyn_mat_NAC(3 *(itype-1)+iDir,3 *(iType_row-1)+iDir_row) = (fpi_const/fi%cell%omtil)*tempval_NAC*cmplx(1.,0.)
                 end do
             end do
         end do
@@ -86,12 +93,246 @@ contains
 
         do iDir = 1, 3
             read(110,*) dielten( iDir, 1:3)
-            print*,dielten( iDir, 1:3)
+            !print*,dielten( iDir, 1:3)
         end do
 
         close(110)
     
     end subroutine read_dielten
+
+    subroutine get_NAC(fi,qpts,dyn_mat_q,iQ)
+
+        type(t_fleurinput), intent(in)     :: fi
+        type(t_kpts), intent(in)           :: qpts
+        complex, intent(inout)             :: dyn_mat_q(:,:)
+        integer, intent(in)                :: iQ
+        
+        complex, allocatable               :: dyn_mat_NAC(:,:) 
+        real                               :: qnorm_vec(3)                    
+
+        allocate(dyn_mat_NAC(3*fi%atoms%ntype,3*fi%atoms%ntype))
+
+        dyn_mat_NAC(:,:) = cmplx(0.0,0.0)
+        print*,"sum(dyn_mat_q) 1",sum(dyn_mat_q(:,:))
+
+        print*,"in the routine"
+        print*,"iQ",iQ
+        if (iQ==1) then
+            print*,"qpts%bk(:,iQ+1)",qpts%bk(:,iQ+1)
+            qnorm_vec(:)=qpts%bk(:,iQ+1)/norm2(qpts%bk(:,iQ+1))
+            print*,"qnorm_vec(:)",qnorm_vec(:)
+        else
+            print*,"qpts%bk(:,iQ+1)",qpts%bk(:,iQ-1)
+            qnorm_vec(:)=qpts%bk(:,iQ-1)/norm2(qpts%bk(:,iQ-1))
+            print*,"qnorm_vec(:)",qnorm_vec(:)
+        end if
+        call dfpt_NAC(fi,dyn_mat_NAC,qnorm_vec)
+        !stop
+        !dyn_mat_q(:,:) = cmplx(0.0,0.0)
+        dyn_mat_q = dyn_mat_q +dyn_mat_NAC
+        print*,"dyn_mat_NAC",dyn_mat_NAC
+        print*,"sum(dyn_mat_q)",sum(dyn_mat_q(:,:))
+
+    end subroutine get_NAC
+
+    subroutine get_NAC_ewald(fi,qpts,stars,dyn_mat_NAC,qvec,iQ)
+
+        type(t_fleurinput), intent(in)     :: fi
+        type(t_kpts), intent(in)           :: qpts
+        type(t_stars) , intent(in)         :: stars
+        complex, intent(inout)             :: dyn_mat_NAC(:,:)
+        real, intent(in)                   :: qvec(3)
+        integer, intent(in)                :: iQ
+        
+        complex, allocatable               :: dyn_mat_NAC_gq(:,:) 
+        real                               :: qnorm_vec(3) 
+        integer                            :: istar,ft_lim(2,3), iz, iy,ix,itype_col,itype_row,iDir_col,iDir_row
+        real                               :: gqvec(3), gauss_fact       
+        complex                            :: tempval_dynmat 
+        REAL                               :: phas
+        COMPLEX                            :: phase_fac
+
+        allocate(dyn_mat_NAC_gq(3*fi%atoms%ntype,3*fi%atoms%ntype))
+        dyn_mat_NAC_gq = (0.0,0.0)
+        !allocate(dyn_mat_NAC(3*fi%atoms%ntype,3*fi%atoms%ntype))
+        print*,"in NAC Ewald"
+        !qvec = qpts%bk(:,iQ)
+        !print*,"qvec",qvec
+        !stop
+        ft_lim(2,:) = qpts%nkpt3(:)/2
+        !print*,"ft_lim(2,:) ",ft_lim(2,:) 
+        !stop
+        ft_lim(1,:) = ft_lim(2,:) - qpts%nkpt3(:) + 1
+        !stop
+        itype_col = 1
+        itype_row = 1
+        !dyn_mat_NAC(itype_col,itype_row) = 0.0
+        !stop
+        !print*,"stars%ng3",stars%ng3
+        do itype_col=1,fi%atoms%ntype
+            do iDir_col=1,3
+                do iType_row=1,fi%atoms%ntype
+                    do iDir_row=1,3
+                        do istar =1, 100!stars%ng3
+                            !print*,"test"
+                            gqvec = stars%kv3(:,istar) + qvec
+                            if (norm2(gqvec) .lt. 1e-8) then
+                                cycle
+                            end if
+                            !print*,"gqvec",gqvec
+                            call dfpt_NAC(fi,dyn_mat_NAC_gq,gqvec) 
+                            !print*,"sum(dyn_mat_NAC_gq)",sum(dyn_mat_NAC_gq)
+                            call get_gaussian(fi,gqvec,gauss_fact)
+                            !print*,"Im here"
+                            tempval_dynmat = 0.0
+                            DO iz=ft_lim(1,3),ft_lim(2,3)
+                                !print*,"im here 2"
+                                DO iy=ft_lim(1,2),ft_lim(2,2)
+                                    DO ix=ft_lim(1,1),ft_lim(2,1)
+                                        !print*,"test"
+                                        phas=tpi_const*sum((gqvec(:))*([ix,iy,iz]+fi%atoms%taual(:,itype_col)-fi%atoms%taual(:,itype_row)))
+                                        phase_fac=cmplx(cos(phas),sin(phas))
+                                        tempval_dynmat  = tempval_dynmat + phase_fac
+                                        !print*,"in tempval dynmat loop"
+                                    END DO
+                                END DO
+                            END DO
+                            !print*,"gauss_fact",gauss_fact
+                            !print*,"tempval_dynmat",tempval_dynmat
+                            dyn_mat_NAC(3 *(itype_col-1)+iDir_col,3 *(iType_row-1)+iDir_row) =dyn_mat_NAC(3 *(itype_col-1)+iDir_col,3 *(iType_row-1)+iDir_row)+ dyn_mat_NAC_gq(3 *(itype_col-1)+iDir_col,3 *(iType_row-1)+iDir_row)*gauss_fact*tempval_dynmat
+                            !print*,"dyn_mat_NAC in loop",dyn_mat_NAC(3 *(itype_col-1)+iDir_col,3 *(iType_row-1)+iDir_row)
+                        end do
+                    end do
+                end do
+            end do
+        end do
+        print*,"sum(dyn_mat_NAC)",sum(dyn_mat_NAC)
+        !stop
+
+
+        !stop
+        
+        
+    end subroutine get_NAC_ewald
+
+    subroutine get_NAC_ewald_r(fi,qpts,stars,dyn_mat_NAC_r,qvec,iQ)
+
+        type(t_fleurinput), intent(in)     :: fi
+        type(t_kpts), intent(in)           :: qpts
+        type(t_stars), intent(in)          :: stars
+        complex, intent(inout)             :: dyn_mat_NAC_r(:,:,:)
+        real, intent(in)                   :: qvec(3)
+        integer, intent(in)                :: iQ
+        
+        complex, allocatable               :: dyn_mat_NAC_gq(:,:) 
+        real                               :: qnorm_vec(3) 
+        integer                            :: istar,ft_lim(2,3), iz, iy,ix,itype_col,itype_row,iDir_col,iDir_row,iGrid
+        real                               :: gqvec(3), gauss_fact       
+        complex                            :: tempval_dynmat
+        REAL                               :: phas
+        COMPLEX                            :: phase_fac
+
+        allocate(dyn_mat_NAC_gq(3*fi%atoms%ntype,3*fi%atoms%ntype))
+        dyn_mat_NAC_gq = (0.0,0.0)
+        !allocate(dyn_mat_NAC(3*fi%atoms%ntype,3*fi%atoms%ntype))
+        print*,"in NAC Ewald"
+        !qvec = qpts%bk(:,iQ)
+        print*,"qvec",qvec
+        !stop
+        ft_lim(2,:) = qpts%nkpt3(:)/2
+        !print*,"ft_lim(2,:) ",ft_lim(2,:) 
+        !stop
+        ft_lim(1,:) = ft_lim(2,:) - qpts%nkpt3(:) + 1
+        !stop
+        !itype_col = 1
+        !itype_row = 1
+        !dyn_mat_NAC(itype_col,itype_row) = 0.0
+        !stop
+        iGrid =0
+        print*,"stars%ng3",stars%ng3
+        print*,"sum(dyn_mat_NAC_r)",sum(dyn_mat_NAC_r)
+        !stop
+        DO iz=ft_lim(1,3),ft_lim(2,3)
+            !print*,"im here 2"
+            DO iy=ft_lim(1,2),ft_lim(2,2)
+                DO ix=ft_lim(1,1),ft_lim(2,1)
+                    iGrid = iGrid+1
+                    do itype_col=1,fi%atoms%ntype
+                        do iDir_col=1,3
+                            do iType_row=1,fi%atoms%ntype
+                                do iDir_row=1,3
+                                    !tempval_dynmat = 0.0
+                                    !print*,"before star sum"
+                                    do istar =2,100!stars%ng3
+                                        !print*,"test"
+                                        gqvec = stars%kv3(:,istar) + qvec
+                                        !print*,"gqvec",gqvec
+                                        !print*,"istar",istar
+                                        call dfpt_NAC(fi,dyn_mat_NAC_gq,gqvec) 
+
+                                        call get_gaussian(fi,gqvec,gauss_fact)
+                                        !print*,"sum(dyn_mat_NAC_gq)",sum(dyn_mat_NAC_gq)
+                                        !print*,"gauss_fact",gauss_fact
+                                        !print*,"Im here"
+                                        
+
+                                        !print*,"test"
+                                        phas=tpi_const*sum((gqvec(:))*([ix,iy,iz]+fi%atoms%taual(:,itype_col)-fi%atoms%taual(:,itype_row)))
+                                        phase_fac=cmplx(cos(phas),sin(phas))
+                                        !tempval_dynmat  =+ phase_fac
+                                        !print*,"in tempval dynmat loop"
+
+                                        !print*,"dyn_mat_NAC_gq(3 *(itype_col-1)+iDir_col,3 *(iType_row-1)+iDir_row)*gauss_fact*phase_fac",dyn_mat_NAC_gq(3 *(itype_col-1)+iDir_col,3 *(iType_row-1)+iDir_row)*gauss_fact*phase_fac
+                                        !print*,"tempval_dynmat",tempval_dynmat
+                                        dyn_mat_NAC_r(iGrid,3 *(itype_col-1)+iDir_col,3 *(iType_row-1)+iDir_row) =dyn_mat_NAC_r(iGrid,3 *(itype_col-1)+iDir_col,3 *(iType_row-1)+iDir_row)+dyn_mat_NAC_gq(3 *(itype_col-1)+iDir_col,3 *(iType_row-1)+iDir_row)*gauss_fact*phase_fac
+                                        !print*,"dyn_mat_NAC in loop",dyn_mat_NAC_r(iGrid,3 *(itype_col-1)+iDir_col,3 *(iType_row-1)+iDir_row)
+                                    end do
+                                    !print*,"dyn_mat_NAC_r",dyn_mat_NAC_r(iGrid,3 *(itype_col-1)+iDir_col,3 *(iType_row-1)+iDir_row)
+                                    !stop
+                                end do
+                            end do
+                        end do
+                    end do
+                END DO
+            END DO
+        END DO
+        !print*,"sum(dyn_mat_NAC)",sum(dyn_mat_NAC)
+        !stop
+
+
+        !stop
+        
+        
+    end subroutine get_NAC_ewald_r
+
+    subroutine get_gaussian(fi,gqvec,gauss_fact)
+
+        type(t_fleurinput), intent(in)     :: fi
+        real, intent(in)                    :: gqvec(3)
+        real, intent(inout)                    :: gauss_fact
+        
+        integer                         :: iDir, iDir1
+        real                            :: tempval_exp,para_ewald,dielten(3,3)
+
+        dielten(:,:)=0.0
+        tempval_exp = 0.0
+        para_ewald= 1
+        open(110, file="diel_tensor", status='old', action='read', form='formatted')
+        call read_dielten(fi,dielten)
+        do iDir=1,3
+            do iDir1=1,3
+                tempval_exp = tempval_exp +gqvec(iDir)*dielten(iDir,iDir1)*gqvec(iDir1)
+            end do
+        end do
+        tempval_exp = -tempval_exp/(4*para_ewald)
+        
+        gauss_fact = exp(tempval_exp)
+        !print*,"gauss_fact",gauss_fact
+        
+    
+    end subroutine get_gaussian
+
+
 
 
 end module 

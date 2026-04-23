@@ -12,6 +12,7 @@ module m_dfpt_interpolation
     use m_juDFT
     use m_constants
     use m_types
+    use m_dfpt_NAC
 
     implicit none 
 
@@ -57,7 +58,7 @@ contains
 
         ! dynMat properties
         complex, allocatable   :: eigenFreqs(:), eigenVecs(:,:)
-        complex, allocatable   :: dyn_mat(:,:,:), dyn_mat_r(:,:,:), dyn_mat_q_full(:,:,:), dyn_mat_pathq(:,:)
+        complex, allocatable   :: dyn_mat(:,:,:), dyn_mat_r(:,:,:), dyn_mat_q_full(:,:,:), dyn_mat_pathq(:,:),dyn_mat_NAC_q(:,:),dyn_mat_NAC_r(:,:,:)
         real,    allocatable   :: eigenVals(:), eigenValsFull(:,:,:)
 
         
@@ -102,6 +103,9 @@ contains
         q_list = (/(iQ, iQ=1,SIZE(qpts%bk,2), 1)/)
 
         ALLOCATE(dyn_mat(SIZE(q_list),3*fi%atoms%ntype,3*fi%atoms%ntype))
+        ALLOCATE(dyn_mat_NAC_q(3*fi%atoms%ntype,3*fi%atoms%ntype))
+        ALLOCATE(dyn_mat_NAC_r(qpts%nkptf,3*fi%atoms%ntype,3*fi%atoms%ntype))
+
         dyn_mat = cmplx(0.0,0.0)
 
 
@@ -128,9 +132,20 @@ contains
                 close(3001)
             end do  ! iQ
 
+            !subtract Long range part
+            !if (fi%juPhon%l_polar) then
+            !    do iQ = 1, qpts%nkpt
+            !        dyn_mat_NAC_q = cmplx(0.0,0.0)
+            !        call get_NAC_ewald(fi,qpts,stars_fullsym,dyn_mat_NAC_q,qpts%bk(:,iQ),iQ)
+            !        dyn_mat(iQ,:,:) = dyn_mat(iQ,:,:) - dyn_mat_NAC_q
+            !    end do
+            !end if
+            !stop
+
+
             ! Real space transformation
             ALLOCATE(dyn_mat_r(qpts%nkptf,3*fi%atoms%nat,3*fi%atoms%nat))
-            call ft_dyn(fi_fullsym%atoms, qpts, fi_fullsym%sym, fi_fullsym%cell%amat, dyn_mat, dyn_mat_r, dyn_mat_q_full)
+            call ft_dyn(fi_fullsym%atoms, qpts, fi_fullsym%sym, fi%cell%amat, dyn_mat, dyn_mat_r, dyn_mat_q_full)
             
             ! In order to call the normal diagonalisation routines
             ! The FCM must be not-normalized --> otherwise we find the wrong unit
@@ -141,25 +156,57 @@ contains
                                                SQRT(atomicMasses_const(fi%atoms%nz(CEILING(iDir/3.0)))*atomicMasses_const(fi%atoms%nz(CEILING(iDir2/3.0))))
                 end do
             end do
+            !subtract Long range part
+            if (fi%juPhon%l_polar) then
+                dyn_mat_NAC_r = cmplx(0.0,0.0)
+                call get_NAC_ewald_r(fi,qpts,stars_fullsym,dyn_mat_NAC_r,[0.,0.,0.],iQ)
+                dyn_mat_r(:,:,:) = dyn_mat_r(:,:,:) - dyn_mat_NAC_r(:,:,:)
+
+            end if
+
 
             ! interpolate to dense grid on a arbitrary q-point
             ! specified in the inp.xml kpts.xml
+
+            !print*,"fi%kpts%bk(:,iQ)",fi%kpts%bk(:,:)
+            !stop
+            !print*,"qpts%nkptf",qpts%nkptf
+            !print*,"fi%kpts%nkptf",fi%kpts%nkptf
+            !stop
+            !print*,"fi%kpts%nkpt",fi%kpts%nkpt
+            !stop
             do iQ = 1, fi%kpts%nkpt
-                call ift_dyn(fi_fullsym%atoms,fi_fullsym%kpts,fi_fullsym%sym,fi_fullsym%cell%amat,fi%kpts%bk(:,iQ),dyn_mat_r,dyn_mat_pathq)
+                call ift_dyn(fi_fullsym%atoms,fi_fullsym%kpts,fi_fullsym%sym,fi%cell%amat,fi%kpts%bk(:,iQ),dyn_mat_r,dyn_mat_pathq)
+                !print*,"sum(dyn_mat_pathq) in inter 1",sum(dyn_mat_pathq(:,:))
                 WRITE(*,*) '-------------------------'
+                !print*,"fi%kpts%bk(:,iQ)",fi%kpts%bk(:,iQ)
+                !if ((fi%juPhon%l_polar) .and. (norm2(fi%kpts%bk(:,iQ)) .lt. 1e-8)) then
+                !    print*,"at gamma"
+                !    call get_NAC(fi,fi%kpts,dyn_mat_pathq,iQ)
+                !end if
+                if (fi%juPhon%l_polar) then
+                    dyn_mat_NAC_q = cmplx(0.0,0.0)
+                    print*,"before adding it again"
+                    call get_NAC_ewald(fi,qpts,stars_fullsym,dyn_mat_NAC_q,fi%kpts%bk(:,iQ),iQ)
+                    print*,"sum(dyn_mat_NAC_q)",sum(dyn_mat_NAC_q)
+                    dyn_mat_pathq(:,:) = dyn_mat_pathq(:,:)+ dyn_mat_NAC_q(:,:)
+                end if
+
+                print*,"sum(dyn_mat_pathq) in inter 2",sum(dyn_mat_pathq(:,:))
                 call timestart("Dynmat diagonalization")
                 call DiagonalizeDynMat(fi%atoms, fi%kpts%bk(:,iQ), fi%juPhon%calcEigenVec, dyn_mat_pathq, eigenVals, eigenVecs, iQ,.TRUE.,TRIM(dynfiletag),fi%juPhon%l_sumrule)
                 call timestop("Dynmat diagonalization")
-
+                !stop
                 call timestart("Frequency calculation")
                 call CalculateFrequencies(fi%atoms, iQ, eigenVals, eigenFreqs,TRIM(dynfiletag),fi%kpts%bk(:,iQ))
                 call timestop("Frequency calculation")
-
+                !stop
                 if (fi%juPhon%l_dos) eigenValsFull(:,iQ,1) = eigenFreqs(:) ! save eigenfrequencies in case of dos
 
                 deallocate(eigenVals, eigenVecs, eigenFreqs, dyn_mat_pathq)
+                !stop
             end do ! iQ
-
+            stop
 
             if (fi%juPhon%l_dos) then 
                 banddosLocal = fi%banddos 
