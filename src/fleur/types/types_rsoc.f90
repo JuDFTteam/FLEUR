@@ -72,7 +72,7 @@ module m_types_rsoc
        !
        !---> in case of jspins=1
        !
-       call radfun%init(atoms, input, itype)
+       !call radfun%init(atoms, input, itype)
        call radfun%generate_radial_functions( atoms, input, enpara, fmpi, vtot, iType)
        
        !Spin averaged potential
