@@ -394,7 +394,15 @@ solver%single_precision = .true.
       type(t_mat):: tmp_mat
       type(t_mpimat):: tmp_mpimat
       call timestart("ELPA BACKTRANSFORM")
+
 #ifdef CPP_ELPA_PATCH
+      select type(zmat)
+      type is (t_mpimat)
+         call elpa_obj%set("nev", zmat%global_size2, err)
+      type is(t_mat)   
+         call elpa_obj%set("nev", zmat%matsize2, err)
+      end select
+
       call elpa_obj%set("nev", zmat%global_size2, err)
       if (smat%l_real) THEN
          call elpa_obj%elpa_transform_back_generalized_d(smat%data_r, zmat%data_r, error)

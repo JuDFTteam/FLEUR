@@ -90,7 +90,6 @@ contains
       class(t_mat), allocatable, intent(OUT)    :: zmat
       real, intent(OUT)           :: eig(:)
 
-      call timestart("CHASE STD")
 
       !These chase parameters might to be adjusted
       real, parameter ::   tol = 1e-10
@@ -102,6 +101,7 @@ contains
       !chase will modify these variables in call to xchase even though these are not arguments!!
       real, allocatable, VOLATILE :: zr(:, :), eigval(:)
       complex, allocatable, VOLATILE :: zc(:, :)
+      call timestart("CHASE STD")
       nex = 0.2*ne
       allocate (eigval(ne+nex))
       allocate (t_mat::zmat)
@@ -141,7 +141,6 @@ contains
       class(t_mat), allocatable, intent(OUT)    :: zmat
       real, intent(OUT)           :: eig(:)
 
-      call timestart("CHASE STD-SP")
 
       integer, parameter:: sp = selected_real_kind(6)
       !These chase parameters might to be adjusted
@@ -157,6 +156,7 @@ contains
       complex(sp), allocatable, volatile :: zc(:, :)
       real(sp), allocatable :: hr(:, :)
       complex(sp), allocatable :: hc(:, :)
+      call timestart("CHASE STD-SP")
       nex = 0.2*ne
       allocate (eigval(ne))
       allocate (t_mat::zmat)
@@ -199,7 +199,6 @@ contains
       class(t_mat), allocatable, intent(OUT)    :: zmat
       real, intent(OUT)           :: eig(:)
 
-      call timestart("CHASE MPI-STD")
 
       !These chase parameters might to be adjusted
       real, parameter ::   tol = 1e-10
@@ -214,6 +213,7 @@ contains
       !chase will modify these variables in call to xchase even though these are not arguments!!
       real, allocatable, volatile :: eigval(:)
       type(t_mpimat), volatile :: ztemp
+      call timestart("CHASE MPI-STD")
       nex = 0.2*ne
       allocate (eigval(ne))
 
