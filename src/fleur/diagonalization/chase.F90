@@ -6,8 +6,6 @@
 ! Added MPI implementation, DW 2018
 !--------------------------------------------------------------------------------
 module m_chase
-   implicit none
-
    use m_judft
    use m_constants
    use m_types_mat
