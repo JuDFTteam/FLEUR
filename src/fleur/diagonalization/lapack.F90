@@ -55,6 +55,8 @@ contains
       real, external      :: dlamch
       real               :: eigTemp(hmat%matsize1)
 
+      call timestart("LAPACK GEV")
+
       allocate (t_mat::zmat)
       call zmat%alloc(hmat%l_real, hmat%matsize1, ne)
       abstol = 2*dlamch('S')
@@ -94,6 +96,7 @@ contains
          WRITE(*,*) 'Error for k-point ', ikpt
          call judft_error("Diagonalization via LAPACK failed failed without explicit errorcode.")
       END IF
+      call timestop("LAPACK GEV")
    end subroutine lapack_gev
 
    subroutine lapack_diag(self, hmat, ne, eig, zmat)
@@ -109,6 +112,8 @@ contains
       real               :: abstol
       real, external      :: dlamch
       real               :: eigTemp(hmat%matsize1)
+
+      call timestart("LAPACK STD")
 
       n = hmat%matsize1
       if (n /= hmat%matsize2) call judft_error("Non-square matrix in lapack_diag")
@@ -152,6 +157,7 @@ contains
          end block
       end if
       eig(:min(size(eig), size(eigTemp))) = eigTemp(:min(size(eig), size(eigTemp)))
+      call timestop("LAPACK STD")
    end subroutine lapack_diag
 
    subroutine lapack_diag_sp(self, hmat, ne, eig, zmat)
@@ -166,6 +172,8 @@ contains
       integer, parameter:: sp = selected_real_kind(6)
       integer          :: info, m, n ,lwork
       real(sp)         :: eigval(hmat%matsize1)
+
+      call timestart("LAPACK STD-SP")
 
       n = hmat%matsize1
       if (n /= hmat%matsize2) call judft_error("Non-square matrix in lapack_diag")
@@ -215,7 +223,7 @@ contains
             deallocate(h,z,eigval,work,rwork,iwork)
             END BLOCK   
       end if
-      
+      call timestop("LAPACK STD-SP")
    end subroutine lapack_diag_sp
 
    subroutine lapack_reduction(self, hmat, smat)
@@ -224,6 +232,8 @@ contains
       class(t_mat), intent(INOUT)  :: hmat, smat
 
       integer            :: info, n
+
+      call timestart("LAPACK REDUCTION")
 
       n = smat%matsize1 !Matrix size
       if (n /= smat%matsize2 .or. n /= hmat%matsize1 .or. n /= hmat%matsize2) &
@@ -247,12 +257,16 @@ contains
          if (info /= 0) call juDFT_error("Error in zhegst")
       end if
 
+      call timestop("LAPACK REDUCTION")
+
    end subroutine lapack_reduction
 
    subroutine lapack_recover(self, smat, zmat)
       class(t_solver_lapack)            :: self
       class(t_mat), intent(INOUT)  :: zmat, smat
       integer :: m, n, info
+
+      call timestart("LAPACK BACKTRANSFORM")
 
       n = smat%matsize1
       m = zmat%matsize2
@@ -266,6 +280,7 @@ contains
          call ztrtrs('U', 'N', 'N', n, m, smat%data_c, n, zMat%data_c, n, info)
          if (info /= 0) call juDFT_error("Error in back transformation (zpotrs)")
       end if
+      call timestop("LAPACK BACKTRANSFORM")
    end subroutine
 
 end module m_lapack

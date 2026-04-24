@@ -55,6 +55,8 @@ contains
       integer            :: nev, lwork, liwork, n
       integer            :: info
 
+      call timestart("DUMMY DIAG")
+
       allocate (t_mat::zmat)
       call zmat%alloc(hmat%l_real, hmat%matsize1, ne)
 
@@ -105,6 +107,7 @@ contains
          end if
 
       end if
+      call timestop("DUMMY DIAG")
    end subroutine dummy_diag
 
 end module m_dummy_diag

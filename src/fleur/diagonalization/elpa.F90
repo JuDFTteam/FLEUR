@@ -78,6 +78,8 @@ solver%single_precision = .true.
          elpa_obj=>null()
       end if
       if (associated(elpa_obj)) return
+
+      call timestart("ELPA SETUP")
       elpa_obj => elpa_allocate()
 
       !Some settings are set for all matrices
@@ -124,6 +126,8 @@ solver%single_precision = .true.
 #else
       call elpa_obj%set("solver", ELPA_SOLVER_2STAGE)
 #endif
+
+   call timestop("ELPA SETUP")
 #endif
    end subroutine
 
@@ -366,8 +370,9 @@ solver%single_precision = .true.
       integer            :: err,n
       logical :: decomposed
 
+      call timestart("ELPA REDUCTION")
       call create_elpa_obj(hmat)
-      
+      call elpa_obj%set("nev", 1, err)
       decomposed=.false.
 #ifdef CPP_ELPA_PATCH 
       IF (hmat%l_real) THEN
@@ -376,6 +381,7 @@ solver%single_precision = .true.
          call elpa_obj%elpa_transform_generalized_dc(hmat%data_c,smat%data_c,decomposed,err)
       endif
 #endif      
+      call timestop("ELPA REDUCTION")
       
    end subroutine   
 
@@ -383,10 +389,12 @@ solver%single_precision = .true.
 
       class(t_solver_elpa) :: self
       class(t_mat), intent(INOUT)  :: zmat, smat
-      integer :: error
+      integer :: error, err
 
       type(t_mat):: tmp_mat
       type(t_mpimat):: tmp_mpimat
+      call timestart("ELPA BACKTRANSFORM")
+      call elpa_obj%set("nev", zmat%global_size2, err)
 #ifdef CPP_ELPA_PATCH
       if (smat%l_real) THEN
          call elpa_obj%elpa_transform_back_generalized_d(smat%data_r, zmat%data_r, error)
@@ -407,6 +415,7 @@ solver%single_precision = .true.
          call tmp_mat%copy(zmat,1,1)
          zmat=tmp_mat
       end select   
+      call timestop("ELPA BACKTRANSFORM")
       
    end subroutine
 

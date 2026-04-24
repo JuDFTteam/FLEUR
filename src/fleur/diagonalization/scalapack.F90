@@ -334,6 +334,8 @@ contains
       class(t_mat), intent(INOUT)  :: hmat, smat
       integer            :: info, n
 
+      call timestart("SCALAPACK REDUCTION")
+
 #ifdef CPP_SCALAPACK
       real :: scale
       select type (hmat)
@@ -375,6 +377,7 @@ contains
          call judft_bug("Wrong matrix type in scalapack")
       end select
 #endif
+      call timestop("SCALAPACK REDUCTION")
    end subroutine
 
    subroutine scalapack_recover(self, smat, zmat)
@@ -382,6 +385,8 @@ contains
       class(t_solver_scalapack) :: self
       class(t_mat), intent(INOUT)  :: zmat, smat
       integer :: m, n, info
+
+      call timestart("SCALAPACK BACKTRANSFORM")
 #ifdef CPP_SCALAPACK
 
       select type (smat)
@@ -409,6 +414,7 @@ contains
          call judft_bug("Wrong matrix type in scalapack")
       end select
 #endif
+      call timestop("SCALAPACK BACKTRANSFORM")
    end subroutine
 
 end module m_scalapack

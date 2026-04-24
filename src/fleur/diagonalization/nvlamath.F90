@@ -62,6 +62,8 @@ contains
       real, external      :: dlamch
       real               :: eigTemp(hmat%matsize1)
 
+      call timestart("NVLAMATH GEV")
+
       allocate (t_mat::zmat)
       call zmat%alloc(hmat%l_real, hmat%matsize1, ne)
       abstol = 2*dlamch('S')
@@ -111,6 +113,7 @@ contains
       eig(:min(size(eig), size(eigTemp))) = eigTemp(:min(size(eig), size(eigTemp)))
       if (info .ne. 0) call judft_error("Diagonalization via nvlamath failed(zhegvx/dsygvx)", no=info)
       if (m .ne. ne) call judft_error("Diagonalization via nvlamath failed failed without explicit errorcode.")
+      call timestop("NVLAMATH GEV")
    end subroutine nvlamath_gev
 
 end module m_nvlamath

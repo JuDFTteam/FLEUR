@@ -6,6 +6,7 @@
 ! Added MPI implementation, DW 2018
 !--------------------------------------------------------------------------------
 module m_chase
+   implicit none
 
    use m_judft
    use m_constants
@@ -91,6 +92,8 @@ contains
       class(t_mat), allocatable, intent(OUT)    :: zmat
       real, intent(OUT)           :: eig(:)
 
+      call timestart("CHASE STD")
+
       !These chase parameters might to be adjusted
       real, parameter ::   tol = 1e-10
       character(kind=c_char), parameter ::  mode = 'R', opt = 'S',qr='C'
@@ -129,6 +132,7 @@ contains
       end if
       eig(:ne) = eigval(:ne)
 #endif
+      call timestop("CHASE STD")
    end subroutine chase_serial_dp
 
    subroutine chase_serial_sp(hmat, ne, eig, zmat)
@@ -138,6 +142,8 @@ contains
       integer, intent(INOUT)      :: ne
       class(t_mat), allocatable, intent(OUT)    :: zmat
       real, intent(OUT)           :: eig(:)
+
+      call timestart("CHASE STD-SP")
 
       integer, parameter:: sp = selected_real_kind(6)
       !These chase parameters might to be adjusted
@@ -184,6 +190,7 @@ contains
       end if
       eig(:ne) = eigval(:ne)
 #endif
+      call timestop("CHASE STD-SP")
    end subroutine chase_serial_sp
 
    subroutine chase_mpi_dp(hmat, ne, eig, zmat)
@@ -193,6 +200,8 @@ contains
       integer, intent(INOUT)         :: ne
       class(t_mat), allocatable, intent(OUT)    :: zmat
       real, intent(OUT)           :: eig(:)
+
+      call timestart("CHASE MPI-STD")
 
       !These chase parameters might to be adjusted
       real, parameter ::   tol = 1e-10
@@ -251,6 +260,7 @@ contains
       call MPI_COMM_FREE(comm_1d, ierr)
       call MPI_COMM_FREE(comm_2d, ierr)
 #endif
+      call timestop("CHASE MPI-STD")
    end subroutine chase_mpi_dp
 
    subroutine create_mpi_comms(parent_comm, icontext, comm_2d, comm_1d)

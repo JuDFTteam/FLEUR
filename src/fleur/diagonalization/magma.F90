@@ -83,6 +83,8 @@ contains
       integer, allocatable :: iwork(:)
       complex, allocatable :: work(:)
 
+      call timestart("MAGMA GEV")
+
       call init()
 
       if (hmat%l_real) then
@@ -154,6 +156,7 @@ contains
          end if
       end do
 #endif
+      call timestop("MAGMA GEV")
    end subroutine magma_gev
 
 
@@ -170,6 +173,8 @@ contains
       real               :: abstol
       real, external      :: dlamch
       real               :: eigTemp(hmat%matsize1)
+
+      call timestart("MAGMA STD")
 #ifdef CPP_MAGMA
       call init()
       n = hmat%matsize1
@@ -215,6 +220,7 @@ contains
       end if
       eig(:min(size(eig), size(eigTemp))) = eigTemp(:min(size(eig), size(eigTemp)))
 #endif      
+      call timestop("MAGMA STD")
    end subroutine magma_diag
    subroutine magma_diag_sp(self, hmat, ne, eig, zmat)
       !Simple driver to solve Standard Eigenvalue Problem using magma routine
@@ -224,6 +230,8 @@ contains
       integer, intent(INOUT)      :: ne
       class(t_mat), allocatable, intent(OUT)    :: zmat
       real, intent(OUT)           :: eig(:)
+
+      call timestart("MAGMA STD-SP")
 #ifdef CPP_MAGMA
       integer, parameter:: sp = selected_real_kind(6)
       integer          :: info, m, n ,lwork
@@ -278,6 +286,7 @@ contains
             END BLOCK   
       end if
 #endif      
+      call timestop("MAGMA STD-SP")
    end subroutine magma_diag_sp
 
    subroutine magma_reduction(self, hmat, smat)
@@ -286,6 +295,8 @@ contains
       class(t_mat), intent(INOUT)  :: hmat, smat
 
       integer            :: info, n
+
+      call timestart("MAGMA REDUCTION")
 #ifdef CPP_MAGMA
       call init()
       n = smat%matsize1 !Matrix size
@@ -310,12 +321,15 @@ contains
          if (info /= 0) call juDFT_error("Error in zhegst")
       end if
 #endif
+      call timestop("MAGMA REDUCTION")
    end subroutine magma_reduction
 
    subroutine magma_recover(self, smat, zmat)
       class(t_solver_magma)            :: self
       class(t_mat), intent(INOUT)  :: zmat, smat
       integer :: m, n, info
+
+      call timestart("MAGMA BACKTRANSFORM")
 #ifdef CPP_MAGMA
       call init()
       n = smat%matsize1
@@ -331,5 +345,6 @@ contains
          if (info /= 0) call juDFT_error("Error in back transformation (zpotrs)")
       end if
 #endif      
+      call timestop("MAGMA BACKTRANSFORM")
    end subroutine
 end module m_magma

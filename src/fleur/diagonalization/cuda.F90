@@ -62,6 +62,8 @@ contains
       real, allocatable        :: work_d(:), eig_tmp(:)
       complex, allocatable     :: work_c(:)
 
+      call timestart("CUDA GEV")
+
       logical :: firstcall = .true.
       if (firstcall) then
          firstcall = .false.
@@ -128,6 +130,8 @@ contains
          end associate
       end if
 #endif
+
+      call timestop("CUDA GEV")
 
    end subroutine
 
