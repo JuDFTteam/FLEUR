@@ -3433,6 +3433,11 @@
             <xsd:documentation>Symmetrize vacuum level for film calculations.</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
+            <xsd:attribute name="qptsListName" type="xsd:string" use="optional">
+            <xsd:annotation>
+               <xsd:documentation>Name of the q-point list to use.</xsd:documentation>
+            </xsd:annotation>
+      </xsd:attribute>
        <xsd:attribute name="bandWindow" type="BandWindowRestricted" use="optional">
       <xsd:annotation>
          <xsd:documentation>

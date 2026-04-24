@@ -47,7 +47,6 @@ MODULE m_types_juPhon
       INTEGER, ALLOCATABLE :: bandWindow(:)  ! Window of Blochstates we want to consider
 
       LOGICAL :: calcEigenVec    = .TRUE.
-      
    CONTAINS
       PROCEDURE :: read_xml => read_xml_juPhon
       PROCEDURE :: mpi_bc => mpi_bc_juPhon
@@ -103,12 +102,12 @@ CONTAINS
       CALL mpi_bc(this%fDiffcut, rank, mpi_comm)
       CALL mpi_bc(this%bandWindow, rank, mpi_comm)
 
-
    END SUBROUTINE mpi_bc_juPhon
 
    SUBROUTINE read_xml_juPhon(this, xml)
       USE m_types_xml
       USE m_judft
+      USE m_types_kpts
 
       IMPLICIT NONE
 
@@ -117,6 +116,9 @@ CONTAINS
 
       INTEGER::numberNodes
       CHARACTER(len=100) :: xPathA,valueString
+      CHARACTER(len=40) :: qptsListName
+      TYPE(t_kpts) :: qpts_from_kpts
+
       REAL, ALLOCATABLE :: tmp_arr(:)
 
 
@@ -300,6 +302,24 @@ CONTAINS
          this%qvec=xml%read_q_list('/fleurInput/output/juPhon/qVectors')
       ENDIF
 
+      ! Read q-points from kpts.xml if specified
+      IF (this%l_dfpt) THEN
+         IF (xml%GetNumberOfNodes('/fleurInput/output/juPhon/@qptsListName') == 1) THEN
+            qptsListName = TRIM(ADJUSTL(xml%GetAttributeValue('/fleurInput/output/juPhon/@qptsListName')))
+            ! Initialize qpts_from_kpts with the number of k-points from the kpts.xml file
+            qpts_from_kpts%nkpt = xml%GetNumberOfNodes('/fleurInput/cell/bzIntegration/kPointLists/kPointList[@name="'//TRIM(qptsListName)//'"]/kPoint')
+            IF (qpts_from_kpts%nkpt > 0) THEN
+                ALLOCATE(qpts_from_kpts%bk(3, qpts_from_kpts%nkpt))
+                ALLOCATE(qpts_from_kpts%wtkpt(qpts_from_kpts%nkpt))
+                IF (qpts_from_kpts%read_kpts_by_name(trim(xml%filename_add_xml)//"inp.xml", qptsListName)) THEN
+                    IF (ALLOCATED(this%qvec)) DEALLOCATE(this%qvec)
+                    ALLOCATE(this%qvec(3, qpts_from_kpts%nkpt))
+                    this%qvec = qpts_from_kpts%bk
+                END IF
+            END IF
+         END IF
+      END IF
+
       ! Before we exit check needed parameters 
       IF (this%l_dfpt) CALL this%precheck_juPhon(xml)
       
@@ -353,6 +373,8 @@ CONTAINS
             end do
          end if
       end if 
+
+ 
 
 
    END SUBROUTINE init_juPhon
