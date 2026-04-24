@@ -112,7 +112,6 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    INTEGER               :: jspin, ierr
    INTEGER               :: dim_idx
    INTEGER               :: i_gf,iContour,n
-
    TYPE(t_eigdos_list),allocatable :: eigdos(:)
 
 #ifdef CPP_HDF
@@ -256,13 +255,14 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
 
   
    IF (fmpi%irank == 0) CALL openXMLElementNoAttributes('allElectronCharges')
-   CALL qfix(fmpi,stars,nococonv,atoms,sym,vacuum,sphhar,input,cell,field,outDen,noco%l_noco,.TRUE.,l_par=.TRUE.,force_fix=.TRUE.,fix=fix)
+   CALL qfix(fmpi,stars,nococonv,atoms,sym,vacuum,sphhar,input,cell,field,outDen,noco%l_noco,.TRUE.,.TRUE.,.TRUE.,fix)
    IF (fmpi%irank == 0) CALL closeXMLElement('allElectronCharges')
    IF (input%jspins == 2) THEN
       !Calculate and write out spin densities at the nucleus and magnetic moments in the spheres
       IF (fmpi%irank == 0) THEN
          CALL spinMoments(input,atoms,noco,nococonv,den=outDen,results=results)
          CALL orbMoments(input,atoms,noco,nococonv,moments)
+         CALL write_output_struct_xsf(atoms,nococonv,outDen)
          if (any(noco%l_constrained).or.any(noco%l_fixedMoment)) call nococonv%update_b_cons(atoms,noco,vtot,outDen)
       END IF
 
@@ -297,6 +297,80 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    END IF
 
 END SUBROUTINE cdngen
+
+SUBROUTINE write_output_struct_xsf(atoms,nococonv,outDen)
+
+   USE m_types
+
+   IMPLICIT NONE
+
+   TYPE(t_atoms),INTENT(IN)      :: atoms
+   TYPE(t_nococonv),INTENT(INOUT):: nococonv
+   TYPE(t_potden),INTENT(IN)     :: outDen
+
+   INTEGER, PARAMETER            :: inUnit = 97, outUnitLocal = 98
+   LOGICAL                       :: l_exists
+   INTEGER                       :: ios, iAtom, iType, atomCount
+   INTEGER                       :: zatom
+   REAL                          :: x, y, z
+   REAL, ALLOCATABLE             :: mag_mom_xsf(:,:), magm_type(:,:), theta(:), phi(:)
+   CHARACTER(len=1024)           :: line
+
+   INQUIRE(file='struct.xsf', exist=l_exists)
+   IF (.NOT.l_exists) RETURN
+
+   ALLOCATE(mag_mom_xsf(3,atoms%nat), magm_type(3,atoms%ntype), theta(atoms%ntype), phi(atoms%ntype))
+   CALL nococonv%avg_moments(outDen,atoms,magm_type,theta,phi)
+
+   mag_mom_xsf = 0.0
+   DO iType = 1, atoms%ntype
+      DO iAtom = atoms%firstAtom(iType), atoms%firstAtom(iType) + atoms%neq(iType) - 1
+         mag_mom_xsf(:,iAtom) = magm_type(:,iType)
+      END DO
+   END DO
+   OPEN(inUnit, file='struct.xsf', status='old', action='read', iostat=ios)
+   IF (ios /= 0) THEN
+      DEALLOCATE(mag_mom_xsf, magm_type, theta, phi)
+      RETURN
+   END IF
+
+   OPEN(outUnitLocal, file='output-struct.xsf', status='replace', action='write', iostat=ios)
+   IF (ios /= 0) THEN
+      CLOSE(inUnit)
+      DEALLOCATE(mag_mom_xsf, magm_type, theta, phi)
+      RETURN
+   END IF
+
+   DO
+      READ(inUnit,'(A)',iostat=ios) line
+      IF (ios /= 0) EXIT
+
+      WRITE(outUnitLocal,'(A)') TRIM(line)
+      IF (TRIM(ADJUSTL(line)) /= 'PRIMCOORD') CYCLE
+
+      READ(inUnit,'(A)',iostat=ios) line
+      IF (ios /= 0) EXIT
+      WRITE(outUnitLocal,'(A)') TRIM(line)
+
+      atomCount = atoms%nat
+      DO iAtom = 1, atomCount
+         READ(inUnit,'(A)',iostat=ios) line
+         IF (ios /= 0) EXIT
+
+         READ(line,*,iostat=ios) zatom, x, y, z
+         IF (ios /= 0) THEN
+            WRITE(outUnitLocal,'(A)') TRIM(line)
+         ELSE
+            WRITE(outUnitLocal,'(i4,2x,6(f0.7,1x))') zatom, x, y, z, mag_mom_xsf(:,iAtom)
+         END IF
+      END DO
+   END DO
+
+   CLOSE(inUnit)
+   CLOSE(outUnitLocal)
+   DEALLOCATE(mag_mom_xsf, magm_type, theta, phi)
+
+END SUBROUTINE write_output_struct_xsf
 
 SUBROUTINE initialize_eigdos_types(eigdos, dos, jointDOS, vacdos, mcd, slab, orbcomp, jDOS, &
                                     input, atoms, kpts, banddos, noco, results, cell)
