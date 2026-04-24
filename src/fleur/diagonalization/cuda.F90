@@ -62,9 +62,9 @@ contains
       real, allocatable        :: work_d(:), eig_tmp(:)
       complex, allocatable     :: work_c(:)
 
-      call timestart("CUDA GEV")
 
       logical :: firstcall = .true.
+      call timestart("CUDA GEV")
       if (firstcall) then
          firstcall = .false.
          istat = cusolverDnCreate(handle)

@@ -334,10 +334,10 @@ contains
       class(t_mat), intent(INOUT)  :: hmat, smat
       integer            :: info, n
 
-      call timestart("SCALAPACK REDUCTION")
 
 #ifdef CPP_SCALAPACK
       real :: scale
+      call timestart("SCALAPACK REDUCTION")
       select type (hmat)
       type is (t_mpimat)
          select type (smat)
