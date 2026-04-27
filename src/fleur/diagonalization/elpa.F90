@@ -403,7 +403,6 @@ solver%single_precision = .true.
          call elpa_obj%set("nev", zmat%matsize2, err)
       end select
 
-      call elpa_obj%set("nev", zmat%global_size2, err)
       if (smat%l_real) THEN
          call elpa_obj%elpa_transform_back_generalized_d(smat%data_r, zmat%data_r, error)
       else
