@@ -372,7 +372,7 @@ solver%single_precision = .true.
 
       call timestart("ELPA REDUCTION")
       call create_elpa_obj(hmat)
-#ifdef CPP_ELPA_PATCH 
+#if defined(CPP_ELPA_PATCH) and defined(CPP_ELPA)
       call elpa_obj%set("nev", 1, err)
       decomposed=.false.
       IF (hmat%l_real) THEN
@@ -395,7 +395,7 @@ solver%single_precision = .true.
       type(t_mpimat):: tmp_mpimat
       call timestart("ELPA BACKTRANSFORM")
 
-#ifdef CPP_ELPA_PATCH
+#if defined(CPP_ELPA_PATCH) and defined(CPP_ELPA)
       select type(zmat)
       type is (t_mpimat)
          call elpa_obj%set("nev", zmat%global_size2, err)
