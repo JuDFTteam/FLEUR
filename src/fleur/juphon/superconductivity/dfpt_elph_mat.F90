@@ -291,18 +291,18 @@ CONTAINS
                 ! Initialize the expansion coefficient matrices at k and k+q
                 ! Then read all the stuff into it
                 CALL zMatk%init(l_real,nbasfcn,nuWindow(2))
-                CALL zMatq%init(l_real,nbasfcnq,nbasfcnq)
+                CALL zMatq%init(l_real,nbasfcnq,nuWindow(2))
 
 
                 ! We only need this for read in 
                 ! Data inside we do not care about
                 ALLOCATE(ev_list(nuWindow(2)))
                 ev_list = (/(i, i=1,nuWindow(2), 1)/)
-                ALLOCATE(q_ev_list(nbasfcnq))
-                q_ev_list = (/(i, i=1,nbasfcnq, 1)/)
+                ALLOCATE(q_ev_list(nuWindow(2)))
+                q_ev_list = (/(i, i=1,nuWindow(2), 1)/)
 
                 ALLOCATE(eigk(nuWindow(2)))
-                ALLOCATE(eigq(nbasfcnq))
+                ALLOCATE(eigq(nuWindow(2)))
 
                 CALL timestart("Read eigenstuff at k/k+q")
                 CALL read_eig(eig_id, nk, jsp, list=ev_list, neig=neigk, eig=eigk, zmat=zMatk)
@@ -324,16 +324,17 @@ CONTAINS
                 ! Initialize the electron-phonon matrix
                 ! CALL gmat%init(.FALSE.,nbasfcnq,nuWindow(2))
                 ! gmat%data_c(:,:) = cmplx(0.0,0.0)
-                ALLOCATE(gmatH,mold=zMatq%data_c)
-                ALLOCATE(gmatS,mold=zMatq%data_c)
+                ALLOCATE(gmatH(nuWindow(2),nuWindow(2)))
+                ALLOCATE(gmatS,mold=gmatH)
                 
                 gmatH = CMPLX(0.0,0.0)
                 gmatS = CMPLX(0.0,0.0)
 
                 ! Allocate auxiliary 
-                ! tempVec and tempMat1 could be made same variable --> do not need tempVec after usage 
+                ! tempVec  size G vectors 
+                ! tempMat1 size bandWindow we are interested in  
                 ALLOCATE(tempVec(nbasfcnq))
-                ALLOCATE(tempMat1(nbasfcnq))
+                ALLOCATE(tempMat1(nuWindow(2)))
                 tempVec = cmplx(0.0,0.0)
                 tempMat1 = cmplx(0.0,0.0)
                 CALL timestart("Matrix multiplication")
@@ -345,15 +346,15 @@ CONTAINS
                     END IF
                     
                     IF (zMatq%l_real) THEN ! l_real for zMatq
-                        tempMat1(:nbasfcnq) = MATMUL(TRANSPOSE(zMatq%data_r),tempvec)
+                        tempMat1(:nuWindow(2)) = MATMUL(TRANSPOSE(zMatq%data_r),tempvec)
                     ELSE
-                        CALL CPP_zgemv('C',nbasfcnq,nbasfcnq,CMPLX(1.0,0.0),zmatq%data_c,nbasfcnq,tempvec,1,CMPLX(0.0,0.0),tempMat1,1)
+                        CALL CPP_zgemv('C',nbasfcnq,nuWindow(2),CMPLX(1.0,0.0),zmatq%data_c,nbasfcnq,tempvec,1,CMPLX(0.0,0.0),tempMat1,1)
                     END IF
                     ! tempMat1 = H^{(1}_{\nu'\nu}
                     ! We have to think about what happens if nu=nu' at q=0 ---> Is there any rule?
                     ! gmatH exists for testing 
                     ! gmat%data_c(:nbasfcnq,nu) = tempMat1(:nbasfcnq)
-                    gmatH(:nbasfcnq,nu) = tempMat1(:nbasfcnq)
+                    gmatH(:nuWindow(2),nu) = tempMat1(:nuWindow(2))
 
                     IF (l_real) THEN ! l_real for zMatk
                         tempVec(:nbasfcnq) = MATMUL(smat%data_c,zMatk%data_r(:nbasfcn,nu))
@@ -362,16 +363,16 @@ CONTAINS
                     END IF
 
                     IF (zMatq%l_real) THEN ! l_real for zMatq
-                        tempMat1(:nbasfcnq) = MATMUL(TRANSPOSE(zMatq%data_r),tempvec)
+                        tempMat1(:nuwindow(2)) = MATMUL(TRANSPOSE(zMatq%data_r),tempvec)
                     ELSE
-                        CALL CPP_zgemv('C',nbasfcnq,nbasfcnq,CMPLX(1.0,0.0),zmatq%data_c,nbasfcnq,tempvec,1,CMPLX(0.0,0.0),tempMat1,1)
+                        CALL CPP_zgemv('C',nbasfcnq,nuWindow(2),CMPLX(1.0,0.0),zmatq%data_c,nbasfcnq,tempvec,1,CMPLX(0.0,0.0),tempMat1,1)
                     END IF
                      
                     ! tempMat1 = S^{(1}_{\nu'\nu}
                     ! We have to think about what happens if nu=nu' at q=0 ---> Is there any rule?
                     ! gmatS exists for testing 
                     !gmat%data_c(:nbasfcnq,nu) = -eigk(nu)*tempMat1(:nbasfcnq)
-                    gmatS(:nbasfcnq,nu) = -eigk(nu)*tempMat1(:nbasfcnq)
+                    gmatS(:nuWindow(2),nu) = -eigk(nu)*tempMat1(:nuWindow(2))
 
                 END DO !nu
                 CALL timestop("Matrix multiplication")
