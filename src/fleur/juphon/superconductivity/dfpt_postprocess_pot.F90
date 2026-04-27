@@ -114,37 +114,6 @@ contains
         do iQ = 1 , size(q_list)
             call timestart("q-point elph")
 
-            kqpts = fi%kpts
-            ! Construct the shifted k-grid
-            do ikpt = 1, fi%kpts%nkpt
-               kqpts%bk(:, ikpt) = kqpts%bk(:, ikpt) + qpts%bk(:,q_list(iQ))
-            end do 
-
-            ! Note:
-            ! I currently think we do not need the minus solution for the el-ph matrix element 
-            ! since we construct < \psi_{k+q} | V(q) | \psi_{k} }. The density never enters.  
-
-            call timestart("Eigenstuff at k+q")
-            ! construct eigenfunction on the k+q grid 
-            call resultsq%reset_results(fi%input)
-            call dummy_results%reset_results(fi%input)
-   
-            call eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv,  &
-                     hybdat, 1, q_eig_id, resultsq, rho, vTot, vxc, hub1data, &
-                     qpts%bk(:,q_list(iQ)))
-
-            ! Fermi level and occupancies
-            call timestart("determination of fermi energy")
-            call fermie(q_eig_id, fmpi, kqpts, fi%input, fi%noco, enpara%epara_min, fi%cell, resultsq)
-            call timestop("determination of fermi energy")
-
-#ifdef CPP_MPI
-            call MPI_BCAST(resultsq%ef, 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
-            call MPI_BCAST(resultsq%w_iks, SIZE(resultsq%w_iks), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
-#endif
-
-            call timestop("Eigenstuff at k+q")
-
             if (fmpi%irank == 0 ) then 
                 call timestart("dynMat IO")
                 ! Read in eigenvectors and eigenvalues for given q-point
@@ -210,7 +179,7 @@ contains
 
                     ! construct the electron-phonon element in cartesian basis 
                     call timestart("elph element")
-                    CALL matrix_element(sternheimerJob,fi,sphhar,results,resultsq,fmpi,enpara,nococonv,starsq,vTot1,vTot1Im,vTot,rho, qpts%bk(:, iQ),&
+                    CALL matrix_element(sternheimerJob,fi,sphhar,results,fmpi,enpara,nococonv,starsq,vTot1,vTot1Im,vTot,rho, qpts%bk(:, iQ),&
                                         eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatCart,fi%juPhon%bandWindow) 
 
                     call timestop("elph element")
@@ -220,8 +189,8 @@ contains
                         do iMode = 1 , 3*fi%atoms%nat    
                             pref = 1.0 
                             if (eigenVals(iMode) .lt. 0.0) pref = -1*ImagUnit
-                            gmat(:,:,:,:,iMode,iQ) =  gmat(:,:,:,:,iMode,iQ) + eigenVecs(iPerturb,iMode) & 
-                                                / sqrt(2* atomic_mass_array(fi%atoms%nz(ceiling(iPerturb/3.0))) * sqrt(eigenVals(iMode))) * gmatCart(:,:,:,:)          
+                            gmat(:,:,:,:,iMode,iQ) =  gmat(:,:,:,:,iMode,iQ) + eigenVecs(iPerturb,iMode) * & 
+                                                pref / sqrt(2* atomic_mass_array(fi%atoms%nz(ceiling(iPerturb/3.0))) * sqrt(abs(eigenVals(iMode))) ) * gmatCart(:,:,:,:)     
                         end do 
                     end if 
                     

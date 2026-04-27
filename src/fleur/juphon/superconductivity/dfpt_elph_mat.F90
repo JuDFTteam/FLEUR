@@ -137,7 +137,7 @@ CONTAINS
                 CALL timestart("Generate electron-phonon matrix element")
                 ! currenlty this call will lead to segfalse here! 
                 ! reactivate in the future. 
-                CALL matrix_element(sternheimerJob,fi,sphhar,results,resultsq,fmpi,enpara,nococonv,starsq,vTot1,vTot1Im,vTot,rho_loc,bqpt,eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatCart,nuWindow) ! nbasfcnq_min
+                CALL matrix_element(sternheimerJob,fi,sphhar,results,fmpi,enpara,nococonv,starsq,vTot1,vTot1Im,vTot,rho_loc,bqpt,eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatCart,nuWindow) ! nbasfcnq_min
                 CALL timestop("Generate electron-phonon matrix element")
 
                 IF (.NOT. ALLOCATED(gmat)) THEN
@@ -191,7 +191,7 @@ CONTAINS
     END SUBROUTINE dfpt_elph_mat
 
 
-    SUBROUTINE matrix_element(sternheimerJob,fi,sphhar,results, resultsq,fmpi,enpara,nococonv,starsq,v1real,v1imag,vTot,inden,bqpt,eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatBuffer,nuWindow)
+    SUBROUTINE matrix_element(sternheimerJob,fi,sphhar,results,fmpi,enpara,nococonv,starsq,v1real,v1imag,vTot,inden,bqpt,eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatBuffer,nuWindow)
         ! This routine is very similar to dfpt_eigen
         ! However, we do not need the gmat which is slightly different to z1
         ! Output needs to be different 
@@ -208,7 +208,7 @@ CONTAINS
         TYPE(t_sternheimerJob),INTENT(IN) :: sternheimerJob
         TYPE(t_fleurinput), INTENT(IN) :: fi 
         TYPE(t_sphhar), INTENT(IN) :: sphhar
-        TYPE(t_results), INTENT(IN) :: results,resultsq
+        TYPE(t_results), INTENT(IN) :: results
         TYPE(t_mpi),INTENT(IN) :: fmpi
         TYPE(t_enpara), INTENT(IN) :: enpara
         TYPE(t_nococonv), INTENT(IN) :: nococonv
@@ -233,10 +233,10 @@ CONTAINS
         INTEGER :: ierr
 #endif 
 
-        INTEGER :: jsp, nk_i, nk ,noccbd,noccbdq,nbasfcn,nbasfcnq , i , neigk,neigq, nu 
+        INTEGER :: jsp, nk_i, nk ,noccbd,noccbdq,nbasfcn,nbasfcnq , i , neigk,neigq, nu , nkqpt
         INTEGER :: tmp1 ,  dealloc_stat
         character(len=300)        :: errmsg
-        REAL :: bkpt(3)
+        REAL :: bkpt(3) , bkqpt(3)
         REAL, ALLOCATABLE :: eigk(:),eigq(:)
         COMPLEX, ALLOCATABLE :: gmatH(:,:),gmatS(:,:),tempVec(:),tempMat1(:)
 
@@ -262,12 +262,20 @@ CONTAINS
 
                 ! Get the required eigenvectors and values at k for occupied bands:
                 bkpt = fi%kpts%bk(:, nk)
+                
+                ! find the corresponding kqpt point
+                ! folding to first BZ is done in %get_nk
+                bkqpt = bkpt + bqpt 
+                nkqpt = fi%kpts%get_nk(bkqpt)
+
 
                 CALL lapw%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, nk, fi%cell, fmpi)
-                CALL lapwq%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, nk, fi%cell, fmpi, bqpt)
+                CALL lapwq%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, nkqpt, fi%cell, fmpi)
+ 
 
                 noccbd  = COUNT(results%w_iks(:,nk,jsp)*2.0/fi%input%jspins>1.e-8)
-                noccbdq = COUNT(resultsq%w_iks(:,nk,jsp)*2.0/fi%input%jspins>1.e-8)
+                noccbdq = COUNT(results%w_iks(:,nkqpt,jsp)*2.0/fi%input%jspins>1.e-8)
+                
                 
                 nbasfcn  = MERGE(lapw%nv(1)+lapw%nv(2)+2*fi%atoms%nlotot,lapw%nv(1)+fi%atoms%nlotot,fi%noco%l_noco)
                 nbasfcnq = MERGE(lapwq%nv(1)+lapwq%nv(2)+2*fi%atoms%nlotot,lapwq%nv(1)+fi%atoms%nlotot,fi%noco%l_noco)
@@ -298,7 +306,7 @@ CONTAINS
 
                 CALL timestart("Read eigenstuff at k/k+q")
                 CALL read_eig(eig_id, nk, jsp, list=ev_list, neig=neigk, eig=eigk, zmat=zMatk)
-                CALL read_eig(q_eig_id, nk, jsp, list=q_ev_list, neig=neigq, eig=eigq, zmat=zMatq)
+                CALL read_eig(eig_id, nkqpt, jsp, list=q_ev_list, neig=neigq, eig=eigq, zmat=zMatq)
                 CALL timestop("Read eigenstuff at k/k+q")
 
 
