@@ -158,7 +158,7 @@ contains
       complex(sp), allocatable :: hc(:, :)
       call timestart("CHASE STD-SP")
       nex = 0.2*ne
-      allocate (eigval(ne))
+      allocate (eigval(ne+nex))
       allocate (t_mat::zmat)
       call zmat%init(hmat%l_real, hmat%matsize1, ne)
 
@@ -215,7 +215,7 @@ contains
       type(t_mpimat), volatile :: ztemp
       call timestart("CHASE MPI-STD")
       nex = 0.2*ne
-      allocate (eigval(ne))
+      allocate (eigval(ne+nex))
 
       !setup ChASE
       mbsize = hmat%blacsdata%blacs_desc(5) !block size for the block-cyclic distribution for the rows of global matrix
@@ -272,25 +272,25 @@ contains
 
       call BLACS_GRIDINFO(icontext, no_row, no_col, MYPROW, MYPCOL)
       call MPI_COMM_SIZE(parent_comm, isize, ierr)
-      allocate (map2d(isize))
-      allocate (map1d(no_row))
-
+      allocate (map2d(0:isize-1))
+      allocate (map1d(0:no_row-1))
+      
       map1d = isize !largest value
       do i = 0, isize - 1
          call blacs_pcoord(icontext, i, ROW, COL)
-         map2d(row + no_row*(col - 1)) = i
+         map2d(row + no_row*col) = i
          map1d(row) = min(map1d(row), i)
       end do
-
+      
       !create 2d communicator
       call MPI_COMM_group(parent_comm, group, ierr)
       call MPI_Group_incl(group, isize, map2d, group_2d, ierr)
-      call MPI_COMM_create_group(parent_comm, 1,group_2d, comm_2d, ierr)
+      call MPI_COMM_create_group(parent_comm, group_2d, 1, comm_2d, ierr)
 
       !create 1d communicator
       call MPI_COMM_group(parent_comm, group, ierr)
       call MPI_Group_incl(group, size(map1d), map1d, group_1d, ierr)
-      call MPI_COMM_create_group(parent_comm, 1,group_1d, comm_1d, ierr)
+      call MPI_COMM_create_group(parent_comm, group_1d, 1, comm_1d, ierr)
 
       call MPI_group_free(group_2d, ierr)
       call MPI_group_free(group_1d, ierr)
