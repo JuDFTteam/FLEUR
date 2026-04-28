@@ -87,7 +87,7 @@ solver%single_precision = .true.
       TYPE(t_mpimat) :: tmp
       
       if (firstcall) then
-         err = elpa_init(CURRENT_API_VERSION)
+         err = elpa_init(20211125)
          call check_elpa_err(err, 'elpa_init')
          firstcall = .false.
          elpa_obj=>null()
