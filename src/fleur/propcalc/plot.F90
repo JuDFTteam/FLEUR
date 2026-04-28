@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2019 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -7,8 +7,8 @@ MODULE m_plot
    USE m_types
    USE m_juDFT
    USE m_constants
+   implicit none
 
-   IMPLICIT NONE
 
    !-----------------------------------------------------------------------------
    ! A general purpose plotting routine for FLEUR.
@@ -116,8 +116,7 @@ CONTAINS
                           denmat, cden, mxden, myden, mzden)
       USE m_fft2d
       USE m_fft3d
-      USE m_rotdenmat
-
+  
       !--------------------------------------------------------------------------
       ! Takes a 2x2 density matrix and rearranges it into four plottable seperate
       ! ones, i.e. ((rho_11, rho_12),(rho_21, rho_22)) ---> n, mx, my, mz.
@@ -329,9 +328,7 @@ CONTAINS
                   rziw = 0.0
                   rhfull(1) = rht(imz,ivac,iden)
                   rhfull(2:)= rhtxy(imz,:,ivac,iden)
-                  CALL fft2d(stars, rvacxy(0,imz,ivac,iden), fftwork, &
-                             rhfull, &
-                              1)
+                  CALL fft2d(stars, rvacxy(0,imz,ivac,iden), fftwork, rhfull, 1)
                END DO
             END DO
          END DO
@@ -343,8 +340,7 @@ CONTAINS
                vz_i = AIMAG(cdomvz(imz,ivac))
                rhfull(1) = cdomvz(imz,ivac)
                rhfull(2:)= cdomvxy(imz,:,ivac)
-               CALL fft2d(stars, rvacxy(0,imz,ivac,3), rvacxy(0,imz,ivac,4), &
-                          rhfull,  1)
+               CALL fft2d(stars, rvacxy(0,imz,ivac,3), rvacxy(0,imz,ivac,4), rhfull,  1)
             END DO
          END DO
 
@@ -364,8 +360,8 @@ CONTAINS
                   mz      = (rho_11-rho_22)
 
                   rvacxy(imesh,imz,ivac,1) = rhotot
-                  rvacxy(imesh,imz,ivac,2) = mx
-                  rvacxy(imesh,imz,ivac,3) = my
+                  rvacxy(imesh,imz,ivac,2) = -mx
+                  rvacxy(imesh,imz,ivac,3) = -my
                   rvacxy(imesh,imz,ivac,4) = mz
                END DO
                !$OMP END PARALLEL DO
@@ -385,8 +381,8 @@ CONTAINS
                mz      = (rho_11-rho_22)
 
                rht(imz,ivac,1) = rhotot
-               rht(imz,ivac,2) = mx
-               rht(imz,ivac,3) = my
+               rht(imz,ivac,2) = -mx
+               rht(imz,ivac,3) = -my
                rht(imz,ivac,4) = mz
             END DO
             !$OMP END PARALLEL DO
@@ -396,11 +392,10 @@ CONTAINS
             DO ivac = 1,vacuum%nvac
                DO imz = 1,vacuum%nmzxyd
                   fftwork=zero
-                  rhfull(1) = rht(imz,ivac,iden)
-                  rhfull(2:)= rhtxy(imz,:,ivac,iden)
-                  CALL fft2d(stars, rvacxy(0,imz,ivac,iden), fftwork, &
-                             rhfull, &
-                              -1)
+                  CALL fft2d(stars, rvacxy(0,imz,ivac,iden), fftwork, rhfull, -1)
+                  rht(imz,ivac,iden) = rhfull(1)
+!                  rhfull(2:)= rhtxy(imz,:,ivac,iden)
+                  rhtxy(imz,1:,ivac,iden) = rhfull(2:)
                END DO
             END DO
          END DO
@@ -908,6 +903,7 @@ CONTAINS
                      xdnout(6)= xdnout(6)/pi_const
                      xdnout(7)= xdnout(7)/pi_const
                   END IF ! (polar)
+
                   IF (xsf) THEN
                      DO i = 1, numOutFiles
                         tempResults(ix,iy,iz,i)=xdnout(i)

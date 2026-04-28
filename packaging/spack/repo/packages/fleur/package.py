@@ -3,6 +3,8 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
+from spack_repo.builtin.build_systems.cuda import CudaPackage
+from spack_repo.builtin.build_systems.generic import Package
 from spack.package import *
 
 
@@ -40,10 +42,17 @@ class Fleur(CudaPackage, Package):
     variant("amd", default=False, description="Use some patch for AMD processors")
     variant("cuda",default=False,description="Use OpenACC on top of CUDA for NVIDIA GPUs")
     variant("cuda_arch",default="80" ,description="specify the CUDA architecture to build for")
+    variant("debug", default=False, description="Build a debugging version in build.debug")
     variant("build_type",default="RelWithDebInfo",description="The build type to build",values=("Debug", "Release", "RelWithDebInfo"))
     
+
+    # The following dependencies are required for building FLEUR
+    depends_on("c", type="build")  # C compiler
+    depends_on("cxx", type="build")  # C++ compiler
+    depends_on("fortran", type="build")  # Fortran compiler
     depends_on("cmake", type="build")
     depends_on("python@3:", type="build")
+    depends_on("gmake", type="build")
     depends_on("blas")
     depends_on("lapack")
     depends_on("libxml2")
@@ -53,6 +62,7 @@ class Fleur(CudaPackage, Package):
     depends_on("scalapack", when="+scalapack")
     depends_on("libxc", when="+libxc")
     depends_on("hdf5+hl+fortran", when="+hdf5")
+    depends_on("hdf5@1.12", when="+hdf5 %nvhpc") #nvhpc has problems with mpi_f08 in newer HDF5 version
     depends_on("magma+fortran", when="+magma")
     depends_on("wannier90", when="+wannier90")
     depends_on("spfft+fortran~openmp", when="+spfft~openmp")
@@ -75,8 +85,9 @@ class Fleur(CudaPackage, Package):
     conflicts("cuda_arch=none", when="+cuda",msg="CUDA architecture is required")
 
     def setup_build_environment(self, env):
-        spec= self.spec
-        if "+mpi" in spec:
+        spec = self.spec
+        env.set("VERBOSE","1")
+        if spec.satisfies("+mpi"):
             env.set("CC", spec["mpi"].mpicc, force=True)
             env.set("FC", spec["mpi"].mpifc, force=True)
             env.set("CXX", spec["mpi"].mpicxx, force=True)
@@ -106,56 +117,56 @@ class Fleur(CudaPackage, Package):
         include_opt.append(join_path(spec["libxml2"].prefix.include, "libxml2"))
 
 
-        if "+cuda" in spec:
+        if spec.satisfies("+cuda"):
             link_opt.append(spec["cuda"].libs.link_flags)
             lib_opt.append(spec["cuda"].prefix.lib)
             args.append("-gpu")
-            cuda_arch = spec.variants["cuda_arch"].value
-            args.append(f"acc:cc{cuda_arch}")
-        if "fft=mkl" in spec:
+            cuda_archs = spec.variants["cuda_arch"].value
+            if cuda_archs:
+                # cuda_arch is a tuple in Spack v1.0+, use first value
+                args.append(f"acc:cc{cuda_archs[0]}")
+        if spec.satisfies("fft=mkl"):
             link_opt.append(spec["intel-mkl"].libs.link_flags)
             lib_opt.append(spec["intel-mkl"].prefix.lib)
             include_opt.append(spec["intel-mkl"].prefix.include)
-        if "fft=fftw" in spec:
+        if spec.satisfies("fft=fftw"):
             link_opt.append(spec["fftw-api"].libs.link_flags)
             lib_opt.append(spec["fftw-api"].prefix.lib)
             include_opt.append(spec["fftw-api"].prefix.include)
-        if "+scalapack" in spec:
+        if spec.satisfies("+scalapack"):
             link_opt.append(spec["scalapack"].libs.link_flags)
             lib_opt.append(spec["scalapack"].prefix.lib)
-        if "+hdf5" in spec:
+        if spec.satisfies("+hdf5"):
             link_opt.append(spec["hdf5"].libs.link_flags)
             lib_opt.append(spec["hdf5"].prefix.lib)
             include_opt.append(spec["hdf5"].prefix.include)
-            args.append("-hdf5")
-            args.append("true")
-        else:    
-            args.append("-hdf5")
-            args.append("false")
-        if "+magma" in spec:
+            args.extend(["-hdf5", "true"])
+        else:
+            args.extend(["-hdf5", "false"])
+        if spec.satisfies("+magma"):
             link_opt.append(spec["magma"].libs.link_flags)
             lib_opt.append(spec["magma"].prefix.lib)
             include_opt.append(spec["magma"].prefix.include)
-        if "+wannier90" in spec:
+        if spec.satisfies("+wannier90"):
             # Workaround: The library is not called wannier90.a/so
             #    for this reason spec['wannier90'].libs.link_flags fails!
             link_opt.append("-lwannier")
             lib_opt.append(spec["wannier90"].prefix.lib)
-        if "+spfft" in spec:
+        if spec.satisfies("+spfft"):
             link_opt.append(spec["spfft"].libs.link_flags)
             # Workaround: The library is installed in /lib64 not /lib
             lib_opt.append(spec["spfft"].prefix.lib + "64")
             # Workaround: The library needs spfft.mod in include/spfft path
             include_opt.append(join_path(spec["spfft"].prefix.include, "spfft"))
-        if "+elsi" in spec:
+        if spec.satisfies("+elsi"):
             link_opt.append(spec["elsi"].libs.link_flags)
-            #workaround: additional dependencies
+            # Workaround: additional dependencies
             link_opt.append("-lMatrixSwitch -lNTPoly -lOMM -lelpa -lfortjson")
-           # Workaround: The library is installed in /lib64 not /lib
+            # Workaround: The library is installed in /lib64 not /lib
             lib_opt.append(spec["elsi"].prefix.lib)
-            # Workaround: The library needs spfft.mod in include/spfft path
+            # Workaround: The library needs elsi.mod in include path
             include_opt.append(spec["elsi"].prefix.include)
-        if "+elpa" in spec:
+        if spec.satisfies("+elpa"):
             link_opt.append(spec["elpa"].libs.link_flags)
             lib_opt.append(spec["elpa"].prefix.lib)
             # Workaround: The library needs elpa.mod in include/elpa_%VERS/modules
@@ -164,8 +175,10 @@ class Fleur(CudaPackage, Package):
             include_opt.append(
                 join_path(spec["elpa"].headers.include_flags[2:], "modules")
             )
-        if "+amd" in spec:
+        if spec.satisfies("+amd"):
             args.append("-amd")
+        if spec.satisfies("+debug"):
+            args.append("-d")
         
         #Now add collected options
         args.append("-link")
@@ -178,14 +191,16 @@ class Fleur(CudaPackage, Package):
         sh("configure.sh", *args)
 
     def build(self,spec,prefix):
-        with working_dir("build"):
+        build_dir = "build.debug" if spec.satisfies("+debug") else "build"
+        with working_dir(build_dir):
             make()
         
 
     def install(self, spec, prefix):
-        with working_dir("build"):
+        build_dir = "build.debug" if spec.satisfies("+debug") else "build"
+        with working_dir(build_dir):
             mkdirp(prefix.bin)
-            if "+mpi" in spec:
+            if spec.satisfies("+mpi"):
                 install("fleur_MPI", prefix.bin)
             else:
                 install("fleur", prefix.bin)
@@ -194,7 +209,8 @@ class Fleur(CudaPackage, Package):
     @run_after("build")
     @on_package_attributes(run_tests=True)
     def test(self):
-        with working_dir("build"):
+        build_dir = "build.debug" if self.spec.satisfies("+debug") else "build"
+        with working_dir(build_dir):
             sh = which("bash")
             sh("run_tests.sh")
         

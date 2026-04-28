@@ -44,7 +44,6 @@ CONTAINS
     type(t_potden)                   :: resDen, vYukawa, resDenMod
     real                             :: fix
     integer                          :: lh,n
-    complex                           :: sigma_loc(2)
 
     if (sym%invs) then
       !This is for easier debugging of the preconditioner. The imaginary part
@@ -64,9 +63,8 @@ CONTAINS
     END IF MPI0_b
     CALL resDen%distribute(fmpi%mpi_comm)
     IF ( .NOT. input%film ) THEN
-       sigma_loc = cmplx(0.0,0.0)
        CALL vgen_coulomb( 1, fmpi,    input, field, vacuum, sym, juphon, stars, cell, &
-            sphhar, atoms, .FALSE., resDen, vYukawa, sigma_loc )
+            sphhar, atoms, .FALSE., resDen, vYukawa )
     ELSE
        call resDenMod%init( stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_DEN )
        if( fmpi%irank == 0 ) then
@@ -94,7 +92,7 @@ CONTAINS
        IF( input%jspins == 2 ) CALL resDen%ChargeAndMagnetisationToSpins()
        ! fix the preconditioned density
        CALL outDen%addPotDen( resDen, inDen )
-       CALL qfix(fmpi,stars,nococonv, atoms, sym, vacuum, sphhar, input, cell,   outDen, noco%l_noco, .FALSE., l_par=.FALSE., force_fix=.TRUE., fix=fix )
+       CALL qfix(fmpi,stars,nococonv, atoms, sym, vacuum, sphhar, input, cell, field,  outDen, noco%l_noco, .FALSE., l_par=.FALSE., force_fix=.TRUE., fix=fix )
        CALL resDen%subPotDen( outDen, inDen )
        resDen%mmpMat = outDen%mmpMat - inDen%mmpMat
     END IF MPI0_c

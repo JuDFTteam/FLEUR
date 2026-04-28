@@ -30,10 +30,10 @@ endif()
 if (FLEUR_USE_GPU)
     #check the cc string
      #Check if a CC is given
-    if ("${FLEUR_CC_MODE}" STREQUAL "80")
-        set(elpa_flags "${elpa_flags} --enable-nvidia-gpu-kernels --enable-nvidia-sm80-gpu-kernels --with-NVIDIA-sm_80-support-only --enable-gpu-streams=nvidia --with-NVIDIA-GPU-compute-capability=sm_80")
+     if ("${FLEUR_CC_MODE}" GREATER_EQUAL 80)
+        set(elpa_flags "${elpa_flags} --disable-sse-assembly --disable-avx --disable-avx2 --disable-sse --enable-nvidia-gpu-kernels --enable-nvidia-sm80-gpu-kernels --with-NVIDIA-sm_80-support-only --enable-gpu-streams=nvidia --with-NVIDIA-GPU-compute-capability=sm_80")
     else()
-        set(elpa_flags "${elpa_flags} --enable-nvidia-gpu-kernels --enable-gpu-streams=nvidia --with-NVIDIA-GPU-compute-capability=sm_${FLEUR_CC_MODE}")
+        set(elpa_flags "${elpa_flags} --disable-sse-assembly --disable-avx --disable-avx2 --disable-sse --enable-nvidia-gpu-kernels --enable-gpu-streams=nvidia --with-NVIDIA-GPU-compute-capability=sm_${FLEUR_CC_MODE}")
     endif()        
 endif()
 file(APPEND ${conffile} "echo 'Building ELPA in: ' $PWD \n")

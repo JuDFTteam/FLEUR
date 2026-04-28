@@ -106,8 +106,8 @@ CONTAINS
                      DO ikGPr = 1, ikG - 1 !TODO check noco case
                         !---> overlap: only  (g-g') parallel=0       '
                         IF (map2(ikGPr, iSpin).EQ.ikG2) THEN
-                           sij = CONJG(a(ikGPr,iSpin))*a(ikG,iSpin) + &
-                                 CONJG(b(ikGPr,iSpin))*b(ikG,iSpin)*ddnv(ikG2,iSpin)
+                           sij = CONJG(a(ikG,iSpin))*a(ikGPr,iSpin) + &
+                                 CONJG(b(ikG,iSpin))*b(ikGPr,iSpin)*ddnv(ikG2,iSpin)
                            !+APW_LO
                            IF (input%l_useapw) THEN
                               apw_lo =      (a(ikG,iSpin)   *  uz(ikG2,iSpin) + b(ikG,iSpin)   *  udz(ikG2,iSpin)) &
@@ -126,7 +126,7 @@ CONTAINS
                            IF (hmat(1,1)%l_real) THEN
                               smat(igSpin,igSpin)%data_r(ikGPr,ikG0) = smat(igSpin,igSpin)%data_r(ikGPr,ikG0) + REAL(sij)
                            ELSE
-                              smat(igSpin,igSpin)%data_c(ikGPr,ikG0) = smat(igSpin,igSpin)%data_c(ikGPr,ikG0) + sij
+                              smat(igSpin,igSpin)%data_c(ikGPr,ikG0) = smat(igSpin,igSpin)%data_c(ikGPr,ikG0) + CONJG(sij)
                            END IF
                         END IF
                      END DO
@@ -136,7 +136,7 @@ CONTAINS
                      IF (hmat(1,1)%l_real) THEN
                         smat(igSpin,igSpin)%data_r(ikGPr,ikG0) = smat(igSpin,igSpin)%data_r(ikGPr,ikG0) + REAL(sij)
                      ELSE
-                        smat(igSpin,igSpin)%data_c(ikGPr,ikG0) = smat(igSpin,igSpin)%data_c(ikGPr,ikG0) + sij
+                        smat(igSpin,igSpin)%data_c(ikGPr,ikG0) = smat(igSpin,igSpin)%data_c(ikGPr,ikG0) + CONJG(sij)
                      END IF
                   END DO
                END IF
@@ -149,14 +149,14 @@ CONTAINS
                      ikGPr2 = map2(ikGPr, iSpinPr)
                      !hij = CONJG(a(ikGPr, iSpinPr) * tuuv(ikG2, ikGPr2) + b(ikGPr,iSpinPr) * tudv(ikG2,ikGPr2)) * a(ikG,iSpin) &
                      !    + CONJG(b(ikGPr, iSpinPr) * tddv(ikG2, ikGPr2) + a(ikGPr,iSpinPr) * tduv(ikG2,ikGPr2)) * b(ikG,iSpin)
-                     hij = CONJG(a(ikGPr, iSpinPr)) * tuuv(ikGPr2, ikG2) * a(ikG,iSpin) &
-                         + CONJG(b(ikGPr, iSpinPr)) * tddv(ikGPr2, ikG2) * b(ikG,iSpin) &
-                         + CONJG(a(ikGPr, iSpinPr)) * tudv(ikGPr2, ikG2) * b(ikG,iSpin) &
-                         + CONJG(b(ikGPr, iSpinPr)) * tduv(ikGPr2, ikG2) * a(ikG,iSpin)
+                     hij = CONJG(a(ikG, iSpin)) * tuuv(ikG2, ikGPr2) * a(ikGPr,iSpinPr) &
+                         + CONJG(b(ikG, iSpin)) * tddv(ikG2, ikGPr2) * b(ikGPr,iSpinPr) &
+                         + CONJG(a(ikG, iSpin)) * tudv(ikG2, ikGPr2) * b(ikGPr,iSpinPr) &
+                         + CONJG(b(ikG, iSpin)) * tduv(ikG2, ikGPr2) * a(ikGPr,iSpinPr)
                      IF (hmat(1,1)%l_real) THEN
                         hmat(igSpinPr,igSpin)%data_r(ikGPr,ikG0) = hmat(igSpinPr,igSpin)%data_r(ikGPr,ikG0) + REAL(hij)
                      ELSE
-                        hmat(igSpinPr,igSpin)%data_c(ikGPr,ikG0) = hmat(igSpinPr,igSpin)%data_c(ikGPr,ikG0) + hij
+                        hmat(igSpinPr,igSpin)%data_c(ikGPr,ikG0) = hmat(igSpinPr,igSpin)%data_c(ikGPr,ikG0) + CONJG(hij)
                      END IF
                   END DO
                END DO

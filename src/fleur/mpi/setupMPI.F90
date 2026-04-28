@@ -12,7 +12,7 @@ MODULE m_setupMPI
   IMPLICIT NONE
 
 CONTAINS
-  SUBROUTINE setupMPI(nkpt,neigd,nbasfcn,fmpi)
+  SUBROUTINE setupMPI(nkpt,neigd,nbasfcn,fmpi,l_real,l_noco)
 !$  use omp_lib
 
     use m_omp_checker
@@ -22,7 +22,8 @@ CONTAINS
     TYPE(t_mpi),INTENT(inout)    :: fmpi
 
     INTEGER :: omp=-1,i,isize,localrank,gpus,ii, me, nk,ierr
-    logical :: finished
+    REAL    :: matricesSize
+    logical :: finished, l_real, l_noco
 
     TYPE(t_log_message) :: log
     
@@ -35,9 +36,9 @@ CONTAINS
        !print INFO on parallelization
        WRITE(*,*) "------------Calculation Setup---------------------------"
 #ifdef CPP_MPI
-       write(*,*) "Number of MPI-tasks  : ",fmpi%isize
+       write(*,*) "Number of MPI-tasks      : ",fmpi%isize
        CALL MPI_COMM_SIZE(fmpi%mpi_comm_same_node,isize,i)
-       write(*,*) "Number of PE/node    : ",isize
+       write(*,*) "Number of PE/node        : ",isize
        CALL add_usage_data("MPI-PE",fmpi%isize)
        call log%add("MPI-Ranks",int2str(fmpi%isize))
 #else
@@ -45,11 +46,11 @@ CONTAINS
        call log%add("MPI-Ranks","noMPI")
 #endif
        IF (omp==-1) THEN
-         WRITE(*,*) "Number of OMP-threads:            No OpenMP"
+         WRITE(*,*) "Number of OMP-threads    :            No OpenMP"
           CALL add_usage_data("OMP",0)
           call log%add("OMP","NoOpenMP")
        ELSE
-         WRITE(*,*) "Number of OMP-threads: ",omp
+         WRITE(*,*) "Number of OMP-threads    : ",omp
           call log%add("OMP-Tasks",int2str(omp))
           IF(omp.EQ.1.AND.fmpi%isize.GE.6.AND.&
              ABS(NINT(REAL(nkpt)/REAL(fmpi%isize))*fmpi%isize-nkpt).GT.1.0e-7) THEN
@@ -71,6 +72,7 @@ CONTAINS
     endif
     call priv_distribute_gpu(fmpi,log)
     call log%report(logmode_info)
+    
     IF (fmpi%isize==1) THEN
        !give some info on available parallelisation
        CALL priv_dist_info(nkpt)
@@ -85,52 +87,63 @@ CONTAINS
        fmpi%k_list=[(i,i=1,nkpt)]
        fmpi%coulomb_owner=[(0,i=1,nkpt)]
        fmpi%ev_list=[(i,i=1,neigd)]
-       WRITE(*,*) "--------------------------------------------------------"
-       RETURN
-    END IF
+    ELSE
 #ifdef CPP_MPI
-    !Distribute the work
-    CALL priv_distribute_k(nkpt,nbasfcn,fmpi)
-    !generate the MPI communicators
-    CALL priv_create_comm(nkpt,neigd,fmpi)
-    !Now check if parallelization is possible
-    IF (fmpi%n_size>1) THEN
-      if (judft_was_argument("-serial_diag")) THEN
-        call priv_redist_for_diag(fmpi)
-      else if (.NOT.parallel_solver_available()) then
-        call juDFT_error("MPI parallelization failed",hint="You have to either compile FLEUR with a parallel diagonalization library (ELPA,SCALAPACK...) or you have to run such that the No of kpoints can be distributed on the PEs")
-      endif
-    endif
+       !Distribute the work
+       CALL priv_distribute_k(nkpt,nbasfcn,fmpi)
+       !generate the MPI communicators
+       CALL priv_create_comm(nkpt,neigd,fmpi)
+       !Now check if parallelization is possible
+       IF (fmpi%n_size>1) THEN
+         if (judft_was_argument("-serial_diag")) THEN
+           call priv_redist_for_diag(fmpi)
+         else if (.NOT.parallel_solver_available()) then
+           call juDFT_error("MPI parallelization failed",hint="You have to either compile FLEUR with a parallel diagonalization library (ELPA,SCALAPACK...) or you have to run such that the No of kpoints can be distributed on the PEs")
+         endif
+       endif
 #endif
-    if (fmpi%irank==0) write(*,'(2a)') "Eigenvalue solver     : ", print_solver(fmpi%n_size>1)
+       if (fmpi%irank==0) write(*,'(a,a12)') " Eigenvalue solver        : ", TRIM(print_solver(fmpi%n_size>1))
 
-    ALLOCATE(fmpi%k_list(SIZE([(i, i=INT(fmpi%irank/fmpi%n_size)+1,nkpt,fmpi%isize/fmpi%n_size )])))
-    ! this corresponds to the compact = .true. switch in priv_create_comm
-    fmpi%k_list=[(i, i=INT(fmpi%irank/fmpi%n_size)+1,nkpt,fmpi%isize/fmpi%n_size )]
+       ALLOCATE(fmpi%k_list(SIZE([(i, i=INT(fmpi%irank/fmpi%n_size)+1,nkpt,fmpi%isize/fmpi%n_size )])))
+       ! this corresponds to the compact = .true. switch in priv_create_comm
+       fmpi%k_list=[(i, i=INT(fmpi%irank/fmpi%n_size)+1,nkpt,fmpi%isize/fmpi%n_size )]
 
-    fmpi%max_length_k_list=size(fmpi%k_list)
+       fmpi%max_length_k_list=size(fmpi%k_list)
 #ifdef CPP_MPI    
-    CALL MPI_ALLREDUCE(MPI_IN_PLACE,fmpi%max_length_k_list,1,MPI_INTEGER,MPI_MAX,fmpi%mpi_comm,ierr)
+       CALL MPI_ALLREDUCE(MPI_IN_PLACE,fmpi%max_length_k_list,1,MPI_INTEGER,MPI_MAX,fmpi%mpi_comm,ierr)
 #endif
-    ! create an array with the owners of the correct coulomb matrix
-    allocate(fmpi%coulomb_owner(nkpt), source=-1)
-    do nk =1,nkpt
-      me = 0
-      finished = .False.
-      do while(.not. finished)
-         if(any(nk == [(i, i=INT(me/fmpi%n_size)+1,nkpt,fmpi%isize/fmpi%n_size)] )) then
-            fmpi%coulomb_owner(nk) = me
-            finished = .True.
-         endif
-         me = me + 1
-         if(me > fmpi%isize .and. .not. finished) then
-            call judft_error("somehow i cant lokate this k-point")
-         endif
-      enddo
-   enddo
+       ! create an array with the owners of the correct coulomb matrix
+       allocate(fmpi%coulomb_owner(nkpt), source=-1)
+       do nk =1,nkpt
+         me = 0
+         finished = .False.
+         do while(.not. finished)
+            if(any(nk == [(i, i=INT(me/fmpi%n_size)+1,nkpt,fmpi%isize/fmpi%n_size)] )) then
+               fmpi%coulomb_owner(nk) = me
+               finished = .True.
+            endif
+            me = me + 1
+            if(me > fmpi%isize .and. .not. finished) then
+               call judft_error("somehow i cant lokate this k-point")
+            endif
+         enddo
+       enddo
 
+       call fmpi%set_errhandler()
+    END IF
 
-    call fmpi%set_errhandler()
+    IF (fmpi%irank.EQ.0) THEN
+       matricesSize = REAL(nbasfcn)*REAL(nbasfcn)*2.0*8.0 ! factor 2 because of H + S, factor 8 because of size of REAL in bytes
+       IF (l_noco) THEN
+          matricesSize = matricesSize * 8.0 ! factor 8 because of all spins in one matrix, complex data.
+       ELSE IF (.NOT.l_real) THEN
+          matricesSize = matricesSize * 2.0 ! factor 2 because of complex data
+       END IF
+       matricesSize = matricesSize / 1024.0 / 1024.0 /1024.0
+       WRITE(*,'(a,i8)') ' Number of basis functions:     ', nbasfcn
+       WRITE(*,'(a,f13.3,a)') ' Approximate size of matrices (H+S) per k-point: ', matricesSize, ' GB'
+    END IF
+    
     if (fmpi%irank==0) WRITE(*,*) "--------------------------------------------------------"
 
   END SUBROUTINE setupMPI
@@ -195,11 +208,11 @@ CONTAINS
     fmpi%n_size   = fmpi%isize/n_members
     !fmpi%n_stride = n_members
     IF (fmpi%irank == 0) THEN
-       WRITE(*,*) 'k-points in parallel : ',n_members
-       WRITE(*,*) "pe's per k-point     : ",fmpi%n_size
-       WRITE(*,*) 'No of k-point loops  : ',nkpt/n_members
+       WRITE(*,*) 'k-points in parallel     : ',n_members
+       WRITE(*,*) "pe's per k-point         : ",fmpi%n_size
+       WRITE(*,*) 'No of k-point loops      : ',nkpt/n_members
        if (mod(nkpt,n_members).ne.0) then
-         Write(*,*) 'Info/Warning         : your k-point parallelism is not fully load-balanced'
+         Write(*,*) 'Info/Warning             : your k-point parallelism is not fully load-balanced'
        endif
 
        IF((REAL(nbasfcn) / REAL(fmpi%n_size)).LE.20) THEN
@@ -363,7 +376,7 @@ call timestart("Distribute GPUs")
       endif   
     ENDIF
 #else
-    write(*,*) "Number of GPU    :",gpus
+    write(*,*) "Number of GPU        :",gpus
 #endif
    call timestop("Distribute GPUs")
 #endif

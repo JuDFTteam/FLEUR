@@ -1,0 +1,2 @@
+[console_scripts]
+fleuriste = fleuriste.cli:main

@@ -76,6 +76,7 @@ CONTAINS
       USE m_make_stars
       USE m_dfpt_vefield
       USE m_checkdopall
+      USE m_store_load_hybrid
 
 !$    USE omp_lib
 
@@ -119,6 +120,7 @@ CONTAINS
       LOGICAL :: l_forceTheorem, l_lastIter, l_exist
       REAL    :: fix, sfscale, rdummy, tempDistance
       REAL    :: mmpmatDistancePrev, occDistancePrev
+      REAL    :: iterRuntime
       INTEGER :: tempI, tempK, tempJSP
 
 #ifdef CPP_MPI
@@ -128,12 +130,13 @@ CONTAINS
       ! Check, whether we already have a suitable density file and if not,
       ! generate a starting density.
       CALL optional(fmpi, fi%atoms, sphhar, fi%vacuum, stars, fi%input, &
-                    fi%sym, fi%cell, fi%sliceplot, xcpot, fi%noco)
+                    fi%sym, fi%cell, fi%field, fi%sliceplot, xcpot, fi%noco)
 
-      IF (fi%input%l_wann .AND. (fmpi%irank == 0) .AND. (.NOT. wann%l_bs_comf)) THEN
+      IF (fi%input%l_wann .AND. (.NOT. wann%l_bs_comf)) THEN
          ! TODO: If this warning is commented out, can it be erased?
          !IF(fmpi%isize.NE.1) CALL juDFT_error('No Wannier+MPI at the moment',calledby = 'fleur')
-         CALL wann_optional(fmpi, fi%input, fi%kpts, fi%atoms, fi%sym, fi%cell,   fi%noco, wann)
+         if (fmpi%irank==0) CALL wann_optional(fmpi, fi%input, fi%kpts, fi%atoms, fi%sym, fi%cell,   fi%noco, wann)
+         if (wann%l_stopopt) CALL juDFT_end("wann_optional done",fmpi%irank) 
       END IF
 
       iter = 0
@@ -183,7 +186,7 @@ CONTAINS
       !END IF
 
       CALL timestart("Qfix main")
-      CALL qfix(fmpi, stars,nococonv, fi%atoms, fi%sym, fi%vacuum, sphhar, fi%input, fi%cell,   inDen, fi%noco%l_noco, .FALSE., .FALSE., .FALSE., fix)
+      CALL qfix(fmpi, stars,nococonv, fi%atoms, fi%sym, fi%vacuum, sphhar, fi%input, fi%cell, fi%field, inDen, fi%noco%l_noco, .FALSE., .FALSE., .FALSE., fix)
       !CALL magMoms(fi%input,fi%atoms,fi%noco,nococonv,den=inDen)
       CALL timestop("Qfix main")
 
@@ -257,6 +260,7 @@ CONTAINS
       ! Start the scf loop.
       l_lastIter = .FALSE.
       scfloop: DO WHILE (l_cont)
+         iterRuntime = cputime()
          iter = iter + 1
          l_lastIter = l_lastIter.OR.(iter.EQ.fi%input%itmax)
          hub1data%overallIteration = hub1data%overallIteration + 1
@@ -466,6 +470,7 @@ CONTAINS
                CALL fermie(eig_id, fmpi, fi%kpts, fi%input, fi%noco, enpara%epara_min, fi%cell, results)
                IF (fi%hybinp%l_hybrid) hybdat%results = results
             ENDIF
+            IF (fi%hybinp%l_hybrid) CALL store_state_weights_hybrid(fi, fmpi, results)
 #ifdef CPP_MPI
             CALL MPI_BCAST(results%ef, 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
             CALL MPI_BCAST(results%w_iks, SIZE(results%w_iks), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
@@ -534,7 +539,7 @@ CONTAINS
             outDen%iter = inDen%iter
             CALL cdngen(eig_id, fmpi, input_soc, fi%banddos, fi%sliceplot, fi%vacuum, &
                         fi%kpts, fi%atoms, sphhar, stars, fi%sym, fi%juphon, fi%gfinp, fi%hub1inp, &
-                        enpara, fi%cell, fi%noco, nococonv, vTot, results,   fi%corespecinput, &
+                        enpara, fi%cell, fi%field, fi%noco, nococonv, vTot, results,   fi%corespecinput, &
                         archiveType, xcpot, outDen, EnergyDen, coreden,greensFunction, hub1data,vxc,exc)
             ! The density matrix for DFT+Hubbard1 only changes in hubbard1_setup and is kept constant otherwise
             outDen%mmpMat(:, :, fi%atoms%n_u + 1:fi%atoms%n_u + fi%atoms%n_hia, :) = inDen%mmpMat(:, :, fi%atoms%n_u + 1:fi%atoms%n_u + fi%atoms%n_hia, :)
@@ -586,6 +591,7 @@ CONTAINS
                 CALL timestart("juPhon DFPT")
                 CALL dfpt(fi, sphhar, stars, nococonv, fi%kpts, fmpi, results, enpara, outDen, vTot, vxc, eig_id, xcpot, hybdat, mpdata, forcetheo)
                 CALL timestop("juPhon DFPT")
+                CALL juDFT_end("Phonon calculation finished.",fmpi%irank)
             END IF
 
             !CRYSTAL FIELD OUTPUT
@@ -633,7 +639,7 @@ CONTAINS
          CALL toLocalSpinFrame(fmpi, fi%vacuum, sphhar, stars, fi%sym, fi%cell, fi%noco, &
                                nococonv, fi%input, fi%atoms, .TRUE., inDen, .TRUE.)
      
-   
+         iterRuntime = cputime() - iterRuntime
                          
          IF (fmpi%irank==0) THEN
             WRITE (oUnit, FMT=8130) iter
@@ -643,7 +649,7 @@ CONTAINS
                WRITE (*, *) "Iteration:", iter, " Distance:", results%last_distance, " hyb distance:", hybdat%results%last_distance
                call log%add("Hybrid-distance",float2str(hybdat%results%last_distance))
             ELSE
-               WRITE (*, *) "Iteration:", iter, " Distance:", results%last_distance
+               WRITE (*, '(a,i6,a,f17.8,a,f12.3,a)') " Iteration:", iter, "   Distance:", results%last_distance, " me/bohr^3   Runtime:", iterRuntime, " s"
             ENDIF
             call log%add("Distance",float2str(results%last_distance))
             call log%report(logmode_info)
@@ -663,7 +669,7 @@ CONTAINS
                l_cont = l_cont .AND. (fi%input%mindistance <= results%last_distance)
                CALL check_time_for_next_iteration(iterHF, l_cont)
             ELSE
-               l_cont = l_cont .AND. (iter < 50) ! Security stop for non-converging nested PBE calculations
+               l_cont = l_cont .AND. (iter < 100) ! Security stop for non-converging nested PBE calculations
             END IF
 
             IF (hybdat%l_subvxc) THEN

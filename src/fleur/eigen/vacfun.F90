@@ -1,8 +1,14 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_vacfun
   use m_juDFT
 #ifdef CPP_MPI
   use mpi
 #endif
+   implicit none
 CONTAINS
   SUBROUTINE vacfun(&
        fmpi,vacuum,stars,input,nococonv,jspin1,jspin2,&
@@ -83,7 +89,7 @@ CONTAINS
       udzq=0.0;duzq=0.0;ddnvq=0.0;udzq=0.;uzq=0.
     END IF
     np1 = vacuum%nmzxy + 1
-    !--->    wronksian for the schrodinger equation given by an identity
+    !--->    wronskian for the schrodinger equation given by an identity
     wronk = 2.0
     !---> setup the spin-spiral q-vector
     qssbti(1:2,1) = - nococonv%qss(1:2)/2
@@ -100,7 +106,7 @@ CONTAINS
           CALL vacudz(ev,REAL(vz(1:,ivac,jspin)),vzero,vacuum%nmz,vacuum%delz,&
                udz(ik,jspin),dudz(ik,jspin),ddnv(ik,jspin),&
                ud(1,ik,jspin),duz(ik,jspin),u(1,ik,jspin))
-          !--->       make sure the solutions satisfy the wronksian
+          !--->       make sure the solutions satisfy the wronskian
           scale = wronk/ (udz(ik,jspin)*duz(ik,jspin)-&
                &                         dudz(ik,jspin)*uz(ik,jspin))
           udz(ik,jspin)  = scale*udz(ik,jspin)
@@ -119,7 +125,7 @@ CONTAINS
             CALL vacudz(ev,REAL(vz(1:,ivac,jspin)),vzero,vacuum%nmz,vacuum%delz,&
                   udzq(ik,jspin),dudzq(ik,jspin),ddnvq(ik,jspin),&
                   udq(1,ik,jspin),duzq(ik,jspin),uq(1,ik,jspin))
-            !--->       make sure the solutions satisfy the wronksian
+            !--->       make sure the solutions satisfy the wronskian
             scale = wronk/ (udzq(ik,jspin)*duzq(ik,jspin)-&
                   &                         dudzq(ik,jspin)*uzq(ik,jspin)) !! TODO: Output wronsk always = 2.0?
             udzq(ik,jspin)  = scale*udzq(ik,jspin)
@@ -156,6 +162,7 @@ CONTAINS
             IF (ind3.EQ.0) CYCLE
             phase = stars%rgphs(i1,i2,i3)
             ind2 = stars%ig2(ind3)
+            ind2 = stars%i2g(i1,i2)
             IF (ind2.EQ.0) THEN
                WRITE (oUnit,FMT=8000) ik,jk
    8000         FORMAT (' **** error in map2 for 2-d stars',2i5)
@@ -171,6 +178,7 @@ CONTAINS
                !--->       the integrals, i.e. the integrand is from infinity inward
 
                !--->       tuuv
+
                DO  i = 1,vacuum%nmzxy
                   x(np1-i) = u(i,ik,jspin1)*u(i,jk,jspin2)*REAL(vxy(i,ind2,ivac,ipot))
                enddo
@@ -284,7 +292,7 @@ CONTAINS
             ind3 = stars%ig(i1,i2,i3)
             IF (ind3.EQ.0) CYCLE
             phase = stars%rgphs(i1,i2,i3)
-            ind2 = stars%ig2(ind3)
+            ind2 = stars%i2g(i1,i2)
             IF (ind2.EQ.0) THEN
                WRITE (oUnit,FMT=8001) ik,jk
    8001         FORMAT (' **** error in map2 for 2-d stars',2i5)

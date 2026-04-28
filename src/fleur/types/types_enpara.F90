@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -22,6 +22,7 @@ MODULE m_types_enpara
      LOGICAL, ALLOCATABLE :: lchg_v(:,:)
      LOGICAL, ALLOCATABLE :: llochg(:,:,:)
      REAL                 :: epara_min
+     real,allocatable     :: vr(:,:,:) !store the potential used to generate the basis functions 
      LOGICAL              :: ready ! are the enpara's ok for calculation?
      LOGICAL              :: floating !floating energy parameters are relative to potential
    CONTAINS
@@ -30,9 +31,7 @@ MODULE m_types_enpara
      PROCEDURE :: read
      PROCEDURE :: write
      PROCEDURE :: mix
-#ifndef CPP_INPGEN
-     PROCEDURE :: calcOutParams
-#endif     
+ 
   END TYPE t_enpara
 
 
@@ -41,7 +40,9 @@ MODULE m_types_enpara
 
 CONTAINS
   SUBROUTINE init_enpara(this,atoms,jspins,film,enparaXML)
-    USE m_types_setup
+   USE m_types_atoms
+   USE m_types_enparaxml
+    
     USE m_constants
     CLASS(t_enpara),INTENT(inout):: this
     TYPE(t_atoms),INTENT(IN)     :: atoms
@@ -53,6 +54,7 @@ CONTAINS
 
     ALLOCATE(this%el0(0:atoms%lmaxd,atoms%ntype,jspins),this%el1(0:atoms%lmaxd,atoms%ntype,jspins))
     ALLOCATE(this%ello0(atoms%nlod,atoms%ntype,jspins),this%ello1(atoms%nlod,atoms%ntype,jspins))
+    ALLOCATE(this%vr(atoms%jmtd,atoms%ntype,jspins))
     this%el0=-1E99
     this%ello0=-1E99
     this%evac0=-1E99
@@ -136,7 +138,7 @@ CONTAINS
     REAL ::  elo_up_local(atoms%nlod,atoms%ntype)
     REAL ::  el0Local(0:atoms%lmaxd,atoms%ntype,input%jspins)
     REAL ::  ello0Local(atoms%nlod,atoms%ntype,input%jspins)
-    REAL,ALLOCATABLE :: v_mt(:)
+    
     TYPE(t_parallelLoop) mpiLoop
 
     IF (fmpi%irank  == 0) CALL openXMLElement('energyParameters',(/'units'/),(/'Htr'/))
@@ -151,19 +153,22 @@ CONTAINS
        elo_lo_local = 0.0
        elo_up_local = 0.0
 
+      DO n=1,atoms%ntype
+         enpara%vr(:,n,jsp)=v%mt(:,0,n,jsp)
+         if (atoms%l_nonpolbas(n)) enpara%vr(:,n,jsp)=(v%mt(:,0,n,1)+v%mt(:,0,n,2))/2
+      endDO
+
        CALL mpiLoop%init(fmpi%irank,fmpi%isize,1,atoms%ntype)
        !$OMP PARALLEL DO DEFAULT(none) &
        !$OMP SHARED(mpiLoop,atoms,enpara,jsp,l_doneLocal,v,lo_doneLocal,e_lo_local,e_up_local,elo_lo_local,elo_up_local,el0Local,ello0Local) &
-       !$OMP PRIVATE(n,l,ilo,v_mt)
+       !$OMP PRIVATE(n,l,ilo)
        !! First calculate energy parameter from quantum numbers if these are given...
        !! l_done stores the index of those energy parameter updated
        DO n = mpiLoop%bunchMinIndex, mpiLoop%bunchMaxIndex
-          v_mt=v%mt(:,0,n,jsp)
-          if (atoms%l_nonpolbas(n)) v_mt=(v%mt(:,0,n,1)+v%mt(:,0,n,2))/2
           DO l = 0,3
              IF( enpara%qn_el(l,n,jsp).ne.0) THEN
                 l_doneLocal(l,n,jsp) = .TRUE.
-                el0Local(l,n,jsp)=find_enpara(.FALSE.,l,n,jsp,enpara%qn_el(l,n,jsp),atoms,v_mt,e_lo_local(l,n),e_up_local(l,n))
+                el0Local(l,n,jsp)=find_enpara(.FALSE.,l,n,jsp,enpara%qn_el(l,n,jsp),atoms,enpara%vr(:,n,jsp),e_lo_local(l,n),e_up_local(l,n))
                 IF( l .EQ. 3 ) THEN
                    el0Local(4:,n,jsp) = el0Local(3,n,jsp)
                    l_doneLocal(4:,n,jsp) = .TRUE.
@@ -181,7 +186,7 @@ CONTAINS
              l = atoms%llo(ilo,n)
              IF( enpara%qn_ello(ilo,n,jsp).NE.0) THEN
                 lo_doneLocal(ilo,n,jsp) = .TRUE.
-                ello0Local(ilo,n,jsp)=find_enpara(.TRUE.,l,n,jsp,enpara%qn_ello(ilo,n,jsp),atoms,v_mt,elo_lo_local(ilo,n),elo_up_local(ilo,n))
+                ello0Local(ilo,n,jsp)=find_enpara(.TRUE.,l,n,jsp,enpara%qn_ello(ilo,n,jsp),atoms,enpara%vr(:,n,jsp),elo_lo_local(ilo,n),elo_up_local(ilo,n))
              ELSE
                 ello0Local(ilo,n,jsp) = enpara%ello0(ilo,n,jsp)
                 lo_doneLocal(ilo,n,jsp) = .FALSE.
@@ -346,7 +351,7 @@ CONTAINS
   END SUBROUTINE update
 
   SUBROUTINE READ(enpara,atoms,jspins,film,l_required)
-    USE m_types_setup
+    USE m_types_atoms
     USE m_constants
     IMPLICIT NONE
     CLASS(t_enpara),INTENT(INOUT):: enpara
@@ -455,7 +460,7 @@ CONTAINS
 
     ! write enpara-file
     !
-    USE m_types_setup
+    USE m_types_atoms
     USE m_constants
     IMPLICIT NONE
     CLASS(t_enpara),INTENT(IN) :: enpara
@@ -545,7 +550,7 @@ CONTAINS
 #else
     irank=0
 #endif
-
+   return !No more mixing of enparas since these are not calculated anymore
     IF (irank==0) THEN
        maxdist2=0.0
        DO jsp=1,SIZE(enpara%el0,3)
@@ -645,46 +650,6 @@ CONTAINS
 
   END SUBROUTINE mix
 
-#ifndef CPP_INPGEN
-  SUBROUTINE calcOutParams(enpara,input,atoms,vacuum,regCharges)
-    USE m_types_setup
-    USE m_types_regionCharges
-    IMPLICIT NONE
-    CLASS(t_enpara),INTENT(INOUT)    :: enpara
-    TYPE(t_input),INTENT(IN)         :: input
-    TYPE(t_atoms),INTENT(IN)         :: atoms
-    TYPE(t_vacuum),INTENT(IN)        :: vacuum
-    TYPE(t_regionCharges),INTENT(IN) :: regCharges
-
-    INTEGER :: ispin, n, ilo, iVac, l
-
-    enpara%el1(:,:,:) = enpara%el0(:,:,:)
-    enpara%ello1(:,:,:) = enpara%ello0(:,:,:)
-    enpara%evac1(:,:) = enpara%evac(:,:)
-
-    DO ispin = 1,input%jspins
-       DO n=1,atoms%ntype
-          DO l = 0, 3
-             IF (regCharges%sqal(l,n,ispin).NE.0.0) enpara%el1(l,n,ispin)=regCharges%ener(l,n,ispin)/regCharges%sqal(l,n,ispin)
-          END DO
-          IF (atoms%nlo(n)>0) THEN
-             DO ilo = 1, atoms%nlo(n)
-                IF (regCharges%sqlo(ilo,n,ispin).NE.0.0) THEN
-                   enpara%ello1(ilo,n,ispin)=regCharges%enerlo(ilo,n,ispin)/regCharges%sqlo(ilo,n,ispin)
-                END IF
-             END DO
-          END IF
-       END DO
-       IF (input%film) THEN
-          DO iVac = 1, vacuum%nvac
-             IF (regCharges%svac(iVac,ispin).NE.0.0) THEN
-                enpara%evac1(iVac,ispin)=regCharges%pvac(iVac,ispin)/regCharges%svac(iVac,ispin)
-             END IF
-          END DO
-       END IF
-    END DO
-  END SUBROUTINE calcOutParams
-#endif
 SUBROUTINE priv_write(lo,l,n,jsp,nqn,e_lo,e_up,e)
     !subroutine to write energy parameters to output
     USE m_constants

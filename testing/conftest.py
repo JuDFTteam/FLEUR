@@ -363,7 +363,6 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "fleur: test running fleur")
     config.addinivalue_line("markers", "serial: test running fleur serial")
     config.addinivalue_line("markers", "mpi: test running fleur in parallel")
-    config.addinivalue_line("markers", "mpionly: test which need a MPI capable fleur to run.")
     config.addinivalue_line("markers", "fast: tests which take < 1 sec to execute")
     config.addinivalue_line("markers", "slow: tests which take < 1 min to execute")
     config.addinivalue_line("markers", "very_slow: tests which take > 1 min to execute")
@@ -406,6 +405,7 @@ def pytest_configure(config):
 
     # main libs
     config.addinivalue_line("markers", "hdf: tests needing hdf")
+    config.addinivalue_line("markers", "mpi: tests needing mpi")
     config.addinivalue_line("markers", "libxc: test for fleur using libxc")
     config.addinivalue_line("markers", "wannier: test for fleur using wannier") # TODO account for differnet wannier versions?
     config.addinivalue_line("markers", "wannier4: test for fleur using wannier 4D calculations")
@@ -762,7 +762,7 @@ def get_mpi_command(env, mpi_procs, parallel):
         mpi_procs = env.get('juDFT_NPROCS', '')
 
     if mpiruncmd is None and parallel:
-        mpiruncmd = 'mpirun -n {mpi_procs} '
+        mpiruncmd = 'mpirun -np {mpi_procs} '
 
     if mpiruncmd is not None:
         if mpiruncmd.strip() != 'time' and len(mpiruncmd.strip()) > 0:
@@ -1051,6 +1051,8 @@ def check_outxml(test_logger):
             attrib=check[1]
             index=check[2]
             tol=check[3]
+            vector=check[4]
+                            
             try:            
                 e2=refxml.findall(".//"+element)[index]
                 if attrib:
@@ -1066,13 +1068,32 @@ def check_outxml(test_logger):
                 except:
                     test_logger.error(f"Element,index,attrib not found: {element} {index} {attrib} in out.xml")
                     return False
-                if abs(float(e1)-float(e2))>tol:
-                    test_logger.info(f"Check failed for {element} {index} {attrib}")
-                    test_logger.info(f"Value: {e1}  Reference: {e2} Tol: {tol}")
-                    ok=False
+                if vector == "list":
+                    vals_ref = list(map(float, e2.text.split()))   
+                    vals = list(map(float, e1.text.split()))   
+                    
+                    if len(vals_ref) != len(vals):
+                        test_logger.error(f"Length mismatch for {element}: {len(vals)} vs {len(vals_ref)}")
+                        ok = False
+                        continue
+
+                    for iter in range(len(vals)):
+                        freqref = vals_ref[iter]
+                        freq    = vals[iter]
+                        if abs(freqref-freq) > tol:
+                            test_logger.info(f"Check failed for {element}[{iter}]")
+                            test_logger.info(f"Value: {freq}  Reference: {freqref}  Tol: {tol}")
+                            ok=False
+                    if ok:
+                        test_logger.info(f"Check passed for {element} text list")     
                 else:
-                    test_logger.info(f"Check passed for {element} {index} {attrib}")           
-        return ok
+                    if abs(float(e1)-float(e2))>tol:
+                        test_logger.info(f"Check failed for {element} {index} {attrib}")
+                        test_logger.info(f"Value: {e1}  Reference: {e2} Tol: {tol}")
+                        ok=False
+                    else:
+                        test_logger.info(f"Check passed for {element} {index} {attrib}")           
+        return ok 
     return _check_outxml
 
 @pytest.fixture
@@ -1087,16 +1108,24 @@ def check_all_outxml(test_logger,check_outxml):
         from xml.etree import ElementTree
         refxml=ElementTree.parse(reffilepath)
         checks=[
-            ["FermiEnergy","value",-1,0.0001],
-            ["bandgap","value",-1,0.001],
-            ["totalEnergy","value",-1,0.0001],
-            ["sumValenceSingleParticleEnergies","value",-1,0.0001],
-            ["chargeDensity","distance",-1,0.001], #last spind only
-            ["mtCharge","total",-1,0.001],
-            ["state","energy",-1,0.0001], #check core state
-            ["densityConvergence/spinDensity","distance",-1,0.001],
-            ["magneticMoment","moment",-1.,0.001]
-            ]
+            ["FermiEnergy","value",-1,0.0001,None],
+            ["bandgap","value",-1,0.001,None],
+            ["totalEnergy","value",-1,0.00003,None],
+            ["sumValenceSingleParticleEnergies","value",-1,0.0001,None],
+            ["chargeDensity","distance",-1,0.001,None], #last spind only
+            ["mtCharge","total",-1,0.001,None],
+            ["state","energy",-1,0.0001,None], #check core state
+            ["densityConvergence/spinDensity","distance",-1,0.001,None],
+            ["magneticMoment","moment",-1.,0.001,None],
+            ["forceTotal","F_x",-1,0.001,None],
+            ["forceTotal","F_y",-1,0.001,None],
+            ["forceTotal","F_z",-1,0.001,None],
+            ["frequencies",None,-1,0.001,"list"], 
+            ["dieltensor",None,-1,0.001,"list"],
+            ["borneffcharge",None,-1,0.001,"list"] 
+            
+
+        ]
         return check_outxml(filepath,reffilepath,checks,skip_noref=True)
     return _check_all_outxml        
 
@@ -1123,7 +1152,7 @@ def check_hdf(test_logger):
 def default_fleur_test(test_logger,check_all_outxml,execute_fleur,validate_out_xml_file,check_hdf):
     """returns the default_fleur_test function
     """
-    def _default_fleur_test(testname,files=None,checks=None,hdf_checks=[],clean=False):
+    def _default_fleur_test(testname,files=None,checks=None,hdf_checks=[],clean=False,cmdline_args=None,mpi_procs=None):
         """ docu
         """
         test_logger.info(f"Starting a default fleur test for {testname}")           
@@ -1142,7 +1171,7 @@ def default_fleur_test(test_logger,check_all_outxml,execute_fleur,validate_out_x
             rm_files=[]
             if clean: rm_files=['.']
             ref_out_xml=os.path.join(test_file_folder,"out.xml")
-            res_files = execute_fleur(test_file_folder,rm_files=rm_files)
+            res_files = execute_fleur(test_file_folder,rm_files=rm_files,cmdline_param=cmdline_args,mpi_procs=mpi_procs)
             should_files = ['out.xml', 'out']
             if files: should_files=should_files+files
             res_file_names = list(res_files.keys())

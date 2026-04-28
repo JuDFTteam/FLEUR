@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_ssomat
   USE m_judft
   IMPLICIT NONE
@@ -20,6 +25,7 @@ CONTAINS
     USE m_spnorb
     USE m_abcof
     USE m_fermifct
+    use m_types_rsoc
 #ifdef CPP_MPI
     USE mpi
 #endif

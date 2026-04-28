@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -28,8 +28,8 @@ module m_scalapack
 contains
 
    function get_solver_scalapack() result(solver)
-      type(t_solver_scalapack), pointer::solver
-      allocate (solver)
+      class(t_solver), allocatable :: solver
+      allocate(t_solver_scalapack :: solver)
       solver%name = "scalapack"
 #ifdef CPP_SCALAPACK
       solver%available = .true.
@@ -43,6 +43,7 @@ contains
       solver%single_precision = .false.
       solver%transform = .true.
       solver%GPU = .false.
+      solver%use_sp = .false.
    end function
 
    subroutine scalapack_gev(self, hmat, smat, ne, eig, zmat, ikpt)
@@ -128,8 +129,8 @@ contains
             mq0 = numroc(max(max(ne, nb), 2), nb, 0, 0, hmat%blacsdata%npcol)
             if (hmat%l_real) then
                lwork2 = 5*hmat%global_size1 + max(5*nn, np0*mq0 + 2*nb*nb) + &
-                        iceil(ne, hmat%blacsdata%nprow*hmat%blacsdata%npcol)*nn
-               allocate (work2_r(lwork2 + 10*hmat%global_size1), stat=err) ! Allocate more in case of clusters
+                        iceil(ne, hmat%blacsdata%nprow*hmat%blacsdata%npcol)*nn+ 10*hmat%global_size1
+               allocate (work2_r(lwork2 ), stat=err) ! Allocate more in case of clusters
             else
                lwork2 = hmat%global_size1 + max(nb*(np0 + 1), 3)
                allocate (work2_c(lwork2), stat=err)
@@ -175,9 +176,9 @@ contains
                             0.0, 1.0, 1, num, abstol, num1, num2, eig2, orfac, ev_dist%data_r, 1, 1, &
                             ev_dist%blacsdata%blacs_desc, work2_r, -1, iwork, -1, ifail, iclustr, gap, ierr)
                if (work2_r(1) .gt. lwork2) then
-                  lwork2 = work2_r(1)
+                  lwork2 = work2_r(1)+ 20*hmat%global_size1
                   deallocate (work2_r)
-                  allocate (work2_r(lwork2 + 20*hmat%global_size1), stat=err) ! Allocate even more in case of clusters
+                  allocate (work2_r(lwork2 ), stat=err) ! Allocate even more in case of clusters
                   if (err .ne. 0) then
                      WRITE(*,*) 'Error for k-point ', ikpt
                      write (*, *) 'work2  :', err, lwork2
@@ -186,10 +187,10 @@ contains
                end if
             else
                lrwork = 4*hmat%global_size1 + max(5*nn, np0*mq0) + &
-                        iceil(ne, hmat%blacsdata%nprow*hmat%blacsdata%npcol)*nn
+                        iceil(ne, hmat%blacsdata%nprow*hmat%blacsdata%npcol)*nn+ 10*hmat%global_size1
                ! Allocate more in case of clusters
-               allocate (rwork(lrwork + 10*hmat%global_size1), stat=ierr)
-               if (err /= 0) then
+               allocate (rwork(lrwork ), stat=ierr)
+               if (ierr /= 0) then
                   WRITE(*,*) 'Error for k-point ', ikpt
                   write (*, *) 'ERROR: chani.F: Allocating rwork failed'
                   call juDFT_error('Failed to allocated "rwork"', calledby='chani')
@@ -211,13 +212,13 @@ contains
                   end if
                end if
                if (rwork(1) .gt. lrwork) then
-                  lrwork = rwork(1)
+                  lrwork = rwork(1)+ 20*hmat%global_size1
                   deallocate (rwork)
                   ! Allocate even more in case of clusters
-                  allocate (rwork(lrwork + 20*hmat%global_size1), stat=err)
+                  allocate (rwork(lrwork ), stat=err)
                   if (err /= 0) then
                      WRITE(*,*) 'Error for k-point ', ikpt
-                     write (*, *) 'ERROR: chani.F: Allocating rwork failed: ', lrwork + 20*hmat%global_size1
+                     write (*, *) 'ERROR: chani.F: Allocating rwork failed: ', lrwork 
                      call juDFT_error('Failed to allocated "rwork"', calledby='chani')
                   end if
                end if
@@ -333,8 +334,10 @@ contains
       class(t_mat), intent(INOUT)  :: hmat, smat
       integer            :: info, n
 
+
 #ifdef CPP_SCALAPACK
       real :: scale
+      call timestart("SCALAPACK REDUCTION")
       select type (hmat)
       type is (t_mpimat)
          select type (smat)
@@ -374,6 +377,7 @@ contains
          call judft_bug("Wrong matrix type in scalapack")
       end select
 #endif
+      call timestop("SCALAPACK REDUCTION")
    end subroutine
 
    subroutine scalapack_recover(self, smat, zmat)
@@ -381,6 +385,8 @@ contains
       class(t_solver_scalapack) :: self
       class(t_mat), intent(INOUT)  :: zmat, smat
       integer :: m, n, info
+
+      call timestart("SCALAPACK BACKTRANSFORM")
 #ifdef CPP_SCALAPACK
 
       select type (smat)
@@ -408,6 +414,7 @@ contains
          call judft_bug("Wrong matrix type in scalapack")
       end select
 #endif
+      call timestop("SCALAPACK BACKTRANSFORM")
    end subroutine
 
 end module m_scalapack

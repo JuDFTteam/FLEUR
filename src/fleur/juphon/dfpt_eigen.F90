@@ -80,7 +80,8 @@ CONTAINS
       EXTERNAL zdotc
 
 
-
+#ifndef _OPENACC  
+!newer nvhpc versions fail here with ICE
       CALL vx%copyPotDen(vTot)
       ALLOCATE(vx%pw_w, mold=vx%pw)
       vx%pw_w = vTot%pw_w
@@ -228,7 +229,7 @@ CONTAINS
                      ! TODO: This part of the correction had no effect whatsoever yet.
                      !       Reactivate for misbehaving materials and see if there are
                      !       changes.
-                     ELSE IF (iNuPr<=noccbdmin.AND.nu<=noccbdmin) THEN
+                     ELSE IF (iNuPr<=noccbdq) THEN
                         wtfq = resultsq%w_iks(iNupr,nk,jsp)/fi%kpts%wtkpt(nk)
                         tempMat2(iNupr) = 1.0/(eigq(iNupr)-eigk(nu))*tempMat1(iNupr) &
                                       & *(1.0-wtfq)
@@ -244,7 +245,7 @@ CONTAINS
                         tempMat2(iNupr) = 0.0
                      ELSE IF (ABS(eigq(iNupr)-eigk(nu))<fi%juPhon%eDiffCut) THEN
                         tempMat2(iNupr) = 0.0
-                     ELSE IF (iNuPr<=noccbdmin.AND.nu<=noccbdmin) THEN
+                     ELSE IF (iNuPr<=noccbdq) THEN
                         wtfq = resultsq%w_iks(iNupr,nk,jsp)/fi%kpts%wtkpt(nk)
                         tempMat2(iNupr) = 1.0/(eigq(iNupr)-eigk(nu))*tempMat1(iNupr) &
                                        & *(1.0-wtfq)
@@ -304,7 +305,7 @@ CONTAINS
                      ! TODO: This part of the correction had no effect whatsoever yet.
                      !       Reactivate for misbehaving materials and see if there are
                      !       changes.
-                     ELSE IF (iNuPr<=noccbdmin.AND.nu<=noccbdmin) THEN
+                     ELSE IF (iNuPr<=noccbdq) THEN
                         wtfq = resultsq%w_iks(iNupr,nk,jsp)/fi%kpts%wtkpt(nk)
                         tempMat2(iNupr) = -eigk(nu)/(eigq(iNupr)-eigk(nu))*tempMat1(iNupr) &
                                       & *(1.0-wtfq) &
@@ -321,7 +322,7 @@ CONTAINS
                         tempMat2(iNupr) = 0.0
                      ELSE IF (ABS(eigq(iNupr)-eigk(nu))<fi%juPhon%eDiffCut) THEN
                         tempMat2(iNupr) = 0.5*tempMat1(iNupr)
-                     ELSE IF (iNuPr<=noccbdmin.AND.nu<=noccbdmin) THEN
+                     ELSE IF (iNuPr<=noccbdq) THEN
                         wtfq = resultsq%w_iks(iNupr,nk,jsp)/fi%kpts%wtkpt(nk)
 
                         tempMat2(iNupr) = -eigk(nu)/(eigq(iNupr)-eigk(nu))*tempMat1(iNupr) &
@@ -419,6 +420,7 @@ CONTAINS
             END IF
          END DO  k_loop
       END DO ! spin loop ends
+#endif  
       neigd2 = MIN(fi%input%neig,lapw%dim_nbasfcn())
 #ifdef CPP_MPI
       CALL MPI_ALLREDUCE(eigBuffer(:neigd2,:,:),results1%eig(:neigd2,:,:),neigd2*fi%kpts%nkpt*fi%input%jspins,MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)

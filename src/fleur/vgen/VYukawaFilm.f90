@@ -64,13 +64,12 @@ module m_VYukawaFilm
     complex                           :: alphm(stars%ng2,2)
     real                              :: dh_prec
     real                              :: coshdh(stars%ng2)
-    complex                           :: sigma_loc(2)
  
     ! PSEUDO-CHARGE DENSITY
 
     call psqpw( fmpi, atoms, sphhar, stars, vacuum, cell, input, sym,   &
                 juphon, den, 1, .false., VYukawa%potdenType, &
-                psq, sigma_loc )
+                psq )
 
     ChooseVariant: if ( .true. ) then
 
@@ -110,7 +109,7 @@ module m_VYukawaFilm
 
     call Vmts( input, fmpi, stars, sphhar, atoms, sym, cell, juphon, .FALSE., &
                VYukawa%pw(:,1), den%mt(:,0:,:,1), VYukawa%potdenType, &
-               VYukawa%mt(:,0:,:,1) )
+               VYukawa%mt(:,0:,:,1), 1 )
  
     ! MODIFICATION FOR CHARGE NEUTRALITY
 
@@ -964,7 +963,7 @@ module m_VYukawaFilm
 
     call Vmts( input, fmpi, stars, sphhar, atoms, sym, cell, juphon, .FALSE., &
                VYukawaModification%pw(:,1), den%mt(:,0:,:,1), VYukawaModification%potdenType, &
-               VYukawaModification%mt(:,0:,:,1) )
+               VYukawaModification%mt(:,0:,:,1), 1 )
 
     ! APPLYING THE MODIFICATION TO THE YUKAWA POTENTIAL
 

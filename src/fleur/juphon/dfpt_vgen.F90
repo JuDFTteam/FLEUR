@@ -10,7 +10,7 @@ CONTAINS
 
    SUBROUTINE dfpt_vgen(hybdat,field,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
                    juphon, cell,fmpi,noco,nococonv,den,vTot,&
-                   &starsq,dfptdenimag,dfptvTot,l_xc,dfptvTotimag,dfptdenreal,iDtype,iDir,killcont,sigma_disc, sliceplot,l_vextpho)
+                   &starsq,dfptdenimag,dfptvTot,l_xc,dfptvTotimag,dfptdenreal,iDtype,iDir,killcont, sliceplot,l_vextpho)
       !--------------------------------------------------------------------------
       ! FLAPW potential perturbation generator (main routine)
       !
@@ -78,7 +78,6 @@ CONTAINS
       INTEGER, OPTIONAL, INTENT(IN)           :: iDtype, iDir ! DFPT: Type and direction of displaced atom
 
       INTEGER, OPTIONAL, INTENT(IN)           :: killcont(2)
-      complex, OPTIONAL, INTENT(IN)           :: sigma_disc(2)
       LOGICAL, OPTIONAL, INTENT(IN)           :: l_vextpho
 
       TYPE(t_potden)                   :: workden, denRot, workdenImag, workdenReal, den1Rot, den1imRot
@@ -86,7 +85,6 @@ CONTAINS
       TYPE(t_potden)                   :: dfptvefield, dfptvefieldimag   
       TYPE(t_atoms)                    :: atomsefield 
 
-      complex                           :: sigma_loc(2)
       COMPLEX :: constantShift
       INTEGER :: ispin 
       
@@ -157,31 +155,16 @@ CONTAINS
       CALL dfptdenimag%sum_both_spin(workdenImag)
       ! NOTE: The normal stars are also passed as an optional argument, because
       !       they are needed for surface-qlm.
-      sigma_loc = sigma_disc
-      !print*,"Im before if"
       IF (juphon%l_efield) THEN
-         !print*,"doing efield shit"
          atomsefield = atoms
          atomsefield%zatom(:) = 0.0 ! find out if this is actually needed
-         CALL dfpt_vefield(juphon,starsq,atoms,sym,sphhar,cell,dfptvefield,dfptvefieldimag,iDir,-1)
-         !dfptvefield%pw = CMPLX(0.0,0.0)
-         !dfptvefield%mt = 0.0
-         !dfptvefieldimag % mt = 0.0
+         CALL dfpt_vefield(juphon,starsq,atoms,sym,sphhar,cell,dfptvefield,dfptvefieldimag,iDir,1)
          CALL dfptvefield%copy_both_spin(dfptvTot)
          CALL dfptvefieldimag%copy_both_spin(dfptvTotimag)
-         IF (.FALSE.) THEN
-            !dfptvefield%pw = cmplx(0.0,0.0)
-            print*,"trying to plot vext1 it1"
-            WRITE (oUnit,*) "Check if checkdopall is done for plot pot"
-            print*,"sum(dfptvefield%pw)",sum(dfptvefield%pw)
-            CALL checkDOPALL(input, sphhar, starsq,atoms, sym, vacuum, cell,dfptvefield,1, dfptvefieldimag)
-            sliceplot_int%iplot = 4
-            CALL makeplots(starsq, atoms, sphhar, vacuum, input, fmpi, sym, cell, noco, nococonv_int, dfptvTot, PLOT_POT_TOT, sliceplot_int)
-            stop
-         END IF
+
          
          IF (l_xc) THEN
-            CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,juphon,starsq,cell,sphhar,atomsefield,.TRUE.,workdenReal,vCoul,sigma_loc,&
+            CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,juphon,starsq,cell,sphhar,atomsefield,.TRUE.,workdenReal,vCoul,&
                      & dfptdenimag=workdenImag,dfptvCoulimag=dfptvCoulimag,dfptden0=workden,stars2=stars,iDtype=iDtype,iDir=iDir)
             dfptvTot%pw = dfptvTot%pw + vCoul%pw
             dfptvTot%mt = dfptvTot%mt + vCoul%mt
@@ -189,7 +172,7 @@ CONTAINS
          END IF
          !print*,"sum dfptvTot in dfpt_vgen ef", sum(dfptvTot%pw(:,1))
       ELSE !standard phonon case
-         CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,juphon,starsq,cell,sphhar,atoms,.TRUE.,workdenReal,vCoul,sigma_loc,&
+         CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,juphon,starsq,cell,sphhar,atoms,.TRUE.,workdenReal,vCoul,&
                      & dfptdenimag=workdenImag,dfptvCoulimag=dfptvCoulimag,dfptden0=workden,stars2=stars,iDtype=iDtype,iDir=iDir)
          ! b)
 

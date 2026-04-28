@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -488,6 +488,7 @@ CONTAINS
       INTEGER :: irank = 0
       CHARACTER(len=:), allocatable :: json_str
       CHARACTER(len=30)::filename
+      LOGICAL :: l_out
 #ifdef CPP_MPI
       INTEGER::err,isize
       LOGICAL:: l_mpi
@@ -495,7 +496,8 @@ CONTAINS
       if (l_mpi) CALL MPI_COMM_RANK(MPI_COMM_WORLD, irank, err)
 #endif
       IF (.NOT. ASSOCIATED(globaltimer)) RETURN !write nothing if no timing recorded
-
+      inquire(juDFT_outUnit, opened=l_out)
+      IF (.NOT. l_out) RETURN !write nothing if output not open
 
       IF (irank == 0) THEN
          globaltimer%time = cputime() - globaltimer%starttime

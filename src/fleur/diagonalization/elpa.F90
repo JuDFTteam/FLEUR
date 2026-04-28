@@ -1,7 +1,7 @@
-! Copyright (c) 2024 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
-! This file is part of FLEUR and available as free software under the conditions
+!--------------------------------------------------------------------------------
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
-!
 !--------------------------------------------------------------------------------
 module m_elpa
    use m_judft
@@ -34,8 +34,8 @@ module m_elpa
 contains
 
    function get_solver_elpa() result(solver)
-      type(t_solver_elpa), pointer::solver
-      allocate (solver)
+      class(t_solver), allocatable :: solver
+      allocate(t_solver_elpa :: solver)
       solver%name = "elpa"
 #ifdef CPP_ELPA
       solver%available = .true.
@@ -78,6 +78,8 @@ solver%single_precision = .true.
          elpa_obj=>null()
       end if
       if (associated(elpa_obj)) return
+
+      call timestart("ELPA SETUP")
       elpa_obj => elpa_allocate()
 
       !Some settings are set for all matrices
@@ -124,6 +126,8 @@ solver%single_precision = .true.
 #else
       call elpa_obj%set("solver", ELPA_SOLVER_2STAGE)
 #endif
+
+   call timestop("ELPA SETUP")
 #endif
    end subroutine
 
@@ -366,16 +370,18 @@ solver%single_precision = .true.
       integer            :: err,n
       logical :: decomposed
 
+      call timestart("ELPA REDUCTION")
       call create_elpa_obj(hmat)
-      
+#if defined(CPP_ELPA_PATCH) && defined(CPP_ELPA)
+      call elpa_obj%set("nev", 1, err)
       decomposed=.false.
-#ifdef CPP_ELPA_PATCH 
       IF (hmat%l_real) THEN
          call elpa_obj%elpa_transform_generalized_d(hmat%data_r,smat%data_r,decomposed,err)
       else   
          call elpa_obj%elpa_transform_generalized_dc(hmat%data_c,smat%data_c,decomposed,err)
       endif
 #endif      
+      call timestop("ELPA REDUCTION")
       
    end subroutine   
 
@@ -383,11 +389,20 @@ solver%single_precision = .true.
 
       class(t_solver_elpa) :: self
       class(t_mat), intent(INOUT)  :: zmat, smat
-      integer :: error
+      integer :: error, err
 
       type(t_mat):: tmp_mat
       type(t_mpimat):: tmp_mpimat
-#ifdef CPP_ELPA_PATCH
+      call timestart("ELPA BACKTRANSFORM")
+
+#if defined(CPP_ELPA_PATCH) && defined(CPP_ELPA)
+      select type(zmat)
+      type is (t_mpimat)
+         call elpa_obj%set("nev", zmat%global_size2, err)
+      type is(t_mat)   
+         call elpa_obj%set("nev", zmat%matsize2, err)
+      end select
+
       if (smat%l_real) THEN
          call elpa_obj%elpa_transform_back_generalized_d(smat%data_r, zmat%data_r, error)
       else
@@ -407,6 +422,7 @@ solver%single_precision = .true.
          call tmp_mat%copy(zmat,1,1)
          zmat=tmp_mat
       end select   
+      call timestop("ELPA BACKTRANSFORM")
       
    end subroutine
 

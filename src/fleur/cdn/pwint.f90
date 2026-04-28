@@ -46,16 +46,14 @@
          x = cmplx(cell%volint,0.0)
          RETURN
       ELSE
-
-            x = (0.0,0.0)
-            if (allocated(stars%ig2)) THEN !film
-                 ig2d = stars%ig2(ig3d)
-                 IF (ig2d.EQ.1) THEN
-                    g = stars%kv3(3,ng)*cell%bmat(3,3)*cell%z1
-                    x = cmplx(cell%vol*sin(g)/g,0.0)
-                 ENDIF
+         x = (0.0,0.0)
+         if (allocated(stars%ig2)) THEN !film
+            ig2d = stars%i2g(stars%kv3(1,ng),stars%kv3(2,ng))
+            IF (ig2d.EQ.1) THEN
+               g = stars%kv3(3,ng)*cell%bmat(3,3)*cell%z1
+               x = cmplx(cell%vol*sin(g)/g,0.0)
             END IF
-         
+         END IF         
       END IF
 !     -----> sphere contributions
       s = stars%sk3(ig3d)
@@ -128,6 +126,7 @@
             IF (allocated(stars%ig2)) THEN
                !Film calculation
                 ig2d = stars%ig2(ig3d)
+                ig2d = stars%i2g(stars%kv3(1,ng),stars%kv3(2,ng))
                 IF (ig2d.EQ.1) THEN
                    g = stars%kv3(3,ng)*cell%bmat(3,3)*cell%z1
                    x(ng) = cmplx(cell%vol*sin(g)/g,0.0)

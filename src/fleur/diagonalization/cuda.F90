@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -29,8 +29,8 @@ module m_cuda_diag
 contains
 
    function get_solver_cuda() result(solver)
-      type(t_solver_cuda), pointer::solver
-      allocate (solver)
+      class(t_solver), allocatable :: solver
+      allocate(t_solver_cuda :: solver)
       solver%name = "cuda"
 #ifdef CPP_CUSOLVER
       solver%available = .true.
@@ -44,6 +44,7 @@ contains
       solver%single_precision = .false.
       solver%transform = .false.
       solver%GPU = .true.
+      solver%use_sp = .false.
    end function
 
    subroutine cuda_gev(self, hmat, smat, ne, eig, zmat, ikpt)
@@ -61,7 +62,9 @@ contains
       real, allocatable        :: work_d(:), eig_tmp(:)
       complex, allocatable     :: work_c(:)
 
+
       logical :: firstcall = .true.
+      call timestart("CUDA GEV")
       if (firstcall) then
          firstcall = .false.
          istat = cusolverDnCreate(handle)
@@ -127,6 +130,8 @@ contains
          end associate
       end if
 #endif
+
+      call timestop("CUDA GEV")
 
    end subroutine
 

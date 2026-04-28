@@ -54,32 +54,15 @@ CONTAINS
       COMPLEX                 ::  cdum
 
 !     - arrays -
-      REAL                    ::  rrot(3, 3), invrrot(3, 3)
+      INTEGER                 ::  rrot(3, 3), invrrot(3, 3)
       INTEGER                 ::  g(3), g1(3)
       REAL                    ::  tau1(3), rkpt(3), rkpthlp(3), trans(3)
       COMPLEX                 ::  cmthlp(2*atoms%lmaxd + 1)
       LOGICAL                 ::  trs
 
-      if (l_real) THEN
-         rrot = transpose(1.0*sym%mrot(:, :, sym%invtab(iop)))
-         invrrot = transpose(1.0*sym%mrot(:, :, iop))
-         trans = sym%tau(:, iop)
-      else
-         IF (iop <= sym%nop) THEN
-            trs = .false.
-            rrot = transpose(1.0*sym%mrot(:, :, sym%invtab(iop)))
-            invrrot = transpose(1.0*sym%mrot(:, :, iop))
-            trans = sym%tau(:, iop)
-         ELSE
-            trs = .true.
-            iiop = iop - sym%nop
-            rrot = -transpose(1.0*sym%mrot(:, :, sym%invtab(iiop)))
-            invrrot = -transpose(1.0*sym%mrot(:, :, iiop))
-            trans = sym%tau(:, iiop)
-         END IF
-      end if
+      call sym%get_sym_operation_int_coord(iop,rrot,invrrot,trans,trs)
 
-      rkpt = matmul(rrot, kpts%bkf(:, nk))
+      rkpt = matmul(transpose(rrot), kpts%bkf(:, nk))
       rkpthlp = rkpt
       rkpt = kpts%to_first_bz(rkpt)
       g1 = nint(rkpt - rkpthlp)
@@ -128,7 +111,7 @@ CONTAINS
       z_out = 0
 
       DO igpt = 1, lapw%nv(jsp)
-         g = INT(matmul(invrrot, lapw%gvec(:, igpt, jsp) + g1))
+         g = INT(matmul(transpose(invrrot), lapw%gvec(:, igpt, jsp) + g1))
 !determine number of g
          igpt1 = 0
          DO i = 1, lapw%nv(jsp)
@@ -195,29 +178,10 @@ CONTAINS
       COMPLEX                 ::  cmthlp(2*atoms%lmaxd + 1)
 
       call timestart("gen_cmt")
-      if (l_real) THEN
-         rrot = transpose(sym%mrot(:, :, sym%invtab(iop)))
-         invrrot = transpose(sym%mrot(:, :, iop))
-         trans = sym%tau(:, iop)
-      else
-         IF (iop <= sym%nop) THEN
-            trs = .false.
-            rrot = transpose(sym%mrot(:, :, sym%invtab(iop)))
-            invrrot = transpose(sym%mrot(:, :, iop))
-            trans = sym%tau(:, iop)
-         ELSE
-! in the case of SOC (l_soc=.true.)
-! time reversal symmetry is not valid anymore;
-! nsym should thus equal nop
-            trs = .true.
-            iiop = iop - sym%nop
-            rrot = -transpose(sym%mrot(:, :, sym%invtab(iiop)))
-            invrrot = -transpose(sym%mrot(:, :, iiop))
-            trans = sym%tau(:, iiop)
-         END IF
-      end if
 
-      rkpt = matmul(rrot, kpts%bkf(:, nk))
+      call sym%get_sym_operation_int_coord(iop,rrot,invrrot,trans,trs)
+
+      rkpt = matmul(transpose(rrot), kpts%bkf(:, nk))
       rkpthlp = rkpt
       rkpt = kpts%to_first_bz(rkpt)
       g1 = nint(rkpt - rkpthlp)
@@ -323,29 +287,10 @@ CONTAINS
       COMPLEX                 ::  cmthlp(2*atoms%lmaxd + 1)
 
       call timestart("genwavf")
-      if (z_in%l_real) THEN
-         rrot = transpose(sym%mrot(:, :, sym%invtab(iop)))
-         invrrot = transpose(sym%mrot(:, :, iop))
-         trans = sym%tau(:, iop)
-      else
-         IF (iop <= sym%nop) THEN
-            trs = .false.
-            rrot = transpose(sym%mrot(:, :, sym%invtab(iop)))
-            invrrot = transpose(sym%mrot(:, :, iop))
-            trans = sym%tau(:, iop)
-         ELSE
-! in the case of SOC (l_soc=.true.)
-! time reversal symmetry is not valid anymore;
-! nsym should thus equal nop
-            trs = .true.
-            iiop = iop - sym%nop
-            rrot = -transpose(sym%mrot(:, :, sym%invtab(iiop)))
-            invrrot = -transpose(sym%mrot(:, :, iiop))
-            trans = sym%tau(:, iiop)
-         END IF
-      end if
 
-      rkpt = matmul(rrot, kpts%bkf(:, nk))
+      call sym%get_sym_operation_int_coord(iop,rrot,invrrot,trans,trs)
+
+      rkpt = matmul(transpose(rrot), kpts%bkf(:, nk))
       rkpthlp = rkpt
       rkpt = kpts%to_first_bz(rkpt)
       g1 = nint(rkpt - rkpthlp)
@@ -395,7 +340,7 @@ CONTAINS
 
       zhlp = 0
       DO igpt = 1, lapw_rkpt%nv(jsp)
-         g = matmul(invrrot, lapw_rkpt%gvec(:, igpt, jsp) + g1)
+         g = matmul(transpose(invrrot), lapw_rkpt%gvec(:, igpt, jsp) + g1)
          !determine number of g
          igpt1 = 0
          DO i = 1, lapw_nk%nv(jsp)
@@ -464,7 +409,7 @@ CONTAINS
 !     - scalars -
       INTEGER                 ::  igpt, igpt1, iiop, i
       COMPLEX                 ::  cdum
-      LOGICAL                 ::  trs
+      LOGICAL                 ::  trs , n_trs
 
 !     - arrays -
       INTEGER                 ::  rrot(3, 3), invrrot(3, 3)
@@ -475,29 +420,8 @@ CONTAINS
       call timestart("gen_zmat")
       if (present(c_phase)) c_phase = 0
 
-      if (z_in%l_real) THEN
-         rrot = transpose(sym%mrot(:, :, sym%invtab(iop)))
-         invrrot = transpose(sym%mrot(:, :, iop))
-         trans = sym%tau(:, iop)
-      else
-         IF (iop <= sym%nop) THEN
-            trs = .false.
-            rrot = transpose(sym%mrot(:, :, sym%invtab(iop)))
-            invrrot = transpose(sym%mrot(:, :, iop))
-            trans = sym%tau(:, iop)
-         ELSE
-! in the case of SOC (l_soc=.true.)
-! time reversal symmetry is not valid anymore;
-! nsym should thus equal nop
-            trs = .true.
-            iiop = iop - sym%nop
-            rrot = -transpose(sym%mrot(:, :, sym%invtab(iiop)))
-            invrrot = -transpose(sym%mrot(:, :, iiop))
-            trans = sym%tau(:, iiop)
-         END IF
-      end if
-
-      rkpt = matmul(rrot, kpts%bkf(:, nk))
+      call sym%get_sym_operation_int_coord(iop,rrot,invrrot,trans,trs)
+      rkpt = matmul(transpose(rrot), kpts%bkf(:, nk))
       rkpthlp = rkpt
       rkpt = kpts%to_first_bz(rkpt)
       g1 = nint(rkpt - rkpthlp)
@@ -506,7 +430,7 @@ CONTAINS
 
       zhlp = 0
       DO igpt = 1, lapw_rkpt%nv(jsp)
-         g = matmul(invrrot, lapw_rkpt%gvec(:, igpt, jsp) + g1)
+         g = matmul(transpose(invrrot), lapw_rkpt%gvec(:, igpt, jsp) + g1)
          !determine number of g
          igpt1 = 0
          DO i = 1, lapw_nk%nv(jsp)

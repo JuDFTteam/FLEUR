@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2024 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -25,17 +25,22 @@ module m_nvlamath
 contains
 
    function get_solver_nvlamath() result(solver)
-      type(t_solver_nvlamath), pointer::solver
-      allocate (solver)
+      class(t_solver), allocatable :: solver
+      allocate(t_solver_nvlamath :: solver)
       solver%name = "nvlamath"
 #ifdef CPP_GPU_NVLAMATH      
       solver%available = .true.
 #else
       solver%available = .false.
 #endif      
+      solver%parallel = .false.
       solver%serial = .true.
       solver%generalized = .true.
+      solver%standard = .false.
+      solver%single_precision = .false.
+      solver%transform = .false.
       solver%GPU = .true.
+      solver%use_sp = .false.
    end function
 
    subroutine nvlamath_gev(self, hmat, smat, ne, eig, zmat, ikpt)
@@ -56,6 +61,8 @@ contains
       complex            :: dumwork(1)
       real, external      :: dlamch
       real               :: eigTemp(hmat%matsize1)
+
+      call timestart("NVLAMATH GEV")
 
       allocate (t_mat::zmat)
       call zmat%alloc(hmat%l_real, hmat%matsize1, ne)
@@ -106,6 +113,7 @@ contains
       eig(:min(size(eig), size(eigTemp))) = eigTemp(:min(size(eig), size(eigTemp)))
       if (info .ne. 0) call judft_error("Diagonalization via nvlamath failed(zhegvx/dsygvx)", no=info)
       if (m .ne. ne) call judft_error("Diagonalization via nvlamath failed failed without explicit errorcode.")
+      call timestop("NVLAMATH GEV")
    end subroutine nvlamath_gev
 
 end module m_nvlamath

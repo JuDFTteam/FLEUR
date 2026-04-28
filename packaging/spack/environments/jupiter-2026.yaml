@@ -1,0 +1,67 @@
+# This is a Spack Environment file.
+#
+##docu Config for specific computer: JEDI@JSC
+# It describes a set of packages to be installed, along with
+# configuration settings.
+spack:
+  # add package specs to the `specs` list
+  specs:
+  - fleur@develop+cuda+elpa+mpi+hdf5 cuda_arch=90 %nvhpc
+  view: true
+  concretizer:
+    unify: true
+  repos:
+    fleur: ${FLEUR_SOURCE}/packaging/spack/repo
+  packages:
+    cuda:
+      externals:
+      - spec: cuda@13.0.48
+        prefix: /e/software/default/stages/2026/software/CUDA/13
+    pkgconf:
+      externals:
+      - spec: pkgconf@1.7.3
+        prefix: /usr
+    gmake:
+      externals:
+      - spec: gmake@4.4.1
+        prefix: /e/software/default/stages/2026/software/make/4.4.1-GCCcore-14.3.0
+      - spec: gmake@4.3
+        prefix: /usr
+    libtool:
+      externals:
+      - spec: libtool@2.4.6
+        prefix: /usr
+    libxml2:
+      buildable: false
+      externals:
+      - spec: libxml2@2.14
+        modules: [libxml2/2.14.3]
+    cmake:
+      externals:
+      - spec: cmake@4.0.3
+        prefix: /e/software/default/stages/2026/software/CMake/4.0.3-GCCcore-14.3.0
+        modules: [CMake]
+    python:
+      externals:
+      - spec: python@3.13.5+bz2+ctypes+dbm+lzma+pyexpat+pythoncmd+readline+sqlite3+ssl~tkinter+uuid+zlib
+        prefix: /e/software/default/stages/2026/software/Python/3.13.5-GCCcore-14.3.0
+      - spec: python@3.9.25+bz2+crypt+ctypes+dbm+lzma+pyexpat~pythoncmd+readline+sqlite3+ssl~tkinter+uuid+zlib
+        prefix: /usr
+    openmpi:
+      externals:
+      - spec: openmpi@5.0.8+cuda~java~memchecker~rocm~static~wrapper-rpath fabrics=ucx schedulers=none
+        prefix: /e/software/default/stages/2026/software/OpenMPI/5.0.8-nvidia-compilers-25.9-CUDA-13
+    openblas:
+      externals:
+      - spec: openblas@0.3.30
+        prefix: /e/software/default/stages/2026/software/OpenBLAS/0.3.30-nvidia-compilers-25.9-CUDA-13
+    nvhpc:
+      externals:
+      - spec: nvhpc@25.9~blas~lapack~mpi
+        prefix: /e/software/default/stages/2026/software/nvidia-compilers/25.9-CUDA-13/Linux_aarch64/25.9/compilers
+        modules: [nvidia-compilers, CUDA, OpenMPI, OpenBLAS, Python]
+        extra_attributes:
+          compilers:
+            c: /e/software/default/stages/2026/software/nvidia-compilers/25.9-CUDA-13/Linux_aarch64/25.9/compilers/bin/nvc
+            cxx: /e/software/default/stages/2026/software/nvidia-compilers/25.9-CUDA-13/Linux_aarch64/25.9/compilers/bin/nvc++
+            fortran: /e/software/default/stages/2026/software/nvidia-compilers/25.9-CUDA-13/Linux_aarch64/25.9/compilers/bin/nvfortran

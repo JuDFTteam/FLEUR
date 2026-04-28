@@ -46,11 +46,11 @@ CONTAINS
     TYPE(t_cell),INTENT(OUT)       :: cell
     TYPE(t_hybinp),INTENT(OUT)     :: hybinp
 
-
+    REAL,     PARAMETER :: eps12 = 1.e-12
 
     !locals
-    REAL                :: a1(3),a2(3),a3(3),aa,SCALE(3),mat(3,3),cart_mat(3,3),det,temp
-    INTEGER             :: ios,n,i, iKpts
+    REAL                :: a1(3),a2(3),a3(3),aa,SCALE(3),mat(3,3),cart_mat(3,3),det,temp, x_c, y_c
+    INTEGER             :: ios, i, iKpts, natin
     CHARACTER(len=100)  :: filename
     LOGICAL             :: l_exist
     LOGICAL             :: cartesian=.false.
@@ -136,10 +136,10 @@ CONTAINS
           IF (aa.NE.0) THEN
              !cell was set already, so list of atoms follow
              if (allocated(atom_pos)) call judft_error("Input error: "//TRIM(line))
-             READ(line,*,iostat=ios) n
+             READ(line,*,iostat=ios) natin
              IF (ios.NE.0) CALL judft_error(("Surprising error in reading input: "//trim(line)))
-             ALLOCATE(atom_pos(3,n),atom_label(n),atom_id(n),mag_mom(0:3,n))
-             DO i=1,n
+             ALLOCATE(atom_pos(3,natin),atom_label(natin),atom_id(natin),mag_mom(0:3,natin))
+             DO i = 1, natin
                 READ(98,"(a)",iostat=ios) line
                 IF (ios.NE.0) CALL judft_error(("List of atoms not complete: "//trim(line)))
                 atom_id(i)=evaluatefirst(line)
@@ -222,21 +222,37 @@ CONTAINS
         cell%amat(:,2) = a2(:)
         cell%amat(:,3) = a3(:)
         CALL inv3(cell%amat,cell%bmat,det)
-        DO n = 1, SIZE(atom_pos,2)
-          atom_pos(:,n) = MATMUL(cell%bmat,MATMUL(mat,atom_pos(:,n)))
+        DO i = 1, SIZE(atom_pos,2)
+          atom_pos(:,i) = MATMUL(cell%bmat,MATMUL(mat,atom_pos(:,i)))
         ENDDO
     ENDIF
     !Transform in case of scaled cartesian input
     IF (cartesian) THEN
       if (all(abs(cart_mat)<0.01)) call judft_error("Cartesian='t' not possible for your lattice")
       CALL inv3(cart_mat,cell%bmat,det)
-      DO n = 1, SIZE(atom_pos,2)
-          atom_pos(:,n) = MATMUL(cell%bmat,atom_pos(:,n))
+      DO i = 1, SIZE(atom_pos,2)
+          atom_pos(:,i) = MATMUL(cell%bmat,atom_pos(:,i))
        ENDDO
     ENDIF
     DO i = 1, 3
        IF (SCALE(i).LT.0.0) SCALE(i) = SQRT(-SCALE(i))
     END DO
+
+    IF(input%film) THEN
+       IF ((abs(a3(1))>eps12 .or. abs(a3(2))>eps12) .and. abs(a1(3))<eps12 .and. abs(a2(3))<eps12) THEN
+          !-> correct film with non-orthogonal z-axis
+          WRITE(*,*) 'film and non-orthogonal z-axis specified - Adjusting unit cell to get orthogonal z axis.'
+          x_c = (-a1(2)*a3(2) + a2(2)*a3(1))/(a1(1)*a2(2) - a1(2)*a2(1))
+          y_c = ( a1(1)*a3(2) - a2(1)*a3(1))/(a1(1)*a2(2) - a1(2)*a2(1))
+          write(*,*) x_c, y_c
+          DO i = 1, abs(natin)
+             atom_pos(1,i) = atom_pos(1,i) + atom_pos(3,i) * x_c / a3(3)
+             atom_pos(2,i) = atom_pos(2,i) + atom_pos(3,i) * y_c / a3(3)
+          END DO
+          a3(1) = 0.0
+          a3(2) = 0.0
+       END IF
+    END IF
 
     !set the cell
     cell%amat(:,1) = aa*SCALE(:)*a1(:)
@@ -248,10 +264,10 @@ CONTAINS
     IF(det.LT.0.0) THEN
        cell%amat(:,1) = aa*SCALE(:)*a2(:)
        cell%amat(:,2) = aa*SCALE(:)*a1(:)
-       DO n = 1, SIZE(atom_pos,2)
-          temp = atom_pos(1,n)
-          atom_pos(1,n) = atom_pos(2,n)
-          atom_pos(2,n) = temp
+       DO i = 1, SIZE(atom_pos,2)
+          temp = atom_pos(1,i)
+          atom_pos(1,i) = atom_pos(2,i)
+          atom_pos(2,i) = temp
        END DO
        WRITE(*,*) 'Provided unit cell is left-handed. Converting it to right-handed system by exchanging a1 and a2'
        WRITE(oUnit,*) 'Provided unit cell is left-handed. Converting it to right-handed system by exchanging a1 and a2'

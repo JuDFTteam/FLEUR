@@ -145,6 +145,7 @@ CONTAINS
          pww = pww*stars%nstr
       ELSE IF (resultstar==2) THEN
          CALL fftgridfin%init((/3*starsfull%mx1,3*starsfull%mx2,3*starsfull%mx3/))
+         !check size grid and grid*pwfull
          fftgridfin%grid = fftgrid%grid*pwfull
          CALL fftgridfin%perform_fft(forward=.true.)
          CALL fftgridfin%takeFieldFromGrid(starsfull,pww)

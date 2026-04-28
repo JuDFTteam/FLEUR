@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<fleurInput fleurInputVersion="0.39">
+   <comment>
+      Graphen Monolayer                                                                                   
+   </comment>
+   <calculationSetup>
+      <cutoffs Kmax="3.0" Gmax="9.0" GmaxXC="9.0" numbands="0"/>
+      <scfLoop itmax="5" minDistance="0.00001" maxIterBroyd="15" imix="Anderson" alpha="0.05" precondParam="0.8" spinf="2.0"/>
+      <coreElectrons ctail="F" frcor="F" kcrel="0" coretail_lmax="0"/>
+      <xcFunctional name="LibXC" relativisticCorrections="F">
+         <LibXCName exchange="lda_x" correlation="lda_c_vwn"/>
+      </xcFunctional>
+      <magnetism jspins="1"/>
+      <soc l_soc="F" theta="0.0" phi="0.0" spav="F"/>
+      <expertModes spex="0" secvar="F"/>
+      <geometryOptimization l_f="F" forcealpha="1.0" forcemix="BFGS" epsdisp="0.00001" epsforce="0.00001"/>
+      <ldaU l_linMix="F" mixParam="0.05" spinf="1.0"/>
+   </calculationSetup>
+   <cell>
+      <bzIntegration valenceElectrons="8.0" mode="hist" fermiSmearingEnergy="0.0005">
+         <kPointListSelection listName="default-1"/>
+         <kPointLists>
+            <kPointList name="default-1" count="1" nx="1" ny="1" nz="1" type="mesh">
+               <kPoint weight="     1.0000000000000">  0.00/4.00   0.00/4.00    0.00/2.00</kPoint>
+            </kPointList>
+         </kPointLists>
+      </bzIntegration>
+      <symmetryOperations>
+         <symOp>
+            <row-1>1 0 0 .0000000000</row-1>
+            <row-2>0 1 0 .0000000000</row-2>
+            <row-3>0 0 1 .0000000000</row-3>
+         </symOp>
+      </symmetryOperations>
+      <filmLattice scale="1.0" dVac="2.56" dTilda="5.06">
+         <bravaisMatrixFilm>
+            <row-1>    2.3220120000000000    -4.0218427597846240</row-1>
+            <row-2>    2.3220120000000000     4.0218427597846240</row-2>
+         </bravaisMatrixFilm>
+         <vacuumEnergyParameters vacuum="1" spinUp="-.25" spinDown="-.25"/>
+         <vacuumEnergyParameters vacuum="2" spinUp="-.25" spinDown="-.25"/>
+      </filmLattice>
+   </cell>
+   <atomSpecies>
+      <species name="C-1" element="C" atomicNumber="6">
+         <mtSphere radius="1.18" gridPoints="981" logIncrement="0.01"/>
+         <atomicCutoffs lmax="6" lnonsphr="4"/>
+         <electronConfig flipSpins="F">
+            <coreConfig>(1s1/2)</coreConfig>
+            <valenceConfig>(2s1/2) (2p1/2) (2p3/2)</valenceConfig>
+            <stateOccupation state="(2p1/2)" spinUp="0.3333333333333" spinDown="0.3333333333333"/>
+            <stateOccupation state="(2p3/2)" spinUp="0.6666666666667" spinDown="0.6666666666667"/>
+         </electronConfig>
+         <energyParameters s="2" p="2" d="3" f="4"/>
+      </species>
+   </atomSpecies>
+   <atomGroups>
+      <atomGroup species="C-1">
+         <filmPos label="                   1">1.000/6.000 -1.000/6.000 .0000000000</filmPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="C-1">
+         <filmPos label="                   2">-1.000/6.000 1.000/6.000 .0000000000</filmPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+   </atomGroups>
+   <output dos="F" band="F" slice="F">
+      <checks vchk="F" cdinf="F"/>
+      <bandDOS minEnergy="-.5*Htr" maxEnergy="0.5*Htr" sigma="0.015" storeEVData="T"/>
+      <vacuumDOS vacdos="F" integ="F" star="F" nstars="0" locx1="0.0" locy1="0.0" locx2="0.0" locy2="0.0" nstm="0" tworkf="0.0"/>
+      <unfoldingBand unfoldBand="F" supercellX="1" supercellY="1" supercellZ="1"/>
+      <plotting iplot="0" polar="F">
+         <plot TwoD="T" vec1="  1.0  0.0  0.0" vec2="  0.0  1.0  0.0" vec3="  0.0  0.0  1.0" zero="  0.0  0.0 -0.5" file="plot"/>
+      </plotting>
+      <chargeDensitySlicing numkpt="0" minEigenval="0.0" maxEigenval="0.0" nnne="0" pallst="F"/>
+      <specialOutput eonly="F"/>
+      <magneticCircularDichroism mcd="F" energyLo="-10.0" energyUp="0.0"/>
+   </output>
+  <!-- We include the file relax.xml here to enable relaxations (see documentation) -->
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="relax.xml"> <xi:fallback/> </xi:include>
+</fleurInput>

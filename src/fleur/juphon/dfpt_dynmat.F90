@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2021 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -13,7 +13,7 @@ CONTAINS
    SUBROUTINE dfpt_dynmat_row(fi, stars, starsq, sphhar, xcpot, nococonv, hybdat, fmpi, qpts, iQ, iDtype_row, iDir_row, &
                               eig_id, dfpt_eig_id, dfpt_eig_id2, enpara, results, results1, l_real, &
                               rho, vTot, grRho3, grVext3, grVC3, denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_row, &
-                              E2ndOrdII, sigma_ext, sigma_gext, q_eig_id)
+                              E2ndOrdII, q_eig_id)
       USE m_step_function
       USE m_convol
       USE m_dfpt_vgen
@@ -30,8 +30,9 @@ CONTAINS
       TYPE(t_mpi),        INTENT(IN)    :: fmpi
       TYPE(t_kpts),       INTENT(IN)    :: qpts
 
-      TYPE(t_potden), INTENT(INOUT) :: rho, vTot
-      TYPE(t_potden), INTENT(INOUT) :: grRho3(3), grVext3(3), grVC3(3)
+      TYPE(t_potden), INTENT(IN) :: rho
+      TYPE(t_potden), INTENT(IN)    :: vTot
+      TYPE(t_potden), INTENT(in) :: grRho3(3), grVext3(3), grVC3(3)
       TYPE(t_potden), INTENT(INOUT) :: denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im
 
       TYPE(t_enpara),   INTENT(INOUT) :: enpara
@@ -45,7 +46,7 @@ CONTAINS
 
       COMPLEX, INTENT(INOUT) :: E2ndOrdII(:,:)
       
-      COMPLEX, OPTIONAL, INTENT(IN) :: sigma_ext(2), sigma_gext(3,2)
+      !COMPLEX, OPTIONAL, INTENT(IN) :: sigma_ext(2), sigma_gext(3,2)
      
       INTEGER, OPTIONAL, INTENT(IN) :: q_eig_id
 
@@ -64,8 +65,6 @@ CONTAINS
 
       REAL :: qvec(3)
       REAL :: e2_vm(fi%atoms%nat)
-
-      complex                           :: sigma_loc(2)
 
       COMPLEX, ALLOCATABLE :: dyn_row_HF(:), dyn_row_eigen(:), dyn_row_int(:)
       COMPLEX, ALLOCATABLE :: theta1full(:, :, :), theta1full0(:, :, :)!, theta2(:, :, :)
@@ -208,11 +207,9 @@ CONTAINS
             ! Get V_{ext}(1) for \alpha, i with gradient cancellation
             CALL vExt1%init(starsqLocal, atomsLocal, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
             CALL vExt1Im%init(starsqLocal, atomsLocal, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
-            sigma_loc = cmplx(0.0,0.0)
-            !IF (iDir_col==3) sigma_loc = -sigma_ext
             CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,starsLocal,fi%vacuum,fi%sym,&
                            fi%juphon,fi%cell,fmpi,fi%noco,nococonv,potdendummy,vTot,&
-                           starsqLocal,potden1dummy,vExt1,.FALSE.,vExt1Im,potden1dummy,iDtype_col,iDir_col,[0,0],sigma_loc)
+                           starsqLocal,potden1dummy,vExt1,.FALSE.,vExt1Im,potden1dummy,iDtype_col,iDir_col,[0,0])
 
             ! IR integral:
             pwwq2Local = CMPLX(0.0,0.0)
@@ -246,15 +243,11 @@ CONTAINS
                                 denIn1_mt(:,0:,iDtype_row) - &
                                 (grRho3(iDir_row)%mt(:,0:,iDtype_row,1)+grRho3(iDir_row)%mt(:,0:,iDtype_row,fi%input%jspins))/(3.0-fi%input%jspins)
 
-               sigma_loc = cmplx(0.0,0.0)
-               !IF (iDir_col==3) sigma_loc = sigma_gext(iDir_row,:)
-               !IF (iDir_row==3) sigma_loc = sigma_gext(iDir_col,:)
                CALL potden1dummy%resetpotden()
                CALL potdendummy%resetpotden()
                CALL vgen_coulomb(1, fmpi, fi%input, fi%field, fi%vacuum, fi%sym, fi%juphon, starsqLocal, fi%cell, &
-                         & sphhar, atomsLocal, .TRUE., potden1dummy, grgrVCq, sigma_loc, &
-                         & dfptdenimag=potden1dummy, dfptvCoulimag=grgrVCqIm,dfptden0=potden1dummy,stars2=starsLocal,iDtype=iDtype_col,iDir=iDir_col,iDir2=iDir_row, &
-                         & sigma_disc2=MERGE(sigma_ext,[cmplx(0.0,0.0),cmplx(0.0,0.0)],iDir_col==3.AND.iDir_row==3.AND..FALSE.))
+                         & sphhar, atomsLocal, .TRUE., potden1dummy, grgrVCq, &
+                         & dfptdenimag=potden1dummy, dfptvCoulimag=grgrVCqIm,dfptden0=potden1dummy,stars2=starsLocal,iDtype=iDtype_col,iDir=iDir_col,iDir2=iDir_row)
                IF (iDtype_col==iDtype_row) THEN
                   e2_vm = 0.0
                   CALL dfpt_e2_madelung(fi%atoms,fi%input%jspins,potden1dummy%mt(:,0,:,:),grgrVCq%mt(:,0,:,1),e2_vm(:))
@@ -360,12 +353,10 @@ CONTAINS
                CALL vExt1%init(starsLocal, atomsLocal, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
                CALL vExt1Im%init(starsLocal, atomsLocal, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
                ! Get V_{ext}(1) for \alpha, i, q=0 with gradient cancellation
-               sigma_loc = cmplx(0.0,0.0)
-               !IF (iDir_col==3) sigma_loc = -sigma_ext
                CALL potdendummy%resetpotden()
                CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,starsLocal,fi%vacuum,fi%sym,&
                               fi%juphon,fi%cell,fmpi,fi%noco,nococonv,potdendummy,vTot,&
-                              starsLocal,potdendummy,vExt1,.FALSE.,vExt1Im,potdendummy,iDtype_col,iDir_col,[0,0],sigma_loc)
+                              starsLocal,potdendummy,vExt1,.FALSE.,vExt1Im,potdendummy,iDtype_col,iDir_col,[0,0])
 
                ! Integrals:
                !rho_pw = (grRho3(iDir_row)%pw(:,1)+grRho3(iDir_row)%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
@@ -652,7 +643,7 @@ CONTAINS
       REAL :: facv ! accounts for vacua symmetry
       REAL :: qzh, pref , facn 
       COMPLEX :: fft_conj(stars%ng2) , fft_pure(stars%ng2)  
-      INTEGER :: iVac , ig2, ig3 
+      INTEGER :: iVac , iStar2, iStar3 
 
       sf_int = CMPLX(0.0,0.0)
       facv = 2.0/vacuum%nvac
@@ -664,13 +655,13 @@ CONTAINS
          fft_pure = CMPLX(0.0,0.0)
          IF (iVac == 2 ) pref = -1.0 
          IF (iVac == 2)  facn =  -1.0 
-         DO ig3 = 1, stars%ng3   
+         DO iStar3 = 1, stars%ng3   
             ! Sum over all G_perp and map to G_||
             ! Fourier Trafo at +-Dvac/2
-            qzh = pref * stars%kv3(3,ig3) * cell%bmat(3,3) * cell%z1
-            ig2 = stars%ig2(ig3)
-            fft_conj(ig2) = fft_conj(ig2) + pw_conj(ig3) * cmplx( cos(qzh), sin(qzh))  
-            fft_pure(ig2) = fft_pure(ig2) + pw_pure(ig3) * cmplx( cos(qzh), sin(qzh))  
+            qzh = pref * stars%kv3(3,iStar3) * cell%bmat(3,3) * cell%z1
+            iStar2 = stars%i2g(stars%kv3(1,iStar3),stars%kv3(2,iStar3)) !! Attention, this might only work in the case of no symmetries.
+            fft_conj(iStar2) = fft_conj(iStar2) + pw_conj(iStar3) * cmplx( cos(qzh), sin(qzh))  
+            fft_pure(iStar2) = fft_pure(iStar2) + pw_pure(iStar3) * cmplx( cos(qzh), sin(qzh))  
          END DO 
       
          sf_int = sf_int - facn * facv * cell%area  *  DOT_PRODUCT(fft_conj(:stars%ng2),fft_pure(:stars%ng2))
@@ -746,7 +737,7 @@ CONTAINS
       TYPE(t_usdus)             :: ud, uddummy
       TYPE(t_lapw)              :: lapw, lapwq
       TYPE(t_hub1data)          :: hub1datadummy
-      TYPE (t_mat)              :: zMat, zMat1, zMatq, zMat2
+      CLASS (t_mat), ALLOCATABLE :: zMat, zMat1, zMatq, zMat2
       CLASS(t_mat), ALLOCATABLE :: hmat1,smat1,hmat1q,smat1q,hmat2,smat2,vmat2
 
       ! Variables for HF or fi%hybinp functional calculation
@@ -806,6 +797,18 @@ CONTAINS
 
             nbasfcn = MERGE(lapw%nv(1)+lapw%nv(2)+2*fi%atoms%nlotot,lapw%nv(1)+fi%atoms%nlotot,fi%noco%l_noco)
             nbasfcnq = MERGE(lapwq%nv(1)+lapwq%nv(2)+2*fi%atoms%nlotot,lapwq%nv(1)+fi%atoms%nlotot,fi%noco%l_noco)
+
+            IF (fmpi%n_size == 1) THEN
+               ALLOCATE (t_mat::zMat)
+               ALLOCATE (t_mat::zMat1)
+               ALLOCATE (t_mat::zMat2)
+               IF (PRESENT(q_eig_id)) ALLOCATE (t_mat::zMatq)
+            ELSE
+               ALLOCATE (t_mpimat::zMat)
+               ALLOCATE (t_mpimat::zMat1)
+               ALLOCATE (t_mpimat::zMat2)
+               IF (PRESENT(q_eig_id)) ALLOCATE (t_mpimat::zMatq)
+            END IF
 
             CALL zMat%init(l_real,nbasfcn,noccbd)
             CALL zMat1%init(.FALSE.,nbasfcnq,noccbd)
@@ -933,12 +936,16 @@ CONTAINS
 #endif
             CALL timestop("EV output")
 
-            !IF (allocated(zmat)) THEN
-             CALL zMat%free()
-             CALL zMat1%free()
-             CALL zMat2%free()
-              !deallocate(zMat)
-            !ENDIF
+            IF (ALLOCATED(zmat)) THEN
+               CALL zMat%free()
+               IF (PRESENT(q_eig_id)) CALL zMatq%free()
+               CALL zMat1%free()
+               CALL zMat2%free()
+               DEALLOCATE(zMat)
+               IF (PRESENT(q_eig_id)) DEALLOCATE(zMatq)
+               DEALLOCATE(zMat1)
+               DEALLOCATE(zMat2)
+            END IF
          END DO  k_loop
       END DO ! spin loop ends
 #ifdef CPP_MPI
@@ -974,7 +981,7 @@ CONTAINS
       USE m_types_mpimat
       USE m_dfpt_hs_int
       USE m_dfpt_hsmt
-      USE m_dfpt_eigen_redist_matrix
+      USE m_eigen_redist_matrix
 
       IMPLICIT NONE
 
@@ -1067,13 +1074,13 @@ CONTAINS
       IF (PRESENT(vmat2_final)) ALLOCATE (vmat2_final, mold=vmat2(1, 1))
 
       CALL timestart("Matrix redistribution")
-      CALL dfpt_eigen_redist_matrix(fmpi, lapw, lapw, fi%atoms, smat1, smat1_final)
-      CALL dfpt_eigen_redist_matrix(fmpi, lapw, lapw, fi%atoms, hmat1, hmat1_final, smat1_final)
-      CALL dfpt_eigen_redist_matrix(fmpi, lapwq, lapw, fi%atoms, smat1q, smat1q_final)
-      CALL dfpt_eigen_redist_matrix(fmpi, lapwq, lapw, fi%atoms, hmat1q, hmat1q_final, smat1q_final)
-      CALL dfpt_eigen_redist_matrix(fmpi, lapw, lapw, fi%atoms, smat2, smat2_final)
-      CALL dfpt_eigen_redist_matrix(fmpi, lapw, lapw, fi%atoms, hmat2, hmat2_final, smat2_final)
-      IF (PRESENT(vmat2_final)) CALL dfpt_eigen_redist_matrix(fmpi, lapw, lapw, fi%atoms, vmat2, vmat2_final)
+      CALL eigen_redist_matrix(fmpi, lapw,  fi%atoms, smat1, smat1_final)
+      CALL eigen_redist_matrix(fmpi, lapw,  fi%atoms, hmat1, hmat1_final, smat1_final)
+      CALL eigen_redist_matrix(fmpi, lapw, fi%atoms, smat1q, smat1q_final,lapwq=lapwq)
+      CALL eigen_redist_matrix(fmpi, lapw, fi%atoms, hmat1q, hmat1q_final, smat1q_final)
+      CALL eigen_redist_matrix(fmpi, lapw,  fi%atoms, smat2, smat2_final)
+      CALL eigen_redist_matrix(fmpi, lapw,  fi%atoms, hmat2, hmat2_final, smat2_final)
+      IF (PRESENT(vmat2_final)) CALL eigen_redist_matrix(fmpi, lapw, fi%atoms, vmat2, vmat2_final)
       CALL timestop("Matrix redistribution")
    END SUBROUTINE
 END MODULE m_dfpt_dynmat

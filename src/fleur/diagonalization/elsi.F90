@@ -1,11 +1,12 @@
 !-------------------------------------------------------------------------------
-! Copyright (c) 2023 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 module m_elsi
    use m_types_solver
+   implicit none
 
    type, extends(t_solver)::t_solver_elsi
    contains
@@ -16,8 +17,8 @@ module m_elsi
 contains
 
    function get_solver_elsi() result(solver)
-      type(t_solver_elsi), pointer::solver
-      allocate (solver)
+      class(t_solver), allocatable :: solver
+      allocate(t_solver_elsi :: solver)
       solver%name = "elsi"
 #ifdef CPP_ELSI
       solver%available = .true.
@@ -31,6 +32,7 @@ contains
       solver%single_precision = .false.
       solver%transform = .false.
       solver%GPU = .false.
+      solver%use_sp = .false.
    end function
 
    subroutine elsi_gev(self, hmat, smat, ne, eig, zmat, ikpt)
@@ -50,7 +52,7 @@ contains
       integer, intent(INOUT)         :: ne
       integer, intent(IN)            :: ikpt
 
-      integer, parameter             :: solver = 1 !Use ELPA
+      integer, parameter             :: solver = 1 !Use 1 for ELPA, 9 for ChASE. See ELSI manual for more solvers.
 
 #ifdef CPP_ELSI
       !...  Local variables

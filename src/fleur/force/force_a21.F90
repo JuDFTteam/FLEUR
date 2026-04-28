@@ -6,7 +6,7 @@
 MODULE m_forcea21
 CONTAINS
    SUBROUTINE force_a21(input,atoms,sym ,cell,we,jsp,epar,ne,eig,usdus,tlmplm,&
-                        vtot,eigVecCoeffs,aveccof,bveccof,cveccof,f_a21,f_b4,results)
+                        vtot,abc,aveccof,bveccof,cveccof,f_a21,f_b4,results,itype)
       !--------------------------------------------------------------------------
       ! Pulay 2nd and 3rd term force contributions à la Rici et al.
       !
@@ -34,7 +34,7 @@ CONTAINS
       USE m_types_misc
       USE m_types_usdus
       USE m_types_tlmplm
-      USE m_types_cdnval
+      USE m_types_abc
       USE m_types_potden
       USE m_constants
       USE m_juDFT
@@ -49,8 +49,9 @@ CONTAINS
       TYPE(t_usdus),        INTENT(IN)    :: usdus
       TYPE(t_tlmplm),       INTENT(IN)    :: tlmplm
       TYPE(t_potden),       INTENT(IN)    :: vtot
-      TYPE(t_eigVecCoeffs), INTENT(IN)    :: eigVecCoeffs
+      TYPE(t_abc),          INTENT(IN)    :: abc
       TYPE(t_results),      INTENT(INOUT) :: results
+      INTEGER,              INTENT(IN)    :: itype
 
       INTEGER, INTENT(IN) :: jsp, ne
 
@@ -65,7 +66,7 @@ CONTAINS
       REAL,    PARAMETER :: zero=0.0
       COMPLEX, PARAMETER :: czero=CMPLX(0.,0.)
       COMPLEX dtd, dtu, utd, utu
-      INTEGER lo
+      INTEGER lo,n_lo
       INTEGER i, ie, im, l1, l2, ll1, ll2, lm1, lm2, m1, m2, n, natom, m
       INTEGER natrun, is, isinv, j, irinv, it, lmplmd
 
@@ -80,7 +81,7 @@ CONTAINS
 
       ALLOCATE(a21(3,atoms%nat),b4(3,atoms%nat) )
 
-      DO n = 1,atoms%ntype
+      n = itype
          natom = atoms%firstAtom(n)
          IF (atoms%l_geo(n)) THEN
             forc_a21(:) = czero
@@ -107,10 +108,10 @@ CONTAINS
                               dtu = CONJG(tlmplm%h_loc(lm2,lm1+tlmplm%h_loc2(n),n,jsp,jsp))
                               DO i = 1,3
                                  a21(i,natrun) = a21(i,natrun) + 2.0*&
-                                    AIMAG( CONJG(eigVecCoeffs%abcof(ie,lm1,0,natrun,jsp)) *utu*aveccof(i,ie,lm2,natrun)&
-                                    +CONJG(eigVecCoeffs%abcof(ie,lm1,0,natrun,jsp)) *utd*bveccof(i,ie,lm2,natrun)&
-                                    +CONJG(eigVecCoeffs%abcof(ie,lm1,1,natrun,jsp)) *dtu*aveccof(i,ie,lm2,natrun)&
-                                    +CONJG(eigVecCoeffs%abcof(ie,lm1,1,natrun,jsp)) *dtd*bveccof(i,ie,lm2,natrun))*we(ie)/atoms%neq(n)
+                                    AIMAG( CONJG(abc%cof(ie,lm1,1,natrun-natom+1)) *utu*aveccof(i,ie,lm2,natrun)&
+                                    +CONJG(abc%cof(ie,lm1,1,natrun-natom+1)) *utd*bveccof(i,ie,lm2,natrun)&
+                                    +CONJG(abc%cof(ie,lm1,2,natrun-natom+1)) *dtu*aveccof(i,ie,lm2,natrun)&
+                                    +CONJG(abc%cof(ie,lm1,2,natrun-natom+1)) *dtd*bveccof(i,ie,lm2,natrun))*we(ie)/atoms%neq(n)
                               END DO ! i (spatial directions)
                            END DO ! natrun
                         END DO ! m2
@@ -124,10 +125,10 @@ CONTAINS
                      DO i = 1,3
                         DO natrun = natom,natom + atoms%neq(n) - 1
                            a21(i,natrun) = a21(i,natrun) + 2.0*AIMAG(&
-                               CONJG(eigVecCoeffs%abcof(ie,lm1,0,natrun,jsp))*utu*aveccof(i,ie,lm1,natrun)&
-                              +CONJG(eigVecCoeffs%abcof(ie,lm1,0,natrun,jsp))*utd*bveccof(i,ie,lm1,natrun)&
-                              +CONJG(eigVecCoeffs%abcof(ie,lm1,1,natrun,jsp))*dtu*aveccof(i,ie,lm1,natrun)&
-                              +CONJG(eigVecCoeffs%abcof(ie,lm1,1,natrun,jsp))*dtd*bveccof(i,ie,lm1,natrun)&
+                               CONJG(abc%cof(ie,lm1,1,natrun-natom+1))*utu*aveccof(i,ie,lm1,natrun)&
+                              +CONJG(abc%cof(ie,lm1,1,natrun-natom+1))*utd*bveccof(i,ie,lm1,natrun)&
+                              +CONJG(abc%cof(ie,lm1,2,natrun-natom+1))*dtu*aveccof(i,ie,lm1,natrun)&
+                              +CONJG(abc%cof(ie,lm1,2,natrun-natom+1))*dtd*bveccof(i,ie,lm1,natrun)&
                               )*we(ie) /atoms%neq(n)
                         END DO
                      END DO
@@ -137,13 +138,14 @@ CONTAINS
 
             ! Add the local orbital and U contribution to a21:
 
-            CALL force_a21_lo(atoms,jsp,n,we,eig,ne,eigVecCoeffs,aveccof,bveccof,cveccof,tlmplm,usdus,a21)
+            CALL force_a21_lo(atoms,jsp,n,we,eig,ne,abc,aveccof,bveccof,cveccof,tlmplm,usdus,a21)
 
             IF (atoms%n_u+atoms%n_hia>0) THEN
-               CALL force_a21_U(atoms,n,jsp,we,ne,usdus,vTot%mmpMat(:,:,:,jsp),eigVecCoeffs,aveccof,bveccof,cveccof,a21)
+               CALL force_a21_U(atoms,n,jsp,we,ne,usdus,vTot%mmpMat(:,:,:,jsp),abc,aveccof,bveccof,cveccof,a21)
             END IF
 
             IF (input%l_useapw) THEN
+               
                ! B4 force
                DO ie = 1,ne
                   DO l1 = 0,atoms%lmax(n)
@@ -154,14 +156,14 @@ CONTAINS
                            DO natrun = natom,natom + atoms%neq(n) - 1
                               b4(i,natrun) = b4(i,natrun) + 0.5 *&
                                  we(ie)/atoms%neq(n)*atoms%rmt(n)**2*AIMAG(&
-                                 CONJG(eigVecCoeffs%abcof(ie,lm1,0,natrun,jsp)*usdus%us(l1,n,jsp)&
-                                 +eigVecCoeffs%abcof(ie,lm1,1,natrun,jsp)*usdus%uds(l1,n,jsp))*&
+                                 CONJG(abc%cof(ie,lm1,1,natrun-natom+1)*usdus%us(l1,n,jsp)&
+                                 +abc%cof(ie,lm1,2,natrun-natom+1)*usdus%uds(l1,n,jsp))*&
                                  (aveccof(i,ie,lm1,natrun)*usdus%dus(l1,n,jsp)&
                                  +bveccof(i,ie,lm1,natrun)*usdus%duds(l1,n,jsp) )&
                                  -CONJG(aveccof(i,ie,lm1,natrun)*usdus%us(l1,n,jsp)&
                                  +bveccof(i,ie,lm1,natrun)*usdus%uds(l1,n,jsp) )*&
-                                 (eigVecCoeffs%abcof(ie,lm1,0,natrun,jsp)*usdus%dus(l1,n,jsp)&
-                                 +eigVecCoeffs%abcof(ie,lm1,1,natrun,jsp)*usdus%duds(l1,n,jsp)) )
+                                 (abc%cof(ie,lm1,1,natrun-natom+1)*usdus%dus(l1,n,jsp)&
+                                 +abc%cof(ie,lm1,2,natrun-natom+1)*usdus%duds(l1,n,jsp)) )
                            END DO
                         END DO
                      END DO
@@ -169,26 +171,27 @@ CONTAINS
 
                   DO lo = 1,atoms%nlo(n)
                      l1 = atoms%llo(lo,n)
+                     n_lo=2+count(atoms%llo(:lo,itype)==l1) !TODO should be a "1+" here since we are using APW?!
                      DO m = -l1,l1
                         lm1 = l1* (l1+1) + m
                         DO i=1,3
                            DO natrun = natom,natom + atoms%neq(n) - 1
                               b4(i,natrun) = b4(i,natrun) + 0.5 *&
                                  we(ie)/atoms%neq(n)*atoms%rmt(n)**2*AIMAG(&
-                                 CONJG( eigVecCoeffs%abcof(ie,lm1,0,natrun,jsp)* usdus%us(l1,n,jsp)&
-                                 + eigVecCoeffs%abcof(ie,lm1,1,natrun,jsp)* usdus%uds(l1,n,jsp) ) *&
+                                 CONJG( abc%cof(ie,lm1,1,natrun-natom+1)* usdus%us(l1,n,jsp)&
+                                 + abc%cof(ie,lm1,2,natrun-natom+1)* usdus%uds(l1,n,jsp) ) *&
                                  cveccof(i,m,ie,lo,natrun)*usdus%dulos(lo,n,jsp)&
-                                 + CONJG(eigVecCoeffs%ccof(m,ie,lo,natrun,jsp)*usdus%ulos(lo,n,jsp)) *&
+                                 + CONJG(abc%cof(ie,lm1,n_lo,natrun-natom+1)*usdus%ulos(lo,n,jsp)) *&
                                  ( aveccof(i,ie,lm1,natrun)* usdus%dus(l1,n,jsp)&
                                  + bveccof(i,ie,lm1,natrun)* usdus%duds(l1,n,jsp)&
                                  + cveccof(i,m,ie,lo,natrun)*usdus%dulos(lo,n,jsp) )  &
                                  - (CONJG( aveccof(i,ie,lm1,natrun) *usdus%us(l1,n,jsp)&
                                  + bveccof(i,ie,lm1,natrun) *usdus%uds(l1,n,jsp) ) *&
-                                 eigVecCoeffs%ccof(m,ie,lo,natrun,jsp)  *usdus%dulos(lo,n,jsp)&
+                                 abc%cof(ie,lm1,n_lo,natrun-natom+1)  *usdus%dulos(lo,n,jsp)&
                                  + CONJG(cveccof(i,m,ie,lo,natrun)*usdus%ulos(lo,n,jsp)) *&
-                                 ( eigVecCoeffs%abcof(ie,lm1,0,natrun,jsp)*usdus%dus(l1,n,jsp)&
-                                 + eigVecCoeffs%abcof(ie,lm1,1,natrun,jsp)*usdus%duds(l1,n,jsp)&
-                                 + eigVecCoeffs%ccof(m,ie,lo,natrun,jsp)*usdus%dulos(lo,n,jsp) ) ) )
+                                 ( abc%cof(ie,lm1,1,natrun-natom+1)*usdus%dus(l1,n,jsp)&
+                                 + abc%cof(ie,lm1,2,natrun-natom+1)*usdus%duds(l1,n,jsp)&
+                                 + abc%cof(ie,lm1,n_lo,natrun-natom+1)*usdus%dulos(lo,n,jsp) ) ) )
                            END DO
                         END DO
                      END DO
@@ -289,8 +292,7 @@ CONTAINS
             END DO
 
          END IF ! l_geo(n)
-      END DO
-
+      
       ! The result is written in force_a8.
 
       CALL timestop("force_a21")

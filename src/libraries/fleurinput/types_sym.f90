@@ -57,6 +57,7 @@ MODULE m_types_sym
       PROCEDURE :: init
       PROCEDURE :: print_xml
       PROCEDURE :: closure
+      PROCEDURE :: get_sym_operation_int_coord
       PROCEDURE :: read_xml => read_xml_sym
       PROCEDURE :: mpi_bc => mpi_bc_sym
       PROCEDURE, PRIVATE :: check_close
@@ -456,4 +457,46 @@ CONTAINS
       END DO
 
    END SUBROUTINE check_close
+
+   SUBROUTINE get_sym_operation_int_coord(this,iop,mrot,invmrot,trans,l_trs)
+
+      ! This subroutine generates the mrot and invmrot 
+      ! that connects the q point in the IBZ to the q point 
+      ! in the BZ.
+
+      CLASS(t_sym), INTENT(IN) :: this
+      INTEGER, INTENT(IN) :: iop 
+      INTEGER, INTENT(INOUT) :: mrot(3,3)
+      INTEGER, INTENT(INOUT) :: invmrot(3,3)
+      REAL, INTENT(INOUT) :: trans(3)
+      LOGICAL, INTENT(INOUT) :: l_trs ! time reversal in kspace 
+
+      ! Legacy comment from trafo.F90
+
+      ! in the case of SOC (l_soc=.true.)
+      ! time reversal symmetry is not valid anymore;
+      ! nsym should thus equal nop
+
+      integer :: iiop , iinv 
+
+      IF (iop .LE. this%nop) THEN 
+         iinv = this%invtab(iop)
+         mrot = this%mrot(:, :,  iinv)
+         invmrot = this%mrot(:, :, this%invtab(iinv) )
+         trans = this%tau(:,iop)
+         l_trs = .false.
+      ELSE 
+         ! We have inversion symmetry in k-space
+         ! but no inversion symmetry in real space
+         iiop = iop -  this%nop 
+         iinv = this%invtab(iiop)
+         mrot = - this%mrot(:, :,  iinv)
+         invmrot = -this%mrot(:, :, this%invtab(iinv))
+         trans = this%tau(:,iiop)
+         l_trs = .true.
+      END IF 
+
+
+   END SUBROUTINE get_sym_operation_int_coord
+
 END MODULE m_types_sym

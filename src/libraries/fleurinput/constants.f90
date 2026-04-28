@@ -33,8 +33,8 @@ MODULE m_constants
   REAL,             PARAMETER :: bohr_to_angstrom_const=0.529177210903 ! value from https://physics.nist.gov/cgi-bin/cuu/Value?bohrrada0
                                                                        ! 0.529177210903(80)
   REAL,             PARAMETER :: eVac0Default_const = -0.25
-  CHARACTER(len=9), PARAMETER :: version_const = 'fleur 41'
-  CHARACTER(len=49), PARAMETER :: version_const_MaX = '     MaX-Release 8.0          (www.max-centre.eu)'
+  CHARACTER(len=9), PARAMETER :: version_const = 'fleur 42'
+  CHARACTER(len=49), PARAMETER :: version_const_MaX = '     MaX-Release 8.1          (www.max-centre.eu)'
   CHARACTER(len=4), PARAMETER :: inputFileVersion_const = '0.39'
   ! outputFileVersion_const is defined in juDFT/xmlOutput.f90
   ! For version number update also update version numbers in files io/xml/FleurInputSchema.xsd, io/xml/FleurOutputSchema.xsd, fleurInput/types_xml, and update the files
@@ -129,6 +129,8 @@ MODULE m_constants
                                                             257.00, 258.00, 259.00, 262.00, 267.00, 269.00, 270.00, 272.00, 273.00, & ! up to hassium
                                                             277.00, 281.00, 281.00, 285.00, 286.00, 289.00, 288.00, 293.00, 294.00, 294.00/)
 
+  real, parameter :: massInElectronMasses = 1836.15 ! Ratio of proton to electron mass 
+
   CHARACTER(4),DIMENSION(6),PARAMETER :: nobleGasConfigList_const=(/'[He]','[Ne]','[Ar]','[Kr]','[Xe]','[Rn]'/)
 
   INTEGER,DIMENSION(6),PARAMETER :: nobleGasNumStatesList_const=(/1, 4, 7, 12, 17, 24/)
@@ -152,6 +154,35 @@ MODULE m_constants
   integer, parameter, dimension(3)    :: dirvecz = [0, 0, 1]
   integer, parameter, dimension(3, 3) :: id3x3   = reshape([dirvecx, dirvecy, dirvecz], [3, 3])
 
+  real,private,parameter:: sqrt12pi10=sqrt((12.0*pi_const)/(10.0))
+  real,private,parameter:: nsqrt12pi10=-1.*sqrt((12.0*pi_const)/(10.0))
+  real,private,parameter:: sqrt16pi5=sqrt((16.0*pi_const)/(5.0))
+  real,private,parameter:: nsqrt4pi5=-1.*sqrt((4.0*pi_const)/(5.0))
+
+  complex, dimension(3,3,5) :: mat2ord  !initialization below due to problems with nvhpc
+  
+  DATA mat2ord / &
+       ! Tensor 1
+       (sqrt12pi10, 0.0),  (0.0, sqrt12pi10),  (0.0, 0.0), &
+       (0.0, sqrt12pi10),  (nsqrt12pi10, 0.0), (0.0, 0.0), &
+       (0.0, 0.0),            (0.0, 0.0),            (0.0, 0.0), &
+       ! Tensor 2
+       (0.0, 0.0),            (0.0, 0.0),            (sqrt12pi10, 0.0), &
+       (0.0, 0.0),            (0.0, 0.0),            (0.0, sqrt12pi10), &
+       (sqrt12pi10, 0.0),  (0.0, sqrt12pi10),  (0.0, 0.0), &
+       ! Tensor 3
+       (nsqrt4pi5, 0.0),           (0.0, 0.0),            (0.0, 0.0), &
+       (0.0, 0.0),            (nsqrt4pi5, 0.0),           (0.0, 0.0), &
+       (0.0, 0.0),            (0.0, 0.0),            (sqrt16pi5, 0.0), &
+       ! Tensor 4
+       (0.0, 0.0),            (0.0, 0.0),            (nsqrt12pi10, 0.0), &
+       (0.0, 0.0),            (0.0, 0.0),            (0.0, sqrt12pi10), &
+       (nsqrt12pi10, 0.0), (0.0, sqrt12pi10),  (0.0, 0.0), &
+       ! Tensor 5
+       (sqrt12pi10, 0.0),  (0.0, nsqrt12pi10), (0.0, 0.0), &
+       (0.0, nsqrt12pi10), (nsqrt12pi10, 0.0), (0.0, 0.0), &
+       (0.0, 0.0),            (0.0, 0.0),            (0.0, 0.0) /
+                                                  
 CONTAINS
 
   REAL PURE FUNCTION pimach()

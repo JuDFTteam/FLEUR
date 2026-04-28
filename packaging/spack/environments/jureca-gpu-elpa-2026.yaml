@@ -1,0 +1,83 @@
+# This is a Spack Environment file.
+##docu Config for a specific computer: JURECA@JSC
+##docu GPU version, using 2023 stage of modules
+#
+# It describes a set of packages to be installed, along with
+# configuration settings.
+#
+#  IMPORTANT: you have to set th/p/home/jusers/wortmann1/jureca/fleur/environment variable to the FLEUR-root directory to find the
+#             adjusted spack recipes in the repo included below!
+#
+spack:
+  # add package specs to the `specs` list
+  specs:
+  - fleur@develop+cuda+elpa+mpi+hdf5 cuda_arch=80 %nvhpc %elpa~openmp+cuda cuda_arch=80 %nvhpc
+  view: true
+  concretizer:
+    unify: true
+  repos:
+    fleur: ${FLEUR_SOURCE}/packaging/spack/repo
+  packages:
+    openblas:
+      externals:
+      - spec: openblas@0.3.30
+        prefix: /p/software/default/stages/2026/software/OpenBLAS/0.3.30-nvidia-compilers-25.9-CUDA-13
+    cuda:
+      externals:
+      - spec: cuda@13.0.48
+        prefix: /p/software/default/stages/2026/software/CUDA/13
+      - spec: cuda@13.0.48
+        prefix: /p/software/default/stages/2026/software/nvidia-compilers/25.9-CUDA-13/Linux_x86_64/25.9/compilers
+    libtool:
+      externals:
+      - spec: libtool@2.4.6
+        prefix: /usr
+    gmake:
+      externals:
+      - spec: gmake@4.4.1
+        prefix: /p/software/default/stages/2026/software/make/4.4.1-GCCcore-14.3.0
+      - spec: gmake@4.3
+        prefix: /usr
+    cmake:
+      externals:
+      - spec: cmake@4.0.3
+        prefix: /p/software/default/stages/2026/software/CMake/4.0.3-GCCcore-14.3.0
+    python:
+      externals:
+      - spec: python@3.9.25+bz2+crypt+ctypes+dbm+lzma+pyexpat+pythoncmd+readline+sqlite3+ssl~tkinter+uuid+zlib
+        prefix: /usr
+    openmpi:
+      externals:
+      - spec: openmpi@5.0.8+cuda~java~memchecker~rocm~static~wrapper-rpath fabrics=ucx schedulers=none
+        prefix: /p/software/default/stages/2026/software/OpenMPI/5.0.8-nvidia-compilers-25.9-CUDA-13
+    libxml2:
+      buildable: false
+      externals:
+      - spec: libxml2@2.14.3
+        prefix: /p/software/default/stages/2026/software/libxml2/2.14.3-GCCcore-14.3.0
+        modules: [Stages/2026, libxml2/2.14.3]
+    gcc:
+      externals:
+      - spec: gcc@14.3.0 languages:='c,c++,fortran'
+        prefix: /p/software/default/stages/2026/software/GCCcore/14.3.0
+        extra_attributes:
+          compilers:
+            c: /p/software/default/stages/2026/software/GCCcore/14.3.0/bin/gcc
+            cxx: /p/software/default/stages/2026/software/GCCcore/14.3.0/bin/g++
+            fortran: /p/software/default/stages/2026/software/GCCcore/14.3.0/bin/gfortran
+      - spec: gcc@11.5.0 languages:='c,c++'
+        prefix: /usr
+        extra_attributes:
+          compilers:
+            c: /usr/bin/gcc
+            cxx: /usr/bin/g++
+    nvhpc:
+      externals:
+      - spec: nvhpc@25.9~blas~lapack~mpi
+        prefix: /p/software/default/stages/2026/software/nvidia-compilers/25.9-CUDA-13/Linux_x86_64/25.9/compilers
+        modules: [Stages/2026, CMake, OpenMPI, nvidia-compilers]
+        extra_attributes:
+          compilers:
+            c: /p/software/default/stages/2026/software/nvidia-compilers/25.9-CUDA-13/Linux_x86_64/25.9/compilers/bin/nvc
+            cxx: /p/software/default/stages/2026/software/nvidia-compilers/25.9-CUDA-13/Linux_x86_64/25.9/compilers/bin/nvc++
+            fortran: /p/software/default/stages/2026/software/nvidia-compilers/25.9-CUDA-13/Linux_x86_64/25.9/compilers/bin/nvfortran

@@ -1,7 +1,11 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_tlmplm
    USE m_judft
-
-   IMPLICIT NONE
+   implicit none
 
 CONTAINS
    SUBROUTINE tlmplm(n,sphhar,atoms,sym,enpara,nococonv,&
@@ -74,16 +78,13 @@ CONTAINS
       if (PRESENT(v1)) lh0=0  !DFPT code-path
 
       IF (.NOT.PRESENT(v1)) THEN
-         vr0 = v%mt(:,:,n,iSpinV)
+         vr0(:atoms%jri(n),0:) = v%mt(:atoms%jri(n),0:,n,iSpinV)
          IF (iSpinV<3) THEN
-            vr0(:,0)=0.0
-            IF (atoms%l_nonpolbas(n)) THEN
-               vr0(:,0)=v%mt(:,0,n,iSpinV)-(v%mt(:,0,n,1)+v%mt(:,0,n,2))/2.0
-               vr0(:,0)= vr0(:,0)/atoms%rmsh(:atoms%jri(n),n)*sfp_const
-            ENDIF
-            IF (alpha_hybrid.NE.0) vr0=vr0-alpha_hybrid*vx%mt(:,:,n,iSpinV)
+            vr0(:atoms%jri(n),0)=v%mt(:atoms%jri(n),0,n,iSpinV)-enpara%vr(:atoms%jri(n),n,iSpinV)
+            vr0(:atoms%jri(n),0)= vr0(:atoms%jri(n),0)/atoms%rmsh(:atoms%jri(n),n)*sfp_const
+            IF (alpha_hybrid.NE.0) vr0(:atoms%jri(n),0:)=vr0(:atoms%jri(n),0:)-alpha_hybrid*vx%mt(:atoms%jri(n),0:,n,iSpinV)
          ELSE
-            vr0(:,0)=vr0(:,0)-0.5*nococonv%b_con(iSpinV-2,n) !Add constraining field
+           ! vr0(:,0)=vr0(:,0)-0.5*nococonv%b_con(iSpinV-2,n) !Add constraining field done already in potential setup
          END IF
       ELSE
          vr0=v1

@@ -1,12 +1,11 @@
-! Copyright (c) 2018 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
-! This file is part of FLEUR and available as free software under the conditions
+!--------------------------------------------------------------------------------
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
-!
-! @authors: Miriam Hinzen, Gregor Michalicek
+!--------------------------------------------------------------------------------
 ! Added MPI implementation, DW 2018
 !--------------------------------------------------------------------------------
 module m_chase
-
    use m_judft
    use m_constants
    use m_types_mat
@@ -32,8 +31,8 @@ module m_chase
 contains
 
    function get_solver_chase() result(solver)
-      type(t_solver_chase), pointer::solver
-      allocate (solver)
+      class(t_solver), allocatable :: solver
+      allocate(t_solver_chase :: solver)
       solver%name = "chase"
 #ifdef CPP_CHASE
       solver%available = .true.
@@ -47,6 +46,7 @@ contains
       solver%single_precision = .true.
       solver%transform = .false.
       solver%GPU = .true.
+      solver%use_sp = .false.
    end function
 
    subroutine chase_diag_dp(self, hmat, ne, eig, zmat)
@@ -85,10 +85,11 @@ contains
    subroutine chase_serial_dp(hmat, ne, eig, zmat)
       !Simple driver to solve Standard Eigenvalue Problem using ChASE routine
       implicit none
-      type(t_mat), intent(INOUT),VOLATILE,ASYNCHRONOUS  :: hmat
+      type(t_mat), intent(INOUT),VOLATILE  :: hmat
       integer, intent(INOUT)      :: ne
       class(t_mat), allocatable, intent(OUT)    :: zmat
       real, intent(OUT)           :: eig(:)
+
 
       !These chase parameters might to be adjusted
       real, parameter ::   tol = 1e-10
@@ -98,8 +99,9 @@ contains
       integer :: nex !extra search space
       integer :: init  !status variable
       !chase will modify these variables in call to xchase even though these are not arguments!!
-      real, allocatable, asynchronous,VOLATILE :: zr(:, :), eigval(:)
-      complex, allocatable, asynchronous,VOLATILE :: zc(:, :)
+      real, allocatable, VOLATILE :: zr(:, :), eigval(:)
+      complex, allocatable, VOLATILE :: zc(:, :)
+      call timestart("CHASE STD")
       nex = 0.2*ne
       allocate (eigval(ne+nex))
       allocate (t_mat::zmat)
@@ -128,6 +130,7 @@ contains
       end if
       eig(:ne) = eigval(:ne)
 #endif
+      call timestop("CHASE STD")
    end subroutine chase_serial_dp
 
    subroutine chase_serial_sp(hmat, ne, eig, zmat)
@@ -137,6 +140,7 @@ contains
       integer, intent(INOUT)      :: ne
       class(t_mat), allocatable, intent(OUT)    :: zmat
       real, intent(OUT)           :: eig(:)
+
 
       integer, parameter:: sp = selected_real_kind(6)
       !These chase parameters might to be adjusted
@@ -148,10 +152,11 @@ contains
       integer :: nex !extra search space
       integer :: init  !status variable
       !chase will modify these variables in call to xchase even though these are not arguments!!
-      real(sp), allocatable, asynchronous :: zr(:, :), eigval(:)
-      complex(sp), allocatable, asynchronous :: zc(:, :)
+      real(sp), allocatable, volatile :: zr(:, :), eigval(:)
+      complex(sp), allocatable, volatile :: zc(:, :)
       real(sp), allocatable :: hr(:, :)
       complex(sp), allocatable :: hc(:, :)
+      call timestart("CHASE STD-SP")
       nex = 0.2*ne
       allocate (eigval(ne))
       allocate (t_mat::zmat)
@@ -183,6 +188,7 @@ contains
       end if
       eig(:ne) = eigval(:ne)
 #endif
+      call timestop("CHASE STD-SP")
    end subroutine chase_serial_sp
 
    subroutine chase_mpi_dp(hmat, ne, eig, zmat)
@@ -192,6 +198,7 @@ contains
       integer, intent(INOUT)         :: ne
       class(t_mat), allocatable, intent(OUT)    :: zmat
       real, intent(OUT)           :: eig(:)
+
 
       !These chase parameters might to be adjusted
       real, parameter ::   tol = 1e-10
@@ -204,8 +211,9 @@ contains
       integer :: nex !extra search space
       integer :: init  !status variable
       !chase will modify these variables in call to xchase even though these are not arguments!!
-      real, allocatable, asynchronous :: eigval(:)
-      type(t_mpimat), asynchronous :: ztemp
+      real, allocatable, volatile :: eigval(:)
+      type(t_mpimat), volatile :: ztemp
+      call timestart("CHASE MPI-STD")
       nex = 0.2*ne
       allocate (eigval(ne))
 
@@ -250,6 +258,7 @@ contains
       call MPI_COMM_FREE(comm_1d, ierr)
       call MPI_COMM_FREE(comm_2d, ierr)
 #endif
+      call timestop("CHASE MPI-STD")
    end subroutine chase_mpi_dp
 
    subroutine create_mpi_comms(parent_comm, icontext, comm_2d, comm_1d)

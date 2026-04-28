@@ -166,7 +166,7 @@ CONTAINS
       ! Copy first vacuum into second vacuum if this was not calculated before:
       IF (vacuum%nvac==1) THEN
          IF (sym%invs) THEN
-            vTot%vac(:,:,2,:)  = CMPLX(vTot%vac(:,:,1,:))
+            vTot%vac(:,:,2,:)  = CONJG(vTot%vac(:,:,1,:))
          ELSE
             vTot%vac(:,:,2,:)  = vTot%vac(:,:,1,:)
          END IF

@@ -7,7 +7,7 @@ module m_vvacis
   !     modified for thick films to avoid underflows gb`06
   !---------------------------------------------------------------
 contains
-   subroutine vvacis( stars, vacuum, cell, psq, input, field, vxy, l_dfptvgen, l_corr )
+   subroutine vvacis( stars, vacuum, cell, psq, input, field, vxy, l_dfptvgen )
       use m_constants
       use m_types
 
@@ -21,22 +21,22 @@ contains
 
       complex,        intent(in)  :: psq(stars%ng3)
       complex,        intent(inout) :: vxy(vacuum%nmzxyd,stars%ng2,2)
-      logical,        intent(in)  :: l_dfptvgen, l_corr
+      logical,        intent(in)  :: l_dfptvgen !, l_corr
 
       complex                     :: arg, c_ph, sumr(2)
       real                        :: g, qz, signu,  vcons, z, e_m, arg_r, arg_i, e_p
       integer                     :: ig3n, imz, ivac, k1, k2, kz, nrec2, start_star
       complex                     :: newdp, newdm, newdp2, newdm2, test
 
-      newdp = cmplx(0.0,0.0)
-      newdm = cmplx(0.0,0.0)
-      newdp2 = cmplx(0.0,0.0)
-      newdm2 =cmplx(0.0,0.0)
+      ! newdp = cmplx(0.0,0.0)
+      ! newdm = cmplx(0.0,0.0)
+      ! newdp2 = cmplx(0.0,0.0)
+      ! newdm2 =cmplx(0.0,0.0)
 
       start_star = 2
       ! For q/=0 in DFPT, there is no G+q=0, so all stars are treated in the G/=0 way.
       if (l_dfptvgen) then
-         if (norm2(stars%center)>1e-8) start_star = 1 
+         if (norm2(stars%center)>1e-8) start_star = 1
       end if
 
       vxy(:,start_star:,:) = cmplx( 0., 0. )
@@ -88,17 +88,17 @@ contains
                      arg_i = signu  * qz * cell%z1
                      sumr(ivac) = sumr(ivac) + c_ph * psq(ig3n) * ( cos( arg_i ) * ( 1 - arg_r ) + ImagUnit * sin( arg_i ) * ( 1 + arg_r ) ) / arg
 
-                     ! New discontinuity correction
-                     IF (l_corr) THEN
-                     IF (kz==0.AND.ivac==1) newdp = newdp - psq(ig3n) * cell%z1
-                     IF (kz/=0.AND.ivac==1) newdp = newdp + ImagUnit * psq(ig3n) * cmplx(cos(qz * cell%z1), sin(qz * cell%z1)) / qz
-                     IF (kz==0.AND.ivac==2) newdm = newdm - psq(ig3n) * cell%z1
-                     IF (kz/=0.AND.ivac==2) newdm = newdm - ImagUnit * psq(ig3n) * cmplx(cos(qz * cell%z1), sin(qz * cell%z1)) / qz
-                     IF (kz==0.AND.ivac==1) newdp2 = newdp2 - psq(ig3n) * cell%z1**2
-                     IF (kz/=0.AND.ivac==1) newdp2 = newdp2 + psq(ig3n) * cmplx(qz * cell%z1, qz * cell%z1) / qz**2
-                     IF (kz==0.AND.ivac==2) newdm2 = newdm2 + psq(ig3n) * cell%z1**2
-                     IF (kz/=0.AND.ivac==2) newdm2 = newdm2 - psq(ig3n) * cmplx(qz * cell%z1,-qz * cell%z1) / qz**2
-                     END IF
+                     ! ! New discontinuity correction
+                     ! IF (l_corr) THEN
+                     ! IF (kz==0.AND.ivac==1) newdp = newdp - psq(ig3n) * cell%z1
+                     ! IF (kz/=0.AND.ivac==1) newdp = newdp + ImagUnit * psq(ig3n) * cmplx(cos(qz * cell%z1), sin(qz * cell%z1)) / qz
+                     ! IF (kz==0.AND.ivac==2) newdm = newdm - psq(ig3n) * cell%z1
+                     ! IF (kz/=0.AND.ivac==2) newdm = newdm - ImagUnit * psq(ig3n) * cmplx(cos(qz * cell%z1), sin(qz * cell%z1)) / qz
+                     ! IF (kz==0.AND.ivac==1) newdp2 = newdp2 - psq(ig3n) * cell%z1**2
+                     ! IF (kz/=0.AND.ivac==1) newdp2 = newdp2 + psq(ig3n) * cmplx(qz * cell%z1, qz * cell%z1) / qz**2
+                     ! IF (kz==0.AND.ivac==2) newdm2 = newdm2 + psq(ig3n) * cell%z1**2
+                     ! IF (kz/=0.AND.ivac==2) newdm2 = newdm2 - psq(ig3n) * cmplx(qz * cell%z1,-qz * cell%z1) / qz**2
+                     ! END IF
                   end if
                end if
             end do

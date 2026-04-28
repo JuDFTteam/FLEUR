@@ -72,6 +72,7 @@ MODULE m_types_input
   LOGICAL:: evonly=.FALSE.
   !     LOGICAL:: l_inpXML=.TRUE.
   REAL :: fixed_moment = 0.0
+  LOGICAL :: isFixedMomentCalc = .FALSE.
   real :: charge_excited =0.0 , charge_shift=0.0
   LOGICAL :: l_onlyMtStDen=.FALSE.
   CHARACTER(LEN=100) :: comment="FLEUR calculation without a title"
@@ -160,6 +161,7 @@ SUBROUTINE mpi_bc_input(this,mpi_comm,irank)
    CALL mpi_bc(this%l_onlyMtStDen,rank,mpi_comm)
    call mpi_bc(this%l_sympsi,rank,mpi_comm)
    CALL mpi_bc(this%fixed_moment ,rank,mpi_comm)
+   CALL mpi_bc(this%isFixedMomentCalc,rank,mpi_comm)
    CALL mpi_bc(this%l_core_confpot,rank,mpi_comm)
    CALL mpi_bc(this%l_useapw,rank,mpi_comm)
    CALL mpi_bc(this%ldauLinMix,rank,mpi_comm)
@@ -262,7 +264,15 @@ SUBROUTINE read_xml_input(this,xml)
    this%lflip = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/magnetism/@lflip'))
    IF (xml%versionNumber>31) &
         this%l_onlyMtStDen=evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/magnetism/@l_onlyMtStDen'))
-   this%fixed_moment=evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/magnetism/@fixed_moment'))
+   this%fixed_moment = 0.0
+   this%isFixedMomentCalc = .FALSE.
+   IF (xml%GetNumberOfNodes('/fleurInput/calculationSetup/magnetism/@fixed_moment')==1) THEN
+      this%isFixedMomentCalc = .TRUE.
+      this%fixed_moment=evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/magnetism/@fixed_moment'))
+   END IF
+   IF (xml%versionNumber < 39) THEN
+      IF (this%fixed_moment.EQ.0.0) this%isFixedMomentCalc = .FALSE. 
+   END IF
    ! Read in optional expert modes switches
    xPathA = '/fleurInput/calculationSetup/expertModes'
    IF (xml%GetNumberOfNodes(xPathA)==1) THEN
