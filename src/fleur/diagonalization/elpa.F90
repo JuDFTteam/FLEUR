@@ -150,17 +150,16 @@ solver%single_precision = .true.
       call check_elpa_err(err, 'setup')
 
 #if defined(CPP_GPU)||defined(_OPENACC)
-      call elpa_obj%set("gpu_hermitian_multiply", 1, err)
-      call check_elpa_err(err, 'set(gpu_hermitian_multiply)')
-      !call elpa_obj%set("cannon_for_generalized",0,err)
       call elpa_obj%set("nvidia-gpu", 1, err)
       call check_elpa_err(err, 'set(nvidia-gpu)')
       !call elpa_obj%set("verbose",1,err)
       err=elpa_obj%setup_gpu()
       call check_elpa_err(err, 'setup_gpu')
       !print *,"ELPA-GPU-err:",err
+      call elpa_obj%set("solver", ELPA_SOLVER_1STAGE, err)
+      call check_elpa_err(err, 'set(solver)')
 #else
-   call elpa_obj%set("solver", ELPA_SOLVER_2STAGE, err)
+      call elpa_obj%set("solver", ELPA_SOLVER_2STAGE, err)
       call check_elpa_err(err, 'set(solver)')
 #endif
 
