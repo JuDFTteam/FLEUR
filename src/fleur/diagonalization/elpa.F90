@@ -33,6 +33,20 @@ module m_elpa
 
 contains
 
+#ifdef CPP_ELPA
+   subroutine check_elpa_err(err, where)
+      implicit none
+      integer, intent(in) :: err
+      character(len=*), intent(in) :: where
+      character(len=256) :: errmsg
+
+      if (err /= ELPA_OK) then
+         write(errmsg, '(a,a,a,i0)') 'ELPA call failed in ', trim(where), ', err=', err
+         call juDFT_error(trim(errmsg), calledby='elpa')
+      end if
+   end subroutine check_elpa_err
+#endif
+
    function get_solver_elpa() result(solver)
       class(t_solver), allocatable :: solver
       allocate(t_solver_elpa :: solver)
@@ -73,21 +87,27 @@ solver%single_precision = .true.
       TYPE(t_mpimat) :: tmp
       
       if (firstcall) then
-         err = elpa_init(20180525)
+         err = elpa_init(CURRENT_API_VERSION)
+         call check_elpa_err(err, 'elpa_init')
          firstcall = .false.
          elpa_obj=>null()
       end if
       if (associated(elpa_obj)) return
 
       call timestart("ELPA SETUP")
-      elpa_obj => elpa_allocate()
+      elpa_obj => elpa_allocate(err)
+      call check_elpa_err(err, 'elpa_allocate')
+      if (.not.associated(elpa_obj)) call juDFT_error('ELPA allocation returned null object', calledby='elpa')
 
       !Some settings are set for all matrices
       call elpa_obj%set("local_nrows", hmat%matsize1, err)
+      call check_elpa_err(err, 'set(local_nrows)')
       call elpa_obj%set("local_ncols", hmat%matsize2, err)
+      call check_elpa_err(err, 'set(local_ncols)')
 
       !$ call elpa_obj%set("omp_threads", omp_get_num_threads(),err)
       call elpa_obj%set("timings", 1, err)
+      call check_elpa_err(err, 'set(timings)')
       !Some other settings depend on matrix type
       select type (hmat)
       type is (t_mpimat)
@@ -98,33 +118,50 @@ solver%single_precision = .true.
          if (hmat%blacsdata%blacs_desc(5) .ne. hmat%blacsdata%blacs_desc(6)) &
             call judft_error("Different block sizes for rows/columns not supported")
          call elpa_obj%set("na", hmat%global_size1, err)
+         call check_elpa_err(err, 'set(na)')
          call elpa_obj%set("nblk", hmat%blacsdata%blacs_desc(5), err)
+         call check_elpa_err(err, 'set(nblk)')
          call elpa_obj%set("mpi_comm_parent", hmat%blacsdata%mpi_com, err)
+         call check_elpa_err(err, 'set(mpi_comm_parent)')
          call elpa_obj%set("process_row", hmat%blacsdata%myrow, err)
+         call check_elpa_err(err, 'set(process_row)')
          call elpa_obj%set("process_col", hmat%blacsdata%mycol, err)
+         call check_elpa_err(err, 'set(process_col)')
          call elpa_obj%set("blacs_context", hmat%blacsdata%blacs_desc(2), err)
+         call check_elpa_err(err, 'set(blacs_context)')
       type is (t_mat)
          call judft_bug("Elpa solver not available for non-distributed matrices")
          call elpa_obj%set("na", hmat%matsize1, err)
+         call check_elpa_err(err, 'set(na)')
          call elpa_obj%set("nblk", hmat%matsize1, err)
+         call check_elpa_err(err, 'set(nblk)')
          call elpa_obj%set("mpi_comm_parent", MPI_COMM_SELF, err)
-         call elpa_obj%set("process_row", 1, err)
-         call elpa_obj%set("process_col", 1, err)
+         call check_elpa_err(err, 'set(mpi_comm_parent)')
+         call elpa_obj%set("process_row", 0, err)
+         call check_elpa_err(err, 'set(process_row)')
+         call elpa_obj%set("process_col", 0, err)
+         call check_elpa_err(err, 'set(process_col)')
          !Generate a blacs context for this PE only
          call tmp%init(.true.,1,1,MPI_COMM_SELF,MPIMAT_2D_BLOCK_CYCLIC)
          call elpa_obj%set("blacs_context", tmp%blacsdata%blacs_desc(2), err)
+         call check_elpa_err(err, 'set(blacs_context)')
       end select
       err = elpa_obj%setup()
+      call check_elpa_err(err, 'setup')
 
 #if defined(CPP_GPU)||defined(_OPENACC)
       call elpa_obj%set("gpu_hermitian_multiply", 1, err)
+      call check_elpa_err(err, 'set(gpu_hermitian_multiply)')
       !call elpa_obj%set("cannon_for_generalized",0,err)
       call elpa_obj%set("nvidia-gpu", 1, err)
+      call check_elpa_err(err, 'set(nvidia-gpu)')
       !call elpa_obj%set("verbose",1,err)
       err=elpa_obj%setup_gpu()
+      call check_elpa_err(err, 'setup_gpu')
       !print *,"ELPA-GPU-err:",err
 #else
-      call elpa_obj%set("solver", ELPA_SOLVER_2STAGE)
+   call elpa_obj%set("solver", ELPA_SOLVER_2STAGE, err)
+      call check_elpa_err(err, 'set(solver)')
 #endif
 
    call timestop("ELPA SETUP")
@@ -151,6 +188,7 @@ solver%single_precision = .true.
       !Update elpa object
       call create_elpa_obj(hmat)
       call elpa_obj%set("nev", ne, err)
+      call check_elpa_err(err, 'set(nev)')
       allocate(ev_dist,mold=hmat)
 
       call timestart("ELPA GEV")
@@ -170,8 +208,10 @@ solver%single_precision = .true.
       call elpa_obj%timer_start("ELPA")
       if (hmat%l_real) then
          call elpa_obj%generalized_eigenvectors(hmat%data_r, smat%data_r, eig2, ev_dist%data_r, .false., err)
+         call check_elpa_err(err, 'generalized_eigenvectors(real)')
       else
          call elpa_obj%generalized_eigenvectors(hmat%data_c, smat%data_c, eig2, ev_dist%data_c, .false., err)
+         call check_elpa_err(err, 'generalized_eigenvectors(complex)')
       end if
       call elpa_obj%timer_stop("ELPA")
       !Useful for debugging
@@ -216,7 +256,8 @@ solver%single_precision = .true.
             endif
       end select   
       call timestop("ELPA GEV")
-      call elpa_deallocate(elpa_obj)
+      call elpa_deallocate(elpa_obj, err)
+      call check_elpa_err(err, 'elpa_deallocate')
       if (associated(elpa_obj)) elpa_obj=>null()
             
 #endif
@@ -239,6 +280,7 @@ solver%single_precision = .true.
       !Update elpa object
       call create_elpa_obj(hmat)
       call elpa_obj%set("nev", ne, err)
+      call check_elpa_err(err, 'set(nev)')
       
       call timestart("ELPA STD")
       select type(hmat)
@@ -256,8 +298,10 @@ solver%single_precision = .true.
       call elpa_obj%timer_start("ELPA")
       if (hmat%l_real) then
          call elpa_obj%eigenvectors(hmat%data_r, eig2, zmat%data_r, err)
+         call check_elpa_err(err, 'eigenvectors(real)')
       else
          call elpa_obj%eigenvectors(hmat%data_c, eig2, zmat%data_c, err)
+         call check_elpa_err(err, 'eigenvectors(complex)')
       end if
       call elpa_obj%timer_stop("ELPA")
       ! END of ELPA stuff
@@ -304,6 +348,7 @@ solver%single_precision = .true.
       !Update elpa object
       call create_elpa_obj(hmat)
       call elpa_obj%set("nev", ne, err)
+      call check_elpa_err(err, 'set(nev)')
             
 
       call timestart("ELPA STD-SP")
@@ -326,6 +371,7 @@ solver%single_precision = .true.
             mat=hmat%data_r
             allocate(z(size(zmat%data_r,1),size(zmat%data_r,2)))
             call elpa_obj%eigenvectors(mat, eig2, z, err)
+            call check_elpa_err(err, 'eigenvectors_sp(real)')
             zmat%data_r=z
          end block
       else
@@ -334,6 +380,7 @@ solver%single_precision = .true.
             mat=hmat%data_c
             allocate(z(size(zmat%data_c,1),size(zmat%data_c,2)))
             call elpa_obj%eigenvectors(mat, eig2, z, err)
+            call check_elpa_err(err, 'eigenvectors_sp(complex)')
             zmat%data_c=z
          end block
       end if
@@ -350,6 +397,7 @@ solver%single_precision = .true.
             !     Only num=num2/np eigenvectors per process
             !
             call MPI_COMM_RANK(hmat%blacsdata%mpi_com, myid, err)
+            call MPI_COMM_SIZE(hmat%blacsdata%mpi_com, np, err)
             num = ne
             ne = 0
             do i = myid + 1, num, np
@@ -374,11 +422,14 @@ solver%single_precision = .true.
       call create_elpa_obj(hmat)
 #if defined(CPP_ELPA_PATCH) && defined(CPP_ELPA)
       call elpa_obj%set("nev", 1, err)
+      call check_elpa_err(err, 'set(nev)')
       decomposed=.false.
       IF (hmat%l_real) THEN
          call elpa_obj%elpa_transform_generalized_d(hmat%data_r,smat%data_r,decomposed,err)
+         call check_elpa_err(err, 'elpa_transform_generalized_d')
       else   
          call elpa_obj%elpa_transform_generalized_dc(hmat%data_c,smat%data_c,decomposed,err)
+         call check_elpa_err(err, 'elpa_transform_generalized_dc')
       endif
 #endif      
       call timestop("ELPA REDUCTION")
@@ -399,16 +450,21 @@ solver%single_precision = .true.
       select type(zmat)
       type is (t_mpimat)
          call elpa_obj%set("nev", zmat%global_size2, err)
+         call check_elpa_err(err, 'set(nev)')
       type is(t_mat)   
          call elpa_obj%set("nev", zmat%matsize2, err)
+         call check_elpa_err(err, 'set(nev)')
       end select
 
       if (smat%l_real) THEN
          call elpa_obj%elpa_transform_back_generalized_d(smat%data_r, zmat%data_r, error)
+         call check_elpa_err(error, 'elpa_transform_back_generalized_d')
       else
          call elpa_obj%elpa_transform_back_generalized_dc(smat%data_c, zmat%data_c, error)
+         call check_elpa_err(error, 'elpa_transform_back_generalized_dc')
       endif   
-      call elpa_deallocate(elpa_obj)
+      call elpa_deallocate(elpa_obj, err)
+      call check_elpa_err(err, 'elpa_deallocate')
       if (associated(elpa_obj)) elpa_obj=>null()
 #endif
 
