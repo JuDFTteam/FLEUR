@@ -68,7 +68,6 @@ CONTAINS
       USE m_mpi_col_den ! collect density data from parallel nodes
 #endif
       USE m_nIJmat
-         IF (banddos%l_jdos.and.ispinpr == jsp_end) call jDOS%calc_jDOS(ikpt, jsp, noccbd, ev_list, we, atoms, banddos, input, nococonv, radfun(itype), abc(1, abc_itype), abc(2, abc_itype))
       IMPLICIT NONE
 
       TYPE(t_results), INTENT(INOUT) :: results
@@ -291,7 +290,7 @@ CONTAINS
                      CALL slab%calc_mt_slab(itype,ispin,ikpt,atoms,ev_list,noccbd,abc(ispin,abc_itype),radfun(itype))                            
                   end if
                   !Decomposition into total angular momentum states
-                  IF (banddos%l_jdos.and.ispinpr == jsp_end) call jDOS%calc_jDOS(ikpt, noccbd, ev_list, we, atoms, banddos, input, radfun(itype), abc(1, abc_itype), abc(2, abc_itype))
+                  IF (banddos%l_jdos.and.ispinpr == jsp_end) call jDOS%calc_jDOS(ikpt, noccbd, ev_list, we, atoms, banddos, input, nococonv, radfun(itype), abc(1, abc_itype), abc(2, abc_itype))
                      
                   IF (noco%l_soc .and. ispin == ispinpr) CALL orb%calc_orbmom(abc(ispin, abc_itype), atoms, radfun(itype), we, itype, &
                                                                               ispin, moments%clmom(:, itype, ispin))  
