@@ -72,7 +72,7 @@ module m_dfpt_dynmat_eig
 
     atomic_mass_array = atomicMasses_const  * massInElectronMasses
 
-    ! TODO: This is ridiculous. Remove asap.
+    ! TODO: This is ridiculous. Remove asap., Nice comment :)
     if (iqpt < 10) then
       write(filenameTemp, '("dynMatq=000",i1)') iqpt
     else if (iqpt > 9 .and. iqpt < 100) then
@@ -165,13 +165,13 @@ module m_dfpt_dynmat_eig
       DEALLOCATE(dynmat0)
     END IF
 
-    write(*, '(a,3f9.3)') 'q =', qvec
-    write(*, '(a)')       '==================================='
-    write(*, '(a)')
-    write(*, '(a)') 'Original Dynamical Matrix [mass corrected]'
-    DO ii = 1, lda
-      write(*, '(3(2(es16.8,1x),3x))') a(ii, :)
-    END DO
+    !write(*, '(a,3f9.3)') 'q =', qvec
+    !write(*, '(a)')       '==================================='
+    !write(*, '(a)')
+    !write(*, '(a)') 'Original Dynamical Matrix [mass corrected]'
+    !DO ii = 1, lda
+    !  write(*, '(3(2(es16.8,1x),3x))') a(ii, :)
+    !END DO
 
     write(109, '(a,3f9.3)') 'q =', qvec
     write(109, '(a)')       '==================================='
@@ -203,12 +203,12 @@ module m_dfpt_dynmat_eig
       CALL juDFT_error("Diagonalization failed.",calledby="DiagonalizeDynMat")
     end if
 
-    write(*, '(a)') 'The eigenvalues of the Dynamical matrix are:'
+    !write(*, '(a)') 'The eigenvalues of the Dynamical matrix are:'
     iatom = 0
     do itype = 1, atoms%ntype
       do ieqat = 1, atoms%neq(itype)
         iatom = iatom + 1
-        write(*, "(a,i2,a,1x,3(es16.8,1x),',',5x)") 'Atom', iatom, ':', w((iatom - 1)* 3 + 1:(iatom - 1)* 3 + 3)
+        !write(*, "(a,i2,a,1x,3(es16.8,1x),',',5x)") 'Atom', iatom, ':', w((iatom - 1)* 3 + 1:(iatom - 1)* 3 + 3)
         write(109, "(a,i2,a,1x,3(es16.8,1x),',',5x)") 'Atom', iatom, ':', w((iatom - 1)* 3 + 1:(iatom - 1)* 3 + 3)
       end do ! ieqat
     end do ! itype
@@ -216,8 +216,8 @@ module m_dfpt_dynmat_eig
     if ( calcEv ) then
       !todo make the output nicer
       DO ii = 1, lda
-        write(*, '(3(2(es16.8,1x),3x))') a(ii, :)
-        write(*, *)
+        !write(*, '(3(2(es16.8,1x),3x))') a(ii, :)
+        !write(*, *)
         write(109, '(3(2(es16.8,1x),3x))') a(ii, :)
         write(109, *)
       END DO
@@ -278,8 +278,8 @@ module m_dfpt_dynmat_eig
 
     convFact = 4.35974472220e-18 / (5.2918e-11)**2 / 9.1093837015e-31 
 
-    write(*, *)
-    write(*, '(a)') 'Eigenfrequencies in THz'
+    !write(*, *)
+    !write(*, '(a)') 'Eigenfrequencies in THz'
     write(109, *)
     write(109, '(a)') 'Eigenfrequencies in THz'
     iatom = 0
@@ -301,8 +301,8 @@ module m_dfpt_dynmat_eig
     end do ! itype
 
 
-    write(*, *)
-    write(*, '(a)') 'Eigenfrequencies in 1/cm'
+    !write(*, *)
+    !write(*, '(a)') 'Eigenfrequencies in 1/cm'
     write(109, *)
     write(109, '(a)') 'Eigenfrequencies in 1/cm'
     iatom = 0
@@ -312,7 +312,7 @@ module m_dfpt_dynmat_eig
         do idir = 1, 3
           eigenFreqs((iatom - 1) * 3 + idir) = eigenFreqs((iatom - 1) * 3 + idir) * 33
         end do ! idir
-        write(*, "(a,i2,a,1x,3(2es16.8,1x),',',5x)") 'Atom', iatom, ':', eigenFreqs((iatom - 1)* 3 + 1:(iatom - 1)* 3 + 3)
+        !write(*, "(a,i2,a,1x,3(2es16.8,1x),',',5x)") 'Atom', iatom, ':', eigenFreqs((iatom - 1)* 3 + 1:(iatom - 1)* 3 + 3)
         write(109, "(a,i2,a,1x,3(2es16.8,1x),',',5x)") 'Atom', iatom, ':', eigenFreqs((iatom - 1)* 3 + 1:(iatom - 1)* 3 + 3)
       end do ! ieqat
     end do ! itype

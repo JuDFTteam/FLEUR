@@ -25,6 +25,7 @@ contains
         use m_dfpt_dynmat
         use m_dfpt_dynmat_eig
         use m_dfpt_NAC
+        USE m_npy
 
 
         type(t_fleurinput),intent(in) :: fi 
@@ -261,14 +262,20 @@ contains
                 ! Diagonalize the dynMat 
                 write(*,*) '-------------------------'
                 !Introduce Non-analytic correction at gamma-point
-                IF (fi%juPhon%l_polar .AND. l_gamma) THEN 
+                IF (fi%juPhon%l_polar) THEN 
                     IF (fmpi%irank==0)  WRITE(*,*) 'Add non-analytic correction at Gamma-Point'
                     allocate(dyn_mat_NAC(3*fi%atoms%ntype,3*fi%atoms%ntype))
                     dyn_mat_NAC =cmplx(0.,0.)
                     CALL dfpt_NAC(fi,dyn_mat_NAC)
+                    !call get_NAC_ewald(fi,qpts,stars,dyn_mat_NAC,fi%juPhon%qvec(:,q_list(iQ)),iQ)
+                    call save_npy("dynmat.npy",dyn_mat(iQ,:,:))
+                    call save_npy("dynmat_NAC.npy",dyn_mat_NAC)
+                    print*,"sum(dyn_mat(iQ,:,:))",sum(dyn_mat(iQ,:,:))
                     dyn_mat(iQ,:,:) = dyn_mat(iQ,:,:)+dyn_mat_NAC(:,:) 
+                    call save_npy("dynmat_plusNAC.npy",dyn_mat_NAC)
                     deallocate(dyn_mat_NAC)
                 END IF
+                !call save_npy("dynmat.npy",dyn_mat(iQ,:,:))
                 call timestart("Dynmat diagonalization")
                 call DiagonalizeDynMat(fi%atoms, qpts%bk(:,q_list(iQ)), fi%juPhon%calcEigenVec, dyn_mat(iQ,:,:), eigenVals, eigenVecs, q_list(iQ),.TRUE.,"raw",fi%juphon%l_sumrule)
                 call timestop("Dynmat diagonalization")

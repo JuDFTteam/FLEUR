@@ -25,6 +25,7 @@ contains
         use m_dfpt_dynmat_eig
         use m_make_dos
         use m_types_eigdos
+        USE m_npy
 
         type(t_fleurinput), intent(in) :: fi 
         type(t_mpi), intent(in)        :: fmpi
@@ -156,14 +157,23 @@ contains
                                                SQRT(atomicMasses_const(fi%atoms%nz(CEILING(iDir/3.0)))*atomicMasses_const(fi%atoms%nz(CEILING(iDir2/3.0))))
                 end do
             end do
+            !call save_npy("dyn_mat_r.npy",dyn_mat(iQ,:,:))
+            !stop
             !subtract Long range part
             if (fi%juPhon%l_polar) then
-                dyn_mat_NAC_r = cmplx(0.0,0.0)
-                call get_NAC_ewald_r(fi,qpts,stars_fullsym,dyn_mat_NAC_r,[0.,0.,0.],iQ)
-                dyn_mat_r(:,:,:) = dyn_mat_r(:,:,:) - dyn_mat_NAC_r(:,:,:)
-
+                do iQ = 1, qpts%nkptf
+                    dyn_mat_NAC_r = cmplx(0.0,0.0)
+                    !do iQ= 1,qpts%nkptf
+                        !print*,"sum(dyn_mat_r(iQ,:,:))",sum(dyn_mat_r(iQ,:,:))
+                    !end do
+                    !stop
+                    !print(sum)
+                    call get_NAC_ewald_r(fi_fullsym,qpts,stars_fullsym,dyn_mat_NAC_r,qpts%bkf(:,iQ),iQ)
+                    !stop
+                    dyn_mat_r(:,:,:) = dyn_mat_r(:,:,:) - dyn_mat_NAC_r(:,:,:)
+                end do
             end if
-
+            stop
 
             ! interpolate to dense grid on a arbitrary q-point
             ! specified in the inp.xml kpts.xml
@@ -187,11 +197,11 @@ contains
                 if (fi%juPhon%l_polar) then
                     dyn_mat_NAC_q = cmplx(0.0,0.0)
                     print*,"before adding it again"
-                    call get_NAC_ewald(fi,qpts,stars_fullsym,dyn_mat_NAC_q,fi%kpts%bk(:,iQ),iQ)
+                    call get_NAC_ewald(fi_fullsym,qpts,stars_fullsym,dyn_mat_NAC_q,fi%kpts%bk(:,iQ),iQ)
                     print*,"sum(dyn_mat_NAC_q)",sum(dyn_mat_NAC_q)
                     dyn_mat_pathq(:,:) = dyn_mat_pathq(:,:)+ dyn_mat_NAC_q(:,:)
                 end if
-
+                !print*,"dyn_mat_pathq",dyn_mat_pathq
                 print*,"sum(dyn_mat_pathq) in inter 2",sum(dyn_mat_pathq(:,:))
                 call timestart("Dynmat diagonalization")
                 call DiagonalizeDynMat(fi%atoms, fi%kpts%bk(:,iQ), fi%juPhon%calcEigenVec, dyn_mat_pathq, eigenVals, eigenVecs, iQ,.TRUE.,TRIM(dynfiletag),fi%juPhon%l_sumrule)
@@ -206,7 +216,7 @@ contains
                 deallocate(eigenVals, eigenVecs, eigenFreqs, dyn_mat_pathq)
                 !stop
             end do ! iQ
-            stop
+            !stop
 
             if (fi%juPhon%l_dos) then 
                 banddosLocal = fi%banddos 

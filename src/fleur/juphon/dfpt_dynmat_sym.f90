@@ -116,6 +116,13 @@ CONTAINS
       REAL    :: phas
       COMPLEX :: phase_fac
       iGrid=0
+      !print*,"ft_lim(1,3)",ft_lim(1,3)
+      !print*,"ft_lim(2,3)",ft_lim(2,3)
+      !print*,"ft_lim(1,2)",ft_lim(1,2)
+      !print*,"ft_lim(2,2)",ft_lim(2,2)
+      !print*,"ft_lim(1,1)",ft_lim(1,1)
+      !print*,"ft_lim(2,1)",ft_lim(2,1)
+      !stop
       DO iz=ft_lim(1,3),ft_lim(2,3)
          DO iy=ft_lim(1,2),ft_lim(2,2)
             DO ix=ft_lim(1,1),ft_lim(2,1)
@@ -130,6 +137,7 @@ CONTAINS
             END DO
          END DO
       END DO
+      !stop
    END SUBROUTINE
 
    SUBROUTINE rotate_dynmat(atoms,sym,isym,mrot,invmrot,l_inv,amat,bqpt,dyn,dyn_mat_qsym)
