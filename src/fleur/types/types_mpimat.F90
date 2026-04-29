@@ -176,7 +176,8 @@ CONTAINS
       if (present(res)) Then
          select type (res)
          type is (t_mpimat)
-            res%blacsdata = mat1%blacsdata
+            res%blacsdata => mat1%blacsdata
+            res%blacsdata%no_use = res%blacsdata%no_use + 1
             res%matsize1 = mat1%matsize1
             res%matsize2 = mat1%matsize2
             res%global_size1 = mat1%global_size1
@@ -402,7 +403,7 @@ CONTAINS
 
             CALL pdgeadd('t', mat1%global_size1, mat1%global_size2, 1.0, mat1%data_r, 1, 1, mat1%blacsdata%blacs_desc, 1.0, mat%data_r, 1, 1, mat%blacsdata%blacs_desc)
          ELSE
-            CALL pzgeadd('c', mat1%global_size1, mat1%global_size2, CMPLX(1.0, 0.0), mat1%data_c, 1, 1, mat1%blacsdata%blacs_desc, CMPLX(1.0, 0.0), mat%data_c, 1, 1, mat1%blacsdata%blacs_desc)
+            CALL pzgeadd('c', mat1%global_size1, mat1%global_size2, CMPLX(1.0, 0.0), mat1%data_c, 1, 1, mat1%blacsdata%blacs_desc, CMPLX(1.0, 0.0), mat%data_c, 1, 1, mat%blacsdata%blacs_desc)
 #endif
          END IF
          !Now multiply the diagonal of the matrix by 1/2
@@ -692,6 +693,8 @@ CONTAINS
       CALL mpi_comm_rank(MPI_COMM_WORLD, irank, ierr)
 
       call timestart("mpimat_init")
+   IF (.NOT. (PRESENT(matsize1) .AND. PRESENT(matsize2) .AND. PRESENT(mpi_subcom) .AND. PRESENT(l_real) .AND. PRESENT(dist_type))) &
+      CALL judft_error("Optional arguments must be present in mpimat_init")
       ALLOCATE (mat%blacsdata, stat=ierr)
       if (mpi_subcom == MPI_COMM_NULL) Then
          mat%blacsdata%blacs_desc(2) = -1
@@ -704,8 +707,6 @@ CONTAINS
          nby = priv_get_blocksize()
          IF (PRESENT(nb_x)) nbx = nb_x
          IF (PRESENT(nb_y)) nby = nb_y
-         IF (.NOT. (PRESENT(matsize1) .AND. PRESENT(matsize2) .AND. PRESENT(mpi_subcom) .AND. PRESENT(l_real) .AND. PRESENT(dist_type))) &
-            CALL judft_error("Optional arguments must be present in mpimat_init")
          mat%global_size1 = matsize1
          mat%global_size2 = matsize2
          mat%blacsdata%no_use = 1
@@ -734,8 +735,7 @@ CONTAINS
       INTEGER, INTENT(IN), OPTIONAL    :: global_size1, global_size2
       character(len=*), intent(in), optional :: mat_name
 
-      INTEGER::numroc
-      EXTERNAL::numroc
+      INTEGER, EXTERNAL :: numroc
 
       SELECT TYPE (templ)
       TYPE IS (t_mpimat)
