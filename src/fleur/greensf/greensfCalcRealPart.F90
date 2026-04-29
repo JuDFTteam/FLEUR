@@ -48,12 +48,12 @@ MODULE m_greensfCalcRealPart
       INTEGER :: i_gf_start,i_gf_end,spin_start,spin_end
       INTEGER :: ikpt, ikpt_i, refElem
       LOGICAL :: l_fixedCutoffset,l_sphavg,l_kresolved_int,l_kresolved
-      REAL    :: del,eb,fixedCutoff,bk(3)
+      REAL    :: deltaE,eb,fixedCutoff,bk(3)
       REAL,    ALLOCATABLE :: eMesh(:)
       COMPLEX, ALLOCATABLE :: gmat(:,:,:),imag(:,:,:)
 
       !Get the information on the real axis energy mesh
-      CALL gfinp%eMesh(ef,del,eb,eMesh=eMesh)
+      CALL gfinp%eMesh(ef,deltaE,eb,eMesh=eMesh)
 
       nspins = MERGE(3,input%jspins,gfinp%l_mperp)
 
@@ -74,7 +74,7 @@ MODULE m_greensfCalcRealPart
 
             IF(l_fixedCutoffset) THEN
                greensfImagPart%kkintgr_cutoff(i_gf,:,1) = 1
-               greensfImagPart%kkintgr_cutoff(i_gf,:,2) = INT((fixedCutoff+ef-eb)/del)+1
+               greensfImagPart%kkintgr_cutoff(i_gf,:,2) = INT((fixedCutoff+ef-eb)/deltaE)+1
                CYCLE
             ENDIF
 
