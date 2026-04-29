@@ -69,6 +69,7 @@ else()
 endif()
 #Now create the elpa target
     add_library(elpa STATIC IMPORTED GLOBAL)
+    add_dependencies(elpa ELPA)
     if (FLEUR_USE_OPENMP)
         set_property(TARGET elpa PROPERTY IMPORTED_LOCATION "${CMAKE_BINARY_DIR}/elpa/src/ELPA/.libs/libelpa_openmp.a")
     else()
