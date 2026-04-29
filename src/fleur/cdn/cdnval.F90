@@ -68,7 +68,7 @@ CONTAINS
       USE m_mpi_col_den ! collect density data from parallel nodes
 #endif
       USE m_nIJmat
-
+         IF (banddos%l_jdos.and.ispinpr == jsp_end) call jDOS%calc_jDOS(ikpt, jsp, noccbd, ev_list, we, atoms, banddos, input, nococonv, radfun(itype), abc(1, abc_itype), abc(2, abc_itype))
       IMPLICIT NONE
 
       TYPE(t_results), INTENT(INOUT) :: results

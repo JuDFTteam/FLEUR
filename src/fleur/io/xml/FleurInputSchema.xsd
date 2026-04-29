@@ -1121,6 +1121,15 @@
             <xsd:attribute name="alpha" type="FleurDouble" use="optional"/>
             <xsd:attribute name="beta"  type="FleurDouble" use="optional"/>
             <xsd:attribute name="gamma" type="FleurDouble" use="optional"/>
+            <xsd:attribute default="F" name="alignToSpin" type="FleurBool" use="optional">
+               <xsd:annotation>
+                  <xsd:documentation>
+                     If true, aligns the orbital quantisation frame used in jDOS to the local spin quantisation axis
+                     defined by nococonv angles for this atom type. If false, manually provided alpha/beta/gamma
+                     angles are used.
+                  </xsd:documentation>
+               </xsd:annotation>
+            </xsd:attribute>
          </xsd:extension>
       </xsd:simpleContent>
    </xsd:complexType>

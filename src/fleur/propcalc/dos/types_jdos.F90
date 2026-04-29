@@ -49,17 +49,20 @@ CONTAINS
       return !currently no postprocessing needed for jdos
    end subroutine postprocessing    
 
-   SUBROUTINE calc_jDOS(jDOS, ikpt, noccbd, ev_list, we, atoms, banddos, input, radfun, abc_u, abc_d)
+   SUBROUTINE calc_jDOS(jDOS, ikpt, noccbd, ev_list, we, atoms, banddos, input, nococonv, radfun, abc_u, abc_d)
       use m_types_atoms
       use m_types_banddos
       use m_types_input
+      use m_types_nococonv
       use m_types_radfun
       use m_types_abc
+      use m_constants
       use m_clebsch
       CLASS(t_jDOS), INTENT(INOUT)  :: jDOS
       TYPE(t_atoms), INTENT(IN)     :: atoms
       TYPE(t_banddos), INTENT(IN)     :: banddos
       TYPE(t_input), INTENT(IN)     :: input
+      TYPE(t_nococonv), INTENT(IN)  :: nococonv
       TYPE(t_radfun), INTENT(IN)     :: radfun
       TYPE(t_abc), INTENT(IN), TARGET :: abc_u, abc_d
       INTEGER, INTENT(IN)     :: ikpt
@@ -89,6 +92,7 @@ CONTAINS
       ! Rotation of reference frame (same feature as in calc_orb_comp)
       TYPE(t_abc), TARGET  :: abc_u_rot, abc_d_rot
       TYPE(t_abc), POINTER :: p_u, p_d
+      REAL    :: alpha_use, beta_use, gamma_use
       REAL    :: j,mj, mup, mdown
       REAL    :: facup, facdown, summed, cf
       COMPLEX :: aup, bup, cup, adown, bdown, cdown, cupp, cdownp
@@ -167,10 +171,24 @@ CONTAINS
          DO n_dos = 1, size(banddos%dos_atomlist)
             if (banddos%dos_atomlist(n_dos) == iAtom) exit
          END DO
-         ! Rotate abc coefficients into the local quantisation frame if Euler angles are set
-         IF (ANY((/banddos%alpha(iAtom), banddos%beta(iAtom), banddos%gamma(iAtom)/) .NE. 0.0)) THEN
-            abc_u_rot = abc_u%rotate(banddos%alpha(iAtom), banddos%beta(iAtom), banddos%gamma(iAtom), lmax)
-            abc_d_rot = abc_d%rotate(banddos%alpha(iAtom), banddos%beta(iAtom), banddos%gamma(iAtom), lmax)
+         ! Rotate abc coefficients into local quantisation frame
+         IF (banddos%align_to_spin(iAtom)) THEN
+            alpha_use = 0.0
+            beta_use  = nococonv%beta(iType)
+            IF (ABS(beta_use) > 1.0e-6) THEN
+               gamma_use = pi_const/2.0 - nococonv%alph(iType)
+            ELSE
+               gamma_use = 0.0
+            END IF
+         ELSE
+            alpha_use = banddos%alpha(iAtom)
+            beta_use  = banddos%beta(iAtom)
+            gamma_use = banddos%gamma(iAtom)
+         END IF
+
+         IF (ANY((/alpha_use, beta_use, gamma_use/) .NE. 0.0)) THEN
+            abc_u_rot = abc_u%rotate(alpha_use, beta_use, gamma_use, lmax)
+            abc_d_rot = abc_d%rotate(alpha_use, beta_use, gamma_use, lmax)
             p_u => abc_u_rot
             p_d => abc_d_rot
          ELSE
