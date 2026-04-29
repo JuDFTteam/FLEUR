@@ -1,0 +1,47 @@
+# FLEURiste MCP Server – podman-compose configuration
+# ====================================================
+#
+# Usage:
+#   cd packaging/docker/fleuriste-mcp
+#   podman-compose up --build          # build & start
+#   podman-compose up -d               # detached
+#   podman-compose logs -f             # follow logs
+#   podman-compose down                # stop & remove
+#
+# The MCP endpoint is available at:
+#   http://localhost:8000/mcp   (streamable-http, default)
+#   http://localhost:8000/sse   (when MCP_TRANSPORT=sse)
+#
+# Mount your FLEUR working directory into /work:
+#   podman-compose run -v $PWD:/work fleuriste-mcp
+# ---------------------------------------------------
+
+services:
+  fleuriste-mcp:
+    build:
+      context: ../../..                       # repo root
+      dockerfile: packaging/docker/fleuriste-mcp/Containerfile
+    image: fleuriste-mcp:latest
+    container_name: fleuriste-mcp
+    ports:
+      - "8000:8000"
+    volumes:
+      - work:/work
+    environment:
+      - MCP_TRANSPORT=streamable-http
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=8000
+      - FLEURISTE_SCHEMA=/app/FleurInputSchema.xsd
+      - FLEURISTE_WORKDIR=/work
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/mcp')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  work:
+    driver: local

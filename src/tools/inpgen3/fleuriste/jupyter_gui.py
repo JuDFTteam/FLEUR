@@ -46,11 +46,7 @@ try:
 except ImportError:
     _HAS_INPGEN_GUI = False
 
-try:
-    from FleurInpgen import InpgenInterface
-    _HAS_INPGEN = True
-except ImportError:
-    _HAS_INPGEN = False
+from .inpgen_loader import create_inpgen_interface
 
 try:
     from ase.io import read as ase_read
@@ -1015,12 +1011,6 @@ class InpgenPanel:
             print(content)
 
     def _on_generate(self, _):
-        if not _HAS_INPGEN:
-            self._status.value = (
-                "<span style='color:red'>FleurInpgen library not available. "
-                "Build FLEUR with Python bindings.</span>")
-            return
-
         content = self._get_namelist_content()
         if content is None:
             return
@@ -1031,7 +1021,7 @@ class InpgenPanel:
 
         try:
             os.chdir(str(output_dir))
-            inpgen = InpgenInterface(quiet=True)
+            inpgen = create_inpgen_interface(quiet=True)
             inpgen.make_inp(content, self._profile.value, self._chk_nosym.value)
             messages = inpgen.get_messages()
             target = output_dir / "inp.xml"
@@ -1612,8 +1602,9 @@ class JobGeneratorPanel:
                 cmd = mc.get_effective_value("command", partition)
                 if cmd:
                     commands = [cmd]
-                if hasattr(mc, "modules_needed") and mc.modules_needed:
-                    modules = list(mc.modules_needed)
+                modules_cfg = mc.get_effective_value("modules_needed", partition) or []
+                if modules_cfg:
+                    modules = list(modules_cfg)
             # Manual module/command overrides from text areas
             if self._modules_area.value.strip():
                 modules = [l for l in self._modules_area.value.splitlines() if l.strip()]
