@@ -26,7 +26,7 @@ module m_types_solver
       procedure        :: solve_std_dp  !solver for standard eigenvalue problem (double precision)
       procedure        :: solve_std_sp  !solver for standard eigenvalue problem (single precision)
       procedure        :: solve_gev  !solver for generalized eigenvalue problem
-      procedure        :: to_std     !transform the H of the generalized problem to a std problem
+      procedure        :: to_std     !transform the H of the generalized problem to a std problem; requires ne parameter
       procedure        :: backtrans  !transform the Eigenvalue back to the generalized problem
    end type
 
@@ -113,10 +113,11 @@ contains
 
       call judft_bug("Not implemented", calledby="solve_std_dp")
    end subroutine
-   subroutine to_std(self, hmat, smat)
+   subroutine to_std(self, hmat, smat, ne)
       implicit none
       class(t_solver)                     :: self
       class(t_mat), intent(INOUT)          :: hmat, smat
+      integer, intent(IN)                  :: ne
 
       call judft_bug("Not implemented", calledby="to_std")
    end subroutine

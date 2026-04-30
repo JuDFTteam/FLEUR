@@ -13,6 +13,7 @@ module m_magma
    use magma
    use openacc
 #endif
+   implicit none
    private
    logical ,save :: initialized=.false.
    !integer, save :: Magma_NumGPU = 1
@@ -289,10 +290,11 @@ contains
       call timestop("MAGMA STD-SP")
    end subroutine magma_diag_sp
 
-   subroutine magma_reduction(self, hmat, smat)
+   subroutine magma_reduction(self, hmat, smat, ne)
       !Simple driver to solve Generalized Eigenvalue Problem using magma routine
       class(t_solver_magma)            :: self
       class(t_mat), intent(INOUT)  :: hmat, smat
+      integer, intent(IN)  :: ne
 
       integer            :: info, n
 

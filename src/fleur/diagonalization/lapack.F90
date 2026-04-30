@@ -225,10 +225,11 @@ contains
       call timestop("LAPACK STD-SP")
    end subroutine lapack_diag_sp
 
-   subroutine lapack_reduction(self, hmat, smat)
+   subroutine lapack_reduction(self, hmat, smat, ne)
       !Simple driver to solve Generalized Eigenvalue Problem using LAPACK routine
       class(t_solver_lapack)            :: self
       class(t_mat), intent(INOUT)  :: hmat, smat
+      integer, intent(IN)  :: ne
 
       integer            :: info, n
 

@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2024 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -60,7 +60,7 @@ contains
       else
          ! We do a reduction, to a standard problem, then solve the standard problem and transform back
          call timestart("Reduction to S-EVP")
-         call transform%to_std(hmat, smat)
+         call transform%to_std(hmat, smat, ne)
          call timestop("Reduction to S-EVP")
          call timestart("Diagonalization")
          print *,"Solver:",solver%name

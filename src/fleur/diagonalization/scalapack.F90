@@ -327,11 +327,12 @@ contains
 #endif
    end subroutine scalapack_gev
 
-   subroutine scalapack_reduction(self, hmat, smat)
+   subroutine scalapack_reduction(self, hmat, smat, ne)
       !Simple driver to transform Generalized Eigenvalue Problem to Standard problem using LAPACK routine
 
       class(t_solver_scalapack) :: self
       class(t_mat), intent(INOUT)  :: hmat, smat
+      integer, intent(IN)  :: ne
       integer            :: info, n
 
 

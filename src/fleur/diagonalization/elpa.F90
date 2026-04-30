@@ -76,10 +76,11 @@ solver%single_precision = .true.
 
 
 
-   subroutine create_elpa_obj(hmat)
+   subroutine create_elpa_obj(hmat, ne)
       !$ use omp_lib
       implicit none
       class(t_mat), intent(IN)              :: hmat
+      integer, intent(IN)                  :: ne
       
 #ifdef CPP_ELPA
       integer           :: np, myid
@@ -146,6 +147,10 @@ solver%single_precision = .true.
          call elpa_obj%set("blacs_context", tmp%blacsdata%blacs_desc(2), err)
          call check_elpa_err(err, 'set(blacs_context)')
       end select
+        ! Set the number of eigenvalues
+      call elpa_obj%set("nev", ne, err)
+      call check_elpa_err(err, 'set(nev)')
+
       err = elpa_obj%setup()
       call check_elpa_err(err, 'setup')
 
@@ -162,7 +167,8 @@ solver%single_precision = .true.
       call elpa_obj%set("solver", ELPA_SOLVER_2STAGE, err)
       call check_elpa_err(err, 'set(solver)')
 #endif
-
+      
+    
    call timestop("ELPA SETUP")
 #endif
    end subroutine
@@ -185,9 +191,7 @@ solver%single_precision = .true.
       real, allocatable      :: eig2(:)
       class(t_mat),allocatable        :: ev_dist
       !Update elpa object
-      call create_elpa_obj(hmat)
-      call elpa_obj%set("nev", ne, err)
-      call check_elpa_err(err, 'set(nev)')
+      call create_elpa_obj(hmat, ne)
       allocate(ev_dist,mold=hmat)
 
       call timestart("ELPA GEV")
@@ -277,9 +281,7 @@ solver%single_precision = .true.
       integer :: err,myid,num,np,i
 
       !Update elpa object
-      call create_elpa_obj(hmat)
-      call elpa_obj%set("nev", ne, err)
-      call check_elpa_err(err, 'set(nev)')
+      call create_elpa_obj(hmat, ne)
       
       call timestart("ELPA STD")
       select type(hmat)
@@ -345,10 +347,8 @@ solver%single_precision = .true.
       
 #ifdef CPP_ELPA_SP
       !Update elpa object
-      call create_elpa_obj(hmat)
-      call elpa_obj%set("nev", ne, err)
-      call check_elpa_err(err, 'set(nev)')
-            
+      call create_elpa_obj(hmat, ne)
+      
 
       call timestart("ELPA STD-SP")
       select type(hmat)
@@ -409,28 +409,107 @@ solver%single_precision = .true.
 #endif
    end subroutine
 
-   subroutine elpa_to_std(self, hmat, smat)
+   subroutine elpa_to_std(self, hmat, smat, ne)
       !Simple driver to transform Generalized Eigenvalue Problem to Standard problem using LAPACK routine
 
       class(t_solver_elpa) :: self
       class(t_mat), intent(INOUT)  :: hmat, smat
-      integer            :: err,n
-      logical :: decomposed
+      integer, intent(IN)  :: ne
+      integer            :: err
 
       call timestart("ELPA REDUCTION")
-      call create_elpa_obj(hmat)
-#if defined(CPP_ELPA_PATCH) && defined(CPP_ELPA)
-      call elpa_obj%set("nev", 1, err)
-      call check_elpa_err(err, 'set(nev)')
-      decomposed=.false.
+      call create_elpa_obj(hmat, ne)
+#ifdef CPP_ELPA
+      
+#ifndef CPP_ELPA_PATCH
+      ! Convert from upper to lower triangular storage for ELPA
+      call timestart("ELPA REDUCTION U2L")
+      call hmat%u2l()
+      call smat%u2l()
+      call timestop("ELPA REDUCTION U2L")
+      ! Step 1: Cholesky decomposition of S: S = U^T*U, store U in smat
+      call timestart("ELPA REDUCTION CHOLESKY")
+      if (hmat%l_real) then
+         call elpa_obj%cholesky(smat%data_r, err)
+         call check_elpa_err(err, 'cholesky(real)')
+         ! Step 2: Invert U in-place: smat <- inv(U)
+         call elpa_obj%invert_trm(smat%data_r, err)
+         call check_elpa_err(err, 'invert_trm(real)')
+      else
+         call elpa_obj%cholesky(smat%data_c, err)
+         call check_elpa_err(err, 'cholesky(complex)')
+         call elpa_obj%invert_trm(smat%data_c, err)
+         call check_elpa_err(err, 'invert_trm(complex)')
+      end if
+      call timestop("ELPA REDUCTION CHOLESKY")
+      ! Steps 3+4: A <- inv(U)^T * A * inv(U)
+      call timestart("ELPA REDUCTION HERMITIAN_MULTIPLY")
+      select type(hmat)
+      type is (t_mpimat)
+         select type(smat)
+         type is (t_mpimat)
+            if (hmat%l_real) then
+               block
+                  real, allocatable :: tmp(:,:)
+                  allocate(tmp(hmat%matsize1, hmat%matsize2))
+                  ! tmp <- inv(U)^T * A
+                  call elpa_obj%hermitian_multiply('U', 'F', hmat%global_size1, &
+                       smat%data_r, hmat%data_r, hmat%matsize1, hmat%matsize2, &
+                       tmp, hmat%matsize1, hmat%matsize2, err)
+                  call check_elpa_err(err, 'hermitian_multiply(real)')
+                  hmat%data_r = tmp
+               end block
+            else
+               block
+                  complex, allocatable :: tmp(:,:)
+                  allocate(tmp(hmat%matsize1, hmat%matsize2))
+                  ! tmp <- inv(U)^H * A
+                  call elpa_obj%hermitian_multiply('U', 'F', hmat%global_size1, &
+                       smat%data_c, hmat%data_c, hmat%matsize1, hmat%matsize2, &
+                       tmp, hmat%matsize1, hmat%matsize2, err)
+                  call check_elpa_err(err, 'hermitian_multiply(complex)')
+                  hmat%data_c = tmp
+               end block
+            end if
+         end select
+      end select
+      call timestop("ELPA REDUCTION HERMITIAN_MULTIPLY")
+      call timestart("ELPA REDUCTION TRMM")
+      select type(hmat)
+      type is (t_mpimat)
+         select type(smat)
+         type is (t_mpimat)
+            if (hmat%l_real) then
+               ! A <- A * inv(U)
+               call pdtrmm('R', 'U', 'N', 'N', hmat%global_size1, hmat%global_size1, &
+                            1.0d0, smat%data_r, 1, 1, smat%blacsdata%blacs_desc, &
+                            hmat%data_r, 1, 1, hmat%blacsdata%blacs_desc)
+            else
+               ! A <- A * inv(U)
+               call pztrmm('R', 'U', 'N', 'N', hmat%global_size1, hmat%global_size1, &
+                            (1.0d0,0.0d0), smat%data_c, 1, 1, smat%blacsdata%blacs_desc, &
+                            hmat%data_c, 1, 1, hmat%blacsdata%blacs_desc)
+            end if
+         end select
+      end select
+      call timestop("ELPA REDUCTION TRMM")
+#else
+      ! Fallback to old private API when CPP_ELPA_PATCH is not defined
+      call timestart("ELPA REDUCTION U2L")
+      call hmat%u2l()
+      call smat%u2l()
+      call timestop("ELPA REDUCTION U2L")
+   call timestart("ELPA REDUCTION TRANSFORM_GENERALIZED")
       IF (hmat%l_real) THEN
-         call elpa_obj%elpa_transform_generalized_d(hmat%data_r,smat%data_r,decomposed,err)
+         call elpa_obj%elpa_transform_generalized_d(hmat%data_r, smat%data_r, .false., err)
          call check_elpa_err(err, 'elpa_transform_generalized_d')
-      else   
-         call elpa_obj%elpa_transform_generalized_dc(hmat%data_c,smat%data_c,decomposed,err)
+      else
+         call elpa_obj%elpa_transform_generalized_dc(hmat%data_c, smat%data_c, .false., err)
          call check_elpa_err(err, 'elpa_transform_generalized_dc')
       endif
-#endif      
+   call timestop("ELPA REDUCTION TRANSFORM_GENERALIZED")
+#endif
+#endif
       call timestop("ELPA REDUCTION")
       
    end subroutine   
@@ -445,26 +524,43 @@ solver%single_precision = .true.
       type(t_mpimat):: tmp_mpimat
       call timestart("ELPA BACKTRANSFORM")
 
-#if defined(CPP_ELPA_PATCH) && defined(CPP_ELPA)
+#ifdef CPP_ELPA
+   
+#ifndef CPP_ELPA_PATCH
+      ! Back-transform eigenvectors: Q <- inv(U) * Q
+      call timestart("ELPA BACKTRANSFORM TRMM")
       select type(zmat)
       type is (t_mpimat)
-         call elpa_obj%set("nev", zmat%global_size2, err)
-         call check_elpa_err(err, 'set(nev)')
-      type is(t_mat)   
-         call elpa_obj%set("nev", zmat%matsize2, err)
-         call check_elpa_err(err, 'set(nev)')
+         select type(smat)
+         type is (t_mpimat)
+            if (smat%l_real) then
+               call pdtrmm('L', 'U', 'N', 'N', smat%global_size1, zmat%global_size2, &
+                            1.0d0, smat%data_r, 1, 1, smat%blacsdata%blacs_desc, &
+                            zmat%data_r, 1, 1, zmat%blacsdata%blacs_desc)
+            else
+               call pztrmm('L', 'U', 'N', 'N', smat%global_size1, zmat%global_size2, &
+                            (1.0d0,0.0d0), smat%data_c, 1, 1, smat%blacsdata%blacs_desc, &
+                            zmat%data_c, 1, 1, zmat%blacsdata%blacs_desc)
+            end if
+         end select
       end select
-
-      if (smat%l_real) THEN
+      call timestop("ELPA BACKTRANSFORM TRMM")
+      call elpa_deallocate(elpa_obj, err)
+      call check_elpa_err(err, 'elpa_deallocate')
+      if (associated(elpa_obj)) elpa_obj=>null()
+#else
+      ! Fallback to old private API when CPP_ELPA_PATCH is defined
+      if (smat%l_real) then
          call elpa_obj%elpa_transform_back_generalized_d(smat%data_r, zmat%data_r, error)
          call check_elpa_err(error, 'elpa_transform_back_generalized_d')
       else
          call elpa_obj%elpa_transform_back_generalized_dc(smat%data_c, zmat%data_c, error)
          call check_elpa_err(error, 'elpa_transform_back_generalized_dc')
-      endif   
+      endif
       call elpa_deallocate(elpa_obj, err)
       call check_elpa_err(err, 'elpa_deallocate')
       if (associated(elpa_obj)) elpa_obj=>null()
+#endif
 #endif
 
       select type(zmat)
