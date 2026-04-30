@@ -79,7 +79,7 @@ MODULE m_types_mpimat
 CONTAINS
    SUBROUTINE t_mpimat_lproblem(mat, vec)
       IMPLICIT NONE
-      CLASS(t_mpimat), INTENT(IN)   :: mat
+      CLASS(t_mpimat), INTENT(INOUT)   :: mat
       class(t_mat), INTENT(INOUT)   :: vec
 
       integer :: ipiv(mat%global_size1), info
