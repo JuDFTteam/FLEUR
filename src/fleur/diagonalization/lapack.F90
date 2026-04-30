@@ -171,7 +171,6 @@ contains
 
       integer, parameter:: sp = selected_real_kind(6)
       integer          :: info, m, n ,lwork
-      real(sp)         :: eigval(hmat%matsize1)
 
       call timestart("LAPACK STD-SP")
 
@@ -182,45 +181,45 @@ contains
 
       if (hmat%l_real) then
          BLOCK
-            REAL(kind=sp),allocatable:: h(:,:),z(:,:),eigval(:),work(:)
+            REAL(kind=sp),allocatable:: h(:,:),z(:,:),eigval_sp(:),work(:)
             integer,allocatable      :: iwork(:),ifail(:)
             Allocate(h(size(hmat%data_r,1),size(hmat%data_r,2)))
-            Allocate(eigval(size(hmat%data_r,1)),ifail(size(hmat%data_r,1)))
+            Allocate(eigval_sp(size(hmat%data_r,1)),ifail(size(hmat%data_r,1)))
             Allocate(z(size(hmat%data_r,1),ne))
             h=hmat%data_r
     
             allocate(work(1),iwork(5*size(h,1)))
-            call ssyevx('V','I','U',size(h,1),h,size(h,1),0.0,0.0,1,ne,1.0E-8_sp,m,eigval,z,size(z,1),work,-1,iwork,ifail,info)
+            call ssyevx('V','I','U',size(h,1),h,size(h,1),0.0,0.0,1,ne,1.0E-8_sp,m,eigval_sp,z,size(z,1),work,-1,iwork,ifail,info)
             lwork=work(1)
             deallocate(work)
             allocate(work(lwork))
     
-            call ssyevx('V','I','U',size(h,1),h,size(h,1),0.0,0.0,1,ne,1.0E-8_sp,m,eigval,z,size(z,1),work,lwork,iwork,ifail,info)
+            call ssyevx('V','I','U',size(h,1),h,size(h,1),0.0,0.0,1,ne,1.0E-8_sp,m,eigval_sp,z,size(z,1),work,lwork,iwork,ifail,info)
             
-            eig(:ne)=eigval(:ne)
+            eig(:ne)=eigval_sp(:ne)
             zmat%data_r=z(:,:ne)
-            deallocate(h,z,eigval,work,iwork)
+            deallocate(h,z,eigval_sp,work,iwork)
            END BLOCK
       else
          BLOCK
             COMPLEX(kind=sp),allocatable:: h(:,:),z(:,:),work(:)
-            REAL(kind=sp),allocatable:: eigval(:),rwork(:)
+            REAL(kind=sp),allocatable:: eigval_sp(:),rwork(:)
             integer,allocatable      :: iwork(:),ifail(:)
             Allocate(h(size(hmat%data_c,1),size(hmat%data_c,2)))
-            Allocate(eigval(size(hmat%data_c,1)),ifail(size(hmat%data_c,1)))
+            Allocate(eigval_sp(size(hmat%data_c,1)),ifail(size(hmat%data_c,1)))
             Allocate(z(size(hmat%data_c,1),ne),rwork(7*size(hmat%data_c,1)))
             h=hmat%data_c
     
             allocate(work(1),iwork(5*size(hmat%data_c,1)))
-            call cheevx('V','I','U',size(h,1),h,size(h,1),0.0,0.0,1,ne,0.0,m,eigval,z,size(z,1),work,-1,rwork,iwork,ifail,info)
+            call cheevx('V','I','U',size(h,1),h,size(h,1),0.0,0.0,1,ne,0.0,m,eigval_sp,z,size(z,1),work,-1,rwork,iwork,ifail,info)
             lwork=work(1)
             deallocate(work)
             allocate(work(lwork))
     
-            call cheevx('V','I','U',size(h,1),h,size(h,1),0.0,0.0,1,ne,0.0,m,eigval,z,size(z,1),work,lwork,rwork,iwork,ifail,info)
-            eig=eigval(:ne)
+            call cheevx('V','I','U',size(h,1),h,size(h,1),0.0,0.0,1,ne,0.0,m,eigval_sp,z,size(z,1),work,lwork,rwork,iwork,ifail,info)
+            eig(:ne)=eigval_sp(:ne)
             zmat%data_c=z(:,:ne)
-            deallocate(h,z,eigval,work,rwork,iwork)
+            deallocate(h,z,eigval_sp,work,rwork,iwork)
             END BLOCK   
       end if
       call timestop("LAPACK STD-SP")
