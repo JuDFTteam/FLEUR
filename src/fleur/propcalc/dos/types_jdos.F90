@@ -421,7 +421,7 @@ CONTAINS
       ! m_j label table for the 6 d-state j_eff sub-channels
       ! order: j1/2 mj=-1/2,+1/2  then  j3/2 mj=-3/2,-1/2,+1/2,+3/2
       character(len=10), parameter :: mj_names(6) = &
-         ["d1/2m-1   ","d1/2m+1   ","d3/2m-3   ","d3/2m-1   ","d3/2m+1   ","d3/2m+3   "]
+         ["d1-2m-1   ","d1-2m+1   ","d3-2m-3   ","d3-2m-1   ","d3-2m+1   ","d3-2m+3   "]
 
       i = 0
       DO na = 1, size(this%comp, 4)
@@ -439,10 +439,10 @@ CONTAINS
          END DO
          ! --- 2 total j_eff channels for d-states ---
          i = i + 1
-         if (i == id) write (get_weight_name, "(a,i0,a)") "jDOS:", this%n_dos_to_na(na), "dj1/2"
+         if (i == id) write (get_weight_name, "(a,i0,a)") "jDOS:", this%n_dos_to_na(na), "dj1-2"
          if (i > id) RETURN
          i = i + 1
-         if (i == id) write (get_weight_name, "(a,i0,a)") "jDOS:", this%n_dos_to_na(na), "dj3/2"
+         if (i == id) write (get_weight_name, "(a,i0,a)") "jDOS:", this%n_dos_to_na(na), "dj3-2"
          if (i > id) RETURN
          ! --- 6 m_j sub-channels for d-states ---
          DO imj = 1, 6
