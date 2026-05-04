@@ -410,7 +410,7 @@ CONTAINS
 
    SUBROUTINE t_mat_lproblem(mat, vec)
       IMPLICIT NONE
-      CLASS(t_mat), INTENT(IN)     :: mat
+      CLASS(t_mat), INTENT(INOUT)     :: mat
       class(t_mat), INTENT(INOUT)   :: vec
 
       INTEGER:: lwork, info

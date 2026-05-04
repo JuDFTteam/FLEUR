@@ -62,7 +62,7 @@ MODULE m_types_abc
 
 CONTAINS
 
-   SUBROUTINE abc_init(this, input, atoms, n_r_in , noccbd, itype)
+   SUBROUTINE abc_init(this, input, atoms, noccbd, itype)
 
       USE m_types_atoms
       USE m_types_input
@@ -70,11 +70,11 @@ CONTAINS
       IMPLICIT NONE
 
       CLASS(t_abc), INTENT(INOUT) :: this
-      INTEGER, INTENT(IN)   :: n_r_in(0:)
       TYPE(t_atoms), INTENT(IN)    :: atoms
       TYPE(t_input), INTENT(IN)    :: input
 
       INTEGER, INTENT(IN)    :: itype, noccbd
+      INTEGER :: n_r(0:atoms%lmaxd)
 
       IF (itype < 1 .OR. itype > atoms%ntype) THEN
          CALL judft_error("abc_init: invalid atom type index", calledby="types_abc")
@@ -82,19 +82,15 @@ CONTAINS
       IF (noccbd < 1) THEN
          CALL judft_error("abc_init: noccbd must be >= 1", calledby="types_abc")
       END IF
-      IF (LBOUND(n_r_in,1) /= 0) THEN
-         CALL judft_error("abc_init: n_r_in must be 0-based", calledby="types_abc")
-      END IF
-      IF (UBOUND(n_r_in,1) < atoms%lmax(itype)) THEN
-         CALL judft_error("abc_init: n_r_in too small for atom lmax", calledby="types_abc")
-      END IF
-      IF (MAXVAL(n_r_in) < 1) THEN
+      n_r = atoms%num_radial_functions_per_l(itype)
+
+      IF (MAXVAL(n_r) < 1) THEN
          CALL judft_error("abc_init: radial function count must be >= 1", calledby="types_abc")
       END IF
 
       IF (ALLOCATED(this%cof)) DEALLOCATE (this%cof,this%n_r)
-      allocate(this%n_r(0:size(n_r_in)-1))
-      this%n_r(0:)=n_r_in(0:)
+      allocate(this%n_r(0:ubound(n_r,1)))
+      this%n_r = n_r
       ALLOCATE (this%cof(noccbd, 0:atoms%lmax(itype)*(atoms%lmax(itype) + 2), maxval(this%n_r), atoms%neq(itype)))
       this%cof = CMPLX(0.0, 0.0)
 

@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -266,7 +266,7 @@ CONTAINS
             call radfun(itype)%generate_radial_functions(atoms, input, enpara, fmpi, vtot, iType)
             DO ispin = jsp_start, jsp_end
                IF (input%l_f) CALL force%init2(noccbd, input, atoms)
-               call abc(ispin, abc_itype)%init(input, atoms, radfun(itype)%n_r, noccbd, itype)
+               call abc(ispin, abc_itype)%init(input, atoms, noccbd, itype)
                call abc(ispin, abc_itype)%calc_abc(input, atoms, sym, cell, lapw, noccbd, usdus, noco, nococonv, ispin, itype, zMat)
                DO ispinpr = jsp_start, ispin
                   ispin123 = merge(ispin, 3, ispin == ispinpr) !sometimes the "3rd" spin is the off-diagonal part

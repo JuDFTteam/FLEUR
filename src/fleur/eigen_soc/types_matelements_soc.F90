@@ -69,6 +69,7 @@ CONTAINS
 
     subroutine add_matrix_elements(this, zmat, mat_inout)
         use m_types_abc
+        use m_types_radfun
         use m_types_nococonv
 
         CLASS(t_matelements_soc), INTENT(INOUT) :: this
@@ -80,8 +81,9 @@ CONTAINS
 
         type(t_abc) :: abc(2)
         type(t_usdus) :: usdus
-        INTEGER :: num_bands
-        integer :: n, l, m, lm, ll1, jcof, icof,n_r(0:this%atoms%lmaxd)
+        type(t_radfun) :: radfun
+      INTEGER :: num_bands
+      integer :: n, l, m, lm, ll1, jcof, icof
         integer :: i, j, i1, j1, na, lm1, m1, i1_int, j1_int
         complex :: cof_lm
 
@@ -99,17 +101,19 @@ CONTAINS
 
         
         DO n = 1,this%atoms%ntype
-         n_r=this%atoms%num_radial_functions_per_l(n)
+         call radfun%generate_radial_functions(this%atoms, this%input, this%enpara, this%fmpi, this%vtot, n, usdus_out=usdus)
          !calculate the abc coefficients for this atom type and both spins
-         call abc(1)%init(this%input, this%atoms, n_r, num_bands, n)
+         
+         call abc(1)%init(this%input, this%atoms, num_bands, n)
          call abc(1)%calc_abc(this%input, this%atoms, this%sym, this%cell, this%lapw, num_bands, usdus, this%noco, this%nococonv, 1, n, zMat(1))
-
+        
          if (this%input%jspins == 2) then
-            call abc(2)%init(this%input, this%atoms, n_r, num_bands, n)
+            call abc(2)%init(this%input, this%atoms, num_bands, n)
             call abc(2)%calc_abc(this%input, this%atoms, this%sym, this%cell, this%lapw, num_bands, usdus, this%noco, this%nococonv, 2, n, zMat(2))
          else
             abc(2) = abc(1)
          end if
+         
          DO j1=1,2
             j1_int = min(this%input%jspins,j1)
             DO i1=1,2
@@ -120,13 +124,13 @@ CONTAINS
                         ll1 = l*(l+1)
                         DO m = -l,l
                            lm = ll1 + m
-                           DO jcof=1,n_r(l)
+                           DO jcof=1,abc(1)%n_r(l)
                               cof_lm = CMPLX(0.,0.)
                               DO m1 = -l,l
                                  lm1 = ll1 + m1
                                  cof_lm = cof_lm + conjg(this%rsoc%soangl(l,m,i1,l,m1,j1))*conjg(abc(j1)%cof(j,lm1,jcof,na))
                               ENDDO
-                              DO icof=1,n_r(l)
+                              DO icof=1,abc(1)%n_r(l)
                                  DO i=1, num_bands
                                     mat(i1,j1)%data_c(i,j) = mat(i1,j1)%data_c(i,j) +&
                                     abc(i1)%cof(i,lm,icof,na)*this%rsoc%rso(icof,jcof,n,l,i1,j1)*cof_lm
@@ -140,6 +144,6 @@ CONTAINS
             ENDDO   !i1 spin
          ENDDO !!j1 spin
       enddo !n atom types
-
+         
     END SUBROUTINE add_matrix_elements
 END MODULE m_types_matelements_soc  
