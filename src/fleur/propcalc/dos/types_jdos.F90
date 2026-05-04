@@ -49,7 +49,7 @@ CONTAINS
       return !currently no postprocessing needed for jdos
    end subroutine postprocessing    
 
-   SUBROUTINE calc_jDOS(jDOS, ikpt, noccbd, ev_list, we, atoms, banddos, input, nococonv, radfun, abc_u, abc_d)
+   SUBROUTINE calc_jDOS(jDOS, ikpt, noccbd, ev_list, we, atoms, banddos, input, nococonv, itype, radfun, abc_u, abc_d)
       use m_types_atoms
       use m_types_banddos
       use m_types_input
@@ -63,6 +63,7 @@ CONTAINS
       TYPE(t_banddos), INTENT(IN)     :: banddos
       TYPE(t_input), INTENT(IN)     :: input
       TYPE(t_nococonv), INTENT(IN)  :: nococonv
+      INTEGER, INTENT(IN)     :: itype
       TYPE(t_radfun), INTENT(IN)     :: radfun
       TYPE(t_abc), INTENT(IN), TARGET :: abc_u, abc_d
       INTEGER, INTENT(IN)     :: ikpt
@@ -87,7 +88,7 @@ CONTAINS
       ! Index map into c_mj(1:6): [j_eff=1/2: mj=-1/2,+1/2] [j_eff=3/2: mj=-3/2,-1/2,+1/2,+3/2]
 
       INTEGER :: n_dos, jcof, icof
-      INTEGER :: jjj, iType, iBand, nn, iAtom, l, jj, j_ind, lmup, lmdown, spin, ilo, ilop
+      INTEGER :: jjj, iBand, nn, iAtom, iAtom_l, l, jj, j_ind, lmup, lmdown, spin, ilo, ilop
       INTEGER :: imj, i_t2g_l, i_t2g_r, n_r_d
       ! Rotation of reference frame (same feature as in calc_orb_comp)
       TYPE(t_abc), TARGET  :: abc_u_rot, abc_d_rot
@@ -164,8 +165,8 @@ CONTAINS
       lm_xz_m1 = 5   ! l=2, m=-1 (shared with yz; different linear combo)
       lm_xz_p1 = 7   ! l=2, m=+1
 
-      DO iAtom = 1, atoms%nat
-         iType = atoms%itype(iAtom)
+      DO iAtom_l = 1, atoms%neq(itype)
+         iAtom = iAtom_l - 1 + atoms%firstAtom(itype)
          if (.not. banddos%dos_atom(iAtom)) cycle
          !find index for dos
          DO n_dos = 1, size(banddos%dos_atomlist)
@@ -174,9 +175,9 @@ CONTAINS
          ! Rotate abc coefficients into local quantisation frame
          IF (banddos%align_to_spin(iAtom)) THEN
             alpha_use = 0.0
-            beta_use  = nococonv%beta(iType)
+            beta_use  = nococonv%beta(itype)
             IF (ABS(beta_use) > 1.0e-6) THEN
-               gamma_use = pi_const/2.0 - nococonv%alph(iType)
+               gamma_use = pi_const/2.0 - nococonv%alph(itype)
             ELSE
                gamma_use = 0.0
             END IF
@@ -203,8 +204,8 @@ CONTAINS
                !s-states (are not split up by SOC)
                DO jjj = 1, radfun%n_r(l)
                   DO jj = 1, radfun%n_r(l)
-                   c(0) = c(0) + p_u%cof(iband, 0, jjj, iatom)*conjg(p_u%cof(iband, 0, jj, iatom))*radfun%integral(jjj, jj, 0, 1, 1)
-                   c(0) = c(0) + p_d%cof(iband, 0, jjj, iatom)*conjg(p_d%cof(iband, 0, jj, iatom))*radfun%integral(jjj, jj, 0, 2, 2)
+                   c(0) = c(0) + p_u%cof(iband, 0, jjj, iatom_l)*conjg(p_u%cof(iband, 0, jj, iatom_l))*radfun%integral(jjj, jj, 0, 1, 1)
+                   c(0) = c(0) + p_d%cof(iband, 0, jjj, iatom_l)*conjg(p_d%cof(iband, 0, jj, iatom_l))*radfun%integral(jjj, jj, 0, 2, 2)
 
                   end do
                end do
@@ -232,8 +233,8 @@ CONTAINS
                            IF (ABS(mup) <= l) THEN
                               lmup = l*(l + 1) + INT(mup)
                               facup = clebsch(REAL(l), 0.5, mup, 0.5, j, mj)
-                              aup = facup*p_u%cof(iBand, lmup, icof, iAtom)
-                              bup = facup*p_u%cof(iBand, lmup, jcof, iAtom)
+                              aup = facup*p_u%cof(iBand, lmup, icof, iAtom_l)
+                              bup = facup*p_u%cof(iBand, lmup, jcof, iAtom_l)
                            ELSE
                               aup = 0.0
                               bup = 0.0
@@ -242,8 +243,8 @@ CONTAINS
                            IF (ABS(mdown) <= l) THEN
                               lmdown = l*(l + 1) + INT(mdown)
                               facdown = clebsch(REAL(l), 0.5, mdown, -0.5, j, mj)
-                              adown = -1*facdown*p_d%cof(iBand, lmdown, icof, iAtom)
-                              bdown = -1*facdown*p_d%cof(iBand, lmdown, jcof, iAtom)
+                              adown = -1*facdown*p_d%cof(iBand, lmdown, icof, iAtom_l)
+                              bdown = -1*facdown*p_d%cof(iBand, lmdown, jcof, iAtom_l)
                            ELSE
                               adown = 0.0
                               bdown = 0.0
@@ -294,19 +295,19 @@ CONTAINS
                      ! real harmonic requires a phase.  The inner product
                      !   <psi|xy> ~ i/sqrt(2)*(a(lm4)+a(lm8))
                      ! so the amplitude for the t2g orbital part is:
-                     lc_xy_u  = CMPLX(0.0,inv_sqrt2)*(p_u%cof(iBand,lm_xy_m2,icof,iAtom)+p_u%cof(iBand,lm_xy_p2,icof,iAtom))
-                     lc_xy_d  = CMPLX(0.0,inv_sqrt2)*(p_d%cof(iBand,lm_xy_m2,icof,iAtom)+p_d%cof(iBand,lm_xy_p2,icof,iAtom))
-                     lc_yz_u  = CMPLX(0.0,inv_sqrt2)*(p_u%cof(iBand,lm_yz_m1,icof,iAtom)+p_u%cof(iBand,lm_yz_p1,icof,iAtom))
-                     lc_yz_d  = CMPLX(0.0,inv_sqrt2)*(p_d%cof(iBand,lm_yz_m1,icof,iAtom)+p_d%cof(iBand,lm_yz_p1,icof,iAtom))
-                     lc_xz_u  = inv_sqrt2*(p_u%cof(iBand,lm_xz_m1,icof,iAtom)-p_u%cof(iBand,lm_xz_p1,icof,iAtom))
-                     lc_xz_d  = inv_sqrt2*(p_d%cof(iBand,lm_xz_m1,icof,iAtom)-p_d%cof(iBand,lm_xz_p1,icof,iAtom))
+                     lc_xy_u  = CMPLX(0.0,inv_sqrt2)*(p_u%cof(iBand,lm_xy_m2,icof,iAtom_l)+p_u%cof(iBand,lm_xy_p2,icof,iAtom_l))
+                     lc_xy_d  = CMPLX(0.0,inv_sqrt2)*(p_d%cof(iBand,lm_xy_m2,icof,iAtom_l)+p_d%cof(iBand,lm_xy_p2,icof,iAtom_l))
+                     lc_yz_u  = CMPLX(0.0,inv_sqrt2)*(p_u%cof(iBand,lm_yz_m1,icof,iAtom_l)+p_u%cof(iBand,lm_yz_p1,icof,iAtom_l))
+                     lc_yz_d  = CMPLX(0.0,inv_sqrt2)*(p_d%cof(iBand,lm_yz_m1,icof,iAtom_l)+p_d%cof(iBand,lm_yz_p1,icof,iAtom_l))
+                     lc_xz_u  = inv_sqrt2*(p_u%cof(iBand,lm_xz_m1,icof,iAtom_l)-p_u%cof(iBand,lm_xz_p1,icof,iAtom_l))
+                     lc_xz_d  = inv_sqrt2*(p_d%cof(iBand,lm_xz_m1,icof,iAtom_l)-p_d%cof(iBand,lm_xz_p1,icof,iAtom_l))
                      ! bra (jcof index)
-                     lc_xy_u2 = CMPLX(0.0,inv_sqrt2)*(p_u%cof(iBand,lm_xy_m2,jcof,iAtom)+p_u%cof(iBand,lm_xy_p2,jcof,iAtom))
-                     lc_xy_d2 = CMPLX(0.0,inv_sqrt2)*(p_d%cof(iBand,lm_xy_m2,jcof,iAtom)+p_d%cof(iBand,lm_xy_p2,jcof,iAtom))
-                     lc_yz_u2 = CMPLX(0.0,inv_sqrt2)*(p_u%cof(iBand,lm_yz_m1,jcof,iAtom)+p_u%cof(iBand,lm_yz_p1,jcof,iAtom))
-                     lc_yz_d2 = CMPLX(0.0,inv_sqrt2)*(p_d%cof(iBand,lm_yz_m1,jcof,iAtom)+p_d%cof(iBand,lm_yz_p1,jcof,iAtom))
-                     lc_xz_u2 = inv_sqrt2*(p_u%cof(iBand,lm_xz_m1,jcof,iAtom)-p_u%cof(iBand,lm_xz_p1,jcof,iAtom))
-                     lc_xz_d2 = inv_sqrt2*(p_d%cof(iBand,lm_xz_m1,jcof,iAtom)-p_d%cof(iBand,lm_xz_p1,jcof,iAtom))
+                     lc_xy_u2 = CMPLX(0.0,inv_sqrt2)*(p_u%cof(iBand,lm_xy_m2,jcof,iAtom_l)+p_u%cof(iBand,lm_xy_p2,jcof,iAtom_l))
+                     lc_xy_d2 = CMPLX(0.0,inv_sqrt2)*(p_d%cof(iBand,lm_xy_m2,jcof,iAtom_l)+p_d%cof(iBand,lm_xy_p2,jcof,iAtom_l))
+                     lc_yz_u2 = CMPLX(0.0,inv_sqrt2)*(p_u%cof(iBand,lm_yz_m1,jcof,iAtom_l)+p_u%cof(iBand,lm_yz_p1,jcof,iAtom_l))
+                     lc_yz_d2 = CMPLX(0.0,inv_sqrt2)*(p_d%cof(iBand,lm_yz_m1,jcof,iAtom_l)+p_d%cof(iBand,lm_yz_p1,jcof,iAtom_l))
+                     lc_xz_u2 = inv_sqrt2*(p_u%cof(iBand,lm_xz_m1,jcof,iAtom_l)-p_u%cof(iBand,lm_xz_p1,jcof,iAtom_l))
+                     lc_xz_d2 = inv_sqrt2*(p_d%cof(iBand,lm_xz_m1,jcof,iAtom_l)-p_d%cof(iBand,lm_xz_p1,jcof,iAtom_l))
                      ! t2g spinor ket/bra arrays (spinor index = orbital x spin):
                      ! 1=|xy,up>  2=|xy,dn>  3=|yz,up>  4=|yz,dn>  5=|xz,up>  6=|xz,dn>
                      amp_ket(1) = lc_xy_u;  amp_ket(2) = lc_xy_d
