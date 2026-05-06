@@ -145,7 +145,7 @@ contains
       integer, parameter:: sp = selected_real_kind(6)
       !These chase parameters might to be adjusted
       real(sp), parameter ::   tol = 1e-6
-      character, parameter ::  mode = 'R', opt = 'S', qr='N'
+      character, parameter ::  mode = 'R', opt = 'S', qr='C'
       integer, parameter  :: deg = 20
 
 #ifdef CPP_CHASE
@@ -202,7 +202,7 @@ contains
 
       !These chase parameters might to be adjusted
       real, parameter ::   tol = 1e-10
-      character(kind=c_char), parameter ::  mode = 'R', opt = 'S', qr='N'
+      character(kind=c_char), parameter ::  mode = 'R', opt = 'S', qr='C'
       character(kind=c_char), parameter ::  grid_major = 'C' !major of 2D MPI grid. Row major: grid_major=’R’, column major: grid_major=’C’
       integer, parameter  :: deg = 20
 #ifdef CPP_CHASE
