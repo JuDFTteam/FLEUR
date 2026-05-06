@@ -433,13 +433,13 @@ solver%single_precision = .true.
          call elpa_obj%cholesky(smat%data_r, err)
          call check_elpa_err(err, 'cholesky(real)')
          ! Step 2: Invert U in-place: smat <- inv(U)
-         call elpa_obj%invert_trm(smat%data_r, err)
-         call check_elpa_err(err, 'invert_trm(real)')
+         call elpa_obj%invert_triangular(smat%data_r, err)
+         call check_elpa_err(err, 'invert_triangular(real)')
       else
          call elpa_obj%cholesky(smat%data_c, err)
          call check_elpa_err(err, 'cholesky(complex)')
-         call elpa_obj%invert_trm(smat%data_c, err)
-         call check_elpa_err(err, 'invert_trm(complex)')
+         call elpa_obj%invert_triangular(smat%data_c, err)
+         call check_elpa_err(err, 'invert_triangular(complex)')
       end if
       call timestop("ELPA REDUCTION CHOLESKY")
       ! Steps 3+4: A <- inv(U)^T * A * inv(U)
