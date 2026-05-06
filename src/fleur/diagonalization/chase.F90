@@ -202,8 +202,8 @@ contains
 
       !These chase parameters might to be adjusted
       real, parameter ::   tol = 1e-10
-      character, parameter ::  mode = 'R', opt = 'S', qr='N'
-      character, parameter ::  grid_major = "C" !major of 2D MPI grid. Row major: grid_major=’R’, column major: grid_major=’C’
+      character(kind=c_char), parameter ::  mode = 'R', opt = 'S', qr='N'
+      character(kind=c_char), parameter ::  grid_major = 'C' !major of 2D MPI grid. Row major: grid_major=’R’, column major: grid_major=’C’
       integer, parameter  :: deg = 20
 #ifdef CPP_CHASE
       integer:: mbsize, nbsize, irsrc, icsrc, dim0, dim1, myprow, mypcol
@@ -237,17 +237,17 @@ contains
          call pdchase_init_blockcyclic(hmat%global_size1, ne, nex, mbsize, nbsize, hmat%data_r, hmat%matsize1, &
                                        ztemp%data_r, eigval, dim0, dim1, grid_major, irsrc, icsrc, comm_2d, init)
 !Solve eigenvalue problem
-         call dchase(deg, tol, mode, opt,qr)
+         call pdchase(deg, tol, mode, opt, qr)
          ! finalize and clean up
-         call dchase_finalize(init)
+         call pdchase_finalize(init)
       else
          ! Initialize of ChASE
          call pzchase_init_blockcyclic(hmat%global_size1, ne, nex, mbsize, nbsize, hmat%data_c, hmat%matsize1, &
                                        ztemp%data_c, eigval, dim0, dim1, grid_major, irsrc, icsrc, comm_2d, init)
          !Solve eigenvalue problem
-         call zchase(deg, tol, mode, opt,qr)
+         call pzchase(deg, tol, mode, opt, qr)
          ! finalize and clean up
-         call zchase_finalize(init)
+         call pzchase_finalize(init)
       end if
       !create zmat in correct distribution
       allocate (t_mpimat::zmat)
