@@ -278,10 +278,12 @@ solver%single_precision = .true.
       real, intent(OUT)           :: eig(:)
 #ifdef CPP_ELPA
       real,allocatable:: eig2(:)
+   class(t_mat),allocatable :: ev_dist
       integer :: err,myid,num,np,i
 
       !Update elpa object
       call create_elpa_obj(hmat, ne)
+   allocate(ev_dist,mold=hmat)
       
       call timestart("ELPA STD")
       select type(hmat)
@@ -291,18 +293,16 @@ solver%single_precision = .true.
             allocate (eig2(hmat%matsize1), stat=err) ! The eigenvalue array
       end select
       if (err .ne. 0) call juDFT_error('Failed to allocated "eig2"', calledby='elpa')
-
-      allocate(zmat, mold=hmat) !allocate zmat with the same type as the input matrix
-      call zmat%init(hmat)! Eigenvectors
-      if (err .ne. 0) call juDFT_error('Failed to allocated "zmat"', calledby='elpa')
+      call ev_dist%init(hmat)! Eigenvectors
+      if (err .ne. 0) call juDFT_error('Failed to allocated "ev_dist"', calledby='elpa')
 
       call hmat%u2l()
       call elpa_obj%timer_start("ELPA")
       if (hmat%l_real) then
-         call elpa_obj%eigenvectors(hmat%data_r, eig2, zmat%data_r, err)
+         call elpa_obj%eigenvectors(hmat%data_r, eig2, ev_dist%data_r, err)
          call check_elpa_err(err, 'eigenvectors(real)')
       else
-         call elpa_obj%eigenvectors(hmat%data_c, eig2, zmat%data_c, err)
+         call elpa_obj%eigenvectors(hmat%data_c, eig2, ev_dist%data_c, err)
          call check_elpa_err(err, 'eigenvectors(complex)')
       end if
       call elpa_obj%timer_stop("ELPA")
@@ -327,7 +327,17 @@ solver%single_precision = .true.
          do i = myid + 1, num, np
             ne = ne + 1
          end do
-         !
+         allocate(t_mpimat::zmat)
+         call zmat%init(hmat%l_real, hmat%global_size1, hmat%global_size1, hmat%blacsdata%mpi_com, MPIMAT_ROWCYCLIC)
+         call zmat%copy(ev_dist, 1, 1)
+      type is (t_mat)
+         allocate(t_mat::zmat)
+         call zmat%init(hmat%l_real,hmat%matsize1,ne)
+         if (zmat%l_real) then
+            zmat%data_r(:,:)=ev_dist%data_r(:,:ne)
+         else
+            zmat%data_c(:,:)=ev_dist%data_c(:,:ne)
+         end if
       end select
       call timestop("ELPA STD")
       call elpa_deallocate(elpa_obj, err)
@@ -347,11 +357,13 @@ solver%single_precision = .true.
 
       integer, parameter:: sp = selected_real_kind(6)
       real(kind=sp),allocatable:: eig2(:)
+      class(t_mat),allocatable :: ev_dist
       integer :: err,myid,num,np,i
       
 #ifdef CPP_ELPA_SP
       !Update elpa object
       call create_elpa_obj(hmat, ne)
+      allocate(ev_dist,mold=hmat)
       
 
       call timestart("ELPA STD-SP")
@@ -362,9 +374,8 @@ solver%single_precision = .true.
             allocate (eig2(hmat%matsize1), stat=err) ! The eigenvalue array
       end select
       if (err .ne. 0) call juDFT_error('Failed to allocated "eig2"', calledby='elpa')
-      allocate(zmat, mold=hmat) !allocate zmat with the same type as the input matrix
-      call zmat%init(hmat)! Eigenvectors
-      if (err .ne. 0) call juDFT_error('Failed to allocated "zmat"', calledby='elpa')
+      call ev_dist%init(hmat)! Eigenvectors
+      if (err .ne. 0) call juDFT_error('Failed to allocated "ev_dist"', calledby='elpa')
 
       call hmat%u2l()
       call elpa_obj%timer_start("ELPA")
@@ -372,19 +383,19 @@ solver%single_precision = .true.
          block
             real(kind=sp),allocatable:: mat(:,:),z(:,:)
             mat=hmat%data_r
-            allocate(z(size(zmat%data_r,1),size(zmat%data_r,2)))
+            allocate(z(size(ev_dist%data_r,1),size(ev_dist%data_r,2)))
             call elpa_obj%eigenvectors(mat, eig2, z, err)
             call check_elpa_err(err, 'eigenvectors_sp(real)')
-            zmat%data_r=z
+            ev_dist%data_r=z
          end block
       else
          block
             complex(kind=sp),allocatable:: mat(:,:),z(:,:)
             mat=hmat%data_c
-            allocate(z(size(zmat%data_c,1),size(zmat%data_c,2)))
+            allocate(z(size(ev_dist%data_c,1),size(ev_dist%data_c,2)))
             call elpa_obj%eigenvectors(mat, eig2, z, err)
             call check_elpa_err(err, 'eigenvectors_sp(complex)')
-            zmat%data_c=z
+            ev_dist%data_c=z
          end block
       end if
       call elpa_obj%timer_stop("ELPA")
@@ -406,7 +417,17 @@ solver%single_precision = .true.
             do i = myid + 1, num, np
                ne = ne + 1
             end do
-            !
+            allocate(t_mpimat::zmat)
+            call zmat%init(hmat%l_real, hmat%global_size1, hmat%global_size1, hmat%blacsdata%mpi_com, MPIMAT_ROWCYCLIC)
+            call zmat%copy(ev_dist, 1, 1)
+      type is (t_mat)
+            allocate(t_mat::zmat)
+            call zmat%init(hmat%l_real,hmat%matsize1,ne)
+            if (zmat%l_real) then
+               zmat%data_r(:,:)=ev_dist%data_r(:,:ne)
+            else
+               zmat%data_c(:,:)=ev_dist%data_c(:,:ne)
+            end if
       end select
 
       call timestop("ELPA STD-SP")
@@ -517,9 +538,6 @@ solver%single_precision = .true.
    call timestop("ELPA REDUCTION TRANSFORM_GENERALIZED")
 #endif
 #endif
-   call elpa_deallocate(elpa_obj, err)
-   call check_elpa_err(err, 'elpa_deallocate')
-   if (associated(elpa_obj)) elpa_obj=>null()
       call timestop("ELPA REDUCTION")
       
    end subroutine   
