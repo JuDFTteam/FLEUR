@@ -292,6 +292,7 @@ solver%single_precision = .true.
       end select
       if (err .ne. 0) call juDFT_error('Failed to allocated "eig2"', calledby='elpa')
 
+      allocate(zmat, mold=hmat) !allocate zmat with the same type as the input matrix
       call zmat%init(hmat)! Eigenvectors
       if (err .ne. 0) call juDFT_error('Failed to allocated "zmat"', calledby='elpa')
 
@@ -329,6 +330,9 @@ solver%single_precision = .true.
          !
       end select
       call timestop("ELPA STD")
+      call elpa_deallocate(elpa_obj, err)
+      call check_elpa_err(err, 'elpa_deallocate')
+      if (associated(elpa_obj)) elpa_obj=>null()
 #endif
    end subroutine
    subroutine elpa_diag_sp(self, hmat, ne, eig, zmat)
@@ -358,7 +362,7 @@ solver%single_precision = .true.
             allocate (eig2(hmat%matsize1), stat=err) ! The eigenvalue array
       end select
       if (err .ne. 0) call juDFT_error('Failed to allocated "eig2"', calledby='elpa')
-
+      allocate(zmat, mold=hmat) !allocate zmat with the same type as the input matrix
       call zmat%init(hmat)! Eigenvectors
       if (err .ne. 0) call juDFT_error('Failed to allocated "zmat"', calledby='elpa')
 
@@ -406,6 +410,9 @@ solver%single_precision = .true.
       end select
 
       call timestop("ELPA STD-SP")
+      call elpa_deallocate(elpa_obj, err)
+      call check_elpa_err(err, 'elpa_deallocate')
+      if (associated(elpa_obj)) elpa_obj=>null()
 #endif
    end subroutine
 
@@ -510,6 +517,9 @@ solver%single_precision = .true.
    call timestop("ELPA REDUCTION TRANSFORM_GENERALIZED")
 #endif
 #endif
+   call elpa_deallocate(elpa_obj, err)
+   call check_elpa_err(err, 'elpa_deallocate')
+   if (associated(elpa_obj)) elpa_obj=>null()
       call timestop("ELPA REDUCTION")
       
    end subroutine   
@@ -518,13 +528,21 @@ solver%single_precision = .true.
 
       class(t_solver_elpa) :: self
       class(t_mat), intent(INOUT)  :: zmat, smat
-      integer :: error, err
+      integer :: error, err, ne
 
       type(t_mat):: tmp_mat
       type(t_mpimat):: tmp_mpimat
       call timestart("ELPA BACKTRANSFORM")
 
 #ifdef CPP_ELPA
+
+      select type(zmat)
+      type is (t_mpimat)
+         ne = zmat%global_size2
+      type is (t_mat)
+         ne = zmat%matsize2
+      end select
+      call create_elpa_obj(zmat, ne)
    
 #ifndef CPP_ELPA_PATCH
       ! Back-transform eigenvectors: Q <- inv(U) * Q
