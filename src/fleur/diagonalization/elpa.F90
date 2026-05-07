@@ -278,12 +278,12 @@ solver%single_precision = .true.
       real, intent(OUT)           :: eig(:)
 #ifdef CPP_ELPA
       real,allocatable:: eig2(:)
-   class(t_mat),allocatable :: ev_dist
+      class(t_mat),allocatable :: ev_dist
       integer :: err,myid,num,np,i
 
       !Update elpa object
       call create_elpa_obj(hmat, ne)
-   allocate(ev_dist,mold=hmat)
+      allocate(ev_dist,mold=hmat)
       
       call timestart("ELPA STD")
       select type(hmat)
@@ -560,7 +560,7 @@ solver%single_precision = .true.
       type is (t_mat)
          ne = zmat%matsize2
       end select
-      call create_elpa_obj(zmat, ne)
+      
    
 #ifndef CPP_ELPA_PATCH
       ! Back-transform eigenvectors: Q <- inv(U) * Q
@@ -581,11 +581,10 @@ solver%single_precision = .true.
          end select
       end select
       call timestop("ELPA BACKTRANSFORM TRMM")
-      call elpa_deallocate(elpa_obj, err)
-      call check_elpa_err(err, 'elpa_deallocate')
-      if (associated(elpa_obj)) elpa_obj=>null()
+
 #else
       ! Fallback to old private API when CPP_ELPA_PATCH is defined
+      call create_elpa_obj(zmat, ne)
       if (smat%l_real) then
          call elpa_obj%elpa_transform_back_generalized_d(smat%data_r, zmat%data_r, error)
          call check_elpa_err(error, 'elpa_transform_back_generalized_d')
