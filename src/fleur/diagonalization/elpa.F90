@@ -605,7 +605,9 @@ solver%single_precision = .true.
       type is (t_mpimat)
          call tmp_mpimat%init(zmat%l_real,zmat%global_size1,zmat%global_size2,zmat%blacsdata%mpi_com,MPIMAT_ROWCYCLIC)
          call tmp_mpimat%copy(zmat,1,1)
-         zmat=tmp_mpimat
+         call zmat%free()
+         call zmat%init(tmp_mpimat)
+         call zmat%copy(tmp_mpimat,1,1)
       type is (t_mat)
          call tmp_mat%init(zmat)
          call tmp_mat%copy(zmat,1,1)
