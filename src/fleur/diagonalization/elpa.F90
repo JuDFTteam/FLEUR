@@ -549,7 +549,7 @@ solver%single_precision = .true.
       integer :: error, err, ne
 
       type(t_mat):: tmp_mat
-      type(t_mpimat):: tmp_mpimat
+      type(t_mpimat):: tmp_mpimat, dist_zmat
       call timestart("ELPA BACKTRANSFORM")
 
 #ifdef CPP_ELPA
@@ -569,15 +569,18 @@ solver%single_precision = .true.
       type is (t_mpimat)
          select type(smat)
          type is (t_mpimat)
+            call dist_zmat%init(smat)
+            call dist_zmat%copy(zmat, 1, 1)
             if (smat%l_real) then
-               call pdtrmm('L', 'U', 'N', 'N', smat%global_size1, zmat%global_size2, &
+               call pdtrmm('L', 'U', 'N', 'N', smat%global_size1, dist_zmat%global_size2, &
                             1.0d0, smat%data_r, 1, 1, smat%blacsdata%blacs_desc, &
-                            zmat%data_r, 1, 1, zmat%blacsdata%blacs_desc)
+                            dist_zmat%data_r, 1, 1, dist_zmat%blacsdata%blacs_desc)
             else
-               call pztrmm('L', 'U', 'N', 'N', smat%global_size1, zmat%global_size2, &
+               call pztrmm('L', 'U', 'N', 'N', smat%global_size1, dist_zmat%global_size2, &
                             (1.0d0,0.0d0), smat%data_c, 1, 1, smat%blacsdata%blacs_desc, &
-                            zmat%data_c, 1, 1, zmat%blacsdata%blacs_desc)
+                            dist_zmat%data_c, 1, 1, dist_zmat%blacsdata%blacs_desc)
             end if
+            zmat = dist_zmat
          end select
       end select
       call timestop("ELPA BACKTRANSFORM TRMM")
