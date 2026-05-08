@@ -580,7 +580,7 @@ solver%single_precision = .true.
                             (1.0d0,0.0d0), smat%data_c, 1, 1, smat%blacsdata%blacs_desc, &
                             dist_zmat%data_c, 1, 1, dist_zmat%blacsdata%blacs_desc)
             end if
-            zmat = dist_zmat
+            call zmat%copy(dist_zmat,1,1)
          end select
       end select
       call timestop("ELPA BACKTRANSFORM TRMM")
