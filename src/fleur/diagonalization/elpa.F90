@@ -444,6 +444,8 @@ solver%single_precision = .true.
       class(t_mat), intent(INOUT)  :: hmat, smat
       integer, intent(IN)  :: ne
       integer            :: err
+      real, allocatable :: tmp_real(:,:)
+      complex, allocatable :: tmp_complex(:,:)
 
       call timestart("ELPA REDUCTION")
       call create_elpa_obj(hmat, ne)
@@ -529,10 +531,12 @@ solver%single_precision = .true.
       call timestop("ELPA REDUCTION U2L")
    call timestart("ELPA REDUCTION TRANSFORM_GENERALIZED")
       IF (hmat%l_real) THEN
-         call elpa_obj%elpa_transform_generalized_double(hmat%data_r, smat%data_r, .false., err)
+         allocate(tmp_real(size(hmat%data_r,1),size(hmat%data_r,2)), stat=err)
+         call elpa_obj%elpa_transform_generalized_double(hmat%data_r, smat%data_r, tmp_real, .false., err)
          call check_elpa_err(err, 'elpa_transform_generalized_double')
       else
-         call elpa_obj%elpa_transform_generalized_double_complex(hmat%data_c, smat%data_c, .false., err)
+         allocate(tmp_cmplx(size(hmat%data_c,1),size(hmat%data_c,2)), stat=err)
+         call elpa_obj%elpa_transform_generalized_double_complex(hmat%data_c, smat%data_c, tmp_cmplx, .false., err)
          call check_elpa_err(err, 'elpa_transform_generalized_double_complex')
       endif
    call timestop("ELPA REDUCTION TRANSFORM_GENERALIZED")
@@ -548,6 +552,8 @@ solver%single_precision = .true.
       class(t_mat), intent(INOUT)  :: zmat, smat
       integer :: error, err, ne
 
+      real, allocatable :: tmp_real(:,:)
+      complex, allocatable :: tmp_complex(:,:)
       type(t_mat):: tmp_mat
       type(t_mpimat):: tmp_mpimat, dist_zmat
       call timestart("ELPA BACKTRANSFORM")
@@ -589,10 +595,12 @@ solver%single_precision = .true.
       ! Fallback to old private API when CPP_ELPA_PATCH is defined
       call create_elpa_obj(zmat, ne)
       if (smat%l_real) then
-         call elpa_obj%elpa_transform_back_generalized_double(smat%data_r, zmat%data_r, error)
+         allocate(tmp_real(size(zmat%data_r,1),size(zmat%data_r,2)), stat=err)
+         call elpa_obj%elpa_transform_back_generalized_double(smat%data_r, zmat%data_r, tmp_real,error)
          call check_elpa_err(error, 'elpa_transform_back_generalized_double')
       else
-         call elpa_obj%elpa_transform_back_generalized_double_complex(smat%data_c, zmat%data_c, error)
+         allocate(tmp_complex(size(zmat%data_c,1),size(zmat%data_c,2)), stat=err)
+         call elpa_obj%elpa_transform_back_generalized_double_complex(smat%data_c, zmat%data_c, tmp_complex, error)
          call check_elpa_err(error, 'elpa_transform_back_generalized_double_complex')
       endif
       call elpa_deallocate(elpa_obj, err)
