@@ -445,7 +445,7 @@ solver%single_precision = .true.
       integer, intent(IN)  :: ne
       integer            :: err
       real, allocatable :: tmp_real(:,:)
-      complex, allocatable :: tmp_complex(:,:)
+      complex, allocatable :: tmp_cmplx(:,:)
 
       call timestart("ELPA REDUCTION")
       call create_elpa_obj(hmat, ne)
@@ -553,7 +553,7 @@ solver%single_precision = .true.
       integer :: error, err, ne
 
       real, allocatable :: tmp_real(:,:)
-      complex, allocatable :: tmp_complex(:,:)
+      complex, allocatable :: tmp_cmplx(:,:)
       type(t_mat):: tmp_mat
       type(t_mpimat):: tmp_mpimat, dist_zmat
       call timestart("ELPA BACKTRANSFORM")
@@ -599,8 +599,8 @@ solver%single_precision = .true.
          call elpa_obj%elpa_transform_back_generalized_double(smat%data_r, zmat%data_r, tmp_real,error)
          call check_elpa_err(error, 'elpa_transform_back_generalized_double')
       else
-         allocate(tmp_complex(size(zmat%data_c,1),size(zmat%data_c,2)), stat=err)
-         call elpa_obj%elpa_transform_back_generalized_double_complex(smat%data_c, zmat%data_c, tmp_complex, error)
+         allocate(tmp_cmplx(size(zmat%data_c,1),size(zmat%data_c,2)), stat=err)
+         call elpa_obj%elpa_transform_back_generalized_double_complex(smat%data_c, zmat%data_c, tmp_cmplx, error)
          call check_elpa_err(error, 'elpa_transform_back_generalized_double_complex')
       endif
       call elpa_deallocate(elpa_obj, err)
