@@ -235,8 +235,10 @@ contains
 #ifdef CPP_CHASE
       integer:: mbsize, nbsize, irsrc, icsrc, dim0, dim1, myprow, mypcol
       integer :: comm_1d, comm_2d, ierr
+   integer :: irank_parent, isize_parent, irank_2d, isize_2d, irank_1d, isize_1d
       integer :: nex !extra search space
       integer :: init  !status variable
+   logical :: chase_debug
       !chase will modify these variables in call to xchase even though these are not arguments!!
       real, allocatable, volatile :: eigval(:)
       type(t_mpimat), volatile :: ztemp
@@ -258,6 +260,26 @@ contains
       call create_mpi_comms(hmat%blacsdata%mpi_com, hmat%blacsdata%blacs_desc(2), comm_2d, comm_1d)
       call timestop("CHASE MPI COMMS")
 
+      chase_debug = .true.
+      if (comm_1d == MPI_COMM_NULL .or. comm_2d == MPI_COMM_NULL) then
+         call juDFT_error("ChASE communicator creation failed (MPI_COMM_NULL)", calledby="chase_mpi_dp")
+      end if
+
+      if (chase_debug) then
+         call MPI_COMM_RANK(hmat%blacsdata%mpi_com, irank_parent, ierr)
+         call MPI_COMM_SIZE(hmat%blacsdata%mpi_com, isize_parent, ierr)
+         call MPI_COMM_RANK(comm_2d, irank_2d, ierr)
+         call MPI_COMM_SIZE(comm_2d, isize_2d, ierr)
+         call MPI_COMM_RANK(comm_1d, irank_1d, ierr)
+         call MPI_COMM_SIZE(comm_1d, isize_1d, ierr)
+            write(*,*) "ChASE DEBUG rank", irank_parent, "/", isize_parent, &
+                 "grid", myprow, mypcol, "dims", dim0, dim1, &
+                 "comm2d", irank_2d, "/", isize_2d, &
+                 "comm1d", irank_1d, "/", isize_1d, &
+                 "N", hmat%global_size1, "ne", ne, "nex", nex, &
+                 "mb", mbsize, "nb", nbsize, "irsrc", irsrc, "icsrc", icsrc
+      end if
+
       call ztemp%init(hmat%l_real, hmat%global_size1, ne + nex, comm_1d, MPIMAT_COLUMN_BLOCK_CYCLIC)
 
       call timestart("CHASE MPI U2L")
@@ -265,10 +287,12 @@ contains
       call timestop("CHASE MPI U2L")
       if (hmat%l_real) then
          ! Initialize of ChASE
+         if (chase_debug) write(*,*) "ChASE DEBUG before pdchase_init_blockcyclic rank", irank_parent
          call timestart("CHASE MPI INIT")
          call pdchase_init_blockcyclic(hmat%global_size1, ne, nex, mbsize, nbsize, hmat%data_r, hmat%matsize1, &
                                        ztemp%data_r, eigval, dim0, dim1, grid_major, irsrc, icsrc, comm_2d, init)
          call timestop("CHASE MPI INIT")
+         if (chase_debug) write(*,*) "ChASE DEBUG after pdchase_init_blockcyclic rank", irank_parent, "init", init
 !Solve eigenvalue problem
          call timestart("CHASE MPI SOLVE")
          call pdchase(deg, tol, mode, opt, qr)
@@ -279,10 +303,12 @@ contains
          call timestop("CHASE MPI FINALIZE")
       else
          ! Initialize of ChASE
+         if (chase_debug) write(*,*) "ChASE DEBUG before pzchase_init_blockcyclic rank", irank_parent
          call timestart("CHASE MPI INIT")
          call pzchase_init_blockcyclic(hmat%global_size1, ne, nex, mbsize, nbsize, hmat%data_c, hmat%matsize1, &
                                        ztemp%data_c, eigval, dim0, dim1, grid_major, irsrc, icsrc, comm_2d, init)
          call timestop("CHASE MPI INIT")
+         if (chase_debug) write(*,*) "ChASE DEBUG after pzchase_init_blockcyclic rank", irank_parent, "init", init
          !Solve eigenvalue problem
          call timestart("CHASE MPI SOLVE")
          call pzchase(deg, tol, mode, opt, qr)
