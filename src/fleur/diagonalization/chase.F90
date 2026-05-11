@@ -282,6 +282,15 @@ contains
 
       call ztemp%init(hmat%l_real, hmat%global_size1, ne + nex, comm_1d, MPIMAT_COLUMN_BLOCK_CYCLIC)
 
+         if (chase_debug) then
+            write(*,*) "ChASE DEBUG local rank", irank_parent, &
+                       "H local", hmat%matsize1, hmat%matsize2, &
+                       "H desc mb/nb", hmat%blacsdata%blacs_desc(5), hmat%blacsdata%blacs_desc(6), &
+                       "V local", ztemp%matsize1, ztemp%matsize2, &
+                       "V desc mb/nb", ztemp%blacsdata%blacs_desc(5), ztemp%blacsdata%blacs_desc(6), &
+                       "V desc ctxt", ztemp%blacsdata%blacs_desc(2)
+         end if
+
       call timestart("CHASE MPI U2L")
       call hmat%u2l() !chase needs full matrix not only upper part!
       call timestop("CHASE MPI U2L")
