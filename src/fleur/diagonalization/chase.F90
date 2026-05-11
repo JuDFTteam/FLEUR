@@ -314,20 +314,17 @@ contains
 #ifdef CPP_CHASE
 
       integer:: isize, ierr, i, col, row, no_col, no_row, myprow, mypcol
-      integer, allocatable:: map1d(:), map2d(:)
+      integer, allocatable:: map2d(:)
       integer :: group, group_2d, group_1d
 
       call timestart("CHASE MPI COMMS BUILD")
       call BLACS_GRIDINFO(icontext, no_row, no_col, MYPROW, MYPCOL)
       call MPI_COMM_SIZE(parent_comm, isize, ierr)
       allocate (map2d(0:isize-1))
-      allocate (map1d(0:no_row-1))
-      
-      map1d = isize !largest value
+
       do i = 0, isize - 1
          call blacs_pcoord(icontext, i, ROW, COL)
          map2d(row + no_row*col) = i
-         map1d(row) = min(map1d(row), i)
       end do
       
       !create 2d communicator
@@ -335,13 +332,14 @@ contains
       call MPI_Group_incl(group, isize, map2d, group_2d, ierr)
       call MPI_COMM_create_group(parent_comm, group_2d, 1, comm_2d, ierr)
 
-      !create 1d communicator
-      call MPI_COMM_group(parent_comm, group, ierr)
-      call MPI_Group_incl(group, size(map1d), map1d, group_1d, ierr)
-      call MPI_COMM_create_group(parent_comm, group_1d, 1, comm_1d, ierr)
+      !create 1d communicator per process column (all ranks get a valid comm_1d)
+      call MPI_COMM_split(parent_comm, MYPCOL, MYPROW, comm_1d, ierr)
+
+      ! group_1d is unused with MPI_COMM_split, keep a valid null handle for cleanup
+      group_1d = MPI_GROUP_NULL
 
       call MPI_group_free(group_2d, ierr)
-      call MPI_group_free(group_1d, ierr)
+      if (group_1d /= MPI_GROUP_NULL) call MPI_group_free(group_1d, ierr)
       call MPI_group_free(group, ierr)
       call timestop("CHASE MPI COMMS BUILD")
 #endif
