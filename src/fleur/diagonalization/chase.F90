@@ -106,26 +106,39 @@ contains
       allocate (eigval(ne+nex))
       allocate (t_mat::zmat)
       call zmat%init(hmat%l_real, hmat%matsize1, ne)
+      call timestart("CHASE STD U2L")
       call hmat%u2l() !chase needs full matrix not only upper part!
+      call timestop("CHASE STD U2L")
       if (hmat%l_real) then
          allocate (zr(hmat%matsize1, ne + nex))
          ! Initialize of ChASE
-         
+         call timestart("CHASE STD INIT")
          call dchase_init(size(hmat%data_r,1), ne, nex, hmat%data_r, size(hmat%data_r,1),zr, eigval, init)
+         call timestop("CHASE STD INIT")
          !Solve eigenvalue problem
+         call timestart("CHASE STD SOLVE")
          call dchase(deg, tol, mode, opt,qr)
+         call timestop("CHASE STD SOLVE")
          ! finalize and clean up
+         call timestart("CHASE STD FINALIZE")
          call dchase_finalize(init)
+         call timestop("CHASE STD FINALIZE")
          
          zmat%data_r = zr(:, :ne)
       else
          allocate (zc(hmat%matsize1, ne + nex))
          ! Initialize of ChASE
+         call timestart("CHASE STD INIT")
          call zchase_init(hmat%matsize1, ne, nex, hmat%data_c, size(hmat%data_c,1), zc, eigval, init)
+         call timestop("CHASE STD INIT")
          !Solve eigenvalue problem
+         call timestart("CHASE STD SOLVE")
          call zchase(deg, tol, mode, opt,qr)
+         call timestop("CHASE STD SOLVE")
          ! finalize and clean up
+         call timestart("CHASE STD FINALIZE")
          call zchase_finalize(init)
+         call timestop("CHASE STD FINALIZE")
          zmat%data_c = zc(:, :ne)
       end if
       eig(:ne) = eigval(:ne)
@@ -162,28 +175,42 @@ contains
       allocate (t_mat::zmat)
       call zmat%init(hmat%l_real, hmat%matsize1, ne)
 
+      call timestart("CHASE STD-SP U2L")
       call hmat%u2l() !chase needs full matrix not only upper part!
+      call timestop("CHASE STD-SP U2L")
       if (hmat%l_real) then
          allocate (zr(hmat%matsize1, ne + nex))
          allocate (hr(hmat%matsize1, hmat%matsize2))
          hr = hmat%data_r  !cast to sp
          ! Initialize of ChASE
+         call timestart("CHASE STD-SP INIT")
          call schase_init(hmat%matsize1, ne, nex, hr,size(hr,1), zr, eigval, init)
+         call timestop("CHASE STD-SP INIT")
          !Solve eigenvalue problem
+         call timestart("CHASE STD-SP SOLVE")
          call schase(deg, tol, mode, opt,qr)
+         call timestop("CHASE STD-SP SOLVE")
          ! finalize and clean up
+         call timestart("CHASE STD-SP FINALIZE")
          call schase_finalize(init)
+         call timestop("CHASE STD-SP FINALIZE")
          zmat%data_r = zr(:, :ne)
       else
          allocate (zc(hmat%matsize1, ne + nex))
          allocate (hc(hmat%matsize1, hmat%matsize2))
          hc = hmat%data_c
          ! Initialize of ChASE
+         call timestart("CHASE STD-SP INIT")
          call cchase_init(hmat%matsize1, ne, nex, hc, size(hc,1),zc, eigval, init)
+         call timestop("CHASE STD-SP INIT")
          !Solve eigenvalue problem
+         call timestart("CHASE STD-SP SOLVE")
          call cchase(deg, tol, mode, opt,qr)
+         call timestop("CHASE STD-SP SOLVE")
          ! finalize and clean up
+         call timestart("CHASE STD-SP FINALIZE")
          call cchase_finalize(init)
+         call timestop("CHASE STD-SP FINALIZE")
          zmat%data_c = zc(:, :ne)
       end if
       eig(:ne) = eigval(:ne)
@@ -227,36 +254,56 @@ contains
       !dim0 :row number of 2D MPI grid
       !dim1 :column number of 2D MPI grid
       call BLACS_GRIDINFO(hmat%blacsdata%blacs_desc(2), dim0, dim1, MYPROW, MYPCOL)
+      call timestart("CHASE MPI COMMS")
       call create_mpi_comms(hmat%blacsdata%mpi_com, hmat%blacsdata%blacs_desc(2), comm_2d, comm_1d)
+      call timestop("CHASE MPI COMMS")
 
       call ztemp%init(hmat%l_real, hmat%global_size1, ne + nex, comm_1d, MPIMAT_COLUMN_BLOCK_CYCLIC)
 
+      call timestart("CHASE MPI U2L")
       call hmat%u2l() !chase needs full matrix not only upper part!
+      call timestop("CHASE MPI U2L")
       if (hmat%l_real) then
          ! Initialize of ChASE
+         call timestart("CHASE MPI INIT")
          call pdchase_init_blockcyclic(hmat%global_size1, ne, nex, mbsize, nbsize, hmat%data_r, hmat%matsize1, &
                                        ztemp%data_r, eigval, dim0, dim1, grid_major, irsrc, icsrc, comm_2d, init)
+         call timestop("CHASE MPI INIT")
 !Solve eigenvalue problem
+         call timestart("CHASE MPI SOLVE")
          call pdchase(deg, tol, mode, opt, qr)
+         call timestop("CHASE MPI SOLVE")
          ! finalize and clean up
+         call timestart("CHASE MPI FINALIZE")
          call pdchase_finalize(init)
+         call timestop("CHASE MPI FINALIZE")
       else
          ! Initialize of ChASE
+         call timestart("CHASE MPI INIT")
          call pzchase_init_blockcyclic(hmat%global_size1, ne, nex, mbsize, nbsize, hmat%data_c, hmat%matsize1, &
                                        ztemp%data_c, eigval, dim0, dim1, grid_major, irsrc, icsrc, comm_2d, init)
+         call timestop("CHASE MPI INIT")
          !Solve eigenvalue problem
+         call timestart("CHASE MPI SOLVE")
          call pzchase(deg, tol, mode, opt, qr)
+         call timestop("CHASE MPI SOLVE")
          ! finalize and clean up
+         call timestart("CHASE MPI FINALIZE")
          call pzchase_finalize(init)
+         call timestop("CHASE MPI FINALIZE")
       end if
       !create zmat in correct distribution
+      call timestart("CHASE MPI REDIST")
       allocate (t_mpimat::zmat)
       call zmat%init(hmat%l_real, hmat%matsize1, ne + NEX, hmat%blacsdata%mpi_com, MPIMAT_ROWCYCLIC)
       call zmat%copy(ztemp, 1, 1)
+      call timestop("CHASE MPI REDIST")
       eig(:ne) = eigval(:ne)
 
+      call timestart("CHASE MPI COMM_FREE")
       call MPI_COMM_FREE(comm_1d, ierr)
       call MPI_COMM_FREE(comm_2d, ierr)
+      call timestop("CHASE MPI COMM_FREE")
 #endif
       call timestop("CHASE MPI-STD")
    end subroutine chase_mpi_dp
@@ -270,6 +317,7 @@ contains
       integer, allocatable:: map1d(:), map2d(:)
       integer :: group, group_2d, group_1d
 
+      call timestart("CHASE MPI COMMS BUILD")
       call BLACS_GRIDINFO(icontext, no_row, no_col, MYPROW, MYPCOL)
       call MPI_COMM_SIZE(parent_comm, isize, ierr)
       allocate (map2d(0:isize-1))
@@ -295,6 +343,7 @@ contains
       call MPI_group_free(group_2d, ierr)
       call MPI_group_free(group_1d, ierr)
       call MPI_group_free(group, ierr)
+      call timestop("CHASE MPI COMMS BUILD")
 #endif
 
    end subroutine
