@@ -529,11 +529,11 @@ solver%single_precision = .true.
       call timestop("ELPA REDUCTION U2L")
    call timestart("ELPA REDUCTION TRANSFORM_GENERALIZED")
       IF (hmat%l_real) THEN
-         call elpa_obj%elpa_transform_generalized_d(hmat%data_r, smat%data_r, .false., err)
-         call check_elpa_err(err, 'elpa_transform_generalized_d')
+         call elpa_obj%elpa_transform_generalized_double(hmat%data_r, smat%data_r, .false., err)
+         call check_elpa_err(err, 'elpa_transform_generalized_double')
       else
-         call elpa_obj%elpa_transform_generalized_dc(hmat%data_c, smat%data_c, .false., err)
-         call check_elpa_err(err, 'elpa_transform_generalized_dc')
+         call elpa_obj%elpa_transform_generalized_double_complex(hmat%data_c, smat%data_c, .false., err)
+         call check_elpa_err(err, 'elpa_transform_generalized_double_complex')
       endif
    call timestop("ELPA REDUCTION TRANSFORM_GENERALIZED")
 #endif
@@ -589,11 +589,11 @@ solver%single_precision = .true.
       ! Fallback to old private API when CPP_ELPA_PATCH is defined
       call create_elpa_obj(zmat, ne)
       if (smat%l_real) then
-         call elpa_obj%elpa_transform_back_generalized_d(smat%data_r, zmat%data_r, error)
-         call check_elpa_err(error, 'elpa_transform_back_generalized_d')
+         call elpa_obj%elpa_transform_back_generalized_double(smat%data_r, zmat%data_r, error)
+         call check_elpa_err(error, 'elpa_transform_back_generalized_double')
       else
-         call elpa_obj%elpa_transform_back_generalized_dc(smat%data_c, zmat%data_c, error)
-         call check_elpa_err(error, 'elpa_transform_back_generalized_dc')
+         call elpa_obj%elpa_transform_back_generalized_double_complex(smat%data_c, zmat%data_c, error)
+         call check_elpa_err(error, 'elpa_transform_back_generalized_double_complex')
       endif
       call elpa_deallocate(elpa_obj, err)
       call check_elpa_err(err, 'elpa_deallocate')
