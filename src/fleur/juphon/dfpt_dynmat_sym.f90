@@ -6,103 +6,68 @@ MODULE m_dfpt_dynmat_sym
 
    IMPLICIT NONE
 CONTAINS
-   SUBROUTINE ft_dyn(atoms, qpts, sym, amat, dyn_mat_q, dyn_mat_r, dyn_mat_q_full)
+   SUBROUTINE ft_dyn(atoms, qpts, sym, ft_lim, amat, dyn_mat_q, dyn_mat_r, dyn_mat_q_full)
       !! Transforms the dynamical matrices for a set of q vectors in the
       !! irreducible Brillouin zone onto the full set of q vector in the BZ
       !! and subsequently transforms it to real space (lattice vector grid), to
       !! calculate the mass-normalized Force Constant Matrix.
-      type(t_atoms), INTENT(IN)   :: atoms
-      type(t_kpts),  INTENT(IN)   :: qpts
-      type(t_sym),   INTENT(IN)   :: sym
-      REAL,          INTENT(IN)   :: amat(3,3)
-      COMPLEX,       INTENT(IN)  :: dyn_mat_q(:,:,:) ! (nqpt,dyn_dim,dyn_dim)
-      COMPLEX,       INTENT(OUT) :: dyn_mat_r(:,:,:) ! (nqptf,dyn_dim,dyn_dim)
+      type(t_atoms), intent(in)       :: atoms
+      type(t_kpts),  intent(in)       :: qpts
+      type(t_sym),   intent(in)       :: sym
+      integer,       intent(in)       :: ft_lim(2,3)
+      real,          intent(in)       :: amat(3,3)
+      complex,       intent(in)       :: dyn_mat_q(:,:,:) ! (nqpt,dyn_dim,dyn_dim)
+      complex,intent(out)             :: dyn_mat_r(0:,0:,0:,:,:) ! (n1,n2,n3,dyn_dim,dyn_dim)
 
-      COMPLEX, ALLOCATABLE, INTENT(OUT) :: dyn_mat_q_full(:,:,:)
-      INTEGER :: mrot(3,3),invmrot(3,3)
+      complex, allocatable, intent(out) :: dyn_mat_q_full(:,:,:)
+      integer :: mrot(3,3),invmrot(3,3)
       logical :: l_inv
 
-      INTEGER :: iq, dyn_dim, iqfull
-      INTEGER :: isym, r_lim(2,3)
-      INTEGER :: j1, j2, j3
-      REAL    :: q_full(3), q_full_BZ(3), trans(3)
-
-      ! INTEGER, ALLOCATABLE :: qvec_to_index(:,:,:)
-      COMPLEX, ALLOCATABLE :: dyn_mat_qsym(:,:)
+      complex,allocatable :: fft_grid(:,:,:) ! (nqptf,dyn_dim,dyn_dim)
+      integer :: iq, dyn_dim, iqfull
+      integer :: isym
+      integer :: iz, iy, ix, iGrid
+      real    :: q_full(3), trans(3)
+      complex, allocatable :: dyn_mat_qsym(:,:)
 
       dyn_dim = 3*atoms%nat
 
-      !allocate(qvec_to_index(0:qpts%nkpt3(1)-1,0:qpts%nkpt3(2)-1,0:qpts%nkpt3(3)-1))
       allocate(dyn_mat_qsym(dyn_dim,dyn_dim))
       allocate(dyn_mat_q_full(qpts%nkptf,dyn_dim,dyn_dim))
-      !qvec_to_index = 0 
-      ! Create an array that maps the q coordinates to the index of their q vector
-      ! in the full BZ
-      ! DO j1 = 0, qpts%nkpt3(1)-1
-      !    q_full(1) = j1*1.0/qpts%nkpt3(1)
-      !    DO j2 = 0, qpts%nkpt3(2)-1
-      !       q_full(2) = j2*1.0/qpts%nkpt3(2)
-      !       DO j3 = 0, qpts%nkpt3(3)-1
-      !          q_full(3) = j3*1.0/qpts%nkpt3(3)
-      !          DO iq = 1, qpts%nkptf
-      !             IF (norm2(q_full-qpts%bkf(:,iq))<1e-8) THEN 
-      !                qvec_to_index(j1, j2, j3) = iq
-      !             end if 
-      !          END DO
-      !       END DO
-      !    END DO
-      ! END DO
+      allocate(fft_grid(qpts%nkptf,dyn_dim,dyn_dim))
+      fft_grid(:,:,:) = cmplx(0.0,0.0)
 
-
-      r_lim(2,:) = qpts%nkpt3(:)/2
-      r_lim(1,:) = r_lim(2,:) - qpts%nkpt3(:) + 1
-
-      dyn_mat_r(:,:,:) = cmplx(0.0,0.0)
-
-      DO iqfull = 1, qpts%nkptf
+      do iqfull = 1, qpts%nkptf
          ! Get q vector index and that of its representative in the irreducible wedge
          iq = qpts%bkp(iqfull)
          ! Fold vector back to 1st BZ if necessary
          q_full = qpts%bkf(:,iqfull)
          isym = qpts%bksym(iqfull)
-         CALL sym%get_sym_operation_int_coord(isym,mrot,invmrot,trans,l_inv)
+         call sym%get_sym_operation_int_coord(isym,mrot,invmrot,trans,l_inv)
          if (.not. all(trans == 0 )) call juDFT_error("dynMat interpolation with non symmorphic symmetries is currently not supported. & 
                                                       Please redo the calculation of the IBZ and interpolation with a symmorphic group.",calledby="dfpt_dynmat_sym.f90")
          if (l_inv) isym = isym - sym%nop ! the corresponding symmetry operation 
          dyn_mat_qsym(:,:) = cmplx(0.0,0.0)
-         CALL rotate_dynmat(atoms,sym,isym,mrot,invmrot,l_inv,amat,qpts%bk(:,iq),dyn_mat_q(iq,:,:),dyn_mat_qsym)
+         call rotate_dynmat(atoms,sym,isym,mrot,invmrot,l_inv,amat,qpts%bk(:,iq),dyn_mat_q(iq,:,:),dyn_mat_qsym)
          dyn_mat_qsym(:,:) = dyn_mat_qsym(:,:)
          dyn_mat_q_full(iqfull,:,:) = dyn_mat_qsym
 
          ! Perform the actual FT onto the lattice vector grid
-         CALL ft_dyn_direct(r_lim,1,q_full,dyn_mat_qsym,dyn_mat_r)
-      END DO
-      !   DO j1 = 0, qpts%nkpt3(1)-1
-      !    q_full(1) = j1*1.0/qpts%nkpt3(1)
-      !    DO j2 = 0, qpts%nkpt3(2)-1
-      !       q_full(2) = j2*1.0/qpts%nkpt3(2)
-      !       DO j3 = 0, qpts%nkpt3(3)-1
-      !          q_full(3) = j3*1.0/qpts%nkpt3(3)
-      !          ! Get q vector index and that of its representative in the irreducible wedge
-      !          iqfull = qvec_to_index(j1, j2, j3)
-      !          iq = qpts%bkp(iqfull)
-      !          ! Fold vector back to 1st BZ if necessary
-      !          q_full_BZ(:)=q_full(:)
-      !          q_full_BZ = qpts%to_first_bz(q_full)
-      !          isym = qpts%bksym(iqfull)
-      !          CALL sym%get_sym_operation_int_coord(isym,mrot,invmrot,trans,l_inv)
-      !          if (l_inv) isym = isym - sym%nop ! the corresponding symmetry operation 
-      !          dyn_mat_qsym(:,:) = cmplx(0.0,0.0)
-      !          CALL rotate_dynmat(atoms,sym,isym,mrot,invmrot,l_inv,amat,qpts%bk(:,iq),dyn_mat_q(iq,:,:),dyn_mat_qsym)
-      !          dyn_mat_qsym(:,:) = dyn_mat_qsym(:,:)
-      !          dyn_mat_q_full(iqfull,:,:) = dyn_mat_qsym
+         call ft_dyn_direct(ft_lim,1,q_full,dyn_mat_qsym,fft_grid)
+      end do 
 
-      !          ! Perform the actual FT onto the lattice vector grid
-      !          CALL ft_dyn_direct(r_lim,1,q_full,dyn_mat_qsym,dyn_mat_r)
-      !       END DO
-      !    END DO
-      ! END DO
-      dyn_mat_r(:,:,:)=dyn_mat_r(:,:,:)/qpts%nkptf
+      fft_grid(:,:,:)=fft_grid(:,:,:)/qpts%nkptf
+      ! unroll the FCM on supercell index
+      
+      iGrid = 1 
+      do iz=ft_lim(1,3),ft_lim(2,3)
+         do iy=ft_lim(1,2),ft_lim(2,2)
+            do ix=ft_lim(1,1),ft_lim(2,1)
+               dyn_mat_r(ix,iy,iz,:,:)= fft_grid(iGrid,:,:)
+               iGrid = iGrid + 1 
+            end do !ix
+         end do !iy
+      end do !iz
    END SUBROUTINE
 
    SUBROUTINE ft_dyn_direct(ft_lim,isn,bqpt,dyn_mat_q,dyn_mat_r)
@@ -112,7 +77,7 @@ CONTAINS
       COMPLEX,INTENT(INOUT) :: dyn_mat_q(:,:)
       COMPLEX,INTENT(INOUT) :: dyn_mat_r(:,:,:)
 
-      INTEGER :: iGrid, ix, iy, iz, iout
+      INTEGER :: iGrid, ix, iy, iz
       REAL    :: phas
       COMPLEX :: phase_fac
       iGrid=0
@@ -131,6 +96,38 @@ CONTAINS
          END DO
       END DO
    END SUBROUTINE
+
+   subroutine ft_fcm_weight(ft_lim,bigBoxLim,weights,bqpt,dyn_mat_q,dyn_mat_r)
+      ! Fourier transform for a fourier transfrom from a bigger box
+      ! make use of weights to enforce correct periodicity 
+
+      integer, intent(in) :: ft_lim(2,3), bigBoxlim(2,3)
+      real,    intent(in) :: bqpt(3)
+      real,    intent(in) :: weights(:)
+
+      complex,intent(inout) :: dyn_mat_q(:,:)
+      complex,intent(in) :: dyn_mat_r(0:,0:,0:,:,:)
+
+      integer :: iGrid, ix, iy, iz, nx, ny, nz 
+      real    :: phas
+      complex :: phase_fac
+
+      iGrid=0
+      do iz=bigBoxlim(1,3),bigBoxlim(2,3)
+         do iy=bigBoxlim(1,2),bigBoxlim(2,2)
+            do ix=bigBoxlim(1,1),bigBoxlim(2,1)
+               iGrid = iGrid+1
+               phas=-1*tpi_const*(bqpt(1)*ix+bqpt(2)*iy+bqpt(3)*iz)
+               phase_fac=cmplx(cos(phas),sin(phas))
+               ! map to smaller box 
+               nx = modulo(ix,ft_lim(2,1)+1)
+               ny = modulo(iy,ft_lim(2,2)+1)
+               nz = modulo(iz,ft_lim(2,3)+1)
+               dyn_mat_q(:,:)    = dyn_mat_q(:,:)    + phase_fac*weights(iGrid)*dyn_mat_r(nx,ny,nz,:,:)
+            end do 
+         end do 
+      end do 
+   end subroutine 
 
    SUBROUTINE rotate_dynmat(atoms,sym,isym,mrot,invmrot,l_inv,amat,bqpt,dyn,dyn_mat_qsym)
       !! Applies a symmetry operation to the dynamical matrix of an IBZ q vector
@@ -214,31 +211,36 @@ CONTAINS
       END DO
    END SUBROUTINE
 
-   SUBROUTINE ift_dyn(atoms,qpts,sym,amat,bqpt,dyn_mat_r,dyn_mat_q)
+   SUBROUTINE ift_dyn(atoms,qpts,ft_lim,bigBox_lim,weights,bqpt,dyn_mat_r,dyn_mat_q)
       !! Transforms the dynamical matrix on a real space lattice vector grid
       !! (--> mass-normalized FCM) back onto a specific q vector provided as
       !! input (bqpt) by the inverse Fourier Transformation as compared to
       !! SUBROUTINE ft_dyn.
-      type(t_atoms), INTENT(IN) :: atoms
-      type(t_kpts),  INTENT(IN) :: qpts
-      type(t_sym),   INTENT(IN) :: sym
-      REAL,          INTENT(IN) :: amat(3,3)
-      REAL,          INTENT(IN) :: bqpt(3)
-      COMPLEX,       INTENT(INOUT) :: dyn_mat_r(:,:,:)
+      type(t_atoms), intent(in) :: atoms
+      type(t_kpts),  intent(in) :: qpts
+      integer,  intent(in) :: ft_lim(2,3), bigBox_lim(2,3)
+      real,     intent(in) :: weights(:) 
+      real,          intent(in) :: bqpt(3)
+      complex,       intent(in) :: dyn_mat_r(0:,0:,0:,:,:)
 
-      COMPLEX, ALLOCATABLE, INTENT(OUT) :: dyn_mat_q(:,:)
+      complex, allocatable, intent(out) :: dyn_mat_q(:,:)
 
-      INTEGER :: dyn_dim, q_lim(2,3)
+      integer :: dyn_dim , iGrid 
 
       dyn_dim = 3*atoms%nat
 
       allocate(dyn_mat_q(dyn_dim,dyn_dim))
       dyn_mat_q(:,:) = cmplx(0.0,0.0)
 
-      q_lim(2,:) = qpts%nkpt3(:)/2
-      q_lim(1,:) = q_lim(2,:) - qpts%nkpt3(:) + 1
 
-      CALL ft_dyn_direct(q_lim,-1,bqpt,dyn_mat_q,dyn_mat_r)
+      do iGrid = 1 , size(weights)
+         write(42,*) "WSweight" , weights(iGrid)
+      end do 
+      !CALL ft_dyn_direct(q_lim,-1,bqpt,dyn_mat_q,dyn_mat_r)
+
+      call ft_fcm_weight(ft_lim,bigBox_lim,weights,bqpt,dyn_mat_q,dyn_mat_r)
+
+
    END SUBROUTINE
 
    SUBROUTINE make_sym_list(sym, bqpt, sym_count, sym_list)
