@@ -47,7 +47,7 @@ if (FLEUR_COMPILE_SCALAPACK)
     BUILD_IN_SOURCE true
     #GIT_REPOSITORY https://gitlab.mpcdf.mpg.de/elpa/elpa.git
     #GIT_TAG release_2024_05_001
-    URL https:////elpa.mpcdf.mpg.de/software/tarball-archive/Releases/2026.02.001/elpa-2026.02.001.tar.gz
+    URL https://elpa.mpcdf.mpg.de/software/tarball-archive/Releases/2026.02.001/elpa-2026.02.001.tar.gz
     PATCH_COMMAND patch -p1 < ${CMAKE_SOURCE_DIR}/cmake/patch/elpa-make-transform-public.patch
     CONFIGURE_COMMAND sh ${conffile}
     BUILD_COMMAND make
