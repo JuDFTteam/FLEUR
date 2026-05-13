@@ -45,6 +45,31 @@ contains
          call juDFT_error(trim(errmsg), calledby='elpa')
       end if
    end subroutine check_elpa_err
+
+   subroutine dump_mat_layout(where, mat)
+      implicit none
+      character(len=*), intent(in) :: where
+      class(t_mat), intent(in) :: mat
+      integer :: rank, ierr
+
+      select type (mat)
+      type is (t_mpimat)
+         rank = -1
+#ifdef CPP_MPI
+         call MPI_COMM_RANK(mat%blacsdata%mpi_com, rank, ierr)
+#endif
+         write(oUnit, '(a,1x,a,1x,a,1x,i0)') 'ELPA layout dump', trim(where), 'rank', rank
+         write(oUnit, '(a,2(1x,i0),a,2(1x,i0),a,2(1x,i0))') '  global', mat%global_size1, mat%global_size2, &
+                                                            'local', mat%matsize1, mat%matsize2, &
+                                                            'grid', mat%blacsdata%nprow, mat%blacsdata%npcol
+         write(oUnit, '(a,2(1x,i0),a,4(1x,i0))') '  prow/pcol', mat%blacsdata%myrow, mat%blacsdata%mycol, &
+                                                 'desc', mat%blacsdata%blacs_desc(5), mat%blacsdata%blacs_desc(6), &
+                                                 mat%blacsdata%blacs_desc(7), mat%blacsdata%blacs_desc(8)
+      type is (t_mat)
+         write(oUnit, '(a,1x,a)') 'ELPA layout dump', trim(where)
+         write(oUnit, '(a,l1,a,2(1x,i0))') '  real', mat%l_real, 'size', mat%matsize1, mat%matsize2
+      end select
+   end subroutine dump_mat_layout
 #endif
 
    function get_solver_elpa() result(solver)
@@ -594,13 +619,19 @@ solver%single_precision = .true.
 #else
       ! Fallback to old private API when CPP_ELPA_PATCH is defined
       call create_elpa_obj(zmat, ne)
+      call dump_mat_layout('smat before elpa_transform_back_generalized', smat)
+      call dump_mat_layout('zmat before elpa_transform_back_generalized', zmat)
       if (smat%l_real) then
          allocate(tmp_real(size(zmat%data_r,1),size(zmat%data_r,2)), stat=err)
+         call timestart("ELPA BACKTRANSFORM API REAL")
          call elpa_obj%elpa_transform_back_generalized_double(smat%data_r, zmat%data_r, tmp_real,error)
+         call timestop("ELPA BACKTRANSFORM API REAL")
          call check_elpa_err(error, 'elpa_transform_back_generalized_double')
       else
          allocate(tmp_cmplx(size(zmat%data_c,1),size(zmat%data_c,2)), stat=err)
+         call timestart("ELPA BACKTRANSFORM API CMPLX")
          call elpa_obj%elpa_transform_back_generalized_double_complex(smat%data_c, zmat%data_c, tmp_cmplx, error)
+         call timestop("ELPA BACKTRANSFORM API CMPLX")
          call check_elpa_err(error, 'elpa_transform_back_generalized_double_complex')
       endif
       call elpa_deallocate(elpa_obj, err)
