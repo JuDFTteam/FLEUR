@@ -2,16 +2,9 @@ diff --git a/src/elpa_api.F90 b/src/elpa_api.F90
 index f5457c83..9052700e 100644
 --- a/src/elpa_api.F90
 +++ b/src/elpa_api.F90
-@@ -235,6 +235,36 @@ module elpa_api
+@@ -235,5 +235,20 @@ module elpa_api
            elpa_generalized_eigenvalues_d_ptr_fc               !< GPU device pointers in the GPU version
- 
- 
-+        generic, public :: elpa_transform_generalized => &      !< method to transform a generalized eigenvalue problem to standard form
-+          elpa_transform_generalized_a_h_a_d, &
-+          elpa_transform_generalized_a_h_a_dc, &
-+            elpa_transform_generalized_d_ptr_d, &
-+            elpa_transform_generalized_d_ptr_dc
-+
+
 +        generic, public :: elpa_transform_generalized_double => &
 +          elpa_transform_generalized_a_h_a_d, &
 +          elpa_transform_generalized_d_ptr_d
@@ -20,13 +13,6 @@ index f5457c83..9052700e 100644
 +          elpa_transform_generalized_a_h_a_dc, &
 +          elpa_transform_generalized_d_ptr_dc
 +
-+
-+        generic, public :: elpa_transform_back_generalized => & !< method to back-transform eigenvectors after generalized solve
-+          elpa_transform_back_generalized_a_h_a_d, &
-+          elpa_transform_back_generalized_a_h_a_dc, &
-+            elpa_transform_back_generalized_d_ptr_d, &
-+            elpa_transform_back_generalized_d_ptr_dc
-+
 +        generic, public :: elpa_transform_back_generalized_double => &
 +          elpa_transform_back_generalized_a_h_a_d, &
 +          elpa_transform_back_generalized_d_ptr_d
@@ -34,8 +20,6 @@ index f5457c83..9052700e 100644
 +        generic, public :: elpa_transform_back_generalized_double_complex => &
 +          elpa_transform_back_generalized_a_h_a_dc, &
 +          elpa_transform_back_generalized_d_ptr_dc
-+
-+
        generic, public :: hermitian_multiply => &              !< method for a "hermitian" multiplication of matrices a and b
            elpa_hermitian_multiply_a_h_a_d, &                  !< for real valued matrices:   a**T * b
            elpa_hermitian_multiply_a_h_a_dc, &                 !< for complex valued matrices a**H * b
@@ -85,7 +69,7 @@ index 6f55463e..b00636a5 100644
 +                                             tmp(self%local_nrows, self%local_ncols)
 +#endif
 +      logical             :: is_already_decomposed
-+      integer, optional   :: error
++      integer             :: error
 +    end subroutine
 +  end interface
 +
@@ -103,7 +87,7 @@ index 6f55463e..b00636a5 100644
 +      class(elpa_t)       :: self
 +      type(c_ptr)         :: aDev, bDev, tmpDev
 +      logical             :: is_already_decomposed
-+      integer, optional   :: error
++      integer             :: error
 +    end subroutine
 +  end interface
 +
@@ -125,7 +109,7 @@ index 6f55463e..b00636a5 100644
 +      MATH_DATATYPE(kind=C_DATATYPE_KIND) :: b(self%local_nrows, self%local_ncols), q(self%local_nrows, self%local_ncols), &
 +                                             tmp(self%local_nrows, self%local_ncols)
 +#endif
-+      integer, optional   :: error
++      integer             :: error
 +    end subroutine
 +  end interface
 +
@@ -142,7 +126,7 @@ index 6f55463e..b00636a5 100644
 +      implicit none
 +      class(elpa_t)       :: self
 +      type(c_ptr)         :: bDev, qDev, tmpDev
-+      integer, optional   :: error
++      integer             :: error
 +    end subroutine
 +  end interface
 +
