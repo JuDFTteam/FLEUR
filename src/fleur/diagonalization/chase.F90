@@ -233,13 +233,16 @@ contains
       character(kind=c_char), parameter ::  grid_major = 'C' !major of 2D MPI grid. Row major: grid_major=’R’, column major: grid_major=’C’
       integer, parameter  :: deg = 20
 #ifdef CPP_CHASE
-      integer:: mbsize, nbsize, irsrc, icsrc, dim0, dim1, myprow, mypcol
+   integer:: mbsize, nbsize, irsrc, icsrc, dim0, dim1, myprow, mypcol
       integer :: comm_1d, comm_2d, ierr
       integer :: nex !extra search space
       integer :: init  !status variable
-      type(t_mpimat) :: zmat_chase
+   integer :: j, gcol
+   integer, external :: indxl2g
       !chase will modify these variables in call to xchase even though these are not arguments!!
       real, allocatable, volatile :: eigval(:)
+   real, allocatable :: zmat_chase_r(:, :)
+   complex, allocatable :: zmat_chase_c(:, :)
 
       call timestart("CHASE MPI-STD")
       nex = 0.2*ne
@@ -263,17 +266,16 @@ contains
          call juDFT_error("ChASE communicator creation failed (MPI_COMM_NULL)", calledby="chase_mpi_dp")
       end if
 
-      call zmat_chase%init(hmat%l_real, hmat%global_size1, ne + nex, comm_1d, MPIMAT_COLUMN_BLOCK_CYCLIC)
-
       call timestart("CHASE MPI U2L")
       call hmat%u2l() !chase needs full matrix not only upper part!
       call timestop("CHASE MPI U2L")
 
       if (hmat%l_real) then
+         allocate (zmat_chase_r(hmat%matsize1, ne + nex))
          ! Initialize of ChASE
          call timestart("CHASE MPI INIT")
          call pdchase_init_blockcyclic(hmat%global_size1, ne, nex, mbsize, nbsize, hmat%data_r, hmat%matsize1, &
-                                       zmat_chase%data_r, eigval, dim0, dim1, grid_major, irsrc, icsrc, comm_2d, init)
+                                       zmat_chase_r, eigval, dim0, dim1, grid_major, irsrc, icsrc, comm_2d, init)
          call timestop("CHASE MPI INIT")
 !Solve eigenvalue problem
          call timestart("CHASE MPI SOLVE")
@@ -284,10 +286,11 @@ contains
          call pdchase_finalize(init)
          call timestop("CHASE MPI FINALIZE")
       else
+         allocate (zmat_chase_c(hmat%matsize1, ne + nex))
          ! Initialize of ChASE
          call timestart("CHASE MPI INIT")
          call pzchase_init_blockcyclic(hmat%global_size1, ne, nex, mbsize, nbsize, hmat%data_c, hmat%matsize1, &
-                                       zmat_chase%data_c, eigval, dim0, dim1, grid_major, irsrc, icsrc, comm_2d, init)
+                                       zmat_chase_c, eigval, dim0, dim1, grid_major, irsrc, icsrc, comm_2d, init)
          call timestop("CHASE MPI INIT")
          !Solve eigenvalue problem
          call timestart("CHASE MPI SOLVE")
@@ -299,23 +302,29 @@ contains
          call timestop("CHASE MPI FINALIZE")
       end if
 
+      ! Redistribute ChASE vectors into 2D block-cyclic layout expected by ELPA.
       allocate (t_mpimat::zmat)
       select type (zmat)
       type is (t_mpimat)
          call zmat%init(hmat, hmat%global_size1, ne)
          if (hmat%l_real) then
-            call pdgemr2d(hmat%global_size1, ne, zmat_chase%data_r, 1, 1, zmat_chase%blacsdata%blacs_desc, &
-                          zmat%data_r, 1, 1, zmat%blacsdata%blacs_desc, zmat_chase%blacsdata%blacs_desc(2))
+            do j = 1, zmat%matsize2
+               gcol = indxl2g(j, zmat%blacsdata%blacs_desc(6), zmat%blacsdata%mycol, zmat%blacsdata%blacs_desc(8), zmat%blacsdata%npcol)
+               zmat%data_r(:, j) = zmat_chase_r(:, gcol)
+            end do
          else
-            call pzgemr2d(hmat%global_size1, ne, zmat_chase%data_c, 1, 1, zmat_chase%blacsdata%blacs_desc, &
-                          zmat%data_c, 1, 1, zmat%blacsdata%blacs_desc, zmat_chase%blacsdata%blacs_desc(2))
+            do j = 1, zmat%matsize2
+               gcol = indxl2g(j, zmat%blacsdata%blacs_desc(6), zmat%blacsdata%mycol, zmat%blacsdata%blacs_desc(8), zmat%blacsdata%npcol)
+               zmat%data_c(:, j) = zmat_chase_c(:, gcol)
+            end do
          end if
       class default
          call juDFT_error("Wrong type for ChASE eigenvector output", calledby="chase_mpi_dp")
       end select
 
       eig(:ne) = eigval(:ne)
-      call zmat_chase%free()
+      if (allocated(zmat_chase_r)) deallocate (zmat_chase_r)
+      if (allocated(zmat_chase_c)) deallocate (zmat_chase_c)
 
       call timestart("CHASE MPI COMM_FREE")
       call MPI_COMM_FREE(comm_1d, ierr)
