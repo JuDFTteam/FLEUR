@@ -237,6 +237,7 @@ contains
       integer :: comm_1d, comm_2d, ierr
       integer :: nex !extra search space
       integer :: init  !status variable
+      type(t_mpimat) :: zmat_chase
       !chase will modify these variables in call to xchase even though these are not arguments!!
       real, allocatable, volatile :: eigval(:)
 
@@ -262,8 +263,7 @@ contains
          call juDFT_error("ChASE communicator creation failed (MPI_COMM_NULL)", calledby="chase_mpi_dp")
       end if
 
-      allocate (t_mpimat::zmat)
-      call zmat%init(hmat%l_real, hmat%global_size1, ne + nex, comm_1d, MPIMAT_COLUMN_BLOCK_CYCLIC)
+      call zmat_chase%init(hmat%l_real, hmat%global_size1, ne + nex, comm_1d, MPIMAT_COLUMN_BLOCK_CYCLIC)
 
       call timestart("CHASE MPI U2L")
       call hmat%u2l() !chase needs full matrix not only upper part!
@@ -273,7 +273,7 @@ contains
          ! Initialize of ChASE
          call timestart("CHASE MPI INIT")
          call pdchase_init_blockcyclic(hmat%global_size1, ne, nex, mbsize, nbsize, hmat%data_r, hmat%matsize1, &
-                                       zmat%data_r, eigval, dim0, dim1, grid_major, irsrc, icsrc, comm_2d, init)
+                                       zmat_chase%data_r, eigval, dim0, dim1, grid_major, irsrc, icsrc, comm_2d, init)
          call timestop("CHASE MPI INIT")
 !Solve eigenvalue problem
          call timestart("CHASE MPI SOLVE")
@@ -287,7 +287,7 @@ contains
          ! Initialize of ChASE
          call timestart("CHASE MPI INIT")
          call pzchase_init_blockcyclic(hmat%global_size1, ne, nex, mbsize, nbsize, hmat%data_c, hmat%matsize1, &
-                                       zmat%data_c, eigval, dim0, dim1, grid_major, irsrc, icsrc, comm_2d, init)
+                                       zmat_chase%data_c, eigval, dim0, dim1, grid_major, irsrc, icsrc, comm_2d, init)
          call timestop("CHASE MPI INIT")
          !Solve eigenvalue problem
          call timestart("CHASE MPI SOLVE")
@@ -298,7 +298,24 @@ contains
          call pzchase_finalize(init)
          call timestop("CHASE MPI FINALIZE")
       end if
+
+      allocate (t_mpimat::zmat)
+      select type (zmat)
+      type is (t_mpimat)
+         call zmat%init(hmat, hmat%global_size1, ne)
+         if (hmat%l_real) then
+            call pdgemr2d(hmat%global_size1, ne, zmat_chase%data_r, 1, 1, zmat_chase%blacsdata%blacs_desc, &
+                          zmat%data_r, 1, 1, zmat%blacsdata%blacs_desc, zmat_chase%blacsdata%blacs_desc(2))
+         else
+            call pzgemr2d(hmat%global_size1, ne, zmat_chase%data_c, 1, 1, zmat_chase%blacsdata%blacs_desc, &
+                          zmat%data_c, 1, 1, zmat%blacsdata%blacs_desc, zmat_chase%blacsdata%blacs_desc(2))
+         end if
+      class default
+         call juDFT_error("Wrong type for ChASE eigenvector output", calledby="chase_mpi_dp")
+      end select
+
       eig(:ne) = eigval(:ne)
+      call zmat_chase%free()
 
       call timestart("CHASE MPI COMM_FREE")
       call MPI_COMM_FREE(comm_1d, ierr)
