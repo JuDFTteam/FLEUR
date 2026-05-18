@@ -266,7 +266,12 @@ contains
                     allocate(dyn_mat_NAC(3*fi%atoms%ntype,3*fi%atoms%ntype))
                     dyn_mat_NAC =cmplx(0.,0.)
                     CALL dfpt_NAC(fi,dyn_mat_NAC)
+                    !call get_NAC_ewald(fi,qpts,stars,dyn_mat_NAC,fi%juPhon%qvec(:,q_list(iQ)),iQ)
+                    !call save_npy("dynmat.npy",dyn_mat(iQ,:,:))
+                    !call save_npy("dynmat_NAC.npy",dyn_mat_NAC)
+                    !print*,"sum(dyn_mat(iQ,:,:))",sum(dyn_mat(iQ,:,:))
                     dyn_mat(iQ,:,:) = dyn_mat(iQ,:,:)+dyn_mat_NAC(:,:) 
+                    !call save_npy("dynmat_plusNAC.npy",dyn_mat_NAC)
                     deallocate(dyn_mat_NAC)
                 END IF
                 call timestart("Dynmat diagonalization")
