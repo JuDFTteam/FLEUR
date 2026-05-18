@@ -78,13 +78,13 @@ index 6f55463e..b00636a5 100644
 +  abstract interface
 +    subroutine elpa_transform_generalized_d_ptr_&
 +           &ELPA_IMPL_SUFFIX&
-+           &_i(self, aDev, bDev, is_already_decomposed, error)
++           &_i(self, aDev, bDev, tmpDev,is_already_decomposed, error)
 +      use, intrinsic :: iso_c_binding
 +      use elpa_constants
 +      import elpa_t
 +      implicit none
 +      class(elpa_t)       :: self
-+      type(c_ptr)         :: aDev, bDev
++      type(c_ptr)         :: aDev, bDev,tmpDev
 +      logical             :: is_already_decomposed
 +      integer             :: error
 +    end subroutine
@@ -117,13 +117,13 @@ index 6f55463e..b00636a5 100644
 +  abstract interface
 +    subroutine elpa_transform_back_generalized_d_ptr_&
 +           &ELPA_IMPL_SUFFIX&
-+           &_i(self, bDev, qDev, error)
++           &_i(self, bDev, qDev, tmpDev,error)
 +      use, intrinsic :: iso_c_binding
 +      use elpa_constants
 +      import elpa_t
 +      implicit none
 +      class(elpa_t)       :: self
-+      type(c_ptr)         :: bDev, qDev
++      type(c_ptr)         :: bDev, qDev,tmpDev
 +      integer             :: error
 +    end subroutine
 +  end interface
