@@ -106,6 +106,7 @@ contains
         print*,"magnetic susc end",magnetic_susc
 
         magnetic_susc_final =1/(1/magnetic_susc -1)
+        magnetic_susc=magnetic_susc_final
         print*,"magnetic_susc_final",magnetic_susc_final
         !final steps
     end subroutine dfpt_magnetic_susc

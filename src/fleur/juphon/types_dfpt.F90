@@ -203,6 +203,9 @@ contains
 
         iDir_start = 1 
         iDir_end   = 3
+        if (juPhon%l_bfield) then
+            iDir_end = 1
+        end if
 
         l_real = fi%sym%invs.and.(.not.fi%noco%l_soc).and.(.not.fi%noco%l_noco).and.fi%atoms%n_hia==0
 
