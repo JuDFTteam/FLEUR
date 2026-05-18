@@ -12,6 +12,8 @@ module m_dfpt_magsusc
     use m_npy
     USE m_make_stars
     use m_inv3
+    USE m_checkdopall
+
 
 
     implicit none
@@ -73,18 +75,19 @@ contains
 
                 call vExt1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
                 call vExt1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
-                call dfpt_vbfield(fi%input,stars,fi%noco,fi%atoms,vExt1,vExt1Im)
-
+                call dfpt_vbfield(fi%input,starsq,fi%noco,fi%atoms,vExt1,vExt1Im)
+                call checkDOPAll(fi%input, sphhar, starsq,fi%atoms, fi%sym, fi%vacuum, fi%cell,vExt1,iSpin,vExt1Im) 
                 !interstitial
                 pwwq2 = CMPLX(0.0,0.0)
-                
-                !CALL dfpt_convol_big(1, starsq , stars, vExt1%pw(:,1), CMPLX(1.0,0.0)*stars%ufft, pwwq2)!starsq
+                !print*,"vExt1%pw",sum(vExt1%pw(:,iSpin))
+                CALL dfpt_convol_big(1, starsq , stars, vExt1%pw(:,iSpin), CMPLX(1.0,0.0)*stars%ufft, pwwq2(:,iSpin))!starsq
                 !call save_npy("pwwq2.npy",pwwq2)
                 !CALL dfpt_int_pw(starsq, fi%cell, vExt1%pw(:,1), pwwq2, tempval_pw)!denIn1_pw
-                CALL dfpt_int_pw(starsq, fi%cell, denIn1%pw(:,iSpin), vExt1%pw(:,iSpin), tempval_pw) !check if correct stepfunction
+                CALL dfpt_int_pw(starsq, fi%cell, denIn1%pw(:,iSpin), pwwq2(:,iSpin), tempval_pw) 
                 print*,"tempval_pw",tempval_pw
                 !dieltensor_HF(iDir_col) = dieltensor_HF(iDir_col) + tempval_pw 
                 magnetic_susc =  magnetic_susc+ tempval_pw
+                print*,"magnetic_susc",magnetic_susc
 
 
                 !Muffin-tin 
@@ -93,13 +96,14 @@ contains
                     call dfpt_int_mt(fi%atoms, sphhar, fi%sym, iType, denIn1%mt(:,:,:,iSpin), denIn1Im%mt(:,:,:,iSpin), vExt1%mt(:,0:,:,iSpin), vExt1Im%mt(:,0:,:,iSpin), tempval_mt)!denIn1_mt
                     print*,"tempval_mt",tempval_mt
                     magnetic_susc =  magnetic_susc+ tempval_mt
+                    print*,"magnetic_susc",magnetic_susc
                 end do
             end do
         end do
 
         !dieltensor_row(:)= dieltensor_HF(:)
         !magnetic_susc = 0.1
-        print*,"magnetic susc",magnetic_susc
+        print*,"magnetic susc end",magnetic_susc
 
         magnetic_susc_final =1/(1/magnetic_susc -1)
         print*,"magnetic_susc_final",magnetic_susc_final

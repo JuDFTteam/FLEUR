@@ -27,8 +27,11 @@ CONTAINS
     !IF (noco%l_noco) CALL judft_error("B-fields not implemented in noco case")
     
     !Interstitial
-    vTot%pw_w(:,1)=vTot%pw_w(:,1)-(1/2)*stars%ustep(:)
-    vTot%pw_w(:,2)=vTot%pw_w(:,2)+(1/2)*stars%ustep(:)
+    !vTot%pw_w(:,1)=vTot%pw_w(:,1)-(1/2)*stars%ustep(:)
+    !vTot%pw_w(:,2)=vTot%pw_w(:,2)+(1/2)*stars%ustep(:)
+    vTot%pw(:,:)=0.0
+    vTot%pw(1,1)=-1/2. 
+    vTot%pw(1,2)=+1/2. 
 
     !MT-spheres
     DO iType = 1, atoms%ntype
@@ -36,6 +39,7 @@ CONTAINS
        vTot%mt(:atoms%jri(iType),0,iType,2) = vTot%mt(:atoms%jri(iType),0,iType,2) + sfp_const/2.0 
 
     END DO
+
     !Set MT imag to zero
     vTotIm%mt(:,:,:,:)=0.0
 
