@@ -233,9 +233,6 @@ CONTAINS
       dyn_mat_q(:,:) = cmplx(0.0,0.0)
 
 
-      do iGrid = 1 , size(weights)
-         write(42,*) "WSweight" , weights(iGrid)
-      end do 
       !CALL ft_dyn_direct(q_lim,-1,bqpt,dyn_mat_q,dyn_mat_r)
 
       call ft_fcm_weight(ft_lim,bigBox_lim,weights,bqpt,dyn_mat_q,dyn_mat_r)
