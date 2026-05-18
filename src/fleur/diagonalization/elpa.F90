@@ -45,33 +45,7 @@ contains
          call juDFT_error(trim(errmsg), calledby='elpa')
       end if
    end subroutine check_elpa_err
-
-   subroutine dump_mat_layout(where, mat)
-      implicit none
-      character(len=*), intent(in) :: where
-      class(t_mat), intent(in) :: mat
-      integer :: rank, ierr
-
-      select type (mat)
-      type is (t_mpimat)
-         rank = -1
-#ifdef CPP_MPI
-         call MPI_COMM_RANK(mat%blacsdata%mpi_com, rank, ierr)
 #endif
-         write(oUnit, '(a,1x,a,1x,a,1x,i0)') 'ELPA layout dump', trim(where), 'rank', rank
-         write(oUnit, '(a,2(1x,i0),a,2(1x,i0),a,2(1x,i0))') '  global', mat%global_size1, mat%global_size2, &
-                                                            'local', mat%matsize1, mat%matsize2, &
-                                                            'grid', mat%blacsdata%nprow, mat%blacsdata%npcol
-         write(oUnit, '(a,2(1x,i0),a,4(1x,i0))') '  prow/pcol', mat%blacsdata%myrow, mat%blacsdata%mycol, &
-                                                 'desc', mat%blacsdata%blacs_desc(5), mat%blacsdata%blacs_desc(6), &
-                                                 mat%blacsdata%blacs_desc(7), mat%blacsdata%blacs_desc(8)
-      type is (t_mat)
-         write(oUnit, '(a,1x,a)') 'ELPA layout dump', trim(where)
-         write(oUnit, '(a,l1,a,2(1x,i0))') '  real', mat%l_real, 'size', mat%matsize1, mat%matsize2
-      end select
-   end subroutine dump_mat_layout
-#endif
-
    function get_solver_elpa() result(solver)
       class(t_solver), allocatable :: solver
       allocate(t_solver_elpa :: solver)
@@ -579,8 +553,8 @@ solver%single_precision = .true.
 
       real, allocatable :: tmp_real(:,:)
       complex, allocatable :: tmp_cmplx(:,:)
-      type(t_mat):: tmp_mat
-      type(t_mpimat):: tmp_mpimat, dist_zmat
+      type(t_mpimat):: tmp_mat, dist_zmat
+
       call timestart("ELPA BACKTRANSFORM")
 
 #ifdef CPP_ELPA
@@ -589,12 +563,11 @@ solver%single_precision = .true.
       type is (t_mpimat)
          ne = zmat%global_size2
       type is (t_mat)
-         ne = zmat%matsize2
+         call judft_error("elpa.F90:Back transformation not implemented for non-distributed matrices")
       end select
-      
-   
-#ifndef CPP_ELPA_PATCH
+
       ! Back-transform eigenvectors: Q <- inv(U) * Q
+#ifndef CPP_ELPA_PATCH
       call timestart("ELPA BACKTRANSFORM TRMM")
       select type(zmat)
       type is (t_mpimat)
@@ -611,49 +584,46 @@ solver%single_precision = .true.
                             (1.0d0,0.0d0), smat%data_c, 1, 1, smat%blacsdata%blacs_desc, &
                             dist_zmat%data_c, 1, 1, dist_zmat%blacsdata%blacs_desc)
             end if
-            call zmat%copy(dist_zmat,1,1)
+            call zmat%copy(dist_zmat, 1, 1)
          end select
       end select
       call timestop("ELPA BACKTRANSFORM TRMM")
-
 #else
-      ! Fallback to old private API when CPP_ELPA_PATCH is defined
+      ! Fallback to old private API
       call create_elpa_obj(zmat, ne)
-      call dump_mat_layout('smat before elpa_transform_back_generalized', smat)
-      call dump_mat_layout('zmat before elpa_transform_back_generalized', zmat)
+     
+      call tmp_mat%init(smat)
+      call tmp_mat%copy(zmat, 1, 1)
       if (smat%l_real) then
-         allocate(tmp_real(size(zmat%data_r,1),size(zmat%data_r,2)), stat=err)
+         allocate(tmp_real(size(tmp_mat%data_r,1),size(tmp_mat%data_r,2)), stat=err)
          call timestart("ELPA BACKTRANSFORM API REAL")
-         call elpa_obj%elpa_transform_back_generalized_double(smat%data_r, zmat%data_r, tmp_real,error)
+         call elpa_obj%elpa_transform_back_generalized_double(smat%data_r, tmp_mat%data_r, tmp_real, error)
          call timestop("ELPA BACKTRANSFORM API REAL")
          call check_elpa_err(error, 'elpa_transform_back_generalized_double')
       else
-         allocate(tmp_cmplx(size(zmat%data_c,1),size(zmat%data_c,2)), stat=err)
+         allocate(tmp_cmplx(size(tmp_mat%data_c,1),size(tmp_mat%data_c,2)), stat=err)
          call timestart("ELPA BACKTRANSFORM API CMPLX")
-         call elpa_obj%elpa_transform_back_generalized_double_complex(smat%data_c, zmat%data_c, tmp_cmplx, error)
+         call elpa_obj%elpa_transform_back_generalized_double_complex(smat%data_c, tmp_mat%data_c, tmp_cmplx, error)
          call timestop("ELPA BACKTRANSFORM API CMPLX")
          call check_elpa_err(error, 'elpa_transform_back_generalized_double_complex')
       endif
       call elpa_deallocate(elpa_obj, err)
       call check_elpa_err(err, 'elpa_deallocate')
-      if (associated(elpa_obj)) elpa_obj=>null()
-#endif
-#endif
+      if (associated(elpa_obj)) elpa_obj => null()
 
+      ! Finalize zmat from temporary matrix used by private ELPA API
       select type(zmat)
       type is (t_mpimat)
-         call tmp_mpimat%init(zmat%l_real,zmat%global_size1,zmat%global_size2,zmat%blacsdata%mpi_com,MPIMAT_ROWCYCLIC)
-         call tmp_mpimat%copy(zmat,1,1)
          call zmat%free()
-         call zmat%init(tmp_mpimat)
-         call zmat%copy(tmp_mpimat,1,1)
-      type is (t_mat)
-         call tmp_mat%init(zmat)
-         call tmp_mat%copy(zmat,1,1)
-         zmat=tmp_mat
-      end select   
+         call zmat%init(tmp_mat%l_real, tmp_mat%global_size1, tmp_mat%global_size2, tmp_mat%blacsdata%mpi_com, MPIMAT_ROWCYCLIC)
+         call zmat%copy(tmp_mat, 1, 1)
+      end select
+#endif
+
       call timestop("ELPA BACKTRANSFORM")
-      
+
+#endif
+
    end subroutine
 
 
