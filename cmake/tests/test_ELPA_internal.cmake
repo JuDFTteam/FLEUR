@@ -1,3 +1,5 @@
+include(CheckCSourceRuns)
+
 set(conffile "${CMAKE_BINARY_DIR}/conf.elpa.sh")
 file(WRITE ${conffile} "export FC=${CMAKE_Fortran_COMPILER}\n")
 file(APPEND ${conffile} "export CC=${CMAKE_C_COMPILER}\n")
@@ -18,8 +20,58 @@ file(APPEND ${conffile} ="${CMAKE_Fortran_FLAGS} ${CMAKE_Fortran_FLAGS_RELEASE} 
 file(APPEND ${conffile} "export CFLAGS")
 file(APPEND ${conffile} ="${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_RELEASE} ${LDFLAGS}" "\n")
 
-set(elpa_flags "--disable-c-tests --disable-cpp-tests --enable-shared=no --enable-c-tests=no --enable-cpp-tests=no --enable-single-precision --disable-avx512-kernels ")
+set(elpa_flags "--disable-c-tests --disable-cpp-tests --enable-shared=no --enable-c-tests=no --enable-cpp-tests=no --enable-single-precision")
 set(elpa_flags "${elpa_flags} --enable-runtime-threading-support-checks --enable-allow-thread-limiting --without-threading-support-check-during-build")
+
+set(ELPA_ENABLE_SSE FALSE)
+set(ELPA_ENABLE_AVX FALSE)
+set(ELPA_ENABLE_AVX2 FALSE)
+set(ELPA_ENABLE_AVX512 FALSE)
+
+if (NOT CMAKE_CROSSCOMPILING AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64|AMD64|i[3-6]86)$")
+    check_c_source_runs(
+        "int main(void) { __builtin_cpu_init(); return __builtin_cpu_supports(\"sse2\") ? 0 : 1; }"
+        ELPA_ENABLE_SSE
+    )
+    check_c_source_runs(
+        "int main(void) { __builtin_cpu_init(); return __builtin_cpu_supports(\"avx\") ? 0 : 1; }"
+        ELPA_ENABLE_AVX
+    )
+    check_c_source_runs(
+        "int main(void) { __builtin_cpu_init(); return __builtin_cpu_supports(\"avx2\") ? 0 : 1; }"
+        ELPA_ENABLE_AVX2
+    )
+    check_c_source_runs(
+        "int main(void) { __builtin_cpu_init(); return __builtin_cpu_supports(\"avx512f\") ? 0 : 1; }"
+        ELPA_ENABLE_AVX512
+    )
+endif()
+
+if (ELPA_ENABLE_SSE)
+    set(elpa_flags "${elpa_flags} --enable-sse")
+else()
+    set(elpa_flags "${elpa_flags} --disable-sse --disable-sse-assembly")
+endif()
+
+if (ELPA_ENABLE_AVX)
+    set(elpa_flags "${elpa_flags} --enable-avx")
+else()
+    set(elpa_flags "${elpa_flags} --disable-avx")
+endif()
+
+if (ELPA_ENABLE_AVX2)
+    set(elpa_flags "${elpa_flags} --enable-avx2")
+else()
+    set(elpa_flags "${elpa_flags} --disable-avx2")
+endif()
+
+if (ELPA_ENABLE_AVX512)
+    set(elpa_flags "${elpa_flags} --enable-avx512-kernels")
+else()
+    set(elpa_flags "${elpa_flags} --disable-avx512-kernels")
+endif()
+
+message(STATUS "ELPA CPU kernels: SSE=${ELPA_ENABLE_SSE} AVX=${ELPA_ENABLE_AVX} AVX2=${ELPA_ENABLE_AVX2} AVX512=${ELPA_ENABLE_AVX512}")
 
 if (DEFINED ENV{ELPA_CONF})
     set(elpa_flags "${elpa_flags} $ENV{ELPA_CONF}")
@@ -48,7 +100,7 @@ if (FLEUR_COMPILE_SCALAPACK)
     #GIT_REPOSITORY https://gitlab.mpcdf.mpg.de/elpa/elpa.git
     #GIT_TAG release_2024_05_001
     URL https://elpa.mpcdf.mpg.de/software/tarball-archive/Releases/2026.02.001/elpa-2026.02.001.tar.gz
-    PATCH_COMMAND patch -p1 < ${CMAKE_SOURCE_DIR}/cmake/patch/elpa-make-transform-public.patch
+    PATCH_COMMAND patch --batch --forward -p1 < ${CMAKE_SOURCE_DIR}/cmake/patch/elpa-make-transform-public.patch
     CONFIGURE_COMMAND sh ${conffile}
     BUILD_COMMAND make
     INSTALL_COMMAND ""
@@ -61,7 +113,7 @@ else()
     #GIT_REPOSITORY/elpa.git
     #GIT_TAG release_2024_05_001
     URL https://elpa.mpcdf.mpg.de/software/tarball-archive/Releases/2026.02.001/elpa-2026.02.001.tar.gz
-    PATCH_COMMAND patch -p1 < ${CMAKE_SOURCE_DIR}/cmake/patch/elpa-make-transform-public.patch
+    PATCH_COMMAND patch --batch --forward -p1 < ${CMAKE_SOURCE_DIR}/cmake/patch/elpa-make-transform-public.patch
     CONFIGURE_COMMAND sh ${conffile}
     BUILD_COMMAND make
     INSTALL_COMMAND ""
