@@ -653,9 +653,15 @@ solver%single_precision = .true.
       call check_elpa_err(err, 'elpa_deallocate (recreate for backtransform)')
       elpa_obj => null()
    end if
-   call create_elpa_obj(zmat, ne)
-   call tmp_mat%init(zmat)
+   call create_elpa_obj(smat, ne)
+   call tmp_mat%init(smat)
       call tmp_mat%copy(zmat, 1, 1)
+      call elpa_obj%set("pxgemm_for_generalized", 0, err)
+      call check_elpa_err(err, 'set(pxgemm_for_generalized=0)')
+      call elpa_obj%set("cannon_for_generalized", 0, err)
+      call check_elpa_err(err, 'set(cannon_for_generalized=0)')
+      call elpa_obj%set("pxtrmm_for_generalized", 1, err)
+      call check_elpa_err(err, 'set(pxtrmm_for_generalized=1)')
       call dump_elpa_obj_settings('before elpa_transform_back_generalized')
       call dump_mat_layout('smat before elpa_transform_back_generalized', smat)
       call dump_mat_layout('zmat before elpa_transform_back_generalized', zmat)
@@ -679,12 +685,18 @@ solver%single_precision = .true.
       call check_elpa_err(err, 'elpa_deallocate')
       if (associated(elpa_obj)) elpa_obj => null()
 
-      ! Finalize zmat from temporary matrix used by private ELPA API
+      ! Copy only the nev columns of the full temporary matrix back to zmat.
       select type(zmat)
       type is (t_mpimat)
-         call zmat%free()
-         call zmat%init(tmp_mat%l_real, tmp_mat%global_size1, tmp_mat%global_size2, tmp_mat%blacsdata%mpi_com, MPIMAT_ROWCYCLIC)
-         call zmat%copy(tmp_mat, 1, 1)
+#ifdef CPP_SCALAPACK
+         if (smat%l_real) then
+         call pdgemr2d(zmat%global_size1, zmat%global_size2, tmp_mat%data_r, 1, 1, tmp_mat%blacsdata%blacs_desc, &
+                 zmat%data_r, 1, 1, zmat%blacsdata%blacs_desc, tmp_mat%blacsdata%blacs_desc(2))
+         else
+         call pzgemr2d(zmat%global_size1, zmat%global_size2, tmp_mat%data_c, 1, 1, tmp_mat%blacsdata%blacs_desc, &
+                 zmat%data_c, 1, 1, zmat%blacsdata%blacs_desc, tmp_mat%blacsdata%blacs_desc(2))
+         end if
+#endif
       end select
 #endif
 
