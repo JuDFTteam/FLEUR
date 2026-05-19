@@ -531,19 +531,11 @@ solver%single_precision = .true.
       call timestart("ELPA REDUCTION TRANSFORM_GENERALIZED")
       IF (hmat%l_real) THEN
          allocate(tmp_real(size(hmat%data_r,1),size(hmat%data_r,2)), stat=err)
-         !$acc data copy(smat%data_r) copy(hmat%data_r) create(tmp_real)
-         !$acc host_data use_device(smat%data_r, hmat%data_r, tmp_real) 
          call elpa_obj%elpa_transform_generalized_double(hmat%data_r, smat%data_r, tmp_real, .false., err)
-         !$acc end host_data
-         !$acc end data
          call check_elpa_err(err, 'elpa_transform_generalized_double')
       else
          allocate(tmp_cmplx(size(hmat%data_c,1),size(hmat%data_c,2)), stat=err)
-         !$acc data copy(smat%data_c) copy(hmat%data_c) create(tmp_cmplx)
-         !$acc host_data use_device(smat%data_c, hmat%data_c, tmp_cmplx)
          call elpa_obj%elpa_transform_generalized_double_complex(hmat%data_c, smat%data_c, tmp_cmplx, .false., err)
-         !$acc end host_data
-         !$acc end data
          call check_elpa_err(err, 'elpa_transform_generalized_double_complex')
       endif
    call timestop("ELPA REDUCTION TRANSFORM_GENERALIZED")
