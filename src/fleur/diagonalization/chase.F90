@@ -332,6 +332,10 @@ contains
       call timestop("CHASE MPI COMM_FREE")
 #endif
       call timestop("CHASE MPI-STD")
+      call MPI_COMM_RANK(hmat%blacsdata%mpi_com, myrank, ierr)
+      if (myrank > 0) then
+         ne=0 !only rank 0 has the correct eigenvalues, set to zero on other ranks to avoid confusion
+      end if
    end subroutine chase_mpi_dp
 
    subroutine create_mpi_comms(parent_comm, icontext, comm_2d, comm_1d)
