@@ -678,7 +678,8 @@ solver%single_precision = .true.
       ! Copy only the nev columns of the full temporary matrix back to zmat.
       select type(zmat)
       type is (t_mpimat)
-      call zmat%init(hmat%l_real, hmat%global_size1, hmat%global_size1, hmat%blacsdata%mpi_com, MPIMAT_ROWCYCLIC)
+      call zmat%free()
+      call zmat%init(smat%l_real, smat%global_size1, smat%global_size1, smat%blacsdata%mpi_com, MPIMAT_ROWCYCLIC)
       call zmat%copy(ev_dist, 1, 1)
 
       end select
