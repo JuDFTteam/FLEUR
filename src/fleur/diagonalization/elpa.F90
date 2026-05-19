@@ -660,7 +660,7 @@ solver%single_precision = .true.
          allocate(tmp_real(size(zmat%data_r,1),size(zmat%data_r,2)), stat=err)
          if (err /= 0) call juDFT_error('alloc tmp_real failed in elpa_recover', calledby='elpa')
          call timestart("ELPA BACKTRANSFORM API REAL")
-         call elpa_obj%elpa_transform_back_generalized_double(smat%data_r, tmpmat%data_r, tmp_real, error)
+         call elpa_obj%elpa_transform_back_generalized_double(smat%data_r, tmp_mat%data_r, tmp_real, error)
          call timestop("ELPA BACKTRANSFORM API REAL")
          call check_elpa_err(error, 'elpa_transform_back_generalized_double')
       else
