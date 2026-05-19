@@ -654,27 +654,17 @@ solver%single_precision = .true.
       elpa_obj => null()
    end if
    call create_elpa_obj(smat, ne)
-   call tmp_mat%init(smat)
-      call tmp_mat%copy(zmat, 1, 1)
-      call elpa_obj%set("pxgemm_for_generalized", 0, err)
-      call check_elpa_err(err, 'set(pxgemm_for_generalized=0)')
-      call elpa_obj%set("cannon_for_generalized", 0, err)
-      call check_elpa_err(err, 'set(cannon_for_generalized=0)')
-      call elpa_obj%set("pxtrmm_for_generalized", 1, err)
-      call check_elpa_err(err, 'set(pxtrmm_for_generalized=1)')
-      call dump_elpa_obj_settings('before elpa_transform_back_generalized')
-      call dump_mat_layout('smat before elpa_transform_back_generalized', smat)
-      call dump_mat_layout('zmat before elpa_transform_back_generalized', zmat)
-      call dump_mat_layout('tmp_mat before elpa_transform_back_generalized', tmp_mat)
+   call tmp_mat%init(zmat)
+   call tmp_mat%copy(zmat, 1, 1)
       if (smat%l_real) then
-         allocate(tmp_real(size(tmp_mat%data_r,1),size(tmp_mat%data_r,2)), stat=err)
+         allocate(tmp_real(size(zmat%data_r,1),size(zmat%data_r,2)), stat=err)
          if (err /= 0) call juDFT_error('alloc tmp_real failed in elpa_recover', calledby='elpa')
          call timestart("ELPA BACKTRANSFORM API REAL")
-         call elpa_obj%elpa_transform_back_generalized_double(smat%data_r, tmp_mat%data_r, tmp_real, error)
+         call elpa_obj%elpa_transform_back_generalized_double(smat%data_r, tmpmat%data_r, tmp_real, error)
          call timestop("ELPA BACKTRANSFORM API REAL")
          call check_elpa_err(error, 'elpa_transform_back_generalized_double')
       else
-         allocate(tmp_cmplx(size(tmp_mat%data_c,1),size(tmp_mat%data_c,2)), stat=err)
+         allocate(tmp_cmplx(size(zmat%data_c,1),size(zmat%data_c,2)), stat=err)
          if (err /= 0) call juDFT_error('alloc tmp_cmplx failed in elpa_recover', calledby='elpa')
          call timestart("ELPA BACKTRANSFORM API CMPLX")
          call elpa_obj%elpa_transform_back_generalized_double_complex(smat%data_c, tmp_mat%data_c, tmp_cmplx, error)
@@ -688,15 +678,10 @@ solver%single_precision = .true.
       ! Copy only the nev columns of the full temporary matrix back to zmat.
       select type(zmat)
       type is (t_mpimat)
-#ifdef CPP_SCALAPACK
-         if (smat%l_real) then
-         call pdgemr2d(zmat%global_size1, zmat%global_size2, tmp_mat%data_r, 1, 1, tmp_mat%blacsdata%blacs_desc, &
-                 zmat%data_r, 1, 1, zmat%blacsdata%blacs_desc, tmp_mat%blacsdata%blacs_desc(2))
-         else
-         call pzgemr2d(zmat%global_size1, zmat%global_size2, tmp_mat%data_c, 1, 1, tmp_mat%blacsdata%blacs_desc, &
-                 zmat%data_c, 1, 1, zmat%blacsdata%blacs_desc, tmp_mat%blacsdata%blacs_desc(2))
-         end if
-#endif
+      allocate(t_mpimat::zmat)
+      call zmat%init(hmat%l_real, hmat%global_size1, hmat%global_size1, hmat%blacsdata%mpi_com, MPIMAT_ROWCYCLIC)
+      call zmat%copy(ev_dist, 1, 1)
+
       end select
 #endif
 

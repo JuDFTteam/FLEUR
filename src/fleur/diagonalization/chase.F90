@@ -306,14 +306,14 @@ contains
       allocate (t_mpimat::zmat)
       select type (zmat)
       type is (t_mpimat)
-         call zmat%init(hmat, hmat%global_size1, ne)
+         call zmat%init(hmat)
          if (hmat%l_real) then
-            do j = 1, zmat%matsize2
+            do j = 1, ne
                gcol = indxl2g(j, zmat%blacsdata%blacs_desc(6), zmat%blacsdata%mycol, zmat%blacsdata%blacs_desc(8), zmat%blacsdata%npcol)
                zmat%data_r(:, j) = zmat_chase_r(:, gcol)
             end do
          else
-            do j = 1, zmat%matsize2
+            do j = 1, ne
                gcol = indxl2g(j, zmat%blacsdata%blacs_desc(6), zmat%blacsdata%mycol, zmat%blacsdata%blacs_desc(8), zmat%blacsdata%npcol)
                zmat%data_c(:, j) = zmat_chase_c(:, gcol)
             end do
