@@ -56,16 +56,16 @@ index 6f55463e..b00636a5 100644
 +  abstract interface
 +    subroutine elpa_transform_generalized_a_h_a_&
 +           &ELPA_IMPL_SUFFIX&
-+           &_i(self, a, b, is_already_decomposed, error)
++           &_i(self, a, b, tmp,is_already_decomposed, error)
 +      use, intrinsic :: iso_c_binding
 +      use elpa_constants
 +      import elpa_t
 +      implicit none
 +      class(elpa_t)       :: self
 +#ifdef USE_ASSUMED_SIZE
-+      MATH_DATATYPE(kind=C_DATATYPE_KIND) :: a(self%local_nrows, *), b(self%local_nrows, *)
++      MATH_DATATYPE(kind=C_DATATYPE_KIND) :: a(self%local_nrows, *), b(self%local_nrows, *), tmp(self%local_nrows, *)
 +#else
-+      MATH_DATATYPE(kind=C_DATATYPE_KIND) :: a(self%local_nrows, self%local_ncols), b(self%local_nrows, self%local_ncols)
++      MATH_DATATYPE(kind=C_DATATYPE_KIND) :: a(self%local_nrows, self%local_ncols), b(self%local_nrows, self%local_ncols),tmp(self%local_nrows, self%local_ncols)
 +#endif
 +      logical             :: is_already_decomposed
 +      integer             :: error
@@ -96,16 +96,16 @@ index 6f55463e..b00636a5 100644
 +  abstract interface
 +    subroutine elpa_transform_back_generalized_a_h_a_&
 +           &ELPA_IMPL_SUFFIX&
-+           &_i(self, b, q, error)
++           &_i(self, b, q, tmp,error)
 +      use, intrinsic :: iso_c_binding
 +      use elpa_constants
 +      import elpa_t
 +      implicit none
 +      class(elpa_t)       :: self
 +#ifdef USE_ASSUMED_SIZE
-+      MATH_DATATYPE(kind=C_DATATYPE_KIND) :: b(self%local_nrows, *), q(self%local_nrows, *)
++      MATH_DATATYPE(kind=C_DATATYPE_KIND) :: b(self%local_nrows, *), q(self%local_nrows, *), tmp(self%local_nrows, *)
 +#else
-+      MATH_DATATYPE(kind=C_DATATYPE_KIND) :: b(self%local_nrows, self%local_ncols), q(self%local_nrows, self%local_ncols)
++      MATH_DATATYPE(kind=C_DATATYPE_KIND) :: b(self%local_nrows, self%local_ncols), q(self%local_nrows, self%local_ncols), tmp(self%local_nrows, self%local_ncols)
 +#endif
 +      integer             :: error
 +    end subroutine

@@ -528,8 +528,7 @@ solver%single_precision = .true.
       call hmat%u2l()
       call smat%u2l()
       call timestop("ELPA REDUCTION U2L")
-#ifdef _OPENACC      
-      call timestart("ELPA REDUCTION TRANSFORM_GENERALIZED(GPU)")
+      call timestart("ELPA REDUCTION TRANSFORM_GENERALIZED")
       IF (hmat%l_real) THEN
          allocate(tmp_real(size(hmat%data_r,1),size(hmat%data_r,2)), stat=err)
          !$acc data copy(smat%data_r) copy(hmat%data_r) create(tmp_real)
@@ -547,18 +546,7 @@ solver%single_precision = .true.
          !$acc end data
          call check_elpa_err(err, 'elpa_transform_generalized_double_complex')
       endif
-   call timestop("ELPA REDUCTION TRANSFORM_GENERALIZED(GPU)")
-#else
-      call timestart("ELPA REDUCTION TRANSFORM_GENERALIZED(CPU)")
-      IF (hmat%l_real) THEN
-         call elpa_obj%elpa_transform_generalized_double(hmat%data_r, smat%data_r, err)
-         call check_elpa_err(err, 'elpa_transform_generalized_double')
-      else
-         call elpa_obj%elpa_transform_generalized_double_complex(hmat%data_c, smat%data_c, err)
-         call check_elpa_err(err, 'elpa_transform_generalized_double_complex')   
-      endif   
-      call timestop("ELPA REDUCTION TRANSFORM_GENERALIZED(CPU)")
-#endif
+   call timestop("ELPA REDUCTION TRANSFORM_GENERALIZED")
 #endif
       call timestop("ELPA REDUCTION")
       
@@ -610,43 +598,29 @@ solver%single_precision = .true.
 #else
       ! Fallback to old private API
       call create_elpa_obj(zmat, ne)
-#ifdef _OPENACC     
       call tmp_mat%init(smat)
       call tmp_mat%copy(zmat, 1, 1)
       if (smat%l_real) then
          allocate(tmp_real(size(tmp_mat%data_r,1),size(tmp_mat%data_r,2)), stat=err)
-         call timestart("ELPA BACKTRANSFORM API REAL(GPU)")
+         call timestart("ELPA BACKTRANSFORM API REAL")
          !$acc data copyin(smat%data_r) copy(tmp_mat%data_r) create(tmp_real)
          !$acc host_data use_device(smat%data_r, tmp_mat%data_r, tmp_real)
          call elpa_obj%elpa_transform_back_generalized_double(smat%data_r, tmp_mat%data_r, tmp_real, error)
          !$acc end host_data
          !$acc end data
-         call timestop("ELPA BACKTRANSFORM API REAL(GPU)")
+         call timestop("ELPA BACKTRANSFORM API REAL")
          call check_elpa_err(error, 'elpa_transform_back_generalized_double')
       else
          allocate(tmp_cmplx(size(tmp_mat%data_c,1),size(tmp_mat%data_c,2)), stat=err)
-         call timestart("ELPA BACKTRANSFORM API CMPLX(GPU)")
+         call timestart("ELPA BACKTRANSFORM API CMPLX")
          !$acc data copyin(smat%data_c) copy(tmp_mat%data_c) create(tmp_cmplx)
          !$acc host_data use_device(smat%data_c, tmp_mat%data_c, tmp_cmplx)
          call elpa_obj%elpa_transform_back_generalized_double_complex(smat%data_c, tmp_mat%data_c, tmp_cmplx, error)
          !$acc end host_data
          !$acc end data
-         call timestop("ELPA BACKTRANSFORM API CMPLX(GPU)")
+         call timestop("ELPA BACKTRANSFORM API CMPLX")
          call check_elpa_err(error, 'elpa_transform_back_generalized_double_complex')
       endif
-#else
-      if (smat%l_real) then
-         call timestart("ELPA BACKTRANSFORM API REAL(CPU)")
-         call elpa_obj%elpa_transform_back_generalized_double(smat%data_r, tmp_mat%data_r, error)
-         call timestop("ELPA BACKTRANSFORM API REAL(CPU)")
-         call check_elpa_err(error, 'elpa_transform_back_generalized_double')
-      else
-         call timestart("ELPA BACKTRANSFORM API CMPLX(CPU)")
-         call elpa_obj%elpa_transform_back_generalized_double_complex(smat%data_c, tmp_mat%data_c, error)
-         call timestop("ELPA BACKTRANSFORM API CMPLX(CPU)")
-         call check_elpa_err(error, 'elpa_transform_back_generalized_double_complex')
-      endif
-#endif      
       call elpa_deallocate(elpa_obj, err)
       call check_elpa_err(err, 'elpa_deallocate')
       if (associated(elpa_obj)) elpa_obj => null()
