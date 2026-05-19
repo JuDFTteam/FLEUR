@@ -647,14 +647,14 @@ solver%single_precision = .true.
       end select
       call timestop("ELPA BACKTRANSFORM TRMM")
 #else
-      ! Fallback to old private API
+      ! Fallback to private API
    if (associated(elpa_obj)) then
       call elpa_deallocate(elpa_obj, err)
       call check_elpa_err(err, 'elpa_deallocate (recreate for backtransform)')
       elpa_obj => null()
    end if
    call create_elpa_obj(smat, ne)
-   call tmp_mat%init(zmat)
+   call tmp_mat%init(smat)
    call tmp_mat%copy(zmat, 1, 1)
       if (smat%l_real) then
          allocate(tmp_real(size(zmat%data_r,1),size(zmat%data_r,2)), stat=err)
