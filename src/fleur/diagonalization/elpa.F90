@@ -549,7 +549,7 @@ solver%single_precision = .true.
    call timestop("ELPA REDUCTION TRANSFORM_GENERALIZED")
 #endif
       call timestop("ELPA REDUCTION")
-      
+#endif      
    end subroutine   
 
    subroutine elpa_recover(self, smat, zmat)
