@@ -69,6 +69,7 @@ contains
          write(oUnit, '(a,1x,a)') 'ELPA layout dump', trim(where)
          write(oUnit, '(a,l1,a,2(1x,i0))') '  real', mat%l_real, 'size', mat%matsize1, mat%matsize2
       end select
+      call flush(oUnit)
    end subroutine dump_mat_layout
 
    subroutine dump_elpa_obj_settings(where)
@@ -101,6 +102,7 @@ contains
 
       write(oUnit, '(a,1x,a,1x,a,1x,i0)') 'ELPA obj dump', trim(where), 'rank', rank
       write(oUnit, '(a,2(1x,i0),a,2(1x,i0),a,3(1x,i0))') '  na/nev', na, nev, 'local', nrows, ncols, 'nblk/prow/pcol', nblk, prow, pcol
+      call flush(oUnit)
    end subroutine dump_elpa_obj_settings
 #endif
    function get_solver_elpa() result(solver)
