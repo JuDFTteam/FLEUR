@@ -648,8 +648,8 @@ solver%single_precision = .true.
       call timestop("ELPA BACKTRANSFORM TRMM")
 #else
       ! Fallback to old private API
-      call create_elpa_obj(smat, ne)
-      call tmp_mat%init(smat)
+   call create_elpa_obj(zmat, ne)
+   call tmp_mat%init(zmat)
       call tmp_mat%copy(zmat, 1, 1)
       call dump_elpa_obj_settings('before elpa_transform_back_generalized')
       call dump_mat_layout('smat before elpa_transform_back_generalized', smat)
