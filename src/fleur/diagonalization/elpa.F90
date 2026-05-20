@@ -240,34 +240,43 @@ contains
       real, intent(OUT)   :: eig(:)
       integer, intent(IN) :: ikpt
 #ifdef CPP_ELPA
-      integer           :: kernel
       integer           :: err
       real, allocatable      :: eig2(:)
-      class(t_mat), allocatable        :: ev_dist
+
       !Update elpa object
       call create_elpa_obj(hmat, ne)
-      allocate (ev_dist, mold=hmat)
 
       call timestart("ELPA GEV")
       select type (hmat)
       type is (t_mpimat)  !we need some data from t_mpimat
          allocate (eig2(hmat%global_size1), stat=err) ! The eigenvalue array
+         allocate (t_mpimat::zmat)
+         call zmat%init(hmat)
       type is (t_mat)
          allocate (eig2(hmat%matsize1), stat=err) ! The eigenvalue array
+         allocate (t_mat::zmat)
+         call zmat%init(hmat%l_real, hmat%matsize1, ne)
       end select
       if (err .ne. 0) call juDFT_error('Failed to allocated "eig2"', calledby='elpa')
-
-      call ev_dist%init(hmat)! Eigenvectors
-      if (err .ne. 0) call juDFT_error('Failed to allocated "ev_dist"', calledby='elpa')
 
       call hmat%u2l()
       call smat%u2l()
       call elpa_obj%timer_start("ELPA")
       if (hmat%l_real) then
-         call elpa_obj%generalized_eigenvectors(hmat%data_r, smat%data_r, eig2, ev_dist%data_r, .false., err)
+         select type (zmat)
+         type is (t_mpimat)
+            call elpa_obj%generalized_eigenvectors(hmat%data_r, smat%data_r, eig2, zmat%data_r, .false., err)
+         type is (t_mat)
+            call elpa_obj%generalized_eigenvectors(hmat%data_r, smat%data_r, eig2, zmat%data_r, .false., err)
+         end select
          call check_elpa_err(err, 'generalized_eigenvectors(real)')
       else
-         call elpa_obj%generalized_eigenvectors(hmat%data_c, smat%data_c, eig2, ev_dist%data_c, .false., err)
+         select type (zmat)
+         type is (t_mpimat)
+            call elpa_obj%generalized_eigenvectors(hmat%data_c, smat%data_c, eig2, zmat%data_c, .false., err)
+         type is (t_mat)
+            call elpa_obj%generalized_eigenvectors(hmat%data_c, smat%data_c, eig2, zmat%data_c, .false., err)
+         end select
          call check_elpa_err(err, 'generalized_eigenvectors(complex)')
       end if
       call elpa_obj%timer_stop("ELPA")
@@ -282,20 +291,6 @@ contains
       eig(:ne) = eig2(:ne)
       deallocate (eig2)
 
-      select type (hmat)
-      type is (t_mpimat)
-         allocate (t_mpimat::zmat)
-         call zmat%init(hmat)
-         call zmat%copy(ev_dist, 1, 1)
-      type is (t_mat)
-         allocate (t_mat::zmat)
-         call zmat%init(hmat%l_real, hmat%matsize1, ne)
-         if (zmat%l_real) THEN
-            zmat%data_r(:, :) = ev_dist%data_r(:, :ne)
-         else
-            zmat%data_c(:, :) = ev_dist%data_c(:, :ne)
-         end if
-      end select
       call timestop("ELPA GEV")
       call elpa_deallocate(elpa_obj, err)
       call check_elpa_err(err, 'elpa_deallocate')
@@ -315,31 +310,41 @@ contains
       real, intent(OUT)           :: eig(:)
 #ifdef CPP_ELPA
       real, allocatable:: eig2(:)
-      class(t_mat), allocatable :: ev_dist
       integer :: err
 
       !Update elpa object
       call create_elpa_obj(hmat, ne)
-      allocate (ev_dist, mold=hmat)
 
       call timestart("ELPA STD")
       select type (hmat)
       type is (t_mpimat)  !we need some data from t_mpimat
          allocate (eig2(hmat%global_size1), stat=err) ! The eigenvalue array
+         allocate (t_mpimat::zmat)
+         call zmat%init(hmat)
       type is (t_mat)
          allocate (eig2(hmat%matsize1), stat=err) ! The eigenvalue array
+         allocate (t_mat::zmat)
+         call zmat%init(hmat%l_real, hmat%matsize1, ne)
       end select
       if (err .ne. 0) call juDFT_error('Failed to allocated "eig2"', calledby='elpa')
-      call ev_dist%init(hmat)! Eigenvectors
-      if (err .ne. 0) call juDFT_error('Failed to allocated "ev_dist"', calledby='elpa')
 
       call hmat%u2l()
       call elpa_obj%timer_start("ELPA")
       if (hmat%l_real) then
-         call elpa_obj%eigenvectors(hmat%data_r, eig2, ev_dist%data_r, err)
+         select type (zmat)
+         type is (t_mpimat)
+            call elpa_obj%eigenvectors(hmat%data_r, eig2, zmat%data_r, err)
+         type is (t_mat)
+            call elpa_obj%eigenvectors(hmat%data_r, eig2, zmat%data_r, err)
+         end select
          call check_elpa_err(err, 'eigenvectors(real)')
       else
-         call elpa_obj%eigenvectors(hmat%data_c, eig2, ev_dist%data_c, err)
+         select type (zmat)
+         type is (t_mpimat)
+            call elpa_obj%eigenvectors(hmat%data_c, eig2, zmat%data_c, err)
+         type is (t_mat)
+            call elpa_obj%eigenvectors(hmat%data_c, eig2, zmat%data_c, err)
+         end select
          call check_elpa_err(err, 'eigenvectors(complex)')
       end if
       call elpa_obj%timer_stop("ELPA")
@@ -348,20 +353,7 @@ contains
       !     Each process has all eigenvalues in output
       eig(:ne) = eig2(:ne)
       deallocate (eig2)
-      select type (hmat)
-      type is (t_mpimat)
-         allocate (t_mpimat::zmat)
-         call zmat%init(hmat)
-         call zmat%copy(ev_dist, 1, 1)
-      type is (t_mat)
-         allocate (t_mat::zmat)
-         call zmat%init(hmat%l_real, hmat%matsize1, ne)
-         if (zmat%l_real) then
-            zmat%data_r(:, :) = ev_dist%data_r(:, :ne)
-         else
-            zmat%data_c(:, :) = ev_dist%data_c(:, :ne)
-         end if
-      end select
+
       call timestop("ELPA STD")
       call elpa_deallocate(elpa_obj, err)
       call check_elpa_err(err, 'elpa_deallocate')
@@ -379,24 +371,24 @@ contains
 
       integer, parameter:: sp = selected_real_kind(6)
       real(kind=sp), allocatable:: eig2(:)
-      class(t_mat), allocatable :: ev_dist
       integer :: err
 
 #ifdef CPP_ELPA_SP
       !Update elpa object
       call create_elpa_obj(hmat, ne)
-      allocate (ev_dist, mold=hmat)
 
       call timestart("ELPA STD-SP")
       select type (hmat)
       type is (t_mpimat)  !we need some data from t_mpimat
          allocate (eig2(hmat%global_size1), stat=err) ! The eigenvalue array
+         allocate (t_mpimat::zmat)
+         call zmat%init(hmat)
       type is (t_mat)
          allocate (eig2(hmat%matsize1), stat=err) ! The eigenvalue array
+         allocate (t_mat::zmat)
+         call zmat%init(hmat%l_real, hmat%matsize1, ne)
       end select
       if (err .ne. 0) call juDFT_error('Failed to allocated "eig2"', calledby='elpa')
-      call ev_dist%init(hmat)! Eigenvectors
-      if (err .ne. 0) call juDFT_error('Failed to allocated "ev_dist"', calledby='elpa')
 
       call hmat%u2l()
       call elpa_obj%timer_start("ELPA")
@@ -404,19 +396,29 @@ contains
          block
             real(kind=sp), allocatable:: mat(:, :), z(:, :)
             mat = hmat%data_r
-            allocate (z(size(ev_dist%data_r, 1), size(ev_dist%data_r, 2)))
+            allocate (z(hmat%matsize1, hmat%matsize2))
             call elpa_obj%eigenvectors(mat, eig2, z, err)
             call check_elpa_err(err, 'eigenvectors_sp(real)')
-            ev_dist%data_r = z
+            select type (zmat)
+            type is (t_mpimat)
+               zmat%data_r = z
+            type is (t_mat)
+               zmat%data_r = z(:, :ne)
+            end select
          end block
       else
          block
             complex(kind=sp), allocatable:: mat(:, :), z(:, :)
             mat = hmat%data_c
-            allocate (z(size(ev_dist%data_c, 1), size(ev_dist%data_c, 2)))
+            allocate (z(hmat%matsize1, hmat%matsize2))
             call elpa_obj%eigenvectors(mat, eig2, z, err)
             call check_elpa_err(err, 'eigenvectors_sp(complex)')
-            ev_dist%data_c = z
+            select type (zmat)
+            type is (t_mpimat)
+               zmat%data_c = z
+            type is (t_mat)
+               zmat%data_c = z(:, :ne)
+            end select
          end block
       end if
       call elpa_obj%timer_stop("ELPA")
@@ -424,20 +426,6 @@ contains
       eig(:ne) = eig2(:ne)
       deallocate (eig2)
 
-      select type (hmat)
-      type is (t_mpimat)
-         allocate (t_mpimat::zmat)
-         call zmat%init(hmat)
-         call zmat%copy(ev_dist, 1, 1)
-      type is (t_mat)
-         allocate (t_mat::zmat)
-         call zmat%init(hmat%l_real, hmat%matsize1, ne)
-         if (zmat%l_real) then
-            zmat%data_r(:, :) = ev_dist%data_r(:, :ne)
-         else
-            zmat%data_c(:, :) = ev_dist%data_c(:, :ne)
-         end if
-      end select
 
       call timestop("ELPA STD-SP")
       call elpa_deallocate(elpa_obj, err)
@@ -562,7 +550,6 @@ contains
 
       real, allocatable :: tmp_real(:, :)
       complex, allocatable :: tmp_cmplx(:, :)
-      type(t_mpimat):: tmp_mat, dist_zmat
 
       call timestart("ELPA BACKTRANSFORM")
 
@@ -582,18 +569,15 @@ contains
       type is (t_mpimat)
          select type (smat)
          type is (t_mpimat)
-            call dist_zmat%init(smat)
-            call dist_zmat%copy(zmat, 1, 1)
             if (smat%l_real) then
-               call pdtrmm('L', 'U', 'N', 'N', smat%global_size1, dist_zmat%global_size2, &
+               call pdtrmm('L', 'U', 'N', 'N', smat%global_size1, zmat%global_size2, &
                            1.0d0, smat%data_r, 1, 1, smat%blacsdata%blacs_desc, &
-                           dist_zmat%data_r, 1, 1, dist_zmat%blacsdata%blacs_desc)
+                           zmat%data_r, 1, 1, zmat%blacsdata%blacs_desc)
             else
-               call pztrmm('L', 'U', 'N', 'N', smat%global_size1, dist_zmat%global_size2, &
+               call pztrmm('L', 'U', 'N', 'N', smat%global_size1, zmat%global_size2, &
                            (1.0d0, 0.0d0), smat%data_c, 1, 1, smat%blacsdata%blacs_desc, &
-                           dist_zmat%data_c, 1, 1, dist_zmat%blacsdata%blacs_desc)
+                           zmat%data_c, 1, 1, zmat%blacsdata%blacs_desc)
             end if
-            call zmat%copy(dist_zmat, 1, 1)
          end select
       end select
       call timestop("ELPA BACKTRANSFORM TRMM")
@@ -605,35 +589,24 @@ contains
          elpa_obj => null()
       end if
       call create_elpa_obj(smat, ne)
-      call tmp_mat%init(smat)
-      call tmp_mat%copy(zmat, 1, 1)
       if (smat%l_real) then
          allocate (tmp_real(size(zmat%data_r, 1), size(zmat%data_r, 2)), stat=err)
          if (err /= 0) call juDFT_error('alloc tmp_real failed in elpa_recover', calledby='elpa')
          call timestart("ELPA BACKTRANSFORM API REAL")
-         call elpa_obj%elpa_transform_back_generalized_double(smat%data_r, tmp_mat%data_r, tmp_real, error)
+         call elpa_obj%elpa_transform_back_generalized_double(smat%data_r, zmat%data_r, tmp_real, error)
          call timestop("ELPA BACKTRANSFORM API REAL")
          call check_elpa_err(error, 'elpa_transform_back_generalized_double')
       else
          allocate (tmp_cmplx(size(zmat%data_c, 1), size(zmat%data_c, 2)), stat=err)
          if (err /= 0) call juDFT_error('alloc tmp_cmplx failed in elpa_recover', calledby='elpa')
          call timestart("ELPA BACKTRANSFORM API CMPLX")
-         call elpa_obj%elpa_transform_back_generalized_double_complex(smat%data_c, tmp_mat%data_c, tmp_cmplx, error)
+         call elpa_obj%elpa_transform_back_generalized_double_complex(smat%data_c, zmat%data_c, tmp_cmplx, error)
          call timestop("ELPA BACKTRANSFORM API CMPLX")
          call check_elpa_err(error, 'elpa_transform_back_generalized_double_complex')
       end if
       call elpa_deallocate(elpa_obj, err)
       call check_elpa_err(err, 'elpa_deallocate')
       if (associated(elpa_obj)) elpa_obj => null()
-
-      ! Copy only the nev columns of the full temporary matrix back to zmat.
-      select type (zmat)
-      type is (t_mpimat)
-         select type (smat)
-         type is (t_mpimat)
-            call zmat%copy(tmp_mat, 1, 1)
-         end select
-      end select
 #endif
 
       call timestop("ELPA BACKTRANSFORM")
