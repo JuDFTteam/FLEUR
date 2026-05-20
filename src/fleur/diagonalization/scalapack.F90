@@ -90,8 +90,6 @@ contains
       real, allocatable :: work2_r(:)
       complex, allocatable :: work2_c(:)
 
-      type(t_mpimat):: ev_dist
-
       external iceil, numroc
       external dlamch
 
@@ -105,17 +103,12 @@ contains
          type IS (t_mpimat)
 
             allocate (eig2(hmat%global_size1))
+            allocate (t_mpimat::zmat)
+            call zmat%init(hmat)
 
             num = ne !no of states solved for
 
             abstol = 2.0*dlamch('S') ! PDLAMCH gave an error on ZAMpano
-
-            call ev_dist%init(hmat)
-
-            !smat%blacs_desc(2)    = hmat%blacs_desc(2)
-            !ev_dist%blacs_desc(2) = hmat%blacs_desc(2)
-            !smat%blacs_desc=hmat%blacs_desc
-            !ev_dist%blacs_desc=hmat%blacs_desc
 
             nb = hmat%blacsdata%blacs_desc(5)! Blocking factor
             if (nb .ne. hmat%blacsdata%blacs_desc(6)) call judft_error("Different block sizes for rows/columns not supported")
@@ -166,12 +159,13 @@ contains
             !
             !     Compute size of workspace
             !
+            call timestart("SCALAPACK WORKSPACE")
             if (hmat%l_real) then
                uplo = 'U'
                call pdsygvx(1, 'V', 'I', 'U', hmat%global_size1, hmat%data_r, 1, 1, &
                             hmat%blacsdata%blacs_desc, smat%data_r, 1, 1, smat%blacsdata%blacs_desc, &
-                            0.0, 1.0, 1, num, abstol, num1, num2, eig2, orfac, ev_dist%data_r, 1, 1, &
-                            ev_dist%blacsdata%blacs_desc, work2_r, -1, iwork, -1, ifail, iclustr, gap, ierr)
+                            0.0, 1.0, 1, num, abstol, num1, num2, eig2, orfac, zmat%data_r, 1, 1, &
+                            hmat%blacsdata%blacs_desc, work2_r, -1, iwork, -1, ifail, iclustr, gap, ierr)
                if (work2_r(1) .gt. lwork2) then
                   lwork2 = work2_r(1) + 20*hmat%global_size1
                   deallocate (work2_r)
@@ -195,8 +189,8 @@ contains
 
                call pzhegvx(1, 'V', 'I', 'U', hmat%global_size1, hmat%data_c, 1, 1, &
                             hmat%blacsdata%blacs_desc, smat%data_c, 1, 1, smat%blacsdata%blacs_desc, &
-                            0.0, 1.0, 1, num, abstol, num1, num2, eig2, orfac, ev_dist%data_c, 1, 1, &
-                            ev_dist%blacsdata%blacs_desc, work2_c, -1, rwork, -1, iwork, -1, ifail, iclustr, &
+                            0.0, 1.0, 1, num, abstol, num1, num2, eig2, orfac, zmat%data_c, 1, 1, &
+                            hmat%blacsdata%blacs_desc, work2_c, -1, rwork, -1, iwork, -1, ifail, iclustr, &
                             gap, ierr)
                if (abs(work2_c(1)) .gt. lwork2) then
                   lwork2 = work2_c(1)
@@ -230,6 +224,7 @@ contains
                   call juDFT_error('Failed to allocated "iwork"', calledby='chani')
                end if
             end if
+            call timestop("SCALAPACK WORKSPACE")
             !
             !     Now solve generalized eigenvalue problem
             !
@@ -237,16 +232,16 @@ contains
                call timestart("SCALAPACK PDSYGVX")
                call pdsygvx(1, 'V', 'I', 'U', hmat%global_size1, hmat%data_r, 1, 1, &
                             hmat%blacsdata%blacs_desc, smat%data_r, 1, 1, smat%blacsdata%blacs_desc, &
-                            1.0, 1.0, 1, num, abstol, num1, num2, eig2, orfac, ev_dist%data_r, 1, 1, &
-                            ev_dist%blacsdata%blacs_desc, work2_r, lwork2, iwork, liwork, ifail, iclustr, &
+                            1.0, 1.0, 1, num, abstol, num1, num2, eig2, orfac, zmat%data_r, 1, 1, &
+                            hmat%blacsdata%blacs_desc, work2_r, lwork2, iwork, liwork, ifail, iclustr, &
                             gap, ierr)
                call timestop("SCALAPACK PDSYGVX")
             else
                call timestart("SCALAPACK PZHEGVX")
                call pzhegvx(1, 'V', 'I', 'U', hmat%global_size1, hmat%data_c, 1, 1, &
                             hmat%blacsdata%blacs_desc, smat%data_c, 1, 1, smat%blacsdata%blacs_desc, &
-                            1.0, 1.0, 1, num, abstol, num1, num2, eig2, orfac, ev_dist%data_c, 1, 1, &
-                            ev_dist%blacsdata%blacs_desc, work2_c, lwork2, rwork, lrwork, iwork, liwork, &
+                            1.0, 1.0, 1, num, abstol, num1, num2, eig2, orfac, zmat%data_c, 1, 1, &
+                            hmat%blacsdata%blacs_desc, work2_c, lwork2, rwork, lrwork, iwork, liwork, &
                             ifail, iclustr, gap, ierr)
                call timestop("SCALAPACK PZHEGVX")
                deallocate (rwork)
@@ -294,10 +289,6 @@ contains
             !     Each process has all eigenvalues in output
             eig(:num2) = eig2(:num2)
             deallocate (eig2)
-            !
-            allocate (t_mpimat::zmat)
-            call zmat%init(ev_dist)
-            call zmat%copy(ev_dist, 1, 1)
          class DEFAULT
             WRITE (*, *) 'Error for k-point ', ikpt
             call judft_error("Wrong type (1) in scalapack")
@@ -306,7 +297,6 @@ contains
          WRITE (*, *) 'Error for k-point ', ikpt
          call judft_error("Wrong type (2) in scalapack")
       end select
-      call ev_dist%free()
 #ifdef FLEUR_USE_SCOREP
       SCOREP_RECORDING_ON()
 #endif
