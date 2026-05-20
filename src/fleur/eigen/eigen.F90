@@ -253,14 +253,7 @@ CONTAINS
             ! Output results
             CALL timestart("EV output")
             ne_found=ne_all
-            if (fmpi%pe_diag) THEN
-#if defined(CPP_MPI)
-              ! Collect number of all eigenvalues
-              CALL MPI_ALLREDUCE(ne_found,ne_all,1,MPI_INTEGER,MPI_SUM, fmpi%diag_sub_comm,ierr)
-              ne_all=MIN(fi%input%neig,ne_all)
-#endif
-            endif
-
+            
             IF (fmpi%n_rank == 0) THEN
                 ! Only process 0 writes out the value of ne_all and the
                 ! eigenvalues.

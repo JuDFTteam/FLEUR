@@ -234,7 +234,7 @@ contains
       integer, parameter  :: deg = 20
 #ifdef CPP_CHASE
    integer:: mbsize, nbsize, irsrc, icsrc, dim0, dim1, myprow, mypcol
-      integer :: comm_1d, comm_2d, ierr,myrank
+      integer :: comm_1d, comm_2d, ierr, myrank, ne_global
       integer :: nex !extra search space
       integer :: init  !status variable
    integer :: j, gcol
@@ -245,6 +245,7 @@ contains
    complex, allocatable :: zmat_chase_c(:, :)
 
       call timestart("CHASE MPI-STD")
+      ne_global = ne
       nex = 0.2*ne
       allocate (eigval(ne+nex))
 
@@ -322,7 +323,12 @@ contains
          call juDFT_error("Wrong type for ChASE eigenvector output", calledby="chase_mpi_dp")
       end select
 
-      eig(:ne) = eigval(:ne)
+      call MPI_COMM_RANK(hmat%blacsdata%mpi_com, myrank, ierr)
+      if (myrank == 0) eig(:ne_global) = eigval(:ne_global)
+      call MPI_BCAST(ne_global, 1, MPI_INTEGER, 0, hmat%blacsdata%mpi_com, ierr)
+      call MPI_BCAST(eig(:ne_global), ne_global, MPI_DOUBLE_PRECISION, 0, hmat%blacsdata%mpi_com, ierr)
+      ne = ne_global
+
       if (allocated(zmat_chase_r)) deallocate (zmat_chase_r)
       if (allocated(zmat_chase_c)) deallocate (zmat_chase_c)
 
@@ -331,10 +337,6 @@ contains
       call MPI_COMM_FREE(comm_2d, ierr)
       call timestop("CHASE MPI COMM_FREE")
       call timestop("CHASE MPI-STD")
-      call MPI_COMM_RANK(hmat%blacsdata%mpi_com, myrank, ierr)
-      if (myrank > 0) then
-         ne=0 !only rank 0 has the correct eigenvalues, set to zero on other ranks to avoid confusion
-      end if
 #endif
    end subroutine chase_mpi_dp
 

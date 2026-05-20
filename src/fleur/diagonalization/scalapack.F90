@@ -82,7 +82,7 @@ contains
       !
       !  ScaLAPACK things
       character(len=1)    :: uplo
-      integer              :: num, num1, num2, liwork, lwork2, np0, mq0, np, myid
+      integer              :: num, num1, num2, liwork, lwork2, np0, mq0
       integer              :: iceil, numroc, nn, nb
       integer, allocatable :: ifail(:), iclustr(:)
       real                 :: abstol, orfac = 1.e-4, dlamch
@@ -105,9 +105,6 @@ contains
          type IS (t_mpimat)
 
             allocate (eig2(hmat%global_size1))
-
-            call MPI_COMM_RANK(hmat%blacsdata%mpi_com, myid, ierr)
-            call MPI_COMM_SIZE(hmat%blacsdata%mpi_com, np, ierr)
 
             num = ne !no of states solved for
 
@@ -296,21 +293,8 @@ contains
             eig(:num2) = eig2(:num2)
             deallocate (eig2)
             !
-            !
-            !     Redistribute eigenvectors  from ScaLAPACK distribution to each process, i.e. for
-            !     process i these are eigenvectors i+1, np+i+1, 2*np+i+1...
-            !     Only num=num2/np eigenvectors per process
-            !
-            num = floor(real(num2)/np)
-            if (myid .lt. num2 - (num2/np)*np) num = num + 1
-            ne = 0
-            do i = myid + 1, num2, np
-               ne = ne + 1
-               !eig(ne)=eig2(i)
-            end do
             allocate (t_mpimat::zmat)
-            call zmat%init(ev_dist%l_real, ev_dist%global_size1, ev_dist%global_size1, &
-                           ev_dist%blacsdata%mpi_com, MPIMAT_ROWCYCLIC)
+            call zmat%init(ev_dist)
             call zmat%copy(ev_dist, 1, 1)
          class DEFAULT
             WRITE(*,*) 'Error for k-point ', ikpt
