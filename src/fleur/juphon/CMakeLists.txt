@@ -1,8 +1,5 @@
 set(fleur_F90 ${fleur_F90}
 src/fleur/juphon/dfpt.F90
-src/fleur/juphon/dfpt_phonon.F90
-src/fleur/juphon/dfpt_efield.F90
-src/fleur/juphon/dfpt_borncharges.F90
 src/fleur/juphon/dfpt_interpolation.F90
 src/fleur/juphon/dfpt_check.F90
 src/fleur/juphon/dfpt_sternheimer.F90
@@ -32,12 +29,13 @@ src/fleur/juphon/dfpt_generate_gradient.F90
 src/fleur/juphon/dfpt_gradient.F90
 src/fleur/juphon/dfpt_vefield.F90
 src/fleur/juphon/dfpt_vbfield.F90
-src/fleur/juphon/dfpt_bfield.F90
+#src/fleur/juphon/dfpt_bfield.F90
 src/fleur/juphon/dfpt_dielecten.F90
 src/fleur/juphon/dfpt_magsusc.F90
 src/fleur/juphon/dfpt_born_effcharge.F90
 src/fleur/juphon/dfpt_potdenLocal.F90
 src/fleur/juphon/dfpt_NAC.F90
+src/fleur/juphon/types_sternheimerJob.F90
 src/fleur/juphon/types_dfpt.F90
 src/fleur/juphon/types_phonon.F90
 src/fleur/juphon/types_efield.F90
@@ -47,4 +45,5 @@ src/fleur/juphon/superconductivity/dfpt_elph_mat.F90
 src/fleur/juphon/superconductivity/dfpt_tetra_double.F90
 src/fleur/juphon/superconductivity/dfpt_tetra_single.F90
 src/fleur/juphon/superconductivity/dfpt_elph_linewidth.F90
+src/fleur/juphon/superconductivity/dfpt_postprocess_pot.F90
 )

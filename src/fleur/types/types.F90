@@ -42,5 +42,6 @@ MODULE m_types
   USE m_types_xcpot
   USE m_types_xcpot_inbuild
   USE m_types_rsoc
+  USE m_types_sternheimerJob
    implicit none
 END MODULE m_types

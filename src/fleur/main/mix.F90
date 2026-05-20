@@ -16,7 +16,7 @@ MODULE m_mix
 contains
 
   SUBROUTINE mix_charge( field,   fmpi, l_writehistory,&
-       stars, atoms, sphhar, vacuum, input, sym, juphon, cell, noco, nococonv,&
+       stars, atoms, sphhar, vacuum, input, sym, cell, noco, nococonv,&
          archiveType, xcpot, iteration, inDen, outDen, results, coreDen, l_runhia, sliceplot,&
          inDenIm, outDenIm, dfpt_tag)
 
@@ -46,7 +46,6 @@ contains
     type(t_noco),      intent(in)    :: noco
     type(t_nococonv),  intent(in)    :: nococonv
     TYPE(t_sym),TARGET,INTENT(in)    :: sym
-    TYPE(t_juphon),    INTENT(in)    :: juphon
     TYPE(t_stars),TARGET,INTENT(in)  :: stars
     TYPE(t_cell),TARGET,INTENT(in)   :: cell
     TYPE(t_sphhar),TARGET,INTENT(in) :: sphhar
@@ -147,7 +146,7 @@ contains
     IF( input%preconditioning_param /= 0 .AND. .NOT.l_dfpt)  THEN
        CALL timestart("Preconditioner")
        CALL kerker( field,  fmpi, &
-                    stars, atoms, sphhar, vacuum, input, sym, juphon, cell, noco, nococonv,&
+                    stars, atoms, sphhar, vacuum, input, sym, cell, noco, nococonv,&
                       inDen, outDen, fsm(it) )
        !Store modified density in history
        CALL mixing_history_store(fsm(it))
@@ -275,8 +274,13 @@ contains
                1,results%last_distance,results%ef,results%last_mmpmatDistance,results%last_occDistance,.TRUE.,inDen,b_constr=nococonv%b_con)
           CALL writeCoreDensity(input,atoms,outDen%mtCore,inDen%tec,inDen%qint)
        ELSE
+          INQUIRE(file=trim(dfpt_tag)//"_old.hdf",exist=l_exist)
+          IF (l_exist) CALL system("rm "//trim(dfpt_tag)//"_old.hdf")
+          INQUIRE(file=trim(dfpt_tag)//".hdf", exist=l_exist)
+          IF (l_exist) CALL system("mv "//trim(dfpt_tag)//".hdf "//trim(dfpt_tag)//"_old.hdf")
           CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,CDN_INPUT_DEN_const,&
                1,results%last_distance,results%ef,results%last_mmpmatDistance,results%last_occDistance,.TRUE.,inDen,inFilename=dfpt_tag,denIm=inDenIm)
+          IF (l_exist) CALL system("rm "//trim(dfpt_tag)//"_old.hdf")
        END IF
     END IF
 

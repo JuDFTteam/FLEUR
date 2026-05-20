@@ -351,7 +351,7 @@ CONTAINS
          END IF
 
          CALL timestart("generation of potential")
-         CALL vgen(hybdat, fi%field, fi%input, xcpot, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, fi%juphon, &
+         CALL vgen(hybdat, fi%field, fi%input, xcpot, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, &
                    fi%cell,   fi%sliceplot, fmpi, results, fi%noco, nococonv, EnergyDen, inDen, vTot, vx, vCoul, vxc, exc)
          CALL timestop("generation of potential")
 
@@ -591,7 +591,7 @@ CONTAINS
                 CALL timestart("juPhon DFPT")
                 CALL dfpt(fi, sphhar, stars, nococonv, fi%kpts, fmpi, results, enpara, outDen, vTot, vxc, eig_id, xcpot, hybdat, mpdata, forcetheo)
                 CALL timestop("juPhon DFPT")
-                CALL juDFT_end("Phonon calculation finished.",fmpi%irank)
+                CALL juDFT_end("DFPT calculation finished.",fmpi%irank)
             END IF
 
             !CRYSTAL FIELD OUTPUT
@@ -632,7 +632,7 @@ CONTAINS
          
          ! mix input and output densities
          CALL mix_charge(field2, fmpi, (iter == fi%input%itmax .OR. judft_was_argument("-mix_io")), stars, &
-                         fi%atoms, sphhar, fi%vacuum, fi%input, fi%sym, fi%juphon, fi%cell, fi%noco, nococonv, &
+                         fi%atoms, sphhar, fi%vacuum, fi%input, fi%sym, fi%cell, fi%noco, nococonv, &
                          archiveType, xcpot, iter, inDen, outDen,  results, coreDen, hub1data%l_runthisiter, fi%sliceplot)
          
          ! Rotating to the local MT frame

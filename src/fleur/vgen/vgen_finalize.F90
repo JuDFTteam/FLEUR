@@ -12,7 +12,7 @@ MODULE m_vgen_finalize
 
 CONTAINS
 
-   SUBROUTINE vgen_finalize(fmpi ,field,cell,atoms,stars,vacuum,sym,juphon,noco,nococonv,input,xcpot,sphhar,vTot,vCoul,denRot,sliceplot)
+   SUBROUTINE vgen_finalize(fmpi ,field,cell,atoms,stars,vacuum,sym,noco,nococonv,input,xcpot,sphhar,vTot,vCoul,denRot,sliceplot)
       !--------------------------------------------------------------------------
       ! FLAPW potential generator (finalization)
       !
@@ -41,7 +41,6 @@ CONTAINS
       TYPE(t_noco),     INTENT(IN)    :: noco
       TYPE(t_nococonv), INTENT(INOUT) :: nococonv
       TYPE(t_sym),      INTENT(IN)    :: sym
-      TYPE(t_juphon),   INTENT(IN)    :: juphon    
       TYPE(t_stars),    INTENT(IN)    :: stars
       TYPE(t_atoms),    INTENT(IN)    :: atoms
       TYPE(t_input),    INTENT(IN)    :: input
@@ -102,7 +101,7 @@ CONTAINS
          CALL timestop("Building B")
 
          CALL timestart("SF subroutine")
-         CALL sourcefree(fmpi,field,stars,atoms,sphhar,vacuum,input,sym,juphon,cell,bxc,vScal,vCorr)
+         CALL sourcefree(fmpi,field,stars,atoms,sphhar,vacuum,input,sym,cell,bxc,vScal,vCorr)
          CALL timestop("SF subroutine")
 
          CALL timestart("Correcting vTot")

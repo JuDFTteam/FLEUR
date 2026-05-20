@@ -9,7 +9,7 @@ module m_dfpt_dynmat_eig
 
   contains
 
-  subroutine DiagonalizeDynMat(atoms, qvec, calcEv, dynMat, w, a, iqpt, l_scalemass, add_tag,l_sumrule)
+  subroutine DiagonalizeDynMat(atoms, qvec, calcEv, dynMat, w, a, iqpt, l_scalemass, add_tag,l_sumrule,l_writeOutput)
 
     USE m_juDFT_stop
     USE m_constants
@@ -29,6 +29,7 @@ module m_dfpt_dynmat_eig
     logical, intent(in) :: l_scalemass
     character(len=*), intent(in) :: add_tag
     logical, intent(in) :: l_sumrule
+    logical,intent(in) :: l_writeOutput
 
     ! Array parameters
 
@@ -85,7 +86,7 @@ module m_dfpt_dynmat_eig
     if ((TRIM(add_tag)).EQ."full".OR.(TRIM(add_tag).EQ."band")) filenameTemp = TRIM(add_tag)//"_"//filenameTemp
 !    filename = trim(filenameTemp)
 !    write(*, *) filename
-    open( 109, file=filenameTemp, status='replace', action='write', form='formatted')
+    if (l_writeOutput) open( 109, file=filenameTemp, status='replace', action='write', form='formatted')
 
     ! Set parameter for LAPACK diagonalization routine
     if (calcEv ) then
@@ -173,13 +174,15 @@ module m_dfpt_dynmat_eig
       write(*, '(3(2(es16.8,1x),3x))') a(ii, :)
     END DO
 
-    write(109, '(a,3f9.3)') 'q =', qvec
-    write(109, '(a)')       '==================================='
-    write(109, '(a)')
-    write(109, '(a)') 'Original Dynamical Matrix [mass corrected]'
-    DO ii = 1, lda
-      write(109, '(3(2(es16.8,1x),3x))') a(ii, :)
-    END DO
+    if (l_writeOutput) then 
+      write(109, '(a,3f9.3)') 'q =', qvec
+      write(109, '(a)')       '==================================='
+      write(109, '(a)')
+      write(109, '(a)') 'Original Dynamical Matrix [mass corrected]'
+      DO ii = 1, lda
+        write(109, '(3(2(es16.8,1x),3x))') a(ii, :)
+      END DO
+    end if 
 
     allocate( w(n))
     w = 0.
@@ -209,7 +212,7 @@ module m_dfpt_dynmat_eig
       do ieqat = 1, atoms%neq(itype)
         iatom = iatom + 1
         write(*, "(a,i2,a,1x,3(es16.8,1x),',',5x)") 'Atom', iatom, ':', w((iatom - 1)* 3 + 1:(iatom - 1)* 3 + 3)
-        write(109, "(a,i2,a,1x,3(es16.8,1x),',',5x)") 'Atom', iatom, ':', w((iatom - 1)* 3 + 1:(iatom - 1)* 3 + 3)
+        if (l_writeOutput) write(109, "(a,i2,a,1x,3(es16.8,1x),',',5x)") 'Atom', iatom, ':', w((iatom - 1)* 3 + 1:(iatom - 1)* 3 + 3)
       end do ! ieqat
     end do ! itype
 
@@ -218,14 +221,14 @@ module m_dfpt_dynmat_eig
       DO ii = 1, lda
         write(*, '(3(2(es16.8,1x),3x))') a(ii, :)
         write(*, *)
-        write(109, '(3(2(es16.8,1x),3x))') a(ii, :)
-        write(109, *)
+        if (l_writeOutput) write(109, '(3(2(es16.8,1x),3x))') a(ii, :)
+        if (l_writeOutput) write(109, *)
       END DO
     else
       a(:, :) = cmplx(0., 0.)
     end if
 
-    close( 109 )
+    if (l_writeOutput) close( 109 )
 
 
 

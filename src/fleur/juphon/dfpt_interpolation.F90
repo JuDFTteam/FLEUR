@@ -50,7 +50,7 @@ contains
         type(t_kpts)  :: qpts
         integer, allocatable :: q_list(:)
         
-        integer :: iQ, iread, iDir, iDir2
+        integer :: iQ, iread, iDir, iDir2, nx,ny,nz
 
         ! for IO of dynMats
         real    :: numbers(3*fi%atoms%nat,6*fi%atoms%nat)
@@ -59,7 +59,7 @@ contains
 
         ! dynMat properties
         complex, allocatable   :: eigenFreqs(:), eigenVecs(:,:)
-        complex, allocatable   :: dyn_mat(:,:,:), dyn_mat_r(:,:,:), dyn_mat_q_full(:,:,:), dyn_mat_pathq(:,:),dyn_mat_NAC_q(:,:),dyn_mat_NAC_r(:,:,:),dyn_mat_NAC_r_full(:,:,:)
+        complex, allocatable   :: dyn_mat(:,:,:), dyn_mat_r(:,:,:,:,:), dyn_mat_q_full(:,:,:), dyn_mat_pathq(:,:),dyn_mat_NAC_q(:,:),dyn_mat_NAC_r(:,:,:),dyn_mat_NAC_r_full(:,:,:)
         real,    allocatable   :: eigenVals(:), eigenValsFull(:,:,:)
 
         
@@ -67,6 +67,12 @@ contains
         type(t_banddos)                 :: banddosLocal
         type(t_eigdos_list),allocatable :: eigdos(:)
         type(t_dos), target             :: dos 
+
+        ! Wigner Seitz Construction 
+        integer, allocatable  :: supercellR(:,:)
+        real,allocatable  :: supercellR_cart(:,:)
+        real, allocatable  :: WSweight(:)
+        integer            :: ft_lim(2,3), bigBox_lim(2,3), iGrid , boxSize
         
 
         ! If the Dynmats-Files were already created, we can read them in and do postprocessing.
@@ -144,25 +150,26 @@ contains
             !end if
             !stop
 
-
             ! Real space transformation
-            ALLOCATE(dyn_mat_r(qpts%nkptf,3*fi%atoms%nat,3*fi%atoms%nat))
-            call ft_dyn(fi_fullsym%atoms, qpts, fi_fullsym%sym, fi%cell%amat, dyn_mat, dyn_mat_r, dyn_mat_q_full)
+            ft_lim(2,:) = qpts%nkpt3(:) -1 
+            ft_lim(1,:) = 0 
+            allocate(dyn_mat_r(0:ft_lim(2,1),0:ft_lim(2,2),0:ft_lim(2,3),3*fi%atoms%nat,3*fi%atoms%nat))
+            call ft_dyn(fi_fullsym%atoms, qpts, fi_fullsym%sym, ft_lim, fi%cell%amat, dyn_mat, dyn_mat_r, dyn_mat_q_full)
             
             ! In order to call the normal diagonalisation routines
             ! The FCM must be not-normalized --> otherwise we find the wrong unit
             ! Either change here or in dfpt_dynmat_eig.F90 if tag != raw 
             do iDir = 1, 3*fi%atoms%nat
                 do iDir2 = 1, 3*fi%atoms%nat
-                    dyn_mat_r(:,iDir, iDir2) = dyn_mat_r(:,iDir, iDir2) * massInElectronMasses*  &
+                    dyn_mat_r(:,:,:,iDir, iDir2) = dyn_mat_r(:,:,:,iDir, iDir2) * massInElectronMasses*  &
                                                SQRT(atomicMasses_const(fi%atoms%nz(CEILING(iDir/3.0)))*atomicMasses_const(fi%atoms%nz(CEILING(iDir2/3.0))))
                 end do
             end do
             !call save_npy("dyn_mat_r.npy",dyn_mat(iQ,:,:))
             !stop
             !subtract Long range part
-            call save_npy("dyn_mat_r_clean.npy",dyn_mat_r(:,:,:))
-            dyn_mat_NAC_r_full(:,:,:) = cmplx(0.0,0.0)
+            !call save_npy("dyn_mat_r_clean.npy",dyn_mat_r(:,:,:,:,:)) !bounds no longer consistent for 
+            !dyn_mat_NAC_r_full(:,:,:) = cmplx(0.0,0.0)
             if (fi%juPhon%l_polar) then
                 do iQ = 1, qpts%nkptf
                     dyn_mat_NAC_r = cmplx(0.0,0.0)
@@ -174,13 +181,37 @@ contains
                     call get_NAC_ewald_r(fi_fullsym,qpts,stars_fullsym,dyn_mat_NAC_r,qpts%bkf(:,iQ),iQ)
                     !stop
                     dyn_mat_NAC_r_full(:,:,:)= dyn_mat_NAC_r_full(:,:,:) + dyn_mat_NAC_r(:,:,:)/qpts%nkptf
-                    dyn_mat_r(:,:,:) = dyn_mat_r(:,:,:) - dyn_mat_NAC_r(:,:,:)/qpts%nkptf
+                    !dyn_mat_r(:,:,:) = dyn_mat_r(:,:,:) - dyn_mat_NAC_r(:,:,:)/qpts%nkptf
                 end do
             end if
-            print*,"dyn_mat_r",shape(dyn_mat_r)
-            call save_npy("dyn_mat_r.npy",dyn_mat_r(:,:,:))
-            call save_npy("dyn_mat_NAC_r_full.npy",dyn_mat_NAC_r_full(:,:,:))
+            !print*,"dyn_mat_r",shape(dyn_mat_r)
+            !call save_npy("dyn_mat_r.npy",dyn_mat_r(:,:,:))
+            !call save_npy("dyn_mat_NAC_r_full.npy",dyn_mat_NAC_r_full(:,:,:))
             !stop
+
+            ! create wigner seitz cell and weights on bigger fft mesh  
+            ! we do this here so we dont have to create the weights for every ift_dyn call            
+            bigBox_lim(2,:) =   2*qpts%nkpt3(:)
+            bigBox_lim(1,:) = - 2*qpts%nkpt3(:) 
+
+            boxSize = (4*qpts%nkpt3(1)+1) * (4*qpts%nkpt3(2)+1) * (4*qpts%nkpt3(3)+1) 
+
+            allocate(WSweight(boxSize))
+            allocate(supercellR(3,boxSize))
+            allocate(supercellR_cart(3,boxSize))
+
+            WSweight = 0.0
+            supercellR = 0.0 
+            iGrid = 1
+            do nz=bigBox_lim(1,3),bigBox_lim(2,3)
+                do ny=bigBox_lim(1,2),bigBox_lim(2,2)
+                    do nx=bigBox_lim(1,1),bigBox_lim(2,1)
+                        supercellR(:,iGrid) = (/nx,ny,nz/)
+                        iGrid = iGrid+1
+                    end do 
+                end do 
+            end do 
+            call fi_fullsym%cell%calculate_WSweight(supercellR,WSweight,scaleSupercell=qpts%nkpt3(:))
 
             ! interpolate to dense grid on a arbitrary q-point
             ! specified in the inp.xml kpts.xml
@@ -193,8 +224,7 @@ contains
             !print*,"fi%kpts%nkpt",fi%kpts%nkpt
             !stop
             do iQ = 1, fi%kpts%nkpt
-                call ift_dyn(fi_fullsym%atoms,fi_fullsym%kpts,fi_fullsym%sym,fi%cell%amat,fi%kpts%bk(:,iQ),dyn_mat_r,dyn_mat_pathq)
-                !print*,"sum(dyn_mat_pathq) in inter 1",sum(dyn_mat_pathq(:,:))
+                call ift_dyn(fi_fullsym%atoms,fi_fullsym%kpts,ft_lim,bigBox_lim,WSweight,fi%kpts%bk(:,iQ),dyn_mat_r,dyn_mat_pathq)
                 WRITE(*,*) '-------------------------'
                 !print*,"fi%kpts%bk(:,iQ)",fi%kpts%bk(:,iQ)
                 !if ((fi%juPhon%l_polar) .and. (norm2(fi%kpts%bk(:,iQ)) .lt. 1e-8)) then
@@ -211,7 +241,7 @@ contains
                 !print*,"dyn_mat_pathq",dyn_mat_pathq
                 print*,"sum(dyn_mat_pathq) in inter 2",sum(dyn_mat_pathq(:,:))
                 call timestart("Dynmat diagonalization")
-                call DiagonalizeDynMat(fi%atoms, fi%kpts%bk(:,iQ), fi%juPhon%calcEigenVec, dyn_mat_pathq, eigenVals, eigenVecs, iQ,.TRUE.,TRIM(dynfiletag),fi%juPhon%l_sumrule)
+                call DiagonalizeDynMat(fi%atoms, fi%kpts%bk(:,iQ), fi%juPhon%calcEigenVec, dyn_mat_pathq, eigenVals, eigenVecs, iQ,.TRUE.,TRIM(dynfiletag),fi%juPhon%l_sumrule,l_writeOutput=.true.)
                 call timestop("Dynmat diagonalization")
                 !stop
                 call timestart("Frequency calculation")
@@ -229,6 +259,7 @@ contains
                 banddosLocal = fi%banddos 
                 banddosLocal%dos = .true.
                 call dos%init(fi%input,fi%atoms,fi%kpts,banddosLocal,.false.,eigenValsFull)
+                allocate(eigdos(1))
                 eigdos(1)%p=>dos 
                 call make_dos(fi%kpts,fi%atoms,fi%vacuum,fi%input,fi%banddos,fi%sliceplot,fi%noco,nococonv,fi%sym,fi%cell,results,eigdos,fi%juPhon)
             end if 

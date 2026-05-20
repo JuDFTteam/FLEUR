@@ -10,7 +10,7 @@ MODULE m_fleur_vdW
   PUBLIC fleur_vdW_mCallsen
 CONTAINS
   SUBROUTINE fleur_vdW_mCallsen(fmpi,atoms,sphhar,stars,input,      &
-   cell,sym ,juphon,vacuum,results,    &
+   cell,sym,vacuum,results,    &
    den,vpw_total,vr_total)
     !Interface to Juelich vdW-code
     USE m_types
@@ -32,7 +32,6 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)      :: cell
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_sym),INTENT(IN)       :: sym
-    TYPE(t_juphon),INTENT(IN)    :: juphon
     TYPE(t_potden),INTENT(INOUT) :: den
      
     TYPE(t_results),INTENT(INOUT) :: results
@@ -77,7 +76,7 @@ CONTAINS
     atoms_tmp%zatom=0.0
     CALL psqpw(fmpi,&
          atoms_tmp,sphhar,stars,vacuum,&
-         cell,input,sym , juphon, &
+         cell,input,sym, &
          den,1,.TRUE.,2,psq)
 
     !put pseudo charge on real-space grid

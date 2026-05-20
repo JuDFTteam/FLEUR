@@ -44,26 +44,21 @@ contains
         out_susc = this%magnetic_susc
     end subroutine get_magnetic_susc
 
-    subroutine init_child_bfield(this,fi,nqpts,juPhon,dynMatNac)
+    subroutine init_child_bfield(this,fi,nqpts,dynMatNac)
         use m_types
         class(t_bfield), intent(inout) :: this
         type(t_fleurinput), intent(in) :: fi
         integer, intent(in)            :: nqpts
-        type(t_juPhon), intent(out)    :: juPhon
         complex, optional, intent(in)  :: dynMatNac(:,:)
 
         this%magnetic_susc = cmplx(0.0,0.0)
 
-        juPhon = fi%juPhon
-        juPhon%l_phonon = .false.
-        juPhon%l_efield = .false.
-        juPhon%l_borneffcharge = .false.
-        juPhon%l_bfield = .true.
     end subroutine init_child_bfield
 
-    subroutine q_indepent_properties_bfield(this,fi,fmpi,sphhar,hybdat,xcpot,nococonv,stars,rho,vTot,grRho3,grVtot3,grVC3,grVext3,grgrVext3x3)
+    subroutine q_indepent_properties_bfield(this,sternheimerJob,fi,fmpi,sphhar,hybdat,xcpot,nococonv,stars,rho,vTot,grRho3,grVtot3,grVC3,grVext3,grgrVext3x3)
         use m_types
         class(t_bfield), intent(inout) :: this
+        type(t_sternheimerjob),intent(in) :: sternheimerJob
         type(t_fleurinput), intent(in)  :: fi
         type(t_mpi), intent(in)         :: fmpi
         type(t_stars),intent(in)        :: stars
@@ -73,13 +68,14 @@ contains
         type(t_hybdat),intent(inout)    :: hybdat
         type(t_potden),intent(in)       :: rho
         type(t_potden),intent(in)       :: vTot
-        type(t_potden), intent(in)      :: grRho3(3), grVtot3(3), grVC3(3), grVext3(3), grgrVext3x3(3,3)
+        type(t_potden), intent(inout)      :: grRho3(3), grVtot3(3), grVC3(3), grVext3(3), grgrVext3x3(3,3)
     end subroutine q_indepent_properties_bfield
 
-    subroutine postprocessing_scf_bfield(this,fi,stars,starsq,sphhar,xcpot,nococonv,hybdat,fmpi,qpts,q_list,iQ,iDtype,iDir,eig_id,dfpt_eig_id, &
+    subroutine postprocessing_scf_bfield(this,sternheimerJob,fi,stars,starsq,sphhar,xcpot,nococonv,hybdat,fmpi,qpts,q_list,iQ,iDtype,iDir,eig_id,dfpt_eig_id, &
                                           dfpt_eig_id2,enpara,results,results1,l_real,juPhon,rho,vTot,grRho3,grVext3,grVC3,den1,vTot1,den1Im,vTot1Im,vC1,vC1Im)
         use m_types
         class(t_bfield),intent(inout) :: this
+        type(t_sternheimerjob),intent(in) :: sternheimerJob
         type(t_fleurinput), intent(in)  :: fi
         type(t_stars),intent(in)       :: stars, starsq
         type(t_sphhar),intent(in)      :: sphhar
