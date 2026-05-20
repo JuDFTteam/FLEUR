@@ -106,7 +106,7 @@ contains
             allocate (t_mpimat::zmat)
             call zmat%init(hmat)
 
-            num = ne !no of states solved for
+            num = max(1, min(ne, hmat%global_size1)) ! number of states solved for
 
             abstol = 2.0*dlamch('S') ! PDLAMCH gave an error on ZAMpano
 
@@ -116,10 +116,10 @@ contains
             !
             nn = max(max(hmat%global_size1, nb), 2)
             np0 = numroc(nn, nb, 0, 0, hmat%blacsdata%nprow)
-            mq0 = numroc(max(max(ne, nb), 2), nb, 0, 0, hmat%blacsdata%npcol)
+            mq0 = numroc(max(max(num, nb), 2), nb, 0, 0, hmat%blacsdata%npcol)
             if (hmat%l_real) then
                lwork2 = 5*hmat%global_size1 + max(5*nn, np0*mq0 + 2*nb*nb) + &
-                        iceil(ne, hmat%blacsdata%nprow*hmat%blacsdata%npcol)*nn + 10*hmat%global_size1
+                        iceil(num, hmat%blacsdata%nprow*hmat%blacsdata%npcol)*nn + 10*hmat%global_size1
                allocate (work2_r(lwork2), stat=err) ! Allocate more in case of clusters
             else
                lwork2 = hmat%global_size1 + max(nb*(np0 + 1), 3)
@@ -166,6 +166,11 @@ contains
                             hmat%blacsdata%blacs_desc, smat%data_r, 1, 1, smat%blacsdata%blacs_desc, &
                             0.0, 1.0, 1, num, abstol, num1, num2, eig2, orfac, zmat%data_r, 1, 1, &
                             hmat%blacsdata%blacs_desc, work2_r, -1, iwork, -1, ifail, iclustr, gap, ierr)
+               if (ierr .ne. 0) then
+                  WRITE (*, *) 'Error for k-point ', ikpt
+                  write (*, *) 'ERROR: pdsygvx workspace query failed: ierr=', ierr, ' n=', hmat%global_size1, ' iu=', num
+                  call juDFT_error('SCALAPACK workspace query failed in pdsygvx', calledby='scalapack')
+               end if
                if (work2_r(1) .gt. lwork2) then
                   lwork2 = work2_r(1) + 20*hmat%global_size1
                   deallocate (work2_r)
@@ -178,7 +183,7 @@ contains
                end if
             else
                lrwork = 4*hmat%global_size1 + max(5*nn, np0*mq0) + &
-                        iceil(ne, hmat%blacsdata%nprow*hmat%blacsdata%npcol)*nn + 10*hmat%global_size1
+                        iceil(num, hmat%blacsdata%nprow*hmat%blacsdata%npcol)*nn + 10*hmat%global_size1
                ! Allocate more in case of clusters
                allocate (rwork(lrwork), stat=ierr)
                if (ierr /= 0) then
@@ -192,8 +197,13 @@ contains
                             0.0, 1.0, 1, num, abstol, num1, num2, eig2, orfac, zmat%data_c, 1, 1, &
                             hmat%blacsdata%blacs_desc, work2_c, -1, rwork, -1, iwork, -1, ifail, iclustr, &
                             gap, ierr)
-               if (abs(work2_c(1)) .gt. lwork2) then
-                  lwork2 = work2_c(1)
+               if (ierr .ne. 0) then
+                  WRITE (*, *) 'Error for k-point ', ikpt
+                  write (*, *) 'ERROR: pzhegvx workspace query failed: ierr=', ierr, ' n=', hmat%global_size1, ' iu=', num
+                  call juDFT_error('SCALAPACK workspace query failed in pzhegvx', calledby='scalapack')
+               end if
+               if (int(real(work2_c(1))) .gt. lwork2) then
+                  lwork2 = int(real(work2_c(1))) + 20*hmat%global_size1
                   deallocate (work2_c)
                   allocate (work2_c(lwork2), stat=err)
                   if (err /= 0) then
