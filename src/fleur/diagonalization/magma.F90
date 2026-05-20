@@ -15,7 +15,7 @@ module m_magma
 #endif
    implicit none
    private
-   logical ,save :: initialized=.false.
+   logical, save :: initialized = .false.
    !integer, save :: Magma_NumGPU = 1
    type, extends(t_solver)::t_solver_magma
    !! provides all solvers& transforms for a "serial" case on the GPU
@@ -32,7 +32,7 @@ contains
 
    function get_solver_magma() result(solver)
       class(t_solver), allocatable :: solver
-      allocate(t_solver_magma :: solver)
+      allocate (t_solver_magma :: solver)
       solver%name = "magma"
 #ifdef CPP_MAGMA
       solver%available = .true.
@@ -50,15 +50,15 @@ contains
    end function
 
    subroutine init()
-#ifdef CPP_MAGMA      
+#ifdef CPP_MAGMA
       if (.not. initialized) then
          initialized = .true.
          call magmaf_init()
          call magmaf_setdevice(acc_get_device_num(acc_device_nvidia))
          print *, acc_get_device_num(acc_device_nvidia)
       end if
-#endif      
-   end subroutine   
+#endif
+   end subroutine
 
    subroutine magma_gev(self, hmat, smat, ne, eig, zmat, ikpt)
 
@@ -160,7 +160,6 @@ contains
       call timestop("MAGMA GEV")
    end subroutine magma_gev
 
-
    subroutine magma_diag(self, hmat, ne, eig, zmat)
       !Simple driver to solve Generalized Eigenvalue Problem using magma routine
       implicit none
@@ -190,14 +189,14 @@ contains
             real, allocatable     :: rwork(:)
             integer, allocatable  :: iwork(:)
             ! Workspace query
-            call magmaf_dsyevr('V', 'I', 'U', n, hmat%data_r, size(hmat%data_r,1),&
-             0.0, 0.0, 1, ne, abstol, m, eigTemp, zmat%data_r, size(zmat%data_r,1), &
-                        isuppz, rwork_dum, -1, liwork, -1, info)
+            call magmaf_dsyevr('V', 'I', 'U', n, hmat%data_r, size(hmat%data_r, 1), &
+                               0.0, 0.0, 1, ne, abstol, m, eigTemp, zmat%data_r, size(zmat%data_r, 1), &
+                               isuppz, rwork_dum, -1, liwork, -1, info)
             lrwork = rwork_dum(1)
             allocate (rwork(lrwork), iwork(liwork(1)))
-            call magmaf_dsyevr('V', 'I', 'U', n, hmat%data_r, size(hmat%data_r,1), &
-            0.0, 0.0, 1, ne, abstol, m, eigTemp, zmat%data_r, size(zmat%data_r,1), &
-                        isuppz, rwork, lrwork, iwork, liwork(1), info)
+            call magmaf_dsyevr('V', 'I', 'U', n, hmat%data_r, size(hmat%data_r, 1), &
+                               0.0, 0.0, 1, ne, abstol, m, eigTemp, zmat%data_r, size(zmat%data_r, 1), &
+                               isuppz, rwork, lrwork, iwork, liwork(1), info)
          end block
       else
          block  !workspace locally
@@ -208,19 +207,19 @@ contains
             real, allocatable     :: rwork(:)
             integer, allocatable  :: iwork(:)
             ! Workspace query
-            call magmaf_zheevr('V', 'I', 'U', n, hmat%data_c, size(hmat%data_c,1), &
-            0.0, 0.0, 1, ne, abstol, m, eigTemp, zmat%data_c, size(zmat%data_c,1), isuppz, work_dum, &
-                        -1, rwork_dum, -1, liwork, -1, info)
+            call magmaf_zheevr('V', 'I', 'U', n, hmat%data_c, size(hmat%data_c, 1), &
+                               0.0, 0.0, 1, ne, abstol, m, eigTemp, zmat%data_c, size(zmat%data_c, 1), isuppz, work_dum, &
+                               -1, rwork_dum, -1, liwork, -1, info)
             lwork = work_dum(1)
             lrwork = rwork_dum(1)
             allocate (work(lwork), rwork(lrwork), iwork(liwork(1)))
-            call magmaf_zheevr('V', 'I', 'U', n, hmat%data_c, size(hmat%data_c,1), &
-            0.0, 0.0, 1, ne, abstol, m, eigTemp, zmat%data_c, size(zmat%data_c,1), isuppz, work, &
-                        lwork, rwork, lrwork, iwork, liwork(1), info)
+            call magmaf_zheevr('V', 'I', 'U', n, hmat%data_c, size(hmat%data_c, 1), &
+                               0.0, 0.0, 1, ne, abstol, m, eigTemp, zmat%data_c, size(zmat%data_c, 1), isuppz, work, &
+                               lwork, rwork, lrwork, iwork, liwork(1), info)
          end block
       end if
       eig(:min(size(eig), size(eigTemp))) = eigTemp(:min(size(eig), size(eigTemp)))
-#endif      
+#endif
       call timestop("MAGMA STD")
    end subroutine magma_diag
    subroutine magma_diag_sp(self, hmat, ne, eig, zmat)
@@ -235,7 +234,7 @@ contains
       call timestart("MAGMA STD-SP")
 #ifdef CPP_MAGMA
       integer, parameter:: sp = selected_real_kind(6)
-      integer          :: info, m, n ,lwork
+      integer          :: info, m, n, lwork
       real(sp)         :: eigval(hmat%matsize1)
       call init()
       n = hmat%matsize1
@@ -245,48 +244,48 @@ contains
 
       if (hmat%l_real) then
          BLOCK
-            REAL(kind=sp),allocatable:: h(:,:),z(:,:),eigval(:),work(:)
-            integer,allocatable      :: iwork(:),ifail(:)
-            Allocate(h(size(hmat%data_r,1),size(hmat%data_r,2)))
-            Allocate(eigval(size(hmat%data_r,1)),ifail(size(hmat%data_r,1)))
-            Allocate(z(size(hmat%data_r,1),ne))
-            h=hmat%data_r
-    
-            allocate(work(1),iwork(5*size(h,1)))
-            call magmaf_ssyevx('V','I','U',size(h,1),h,size(h,1),0.0,0.0,1,ne,1.0E-8_sp,m,eigval,z,size(z,1),work,-1,iwork,ifail,info)
-            lwork=work(1)
-            deallocate(work)
-            allocate(work(lwork))
-    
-            call magmaf_ssyevx('V','I','U',size(h,1),h,size(h,1),0.0,0.0,1,ne,1.0E-8_sp,m,eigval,z,size(z,1),work,lwork,iwork,ifail,info)
-            
-            eig(:ne)=eigval(:ne)
-            zmat%data_r=z(:,:ne)
-            deallocate(h,z,eigval,work,iwork)
-           END BLOCK
+            REAL(kind=sp), allocatable:: h(:, :), z(:, :), eigval(:), work(:)
+            integer, allocatable      :: iwork(:), ifail(:)
+            Allocate (h(size(hmat%data_r, 1), size(hmat%data_r, 2)))
+            Allocate (eigval(size(hmat%data_r, 1)), ifail(size(hmat%data_r, 1)))
+            Allocate (z(size(hmat%data_r, 1), ne))
+            h = hmat%data_r
+
+            allocate (work(1), iwork(5*size(h, 1)))
+          call magmaf_ssyevx('V','I','U',size(h,1),h,size(h,1),0.0,0.0,1,ne,1.0E-8_sp,m,eigval,z,size(z,1),work,-1,iwork,ifail,info)
+            lwork = work(1)
+            deallocate (work)
+            allocate (work(lwork))
+
+       call magmaf_ssyevx('V','I','U',size(h,1),h,size(h,1),0.0,0.0,1,ne,1.0E-8_sp,m,eigval,z,size(z,1),work,lwork,iwork,ifail,info)
+
+            eig(:ne) = eigval(:ne)
+            zmat%data_r = z(:, :ne)
+            deallocate (h, z, eigval, work, iwork)
+         END BLOCK
       else
          BLOCK
-            COMPLEX(kind=sp),allocatable:: h(:,:),z(:,:),work(:)
-            REAL(kind=sp),allocatable:: eigval(:),rwork(:)
-            integer,allocatable      :: iwork(:),ifail(:)
-            Allocate(h(size(hmat%data_c,1),size(hmat%data_c,2)))
-            Allocate(eigval(size(hmat%data_c,1)),ifail(size(hmat%data_c,1)))
-            Allocate(z(size(hmat%data_c,1),ne),rwork(7*size(hmat%data_c,1)))
-            h=hmat%data_c
-    
-            allocate(work(1),iwork(5*size(hmat%data_c,1)))
-            call magmaf_cheevx('V','I','U',size(h,1),h,size(h,1),0.0,0.0,1,ne,0.0,m,eigval,z,size(z,1),work,-1,rwork,iwork,ifail,info)
-            lwork=work(1)
-            deallocate(work)
-            allocate(work(lwork))
-    
-            call magmaf_cheevx('V','I','U',size(h,1),h,size(h,1),0.0,0.0,1,ne,0.0,m,eigval,z,size(z,1),work,lwork,rwork,iwork,ifail,info)
-            eig=eigval(:ne)
-            zmat%data_c=z(:,:ne)
-            deallocate(h,z,eigval,work,rwork,iwork)
-            END BLOCK   
+            COMPLEX(kind=sp), allocatable:: h(:, :), z(:, :), work(:)
+            REAL(kind=sp), allocatable:: eigval(:), rwork(:)
+            integer, allocatable      :: iwork(:), ifail(:)
+            Allocate (h(size(hmat%data_c, 1), size(hmat%data_c, 2)))
+            Allocate (eigval(size(hmat%data_c, 1)), ifail(size(hmat%data_c, 1)))
+            Allocate (z(size(hmat%data_c, 1), ne), rwork(7*size(hmat%data_c, 1)))
+            h = hmat%data_c
+
+            allocate (work(1), iwork(5*size(hmat%data_c, 1)))
+          call magmaf_cheevx('V','I','U',size(h,1),h,size(h,1),0.0,0.0,1,ne,0.0,m,eigval,z,size(z,1),work,-1,rwork,iwork,ifail,info)
+            lwork = work(1)
+            deallocate (work)
+            allocate (work(lwork))
+
+       call magmaf_cheevx('V','I','U',size(h,1),h,size(h,1),0.0,0.0,1,ne,0.0,m,eigval,z,size(z,1),work,lwork,rwork,iwork,ifail,info)
+            eig = eigval(:ne)
+            zmat%data_c = z(:, :ne)
+            deallocate (h, z, eigval, work, rwork, iwork)
+         END BLOCK
       end if
-#endif      
+#endif
       call timestop("MAGMA STD-SP")
    end subroutine magma_diag_sp
 
@@ -306,20 +305,20 @@ contains
          call judft_error("Matices not square in magma_reduction")
       if (smat%l_real) then
          ! Perform Cholesky decomposition of B to obtain L (B = L * L^T)
-         call magmaf_dpotrf('U', n, smat%data_r, size(smat%data_r,1), info)
+         call magmaf_dpotrf('U', n, smat%data_r, size(smat%data_r, 1), info)
          if (info /= 0) call juDFT_error("Error in Cholesky decomposition of B")
 
          ! Transform A to A' = L^-1 * A * L^-T using chegst
-         call magmaf_dsygst(1, "U", n, hmat%data_r, size(hmat%data_r,1), smat%data_r, size(smat%data_r,1), info)
+         call magmaf_dsygst(1, "U", n, hmat%data_r, size(hmat%data_r, 1), smat%data_r, size(smat%data_r, 1), info)
          if (info /= 0) call juDFT_error("Error in dsygst")
 
       else
          ! Perform Cholesky decomposition of B to obtain L (B = L * L^T)
-         call magmaf_zpotrf('U', n, smat%data_c, size(smat%data_c,1), info)
+         call magmaf_zpotrf('U', n, smat%data_c, size(smat%data_c, 1), info)
          if (info /= 0) call juDFT_error("Error in Cholesky decomposition of B")
 
          ! Transform A to A' = L^-1 * A * L^-T using chegst
-         call magmaf_zhegst(1, "U", n, hmat%data_c, size(hmat%data_c,1), smat%data_c, size(smat%data_c,1), info)
+         call magmaf_zhegst(1, "U", n, hmat%data_c, size(hmat%data_c, 1), smat%data_c, size(smat%data_c, 1), info)
          if (info /= 0) call juDFT_error("Error in zhegst")
       end if
 #endif
@@ -346,7 +345,7 @@ contains
          call magmaf_ztrtrs('U', 'N', 'N', n, m, smat%data_c, n, zMat%data_c, n, info)
          if (info /= 0) call juDFT_error("Error in back transformation (zpotrs)")
       end if
-#endif      
+#endif
       call timestop("MAGMA BACKTRANSFORM")
    end subroutine
 end module m_magma

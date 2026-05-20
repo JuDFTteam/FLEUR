@@ -18,7 +18,7 @@ contains
 
    function get_solver_elsi() result(solver)
       class(t_solver), allocatable :: solver
-      allocate(t_solver_elsi :: solver)
+      allocate (t_solver_elsi :: solver)
       solver%name = "elsi"
 #ifdef CPP_ELSI
       solver%available = .true.

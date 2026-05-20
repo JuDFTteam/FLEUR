@@ -41,7 +41,7 @@ module m_types_solver
 contains
    function get_solver_stop() result(solver)
       class(t_solver), allocatable :: solver
-      allocate(t_solver_stop :: solver)
+      allocate (t_solver_stop :: solver)
       solver%name = "stop"
       solver%available = .true.
       solver%parallel = .true.

@@ -240,7 +240,7 @@ contains
       real, intent(OUT)   :: eig(:)
       integer, intent(IN) :: ikpt
 #ifdef CPP_ELPA
-   integer           :: kernel
+      integer           :: kernel
       integer           :: err
       real, allocatable      :: eig2(:)
       class(t_mat), allocatable        :: ev_dist

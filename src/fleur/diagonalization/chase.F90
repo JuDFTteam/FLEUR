@@ -1,6 +1,6 @@
 !--------------------------------------------------------------------------------
 ! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
-! This file is part of FLEUR and available as free software under the conditions 
+! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 ! Added MPI implementation, DW 2018
@@ -11,7 +11,7 @@ module m_chase
    use m_types_mat
    use m_types_mpimat
    use m_types_solver
-   use , INTRINSIC :: iso_c_binding,ONLY: c_char
+   use , INTRINSIC :: iso_c_binding, ONLY: c_char
 #ifdef CPP_MPI
    use mpi
 #endif
@@ -32,7 +32,7 @@ contains
 
    function get_solver_chase() result(solver)
       class(t_solver), allocatable :: solver
-      allocate(t_solver_chase :: solver)
+      allocate (t_solver_chase :: solver)
       solver%name = "chase"
 #ifdef CPP_CHASE
       solver%available = .true.
@@ -85,15 +85,14 @@ contains
    subroutine chase_serial_dp(hmat, ne, eig, zmat)
       !Simple driver to solve Standard Eigenvalue Problem using ChASE routine
       implicit none
-      type(t_mat), intent(INOUT),VOLATILE  :: hmat
+      type(t_mat), intent(INOUT), VOLATILE  :: hmat
       integer, intent(INOUT)      :: ne
       class(t_mat), allocatable, intent(OUT)    :: zmat
       real, intent(OUT)           :: eig(:)
 
-
       !These chase parameters might to be adjusted
       real, parameter ::   tol = 1e-10
-      character(kind=c_char), parameter ::  mode = 'R', opt = 'S',qr='C'
+      character(kind=c_char), parameter ::  mode = 'R', opt = 'S', qr = 'C'
       integer, parameter  :: deg = 20
 #ifdef CPP_CHASE
       integer :: nex !extra search space
@@ -103,7 +102,7 @@ contains
       complex, allocatable, VOLATILE :: zc(:, :)
       call timestart("CHASE STD")
       nex = 0.2*ne
-      allocate (eigval(ne+nex))
+      allocate (eigval(ne + nex))
       allocate (t_mat::zmat)
       call zmat%init(hmat%l_real, hmat%matsize1, ne)
       call timestart("CHASE STD U2L")
@@ -113,27 +112,27 @@ contains
          allocate (zr(hmat%matsize1, ne + nex))
          ! Initialize of ChASE
          call timestart("CHASE STD INIT")
-         call dchase_init(size(hmat%data_r,1), ne, nex, hmat%data_r, size(hmat%data_r,1),zr, eigval, init)
+         call dchase_init(size(hmat%data_r, 1), ne, nex, hmat%data_r, size(hmat%data_r, 1), zr, eigval, init)
          call timestop("CHASE STD INIT")
          !Solve eigenvalue problem
          call timestart("CHASE STD SOLVE")
-         call dchase(deg, tol, mode, opt,qr)
+         call dchase(deg, tol, mode, opt, qr)
          call timestop("CHASE STD SOLVE")
          ! finalize and clean up
          call timestart("CHASE STD FINALIZE")
          call dchase_finalize(init)
          call timestop("CHASE STD FINALIZE")
-         
+
          zmat%data_r = zr(:, :ne)
       else
          allocate (zc(hmat%matsize1, ne + nex))
          ! Initialize of ChASE
          call timestart("CHASE STD INIT")
-         call zchase_init(hmat%matsize1, ne, nex, hmat%data_c, size(hmat%data_c,1), zc, eigval, init)
+         call zchase_init(hmat%matsize1, ne, nex, hmat%data_c, size(hmat%data_c, 1), zc, eigval, init)
          call timestop("CHASE STD INIT")
          !Solve eigenvalue problem
          call timestart("CHASE STD SOLVE")
-         call zchase(deg, tol, mode, opt,qr)
+         call zchase(deg, tol, mode, opt, qr)
          call timestop("CHASE STD SOLVE")
          ! finalize and clean up
          call timestart("CHASE STD FINALIZE")
@@ -154,11 +153,10 @@ contains
       class(t_mat), allocatable, intent(OUT)    :: zmat
       real, intent(OUT)           :: eig(:)
 
-
       integer, parameter:: sp = selected_real_kind(6)
       !These chase parameters might to be adjusted
       real(sp), parameter ::   tol = 1e-6
-      character, parameter ::  mode = 'R', opt = 'S', qr='C'
+      character, parameter ::  mode = 'R', opt = 'S', qr = 'C'
       integer, parameter  :: deg = 20
 
 #ifdef CPP_CHASE
@@ -171,7 +169,7 @@ contains
       complex(sp), allocatable :: hc(:, :)
       call timestart("CHASE STD-SP")
       nex = 0.2*ne
-      allocate (eigval(ne+nex))
+      allocate (eigval(ne + nex))
       allocate (t_mat::zmat)
       call zmat%init(hmat%l_real, hmat%matsize1, ne)
 
@@ -184,11 +182,11 @@ contains
          hr = hmat%data_r  !cast to sp
          ! Initialize of ChASE
          call timestart("CHASE STD-SP INIT")
-         call schase_init(hmat%matsize1, ne, nex, hr,size(hr,1), zr, eigval, init)
+         call schase_init(hmat%matsize1, ne, nex, hr, size(hr, 1), zr, eigval, init)
          call timestop("CHASE STD-SP INIT")
          !Solve eigenvalue problem
          call timestart("CHASE STD-SP SOLVE")
-         call schase(deg, tol, mode, opt,qr)
+         call schase(deg, tol, mode, opt, qr)
          call timestop("CHASE STD-SP SOLVE")
          ! finalize and clean up
          call timestart("CHASE STD-SP FINALIZE")
@@ -201,11 +199,11 @@ contains
          hc = hmat%data_c
          ! Initialize of ChASE
          call timestart("CHASE STD-SP INIT")
-         call cchase_init(hmat%matsize1, ne, nex, hc, size(hc,1),zc, eigval, init)
+         call cchase_init(hmat%matsize1, ne, nex, hc, size(hc, 1), zc, eigval, init)
          call timestop("CHASE STD-SP INIT")
          !Solve eigenvalue problem
          call timestart("CHASE STD-SP SOLVE")
-         call cchase(deg, tol, mode, opt,qr)
+         call cchase(deg, tol, mode, opt, qr)
          call timestop("CHASE STD-SP SOLVE")
          ! finalize and clean up
          call timestart("CHASE STD-SP FINALIZE")
@@ -223,31 +221,30 @@ contains
       implicit none
       type(t_mpimat), intent(INOUT)  :: hmat
       integer, intent(INOUT)         :: ne
-      class(t_mat), allocatable, intent(OUT),volatile    :: zmat
+      class(t_mat), allocatable, intent(OUT), volatile    :: zmat
       real, intent(OUT)           :: eig(:)
-
 
       !These chase parameters might to be adjusted
       real, parameter ::   tol = 1e-10
-      character(kind=c_char), parameter ::  mode = 'R', opt = 'S', qr='C'
+      character(kind=c_char), parameter ::  mode = 'R', opt = 'S', qr = 'C'
       character(kind=c_char), parameter ::  grid_major = 'C' !major of 2D MPI grid. Row major: grid_major=’R’, column major: grid_major=’C’
       integer, parameter  :: deg = 20
 #ifdef CPP_CHASE
-   integer:: mbsize, nbsize, irsrc, icsrc, dim0, dim1, myprow, mypcol
+      integer:: mbsize, nbsize, irsrc, icsrc, dim0, dim1, myprow, mypcol
       integer :: comm_1d, comm_2d, ierr, myrank, ne_global
       integer :: nex !extra search space
       integer :: init  !status variable
-   integer :: j, gcol
-   integer, external :: indxl2g
+      integer :: j, gcol
+      integer, external :: indxl2g
       !chase will modify these variables in call to xchase even though these are not arguments!!
       real, allocatable, volatile :: eigval(:)
-   real, allocatable :: zmat_chase_r(:, :)
-   complex, allocatable :: zmat_chase_c(:, :)
+      real, allocatable :: zmat_chase_r(:, :)
+      complex, allocatable :: zmat_chase_c(:, :)
 
       call timestart("CHASE MPI-STD")
       ne_global = ne
       nex = 0.2*ne
-      allocate (eigval(ne+nex))
+      allocate (eigval(ne + nex))
 
       !setup ChASE
       mbsize = hmat%blacsdata%blacs_desc(5) !block size for the block-cyclic distribution for the rows of global matrix
@@ -310,12 +307,12 @@ contains
          call zmat%init(hmat)
          if (hmat%l_real) then
             do j = 1, ne
-               gcol = indxl2g(j, zmat%blacsdata%blacs_desc(6), zmat%blacsdata%mycol, zmat%blacsdata%blacs_desc(8), zmat%blacsdata%npcol)
+           gcol = indxl2g(j, zmat%blacsdata%blacs_desc(6), zmat%blacsdata%mycol, zmat%blacsdata%blacs_desc(8), zmat%blacsdata%npcol)
                zmat%data_r(:, j) = zmat_chase_r(:, gcol)
             end do
          else
             do j = 1, ne
-               gcol = indxl2g(j, zmat%blacsdata%blacs_desc(6), zmat%blacsdata%mycol, zmat%blacsdata%blacs_desc(8), zmat%blacsdata%npcol)
+           gcol = indxl2g(j, zmat%blacsdata%blacs_desc(6), zmat%blacsdata%mycol, zmat%blacsdata%blacs_desc(8), zmat%blacsdata%npcol)
                zmat%data_c(:, j) = zmat_chase_c(:, gcol)
             end do
          end if
@@ -352,13 +349,13 @@ contains
       call timestart("CHASE MPI COMMS BUILD")
       call BLACS_GRIDINFO(icontext, no_row, no_col, MYPROW, MYPCOL)
       call MPI_COMM_SIZE(parent_comm, isize, ierr)
-      allocate (map2d(0:isize-1))
+      allocate (map2d(0:isize - 1))
 
       do i = 0, isize - 1
          call blacs_pcoord(icontext, i, ROW, COL)
          map2d(row + no_row*col) = i
       end do
-      
+
       !create 2d communicator
       call MPI_COMM_group(parent_comm, group, ierr)
       call MPI_Group_incl(group, isize, map2d, group_2d, ierr)

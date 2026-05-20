@@ -35,7 +35,7 @@ contains
 
       !Locals
       logical                       :: parallel
-      class(t_solver),allocatable   :: solver,transform
+      class(t_solver), allocatable   :: solver, transform
 
       select type (smat)
       class IS (t_mpimat)
@@ -46,8 +46,8 @@ contains
          parallel = .false.
       end select
 
-      call select_solver(parallel,diag_solver=solver,diag_transform=transform)
-      
+      call select_solver(parallel, diag_solver=solver, diag_transform=transform)
+
       if (.not. allocated(transform)) then
          ! We solve directly the generalized eigenvalue problem
          if (solver%generalized) then
@@ -64,7 +64,7 @@ contains
          call transform%to_std(hmat, smat, ne)
          call timestop("Reduction to S-EVP")
          call timestart("Diagonalization")
-         print *,"Solver:",solver%name
+         print *, "Solver:", solver%name
          call solver%solve_std(hmat, ne, eig, ev)
          call timestop("Diagonalization")
          call timestart("Backtransform of eigenvectors")

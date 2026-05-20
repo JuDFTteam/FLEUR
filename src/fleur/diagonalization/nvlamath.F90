@@ -7,7 +7,7 @@ module m_nvlamath
    use m_types_solver
    use m_types_mat
    use m_judft
-#ifdef CPP_GPU_NVLAMATH      
+#ifdef CPP_GPU_NVLAMATH
    use nvlamath
 #endif
    implicit none
@@ -26,13 +26,13 @@ contains
 
    function get_solver_nvlamath() result(solver)
       class(t_solver), allocatable :: solver
-      allocate(t_solver_nvlamath :: solver)
+      allocate (t_solver_nvlamath :: solver)
       solver%name = "nvlamath"
-#ifdef CPP_GPU_NVLAMATH      
+#ifdef CPP_GPU_NVLAMATH
       solver%available = .true.
 #else
       solver%available = .false.
-#endif      
+#endif
       solver%parallel = .false.
       solver%serial = .true.
       solver%generalized = .true.
@@ -74,7 +74,7 @@ contains
          call dsygvx(1, 'V', 'I', 'U', hmat%matsize1, hmat%data_r, size(hmat%data_r, 1), smat%data_r, size(smat%data_r, 1), &
                      0.0, 0.0, 1, ne, abstol, m, eigTemp, zmat%data_r, size(zmat%data_r, 1), dumrwork, -1, iwork, ifail, info)
          !$acc end host_data
-         !$acc update self(dumrwork)             
+         !$acc update self(dumrwork)
          lwork = dumrwork(1)
          allocate (rwork(lwork))
          !$acc data create(rwork)
@@ -84,15 +84,15 @@ contains
                      0.0, 0.0, 1, ne, abstol, m, eigTemp, zmat%data_r, size(zmat%data_r, 1), rwork, lwork, iwork, ifail, info)
          !$acc end host_data
          !$acc end data
-         !$acc update self(eigTemp,zmat%data_r)            
-         !$acc end data            
+         !$acc update self(eigTemp,zmat%data_r)
+         !$acc end data
       else
-        
+
          allocate (rwork(7*hmat%matsize1), iwork(5*hmat%matsize1), ifail(hmat%matsize1))
          !$acc data create(iwork,ifail,eigTemp,zmat%data_c,rwork)
          !Do a workspace query
          !$acc host_data use_device(hmat%data_c,smat%data_c,eigTemp,zmat%data_c,dumwork,rwork,iwork,ifail)
-         
+
          call zhegvx(1, 'V', 'I', 'U', hmat%matsize1, hmat%data_c, size(hmat%data_c, 1), smat%data_c, size(smat%data_c, 1), &
                      0.0, 0.0, 1, ne, abstol, m, eigTemp, zmat%data_c, size(zmat%data_c, 1), dumwork, -1, rwork, iwork, ifail, info)
          !$acc end host_data
@@ -104,10 +104,10 @@ contains
          !Perform diagonalization
          !$acc host_data use_device(hmat%data_c,smat%data_c,eigTemp,zmat%data_c,work,rwork,iwork,ifail)
          call zhegvx(1, 'V', 'I', 'U', hmat%matsize1, hmat%data_c, size(hmat%data_c, 1), smat%data_c, size(smat%data_c, 1), &
-                      0.0, 0.0, 1, ne, abstol, m, eigTemp, zmat%data_c, size(zmat%data_c, 1), work, lwork, rwork, iwork, ifail, info)
+                     0.0, 0.0, 1, ne, abstol, m, eigTemp, zmat%data_c, size(zmat%data_c, 1), work, lwork, rwork, iwork, ifail, info)
          !$acc end host_data
          !$acc end data
-         !$acc update self(eigTemp,zmat%data_c)            
+         !$acc update self(eigTemp,zmat%data_c)
          !$acc end data
       end if
       eig(:min(size(eig), size(eigTemp))) = eigTemp(:min(size(eig), size(eigTemp)))
