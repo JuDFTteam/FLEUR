@@ -30,10 +30,6 @@ if (DEFINED CLI_FLEUR_USE_ELSI)
             endif()
             #
             set(ENABLE_CHASE ON CACHE BOOL "Build Chase support") 
-            if (FLEUR_COMPILE_SCALAPACK)
-                set(SCALAPACK_FOUND TRUE CACHE BOOL "ScaLAPACK available for internal ELSI build" FORCE)
-                set(SCALAPACK_LIBRARIES scalapack CACHE STRING "ScaLAPACK target for internal ELSI build" FORCE)
-            endif()
             if (FLEUR_USE_GPU)
                set(USE_GPU_CUDA ON CACHE BOOL "Build GPU support") 
                STRING(REGEX MATCH ".*:cc(..)" CC_MODE "${CLI_FLEUR_USE_GPU}")
@@ -43,7 +39,59 @@ if (DEFINED CLI_FLEUR_USE_ELSI)
                 endif()
                
             endif()   
-            add_subdirectory(external/elsi-git EXCLUDE_FROM_ALL)
+
+            include(ExternalProject)
+            set(ELSI_PREFIX_DIR "${CMAKE_BINARY_DIR}/elsi")
+            set(ELSI_BINARY_DIR "${ELSI_PREFIX_DIR}/build")
+            set(ELSI_CMAKE_ARGS
+                -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+                -DCMAKE_Fortran_COMPILER=${CMAKE_Fortran_COMPILER}
+                -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+                -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+                -DCMAKE_Fortran_FLAGS=${CMAKE_Fortran_FLAGS}
+                -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS}
+                -DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}
+                -DENABLE_CHASE=ON
+            )
+            if (FLEUR_USE_GPU)
+               list(APPEND ELSI_CMAKE_ARGS -DUSE_GPU_CUDA=ON)
+               if (CC_MODE)
+                  list(APPEND ELSI_CMAKE_ARGS -DCMAKE_CUDA_ARCHITECTURES=${CMAKE_MATCH_1})
+               endif()
+            endif()
+            if (FLEUR_COMPILE_SCALAPACK)
+               list(APPEND ELSI_CMAKE_ARGS
+                    -DSCALAPACK_DIR=${CMAKE_BINARY_DIR}/external/SCALAPACK-git
+                    -DSCALAPACK_LIBRARIES=${CMAKE_BINARY_DIR}/external/SCALAPACK-git/lib/libscalapack.a)
+               ExternalProject_Add(ELSI
+                   PREFIX elsi/
+                   SOURCE_DIR ${PROJECT_SOURCE_DIR}/external/elsi-git
+                   BINARY_DIR ${ELSI_BINARY_DIR}
+                   CMAKE_ARGS ${ELSI_CMAKE_ARGS}
+                   BUILD_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR> --target elsi
+                   INSTALL_COMMAND ""
+                   BUILD_BYPRODUCTS ${ELSI_BINARY_DIR}/lib/libelsi.a
+                   DEPENDS scalapack
+               )
+            else()
+               ExternalProject_Add(ELSI
+                   PREFIX elsi/
+                   SOURCE_DIR ${PROJECT_SOURCE_DIR}/external/elsi-git
+                   BINARY_DIR ${ELSI_BINARY_DIR}
+                   CMAKE_ARGS ${ELSI_CMAKE_ARGS}
+                   BUILD_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR> --target elsi
+                   INSTALL_COMMAND ""
+                   BUILD_BYPRODUCTS ${ELSI_BINARY_DIR}/lib/libelsi.a
+               )
+            endif()
+
+            add_library(elsi STATIC IMPORTED GLOBAL)
+            add_dependencies(elsi ELSI)
+            set_property(TARGET elsi PROPERTY IMPORTED_LOCATION "${ELSI_BINARY_DIR}/lib/libelsi.a")
+            include_directories("${ELSI_BINARY_DIR}/include")
+            include_directories("${ELSI_BINARY_DIR}/modules")
+            include_directories("${ELSI_BINARY_DIR}/mod")
+            set(FLEUR_ELSI_IMPORTED TRUE)
             
             set(FLEUR_COMPILE_ELSI TRUE)
             set(FLEUR_USE_ELSI TRUE)
