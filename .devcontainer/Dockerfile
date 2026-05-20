@@ -22,7 +22,7 @@ RUN apt-get update && \
     python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
-RUN python3 -m pip install --no-cache-dir --break-system-packages pre-commit fprettify
+RUN python3 -m pip install --no-cache-dir --break-system-packages pre-commit fprettify fortls
 
 ENV CC=gcc
 ENV CXX=g++
