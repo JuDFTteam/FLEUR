@@ -1007,6 +1007,13 @@
       <xsd:attribute name="exchange"    type="xsd:integer" use="required"/>
       <xsd:attribute name="correlation" type="xsd:integer" use="required"/>
    </xsd:complexType>
+   <xsd:complexType name="AuxGGAType">
+      <xsd:annotation>
+         <xsd:documentation>Auxiliary GGA functional (LibXC IDs) for radial basis functions in MetaGGA calculations.</xsd:documentation>
+      </xsd:annotation>
+      <xsd:attribute name="exchange"    type="xsd:integer" use="required"/>
+      <xsd:attribute name="correlation" type="xsd:integer" use="required"/>
+   </xsd:complexType>
    <xsd:complexType name="XCParamsType">
       <xsd:attribute name="igrd" type="xsd:integer" use="required">
          <xsd:annotation>
