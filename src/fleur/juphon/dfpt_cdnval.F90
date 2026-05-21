@@ -12,8 +12,8 @@ MODULE m_dfpt_cdnval
    implicit none
 CONTAINS
 
-SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddosdummy,cell,atoms,enpara,stars,&
-                  vacuum,sphhar,sym,juphon,vTot,cdnvalJob,den,dosdummy,vacdosdummy,&
+SUBROUTINE dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddosdummy,cell,atoms,enpara,stars,&
+                  vacuum,sphhar,sym,vTot,cdnvalJob,den,dosdummy,vacdosdummy,&
                   hub1inp, cdnvalJob1, resultsdummy, resultsdummy1, bqpt, iDtype, iDir, denIm, l_real,&
                   qm_eid_id,dfpt_eigm_id,starsmq,resultsdummy1m,cdnvalJob1m)
 
@@ -28,6 +28,7 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
    !USE m_cdnmt       ! calculate the density and orbital moments etc.
    USE m_types_dos
    USE m_types_vacdos
+   
 #ifdef CPP_MPI
    USE m_mpi_col_den ! collect density data from parallel nodes
 #endif
@@ -38,8 +39,8 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
 
    IMPLICIT NONE
 
+   TYPE(t_sternheimerJob),INTENT(IN)    :: sternheimerJob
    TYPE(t_mpi),           INTENT(IN)    :: fmpi
-
    TYPE(t_enpara),        INTENT(IN)    :: enpara
    TYPE(t_banddos),       INTENT(IN)    :: banddosdummy
    TYPE(t_dos),           INTENT(INOUT) :: dosdummy
@@ -49,7 +50,6 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
    TYPE(t_noco),          INTENT(IN)    :: noco
    TYPE(t_nococonv),      INTENT(IN)    :: nococonv
    TYPE(t_sym),           INTENT(IN)    :: sym
-   TYPE(t_juphon),        INTENT(IN)    :: juphon
    TYPE(t_stars),         INTENT(IN)    :: stars
    TYPE(t_cell),          INTENT(IN)    :: cell
    TYPE(t_kpts),          INTENT(IN)    :: kpts
@@ -128,7 +128,7 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
    end do
    allocate (abc(jsp_start:jsp_end))
    allocate (abc1(jsp_start:jsp_end))
-   if (juphon%l_phonon) allocate (abcpref(jsp_start:jsp_end))
+   if (sternheimerJob%l_IBScorrection) allocate (abcpref(jsp_start:jsp_end))
    if (l_minusq)allocate (abc1m(jsp_start:jsp_end))
    
       
@@ -197,7 +197,7 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
 
       CALL zMat%init(l_real,nbasfcn,noccbd)
       CALL zMat1%init(.FALSE.,nbasfcnq,noccbd)
-      if (juphon%l_phonon) CALL zMatPref%init(.FALSE.,nbasfcn,noccbd)
+      if (sternheimerJob%l_IBScorrection) CALL zMatPref%init(.FALSE.,nbasfcn,noccbd)
 
       IF (l_minusq) THEN
          CALL zMat1m%init(.FALSE.,nbasfcnmq,noccbd)
@@ -209,7 +209,7 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
       IF (l_minusq) CALL read_eig(dfpt_eigm_id,ikpt,jsp,list=ev_list,neig=nbands1m,zmat=zMat1m)
 
       ! TODO: Implement correct spin logic here! Only collinear operational for now!
-      if (juphon%l_phonon) then
+      if (sternheimerJob%l_IBScorrection) then
          DO ikG = 1, lapw%nv(jsp)
             gExt = MATMUL(lapw%vk(:, ikG, jsp),cell%bmat)
             IF (zMat%l_real) THEN
@@ -254,7 +254,7 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
             DO ispinpr = ispin,ispin !TODO no real noco here
                                        !In future this could perhaps be generalized according to code in cdnval. The two following if statements have to be understood in this context then.
                
-               IF (juphon%l_phonon.and.idtype==itype) THEN
+               IF (sternheimerJob%l_IBScorrection.and.idtype==itype) THEN
                   call abcpref(ispin)%init(input, atoms, radfun(itype)%n_r, noccbd, itype)
                   call abcpref(ispin)%calc_abc(input, atoms, sym, cell, lapw, noccbd, usdus, noco, nococonv, ispin, itype, zMatPref)
                   abc1(ispin)%cof=abc1(ispin)%cof+abcpref(ispin)%cof
@@ -262,7 +262,7 @@ SUBROUTINE dfpt_cdnval(eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,
                IF (l_minusq) THEN
                   call abc1m(ispin)%init(input, atoms, radfun(itype)%n_r, noccbd, itype)
                   call abc1m(ispin)%calc_abc(input, atoms, sym, cell, lapwmq, noccbd, usdus, noco, nococonv, ispin, itype, zMat1m)
-                  if (juphon%l_phonon.and.idtype==itype) then
+                  if (sternheimerJob%l_IBScorrection.and.idtype==itype) then
                      abc1m(ispin)%cof=abc1m(ispin)%cof+abcpref(ispin)%cof
                   end if
                END IF

@@ -17,6 +17,7 @@ module m_dfpt_born_effcharge
     USE m_constants
     USE m_checkdopall
     USE m_types_fftGrid
+    
 
 
 
@@ -25,9 +26,10 @@ module m_dfpt_born_effcharge
 
 contains 
 
-    subroutine dfpt_born_eff_charge_element_nef(fi,stars,starsq,sphhar,fmpi,rho,denIn1,denIn1Im,grRho,BEC_element,BEC_contributions_element,iDir_den,q_sign,hybdat,xcpot,nococonv,vTot)
+    subroutine dfpt_born_eff_charge_element_nef(sternheimerJob,fi,stars,starsq,sphhar,fmpi,rho,denIn1,denIn1Im,grRho,BEC_element,BEC_contributions_element,iDir_den,q_sign,hybdat,xcpot,nococonv,vTot)
 
 
+        type(t_sternheimerJob), intent(in) :: sternheimerJob 
         type(t_fleurinput), intent(in)     :: fi
         type(t_sphhar),    intent(in)      :: sphhar
         TYPE(t_stars),      INTENT(IN)     :: stars, starsq
@@ -55,13 +57,7 @@ contains
         type(t_potden)                     :: den1_dummy,den1Im_dummy
 
         TYPE(t_potden)  :: rho_loc0
-        TYPE(t_juphon)                     :: juphon_int
 
-        
-        juphon_int = fi%juPhon
-        juphon_int%l_efield = .FALSE.
-        juphon_int%l_borneffcharge = .FALSE.
-        juphon_int%l_phonon = .TRUE.
         !CALL dfpt_vefield_int(fi,stars,sphhar,fmpi,rho,-1)
         !CALL dfpt_vefield_int(fi,stars,sphhar,fmpi,rho,-1)
         !stop
@@ -107,8 +103,8 @@ contains
                 CALL vExt1pho%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
                 CALL vExt1Impho%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
                 print*,"right before it"
-                CALL dfpt_vgen(hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
-                            juphon_int,fi%cell,fmpi,fi%noco,nococonv,rho_loc0,vTot,&
+                CALL dfpt_vgen(sternheimerJob,hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
+                            fi%juPhon,fi%cell,fmpi,fi%noco,nococonv,rho_loc0,vTot,&
                             starsq,den1Im_dummy,vExt1pho,.FALSE.,vExt1Impho,den1_dummy,iDtype,iDir,[1,1],l_vextpho=.TRUE.)
                 
                 print*,"sum(vExt1pho%pw(:,1))", sum(vExt1pho%pw(:,1))
@@ -163,7 +159,7 @@ contains
         TYPE(t_stars),      INTENT(IN)     :: stars, starsq
         type(t_potden), intent(in)         :: rho
         ! type(t_potden), intent(inout)         :: rho_core
-        type(t_potden), intent(inout)         :: denIn1,denIn1Im
+        type(t_potden), intent(in)         :: denIn1,denIn1Im
         type(t_potden),optional, intent(in)     ::grRho
         TYPE(t_mpi),        intent(in)     :: fmpi
         !complex, intent(in)                 :: grrho_val(:,:,:,:)
@@ -201,10 +197,10 @@ contains
         IF (.FALSE.) denIn1_mt(:,0:,iDType) = &
                             denIn1_mt(:,0:,iDType) - &
                             (grRho%mt(:,0:,iDType,1)+grRho%mt(:,0:,iDType,fi%input%jspins))/(3.0-fi%input%jspins)
-
-        IF (.FALSE.) denIn1%mt(:,0:,iDType,1) = &
-                            denIn1%mt(:,0:,iDType,1) - &
-                            (grRho%mt(:,0:,iDType,1)+grRho%mt(:,0:,iDType,fi%input%jspins))/(3.0-fi%input%jspins)
+        ! This is some debugging stuff 
+        !IF (.FALSE.) denIn1%mt(:,0:,iDType,1) = &
+        !                    denIn1%mt(:,0:,iDType,1) - &
+        !                    (grRho%mt(:,0:,iDType,1)+grRho%mt(:,0:,iDType,fi%input%jspins))/(3.0-fi%input%jspins)
         rho_pw = (rho%pw(:,1)+rho%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
         rho_mt = (rho%mt(:,0:,:,1)+rho%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
         

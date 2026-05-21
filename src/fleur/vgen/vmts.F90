@@ -4,7 +4,7 @@ module m_vmts
 #endif
 contains
 
-  subroutine vmts( input, fmpi, stars, sphhar, atoms, sym, cell, juphon, dosf, vpw, rho, potdenType, vr, ispin,  rhoIm, vrIm, iDtype, iDir, iDir2)
+  subroutine vmts( input, fmpi, stars, sphhar, atoms, sym, cell, dosf, vpw, rho, potdenType, vr, ispin, sternheimerJob, rhoIm, vrIm, iDtype, iDir, iDir2)
 
   !-------------------------------------------------------------------------
   ! This subroutine calculates the lattice harmonics expansion coefficients
@@ -38,6 +38,7 @@ contains
     use m_intgr, only : intgr2, sfint
     use m_phasy1
     use m_sphbes
+    
      
     use m_SphBessel
     !$ use omp_lib
@@ -50,7 +51,6 @@ contains
     type(t_atoms),  intent(in)        :: atoms
     type(t_sym),    intent(in)        :: sym
     type(t_cell),   intent(in)        :: cell
-    type(t_juphon), intent(in)        :: juphon
      
     LOGICAL,        INTENT(IN)        :: dosf
     complex,        intent(in)        :: vpw(:)!(stars%ng3,input%jspins)
@@ -58,6 +58,7 @@ contains
     integer,        intent(in)        :: potdenType
     real,           intent(out)       :: vr(:,0:,:)!(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
     integer,        intent(in)        :: ispin
+    type(t_sternheimerJob),optional,intent(in) :: sternheimerJob
     type(t_potden), optional, intent(in) :: rhoIm
     type(t_potden), optional, intent(inout) :: vrIm  
     INTEGER, OPTIONAL, INTENT(IN)     :: iDtype, iDir
@@ -75,11 +76,13 @@ contains
     real                              :: integral_1 (1:atoms%jmtd), integral_2 (1:atoms%jmtd)!, integral_3 (1:atoms%jmtd)
     real                              :: sbf(0:atoms%lmaxd)
     real, allocatable, dimension(:,:) :: il, kl
-    LOGICAL                           :: l_dfptvgen
+    LOGICAL                           :: l_dfptvgen , l_IBScorrection
     COMPLEX, ALLOCATABLE              :: vtlStars(:,:,:), vtlLocal(:,:)
     TYPE(t_parallelLoop)              :: mpiLoop, ompLoop
 
     l_dfptvgen = PRESENT(rhoIm)
+    l_IBScorrection = .false. 
+    if (present(sternheimerJob)) l_IBScorrection = sternheimerJob%l_IBScorrection
 
     ! SPHERE BOUNDARY CONTRIBUTION to the coefficients calculated from the values
     ! of the interstitial Coulomb / Yukawa potential on the sphere boundary
@@ -212,7 +215,7 @@ contains
          do n = 1, atoms%ntype
          vr(1:atoms%jri(n),0,n) = vr(1:atoms%jri(n),0,n) - sfp_const * ( 1.0 / atoms%rmsh(1:atoms%jri(n),n) - 1.0 / atoms%rmt(n) ) * atoms%zatom(n)
          end do
-      ELSE IF (juphon%l_phonon) THEN
+      ELSE IF (l_IBScorrection) THEN
          IF (.NOT.PRESENT(iDir2)) THEN
             ! DFPT(-phonon) case:
             ! l=1 contributions from the Coulomb singularity instead of l=0 (1/r -> 1/r^2)

@@ -16,15 +16,17 @@ module m_dfpt_generate_gradient
 
 contains 
 
-    subroutine dfpt_generate_gradient(fi_ext,fmpi,sphhar,hybdat,xcpot,nococonv,stars,rho,vTot,grRho3,grVtot3,grVc3,grVext3,grgrVext3x3)
+    subroutine dfpt_generate_gradient(sternheimerJob,fi,fmpi,sphhar,hybdat,xcpot,nococonv,stars,rho,vTot,grRho3,grVtot3,grVc3,grVext3,grgrVext3x3)
         
         use m_dfpt_vgen
         use m_vgen_coulomb
         use m_dfpt_potdenLocal
         use m_dfpt_gradient 
         use m_grdchlh
+        
 
-        type(t_fleurinput),intent(in) :: fi_ext 
+        type(t_sternheimerjob),intent(in) :: sternheimerJob
+        type(t_fleurinput),intent(in) :: fi 
         type(t_mpi), intent(in)       :: fmpi
         type(t_sphhar),intent(in)     :: sphhar
         type(t_hybdat),intent(in)     :: hybdat
@@ -40,7 +42,6 @@ contains
         type(t_potden),intent(inout)     :: grgrVext3x3(3,3)
 
 
-        type(t_fleurinput) :: fi !not nice, WIP
         type(t_stars) :: starsLocal 
         type(t_potden) :: potdummy,potdummyLocal
         type(t_potden) :: rho_tmp ! a copy of the starting density. This is done to not mess with the starting density 
@@ -48,12 +49,8 @@ contains
         integer :: iDir, iDir2, iSpin, xInd, yInd, zInd, iStar , iVac, zlim
 
         complex, allocatable :: grrhodummy(:, :, :, :, :) 
-        real    :: dr_re(fi_ext%vacuum%nmzd), dr_im(fi_ext%vacuum%nmzd), drr_dummy(fi_ext%vacuum%nmzd)
+        real    :: dr_re(fi%vacuum%nmzd), dr_im(fi%vacuum%nmzd), drr_dummy(fi%vacuum%nmzd)
 
-        fi = fi_ext !WIP
-        IF (fi%juPhon%l_borneffcharge) THEN
-            fi%juPhon%l_phonon = .TRUE.
-        END IF
         
         call rho_tmp%copyPotDen(rho)
 
@@ -131,18 +128,18 @@ contains
 
         !  compute gradient external potential
         do iDir = 1 , 3 
-            call vgen_coulomb(1, fmpi, fi%input, fi%field, fi%vacuum, fi%sym, fi%juphon, starsLocal, fi%cell, &
-                         & sphhar, atomsLocal, .FALSE., potdummyLocal, grVext3(iDir), &
+            call vgen_coulomb(1, fmpi, fi%input, fi%field, fi%vacuum, fi%sym, starsLocal, fi%cell, &
+                         & sphhar, atomsLocal, .FALSE., potdummyLocal, grVext3(iDir), sternheimerJob=sternheimerJob,juphon=fi%juPhon, &
                          & dfptdenimag=potdummyLocal, dfptvCoulimag=potdummyLocal,dfptden0=potdummyLocal,stars2=starsLocal,iDtype=0,iDir=iDir)
         end do 
 
         ! Coulomb/Effective potential gradients
         do iDir = 1, 3
             call potdummy%resetPotDen()
-            call dfpt_vgen(hybdat, fi%field, fi%input, xcpot, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, &
+            call dfpt_vgen(sternheimerJob,hybdat, fi%field, fi%input, xcpot, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, &
                             fi%juphon, fi%cell, fmpi, fi%noco, nococonv, rho_tmp, vTot, &
                             stars, potdummy, grVtot3(iDir), .TRUE., potdummy, grRho3(iDir), 0, iDir, [0,0])
-            call dfpt_vgen(hybdat, fi%field, fi%input, xcpot, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, &
+            call dfpt_vgen(sternheimerJob,hybdat, fi%field, fi%input, xcpot, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, &
                             fi%juphon, fi%cell, fmpi, fi%noco, nococonv, rho_tmp, vTot, &
                             stars, potdummy, grVc3(iDir), .FALSE., potdummy, grRho3(iDir), 0, iDir, [0,0])
         end do 
@@ -153,8 +150,8 @@ contains
         do iDir2 = 1, 3
             do iDir = 1, 3
                 call potdummyLocal%resetPotDen()
-                call vgen_coulomb(1, fmpi, fi%input, fi%field, fi%vacuum, fi%sym, fi%juphon, starsLocal, fi%cell, &
-                            & sphhar, atomsLocal, .TRUE., potdummyLocal, grgrVext3x3(iDir2,iDir), &
+                call vgen_coulomb(1, fmpi, fi%input, fi%field, fi%vacuum, fi%sym, starsLocal, fi%cell, &
+                            & sphhar, atomsLocal, .TRUE., potdummyLocal, grgrVext3x3(iDir2,iDir), sternheimerJob=sternheimerJob,juphon=fi%juPhon, &
                             & dfptdenimag=potdummyLocal, dfptvCoulimag=potdummyLocal,dfptden0=potdummyLocal,stars2=starsLocal,iDtype=0,iDir=iDir,iDir2=iDir2)
             end do 
         end do 

@@ -3937,12 +3937,39 @@
             <xsd:documentation>Calculate Born effective charges.</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
+      <xsd:attribute name="l_bfield" type="FleurBool" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Include (bare) electric field perturbation.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
       <xsd:attribute name="l_symVacLevel" type="FleurBool" use="optional" default="F">
          <xsd:annotation>
             <xsd:documentation>Symmetrize vacuum level for film calculations.</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
+            <xsd:attribute name="qptsListName" type="xsd:string" use="optional">
+            <xsd:annotation>
+               <xsd:documentation>Name of the q-point list to use.</xsd:documentation>
+            </xsd:annotation>
+      </xsd:attribute>
+       <xsd:attribute name="bandWindow" type="BandWindowRestricted" use="optional">
+      <xsd:annotation>
+         <xsd:documentation>
+            Two non-negative integers defining the band window for the electron phonon matrix element.
+         </xsd:documentation>
+      </xsd:annotation>
+   </xsd:attribute>
    </xsd:complexType>
+
+   <xsd:simpleType name="BandWindowType">
+      <xsd:list itemType="xsd:nonNegativeInteger"/>
+   </xsd:simpleType>
+
+   <xsd:simpleType name="BandWindowRestricted">
+      <xsd:restriction base="BandWindowType">
+         <xsd:length value="2"/>
+      </xsd:restriction>
+   </xsd:simpleType>
 
    <xsd:complexType name="OutputType">
       <xsd:annotation>

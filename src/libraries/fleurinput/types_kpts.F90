@@ -538,7 +538,7 @@ CONTAINS
       call eibz%calc_pointer_EIBZ(kpts, sym, nk)
    end subroutine init_EIBZ
 
-   SUBROUTINE initTetra(kpts,input,cell,sym,l_soc_or_ss,juphon)
+   SUBROUTINE initTetra(kpts,input,cell,sym,l_soc_or_ss)
       USE m_juDFT
       USE m_constants
       USE m_types_input
@@ -546,13 +546,11 @@ CONTAINS
       USE m_types_sym
       USE m_tetcon
       USE m_triang
-      USE m_types_juPhon
       CLASS(t_kpts),    INTENT(INOUT) :: kpts
       TYPE(t_input),    INTENT(IN)    :: input
       TYPE(t_cell),     INTENT(IN)    :: cell
       TYPE(t_sym),      INTENT(IN)    :: sym
       LOGICAL,          INTENT(IN)    :: l_soc_or_ss
-      TYPE(t_juphon),     INTENT(IN)    :: juphon
 
       INTEGER, PARAMETER :: nop48  = 48
 
@@ -673,7 +671,7 @@ CONTAINS
          END DO
       END IF
 
-      IF(input%bz_integration.EQ.BZINT_METHOD_TETRA .OR. (juphon%l_dfpt .AND. juphon%l_elph)) THEN
+      IF(input%bz_integration.EQ.BZINT_METHOD_TETRA) THEN
          !Regular decomposition of the Monkhorst Pack Grid into tetrahedra
          ! (kpts%init is supposed to be called before this point)
          IF((kpts%kptsKind.NE.KPTS_KIND_MESH).OR.(.NOT.kpts%l_gamma)) THEN
@@ -704,7 +702,7 @@ CONTAINS
       END IF
 
       IF((input%bz_integration.EQ.BZINT_METHOD_TETRA).OR.&
-         (input%bz_integration.EQ.BZINT_METHOD_TRIA).OR. (juphon%l_dfpt .AND. juphon%l_elph)) THEN
+         (input%bz_integration.EQ.BZINT_METHOD_TRIA)) THEN
          CALL timestart("setup tetraList")
          allocate(kpts%tetraList( MERGE(2*sym%nop,sym%nop,.NOT.sym%invs)&
                                  *MERGE(6,24,input%film),kpts%nkpt),source=0)

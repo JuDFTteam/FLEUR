@@ -242,7 +242,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
 
    CALL outDen%distribute(fmpi%mpi_comm)
 
-   IF(.FALSE.) CALL denMultipoleExp(input, fmpi, atoms, sphhar, stars, sym, juphon, cell,   outDen) ! There should be a switch in the inp file for this
+   IF(.FALSE.) CALL denMultipoleExp(input, fmpi, atoms, sphhar, stars, sym, cell,   outDen) ! There should be a switch in the inp file for this
    IF(fmpi%irank.EQ.0) THEN
       IF(input%lResMax>0) CALL resMoms(sym,input,atoms,sphhar,noco,nococonv,outDen,moments%rhoLRes) ! There should be a switch in the inp file for this
    END IF
@@ -266,7 +266,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
          if (any(noco%l_constrained).or.any(noco%l_fixedMoment)) call nococonv%update_b_cons(atoms,noco,vtot,outDen)
       END IF
 
-      if (sym%nop==1.and..not.input%film) call magMultipoles(fmpi,sym,juphon,stars, atoms,cell, sphhar, vacuum, input, noco,nococonv,outden)
+      if (sym%nop==1.and..not.input%film) call magMultipoles(fmpi,sym,stars, atoms,cell, sphhar, vacuum, input, noco,nococonv,outden)
       !Generate and save the new nocoinp file if the directions of the local
       !moments are relaxed or a constraint B-field is calculated.
    END IF

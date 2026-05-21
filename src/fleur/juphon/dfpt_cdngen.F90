@@ -9,8 +9,8 @@ MODULE m_dfpt_cdngen
 #endif
 CONTAINS
 
-SUBROUTINE dfpt_cdngen(eig_id,dfpt_eig_id,fmpi,input,banddosdummy,vacuum,&
-                  kpts,atoms,sphhar,starsq,sym,juphon,gfinp,hub1inp,&
+SUBROUTINE dfpt_cdngen(sternheimerJob,eig_id,dfpt_eig_id,fmpi,input,banddosdummy,vacuum,&
+                  kpts,atoms,sphhar,starsq,sym,gfinp,hub1inp,&
                   enpara,cell,noco,nococonv,vTot,resultsdummy, resultsdummy1,&
                   archiveType, xcpot,outDen,outDenIm,bqpt,iDtype,iDir,l_real,&
                   qm_eid_id,dfpt_eigm_id,starsmq,resultsdummy1m)
@@ -23,10 +23,12 @@ SUBROUTINE dfpt_cdngen(eig_id,dfpt_eig_id,fmpi,input,banddosdummy,vacuum,&
    USE m_cdn_io
    USE m_wrtdop
    USE m_cdncore
+   
 
    IMPLICIT NONE
 
    ! Type instance arguments
+   TYPE(t_sternheimerJob),INTENT(IN):: sternheimerJob
    TYPE(t_results),INTENT(INOUT)    :: resultsdummy, resultsdummy1
    TYPE(t_mpi),INTENT(IN)           :: fmpi
    TYPE(t_enpara),INTENT(IN)        :: enpara
@@ -36,7 +38,6 @@ SUBROUTINE dfpt_cdngen(eig_id,dfpt_eig_id,fmpi,input,banddosdummy,vacuum,&
    TYPE(t_noco),INTENT(IN)          :: noco
    TYPE(t_nococonv),INTENT(IN)      :: nococonv
    TYPE(t_sym),INTENT(IN)           :: sym
-   TYPE(t_juphon),INTENT(IN)        :: juphon
    TYPE(t_stars),INTENT(IN)         :: starsq
    TYPE(t_cell),INTENT(IN)          :: cell
    TYPE(t_kpts),INTENT(IN)          :: kpts
@@ -91,13 +92,13 @@ SUBROUTINE dfpt_cdngen(eig_id,dfpt_eig_id,fmpi,input,banddosdummy,vacuum,&
       CALL cdnvalJob1%init(fmpi,input,kpts,noco,resultsdummy1,jspin)
       IF (l_minusq) THEN
          CALL cdnvalJob1m%init(fmpi,input,kpts,noco,resultsdummy1m,jspin)
-         CALL dfpt_cdnval(eig_id, dfpt_eig_id,fmpi,kpts,jspin,noco,nococonv,input,banddosdummy,cell,atoms,enpara,starsq,&
-                          vacuum,sphhar,sym,juphon,vTot,cdnvalJob,outDen,dosdummy,vacdosdummy,&
+         CALL dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id,fmpi,kpts,jspin,noco,nococonv,input,banddosdummy,cell,atoms,enpara,starsq,&
+                          vacuum,sphhar,sym,vTot,cdnvalJob,outDen,dosdummy,vacdosdummy,&
                           hub1inp, cdnvalJob1, resultsdummy, resultsdummy1, bqpt, iDtype, iDir, outDenIm, l_real,&
                           qm_eid_id,dfpt_eigm_id,starsmq,resultsdummy1m,cdnvalJob1m)
       ELSE
-         CALL dfpt_cdnval(eig_id, dfpt_eig_id,fmpi,kpts,jspin,noco,nococonv,input,banddosdummy,cell,atoms,enpara,starsq,&
-                          vacuum,sphhar,sym,juphon,vTot,cdnvalJob,outDen,dosdummy,vacdosdummy,&
+         CALL dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id,fmpi,kpts,jspin,noco,nococonv,input,banddosdummy,cell,atoms,enpara,starsq,&
+                          vacuum,sphhar,sym,vTot,cdnvalJob,outDen,dosdummy,vacdosdummy,&
                           hub1inp, cdnvalJob1, resultsdummy, resultsdummy1, bqpt, iDtype, iDir, outDenIm, l_real)
       END IF
    END DO

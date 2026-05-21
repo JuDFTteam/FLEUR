@@ -39,13 +39,15 @@ MODULE m_types_juPhon
       LOGICAL :: l_efield_scr = .FALSE.
       LOGICAL :: l_borneffcharge = .FALSE.
       LOGICAL :: l_polar = .FALSE.
+      LOGICAL :: l_bfield = .FALSE.
       LOGICAL :: l_symVacLevel = .TRUE. ! Symmetrize the vacua levels  
 
       REAL, ALLOCATABLE :: qvec(:,:)
       REAL, ALLOCATABLE :: qvec_efield(:,:)
 
+      INTEGER, ALLOCATABLE :: bandWindow(:)  ! Window of Blochstates we want to consider
+
       LOGICAL :: calcEigenVec    = .TRUE.
-      
    CONTAINS
       PROCEDURE :: read_xml => read_xml_juPhon
       PROCEDURE :: mpi_bc => mpi_bc_juPhon
@@ -94,17 +96,20 @@ CONTAINS
       CALL mpi_bc(this%l_efield_scr, rank, mpi_comm)
       CALL mpi_bc(this%l_borneffcharge, rank, mpi_comm)
       CALL mpi_bc(this%l_polar, rank, mpi_comm)
+      CALL mpi_bc(this%l_bfield, rank, mpi_comm)
       CALL mpi_bc(this%qlim,rank,mpi_comm)
       CALL mpi_bc(this%gmaxzLocal,rank,mpi_comm)
       CALL mpi_bc(this%l_symVacLevel, rank, mpi_comm)
       CALL mpi_bc(this%eDiffcut, rank, mpi_comm)
       CALL mpi_bc(this%fDiffcut, rank, mpi_comm)
+      CALL mpi_bc(this%bandWindow, rank, mpi_comm)
 
    END SUBROUTINE mpi_bc_juPhon
 
    SUBROUTINE read_xml_juPhon(this, xml)
       USE m_types_xml
       USE m_judft
+      USE m_types_kpts
 
       IMPLICIT NONE
 
@@ -113,6 +118,11 @@ CONTAINS
 
       INTEGER::numberNodes
       CHARACTER(len=100) :: xPathA,valueString
+      CHARACTER(len=40) :: qptsListName
+      TYPE(t_kpts) :: qpts_from_kpts
+
+      REAL, ALLOCATABLE :: tmp_arr(:)
+
 
       numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon')
 
@@ -273,16 +283,50 @@ CONTAINS
            this%l_polar    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_polar'))
          END IF
 
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_bfield')
+
+         IF (numberNodes == 1) THEN
+           this%l_bfield    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_bfield'))
+         END IF
+
          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_symVacLevel')
 
          IF (numberNodes == 1) THEN
           this%l_symVacLevel    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_symVacLevel'))
          END IF
 
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@bandWindow')
+
+         IF (numberNodes == 1) THEN
+          allocate(this%bandWindow(2))
+          allocate(tmp_arr(2))
+          valueString = xml%GetAttributeValue('/fleurInput/output/juPhon/@bandWindow')
+          call evaluateList(tmp_arr,valueString)
+          this%bandWindow = tmp_arr
+         END IF
+
 
          allocate(this%qvec(0,0))
          this%qvec=xml%read_q_list('/fleurInput/output/juPhon/qVectors')
       ENDIF
+
+      ! Read q-points from kpts.xml if specified
+      IF (this%l_dfpt) THEN
+         IF (xml%GetNumberOfNodes('/fleurInput/output/juPhon/@qptsListName') == 1) THEN
+            qptsListName = TRIM(ADJUSTL(xml%GetAttributeValue('/fleurInput/output/juPhon/@qptsListName')))
+            ! Initialize qpts_from_kpts with the number of k-points from the kpts.xml file
+            qpts_from_kpts%nkpt = xml%GetNumberOfNodes('/fleurInput/cell/bzIntegration/kPointLists/kPointList[@name="'//TRIM(qptsListName)//'"]/kPoint')
+            IF (qpts_from_kpts%nkpt > 0) THEN
+                ALLOCATE(qpts_from_kpts%bk(3, qpts_from_kpts%nkpt))
+                ALLOCATE(qpts_from_kpts%wtkpt(qpts_from_kpts%nkpt))
+                IF (qpts_from_kpts%read_kpts_by_name(trim(xml%filename_add_xml)//"inp.xml", qptsListName)) THEN
+                    IF (ALLOCATED(this%qvec)) DEALLOCATE(this%qvec)
+                    ALLOCATE(this%qvec(3, qpts_from_kpts%nkpt))
+                    this%qvec = qpts_from_kpts%bk
+                END IF
+            END IF
+         END IF
+      END IF
 
       ! Before we exit check needed parameters 
       IF (this%l_dfpt) CALL this%precheck_juPhon(xml)
@@ -337,6 +381,8 @@ CONTAINS
             end do
          end if
       end if 
+
+ 
 
 
    END SUBROUTINE init_juPhon
