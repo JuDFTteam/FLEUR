@@ -1,0 +1,58 @@
+easyblock = 'CMakeMake'
+
+name = 'FLEUR'
+version = 'MaX-R8.1'  
+homepage = 'https://iffgit.fz-juelich.de/fleur/fleur'
+description = """FLEUR is a density functional theory package implementing the all-electron
+full-potential linearized augmented-plane-wave method. It allows for the ab initio
+calculation of properties of crystals, thin films, and surfaces, with a special 
+focus on magnetism."""
+
+toolchain = {'name': 'GCCcore', 'version': '14.3.0'}
+
+sources = [
+    {
+        "filename": "fleur-%(version)s.tar.gz",
+        "extract_cmd": "mkdir -p %(builddir)s/%(version)s && tar xzvf %s --strip-components=1 -C $_",
+        "source_urls": ["https://iffgit.fz-juelich.de/fleur/fleur/-/archive/%(version)s"],
+    }
+]
+
+dependencies = [
+    ('Stages/2026', EXTERNAL_MODULE),
+    ('Intel/2025.2.0', EXTERNAL_MODULE),
+    ('ParaStationMPI/5.13.0-1', EXTERNAL_MODULE),
+    ('imkl/2025.2.0', EXTERNAL_MODULE),
+    ('lxml/6.0.0', EXTERNAL_MODULE),
+    ('HDF5/1.14.6', EXTERNAL_MODULE)
+]
+
+builddependencies = [
+    ('Stages/2026', EXTERNAL_MODULE),
+    ('Intel/2025.2.0', EXTERNAL_MODULE),
+    ('ParaStationMPI/5.13.0-1', EXTERNAL_MODULE),
+    ('imkl/2025.2.0', EXTERNAL_MODULE),
+    ('CMake/3.31.8', EXTERNAL_MODULE),
+    ('lxml/6.0.0', EXTERNAL_MODULE),
+    ('HDF5/1.14.6', EXTERNAL_MODULE)
+]
+
+cuda_compute_capabilities = ['7.0'] # This is just random to silence easybuild requirements due to ParaStationMPI with GPU support.
+
+configure_cmd = 'cd %(builddir)s/%(version)s && echo $PWD && FC=mpif90 CC=mpicc CXX=mpicxx ./configure.sh'
+build_cmd = 'cd %(builddir)s/%(version)s/build && echo $PWD && make -j16'
+
+skipsteps = ['install']
+buildopts = ' && mkdir -p %(installdir)s && cp -r * %(installdir)s/'
+separate_build_dir = True
+modextrapaths = {
+    'PATH': '',
+}
+
+sanity_check_paths = {
+    'files': ['fleur_MPI'],
+    'dirs': [],
+}
+
+moduleclass = 'chem'
+
