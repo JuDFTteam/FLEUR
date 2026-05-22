@@ -1,10 +1,11 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2017 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_cdnpot_io_hdf
+   implicit none
 
    USE m_constants
    USE m_juDFT
@@ -1954,14 +1955,10 @@ MODULE m_cdnpot_io_hdf
             CALL io_write_attreal0(groupID,'fermiEnergy',fermiEnergy)
             CALL io_write_attlog0(groupID,'l_qfix',l_qfix)
 
-            !dimsInt(:4)=(/jmtd,nlhd+1,ntype,input%jspins/)
-            !CALL h5dopen_f(groupID, 'fr', frSetID, hdfError)
-            ! Note: The last dimension of den%mt (input%jspins) is temporary to
-            ! avoid segmentation faults if l_mperp is set to true but there
-            ! already is a data set with l_mperp=false. At the moment this is ok
-            ! since the offdiagonal parts are never read.
-            !CALL io_write_real4(frSetID,(/1,1,1,1/),dimsInt(:4),den%mt(:,0:,:,:input%jspins))
-            !CALL h5dclose_f(frSetID, hdfError)
+            dimsInt(:4)=(/jmtd,nlhd+1,ntype,input%jspins/)
+            CALL h5dopen_f(groupID, 'fr', frSetID, hdfError)
+            CALL io_write_real4(frSetID,(/1,1,1,1/),dimsInt(:4),"mt",den%mt(:,0:,:,:input%jspins))
+            CALL h5dclose_f(frSetID, hdfError)
 
             dimsInt(:3)=(/2,ng3,input%jspins/)
             CALL h5dopen_f(groupID, 'fpw', fpwSetID, hdfError)

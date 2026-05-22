@@ -183,7 +183,8 @@ CONTAINS
          CALL EnergyDen%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_EnergyDen)
          IF (fmpi%irank==0) THEN
             INQUIRE(FILE='kinED.hdf', EXIST=l_dummy)
-            IF (l_dummy) THEN 
+            INQUIRE(FILE='kinED', EXIST=l_exist)
+            IF (l_dummy .OR. l_exist) THEN
                CALL readDensity(stars, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
                              fi%input, fi%sym, CDN_ARCHIVE_TYPE_CDN_const, CDN_INPUT_DEN_const, &
                              0, rdummy, rdummy, l_dummy, EnergyDen, inFilename='kinED')

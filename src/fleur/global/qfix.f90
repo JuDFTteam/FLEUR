@@ -31,6 +31,7 @@ CONTAINS
     USE m_types_cell
     USE m_types_potden
     use m_types_nococonv
+    use m_types_field
     use m_types_mpi
     USE m_constants
     USE m_cdntot

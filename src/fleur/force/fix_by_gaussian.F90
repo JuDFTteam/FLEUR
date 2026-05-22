@@ -25,6 +25,7 @@ CONTAINS
       USE m_types_mpi
       USE m_types_potden      
       use m_types_noco
+      use m_types_field
 
       REAL,           INTENT(IN)    :: shift(:,:)
       TYPE(t_mpi),    INTENT(IN)    :: fmpi

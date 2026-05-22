@@ -1076,7 +1076,7 @@ CONTAINS
 #endif
   END SUBROUTINE storeStructureIfNew
 
-  SUBROUTINE transform_by_moving_atoms(fmpi,stars,atoms,vacuum, cell, sym, sphhar,input ,noco,nococonv)
+   SUBROUTINE transform_by_moving_atoms(fmpi,stars,atoms,vacuum, cell, field, sym, sphhar,input ,noco,nococonv)
     use m_types_stars
     use m_types_atoms
     use m_types_sym
@@ -1084,12 +1084,14 @@ CONTAINS
     use m_types_sphhar
     use m_types_input
     use m_types_potden
+    use m_types_field
     use m_types_cell
     use m_types_noco
     use m_types_nococonv
     use m_types_mpi
     USE m_constants
     USE m_qfix
+    USE m_types_field
     USE m_fix_by_gaussian
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)      :: fmpi

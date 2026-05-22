@@ -7,7 +7,7 @@
 !>This module contains the xcpot-type providing an interface to libxc
 MODULE m_types_xcpot_libxc
 #ifdef CPP_LIBXC
-   USE xc_f90_lib_m
+   USE xc_f03_lib_m
 #endif
    USE m_types_xcpot
    USE m_judft
@@ -20,9 +20,9 @@ MODULE m_types_xcpot_libxc
 
    TYPE,EXTENDS(t_xcpot):: t_xcpot_libxc
 #ifdef CPP_LIBXC
-      TYPE(xc_f90_func_t)      :: vxc_func_x, vxc_func_c
-      TYPE(xc_f90_func_t)      :: exc_func_x, exc_func_c
-      TYPE(xc_f90_func_t)      :: aux_func_x, aux_func_c
+      TYPE(xc_f03_func_t)      :: vxc_func_x, vxc_func_c
+      TYPE(xc_f03_func_t)      :: exc_func_x, exc_func_c
+      TYPE(xc_f03_func_t)      :: aux_func_x, aux_func_c
       LOGICAL                  :: l_has_aux = .FALSE.
 #endif
       INTEGER                  :: jspins
@@ -109,24 +109,24 @@ CONTAINS
 
       IF (jspins==1) THEN
          ! potential functionals
-         CALL xc_f90_func_init(xcpot%vxc_func_x, xcpot%func_vxc_id_x, XC_UNPOLARIZED, err=errors(1))
-         IF (xcpot%func_vxc_id_c>0) CALL xc_f90_func_init(xcpot%vxc_func_c, xcpot%func_vxc_id_c, &
+         CALL xc_f03_func_init(xcpot%vxc_func_x, xcpot%func_vxc_id_x, XC_UNPOLARIZED, err=errors(1))
+         IF (xcpot%func_vxc_id_c>0) CALL xc_f03_func_init(xcpot%vxc_func_c, xcpot%func_vxc_id_c, &
                                                                  XC_UNPOLARIZED, err=errors(2))
 
          ! energy functionals
-         CALL xc_f90_func_init(xcpot%exc_func_x, xcpot%func_exc_id_x, XC_UNPOLARIZED, err=errors(3))
-         IF (xcpot%func_exc_id_c>0) CALL xc_f90_func_init(xcpot%exc_func_c, xcpot%func_exc_id_c, &
+         CALL xc_f03_func_init(xcpot%exc_func_x, xcpot%func_exc_id_x, XC_UNPOLARIZED, err=errors(3))
+         IF (xcpot%func_exc_id_c>0) CALL xc_f03_func_init(xcpot%exc_func_c, xcpot%func_exc_id_c, &
                                                                   XC_UNPOLARIZED, err=errors(4))
 
       ELSE
          ! potential functionals
-         CALL xc_f90_func_init(xcpot%vxc_func_x, xcpot%func_vxc_id_x, XC_POLARIZED, err=errors(1))
-         IF (xcpot%func_vxc_id_c>0) CALL xc_f90_func_init(xcpot%vxc_func_c, xcpot%func_vxc_id_c, &
+         CALL xc_f03_func_init(xcpot%vxc_func_x, xcpot%func_vxc_id_x, XC_POLARIZED, err=errors(1))
+         IF (xcpot%func_vxc_id_c>0) CALL xc_f03_func_init(xcpot%vxc_func_c, xcpot%func_vxc_id_c, &
                                                                   XC_POLARIZED, err=errors(2))
 
          !energy functionals
-         CALL xc_f90_func_init(xcpot%exc_func_x, xcpot%func_exc_id_x, XC_POLARIZED, err=errors(3))
-         IF (xcpot%func_exc_id_c>0) CALL xc_f90_func_init(xcpot%exc_func_c, xcpot%func_exc_id_c, &
+         CALL xc_f03_func_init(xcpot%exc_func_x, xcpot%func_exc_id_x, XC_POLARIZED, err=errors(3))
+         IF (xcpot%func_exc_id_c>0) CALL xc_f03_func_init(xcpot%exc_func_c, xcpot%func_exc_id_c, &
                                                                   XC_POLARIZED, err=errors(4))
       END IF
 
@@ -150,13 +150,13 @@ CONTAINS
          WRITE(*,*) "Auxiliary Potential for radial basis: exchange=", xcpot%func_aux_id_x, &
                     " correlation=", xcpot%func_aux_id_c
          IF (jspins == 1) THEN
-            CALL xc_f90_func_init(xcpot%aux_func_x, xcpot%func_aux_id_x, XC_UNPOLARIZED)
+            CALL xc_f03_func_init(xcpot%aux_func_x, xcpot%func_aux_id_x, XC_UNPOLARIZED)
             IF (xcpot%func_aux_id_c > 0) &
-               CALL xc_f90_func_init(xcpot%aux_func_c, xcpot%func_aux_id_c, XC_UNPOLARIZED)
+               CALL xc_f03_func_init(xcpot%aux_func_c, xcpot%func_aux_id_c, XC_UNPOLARIZED)
          ELSE
-            CALL xc_f90_func_init(xcpot%aux_func_x, xcpot%func_aux_id_x, XC_POLARIZED)
+            CALL xc_f03_func_init(xcpot%aux_func_x, xcpot%func_aux_id_x, XC_POLARIZED)
             IF (xcpot%func_aux_id_c > 0) &
-               CALL xc_f90_func_init(xcpot%aux_func_c, xcpot%func_aux_id_c, XC_POLARIZED)
+               CALL xc_f03_func_init(xcpot%aux_func_c, xcpot%func_aux_id_c, XC_POLARIZED)
          ENDIF
       ENDIF
 
@@ -191,13 +191,13 @@ CONTAINS
       IMPLICIT NONE
       CLASS(t_xcpot_libxc), INTENT(IN):: xcpot
 #ifdef CPP_LIBXC
-      TYPE(xc_f90_func_info_t)        :: xc_info
+      TYPE(xc_f03_func_info_t)        :: xc_info
       if (xcpot%func_vxc_id_x == 0) then
          xcpot_vx_is_LDA = .false.
          return
       endif   
-      xc_info = xc_f90_func_get_info(xcpot%vxc_func_x)
-      xcpot_vx_is_LDA =  XC_FAMILY_LDA == xc_f90_func_info_get_family(xc_info)
+      xc_info = xc_f03_func_get_info(xcpot%vxc_func_x)
+      xcpot_vx_is_LDA =  XC_FAMILY_LDA == xc_f03_func_info_get_family(xc_info)
 #else
       xcpot_vx_is_LDA = .false.
 #endif
@@ -207,14 +207,14 @@ CONTAINS
       IMPLICIT NONE
       CLASS(t_xcpot_libxc), INTENT(IN):: xcpot
 #ifdef CPP_LIBXC
-      TYPE(xc_f90_func_info_t)        :: xc_info
+      TYPE(xc_f03_func_info_t)        :: xc_info
 
       if (xcpot%func_vxc_id_c == 0) then
          xcpot_vc_is_LDA = .false.
          return
       endif
-      xc_info = xc_f90_func_get_info(xcpot%vxc_func_c)
-      xcpot_vc_is_LDA =  XC_FAMILY_LDA == xc_f90_func_info_get_family(xc_info)
+      xc_info = xc_f03_func_get_info(xcpot%vxc_func_c)
+      xcpot_vc_is_LDA =  XC_FAMILY_LDA == xc_f03_func_info_get_family(xc_info)
 #else
       xcpot_vc_is_LDA = .false.
 #endif
@@ -224,14 +224,14 @@ CONTAINS
       IMPLICIT NONE
       CLASS(t_xcpot_libxc), INTENT(IN):: xcpot
 #ifdef CPP_LIBXC
-      TYPE(xc_f90_func_info_t)        :: xc_info
+      TYPE(xc_f03_func_info_t)        :: xc_info
 
       if (xcpot%func_exc_id_x == 0) then
          xcpot_exc_is_LDA = .false.
          return
       endif
-      xc_info = xc_f90_func_get_info(xcpot%exc_func_x)
-      xcpot_exc_is_LDA = (XC_FAMILY_LDA == xc_f90_func_info_get_family(xc_info))
+      xc_info = xc_f03_func_get_info(xcpot%exc_func_x)
+      xcpot_exc_is_LDA = (XC_FAMILY_LDA == xc_f03_func_info_get_family(xc_info))
 #else
       xcpot_exc_is_LDA = .false.
 #endif
@@ -242,14 +242,14 @@ CONTAINS
       IMPLICIT NONE
       CLASS(t_xcpot_libxc), INTENT(IN):: xcpot
 #ifdef CPP_LIBXC
-      TYPE(xc_f90_func_info_t)        :: xc_info
+      TYPE(xc_f03_func_info_t)        :: xc_info
 
       if (xcpot%func_vxc_id_c == 0) then
          xcpot_vc_is_gga = .false.
          return
       endif
-      xc_info = xc_f90_func_get_info(xcpot%vxc_func_c)
-      xcpot_vc_is_gga =  ANY([XC_FAMILY_GGA, XC_FAMILY_HYB_GGA]==xc_f90_func_info_get_family(xc_info))
+      xc_info = xc_f03_func_get_info(xcpot%vxc_func_c)
+      xcpot_vc_is_gga =  ANY([XC_FAMILY_GGA, XC_FAMILY_HYB_GGA]==xc_f03_func_info_get_family(xc_info))
 #else
       xcpot_vc_is_gga = .false.
 #endif
@@ -259,14 +259,14 @@ CONTAINS
       IMPLICIT NONE
       CLASS(t_xcpot_libxc), INTENT(IN):: xcpot
 #ifdef CPP_LIBXC
-      TYPE(xc_f90_func_info_t)        :: xc_info
+      TYPE(xc_f03_func_info_t)        :: xc_info
 
       if (xcpot%func_vxc_id_x == 0) then
          xcpot_vx_is_gga = .false.
          return
       endif
-      xc_info = xc_f90_func_get_info(xcpot%vxc_func_x)
-      xcpot_vx_is_gga =  ANY([XC_FAMILY_GGA, XC_FAMILY_HYB_GGA]==xc_f90_func_info_get_family(xc_info))
+      xc_info = xc_f03_func_get_info(xcpot%vxc_func_x)
+      xcpot_vx_is_gga =  ANY([XC_FAMILY_GGA, XC_FAMILY_HYB_GGA]==xc_f03_func_info_get_family(xc_info))
 #else
       xcpot_vx_is_gga = .false.
 #endif
@@ -276,7 +276,7 @@ CONTAINS
       IMPLICIT NONE
       CLASS(t_xcpot_libxc), INTENT(IN):: xcpot
 #ifdef CPP_LIBXC
-      TYPE(xc_f90_func_info_t)        :: xc_info
+      TYPE(xc_f03_func_info_t)        :: xc_info
       if (xcpot%func_vxc_id_x == 0) then
          xcpot_vx_is_MetaGGA = .false.
          return
@@ -285,8 +285,8 @@ CONTAINS
          xcpot_vx_is_MetaGGA = .TRUE.
          return
       endif
-      xc_info = xc_f90_func_get_info(xcpot%vxc_func_x)
-      xcpot_vx_is_MetaGGA =  ANY([XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA]==xc_f90_func_info_get_family(xc_info))
+      xc_info = xc_f03_func_get_info(xcpot%vxc_func_x)
+      xcpot_vx_is_MetaGGA =  ANY([XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA]==xc_f03_func_info_get_family(xc_info))
 #else
       xcpot_vx_is_MetaGGA = .false.
 #endif
@@ -296,13 +296,13 @@ CONTAINS
       IMPLICIT NONE
       CLASS(t_xcpot_libxc), INTENT(IN):: xcpot
 #ifdef CPP_LIBXC
-      TYPE(xc_f90_func_info_t)        :: xc_info
+      TYPE(xc_f03_func_info_t)        :: xc_info
       if (xcpot%func_exc_id_x == 0) then
          xcpot_exc_is_gga = .false.
          return
       endif
-      xc_info = xc_f90_func_get_info(xcpot%exc_func_x)
-      xcpot_exc_is_gga =  ANY([XC_FAMILY_GGA, XC_FAMILY_HYB_GGA]==xc_f90_func_info_get_family(xc_info))
+      xc_info = xc_f03_func_get_info(xcpot%exc_func_x)
+      xcpot_exc_is_gga =  ANY([XC_FAMILY_GGA, XC_FAMILY_HYB_GGA]==xc_f03_func_info_get_family(xc_info))
 #else
       xcpot_exc_is_gga = .false.
 #endif
@@ -312,13 +312,13 @@ CONTAINS
       IMPLICIT NONE
    CLASS(t_xcpot_libxc),INTENT(IN):: xcpot
 #ifdef CPP_LIBXC
-      TYPE(xc_f90_func_info_t)        :: xc_info
+      TYPE(xc_f03_func_info_t)        :: xc_info
       if (xcpot%func_exc_id_x == 0) then
          xcpot_exc_is_MetaGGA = .false.
          return
       endif
-      xc_info = xc_f90_func_get_info(xcpot%exc_func_x)
-      xcpot_exc_is_MetaGGA=ANY([XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA]==xc_f90_func_info_get_family(xc_info))
+      xc_info = xc_f03_func_get_info(xcpot%exc_func_x)
+      xcpot_exc_is_MetaGGA=ANY([XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA]==xc_f03_func_info_get_family(xc_info))
 #else
       xcpot_exc_is_MetaGGA = .False.
 #endif
@@ -328,13 +328,13 @@ CONTAINS
       IMPLICIT NONE
       CLASS(t_xcpot_libxc), INTENT(IN):: xcpot
 #ifdef CPP_LIBXC
-      TYPE(xc_f90_func_info_t)        :: xc_info
+      TYPE(xc_f03_func_info_t)        :: xc_info
       if (xcpot%func_vxc_id_x == 0) then
          xcpot_is_hybrid = .false.
          return
       endif
-      xc_info = xc_f90_func_get_info(xcpot%vxc_func_x)
-      xcpot_is_hybrid=ANY([XC_FAMILY_HYB_MGGA, XC_FAMILY_HYB_GGA]==xc_f90_func_info_get_family(xc_info))
+      xc_info = xc_f03_func_get_info(xcpot%vxc_func_x)
+      xcpot_is_hybrid=ANY([XC_FAMILY_HYB_MGGA, XC_FAMILY_HYB_GGA]==xc_f03_func_info_get_family(xc_info))
 #else
       xcpot_is_hybrid = .False.
 #endif
@@ -347,7 +347,7 @@ CONTAINS
 
       REAL:: a_ex
 #ifdef CPP_LIBXC
-      a_ex=xc_f90_hyb_exx_coef(xcpot%vxc_func_x)
+      a_ex=xc_f03_hyb_exx_coef(xcpot%vxc_func_x)
 #endif
    END FUNCTION xcpot_get_exchange_weight
 
@@ -372,7 +372,7 @@ CONTAINS
    REAL, ALLOCATABLE :: vxc_tmp(:,:), vx_tmp(:,:)
    REAL, ALLOCATABLE :: kinED_libxc(:,:), vtau_tmp(:,:)
    REAL, ALLOCATABLE :: sigma(:,:), vsigma(:,:), laplace(:,:)
-   TYPE(xc_f90_func_t) :: func_x, func_c
+   TYPE(xc_f03_func_t) :: func_x, func_c
    LOGICAL :: use_aux, has_c
 
       use_aux = .FALSE.
@@ -429,10 +429,10 @@ CONTAINS
 
       !> Unified evaluation of a single xc functional (exchange OR correlation).
       !! Auto-detects LDA/GGA/MetaGGA family via libxc and calls the appropriate
-      !! xc_f90_*_vxc routine. Results are accumulated (added) into the output arrays.
+      !! xc_f03_*_vxc routine. Results are accumulated (added) into the output arrays.
       !! Uses rh from host association (parent scope).
       SUBROUTINE eval_vxc(func, vxc_out, sigma, vsigma_out, laplace, kinED, vtau_out)
-         TYPE(xc_f90_func_t), INTENT(IN)      :: func
+         TYPE(xc_f03_func_t), INTENT(IN)      :: func
          REAL, INTENT(INOUT)                   :: vxc_out(:, :)    ! (spin, points) - accumulated
          REAL, INTENT(IN), ALLOCATABLE         :: sigma(:, :)      ! (nsigma, npoints)
          REAL, INTENT(INOUT), ALLOCATABLE      :: vsigma_out(:, :) ! (nsigma, npoints) - accumulated
@@ -441,20 +441,20 @@ CONTAINS
          REAL, INTENT(INOUT), ALLOCATABLE      :: vtau_out(:, :)   ! (spin, npoints) - accumulated
 
          REAL, ALLOCATABLE               :: vxc(:, :), vsigma(:, :), vtau(:, :), vlapl(:, :)
-         TYPE(xc_f90_func_info_t)        :: info
+         TYPE(xc_f03_func_info_t)        :: info
          INTEGER                         :: family
 
          ALLOCATE(vxc, mold=vxc_out); vxc = 0.0
-         info = xc_f90_func_get_info(func)
-         family = xc_f90_func_info_get_family(info)
+         info = xc_f03_func_get_info(func)
+         family = xc_f03_func_info_get_family(info)
 
          IF (ANY([XC_FAMILY_LDA, XC_FAMILY_HYB_LDA] == family)) THEN
-            CALL xc_f90_lda_vxc(func, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), vxc)
+            CALL xc_f03_lda_vxc(func, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), vxc)
 
          ELSEIF (ANY([XC_FAMILY_GGA, XC_FAMILY_HYB_GGA] == family)) THEN
             IF (.NOT. ALLOCATED(sigma)) CALL judft_error("eval_vxc: GGA functional requires sigma (gradients)")
             ALLOCATE(vsigma, mold=vsigma_out); vsigma = 0.0
-            CALL xc_f90_gga_vxc(func, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), sigma, vxc, vsigma)
+            CALL xc_f03_gga_vxc(func, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), sigma, vxc, vsigma)
             vsigma_out = vsigma_out + vsigma
 
          ELSEIF (ANY([XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA] == family)) THEN
@@ -463,7 +463,7 @@ CONTAINS
             ALLOCATE(vsigma, mold=vsigma_out); vsigma = 0.0
             ALLOCATE(vtau, mold=vtau_out); vtau = 0.0
             ALLOCATE(vlapl(SIZE(rh, 2), SIZE(rh, 1))); vlapl = 0.0
-            CALL xc_f90_mgga_vxc(func, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), sigma, &
+            CALL xc_f03_mgga_vxc(func, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), sigma, &
                                  TRANSPOSE(laplace), kinED, vxc, vsigma, vlapl, vtau)
             vsigma_out = vsigma_out + vsigma
             vtau_out = vtau_out + vtau
@@ -523,7 +523,7 @@ CONTAINS
       REAL, INTENT(IN), OPTIONAL     :: kinEnergyDen_KS(:, :)
 
 #ifdef CPP_LIBXC
-      TYPE(xc_f90_func_info_t)       :: xc_info
+      TYPE(xc_f03_func_info_t)       :: xc_info
       REAL  :: excc(SIZE(exc))
       REAL  :: cut_ratio = 0.1
       INTEGER :: cut_idx
@@ -536,15 +536,15 @@ CONTAINS
       is_mt = merge(mt_call, .False., present(mt_call))
       IF (xcpot%exc_is_gga()) THEN
          IF (.NOT. PRESENT(grad)) CALL judft_error("Bug: You called get_exc for a GGA potential without providing derivatives")
-         CALL xc_f90_gga_exc(xcpot%exc_func_x, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), grad%sigma, exc)
+         CALL xc_f03_gga_exc(xcpot%exc_func_x, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), grad%sigma, exc)
          IF (xcpot%func_exc_id_c > 0) THEN
-            CALL xc_f90_gga_exc(xcpot%exc_func_c, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), grad%sigma, excc)
+            CALL xc_f03_gga_exc(xcpot%exc_func_c, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), grad%sigma, excc)
             exc = exc + excc
          END IF
       ELSEIF (xcpot%exc_is_LDA()) THEN  !LDA potentials
-         CALL xc_f90_lda_exc(xcpot%exc_func_x, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), exc)
+         CALL xc_f03_lda_exc(xcpot%exc_func_x, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), exc)
          IF (xcpot%func_exc_id_c > 0) THEN
-            CALL xc_f90_lda_exc(xcpot%exc_func_c, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), excc)
+            CALL xc_f03_lda_exc(xcpot%exc_func_c, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), excc)
             exc = exc + excc
          END IF
       ELSEIF (xcpot%exc_is_MetaGGA()) THEN
@@ -557,27 +557,27 @@ CONTAINS
 
             exc = 0.0
             excc = 0.0
-            call xc_f90_mgga_exc(xcpot%exc_func_x, SIZE(rh(cut_idx + 1:, :), 1, kind=c_size_t), &
+            call xc_f03_mgga_exc(xcpot%exc_func_x, SIZE(rh(cut_idx + 1:, :), 1, kind=c_size_t), &
                                  TRANSPOSE(rh(cut_idx + 1:, :)), &
                                  grad%sigma(:, cut_idx + 1:), &
                                  transpose(grad%laplace(cut_idx + 1:, :)), &
                                  kinEnergyDen_libXC(:, cut_idx + 1:), &
                                  exc(cut_idx + 1:))
 
-            call xc_f90_gga_exc(xcpot%vxc_func_x, SIZE(rh(:cut_idx, :), 1, kind=c_size_t), &
+            call xc_f03_gga_exc(xcpot%vxc_func_x, SIZE(rh(:cut_idx, :), 1, kind=c_size_t), &
                                 TRANSPOSE(rh(:cut_idx, :)), &
                                 grad%sigma(:, :cut_idx), &
                                 exc(:cut_idx))
 
             IF (xcpot%func_exc_id_c > 0) THEN
-               call xc_f90_mgga_exc(xcpot%exc_func_c, SIZE(rh(cut_idx + 1:, :), 1, kind=c_size_t), &
+               call xc_f03_mgga_exc(xcpot%exc_func_c, SIZE(rh(cut_idx + 1:, :), 1, kind=c_size_t), &
                                     TRANSPOSE(rh(cut_idx + 1:, :)), &
                                     grad%sigma(:, cut_idx + 1:), &
                                     transpose(grad%laplace(cut_idx + 1:, :)), &
                                     kinEnergyDen_libXC(:, cut_idx + 1:), &
                                     excc(cut_idx + 1:))
 
-               call xc_f90_gga_exc(xcpot%vxc_func_c, SIZE(rh(:cut_idx, :), 1, kind=c_size_t), &
+               call xc_f03_gga_exc(xcpot%vxc_func_c, SIZE(rh(:cut_idx, :), 1, kind=c_size_t), &
                                    TRANSPOSE(rh(:cut_idx, :)), &
                                    grad%sigma(:, :cut_idx), &
                                    excc(:cut_idx))
@@ -586,9 +586,9 @@ CONTAINS
 
          ELSE ! first iteration is GGA
             IF (.NOT. PRESENT(grad)) CALL judft_error("Bug: You called get_exc for a MetaGGA potential without providing derivatives")
-            CALL xc_f90_gga_exc(xcpot%vxc_func_x, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), grad%sigma, exc)
+            CALL xc_f03_gga_exc(xcpot%vxc_func_x, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), grad%sigma, exc)
             IF (xcpot%func_exc_id_c > 0) THEN
-               CALL xc_f90_gga_exc(xcpot%vxc_func_c, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), grad%sigma, excc)
+               CALL xc_f03_gga_exc(xcpot%vxc_func_c, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), grad%sigma, excc)
                exc = exc + excc
             END IF
          ENDIF
@@ -623,9 +623,9 @@ CONTAINS
       IF (xcpot%needs_grad().OR.xcpot%exc_is_MetaGGA()) THEN
          CALL judft_error("Bug: You called get_fxc for a (meta)GGA potential. This is not implemented (yet?).")
       ELSE  !LDA potentials
-         CALL xc_f90_lda_fxc(xcpot%vxc_func_x, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), fx_tmp)
+         CALL xc_f03_lda_fxc(xcpot%vxc_func_x, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), fx_tmp)
          IF (xcpot%func_vxc_id_c > 0) THEN
-            CALL xc_f90_lda_fxc(xcpot%vxc_func_c, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), fxc_tmp)
+            CALL xc_f03_lda_fxc(xcpot%vxc_func_c, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), fxc_tmp)
             fxc_tmp = fxc_tmp + fx_tmp
          ENDIF
       ENDIF
@@ -711,15 +711,15 @@ CONTAINS
       CHARACTER(len=120)                  :: kind, family
       LOGICAL                             :: is_energy_func
 
-      TYPE(xc_f90_func_t),INTENT(IN)      :: xc_func
-      TYPE(xc_f90_func_info_t)            :: xc_info
+      TYPE(xc_f03_func_t),INTENT(IN)      :: xc_func
+      TYPE(xc_f03_func_info_t)            :: xc_info
 
-      xc_info = xc_f90_func_get_info(xc_func)
+      xc_info = xc_f03_func_get_info(xc_func)
 
       is_energy_func = .FALSE.
       IF (PRESENT(is_E_func)) is_energy_func = is_E_func
 
-      SELECT CASE(xc_f90_func_info_get_kind(xc_info))
+      SELECT CASE(xc_f03_func_info_get_kind(xc_info))
       CASE (XC_EXCHANGE)
          WRITE (kind, '(a)') 'an exchange functional'
       CASE (XC_CORRELATION)
@@ -731,7 +731,7 @@ CONTAINS
       CASE default
          WRITE (kind, '(a)') 'of unknown kind'
       END SELECT
-      SELECT CASE (xc_f90_func_info_get_family(xc_info))
+      SELECT CASE (xc_f03_func_info_get_family(xc_info))
       CASE (XC_FAMILY_LDA);
          WRITE (family, '(a)') "LDA"
       CASE (XC_FAMILY_GGA);
@@ -748,23 +748,23 @@ CONTAINS
 
       IF(.not. is_energy_func) THEN
          WRITE(*,'("The functional ''", a, "'' is ", a, ", it belongs to the ''", a, "'' family and is defined in the reference(s):")') &
-            TRIM(xc_f90_func_info_get_name(xc_info)), TRIM(kind), TRIM(family)
+            TRIM(xc_f03_func_info_get_name(xc_info)), TRIM(kind), TRIM(family)
       ELSE
          WRITE(*,'("The functional used for TotalE ''", a, "'' is ", a, ", it belongs to the ''", a, "'' family and is defined in the reference(s):")') &
-            TRIM(xc_f90_func_info_get_name(xc_info)), TRIM(kind), TRIM(family)
+            TRIM(xc_f03_func_info_get_name(xc_info)), TRIM(kind), TRIM(family)
       ENDIF
 
       i = 0
       DO WHILE(i >= 0)
-         WRITE(*, '(a,i1,2a)') '[', i+1, '] ', TRIM(xc_f90_func_reference_get_ref(xc_f90_func_info_get_references(xc_info, i)))
+         WRITE(*, '(a,i1,2a)') '[', i+1, '] ', TRIM(xc_f03_func_reference_get_ref(xc_f03_func_info_get_references(xc_info, i)))
       END DO
    END SUBROUTINE write_xc_info
 
    FUNCTION xc_get_family(xc_func) result(family)
       IMPLICIT NONE
-      TYPE(xc_f90_func_t)  :: xc_func
+      TYPE(xc_f03_func_t)  :: xc_func
       integer              :: family
-      family = xc_f90_func_info_get_family(xc_f90_func_get_info(xc_func))
+      family = xc_f03_func_info_get_family(xc_f03_func_get_info(xc_func))
    END FUNCTION xc_get_family
 #endif
 
