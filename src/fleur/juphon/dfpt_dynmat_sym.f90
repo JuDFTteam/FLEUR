@@ -6,7 +6,7 @@ MODULE m_dfpt_dynmat_sym
 
    IMPLICIT NONE
 CONTAINS
-   SUBROUTINE ft_dyn(atoms, qpts, sym, ft_lim, amat, dyn_mat_q, dyn_mat_r, dyn_mat_q_full)
+   SUBROUTINE ft_dyn(atoms, qpts, sym, ft_lim, amat, l_WSinterpol, dyn_mat_q, dyn_mat_r, fft_grid, dyn_mat_q_full)
       !! Transforms the dynamical matrices for a set of q vectors in the
       !! irreducible Brillouin zone onto the full set of q vector in the BZ
       !! and subsequently transforms it to real space (lattice vector grid), to
@@ -16,14 +16,15 @@ CONTAINS
       type(t_sym),   intent(in)       :: sym
       integer,       intent(in)       :: ft_lim(2,3)
       real,          intent(in)       :: amat(3,3)
+      logical, intent(in)             :: l_WSinterpol 
       complex,       intent(in)       :: dyn_mat_q(:,:,:) ! (nqpt,dyn_dim,dyn_dim)
       complex,intent(out)             :: dyn_mat_r(0:,0:,0:,:,:) ! (n1,n2,n3,dyn_dim,dyn_dim)
-
+      complex, intent(out), allocatable :: fft_grid(:,:,:) ! (nqptf,dyn_dim,dyn_dim)
       complex, allocatable, intent(out) :: dyn_mat_q_full(:,:,:)
+
       integer :: mrot(3,3),invmrot(3,3)
       logical :: l_inv
 
-      complex,allocatable :: fft_grid(:,:,:) ! (nqptf,dyn_dim,dyn_dim)
       integer :: iq, dyn_dim, iqfull
       integer :: isym
       integer :: iz, iy, ix, iGrid
@@ -57,17 +58,19 @@ CONTAINS
       end do 
 
       fft_grid(:,:,:)=fft_grid(:,:,:)/qpts%nkptf
-      ! unroll the FCM on supercell index
-      
-      iGrid = 1 
-      do iz=ft_lim(1,3),ft_lim(2,3)
-         do iy=ft_lim(1,2),ft_lim(2,2)
-            do ix=ft_lim(1,1),ft_lim(2,1)
-               dyn_mat_r(ix,iy,iz,:,:)= fft_grid(iGrid,:,:)
-               iGrid = iGrid + 1 
-            end do !ix
-         end do !iy
-      end do !iz
+      if (l_WSinterpol) then 
+         ! unroll the FCM on supercell index
+         ! for WS construction 
+         iGrid = 1 
+         do iz=ft_lim(1,3),ft_lim(2,3)
+            do iy=ft_lim(1,2),ft_lim(2,2)
+               do ix=ft_lim(1,1),ft_lim(2,1)
+                  dyn_mat_r(ix,iy,iz,:,:)= fft_grid(iGrid,:,:)
+                  iGrid = iGrid + 1 
+               end do !ix
+            end do !iy
+         end do !iz
+      end if 
    END SUBROUTINE
 
    SUBROUTINE ft_dyn_direct(ft_lim,isn,bqpt,dyn_mat_q,dyn_mat_r)
@@ -211,7 +214,7 @@ CONTAINS
       END DO
    END SUBROUTINE
 
-   SUBROUTINE ift_dyn(atoms,qpts,ft_lim,bigBox_lim,weights,bqpt,dyn_mat_r,dyn_mat_q)
+   SUBROUTINE ift_dyn(atoms,qpts,ft_lim,bigBox_lim,weights,bqpt,dyn_mat_r,fft_grid,dyn_mat_q,l_WSinterpol)
       !! Transforms the dynamical matrix on a real space lattice vector grid
       !! (--> mass-normalized FCM) back onto a specific q vector provided as
       !! input (bqpt) by the inverse Fourier Transformation as compared to
@@ -222,21 +225,22 @@ CONTAINS
       real,     intent(in) :: weights(:) 
       real,          intent(in) :: bqpt(3)
       complex,       intent(in) :: dyn_mat_r(0:,0:,0:,:,:)
-
+      complex,       intent(inout) :: fft_grid(:,:,:)
       complex, allocatable, intent(out) :: dyn_mat_q(:,:)
+      logical, intent(in) :: l_WSinterpol
 
-      integer :: dyn_dim , iGrid 
+      integer :: dyn_dim 
 
       dyn_dim = 3*atoms%nat
 
       allocate(dyn_mat_q(dyn_dim,dyn_dim))
       dyn_mat_q(:,:) = cmplx(0.0,0.0)
 
-
-      !CALL ft_dyn_direct(q_lim,-1,bqpt,dyn_mat_q,dyn_mat_r)
-
-      call ft_fcm_weight(ft_lim,bigBox_lim,weights,bqpt,dyn_mat_q,dyn_mat_r)
-
+      if (l_WSinterpol) then 
+         call ft_fcm_weight(ft_lim,bigBox_lim,weights,bqpt,dyn_mat_q,dyn_mat_r)
+      else 
+         CALL ft_dyn_direct(ft_lim,-1,bqpt,dyn_mat_q,fft_grid)
+      end if 
 
    END SUBROUTINE
 

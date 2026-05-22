@@ -41,6 +41,8 @@ MODULE m_types_juPhon
       LOGICAL :: l_polar = .FALSE.
       LOGICAL :: l_bfield = .FALSE.
       LOGICAL :: l_symVacLevel = .TRUE. ! Symmetrize the vacua levels  
+      LOGICAL :: l_WSinterpol = .FALSE.
+
 
       REAL, ALLOCATABLE :: qvec(:,:)
       REAL, ALLOCATABLE :: qvec_efield(:,:)
@@ -103,6 +105,8 @@ CONTAINS
       CALL mpi_bc(this%eDiffcut, rank, mpi_comm)
       CALL mpi_bc(this%fDiffcut, rank, mpi_comm)
       CALL mpi_bc(this%bandWindow, rank, mpi_comm)
+      CALL mpi_bc(this%l_WSinterpol, rank, mpi_comm)
+
 
    END SUBROUTINE mpi_bc_juPhon
 
@@ -293,6 +297,12 @@ CONTAINS
 
          IF (numberNodes == 1) THEN
           this%l_symVacLevel    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_symVacLevel'))
+         END IF
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_WSinterpol')
+
+         IF (numberNodes == 1) THEN
+          this%l_WSinterpol    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_WSinterpol'))
          END IF
 
          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@bandWindow')
