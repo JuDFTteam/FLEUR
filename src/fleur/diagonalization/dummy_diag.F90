@@ -1,6 +1,6 @@
 !--------------------------------------------------------------------------------
 ! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
-! This file is part of FLEUR and available as free software under the conditions 
+! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 ! Added MPI implementation, DW 2018
@@ -22,7 +22,7 @@ contains
 
    function get_solver_dummy() result(solver)
       class(t_solver), allocatable :: solver
-      allocate(t_solver_dummy :: solver)
+      allocate (t_solver_dummy :: solver)
       solver%name = "dummy"
       solver%available = .true.
       solver%parallel = .false.

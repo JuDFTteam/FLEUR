@@ -252,7 +252,7 @@ CONTAINS
 #else
       WRITE (*, "(3a,f20.2,5x,a)") startstop, name, " at:", cputime() - debugtimestart, memory_usage_string()
 #endif
-
+   call flush(6) !add a flush to make sure the output is not buffered 
 #if false
 ! Somehow this doesn't compile at the moment, at least with the ifx compiler
 #ifdef CPP_DEBUG
