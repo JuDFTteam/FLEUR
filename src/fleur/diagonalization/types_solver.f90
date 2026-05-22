@@ -41,7 +41,7 @@ module m_types_solver
 contains
    function get_solver_stop() result(solver)
       class(t_solver), allocatable :: solver
-      allocate(t_solver_stop :: solver)
+      allocate (t_solver_stop :: solver)
       solver%name = "stop"
       solver%available = .true.
       solver%parallel = .true.
@@ -91,6 +91,9 @@ contains
       real, intent(OUT)                    :: eig(:)
       integer, intent(IN)                  :: ikpt
 
+      ! For distributed solvers, ne is the global eigenvalue count on input/output.
+      ! eig contains global eigenvalues on all ranks.
+
       call judft_bug("Not implemented", calledby="solve_std")
    end subroutine
    subroutine solve_std_sp(self, hmat, ne, eig, zmat)
@@ -101,6 +104,9 @@ contains
       class(t_mat), allocatable, intent(OUT):: zmat
       real, intent(OUT)                    :: eig(:)
 
+      ! For distributed solvers, ne is the global eigenvalue count on input/output.
+      ! eig contains global eigenvalues on all ranks.
+
       call judft_bug("Not implemented", calledby="solve_std_sp")
    end subroutine
    subroutine solve_std_dp(self, hmat, ne, eig, zmat)
@@ -110,6 +116,9 @@ contains
       integer, intent(INOUT)               :: ne
       class(t_mat), allocatable, intent(OUT):: zmat
       real, intent(OUT)                    :: eig(:)
+
+      ! For distributed solvers, ne is the global eigenvalue count on input/output.
+      ! eig contains global eigenvalues on all ranks.
 
       call judft_bug("Not implemented", calledby="solve_std_dp")
    end subroutine

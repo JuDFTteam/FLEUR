@@ -75,7 +75,7 @@ MODULE m_types_mpimat
 #endif      
    END TYPE t_mpimat
 
-   PUBLIC t_blacsdata, t_mpimat, mingeselle
+   PUBLIC :: t_blacsdata, t_mpimat, mingeselle
 
 CONTAINS
    SUBROUTINE t_mpimat_lproblem(mat, vec)
@@ -990,7 +990,7 @@ CONTAINS
             c_help_size = 0
 
             ! determine number of elements to send to other pe's
-            ! and calculate the dimensions of c_helpi
+            ! and calculate the dimensions of c_help
             ! rows of c_help correspond to columns of mat_in and vice versa
 
             DO ki = 1, mat_in%matsize2
@@ -1482,7 +1482,6 @@ CONTAINS
 
       integer:: myrow,send_size,ierr,n,nn
       integer(MPI_ADDRESS_KIND)::disp
-      integer:: req(size(gridmap))
 
       real,allocatable:: buffer_r(:)
       complex,allocatable:: buffer_c(:)
@@ -1501,10 +1500,12 @@ CONTAINS
          if (send_size==0) cycle
          if (mat%l_real) THEN
             buffer_r(1:send_size)=pack(mat%data_r(:,n_col1d),row_map==myrow)
-            call mpi_put(buffer_r,send_size,MPI_DOUBLE_PRECISION,gridmap(myrow),disp,send_size,MPI_DOUBLE_PRECISION,win_handle,ierr)
+            call mpi_put(buffer_r,send_size,MPI_DOUBLE_PRECISION,gridmap(myrow),disp,send_size, &
+                         MPI_DOUBLE_PRECISION,win_handle,ierr)
          else
             buffer_c(1:send_size)=pack(mat%data_c(:,n_col1d),row_map==myrow)
-            call mpi_put(buffer_c,send_size,MPI_DOUBLE_COMPLEX,gridmap(myrow),disp,send_size,MPI_DOUBLE_complex,win_handle,ierr)
+            call mpi_put(buffer_c,send_size,MPI_DOUBLE_COMPLEX,gridmap(myrow),disp,send_size, &
+                         MPI_DOUBLE_COMPLEX,win_handle,ierr)
          endif   
       ENDDO
       
@@ -1539,8 +1540,6 @@ CONTAINS
 
       
    END subroutine
-
-   
 
   
 #endif

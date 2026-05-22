@@ -35,7 +35,7 @@ contains
 
       !Locals
       logical                       :: parallel
-      class(t_solver),allocatable   :: solver,transform
+      class(t_solver), allocatable   :: solver, transform
 
       select type (smat)
       class IS (t_mpimat)
@@ -46,14 +46,15 @@ contains
          parallel = .false.
       end select
 
-      call select_solver(parallel,diag_solver=solver,diag_transform=transform)
-      
+      call select_solver(parallel, diag_solver=solver, diag_transform=transform)
+
       if (.not. allocated(transform)) then
          ! We solve directly the generalized eigenvalue problem
          if (solver%generalized) then
             call timestart("Diagonalization")
             call solver%solve_gev(hmat, smat, ne, eig, ev, ikpt)
             call timestop("Diagonalization")
+            call redistribute_ev_to_rowcyclic(ev)
          else
             call judft_bug("Generalized solver not available?")
          end if
@@ -63,13 +64,32 @@ contains
          call transform%to_std(hmat, smat, ne)
          call timestop("Reduction to S-EVP")
          call timestart("Diagonalization")
-         print *,"Solver:",solver%name
+         print *, "Solver:", solver%name
          call solver%solve_std(hmat, ne, eig, ev)
          call timestop("Diagonalization")
          call timestart("Backtransform of eigenvectors")
          call transform%backtrans(smat, ev)
          call timestop("Backtransform of eigenvectors")
+         call redistribute_ev_to_rowcyclic(ev)
       end if
    end subroutine
+
+   subroutine redistribute_ev_to_rowcyclic(ev)
+      class(t_mat), allocatable, intent(inout) :: ev
+      type(t_mpimat) :: row_cyclic_ev
+
+      select type (ev)
+      type is (t_mpimat)
+         call row_cyclic_ev%init(ev%l_real, ev%global_size1, ev%global_size1, ev%blacsdata%mpi_com, MPIMAT_ROWCYCLIC)
+         call row_cyclic_ev%copy(ev, 1, 1)
+         call ev%free()
+         call ev%init(row_cyclic_ev%l_real, row_cyclic_ev%global_size1, row_cyclic_ev%global_size2, &
+                      row_cyclic_ev%blacsdata%mpi_com, MPIMAT_ROWCYCLIC)
+         call ev%copy(row_cyclic_ev, 1, 1)
+         call row_cyclic_ev%free()
+      class default
+         ! Serial output remains unchanged.
+      end select
+   end subroutine redistribute_ev_to_rowcyclic
 
 end module m_eigen_diag
