@@ -58,7 +58,7 @@ contains
 
         ! dynMat properties
         complex, allocatable   :: eigenFreqs(:), eigenVecs(:,:)
-        complex, allocatable   :: dyn_mat(:,:,:), dyn_mat_r(:,:,:,:,:), dyn_mat_q_full(:,:,:), dyn_mat_pathq(:,:), fft_r_grid(:,:,:)
+        complex, allocatable   :: dyn_mat(:,:,:), dyn_mat_r(:,:,:,:,:), dyn_mat_q_full(:,:,:), dyn_mat_pathq(:,:)
         complex, allocatable   :: dyn_mat_NAC_q(:,:),dyn_mat_NAC_r(:,:,:),dyn_mat_NAC_r_full(:,:,:)
         real,    allocatable   :: eigenVals(:), eigenValsFull(:,:,:)
 
@@ -70,7 +70,6 @@ contains
 
         ! Wigner Seitz Construction 
         integer, allocatable  :: supercellR(:,:)
-        real,allocatable  :: supercellR_cart(:,:)
         real, allocatable  :: FTweight(:)
         integer            :: ft_lim(2,3), bigBox_lim(2,3), iGrid , boxSize
         
@@ -149,11 +148,11 @@ contains
             !    end do
             !end if
 
+            ! Fourier box limits
+            ft_lim(2,:) =  qpts%nkpt3(:)/2
+            ft_lim(1,:) = ft_lim(2,:) - qpts%nkpt3(:) + 1
+            
             if (fi%juPhon%l_WSinterpol) then 
-                ! Small box transformation
-                ft_lim(2,:) =  qpts%nkpt3(:)/2
-                ft_lim(1,:) = ft_lim(2,:) - qpts%nkpt3(:) + 1
-
                 ! create wigner seitz cell and weights on bigger fft mesh  
                 ! we do this here so we dont have to create the weights for every ift_dyn call            
                 bigBox_lim(2,:) =   2*qpts%nkpt3(:)
@@ -163,7 +162,6 @@ contains
 
                 allocate(FTweight(boxSize))
                 allocate(supercellR(3,boxSize))
-                allocate(supercellR_cart(3,boxSize))
 
                 FTweight = 0.0
                 supercellR = 0.0 
@@ -172,25 +170,21 @@ contains
                     do ny=bigBox_lim(1,2),bigBox_lim(2,2)
                         do nx=bigBox_lim(1,1),bigBox_lim(2,1)
                             supercellR(:,iGrid) = (/nx,ny,nz/)
-                            supercellR_cart(:,iGrid) = matmul(fi%cell%amat,(/nx,ny,nz/))
-
                             iGrid = iGrid+1
                         end do 
                     end do 
                 end do 
                 call fi_fullsym%cell%calculate_WSweight(supercellR,FTweight,scaleSupercell=qpts%nkpt3(:))
             else 
-                ! Real space transformation
-                ft_lim(2,:) =  qpts%nkpt3(:)/2
-                ft_lim(1,:) = ft_lim(2,:) - qpts%nkpt3(:) + 1
-                
                 ! Do a simple backtransformation 
                 bigBox_lim = ft_lim
                 boxSize = (qpts%nkpt3(1)) * (qpts%nkpt3(2)) * (qpts%nkpt3(3)) 
+                allocate(FTweight(boxSize))
+                FTweight = 1.0 
             end if 
             
             allocate(dyn_mat_r(0:(qpts%nkpt3(1)-1),0:(qpts%nkpt3(2)-1) ,0:(qpts%nkpt3(3)-1) ,3*fi%atoms%nat,3*fi%atoms%nat))
-            call ft_dyn(fi_fullsym%atoms, qpts, fi_fullsym%sym, ft_lim, fi%cell%amat, fi%juPhon%l_WSinterpol ,dyn_mat, dyn_mat_r, fft_r_grid, dyn_mat_q_full)
+            call ft_dyn(fi_fullsym%atoms, qpts, fi_fullsym%sym, ft_lim, fi%cell%amat ,dyn_mat, dyn_mat_r, dyn_mat_q_full)
             
             ! In order to call the normal diagonalisation routines
             ! The FCM must be not-normalized --> otherwise we find the wrong unit
@@ -198,8 +192,6 @@ contains
             do iDir = 1, 3*fi%atoms%nat
                 do iDir2 = 1, 3*fi%atoms%nat
                     dyn_mat_r(:,:,:,iDir, iDir2) = dyn_mat_r(:,:,:,iDir, iDir2) * massInElectronMasses*  &
-                                               SQRT(atomicMasses_const(fi%atoms%nz(CEILING(iDir/3.0)))*atomicMasses_const(fi%atoms%nz(CEILING(iDir2/3.0))))
-                    fft_r_grid(:,iDir, iDir2) = fft_r_grid(:,iDir, iDir2) * massInElectronMasses*  &
                                                SQRT(atomicMasses_const(fi%atoms%nz(CEILING(iDir/3.0)))*atomicMasses_const(fi%atoms%nz(CEILING(iDir2/3.0))))
                 end do
             end do
@@ -215,7 +207,7 @@ contains
             ! specified in the inp.xml kpts.xml
 
             do iQ = 1, fi%kpts%nkpt
-                call ift_dyn(fi_fullsym%atoms,fi_fullsym%kpts,ft_lim,bigBox_lim,FTweight,fi%kpts%bk(:,iQ),dyn_mat_r,fft_r_grid,dyn_mat_pathq,fi%juPhon%l_WSinterpol)
+                call ift_dyn(fi_fullsym%atoms,fi_fullsym%kpts,ft_lim,bigBox_lim,FTweight,fi%kpts%bk(:,iQ),dyn_mat_r,dyn_mat_pathq)
                 write(*,*) '-------------------------'
                 !if ((fi%juPhon%l_polar) .and. (norm2(fi%kpts%bk(:,iQ)) .lt. 1e-8)) then
                 !    call get_NAC(fi,fi%kpts,dyn_mat_pathq,iQ)
