@@ -150,9 +150,9 @@ contains
             !end if
 
             if (fi%juPhon%l_WSinterpol) then 
-                 ! Small box transformation
-                ft_lim(2,:) = qpts%nkpt3(:) -1 
-                ft_lim(1,:) = 0 
+                ! Small box transformation
+                ft_lim(2,:) =  qpts%nkpt3(:)/2
+                ft_lim(1,:) = ft_lim(2,:) - qpts%nkpt3(:) + 1
 
                 ! create wigner seitz cell and weights on bigger fft mesh  
                 ! we do this here so we dont have to create the weights for every ift_dyn call            
@@ -189,7 +189,7 @@ contains
                 boxSize = (qpts%nkpt3(1)) * (qpts%nkpt3(2)) * (qpts%nkpt3(3)) 
             end if 
             
-            allocate(dyn_mat_r(0:ft_lim(2,1),0:ft_lim(2,2),0:ft_lim(2,3),3*fi%atoms%nat,3*fi%atoms%nat))
+            allocate(dyn_mat_r(0:(qpts%nkpt3(1)-1),0:(qpts%nkpt3(2)-1) ,0:(qpts%nkpt3(3)-1) ,3*fi%atoms%nat,3*fi%atoms%nat))
             call ft_dyn(fi_fullsym%atoms, qpts, fi_fullsym%sym, ft_lim, fi%cell%amat, fi%juPhon%l_WSinterpol ,dyn_mat, dyn_mat_r, fft_r_grid, dyn_mat_q_full)
             
             ! In order to call the normal diagonalisation routines

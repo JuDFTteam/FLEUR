@@ -27,7 +27,7 @@ CONTAINS
 
       integer :: iq, dyn_dim, iqfull
       integer :: isym
-      integer :: iz, iy, ix, iGrid
+      integer :: iz, iy, ix, iGrid, nx, ny, nz 
       real    :: q_full(3), trans(3)
       complex, allocatable :: dyn_mat_qsym(:,:)
 
@@ -65,7 +65,11 @@ CONTAINS
          do iz=ft_lim(1,3),ft_lim(2,3)
             do iy=ft_lim(1,2),ft_lim(2,2)
                do ix=ft_lim(1,1),ft_lim(2,1)
-                  dyn_mat_r(ix,iy,iz,:,:)= fft_grid(iGrid,:,:)
+                  ! shift to storage indices (0-based)
+                  nx = ix - ft_lim(1,1)
+                  ny = iy - ft_lim(1,2)
+                  nz = iz - ft_lim(1,3)
+                  dyn_mat_r(nx,ny,nz,:,:)= fft_grid(iGrid,:,:)
                   iGrid = iGrid + 1 
                end do !ix
             end do !iy
@@ -101,7 +105,7 @@ CONTAINS
    END SUBROUTINE
 
    subroutine ft_fcm_weight(ft_lim,bigBoxLim,weights,bqpt,dyn_mat_q,dyn_mat_r)
-      ! Fourier transform for a fourier transfrom from a bigger box
+      ! Fourier transform for a fourier transform from a bigger box
       ! make use of weights to enforce correct periodicity 
 
       integer, intent(in) :: ft_lim(2,3), bigBoxlim(2,3)
@@ -122,10 +126,14 @@ CONTAINS
                iGrid = iGrid+1
                phas=-1*tpi_const*(bqpt(1)*ix+bqpt(2)*iy+bqpt(3)*iz)
                phase_fac=cmplx(cos(phas),sin(phas))
-               ! map to smaller box 
-               nx = modulo(ix,ft_lim(2,1)+1)
-               ny = modulo(iy,ft_lim(2,2)+1)
-               nz = modulo(iz,ft_lim(2,3)+1)
+               ! map to smaller box using ft_lim bounds
+               nx = ft_lim(1,1) + modulo(ix - ft_lim(1,1), ft_lim(2,1) - ft_lim(1,1) + 1)
+               ny = ft_lim(1,2) + modulo(iy - ft_lim(1,2), ft_lim(2,2) - ft_lim(1,2) + 1)
+               nz = ft_lim(1,3) + modulo(iz - ft_lim(1,3), ft_lim(2,3) - ft_lim(1,3) + 1)
+               ! shift to storage indices (0-based)
+               nx = nx - ft_lim(1,1)
+               ny = ny - ft_lim(1,2)
+               nz = nz - ft_lim(1,3)
                dyn_mat_q(:,:)    = dyn_mat_q(:,:)    + phase_fac*weights(iGrid)*dyn_mat_r(nx,ny,nz,:,:)
             end do 
          end do 
