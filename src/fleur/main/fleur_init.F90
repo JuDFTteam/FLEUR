@@ -138,8 +138,6 @@ CONTAINS
                OPEN (oUnit, file='out', form='formatted', status='unknown')
          END IF
          CALL writeOutHeader()
-         !this should be removed, it deletes output of old inf file
-         OPEN (16, status='SCRATCH')
       END IF
 
       ALLOCATE (t_xcpot_inbuild::xcpot)
