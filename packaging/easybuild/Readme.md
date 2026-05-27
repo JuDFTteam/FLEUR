@@ -7,5 +7,6 @@ JSC_OVERRIDE_TOOLCHAIN_CHECK=1 eb --detect-loaded-modules=ignore --use-existing-
 
 module use $PWD/easybuild/modules/
 
-ml chem/FLEUR/MaX-R8.0-GCCcore-.13.3.0
+#ml chem/FLEUR/MaX-R8.0-GCCcore-.13.3.0
+ml chem/FLEUR/develop-GCCcore-.13.3.0
 ```
