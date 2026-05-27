@@ -10,13 +10,7 @@ focus on magnetism."""
 
 toolchain = {'name': 'GCCcore', 'version': '.13.3.0'}
 
-sources = [
-    {
-        "filename": "fleur-%(version)s.tar.gz",
-        "extract_cmd": "mkdir -p %(builddir)s/%(version)s && tar xzvf %s --strip-components=1 -C $_",
-        "source_urls": ["https://iffgit.fz-juelich.de/fleur/fleur/-/archive/%(version)s"],
-    }
-]
+sources = []
 
 dependencies = [
     ('Stages/2025', EXTERNAL_MODULE),
@@ -41,7 +35,17 @@ builddependencies = [
     ('Wannier90/1.2', EXTERNAL_MODULE)
 ]
 
-configure_cmd = 'cd %(builddir)s/%(version)s && echo $PWD && FC=mpif90 CC=mpicc CXX=mpicxx ./configure.sh'
+preconfigopts = """
+mkdir -p %(builddir)s/%(version)s
+cd %(builddir)s/%(version)s
+git clone https://iffgit.fz-juelich.de/fleur/fleur.git
+cd fleur
+git checkout release
+git checkout MaX-R8.1
+cd ..
+"""
+
+configure_cmd = 'cd %(builddir)s/%(version)s && echo $PWD && FC=mpif90 CC=mpicc CXX=mpicxx ./fleur/configure.sh -libxc TRUE'
 build_cmd = 'cd %(builddir)s/%(version)s/build && echo $PWD && make -j16'
 
 skipsteps = ['install']
