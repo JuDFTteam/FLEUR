@@ -179,7 +179,7 @@ CONTAINS
         ! Phonon read-in
         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/phonon')
 
-        if (numberNodes /= 1 .and. this%l_phonon==.true.) call juDFT_error("Please specify the phonon calculation with the phonon tag",calledby="types_juPhon.F90")
+        if ((numberNodes /= 1) .and. this%l_phonon) call juDFT_error("Please specify the phonon calculation with the phonon tag",calledby="types_juPhon.F90")
 
          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/phonon/@eDiffcut')
 
@@ -244,7 +244,7 @@ CONTAINS
         ! efield read-in
         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/efield')
 
-        if (numberNodes /= 1 .and. this%l_efield==.true.) call juDFT_error("Please specify the phonon calculation with the phonon tag",calledby="types_juPhon.F90")
+        if ( (numberNodes /= 1) .and. this%l_efield) call juDFT_error("Please specify the phonon calculation with the phonon tag",calledby="types_juPhon.F90")
 
         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/efield/@l_efield_scr')
 
@@ -262,7 +262,7 @@ CONTAINS
         ! interpolation read-in 
         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/dfptInterpolate')
 
-        if (numberNodes /= 1 .and. this%l_intp==.true.) call juDFT_error("Please specify the interpolation with the interpolation tag",calledby="types_juPhon.F90")
+        if ((numberNodes /= 1) .and. this%l_intp) call juDFT_error("Please specify the interpolation with the interpolation tag",calledby="types_juPhon.F90")
          
          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/dfptInterpolate/@l_band')
 
@@ -307,7 +307,7 @@ CONTAINS
         ! postprocess read-in
          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/postprocess')
          ! introduce switch for postprocessing 
-        if (numberNodes /= 1 .and. this%l_elph==.true.) call juDFT_error("Please specify the interpolation with the interpolation tag",calledby="types_juPhon.F90")
+        if ( (numberNodes /= 1) .and. this%l_elph) call juDFT_error("Please specify the interpolation with the interpolation tag",calledby="types_juPhon.F90")
         
 
          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/postprocess/@l_elph')
