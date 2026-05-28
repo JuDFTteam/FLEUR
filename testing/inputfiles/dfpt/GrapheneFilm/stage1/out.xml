@@ -1,20 +1,20 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <fleurOutput fleurOutputVersion="0.38">
-   <programVersion version="fleur 41">
-      <compilationInfo date="2025-11-17T16:12:07" user="bornhake" host="iff1146" flag="-fiopenmp -qmkl  -assume byterecl -no-wrap-margin -I/Data/ias-1/bornhake/Fleur/film_code/build.local/external/" link="lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64;/usr/lib64/libxml2.so"/>
-      <gitInfo version="MaX-R8.0-104-g88b2874f2-dirty" branch="develop" lastCommitHash="88b2874f2d56b982ca33998eccf565a456573131"/>
+   <programVersion version="fleur 42">
+      <compilationInfo date="2026-05-27T18:00:55" user="bornhake" host="iffcluster1801" flag="I/Users/bornhake/develop/hdf5-1.12.3/hdf5/include -fiopenmp -qmkl  -assume byterecl -no-wrap-margin -fPIC -I/D" link="lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64;-L/Users/bornhake/develop/hdf5-1.12.3/hdf5/lib;/usr/lib64/libxml"/>
+      <gitInfo version="MaX-R8.0-389-g7240c9213-dirty" branch="refactor-dfpt-driver" lastCommitHash="7240c9213d546494217eaf5ef3a7fd5b8e2b7935"/>
       <targetComputerArchitectures>GEN</targetComputerArchitectures>
       <precision type="DOUBLE"/>
       <targetStructureClass> </targetStructureClass>
       <additionalCompilerFlags>CPP_MPI             CPP_HDF</additionalCompilerFlags>
-      <programExecution commandLine="/Data/ias-1/bornhake/Fleur/film_code/build.local/fleur_MPI"/>
+      <programExecution commandLine="/Data/ias-1/bornhake/clean_code/build/fleur_MPI"/>
    </programVersion>
    <parallelSetup>
       <openMP ompThreads="1"/>
       <mpi mpiProcesses="1"/>
-      <mem memoryPerNode="32336496 kB"/>
+      <mem memoryPerNode="32333172 kB"/>
    </parallelSetup>
-   <startDateAndTime date="2025/11/17" time="16:15:12" zone="+0100"/>
+   <startDateAndTime date="2026/05/28" time="16:44:42" zone="+0200"/>
    <!-- Now follows a dump of the inp.xml file after evaluating the Schema -->
   <fleurInput fleurInputVersion="0.39">
      <comment>
@@ -27,7 +27,7 @@
         <xcFunctional name="LibXC" relativisticCorrections="F">
            <LibXCName exchange="lda_x" correlation="lda_c_vwn"/>
         </xcFunctional>
-        <magnetism jspins="1" l_noco="F" l_ss="F" l_J="F" swsp="F" lflip="F" l_onlyMtStDen="F" fixed_moment="0.0"/>
+        <magnetism jspins="1" l_noco="F" l_ss="F" l_J="F" swsp="F" lflip="F" l_onlyMtStDen="F"/>
         <soc l_soc="F" theta="0.0" phi="0.0" spav="F" off="F" soc66="T"/>
         <expertModes spex="0" secvar="F" vdW="NONE" vdW_tol="0.0005" pot8="F" eig66="F" lpr="0" isec1="99" warp_factor="1.0"/>
         <geometryOptimization l_f="F" forcealpha="1.0" forcemix="BFGS" epsdisp="0.00001" epsforce="0.00001" f_level="-1" l_driftForce="F" qfix="0" force_converged="0.00001"/>
@@ -83,7 +83,7 @@
      </atomGroups>
      <output dos="F" band="F" slice="F" coreSpec="F" wannier="F" eig66="F">
         <checks vchk="F" cdinf="F" disp="F" sympsi="F"/>
-        <bandDOS minEnergy="-.5*Htr" maxEnergy="0.5*Htr" sigma="0.015" storeEVData="T" all_atoms="T" orbcomp="F" jDOS="F" numberPoints="1321"/>
+        <bandDOS minEnergy="-.5*Htr" maxEnergy="0.5*Htr" sigma="0.015" storeEVData="T" all_atoms="T" orbcomp="F" globalspin="F" jDOS="F" jointDOS="F" numberPoints="1321"/>
         <vacuumDOS vacdos="F" integ="F" star="F" nstars="0" locx1="0.0" locy1="0.0" locx2="0.0" locy2="0.0" nstm="0" tworkf="0.0"/>
         <unfoldingBand unfoldBand="F" supercellX="1" supercellY="1" supercellZ="1" useOlap="T"/>
         <plotting iplot="0" polar="F" format="1">
@@ -320,7 +320,7 @@
             <atomicEP atomType="2" spin="1" branch="3d" branchLowest="-9.99" branchHighest="8.31" value="-0.8360561712"/>
             <atomicEP atomType="2" spin="1" branch="4f" branchLowest="-9.99" branchHighest="14.41" value="-0.6764861348"/>
             <vacuumEP vacuum="1" spin="1" vzIR="-0.7856518229" vzInf="0.0000000000" value="-0.2500000000"/>
-            <vacuumEP vacuum="2" spin="1" vzIR="-0.7856518229" vzInf="0.0000000000" value="-0.2500000000"/>
+            <vacuumEP vacuum="2" spin="1" vzIR="-0.7856518229" vzInf="-0.0000000000" value="-0.2500000000"/>
          </energyParameters>
          <eigenvalues>
             <eigenvaluesAt spin="1" ikpt="1" k_x="0.00000000" k_y="0.00000000" k_z="0.00000000">
@@ -442,5 +442,5 @@
          </densityConvergence>
       </iteration>
    </scfLoop>
-   <endDateAndTime date="2025/11/17" time="16:15:14" zone="+0100"/>
+   <endDateAndTime date="2026/05/28" time="16:44:42" zone="+0200"/>
 </fleurOutput>

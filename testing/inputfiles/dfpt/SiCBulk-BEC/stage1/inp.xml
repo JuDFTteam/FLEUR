@@ -82,10 +82,8 @@
       <plotting iplot="0" polar="F">
          <plot TwoD="T" vec1="  1.0  0.0  0.0" vec2="  0.0  1.0  0.0" vec3="  0.0  0.0  1.0" zero="  0.0  0.0  0.0" file="plot"/>
       </plotting>
-       <juPhon l_dfpt="F" l_efield="F" l_phonon="F" l_borneffcharge="F" qlim="1/100" startq="1">
-          <qVectors>
-             <q> 0.0/16 0.0/16 0.0/16 </q>
-          </qVectors>
+       <juPhon l_dfpt="F" l_efield="F" l_phonon="F" l_borneffcharge="F">
+       <efield qlim="1/100"/>
        </juPhon>
       <chargeDensitySlicing numkpt="0" minEigenval="0.0" maxEigenval="0.0" nnne="0" pallst="F"/>
       <specialOutput eonly="F"/>

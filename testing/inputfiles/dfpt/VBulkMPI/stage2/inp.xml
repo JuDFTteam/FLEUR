@@ -77,9 +77,11 @@
          <plot TwoD="T" vec1="  1.0  0.0  0.0" vec2="  0.0  1.0  0.0" vec3="  0.0  0.0  1.0" zero="  0.0  0.0  0.0" file="plot"/>
       </plotting>
       <juPhon l_dfpt="T" l_phonon="T" l_rm_qhdf="T">
-         <qVectors>
-            <q> 0.0/4 0.0/4 0.0/16 </q>
-         </qVectors>
+         <phonon>
+            <qVectors>
+               <q> 0.0/4 0.0/4 0.0/16 </q>
+            </qVectors>
+         </phonon>
       </juPhon>
       <chargeDensitySlicing numkpt="0" minEigenval="0.0" maxEigenval="0.0" nnne="0" pallst="F"/>
       <specialOutput eonly="F"/>

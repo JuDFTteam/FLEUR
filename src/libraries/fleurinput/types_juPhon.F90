@@ -12,10 +12,6 @@ MODULE m_types_juPhon
 
    TYPE, EXTENDS(t_fleurinput_base) :: t_juPhon
       LOGICAL :: l_dfpt    = .FALSE. ! Phonon calculation on/off
-      LOGICAL :: l_jpCheck = .FALSE. ! Check validity of input for a phonon run
-      !LOGICAL :: l_jpTest  = .FALSE. ! Run juPhon testset/inpu tests
-      !LOGICAL :: l_potout  = .FALSE. ! Write out potential
-      !LOGICAL :: l_eigout  = .FALSE. ! Write out eigenstuff
       REAL    :: eDiffcut  = 1e-5   ! Cutoff for energy differences
       REAL    :: fDiffcut  = 1e-7    ! Cutoff for occupation differences
       REAL    :: qlim      = 1./100     ! qlim value
@@ -25,13 +21,12 @@ MODULE m_types_juPhon
       LOGICAL :: l_band = .FALSE.    ! Interpolate the q-set to a bandstructure
       LOGICAL :: l_dos  = .FALSE.     ! Calculate the phonon density of states
       LOGICAL :: l_scf  = .TRUE.     ! Do a self-consistency run for dynmats
+      LOGICAL :: l_postprocess = .FALSE. ! Postprocessing of charge density response 
       LOGICAL :: l_elph = .FALSE.    ! Calculate electron-phonon matrix elements
       LOGICAL :: l_sumrule  = .FALSE. ! Apply sumrule for dynmats
       LOGICAL :: l_rm_qhdf  = .TRUE. ! Remove q*hdf files, after convergence
       INTEGER :: startq = 1          ! Start the q-loop at a specific point
       INTEGER :: stopq  = 0          ! Stop  the q-loop at a specific point
-      INTEGER :: qmode  = 0          ! 0: Single-shot calculation for qlist
-                                     ! 1: Reads q from fullsym_* input files
       INTEGER :: i_integration = 1   ! choose integration scheme for ph-linewidth (experimental)
       REAL    :: smearingGauss = 1e-7 ! Gaussian smearing for pot-response in Film DFPT 
       LOGICAL :: l_phonon = .FALSE.    
@@ -44,7 +39,9 @@ MODULE m_types_juPhon
       LOGICAL :: l_WSinterpol = .FALSE.
 
 
-      REAL, ALLOCATABLE :: qvec(:,:)
+      REAL, ALLOCATABLE :: qvec(:,:)     ! q vectors for scf 
+      REAL, ALLOCATABLE :: qvec_interpolate(:,:) ! q vectors for interpolation
+
       REAL, ALLOCATABLE :: qvec_efield(:,:)
 
       INTEGER, ALLOCATABLE :: bandWindow(:)  ! Window of Blochstates we want to consider
@@ -88,7 +85,6 @@ CONTAINS
       CALL mpi_bc(this%l_rm_qhdf, rank, mpi_comm)
       CALL mpi_bc(this%startq, rank, mpi_comm)
       CALL mpi_bc(this%stopq, rank, mpi_comm)
-      CALL mpi_bc(this%qmode, rank, mpi_comm)
       CALL mpi_bc(this%i_integration, rank, mpi_comm)
       CALL mpi_bc(this%smearingGauss, rank, mpi_comm)
       CALL mpi_bc(this%qvec, rank, mpi_comm)
@@ -137,125 +133,12 @@ CONTAINS
            this%l_dfpt    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_dfpt'))
          END IF
 
-         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_jpCheck')
-
-         IF (numberNodes == 1) THEN
-           this%l_jpCheck = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_jpCheck'))
-         END IF
-
-        !  numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_jpTest')
-
-        !  IF (numberNodes == 1) THEN
-        !    this%l_jpTest  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_jpTest'))
-        !  END IF
-
-        !  numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_potout')
-
-        !  IF (numberNodes == 1) THEN
-        !    this%l_potout  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_potout'))
-        !  END IF
-
-        !  numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_eigout')
-
-        !  IF (numberNodes == 1) THEN
-        !    this%l_eigout  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_eigout'))
-        !  END IF
-
-         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@eDiffcut')
-
-         IF (numberNodes == 1) THEN
-           this%eDiffcut  = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@eDiffcut'))
-         END IF
-
-         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@fDiffcut')
-
-         IF (numberNodes == 1) THEN
-           this%fDiffcut  = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@fDiffcut'))
-         END IF
-
-         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@qlim')
-
-         IF (numberNodes == 1) THEN
-           this%qlim  = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@qlim'))
-         END IF
-
-         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@gmaxzLocal')
-
-         IF (numberNodes == 1) THEN
-           this%gmaxzLocal  = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@gmaxzLocal'))
-         END IF
-
-         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_intp')
-
-         IF (numberNodes == 1) THEN
-           this%l_intp  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_intp'))
-         END IF
-
-         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_band')
-
-         IF (numberNodes == 1) THEN
-           this%l_band  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_band'))
-         END IF
-
-         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_dos')
-
-         IF (numberNodes == 1) THEN
-           this%l_dos  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_dos'))
-         END IF
-
-         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_scf')
+        numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_scf')
 
          IF (numberNodes == 1) THEN
            this%l_scf  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_scf'))
          END IF
 
-         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_elph')
-
-         IF (numberNodes == 1) THEN
-           this%l_elph  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_elph'))
-         END IF
-
-         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_sumrule')
-
-         IF (numberNodes == 1) THEN
-           this%l_sumrule  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_sumrule'))
-         END IF
-
-         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_rm_qhdf')
-
-         IF (numberNodes == 1) THEN
-           this%l_rm_qhdf  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_rm_qhdf'))
-         END IF
-
-         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@startq')
-
-         IF (numberNodes == 1) THEN
-           this%startq  = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@startq'))
-         END IF
-
-         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@stopq')
-
-         IF (numberNodes == 1) THEN
-           this%stopq  = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@stopq'))
-         END IF
-
-         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@qmode')
-
-         IF (numberNodes == 1) THEN
-           this%qmode  = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@qmode'))
-         END IF
-
-         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@i_integration')
-
-         IF (numberNodes == 1) THEN
-           this%i_integration  = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@i_integration'))
-         END IF
-
-         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@smearingGauss')
-
-         IF (numberNodes == 1) THEN
-           this%smearingGauss  = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@smearingGauss'))
-         END IF
 
          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_phonon')
 
@@ -263,28 +146,28 @@ CONTAINS
            this%l_phonon    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_phonon'))
          END IF
 
-         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_efield')
+        numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_efield')
 
          IF (numberNodes == 1) THEN
            this%l_efield    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_efield'))
          END IF
 
-         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_efield_scr')
-
-         IF (numberNodes == 1) THEN
-           this%l_efield_scr    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_efield_scr'))
-         END IF
-
-         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_borneffcharge')
+        numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_borneffcharge')
 
          IF (numberNodes == 1) THEN
            this%l_borneffcharge    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_borneffcharge'))
          END IF
 
-         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_polar')
+          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_intp')
 
          IF (numberNodes == 1) THEN
-           this%l_polar    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_polar'))
+           this%l_intp  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_intp'))
+         END IF
+
+           numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_rm_qhdf')
+
+         IF (numberNodes == 1) THEN
+           this%l_rm_qhdf  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_rm_qhdf'))
          END IF
 
          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_bfield')
@@ -292,50 +175,169 @@ CONTAINS
          IF (numberNodes == 1) THEN
            this%l_bfield    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_bfield'))
          END IF
+         
+        ! Phonon read-in
+        numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/phonon')
 
-         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_symVacLevel')
+        if (numberNodes /= 1 .and. this%l_phonon==.true.) call juDFT_error("Please specify the phonon calculation with the phonon tag",calledby="types_juPhon.F90")
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/phonon/@eDiffcut')
 
          IF (numberNodes == 1) THEN
-          this%l_symVacLevel    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_symVacLevel'))
-         END IF
+           this%eDiffcut  = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/phonon/@eDiffcut'))
+         END IF 
 
-         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_WSinterpol')
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/phonon/@fDiffcut')
 
          IF (numberNodes == 1) THEN
-          this%l_WSinterpol    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_WSinterpol'))
+           this%fDiffcut  = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/phonon/@fDiffcut'))
          END IF
 
-         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@bandWindow')
+          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/phonon/@gmaxzLocal')
+
+         IF (numberNodes == 1) THEN
+           this%gmaxzLocal  = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/phonon/@gmaxzLocal'))
+         END IF
+
+          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/phonon/@l_sumrule')
+
+         IF (numberNodes == 1) THEN
+           this%l_sumrule  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/phonon/@l_sumrule'))
+         END IF
+
+        numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/phonon/@startq')
+
+         IF (numberNodes == 1) THEN
+           this%startq  = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/phonon/@startq'))
+         END IF
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/phonon/@stopq')
+
+         IF (numberNodes == 1) THEN
+           this%stopq  = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/phonon/@stopq'))
+         END IF
+
+          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/phonon/phonon/@l_symVacLevel')
+
+         IF (numberNodes == 1) THEN
+          this%l_symVacLevel    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/phonon/@l_symVacLevel'))
+         END IF
+
+        allocate(this%qvec(0,0))
+        this%qvec=xml%read_q_list('/fleurInput/output/juPhon/phonon/qVectors')
+
+        IF (xml%GetNumberOfNodes('/fleurInput/output/juPhon/phonon/@qptsListName') == 1) THEN
+          qptsListName = TRIM(ADJUSTL(xml%GetAttributeValue('/fleurInput/output/juPhon/phonon/@qptsListName')))
+          ! Initialize qpts_from_kpts with the number of k-points from the kpts.xml file
+          qpts_from_kpts%nkpt = xml%GetNumberOfNodes('/fleurInput/cell/bzIntegration/kPointLists/kPointList[@name="'//TRIM(qptsListName)//'"]/kPoint')
+          IF (qpts_from_kpts%nkpt > 0) THEN
+              ALLOCATE(qpts_from_kpts%bk(3, qpts_from_kpts%nkpt))
+              ALLOCATE(qpts_from_kpts%wtkpt(qpts_from_kpts%nkpt))
+              IF (qpts_from_kpts%read_kpts_by_name(trim(xml%filename_add_xml)//"inp.xml", qptsListName)) THEN
+                  IF (ALLOCATED(this%qvec)) DEALLOCATE(this%qvec)
+                  ALLOCATE(this%qvec(3, qpts_from_kpts%nkpt))
+                  this%qvec = qpts_from_kpts%bk
+              END IF
+          END IF
+        END IF
+
+        ! efield read-in
+        numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/efield')
+
+        if (numberNodes /= 1 .and. this%l_efield==.true.) call juDFT_error("Please specify the phonon calculation with the phonon tag",calledby="types_juPhon.F90")
+
+        numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/efield/@l_efield_scr')
+
+         IF (numberNodes == 1) THEN
+           this%l_efield_scr    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/efield/@l_efield_scr'))
+         END IF
+
+        numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/efield/@qlim')
+
+         IF (numberNodes == 1) THEN
+           this%qlim  = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/efield/@qlim'))
+         END IF
+
+
+        ! interpolation read-in 
+        numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/dfptInterpolate')
+
+        if (numberNodes /= 1 .and. this%l_intp==.true.) call juDFT_error("Please specify the interpolation with the interpolation tag",calledby="types_juPhon.F90")
+         
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/dfptInterpolate/@l_band')
+
+         IF (numberNodes == 1) THEN
+           this%l_band  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/dfptInterpolate/@l_band'))
+         END IF
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/dfptInterpolate/@l_dos')
+
+         IF (numberNodes == 1) THEN
+           this%l_dos  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/dfptInterpolate/@l_dos'))
+         END IF
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/dfptInterpolate/@l_WSinterpol')
+
+         IF (numberNodes == 1) THEN
+          this%l_WSinterpol    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/dfptInterpolate/@l_WSinterpol'))
+         END IF
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/dfptInterpolate/@l_polar')
+
+         IF (numberNodes == 1) THEN
+           this%l_polar    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/dfptInterpolate/@l_polar'))
+         END IF
+
+
+          IF (xml%GetNumberOfNodes('/fleurInput/output/juPhon/dfptInterpolate/@qptsListName') == 1) THEN
+          qptsListName = TRIM(ADJUSTL(xml%GetAttributeValue('/fleurInput/output/juPhon/dfptInterpolate/@qptsListName')))
+          ! Initialize qpts_from_kpts with the number of k-points from the kpts.xml file
+          qpts_from_kpts%nkpt = xml%GetNumberOfNodes('/fleurInput/cell/bzIntegration/kPointLists/kPointList[@name="'//TRIM(qptsListName)//'"]/kPoint')
+          IF (qpts_from_kpts%nkpt > 0) THEN
+              ALLOCATE(qpts_from_kpts%bk(3, qpts_from_kpts%nkpt))
+              ALLOCATE(qpts_from_kpts%wtkpt(qpts_from_kpts%nkpt))
+              IF (qpts_from_kpts%read_kpts_by_name(trim(xml%filename_add_xml)//"inp.xml", qptsListName)) THEN
+                  IF (ALLOCATED(this%qvec_interpolate)) DEALLOCATE(this%qvec_interpolate)
+                  ALLOCATE(this%qvec(3, qpts_from_kpts%nkpt))
+                  this%qvec_interpolate = qpts_from_kpts%bk
+              END IF
+          END IF
+        END IF
+
+        ! postprocess read-in
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/postprocess')
+         ! introduce switch for postprocessing 
+        if (numberNodes /= 1 .and. this%l_elph==.true.) call juDFT_error("Please specify the interpolation with the interpolation tag",calledby="types_juPhon.F90")
+        
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/postprocess/@l_elph')
+
+         IF (numberNodes == 1) THEN
+           this%l_elph  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/postprocess/@l_elph'))
+         END IF
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/postprocess/@i_integration')
+
+         IF (numberNodes == 1) THEN
+           this%i_integration  = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/postprocess/@i_integration'))
+         END IF
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/postprocess/@smearingGauss')
+
+         IF (numberNodes == 1) THEN
+           this%smearingGauss  = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/postprocess/@smearingGauss'))
+         END IF
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/postprocess/@bandWindow')
 
          IF (numberNodes == 1) THEN
           allocate(this%bandWindow(2))
           allocate(tmp_arr(2))
-          valueString = xml%GetAttributeValue('/fleurInput/output/juPhon/@bandWindow')
+          valueString = xml%GetAttributeValue('/fleurInput/output/juPhon/postprocess/@bandWindow')
           call evaluateList(tmp_arr,valueString)
           this%bandWindow = tmp_arr
          END IF
 
-
-         allocate(this%qvec(0,0))
-         this%qvec=xml%read_q_list('/fleurInput/output/juPhon/qVectors')
-      ENDIF
-
-      ! Read q-points from kpts.xml if specified
-      IF (this%l_dfpt) THEN
-         IF (xml%GetNumberOfNodes('/fleurInput/output/juPhon/@qptsListName') == 1) THEN
-            qptsListName = TRIM(ADJUSTL(xml%GetAttributeValue('/fleurInput/output/juPhon/@qptsListName')))
-            ! Initialize qpts_from_kpts with the number of k-points from the kpts.xml file
-            qpts_from_kpts%nkpt = xml%GetNumberOfNodes('/fleurInput/cell/bzIntegration/kPointLists/kPointList[@name="'//TRIM(qptsListName)//'"]/kPoint')
-            IF (qpts_from_kpts%nkpt > 0) THEN
-                ALLOCATE(qpts_from_kpts%bk(3, qpts_from_kpts%nkpt))
-                ALLOCATE(qpts_from_kpts%wtkpt(qpts_from_kpts%nkpt))
-                IF (qpts_from_kpts%read_kpts_by_name(trim(xml%filename_add_xml)//"inp.xml", qptsListName)) THEN
-                    IF (ALLOCATED(this%qvec)) DEALLOCATE(this%qvec)
-                    ALLOCATE(this%qvec(3, qpts_from_kpts%nkpt))
-                    this%qvec = qpts_from_kpts%bk
-                END IF
-            END IF
-         END IF
       END IF
 
       ! Before we exit check needed parameters 

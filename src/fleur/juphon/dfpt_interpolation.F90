@@ -96,7 +96,6 @@ contains
         ! We currently rely on a seperate set of files fullsym_* that contain the symmetry
         ! Maybe we should change this in the future.
         ! Read qpoints from fullsym_inp.xml and fullsym_kpts.xml
-        if (fi%juPhon%qmode .ne. 1 )   call juDFT_error("Invalid option for post-procession of dynMatfiles. qmode not set to 1", calledby="dfpt_interpolation.F90")
         inp_pref = ADJUSTL("fullsym_")
         fmpi_fullsym%l_mpi_multithreaded = fmpi%l_mpi_multithreaded
         fmpi_fullsym%mpi_comm = fmpi%mpi_comm

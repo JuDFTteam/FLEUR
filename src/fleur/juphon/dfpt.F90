@@ -72,6 +72,8 @@ CONTAINS
       ! inversion symmetry
       l_minusq = .FALSE.
 
+      write(42,*) "gmaxzlocal i think is " , fi%juPhon%gmaxzLocal
+
       nspins = MERGE(2, 1, fi%noco%l_noco)
      
       if (fmpi%irank==0) call dfpt_check(fi, xcpot)

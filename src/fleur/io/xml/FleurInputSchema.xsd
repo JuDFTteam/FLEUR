@@ -3304,9 +3304,24 @@
          <xsd:documentation>JuPhon interface for phonon and electron-phonon calculations using DFPT.</xsd:documentation>
       </xsd:annotation>
       <xsd:all>
-         <xsd:element maxOccurs="1" minOccurs="0" name="qVectors" type="QListType">
+       <xsd:element minOccurs="0" name="phonon" type="PhononType">
             <xsd:annotation>
-               <xsd:documentation>List of phonon q-vectors.</xsd:documentation>
+               <xsd:documentation>Parameters for phonon calculations using DFPT.</xsd:documentation>
+            </xsd:annotation>
+         </xsd:element>
+         <xsd:element minOccurs="0" name="dfptInterpolate" type="DfptInterpolationType">
+            <xsd:annotation>
+               <xsd:documentation>Parameters for phonon calculations using DFPT.</xsd:documentation>
+            </xsd:annotation>
+         </xsd:element>
+         <xsd:element minOccurs="0" name="efield" type="DFPTEfieldType">
+            <xsd:annotation>
+               <xsd:documentation>Parameters for post-processing of DFPT calculations.</xsd:documentation>
+            </xsd:annotation>
+         </xsd:element>
+         <xsd:element minOccurs="0" name="postprocess" type="DFPTPostprocessType">
+            <xsd:annotation>
+               <xsd:documentation>Parameters for post-processing of DFPT calculations.</xsd:documentation>
             </xsd:annotation>
          </xsd:element>
       </xsd:all>
@@ -3315,47 +3330,14 @@
             <xsd:documentation>Enable DFPT (density functional perturbation theory) calculation.</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
-      <xsd:attribute name="l_jpCheck" type="FleurBool" use="optional">
-         <xsd:annotation>
-            <xsd:documentation>Enable JuPhon consistency checks.</xsd:documentation>
-         </xsd:annotation>
-      </xsd:attribute>
-      <!--xsd:attribute name="l_jpTest" type="FleurBool" use="optional"/-->
-      <!--xsd:attribute name="l_potout" type="FleurBool" use="optional"/-->
-      <!--xsd:attribute name="l_eigout" type="FleurBool" use="optional"/-->
-      <xsd:attribute name="eDiffcut" type="FleurDouble" use="optional">
-         <xsd:annotation>
-            <xsd:documentation>Energy difference cutoff for state selection.</xsd:documentation>
-         </xsd:annotation>
-      </xsd:attribute>
-      <xsd:attribute name="fDiffcut" type="FleurDouble" use="optional">
-         <xsd:annotation>
-            <xsd:documentation>Occupation difference cutoff for state selection.</xsd:documentation>
-         </xsd:annotation>
-      </xsd:attribute>
-      <xsd:attribute name="qlim" type="FleurDouble" use="optional">
-         <xsd:annotation>
-            <xsd:documentation>Q-vector magnitude limit.</xsd:documentation>
-         </xsd:annotation>
-      </xsd:attribute>  
-      <xsd:attribute name="gmaxzLocal" type="FleurDouble" use="optional">
-         <xsd:annotation>
-            <xsd:documentation>Local Gmax for z-direction (film calculations).</xsd:documentation>
-         </xsd:annotation>
-      </xsd:attribute>  
-      <xsd:attribute name="l_intp" type="FleurBool" use="optional">
+      <xsd:attribute name="l_interpolate" type="FleurBool" use="optional">
          <xsd:annotation>
             <xsd:documentation>Enable interpolation of phonon properties.</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
-      <xsd:attribute name="l_band" type="FleurBool" use="optional">
+      <xsd:attribute name="l_postprocess" type="FleurBool" use="optional">
          <xsd:annotation>
-            <xsd:documentation>Calculate phonon band structure.</xsd:documentation>
-         </xsd:annotation>
-      </xsd:attribute>
-      <xsd:attribute name="l_dos" type="FleurBool" use="optional">
-         <xsd:annotation>
-            <xsd:documentation>Calculate phonon DOS.</xsd:documentation>
+            <xsd:documentation>Enable post-processing of DFPT properties.</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
       <xsd:attribute name="l_scf" type="FleurBool" use="optional">
@@ -3363,44 +3345,9 @@
             <xsd:documentation>Enable self-consistent DFPT calculation.</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
-      <xsd:attribute name="l_elph" type="FleurBool" use="optional">
-         <xsd:annotation>
-            <xsd:documentation>Calculate electron-phonon coupling.</xsd:documentation>
-         </xsd:annotation>
-      </xsd:attribute>
-      <xsd:attribute name="l_sumrule" type="FleurBool" use="optional">
-         <xsd:annotation>
-            <xsd:documentation>Apply acoustic sum rule correction.</xsd:documentation>
-         </xsd:annotation>
-      </xsd:attribute>
       <xsd:attribute name="l_rm_qhdf" type="FleurBool" use="optional">
          <xsd:annotation>
             <xsd:documentation>Remove existing q.hdf files before calculation.</xsd:documentation>
-         </xsd:annotation>
-      </xsd:attribute>
-      <xsd:attribute name="startq" type="xsd:positiveInteger" use="optional">
-         <xsd:annotation>
-            <xsd:documentation>Starting q-point index for parallel calculations.</xsd:documentation>
-         </xsd:annotation>
-      </xsd:attribute>
-      <xsd:attribute name="stopq" type="xsd:nonNegativeInteger" use="optional">
-         <xsd:annotation>
-            <xsd:documentation>Stopping q-point index for parallel calculations.</xsd:documentation>
-         </xsd:annotation>
-      </xsd:attribute>
-      <xsd:attribute name="qmode" type="xsd:nonNegativeInteger" use="optional">
-         <xsd:annotation>
-            <xsd:documentation>Q-point mode selection.</xsd:documentation>
-         </xsd:annotation>
-      </xsd:attribute>
-      <xsd:attribute name="i_integration" type="xsd:nonNegativeInteger" use="optional">
-         <xsd:annotation>
-            <xsd:documentation>Integration method for electron-phonon coupling.</xsd:documentation>
-         </xsd:annotation>
-      </xsd:attribute>
-      <xsd:attribute name="smearingGauss" type="FleurDouble" use="optional">
-         <xsd:annotation>
-            <xsd:documentation>Gaussian smearing width for integration.</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
       <xsd:attribute name="l_phonon" type="FleurBool" use="optional">
@@ -3413,17 +3360,7 @@
             <xsd:documentation>Include (bare) electric field perturbation.</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
-      <xsd:attribute name="l_efield_scr" type="FleurBool" use="optional">
-         <xsd:annotation>
-            <xsd:documentation>Include screened electric field perturbation.</xsd:documentation>
-         </xsd:annotation>
-      </xsd:attribute>
       <xsd:attribute name="l_borneffcharge" type="FleurBool" use="optional">
-         <xsd:annotation>
-            <xsd:documentation>Calculate Born effective charges.</xsd:documentation>
-         </xsd:annotation>
-      </xsd:attribute>
-      <xsd:attribute name="l_polar" type="FleurBool" use="optional">
          <xsd:annotation>
             <xsd:documentation>Calculate Born effective charges.</xsd:documentation>
          </xsd:annotation>
@@ -3433,28 +3370,139 @@
             <xsd:documentation>Include (bare) electric field perturbation.</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
-      <xsd:attribute name="l_symVacLevel" type="FleurBool" use="optional" default="F">
+   </xsd:complexType>
+
+   <xsd:complexType name="PhononType">
+      <xsd:annotation>
+            <xsd:documentation>Parameters specifying the phonon DFPT calculation.</xsd:documentation>
+      </xsd:annotation>
+         <xsd:all>
+            <xsd:element maxOccurs="1" minOccurs="0" name="qVectors" type="QListType">
+               <xsd:annotation>
+                  <xsd:documentation>List of phonon q-vectors.</xsd:documentation>
+               </xsd:annotation>
+            </xsd:element>
+         </xsd:all>
+      <xsd:attribute name="qptsListName" type="xsd:string" use="optional">
+               <xsd:annotation>
+                  <xsd:documentation>Name of the q-point list to use.</xsd:documentation>
+               </xsd:annotation>
+         </xsd:attribute>
+      <xsd:attribute name="l_sumrule" type="FleurBool" use="optional">
+            <xsd:annotation>
+               <xsd:documentation>Apply acoustic sum rule correction.</xsd:documentation>
+            </xsd:annotation>
+         </xsd:attribute>
+         <xsd:attribute name="startq" type="xsd:positiveInteger" use="optional">
+            <xsd:annotation>
+               <xsd:documentation>Starting q-point index for parallel calculations.</xsd:documentation>
+            </xsd:annotation>
+         </xsd:attribute>
+         <xsd:attribute name="stopq" type="xsd:nonNegativeInteger" use="optional">
+            <xsd:annotation>
+               <xsd:documentation>Stopping q-point index for parallel calculations.</xsd:documentation>
+            </xsd:annotation>
+         </xsd:attribute>
+      <xsd:attribute name="gmaxzLocal" type="FleurDouble" use="optional">
+            <xsd:annotation>
+               <xsd:documentation>Local Gmax for z-direction (film calculations).</xsd:documentation>
+            </xsd:annotation>
+         </xsd:attribute>  
+         <xsd:attribute name="l_symVacLevel" type="FleurBool" use="optional" default="F">
+            <xsd:annotation>
+               <xsd:documentation>Symmetrize vacuum level for film calculations.</xsd:documentation>
+            </xsd:annotation>
+         </xsd:attribute>
+               <xsd:attribute name="eDiffcut" type="FleurDouble" use="optional">
+            <xsd:annotation>
+               <xsd:documentation>Energy difference cutoff for state selection.</xsd:documentation>
+            </xsd:annotation>
+         </xsd:attribute>
+         <xsd:attribute name="fDiffcut" type="FleurDouble" use="optional">
+            <xsd:annotation>
+               <xsd:documentation>Occupation difference cutoff for state selection.</xsd:documentation>
+            </xsd:annotation>
+         </xsd:attribute>
+   </xsd:complexType>
+
+
+   <xsd:complexType name="DFPTEfieldType">
+      <xsd:annotation>
+            <xsd:documentation>Parameters specifying the efield DFPT calculation.</xsd:documentation>
+      </xsd:annotation>
+         <xsd:attribute name="l_efield_scr" type="FleurBool" use="optional">
          <xsd:annotation>
-            <xsd:documentation>Symmetrize vacuum level for film calculations.</xsd:documentation>
+            <xsd:documentation>Include screened electric field perturbation.</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
-            <xsd:attribute name="l_WSinterpol" type="FleurBool" use="optional">
+       <xsd:attribute name="qlim" type="FleurDouble" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Q-vector magnitude limit.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>  
+   </xsd:complexType>
+<xsd:complexType name="DfptInterpolationType">
+      <xsd:annotation>
+            <xsd:documentation>Parameters specifying the interpolation of DFPT results.</xsd:documentation>
+      </xsd:annotation>
+      <xsd:attribute name="l_band" type="FleurBool" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Interpolate phonon band structure.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="l_dos" type="FleurBool" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Interpolate phonon DOS.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="qptsListName" type="xsd:string" use="optional">
+               <xsd:annotation>
+                  <xsd:documentation>Name of the q-point list to use.</xsd:documentation>
+               </xsd:annotation>
+         </xsd:attribute>
+      <xsd:attribute name="l_sumrule" type="FleurBool" use="optional">
+            <xsd:annotation>
+               <xsd:documentation>Apply acoustic sum rule correction.</xsd:documentation>
+            </xsd:annotation>
+         </xsd:attribute>
+         <xsd:attribute name="l_WSinterpol" type="FleurBool" use="optional">
          <xsd:annotation>
             <xsd:documentation>Wigner Seitz Construction for interpolation.</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
-            <xsd:attribute name="qptsListName" type="xsd:string" use="optional">
-            <xsd:annotation>
-               <xsd:documentation>Name of the q-point list to use.</xsd:documentation>
-            </xsd:annotation>
+      <xsd:attribute name="l_polar" type="FleurBool" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Calculate long range correction for polar systems in interpolation</xsd:documentation>
+         </xsd:annotation>
       </xsd:attribute>
-       <xsd:attribute name="bandWindow" type="BandWindowRestricted" use="optional">
+   </xsd:complexType>
+
+   <xsd:complexType name="DFPTPostprocessType">
+      <xsd:annotation>
+            <xsd:documentation>Parameters specifying the interpolation of DFPT results.</xsd:documentation>
+      </xsd:annotation>
+      <xsd:attribute name="l_elph" type="FleurBool" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Calculate electron-phonon coupling.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="bandWindow" type="BandWindowRestricted" use="optional">
       <xsd:annotation>
          <xsd:documentation>
             Two non-negative integers defining the band window for the electron phonon matrix element.
          </xsd:documentation>
       </xsd:annotation>
    </xsd:attribute>
+    <xsd:attribute name="i_integration" type="xsd:nonNegativeInteger" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Integration method for electron-phonon coupling.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="smearingGauss" type="FleurDouble" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Gaussian smearing width for integration.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
    </xsd:complexType>
 
    <xsd:simpleType name="BandWindowType">
@@ -3523,7 +3571,7 @@
          </xsd:element>
          <xsd:element maxOccurs="1" minOccurs="0" name="juPhon" type="JuPhonType">
             <xsd:annotation>
-               <xsd:documentation>Parameters for phonon calculations using DFPT.</xsd:documentation>
+               <xsd:documentation>Parameters for calculations using DFPT.</xsd:documentation>
             </xsd:annotation>
          </xsd:element>
       </xsd:all>
