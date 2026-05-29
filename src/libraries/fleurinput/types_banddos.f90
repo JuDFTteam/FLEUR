@@ -55,6 +55,7 @@ MODULE m_types_banddos
      INTEGER,ALLOCATABLE :: dos_typelist(:) !list of types for which DOS is calculated
      INTEGER,ALLOCATABLE :: dos_atomlist(:) !list of atoms for which DOS is calculated
      INTEGER,ALLOCATABLE  :: map_atomtype(:) !map an atomtype to corresponding entry in DOS
+    LOGICAL,ALLOCATABLE :: align_to_spin(:) ! for each atom align orbital frame to local spin frame
      real,allocatable    :: alpha(:),beta(:),gamma(:)
      !INTEGER :: ndir =0
      !INTEGER :: orbCompAtom=0
@@ -97,6 +98,7 @@ CONTAINS
     CALL mpi_bc(this%alpha,rank,mpi_comm)
     CALL mpi_bc(this%beta,rank,mpi_comm)
     CALL mpi_bc(this%gamma,rank,mpi_comm)
+    CALL mpi_bc(this%align_to_spin,rank,mpi_comm)
     CALL mpi_bc(this%dos_atom,rank,mpi_comm)
     CALL mpi_bc(this%l_slab,rank,mpi_comm)
     CALL mpi_bc(this%ndos_points,rank,mpi_comm)
@@ -159,6 +161,7 @@ CONTAINS
     allocate(this%alpha(size(this%dos_atom)));this%alpha=0.0
     allocate(this%beta(size(this%dos_atom)));this%beta=0.0
     allocate(this%gamma(size(this%dos_atom)));this%gamma=0.0
+    allocate(this%align_to_spin(size(this%dos_atom)));this%align_to_spin=.false.
     allocate(neq(xml%get_ntype()), source=0)
     ALLOCATE(this%unfoldTransMat(3,3))
 
@@ -194,6 +197,8 @@ CONTAINS
           this%beta(na) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@beta'))
           if (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathB))//'/@gamma')==1) &
           this%gamma(na) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@gamma'))
+          if (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathB))//'/@alignToSpin')==1) &
+          this%align_to_spin(na) = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathB))//'/@alignToSpin'))
         ENDDO
     ENDDO
     endif

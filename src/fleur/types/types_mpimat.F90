@@ -28,6 +28,7 @@ MODULE m_types_mpimat
 #else
    LOGICAL:: use_pdgemr2d=.false.
 #endif         
+   LOGICAL:: use_fast_redist=.false.
 
    !<This data-type extends the basic t_mat for distributed matrices.
    !<
@@ -79,7 +80,7 @@ MODULE m_types_mpimat
 CONTAINS
    SUBROUTINE t_mpimat_lproblem(mat, vec)
       IMPLICIT NONE
-      CLASS(t_mpimat), INTENT(IN)   :: mat
+      CLASS(t_mpimat), INTENT(INOUT)   :: mat
       class(t_mat), INTENT(INOUT)   :: vec
 
       integer :: ipiv(mat%global_size1), info
@@ -175,7 +176,8 @@ CONTAINS
       if (present(res)) Then
          select type (res)
          type is (t_mpimat)
-            res%blacsdata = mat1%blacsdata
+            res%blacsdata => mat1%blacsdata
+            res%blacsdata%no_use = res%blacsdata%no_use + 1
             res%matsize1 = mat1%matsize1
             res%matsize2 = mat1%matsize2
             res%global_size1 = mat1%global_size1
@@ -401,7 +403,7 @@ CONTAINS
 
             CALL pdgeadd('t', mat1%global_size1, mat1%global_size2, 1.0, mat1%data_r, 1, 1, mat1%blacsdata%blacs_desc, 1.0, mat%data_r, 1, 1, mat%blacsdata%blacs_desc)
          ELSE
-            CALL pzgeadd('c', mat1%global_size1, mat1%global_size2, CMPLX(1.0, 0.0), mat1%data_c, 1, 1, mat1%blacsdata%blacs_desc, CMPLX(1.0, 0.0), mat%data_c, 1, 1, mat1%blacsdata%blacs_desc)
+            CALL pzgeadd('c', mat1%global_size1, mat1%global_size2, CMPLX(1.0, 0.0), mat1%data_c, 1, 1, mat1%blacsdata%blacs_desc, CMPLX(1.0, 0.0), mat%data_c, 1, 1, mat%blacsdata%blacs_desc)
 #endif
          END IF
          !Now multiply the diagonal of the matrix by 1/2
@@ -428,6 +430,7 @@ CONTAINS
       CLASS(t_mat), INTENT(IN)      ::mat1
       INTEGER, INTENT(IN) ::n1, n2
       INTEGER :: irank, err
+      LOGICAL :: can_use_fast_redist
 
       call timestart("mpimat_copy")
 
@@ -447,10 +450,17 @@ CONTAINS
          else
             use_pdgemr2d = .false.
          end if
+         use_fast_redist = judft_was_argument("-use_fast_redist")
       end if
       SELECT TYPE (mat1)
       TYPE IS (t_mpimat)
-         if (mat1%is_column_cyclic().and..not.mat%is_column_cyclic().and..not.use_pdgemr2d) THEN
+         can_use_fast_redist = mat1%is_column_cyclic().and..not.mat%is_column_cyclic().and.&
+                              (n1>=1).and.(n2>=1).and.&
+                              (n1+mat1%global_size1-1<=mat%global_size1).and.&
+                              (n2+mat1%global_size2-1<=mat%global_size2)
+         if (can_use_fast_redist.and..not.use_pdgemr2d.and.use_fast_redist) THEN
+            call cyclic_column_to_2Dblock_cyclic_fast(mat1,mat,n1,n2)
+         else if (can_use_fast_redist.and..not.use_pdgemr2d) then
             call cyclic_column_to_2Dblock_cyclic(mat1,mat,n1,n2)
          else
             IF (mat%l_real) THEN
@@ -683,6 +693,8 @@ CONTAINS
       CALL mpi_comm_rank(MPI_COMM_WORLD, irank, ierr)
 
       call timestart("mpimat_init")
+   IF (.NOT. (PRESENT(matsize1) .AND. PRESENT(matsize2) .AND. PRESENT(mpi_subcom) .AND. PRESENT(l_real) .AND. PRESENT(dist_type))) &
+      CALL judft_error("Optional arguments must be present in mpimat_init")
       ALLOCATE (mat%blacsdata, stat=ierr)
       if (mpi_subcom == MPI_COMM_NULL) Then
          mat%blacsdata%blacs_desc(2) = -1
@@ -695,8 +707,6 @@ CONTAINS
          nby = priv_get_blocksize()
          IF (PRESENT(nb_x)) nbx = nb_x
          IF (PRESENT(nb_y)) nby = nb_y
-         IF (.NOT. (PRESENT(matsize1) .AND. PRESENT(matsize2) .AND. PRESENT(mpi_subcom) .AND. PRESENT(l_real) .AND. PRESENT(dist_type))) &
-            CALL judft_error("Optional arguments must be present in mpimat_init")
          mat%global_size1 = matsize1
          mat%global_size2 = matsize2
          mat%blacsdata%no_use = 1
@@ -725,8 +735,7 @@ CONTAINS
       INTEGER, INTENT(IN), OPTIONAL    :: global_size1, global_size2
       character(len=*), intent(in), optional :: mat_name
 
-      INTEGER::numroc
-      EXTERNAL::numroc
+      INTEGER, EXTERNAL :: numroc
 
       SELECT TYPE (templ)
       TYPE IS (t_mpimat)
@@ -1271,6 +1280,130 @@ CONTAINS
    end function
 
 #ifdef CPP_SCALAPACK
+   subroutine cyclic_column_to_2Dblock_cyclic_fast(mat,mat2d,offset1,offset2)
+      implicit none
+      class(t_mpimat),intent(in)   ::mat
+      class(t_mpimat),intent(inout)::mat2d
+      integer,intent(in),optional  ::offset1,offset2
+
+      integer, external :: indxl2g
+      integer :: o1, o2
+      integer :: ierr, irank, isize, i, j, n
+      integer :: np_row, np_col, my_row, my_col
+      integer :: mb, nb, rsrc, csrc
+      integer :: gi_src, gj_src, gi_dst, gj_dst
+      integer :: prow_dst, pcol_dst, rank_dst
+      integer :: li_dst, lj_dst, dummy
+      integer :: total_send, total_recv, pos
+      integer, allocatable :: map(:,:)
+      integer, allocatable :: send_counts(:), recv_counts(:)
+      integer, allocatable :: send_displ(:), recv_displ(:), cursor(:)
+      integer, allocatable :: send_i(:), send_j(:), recv_i(:), recv_j(:)
+      real, allocatable    :: send_r(:), recv_r(:)
+      complex, allocatable :: send_c(:), recv_c(:)
+
+      o1 = 1
+      if (present(offset1)) o1 = offset1
+      o2 = 1
+      if (present(offset2)) o2 = offset2
+
+      call MPI_COMM_SIZE(mat%blacsdata%mpi_com, isize, ierr)
+      call MPI_COMM_RANK(mat%blacsdata%mpi_com, irank, ierr)
+      call blacs_gridinfo(mat2d%blacsdata%blacs_desc(2), np_row, np_col, my_row, my_col)
+
+      mb = mat2d%blacsdata%blacs_desc(5)
+      nb = mat2d%blacsdata%blacs_desc(6)
+      rsrc = mat2d%blacsdata%blacs_desc(7)
+      csrc = mat2d%blacsdata%blacs_desc(8)
+
+      call generate_map_to_irank(np_row,np_col,my_row,my_col,irank,mat2d%blacsdata%blacs_desc(2),mat%blacsdata%mpi_com,map)
+
+      allocate(send_counts(isize), recv_counts(isize), send_displ(isize), recv_displ(isize), cursor(isize))
+      send_counts = 0
+
+      do j = 1, mat%matsize2
+         gj_src = indxl2g(j, mat%blacsdata%blacs_desc(6), mat%blacsdata%mycol, mat%blacsdata%blacs_desc(8), mat%blacsdata%npcol)
+         gj_dst = gj_src + o2 - 1
+         pcol_dst = mod((gj_dst-1)/nb + csrc, np_col)
+         do i = 1, mat%matsize1
+            gi_src = indxl2g(i, mat%blacsdata%blacs_desc(5), mat%blacsdata%myrow, mat%blacsdata%blacs_desc(7), mat%blacsdata%nprow)
+            gi_dst = gi_src + o1 - 1
+            prow_dst = mod((gi_dst-1)/mb + rsrc, np_row)
+            rank_dst = map(prow_dst, pcol_dst)
+            send_counts(rank_dst+1) = send_counts(rank_dst+1) + 1
+         end do
+      end do
+
+      call MPI_ALLTOALL(send_counts, 1, MPI_INTEGER, recv_counts, 1, MPI_INTEGER, mat%blacsdata%mpi_com, ierr)
+
+      send_displ(1) = 0
+      recv_displ(1) = 0
+      do n = 2, isize
+         send_displ(n) = send_displ(n-1) + send_counts(n-1)
+         recv_displ(n) = recv_displ(n-1) + recv_counts(n-1)
+      end do
+      total_send = send_displ(isize) + send_counts(isize)
+      total_recv = recv_displ(isize) + recv_counts(isize)
+
+      allocate(send_i(max(1,total_send)), send_j(max(1,total_send)))
+      allocate(recv_i(max(1,total_recv)), recv_j(max(1,total_recv)))
+      if (mat%l_real) then
+         allocate(send_r(max(1,total_send)), recv_r(max(1,total_recv)))
+      else
+         allocate(send_c(max(1,total_send)), recv_c(max(1,total_recv)))
+      end if
+
+      cursor = send_displ + 1
+      do j = 1, mat%matsize2
+         gj_src = indxl2g(j, mat%blacsdata%blacs_desc(6), mat%blacsdata%mycol, mat%blacsdata%blacs_desc(8), mat%blacsdata%npcol)
+         gj_dst = gj_src + o2 - 1
+         pcol_dst = mod((gj_dst-1)/nb + csrc, np_col)
+         do i = 1, mat%matsize1
+            gi_src = indxl2g(i, mat%blacsdata%blacs_desc(5), mat%blacsdata%myrow, mat%blacsdata%blacs_desc(7), mat%blacsdata%nprow)
+            gi_dst = gi_src + o1 - 1
+            prow_dst = mod((gi_dst-1)/mb + rsrc, np_row)
+            rank_dst = map(prow_dst, pcol_dst)
+            pos = cursor(rank_dst+1)
+            call infog1l(gi_dst, mb, np_row, prow_dst, rsrc, li_dst, dummy)
+            call infog1l(gj_dst, nb, np_col, pcol_dst, csrc, lj_dst, dummy)
+            send_i(pos) = li_dst
+            send_j(pos) = lj_dst
+            if (mat%l_real) then
+               send_r(pos) = mat%data_r(i, j)
+            else
+               send_c(pos) = mat%data_c(i, j)
+            end if
+            cursor(rank_dst+1) = pos + 1
+         end do
+      end do
+
+      call MPI_ALLTOALLV(send_i, send_counts, send_displ, MPI_INTEGER, recv_i, recv_counts, recv_displ, MPI_INTEGER, mat%blacsdata%mpi_com, ierr)
+      call MPI_ALLTOALLV(send_j, send_counts, send_displ, MPI_INTEGER, recv_j, recv_counts, recv_displ, MPI_INTEGER, mat%blacsdata%mpi_com, ierr)
+      if (mat%l_real) then
+         call MPI_ALLTOALLV(send_r, send_counts, send_displ, MPI_DOUBLE_PRECISION, recv_r, recv_counts, recv_displ, MPI_DOUBLE_PRECISION, mat%blacsdata%mpi_com, ierr)
+      else
+         call MPI_ALLTOALLV(send_c, send_counts, send_displ, MPI_DOUBLE_COMPLEX, recv_c, recv_counts, recv_displ, MPI_DOUBLE_COMPLEX, mat%blacsdata%mpi_com, ierr)
+      end if
+
+      if (mat%l_real) then
+         do n = 1, total_recv
+            mat2d%data_r(recv_i(n), recv_j(n)) = recv_r(n)
+         end do
+      else
+         do n = 1, total_recv
+            mat2d%data_c(recv_i(n), recv_j(n)) = recv_c(n)
+         end do
+      end if
+
+      if (allocated(send_r)) deallocate(send_r)
+      if (allocated(recv_r)) deallocate(recv_r)
+      if (allocated(send_c)) deallocate(send_c)
+      if (allocated(recv_c)) deallocate(recv_c)
+      deallocate(send_i, send_j, recv_i, recv_j)
+      deallocate(send_counts, recv_counts, send_displ, recv_displ, cursor)
+      if (allocated(map)) deallocate(map)
+   end subroutine
+
    subroutine cyclic_column_to_2Dblock_cyclic(mat,mat2d,offset1,offset2)
       use iso_c_binding
       implicit none 
@@ -1296,12 +1429,14 @@ CONTAINS
       row_map=get_vector_map(mat%global_size1,offset1,blocksize,np_row)
       col_map=get_vector_map(mat%global_size2,offset2,blocksize,np_col)
       call create_RMA_win(mat2d,offset1,np_row,my_row,blocksize,mat2d%blacsdata%mpi_com,win_handle) 
+      call MPI_WIN_LOCK_ALL(0, win_handle, ierr)
       global_col=irank+1
       DO n=1,mat%matsize2 !loop over all local columns
          !first fence before all the commm
          call send_column(mat,n,global_col,offset2,blocksize,np_col,col_map(global_col),row_map,map(:,col_map(global_col)),win_handle,irank)
          global_col=global_col+isize !the next local column corresponds to this global column
       ENDDO
+      call MPI_WIN_UNLOCK_ALL(win_handle, ierr)
       call mpi_win_free(win_handle,ierr)
    end subroutine
 
@@ -1363,16 +1498,13 @@ CONTAINS
 
       DO myrow=0,size(gridmap)-1
          send_size=count(row_map==myrow)
+         if (send_size==0) cycle
          if (mat%l_real) THEN
             buffer_r(1:send_size)=pack(mat%data_r(:,n_col1d),row_map==myrow)
-            CALL MPI_WIN_LOCK(MPI_LOCK_SHARED, gridmap(myrow), 0, win_handle, ierr)
             call mpi_put(buffer_r,send_size,MPI_DOUBLE_PRECISION,gridmap(myrow),disp,send_size,MPI_DOUBLE_PRECISION,win_handle,ierr)
-            call MPI_WIN_UNLOCK(gridmap(myrow), win_handle, ierr)
          else
             buffer_c(1:send_size)=pack(mat%data_c(:,n_col1d),row_map==myrow)
-            CALL MPI_WIN_LOCK(MPI_LOCK_SHARED, gridmap(myrow), 0, win_handle, ierr)
             call mpi_put(buffer_c,send_size,MPI_DOUBLE_COMPLEX,gridmap(myrow),disp,send_size,MPI_DOUBLE_complex,win_handle,ierr)
-            call MPI_WIN_UNLOCK(gridmap(myrow), win_handle, ierr)
          endif   
       ENDDO
       

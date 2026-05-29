@@ -5,8 +5,50 @@ Provides functions to generate inp.xml and add k-points from Python.
 
 import ctypes
 import os
+import sys
 from pathlib import Path
 from typing import Optional, Union, List
+
+
+POSSIBLE_LIBRARY_NAMES = [
+    'libfleurinpgen.so',
+    'libfleurinpgen.dylib',
+    'libinpgen3.so',
+    'libinpgen3.dylib',
+    'fleurinpgen.so',
+    'fleurinpgen.dylib',
+    'inpgen3.so',
+    'inpgen3.dylib'
+]
+
+
+def get_library_search_paths() -> List[Path]:
+    """Return default search paths for the FLEUR inpgen shared library."""
+    search_paths = [
+        Path(sys.prefix) / 'lib',
+        Path.cwd(),
+        Path.cwd() / 'build' / 'lib',
+        Path.cwd() / 'build' / 'src' / 'tools' / 'inpgen3',
+        Path.cwd() / 'lib',
+        Path(__file__).parent / 'lib',
+        Path(__file__).parent.parent.parent.parent / 'build' / 'lib',
+    ]
+
+    builddir = os.environ.get('FLEUR_BUILDDIR')
+    if builddir:
+        search_paths.insert(0, Path(builddir) / 'fleuriste-venv' / 'lib')
+        search_paths.insert(0, Path(builddir) / 'src' / 'tools' / 'inpgen3')
+        search_paths.insert(1, Path(builddir))
+
+    return search_paths
+
+
+def format_library_search_message() -> str:
+    """Format library search diagnostics for user-facing error messages."""
+    return (
+        f"Searched in: {[str(p) for p in get_library_search_paths()]}\n"
+        f"Looking for: {POSSIBLE_LIBRARY_NAMES}"
+    )
 
 
 class InpgenInterface:
@@ -26,8 +68,15 @@ class InpgenInterface:
         
         if lib_path is None:
             lib_path = self._find_library()
-        
-        self.lib = ctypes.CDLL(str(lib_path))
+
+        try:
+            self.lib = ctypes.CDLL(str(lib_path))
+        except OSError as exc:
+            raise OSError(
+                f"Failed to load inpgen library at: {lib_path}\n"
+                f"{format_library_search_message()}\n"
+                f"Original error: {exc}"
+            ) from exc
         self._setup_functions()
         self._log(f"✓ Loaded library: {lib_path}")
     
@@ -47,44 +96,19 @@ class InpgenInterface:
     
     def _find_library(self) -> Path:
         """Search for the inpgen library in common locations."""
-        possible_names = [
-            'libfleurinpgen.so',
-            'libfleurinpgen.dylib',
-            'libinpgen3.so',
-            'libinpgen3.dylib',
-            'fleurinpgen.so',
-            'fleurinpgen.dylib',
-            'inpgen3.so',
-            'inpgen3.dylib'
-        ]
-        
-        search_paths = [
-            Path.cwd(),
-            Path.cwd() / 'build' / 'lib',
-            Path.cwd() / 'build' / 'src' / 'tools' / 'inpgen3',
-            Path.cwd() / 'lib',
-            Path(__file__).parent / 'lib',
-            Path(__file__).parent.parent.parent.parent / 'build' / 'lib',
-        ]
-        
-        # Add build directory from environment (set by fleuriste wrapper)
-        builddir = os.environ.get('FLEUR_BUILDDIR')
-        if builddir:
-            search_paths.insert(0, Path(builddir) / 'src' / 'tools' / 'inpgen3')
-            search_paths.insert(1, Path(builddir))
+        search_paths = get_library_search_paths()
         
         for path in search_paths:
             if not path.exists():
                 continue
-            for name in possible_names:
+            for name in POSSIBLE_LIBRARY_NAMES:
                 lib_file = path / name
                 if lib_file.exists():
                     return lib_file
         
         raise FileNotFoundError(
             f"Could not find inpgen library.\n"
-            f"Searched in: {[str(p) for p in search_paths]}\n"
-            f"Looking for: {possible_names}\n\n"
+            f"{format_library_search_message()}\n\n"
             "Please build the library first:\n"
             "  cd build && cmake .. && make inpgen3\n"
             "Or specify lib_path explicitly."
@@ -121,6 +145,11 @@ class InpgenInterface:
             ctypes.c_bool         # nosym (LOGICAL)
         ]
         self.lib.make_kpt.restype = None
+
+        # drop_xmlschema function
+        # SUBROUTINE drop_xmlschema_py() BIND(C, name="drop_xmlschema")
+        self.lib.drop_xmlschema.argtypes = []
+        self.lib.drop_xmlschema.restype = None
     
     def say_hello(self,Num: int =2 ) -> None:
         """Test function to verify library connection."""
@@ -247,6 +276,21 @@ class InpgenInterface:
             self._log(f"✗ Error adding k-points: {e}")
             raise
 
+    def dropxmlschema(self) -> None:
+        """Write the bundled FLEUR XML schema files to the current directory.
+
+        This exposes the same core functionality as inpgen's `-dropXMLSchema`
+        mode, but as a library call without terminating the process.
+        """
+        self._log("Writing XML schema files")
+
+        try:
+            self.lib.drop_xmlschema()
+            self._log("✓ XML schema files written successfully")
+        except Exception as e:
+            self._log(f"✗ Error writing XML schema files: {e}")
+            raise
+
 
 # Convenience functions
 def make_inp(simple_input: str,
@@ -311,6 +355,20 @@ def add_kpoints(kpts_str: str,
     """
     inpgen = InpgenInterface(lib_path)
     inpgen.add_kpoints(kpts_str, kpts_path, nosym)
+
+
+def dropxmlschema(lib_path: Optional[str] = None) -> None:
+    """Convenience function to write the bundled XML schema files.
+
+    Args:
+        lib_path: Optional path to shared library
+
+    Example:
+        >>> from FleurInpgen import dropxmlschema
+        >>> dropxmlschema()
+    """
+    inpgen = InpgenInterface(lib_path)
+    inpgen.dropxmlschema()
 
 
 # Example usage

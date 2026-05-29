@@ -454,7 +454,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
       CALL cdncore(fmpi, fi%input,fi%vacuum,fi%noco,nococonv,fi%sym,enpara,&
                    stars,fi%cell,sphhar,fi%atoms,vTot,overallDen,moments,results)
       IF (fmpi%irank.EQ.0) THEN
-         CALL qfix(fmpi,stars,nococonv,fi%atoms,fi%sym,fi%vacuum,sphhar,fi%input,fi%cell, overallDen,&
+         CALL qfix(fmpi,stars,nococonv,fi%atoms,fi%sym,fi%vacuum,sphhar,fi%input,fi%cell,fi%field,overallDen,&
                    fi%noco%l_noco,.TRUE.,l_par=.FALSE.,force_fix=.TRUE.,fix=fix)
       END IF
       CALL overallDen%distribute(fmpi%mpi_comm)
@@ -860,7 +860,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
    !I think we need most of cdngen at this place so I just use cdngen
    CALL outDen%resetPotDen()
    CALL cdngen(eig_id,fmpi,fi%input,fi%banddos,fi%sliceplot,fi%vacuum,fi%kpts,fi%atoms,sphhar,stars,fi%sym,fi%juphon,fi%gfinp,fi%hub1inp,&
-               enpara,fi%cell,fi%noco,nococonv,vTot,results, fi%corespecinput,archiveType,xcpot,outDen, EnergyDen)
+               enpara,fi%cell,fi%field,fi%noco,nococonv,vTot,results, fi%corespecinput,archiveType,xcpot,outDen, EnergyDen)
 
    ! Calculate RDMFT energy
    rdmftEnergy = 0.0

@@ -259,7 +259,11 @@ CONTAINS
    LOGICAL FUNCTION xcpot_is_name(xcpot, name)
       CLASS(t_xcpot_inbuild_nf), INTENT(IN):: xcpot
       CHARACTER(len=*), INTENT(IN)  :: name
-      xcpot_is_name = (TRIM(xc_names(xcpot%icorr)) == TRIM((name)))
+      IF (xcpot%icorr.EQ.-1) THEN
+         xcpot_is_name = .FALSE.
+      ELSE
+         xcpot_is_name = (TRIM(xc_names(xcpot%icorr)) == TRIM((name)))
+      END IF
    END FUNCTION xcpot_is_name
 
 END MODULE m_types_xcpot_inbuild_nofunction

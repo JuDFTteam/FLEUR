@@ -331,6 +331,8 @@ contains
 
     subroutine dfpt_born_eff_charge_final(fi,born_eff_charge,born_eff_charge_contributions)
 
+         USE m_xmlOutput
+
         type(t_fleurinput), intent(in)    :: fi
         complex, intent(inout)   :: born_eff_charge(:,:,:)
         complex, intent(inout)   :: born_eff_charge_contributions(:,:,:,:)
@@ -339,6 +341,7 @@ contains
         character(len=20)        :: atom_string
         character(len=20)        :: filename
         integer                  ::i, file_int
+        CHARACTER(LEN=20)        :: attributes(2)
 
 
         !born_eff_charge(:,:,:) = -born_eff_charge(:,:,:)
@@ -366,33 +369,46 @@ contains
         close(111)
         write(*,*) '-------------------------' 
 
-        !born_eff_charge_IR(:,:,:) = -born_eff_charge_IR(:,:,:)
+        !save in out.xml
+        CALL openXMLElementNoAttributes('Phonons')
+        CALL openXMLElementNoAttributes('efield')
+        do iDType = 1, fi%atoms%ntype 
+            do iDir = 1,3
+                attributes = ''
+                WRITE(attributes(1),'(i0)') iDType
+                WRITE(attributes(2),'(i0)') iDir
+                CALL writeXMLElementPoly('borneffcharge',(/ 'iDtype' , 'iDir  '/), attributes,real(born_eff_charge(iDType,iDir,:)))
+            end do
+        end do
+        CALL closeXMLElement('efield')
+        CALL closeXMLElement('Phonons')
         
         atom_string = 'atom No:'
-
-        IF (fi%juPhon%l_efield) THEN
-            call write_born_effective_charge(112, "born_eff_charge", born_eff_charge, atom_string, fi)
-            call write_born_effective_charge(112, "born_eff_charge_MT", -born_eff_charge_contributions(:,:,:,1), atom_string, fi)
-            call write_born_effective_charge(112, "born_eff_charge_MT_1", -born_eff_charge_contributions(:,:,:,2), atom_string, fi)
-            call write_born_effective_charge(112, "born_eff_charge_MT_2", -born_eff_charge_contributions(:,:,:,3), atom_string, fi)
-        ELSE
-            call write_born_effective_charge(112, "born_eff_charge_cmplx", born_eff_charge, atom_string, fi)
-            call write_born_effective_charge(113, "born_eff_charge_IR", born_eff_charge_contributions(:,:,:,1), atom_string, fi)
-            call write_born_effective_charge(114, "born_eff_charge_MT", born_eff_charge_contributions(:,:,:,2), atom_string, fi)
-            call write_born_effective_charge(115, "born_eff_charge_SF-MT", born_eff_charge_contributions(:,:,:,3), atom_string, fi)
-            call write_born_effective_charge(116, "born_eff_charge_SF-IR", born_eff_charge_contributions(:,:,:,4), atom_string, fi)
-            call write_born_effective_charge(117, "born_eff_charge_grRho", born_eff_charge_contributions(:,:,:,5), atom_string, fi)
-            call write_born_effective_charge(118, "born_eff_charge_Zbare", born_eff_charge_contributions(:,:,:,6), atom_string, fi)
-            call write_born_effective_charge(119, "born_eff_charge_SF", born_eff_charge_contributions(:,:,:,7), atom_string, fi)
-            call write_born_effective_charge(120, "born_eff_charge_pulay_only", born_eff_charge_contributions(:,:,:,8), atom_string, fi)
-            DO i =1,fi%atoms%nat
-                file_int = 120+i
-                write(filename, '("born_eff_charge_MT_",i0)') i
-                !top
-                call write_born_effective_charge(120, filename, born_eff_charge_contributions(:,:,:,8+i), atom_string, fi)
-                !call write_born_effective_charge(121, "born_eff_charge_MT_2", born_eff_charge_contributions(:,:,:,9), atom_string, fi)
-            END DO
-
+        ! Turn off debugging stuff
+        IF (.FALSE.) THEN
+            IF (fi%juPhon%l_efield) THEN
+                call write_born_effective_charge(112, "born_eff_charge", born_eff_charge, atom_string, fi)
+                call write_born_effective_charge(112, "born_eff_charge_MT", -born_eff_charge_contributions(:,:,:,1), atom_string, fi)
+                call write_born_effective_charge(112, "born_eff_charge_MT_1", -born_eff_charge_contributions(:,:,:,2), atom_string, fi)
+                call write_born_effective_charge(112, "born_eff_charge_MT_2", -born_eff_charge_contributions(:,:,:,3), atom_string, fi)
+            ELSE
+                call write_born_effective_charge(112, "born_eff_charge_cmplx", born_eff_charge, atom_string, fi)
+                call write_born_effective_charge(113, "born_eff_charge_IR", born_eff_charge_contributions(:,:,:,1), atom_string, fi)
+                call write_born_effective_charge(114, "born_eff_charge_MT", born_eff_charge_contributions(:,:,:,2), atom_string, fi)
+                call write_born_effective_charge(115, "born_eff_charge_SF-MT", born_eff_charge_contributions(:,:,:,3), atom_string, fi)
+                call write_born_effective_charge(116, "born_eff_charge_SF-IR", born_eff_charge_contributions(:,:,:,4), atom_string, fi)
+                call write_born_effective_charge(117, "born_eff_charge_grRho", born_eff_charge_contributions(:,:,:,5), atom_string, fi)
+                call write_born_effective_charge(118, "born_eff_charge_Zbare", born_eff_charge_contributions(:,:,:,6), atom_string, fi)
+                call write_born_effective_charge(119, "born_eff_charge_SF", born_eff_charge_contributions(:,:,:,7), atom_string, fi)
+                call write_born_effective_charge(120, "born_eff_charge_pulay_only", born_eff_charge_contributions(:,:,:,8), atom_string, fi)
+                DO i =1,fi%atoms%nat
+                    file_int = 120+i
+                    write(filename, '("born_eff_charge_MT_",i0)') i
+                    !top
+                    call write_born_effective_charge(120, filename, born_eff_charge_contributions(:,:,:,8+i), atom_string, fi)
+                    !call write_born_effective_charge(121, "born_eff_charge_MT_2", born_eff_charge_contributions(:,:,:,9), atom_string, fi)
+                END DO
+            END IF
         END IF
     
     end subroutine dfpt_born_eff_charge_final

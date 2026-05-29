@@ -6,10 +6,13 @@ managing k-points, and generating SLURM job scripts.
 """
 
 import sys
+import re
 from pathlib import Path
 from typing import Optional
 
 import click
+
+from .inpgen_loader import create_inpgen_interface
 
 
 def find_schema() -> Optional[Path]:
@@ -40,7 +43,7 @@ def cli(ctx, schema, input_file):
     ctx.obj['input_file'] = input_file
 
     if ctx.invoked_subcommand is None:
-        ctx.invoke(tui, schema=schema, input_file=input_file)
+        click.echo(ctx.get_help())
 
 
 # ── TUI ──────────────────────────────────────────────────────────────────────
@@ -100,13 +103,6 @@ def generate(input_source, fmt, profile, nosym, output, force, film):
       fleuriste generate struct.cif -F cif
       fleuriste generate struct.xyz -F xyz --film
     """
-    try:
-        from FleurInpgen import InpgenInterface
-    except ImportError:
-        raise click.ClickException(
-            "FleurInpgen not available. Build FLEUR with Python bindings."
-        )
-
     import os
 
     input_path = Path(input_source)
@@ -149,11 +145,13 @@ def generate(input_source, fmt, profile, nosym, output, force, film):
     original_dir = os.getcwd()
     try:
         os.chdir(str(output_dir))
-        inpgen = InpgenInterface(quiet=True)
+        inpgen = create_inpgen_interface(quiet=True)
         inpgen.make_inp(content, profile, nosym)
         messages = inpgen.get_messages()
         if messages.strip():
             click.echo(f"\n{messages}")
+    except RuntimeError as exc:
+        raise click.ClickException(str(exc)) from exc
     finally:
         os.chdir(original_dir)
 
@@ -318,17 +316,12 @@ def kpoints_create(ctx, name, grid, density, number, path, custom, gamma, symmet
                 f"Available: {', '.join(mgr.kpoint_lists.keys())}"
             )
         
-        try:
-            from FleurInpgen import InpgenInterface
-        except ImportError:
-            raise click.ClickException("FleurInpgen not available.")
-        
         full_string = f"{name}#{custom}"
         nosym = not symmetry
         
         mgr.clear_messages()
         try:
-            inpgen = InpgenInterface(quiet=True)
+            inpgen = create_inpgen_interface(quiet=True)
             inpgen.add_kpoints(full_string, kpts_path="", nosym=nosym)
             messages = inpgen.get_messages()
             if messages.strip():
@@ -576,7 +569,7 @@ def job_generate(input_file, machine, partition, job_name, nodes, time_limit,
     gpus = None
 
     if machine_config:
-        modules = list(machine_config.modules_needed or [])
+        modules = list(machine_config.get_effective_value("modules_needed", partition) or [])
         command = machine_config.get_effective_value("command", partition)
         gpu_syntax = (
             machine_config.get_effective_value("gpu_syntax", partition)
@@ -626,6 +619,63 @@ def job_generate(input_file, machine, partition, job_name, nodes, time_limit,
         click.secho(f"✓ Saved job script: {out_file}", fg='green')
 
 
+@job.command('discovermachine')
+@click.option('--output', '-o', type=click.Path(), default=None,
+              help='Output JSON path (default: ~/.fleuriste/machines/<cluster>.json).')
+@click.option('--machine-name', '-n', type=str, default=None,
+              help='Override machine name (default: SLURM ClusterName).')
+@click.option('--description', type=str, default=None,
+              help='Machine description (default: auto-generated with timestamp).')
+@click.option('--command', default='srun fleur_MPI', show_default=True,
+              help='Default command written for each partition.')
+@click.option('--modules', type=str, default=None,
+              help='Comma-separated modules written for each partition.')
+@click.option('--shell-commands', type=str, default=None,
+              help='Comma-separated shell commands written for each partition.')
+@click.option('--gpu-syntax', type=click.Choice(['gpus', 'gres']), default='gres',
+              show_default=True,
+              help='GPU request syntax stored in partition configs.')
+@click.option('--no-mem-option', is_flag=True, default=False,
+              help='Store use_mem_option=false for all partitions.')
+def job_discover_machine(output, machine_name, description, command, modules,
+                         shell_commands, gpu_syntax, no_mem_option):
+    """Discover machine partitions from SLURM and write machine config JSON.
+
+    Uses `sinfo` and `scontrol` to extract partition limits/resources and
+    stores a MachineConfig-compatible JSON with partition-centric settings.
+
+    Examples:
+      fleuriste job discovermachine
+      fleuriste job discovermachine -n juwels -o ~/.fleuriste/machines/juwels.json
+      fleuriste job discovermachine --modules Intel,ParaStationMPI,FLEUR --gpu-syntax gres
+    """
+    from .pyjob.slurm_machine_discovery import (
+        SlurmDiscoveryError,
+        write_discovered_machine_config,
+    )
+
+    def _parse_csv(value):
+        if not value:
+            return []
+        return [item.strip() for item in value.split(',') if item.strip()]
+
+    try:
+        out_path = write_discovered_machine_config(
+            output_path=output,
+            machine_name=machine_name,
+            description=description,
+            default_command=command,
+            modules_needed=_parse_csv(modules),
+            shell_commands=_parse_csv(shell_commands),
+            gpu_syntax=gpu_syntax,
+            use_mem_option=not no_mem_option,
+        )
+    except SlurmDiscoveryError as exc:
+        raise click.ClickException(f"SLURM discovery failed: {exc}")
+
+    click.secho(f"✓ Discovered machine config written to: {out_path}", fg='green')
+
+
 # ── Analyse ──────────────────────────────────────────────────────────────────
 
 @cli.group()
@@ -643,7 +693,9 @@ def analyse():
 @click.option('--scaling', '-s', 'scaling_file', type=click.Path(exists=True),
               default=None,
               help='Optional second juDFT_times.json for scaling comparison.')
-def analyse_times(json_file, output, scaling_file):
+@click.option('--color-range', type=str, default=None,
+              help='Optional colorscale range as min-max (e.g. 0-4.0).')
+def analyse_times(json_file, output, scaling_file, color_range):
     """Generate a sunburst plot from a juDFT timing JSON file.
 
     JSON_FILE defaults to juDFT_times.json in the current directory when
@@ -654,6 +706,7 @@ def analyse_times(json_file, output, scaling_file):
       fleuriste analyse times
       fleuriste analyse times juDFT_times.json -o timing.html
       fleuriste analyse times juDFT_times.json --scaling juDFT_times_ref.json
+    fleuriste analyse times juDFT_times.json --color-range 0-4.0
     """
     if json_file is None:
         default = Path.cwd() / "juDFT_times.json"
@@ -671,8 +724,25 @@ def analyse_times(json_file, output, scaling_file):
     if scaling_file:
         click.echo(f"Scaling reference    : {scaling_file}")
 
+    parsed_color_range = None
+    if color_range is not None:
+        match = re.fullmatch(r'\s*([+-]?\d*\.?\d+)\s*-\s*([+-]?\d*\.?\d+)\s*', color_range)
+        if not match:
+            raise click.ClickException(
+                "Invalid --color-range format. Use min-max, e.g. --color-range 0-4.0"
+            )
+        parsed_color_range = [float(match.group(1)), float(match.group(2))]
+        if parsed_color_range[0] > parsed_color_range[1]:
+            raise click.ClickException("Invalid --color-range: min must be <= max.")
+        click.echo(f"Color range          : {parsed_color_range[0]}-{parsed_color_range[1]}")
+
     try:
-        generate_sunburst_plot(json_file, output_file=output, scalingFile=scaling_file)
+        generate_sunburst_plot(
+            json_file,
+            output_file=output,
+            scalingFile=scaling_file,
+            color_range=parsed_color_range,
+        )
     except Exception as exc:
         raise click.ClickException(str(exc))
 

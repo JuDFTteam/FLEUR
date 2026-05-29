@@ -134,7 +134,7 @@ CONTAINS
    SUBROUTINE read_xml_xcpot(this, xml)
       USE m_types_xml
 #ifdef CPP_LIBXC
-      USE xc_f90_lib_m
+      USE xc_f03_lib_m
 #endif
       CLASS(t_xcpot), INTENT(INOUT):: this
       TYPE(t_xml), INTENT(INOUT)    ::xml
@@ -159,7 +159,6 @@ CONTAINS
          this%l_relativistic = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathC))//'/@relativisticCorrections'))
          IF (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathC))//'/@BeckeJohnson') == 1) THEN
             this%l_bj = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathC))//'/@BeckeJohnson'))
-            print *, "Becke-Johnson potential enabled via XML input"
          ENDIF
       ENDIF
 
@@ -199,21 +198,21 @@ CONTAINS
          l_libxc_names = .TRUE.
 #ifdef CPP_LIBXC
          valueString = xml%GetAttributeValue(xPathB //'/@exchange')
-         this%func_vxc_id_x = xc_f90_functional_get_number(valueString)
+         this%func_vxc_id_x = xc_f03_functional_get_number(valueString)
 
          valueString = TRIM(ADJUSTL(xml%GetAttributeValue(xPathB//'/@correlation')))
-         this%func_vxc_id_c = xc_f90_functional_get_number(valueString)
+         this%func_vxc_id_c = xc_f03_functional_get_number(valueString)
 
          IF (xml%GetNumberOfNodes(xPathB//'/@etot_exchange') == 1) THEN
             valueString = TRIM(ADJUSTL(xml%GetAttributeValue(xPathB//'/@etot_exchange')))
-            this%func_exc_id_x = xc_f90_functional_get_number(valueString)
+            this%func_exc_id_x = xc_f03_functional_get_number(valueString)
          ELSE
             this%func_exc_id_x = this%func_vxc_id_x
          ENDIF
 
          IF (xml%GetNumberOfNodes(xPathB//'/@etot_correlation') == 1) THEN
             valueString = TRIM(ADJUSTL(xml%GetAttributeValue(xPathB//'/@etot_correlation')))
-            this%func_exc_id_c = xc_f90_functional_get_number(valueString)
+            this%func_exc_id_c = xc_f03_functional_get_number(valueString)
          ELSE
             this%func_exc_id_c = this%func_vxc_id_c
          ENDIF

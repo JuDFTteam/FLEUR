@@ -804,17 +804,28 @@
 
    <xsd:complexType name="efieldType">
       <xsd:sequence>
-        <xsd:element maxOccurs="unbounded" minOccurs="1" name="dielconst" type="dielconstType"/>
+        <xsd:element maxOccurs="unbounded" minOccurs="0" name="dieltensor" type="dieltensorType"/>
+        <xsd:element maxOccurs="unbounded" minOccurs="0" name="borneffcharge" type="borneffchargeType"/>
       </xsd:sequence>
    </xsd:complexType>
 
-   <xsd:complexType name="dielconstType">
+   <xsd:complexType name="dieltensorType">
       <xsd:simpleContent>
          <xsd:extension base="DoubleVecType">
             <xsd:attribute name="qlim" type="xsd:double" use="optional"/>
          </xsd:extension>
       </xsd:simpleContent>
    </xsd:complexType>
+
+      <xsd:complexType name="borneffchargeType">
+      <xsd:simpleContent>
+         <xsd:extension base="DoubleVecType">
+            <xsd:attribute name="iDtype" type="xsd:integer" use="optional"/>
+            <xsd:attribute name="iDir" type="xsd:integer" use="optional"/>
+         </xsd:extension>
+      </xsd:simpleContent>
+   </xsd:complexType>
+
    <!-- Cannot be in the FleurInputSchema.xsd since we still support older FleurInputSchemas -->
    <xsd:simpleType name="FleurDouble4DVecType">
       <xsd:restriction base="FleurDoubleVecType">

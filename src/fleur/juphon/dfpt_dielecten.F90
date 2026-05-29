@@ -85,7 +85,7 @@ contains
                 pwwq2 = CMPLX(0.0,0.0)
                 
                 CALL dfpt_convol_big(1, starsq , stars, vExt1%pw(:,1), CMPLX(1.0,0.0)*stars%ufft, pwwq2)!starsq
-                call save_npy("pwwq2.npy",pwwq2)
+                !call save_npy("pwwq2.npy",pwwq2)
                 !CALL dfpt_int_pw(starsq, fi%cell, vExt1%pw(:,1), pwwq2, tempval_pw)!denIn1_pw
                 CALL dfpt_int_pw(starsq, fi%cell, denIn1_pw, pwwq2, tempval_pw)!denIn1_pw
                 
@@ -105,28 +105,30 @@ contains
                 end do
             end if 
         end do
-        IF (fmpi%irank==0) THEN
-            status_string = 'old'
-            if (iDir_den == 1) status_string = 'replace'
-            open(113, file="diel_tensor_int", status=status_string, position='append', action='write', form='formatted')
-            write(113,'(6es16.8)') dieltensor_HF(:)
-            close(113)
-            open(111, file="diel_tensor_int_IR", status=status_string, position='append',action='write', form='formatted')
-            write(111,'(6es16.8)') diel_tensor_int_IR(:)
-            close(111)
-            open(112, file="diel_tensor_int_MT", status=status_string, position='append', action='write', form='formatted')
-            write(112,'(6es16.8)') diel_tensor_int_MT(:)
-            close(112)
-            if (fi%atoms%ntype >1) then
-                do iType = 1,fi%atoms%ntype
-                    write(filename_string, '(A,I0)') "diel_tensor_int_MT_", iType
-                    open(112+itype, file=filename_string, status=status_string, position='append', action='write', form='formatted')
-                    write(112+itype,'(6es16.8)') diel_tensor_int_MT_atom(:,iType)
-                    close(112+itype)
-                end do
-            end if 
+        !Turn off dielten contributions output
+        IF (.FALSE.) THEN
+            IF (fmpi%irank==0) THEN
+                status_string = 'old'
+                if (iDir_den == 1) status_string = 'replace'
+                open(113, file="diel_tensor_int", status=status_string, position='append', action='write', form='formatted')
+                write(113,'(6es16.8)') dieltensor_HF(:)
+                close(113)
+                open(111, file="diel_tensor_int_IR", status=status_string, position='append',action='write', form='formatted')
+                write(111,'(6es16.8)') diel_tensor_int_IR(:)
+                close(111)
+                open(112, file="diel_tensor_int_MT", status=status_string, position='append', action='write', form='formatted')
+                write(112,'(6es16.8)') diel_tensor_int_MT(:)
+                close(112)
+                if (fi%atoms%ntype >1) then
+                    do iType = 1,fi%atoms%ntype
+                        write(filename_string, '(A,I0)') "diel_tensor_int_MT_", iType
+                        open(112+itype, file=filename_string, status=status_string, position='append', action='write', form='formatted')
+                        write(112+itype,'(6es16.8)') diel_tensor_int_MT_atom(:,iType)
+                        close(112+itype)
+                    end do
+                end if 
             END IF 
-
+        END IF
 
         dieltensor_row(:)= dieltensor_HF(:)
         
@@ -174,7 +176,7 @@ contains
         CALL openXMLElementNoAttributes('efield')
         attributes = ''
         WRITE(attributes(1),'(f15.8)') fi%juPhon%qlim
-        CALL writeXMLElementPoly('dielconst',(/'qlim'/), attributes,real(dielecten(:,1)))
+        CALL writeXMLElementPoly('dieltensor',(/'qlim'/), attributes,real(dielecten(:,1)))
         CALL closeXMLElement('efield')
         CALL closeXMLElement('Phonons')
 

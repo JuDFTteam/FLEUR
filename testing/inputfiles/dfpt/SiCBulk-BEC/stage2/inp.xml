@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<fleurInput fleurInputVersion="0.39">
+   <comment>
+      SiC                                                                                              
+   </comment>
+   <calculationSetup>
+      <cutoffs Kmax="3.0" Gmax="9.0" GmaxXC="9.0" numbands="all"/>
+      <scfLoop itmax="3" minDistance="0.00001" maxIterBroyd="15" imix="Anderson" alpha="0.05" precondParam="0.0" spinf="2.0"/>
+      <coreElectrons ctail="F" frcor="F" kcrel="0" coretail_lmax="0"/>
+      <xcFunctional name="LibXC" relativisticCorrections="F">
+         <LibXCName  exchange="lda_x" correlation="lda_c_vwn"/>
+      </xcFunctional>
+<magnetism jspins="1"/>
+      <soc l_soc="F" theta="0.0" phi="0.0" spav="F"/>
+      <expertModes spex="0" secvar="F"/>
+      <geometryOptimization l_f="F" forcealpha="1.0" forcemix="BFGS" epsdisp="0.00001" epsforce="0.00001"/>
+      <ldaU l_linMix="F" mixParam="0.05" spinf="1.0"/>
+   </calculationSetup>
+   <cell>
+      <bzIntegration valenceElectrons="8.0" mode="hist" fermiSmearingEnergy="0.001">
+    <kPointListSelection listName="default-1"/>
+         <kPointLists>
+         <kPointList name="default-1" count="1" nx="1" ny="1" nz="1" type="mesh">
+            <kPoint weight="     1.0000000000000">   0.00/2.00    0.00/2.00    0.00/2.00</kPoint>
+         </kPointList>
+         </kPointLists>
+      </bzIntegration>
+      <symmetryOperations>
+         <symOp>
+            <row-1>1 0 0 .0000000000</row-1>
+            <row-2>0 1 0 .0000000000</row-2>
+            <row-3>0 0 1 .0000000000</row-3>
+         </symOp>
+      </symmetryOperations>
+      <bulkLattice scale="1.0">
+         <bravaisMatrix>
+            <row-1>    0.0000000000000000     4.1192250049999997     4.1192250049999997</row-1>
+            <row-2>    4.1192250049999997     0.0000000000000000     4.1192250049999997</row-2>
+            <row-3>    4.1192250049999997     4.1192250049999997     0.0000000000000000</row-3>
+         </bravaisMatrix>
+      </bulkLattice>
+   </cell>
+   <atomSpecies>
+      <species name="Silicon (Si)" element="Si" atomicNumber="14">
+         <mtSphere radius="0.95*1.86" gridPoints="615" logIncrement="0.018"/>
+         <atomicCutoffs lmax="8" lnonsphr="6"/>
+         <electronConfig flipSpins="F">
+            <coreConfig>(1s1/2) (2s1/2) (2p1/2) (2p3/2)</coreConfig>
+            <valenceConfig>(3s1/2) (3p1/2) (3p3/2)</valenceConfig>
+            <stateOccupation state="(3p1/2)" spinUp="0.3333333333333" spinDown="0.3333333333333"/>
+            <stateOccupation state="(3p3/2)" spinUp="0.6666666666667" spinDown="0.6666666666667"/>
+         </electronConfig>
+         <energyParameters s="3" p="3" d="3" f="4"/>
+      </species>
+      <species name="Carbon (C)" element="C" atomicNumber="6">
+         <mtSphere radius="0.95*1.61" gridPoints="533" logIncrement="0.019"/>
+         <atomicCutoffs lmax="6" lnonsphr="4"/>
+         <electronConfig flipSpins="F">
+            <coreConfig>(1s1/2)</coreConfig>
+            <valenceConfig>(2s1/2) (2p1/2) (2p3/2)</valenceConfig>
+            <stateOccupation state="(2p1/2)" spinUp="0.3333333333333" spinDown="0.3333333333333"/>
+            <stateOccupation state="(2p3/2)" spinUp="0.6666666666667" spinDown="0.6666666666667"/>
+         </electronConfig>
+         <energyParameters s="2" p="2" d="3" f="4"/>
+      </species>
+   </atomSpecies>
+   <atomGroups>
+      <atomGroup species="Silicon (Si)">
+         <relPos label="                   1">-1.000/8.000 -1.000/8.000 -1.000/8.000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+      <atomGroup species="Carbon (C)">
+         <relPos label="                   2">1.000/8.000 1.000/8.000 1.000/8.000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+   </atomGroups>
+   <output dos="F" band="F" slice="F">
+      <checks vchk="F" cdinf="F"/>
+      <bandDOS minEnergy="-.5*Htr" maxEnergy="0.5*Htr" sigma="0.015" storeEVData="T"/>
+      <vacuumDOS vacdos="F" integ="F" star="F" nstars="0" locx1="0.0" locy1="0.0" locx2="0.0" locy2="0.0" nstm="0" tworkf="0.0"/>
+      <unfoldingBand unfoldBand="F" supercellX="1" supercellY="1" supercellZ="1"/>
+      <plotting iplot="0" polar="F">
+         <plot TwoD="T" vec1="  1.0  0.0  0.0" vec2="  0.0  1.0  0.0" vec3="  0.0  0.0  1.0" zero="  0.0  0.0  0.0" file="plot"/>
+      </plotting>
+       <juPhon l_dfpt="T" l_efield="F" l_phonon="F" l_borneffcharge="T" qlim="1/100" startq="1">
+          <qVectors>
+             <q> 0.0/16 0.0/16 0.0/16 </q>
+          </qVectors>
+       </juPhon>
+      <chargeDensitySlicing numkpt="0" minEigenval="0.0" maxEigenval="0.0" nnne="0" pallst="F"/>
+      <specialOutput eonly="F"/>
+      <magneticCircularDichroism mcd="F" energyLo="-10.0" energyUp="0.0"/>
+   </output>
+  <!-- We include the file relax.xml here to enable relaxations (see documentation) -->
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="relax.xml"> <xi:fallback/> </xi:include>
+</fleurInput>
+
+<!--
+Command line when calling inpgen (only for documentation purposes):
+/Data/ias-1/hanrath/fleur-versions/local/dfpt_efield_new/build/inpgen -f inp_SiC -nosym
+
+Initial (original) inpgen input (only for documentation purposes):
+ AlAs
+ &input  film =f /
+
+ &lattice latsys='cF' a= 8.23845001/
+
+ 2
+ 14 -0.125 -0.125 -0.125
+ 6   0.125 0.125 0.125
+
+
+-->
+

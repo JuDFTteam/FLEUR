@@ -54,16 +54,16 @@ contains
       end select
    end subroutine   
 
-   function select_by_name(name)
-      character(len=*),intent(in):: name
+   function select_by_name(solver_name)
+      character(len=*),intent(in):: solver_name
       CLASS(t_solver),allocatable :: select_by_name
 
       integer:: i
       DO i=1,num_solvers
          call assign_solver(i,select_by_name)
-         if (trim(name)==trim(select_by_name%name)) return
+         if (trim(solver_name)==trim(select_by_name%name)) return
       enddo 
-      call judft_error("No Solver/transform could be selected:"//name)
+      call judft_error("No Solver/transform could be selected:"//solver_name)
    end function               
 
    logical function parallel_solver_available()
@@ -85,7 +85,7 @@ contains
       class(t_solver), INTENT(OUT),allocatable  :: diag_solver,diag_transform
 
       logical :: use_single_precision, use_gpu, generalized, fit
-      character(len=30):: name, trans
+      character(len=30):: diag_name, trans_name
       integer :: i
    
       use_single_precision = .false.
@@ -96,22 +96,22 @@ contains
 #endif
       if (present(gpu)) use_gpu = gpu
 
-      name = trim(juDFT_string_for_argument("-diag"))
-      if (len_trim(name) .gt. 0) then
+      diag_name = trim(juDFT_string_for_argument("-diag"))
+      if (len_trim(diag_name) .gt. 0) then
          !solver was specified on command line
-         if (index(name,"+") .gt. 0) then
+         if (index(diag_name,"+") .gt. 0) then
             ! trensformation + standard solver
-            trans = name(:index(name,"+")-1)
-            name = name(index(name,"+") + 1:)
-            diag_transform=select_by_name(trans)
+            trans_name = diag_name(:index(diag_name,"+")-1)
+            diag_name = diag_name(index(diag_name,"+") + 1:)
+            diag_transform=select_by_name(trans_name)
          end if
          !check if "-sp" was given
-         if (index(name,"-") .gt. 0) then
-            use_single_precision = trim(name(index(name,"-") + 1:)) .eq. "sp"
-            name = name(:index(name,"-")-1)
+         if (index(diag_name,"-") .gt. 0) then
+            use_single_precision = trim(diag_name(index(diag_name,"-") + 1:)) .eq. "sp"
+            diag_name = diag_name(:index(diag_name,"-")-1)
          end if
          !select solver from name
-         diag_solver=select_by_name(name)
+         diag_solver=select_by_name(diag_name)
       else
          !defaults
          do i = first_real_solver, num_solvers

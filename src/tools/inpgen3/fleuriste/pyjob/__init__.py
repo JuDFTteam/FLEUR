@@ -26,6 +26,12 @@ from .parallelization import (
     suggest_parallelization,
 )
 
+from .slurm_machine_discovery import (
+    SlurmDiscoveryError,
+    discover_machine_config,
+    write_discovered_machine_config,
+)
+
 __all__ = [
     "MachineConfig",
     "Partition",
@@ -39,4 +45,7 @@ __all__ = [
     "ParallelizationStrategy",
     "ParallelizationResult",
     "suggest_parallelization",
+    "SlurmDiscoveryError",
+    "discover_machine_config",
+    "write_discovered_machine_config",
 ]

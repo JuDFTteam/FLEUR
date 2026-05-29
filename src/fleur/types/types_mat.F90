@@ -67,7 +67,7 @@ CONTAINS
          CLASS(t_mat), INTENT(INOUT)      :: mat
          class(t_mat), INTENT(IN)         :: mat2
          complex,intent(in),optional      :: alpha_c
-         complex,intent(in),optional      :: alpha_r
+         real,intent(in),optional         :: alpha_r
    
          real:: a_r
          complex:: a_c
@@ -81,6 +81,10 @@ CONTAINS
       
          a_r=1.0
          if(present(alpha_r)) a_r=alpha_r
+
+         if (mat%l_real .neqv. mat2%l_real) call judft_error("add: matrix type mismatch")
+         if (mat%matsize1 /= mat2%matsize1 .or. mat%matsize2 /= mat2%matsize2) &
+            call judft_error("add: matrix size mismatch")
          
 #ifdef _OPENACC
          if (mat%l_real) THEN 
@@ -144,12 +148,13 @@ CONTAINS
       real, allocatable    :: rwork(:)
       complex, allocatable :: cwork(:)
 
-      if(A%matsize2 /= b%matsize2) call judft_error("least-squares dimension problem")
+      if(A%matsize1 /= b%matsize1) call judft_error("least-squares dimension problem")
       if(A%l_real .neqv. b%l_real) call judft_error("least-squares kind problem")
 
       m = A%matsize1
       n = A%matsize2
       nrhs = b%matsize2
+      if (b%matsize1 < max(m,n)) call judft_error("least-squares RHS has too few rows")
       if(A%l_real) then
          lda = size(A%data_r,1)
          ldb = size(b%data_r,1)
@@ -308,7 +313,7 @@ CONTAINS
       integer :: i,j
 
       call timestart("copy lower to upper matrix")
-      if(mat%matsize1 /= mat%matsize2) call judft_error("l2u only works for square matricies")
+      if(mat%matsize1 /= mat%matsize2) call judft_error("l2u only works for square matrices")
 
       if(mat%l_real) then
          do i = 1,mat%matsize1
@@ -334,7 +339,7 @@ CONTAINS
       integer :: i,j
 
       call timestart("copy upper to lower matrix")
-      if(mat%matsize1 /= mat%matsize2) call judft_error("l2u only works for square matricies")
+      if(mat%matsize1 /= mat%matsize2) call judft_error("l2u only works for square matrices")
       if(mat%l_real) then
          do i = 1,mat%matsize1
             do j = 1,i-1
@@ -405,7 +410,7 @@ CONTAINS
 
    SUBROUTINE t_mat_lproblem(mat, vec)
       IMPLICIT NONE
-      CLASS(t_mat), INTENT(IN)     :: mat
+      CLASS(t_mat), INTENT(INOUT)  :: mat
       class(t_mat), INTENT(INOUT)   :: vec
 
       INTEGER:: lwork, info
@@ -425,7 +430,7 @@ CONTAINS
       end select
 
       IF ((mat%l_real .NEQV. vec%l_real) .OR. (mat%matsize1 .NE. mat%matsize2) .OR. (mat%matsize1 .NE. vec%matsize1)) then
-         CALL judft_error("Invalid matices in t_mat_lproblem")
+         CALL judft_error("Invalid matrices in t_mat_lproblem")
       endif 
 
 #ifdef _OPENACC
@@ -463,11 +468,12 @@ CONTAINS
                         vec%data_r, vec%matsize1, INFO)
                IF (INFO > 0) THEN
                   !Matrix was not positive definite
+                  ALLOCATE (ipiv(mat%matsize1))
                   lwork = -1; ALLOCATE (work(1))
                   CALL DSYSV('Upper', mat%matsize1, vec%matsize2, mat%data_r, mat%matsize1, IPIV, &
                            vec%data_r, vec%matsize1, WORK, LWORK, INFO)
                   lwork = INT(work(1))
-                  DEALLOCATE (work); ALLOCATE (ipiv(mat%matsize1), work(lwork))
+                  DEALLOCATE (work); ALLOCATE (work(lwork))
                   CALL DSYSV('Upper', mat%matsize1, vec%matsize2, mat%data_r, mat%matsize1, IPIV, &
                            vec%data_r, vec%matsize1, WORK, LWORK, INFO)
                   IF (info .NE. 0) CALL judft_error("Could not solve linear equation, matrix singular")
@@ -506,7 +512,7 @@ CONTAINS
       if(l_real) then 
          sz = size(data_r,1)
          allocate(r_work(lwork), stat=ierr)
-         if(ierr /= 0) call juDFT_error("cant' alloc r_work")
+         if(ierr /= 0) call juDFT_error("can't alloc r_work")
 
          !$acc data create(r_work) copyout(devinfo)
             !$acc host_data use_device(data_r, r_work, ipiv, devinfo)
@@ -518,7 +524,7 @@ CONTAINS
       else
          sz = size(data_c,1)
          allocate(c_work(lwork), stat=ierr)
-         if(ierr /= 0) call juDFT_error("cant' alloc c_work")
+         if(ierr /= 0) call juDFT_error("can't alloc c_work")
 
          !$acc data create(c_work) copyout(devinfo)
             !$acc host_data use_device(data_c, c_work, ipiv, devinfo)
@@ -598,8 +604,8 @@ CONTAINS
       INTEGER::i, j
       IF ((mat%matsize1 .NE. mat1%matsize2) .OR. &
           (mat%matsize2 .NE. mat1%matsize1)) &
-         CALL judft_error("Matrix sizes missmatch in add_transpose")
-      IF (mat%l_real .AND. mat1%l_real) THEN
+          CALL judft_error("Matrix sizes mismatch in add_transpose")
+         IF (mat%l_real .AND. mat1%l_real) THEN
          DO i = 1, mat%matsize2
             DO j = i + 1, mat%matsize1
                mat%data_r(j, i) = mat1%data_r(i, j)
@@ -688,10 +694,10 @@ CONTAINS
             write (*,*) "Failed to allocate mem of shape: [" &
                        // int2str(mat%matsize1) // ", " //  int2str(mat%matsize2) // "]"
             if(present(mat_name)) then
-               CALL judft_error("Allocation of memmory failed for mat datatype. Name:" // trim(mat_name), &
+               CALL judft_error("Allocation of memory failed for mat datatype. Name:" // trim(mat_name), &
                                        hint="Errormessage: " // trim(errmsg))
             else
-               CALL judft_error("Allocation of memmory failed for mat datatype", &
+               CALL judft_error("Allocation of memory failed for mat datatype", &
                                        hint="Errormessage: " // trim(errmsg))
             endif
          endif
@@ -700,7 +706,7 @@ CONTAINS
       ELSE
          ALLOCATE (mat%data_r(0, 0))
          ALLOCATE (mat%data_c(mat%matsize1, mat%matsize2), STAT=err, errmsg=errmsg)
-         IF (err /= 0) CALL judft_error("Allocation of memmory failed for mat datatype", &
+         IF (err /= 0) CALL judft_error("Allocation of memory failed for mat datatype", &
                                         hint="Errormessage: " // trim(errmsg))
          mat%data_c = 0.0
          IF (PRESENT(init)) mat%data_c = init
@@ -738,7 +744,7 @@ CONTAINS
          k = mat1%matsize1
       endif
 
-      if(mat1%l_real .neqv. mat2%l_real) call judft_error("can only multiply matricies of the same type")
+      if(mat1%l_real .neqv. mat2%l_real) call judft_error("can only multiply matrices of the same type")
 
       if(mat1%l_real) then
 #ifdef _OPENACC
@@ -930,7 +936,6 @@ CONTAINS
             i = ((n - 1)*n)/2 + nn
             mat1%data_c(n, nn) = conjg(packed_c(i))
             mat1%data_c(nn, n) = packed_c(i)
-            i = i + 1
          end DO
       end DO
       !$OMP END PARALLEL DO
@@ -941,7 +946,6 @@ CONTAINS
       CLASS(t_mat), INTENT(IN)      :: mat
       COMPLEX                       :: packed(mat%matsize1*(mat%matsize1 + 1)/2)
       integer :: n, nn, i
-      real, parameter :: tol = 1e-5
       if (mat%matsize1 .ne. mat%matsize2) call judft_error("Could not pack no-square matrix", hint='This is a BUG, please report')
 
       if (mat%l_real) THEN
@@ -987,15 +991,15 @@ CONTAINS
       if (mat%l_real) THEN
          ALLOCATE (work_r(mat%matsize1))
          call dgetrf(mat%matsize1, mat%matsize1, mat%data_r, size(mat%data_r, 1), ipiv, info)
-         if (info .ne. 0) call judft_error("Failed to invert matrix: dpotrf failed.")
+          if (info .ne. 0) call judft_error("Failed to invert matrix: dgetrf failed.")
          call dgetri(mat%matsize1, mat%data_r, size(mat%data_r, 1), ipiv, work_r, size(work_r), info)
-         if (info .ne. 0) call judft_error("Failed to invert matrix: dpotrf failed.")
+          if (info .ne. 0) call judft_error("Failed to invert matrix: dgetri failed.")
       else
          ALLOCATE (work_c(mat%matsize1))
          call zgetrf(mat%matsize1, mat%matsize1, mat%data_c, size(mat%data_c, 1), ipiv, info)
-         if (info .ne. 0) call judft_error("Failed to invert matrix: dpotrf failed.")
+          if (info .ne. 0) call judft_error("Failed to invert matrix: zgetrf failed.")
          call zgetri(mat%matsize1, mat%data_c, size(mat%data_c, 1), ipiv, work_c, size(work_c), info)
-         if (info .ne. 0) call judft_error("Failed to invert matrix: dpotrf failed.")
+          if (info .ne. 0) call judft_error("Failed to invert matrix: zgetri failed.")
       end if
       call timestop("invert matrix")
    end subroutine t_mat_inverse
@@ -1004,12 +1008,28 @@ CONTAINS
       IMPLICIT NONE
       CLASS(t_mat), INTENT(INOUT):: mat
       CLASS(t_mat), INTENT(INOUT):: mat1
+      logical :: src_real
+      integer :: s1, s2
+
+      src_real = mat1%l_real
+      s1 = mat1%matsize1
+      s2 = mat1%matsize2
+
+      if (.not. mat1%allocated()) call judft_error("t_mat_move: source matrix not allocated")
+
+      call mat%free()
+      mat%l_real = src_real
+      mat%matsize1 = s1
+      mat%matsize2 = s2
       !Special case, the full matrix is copied. Then use move alloc
-      IF (mat%l_real) THEN
+      IF (src_real) THEN
          CALL move_ALLOC(mat1%data_r, mat%data_r)
+         ALLOCATE(mat%data_c(0,0))
       ELSE
          CALL move_ALLOC(mat1%data_c, mat%data_c)
+         ALLOCATE(mat%data_r(0,0))
       END IF
+      call mat1%free()
    END SUBROUTINE t_mat_move
 
    SUBROUTINE t_mat_copy(mat, mat1, n1, n2)
@@ -1090,7 +1110,6 @@ CONTAINS
    SUBROUTINE t_mat_clear(mat)
       IMPLICIT NONE
       CLASS(t_mat), INTENT(INOUT):: mat
-      INTEGER :: i
 
       IF (mat%l_real) THEN
          call dlaset("A",mat%matsize1,mat%matsize2,0.0,0.0,mat%data_r,mat%matsize1)
@@ -1136,11 +1155,11 @@ CONTAINS
       unsymmetry = 0.0
 
       if (mat%matsize1 /= mat%matsize2) then
-         call judft_error("Rectangular matricies can't be symmetric")
+         call judft_error("Rectangular matrices can't be symmetric")
       else
          n = mat%matsize1
          if (mat%l_real) THEN
-            unsymmetry = maxval(mat%data_r(:n, :n) - transpose(mat%data_r(:n, :n)))
+            unsymmetry = maxval(abs(mat%data_r(:n, :n) - transpose(mat%data_r(:n, :n))))
          else
             unsymmetry = maxval(abs(mat%data_c(:n, :n) - conjg(transpose(mat%data_c(:n, :n)))))
          endif

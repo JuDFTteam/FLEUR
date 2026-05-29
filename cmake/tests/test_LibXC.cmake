@@ -1,9 +1,11 @@
 #Check if we can compile with LIBXC
+set(FLEUR_LIBXC_TARGETS "")
+
 try_compile(FLEUR_USE_LIBXC ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_LibXC.f90
 LINK_LIBRARIES ${FLEUR_LIBRARIES}
             )
 
-foreach (teststring "-lxcf90;-lxc")
+foreach (teststring "-lxcf03;-lxc" "-lxcf90;-lxc")
 if (NOT FLEUR_USE_LIBXC)
     set(TEST_LIBRARIES "${FLEUR_LIBRARIES};${teststring}")
     try_compile(FLEUR_USE_LIBXC ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/cmake/tests/test_LibXC.f90
@@ -40,7 +42,15 @@ if (DEFINED CLI_FLEUR_USE_LIBXC)
 	   add_subdirectory (external/libxc-git EXCLUDE_FROM_ALL)
 	   include_directories("${CMAKE_CURRENT_BINARY_DIR}/modules/external")
 	   set(FLEUR_USE_LIBXC TRUE)
-	   set(FLEUR_LINK_LIBRARIES "${FLEUR_LINK_LIBRARIES};xcf90")
+      if (TARGET xcf03)
+         set(FLEUR_LIBXC_TARGETS "xcf03;xc")
+         set(FLEUR_LINK_LIBRARIES "${FLEUR_LINK_LIBRARIES};xcf03;xc")
+      elseif (TARGET xcf90)
+         set(FLEUR_LIBXC_TARGETS "xcf90;xc")
+         set(FLEUR_LINK_LIBRARIES "${FLEUR_LINK_LIBRARIES};xcf90;xc")
+      else()
+         message(FATAL_ERROR "Internal LibXC build succeeded but no Fortran interface target (xcf03/xcf90) was created")
+      endif()
            set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -I${CMAKE_CURRENT_BINARY_DIR}/external/libxc-git")
        endif()
     else()
@@ -53,6 +63,12 @@ endif()
 
 
 message("Libxc Library found:${FLEUR_USE_LIBXC}")
+
+if (FLEUR_USE_LIBXC AND TARGET xcf03)
+   set(FLEUR_LIBXC_TARGETS "xcf03;xc")
+elseif (FLEUR_USE_LIBXC AND TARGET xcf90)
+   set(FLEUR_LIBXC_TARGETS "xcf90;xc")
+endif()
 
 if (FLEUR_USE_LIBXC)
    set(FLEUR_MPI_DEFINITIONS ${FLEUR_MPI_DEFINITIONS} "CPP_LIBXC")

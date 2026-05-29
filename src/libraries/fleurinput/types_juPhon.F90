@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2020 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -34,7 +34,7 @@ MODULE m_types_juPhon
                                      ! 1: Reads q from fullsym_* input files
       INTEGER :: i_integration = 1   ! choose integration scheme for ph-linewidth (experimental)
       REAL    :: smearingGauss = 1e-7 ! Gaussian smearing for pot-response in Film DFPT 
-      LOGICAL :: l_phonon = .TRUE.    
+      LOGICAL :: l_phonon = .FALSE.    
       LOGICAL :: l_efield = .FALSE.
       LOGICAL :: l_efield_scr = .FALSE.
       LOGICAL :: l_borneffcharge = .FALSE.
@@ -360,6 +360,12 @@ CONTAINS
       valueString = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))))) 
       IF(.NOT. TRIM(ADJUSTL(valueString)).EQ.'all') CALL juDFT_error("numbands is not set to all", calledby="types_juPhon.F90")
     END IF 
+
+    if (this%l_phonon ) then 
+      if (allocated(this%qvec)) then 
+        if (size(this%qvec) .eq. 0 ) call juDFT_warn("No q-Points were given while trying to do a phonon calculation. Please insert q points",calledby="types_juPhon.F90")    
+      end if     
+    end if 
 
    END SUBROUTINE precheck_juPhon
 END MODULE m_types_juPhon
