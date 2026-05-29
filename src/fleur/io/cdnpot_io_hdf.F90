@@ -5,8 +5,6 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_cdnpot_io_hdf
-   implicit none
-
    USE m_constants
    USE m_juDFT
 #ifdef CPP_HDF

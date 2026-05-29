@@ -134,7 +134,13 @@ CONTAINS
    SUBROUTINE read_xml_xcpot(this, xml)
       USE m_types_xml
 #ifdef CPP_LIBXC
+#ifdef CPP_LIBXC_F90
+#define xc_f03_lib_m xc_f90_lib_m
+#define xc_f03_functional_get_number xc_f90_functional_get_number
+    use xc_f90_lib_m
+#else
       USE xc_f03_lib_m
+#endif   
 #endif
       CLASS(t_xcpot), INTENT(INOUT):: this
       TYPE(t_xml), INTENT(INOUT)    ::xml

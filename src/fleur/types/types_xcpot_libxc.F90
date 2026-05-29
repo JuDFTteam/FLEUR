@@ -7,6 +7,26 @@
 !>This module contains the xcpot-type providing an interface to libxc
 MODULE m_types_xcpot_libxc
 #ifdef CPP_LIBXC
+#ifdef CPP_LIBXC_F90
+#define xc_f03_lib_m xc_f90_lib_m
+#define xc_f03_func_t xc_f90_func_t
+#define xc_f03_func_info_t xc_f90_func_info_t
+#define xc_f03_func_init xc_f90_func_init
+#define xc_f03_func_get_info xc_f90_func_get_info
+#define xc_f03_func_info_get_family xc_f90_func_info_get_family
+#define xc_f03_func_info_get_kind xc_f90_func_info_get_kind
+#define xc_f03_func_info_get_name xc_f90_func_info_get_name
+#define xc_f03_func_info_get_references xc_f90_func_info_get_references
+#define xc_f03_func_reference_get_ref xc_f90_func_reference_get_ref
+#define xc_f03_hyb_exx_coef xc_f90_hyb_exx_coef
+#define xc_f03_lda_vxc xc_f90_lda_vxc
+#define xc_f03_gga_vxc xc_f90_gga_vxc
+#define xc_f03_mgga_vxc xc_f90_mgga_vxc
+#define xc_f03_lda_exc xc_f90_lda_exc
+#define xc_f03_gga_exc xc_f90_gga_exc
+#define xc_f03_mgga_exc xc_f90_mgga_exc
+#define xc_f03_lda_fxc xc_f90_lda_fxc
+#endif
    USE xc_f03_lib_m
 #endif
    USE m_types_xcpot

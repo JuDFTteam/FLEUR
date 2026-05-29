@@ -28,8 +28,6 @@ MODULE m_fleur
    !! one-dimensional        --- y.mokrousov   2002
    !! exchange parameters    --- m.lezaic      2004
    !!                            g.bihlmayer, s.bluegel 1999
-   implicit none
-
    IMPLICIT NONE
 CONTAINS
    SUBROUTINE fleur_execute(fmpi, fi, sphhar, stars, nococonv, forcetheo, enpara, results, &

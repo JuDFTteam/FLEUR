@@ -12,6 +12,7 @@ MODULE m_rinpXML
    !!!                               GM'16
    !!!
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   implicit none
 CONTAINS
    SUBROUTINE r_inpXML(&
       atoms,obsolete,vacuum,input,stars,sliceplot,banddos,DIMENSION,forcetheo,field,&
@@ -38,6 +39,10 @@ CONTAINS
       USE m_sort
       USE m_types_xcpot_inbuild
 #ifdef CPP_LIBXC
+   #ifdef CPP_LIBXC_F90
+   #define xc_f03_lib_m xc_f90_lib_m
+   #define xc_f03_functional_get_number xc_f90_functional_get_number
+   #endif
       USE xc_f03_lib_m
 #endif
       IMPLICIT NONE
