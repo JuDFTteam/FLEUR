@@ -1,0 +1,424 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Gruenberg Institut, Forschungszentrum Juelich, Germany
+!--------------------------------------------------------------------------------
+MODULE m_types_wannierlib
+  USE m_juDFT
+  USE m_types_atoms
+  USE m_types_noco
+  USE m_types_fleurinput_base
+  IMPLICIT NONE
+  PRIVATE
+
+  TYPE, EXTENDS(t_fleurinput_base) :: t_wannierlib_wannierize
+    LOGICAL :: l_wannierize = .FALSE.
+
+    INTEGER :: num_wann = 0
+    INTEGER :: num_bands = 0
+    INTEGER :: min_band = -1
+    INTEGER :: max_band = -1
+
+    REAL :: dis_win_min = 0.0
+    REAL :: dis_win_max = 0.0
+    REAL :: dis_froz_min = 0.0
+    REAL :: dis_froz_max = 0.0
+    INTEGER :: dis_num_iter = 0
+    REAL :: dis_mix_ratio = 0.0
+    REAL :: dis_conv_tol = 0.0
+
+    INTEGER, ALLOCATABLE :: proj_ntype(:)
+    CHARACTER(LEN=20), ALLOCATABLE :: proj_species(:)
+    INTEGER, ALLOCATABLE :: proj_l(:)
+    INTEGER, ALLOCATABLE :: proj_m(:)
+    INTEGER, ALLOCATABLE :: proj_spin(:)
+    INTEGER, ALLOCATABLE :: proj_rwf(:)
+    REAL, ALLOCATABLE :: proj_alpha(:)
+    REAL, ALLOCATABLE :: proj_beta(:)
+    REAL, ALLOCATABLE :: proj_gamma(:)
+    REAL, ALLOCATABLE :: proj_zona(:)
+    REAL, ALLOCATABLE :: proj_regio(:)
+    REAL, ALLOCATABLE :: proj_j(:)
+    REAL, ALLOCATABLE :: proj_mj(:)
+    REAL, ALLOCATABLE :: proj_weight(:)
+    REAL, ALLOCATABLE :: proj_shift(:, :)
+  CONTAINS
+    PROCEDURE :: init => init_wannierlib
+    PROCEDURE :: read_xml => read_xml_wannierlib
+    PROCEDURE :: mpi_bc => mpi_bc_wannierlib
+  END TYPE t_wannierlib_wannierize
+
+  PUBLIC :: t_wannierlib_wannierize
+
+CONTAINS
+
+  SUBROUTINE init_wannierlib(this, atoms, noco)
+    CLASS(t_wannierlib_wannierize), INTENT(INOUT) :: this
+    TYPE(t_atoms), INTENT(IN) :: atoms
+    TYPE(t_noco), INTENT(IN) :: noco
+
+    INTEGER :: i, j, nold, nnew, mcount, mval, mrepeat, spin_mult, ispin, itype, type_mult, nn, na
+    INTEGER, ALLOCATABLE :: new_proj_ntype(:), new_proj_l(:), new_proj_m(:), new_proj_spin(:), new_proj_rwf(:)
+    CHARACTER(LEN=20), ALLOCATABLE :: new_proj_species(:)
+    REAL, ALLOCATABLE :: new_proj_alpha(:), new_proj_beta(:), new_proj_gamma(:), new_proj_zona(:), new_proj_regio(:)
+    REAL, ALLOCATABLE :: new_proj_j(:), new_proj_mj(:), new_proj_weight(:), new_proj_shift(:, :)
+    LOGICAL :: expand_spin
+
+    IF (.NOT.ALLOCATED(this%proj_l)) RETURN !No Wannier projections configured, nothing to do
+    IF (.NOT.ALLOCATED(atoms%speciesName)) CALL juDFT_error('wannierlib: atoms%speciesName not allocated in init', calledby='init_wannierlib')
+    
+    nold = SIZE(this%proj_l)
+
+    IF (.NOT.ALLOCATED(this%proj_ntype)) THEN
+      ALLOCATE(this%proj_ntype(nold))
+      this%proj_ntype = 0
+    END IF
+
+    expand_spin = noco%l_noco .OR. noco%l_soc
+
+    nnew = 0
+    DO i = 1, nold
+      mcount = projection_m_count(this%proj_l(i))
+
+      IF (this%proj_m(i) == 0) THEN
+        IF (mcount <= 0) THEN
+          CALL juDFT_error('wannierlib: unsupported projection l for m expansion', calledby='init_wannierlib')
+        END IF
+        mrepeat = mcount
+      ELSE
+        IF ((mcount > 0) .AND. ((this%proj_m(i) < 1) .OR. (this%proj_m(i) > mcount))) THEN
+          CALL juDFT_error('wannierlib: projection m out of range for l', calledby='init_wannierlib')
+        END IF
+        mrepeat = 1
+      END IF
+
+      spin_mult = 1
+      IF (expand_spin .AND. (this%proj_spin(i) == 0)) spin_mult = 2
+
+      type_mult = 0
+      DO itype = 1, atoms%ntype
+        IF (TRIM(atoms%speciesName(itype)) == TRIM(this%proj_species(i))) type_mult = type_mult + atoms%neq(itype)
+      END DO
+      IF (type_mult <= 0) THEN
+        CALL juDFT_error('wannierlib: no matching atom type for projection species name', calledby='init_wannierlib')
+      END IF
+
+      nnew = nnew + mrepeat * spin_mult * type_mult
+    END DO
+
+    ALLOCATE(new_proj_ntype(nnew), new_proj_species(nnew), new_proj_l(nnew), new_proj_m(nnew), new_proj_spin(nnew), new_proj_rwf(nnew))
+    ALLOCATE(new_proj_alpha(nnew), new_proj_beta(nnew), new_proj_gamma(nnew), new_proj_zona(nnew), new_proj_regio(nnew))
+    ALLOCATE(new_proj_j(nnew), new_proj_mj(nnew), new_proj_weight(nnew), new_proj_shift(3, nnew))
+
+    j = 0
+    DO i = 1, nold
+      mcount = projection_m_count(this%proj_l(i))
+
+      IF ((this%proj_m(i) == 0) .AND. (mcount > 0)) THEN
+        mrepeat = mcount
+      ELSE
+        mrepeat = 1
+      END IF
+
+      spin_mult = 1
+      IF (expand_spin .AND. (this%proj_spin(i) == 0)) spin_mult = 2
+
+      DO itype = 1, atoms%ntype
+        IF (TRIM(atoms%speciesName(itype)) /= TRIM(this%proj_species(i))) CYCLE
+        DO nn = 1, atoms%neq(itype)
+          na = atoms%firstAtom(itype) + nn - 1
+          DO mval = 1, mrepeat
+          DO ispin = 1, spin_mult
+            j = j + 1
+            new_proj_ntype(j) = itype
+            new_proj_species(j) = this%proj_species(i)
+            new_proj_l(j) = this%proj_l(i)
+            IF (mrepeat > 1) THEN
+              new_proj_m(j) = mval
+            ELSE
+              new_proj_m(j) = this%proj_m(i)
+            END IF
+            IF (spin_mult == 2) THEN
+              IF (ispin == 1) THEN
+                new_proj_spin(j) = 1
+              ELSE
+                new_proj_spin(j) = -1
+              END IF
+            ELSE
+              new_proj_spin(j) = this%proj_spin(i)
+            END IF
+            new_proj_rwf(j) = this%proj_rwf(i)
+            new_proj_alpha(j) = this%proj_alpha(i)
+            new_proj_beta(j) = this%proj_beta(i)
+            new_proj_gamma(j) = this%proj_gamma(i)
+            new_proj_zona(j) = this%proj_zona(i)
+            new_proj_regio(j) = this%proj_regio(i)
+            new_proj_j(j) = this%proj_j(i)
+            new_proj_mj(j) = this%proj_mj(i)
+            new_proj_weight(j) = this%proj_weight(i)
+            new_proj_shift(:, j) = this%proj_shift(:, i) + atoms%pos(:, na)
+          END DO
+          END DO
+        END DO
+      END DO
+    END DO
+
+    CALL move_alloc(new_proj_ntype, this%proj_ntype)
+    CALL move_alloc(new_proj_species, this%proj_species)
+    CALL move_alloc(new_proj_l, this%proj_l)
+    CALL move_alloc(new_proj_m, this%proj_m)
+    CALL move_alloc(new_proj_spin, this%proj_spin)
+    CALL move_alloc(new_proj_rwf, this%proj_rwf)
+    CALL move_alloc(new_proj_alpha, this%proj_alpha)
+    CALL move_alloc(new_proj_beta, this%proj_beta)
+    CALL move_alloc(new_proj_gamma, this%proj_gamma)
+    CALL move_alloc(new_proj_zona, this%proj_zona)
+    CALL move_alloc(new_proj_regio, this%proj_regio)
+    CALL move_alloc(new_proj_j, this%proj_j)
+    CALL move_alloc(new_proj_mj, this%proj_mj)
+    CALL move_alloc(new_proj_weight, this%proj_weight)
+    CALL move_alloc(new_proj_shift, this%proj_shift)
+
+    this%num_wann = nnew
+
+    IF (this%min_band == 0) THEN
+      IF (noco%l_noco .OR. noco%l_soc) THEN
+        this%min_band = 2 * atoms%nlotot + 1
+      ELSE
+        this%min_band = atoms%nlotot + 1
+      END IF
+    END IF
+
+    IF ((this%max_band == 0) .AND. (this%num_bands > 0)) THEN
+      this%max_band = this%min_band + this%num_bands - 1
+    END IF
+
+    IF (this%num_bands == 0) THEN
+      IF ((this%min_band > 0) .AND. (this%max_band > 0)) THEN
+        this%num_bands = this%max_band - this%min_band + 1
+      END IF
+    END IF
+
+    IF ((this%min_band > 0) .AND. (this%max_band > 0) .AND. (this%num_bands > 0)) THEN
+      IF (this%max_band /= this%min_band + this%num_bands - 1) THEN
+        CALL juDFT_error('wannierlib: inconsistent numBands and [minBand,maxBand]', calledby='init_wannierlib')
+      END IF
+    END IF
+  END SUBROUTINE init_wannierlib
+
+  INTEGER FUNCTION projection_m_count(l)
+    INTEGER, INTENT(IN) :: l
+
+    SELECT CASE (l)
+    CASE (0)
+      projection_m_count = 1
+    CASE (1)
+      projection_m_count = 3
+    CASE (2)
+      projection_m_count = 5
+    CASE (3)
+      projection_m_count = 7
+    CASE (-1)
+      projection_m_count = 2
+    CASE (-2)
+      projection_m_count = 3
+    CASE (-3)
+      projection_m_count = 4
+    CASE (-4)
+      projection_m_count = 5
+    CASE (-5)
+      projection_m_count = 6
+    CASE DEFAULT
+      projection_m_count = 0
+    END SELECT
+  END FUNCTION projection_m_count
+
+  SUBROUTINE mpi_bc_wannierlib(this, mpi_comm, irank)
+    USE m_mpi_bc_tool
+    CLASS(t_wannierlib_wannierize), INTENT(INOUT) :: this
+    INTEGER, INTENT(IN) :: mpi_comm
+    INTEGER, INTENT(IN), OPTIONAL :: irank
+    INTEGER :: rank
+
+    rank = 0
+    IF (PRESENT(irank)) rank = irank
+
+    CALL mpi_bc(this%l_wannierize, rank, mpi_comm)
+    CALL mpi_bc(this%num_wann, rank, mpi_comm)
+    CALL mpi_bc(this%num_bands, rank, mpi_comm)
+    CALL mpi_bc(this%min_band, rank, mpi_comm)
+    CALL mpi_bc(this%max_band, rank, mpi_comm)
+    CALL mpi_bc(this%dis_win_min, rank, mpi_comm)
+    CALL mpi_bc(this%dis_win_max, rank, mpi_comm)
+    CALL mpi_bc(this%dis_froz_min, rank, mpi_comm)
+    CALL mpi_bc(this%dis_froz_max, rank, mpi_comm)
+    CALL mpi_bc(this%dis_num_iter, rank, mpi_comm)
+    CALL mpi_bc(this%dis_mix_ratio, rank, mpi_comm)
+    CALL mpi_bc(this%dis_conv_tol, rank, mpi_comm)
+    CALL mpi_bc(this%proj_ntype, rank, mpi_comm)
+    CALL mpi_bc(this%proj_species, rank, mpi_comm)
+    CALL mpi_bc(this%proj_l, rank, mpi_comm)
+    CALL mpi_bc(this%proj_m, rank, mpi_comm)
+    CALL mpi_bc(this%proj_spin, rank, mpi_comm)
+    CALL mpi_bc(this%proj_rwf, rank, mpi_comm)
+    CALL mpi_bc(this%proj_alpha, rank, mpi_comm)
+    CALL mpi_bc(this%proj_beta, rank, mpi_comm)
+    CALL mpi_bc(this%proj_gamma, rank, mpi_comm)
+    CALL mpi_bc(this%proj_zona, rank, mpi_comm)
+    CALL mpi_bc(this%proj_regio, rank, mpi_comm)
+    CALL mpi_bc(this%proj_j, rank, mpi_comm)
+    CALL mpi_bc(this%proj_mj, rank, mpi_comm)
+    CALL mpi_bc(this%proj_weight, rank, mpi_comm)
+    CALL mpi_bc(this%proj_shift, rank, mpi_comm)
+  END SUBROUTINE mpi_bc_wannierlib
+
+  SUBROUTINE read_xml_wannierlib(this, xml)
+    USE m_types_xml
+    USE m_constants
+    CLASS(t_wannierlib_wannierize), INTENT(INOUT) :: this
+    TYPE(t_xml), INTENT(INOUT) :: xml
+
+    CHARACTER(LEN=200) :: xPathA
+    CHARACTER(LEN=200) :: xPathP
+    CHARACTER(LEN=32) :: spin_label
+    INTEGER :: numberNodes
+    INTEGER :: nSpecies, iType, nProjType, iProj, ip, nProjTotal
+    LOGICAL :: has_wannierize, has_numBands, has_minBand, has_maxBand
+    CHARACTER(LEN=20) :: species_name
+
+    xPathA = '/fleurInput/output/wannierlib'
+    numberNodes = xml%getNumberOfNodes(xPathA)
+    IF (numberNodes /= 1) RETURN
+
+    this%l_wannierize = .TRUE.
+
+    has_wannierize = xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@wannierize') == 1
+    IF (has_wannierize) THEN
+      this%l_wannierize = evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@wannierize'))
+    END IF
+
+    xPathA = '/fleurInput/output/wannierlib/bands'
+    IF (xml%getNumberOfNodes(xPathA) == 1) THEN
+      this%num_bands = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@numBands'))
+
+      this%min_band = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@minBand'))
+      this%max_band = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@maxBand'))
+    END IF
+
+      
+    xPathA = '/fleurInput/output/wannierlib/disentanglement'
+    IF (xml%getNumberOfNodes(xPathA) == 1) THEN
+      this%dis_win_min = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@disWinMin'))
+      this%dis_win_max = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@disWinMax'))
+      this%dis_froz_min = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@disFrozMin'))
+      this%dis_froz_max = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@disFrozMax'))
+      this%dis_num_iter = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@numIter'))
+      this%dis_mix_ratio = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mixRatio'))
+      this%dis_conv_tol = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@convTol'))
+    END IF
+
+    nSpecies = xml%getNumberOfNodes('/fleurInput/atomSpecies/species')
+    nProjTotal = 0
+    DO iType = 1, nSpecies
+      WRITE(xPathP, '(A,I0,A)') '/fleurInput/atomSpecies/species[', iType, ']/wannierproj'
+      nProjTotal = nProjTotal + xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP)))
+    END DO
+
+    IF (nProjTotal > 0) THEN
+      ALLOCATE(this%proj_ntype(nProjTotal), this%proj_species(nProjTotal), this%proj_l(nProjTotal), this%proj_m(nProjTotal), this%proj_spin(nProjTotal))
+      ALLOCATE(this%proj_rwf(nProjTotal), this%proj_alpha(nProjTotal), this%proj_beta(nProjTotal), this%proj_gamma(nProjTotal))
+      ALLOCATE(this%proj_zona(nProjTotal), this%proj_regio(nProjTotal), this%proj_j(nProjTotal), this%proj_mj(nProjTotal))
+      ALLOCATE(this%proj_weight(nProjTotal), this%proj_shift(3, nProjTotal))
+      ip = 0
+      DO iType = 1, nSpecies
+        WRITE(xPathA, '(A,I0,A)') '/fleurInput/atomSpecies/species[', iType, ']/@name'
+        IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))) == 1) THEN
+          species_name = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))))
+        ELSE
+          CALL juDFT_error('wannierlib: species name missing while reading projections', calledby='read_xml_wannierlib')
+        END IF
+
+        WRITE(xPathP, '(A,I0,A)') '/fleurInput/atomSpecies/species[', iType, ']/wannierproj'
+        nProjType = xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP)))
+        DO iProj = 1, nProjType
+          ip = ip + 1
+          WRITE(xPathP, '(A,I0,A,I0,A)') '/fleurInput/atomSpecies/species[', iType, ']/wannierproj[', iProj, ']'
+          this%proj_ntype(ip) = iType
+          this%proj_species(ip) = species_name
+          this%proj_l(ip) = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@l'))
+          this%proj_m(ip) = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@m'))
+          this%proj_rwf(ip) = 0
+          this%proj_alpha(ip) = 0.0
+          this%proj_beta(ip) = 0.0
+          this%proj_gamma(ip) = 0.0
+          this%proj_zona(ip) = 0.0
+          this%proj_regio(ip) = 1.0
+          this%proj_j(ip) = -1.0
+          this%proj_mj(ip) = 0.0
+          this%proj_weight(ip) = 1.0
+          this%proj_shift(:, ip) = 0.0
+
+          IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@rwf') == 1) THEN
+            this%proj_rwf(ip) = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@rwf'))
+          END IF
+          IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@zona') == 1) THEN
+            this%proj_zona(ip) = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@zona'))
+          END IF
+          IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@regio') == 1) THEN
+            this%proj_regio(ip) = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@regio'))
+          END IF
+
+          IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@alpha') == 1) THEN
+            this%proj_alpha(ip) = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@alpha'))
+          ELSE IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@phi') == 1) THEN
+            this%proj_alpha(ip) = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@phi'))
+          END IF
+
+          IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@beta') == 1) THEN
+            this%proj_beta(ip) = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@beta'))
+          ELSE IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@theta') == 1) THEN
+            this%proj_beta(ip) = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@theta'))
+          END IF
+
+          IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@gamma') == 1) THEN
+            this%proj_gamma(ip) = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@gamma'))
+          END IF
+
+          IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@j') == 1) THEN
+            this%proj_j(ip) = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@j'))
+          END IF
+          IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@mj') == 1) THEN
+            this%proj_mj(ip) = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@mj'))
+          END IF
+          IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@weight') == 1) THEN
+            this%proj_weight(ip) = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@weight'))
+          END IF
+          IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@shiftX') == 1) THEN
+            this%proj_shift(1, ip) = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@shiftX'))
+          END IF
+          IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@shiftY') == 1) THEN
+            this%proj_shift(2, ip) = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@shiftY'))
+          END IF
+          IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@shiftZ') == 1) THEN
+            this%proj_shift(3, ip) = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@shiftZ'))
+          END IF
+
+          spin_label = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@spin'))
+          SELECT CASE (spin_label(1:1))
+          CASE ('u', 'U')
+            this%proj_spin(ip) = 1
+          CASE ('d', 'D')
+            this%proj_spin(ip) = -1
+          CASE DEFAULT
+            this%proj_spin(ip) = 0
+          END SELECT
+        END DO
+      END DO
+    END IF
+
+  END SUBROUTINE read_xml_wannierlib
+
+END MODULE m_types_wannierlib

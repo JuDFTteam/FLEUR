@@ -92,7 +92,9 @@ subprocess.check_call([pip_exe, 'install', '--force-reinstall', str(wheels[-1]),
 # The stamp file avoids re-running pip on every build.
 add_custom_command(
     OUTPUT  "${FLEURISTE_STAMP}" "${FLEURISTE_SCRIPT}"
-    # Create the virtual environment (idempotent)
+    # Recreate the virtual environment to avoid stale/broken site-packages.
+    COMMAND "${CMAKE_COMMAND}" -E rm -rf "${FLEURISTE_VENV}"
+    # Create the virtual environment
     COMMAND "${FLEUR_PYTHON}" -m venv "${FLEURISTE_VENV}"
     # Upgrade pip inside the venv
     COMMAND "${FLEURISTE_VENV}/bin/pip" install --upgrade pip -q
@@ -117,6 +119,8 @@ add_custom_command(
         COMMAND "${FLEURISTE_VENV}/bin/python" "${FLEURISTE_INSTALL_WHEEL_SCRIPT}" "${FLEURISTE_WHEEL_DIR}" "${FLEURISTE_VENV}/bin/pip"
     # Install jupyter extra dependencies explicitly
     COMMAND "${FLEURISTE_VENV}/bin/pip" install -q "ipywidgets>=8.0" "jupyterlab-widgets>=3.0" "widgetsnbextension>=4.0" "matplotlib>=3.5" "jupyterlab>=3.0"
+    # Ensure pygments is present before importing IPython/ipykernel.
+    COMMAND "${FLEURISTE_VENV}/bin/pip" install -q "pygments>=2.10"
     # Install ipykernel and register this venv as a Jupyter kernel
     COMMAND "${FLEURISTE_VENV}/bin/pip" install ipykernel -q
     COMMAND "${FLEURISTE_VENV}/bin/python" -m ipykernel install --user --name fleuriste --display-name "Python FLEURiste"
