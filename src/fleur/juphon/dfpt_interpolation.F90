@@ -84,7 +84,7 @@ contains
         ! determine the Job 
         if (fi%juPhon%l_band) then 
             dynfiletag = "band"
-        else if (fi%juPhon%l_intp .or. fi%juPhon%l_dos) then 
+        else if (fi%juPhon%l_dos) then 
             dynfiletag = "full"
         else
             call juDFT_error("Invalid option for post-procession of dynMatfiles.", calledby="dfpt_interpolation.F90")
@@ -205,8 +205,8 @@ contains
             ! interpolate to dense grid on a arbitrary q-point
             ! specified in the inp.xml kpts.xml
 
-            do iQ = 1, fi%kpts%nkpt
-                call ift_dyn(fi_fullsym%atoms,fi_fullsym%kpts,ft_lim,bigBox_lim,FTweight,fi%kpts%bk(:,iQ),dyn_mat_r,dyn_mat_pathq)
+            do iQ = 1, size(fi%juPhon%qvec_interpolate,2)
+                call ift_dyn(fi_fullsym%atoms,fi_fullsym%kpts,ft_lim,bigBox_lim,FTweight,fi%juPhon%qvec_interpolate(:,iQ),dyn_mat_r,dyn_mat_pathq)
                 write(*,*) '-------------------------'
                 !if ((fi%juPhon%l_polar) .and. (norm2(fi%kpts%bk(:,iQ)) .lt. 1e-8)) then
                 !    call get_NAC(fi,fi%kpts,dyn_mat_pathq,iQ)
@@ -217,11 +217,11 @@ contains
                 !    dyn_mat_pathq(:,:) = dyn_mat_pathq(:,:)+ dyn_mat_NAC_q(:,:)
                 !end if
                 call timestart("Dynmat diagonalization")
-                call DiagonalizeDynMat(fi%atoms, fi%kpts%bk(:,iQ), fi%juPhon%calcEigenVec, dyn_mat_pathq, eigenVals, eigenVecs, iQ,.TRUE.,TRIM(dynfiletag),fi%juPhon%l_sumrule,l_writeOutput=.true.)
+                call DiagonalizeDynMat(fi%atoms, fi%juPhon%qvec_interpolate(:,iQ), fi%juPhon%calcEigenVec, dyn_mat_pathq, eigenVals, eigenVecs, iQ,.TRUE.,TRIM(dynfiletag),fi%juPhon%l_sumrule,l_writeOutput=.true.)
                 call timestop("Dynmat diagonalization")
 
                 call timestart("Frequency calculation")
-                call CalculateFrequencies(fi%atoms, iQ, eigenVals, eigenFreqs,TRIM(dynfiletag),fi%kpts%bk(:,iQ))
+                call CalculateFrequencies(fi%atoms, iQ, eigenVals, eigenFreqs,TRIM(dynfiletag),fi%juPhon%qvec_interpolate(:,iQ))
                 call timestop("Frequency calculation")
 
                 if (fi%juPhon%l_dos) eigenValsFull(:,iQ,1) = eigenFreqs(:) ! save eigenfrequencies in case of dos

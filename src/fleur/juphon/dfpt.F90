@@ -154,7 +154,7 @@ CONTAINS
 #ifdef CPP_MPI
       call MPI_BARRIER(fmpi%mpi_comm,ierr)
 #endif 
-      if ( fi%juPhon%l_band .or. fi%juPhon%l_dos .or. fi%juPhon%l_intp) then 
+      if (fi%juPhon%l_intp) then 
          ! Do post processing of converged results 
          ! Interpolate the dynamic matrix with FFT
          call timestart("dfpt interpolation")

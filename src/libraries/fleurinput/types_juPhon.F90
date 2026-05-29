@@ -158,10 +158,10 @@ CONTAINS
            this%l_borneffcharge    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_borneffcharge'))
          END IF
 
-          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_intp')
+          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_interpolate')
 
          IF (numberNodes == 1) THEN
-           this%l_intp  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_intp'))
+           this%l_intp  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_interpolate'))
          END IF
 
            numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_rm_qhdf')
@@ -298,7 +298,7 @@ CONTAINS
               ALLOCATE(qpts_from_kpts%wtkpt(qpts_from_kpts%nkpt))
               IF (qpts_from_kpts%read_kpts_by_name(trim(xml%filename_add_xml)//"inp.xml", qptsListName)) THEN
                   IF (ALLOCATED(this%qvec_interpolate)) DEALLOCATE(this%qvec_interpolate)
-                  ALLOCATE(this%qvec(3, qpts_from_kpts%nkpt))
+                  ALLOCATE(this%qvec_interpolate(3, qpts_from_kpts%nkpt))
                   this%qvec_interpolate = qpts_from_kpts%bk
               END IF
           END IF
