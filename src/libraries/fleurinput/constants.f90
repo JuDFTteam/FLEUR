@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -76,6 +76,7 @@ MODULE m_constants
    INTEGER, PARAMETER :: PLOT_OUTDEN_Y_CORE=5
    INTEGER, PARAMETER :: PLOT_MIXDEN_Y_CORE=6
    INTEGER, PARAMETER :: PLOT_MIXDEN_N_CORE=11
+   INTEGER, PARAMETER :: PLOT_ENERGYDEN=7
 
   CHARACTER(2),DIMENSION(0:103),PARAMETER :: namat_const=(/&
        'va',' H','He','Li','Be',' B',' C',' N',' O',' F','Ne',&

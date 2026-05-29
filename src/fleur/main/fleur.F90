@@ -28,6 +28,7 @@ MODULE m_fleur
    !! one-dimensional        --- y.mokrousov   2002
    !! exchange parameters    --- m.lezaic      2004
    !!                            g.bihlmayer, s.bluegel 1999
+   implicit none
 
    IMPLICIT NONE
 CONTAINS
@@ -320,6 +321,10 @@ CONTAINS
             IF (.NOT.fi%sliceplot%slice) THEN
                CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi, fi%sym, fi%cell, &
                               fi%noco, nococonv, inDen, PLOT_INPDEN, fi%sliceplot)
+               if (real(EnergyDen%pw(1,1)) < -1E98) &
+                  CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi, fi%sym, fi%cell, &
+                                 fi%noco, nococonv, EnergyDen, PLOT_ENERGYDEN, fi%sliceplot)
+                                 
             ELSE
                CALL sliceDen%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN)
                IF (fmpi%irank .EQ. 0) CALL readDensity(stars, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
