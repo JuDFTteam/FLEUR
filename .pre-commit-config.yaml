@@ -13,7 +13,7 @@ repos:
     -   id: check-xml
     -   id: check-yaml
   - repo: https://iffgit.fz-juelich.de/fleur/fleur-pre-commit
-    rev: V0.1.0
+    rev: v0.1.2
     hooks:
     -   id: check-copyright
     -   id: check-implicit-none
