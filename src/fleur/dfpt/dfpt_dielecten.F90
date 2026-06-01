@@ -18,10 +18,10 @@ module m_dfpt_dielecten
 
 contains
 
-    subroutine dfpt_dielecten_HF_int(fi,stars,starsq,sphhar,fmpi,denIn1,denIn1Im,dieltensor_row,rho,iDir_den,q_sign)
+    subroutine dfpt_dielecten_HF_int(sternheimerJob,fi,stars,starsq,sphhar,fmpi,denIn1,denIn1Im,dieltensor_row,rho,iDir_den,q_sign)
 
 
-        
+        type(t_sternheimerJob),intent(in)  :: sternheimerJob
         type(t_fleurinput), intent(in)     :: fi
         type(t_sphhar),    intent(in)      :: sphhar
         type(t_stars),     intent(in)      :: stars, starsq
@@ -71,7 +71,7 @@ contains
             tempval_pw = CMPLX(0.0,0.0)
             qvec_int=fi%dfpt%qvec_efield(:,iDir_col)
             CALL starsq_vext%reset_stars()
-            CALL make_stars(starsq_vext, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, qvec_int, 1, iDir_col,fi%dfpt%l_efield)
+            CALL make_stars(starsq_vext, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, qvec_int, 1, iDir_col,sternheimerJob%l_efield)
             starsq_vext%ufft = starsq%ufft
 
             call vExt1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)

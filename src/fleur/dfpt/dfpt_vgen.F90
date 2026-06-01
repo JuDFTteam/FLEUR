@@ -124,6 +124,10 @@ CONTAINS
 #ifndef CPP_OLDINTEL
       ALLOCATE(dfptvTot%pw_w,mold=dfptvTot%pw)
       ALLOCATE(dfptvTotimag%pw_w,mold=dfptvTotimag%pw)
+      IF (sternheimerJob%l_efield) THEN
+         ALLOCATE(dfptvefield%pw_w,mold=dfptvefield%pw)
+         ALLOCATE(dfptvefieldimag%pw_w,mold=dfptvefieldimag%pw)
+      end if  
 #else
       ALLOCATE( dfptvTot%pw_w(size(dfptvTot%pw,1),size(dfptvTot%pw,2)))
       ALLOCATE( dfptvTotimag%pw_w(size(dfptvTotimag%pw,1),size(dfptvTotimag%pw,2)))
@@ -131,7 +135,7 @@ CONTAINS
       IF (sternheimerJob%l_efield) THEN
          ALLOCATE( dfptvefield%pw_w(size(dfptvefield%pw,1),size(dfptvefield%pw,2)))
          ALLOCATE( dfptvefieldimag%pw_w(size(dfptvefieldimag%pw,1),size(dfptvefieldimag%pw,2)))
-      else IF 
+      end if  
          
 #endif
 
@@ -171,7 +175,7 @@ CONTAINS
             dfptvTot%mt = dfptvTot%mt + vCoul%mt
             dfptvTotimag%mt = dfptvTotimag%mt + dfptvCoulimag%mt
          END IF
-      else if (dfpt%l_bfield) then
+      else if (sternheimerJob%l_bfield) then
          atomsefield = atoms
          atomsefield%zatom(:) = 0.0 ! find out if this is actually needed, actually check that
          CALL dfpt_vbfield(input,stars,noco,atoms,dfptvTot,dfptvTotimag)
