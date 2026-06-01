@@ -217,7 +217,7 @@ contains
                 !    dyn_mat_pathq(:,:) = dyn_mat_pathq(:,:)+ dyn_mat_NAC_q(:,:)
                 !end if
                 call timestart("Dynmat diagonalization")
-                call DiagonalizeDynMat(fi%atoms, fi%juPhon%qvec_interpolate(:,iQ), fi%juPhon%calcEigenVec, dyn_mat_pathq, eigenVals, eigenVecs, iQ,.TRUE.,TRIM(dynfiletag),fi%juPhon%l_sumrule,l_writeOutput=.true.)
+                call DiagonalizeDynMat(fi%atoms, fi%juPhon%qvec_interpolate(:,iQ), fi%juPhon%calcEigenVec, dyn_mat_pathq, eigenVals, eigenVecs, iQ,.TRUE.,TRIM(dynfiletag),fi%juPhon%l_sumrule_intp,l_writeOutput=.true.)
                 call timestop("Dynmat diagonalization")
 
                 call timestart("Frequency calculation")

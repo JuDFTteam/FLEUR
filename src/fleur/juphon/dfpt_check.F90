@@ -10,6 +10,8 @@ IMPLICIT NONE
 CONTAINS
     SUBROUTINE dfpt_check(fi, xcpot)
 
+        ! This routine checks if the fleur input can be executed  
+        ! with the dfpt code 
         USE m_types_fleurinput
         USE m_types_xcpot_libxc
         USE m_juDFT_stop, only : juDFT_error

@@ -72,8 +72,6 @@ CONTAINS
       ! inversion symmetry
       l_minusq = .FALSE.
 
-      write(42,*) "gmaxzlocal i think is " , fi%juPhon%gmaxzLocal
-
       nspins = MERGE(2, 1, fi%noco%l_noco)
      
       if (fmpi%irank==0) call dfpt_check(fi, xcpot)
@@ -162,11 +160,13 @@ CONTAINS
          call timestop("dfpt interpolation")
       end if 
 
-      if ( fi%juPhon%l_elph .and. .not. fi%juPhon%l_scf) then 
-         ! Construct the electron phonon matrix element from converged potentials
-         call timestart("construction of el-ph matrix elements")
-         call construct_elph_mat(fmpi,fi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,rho,vTot,vxc,results,eig_id,q_results,q_eig_id,l_real)
-         call timestop("construction of el-ph matrix elements")
+      if ( fi%juPhon%l_postprocess) then 
+         ! Construct the matrix element from converged potentials
+         if (fi%juPhon%l_elph) then 
+            call timestart("construction of el-ph matrix elements")
+            call construct_elph_mat(fmpi,fi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,rho,vTot,vxc,results,eig_id,q_results,q_eig_id,l_real)
+            call timestop("construction of el-ph matrix elements")
+         end if 
       end if 
 
 

@@ -23,7 +23,8 @@ MODULE m_types_juPhon
       LOGICAL :: l_scf  = .TRUE.     ! Do a self-consistency run for dynmats
       LOGICAL :: l_postprocess = .FALSE. ! Postprocessing of charge density response 
       LOGICAL :: l_elph = .FALSE.    ! Calculate electron-phonon matrix elements
-      LOGICAL :: l_sumrule  = .FALSE. ! Apply sumrule for dynmats
+      LOGICAL :: l_sumrule_scf  = .FALSE. ! Apply sumrule for dynmats in scf calculation 
+      LOGICAL :: l_sumrule_intp  = .FALSE. ! Apply sumrule for dynmats in interpolation calculation 
       LOGICAL :: l_rm_qhdf  = .TRUE. ! Remove q*hdf files, after convergence
       INTEGER :: startq = 1          ! Start the q-loop at a specific point
       INTEGER :: stopq  = 0          ! Stop  the q-loop at a specific point
@@ -80,8 +81,10 @@ CONTAINS
       CALL mpi_bc(this%l_band, rank, mpi_comm)
       CALL mpi_bc(this%l_dos, rank, mpi_comm)
       CALL mpi_bc(this%l_scf, rank, mpi_comm)
+      CALL mpi_bc(this%l_postprocess, rank, mpi_comm)
       CALL mpi_bc(this%l_elph, rank, mpi_comm)
-      CALL mpi_bc(this%l_sumrule, rank, mpi_comm)
+      CALL mpi_bc(this%l_sumrule_scf, rank, mpi_comm)
+      CALL mpi_bc(this%l_sumrule_intp, rank, mpi_comm)
       CALL mpi_bc(this%l_rm_qhdf, rank, mpi_comm)
       CALL mpi_bc(this%startq, rank, mpi_comm)
       CALL mpi_bc(this%stopq, rank, mpi_comm)
@@ -164,6 +167,12 @@ CONTAINS
            this%l_intp  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_interpolate'))
          END IF
 
+          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_postprocess')
+
+         IF (numberNodes == 1) THEN
+           this%l_postprocess  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/@l_postprocess'))
+         END IF
+
            numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/@l_rm_qhdf')
 
          IF (numberNodes == 1) THEN
@@ -202,7 +211,7 @@ CONTAINS
           numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/phonon/@l_sumrule')
 
          IF (numberNodes == 1) THEN
-           this%l_sumrule  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/phonon/@l_sumrule'))
+           this%l_sumrule_scf  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/phonon/@l_sumrule'))
          END IF
 
         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/phonon/@startq')
@@ -288,6 +297,12 @@ CONTAINS
            this%l_polar    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/dfptInterpolate/@l_polar'))
          END IF
 
+          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/phonon/@l_sumrule')
+
+         IF (numberNodes == 1) THEN
+           this%l_sumrule_intp  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/juPhon/phonon/@l_sumrule'))
+         END IF
+
 
           IF (xml%GetNumberOfNodes('/fleurInput/output/juPhon/dfptInterpolate/@qptsListName') == 1) THEN
           qptsListName = TRIM(ADJUSTL(xml%GetAttributeValue('/fleurInput/output/juPhon/dfptInterpolate/@qptsListName')))
@@ -307,7 +322,7 @@ CONTAINS
         ! postprocess read-in
          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/postprocess')
          ! introduce switch for postprocessing 
-        if ( (numberNodes /= 1) .and. this%l_elph) call juDFT_error("Please specify the interpolation with the interpolation tag",calledby="types_juPhon.F90")
+        if ( (numberNodes /= 1) .and. this%l_postprocess) call juDFT_error("Please specify the interpolation with the interpolation tag",calledby="types_juPhon.F90")
         
 
          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/juPhon/postprocess/@l_elph')
@@ -400,6 +415,8 @@ CONTAINS
    END SUBROUTINE init_juPhon
 
    SUBROUTINE precheck_juPhon(this,xml)
+    ! This routine checks if the general input structure 
+    ! for the dfpt calculation is compatible 
     USE m_types_xml
     USE m_judft 
 

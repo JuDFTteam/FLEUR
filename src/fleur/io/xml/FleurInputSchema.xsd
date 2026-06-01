@@ -3309,7 +3309,7 @@
                <xsd:documentation>Parameters for phonon calculations using DFPT.</xsd:documentation>
             </xsd:annotation>
          </xsd:element>
-         <xsd:element minOccurs="0" name="dfptInterpolate" type="DfptInterpolationType">
+         <xsd:element minOccurs="0" name="interpolation" type="DfptInterpolationType">
             <xsd:annotation>
                <xsd:documentation>Parameters for phonon calculations using DFPT.</xsd:documentation>
             </xsd:annotation>
@@ -3441,6 +3441,8 @@
          </xsd:annotation>
       </xsd:attribute>  
    </xsd:complexType>
+
+
 <xsd:complexType name="DfptInterpolationType">
       <xsd:annotation>
             <xsd:documentation>Parameters specifying the interpolation of DFPT results.</xsd:documentation>
