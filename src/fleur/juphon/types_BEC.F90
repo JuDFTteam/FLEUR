@@ -6,7 +6,7 @@
 
 module m_types_BEC
     use m_juDFT
-    use m_types_dfpt
+    use m_types_dfpt_scf
 
     implicit none 
 
@@ -15,7 +15,7 @@ module m_types_BEC
     private
     public :: t_BEC
 
-    type, extends(t_dfpt) :: t_BEC
+    type, extends(t_dfpt_scf) :: t_BEC
         private
         complex , allocatable :: borneffcharge(:,:,:),borneffcharge_ctrb(:,:,:,:) 
 

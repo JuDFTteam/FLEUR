@@ -8,7 +8,7 @@
 module m_types_phonon
 
     use m_juDFT
-    use m_types_dfpt
+    use m_types_dfpt_scf
 
     implicit none 
 
@@ -17,7 +17,7 @@ module m_types_phonon
     private
     public :: t_phonon
 
-    type, extends(t_dfpt) :: t_phonon
+    type, extends(t_dfpt_scf) :: t_phonon
         private
         complex , allocatable :: dynMat(:,:,:) ! (q-Point , 3*natoms, 3*natoms)
         complex , allocatable :: dynMatNac(:,:) ! (q-Point , 3*natoms, 3*natoms) NAC correction LO-TO 

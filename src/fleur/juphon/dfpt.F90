@@ -18,7 +18,7 @@ CONTAINS
       USE m_eig66_io, only : open_eig,close_eig
       USE m_dfpt_check
       USE m_dfpt_interpolation
-      use m_types_dfpt
+      use m_types_dfpt_scf
       use m_types_phonon
       use m_types_efield
       use m_types_BEC
@@ -55,7 +55,7 @@ CONTAINS
       INTEGER :: q_eig_id, dfpt_eig_id, dfpt_eig_id2, qm_eig_id, dfpt_eigm_id, dfpt_eigm_id2
       LOGICAL :: l_real, l_minusq,l_gamma 
 
-      class(t_dfpt), allocatable :: phonon_obj, efield_obj, BEC_obj, bfield_obj ! we might want to have multiple scf calculation in one fleur call
+      class(t_dfpt_scf), allocatable :: phonon_obj, efield_obj, BEC_obj, bfield_obj ! we might want to have multiple scf calculation in one fleur call
       type(t_sternheimerJob)     :: sternheimerJob
 #ifdef CPP_MPI
       integer :: ierr

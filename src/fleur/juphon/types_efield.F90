@@ -6,7 +6,7 @@
 
 module m_types_efield
     use m_juDFT
-    use m_types_dfpt
+    use m_types_dfpt_scf
 
     implicit none 
 
@@ -15,7 +15,7 @@ module m_types_efield
     private
     public :: t_efield_pert
 
-    type, extends(t_dfpt) :: t_efield_pert
+    type, extends(t_dfpt_scf) :: t_efield_pert
         private
         complex , allocatable :: dielecTen(:,:) ! (3, 3)
 

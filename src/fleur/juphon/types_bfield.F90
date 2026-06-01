@@ -6,7 +6,7 @@
 
 module m_types_bfield
     use m_juDFT
-    use m_types_dfpt
+    use m_types_dfpt_scf
     use m_types
     use m_dfpt_magsusc
 
@@ -15,7 +15,7 @@ module m_types_bfield
     private
     public :: t_bfield
 
-    type, extends(t_dfpt) :: t_bfield
+    type, extends(t_dfpt_scf) :: t_bfield
         private
         complex :: magnetic_susc
 

@@ -5,15 +5,15 @@
 !--------------------------------------------------------------------------------
 
 
-module m_types_dfpt
+module m_types_dfpt_scf
 
     use m_judft
     implicit none
     
     private
-    public :: t_dfpt
+    public :: t_dfpt_scf
 
-    type,abstract :: t_dfpt
+    type,abstract :: t_dfpt_scf
   
         real, allocatable :: qVectors(:,:)
 
@@ -33,8 +33,8 @@ module m_types_dfpt
     interface 
         subroutine init_child(this,fi,nqpts,dynMatNac)
             use m_types
-            import t_dfpt
-            class(t_dfpt),intent(inout)    :: this
+            import t_dfpt_scf
+            class(t_dfpt_scf),intent(inout)    :: this
             type(t_fleurinput), intent(in) :: fi 
             integer, intent(in)            :: nqpts
             complex,optional,intent(in)    :: dynMatNac(:,:) !Maybe change this in the future
@@ -46,8 +46,8 @@ module m_types_dfpt
             use m_types
             
 
-            import t_dfpt
-            class(t_dfpt),intent(inout)       :: this      
+            import t_dfpt_scf
+            class(t_dfpt_scf),intent(inout)       :: this      
             type(t_sternheimerjob),intent(in) :: sternheimerJob 
             type(t_fleurinput), intent(in)    :: fi 
             type(t_mpi), intent(in)           :: fmpi
@@ -68,8 +68,8 @@ module m_types_dfpt
                                           dfpt_eig_id2,enpara,results,results1,l_real,juPhon,rho,vTot,grRho3,grVext3,grVc3,den1,vTot1,den1Im,vTot1Im,vC1,vC1Im)
             use m_types
             
-            import t_dfpt
-            class(t_dfpt),intent(inout)       :: this
+            import t_dfpt_scf
+            class(t_dfpt_scf),intent(inout)       :: this
             type(t_sternheimerjob),intent(in) :: sternheimerJob 
             type(t_fleurinput), intent(in)    :: fi 
             type(t_stars),intent(in)          :: stars
@@ -95,8 +95,8 @@ module m_types_dfpt
     interface 
         subroutine postprocessing_qpoint(this,fi,fmpi,juPhon,qpts,iQ,q_list)
             use m_types
-            import t_dfpt
-            class(t_dfpt),intent(inout)   :: this         
+            import t_dfpt_scf
+            class(t_dfpt_scf),intent(inout)   :: this         
             type(t_fleurinput),intent(in) :: fi
             type(t_mpi),intent(in)        :: fmpi
             type(t_juPhon),intent(in)     :: juPhon
@@ -110,8 +110,8 @@ module m_types_dfpt
     interface 
         subroutine write_outfiles(this,fi,fmpi,juPhon)
             use m_types
-            import t_dfpt
-            class(t_dfpt),intent(inout)   :: this         
+            import t_dfpt_scf
+            class(t_dfpt_scf),intent(inout)   :: this         
             type(t_fleurinput),intent(in) :: fi
             type(t_mpi),intent(in)        :: fmpi
             type(t_juPhon),intent(in)     :: juPhon
@@ -123,7 +123,7 @@ contains
     subroutine init_scf(this,fi,qvec)
         use m_types_fleurinput
         use m_types_juPhon
-        class(t_dfpt), intent(inout) :: this
+        class(t_dfpt_scf), intent(inout) :: this
         type(t_fleurinput),intent(in) :: fi 
         real, intent(in) :: qvec(:,:)
         integer :: nqpts
@@ -149,7 +149,7 @@ contains
         use m_types
         
 
-        class(t_dfpt), intent(inout) :: this 
+        class(t_dfpt_scf), intent(inout) :: this 
         type(t_sternheimerJob),intent(in) :: sternheimerJob
         type(t_fleurinput), intent(in)  :: fi 
         type(t_mpi), intent(in)         :: fmpi
@@ -331,4 +331,4 @@ contains
     end subroutine perform_scf
     
 
-end module m_types_dfpt
+end module m_types_dfpt_scf

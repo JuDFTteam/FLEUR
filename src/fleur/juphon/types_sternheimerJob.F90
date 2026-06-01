@@ -64,7 +64,7 @@ module m_types_sternheimerJob
         integer :: jobSize , iJob , iQ , iDtype, iDir, iQ_last
         integer :: q_start, q_stop
         ! we currently work with logicals to circumvent circular dependence
-        ! it would be nicer to work with select type(t_dfpt) 
+        ! it would be nicer to work with select type(t_dfpt_scf) 
         logical :: l_ph = .false. 
         logical :: l_borncharges  = .false. 
         logical :: l_efield_pert  = .false. 
