@@ -538,7 +538,7 @@ CONTAINS
             CALL outDen%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN)
             outDen%iter = inDen%iter
             CALL cdngen(eig_id, fmpi, input_soc, fi%banddos, fi%sliceplot, fi%vacuum, &
-                        fi%kpts, fi%atoms, sphhar, stars, fi%sym, fi%juphon, fi%gfinp, fi%hub1inp, &
+                        fi%kpts, fi%atoms, sphhar, stars, fi%sym, fi%dfpt, fi%gfinp, fi%hub1inp, &
                         enpara, fi%cell, fi%noco, nococonv, vTot, results,   fi%corespecinput, &
                         archiveType, xcpot, outDen, EnergyDen, coreden,greensFunction, hub1data,vxc,exc)
             ! The density matrix for DFT+Hubbard1 only changes in hubbard1_setup and is kept constant otherwise
@@ -584,13 +584,13 @@ CONTAINS
 #endif
             CALL timestop("generation of new charge density (total)")
 
-            IF (fi%juPhon%l_dfpt) THEN
+            IF (fi%dfpt%l_dfpt) THEN
                ! Sideline the actual scf loop for a phonon calculation.
                ! It is assumed that the density was converged beforehand.
                 CALL timestop("Iteration")
-                CALL timestart("juPhon DFPT")
+                CALL timestart("DFPT")
                 CALL dfpt(fi, sphhar, stars, nococonv, fi%kpts, fmpi, results, enpara, outDen, vTot, vxc, eig_id, xcpot, hybdat, mpdata, forcetheo)
-                CALL timestop("juPhon DFPT")
+                CALL timestop("DFPT")
                 CALL juDFT_end("DFPT calculation finished.",fmpi%irank)
             END IF
 

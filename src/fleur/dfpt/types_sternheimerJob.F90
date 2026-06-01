@@ -95,8 +95,8 @@ module m_types_sternheimerJob
 
             ! Introduce the option to calculate a fraction of the input 
             ! Useful for restarting a calculation
-            q_start = fi%juPhon%startq
-            q_stop = merge(fi%juPhon%stopq,size(fi%juPhon%qvec,2),fi%juPhon%stopq/=0)
+            q_start = fi%dfpt%startq
+            q_stop = merge(fi%dfpt%stopq,size(fi%dfpt%qvec,2),fi%dfpt%stopq/=0)
 
             jobSize = 3 * fi%atoms%nat * (q_stop - q_start + 1 ) 
 
@@ -107,8 +107,8 @@ module m_types_sternheimerJob
             allocate(this%needs_postprocessing(jobSize))
             allocate(this%needs_eigen(jobSize))
 
-            q_start = fi%juPhon%startq
-            q_stop = merge(fi%juPhon%stopq,size(fi%juPhon%qvec,2),fi%juPhon%stopq/=0)
+            q_start = fi%dfpt%startq
+            q_stop = merge(fi%dfpt%stopq,size(fi%dfpt%qvec,2),fi%dfpt%stopq/=0)
 
 
             iJob = 1 

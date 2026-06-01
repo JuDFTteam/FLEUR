@@ -102,49 +102,49 @@ CONTAINS
                                 .NOT.fi%INPUT%eig66(1), .FALSE., fi%noco%l_soc, fi%INPUT%eig66(1), .FALSE., fmpi%n_size)
       END IF
 
-      if (fi%juPhon%l_scf) then 
-         if (fi%juPhon%l_bfield) then 
+      if (fi%dfpt%l_scf) then 
+         if (fi%dfpt%l_bfield) then 
             !Zeeman field
             call timestart("dfpt bfield")
             allocate(t_bfield :: bfield_obj)
-            call bfield_obj%init(fi,fi%juPhon%qvec)
+            call bfield_obj%init(fi,fi%dfpt%qvec)
             call sternheimerJob%init(fi,l_bfield=.true.)
-            call bfield_obj%perform_scf(sternheimerJob,fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,fi%juPhon,rho,vTot,vxc,results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id, &
+            call bfield_obj%perform_scf(sternheimerJob,fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,fi%dfpt,rho,vTot,vxc,results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id, &
                                      dfpt_eig_id2,l_minusq,qm_results,results1m,qm_eig_id,dfpt_eigm_id,dfpt_eigm_id2)
-            call bfield_obj%write_outfiles(fi,fmpi,fi%juPhon)
+            call bfield_obj%write_outfiles(fi,fmpi,fi%dfpt)
             call timestop("dfpt bfield")
          end if 
-         if (fi%juPhon%l_efield) then 
+         if (fi%dfpt%l_efield) then 
             call timestart("dfpt efield")
             ! Do a scf calculation with an electric field as the external perturbation
             allocate(t_efield_pert :: efield_obj)
-            call efield_obj%init(fi,fi%juPhon%qvec_efield)
+            call efield_obj%init(fi,fi%dfpt%qvec_efield)
             call sternheimerJob%init(fi,l_efield=.true.)
-            call efield_obj%perform_scf(sternheimerJob,fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,fi%juPhon,rho,vTot,vxc,results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id, &
+            call efield_obj%perform_scf(sternheimerJob,fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,fi%dfpt,rho,vTot,vxc,results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id, &
                                      dfpt_eig_id2,l_minusq,qm_results,results1m,qm_eig_id,dfpt_eigm_id,dfpt_eigm_id2)
-            call efield_obj%write_outfiles(fi,fmpi,fi%juPhon)
+            call efield_obj%write_outfiles(fi,fmpi,fi%dfpt)
             call timestop("dfpt efield")
          end if 
-         if (fi%juPhon%l_borneffcharge) then
+         if (fi%dfpt%l_borneffcharge) then
             call timestart("dfpt born effective charges") 
             ! Do a scf calculation for phonon for q-Vectors close to Gamma --> calculate the polar response
             allocate(t_BEC :: BEC_obj)
-            call BEC_obj%init(fi,fi%juPhon%qvec_efield)
+            call BEC_obj%init(fi,fi%dfpt%qvec_efield)
             call sternheimerJob%init(fi,l_BEC=.true.)
-            call BEC_obj%perform_scf(sternheimerJob,fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,fi%juPhon,rho,vTot,vxc,results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id, &
+            call BEC_obj%perform_scf(sternheimerJob,fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,fi%dfpt,rho,vTot,vxc,results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id, &
                                      dfpt_eig_id2,l_minusq,qm_results,results1m,qm_eig_id,dfpt_eigm_id,dfpt_eigm_id2)
-            call BEC_obj%write_outfiles(fi,fmpi,fi%juPhon)
+            call BEC_obj%write_outfiles(fi,fmpi,fi%dfpt)
             call timestop("dfpt born effective charges")
          end if 
-         if (fi%juPhon%l_phonon) then 
+         if (fi%dfpt%l_phonon) then 
             allocate(t_phonon :: phonon_obj)
             call timestart("dfpt phonons")
             ! Do a scf calculation with atom displacements as the perturbation
-            call phonon_obj%init(fi,fi%juPhon%qvec)
+            call phonon_obj%init(fi,fi%dfpt%qvec)
             call sternheimerJob%init(fi,l_phonon=.true.)
-            call phonon_obj%perform_scf(sternheimerJob,fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,fi%juPhon,rho,vTot,vxc,results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id, &
+            call phonon_obj%perform_scf(sternheimerJob,fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,fi%dfpt,rho,vTot,vxc,results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id, &
                                       dfpt_eig_id2,l_minusq,qm_results,results1m,qm_eig_id,dfpt_eigm_id,dfpt_eigm_id2)
-            call phonon_obj%write_outfiles(fi,fmpi,fi%juPhon)
+            call phonon_obj%write_outfiles(fi,fmpi,fi%dfpt)
             call timestop("dfpt phonons")
          end if 
       end if 
@@ -152,7 +152,7 @@ CONTAINS
 #ifdef CPP_MPI
       call MPI_BARRIER(fmpi%mpi_comm,ierr)
 #endif 
-      if (fi%juPhon%l_intp) then 
+      if (fi%dfpt%l_intp) then 
          ! Do post processing of converged results 
          ! Interpolate the dynamic matrix with FFT
          call timestart("dfpt interpolation")
@@ -160,9 +160,9 @@ CONTAINS
          call timestop("dfpt interpolation")
       end if 
 
-      if ( fi%juPhon%l_postprocess) then 
+      if ( fi%dfpt%l_postprocess) then 
          ! Construct the matrix element from converged potentials
-         if (fi%juPhon%l_elph) then 
+         if (fi%dfpt%l_elph) then 
             call timestart("construction of el-ph matrix elements")
             call construct_elph_mat(fmpi,fi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,rho,vTot,vxc,results,eig_id,q_results,q_eig_id,l_real)
             call timestop("construction of el-ph matrix elements")

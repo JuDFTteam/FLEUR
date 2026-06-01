@@ -9,7 +9,7 @@ MODULE m_dfpt_vgen
 CONTAINS
 
    SUBROUTINE dfpt_vgen(sternheimerJob,hybdat,field,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
-                   juphon, cell,fmpi,noco,nococonv,den,vTot,&
+                   dfpt, cell,fmpi,noco,nococonv,den,vTot,&
                    &starsq,dfptdenimag,dfptvTot,l_xc,dfptvTotimag,dfptdenreal,iDtype,iDir,killcont, sliceplot,l_vextpho)
       !--------------------------------------------------------------------------
       ! FLAPW potential perturbation generator (main routine)
@@ -57,7 +57,7 @@ CONTAINS
       TYPE(t_noco),      INTENT(IN)    :: noco
       TYPE(t_nococonv),  INTENT(IN)    :: nococonv
       TYPE(t_sym),       INTENT(IN)    :: sym
-      TYPE(t_juphon),    INTENT(IN)    :: juphon
+      TYPE(t_dfpt),    INTENT(IN)    :: dfpt
       TYPE(t_stars),     INTENT(IN)    :: stars
       TYPE(t_cell),      INTENT(IN)    :: cell
       TYPE(t_sphhar),    INTENT(IN)    :: sphhar
@@ -160,18 +160,18 @@ CONTAINS
       IF (sternheimerJob%l_efield) THEN
          atomsefield = atoms
          atomsefield%zatom(:) = 0.0 ! find out if this is actually needed
-         CALL dfpt_vefield(juphon,starsq,atoms,sym,sphhar,cell,dfptvefield,dfptvefieldimag,iDir,1)
+         CALL dfpt_vefield(dfpt,starsq,atoms,sym,sphhar,cell,dfptvefield,dfptvefieldimag,iDir,1)
          CALL dfptvefield%copy_both_spin(dfptvTot)
          CALL dfptvefieldimag%copy_both_spin(dfptvTotimag)
 
          IF (l_xc) THEN
             CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,starsq,cell,sphhar,atomsefield,.TRUE.,workdenReal,vCoul, sternheimerJob=sternheimerJob,&
-                     & juphon=juphon,dfptdenimag=workdenImag,dfptvCoulimag=dfptvCoulimag,dfptden0=workden,stars2=stars,iDtype=iDtype,iDir=iDir)
+                     & dfpt=dfpt,dfptdenimag=workdenImag,dfptvCoulimag=dfptvCoulimag,dfptden0=workden,stars2=stars,iDtype=iDtype,iDir=iDir)
             dfptvTot%pw = dfptvTot%pw + vCoul%pw
             dfptvTot%mt = dfptvTot%mt + vCoul%mt
             dfptvTotimag%mt = dfptvTotimag%mt + dfptvCoulimag%mt
          END IF
-      else if (juphon%l_bfield) then
+      else if (dfpt%l_bfield) then
          atomsefield = atoms
          atomsefield%zatom(:) = 0.0 ! find out if this is actually needed, actually check that
          CALL dfpt_vbfield(input,stars,noco,atoms,dfptvTot,dfptvTotimag)
@@ -180,7 +180,7 @@ CONTAINS
 
          IF (l_xc) THEN
             CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,starsq,cell,sphhar,atomsefield,.TRUE.,workdenReal,vCoul,sternheimerJob=sternheimerJob,&
-                     & juphon=juphon,dfptdenimag=workdenImag,dfptvCoulimag=dfptvCoulimag,dfptden0=workden,stars2=stars,iDtype=iDtype,iDir=iDir)
+                     & dfpt=dfpt,dfptdenimag=workdenImag,dfptvCoulimag=dfptvCoulimag,dfptden0=workden,stars2=stars,iDtype=iDtype,iDir=iDir)
             dfptvTot%pw = dfptvTot%pw + vCoul%pw
             dfptvTot%mt = dfptvTot%mt + vCoul%mt
             dfptvTotimag%mt = dfptvTotimag%mt + dfptvCoulimag%mt
@@ -188,7 +188,7 @@ CONTAINS
 
       ELSE !standard phonon case
          CALL vgen_coulomb(1,fmpi ,input,field,vacuum,sym,starsq,cell,sphhar,atoms,.TRUE.,workdenReal,vCoul, sternheimerJob=sternheimerJob,&
-                     & juphon=juphon,dfptdenimag=workdenImag,dfptvCoulimag=dfptvCoulimag,dfptden0=workden,stars2=stars,iDtype=iDtype,iDir=iDir)
+                     & dfpt=dfpt,dfptdenimag=workdenImag,dfptvCoulimag=dfptvCoulimag,dfptden0=workden,stars2=stars,iDtype=iDtype,iDir=iDir)
          ! b)
 
          CALL vCoul%copy_both_spin(dfptvTot)

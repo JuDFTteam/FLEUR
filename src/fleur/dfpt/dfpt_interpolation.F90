@@ -82,15 +82,15 @@ contains
 
 
         ! determine the Job 
-        if (fi%juPhon%l_band) then 
+        if (fi%dfpt%l_band) then 
             dynfiletag = "band"
-        else if (fi%juPhon%l_dos) then 
+        else if (fi%dfpt%l_dos) then 
             dynfiletag = "full"
         else
             call juDFT_error("Invalid option for post-procession of dynMatfiles.", calledby="dfpt_interpolation.F90")
         end if 
 
-        IF (fi%juPhon%l_dos) allocate(eigenValsFull(3*fi%atoms%nat,fi%kpts%nkpt,fi%input%jspins))
+        IF (fi%dfpt%l_dos) allocate(eigenValsFull(3*fi%atoms%nat,fi%kpts%nkpt,fi%input%jspins))
 
         ! Read in the dynMats in the IBZ
         ! We currently rely on a seperate set of files fullsym_* that contain the symmetry
@@ -139,7 +139,7 @@ contains
             end do  ! iQ
 
             !subtract Long range part
-            !if (fi%juPhon%l_polar) then
+            !if (fi%dfpt%l_polar) then
             !    do iQ = 1, qpts%nkpt
             !        dyn_mat_NAC_q = cmplx(0.0,0.0)
             !        call get_NAC_ewald(fi,qpts,stars_fullsym,dyn_mat_NAC_q,qpts%bk(:,iQ),iQ)
@@ -151,7 +151,7 @@ contains
             ft_lim(2,:) =  qpts%nkpt3(:)/2
             ft_lim(1,:) = ft_lim(2,:) - qpts%nkpt3(:) + 1
             
-            if (fi%juPhon%l_WSinterpol) then 
+            if (fi%dfpt%l_WSinterpol) then 
                 ! create wigner seitz cell and weights on bigger fft mesh  
                 ! we do this here so we dont have to create the weights for every ift_dyn call            
                 bigBox_lim(2,:) =   2*qpts%nkpt3(:)
@@ -195,7 +195,7 @@ contains
                 end do
             end do
 
-            if (fi%juPhon%l_polar) then
+            if (fi%dfpt%l_polar) then
                 do iQ = 1, qpts%nkptf
                     dyn_mat_NAC_r = cmplx(0.0,0.0)
                     call get_NAC_ewald_r(fi_fullsym,qpts,stars_fullsym,dyn_mat_NAC_r,qpts%bkf(:,iQ),iQ)
@@ -205,37 +205,37 @@ contains
             ! interpolate to dense grid on a arbitrary q-point
             ! specified in the inp.xml kpts.xml
 
-            do iQ = 1, size(fi%juPhon%qvec_interpolate,2)
-                call ift_dyn(fi_fullsym%atoms,fi_fullsym%kpts,ft_lim,bigBox_lim,FTweight,fi%juPhon%qvec_interpolate(:,iQ),dyn_mat_r,dyn_mat_pathq)
+            do iQ = 1, size(fi%dfpt%qvec_interpolate,2)
+                call ift_dyn(fi_fullsym%atoms,fi_fullsym%kpts,ft_lim,bigBox_lim,FTweight,fi%dfpt%qvec_interpolate(:,iQ),dyn_mat_r,dyn_mat_pathq)
                 write(*,*) '-------------------------'
-                !if ((fi%juPhon%l_polar) .and. (norm2(fi%kpts%bk(:,iQ)) .lt. 1e-8)) then
+                !if ((fi%dfpt%l_polar) .and. (norm2(fi%kpts%bk(:,iQ)) .lt. 1e-8)) then
                 !    call get_NAC(fi,fi%kpts,dyn_mat_pathq,iQ)
                 !end if
-                !if (fi%juPhon%l_polar) then
+                !if (fi%dfpt%l_polar) then
                 !    dyn_mat_NAC_q = cmplx(0.0,0.0)
                 !    call get_NAC_ewald(fi_fullsym,qpts,stars_fullsym,dyn_mat_NAC_q,fi%kpts%bk(:,iQ),iQ)
                 !    dyn_mat_pathq(:,:) = dyn_mat_pathq(:,:)+ dyn_mat_NAC_q(:,:)
                 !end if
                 call timestart("Dynmat diagonalization")
-                call DiagonalizeDynMat(fi%atoms, fi%juPhon%qvec_interpolate(:,iQ), fi%juPhon%calcEigenVec, dyn_mat_pathq, eigenVals, eigenVecs, iQ,.TRUE.,TRIM(dynfiletag),fi%juPhon%l_sumrule_intp,l_writeOutput=.true.)
+                call DiagonalizeDynMat(fi%atoms, fi%dfpt%qvec_interpolate(:,iQ), fi%dfpt%calcEigenVec, dyn_mat_pathq, eigenVals, eigenVecs, iQ,.TRUE.,TRIM(dynfiletag),fi%dfpt%l_sumrule_intp,l_writeOutput=.true.)
                 call timestop("Dynmat diagonalization")
 
                 call timestart("Frequency calculation")
-                call CalculateFrequencies(fi%atoms, iQ, eigenVals, eigenFreqs,TRIM(dynfiletag),fi%juPhon%qvec_interpolate(:,iQ))
+                call CalculateFrequencies(fi%atoms, iQ, eigenVals, eigenFreqs,TRIM(dynfiletag),fi%dfpt%qvec_interpolate(:,iQ))
                 call timestop("Frequency calculation")
 
-                if (fi%juPhon%l_dos) eigenValsFull(:,iQ,1) = eigenFreqs(:) ! save eigenfrequencies in case of dos
+                if (fi%dfpt%l_dos) eigenValsFull(:,iQ,1) = eigenFreqs(:) ! save eigenfrequencies in case of dos
 
                 deallocate(eigenVals, eigenVecs, eigenFreqs, dyn_mat_pathq)
             end do ! iQ
 
-            if (fi%juPhon%l_dos) then 
+            if (fi%dfpt%l_dos) then 
                 banddosLocal = fi%banddos 
                 banddosLocal%dos = .true.
                 call dos%init(fi%input,fi%atoms,fi%kpts,banddosLocal,.false.,eigenValsFull)
                 allocate(eigdos(1))
                 eigdos(1)%p=>dos 
-                call make_dos(fi%kpts,fi%atoms,fi%vacuum,fi%input,fi%banddos,fi%sliceplot,fi%noco,nococonv,fi%sym,fi%cell,results,eigdos,fi%juPhon)
+                call make_dos(fi%kpts,fi%atoms,fi%vacuum,fi%input,fi%banddos,fi%sliceplot,fi%noco,nococonv,fi%sym,fi%cell,results,eigdos,fi%dfpt)
             end if 
         end if !irank==0 
 

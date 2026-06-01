@@ -27,7 +27,7 @@ MODULE m_dfpt_sternheimer
 IMPLICIT NONE
 
 CONTAINS
-   SUBROUTINE dfpt_sternheimer(sternheimerJob, fi, xcpot, sphhar, stars, starsq, nococonv, qpts, fmpi, results, resultsq, enpara, hybdat, juPhon, &
+   SUBROUTINE dfpt_sternheimer(sternheimerJob, fi, xcpot, sphhar, stars, starsq, nococonv, qpts, fmpi, results, resultsq, enpara, hybdat, dfpt, &
                                rho, vTot, grRho, grVtot, grVext, iQ, iDType, iDir, dfpt_tag, eig_id, &
                                l_real, results1, dfpt_eig_id, dfpt_eig_id2, q_eig_id, &
                                denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, &
@@ -45,7 +45,7 @@ CONTAINS
       TYPE(t_results),    INTENT(INOUT)  :: results, resultsq, results1
       TYPE(t_hybdat),     INTENT(INOUT)  :: hybdat
       TYPE(t_enpara),     INTENT(INOUT)  :: enpara
-      TYPE(t_juPhon),     INTENT(IN)     :: juPhon
+      TYPE(t_dfpt),     INTENT(IN)     :: dfpt
       TYPE(t_potden),     INTENT(IN)     :: rho, vTot, grRho, grVtot, grVext
 
       TYPE(t_potden),     INTENT(INOUT) :: denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im
@@ -207,24 +207,24 @@ CONTAINS
          IF (strho) THEN
             if (fmpi%irank==0) write(oUnit, *) "vExt1", iDir
             CALL dfpt_vgen(sternheimerJob,hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
-                           juPhon,fi%cell,fmpi,fi%noco,nococonv_int,rho_loc0,vTot,&
+                           dfpt,fi%cell,fmpi,fi%noco,nococonv_int,rho_loc0,vTot,&
                            starsq,denIn1Im,vTot1,.FALSE.,vTot1Im,denIn1,iDtype,iDir,[1,1])!-?
                            ! Last variable: [m,n] dictates with [1/0, 1/0], whether or not we take
                            ! V1*Theta and V*Theta1 into account respectively. For [1,1] all is
                            ! contained.
             IF (l_minusq) THEN
                CALL dfpt_vgen(sternheimerJob,hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
-                              juPhon,fi%cell,fmpi,fi%noco,nococonv,rho_loc0,vTot,&
+                              dfpt,fi%cell,fmpi,fi%noco,nococonv,rho_loc0,vTot,&
                               starsmq,denIn1mIm,vTot1m,.FALSE.,vTot1mIm,denIn1m,iDtype,iDir,[1,1])!-?
             END IF
          ELSE
             if (fmpi%irank==0) write(oUnit, *) "vEff1", iDir
             CALL dfpt_vgen(sternheimerJob,hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
-                           juPhon,fi%cell,fmpi,fi%noco,nococonv,rho_loc,vTot,&
+                           dfpt,fi%cell,fmpi,fi%noco,nococonv,rho_loc,vTot,&
                            starsq,denIn1Im,vTot1,.TRUE.,vTot1Im,denIn1,iDtype,iDir,[1,1])
             IF (l_minusq) THEN
                CALL dfpt_vgen(sternheimerJob,hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
-                              juPhon,fi%cell,fmpi,fi%noco,nococonv,rho_loc,vTot,&
+                              dfpt,fi%cell,fmpi,fi%noco,nococonv,rho_loc,vTot,&
                               starsmq,denIn1mIm,vTot1m,.TRUE.,vTot1mIm,denIn1m,iDtype,iDir,[1,1])
             END IF
          END IF
@@ -232,7 +232,7 @@ CONTAINS
          IF (final_SH_it) THEN
             if (fmpi%irank==0) write(oUnit, *) "vC1", iDir
             CALL dfpt_vgen(sternheimerJob,hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
-                           juPhon,fi%cell,fmpi,fi%noco,nococonv,rho_loc,vTot,&
+                           dfpt,fi%cell,fmpi,fi%noco,nococonv,rho_loc,vTot,&
                            starsq,denIn1Im,vC1,.FALSE.,vC1Im,denIn1,iDtype,iDir,[0,0])
             
          END IF

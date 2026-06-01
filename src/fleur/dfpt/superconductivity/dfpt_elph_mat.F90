@@ -126,7 +126,7 @@ CONTAINS
                 CALL timestart("Generating Potential Perturbation")
                 IF (fmpi%irank==0) WRITE(oUnit, *) "vEff1", iDir
                 CALL dfpt_vgen(sternheimerJob,hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
-                           fi%juphon,fi%cell,fmpi,fi%noco,nococonv,rho_loc,vTot,&
+                           fi%dfpt,fi%cell,fmpi,fi%noco,nococonv,rho_loc,vTot,&
                            starsq,denIn1Im_loc,vTot1,.TRUE.,vTot1Im,denIn1_loc,iDtype,iDir,[1,1])
                     
                 CALL timestop("Generating Potential Perturbation")

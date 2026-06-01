@@ -56,7 +56,7 @@ CONTAINS
         gmat(:,:,:,:,:) = ABS(gmat(:,:,:,:,:))**2 
         
 
-        SELECT CASE(fi%juphon%i_integration)
+        SELECT CASE(fi%dfpt%i_integration)
 
             ! 1 = Full calculation of linewidth with one delta function via smearing 
             ! 2 = Double delta approximation of linewidth calculated with  smearing
@@ -119,7 +119,7 @@ CONTAINS
 #endif 
                         IF (fmpi%irank == 0 ) THEN 
                             DO ispin = 1 , fi%input%jspins
-                                CALL smooth(eGrid,linewidth(:,ispin),fi%juPhon%smearingGauss,size(eGrid))
+                                CALL smooth(eGrid,linewidth(:,ispin),fi%dfpt%smearingGauss,size(eGrid))
                             END DO 
 
 
@@ -160,7 +160,7 @@ CONTAINS
                         ! Gaussian Smearing is already done in routine, in case of double delta distribution
                         CALL dos_bin_double(fmpi,fi%input%jspins,fi%kpts%wtkpt,eGrid,results%eig(nuWindow(1,1):nuWindow(1,2),:,:)  &
                         &                   ,resultsq%eig(nuWindow(2,1):nuWindow(2,2),:,:), REAL(gmat(:,:,:,:,iMode))  & 
-                        &                   , fi%juphon%smearingGauss ,linewidth, results%ef)
+                        &                   , fi%dfpt%smearingGauss ,linewidth, results%ef)
 
 #ifdef CPP_MPI
                         CALL MPI_ALLREDUCE(MPI_IN_PLACE,linewidth,size(linewidth),MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)
@@ -282,7 +282,7 @@ CONTAINS
         END SELECT
 
         IF (fmpi%irank == 0 ) THEN 
-            IF ( iQ .EQ. fi%juPhon%startq ) THEN 
+            IF ( iQ .EQ. fi%dfpt%startq ) THEN 
                 open( 110, file="linewidth", status='replace', action='write', form='formatted')
                 write(110,*) "q-Point", qpts%bk(:,iQ) 
                 write(*,*) '-------------------------'

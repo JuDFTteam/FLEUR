@@ -66,9 +66,9 @@ MODULE m_dfpt_tetra_single
                             !DO j = i+1,ncorners !corner
                             !    jcorn = fi%kpts%ntetra(j,itet)
                             !    eig_nondeg(comInd,jcorn,ispin) =  resultsq%eig(iNupr,jcorn,ispin) - results%eig(nu,jcorn,ispin) 
-                            !    IF (abs(eig_nondeg(comInd,icorn,ispin)-eig_nondeg(comInd,jcorn,ispin)).LT.fi%juPhon%eDiffcut) THEN 
-                            !        eig_nondeg(comInd,icorn,ispin) = eig_nondeg(comInd,icorn,ispin) + i*fi%juPhon%eDiffcut*itet 
-                            !        eig_nondeg(comInd,jcorn,ispin) = eig_nondeg(comInd,jcorn,ispin) - i*fi%juPhon%eDiffcut*itet  
+                            !    IF (abs(eig_nondeg(comInd,icorn,ispin)-eig_nondeg(comInd,jcorn,ispin)).LT.fi%dfpt%eDiffcut) THEN 
+                            !        eig_nondeg(comInd,icorn,ispin) = eig_nondeg(comInd,icorn,ispin) + i*fi%dfpt%eDiffcut*itet 
+                            !        eig_nondeg(comInd,jcorn,ispin) = eig_nondeg(comInd,jcorn,ispin) - i*fi%dfpt%eDiffcut*itet  
                             !    END IF     
                             !END DO !j
                         END DO !i
@@ -101,7 +101,7 @@ MODULE m_dfpt_tetra_single
                                 tmpMat(i) = gmat(indPr,ind,icorn,ispin,iMode)  
                             END DO !corners
                             CALL timestart("Tetrahedon Degeneracy Test")
-                            CALL degeneracyCheck(eig,fi%juPhon%eDiffcut)
+                            CALL degeneracyCheck(eig,fi%dfpt%eDiffcut)
                             CALL timestop("Tetrahedon Degeneracy Test")
                             CALL tetra_area(eig,tmpMat,SQRT(shift(iMode)),valArea)
                             linewidth(iMode,ispin) = linewidth(iMode,ispin) + 2.0/fi%input%jspins * fi%kpts%voltet(itet)/fi%kpts%ntet * valArea 

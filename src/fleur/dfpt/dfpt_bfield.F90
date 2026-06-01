@@ -4,7 +4,7 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
-module m_dfpt_efield
+module m_dfpt_bfield
 
     use m_juDFT
     use m_constants
@@ -14,7 +14,7 @@ module m_dfpt_efield
 
 contains 
 
-    subroutine dfpt_efield(fi_ext,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,rho,vTot,vxc,&
+    subroutine dfpt_bfield(fi_ext,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,rho,vTot,vxc,&
                             grRho3,grVtot3,grVext3,results,resultsq,results1, eig_id,q_eig_id, dfpt_eig_id,dfpt_eig_id2)
 
 
@@ -22,7 +22,7 @@ contains
         use m_eigen
         use m_fermie
         use m_dfpt_sternheimer
-        use m_dfpt_dielecten
+        use m_dfpt_magsusc
 
 
         type(t_fleurinput),intent(in) :: fi_ext 
@@ -51,7 +51,7 @@ contains
 
         ! dielectric tensor 
         type(t_fleurinput) :: fi
-        complex :: diel_tensor(3,3)
+        complex :: magnetic_susc
 
         ! helper types
         type(t_hub1data) :: hub1data
@@ -68,7 +68,7 @@ contains
     
         !set l_phonon to true, not nice WIP
         fi= fi_ext
-        fi%juphon%l_phonon=.FALSE.
+        fi%dfpt%l_phonon=.FALSE.
 
 
         !sigma_coul = cmplx(0.0,0.0)
@@ -77,25 +77,25 @@ contains
         l_real = fi%sym%invs.and.(.not.fi%noco%l_soc).and.(.not.fi%noco%l_noco).and.fi%atoms%n_hia==0 !change tomorra 
 
 
-        diel_tensor = CMPLX(0,0)
+        magnetic_susc = CMPLX(0,0)
 
-        if (fmpi%irank==0) write(*,*) "Scf calculation for electric field perturbation"
+        if (fmpi%irank==0) write(*,*) "Scf calculation for Zeeman field perturbation"
 
-        do iDir = 1,3 !for all cartesian directions
-            call timestart("Dirloop Efield")
+        do iDir = 1,1 !for all cartesian directions
+            call timestart("Dirloop Bfield")
 
             dfpt_tag = ''
             write(dfpt_tag,'(a1,i0,a2,i0)') 'q', 1, '_j', iDir
 
             kqpts = fi%kpts
             do ikpt = 1, fi%kpts%nkpt
-                kqpts%bk(:, ikpt) = kqpts%bk(:, ikpt) + fi%juPhon%qvec_efield(:,iDir)
+                kqpts%bk(:, ikpt) = kqpts%bk(:, ikpt) + fi%dfpt%qvec(:,1)
             end do 
-
+            !stop
             qpts = fi%kpts
             deallocate(qpts%bk)
             allocate(qpts%bk(3,1)) ! this is not nice. Maybe change the expected type in dfpt_sternheimer/make_stars
-            qpts%bk(:,1) = fi%juPhon%qvec_efield(:,iDir)
+            qpts%bk(:,1) = fi%dfpt%qvec(:,1)
 
 
             call timestart("Eigenstuff at k+q")
@@ -133,17 +133,17 @@ contains
 
             if (fmpi%irank==0) write(*,*) '-------------------------'
             call timestart("Sternheimer")
-            call dfpt_sternheimer(fi, xcpot, sphhar, stars, starsq, nococonv, qpts, fmpi, results, resultsq, enpara, hybdat, fi%juPhon, &
+            call dfpt_sternheimer(fi, xcpot, sphhar, stars, starsq, nococonv, qpts, fmpi, results, resultsq, enpara, hybdat, fi%dfpt, &
                                   rho, vTot, grRho3(iDir), grVtot3(iDir), grVext3(iDir), 1, 1, iDir, &
                                   dfpt_tag, eig_id, l_real, results1, dfpt_eig_id, dfpt_eig_id2, q_eig_id, &
                                   den1, vTot1, den1Im, vTot1Im, vC1, vC1Im)
             call timestop("Sternheimer")
             if (fmpi%irank==0) write(*,*) '-------------------------'  
-            call dfpt_dielecten_HF_int(fi,stars,starsq,sphhar,fmpi,den1,den1Im,diel_tensor(iDir,:),rho,iDir,1)
+            call dfpt_magnetic_susc(fi,stars,starsq,sphhar,fmpi,den1,den1Im,magnetic_susc)
 
 
 
-            call timestop("Dirloop Efield")
+            call timestop("Dirloop Bfield")
         end do !iDir 
 
 
@@ -152,20 +152,15 @@ contains
 ! #endif  
 
         ! IO of results 
-        if (fmpi%irank==0) then
-            call timestart("diel_tensor")
-            if (fi%juPhon%l_efield_scr) then
-                write(*,*) "Scf calculation for screened electric field perturbation finished"
-                call dfpt_dielecten_final_old(fi,diel_tensor(:,:))
-            else
-                write(*,*) "Scf calculation for bare electric field perturbation finished"
-                call dfpt_dielecten_final_new(fi,diel_tensor(:,:))
-            end if 
-            call timestop("diel_tensor")
-        end if 
+        !if (fmpi%irank==0) then
+        !    call timestart("magnetic susceptibilty")
+        !    write(*,*) "Scf calculation for Zeeman field perturbation finished"
+        !    call dfpt_dielecten_final_old(fi,magnetic_susc)
+        !    call timestop("magnetic susceptibilty")
+        !end if 
 
 
-    end subroutine dfpt_efield
+    end subroutine dfpt_bfield
 
 
-end module m_dfpt_efield
+end module m_dfpt_bfield

@@ -43,7 +43,7 @@ CONTAINS
         INTEGER, OPTIONAL, INTENT(IN) :: iDir,iDtype
 
 
-        call make_stars(stars,sym,fi%atoms,vacuum,sphhar,input,cell,noco,fmpi,qvec,iDtype,iDir,gmaxzLocal=fi%juphon%gmaxzLocal)
+        call make_stars(stars,sym,fi%atoms,vacuum,sphhar,input,cell,noco,fmpi,qvec,iDtype,iDir,gmaxzLocal=fi%dfpt%gmaxzLocal)
         atomsLocal = fi%atoms
         call convn(fmpi%irank == 0, atomsLocal, stars)
         call potdenLocal%init(stars,atomsLocal,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_POTTOT)

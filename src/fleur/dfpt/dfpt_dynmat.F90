@@ -11,7 +11,7 @@ IMPLICIT NONE
 
 CONTAINS
    SUBROUTINE dfpt_dynmat_row(sternheimerJob, fi, stars, starsq, sphhar, xcpot, nococonv, hybdat, fmpi, qpts, iQ, iDtype_row, iDir_row, &
-                              eig_id, dfpt_eig_id, dfpt_eig_id2, enpara, results, results1, l_real, juphon,&
+                              eig_id, dfpt_eig_id, dfpt_eig_id2, enpara, results, results1, l_real, dfpt,&
                               rho, vTot, grRho3, grVext3, grVC3, denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_row, &
                               E2ndOrdII, q_eig_id)
       USE m_step_function
@@ -31,7 +31,7 @@ CONTAINS
       TYPE(t_hybdat),     INTENT(INOUT) :: hybdat
       TYPE(t_mpi),        INTENT(IN)    :: fmpi
       TYPE(t_kpts),       INTENT(IN)    :: qpts
-      TYPE(t_juphon),     INTENT(IN)    :: juphon
+      TYPE(t_dfpt),     INTENT(IN)    :: dfpt
 
       TYPE(t_potden), INTENT(IN) :: rho
       TYPE(t_potden), INTENT(IN)    :: vTot
@@ -212,7 +212,7 @@ CONTAINS
             CALL vExt1%init(starsqLocal, atomsLocal, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
             CALL vExt1Im%init(starsqLocal, atomsLocal, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
             CALL dfpt_vgen(sternheimerJob,hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,starsLocal,fi%vacuum,fi%sym,&
-                           juphon,fi%cell,fmpi,fi%noco,nococonv,potdendummy,vTot,&
+                           dfpt,fi%cell,fmpi,fi%noco,nococonv,potdendummy,vTot,&
                            starsqLocal,potden1dummy,vExt1,.FALSE.,vExt1Im,potden1dummy,iDtype_col,iDir_col,[0,0])
 
             ! IR integral:
@@ -250,7 +250,7 @@ CONTAINS
                CALL potden1dummy%resetpotden()
                CALL potdendummy%resetpotden()
                CALL vgen_coulomb(1, fmpi, fi%input, fi%field, fi%vacuum, fi%sym, starsqLocal, fi%cell, &
-                         & sphhar, atomsLocal, .TRUE., potden1dummy, grgrVCq, sternheimerJob=sternheimerJob,juphon=juphon, &
+                         & sphhar, atomsLocal, .TRUE., potden1dummy, grgrVCq, sternheimerJob=sternheimerJob,dfpt=dfpt, &
                          & dfptdenimag=potden1dummy, dfptvCoulimag=grgrVCqIm,dfptden0=potden1dummy,stars2=starsLocal,iDtype=iDtype_col,iDir=iDir_col,iDir2=iDir_row)
                IF (iDtype_col==iDtype_row) THEN
                   e2_vm = 0.0
@@ -359,7 +359,7 @@ CONTAINS
                ! Get V_{ext}(1) for \alpha, i, q=0 with gradient cancellation
                CALL potdendummy%resetpotden()
                CALL dfpt_vgen(sternheimerJob,hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,starsLocal,fi%vacuum,fi%sym,&
-                              juphon,fi%cell,fmpi,fi%noco,nococonv,potdendummy,vTot,&
+                              dfpt,fi%cell,fmpi,fi%noco,nococonv,potdendummy,vTot,&
                               starsLocal,potdendummy,vExt1,.FALSE.,vExt1Im,potdendummy,iDtype_col,iDir_col,[0,0])
 
                ! Integrals:

@@ -87,7 +87,7 @@ module m_types_efield
     end subroutine q_indepent_properties_efield
 
     subroutine postprocessing_scf_efield(this,sternheimerJob,fi,stars,starsq,sphhar,xcpot,nococonv,hybdat,fmpi,qpts,q_list,iQ,iDtype,iDir,eig_id,dfpt_eig_id, &
-                                          dfpt_eig_id2,enpara,results,results1,l_real,juphon,rho,vTot,grRho3,grVext3,grVc3,den1,vTot1,den1Im,vTot1Im,vC1,vC1Im)
+                                          dfpt_eig_id2,enpara,results,results1,l_real,dfpt,rho,vTot,grRho3,grVext3,grVc3,den1,vTot1,den1Im,vTot1Im,vC1,vC1Im)
         
         
         use m_types
@@ -110,7 +110,7 @@ module m_types_efield
         type(t_enpara),intent(inout)     :: enpara
         type(t_results),intent(inout)    :: results, results1
         logical,intent(in)               :: l_real
-        type(t_juphon),intent(in)        :: juphon
+        type(t_dfpt),intent(in)        :: dfpt
         type(t_potden),intent(in)        :: rho,vTot,grRho3(3),grVext3(3),grVC3(3),den1,vTot1,den1Im,vTot1Im
         type(t_potden),intent(inout)     :: vC1,vC1Im
 
@@ -131,7 +131,7 @@ module m_types_efield
     end subroutine postprocessing_scf_efield
 
 
-    subroutine postprocessing_qpoint_efield(this,fi,fmpi,juphon,qpts,iQ,q_list)
+    subroutine postprocessing_qpoint_efield(this,fi,fmpi,dfpt,qpts,iQ,q_list)
 
         use m_types
         use m_dfpt_dielecten
@@ -139,7 +139,7 @@ module m_types_efield
         class(t_efield_pert), intent(inout) :: this
         type(t_fleurinput),intent(in)  :: fi 
         type(t_mpi),intent(in)         :: fmpi
-        type(t_juphon),intent(in)      :: juphon
+        type(t_dfpt),intent(in)      :: dfpt
         type(t_kpts),intent(in)        :: qpts
         integer,intent(in)             :: iQ
         integer, intent(in)            :: q_list(:)
@@ -147,7 +147,7 @@ module m_types_efield
     end subroutine postprocessing_qpoint_efield
 
 
-    subroutine write_outfiles_efield(this,fi,fmpi,juPhon)
+    subroutine write_outfiles_efield(this,fi,fmpi,dfpt)
 
         use m_types 
         use m_dfpt_dielecten
@@ -155,7 +155,7 @@ module m_types_efield
         class(t_efield_pert),intent(inout)   :: this         
         type(t_fleurinput),intent(in) :: fi
         type(t_mpi),intent(in)        :: fmpi
-        type(t_juPhon),intent(in)     :: juPhon
+        type(t_dfpt),intent(in)     :: dfpt
 
 
         complex, allocatable :: diel_tensor(:,:)
@@ -167,7 +167,7 @@ module m_types_efield
         ! IO of results 
         if (fmpi%irank==0) then
             call timestart("diel_tensor")
-            if (juPhon%l_efield_scr) then
+            if (dfpt%l_efield_scr) then
                 write(*,*) "Scf calculation for screened electric field perturbation finished"
                 call dfpt_dielecten_final_old(fi,diel_tensor(:,:))
             else

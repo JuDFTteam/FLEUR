@@ -65,7 +65,7 @@ module m_types_dfpt_scf
 
     interface 
         subroutine postprocessing_scf(this,sternheimerJob,fi,stars,starsq,sphhar,xcpot,nococonv,hybdat,fmpi,qpts,q_list,iQ,iDtype,iDir,eig_id,dfpt_eig_id, &
-                                          dfpt_eig_id2,enpara,results,results1,l_real,juPhon,rho,vTot,grRho3,grVext3,grVc3,den1,vTot1,den1Im,vTot1Im,vC1,vC1Im)
+                                          dfpt_eig_id2,enpara,results,results1,l_real,dfpt,rho,vTot,grRho3,grVext3,grVc3,den1,vTot1,den1Im,vTot1Im,vC1,vC1Im)
             use m_types
             
             import t_dfpt_scf
@@ -85,7 +85,7 @@ module m_types_dfpt_scf
             type(t_enpara),intent(inout)      :: enpara
             type(t_results),intent(inout)     :: results, results1
             logical,intent(in)                :: l_real
-            type(t_juPhon),intent(in)         :: juPhon
+            type(t_dfpt),intent(in)         :: dfpt
             type(t_potden),intent(in)         :: rho,vTot,grRho3(3),grVext3(3),grVC3(3),den1,vTot1,den1Im,vTot1Im
             type(t_potden),intent(inout)      :: vC1,vC1Im         
         end subroutine postprocessing_scf
@@ -93,13 +93,13 @@ module m_types_dfpt_scf
 
 
     interface 
-        subroutine postprocessing_qpoint(this,fi,fmpi,juPhon,qpts,iQ,q_list)
+        subroutine postprocessing_qpoint(this,fi,fmpi,dfpt,qpts,iQ,q_list)
             use m_types
             import t_dfpt_scf
             class(t_dfpt_scf),intent(inout)   :: this         
             type(t_fleurinput),intent(in) :: fi
             type(t_mpi),intent(in)        :: fmpi
-            type(t_juPhon),intent(in)     :: juPhon
+            type(t_dfpt),intent(in)     :: dfpt
             type(t_kpts),intent(in)       :: qpts
             integer,intent(in)            :: iQ
             integer,intent(in)            :: q_list(:)
@@ -108,13 +108,13 @@ module m_types_dfpt_scf
 
 
     interface 
-        subroutine write_outfiles(this,fi,fmpi,juPhon)
+        subroutine write_outfiles(this,fi,fmpi,dfpt)
             use m_types
             import t_dfpt_scf
             class(t_dfpt_scf),intent(inout)   :: this         
             type(t_fleurinput),intent(in) :: fi
             type(t_mpi),intent(in)        :: fmpi
-            type(t_juPhon),intent(in)     :: juPhon
+            type(t_dfpt),intent(in)     :: dfpt
         end subroutine write_outfiles
     end interface 
 
@@ -122,7 +122,7 @@ contains
 
     subroutine init_scf(this,fi,qvec)
         use m_types_fleurinput
-        use m_types_juPhon
+
         class(t_dfpt_scf), intent(inout) :: this
         type(t_fleurinput),intent(in) :: fi 
         real, intent(in) :: qvec(:,:)
@@ -139,7 +139,7 @@ contains
     end subroutine
 
 
-    subroutine perform_scf(this,sternheimerJob,fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,juPhon,rho,vTot,vxc,&
+    subroutine perform_scf(this,sternheimerJob,fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,dfpt,rho,vTot,vxc,&
                             results,resultsq, results1, eig_id,q_eig_id, & 
                             dfpt_eig_id,dfpt_eig_id2,l_minusq,resultsqm,results1m,qm_eig_id, dfpt_eigm_id, dfpt_eigm_id2)
         use m_eigen 
@@ -160,7 +160,7 @@ contains
         type(t_enpara),intent(inout)     :: enpara
         type(t_nococonv),intent(in)   :: nococonv
         type(t_hybdat),intent(inout)     :: hybdat
-        type(t_juPhon),intent(in)     :: juPhon
+        type(t_dfpt),intent(in)     :: dfpt
         type(t_potden),intent(in)     :: rho 
         type(t_potden),intent(in)     :: vTot
         type(t_potden),intent(in)     :: vxc
@@ -304,7 +304,7 @@ contains
             ! iteratively, providing the scf part of dfpt calculations.
             if (l_minusq) then 
                 call timestart("Sternheimer with -q")
-                call dfpt_sternheimer(sternheimerJob,fi, xcpot, sphhar, stars, starsq, nococonv, qpts, fmpi, results, resultsq, enpara, hybdat, juPhon, &
+                call dfpt_sternheimer(sternheimerJob,fi, xcpot, sphhar, stars, starsq, nococonv, qpts, fmpi, results, resultsq, enpara, hybdat, dfpt, &
                                     rho, vTot, grRho3(iDir), grVtot3(iDir), grVext3(iDir), q_list(iQ), iDtype, iDir, &
                                     dfpt_tag, eig_id, l_real, results1, dfpt_eig_id, dfpt_eig_id2, q_eig_id, &
                                     den1, vTot1, den1Im, vTot1Im, vC1, vC1Im, &
@@ -312,7 +312,7 @@ contains
                 call timestop("Sternheimer with -q")
             else
                 call timestart("Sternheimer")
-                call dfpt_sternheimer(sternheimerJob,fi, xcpot, sphhar, stars, starsq, nococonv, qpts, fmpi, results, resultsq, enpara, hybdat, juPhon, &
+                call dfpt_sternheimer(sternheimerJob,fi, xcpot, sphhar, stars, starsq, nococonv, qpts, fmpi, results, resultsq, enpara, hybdat, dfpt, &
                                     rho, vTot, grRho3(iDir), grVtot3(iDir), grVext3(iDir), q_list(iQ), iDtype, iDir, &
                                     dfpt_tag, eig_id, l_real, results1, dfpt_eig_id, dfpt_eig_id2, q_eig_id, &
                                     den1, vTot1, den1Im, vTot1Im, vC1, vC1Im)
@@ -321,11 +321,11 @@ contains
 
             
             call this%postprocessing_scf(sternheimerJob,fi,stars,starsq,sphhar,xcpot,nococonv,hybdat,fmpi,qpts,q_list,iQ,iDtype,iDir,eig_id,dfpt_eig_id, &
-                                dfpt_eig_id2,enpara,results,results1,l_real,juPhon,rho,vTot,grRho3,grVext3,grVc3,den1,vTot1,den1Im,vTot1Im,vC1,vC1Im)
+                                dfpt_eig_id2,enpara,results,results1,l_real,dfpt,rho,vTot,grRho3,grVext3,grVc3,den1,vTot1,den1Im,vTot1Im,vC1,vC1Im)
 
-            if (fmpi%irank == 0 .and. juPhon%l_rm_qhdf) call system("rm "//trim(dfpt_tag)//".hdf")
+            if (fmpi%irank == 0 .and. dfpt%l_rm_qhdf) call system("rm "//trim(dfpt_tag)//".hdf")
             
-            if (sternheimerjob%needs_postprocessing(iJob)) call this%postprocessing_qpoint(fi,fmpi,juPhon,qpts,iQ,q_list)
+            if (sternheimerjob%needs_postprocessing(iJob)) call this%postprocessing_qpoint(fi,fmpi,dfpt,qpts,iQ,q_list)
         end do ! iJob 
 
     end subroutine perform_scf

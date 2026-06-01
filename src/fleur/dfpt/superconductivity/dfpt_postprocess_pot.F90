@@ -93,12 +93,12 @@ contains
          ! create a kpts type that contains the necessary q-vectors 
         qpts = fi%kpts
         deallocate(qpts%bk)
-        allocate(qpts%bk,mold=fi%juPhon%qvec) ! this is not nice. Maybe change the expected type in dfpt_sternheimer/make_stars
-        qpts%bk(:, :size(fi%juPhon%qvec,2)) = fi%juPhon%qvec
-        allocate(q_list(size(fi%juPhon%qvec,2)))  
-        q_list = (/(iArray, iArray=1,SIZE(fi%juPhon%qvec,2), 1)/)
+        allocate(qpts%bk,mold=fi%dfpt%qvec) ! this is not nice. Maybe change the expected type in dfpt_sternheimer/make_stars
+        qpts%bk(:, :size(fi%dfpt%qvec,2)) = fi%dfpt%qvec
+        allocate(q_list(size(fi%dfpt%qvec,2)))  
+        q_list = (/(iArray, iArray=1,SIZE(fi%dfpt%qvec,2), 1)/)
 
-        bandWindowSize = fi%juPhon%bandWindow(2) - fi%juPhon%bandWindow(1) + 1 
+        bandWindowSize = fi%dfpt%bandWindow(2) - fi%dfpt%bandWindow(1) + 1 
 
         allocate(dynMat(3*fi%atoms%nat,3*fi%atoms%nat))
         allocate(gmat(bandWindowSize,bandWindowSize,fi%kpts%nkpt,fi%input%jspins,3*fi%atoms%nat,size(q_list)))        
@@ -119,7 +119,7 @@ contains
                 ! Read in eigenvectors and eigenvalues for given q-point
                 ! Be careful only irank 0 has eigenVals and eigenVecs allocated 
                 call read_dynmats(fi%atoms%nat,iQ,dynMat)
-                CALL DiagonalizeDynMat(fi%atoms, qpts%bk(:,q_list(iQ)), fi%juPhon%calcEigenVec, dynMat(:,:), eigenVals, eigenVecs, q_list(iQ),.false.,"raw",.false.,l_writeOutput=.false.)
+                CALL DiagonalizeDynMat(fi%atoms, qpts%bk(:,q_list(iQ)), fi%dfpt%calcEigenVec, dynMat(:,:), eigenVals, eigenVecs, q_list(iQ),.false.,"raw",.false.,l_writeOutput=.false.)
                 call timestop("dynMat IO")
             end if 
 
@@ -171,7 +171,7 @@ contains
 #endif 
                     call timestart("Generating Potential Perturbation")
                     call dfpt_vgen(sternheimerJob,hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
-                                    fi%juPhon,fi%cell,fmpi,fi%noco,nococonv,rho_local,vTot,&
+                                    fi%dfpt,fi%cell,fmpi,fi%noco,nococonv,rho_local,vTot,&
                                     starsq,den1Im,vTot1,.TRUE.,vTot1Im,den1,iDtype,iDir,[1,1])
                     call timestop("Generating Potential Perturbation")
                     ! The matrix element needs the gradient correction in the MT 
@@ -180,7 +180,7 @@ contains
                     ! construct the electron-phonon element in cartesian basis 
                     call timestart("elph element")
                     CALL matrix_element(sternheimerJob,fi,sphhar,results,fmpi,enpara,nococonv,starsq,vTot1,vTot1Im,vTot,rho, qpts%bk(:, iQ),&
-                                        eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatCart,fi%juPhon%bandWindow) 
+                                        eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatCart,fi%dfpt%bandWindow) 
 
                     call timestop("elph element")
 

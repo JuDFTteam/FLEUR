@@ -92,8 +92,8 @@ contains
         do iDtype = 1,fi%atoms%ntype
             do iDir =1,3
                 CALL starsq_vextpho%reset_stars()
-                print*,"shape(q_vec)",shape(fi%juPhon%qvec_efield)
-                qvec_int= 0.0!fi%juPhon%qvec_efield(1,:)
+                print*,"shape(q_vec)",shape(fi%dfpt%qvec_efield)
+                qvec_int= 0.0!fi%dfpt%qvec_efield(1,:)
                 CALL make_stars(starsq_vextpho, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, qvec_int, iDtype, iDir)
                 starsq_vextpho%ufft = stars%ufft
 
@@ -104,21 +104,21 @@ contains
                 CALL vExt1Impho%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
                 print*,"right before it"
                 CALL dfpt_vgen(sternheimerJob,hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
-                            fi%juPhon,fi%cell,fmpi,fi%noco,nococonv,rho_loc0,vTot,&
+                            fi%dfpt,fi%cell,fmpi,fi%noco,nococonv,rho_loc0,vTot,&
                             starsq,den1Im_dummy,vExt1pho,.FALSE.,vExt1Impho,den1_dummy,iDtype,iDir,[1,1],l_vextpho=.TRUE.)
                 
                 print*,"sum(vExt1pho%pw(:,1))", sum(vExt1pho%pw(:,1))
                 !stop
                 tempval_pw = CMPLX(0.0,0.0)
                 ! call make_stars
-                !qvec_int= fi%juPhon%qvec_efield(iQ,:)
+                !qvec_int= fi%dfpt%qvec_efield(iQ,:)
                 !print*,"qvec_int",qvec_int
                 !CALL starsq_vext%reset_stars()
                 !CALL make_stars(starsq_vext, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, qvec_int, 1, iQ,.true.)
                 !starsq_vext%ufft = starsq%ufft !why again
                 !call vExt1%init(starsq_vext, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
                 !call vExt1Im%init(starsq_vext, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
-                !call dfpt_vefield(fi%juPhon,starsq_vext,fi%atoms,fi%sym,sphhar,fi%cell,vExt1,vExt1Im,iQ,q_sign)
+                !call dfpt_vefield(fi%dfpt,starsq_vext,fi%atoms,fi%sym,sphhar,fi%cell,vExt1,vExt1Im,iQ,q_sign)
                 !interstitial
                 pwwq2 = CMPLX(0.0,0.0)
                 !print*,"I make it this far"
@@ -211,7 +211,7 @@ contains
 
         call vExt1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
         call vExt1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
-        call dfpt_vefield(fi%juPhon,starsq,fi%atoms,fi%sym,sphhar,fi%cell,vExt1,vExt1Im,iQ,q_sign)
+        call dfpt_vefield(fi%dfpt,starsq,fi%atoms,fi%sym,sphhar,fi%cell,vExt1,vExt1Im,iQ,q_sign)
 
         !interstitial
         pwwq2 = CMPLX(0.0,0.0)
@@ -276,7 +276,7 @@ contains
         pwwq2 = CMPLX(0.0,0.0)
         theta1full = CMPLX(0.0,0.0)
         !CALL stepf_analytical(fi%sym, stars, fi%atoms, fi%input, fi%cell, fmpi, fftgrid_dummy, [0.0,0.0,0.0], iDType, iDir_den, 1, theta1full0(0:,:,:))
-        CALL stepf_analytical(fi%sym, starsq, fi%atoms, fi%input, fi%cell, fmpi, fftgrid_dummy,q_sign*fi%juPhon%qvec_efield(:,iQ), iDType, iDir_den, 1, theta1full)   
+        CALL stepf_analytical(fi%sym, starsq, fi%atoms, fi%input, fi%cell, fmpi, fftgrid_dummy,q_sign*fi%dfpt%qvec_efield(:,iQ), iDType, iDir_den, 1, theta1full)   
         DO iType = 1, fi%atoms%ntype
             DO iDir = 1, 3
                 fftgrid_dummy%grid = theta1full(0:, iType, iDir)
@@ -382,7 +382,7 @@ contains
         atom_string = 'atom No:'
         ! Turn off debugging stuff
         IF (.FALSE.) THEN
-            IF (fi%juPhon%l_efield) THEN
+            IF (fi%dfpt%l_efield) THEN
                 call write_born_effective_charge(112, "born_eff_charge", born_eff_charge, atom_string, fi)
                 call write_born_effective_charge(112, "born_eff_charge_MT", -born_eff_charge_contributions(:,:,:,1), atom_string, fi)
                 call write_born_effective_charge(112, "born_eff_charge_MT_1", -born_eff_charge_contributions(:,:,:,2), atom_string, fi)

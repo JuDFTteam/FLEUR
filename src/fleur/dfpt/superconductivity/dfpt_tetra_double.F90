@@ -93,7 +93,7 @@ CONTAINS
         !                    eigk_nondeg(ind,jcorn,ispin) =  results%eig(nu,jcorn,ispin)  
         !                    IF (abs(eigk_nondeg(ind,icorn,ispin)-eigk_nondeg(ind,jcorn,ispin)).LT.1.0e-7) THEN 
         !                        print * , "I lifted the degeneracy" , abs(eigk_nondeg(ind,icorn,ispin)-eigk_nondeg(ind,jcorn,ispin))
-        !                        eigk_nondeg(ind,icorn,ispin) = eigk_nondeg(ind,icorn,ispin) + 1.0e-7*itet ! maybe just rewrite this as fi%juPhon%edifCut only 
+        !                        eigk_nondeg(ind,icorn,ispin) = eigk_nondeg(ind,icorn,ispin) + 1.0e-7*itet ! maybe just rewrite this as fi%dfpt%edifCut only 
         !                        eigk_nondeg(ind,jcorn,ispin) = eigk_nondeg(ind,jcorn,ispin) - 1.0e-7*itet  
         !                        print * , "Now" , abs(eigk_nondeg(ind,icorn,ispin)-eigk_nondeg(ind,jcorn,ispin))
         !                    END IF     
@@ -143,8 +143,8 @@ CONTAINS
                                 tmp_gmat(i) = gmat(indPr,ind,icorn,ispin,iMode) ! we give the nu' nu element for the k points at the tetra corners
                             END DO !corners
                             CALL timestart("Tetrahedon Degeneracy Test")
-                            CALL degeneracyCheck(eigkVal,fi%juPhon%eDiffcut)
-                            CALL degeneracyCheck(eigqVal,fi%juPhon%eDiffcut)
+                            CALL degeneracyCheck(eigkVal,fi%dfpt%eDiffcut)
+                            CALL degeneracyCheck(eigqVal,fi%dfpt%eDiffcut)
                             CALL timestop("Tetrahedon Degeneracy Test")
                             call tetra_area(eigkVal,eigqVal,results%ef,fi%kpts%voltet(itet),tmp_gmat,area,icase) !results%ef voltetra(itet)
                             linewidth(iMode,ispin) = linewidth(iMode,ispin) +  2.0/fi%input%jspins * 1/fi%kpts%ntet * REAL(area)  

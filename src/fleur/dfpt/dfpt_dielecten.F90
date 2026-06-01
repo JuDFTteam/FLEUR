@@ -69,14 +69,14 @@ contains
         do iDir_col = 1, 3   
             ! call make_stars 
             tempval_pw = CMPLX(0.0,0.0)
-            qvec_int=fi%juPhon%qvec_efield(:,iDir_col)
+            qvec_int=fi%dfpt%qvec_efield(:,iDir_col)
             CALL starsq_vext%reset_stars()
-            CALL make_stars(starsq_vext, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, qvec_int, 1, iDir_col,fi%juPhon%l_efield)
+            CALL make_stars(starsq_vext, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, qvec_int, 1, iDir_col,fi%dfpt%l_efield)
             starsq_vext%ufft = starsq%ufft
 
             call vExt1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
             call vExt1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
-            call dfpt_vefield(fi%juPhon,starsq,fi%atoms,fi%sym,sphhar,fi%cell,vExt1,vExt1Im,iDir_col,1)
+            call dfpt_vefield(fi%dfpt,starsq,fi%atoms,fi%sym,sphhar,fi%cell,vExt1,vExt1Im,iDir_col,1)
 
 
             if (iDir_col .eq. iDir_den) then
@@ -174,7 +174,7 @@ contains
         CALL openXMLElementNoAttributes('Phonons')
         CALL openXMLElementNoAttributes('efield')
         attributes = ''
-        WRITE(attributes(1),'(f15.8)') fi%juPhon%qlim
+        WRITE(attributes(1),'(f15.8)') fi%dfpt%qlim
         CALL writeXMLElementPoly('dieltensor',(/'qlim'/), attributes,real(dielecten(:,1)))
         CALL closeXMLElement('efield')
         CALL closeXMLElement('Phonons')

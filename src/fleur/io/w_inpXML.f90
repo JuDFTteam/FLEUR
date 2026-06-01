@@ -17,7 +17,7 @@ MODULE m_winpXML
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 CONTAINS
    SUBROUTINE w_inpXML( &
-      atoms, vacuum, input, stars, sliceplot, forcetheo, banddos, juPhon, &
+      atoms, vacuum, input, stars, sliceplot, forcetheo, banddos, dfpt, &
       cell, sym, xcpot, noco,   mpinp, hybinp, kptsArray, kptsSelection, enpara, &
       gfinp, hub1inp, l_explicitIn, l_includeIn, filename, add_filename)
 
@@ -40,7 +40,7 @@ CONTAINS
       USE m_types_noco
       use m_types_enparaxml
       USE m_types_forcetheo
-      USE m_types_juPhon
+      USE m_types_dfpt
 
       USE m_juDFT
       USE m_constants
@@ -62,7 +62,7 @@ CONTAINS
       TYPE(t_hybinp), INTENT(IN)   :: hybinp
       TYPE(t_cell), INTENT(IN)     :: cell
       TYPE(t_banddos), INTENT(IN)  :: banddos
-      TYPE(t_juPhon), INTENT(IN)   :: juPhon
+      TYPE(t_dfpt), INTENT(IN)   :: dfpt
       TYPE(t_sliceplot), INTENT(IN):: sliceplot
       CLASS(t_xcpot), INTENT(IN)   :: xcpot
       TYPE(t_noco), INTENT(IN)     :: noco
@@ -614,9 +614,9 @@ WRITE (fileNum, 242) fr(1.0)
 395   FORMAT('      <unfoldingBand unfoldBand="', l1, '" supercellX="', i0, '" supercellY="', i0, '" supercellZ="', i0, '"/>')
       WRITE (fileNum, 395) banddos%unfoldband, banddos%s_cell_x, banddos%s_cell_y, banddos%s_cell_z
 
-!!      <juPhon l_potout="F" l_eigout="F"/>
-!396   FORMAT('      <juPhon l_potout="', l1, '" l_eigout="', l1, '"/>')
-!      WRITE (fileNum, 396) juPhon%l_potout, juPhon%l_eigout
+!!      <dfpt l_potout="F" l_eigout="F"/>
+!396   FORMAT('      <dfpt l_potout="', l1, '" l_eigout="', l1, '"/>')
+!      WRITE (fileNum, 396) dfpt%l_potout, dfpt%l_eigout
 
 !      <plotting iplot="0" />
       IF(SIZE(sliceplot%plot)>0) THEN

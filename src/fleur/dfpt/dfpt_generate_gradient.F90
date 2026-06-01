@@ -129,7 +129,7 @@ contains
         !  compute gradient external potential
         do iDir = 1 , 3 
             call vgen_coulomb(1, fmpi, fi%input, fi%field, fi%vacuum, fi%sym, starsLocal, fi%cell, &
-                         & sphhar, atomsLocal, .FALSE., potdummyLocal, grVext3(iDir), sternheimerJob=sternheimerJob,juphon=fi%juPhon, &
+                         & sphhar, atomsLocal, .FALSE., potdummyLocal, grVext3(iDir), sternheimerJob=sternheimerJob,dfpt=fi%dfpt, &
                          & dfptdenimag=potdummyLocal, dfptvCoulimag=potdummyLocal,dfptden0=potdummyLocal,stars2=starsLocal,iDtype=0,iDir=iDir)
         end do 
 
@@ -137,10 +137,10 @@ contains
         do iDir = 1, 3
             call potdummy%resetPotDen()
             call dfpt_vgen(sternheimerJob,hybdat, fi%field, fi%input, xcpot, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, &
-                            fi%juphon, fi%cell, fmpi, fi%noco, nococonv, rho_tmp, vTot, &
+                            fi%dfpt, fi%cell, fmpi, fi%noco, nococonv, rho_tmp, vTot, &
                             stars, potdummy, grVtot3(iDir), .TRUE., potdummy, grRho3(iDir), 0, iDir, [0,0])
             call dfpt_vgen(sternheimerJob,hybdat, fi%field, fi%input, xcpot, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, &
-                            fi%juphon, fi%cell, fmpi, fi%noco, nococonv, rho_tmp, vTot, &
+                            fi%dfpt, fi%cell, fmpi, fi%noco, nococonv, rho_tmp, vTot, &
                             stars, potdummy, grVc3(iDir), .FALSE., potdummy, grRho3(iDir), 0, iDir, [0,0])
         end do 
 
@@ -151,7 +151,7 @@ contains
             do iDir = 1, 3
                 call potdummyLocal%resetPotDen()
                 call vgen_coulomb(1, fmpi, fi%input, fi%field, fi%vacuum, fi%sym, starsLocal, fi%cell, &
-                            & sphhar, atomsLocal, .TRUE., potdummyLocal, grgrVext3x3(iDir2,iDir), sternheimerJob=sternheimerJob,juphon=fi%juPhon, &
+                            & sphhar, atomsLocal, .TRUE., potdummyLocal, grgrVext3x3(iDir2,iDir), sternheimerJob=sternheimerJob,dfpt=fi%dfpt, &
                             & dfptdenimag=potdummyLocal, dfptvCoulimag=potdummyLocal,dfptden0=potdummyLocal,stars2=starsLocal,iDtype=0,iDir=iDir,iDir2=iDir2)
             end do 
         end do 

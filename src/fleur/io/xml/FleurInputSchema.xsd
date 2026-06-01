@@ -3299,9 +3299,9 @@
       </xsd:attribute>
    </xsd:complexType>
 
-   <xsd:complexType name="JuPhonType">
+   <xsd:complexType name="DFPTType">
       <xsd:annotation>
-         <xsd:documentation>JuPhon interface for phonon and electron-phonon calculations using DFPT.</xsd:documentation>
+         <xsd:documentation>dfpt interface for phonon and electron-phonon calculations using DFPT.</xsd:documentation>
       </xsd:annotation>
       <xsd:all>
        <xsd:element minOccurs="0" name="phonon" type="PhononType">
@@ -3571,7 +3571,7 @@
                <xsd:documentation>Parameters for band unfolding from supercell to primitive cell.</xsd:documentation>
             </xsd:annotation>
          </xsd:element>
-         <xsd:element maxOccurs="1" minOccurs="0" name="juPhon" type="JuPhonType">
+         <xsd:element maxOccurs="1" minOccurs="0" name="dfpt" type="DFPTType">
             <xsd:annotation>
                <xsd:documentation>Parameters for calculations using DFPT.</xsd:documentation>
             </xsd:annotation>

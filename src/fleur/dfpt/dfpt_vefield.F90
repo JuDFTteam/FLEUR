@@ -10,7 +10,7 @@ module m_dfpt_vefield
 
 contains
     
-    subroutine dfpt_vefield(juphon,starsq,atoms,sym,sphhar,cell,dfptvefield,dfptvefieldimag,iDir,q_sign)
+    subroutine dfpt_vefield(dfpt,starsq,atoms,sym,sphhar,cell,dfptvefield,dfptvefieldimag,iDir,q_sign)
         !Currently only spin=1
 
         use m_types
@@ -26,7 +26,7 @@ contains
 
 
 
-        type(t_juphon),     intent(in)               :: juphon
+        type(t_dfpt),     intent(in)               :: dfpt
         TYPE(t_stars),      intent(in)               :: starsq
         type(t_atoms),      intent(in)               :: atoms
         type(t_sym),        intent(in)               :: sym
@@ -55,7 +55,7 @@ contains
 
 
         !print*,'q_sign',q_sign
-        qlim = juphon%qlim 
+        qlim = dfpt%qlim 
 
         !interstitial region
         dfptvefield%pw(:,1) = 0.0

@@ -223,7 +223,7 @@ CONTAINS
                      IF (norm2(bqpt)<1e-8.AND.iNupr==nu) THEN
                         tempMat2(iNupr) = 0.0
                         tempMat3(iNupr) = 0.0
-                     ELSE IF (ABS(eigq(iNupr)-eigk(nu))<fi%juPhon%eDiffCut) THEN
+                     ELSE IF (ABS(eigq(iNupr)-eigk(nu))<fi%dfpt%eDiffCut) THEN
                         tempMat2(iNupr) = 0.0
                         ! Additional correction term that constitutes new
                         ! coefficients:
@@ -245,7 +245,7 @@ CONTAINS
                   ELSE
                      IF (norm2(bqpt)<1e-8.AND.iNupr==nu) THEN
                         tempMat2(iNupr) = 0.0
-                     ELSE IF (ABS(eigq(iNupr)-eigk(nu))<fi%juPhon%eDiffCut) THEN
+                     ELSE IF (ABS(eigq(iNupr)-eigk(nu))<fi%dfpt%eDiffCut) THEN
                         tempMat2(iNupr) = 0.0
                      ELSE IF (iNuPr<=noccbdq) THEN
                         wtfq = resultsq%w_iks(iNupr,nk,jsp)/fi%kpts%wtkpt(nk)
@@ -299,7 +299,7 @@ CONTAINS
                      IF (norm2(bqpt)<1e-8.AND.iNupr==nu) THEN
                         tempMat2(iNupr) = 0.0
                         tempMat3(iNupr) = 0.0
-                     ELSE IF (ABS(eigq(iNupr)-eigk(nu))<fi%juPhon%eDiffCut) THEN
+                     ELSE IF (ABS(eigq(iNupr)-eigk(nu))<fi%dfpt%eDiffCut) THEN
                         tempMat2(iNupr) = 0.5 * tempMat1(iNupr)
                         ! Additional correction term that constitutes new
                         ! coefficients:
@@ -322,7 +322,7 @@ CONTAINS
                   ELSE
                      IF (norm2(bqpt)<1e-8.AND.iNupr==nu) THEN
                         tempMat2(iNupr) = 0.0
-                     ELSE IF (ABS(eigq(iNupr)-eigk(nu))<fi%juPhon%eDiffCut) THEN
+                     ELSE IF (ABS(eigq(iNupr)-eigk(nu))<fi%dfpt%eDiffCut) THEN
                         tempMat2(iNupr) = 0.5*tempMat1(iNupr)
                      ELSE IF (iNuPr<=noccbdq) THEN
                         wtfq = resultsq%w_iks(iNupr,nk,jsp)/fi%kpts%wtkpt(nk)
