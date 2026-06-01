@@ -23,7 +23,6 @@ CONTAINS
       use m_types_efield
       use m_types_BEC
       use m_types_bfield
-      !use m_dfpt_bfield
       use m_dfpt_postprocess_pot
       
 

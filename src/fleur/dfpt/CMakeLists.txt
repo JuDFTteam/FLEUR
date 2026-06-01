@@ -29,7 +29,6 @@ src/fleur/dfpt/dfpt_generate_gradient.F90
 src/fleur/dfpt/dfpt_gradient.F90
 src/fleur/dfpt/dfpt_vefield.F90
 src/fleur/dfpt/dfpt_vbfield.F90
-#src/fleur/dfpt/dfpt_bfield.F90
 src/fleur/dfpt/dfpt_dielecten.F90
 src/fleur/dfpt/dfpt_magsusc.F90
 src/fleur/dfpt/dfpt_born_effcharge.F90
