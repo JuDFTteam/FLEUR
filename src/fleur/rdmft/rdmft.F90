@@ -858,7 +858,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
 
    !I think we need most of cdngen at this place so I just use cdngen
    CALL outDen%resetPotDen()
-   CALL cdngen(eig_id,fmpi,fi%input,fi%banddos,fi%sliceplot,fi%vacuum,fi%kpts,fi%atoms,sphhar,stars,fi%sym,fi%dfpt,fi%gfinp,fi%hub1inp,&
+   CALL cdngen(eig_id,fmpi,fi%input,fi%banddos,fi%sliceplot,fi%vacuum,fi%kpts,fi%atoms,sphhar,stars,fi%sym,fi%gfinp,fi%hub1inp,&
                enpara,fi%cell,fi%noco,nococonv,vTot,results, fi%corespecinput,archiveType,xcpot,outDen, EnergyDen)
 
    ! Calculate RDMFT energy

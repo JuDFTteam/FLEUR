@@ -11,7 +11,7 @@ MODULE m_cdngen
 CONTAINS
 
 SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
-                  kpts,atoms,sphhar,stars,sym,dfpt,gfinp,hub1inp,&
+                  kpts,atoms,sphhar,stars,sym,gfinp,hub1inp,&
                   enpara,cell,noco,nococonv,vTot,results ,coreSpecInput,&
                   archiveType, xcpot,outDen,EnergyDen,core_den,greensFunction,hub1data,vxc,exc)
 
@@ -70,7 +70,6 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_noco),INTENT(IN)          :: noco
    TYPE(t_nococonv),INTENT(INOUT)   :: nococonv
    TYPE(t_sym),INTENT(IN)           :: sym
-   TYPE(t_dfpt),INTENT(IN)        :: dfpt
    TYPE(t_stars),INTENT(IN)         :: stars
    TYPE(t_cell),INTENT(IN)          :: cell
    TYPE(t_kpts),INTENT(IN)          :: kpts
