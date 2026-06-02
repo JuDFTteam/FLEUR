@@ -214,7 +214,7 @@ MODULE m_greensfTorque
       !Collect the torque to rank 0
       n = SIZE(torque)
       ALLOCATE(rtmp(n))
-      CALL MPI_REDUCE(torque,rtmp,n,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+      CALL MPI_REDUCE(torque,rtmp,n,MPI_DOUBLE_PRECISION,MPI_SUM,0,fmpi%mpi_comm,ierr)
       IF(fmpi%irank.EQ.0) CALL dcopy(n,rtmp,1,torque,1)
       DEALLOCATE(rtmp)
 #endif

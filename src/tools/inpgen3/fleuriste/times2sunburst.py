@@ -1,13 +1,15 @@
 import json
 
 
-def generate_sunburst_plot(json_file, output_file="juDFT_times_plot.html",scalingFile=None):
+def generate_sunburst_plot(json_file, output_file="juDFT_times_plot.html", scalingFile=None, color_range=None):
     """
     Generate a sunburst plot from a JSON file.
 
     Parameters:
         json_file (str): Path to the JSON file containing hierarchical data.
         output_file (str): Path to save the generated sunburst plot as an HTML file.
+        scalingFile (str): Optional path to the reference scaling JSON file.
+        color_range (list[float] | None): Optional [min, max] range for the colorscale values.
     """
     timers_list = []
     # Load the JSON data
@@ -82,6 +84,7 @@ def generate_sunburst_plot(json_file, output_file="juDFT_times_plot.html",scalin
     df = pd.DataFrame(flat_data)
     
     color="scaling" if scaling_data else "variance"
+    range_color = color_range
 
     # Generate the sunburst plot
     fig = px.sunburst(
@@ -89,6 +92,7 @@ def generate_sunburst_plot(json_file, output_file="juDFT_times_plot.html",scalin
         names="label",
         parents="parent",
         values="runtime",color=color,
+        range_color=range_color,
         hover_data=["percent", "calls","variance"], 
         title="FLEUR runtime breakdown" ,branchvalues="total" 
         )

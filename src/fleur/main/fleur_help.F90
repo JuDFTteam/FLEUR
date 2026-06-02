@@ -126,6 +126,7 @@ CONTAINS
     CALL new_argument(0,"-serial_diag","Use serial diagonalization in parallel code","")
     CALL new_argument(0,"-disable_progress_thread","Do not use progress_thread","")
     CALL new_argument(0,"-use_scalapack_redist","Use Scalapack for redistributing the matices","")   
+    CALL new_argument(0,"-use_fast_redist","Use specialized fast row-cyclic to 2D redistribution in mpimat_copy","")
     !Debugging
     CALL new_argument(0,"-warn_only","Continue execution after a warning message","")
     CALL new_argument(0,"-trace","Try to generate a stacktrace in case of an error","")

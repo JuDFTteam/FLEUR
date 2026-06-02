@@ -138,8 +138,6 @@ CONTAINS
                OPEN (oUnit, file='out', form='formatted', status='unknown')
          END IF
          CALL writeOutHeader()
-         !this should be removed, it deletes output of old inf file
-         OPEN (16, status='SCRATCH')
       END IF
 
       ALLOCATE (t_xcpot_inbuild::xcpot)
@@ -187,7 +185,7 @@ CONTAINS
 
       !At some point this should be enabled for fi%noco as well
       IF (.NOT. fi%noco%l_noco) &
-         CALL transform_by_moving_atoms(fmpi, stars,fi%atoms, fi%vacuum, fi%cell, fi%sym, sphhar, fi%input,   fi%noco, nococonv)
+         CALL transform_by_moving_atoms(fmpi, stars,fi%atoms, fi%vacuum, fi%cell, fi%field, fi%sym, sphhar, fi%input,   fi%noco, nococonv)
 
       !
       !--> determine more dimensions

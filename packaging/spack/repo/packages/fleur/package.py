@@ -42,6 +42,7 @@ class Fleur(CudaPackage, Package):
     variant("amd", default=False, description="Use some patch for AMD processors")
     variant("cuda",default=False,description="Use OpenACC on top of CUDA for NVIDIA GPUs")
     variant("cuda_arch",default="80" ,description="specify the CUDA architecture to build for")
+    variant("debug", default=False, description="Build a debugging version in build.debug")
     variant("build_type",default="RelWithDebInfo",description="The build type to build",values=("Debug", "Release", "RelWithDebInfo"))
     
 
@@ -176,6 +177,8 @@ class Fleur(CudaPackage, Package):
             )
         if spec.satisfies("+amd"):
             args.append("-amd")
+        if spec.satisfies("+debug"):
+            args.append("-d")
         
         #Now add collected options
         args.append("-link")
@@ -188,12 +191,14 @@ class Fleur(CudaPackage, Package):
         sh("configure.sh", *args)
 
     def build(self,spec,prefix):
-        with working_dir("build"):
+        build_dir = "build.debug" if spec.satisfies("+debug") else "build"
+        with working_dir(build_dir):
             make()
         
 
     def install(self, spec, prefix):
-        with working_dir("build"):
+        build_dir = "build.debug" if spec.satisfies("+debug") else "build"
+        with working_dir(build_dir):
             mkdirp(prefix.bin)
             if spec.satisfies("+mpi"):
                 install("fleur_MPI", prefix.bin)
@@ -204,7 +209,8 @@ class Fleur(CudaPackage, Package):
     @run_after("build")
     @on_package_attributes(run_tests=True)
     def test(self):
-        with working_dir("build"):
+        build_dir = "build.debug" if self.spec.satisfies("+debug") else "build"
+        with working_dir(build_dir):
             sh = which("bash")
             sh("run_tests.sh")
         

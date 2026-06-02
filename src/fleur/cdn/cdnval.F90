@@ -43,6 +43,7 @@ CONTAINS
       USE m_greensfCalcImagPart
       USE m_local_hamiltonian
       USE m_greensfCalcScalarProducts
+      USE m_abcof
       !USE m_cdnmt       ! calculate the density and orbital moments etc.
       !USE m_orbmom      ! coeffd for orbital moments
       USE m_qmtsl       ! These subroutines divide the input%film into banddos%layers
@@ -68,7 +69,6 @@ CONTAINS
       USE m_mpi_col_den ! collect density data from parallel nodes
 #endif
       USE m_nIJmat
-
       IMPLICIT NONE
 
       TYPE(t_results), INTENT(INOUT) :: results
@@ -125,6 +125,7 @@ CONTAINS
       TYPE(t_tlmplm)            :: tlmplm
       TYPE(t_greensfBZintCoeffs):: greensfBZintCoeffs
       TYPE(t_scalarGF), ALLOCATABLE :: scalarGF(:)
+      TYPE(t_eigVecCoeffs)      :: eigVecCoeffs
       TYPE(t_radfun)             :: radfun(atoms%ntype)
       TYPE(t_abc), allocatable    :: abc(:, :)
 
@@ -255,6 +256,18 @@ CONTAINS
 
          call timestop("init k-loop")
          IF (noccbd .LE. 0) CYCLE ! Note: This jump has to be after the MPI_BARRIER is called
+         IF (gfinp%n > 0 .AND. PRESENT(greensfImagPart)) THEN
+            IF (greensfImagPart%l_calc) THEN
+               CALL eigVecCoeffs%init(input, atoms, jsp, noccbd, gfinp%l_mperp)
+               IF (gfinp%l_mperp .AND. noco%l_noco) THEN
+                  DO ispin = 1, input%jspins
+                     CALL abcof_new(input, atoms, sym, cell, lapw, noccbd, usdus, noco, nococonv, ispin, eigVecCoeffs, zMat)
+                  END DO
+               ELSE
+                  CALL abcof_new(input, atoms, sym, cell, lapw, noccbd, usdus, noco, nococonv, jsp, eigVecCoeffs, zMat)
+               END IF
+            END IF
+         END IF
          call timestart("Atoms loop")
          ! valence density in the atomic spheres
          !!$OMP PARALLEL DO DEFAULT(NONE) PRIVATE(itype, ispin, ispinpr, ispin123, abc_itype, abc) &
@@ -291,7 +304,7 @@ CONTAINS
                      CALL slab%calc_mt_slab(itype,ispin,ikpt,atoms,ev_list,noccbd,abc(ispin,abc_itype),radfun(itype))                            
                   end if
                   !Decomposition into total angular momentum states
-                  IF (banddos%l_jdos.and.ispinpr == jsp_end) call jDOS%calc_jDOS(ikpt, noccbd, ev_list, we, atoms, banddos, input, radfun(itype), abc(1, abc_itype), abc(2, abc_itype))
+                  IF (banddos%l_jdos.and.ispinpr == jsp_end) call jDOS%calc_jDOS(ikpt, noccbd, ev_list, we, atoms, banddos, input, nococonv, itype, radfun(itype), abc(1, abc_itype), abc(2, abc_itype))
                      
                   IF (noco%l_soc .and. ispin == ispinpr) CALL orb%calc_orbmom(abc(ispin, abc_itype), atoms, radfun(itype), we, itype, &
                                                                               ispin, moments%clmom(:, itype, ispin))  
@@ -336,6 +349,23 @@ CONTAINS
          call timestop("valence density in the interstitial and vacuum region")
          IF (input%l_sympsi .and. allocated(dos%jsym)) THEN
             CALL sympsi(lapw, jspin, sym, noccbd, cell, eig, noco, dos%jsym(:, ikpt, jspin), zMat)
+         END IF
+         IF (gfinp%n > 0 .AND. PRESENT(greensfImagPart)) THEN
+            IF (greensfImagPart%l_calc) THEN
+               IF (gfinp%l_mperp) THEN
+                  DO ispin = 1, 3
+                     CALL greensfBZint(ikpt, noccbd, ispin, gfinp, sym, atoms, noco, nococonv, input, kpts, &
+                                       scalarGF, eigVecCoeffs, greensfBZintCoeffs)
+                     CALL greensfCalcImagPart_single_kpt(ikpt, ikpt_i, ev_list, ispin, gfinp, atoms, input, kpts, noco, fmpi, &
+                                                         results, greensfBZintCoeffs, greensfImagPart)
+                  END DO
+               ELSE
+                  CALL greensfBZint(ikpt, noccbd, jsp, gfinp, sym, atoms, noco, nococonv, input, kpts, &
+                                    scalarGF, eigVecCoeffs, greensfBZintCoeffs)
+                  CALL greensfCalcImagPart_single_kpt(ikpt, ikpt_i, ev_list, jsp, gfinp, atoms, input, kpts, noco, fmpi, &
+                                                      results, greensfBZintCoeffs, greensfImagPart)
+               END IF
+            END IF
          END IF
       END DO ! end of k-point loop
 

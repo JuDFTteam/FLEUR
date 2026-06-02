@@ -1,8 +1,8 @@
-! Copyright (c) 2018 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+!--------------------------------------------------------------------------------
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
-!
-! @authors: Miriam Hinzen, Gregor Michalicek
+!--------------------------------------------------------------------------------
 ! Added MPI implementation, DW 2018
 !--------------------------------------------------------------------------------
 module m_dummy_diag
@@ -21,8 +21,8 @@ module m_dummy_diag
 contains
 
    function get_solver_dummy() result(solver)
-      type(t_solver_dummy), pointer::solver
-      allocate (solver)
+      class(t_solver), allocatable :: solver
+      allocate (t_solver_dummy :: solver)
       solver%name = "dummy"
       solver%available = .true.
       solver%parallel = .false.
@@ -54,6 +54,8 @@ contains
 
       integer            :: nev, lwork, liwork, n
       integer            :: info
+
+      call timestart("DUMMY DIAG")
 
       allocate (t_mat::zmat)
       call zmat%alloc(hmat%l_real, hmat%matsize1, ne)
@@ -105,6 +107,7 @@ contains
          end if
 
       end if
+      call timestop("DUMMY DIAG")
    end subroutine dummy_diag
 
 end module m_dummy_diag

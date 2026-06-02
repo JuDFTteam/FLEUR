@@ -1,0 +1,19 @@
+{
+  "name": "FLEUR (GNU + OpenMPI)",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "remoteUser": "vscode",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.cmake-tools",
+        "ms-vscode.cpptools",
+        "fortran-lang.linter-gfortran",
+        "fortran-lang.vscode-fortran-support"
+      ]
+    }
+  },
+  "postCreateCommand": "git config --global --add safe.directory ${containerWorkspaceFolder}"
+}

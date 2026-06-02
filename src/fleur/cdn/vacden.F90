@@ -715,7 +715,7 @@ CONTAINS
                               uj = u(banddos%izlay(jj,1),ikGPr,jspin)
                               uej = ue(banddos%izlay(jj,1),ikGPr,jspin)
                               vacdos%qvlay(ev_list(n),jj,ivac,ikpt,jspin) = vacdos%qvlay(ev_list(n),jj,ivac,ikpt,jspin)& 
-                                                                        +REAL((aa*ui*uj + bb*uei*uej+ab*uei*uj+ba*ui**uej)*factorx*factory)
+                                                                        +REAL((aa*ui*uj + bb*uei*uej+ab*uei*uj+ba*ui*uej)*factorx*factory)
                            END IF
                         END DO
                      END DO

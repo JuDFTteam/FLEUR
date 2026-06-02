@@ -158,10 +158,10 @@ SUBROUTINE eigVecCoeffs_init(thisEigVecCoeffs,input,atoms,jspin,noccbd,l_bothSpi
 
    IF (l_bothSpins) THEN
       ALLOCATE (thisEigVecCoeffs%ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat,input%jspins))
-      ALLOCATE (thisEigVecCoeffs%abcof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),n_r,atoms%nat,input%jspins))
+      ALLOCATE (thisEigVecCoeffs%abcof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),0:n_r-1,atoms%nat,input%jspins))
    ELSE
       ALLOCATE (thisEigVecCoeffs%ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat,jspin:jspin))
-      ALLOCATE (thisEigVecCoeffs%abcof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),n_r,atoms%nat,jspin:jspin))
+      ALLOCATE (thisEigVecCoeffs%abcof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),0:n_r-1,atoms%nat,jspin:jspin))
    END IF
 
    thisEigVecCoeffs%ccof = CMPLX(0.0,0.0)

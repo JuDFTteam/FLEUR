@@ -14,8 +14,7 @@ USE m_juDFT
 CONTAINS
 
 
-SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
-                 input,cell,xcpot,noco )
+SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,input,cell,field,xcpot,noco )
 
    USE m_juDFT_init
    USE m_types
@@ -34,15 +33,14 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
 
    TYPE(t_mpi),INTENT(IN)      :: fmpi
    TYPE(t_atoms),INTENT(IN)    :: atoms
-
    TYPE(t_sphhar),INTENT(IN)   :: sphhar
    TYPE(t_sym),INTENT(IN)      :: sym
    TYPE(t_stars),INTENT(IN)    :: stars
    TYPE(t_noco),INTENT(IN)     :: noco
-    
    TYPE(t_input),INTENT(IN)    :: input
    TYPE(t_vacuum),INTENT(IN)   :: vacuum
    TYPE(t_cell),INTENT(IN)     :: cell
+   TYPE(t_field),INTENT(IN)    :: field
    CLASS(t_xcpot),INTENT(IN)   :: xcpot
 
    ! Local type instances
@@ -224,7 +222,7 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
 
    ! Check the normalization of total density
    CALL timestart("stden - qfix")
-   CALL qfix(fmpi,stars,nococonv,atoms,sym,vacuum,sphhar,input,cell ,den,.FALSE.,.FALSE.,l_par=.FALSE.,force_fix=.TRUE.,fix=fix)
+   CALL qfix(fmpi,stars,nococonv,atoms,sym,vacuum,sphhar,input,cell,field,den,.FALSE.,.FALSE.,l_par=.FALSE.,force_fix=.TRUE.,fix=fix)
    CALL timestop("stden - qfix")
    CALL timestart("stden - finalize")
    !Rotate density into global frame if l_alignSQA

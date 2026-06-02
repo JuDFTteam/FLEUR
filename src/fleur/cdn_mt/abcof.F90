@@ -466,12 +466,16 @@ INTEGER,OPTIONAL,INTENT(IN):: nat_start,nat_stop
 integer:: itype,lo,l,na,m,lm,n_l(0:atoms%lmaxd)
 
 call abcof(input,atoms,sym,cell,lapw,ne,usdus,noco,nococonv,ispin,&
-eigVecCoefs%abcof(:,0:,1,:,ispin),eigVecCoefs%abcof(:,0:,2,:,ispin),&
+eigVecCoefs%abcof(:,0:,0,:,ispin),eigVecCoefs%abcof(:,0:,1,:,ispin),&
 ccof(-atoms%llod:,:,:,:),zMat,eig,force)
+
+! Preserve the explicit LO coefficients for consumers that still read
+! eigVecCoeffs%ccof directly, such as the Green's-function path.
+eigVecCoefs%ccof(:,:,:,:,ispin) = ccof
 
 !Now put the c-coef into the correct abcof
 DO itype=1,atoms%ntype
-   n_l=2
+   n_l=1
    DO lo=1,atoms%nlo(itype)
       l=atoms%llo(lo,itype)
       n_l(l)=n_l(l)+1
