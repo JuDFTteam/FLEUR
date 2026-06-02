@@ -171,13 +171,11 @@ contains
         write(*,*) '-------------------------' 
 
         !save in out.xml
-        CALL openXMLElementNoAttributes('Phonons')
-        CALL openXMLElementNoAttributes('efield')
+        CALL openXMLElementNoAttributes('DFPTEfield')
         attributes = ''
         WRITE(attributes(1),'(f15.8)') fi%dfpt%qlim
         CALL writeXMLElementPoly('dieltensor',(/'qlim'/), attributes,real(dielecten(:,1)))
-        CALL closeXMLElement('efield')
-        CALL closeXMLElement('Phonons')
+        CALL closeXMLElement('DFPTEfield')
 
     end subroutine dfpt_dielecten_final_new
 

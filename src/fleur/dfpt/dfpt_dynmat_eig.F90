@@ -322,7 +322,7 @@ module m_dfpt_dynmat_eig
     close( 109 )
 
     ! write into out.xml
-    CALL openXMLElementNoAttributes('Phonons')
+    CALL openXMLElementNoAttributes('phonon')
     CALL openXMLElementNoAttributes('dynMat')
     attributes = ''
     WRITE(attributes(1),'(i0)') iqpt
@@ -332,7 +332,7 @@ module m_dfpt_dynmat_eig
     attributes(5) = '1/cm'
     CALL writeXMLElementPoly('frequencies',(/'iqpt', 'q_x ' , "q_y " , "q_z ",'unit'/), attributes, REAL(eigenFreqs)+AIMAG(eigenFreqs))
     CALL closeXMLElement('dynMat')
-    CALL closeXMLElement('Phonons')
+    CALL closeXMLElement('phonon')
   end subroutine CalculateFrequencies
 
 end module m_dfpt_dynmat_eig

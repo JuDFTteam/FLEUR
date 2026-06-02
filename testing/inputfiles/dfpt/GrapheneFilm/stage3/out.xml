@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <fleurOutput fleurOutputVersion="0.38">
    <programVersion version="fleur 42">
-      <compilationInfo date="2026-05-27T18:00:55" user="bornhake" host="iffcluster1801" flag="I/Users/bornhake/develop/hdf5-1.12.3/hdf5/include -fiopenmp -qmkl  -assume byterecl -no-wrap-margin -fPIC -I/D" link="lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64;-L/Users/bornhake/develop/hdf5-1.12.3/hdf5/lib;/usr/lib64/libxml"/>
-      <gitInfo version="MaX-R8.0-389-g7240c9213-dirty" branch="refactor-dfpt-driver" lastCommitHash="7240c9213d546494217eaf5ef3a7fd5b8e2b7935"/>
+      <compilationInfo date="2026-06-01T15:40:08" user="bornhake" host="iffcluster1801" flag="I/Users/bornhake/develop/hdf5-1.12.3/hdf5/include -fiopenmp -qmkl  -assume byterecl -no-wrap-margin -fPIC -I/D" link="lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64;-L/Users/bornhake/develop/hdf5-1.12.3/hdf5/lib;/usr/lib64/libxml"/>
+      <gitInfo version="MaX-R8.0-397-g86acd2704-dirty" branch="refactor-dfpt-driver" lastCommitHash="86acd2704101b836412f66cc5cb2855647aaf999"/>
       <targetComputerArchitectures>GEN</targetComputerArchitectures>
       <precision type="DOUBLE"/>
       <targetStructureClass> </targetStructureClass>
@@ -12,9 +12,9 @@
    <parallelSetup>
       <openMP ompThreads="1"/>
       <mpi mpiProcesses="1"/>
-      <mem memoryPerNode="32333172 kB"/>
+      <mem memoryPerNode="131730880 kB"/>
    </parallelSetup>
-   <startDateAndTime date="2026/05/28" time="16:45:22" zone="+0200"/>
+   <startDateAndTime date="2026/06/02" time="14:17:35" zone="+0200"/>
    <!-- Now follows a dump of the inp.xml file after evaluating the Schema -->
   <fleurInput fleurInputVersion="0.39">
      <comment>
@@ -89,13 +89,13 @@
         <plotting iplot="0" polar="F" format="1">
            <plot TwoD="T" vec1="  1.0  0.0  0.0" vec2="  0.0  1.0  0.0" vec3="  0.0  0.0  1.0" zero="  0.0  0.0 -0.5" file="plot" cartesian="F" grid="30 30 30" onlyMT="F" typeMT="0" vecField="F" edgesAllSides="T"/>
         </plotting>
-        <juPhon l_dfpt="T" l_phonon="T" l_rm_qhdf="T">
+        <dfpt l_dfpt="T" l_phonon="T" l_rm_qhdf="T">
            <phonon gmaxzLocal="35.00" l_symVacLevel="F">
            <qVectors>
               <q> -1.0/24 2.0/24 0.0/16 </q>
            </qVectors>
            </phonon>
-        </juPhon>
+        </dfpt>
         <chargeDensitySlicing numkpt="0" minEigenval="0.0" maxEigenval="0.0" nnne="0" pallst="F"/>
         <specialOutput eonly="F" form66="F" bmt="F"/>
         <magneticCircularDichroism mcd="F" energyLo="-10.0" energyUp="0.0"/>
@@ -184,15 +184,15 @@
          <bandgap value="6.5281038214" units="eV"/>
          <sumValenceSingleParticleEnergies value="-4.0162336420" units="Htr"/>
          <FermiEnergy value="-0.2893855253" units="Htr"/>
-         <Phonons>
+         <phonon>
             <dynMat>
                <frequencies iqpt="1" q_x="-.04166667" q_y=".08333333" q_z=".00000000" unit="1/cm">
-                      -3880.3071712601     -744.4622677871     1258.3492172842     1559.0665503040     1878.9738715645
-                       2045.6013415932
+                      -3880.3071712607     -744.4622677874     1258.3492172840     1559.0665503046     1878.9738715643
+                       2045.6013415930
                </frequencies>
             </dynMat>
-         </Phonons>
+         </phonon>
       </iteration>
    </scfLoop>
-   <endDateAndTime date="2026/05/28" time="16:45:29" zone="+0200"/>
+   <endDateAndTime date="2026/06/02" time="14:17:49" zone="+0200"/>
 </fleurOutput>

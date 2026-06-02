@@ -366,8 +366,7 @@ contains
         write(*,*) '-------------------------' 
 
         !save in out.xml
-        CALL openXMLElementNoAttributes('Phonons')
-        CALL openXMLElementNoAttributes('efield')
+        CALL openXMLElementNoAttributes('DFPTEfield')
         do iDType = 1, fi%atoms%ntype 
             do iDir = 1,3
                 attributes = ''
@@ -376,8 +375,7 @@ contains
                 CALL writeXMLElementPoly('borneffcharge',(/ 'iDtype' , 'iDir  '/), attributes,real(born_eff_charge(iDType,iDir,:)))
             end do
         end do
-        CALL closeXMLElement('efield')
-        CALL closeXMLElement('Phonons')
+        CALL closeXMLElement('DFPTEfield')
         
         atom_string = 'atom No:'
         ! Turn off debugging stuff

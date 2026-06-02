@@ -190,7 +190,8 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="ldaUDensityMatrixConvergence" type="LDAUDensityMatrixConvergenceType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="densityConvergence" type="DensityConvergenceType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="timing" type="TimingType"/>
-         <xsd:element maxOccurs="1" minOccurs="0" name="Phonons" type="PhononsType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="phonon" type="PhononsType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="DFPTEfield" type="efieldType"/> 
       </xsd:sequence>
    </xsd:group>
 
@@ -780,7 +781,6 @@
    <xsd:complexType name="PhononsType">
       <xsd:sequence>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="dynMat" type="dynMatType"/>
-         <xsd:element maxOccurs="unbounded" minOccurs="0" name="efield" type="efieldType"/> 
       </xsd:sequence>
    </xsd:complexType>
 

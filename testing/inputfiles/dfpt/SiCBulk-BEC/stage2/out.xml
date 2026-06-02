@@ -1,20 +1,20 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <fleurOutput fleurOutputVersion="0.38">
-   <programVersion version="fleur 41">
-      <compilationInfo date="2026-02-25T21:00:00" user="hanrath" host="iff1835.iff.kfa-juelich.de" flag="-fiopenmp -qmkl  -assume byterecl -no-wrap-margin -fPIC -I/Data/ias-1/hanrath/fleur-versions/local/dfpt_efield" link="lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64;/usr/lib64/libxml2.so"/>
-      <gitInfo version="MaX-R8.0-284-gbba6e2751-dirty" branch="dfpt_efield_new" lastCommitHash="bba6e2751ca0857275392bf0677285ed1a346008"/>
+   <programVersion version="fleur 42">
+      <compilationInfo date="2026-06-01T15:40:08" user="bornhake" host="iffcluster1801" flag="I/Users/bornhake/develop/hdf5-1.12.3/hdf5/include -fiopenmp -qmkl  -assume byterecl -no-wrap-margin -fPIC -I/D" link="lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64;-L/Users/bornhake/develop/hdf5-1.12.3/hdf5/lib;/usr/lib64/libxml"/>
+      <gitInfo version="MaX-R8.0-397-g86acd2704-dirty" branch="refactor-dfpt-driver" lastCommitHash="86acd2704101b836412f66cc5cb2855647aaf999"/>
       <targetComputerArchitectures>GEN</targetComputerArchitectures>
       <precision type="DOUBLE"/>
       <targetStructureClass> </targetStructureClass>
       <additionalCompilerFlags>CPP_MPI             CPP_HDF</additionalCompilerFlags>
-      <programExecution commandLine="/Data/ias-1/hanrath/fleur-versions/local/dfpt_efield_new-merge/build/fleur_MPI"/>
+      <programExecution commandLine="/Data/ias-1/bornhake/clean_code/build/fleur_MPI"/>
    </programVersion>
    <parallelSetup>
-      <openMP ompThreads="6"/>
+      <openMP ompThreads="1"/>
       <mpi mpiProcesses="1"/>
-      <mem memoryPerNode="15856656 kB"/>
+      <mem memoryPerNode="131730880 kB"/>
    </parallelSetup>
-   <startDateAndTime date="2026/02/27" time="13:44:09" zone="+0100"/>
+   <startDateAndTime date="2026/06/02" time="14:19:47" zone="+0200"/>
    <!-- Now follows a dump of the inp.xml file after evaluating the Schema -->
   <fleurInput fleurInputVersion="0.39">
      <comment>
@@ -99,11 +99,9 @@
         <plotting iplot="0" polar="F" format="1">
            <plot TwoD="T" vec1="  1.0  0.0  0.0" vec2="  0.0  1.0  0.0" vec3="  0.0  0.0  1.0" zero="  0.0  0.0  0.0" file="plot" cartesian="F" grid="30 30 30" onlyMT="F" typeMT="0" vecField="F" edgesAllSides="T"/>
         </plotting>
-         <juPhon l_dfpt="T" l_efield="F" l_phonon="F" l_borneffcharge="T" qlim="1/100" startq="1" l_symVacLevel="F">
-            <qVectors>
-               <q> 0.0/16 0.0/16 0.0/16 </q>
-            </qVectors>
-         </juPhon>
+         <dfpt l_dfpt="T" l_efield="F" l_phonon="F" l_borneffcharge="T">
+           <efield qlim="1/100"/>
+         </dfpt>
         <chargeDensitySlicing numkpt="0" minEigenval="0.0" maxEigenval="0.0" nnne="0" pallst="F"/>
         <specialOutput eonly="F" form66="F" bmt="F"/>
         <magneticCircularDichroism mcd="F" energyLo="-10.0" energyUp="0.0"/>
@@ -250,17 +248,15 @@
          <bandgap value="5.0893578849" units="eV"/>
          <sumValenceSingleParticleEnergies value="1.7530567926" units="Htr"/>
          <FermiEnergy value="0.3721012954" units="Htr"/>
-         <Phonons>
-            <efield>
-               <borneffcharge iDtype="1" iDir="1">2.1409240113        0.0000000124       -0.0000002698</borneffcharge>
-               <borneffcharge iDtype="1" iDir="2">-0.0000000014        2.1409243615        0.0000037849</borneffcharge>
-               <borneffcharge iDtype="1" iDir="3">-0.0000002270        0.0000433078        2.1406657573</borneffcharge>
-               <borneffcharge iDtype="2" iDir="1">-21.1456492207        0.0000005967       -0.0000016565</borneffcharge>
-               <borneffcharge iDtype="2" iDir="2">0.0000005771      -21.1456495774       -0.0000052690</borneffcharge>
-               <borneffcharge iDtype="2" iDir="3">-0.0000016146       -0.0000427282      -21.1453091916</borneffcharge>
-            </efield>
-         </Phonons>
+         <DFPTEfield>
+            <borneffcharge iDtype="1" iDir="1">2.1409240116        0.0000000124       -0.0000002698</borneffcharge>
+            <borneffcharge iDtype="1" iDir="2">-0.0000000014        2.1409243621        0.0000037849</borneffcharge>
+            <borneffcharge iDtype="1" iDir="3">-0.0000002270        0.0000433078        2.1406657581</borneffcharge>
+            <borneffcharge iDtype="2" iDir="1">-21.1456492214        0.0000005967       -0.0000016565</borneffcharge>
+            <borneffcharge iDtype="2" iDir="2">0.0000005771      -21.1456495861       -0.0000052690</borneffcharge>
+            <borneffcharge iDtype="2" iDir="3">-0.0000016146       -0.0000427282      -21.1453091932</borneffcharge>
+         </DFPTEfield>
       </iteration>
    </scfLoop>
-   <endDateAndTime date="2026/02/27" time="13:44:19" zone="+0100"/>
+   <endDateAndTime date="2026/06/02" time="14:20:08" zone="+0200"/>
 </fleurOutput>

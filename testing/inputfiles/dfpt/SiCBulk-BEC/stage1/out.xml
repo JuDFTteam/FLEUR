@@ -1,20 +1,20 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <fleurOutput fleurOutputVersion="0.38">
-   <programVersion version="fleur 41">
-      <compilationInfo date="2026-02-25T21:00:00" user="hanrath" host="iff1835.iff.kfa-juelich.de" flag="-fiopenmp -qmkl  -assume byterecl -no-wrap-margin -fPIC -I/Data/ias-1/hanrath/fleur-versions/local/dfpt_efield" link="lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64;/usr/lib64/libxml2.so"/>
-      <gitInfo version="MaX-R8.0-284-gbba6e2751-dirty" branch="dfpt_efield_new" lastCommitHash="bba6e2751ca0857275392bf0677285ed1a346008"/>
+   <programVersion version="fleur 42">
+      <compilationInfo date="2026-06-01T15:40:08" user="bornhake" host="iffcluster1801" flag="I/Users/bornhake/develop/hdf5-1.12.3/hdf5/include -fiopenmp -qmkl  -assume byterecl -no-wrap-margin -fPIC -I/D" link="lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64;-L/Users/bornhake/develop/hdf5-1.12.3/hdf5/lib;/usr/lib64/libxml"/>
+      <gitInfo version="MaX-R8.0-397-g86acd2704-dirty" branch="refactor-dfpt-driver" lastCommitHash="86acd2704101b836412f66cc5cb2855647aaf999"/>
       <targetComputerArchitectures>GEN</targetComputerArchitectures>
       <precision type="DOUBLE"/>
       <targetStructureClass> </targetStructureClass>
       <additionalCompilerFlags>CPP_MPI             CPP_HDF</additionalCompilerFlags>
-      <programExecution commandLine="/Data/ias-1/hanrath/fleur-versions/local/dfpt_efield_new-merge/build/fleur_MPI"/>
+      <programExecution commandLine="/Data/ias-1/bornhake/clean_code/build/fleur_MPI"/>
    </programVersion>
    <parallelSetup>
-      <openMP ompThreads="6"/>
+      <openMP ompThreads="1"/>
       <mpi mpiProcesses="1"/>
-      <mem memoryPerNode="15856656 kB"/>
+      <mem memoryPerNode="131730880 kB"/>
    </parallelSetup>
-   <startDateAndTime date="2026/02/27" time="16:07:02" zone="+0100"/>
+   <startDateAndTime date="2026/06/02" time="14:18:45" zone="+0200"/>
    <!-- Now follows a dump of the inp.xml file after evaluating the Schema -->
   <fleurInput fleurInputVersion="0.39">
      <comment>
@@ -99,11 +99,9 @@
         <plotting iplot="0" polar="F" format="1">
            <plot TwoD="T" vec1="  1.0  0.0  0.0" vec2="  0.0  1.0  0.0" vec3="  0.0  0.0  1.0" zero="  0.0  0.0  0.0" file="plot" cartesian="F" grid="30 30 30" onlyMT="F" typeMT="0" vecField="F" edgesAllSides="T"/>
         </plotting>
-         <juPhon l_dfpt="F" l_efield="F" l_phonon="F" l_borneffcharge="F" qlim="1/100" startq="1" l_symVacLevel="F">
-            <qVectors>
-               <q> 0.0/16 0.0/16 0.0/16 </q>
-            </qVectors>
-         </juPhon>
+         <dfpt l_dfpt="F" l_efield="F" l_phonon="F" l_borneffcharge="F">
+         <efield qlim="1/100"/>
+         </dfpt>
         <chargeDensitySlicing numkpt="0" minEigenval="0.0" maxEigenval="0.0" nnne="0" pallst="F"/>
         <specialOutput eonly="F" form66="F" bmt="F"/>
         <magneticCircularDichroism mcd="F" energyLo="-10.0" energyUp="0.0"/>
@@ -608,7 +606,7 @@
             <extrapolationTo0K value="-326.1242926483"/>
          </totalEnergy>
          <densityConvergence units="me/bohr^3">
-            <chargeDensity spin="1" distance="0.4791951625"/>
+            <chargeDensity spin="1" distance="0.4791951624"/>
          </densityConvergence>
       </iteration>
       <iteration numberForCurrentRun="    8" overallNumber="    8">
@@ -628,7 +626,7 @@
                        0.5593449428        0.5593449577
             </eigenvaluesAt>
          </eigenvalues>
-         <bandgap value="5.0933288417" units="eV"/>
+         <bandgap value="5.0933288418" units="eV"/>
          <sumValenceSingleParticleEnergies value="1.7533854598" units="Htr"/>
          <FermiEnergy value="0.3721668163" units="Htr"/>
          <valenceDensity>
@@ -809,9 +807,9 @@
             <extrapolationTo0K value="-326.1241241110"/>
          </totalEnergy>
          <densityConvergence units="me/bohr^3">
-            <chargeDensity spin="1" distance="0.0043593472"/>
+            <chargeDensity spin="1" distance="0.0043593473"/>
          </densityConvergence>
       </iteration>
    </scfLoop>
-   <endDateAndTime date="2026/02/27" time="16:07:03" zone="+0100"/>
+   <endDateAndTime date="2026/06/02" time="14:18:47" zone="+0200"/>
 </fleurOutput>
