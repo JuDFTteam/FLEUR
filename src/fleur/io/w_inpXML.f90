@@ -125,7 +125,7 @@ CONTAINS
       CHARACTER(len=20) :: mixingScheme
       CHARACTER(len=10) :: loType
       CHARACTER(len=10) :: bzIntMode
-      LOGICAL ::   l_explicit, l_nocoOpt, l_gfOpt, l_include(4)
+      LOGICAL ::   l_explicit, l_nocoOpt, l_gfOpt, l_dfptOpt, l_include(4)
       INTEGER :: iAtomType, startCoreStates, endCoreStates
       CHARACTER(len=100) :: posString(3)
       CHARACTER(len=7) :: str
@@ -136,6 +136,7 @@ CONTAINS
       l_explicit = l_explicitIn .OR. .not. present(filename)
       l_nocoOpt = noco%l_noco .OR. juDFT_was_argument("-noco")
       l_gfOpt = gfinp%n>0 .OR. juDFT_was_argument("-greensf")
+      l_dfptOpt = dfpt%l_dfpt .OR. juDFT_was_argument("-dfpt")
 
       band = .false.
       nw = 1
@@ -181,12 +182,12 @@ CONTAINS
 
 !      <coreElectrons ctail="T" frcor="F" kcrel="0" coretail_lmax="0" l_core_confpot="T"/>
 130   FORMAT('      <coreElectrons ctail="', l1, '" frcor="', l1, '" kcrel="', i0, '" coretail_lmax="', i0, '"/>')
-      WRITE (fileNum, 130) input%ctail, input%frcor, input%kcrel, input%coretail_lmax
+      WRITE (fileNum, 130) input%ctail .and. .not. l_dfptOpt, input%frcor, input%kcrel, input%coretail_lmax
 
       SELECT TYPE (xcpot)
       CLASS IS (t_xcpot_inbuild_nf)
          xcpotName = TRIM(ADJUSTL(xcpot%inbuild_name))
-         IF (xcpotName(1:5).EQ.'LibXC') THEN
+         IF (xcpotName(1:5).EQ.'LibXC'.or. l_dfptOpt) THEN
             xcName = "LibXC"
             xIndex = index(xcpotName, 'Exch:')
             cIndex = index(xcpotName, 'Cor:')
@@ -196,6 +197,8 @@ CONTAINS
             WRITE (fileNum, '(a)') '      <xcFunctional name="LibXC" relativisticCorrections="F">'
             !         <LibXCName  exchange="lda_x" correlation="lda_c_vwn"/> 
 133         FORMAT('         <LibXCName exchange="', a, '" correlation="', a, '"/>')
+            IF (l_dfptOpt) xName = 'lda_x'
+            IF (l_dfptOpt) cName = 'lda_c_vwn'
             WRITE (fileNum, 133) TRIM(xName), TRIM(cName)
             WRITE (fileNum, '(a)') '      </xcFunctional>'
          ELSE
@@ -629,6 +632,14 @@ WRITE (fileNum, 242) fr(1.0)
       ELSE
 402      FORMAT('      <plotting iplot="', i0, '" polar="', l1, '"/>')
          WRITE (fileNum, 402) sliceplot%iplot, sliceplot%polar
+      ENDIF
+
+      IF(l_explicit .OR. l_dfptOpt) THEN
+         WRITE (fileNum, '(a)') '      <dfpt l_dfpt="F" l_phonon="F" l_borneffcharge="F" l_efield="F" l_bfield="F">'
+         WRITE (fileNum, '(a)') '         <phonon l_sumrule="F" qptsListName="default-1"/>'
+         WRITE (fileNum, '(a)') '         <efield qlim="1.0/100"/>'
+         WRITE (fileNum, '(a)') '         <interpolation l_WSinterpol="T" qptsListName="default-1"/>'
+         WRITE (fileNum, '(a)') '      </dfpt>'
       ENDIF
 
 !      <chargeDensitySlicing numkpt="0" minEigenval="0.000000" maxEigenval="0.000000" nnne="0" pallst="F"/>

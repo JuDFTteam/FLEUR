@@ -21,7 +21,7 @@ PROGRAM inpgen
      use m_inpgen_make_kpts 
       IMPLICIT NONE
 
-      LOGICAL               :: l_fullinput,l_explicit(3),l_inpxml,l_include(4)
+      LOGICAL               :: l_fullinput,l_explicit(4),l_inpxml,l_include(4)
 
       LOGICAL               :: l_nosym,l_overwrite,l_noInpgenComment
       LOGICAL               :: l_dropXMLSchema,l_noksym
@@ -137,12 +137,13 @@ PROGRAM inpgen
       implicit none
       logical, intent(out) :: l_nosym,l_overwrite,l_noInpgenComment,l_dropXMLSchema,l_noksym
       character(len=100), intent(out) :: filename, kpt_string, profileName, kptsPath
-      logical, intent(out) :: l_include(4),l_explicit(3) 
+      logical, intent(out) :: l_include(4),l_explicit(4) 
 
       l_nosym=judft_was_argument("-nosym")
       l_explicit(1)=judft_was_argument("-explicit")
       l_explicit(2)=judft_was_argument("-noco")
       l_explicit(3)=judft_was_argument("-greensf")
+      l_explicit(4)=judft_was_argument("-dfpt")
       l_overwrite=judft_was_argument("-overwrite")
       l_noInpgenComment=juDFT_was_argument("-noInpgenComment")
       l_dropXMLSchema=juDFT_was_argument("-dropXMLSchema")

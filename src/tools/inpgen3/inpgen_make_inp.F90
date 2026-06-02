@@ -51,7 +51,7 @@ CONTAINS
       ! Arguments
       INTEGER, INTENT(IN) :: simple_inp_file_id
       CHARACTER(LEN=*), INTENT(IN) :: filename,  profileName
-      LOGICAL, INTENT(IN) :: l_addPath, l_include(4), l_explicit(3),l_onlyIdentitySym
+      LOGICAL, INTENT(IN) :: l_addPath, l_include(4), l_explicit(4),l_onlyIdentitySym
 
       ! Type declarations
       TYPE(t_input)            :: input

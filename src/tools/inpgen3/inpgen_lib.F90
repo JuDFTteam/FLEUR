@@ -44,7 +44,7 @@
       REWIND(97)
 
       CALL make_inp_xml(97, "inp.xml", .TRUE., profileName_f, &
-                        [.TRUE., .TRUE., .TRUE., .TRUE.], [.TRUE.,.TRUE.,.TRUE.],nosym)
+                        [.TRUE., .TRUE., .TRUE., .TRUE.], [.TRUE.,.TRUE.,.TRUE.,.TRUE.],nosym)
 
    END SUBROUTINE make_inp_py
 
