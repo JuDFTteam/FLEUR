@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -29,6 +29,8 @@ MODULE m_wannierlib_main
    USE m_types_radfun
    USE m_types_abc
    USE m_types_wannierlib
+
+   use m_wann_write_amn
    IMPLICIT NONE
 CONTAINS
 
@@ -50,7 +52,7 @@ CONTAINS
       INTEGER, INTENT(IN) :: jspin
       INTEGER, INTENT(IN) :: eig_id
 
-      INTEGER :: ikpt, itype, nntot_w90
+      INTEGER :: ikpt, itype, nntot_w90, ierr
       COMPLEX, ALLOCATABLE :: amn(:, :, :)
       COMPLEX, ALLOCATABLE :: mmn(:, :, :, :)
       COMPLEX, ALLOCATABLE :: ujug(:, :, :, :, :, :)
@@ -65,33 +67,49 @@ CONTAINS
 
       IF (.NOT. this%l_wannierize) RETURN
 
-      CALL init_w90(this, kpts, nntot_w90, nnkp, gkpb)
+      CALL init_w90(this, atoms, cell, kpts, fmpi, nntot_w90, nnkp, gkpb)
 
+      
       !Setup of data structures for amn and mmn calculation for all k-points
       CALL usdus%init(atoms, input%jspins)
       DO itype = 1, atoms%ntype
          CALL radfun(itype)%generate_radial_functions(atoms, input, enpara, fmpi, vtot, itype, usdus=usdus)
       END DO
 
-      CALL wannierlib_kdiff(kpts%nkpt, nntot_w90, kpts%bk, nnkp, gkpb, kdiff)
+      ! calculate the  matrices for all k-points
+      ALLOCATE (amn(this%num_bands, this%num_wann, kpts%nkptf),stat=ierr,source=cmplx(0.0, 0.0))
+      IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating amn buffer', calledby='wannierlib_main')
+      
+      allocate (mmn(this%num_bands, this%num_bands, nntot_w90, kpts%nkptf),stat=ierr,source=cmplx(0.0, 0.0))
+       IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating mmn buffer', calledby='wannierlib_main')
+      IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating mmn buffer', calledby='wannierlib_main')
+      
+  CALL wannierlib_kdiff(kpts%nkptf, nntot_w90, kpts%bkf, nnkp, gkpb, kdiff)
       CALL wannierlib_ujugaunt(atoms, cell, nntot_w90, kdiff, radfun, radfun, jspin, jspin, .FALSE., 1, ujug)
 
-      ! calculate the  matrices for all k-points
-      ALLOCATE (amn(this%num_bands, this%num_wann, kpts%nkptf), source=cmplx(0.0, 0.0))
-      allocate (mmn(this%num_bands, this%num_bands, nntot_w90, kpts%nkptf), source=cmplx(0.0, 0.0))
+      
 
       DO ikpt = 1, kpts%nkptf
+      
          CALL wannierlib_get_z(this, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, ikpt, jspin, input%l_real, lapw, zMat)
-
+         zmat%data_c= conjg(zMat%data_c)
          DO itype = 1, atoms%ntype
             CALL abc(itype)%init(input, atoms, radfun(itype)%n_r, this%num_bands, itype)
             CALL abc(itype)%calc_abc(input, atoms, sym, cell, lapw, this%num_bands, usdus, noco, nococonv, jspin, itype, zMat)
          END DO
-
-         CALL wannierlib_amn(this, atoms, cell, input, kpts, ikpt, usdus, radfun, abc, l_nocosoc, jspin, amn(:, :, ikpt))
+      
+         CALL wannierlib_amn(this, atoms, kpts, ikpt, usdus, radfun, abc, l_nocosoc, jspin, amn(:, :, ikpt))
+      
       CALL wannierlib_mmnkb(this, this%num_bands, nntot_w90, ikpt, kpts, nnkp, gkpb, kdiff, ujug, atoms, cell, input, sym, noco, nococonv, usdus, &
                                radfun, abc, jspin, eig_id, stars, lapw, zMat, mmn)
+      
       END DO
+
+      call wann_write_amn(fmpi%mpi_comm,.true.,"test.amn","Testing amn",&
+                    this%num_bands,kpts%nkptf,this%num_wann,&
+                    0,1,.false.,.false.,&
+                    amn,.false.)
+
 
       call wannierlib_create_eig(this, results, kpts, jspin, eig)
       CALL run_w90(this, mmn, amn, eig)
@@ -131,12 +149,14 @@ CONTAINS
       kd = 1
       DO k = 1, num_kpts
          k_loop: DO kk = 1, nntot
-            kdiffvec = bk(:, nnkp(kk, k)) + REAL(gkpb(:, kk, k)) - bk(:, k)
+            kdiffvec = bk(:, nnkp(k, kk)) + REAL(gkpb(:, k, kk)) - bk(:, k)
             DO ikpt = 1, kd - 1
                IF (ALL(ABS(kdiff(:, ikpt) - kdiffvec) <= 1.0e-4)) CYCLE k_loop
             END DO
 
-            IF (kd > nntot) CALL juDFT_error("problem in wannierlib_kdiff", calledby="wannierlib_kdiff")
+            IF (kd > nntot) THEN
+               CALL juDFT_error("problem in wannierlib_kdiff", calledby="wannierlib_kdiff")
+            endif
             kdiff(:, kd) = kdiffvec
             kd = kd + 1
          END DO k_loop

@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -14,9 +14,8 @@ MODULE m_wannierlib_mmk0_sph
    IMPLICIT NONE
 CONTAINS
 
-   SUBROUTINE wannierlib_mmk0_sph(atoms, noccbd, abc, radfun, mmn)
+   SUBROUTINE wannierlib_mmk0_sph(atoms, abc, radfun, mmn)
       TYPE(t_atoms), INTENT(IN) :: atoms
-      INTEGER, INTENT(IN) :: noccbd
       TYPE(t_abc), INTENT(IN) :: abc(:)
       TYPE(t_radfun), INTENT(IN) :: radfun(:)
       COMPLEX, INTENT(INOUT) :: mmn(:, :)

@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -51,7 +51,7 @@ CONTAINS
          total_nr = max(total_nr, maxval(radfun(n)%n_r(:)))
       end do
       ALLOCATE (uju(total_nr, total_nr, 0:atoms%lmaxd, 0:atoms%lmaxd, 0:atoms%lmaxd), source=0.0)
-      allocate (ujug(total_nr, total_nr, 0:atoms%lmaxd, 0:atoms%lmaxd, atoms%ntype, nntot), source=CMPLX(0.0, 0.0))
+      allocate (ujug( 0:atoms%lmaxd*(atoms%lmaxd+2), 0:atoms%lmaxd*(atoms%lmaxd+2), total_nr, total_nr,atoms%ntype, nntot), source=CMPLX(0.0, 0.0))
 
       DO ikpt_b = 1, nntot
          bpt(:) = kdiff(:, ikpt_b)
@@ -106,7 +106,7 @@ CONTAINS
                            IF ((lmini <= lp) .AND. (lp <= lmaxi) .AND. (MOD(l + lp + lpp, 2) == 0) .AND. (ABS(mpp) <= lpp)) THEN
                        factor = CONJG(ylmpp(lmpp + 1))*(cmplx(0.0, 1.0)**(l + lpp - lp))*gaunt1(lp, lpp, l, mp, mpp, m, atoms%lmaxd)
                               IF (l_q) factor = (sign_q**lpp)*factor
-                              ujug(:, :, lpmp, lm, n, ikpt_b) = ujug(:, :, lpmp, lm, n, ikpt_b) + factor*uju(:, :, l, lp, lpp)
+                              ujug(lpmp, lm, :,:, n, ikpt_b) = ujug(lpmp, lm, :,:, n, ikpt_b) + factor*uju(:, :, l, lp, lpp)
                            END IF
                         END DO
                      END DO

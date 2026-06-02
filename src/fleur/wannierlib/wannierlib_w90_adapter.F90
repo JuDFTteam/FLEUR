@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -7,13 +7,17 @@
 ! Copyright (c) 2026 Peter Gruenberg Institut, Forschungszentrum Juelich, Germany
 !--------------------------------------------------------------------------------
 MODULE m_wannierlib_w90_adapter
-  USE m_constants, ONLY : oUnit
+  USE m_constants, ONLY : oUnit, namat_const
   USE m_juDFT
   USE m_xmlOutput
+  USE m_types_atoms
+  USE m_types_cell
   USE m_types_kpts
+  USE m_types_mpi
   USE m_types_wannierlib
 #ifdef CPP_WANNLIB_API
-  USE w90_library, ONLY : lib_common_type, w90_set_option, w90_input_setopt, &
+  USE w90_library, ONLY : lib_common_type, w90_set_comm, w90_set_option, w90_input_setopt, &
+   implicit none
                           w90_get_nn, w90_get_nnkp, w90_get_gkpb, w90_set_eigval, &
                           w90_set_u_opt, w90_set_m_local, w90_set_u_matrix, &
                           w90_disentangle, w90_project_overlap, w90_wannierise, &
@@ -25,18 +29,24 @@ MODULE m_wannierlib_w90_adapter
 #endif
 CONTAINS
 
-  SUBROUTINE init_w90(this, kpts, nntot_w90, nnkp, gkpb)
+  SUBROUTINE init_w90(this, atoms, cell, kpts, fmpi, nntot_w90, nnkp, gkpb)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
+    TYPE(t_atoms), INTENT(IN) :: atoms
+    TYPE(t_cell), INTENT(IN) :: cell
     TYPE(t_kpts), INTENT(IN) :: kpts
+    TYPE(t_mpi), INTENT(IN) :: fmpi
     INTEGER, INTENT(OUT) :: nntot_w90
     INTEGER, ALLOCATABLE, INTENT(OUT) :: nnkp(:, :)
     INTEGER, ALLOCATABLE, INTENT(OUT), OPTIONAL :: gkpb(:, :, :)
 
     INTEGER :: nn
+    INTEGER :: na, itype
     INTEGER :: ierr
     INTEGER :: mp_grid(3)
     LOGICAL :: gamma_only, spinors
+    CHARACTER(LEN=2) :: atom_symbol
     CHARACTER(LEN=32) :: seedname
+    CHARACTER(LEN=128), ALLOCATABLE :: atoms_frac(:)
 
     IF (.NOT.this%l_wannierize) RETURN
 
@@ -46,15 +56,30 @@ CONTAINS
 #else
     
 
+      CALL w90_set_comm(wannierlib_w90main, fmpi%mpi_comm)
+
     mp_grid = kpts%nkpt3  !TODO: is this correct????
     gamma_only = .FALSE.  !TODO: determine from kpts if this is a gamma-only calculation
     spinors = .FALSE.     !TODO: determine from input if this is a spinor calculation
  
 
     CALL w90_set_option(wannierlib_w90main, 'num_bands', this%num_bands)
+    CALL w90_set_option(wannierlib_w90main, 'num_kpts', kpts%nkptf)
     CALL w90_set_option(wannierlib_w90main, 'num_wann', this%num_wann)
+    CALL w90_set_option(wannierlib_w90main, 'num_atoms', atoms%nat)
     CALL w90_set_option(wannierlib_w90main, 'mp_grid', mp_grid)
-    CALL w90_set_option(wannierlib_w90main, 'kpoints', kpts%bk)
+    CALL w90_set_option(wannierlib_w90main, 'kpoints', kpts%bkf)
+    CALL w90_set_option(wannierlib_w90main, 'unit_cell_cart', cell%amat)
+
+    ALLOCATE(atoms_frac(atoms%nat), stat=ierr)
+    IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating atoms_frac buffer', calledby='init_w90')
+    DO na = 1, atoms%nat
+      itype = atoms%itype(na)
+      atom_symbol = ADJUSTL(namat_const(atoms%nz(itype)))
+      WRITE(atoms_frac(na), '(a,1x,3(f24.16,1x))') TRIM(atom_symbol), atoms%taual(1, na), atoms%taual(2, na), atoms%taual(3, na)
+    END DO
+    !CALL w90_set_option(wannierlib_w90main, 'atoms_frac', atoms_frac)
+
     CALL w90_set_option(wannierlib_w90main, 'gamma_only', gamma_only)
     CALL w90_set_option(wannierlib_w90main, 'spinors', spinors)
     CALL w90_set_option(wannierlib_w90main, 'dump_inputs', .FALSE.)
@@ -75,13 +100,13 @@ CONTAINS
     nntot_w90 = nn
     IF (nntot_w90 <= 0) CALL juDFT_error('wannierlib invalid nntot from w90_get_nn', calledby='init_w90')
 
-    ALLOCATE(nnkp(nntot_w90, kpts%nkpt), stat=ierr)
+    ALLOCATE(nnkp(kpts%nkptf, nntot_w90), stat=ierr)
     IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating nnkp', calledby='init_w90')
     CALL w90_get_nnkp(wannierlib_w90main, nnkp, oUnit, oUnit, ierr)
     IF (ierr /= 0) CALL juDFT_error('w90_get_nnkp failed in wannierlib adapter', calledby='init_w90')
 
     IF (PRESENT(gkpb)) THEN
-      ALLOCATE(gkpb(3, nntot_w90, kpts%nkpt), stat=ierr)
+      ALLOCATE(gkpb(3, kpts%nkptf, nntot_w90), stat=ierr)
       IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating gkpb', calledby='init_w90')
       CALL w90_get_gkpb(wannierlib_w90main, gkpb, oUnit, oUnit, ierr)
       IF (ierr /= 0) CALL juDFT_error('w90_get_gkpb failed in wannierlib adapter', calledby='init_w90')

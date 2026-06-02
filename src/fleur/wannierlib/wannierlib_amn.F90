@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -14,8 +14,6 @@ MODULE m_wannierlib_amn
   USE m_eulerrot
   USE m_clebsch
   USE m_types_atoms
-  USE m_types_cell
-  USE m_types_input
   USE m_types_kpts
   USE m_types_abc
   USE m_types_usdus
@@ -26,11 +24,9 @@ MODULE m_wannierlib_amn
   IMPLICIT NONE
 CONTAINS
 
-  SUBROUTINE wannierlib_amn(wannierlib, atoms, cell, input, kpts, ikpt, usdus, radfun, abc, l_nocosoc, jspin, amn)
+  SUBROUTINE wannierlib_amn(wannierlib, atoms, kpts, ikpt, usdus, radfun, abc, l_nocosoc, jspin, amn)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: wannierlib
     TYPE(t_atoms), INTENT(IN) :: atoms
-    TYPE(t_cell), INTENT(IN) :: cell
-    TYPE(t_input), INTENT(IN) :: input
     TYPE(t_kpts), INTENT(IN) :: kpts
     INTEGER, INTENT(IN) :: ikpt
     TYPE(t_usdus), INTENT(IN) :: usdus
@@ -59,7 +55,7 @@ CONTAINS
 
     CALL timestart('wannierlib_amn')
 
-    CALL wannierlib_rad_twd(wannierlib, atoms, cell, input, wannierlib%num_wann, ikpt, usdus, radfun, jspin, rads)
+    CALL wannierlib_rad_twd(wannierlib, atoms, wannierlib%num_wann, ikpt, usdus, radfun, jspin, rads)
 
     tlmwf = CMPLX(0.0, 0.0)
     tlmwft = CMPLX(0.0, 0.0)
@@ -88,19 +84,17 @@ CONTAINS
         END DO
       END DO
     END DO
-
-    vlpr(:) = 0.0
-
+    
     DO nwf = 1, wannierlib%num_wann
       arg = -kpts%bkf(1, ikpt) * wannierlib%proj_shift(1, nwf)
       arg = arg - kpts%bkf(2, ikpt) * wannierlib%proj_shift(2, nwf)
       arg = arg - kpts%bkf(3, ikpt) * wannierlib%proj_shift(3, nwf)
       arg = tpi_const * arg
       factor = CMPLX(COS(arg), SIN(arg)) * wannierlib%proj_weight(nwf)
-      
-      ntyp = wannierlib%proj_ntype(nwf)
-      nat_local = 1
+    
 
+      ntyp = wannierlib%proj_ntype(nwf)
+      nat_local = wannierlib%proj_atom(nwf)
       DO ne = 1, size(amn,1)
         DO l = 0, MIN(atoms%lmax(ntyp), 3)
           proj_int(:) = 0.0

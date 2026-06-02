@@ -2990,9 +2990,9 @@
       <xsd:annotation>
          <xsd:documentation>Band window controls for wannierlib library-mode workflow.</xsd:documentation>
       </xsd:annotation>
-      <xsd:attribute name="numBands" type="xsd:positiveInteger" use="optional" default="0"/>
-      <xsd:attribute name="minBand" type="xsd:positiveInteger" use="optional" default="0"/>
-      <xsd:attribute name="maxBand" type="xsd:positiveInteger" use="optional" default="0"/>
+      <xsd:attribute name="numBands" type="xsd:integer" use="optional" default="0"/>
+      <xsd:attribute name="minBand" type="xsd:integer" use="optional" default="0"/>
+      <xsd:attribute name="maxBand" type="xsd:integer" use="optional" default="0"/>
    </xsd:complexType>
 
    <xsd:complexType name="WannierlibDisentanglementType">

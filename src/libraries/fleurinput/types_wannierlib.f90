@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -11,6 +11,7 @@ MODULE m_types_wannierlib
   USE m_types_atoms
   USE m_types_noco
   USE m_types_fleurinput_base
+  USE m_constants,ONLY: ounit
   IMPLICIT NONE
   PRIVATE
 
@@ -31,6 +32,7 @@ MODULE m_types_wannierlib
     REAL :: dis_conv_tol = 0.0
 
     INTEGER, ALLOCATABLE :: proj_ntype(:)
+    INTEGER, ALLOCATABLE :: proj_atom(:)
     CHARACTER(LEN=20), ALLOCATABLE :: proj_species(:)
     INTEGER, ALLOCATABLE :: proj_l(:)
     INTEGER, ALLOCATABLE :: proj_m(:)
@@ -61,7 +63,7 @@ CONTAINS
     TYPE(t_noco), INTENT(IN) :: noco
 
     INTEGER :: i, j, nold, nnew, mcount, mval, mrepeat, spin_mult, ispin, itype, type_mult, nn, na
-    INTEGER, ALLOCATABLE :: new_proj_ntype(:), new_proj_l(:), new_proj_m(:), new_proj_spin(:), new_proj_rwf(:)
+    INTEGER, ALLOCATABLE :: new_proj_ntype(:), new_proj_atom(:), new_proj_l(:), new_proj_m(:), new_proj_spin(:), new_proj_rwf(:)
     CHARACTER(LEN=20), ALLOCATABLE :: new_proj_species(:)
     REAL, ALLOCATABLE :: new_proj_alpha(:), new_proj_beta(:), new_proj_gamma(:), new_proj_zona(:), new_proj_regio(:)
     REAL, ALLOCATABLE :: new_proj_j(:), new_proj_mj(:), new_proj_weight(:), new_proj_shift(:, :)
@@ -75,6 +77,10 @@ CONTAINS
     IF (.NOT.ALLOCATED(this%proj_ntype)) THEN
       ALLOCATE(this%proj_ntype(nold))
       this%proj_ntype = 0
+    END IF
+    IF (.NOT.ALLOCATED(this%proj_atom)) THEN
+      ALLOCATE(this%proj_atom(nold))
+      this%proj_atom = 1
     END IF
 
     expand_spin = noco%l_noco .OR. noco%l_soc
@@ -109,7 +115,7 @@ CONTAINS
       nnew = nnew + mrepeat * spin_mult * type_mult
     END DO
 
-    ALLOCATE(new_proj_ntype(nnew), new_proj_species(nnew), new_proj_l(nnew), new_proj_m(nnew), new_proj_spin(nnew), new_proj_rwf(nnew))
+    ALLOCATE(new_proj_ntype(nnew), new_proj_atom(nnew), new_proj_species(nnew), new_proj_l(nnew), new_proj_m(nnew), new_proj_spin(nnew), new_proj_rwf(nnew))
     ALLOCATE(new_proj_alpha(nnew), new_proj_beta(nnew), new_proj_gamma(nnew), new_proj_zona(nnew), new_proj_regio(nnew))
     ALLOCATE(new_proj_j(nnew), new_proj_mj(nnew), new_proj_weight(nnew), new_proj_shift(3, nnew))
 
@@ -134,6 +140,7 @@ CONTAINS
           DO ispin = 1, spin_mult
             j = j + 1
             new_proj_ntype(j) = itype
+            new_proj_atom(j) = nn
             new_proj_species(j) = this%proj_species(i)
             new_proj_l(j) = this%proj_l(i)
             IF (mrepeat > 1) THEN
@@ -159,7 +166,7 @@ CONTAINS
             new_proj_j(j) = this%proj_j(i)
             new_proj_mj(j) = this%proj_mj(i)
             new_proj_weight(j) = this%proj_weight(i)
-            new_proj_shift(:, j) = this%proj_shift(:, i) + atoms%pos(:, na)
+            new_proj_shift(:, j) = this%proj_shift(:, i) 
           END DO
           END DO
         END DO
@@ -167,6 +174,7 @@ CONTAINS
     END DO
 
     CALL move_alloc(new_proj_ntype, this%proj_ntype)
+    CALL move_alloc(new_proj_atom, this%proj_atom)
     CALL move_alloc(new_proj_species, this%proj_species)
     CALL move_alloc(new_proj_l, this%proj_l)
     CALL move_alloc(new_proj_m, this%proj_m)
@@ -207,6 +215,19 @@ CONTAINS
         CALL juDFT_error('wannierlib: inconsistent numBands and [minBand,maxBand]', calledby='init_wannierlib')
       END IF
     END IF
+
+    WRITE(oUnit, '(A)') 'wannierlib: expanded projection list'
+    WRITE(oUnit, '(A)') ' idx  species               type atom   l   m spin rwf      alpha       beta      gamma       zona      regio          j         mj    weight      shift_x      shift_y      shift_z'
+    WRITE(oUnit, '(A)') '--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------'
+    DO i = 1, this%num_wann
+      WRITE(oUnit, '(I4,1X,A20,1X,I4,1X,I4,1X,I3,1X,I3,1X,I4,1X,I3,1X,&
+     &             F10.5,1X,F10.5,1X,F10.5,1X,F10.5,1X,F10.5,1X,F10.5,1X,&
+     &             F10.5,1X,F10.5,1X,F10.5,1X,F10.5,1X,F10.5)') &
+           i, TRIM(this%proj_species(i)), this%proj_ntype(i), this%proj_atom(i), this%proj_l(i), this%proj_m(i), this%proj_spin(i), this%proj_rwf(i), &
+           this%proj_alpha(i), this%proj_beta(i), this%proj_gamma(i), this%proj_zona(i), this%proj_regio(i), this%proj_j(i), this%proj_mj(i), this%proj_weight(i), &
+           this%proj_shift(1, i), this%proj_shift(2, i), this%proj_shift(3, i)
+    END DO
+    WRITE(oUnit, '(A)') '--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------'
   END SUBROUTINE init_wannierlib
 
   INTEGER FUNCTION projection_m_count(l)
@@ -259,6 +280,7 @@ CONTAINS
     CALL mpi_bc(this%dis_mix_ratio, rank, mpi_comm)
     CALL mpi_bc(this%dis_conv_tol, rank, mpi_comm)
     CALL mpi_bc(this%proj_ntype, rank, mpi_comm)
+    CALL mpi_bc(this%proj_atom, rank, mpi_comm)
     CALL mpi_bc(this%proj_species, rank, mpi_comm)
     CALL mpi_bc(this%proj_l, rank, mpi_comm)
     CALL mpi_bc(this%proj_m, rank, mpi_comm)
@@ -328,7 +350,7 @@ CONTAINS
     END DO
 
     IF (nProjTotal > 0) THEN
-      ALLOCATE(this%proj_ntype(nProjTotal), this%proj_species(nProjTotal), this%proj_l(nProjTotal), this%proj_m(nProjTotal), this%proj_spin(nProjTotal))
+      ALLOCATE(this%proj_ntype(nProjTotal), this%proj_atom(nProjTotal), this%proj_species(nProjTotal), this%proj_l(nProjTotal), this%proj_m(nProjTotal), this%proj_spin(nProjTotal))
       ALLOCATE(this%proj_rwf(nProjTotal), this%proj_alpha(nProjTotal), this%proj_beta(nProjTotal), this%proj_gamma(nProjTotal))
       ALLOCATE(this%proj_zona(nProjTotal), this%proj_regio(nProjTotal), this%proj_j(nProjTotal), this%proj_mj(nProjTotal))
       ALLOCATE(this%proj_weight(nProjTotal), this%proj_shift(3, nProjTotal))
@@ -346,7 +368,7 @@ CONTAINS
         DO iProj = 1, nProjType
           ip = ip + 1
           WRITE(xPathP, '(A,I0,A,I0,A)') '/fleurInput/atomSpecies/species[', iType, ']/wannierproj[', iProj, ']'
-          this%proj_ntype(ip) = iType
+       
           this%proj_species(ip) = species_name
           this%proj_l(ip) = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@l'))
           this%proj_m(ip) = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@m'))

@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -77,6 +77,7 @@ CONTAINS
       USE m_dfpt_vefield
       USE m_checkdopall
       USE m_store_load_hybrid
+      USE m_wannierlib_main
 
 !$    USE omp_lib
 
@@ -116,8 +117,10 @@ CONTAINS
       INTEGER :: eig_id, archiveType, num_threads
       INTEGER :: iter, iterHF, i, n, i_gf
       INTEGER :: wannierspin
+      INTEGER :: wannierlib_jspin
       LOGICAL :: l_opti, l_cont, l_qfix, l_real, l_olap, l_error, l_dummy
       LOGICAL :: l_forceTheorem, l_lastIter, l_exist
+      LOGICAL :: l_wannierlib_nocosoc
       REAL    :: fix, sfscale, rdummy, tempDistance
       REAL    :: mmpmatDistancePrev, occDistancePrev
       REAL    :: iterRuntime
@@ -456,6 +459,7 @@ CONTAINS
                END IF
             END IF
 
+
             CALL timestart("determination of fermi energy")
 
             IF (fi%noco%l_soc .AND. (.NOT. fi%noco%l_noco)) THEN
@@ -480,6 +484,16 @@ CONTAINS
             endif   
 #endif            
             CALL timestop("determination of fermi energy")
+
+                        IF (fi%wannierlib%l_wannierize) THEN
+               wannierlib_jspin = 1
+               l_wannierlib_nocosoc = fi%noco%l_noco .AND. (.NOT. fi%noco%l_soc)
+               CALL timestart("wannierlib")
+               CALL wannierlib_main(fi%wannierlib, fi%atoms, fi%cell, input_soc, fi%kpts, fi%sym, fi%noco, nococonv, stars, enpara, fmpi, &
+                                    vTot, results, l_wannierlib_nocosoc, wannierlib_jspin, eig_id)
+               CALL timestop("wannierlib")
+               call juDFT_end("Wannierization done. Fleur ends.", fmpi%irank)
+            END IF
 
             ! TODO: What is commented out here and should it perhaps be removed?
 ! !$          !+Wannier

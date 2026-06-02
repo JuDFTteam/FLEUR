@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -11,7 +11,6 @@ MODULE m_wannierlib_mmnkb
   USE m_wannierlib_mmkb_int
   USE m_wannierlib_get_z
   USE m_wannierlib_mmkb_sph
-  USE m_wannierlib_mmk0_sph
   USE m_types
   USE m_types_abc
   USE m_types_atoms
@@ -67,15 +66,15 @@ CONTAINS
     END IF
   
     DO kk = 1, nntot
-      nk_b = nnkp(kk, nk)
+      nk_b = nnkp(nk, kk)
       CALL wannierlib_get_z(this, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, nk_b, jspin, input%l_real, lapw_b, zMat_b)
       DO itype = 1, atoms%ntype
          CALL abc_b(itype)%init(input, atoms, radfun(itype)%n_r, num_bands, itype)
          CALL abc_b(itype)%calc_abc(input, atoms, sym, cell, lapw_b, num_bands, usdus, noco, nococonv, jspin, itype, zMat_b)
       END DO
 
-      CALL wannierlib_mmkb_sph(atoms, abc_b, abc, kpts%bk(:, nnkp(kk, nk)), gkpb(:, kk, nk), kpts%bk(:, nk), ujug, kdiff, nntot, mmn(:, :, kk, nk))
-      CALL wannierlib_mmnkb_int(stars, lapw, lapw_b, jspin, jspin, zMat, zMat_b, gkpb(:, kk, nk), mmn(:, :, kk, nk))
+      CALL wannierlib_mmkb_sph(atoms, abc_b, abc, kpts%bk(:, nnkp(nk, kk)), gkpb(:, nk, kk), kpts%bk(:, nk), ujug, kdiff, nntot, mmn(:, :, kk, nk))
+      CALL wannierlib_mmnkb_int(stars, lapw, lapw_b, jspin, jspin, zMat, zMat_b, gkpb(:, nk, kk), mmn(:, :, kk, nk))
     END DO
 
     

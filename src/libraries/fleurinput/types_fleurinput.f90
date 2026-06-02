@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -44,6 +44,7 @@ MODULE m_types_fleurinput
     type(t_mpinp) :: mpinp
      
     TYPE(t_coreSpecInput)::coreSpecInput
+    TYPE(t_wannierlib_wannierize)::wannierlib
     TYPE(t_forcetheo_data)::forcetheo_data
     TYPE(t_enparaXML)::enparaXML
     TYPE(t_kpts)::kpts
