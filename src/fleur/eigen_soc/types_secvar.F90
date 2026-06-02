@@ -142,6 +142,7 @@ MODULE m_types_secvar
         DO jsp=1,size(this%zmat)
             !Split the eigenvectors into a spin-up and down part
             call eig%copy(this%eigvec, 1, 1, m1=merge(1, this%ne_first+1, jsp==1), m2=1)
+            eig%data_c=conjg(eig%data_c) !Conjugate the eigenvectors, since they are stored in the adjoint form in this%eigvec
             !Now transform the eigenvectors back to the original LAPW basis
             call this%zmat(jsp)%multiply(eig, backtransformed)
             !Store the backtransformed eigenvectors in the original matrix format

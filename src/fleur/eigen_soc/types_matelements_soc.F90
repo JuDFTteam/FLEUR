@@ -84,7 +84,7 @@ CONTAINS
         type(t_radfun) :: radfun
       INTEGER :: num_bands
       integer :: n, l, m, lm, ll1, jcof, icof
-        integer :: i, j, i1, j1, na, lm1, m1, i1_int, j1_int
+        integer :: i, j, i1, j1, na, lm1, m1
         complex :: cof_lm
 
 
@@ -115,9 +115,7 @@ CONTAINS
          end if
          
          DO j1=1,2
-            j1_int = min(this%input%jspins,j1)
             DO i1=1,2
-               i1_int = min(this%input%jspins,i1)
                DO j = 1,num_bands
                   DO na = 1, this%atoms%neq(n)
                      DO l = 1,this%atoms%lmax(n)
