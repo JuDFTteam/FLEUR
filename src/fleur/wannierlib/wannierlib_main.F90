@@ -82,9 +82,8 @@ CONTAINS
       
       allocate (mmn(this%num_bands, this%num_bands, nntot_w90, kpts%nkptf),stat=ierr,source=cmplx(0.0, 0.0))
        IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating mmn buffer', calledby='wannierlib_main')
-      IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating mmn buffer', calledby='wannierlib_main')
       
-  CALL wannierlib_kdiff(kpts%nkptf, nntot_w90, kpts%bkf, nnkp, gkpb, kdiff)
+      CALL wannierlib_kdiff(kpts%nkptf, nntot_w90, kpts%bkf, nnkp, gkpb, kdiff)
       CALL wannierlib_ujugaunt(atoms, cell, nntot_w90, kdiff, radfun, radfun, jspin, jspin, .FALSE., 1, ujug)
 
       
@@ -92,7 +91,7 @@ CONTAINS
       DO ikpt = 1, kpts%nkptf
       
          CALL wannierlib_get_z(this, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, ikpt, jspin, input%l_real, lapw, zMat)
-         zmat%data_c= conjg(zMat%data_c)
+
          DO itype = 1, atoms%ntype
             CALL abc(itype)%init(input, atoms, radfun(itype)%n_r, this%num_bands, itype)
             CALL abc(itype)%calc_abc(input, atoms, sym, cell, lapw, this%num_bands, usdus, noco, nococonv, jspin, itype, zMat)
@@ -105,10 +104,14 @@ CONTAINS
       
       END DO
 
-      call wann_write_amn(fmpi%mpi_comm,.true.,"test.amn","Testing amn",&
+      mmn=conjg(mmn)
+
+      call wann_write_amn(fmpi%mpi_comm,.true.,"WF1.amn","Testing amn",&
                     this%num_bands,kpts%nkptf,this%num_wann,&
                     0,1,.false.,.false.,&
                     amn,.false.)
+
+      CALL wannierlib_write_mmn(this, mmn, kpts, nnkp, gkpb, jspin)
 
 
       call wannierlib_create_eig(this, results, kpts, jspin, eig)
@@ -162,5 +165,68 @@ CONTAINS
          END DO k_loop
       END DO
    END SUBROUTINE wannierlib_kdiff
+
+   subroutine wannierlib_write_mmn(this, mmnk, kpts, nnkp, gkpb, jspin, fending)
+      TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
+      COMPLEX, INTENT(IN) :: mmnk(:, :, :, :)
+      TYPE(t_kpts), INTENT(IN) :: kpts
+      INTEGER, INTENT(IN) :: nnkp(:, :)
+      INTEGER, INTENT(IN) :: gkpb(:, :, :)
+      INTEGER, INTENT(IN), OPTIONAL :: jspin
+      CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: fending
+
+      INTEGER :: ikpt, ikpt_b, i, j, nntot, nbnd, jspin2
+      CHARACTER(LEN=3) :: spin12(2)
+      CHARACTER(LEN=12) :: file_ending
+
+      spin12 = (/'WF1', 'WF2'/)
+      jspin2 = 1
+      IF (PRESENT(jspin)) jspin2 = jspin
+      IF (PRESENT(fending)) THEN
+         file_ending = TRIM(fending)
+      ELSE
+         file_ending = ''
+      END IF
+
+      nntot = SIZE(mmnk, 3)
+      nbnd = SIZE(mmnk, 1)
+
+      IF (SIZE(mmnk, 2) /= nbnd) THEN
+         CALL juDFT_error('wannierlib_write_mmn: mmnk must be square in band indices', &
+                          calledby='wannierlib_write_mmn')
+      END IF
+      IF (SIZE(mmnk, 4) /= kpts%nkptf) THEN
+         CALL juDFT_error('wannierlib_write_mmn: k-point dimension mismatch', &
+                          calledby='wannierlib_write_mmn')
+      END IF
+      IF (SIZE(nnkp, 1) /= kpts%nkptf .OR. SIZE(nnkp, 2) /= nntot) THEN
+         CALL juDFT_error('wannierlib_write_mmn: nnkp dimension mismatch', &
+                          calledby='wannierlib_write_mmn')
+      END IF
+      IF (SIZE(gkpb, 1) /= 3 .OR. SIZE(gkpb, 2) /= kpts%nkptf .OR. SIZE(gkpb, 3) /= nntot) THEN
+         CALL juDFT_error('wannierlib_write_mmn: gkpb dimension mismatch', &
+                          calledby='wannierlib_write_mmn')
+      END IF
+      IF (jspin2 < 1 .OR. jspin2 > 2) THEN
+         CALL juDFT_error('wannierlib_write_mmn: jspin must be 1 or 2', &
+                          calledby='wannierlib_write_mmn')
+      END IF
+
+      open (305, file=spin12(jspin2)//TRIM(file_ending)//'.mmn')
+      write (305, *) 'Overlaps of the wavefunct. the k- and b-points'
+      write (305, '(3i5)') nbnd, kpts%nkptf, nntot
+      DO ikpt = 1, kpts%nkptf
+         DO ikpt_b = 1, nntot
+            write (305, '(2i5,3x,3i4)') ikpt, nnkp(ikpt, ikpt_b), gkpb(1:3, ikpt, ikpt_b)
+            DO i = 1, nbnd
+               DO j = 1, nbnd
+                  write (305, '(2f24.18)') real(mmnk(j, i, ikpt_b, ikpt)), &
+                                           aimag(mmnk(j, i, ikpt_b, ikpt))
+               END DO
+            END DO
+         END DO
+      END DO
+      close (305)
+   END SUBROUTINE wannierlib_write_mmn
 
 END MODULE m_wannierlib_main

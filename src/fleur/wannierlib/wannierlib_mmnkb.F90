@@ -73,8 +73,8 @@ CONTAINS
          CALL abc_b(itype)%calc_abc(input, atoms, sym, cell, lapw_b, num_bands, usdus, noco, nococonv, jspin, itype, zMat_b)
       END DO
 
-      CALL wannierlib_mmkb_sph(atoms, abc_b, abc, kpts%bk(:, nnkp(nk, kk)), gkpb(:, nk, kk), kpts%bk(:, nk), ujug, kdiff, nntot, mmn(:, :, kk, nk))
       CALL wannierlib_mmnkb_int(stars, lapw, lapw_b, jspin, jspin, zMat, zMat_b, gkpb(:, nk, kk), mmn(:, :, kk, nk))
+      CALL wannierlib_mmkb_sph(atoms, abc, abc_b, kpts%bkf(:, nnkp(nk, kk)), gkpb(:, nk, kk), kpts%bkf(:, nk), ujug, kdiff, nntot, mmn(:, :, kk, nk))
     END DO
 
     

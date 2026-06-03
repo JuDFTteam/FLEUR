@@ -17,7 +17,6 @@ MODULE m_wannierlib_w90_adapter
   USE m_types_wannierlib
 #ifdef CPP_WANNLIB_API
   USE w90_library, ONLY : lib_common_type, w90_set_comm, w90_set_option, w90_input_setopt, &
-   implicit none
                           w90_get_nn, w90_get_nnkp, w90_get_gkpb, w90_set_eigval, &
                           w90_set_u_opt, w90_set_m_local, w90_set_u_matrix, &
                           w90_disentangle, w90_project_overlap, w90_wannierise, &
