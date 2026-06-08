@@ -151,7 +151,7 @@ CONTAINS
                                   wann=wann, xcpot=xcpot, forcetheo_data=forcetheo_data, kpts=fi%kpts, kptsSelection=kptsSelection, kptsArray=kptsArray, &
                                   enparaXML=enparaXML, gfinp=fi%gfinp, hub1inp=fi%hub1inp, juPhon=fi%juPhon)
          CALL fleurinput_postprocess(fi%cell, fi%sym, fi%atoms, fi%input, fi%noco, fi%vacuum, &
-                                     fi%banddos, fi%hybinp,  Xcpot, fi%kpts, fi%gfinp)
+                                     fi%banddos, fi%hybinp,  Xcpot, fi%kpts, fi%gfinp, fi%wannierlib)
       END IF
       !Distribute fi%input to all PE
       CALL fleurinput_mpi_bc(fi%cell, fi%sym, fi%atoms, fi%input, fi%noco, fi%vacuum, fi%field, &
@@ -173,7 +173,7 @@ CONTAINS
       CALL fi%juPhon%init(fi%cell,fi%input) ! This is needed for the dim of lapw basis 
       CALL lapw_dim(fi%kpts, fi%cell, fi%input, fi%noco, nococonv,   forcetheo, fi%atoms, nbasfcn, fi%juPhon)
       CALL fi%input%init(fi%noco, fi%hybinp%l_hybrid,fi%sym%invs,fi%atoms%n_denmat,fi%atoms%n_hia,lapw_dim_nbasfcn)
-      CALL fi%wannierlib%init(fi%atoms, fi%noco)
+     
       CALL fi%hybinp%init(fi%atoms, fi%cell, fi%input,   fi%sym, xcpot)
       l_timeReversalCheck = .FALSE.
       IF(.NOT.fi%banddos%band.AND..NOT.fi%banddos%dos) THEN

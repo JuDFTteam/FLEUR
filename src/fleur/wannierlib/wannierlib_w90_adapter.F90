@@ -53,8 +53,8 @@ CONTAINS
                      calledby='init_w90')
 #else
     
-
-      CALL w90_set_comm(wannierlib_w90main, fmpi%mpi_comm)
+    call timestart('init_w90')
+    CALL w90_set_comm(wannierlib_w90main, fmpi%mpi_comm)
 
     mp_grid = kpts%nkpt3  !TODO: is this correct????
     gamma_only = .FALSE.  !TODO: determine from kpts if this is a gamma-only calculation
@@ -107,6 +107,7 @@ CONTAINS
     IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating gkpb', calledby='init_w90')
     CALL w90_get_gkpb(wannierlib_w90main, gkpb, oUnit, oUnit, ierr)
     IF (ierr /= 0) CALL juDFT_error('w90_get_gkpb failed in wannierlib adapter', calledby='init_w90')
+    call timestop('init_w90')
 #endif
   END SUBROUTINE init_w90
 
@@ -127,7 +128,7 @@ CONTAINS
     CALL juDFT_error('wannierlib requires Wannier90 module API (w90_library). Rebuild with CPP_WANNLIB_API and matching w90_library.mod.', &
                      calledby='run_w90')
 #else
-
+    call timestart('run_w90')
 
     ALLOCATE(u_matrix(this%num_wann, this%num_wann, num_kpts), stat=ierr)
     IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating U matrix', calledby='run_w90')
@@ -154,6 +155,7 @@ CONTAINS
 
     CALL w90_wannierise(wannierlib_w90main, oUnit, oUnit, ierr)
     IF (ierr /= 0) CALL juDFT_error('w90_wannierise failed in wannierlib adapter', calledby='run_w90')
+    call timestop('run_w90')
 #endif
   END SUBROUTINE run_w90
 

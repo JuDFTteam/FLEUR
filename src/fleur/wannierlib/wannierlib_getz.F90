@@ -1,10 +1,7 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
-!--------------------------------------------------------------------------------
-!--------------------------------------------------------------------------------
-! Copyright (c) 2026 Peter Gruenberg Institut, Forschungszentrum Juelich, Germany
 !--------------------------------------------------------------------------------
 MODULE m_wannierlib_get_z
   USE m_juDFT
@@ -53,7 +50,8 @@ CONTAINS
 
     nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*atoms%nlotot, lapw%nv(1) + atoms%nlotot, noco%l_noco)
     CALL zMat%init(l_real, nbasfcn, num_selected)
-    CALL read_eig(eig_id, nk, jspin, list=ev_list, zmat=zMat)
+    CALL read_eig(eig_id, nk, jspin, list=ev_list, zmat=zMat,&
+          kpts=kpts,input=input,noco=noco,nococonv=nococonv,sym=sym,atoms=atoms,cell=cell)
 
     DEALLOCATE(ev_list)
   END SUBROUTINE wannierlib_get_z
