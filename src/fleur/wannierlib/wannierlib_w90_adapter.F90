@@ -3,9 +3,6 @@
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
-!--------------------------------------------------------------------------------
-! Copyright (c) 2026 Peter Gruenberg Institut, Forschungszentrum Juelich, Germany
-!--------------------------------------------------------------------------------
 MODULE m_wannierlib_w90_adapter
   USE m_constants, ONLY : oUnit, namat_const
   USE m_juDFT
@@ -17,6 +14,7 @@ MODULE m_wannierlib_w90_adapter
   USE m_types_wannierlib
 #ifdef CPP_WANNLIB_API
   USE w90_library, ONLY : lib_common_type, w90_set_comm, w90_set_option, w90_input_setopt, &
+   implicit none
                           w90_get_nn, w90_get_nnkp, w90_get_gkpb, w90_set_eigval, &
                           w90_set_u_opt, w90_set_m_local, w90_set_u_matrix, &
                           w90_disentangle, w90_project_overlap, w90_wannierise, &
@@ -28,12 +26,13 @@ MODULE m_wannierlib_w90_adapter
 #endif
 CONTAINS
 
-  SUBROUTINE init_w90(this, atoms, cell, kpts, fmpi, nntot_w90, nnkp, gkpb)
+  SUBROUTINE init_w90(this, atoms, cell, kpts, fmpi, spinors, nntot_w90, nnkp, gkpb)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
     TYPE(t_atoms), INTENT(IN) :: atoms
     TYPE(t_cell), INTENT(IN) :: cell
     TYPE(t_kpts), INTENT(IN) :: kpts
     TYPE(t_mpi), INTENT(IN) :: fmpi
+    LOGICAL, INTENT(IN) :: spinors
     INTEGER, INTENT(OUT) :: nntot_w90
     INTEGER, ALLOCATABLE, INTENT(OUT) :: nnkp(:, :)
     INTEGER, ALLOCATABLE, INTENT(OUT), OPTIONAL :: gkpb(:, :, :)
@@ -42,7 +41,7 @@ CONTAINS
     INTEGER :: na, itype
     INTEGER :: ierr
     INTEGER :: mp_grid(3)
-    LOGICAL :: gamma_only, spinors
+    LOGICAL :: gamma_only
     CHARACTER(LEN=2) :: atom_symbol
     CHARACTER(LEN=32) :: seedname
     CHARACTER(LEN=128), ALLOCATABLE :: atoms_frac(:)
@@ -59,7 +58,6 @@ CONTAINS
 
     mp_grid = kpts%nkpt3  !TODO: is this correct????
     gamma_only = .FALSE.  !TODO: determine from kpts if this is a gamma-only calculation
-    spinors = .FALSE.     !TODO: determine from input if this is a spinor calculation
  
 
     CALL w90_set_option(wannierlib_w90main, 'num_bands', this%num_bands)

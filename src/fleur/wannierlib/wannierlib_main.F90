@@ -1,10 +1,7 @@
 !--------------------------------------------------------------------------------
 ! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
-! This file is part of FLEUR and available as free software under the conditions 
+! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
-!--------------------------------------------------------------------------------
-!--------------------------------------------------------------------------------
-! Copyright (c) 2026 Peter Gruenberg Institut, Forschungszentrum Juelich, Germany
 !--------------------------------------------------------------------------------
 MODULE m_wannierlib_main
    USE m_types, ONLY: t_stars, t_results
@@ -34,7 +31,7 @@ MODULE m_wannierlib_main
    IMPLICIT NONE
 CONTAINS
 
-  SUBROUTINE wannierlib_main(this, atoms, cell, input, kpts, sym, noco, nococonv, stars, enpara, fmpi, vtot, results,  l_nocosoc, jspin, eig_id)
+   SUBROUTINE wannierlib_main(this, atoms, cell, input, kpts, sym, noco, nococonv, stars, enpara, fmpi, vtot, results, eig_id)
       TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
       TYPE(t_atoms), INTENT(IN) :: atoms
       TYPE(t_cell), INTENT(IN) :: cell
@@ -48,11 +45,9 @@ CONTAINS
       TYPE(t_mpi), INTENT(IN) :: fmpi
       TYPE(t_potden), INTENT(IN) :: vtot
       TYPE(t_results), INTENT(IN) :: results
-      LOGICAL, INTENT(IN) :: l_nocosoc
-      INTEGER, INTENT(IN) :: jspin
       INTEGER, INTENT(IN) :: eig_id
 
-      INTEGER :: ikpt, itype, nntot_w90, ierr
+      INTEGER :: ikpt, itype, nntot_w90, ierr, jspin, jspin_comp
       COMPLEX, ALLOCATABLE :: amn(:, :, :)
       COMPLEX, ALLOCATABLE :: mmn(:, :, :, :)
       COMPLEX, ALLOCATABLE :: ujug(:, :, :, :, :, :)
@@ -64,59 +59,79 @@ CONTAINS
       TYPE(t_mat) :: zMat
       TYPE(t_radfun) :: radfun(atoms%ntype)
       TYPE(t_abc) :: abc(atoms%ntype)
+      LOGICAL :: l_wannierlib_spinors
+      LOGICAL :: l_nocosoc
+      CHARACTER(LEN=7) :: amn_file
+      CHARACTER(LEN=3) :: spin12(2)
 
       IF (.NOT. this%l_wannierize) RETURN
 
-      CALL init_w90(this, atoms, cell, kpts, fmpi, nntot_w90, nnkp, gkpb)
+      l_wannierlib_spinors = noco%l_noco .OR. noco%l_soc
+      l_nocosoc = noco%l_noco .AND. (.NOT. noco%l_soc)
+      spin12 = (/'WF1', 'WF2'/)
 
-      
       !Setup of data structures for amn and mmn calculation for all k-points
       CALL usdus%init(atoms, input%jspins)
       DO itype = 1, atoms%ntype
          CALL radfun(itype)%generate_radial_functions(atoms, input, enpara, fmpi, vtot, itype, usdus=usdus)
       END DO
 
-      ! calculate the  matrices for all k-points
-      ALLOCATE (amn(this%num_bands, this%num_wann, kpts%nkptf),stat=ierr,source=cmplx(0.0, 0.0))
-      IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating amn buffer', calledby='wannierlib_main')
-      
-      allocate (mmn(this%num_bands, this%num_bands, nntot_w90, kpts%nkptf),stat=ierr,source=cmplx(0.0, 0.0))
-       IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating mmn buffer', calledby='wannierlib_main')
-      
+      CALL init_w90(this, atoms, cell, kpts, fmpi, l_wannierlib_spinors, nntot_w90, nnkp, gkpb)
       CALL wannierlib_kdiff(kpts%nkptf, nntot_w90, kpts%bkf, nnkp, gkpb, kdiff)
-      CALL wannierlib_ujugaunt(atoms, cell, nntot_w90, kdiff, radfun, radfun, jspin, jspin, .FALSE., 1, ujug)
 
-      
+      DO jspin = 1, MERGE(2, 1, input%jspins == 2 .AND. (.NOT. l_wannierlib_spinors))
 
-      DO ikpt = 1, kpts%nkptf
-      
-         CALL wannierlib_get_z(this, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, ikpt, jspin, input%l_real, lapw, zMat)
+         ! calculate the  matrices for all k-points
+         ALLOCATE (amn(this%num_bands, this%num_wann, kpts%nkptf), stat=ierr, source=cmplx(0.0, 0.0))
+         IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating amn buffer', calledby='wannierlib_main')
 
-         DO itype = 1, atoms%ntype
-            CALL abc(itype)%init(input, atoms, radfun(itype)%n_r, this%num_bands, itype)
-            CALL abc(itype)%calc_abc(input, atoms, sym, cell, lapw, this%num_bands, usdus, noco, nococonv, jspin, itype, zMat)
+         allocate (mmn(this%num_bands, this%num_bands, nntot_w90, kpts%nkptf), stat=ierr, source=cmplx(0.0, 0.0))
+         IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating mmn buffer', calledby='wannierlib_main')
+
+         DO jspin_comp = MERGE(1, jspin, l_wannierlib_spinors), MERGE(2, jspin, l_wannierlib_spinors)
+            CALL wannierlib_ujugaunt(atoms, cell, nntot_w90, kdiff, radfun, radfun, jspin_comp, jspin_comp, .FALSE., 1, ujug)
+
+            DO ikpt = 1, kpts%nkptf
+               CALL wannierlib_get_z(this, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, &
+                                     ikpt, jspin_comp, input%l_real, lapw, zMat)
+
+               DO itype = 1, atoms%ntype
+                  CALL abc(itype)%init(input, atoms, radfun(itype)%n_r, this%num_bands, itype)
+                  CALL abc(itype)%calc_abc(input, atoms, sym, cell, lapw, this%num_bands, usdus, &
+                                           noco, nococonv, jspin_comp, itype, zMat)
+               END DO
+
+               CALL wannierlib_amn(this, atoms, kpts, ikpt, usdus, radfun, abc, l_nocosoc, jspin_comp, amn(:, :, ikpt))
+
+               CALL wannierlib_mmnkb(this, this%num_bands, nntot_w90, ikpt, kpts, nnkp, gkpb, kdiff, &
+                                     ujug, atoms, cell, input, sym, noco, nococonv, usdus, &
+                                     radfun, abc, jspin_comp, eig_id, stars, lapw, zMat, mmn)
+            END DO
+
+            IF (ALLOCATED(ujug)) DEALLOCATE (ujug)
          END DO
-      
-         CALL wannierlib_amn(this, atoms, kpts, ikpt, usdus, radfun, abc, l_nocosoc, jspin, amn(:, :, ikpt))
-      
-      CALL wannierlib_mmnkb(this, this%num_bands, nntot_w90, ikpt, kpts, nnkp, gkpb, kdiff, ujug, atoms, cell, input, sym, noco, nococonv, usdus, &
-                               radfun, abc, jspin, eig_id, stars, lapw, zMat, mmn)
-      
+
+
+         mmn = conjg(mmn)
+
+         amn_file = spin12(jspin)//'.amn'
+         call wann_write_amn(fmpi%mpi_comm, .true., amn_file, "Testing amn", &
+                             this%num_bands, kpts%nkptf, this%num_wann, &
+                             0, 1, .false., .false., &
+                             amn, .false.)
+
+         CALL wannierlib_write_mmn(this, mmn, kpts, nnkp, gkpb, jspin)
+
+         call wannierlib_create_eig(this, results, kpts, MERGE(1, jspin, l_wannierlib_spinors), eig)
+         CALL run_w90(this, mmn, amn, eig)
+         CALL report_w90(this)
+
+         IF (ALLOCATED(amn)) DEALLOCATE (amn)
+         IF (ALLOCATED(mmn)) DEALLOCATE (mmn)
+         IF (ALLOCATED(eig)) DEALLOCATE (eig)
+
       END DO
 
-      mmn=conjg(mmn)
-
-      call wann_write_amn(fmpi%mpi_comm,.true.,"WF1.amn","Testing amn",&
-                    this%num_bands,kpts%nkptf,this%num_wann,&
-                    0,1,.false.,.false.,&
-                    amn,.false.)
-
-      CALL wannierlib_write_mmn(this, mmn, kpts, nnkp, gkpb, jspin)
-
-
-      call wannierlib_create_eig(this, results, kpts, jspin, eig)
-      CALL run_w90(this, mmn, amn, eig)
-      CALL report_w90(this)
    END SUBROUTINE wannierlib_main
 
    subroutine wannierlib_create_eig(this, results, kpts, jspin, eig)
@@ -159,7 +174,7 @@ CONTAINS
 
             IF (kd > nntot) THEN
                CALL juDFT_error("problem in wannierlib_kdiff", calledby="wannierlib_kdiff")
-            endif
+            end if
             kdiff(:, kd) = kdiffvec
             kd = kd + 1
          END DO k_loop
@@ -221,7 +236,7 @@ CONTAINS
             DO i = 1, nbnd
                DO j = 1, nbnd
                   write (305, '(2f24.18)') real(mmnk(j, i, ikpt_b, ikpt)), &
-                                           aimag(mmnk(j, i, ikpt_b, ikpt))
+                     aimag(mmnk(j, i, ikpt_b, ikpt))
                END DO
             END DO
          END DO

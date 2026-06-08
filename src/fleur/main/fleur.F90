@@ -117,10 +117,8 @@ CONTAINS
       INTEGER :: eig_id, archiveType, num_threads
       INTEGER :: iter, iterHF, i, n, i_gf
       INTEGER :: wannierspin
-      INTEGER :: wannierlib_jspin
       LOGICAL :: l_opti, l_cont, l_qfix, l_real, l_olap, l_error, l_dummy
       LOGICAL :: l_forceTheorem, l_lastIter, l_exist
-      LOGICAL :: l_wannierlib_nocosoc
       REAL    :: fix, sfscale, rdummy, tempDistance
       REAL    :: mmpmatDistancePrev, occDistancePrev
       REAL    :: iterRuntime
@@ -485,14 +483,12 @@ CONTAINS
 #endif            
             CALL timestop("determination of fermi energy")
 
-                        IF (fi%wannierlib%l_wannierize) THEN
-               wannierlib_jspin = 1
-               l_wannierlib_nocosoc = fi%noco%l_noco .AND. (.NOT. fi%noco%l_soc)
+            IF (fi%wannierlib%l_wannierize) THEN
                CALL timestart("wannierlib")
                CALL wannierlib_main(fi%wannierlib, fi%atoms, fi%cell, input_soc, fi%kpts, fi%sym, fi%noco, nococonv, stars, enpara, fmpi, &
-                                    vTot, results, l_wannierlib_nocosoc, wannierlib_jspin, eig_id)
+                                    vTot, results, eig_id)
                CALL timestop("wannierlib")
-               call juDFT_end("Wannierization done. Fleur ends.", fmpi%irank)
+               CALL juDFT_end("Wannierization done. Fleur ends.", fmpi%irank)
             END IF
 
             ! TODO: What is commented out here and should it perhaps be removed?

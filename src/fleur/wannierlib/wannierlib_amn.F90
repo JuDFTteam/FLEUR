@@ -3,9 +3,6 @@
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
-!--------------------------------------------------------------------------------
-! Copyright (c) 2026 Peter Gruenberg Institut, Forschungszentrum Juelich, Germany
-!--------------------------------------------------------------------------------
 MODULE m_wannierlib_amn
   USE m_juDFT
   USE m_constants
@@ -51,8 +48,6 @@ CONTAINS
       CALL juDFT_error('wannierlib_amn: no projections configured', calledby='wannierlib_amn')
     END IF
     
-    amn = CMPLX(0.0, 0.0)
-
     CALL timestart('wannierlib_amn')
 
     CALL wannierlib_rad_twd(wannierlib, atoms, wannierlib%num_wann, ikpt, usdus, radfun, jspin, rads)
