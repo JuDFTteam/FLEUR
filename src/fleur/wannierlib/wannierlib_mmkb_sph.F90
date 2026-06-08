@@ -33,6 +33,7 @@ CONTAINS
       REAL :: rph, cph, th
       REAL :: bpt(3)
       COMPLEX :: phasefac
+      COMPLEX, ALLOCATABLE :: cof_b_u(:,:)
 
       CALL timestart("wannierlib_mmkb_sph")
 
@@ -50,10 +51,17 @@ CONTAINS
             cph = 2.0*tpi_const*SIN(th)
             phasefac = CMPLX(rph, cph)
 
+            lm = atoms%lmax(n)**2
+            ALLOCATE(cof_b_u(size(mmn, 2), lm + 1))
             DO r1 = 1, maxval(abc(n)%n_r)
                DO r2 = 1, maxval(abc_b(n)%n_r)
-                  lm=atoms%lmax(n)**2
-                  mmn=mmn+phasefac*matmul(abc(n)%cof(:, 0:lm, r1, nn), transpose(matmul(conjg(abc_b(n)%cof(:, 0:lm, r2, nn)),ujug(0:lm, 0:lm, r1, r2, n, nene))))   
+                  CALL zgemm('N', 'N', size(mmn, 2), lm + 1, lm + 1,                        &
+                             CMPLX(1.0, 0.0), conjg(abc_b(n)%cof(:, 0:lm, r2, nn)),         &
+                             size(abc_b(n)%cof, 1), ujug(0:lm, 0:lm, r1, r2, n, nene),      &
+                             lm + 1, CMPLX(0.0, 0.0), cof_b_u, size(mmn, 2))
+                  CALL zgemm('N', 'T', size(mmn, 1), size(mmn, 2), lm + 1, phasefac,         &
+                             abc(n)%cof(:, 0:lm, r1, nn), size(abc(n)%cof, 1), cof_b_u,      &
+                             size(mmn, 2), CMPLX(1.0, 0.0), mmn, size(mmn, 1))
                enddo
                   !DO l = 0, atoms%lmax(n)
                   !   ll = l*(l + 1)
@@ -75,6 +83,7 @@ CONTAINS
                   !END DO
                !END DO
             END DO
+            DEALLOCATE(cof_b_u)
 
          END DO
       END DO
