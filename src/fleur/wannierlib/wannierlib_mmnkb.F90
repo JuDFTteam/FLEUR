@@ -27,7 +27,7 @@ MODULE m_wannierlib_mmnkb
 CONTAINS
 
   SUBROUTINE wannierlib_mmnkb(this, num_bands, nntot, nk, kpts, nnkp, gkpb, kdiff, ujug, atoms, cell, input, sym, noco, nococonv, usdus, &
-                              radfun, abc, jspin, eig_id, stars, lapw, zMat, mmn)
+                              radfun, abc, jspin, eig_id, stars, lapw, zMat, mmn, nk_local)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
     INTEGER, INTENT(IN) :: num_bands
     INTEGER, INTENT(IN) :: nntot
@@ -52,6 +52,7 @@ CONTAINS
     TYPE(t_lapw), INTENT(IN) :: lapw
     TYPE(t_mat), INTENT(IN) :: zMat
     COMPLEX, ALLOCATABLE, INTENT(INOUT) :: mmn(:, :, :, :)
+    INTEGER, INTENT(IN) :: nk_local
 
     TYPE(t_mat) :: zMat_b
     TYPE(t_abc) :: abc_b(atoms%ntype)
@@ -73,8 +74,8 @@ CONTAINS
          CALL abc_b(itype)%calc_abc(input, atoms, sym, cell, lapw_b, num_bands, usdus, noco, nococonv, jspin, itype, zMat_b)
       END DO
 
-      CALL wannierlib_mmnkb_int(stars, lapw, lapw_b, jspin, jspin, zMat, zMat_b, gkpb(:, nk, kk), mmn(:, :, kk, nk))
-      CALL wannierlib_mmkb_sph(atoms, abc, abc_b, kpts%bkf(:, nnkp(nk, kk)), gkpb(:, nk, kk), kpts%bkf(:, nk), ujug, kdiff, nntot, mmn(:, :, kk, nk))
+      CALL wannierlib_mmnkb_int(stars, lapw, lapw_b, jspin, jspin, zMat, zMat_b, gkpb(:, nk, kk), mmn(:, :, kk, nk_local))
+      CALL wannierlib_mmkb_sph(atoms, abc, abc_b, kpts%bkf(:, nnkp(nk, kk)), gkpb(:, nk, kk), kpts%bkf(:, nk), ujug, kdiff, nntot, mmn(:, :, kk, nk_local))
     END DO
 
     

@@ -53,6 +53,7 @@ CONTAINS
       COMPLEX, ALLOCATABLE :: ujug(:, :, :, :, :, :)
       REAL, ALLOCATABLE :: kdiff(:, :)
       INTEGER, ALLOCATABLE :: nnkp(:, :), gkpb(:, :, :)
+      INTEGER, ALLOCATABLE :: distk(:)
       real, allocatable :: eig(:, :)
       TYPE(t_usdus) :: usdus
       TYPE(t_lapw) :: lapw
@@ -63,6 +64,7 @@ CONTAINS
       LOGICAL :: l_nocosoc
       CHARACTER(LEN=7) :: amn_file
       CHARACTER(LEN=3) :: spin12(2)
+      INTEGER :: ik_local, nk_local
 
       IF (.NOT. this%l_wannierize) RETURN
 
@@ -76,7 +78,20 @@ CONTAINS
          CALL radfun(itype)%generate_radial_functions(atoms, input, enpara, fmpi, vtot, itype, usdus=usdus)
       END DO
 
-      CALL init_w90(this, atoms, cell, kpts, fmpi, l_wannierlib_spinors, nntot_w90, nnkp, gkpb)
+      ALLOCATE(distk(kpts%nkptf), stat=ierr)
+      IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating distk', calledby='wannierlib_main')
+      IF (ALLOCATED(fmpi%coulomb_owner) .AND. SIZE(fmpi%coulomb_owner) == kpts%nkptf) THEN
+         distk = fmpi%coulomb_owner
+      ELSE
+         ! Fallback to contiguous block distribution if no global owner map is available.
+         nk_local = kpts%nkptf/MAX(1, fmpi%isize)
+         IF (MOD(kpts%nkptf, MAX(1, fmpi%isize)) > 0) nk_local = nk_local + 1
+         DO ikpt = 1, kpts%nkptf
+            distk(ikpt) = MIN((ikpt - 1)/MAX(1, nk_local), MAX(0, fmpi%isize - 1))
+         END DO
+      END IF
+
+      CALL init_w90(this, atoms, cell, kpts, fmpi, l_wannierlib_spinors, nntot_w90, nnkp, gkpb, distk)
       CALL wannierlib_kdiff(kpts%nkptf, nntot_w90, kpts%bkf, nnkp, gkpb, kdiff)
 
       DO jspin = 1, MERGE(2, 1, input%jspins == 2 .AND. (.NOT. l_wannierlib_spinors))
@@ -85,12 +100,14 @@ CONTAINS
          ALLOCATE (amn(this%num_bands, this%num_wann, kpts%nkptf), stat=ierr, source=cmplx(0.0, 0.0))
          IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating amn buffer', calledby='wannierlib_main')
 
-         allocate (mmn(this%num_bands, this%num_bands, nntot_w90, kpts%nkptf), stat=ierr, source=cmplx(0.0, 0.0))
-         IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating mmn buffer', calledby='wannierlib_main')
+         nk_local = COUNT(distk == fmpi%irank)
+         ALLOCATE(mmn(this%num_bands, this%num_bands, nntot_w90, nk_local), stat=ierr, source=cmplx(0.0, 0.0))
+         IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating local mmn buffer', calledby='wannierlib_main')
 
          DO jspin_comp = MERGE(1, jspin, l_wannierlib_spinors), MERGE(2, jspin, l_wannierlib_spinors)
             CALL wannierlib_ujugaunt(atoms, cell, nntot_w90, kdiff, radfun, radfun, jspin_comp, jspin_comp, .FALSE., 1, ujug)
 
+            ik_local = 0
             DO ikpt = 1, kpts%nkptf
                CALL wannierlib_get_z(this, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, &
                                      ikpt, jspin_comp, input%l_real, lapw, zMat)
@@ -103,24 +120,28 @@ CONTAINS
 
                CALL wannierlib_amn(this, atoms, kpts, ikpt, usdus, radfun, abc, l_nocosoc, jspin_comp, amn(:, :, ikpt))
 
-               CALL wannierlib_mmnkb(this, this%num_bands, nntot_w90, ikpt, kpts, nnkp, gkpb, kdiff, &
-                                     ujug, atoms, cell, input, sym, noco, nococonv, usdus, &
-                                     radfun, abc, jspin_comp, eig_id, stars, lapw, zMat, mmn)
+               IF (distk(ikpt) == fmpi%irank) THEN
+                  ik_local = ik_local + 1
+                  CALL wannierlib_mmnkb(this, this%num_bands, nntot_w90, ikpt, kpts, nnkp, gkpb, kdiff, &
+                                        ujug, atoms, cell, input, sym, noco, nococonv, usdus, &
+                                        radfun, abc, jspin_comp, eig_id, stars, lapw, zMat, mmn, ik_local)
+               END IF
             END DO
 
             IF (ALLOCATED(ujug)) DEALLOCATE (ujug)
          END DO
 
-
          mmn = conjg(mmn)
 
-         amn_file = spin12(jspin)//'.amn'
-         call wann_write_amn(fmpi%mpi_comm, .true., amn_file, "Testing amn", &
-                             this%num_bands, kpts%nkptf, this%num_wann, &
-                             0, 1, .false., .false., &
-                             amn, .false.)
+         IF (fmpi%isize == 1) THEN
+            amn_file = spin12(jspin)//'.amn'
+            call wann_write_amn(fmpi%mpi_comm, .true., amn_file, "Testing amn", &
+                                this%num_bands, kpts%nkptf, this%num_wann, &
+                                0, 1, .false., .false., &
+                                amn, .false.)
 
-         CALL wannierlib_write_mmn(this, mmn, kpts, nnkp, gkpb, jspin)
+            CALL wannierlib_write_mmn(this, mmn, kpts, nnkp, gkpb, jspin)
+         END IF
 
          call wannierlib_create_eig(this, results, kpts, MERGE(1, jspin, l_wannierlib_spinors), eig)
          CALL run_w90(this, mmn, amn, eig)
@@ -131,6 +152,8 @@ CONTAINS
          IF (ALLOCATED(eig)) DEALLOCATE (eig)
 
       END DO
+
+      IF (ALLOCATED(distk)) DEALLOCATE(distk)
 
    END SUBROUTINE wannierlib_main
 

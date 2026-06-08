@@ -14,7 +14,6 @@ MODULE m_wannierlib_w90_adapter
   USE m_types_wannierlib
 #ifdef CPP_WANNLIB_API
   USE w90_library, ONLY : lib_common_type, w90_set_comm, w90_set_option, w90_input_setopt, &
-   implicit none
                           w90_get_nn, w90_get_nnkp, w90_get_gkpb, w90_set_eigval, &
                           w90_set_u_opt, w90_set_m_local, w90_set_u_matrix, &
                           w90_disentangle, w90_project_overlap, w90_wannierise, &
@@ -26,7 +25,7 @@ MODULE m_wannierlib_w90_adapter
 #endif
 CONTAINS
 
-  SUBROUTINE init_w90(this, atoms, cell, kpts, fmpi, spinors, nntot_w90, nnkp, gkpb)
+  SUBROUTINE init_w90(this, atoms, cell, kpts, fmpi, spinors, nntot_w90, nnkp, gkpb, distk)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
     TYPE(t_atoms), INTENT(IN) :: atoms
     TYPE(t_cell), INTENT(IN) :: cell
@@ -35,7 +34,8 @@ CONTAINS
     LOGICAL, INTENT(IN) :: spinors
     INTEGER, INTENT(OUT) :: nntot_w90
     INTEGER, ALLOCATABLE, INTENT(OUT) :: nnkp(:, :)
-    INTEGER, ALLOCATABLE, INTENT(OUT), OPTIONAL :: gkpb(:, :, :)
+    INTEGER, ALLOCATABLE, INTENT(OUT) :: gkpb(:, :, :)
+    INTEGER, INTENT(IN) :: distk(:)
 
     INTEGER :: nn
     INTEGER :: na, itype
@@ -67,6 +67,7 @@ CONTAINS
     CALL w90_set_option(wannierlib_w90main, 'mp_grid', mp_grid)
     CALL w90_set_option(wannierlib_w90main, 'kpoints', kpts%bkf)
     CALL w90_set_option(wannierlib_w90main, 'unit_cell_cart', cell%amat)
+    CALL w90_set_option(wannierlib_w90main, 'distk', distk)
 
     ALLOCATE(atoms_frac(atoms%nat), stat=ierr)
     IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating atoms_frac buffer', calledby='init_w90')
@@ -102,12 +103,10 @@ CONTAINS
     CALL w90_get_nnkp(wannierlib_w90main, nnkp, oUnit, oUnit, ierr)
     IF (ierr /= 0) CALL juDFT_error('w90_get_nnkp failed in wannierlib adapter', calledby='init_w90')
 
-    IF (PRESENT(gkpb)) THEN
-      ALLOCATE(gkpb(3, kpts%nkptf, nntot_w90), stat=ierr)
-      IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating gkpb', calledby='init_w90')
-      CALL w90_get_gkpb(wannierlib_w90main, gkpb, oUnit, oUnit, ierr)
-      IF (ierr /= 0) CALL juDFT_error('w90_get_gkpb failed in wannierlib adapter', calledby='init_w90')
-    END IF
+    ALLOCATE(gkpb(3, kpts%nkptf, nntot_w90), stat=ierr)
+    IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating gkpb', calledby='init_w90')
+    CALL w90_get_gkpb(wannierlib_w90main, gkpb, oUnit, oUnit, ierr)
+    IF (ierr /= 0) CALL juDFT_error('w90_get_gkpb failed in wannierlib adapter', calledby='init_w90')
 #endif
   END SUBROUTINE init_w90
 
