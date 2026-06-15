@@ -81,13 +81,15 @@ CONTAINS
     CALL w90_set_option(wannierlib_w90main, 'gamma_only', gamma_only)
     CALL w90_set_option(wannierlib_w90main, 'spinors', spinors)
     CALL w90_set_option(wannierlib_w90main, 'dump_inputs', .FALSE.)
-    IF (this%dis_num_iter > 0) CALL w90_set_option(wannierlib_w90main, 'num_iter', this%dis_num_iter)
+    IF (this%dis_num_iter > 0) CALL w90_set_option(wannierlib_w90main, 'dis_num_iter', this%dis_num_iter)  ! disentanglement (XML numIter)
+    IF (this%num_iter > 0)     CALL w90_set_option(wannierlib_w90main, 'num_iter', this%num_iter)          ! MLWF/wannierise (XML wannIter)
     CALL w90_set_option(wannierlib_w90main, 'dis_win_min', this%dis_win_min)
     CALL w90_set_option(wannierlib_w90main, 'dis_win_max', this%dis_win_max)
     CALL w90_set_option(wannierlib_w90main, 'dis_froz_min', this%dis_froz_min)
     CALL w90_set_option(wannierlib_w90main, 'dis_froz_max', this%dis_froz_max)
     IF (this%dis_mix_ratio > 0.0) CALL w90_set_option(wannierlib_w90main, 'dis_mix_ratio', this%dis_mix_ratio)
-    IF (this%dis_conv_tol > 0.0) CALL w90_set_option(wannierlib_w90main, 'conv_tol', this%dis_conv_tol)
+    IF (this%dis_conv_tol > 0.0) CALL w90_set_option(wannierlib_w90main, 'dis_conv_tol', this%dis_conv_tol)  ! disentanglement (XML disConvTol)
+    IF (this%conv_tol > 0.0)     CALL w90_set_option(wannierlib_w90main, 'conv_tol', this%conv_tol)          ! MLWF/wannierise (XML wannConvTol)
 
     seedname = 'fleur_wlib_internal'
     CALL w90_input_setopt(wannierlib_w90main, seedname, oUnit, oUnit, ierr)

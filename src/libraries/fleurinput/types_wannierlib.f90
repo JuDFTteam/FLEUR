@@ -28,8 +28,10 @@ MODULE m_types_wannierlib
     REAL :: dis_froz_min = 0.0
     REAL :: dis_froz_max = 0.0
     INTEGER :: dis_num_iter = 0
+    INTEGER :: num_iter = 0      ! MLWF/wannierise iterations (W90 num_iter); XML @wannNumIter
     REAL :: dis_mix_ratio = 0.0
     REAL :: dis_conv_tol = 0.0
+    REAL :: conv_tol = 0.0       ! MLWF/wannierise convergence (W90 conv_tol); XML @wannConvTol
 
     INTEGER, ALLOCATABLE :: proj_ntype(:)
     INTEGER, ALLOCATABLE :: proj_atom(:)
@@ -143,7 +145,11 @@ CONTAINS
             new_proj_atom(j) = nn
             new_proj_species(j) = this%proj_species(i)
             new_proj_l(j) = this%proj_l(i)
-            IF (mrepeat > 1) THEN
+            ! BUGFIX: when the user requested m=0 ("expand all m"), the auto-generated
+            ! harmonic index must be the 1-based mval -- even when only one m exists
+            ! (l=0/s: mrepeat=1). The old test (mrepeat>1) left s with the literal
+            ! proj_m=0, which is out of range for tlm(:,:,1:7) -> uninitialised read.
+            IF (this%proj_m(i) == 0) THEN
               new_proj_m(j) = mval
             ELSE
               new_proj_m(j) = this%proj_m(i)
@@ -277,8 +283,10 @@ CONTAINS
     CALL mpi_bc(this%dis_froz_min, rank, mpi_comm)
     CALL mpi_bc(this%dis_froz_max, rank, mpi_comm)
     CALL mpi_bc(this%dis_num_iter, rank, mpi_comm)
+    CALL mpi_bc(this%num_iter, rank, mpi_comm)
     CALL mpi_bc(this%dis_mix_ratio, rank, mpi_comm)
     CALL mpi_bc(this%dis_conv_tol, rank, mpi_comm)
+    CALL mpi_bc(this%conv_tol, rank, mpi_comm)
     CALL mpi_bc(this%proj_ntype, rank, mpi_comm)
     CALL mpi_bc(this%proj_atom, rank, mpi_comm)
     CALL mpi_bc(this%proj_species, rank, mpi_comm)
@@ -337,9 +345,13 @@ CONTAINS
       this%dis_win_max = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@disWinMax'))
       this%dis_froz_min = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@disFrozMin'))
       this%dis_froz_max = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@disFrozMax'))
-      this%dis_num_iter = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@numIter'))
+      this%dis_num_iter = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@disNumIter'))
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@wannNumIter') == 1) &
+         this%num_iter = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@wannNumIter'))
       this%dis_mix_ratio = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mixRatio'))
-      this%dis_conv_tol = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@convTol'))
+      this%dis_conv_tol = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@disConvTol'))
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@wannConvTol') == 1) &
+         this%conv_tol = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@wannConvTol'))
     END IF
 
     nSpecies = xml%getNumberOfNodes('/fleurInput/atomSpecies/species')

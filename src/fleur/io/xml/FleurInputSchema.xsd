@@ -3003,9 +3003,11 @@
       <xsd:attribute name="disWinMax" type="FleurDouble" use="required"/>
       <xsd:attribute name="disFrozMin" type="FleurDouble" use="required"/>
       <xsd:attribute name="disFrozMax" type="FleurDouble" use="required"/>
-      <xsd:attribute name="numIter" type="xsd:positiveInteger" use="required"/>
+      <xsd:attribute name="disNumIter" type="xsd:positiveInteger" use="required"/>
+      <xsd:attribute name="wannNumIter" type="xsd:positiveInteger" use="optional"/>
       <xsd:attribute name="mixRatio" type="FleurDouble" use="required"/>
-      <xsd:attribute name="convTol" type="FleurDouble" use="required"/>
+      <xsd:attribute name="disConvTol" type="FleurDouble" use="required"/>
+      <xsd:attribute name="wannConvTol" type="FleurDouble" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="WannierlibOutputType">
