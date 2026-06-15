@@ -52,6 +52,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    USE m_types_eigdos
    USE m_types_dos
    USE m_types_hyperfine
+   USE m_xas_driver, ONLY: xas_hardwired_test_driver
 
    USE m_force_sf ! Klueppelberg (force level 3)
 
@@ -116,7 +117,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
 #ifdef CPP_HDF
    INTEGER(HID_T)        :: banddosFile_id
 #endif
-   LOGICAL               :: l_error,Perform_metagga
+   LOGICAL               :: l_error, Perform_metagga, l_xas_hardwired_test
 
    ! Initialization section
    CALL moments%init(fmpi,input,sphhar,atoms)
@@ -172,6 +173,9 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
                   sphhar,sym,vTot ,cdnvalJob,outDen,dos,vacdos,results,moments,gfinp,&
                   hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,jDOS,greensfImagPart)
    END DO
+   l_xas_hardwired_test = .TRUE.
+   IF (l_xas_hardwired_test) CALL xas_hardwired_test_driver(eig_id, fmpi, input, kpts, atoms, sym, cell, noco, nococonv, &
+                                                            enpara, vTot, results)
    CALL timestop("cdngen: cdnval")
 
    call val_den%copyPotDen(outDen)

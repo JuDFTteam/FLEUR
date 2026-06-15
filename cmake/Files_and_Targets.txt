@@ -32,6 +32,7 @@ include(src/fleur/fft/CMakeLists.txt)
 include(src/fleur/propcalc/CMakeLists.txt)
 include(src/fleur/cdn_mt/CMakeLists.txt)
 include(src/fleur/propcalc/dos/CMakeLists.txt)
+include(src/fleur/propcalc/xas/CMakeLists.txt)
 include(src/fleur/fermi/CMakeLists.txt)
 include(src/fleur/init/CMakeLists.txt)
 include(src/fleur/ldaX/CMakeLists.txt)
@@ -145,4 +146,3 @@ include(cmake/docker.txt)
 #        CONFIGURATIONS Release
 #        DESTINATION bin)
 #endif()
-

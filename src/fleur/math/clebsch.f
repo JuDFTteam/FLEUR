@@ -14,9 +14,29 @@
       REAL, INTENT (IN) :: aj,bj,am,bm,cj,cm
 
       INTEGER n,k,i,i1,i2,i3,i4,i5,i6,i7,i8,i9,i10
-      REAL    x,s,c,e
+      INTEGER iaj2,ibj2,icj2,im2,in2,ip2
+      REAL    x,s,c,e,tol
       REAL    f(100)
-      INTRINSIC sqrt,exp,min0,max0
+      INTRINSIC sqrt,exp,min0,max0,nint,abs
+
+      clebsch = 0.e0
+
+      tol = 1.e-5
+      iaj2 = NINT(2.e0*aj)
+      ibj2 = NINT(2.e0*bj)
+      icj2 = NINT(2.e0*cj)
+      im2  = NINT(2.e0*am)
+      in2  = NINT(2.e0*bm)
+      ip2  = NINT(2.e0*cm)
+
+      IF (ABS(2.e0*aj - REAL(iaj2)).GT.tol) RETURN
+      IF (ABS(2.e0*bj - REAL(ibj2)).GT.tol) RETURN
+      IF (ABS(2.e0*cj - REAL(icj2)).GT.tol) RETURN
+      IF (ABS(2.e0*am - REAL(im2 )).GT.tol) RETURN
+      IF (ABS(2.e0*bm - REAL(in2 )).GT.tol) RETURN
+      IF (ABS(2.e0*cm - REAL(ip2 )).GT.tol) RETURN
+
+      IF (im2 + in2 .NE. ip2) RETURN
 
       n = 100
       k =   0
@@ -183,4 +203,33 @@
       
 
       END FUNCTION clebsch
+
+      SUBROUTINE clebsch_selftest(unit)
+      IMPLICIT NONE
+      INTEGER, INTENT(IN), OPTIONAL :: unit
+      INTEGER out
+      REAL c1,c2,c3,c4
+
+      out = 6
+      IF (PRESENT(unit)) out = unit
+
+      c1 = clebsch(1.0,0.5,-1.0, 0.5,1.5,-0.5)
+      c2 = clebsch(1.0,0.5, 0.0, 0.5,1.5, 0.5)
+      c3 = clebsch(1.0,0.5, 1.0, 0.5,1.5, 1.5)
+      c4 = clebsch(1.0,0.5, 0.0, 0.5,1.5, 1.5)
+
+      WRITE(out,'(a)') 'Clebsch-Gordan self-test table:'
+      WRITE(out,'(a,3f10.5,a,es18.10,a,es18.10)')
+     + '<1,-1;1/2,+1/2|3/2,-1/2> ',1.0,-1.0,-0.5,
+     + ' value=',c1,' expected=',1.0/SQRT(3.0)
+      WRITE(out,'(a,3f10.5,a,es18.10,a,es18.10)')
+     + '<1, 0;1/2,+1/2|3/2,+1/2> ',1.0,0.0,0.5,
+     + ' value=',c2,' expected=',SQRT(2.0/3.0)
+      WRITE(out,'(a,3f10.5,a,es18.10,a,es18.10)')
+     + '<1,+1;1/2,+1/2|3/2,+3/2> ',1.0,1.0,1.5,
+     + ' value=',c3,' expected=',1.0
+      WRITE(out,'(a,3f10.5,a,es18.10,a,es18.10)')
+     + '<1, 0;1/2,+1/2|3/2,+3/2> ',1.0,0.0,1.5,
+     + ' value=',c4,' expected=',0.0
+      END SUBROUTINE clebsch_selftest
       END MODULE m_clebsch
