@@ -6,9 +6,13 @@
 
 MODULE m_xas_driver
    USE, INTRINSIC :: IEEE_ARITHMETIC, ONLY: IEEE_UNDERFLOW, IEEE_GET_FLAG, IEEE_SET_FLAG
+#ifdef CPP_MPI
+   USE mpi
+#endif
    USE m_eig66_io, ONLY: read_eig
    USE m_genMTBasis, ONLY: genMTBasis
    USE m_juDFT, ONLY: juDFT_error
+   USE m_mpi_reduce_tool, ONLY: mpi_sum_reduce
    USE m_types_abc, ONLY: t_abc
    USE m_types_atoms, ONLY: t_atoms
    USE m_types_cell, ONLY: t_cell
@@ -75,8 +79,9 @@ CONTAINS
       ! The current test spectrum is a per-selected-absorbing-atom local
       ! muffin-tin XAS signal. It is k-weighted and written in arbitrary units,
       ! but it is not normalized per cell volume, film area, film thickness, or
-      ! number of equivalent atoms. The routine is serial-only and is not yet
-      ! suitable for quantitative comparison between bulk and film calculations.
+      ! number of equivalent atoms. Additive spectral and diagnostic quantities
+      ! are accumulated over the rank-local fmpi%k_list and reduced to rank 0
+      ! before output.
       !
       ! The local dipole approximation intentionally neglects interstitial and
       ! vacuum contributions. This is appropriate for core-level local XAS as a
@@ -116,10 +121,13 @@ CONTAINS
       COMPLEX :: eps_cart(3), eps_sph(-1:1), eps_cart_debug(3), eps_sph_debug(-1:1)
       COMPLEX, ALLOCATABLE :: matrix(:, :), matrix_debug(:, :), matrix_l0(:, :), matrix_l2(:, :)
       REAL, ALLOCATABLE :: energy_grid(:), intensity(:), radial_xas(:, :, :)
+      REAL, ALLOCATABLE :: intensity_reduced(:)
       REAL, ALLOCATABLE :: f(:, :, :, :), g(:, :, :, :), flo(:, :, :, :)
       REAL, ALLOCATABLE :: eig_band(:), occ_band(:)
       REAL, ALLOCATABLE :: xas_debug_strength_kpt(:, :)
+      REAL, ALLOCATABLE :: xas_debug_strength_kpt_reduced(:, :)
       REAL, ALLOCATABLE :: xas_debug_strength_spin(:, :)
+      REAL, ALLOCATABLE :: xas_debug_strength_spin_reduced(:, :)
       INTEGER, ALLOCATABLE :: ev_list(:)
 
       CHARACTER(LEN=1)   :: pol_label
@@ -132,12 +140,17 @@ CONTAINS
       INTEGER :: n_underflow_spectrum, i_char, i_pol, iatom_l, n_absorber_types, n_absorber_atoms, nstar
       INTEGER :: xas_debug_unit
       REAL    :: xas_debug_strength_l0(xas_debug_n_pol), xas_debug_strength_l2(xas_debug_n_pol)
-      REAL    :: xas_debug_strength_total(xas_debug_n_pol), xas_debug_strength_cross(xas_debug_n_pol)
+      REAL    :: xas_debug_strength_total(xas_debug_n_pol)
+      REAL    :: xas_debug_strength_l0_reduced(xas_debug_n_pol), xas_debug_strength_l2_reduced(xas_debug_n_pol)
+      REAL    :: xas_debug_strength_total_reduced(xas_debug_n_pol), xas_debug_strength_cross_reduced(xas_debug_n_pol)
+      REAL    :: weight_sums_local(2), weight_sums_reduced(2)
       REAL    :: transition_min, transition_max, transition_padding, occ, debug_strength, debug_l0, debug_l2
       REAL    :: debug_avg, debug_rel_xz
       REAL    :: wk_current, wk_star, weight_sum_parent, weight_sum_star
-      LOGICAL :: l_real, l_xas_debug_fp, l_xas_debug_strength, l_xas_debug_kpt_strength
+      INTEGER :: underflow_local(1), underflow_reduced(1)
+      LOGICAL :: l_real, l_xas_debug_fp, l_xas_debug_strength, l_xas_debug_kpt_strength, l_root
 
+      l_root = fmpi%irank == 0
       l_xas_debug_fp = xas_debug_verbosity >= 3
       l_xas_debug_strength = xas_debug_verbosity >= 1
       l_xas_debug_kpt_strength = xas_debug_verbosity >= 2
@@ -145,28 +158,25 @@ CONTAINS
       xas_debug_strength_l0 = 0.0
       xas_debug_strength_l2 = 0.0
       xas_debug_strength_total = 0.0
-      xas_debug_strength_cross = 0.0
       n_absorber_types = 0
       n_absorber_atoms = 0
       weight_sum_parent = 0.0
       weight_sum_star = 0.0
       xas_debug_unit = -1
 
-      IF (fmpi%isize /= 1) THEN
-         CALL juDFT_error("xas_hardwired_test_driver is serial-only for now", calledby="m_xas_driver")
-      END IF
       IF (.NOT. ALLOCATED(results%w_iks)) THEN
          CALL juDFT_error("results%w_iks is not allocated in xas_hardwired_test_driver", calledby="m_xas_driver")
       END IF
 
-      CALL xas_debug_open_log(kpts, xas_use_spatial_star, xas_debug_unit, xas_debug_filename)
+      xas_debug_filename = ""
+      IF (l_root) CALL xas_debug_open_log(kpts, xas_use_spatial_star, xas_debug_unit, xas_debug_filename)
 
-      IF (xas_debug_verbosity >= 3) THEN
+      IF (l_root .AND. xas_debug_verbosity >= 3) THEN
          WRITE(*, '(a,i0)') "XAS DEBUG atom types: ntype=", atoms%ntype
          WRITE(xas_debug_unit, '(a,i0)') "XAS DEBUG atom types: ntype=", atoms%ntype
       END IF
       DO itype = 1, atoms%ntype
-         IF (xas_debug_verbosity >= 3) THEN
+         IF (l_root .AND. xas_debug_verbosity >= 3) THEN
             WRITE(*, '(a,i0,a,i0,a,i0,a,a)') "XAS DEBUG atom type ", itype, " Z=", atoms%nz(itype), &
                                               " neq=", atoms%neq(itype), " species=", TRIM(atoms%speciesName(itype))
             WRITE(xas_debug_unit, '(a,i0,a,i0,a,i0,a,a)') "XAS DEBUG atom type ", itype, " Z=", atoms%nz(itype), &
@@ -221,20 +231,6 @@ CONTAINS
             weight_sum_star = weight_sum_star + kpts%wtkpt(ikpt)
          END IF
       END DO
-      IF (xas_debug_verbosity >= 1) THEN
-         WRITE(*, '(a,i0,a,i0,a,l1,a,es12.4)') "XAS DEBUG star setup: nkpt=", kpts%nkpt, &
-                                      " nkptf=", kpts%nkptf, " use_spatial_star=", xas_use_spatial_star, &
-                                      " reduction_factor=", REAL(kpts%nkptf)/REAL(kpts%nkpt)
-         WRITE(*, '(a,es18.10,a,es18.10,a,es12.4)') "XAS DEBUG star weight sums: selected=", weight_sum_parent, &
-                                            " expanded=", weight_sum_star, &
-                                            " diff=", weight_sum_star - weight_sum_parent
-         WRITE(xas_debug_unit, '(a,i0,a,i0,a,l1,a,es12.4)') "XAS DEBUG star setup: nkpt=", kpts%nkpt, &
-                                      " nkptf=", kpts%nkptf, " use_spatial_star=", xas_use_spatial_star, &
-                                      " reduction_factor=", REAL(kpts%nkptf)/REAL(kpts%nkpt)
-         WRITE(xas_debug_unit, '(a,es18.10,a,es18.10,a,es12.4)') "XAS DEBUG star weight sums: selected=", weight_sum_parent, &
-                                            " expanded=", weight_sum_star, &
-                                            " diff=", weight_sum_star - weight_sum_parent
-      END IF
       transition_min = HUGE(1.0)
       transition_max = -HUGE(1.0)
       DO itype = 1, atoms%ntype
@@ -264,6 +260,7 @@ CONTAINS
          END DO
          DEALLOCATE(core_states)
       END DO
+      CALL xas_allreduce_transition_window(fmpi, transition_min, transition_max)
       IF (transition_min > transition_max) THEN
          CALL juDFT_error("No empty final-state bands found for hardwired XAS test", calledby="m_xas_driver")
       END IF
@@ -461,7 +458,49 @@ CONTAINS
          DEALLOCATE(radial_xas, core_states)
       END DO
 
-      IF (xas_debug_verbosity >= 1) THEN
+      ! Rank-local k-point/star contributions are additive. Reduce them once
+      ! after the k loops, then let rank 0 do all text/debug output.
+      ALLOCATE(intensity_reduced(SIZE(intensity)), SOURCE=0.0)
+      CALL mpi_sum_reduce(intensity, intensity_reduced, fmpi%mpi_comm)
+
+      weight_sums_local = [weight_sum_parent, weight_sum_star]
+      weight_sums_reduced = 0.0
+      CALL mpi_sum_reduce(weight_sums_local, weight_sums_reduced, fmpi%mpi_comm)
+
+      underflow_local = [n_underflow_spectrum]
+      underflow_reduced = 0
+      CALL mpi_sum_reduce(underflow_local, underflow_reduced, fmpi%mpi_comm)
+
+      IF (l_xas_debug_strength) THEN
+         ALLOCATE(xas_debug_strength_spin_reduced(SIZE(xas_debug_strength_spin, 1), &
+                                                  SIZE(xas_debug_strength_spin, 2)), SOURCE=0.0)
+         CALL mpi_sum_reduce(xas_debug_strength_spin, xas_debug_strength_spin_reduced, fmpi%mpi_comm)
+         xas_debug_strength_total_reduced = 0.0
+         xas_debug_strength_l0_reduced = 0.0
+         xas_debug_strength_l2_reduced = 0.0
+         CALL mpi_sum_reduce(xas_debug_strength_total, xas_debug_strength_total_reduced, fmpi%mpi_comm)
+         CALL mpi_sum_reduce(xas_debug_strength_l0, xas_debug_strength_l0_reduced, fmpi%mpi_comm)
+         CALL mpi_sum_reduce(xas_debug_strength_l2, xas_debug_strength_l2_reduced, fmpi%mpi_comm)
+      END IF
+      IF (l_xas_debug_kpt_strength) THEN
+         ALLOCATE(xas_debug_strength_kpt_reduced(SIZE(xas_debug_strength_kpt, 1), &
+                                                 SIZE(xas_debug_strength_kpt, 2)), SOURCE=0.0)
+         CALL mpi_sum_reduce(xas_debug_strength_kpt, xas_debug_strength_kpt_reduced, fmpi%mpi_comm)
+      END IF
+
+      IF (l_root .AND. xas_debug_verbosity >= 1) THEN
+         WRITE(*, '(a,i0,a,i0,a,l1,a,es12.4)') "XAS DEBUG star setup: nkpt=", kpts%nkpt, &
+                                      " nkptf=", kpts%nkptf, " use_spatial_star=", xas_use_spatial_star, &
+                                      " reduction_factor=", REAL(kpts%nkptf)/REAL(kpts%nkpt)
+         WRITE(*, '(a,es18.10,a,es18.10,a,es12.4)') "XAS DEBUG star weight sums: selected=", weight_sums_reduced(1), &
+                                            " expanded=", weight_sums_reduced(2), &
+                                            " diff=", weight_sums_reduced(2) - weight_sums_reduced(1)
+         WRITE(xas_debug_unit, '(a,i0,a,i0,a,l1,a,es12.4)') "XAS DEBUG star setup: nkpt=", kpts%nkpt, &
+                                      " nkptf=", kpts%nkptf, " use_spatial_star=", xas_use_spatial_star, &
+                                      " reduction_factor=", REAL(kpts%nkptf)/REAL(kpts%nkpt)
+         WRITE(xas_debug_unit, '(a,es18.10,a,es18.10,a,es12.4)') "XAS DEBUG star weight sums: selected=", weight_sums_reduced(1), &
+                                            " expanded=", weight_sums_reduced(2), &
+                                            " diff=", weight_sums_reduced(2) - weight_sums_reduced(1)
          WRITE(*, '(a,i0,a,i0,a,i0,a)') "XAS DEBUG: summed ", n_absorber_atoms, &
                                         " total absorber atoms with Z=", xas_absorber_z, &
                                         " over ", n_absorber_types, " atom types"
@@ -469,64 +508,89 @@ CONTAINS
                                                      " total absorber atoms with Z=", xas_absorber_z, &
                                                      " over ", n_absorber_types, " atom types"
       END IF
-      IF (l_xas_debug_kpt_strength) THEN
+      IF (l_root .AND. l_xas_debug_kpt_strength) THEN
          WRITE(*, '(a)') "XAS DEBUG kpt strength columns: ikpt weight Sx Sy Sz rel_xz=(Sx-Sz)/avg"
          WRITE(xas_debug_unit, '(a)') "XAS DEBUG kpt strength columns: ikpt weight Sx Sy Sz rel_xz=(Sx-Sz)/avg"
-         DO ikpt_i = 1, SIZE(fmpi%k_list)
-            ikpt = fmpi%k_list(ikpt_i)
-            debug_avg = SUM(xas_debug_strength_kpt(:, ikpt))/REAL(xas_debug_n_pol)
+         DO ikpt = 1, kpts%nkpt
+            debug_avg = SUM(xas_debug_strength_kpt_reduced(:, ikpt))/REAL(xas_debug_n_pol)
             debug_rel_xz = 0.0
             IF (ABS(debug_avg) > TINY(debug_avg)) THEN
-               debug_rel_xz = (xas_debug_strength_kpt(1, ikpt) - xas_debug_strength_kpt(3, ikpt))/debug_avg
+               debug_rel_xz = (xas_debug_strength_kpt_reduced(1, ikpt) - xas_debug_strength_kpt_reduced(3, ikpt))/debug_avg
             END IF
             WRITE(*, '(a,i0,1x,5es16.8)') "XAS DEBUG kpt strength ", ikpt, kpts%wtkpt(ikpt), &
-               xas_debug_strength_kpt(1, ikpt), xas_debug_strength_kpt(2, ikpt), &
-               xas_debug_strength_kpt(3, ikpt), debug_rel_xz
+               xas_debug_strength_kpt_reduced(1, ikpt), xas_debug_strength_kpt_reduced(2, ikpt), &
+               xas_debug_strength_kpt_reduced(3, ikpt), debug_rel_xz
             WRITE(xas_debug_unit, '(a,i0,1x,5es16.8)') "XAS DEBUG kpt strength ", ikpt, kpts%wtkpt(ikpt), &
-               xas_debug_strength_kpt(1, ikpt), xas_debug_strength_kpt(2, ikpt), &
-               xas_debug_strength_kpt(3, ikpt), debug_rel_xz
+               xas_debug_strength_kpt_reduced(1, ikpt), xas_debug_strength_kpt_reduced(2, ikpt), &
+               xas_debug_strength_kpt_reduced(3, ikpt), debug_rel_xz
          END DO
       END IF
-      IF (l_xas_debug_strength) THEN
+      IF (l_root .AND. l_xas_debug_strength) THEN
          DO jsp_loop = 1, n_spin_channels
-            CALL xas_debug_print_strength_summary("spin-resolved", jsp_loop, xas_debug_strength_spin(:, jsp_loop), xas_debug_unit)
+            CALL xas_debug_print_strength_summary("spin-resolved", jsp_loop, &
+                                                  xas_debug_strength_spin_reduced(:, jsp_loop), xas_debug_unit)
          END DO
          DO i_pol = 1, xas_debug_n_pol
-            xas_debug_strength_cross(i_pol) = xas_debug_strength_total(i_pol) - &
-                                              xas_debug_strength_l0(i_pol) - xas_debug_strength_l2(i_pol)
+            xas_debug_strength_cross_reduced(i_pol) = xas_debug_strength_total_reduced(i_pol) - &
+                                                      xas_debug_strength_l0_reduced(i_pol) - &
+                                                      xas_debug_strength_l2_reduced(i_pol)
             WRITE(*, '(a,a,a,es18.10,a,es18.10,a,es18.10,a,es18.10)') &
                "XAS DEBUG strength pol=", xas_debug_pol_label(i_pol), &
-               " total=", xas_debug_strength_total(i_pol), &
-               " l0=", xas_debug_strength_l0(i_pol), &
-               " l2=", xas_debug_strength_l2(i_pol), &
-               " cross_l0_l2=", xas_debug_strength_cross(i_pol)
+               " total=", xas_debug_strength_total_reduced(i_pol), &
+               " l0=", xas_debug_strength_l0_reduced(i_pol), &
+               " l2=", xas_debug_strength_l2_reduced(i_pol), &
+               " cross_l0_l2=", xas_debug_strength_cross_reduced(i_pol)
             WRITE(xas_debug_unit, '(a,a,a,es18.10,a,es18.10,a,es18.10,a,es18.10)') &
                "XAS DEBUG strength pol=", xas_debug_pol_label(i_pol), &
-               " total=", xas_debug_strength_total(i_pol), &
-               " l0=", xas_debug_strength_l0(i_pol), &
-               " l2=", xas_debug_strength_l2(i_pol), &
-               " cross_l0_l2=", xas_debug_strength_cross(i_pol)
+               " total=", xas_debug_strength_total_reduced(i_pol), &
+               " l0=", xas_debug_strength_l0_reduced(i_pol), &
+               " l2=", xas_debug_strength_l2_reduced(i_pol), &
+               " cross_l0_l2=", xas_debug_strength_cross_reduced(i_pol)
          END DO
-         CALL xas_debug_print_strength_summary("total", 0, xas_debug_strength_total, xas_debug_unit)
+         CALL xas_debug_print_strength_summary("total", 0, xas_debug_strength_total_reduced, xas_debug_unit)
       END IF
 
-      CALL xas_debug_clear_underflow(l_xas_debug_fp)
-      CALL xas_write_spectrum_text(TRIM(output_filename), energy_grid, intensity, "Hartree")
-      CALL xas_debug_report_underflow(l_xas_debug_fp, "xas_write_spectrum_text", unit=xas_debug_unit)
-      WRITE(*, '(a,a)') "XAS hardwired test wrote spectrum to ", TRIM(output_filename)
-      WRITE(xas_debug_unit, '(a,a)') "XAS hardwired test wrote spectrum to ", TRIM(output_filename)
-      WRITE(*, '(a,a)') "XAS hardwired test wrote debug log to ", TRIM(xas_debug_filename)
-      WRITE(xas_debug_unit, '(a,a)') "XAS hardwired test wrote debug log to ", TRIM(xas_debug_filename)
-      IF (xas_debug_verbosity >= 3 .AND. n_underflow_spectrum > 0) THEN
-         WRITE(*, '(a,i0,a)') "XAS DEBUG SUMMARY: underflow occurred in xas_accumulate_matrix_spectrum ", &
-                              n_underflow_spectrum, &
-                              " time(s); cleared as harmless Gaussian-tail/tiny-product underflow."
-         WRITE(xas_debug_unit, '(a,i0,a)') "XAS DEBUG SUMMARY: underflow occurred in xas_accumulate_matrix_spectrum ", &
-                                          n_underflow_spectrum, &
-                                          " time(s); cleared as harmless Gaussian-tail/tiny-product underflow."
+      IF (l_root) THEN
+         CALL xas_debug_clear_underflow(l_xas_debug_fp)
+         CALL xas_write_spectrum_text(TRIM(output_filename), energy_grid, intensity_reduced, "Hartree")
+         CALL xas_debug_report_underflow(l_xas_debug_fp, "xas_write_spectrum_text", unit=xas_debug_unit)
+         WRITE(*, '(a,a)') "XAS hardwired test wrote spectrum to ", TRIM(output_filename)
+         WRITE(xas_debug_unit, '(a,a)') "XAS hardwired test wrote spectrum to ", TRIM(output_filename)
+         WRITE(*, '(a,a)') "XAS hardwired test wrote debug log to ", TRIM(xas_debug_filename)
+         WRITE(xas_debug_unit, '(a,a)') "XAS hardwired test wrote debug log to ", TRIM(xas_debug_filename)
+         IF (xas_debug_verbosity >= 3 .AND. underflow_reduced(1) > 0) THEN
+            WRITE(*, '(a,i0,a)') "XAS DEBUG SUMMARY: underflow occurred in xas_accumulate_matrix_spectrum ", &
+                                 underflow_reduced(1), &
+                                 " time(s); cleared as harmless Gaussian-tail/tiny-product underflow."
+            WRITE(xas_debug_unit, '(a,i0,a)') "XAS DEBUG SUMMARY: underflow occurred in xas_accumulate_matrix_spectrum ", &
+                                             underflow_reduced(1), &
+                                             " time(s); cleared as harmless Gaussian-tail/tiny-product underflow."
+         END IF
+         CLOSE(xas_debug_unit)
       END IF
-      CLOSE(xas_debug_unit)
    END SUBROUTINE xas_hardwired_test_driver
+
+   SUBROUTINE xas_allreduce_transition_window(fmpi, transition_min, transition_max)
+      TYPE(t_mpi), INTENT(IN)    :: fmpi
+      REAL,        INTENT(INOUT) :: transition_min
+      REAL,        INTENT(INOUT) :: transition_max
+
+#ifdef CPP_MPI
+      INTEGER :: ierr
+      REAL    :: local_min, local_max
+
+      local_min = transition_min
+      local_max = transition_max
+      CALL MPI_ALLREDUCE(local_min, transition_min, 1, MPI_DOUBLE_PRECISION, MPI_MIN, fmpi%mpi_comm, ierr)
+      IF (ierr /= 0) CALL juDFT_error("MPI_ALLREDUCE failed for XAS transition minimum", calledby="m_xas_driver")
+      CALL MPI_ALLREDUCE(local_max, transition_max, 1, MPI_DOUBLE_PRECISION, MPI_MAX, fmpi%mpi_comm, ierr)
+      IF (ierr /= 0) CALL juDFT_error("MPI_ALLREDUCE failed for XAS transition maximum", calledby="m_xas_driver")
+#else
+      ! Serial/non-MPI builds already have the complete transition window.
+      transition_min = transition_min
+      transition_max = transition_max
+#endif
+   END SUBROUTINE xas_allreduce_transition_window
 
    SUBROUTINE xas_debug_open_log(kpts, l_use_spatial_star, unit, filename)
       TYPE(t_kpts),      INTENT(IN)  :: kpts
@@ -620,13 +684,18 @@ CONTAINS
       INTEGER, OPTIONAL, INTENT(IN) :: unit
 
       LOGICAL :: l_underflow
+      LOGICAL :: l_write
 
       IF (.NOT. l_debug) RETURN
 
       CALL IEEE_GET_FLAG(IEEE_UNDERFLOW, l_underflow)
       IF (l_underflow) THEN
-         WRITE(*, '(a,a)') "XAS DEBUG: underflow occurred in ", TRIM(stage_name)
-         IF (PRESENT(unit)) WRITE(unit, '(a,a)') "XAS DEBUG: underflow occurred in ", TRIM(stage_name)
+         l_write = .TRUE.
+         IF (PRESENT(unit)) l_write = unit > 0
+         IF (l_write) WRITE(*, '(a,a)') "XAS DEBUG: underflow occurred in ", TRIM(stage_name)
+         IF (PRESENT(unit)) THEN
+            IF (unit > 0) WRITE(unit, '(a,a)') "XAS DEBUG: underflow occurred in ", TRIM(stage_name)
+         END IF
          IF (PRESENT(l_clear_after)) THEN
             IF (l_clear_after) CALL IEEE_SET_FLAG(IEEE_UNDERFLOW, .FALSE.)
          END IF
