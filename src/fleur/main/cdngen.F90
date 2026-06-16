@@ -173,7 +173,9 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
                   sphhar,sym,vTot ,cdnvalJob,outDen,dos,vacdos,results,moments,gfinp,&
                   hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,jDOS,greensfImagPart)
    END DO
-   l_xas_hardwired_test = .TRUE.
+   ! Temporary XAS development hook. Keep disabled by default; enable locally
+   ! only for hardwired XAS validation runs until XML/input control exists.
+   l_xas_hardwired_test = .FALSE.
    IF (l_xas_hardwired_test) CALL xas_hardwired_test_driver(eig_id, fmpi, input, kpts, atoms, sym, cell, noco, nococonv, &
                                                             enpara, vTot, results)
    CALL timestop("cdngen: cdnval")
