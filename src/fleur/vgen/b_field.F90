@@ -28,7 +28,7 @@ CONTAINS
 
 
     IF (.NOT.field%l_b_field.and..not.any(noco%l_fixedMoment)) RETURN !no B-field specified
-
+   print*,"Doing B field"
     IF (input%jspins.NE.2) CALL judft_error("B-fields can only be used in spin-polarized calculations")
     !IF (noco%l_noco) CALL judft_error("B-fields not implemented in noco case")
     

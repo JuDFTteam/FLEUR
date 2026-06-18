@@ -175,7 +175,7 @@ contains
         CALL openXMLElementNoAttributes('efield')
         attributes = ''
         WRITE(attributes(1),'(f15.8)') fi%juPhon%qlim
-        CALL writeXMLElementPoly('dieltensor',(/'qlim'/), attributes,real(dielecten(:,1)))
+        CALL writeXMLElementPoly('dieltensor',(/'qlim'/), attributes,real(dielecten(:,1))) !Get 3x3 array
         CALL closeXMLElement('efield')
         CALL closeXMLElement('Phonons')
 

@@ -252,7 +252,9 @@ module m_types_phonon
         if (fmpi%irank==0) then 
             ! Add NAC contribution
             if (l_gamma .and. juPhon%l_polar) then 
+                print*,"doing NAC"
                 call this%get_dynNAC(dynMatNac)
+                print*,"sum(nac)",sum(dynMatNac(:,:) )
                 dyn_mat(iQ,:,:) = dyn_mat(iQ,:,:) + dynMatNac(:,:) 
             end if 
 

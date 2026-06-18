@@ -115,11 +115,11 @@ CONTAINS
           END DO
        END IF
 
-       IF(fmpi%irank.EQ.0) THEN
-          IF (stateCheck.AND.(input%jspins.EQ.2)) THEN
-             CALL juDFT_warn("Spin-polarized calculation (jspins=2) without any actual polarization given. Is this wanted?", calledby='optional')
-          END IF
-       END IF
+       !IF(fmpi%irank.EQ.0) THEN
+       !   IF (stateCheck.AND.(input%jspins.EQ.2)) THEN
+       !      CALL juDFT_warn("Spin-polarized calculation (jspins=2) without any actual polarization given. Is this wanted?", calledby='optional')
+       !   END IF
+       !END IF
 
        CALL stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
                   input,cell,xcpot,noco )

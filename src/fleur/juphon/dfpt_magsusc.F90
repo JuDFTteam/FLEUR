@@ -16,6 +16,7 @@ module m_dfpt_magsusc
 
 
 
+
     implicit none
 
 contains
@@ -80,34 +81,36 @@ contains
                 !interstitial
                 pwwq2 = CMPLX(0.0,0.0)
                 !print*,"vExt1%pw",sum(vExt1%pw(:,iSpin))
-                CALL dfpt_convol_big(1, starsq , stars, vExt1%pw(:,iSpin), CMPLX(1.0,0.0)*stars%ufft, pwwq2(:,iSpin))!starsq
+                CALL dfpt_convol_big(1, starsq , stars, -vExt1%pw(:,iSpin), CMPLX(1.0,0.0)*stars%ufft, pwwq2(:,iSpin))!starsq !the minus sign here is not necessarly pretty, fix when extending to noco
                 !call save_npy("pwwq2.npy",pwwq2)
                 !CALL dfpt_int_pw(starsq, fi%cell, vExt1%pw(:,1), pwwq2, tempval_pw)!denIn1_pw
                 CALL dfpt_int_pw(starsq, fi%cell, denIn1%pw(:,iSpin), pwwq2(:,iSpin), tempval_pw) 
-                print*,"tempval_pw",tempval_pw
+                !print*,"tempval_pw",tempval_pw
                 !dieltensor_HF(iDir_col) = dieltensor_HF(iDir_col) + tempval_pw 
                 magnetic_susc =  magnetic_susc+ tempval_pw
-                print*,"magnetic_susc",magnetic_susc
+                !print*,"magnetic_susc",magnetic_susc
 
 
                 !Muffin-tin 
                 do iType = 1, fi%atoms%nat
                     tempval_mt = CMPLX(0.0,0.0) 
-                    call dfpt_int_mt(fi%atoms, sphhar, fi%sym, iType, denIn1%mt(:,:,:,iSpin), denIn1Im%mt(:,:,:,iSpin), vExt1%mt(:,0:,:,iSpin), vExt1Im%mt(:,0:,:,iSpin), tempval_mt)!denIn1_mt
-                    print*,"tempval_mt",tempval_mt
+                    call dfpt_int_mt(fi%atoms, sphhar, fi%sym, iType, denIn1%mt(:,:,:,iSpin), denIn1Im%mt(:,:,:,iSpin), -vExt1%mt(:,0:,:,iSpin), -vExt1Im%mt(:,0:,:,iSpin), tempval_mt)!denIn1_mt ! same minus sign for potential due to mixed use of energy and spin sign
+                    !print*,"tempval_mt",tempval_mt
                     magnetic_susc =  magnetic_susc+ tempval_mt
-                    print*,"magnetic_susc",magnetic_susc
+                    !print*,"magnetic_susc",magnetic_susc
                 end do
             end do
         end do
 
         !dieltensor_row(:)= dieltensor_HF(:)
         !magnetic_susc = 0.1
-        print*,"magnetic susc end",magnetic_susc
+        !print*,"magnetic susc end",magnetic_susc
+       ! IF (fmpi%irank==0) write(9989,*) "magnetic response", magnetic_susc
+        IF (fmpi%irank==0) write(oUnit,*) "magnetic response (real): ", real(magnetic_susc), ", (imag): ", aimag(magnetic_susc)
 
-        magnetic_susc_final =1/(1/magnetic_susc -1)
-        magnetic_susc=magnetic_susc_final
-        print*,"magnetic_susc_final",magnetic_susc_final
+        !magnetic_susc_final =1/(1/magnetic_susc -1)
+        !magnetic_susc=magnetic_susc_final
+        !print*,"magnetic_susc_final",magnetic_susc_final
         !final steps
     end subroutine dfpt_magnetic_susc
 
