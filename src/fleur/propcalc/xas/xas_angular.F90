@@ -25,6 +25,7 @@ MODULE m_xas_angular
    PUBLIC :: xas_dipole_angular_coeff
    PUBLIC :: xas_dipole_angular_table
    PUBLIC :: xas_angular_selfcheck
+   PUBLIC :: xas_print_angular_sumrule
 
 CONTAINS
 
@@ -207,5 +208,93 @@ CONTAINS
          END IF
       END IF
    END FUNCTION xas_angular_selfcheck
+
+   SUBROUTINE xas_print_angular_sumrule(lc, twice_j, unit)
+      ! Diagnostic-only pure angular sum rule for dipole XAS. This uses the
+      ! production angular coefficient C but no bands, abc coefficients,
+      ! radial integrals, occupations, or k points.
+      INTEGER, INTENT(IN) :: lc, twice_j
+      INTEGER, INTENT(IN) :: unit
+
+      COMPLEX :: eps_cart(3), eps_sph(-1:1), coeff
+      REAL    :: strength(2, 3), strength_mj(2, 3, twice_j + 1)
+      REAL    :: avg, rel_xy, rel_xz, rel_yz
+      INTEGER :: i_l, l_values(2), i_pol, i_mj, twice_mj, sigma, l, m
+
+      l_values = [0, 2]
+      strength = 0.0
+      strength_mj = 0.0
+
+      DO i_pol = 1, 3
+         eps_cart = CMPLX(0.0, 0.0)
+         eps_cart(i_pol) = CMPLX(1.0, 0.0)
+         CALL xas_cartesian_to_spherical(eps_cart, eps_sph)
+         DO i_l = 1, SIZE(l_values)
+            l = l_values(i_l)
+            DO i_mj = 1, twice_j + 1
+               twice_mj = -twice_j + 2*(i_mj - 1)
+               DO sigma = -1, 1, 2
+                  DO m = -l, l
+                     coeff = xas_dipole_angular_coeff(l, m, lc, twice_j, twice_mj, sigma, eps_sph)
+                     strength(i_l, i_pol) = strength(i_l, i_pol) + ABS(coeff)**2
+                     strength_mj(i_l, i_pol, i_mj) = strength_mj(i_l, i_pol, i_mj) + ABS(coeff)**2
+                  END DO
+               END DO
+            END DO
+         END DO
+      END DO
+
+      CALL xas_write_sumrule_line(unit, "XAS DEBUG ANGULAR SUMRULE header: lc twice_j", REAL(lc), REAL(twice_j))
+      DO i_l = 1, SIZE(l_values)
+         CALL xas_angular_relative(strength(i_l, :), avg, rel_xy, rel_xz, rel_yz)
+         CALL xas_write_sumrule_strength(unit, "XAS DEBUG ANGULAR SUMRULE total", l_values(i_l), 0, &
+                                         strength(i_l, :), avg, rel_xy, rel_xz, rel_yz)
+         DO i_mj = 1, twice_j + 1
+            twice_mj = -twice_j + 2*(i_mj - 1)
+            CALL xas_angular_relative(strength_mj(i_l, :, i_mj), avg, rel_xy, rel_xz, rel_yz)
+            CALL xas_write_sumrule_strength(unit, "XAS DEBUG ANGULAR SUMRULE mj", l_values(i_l), twice_mj, &
+                                            strength_mj(i_l, :, i_mj), avg, rel_xy, rel_xz, rel_yz)
+         END DO
+      END DO
+   END SUBROUTINE xas_print_angular_sumrule
+
+   SUBROUTINE xas_angular_relative(strength, avg, rel_xy, rel_xz, rel_yz)
+      REAL, INTENT(IN)  :: strength(3)
+      REAL, INTENT(OUT) :: avg, rel_xy, rel_xz, rel_yz
+
+      avg = SUM(strength)/3.0
+      rel_xy = 0.0
+      rel_xz = 0.0
+      rel_yz = 0.0
+      IF (ABS(avg) > TINY(avg)) THEN
+         rel_xy = (strength(1) - strength(2))/avg
+         rel_xz = (strength(1) - strength(3))/avg
+         rel_yz = (strength(2) - strength(3))/avg
+      END IF
+   END SUBROUTINE xas_angular_relative
+
+   SUBROUTINE xas_write_sumrule_strength(unit, label, l, twice_mj, strength, avg, rel_xy, rel_xz, rel_yz)
+      INTEGER,          INTENT(IN) :: unit, l, twice_mj
+      CHARACTER(LEN=*), INTENT(IN) :: label
+      REAL,             INTENT(IN) :: strength(3), avg, rel_xy, rel_xz, rel_yz
+
+      WRITE(*, '(a,a,i0,a,i0,a,3es18.10,a,es18.10,a,3es12.4)') TRIM(label), " l=", l, &
+         " twice_mj=", twice_mj, " Ax Ay Az=", strength, " avg=", avg, " rel_xy rel_xz rel_yz=", &
+         rel_xy, rel_xz, rel_yz
+      IF (unit > 0) THEN
+         WRITE(unit, '(a,a,i0,a,i0,a,3es18.10,a,es18.10,a,3es12.4)') TRIM(label), " l=", l, &
+            " twice_mj=", twice_mj, " Ax Ay Az=", strength, " avg=", avg, " rel_xy rel_xz rel_yz=", &
+            rel_xy, rel_xz, rel_yz
+      END IF
+   END SUBROUTINE xas_write_sumrule_strength
+
+   SUBROUTINE xas_write_sumrule_line(unit, label, value1, value2)
+      INTEGER,          INTENT(IN) :: unit
+      CHARACTER(LEN=*), INTENT(IN) :: label
+      REAL,             INTENT(IN) :: value1, value2
+
+      WRITE(*, '(a,2es18.10)') TRIM(label)//" ", value1, value2
+      IF (unit > 0) WRITE(unit, '(a,2es18.10)') TRIM(label)//" ", value1, value2
+   END SUBROUTINE xas_write_sumrule_line
 
 END MODULE m_xas_angular

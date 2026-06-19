@@ -29,13 +29,15 @@ MODULE m_xas_driver
    USE m_types_radfun, ONLY: t_radfun
    USE m_types_sym, ONLY: t_sym
    USE m_types_usdus, ONLY: t_usdus
-   USE m_xas_angular, ONLY: xas_cartesian_to_spherical
+   USE m_xas_angular, ONLY: xas_cartesian_to_spherical, xas_print_angular_sumrule
    USE m_xas_core, ONLY: t_xas_core_state, xas_extract_core_states
    USE m_xas_io, ONLY: xas_write_spectrum_text
    USE m_xas_matrixelements, ONLY: xas_core_band_matrixelements
    USE m_xas_radial, ONLY: xas_radial_dipole_integrals
    USE m_xas_spectrum, ONLY: xas_accumulate_matrix_spectrum
-   USE m_xas_symmetry, ONLY: xas_count_star_members, xas_star_member_weight, xas_rotate_abc_star_member
+   USE m_xas_symmetry, ONLY: xas_count_star_members, xas_star_member_weight, xas_rotate_abc_star_member, &
+                             xas_rotate_abc_star_member_spinor, xas_su2_from_sym, xas_local_spin_transform, &
+                             xas_cart_rotation_from_sym
    IMPLICIT NONE
    PRIVATE
 
@@ -60,6 +62,13 @@ MODULE m_xas_driver
    ! The lab-frame polarization is kept fixed. Older diagnostic paths that only
    ! rotated polarization, or used full-zone read_eig, were not production-valid.
    LOGICAL, PARAMETER :: xas_use_spatial_star = .TRUE.
+   ! Development diagnostic for the SOC/noncollinear spinor part of the star
+   ! transform. This prints SU(2) and local-spin-frame matrices only; it is not
+   ! connected to spectrum accumulation yet.
+   LOGICAL, PARAMETER :: xas_debug_spinor_star = .FALSE.
+   ! Temporary pure-angular L3 sum-rule diagnostic. Enable manually when
+   ! checking angular isotropy; it does not affect spectra.
+   LOGICAL, PARAMETER :: xas_debug_angular_sumrule = .FALSE.
    CHARACTER(LEN=1), PARAMETER :: xas_debug_pol_label(xas_debug_n_pol) = [CHARACTER(LEN=1) :: "x", "y", "z"]
 
    PUBLIC :: xas_hardwired_test_driver
@@ -91,7 +100,9 @@ CONTAINS
       ! the MT angular coefficients with Wigner-D matrices, and keeps the
       ! laboratory polarization fixed for each full k-star member. The current
       ! atom-mapping helper requires mapped absorbers to stay in the same atom
-      ! type. SOC/noncollinear calculations need additional spinor rotations.
+      ! type. Scalar calculations use orbital Wigner-D only. SOC/noncollinear
+      ! calculations use orbital Wigner-D plus local-frame SU(2) for unitary
+      ! spatial operations; time-reversal star handling is still guarded.
       !
       ! For k-mesh and Kmax convergence tests, reuse the same converged cdn.hdf
       ! (for example from a dense 12x12x12 SCF run), then vary only the XAS
@@ -119,6 +130,7 @@ CONTAINS
       TYPE(t_abc), ALLOCATABLE :: abc_star_spin(:)
 
       COMPLEX :: eps_cart(3), eps_sph(-1:1), eps_cart_debug(3), eps_sph_debug(-1:1)
+      COMPLEX :: spin_frame_transform(2, 2)
       COMPLEX, ALLOCATABLE :: matrix(:, :), matrix_debug(:, :), matrix_l0(:, :), matrix_l2(:, :)
       REAL, ALLOCATABLE :: energy_grid(:), intensity(:), radial_xas(:, :, :)
       REAL, ALLOCATABLE :: intensity_reduced(:)
@@ -149,6 +161,7 @@ CONTAINS
       REAL    :: wk_current, wk_star, weight_sum_parent, weight_sum_star
       INTEGER :: underflow_local(1), underflow_reduced(1)
       LOGICAL :: l_real, l_xas_debug_fp, l_xas_debug_strength, l_xas_debug_kpt_strength, l_root
+      LOGICAL :: l_spinor_abc, l_xas_angular_sumrule_printed
 
       l_root = fmpi%irank == 0
       l_xas_debug_fp = xas_debug_verbosity >= 3
@@ -163,6 +176,7 @@ CONTAINS
       weight_sum_parent = 0.0
       weight_sum_star = 0.0
       xas_debug_unit = -1
+      l_xas_angular_sumrule_printed = .FALSE.
 
       IF (.NOT. ALLOCATED(results%w_iks)) THEN
          CALL juDFT_error("results%w_iks is not allocated in xas_hardwired_test_driver", calledby="m_xas_driver")
@@ -191,6 +205,9 @@ CONTAINS
          WRITE(error_message, '(a,i0)') "No atom types found for requested XAS absorber Z=", xas_absorber_z
          CALL juDFT_error(TRIM(error_message), calledby="m_xas_driver")
       END IF
+      IF (l_root .AND. xas_debug_spinor_star) THEN
+         CALL xas_debug_print_spinor_star(sym, cell, atoms, nococonv, xas_absorber_z, xas_debug_unit)
+      END IF
 
       CALL usdus%init(atoms, input%jspins)
       ALLOCATE(f(atoms%jmtd, 2, 0:atoms%lmaxd, input%jspins))
@@ -215,7 +232,12 @@ CONTAINS
       END DO
       output_filename = "xas_test_"//TRIM(xas_edge_name)//"_"//TRIM(pol_label)//"_eta"//TRIM(eta_label)//".dat"
 
-      n_spin_channels = MERGE(1, input%jspins, noco%l_noco)
+      ! Keep FLEUR eig/occupation spin channels separate from the local MT
+      ! spinor components used by the XAS dipole matrix element. In noco
+      ! calculations the eig file is addressed with jsp=1, while abc%calc_abc
+      ! must still be called for the two local components ispin=1,2.
+      l_spinor_abc = noco%l_noco
+      n_spin_channels = MERGE(1, input%jspins, l_spinor_abc)
       IF (l_xas_debug_strength) THEN
          ALLOCATE(xas_debug_strength_spin(xas_debug_n_pol, n_spin_channels), SOURCE=0.0)
       END IF
@@ -290,6 +312,10 @@ CONTAINS
                                                     " in absorber Z=", xas_absorber_z, " atom type ", itype
             CALL juDFT_error(TRIM(error_message), calledby="m_xas_driver")
          END IF
+         IF (l_root .AND. xas_debug_angular_sumrule .AND. (.NOT. l_xas_angular_sumrule_printed)) THEN
+            CALL xas_print_angular_sumrule(core_states(1)%lc, core_states(1)%twice_j, xas_debug_unit)
+            l_xas_angular_sumrule_printed = .TRUE.
+         END IF
 
          CALL radfun%generate_radial_functions(atoms, input, enpara, fmpi, vTot, itype)
          max_order = MAXVAL(radfun%n_r(0:atoms%lmax(itype)))
@@ -299,9 +325,22 @@ CONTAINS
          CALL xas_debug_report_underflow(l_xas_debug_fp, "xas_radial_dipole_integrals", unit=xas_debug_unit)
 
          lmax_xas = atoms%lmax(itype)
+         IF (l_spinor_abc) THEN
+            ! abc%calc_abc returns local MT spin components in noco:
+            ! abc_local(tau) = sum_s conjg(U(s,tau)) abc_global(s).
+            ! Rotate the global core spin-angular coefficients with the same
+            ! U^\dagger convention before contracting with abc_local.
+            spin_frame_transform = CONJG(TRANSPOSE(nococonv%umat(itype)))
+         END IF
          DO jsp_loop = 1, n_spin_channels
-            jsp = MERGE(1, jsp_loop, noco%l_noco)
-            n_local_spins = MERGE(2, 1, noco%l_noco .OR. input%jspins == 2)
+            jsp = MERGE(1, jsp_loop, l_spinor_abc)
+            IF (l_spinor_abc) THEN
+               n_local_spins = 2
+            ELSE IF (input%jspins == 2) THEN
+               n_local_spins = 2
+            ELSE
+               n_local_spins = 1
+            END IF
             DO ikpt_i = 1, SIZE(fmpi%k_list)
                ikpt = fmpi%k_list(ikpt_i)
                IF (kpts%wtkpt(ikpt) <= 0.0) CYCLE
@@ -326,7 +365,7 @@ CONTAINS
                DO ispin = 1, n_local_spins
                   CALL abc_spin(ispin)%init(input, atoms, radfun%n_r, nbands, itype)
                END DO
-               IF (noco%l_noco) THEN
+               IF (l_spinor_abc) THEN
                   DO ispin = 1, n_local_spins
                      CALL abc_spin(ispin)%calc_abc(input, atoms, sym, cell, lapw, nbands, usdus, noco, nococonv, &
                                                    ispin, itype, zMat)
@@ -355,10 +394,17 @@ CONTAINS
                      wk_current = wk_star
 
                      ALLOCATE(abc_star_spin(n_local_spins))
-                     DO ispin = 1, n_local_spins
-                        CALL xas_rotate_abc_star_member(abc_spin(ispin), atoms, sym, cell, itype, bksym, lmax_xas, &
-                                                        abc_star_spin(ispin))
-                     END DO
+                     IF (l_spinor_abc) THEN
+                        CALL xas_rotate_abc_star_member_spinor(abc_spin, atoms, sym, cell, nococonv, itype, bksym, &
+                                                               lmax_xas, abc_star_spin)
+                     ELSE IF (noco%l_soc) THEN
+                        CALL xas_abort_missing_spinor_abc(input, noco, n_local_spins)
+                     ELSE
+                        DO ispin = 1, n_local_spins
+                           CALL xas_rotate_abc_star_member(abc_spin(ispin), atoms, sym, cell, itype, bksym, lmax_xas, &
+                                                           abc_star_spin(ispin))
+                        END DO
+                     END IF
 
                      IF (l_xas_debug_strength) THEN
                         DO iatom_l = 1, atoms%neq(itype)
@@ -367,12 +413,24 @@ CONTAINS
                               eps_cart_debug(i_pol) = CMPLX(1.0, 0.0)
                               CALL xas_cartesian_to_spherical(eps_cart_debug, eps_sph_debug)
 
-                              CALL xas_core_band_matrixelements(abc_star_spin, radfun, radial_xas, core_states(1), eps_sph_debug, &
-                                                                iatom_l, lmax_xas, matrix_debug)
-                              CALL xas_core_band_matrixelements(abc_star_spin, radfun, radial_xas, core_states(1), eps_sph_debug, &
-                                                                iatom_l, lmax_xas, matrix_l0, final_l=0)
-                              CALL xas_core_band_matrixelements(abc_star_spin, radfun, radial_xas, core_states(1), eps_sph_debug, &
-                                                                iatom_l, lmax_xas, matrix_l2, final_l=2)
+                              IF (l_spinor_abc) THEN
+                                 CALL xas_core_band_matrixelements(abc_star_spin, radfun, radial_xas, core_states(1), eps_sph_debug, &
+                                                                   iatom_l, lmax_xas, matrix_debug, &
+                                                                   spin_frame_transform=spin_frame_transform)
+                                 CALL xas_core_band_matrixelements(abc_star_spin, radfun, radial_xas, core_states(1), eps_sph_debug, &
+                                                                   iatom_l, lmax_xas, matrix_l0, final_l=0, &
+                                                                   spin_frame_transform=spin_frame_transform)
+                                 CALL xas_core_band_matrixelements(abc_star_spin, radfun, radial_xas, core_states(1), eps_sph_debug, &
+                                                                   iatom_l, lmax_xas, matrix_l2, final_l=2, &
+                                                                   spin_frame_transform=spin_frame_transform)
+                              ELSE
+                                 CALL xas_core_band_matrixelements(abc_star_spin, radfun, radial_xas, core_states(1), eps_sph_debug, &
+                                                                   iatom_l, lmax_xas, matrix_debug)
+                                 CALL xas_core_band_matrixelements(abc_star_spin, radfun, radial_xas, core_states(1), eps_sph_debug, &
+                                                                   iatom_l, lmax_xas, matrix_l0, final_l=0)
+                                 CALL xas_core_band_matrixelements(abc_star_spin, radfun, radial_xas, core_states(1), eps_sph_debug, &
+                                                                   iatom_l, lmax_xas, matrix_l2, final_l=2)
+                              END IF
 
                               debug_strength = xas_debug_transition_strength(matrix_debug, occ_band, wk_current)
                               debug_l0 = xas_debug_transition_strength(matrix_l0, occ_band, wk_current)
@@ -390,8 +448,14 @@ CONTAINS
 
                      DO iatom_l = 1, atoms%neq(itype)
                         CALL xas_debug_clear_underflow(l_xas_debug_fp)
-                        CALL xas_core_band_matrixelements(abc_star_spin, radfun, radial_xas, core_states(1), eps_sph, &
-                                                          iatom_l, lmax_xas, matrix)
+                        IF (l_spinor_abc) THEN
+                           CALL xas_core_band_matrixelements(abc_star_spin, radfun, radial_xas, core_states(1), eps_sph, &
+                                                             iatom_l, lmax_xas, matrix, &
+                                                             spin_frame_transform=spin_frame_transform)
+                        ELSE
+                           CALL xas_core_band_matrixelements(abc_star_spin, radfun, radial_xas, core_states(1), eps_sph, &
+                                                             iatom_l, lmax_xas, matrix)
+                        END IF
                         CALL xas_debug_report_underflow(l_xas_debug_fp, "xas_core_band_matrixelements", unit=xas_debug_unit)
                         CALL xas_debug_clear_underflow(l_xas_debug_fp)
                         CALL xas_accumulate_matrix_spectrum(energy_grid, eig_band, occ_band, wk_current, &
@@ -413,12 +477,24 @@ CONTAINS
                            eps_cart_debug(i_pol) = CMPLX(1.0, 0.0)
                            CALL xas_cartesian_to_spherical(eps_cart_debug, eps_sph_debug)
 
-                           CALL xas_core_band_matrixelements(abc_spin, radfun, radial_xas, core_states(1), eps_sph_debug, &
-                                                             iatom_l, lmax_xas, matrix_debug)
-                           CALL xas_core_band_matrixelements(abc_spin, radfun, radial_xas, core_states(1), eps_sph_debug, &
-                                                             iatom_l, lmax_xas, matrix_l0, final_l=0)
-                           CALL xas_core_band_matrixelements(abc_spin, radfun, radial_xas, core_states(1), eps_sph_debug, &
-                                                             iatom_l, lmax_xas, matrix_l2, final_l=2)
+                           IF (l_spinor_abc) THEN
+                              CALL xas_core_band_matrixelements(abc_spin, radfun, radial_xas, core_states(1), eps_sph_debug, &
+                                                                iatom_l, lmax_xas, matrix_debug, &
+                                                                spin_frame_transform=spin_frame_transform)
+                              CALL xas_core_band_matrixelements(abc_spin, radfun, radial_xas, core_states(1), eps_sph_debug, &
+                                                                iatom_l, lmax_xas, matrix_l0, final_l=0, &
+                                                                spin_frame_transform=spin_frame_transform)
+                              CALL xas_core_band_matrixelements(abc_spin, radfun, radial_xas, core_states(1), eps_sph_debug, &
+                                                                iatom_l, lmax_xas, matrix_l2, final_l=2, &
+                                                                spin_frame_transform=spin_frame_transform)
+                           ELSE
+                              CALL xas_core_band_matrixelements(abc_spin, radfun, radial_xas, core_states(1), eps_sph_debug, &
+                                                                iatom_l, lmax_xas, matrix_debug)
+                              CALL xas_core_band_matrixelements(abc_spin, radfun, radial_xas, core_states(1), eps_sph_debug, &
+                                                                iatom_l, lmax_xas, matrix_l0, final_l=0)
+                              CALL xas_core_band_matrixelements(abc_spin, radfun, radial_xas, core_states(1), eps_sph_debug, &
+                                                                iatom_l, lmax_xas, matrix_l2, final_l=2)
+                           END IF
 
                            debug_strength = xas_debug_transition_strength(matrix_debug, occ_band, wk_current)
                            debug_l0 = xas_debug_transition_strength(matrix_l0, occ_band, wk_current)
@@ -436,8 +512,14 @@ CONTAINS
 
                   DO iatom_l = 1, atoms%neq(itype)
                      CALL xas_debug_clear_underflow(l_xas_debug_fp)
-                     CALL xas_core_band_matrixelements(abc_spin, radfun, radial_xas, core_states(1), eps_sph, &
-                                                       iatom_l, lmax_xas, matrix)
+                     IF (l_spinor_abc) THEN
+                        CALL xas_core_band_matrixelements(abc_spin, radfun, radial_xas, core_states(1), eps_sph, &
+                                                          iatom_l, lmax_xas, matrix, &
+                                                          spin_frame_transform=spin_frame_transform)
+                     ELSE
+                        CALL xas_core_band_matrixelements(abc_spin, radfun, radial_xas, core_states(1), eps_sph, &
+                                                          iatom_l, lmax_xas, matrix)
+                     END IF
                      CALL xas_debug_report_underflow(l_xas_debug_fp, "xas_core_band_matrixelements", unit=xas_debug_unit)
                      CALL xas_debug_clear_underflow(l_xas_debug_fp)
                      CALL xas_accumulate_matrix_spectrum(energy_grid, eig_band, occ_band, wk_current, &
@@ -570,6 +652,21 @@ CONTAINS
       END IF
    END SUBROUTINE xas_hardwired_test_driver
 
+   SUBROUTINE xas_abort_missing_spinor_abc(input, noco, n_local_spins)
+      TYPE(t_input), INTENT(IN) :: input
+      TYPE(t_noco),  INTENT(IN) :: noco
+      INTEGER,       INTENT(IN) :: n_local_spins
+
+      CHARACTER(LEN=320) :: error_message
+
+      WRITE(error_message, '(a,i0,a,l1,a,l1,a,i0,a)') &
+         "XAS spinor star rotation needs two local MT spinor abc components from abc%calc_abc; found input%jspins=", &
+         input%jspins, ", noco%l_soc=", noco%l_soc, ", noco%l_noco=", noco%l_noco, &
+         ", constructed local components=", n_local_spins, &
+         ". The connected XAS spinor-star path is currently implemented for noco%l_noco; SOC without noco needs a separate abc construction."
+      CALL juDFT_error(TRIM(error_message), calledby="m_xas_driver")
+   END SUBROUTINE xas_abort_missing_spinor_abc
+
    SUBROUTINE xas_allreduce_transition_window(fmpi, transition_min, transition_max)
       TYPE(t_mpi), INTENT(IN)    :: fmpi
       REAL,        INTENT(INOUT) :: transition_min
@@ -617,6 +714,114 @@ CONTAINS
          kpts%nkpt, kpts%nkptf, l_use_spatial_star, TRIM(reduction_label)
       OPEN(NEWUNIT=unit, FILE=TRIM(filename), STATUS="REPLACE", ACTION="WRITE")
    END SUBROUTINE xas_debug_open_log
+
+   SUBROUTINE xas_debug_print_spinor_star(sym, cell, atoms, nococonv, absorber_z, unit)
+      TYPE(t_sym),      INTENT(IN) :: sym
+      TYPE(t_cell),     INTENT(IN) :: cell
+      TYPE(t_atoms),    INTENT(IN) :: atoms
+      TYPE(t_nococonv), INTENT(IN) :: nococonv
+      INTEGER,          INTENT(IN) :: absorber_z
+      INTEGER,          INTENT(IN) :: unit
+
+      COMPLEX :: su_global(2, 2), su_local(2, 2), su_check(2, 2), det_su
+      REAL    :: r_cart(3, 3), unitarity_norm
+      INTEGER :: identity_rot(3, 3), iop_list(2), n_iop, iop, itype, det_rot
+      INTEGER :: parent_atom, mapped_atom, i, j
+      LOGICAL :: found_absorber
+
+      identity_rot = RESHAPE([1, 0, 0, 0, 1, 0, 0, 0, 1], [3, 3])
+      found_absorber = .FALSE.
+      parent_atom = 1
+      DO itype = 1, atoms%ntype
+         IF (atoms%nz(itype) == absorber_z) THEN
+            parent_atom = atoms%firstAtom(itype)
+            found_absorber = .TRUE.
+            EXIT
+         END IF
+      END DO
+      IF (.NOT. found_absorber) RETURN
+
+      iop_list = 1
+      n_iop = 1
+      DO iop = 1, sym%nop
+         det_rot = xas_debug_det3_int(sym%mrot(:, :, iop))
+         IF (det_rot == 1 .AND. ANY(sym%mrot(:, :, iop) /= identity_rot)) THEN
+            n_iop = 2
+            iop_list(2) = iop
+            EXIT
+         END IF
+      END DO
+      IF (n_iop == 1) THEN
+         DO iop = 1, sym%nop
+            IF (ANY(sym%mrot(:, :, iop) /= identity_rot)) THEN
+               n_iop = 2
+               iop_list(2) = iop
+               EXIT
+            END IF
+         END DO
+      END IF
+
+      CALL xas_debug_write_line(unit, "XAS DEBUG SPINOR STAR: diagnostic-only SU(2) matrices")
+      DO i = 1, n_iop
+         iop = iop_list(i)
+         mapped_atom = parent_atom
+         IF (ALLOCATED(sym%mapped_atom)) mapped_atom = sym%mapped_atom(iop, parent_atom)
+
+         CALL xas_cart_rotation_from_sym(sym, cell, iop, r_cart)
+         CALL xas_su2_from_sym(sym, cell, iop, su_global)
+         CALL xas_local_spin_transform(atoms, nococonv, parent_atom, mapped_atom, su_global, su_local)
+
+         su_check = MATMUL(CONJG(TRANSPOSE(su_global)), su_global)
+         su_check(1, 1) = su_check(1, 1) - CMPLX(1.0, 0.0)
+         su_check(2, 2) = su_check(2, 2) - CMPLX(1.0, 0.0)
+         unitarity_norm = MAXVAL(ABS(su_check))
+         det_su = su_global(1, 1)*su_global(2, 2) - su_global(1, 2)*su_global(2, 1)
+
+         WRITE(*, '(a,i0,a,i0,a,i0)') "XAS DEBUG SPINOR STAR iop=", iop, " parent_atom=", parent_atom, &
+                                      " mapped_atom=", mapped_atom
+         IF (unit > 0) WRITE(unit, '(a,i0,a,i0,a,i0)') "XAS DEBUG SPINOR STAR iop=", iop, &
+                                                        " parent_atom=", parent_atom, " mapped_atom=", mapped_atom
+         DO j = 1, 3
+            WRITE(*, '(a,i0,a,3es16.8)') "XAS DEBUG SPINOR STAR R_cart row ", j, ":", r_cart(j, :)
+            IF (unit > 0) WRITE(unit, '(a,i0,a,3es16.8)') "XAS DEBUG SPINOR STAR R_cart row ", j, ":", r_cart(j, :)
+         END DO
+         CALL xas_debug_write_complex2(unit, "XAS DEBUG SPINOR STAR SU2 global row 1:", su_global(1, :))
+         CALL xas_debug_write_complex2(unit, "XAS DEBUG SPINOR STAR SU2 global row 2:", su_global(2, :))
+         WRITE(*, '(a,es12.4,a,2es16.8)') "XAS DEBUG SPINOR STAR SU2 unitarity_norm=", unitarity_norm, &
+                                          " det=", REAL(det_su), AIMAG(det_su)
+         IF (unit > 0) WRITE(unit, '(a,es12.4,a,2es16.8)') &
+            "XAS DEBUG SPINOR STAR SU2 unitarity_norm=", unitarity_norm, " det=", REAL(det_su), AIMAG(det_su)
+         CALL xas_debug_write_complex2(unit, "XAS DEBUG SPINOR STAR SU2 local row 1:", su_local(1, :))
+         CALL xas_debug_write_complex2(unit, "XAS DEBUG SPINOR STAR SU2 local row 2:", su_local(2, :))
+      END DO
+   END SUBROUTINE xas_debug_print_spinor_star
+
+   INTEGER FUNCTION xas_debug_det3_int(mat)
+      INTEGER, INTENT(IN) :: mat(3, 3)
+
+      xas_debug_det3_int = mat(1, 1)*(mat(2, 2)*mat(3, 3) - mat(3, 2)*mat(2, 3)) + &
+                           mat(1, 2)*(mat(2, 3)*mat(3, 1) - mat(2, 1)*mat(3, 3)) + &
+                           mat(1, 3)*(mat(2, 1)*mat(3, 2) - mat(2, 2)*mat(3, 1))
+   END FUNCTION xas_debug_det3_int
+
+   SUBROUTINE xas_debug_write_line(unit, text)
+      INTEGER,          INTENT(IN) :: unit
+      CHARACTER(LEN=*), INTENT(IN) :: text
+
+      WRITE(*, '(a)') TRIM(text)
+      IF (unit > 0) WRITE(unit, '(a)') TRIM(text)
+   END SUBROUTINE xas_debug_write_line
+
+   SUBROUTINE xas_debug_write_complex2(unit, label, values)
+      INTEGER,          INTENT(IN) :: unit
+      CHARACTER(LEN=*), INTENT(IN) :: label
+      COMPLEX,          INTENT(IN) :: values(2)
+
+      WRITE(*, '(a,2(1x,"(",es13.5,",",es13.5,")"))') TRIM(label), &
+         REAL(values(1)), AIMAG(values(1)), REAL(values(2)), AIMAG(values(2))
+      IF (unit > 0) WRITE(unit, '(a,2(1x,"(",es13.5,",",es13.5,")"))') TRIM(label), &
+         REAL(values(1)), AIMAG(values(1)), REAL(values(2)), AIMAG(values(2))
+   END SUBROUTINE xas_debug_write_complex2
 
    SUBROUTINE xas_debug_print_strength_summary(label, jsp_loop, strength, unit)
       CHARACTER(LEN=*), INTENT(IN) :: label

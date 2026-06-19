@@ -7,11 +7,13 @@
 MODULE m_xas_symmetry
    USE m_constants, ONLY: tpi_const
    USE m_dwigner, ONLY: d_wigner
+   USE m_grp_k, ONLY: euler
    USE m_juDFT, ONLY: juDFT_error
    USE m_types_abc, ONLY: t_abc
    USE m_types_atoms, ONLY: t_atoms
    USE m_types_cell, ONLY: t_cell
    USE m_types_kpts, ONLY: t_kpts
+   USE m_types_nococonv, ONLY: t_nococonv
    USE m_types_sym, ONLY: t_sym
    IMPLICIT NONE
    PRIVATE
@@ -22,6 +24,9 @@ MODULE m_xas_symmetry
    PUBLIC :: xas_cart_rotation_from_sym
    PUBLIC :: xas_rotate_lab_polarization_for_parent
    PUBLIC :: xas_rotate_abc_star_member
+   PUBLIC :: xas_rotate_abc_star_member_spinor
+   PUBLIC :: xas_su2_from_sym
+   PUBLIC :: xas_local_spin_transform
 
 CONTAINS
 
@@ -112,6 +117,54 @@ CONTAINS
       eps_parent_cart = MATMUL(CMPLX(TRANSPOSE(r_cart), 0.0), eps_source)
    END SUBROUTINE xas_rotate_lab_polarization_for_parent
 
+   SUBROUTINE xas_su2_from_sym(sym, cell, spatial_iop, su_global)
+      TYPE(t_sym),  INTENT(IN)  :: sym
+      TYPE(t_cell), INTENT(IN)  :: cell
+      INTEGER,      INTENT(IN)  :: spatial_iop
+      COMPLEX,      INTENT(OUT) :: su_global(2, 2)
+
+      REAL :: alpha, beta, gamma
+
+      IF (spatial_iop < 1 .OR. spatial_iop > sym%nop) THEN
+         CALL juDFT_error("Invalid spatial symmetry index in xas_su2_from_sym", calledby="m_xas_symmetry")
+      END IF
+
+      ! Match the spin-1/2 rotation convention used by grp_k/sympsi.
+      ! The Euler helper takes the proper part of the spatial operation.
+      ! su_global maps parent global spinor components to the symmetry-
+      ! related star-member global spinor components for this operation.
+      CALL euler(spatial_iop, sym, cell, alpha, beta, gamma)
+      su_global(1, 1) = COS(beta/2.0)*EXP(CMPLX(0.0, -(alpha + gamma)/2.0))
+      su_global(1, 2) = -SIN(beta/2.0)*EXP(CMPLX(0.0, -(alpha - gamma)/2.0))
+      su_global(2, 1) = SIN(beta/2.0)*EXP(CMPLX(0.0,  (alpha - gamma)/2.0))
+      su_global(2, 2) = COS(beta/2.0)*EXP(CMPLX(0.0,  (alpha + gamma)/2.0))
+   END SUBROUTINE xas_su2_from_sym
+
+   SUBROUTINE xas_local_spin_transform(atoms, nococonv, parent_atom, mapped_atom, su_global, su_local)
+      TYPE(t_atoms),    INTENT(IN)  :: atoms
+      TYPE(t_nococonv), INTENT(IN)  :: nococonv
+      INTEGER,          INTENT(IN)  :: parent_atom, mapped_atom
+      COMPLEX,          INTENT(IN)  :: su_global(2, 2)
+      COMPLEX,          INTENT(OUT) :: su_local(2, 2)
+
+      COMPLEX :: u_parent(2, 2), u_mapped(2, 2)
+
+      IF (parent_atom < 1 .OR. parent_atom > atoms%nat) THEN
+         CALL juDFT_error("Invalid parent atom index in xas_local_spin_transform", calledby="m_xas_symmetry")
+      END IF
+      IF (mapped_atom < 1 .OR. mapped_atom > atoms%nat) THEN
+         CALL juDFT_error("Invalid mapped atom index in xas_local_spin_transform", calledby="m_xas_symmetry")
+      END IF
+
+      ! abc%calc_abc forms local-spin coefficients as
+      !   abc_local(sigma) = sum_s conjg(U_global_local(s,sigma)) * abc_global(s),
+      ! i.e. abc_local = U^\dagger abc_global. Therefore the parent-local to
+      ! mapped-local spin transformation is U_mapped^\dagger S_global U_parent.
+      u_parent = nococonv%umat(atoms%itype(parent_atom))
+      u_mapped = nococonv%umat(atoms%itype(mapped_atom))
+      su_local = MATMUL(CONJG(TRANSPOSE(u_mapped)), MATMUL(su_global, u_parent))
+   END SUBROUTINE xas_local_spin_transform
+
    SUBROUTINE xas_rotate_abc_star_member(abc_parent, atoms, sym, cell, itype, bksym, lmax, abc_star)
       ! Transform MT expansion coefficients from the parent k point to one
       ! full-zone star member. The m-block convention follows waveftrafo_symm:
@@ -190,5 +243,101 @@ CONTAINS
          END DO
       END DO
    END SUBROUTINE xas_rotate_abc_star_member
+
+   SUBROUTINE xas_rotate_abc_star_member_spinor(abc_parent_spin, atoms, sym, cell, nococonv, itype, bksym, lmax, abc_star_spin)
+      ! Spinor star transform for unitary spatial operations only:
+      !
+      !   A_star(m,s) = sum_mprime,sum_sprime
+      !      A_parent(mprime,sprime) * D_l(mprime,m;iop) * S_local(s,sprime)
+      !
+      ! The orbital D_l ordering is the same as xas_rotate_abc_star_member.
+      ! S_local = U_mapped^\dagger S_global U_parent follows abc%calc_abc,
+      ! where local coefficients are U^\dagger times global spinors.
+      ! Time-reversal-related star members are antiunitary and are deliberately
+      ! guarded until the spin flip/conjugation convention is implemented.
+      TYPE(t_abc),       INTENT(IN)  :: abc_parent_spin(:)
+      TYPE(t_atoms),     INTENT(IN)  :: atoms
+      TYPE(t_sym),       INTENT(IN)  :: sym
+      TYPE(t_cell),      INTENT(IN)  :: cell
+      TYPE(t_nococonv),  INTENT(IN)  :: nococonv
+      INTEGER,           INTENT(IN)  :: itype, bksym, lmax
+      TYPE(t_abc),       INTENT(OUT) :: abc_star_spin(:)
+
+      INTEGER :: spatial_iop, l, iOrd, band, iAtom_l, iAtom, mapped_atom, mapped_l
+      INTEGER :: lm1, lm2, s, sp
+      INTEGER :: mrot_one(3, 3, 1)
+      LOGICAL :: l_time_reversal
+      COMPLEX :: su_global(2, 2), su_local(2, 2)
+      COMPLEX :: source(2, 2*lmax + 1), orbital_rot(2, 2*lmax + 1)
+      COMPLEX, ALLOCATABLE :: d_wgn(:, :, :, :)
+
+      IF (SIZE(abc_parent_spin) < 2 .OR. SIZE(abc_star_spin) < 2) THEN
+         CALL juDFT_error("Spinor XAS star rotation requires two local-spin t_abc objects", calledby="m_xas_symmetry")
+      END IF
+      IF (.NOT. ALLOCATED(abc_parent_spin(1)%cof) .OR. .NOT. ALLOCATED(abc_parent_spin(2)%cof)) THEN
+         CALL juDFT_error("abc_parent_spin%cof is not allocated in xas_rotate_abc_star_member_spinor", &
+                          calledby="m_xas_symmetry")
+      END IF
+
+      CALL xas_star_operation(sym, bksym, spatial_iop, l_time_reversal)
+      IF (l_time_reversal) THEN
+         CALL juDFT_error("XAS spinor time-reversal star handling is not implemented yet", calledby="m_xas_symmetry")
+      END IF
+
+      abc_star_spin(1) = abc_parent_spin(1)
+      abc_star_spin(2) = abc_parent_spin(2)
+      abc_star_spin(1)%cof = CMPLX(0.0, 0.0)
+      abc_star_spin(2)%cof = CMPLX(0.0, 0.0)
+
+      IF (lmax >= 1) THEN
+         ALLOCATE(d_wgn(-lmax:lmax, -lmax:lmax, 1:lmax, 1))
+         mrot_one(:, :, 1) = sym%mrot(:, :, spatial_iop)
+         CALL d_wigner(1, mrot_one, cell%bmat, lmax, d_wgn)
+      END IF
+      CALL xas_su2_from_sym(sym, cell, spatial_iop, su_global)
+
+      DO iAtom_l = LBOUND(abc_parent_spin(1)%cof, 4), UBOUND(abc_parent_spin(1)%cof, 4)
+         iAtom = atoms%firstAtom(itype) + iAtom_l - 1
+         mapped_atom = iAtom
+         IF (ALLOCATED(sym%mapped_atom)) THEN
+            mapped_atom = sym%mapped_atom(spatial_iop, iAtom)
+            IF (mapped_atom < atoms%firstAtom(itype) .OR. mapped_atom >= atoms%firstAtom(itype) + atoms%neq(itype)) THEN
+               CALL juDFT_error("XAS spinor star rotation currently requires mapped absorber atoms to stay in the same atom type", &
+                                calledby="m_xas_symmetry")
+            END IF
+            mapped_l = mapped_atom - atoms%firstAtom(itype) + 1
+            IF (mapped_l /= iAtom_l) THEN
+               CALL juDFT_error("XAS spinor star rotation currently assumes local absorbing atom maps to itself", &
+                                calledby="m_xas_symmetry")
+            END IF
+         END IF
+         CALL xas_local_spin_transform(atoms, nococonv, iAtom, mapped_atom, su_global, su_local)
+
+         DO l = 0, lmax
+            lm1 = l*l
+            lm2 = l*(l + 2)
+            IF (lm2 > UBOUND(abc_parent_spin(1)%cof, 2)) CYCLE
+            DO iOrd = 1, MIN(abc_parent_spin(1)%n_r(l), SIZE(abc_parent_spin(1)%cof, 3))
+               DO band = 1, SIZE(abc_parent_spin(1)%cof, 1)
+                  source = CMPLX(0.0, 0.0)
+                  source(1, 1:2*l + 1) = abc_parent_spin(1)%cof(band, lm1:lm2, iOrd, iAtom_l)
+                  source(2, 1:2*l + 1) = abc_parent_spin(2)%cof(band, lm1:lm2, iOrd, iAtom_l)
+                  IF (l == 0) THEN
+                     orbital_rot(:, 1) = source(:, 1)
+                  ELSE
+                     DO sp = 1, 2
+                        orbital_rot(sp, 1:2*l + 1) = MATMUL(source(sp, 1:2*l + 1), d_wgn(-l:l, -l:l, l, 1))
+                     END DO
+                  END IF
+                  DO s = 1, 2
+                     abc_star_spin(s)%cof(band, lm1:lm2, iOrd, iAtom_l) = &
+                        su_local(s, 1)*orbital_rot(1, 1:2*l + 1) + &
+                        su_local(s, 2)*orbital_rot(2, 1:2*l + 1)
+                  END DO
+               END DO
+            END DO
+         END DO
+      END DO
+   END SUBROUTINE xas_rotate_abc_star_member_spinor
 
 END MODULE m_xas_symmetry

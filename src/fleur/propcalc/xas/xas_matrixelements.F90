@@ -18,10 +18,15 @@ MODULE m_xas_matrixelements
 
 CONTAINS
 
-   SUBROUTINE xas_core_band_matrixelements(abc_spin, radfun, radial_xas, core_state, eps_sph, iAtom_l, lmax, matrix, final_l)
+   SUBROUTINE xas_core_band_matrixelements(abc_spin, radfun, radial_xas, core_state, eps_sph, iAtom_l, lmax, matrix, &
+                                           final_l, spin_frame_transform)
       ! Computes M(band,mj_index) using FLEUR lm indexing lm=l*(l+1)+m.
       ! abc_spin(1) is the local MT spin-up component and maps to sigma=+1;
       ! abc_spin(2) is the local MT spin-down component and maps to sigma=-1.
+      ! In noco calculations abc_spin(:) is in the local MT spin frame. The
+      ! core spin-angular coefficients are constructed in the global spin
+      ! basis and must be rotated into the same local frame with the optional
+      ! spin_frame_transform(tau,s) before contraction.
       ! If final_l is present, only that final-state angular momentum channel
       ! is included. This is a temporary diagnostic hook.
       TYPE(t_abc),            INTENT(IN)  :: abc_spin(:)
@@ -32,9 +37,12 @@ CONTAINS
       INTEGER,                INTENT(IN)  :: iAtom_l, lmax
       COMPLEX,                INTENT(OUT) :: matrix(:, :)
       INTEGER, OPTIONAL,      INTENT(IN)  :: final_l
+      COMPLEX, OPTIONAL,      INTENT(IN)  :: spin_frame_transform(:, :)
 
-      INTEGER :: band, i_mj, ispin, sigma, l, m, lm, iOrd, nbands
+      INTEGER :: band, i_mj, ispin, sigma, l, m, lm, iOrd, nbands, s_global
       COMPLEX :: angular, radial_sum
+      COMPLEX :: angular_global(2), angular_local(2)
+      LOGICAL :: l_rotate_spin_frame
 
       CALL xas_check_matrixelement_inputs(abc_spin, radfun, radial_xas, core_state, iAtom_l, lmax, matrix)
       IF (PRESENT(final_l)) THEN
@@ -42,21 +50,45 @@ CONTAINS
             CALL juDFT_error("Invalid final_l in XAS matrix elements", calledby="m_xas_matrixelements")
          END IF
       END IF
+      l_rotate_spin_frame = PRESENT(spin_frame_transform)
+      IF (l_rotate_spin_frame) THEN
+         IF (SIZE(abc_spin) /= 2) THEN
+            CALL juDFT_error("XAS spin-frame transform requires two abc spin components", calledby="m_xas_matrixelements")
+         END IF
+         IF (SIZE(spin_frame_transform, 1) < 2 .OR. SIZE(spin_frame_transform, 2) < 2) THEN
+            CALL juDFT_error("XAS spin-frame transform must be at least 2x2", calledby="m_xas_matrixelements")
+         END IF
+      END IF
 
       nbands = SIZE(abc_spin(1)%cof, 1)
       matrix = CMPLX(0.0, 0.0)
 
       DO i_mj = 1, SIZE(core_state%twice_mj)
-         DO ispin = 1, SIZE(abc_spin)
-            sigma = xas_sigma_from_spin_index(ispin)
-            DO l = 0, lmax
-               IF (PRESENT(final_l)) THEN
-                  IF (l /= final_l) CYCLE
+         DO l = 0, lmax
+            IF (PRESENT(final_l)) THEN
+               IF (l /= final_l) CYCLE
+            END IF
+            DO m = -l, l
+               lm = l*(l + 1) + m
+               IF (l_rotate_spin_frame) THEN
+                  DO s_global = 1, 2
+                     sigma = xas_sigma_from_spin_index(s_global)
+                     angular_global(s_global) = xas_dipole_angular_coeff(l, m, core_state%lc, core_state%twice_j, &
+                                                                          core_state%twice_mj(i_mj), sigma, eps_sph)
+                  END DO
+                  DO ispin = 1, 2
+                     angular_local(ispin) = spin_frame_transform(ispin, 1)*angular_global(1) + &
+                                            spin_frame_transform(ispin, 2)*angular_global(2)
+                  END DO
+               ELSE
+                  DO ispin = 1, SIZE(abc_spin)
+                     sigma = xas_sigma_from_spin_index(ispin)
+                     angular_local(ispin) = xas_dipole_angular_coeff(l, m, core_state%lc, core_state%twice_j, &
+                                                                     core_state%twice_mj(i_mj), sigma, eps_sph)
+                  END DO
                END IF
-               DO m = -l, l
-                  lm = l*(l + 1) + m
-                  angular = xas_dipole_angular_coeff(l, m, core_state%lc, core_state%twice_j, &
-                                                      core_state%twice_mj(i_mj), sigma, eps_sph)
+               DO ispin = 1, SIZE(abc_spin)
+                  angular = angular_local(ispin)
                   IF (ABS(angular) == 0.0) CYCLE
                   DO band = 1, nbands
                      radial_sum = CMPLX(0.0, 0.0)

@@ -175,7 +175,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    END DO
    ! Temporary XAS development hook. Keep disabled by default; enable locally
    ! only for hardwired XAS validation runs until XML/input control exists.
-   l_xas_hardwired_test = .FALSE.
+   l_xas_hardwired_test = .TRUE.
    IF (l_xas_hardwired_test) CALL xas_hardwired_test_driver(eig_id, fmpi, input, kpts, atoms, sym, cell, noco, nococonv, &
                                                             enpara, vTot, results)
    CALL timestop("cdngen: cdnval")
