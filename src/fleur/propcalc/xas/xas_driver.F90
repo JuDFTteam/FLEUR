@@ -35,9 +35,9 @@ MODULE m_xas_driver
    USE m_xas_matrixelements, ONLY: xas_core_band_matrixelements
    USE m_xas_radial, ONLY: xas_radial_dipole_integrals
    USE m_xas_spectrum, ONLY: xas_accumulate_matrix_spectrum
-   USE m_xas_symmetry, ONLY: xas_count_star_members, xas_star_member_weight, xas_rotate_abc_star_member, &
-                             xas_rotate_abc_star_member_spinor, xas_su2_from_sym, xas_local_spin_transform, &
-                             xas_cart_rotation_from_sym
+	   USE m_xas_symmetry, ONLY: xas_count_star_members, xas_star_member_weight, xas_rotate_abc_star_member, &
+	                             xas_rotate_abc_star_member_spinor, xas_su2_from_sym, xas_local_spin_transform, &
+	                             xas_cart_rotation_from_sym, xas_star_operation, xas_print_symmetry_rotation_diagnostics
    IMPLICIT NONE
    PRIVATE
 
@@ -69,7 +69,16 @@ MODULE m_xas_driver
    ! Temporary pure-angular L3 sum-rule diagnostic. Enable manually when
    ! checking angular isotropy; it does not affect spectra.
    LOGICAL, PARAMETER :: xas_debug_angular_sumrule = .FALSE.
-   CHARACTER(LEN=1), PARAMETER :: xas_debug_pol_label(xas_debug_n_pol) = [CHARACTER(LEN=1) :: "x", "y", "z"]
+   ! Temporary symmetry-basis diagnostic. Enable manually to print the raw
+	   ! lattice/fractional operations and the Cartesian/proper rotations used by
+	   ! XAS Wigner-D and SU(2) star reconstruction.
+	   LOGICAL, PARAMETER :: xas_debug_symmetry_rotations = .FALSE.
+   ! Temporary abc fingerprint diagnostic for spinor spatial-star validation.
+   ! Explicit full-k runs write DIRECT records; symmetry-reduced runs write
+   ! STAR records keyed by the same full-zone k coordinates for comparison.
+   LOGICAL, PARAMETER :: xas_debug_abc_star_compare = .FALSE.
+   INTEGER, PARAMETER :: xas_debug_abc_star_max_records = 20
+	   CHARACTER(LEN=1), PARAMETER :: xas_debug_pol_label(xas_debug_n_pol) = [CHARACTER(LEN=1) :: "x", "y", "z"]
 
    PUBLIC :: xas_hardwired_test_driver
 
@@ -149,8 +158,9 @@ CONTAINS
       CHARACTER(LEN=200) :: error_message
       INTEGER :: ikpt_i, ikpt, ikptf, bksym, jsp_loop, jsp, ispin, nbands, nbands_read, itype
       INTEGER :: n_spin_channels, n_local_spins, max_order, nbasfcn, lmax_xas, i_band
-      INTEGER :: n_underflow_spectrum, i_char, i_pol, iatom_l, n_absorber_types, n_absorber_atoms, nstar
-      INTEGER :: xas_debug_unit
+	      INTEGER :: n_underflow_spectrum, i_char, i_pol, iatom_l, n_absorber_types, n_absorber_atoms, nstar
+	      INTEGER :: n_abc_debug_direct_records, n_abc_debug_star_records
+	      INTEGER :: xas_debug_unit, xas_abc_debug_unit
       REAL    :: xas_debug_strength_l0(xas_debug_n_pol), xas_debug_strength_l2(xas_debug_n_pol)
       REAL    :: xas_debug_strength_total(xas_debug_n_pol)
       REAL    :: xas_debug_strength_l0_reduced(xas_debug_n_pol), xas_debug_strength_l2_reduced(xas_debug_n_pol)
@@ -173,17 +183,24 @@ CONTAINS
       xas_debug_strength_total = 0.0
       n_absorber_types = 0
       n_absorber_atoms = 0
-      weight_sum_parent = 0.0
-      weight_sum_star = 0.0
-      xas_debug_unit = -1
-      l_xas_angular_sumrule_printed = .FALSE.
+	      weight_sum_parent = 0.0
+	      weight_sum_star = 0.0
+	      xas_debug_unit = -1
+	      xas_abc_debug_unit = -1
+	      n_abc_debug_direct_records = 0
+	      n_abc_debug_star_records = 0
+	      l_xas_angular_sumrule_printed = .FALSE.
 
       IF (.NOT. ALLOCATED(results%w_iks)) THEN
          CALL juDFT_error("results%w_iks is not allocated in xas_hardwired_test_driver", calledby="m_xas_driver")
       END IF
 
-      xas_debug_filename = ""
-      IF (l_root) CALL xas_debug_open_log(kpts, xas_use_spatial_star, xas_debug_unit, xas_debug_filename)
+	      xas_debug_filename = ""
+	      IF (l_root) CALL xas_debug_open_log(kpts, xas_use_spatial_star, xas_debug_unit, xas_debug_filename)
+	      IF (l_root .AND. xas_debug_abc_star_compare) THEN
+	         OPEN(NEWUNIT=xas_abc_debug_unit, FILE="xas_abc_star_compare.dat", STATUS="REPLACE", ACTION="WRITE")
+	         CALL xas_debug_write_abc_header(xas_abc_debug_unit)
+	      END IF
 
       IF (l_root .AND. xas_debug_verbosity >= 3) THEN
          WRITE(*, '(a,i0)') "XAS DEBUG atom types: ntype=", atoms%ntype
@@ -207,6 +224,9 @@ CONTAINS
       END IF
       IF (l_root .AND. xas_debug_spinor_star) THEN
          CALL xas_debug_print_spinor_star(sym, cell, atoms, nococonv, xas_absorber_z, xas_debug_unit)
+      END IF
+      IF (l_root .AND. xas_debug_symmetry_rotations) THEN
+         CALL xas_print_symmetry_rotation_diagnostics(sym, cell, xas_debug_unit)
       END IF
 
       CALL usdus%init(atoms, input%jspins)
@@ -373,12 +393,23 @@ CONTAINS
                ELSE IF (input%jspins == 2) THEN
                   CALL abc_spin(jsp_loop)%calc_abc(input, atoms, sym, cell, lapw, nbands, usdus, noco, nococonv, &
                                                    jsp_loop, itype, zMat)
-               ELSE
-                  CALL abc_spin(1)%calc_abc(input, atoms, sym, cell, lapw, nbands, usdus, noco, nococonv, &
-                                            1, itype, zMat)
-               END IF
+	               ELSE
+	                  CALL abc_spin(1)%calc_abc(input, atoms, sym, cell, lapw, nbands, usdus, noco, nococonv, &
+	                                            1, itype, zMat)
+	               END IF
+               IF (l_root .AND. xas_debug_abc_star_compare .AND. l_spinor_abc .AND. &
+                   xas_debug_is_direct_target_k(kpts%bk(:, ikpt)) .AND. &
+                   n_abc_debug_direct_records < xas_debug_abc_star_max_records) THEN
+	                  DO iatom_l = 1, atoms%neq(itype)
+	                     IF (n_abc_debug_direct_records >= xas_debug_abc_star_max_records) EXIT
+	                     CALL xas_debug_dump_abc_fingerprint(xas_abc_debug_unit, "DIRECT", abc_spin, atoms, sym, cell, &
+	                                                         nococonv, itype, iatom_l, ikpt, ikpt, 1, kpts%bk(:, ikpt), &
+	                                                         lmax_xas, eig_band)
+	                     n_abc_debug_direct_records = n_abc_debug_direct_records + 1
+	                  END DO
+	               END IF
 
-               ALLOCATE(matrix(nbands, SIZE(core_states(1)%twice_mj)))
+	               ALLOCATE(matrix(nbands, SIZE(core_states(1)%twice_mj)))
                IF (l_xas_debug_strength) THEN
                   ALLOCATE(matrix_debug(nbands, SIZE(core_states(1)%twice_mj)))
                   ALLOCATE(matrix_l0(nbands, SIZE(core_states(1)%twice_mj)))
@@ -394,11 +425,21 @@ CONTAINS
                      wk_current = wk_star
 
                      ALLOCATE(abc_star_spin(n_local_spins))
-                     IF (l_spinor_abc) THEN
-                        CALL xas_rotate_abc_star_member_spinor(abc_spin, atoms, sym, cell, nococonv, itype, bksym, &
-                                                               lmax_xas, abc_star_spin)
-                     ELSE IF (noco%l_soc) THEN
-                        CALL xas_abort_missing_spinor_abc(input, noco, n_local_spins)
+	                     IF (l_spinor_abc) THEN
+	                        CALL xas_rotate_abc_star_member_spinor(abc_spin, atoms, sym, cell, nococonv, itype, bksym, &
+	                                                               lmax_xas, abc_star_spin)
+	                        IF (l_root .AND. xas_debug_abc_star_compare .AND. kpts%nkpt /= kpts%nkptf .AND. &
+	                            bksym /= 1 .AND. n_abc_debug_star_records < xas_debug_abc_star_max_records) THEN
+	                           DO iatom_l = 1, atoms%neq(itype)
+	                              IF (n_abc_debug_star_records >= xas_debug_abc_star_max_records) EXIT
+	                              CALL xas_debug_dump_abc_fingerprint(xas_abc_debug_unit, "STAR", abc_star_spin, atoms, sym, cell, &
+	                                                                  nococonv, itype, iatom_l, ikpt, ikptf, bksym, &
+	                                                                  kpts%bkf(:, ikptf), lmax_xas, eig_band)
+	                              n_abc_debug_star_records = n_abc_debug_star_records + 1
+	                           END DO
+	                        END IF
+	                     ELSE IF (noco%l_soc) THEN
+	                        CALL xas_abort_missing_spinor_abc(input, noco, n_local_spins)
                      ELSE
                         DO ispin = 1, n_local_spins
                            CALL xas_rotate_abc_star_member(abc_spin(ispin), atoms, sym, cell, itype, bksym, lmax_xas, &
@@ -647,10 +688,11 @@ CONTAINS
             WRITE(xas_debug_unit, '(a,i0,a)') "XAS DEBUG SUMMARY: underflow occurred in xas_accumulate_matrix_spectrum ", &
                                              underflow_reduced(1), &
                                              " time(s); cleared as harmless Gaussian-tail/tiny-product underflow."
-         END IF
-         CLOSE(xas_debug_unit)
-      END IF
-   END SUBROUTINE xas_hardwired_test_driver
+	         END IF
+	         CLOSE(xas_debug_unit)
+	         IF (xas_abc_debug_unit /= -1) CLOSE(xas_abc_debug_unit)
+	      END IF
+	   END SUBROUTINE xas_hardwired_test_driver
 
    SUBROUTINE xas_abort_missing_spinor_abc(input, noco, n_local_spins)
       TYPE(t_input), INTENT(IN) :: input
@@ -664,8 +706,192 @@ CONTAINS
          input%jspins, ", noco%l_soc=", noco%l_soc, ", noco%l_noco=", noco%l_noco, &
          ", constructed local components=", n_local_spins, &
          ". The connected XAS spinor-star path is currently implemented for noco%l_noco; SOC without noco needs a separate abc construction."
-      CALL juDFT_error(TRIM(error_message), calledby="m_xas_driver")
-   END SUBROUTINE xas_abort_missing_spinor_abc
+	      CALL juDFT_error(TRIM(error_message), calledby="m_xas_driver")
+	   END SUBROUTINE xas_abort_missing_spinor_abc
+
+   SUBROUTINE xas_debug_write_abc_header(unit)
+      INTEGER, INTENT(IN) :: unit
+
+      WRITE(unit, '(a)') "# XAS abc star comparison fingerprints"
+      WRITE(unit, '(a)') "# Run explicit full-k/no-symmetry with this flag enabled to get DIRECT records."
+      WRITE(unit, '(a)') "# Run symmetry-reduced with the same setup to get STAR records."
+      WRITE(unit, '(a)') "# Match records by full-zone k coordinates; compare l/tau/lm norms and complex checksums."
+      WRITE(unit, '(a)') "# ABC_RECORD mode parent_ikpt full_ikpt bksym spatial_iop det_int itype atom_l time_reversal mapped_atom mapped_l Z kx ky kz"
+      WRITE(unit, '(a)') "# ABC_BAND mode band eigenvalue_ha"
+      WRITE(unit, '(a)') "# ABC_NORM mode tau l norm sum_re sum_im max_abs"
+      WRITE(unit, '(a)') "# ABC_LM mode tau l m lm norm sum_re sum_im max_abs"
+      WRITE(unit, '(a)') "# ABC_COEF mode tau l m lm iord band re im"
+      WRITE(unit, '(a)') "# ABC_SU2 row re1 im1 re2 im2"
+      WRITE(unit, '(a)') "# ABC_SLOCAL row re1 im1 re2 im2"
+   END SUBROUTINE xas_debug_write_abc_header
+
+   SUBROUTINE xas_debug_dump_abc_fingerprint(unit, mode, abc_spin, atoms, sym, cell, nococonv, itype, iatom_l, &
+                                             ikpt_parent, ikpt_full, bksym, k_full, lmax_xas, eig_band)
+      INTEGER,             INTENT(IN) :: unit
+      CHARACTER(LEN=*),    INTENT(IN) :: mode
+      TYPE(t_abc),         INTENT(IN) :: abc_spin(:)
+      TYPE(t_atoms),       INTENT(IN) :: atoms
+      TYPE(t_sym),         INTENT(IN) :: sym
+      TYPE(t_cell),        INTENT(IN) :: cell
+      TYPE(t_nococonv),    INTENT(IN) :: nococonv
+      INTEGER,             INTENT(IN) :: itype, iatom_l, ikpt_parent, ikpt_full, bksym, lmax_xas
+      REAL,                INTENT(IN) :: k_full(3)
+      REAL,                INTENT(IN) :: eig_band(:)
+
+      INTEGER :: spatial_iop, iatom, mapped_atom, mapped_l, tau, l, lm, m, det_int, irow, band
+      LOGICAL :: l_time_reversal
+      COMPLEX :: su_global(2, 2), su_local(2, 2)
+
+      IF (unit == -1) RETURN
+      IF (SIZE(abc_spin) < 2) THEN
+         WRITE(unit, '(a,1x,a,1x,a,i0)') "# ABC_SKIP", TRIM(mode), "abc_spin_size=", SIZE(abc_spin)
+         RETURN
+      END IF
+      IF (.NOT. ALLOCATED(abc_spin(1)%cof) .OR. .NOT. ALLOCATED(abc_spin(2)%cof)) THEN
+         WRITE(unit, '(a,1x,a)') "# ABC_SKIP", TRIM(mode)//" missing allocated abc cof"
+         RETURN
+      END IF
+
+      iatom = atoms%firstAtom(itype) + iatom_l - 1
+      mapped_atom = iatom
+      CALL xas_star_operation(sym, bksym, spatial_iop, l_time_reversal)
+      IF (ALLOCATED(sym%mapped_atom)) THEN
+         IF (iatom >= 1 .AND. iatom <= atoms%nat) mapped_atom = sym%mapped_atom(spatial_iop, iatom)
+      END IF
+      IF (mapped_atom < 1 .OR. mapped_atom > atoms%nat) mapped_atom = iatom
+      IF (mapped_atom >= 1 .AND. mapped_atom <= atoms%nat) THEN
+         mapped_l = mapped_atom - atoms%firstAtom(atoms%itype(mapped_atom)) + 1
+      ELSE
+         mapped_l = -1
+      END IF
+      det_int = xas_debug_det3_int(sym%mrot(:, :, spatial_iop))
+
+      WRITE(unit, '(a,1x,a,1x,7(i0,1x),l1,1x,i0,1x,i0,1x,i0,1x,3es22.14)') &
+         "ABC_RECORD", TRIM(mode), ikpt_parent, ikpt_full, bksym, spatial_iop, det_int, itype, iatom_l, &
+         l_time_reversal, mapped_atom, mapped_l, atoms%nz(itype), k_full
+
+      CALL xas_su2_from_sym(sym, cell, spatial_iop, su_global)
+      CALL xas_local_spin_transform(atoms, nococonv, iatom, mapped_atom, su_global, su_local)
+      DO irow = 1, 2
+         WRITE(unit, '(a,1x,i0,1x,4es22.14)') "ABC_SU2", irow, REAL(su_global(irow, 1)), AIMAG(su_global(irow, 1)), &
+                                              REAL(su_global(irow, 2)), AIMAG(su_global(irow, 2))
+         WRITE(unit, '(a,1x,i0,1x,4es22.14)') "ABC_SLOCAL", irow, REAL(su_local(irow, 1)), AIMAG(su_local(irow, 1)), &
+                                                 REAL(su_local(irow, 2)), AIMAG(su_local(irow, 2))
+      END DO
+      DO band = 1, MIN(SIZE(eig_band), SIZE(abc_spin(1)%cof, 1))
+         WRITE(unit, '(a,1x,a,1x,i0,1x,es22.14)') "ABC_BAND", TRIM(mode), band, eig_band(band)
+      END DO
+
+      DO tau = 1, 2
+         DO l = 0, MIN(lmax_xas, UBOUND(abc_spin(tau)%n_r, 1))
+            IF (l /= 0 .AND. l /= 2) CYCLE
+            CALL xas_debug_write_abc_block(unit, mode, abc_spin(tau), tau, l, iatom_l)
+            DO lm = l*l, l*(l + 2)
+               m = lm - l*(l + 1)
+               CALL xas_debug_write_abc_lm(unit, mode, abc_spin(tau), tau, l, m, lm, iatom_l)
+            END DO
+            CALL xas_debug_write_abc_coefficients(unit, mode, abc_spin(tau), tau, l, iatom_l)
+         END DO
+      END DO
+      WRITE(unit, '(a)') "ABC_END"
+   END SUBROUTINE xas_debug_dump_abc_fingerprint
+
+   SUBROUTINE xas_debug_write_abc_block(unit, mode, abc, tau, l, iatom_l)
+      INTEGER,          INTENT(IN) :: unit, tau, l, iatom_l
+      CHARACTER(LEN=*), INTENT(IN) :: mode
+      TYPE(t_abc),      INTENT(IN) :: abc
+
+      INTEGER :: lm1, lm2
+      REAL    :: norm_val, max_abs
+      COMPLEX :: checksum
+
+      lm1 = l*l
+      lm2 = l*(l + 2)
+      IF (lm2 > UBOUND(abc%cof, 2)) RETURN
+      norm_val = SQRT(SUM(ABS(abc%cof(:, lm1:lm2, :, iatom_l))**2))
+      max_abs = MAXVAL(ABS(abc%cof(:, lm1:lm2, :, iatom_l)))
+      checksum = SUM(abc%cof(:, lm1:lm2, :, iatom_l))
+      WRITE(unit, '(a,1x,a,1x,i0,1x,i0,1x,4es22.14)') "ABC_NORM", TRIM(mode), tau, l, norm_val, &
+                                                        REAL(checksum), AIMAG(checksum), max_abs
+   END SUBROUTINE xas_debug_write_abc_block
+
+   SUBROUTINE xas_debug_write_abc_lm(unit, mode, abc, tau, l, m, lm, iatom_l)
+      INTEGER,          INTENT(IN) :: unit, tau, l, m, lm, iatom_l
+      CHARACTER(LEN=*), INTENT(IN) :: mode
+      TYPE(t_abc),      INTENT(IN) :: abc
+
+      REAL    :: norm_val, max_abs
+      COMPLEX :: checksum
+
+      IF (lm > UBOUND(abc%cof, 2)) RETURN
+      norm_val = SQRT(SUM(ABS(abc%cof(:, lm, :, iatom_l))**2))
+      max_abs = MAXVAL(ABS(abc%cof(:, lm, :, iatom_l)))
+      checksum = SUM(abc%cof(:, lm, :, iatom_l))
+      WRITE(unit, '(a,1x,a,1x,5(i0,1x),4es22.14)') "ABC_LM", TRIM(mode), tau, l, m, lm, iatom_l, &
+                                                     norm_val, REAL(checksum), AIMAG(checksum), max_abs
+   END SUBROUTINE xas_debug_write_abc_lm
+
+   SUBROUTINE xas_debug_write_abc_coefficients(unit, mode, abc, tau, l, iatom_l)
+      INTEGER,          INTENT(IN) :: unit, tau, l, iatom_l
+      CHARACTER(LEN=*), INTENT(IN) :: mode
+      TYPE(t_abc),      INTENT(IN) :: abc
+
+      INTEGER :: lm, m, iord, band
+      COMPLEX :: coeff
+
+      IF (l > UBOUND(abc%n_r, 1)) RETURN
+      DO lm = l*l, l*(l + 2)
+         IF (lm > UBOUND(abc%cof, 2)) CYCLE
+         m = lm - l*(l + 1)
+         DO iord = 1, MIN(abc%n_r(l), SIZE(abc%cof, 3))
+            DO band = 1, SIZE(abc%cof, 1)
+               coeff = abc%cof(band, lm, iord, iatom_l)
+               WRITE(unit, '(a,1x,a,1x,6(i0,1x),2es22.14)') "ABC_COEF", TRIM(mode), tau, l, m, lm, iord, band, &
+                                                             REAL(coeff), AIMAG(coeff)
+            END DO
+         END DO
+      END DO
+   END SUBROUTINE xas_debug_write_abc_coefficients
+
+   LOGICAL FUNCTION xas_debug_is_direct_target_k(kvec) RESULT(l_match)
+      REAL, INTENT(IN) :: kvec(3)
+
+      REAL, PARAMETER :: tol = 1.0e-7
+      REAL, PARAMETER :: targets(3, 20) = RESHAPE([REAL :: &
+         3.75000000000000E-01, 5.41666666666667E-01, 5.41666666666667E-01, &
+         4.58333333333333E-01, 4.58333333333333E-01, 6.25000000000000E-01, &
+         5.41666666666667E-01, 5.41666666666667E-01, 5.41666666666667E-01, &
+         5.41666666666667E-01, 3.75000000000000E-01, 5.41666666666667E-01, &
+         4.58333333333333E-01, 6.25000000000000E-01, 4.58333333333333E-01, &
+         4.58333333333333E-01, 4.58333333333333E-01, 4.58333333333333E-01, &
+         5.41666666666667E-01, 5.41666666666667E-01, 3.75000000000000E-01, &
+         4.58333333333333E-01, 5.41666666666667E-01, 5.41666666666667E-01, &
+         3.75000000000000E-01, 4.58333333333333E-01, 7.08333333333333E-01, &
+         5.41666666666667E-01, 5.41666666666667E-01, 6.25000000000000E-01, &
+         4.58333333333333E-01, 7.08333333333333E-01, 4.58333333333333E-01, &
+         7.08333333333333E-01, 3.75000000000000E-01, 4.58333333333333E-01, &
+         2.91666666666667E-01, 6.25000000000000E-01, 5.41666666666667E-01, &
+         5.41666666666667E-01, 2.91666666666667E-01, 5.41666666666667E-01, &
+         4.58333333333333E-01, 4.58333333333333E-01, 3.75000000000000E-01, &
+         3.75000000000000E-01, 5.41666666666667E-01, 6.25000000000000E-01, &
+         4.58333333333333E-01, 5.41666666666667E-01, 6.25000000000000E-01, &
+         4.58333333333333E-01, 6.25000000000000E-01, 5.41666666666667E-01, &
+         6.25000000000000E-01, 3.75000000000000E-01, 4.58333333333333E-01, &
+         3.75000000000000E-01, 6.25000000000000E-01, 5.41666666666667E-01], [3, 20])
+
+      INTEGER :: i
+      REAL    :: diff(3)
+
+      l_match = .FALSE.
+      DO i = 1, SIZE(targets, 2)
+         diff = kvec - targets(:, i)
+         diff = diff - REAL(NINT(diff))
+         IF (MAXVAL(ABS(diff)) < tol) THEN
+            l_match = .TRUE.
+            EXIT
+         END IF
+      END DO
+   END FUNCTION xas_debug_is_direct_target_k
 
    SUBROUTINE xas_allreduce_transition_window(fmpi, transition_min, transition_max)
       TYPE(t_mpi), INTENT(IN)    :: fmpi
