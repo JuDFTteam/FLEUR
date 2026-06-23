@@ -301,16 +301,16 @@ CONTAINS
 8100        FORMAT(/, 10x, '   iter=  ', i5)
          END IF !fmpi%irank==0
 
-         xcpot_iter = xcpot
-         if (xcpot%is_MetaGGA()) then
+         
+         if (xcpot%is_MetaGGA().and.(real(EnergyDen%pw(1,1)) < -1E98)) then
              ! In the first iteration, we do not have a valid kinetic energy density, so we use an auxiliary GGA potential for the XC part. 
              ! This is needed to avoid NaNs in the potential and to get a reasonable starting density for the self-consistency loop. 
              ! The auxiliary GGA potential is constructed from the input parameters and does not require a kinetic energy density.
             !In this iteration we do not have a valid kinetic energy density, so we use AUX_GGA. 
-            if(real(EnergyDen%pw(1,1)) < -1E98) then 
-                xcpot_iter=xcpot%create_from_aux()
-                print *,"Using auxiliary GGA potential for the first iteration of MetaGGA calculation."
-            endif
+            xcpot_iter=xcpot%create_from_aux()
+            print *,"Using auxiliary GGA potential for the first iteration of MetaGGA calculation."
+         else
+            xcpot_iter = xcpot
          endif
          CALL inDen%distribute(fmpi%mpi_comm)
          CALL nococonv%mpi_bc(fmpi%mpi_comm)
