@@ -41,7 +41,6 @@ src/fleur/types/types_xcpot_inbuild.F90
 src/fleur/types/types_xcpot_inbuild_nofunction.F90
 src/fleur/types/types_xcpot_libxc.F90
 src/fleur/types/types_fftGrid.f90
-src/fleur/types/types_BEC.F90
 src/fleur/types/types_abc.F90
 src/fleur/types/types_orbmom.F90
 )

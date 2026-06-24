@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2024 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -26,7 +26,7 @@ module m_types_solver
       procedure        :: solve_std_dp  !solver for standard eigenvalue problem (double precision)
       procedure        :: solve_std_sp  !solver for standard eigenvalue problem (single precision)
       procedure        :: solve_gev  !solver for generalized eigenvalue problem
-      procedure        :: to_std     !transform the H of the generalized problem to a std problem
+      procedure        :: to_std     !transform the H of the generalized problem to a std problem; requires ne parameter
       procedure        :: backtrans  !transform the Eigenvalue back to the generalized problem
    end type
 
@@ -40,8 +40,8 @@ module m_types_solver
 
 contains
    function get_solver_stop() result(solver)
-      type(t_solver_stop), pointer::solver
-      allocate (solver)
+      class(t_solver), allocatable :: solver
+      allocate (t_solver_stop :: solver)
       solver%name = "stop"
       solver%available = .true.
       solver%parallel = .true.
@@ -91,6 +91,9 @@ contains
       real, intent(OUT)                    :: eig(:)
       integer, intent(IN)                  :: ikpt
 
+      ! For distributed solvers, ne is the global eigenvalue count on input/output.
+      ! eig contains global eigenvalues on all ranks.
+
       call judft_bug("Not implemented", calledby="solve_std")
    end subroutine
    subroutine solve_std_sp(self, hmat, ne, eig, zmat)
@@ -100,6 +103,9 @@ contains
       integer, intent(INOUT)               :: ne
       class(t_mat), allocatable, intent(OUT):: zmat
       real, intent(OUT)                    :: eig(:)
+
+      ! For distributed solvers, ne is the global eigenvalue count on input/output.
+      ! eig contains global eigenvalues on all ranks.
 
       call judft_bug("Not implemented", calledby="solve_std_sp")
    end subroutine
@@ -111,12 +117,16 @@ contains
       class(t_mat), allocatable, intent(OUT):: zmat
       real, intent(OUT)                    :: eig(:)
 
+      ! For distributed solvers, ne is the global eigenvalue count on input/output.
+      ! eig contains global eigenvalues on all ranks.
+
       call judft_bug("Not implemented", calledby="solve_std_dp")
    end subroutine
-   subroutine to_std(self, hmat, smat)
+   subroutine to_std(self, hmat, smat, ne)
       implicit none
       class(t_solver)                     :: self
       class(t_mat), intent(INOUT)          :: hmat, smat
+      integer, intent(IN)                  :: ne
 
       call judft_bug("Not implemented", calledby="to_std")
    end subroutine

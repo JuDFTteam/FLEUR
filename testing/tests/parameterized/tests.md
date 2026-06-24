@@ -60,12 +60,12 @@ Testset: DFPT
 |     | Description   | directory name              | marks | Remarks      | CmdLine | MPI |
 | --- | ----------------------- | ----------------- | ----- | ------------ | ------- | --- |
 | +   | Cu bulk fcc, Gamma only | dfpt/CuBulkGamma  | libxc | partly ready |         |   1 |
-| +   | SiC bulk fcc, Gamma only BEC| dfpt/SiCBulk-BEC  | libxc | partly ready |         |   1 |
-| +   | Cu bulk fcc, K-mesh     | dfpt/CuBulkKmesh  | libxc | partly ready |         |   1 |
+| +   | SiC bulk fcc, Gamma only BEC| dfpt/SiCBulk-BEC  | libxc |          |         |   1 |
+| +   | Cu bulk fcc, K-mesh     | dfpt/CuBulkKmesh  | libxc |              |         |   1 |
 | +   | C bulk fcc              | dfpt/CBulk        | libxc | partly ready |         |   1 |
 | +   | C bulk fcc BEC             | dfpt/CBulk-BEC        | libxc | partly ready |         |   1 |
-| +   | Graphene Film           | dfpt/GrapheneFilm | libxc | partly ready |         |   1 |
-| +   | V bulk bcc, mpi         | dfpt/VBulkMPI     | libxc | partly ready |         |   2 |
+| +   | Graphene Film           | dfpt/GrapheneFilm | libxc |              |         |   1 |
+| +   | V bulk bcc, mpi         | dfpt/VBulkMPI     | libxc |              |         |   2 |
 
 
 Testset: Noco
@@ -107,7 +107,7 @@ Testset: Experimental
 | +   | Bulk Al one iteration, LibXC                   | extra/Al_libxc_PBE      | bulk,libxc    |                           |         | 2   |
 |     | Test of GW interface 1                         | extra/gw1Interface      | bulk          | inp.xml files too old     |         | 2   |
 |     | Test of GW interface 2                         | extra/gw2Interface      | bulk          | inp.xml files too old     |         | 2   |
-| +   | Sm jDOS decomposition                          | extra/SmAtomjDOS        | bulk,dos      |                           |         | 2   |
+|     | Sm jDOS decomposition                          | extra/SmAtomjDOS        | bulk,dos      |                           |         | 2   |
 | +   | C: simple test for the Wannier code            | extra/Cwann             | bulk,wannier  |                           |         | 2   |
 |     | TiO2 EELS spectrum                             | extra/TiO2eels          | bulk,eels     | inp.xml too old           |         | 2   |
 | +   | Hubbard1 using SOC                             | extra/Gd_Hubbard1       | bulk,edsolver |                           |         | 2   |

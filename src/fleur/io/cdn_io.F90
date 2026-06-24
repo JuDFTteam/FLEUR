@@ -241,24 +241,14 @@ CONTAINS
           CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
                currentStepfunctionIndex,readDensityIndex,lastDensityIndex,inFilename)
 
-          IF (PRESENT(denIm)) THEN
-             CALL readDensityHDF(fileID, input, stars, sphhar, atoms, vacuum,   archiveName, densityType,&
-                 fermiEnergy,lastDistance,l_qfix,l_DimChange,den,denIm)
-          ELSE
-             CALL readDensityHDF(fileID, input, stars, sphhar, atoms, vacuum,   archiveName, densityType,&
-                 fermiEnergy,lastDistance,l_qfix,l_DimChange,den,b_constr=b_constr)
-          END IF
+         CALL readDensityHDF(fileID, input, stars, sphhar, atoms, vacuum,   archiveName, densityType,&
+               fermiEnergy,lastDistance,l_qfix,l_DimChange,den,denIm=denIm,b_constr=b_constr)
 
           CALL closeCDNPOT_HDF(fileID)
 
           IF(l_DimChange) THEN
-             IF (PRESENT(denIm)) THEN
                 CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,inOrOutCDN,&
                      1,-1.0,fermiEnergy,-1.0,-1.0,l_qfix,den,denIm=denIm)
-             ELSE
-                CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,inOrOutCDN,&
-                     1,-1.0,fermiEnergy,-1.0,-1.0,l_qfix,den)
-             END IF
           END IF
        ELSE
           INQUIRE(FILE=TRIM(ADJUSTL(filename)),EXIST=l_exist)
@@ -524,24 +514,17 @@ CONTAINS
           END IF
        END IF
 
-       IF (PRESENT(denIm)) THEN
-       CALL writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
+      if (any(noco%l_constrained).or.any(noco%l_fixedMoment)) THEN
+         CALL writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
             currentStarsIndex, currentLatharmsIndex, currentStructureIndex,&
             currentStepfunctionIndex,date,time,distance,fermiEnergy,mmpmatDistance,&
-            occDistance,l_qfix,den%iter+relCdnIndex,den,denIm)
-       ELSE
-          if (any(noco%l_constrained).or.any(noco%l_fixedMoment)) THEN
-            CALL writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
-               currentStarsIndex, currentLatharmsIndex, currentStructureIndex,&
-               currentStepfunctionIndex,date,time,distance,fermiEnergy,mmpmatDistance,&
-               occDistance,l_qfix,den%iter+relCdnIndex,den,b_constr=b_constr)
-          else
-            CALL writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
-               currentStarsIndex, currentLatharmsIndex, currentStructureIndex,&
-               currentStepfunctionIndex,date,time,distance,fermiEnergy,mmpmatDistance,&
-               occDistance,l_qfix,den%iter+relCdnIndex,den)
-          endif          
-       END IF
+            occDistance,l_qfix,den%iter+relCdnIndex,den,b_constr=b_constr)
+         else
+         CALL writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
+            currentStarsIndex, currentLatharmsIndex, currentStructureIndex,&
+            currentStepfunctionIndex,date,time,distance,fermiEnergy,mmpmatDistance,&
+            occDistance,l_qfix,den%iter+relCdnIndex,den,denIm=denIm)
+      endif          
 
        IF(l_storeIndices) THEN
           CALL writeCDNHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
@@ -1046,7 +1029,7 @@ CONTAINS
 #endif
   END SUBROUTINE storeStructureIfNew
 
-  SUBROUTINE transform_by_moving_atoms(fmpi,stars,atoms,vacuum, cell, sym, sphhar,input ,noco,nococonv)
+  SUBROUTINE transform_by_moving_atoms(fmpi,stars,atoms,vacuum,cell,field,sym,sphhar,input,noco,nococonv)
     USE m_types
     USE m_constants
     USE m_qfix
@@ -1058,8 +1041,8 @@ CONTAINS
     TYPE(t_vacuum),INTENT(IN)   :: vacuum
     TYPE(t_sphhar),INTENT(IN)   :: sphhar
     TYPE(t_input),INTENT(IN)    :: input
-     
     TYPE(t_cell),INTENT(IN)     :: cell
+    TYPE(t_field),INTENT(IN)    :: field
     TYPE(t_noco),INTENT(IN)     :: noco
     TYPE(t_nococonv),INTENT(IN)     :: nococonv
     
@@ -1141,13 +1124,13 @@ CONTAINS
        SELECT CASE(input%qfix)
        CASE (0,1) !just qfix the density
           IF (fmpi%irank==0) WRITE(oUnit,*) "Using qfix to adjust density"
-          IF (fmpi%irank==0) CALL qfix(fmpi,stars,nococonv,atoms,sym,vacuum,sphhar,input,cell ,&
+          IF (fmpi%irank==0) CALL qfix(fmpi,stars,nococonv,atoms,sym,vacuum,sphhar,input,cell,field,&
                den,noco%l_noco,.FALSE.,.FALSE.,force_fix=.TRUE.,fix=fix)
        CASE(2,3)
-          IF (fmpi%irank==0) CALL qfix(fmpi,stars,nococonv,atoms,sym,vacuum,sphhar,input,cell ,&
+          IF (fmpi%irank==0) CALL qfix(fmpi,stars,nococonv,atoms,sym,vacuum,sphhar,input,cell,field,&
                den,noco%l_noco,.FALSE.,.FALSE.,force_fix=.TRUE.,fix=fix,fix_pw_only=.TRUE.)
        CASE(4,5)
-          IF (fmpi%irank==0) CALL fix_by_gaussian(shifts,atoms,nococonv,stars,fmpi,sym,vacuum,sphhar,input ,cell,noco,den)
+          IF (fmpi%irank==0) CALL fix_by_gaussian(shifts,atoms,nococonv,stars,fmpi,sym,vacuum,sphhar,input,cell,field,noco,den)
        CASE default
           CALL judft_error("Wrong choice of qfix in input")
        END SELECT

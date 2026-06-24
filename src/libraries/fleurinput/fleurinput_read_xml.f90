@@ -9,7 +9,7 @@ MODULE m_fleurinput_read_xml
 CONTAINS
   SUBROUTINE fleurinput_read_xml(xmlOUTFileID,filename_add,cell,sym,atoms,input,noco,vacuum,field,&
        sliceplot,banddos,mpinp,hybinp ,coreSpecInput,wann,&
-       xcpot,forcetheo_data,kpts,kptsSelection,kptsArray,enparaXML,gfinp,hub1inp,juPhon,old_version)
+       xcpot,forcetheo_data,kpts,kptsSelection,kptsArray,enparaXML,gfinp,hub1inp,dfpt,old_version)
     USE m_types_xml
     integer,INTENT(IN)             :: xmlOUTFileID
     CHARACTER(len=*), INTENT(IN) :: filename_add
@@ -34,7 +34,7 @@ CONTAINS
     TYPE(t_kpts),ALLOCATABLE,INTENT(INOUT),OPTIONAL::kptsArray(:)
     TYPE(t_gfinp),INTENT(OUT),OPTIONAL::gfinp
     TYPE(t_hub1inp),INTENT(OUT),OPTIONAL::hub1inp
-    TYPE(t_juPhon),INTENT(OUT),OPTIONAL::juPhon
+    TYPE(t_dfpt),INTENT(OUT),OPTIONAL::dfpt
     CHARACTER(LEN=40),INTENT(OUT),OPTIONAL::kptsSelection(3)
     LOGICAL,INTENT(INOUT),OPTIONAL :: old_version
 
@@ -68,7 +68,7 @@ CONTAINS
     if (present(kpts)) CALL kpts%read_xml(xml)
     if (present(gfinp)) CALL gfinp%read_xml(xml)
     if (present(hub1inp)) CALL hub1inp%read_xml(xml)
-    if (present(juPhon)) CALL juPhon%read_xml(xml)
+    if (present(dfpt)) CALL dfpt%read_xml(xml)
     IF (present(kptsSelection).and.xml%GetNumberOfNodes('/fleurInput/cell/bzIntegration/kPointListSelection')>0) THEN
        kptsSelection(:) = ''
        kptsSelection(1) = TRIM(ADJUSTL(xml%GetAttributeValue('/fleurInput/cell/bzIntegration/kPointListSelection/@listName')))

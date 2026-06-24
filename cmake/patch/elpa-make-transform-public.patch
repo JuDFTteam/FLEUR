@@ -1,91 +1,184 @@
-diff -ru elpa-2024.05.001/src/elpa_api.F90 elpa-2024.05.001-patched/src/elpa_api.F90
---- elpa-2024.05.001/src/elpa_api.F90	2024-07-04 13:30:46.000000000 +0200
-+++ elpa-2024.05.001-patched/src/elpa_api.F90	2024-12-18 14:47:48.712918517 +0100
-@@ -369,6 +369,12 @@
- 
-       procedure(elpa_solve_tridiagonal_d_i), deferred, public :: elpa_solve_tridiagonal_d
-       procedure(elpa_solve_tridiagonal_f_i), deferred, public :: elpa_solve_tridiagonal_f
+diff --git a/src/elpa_api.F90 b/src/elpa_api.F90
+index f5457c83..9052700e 100644
+--- a/src/elpa_api.F90
++++ b/src/elpa_api.F90
+@@ -235,5 +235,20 @@ module elpa_api
+           elpa_generalized_eigenvalues_d_ptr_fc               !< GPU device pointers in the GPU version
+
++        generic, public :: elpa_transform_generalized_double => &
++          elpa_transform_generalized_a_h_a_d, &
++          elpa_transform_generalized_d_ptr_d
 +
++        generic, public :: elpa_transform_generalized_double_complex => &
++          elpa_transform_generalized_a_h_a_dc, &
++          elpa_transform_generalized_d_ptr_dc
 +
-+      procedure(elpa_transform_generalized_d_i), deferred,public :: elpa_transform_generalized_d
-+      procedure(elpa_transform_generalized_dc_i), deferred,public :: elpa_transform_generalized_dc
-+      procedure(elpa_transform_back_generalized_d_i),deferred,public:: elpa_transform_back_generalized_d
-+      procedure(elpa_transform_back_generalized_dc_i),deferred,public:: elpa_transform_back_generalized_dc
-   end type elpa_t
++        generic, public :: elpa_transform_back_generalized_double => &
++          elpa_transform_back_generalized_a_h_a_d, &
++          elpa_transform_back_generalized_d_ptr_d
++
++        generic, public :: elpa_transform_back_generalized_double_complex => &
++          elpa_transform_back_generalized_a_h_a_dc, &
++          elpa_transform_back_generalized_d_ptr_dc
+       generic, public :: hermitian_multiply => &              !< method for a "hermitian" multiplication of matrices a and b
+           elpa_hermitian_multiply_a_h_a_d, &                  !< for real valued matrices:   a**T * b
+           elpa_hermitian_multiply_a_h_a_dc, &                 !< for complex valued matrices a**H * b
+@@ -409,6 +439,18 @@ module elpa_api
+       procedure(elpa_generalized_eigenvalues_d_ptr_dc_i),   deferred, public :: elpa_generalized_eigenvalues_d_ptr_dc
+       procedure(elpa_generalized_eigenvalues_d_ptr_fc_i),   deferred, public :: elpa_generalized_eigenvalues_d_ptr_fc
  
- #ifdef ENABLE_AUTOTUNING
-diff -ru elpa-2024.05.001/src/elpa_api_math_template.F90 elpa-2024.05.001-patched/src/elpa_api_math_template.F90
---- elpa-2024.05.001/src/elpa_api_math_template.F90	2024-07-04 13:30:46.000000000 +0200
-+++ elpa-2024.05.001-patched/src/elpa_api_math_template.F90	2024-12-18 14:47:35.175934062 +0100
-@@ -869,8 +869,8 @@
-     subroutine elpa_solve_tridiagonal_&
-           &ELPA_IMPL_SUFFIX&
-           &_i (self, d, e, q, error)
--      use, intrinsic :: iso_c_binding
--      import elpa_t
-+          use, intrinsic :: iso_c_binding
-+          import elpa_t
-       implicit none
-       class(elpa_t)                   :: self
-       real(kind=C_REAL_DATATYPE)        :: d(self%na), e(self%na)
-@@ -888,3 +888,31 @@
++      procedure(elpa_transform_generalized_a_h_a_d_i),      deferred, public :: elpa_transform_generalized_a_h_a_d
++      procedure(elpa_transform_generalized_a_h_a_dc_i),     deferred, public :: elpa_transform_generalized_a_h_a_dc
++
++      procedure(elpa_transform_generalized_d_ptr_d_i),      deferred, public :: elpa_transform_generalized_d_ptr_d
++      procedure(elpa_transform_generalized_d_ptr_dc_i),     deferred, public :: elpa_transform_generalized_d_ptr_dc
++
++      procedure(elpa_transform_back_generalized_a_h_a_d_i),  deferred, public :: elpa_transform_back_generalized_a_h_a_d
++      procedure(elpa_transform_back_generalized_a_h_a_dc_i), deferred, public :: elpa_transform_back_generalized_a_h_a_dc
++
++      procedure(elpa_transform_back_generalized_d_ptr_d_i),  deferred, public :: elpa_transform_back_generalized_d_ptr_d
++      procedure(elpa_transform_back_generalized_d_ptr_dc_i), deferred, public :: elpa_transform_back_generalized_d_ptr_dc
++
+       
+       procedure(elpa_hermitian_multiply_a_h_a_d_i),  deferred, public :: elpa_hermitian_multiply_a_h_a_d
+       procedure(elpa_hermitian_multiply_a_h_a_f_i),  deferred, public :: elpa_hermitian_multiply_a_h_a_f
+diff --git a/src/elpa_api_math_template.F90 b/src/elpa_api_math_template.F90
+index 6f55463e..b00636a5 100644
+--- a/src/elpa_api_math_template.F90
++++ b/src/elpa_api_math_template.F90
+@@ -669,6 +669,84 @@
      end subroutine
-   end interface
+   end interface  
  
 +
-+  abstract interface 
-+    subroutine elpa_transform_back_generalized_&
-+    &ELPA_IMPL_SUFFIX&
-+    &_i(self, b, q, error)
++  !> \brief abstract definition of interface to transform a generalized eigenvalue problem,
++  !>        using host arrays
++  abstract interface
++    subroutine elpa_transform_generalized_a_h_a_&
++           &ELPA_IMPL_SUFFIX&
++           &_i(self, a, b, tmp,is_already_decomposed, error)
 +      use, intrinsic :: iso_c_binding
++      use elpa_constants
 +      import elpa_t
 +      implicit none
-+      class(elpa_t)  :: self
-+      MATH_DATATYPE(kind=C_REAL_DATATYPE) :: b(self%local_nrows, *), q(self%local_nrows, *)
-+      integer                :: error
++      class(elpa_t)       :: self
++#ifdef USE_ASSUMED_SIZE
++      MATH_DATATYPE(kind=C_DATATYPE_KIND) :: a(self%local_nrows, *), b(self%local_nrows, *), tmp(self%local_nrows, *)
++#else
++      MATH_DATATYPE(kind=C_DATATYPE_KIND) :: a(self%local_nrows, self%local_ncols), b(self%local_nrows, self%local_ncols),tmp(self%local_nrows, self%local_ncols)
++#endif
++      logical             :: is_already_decomposed
++      integer             :: error
 +    end subroutine
 +  end interface
 +
-+  abstract interface 
-+    subroutine elpa_transform_generalized_&
-+       &ELPA_IMPL_SUFFIX&
-+       &_i(self, a, b, is_already_decomposed, error)
-+          use, intrinsic :: iso_c_binding
-+          import elpa_t
-+          implicit none
-+          class(elpa_t)  :: self
-+          MATH_DATATYPE(kind=C_REAL_DATATYPE) :: a(self%local_nrows, *), b(self%local_nrows, *)
-+          integer                :: error
-+          logical                :: is_already_decomposed
++
++  !> \brief abstract definition of interface to transform a generalized eigenvalue problem,
++  !>        using device pointers
++  abstract interface
++    subroutine elpa_transform_generalized_d_ptr_&
++           &ELPA_IMPL_SUFFIX&
++           &_i(self, aDev, bDev, tmpDev,is_already_decomposed, error)
++      use, intrinsic :: iso_c_binding
++      use elpa_constants
++      import elpa_t
++      implicit none
++      class(elpa_t)       :: self
++      type(c_ptr)         :: aDev, bDev,tmpDev
++      logical             :: is_already_decomposed
++      integer             :: error
 +    end subroutine
 +  end interface
 +
-diff -ru elpa-2024.05.001/src/elpa_impl.F90 elpa-2024.05.001-patched/src/elpa_impl.F90
---- elpa-2024.05.001/src/elpa_impl.F90	2024-07-09 07:46:03.000000000 +0200
-+++ elpa-2024.05.001-patched/src/elpa_impl.F90	2024-12-18 14:47:18.804952862 +0100
-@@ -207,17 +207,17 @@
++
++  !> \brief abstract definition of interface to back-transform eigenvectors,
++  !>        using host arrays
++  abstract interface
++    subroutine elpa_transform_back_generalized_a_h_a_&
++           &ELPA_IMPL_SUFFIX&
++           &_i(self, b, q, tmp,error)
++      use, intrinsic :: iso_c_binding
++      use elpa_constants
++      import elpa_t
++      implicit none
++      class(elpa_t)       :: self
++#ifdef USE_ASSUMED_SIZE
++      MATH_DATATYPE(kind=C_DATATYPE_KIND) :: b(self%local_nrows, *), q(self%local_nrows, *), tmp(self%local_nrows, *)
++#else
++      MATH_DATATYPE(kind=C_DATATYPE_KIND) :: b(self%local_nrows, self%local_ncols), q(self%local_nrows, self%local_ncols), tmp(self%local_nrows, self%local_ncols)
++#endif
++      integer             :: error
++    end subroutine
++  end interface
++
++
++  !> \brief abstract definition of interface to back-transform eigenvectors,
++  !>        using device pointers
++  abstract interface
++    subroutine elpa_transform_back_generalized_d_ptr_&
++           &ELPA_IMPL_SUFFIX&
++           &_i(self, bDev, qDev, tmpDev,error)
++      use, intrinsic :: iso_c_binding
++      use elpa_constants
++      import elpa_t
++      implicit none
++      class(elpa_t)       :: self
++      type(c_ptr)         :: bDev, qDev,tmpDev
++      integer             :: error
++    end subroutine
++  end interface
++
+ ! _________________________________________________________________________________________________
+ 
+   !> \brief abstract definition of interface to compute C : = A**T * B
+diff --git a/src/elpa_impl.F90 b/src/elpa_impl.F90
+index bad65f69..7d023d18 100644
+--- a/src/elpa_impl.F90
++++ b/src/elpa_impl.F90
+@@ -241,30 +241,30 @@ module elpa_impl
  
       procedure, public :: associate_int => elpa_associate_int  !< public method to set some pointers
  
--     procedure, private :: elpa_transform_generalized_d
--     procedure, private :: elpa_transform_back_generalized_d
--     procedure, private :: elpa_transform_generalized_dc
--     procedure, private :: elpa_transform_back_generalized_dc
-+     procedure, public :: elpa_transform_generalized_d
-+     procedure, public :: elpa_transform_back_generalized_d
-+     procedure, public :: elpa_transform_generalized_dc
-+     procedure, public :: elpa_transform_back_generalized_dc
+-     procedure, private :: elpa_transform_generalized_a_h_a_d
+-     procedure, private :: elpa_transform_back_generalized_a_h_a_d
+-     procedure, private :: elpa_transform_generalized_a_h_a_dc
+-     procedure, private :: elpa_transform_back_generalized_a_h_a_dc
++    procedure, public :: elpa_transform_generalized_a_h_a_d
++    procedure, public :: elpa_transform_back_generalized_a_h_a_d
++    procedure, public :: elpa_transform_generalized_a_h_a_dc
++    procedure, public :: elpa_transform_back_generalized_a_h_a_dc
  #ifdef WANT_SINGLE_PRECISION_REAL
--     procedure, private :: elpa_transform_generalized_f
--     procedure, private :: elpa_transform_back_generalized_f
-+     procedure, public :: elpa_transform_generalized_f
-+     procedure, public :: elpa_transform_back_generalized_f
+-     procedure, private :: elpa_transform_generalized_a_h_a_f
+-     procedure, private :: elpa_transform_back_generalized_a_h_a_f
++    procedure, public :: elpa_transform_generalized_a_h_a_f
++    procedure, public :: elpa_transform_back_generalized_a_h_a_f
  #endif
  #ifdef WANT_SINGLE_PRECISION_COMPLEX
--     procedure, private :: elpa_transform_generalized_fc
--     procedure, private :: elpa_transform_back_generalized_fc
-+     procedure, public :: elpa_transform_generalized_fc
-+     procedure, public :: elpa_transform_back_generalized_fc
+-     procedure, private :: elpa_transform_generalized_a_h_a_fc
+-     procedure, private :: elpa_transform_back_generalized_a_h_a_fc
++    procedure, public :: elpa_transform_generalized_a_h_a_fc
++    procedure, public :: elpa_transform_back_generalized_a_h_a_fc
+ #endif
+ 
+-     procedure, private :: elpa_transform_generalized_d_ptr_d
+-     procedure, private :: elpa_transform_back_generalized_d_ptr_d
+-     procedure, private :: elpa_transform_generalized_d_ptr_dc
+-     procedure, private :: elpa_transform_back_generalized_d_ptr_dc
++    procedure, public :: elpa_transform_generalized_d_ptr_d
++    procedure, public :: elpa_transform_back_generalized_d_ptr_d
++    procedure, public :: elpa_transform_generalized_d_ptr_dc
++    procedure, public :: elpa_transform_back_generalized_d_ptr_dc
+ #ifdef WANT_SINGLE_PRECISION_REAL
+-     procedure, private :: elpa_transform_generalized_d_ptr_f
+-     procedure, private :: elpa_transform_back_generalized_d_ptr_f
++    procedure, public :: elpa_transform_generalized_d_ptr_f
++    procedure, public :: elpa_transform_back_generalized_d_ptr_f
+ #endif
+ #ifdef WANT_SINGLE_PRECISION_COMPLEX
+-     procedure, private :: elpa_transform_generalized_d_ptr_fc
+-     procedure, private :: elpa_transform_back_generalized_d_ptr_fc
++    procedure, public :: elpa_transform_generalized_d_ptr_fc
++    procedure, public :: elpa_transform_back_generalized_d_ptr_fc
  #endif
  
       procedure, public :: print_settings => elpa_print_settings

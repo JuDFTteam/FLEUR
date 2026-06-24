@@ -453,7 +453,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
       CALL cdncore(fmpi, fi%input,fi%vacuum,fi%noco,nococonv,fi%sym,&
                    stars,fi%cell,sphhar,fi%atoms,vTot,overallDen,moments,results)
       IF (fmpi%irank.EQ.0) THEN
-         CALL qfix(fmpi,stars,nococonv,fi%atoms,fi%sym,fi%vacuum,sphhar,fi%input,fi%cell, overallDen,&
+         CALL qfix(fmpi,stars,nococonv,fi%atoms,fi%sym,fi%vacuum,sphhar,fi%input,fi%cell,fi%field,overallDen,&
                    fi%noco%l_noco,.TRUE.,l_par=.FALSE.,force_fix=.TRUE.,fix=fix)
       END IF
       CALL overallDen%distribute(fmpi%mpi_comm)
@@ -463,7 +463,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
       CALL overallVCoul%resetPotDen()
       ALLOCATE(overallVCoul%pw_w(size(overallVCoul%pw,1),size(overallVCoul%pw,2)))
       overallVCoul%pw_w(:,:) = 0.0
-      CALL vgen_coulomb(1,fmpi, fi%input,fi%field,fi%vacuum,fi%sym,fi%juphon,stars,fi%cell,sphhar,fi%atoms,.FALSE.,overallDen,overallVCoul)
+      CALL vgen_coulomb(1,fmpi, fi%input,fi%field,fi%vacuum,fi%sym,stars,fi%cell,sphhar,fi%atoms,.FALSE.,overallDen,overallVCoul)
       CALL convol(stars,overallVCoul%pw_w(:,1),overallVCoul%pw(:,1))   ! Is there a problem with a second spin?!
       CALL overallVCoul%distribute(fmpi%mpi_comm)
 
@@ -858,8 +858,8 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
 
    !I think we need most of cdngen at this place so I just use cdngen
    CALL outDen%resetPotDen()
-   CALL cdngen(eig_id,fmpi,fi%input,fi%banddos,fi%sliceplot,fi%vacuum,fi%kpts,fi%atoms,sphhar,stars,fi%sym,fi%juphon,fi%gfinp,fi%hub1inp,&
-               enpara,fi%cell,fi%noco,nococonv,vTot,results, fi%corespecinput,archiveType,xcpot,outDen, EnergyDen)
+   CALL cdngen(eig_id,fmpi,fi%input,fi%banddos,fi%sliceplot,fi%vacuum,fi%kpts,fi%atoms,sphhar,stars,fi%sym,fi%gfinp,fi%hub1inp,&
+               enpara,fi%cell,fi%field,fi%noco,nococonv,vTot,results, fi%corespecinput,archiveType,xcpot,outDen, EnergyDen)
 
    ! Calculate RDMFT energy
    rdmftEnergy = 0.0

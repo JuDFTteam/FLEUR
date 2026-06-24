@@ -21,12 +21,23 @@ CONTAINS
 
     CHARACTER(len=20), OPTIONAL, INTENT(IN) :: basename
 
-    CHARACTER(len=35):: filename
+   CHARACTER(len=80):: filename
     LOGICAL          :: l_fileexist
-    INTEGER          :: n
+   LOGICAL          :: l_has_history
+   INTEGER          :: n, expected_history_files, existing_history_files
 
 
     IF (iter_stored>0) RETURN ! History in memory found, no need to do IO
+    CALL mixing_history_file_count(mpi,expected_history_files,existing_history_files,l_has_history,basename)
+    IF (l_has_history .AND. existing_history_files /= expected_history_files) THEN
+       IF (mpi%irank==0) THEN
+          WRITE(*,'(a,i0,a,i0,a)') 'Reset of history: found ', existing_history_files, &
+                                   ' mixing history file(s) for ', mpi%isize, ' MPI task(s).'
+       END IF
+       CALL mixing_history_reset(mpi,basename)
+       RETURN
+    END IF
+
     IF (mpi%isize>1) THEN
        IF (.NOT.PRESENT(basename)) THEN
          WRITE(filename,'(a,i0)') "mixing_history.",mpi%irank
@@ -64,7 +75,7 @@ CONTAINS
 
     CHARACTER(len=20), OPTIONAL, INTENT(IN) :: basename
 
-    CHARACTER(len=35):: filename
+   CHARACTER(len=80):: filename
     INTEGER          :: n
 
 
@@ -143,13 +154,21 @@ CONTAINS
     endif
   end subroutine mixing_history
 
-  SUBROUTINE mixing_history_reset(mpi)
+  SUBROUTINE mixing_history_reset(mpi,basename)
     USE m_types,ONLY:t_mpi
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(in)::mpi
+    CHARACTER(len=20), OPTIONAL, INTENT(IN) :: basename
     iter_stored=0
+    IF (ALLOCATED(sm_store)) DEALLOCATE(sm_store,fsm_store)
     IF (mpi%irank==0) PRINT *, "Reset of history"
-    IF (mpi%irank==0) CALL system('rm -f mixing_history*')
+    IF (mpi%irank==0) THEN
+       IF (.NOT.PRESENT(basename)) THEN
+          CALL system('rm -f mixing_history*')
+       ELSE
+          CALL system('rm -f '//TRIM(basename)//'_mixing_history* '//TRIM(basename)//'mixing_history*')
+       END IF
+    END IF
   END SUBROUTINE mixing_history_reset
 
   subroutine mixing_history_limit(len)
@@ -174,5 +193,51 @@ CONTAINS
     iter_stored=0
     IF (ALLOCATED(sm_store)) DEALLOCATE(sm_store,fsm_store)
 END SUBROUTINE dfpt_mixing_history_reset
+
+  SUBROUTINE mixing_history_file_count(mpi,expected_files,existing_files,l_has_history,basename)
+    USE m_types,ONLY:t_mpi
+    IMPLICIT NONE
+
+    TYPE(t_mpi),INTENT(IN) :: mpi
+    INTEGER,INTENT(OUT) :: expected_files, existing_files
+    LOGICAL,INTENT(OUT) :: l_has_history
+    CHARACTER(len=20), OPTIONAL, INTENT(IN) :: basename
+
+    CHARACTER(len=80) :: filename
+    LOGICAL :: l_fileexist
+    INTEGER :: rank_count
+
+    expected_files = MERGE(mpi%isize,1,mpi%isize>1)
+    existing_files = 0
+    l_has_history = .FALSE.
+
+    IF (.NOT.PRESENT(basename)) THEN
+       filename = 'mixing_history'
+       INQUIRE(file=filename,exist=l_fileexist)
+       IF (l_fileexist) existing_files = existing_files + 1
+    ELSE
+       filename = TRIM(basename)//'mixing_history'
+       INQUIRE(file=filename,exist=l_fileexist)
+       IF (l_fileexist) existing_files = existing_files + 1
+       filename = TRIM(basename)//'_mixing_history'
+       INQUIRE(file=filename,exist=l_fileexist)
+       IF (l_fileexist) existing_files = existing_files + 1
+    END IF
+
+    rank_count = 0
+    DO
+       IF (.NOT.PRESENT(basename)) THEN
+          WRITE(filename,'(a,i0)') 'mixing_history.', rank_count
+       ELSE
+          WRITE(filename,'(a,i0)') TRIM(basename)//'_mixing_history.', rank_count
+       END IF
+       INQUIRE(file=filename,exist=l_fileexist)
+       IF (.NOT.l_fileexist) EXIT
+       existing_files = existing_files + 1
+       rank_count = rank_count + 1
+    END DO
+
+    l_has_history = existing_files > 0
+  END SUBROUTINE mixing_history_file_count
 
 end MODULE m_mixing_history

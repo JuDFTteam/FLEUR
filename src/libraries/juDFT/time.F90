@@ -236,14 +236,19 @@ CONTAINS
 #else
       WRITE (*, "(3a,f20.2,5x,a)") startstop, name, " at:", cputime() - debugtimestart, memory_usage_string()
 #endif
-
-!      IF(TRIM(ADJUSTL(name)).EQ."Iteration") THEN
-!         IF(TRIM(ADJUSTL(startstop)).EQ."started") THEN
-!            call fp_error_check(.true.)
-!         ELSE IF(TRIM(ADJUSTL(startstop)).EQ."stopped") THEN
-!            call fp_error_check(.false.)
-!         END IF
-!      END IF
+   call flush(6) !add a flush to make sure the output is not buffered 
+#if false
+! Somehow this doesn't compile at the moment, at least with the ifx compiler
+#ifdef CPP_DEBUG
+      IF(TRIM(ADJUSTL(name)).EQ."Iteration") THEN
+         IF(TRIM(ADJUSTL(startstop)).EQ."started") THEN
+            fpErrorDetectionReturnCode = startFPErrorDetection()
+         ELSE IF(TRIM(ADJUSTL(startstop)).EQ."stopped") THEN
+            fpErrorDetectionReturnCode = stopFPErrorDetection()
+         END IF
+      END IF
+#endif
+#endif
 
    END SUBROUTINE priv_debug_output
 

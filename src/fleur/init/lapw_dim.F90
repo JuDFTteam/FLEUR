@@ -8,7 +8,7 @@ MODULE m_lapwdim
 
 CONTAINS
 
-   SUBROUTINE lapw_dim(kpts,cell,input,noco,nococonv,forcetheo,atoms,nbasfcn,juPhon)
+   SUBROUTINE lapw_dim(kpts,cell,input,noco,nococonv,forcetheo,atoms,nbasfcn,dfpt)
       !
       !*********************************************************************
       !     determines dimensions of the lapw basis set with |k+G|<rkmax.
@@ -28,7 +28,7 @@ CONTAINS
       TYPE(t_atoms),INTENT(IN)     :: atoms
       INTEGER, INTENT(OUT)         :: nbasfcn
 
-      TYPE(t_juPhon), INTENT(IN)   :: juPhon
+      TYPE(t_dfpt), INTENT(IN)   :: dfpt
 
       !local variable for init
       INTEGER               :: nvd,nv2d,addx,addy,addz
@@ -66,15 +66,15 @@ CONTAINS
       rk2 = rkm*rkm
 
       !Determine the q-vector(s) to use
-      IF (juPhon%l_dfpt) THEN
-         IF (juPhon%l_efield .OR. juPhon%l_borneffcharge) THEN
-            ALLOCATE(q_vectors(3,SIZE(juPhon%qvec_efield,2)+1))
+      IF (dfpt%l_dfpt) THEN
+         IF (dfpt%l_efield .OR. dfpt%l_borneffcharge) THEN
+            ALLOCATE(q_vectors(3,SIZE(dfpt%qvec_efield,2)+1))
             q_vectors = 0.0
-            q_vectors(:,:size(juPhon%qvec_efield,2))=juPhon%qvec_efield
+            q_vectors(:,:size(dfpt%qvec_efield,2))=dfpt%qvec_efield
          ElSE
-            ALLOCATE(q_vectors(3,SIZE(juPhon%qvec,2)+1))
+            ALLOCATE(q_vectors(3,SIZE(dfpt%qvec,2)+1))
             q_vectors = 0.0 ! with this we force the gamma point to be within the dim search 
-            q_vectors(:,:size(juPhon%qvec,2))=juPhon%qvec
+            q_vectors(:,:size(dfpt%qvec,2))=dfpt%qvec
          END IF
          q_vectors= 2*q_vectors ! To get right qvec in i.e. line 113 and bellow
       ELSE
@@ -94,7 +94,7 @@ CONTAINS
          END SELECT
       END IF
 
-      if (.not. juPhon%l_dfpt .AND. any(abs(nococonv%qss-q_vectors(:,1))>1E-4)) CALL judft_warn("q-vector for self-consistency should be first in list for force-theorem")
+      if (.not. dfpt%l_dfpt .AND. any(abs(nococonv%qss-q_vectors(:,1))>1E-4)) CALL judft_warn("q-vector for self-consistency should be first in list for force-theorem")
 
 
       nvd = 0 ; nv2d = 0

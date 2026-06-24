@@ -28,8 +28,8 @@ module m_scalapack
 contains
 
    function get_solver_scalapack() result(solver)
-      type(t_solver_scalapack), pointer::solver
-      allocate (solver)
+      class(t_solver), allocatable :: solver
+      allocate (t_solver_scalapack :: solver)
       solver%name = "scalapack"
 #ifdef CPP_SCALAPACK
       solver%available = .true.
@@ -43,6 +43,7 @@ contains
       solver%single_precision = .false.
       solver%transform = .true.
       solver%GPU = .false.
+      solver%use_sp = .false.
    end function
 
    subroutine scalapack_gev(self, hmat, smat, ne, eig, zmat, ikpt)
@@ -81,15 +82,13 @@ contains
       !
       !  ScaLAPACK things
       character(len=1)    :: uplo
-      integer              :: num, num1, num2, liwork, lwork2, np0, mq0, np, myid
+      integer              :: num, num1, num2, liwork, lwork2, np0, mq0
       integer              :: iceil, numroc, nn, nb
       integer, allocatable :: ifail(:), iclustr(:)
       real                 :: abstol, orfac = 1.e-4, dlamch
       real, allocatable     :: eig2(:), gap(:)
       real, allocatable :: work2_r(:)
       complex, allocatable :: work2_c(:)
-
-      type(t_mpimat):: ev_dist
 
       external iceil, numroc
       external dlamch
@@ -104,20 +103,12 @@ contains
          type IS (t_mpimat)
 
             allocate (eig2(hmat%global_size1))
+            allocate (t_mpimat::zmat)
+            call zmat%init(hmat)
 
-            call MPI_COMM_RANK(hmat%blacsdata%mpi_com, myid, ierr)
-            call MPI_COMM_SIZE(hmat%blacsdata%mpi_com, np, ierr)
-
-            num = ne !no of states solved for
+            num = max(1, min(ne, hmat%global_size1)) ! number of states solved for
 
             abstol = 2.0*dlamch('S') ! PDLAMCH gave an error on ZAMpano
-
-            call ev_dist%init(hmat)
-
-            !smat%blacs_desc(2)    = hmat%blacs_desc(2)
-            !ev_dist%blacs_desc(2) = hmat%blacs_desc(2)
-            !smat%blacs_desc=hmat%blacs_desc
-            !ev_dist%blacs_desc=hmat%blacs_desc
 
             nb = hmat%blacsdata%blacs_desc(5)! Blocking factor
             if (nb .ne. hmat%blacsdata%blacs_desc(6)) call judft_error("Different block sizes for rows/columns not supported")
@@ -125,17 +116,17 @@ contains
             !
             nn = max(max(hmat%global_size1, nb), 2)
             np0 = numroc(nn, nb, 0, 0, hmat%blacsdata%nprow)
-            mq0 = numroc(max(max(ne, nb), 2), nb, 0, 0, hmat%blacsdata%npcol)
+            mq0 = numroc(max(max(num, nb), 2), nb, 0, 0, hmat%blacsdata%npcol)
             if (hmat%l_real) then
                lwork2 = 5*hmat%global_size1 + max(5*nn, np0*mq0 + 2*nb*nb) + &
-                        iceil(ne, hmat%blacsdata%nprow*hmat%blacsdata%npcol)*nn+ 10*hmat%global_size1
-               allocate (work2_r(lwork2 ), stat=err) ! Allocate more in case of clusters
+                        iceil(num, hmat%blacsdata%nprow*hmat%blacsdata%npcol)*nn + 10*hmat%global_size1
+               allocate (work2_r(lwork2), stat=err) ! Allocate more in case of clusters
             else
                lwork2 = hmat%global_size1 + max(nb*(np0 + 1), 3)
                allocate (work2_c(lwork2), stat=err)
             end if
             if (err .ne. 0) then
-               WRITE(*,*) 'Error for k-point ', ikpt
+               WRITE (*, *) 'Error for k-point ', ikpt
                write (*, *) 'work2  :', err, lwork2
                call juDFT_error('Failed to allocated "work2"', calledby='chani')
             end if
@@ -143,81 +134,92 @@ contains
             liwork = 6*max(max(hmat%global_size1, hmat%blacsdata%nprow*hmat%blacsdata%npcol + 1), 4)
             allocate (iwork(liwork), stat=err)
             if (err .ne. 0) then
-               WRITE(*,*) 'Error for k-point ', ikpt
+               WRITE (*, *) 'Error for k-point ', ikpt
                write (*, *) 'iwork  :', err, liwork
                call juDFT_error('Failed to allocated "iwork"', calledby='chani')
             end if
             allocate (ifail(hmat%global_size1), stat=err)
             if (err .ne. 0) then
-               WRITE(*,*) 'Error for k-point ', ikpt
+               WRITE (*, *) 'Error for k-point ', ikpt
                write (*, *) 'ifail  :', err, hmat%global_size1
                call juDFT_error('Failed to allocated "ifail"', calledby='chani')
             end if
             allocate (iclustr(2*hmat%blacsdata%nprow*hmat%blacsdata%npcol), stat=err)
             if (err .ne. 0) then
-               WRITE(*,*) 'Error for k-point ', ikpt
+               WRITE (*, *) 'Error for k-point ', ikpt
                write (*, *) 'iclustr:', err, 2*hmat%blacsdata%nprow*hmat%blacsdata%npcol
                call juDFT_error('Failed to allocated "iclustr"', calledby='chani')
             end if
             allocate (gap(hmat%blacsdata%nprow*hmat%blacsdata%npcol), stat=err)
             if (err .ne. 0) then
-               WRITE(*,*) 'Error for k-point ', ikpt
+               WRITE (*, *) 'Error for k-point ', ikpt
                write (*, *) 'gap    :', err, hmat%blacsdata%nprow*hmat%blacsdata%npcol
                call juDFT_error('Failed to allocated "gap"', calledby='chani')
             end if
             !
             !     Compute size of workspace
             !
+            call timestart("SCALAPACK WORKSPACE")
             if (hmat%l_real) then
                uplo = 'U'
                call pdsygvx(1, 'V', 'I', 'U', hmat%global_size1, hmat%data_r, 1, 1, &
                             hmat%blacsdata%blacs_desc, smat%data_r, 1, 1, smat%blacsdata%blacs_desc, &
-                            0.0, 1.0, 1, num, abstol, num1, num2, eig2, orfac, ev_dist%data_r, 1, 1, &
-                            ev_dist%blacsdata%blacs_desc, work2_r, -1, iwork, -1, ifail, iclustr, gap, ierr)
+                            0.0, 1.0, 1, num, abstol, num1, num2, eig2, orfac, zmat%data_r, 1, 1, &
+                            hmat%blacsdata%blacs_desc, work2_r, -1, iwork, -1, ifail, iclustr, gap, ierr)
+               if (ierr .ne. 0) then
+                  WRITE (*, *) 'Error for k-point ', ikpt
+                  write (*, *) 'ERROR: pdsygvx workspace query failed: ierr=', ierr, ' n=', hmat%global_size1, ' iu=', num
+                  call juDFT_error('SCALAPACK workspace query failed in pdsygvx', calledby='scalapack')
+               end if
                if (work2_r(1) .gt. lwork2) then
-                  lwork2 = work2_r(1)+ 20*hmat%global_size1
+                  lwork2 = work2_r(1) + 20*hmat%global_size1
                   deallocate (work2_r)
-                  allocate (work2_r(lwork2 ), stat=err) ! Allocate even more in case of clusters
+                  allocate (work2_r(lwork2), stat=err) ! Allocate even more in case of clusters
                   if (err .ne. 0) then
-                     WRITE(*,*) 'Error for k-point ', ikpt
+                     WRITE (*, *) 'Error for k-point ', ikpt
                      write (*, *) 'work2  :', err, lwork2
                      call juDFT_error('Failed to allocated "work2"', calledby='chani')
                   end if
                end if
             else
                lrwork = 4*hmat%global_size1 + max(5*nn, np0*mq0) + &
-                        iceil(ne, hmat%blacsdata%nprow*hmat%blacsdata%npcol)*nn+ 10*hmat%global_size1
+                        iceil(num, hmat%blacsdata%nprow*hmat%blacsdata%npcol)*nn + 10*hmat%global_size1
                ! Allocate more in case of clusters
-               allocate (rwork(lrwork ), stat=ierr)
+               allocate (rwork(lrwork), stat=ierr)
                if (ierr /= 0) then
-                  WRITE(*,*) 'Error for k-point ', ikpt
+                  WRITE (*, *) 'Error for k-point ', ikpt
                   write (*, *) 'ERROR: chani.F: Allocating rwork failed'
                   call juDFT_error('Failed to allocated "rwork"', calledby='chani')
                end if
 
                call pzhegvx(1, 'V', 'I', 'U', hmat%global_size1, hmat%data_c, 1, 1, &
                             hmat%blacsdata%blacs_desc, smat%data_c, 1, 1, smat%blacsdata%blacs_desc, &
-                            0.0, 1.0, 1, num, abstol, num1, num2, eig2, orfac, ev_dist%data_c, 1, 1, &
-                            ev_dist%blacsdata%blacs_desc, work2_c, -1, rwork, -1, iwork, -1, ifail, iclustr, &
+                            0.0, 1.0, 1, num, abstol, num1, num2, eig2, orfac, zmat%data_c, 1, 1, &
+                            hmat%blacsdata%blacs_desc, work2_c, -1, rwork, -1, iwork, -1, ifail, iclustr, &
                             gap, ierr)
-               if (abs(work2_c(1)) .gt. lwork2) then
-                  lwork2 = work2_c(1)
+               if (ierr .ne. 0) then
+                  WRITE (*, *) 'Error for k-point ', ikpt
+                  write (*, *) 'ERROR: pzhegvx workspace query failed: ierr=', ierr, ' n=', hmat%global_size1, ' iu=', num
+                  call juDFT_error('SCALAPACK workspace query failed in pzhegvx', calledby='scalapack')
+               end if
+               if (int(real(work2_c(1))) .gt. lwork2) then
+                  lwork2 = int(real(work2_c(1))) + 20*hmat%global_size1
                   deallocate (work2_c)
                   allocate (work2_c(lwork2), stat=err)
                   if (err /= 0) then
-                     WRITE(*,*) 'Error for k-point ', ikpt
+                     WRITE (*, *) 'Error for k-point ', ikpt
                      write (*, *) 'ERROR: chani.F: Allocating rwork failed:', lwork2
                      call juDFT_error('Failed to allocated "work2"', calledby='chani')
                   end if
                end if
                if (rwork(1) .gt. lrwork) then
-                  lrwork = rwork(1)+ 20*hmat%global_size1
+                  lrwork = rwork(1) + 20*hmat%global_size1
                   deallocate (rwork)
                   ! Allocate even more in case of clusters
-                  allocate (rwork(lrwork ), stat=err)
+                  allocate (rwork(lrwork), stat=err)
                   if (err /= 0) then
-                     WRITE(*,*) 'Error for k-point ', ikpt
-                     write (*, *) 'ERROR: chani.F: Allocating rwork failed: ', lrwork 
+                     WRITE (*, *) 'Error for k-point ', ikpt
+                     write (*, *) 'ERROR: chani.F: Allocating rwork failed: ', lrwork
                      call juDFT_error('Failed to allocated "rwork"', calledby='chani')
                   end if
                end if
@@ -227,30 +229,33 @@ contains
                deallocate (iwork)
                allocate (iwork(liwork), stat=err)
                if (err /= 0) then
-                  WRITE(*,*) 'Error for k-point ', ikpt
+                  WRITE (*, *) 'Error for k-point ', ikpt
                   write (*, *) 'ERROR: chani.F: Allocating iwork failed: ', liwork
                   call juDFT_error('Failed to allocated "iwork"', calledby='chani')
                end if
             end if
+            call timestop("SCALAPACK WORKSPACE")
             !
             !     Now solve generalized eigenvalue problem
             !
-            call timestart("SCALAPACK call")
             if (hmat%l_real) then
+               call timestart("SCALAPACK PDSYGVX")
                call pdsygvx(1, 'V', 'I', 'U', hmat%global_size1, hmat%data_r, 1, 1, &
                             hmat%blacsdata%blacs_desc, smat%data_r, 1, 1, smat%blacsdata%blacs_desc, &
-                            1.0, 1.0, 1, num, abstol, num1, num2, eig2, orfac, ev_dist%data_r, 1, 1, &
-                            ev_dist%blacsdata%blacs_desc, work2_r, lwork2, iwork, liwork, ifail, iclustr, &
+                            1.0, 1.0, 1, num, abstol, num1, num2, eig2, orfac, zmat%data_r, 1, 1, &
+                            hmat%blacsdata%blacs_desc, work2_r, lwork2, iwork, liwork, ifail, iclustr, &
                             gap, ierr)
+               call timestop("SCALAPACK PDSYGVX")
             else
+               call timestart("SCALAPACK PZHEGVX")
                call pzhegvx(1, 'V', 'I', 'U', hmat%global_size1, hmat%data_c, 1, 1, &
                             hmat%blacsdata%blacs_desc, smat%data_c, 1, 1, smat%blacsdata%blacs_desc, &
-                            1.0, 1.0, 1, num, abstol, num1, num2, eig2, orfac, ev_dist%data_c, 1, 1, &
-                            ev_dist%blacsdata%blacs_desc, work2_c, lwork2, rwork, lrwork, iwork, liwork, &
+                            1.0, 1.0, 1, num, abstol, num1, num2, eig2, orfac, zmat%data_c, 1, 1, &
+                            hmat%blacsdata%blacs_desc, work2_c, lwork2, rwork, lrwork, iwork, liwork, &
                             ifail, iclustr, gap, ierr)
+               call timestop("SCALAPACK PZHEGVX")
                deallocate (rwork)
             end if
-            call timestop("SCALAPACK call")
             if (ierr .ne. 0) then
                !IF (ierr /= 2) WRITE (oUnit,*) myid,' error in pzhegvx/pdsygvx, ierr=',ierr
                !IF (ierr <= 0) WRITE (oUnit,*) myid,' illegal input argument'
@@ -271,11 +276,11 @@ contains
                end if
                if (mod(ierr/8, 2) .ne. 0) then
                   !WRITE(oUnit,*) myid,' PDSTEBZ failed to compute eigenvalues'
-                  WRITE(*,*) 'Warning for k-point ', ikpt
+                  WRITE (*, *) 'Warning for k-point ', ikpt
                   call judft_warn("SCALAPACK failed to solve eigenvalue problem", calledby="scalapack.f90")
                end if
                if (mod(ierr/16, 2) .ne. 0) then
-                  WRITE(*,*) 'Warning for k-point ', ikpt
+                  WRITE (*, *) 'Warning for k-point ', ikpt
                   !WRITE(oUnit,*) myid,' B was not positive definite, Cholesky failed at',ifail(1)
                   call judft_warn("SCALAPACK failed: B was not positive definite. "//new_line("a")// &
                                   "Order of the smallest minor which is not positive definite:"//int2str(ifail(1)) &
@@ -294,73 +299,65 @@ contains
             !     Each process has all eigenvalues in output
             eig(:num2) = eig2(:num2)
             deallocate (eig2)
-            !
-            !
-            !     Redistribute eigenvectors  from ScaLAPACK distribution to each process, i.e. for
-            !     process i these are eigenvectors i+1, np+i+1, 2*np+i+1...
-            !     Only num=num2/np eigenvectors per process
-            !
-            num = floor(real(num2)/np)
-            if (myid .lt. num2 - (num2/np)*np) num = num + 1
-            ne = 0
-            do i = myid + 1, num2, np
-               ne = ne + 1
-               !eig(ne)=eig2(i)
-            end do
-            allocate (t_mpimat::zmat)
-            call zmat%init(ev_dist%l_real, ev_dist%global_size1, ev_dist%global_size1, &
-                           ev_dist%blacsdata%mpi_com, MPIMAT_ROWCYCLIC)
-            call zmat%copy(ev_dist, 1, 1)
          class DEFAULT
-            WRITE(*,*) 'Error for k-point ', ikpt
+            WRITE (*, *) 'Error for k-point ', ikpt
             call judft_error("Wrong type (1) in scalapack")
          end select
       class DEFAULT
-         WRITE(*,*) 'Error for k-point ', ikpt
+         WRITE (*, *) 'Error for k-point ', ikpt
          call judft_error("Wrong type (2) in scalapack")
       end select
-      call ev_dist%free()
 #ifdef FLEUR_USE_SCOREP
       SCOREP_RECORDING_ON()
 #endif
 #endif
    end subroutine scalapack_gev
 
-   subroutine scalapack_reduction(self, hmat, smat)
+   subroutine scalapack_reduction(self, hmat, smat, ne)
       !Simple driver to transform Generalized Eigenvalue Problem to Standard problem using LAPACK routine
 
       class(t_solver_scalapack) :: self
       class(t_mat), intent(INOUT)  :: hmat, smat
+      integer, intent(IN)  :: ne
       integer            :: info, n
 
 #ifdef CPP_SCALAPACK
       real :: scale
+      call timestart("SCALAPACK REDUCTION")
       select type (hmat)
       type is (t_mpimat)
          select type (smat)
          type is (t_mpimat)
             !Transform to standard problem using SCALAPACK
             if (hmat%l_real) then
+               call timestart("SCALAPACK PDPOTRF")
                call pdpotrf('U', smat%global_size1, smat%data_r, 1, 1, smat%blacsdata%blacs_desc, info)
+               call timestop("SCALAPACK PDPOTRF")
                if (info .ne. 0) then
                   write (*, *) 'Error in pdpotrf: info =', info
                   call juDFT_error("1 Reduction failed", calledby="scalapack_reduction")
                end if
+               call timestart("SCALAPACK PDSYGST")
                call pdsygst(1, 'U', smat%global_size1, hmat%data_r, 1, 1, hmat%blacsdata%blacs_desc, &
                             smat%data_r, 1, 1, smat%blacsdata%blacs_desc, scale, info)
+               call timestop("SCALAPACK PDSYGST")
                if (abs(scale - 1) > 1e-10) call judft_error("Scale parameter not implemented in scalapack_reduction")
                if (info .ne. 0) then
                   write (oUnit, *) 'Error in pdsygst: info =', info
                   call juDFT_error("2 Reduction failed", calledby="scalapack_reduction")
                end if
             else
+               call timestart("SCALAPACK PZPOTRF")
                call pzpotrf('U', smat%global_size1, smat%data_c, 1, 1, smat%blacsdata%blacs_desc, info)
+               call timestop("SCALAPACK PZPOTRF")
                if (info .ne. 0) then
                   write (*, *) 'Error in pzpotrf: info =', info
                   call juDFT_error("3 Reduction failed", calledby="scalapack_reduction")
                end if
+               call timestart("SCALAPACK PZHEGST")
                call pzhegst(1, 'U', smat%global_size1, hmat%data_c, 1, 1, smat%blacsdata%blacs_desc, &
                             smat%data_c, 1, 1, smat%blacsdata%blacs_desc, scale, info)
+               call timestop("SCALAPACK PZHEGST")
                if (abs(scale - 1) > 1e-10) call judft_error("Scale parameter not implemented in scalapack_reduction")
                if (info .ne. 0) then
                   write (oUnit, *) 'Error in pzhegst: info =', info
@@ -374,6 +371,7 @@ contains
          call judft_bug("Wrong matrix type in scalapack")
       end select
 #endif
+      call timestop("SCALAPACK REDUCTION")
    end subroutine
 
    subroutine scalapack_recover(self, smat, zmat)
@@ -381,6 +379,8 @@ contains
       class(t_solver_scalapack) :: self
       class(t_mat), intent(INOUT)  :: zmat, smat
       integer :: m, n, info
+
+      call timestart("SCALAPACK BACKTRANSFORM")
 #ifdef CPP_SCALAPACK
 
       select type (smat)
@@ -391,11 +391,15 @@ contains
             m = zmat%global_size2
             ! --> recover the generalized eigenvectors z by solving z' = l^t * z
             if (smat%l_real) then
+               call timestart("SCALAPACK PDTRTRS")
                call pdtrtrs('U', 'N', 'N', n, m, smat%data_r, 1, 1, smat%blacsdata%blacs_desc, &
                             zmat%data_r, 1, 1, zmat%blacsdata%blacs_desc, info)
+               call timestop("SCALAPACK PDTRTRS")
             else
+               call timestart("SCALAPACK PZTRTRS")
                call pztrtrs('U', 'N', 'N', n, m, smat%data_c, 1, 1, smat%blacsdata%blacs_desc, &
                             zmat%data_c, 1, 1, zmat%blacsdata%blacs_desc, info)
+               call timestop("SCALAPACK PZTRTRS")
             end if
             if (info .ne. 0) then
                write (oUnit, *) 'Error in p?trtrs: info =', info
@@ -408,6 +412,7 @@ contains
          call judft_bug("Wrong matrix type in scalapack")
       end select
 #endif
+      call timestop("SCALAPACK BACKTRANSFORM")
    end subroutine
 
 end module m_scalapack

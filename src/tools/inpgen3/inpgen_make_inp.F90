@@ -40,7 +40,7 @@ CONTAINS
       USE m_types_enpara
       USE m_types_sliceplot
       USE m_types_stars
-      USE m_types_juPhon
+      USE m_types_dfpt
       USE m_types_profile
       USE m_constants
       USE m_types_enparaXML
@@ -51,7 +51,7 @@ CONTAINS
       ! Arguments
       INTEGER, INTENT(IN) :: simple_inp_file_id
       CHARACTER(LEN=*), INTENT(IN) :: filename,  profileName
-      LOGICAL, INTENT(IN) :: l_addPath, l_include(4), l_explicit(3),l_onlyIdentitySym
+      LOGICAL, INTENT(IN) :: l_addPath, l_include(4), l_explicit(4),l_onlyIdentitySym
 
       ! Type declarations
       TYPE(t_input)            :: input
@@ -72,7 +72,7 @@ CONTAINS
       TYPE(t_gfinp)            :: gfinp
       TYPE(t_hub1inp)          :: hub1inp
       TYPE(t_enparaXML)        :: enparaxml
-      TYPE(t_juPhon)           :: juPhon
+      TYPE(t_dfpt)           :: dfpt
       TYPE(t_profile)          :: profile
 
       ! Local variables
@@ -144,7 +144,7 @@ CONTAINS
       k_set_selected=kpts(1)%kptsName
       ! Write inp.xml file
       CALL w_inpxml(atoms, vacuum, input, stars, sliceplot, forcetheo, banddos, &
-                   juPhon, cell, sym, xcpot, noco, mpinp, hybinp, kpts(:numkpts), &
+                   dfpt, cell, sym, xcpot, noco, mpinp, hybinp, kpts(:numkpts), &
                    k_set_selected, enpara, gfinp, hub1inp, l_explicit, l_include, &
                    filename)
 

@@ -131,7 +131,7 @@ CONTAINS
       ! Check, whether we already have a suitable density file and if not,
       ! generate a starting density.
       CALL optional(fmpi, fi%atoms, sphhar, fi%vacuum, stars, fi%input, &
-                    fi%sym, fi%cell, fi%sliceplot, xcpot, fi%noco)
+                    fi%sym, fi%cell, fi%field, fi%sliceplot, xcpot, fi%noco)
 
       IF (fi%input%l_wann .AND. (.NOT. wann%l_bs_comf)) THEN
          ! TODO: If this warning is commented out, can it be erased?
@@ -187,7 +187,7 @@ CONTAINS
       !END IF
 
       CALL timestart("Qfix main")
-      CALL qfix(fmpi, stars,nococonv, fi%atoms, fi%sym, fi%vacuum, sphhar, fi%input, fi%cell,   inDen, fi%noco%l_noco, .FALSE., .FALSE., .FALSE., fix)
+      CALL qfix(fmpi, stars,nococonv, fi%atoms, fi%sym, fi%vacuum, sphhar, fi%input, fi%cell, fi%field, inDen, fi%noco%l_noco, .FALSE., .FALSE., .FALSE., fix)
       !CALL magMoms(fi%input,fi%atoms,fi%noco,nococonv,den=inDen)
       CALL timestop("Qfix main")
 
@@ -352,7 +352,7 @@ CONTAINS
          END IF
 
          CALL timestart("generation of potential")
-         CALL vgen(hybdat, fi%field, fi%input, xcpot, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, fi%juphon, &
+         CALL vgen(hybdat, fi%field, fi%input, xcpot, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, &
                    fi%cell,   fi%sliceplot, fmpi, results, fi%noco, nococonv, EnergyDen, inDen, vTot, vx, vCoul, vxc, exc)
          CALL timestop("generation of potential")
 
@@ -536,8 +536,8 @@ CONTAINS
             CALL outDen%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN)
             outDen%iter = inDen%iter
             CALL cdngen(eig_id, fmpi, input_soc, fi%banddos, fi%sliceplot, fi%vacuum, &
-                        fi%kpts, fi%atoms, sphhar, stars, fi%sym, fi%juphon, fi%gfinp, fi%hub1inp, &
-                        enpara, fi%cell, fi%noco, nococonv, vTot, results,   fi%corespecinput, &
+                        fi%kpts, fi%atoms, sphhar, stars, fi%sym, fi%gfinp, fi%hub1inp, &
+                        enpara, fi%cell, fi%field, fi%noco, nococonv, vTot, results,   fi%corespecinput, &
                         archiveType, xcpot, outDen, EnergyDen, coreden,greensFunction, hub1data,vxc,exc)
             ! The density matrix for DFT+Hubbard1 only changes in hubbard1_setup and is kept constant otherwise
             outDen%mmpMat(:, :, fi%atoms%n_u + 1:fi%atoms%n_u + fi%atoms%n_hia, :) = inDen%mmpMat(:, :, fi%atoms%n_u + 1:fi%atoms%n_u + fi%atoms%n_hia, :)
@@ -582,14 +582,14 @@ CONTAINS
 #endif
             CALL timestop("generation of new charge density (total)")
 
-            IF (fi%juPhon%l_dfpt) THEN
+            IF (fi%dfpt%l_dfpt) THEN
                ! Sideline the actual scf loop for a phonon calculation.
                ! It is assumed that the density was converged beforehand.
                 CALL timestop("Iteration")
-                CALL timestart("juPhon DFPT")
+                CALL timestart("DFPT")
                 CALL dfpt(fi, sphhar, stars, nococonv, fi%kpts, fmpi, results, enpara, outDen, vTot, vxc, eig_id, xcpot, hybdat, mpdata, forcetheo)
-                CALL timestop("juPhon DFPT")
-                CALL juDFT_end("Phonon calculation finished.",fmpi%irank)
+                CALL timestop("DFPT")
+                CALL juDFT_end("DFPT calculation finished.",fmpi%irank)
             END IF
 
             !CRYSTAL FIELD OUTPUT
@@ -630,7 +630,7 @@ CONTAINS
          
          ! mix input and output densities
          CALL mix_charge(field2, fmpi, (iter == fi%input%itmax .OR. judft_was_argument("-mix_io")), stars, &
-                         fi%atoms, sphhar, fi%vacuum, fi%input, fi%sym, fi%juphon, fi%cell, fi%noco, nococonv, &
+                         fi%atoms, sphhar, fi%vacuum, fi%input, fi%sym, fi%cell, fi%noco, nococonv, &
                          archiveType, xcpot, iter, inDen, outDen,  results, coreDen, hub1data%l_runthisiter, fi%sliceplot)
          
          ! Rotating to the local MT frame
