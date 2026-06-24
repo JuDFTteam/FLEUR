@@ -16,7 +16,7 @@ CONTAINS
       type(t_sym),   intent(in)       :: sym
       integer,       intent(in)       :: ft_lim(2,3)
       real,          intent(in)       :: amat(3,3)
-      complex,       intent(in)       :: dyn_mat_q(:,:,:) ! (nqpt,dyn_dim,dyn_dim)
+      complex,       intent(in)       :: dyn_mat_q(:,:,:) ! (dyn_dim,dyn_dim,nqpt)
       complex,intent(out)             :: dyn_mat_r(:,:,0:,0:,0:) ! (dyn_dim,dyn_dim,n1,n2,n3)
       complex, allocatable, intent(out) :: dyn_mat_q_full(:,:,:)
 
@@ -33,7 +33,7 @@ CONTAINS
       dyn_dim = 3*atoms%nat
 
       allocate(dyn_mat_qsym(dyn_dim,dyn_dim))
-      allocate(dyn_mat_q_full(qpts%nkptf,dyn_dim,dyn_dim))
+      allocate(dyn_mat_q_full(dyn_dim,dyn_dim,qpts%nkptf))
       allocate(fft_grid(dyn_dim,dyn_dim,qpts%nkptf))
       fft_grid(:,:,:) = cmplx(0.0,0.0)
 
@@ -48,9 +48,9 @@ CONTAINS
                                                       Please redo the calculation of the IBZ and interpolation with a symmorphic group.",calledby="dfpt_dynmat_sym.f90")
          if (l_inv) isym = isym - sym%nop ! the corresponding symmetry operation 
          dyn_mat_qsym(:,:) = cmplx(0.0,0.0)
-         call rotate_dynmat(atoms,sym,isym,mrot,invmrot,l_inv,amat,qpts%bk(:,iq),dyn_mat_q(iq,:,:),dyn_mat_qsym)
+         call rotate_dynmat(atoms,sym,isym,mrot,invmrot,l_inv,amat,qpts%bk(:,iq),dyn_mat_q(:,:,iq),dyn_mat_qsym)
          dyn_mat_qsym(:,:) = dyn_mat_qsym(:,:)
-         dyn_mat_q_full(iqfull,:,:) = dyn_mat_qsym
+         dyn_mat_q_full(:,:,iqfull) = dyn_mat_qsym
 
          ! Perform the actual FT onto the lattice vector grid
          call ft_dyn_direct(ft_lim,1,q_full,dyn_mat_qsym,fft_grid)

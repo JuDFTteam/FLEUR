@@ -108,7 +108,7 @@ contains
         ALLOCATE(q_list(SIZE(qpts%bk,2)))
         q_list = (/(iQ, iQ=1,SIZE(qpts%bk,2), 1)/)
 
-        ALLOCATE(dyn_mat(SIZE(q_list),3*fi%atoms%ntype,3*fi%atoms%ntype))
+        ALLOCATE(dyn_mat(3*fi%atoms%ntype,3*fi%atoms%ntype,SIZE(q_list)))
         ALLOCATE(dyn_mat_NAC_q(3*fi%atoms%ntype,3*fi%atoms%ntype))
         ALLOCATE(dyn_mat_NAC_r(qpts%nkptf,3*fi%atoms%ntype,3*fi%atoms%ntype))
         ALLOCATE(dyn_mat_NAC_r_full(qpts%nkptf,3*fi%atoms%ntype,3*fi%atoms%ntype))
@@ -133,7 +133,7 @@ contains
                     else
                         read( 3001,*) numbers(iread-3,:)
                         write(*,*) iread, numbers(iread-3,:)
-                        dyn_mat(iQ,iread-3,:) = cmplx(numbers(iread-3,::2),numbers(iread-3,2::2))
+                        dyn_mat(iread-3,:,iQ) = cmplx(numbers(iread-3,::2),numbers(iread-3,2::2))
                     end if
                 end do  ! iread
                 close(3001)
@@ -144,7 +144,7 @@ contains
             !    do iQ = 1, qpts%nkpt
             !        dyn_mat_NAC_q = cmplx(0.0,0.0)
             !        call get_NAC_ewald(fi,qpts,stars_fullsym,dyn_mat_NAC_q,qpts%bk(:,iQ),iQ)
-            !        dyn_mat(iQ,:,:) = dyn_mat(iQ,:,:) - dyn_mat_NAC_q
+            !        dyn_mat(:,:,iQ) = dyn_mat(:,:,iQ) - dyn_mat_NAC_q
             !    end do
             !end if
 
