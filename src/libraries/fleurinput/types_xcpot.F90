@@ -411,12 +411,14 @@ CONTAINS
    END FUNCTION xcpot_has_aux_gga
 
    !> Default implementation: always errors. Override in t_xcpot_libxc for MetaGGA use.
-   FUNCTION xcpot_create_from_aux(xcpot) RESULT(aux_libxc)
+   ! Subroutine form avoids polymorphic allocatable function-result assignment, which
+   ! Intel compilers (ifort/ifx) cannot handle (gfortran handles it fine).
+   SUBROUTINE xcpot_create_from_aux(xcpot, aux_libxc)
       USE m_judft
       IMPLICIT NONE
-      CLASS(t_xcpot), INTENT(IN)       :: xcpot
-      CLASS(t_xcpot), ALLOCATABLE      :: aux_libxc
+      CLASS(t_xcpot),              INTENT(IN)  :: xcpot
+      CLASS(t_xcpot), ALLOCATABLE, INTENT(OUT) :: aux_libxc
       CALL judft_error("create_from_aux is not supported for this xcpot type (only t_xcpot_libxc)")
-   END FUNCTION xcpot_create_from_aux
+   END SUBROUTINE xcpot_create_from_aux
 
 END MODULE m_types_xcpot

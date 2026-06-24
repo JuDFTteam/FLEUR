@@ -307,7 +307,7 @@ CONTAINS
              ! This is needed to avoid NaNs in the potential and to get a reasonable starting density for the self-consistency loop. 
              ! The auxiliary GGA potential is constructed from the input parameters and does not require a kinetic energy density.
             !In this iteration we do not have a valid kinetic energy density, so we use AUX_GGA. 
-            xcpot_iter=xcpot%create_from_aux()
+            CALL xcpot%create_from_aux(xcpot_iter)
             print *,"Using auxiliary GGA potential for the first iteration of MetaGGA calculation."
          else
             xcpot_iter = xcpot

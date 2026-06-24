@@ -671,14 +671,14 @@ CONTAINS
    !! are used to initialize the func_vxc_id_* and func_exc_id_* fields.
    !! This is useful to evaluate the auxiliary GGA potential/energy as a standalone xcpot.
    !! Overrides the error-stub in the base class t_xcpot.
-   FUNCTION xcpot_create_from_aux(xcpot) RESULT(aux_libxc)
+   SUBROUTINE xcpot_create_from_aux(xcpot, aux_libxc)
       USE m_judft
       IMPLICIT NONE
-      CLASS(t_xcpot_libxc), INTENT(IN) :: xcpot
-      CLASS(t_xcpot), ALLOCATABLE      :: aux_libxc
+      CLASS(t_xcpot_libxc),        INTENT(IN)  :: xcpot
+      CLASS(t_xcpot), ALLOCATABLE, INTENT(OUT) :: aux_libxc
 
 #ifdef CPP_LIBXC
-    
+
       IF (.NOT. xcpot%l_has_aux) &
          CALL judft_error("create_from_aux: no auxiliary GGA functional configured in this MetaGGA xcpot")
 
@@ -691,11 +691,11 @@ CONTAINS
                           xcpot%func_aux_id_x, xcpot%func_aux_id_c, &
                           xcpot%jspins, .false.)
       end select !No other type possible due to the ALLOCATE statement above
-      
+
 #else
       CALL judft_error("create_from_aux requires FLEUR compiled with libxc support")
 #endif
-   END FUNCTION xcpot_create_from_aux
+   END SUBROUTINE xcpot_create_from_aux
 
    subroutine mpi_bc_xcpot_libxc(This, Mpi_comm, Irank)
       Use M_mpi_bc_tool

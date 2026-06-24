@@ -71,7 +71,7 @@ CONTAINS
       CALL timestart("Auxiliary GGA for basis")
 
       ! Create temporary xcpot with auxiliary GGA functional IDs
-      xcpot_aux = xcpot%create_from_aux()
+      CALL xcpot%create_from_aux(xcpot_aux)
 
       ! Initialize temporary output potentials for vmt_xc
       CALL vTot_aux%init(stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_POTTOT)
