@@ -17,7 +17,7 @@ CONTAINS
       integer,       intent(in)       :: ft_lim(2,3)
       real,          intent(in)       :: amat(3,3)
       complex,       intent(in)       :: dyn_mat_q(:,:,:) ! (nqpt,dyn_dim,dyn_dim)
-      complex,intent(out)             :: dyn_mat_r(0:,0:,0:,:,:) ! (n1,n2,n3,dyn_dim,dyn_dim)
+      complex,intent(out)             :: dyn_mat_r(:,:,0:,0:,0:) ! (dyn_dim,dyn_dim,n1,n2,n3)
       complex, allocatable, intent(out) :: dyn_mat_q_full(:,:,:)
 
       integer :: mrot(3,3),invmrot(3,3)
@@ -27,14 +27,14 @@ CONTAINS
       integer :: isym
       integer :: iz, iy, ix, iGrid, nx, ny, nz 
       real    :: q_full(3), trans(3)
-      complex, allocatable :: fft_grid(:,:,:) ! (nqptf,dyn_dim,dyn_dim)
+      complex, allocatable :: fft_grid(:,:,:) ! (dyn_dim,dyn_dim,nqptf)
       complex, allocatable :: dyn_mat_qsym(:,:)
 
       dyn_dim = 3*atoms%nat
 
       allocate(dyn_mat_qsym(dyn_dim,dyn_dim))
       allocate(dyn_mat_q_full(qpts%nkptf,dyn_dim,dyn_dim))
-      allocate(fft_grid(qpts%nkptf,dyn_dim,dyn_dim))
+      allocate(fft_grid(dyn_dim,dyn_dim,qpts%nkptf))
       fft_grid(:,:,:) = cmplx(0.0,0.0)
 
       do iqfull = 1, qpts%nkptf
@@ -66,7 +66,7 @@ CONTAINS
                nx = ix - ft_lim(1,1)
                ny = iy - ft_lim(1,2)
                nz = iz - ft_lim(1,3)
-               dyn_mat_r(nx,ny,nz,:,:)= fft_grid(iGrid,:,:)
+               dyn_mat_r(:,:,nx,ny,nz)= fft_grid(:,:,iGrid)
                iGrid = iGrid + 1 
             end do !ix
          end do !iy
@@ -91,9 +91,9 @@ CONTAINS
                phas=isn*tpi_const*(bqpt(1)*ix+bqpt(2)*iy+bqpt(3)*iz)
                phase_fac=cmplx(cos(phas),sin(phas))
                IF (isn==1) THEN
-                  dyn_mat_r(iGrid,:,:) = dyn_mat_r(iGrid,:,:) + phase_fac*dyn_mat_q(:,:)
+                  dyn_mat_r(:,:,iGrid) = dyn_mat_r(:,:,iGrid) + phase_fac*dyn_mat_q(:,:)
                ELSE IF (isn==-1) THEN
-                  dyn_mat_q(:,:)    = dyn_mat_q(:,:)    + phase_fac*dyn_mat_r(iGrid,:,:)
+                  dyn_mat_q(:,:)    = dyn_mat_q(:,:)    + phase_fac*dyn_mat_r(:,:,iGrid)
                END IF
             END DO
          END DO
@@ -109,7 +109,7 @@ CONTAINS
       real,    intent(in) :: weights(:)
 
       complex,intent(inout) :: dyn_mat_q(:,:)
-      complex,intent(in) :: dyn_mat_r(0:,0:,0:,:,:)
+      complex,intent(in) :: dyn_mat_r(:,:,0:,0:,0:)
 
       integer :: iGrid, ix, iy, iz, nx, ny, nz 
       real    :: phas
@@ -130,7 +130,7 @@ CONTAINS
                nx = nx - ft_lim(1,1)
                ny = ny - ft_lim(1,2)
                nz = nz - ft_lim(1,3)
-               dyn_mat_q(:,:)    = dyn_mat_q(:,:)    + phase_fac*weights(iGrid)*dyn_mat_r(nx,ny,nz,:,:)
+               dyn_mat_q(:,:)    = dyn_mat_q(:,:)    + phase_fac*weights(iGrid)*dyn_mat_r(:,:,nx,ny,nz)
             end do 
          end do 
       end do 
@@ -228,7 +228,7 @@ CONTAINS
       integer,  intent(in) :: ft_lim(2,3), bigBox_lim(2,3)
       real,     intent(in) :: weights(:) 
       real,          intent(in) :: bqpt(3)
-      complex,       intent(in) :: dyn_mat_r(0:,0:,0:,:,:)
+      complex,       intent(in) :: dyn_mat_r(:,:,0:,0:,0:)
       complex, allocatable, intent(out) :: dyn_mat_q(:,:)
 
       integer :: dyn_dim 

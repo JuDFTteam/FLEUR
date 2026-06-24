@@ -61,6 +61,7 @@ contains
         complex, allocatable   :: dyn_mat(:,:,:), dyn_mat_r(:,:,:,:,:), dyn_mat_q_full(:,:,:), dyn_mat_pathq(:,:)
         complex, allocatable   :: dyn_mat_NAC_q(:,:),dyn_mat_NAC_r(:,:,:),dyn_mat_NAC_r_full(:,:,:)
         real,    allocatable   :: eigenVals(:), eigenValsFull(:,:,:)
+        real :: mass_mat(3*fi%atoms%nat, 3*fi%atoms%nat)
 
         
         ! helper types 
@@ -182,16 +183,23 @@ contains
                 FTweight = 1.0 
             end if 
             
-            allocate(dyn_mat_r(0:(qpts%nkpt3(1)-1),0:(qpts%nkpt3(2)-1) ,0:(qpts%nkpt3(3)-1) ,3*fi%atoms%nat,3*fi%atoms%nat))
+            allocate(dyn_mat_r(3*fi%atoms%nat,3*fi%atoms%nat,0:(qpts%nkpt3(1)-1),0:(qpts%nkpt3(2)-1),0:(qpts%nkpt3(3)-1)))
             call ft_dyn(fi_fullsym%atoms, qpts, fi_fullsym%sym, ft_lim, fi%cell%amat ,dyn_mat, dyn_mat_r, dyn_mat_q_full)
             
             ! In order to call the normal diagonalisation routines
             ! The FCM must be not-normalized --> otherwise we find the wrong unit
-            ! Either change here or in dfpt_dynmat_eig.F90 if tag != raw 
+            ! Either change here or in dfpt_dynmat_eig.F90 if tag != raw
             do iDir = 1, 3*fi%atoms%nat
                 do iDir2 = 1, 3*fi%atoms%nat
-                    dyn_mat_r(:,:,:,iDir, iDir2) = dyn_mat_r(:,:,:,iDir, iDir2) * massInElectronMasses*  &
-                                               SQRT(atomicMasses_const(fi%atoms%nz(CEILING(iDir/3.0)))*atomicMasses_const(fi%atoms%nz(CEILING(iDir2/3.0))))
+                    mass_mat(iDir,iDir2) = massInElectronMasses * &
+                                           SQRT(atomicMasses_const(fi%atoms%nz(CEILING(iDir/3.0)))*atomicMasses_const(fi%atoms%nz(CEILING(iDir2/3.0))))
+                end do
+            end do
+            do nz = 0, qpts%nkpt3(3)-1
+                do ny = 0, qpts%nkpt3(2)-1
+                    do nx = 0, qpts%nkpt3(1)-1
+                        dyn_mat_r(:,:,nx,ny,nz) = dyn_mat_r(:,:,nx,ny,nz) * mass_mat(:,:)
+                    end do
                 end do
             end do
 
