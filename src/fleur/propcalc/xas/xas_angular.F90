@@ -219,9 +219,15 @@ CONTAINS
       COMPLEX :: eps_cart(3), eps_sph(-1:1), coeff
       REAL    :: strength(2, 3), strength_mj(2, 3, twice_j + 1)
       REAL    :: avg, rel_xy, rel_xz, rel_yz
-      INTEGER :: i_l, l_values(2), i_pol, i_mj, twice_mj, sigma, l, m
+      INTEGER :: i_l, n_l_values, l_values(2), i_pol, i_mj, twice_mj, sigma, l, m
 
-      l_values = [0, 2]
+      n_l_values = 0
+      IF (lc - 1 >= 0) THEN
+         n_l_values = n_l_values + 1
+         l_values(n_l_values) = lc - 1
+      END IF
+      n_l_values = n_l_values + 1
+      l_values(n_l_values) = lc + 1
       strength = 0.0
       strength_mj = 0.0
 
@@ -229,7 +235,7 @@ CONTAINS
          eps_cart = CMPLX(0.0, 0.0)
          eps_cart(i_pol) = CMPLX(1.0, 0.0)
          CALL xas_cartesian_to_spherical(eps_cart, eps_sph)
-         DO i_l = 1, SIZE(l_values)
+         DO i_l = 1, n_l_values
             l = l_values(i_l)
             DO i_mj = 1, twice_j + 1
                twice_mj = -twice_j + 2*(i_mj - 1)
@@ -245,7 +251,7 @@ CONTAINS
       END DO
 
       CALL xas_write_sumrule_line(unit, "XAS DEBUG ANGULAR SUMRULE header: lc twice_j", REAL(lc), REAL(twice_j))
-      DO i_l = 1, SIZE(l_values)
+      DO i_l = 1, n_l_values
          CALL xas_angular_relative(strength(i_l, :), avg, rel_xy, rel_xz, rel_yz)
          CALL xas_write_sumrule_strength(unit, "XAS DEBUG ANGULAR SUMRULE total", l_values(i_l), 0, &
                                          strength(i_l, :), avg, rel_xy, rel_xz, rel_yz)

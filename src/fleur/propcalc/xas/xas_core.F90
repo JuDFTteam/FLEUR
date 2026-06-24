@@ -163,6 +163,13 @@ CONTAINS
          lc = 1
          twice_j = 1
          kappa = 1
+      CASE ("K", "k", "1s1/2", "1S1/2")
+         n = 1
+         lc = 0
+         twice_j = 1
+         kappa = -1
+      CASE ("L23", "l23", "L2,3", "l2,3")
+         CALL juDFT_error("Combined L23 edge is not implemented yet; run L2 and L3 separately.", calledby="m_xas_core")
       CASE DEFAULT
          CALL juDFT_error("Unsupported XAS edge in xas_edge_quantum_numbers", calledby="m_xas_core")
       END SELECT

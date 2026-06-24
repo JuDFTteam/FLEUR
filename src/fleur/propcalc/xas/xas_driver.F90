@@ -30,7 +30,7 @@ MODULE m_xas_driver
    USE m_types_sym, ONLY: t_sym
    USE m_types_usdus, ONLY: t_usdus
    USE m_xas_angular, ONLY: xas_cartesian_to_spherical, xas_print_angular_sumrule
-   USE m_xas_core, ONLY: t_xas_core_state, xas_extract_core_states
+   USE m_xas_core, ONLY: t_xas_core_state, xas_extract_core_states, xas_print_core_states
    USE m_xas_io, ONLY: xas_write_spectrum_text
    USE m_xas_matrixelements, ONLY: xas_core_band_matrixelements
    USE m_xas_radial, ONLY: xas_radial_dipole_integrals
@@ -45,12 +45,13 @@ MODULE m_xas_driver
    ! default validation case, but these choices are no longer baked into the
    ! driver logic and should become XML/input controlled later.
    INTEGER, PARAMETER :: xas_absorber_z = 26
-   CHARACTER(LEN=2), PARAMETER :: xas_edge_name = "L3"
+   CHARACTER(LEN=16), PARAMETER :: xas_edge_name = "L3"
    INTEGER, PARAMETER :: xas_test_n_grid = 401
    ! Hardwired Gaussian broadening for the smoke test, in Hartree.
    ! Useful trial values: 0.01 Ha (sharper), 0.03 Ha (default), 0.05 Ha (smoother).
    REAL,    PARAMETER :: xas_test_eta = 0.03
    INTEGER, PARAMETER :: xas_debug_n_pol = 3
+   INTEGER, PARAMETER :: xas_max_final_l_channels = 2
    ! Debug verbosity:
    !   0: only final spectrum filename
    !   1: compact atom/spin/total/l-channel strength summary
@@ -140,7 +141,7 @@ CONTAINS
 
       COMPLEX :: eps_cart(3), eps_sph(-1:1), eps_cart_debug(3), eps_sph_debug(-1:1)
       COMPLEX :: spin_frame_transform(2, 2)
-      COMPLEX, ALLOCATABLE :: matrix(:, :), matrix_debug(:, :), matrix_l0(:, :), matrix_l2(:, :)
+      COMPLEX, ALLOCATABLE :: matrix(:, :), matrix_debug(:, :), matrix_lchan(:, :, :)
       REAL, ALLOCATABLE :: energy_grid(:), intensity(:), radial_xas(:, :, :)
       REAL, ALLOCATABLE :: intensity_reduced(:)
       REAL, ALLOCATABLE :: f(:, :, :, :), g(:, :, :, :), flo(:, :, :, :)
@@ -159,14 +160,15 @@ CONTAINS
       INTEGER :: ikpt_i, ikpt, ikptf, bksym, jsp_loop, jsp, ispin, nbands, nbands_read, itype
       INTEGER :: n_spin_channels, n_local_spins, max_order, nbasfcn, lmax_xas, i_band
 	      INTEGER :: n_underflow_spectrum, i_char, i_pol, iatom_l, n_absorber_types, n_absorber_atoms, nstar
+      INTEGER :: n_final_l_channels, final_l_channels(xas_max_final_l_channels), i_lchan
 	      INTEGER :: n_abc_debug_direct_records, n_abc_debug_star_records
 	      INTEGER :: xas_debug_unit, xas_abc_debug_unit
-      REAL    :: xas_debug_strength_l0(xas_debug_n_pol), xas_debug_strength_l2(xas_debug_n_pol)
+      REAL    :: xas_debug_strength_lchan(xas_max_final_l_channels, xas_debug_n_pol)
       REAL    :: xas_debug_strength_total(xas_debug_n_pol)
-      REAL    :: xas_debug_strength_l0_reduced(xas_debug_n_pol), xas_debug_strength_l2_reduced(xas_debug_n_pol)
+      REAL    :: xas_debug_strength_lchan_reduced(xas_max_final_l_channels, xas_debug_n_pol)
       REAL    :: xas_debug_strength_total_reduced(xas_debug_n_pol), xas_debug_strength_cross_reduced(xas_debug_n_pol)
       REAL    :: weight_sums_local(2), weight_sums_reduced(2)
-      REAL    :: transition_min, transition_max, transition_padding, occ, debug_strength, debug_l0, debug_l2
+      REAL    :: transition_min, transition_max, transition_padding, occ, debug_strength
       REAL    :: debug_avg, debug_rel_xz
       REAL    :: wk_current, wk_star, weight_sum_parent, weight_sum_star
       INTEGER :: underflow_local(1), underflow_reduced(1)
@@ -178,9 +180,10 @@ CONTAINS
       l_xas_debug_strength = xas_debug_verbosity >= 1
       l_xas_debug_kpt_strength = xas_debug_verbosity >= 2
       n_underflow_spectrum = 0
-      xas_debug_strength_l0 = 0.0
-      xas_debug_strength_l2 = 0.0
+      xas_debug_strength_lchan = 0.0
       xas_debug_strength_total = 0.0
+      final_l_channels = -1
+      n_final_l_channels = 0
       n_absorber_types = 0
       n_absorber_atoms = 0
 	      weight_sum_parent = 0.0
@@ -333,6 +336,8 @@ CONTAINS
             CALL juDFT_error(TRIM(error_message), calledby="m_xas_driver")
          END IF
          IF (l_root .AND. xas_debug_angular_sumrule .AND. (.NOT. l_xas_angular_sumrule_printed)) THEN
+            CALL xas_print_core_states(core_states)
+            CALL xas_print_core_states(core_states, xas_debug_unit)
             CALL xas_print_angular_sumrule(core_states(1)%lc, core_states(1)%twice_j, xas_debug_unit)
             l_xas_angular_sumrule_printed = .TRUE.
          END IF
@@ -345,6 +350,13 @@ CONTAINS
          CALL xas_debug_report_underflow(l_xas_debug_fp, "xas_radial_dipole_integrals", unit=xas_debug_unit)
 
          lmax_xas = atoms%lmax(itype)
+         CALL xas_allowed_final_l_channels(core_states(1)%lc, lmax_xas, n_final_l_channels, final_l_channels)
+         IF (n_final_l_channels <= 0) THEN
+            WRITE(error_message, '(a,a,a,i0,a,i0)') "No dipole-allowed final-l channels for XAS edge ", &
+                                                     TRIM(xas_edge_name), " with lc=", core_states(1)%lc, &
+                                                     " and lmax=", lmax_xas
+            CALL juDFT_error(TRIM(error_message), calledby="m_xas_driver")
+         END IF
          IF (l_spinor_abc) THEN
             ! abc%calc_abc returns local MT spin components in noco:
             ! abc_local(tau) = sum_s conjg(U(s,tau)) abc_global(s).
@@ -409,11 +421,10 @@ CONTAINS
 	                  END DO
 	               END IF
 
-	               ALLOCATE(matrix(nbands, SIZE(core_states(1)%twice_mj)))
+               ALLOCATE(matrix(nbands, SIZE(core_states(1)%twice_mj)))
                IF (l_xas_debug_strength) THEN
                   ALLOCATE(matrix_debug(nbands, SIZE(core_states(1)%twice_mj)))
-                  ALLOCATE(matrix_l0(nbands, SIZE(core_states(1)%twice_mj)))
-                  ALLOCATE(matrix_l2(nbands, SIZE(core_states(1)%twice_mj)))
+                  ALLOCATE(matrix_lchan(nbands, SIZE(core_states(1)%twice_mj), n_final_l_channels))
                END IF
 
                IF (xas_use_spatial_star) THEN
@@ -458,31 +469,35 @@ CONTAINS
                                  CALL xas_core_band_matrixelements(abc_star_spin, radfun, radial_xas, core_states(1), eps_sph_debug, &
                                                                    iatom_l, lmax_xas, matrix_debug, &
                                                                    spin_frame_transform=spin_frame_transform)
-                                 CALL xas_core_band_matrixelements(abc_star_spin, radfun, radial_xas, core_states(1), eps_sph_debug, &
-                                                                   iatom_l, lmax_xas, matrix_l0, final_l=0, &
-                                                                   spin_frame_transform=spin_frame_transform)
-                                 CALL xas_core_band_matrixelements(abc_star_spin, radfun, radial_xas, core_states(1), eps_sph_debug, &
-                                                                   iatom_l, lmax_xas, matrix_l2, final_l=2, &
-                                                                   spin_frame_transform=spin_frame_transform)
                               ELSE
                                  CALL xas_core_band_matrixelements(abc_star_spin, radfun, radial_xas, core_states(1), eps_sph_debug, &
                                                                    iatom_l, lmax_xas, matrix_debug)
-                                 CALL xas_core_band_matrixelements(abc_star_spin, radfun, radial_xas, core_states(1), eps_sph_debug, &
-                                                                   iatom_l, lmax_xas, matrix_l0, final_l=0)
-                                 CALL xas_core_band_matrixelements(abc_star_spin, radfun, radial_xas, core_states(1), eps_sph_debug, &
-                                                                   iatom_l, lmax_xas, matrix_l2, final_l=2)
                               END IF
+                              DO i_lchan = 1, n_final_l_channels
+                                 IF (l_spinor_abc) THEN
+                                    CALL xas_core_band_matrixelements(abc_star_spin, radfun, radial_xas, core_states(1), &
+                                                                      eps_sph_debug, iatom_l, lmax_xas, &
+                                                                      matrix_lchan(:, :, i_lchan), &
+                                                                      final_l=final_l_channels(i_lchan), &
+                                                                      spin_frame_transform=spin_frame_transform)
+                                 ELSE
+                                    CALL xas_core_band_matrixelements(abc_star_spin, radfun, radial_xas, core_states(1), &
+                                                                      eps_sph_debug, iatom_l, lmax_xas, &
+                                                                      matrix_lchan(:, :, i_lchan), &
+                                                                      final_l=final_l_channels(i_lchan))
+                                 END IF
+                              END DO
 
                               debug_strength = xas_debug_transition_strength(matrix_debug, occ_band, wk_current)
-                              debug_l0 = xas_debug_transition_strength(matrix_l0, occ_band, wk_current)
-                              debug_l2 = xas_debug_transition_strength(matrix_l2, occ_band, wk_current)
                               xas_debug_strength_total(i_pol) = xas_debug_strength_total(i_pol) + debug_strength
                               xas_debug_strength_spin(i_pol, jsp_loop) = xas_debug_strength_spin(i_pol, jsp_loop) + debug_strength
                               IF (l_xas_debug_kpt_strength) THEN
                                  xas_debug_strength_kpt(i_pol, ikpt) = xas_debug_strength_kpt(i_pol, ikpt) + debug_strength
                               END IF
-                              xas_debug_strength_l0(i_pol) = xas_debug_strength_l0(i_pol) + debug_l0
-                              xas_debug_strength_l2(i_pol) = xas_debug_strength_l2(i_pol) + debug_l2
+                              DO i_lchan = 1, n_final_l_channels
+                                 xas_debug_strength_lchan(i_lchan, i_pol) = xas_debug_strength_lchan(i_lchan, i_pol) + &
+                                    xas_debug_transition_strength(matrix_lchan(:, :, i_lchan), occ_band, wk_current)
+                              END DO
                            END DO
                         END DO
                      END IF
@@ -522,31 +537,33 @@ CONTAINS
                               CALL xas_core_band_matrixelements(abc_spin, radfun, radial_xas, core_states(1), eps_sph_debug, &
                                                                 iatom_l, lmax_xas, matrix_debug, &
                                                                 spin_frame_transform=spin_frame_transform)
-                              CALL xas_core_band_matrixelements(abc_spin, radfun, radial_xas, core_states(1), eps_sph_debug, &
-                                                                iatom_l, lmax_xas, matrix_l0, final_l=0, &
-                                                                spin_frame_transform=spin_frame_transform)
-                              CALL xas_core_band_matrixelements(abc_spin, radfun, radial_xas, core_states(1), eps_sph_debug, &
-                                                                iatom_l, lmax_xas, matrix_l2, final_l=2, &
-                                                                spin_frame_transform=spin_frame_transform)
                            ELSE
                               CALL xas_core_band_matrixelements(abc_spin, radfun, radial_xas, core_states(1), eps_sph_debug, &
                                                                 iatom_l, lmax_xas, matrix_debug)
-                              CALL xas_core_band_matrixelements(abc_spin, radfun, radial_xas, core_states(1), eps_sph_debug, &
-                                                                iatom_l, lmax_xas, matrix_l0, final_l=0)
-                              CALL xas_core_band_matrixelements(abc_spin, radfun, radial_xas, core_states(1), eps_sph_debug, &
-                                                                iatom_l, lmax_xas, matrix_l2, final_l=2)
                            END IF
+                           DO i_lchan = 1, n_final_l_channels
+                              IF (l_spinor_abc) THEN
+                                 CALL xas_core_band_matrixelements(abc_spin, radfun, radial_xas, core_states(1), eps_sph_debug, &
+                                                                   iatom_l, lmax_xas, matrix_lchan(:, :, i_lchan), &
+                                                                   final_l=final_l_channels(i_lchan), &
+                                                                   spin_frame_transform=spin_frame_transform)
+                              ELSE
+                                 CALL xas_core_band_matrixelements(abc_spin, radfun, radial_xas, core_states(1), eps_sph_debug, &
+                                                                   iatom_l, lmax_xas, matrix_lchan(:, :, i_lchan), &
+                                                                   final_l=final_l_channels(i_lchan))
+                              END IF
+                           END DO
 
                            debug_strength = xas_debug_transition_strength(matrix_debug, occ_band, wk_current)
-                           debug_l0 = xas_debug_transition_strength(matrix_l0, occ_band, wk_current)
-                           debug_l2 = xas_debug_transition_strength(matrix_l2, occ_band, wk_current)
                            xas_debug_strength_total(i_pol) = xas_debug_strength_total(i_pol) + debug_strength
                            xas_debug_strength_spin(i_pol, jsp_loop) = xas_debug_strength_spin(i_pol, jsp_loop) + debug_strength
                            IF (l_xas_debug_kpt_strength) THEN
                               xas_debug_strength_kpt(i_pol, ikpt) = xas_debug_strength_kpt(i_pol, ikpt) + debug_strength
                            END IF
-                           xas_debug_strength_l0(i_pol) = xas_debug_strength_l0(i_pol) + debug_l0
-                           xas_debug_strength_l2(i_pol) = xas_debug_strength_l2(i_pol) + debug_l2
+                           DO i_lchan = 1, n_final_l_channels
+                              xas_debug_strength_lchan(i_lchan, i_pol) = xas_debug_strength_lchan(i_lchan, i_pol) + &
+                                 xas_debug_transition_strength(matrix_lchan(:, :, i_lchan), occ_band, wk_current)
+                           END DO
                         END DO
                      END DO
                   END IF
@@ -573,7 +590,7 @@ CONTAINS
                   END DO
                END IF
 
-               IF (l_xas_debug_strength) DEALLOCATE(matrix_debug, matrix_l0, matrix_l2)
+               IF (l_xas_debug_strength) DEALLOCATE(matrix_debug, matrix_lchan)
 
                DEALLOCATE(matrix, abc_spin, eig_band, occ_band, ev_list)
             END DO
@@ -599,11 +616,9 @@ CONTAINS
                                                   SIZE(xas_debug_strength_spin, 2)), SOURCE=0.0)
          CALL mpi_sum_reduce(xas_debug_strength_spin, xas_debug_strength_spin_reduced, fmpi%mpi_comm)
          xas_debug_strength_total_reduced = 0.0
-         xas_debug_strength_l0_reduced = 0.0
-         xas_debug_strength_l2_reduced = 0.0
+         xas_debug_strength_lchan_reduced = 0.0
          CALL mpi_sum_reduce(xas_debug_strength_total, xas_debug_strength_total_reduced, fmpi%mpi_comm)
-         CALL mpi_sum_reduce(xas_debug_strength_l0, xas_debug_strength_l0_reduced, fmpi%mpi_comm)
-         CALL mpi_sum_reduce(xas_debug_strength_l2, xas_debug_strength_l2_reduced, fmpi%mpi_comm)
+         CALL mpi_sum_reduce(xas_debug_strength_lchan, xas_debug_strength_lchan_reduced, fmpi%mpi_comm)
       END IF
       IF (l_xas_debug_kpt_strength) THEN
          ALLOCATE(xas_debug_strength_kpt_reduced(SIZE(xas_debug_strength_kpt, 1), &
@@ -655,20 +670,17 @@ CONTAINS
          END DO
          DO i_pol = 1, xas_debug_n_pol
             xas_debug_strength_cross_reduced(i_pol) = xas_debug_strength_total_reduced(i_pol) - &
-                                                      xas_debug_strength_l0_reduced(i_pol) - &
-                                                      xas_debug_strength_l2_reduced(i_pol)
-            WRITE(*, '(a,a,a,es18.10,a,es18.10,a,es18.10,a,es18.10)') &
-               "XAS DEBUG strength pol=", xas_debug_pol_label(i_pol), &
-               " total=", xas_debug_strength_total_reduced(i_pol), &
-               " l0=", xas_debug_strength_l0_reduced(i_pol), &
-               " l2=", xas_debug_strength_l2_reduced(i_pol), &
-               " cross_l0_l2=", xas_debug_strength_cross_reduced(i_pol)
-            WRITE(xas_debug_unit, '(a,a,a,es18.10,a,es18.10,a,es18.10,a,es18.10)') &
-               "XAS DEBUG strength pol=", xas_debug_pol_label(i_pol), &
-               " total=", xas_debug_strength_total_reduced(i_pol), &
-               " l0=", xas_debug_strength_l0_reduced(i_pol), &
-               " l2=", xas_debug_strength_l2_reduced(i_pol), &
-               " cross_l0_l2=", xas_debug_strength_cross_reduced(i_pol)
+                                                      SUM(xas_debug_strength_lchan_reduced(1:n_final_l_channels, i_pol))
+            CALL xas_debug_print_lchannel_summary(6, xas_debug_pol_label(i_pol), &
+                                                  xas_debug_strength_total_reduced(i_pol), &
+                                                  n_final_l_channels, final_l_channels, &
+                                                  xas_debug_strength_lchan_reduced(:, i_pol), &
+                                                  xas_debug_strength_cross_reduced(i_pol))
+            CALL xas_debug_print_lchannel_summary(xas_debug_unit, xas_debug_pol_label(i_pol), &
+                                                  xas_debug_strength_total_reduced(i_pol), &
+                                                  n_final_l_channels, final_l_channels, &
+                                                  xas_debug_strength_lchan_reduced(:, i_pol), &
+                                                  xas_debug_strength_cross_reduced(i_pol))
          END DO
          CALL xas_debug_print_strength_summary("total", 0, xas_debug_strength_total_reduced, xas_debug_unit)
       END IF
@@ -693,6 +705,48 @@ CONTAINS
 	         IF (xas_abc_debug_unit /= -1) CLOSE(xas_abc_debug_unit)
 	      END IF
 	   END SUBROUTINE xas_hardwired_test_driver
+
+   SUBROUTINE xas_allowed_final_l_channels(lc, lmax, n_channels, final_l)
+      INTEGER, INTENT(IN)  :: lc, lmax
+      INTEGER, INTENT(OUT) :: n_channels
+      INTEGER, INTENT(OUT) :: final_l(:)
+
+      n_channels = 0
+      final_l = -1
+      IF (lc - 1 >= 0 .AND. lc - 1 <= lmax) THEN
+         n_channels = n_channels + 1
+         IF (n_channels <= SIZE(final_l)) final_l(n_channels) = lc - 1
+      END IF
+      IF (lc + 1 <= lmax) THEN
+         n_channels = n_channels + 1
+         IF (n_channels <= SIZE(final_l)) final_l(n_channels) = lc + 1
+      END IF
+      IF (n_channels > SIZE(final_l)) THEN
+         CALL juDFT_error("Too many XAS final-l channels for diagnostic storage", calledby="m_xas_driver")
+      END IF
+   END SUBROUTINE xas_allowed_final_l_channels
+
+   SUBROUTINE xas_debug_print_lchannel_summary(unit, pol_label, total_strength, n_channels, final_l, l_strength, cross_strength)
+      INTEGER,          INTENT(IN) :: unit, n_channels
+      CHARACTER(LEN=*), INTENT(IN) :: pol_label
+      REAL,             INTENT(IN) :: total_strength, l_strength(:), cross_strength
+      INTEGER,          INTENT(IN) :: final_l(:)
+
+      SELECT CASE (n_channels)
+      CASE (1)
+         WRITE(unit, '(a,a,a,es18.10,a,i0,a,es18.10)') &
+            "XAS DEBUG strength pol=", pol_label, " total=", total_strength, &
+            " l", final_l(1), "=", l_strength(1)
+      CASE (2)
+         WRITE(unit, '(a,a,a,es18.10,a,i0,a,es18.10,a,i0,a,es18.10,a,i0,a,i0,a,es18.10)') &
+            "XAS DEBUG strength pol=", pol_label, " total=", total_strength, &
+            " l", final_l(1), "=", l_strength(1), &
+            " l", final_l(2), "=", l_strength(2), &
+            " cross_l", final_l(1), "_l", final_l(2), "=", cross_strength
+      CASE DEFAULT
+         WRITE(unit, '(a,a,a,es18.10)') "XAS DEBUG strength pol=", pol_label, " total=", total_strength
+      END SELECT
+   END SUBROUTINE xas_debug_print_lchannel_summary
 
    SUBROUTINE xas_abort_missing_spinor_abc(input, noco, n_local_spins)
       TYPE(t_input), INTENT(IN) :: input
