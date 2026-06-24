@@ -175,6 +175,7 @@ CONTAINS
                    plo(1:atoms%jri(ntyp),jspin) = glo(1:atoms%jri(ntyp),1) / ddn1
                    qlo(1:atoms%jri(ntyp),jspin) = glo(1:atoms%jri(ntyp),2) / ddn1
                    usdus%dulos(ilo,ntyp,jspin) = duds1 / ddn1
+                   usdus%ulos(ilo,ntyp,jspin) = usdus%ulos(ilo,ntyp,jspin) / ddn1
                    DEALLOCATE (glo,pqlo,filo)
                 ENDIF
                 !-apw+lo
@@ -197,10 +198,10 @@ CONTAINS
 
              DO iSpin = 1, 2
                 DO jSpin = 1, 2
-                   rsoc%rsoplop (ntyp,ilo,iSpin,jSpin) = radso(plo(:atoms%jri(ntyp),iSpin),p (:atoms%jri(ntyp),jSpin),vso(:atoms%jri(ntyp),iSpin),atoms%dx(ntyp),atoms%rmsh(1,ntyp))
-                   rsoc%rsoplopd(ntyp,ilo,iSpin,jSpin) = radso(plo(:atoms%jri(ntyp),iSpin),pd(:atoms%jri(ntyp),jSpin),vso(:atoms%jri(ntyp),iSpin),atoms%dx(ntyp), atoms%rmsh(1,ntyp))
-                   rsoc%rsopplo (ntyp,ilo,iSpin,jSpin) = radso(p (:atoms%jri(ntyp),iSpin),plo(:atoms%jri(ntyp),jSpin),vso(:atoms%jri(ntyp),iSpin),atoms%dx(ntyp), atoms%rmsh(1,ntyp))
-                   rsoc%rsopdplo(ntyp,ilo,iSpin,jSpin) = radso(pd(:atoms%jri(ntyp),iSpin),plo(:atoms%jri(ntyp),jSpin),vso(:atoms%jri(ntyp),iSpin),atoms%dx(ntyp), atoms%rmsh(1,ntyp))
+                   rsoc%rsoplop (ntyp,ilo,iSpin,jSpin) = radso(plo(:atoms%jri(ntyp),iSpin),  p(:atoms%jri(ntyp),jSpin),vso(:atoms%jri(ntyp),iSpin),atoms%dx(ntyp), atoms%rmsh(1,ntyp))
+                   rsoc%rsoplopd(ntyp,ilo,iSpin,jSpin) = radso(plo(:atoms%jri(ntyp),iSpin), pd(:atoms%jri(ntyp),jSpin),vso(:atoms%jri(ntyp),iSpin),atoms%dx(ntyp), atoms%rmsh(1,ntyp))
+                   rsoc%rsopplo (ntyp,ilo,iSpin,jSpin) = radso(  p(:atoms%jri(ntyp),iSpin),plo(:atoms%jri(ntyp),jSpin),vso(:atoms%jri(ntyp),iSpin),atoms%dx(ntyp), atoms%rmsh(1,ntyp))
+                   rsoc%rsopdplo(ntyp,ilo,iSpin,jSpin) = radso( pd(:atoms%jri(ntyp),iSpin),plo(:atoms%jri(ntyp),jSpin),vso(:atoms%jri(ntyp),iSpin),atoms%dx(ntyp), atoms%rmsh(1,ntyp))
                 ENDDO
              ENDDO
 
@@ -221,19 +222,21 @@ CONTAINS
                       CALL radsra(e,l,vrtmp,atoms%rmsh(1,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),c_light(1.0),&
                                   ulops,dulops,nodeu,plop(:,jspin),q(:,1))
                       !+apw+lo
-                      IF (atoms%l_dulo(ilo,ntyp).OR.atoms%ulo_der(ilo,ntyp).GE.1) THEN ! calculate orthogonal energy derivative at e
+                      IF (atoms%l_dulo(ilop,ntyp).OR.atoms%ulo_der(ilop,ntyp).GE.1) THEN ! calculate orthogonal energy derivative at e
                          ALLOCATE (glo(atoms%jmtd,2),pqlo(atoms%jmtd,2),filo(atoms%jmtd,2))
                          glo = 0.0
                          pqlo = 0.0
                          filo = 0.0
                          pqlo(1:atoms%jri(ntyp),1) = plop(1:atoms%jri(ntyp),jspin)
                          pqlo(1:atoms%jri(ntyp),2) = q(1:atoms%jri(ntyp),1)
-                         iDeriv = atoms%ulo_der(ilo,ntyp)
-                         IF(atoms%l_dulo(ilo,ntyp)) iDeriv = 1
+                         iDeriv = atoms%ulo_der(ilop,ntyp)
+                         IF(atoms%l_dulo(ilop,ntyp)) iDeriv = 1
                          CALL radsrdn(e,l,vrtmp,atoms%rmsh(1,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),c_light(1.0),&
                                       ulops,duds1,ddn1,noded,glo,filo,&!filo is a dummy array&
                                       pqlo,dulops,iDeriv)
-                         plop(1:atoms%jri(ntyp),jspin) = glo(1:atoms%jri(ntyp),1)
+                         ddn1 = SQRT(ddn1)
+                         IF(atoms%l_dulo(ilop,ntyp)) ddn1 = 1.0
+                         plop(1:atoms%jri(ntyp),jspin) = glo(1:atoms%jri(ntyp),1) / ddn1
                          DEALLOCATE (glo,pqlo,filo)
                       ENDIF
                       !-apw+lo
