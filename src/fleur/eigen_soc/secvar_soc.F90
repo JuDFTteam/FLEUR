@@ -78,6 +78,7 @@ CONTAINS
 
         TYPE(t_lapw)  :: lapw
         TYPE(t_rsoc)  :: rsoc
+        TYPE(t_sym)   :: sym_l
         INTEGER :: nk, nk_i
 #ifdef CPP_MPI
         INTEGER :: ierr
@@ -87,6 +88,13 @@ CONTAINS
         results%eig   = 1.0e300
         results%neig  = 0
 
+        ! The SOC angular matrix elements (soangl) are set up in the global frame.
+        ! Hence the basis matching coefficients must not be rotated into the local
+        ! frame of the representative atom, so we disable the atom rotation here
+        ! (consistent with eigenso, where sym%ngopr is forced to 1).
+        sym_l = fi%sym
+        sym_l%ngopr = 1
+
         ! Compute radial spin-orbit matrix elements
         !CALL spnorb(fi%atoms, fi%noco, nococonv, fi%input, fmpi, enpara, vTot%mt, usdus, rsoc, .TRUE.)
         call rsoc%init(fi%atoms)
@@ -95,8 +103,8 @@ CONTAINS
         ! Loop over k-points assigned to this MPI task
         DO nk_i = 1, SIZE(fmpi%k_list)
             nk = fmpi%k_list(nk_i)
-            CALL lapw%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, nk, fi%cell, fmpi)
-            CALL secvar_soc_kpts(fi%atoms, fi%noco, nococonv, fi%input, fi%sym, fi%cell, &
+            CALL lapw%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, sym_l, nk, fi%cell, fmpi)
+            CALL secvar_soc_kpts(fi%atoms, fi%noco, nococonv, fi%input, sym_l, fi%cell, &
                             enpara, lapw, vTot, rsoc, fmpi, nk, eig_id, &
                             ne_out=results%neig(nk, 1), eigval_out=results%eig(:, nk, 1))
         END DO

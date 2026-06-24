@@ -57,15 +57,19 @@ module m_types_rsoc
   
     !     ..
     !     .. Local Scalars ..
-    INTEGER:: n,i,j,l,itype,ispin,jspin,ispin1,jspin1
+    INTEGER:: n,i,j,l,itype,ispin,jspin,ispin1,jspin1,ilo,nr
     LOGICAL, SAVE :: first_k = .TRUE.
     TYPE(t_radfun) :: radfun
     REAL,ALLOCATABLE:: v0(:)
     REAL,ALLOCATABLE:: vso(:,:)
+    REAL,ALLOCATABLE:: vsoint(:)
+    REAL,ALLOCATABLE:: efun(:)
     REAL:: e
 
-    
+
     allocate(vso(atoms%jmtd,2))
+    allocate(vsoint(atoms%jmtd))
+    allocate(efun(atoms%nlod+2))
    
     !Calculate radial soc-matrix elements
     DO itype = 1,atoms%ntype
@@ -79,44 +83,70 @@ module m_types_rsoc
        v0= (vtot%mt(:,0,itype,1)+vtot%mt(:,0,itype,min(2,input%jspins)))/2.
          
        DO l=0,atoms%lmax(itype)
-         !
-         !---> common spin-orbit integrant V   (average spin directions)
-         !                                  SO
-         e = (enpara%el0(l,itype,1)+enpara%el0(l,itype,min(2,input%jspins)))/2.
+         IF (l.LE.0) CYCLE ! there is no spin-orbit for s-states
 
-         CALL sointg(itype,e,vtot%mt(:,0,itype,:),v0,atoms,input,vso)
-         IF (noco%l_spav) THEN
-            DO i= 1,atoms%jmtd
-               vso(i,1)= (vso(i,1)+vso(i,2))/2.
-               vso(i,2)= vso(i,1)
-            ENDDO
-         ENDIF
+         !
+         !---> spin-averaged energy parameter of each radial function for this l:
+         !     index 1 = u, 2 = udot (valence energy el0), >=3 = local orbitals (ello0).
+         !     The ordering of the LO indices matches the one used when the radial
+         !     functions are generated (see types_radfun%generate_radial_functions).
+         !
+         efun(1) = (enpara%el0(l,itype,1)+enpara%el0(l,itype,min(2,input%jspins)))/2.
+         efun(2) = efun(1)
+         nr = 2
+         DO ilo = 1, atoms%nlo(itype)
+            IF (atoms%llo(ilo,itype).NE.l) CYCLE
+            nr = nr + 1
+            efun(nr) = (enpara%ello0(ilo,itype,1)+enpara%ello0(ilo,itype,min(2,input%jspins)))/2.
+         END DO
 
          !                        s       s'            .s       s'
          !-->  radial integrals <u  |V  |u  > = rso(1,1), <u  |V  |u  > = rso(2,1) etc.
          !                            SO                     SO
+         DO i=1,radfun%n_r(l)
+            DO j=1,radfun%n_r(l)
+               !
+               !---> common spin-orbit integrant V   (average spin directions).
+               !                                  SO
+               ! It is evaluated at the average of the two radial functions' energy
+               ! parameters; for two valence functions this is the valence energy, if
+               ! a local orbital is involved its (ello0-based) energy enters as well.
+               !
+               e = (efun(i)+efun(j))/2.
+               CALL sointg(itype,e,vtot%mt(:,0,itype,:),v0,atoms,input,vso)
+               IF (noco%l_spav) THEN
+                  vso(:,1) = (vso(:,1)+vso(:,2))/2.
+                  vso(:,2) = vso(:,1)
+               ENDIF
 
-         IF (l.GT.0) THEN ! there is no spin-orbit for s-states
-            DO ispin = 1, 2
-               DO jspin = 1, 2
-                  ispin1=min(input%jspins,ispin)
-                  jspin1=min(input%jspins,jspin)
-                   
-                  DO i=1,radfun%n_r(l)
-                     DO j=1,radfun%n_r(l)
-                        rsoc%rso(i,j,itype,l,ispin,jspin) = radso( &
-                           radfun%r(:atoms%jri(itype),1,i,l,ispin1), &
-                           radfun%r(:atoms%jri(itype),1,j,l,jspin1), &
-                           (vso(:atoms%jri(itype),ispin1)+vso(:atoms%jri(itype),jspin1))*0.5, &
-                           atoms%dx(itype), &
-                           atoms%rmsh(1,itype))
-                     ENDDO
-                  enddo
+               DO ispin = 1, 2
+                  DO jspin = 1, 2
+                     ispin1=min(input%jspins,ispin)
+                     jspin1=min(input%jspins,jspin)
+                     !
+                     ! spin weighting of the integrand: valence-valence (u/udot)
+                     ! integrals use the average of both spins; if a local orbital
+                     ! is involved only the (bra) spin is used, consistent with the
+                     ! original sorad implementation.
+                     !
+                     IF (i.LE.2 .AND. j.LE.2) THEN
+                        vsoint(:atoms%jri(itype)) = (vso(:atoms%jri(itype),ispin1)+vso(:atoms%jri(itype),jspin1))*0.5
+                     ELSE
+                        vsoint(:atoms%jri(itype)) = vso(:atoms%jri(itype),ispin1)
+                     END IF
+
+                     rsoc%rso(i,j,itype,l,ispin,jspin) = radso( &
+                        radfun%r(:atoms%jri(itype),1,i,l,ispin1), &
+                        radfun%r(:atoms%jri(itype),1,j,l,jspin1), &
+                        vsoint(:atoms%jri(itype)), &
+                        atoms%dx(itype), &
+                        atoms%rmsh(1,itype))
+                  ENDDO
                ENDDO
             ENDDO
-         ENDIF ! l>0
+         enddo
       END DO
-    ENDDO   
+    ENDDO
 
     !Scale SOC
     DO n= 1,atoms%ntype
