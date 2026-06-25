@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -77,6 +77,7 @@ CONTAINS
       USE m_dfpt_vefield
       USE m_checkdopall
       USE m_store_load_hybrid
+      USE m_wannierlib_main
 
 !$    USE omp_lib
 
@@ -456,6 +457,7 @@ CONTAINS
                END IF
             END IF
 
+
             CALL timestart("determination of fermi energy")
 
             IF (fi%noco%l_soc .AND. (.NOT. fi%noco%l_noco)) THEN
@@ -480,6 +482,14 @@ CONTAINS
             endif   
 #endif            
             CALL timestop("determination of fermi energy")
+
+            IF (fi%wannierlib%l_wannierize) THEN
+               CALL timestart("wannierlib")
+               CALL wannierlib_main(fi%wannierlib, fi%atoms, fi%cell, input_soc, fi%kpts, fi%sym, fi%noco, nococonv, stars, enpara, fmpi, &
+                                    vTot, results, eig_id)
+               CALL timestop("wannierlib")
+               CALL juDFT_end("Wannierization done. Fleur ends.", fmpi%irank)
+            END IF
 
             ! TODO: What is commented out here and should it perhaps be removed?
 ! !$          !+Wannier

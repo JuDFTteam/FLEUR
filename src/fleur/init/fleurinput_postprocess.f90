@@ -1,8 +1,14 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_fleurinput_postprocess
   USE m_types_fleurinput
+   implicit none
 CONTAINS
   SUBROUTINE fleurinput_postprocess(Cell,Sym,Atoms,Input,Noco,Vacuum,&
-    Banddos,hybinp ,Xcpot,Kpts,gfinp)
+    Banddos,hybinp ,Xcpot,Kpts,gfinp,wannierlib)
     USE m_juDFT
     USE m_types_fleurinput
     use m_make_sym
@@ -13,6 +19,8 @@ CONTAINS
     USE m_relaxio
     USE m_types_nococonv
     USE m_constants
+    USE m_types_wannierlib
+    IMPLICIT NONE
 
     TYPE(t_cell),INTENT(INOUT)  ::cell
     TYPE(t_sym),INTENT(INOUT)   ::sym
@@ -22,6 +30,7 @@ CONTAINS
     TYPE(t_vacuum),INTENT(INOUT)::vacuum
     TYPE(t_banddos),INTENT(IN)  ::banddos
     TYPE(t_hybinp),INTENT(IN)   :: hybinp 
+    TYPE(t_wannierlib_wannierize),INTENT(INOUT) ::wannierlib
 
     CLASS(t_xcpot),ALLOCATABLE,INTENT(INOUT)::xcpot
     TYPE(t_kpts),INTENT(INOUT)     ::kpts
@@ -84,6 +93,6 @@ CONTAINS
       END DO
    END IF
 !--------------------------------------------------------------------------
-
+  CALL wannierlib%init(atoms, noco)
   END SUBROUTINE fleurinput_postprocess
 END MODULE m_fleurinput_postprocess

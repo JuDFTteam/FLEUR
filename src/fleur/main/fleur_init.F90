@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -145,15 +145,16 @@ CONTAINS
       IF (fmpi%irank .EQ. 0) THEN
          CALL fleurinput_read_xml(outxmlFileID, filename_add_loc, cell=fi%cell, sym=fi%sym, atoms=fi%atoms, input=fi%input, noco=fi%noco, vacuum=fi%vacuum, field=fi%field, &
                                   sliceplot=fi%sliceplot, banddos=fi%banddos, mpinp=fi%mpinp, hybinp=fi%hybinp, coreSpecInput=fi%coreSpecInput, &
+                                  wannierlib=fi%wannierlib, &
                                   wann=wann, xcpot=xcpot, forcetheo_data=forcetheo_data, kpts=fi%kpts, kptsSelection=kptsSelection, kptsArray=kptsArray, &
                                   enparaXML=enparaXML, gfinp=fi%gfinp, hub1inp=fi%hub1inp, dfpt=fi%dfpt)
          CALL fleurinput_postprocess(fi%cell, fi%sym, fi%atoms, fi%input, fi%noco, fi%vacuum, &
-                                     fi%banddos, fi%hybinp,  Xcpot, fi%kpts, fi%gfinp)
+                                     fi%banddos, fi%hybinp,  Xcpot, fi%kpts, fi%gfinp, fi%wannierlib)
       END IF
       !Distribute fi%input to all PE
       CALL fleurinput_mpi_bc(fi%cell, fi%sym, fi%atoms, fi%input, fi%noco, fi%vacuum, fi%field, &
                              fi%sliceplot, fi%banddos, fi%mpinp, fi%hybinp,   fi%coreSpecInput, Wann, &
-                             Xcpot, Forcetheo_data, fi%kpts, Enparaxml, fi%gfinp, fi%hub1inp, fmpi%Mpi_comm, fi%dfpt)
+                             Xcpot, Forcetheo_data, fi%kpts, Enparaxml, fi%gfinp, fi%hub1inp, fmpi%Mpi_comm, fi%dfpt, wannierlib=fi%wannierlib)
       !Remaining init is done using all PE
       call make_xcpot(fmpi, xcpot, fi%atoms, fi%input)
       if (fi%noco%l_noco.and..not.xcpot%vxc_is_LDA()) call judft_warn("Noco should be used only with LDA",hint="GGA calculations and l_noco=T can be very error prone due.")
@@ -170,6 +171,7 @@ CONTAINS
       CALL fi%dfpt%init(fi%cell,fi%input) ! This is needed for the dim of lapw basis 
       CALL lapw_dim(fi%kpts, fi%cell, fi%input, fi%noco, nococonv,   forcetheo, fi%atoms, nbasfcn, fi%dfpt)
       CALL fi%input%init(fi%noco, fi%hybinp%l_hybrid,fi%sym%invs,fi%atoms%n_denmat,fi%atoms%n_hia,lapw_dim_nbasfcn)
+     
       CALL fi%hybinp%init(fi%atoms, fi%cell, fi%input,   fi%sym, xcpot)
       l_timeReversalCheck = .FALSE.
       IF(.NOT.fi%banddos%band.AND..NOT.fi%banddos%dos) THEN

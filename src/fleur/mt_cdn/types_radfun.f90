@@ -35,7 +35,7 @@ contains
       this%n_r(0:)=atoms%num_radial_functions_per_l(itype)
    end subroutine
 
-   subroutine generate_radial_functions(this, atoms, input, enpara, fmpi, vtot, iType, hub1data)
+   subroutine generate_radial_functions(this, atoms, input, enpara, fmpi, vtot, iType, hub1data, usdus)
       use m_genMTBasis
       use m_types_atoms
       use m_types_input
@@ -53,10 +53,11 @@ contains
       type(t_hub1data), intent(IN),optional :: hub1data
       type(t_mpi), intent(IN)     :: fmpi
       type(t_potden), intent(IN)   :: vtot
+      type(t_usdus), intent(inout), optional :: usdus
       integer, intent(in)                    :: itype
 
       !temp variables not really used but required by genMTBasis
-      type(t_usdus) :: usdus
+      type(t_usdus) :: usdus_tmp
       !radial functions to copy into type
       real            :: f(atoms%jmtd, 2, 0:atoms%lmaxd)
       real            :: g(atoms%jmtd, 2, 0:atoms%lmaxd)
@@ -66,7 +67,11 @@ contains
       real,allocatable:: rf(:)
       real :: ovlp
       call timestart("generate radial functions")
-      call usdus%init(atoms,input%jspins)
+      if (present(usdus)) then
+         if (.not. allocated(usdus%us)) call usdus%init(atoms,input%jspins)
+      else
+         call usdus_tmp%init(atoms,input%jspins)
+      end if
    
       !check if data is already available
       if (this%itype /= itype .or. .not.allocated(this%r)) THEN
@@ -79,7 +84,11 @@ contains
          allocate (this%integral(maxval(this%n_r), maxval(this%n_r),0:atoms%lmaxd, input%jspins,input%jspins),source=0.0)
          
          do ispin = 1, input%jspins
-            call genMTBasis(atoms, enpara, vTot, fmpi, iType, ispin, usdus, f, g, flo, hub1data, l_writeArg=.false.)
+            if (present(usdus)) then
+               call genMTBasis(atoms, enpara, vTot, fmpi, iType, ispin, usdus, f, g, flo, hub1data, l_writeArg=.false.)
+            else
+               call genMTBasis(atoms, enpara, vTot, fmpi, iType, ispin, usdus_tmp, f, g, flo, hub1data, l_writeArg=.false.)
+            end if
             do l = 0, atoms%lmax(itype)
                this%R( 1:atoms%jri(itype), 1:2, 1,l, ispin) = f(1:atoms%jri(itype), 1:2, l)
                this%R( 1:atoms%jri(itype), 1:2, 2,l, ispin) = g(1:atoms%jri(itype), 1:2, l)
