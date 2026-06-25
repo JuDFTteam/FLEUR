@@ -92,7 +92,7 @@ CONTAINS
          usdus%ulos(fi%atoms%nlod,fi%atoms%ntype,fi%input%jspins),usdus%dulos(fi%atoms%nlod,fi%atoms%ntype,fi%input%jspins),&
          usdus%uulon(fi%atoms%nlod,fi%atoms%ntype,fi%input%jspins),usdus%dulon(fi%atoms%nlod,fi%atoms%ntype,fi%input%jspins))
 
-    IF (fi%input%l_wann.OR.l_socvec) THEN
+    IF (fi%input%l_wann.OR.l_socvec.OR.fi%wannierlib%l_wannierize) THEN
        wannierspin = 2
     ELSE
        wannierspin = fi%input%jspins
@@ -136,7 +136,8 @@ CONTAINS
 
        CALL timestart("eigenso: alineso")
        CALL alineso(eig_id,lapw, fmpi,fi%atoms,sym_l,fi%kpts,&
-       fi%input,fi%noco,nococonv,fi%cell, nk,usdus,rsoc,nsz,nmat, eig_so,zso)
+       fi%input,fi%noco,nococonv,fi%cell, nk,usdus,rsoc,nsz,nmat, eig_so,zso,&
+       l_wann_store=fi%input%l_wann .OR. fi%wannierlib%l_wannierize)
        CALL timestop("eigenso: alineso")
        IF (fmpi%irank.EQ.0) THEN
           WRITE (oUnit,FMT=8010) nk,nsz
@@ -190,14 +191,16 @@ CONTAINS
         results%unfolding_weights = CMPLX(0.0,0.0)
         CALL MPI_ALLREDUCE(unfoldingBuffer,results%unfolding_weights,SIZE(results%unfolding_weights,1)*SIZE(results%unfolding_weights,2)*SIZE(results%unfolding_weights,3),MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
     END IF
-    CALL MPI_ALLREDUCE(neigBuffer,results%neig,fi%kpts%nkpt*wannierspin,MPI_INTEGER,MPI_SUM,fmpi%mpi_comm,ierr)
-    CALL MPI_ALLREDUCE(eigBuffer(:2*fi%input%neig,:,:),results%eig(:2*fi%input%neig,:,:),&
-                       2*fi%input%neig*fi%kpts%nkpt*wannierspin,MPI_DOUBLE_PRECISION,MPI_MIN,fmpi%mpi_comm,ierr)
+    ! results%neig/eig se alocan con input%jspins slots; eigBuffer tiene wannierspin(=2).
+    ! Reducir solo :input%jspins evita un out-of-bounds (autovalores SOC iguales en ambos slots).
+    CALL MPI_ALLREDUCE(neigBuffer(:,:fi%input%jspins),results%neig,fi%kpts%nkpt*fi%input%jspins,MPI_INTEGER,MPI_SUM,fmpi%mpi_comm,ierr)
+    CALL MPI_ALLREDUCE(eigBuffer(:2*fi%input%neig,:,:fi%input%jspins),results%eig(:2*fi%input%neig,:,:),&
+                       2*fi%input%neig*fi%kpts%nkpt*fi%input%jspins,MPI_DOUBLE_PRECISION,MPI_MIN,fmpi%mpi_comm,ierr)
     CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
 #else
     results%unfolding_weights(:,:,:) = unfoldingBuffer(:,:,:)
-    results%neig(:,:) = neigBuffer(:,:)
-    results%eig(:2*fi%input%neig,:,:) = eigBuffer(:2*fi%input%neig,:,:)
+    results%neig(:,:) = neigBuffer(:,:fi%input%jspins)
+    results%eig(:2*fi%input%neig,:,:) = eigBuffer(:2*fi%input%neig,:,:fi%input%jspins)
 #endif
 
     RETURN

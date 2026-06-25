@@ -62,6 +62,8 @@ CONTAINS
       TYPE(t_abc) :: abc(atoms%ntype)
       LOGICAL :: l_wannierlib_spinors
       LOGICAL :: l_nocosoc
+      LOGICAL :: l_real_wann
+      INTEGER :: jspin_rad
       CHARACTER(LEN=7) :: amn_file
       CHARACTER(LEN=3) :: spin12(2)
       INTEGER :: ik_local, nk_local
@@ -70,6 +72,9 @@ CONTAINS
 
       l_wannierlib_spinors = noco%l_noco .OR. noco%l_soc
       l_nocosoc = noco%l_noco .AND. (.NOT. noco%l_soc)
+      ! A.1: input%l_real queda TRUE con inversion aunque haya SOC (n_denmat=0);
+      ! leer un espinor complejo en buffer real mata la parte imaginaria del MMN.
+      l_real_wann = input%l_real .AND. .NOT. noco%l_soc
       spin12 = (/'WF1', 'WF2'/)
 
       !Setup of data structures for amn and mmn calculation for all k-points
@@ -105,26 +110,29 @@ CONTAINS
          IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating local mmn buffer', calledby='wannierlib_main')
 
          DO jspin_comp = MERGE(1, jspin, l_wannierlib_spinors), MERGE(2, jspin, l_wannierlib_spinors)
-            CALL wannierlib_ujugaunt(atoms, cell, nntot_w90, kdiff, radfun, radfun, jspin_comp, jspin_comp, .FALSE., 1, ujug)
+            ! jspin_comp = record del eig (spinor up/down). jspin_rad = indice radial:
+            ! con jspins=1 solo existe 1 set de radiales -> usar 1 para ambas componentes.
+            jspin_rad = MERGE(1, jspin_comp, input%jspins == 1)
+            CALL wannierlib_ujugaunt(atoms, cell, nntot_w90, kdiff, radfun, radfun, jspin_rad, jspin_rad, .FALSE., 1, ujug)
 
             ik_local = 0
             DO ikpt = 1, kpts%nkptf
                CALL wannierlib_get_z(this, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, &
-                                     ikpt, jspin_comp, input%l_real, lapw, zMat)
+                                     ikpt, jspin_comp, l_real_wann, lapw, zMat)
 
                DO itype = 1, atoms%ntype
                   CALL abc(itype)%init(input, atoms, radfun(itype)%n_r, this%num_bands, itype)
                   CALL abc(itype)%calc_abc(input, atoms, sym, cell, lapw, this%num_bands, usdus, &
-                                           noco, nococonv, jspin_comp, itype, zMat)
+                                           noco, nococonv, jspin_rad, itype, zMat)
                END DO
 
-               CALL wannierlib_amn(this, atoms, kpts, ikpt, usdus, radfun, abc, l_nocosoc, jspin_comp, amn(:, :, ikpt))
+               CALL wannierlib_amn(this, atoms, kpts, ikpt, usdus, radfun, abc, l_nocosoc, jspin_comp, jspin_rad, amn(:, :, ikpt))
 
                IF (distk(ikpt) == fmpi%irank) THEN
                   ik_local = ik_local + 1
                   CALL wannierlib_mmnkb(this, this%num_bands, nntot_w90, ikpt, kpts, nnkp, gkpb, kdiff, &
                                         ujug, atoms, cell, input, sym, noco, nococonv, usdus, &
-                                        radfun, abc, jspin_comp, eig_id, stars, lapw, zMat, mmn, ik_local)
+                                        radfun, abc, jspin_comp, jspin_rad, eig_id, stars, lapw, zMat, mmn, ik_local)
                END IF
             END DO
 

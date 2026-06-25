@@ -221,7 +221,8 @@ CONTAINS
 
       ! Open/allocate eigenvector storage
       CALL timestart("Open/allocate eigenvector storage")
-      IF (fi%noco%l_soc .AND. fi%input%l_wann) THEN
+      IF (fi%noco%l_soc .AND. .NOT.fi%noco%l_noco .AND. &
+          (fi%input%l_wann .OR. fi%wannierlib%l_wannierize)) THEN
          ! Weed up and down spinor components for SOC MLWFs.
          ! When jspins=1 Fleur usually writes only the up-spinor into the eig-file.
          ! Make sure we always get up and down spinors when SOC=true.

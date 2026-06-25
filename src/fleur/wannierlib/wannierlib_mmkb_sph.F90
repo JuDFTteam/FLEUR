@@ -49,16 +49,15 @@ CONTAINS
             phasefac = CMPLX(rph, cph)
 
             lm = atoms%lmax(n)**2
-            ALLOCATE(cof_b_u(size(mmn, 2), lm + 1))
             DO r1 = 1, maxval(abc(n)%n_r)
                DO r2 = 1, maxval(abc_b(n)%n_r)
-                  CALL zgemm('N', 'N', size(mmn, 2), lm + 1, lm + 1,                        &
-                             CMPLX(1.0, 0.0), conjg(abc_b(n)%cof(:, 0:lm, r2, nn)),         &
-                             size(abc_b(n)%cof, 1), ujug(0:lm, 0:lm, r1, r2, n, nene),      &
-                             lm + 1, CMPLX(0.0, 0.0), cof_b_u, size(mmn, 2))
-                  CALL zgemm('N', 'T', size(mmn, 1), size(mmn, 2), lm + 1, phasefac,         &
-                             abc(n)%cof(:, 0:lm, r1, nn), size(abc(n)%cof, 1), cof_b_u,      &
-                             size(mmn, 2), CMPLX(1.0, 0.0), mmn, size(mmn, 1))
+                  ! M_MT = phasefac * A . (conjg(B).ujug)^T  (convencion de Daniel:
+                  ! conjg(abc_b) aqui + mmn=conjg(mmn) en main). Se usa matmul porque el
+                  ! zgemm previo pasaba ujug rebanado con leading-dim lm+1 (en vez de
+                  ! lmd+1, como el clasico) -> MKL rechazaba (params 8/10) y la parte MT
+                  ! quedaba en 0. Equivalente exacto a la intencion del zgemm.
+                  mmn = mmn + phasefac*matmul(abc(n)%cof(:, 0:lm, r1, nn), &
+                        transpose(matmul(conjg(abc_b(n)%cof(:, 0:lm, r2, nn)), ujug(0:lm, 0:lm, r1, r2, n, nene))))
                enddo
                   !DO l = 0, atoms%lmax(n)
                   !   ll = l*(l + 1)
@@ -80,7 +79,6 @@ CONTAINS
                   !END DO
                !END DO
             END DO
-            DEALLOCATE(cof_b_u)
 
          END DO
       END DO

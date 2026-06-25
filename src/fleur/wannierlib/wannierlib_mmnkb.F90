@@ -27,7 +27,7 @@ MODULE m_wannierlib_mmnkb
 CONTAINS
 
   SUBROUTINE wannierlib_mmnkb(this, num_bands, nntot, nk, kpts, nnkp, gkpb, kdiff, ujug, atoms, cell, input, sym, noco, nococonv, usdus, &
-                              radfun, abc, jspin, eig_id, stars, lapw, zMat, mmn, nk_local)
+                              radfun, abc, jspin, jspin_rad, eig_id, stars, lapw, zMat, mmn, nk_local)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
     INTEGER, INTENT(IN) :: num_bands
     INTEGER, INTENT(IN) :: nntot
@@ -46,7 +46,8 @@ CONTAINS
     TYPE(t_usdus), INTENT(IN) :: usdus
     TYPE(t_radfun), INTENT(IN) :: radfun(atoms%ntype)
     TYPE(t_abc), INTENT(IN) :: abc(:)
-    INTEGER, INTENT(IN) :: jspin
+    INTEGER, INTENT(IN) :: jspin       ! spin fisico (record del eig)
+    INTEGER, INTENT(IN) :: jspin_rad   ! indice radial (=1 si jspins=1)
     INTEGER, INTENT(IN) :: eig_id
     TYPE(t_stars), INTENT(IN) :: stars
     TYPE(t_lapw), INTENT(IN) :: lapw
@@ -58,6 +59,7 @@ CONTAINS
     TYPE(t_abc) :: abc_b(atoms%ntype)
     TYPE(t_lapw) :: lapw_b
     INTEGER :: kk, nk_b, itype
+    LOGICAL :: l_real_wann
 
     IF (.NOT.ALLOCATED(mmn)) THEN
       IF ((num_bands > 0) .AND. (kpts%nkpt > 0) .AND. (nntot > 0)) THEN
@@ -66,15 +68,16 @@ CONTAINS
       END IF
     END IF
   
+    l_real_wann = input%l_real .AND. .NOT. noco%l_soc
     DO kk = 1, nntot
       nk_b = nnkp(nk, kk)
-      CALL wannierlib_get_z(this, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, nk_b, jspin, input%l_real, lapw_b, zMat_b)
+      CALL wannierlib_get_z(this, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, nk_b, jspin, l_real_wann, lapw_b, zMat_b)
       DO itype = 1, atoms%ntype
          CALL abc_b(itype)%init(input, atoms, radfun(itype)%n_r, num_bands, itype)
-         CALL abc_b(itype)%calc_abc(input, atoms, sym, cell, lapw_b, num_bands, usdus, noco, nococonv, jspin, itype, zMat_b)
+         CALL abc_b(itype)%calc_abc(input, atoms, sym, cell, lapw_b, num_bands, usdus, noco, nococonv, jspin_rad, itype, zMat_b)
       END DO
 
-      CALL wannierlib_mmnkb_int(stars, lapw, lapw_b, jspin, jspin, zMat, zMat_b, gkpb(:, nk, kk), mmn(:, :, kk, nk_local))
+      CALL wannierlib_mmnkb_int(stars, lapw, lapw_b, jspin_rad, jspin_rad, zMat, zMat_b, gkpb(:, nk, kk), mmn(:, :, kk, nk_local))
       CALL wannierlib_mmkb_sph(atoms, abc, abc_b, kpts%bkf(:, nnkp(nk, kk)), gkpb(:, nk, kk), kpts%bkf(:, nk), ujug, kdiff, nntot, mmn(:, :, kk, nk_local))
     END DO
 

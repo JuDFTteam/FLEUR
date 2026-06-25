@@ -7,7 +7,7 @@ MODULE m_alineso
   !----------------------------------------------------------------------
 CONTAINS
   SUBROUTINE alineso(eig_id,lapw,fmpi,atoms,sym,kpts,input,noco,nococonv,&
-                     cell , nk, usdus,rsoc,nsize,nmat, eig_so,zso)
+                     cell , nk, usdus,rsoc,nsize,nmat, eig_so,zso, l_wann_store)
 
     USE m_types
     USE m_constants
@@ -37,6 +37,7 @@ CONTAINS
     !     .. Array Arguments ..
     COMPLEX, INTENT (OUT) :: zso(:,:,:)!(lapw%dim_nbasfcn(),2*input%neig,wannierspin)
     REAL,    INTENT (OUT) :: eig_so(2*input%neig)
+    LOGICAL, INTENT (IN), OPTIONAL :: l_wann_store  ! guardar ambos spinors (wannier/wannierlib)
     !-odim
     !+odim
     !     ..
@@ -46,6 +47,7 @@ CONTAINS
     INTEGER   idim_c,idim_r,jsp2,nbas,j1,ierr
     CHARACTER vectors 
     LOGICAL   l_socvec,l_qsgw,l_open
+    LOGICAL   l_store   ! efectivo: input%l_wann o forzado por wannierlib
     INTEGER   irec,irecl_qsgw
     INTEGER nat_l, extra, nat_start, nat_stop
     COMPLEX   cdum
@@ -67,6 +69,9 @@ CONTAINS
 
     !     read from eigenvalue and -vector file
     !
+
+    l_store = input%l_wann
+    IF (PRESENT(l_wann_store)) l_store = l_store .OR. l_wann_store
 
     zmat%l_real=input%l_real
     zMat(1:input%jspins)%matsize1=lapw%nv(1:input%jspins)+atoms%nlotot
@@ -299,7 +304,7 @@ else
           jsp = i1
           jsp2= i1
           IF (input%jspins.EQ.1) jsp = 1
-          IF (input%jspins.EQ.1 .AND..NOT.(input%l_wann.OR.l_socvec)) jsp2=1
+          IF (input%jspins.EQ.1 .AND..NOT.(l_store.OR.l_socvec)) jsp2=1
           IF (i1.EQ.1) nn = 0
           IF (i1.EQ.2) nn = nsz(1)
 

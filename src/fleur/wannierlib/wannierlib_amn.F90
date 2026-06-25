@@ -21,7 +21,7 @@ MODULE m_wannierlib_amn
   IMPLICIT NONE
 CONTAINS
 
-  SUBROUTINE wannierlib_amn(wannierlib, atoms, kpts, ikpt, usdus, radfun, abc, l_nocosoc, jspin, amn)
+  SUBROUTINE wannierlib_amn(wannierlib, atoms, kpts, ikpt, usdus, radfun, abc, l_nocosoc, jspin, jspin_rad, amn)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: wannierlib
     TYPE(t_atoms), INTENT(IN) :: atoms
     TYPE(t_kpts), INTENT(IN) :: kpts
@@ -30,7 +30,8 @@ CONTAINS
     TYPE(t_radfun), INTENT(IN) :: radfun(atoms%ntype)
     TYPE(t_abc), INTENT(IN) :: abc(atoms%ntype)
     LOGICAL, INTENT(IN) :: l_nocosoc
-    INTEGER, INTENT(IN) :: jspin
+    INTEGER, INTENT(IN) :: jspin       ! spin fisico (filtro de proyecciones)
+    INTEGER, INTENT(IN) :: jspin_rad   ! indice radial (=1 si jspins=1)
     COMPLEX, INTENT(INOUT) :: amn(:,:)
     
     INTEGER :: nwf, nat_local, ntyp, ne, l, m, lm, j, mp, ir
@@ -50,7 +51,7 @@ CONTAINS
     
     CALL timestart('wannierlib_amn')
 
-    CALL wannierlib_rad_twd(wannierlib, atoms, wannierlib%num_wann, ikpt, usdus, radfun, jspin, rads)
+    CALL wannierlib_rad_twd(wannierlib, atoms, wannierlib%num_wann, ikpt, usdus, radfun, jspin_rad, rads)
 
     tlmwf = CMPLX(0.0, 0.0)
     tlmwft = CMPLX(0.0, 0.0)
@@ -95,8 +96,8 @@ CONTAINS
           proj_int(:) = 0.0
           DO j = 1, abc(ntyp)%n_r(l)
             DO ir = 1, atoms%jri(ntyp)
-              vlpr(ir) = radfun(ntyp)%r(ir, 1, j, l, jspin) * rads(nwf, l, ir, 1) + &
-                         radfun(ntyp)%r(ir, 2, j, l, jspin) * rads(nwf, l, ir, 2)
+              vlpr(ir) = radfun(ntyp)%r(ir, 1, j, l, jspin_rad) * rads(nwf, l, ir, 1) + &
+                         radfun(ntyp)%r(ir, 2, j, l, jspin_rad) * rads(nwf, l, ir, 2)
               IF (wannierlib%proj_rwf(nwf) > 0) THEN
                 vlpr(ir) = vlpr(ir) * atoms%rmsh(ir, ntyp)
               END IF
