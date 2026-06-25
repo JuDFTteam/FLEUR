@@ -40,6 +40,7 @@ src/fleur/dfpt/types_phonon.F90
 src/fleur/dfpt/types_efield.F90
 src/fleur/dfpt/types_BEC.F90
 src/fleur/dfpt/types_bfield.F90
+src/fleur/dfpt/matrix_interpolation.F90
 src/fleur/dfpt/superconductivity/dfpt_elph_mat.F90
 src/fleur/dfpt/superconductivity/dfpt_tetra_double.F90
 src/fleur/dfpt/superconductivity/dfpt_tetra_single.F90

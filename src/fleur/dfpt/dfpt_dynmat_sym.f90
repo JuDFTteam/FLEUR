@@ -100,10 +100,13 @@ CONTAINS
       END DO
    END SUBROUTINE
 
-   subroutine ft_fcm_weight(ft_lim,bigBoxLim,weights,bqpt,dyn_mat_q,dyn_mat_r)
+   subroutine ft_fcm_weight(isn,ft_lim,bigBoxLim,weights,bqpt,dyn_mat_q,dyn_mat_r)
       ! Fourier transform for a fourier transform from a bigger box
       ! make use of weights to enforce correct periodicity 
+      ! isn =  1 : k -> r 
+      ! isn = -1 : r -> k
 
+      integer, intent(in) :: isn 
       integer, intent(in) :: ft_lim(2,3), bigBoxlim(2,3)
       real,    intent(in) :: bqpt(3)
       real,    intent(in) :: weights(:)
@@ -120,7 +123,7 @@ CONTAINS
          do iy=bigBoxlim(1,2),bigBoxlim(2,2)
             do ix=bigBoxlim(1,1),bigBoxlim(2,1)
                iGrid = iGrid+1
-               phas=-1*tpi_const*(bqpt(1)*ix+bqpt(2)*iy+bqpt(3)*iz)
+               phas=isn*tpi_const*(bqpt(1)*ix+bqpt(2)*iy+bqpt(3)*iz)
                phase_fac=cmplx(cos(phas),sin(phas))
                ! map to smaller box using ft_lim bounds
                nx = ft_lim(1,1) + modulo(ix - ft_lim(1,1), ft_lim(2,1) - ft_lim(1,1) + 1)
@@ -238,7 +241,7 @@ CONTAINS
       allocate(dyn_mat_q(dyn_dim,dyn_dim))
       dyn_mat_q(:,:) = cmplx(0.0,0.0)
 
-      call ft_fcm_weight(ft_lim,bigBox_lim,weights,bqpt,dyn_mat_q,dyn_mat_r)
+      call ft_fcm_weight(-1,ft_lim,bigBox_lim,weights,bqpt,dyn_mat_q,dyn_mat_r)
     
    END SUBROUTINE
 
