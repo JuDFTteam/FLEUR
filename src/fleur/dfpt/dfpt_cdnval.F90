@@ -255,7 +255,7 @@ SUBROUTINE dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,
                                        !In future this could perhaps be generalized according to code in cdnval. The two following if statements have to be understood in this context then.
                
                IF (sternheimerJob%l_IBScorrection.and.idtype==itype) THEN
-                  call abcpref(ispin)%init(input, atoms, radfun(itype)%n_r, noccbd, itype)
+                  call abcpref(ispin)%init(input, atoms, noccbd, itype)
                   call abcpref(ispin)%calc_abc(input, atoms, sym, cell, lapw, noccbd, usdus, noco, nococonv, ispin, itype, zMatPref)
                   abc1(ispin)%cof=abc1(ispin)%cof+abcpref(ispin)%cof
                END IF

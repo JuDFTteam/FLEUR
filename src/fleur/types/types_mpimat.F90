@@ -431,7 +431,7 @@ CONTAINS
       INTEGER, INTENT(IN) ::n1, n2
       INTEGER, INTENT(IN), OPTIONAL :: m1, m2  !> offsets into source matrix
       INTEGER :: irank, err, s1, s2
-
+      LOGICAL :: can_use_fast_redist
       call timestart("mpimat_copy")
 
       s1 = 1; if (present(m1)) s1 = m1

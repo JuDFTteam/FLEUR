@@ -84,7 +84,7 @@ CONTAINS
         type(t_radfun) :: radfun
       INTEGER :: num_bands
       integer :: n, l, m, lm, ll1, jcof, icof
-        integer :: i, j, i1, j1, na, lm1, m1
+        integer :: i, j, j0, i1, j1, na, lm1, m1
         complex :: cof_lm
 
 
@@ -116,7 +116,11 @@ CONTAINS
          
          DO j1=1,2
             DO i1=1,2
-               DO j = 1,num_bands
+               !Distribute the column (ket) band index row-cyclically over the
+               !sub_comm group; for n_size==1/n_rank==0 this is the full 1..num_bands
+               !loop with j0==j, i.e. identical to the serial case.
+               DO j = this%fmpi%n_rank+1, num_bands, this%fmpi%n_size
+                  j0 = (j-1)/this%fmpi%n_size + 1
                   DO na = 1, this%atoms%neq(n)
                      DO l = 1,this%atoms%lmax(n)
                         ll1 = l*(l+1)
@@ -130,7 +134,7 @@ CONTAINS
                               ENDDO
                               DO icof=1,abc(1)%n_r(l)
                                  DO i=1, num_bands
-                                    mat(i1,j1)%data_c(i,j) = mat(i1,j1)%data_c(i,j) +&
+                                    mat(i1,j1)%data_c(i,j0) = mat(i1,j1)%data_c(i,j0) +&
                                     abc(i1)%cof(i,lm,icof,na)*this%rsoc%rso(icof,jcof,n,l,i1,j1)*cof_lm
                                  ENDDO
                               ENDDO
