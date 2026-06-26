@@ -113,11 +113,12 @@ CONTAINS
 #endif
   END SUBROUTINE init_w90
 
-  SUBROUTINE run_w90(this, mmn, amn, eig)
+  SUBROUTINE run_w90(this, mmn, amn, eig, u_matrix_out)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
     COMPLEX, TARGET, INTENT(IN) :: mmn(:, :, :, :)
     COMPLEX, TARGET, INTENT(IN) :: amn(:, :, :)
     REAL, TARGET, INTENT(IN) :: eig(:, :)
+    COMPLEX, ALLOCATABLE, INTENT(OUT) :: u_matrix_out(:, :, :)
 
     INTEGER :: ierr,num_kpts
     COMPLEX, ALLOCATABLE :: u_matrix(:, :, :), mmn_local(:, :, :, :), amn_local(:, :, :)
@@ -141,7 +142,6 @@ CONTAINS
   IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating amn buffer', calledby='run_w90')
   mmn_local = mmn
   amn_local = amn
-    !TODO u_matrix should be stored (in results)  
     CALL w90_set_eigval(wannierlib_w90main, eig)
   CALL w90_set_m_local(wannierlib_w90main, mmn_local)
   CALL w90_set_u_opt(wannierlib_w90main, amn_local)
@@ -157,6 +157,9 @@ CONTAINS
 
     CALL w90_wannierise(wannierlib_w90main, oUnit, oUnit, ierr)
     IF (ierr /= 0) CALL juDFT_error('w90_wannierise failed in wannierlib adapter', calledby='run_w90')
+
+    ALLOCATE(u_matrix_out(this%num_wann, this%num_wann, num_kpts))
+    u_matrix_out = u_matrix
     call timestop('run_w90')
 #endif
   END SUBROUTINE run_w90

@@ -26,6 +26,7 @@ MODULE m_wannierlib_main
    USE m_types_radfun
    USE m_types_abc
    USE m_types_wannierlib
+   use m_npy
 
    use m_wann_write_amn
    IMPLICIT NONE
@@ -44,12 +45,13 @@ CONTAINS
       TYPE(t_enpara), INTENT(IN) :: enpara
       TYPE(t_mpi), INTENT(IN) :: fmpi
       TYPE(t_potden), INTENT(IN) :: vtot
-      TYPE(t_results), INTENT(IN) :: results
+      TYPE(t_results), INTENT(INOUT) :: results
       INTEGER, INTENT(IN) :: eig_id
 
       INTEGER :: ikpt, itype, nntot_w90, ierr, jspin, jspin_comp
       COMPLEX, ALLOCATABLE :: amn(:, :, :)
       COMPLEX, ALLOCATABLE :: mmn(:, :, :, :)
+      COMPLEX, ALLOCATABLE :: u_matrix_out(:, :, :)
       COMPLEX, ALLOCATABLE :: ujug(:, :, :, :, :, :)
       REAL, ALLOCATABLE :: kdiff(:, :)
       INTEGER, ALLOCATABLE :: nnkp(:, :), gkpb(:, :, :)
@@ -144,7 +146,16 @@ CONTAINS
          END IF
 
          call wannierlib_create_eig(this, results, kpts, MERGE(1, jspin, l_wannierlib_spinors), eig)
-         CALL run_w90(this, mmn, amn, eig)
+         CALL run_w90(this, mmn, amn, eig, u_matrix_out)
+         IF (ALLOCATED(u_matrix_out)) THEN
+            IF (.NOT. ALLOCATED(results%U_mat)) THEN
+               ALLOCATE(results%U_mat(this%num_wann, this%num_wann, kpts%nkptf, input%jspins))
+               results%U_mat = CMPLX(0.0, 0.0)
+            END IF
+            results%U_mat(:, :, :, jspin) = u_matrix_out
+            DEALLOCATE(u_matrix_out)
+         END IF
+
          if (fmpi%isize == 1) CALL report_w90(this)
 
          IF (ALLOCATED(amn)) DEALLOCATE (amn)
