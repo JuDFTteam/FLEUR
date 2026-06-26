@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_local_Hamiltonian
    USE m_judft
    IMPLICIT NONE
@@ -20,7 +25,7 @@ CONTAINS
       ! etc. In the diagonal case, Cholesky decompose the nonspherical part of
       ! the Hamiltonian by shifting the diagonal part upwards until the matrix
       ! is positive-definite.
-      USE m_spnorb
+      USE m_constants
       USE m_tlmplm
       USE m_types
     
@@ -46,7 +51,7 @@ CONTAINS
 
       ! Local Scalars
       INTEGER :: l,lm,j1,j2,jsp
-      INTEGER :: n,m,s
+      INTEGER :: n,m,s,i_hia
       COMPLEX :: one
 
       CALL timestart("local_hamiltonian")
@@ -99,7 +104,21 @@ CONTAINS
 
       !Setup of soc parameters for first-variation SOC
       IF (noco%l_soc.AND.noco%l_noco.AND..NOT.noco%l_ss) THEN
-         CALL spnorb(atoms,noco,nococonv,input,fmpi,enpara,v%mt,ud,td%rsoc,.FALSE.,hub1inp,hub1data)
+         ! Fill the unified radial SOC matrix rsoc%rso used by hsmt_soc_offdiag.
+         ! (This replaces the former spnorb call; the angular matrix elements are
+         ! built from the Pauli matrices in hsmt_soc_offdiag, so soangl is not needed.)
+         IF (.NOT.ALLOCATED(td%rsoc%rso)) CALL td%rsoc%init(atoms)
+         CALL td%rsoc%rad_matrix(atoms,noco,nococonv,input,fmpi,enpara,v)
+         ! Derive the Hubbard-1 SOC parameter xi from the radial matrix element
+         ! <u|V_SO|u> = rso(1,1,...) (formerly taken from rsopp in spnorb).
+         IF (fmpi%irank==0) THEN
+            DO i_hia = 1, atoms%n_hia
+               IF (hub1inp%l_soc_given(i_hia)) CYCLE
+               n = atoms%lda_u(atoms%n_u+i_hia)%atomType
+               l = atoms%lda_u(atoms%n_u+i_hia)%l
+               hub1data%xi(i_hia) = 2.0*td%rsoc%rso(1,1,n,l,1,1)*hartree_to_ev_const
+            END DO
+         END IF
       END IF
       CALL timestop("local_hamiltonian")
    END SUBROUTINE 
