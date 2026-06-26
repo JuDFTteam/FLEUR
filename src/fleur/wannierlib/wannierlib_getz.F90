@@ -48,9 +48,11 @@ CONTAINS
 
     CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell)
 
+    ! noco: el espinor 2N esta en UN solo record (jspin=1). Para noco leemos siempre el
+    ! record 1 y devolvemos el 2N COMPLETO; abcof/mmkb_int extraen el spin via offsets.
     nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*atoms%nlotot, lapw%nv(1) + atoms%nlotot, noco%l_noco)
     CALL zMat%init(l_real, nbasfcn, num_selected)
-    CALL read_eig(eig_id, nk, jspin, list=ev_list, zmat=zMat,&
+    CALL read_eig(eig_id, nk, MERGE(1, jspin, noco%l_noco), list=ev_list, zmat=zMat,&
           kpts=kpts,input=input,noco=noco,nococonv=nococonv,sym=sym,atoms=atoms,cell=cell)
 
     DEALLOCATE(ev_list)

@@ -12,7 +12,7 @@ MODULE m_wannierlib_mmkb_int
   IMPLICIT NONE
 CONTAINS
 
-  SUBROUTINE wannierlib_mmnkb_int(stars, lapw, lapw_b, jspin, jspin_b, zMat, zMat_b, gb, mmnk)
+  SUBROUTINE wannierlib_mmnkb_int(stars, lapw, lapw_b, jspin, jspin_b, zMat, zMat_b, gb, mmnk, ioff, ioff_b)
     TYPE(t_stars), INTENT(IN) :: stars
     TYPE(t_lapw), INTENT(IN) :: lapw
     TYPE(t_lapw), INTENT(IN) :: lapw_b
@@ -22,6 +22,7 @@ CONTAINS
     TYPE(t_mat), INTENT(IN) :: zMat_b
     INTEGER, INTENT(IN) :: gb(3)
     COMPLEX, INTENT(INOUT) :: mmnk(:,:)
+    INTEGER, INTENT(IN), OPTIONAL :: ioff, ioff_b   ! offset noco al bloque spin-down (nv(1)+nlotot)
 
     INTEGER :: nbnd
     COMPLEX, ALLOCATABLE :: stepf_c(:, :)
@@ -31,10 +32,13 @@ CONTAINS
     REAL, ALLOCATABLE :: mmnk_tmp(:, :)
     INTEGER :: i, j1, j2, j3, i1, i2, i3, j, in
     COMPLEX :: phasefac
+    INTEGER :: io, io_b
 
     CALL timestart("wannierlib_mmnkb_int")
 
     nbnd=size(mmnk, 1)
+    io = 0;   IF (PRESENT(ioff))   io   = ioff
+    io_b = 0; IF (PRESENT(ioff_b)) io_b = ioff_b
     
 
     IF (zMat%l_real) THEN
@@ -69,19 +73,19 @@ CONTAINS
 
     IF (zMat%l_real) THEN
       CALL dgemm('T', 'N', lapw%nv(jspin), nbnd, lapw_b%nv(jspin_b), REAL(1.0), &
-                 stepf_r, lapw_b%nv(jspin_b), zMat_b%data_r(1 , 1), zMat_b%matsize1, &
+                 stepf_r, lapw_b%nv(jspin_b), zMat_b%data_r(1+io_b, 1), zMat_b%matsize1, &
                  REAL(0.0), phasusbmat_r, lapw%nv(jspin))
       CALL dgemm('T', 'N', nbnd, nbnd, lapw%nv(jspin), REAL(1.0), &
-                 zMat%data_r(1 , 1), zMat%matsize1, phasusbmat_r, lapw%nv(jspin), &
+                 zMat%data_r(1+io, 1), zMat%matsize1, phasusbmat_r, lapw%nv(jspin), &
                  REAL(0.0), mmnk_tmp, nbnd)
       mmnk(1:nbnd, 1:nbnd) = mmnk(1:nbnd, 1:nbnd) + mmnk_tmp(1:nbnd, 1:nbnd) 
     ELSE
       CALL zgemm('T', 'N', lapw%nv(jspin), nbnd, lapw_b%nv(jspin_b), CMPLX(1.0), &
-                 stepf_c, lapw_b%nv(jspin_b), zMat_b%data_c(1 , 1), zMat_b%matsize1, CMPLX(0.0), &
+                 stepf_c, lapw_b%nv(jspin_b), zMat_b%data_c(1+io_b, 1), zMat_b%matsize1, CMPLX(0.0), &
                  phasusbmat_c, lapw%nv(jspin))
       phasusbmat_c = CONJG(phasusbmat_c)
       CALL zgemm('T', 'N', nbnd, nbnd, lapw%nv(jspin), CMPLX(1.0, 0.0), &
-                 zMat%data_c(1 , 1), zMat%matsize1, phasusbmat_c, lapw%nv(jspin), &
+                 zMat%data_c(1+io, 1), zMat%matsize1, phasusbmat_c, lapw%nv(jspin), &
                  CMPLX(1.0, 0.0), mmnk, nbnd)
     END IF
 

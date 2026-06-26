@@ -77,7 +77,9 @@ CONTAINS
          CALL abc_b(itype)%calc_abc(input, atoms, sym, cell, lapw_b, num_bands, usdus, noco, nococonv, jspin_rad, itype, zMat_b)
       END DO
 
-      CALL wannierlib_mmnkb_int(stars, lapw, lapw_b, jspin_rad, jspin_rad, zMat, zMat_b, gkpb(:, nk, kk), mmn(:, :, kk, nk_local))
+      CALL wannierlib_mmnkb_int(stars, lapw, lapw_b, jspin_rad, jspin_rad, zMat, zMat_b, gkpb(:, nk, kk), mmn(:, :, kk, nk_local), &
+                                ioff=MERGE(lapw%nv(1)+atoms%nlotot, 0, noco%l_noco .AND. jspin==2), &
+                                ioff_b=MERGE(lapw_b%nv(1)+atoms%nlotot, 0, noco%l_noco .AND. jspin==2))
       CALL wannierlib_mmkb_sph(atoms, abc, abc_b, kpts%bkf(:, nnkp(nk, kk)), gkpb(:, nk, kk), kpts%bkf(:, nk), ujug, kdiff, nntot, mmn(:, :, kk, nk_local))
     END DO
 
