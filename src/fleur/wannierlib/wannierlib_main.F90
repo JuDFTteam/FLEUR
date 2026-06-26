@@ -26,7 +26,6 @@ MODULE m_wannierlib_main
    USE m_types_radfun
    USE m_types_abc
    USE m_types_wannierlib
-   use m_npy
 
    use m_wann_write_amn
    IMPLICIT NONE
