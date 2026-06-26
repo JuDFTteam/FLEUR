@@ -85,6 +85,9 @@ src/fleur/wannier/bs_comfort.F
 src/fleur/wannier/wann_socmatvec_rs.F
 )
 set(fleur_F90 ${fleur_F90}
+src/fleur/wannier/sorad.f90
+src/fleur/wannier/vso.f90
+src/fleur/wannier/spnorb.f90
 src/fleur/wannier/hsoham.F90
 src/fleur/wannier/init_wannier_defaults.f90
 src/fleur/wannier/wann_read_inp.F90

@@ -66,8 +66,7 @@ CONTAINS
 
     SUBROUTINE secvar_soc(eig_id, fmpi, nococonv, vTot, enpara, fi, results)
         use m_types 
-        USE m_spnorb
-
+      
         INTEGER,            INTENT(IN)    :: eig_id
         TYPE(t_mpi),        INTENT(INOUT) :: fmpi
         TYPE(t_nococonv),   INTENT(IN)    :: nococonv
@@ -96,7 +95,6 @@ CONTAINS
         sym_l%ngopr = 1
 
         ! Compute radial spin-orbit matrix elements
-        !CALL spnorb(fi%atoms, fi%noco, nococonv, fi%input, fmpi, enpara, vTot%mt, usdus, rsoc, .TRUE.)
         call rsoc%init(fi%atoms)
         call rsoc%rad_matrix(fi%atoms, fi%noco, nococonv, fi%input, fmpi, enpara, vTot)
         call rsoc%angles(fi%atoms,fmpi,nococonv%theta,nococonv%phi)

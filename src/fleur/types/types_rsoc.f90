@@ -10,9 +10,6 @@ module m_types_rsoc
   PUBLIC :: t_rsoc
  
   TYPE t_rsoc
-    REAL,ALLOCATABLE,DIMENSION(:,:,:,:) :: rsopp,rsoppd,rsopdp,rsopdpd     !(atoms%ntype,atoms%lmaxd,2,2)
-    REAL,ALLOCATABLE,DIMENSION(:,:,:,:) :: rsoplop,rsoplopd,rsopdplo,rsopplo!(atoms%ntype,atoms%nlod,2,2)
-    REAL,ALLOCATABLE,DIMENSION(:,:,:,:,:) :: rsoploplop !(atoms%ntype,atoms%nlod,nlod,2,2)
     COMPLEX,ALLOCATABLE,DIMENSION(:,:,:,:,:,:)::soangl
     real,allocatable :: rso(:,:,:,:,:,:) ! (icof,jcof,n_type,lmax,2,2)
     contains 

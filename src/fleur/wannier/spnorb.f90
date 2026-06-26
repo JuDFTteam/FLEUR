@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -11,6 +11,7 @@ MODULE m_spnorb
   !     and sets up the so - angular matrix elements (soangl)
   !     using the functions anglso and sgml.
   !*********************************************************************
+   implicit none
 CONTAINS
   SUBROUTINE spnorb(atoms,noco,nococonv,input,fmpi, enpara, vr, usdus, rsoc,l_angles,hub1inp,hub1data)
     USE m_sorad
@@ -40,15 +41,16 @@ CONTAINS
     !     ..
 
     !Allocate space for SOC matrix elements; set to zero at the same time
-    ALLOCATE(rsoc%rsopp  (atoms%ntype,atoms%lmaxd,2,2));rsoc%rsopp =0.0
-    ALLOCATE(rsoc%rsoppd (atoms%ntype,atoms%lmaxd,2,2));rsoc%rsoppd=0.0
-    ALLOCATE(rsoc%rsopdp (atoms%ntype,atoms%lmaxd,2,2));rsoc%rsopdp=0.0
-    ALLOCATE(rsoc%rsopdpd(atoms%ntype,atoms%lmaxd,2,2));rsoc%rsopdpd=0.0
-    ALLOCATE(rsoc%rsoplop (atoms%ntype,atoms%nlod,2,2));rsoc%rsoplop=0.0
-    ALLOCATE(rsoc%rsoplopd(atoms%ntype,atoms%nlod,2,2));rsoc%rsoplopd=0.0
-    ALLOCATE(rsoc%rsopdplo(atoms%ntype,atoms%nlod,2,2));rsoc%rsopdplo=0.0
-    ALLOCATE(rsoc%rsopplo (atoms%ntype,atoms%nlod,2,2));rsoc%rsopplo=0.0
-    ALLOCATE(rsoc%rsoploplop(atoms%ntype,atoms%nlod,atoms%nlod,2,2));rsoc%rsoploplop=0.0
+    ! Legacy rso* arrays removed from t_rsoc - commented out (see rsoc%rso).
+    !ALLOCATE(rsoc%rsopp  (atoms%ntype,atoms%lmaxd,2,2));rsoc%rsopp =0.0
+    !ALLOCATE(rsoc%rsoppd (atoms%ntype,atoms%lmaxd,2,2));rsoc%rsoppd=0.0
+    !ALLOCATE(rsoc%rsopdp (atoms%ntype,atoms%lmaxd,2,2));rsoc%rsopdp=0.0
+    !ALLOCATE(rsoc%rsopdpd(atoms%ntype,atoms%lmaxd,2,2));rsoc%rsopdpd=0.0
+    !ALLOCATE(rsoc%rsoplop (atoms%ntype,atoms%nlod,2,2));rsoc%rsoplop=0.0
+    !ALLOCATE(rsoc%rsoplopd(atoms%ntype,atoms%nlod,2,2));rsoc%rsoplopd=0.0
+    !ALLOCATE(rsoc%rsopdplo(atoms%ntype,atoms%nlod,2,2));rsoc%rsopdplo=0.0
+    !ALLOCATE(rsoc%rsopplo (atoms%ntype,atoms%nlod,2,2));rsoc%rsopplo=0.0
+    !ALLOCATE(rsoc%rsoploplop(atoms%ntype,atoms%nlod,atoms%nlod,2,2));rsoc%rsoploplop=0.0
     IF (l_angles) ALLOCATE(rsoc%soangl(atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2,&
          atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2))
 
@@ -64,7 +66,7 @@ CONTAINS
          IF(hub1inp%l_soc_given(i_hia)) CYCLE
          n = atoms%lda_u(atoms%n_u+i_hia)%atomType
          l = atoms%lda_u(atoms%n_u+i_hia)%l
-         IF(PRESENT(hub1data)) hub1data%xi(i_hia) = 2.0*rsoc%rsopp(n,l,1,1)*hartree_to_ev_const
+         !IF(PRESENT(hub1data)) hub1data%xi(i_hia) = 2.0*rsoc%rsopp(n,l,1,1)*hartree_to_ev_const
       ENDDO
     ENDIF
 
@@ -73,15 +75,15 @@ CONTAINS
     DO n= 1,atoms%ntype
        IF (ABS(noco%socscale(n)-1)>1E-5) THEN
           IF (fmpi%irank==0) WRITE(oUnit,"(a,i0,a,f10.8)") "Scaled SOC for atom ",n," by ",noco%socscale(n)
-          rsoc%rsopp(n,:,:,:)    = rsoc%rsopp(n,:,:,:)*noco%socscale(n)
-          rsoc%rsopdp(n,:,:,:)   = rsoc%rsopdp(n,:,:,:)*noco%socscale(n)
-          rsoc%rsoppd(n,:,:,:)   = rsoc%rsoppd(n,:,:,:)*noco%socscale(n)
-          rsoc%rsopdpd(n,:,:,:)  = rsoc%rsopdpd(n,:,:,:)*noco%socscale(n)
-          rsoc%rsoplop(n,:,:,:)  = rsoc%rsoplop(n,:,:,:)*noco%socscale(n)
-          rsoc%rsoplopd(n,:,:,:) = rsoc%rsoplopd(n,:,:,:)*noco%socscale(n)
-          rsoc%rsopdplo(n,:,:,:) = rsoc%rsopdplo(n,:,:,:)*noco%socscale(n)
-          rsoc%rsopplo(n,:,:,:)  = rsoc%rsopplo(n,:,:,:)*noco%socscale(n)
-          rsoc%rsoploplop(n,:,:,:,:) = rsoc%rsoploplop(n,:,:,:,:)*noco%socscale(n)
+          !rsoc%rsopp(n,:,:,:)    = rsoc%rsopp(n,:,:,:)*noco%socscale(n)
+          !rsoc%rsopdp(n,:,:,:)   = rsoc%rsopdp(n,:,:,:)*noco%socscale(n)
+          !rsoc%rsoppd(n,:,:,:)   = rsoc%rsoppd(n,:,:,:)*noco%socscale(n)
+          !rsoc%rsopdpd(n,:,:,:)  = rsoc%rsopdpd(n,:,:,:)*noco%socscale(n)
+          !rsoc%rsoplop(n,:,:,:)  = rsoc%rsoplop(n,:,:,:)*noco%socscale(n)
+          !rsoc%rsoplopd(n,:,:,:) = rsoc%rsoplopd(n,:,:,:)*noco%socscale(n)
+          !rsoc%rsopdplo(n,:,:,:) = rsoc%rsopdplo(n,:,:,:)*noco%socscale(n)
+          !rsoc%rsopplo(n,:,:,:)  = rsoc%rsopplo(n,:,:,:)*noco%socscale(n)
+          !rsoc%rsoploplop(n,:,:,:,:) = rsoc%rsoploplop(n,:,:,:,:)*noco%socscale(n)
        ENDIF
     ENDDO
 
@@ -90,9 +92,9 @@ CONTAINS
        DO n = 1,atoms%ntype
           WRITE (oUnit,FMT=8000)
           WRITE (oUnit,FMT=9000)
-          WRITE (oUnit,FMT=8001) (2*rsoc%rsopp(n,l,1,1),l=1,3)
-          WRITE (oUnit,FMT=8001) (2*rsoc%rsopp(n,l,2,2),l=1,3)
-          WRITE (oUnit,FMT=8001) (2*rsoc%rsopp(n,l,2,1),l=1,3)
+          !WRITE (oUnit,FMT=8001) (2*rsoc%rsopp(n,l,1,1),l=1,3)
+          !WRITE (oUnit,FMT=8001) (2*rsoc%rsopp(n,l,2,2),l=1,3)
+          !WRITE (oUnit,FMT=8001) (2*rsoc%rsopp(n,l,2,1),l=1,3)
        ENDDO
        IF (noco%l_spav) THEN
           WRITE(oUnit,fmt='(A)') 'SOC Hamiltonian is constructed by neglecting B_xc.'

@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -8,6 +8,7 @@ MODULE m_sorad
   !*********************************************************************
   !     generates radial spin-orbit matrix elements
   !*********************************************************************
+   implicit none
 CONTAINS
   SUBROUTINE sorad(atoms,input,ntyp,vr,enpara,spav,rsoc,usdus,hub1data)
 
@@ -136,10 +137,11 @@ CONTAINS
        IF (l.GT.0) THEN ! there is no spin-orbit for s-states
           DO iSpin = 1, 2
              DO jSpin = 1, 2
-                rsoc%rsopp(ntyp,l,iSpin,jSpin) = radso( p(:atoms%jri(ntyp),iSpin), p(:atoms%jri(ntyp),jSpin),(vso(:atoms%jri(ntyp),iSpin)+vso(:atoms%jri(ntyp),jSpin))*0.5,atoms%dx(ntyp),atoms%rmsh(1,ntyp))
-                rsoc%rsopdp(ntyp,l,iSpin,jSpin) = radso(pd(:atoms%jri(ntyp),iSpin), p(:atoms%jri(ntyp),jSpin),(vso(:atoms%jri(ntyp),iSpin)+vso(:atoms%jri(ntyp),jSpin))*0.5,atoms%dx(ntyp),atoms%rmsh(1,ntyp))
-                rsoc%rsoppd(ntyp,l,iSpin,jSpin) = radso( p(:atoms%jri(ntyp),iSpin),pd(:atoms%jri(ntyp),jSpin),(vso(:atoms%jri(ntyp),iSpin)+vso(:atoms%jri(ntyp),jSpin))*0.5,atoms%dx(ntyp),atoms%rmsh(1,ntyp))
-                rsoc%rsopdpd(ntyp,l,iSpin,jSpin) = radso(pd(:atoms%jri(ntyp),iSpin),pd(:atoms%jri(ntyp),jSpin),(vso(:atoms%jri(ntyp),iSpin)+vso(:atoms%jri(ntyp),jSpin))*0.5,atoms%dx(ntyp),atoms%rmsh(1,ntyp))
+                ! Legacy rso* arrays removed from t_rsoc - commented out (see rsoc%rso / rad_matrix).
+                !rsoc%rsopp(ntyp,l,iSpin,jSpin) = radso( p(:atoms%jri(ntyp),iSpin), p(:atoms%jri(ntyp),jSpin),(vso(:atoms%jri(ntyp),iSpin)+vso(:atoms%jri(ntyp),jSpin))*0.5,atoms%dx(ntyp),atoms%rmsh(1,ntyp))
+                !rsoc%rsopdp(ntyp,l,iSpin,jSpin) = radso(pd(:atoms%jri(ntyp),iSpin), p(:atoms%jri(ntyp),jSpin),(vso(:atoms%jri(ntyp),iSpin)+vso(:atoms%jri(ntyp),jSpin))*0.5,atoms%dx(ntyp),atoms%rmsh(1,ntyp))
+                !rsoc%rsoppd(ntyp,l,iSpin,jSpin) = radso( p(:atoms%jri(ntyp),iSpin),pd(:atoms%jri(ntyp),jSpin),(vso(:atoms%jri(ntyp),iSpin)+vso(:atoms%jri(ntyp),jSpin))*0.5,atoms%dx(ntyp),atoms%rmsh(1,ntyp))
+                !rsoc%rsopdpd(ntyp,l,iSpin,jSpin) = radso(pd(:atoms%jri(ntyp),iSpin),pd(:atoms%jri(ntyp),jSpin),(vso(:atoms%jri(ntyp),iSpin)+vso(:atoms%jri(ntyp),jSpin))*0.5,atoms%dx(ntyp),atoms%rmsh(1,ntyp))
              ENDDO
           ENDDO
        ENDIF ! l>0
@@ -197,10 +199,11 @@ CONTAINS
 
              DO iSpin = 1, 2
                 DO jSpin = 1, 2
-                   rsoc%rsoplop (ntyp,ilo,iSpin,jSpin) = radso(plo(:atoms%jri(ntyp),iSpin),p (:atoms%jri(ntyp),jSpin),vso(:atoms%jri(ntyp),iSpin),atoms%dx(ntyp),atoms%rmsh(1,ntyp))
-                   rsoc%rsoplopd(ntyp,ilo,iSpin,jSpin) = radso(plo(:atoms%jri(ntyp),iSpin),pd(:atoms%jri(ntyp),jSpin),vso(:atoms%jri(ntyp),iSpin),atoms%dx(ntyp), atoms%rmsh(1,ntyp))
-                   rsoc%rsopplo (ntyp,ilo,iSpin,jSpin) = radso(p (:atoms%jri(ntyp),iSpin),plo(:atoms%jri(ntyp),jSpin),vso(:atoms%jri(ntyp),iSpin),atoms%dx(ntyp), atoms%rmsh(1,ntyp))
-                   rsoc%rsopdplo(ntyp,ilo,iSpin,jSpin) = radso(pd(:atoms%jri(ntyp),iSpin),plo(:atoms%jri(ntyp),jSpin),vso(:atoms%jri(ntyp),iSpin),atoms%dx(ntyp), atoms%rmsh(1,ntyp))
+                   ! Legacy rso* arrays removed from t_rsoc - commented out (see rsoc%rso / rad_matrix).
+                   !rsoc%rsoplop (ntyp,ilo,iSpin,jSpin) = radso(plo(:atoms%jri(ntyp),iSpin),p (:atoms%jri(ntyp),jSpin),vso(:atoms%jri(ntyp),iSpin),atoms%dx(ntyp),atoms%rmsh(1,ntyp))
+                   !rsoc%rsoplopd(ntyp,ilo,iSpin,jSpin) = radso(plo(:atoms%jri(ntyp),iSpin),pd(:atoms%jri(ntyp),jSpin),vso(:atoms%jri(ntyp),iSpin),atoms%dx(ntyp), atoms%rmsh(1,ntyp))
+                   !rsoc%rsopplo (ntyp,ilo,iSpin,jSpin) = radso(p (:atoms%jri(ntyp),iSpin),plo(:atoms%jri(ntyp),jSpin),vso(:atoms%jri(ntyp),iSpin),atoms%dx(ntyp), atoms%rmsh(1,ntyp))
+                   !rsoc%rsopdplo(ntyp,ilo,iSpin,jSpin) = radso(pd(:atoms%jri(ntyp),iSpin),plo(:atoms%jri(ntyp),jSpin),vso(:atoms%jri(ntyp),iSpin),atoms%dx(ntyp), atoms%rmsh(1,ntyp))
                 ENDDO
              ENDDO
 
@@ -256,8 +259,9 @@ CONTAINS
 
                    DO iSpin = 1, 2
                       DO jSpin = 1, 2
-                         rsoc%rsoploplop(ntyp,ilo,ilop,iSpin,jSpin) = &
-                              radso(plo(:atoms%jri(ntyp),iSpin),plop(:atoms%jri(ntyp),jSpin),vso(:atoms%jri(ntyp),iSpin),atoms%dx(ntyp),atoms%rmsh(1,ntyp))
+                         ! Legacy rso* arrays removed from t_rsoc - commented out (see rsoc%rso / rad_matrix).
+                         !rsoc%rsoploplop(ntyp,ilo,ilop,iSpin,jSpin) = &
+                         !     radso(plo(:atoms%jri(ntyp),iSpin),plop(:atoms%jri(ntyp),jSpin),vso(:atoms%jri(ntyp),iSpin),atoms%dx(ntyp),atoms%rmsh(1,ntyp))
                       ENDDO
                    ENDDO
 

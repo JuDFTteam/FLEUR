@@ -145,12 +145,13 @@ CONTAINS
                               ll1 = l*(l+1) 
                               DO m = -l,l
                                  lm = ll1 + m
-                                 c_1 =   rsoc%rsopp(n,l,i1,j1) * ahelp(lm,na,i,jsp) +&
-                                       rsoc%rsopdp(n,l,i1,j1) * bhelp(lm,na,i,jsp)
-                                 c_2 =  rsoc%rsoppd(n,l,i1,j1) * ahelp(lm,na,i,jsp) +&
-                                       rsoc%rsopdpd(n,l,i1,j1) * bhelp(lm,na,i,jsp)
-                                 hsomtx(i,j,i1,j1) = hsomtx(i,j,i1,j1) +&
-                                       c_1*c_a(lm,na) + c_2*c_b(lm,na)  
+                                 ! Legacy rso* arrays removed from t_rsoc - commented out (see rsoc%rso).
+                                 !c_1 =   rsoc%rsopp(n,l,i1,j1) * ahelp(lm,na,i,jsp) +&
+                                 !      rsoc%rsopdp(n,l,i1,j1) * bhelp(lm,na,i,jsp)
+                                 !c_2 =  rsoc%rsoppd(n,l,i1,j1) * ahelp(lm,na,i,jsp) +&
+                                 !      rsoc%rsopdpd(n,l,i1,j1) * bhelp(lm,na,i,jsp)
+                                 !hsomtx(i,j,i1,j1) = hsomtx(i,j,i1,j1) +&
+                                 !      c_1*c_a(lm,na) + c_2*c_b(lm,na)
                               ENDDO
                               ! 
                            ENDDO
@@ -161,20 +162,22 @@ CONTAINS
                               IF (l.GT.0) THEN
                                  DO m = -l,l
                                     lm = ll1 + m
-                                    c_3 = rsoc%rsopplo(n,ilo,i1,j1) *ahelp(lm,na,i,jsp) +&
-                                          rsoc%rsopdplo(n,ilo,i1,j1) *bhelp(lm,na,i,jsp)
-                                    c_4 = rsoc%rsoplop(n,ilo,i1,j1) *chelp(m,i,ilo,na,jsp)
-                                    c_5 =rsoc%rsoplopd(n,ilo,i1,j1) *chelp(m,i,ilo,na,jsp)
-                                    hsomtx(i,j,i1,j1) = hsomtx(i,j,i1,j1) + &
-                                          c_4*c_a(lm,na) + c_5*c_b(lm,na) +&
-                                          c_3*c_c(m,ilo,na)
+                                    ! Legacy rso* arrays removed from t_rsoc - commented out (see rsoc%rso).
+                                    !c_3 = rsoc%rsopplo(n,ilo,i1,j1) *ahelp(lm,na,i,jsp) +&
+                                    !      rsoc%rsopdplo(n,ilo,i1,j1) *bhelp(lm,na,i,jsp)
+                                    !c_4 = rsoc%rsoplop(n,ilo,i1,j1) *chelp(m,i,ilo,na,jsp)
+                                    !c_5 =rsoc%rsoplopd(n,ilo,i1,j1) *chelp(m,i,ilo,na,jsp)
+                                    !hsomtx(i,j,i1,j1) = hsomtx(i,j,i1,j1) + &
+                                    !      c_4*c_a(lm,na) + c_5*c_b(lm,na) +&
+                                    !      c_3*c_c(m,ilo,na)
                                  ENDDO
                                  DO ilop = 1,atoms%nlo(n)
                                     IF (atoms%llo(ilop,n).EQ.l) THEN
                                        DO m = -l,l
-                                          hsomtx(i,j,i1,j1) = hsomtx(i,j,i1,j1) + &
-                                                rsoc%rsoploplop(n,ilop,ilo,i1,j1) * &
-                                                chelp(m,i,ilop,na,jsp) * c_c(m,ilo,na)
+                                          ! Legacy rso* arrays removed from t_rsoc - commented out (see rsoc%rso).
+                                          !hsomtx(i,j,i1,j1) = hsomtx(i,j,i1,j1) + &
+                                          !      rsoc%rsoploplop(n,ilop,ilo,i1,j1) * &
+                                          !      chelp(m,i,ilop,na,jsp) * c_c(m,ilo,na)
                                        ENDDO
                                     ENDIF
                                  ENDDO
