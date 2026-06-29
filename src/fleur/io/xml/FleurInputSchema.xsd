@@ -2999,7 +2999,7 @@
       <xsd:annotation>
          <xsd:documentation>Interpolation for wannierlib library-mode workflow.</xsd:documentation>
       </xsd:annotation>
-      <xsd:attribute name="interpolate" type="FleurBool" use="optional" default="0"/>
+      <xsd:attribute name="l_intp" type="FleurBool" use="optional"/>
       <xsd:attribute name="kptsPath" type="xsd:string" use="optional">
          <xsd:annotation>
             <xsd:documentation>Name of the q-point list to use.</xsd:documentation>
@@ -3029,7 +3029,7 @@
       </xsd:annotation>
       <xsd:all>
          <xsd:element maxOccurs="1" minOccurs="1" name="bands" type="WannierlibBandsType"/>
-         <xsd:element maxOccurs="1" minOccurs="0" name="l_intp" type="WannierlibInterpolationType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="interpolation" type="WannierlibInterpolationType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="disentanglement" type="WannierlibDisentanglementType"/>
       </xsd:all>
       <xsd:attribute default="F" name="wannierize" type="FleurBool" use="optional"/>
