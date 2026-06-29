@@ -33,6 +33,9 @@ MODULE m_types_wannierlib
     REAL :: dis_conv_tol = 0.0
     REAL :: conv_tol = 0.0       ! MLWF/wannierise convergence (W90 conv_tol); XML @wannConvTol
 
+    LOGICAL :: l_intp = .FALSE.         ! Do interpolation
+    REAL, ALLOCATABLE :: kpts_fine(:,:) ! kPoints to interpolate on 
+
     INTEGER, ALLOCATABLE :: proj_ntype(:)
     INTEGER, ALLOCATABLE :: proj_atom(:)
     CHARACTER(LEN=20), ALLOCATABLE :: proj_species(:)
@@ -303,11 +306,15 @@ CONTAINS
     CALL mpi_bc(this%proj_mj, rank, mpi_comm)
     CALL mpi_bc(this%proj_weight, rank, mpi_comm)
     CALL mpi_bc(this%proj_shift, rank, mpi_comm)
+    CALL mpi_bc(this%kpts_fine, rank, mpi_comm)
+    CALL mpi_bc(this%l_intp, rank, mpi_comm)
+
   END SUBROUTINE mpi_bc_wannierlib
 
   SUBROUTINE read_xml_wannierlib(this, xml)
     USE m_types_xml
     USE m_constants
+    USE m_types_kpts
     CLASS(t_wannierlib_wannierize), INTENT(INOUT) :: this
     TYPE(t_xml), INTENT(INOUT) :: xml
 
@@ -318,6 +325,9 @@ CONTAINS
     INTEGER :: nSpecies, iType, nProjType, iProj, ip, nProjTotal
     LOGICAL :: has_wannierize, has_numBands, has_minBand, has_maxBand
     CHARACTER(LEN=20) :: species_name
+    TYPE(t_kpts) :: kpts_temp
+    CHARACTER(len=40) :: kptsPath
+
 
     xPathA = '/fleurInput/output/wannierlib'
     numberNodes = xml%getNumberOfNodes(xPathA)
@@ -337,6 +347,27 @@ CONTAINS
       this%min_band = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@minBand'))
       this%max_band = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@maxBand'))
     END IF
+  
+    xPathA = '/fleurInput/output/wannierlib/interpolation'
+    IF (xml%getNumberOfNodes(xPathA) == 1) THEN
+      this%l_intp = evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@l_intp'))
+
+      IF (xml%GetNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@kptsPath') == 1) THEN
+        kptsPath = TRIM(ADJUSTL(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@kptsPath')))
+        ! Initialize kpts_temp with the number of k-points from the kpts.xml file
+        kpts_temp%nkpt = xml%GetNumberOfNodes('/fleurInput/cell/bzIntegration/kPointLists/kPointList[@name="'//TRIM(kptsPath)//'"]/kPoint')
+        IF (kpts_temp%nkpt > 0) THEN
+          ALLOCATE(kpts_temp%bk(3, kpts_temp%nkpt))
+          ALLOCATE(kpts_temp%wtkpt(kpts_temp%nkpt))
+          IF (kpts_temp%read_kpts_by_name(trim(xml%filename_add_xml)//"inp.xml", kptsPath)) THEN
+            IF (ALLOCATED(this%kpts_fine)) DEALLOCATE(this%kpts_fine)
+              ALLOCATE(this%kpts_fine(3, kpts_temp%nkpt))
+              this%kpts_fine = kpts_temp%bk
+            END IF
+        END IF
+      END IF
+    END IF
+  
 
       
     xPathA = '/fleurInput/output/wannierlib/disentanglement'

@@ -18,9 +18,9 @@ contains
 
         type(t_fleurinput), intent(in) :: fi  
         complex, intent(in) :: matElement(:,:,:,:)               ! nu',nu, kpoints, spin
-        complex, intent(in) :: U_mat(:,:,:)                      ! bloch, wannier, kpoint 
+        complex, intent(in) :: U_mat(:,:,:,:)                    ! bloch, wannier, kpoint, jspin 
         type(t_kpts),intent(in) :: kpts_coarse                   ! on the coarse Wannier k-mesh  
-        type(t_kpts),intent(in) :: kpts_fine                     ! to interpolate onto
+        real,intent(in) :: kpts_fine(:,:)                        ! to interpolate onto
         complex,allocatable,intent(out) :: matInterpol(:,:,:,:)  ! interpoalte matrix element  
         type(t_kpts),optional,intent(in) :: qpts_coarse          ! on the coarse Wannier k-mesh  
         type(t_kpts),optional,intent(in) :: qpts_fine            ! to interpolate onto 
@@ -37,9 +37,14 @@ contains
         complex,allocatable :: matRot(:,:)                          ! rotated matrix elements in wannier gauge 
         real :: bkpt(3)
 
-        allocate(fft_grid(size(matElement,1),size(matElement,2),size(matElement,3)))
-        allocate(matInterpol(size(matElement,1),size(matElement,2),qpts_fine%nkpt,size(matElement,4)))
-        allocate(matRot(size(matElement,1),size(matElement,2)))
+        integer :: nwann, nfine
+        
+        nwann = size(U_mat, 2)
+        nfine = size(kpts_fine,2)
+
+        allocate(fft_grid(nwann,nwann,size(matElement,3)))
+        allocate(matInterpol(nwann,nwann,nfine,size(matElement,4)))
+        allocate(matRot(nwann,nwann))
 
         fft_grid = cmplx(0.0,0.0)
         matRot = cmplx(0.0,0.0)
@@ -48,7 +53,7 @@ contains
         ft_lim(2,:) = kpts_coarse%nkpt3(:)/2
         ft_lim(1,:) = ft_lim(2,:) - kpts_coarse%nkpt3(:) + 1       
         
-        allocate(matWannier(size(matElement,1),size(matElement,2),0:(kpts_coarse%nkpt3(1)-1),&
+        allocate(matWannier(nwann,nwann,0:(kpts_coarse%nkpt3(1)-1),&
                             0:(kpts_coarse%nkpt3(2)-1),0:(kpts_coarse%nkpt3(3)-1),size(matElement,4)))
         matWannier = cmplx(0.0,0.0)
 
@@ -60,7 +65,7 @@ contains
 
                 ! rotate the matrix elements into wannier gauge
                 ! U^dagger M U
-                matRot(:,:) = matmul(conjg(transpose(U_mat(:,:,ikpt))),matmul(matElement(:,:,ikpt,iSpin),U_mat(:,:,ikpt)))
+                matRot(:,:) = matmul(conjg(transpose(U_mat(:,:,ikpt,ispin))),matmul(matElement(:,:,ikpt,iSpin),U_mat(:,:,ikpt,ispin)))
                 
                 call ft_dyn_direct(ft_lim,1,bkpt,matRot,fft_grid(:,:,:))
             end do ! ikpt 
@@ -105,8 +110,8 @@ contains
         call cell%calculate_WSweight(supercellR,FTweight,scaleSupercell=kpts_coarse%nkpt3(:))
 
         do ispin = 1 , size(matElement,4)
-            do ikpt = 1 , kpts_fine%nkpt
-                call ft_fcm_weight(-1,ft_lim,bigBox_lim,FTweight,kpts_fine%bk(:,ikpt),matInterpol(:,:,ikpt,ispin),matWannier(:,:,:,:,:,iSpin))
+            do ikpt = 1 , nfine
+                call ft_fcm_weight(-1,ft_lim,bigBox_lim,FTweight,kpts_fine(:,ikpt),matInterpol(:,:,ikpt,ispin),matWannier(:,:,:,:,:,iSpin))
             end do !ikpt 
         end do ! ispin 
 

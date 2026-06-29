@@ -113,12 +113,13 @@ CONTAINS
 #endif
   END SUBROUTINE init_w90
 
-  SUBROUTINE run_w90(this, mmn, amn, eig, u_matrix_out)
+  SUBROUTINE run_w90(this, mmn, amn, eig, u_matrix_out, u_dis_out)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
     COMPLEX, TARGET, INTENT(IN) :: mmn(:, :, :, :)
     COMPLEX, TARGET, INTENT(IN) :: amn(:, :, :)
     REAL, TARGET, INTENT(IN) :: eig(:, :)
     COMPLEX, ALLOCATABLE, INTENT(OUT) :: u_matrix_out(:, :, :)
+    COMPLEX, ALLOCATABLE, INTENT(OUT) :: u_dis_out(:, :, :)
 
     INTEGER :: ierr,num_kpts
     COMPLEX, ALLOCATABLE :: u_matrix(:, :, :), mmn_local(:, :, :, :), amn_local(:, :, :)
@@ -150,6 +151,11 @@ CONTAINS
     IF (this%num_bands > this%num_wann) THEN
       CALL w90_disentangle(wannierlib_w90main, oUnit, oUnit, ierr)
       IF (ierr /= 0) CALL juDFT_error('w90_disentangle failed in wannierlib adapter', calledby='run_w90')
+      ! amn_local is u_matrix_opt by pointer association — copy out before wannierise
+      IF (ALLOCATED(u_dis_out)) DEALLOCATE(u_dis_out)
+      ALLOCATE(u_dis_out(this%num_bands, this%num_wann, num_kpts), stat=ierr)
+      IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating u_dis_out', calledby='run_w90')
+      u_dis_out = amn_local
     END IF
 
     CALL w90_project_overlap(wannierlib_w90main, oUnit, oUnit, ierr)

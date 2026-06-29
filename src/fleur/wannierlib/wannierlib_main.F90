@@ -51,6 +51,7 @@ CONTAINS
       COMPLEX, ALLOCATABLE :: amn(:, :, :)
       COMPLEX, ALLOCATABLE :: mmn(:, :, :, :)
       COMPLEX, ALLOCATABLE :: u_matrix_out(:, :, :)
+      COMPLEX, ALLOCATABLE :: u_dis_out(:, :, :)
       COMPLEX, ALLOCATABLE :: ujug(:, :, :, :, :, :)
       REAL, ALLOCATABLE :: kdiff(:, :)
       INTEGER, ALLOCATABLE :: nnkp(:, :), gkpb(:, :, :)
@@ -145,7 +146,8 @@ CONTAINS
          END IF
 
          call wannierlib_create_eig(this, results, kpts, MERGE(1, jspin, l_wannierlib_spinors), eig)
-         CALL run_w90(this, mmn, amn, eig, u_matrix_out)
+         CALL run_w90(this, mmn, amn, eig, u_matrix_out, u_dis_out)
+         ! store results of run_w90 into type results
          IF (ALLOCATED(u_matrix_out)) THEN
             IF (.NOT. ALLOCATED(results%U_mat)) THEN
                ALLOCATE(results%U_mat(this%num_wann, this%num_wann, kpts%nkptf, input%jspins))
@@ -153,6 +155,18 @@ CONTAINS
             END IF
             results%U_mat(:, :, :, jspin) = u_matrix_out
             DEALLOCATE(u_matrix_out)
+         END IF
+         IF (ALLOCATED(u_dis_out)) THEN
+#ifdef CPP_MPI
+            CALL MPI_Allreduce(MPI_IN_PLACE, u_dis_out, SIZE(u_dis_out), &
+                               MPI_COMPLEX, MPI_SUM, fmpi%mpi_comm, ierr)
+#endif
+            IF (.NOT. ALLOCATED(results%U_dis)) THEN
+               ALLOCATE(results%U_dis(this%num_bands, this%num_wann, kpts%nkptf, input%jspins))
+               results%U_dis = CMPLX(0.0, 0.0)
+            END IF
+            results%U_dis(:, :, :, jspin) = u_dis_out
+            DEALLOCATE(u_dis_out)
          END IF
 
          if (fmpi%isize == 1) CALL report_w90(this)

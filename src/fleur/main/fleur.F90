@@ -78,6 +78,7 @@ CONTAINS
       USE m_checkdopall
       USE m_store_load_hybrid
       USE m_wannierlib_main
+      USE m_wannier_interpolate
 
 !$    USE omp_lib
 
@@ -488,7 +489,10 @@ CONTAINS
                CALL wannierlib_main(fi%wannierlib, fi%atoms, fi%cell, input_soc, fi%kpts, fi%sym, fi%noco, nococonv, stars, enpara, fmpi, &
                                     vTot, results, eig_id)
                CALL timestop("wannierlib")
-               CALL juDFT_end("Wannierization done. Fleur ends.", fmpi%irank)
+               ! lets do a test interpolation here 
+               ! sub in the hamiltinan routine
+               call interpolate_bandstructure(fi,results , fi%wannierlib%kpts_fine)
+               IF (.NOT. fi%dfpt%l_dfpt) CALL juDFT_end("Wannierization done. Fleur ends.", fmpi%irank)
             END IF
 
             ! TODO: What is commented out here and should it perhaps be removed?

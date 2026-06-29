@@ -45,7 +45,8 @@ MODULE m_types_misc
       REAL, ALLOCATABLE    :: eig(:,:,:)
       REAL, ALLOCATABLE    :: M(:)
       INTEGER, ALLOCATABLE :: neig(:,:)    ! neig(nkpts,jspins) number of calculated eigenvalues for each k point, spin
-      COMPLEX, ALLOCATABLE :: U_mat(:,:,:,:) ! rotation matrix for wannier gauge (nbloch,nwannier,nkpt,jspins)
+      COMPLEX, ALLOCATABLE :: U_mat(:,:,:,:) ! rotation matrix for wannier gauge (nwann,nwann,nkpt,jspins)
+      COMPLEX, ALLOCATABLE :: U_dis(:,:,:,:) ! disentanglement matrix (nbands,nwann,nkpt,jspins); only when nbands>nwann
       REAL :: tkb_loc
 
    CONTAINS
