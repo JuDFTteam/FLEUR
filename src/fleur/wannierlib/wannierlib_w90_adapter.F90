@@ -122,7 +122,7 @@ CONTAINS
     COMPLEX, ALLOCATABLE, INTENT(OUT) :: u_dis_out(:, :, :)
 
     INTEGER :: ierr,num_kpts
-    COMPLEX, ALLOCATABLE :: u_matrix(:, :, :), mmn_local(:, :, :, :), amn_local(:, :, :)
+    COMPLEX, ALLOCATABLE, TARGET :: u_matrix(:, :, :), mmn_local(:, :, :, :), amn_local(:, :, :)
 
 
     IF (.NOT.this%l_wannierize) RETURN
