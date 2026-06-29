@@ -8,6 +8,7 @@ module m_matrix_interpolation
     use m_juDFT
     use m_types
     use m_constants
+    use m_npy
 
     implicit none 
 
@@ -44,9 +45,8 @@ contains
 
         allocate(fft_grid(nwann,nwann,size(matElement,3)))
         allocate(matInterpol(nwann,nwann,nfine,size(matElement,4)))
+        matInterpol = cmplx(0.0, 0.0)
         allocate(matRot(nwann,nwann))
-
-        fft_grid = cmplx(0.0,0.0)
         matRot = cmplx(0.0,0.0)
 
 
@@ -59,6 +59,7 @@ contains
 
 
         do iSpin = 1 , size(matElement,4)
+            fft_grid = cmplx(0.0,0.0)
             do ikpt = 1 , kpts_coarse%nkpt
 
                 bkpt = kpts_coarse%bk(:, ikpt)

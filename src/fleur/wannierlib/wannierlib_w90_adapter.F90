@@ -155,6 +155,7 @@ CONTAINS
       IF (ALLOCATED(u_dis_out)) DEALLOCATE(u_dis_out)
       ALLOCATE(u_dis_out(this%num_bands, this%num_wann, num_kpts), stat=ierr)
       IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating u_dis_out', calledby='run_w90')
+      u_dis_out = cmplx(0.0,0.0)
       u_dis_out = amn_local
     END IF
 
