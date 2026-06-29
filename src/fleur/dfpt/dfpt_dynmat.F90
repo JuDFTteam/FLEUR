@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -756,9 +756,6 @@ CONTAINS
 
       COMPLEX, ALLOCATABLE :: tempVec(:), tempVecq(:), z_loop(:), z1_loop(:), ztest_loop(:), zq_loop(:)
 
-      COMPLEX  zdotc
-      EXTERNAL zdotc
-      
       eigen_e1 = CMPLX(0.0,0.0)
       eigen_w1e1 = CMPLX(0.0,0.0)
       eigen_s2w1e1 = CMPLX(0.0,0.0)
@@ -884,34 +881,34 @@ CONTAINS
                z1_loop = zMat1%data_c(:,iEig)
 
                CALL CPP_zgemv('N',nbasfcn,nbasfcn,-we_loop*eig1_loop,smat1%data_c,nbasfcn,z_loop,1,CMPLX(0.0,0.0),tempVec,1)
-               eigen_e1 = eigen_e1 + zdotc(nbasfcn,z_loop,1,tempVec,1)
+               eigen_e1 = eigen_e1 + DOT_PRODUCT(z_loop,tempVec)
                CALL CPP_zgemv('N',nbasfcn,nbasfcn,-we1_loop*eig_loop,smat1%data_c,nbasfcn,z_loop,1,CMPLX(1.0,0.0),tempVec,1)
-               eigen_w1e1 = eigen_w1e1 + zdotc(nbasfcn,z_loop,1,tempVec,1)
+               eigen_w1e1 = eigen_w1e1 + DOT_PRODUCT(z_loop,tempVec)
                CALL CPP_zgemv('N',nbasfcn,nbasfcn,-we_loop*eig_loop,smat2%data_c,nbasfcn,z_loop,1,CMPLX(1.0,0.0),tempVec,1)
-               eigen_s2w1e1 = eigen_s2w1e1 + zdotc(nbasfcn,z_loop,1,tempVec,1)
+               eigen_s2w1e1 = eigen_s2w1e1 + DOT_PRODUCT(z_loop,tempVec)
                CALL CPP_zgemv('N',nbasfcn,nbasfcn,we_loop,hmat2%data_c,nbasfcn,z_loop,1,CMPLX(1.0,0.0),tempVec,1)
-               eigen_h2s2w1e1 = eigen_h2s2w1e1 + zdotc(nbasfcn,z_loop,1,tempVec,1)
+               eigen_h2s2w1e1 = eigen_h2s2w1e1 + DOT_PRODUCT(z_loop,tempVec)
                CALL CPP_zgemv('N',nbasfcn,nbasfcn,we1_loop,hmat1%data_c,nbasfcn,z_loop,1,CMPLX(1.0,0.0),tempVec,1)
-               eigen_w1h2s2w1e1 = eigen_w1h2s2w1e1 + zdotc(nbasfcn,z_loop,1,tempVec,1)
+               eigen_w1h2s2w1e1 = eigen_w1h2s2w1e1 + DOT_PRODUCT(z_loop,tempVec)
 
-               eigen_term = eigen_term + zdotc(nbasfcn,z_loop,1,tempVec,1)
+               eigen_term = eigen_term + DOT_PRODUCT(z_loop,tempVec)
 
                IF (PRESENT(q_eig_id)) THEN
                   CALL CPP_zgemv('N',nbasfcnq,nbasfcn,we_loop,vmat2%data_c,nbasfcnq,z_loop,1,CMPLX(0.0,0.0),tempVecq,1)
-                  eigen_term = eigen_term + zdotc(nbasfcnq,zq_loop,1,tempVecq,1)
+                  eigen_term = eigen_term + DOT_PRODUCT(zq_loop,tempVecq)
                END IF
 
                CALL CPP_zgemv('C',nbasfcnq,nbasfcn,-we_loop*eig_loop,smat1q%data_c,nbasfcnq,z1_loop,1,CMPLX(0.0,0.0),tempVec,1)
-               eigen_s1q = eigen_s1q + 2.0*zdotc(nbasfcn,z_loop,1,tempVec,1)
+               eigen_s1q = eigen_s1q + 2.0*DOT_PRODUCT(z_loop,tempVec)
                CALL CPP_zgemv('C',nbasfcnq,nbasfcn,we_loop,hmat1q%data_c,nbasfcnq,z1_loop,1,CMPLX(1.0,0.0),tempVec,1)
-               eigen_h1qs1q = eigen_h1qs1q + 2.0*zdotc(nbasfcn,z_loop,1,tempVec,1)
+               eigen_h1qs1q = eigen_h1qs1q + 2.0*DOT_PRODUCT(z_loop,tempVec)
 
-               eigen_term = eigen_term + 2.0*zdotc(nbasfcn,z_loop,1,tempVec,1)
+               eigen_term = eigen_term + 2.0*DOT_PRODUCT(z_loop,tempVec)
                
                ! Correction:
                CALL CPP_zgemv('C',nbasfcnq,nbasfcn,we_loop,smat1q%data_c,nbasfcnq,zMat2%data_c(:,iEig),1,CMPLX(0.0,0.0),tempVec,1)
-               eigen_bonus = eigen_bonus + 2.0*zdotc(nbasfcn,z_loop,1,tempVec,1)
-               eigen_term = eigen_term + 2.0 * zdotc(nbasfcn,z_loop,1,tempVec,1)
+               eigen_bonus = eigen_bonus + 2.0*DOT_PRODUCT(z_loop,tempVec)
+               eigen_term = eigen_term + 2.0 * DOT_PRODUCT(z_loop,tempVec)
             END DO
 
             DEALLOCATE(tempVec)
