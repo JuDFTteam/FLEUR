@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -79,11 +79,8 @@ CONTAINS
       END IF
 
       ALLOCATE(ab_select(size_ab_select, 2 * atoms%lmaxd * (atoms%lmaxd + 2) + 2))
-      ALLOCATE(abCoeffs(2 * atoms%lmaxd * (atoms%lmaxd + 2) + 2, MAXVAL(lapw%nv)),&
-             & ab1(size_ab, 2 * atoms%lmaxd * (atoms%lmaxd + 2) + 2))
-      ! TODO: Check, whether this is necessary or shifting to
-      !       max(MAXVAL(lapwq%nv),MAXVAL(lapw%nv)) in abCoeffs is also enough.
-      ALLOCATE(abCoeffsPr(2 * atoms%lmaxd * (atoms%lmaxd + 2) + 2, MAXVAL(lapwPr%nv)))
+      ! abCoeffs and abCoeffsPr are allocated (and filled) inside hsmt_ab.
+      ALLOCATE(ab1(size_ab, 2 * atoms%lmaxd * (atoms%lmaxd + 2) + 2))
 
       IF (igSpinPr.NE.igSpin) THEN
          ALLOCATE(ab2(lapwPr%nv(igSpinPr), 2 * atoms%lmaxd * (atoms%lmaxd + 2) + 2))
@@ -120,7 +117,7 @@ CONTAINS
       h_loc = td%h_loc_nonsph(0:, 0:, n, ilSpinPr, ilSpin)
 
 #ifdef _OPENACC
-      !$acc enter data create(ab2,ab1,abCoeffs,abCoeffsPr,data_c,ab_select)copyin(h_loc)
+      !$acc enter data create(ab2,ab1,data_c,ab_select)copyin(h_loc)
       !$acc kernels present(data_c) default(none)
       data_c(:, :)=0.0
       !$acc end kernels
@@ -353,6 +350,14 @@ CONTAINS
                   call timestop("zgemm6")
                END IF
             END IF
+            ! abCoeffs/abCoeffsPr are (re)allocated per call inside hsmt_ab;
+            ! release the device copies and host arrays before the next nn.
+            !$acc exit data delete(abCoeffs)
+            DEALLOCATE(abCoeffs)
+            IF (ALLOCATED(abCoeffsPr)) THEN
+               !$acc exit data delete(abCoeffsPr)
+               DEALLOCATE(abCoeffsPr)
+            END IF
          END IF
       END DO
 
@@ -382,8 +387,8 @@ CONTAINS
          !$OMP END PARALLEL DO
       END IF
 #endif
-     !$acc exit data delete(ab2,ab1,abCoeffs,abCoeffsPr,data_c,ab_select,h_loc)
-      DEALLOCATE(ab_select,abCoeffs,abCoeffsPr,ab1,ab2,h_loc)
+     !$acc exit data delete(ab2,ab1,data_c,ab_select,h_loc)
+      DEALLOCATE(ab_select,ab1,ab2,h_loc)
       IF (ALLOCATED(data_c)) DEALLOCATE(data_c)
       !$acc end data
       CALL timestop("non-spherical setup")

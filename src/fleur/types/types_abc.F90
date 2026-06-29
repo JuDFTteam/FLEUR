@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -153,7 +153,7 @@ CONTAINS
 
 ! Allocations
       CALL fjgj%alloc(MAXVAL(lapw%nv), atoms%lmaxd, jspin, noco)
-      ALLOCATE (abCoeffs(2*atoms%lmaxd*(atoms%lmaxd + 2) + 2, MAXVAL(lapw%nv)))
+      ! abCoeffs is allocated (and filled) inside hsmt_ab.
       ALLOCATE (abTemp(SIZE(this%cof, 1), 0:2*SIZE(this%cof, 2) - 1))
       ALLOCATE (fgpl(3, MAXVAL(lapw%nv)))
       ALLOCATE (work_c(MAXVAL(lapw%nv), ne))
@@ -161,7 +161,7 @@ CONTAINS
 
 ! Initializations
       acof_size = size(this%cof, 1)
-!$acc enter data create(abTemp,fjgj,fjgj%fj,fjgj%gj,work_c,abcoeffs)
+!$acc enter data create(abTemp,fjgj,fjgj%fj,fjgj%gj,work_c)
       
 
 !Use inversion symmetry explicitely
@@ -255,7 +255,7 @@ CONTAINS
 ! variant with zgemm
 
 !$acc host_data use_device(work_c,abCoeffs,abTemp)
-CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),abCoeffs,2*atoms%lmaxd*(atoms%lmaxd+2)+2,CMPLX(0.0,0.0),abTemp,acof_size)
+CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),abCoeffs,SIZE(abCoeffs,1),CMPLX(0.0,0.0),abTemp,acof_size)
 !$acc end host_data
 !$acc update self(abTemp)
 !stop "DEBUG"
@@ -269,6 +269,10 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
 !$OMP END PARALLEL DO
 
             CALL timestop("gemm")
+            ! abCoeffs is (re)allocated per call inside hsmt_ab; release the
+            ! device copy it created and the host array before the next call.
+            !$acc exit data delete(abCoeffs)
+            DEALLOCATE(abCoeffs)
 
             CALL timestart("local orbitals")
 ! Treatment of local orbitals
@@ -337,7 +341,7 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
             CALL timestop("local orbitals")
          END DO ! loop over interstitial spin
       END DO ! loop over atoms
-!$acc exit data delete(abTemp,fjgj%fj,fjgj%gj,work_c,abcoeffs)
+!$acc exit data delete(abTemp,fjgj%fj,fjgj%gj,work_c)
 !$acc exit data delete(fjgj)
       DEALLOCATE (work_c)
 
@@ -460,14 +464,14 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
 
 ! Allocations
       CALL fjgj%alloc(MAXVAL(lapw%nv), atoms%lmaxd, jspin, noco)
-      ALLOCATE (abCoeffs(2*atoms%lmaxd*(atoms%lmaxd + 2) + 2, MAXVAL(lapw%nv)))
+      ! abCoeffs is allocated (and filled) inside hsmt_ab.
       ALLOCATE (abTemp(SIZE(this%cof, 1), 0:2*SIZE(this%cof, 2) - 1))
       ALLOCATE (fgpl(3, MAXVAL(lapw%nv)))
       ALLOCATE (work_c(MAXVAL(lapw%nv), ne))
 
 ! Initializations
       acof_size = size(this%cof, 1)
-!$acc enter data create(abTemp,fjgj,fjgj%fj,fjgj%gj,work_c,abcoeffs)
+!$acc enter data create(abTemp,fjgj,fjgj%fj,fjgj%gj,work_c)
 
 
 !Use inversion symmetry explicitely
@@ -539,7 +543,11 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
                force%bveccof(i, :, :, iAtom) = force%bveccof(i, :, :, iAtom) + helpMat_force(:, :)
             END DO
             CALL timestop("force contributions")
-      
+            ! abCoeffs is (re)allocated per call inside hsmt_ab; release the
+            ! device copy it created and the host array before the next call.
+            !$acc exit data delete(abCoeffs)
+            DEALLOCATE(abCoeffs)
+
 
             CALL timestart("local orbitals")
 ! Treatment of local orbitals
@@ -612,7 +620,7 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
             CALL timestop("local orbitals")
          END DO ! loop over interstitial spin
       END DO ! loop over atoms
-!$acc exit data delete(abTemp,fjgj%fj,fjgj%gj,work_c,abcoeffs)
+!$acc exit data delete(abTemp,fjgj%fj,fjgj%gj,work_c)
 !$acc exit data delete(fjgj)
       DEALLOCATE (work_c)
 

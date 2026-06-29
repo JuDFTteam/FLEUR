@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -64,7 +64,7 @@ CONTAINS
       INTEGER,          INTENT(OUT)   :: ab_size
     !     ..
     !     .. Array Arguments ..
-      COMPLEX,          INTENT(INOUT) :: abCoeffs(:,:)
+      COMPLEX, ALLOCATABLE, INTENT(OUT) :: abCoeffs(:,:)
     !Optional arguments if abc coef for LOs are needed
       COMPLEX, INTENT(INOUT), OPTIONAL :: abclo(:, :, :, :)
       REAL,    INTENT(IN),    OPTIONAL :: alo1(:), blo1(:), clo1(:)
@@ -96,6 +96,12 @@ CONTAINS
       IF (ierr /= 0) CALL juDFT_error("Couldn't allocate ylm")
       ALLOCATE(gkrot(3,lapw%nv(igSpin)), stat=ierr)
       IF (ierr /= 0) CALL juDFT_error("Couldn't allocate gkrot")
+
+      ! Allocate the output matching coefficients to their exact size.
+      ! l_apw is .FALSE., so the array always needs 2*ab_size rows.
+      ALLOCATE(abCoeffs(2*(lmax*(lmax+2)+1), lapw%nv(igSpin)), stat=ierr)
+      IF (ierr /= 0) CALL juDFT_error("Couldn't allocate abCoeffs")
+      !$acc enter data create(abCoeffs)
 
       ! Generate spherical harmonics
       ! gkrot = matmul(bmrot, lapw%vk(:,:,igSpin))

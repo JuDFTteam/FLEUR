@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_vham
 
     !----------------------------------------------------------------------------------- !
@@ -18,6 +23,7 @@ MODULE m_vham
     !------------------------------------------------------------------------------------! 
 
 
+   implicit none
     CONTAINS
 
     SUBROUTINE v_ham(input,usdus,atoms,kpts,cell,lapw,sym,noco,fmpi,nococonv,fjgj,den,jspin,kptindx,hmat)
@@ -54,14 +60,11 @@ MODULE m_vham
             COMPLEX c_0, a1, b1, a2, b2, power_fac, exponent
             REAL norm1_W, norm2_W, V_inp
             COMPLEX, ALLOCATABLE :: abG1(:,:),abG2(:,:),temp_nIJ(:,:), c_pairs(:,:)
-            ALLOCATE(abG1(2*atoms%lmaxd*(atoms%lmaxd+2)+2,MAXVAL(lapw%nv)))
-            ALLOCATE(abG2(2*atoms%lmaxd*(atoms%lmaxd+2)+2,MAXVAL(lapw%nv)))
+            ! abG1/abG2 are allocated (and filled) inside hsmt_ab.
             ALLOCATE(temp_nIJ(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const))
             ALLOCATE(c_pairs(MAXVAL(lapw%nv),MAXVAL(lapw%nv)))
 
             !c_pairs=cmplx_0
-            abG1=cmplx_0
-            abG2=cmplx_0
             temp_nIJ=cmplx_0
             c_pairs=cmplx_0
 
@@ -100,11 +103,13 @@ MODULE m_vham
                                                  (conjg(a1)*a2 + conjg(b1)*a2*norm1_W + conjg(a1)*b2*norm2_W + conjg(b1)*b2*norm2_W*norm1_W)
                                 ENDDO
                             ENDDO
-                            c_pairs(iG1,iG2)=c_0+c_pairs(iG1,iG2) 
+                            c_pairs(iG1,iG2)=c_0+c_pairs(iG1,iG2)
                         ENDDO
                     ENDDO
+                    !$acc exit data delete(abG2)
                     i_pair=i_pair+1
                 ENDDO
+                !$acc exit data delete(abG1)
             ENDDO
 
 

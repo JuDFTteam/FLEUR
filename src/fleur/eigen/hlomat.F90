@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -92,26 +92,29 @@ CONTAINS
 
       ALLOCATE(abclo(3,-atoms%llod:atoms%llod,2*(2*atoms%llod+1),atoms%nlod))
       ALLOCATE(ax(2*lo_lmax+1,MAXVAL(lapw%nv)),bx(2*lo_lmax+1,MAXVAL(lapw%nv)),cx(2*lo_lmax+1,MAXVAL(lapw%nv)))      
-      ALLOCATE(abCoeffsPr(0:2*atoms%lnonsph(ntyp)*(atoms%lnonsph(ntyp)+2)+1,MAXVAL(lapwPr%nv)))
+      ! abCoeffs and abCoeffsPr are allocated (and filled) inside hsmt_ab.
       ALLOCATE(axPr(MAXVAL(lapwPr%nv),2*lo_lmax+1),bxPr(MAXVAL(lapwPr%nv),2*lo_lmax+1),cxPr(MAXVAL(lapwPr%nv),2*lo_lmax+1))
       ALLOCATE(abcloPr(3,-atoms%llod:atoms%llod,2*(2*atoms%llod+1),atoms%nlod))
-      ALLOCATE(abCoeffs(0:2*atoms%lnonsph(ntyp)*(atoms%lnonsph(ntyp)+2)+1,MAXVAL(lapw%nv)))       
-      !$acc data create(abcoeffs,abclo,abcoeffsPr,abcloPr)
+      !$acc data create(abclo,abcloPr)
       !$acc data copyin(alo1,blo1,clo1,fjgjPr,fjgjpr%fj,fjgjpr%gj,tlmplm,tlmplm%h_loc_LO,tlmplm%h_lo)
       call timestart("hsmt_ab")
-      CALL hsmt_ab(sym,atoms,noco,nococonv,ilSpinPr,igSpinPr,ntyp,na,cell,lapwPr,fjgjPr,abCoeffsPr(:,:),ab_size_Pr,.TRUE.,abcloPr,alo1(:,ilSpinPr),blo1(:,ilSpinPr),clo1(:,ilSpinPr))
+      CALL hsmt_ab(sym,atoms,noco,nococonv,ilSpinPr,igSpinPr,ntyp,na,cell,lapwPr,fjgjPr,abCoeffsPr,ab_size_Pr,.TRUE.,abcloPr,alo1(:,ilSpinPr),blo1(:,ilSpinPr),clo1(:,ilSpinPr))
       call timestop("hsmt_ab")
       !we need the "unprimed" abcoeffs
       IF (ilSpin==ilSpinPr.AND.igSpinPr==igSpin.AND.l_samelapw) THEN
          call timestart("abcoeffs copy")
+         ! abcoeffs is not produced by hsmt_ab in this branch; allocate it
+         ! (matching abcoeffsPr) and put it on the device so it can be copied.
+         ALLOCATE(abcoeffs, mold=abcoeffsPr)
+         !$acc enter data create(abcoeffs)
          !$acc kernels present(abcoeffs,abcoeffsPr,abclo,abcloPr)
-         if (l_fullj) abcoeffs=abcoeffsPr 
+         if (l_fullj) abcoeffs=abcoeffsPr
          abclo=abcloPr
          !$acc end kernels
          call timestop("abcoeffs copy")
-      ELSE     
+      ELSE
          call timestart("hsmt_ab2")
-         CALL hsmt_ab(sym,atoms,noco,nococonv,ilSpin,igSpin,ntyp,na,cell,lapw,fjgj,abCoeffs(:,:),ab_size,.TRUE.,abclo,alo1(:,ilSpin),blo1(:,ilSpin),clo1(:,ilSpin))
+         CALL hsmt_ab(sym,atoms,noco,nococonv,ilSpin,igSpin,ntyp,na,cell,lapw,fjgj,abCoeffs,ab_size,.TRUE.,abclo,alo1(:,ilSpin),blo1(:,ilSpin),clo1(:,ilSpin))
          call timestop("hsmt_ab2")
       END IF
    
@@ -154,15 +157,15 @@ CONTAINS
             h_loc_LO_B_tmp(:,:) = tlmplm%h_loc_LO(0:2*s-1,s+l*l:s+l*l+2*l,ntyp,ilSpinPr,ilSpin)
             h_LO_tmp(:,:) = tlmplm%h_LO(0:2*s-1,-l:l,lo+mlo,ilSpinPr,ilSpin)
             !$acc end kernels
-            call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,h_loc_LO_A_tmp,axPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
-            call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,h_loc_LO_B_tmp,bxPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
-            call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,h_LO_tmp,cxPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
+            call blas_matmul(lapwPr%nv(igSpinPr),2*l+1,2*s,abCoeffsPr,h_loc_LO_A_tmp,axPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
+            call blas_matmul(lapwPr%nv(igSpinPr),2*l+1,2*s,abCoeffsPr,h_loc_LO_B_tmp,bxPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
+            call blas_matmul(lapwPr%nv(igSpinPr),2*l+1,2*s,abCoeffsPr,h_LO_tmp,cxPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
             !$acc end data
             DEALLOCATE(h_LO_tmp,h_loc_LO_B_tmp,h_loc_LO_A_tmp)
 #else
-            call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,tlmplm%h_loc_LO(0:2*s-1,l*l:,ntyp,ilSpinPr,ilSpin),axPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
-            call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,tlmplm%h_loc_LO(0:2*s-1,s+l*l:,ntyp,ilSpinPr,ilSpin),bxPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
-            call blas_matmul(maxval(lapwPr%nv),2*l+1,2*s,abCoeffsPr,tlmplm%h_LO(0:2*s-1,-l:,lo+mlo,ilSpinPr,ilSpin),cxPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
+            call blas_matmul(lapwPr%nv(igSpinPr),2*l+1,2*s,abCoeffsPr,tlmplm%h_loc_LO(0:2*s-1,l*l:,ntyp,ilSpinPr,ilSpin),axPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
+            call blas_matmul(lapwPr%nv(igSpinPr),2*l+1,2*s,abCoeffsPr,tlmplm%h_loc_LO(0:2*s-1,s+l*l:,ntyp,ilSpinPr,ilSpin),bxPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
+            call blas_matmul(lapwPr%nv(igSpinPr),2*l+1,2*s,abCoeffsPr,tlmplm%h_LO(0:2*s-1,-l:,lo+mlo,ilSpinPr,ilSpin),cxPr,cmplx(1.0,0.0),cmplx(0.0,0.0),'C')
 #endif
 
 !#ifndef CPP_GPU
@@ -210,9 +213,9 @@ CONTAINS
                l = atoms%llo(lo,ntyp)
                s = tlmplm%h_loc2_nonsph(ntyp) 
                !$acc data create(axpr,bxpr,cxpr)
-               call blas_matmul(2*l+1,maxval(lapw%nv),2*s,tlmplm%h_loc_LO(0:2*s-1,l*l:,ntyp,ilSpinPr,ilSpin),abCoeffs,ax,cmplx(1.0,0.0),cmplx(0.0,0.0),'T','N')
-               call blas_matmul(2*l+1,maxval(lapw%nv),2*s,tlmplm%h_loc_LO(0:2*s-1,s+l*l:,ntyp,ilSpinPr,ilSpin),abCoeffs,bx,cmplx(1.0,0.0),cmplx(0.0,0.0),'T','N')
-               call blas_matmul(2*l+1,maxval(lapw%nv),2*s,tlmplm%h_LO2(0:2*s-1,-l:,lo+mlo,ilSpinPr,ilSpin),abCoeffs,cx,cmplx(1.0,0.0),cmplx(0.0,0.0),'T','N')
+               call blas_matmul(2*l+1,lapw%nv(igSpin),2*s,tlmplm%h_loc_LO(0:2*s-1,l*l:,ntyp,ilSpinPr,ilSpin),abCoeffs,ax,cmplx(1.0,0.0),cmplx(0.0,0.0),'T','N')
+               call blas_matmul(2*l+1,lapw%nv(igSpin),2*s,tlmplm%h_loc_LO(0:2*s-1,s+l*l:,ntyp,ilSpinPr,ilSpin),abCoeffs,bx,cmplx(1.0,0.0),cmplx(0.0,0.0),'T','N')
+               call blas_matmul(2*l+1,lapw%nv(igSpin),2*s,tlmplm%h_LO2(0:2*s-1,-l:,lo+mlo,ilSpinPr,ilSpin),abCoeffs,cx,cmplx(1.0,0.0),cmplx(0.0,0.0),'T','N')
             
                !$acc kernels present(hmat,hmat%data_c,hmat%data_r,abcloPr,ax,bx,cx)&
                !$acc & copyin(lapwPr,lapwPr%nv,lapwPr%index_lo,fmpi,fmpi%n_size,fmpi%n_rank,invsfct,igSpinPr,lo,na,l)
@@ -247,7 +250,7 @@ CONTAINS
             CALL timestop("LO-LAPW")
          END IF
          CALL timestart("LO-LO")
-         !$acc kernels present(hmat,hmat%data_c,hmat%data_r,abcoeffs,abclo,abcoeffsPr,abcloPr) &
+         !$acc kernels present(hmat,hmat%data_c,hmat%data_r,abclo,abcloPr) &
          !$acc & copyin(atoms,lapw,lapwPr,tlmplm,lapw%nv(:),lapwPr%nv(:))&
          !$acc & copyin(tlmplm%tuloulo_newer(:,:,:,:,ntyp,ilSpinPr,ilSpin))&
          !$acc & copyin(tlmplm%h_loc_LO(:,:,ntyp,ilSpinPr,ilSpin),tlmplm%h_LO(:,:,:,ilSpinPr,ilSpin),tlmplm%h_LO2(:,:,:,ilSpinPr,ilSpin),tlmplm%h_loc2_nonsph)&
@@ -306,6 +309,15 @@ CONTAINS
          END DO ! end of lo = 1,atoms%nlo loop
          !$acc end kernels
          CALL timestop("LO-LO")
+      END IF
+
+      ! abCoeffs/abCoeffsPr are allocated and put on the device inside hsmt_ab
+      ! (or, for abcoeffs in the copy branch, just above); release them here.
+      !$acc exit data delete(abcoeffsPr)
+      DEALLOCATE(abcoeffsPr)
+      IF (ALLOCATED(abcoeffs)) THEN
+         !$acc exit data delete(abcoeffs)
+         DEALLOCATE(abcoeffs)
       END IF
 
       !$acc end data
