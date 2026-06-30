@@ -3,7 +3,7 @@ MODULE m_fleurinput_mpi_bc
   IMPLICIT NONE
 CONTAINS
   SUBROUTINE fleurinput_mpi_bc(cell,sym,atoms,input,noco,vacuum,field,&
-       sliceplot,banddos,mpinp,hybinp ,coreSpecInput,wann,&
+       sliceplot,banddos,xas,mpinp,hybinp ,coreSpecInput,wann,&
        xcpot,forcetheo_data,kpts,enparaXML,gfinp,hub1inp,mpi_comm,dfpt,rank)
     USE m_types_xml
 
@@ -17,6 +17,7 @@ CONTAINS
     TYPE(t_field),INTENT(INOUT)::field
     TYPE(t_sliceplot),INTENT(INOUT)::sliceplot
     TYPE(t_banddos),INTENT(INOUT)::banddos
+    TYPE(t_xas),INTENT(INOUT)::xas
     TYPE(t_mpinp), INTENT(INOUT):: mpinp
     TYPE(t_hybinp),INTENT(INOUT)::hybinp
      
@@ -42,6 +43,7 @@ CONTAINS
     CALL field%mpi_bc(mpi_comm,rank)
     CALL sliceplot%mpi_bc(mpi_comm,rank)
     CALL banddos%mpi_bc(mpi_comm,rank)
+    CALL xas%mpi_bc(mpi_comm,rank)
     CALL hybinp%mpi_bc(mpi_comm,rank)
     CALL mpinp%mpi_bc(mpi_comm, rank)
     CALL coreSpecInput%mpi_bc(mpi_comm,rank)

@@ -9,6 +9,7 @@ MODULE m_xas_driver
 #ifdef CPP_MPI
    USE mpi
 #endif
+   USE m_constants, ONLY: hartree_to_ev_const
    USE m_eig66_io, ONLY: read_eig
    USE m_genMTBasis, ONLY: genMTBasis
    USE m_juDFT, ONLY: juDFT_error
@@ -29,6 +30,7 @@ MODULE m_xas_driver
    USE m_types_radfun, ONLY: t_radfun
    USE m_types_sym, ONLY: t_sym
    USE m_types_usdus, ONLY: t_usdus
+   USE m_types_xas, ONLY: t_xas
    USE m_xas_angular, ONLY: xas_cartesian_to_spherical, xas_print_angular_sumrule
    USE m_xas_core, ONLY: t_xas_core_state, xas_extract_core_states, xas_print_core_states
    USE m_xas_io, ONLY: xas_write_spectrum_text
@@ -41,15 +43,6 @@ MODULE m_xas_driver
    IMPLICIT NONE
    PRIVATE
 
-   ! Temporary hardwired XAS development parameters. Fe L3 remains the
-   ! default validation case, but these choices are no longer baked into the
-   ! driver logic and should become XML/input controlled later.
-   INTEGER, PARAMETER :: xas_absorber_z = 26
-   CHARACTER(LEN=16), PARAMETER :: xas_edge_name = "L3"
-   INTEGER, PARAMETER :: xas_test_n_grid = 401
-   ! Hardwired Gaussian broadening for the smoke test, in Hartree.
-   ! Useful trial values: 0.01 Ha (sharper), 0.03 Ha (default), 0.05 Ha (smoother).
-   REAL,    PARAMETER :: xas_test_eta = 0.03
    INTEGER, PARAMETER :: xas_debug_n_pol = 3
    INTEGER, PARAMETER :: xas_max_final_l_channels = 2
    ! Debug verbosity:
@@ -63,39 +56,32 @@ MODULE m_xas_driver
    ! The lab-frame polarization is kept fixed. Older diagnostic paths that only
    ! rotated polarization, or used full-zone read_eig, were not production-valid.
    LOGICAL, PARAMETER :: xas_use_spatial_star = .TRUE.
-   ! Development diagnostic for the SOC/noncollinear spinor part of the star
+   ! Developer diagnostic for the SOC/noncollinear spinor part of the star
    ! transform. This prints SU(2) and local-spin-frame matrices only; it is not
-   ! connected to spectrum accumulation yet.
+   ! part of normal spectrum output.
    LOGICAL, PARAMETER :: xas_debug_spinor_star = .FALSE.
-   ! Temporary pure-angular L3 sum-rule diagnostic. Enable manually when
-   ! checking angular isotropy; it does not affect spectra.
+   ! Developer pure-angular sum-rule diagnostic. Enable manually when checking
+   ! angular isotropy; it does not affect spectra.
    LOGICAL, PARAMETER :: xas_debug_angular_sumrule = .FALSE.
-   ! Temporary symmetry-basis diagnostic. Enable manually to print the raw
-	   ! lattice/fractional operations and the Cartesian/proper rotations used by
-	   ! XAS Wigner-D and SU(2) star reconstruction.
+   ! Developer symmetry-basis diagnostic. Enable manually to print the raw
+   ! lattice/fractional operations and the Cartesian/proper rotations used by
+   ! XAS Wigner-D and SU(2) star reconstruction.
 	   LOGICAL, PARAMETER :: xas_debug_symmetry_rotations = .FALSE.
-   ! Temporary abc fingerprint diagnostic for spinor spatial-star validation.
+   ! Developer abc fingerprint diagnostic for spinor spatial-star validation.
    ! Explicit full-k runs write DIRECT records; symmetry-reduced runs write
    ! STAR records keyed by the same full-zone k coordinates for comparison.
    LOGICAL, PARAMETER :: xas_debug_abc_star_compare = .FALSE.
    INTEGER, PARAMETER :: xas_debug_abc_star_max_records = 20
 	   CHARACTER(LEN=1), PARAMETER :: xas_debug_pol_label(xas_debug_n_pol) = [CHARACTER(LEN=1) :: "x", "y", "z"]
 
-   PUBLIC :: xas_hardwired_test_driver
+   PUBLIC :: xas_run_driver
 
 CONTAINS
 
-   SUBROUTINE xas_hardwired_test_driver(eig_id, fmpi, input, kpts, atoms, sym, cell, noco, nococonv, enpara, vTot, results)
-      ! Temporary internal XAS smoke-test driver.
+   SUBROUTINE xas_run_driver(eig_id, fmpi, input, xas, kpts, atoms, sym, cell, noco, nococonv, enpara, vTot, results)
+      ! Internal XAS postprocessing driver.
       !
-      ! Hardwired choices:
-      !   all atom types with Z=xas_absorber_z, edge=xas_edge_name, z
-      !   polarization, Gaussian eta=xas_test_eta Ha, output file labelled by
-      !   edge, polarization, and broadening. The absorbing-atom selection is
-      !   temporary hardwired behavior and must become XML/input controlled in
-      !   the real driver.
-      !
-      ! The current test spectrum is a per-selected-absorbing-atom local
+      ! The current spectrum is a per-selected-absorbing-atom local
       ! muffin-tin XAS signal. It is k-weighted and written in arbitrary units,
       ! but it is not normalized per cell volume, film area, film thickness, or
       ! number of equivalent atoms. Additive spectral and diagnostic quantities
@@ -121,6 +107,7 @@ CONTAINS
       INTEGER,             INTENT(IN) :: eig_id
       TYPE(t_mpi),         INTENT(IN) :: fmpi
       TYPE(t_input),       INTENT(IN) :: input
+      TYPE(t_xas),         INTENT(IN) :: xas
       TYPE(t_kpts),        INTENT(IN) :: kpts
       TYPE(t_atoms),       INTENT(IN) :: atoms
       TYPE(t_sym),         INTENT(IN) :: sym
@@ -142,8 +129,8 @@ CONTAINS
       COMPLEX :: eps_cart(3), eps_sph(-1:1), eps_cart_debug(3), eps_sph_debug(-1:1)
       COMPLEX :: spin_frame_transform(2, 2)
       COMPLEX, ALLOCATABLE :: matrix(:, :), matrix_debug(:, :), matrix_lchan(:, :, :)
-      REAL, ALLOCATABLE :: energy_grid(:), intensity(:), radial_xas(:, :, :)
-      REAL, ALLOCATABLE :: intensity_reduced(:)
+      REAL, ALLOCATABLE :: energy_grid(:), intensity(:, :), radial_xas(:, :, :)
+      REAL, ALLOCATABLE :: intensity_reduced(:, :)
       REAL, ALLOCATABLE :: f(:, :, :, :), g(:, :, :, :), flo(:, :, :, :)
       REAL, ALLOCATABLE :: eig_band(:), occ_band(:)
       REAL, ALLOCATABLE :: xas_debug_strength_kpt(:, :)
@@ -152,7 +139,6 @@ CONTAINS
       REAL, ALLOCATABLE :: xas_debug_strength_spin_reduced(:, :)
       INTEGER, ALLOCATABLE :: ev_list(:)
 
-      CHARACTER(LEN=1)   :: pol_label
       CHARACTER(LEN=5)   :: eta_label
       CHARACTER(LEN=128) :: output_filename
       CHARACTER(LEN=128) :: xas_debug_filename
@@ -168,7 +154,7 @@ CONTAINS
       REAL    :: xas_debug_strength_lchan_reduced(xas_max_final_l_channels, xas_debug_n_pol)
       REAL    :: xas_debug_strength_total_reduced(xas_debug_n_pol), xas_debug_strength_cross_reduced(xas_debug_n_pol)
       REAL    :: weight_sums_local(2), weight_sums_reduced(2)
-      REAL    :: transition_min, transition_max, transition_padding, occ, debug_strength
+      REAL    :: transition_min, transition_max, transition_padding, transition_step, occ, debug_strength
       REAL    :: debug_avg, debug_rel_xz
       REAL    :: wk_current, wk_star, weight_sum_parent, weight_sum_star
       INTEGER :: underflow_local(1), underflow_reduced(1)
@@ -194,12 +180,14 @@ CONTAINS
 	      n_abc_debug_star_records = 0
 	      l_xas_angular_sumrule_printed = .FALSE.
 
+      IF (.NOT. xas%l_xas) RETURN
       IF (.NOT. ALLOCATED(results%w_iks)) THEN
-         CALL juDFT_error("results%w_iks is not allocated in xas_hardwired_test_driver", calledby="m_xas_driver")
+         CALL juDFT_error("results%w_iks is not allocated in xas_run_driver", calledby="m_xas_driver")
       END IF
 
 	      xas_debug_filename = ""
 	      IF (l_root) CALL xas_debug_open_log(kpts, xas_use_spatial_star, xas_debug_unit, xas_debug_filename)
+      IF (l_root) CALL xas_print_setup_summary(xas, xas_debug_unit)
 	      IF (l_root .AND. xas_debug_abc_star_compare) THEN
 	         OPEN(NEWUNIT=xas_abc_debug_unit, FILE="xas_abc_star_compare.dat", STATUS="REPLACE", ACTION="WRITE")
 	         CALL xas_debug_write_abc_header(xas_abc_debug_unit)
@@ -216,17 +204,17 @@ CONTAINS
             WRITE(xas_debug_unit, '(a,i0,a,i0,a,i0,a,a)') "XAS DEBUG atom type ", itype, " Z=", atoms%nz(itype), &
                                                           " neq=", atoms%neq(itype), " species=", TRIM(atoms%speciesName(itype))
          END IF
-         IF (atoms%nz(itype) == xas_absorber_z) THEN
+         IF (atoms%nz(itype) == xas%absorber_z) THEN
             n_absorber_types = n_absorber_types + 1
             n_absorber_atoms = n_absorber_atoms + atoms%neq(itype)
          END IF
       END DO
       IF (n_absorber_types == 0) THEN
-         WRITE(error_message, '(a,i0)') "No atom types found for requested XAS absorber Z=", xas_absorber_z
+         WRITE(error_message, '(a,i0)') "No atom types found for requested XAS absorber Z=", xas%absorber_z
          CALL juDFT_error(TRIM(error_message), calledby="m_xas_driver")
       END IF
       IF (l_root .AND. xas_debug_spinor_star) THEN
-         CALL xas_debug_print_spinor_star(sym, cell, atoms, nococonv, xas_absorber_z, xas_debug_unit)
+         CALL xas_debug_print_spinor_star(sym, cell, atoms, nococonv, xas%absorber_z, xas_debug_unit)
       END IF
       IF (l_root .AND. xas_debug_symmetry_rotations) THEN
          CALL xas_print_symmetry_rotation_diagnostics(sym, cell, xas_debug_unit)
@@ -240,20 +228,10 @@ CONTAINS
          ALLOCATE(xas_debug_strength_kpt(xas_debug_n_pol, kpts%nkpt), SOURCE=0.0)
       END IF
 
-      eps_cart = CMPLX(0.0, 0.0)
-      ! Hardwired linear polarization vector in Cartesian components:
-      !   x: eps_cart(1) = CMPLX(1.0, 0.0); pol_label = "x"
-      !   y: eps_cart(2) = CMPLX(1.0, 0.0); pol_label = "y"
-      !   z: eps_cart(3) = CMPLX(1.0, 0.0); pol_label = "z"  ! default
-      pol_label = "z"
-      eps_cart(3) = CMPLX(1.0, 0.0)
-      CALL xas_cartesian_to_spherical(eps_cart, eps_sph)
-
-      WRITE(eta_label, '(f5.3)') xas_test_eta
+      WRITE(eta_label, '(f5.3)') xas%eta
       DO i_char = 1, LEN(eta_label)
          IF (eta_label(i_char:i_char) == ".") eta_label(i_char:i_char) = "p"
       END DO
-      output_filename = "xas_test_"//TRIM(xas_edge_name)//"_"//TRIM(pol_label)//"_eta"//TRIM(eta_label)//".dat"
 
       ! Keep FLEUR eig/occupation spin channels separate from the local MT
       ! spinor components used by the XAS dipole matrix element. In noco
@@ -279,13 +257,13 @@ CONTAINS
       transition_min = HUGE(1.0)
       transition_max = -HUGE(1.0)
       DO itype = 1, atoms%ntype
-         IF (atoms%nz(itype) /= xas_absorber_z) CYCLE
+         IF (atoms%nz(itype) /= xas%absorber_z) CYCLE
          CALL xas_debug_clear_underflow(l_xas_debug_fp)
-         CALL xas_extract_core_states(atoms, itype, xas_edge_name, vTot%mt(1:atoms%jri(itype), 0, itype, 1), core_states)
+         CALL xas_extract_core_states(atoms, itype, xas%edge, vTot%mt(1:atoms%jri(itype), 0, itype, 1), core_states)
          CALL xas_debug_report_underflow(l_xas_debug_fp, "xas_extract_core_states", unit=xas_debug_unit)
          IF (SIZE(core_states) < 1) THEN
-            WRITE(error_message, '(a,a,a,i0,a,i0)') "No core state found for requested XAS edge ", TRIM(xas_edge_name), &
-                                                    " in absorber Z=", xas_absorber_z, " atom type ", itype
+            WRITE(error_message, '(a,a,a,i0,a,i0)') "No core state found for requested XAS edge ", TRIM(xas%edge), &
+                                                    " in absorber Z=", xas%absorber_z, " atom type ", itype
             CALL juDFT_error(TRIM(error_message), calledby="m_xas_driver")
          END IF
          DO jsp_loop = 1, n_spin_channels
@@ -307,32 +285,41 @@ CONTAINS
       END DO
       CALL xas_allreduce_transition_window(fmpi, transition_min, transition_max)
       IF (transition_min > transition_max) THEN
-         CALL juDFT_error("No empty final-state bands found for hardwired XAS test", calledby="m_xas_driver")
+         CALL juDFT_error("No empty final-state bands found for XAS", calledby="m_xas_driver")
       END IF
-      transition_padding = MAX(5.0*xas_test_eta, 0.05)
-      transition_min = transition_min - transition_padding
-      transition_max = transition_max + transition_padding
+      IF (xas%l_energy_window) THEN
+         transition_min = xas%e_min
+         transition_max = xas%e_max
+      ELSE
+         transition_padding = MAX(5.0*xas%eta, 0.05)
+         transition_min = transition_min - transition_padding
+         transition_max = transition_max + transition_padding
+      END IF
 
-      ALLOCATE(energy_grid(xas_test_n_grid), intensity(xas_test_n_grid), SOURCE=0.0)
-      DO i_band = 1, xas_test_n_grid
-         energy_grid(i_band) = transition_min + (transition_max - transition_min)*REAL(i_band - 1)/REAL(xas_test_n_grid - 1)
+      ALLOCATE(energy_grid(xas%n_energy), intensity(xas%n_energy, xas_debug_n_pol), SOURCE=0.0)
+      DO i_band = 1, xas%n_energy
+         energy_grid(i_band) = transition_min + (transition_max - transition_min)*REAL(i_band - 1)/REAL(xas%n_energy - 1)
       END DO
+      transition_step = energy_grid(2) - energy_grid(1)
+      ! Print after grid construction so automatic-window runs report the
+      ! actual endpoints used for the spectrum, not just "automatic".
+      IF (l_root) CALL xas_print_resolved_grid_summary(xas, transition_min, transition_max, transition_step, xas_debug_unit)
 
       l_real = sym%invs .AND. (.NOT. noco%l_soc) .AND. (.NOT. noco%l_noco) .AND. atoms%n_hia == 0
 
       DO itype = 1, atoms%ntype
-         IF (atoms%nz(itype) /= xas_absorber_z) CYCLE
+         IF (atoms%nz(itype) /= xas%absorber_z) CYCLE
          DO ispin = 1, input%jspins
             CALL genMTBasis(atoms, enpara, vTot, fmpi, itype, ispin, usdus, &
                             f(:, :, 0:, ispin), g(:, :, 0:, ispin), flo(:, :, :, ispin), l_writeArg=.FALSE.)
          END DO
 
          CALL xas_debug_clear_underflow(l_xas_debug_fp)
-         CALL xas_extract_core_states(atoms, itype, xas_edge_name, vTot%mt(1:atoms%jri(itype), 0, itype, 1), core_states)
+         CALL xas_extract_core_states(atoms, itype, xas%edge, vTot%mt(1:atoms%jri(itype), 0, itype, 1), core_states)
          CALL xas_debug_report_underflow(l_xas_debug_fp, "xas_extract_core_states", unit=xas_debug_unit)
          IF (SIZE(core_states) < 1) THEN
-            WRITE(error_message, '(a,a,a,i0,a,i0)') "No core state found for requested XAS edge ", TRIM(xas_edge_name), &
-                                                    " in absorber Z=", xas_absorber_z, " atom type ", itype
+            WRITE(error_message, '(a,a,a,i0,a,i0)') "No core state found for requested XAS edge ", TRIM(xas%edge), &
+                                                    " in absorber Z=", xas%absorber_z, " atom type ", itype
             CALL juDFT_error(TRIM(error_message), calledby="m_xas_driver")
          END IF
          IF (l_root .AND. xas_debug_angular_sumrule .AND. (.NOT. l_xas_angular_sumrule_printed)) THEN
@@ -353,7 +340,7 @@ CONTAINS
          CALL xas_allowed_final_l_channels(core_states(1)%lc, lmax_xas, n_final_l_channels, final_l_channels)
          IF (n_final_l_channels <= 0) THEN
             WRITE(error_message, '(a,a,a,i0,a,i0)') "No dipole-allowed final-l channels for XAS edge ", &
-                                                     TRIM(xas_edge_name), " with lc=", core_states(1)%lc, &
+                                                     TRIM(xas%edge), " with lc=", core_states(1)%lc, &
                                                      " and lmax=", lmax_xas
             CALL juDFT_error(TRIM(error_message), calledby="m_xas_driver")
          END IF
@@ -390,7 +377,7 @@ CONTAINS
                CALL zMat%init(l_real, nbasfcn, nbands)
                CALL read_eig(eig_id, ikpt, jsp, list=ev_list, neig=nbands_read, zmat=zMat)
                IF (nbands_read < nbands) THEN
-                  CALL juDFT_error("read_eig returned fewer bands than requested in hardwired XAS test", calledby="m_xas_driver")
+                  CALL juDFT_error("read_eig returned fewer bands than requested in XAS", calledby="m_xas_driver")
                END IF
 
                ALLOCATE(abc_spin(n_local_spins))
@@ -450,6 +437,8 @@ CONTAINS
 	                           END DO
 	                        END IF
 	                     ELSE IF (noco%l_soc) THEN
+                        ! Second-variation SOC does not provide the two local
+                        ! spinor abc components required by the validated XAS path.
 	                        CALL xas_abort_missing_spinor_abc(input, noco, n_local_spins)
                      ELSE
                         DO ispin = 1, n_local_spins
@@ -503,24 +492,30 @@ CONTAINS
                      END IF
 
                      DO iatom_l = 1, atoms%neq(itype)
-                        CALL xas_debug_clear_underflow(l_xas_debug_fp)
-                        IF (l_spinor_abc) THEN
-                           CALL xas_core_band_matrixelements(abc_star_spin, radfun, radial_xas, core_states(1), eps_sph, &
-                                                             iatom_l, lmax_xas, matrix, &
-                                                             spin_frame_transform=spin_frame_transform)
-                        ELSE
-                           CALL xas_core_band_matrixelements(abc_star_spin, radfun, radial_xas, core_states(1), eps_sph, &
-                                                             iatom_l, lmax_xas, matrix)
-                        END IF
-                        CALL xas_debug_report_underflow(l_xas_debug_fp, "xas_core_band_matrixelements", unit=xas_debug_unit)
-                        CALL xas_debug_clear_underflow(l_xas_debug_fp)
-                        CALL xas_accumulate_matrix_spectrum(energy_grid, eig_band, occ_band, wk_current, &
-                                                            core_states(1)%energy, matrix, xas_test_eta, intensity, "gaussian")
-                        ! The hardwired test can raise harmless underflow from negligible
-                        ! Gaussian tails or tiny spectral products. Count it, then clear
-                        ! only IEEE_UNDERFLOW so the temporary debug path does not leave
-                        ! this benign flag set at program exit.
-                        CALL xas_debug_count_and_clear_underflow(l_xas_debug_fp, n_underflow_spectrum)
+                        DO i_pol = 1, xas_debug_n_pol
+                           IF (.NOT. xas%polarizations(i_pol)) CYCLE
+                           eps_cart = CMPLX(0.0, 0.0)
+                           eps_cart(i_pol) = CMPLX(1.0, 0.0)
+                           CALL xas_cartesian_to_spherical(eps_cart, eps_sph)
+                           CALL xas_debug_clear_underflow(l_xas_debug_fp)
+                           IF (l_spinor_abc) THEN
+                              CALL xas_core_band_matrixelements(abc_star_spin, radfun, radial_xas, core_states(1), eps_sph, &
+                                                                iatom_l, lmax_xas, matrix, &
+                                                                spin_frame_transform=spin_frame_transform)
+                           ELSE
+                              CALL xas_core_band_matrixelements(abc_star_spin, radfun, radial_xas, core_states(1), eps_sph, &
+                                                                iatom_l, lmax_xas, matrix)
+                           END IF
+                           CALL xas_debug_report_underflow(l_xas_debug_fp, "xas_core_band_matrixelements", unit=xas_debug_unit)
+                           CALL xas_debug_clear_underflow(l_xas_debug_fp)
+                           CALL xas_accumulate_matrix_spectrum(energy_grid, eig_band, occ_band, wk_current, &
+                                                               core_states(1)%energy, matrix, xas%eta, intensity(:, i_pol), "gaussian")
+                           ! The XAS accumulator can raise harmless underflow from negligible
+                           ! Gaussian tails or tiny spectral products. Count it, then clear
+                           ! only IEEE_UNDERFLOW so the debug path does not leave this benign
+                           ! flag set at program exit.
+                           CALL xas_debug_count_and_clear_underflow(l_xas_debug_fp, n_underflow_spectrum)
+                        END DO
                      END DO
                      DEALLOCATE(abc_star_spin)
                   END DO
@@ -569,24 +564,30 @@ CONTAINS
                   END IF
 
                   DO iatom_l = 1, atoms%neq(itype)
-                     CALL xas_debug_clear_underflow(l_xas_debug_fp)
-                     IF (l_spinor_abc) THEN
-                        CALL xas_core_band_matrixelements(abc_spin, radfun, radial_xas, core_states(1), eps_sph, &
-                                                          iatom_l, lmax_xas, matrix, &
-                                                          spin_frame_transform=spin_frame_transform)
-                     ELSE
-                        CALL xas_core_band_matrixelements(abc_spin, radfun, radial_xas, core_states(1), eps_sph, &
-                                                          iatom_l, lmax_xas, matrix)
-                     END IF
-                     CALL xas_debug_report_underflow(l_xas_debug_fp, "xas_core_band_matrixelements", unit=xas_debug_unit)
-                     CALL xas_debug_clear_underflow(l_xas_debug_fp)
-                     CALL xas_accumulate_matrix_spectrum(energy_grid, eig_band, occ_band, wk_current, &
-                                                         core_states(1)%energy, matrix, xas_test_eta, intensity, "gaussian")
-                     ! The hardwired test can raise harmless underflow from negligible
-                     ! Gaussian tails or tiny spectral products. Count it, then clear
-                     ! only IEEE_UNDERFLOW so the temporary debug path does not leave
-                     ! this benign flag set at program exit.
-                     CALL xas_debug_count_and_clear_underflow(l_xas_debug_fp, n_underflow_spectrum)
+                     DO i_pol = 1, xas_debug_n_pol
+                        IF (.NOT. xas%polarizations(i_pol)) CYCLE
+                        eps_cart = CMPLX(0.0, 0.0)
+                        eps_cart(i_pol) = CMPLX(1.0, 0.0)
+                        CALL xas_cartesian_to_spherical(eps_cart, eps_sph)
+                        CALL xas_debug_clear_underflow(l_xas_debug_fp)
+                        IF (l_spinor_abc) THEN
+                           CALL xas_core_band_matrixelements(abc_spin, radfun, radial_xas, core_states(1), eps_sph, &
+                                                             iatom_l, lmax_xas, matrix, &
+                                                             spin_frame_transform=spin_frame_transform)
+                        ELSE
+                           CALL xas_core_band_matrixelements(abc_spin, radfun, radial_xas, core_states(1), eps_sph, &
+                                                             iatom_l, lmax_xas, matrix)
+                        END IF
+                        CALL xas_debug_report_underflow(l_xas_debug_fp, "xas_core_band_matrixelements", unit=xas_debug_unit)
+                        CALL xas_debug_clear_underflow(l_xas_debug_fp)
+                        CALL xas_accumulate_matrix_spectrum(energy_grid, eig_band, occ_band, wk_current, &
+                                                            core_states(1)%energy, matrix, xas%eta, intensity(:, i_pol), "gaussian")
+                        ! The XAS accumulator can raise harmless underflow from negligible
+                        ! Gaussian tails or tiny spectral products. Count it, then clear
+                        ! only IEEE_UNDERFLOW so the debug path does not leave this benign
+                        ! flag set at program exit.
+                        CALL xas_debug_count_and_clear_underflow(l_xas_debug_fp, n_underflow_spectrum)
+                     END DO
                   END DO
                END IF
 
@@ -600,7 +601,7 @@ CONTAINS
 
       ! Rank-local k-point/star contributions are additive. Reduce them once
       ! after the k loops, then let rank 0 do all text/debug output.
-      ALLOCATE(intensity_reduced(SIZE(intensity)), SOURCE=0.0)
+      ALLOCATE(intensity_reduced(SIZE(intensity, 1), SIZE(intensity, 2)), SOURCE=0.0)
       CALL mpi_sum_reduce(intensity, intensity_reduced, fmpi%mpi_comm)
 
       weight_sums_local = [weight_sum_parent, weight_sum_star]
@@ -640,10 +641,10 @@ CONTAINS
                                             " expanded=", weight_sums_reduced(2), &
                                             " diff=", weight_sums_reduced(2) - weight_sums_reduced(1)
          WRITE(*, '(a,i0,a,i0,a,i0,a)') "XAS DEBUG: summed ", n_absorber_atoms, &
-                                        " total absorber atoms with Z=", xas_absorber_z, &
+                                        " total absorber atoms with Z=", xas%absorber_z, &
                                         " over ", n_absorber_types, " atom types"
          WRITE(xas_debug_unit, '(a,i0,a,i0,a,i0,a)') "XAS DEBUG: summed ", n_absorber_atoms, &
-                                                     " total absorber atoms with Z=", xas_absorber_z, &
+                                                     " total absorber atoms with Z=", xas%absorber_z, &
                                                      " over ", n_absorber_types, " atom types"
       END IF
       IF (l_root .AND. l_xas_debug_kpt_strength) THEN
@@ -686,13 +687,18 @@ CONTAINS
       END IF
 
       IF (l_root) THEN
-         CALL xas_debug_clear_underflow(l_xas_debug_fp)
-         CALL xas_write_spectrum_text(TRIM(output_filename), energy_grid, intensity_reduced, "Hartree")
-         CALL xas_debug_report_underflow(l_xas_debug_fp, "xas_write_spectrum_text", unit=xas_debug_unit)
-         WRITE(*, '(a,a)') "XAS hardwired test wrote spectrum to ", TRIM(output_filename)
-         WRITE(xas_debug_unit, '(a,a)') "XAS hardwired test wrote spectrum to ", TRIM(output_filename)
-         WRITE(*, '(a,a)') "XAS hardwired test wrote debug log to ", TRIM(xas_debug_filename)
-         WRITE(xas_debug_unit, '(a,a)') "XAS hardwired test wrote debug log to ", TRIM(xas_debug_filename)
+         DO i_pol = 1, xas_debug_n_pol
+            IF (.NOT. xas%polarizations(i_pol)) CYCLE
+            output_filename = TRIM(xas%output_prefix)//"_"//TRIM(xas%edge)//"_"//TRIM(xas_debug_pol_label(i_pol))// &
+                              "_eta"//TRIM(eta_label)//".dat"
+            CALL xas_debug_clear_underflow(l_xas_debug_fp)
+            CALL xas_write_spectrum_text(TRIM(output_filename), energy_grid, intensity_reduced(:, i_pol), "Hartree")
+            CALL xas_debug_report_underflow(l_xas_debug_fp, "xas_write_spectrum_text", unit=xas_debug_unit)
+            WRITE(*, '(a,a)') "XAS wrote spectrum to ", TRIM(output_filename)
+            WRITE(xas_debug_unit, '(a,a)') "XAS wrote spectrum to ", TRIM(output_filename)
+         END DO
+         WRITE(*, '(a,a)') "XAS wrote debug log to ", TRIM(xas_debug_filename)
+         WRITE(xas_debug_unit, '(a,a)') "XAS wrote debug log to ", TRIM(xas_debug_filename)
          IF (xas_debug_verbosity >= 3 .AND. underflow_reduced(1) > 0) THEN
             WRITE(*, '(a,i0,a)') "XAS DEBUG SUMMARY: underflow occurred in xas_accumulate_matrix_spectrum ", &
                                  underflow_reduced(1), &
@@ -704,7 +710,75 @@ CONTAINS
 	         CLOSE(xas_debug_unit)
 	         IF (xas_abc_debug_unit /= -1) CLOSE(xas_abc_debug_unit)
 	      END IF
-	   END SUBROUTINE xas_hardwired_test_driver
+	   END SUBROUTINE xas_run_driver
+
+   SUBROUTINE xas_print_setup_summary(xas, log_unit)
+      TYPE(t_xas), INTENT(IN) :: xas
+      INTEGER,     INTENT(IN) :: log_unit
+
+      CALL xas_print_setup_summary_unit(6, xas)
+      IF (log_unit > 0) CALL xas_print_setup_summary_unit(log_unit, xas)
+   END SUBROUTINE xas_print_setup_summary
+
+   SUBROUTINE xas_print_setup_summary_unit(unit, xas)
+      INTEGER,     INTENT(IN) :: unit
+      TYPE(t_xas), INTENT(IN) :: xas
+
+      WRITE(unit, '(a)') " ---------- XAS setup -------------------------------"
+      WRITE(unit, '(a,l1)') " XAS enabled              : ", xas%l_xas
+      WRITE(unit, '(a,i0)') " Absorber Z               : ", xas%absorber_z
+      WRITE(unit, '(a,a)') " Edge                     : ", TRIM(xas%edge)
+      WRITE(unit, '(a,f10.6,a)') " Broadening eta           : ", xas%eta, " Ha"
+      WRITE(unit, '(a,i0)') " Number of energy points  : ", xas%n_energy
+      IF (xas%l_energy_window) THEN
+         WRITE(unit, '(a,f12.6,a,f12.6,a)') " Energy window input      : ", xas%e_min, " ... ", xas%e_max, " Ha"
+      ELSE
+         WRITE(unit, '(a)') " Energy window input      : automatic"
+      END IF
+      WRITE(unit, '(a,a)') " Polarizations            : ", TRIM(xas_polarization_string(xas%polarizations))
+      WRITE(unit, '(a,a)') " Output prefix            : ", TRIM(xas%output_prefix)
+      WRITE(unit, '(a)') " ----------------------------------------------------"
+   END SUBROUTINE xas_print_setup_summary_unit
+
+   SUBROUTINE xas_print_resolved_grid_summary(xas, e_min_used, e_max_used, e_step, log_unit)
+      TYPE(t_xas), INTENT(IN) :: xas
+      REAL,        INTENT(IN) :: e_min_used, e_max_used, e_step
+      INTEGER,     INTENT(IN) :: log_unit
+
+      CALL xas_print_resolved_grid_summary_unit(6, xas, e_min_used, e_max_used, e_step)
+      IF (log_unit > 0) CALL xas_print_resolved_grid_summary_unit(log_unit, xas, e_min_used, e_max_used, e_step)
+   END SUBROUTINE xas_print_resolved_grid_summary
+
+   SUBROUTINE xas_print_resolved_grid_summary_unit(unit, xas, e_min_used, e_max_used, e_step)
+      INTEGER,     INTENT(IN) :: unit
+      TYPE(t_xas), INTENT(IN) :: xas
+      REAL,        INTENT(IN) :: e_min_used, e_max_used, e_step
+
+      WRITE(unit, '(a)') " ---------- XAS resolved energy grid ----------------"
+      WRITE(unit, '(a,f12.6,a,f12.6,a,f12.6,a,f12.6,a)') &
+         " Energy window used       : ", e_min_used, " ... ", e_max_used, " Ha  (", &
+         e_min_used*hartree_to_ev_const, " ... ", e_max_used*hartree_to_ev_const, " eV)"
+      WRITE(unit, '(a,f12.6,a,f12.6,a)') " Energy step              : ", e_step, " Ha  (", &
+                                        e_step*hartree_to_ev_const, " eV)"
+      WRITE(unit, '(a,i0)') " Number of energy points  : ", xas%n_energy
+      IF (xas%l_energy_window) THEN
+         WRITE(unit, '(a)') " Window source            : user input"
+      ELSE
+         WRITE(unit, '(a)') " Window source            : automatic transition range"
+      END IF
+      WRITE(unit, '(a)') " ----------------------------------------------------"
+   END SUBROUTINE xas_print_resolved_grid_summary_unit
+
+   FUNCTION xas_polarization_string(polarizations) RESULT(pol_string)
+      LOGICAL, INTENT(IN) :: polarizations(3)
+      CHARACTER(LEN=16) :: pol_string
+
+      pol_string = ""
+      IF (polarizations(1)) pol_string = TRIM(pol_string)//" x"
+      IF (polarizations(2)) pol_string = TRIM(pol_string)//" y"
+      IF (polarizations(3)) pol_string = TRIM(pol_string)//" z"
+      pol_string = ADJUSTL(pol_string)
+   END FUNCTION xas_polarization_string
 
    SUBROUTINE xas_allowed_final_l_channels(lc, lmax, n_channels, final_l)
       INTEGER, INTENT(IN)  :: lc, lmax

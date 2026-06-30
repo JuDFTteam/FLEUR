@@ -8,7 +8,8 @@ include("${CMAKE_SOURCE_DIR}/cmake/Generate_Schema.cmake")
 set (fleurinp_src fleurinput_read_xml.f90    fleurinput_mpi_bc.f90
 types_fleurinput_base.F90  types_input.f90      
 types_coreSpecInput.f90    types_hybinp.f90     types_noco.f90
-types_vacuum.f90           types_banddos.f90    types_wannier.f90
+types_vacuum.f90           types_banddos.f90    types_xas.f90
+types_wannier.f90
 types_cell.f90             types_kpts.F90       types_fleurinput.f90
 types_sliceplot.f90        types_sym.f90        types_atoms.F90
 types_econfig.F90          types_field.F90      types_xcpot.F90
@@ -45,4 +46,3 @@ set_target_properties(fleurinput PROPERTIES Fortran_MODULE_DIRECTORY ${CMAKE_BIN
 if ((CMAKE_Fortran_COMPILER_ID MATCHES "PGI") OR (CMAKE_Fortran_COMPILER_ID MATCHES "NVHPC"))
 	set_source_files_properties(types_kpts.F90 TARGET_DIRECTORY fleurinput PROPERTIES COMPILE_OPTIONS "-nomp")
 endif()    
-

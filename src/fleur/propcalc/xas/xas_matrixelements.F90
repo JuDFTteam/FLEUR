@@ -28,7 +28,7 @@ CONTAINS
       ! basis and must be rotated into the same local frame with the optional
       ! spin_frame_transform(tau,s) before contraction.
       ! If final_l is present, only that final-state angular momentum channel
-      ! is included. This is a temporary diagnostic hook.
+      ! is included. The driver uses this for compact channel summaries.
       TYPE(t_abc),            INTENT(IN)  :: abc_spin(:)
       TYPE(t_radfun),         INTENT(IN)  :: radfun
       REAL,                   INTENT(IN)  :: radial_xas(:, 0:, :)

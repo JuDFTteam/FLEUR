@@ -30,7 +30,7 @@ MODULE m_xas_symmetry
    PUBLIC :: xas_local_spin_transform
    PUBLIC :: xas_print_symmetry_rotation_diagnostics
 
-   ! Temporary atom-mapping diagnostic for XAS star reconstruction. Enable
+   ! Developer atom-mapping diagnostic for XAS star reconstruction. Enable
    ! manually when checking how sym%mapped_atom maps global/type-local indices.
    LOGICAL, PARAMETER :: xas_debug_atom_mapping = .FALSE.
 
@@ -186,7 +186,7 @@ CONTAINS
       ! |M|^2. They must be restored before using this helper for coherent
       ! multi-atom amplitudes.
       !
-      ! The hardwired XAS validation sums atoms explicitly. Symmetry operations
+      ! The current XAS development driver sums atoms explicitly. Symmetry operations
       ! may permute equivalent atoms of the selected type, so the rotated
       ! coefficients are written into the mapped type-local atom slot. Mappings
       ! to genuinely different atom types remain guarded.
@@ -225,7 +225,7 @@ CONTAINS
             mapped_atom = xas_find_mapped_absorber(atoms, sym, spatial_iop, itype, iAtom)
          END IF
          CALL xas_check_mapped_absorber(atoms, sym, spatial_iop, itype, iAtom_l, mapped_atom, mapped_l, &
-                                        "XAS star mode 3")
+                                        "XAS scalar star rotation")
 
          IF (l_time_reversal) THEN
             abc_star%cof(:, 0, :, mapped_l) = CONJG(abc_parent%cof(:, 0, :, iAtom_l))
