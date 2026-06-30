@@ -537,7 +537,7 @@ CONTAINS
             CALL timestart("generation of new charge density (total)")
             CALL outDen%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN)
             outDen%iter = inDen%iter
-            CALL cdngen(eig_id, fmpi, input_soc, fi%banddos, fi%sliceplot, fi%vacuum, &
+            CALL cdngen(eig_id, fmpi, input_soc, fi%xas, fi%banddos, fi%sliceplot, fi%vacuum, &
                         fi%kpts, fi%atoms, sphhar, stars, fi%sym, fi%gfinp, fi%hub1inp, &
                         enpara, fi%cell, fi%field, fi%noco, nococonv, vTot, results,   fi%corespecinput, &
                         archiveType, xcpot, outDen, EnergyDen, coreden,greensFunction, hub1data,vxc,exc)

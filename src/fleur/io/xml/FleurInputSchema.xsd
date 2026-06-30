@@ -4065,6 +4065,11 @@
                <xsd:documentation>Parameters for core-level spectroscopy calculations.</xsd:documentation>
             </xsd:annotation>
          </xsd:element>
+         <xsd:element maxOccurs="1" minOccurs="0" name="xas" type="XASOutputType">
+            <xsd:annotation>
+               <xsd:documentation>Parameters for independent-particle core-level XAS postprocessing.</xsd:documentation>
+            </xsd:annotation>
+         </xsd:element>
          <xsd:element maxOccurs="1" minOccurs="0" name="wannier" type="WannierOutputType">
             <xsd:annotation>
                <xsd:documentation>Parameters for Wannier function generation.</xsd:documentation>
@@ -4115,6 +4120,43 @@
       <xsd:attribute default="F" name="coreSpec" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="wannier" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="eig66" type="FleurBool" use="optional"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="XASOutputType">
+      <xsd:annotation>
+         <xsd:documentation>
+            Minimal input for the independent-particle local muffin-tin XAS
+            postprocessor. This is placed below output because it is a
+            postprocessing calculation from converged eigenvalues, occupations,
+            and muffin-tin wave-function coefficients. Energies and eta are
+            given in Hartree.
+         </xsd:documentation>
+      </xsd:annotation>
+      <xsd:attribute default="T" name="l_xas" type="FleurBool" use="optional"/>
+      <xsd:attribute name="absorberZ" type="xsd:positiveInteger" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Nuclear charge of the absorbing element. All atom types with this Z are summed.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute default="L3" name="edge" type="xsd:string" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Core edge. Supported values are K, L2, and L3; combined L23 is not implemented.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute default="0.03" name="eta" type="FleurDouble" use="optional"/>
+      <xsd:attribute name="eMin" type="FleurDouble" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Optional lower photon-energy grid bound in Hartree; must be given together with eMax.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="eMax" type="FleurDouble" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Optional upper photon-energy grid bound in Hartree. If omitted with eMin, XAS scans the transition range automatically.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute default="401" name="nEnergy" type="xsd:positiveInteger" use="optional"/>
+      <xsd:attribute default="x y z" name="polarizations" type="StringVecType" use="optional"/>
+      <xsd:attribute default="xas" name="outputPrefix" type="xsd:string" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="ElectronConfigType">
