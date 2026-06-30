@@ -101,6 +101,7 @@ CONTAINS
       USE m_setabc1lo
       USE m_hsmt_fjgj
       USE m_hsmt_ab
+      USE m_abcoeff_store
       USE m_types_mat
 
       IMPLICIT NONE
@@ -272,7 +273,9 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
             ! abCoeffs is (re)allocated per call inside hsmt_ab; release the
             ! device copy it created and the host array before the next call.
             !$acc exit data delete(abCoeffs)
-            DEALLOCATE(abCoeffs)
+            ! Hand abCoeffs to the optional store for later reuse (no-op unless on).
+            CALL abcoeff_store_save(abCoeffs, lapw%nk, iintsp, jspin, iAtom)
+            IF (ALLOCATED(abCoeffs)) DEALLOCATE(abCoeffs)
 
             CALL timestart("local orbitals")
 ! Treatment of local orbitals
@@ -401,6 +404,7 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
       USE m_setabc1lo
       USE m_hsmt_fjgj
       USE m_hsmt_ab
+      USE m_abcoeff_store
       USE m_types_mat
 
       IMPLICIT NONE
@@ -546,7 +550,9 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
             ! abCoeffs is (re)allocated per call inside hsmt_ab; release the
             ! device copy it created and the host array before the next call.
             !$acc exit data delete(abCoeffs)
-            DEALLOCATE(abCoeffs)
+            ! Hand abCoeffs to the optional store for later reuse (no-op unless on).
+            CALL abcoeff_store_save(abCoeffs, lapw%nk, iintsp, jspin, iAtom)
+            IF (ALLOCATED(abCoeffs)) DEALLOCATE(abCoeffs)
 
 
             CALL timestart("local orbitals")

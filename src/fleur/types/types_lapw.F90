@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -36,6 +36,7 @@ MODULE m_types_lapw
       INTEGER, ALLOCATABLE::nkvec(:, :)
       REAL   :: bkpt(3)
       REAL   :: qphon(3)
+      INTEGER :: nk = 0 !k-point index this basis was initialized for (0 if unset)
    CONTAINS
       procedure       :: lapw_init => t_lapw_init
       procedure       :: lapw_init_fi => t_lapw_init_fi
@@ -240,6 +241,7 @@ CONTAINS
       lapw%qphon = [0.0,0.0,0.0]
       IF (PRESENT(dfpt_q)) lapw%qphon = dfpt_q
       
+      lapw%nk = nk
       IF (nk > kpts%nkpt) THEN
          lapw%bkpt(:) = kpts%bkf(:, nk)
       ELSE

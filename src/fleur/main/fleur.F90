@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -72,6 +72,7 @@ CONTAINS
       USE m_writeBasis
       USE m_RelaxSpinAxisMagn
       USE m_dfpt
+      USE m_abcoeff_store
       !For vTot1 efield WIP
       USE m_make_stars
       USE m_dfpt_vefield
@@ -242,9 +243,7 @@ CONTAINS
          hybdat%eig_id = eig_id
       ENDIF
  
-      ! TODO: Isn't this comment kind of lost here?
-      ! Rotate cdn to local frame if specified.
-
+      call abcoeff_store_init(fi%input, fi%noco, fi%kpts, fi%atoms)
 
       CALL timestop("Open/allocate eigenvector storage")
 
@@ -284,7 +283,6 @@ CONTAINS
             WRITE (oUnit, FMT=8100) iter
 8100        FORMAT(/, 10x, '   iter=  ', i5)
          END IF !fmpi%irank==0
-
 
          CALL inDen%distribute(fmpi%mpi_comm)
          CALL nococonv%mpi_bc(fmpi%mpi_comm)
@@ -390,6 +388,8 @@ CONTAINS
 
          CALL forcetheo%start(vtot, fmpi%irank==0)
          forcetheoloop: DO WHILE (forcetheo%next_job(fmpi,l_lastIter, fi%atoms, fi%noco, nococonv))
+
+            call abcoeff_store_free() !Use new abcoeffs 
 
             CALL timestart("H generation and diagonalization (total)")
 

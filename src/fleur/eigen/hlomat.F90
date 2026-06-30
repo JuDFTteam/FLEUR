@@ -21,6 +21,7 @@ CONTAINS
        ntyp,na,fjgj,alo1,blo1,clo1, igSpinPr,igSpin,chi,hmat,l_fullj,l_ham,lapwq,fjgjq)
 
     USE m_hsmt_ab
+    USE m_abcoeff_store
     USE m_types
 !    USE m_types_mpimat
     USE m_hsmt_fjgj
@@ -317,7 +318,12 @@ CONTAINS
       DEALLOCATE(abcoeffsPr)
       IF (ALLOCATED(abcoeffs)) THEN
          !$acc exit data delete(abcoeffs)
-         DEALLOCATE(abcoeffs)
+         ! Store only the genuine unprimed abCoeffs produced by hsmt_ab (the ELSE
+         ! branch above). The copy branch holds primed data, which must not be
+         ! cached under the unprimed (nk,igSpin,ilSpin,na) key.
+         IF (.NOT.(ilSpin==ilSpinPr.AND.igSpinPr==igSpin.AND.l_samelapw)) &
+              CALL abcoeff_store_save(abcoeffs, lapw%nk, igSpin, ilSpin, na)
+         IF (ALLOCATED(abcoeffs)) DEALLOCATE(abcoeffs)
       END IF
 
       !$acc end data

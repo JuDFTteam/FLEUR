@@ -32,6 +32,7 @@ MODULE m_vham
         USE m_constants
         USE m_juDFT
         USE m_hsmt_ab
+        USE m_abcoeff_store
         USE m_hsmt_fjgj
         USE m_ylm
         USE m_radsrd
@@ -107,9 +108,13 @@ MODULE m_vham
                         ENDDO
                     ENDDO
                     !$acc exit data delete(abG2)
+                    ! cache abG2 for later reuse (no-op unless storage enabled)
+                    CALL abcoeff_store_save(abG2, lapw%nk, 1, jspin, natom2)
                     i_pair=i_pair+1
                 ENDDO
                 !$acc exit data delete(abG1)
+                ! cache abG1 for later reuse (no-op unless storage enabled)
+                CALL abcoeff_store_save(abG1, lapw%nk, 1, jspin, natom1)
             ENDDO
 
 

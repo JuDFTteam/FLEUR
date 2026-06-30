@@ -14,6 +14,7 @@ CONTAINS
       USE m_hsmt_fjgj
       USE m_types
       USE m_hsmt_ab
+      USE m_abcoeff_store
 #ifdef _OPENACC
       USE cublas
 #define CPP_zgemm cublaszgemm
@@ -353,9 +354,15 @@ CONTAINS
             ! abCoeffs/abCoeffsPr are (re)allocated per call inside hsmt_ab;
             ! release the device copies and host arrays before the next nn.
             !$acc exit data delete(abCoeffs)
-            DEALLOCATE(abCoeffs)
+            ! Hand the (unprimed) abCoeffs to the optional store for later reuse
+            ! (no-op unless storage is enabled).
+            CALL abcoeff_store_save(abCoeffs, lapw%nk, igSpin, ilSpin, na)
+            IF (ALLOCATED(abCoeffs)) DEALLOCATE(abCoeffs)
             IF (ALLOCATED(abCoeffsPr)) THEN
                !$acc exit data delete(abCoeffsPr)
+               ! abCoeffsPr (primed lapwPr/fjgjPr) is intentionally NOT stored: it
+               ! would share the (nk,igSpin,ilSpin,na) key with the unprimed
+               ! abCoeffs and corrupt that slot.
                DEALLOCATE(abCoeffsPr)
             END IF
          END IF

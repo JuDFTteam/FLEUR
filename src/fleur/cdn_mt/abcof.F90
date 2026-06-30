@@ -31,6 +31,7 @@ USE m_setabc1lo
 USE m_abclocdn
 USE m_hsmt_fjgj
 USE m_hsmt_ab
+USE m_abcoeff_store
 
 IMPLICIT NONE
 
@@ -342,7 +343,9 @@ INTEGER,OPTIONAL,INTENT(IN):: nat_start,nat_stop
              ! abCoeffs is (re)allocated per call inside hsmt_ab; release the
              ! device copy it created and the host array before the next call.
              !$acc exit data delete(abCoeffs)
-             DEALLOCATE(abCoeffs)
+             ! Hand abCoeffs to the optional store for later reuse (no-op unless on).
+             CALL abcoeff_store_save(abCoeffs, lapw%nk, iintsp, jspin, iAtom)
+             IF (ALLOCATED(abCoeffs)) DEALLOCATE(abCoeffs)
        END DO ! loop over interstitial spin
     END DO ! loop over atoms
     !$acc exit data delete(abTemp,fjgj%fj,fjgj%gj,work_c)
@@ -443,6 +446,7 @@ USE m_setabc1lo
 USE m_abclocdn
 USE m_hsmt_fjgj
 USE m_hsmt_ab
+USE m_abcoeff_store
 USE m_types_cdnval
 IMPLICIT NONE
 
