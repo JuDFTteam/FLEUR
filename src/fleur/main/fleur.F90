@@ -491,7 +491,10 @@ CONTAINS
                CALL timestop("wannierlib")
                ! lets do a test interpolation here 
                ! sub in the hamiltinan routine
+               if (fmpi%irank==0) print *, "Starting interpolate bandstructure "
+               call timestart("Wannier Interpolation")
                if (fmpi%irank==0) call interpolate_bandstructure(fi,results , fi%wannierlib%kpts_fine)
+               call timestop("Wannier Interpolation")
                IF (.NOT. fi%dfpt%l_dfpt) CALL juDFT_end("Wannierization done. Fleur ends.", fmpi%irank)
             END IF
 
