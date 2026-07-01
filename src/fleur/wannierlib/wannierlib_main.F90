@@ -148,6 +148,13 @@ CONTAINS
          CALL run_w90(this, mmn, amn, eig, u_matrix_out, u_dis_out)
          ! store results of run_w90 into type results
          IF (ALLOCATED(u_matrix_out)) THEN
+#ifdef CPP_MPI
+            DO ikpt = 1, kpts%nkptf
+               IF (distk(ikpt) /= fmpi%irank) u_matrix_out(:, :, ikpt) = CMPLX(0.0, 0.0)
+            END DO
+            CALL MPI_Allreduce(MPI_IN_PLACE, u_matrix_out, SIZE(u_matrix_out), &
+                               MPI_DOUBLE_COMPLEX, MPI_SUM, fmpi%mpi_comm, ierr)
+#endif
             IF (.NOT. ALLOCATED(results%U_mat)) THEN
                ALLOCATE(results%U_mat(this%num_wann, this%num_wann, kpts%nkptf, input%jspins))
                results%U_mat = CMPLX(0.0, 0.0)
@@ -157,8 +164,11 @@ CONTAINS
          END IF
          IF (ALLOCATED(u_dis_out)) THEN
 #ifdef CPP_MPI
+            DO ikpt = 1, kpts%nkptf
+               IF (distk(ikpt) /= fmpi%irank) u_dis_out(:, :, ikpt) = CMPLX(0.0, 0.0)
+            END DO
             CALL MPI_Allreduce(MPI_IN_PLACE, u_dis_out, SIZE(u_dis_out), &
-                               MPI_COMPLEX, MPI_SUM, fmpi%mpi_comm, ierr)
+                               MPI_DOUBLE_COMPLEX, MPI_SUM, fmpi%mpi_comm, ierr)
 #endif
             IF (.NOT. ALLOCATED(results%U_dis)) THEN
                ALLOCATE(results%U_dis(this%num_bands, this%num_wann, kpts%nkptf, input%jspins))
