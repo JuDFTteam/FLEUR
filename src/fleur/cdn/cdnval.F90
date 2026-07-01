@@ -383,6 +383,15 @@ CONTAINS
             end do
          END DO
       END DO
+      ! Reduce orbital moments: each rank accumulated clmom from its own k-points.
+      ! Only reduce the spin components updated in this cdnval call (jsp_start:jsp_end),
+      ! because cdnval is called once per jspin for non-mperp. Reducing the full array
+      ! would multiply spin-1 clmom by N_ranks on the jspin=2 call.
+      IF (noco%l_soc) THEN
+         CALL MPI_ALLREDUCE(MPI_IN_PLACE, moments%clmom(1,1,jsp_start), &
+                            SIZE(moments%clmom(:,:,jsp_start:jsp_end)), &
+                            MPI_DOUBLE_PRECISION, MPI_SUM, fmpi%mpi_comm, iErr)
+      END IF
 #endif
 
       IF (gfinp%n > 0 .AND. PRESENT(greensfImagPart)) THEN
