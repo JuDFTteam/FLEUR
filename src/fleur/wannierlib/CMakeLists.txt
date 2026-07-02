@@ -1,6 +1,8 @@
 set(fleur_F90 ${fleur_F90}
 src/fleur/wannierlib/wannierlib_amn_stub.F90
 src/fleur/wannierlib/wannierlib_mmnkb.F90
+src/fleur/wannierlib/wannierlib_ft.F90
+src/fleur/wannierlib/wannierlib_interpolate.F90
 src/fleur/wannierlib/wannierlib_w90_adapter.F90
 src/fleur/wannierlib/wannierlib_main.F90
 src/fleur/wannierlib/wannierlib_tlmw.F90

@@ -152,7 +152,7 @@ CONTAINS
          END IF
 
          call wannierlib_create_eig(this, results, kpts, MERGE(1, jspin, l_wannierlib_spinors), eig)
-         CALL run_w90(this, mmn, amn, eig)
+         CALL run_w90(this, cell, kpts, mmn, amn, eig, fmpi%irank)
          if (fmpi%isize == 1) CALL report_w90(this)
 
          IF (ALLOCATED(amn)) DEALLOCATE (amn)

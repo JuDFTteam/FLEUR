@@ -1,0 +1,129 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
+!>  Operator-agnostic Wannier (slow) Fourier interpolation core.
+!>
+!>  Given any k-space matrix mat_k(nw,nw,nk) sampled on the coarse uniform
+!>  Wannier mesh (in the Wannier gauge), interpolates it onto an arbitrary
+!>  fractional k-path via the standard Wannier90 real-space transform:
+!>
+!>    mat_r(R) = (1/Nk) sum_k e^{-i 2pi k.R} mat_k(k)           (coarse mesh -> R)
+!>    mat(k')  = sum_R  e^{+i 2pi k'.R} / ndegen(R) * mat_r(R)  (R -> fine path)
+!>
+!>  over the Wigner-Seitz supercell of R vectors with their degeneracies.
+!>  This routine is agnostic to the physical meaning of mat: feeding it the
+!>  Wannier-gauge Hamiltonian H_W(k) interpolates the band structure; feeding
+!>  it a spin / orbital-moment / position operator interpolates that operator.
+!>  A new operator interpolator only has to build its own mat_k(k) and reuse
+!>  this core unchanged (see m_wannierlib_interpolate for the H example).
+MODULE m_wannierlib_ft
+  USE m_constants, ONLY : tpi_const
+  USE m_types_cell
+  USE m_types_kpts
+  IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: wannierlib_ft_interpolate
+CONTAINS
+
+  !> Fourier-interpolate a coarse-mesh k-space matrix onto a fine k-path.
+  SUBROUTINE wannierlib_ft_interpolate(cell, mat_k, kpts, kfrac, mat_interp)
+    TYPE(t_cell), INTENT(IN) :: cell
+    COMPLEX, INTENT(IN) :: mat_k(:, :, :)     ! (nw, nw, nk)  Wannier-gauge matrix on coarse mesh
+    TYPE(t_kpts), INTENT(IN) :: kpts
+    REAL,    INTENT(IN) :: kfrac(:, :)        ! (3, nfine)    fractional coords of the fine path
+    COMPLEX, ALLOCATABLE, INTENT(OUT) :: mat_interp(:, :, :)  ! (nw, nw, nfine)
+
+    INTEGER :: nw, nk, nfine, k, irpt, ip, nrpts, mp_grid(3)
+    INTEGER, ALLOCATABLE :: irvec(:, :), ndegen(:)
+    COMPLEX, ALLOCATABLE :: mat_r(:, :, :)
+    REAL :: rdotk
+    COMPLEX :: fac
+
+    nw = SIZE(mat_k, 1); nk = SIZE(mat_k, 3); nfine = SIZE(kfrac, 2)
+    mp_grid = kpts%nkpt3
+
+    CALL wigner_seitz(cell, mp_grid, irvec, ndegen, nrpts)
+
+    ! coarse mesh -> R
+    ALLOCATE(mat_r(nw, nw, nrpts), source=CMPLX(0.0, 0.0))
+    DO irpt = 1, nrpts
+      DO k = 1, nk
+        rdotk = tpi_const * DOT_PRODUCT(kpts%bkf(:, k), REAL(irvec(:, irpt)))
+        fac = EXP(CMPLX(0.0, -rdotk)) / REAL(nk)
+        mat_r(:, :, irpt) = mat_r(:, :, irpt) + fac * mat_k(:, :, k)
+      END DO
+    END DO
+
+    ! R -> fine path
+    ALLOCATE(mat_interp(nw, nw, nfine), source=CMPLX(0.0, 0.0))
+    DO ip = 1, nfine
+      DO irpt = 1, nrpts
+        rdotk = tpi_const * DOT_PRODUCT(kfrac(:, ip), REAL(irvec(:, irpt)))
+        fac = EXP(CMPLX(0.0, rdotk)) / REAL(ndegen(irpt))
+        mat_interp(:, :, ip) = mat_interp(:, :, ip) + fac * mat_r(:, :, irpt)
+      END DO
+    END DO
+    DEALLOCATE(mat_r, irvec, ndegen)
+  END SUBROUTINE wannierlib_ft_interpolate
+
+  !> Wigner-Seitz supercell R vectors + degeneracies (replicates W90
+  !> hamiltonian_wigner_seitz). Kept local to preserve W90's exact ndegen
+  !> convention, on which the interpolation weights depend; FLEUR's generic
+  !> cell%calculate_WSweight uses a different convention and is not a drop-in.
+  SUBROUTINE wigner_seitz(cell, mp_grid, irvec, ndegen, nrpts)
+    TYPE(t_cell), INTENT(IN) :: cell
+    INTEGER, INTENT(IN)  :: mp_grid(3)
+    INTEGER, ALLOCATABLE, INTENT(OUT) :: irvec(:, :), ndegen(:)
+    INTEGER, INTENT(OUT) :: nrpts
+    INTEGER, PARAMETER :: ws = 2
+    REAL,    PARAMETER :: tol = 1.0e-5
+    INTEGER :: n1, n2, n3, i1, i2, i3, icnt, i, jj, ndeg, pass, ndiff(3), dist_dim, imid
+    REAL    :: metric(3, 3), dist_min
+    REAL, ALLOCATABLE :: dist(:)
+
+    metric = MATMUL(TRANSPOSE(cell%amat), cell%amat)
+    dist_dim = (2*ws + 3)**3; imid = (dist_dim + 1) / 2
+    ALLOCATE(dist(dist_dim))
+    DO pass = 1, 2
+      nrpts = 0
+      DO n1 = -ws*mp_grid(1), ws*mp_grid(1)
+        DO n2 = -ws*mp_grid(2), ws*mp_grid(2)
+          DO n3 = -ws*mp_grid(3), ws*mp_grid(3)
+            icnt = 0
+            DO i1 = -ws-1, ws+1
+              DO i2 = -ws-1, ws+1
+                DO i3 = -ws-1, ws+1
+                  icnt = icnt + 1
+                  ndiff = (/ n1 - i1*mp_grid(1), n2 - i2*mp_grid(2), n3 - i3*mp_grid(3) /)
+                  dist(icnt) = 0.0
+                  DO i = 1, 3
+                    DO jj = 1, 3
+                      dist(icnt) = dist(icnt) + REAL(ndiff(i))*metric(i, jj)*REAL(ndiff(jj))
+                    END DO
+                  END DO
+                END DO
+              END DO
+            END DO
+            dist_min = MINVAL(dist)
+            IF (ABS(dist(imid) - dist_min) < tol**2) THEN
+              nrpts = nrpts + 1
+              IF (pass == 2) THEN
+                ndeg = 0
+                DO i = 1, dist_dim
+                  IF (ABS(dist(i) - dist_min) < tol**2) ndeg = ndeg + 1
+                END DO
+                ndegen(nrpts) = ndeg
+                irvec(:, nrpts) = (/ n1, n2, n3 /)
+              END IF
+            END IF
+          END DO
+        END DO
+      END DO
+      IF (pass == 1) ALLOCATE(irvec(3, nrpts), ndegen(nrpts))
+    END DO
+    DEALLOCATE(dist)
+  END SUBROUTINE wigner_seitz
+
+END MODULE m_wannierlib_ft

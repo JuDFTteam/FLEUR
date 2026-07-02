@@ -17,6 +17,7 @@ MODULE m_types_wannierlib
 
   TYPE, EXTENDS(t_fleurinput_base) :: t_wannierlib_wannierize
     LOGICAL :: l_wannierize = .FALSE.
+    LOGICAL :: l_interpolation = .FALSE.   ! build H(R) + interpolate bands (XML @interpolation)
 
     INTEGER :: num_wann = 0
     INTEGER :: num_bands = 0
@@ -274,6 +275,7 @@ CONTAINS
     IF (PRESENT(irank)) rank = irank
 
     CALL mpi_bc(this%l_wannierize, rank, mpi_comm)
+    CALL mpi_bc(this%l_interpolation, rank, mpi_comm)
     CALL mpi_bc(this%num_wann, rank, mpi_comm)
     CALL mpi_bc(this%num_bands, rank, mpi_comm)
     CALL mpi_bc(this%min_band, rank, mpi_comm)
@@ -328,6 +330,10 @@ CONTAINS
     has_wannierize = xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@wannierize') == 1
     IF (has_wannierize) THEN
       this%l_wannierize = evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@wannierize'))
+    END IF
+
+    IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@interpolation') == 1) THEN
+      this%l_interpolation = evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@interpolation'))
     END IF
 
     xPathA = '/fleurInput/output/wannierlib/bands'

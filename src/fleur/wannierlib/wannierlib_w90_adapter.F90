@@ -12,6 +12,7 @@ MODULE m_wannierlib_w90_adapter
   USE m_types_kpts
   USE m_types_mpi
   USE m_types_wannierlib
+  USE m_wannierlib_interpolate
 #ifdef CPP_WANNLIB_API
   USE w90_library, ONLY : lib_common_type, w90_set_comm, w90_set_option, w90_input_setopt, &
                           w90_get_nn, w90_get_nnkp, w90_get_gkpb, w90_set_eigval, &
@@ -113,11 +114,14 @@ CONTAINS
 #endif
   END SUBROUTINE init_w90
 
-  SUBROUTINE run_w90(this, mmn, amn, eig)
+  SUBROUTINE run_w90(this, cell, kpts, mmn, amn, eig, irank)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
+    TYPE(t_cell), INTENT(IN) :: cell
+    TYPE(t_kpts), INTENT(IN) :: kpts
     COMPLEX, TARGET, INTENT(IN) :: mmn(:, :, :, :)
     COMPLEX, TARGET, INTENT(IN) :: amn(:, :, :)
     REAL, TARGET, INTENT(IN) :: eig(:, :)
+    INTEGER, INTENT(IN) :: irank
 
     INTEGER :: ierr,num_kpts
     COMPLEX, ALLOCATABLE :: u_matrix(:, :, :), mmn_local(:, :, :, :), amn_local(:, :, :)
@@ -157,6 +161,10 @@ CONTAINS
 
     CALL w90_wannierise(wannierlib_w90main, oUnit, oUnit, ierr)
     IF (ierr /= 0) CALL juDFT_error('w90_wannierise failed in wannierlib adapter', calledby='run_w90')
+
+    ! Wannier-gauge band interpolation (u_matrix = MLWF gauge, amn_local = disentangled u_opt).
+    IF (this%l_interpolation) CALL wannierlib_interpolate(this, cell, kpts, eig, u_matrix, amn_local, irank)
+
     call timestop('run_w90')
 #endif
   END SUBROUTINE run_w90
