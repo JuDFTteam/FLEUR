@@ -25,7 +25,7 @@ CONTAINS
 
       integer :: iq, dyn_dim, iqfull
       integer :: isym
-      integer :: iz, iy, ix, iGrid, nx, ny, nz 
+      integer :: iz, iy, ix, nx, ny, nz 
       real    :: q_full(3), trans(3)
       complex, allocatable :: fft_grid(:,:,:) ! (dyn_dim,dyn_dim,nqptf)
       complex, allocatable :: dyn_mat_qsym(:,:)
@@ -58,19 +58,8 @@ CONTAINS
 
       fft_grid(:,:,:)=fft_grid(:,:,:)/qpts%nkptf 
       ! unroll the FCM on supercell index
-      iGrid = 1 
-      do iz=ft_lim(1,3),ft_lim(2,3)
-         do iy=ft_lim(1,2),ft_lim(2,2)
-            do ix=ft_lim(1,1),ft_lim(2,1)
-               ! shift to storage indices (0-based)
-               nx = ix - ft_lim(1,1)
-               ny = iy - ft_lim(1,2)
-               nz = iz - ft_lim(1,3)
-               dyn_mat_r(:,:,nx,ny,nz)= fft_grid(:,:,iGrid)
-               iGrid = iGrid + 1 
-            end do !ix
-         end do !iy
-      end do !iz
+      call unfold_grid(ft_lim,fft_grid,dyn_mat_r)
+
    END SUBROUTINE
 
    SUBROUTINE ft_dyn_direct(ft_lim,isn,bqpt,dyn_mat_q,dyn_mat_r)
@@ -138,6 +127,29 @@ CONTAINS
          end do 
       end do 
    end subroutine 
+
+   subroutine unfold_grid(ft_lim, grid, cube)
+        !  Unfold a flat Fourier grid (as accumulated by the discrete fourier transform into
+        !  a cube that starts at index 0, using the same iz-outer / iy / ix-inner ordering as ft_dyn_direct.
+        integer, intent(in)  :: ft_lim(2,3)
+        complex, intent(in)  :: grid(:,:,:)
+        complex, intent(out) :: cube(:,:,0:,0:,0:)
+
+        integer :: ix, iy, iz, nx, ny, nz, iGrid
+
+        iGrid = 1
+        do iz=ft_lim(1,3),ft_lim(2,3)
+            do iy=ft_lim(1,2),ft_lim(2,2)
+                do ix=ft_lim(1,1),ft_lim(2,1)
+                    nx = ix - ft_lim(1,1)
+                    ny = iy - ft_lim(1,2)
+                    nz = iz - ft_lim(1,3)
+                    cube(:,:,nx,ny,nz) = grid(:,:,iGrid)
+                    iGrid = iGrid + 1
+                end do !ix
+            end do !iy
+        end do !iz
+    end subroutine unfold_grid
 
    SUBROUTINE rotate_dynmat(atoms,sym,isym,mrot,invmrot,l_inv,amat,bqpt,dyn,dyn_mat_qsym)
       !! Applies a symmetry operation to the dynamical matrix of an IBZ q vector
