@@ -130,7 +130,7 @@ if (FLEUR_USE_MPI)
   
 endif ()
 
-
+include(cmake/gfleur.cmake)
 
 include(cmake/docker.txt)
 

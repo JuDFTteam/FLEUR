@@ -5,6 +5,7 @@ src/fleur/main/cdngen.F90
 src/fleur/main/fleur.F90
 src/fleur/main/fleur_init.F90
 src/fleur/main/fleur_job.F90
+src/fleur/main/fleur_prog.F90
 src/fleur/main/fleur_help.F90
 src/fleur/main/fleur_info.f90
 src/fleur/main/fleur_version.F90
