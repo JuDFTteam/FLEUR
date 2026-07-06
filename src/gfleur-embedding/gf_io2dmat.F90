@@ -87,7 +87,7 @@
       CONTAINS 
                                                                         
       !<-- S: init                                                      
-      SUBROUTINE init(kpts,gfinp,lapw,sym,layers,jspins,l_noco,gmpi    &
+      SUBROUTINE init(kpts,gfinp,lapw_gf,sym,layers,jspins,l_noco,gmpi    &
      &     ,l_tmatmemory)                                               
 !-----------------------------------------------                        
 !                                                                       
@@ -101,7 +101,7 @@
       INTEGER,INTENT(IN)        :: jspins 
       TYPE(t_kpts),INTENT(IN)   :: kpts 
       TYPE(t_embinp),INTENT(IN)  :: gfinp 
-      TYPE(t_lapw_gf),INTENT(IN)   :: lapw 
+      TYPE(t_lapw_gf),INTENT(IN)   :: lapw_gf 
       TYPE(t_sym),INTENT(IN)    :: sym 
       TYPE(t_layers),INTENT(IN) :: layers 
       LOGICAL,INTENT(IN)        :: l_noco
@@ -384,7 +384,7 @@
            mem%in_mem=(count(iohandle%mode==IO2D_EMB)==2)
          ENDIF
          if (mem%in_mem)THEN
-           IF(priv_create_mpi_memory(gmpi,layers,kpts,lapw,jspins,l_noco)) THEN
+           IF(priv_create_mpi_memory(gmpi,layers,kpts,lapw_gf,jspins,l_noco)) THEN
              new_handles=0
              l_tmatmemory=.false.
            ENDIF
@@ -483,7 +483,7 @@
       !>                                                                
       !<-- Now open all              
       DO i = 1,SIZE(iofile) 
-         CALL priv_open_file(iofile(i),lapw,kpts,sym,jspins,l_noco) 
+         CALL priv_open_file(iofile(i),lapw_gf,kpts,sym,jspins,l_noco) 
       ENDDO 
       !>
 
@@ -495,9 +495,9 @@
 
 
                                                                   
-      !<-- S: priv_open_file(io_file,lapw,kpts,sym,jspins,l_noco)       
+      !<-- S: priv_open_file(io_file,lapw_gf,kpts,sym,jspins,l_noco)       
                                                                         
-      SUBROUTINE priv_open_file(io_file,lapw,kpts,sym,jspins,l_noco) 
+      SUBROUTINE priv_open_file(io_file,lapw_gf,kpts,sym,jspins,l_noco) 
 !-----------------------------------------------                        
 !                                                                       
 !           (last modified: 2004-00-00) D. Wortmann                     
@@ -508,7 +508,7 @@
       IMPLICIT NONE 
       !<--Arguments                                                     
       TYPE(t_file),INTENT(INOUT) :: io_file 
-      TYPE(t_lapw_gf),INTENT(IN)  :: lapw 
+      TYPE(t_lapw_gf),INTENT(IN)  :: lapw_gf 
       TYPE(t_kpts),INTENT(IN)  :: kpts 
       TYPE(t_sym),INTENT(IN)   :: sym 
       INTEGER,INTENT(IN)       :: jspins 
@@ -540,7 +540,7 @@
       CALL timestart("io2dmat open:"//io_file%filename)
       !>                                                                
       !<--perhaps a supercell embedding potential should be made??      
-      CALL priv_generatesupercell(lapw,kpts,jspins) 
+      CALL priv_generatesupercell(lapw_gf,kpts,jspins) 
       !>                                                                
                                                                         
                                                                         
@@ -656,8 +656,8 @@
          ALLOCATE(io_file%gmap(SIZE(gvecs_in,2))) 
          io_file%gmap = 0 
          DO n = 1,SIZE(gvecs_in,2) 
-            IF (ALL(ABS(gvecs_in(1:2,n)) <= lapw%g_MAX(1:2)))           &
-     &           io_file%gmap(n) = lapw%global2dmap(gvecs_in(1          &
+            IF (ALL(ABS(gvecs_in(1:2,n)) <= lapw_gf%g_max(1:2)))           &
+     &           io_file%gmap(n) = lapw_gf%global2Dmap(gvecs_in(1          &
      &           ,n),gvecs_in(2,n))                                     
          ENDDO 
          !up to now io_file%matsize was the scaling factor              
@@ -683,7 +683,7 @@
       ELSE !file does not exist
          !<-- create the dimensions                                     
          io_file%matscale=io_file%matsize 
-         io_file%matsize=io_file%matsize*SIZE(lapw%global2dList,2) 
+         io_file%matsize=io_file%matsize*SIZE(lapw_gf%global2Dlist,2) 
          io_file%spins=jspins 
          IF (l_noco) io_file%spins=4 
          !>                                                             
@@ -714,7 +714,7 @@
      &           (/io_file%matsize,io_file%matsize,2,io_file%spins      &
      &           ,gf_NoEN(),nk/),io_file%varid,chunk=4,fill=.false.)
             !call io_createvar(io_file%fid,"mapping",H5T_NATIVE_INTEGER, &
-            !        (/SIZE(lapw%global2dList,2),io_file%spins,nk/),io_file%mapid)
+            !        (/SIZE(lapw_gf%global2Dlist,2),io_file%spins,nk/),io_file%mapid)
             !>
             CALL timestop("create datasets")
             !<-- create mapping array for energies                      
@@ -755,11 +755,11 @@
             CALL timestart("create gvec dataset")
             !>                                                          
             !<-- The gvectors                                           
-            ALLOCATE(io_file%gmap(SIZE(lapw%global2dList,2))) 
+            ALLOCATE(io_file%gmap(SIZE(lapw_gf%global2Dlist,2))) 
             io_file%gmap = (/(n,n = 1,SIZE(io_file%gmap))/) 
             CALL io_createvar(io_file%fid,"gvecs",H5T_NATIVE_INTEGER,(/2&
      &           ,SIZE(io_file%gmap)/),varid)                           
-            CALL io_WRITE(varid,(/1,1/),(/2,SIZE(io_file%gmap)/),"lapw_global2Dlist",lapw%global2Dlist(:,:))
+            CALL io_WRITE(varid,(/1,1/),(/2,SIZE(io_file%gmap)/),"lapw_global2Dlist",lapw_gf%global2Dlist(:,:))
             CALL io_dclose(varid,hdferr)
             CALL timestop("create gvec dataset")
             CALL timestop("energy+k mapping")
@@ -794,9 +794,9 @@
                                                                         
       !>                                                                
                                                                         
-      !<-- S:gf_write2dmat(mode,region,side,en,nk,jspin,lapw,mat)       
+      !<-- S:gf_write2dmat(mode,region,side,en,nk,jspin,lapw_gf,mat)       
       SUBROUTINE gf_write2dmat(mode,region,side,en,nk,jspin   &
-     &     ,lapw,mat)
+     &     ,lapw_gf,mat)
 !********************************************************************** 
 !     * This SUBROUTINE saves the 2DMatrix for the                      
 !     * energy,kpoint,spin                                              
@@ -807,7 +807,7 @@
       IMPLICIT NONE 
       INTEGER,INTENT(IN)          :: mode,region,side 
       INTEGER,INTENT(IN)          :: jspin,nk,en 
-      TYPE(t_lapw_gf),INTENT(IN)     :: lapw 
+      TYPE(t_lapw_gf),INTENT(IN)     :: lapw_gf 
       COMPLEX,INTENT(IN)          :: mat(:,:) 
                                                                         
       INTEGER :: fileid
@@ -824,7 +824,7 @@
       CALL timestart("gf_write2dmat")
 
       !Check if this is a noco calculation
-      if (jspin==1.and.size(mat,1)>iofile(fileid)%matscale*lapw%nv2(1)) then
+      if (jspin==1.and.size(mat,1)>iofile(fileid)%matscale*lapw_gf%nv2(1)) then
           allocate(A(iofile(fileid)%matsize,iofile(fileid)%matsize,2,4))
       else
           allocate(A(iofile(fileid)%matsize,iofile(fileid)%matsize,2,1))
@@ -832,7 +832,7 @@
       A=0
       !Now map data to output buffer
 
-      call priv_map_out(jspin,lapw,fileid,mat,A)
+      call priv_map_out(jspin,lapw_gf,fileid,mat,A)
 
       !Write Data to file
        if (size(a,4)==1) then
@@ -851,25 +851,25 @@
 
       end subroutine
 
-      RECURSIVE SUBROUTINE priv_map_out(jspin,lapw,fileid,mat,A)
+      RECURSIVE SUBROUTINE priv_map_out(jspin,lapw_gf,fileid,mat,A)
       !This subroutine maps the 2D-matrix to te output buffer
       USE m_gf_types
       IMPLICIT NONE
       INTEGER,INTENT(IN)          :: jspin,fileid
-      TYPE(t_lapw_gf),INTENT(IN)     :: lapw
+      TYPE(t_lapw_gf),INTENT(IN)     :: lapw_gf
       COMPLEX,INTENT(IN)          :: mat(:,:)
       real,intent(inout)          :: a(:,:,:,:)
                                                                         
       INTEGER :: nv2,na,jsp,i,ii,n1,n2
 
       !--check if matrix cosists of several blocks, e.g. T-Matrix
-        IF (iofile(fileid)%matscale == 2.AND.SIZE(mat,1)>lapw%nv2_tot) THEN
-         nv2 = lapw%nv2_tot
+        IF (iofile(fileid)%matscale == 2.AND.SIZE(mat,1)>lapw_gf%nv2_tot) THEN
+         nv2 = lapw_gf%nv2_tot
          na=size(a,1)/2
-         call priv_map_out(jspin,lapw,fileid,mat(1:nv2,1:nv2),a(1:na,1:na,:,:))
-         call priv_map_out(jspin,lapw,fileid,mat(nv2+1:,1:nv2),a(1:na,na+1:,:,:))
-         call priv_map_out(jspin,lapw,fileid,mat(1:nv2,nv2+1:),a(na+1:,1:na,:,:))
-         call priv_map_out(jspin,lapw,fileid,mat(nv2+1:,nv2+1:),a(na+1:,na+1:,:,:))
+         call priv_map_out(jspin,lapw_gf,fileid,mat(1:nv2,1:nv2),a(1:na,1:na,:,:))
+         call priv_map_out(jspin,lapw_gf,fileid,mat(nv2+1:,1:nv2),a(1:na,na+1:,:,:))
+         call priv_map_out(jspin,lapw_gf,fileid,mat(1:nv2,nv2+1:),a(na+1:,1:na,:,:))
+         call priv_map_out(jspin,lapw_gf,fileid,mat(nv2+1:,nv2+1:),a(na+1:,na+1:,:,:))
          RETURN 
       ENDIF 
                                                                         
@@ -877,13 +877,13 @@
       !<--Matrix might be a noco-matrix containing four components check
       !and call writing subroutine recursive in this case               
       IF (jspin == 1) THEN 
-         IF (SIZE(mat,1)>lapw%nv2(1)) THEN 
+         IF (SIZE(mat,1)>lapw_gf%nv2(1)) THEN 
             !This is a noco calculation                                 
-            nv2 = lapw%nv2_tot/2
-            call priv_map_out(1,lapw,fileid,mat(1:nv2,1:nv2),a)
-            call priv_map_out(2,lapw,fileid,mat(nv2+1:,nv2+1:),a)
-            call priv_map_out(3,lapw,fileid,mat(1:nv2,nv2+1:),a)
-            call priv_map_out(4,lapw,fileid,mat(nv2+1:,1:nv2),a)
+            nv2 = lapw_gf%nv2_tot/2
+            call priv_map_out(1,lapw_gf,fileid,mat(1:nv2,1:nv2),a)
+            call priv_map_out(2,lapw_gf,fileid,mat(nv2+1:,nv2+1:),a)
+            call priv_map_out(3,lapw_gf,fileid,mat(1:nv2,nv2+1:),a)
+            call priv_map_out(4,lapw_gf,fileid,mat(nv2+1:,1:nv2),a)
             RETURN 
          ENDIF 
       ENDIF 
@@ -912,12 +912,12 @@
       jsp=1
       if (size(a,4)>2) jsp=jspin
 
-      DO i = 1,lapw%nv2(min(jspin,2))
-         n1=lapw%g2map(i)
+      DO i = 1,lapw_gf%nv2(min(jspin,2))
+         n1=lapw_gf%g2map(i)
          if (n1==0) CALL juDFT_error("Uups")
          IF (iofile(fileid)%gmap(n1) == 0.OR.iofile(fileid)%gmap(n1)>SIZE(A,1)) CYCLE
-         DO ii = 1,lapw%nv2(min(jspin,2))
-            n2=lapw%g2map(ii)
+         DO ii = 1,lapw_gf%nv2(min(jspin,2))
+            n2=lapw_gf%g2map(ii)
             if (n2==0) cycle
             IF (iofile(fileid)%gmap(n2) == 0.OR.iofile(fileid)%gmap(n2  &
      &           )>SIZE(a,2)) CYCLE
@@ -930,19 +930,19 @@
       END SUBROUTINE 
                                                                         
       !>
-      SUBROUTINE priv_read_files_to_mem(layers,jspins,nkpts,lapw,l_noco)
+      SUBROUTINE priv_read_files_to_mem(layers,jspins,nkpts,lapw_gf,l_noco)
       USE m_gf_types
       USE m_gf_energies
       IMPLICIT NONE
       Type(t_layers),intent(in) :: layers
-      TYPE(t_lapw_gf),intent(in)   :: lapw
+      TYPE(t_lapw_gf),intent(in)   :: lapw_gf
       integer,intent(in)        :: jspins,nkpts
       logical,intent(in)        :: l_noco
 
       INTEGER:: jsp,l,s,jspin,en,nk
       COMPLEX,ALLOCATABLE:: mat(:,:)
 
-      ALLOCATE(mat(lapw%nv2d,lapw%nv2d))
+      ALLOCATE(mat(lapw_gf%nv2d,lapw_gf%nv2d))
       jsp=jspins
       if (l_noco) jsp=1
 #ifdef CPP_MPI
@@ -954,8 +954,8 @@
                 DO en=1,gf_noEN()
                     DO nk=1,nkpts
                           mem%in_mem=.false.
-                          mem%in_mem=gf_read2dmat(IO2D_EMB,l,s,en,nk,jspin,lapw,mat)
-                          CALL gf_write2dmat(IO2D_EMB,l,s,en,nk,jspin,lapw,mat)
+                          mem%in_mem=gf_read2dmat(IO2D_EMB,l,s,en,nk,jspin,lapw_gf,mat)
+                          CALL gf_write2dmat(IO2D_EMB,l,s,en,nk,jspin,lapw_gf,mat)
                     ENDDO
                 ENDDO
             ENDDO
@@ -965,8 +965,8 @@
 #endif
       END subroutine
 
-      !<-- F:gf_read2dmat(mode,region,side,en,nk,jspin,lapw,mat)        
-      RECURSIVE FUNCTION gf_read2dmat(mode,region,side,en,nk,jspin,lapw &
+      !<-- F:gf_read2dmat(mode,region,side,en,nk,jspin,lapw_gf,mat)        
+      RECURSIVE FUNCTION gf_read2dmat(mode,region,side,en,nk,jspin,lapw_gf &
      &     ,mat,pos1,pos2) RESULT(read2dmat)                            
 !********************************************************************** 
 !     * This SUBROUTINE reads the 2DMatrix for the                      
@@ -982,7 +982,7 @@
       IMPLICIT NONE 
       INTEGER,INTENT(IN)         :: mode,region,side 
       INTEGER,INTENT(IN)         :: jspin,nk,en 
-      TYPE(t_lapw_gf),INTENT(IN)    :: lapw 
+      TYPE(t_lapw_gf),INTENT(IN)    :: lapw_gf 
       COMPLEX,INTENT(OUT)        :: mat(:,:) 
       INTEGER,INTENT(IN),OPTIONAL :: pos1,pos2 
       LOGICAL                     :: read2dmat 
@@ -1007,16 +1007,16 @@
       CALL timestart("gf_read2dmat")
       !<-- check if matrix cosists of several blocks                    
       IF (.NOT.PRESENT(pos1).AND.iofile(fileid)%matscale == 2           &
-     &     .AND.SIZE(mat,1)>lapw%nv2_tot) THEN                          
-         nv2 = lapw%nv2_tot 
+     &     .AND.SIZE(mat,1)>lapw_gf%nv2_tot) THEN                          
+         nv2 = lapw_gf%nv2_tot 
          l = gf_read2dmat(mode,region,side,en,nk,jspin                  &
-     &           ,lapw,mat(1:nv2,1:nv2),1,1)                            
+     &           ,lapw_gf,mat(1:nv2,1:nv2),1,1)                            
          l = gf_read2dmat(mode,region,side,en,nk,jspin                  &
-     &           ,lapw,mat(nv2+1:2*nv2,nv2+1:2*nv2),2,2)                
+     &           ,lapw_gf,mat(nv2+1:2*nv2,nv2+1:2*nv2),2,2)                
          l = gf_read2dmat(mode,region,side,en,nk,jspin                  &
-     &           ,lapw,mat(1:nv2,nv2+1:2*nv2),2,1)                      
+     &           ,lapw_gf,mat(1:nv2,nv2+1:2*nv2),2,1)                      
          l = gf_read2dmat(mode,region,side,en,nk,jspin,                 &
-     &        lapw,mat(nv2+1:2*nv2,1:nv2),1,2)                          
+     &        lapw_gf,mat(nv2+1:2*nv2,1:nv2),1,2)                          
          read2dmat = l 
          CALL timestop("gf_read2dmat")
          RETURN 
@@ -1036,16 +1036,16 @@
       !<-- Matrix might be a noco-matrix containing four components chec
       !and call reading subroutine recursive in this case               
       IF (jspin == 1) THEN 
-         IF (SIZE(mat,1)>lapw%nv2(1)) THEN 
+         IF (SIZE(mat,1)>lapw_gf%nv2(1)) THEN 
             !This is a noco calculation                                 
-            nv2 = lapw%nv2_tot/2 
+            nv2 = lapw_gf%nv2_tot/2 
             l = gf_read2dmat(mode,region,side,en,nk,1                   &
-     &           ,lapw,mat(1:nv2,1:nv2),pos1,pos2)                      
+     &           ,lapw_gf,mat(1:nv2,1:nv2),pos1,pos2)                      
             l = gf_read2dmat(mode,region,side,en,nk,2                   &
-     &           ,lapw,mat(nv2+1:2*nv2,nv2+1:2*nv2),pos1,pos2)          
+     &           ,lapw_gf,mat(nv2+1:2*nv2,nv2+1:2*nv2),pos1,pos2)          
             l = gf_read2dmat(mode,region,side,en,nk,3                   &
-     &           ,lapw,mat(1:nv2,nv2+1:2*nv2),pos1,pos2)                
-            l = gf_read2dmat(mode,region,side,en,nk,4,lapw              &
+     &           ,lapw_gf,mat(1:nv2,nv2+1:2*nv2),pos1,pos2)                
+            l = gf_read2dmat(mode,region,side,en,nk,4,lapw_gf              &
      &           ,mat(nv2+1:2*nv2,1:nv2),pos1,pos2)                     
             read2dmat = l 
             CALL priv_rotspin(mode,region,side,nv2,mat)
@@ -1123,7 +1123,7 @@
          DO i = 1,SIZE(phase,1)
             DO ii = 1,SIZE(phase,2)
                phase(i,ii) = EXP(CMPLX(0.0,2.*pi_const)*dot_PRODUCT(s     &
-     &              ,lapw%global2dlist(:,i)-lapw%global2dlist(:,ii)))   
+     &              ,lapw_gf%global2Dlist(:,i)-lapw_gf%global2Dlist(:,ii)))   
             ENDDO 
          ENDDO 
       ELSE 
@@ -1132,13 +1132,13 @@
       !>                                                                
       !<-- now map data to temp array
       mat=0.0
-      DO i = 1,min(SIZE(A,1),size(lapw%g2map))
-         n1=lapw%g2map(i)
+      DO i = 1,min(SIZE(A,1),size(lapw_gf%g2map))
+         n1=lapw_gf%g2map(i)
          if (n1==0) cycle
          IF (iofile(fileid)%gmap(n1) == 0.OR.iofile(fileid)%gmap(n1       &
      &        )>SIZE(A,1)) cycle
-         DO ii = 1,min(SIZE(A,2),size(lapw%g2map))
-            n2=lapw%g2map(ii)
+         DO ii = 1,min(SIZE(A,2),size(lapw_gf%g2map))
+            n2=lapw_gf%g2map(ii)
             if (n2==0) cycle
             IF (iofile(fileid)%gmap(n2) == 0.OR.iofile(fileid)%gmap(n2  &
      &           )>SIZE(A,2)) cycle
@@ -1307,7 +1307,7 @@
       !>                                                                
                                                                         
       !<-- S:priv_generatesupercell(fid,matrix)                         
-      SUBROUTINE priv_generatesupercell(lapw,kpts,jspins) 
+      SUBROUTINE priv_generatesupercell(lapw_gf,kpts,jspins) 
 !-----------------------------------------------                        
 ! Subroutine reads in the data and remaps it to a supercell             
 !           (last modified: 2004-00-00) D. Wortmann                     
@@ -1322,7 +1322,7 @@
       !<--Arguments                                                     
       INTEGER,INTENT(IN)        :: jspins 
       TYPE(t_kpts),INTENT(IN)   :: kpts 
-      TYPE(t_lapw_gf),INTENT(IN)   :: lapw 
+      TYPE(t_lapw_gf),INTENT(IN)   :: lapw_gf 
       !>                                                                
       !<-- Locals                                                       
       REAL                :: trans(2,2) 
@@ -1421,7 +1421,7 @@
      &        ,H5F_ACC_TRUNC_F,fid_new, hdferr)                         
          IF (hdferr /= 0) CALL juDFT_error("Could not create:"//TRIM(file2)//'.hdf')
          CALL io_createvar(fid_new,"2Dmat",H5T_NATIVE_DOUBLE,           &
-     &        (/SIZE(lapw%global2dlist,2),SIZE(lapw%global2dlist,2),2   &
+     &        (/SIZE(lapw_gf%global2Dlist,2),SIZE(lapw_gf%global2Dlist,2),2   &
      &        ,jspins,gf_NoEn(),kpts%nkpt/),varid_new)                 
                                                                         
          !>                                                             
@@ -1445,8 +1445,8 @@
          !<-- The gvectors                                              
                                                                         
          CALL io_createvar(fid_new,"gvecs",H5T_NATIVE_INTEGER,(/2       &
-     &        ,SIZE(lapw%global2Dlist,2)/),varid)                       
-         CALL io_WRITE(varid,(/1,1/),(/2,SIZE(lapw%global2Dlist,2)/),"lapw_global2Dlist",lapw%global2Dlist(:,:))
+     &        ,SIZE(lapw_gf%global2Dlist,2)/),varid)                       
+         CALL io_WRITE(varid,(/1,1/),(/2,SIZE(lapw_gf%global2Dlist,2)/),"lapw_global2Dlist",lapw_gf%global2Dlist(:,:))
          CALL io_dclose(varid,hdferr) 
                                                                         
          !>                                                             
@@ -1454,10 +1454,10 @@
          !<-- allocate big storage                                      
          ALLOCATE(sigma_old(SIZE(g_old,2),SIZE(g_old,2),2,SIZE(k_old,2))&
      &        )                                                         
-         ALLOCATE(sigma_new(SIZE(lapw%global2dlist,2)                   &
-     &        ,SIZE(lapw%global2dlist,2),2))                            
-         ALLOCATE(gmap(SIZE(lapw%global2dlist,2))                       &
-     &        ,kmap(SIZE(lapw%global2dlist,2)))                         
+         ALLOCATE(sigma_new(SIZE(lapw_gf%global2Dlist,2)                   &
+     &        ,SIZE(lapw_gf%global2Dlist,2),2))                            
+         ALLOCATE(gmap(SIZE(lapw_gf%global2Dlist,2))                       &
+     &        ,kmap(SIZE(lapw_gf%global2Dlist,2)))                         
          !>                                                             
          DO jsp = 1,jspins 
             DO en  = 1,gf_NoEn() 
@@ -1473,8 +1473,8 @@
                   WRITE(oUnit,"(a,i3,a,2(f0.6,2x))") "Processing kpoint ",nk&
      &                 ," : ",kpts%bk(1:2,nk)                           
                   !<-- generate a map of all k+g to corresponding old va
-                  DO ng = 1,SIZE(lapw%global2dlist,2) 
-                     k  = kpts%bk(1:2,nk)+lapw%global2dlist(:,ng) 
+                  DO ng = 1,SIZE(lapw_gf%global2Dlist,2) 
+                     k  = kpts%bk(1:2,nk)+lapw_gf%global2Dlist(:,ng) 
                      k  = MATMUL(trans,k) 
                      ! separate integer->gvector from old kpoint        
                      gvec = NINT(k) 
@@ -1493,15 +1493,15 @@
                      ENDDO 
                      IF (kmap(ng) == 0) WRITE(6                         &
      &                    ,"(2i5,a,2i5,a,2(f0.5,2x),a)"                 &
-     &                    )lapw%global2dlist(:,ng)," => ",g_old(:       &
+     &                    )lapw_gf%global2Dlist(:,ng)," => ",g_old(:       &
      &                    ,gmap(ng))," + ",kvec(:)                      &
      &                    ," Problem with k-mapping"                    
                      IF (gmap(ng) == 0) WRITE(oUnit,"(2i5,a)")              &
-     &                    lapw%global2dlist(:,ng)                       &
+     &                    lapw_gf%global2Dlist(:,ng)                       &
      &                    ," Problem with g-mapping"                    
                      IF (kmap(ng) /= 0.AND.gmap(ng) /= 0)               &
      &                    WRITE(oUnit,'(2i5,a,2i5,a,2(f0.5,2x))')           &
-     &                    lapw%global2dlist(:,ng)," => ",g_old(:,gmap(ng&
+     &                    lapw_gf%global2Dlist(:,ng)," => ",g_old(:,gmap(ng&
      &                    ))," + ",k_old(:,kmap(ng))                    
                      !>                                                 
                   ENDDO 
@@ -1512,9 +1512,9 @@
                   !>                                                    
                                                                         
                   !<-- Now construct the new embedding potential        
-                  DO ng1 = 1,SIZE(lapw%global2dlist,2) 
+                  DO ng1 = 1,SIZE(lapw_gf%global2Dlist,2) 
                      IF (gmap(ng1) == 0) CYCLE 
-                     DO ng2 = 1,SIZE(lapw%global2dlist,2) 
+                     DO ng2 = 1,SIZE(lapw_gf%global2Dlist,2) 
                         IF (gmap(ng2) == 0) CYCLE 
                         IF (kmap(ng1) /= kmap(ng2)) THEN 
                            Sigma_new(ng1,ng2,:) = 0.0 
@@ -1587,14 +1587,14 @@
       END SUBROUTINE 
       !>                                                                
 #ifdef CPP_MPI
-      LOGICAL FUNCTION priv_create_MPI_memory(mpi_d,layer,kpts,lapw,jspins,l_noco) result(ok)
+      LOGICAL FUNCTION priv_create_MPI_memory(mpi_d,layer,kpts,lapw_gf,jspins,l_noco) result(ok)
       USE m_gf_types
       USE m_gf_energies
       !use gmpi
       IMPLICIT NONE
       TYPE(t_gfmpi),INTENT(IN)     :: mpi_d
       TYPE(t_layers),INTENT(IN)  :: layer
-      TYPE(t_lapw_gf),INTENT(IN)    :: lapw
+      TYPE(t_lapw_gf),INTENT(IN)    :: lapw_gf
       TYPE(t_kpts),INTENT(IN)    :: kpts
       INTEGER,INTENT(IN)         :: jspins
       LOGICAL,INTENT(IN)         :: l_noco
@@ -1603,7 +1603,7 @@
       INTEGER :: stat(MPI_STATUS_SIZE)
       TYPE(c_ptr)::ptr,ptr1
       ok=.false.
-      mem%matsize=SIZE(lapw%global2dList,2)
+      mem%matsize=SIZE(lapw_gf%global2Dlist,2)
       mem%spins=jspins
       IF (l_noco)  mem%spins=4
       mem%l_noco=l_noco

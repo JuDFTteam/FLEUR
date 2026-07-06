@@ -14,7 +14,7 @@
                                                                         
       !<--S: gf_CBS(nk,Nv2,En,                                          
                                                                         
-      SUBROUTINE gf_CBS(layers,layer,nk,bk,En,jspin,gfinp,lapw,         &
+      SUBROUTINE gf_CBS(layers,layer,nk,bk,En,jspin,gfinp,lapw,lapw_gf,         &
      &     cell,T,mrot,mpi,T1,T2)                                       
 !********************************************************************** 
 !     * This SUBROUTINE takes the Transfer-Matrix and calculates        
@@ -23,7 +23,6 @@
 !     *                           Daniel Wortmann, Tokyo, 2001          
 ! *                                                                     
 !********************************************************************** 
-#include "juDFT_env.h"
       USE m_gf_types 
       USE m_gf_math, ONLY  : eigenvalues,tpi_const 
       USE m_gf_io2dmat 
@@ -38,17 +37,18 @@
       REAL, INTENT(IN)          :: bk(2) 
       INTEGER, INTENT(IN)       :: mrot(:,:,:) 
       TYPE(t_lapw),INTENT(IN)   :: lapw 
-      TYPE(t_mpi)               :: mpi 
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
+      TYPE(t_gfmpi)               :: mpi 
       TYPE(t_cell),INTENT(IN)   :: cell 
-      TYPE(t_gfinp), INTENT(IN) :: gfinp 
-      COMPLEX, INTENT(INOUT)    :: T(2*Lapw%nv2_Tot,2*Lapw%nv2_Tot) 
-      COMPLEX, INTENT(IN)       :: T1(2*Lapw%nv2_Tot,2*Lapw%nv2_Tot)    &
-     &     ,T2(2*Lapw%nv2_Tot,2*Lapw%nv2_Tot)                           
+      TYPE(t_embinp), INTENT(IN) :: gfinp 
+      COMPLEX, INTENT(INOUT)    :: T(2*lapw_gf%nv2_tot,2*lapw_gf%nv2_tot) 
+      COMPLEX, INTENT(IN)       :: T1(2*lapw_gf%nv2_tot,2*lapw_gf%nv2_tot)    &
+     &     ,T2(2*lapw_gf%nv2_tot,2*lapw_gf%nv2_tot)                           
                                                                         
       !>                                                                
       !<-- Locals                                                       
                                                                         
-      INTEGER              :: n,state,n2,nn,nloc(2*lapw%nv2_tot)
+      INTEGER              :: n,state,n2,nn,nloc(2*lapw_gf%nv2_tot)
       REAL                 :: bz 
                                                  !put into input-data la
       LOGICAL, PARAMETER   :: L_STATES = .FALSE. 
@@ -60,17 +60,17 @@
       REAL, ALLOCATABLE    :: curr(:),spinp(:,:)
       COMPLEX,ALLOCATABLE  :: logderiv(:,:)
                                                                     !cma
-      COMPLEX              :: T_temp(2*Lapw%nv2_Tot,2*Lapw%nv2_Tot) 
+      COMPLEX              :: T_temp(2*lapw_gf%nv2_tot,2*lapw_gf%nv2_tot) 
       LOGICAL              :: l_noembtest 
-      COMPLEX              :: vector(lapw%nv2_tot,2*lapw%nv2_tot) 
+      COMPLEX              :: vector(lapw_gf%nv2_tot,2*lapw_gf%nv2_tot) 
       INTEGER              :: layer_ind 
       complex              :: cnorm
                                                                         
       !>                                                                
       !<-- Allocate storage,initialize                                  
                                                                         
-      ALLOCATE(ew(2*Lapw%nv2_Tot,2),spinp(0:3,2*lapw%nv2_tot),curr(2*Lapw%nv2_Tot),ev(2           &
-     &     *Lapw%nv2_Tot,2*Lapw%nv2_Tot),logderiv(4,2*lapw%nv2_tot))
+      ALLOCATE(ew(2*lapw_gf%nv2_tot,2),spinp(0:3,2*lapw_gf%nv2_tot),curr(2*lapw_gf%nv2_tot),ev(2           &
+     &     *lapw_gf%nv2_tot,2*lapw_gf%nv2_tot),logderiv(4,2*lapw_gf%nv2_tot))
                                                                         
 !      bz = tpi_const/(2*cell%Z1-gfinp%d)                               
        bz=tpi_const/sum(layers%c)
@@ -80,32 +80,32 @@
       !<--now calculate Eigenvectors and eigenvalues                    
                                                                         
       t_temp = T 
-      CPP_juDFT_timestart("CBS:diagonalization")
+      CALL timestart("CBS:diagonalization")
       CALL eigenvalues(T_temp,ew(:,1),ev) 
-      CPP_juDFT_timestop("CBS:diagonalization")
+      CALL timestop("CBS:diagonalization")
       ew(:,2) = CMPLX(0,bz/tpi_const)*LOG(ew(:,1)) 
-!      do n=1,2*lapw%nv2_tot                                            
+!      do n=1,2*lapw_gf%nv2_tot                                            
 !         if(abs(ew(n,1)).lt.1.0e-10)                                   
 !      enddo                                                            
       !>                                                                
-      CPP_juDFT_timestart("CBS:current")
-      CALL priv_current(en,nk,mpi,lapw,gfinp,ew,ev,curr) 
-      CPP_juDFT_timestop("CBS:current")
+      CALL timestart("CBS:current")
+      CALL priv_current(en,nk,mpi,lapw,lapw_gf,gfinp,ew,ev,curr)
+      CALL timestop("CBS:current")
                                                                         
                                                                         
       !<--For Debugging: write to stdout&STOP                                                                    
       IF ( L_STATES ) THEN 
          WRITE (*,*) '2D-Eigenstates:' 
-         DO state = 1, Lapw%nv2_Tot 
+         DO state = 1, lapw_gf%nv2_tot 
             WRITE (*,*) 'State:', state, ew(state,2) 
-            DO n = 1, Lapw%nv2_Tot 
-               WRITE (*,*) lapw%KP%k1p(n,jspin),lapw%kp%k2p(n,jspin),   &
+            DO n = 1, lapw_gf%nv2_tot 
+               WRITE (*,*) lapw_gf%k1p(n,jspin),lapw_gf%k2p(n,jspin),   &
      &              REAL(Ev(n,state))                                   
             ENDDO 
             WRITE (*,*) 'Derivative' 
-            DO n = 1, Lapw%nv2_Tot 
-               WRITE (*,*)lapw%KP%k1p(n,jspin),lapw%kp%k2p(n,jspin),    &
-     &              REAL(Ev(n+Lapw%nv2_Tot,state))                      
+            DO n = 1, lapw_gf%nv2_tot 
+               WRITE (*,*)lapw_gf%k1p(n,jspin),lapw_gf%k2p(n,jspin),    &
+     &              REAL(Ev(n+lapw_gf%nv2_tot,state))                      
             ENDDO 
          ENDDO 
          CALL juDFT_error('CBS: 2d-states') 
@@ -116,7 +116,7 @@
       !<-- Debugging: output of statistics of the eigen-states          
                                                                         
 #ifdef CPP_DEBUG                                                        
-      DO n=1,2*lapw%nv2_tot 
+      DO n=1,2*lapw_gf%nv2_tot 
          WRITE(16,*) 'State:',n 
          WRITE(16,*) ew(n,2),curr(n) 
          WRITE(16,*) maxval(abs(ev(:,n))),minval(abs(ev(:,n))) 
@@ -130,35 +130,35 @@
                                                                         
        ALLOCATE(syms(size(ev,2),size(mrot,3)+1)) 
        syms=0 
-       IF (lapw%nv2(1) == lapw%nv2_tot)                                 &
+       IF (lapw_gf%nv2(1) == lapw_gf%nv2_tot)                                 &
      &      CALL symcheck(jspin,bk,cell%amat,ev,ew(:,2),curr,mrot,lapw  &
-     &      ,syms)                                                      
+     &      ,lapw_gf,syms)                                                      
                                                                         
       !>                                                                
                                                                         
       !<-- output of CBS (eigenvalues)                                  
-      CPP_juDFT_timestart("writing of CBS")
+      CALL timestart("writing of CBS")
       DO n=1,size(ew,1)
-        cnorm=dot_product(ev(:lapw%nv2(1),n),ev(:lapw%nv2(1),n))
+        cnorm=dot_product(ev(:lapw_gf%nv2(1),n),ev(:lapw_gf%nv2(1),n))
         logderiv(1,n)=ev(1,n)
-        logderiv(2,n)=ev(lapw%nv2_tot+1,n)
-        !logderiv(1,n)=dot_product(ev(lapw%nv2(1)+1:lapw%nv2_tot+lapw%nv2(1),n),  &
-     !&      ev(:lapw%nv2(1),n))/cnorm
-        if (Lapw%nv2_Tot>lapw%nv2(1)) then
+        logderiv(2,n)=ev(lapw_gf%nv2_tot+1,n)
+        !logderiv(1,n)=dot_product(ev(lapw_gf%nv2(1)+1:lapw_gf%nv2_tot+lapw_gf%nv2(1),n),  &
+     !&      ev(:lapw_gf%nv2(1),n))/cnorm
+        if (lapw_gf%nv2_tot>lapw_gf%nv2(1)) then
            !this is a noco calculation
-           logderiv(3,n)=ev(lapw%nv2(1)+1,n)
-           logderiv(4,n)=ev(lapw%nv2(1)+lapw%nv2_tot+1,n)
-           !cnorm=dot_product(ev(:lapw%nv2_tot,n),ev(:lapw%nv2_tot,n))
-           !logderiv(2,n)=dot_product(ev(lapw%nv2_tot+1:2*lapw%nv2_tot,n),       &
-     !&      ev(:lapw%nv2_tot,n))/cnorm
+           logderiv(3,n)=ev(lapw_gf%nv2(1)+1,n)
+           logderiv(4,n)=ev(lapw_gf%nv2(1)+lapw_gf%nv2_tot+1,n)
+           !cnorm=dot_product(ev(:lapw_gf%nv2_tot,n),ev(:lapw_gf%nv2_tot,n))
+           !logderiv(2,n)=dot_product(ev(lapw_gf%nv2_tot+1:2*lapw_gf%nv2_tot,n),       &
+     !&      ev(:lapw_gf%nv2_tot,n))/cnorm
         endif
       enddo
 
 
       !Generate spin-projection
-      if (Lapw%nv2_Tot>lapw%nv2(1)) then
+      if (lapw_gf%nv2_tot>lapw_gf%nv2(1)) then
            !this is a noco calculation
-           n2=lapw%nv2(1)
+           n2=lapw_gf%nv2(1)
            DO n=1,size(ew,1)
                  spinp(0,n)=dot_product(ev(:n2,n),ev(:n2,n))/dot_product(ev(:2*n2,n),ev(:2*n2,n))
                  spinp(1,n)=ev(1,n)*conjg(ev(n2+1,n))+conjg(ev(1,n))*ev(n2+1,n)
@@ -173,12 +173,12 @@
       !set crit. for second complex :: line                             
       IF (gfinp%CBS_bz>0) bz=gfinp%CBS_bz 
       if (.not.gfinp%l_hdfio) THEN
-               CALL outCBS(mpi,nk,en,lapw%nv2_tot,ew(:,2),bz,bk,syms,curr,spinp,logderiv)
+               CALL outCBS(mpi,nk,en,lapw_gf%nv2_tot,ew(:,2),bz,bk,syms,curr,spinp,logderiv)
       else
                CALL outCBS_HDF(nk,en,jspin,ew(:,2),syms,curr,spinp)
       endif
       DEALLOCATE(syms) 
-      CPP_juDFT_timestop("writing of CBS")
+      CALL timestop("writing of CBS")
       !>                                                                
                                                                         
       !<-- check symmetry of Eigenvalues                                
@@ -193,23 +193,23 @@
       !>                                                                
       !<-- calculate embedding potential!                               
                                                                         
-      CPP_juDFT_timestart("CBS:gen of Sigma")
+      CALL timestart("CBS:gen of Sigma")
       INQUIRE(FILE='noembtest',EXIST=l_noembtest) 
       IF(.NOT.l_noembtest)THEN 
        CALL gf_generateEmbPot(en,nk,jspin,mpi%pe0,ev,ew(:,2),T1         &
-     &     ,T2,curr,lapw,gfinp,layer)                                   
+     &     ,T2,curr,lapw,lapw_gf,gfinp,layer)                                   
       ENDIF 
-      CPP_juDFT_timestop("CBS:gen of Sigma")
+      CALL timestop("CBS:gen of Sigma")
       !>                                                                
                                                                         
-      CALL priv_embtest(jspin,nk,en,lapw%nv2_tot,lapw) 
+      CALL priv_embtest(jspin,nk,en,lapw_gf%nv2_tot,lapw,lapw_gf)
       DEALLOCATE(ew,curr,ev) 
       END SUBROUTINE gf_CBS 
                                                                         
       !>                                                                
                                                                         
       !<-- S:priv_current(mpi,lapw,gfinp,ew,ev,curr)                    
-      recursive SUBROUTINE priv_current(en,nk,mpi,lapw,gfinp,ew,ev,curr,eps_non_bloch_in)
+      recursive SUBROUTINE priv_current(en,nk,mpi,lapw,lapw_gf,gfinp,ew,ev,curr,eps_non_bloch_in)
 !-----------------------------------------------                        
 !                                                                       
 !           (last modified:09-10-19) D. Wortmann                        
@@ -220,9 +220,10 @@
       IMPLICIT NONE 
       !<--Arguments                                                     
       INTEGER,INTENT(IN)       :: en,nk 
-      TYPE(t_mpi),INTENT(IN)   :: mpi 
+      TYPE(t_gfmpi),INTENT(IN)   :: mpi 
       TYPE(t_lapw),INTENT(IN ) :: lapw 
-      TYPE(t_gfinp),INTENT(IN) :: gfinp 
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
+      TYPE(t_embinp),INTENT(IN) :: gfinp 
       COMPLEX,INTENT(IN)       :: ev(:,:) 
       COMPLEX,INTENT(IN)       :: ew(:,:) 
       REAL   ,INTENT(OUT)      :: curr(:) 
@@ -244,16 +245,16 @@
       IF(.NOT.ALLOCATED(basisoverlaps))THEN 
            CALL gf_curvy2dprojector(cell,lapw,.FALSE.) 
          ENDIF 
-         vector = matmul(basisoverlaps(1:lapw%nv2_tot,1:lapw%nv2_tot,1),&
-     &      Ev(lapw%nv2_tot+1:2*lapw%nv2_tot,1:2*lapw%nv2_tot))         
-         DO n = 1, 2*Lapw%nv2_Tot 
-           curr(n) = AIMAG(  DOT_PRODUCT(  Ev(1:Lapw%nv2_Tot,n)         &
-     &        ,vector(1:lapw%nv2_tot,n)     ))                          
+         vector = matmul(basisoverlaps(1:lapw_gf%nv2_tot,1:lapw_gf%nv2_tot,1),&
+     &      Ev(lapw_gf%nv2_tot+1:2*lapw_gf%nv2_tot,1:2*lapw_gf%nv2_tot))         
+         DO n = 1, 2*lapw_gf%nv2_tot 
+           curr(n) = AIMAG(  DOT_PRODUCT(  Ev(1:lapw_gf%nv2_tot,n)         &
+     &        ,vector(1:lapw_gf%nv2_tot,n)     ))                          
          ENDDO 
 #else                                                                   
-         DO n = 1, 2*Lapw%nv2_Tot 
-           curr(n) = AIMAG(  DOT_PRODUCT(  Ev(1:Lapw%nv2_Tot,n)         &
-     &        ,Ev(Lapw%nv2_Tot+1:2*Lapw%nv2_Tot,n)     ))               
+         DO n = 1, 2*lapw_gf%nv2_tot 
+           curr(n) = AIMAG(  DOT_PRODUCT(  Ev(1:lapw_gf%nv2_tot,n)         &
+     &        ,Ev(lapw_gf%nv2_tot+1:2*lapw_gf%nv2_tot,n)     ))               
          ENDDO 
 #endif                                                                  
       !>                                                                
@@ -264,13 +265,13 @@
       n_decay=0
       n_evanescent=0
       n_blochin=0
-      DO n = 1, 2*Lapw%nv2_Tot 
+      DO n = 1, 2*lapw_gf%nv2_tot 
          IF ( ABS(ABS(ew(n,1))-1)>eps_non_bloch ) THEN
             n_evanescent=n_evanescent+1
             IF  (ABS(ew(n,1))>1) n_decay=n_decay+1
             IF (( ABS(curr(n))>gfinp%eps_current .AND.                  &
      &           AIMAG(gf_Z(en,0))<1E-10).AND.mpi%pe0) THEN             
-               WRITE(6,*)'WARNING! Evanescent with current detected!' 
+               WRITE(oUnit,*)'WARNING! Evanescent with current detected!' 
                WRITE (6,*) '|Lambda|=', ABS(ew(n,1)) 
                WRITE (6,*) 'curr    =', curr(n) 
             ENDIF 
@@ -286,29 +287,29 @@
       ENDDO 
       !>                                                                
                                                                         
-      IF (COUNT(curr>0)/=Lapw%nv2_Tot) THEN
+      IF (COUNT(curr>0)/=lapw_gf%nv2_tot) THEN
          !Decomposition of states failed, first try again
-         n_bloch=count(ABS(ABS(ew(:2*Lapw%nv2_Tot,1))-1)<eps_non_bloch)
+         n_bloch=count(ABS(ABS(ew(:2*lapw_gf%nv2_tot,1))-1)<eps_non_bloch)
          if (eps_non_bloch<gfinp%eps_non_bloch.and.eps_non_bloch>5*epsilon(1.0)) then
-                write(6,*) "Decomposition of States failed,retry with smaller eps_non_bloch:",eps_non_bloch/2.0
-                write(6,*) "Bloch states:",n_bloch," 'in':",n_blochin
-                write(6,*) "Evanescent:",n_evanescent," decaying:",n_decay
-                call priv_current(en,nk,mpi,lapw,gfinp,ew,ev,curr,eps_non_bloch/2.0)
+                write(oUnit,*) "Decomposition of States failed,retry with smaller eps_non_bloch:",eps_non_bloch/2.0
+                write(oUnit,*) "Bloch states:",n_bloch," 'in':",n_blochin
+                write(oUnit,*) "Evanescent:",n_evanescent," decaying:",n_decay
+                call priv_current(en,nk,mpi,lapw,lapw_gf,gfinp,ew,ev,curr,eps_non_bloch/2.0)
                 return
          endif
          if (eps_non_bloch<gfinp%eps_non_bloch*1000) then
                 if (eps_non_bloch<=5*epsilon(1.0)) eps_non_bloch=gfinp%eps_non_bloch
-                write(6,*) "Decomposition of States failed,retry with larger eps_non_bloch:",eps_non_bloch*2.0
-                write(6,*) "Bloch states:",n_bloch," 'in':",n_blochin
-                write(6,*) "Evanescent:",n_evanescent," decaying:",n_decay
-                call priv_current(en,nk,mpi,lapw,gfinp,ew,ev,curr,eps_non_bloch*2.0)
+                write(oUnit,*) "Decomposition of States failed,retry with larger eps_non_bloch:",eps_non_bloch*2.0
+                write(oUnit,*) "Bloch states:",n_bloch," 'in':",n_blochin
+                write(oUnit,*) "Evanescent:",n_evanescent," decaying:",n_decay
+                call priv_current(en,nk,mpi,lapw,lapw_gf,gfinp,ew,ev,curr,eps_non_bloch*2.0)
                 return
          endif
          if (n_blochin*2.ne.n_bloch) THEN
                 WRITE(*,*) "CBS failed to decompose into in/out states"
                 write(*,*) "Bloch states:",n_bloch," 'in':",n_blochin
                 WRITE(*,*) "nk   en   n   EW (Re+Im) Direction  Abs(ew)-1"
-                DO n = 1, 2*Lapw%nv2_Tot
+                DO n = 1, 2*lapw_gf%nv2_tot
                 WRITE(*,"(3i5,10(e15.4,1x))") nk,en,n,ew(n,1),curr(n)       &
      &           ,SIGN(1.0,curr(n)),ABS(ew(n,1))-1
                 ENDDO
@@ -317,7 +318,7 @@
              WRITE(*,*) "CBS failed to decompose into in/out states (evanescent)"
              write(*,*) "evanescent:",n_evanescent," decaying:",n_decay
              WRITE(*,*) "nk   en   n   EW (Re+Im) Direction  Abs(ew)-1"
-             DO n = 1, 2*Lapw%nv2_Tot
+             DO n = 1, 2*lapw_gf%nv2_tot
                WRITE(*,"(3i5,10(e15.4,1x))") nk,en,n,ew(n,1),curr(n)       &
      &           ,SIGN(1.0,curr(n)),ABS(ew(n,1))-1                      
              ENDDO
@@ -325,11 +326,11 @@
          endif
          !INQUIRE(FILE ="curr_fix",EXIST = l_exist)
          !IF(.NOT.l_exist) CALL juDFT_error("CBS decomposition failed")
-         !n = COUNT(curr<0)-Lapw%nv2_Tot
+         !n = COUNT(curr<0)-lapw_gf%nv2_tot
          !IF (n>0) THEN
          !   curr(:n) =-curr(:n)
          !ELSE
-         !   curr(Lapw%nv2_Tot+n:)=-curr(Lapw%nv2_Tot+n:)
+         !   curr(lapw_gf%nv2_tot+n:)=-curr(lapw_gf%nv2_tot+n:)
          !ENDIF
       ENDIF 
                                                                         
@@ -338,7 +339,7 @@
 
 
       SUBROUTINE outCBS_HDF(nk,en,jspin,ew,syms,curr,spinp)
-      !<-- S: outCBS(mpi,nk,en,lapw%nv2_tot,ew,bz,bk,syms)              
+      !<-- S: outCBS(mpi,nk,en,lapw_gf%nv2_tot,ew,bz,bk,syms)              
       USE m_hdf_tools,ONLY:io_WRITE
       USE m_hdf_accessprp
       IMPLICIT NONE
@@ -349,11 +350,11 @@
       REAL   ,INTENT(IN)    :: curr(:),spinp(0:,:)
 
 
-      CALL io_write(re_k_var,(/1,en,nk,jspin/),(/size(ew),1,1,1/),real(ew))
-      CALL io_write(im_k_var,(/1,en,nk,jspin/),(/size(ew),1,1,1/),aimag(ew))
+      CALL io_write(re_k_var,(/1,en,nk,jspin/),(/size(ew),1,1,1/),"ew",real(ew))
+      CALL io_write(im_k_var,(/1,en,nk,jspin/),(/size(ew),1,1,1/),"ew",aimag(ew))
 
-      CALL io_write(curr_var,(/1,en,nk,jspin/),(/size(ew),1,1,1/),curr)
-      CALL io_write(spinp_var,(/1,1,en,nk,jspin/),(/4,size(ew),1,1,1/),spinp)
+      CALL io_write(curr_var,(/1,en,nk,jspin/),(/size(ew),1,1,1/),"curr",curr)
+      CALL io_write(spinp_var,(/1,1,en,nk,jspin/),(/4,size(ew),1,1,1/),"spinp",spinp)
       !CALL io_write(sym_var,(/1,1,en,nk,jspin/),(/size(ew),size(syms,2),1,1,1/),syms)
 
       END SUBROUTINE
@@ -375,10 +376,10 @@
         if (jspin>1) return !open the file only once
 
         CALL h5fcreate_f("CBS.hdf",H5F_ACC_TRUNC_F,fid,hdferr,H5P_DEFAULT_F,hdf_access_prp("CBS.hdf"))
-        CALL io_createvar(fid,"Re_k",H5T_NATIVE_DOUBLE,(/2*nv2d,gf_noen(),kpts%nkpts,jspins/),re_k_var)
-        CALL io_createvar(fid,"Im_k",H5T_NATIVE_DOUBLE,(/2*nv2d,gf_noen(),kpts%nkpts,jspins/),Im_k_var)
-        CALL io_createvar(fid,"Curr",H5T_NATIVE_DOUBLE,(/2*nv2d,gf_noen(),kpts%nkpts,jspins/),curr_var)
-        CALL io_createvar(fid,"Spinp",H5T_NATIVE_DOUBLE,(/4,2*nv2d,gf_noen(),kpts%nkpts,jspins/),spinp_var)
+        CALL io_createvar(fid,"Re_k",H5T_NATIVE_DOUBLE,(/2*nv2d,gf_noen(),kpts%nkpt,jspins/),re_k_var)
+        CALL io_createvar(fid,"Im_k",H5T_NATIVE_DOUBLE,(/2*nv2d,gf_noen(),kpts%nkpt,jspins/),Im_k_var)
+        CALL io_createvar(fid,"Curr",H5T_NATIVE_DOUBLE,(/2*nv2d,gf_noen(),kpts%nkpt,jspins/),curr_var)
+        CALL io_createvar(fid,"Spinp",H5T_NATIVE_DOUBLE,(/4,2*nv2d,gf_noen(),kpts%nkpt,jspins/),spinp_var)
 
         CALL io_write_var(fid,"kpts",kpts%bk(:2,:))
         CALL io_write_var(fid,"energies",real(gf_allz(0)))
@@ -418,11 +419,11 @@
 !                       D. Wortmann, Tokyo, 2001                        
 !****************************************************************       
       USE m_gf_energies,ONLY  :gf_Z 
-      USE m_gf_types,ONLY   :t_mpi 
+      USE m_gf_types
       IMPLICIT NONE 
       !<--Arguments                                                     
       INTEGER,INTENT(IN)    :: nv2,nk,en 
-      TYPE(t_mpi),INTENT(IN) :: mpi 
+      TYPE(t_gfmpi),INTENT(IN) :: mpi 
       REAL,INTENT(IN)       ::bz,bk_in(2) 
       INTEGER,INTENT(IN)    ::syms(:,:) 
       COMPLEX,INTENT(IN)    ::ew(:) 
@@ -466,17 +467,17 @@
       IF (mpi%irank/=0) THEN 
          !<--Send data to PE=0                                          
          CALL MPI_SEND(nkp, 1, MPI_INTEGER, 0, 1,MPI_COMM_WORLD, E) 
-         CALL MPI_SEND(zz,1,CPP_MPI_COMPLEX,0,2,MPI_COMM_WORLD,E) 
+         CALL MPI_SEND(zz,1,MPI_DOUBLE_COMPLEX,0,2,MPI_COMM_WORLD,E) 
          CALL MPI_SEND(nnv2,1, MPI_INTEGER, 0, 4,MPI_COMM_WORLD, E) 
-         CALL MPI_SEND(bk,2, CPP_MPI_REAL,                              &
+         CALL MPI_SEND(bk,2, MPI_DOUBLE_PRECISION,                              &
      &        0, 5,MPI_COMM_WORLD,E)                                    
-         CALL MPI_SEND(kz, 2*nnv2, CPP_MPI_COMPLEX,                     &
+         CALL MPI_SEND(kz, 2*nnv2, MPI_DOUBLE_COMPLEX,                     &
      &        0, 3,MPI_COMM_WORLD, E)                                   
-         CALL mpi_send(curr,2*nnv2,CPP_MPI_REAL,                        &
+         CALL mpi_send(curr,2*nnv2,MPI_DOUBLE_PRECISION,                        &
      &        0,7,MPI_COMM_WORLD,E)                                     
-         CALL mpi_send(spinp,4*2*nnv2,CPP_MPI_REAL,                        &
+         CALL mpi_send(spinp,4*2*nnv2,MPI_DOUBLE_PRECISION,                        &
      &        0,8,MPI_COMM_WORLD,E)
-     CALL mpi_send(logderiv,4*2*nnv2,CPP_MPI_COMPLEX,                        &
+     CALL mpi_send(logderiv,4*2*nnv2,MPI_DOUBLE_COMPLEX,                        &
      &        0,9,MPI_COMM_WORLD,E)
          CALL MPI_SEND(nsyms,2*nnv2*size(syms,2),MPI_INTEGER, 0, 6,     &
      &        MPI_COMM_WORLD, E)                                        
@@ -487,24 +488,24 @@
             IF (rank/=0) THEN 
                CALL MPI_RECV(nkp,1,MPI_INTEGER,rank,1,                  &
      &              MPI_COMM_WORLD,S, E)                                
-              CALL MPI_RECV(zz,1,CPP_MPI_COMPLEX,                       &
+              CALL MPI_RECV(zz,1,MPI_DOUBLE_COMPLEX,                       &
      &             rank,2, MPI_COMM_WORLD,S, E)                         
               CALL MPI_RECV(nnv2,1,MPI_INTEGER,rank,4,                  &
      &             MPI_COMM_WORLD,S, E)                                 
-              CALL MPI_RECV(bk,2,CPP_MPI_REAL,                          &
+              CALL MPI_RECV(bk,2,MPI_DOUBLE_PRECISION,                          &
      &             rank,5, MPI_COMM_WORLD,S, E)                         
 
               DEALLOCATE(kz,nsyms) 
               ALLOCATE(kz(1:2*nnv2),nsyms(2*nnv2,SIZE(syms,2))) 
               DEALLOCATE(curr,spinp,logderiv)
               ALLOCATE(curr(1:2*nnv2),spinp(0:3,2*nnv2),logderiv(4,2*nnv2))
-              CALL MPI_RECV(kz,2*nnv2,CPP_MPI_COMPLEX,                  &
+              CALL MPI_RECV(kz,2*nnv2,MPI_DOUBLE_COMPLEX,                  &
      &             rank,3,MPI_COMM_WORLD,S, E)                          
-              CALL MPI_RECV(curr,2*nnv2,CPP_MPI_REAL,                   &
+              CALL MPI_RECV(curr,2*nnv2,MPI_DOUBLE_PRECISION,                   &
      &             rank,7,MPI_COMM_WORLD,S,E)                           
-              CALL MPI_RECV(spinp,4*2*nnv2,CPP_MPI_REAL,                   &
+              CALL MPI_RECV(spinp,4*2*nnv2,MPI_DOUBLE_PRECISION,                   &
      &             rank,8,MPI_COMM_WORLD,S,E)
-              CALL MPI_RECV(logderiv,4*2*nnv2,CPP_MPI_COMPLEX,                   &
+              CALL MPI_RECV(logderiv,4*2*nnv2,MPI_DOUBLE_COMPLEX,                   &
      &             rank,9,MPI_COMM_WORLD,S,E)
               CALL MPI_RECV(nsyms,2*nnv2*SIZE(syms,2),MPI_INTEGER,rank, &
      &             6, MPI_COMM_WORLD,S, E)                              
@@ -565,7 +566,7 @@
                                                                         
       !<--S: symcheck                                                   
                                                                         
-      SUBROUTINE symcheck(jspin,bk,amat,ev,ew,curr,mrot,lapw,sym) 
+      SUBROUTINE symcheck(jspin,bk,amat,ev,ew,curr,mrot,lapw,lapw_gf,sym) 
 !*****************************************************************      
 !                                                                       
 ! Calculate the irreducible representations of the electronic states    
@@ -574,9 +575,8 @@
 !                                                                       
 ! Jussi Enkovaara Jlich 2004                                            
 !****************************************************************       
-      USE m_gf_types,ONLY:t_lapw 
+      USE m_gf_types
       USE m_gf_math,  ONLY:mat_inverse 
-      USE m_fleur_interface 
                                                                         
       IMPLICIT NONE 
       !<--Argument                                                      
@@ -585,6 +585,7 @@
       REAL, INTENT(IN)         :: curr(:),bk(2) 
       INTEGER,INTENT(IN)       :: mrot(:,:,:) 
       TYPE(t_lapw),INTENT(IN)  :: lapw 
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
       INTEGER,INTENT(OUT)      ::sym(:,:) 
                                                                         
       !>                                                                
@@ -620,7 +621,7 @@
                                                                         
       !>                                                                
       nv2=size(ev,1)/2 
-      soc = (nv2/=lapw%nv2(1)) 
+      soc = (nv2/=lapw_gf%nv2(1)) 
       nstates = 2*nv2 
       nop=size(mrot,3) 
       sym=0 
@@ -635,10 +636,10 @@
       IF (soc) THEN 
          nv2=nv2/2 
          ALLOCATE(su(2,2,2*nop)) 
-         CALL fleur_grp_k(mrot,mrot_k,amat,bk3,nclass,nirr,c_table,     &
+         CALL priv_grp_k(mrot,mrot_k,amat,bk3,nclass,nirr,c_table,     &
      &     grpname,irrname,su)                                          
       ELSE 
-         CALL fleur_grp_k(mrot,mrot_k,amat,bk3,nclass,nirr,c_table,     &
+         CALL priv_grp_k(mrot,mrot_k,amat,bk3,nclass,nirr,c_table,     &
      &     grpname,irrname)                                             
       ENDIF 
                                                                         
@@ -678,13 +679,13 @@
       DO c=1,nclass 
          mtmpinv = mat_inverse(mrot_k(:,:,c)*1.0) 
          iloop: DO i=1,nv2 
-            kv(1)=lapw%kp%k1p(i,jspin) 
-            kv(2)=lapw%kp%k2p(i,jspin) 
+            kv(1)=lapw_gf%k1p(i,jspin) 
+            kv(2)=lapw_gf%k2p(i,jspin) 
             kv=kv+bk 
             kvtest=matmul(kv,mtmpinv(1:2,1:2))-bk 
             DO j=1,nv2 
-               kv(1) = lapw%kp%k1p(j,jspin) 
-               kv(2) = lapw%kp%k2p(j,jspin) 
+               kv(1) = lapw_gf%k1p(j,jspin) 
+               kv(2) = lapw_gf%k2p(j,jspin) 
                IF (ABS(kvtest(1)-kv(1))<eps.AND.                     &
      &           ABS(kvtest(2)-kv(2))<eps) THEN                      
                   gmap(i,c)=j 
@@ -838,7 +839,7 @@
                                                                         
       !<-- S: priv_embtest                                              
                                                                         
-      SUBROUTINE priv_embtest(jspin,nk,en,nv2,lapw) 
+      SUBROUTINE priv_embtest(jspin,nk,en,nv2,lapw,lapw_gf) 
 !******************************************                             
 !    Different tests on the embedding potential....                     
 !     Test J.Inglesfield's Idea to calculate eigenvectors               
@@ -852,6 +853,7 @@
       !<--Arguments                                                     
       INTEGER,INTENT(IN) :: jspin,en,nk,nv2 
       TYPE(t_lapw),INTENT(IN) :: lapw 
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
       !>                                                                
       !<-- Locals                                                       
                                                                         
@@ -863,7 +865,7 @@
       !Test J.Inglesfield's channel functions....                       
       INQUIRE(FILE ="jingle",EXIST= l_exist) 
       IF (l_exist) THEN 
-         IF(.NOT.gf_read2dmat(IO2D_EMB,2,2,en,nk,jspin,lapw,mat)) RETURN 
+         IF(.NOT.gf_read2dmat(IO2D_EMB,2,2,en,nk,jspin,lapw_gf,mat)) RETURN 
          mat = AIMAG(mat) 
          CALL eigenvalues(mat,ew,ev) 
          OPEN(99,FILE ="jingle",STATUS ="old",POSITION ="append",FORM="formatted")
@@ -877,7 +879,7 @@
       !Calculate Sigma*Sigma^*^-1                                       
       INQUIRE(FILE ="SigmaSigma",EXIST = l_exist) 
       IF (l_exist) THEN 
-         IF(.NOT.gf_read2dmat(IO2D_EMB,2,2,en,nk,jspin,lapw,mat)) RETURN 
+         IF(.NOT.gf_read2dmat(IO2D_EMB,2,2,en,nk,jspin,lapw_gf,mat)) RETURN 
          mat = MATMUL(CONJG(mat),mat_inverse(mat)) 
          CALL eigenvalues(mat,ew,ev) 
          OPEN(99,FILE ="SigmaSigma",STATUS ="old",POSITION ="append"    &
@@ -891,4 +893,33 @@
                                                                         
       !>                                                                
                                                                         
+      SUBROUTINE priv_grp_k(mrot,mrot_k,amat,bk,nclass,nirr,char_table, &
+     &     grpname,irrname,su)
+      !shim onto the modern grp_k (which takes t_sym/t_cell but only
+      !uses sym%mrot/nop and cell%amat)
+      USE m_grp_k
+      USE m_gf_types
+      IMPLICIT NONE
+      INTEGER, INTENT(IN)                :: mrot(:,:,:)
+      REAL, INTENT(IN)                   :: bk(3),amat(3,3)
+      COMPLEX , INTENT(OUT)              :: char_table(:,:)
+      INTEGER, INTENT(OUT)               :: mrot_k(:,:,:),nclass,nirr
+      CHARACTER(LEN = 7), INTENT(OUT)    :: grpname
+      CHARACTER(LEN = 5), INTENT(OUT)    :: irrname(:)
+      COMPLEX, OPTIONAL, INTENT(OUT)     :: su(:,:,:)
+      TYPE(t_sym)  :: sym_loc
+      TYPE(t_cell) :: cell_loc
+      sym_loc%nop = SIZE(mrot,3)
+      ALLOCATE(sym_loc%mrot(3,3,sym_loc%nop))
+      sym_loc%mrot = mrot
+      cell_loc%amat = amat
+      IF (PRESENT(su)) THEN
+         CALL grp_k(sym_loc,mrot_k,cell_loc,bk,nclass,nirr,char_table,  &
+     &        grpname,irrname,su)
+      ELSE
+         CALL grp_k(sym_loc,mrot_k,cell_loc,bk,nclass,nirr,char_table,  &
+     &        grpname,irrname)
+      ENDIF
+      END SUBROUTINE priv_grp_k
+
       END                                           

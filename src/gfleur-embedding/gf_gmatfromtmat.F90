@@ -14,18 +14,19 @@
 !***************************************************                    
       CONTAINS 
       SUBROUTINE gf_gmatfromtmat(                                       &
-     &                           nv2,en,nk,jspin,lapw,                  &
+     &                           nv2,en,nk,jspin,lapw,lapw_gf,                  &
      &                           l_embed,cell,                          &
      &                           gij,                                   &
      &                           tmat)                                  
       USE m_gf_math, ONLY: mat_inverse 
       USE m_gf_io2dmat 
-      USE m_gf_types, ONLY: t_lapw, t_cell 
+      USE m_gf_types
       USE m_gf_projembed 
                                                                         
       IMPLICIT NONE 
       INTEGER, INTENT(IN)           :: nv2,en,nk,jspin 
       TYPE(t_lapw),INTENT(IN)       :: lapw 
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
       LOGICAL, INTENT(IN)           :: l_embed 
       TYPE(t_cell),INTENT(IN)       :: cell 
       COMPLEX, INTENT(OUT)          :: gij(2*nv2,2*nv2) 
@@ -51,7 +52,7 @@
          ALLOCATE( tmat_tmp(2*nv2,2*nv2) ) 
 ! read transfer-matrix from file                                        
          IF(.NOT.(gf_read2dmat(                                         &
-     &         IO2D_TMAT,1,0,en,nk,jspin,lapw,tmat_tmp)))               &
+     &         IO2D_TMAT,1,0,en,nk,jspin,lapw_gf,tmat_tmp)))               &
      &          CALL juDFT_error("tmat1",calledby="gf_gmatfromtmat.F90")
          tmat11(1:nv2,1:nv2)=tmat_tmp(1:nv2,1:nv2) 
          tmat12(1:nv2,1:nv2)=tmat_tmp(1:nv2,nv2+1:2*nv2) 
@@ -66,8 +67,7 @@
       DEALLOCATE(tmat11,tmat12,tmat21,tmat22) 
                                                                         
       IF(l_embed)THEN 
-           CALL gf_projembed(                                           &
-     &           lapw,en,nk,jspin,cell,.FALSE.,                         &
+           CALL gf_projembed(lapw,lapw_gf,en,nk,jspin,cell,.FALSE.,                         &
      &           .FALSE.,.FALSE.,1,                                     &
      &           gij(:,:))                                              
       ENDIF 

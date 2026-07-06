@@ -34,7 +34,7 @@
 !********************************************************************** 
       USE m_gf_math,ONLY:mat_inverse 
       USE m_gf_io2Dmat 
-      USE m_gf_types,ONLY:t_lapw,t_lapw_gf
+      USE m_gf_types
       IMPLICIT NONE 
       INTEGER,INTENT(IN)       :: region,en,jspin,nk 
       TYPE(t_lapw),INTENT(IN)  :: lapw 

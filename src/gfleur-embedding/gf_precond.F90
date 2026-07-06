@@ -7,33 +7,32 @@ module m_gf_precond
     use m_juDFT
     implicit none
     contains
-    subroutine gf_precond(layer,mpi,mix,sphhar,atoms,stars,cell,sym,jspins,d_qpw,d_rho)
+    subroutine gf_precond(layer,ld,gmpi,mix,jspins,d_qpw,d_rho)
     use m_fleur_psqpw
     use m_qpwtonmt
     use m_gf_types
-    use m_od_types
     use m_gf_stepsanaly
     use m_gf_precond_stepweight
     implicit none
     integer,intent(in)        :: layer
-    type(t_stars),intent(in)  :: stars
-    type(t_atoms),intent(in)  :: atoms
-    type(t_sphhar),intent(in) :: sphhar
-    type(t_cell),intent(in)   :: cell
-    type(t_sym),intent(in)    :: sym
-    type(t_mpi),intent(in)    :: mpi
-    TYPE(t_gfmix),intent(in)    :: mix
+    type(t_gflayer),intent(in),target :: ld
+    type(t_gfmpi),intent(in)  :: gmpi
+    TYPE(t_gfmix),intent(in)  :: mix
     integer,intent(in)        :: jspins
     complex,intent(inout)     :: d_qpw(:,:)
     real,intent(inout)        :: d_rho(:,:,:,:)
 
     integer :: jspin,n
-    real    :: rho(size(d_rho,1),size(d_rho,2),size(d_rho,3))
+    real    :: rho4(size(d_rho,1),size(d_rho,2),size(d_rho,3),1)
     complex :: psq(size(d_qpw,1))
-    TYPE (od_inp) :: odi
-    TYPE (od_sym) :: ods
-    odi%d1 = .FALSE.
-
+    type(t_potden) :: dden
+    type(t_stars),pointer :: stars
+    type(t_atoms),pointer :: atoms
+    type(t_sphhar),pointer :: sphhar
+    type(t_cell),pointer :: cell
+    type(t_sym),pointer :: sym
+    stars=>ld%stars; atoms=>ld%fi%atoms; sphhar=>ld%sphhar
+    cell=>ld%fi%cell; sym=>ld%fi%sym
     if (btest(mix%precond,6)) then
              call gf_diagonalize_step(layer,stars)
              call gf_remove_variation(layer,stars,1E-3,d_qpw)
@@ -45,7 +44,11 @@ module m_gf_precond
 
          call priv_plot(stars,d_qpw(:,jspin),1,layer,"Charge difference")
 
-         call fleur_psqpw(mpi%com_world,atoms,stars,sphhar,cell,sym,d_qpw(:,jspin:jspin),d_rho(:,:,:,jspin:jspin),psq,no_core=.true.)
+         call dden%init(ld%stars,ld%fi%atoms,ld%sphhar,ld%fi%vacuum,          &
+             ld%fi%noco,1,1001)
+         dden%pw(:,1)=d_qpw(:,jspin)
+         dden%mt(:,:,:,1)=d_rho(:,:,:,jspin)
+         call fleur_psqpw(gmpi%fmpi,ld,dden,1,psq,no_core=.true.)
 
          call priv_plot(stars,psq,2,layer,"Pseudo_Charge")
 
@@ -87,14 +90,10 @@ module m_gf_precond
 
 
 
-         rho = 0.0
-         CALL qpw_to_nmt(  &
-             size(sphhar%clnu,1),size(sphhar%clnu,2)-1,size(sphhar%nlh),size(atoms%rmsh,1)         &
-             ,atoms%ntype,size(stars%sk3),1,maxval(atoms%lmax),atoms%lmax,atoms%ntypsy,atoms%jri,atoms%dx,atoms%rmsh           &
-             ,atoms%ntype,sym%nop,SIZE(atoms%taual,2),sym%symor,cell%bmat,sym%tau,atoms%taual,atoms%neq,stars%kv3,sym%mrot          &
-             ,sym%invtab,sphhar%nmem,sphhar%nlh,sphhar%mlh,sphhar%llh,sphhar%clnu,odi,ods,mpi%irank,mpi%isize,1       &
-             ,4,stars%ng3,stars%nstr,stars%sk3,d_qpw(:,jspin)-psq,rho)
-         d_rho(:,:,:,jspin)=d_rho(:,:,:,jspin)+rho
+         rho4 = 0.0
+         CALL qpw_to_nmt(sphhar,atoms,stars,sym,cell,gmpi%fmpi,1,4,     &
+             d_qpw(:,jspin)-psq,rho4)
+         d_rho(:,:,:,jspin)=d_rho(:,:,:,jspin)+rho4(:,:,:,1)
     enddo
 
     end subroutine gf_precond

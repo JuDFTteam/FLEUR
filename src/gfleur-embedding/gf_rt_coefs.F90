@@ -16,7 +16,7 @@
                                                                         
       !<-- S: gf_wave_match                                             
                                                                         
-      SUBROUTINE gf_wave_match(Nv2,en,nk,jspin,sym,cell,lapw,matrix     &
+      SUBROUTINE gf_wave_match(Nv2,en,nk,jspin,sym,cell,lapw,lapw_gf,matrix     &
      &     ,gfinp,bk,mode,mpi)
 !********************************************************************** 
 !     * This SUBROUTINE calculates the current through a INTERFACE      
@@ -36,15 +36,16 @@
       INTEGER,      INTENT(IN) :: Nv2, jspin 
                                        !for output                      
       INTEGER,      INTENT(IN):: en,nk 
-      type(t_mpi),intent(in)::mpi
+      TYPE(t_gfmpi),intent(in)::mpi
 
       TYPE(t_sym),INTENT(IN)  :: sym 
       TYPE(t_cell),INTENT(IN) :: cell 
       TYPE(t_lapw),INTENT(IN) :: lapw 
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
                                          !for output                    
       REAL,         INTENT(IN):: bk(:,:) 
       COMPLEX,      INTENT(IN):: matrix(:,:) 
-      TYPE(t_gfinp),INTENT(IN):: gfinp 
+      TYPE(t_embinp),INTENT(IN):: gfinp 
                                       !switches mode                    
       INTEGER,      INTENT(IN):: mode 
                                                                         
@@ -58,11 +59,11 @@
 !                                                                       
 !     READ CBS for both Systems                                         
 !                                                                       
-      IF (.NOT.gf_read2dmat(IO2D_CBS,1,1,en,nk,jspin,lapw,cbs1)) THEN 
+      IF (.NOT.gf_read2dmat(IO2D_CBS,1,1,en,nk,jspin,lapw_gf,cbs1)) THEN 
          CALL gf_io2dstatus(IO2D_READ,IO2D_CBS,1,1) 
          CALL juDFT_error('gf_wave_match:Failed to read first CBS') 
       ENDIF 
-      IF (.NOT.gf_read2dmat(IO2D_CBS,1,2,en,nk,jspin,lapw,cbs2)) THEN 
+      IF (.NOT.gf_read2dmat(IO2D_CBS,1,2,en,nk,jspin,lapw_gf,cbs2)) THEN 
          CALL gf_io2dstatus(IO2D_READ,IO2D_CBS,1,2) 
          CALL juDFT_error('gf_wave_match:Failed to read second CBS') 
       ENDIF 

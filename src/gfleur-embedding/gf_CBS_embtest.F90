@@ -193,7 +193,6 @@
 !     Uses QR-Factorization by lapack                                   
 !                          D. Wortmann                                  
 !******************************************                             
-#include "cpp_double.h"
       IMPLICIT NONE 
       !<--Arguments                                                     
       COMPLEX,INTENT(IN) :: ev(:,:) 
@@ -216,8 +215,8 @@
       mat(:,nv2)=ev(:,n) 
       !>                                                                
       !<--Call LAPACK for QR-factorization                              
-      CALL CPP_LAPACK_cgeqrf( nv2, nv2, mat, nv2, vec, WORK, nv2, INFO ) 
-      CALL CPP_LAPACK_cungqr( nv2,nv2,nv2,mat,nv2,vec,WORK,nv2,INFO ) 
+      CALL zgeqrf( nv2, nv2, mat, nv2, vec, WORK, nv2, INFO ) 
+      CALL zungqr( nv2,nv2,nv2,mat,nv2,vec,WORK,nv2,INFO ) 
       !>                                                                
       !<--Normalize vector such that <O|ev>=1                           
       v=mat(:,nv2)/dot_product(mat(:,nv2),ev(:,n)) 

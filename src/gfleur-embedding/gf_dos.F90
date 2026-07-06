@@ -63,26 +63,26 @@
          exp1 = EXP(CMPLX(0.0,cell%bmat(3,3)*z_dos)) 
          exp2 = EXP(CMPLX(0.0,-1.0*cell%bmat(3,3)*z_dos)) 
          work = 0.0 
-         DO n1 = 1,lapw%nv_sphere(jspin)
-            k1_1 = lapw%k%k1(n1,jspin) 
+         DO n1 = 1,lapw_gf%nv_sphere(jspin)
+            k1_1 = lapw%k1(n1,jspin) 
             IF (k1_1<0) THEN 
                k1_1 = nx+k1_1-1 
             ENDIF 
-            k1_2 = lapw%k%k2(n1,jspin) 
+            k1_2 = lapw%k2(n1,jspin) 
             IF (k1_2<0) THEN 
                k1_2 = ny+k1_2-1 
             ENDIF 
-            f1  = 1/cell%amat(3,3)*exp1**lapw%k%k3(n1,jspin) 
-            DO n2 = 1,lapw%nv_sphere(jspin)
-               k2_1 = lapw%k%k1(n2,jspin) 
+            f1  = 1/cell%amat(3,3)*exp1**lapw%k3(n1,jspin) 
+            DO n2 = 1,lapw_gf%nv_sphere(jspin)
+               k2_1 = lapw%k1(n2,jspin) 
                IF (k2_1<0) THEN 
                   k2_1 = nx+k2_1-1 
                ENDIF 
-               k2_2 = lapw%k%k2(n2,jspin) 
+               k2_2 = lapw%k2(n2,jspin) 
                IF (k2_2<0) THEN 
                   k2_2 = ny+k2_2-1 
                ENDIF 
-               f2  = exp2**lapw%k%k3(n2,jspin) 
+               f2  = exp2**lapw%k3(n2,jspin) 
                work(k1_1+1,k1_2+1,k2_1+1,k2_2+1) = work(k1_1+1,k1_2+1   &
      &              ,k2_1+1,k2_2+1)+g(n1,n2)*f1*f2                      
             ENDDO 
@@ -195,7 +195,7 @@
       ldos_mat=0.0 
       !<-- Loop over all atom types                                     
                                                                         
-      ALLOCATE(vec1(lapw%nv_sphere(jspin)),vec2(lapw%nv_sphere(jspin)))
+      ALLOCATE(vec1(lapw_gf%nv_sphere(jspin)),vec2(lapw_gf%nv_sphere(jspin)))
       nt = 0 
       DO itype=1,atoms%ntype 
          DO na = 1,atoms%neq(itype) 
@@ -209,16 +209,16 @@
                                                                         
                      !Use BLAS to construct the uu,dd
 
-                     CALL CPP_BLAS_cgemv('n',lapw%nv_sphere(jspin)            &
-     &                    ,lapw%nv_sphere(jspin),CMPLX(1.0,0.0),gmat             &
+                     CALL CPP_BLAS_cgemv('n',lapw_gf%nv_sphere(jspin)            &
+     &                    ,lapw_gf%nv_sphere(jspin),CMPLX(1.0,0.0),gmat             &
      &                    ,SIZE(gmat,1),CONJG(gf_ab_coef_vector(lmp,nt,1,jspin2))      &
      &                    ,1,CMPLX(0.0,0.0),vec1,1)                     
-                     CALL CPP_BLAS_cgemv('n',lapw%nv_sphere(jspin)            &
-     &                    ,lapw%nv_sphere(jspin),CMPLX(1.0,0.0),gmat             &
+                     CALL CPP_BLAS_cgemv('n',lapw_gf%nv_sphere(jspin)            &
+     &                    ,lapw_gf%nv_sphere(jspin),CMPLX(1.0,0.0),gmat             &
      &                    ,SIZE(gmat,1),CONJG(gf_ab_coef_vector(lmp,nt,2,jspin2))      &
      &                    ,1,CMPLX(0.0,0.0),vec2,1)                     
-                     uu=(CPP_BLAS_cdotu(lapw%nv_sphere(jspin),gf_ab_coef_vector(lm,nt,1,jspin1),1,vec1,1))
-                     dd=(CPP_BLAS_cdotu(lapw%nv_sphere(jspin),gf_ab_coef_vector(lm,nt,2,jspin1),1,vec2,1))
+                     uu=(CPP_BLAS_cdotu(lapw_gf%nv_sphere(jspin),gf_ab_coef_vector(lm,nt,1,jspin1),1,vec1,1))
+                     dd=(CPP_BLAS_cdotu(lapw_gf%nv_sphere(jspin),gf_ab_coef_vector(lm,nt,2,jspin1),1,vec2,1))
                      if (jspin_in==3) uu=uu*ddn(l,itype,layer,4)
                      n_tmp(m,mp) = (ddn(l,itype,layer,jspin_in)*dd+uu)           &
      &                    /atoms%neq(itype)                             
@@ -343,8 +343,8 @@
          IF (gfinp%l_surface) THEN 
             !prepare for planar d                                       
                                                                         
-            nx = lapw%g_MAX(1)*2+1 
-            ny = lapw%g_MAX(2)*2+1 
+            nx = lapw_gf%g_max(1)*2+1 
+            ny = lapw_gf%g_max(2)*2+1 
             nz = gfinp%nz_dos 
             !create_dataset                                             
             CALL io_createvar(fid,"surface",H5T_NATIVE_DOUBLE,          &
@@ -780,15 +780,15 @@
       qpw = 0.0 
       rg=CMPLX(0.0,0.0) 
       !<-- Calculate the reduced G-function                             
-      DO n1=1,lapw%nv_sphere(jspin)
-!         IF (ABS(lapw%k%k3(n1,jspin))>stars%mx3) CYCLE                 
-         DO n2=1,lapw%nv_sphere(jspin)
-!            IF (ABS(lapw%k%k3(n2,jspin))>stars%mx3) CYCLE              
-            i1 = lapw%k%k1(n2,jspin) - lapw%k%k1(n1,jspin) 
+      DO n1=1,lapw_gf%nv_sphere(jspin)
+!         IF (ABS(lapw%k3(n1,jspin))>stars%mx3) CYCLE                 
+         DO n2=1,lapw_gf%nv_sphere(jspin)
+!            IF (ABS(lapw%k3(n2,jspin))>stars%mx3) CYCLE              
+            i1 = lapw%k1(n2,jspin) - lapw%k1(n1,jspin) 
             IF (iabs(i1)>stars%mx1) CYCLE 
-            i2 = lapw%k%k2(n2,jspin) - lapw%k%k2(n1,jspin) 
+            i2 = lapw%k2(n2,jspin) - lapw%k2(n1,jspin) 
             IF (iabs(i2)>stars%mx2) CYCLE 
-            i3 = lapw%k%k3(n2,jspin) - lapw%k%k3(n1,jspin) 
+            i3 = lapw%k3(n2,jspin) - lapw%k3(n1,jspin) 
             IF (iabs(i3)>stars%mx3) CYCLE 
             rg(i1,i2,i3)=rg(i1,i2,i3)+g(n2,n1) 
          ENDDO 

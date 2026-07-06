@@ -7,7 +7,7 @@
           IMPLICIT NONE
       CONTAINS 
       SUBROUTINE gf_get_spectrum(                                       &
-     &     layer,jspin,gfinp,cell,lapw,                                 &
+     &     layer,jspin,gfinp,cell,lapw,lapw_gf,                                 &
      &     l_inversion,l_fullgreen,l_nogno,l_nohelpregion,              &
      &     l_writespectrum,nk,l_sph)
 !***************************************************
@@ -26,9 +26,10 @@
       IMPLICIT NONE 
       INTEGER,INTENT(IN)        :: layer 
       INTEGER,INTENT(IN)        :: jspin 
-      TYPE(t_gfinp), INTENT(IN) :: gfinp 
+      TYPE(t_embinp), INTENT(IN) :: gfinp 
       TYPE(t_cell),INTENT(IN)   :: cell 
       TYPE(t_lapw),INTENT(IN)   :: lapw 
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
       LOGICAL,INTENT(IN)        :: l_inversion,l_fullgreen,l_nogno 
       LOGICAL,INTENT(IN)        :: l_nohelpregion 
       LOGICAL,INTENT(IN)        :: l_writespectrum,l_sph
@@ -55,11 +56,11 @@
             !CALL gf_calcspectrum2(                                      &
      !&           l_inversion,layer,lapw,                                &
      !&                          jspin)
-            CALL gf_calcspectrum_simple(layer,lapw,jspin,l_sph)
+            CALL gf_calcspectrum_simple(layer,lapw,lapw_gf,jspin,l_sph)
          ELSE 
-            CALL gf_calcspectrum(layer,lapw,jspin,l_sph)
+            CALL gf_calcspectrum(layer,lapw,lapw_gf,jspin,l_sph)
          ENDIF 
-         CALL gf_uhuproj(layer,jspin,lapw,cell,l_nohelpregion,l_sph)
+         CALL gf_uhuproj(layer,jspin,lapw,lapw_gf,cell,l_nohelpregion,l_sph)
 #ifdef CPP_WANNIER                                                      
          IF(gfinp%l_addselfen)THEN 
             CALL gf_wannprojspec() 
@@ -70,7 +71,7 @@
             WRITE(uhuname,777)layer,nk 
   777       FORMAT('uhu_',i3.3,'_',i6.6) 
             OPEN(222,FILE=uhuname,FORM='unformatted') 
-            WRITE(222)lapw%nmat,lapw%nv2_tot 
+            WRITE(222)lapw%nmat,lapw_gf%nv2_tot 
             WRITE(222)uhuprojone 
             WRITE(222)uhuprojtwo 
             WRITE(222)uhueigval 

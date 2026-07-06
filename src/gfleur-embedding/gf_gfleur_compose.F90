@@ -8,7 +8,7 @@ MODULE m_gf_gfleur_compose
     IMPLICIT NONE
 CONTAINS
     SUBROUTINE gf_gfleur_compose(layer,noco,gfinp,layers,nk,          &
-    jspin,sym,cell,mpi,lapw,                  &
+    jspin,sym,cell,mpi,lapw,lapw_gf,                  &
     kpts,pot_aux,charge,                      &
     atoms,stars,sphhar,vr,enpara)
         !****************************************************
@@ -24,7 +24,6 @@ CONTAINS
         USE m_gf_types
         USE m_gf_gmatfromtmat
         USE m_gf_read_tmat
-#include "juDFT_env.h"
         USE m_gf_gfcn
         USE m_gf_landauer
         USE m_gf_propaembcurr
@@ -40,7 +39,7 @@ CONTAINS
         IMPLICIT NONE
         INTEGER,INTENT(IN)::layer
         TYPE(t_noco),INTENT(IN)::noco
-        TYPE(t_gfinp),INTENT(IN)::gfinp
+        TYPE(t_embinp),INTENT(IN)::gfinp
         TYPE(t_layers),INTENT(IN)::layers
         TYPE(t_kpts),INTENT(IN) :: kpts
         INTEGER,INTENT(IN)::nk
@@ -49,6 +48,7 @@ CONTAINS
         TYPE(t_cell),INTENT(IN)::cell
         TYPE(t_mpi),INTENT(IN)::mpi
         TYPE(t_lapw),INTENT(INOUT)::lapw
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
         COMPLEX,INTENT(IN)::pot_aux(2,2)
         TYPE(t_potden),INTENT(INOUT)::charge
         TYPE(t_atoms),INTENT(IN)    :: atoms
@@ -73,37 +73,37 @@ CONTAINS
         ab_spin=1
         if (noco%l_noco) ab_spin=2
 
-        lapw%nmat_sphere=lapw%nmat+lapw%nv_tot_sphere-lapw%nv_tot
+        lapw_gf%nmat_sphere=lapw%nmat+lapw_gf%nv_tot_sphere-lapw%nv_tot
 
-        ALLOCATE( gij(2*lapw%nv2_tot,2*lapw%nv2_tot,1) )
+        ALLOCATE( gij(2*lapw_gf%nv2_tot,2*lapw_gf%nv2_tot,1) )
         IF(gfinp%l_charge.or.gfinp%l_dos)THEN
-            ALLOCATE( g(lapw%nmat_sphere,lapw%nmat_sphere) )
+            ALLOCATE( g(lapw_gf%nmat_sphere,lapw_gf%nmat_sphere) )
         ENDIF
         IF(gfinp%l_charge.or.gfinp%l_dos)THEN
-            ALLOCATE( g_sum(lapw%nmat_sphere,lapw%nmat_sphere) )
-            ALLOCATE( embpot_left(lapw%nv2_tot,lapw%nv2_tot) )
-            ALLOCATE( embpot_right(lapw%nv2_tot,lapw%nv2_tot) )
+            ALLOCATE( g_sum(lapw_gf%nmat_sphere,lapw_gf%nmat_sphere) )
+            ALLOCATE( embpot_left(lapw_gf%nv2_tot,lapw_gf%nv2_tot) )
+            ALLOCATE( embpot_right(lapw_gf%nv2_tot,lapw_gf%nv2_tot) )
             IF(gfinp%l_spectral)THEN
-                CPP_juDFT_timestart("gf_get_spectrum_sph")
+                CALL timestart("gf_get_spectrum_sph")
                 CALL gf_spectrum_clean()
                 CALL gf_get_spectrum(layer,jspin,gfinp,cell,lapw,.FALSE.,      &
                 gfinp%l_fullgreen,gfinp%l_nogno,gfinp%l_nohelpregion,     &
                 .false.,nk,.true.)
                 !CALL gf_read_spectrum(layer,nk)
-                !lapw%nmat=lapw%nmat_sphere
-                !lapw%nv=lapw%nv_sphere
-                !lapw%nv_tot=lapw%nv_tot_sphere
-                CPP_juDFT_timestop("gf_get_spectrum_sph")
+                !lapw%nmat=lapw_gf%nmat_sphere
+                !lapw%nv=lapw_gf%nv_sphere
+                !lapw%nv_tot=lapw_gf%nv_tot_sphere
+                CALL timestop("gf_get_spectrum_sph")
 
             ENDIF 
             g_sum=cmplx(0.0,0.0)
         ENDIF
         IF (gfinp%l_dos.or.gfinp%l_charge) THEN
-            CPP_juDFT_timestart("gf_ab_coef")
+            CALL timestart("gf_ab_coef")
             CALL gf_ab_coef_calc(noco%l_noco,jspin,kpts%bk(:,nk),sym                        &
             ,enpara%el0,vr(:,0,:,:),atoms,cell         &
             ,lapw)
-            CPP_juDFT_timestop("gf_ab_coef")
+            CALL timestop("gf_ab_coef")
         ENDIF
         DO en=1,gf_noen()
             IF(gfinp%l_gmat)THEN
@@ -117,51 +117,51 @@ CONTAINS
 
                     IF (gfinp%l_dos) THEN
                         IF (gfinp%l_nogno) THEN
-                        CPP_juDFT_timestart("gf_nognofinalize_single")
+                        CALL timestart("gf_nognofinalize_single")
                         CALL gf_nognofinalize(g,layer,lapw,en)
-                        CPP_juDFT_timestop("gf_nognofinalize_single")
+                        CALL timestop("gf_nognofinalize_single")
                         endif
-                        CPP_juDFT_timestart("gf_dos_mt")
+                        CALL timestart("gf_dos_mt")
                         CALL gf_dos_mt(layer,atoms,gfinp,                     &
                         g,sym,en,jspin,kpts%weight(nk),nk,noco%l_noco,lapw)
                         IF (gfinp%l_intdos)  CALL gf_dos_INT(gfinp,layer      &
                         ,mpi,lapw,stars,jspin,cell%omtil,G,kpts%weight(nk&
                         ),en,nk,noco%l_noco)
-                        CPP_juDFT_timestop("gf_dos_mt")
+                        CALL timestop("gf_dos_mt")
                     ENDIF
                 ENDIF
                   !l_gmat
             ENDIF
-            IF (gfinp%curr /= 0)  CPP_juDFT_timestart("current(misc)")
+            IF (gfinp%curr /= 0)  CALL timestart("current(misc)")
             IF (gfinp%curr ==-1) THEN
                                                !calculate gij from t-matrice
                 IF(layers%num_layers>1)THEN
-                    ALLOCATE( tmat(2*lapw%nv2_tot,2*lapw%nv2_tot) )
+                    ALLOCATE( tmat(2*lapw_gf%nv2_tot,2*lapw_gf%nv2_tot) )
                     CALL gf_read_tmat(                                       &
-                    layers,lapw%nv2_tot,en,nk,jspin,        &
+                    layers,lapw_gf%nv2_tot,en,nk,jspin,        &
                     lapw,                                   &
                     tmat)
                     CALL gf_gmatfromtmat(                                    &
-                    lapw%nv2_tot,en,nk,jspin,lapw,                        &
+                    lapw_gf%nv2_tot,en,nk,jspin,lapw,                        &
                     .TRUE.,cell,                                          &
                     gij(:,:,1),                                           &
                     tmat)
                     DEALLOCATE( tmat )
                 ENDIF
-                CALL gf_landauer(lapw%nv2_tot,en,nk,jspin,cell              &
+                CALL gf_landauer(lapw_gf%nv2_tot,en,nk,jspin,cell              &
                 ,sym,lapw,kpts%bk,gij(:,:,1),mpi)
             ENDIF
             IF (gfinp%curr ==1)THEN
-                CALL gf_propaembcurr(layers,lapw%nv2_tot,en,nk,jspin,       &
+                CALL gf_propaembcurr(layers,lapw_gf%nv2_tot,en,nk,jspin,       &
                 lapw,kpts%bk,sym,cell,mpi)
             ENDIF
             IF (gfinp%curr ==2)THEN
-                CALL gf_propaembcurr2(layers,lapw%nv2_tot,en,nk,jspin,      &
+                CALL gf_propaembcurr2(layers,lapw_gf%nv2_tot,en,nk,jspin,      &
                 lapw,kpts%bk,sym,cell,mpi)
             ENDIF
             IF (gfinp%curr ==3)THEN
                 CALL gf_propaembcurr3(layers,                               &
-                lapw%nv2_tot,en,nk,jspin,              &
+                lapw_gf%nv2_tot,en,nk,jspin,              &
                 lapw,kpts%bk,sym,cell,gfinp,mpi)
             ENDIF
             IF (gfinp%curr==4) THEN
@@ -169,9 +169,9 @@ CONTAINS
                 noco%l_noco,en,nk,jspin,                  &
                 lapw,kpts%bk,sym,cell,gfinp,mpi)
             ENDIF
-            IF (gfinp%curr /= 0)  CPP_juDFT_timestop("current(misc)")
+            IF (gfinp%curr /= 0)  CALL timestop("current(misc)")
             IF ( gfinp%l_tmat ) THEN
-                CPP_juDFT_timestart("gf_tmat")
+                CALL timestart("gf_tmat")
                 IF (pot_aux(1,jspin) /= pot_aux(2,jspin)) CALL               &
                 juDFT_error                                                  &
                 ("Cannot treat different aux_potentials")
@@ -179,18 +179,18 @@ CONTAINS
                 CALL gf_tmat(layer,                                          &
                 (layers%num_layers>1),layers,en,nk,jspin,sym,cell,      &
                 mpi,lapw,kpts%bk,gfinp,pot_aux(1,jspin),gij,dgij)
-                CPP_juDFT_timestop("gf_tmat")
+                CALL timestop("gf_tmat")
             ENDIF
 
         ENDDO
         IF(allocated(g))DEALLOCATE(g)
         IF(gfinp%l_charge)THEN
             IF (gfinp%l_nogno) THEN
-                CPP_juDFT_timestart("gf_nognofinalize")
+                CALL timestart("gf_nognofinalize")
                 CALL gf_nognofinalize(g_sum,layer,lapw)
-                CPP_juDFT_timestop("gf_nognofinalize")
+                CALL timestop("gf_nognofinalize")
             ENDIF
-            CPP_juDFT_timestart("gf_cdnskval") 
+            CALL timestart("gf_cdnskval") 
             CALL gf_cdnskval(noco%l_noco,                                           &
             lapw,jspin,nk,                                        &
             MAXVAL(sym%ntypsy),enpara,vr(:,0,:,:),              &
@@ -200,7 +200,7 @@ CONTAINS
             charge%mt(:,0:,:,:),                             &
             charge%qmtl_new(:,:))
 
-            CPP_juDFT_timestop("gf_cdnskval") 
+            CALL timestop("gf_cdnskval") 
             DEALLOCATE(g_sum) 
         ENDIF
         call gf_ab_coef_delete()

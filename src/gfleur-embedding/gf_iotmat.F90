@@ -15,10 +15,10 @@
       PUBLIC gf_READ_tmat2,gf_WRITE_tmat,init_tmat_storage 
                                                                         
       CONTAINS 
-      !<--S: gf_READ_tmat2(layer,en,nk,jspin,lapw,tmat)                 
+      !<--S: gf_READ_tmat2(layer,en,nk,jspin,lapw_gf,tmat)                 
                                                                         
       SUBROUTINE gf_READ_tmat2(                                         &
-     &     layer,en,nk,jspin,lapw,                                      &
+     &     layer,en,nk,jspin,lapw_gf,                                      &
      &     tmat)                                                        
 !******************************************                             
 !    Read the T-matrices of the subsystems                              
@@ -32,7 +32,7 @@
       use m_juDFT 
       IMPLICIT NONE 
       INTEGER,INTENT(IN)      :: layer 
-      TYPE(t_lapw_gf),INTENT(IN) :: lapw 
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf 
       INTEGER,INTENT(IN)      :: en 
       INTEGER,INTENT(IN)      :: nk 
       INTEGER,INTENT(IN)      :: jspin 
@@ -46,7 +46,7 @@
          tmat = tmat_storage(:SIZE(tmat,1),:SIZE(tmat,2),en,layer) 
       ELSE 
          IF(.NOT.(gf_read2dmat(                                         &
-     &        IO2D_TMAT,layer,0,en,nk,jspin,lapw,tmat )))               &
+     &        IO2D_TMAT,layer,0,en,nk,jspin,lapw_gf,tmat )))               &
      &        CALL juDFT_error("tmat_layer: Data not found in file")      
       ENDIF 
       CALL gf_tmatregularize( tmat ) 
@@ -54,9 +54,9 @@
       END SUBROUTINE gf_READ_tmat2 
                                                                         
       !>                                                                
-      !<-- S: gf_write_tmat(layer,en,nk,jspin,lapw,tmat)                
+      !<-- S: gf_write_tmat(layer,en,nk,jspin,lapw_gf,tmat)                
                                                                         
-      SUBROUTINE gf_write_tmat(layer,en,nk,jspin,lapw,tmat) 
+      SUBROUTINE gf_write_tmat(layer,en,nk,jspin,lapw_gf,tmat) 
 !-----------------------------------------------                        
 !  write t-matrix to storage                                            
 !           (last modified: 2004-00-00) D. Wortmann                     
@@ -66,7 +66,7 @@
       IMPLICIT NONE 
       !<--Arguments                                                     
       INTEGER,INTENT(IN)      :: layer 
-      TYPE(t_lapw_gf),INTENT(IN) :: lapw 
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf 
       INTEGER,INTENT(IN)      :: en 
       INTEGER,INTENT(IN)      :: nk 
       INTEGER,INTENT(IN)      :: jspin 
@@ -80,7 +80,7 @@
          tmat_storage(:SIZE(tmat,1),:SIZE(tmat,2),en,layer) = tmat 
       ELSE 
       CALL gf_write2dmat(IO2D_TMAT,                                     &
-     &     layer,0,en,nk,jspin,lapw,Tmat(:,:))                          
+     &     layer,0,en,nk,jspin,lapw_gf,Tmat(:,:))                          
       ENDIF 
       CALL timestop("IO: writing tmat") 
       END SUBROUTINE 

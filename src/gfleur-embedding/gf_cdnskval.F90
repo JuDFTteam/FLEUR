@@ -87,8 +87,8 @@
       if (l_noco) then
             !spin-up-spin-up
             allocate(gs(size(gfkt,1)/2,size(gfkt,2)/2))
-            nv=lapw%nv_sphere(1)
-            nlo=(lapw%nmat_sphere-lapw%nv_tot_sphere)/2
+            nv=lapw_gf%nv_sphere(1)
+            nlo=(lapw_gf%nmat_sphere-lapw_gf%nv_tot_sphere)/2
             gs(:nv,:nv)=gfkt(:nv,:nv)
             if (nlo>0) then
                 gs(:nv,nv+1:nv+nlo)=gfkt(:nv,2*nv+1:2*nv+nlo)

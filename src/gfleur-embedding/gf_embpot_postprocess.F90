@@ -27,7 +27,7 @@ MODULE m_gf_embpot_postprocess
     TYPE(t_cell),INTENT(IN)  :: cell
     TYPE(t_kpts),INTENT(IN)  :: kpts
 
-    COMPLEX,DIMENSION(lapw%nv2_tot,lapw%nv2_tot)::sig1,sig2,imag_matrix
+    COMPLEX,DIMENSION(lapw_gf%nv2_tot,lapw_gf%nv2_tot)::sig1,sig2,imag_matrix
     INTEGER :: n,en
 
     sig2=0.0
@@ -48,7 +48,7 @@ MODULE m_gf_embpot_postprocess
         sig1=sig1+sig2+imag_matrix
 
         sig1=mat_inverse(sig1)
-        CALL gf_write2dmat(IO2D_gmat,1,1,en,nk,jspin,lapw,sig1)
+        CALL gf_write2dmat(IO2D_gmat,1,1,en,nk,jspin,lapw_gf,sig1)
     ENDDO
     END SUBROUTINE gf_embpot_spectral
 END MODULE m_gf_embpot_postprocess

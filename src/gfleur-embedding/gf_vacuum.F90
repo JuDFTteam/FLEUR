@@ -949,7 +949,7 @@
          embpot(n,n)=I/2*kl*(kr*COS(kl*d)+I*kl*SIN(kl*d))/(kl*COS(kl*d) &
      &        +I*kr*SIN(kl*d))                                          
       ENDDO 
-      CALL gf_write2dmat(IO2D_EMB,2,2,en,nk,jsp,lapw,embpot) 
+      CALL gf_write2dmat(IO2D_EMB,2,2,en,nk,jsp,lapw_gf,embpot) 
                                                                         
       END SUBROUTINE 
       !>                                                                

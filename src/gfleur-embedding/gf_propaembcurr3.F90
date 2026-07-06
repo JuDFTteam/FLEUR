@@ -42,8 +42,8 @@
       INTEGER            :: layer 
       REAL               :: j(layers%num_layers+1) 
                                                                         
-      ALLOCATE( g1(lapw%nv2_tot,lapw%nv2_tot) ) 
-      ALLOCATE( g2(lapw%nv2_tot,lapw%nv2_tot) ) 
+      ALLOCATE( g1(lapw_gf%nv2_tot,lapw_gf%nv2_tot) ) 
+      ALLOCATE( g2(lapw_gf%nv2_tot,lapw_gf%nv2_tot) ) 
       ALLOCATE( embpot_left (nv2,nv2,1:layers%num_layers+1) ) 
       ALLOCATE( embpot_right(nv2,nv2,0:layers%num_layers) ) 
                                                                         

@@ -43,7 +43,7 @@
       TYPE(t_sphhar),INTENT(IN) :: sphhar(:) 
       TYPE(t_stars),INTENT(IN)  :: stars(:) 
       TYPE(t_atoms),INTENT(IN)  :: atoms(:) 
-      TYPE(t_mpi),INTENT(IN)    :: mpi 
+      TYPE(t_gfmpi),INTENT(IN)    :: mpi 
       TYPE(t_cell),INTENT(IN)   :: cell(:) 
       TYPE(t_noco),INTENT(IN)   :: noco(:) 
       TYPE(t_sym),INTENT(IN)    :: sym 
@@ -212,7 +212,7 @@
       !<-- Arguments                                                    
       INTEGER,INTENT(IN)        :: fileid 
       TYPE(t_layers),INTENT(IN) :: layers 
-      TYPE(t_mpi),INTENT(IN)    :: mpi 
+      TYPE(t_gfmpi),INTENT(IN)    :: mpi 
       TYPE(t_sphhar),INTENT(IN) :: sphhar(:) 
       TYPE(t_atoms),INTENT(IN)  :: atoms(:) 
       TYPE(t_stars),INTENT(IN)  :: stars(:)
@@ -359,7 +359,7 @@
       !<-- Arguments                                                    
       INTEGER,INTENT(IN)        :: fileid 
       TYPE(t_layers),INTENT(IN) :: layers 
-      TYPE(t_mpi),INTENT(IN)    :: mpi 
+      TYPE(t_gfmpi),INTENT(IN)    :: mpi 
       TYPE(t_sphhar),INTENT(IN) :: sphhar(:) 
       TYPE(t_atoms),INTENT(IN)  :: atoms(:) 
       TYPE(t_stars),INTENT(IN)  :: stars(:) 

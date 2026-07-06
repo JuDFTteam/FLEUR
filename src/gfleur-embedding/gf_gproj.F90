@@ -5,7 +5,6 @@
 !--------------------------------------------------------------------------------
       MODULE m_gf_proj 
       IMPLICIT NONE
-#include "cpp_double.h"                                                 
 !********************************************************************** 
 !     This MODULE CONTAINS two subroutines to calculate the Projections 
 !     of the Green's function onto the boundary surfaces                
@@ -17,7 +16,7 @@
       CONTAINS 
       !<--S:gf_GProj(r1,r2,Nv2,Nv,cell,k,l_noco,G,Gij)                  
       SUBROUTINE gf_GProj(                                              &
-     &                 r1,r2,jspin,lapw,cell,l_noco,l_sph,G,                  &
+     &                 r1,r2,jspin,lapw,lapw_gf,cell,l_noco,l_sph,G,                  &
      &                 Gij)                                             
 !********************************************************************** 
 !     * This subroutine calculates projections of the Greenfunktion     
@@ -37,6 +36,7 @@
       INTEGER, INTENT(IN)       :: r1, r2,jspin 
       TYPE(t_cell),INTENT(IN)   :: cell 
       TYPE(t_lapw),INTENT(IN)   :: lapw 
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
       LOGICAL, INTENT(IN)       :: l_noco,l_sph
       COMPLEX, INTENT(IN)       :: G(:,:) 
       COMPLEX, INTENT(OUT)      :: Gij(:,:) 
@@ -58,38 +58,38 @@
                                                                         
          !factor is r1*2-1                                              
          nv_tot=lapw%nv_tot
-         if (l_sph) nv_tot=lapw%nv_tot_sphere
+         if (l_sph) nv_tot=lapw_gf%nv_tot_sphere
          exp1 = EXP(CMPLX(0.0,(r1*2-1)*cell%bmat(3,3)*cell%Z1)) 
          exp2 = EXP(CMPLX(0.0,-1.*(r2*2-1)*cell%bmat(3,3)*cell%Z1)) 
          IF (l_noco) THEN 
            DO n1 = 1, nv_tot/2
-            f1 = 1/cell%amat(3,3)*exp1**lapw%k%k3(n1,jspin) 
+            f1 = 1/cell%amat(3,3)*exp1**lapw%k3(n1,jspin) 
             DO n2 = 1, nv_tot/2
-               Gij(lapw%k%kp(n1,jspin),lapw%k%kp(n2,jspin))=            &
-     &              Gij(lapw%k%kp(n1,jspin),lapw%k%kp(n2,jspin)) + f1   &
-     &              *exp2**lapw%k%k3(n2,jspin)*G(n1,n2)                 
-               Gij(lapw%k%kp(n1,jspin)+lapw%nv2_tot/2,lapw%k%kp(n2,jspin&
-     &              )) = Gij(lapw%k%kp(n1,jspin)+lapw%nv2_tot/2         &
-     &              ,lapw%k%kp(n2,jspin))+f1*exp2**lapw%k%k3(n2,jspin)  &
+               Gij(lapw%kp(n1,jspin),lapw%kp(n2,jspin))=            &
+     &              Gij(lapw%kp(n1,jspin),lapw%kp(n2,jspin)) + f1   &
+     &              *exp2**lapw%k3(n2,jspin)*G(n1,n2)                 
+               Gij(lapw%kp(n1,jspin)+lapw_gf%nv2_tot/2,lapw%kp(n2,jspin&
+     &              )) = Gij(lapw%kp(n1,jspin)+lapw_gf%nv2_tot/2         &
+     &              ,lapw%kp(n2,jspin))+f1*exp2**lapw%k3(n2,jspin)  &
      &              *G(n1+nv_tot/2,n2)
-               Gij(lapw%k%kp(n1,jspin),lapw%k%kp(n2,jspin)+lapw%nv2_tot &
-     &              /2) = Gij(lapw%k%kp(n1,jspin),lapw%k%kp(n2,jspin)   &
-     &              +lapw%nv2_tot/2)+f1*exp2**lapw%k%k3(n2,jspin)  *G(n1&
+               Gij(lapw%kp(n1,jspin),lapw%kp(n2,jspin)+lapw_gf%nv2_tot &
+     &              /2) = Gij(lapw%kp(n1,jspin),lapw%kp(n2,jspin)   &
+     &              +lapw_gf%nv2_tot/2)+f1*exp2**lapw%k3(n2,jspin)  *G(n1&
      &              ,n2+nv_tot/2)
-               Gij(lapw%k%kp(n1,jspin)+lapw%nv2_tot/2,lapw%k%kp(n2,jspin&
-     &              )+lapw%nv2_tot/2) = Gij(lapw%k%kp(n1,jspin)         &
-     &              +lapw%nv2_tot/2,lapw%k%kp(n2,jspin)+lapw%nv2_tot/2) &
-     &              +f1*exp2**lapw%k%k3(n2,jspin) *G(n1+nv_tot/2,n2&
+               Gij(lapw%kp(n1,jspin)+lapw_gf%nv2_tot/2,lapw%kp(n2,jspin&
+     &              )+lapw_gf%nv2_tot/2) = Gij(lapw%kp(n1,jspin)         &
+     &              +lapw_gf%nv2_tot/2,lapw%kp(n2,jspin)+lapw_gf%nv2_tot/2) &
+     &              +f1*exp2**lapw%k3(n2,jspin) *G(n1+nv_tot/2,n2&
      &              +nv_tot/2)
             ENDDO 
            ENDDO 
          ELSE 
            DO n1 = 1, nv_tot
-            f1 = 1/cell%amat(3,3)*exp1**lapw%k%k3(n1,jspin) 
+            f1 = 1/cell%amat(3,3)*exp1**lapw%k3(n1,jspin) 
             DO n2 = 1, nv_tot
-               Gij(lapw%k%kp(n1,jspin),lapw%k%kp(n2,jspin)) =           &
-     &              Gij(lapw%k%kp(n1,jspin),lapw%k%kp(n2,jspin)) + f1   &
-     &              *exp2**lapw%k%k3(n2,jspin)*G(n1,n2)                 
+               Gij(lapw%kp(n1,jspin),lapw%kp(n2,jspin)) =           &
+     &              Gij(lapw%kp(n1,jspin),lapw%kp(n2,jspin)) + f1   &
+     &              *exp2**lapw%k3(n2,jspin)*G(n1,n2)                 
             ENDDO 
            ENDDO 
          ENDIF 
@@ -151,13 +151,14 @@
 !     circumvent the use of help regions.                               
 !     Frank Freimuth, October 2007                                      
 !*******************************************************************    
-      SUBROUTINE gf_gprojnohelpregion(layer,cell,lapw,l_noco,g,gij)
+      SUBROUTINE gf_gprojnohelpregion(layer,cell,lapw,lapw_gf,l_noco,g,gij)
       USE m_gf_types 
       USE m_gf_curvy2dprojector 
       IMPLICIT NONE 
       INTEGER,INTENT(IN)        :: layer
       TYPE(t_cell),INTENT(IN)   :: cell 
       TYPE(t_lapw),INTENT(IN)   :: lapw 
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
       LOGICAL, INTENT(IN)       :: l_noco 
       COMPLEX, INTENT(IN)       :: G(:,:) 
       COMPLEX, INTENT(OUT)      :: Gij(:,:) 
@@ -169,24 +170,24 @@
          matsize=size(g,1) 
                                                                         
                                                                         
-         CALL gf_curvy2dprojector(layer,cell,lapw,.TRUE.) 
+         CALL gf_curvy2dprojector(layer,cell,lapw,lapw_gf,.TRUE.) 
                                                                         
                                                                         
-         ALLOCATE( projtwodright(2*lapw%nv2_tot,matsize) ) 
-         ALLOCATE(gnoughtp(matsize,2*lapw%nv2_tot)) 
-         CALL gf_get_curvy2dproject(lapw,projtwodright) 
-!         projtwodright(1:lapw%nv2_tot,1:matsize)=                      
-!     =        curvyproject(1:lapw%nv2_tot,1:matsize,1)                 
-!         projtwodright(lapw%nv2_tot+1:2*lapw%nv2_tot,1:matsize)=       
-!     =        curvyproject(1:lapw%nv2_tot,1:matsize,2)                 
-         CALL CPP_BLAS_cgemm('N','C',matsize,2*lapw%nv2_tot,matsize,    &
+         ALLOCATE( projtwodright(2*lapw_gf%nv2_tot,matsize) ) 
+         ALLOCATE(gnoughtp(matsize,2*lapw_gf%nv2_tot)) 
+         CALL gf_get_curvy2dproject(lapw,lapw_gf,projtwodright) 
+!         projtwodright(1:lapw_gf%nv2_tot,1:matsize)=                      
+!     =        curvyproject(1:lapw_gf%nv2_tot,1:matsize,1)                 
+!         projtwodright(lapw_gf%nv2_tot+1:2*lapw_gf%nv2_tot,1:matsize)=       
+!     =        curvyproject(1:lapw_gf%nv2_tot,1:matsize,2)                 
+         CALL zgemm('N','C',matsize,2*lapw_gf%nv2_tot,matsize,    &
      &                           cmplx(1.0,0.0),                        &
-     &                           g,matsize,projtwodright,2*lapw%nv2_tot,&
+     &                           g,matsize,projtwodright,2*lapw_gf%nv2_tot,&
      &                           cmplx(0.0,0.0),gnoughtp,matsize)       
-         CALL CPP_BLAS_cgemm('N','N',2*lapw%nv2_tot,2*lapw%nv2_tot,     &
+         CALL zgemm('N','N',2*lapw_gf%nv2_tot,2*lapw_gf%nv2_tot,     &
      &                   matsize,cmplx(1.0,0.0),projtwodright,          &
-     &                   2*lapw%nv2_tot,gnoughtp,matsize,cmplx(0.0,0.0),&
-     &                   gij,2*lapw%nv2_tot)                            
+     &                   2*lapw_gf%nv2_tot,gnoughtp,matsize,cmplx(0.0,0.0),&
+     &                   gij,2*lapw_gf%nv2_tot)                            
 !         gij=matmul(projtwodright,gnoughtp)                            
          DEALLOCATE(projtwodright) 
          DEALLOCATE(gnoughtp) 

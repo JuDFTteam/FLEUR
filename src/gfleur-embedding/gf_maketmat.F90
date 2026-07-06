@@ -21,7 +21,7 @@
 !     For better performance: calls to blas library instead of matmul.  
 !     Frank Freimuth, November 2007                                     
 !********************************************************************** 
-      USE m_gf_types,  ONLY:t_gfinp 
+      USE m_gf_types
       USE m_gf_math,  ONLY:mat_inverse,zmat_product 
 #ifdef CPP_CUOVLP                                                       
       USE m_gf_curvy2dprojector,ONLY:basisoverlaps 
@@ -70,14 +70,14 @@
 !*****************************************************************      
 ! This subroutine calculates the inverse T-matrix for region II         
 !*****************************************************************      
-      USE m_gf_types,  ONLY:t_gfinp 
+      USE m_gf_types
       USE m_gf_energies  ,ONLY:gf_z 
                                                                         
       IMPLICIT NONE 
       INTEGER,INTENT(IN)        :: layer 
       REAL,INTENT(IN)           :: l 
       INTEGER,      INTENT(IN)  :: nv2,en 
-      TYPE(t_gfinp),INTENT(IN)  :: gfinp 
+      TYPE(t_embinp),INTENT(IN)  :: gfinp 
       COMPLEX,INTENT(INOUT)     :: TR(2*nv2,2*nv2) 
       REAL,          INTENT(IN) :: rkp(nv2) 
       COMPLEX,INTENT(IN)        :: pot_aux 
@@ -119,12 +119,12 @@
 !                                Daniel Wortmann, Tokyo, 2001           
 !     (last modified: 04-09-07)                                         
 !********************************************************************** 
-      USE m_gf_types,  ONLY:t_gfinp 
+      USE m_gf_types
       USE m_gf_math,  ONLY:mat_inverse 
       IMPLICIT NONE 
       !<-- Arguments                                                    
       INTEGER,      INTENT(IN) :: nv2 
-      TYPE(t_gfinp),INTENT(IN) :: gfinp 
+      TYPE(t_embinp),INTENT(IN) :: gfinp 
       COMPLEX,INTENT(INOUT)    :: Gij(2*nv2,2*nv2,2),DGij(2*nv2,2*nv2,2) 
       COMPLEX,INTENT(INOUT)    :: TR(2*nv2,2*nv2,2) 
       !>                                                                

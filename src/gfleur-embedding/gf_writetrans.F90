@@ -103,7 +103,7 @@
       !>                                                                
       !<--S:writetrans(en_i,nk_i,jspin,bkpts,sym,cell,nochannel,j)      
       SUBROUTINE writetrans(en_i,nk_i,jspin,bkpts,sym,cell,nochannel,j,gmpi)
-      USE m_gf_types,ONLY :t_sym,t_cell,t_gfmpi
+      USE m_gf_types
       USE m_gf_energies,ONLY:gf_z 
       IMPLICIT NONE 
       !<--Arguments                                                     

@@ -5,9 +5,8 @@
 !--------------------------------------------------------------------------------
       MODULE m_gf_nognofinalize 
           IMPLICIT NONE
-#include "cpp_double.h"
       CONTAINS 
-      SUBROUTINE gf_nognofinalize(g,layer,lapw,single_en)
+      SUBROUTINE gf_nognofinalize(g,layer,lapw,lapw_gf,single_en)
 !**********************************************                         
 !     Perform the final matrix multiplications                          
 !     with the matrix of the eigenvectors ("uhumatrix").                
@@ -24,6 +23,7 @@
       USE m_gf_types
       IMPLICIT NONE 
       TYPE(t_lapw),INTENT(IN)::lapw
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
       COMPLEX,INTENT(INOUT) :: g(:,:) 
       INTEGER,INTENT(IN)    :: layer
       INTEGER,INTENT(IN),OPTIONAL::single_en
@@ -40,9 +40,9 @@
             uhu=uhumatrix
       ELSE
             CALL juDFT_error("BUG in sphere code",calledby="gf_nognofinalize")
-            uhu(:lapw%nv_tot_sphere,:)=uhumatrix(:lapw%nv_tot_sphere,:matsize)
-            if (matsize>lapw%nv_tot_sphere) then !copy LO'part
-                uhu(lapw%nv_tot_sphere+1:,:)=uhumatrix(lapw%nv_tot+1:,:matsize)
+            uhu(:lapw_gf%nv_tot_sphere,:)=uhumatrix(:lapw_gf%nv_tot_sphere,:matsize)
+            if (matsize>lapw_gf%nv_tot_sphere) then !copy LO'part
+                uhu(lapw_gf%nv_tot_sphere+1:,:)=uhumatrix(lapw%nv_tot+1:,:matsize)
             endif
       endif
 
@@ -78,10 +78,10 @@
       ENDDO 
 
 
-      CALL CPP_BLAS_cgemm('N','C',matsize,matsize,matsize,              &
+      CALL zgemm('N','C',matsize,matsize,matsize,              &
      &      cmplx(1.0,0.0),g,matsize,uhu,                         &
      &      matsize,cmplx(0.0,0.0),gtemp,matsize)                       
-      CALL CPP_BLAS_cgemm('N','N',matsize,matsize,matsize,              &
+      CALL zgemm('N','N',matsize,matsize,matsize,              &
      &      cmplx(1.0,0.0),uhu,matsize,gtemp,                     &
      &      matsize,cmplx(0.0,0.0),g,matsize)                           
                                                                         

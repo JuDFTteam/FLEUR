@@ -41,8 +41,8 @@
       INTEGER layer 
                                                                         
       ALLOCATE( tmat(2*nv2,2*nv2) ) 
-      ALLOCATE( g1(lapw%nv2_tot,lapw%nv2_tot) ) 
-      ALLOCATE( g2(lapw%nv2_tot,lapw%nv2_tot) ) 
+      ALLOCATE( g1(lapw_gf%nv2_tot,lapw_gf%nv2_tot) ) 
+      ALLOCATE( g2(lapw_gf%nv2_tot,lapw_gf%nv2_tot) ) 
       ALLOCATE( embpot_in(nv2,nv2) ) 
       ALLOCATE( embpot_out(nv2,nv2) ) 
                                                                         

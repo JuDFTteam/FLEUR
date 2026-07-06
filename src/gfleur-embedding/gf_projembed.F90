@@ -6,10 +6,9 @@
       MODULE m_gf_projembed 
       use m_juDFT
           IMPLICIT NONE
-#include "cpp_double.h"                                                 
       CONTAINS 
       SUBROUTINE gf_projembed(                                          &
-     &           lapw,en,nk,jspin,cell,l_fullgreen,                     &
+     &           lapw,lapw_gf,en,nk,jspin,cell,l_fullgreen,             &
      &           l_nogno,l_nohelpregion,layer,                          &
      &           gij,                                                   &
      &           g)                                                     
@@ -30,11 +29,12 @@
                                                                         
       IMPLICIT NONE 
       TYPE(t_lapw),INTENT(IN)::lapw 
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
       INTEGER,INTENT(IN)::en,nk,jspin 
       TYPE(t_cell),INTENT(IN)::cell 
       LOGICAL,INTENT(IN) :: l_fullgreen,l_nogno,l_nohelpregion 
       INTEGER,INTENT(IN) :: layer 
-      COMPLEX,INTENT(INOUT)::gij(2*lapw%nv2_tot,2*lapw%nv2_tot) 
+      COMPLEX,INTENT(INOUT)::gij(2*lapw_gf%nv2_tot,2*lapw_gf%nv2_tot) 
       COMPLEX,INTENT(INOUT),OPTIONAL::g(:,:) 
                                                                         
       COMPLEX,ALLOCATABLE::semb(:,:) 
@@ -55,14 +55,14 @@
       COMPLEX norm,exp1,f1 
                                                                         
                                                                         
-      ALLOCATE(omgemb(2*lapw%nv2_tot,2*lapw%nv2_tot)) 
-      ALLOCATE(g1(lapw%nv2_tot,lapw%nv2_tot)) 
-      ALLOCATE(g2(lapw%nv2_tot,lapw%nv2_tot)) 
+      ALLOCATE(omgemb(2*lapw_gf%nv2_tot,2*lapw_gf%nv2_tot)) 
+      ALLOCATE(g1(lapw_gf%nv2_tot,lapw_gf%nv2_tot)) 
+      ALLOCATE(g2(lapw_gf%nv2_tot,lapw_gf%nv2_tot)) 
                                                                         
                                                   !left emb-pot         
-      CALL gf_getemb2(g1,1,layer,en,nk,jspin,lapw) 
+      CALL gf_getemb2(g1,1,layer,en,nk,jspin,lapw,lapw_gf) 
                                                   !right emb-pot        
-      CALL gf_getemb2(g2,2,layer,en,nk,jspin,lapw) 
+      CALL gf_getemb2(g2,2,layer,en,nk,jspin,lapw,lapw_gf) 
                                                                         
 !      WRITE(*,*) "G1:",layer,en,nk,SUM(g1)                             
 !      WRITE(*,*) "G2:",layer,en,nk,SUM(g2)                             
@@ -76,37 +76,37 @@
          g2=matmul(basisoverlaps(:,:,2),g2) 
       ENDIF 
 #endif                                                                  
-      CALL CPP_BLAS_cgemm('N','N',lapw%nv2_tot,lapw%nv2_tot,            &
-     &          lapw%nv2_tot,alpha,gij(1,1),2*lapw%nv2_tot,             &
-     &          g1,lapw%nv2_tot,beta,omgemb(1,1),2*lapw%nv2_tot)        
-      CALL CPP_BLAS_cgemm('N','N',lapw%nv2_tot,lapw%nv2_tot,            &
-     &          lapw%nv2_tot,alpha,gij(1,lapw%nv2_tot+1),               &
-     &          2*lapw%nv2_tot,g2,lapw%nv2_tot,beta,                    &
-     &          omgemb(1,lapw%nv2_tot+1),2*lapw%nv2_tot)                
-      CALL CPP_BLAS_cgemm('N','N',lapw%nv2_tot,lapw%nv2_tot,            &
-     &          lapw%nv2_tot,alpha,gij(1+lapw%nv2_tot,1),               &
-     &          2*lapw%nv2_tot,g1,lapw%nv2_tot,beta,                    &
-     &          omgemb(1+lapw%nv2_tot,1),2*lapw%nv2_tot)                
-      CALL CPP_BLAS_cgemm('N','N',lapw%nv2_tot,lapw%nv2_tot,            &
-     &          lapw%nv2_tot,alpha,                                     &
-     &          gij(1+lapw%nv2_tot,1+lapw%nv2_tot),2*lapw%nv2_tot,      &
-     &          g2,lapw%nv2_tot,beta,                                   &
-     &          omgemb(1+lapw%nv2_tot,1+lapw%nv2_tot),2*lapw%nv2_tot)   
+      CALL zgemm('N','N',lapw_gf%nv2_tot,lapw_gf%nv2_tot,            &
+     &          lapw_gf%nv2_tot,alpha,gij(1,1),2*lapw_gf%nv2_tot,             &
+     &          g1,lapw_gf%nv2_tot,beta,omgemb(1,1),2*lapw_gf%nv2_tot)        
+      CALL zgemm('N','N',lapw_gf%nv2_tot,lapw_gf%nv2_tot,            &
+     &          lapw_gf%nv2_tot,alpha,gij(1,lapw_gf%nv2_tot+1),               &
+     &          2*lapw_gf%nv2_tot,g2,lapw_gf%nv2_tot,beta,                    &
+     &          omgemb(1,lapw_gf%nv2_tot+1),2*lapw_gf%nv2_tot)                
+      CALL zgemm('N','N',lapw_gf%nv2_tot,lapw_gf%nv2_tot,            &
+     &          lapw_gf%nv2_tot,alpha,gij(1+lapw_gf%nv2_tot,1),               &
+     &          2*lapw_gf%nv2_tot,g1,lapw_gf%nv2_tot,beta,                    &
+     &          omgemb(1+lapw_gf%nv2_tot,1),2*lapw_gf%nv2_tot)                
+      CALL zgemm('N','N',lapw_gf%nv2_tot,lapw_gf%nv2_tot,            &
+     &          lapw_gf%nv2_tot,alpha,                                     &
+     &          gij(1+lapw_gf%nv2_tot,1+lapw_gf%nv2_tot),2*lapw_gf%nv2_tot,      &
+     &          g2,lapw_gf%nv2_tot,beta,                                   &
+     &          omgemb(1+lapw_gf%nv2_tot,1+lapw_gf%nv2_tot),2*lapw_gf%nv2_tot)   
                                                                         
                                                                         
                                                                         
-      DO n1=1,2*lapw%nv2_tot 
+      DO n1=1,2*lapw_gf%nv2_tot 
          omgemb(n1,n1)=omgemb(n1,n1)+cmplx(1.0,0.0) 
       ENDDO 
                                                                         
-      ALLOCATE(ipiv(2*lapw%nv2_tot)) 
-      CALL CPP_LAPACK_cgetrf(2*lapw%nv2_tot,2*lapw%nv2_tot,omgemb,      &
-     &          2*lapw%nv2_tot,ipiv,info)                               
+      ALLOCATE(ipiv(2*lapw_gf%nv2_tot)) 
+      CALL zgetrf(2*lapw_gf%nv2_tot,2*lapw_gf%nv2_tot,omgemb,      &
+     &          2*lapw_gf%nv2_tot,ipiv,info)                               
       IF(info/=0) CALL juDFT_error("projembed: cgetrf",calledby="gf_projembed.F90")
       IF(.NOT.l_nogno)THEN 
-      CALL CPP_LAPACK_cgetrs('N',2*lapw%nv2_tot,2*lapw%nv2_tot,         &
-     &        omgemb,2*lapw%nv2_tot,                                    &
-     &        ipiv,gij,2*lapw%nv2_tot,info)                             
+      CALL zgetrs('N',2*lapw_gf%nv2_tot,2*lapw_gf%nv2_tot,         &
+     &        omgemb,2*lapw_gf%nv2_tot,                                    &
+     &        ipiv,gij,2*lapw_gf%nv2_tot,info)                             
       IF(info/=0) CALL juDFT_error("projembed: cgetrs",calledby="gf_projembed.F90")
       ENDIF 
                                                                         
@@ -118,31 +118,31 @@
 !*************************************************************          
                                                                         
 !project right hand side of 3D-Green function to 2D-basis               
-         matsize=lapw%nmat_sphere
+         matsize=lapw_gf%nmat_sphere
          IF(size(g,1)/=matsize) CALL juDFT_error("size(g,1)",calledby="gf_projembed.F90")
          IF(size(g,2)/=matsize) CALL juDFT_error("size(g,2)",calledby="gf_projembed.F90")
-         ALLOCATE(gnoughtp(matsize,2*lapw%nv2_tot)) 
+         ALLOCATE(gnoughtp(matsize,2*lapw_gf%nv2_tot)) 
          IF(l_fullgreen)THEN 
           IF(.NOT.l_nohelpregion)THEN 
             gnoughtp(:,:)=cmplx(0.0,0.0) 
             norm=cmplx(1.0/sqrt(cell%amat(3,3)),0.0) 
             exp1=exp(cmplx(0.0,cell%bmat(3,3)*cell%z1)) 
-            DO n1=1,lapw%nv_tot_sphere
-              f1=norm*exp1**lapw%k%k3(n1,jspin) 
+            DO n1=1,lapw_gf%nv_tot_sphere
+              f1=norm*exp1**lapw%k3(n1,jspin) 
               DO n2=1,matsize 
-               gnoughtp(n2,lapw%k%kp(n1,jspin))=                        &
-     &            gnoughtp(n2,lapw%k%kp(n1,jspin))+                     &
+               gnoughtp(n2,lapw%kp(n1,jspin))=                        &
+     &            gnoughtp(n2,lapw%kp(n1,jspin))+                     &
      &              g(n2,n1)*f1                                         
                     !n2                                                 
               ENDDO 
                   !n1                                                   
             ENDDO 
             exp1=exp(cmplx(0.0,-cell%bmat(3,3)*cell%z1)) 
-            DO n1=1,lapw%nv_tot_sphere
-              f1=norm*exp1**lapw%k%k3(n1,jspin) 
+            DO n1=1,lapw_gf%nv_tot_sphere
+              f1=norm*exp1**lapw%k3(n1,jspin) 
               DO n2=1,matsize 
-               gnoughtp(n2,lapw%nv2_tot+lapw%k%kp(n1,jspin))=           &
-     &            gnoughtp(n2,lapw%nv2_tot+lapw%k%kp(n1,jspin))+        &
+               gnoughtp(n2,lapw_gf%nv2_tot+lapw%kp(n1,jspin))=           &
+     &            gnoughtp(n2,lapw_gf%nv2_tot+lapw%kp(n1,jspin))+        &
      &              g(n2,n1)*f1                                         
                     !n2                                                 
               ENDDO 
@@ -150,13 +150,13 @@
             ENDDO 
                !l_nohelpregion                                          
           ELSE 
-            ALLOCATE( projtwodright(matsize,2*lapw%nv2_tot) ) 
-            CALL gf_get_curvy2dproject(lapw,projtwodright,.TRUE.) 
-!            projtwodright(1:matsize,1:lapw%nv2_tot)=                   
-!     =        transpose(conjg(curvyproject(1:lapw%nv2_tot,1:matsize,1))
-!            projtwodright(1:matsize,lapw%nv2_tot+1:2*lapw%nv2_tot)=    
-!     =        transpose(conjg(curvyproject(1:lapw%nv2_tot,1:matsize,2))
-            CALL CPP_BLAS_cgemm('N','N',matsize,2*lapw%nv2_tot,matsize, &
+            ALLOCATE( projtwodright(matsize,2*lapw_gf%nv2_tot) ) 
+            CALL gf_get_curvy2dproject(lapw,lapw_gf,projtwodright,.TRUE.) 
+!            projtwodright(1:matsize,1:lapw_gf%nv2_tot)=                   
+!     =        transpose(conjg(curvyproject(1:lapw_gf%nv2_tot,1:matsize,1))
+!            projtwodright(1:matsize,lapw_gf%nv2_tot+1:2*lapw_gf%nv2_tot)=    
+!     =        transpose(conjg(curvyproject(1:lapw_gf%nv2_tot,1:matsize,2))
+            CALL zgemm('N','N',matsize,2*lapw_gf%nv2_tot,matsize, &
      &                           cmplx(1.0,0.0),                        &
      &                           g,matsize,projtwodright,matsize,       &
      &                           cmplx(0.0,0.0),gnoughtp,matsize)       
@@ -169,37 +169,37 @@
 !prepare the calculation of the correction [G0-G]                       
          g1=transpose(g1) 
          g2=transpose(g2) 
-         ALLOCATE(semb(2*lapw%nv2_tot,2*lapw%nv2_tot)) 
+         ALLOCATE(semb(2*lapw_gf%nv2_tot,2*lapw_gf%nv2_tot)) 
          semb(:,:)=cmplx(0.0,0.0) 
-         semb(1:lapw%nv2_tot,1:lapw%nv2_tot)=                           &
-     &              g1(1:lapw%nv2_tot,1:lapw%nv2_tot)                   
-         semb(lapw%nv2_tot+1:2*lapw%nv2_tot,                            &
-     &                              lapw%nv2_tot+1:2*lapw%nv2_tot)=     &
-     &              g2(1:lapw%nv2_tot,1:lapw%nv2_tot)                   
-         CALL CPP_LAPACK_cgetrs('T',2*lapw%nv2_tot,2*lapw%nv2_tot,      &
-     &        omgemb,2*lapw%nv2_tot,                                    &
-     &        ipiv,semb,2*lapw%nv2_tot,info)                            
+         semb(1:lapw_gf%nv2_tot,1:lapw_gf%nv2_tot)=                           &
+     &              g1(1:lapw_gf%nv2_tot,1:lapw_gf%nv2_tot)                   
+         semb(lapw_gf%nv2_tot+1:2*lapw_gf%nv2_tot,                            &
+     &                              lapw_gf%nv2_tot+1:2*lapw_gf%nv2_tot)=     &
+     &              g2(1:lapw_gf%nv2_tot,1:lapw_gf%nv2_tot)                   
+         CALL zgetrs('T',2*lapw_gf%nv2_tot,2*lapw_gf%nv2_tot,      &
+     &        omgemb,2*lapw_gf%nv2_tot,                                    &
+     &        ipiv,semb,2*lapw_gf%nv2_tot,info)                            
          IF(info/=0) CALL juDFT_error("projembed: cgetrs-full",calledby="gf_projembed.F90")
                                                                         
 !multiply with the 2D embedded Green function                           
-         ALLOCATE(gnpg(matsize,2*lapw%nv2_tot)) 
-         CALL CPP_BLAS_cgemm('N','T',matsize,2*lapw%nv2_tot,            &
-     &            2*lapw%nv2_tot,cmplx(1.0,0.0),gnoughtp,matsize,       &
-     &            semb,2*lapw%nv2_tot,cmplx(0.0,0.0),gnpg,matsize)      
+         ALLOCATE(gnpg(matsize,2*lapw_gf%nv2_tot)) 
+         CALL zgemm('N','T',matsize,2*lapw_gf%nv2_tot,            &
+     &            2*lapw_gf%nv2_tot,cmplx(1.0,0.0),gnoughtp,matsize,       &
+     &            semb,2*lapw_gf%nv2_tot,cmplx(0.0,0.0),gnpg,matsize)      
          DEALLOCATE(gnoughtp) 
          DEALLOCATE(semb) 
                                                                         
 !project left hand side of 3D-Green function to 2D-basis                
-         ALLOCATE(pdaggnought(2*lapw%nv2_tot,matsize)) 
+         ALLOCATE(pdaggnought(2*lapw_gf%nv2_tot,matsize)) 
          IF(l_fullgreen)THEN 
           IF(.NOT.l_nohelpregion)THEN 
             pdaggnought(:,:)=cmplx(0.0,0.0) 
             exp1=exp(cmplx(0.0,-cell%bmat(3,3)*cell%z1)) 
             DO n2=1,matsize 
-             DO n1=1,lapw%nv_tot_sphere
-              f1=norm*exp1**lapw%k%k3(n1,jspin) 
-               pdaggnought(lapw%k%kp(n1,jspin),n2)=                     &
-     &            pdaggnought(lapw%k%kp(n1,jspin),n2)+                  &
+             DO n1=1,lapw_gf%nv_tot_sphere
+              f1=norm*exp1**lapw%k3(n1,jspin) 
+               pdaggnought(lapw%kp(n1,jspin),n2)=                     &
+     &            pdaggnought(lapw%kp(n1,jspin),n2)+                  &
      &              g(n1,n2)*f1                                         
                    !n1                                                  
              ENDDO 
@@ -207,10 +207,10 @@
             ENDDO 
             exp1=exp(cmplx(0.0,cell%bmat(3,3)*cell%z1)) 
             DO n2=1,matsize 
-             DO n1=1,lapw%nv_tot_sphere
-              f1=norm*exp1**lapw%k%k3(n1,jspin) 
-               pdaggnought(lapw%k%kp(n1,jspin)+lapw%nv2_tot,n2)=        &
-     &            pdaggnought(lapw%k%kp(n1,jspin)+lapw%nv2_tot,n2)+     &
+             DO n1=1,lapw_gf%nv_tot_sphere
+              f1=norm*exp1**lapw%k3(n1,jspin) 
+               pdaggnought(lapw%kp(n1,jspin)+lapw_gf%nv2_tot,n2)=        &
+     &            pdaggnought(lapw%kp(n1,jspin)+lapw_gf%nv2_tot,n2)+     &
      &              g(n1,n2)*f1                                         
                    !n1                                                  
              ENDDO 
@@ -218,16 +218,16 @@
             ENDDO 
                !l_nohelpregion                                          
           ELSE 
-            ALLOCATE( projtwodleft(2*lapw%nv2_tot,matsize) ) 
-            CALL gf_get_curvy2dproject(lapw,projtwodleft) 
-!            projtwodleft(1:lapw%nv2_tot,1:matsize)=                    
-!     =        curvyproject(1:lapw%nv2_tot,1:matsize,1)                 
-!            projtwodleft(lapw%nv2_tot+1:2*lapw%nv2_tot,1:matsize)=     
-!     =        curvyproject(1:lapw%nv2_tot,1:matsize,2)                 
-            CALL CPP_BLAS_cgemm('N','N',2*lapw%nv2_tot,matsize,matsize, &
+            ALLOCATE( projtwodleft(2*lapw_gf%nv2_tot,matsize) ) 
+            CALL gf_get_curvy2dproject(lapw,lapw_gf,projtwodleft) 
+!            projtwodleft(1:lapw_gf%nv2_tot,1:matsize)=                    
+!     =        curvyproject(1:lapw_gf%nv2_tot,1:matsize,1)                 
+!            projtwodleft(lapw_gf%nv2_tot+1:2*lapw_gf%nv2_tot,1:matsize)=     
+!     =        curvyproject(1:lapw_gf%nv2_tot,1:matsize,2)                 
+            CALL zgemm('N','N',2*lapw_gf%nv2_tot,matsize,matsize, &
      &                       cmplx(1.0,0.0),projtwodleft,               &
-     &                       2*lapw%nv2_tot,g,matsize,                  &
-     &                       cmplx(0.0,0.0),pdaggnought,2*lapw%nv2_tot) 
+     &                       2*lapw_gf%nv2_tot,g,matsize,                  &
+     &                       cmplx(0.0,0.0),pdaggnought,2*lapw_gf%nv2_tot) 
             DEALLOCATE(projtwodleft) 
           ENDIF 
          ELSE 
@@ -235,8 +235,8 @@
          ENDIF 
                                                                         
 !calculate embedded 3D-Green function: G=G0-[G0-G]                      
-         CALL CPP_BLAS_cgemm('N','N',matsize,matsize,2*lapw%nv2_tot,    &
-     &        cmplx(-1.0,0.0),gnpg,matsize,pdaggnought,2*lapw%nv2_tot,  &
+         CALL zgemm('N','N',matsize,matsize,2*lapw_gf%nv2_tot,    &
+     &        cmplx(-1.0,0.0),gnpg,matsize,pdaggnought,2*lapw_gf%nv2_tot,  &
      &        cmplx(1.0,0.0),g,matsize)                                 
                                                                         
          DEALLOCATE(pdaggnought) 

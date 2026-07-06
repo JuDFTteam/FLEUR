@@ -34,9 +34,9 @@ module m_gf_bandbending
 
 
       allocate(energies(gf_noen()))
-      allocate(embpot_in(lapw%nv2_tot,lapw%nv2_tot))
-      allocate(embpot_out(lapw%nv2_tot,lapw%nv2_tot))
-      allocate(tmat(2*lapw%nv2_tot,2*lapw%nv2_tot))
+      allocate(embpot_in(lapw_gf%nv2_tot,lapw_gf%nv2_tot))
+      allocate(embpot_out(lapw_gf%nv2_tot,lapw_gf%nv2_tot))
+      allocate(tmat(2*lapw_gf%nv2_tot,2*lapw_gf%nv2_tot))
       energies=real(gf_allz(1))
 
 
@@ -64,7 +64,7 @@ module m_gf_bandbending
                     CALL gf_read_tmat2(                                               &
      &                   1,en_mod,nk,jspin,lapw,                                          &
      &                   tmat)
-                    CALL gf_propaemb(.FALSE.,lapw%nv2_tot,embpot_in,   &
+                    CALL gf_propaemb(.FALSE.,lapw_gf%nv2_tot,embpot_in,   &
      &                      tmat,embpot_out)
                     embpot_in=matmul(getPhaseMatrix(),embpot_in)
                     embpot_out=matmul(embpot_in,mat_inverse(getPhaseMatrix()))

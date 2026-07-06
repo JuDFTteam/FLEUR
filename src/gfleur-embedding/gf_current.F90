@@ -96,7 +96,7 @@
                                                                         
          IF(btest(gfinp%curr,0)) THEN 
             IF(.NOT.gf_read2dmat(IO2D_G12,1,1,en,nk                     &
-     &           ,jspin,lapw,gmat(:,:,1))) CALL                         &
+     &           ,jspin,lapw_gf,gmat(:,:,1))) CALL                         &
      &           juDFT_error("gf_current:Data missing for Landauer2")     
             CALL gf_landauer2Plane(gmat(:,:,1),embpot(:,:               &
      &           ,1,1),embpot(:,:,2,1),curr(1),curr(2))                 
@@ -116,10 +116,10 @@
          IF(btest(gfinp%curr,2)) THEN 
             INQUIRE(FILE='bard_shift',EXIST=l_shift) 
             IF(.NOT.gf_read2dmat(IO2D_GMAT,1,1,en,nk                    &
-     &           ,jspin,lapw,gmat(:,:,1))) CALL                         &
+     &           ,jspin,lapw_gf,gmat(:,:,1))) CALL                         &
      &           juDFT_error("gf_current:Data missing for Bardeen")       
             IF (.NOT.gf_read2dmat(IO2D_GMAT,2,1,en,nk                   &
-     &           ,jspin,lapw,gmat(:,:,2))) CALL                         &
+     &           ,jspin,lapw_gf,gmat(:,:,2))) CALL                         &
      &           juDFT_error("gf_current:Data missing for Bardeen")       
             IF (l_shift) THEN 
                gmat(:,:,2) = MATMUL(MATMUL((getPhaseMatrix()),          &
@@ -137,7 +137,7 @@
                                                                         
          IF(btest(gfinp%curr,3)) THEN 
             IF(.NOT.gf_read2dmat(IO2D_GMAT,1,1,en,nk                    &
-     &           ,jspin,lapw,gmat(:,:,1))) CALL                         &
+     &           ,jspin,lapw_gf,gmat(:,:,1))) CALL                         &
      &           juDFT_error("gf_current:Data missing for Surface")       
             CALL gf_CurrIshida(embpot(:,:,1,1),gmat(:,:,1)              &
      &           ,curr(5))                                              
@@ -156,7 +156,7 @@
                                                                         
          IF(btest(gfinp%curr,5)) THEN 
             IF(.NOT.gf_read2dmat(IO2D_G12,1,1,en,nk                     &
-     &           ,jspin,lapw,gmat(:,:,1))) CALL                         &
+     &           ,jspin,lapw_gf,gmat(:,:,1))) CALL                         &
      &           juDFT_error("gf_current:Data missing for Channel")       
             CALL gf_channels(embpot(:,:,1,1),embpot(:,:,2,1),gmat(:,:,1)&
      &           ,curr(9:),curr(8),lapw)                                
@@ -384,7 +384,7 @@
 !     (Jussi's first NOCO version)                                      
 !*********************************************************************  
       USE m_gf_writetrans,ONLY:writetrans 
-      USE m_gf_types,ONLY:t_sym,t_cell 
+      USE m_gf_types
       USE m_gf_embedding,ONLY:gf_getemb 
       IMPLICIT NONE 
       INTEGER ,INTENT(IN) :: nv2,en,nk ,jspin 

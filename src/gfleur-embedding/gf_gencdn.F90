@@ -10,8 +10,8 @@
       IMPLICIT NONE
       CONTAINS 
       SUBROUTINE gf_gencdn(layer,jspin,l_chargefromstates,              &
-     &     jspins,gfinp,atoms,cell,sym,kpts,stars,sphhar,mpi,enpara     &
-     &     ,vr,qpw,rho,qmtl,neigd,l_noco,qtot_el,qtot_nuc)
+     &     jspins,gfinp,input,atoms,cell,sym,kpts,stars,sphhar,mpi,     &
+     &     enpara,vr,qpw,rho,qmtl,neigd,l_noco,qtot_el,qtot_nuc)
 !*****************************************************************      
 ! DESC:This subroutine constructes the charge-density from the Green    
 ! function. It can be considered as the GF-version of cdngen            
@@ -22,13 +22,11 @@
       USE m_gf_types 
       USE m_gf_plot 
       USE m_gf_iodop 
-#ifdef CPP_MPI                                                          
-      USE m_gf_mpicollect 
-#endif                                                                  
-      USE m_fleur_INTERFACE,ONLY:fleur_cored 
+      USE m_cored
       IMPLICIT NONE 
 !     .. Scalar Arguments ..                                            
-      INTEGER, INTENT(IN)          :: jspin,jspins,layer 
+      INTEGER, INTENT(IN)          :: jspin,jspins,layer
+      TYPE(t_input),INTENT(IN)     :: input
       TYPE(t_atoms),INTENT(INOUT)  :: atoms 
       TYPE(t_embinp),INTENT(IN)     :: gfinp 
       TYPE(t_sphhar),INTENT(IN)    :: sphhar 
@@ -36,7 +34,7 @@
       TYPE(t_kpts),INTENT(IN)      :: kpts 
       TYPE(t_cell),INTENT(INOUT)   :: cell 
       TYPE(t_stars),INTENT(IN)     :: stars 
-      TYPE(t_mpi),INTENT(IN)       :: mpi 
+      TYPE(t_gfmpi),INTENT(IN)       :: mpi 
       TYPE(t_enpara),INTENT(INOUT) :: enpara 
 !Arguments for cdnstates
       LOGICAL,INTENT(IN)           :: l_noco
@@ -133,13 +131,13 @@
             allocate(vr_fixed(size(vr,1),size(vr,2),size(vr,3),size(vr,4)))
             vr_fixed=0.0
             call gf_loddop_name("gf_pot_fixedcore.hdf",layer,jspins,atoms,stars,sphhar,vr_fixed)
-            call fleur_cored(jspins,jspin,atoms,vr_fixed,q_int,rh,seig,rho(:,0:,:,:))
-            if (l_noco) CALL fleur_cored(jspins,2,atoms,vr_fixed,q_int,rh,seig,rho(:,0:,:,:))
+            call priv_cored(input,sphhar,jspin,atoms,vr_fixed,q_int,seig,rho(:,0:,:,:))
+            if (l_noco) CALL priv_cored(input,sphhar,2,atoms,vr_fixed,q_int,seig,rho(:,0:,:,:))
             deallocate(vr_fixed)
          else
-               CALL fleur_cored(jspins,jspin,atoms,vr,q_int,rh,seig,rho(:,0:,:&
-     &        ,:))
-              if (l_noco) CALL fleur_cored(jspins,2,atoms,vr,q_int,rh,seig,rho(:,0:,:,:))
+               CALL priv_cored(input,sphhar,jspin,atoms,vr,q_int,     &
+     &              seig,rho(:,0:,:,:))
+              if (l_noco) CALL priv_cored(input,sphhar,2,atoms,vr,q_int,seig,rho(:,0:,:,:))
          endif
       ENDIF 
 !                                                                       
@@ -147,7 +145,7 @@
 !                                                                       
       CALL priv_plotPlanar(stars,qpw) 
       IF (jspin==jspins.or.l_noco) THEN
-         CALL gf_cdntot(layer,mpi,jspins,stars,cell,atoms,rho(:,0:,:,:) &
+         CALL gf_cdntot(layer,mpi%fmpi,jspins,stars,cell,atoms,rho(:,0:,:,:) &
      &        ,qpw(:,:),qtot_el(layer),qtot_nuc(layer))                 
          !<-- generate gf_cdn.diff file for totalcharge mixing          
          IF (gfinp%l_totalmix.AND..NOT.lexist) THEN 
@@ -202,4 +200,37 @@
                                                                         
       END SUBROUTINE 
                                                                         
+      SUBROUTINE priv_cored(input,sphhar,jspin,atoms,vr,q_int,seig,rho)
+      !per-type loop over the modern cored (replaces the old EXTERNAL
+      !cored call; deliberately NOT cdncore, which would additionally
+      !spread core tails into the interstitial)
+      USE m_cored
+      USE m_gf_types
+      IMPLICIT NONE
+      TYPE(t_input),INTENT(IN)  :: input
+      TYPE(t_sphhar),INTENT(IN) :: sphhar
+      INTEGER,INTENT(IN)        :: jspin
+      TYPE(t_atoms),INTENT(IN)  :: atoms
+      REAL,INTENT(IN)           :: vr(:,0:,1:,:)
+      REAL,INTENT(OUT)          :: q_int(:,:)
+      REAL,INTENT(OUT)          :: seig
+      REAL,INTENT(INOUT)        :: rho(:,0:,:,:)
+
+      REAL :: rhc(atoms%msh,atoms%ntype,input%jspins)
+      REAL :: tec(atoms%ntype,input%jspins)
+      REAL :: qint2(atoms%ntype,input%jspins)
+      REAL :: seig_t
+      INTEGER :: iType
+
+      seig=0.0
+      qint2=0.0
+      rhc=0.0; tec=0.0
+      DO iType=1,atoms%ntype
+         CALL cored(input,jspin,iType,atoms,rho,sphhar,.FALSE.,          &
+     &              vr(:,0,:,jspin),qint2,rhc,tec,seig_t)
+         seig=seig+seig_t
+      ENDDO
+      q_int(:,jspin)=qint2(:,jspin)
+      END SUBROUTINE priv_cored
+
       END                                           

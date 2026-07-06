@@ -19,14 +19,12 @@
 !     gf_projembed.                                                     
 !     Frank Freimuth, January - February 2007                           
 !------------------------------------------------------------           
-#include "realcomplex.h"                                                
-#include "cpp_double.h"
       PRIVATE 
       PUBLIC gf_fnaeproj 
                                                                         
       CONTAINS 
       SUBROUTINE gf_fnaeproj(layer,                                     &
-     &     jspin,gfinp,cell,lapw,en,l_sph,                                    &
+     &     jspin,gfinp,cell,lapw,lapw_gf,en,l_sph,                                    &
      &     l_inversion,l_fullgreen,l_nogno,l_nohelpregion,              &
      &     gij,g,real_energy)
 !*****************************************************                  
@@ -42,16 +40,16 @@
       USE m_gf_energies,ONLY:gf_z 
       use m_juDFT 
       USE m_gf_spectrum 
-#include "juDFT_env.h"
       IMPLICIT NONE 
       INTEGER,INTENT(IN)        :: jspin,layer 
-      TYPE(t_gfinp), INTENT(IN) :: gfinp 
+      TYPE(t_embinp), INTENT(IN) :: gfinp 
       TYPE(t_cell),INTENT(IN)   :: cell 
       TYPE(t_lapw),INTENT(IN)   :: lapw 
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
       INTEGER,INTENT(IN)        :: en 
       LOGICAL,INTENT(IN)        :: l_inversion,l_fullgreen,l_nogno,l_sph
       LOGICAL,INTENT(IN)        :: l_nohelpregion 
-      COMPLEX,INTENT(OUT)       :: gij(2*lapw%nv2_tot,2*lapw%nv2_tot) 
+      COMPLEX,INTENT(OUT)       :: gij(2*lapw_gf%nv2_tot,2*lapw_gf%nv2_tot) 
       COMPLEX,INTENT(OUT)       :: g(:,:) 
       LOGICAL,INTENT(IN),OPTIONAL:: real_energy
                                                                         
@@ -65,7 +63,7 @@
                                                                         
 
       matsize = lapw%nmat 
-      if (l_sph) matsize=lapw%nmat_sphere
+      if (l_sph) matsize=lapw_gf%nmat_sphere
 
       cmplxone = CMPLX(1.0,0.0) 
                                                                         
@@ -86,7 +84,7 @@
          ENDIF
       ENDIF
                                                                         
-      ALLOCATE(g_temp(2*lapw%nv2_tot,matsize),STAT=info) 
+      ALLOCATE(g_temp(2*lapw_gf%nv2_tot,matsize),STAT=info) 
       IF(info/=0) CALL juDFT_error("g_temp1") 
       DO j = 1,matsize
          IF (smooth.ne.0.0) THEN
@@ -95,7 +93,7 @@
          ELSE
               enedeno = cmplxone/(z-CMPLX(uhueigval(j),0.0))
          ENDIF
-         DO i = 1,2*lapw%nv2_tot 
+         DO i = 1,2*lapw_gf%nv2_tot 
             g_temp(i,j) = uhuprojone(i,j)*enedeno 
                !i                                                       
          ENDDO 
@@ -103,10 +101,10 @@
       ENDDO 
                                                                         
                                                                         
-      CALL CPP_BLAS_cgemm('N','N',                                 &
-     &      2*lapw%nv2_tot,2*lapw%nv2_tot,matsize                       &
-     &     ,CMPLX(1.0,0.0),g_temp,2*lapw%nv2_tot,uhuprojtwo,matsize     &
-     &     ,CMPLX(0.0,0.0),gij,2*lapw%nv2_tot)                          
+      CALL zgemm('N','N',                                 &
+     &      2*lapw_gf%nv2_tot,2*lapw_gf%nv2_tot,matsize                       &
+     &     ,CMPLX(1.0,0.0),g_temp,2*lapw_gf%nv2_tot,uhuprojtwo,matsize     &
+     &     ,CMPLX(0.0,0.0),gij,2*lapw_gf%nv2_tot)                          
                                                                         
       DEALLOCATE(g_temp) 
 !********************************************************************** 
@@ -138,7 +136,7 @@
                 !j                                                      
        ENDDO 
                                                                         
-       CALL CPP_BLAS_cgemm('N','N',totwann,totwann,matsize,        &
+       CALL zgemm('N','N',totwann,totwann,matsize,        &
      &     CMPLX(1.0,0.0),g_temp,totwann,wannprojtwo,matsize,           &
      &     CMPLX(0.0,0.0),wgw,totwann)                                  
                                                                         
@@ -152,20 +150,20 @@
 !***********************************************************************
       IF(l_fullgreen)THEN
          !now we only calculate G up to smaller cutoff nv_sphere
-         matsize1=lapw%nmat_sphere
+         matsize1=lapw_gf%nmat_sphere
 
-         CPP_juDFT_timestart("gf_fnae_full")
+         CALL timestart("gf_fnae_full")
          IF(.NOT.ALLOCATED(uhumatrix)) CALL juDFT_error                   &
      &        ("fullgreen, no uhumat")                                  
          IF(SIZE(g,1)/=matsize1)CALL juDFT_error("size(g,1)")
          IF(SIZE(g,2) /= matsize1)CALL juDFT_error("size(g,2)")
          ALLOCATE(g_temp(matsize1,matsize1),STAT=info)
          ALLOCATE(g_temp2(matsize1,matsize1),STAT=info)
-         CPP_juDFT_timestart("g_temp")
+         CALL timestart("g_temp")
          !Copy out part of the uhumatrix
 
-         g_temp2(:lapw%nv_tot_sphere,:)=uhumatrix(:lapw%nv_tot_sphere,:matsize1)   !lapw part of vectors
-         g_temp2(lapw%nv_tot_sphere+1:,:)=uhumatrix(lapw%nv_tot_sphere+1:,:matsize1)  !lo-part of vectors
+         g_temp2(:lapw_gf%nv_tot_sphere,:)=uhumatrix(:lapw_gf%nv_tot_sphere,:matsize1)   !lapw part of vectors
+         g_temp2(lapw_gf%nv_tot_sphere+1:,:)=uhumatrix(lapw_gf%nv_tot_sphere+1:,:matsize1)  !lo-part of vectors
 
          IF(info/=0) CALL juDFT_error("g_temp2")
 
@@ -181,14 +179,14 @@
             ENDDO 
                   !j                                                    
          ENDDO 
-         CPP_juDFT_timestop("g_temp")
-         CPP_juDFT_timestart("dgemm")
-         CALL CPP_BLAS_cgemm('N','C',matsize1,matsize1,matsize1,      &
+         CALL timestop("g_temp")
+         CALL timestart("dgemm")
+         CALL zgemm('N','C',matsize1,matsize1,matsize1,      &
      &        CMPLX(1.0,0.0),g_temp,matsize1,g_temp2,                  &
      &        matsize1,CMPLX(0.0,0.0),g,matsize1)
-         CPP_juDFT_timestop("dgemm")
+         CALL timestop("dgemm")
          DEALLOCATE(g_temp,g_temp2)
-         CPP_juDFT_timestop("gf_fnae_full")
+         CALL timestop("gf_fnae_full")
              !l_fullgreen                                               
       ENDIF 
                                                                         
@@ -199,15 +197,15 @@
 !     gleft : first index 2D and second index 3D                        
 !***********************************************************************
       IF(l_nogno.OR.gfinp%l_addselfen)THEN
-         CPP_juDFT_timestart("gf_fnae_red")
+         CALL timestart("gf_fnae_red")
          g(:,:)=cmplx(0.0,0.0) 
          IF(allocated(gright))DEALLOCATE(gright)
          IF(allocated(gleft))DEALLOCATE(gleft)
-         ALLOCATE(gright(matsize,2*lapw%nv2_tot))
-         ALLOCATE(gleft(2*lapw%nv2_tot,matsize))
+         ALLOCATE(gright(matsize,2*lapw_gf%nv2_tot))
+         ALLOCATE(gleft(2*lapw_gf%nv2_tot,matsize))
                                                                         
-         ALLOCATE(g_temp(2*lapw%nv2_tot,matsize)) 
-         ALLOCATE(g_temp2(2*lapw%nv2_tot,matsize)) 
+         ALLOCATE(g_temp(2*lapw_gf%nv2_tot,matsize)) 
+         ALLOCATE(g_temp2(2*lapw_gf%nv2_tot,matsize)) 
                                                                         
          g_temp2=conjg(uhuprojone) 
          DO j=1,matsize 
@@ -217,11 +215,11 @@
               enedeno = cmplxone/(z-CMPLX(uhueigval(j),0.0))
            ENDIF
 
-          DO i=1,2*lapw%nv2_tot 
+          DO i=1,2*lapw_gf%nv2_tot 
            g_temp(i,j)=g_temp2(i,j)*enedeno 
                 !i                                                      
           ENDDO 
-          DO i=1,2*lapw%nv2_tot 
+          DO i=1,2*lapw_gf%nv2_tot 
            gleft(i,j)=uhuprojone(i,j)*enedeno 
                 !i                                                      
           ENDDO 
@@ -231,7 +229,7 @@
          gright=transpose(g_temp) 
          DEALLOCATE(g_temp2) 
          DEALLOCATE(g_temp) 
-         CPP_juDFT_timestop("gf_fnae_red")
+         CALL timestop("gf_fnae_red")
       ENDIF 
                                                                         
       END SUBROUTINE gf_fnaeproj 

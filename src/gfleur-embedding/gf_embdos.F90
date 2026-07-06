@@ -41,15 +41,15 @@
             CALL gf_apws(                                               &
      &           jspins,jspin,kpts%bk(:,nk),.FALSE.,noco,gfinp,cell,lapw&
      &           ,1)                                                    
-            DO n = 1,lapw%nv2(1) 
-               IF (lapw%kp%k1p(n,1) == 1.AND.lapw%kp%k2p(n,1) == 2) in1 &
+            DO n = 1,lapw_gf%nv2(1) 
+               IF (lapw_gf%k1p(n,1) == 1.AND.lapw_gf%k2p(n,1) == 2) in1 &
      &              = n                                                 
-               IF (lapw%kp%k1p(n,1) == 2.AND.lapw%kp%k2p(n,1) == 1) in2 &
+               IF (lapw_gf%k1p(n,1) == 2.AND.lapw_gf%k2p(n,1) == 1) in2 &
      &              = n                                                 
             ENDDO 
-            ALLOCATE(sigma(lapw%nv2_tot,lapw%nv2_tot)) 
-            ALLOCATE(ev(lapw%nv2_tot,lapw%nv2_tot)) 
-            ALLOCATE(ew(lapw%nv2_tot)) 
+            ALLOCATE(sigma(lapw_gf%nv2_tot,lapw_gf%nv2_tot)) 
+            ALLOCATE(ev(lapw_gf%nv2_tot,lapw_gf%nv2_tot)) 
+            ALLOCATE(ew(lapw_gf%nv2_tot)) 
             DO en = 1,gf_Noen() 
                sigma = 0.0 
                CALL gf_getemb2(sigma,1,1,en,nk,jspin,lapw) 

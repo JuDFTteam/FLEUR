@@ -145,8 +145,8 @@
       INTEGER            :: layer,n,c
       REAL               :: j(curr%totalnum_currents)
 
-      ALLOCATE( g1(lapw%nv2_tot,lapw%nv2_tot) )
-      ALLOCATE( g2(lapw%nv2_tot,lapw%nv2_tot) )
+      ALLOCATE( g1(lapw_gf%nv2_tot,lapw_gf%nv2_tot) )
+      ALLOCATE( g2(lapw_gf%nv2_tot,lapw_gf%nv2_tot) )
 
       n = 1
       DO c=1,curr%num_currents
@@ -205,8 +205,8 @@
       INTEGER            :: layer,n
       REAL               :: j(5*layers%num_layers-5)
 
-      ALLOCATE( g1(lapw%nv2_tot,lapw%nv2_tot) )
-      ALLOCATE( g2(lapw%nv2_tot,lapw%nv2_tot) )
+      ALLOCATE( g1(lapw_gf%nv2_tot,lapw_gf%nv2_tot) )
+      ALLOCATE( g2(lapw_gf%nv2_tot,lapw_gf%nv2_tot) )
 
       n = 1
       DO layer = 1,layers%num_layers-1

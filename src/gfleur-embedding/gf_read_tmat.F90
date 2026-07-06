@@ -5,7 +5,6 @@
 !--------------------------------------------------------------------------------
       MODULE m_gf_read_tmat 
           IMPLICIT NONE
-#include "cpp_double.h"                                                 
       CONTAINS 
       SUBROUTINE gf_read_tmat(                                          &
      &                       layers,nv2,en,nk,jspin,lapw,               &
@@ -20,7 +19,7 @@
       USE m_gf_iotmat 
       IMPLICIT NONE 
       TYPE(t_layers),INTENT(IN)::layers 
-      TYPE(t_lapw),INTENT(IN)::lapw 
+      TYPE(t_lapw_gf),INTENT(IN)::lapw 
       INTEGER,INTENT(IN):: nv2 
       INTEGER,INTENT(IN):: en 
       INTEGER,INTENT(IN):: nk 
@@ -36,7 +35,7 @@
                                                                         
       DO layer_ind=2,layers%num_layers 
          CALL gf_READ_tmat2(layer_ind,en,nk,jspin,lapw,tr(:,:,2)) 
-        CALL CPP_BLAS_cgemm('N','N',2*nv2,2*nv2,                        &
+        CALL zgemm('N','N',2*nv2,2*nv2,                        &
      &      2*nv2,cmplx(1.0,0.0),tr(:,:,2),2*nv2,                       &
      &      tr(:,:,1),2*nv2,cmplx(0.0,0.0),t_temp,                      &
      &             2*nv2)                                               

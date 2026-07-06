@@ -987,8 +987,8 @@
 
       n=0.0
       DO ng=1,stars%nq2
-         DO n1=1,lapw%nv2(1)
-            DO n2=1,lapw%nv2(1)
+         DO n1=1,lapw_gf%nv2(1)
+            DO n2=1,lapw_gf%nv2(1)
                !determine if n1-n2 are in star ng
                n3_star=stars%ig(lapw%k%kp1(n1,1)-lapw%k%kp1(n2,1),lapw%k%kp2(n1,1)-lapw%k%kp2(n2,1),0)
                if (n3_star/=0) then

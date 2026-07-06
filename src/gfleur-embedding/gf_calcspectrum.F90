@@ -6,10 +6,8 @@
 MODULE m_gf_calcspectrum
     use m_juDFT
     IMPLICIT NONE
-#include "realcomplex.h"                                                
-#include "cpp_double.h"
 CONTAINS
-    SUBROUTINE gf_calcspectrum(layer,lapw,jspin,l_sph)
+    SUBROUTINE gf_calcspectrum(layer,lapw,lapw_gf,jspin,l_sph)
         !-----------------------------------------------
         ! solve generalized eigenvalue problem for spectral representation
         ! the hamiltonian&overlapp are taken from gf_hsdata
@@ -25,12 +23,12 @@ CONTAINS
         use m_juDFT
         USE m_gf_spectrum
         USE m_gf_mkposdef
-#include "juDFT_env.h"
         IMPLICIT NONE
         !<-- Arguments
                                                                         
         INTEGER,INTENT(IN)        :: jspin,layer
         TYPE(t_lapw),INTENT(IN)   :: lapw
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
         LOGICAL,INTENT(IN)        :: l_sph
                                                                         
         !>
@@ -39,7 +37,7 @@ CONTAINS
         LOGICAL                  :: l_firstrun,l_posdef
         COMPLEX,ALLOCATABLE      :: over(:,:)
         INTEGER                  :: in,i,j,n1,n2,info
-        COMPLEX,POINTER          :: hp(:),sp(:)
+        COMPLEX,POINTER :: hp(:,:),sp(:,:)
         COMPLEX,ALLOCATABLE      :: work(:)
         REAL,ALLOCATABLE         :: rwork(:)
         INTEGER,ALLOCATABLE      :: iwork(:)
@@ -55,7 +53,7 @@ CONTAINS
       l_pe0=irank==0
 #endif
         !>
-        CPP_juDFT_timestart("gf_calcspectrum")
+        CALL timestart("gf_calcspectrum")
 
         IF(ALLOCATED(uhuprojtwo)) CALL juDFT_error("uhu, no uhu")
         IF(ALLOCATED(uhueigval))  CALL juDFT_error("uhueigval, no uhu")
@@ -71,14 +69,14 @@ CONTAINS
         IF (l_posdef) l_firstrun = .FALSE.
 
         matsize=lapw%nmat
-        if (l_sph) matsize=lapw%nmat_sphere
+        if (l_sph) matsize=lapw_gf%nmat_sphere
 
-        CPP_juDFT_timestart("Allocation")
+        CALL timestart("Allocation")
 
         ALLOCATE(over(matsize,matsize))
         ALLOCATE(uhumatrix(matsize,matsize))
         ALLOCATE(uhueigval(matsize))
-        CPP_juDFT_timestop("Allocation")
+        CALL timestop("Allocation")
                                                                         
     !      open(888,file='overlap')
     !      write(888,*)sp
@@ -91,26 +89,26 @@ CONTAINS
                                                                         
 200 CONTINUE
     !write the overlap matrix to full storage
-    call priv_map_hs(jspin,over,lapw,sp,l_sph)
+    call priv_map_hs(jspin,over,lapw,lapw_gf,sp,l_sph)
 
                                                                         
     !in some cases the overlap matrix is not positive definite
     !the following piece of code helps here
                      !make metric positive definite
     IF(l_posdef)THEN
-        CPP_juDFT_timestart("gf_mkposdef")
+        CALL timestart("gf_mkposdef")
         CALL gf_mkposdef(matsize,over)
            !l_posdef
-        CPP_juDFT_timestop("gf_mkposdef")
+        CALL timestop("gf_mkposdef")
 
     ENDIF
                                                                         
     !write the hamiltonian to full storage
-    call priv_map_hs(jspin,uhumatrix,lapw,hp,l_sph)
-    CPP_juDFT_timestart("work array allocation")
+    call priv_map_hs(jspin,uhumatrix,lapw,lapw_gf,hp,l_sph)
+    CALL timestart("work array allocation")
     !calculate eigenvalues and eigenvectors of the generalized
     !eigenvalue problem
-    CALL CPP_LAPACK_chegvd(1,'V','U',matsize,uhumatrix,matsize&
+    CALL zhegvd(1,'V','U',matsize,uhumatrix,matsize&
     ,over,matsize,uhueigval,work_d,-1,rwork_d,-1,iwork_d   &
     ,-1,info)
                                                                         
@@ -120,12 +118,12 @@ CONTAINS
     ALLOCATE(rwork(lrwork))
     liwork=iwork_d(1)
     ALLOCATE(iwork(liwork))
-    CPP_juDFT_timestop("work array allocation")
-    CPP_juDFT_timestart("diagonalization")
-    CALL CPP_LAPACK_chegvd(1,'V','U',matsize,uhumatrix,matsize&
+    CALL timestop("work array allocation")
+    CALL timestart("diagonalization")
+    CALL zhegvd(1,'V','U',matsize,uhumatrix,matsize&
     ,over,matsize,uhueigval,work,lwork,rwork,lrwork,iwork   &
     ,liwork,info)
-    CPP_juDFT_timestop("diagonalization")
+    CALL timestop("diagonalization")
     DEALLOCATE(iwork)
     DEALLOCATE(rwork)
     DEALLOCATE(work)
@@ -150,11 +148,11 @@ CONTAINS
     endif
     DEALLOCATE(over)
                                                                         
-    CPP_juDFT_timestop("gf_calcspectrum")
+    CALL timestop("gf_calcspectrum")
 END SUBROUTINE gf_calcspectrum
 
 
-SUBROUTINE gf_calcspectrum_simple(layer,lapw,jspin,l_sph)
+SUBROUTINE gf_calcspectrum_simple(layer,lapw,lapw_gf,jspin,l_sph)
         !-----------------------------------------------
         ! solve generalized eigenvalue problem for spectral representation
         ! the hamiltonian&overlapp are taken from gf_hsdata
@@ -170,12 +168,12 @@ SUBROUTINE gf_calcspectrum_simple(layer,lapw,jspin,l_sph)
         use m_juDFT
         USE m_gf_spectrum
         USE m_gf_mkposdef
-#include "juDFT_env.h"
         IMPLICIT NONE
         !<-- Arguments
 
         INTEGER,INTENT(IN)        :: jspin,layer
         TYPE(t_lapw),INTENT(IN)   :: lapw
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
         LOGICAL,INTENT(IN)        :: l_sph
 
         !>
@@ -184,7 +182,7 @@ SUBROUTINE gf_calcspectrum_simple(layer,lapw,jspin,l_sph)
         LOGICAL                  :: l_firstrun,l_posdef
         COMPLEX,ALLOCATABLE      :: over(:,:)
         INTEGER                  :: in,i,j,n1,n2,info
-        COMPLEX,POINTER          :: hp(:),sp(:)
+        COMPLEX,POINTER :: hp(:,:),sp(:,:)
         COMPLEX,ALLOCATABLE      :: work(:)
         REAL,ALLOCATABLE         :: rwork(:)
         INTEGER                  :: lwork,lrwork
@@ -199,7 +197,7 @@ SUBROUTINE gf_calcspectrum_simple(layer,lapw,jspin,l_sph)
       l_pe0=irank==0
 #endif
         !>
-        CPP_juDFT_timestart("gf_calcspectrum_simple")
+        CALL timestart("gf_calcspectrum_simple")
 
         IF(ALLOCATED(uhuprojtwo)) CALL juDFT_error("uhu, no uhu")
         IF(ALLOCATED(uhueigval))  CALL juDFT_error("uhueigval, no uhu")
@@ -215,14 +213,14 @@ SUBROUTINE gf_calcspectrum_simple(layer,lapw,jspin,l_sph)
         IF (l_posdef) l_firstrun = .FALSE.
 
         matsize=lapw%nmat
-        if (l_sph) matsize=lapw%nmat_sphere
+        if (l_sph) matsize=lapw_gf%nmat_sphere
 
-        CPP_juDFT_timestart("Allocation")
+        CALL timestart("Allocation")
 
         ALLOCATE(over(matsize,matsize))
         ALLOCATE(uhumatrix(matsize,matsize))
         ALLOCATE(uhueigval(matsize))
-        CPP_juDFT_timestop("Allocation")
+        CALL timestop("Allocation")
 
     !      open(888,file='overlap')
     !      write(888,*)sp
@@ -235,37 +233,37 @@ SUBROUTINE gf_calcspectrum_simple(layer,lapw,jspin,l_sph)
 
 200 CONTINUE
     !write the overlap matrix to full storage
-    call priv_map_hs(jspin,over,lapw,sp,l_sph)
+    call priv_map_hs(jspin,over,lapw,lapw_gf,sp,l_sph)
 
 
     !in some cases the overlap matrix is not positive definite
     !the following piece of code helps here
                      !make metric positive definite
     IF(l_posdef)THEN
-        CPP_juDFT_timestart("gf_mkposdef")
+        CALL timestart("gf_mkposdef")
         CALL gf_mkposdef(matsize,over)
            !l_posdef
-        CPP_juDFT_timestop("gf_mkposdef")
+        CALL timestop("gf_mkposdef")
 
     ENDIF
 
     !write the hamiltonian to full storage
-    call priv_map_hs(jspin,uhumatrix,lapw,hp,l_sph)
-    CPP_juDFT_timestart("work array allocation")
+    call priv_map_hs(jspin,uhumatrix,lapw,lapw_gf,hp,l_sph)
+    CALL timestart("work array allocation")
     !calculate eigenvalues and eigenvectors of the generalized
     !eigenvalue problem
-    CALL CPP_LAPACK_chegv(1,'V','U',matsize,uhumatrix,matsize&
+    CALL zhegv(1,'V','U',matsize,uhumatrix,matsize&
     ,over,matsize,uhueigval,work_d,-1,rwork_d,info)
 
     lwork = work_d(1)
     ALLOCATE(work(lwork))
     lrwork=3*matsize-2
     ALLOCATE(rwork(lrwork))
-    CPP_juDFT_timestop("work array allocation")
-    CPP_juDFT_timestart("diagonalization")
-    CALL CPP_LAPACK_chegv(1,'V','U',matsize,uhumatrix,matsize&
+    CALL timestop("work array allocation")
+    CALL timestart("diagonalization")
+    CALL zhegv(1,'V','U',matsize,uhumatrix,matsize&
     ,over,matsize,uhueigval,work,lwork,rwork,info)
-    CPP_juDFT_timestop("diagonalization")
+    CALL timestop("diagonalization")
 
     DEALLOCATE(rwork)
     DEALLOCATE(work)
@@ -290,24 +288,28 @@ SUBROUTINE gf_calcspectrum_simple(layer,lapw,jspin,l_sph)
     endif
     DEALLOCATE(over)
 
-    CPP_juDFT_timestop("gf_calcspectrum_simple")
+    CALL timestop("gf_calcspectrum_simple")
 END SUBROUTINE gf_calcspectrum_simple
 
-subroutine priv_map_hs(jspin,mat,lapw,hs,l_sph)
+subroutine priv_map_hs(jspin,mat,lapw,lapw_gf,hs,l_sph)
+    !maps the stored FULL Hermitian H/S (standard convention
+    !hs(row,col)=<G_row|M|G_col>, see gf_hsdata) onto the working
+    !matrix, optionally compressing out the cylinder basis functions
+    !outside the rkmax sphere
     use m_gf_types
     implicit none
     integer,intent(in)      :: jspin
     type(t_lapw),intent(in) :: lapw
-    complex,intent(in)      :: hs(:)
+    TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
+    complex,intent(in)      :: hs(:,:)
     complex,INTENT(out)     :: mat(:,:)
     logical,intent(in)      :: l_sph
 
-    integer :: i,j,ii,jj,in,nv_lo,nv_skip,n,nn
+    integer :: i,j,ii,jj,nv_lo,nv_skip,n,nn
     integer :: map(lapw%nmat)
 
-
     IF (l_sph) THEN
-        nv_skip=lapw%nmat-lapw%nmat_sphere  !no of lapw to be skipped
+        nv_skip=lapw%nmat-lapw_gf%nmat_sphere  !no of lapw to be skipped
         if (lapw%nmat>lapw%nv_tot) THEN
             !There are some LO
             nv_lo=lapw%nmat-lapw%nv_tot
@@ -321,9 +323,9 @@ subroutine priv_map_hs(jspin,mat,lapw,hs,l_sph)
         n=0
         nn=0
 
-        map(n+1:n+lapw%nv_sphere(jspin))=(/(i,i=nn+1,nn+lapw%nv_sphere(jspin))/)
-        n=n+lapw%nv_sphere(jspin)
-        nn=nn+lapw%nv_sphere(jspin)
+        map(n+1:n+lapw_gf%nv_sphere(jspin))=(/(i,i=nn+1,nn+lapw_gf%nv_sphere(jspin))/)
+        n=n+lapw_gf%nv_sphere(jspin)
+        nn=nn+lapw_gf%nv_sphere(jspin)
         !skip some lapw
         if (nv_skip>0) THEN
             map(n+1:n+nv_skip)=0
@@ -331,9 +333,9 @@ subroutine priv_map_hs(jspin,mat,lapw,hs,l_sph)
         endif
         if (lapw%nv_tot>lapw%nv(1)) THEN
             !noco
-            map(n+1:n+lapw%nv_sphere(jspin))=(/(i,i=nn+1,nn+lapw%nv_sphere(jspin))/)
-            n=n+lapw%nv_sphere(jspin)
-            nn=nn+lapw%nv_sphere(jspin)
+            map(n+1:n+lapw_gf%nv_sphere(jspin))=(/(i,i=nn+1,nn+lapw_gf%nv_sphere(jspin))/)
+            n=n+lapw_gf%nv_sphere(jspin)
+            nn=nn+lapw_gf%nv_sphere(jspin)
             !skip some lapw
             if (nv_skip>0) THEN
                 map(n+1:n+nv_skip)=0
@@ -353,26 +355,18 @@ subroutine priv_map_hs(jspin,mat,lapw,hs,l_sph)
             endif
         endif
 
-        in=0
         DO i = 1,lapw%nmat
             ii=map(i)
-            DO j = 1,i
-                in = in+1
+            IF (ii==0) CYCLE
+            DO j = 1,lapw%nmat
                 jj=map(j)
-                if (ii==0.or.jj==0) cycle
-                mat(jj,ii) = CONJG(hs(in))
+                if (jj==0) cycle
+                mat(jj,ii) = hs(j,i)
             ENDDO
-            !i
         ENDDO
 
     ELSE
-        in=0
-        DO i = 1,lapw%nmat
-            DO j = 1,i
-                in = in+1
-                mat(j,i) = CONJG(hs(in))
-            ENDDO
-        ENDDO
+        mat(:lapw%nmat,:lapw%nmat) = hs(:lapw%nmat,:lapw%nmat)
     ENDIF
 end subroutine
 END

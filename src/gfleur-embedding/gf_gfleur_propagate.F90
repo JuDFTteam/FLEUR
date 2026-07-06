@@ -13,7 +13,7 @@
 !     Frank Freimuth, November 2007                                     
 !*************************************************                      
       CONTAINS 
-      SUBROUTINE gf_gfleur_propagate(layers,mpi,lapw,gfinp,nk,jspin,sym &
+      SUBROUTINE gf_gfleur_propagate(layers,mpi,lapw,lapw_gf,gfinp,nk,jspin,sym &
      &     ,cell,bk)                                                    
       USE m_gf_types 
       USE m_gf_iotmat 
@@ -22,14 +22,14 @@
       USE m_gf_io2dmat 
       USE m_gf_energies 
       USE m_gf_current_single
-#include "juDFT_env.h" 
       USE m_gf_tmat 
       USE m_gf_math
       IMPLICIT NONE 
       TYPE(t_layers),INTENT(IN) :: layers 
       TYPE(t_mpi),INTENT(IN)    :: mpi 
       TYPE(t_lapw),INTENT(IN)   :: lapw 
-      TYPE(t_gfinp),INTENT(IN)  :: gfinp 
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
+      TYPE(t_embinp),INTENT(IN)  :: gfinp 
       INTEGER,INTENT(IN)        :: nk 
       INTEGER,INTENT(IN)        :: jspin 
       TYPE(t_sym),INTENT(IN)    :: sym 
@@ -43,9 +43,9 @@
       INTEGER             :: key,en,nv2,en_loop 
       print *, "Propagate with rank:",mpi%irank
       key = IO2D_EMB 
-      ALLOCATE( g1(lapw%nv2_tot,lapw%nv2_tot) ) 
-      ALLOCATE( g2(lapw%nv2_tot,lapw%nv2_tot) ) 
-      nv2=lapw%nv2_tot 
+      ALLOCATE( g1(lapw_gf%nv2_tot,lapw_gf%nv2_tot) ) 
+      ALLOCATE( g2(lapw_gf%nv2_tot,lapw_gf%nv2_tot) ) 
+      nv2=lapw_gf%nv2_tot 
       ALLOCATE( embpot_left (nv2,nv2,1:layers%num_layers) ) 
       ALLOCATE( embpot_right(nv2,nv2,1:layers%num_layers) ) 
       CALL gf_io2dmat_memorysync()
@@ -65,7 +65,7 @@
          ENDDO
       ENDIF 
                                                                         
-      CPP_juDFT_timestart("gf_propagate_left")
+      CALL timestart("gf_propagate_left")
       DO en_loop = 1,mpi%ke_ENperPE
          en = mpi%ke_energies(en_loop) 
                                                                         
@@ -93,18 +93,18 @@
      &             gfinp%l_nohelpregion,                                &
      &             embpot_left(:,:,layer+1))
            !!$omp section
-!              CALL gf_write2dmat(IO2D_EMB,layer,1,en,nk,jspin,lapw,        &
+!              CALL gf_write2dmat(IO2D_EMB,layer,1,en,nk,jspin,lapw_gf,        &
 !     &                         cmplx(-0.5,0.0)*embpot_left(:,:,layer))
            !!$omp end parallel sections
            ENDIF 
         ENDDO 
-!        CALL gf_write2dmat(IO2D_EMB,layers%num_layers,1,en,nk,jspin,lapw,        &
+!        CALL gf_write2dmat(IO2D_EMB,layers%num_layers,1,en,nk,jspin,lapw_gf,        &
 !     &                    cmplx(-0.5,0.0)*embpot_left(:,:,layers%num_layers))
 
         embpot_left=cmplx(-0.5,0.0)*embpot_left
         IF (gfinp%curr<16) THEN
           DO layer = 1,layers%num_layers
-             CALL gf_write2dmat(IO2D_EMB,layer,1,en,nk,jspin,lapw,  &
+             CALL gf_write2dmat(IO2D_EMB,layer,1,en,nk,jspin,lapw_gf,  &
      &                         embpot_left(:,:,layer))
           ENDDO
         ENDIF
@@ -115,7 +115,7 @@
      &             gfinp%l_nohelpregion,                                &
      &              embpot_left(:,:,1))
      		  IF (gfinp%curr<16) THEN
-     		        CALL gf_write2dmat(IO2D_EMB,layers%num_layers+1,1,en,nk,jspin,lapw,        &
+     		        CALL gf_write2dmat(IO2D_EMB,layers%num_layers+1,1,en,nk,jspin,lapw_gf,        &
      &                         -0.5*embpot_left(:,:,1))
               ELSE
                  CALL gf_current_single(layers,lapw,cell(1),sym,mpi,bk,nk,en,jspin,        &
@@ -123,14 +123,14 @@
               ENDIF
         endif
       ENDDO 
-      CPP_juDFT_timestop("gf_propagate_left")
+      CALL timestop("gf_propagate_left")
       IF (gfinp%curr>15) return
 #ifdef CPP_TMAT_DIRECT                                                    
       DO layer = 1,layers%num_layers 
          REWIND(700+layer) 
       ENDDO 
 #endif
-      CPP_juDFT_timestart("gf_propagate_right")
+      CALL timestart("gf_propagate_right")
       DO en_loop = 1,mpi%ke_ENperPE 
          en = mpi%ke_energies(en_loop) 
          CALL gf_GETEMB2(G2,2,layers%num_layers,en,nk,jspin,lapw)
@@ -158,20 +158,20 @@
      &             gfinp%l_nohelpregion,                                &
      &             embpot_right(:,:,layer-1))
             !!$omp section
-     !         CALL gf_write2dmat(IO2D_EMB,layer,2,en,nk,jspin,lapw,        &
+     !         CALL gf_write2dmat(IO2D_EMB,layer,2,en,nk,jspin,lapw_gf,        &
      !&          cmplx(0.5,0.0)*embpot_right(:,:,layer))
             !!$omp end parallel sections
            ENDIF 
         ENDDO 
-        !CALL gf_write2dmat(IO2D_EMB,1,2,en,nk,jspin,lapw,        &
+        !CALL gf_write2dmat(IO2D_EMB,1,2,en,nk,jspin,lapw_gf,        &
      !&          cmplx(0.5,0.0)*embpot_right(:,:,1))
         embpot_right=cmplx(0.5,0.0)*embpot_right
         DO layer = 1,layers%num_layers
-           CALL gf_write2dmat(IO2D_EMB,layer,2,en,nk,jspin,lapw,   &
+           CALL gf_write2dmat(IO2D_EMB,layer,2,en,nk,jspin,lapw_gf,   &
      &          embpot_right(:,:,layer))
         enddo
       ENDDO 
-      CPP_juDFT_timestop("gf_propagate_right")
+      CALL timestop("gf_propagate_right")
       CALL gf_io2dmat_memorysync()
       END SUBROUTINE gf_gfleur_propagate 
       END                                           

@@ -24,7 +24,7 @@ module m_gf_current_single
         real    :: j(2)
         logical :: l_noco
 
-        l_noco=.not.(lapw%nv2_tot==lapw%nv2(1))
+        l_noco=.not.(lapw_gf%nv2_tot==lapw_gf%nv2(1))
 
         CALL gf_getemb2(sigmaR,2,layers%num_layers,en,nk,jspin,lapw)
         CALL gf_landauer1plane(l_noco,                                 &

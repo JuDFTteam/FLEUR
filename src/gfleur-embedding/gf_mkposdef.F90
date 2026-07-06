@@ -6,8 +6,6 @@
       MODULE m_gf_mkposdef 
       use m_juDFT
           IMPLICIT NONE
-#include "realcomplex.h"                                                
-#include "cpp_double.h"
       CONTAINS 
       !<-- S:priv_mkposdef(matsize,l_inversion,over,over_real,uhumatrix_
       SUBROUTINE gf_mkposdef(matsize,over)
@@ -54,7 +52,7 @@
       ALLOCATE(overeigvec1(matsize,matsize))
       uhumatrix(:,:) = over(:,:)
 
-      CALL CPP_LAPACK_cheevx('V','V','U',matsize,uhumatrix,       &
+      CALL zheevx('V','V','U',matsize,uhumatrix,       &
      &        matsize,                                                  &
      &        vl,vu,1,matsize,abstol,ne,uhueigval,overeigvec1,matsize,  &
      &        work,lwork,rwork,iwork,ifail,info)                        
@@ -70,7 +68,7 @@
           uhueigval(ind1) = toler-uhueigval(ind1)
       ENDDO
       DO ind1 = 1,ne
-          CALL CPP_BLAS_cher('U',matsize,uhueigval(ind1),        &
+          CALL zher('U',matsize,uhueigval(ind1),        &
      &           overeigvec1(1,ind1),1,over,matsize)                    
       ENDDO
       DEALLOCATE(overeigvec1)

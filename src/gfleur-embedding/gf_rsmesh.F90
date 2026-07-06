@@ -129,7 +129,7 @@
 ! DESC: Sets Box and grid of rs to value corresponding to stars         
 !*****************************************************************      
       USE m_constants,ONLY:PIMACH 
-      USE m_gf_types,ONLY:t_stars 
+      USE m_gf_types
       IMPLICIT NONE 
 !     Arguments                                                         
       TYPE(t_stars),INTENT(IN)   ::stars 
@@ -161,7 +161,7 @@
 !*****************************************************************      
 ! DESC: Transforms data to rez. Space                                   
 !*****************************************************************      
-      USE m_gf_types,ONLY:t_stars 
+      USE m_gf_types
       IMPLICIT NONE 
 !     Arguments                                                         
       TYPE(t_rsdata),INTENT(IN) ::rs 
@@ -191,7 +191,7 @@
 !*****************************************************************      
 ! DESC: Transforms data to rez. Space                                   
 !*****************************************************************      
-      USE m_gf_types,ONLY:t_stars 
+      USE m_gf_types
       IMPLICIT NONE 
 !     Arguments                                                         
       TYPE(t_rsdata),INTENT(INOUT) ::rs 
