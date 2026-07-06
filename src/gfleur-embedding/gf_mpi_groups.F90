@@ -1,294 +1,273 @@
 !--------------------------------------------------------------------------------
 ! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
-! This file is part of FLEUR and available as free software under the conditions 
+! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
-      MODULE m_gf_mpi_groups 
-          IMPLICIT NONE
-!-----------------------------------------------                        
-! DESC:determine different parallelization levels                       
-!                 Daniel Wortmann, (08-03-12)                           
+      MODULE m_gf_mpi_groups
+#ifdef CPP_MPI
+      USE mpi
+#endif
+      IMPLICIT NONE
+!-----------------------------------------------
+! DESC:determine different parallelization levels
+!      The GF parallelization works on t_gfmpi: the standard FLEUR
+!      t_mpi (gmpi%fmpi, configured "serial-like" for calls into the
+!      FLEUR kernels) plus the k x layer x energy sub-communicators.
+!                 Daniel Wortmann, (08-03-12)
 !-----------------------------------------------
       INTEGER,PARAMETER :: GGT_PARALLEL=0
       INTEGER,PARAMETER :: FULL_PARALLEL=1
       INTEGER,PARAMETER :: UNBALANCED_PARALLEL=2
-      CONTAINS 
+      CONTAINS
 #ifndef CPP_TEST
-                                                                        
-      !<-- S: gf_setup_mpi_groups(mpi,layers,kpts,n_energies)           
-      SUBROUTINE gf_setup_mpi_groups(mpi,layers,kpts,n_energies) 
-!-----------------------------------------------                        
-!                                                                       
-!           (last modified: 2004-00-00) D. Wortmann                     
-!-----------------------------------------------                        
-      USE m_gf_types 
-      IMPLICIT NONE 
-      !<--Arguments                                                     
-      TYPE(t_kpts),INTENT(IN)   :: kpts 
-      TYPE(t_layers),INTENT(IN) :: layers 
-      TYPE(t_mpi),INTENT(OUT)   :: mpi 
-      INTEGER                   :: n_energies 
-      !>                                                                
-      INTEGER             :: ierr 
-#ifdef CPP_MPI                                                          
-      INCLUDE 'mpif.h' 
-      CALL MPI_COMM_RANK (MPI_COMM_WORLD,mpi%irank,ierr) 
-      CALL MPI_COMM_SIZE (MPI_COMM_WORLD,mpi%isize,ierr) 
-                                                                        
-#else                                                                   
-      mpi%irank = 0 
-      mpi%isize = 1 
-#endif                                                                  
-      mpi%pe0 = mpi%irank == 0 
-      !These should not be used anymore                                 
-      mpi%n_start = 1 
-      mpi%n_stride = 1 
-      mpi%n_size = 1 
-      mpi%n_rank = 0 
-      mpi%sub_comm=0 
-                                                                        
-      CALL priv_full(mpi,kpts,layers,n_energies) 
-                                                                        
-      CALL priv_subcom(mpi) 
-                                                                        
-      CALL priv_print_info(mpi,layers%num_layers,kpts%nkpts) 
-                                                                        
-      END SUBROUTINE 
-      !>                                                                
-                                                                        
-      !<-- S:priv_subcom(mpi)                                           
-      SUBROUTINE priv_subcom(mpi) 
-!-----------------------------------------------                        
-!  create a subcom with all members that write on gf_pot and gf_iodop   
-!           (last modified: 2004-00-00) D. Wortmann                     
-!-----------------------------------------------                        
-      USE m_gf_types 
-      IMPLICIT NONE 
-      !<--Arguments                                                     
-      TYPE(t_mpi),INTENT(INOUT) :: mpi 
-      !>                                                                
-      !<-- Locals                                                       
-      INTEGER             :: iogroupsize,i 
-      INTEGER,ALLOCATABLE :: members(:) 
-#ifdef CPP_MPI                                                          
-      INTEGER             :: WORLD_GROUP,SUB_GROUP,ierr 
-      include "mpif.h" 
-      !>                                                                
-      !<-- Group of PE that construct the potential                     
-      iogroupsize = mpi%k_PEperK 
-      ALLOCATE(members(iogroupsize)) 
-      members = (/(i,i=0,mpi%k_PEperK-1)/) 
-                                                                        
-                                                                        
-      CALL MPI_COMM_GROUP (MPI_COMM_WORLD,WORLD_GROUP,ierr) 
+
+      !<-- S: gf_setup_mpi_groups(gmpi,layers,kpts,n_energies)
+      SUBROUTINE gf_setup_mpi_groups(gmpi,layers,kpts,n_energies)
+!-----------------------------------------------
+!
+!           (last modified: 2004-00-00) D. Wortmann
+!-----------------------------------------------
+      USE m_gf_types
+      IMPLICIT NONE
+      !<--Arguments
+      TYPE(t_kpts),INTENT(IN)    :: kpts
+      TYPE(t_layers),INTENT(IN)  :: layers
+      TYPE(t_gfmpi),INTENT(INOUT):: gmpi !fmpi%mpi_comm must be set
+      INTEGER                    :: n_energies
+      !>
+      INTEGER             :: ierr
+#ifdef CPP_MPI
+      CALL MPI_COMM_RANK (gmpi%fmpi%mpi_comm,gmpi%fmpi%irank,ierr)
+      CALL MPI_COMM_SIZE (gmpi%fmpi%mpi_comm,gmpi%fmpi%isize,ierr)
+#else
+      gmpi%fmpi%irank = 0
+      gmpi%fmpi%isize = 1
+#endif
+      gmpi%pe0 = gmpi%fmpi%irank == 0
+
+      CALL priv_full(gmpi,kpts,layers,n_energies)
+
+      CALL priv_subcom(gmpi)
+
+      CALL priv_print_info(gmpi,layers%num_layers,kpts%nkpt)
+
+      END SUBROUTINE
+      !>
+
+      !<-- S:priv_subcom(gmpi)
+      SUBROUTINE priv_subcom(gmpi)
+!-----------------------------------------------
+!  create a subcom with all members that write on gf_pot and gf_iodop
+!           (last modified: 2004-00-00) D. Wortmann
+!-----------------------------------------------
+      USE m_gf_types
+      IMPLICIT NONE
+      !<--Arguments
+      TYPE(t_gfmpi),INTENT(INOUT) :: gmpi
+      !>
+      !<-- Locals
+      INTEGER             :: iogroupsize,i
+      INTEGER,ALLOCATABLE :: members(:)
+#ifdef CPP_MPI
+      INTEGER             :: WORLD_GROUP,SUB_GROUP,ierr
+      !>
+      !<-- Group of PE that construct the potential
+      iogroupsize = gmpi%k_PEperK
+      ALLOCATE(members(iogroupsize))
+      members = (/(i,i=0,gmpi%k_PEperK-1)/)
+
+
+      CALL MPI_COMM_GROUP (gmpi%fmpi%mpi_comm,WORLD_GROUP,ierr)
       CALL MPI_GROUP_INCL (WORLD_GROUP,iogroupsize,members,             &
-     &                                      SUB_GROUP,ierr)             
-      CALL MPI_COMM_CREATE (MPI_COMM_WORLD,SUB_GROUP,mpi%iodop_SUBCOM   &
-     &     ,ierr)                                                       
-      DEALLOCATE(members) 
-      !>                                                                
-      !<-- Group of PE that work on same layer                          
-      iogroupsize = mpi%isize/mpi%k_PEperK 
-      ALLOCATE(members(iogroupsize)) 
-      members = (/(i,i = 0,mpi%isize-1,mpi%k_PEperK)/) 
-      members = members+MOD(mpi%irank,mpi%k_PEperK) 
-      CALL MPI_GROUP_INCL (WORLD_GROUP,iogroupsize,members,             &
-     &     SUB_GROUP,ierr)                                              
-      CALL MPI_COMM_CREATE (MPI_COMM_WORLD,SUB_GROUP                    &
-     &     ,mpi%samelayer_SUBCOM,ierr)
+     &                                      SUB_GROUP,ierr)
+      CALL MPI_COMM_CREATE (gmpi%fmpi%mpi_comm,SUB_GROUP,               &
+     &     gmpi%iodop_SUBCOM,ierr)
       DEALLOCATE(members)
       !>
-      !<-- Group of PE that work on same k-point
-      !iogroupsize= mpi%k_PEperK
-      !ALLOCATE(members(iogroupsize))
-      !members = (/(i,i=0,mpi%k_PEperK-1)/)
-      !members=members+(mpi%k_PEperK-1)*mpi%k_rank
-      !write(*,"('PE:',i0,':',100(i0,1x))") mpi%irank,members
-      !CALL MPI_GROUP_INCL (WORLD_GROUP,iogroupsize,members,             &
-     !&     SUB_GROUP,ierr)
-      !CALL MPI_COMM_CREATE (MPI_COMM_WORLD,SUB_GROUP                    &
-     !&     ,mpi%samek_SUBCOM,ierr)
-      !DEALLOCATE(members)
-
-      mpi%com_world = MPI_COMM_WORLD 
-      mpi%self_subcom =MPI_COMM_SELF 
-#else                                                                   
-      mpi%self_subcom = 1 
-      mpi%com_world=1 
-      mpi%iodop_subcom=1 
-      mpi%samelayer_subcom = 1 
+      !<-- Group of PE that work on same layer
+      iogroupsize = gmpi%fmpi%isize/gmpi%k_PEperK
+      ALLOCATE(members(iogroupsize))
+      members = (/(i,i = 0,gmpi%fmpi%isize-1,gmpi%k_PEperK)/)
+      members = members+MOD(gmpi%fmpi%irank,gmpi%k_PEperK)
+      CALL MPI_GROUP_INCL (WORLD_GROUP,iogroupsize,members,             &
+     &     SUB_GROUP,ierr)
+      CALL MPI_COMM_CREATE (gmpi%fmpi%mpi_comm,SUB_GROUP               &
+     &     ,gmpi%samelayer_SUBCOM,ierr)
+      DEALLOCATE(members)
+      !>
+      gmpi%self_subcom = MPI_COMM_SELF
+#else
+      gmpi%self_subcom = 1
+      gmpi%iodop_subcom = 1
+      gmpi%samelayer_subcom = 1
 #endif
-      mpi%n_rank=0
-      mpi%n_size=1
-      mpi%n_start=1
-      mpi%n_stride=1
-      mpi%sub_comm=  mpi%self_subcom
+      !configure the embedded standard t_mpi such that FLEUR kernels
+      !called per (layer,k) run without their own eigenvalue
+      !parallelization
+      gmpi%fmpi%n_rank = 0
+      gmpi%fmpi%n_size = 1
+      gmpi%fmpi%sub_comm = gmpi%self_subcom
 
-      END SUBROUTINE 
-      !>                                                                
-                                                                        
-      !<-- S: priv_full(mpi,kpts,layers,n_energies)                     
-      SUBROUTINE PRIV_full(mpi,kpts,layers,n_energies) 
-!-----------------------------------------------                        
-!  full parallelization over kpts+(layers or energies)                  
-!           (last modified: 2004-00-00) D. Wortmann                     
-!-----------------------------------------------                        
-      USE m_gf_types 
-      use m_juDFT 
-      IMPLICIT NONE 
-      !<--Arguments                                                     
-      TYPE(t_kpts),INTENT(IN)   :: kpts 
-      TYPE(t_layers),INTENT(IN) :: layers 
-      TYPE(t_mpi),INTENT(INOUT) :: mpi 
-      INTEGER                   :: n_energies 
-      !>                                                                
-      !<-- Locals                                                       
-      INTEGER             :: ggt,n 
-                                                                        
-      !>                                                                
+      END SUBROUTINE
+      !>
+
+      !<-- S: priv_full(gmpi,kpts,layers,n_energies)
+      SUBROUTINE PRIV_full(gmpi,kpts,layers,n_energies)
+!-----------------------------------------------
+!  full parallelization over kpts+(layers or energies)
+!           (last modified: 2004-00-00) D. Wortmann
+!-----------------------------------------------
+      USE m_gf_types
+      use m_juDFT
+      IMPLICIT NONE
+      !<--Arguments
+      TYPE(t_kpts),INTENT(IN)     :: kpts
+      TYPE(t_layers),INTENT(IN)   :: layers
+      TYPE(t_gfmpi),INTENT(INOUT) :: gmpi
+      INTEGER                     :: n_energies
+      !>
+      !<-- Locals
+      INTEGER             :: ggt,n
+
+      !>
 
       !k-point parallelization
-      ggt = priv_ggt(kpts%nkpts,mpi%isize) 
-                                                                  
-      mpi%k_kperPE = kpts%nkpts/ggt 
-      mpi%k_PEperK = mpi%isize/ggt 
-      
-      ALLOCATE( mpi%k_kpts(mpi%k_kperPE)) 
-      DO n = 1,mpi%k_kperPE 
-         mpi%k_rank =mod(mpi%irank,mpi%k_PEperK) 
-         mpi%k_kpts(n) = n+mpi%k_kperPE*(mpi%irank/mpi%k_PEperK) 
-      ENDDO 
-                                                                        
-                                                                        
-      !additional layer parallelization                                 
-      mpi%kl_LayerPerPE = layers%num_layers/mpi%k_PEperK
+      ggt = priv_ggt(kpts%nkpt,gmpi%fmpi%isize)
 
-      IF (mpi%kl_LayerPerPE == 0) CALL juDFT_error                        &
+      gmpi%k_kperPE = kpts%nkpt/ggt
+      gmpi%k_PEperK = gmpi%fmpi%isize/ggt
+
+      ALLOCATE( gmpi%k_kpts(gmpi%k_kperPE))
+      DO n = 1,gmpi%k_kperPE
+         gmpi%k_rank =mod(gmpi%fmpi%irank,gmpi%k_PEperK)
+         gmpi%k_kpts(n) = n+gmpi%k_kperPE*(gmpi%fmpi%irank/gmpi%k_PEperK)
+      ENDDO
+
+
+      !additional layer parallelization
+      gmpi%kl_LayerPerPE = layers%num_layers/gmpi%k_PEperK
+
+      IF (gmpi%kl_LayerPerPE == 0) CALL juDFT_error                      &
      &     ("Parallelization error 1")
 
-
-      mpi%kl_LayerPerPE = layers%num_layers/mpi%k_PEperK 
-                                                                        
-      IF (mpi%kl_LayerPerPE == 0) CALL juDFT_error                        &
-     &     ("Parallelization error 1")                                  
-                                                                        
-      IF (MOD(layers%num_layers,mpi%k_PEperK)>0)                        &
-     &     mpi%kl_LayerPerPE = mpi%kl_LayerPerPE+1                      
-      IF (mpi%k_rank == mpi%k_PEperK-1) THEN 
-         mpi%kl_LayerPerPE = layers%num_layers-mpi%kl_LayerPerPE        &
-     &        *mpi%k_rank                                               
-         ALLOCATE(mpi%kl_layers(mpi%kl_LayerPerPE)) 
-         DO n = 1,mpi%kl_LayerPerPE 
-            mpi%kl_layers(n) = layers%num_layers-mpi%kl_LayerPerPE+n 
-         ENDDO 
-      ELSE 
-         ALLOCATE(mpi%kl_layers(mpi%kl_LayerPerPE)) 
-         DO n = 1,mpi%kl_LayerPerPE 
-            mpi%kl_layers(n) = n+mpi%kl_LayerPerPE*mpi%k_rank 
-         ENDDO 
-      ENDIF 
-                                                                        
-      !additional energy parallelization                                
-                                                                        
-      mpi%ke_ENPerPE = n_energies/mpi%k_PEperK 
-                                                                        
-      IF (mpi%ke_EnPerPE == 0) THEN
-         WRITE(*,"('PE:',i3,' Energies:',i8,' PE/kpt:',i8):")         &
-            mpi%irank,n_energies,mpi%k_PEperK
-         CALL juDFT_error                           &
-     &     ("Parallelization error 2")                                  
+      IF (MOD(layers%num_layers,gmpi%k_PEperK)>0)                        &
+     &     gmpi%kl_LayerPerPE = gmpi%kl_LayerPerPE+1
+      IF (gmpi%k_rank == gmpi%k_PEperK-1) THEN
+         gmpi%kl_LayerPerPE = layers%num_layers-gmpi%kl_LayerPerPE       &
+     &        *gmpi%k_rank
+         ALLOCATE(gmpi%kl_layers(gmpi%kl_LayerPerPE))
+         DO n = 1,gmpi%kl_LayerPerPE
+            gmpi%kl_layers(n) = layers%num_layers-gmpi%kl_LayerPerPE+n
+         ENDDO
+      ELSE
+         ALLOCATE(gmpi%kl_layers(gmpi%kl_LayerPerPE))
+         DO n = 1,gmpi%kl_LayerPerPE
+            gmpi%kl_layers(n) = n+gmpi%kl_LayerPerPE*gmpi%k_rank
+         ENDDO
       ENDIF
-      IF (MOD(n_energies,mpi%k_PEperK)>0)                               &
-     &     mpi%ke_ENPerPE = mpi%ke_ENPerPE+1                            
-      IF (mpi%k_rank == mpi%k_PEperK-1) THEN 
-         mpi%ke_EnPerPE = n_energies-mpi%ke_EnPerPE                     &
-     &        *mpi%k_rank                                               
-         ALLOCATE(mpi%ke_energies(mpi%ke_EnPerPE)) 
-         DO n = 1,mpi%ke_EnPerPE 
-            mpi%ke_energies(n) = n_energies-mpi%ke_EnPerPE+n 
-         ENDDO 
-      ELSE 
-         ALLOCATE(mpi%ke_energies(mpi%ke_EnPerPE)) 
-         DO n = 1,mpi%ke_ENPerPE 
-            mpi%ke_energies(n) = n+mpi%ke_ENPerPE*mpi%k_rank 
-         ENDDO 
-      ENDIF 
-                                                                        
-                                                                        
-      END SUBROUTINE 
-      !>                                                                
-                                                                        
 
-                                                                        
-      !<-- S: priv_print_info(mpi,nl,nk)                                
-      SUBROUTINE priv_PRINT_info(mpi,nl,nk) 
-!-----------------------------------------------                        
-!  prints the information on parallelization                            
-!           (last modified: 2004-00-00) D. Wortmann                     
-!-----------------------------------------------                        
-      USE m_gf_types 
-      IMPLICIT NONE 
-      !<--Arguments                                                     
-                                      !no of layers, no of kpts         
-      INTEGER,INTENT(IN)     :: nl,nk 
-      TYPE(t_mpi),INTENT(IN) :: mpi 
-      !>                                                                
-      !<-- Locals                                                       
-      INTEGER             :: n 
-      INTEGER             :: info_kpts(nk+1) 
-      INTEGER             :: info_layer(nl+1) 
+      !additional energy parallelization
+
+      gmpi%ke_ENPerPE = n_energies/gmpi%k_PEperK
+
+      IF (gmpi%ke_EnPerPE == 0) THEN
+         WRITE(*,"('PE:',i3,' Energies:',i8,' PE/kpt:',i8):")         &
+            gmpi%fmpi%irank,n_energies,gmpi%k_PEperK
+         CALL juDFT_error                           &
+     &     ("Parallelization error 2")
+      ENDIF
+      IF (MOD(n_energies,gmpi%k_PEperK)>0)                               &
+     &     gmpi%ke_ENPerPE = gmpi%ke_ENPerPE+1
+      IF (gmpi%k_rank == gmpi%k_PEperK-1) THEN
+         gmpi%ke_EnPerPE = n_energies-gmpi%ke_EnPerPE                    &
+     &        *gmpi%k_rank
+         ALLOCATE(gmpi%ke_energies(gmpi%ke_EnPerPE))
+         DO n = 1,gmpi%ke_EnPerPE
+            gmpi%ke_energies(n) = n_energies-gmpi%ke_EnPerPE+n
+         ENDDO
+      ELSE
+         ALLOCATE(gmpi%ke_energies(gmpi%ke_EnPerPE))
+         DO n = 1,gmpi%ke_ENPerPE
+            gmpi%ke_energies(n) = n+gmpi%ke_ENPerPE*gmpi%k_rank
+         ENDDO
+      ENDIF
+
+
+      END SUBROUTINE
+      !>
+
+
+
+      !<-- S: priv_print_info(gmpi,nl,nk)
+      SUBROUTINE priv_PRINT_info(gmpi,nl,nk)
+!-----------------------------------------------
+!  prints the information on parallelization
+!           (last modified: 2004-00-00) D. Wortmann
+!-----------------------------------------------
+      USE m_gf_types
+      USE m_constants, ONLY: oUnit
+      IMPLICIT NONE
+      !<--Arguments
+                                      !no of layers, no of kpts
+      INTEGER,INTENT(IN)     :: nl,nk
+      TYPE(t_gfmpi),INTENT(IN) :: gmpi
+      !>
+      !<-- Locals
+      INTEGER             :: n
+      INTEGER             :: info_kpts(nk+1)
+      INTEGER             :: info_layer(nl+1)
       INTEGER             :: info_com(2)
-#ifdef CPP_MPI                                                          
-      INCLUDE 'mpif.h' 
-                                    !MPI error+status                   
-      INTEGER::e,s(MPI_STATUS_SIZE) 
-                                                                        
-      !>                                                                
-      !info on kpts for this PE                                         
-      info_kpts=0 
-      info_kpts(1) = mpi%k_kperPE 
-      info_kpts(2:mpi%k_kperPE+1) = mpi%k_kpts(1:mpi%k_kperPE) 
-      !info on layers in second parallelization                         
-      info_layer=0 
-      info_layer(1) = mpi%kl_layerperpe 
-      info_layer(2:mpi%kl_layerperpe+1) =                               &
-     &     mpi%kl_layers(:mpi%kl_layerperpe)                            
-       info_com=(/mpi%iodop_subcom,mpi%samelayer_subcom/)
+#ifdef CPP_MPI
+                                    !MPI error+status
+      INTEGER::e,s(MPI_STATUS_SIZE)
 
-                                                                        
-      WRITE(6,*) 
-      WRITE(6,*) "Parallelization setup:" 
-      IF (mpi%irank >0) THEN 
+      !>
+      !info on kpts for this PE
+      info_kpts=0
+      info_kpts(1) = gmpi%k_kperPE
+      info_kpts(2:gmpi%k_kperPE+1) = gmpi%k_kpts(1:gmpi%k_kperPE)
+      !info on layers in second parallelization
+      info_layer=0
+      info_layer(1) = gmpi%kl_layerperpe
+      info_layer(2:gmpi%kl_layerperpe+1) =                               &
+     &     gmpi%kl_layers(:gmpi%kl_layerperpe)
+       info_com=(/gmpi%iodop_subcom,gmpi%samelayer_subcom/)
+
+
+      WRITE(oUnit,*)
+      WRITE(oUnit,*) "Parallelization setup:"
+      IF (gmpi%fmpi%irank >0) THEN
          CALL MPI_SEND(info_kpts,SIZE(info_kpts),                       &
-     &        MPI_INTEGER,0,11,MPI_COMM_WORLD,E)                        
+     &        MPI_INTEGER,0,11,gmpi%fmpi%mpi_comm,E)
          CALL MPI_SEND(info_layer,SIZE(info_layer),                     &
-     &        MPI_INTEGER,0,22,MPI_COMM_WORLD,E)
+     &        MPI_INTEGER,0,22,gmpi%fmpi%mpi_comm,E)
          CALL MPI_SEND(info_com,SIZE(info_com),                     &
-     &        MPI_INTEGER,0,33,MPI_COMM_WORLD,E)
-      ELSE 
-         DO n = 0,mpi%isize-1 
-            IF (n>0) THEN 
+     &        MPI_INTEGER,0,33,gmpi%fmpi%mpi_comm,E)
+      ELSE
+         DO n = 0,gmpi%fmpi%isize-1
+            IF (n>0) THEN
                CALL MPI_RECV(info_kpts,SIZE(info_kpts),                 &
-     &              MPI_INTEGER,n,11,MPI_COMM_WORLD,s,E)                
+     &              MPI_INTEGER,n,11,gmpi%fmpi%mpi_comm,s,E)
                CALL MPI_RECV(info_layer,SIZE(info_layer),               &
-     &              MPI_INTEGER,n,22,MPI_COMM_WORLD,s,E)                
+     &              MPI_INTEGER,n,22,gmpi%fmpi%mpi_comm,s,E)
                CALL MPI_RECV(info_com,SIZE(info_com),               &
-     &              MPI_INTEGER,n,33,MPI_COMM_WORLD,s,E)
-                                                                        
-            ENDIF 
-            WRITE(6,"('For PE:',i6)") n 
-            WRITE(6,"('Kpts  :',100(i0,1x))")                           &
-     &           info_kpts(2:info_kpts(1)+1)                            
-            WRITE(6,"('Layers:',100(i0,1x))")                           &
-     &           info_layer(2:info_layer(1)+1)                          
-            write(6,"('Subcoms: iodop=',i0,'  samelayer=',i0)")info_com
-         ENDDO 
-      ENDIF 
-      CALL MPI_Barrier(   MPI_COMM_WORLD,E) 
-#endif                                                                  
+     &              MPI_INTEGER,n,33,gmpi%fmpi%mpi_comm,s,E)
 
-      END SUBROUTINE 
-      !>                                                                
+            ENDIF
+            WRITE(oUnit,"('For PE:',i6)") n
+            WRITE(oUnit,"('Kpts  :',100(i0,1x))")                       &
+     &           info_kpts(2:info_kpts(1)+1)
+            WRITE(oUnit,"('Layers:',100(i0,1x))")                       &
+     &           info_layer(2:info_layer(1)+1)
+            write(oUnit,"('Subcoms: iodop=',i0,'  samelayer=',i0)")     &
+     &           info_com
+         ENDDO
+      ENDIF
+      CALL MPI_Barrier(gmpi%fmpi%mpi_comm,E)
+#endif
+
+      END SUBROUTINE
+      !>
 #endif
      !<-- F: priv_ggt(n1,n2)
       PURE FUNCTION priv_ggt(n1,n2)
@@ -334,7 +313,6 @@
       !                     if isize>loop each loop-element is done by one or more PE
       use m_juDFT
       IMPLICIT NONE
-      include 'mpif.h'
       INTEGER,INTENT(IN)               ::com,loopsize,strategy
       INTEGER,ALLOCATABLE,INTENT(OUT)  ::local_elements(:)
       INTEGER,INTENT(OUT)              ::subcom
@@ -391,7 +369,6 @@
 #ifdef CPP_TEST
        subroutine priv_plot_comm(com1,com2)
        implicit none
-       include 'mpif.h'
        integer,intent(in)::com1,com2
        integer           ::rank1,rank2,size2,g1,g2,e
        integer,allocatable::r1(:),r2(:)
@@ -413,13 +390,15 @@
 
 #endif
 
-                                                                        
+
       END
 
 #ifdef CPP_TEST
 program test
 use m_gf_mpi_groups
-include 'mpif.h'
+#ifdef CPP_MPI
+use mpi
+#endif
 
 INTEGER :: loopsize
 
