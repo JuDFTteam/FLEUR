@@ -1,487 +1,351 @@
 !--------------------------------------------------------------------------------
 ! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
-! This file is part of FLEUR and available as free software under the conditions 
+! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
-      MODULE m_gf_fft 
+      MODULE m_gf_fft
       use m_juDFT
-      use m_juDFT 
       IMPLICIT NONE
-!*****************************************************************      
-!     Easy to use interfaces for fft subroutines                        
-!     The FLEUR cfft subroutines are not used anymore but instead       
-!     the newer f90 fft routines from the module included in this file  
-!     Daniel Wortmann, Thu Oct 16 10:33:01 2003                         
-!*****************************************************************      
-      PRIVATE 
+!*****************************************************************
+!     Easy to use interfaces for fft subroutines.
+!     In the port to current FLEUR the star<->grid mappings moved
+!     from the old igfft/pgfft arrays to the standard machinery
+!     (m_fft3d / t_fftGrid), which handles modern t_stars directly.
+!     Only the partial transform (gf_fft23d), the small-grid 2D
+!     transform and the private cfft engine remain local.
+!     Daniel Wortmann, Thu Oct 16 10:33:01 2003
+!*****************************************************************
+      PRIVATE
       INTEGER,PARAMETER ::GF_FFT_TO_G_SPACE=-1                          &
-     &     ,GF_FFT_TO_REAL_SPACE=1                                      
-      INTERFACE gf_fft3d 
-      MODULE PROCEDURE gf_fft3dc,gf_fft3dr 
-      END INTERFACE 
-      INTERFACE gf_fft2d 
-      MODULE PROCEDURE gf_fft2dr,gf_fft2dc 
-      END INTERFACE 
+     &     ,GF_FFT_TO_REAL_SPACE=1
+      INTERFACE gf_fft3d
+      MODULE PROCEDURE gf_fft3dc,gf_fft3dr
+      END INTERFACE
+      INTERFACE gf_fft2d
+      MODULE PROCEDURE gf_fft2dr,gf_fft2dc
+      END INTERFACE
       PUBLIC  gf_fft2d,gf_fft3d,GF_FFT_TO_G_SPACE,GF_FFT_TO_REAL_SPACE  &
-     &     ,gf_fft23d,gf_fft2d_small,gf_convol,cfft                     
-      CONTAINS 
-      !<--S:gf_fft3dr(r,g,stars,dir)                                    
-                                                                        
-      SUBROUTINE gf_fft3dr(r,g,stars,dir) 
-!******************************************                             
-!     real to complex fft                                               
-!                          D. Wortmann                                  
-!******************************************                             
-      USE m_gf_types 
-      IMPLICIT NONE 
-      !<--Arguments                                                     
-      REAL                     :: r(:) 
-      COMPLEX,INTENT(INOUT)    :: g(:) 
-      TYPE(t_stars),INTENT(IN) :: stars 
-      INTEGER,INTENT(IN)       :: dir 
-      !>                                                                
-      !<--Locals                                                        
-                                                                        
-      REAL ::ri(0:SIZE(r)-1,2) 
-      INTEGER :: ifftd,i 
-                                                                        
-      !>                                                                
-      !<-- Tests                                                        
+     &     ,gf_fft23d,gf_fft2d_small,gf_convol,cfft
+      CONTAINS
+      !<--S:gf_fft3dr(r,g,stars,dir)
 
+      SUBROUTINE gf_fft3dr(r,g,stars,dir)
+!******************************************
+!     real to complex fft
+!     (delegates to the standard FLEUR fft3d)
+!                          D. Wortmann
+!******************************************
+      USE m_gf_types
+      USE m_fft3d
+      IMPLICIT NONE
+      !<--Arguments
+      REAL                     :: r(:)
+      COMPLEX,INTENT(INOUT)    :: g(:)
+      TYPE(t_stars),INTENT(IN) :: stars
+      INTEGER,INTENT(IN)       :: dir
+      !>
+      !<--Locals
+      REAL :: afft(SIZE(r)),bfft(SIZE(r))
+      !>
+      !<-- Tests
       IF(SIZE(r)/=27*stars%mx1*stars%mx2*stars%mx3) CALL juDFT_error      &
-     &     ('Dimension of real-mesh wrong in gf_fft3dr')                
-      IF(SIZE(g)/=stars%nq3) CALL juDFT_error                           &
-     &     ('Dimension of star-array wrong in gf_fft3dr')               
+     &     ('Dimension of real-mesh wrong in gf_fft3dr')
+      IF(SIZE(g)/=stars%ng3) CALL juDFT_error                           &
+     &     ('Dimension of star-array wrong in gf_fft3dr')
       IF(abs(dir)/=1)  CALL juDFT_error                                 &
-     &     ('Invalid direction specified in gf_fft3dr')                 
+     &     ('Invalid direction specified in gf_fft3dr')
+      !>
+      IF (dir==GF_FFT_TO_REAL_SPACE) THEN
+         CALL fft3d(afft,bfft,g,stars,+1)
+         r = afft
+      ELSE
+         afft = r
+         bfft = 0.0
+         CALL fft3d(afft,bfft,g,stars,-1)
+      ENDIF
+      END SUBROUTINE
 
-      !>                                                                
-      ifftd    = 27*stars%mx1*stars%mx2*stars%mx3 
-                                                                        
-                                                                        
-      IF(dir==GF_FFT_TO_G_SPACE) THEN 
-         ri(:,1)=r 
-         ri(:,2)=0 
-      ELSE 
-         !<-- put stars onto the fft-grid                               
-         ri=0.0 
-         DO i = 0,stars%kimax-1 
-          ri(stars%igfft(i,2),1)=real(g(stars%igfft(i,1)))*             &
-     &                                   stars%pgfft(i)                 
-          ri(stars%igfft(i,2),2)=aimag(g(stars%igfft(i,1)))*            &
-     &                                   stars%pgfft(i)                 
-        ENDDO 
-        !>                                                              
-      ENDIF 
-                                                                        
-      !<--now do the fft (dir=+1 : G -> r ; dir=-1 : r -> G)            
-                                                                        
-      CALL cfft(ri(:,1),ri(:,2),ifftd,3*stars%mx1,3*stars%mx1,dir) 
-      CALL cfft(ri(:,1),ri(:,2),ifftd,3*stars%mx2,9*stars%mx1*stars%mx2 &
-     &     ,dir)                                                        
-      CALL cfft(ri(:,1),ri(:,2),ifftd,3*stars%mx3,ifftd,dir) 
-                                                                        
-      !>                                                                
-      IF (dir==GF_FFT_TO_G_SPACE) THEN 
-                                                                        
-         !<-- collect stars from the fft-grid                           
-                                                                        
-         g = CMPLX(0.0,0.0) 
-         DO i = 0,stars%kimax-1 
-            g(stars%igfft(i,1)) = g(stars%igfft(i,1))+stars%pgfft(i)*   &
-     &           CMPLX(ri(stars%igfft(i,2),1),ri(stars%igfft(i,2),2))   
-        ENDDO 
-        g = g/stars%nstr/ifftd 
-                                                                        
-        !>                                                              
-      ELSE 
-         r = ri(:,1) 
-      ENDIF 
-      END SUBROUTINE 
-                                                                        
-      !>                                                                
-      !<--S:gf_fft3dc(r,g,stars,dir)                                    
-                                                                        
-      SUBROUTINE gf_fft3dc(r,g,stars,dir) 
-!******************************************                             
-!     COMPLEX to COMPLEX fft-code                                       
-!     code addaped from fft3d of fleur                                  
-!     D. Wortmann                                                       
-!******************************************                             
-      USE m_gf_types 
-      IMPLICIT NONE 
-      !<--Arguments                                                     
-      COMPLEX,INTENT(INOUT)    :: r(:) 
-      COMPLEX,INTENT(INOUT)    :: g(:) 
-      TYPE(t_stars),INTENT(IN) :: stars 
-      INTEGER,INTENT(IN)       :: dir 
-      !>                                                                
-      !<--Locals                                                        
-                                                                        
-      REAL    :: ri(0:SIZE(r)-1,2) 
-      INTEGER :: ifftd,i 
-                                                                        
-      !>                                                                
-      !<-- Tests                                                        
+      !>
+      !<--S:gf_fft3dc(r,g,stars,dir)
 
+      SUBROUTINE gf_fft3dc(r,g,stars,dir)
+!******************************************
+!     COMPLEX to COMPLEX fft-code
+!     (delegates to the standard FLEUR fft3d)
+!     D. Wortmann
+!******************************************
+      USE m_gf_types
+      USE m_fft3d
+      IMPLICIT NONE
+      !<--Arguments
+      COMPLEX,INTENT(INOUT)    :: r(:)
+      COMPLEX,INTENT(INOUT)    :: g(:)
+      TYPE(t_stars),INTENT(IN) :: stars
+      INTEGER,INTENT(IN)       :: dir
+      !>
+      !<--Locals
+      REAL :: afft(SIZE(r)),bfft(SIZE(r))
+      !>
+      !<-- Tests
       IF(SIZE(r) /= 27*stars%mx1*stars%mx2*stars%mx3) CALL juDFT_error(   &
-     &     'Dimension of real-mesh wrong in gf_fft3dc')                 
-      IF(SIZE(g) /= stars%nq3) CALL juDFT_error(                          &
-     &     'Dimension of star-array wrong in gf_fft3dc')                
+     &     'Dimension of real-mesh wrong in gf_fft3dc')
+      IF(SIZE(g) /= stars%ng3) CALL juDFT_error(                          &
+     &     'Dimension of star-array wrong in gf_fft3dc')
       IF(abs(dir) /= 1) CALL juDFT_error(                                 &
-     &     'Invalid direction specified in gf_fft3dc')                  
+     &     'Invalid direction specified in gf_fft3dc')
+      !>
+      IF (dir==GF_FFT_TO_REAL_SPACE) THEN
+         CALL fft3d(afft,bfft,g,stars,+1)
+         r = CMPLX(afft,bfft)
+      ELSE
+         afft = REAL(r)
+         bfft = AIMAG(r)
+         CALL fft3d(afft,bfft,g,stars,-1)
+      ENDIF
 
-      !>                                                                
-      ifftd = 27*stars%mx1*stars%mx2*stars%mx3 
-                                                                        
-                                                                        
-      IF(dir==GF_FFT_TO_G_SPACE) THEN 
-         ri(:,1)=REAL(r) 
-         ri(:,2)=AIMAG(r) 
-      ELSE 
-         !<-- put stars onto the fft-grid                               
-         ri=0.0 
-         DO i = 0,stars%kimax-1 
-          ri(stars%igfft(i,2),1)=real(g(stars%igfft(i,1)))*             &
-     &                                   stars%pgfft(i)                 
-          ri(stars%igfft(i,2),2)=aimag(g(stars%igfft(i,1)))*            &
-     &                                   stars%pgfft(i)                 
-        ENDDO 
-        !>                                                              
-      ENDIF 
-                                                                        
-      !<--now do the fft (dir=+1 : G -> r ; dir=-1 : r -> G)            
-                                                                        
-      CALL cfft(ri(:,1),ri(:,2),ifftd,3*stars%mx1,3*stars%mx1,dir) 
-      CALL cfft(ri(:,1),ri(:,2),ifftd,3*stars%mx2,9*stars%mx1*stars%mx2 &
-     &     ,dir)                                                        
-      CALL cfft(ri(:,1),ri(:,2),ifftd,3*stars%mx3,ifftd,dir) 
-                                                                        
-      !>                                                                
-      IF (dir==GF_FFT_TO_G_SPACE) THEN 
-                                                                        
-         !<-- collect stars from the fft-grid                           
-         g = CMPLX(0.0,0.0) 
-         DO i = 0,stars%kimax-1 
-            g(stars%igfft(i,1)) = g(stars%igfft(i,1))+stars%pgfft(i)*   &
-     &           CMPLX(ri(stars%igfft(i,2),1),ri(stars%igfft(i,2),2))   
-        ENDDO 
-        g = g/stars%nstr/ifftd 
-        !>                                                              
-      ELSE 
-         r = CMPLX(ri(:,1),ri(:,2)) 
-      ENDIF 
-                                                                        
-      END SUBROUTINE 
-                                                                        
-      !>                                                                
-                                                                        
-      !<--S:gf_fft23d(r,g,stars)                                        
-                                                                        
-      SUBROUTINE gf_fft23d(r,g,stars) 
-!******************************************                             
-!     COMPLEX to COMPLEX fft,                                           
-!     only the x und y components are                                   
-!     transformed to real space!                                        
-!     D. Wortmann                                                       
-!******************************************                             
-      USE m_gf_fft_singleton,ONLY:fft 
-      USE m_gf_types 
-      IMPLICIT NONE 
-      !<-- Arguments                                                    
-      COMPLEX,INTENT(INOUT) :: r(:) 
-      COMPLEX,INTENT(INOUT)    :: g(:) 
-      TYPE(t_stars),INTENT(IN) :: stars 
-      !>                                                                
-      !<-- Locals                                                       
-      COMPLEX   :: ri(0:SIZE(r)-1) 
-      INTEGER ::i 
-      !>                                                                
-      !<-- Tests                                                        
+      END SUBROUTINE
 
+      !>
+
+      !<--S:gf_fft23d(r,g,stars)
+
+      SUBROUTINE gf_fft23d(r,g,stars)
+!******************************************
+!     COMPLEX to COMPLEX fft,
+!     only the x und y components are
+!     transformed to real space!
+!     D. Wortmann
+!******************************************
+      USE m_gf_fft_singleton,ONLY:fft
+      USE m_gf_types
+      USE m_types_fftGrid
+      IMPLICIT NONE
+      !<-- Arguments
+      COMPLEX,INTENT(INOUT) :: r(:)
+      COMPLEX,INTENT(INOUT)    :: g(:)
+      TYPE(t_stars),INTENT(IN) :: stars
+      !>
+      !<-- Locals
+      TYPE(t_fftGrid) :: fftgrid
+      !>
+      !<-- Tests
       IF(SIZE(r) /= 27*stars%mx1*stars%mx2*stars%mx3) CALL juDFT_error(   &
-     &     'Dimension of real-mesh wrong in gf_fft3dc')                 
-      IF(SIZE(g) /= stars%nq3) CALL juDFT_error(                          &
-     &     'Dimension of star-array wrong in gf_fft3dc')                
+     &     'Dimension of real-mesh wrong in gf_fft23d')
+      IF(SIZE(g) /= stars%ng3) CALL juDFT_error(                          &
+     &     'Dimension of star-array wrong in gf_fft23d')
+      !>
+      CALL fftgrid%init((/3*stars%mx1,3*stars%mx2,3*stars%mx3/))
+      CALL fftgrid%putFieldOnGrid(stars,g)
 
-      !>                                                                
-      ri=0.0 
-      DO i=0,stars%kimax-1 
-         ri(stars%igfft(i,2))=g(stars%igfft(i,1))*stars%pgfft(i) 
-      ENDDO 
-                                                                        
-      r = reshape(fft(reshape(ri,(/3*stars%mx1,3*stars%mx2,3*stars%mx3/)&
-     &     ),(/1,2/)),(/size(r)/))                                      
-      END SUBROUTINE 
-                                                                        
-      !>                                                                
-                                                                        
-      !<--S:gf_fft2dr(r,g,stars,dir)                                    
-                                                                        
-      SUBROUTINE gf_fft2dr(r,g,stars,dir) 
-!******************************************                             
-!     real to complex fft                                               
-!                          D. Wortmann                                  
-!******************************************                             
-      USE m_gf_types 
-      IMPLICIT NONE 
-      !<--Arguments                                                     
-      REAL   ,INTENT(INOUT)    :: r(:) 
-      COMPLEX,INTENT(INOUT)    :: g(:) 
-      TYPE(t_stars),INTENT(IN) :: stars 
-      INTEGER,INTENT(IN)       :: dir 
-      !>                                                                
-      !<--Locals                                                        
-      REAL    ::ri(0:SIZE(r)-1,2) 
-      INTEGER :: i 
-      !>                                                                
-      !<-- Tests                                                        
+      r = reshape(fft(reshape(fftgrid%grid,(/3*stars%mx1,3*stars%mx2,   &
+     &     3*stars%mx3/)),(/1,2/)),(/size(r)/))
+      END SUBROUTINE
 
+      !>
+
+      !<--S:gf_fft2dr(r,g,stars,dir)
+
+      SUBROUTINE gf_fft2dr(r,g,stars,dir)
+!******************************************
+!     real to complex 2D fft on the 2D stars
+!                          D. Wortmann
+!******************************************
+      USE m_gf_types
+      USE m_types_fftGrid
+      IMPLICIT NONE
+      !<--Arguments
+      REAL                     :: r(:)
+      COMPLEX,INTENT(INOUT)    :: g(:)
+      TYPE(t_stars),INTENT(IN) :: stars
+      INTEGER,INTENT(IN)       :: dir
+      !>
+      !<--Locals
+      TYPE(t_fftGrid) :: fftgrid
+      !>
+      !<-- Tests
       IF(SIZE(r) /= 9*stars%mx1*stars%mx2) CALL juDFT_error(              &
-     &     'Dimension of real-mesh wrong in gf_fft2dr')                 
-      IF(SIZE(g)/=stars%nq2) CALL juDFT_error(                            &
-     &     'Dimension of star-array wrong in gf_fft2dr')                
-      IF(abs(dir)/=1) CALL juDFT_error(                                 &
-     &     'Invalid direction specified in gf_fft2dr')                  
+     &     'Dimension of real-mesh wrong in gf_fft2dr')
+      IF(SIZE(g)/=stars%ng2) CALL juDFT_error(                            &
+     &     'Dimension of star-array wrong in gf_fft2dr')
+      IF(abs(dir)/=1)  CALL juDFT_error(                                 &
+     &     'Invalid direction specified in gf_fft2dr')
+      !>
+      CALL fftgrid%init((/3*stars%mx1,3*stars%mx2,1/))
+      IF (dir==GF_FFT_TO_REAL_SPACE) THEN
+         CALL fftgrid%putFieldOnGrid(stars,g,l_2D=.TRUE.)
+         CALL fftgrid%perform_fft(forward=.FALSE.)
+         r = REAL(fftgrid%grid)
+      ELSE
+         fftgrid%grid = CMPLX(r,0.0)
+         CALL fftgrid%perform_fft(forward=.TRUE.)
+         CALL fftgrid%takeFieldFromGrid(stars,g,l_2d=.TRUE.)
+      ENDIF
+      END SUBROUTINE
 
-      !>                                                                
-!                                                                       
-      IF (dir==GF_FFT_TO_REAL_SPACE) THEN 
-         !<-- put stars onto the fft-grid                               
-         ri = 0.0 
-         DO i = 0,stars%kimax2-1 
-            ri(stars%igfft2(i,2),1) = REAL(g(stars%igfft2(i,1)))*       &
-     &           stars%pgfft2(i)                                        
-            ri(stars%igfft2(i,2),2) = AIMAG(g(stars%igfft2(i,1)))*      &
-     &           stars%pgfft2(i)                                        
-         ENDDO 
-         !>                                                             
-      ELSE 
-         ri(:,1) = r 
-      ENDIF 
-                                                                        
-      !<--now do the fft (dir =+1 : G -> r ; dir =-1 : r -> G)          
-                                                                        
-      CALL cfft(ri(:,1),ri(:,2),9*stars%mx1*stars%mx2,3*stars%mx1,3     &
-     &     *stars%mx1,dir)                                              
-      CALL cfft(ri(:,1),ri(:,2),9*stars%mx1*stars%mx2,3*stars%mx2,9     &
-     &     *stars%mx1*stars%mx2,dir)                                    
-                                                                        
-      !>                                                                
-      IF (dir == GF_FFT_TO_G_SPACE) THEN 
-         !<-- collect stars from the fft-grid                           
-         g =  CMPLX(0.0,0.0) 
-         DO i = 0,stars%kimax2-1 
-            g(stars%igfft2(i,1)) = g(stars%igfft2(i,1))+stars%pgfft2(i)*&
-     &           CMPLX(ri(stars%igfft2(i,2),1),ri(stars%igfft2(i,2),2)) 
-         ENDDO 
-         g = g/stars%nstr2/9/stars%mx1/stars%mx2 
-         !>                                                             
-      ELSE 
-         r = ri(:,1) 
-      ENDIF 
-      END SUBROUTINE 
-                                                                        
-      !>                                                                
-      !<-- S:gf_fft2dc(r,g,stars,dir)                                   
-                                                                        
-      SUBROUTINE gf_fft2dc(r,g,stars,dir) 
-!******************************************                             
-!     real to complex fft                                               
-!                          D. Wortmann                                  
-!******************************************                             
-      USE m_gf_types 
-      IMPLICIT NONE 
-      !<--Arguments                                                     
-      COMPLEX,INTENT(INOUT)    :: r(:) 
-      COMPLEX,INTENT(INOUT)    :: g(:) 
-      TYPE(t_stars),INTENT(IN) :: stars 
-      INTEGER,INTENT(IN)       :: dir 
-      !>                                                                
-      !<--Locals                                                        
-      REAL ::ri(0:SIZE(r)-1,2) 
-      INTEGER :: i 
-      !>                                                                
-                                                                        
-      !<--Tests                                                         
+      !>
 
+      !<--S:gf_fft2dc(r,g,stars,dir)
+
+      SUBROUTINE gf_fft2dc(r,g,stars,dir)
+!******************************************
+!     complex to complex 2D fft on the 2D stars
+!                          D. Wortmann
+!******************************************
+      USE m_gf_types
+      USE m_types_fftGrid
+      IMPLICIT NONE
+      !<--Arguments
+      COMPLEX,INTENT(INOUT)    :: r(:)
+      COMPLEX,INTENT(INOUT)    :: g(:)
+      TYPE(t_stars),INTENT(IN) :: stars
+      INTEGER,INTENT(IN)       :: dir
+      !>
+      !<--Locals
+      TYPE(t_fftGrid) :: fftgrid
+      !>
+      !<-- Tests
       IF(SIZE(r)/=9*stars%mx1*stars%mx2) CALL juDFT_error(              &
-     &     'Dimension of real-mesh wrong in gf_fft2dc')                 
-      IF(SIZE(g)/=stars%nq2) CALL juDFT_error(                          &
-     &     'Dimension of star-array wrong in gf_fft2dc')                
-      IF(abs(dir)/=1) CALL juDFT_error(                                 &
-     &     'Invalid direction specified in gf_fft2dc')                  
+     &     'Dimension of real-mesh wrong in gf_fft2dc')
+      IF(SIZE(g)/=stars%ng2) CALL juDFT_error(                          &
+     &     'Dimension of star-array wrong in gf_fft2dc')
+      IF(abs(dir)/=1)  CALL juDFT_error(                                 &
+     &     'Invalid direction specified in gf_fft2dc')
+      !>
+      CALL fftgrid%init((/3*stars%mx1,3*stars%mx2,1/))
+      IF (dir==GF_FFT_TO_REAL_SPACE) THEN
+         CALL fftgrid%putFieldOnGrid(stars,g,l_2D=.TRUE.)
+         CALL fftgrid%perform_fft(forward=.FALSE.)
+         r = fftgrid%grid
+      ELSE
+         fftgrid%grid = r
+         CALL fftgrid%perform_fft(forward=.TRUE.)
+         CALL fftgrid%takeFieldFromGrid(stars,g,l_2d=.TRUE.)
+      ENDIF
 
-      !>                                                                
-                                                                        
-      !<-- Tests                                                        
+      END SUBROUTINE
 
-      IF(SIZE(r) /= 9*stars%mx1*stars%mx2) CALL juDFT_error(              &
-     &     'Dimension of real-mesh wrong in gf_fft2dr')                 
-      IF(SIZE(g)/=stars%nq2) CALL juDFT_error(                            &
-     &     'Dimension of star-array wrong in gf_fft2dr')                
-      IF(abs(dir)/=1) CALL juDFT_error(                                 &
-     &     'Invalid direction specified in gf_fft2dr')                  
+      !>
 
-      !>                                                                
-!                                                                       
-      IF (dir==GF_FFT_TO_REAL_SPACE) THEN 
-         !<-- put stars onto the fft-grid                               
-         ri = 0.0 
-         DO i = 0,stars%kimax2-1 
-            ri(stars%igfft2(i,2),1) = REAL(g(stars%igfft2(i,1)))*       &
-     &           stars%pgfft2(i)                                        
-            ri(stars%igfft2(i,2),2) = AIMAG(g(stars%igfft2(i,1)))*      &
-     &           stars%pgfft2(i)                                        
-         ENDDO 
-         !>                                                             
-      ELSE 
-         ri(:,1) = REAL(r) 
-         ri(:,2) = AIMAG(r) 
-      ENDIF 
-                                                                        
-      !<--now do the fft (dir =+1 : G -> r ; dir =-1 : r -> G)          
-                                                                        
-      CALL cfft(ri(:,1),ri(:,2),9*stars%mx1*stars%mx2,3*stars%mx1,3     &
-     &     *stars%mx1,dir)                                              
-      CALL cfft(ri(:,1),ri(:,2),9*stars%mx1*stars%mx2,3*stars%mx2,9     &
-     &     *stars%mx1*stars%mx2,dir)                                    
-                                                                        
-      !>                                                                
-      IF (dir == GF_FFT_TO_G_SPACE) THEN 
-         !<-- collect stars from the fft-grid                           
-         g =  CMPLX(0.0,0.0) 
-         DO i = 0,stars%kimax2-1 
-            g(stars%igfft2(i,1)) = g(stars%igfft2(i,1))+stars%pgfft2(i)*&
-     &           CMPLX(ri(stars%igfft2(i,2),1),ri(stars%igfft2(i,2),2)) 
-         ENDDO 
-         g = g/stars%nstr2/9/stars%mx1/stars%mx2 
-         !>                                                             
-      ELSE 
-         r = CMPLX(ri(:,1),ri(:,2)) 
-      ENDIF 
-      END SUBROUTINE 
-                                                                        
-      !>                                                                
-                                                                        
-      !<-- S:gf_fft2d_small(r,g,stars,dir)                              
+      !<-- S:gf_fft2d_small(r,g,stars,dir)
 
-      SUBROUTINE gf_fft2d_small(r,g,stars,dir) 
-!-----------------------------------------------                        
-!     complex to complex FFT with small real-space grid                 
-!           (last modified: 2004-00-00) D. Wortmann                     
-!-----------------------------------------------                        
-      USE m_gf_types 
-      IMPLICIT NONE 
-      !<--Arguments                                                     
-      COMPLEX,INTENT(INOUT)    :: r(:) 
-      COMPLEX,INTENT(INOUT)    :: g(:) 
-      TYPE(t_stars),INTENT(IN) :: stars 
-      INTEGER,INTENT(IN)       :: dir 
-      !>                                                                
-      !<--Locals                                                        
-      REAL ::grid(0:SIZE(r)-1,2) 
-      INTEGER :: griddim,x,y,index 
-      !>                                                                
-      griddim = SIZE(r) 
-      IF(dir==GF_FFT_TO_REAL_SPACE) THEN 
-         !Put stars on fft-grid                                         
-         IF (ANY(stars%pgfft<0.0)) CALL juDFT_error("Symmetry problem") 
-         grid=0.0 
-         DO x=0,2*stars%mx1-1 
-            DO y = 0,2*stars%mx2-1 
-               IF (x>stars%mx1) THEN 
-                  IF (y>stars%mx2) THEN 
-                     index = stars%ig(x-2*stars%mx1,y-2*stars%mx2,0) 
-                  ELSE 
-                     index = stars%ig(x-2*stars%mx1,y,0) 
-                  ENDIF 
-               ELSE 
-                  IF (y>stars%mx2) THEN 
-                     index = stars%ig(x,y-2*stars%mx2,0) 
-                  ELSE 
-                     index = stars%ig(x,y,0) 
-                  ENDIF 
-               ENDIF 
-               IF (index<1) CYCLE 
-               index = stars%ig2(index) 
-               grid(x+2*stars%mx1*y,1) = REAL(g(index)) 
-               grid(x+2*stars%mx1*y,2) = AIMAG(g(index)) 
-            ENDDO 
-         ENDDO 
-      ELSE 
-         grid(0:,1) = REAL(r) 
-         grid(0:,2) = AIMAG(r) 
-      ENDIF 
-                                                                        
-                                                                        
-      CALL cfft(grid(:,1),grid(:,2),griddim,2*stars%mx1,2*stars%mx1,dir) 
-      CALL cfft(grid(:,1),grid(:,2),griddim,2*stars%mx2,griddim,dir) 
-                                                                        
-      IF(dir==GF_FFT_TO_G_SPACE) THEN 
-         !Collect stars                                                 
-         g = 0.0 
-         DO x = 0,2*stars%mx1-1 
-            DO y = 0,2*stars%mx2-1 
-               IF (x>stars%mx1) THEN 
-                  IF (y>stars%mx2) THEN 
-                     index = stars%ig(x-2*stars%mx1,y-2*stars%mx2,0) 
-                  ELSE 
-                     index = stars%ig(x-2*stars%mx1,y,0) 
-                  ENDIF 
-               ELSE 
-                  IF (y>stars%mx2) THEN 
-                     index = stars%ig(x,y-2*stars%mx2,0) 
-                  ELSE 
-                     index = stars%ig(x,y,0) 
-                  ENDIF 
-               ENDIF 
-               IF (index<1) CYCLE 
-               index = stars%ig2(index) 
-                                                                        
+      SUBROUTINE gf_fft2d_small(r,g,stars,dir)
+!-----------------------------------------------
+!     complex to complex FFT with small real-space grid
+!           (last modified: 2004-00-00) D. Wortmann
+!-----------------------------------------------
+      USE m_gf_types
+      IMPLICIT NONE
+      !<--Arguments
+      COMPLEX,INTENT(INOUT)    :: r(:)
+      COMPLEX,INTENT(INOUT)    :: g(:)
+      TYPE(t_stars),INTENT(IN) :: stars
+      INTEGER,INTENT(IN)       :: dir
+      !>
+      !<--Locals
+      REAL ::grid(0:SIZE(r)-1,2)
+      INTEGER :: griddim,x,y,index
+      !>
+      griddim = SIZE(r)
+      IF(dir==GF_FFT_TO_REAL_SPACE) THEN
+         !Put stars on fft-grid
+         !this small-grid transform assumes trivial star phases
+         IF (ANY(ABS(stars%rgphs-CMPLX(1.0,0.0))>1.0E-8))               &
+     &        CALL juDFT_error("Symmetry problem")
+         grid=0.0
+         DO x=0,2*stars%mx1-1
+            DO y = 0,2*stars%mx2-1
+               IF (x>stars%mx1) THEN
+                  IF (y>stars%mx2) THEN
+                     index = stars%ig(x-2*stars%mx1,y-2*stars%mx2,0)
+                  ELSE
+                     index = stars%ig(x-2*stars%mx1,y,0)
+                  ENDIF
+               ELSE
+                  IF (y>stars%mx2) THEN
+                     index = stars%ig(x,y-2*stars%mx2,0)
+                  ELSE
+                     index = stars%ig(x,y,0)
+                  ENDIF
+               ENDIF
+               IF (index<1) CYCLE
+               index = stars%ig2(index)
+               grid(x+2*stars%mx1*y,1) = REAL(g(index))
+               grid(x+2*stars%mx1*y,2) = AIMAG(g(index))
+            ENDDO
+         ENDDO
+      ELSE
+         grid(0:,1) = REAL(r)
+         grid(0:,2) = AIMAG(r)
+      ENDIF
+
+
+      CALL cfft(grid(:,1),grid(:,2),griddim,2*stars%mx1,2*stars%mx1,dir)
+      CALL cfft(grid(:,1),grid(:,2),griddim,2*stars%mx2,griddim,dir)
+
+      IF(dir==GF_FFT_TO_G_SPACE) THEN
+         !Collect stars
+         g = 0.0
+         DO x = 0,2*stars%mx1-1
+            DO y = 0,2*stars%mx2-1
+               IF (x>stars%mx1) THEN
+                  IF (y>stars%mx2) THEN
+                     index = stars%ig(x-2*stars%mx1,y-2*stars%mx2,0)
+                  ELSE
+                     index = stars%ig(x-2*stars%mx1,y,0)
+                  ENDIF
+               ELSE
+                  IF (y>stars%mx2) THEN
+                     index = stars%ig(x,y-2*stars%mx2,0)
+                  ELSE
+                     index = stars%ig(x,y,0)
+                  ENDIF
+               ENDIF
+               IF (index<1) CYCLE
+               index = stars%ig2(index)
+
                g(index) = cmplx(grid(x+2*stars%mx1*y,1),grid(x+2        &
-     &              *stars%mx1*y,2))+g(index)                           
-            ENDDO 
-         ENDDO 
-         g=g/real(griddim)/stars%nstr2 
-      ELSE 
-         r=CMPLX(grid(:,1),grid(:,2)) 
-      ENDIF 
-      END SUBROUTINE 
+     &              *stars%mx1*y,2))+g(index)
+            ENDDO
+         ENDDO
+         g=g/real(griddim)/stars%nstr2
+      ELSE
+         r=CMPLX(grid(:,1),grid(:,2))
+      ENDIF
+      END SUBROUTINE
 
-      !>                                                                
-                                                                        
-      !<-- S: gf_convol(f,ufft,stars,f_out)                             
-      SUBROUTINE gf_convol(f_in,ufft,stars,f_out) 
-!-----------------------------------------------                        
-!  convolutes the g-space function f with the real space function ufft  
-!  see convol from FLEUR                                                
-!           (last modified: 05-03-23) D. Wortmann                       
-!-----------------------------------------------                        
-      USE m_gf_types 
-      IMPLICIT NONE 
-      !<--Arguments                                                     
-                                          !This is intent(in) only!     
-      COMPLEX,INTENT(INOUT)    :: f_in(:) 
-      COMPLEX,INTENT(OUT)      :: f_out(:) 
-      REAL   ,INTENT(IN)       :: ufft(:) 
-      TYPE(t_stars),INTENT(IN) :: stars 
-      !>                                                                
-      !<-- Locals                                                       
-      REAL :: r_fft(size(ufft)) 
-      !>                                                                
-                                                                        
-      CALL gf_fft3d(r_fft,f_in,stars,GF_FFT_TO_REAL_SPACE) 
-                                                                        
-      r_fft = r_fft*ufft 
-                                                                        
-      CALL gf_fft3d(r_fft,f_out,stars,GF_FFT_TO_G_SPACE) 
+      !>
+
+      !<-- S: gf_convol(f,ufft,stars,f_out)
+      SUBROUTINE gf_convol(f_in,ufft,stars,f_out)
+!-----------------------------------------------
+!  convolutes the g-space function f with the real space function ufft
+!  see convol from FLEUR
+!           (last modified: 05-03-23) D. Wortmann
+!-----------------------------------------------
+      USE m_gf_types
+      IMPLICIT NONE
+      !<--Arguments
+                                          !This is intent(in) only!
+      COMPLEX,INTENT(INOUT)    :: f_in(:)
+      COMPLEX,INTENT(OUT)      :: f_out(:)
+      REAL   ,INTENT(IN)       :: ufft(:)
+      TYPE(t_stars),INTENT(IN) :: stars
+      !>
+      !<-- Locals
+      REAL :: r_fft(size(ufft))
+      !>
+
+      CALL gf_fft3d(r_fft,f_in,stars,GF_FFT_TO_REAL_SPACE)
+
+      r_fft = r_fft*ufft
+
+      CALL gf_fft3d(r_fft,f_out,stars,GF_FFT_TO_G_SPACE)
                                !needed for compatibility with FLEURs def
-      f_out = f_out*stars%nstr 
-                                                                        
-      END SUBROUTINE 
-      !>                                                                
-                                                                        
+      f_out = f_out*stars%nstr
+
+      END SUBROUTINE
+      !>
+
       !<-- S: cfft(a,b,ntot,n,nspan,isn)                                
                                                                         
       SUBROUTINE cfft(a,b,ntot,n,nspan,isn) 

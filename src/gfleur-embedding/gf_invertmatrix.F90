@@ -14,7 +14,8 @@
 !   gf_inv_Smat     : inverts a large symmetric matrix                  
 !                                                                       
 !---------------------------------------------------------------        
-      use m_juDFT 
+      use m_juDFT
+      USE m_constants, ONLY: oUnit
       IMPLICIT NONE
       CONTAINS 
                                                                         
@@ -105,7 +106,6 @@
 !     Daniel Wortmann, Juelich 2001                                     
 !***********************************************************************
       IMPLICIT NONE 
-#include "cpp_double.h"                                                 
       COMPLEX,INTENT(INOUT)::A(:,:) 
 !     LOCALS                                                            
       INTEGER             :: nmat 
@@ -118,23 +118,18 @@
       nmat = SIZE(A,1) 
       !<-- Before starting determine best size of lapack work-array!    
                                                                         
-#ifndef CPP_APC                                                         
-      !on PC no ilaenv-call is available...                             
-      lwork=ilaenv(1,'cgetri',' ',Nmat,Nmat,-1,-1) 
+      lwork=ilaenv(1,'zgetri',' ',Nmat,Nmat,-1,-1) 
       lwork=Nmat*lwork 
       IF (lwork<0)                                                   &
      &     CALL juDFT_error                                               &
      &     ('gf_gfcn: failed to determine LAPACK work-size')            
-#else                                                                   
-      lwork=Nmat 
-#endif                                                                  
       ALLOCATE(work(lwork),STAT=info) 
       IF (info/=0) THEN 
-         WRITE(6,*)                                                     &
+         WRITE(oUnit,*)                                                     &
      & 'WARNING, failed to ALLOCATE LAPACK workspace in gf_invertmatrix'
          WRITE(*,*)                                                     &
      &        'WARNING, failed to ALLOCATE LAPACK workspace'            
-         WRITE(6,*)                                                     &
+         WRITE(oUnit,*)                                                     &
      &        'Using default value'                                     
          lwork=Nmat 
          ALLOCATE(work(lwork)) 
@@ -146,9 +141,9 @@
       !<-- Now inverte the Matrix!                                      
                                                                         
       WRITE(*,*) 'Non-Hermitian complex matrix inversion' 
-      CALL CPP_LAPACK_cgetrf(Nmat,Nmat,A,Nmat,ipiv,info) 
+      CALL zgetrf(Nmat,Nmat,A,Nmat,ipiv,info) 
       IF ( info /= 0 ) CALL juDFT_error('cgetrf (inversion of H-zS)') 
-      CALL CPP_LAPACK_cgetri(Nmat,A,Nmat,ipiv,work,lwork,info) 
+      CALL zgetri(Nmat,A,Nmat,ipiv,work,lwork,info) 
       IF ( info /= 0 ) CALL juDFT_error('cgetri (inversion of H-zS)') 
                                                                         
       !>                                                                
@@ -164,7 +159,6 @@
 !     Daniel Wortmann, Juelich 2001                                     
 !***********************************************************************
       IMPLICIT NONE 
-#include "cpp_double.h"                                                 
       COMPLEX,INTENT(INOUT)::A(:,:) 
 !     LOCALS                                                            
       INTEGER             :: nmat,i,j 
@@ -176,23 +170,18 @@
                                                                         
       nmat = SIZE(A,1) 
       !<-- Before starting determine best size of lapack work-array!    
-#ifndef CPP_APC                                                         
-      !on PC no ilaenv-call is available...                             
-      lwork=ilaenv(1,'cgetri',' ',Nmat,Nmat,-1,-1) 
+      lwork=ilaenv(1,'zgetri',' ',Nmat,Nmat,-1,-1) 
       lwork=Nmat*lwork 
       IF (lwork<0)                                                   &
      &     CALL juDFT_error                                               &
      &     ('gf_gfcn: failed to determine LAPACK work-size')            
-#else                                                                   
-      lwork=Nmat 
-#endif                                                                  
       ALLOCATE(work(lwork),STAT=info) 
       IF (info/=0) THEN 
-         WRITE(6,*)                                                     &
+         WRITE(oUnit,*)                                                     &
      & 'WARNING, failed to ALLOCATE LAPACK workspace in gf_invertmatrix'
          WRITE(*,*)                                                     &
      &        'WARNING, failed to ALLOCATE LAPACK workspace'            
-         WRITE(6,*)                                                     &
+         WRITE(oUnit,*)                                                     &
      &        'Using default value'                                     
          lwork=Nmat 
          ALLOCATE(work(lwork)) 
@@ -202,9 +191,9 @@
                                                                         
       !<-- Now invert the Matrix!                                       
       WRITE(*,*) 'Hermitian matrix inversion' 
-      CALL CPP_LAPACK_chetrf('L',Nmat,A,Nmat,ipiv,work,lwork,info) 
+      CALL zhetrf('L',Nmat,A,Nmat,ipiv,work,lwork,info) 
       IF ( info /= 0 ) CALL juDFT_error('chetrf (inversion of H-zS)') 
-      CALL CPP_LAPACK_chetri('L',Nmat,A,Nmat,ipiv,work(1:Nmat),info) 
+      CALL zhetri('L',Nmat,A,Nmat,ipiv,work(1:Nmat),info) 
       IF ( info /= 0 ) CALL juDFT_error('chetri (inversion of H-zS)') 
 !     chetri returns only the lower diagonal part, so we set the upper  
 !     diag...                                                           
@@ -226,7 +215,6 @@
 !     Daniel Wortmann, Juelich 2001                                     
 !***********************************************************************
       IMPLICIT NONE 
-#include "cpp_double.h"                                                 
 !     Arguments                                                         
       REAL,INTENT(INOUT)::A(:,:) 
 !     LOCALS                                                            
@@ -238,23 +226,18 @@
       EXTERNAL ilaenv 
       nmat = SIZE(A,1) 
       !<-- Before starting determine best size of lapack work-array!    
-#ifndef CPP_APC                                                         
-      !on PC no ilaenv-call is available...                             
-      lwork=ilaenv(1,'ssytrf',' ',Nmat,Nmat,-1,-1) 
+      lwork=ilaenv(1,'dsytrf',' ',Nmat,Nmat,-1,-1) 
       lwork=Nmat*lwork 
       IF (lwork<0)                                                   &
      &     CALL juDFT_error                                               &
      &     ('gf_gfcn: failed to determine LAPACK work-size')            
-#else                                                                   
-      lwork=Nmat 
-#endif                                                                  
       ALLOCATE(work(lwork),STAT=info) 
       IF (info/=0) THEN 
-         WRITE(6,*)                                                     &
+         WRITE(oUnit,*)                                                     &
      & 'WARNING, failed to ALLOCATE LAPACK workspace in gf_invertmatrix'
          WRITE(*,*)                                                     &
      &        'WARNING, failed to ALLOCATE LAPACK workspace'            
-         WRITE(6,*)                                                     &
+         WRITE(oUnit,*)                                                     &
      &        'Using default value'                                     
          lwork=Nmat 
          ALLOCATE(work(lwork)) 
@@ -264,9 +247,9 @@
       !<-- Now invert the Matrix!                                       
                                                                         
       WRITE(*,*) 'Non-Hermitian real matrix inversion' 
-      CALL CPP_LAPACK_sgetrf(Nmat,Nmat,A,Nmat,ipiv,info) 
+      CALL dgetrf(Nmat,Nmat,A,Nmat,ipiv,info) 
       IF ( info /= 0 ) CALL juDFT_error('cgetrf (inversion of H-zS)') 
-      CALL CPP_LAPACK_sgetri(Nmat,A,Nmat,ipiv,work,lwork,info) 
+      CALL dgetri(Nmat,A,Nmat,ipiv,work,lwork,info) 
       IF ( info /= 0 ) CALL juDFT_error('cgetri (inversion of H-zS)') 
                                                                         
       !>                                                                
@@ -283,7 +266,6 @@
 !     Daniel Wortmann, Juelich 2001                                     
 !***********************************************************************
       IMPLICIT NONE 
-#include "cpp_double.h"                                                 
 !     Arguments                                                         
       REAL,INTENT(INOUT)::A(:,:) 
 !     LOCALS                                                            
@@ -295,23 +277,18 @@
       EXTERNAL ilaenv 
       nmat = SIZE(A,1) 
       !<-- Before starting determine best size of lapack work-array!    
-#ifndef CPP_APC                                                         
-      !on PC no ilaenv-call is available...                             
-      lwork=ilaenv(1,'ssytrf',' ',Nmat,Nmat,-1,-1) 
+      lwork=ilaenv(1,'dsytrf',' ',Nmat,Nmat,-1,-1) 
       lwork=Nmat*lwork 
       IF (lwork<0)                                                   &
      &     CALL juDFT_error                                               &
      &     ('gf_gfcn: failed to determine LAPACK work-size')            
-#else                                                                   
-      lwork=Nmat 
-#endif                                                                  
       ALLOCATE(work(lwork),STAT=info) 
       IF (info/=0) THEN 
-         WRITE(6,*)                                                     &
+         WRITE(oUnit,*)                                                     &
      & 'WARNING, failed to ALLOCATE LAPACK workspace in gf_invertmatrix'
          WRITE(*,*)                                                     &
      &        'WARNING, failed to ALLOCATE LAPACK workspace'            
-         WRITE(6,*)                                                     &
+         WRITE(oUnit,*)                                                     &
      &        'Using default value'                                     
          lwork=Nmat 
          ALLOCATE(work(lwork)) 
@@ -320,9 +297,9 @@
                                                                         
       !<-- Now inverte the Matrix!                                      
       WRITE(*,*) "Real-symmetric matrix inversion" 
-      CALL CPP_LAPACK_ssytrf('L',Nmat,A,Nmat,ipiv,work,lwork,info) 
+      CALL dsytrf('L',Nmat,A,Nmat,ipiv,work,lwork,info) 
       IF ( info /= 0 ) CALL juDFT_error('ssytrf (inversion of H-zS)') 
-      CALL CPP_LAPACK_ssytri('L',Nmat,A,Nmat,ipiv,work(1:Nmat),info) 
+      CALL dsytri('L',Nmat,A,Nmat,ipiv,work(1:Nmat),info) 
       IF ( info/=0 ) CALL juDFT_error('ssytri (inversion of H-zS)') 
       DO i = 1,nmat 
          DO j = i+1,nmat 

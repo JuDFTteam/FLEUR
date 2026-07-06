@@ -5,6 +5,7 @@
 !--------------------------------------------------------------------------------
       MODULE m_quadrature 
       use m_juDFT
+      USE m_constants, ONLY: oUnit
       IMPLICIT NONE
       PRIVATE 
       PUBLIC :: dqag 
@@ -1959,7 +1960,7 @@
         CASE (5) 
           D1MACH_PRIVATE = LOG10(B) 
         CASE DEFAULT 
-          WRITE (6, FMT = 9000) 
+          WRITE (oUnit, FMT = 9000) 
  9000     FORMAT ('1ERROR    1 IN D1MACH - I OUT OF BOUNDS') 
           CALL juDFT_error("IN D1MACH - I OUT OF BOUNDS",calledby="quadrature.F90")
       END SELECT 

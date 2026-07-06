@@ -3,9 +3,9 @@
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
-#include "cpp_double.h"
       MODULE m_gf_math 
       use m_juDFT
+      USE m_constants, ONLY: pi_const, tpi_const, oUnit
       IMPLICIT NONE
 !-------------------------------------------------------------------    
 !     This module creates easy to use interfaces to useful math and     
@@ -13,8 +13,6 @@
 !     It simplifies the code but might decrease performance!            
 !-------------------------------------------------------------------    
       PRIVATE 
-      REAL,PARAMETER :: pi_const = 3.14159265358979323846264338328 
-      REAL,PARAMETER :: tpi_const = 6.28318530717958647692528676656 
       REAL,PARAMETER :: sqrt_pi_const = 1.77245385090551602729816748334 
       INTERFACE mat_inverse 
          MODULE PROCEDURE cmat_inverse 
@@ -65,12 +63,12 @@
       Ainv = A 
       IF (nv2 /= SIZE(A,2)) CALL juDFT_error                              &
      &     ('NO SQUARE MATRIX in matrix inverse')                       
-      CALL CPP_LAPACK_cgetrf(Nv2,Nv2,Ainv,Nv2,ipiv,info) 
+      CALL zgetrf(Nv2,Nv2,Ainv,Nv2,ipiv,info) 
       IF ( info /= 0 )  THEN
             write(999,*) a
             CALL juDFT_error("cgetrf (inversion of A)")
       ENDIF
-      CALL CPP_LAPACK_cgetri(Nv2,Ainv,Nv2,ipiv,work,4*nv2,info) 
+      CALL zgetri(Nv2,Ainv,Nv2,ipiv,work,4*nv2,info) 
       IF ( info /= 0 )  CALL juDFT_error("cgetri (inversion of A)") 
       END FUNCTION 
 
@@ -92,9 +90,9 @@
       Ainv = A 
       IF (nv2 /= SIZE(A,2)) CALL juDFT_error                              &
      &     ('NO SQUARE MATRIX in matrix inverse')                       
-      CALL CPP_LAPACK_sgetrf(Nv2,Nv2,Ainv,Nv2,ipiv,info) 
+      CALL dgetrf(Nv2,Nv2,Ainv,Nv2,ipiv,info) 
       IF ( info /= 0 )  CALL juDFT_error("sgetrf (inversion of A)") 
-      CALL CPP_LAPACK_sgetri(Nv2,Ainv,Nv2,ipiv,work,4*nv2,info) 
+      CALL dgetri(Nv2,Ainv,Nv2,ipiv,work,4*nv2,info) 
       IF ( info /= 0 )  CALL juDFT_error("sgetri (inversion of A)") 
       END FUNCTION 
       !>                                                                
@@ -120,7 +118,7 @@
                    !a,b are intent in                                   
       x = b 
       AA = A 
-      CALL CPP_LAPACK_cgesv(SIZE(aa,1),SIZE(b,2),AA,SIZE(AA,1),ipiv,x   &
+      CALL zgesv(SIZE(aa,1),SIZE(b,2),AA,SIZE(AA,1),ipiv,x   &
      &     ,SIZE(x),info)                                               
                                                                         
       IF (info /= 0) CALL juDFT_error('mat_lineq failed') 
@@ -144,7 +142,7 @@
                    !a,b are intent in                                   
       x = b 
       AA = A 
-      CALL CPP_LAPACK_cgesv(SIZE(aa,1),1,AA,SIZE(AA,1),ipiv,x           &
+      CALL zgesv(SIZE(aa,1),1,AA,SIZE(AA,1),ipiv,x           &
      &     ,SIZE(x),info)                                               
                                                                         
       IF (info /= 0) CALL juDFT_error('mat_lineq failed') 
@@ -168,7 +166,7 @@
                    !a,b are intent in                                   
       x = b 
       AA = A 
-      CALL CPP_LAPACK_sgesv(SIZE(aa,1),SIZE(b,2),AA,SIZE(AA,1),ipiv,x   &
+      CALL dgesv(SIZE(aa,1),SIZE(b,2),AA,SIZE(AA,1),ipiv,x   &
      &     ,SIZE(x),info)                                               
                                                                         
       IF (info /= 0) CALL juDFT_error('mat_lineq failed') 
@@ -192,7 +190,7 @@
                    !a,b are intent in                                   
       x = b 
       AA = A 
-      CALL CPP_LAPACK_sgesv(SIZE(aa,1),1,AA,SIZE(AA,1),ipiv,x           &
+      CALL dgesv(SIZE(aa,1),1,AA,SIZE(AA,1),ipiv,x           &
      &     ,SIZE(x),info)                                               
                                                                         
       IF (info /= 0) CALL juDFT_error('mat_lineq failed') 
@@ -238,7 +236,7 @@
                                                                         
                                                                         
       IF(.NOT.l_condnum)THEN 
-         CALL CPP_LAPACK_cgeev('N','V',n,A_local,n,ew,                  &
+         CALL zgeev('N','V',n,A_local,n,ew,                  &
      &        Ev,n,Ev,n,work,2*n,rwork,info)                            
          IF (info /= 0) CALL juDFT_error('cmat_eigenvalues failed') 
       ELSE 
@@ -278,7 +276,7 @@
       IF (n /= SIZE(ew).OR.n /= SIZE(ev,1).OR.n /= SIZE(ev,2))          &
      &     CALL juDFT_error('Wrong dimensions in rmat_eigenvalues')       
                                                                         
-      CALL CPP_LAPACK_sgeev('N','V',n,A_local,n,ew,                     &
+      CALL dgeev('N','V',n,A_local,n,ew,                     &
      &     Ev,n,Ev,n,work,2*n,rwork,info)                               
       IF (info /= 0) CALL juDFT_error('rmat_eigenvalues failed') 
       END SUBROUTINE 

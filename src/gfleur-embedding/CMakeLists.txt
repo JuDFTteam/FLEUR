@@ -7,6 +7,14 @@
 set(gfleur_F90
 src/gfleur-embedding/main/gfleur.F90
 src/gfleur-embedding/gf_types.F90
+src/gfleur-embedding/gf_fft_singleton.F90
+src/gfleur-embedding/gf_fft.F90
+src/gfleur-embedding/gf_version.F90
+src/gfleur-embedding/gf_out.F90
+src/gfleur-embedding/gf_invertmatrix.F90
+src/gfleur-embedding/gf_quadrature.F90
+src/gfleur-embedding/gf_bessel.F90
+src/gfleur-embedding/gf_math.F90
 )
 
 #--- not yet ported ------------------------------------------------------
@@ -21,7 +29,6 @@ src/gfleur-embedding/gf_types.F90
 #src/gfleur-embedding/gf_apws.F90
 #src/gfleur-embedding/gf_ballpartfourier.F90
 #src/gfleur-embedding/gf_bandbending.F90
-#src/gfleur-embedding/gf_bessel.F90
 #src/gfleur-embedding/gf_boundaryembpot.F90
 #src/gfleur-embedding/gf_broyden.F90
 #src/gfleur-embedding/gf_calcspectrum.F90
@@ -44,8 +51,6 @@ src/gfleur-embedding/gf_types.F90
 #src/gfleur-embedding/gf_embpot_postprocess.F90
 #src/gfleur-embedding/gf_energies.F90
 #src/gfleur-embedding/gf_enpara.F90
-#src/gfleur-embedding/gf_fft.F90
-#src/gfleur-embedding/gf_fft_singleton.F90
 #src/gfleur-embedding/gf_flipPot.F90
 #src/gfleur-embedding/gf_fnaeproj.F90
 #src/gfleur-embedding/gf_gencdn.F90
@@ -62,7 +67,6 @@ src/gfleur-embedding/gf_types.F90
 #src/gfleur-embedding/gf_inp2plot.F90
 #src/gfleur-embedding/gf_inp_describe.F90
 #src/gfleur-embedding/gf_intcoul.F90
-#src/gfleur-embedding/gf_invertmatrix.F90
 #src/gfleur-embedding/gf_io2dmat.F90
 #src/gfleur-embedding/gf_ioCoulBoundary.F90
 #src/gfleur-embedding/gf_iodop.F90
@@ -76,7 +80,6 @@ src/gfleur-embedding/gf_types.F90
 #src/gfleur-embedding/gf_makecoulboundary.F90
 #src/gfleur-embedding/gf_makepseudocharge.F90
 #src/gfleur-embedding/gf_maketmat.F90
-#src/gfleur-embedding/gf_math.F90
 #src/gfleur-embedding/gf_metric.F90
 #src/gfleur-embedding/gf_mix.F90
 #src/gfleur-embedding/gf_mkposdef.F90
@@ -84,7 +87,6 @@ src/gfleur-embedding/gf_types.F90
 #src/gfleur-embedding/gf_noco.F90
 #src/gfleur-embedding/gf_nognofinalize.F90
 #src/gfleur-embedding/gf_optional.F90
-#src/gfleur-embedding/gf_out.F90
 #src/gfleur-embedding/gf_phasematrix.F90
 #src/gfleur-embedding/gf_plot.F90
 #src/gfleur-embedding/gf_potdis.F90
@@ -99,7 +101,6 @@ src/gfleur-embedding/gf_types.F90
 #src/gfleur-embedding/gf_propaembcurr3.F90
 #src/gfleur-embedding/gf_propagate_embpot.F90
 #src/gfleur-embedding/gf_pwden.F90
-#src/gfleur-embedding/gf_quadrature.F90
 #src/gfleur-embedding/gf_read_tmat.F90
 #src/gfleur-embedding/gf_rhocdnmt.F90
 #src/gfleur-embedding/gf_rholocorbs.F90
@@ -119,7 +120,6 @@ src/gfleur-embedding/gf_types.F90
 #src/gfleur-embedding/gf_vacuum_charge.F90
 #src/gfleur-embedding/gf_vacuum_hs.F90
 #src/gfleur-embedding/gf_vacuum_pot.F90
-#src/gfleur-embedding/gf_version.F90
 #src/gfleur-embedding/gf_vgen.F90
 #src/gfleur-embedding/gf_writetrans.F90
 #src/gfleur-embedding/gfleur.F90
