@@ -4,6 +4,7 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
       MODULE m_gf_kkrpoints 
+      USE m_constants, ONLY: oUnit
       use m_juDFT 
       IMPLICIT NONE
 !*****************************************************************      
@@ -49,9 +50,9 @@
       READ(io,'(6x,f15.0)') e_min 
       READ(io,'(8x,f15.0)') e_fermi 
       READ(io,'(3x,f15.0)') tk 
-      WRITE(6,*) 'Generating energy mesh in complex plane' 
-      WRITE(6,*) 'Emin=',e_min," Emax=",e_fermi 
-      WRITE(6,*) 'Temperature:',tk,"K  Npols:",npol 
+      WRITE(oUnit,*) 'Generating energy mesh in complex plane' 
+      WRITE(oUnit,*) 'Emin=',e_min," Emax=",e_fermi 
+      WRITE(oUnit,*) 'Temperature:',tk,"K  Npols:",npol 
       CALL emesht(z,w,n1+n2+n3+npol,e_min,e_fermi,tk,npol,n1,n2,n3) 
                                                                         
                                                                         
@@ -149,7 +150,7 @@
       DATA KB /0.316679D-5/ 
       DATA HTR/27.2116D0/ 
 !     ..                                                                
-      WRITE(6,*) '>>> EMESHT: generates a complex E contour' 
+      WRITE(oUnit,*) '>>> EMESHT: generates a complex E contour' 
       ETK = PI*KB*TK 
       IF (NPOL==0) THEN 
         DE = (EMU-EBOT) 
@@ -161,7 +162,7 @@
           EZ(NPNT) = CMPLX(ER,ETK) 
           DF(NPNT) = DE 
    10   CONTINUE 
-        WRITE (6,FMT=9000) NPNT,ETK,ETK*HTR 
+        WRITE (oUnit,FMT=9000) NPNT,ETK,ETK*HTR 
 ! 9000   format('density-of-states calculation',/,                      
 !     +       'for',I4,' energy points with broadening',E12.4,'Ry'      
  9000   FORMAT(' density-of-states calculation',/,                      &
@@ -2337,7 +2338,7 @@
                                                                         
       END IF 
                                                                         
-      WRITE (6,FMT=*) 'CASE N=',N,' IS NOT PROVIDED IN GAULEG' 
+      WRITE (oUnit,FMT=*) 'CASE N=',N,' IS NOT PROVIDED IN GAULEG' 
       CALL juDFT_error('GAULEG') 
                                                                         
    10 CONTINUE 

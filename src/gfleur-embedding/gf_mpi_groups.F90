@@ -318,7 +318,7 @@
       INTEGER,INTENT(OUT)              ::subcom
 
       !locals
-      INTEGER :: irank,isize,e(MPI_STATUS_SIZE)
+      INTEGER :: irank,isize,e
       INTEGER :: ggt,n,n_local,n_region
       !Determine current dimensions
       CALL MPI_COMM_RANK(com,irank,e)

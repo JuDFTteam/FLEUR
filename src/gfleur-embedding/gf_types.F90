@@ -53,11 +53,20 @@ MODULE m_gf_types
       LOGICAL, ALLOCATABLE :: l_doslayer(:)
       REAL    :: trans
       REAL    :: c_sc
+      !cutoffs for the corrections of the Coulomb potential
+      !(distributed into the per-layer t_stars_gf)
+      REAL    :: gmax_pot, gmax_decouple
+      !occupation/smearing parameters of the energy contour
+      !(was the separate t_fermi type)
+      LOGICAL :: l_gauss, l_tria
+      REAL    :: tkb, delgau
    END TYPE t_embinp
 
    !Geometry of the layer decomposition along z
    TYPE t_layers
       INTEGER :: num_layers
+      !prefix of the per-layer input files: <prefix><ilayer>_inp.xml
+      CHARACTER(LEN=20) :: prefix = "layer"
       REAL, ALLOCATABLE :: c1(:), c2(:), d(:), dt(:), c(:)
    END TYPE t_layers
 
@@ -115,8 +124,9 @@ MODULE m_gf_types
       INTEGER :: nv2_tot
       !actual no of G's inside the rkmax sphere for this k (jspin)
       INTEGER :: nv_sphere(2)
-      !actual no of 2D-G's for this k
+      !actual no of 2D-G's for this k / its dimension
       INTEGER :: nv2(2)
+      INTEGER :: nv2d
       !cylinder basis (all G_z for the in-plane stars) in use?
       LOGICAL :: l_cylinder
       !3D basis index -> 2D basis index (per G, per spin)

@@ -42,17 +42,17 @@
      &     juDFT_error("No boundary values found")                        
       CALL io_read_att(gid,"n",n) 
       IF (n/=size(v_bound)) THEN 
-         WRITE(6,*) "Different no of boundary values" 
-         WRITE(6,*) "In file:",n 
-         WRITE(6,*) "In setup:",size(v_bound) 
+         WRITE(oUnit,*) "Different no of boundary values" 
+         WRITE(oUnit,*) "In file:",n 
+         WRITE(oUnit,*) "In setup:",size(v_bound) 
          n=min(n,size(v_bound)) 
       ENDIF 
       ALLOCATE(v_b(n,2)) 
       CALL h5dopen_f(gid,"v_coul_real",did,hdferr) 
-      CALL io_read(did,(/1/),(/n/),v_b(:,1)) 
+      CALL io_read(did,(/1/),(/n/),"v_b",v_b(:,1))
       CALL h5dclose_f(did,hdferr) 
       CALL h5dopen_f(gid,"v_coul_aimag",did,hdferr) 
-      CALL io_read(did,(/1/),(/n/),v_b(:,2)) 
+      CALL io_read(did,(/1/),(/n/),"v_b",v_b(:,2))
       CALL h5dclose_f(did,hdferr) 
       v_bound = 0.0 
       v_bound(:n) = CMPLX(v_b(:,1),v_b(:,2)) 
@@ -62,9 +62,9 @@
       shift = gf_io2dmatshift(IO2D_EMB,layer,side,io2d_READ) 
       IF (ANY(shift /= 0.0)) THEN 
          WRITE(*,*) "Shifted Boundary Potential" 
-         DO n = 1,stars%nq2 
+         DO n = 1,stars%ng2 
             k = 1.0*stars%kv2(:,n) 
-            v_bound(n) = v_bound(n)*EXP(CMPLX(0.0,-2.*pimach()          &
+            v_bound(n) = v_bound(n)*EXP(CMPLX(0.0,-2.*pi_const          &
      &           *dot_PRODUCT(k,shift)))                                
          ENDDO 
       ENDIF 

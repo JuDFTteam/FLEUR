@@ -4,8 +4,11 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
       MODULE m_gf_writetrans
-#include "juDFT_env.h"
+#ifdef CPP_MPI
+      USE mpi
+#endif
       USE hdf5
+      use m_juDFT
       IMPLICIT NONE
       INTEGER(hid_t)::fid,varid
       LOGICAL       ::hdf=.false.
@@ -22,7 +25,7 @@
       INTEGER,INTENT(IN) :: en,nk,jspin
       REAL,INTENT(IN)    :: j(:)
 
-      CALL io_WRITE(varid,(/jspin,nk,en,1/),(/1,1,1,size(j)/),j)
+      CALL io_WRITE(varid,(/jspin,nk,en,1/),(/1,1,1,size(j)/),"j",j)
 
       END SUBROUTINE
 
@@ -35,26 +38,26 @@
       hdf=.false.
       END subroutine
 
-      SUBROUTINE gf_writetrans_hdfopen(mpi,kpts,sym,num_layers,jspins)
+      SUBROUTINE gf_writetrans_hdfopen(gmpi,kpts,sym,num_layers,jspins)
       USE m_hdf_tools
       USE m_gf_types
       USE m_gf_energies
       IMPLICIT NONE
-      TYPE(t_mpi),INTENT(IN) :: mpi
+      TYPE(t_gfmpi),INTENT(IN) :: gmpi
       TYPE(t_kpts),INTENT(IN):: kpts
       TYPE(t_sym),INTENT(IN) :: sym
       INTEGER    ,INTENT(IN) :: num_layers,jspins
 
 
-      real    :: bk(2),all_bk(kpts%nkpts,sym%nop,2)
-      INTEGER :: nk,nkpt(kpts%nkpts),n,i,hdferr
+      real    :: bk(2),all_bk(kpts%nkpt,sym%nop,2)
+      INTEGER :: nk,nkpt(kpts%nkpt),n,i,hdferr
       INTEGER(hid_t)::access_prp
       logical :: new
-      if (mpi%kl_layers(1).ne.1) return !only open for PE that work on layer==1
+      if (gmpi%kl_layers(1).ne.1) return !only open for PE that work on layer==1
 
 #ifdef CPP_HDFMPI
       call h5pcreate_f(H5P_FILE_ACCESS_F, access_prp, hdferr)
-      CALL h5pset_fapl_mpiposix_f(access_prp, mpi%samelayer_subcom,.false.,hdferr)
+      CALL h5pset_fapl_mpiposix_f(access_prp, gmpi%samelayer_subcom,.false.,hdferr)
 #else
       access_prp=H5P_DEFAULT_f
 #endif
@@ -64,7 +67,7 @@
 
       !First store all information
 
-      DO nk=1,kpts%nkpts
+      DO nk=1,kpts%nkpt
            nkpt(nk) = 0
            DO n = 1,sym%nop
                  bk = MATMUL(kpts%bk(1:2,nk),1.0*sym%mrot(1:2,1:2,n))
@@ -82,7 +85,7 @@
       CALL IO_WRITE_VAR(fid,"kpts",all_bk)
       CALL IO_WRITE_VAR(fid,"energies",real(gf_allz(1)))
       !Create variable for current
-      CALL io_createvar(fid,"current",H5T_NATIVE_DOUBLE,(/jspins,kpts%nkpts,gf_noen(),5*num_layers/),varid)
+      CALL io_createvar(fid,"current",H5T_NATIVE_DOUBLE,(/jspins,kpts%nkpt,gf_noen(),5*num_layers/),varid)
       hdf=.true.
       END subroutine
 
@@ -99,15 +102,15 @@
       END SUBROUTINE check 
       !>                                                                
       !<--S:writetrans(en_i,nk_i,jspin,bkpts,sym,cell,nochannel,j)      
-      SUBROUTINE writetrans(en_i,nk_i,jspin,bkpts,sym,cell,nochannel,j,mpi)
-      USE m_gf_types,ONLY :t_sym,t_cell,t_mpi
+      SUBROUTINE writetrans(en_i,nk_i,jspin,bkpts,sym,cell,nochannel,j,gmpi)
+      USE m_gf_types,ONLY :t_sym,t_cell,t_gfmpi
       USE m_gf_energies,ONLY:gf_z 
       IMPLICIT NONE 
       !<--Arguments                                                     
       INTEGER,INTENT(IN)      :: en_i,nk_i,jspin,nochannel
       REAL,INTENT(IN)         :: j(:)
       REAL,INTENT(IN)         :: bkpts(:,:)
-      type(t_mpi),intent(in)  :: mpi
+      TYPE(t_gfmpi),intent(in)  :: gmpi
       TYPE(t_sym),INTENT(IN)  :: sym
       TYPE(t_cell),INTENT(IN) :: cell 
       !>                                                                
@@ -121,17 +124,15 @@
 !                                                                       
 !     variables for MPI                                                 
 !                                                                       
-#include"cpp_double.h"                                                  
-      INCLUDE 'mpif.h' 
                                     !MPI error+status                   
       INTEGER::e,s(MPI_STATUS_SIZE) 
       INTEGER::rank
 #endif
       !Check if we use hdf for io
       if (hdf) THEN
-         CPP_juDFT_timestart("writetrans_hdf")
+         CALL timestart("writetrans_hdf")
          call  gf_writetrans_hdf(en_i,nk_i,jspin,j)
-         CPP_juDFT_timestop("writetrans_hdf")
+         CALL timestop("writetrans_hdf")
          return
       endif
                                                                         
@@ -149,30 +150,30 @@
       !>                                                                
       !<--On Parallel machine data has to be send to PE=0               
 #ifdef CPP_MPI                                                          
-      CALL MPI_COMM_RANK(mpi%samelayer_SUBCOM,irank,E)
-      CALL MPI_COMM_SIZE(mpi%samelayer_SUBCOM,isize,E)
+      CALL MPI_COMM_RANK(gmpi%samelayer_SUBCOM,irank,E)
+      CALL MPI_COMM_SIZE(gmpi%samelayer_SUBCOM,isize,E)
 
                                                                         
       IF (irank/=0) THEN
 !     for a parallel Maschine one has to send the data to PE=0          
-         CALL MPI_SEND(n_curr, 1, MPI_INTEGER, 0, 1,mpi%samelayer_SUBCOM, E)
-         CALL MPI_SEND(en, 1, MPI_INTEGER, 0, 2,mpi%samelayer_SUBCOM, E)
-         CALL MPI_SEND(nk, 1, MPI_INTEGER, 0, 3,mpi%samelayer_SUBCOM, E)
-         CALL MPI_SEND(j_in,n_curr,CPP_MPI_REAL,                        &
-     &        0,4,mpi%samelayer_SUBCOM,E)
+         CALL MPI_SEND(n_curr, 1, MPI_INTEGER, 0, 1,gmpi%samelayer_SUBCOM, E)
+         CALL MPI_SEND(en, 1, MPI_INTEGER, 0, 2,gmpi%samelayer_SUBCOM, E)
+         CALL MPI_SEND(nk, 1, MPI_INTEGER, 0, 3,gmpi%samelayer_SUBCOM, E)
+         CALL MPI_SEND(j_in,n_curr,MPI_DOUBLE_PRECISION,                        &
+     &        0,4,gmpi%samelayer_SUBCOM,E)
       ELSE 
          DO rank=0,isize-1
             IF (rank/=0) THEN 
                CALL MPI_RECV(n_curr,1,MPI_INTEGER,rank,1,               &
-     &              mpi%samelayer_SUBCOM,S, E)
+     &              gmpi%samelayer_SUBCOM,S, E)
                CALL MPI_RECV(en,1,MPI_INTEGER,rank,2,                   &
-     &              mpi%samelayer_SUBCOM,S, E)
+     &              gmpi%samelayer_SUBCOM,S, E)
                CALL MPI_RECV(nk,1,MPI_INTEGER,rank,3,                   &
-     &              mpi%samelayer_SUBCOM,S, E)
+     &              gmpi%samelayer_SUBCOM,S, E)
               DEALLOCATE(j_in) 
               ALLOCATE(j_in(n_curr)) 
-              CALL MPI_RECV(j_in,n_curr,CPP_MPI_REAL,                   &
-     &             rank,4,mpi%samelayer_SUBCOM,S, E)
+              CALL MPI_RECV(j_in,n_curr,MPI_DOUBLE_PRECISION,                   &
+     &             rank,4,gmpi%samelayer_SUBCOM,S, E)
            ENDIF 
 #endif                                                                  
            !>                                                           

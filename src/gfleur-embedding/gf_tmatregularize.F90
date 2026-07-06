@@ -5,7 +5,6 @@
 !--------------------------------------------------------------------------------
       MODULE m_gf_tmatregularize 
           IMPLICIT NONE
-#include "cpp_double.h"                                                 
       CONTAINS 
       SUBROUTINE gf_tmatregularize(tmat) 
       USE m_gf_math 
@@ -52,7 +51,7 @@
          ev(:,i)=lambda*ev(:,i) 
       ENDDO 
 !      tmat=matmul(ev,ev_inv)                                           
-      CALL CPP_BLAS_cgemm('N','N',nv2,nv2,                              &
+      CALL zgemm('N','N',nv2,nv2,                              &
      &      nv2,cmplx(1.0,0.0),ev,nv2,                                  &
      &    ev_inv,nv2,cmplx(0.0,0.0),tmat,nv2)                           
       DEALLOCATE(ev,ew,t_temp) 

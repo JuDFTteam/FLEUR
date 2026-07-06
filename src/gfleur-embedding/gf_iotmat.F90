@@ -30,15 +30,14 @@
       USE m_gf_io2dmat 
       USE m_gf_tmatregularize 
       use m_juDFT 
-#include "juDFT_env.h" 
       IMPLICIT NONE 
       INTEGER,INTENT(IN)      :: layer 
-      TYPE(t_lapw),INTENT(IN) :: lapw 
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw 
       INTEGER,INTENT(IN)      :: en 
       INTEGER,INTENT(IN)      :: nk 
       INTEGER,INTENT(IN)      :: jspin 
       COMPLEX,INTENT(OUT)     :: tmat(:,:) 
-      CPP_juDFT_timestart("IO: reading tmat") 
+      CALL timestart("IO: reading tmat") 
       IF (ALLOCATED(tmat_storage)) THEN 
          IF (nk /= nk_storage) CALL                                     &
      &        juDFT_error("io_tmat:Wrong nk in storage")                  
@@ -51,7 +50,7 @@
      &        CALL juDFT_error("tmat_layer: Data not found in file")      
       ENDIF 
       CALL gf_tmatregularize( tmat ) 
-      CPP_juDFT_timestop("IO: reading tmat") 
+      CALL timestop("IO: reading tmat") 
       END SUBROUTINE gf_READ_tmat2 
                                                                         
       !>                                                                
@@ -64,18 +63,17 @@
 !-----------------------------------------------                        
       USE m_gf_types 
       USE m_gf_io2dmat 
-#include "juDFT_env.h" 
       IMPLICIT NONE 
       !<--Arguments                                                     
       INTEGER,INTENT(IN)      :: layer 
-      TYPE(t_lapw),INTENT(IN) :: lapw 
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw 
       INTEGER,INTENT(IN)      :: en 
       INTEGER,INTENT(IN)      :: nk 
       INTEGER,INTENT(IN)      :: jspin 
       COMPLEX,INTENT(IN)      :: tmat(:,:) 
                                                                         
       !>                                                                
-      CPP_juDFT_timestart("IO: writing tmat") 
+      CALL timestart("IO: writing tmat") 
       IF (ALLOCATED(tmat_storage)) THEN 
          nk_storage = nk 
          jspin_storage=jspin 
@@ -84,7 +82,7 @@
       CALL gf_write2dmat(IO2D_TMAT,                                     &
      &     layer,0,en,nk,jspin,lapw,Tmat(:,:))                          
       ENDIF 
-      CPP_juDFT_timestop("IO: writing tmat") 
+      CALL timestop("IO: writing tmat") 
       END SUBROUTINE 
                                                                         
       !>                                                                

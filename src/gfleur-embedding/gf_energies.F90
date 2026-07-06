@@ -3,9 +3,9 @@
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
-      MODULE m_gf_energies 
+      MODULE m_gf_energies
       use m_juDFT
-      use m_juDFT 
+      USE m_constants, ONLY: oUnit
 !***************************************************                    
 ! This module supplies all energies for which the GF                    
 ! should be calculated                                                  
@@ -202,11 +202,11 @@
                   !apply shift                                          
       z=z+shift 
       IF (pe0) THEN 
-         WRITE(6,*) 'ENERGY MESH' 
-         WRITE(6,*) 'No of energies:',energies 
-         WRITE(6,*) 'Energy-point             Weight' 
+         WRITE(oUnit,*) 'ENERGY MESH' 
+         WRITE(oUnit,*) 'No of energies:',energies 
+         WRITE(oUnit,*) 'Energy-point             Weight' 
          DO i=1,energies 
-            WRITE(6,'(2(2(e15.8,1x),2x))') z(i),wz(i) 
+            WRITE(oUnit,'(2(2(e15.8,1x),2x))') z(i),wz(i) 
          ENDDO 
       ENDIF 
       IF (ANY(direction>0.AND.abs(aimag(z))>epsilon(0.))) THEN 
@@ -355,9 +355,9 @@
                   WRITE(*,*) 'WARNING, no of energy points in',         &
      &           ' semi-circle must be modified to be of form 2**n-1'   
                   WRITE(*,*) 'Old:',no,'New:',i-1 
-                  WRITE(6,*) 'WARNING, no of energy points in',         &
+                  WRITE(oUnit,*) 'WARNING, no of energy points in',         &
      &           'semi-circle must be modified to be of form 2**n-1'    
-                  WRITE(6,*) 'Old:',no,'New:',i-1 
+                  WRITE(oUnit,*) 'Old:',no,'New:',i-1 
                   no=i-1 
                   CALL juDFT_error('gf_energies') 
                ENDIF 
@@ -519,7 +519,7 @@
          IF (ew(n)>0) THEN 
             IF (info>SIZE(z)) CALL juDFT_error("Error in priv_ozaki") 
             z(info) = CMPLX(ef,ew(n)*k_b*temp) 
-            wz(info) = -2.*r(n)*CMPLX(0.0,k_b*temp*pimach()) 
+            wz(info) = -2.*r(n)*CMPLX(0.0,k_b*temp*pi_const) 
             info = info+1 
          ENDIF 
       ENDDO 

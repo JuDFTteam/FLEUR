@@ -4,6 +4,9 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
       MODULE m_gf_iodop 
+#ifdef CPP_MPI
+      USE mpi
+#endif
       USE hdf5 
       USE m_hdf_tools
       use m_juDFT 
@@ -62,14 +65,14 @@
       CALL io_dopen(gid,"vz",did,hdferr)
       CALL io_datadim(did,dims(1:2))
       if (dims(1)/=size(vz,1)) call juDFT_error("Wrong dimension in vz")
-      call io_read(did,(/1,1/),(/dims(1),1/),vz(:,1))
+      CALL io_read(did,(/1,1/),(/dims(1),1/),"vz",vz(:,1))
       if (size(vz,2)>1) THEN
       	if (dims(2)>1) THEN
-      		call io_read(did,(/1,2/),(/dims(1),1/),vz(:,2))!read second spin
+      		call io_read(did,(/1,2/),(/dims(1),1/),"vz",vz(:,2))!read second spin
       		if (size(vz,2)>2) THEN
       		    !now check noco-part
       		    if (dims(2)>2) then
-      		        call io_read(did,(/1,3/),(/dims(1),2/),vz(:,3:4))
+      		        CALL io_read(did,(/1,3/),(/dims(1),2/),"vz",vz(:,3:4))
       		    else
       		        vz(:,3:4)=0.0
       		    endif
@@ -90,13 +93,13 @@
             call juDFT_error("Wrong dimension in vxy")
       endif
       dims(1)=1
-      CALL io_READ(did,(/-1,1,1,1/),(/1,dims(2),dims(3),1/),vxy(:,:,1))
+      CALL io_READ(did,(/-1,1,1,1/),(/1,dims(2),dims(3),1/),"vxy",vxy(:,:,1))
       if (size(vxy,3)>1) THEN
          if (dims(4)>1) then
-         	CALL io_READ(did,(/-1,1,1,2/),(/1,dims(2),dims(3),1/),vxy(:,:,2))
+         	CALL io_READ(did,(/-1,1,1,2/),(/1,dims(2),dims(3),1/),"vxy",vxy(:,:,2))
          	if (size(vxy,3)>2) then !read noco-part
          	    if (dims(4)>2) THEN
-         	      CALL io_READ(did,(/-1,1,1,3/),(/1,dims(2),dims(3),1/),vxy(:,:,3))
+         	      CALL io_READ(did,(/-1,1,1,3/),(/1,dims(2),dims(3),1/),"vxy",vxy(:,:,3))
          	    else
          	      vxy(:,:,3)=0.0
          	    endif
@@ -141,8 +144,8 @@
       	call io_createvar(gid,"vz", H5T_NATIVE_DOUBLE,(/size(vz,1),size(vz,2)/),dvz)
       	call io_createvar(gid,"vxy", H5T_NATIVE_DOUBLE,(/2,size(vxy,1),size(vxy,2),size(vxy,3)/),dvxy)
       endif
-      call io_write(dvz,(/1,1/),(/size(vz,1),size(vz,2)/),vz)
-      call io_write(dvxy,(/-1,1,1,1/),(/1,size(vxy,1),size(vxy,2),size(vxy,3)/),vxy)
+      CALL io_write(dvz,(/1,1/),(/size(vz,1),size(vz,2)/),"vz",vz)
+      CALL io_write(dvxy,(/-1,1,1,1/),(/1,size(vxy,1),size(vxy,2),size(vxy,3)/),"vxy",vxy)
       if (present(evac)) call io_write_att(gid,"evac",evac)
       CALL io_dclose(dvz,hdferr)
       CALL io_dclose(dvxy,hdferr)
@@ -175,7 +178,7 @@
       CALL io_datadim(did,dims) 
       ALLOCATE(psq(dims(2),dims(3))) 
       dims(1) = 1 
-      CALL io_READ(did,(/-1,1,1/),dims,psq) 
+      CALL io_READ(did,(/-1,1,1/),dims,"psq",psq)
       CALL io_dclose(did,hdferr) 
       CALL io_gclose(gid,hdferr) 
       CALL  priv_closefile(GF_CDNFILE)
@@ -210,7 +213,7 @@
          CALL io_createvar(gid,"pseudocharge", H5T_NATIVE_DOUBLE,(/2    &
      &        ,SIZE(psq,1),SIZE(psq,2)/),did)                           
       ENDIF 
-      CALL io_WRITE(did,(/-1,1,1/),(/1,SIZE(psq,1),SIZE(psq,2)/),psq) 
+      CALL io_WRITE(did,(/-1,1,1/),(/1,SIZE(psq,1),SIZE(psq,2)/),"psq",psq)
       CALL io_dclose(did,hdferr) 
       CALL io_gclose(gid,hdferr) 
       CALL  priv_closefile(GF_CDNFILE,mpi_subcom) 
@@ -222,7 +225,7 @@
                                                                         
       SUBROUTINE gf_loddop(file_type,layer,jspins,                      &
      &     atoms,stars,sphhar,                                          &
-     &     vr,vpw,noco,old)
+     &     vr,vpw,noco,old,alpha_int,beta_int)
 !***********************************************************************
 !     This subroutine reads in the potential or the charge density      
 !     needed by the green fct part of FLEUR.                            
@@ -240,6 +243,9 @@
       TYPE(t_stars), INTENT(IN)::stars 
       TYPE(t_sphhar),INTENT(IN)::sphhar 
       type(t_noco),intent(in),optional  :: noco
+      !interface rotation angles of the spin frame (was noco%alpha_int/
+      !beta_int in the old gf t_noco)
+      REAL,INTENT(IN),OPTIONAL :: alpha_int,beta_int
       REAL,          INTENT(INOUT):: vr(:,0:,:,:) 
       COMPLEX,       INTENT(INOUT):: vpw(:,:) 
       LOGICAL ,      INTENT(IN),optional   :: old
@@ -298,17 +304,13 @@
       nlhd_in=min(nlhd_in,sphhar%nlhd) 
       jrid_in=min(jrid_in,size(vr,1)) 
       ALLOCATE(vr_tmp(jrid_in,nlhd_in+1,ntype_in,1)) 
-      CALL io_read(vrid,(/1,1,1,1/),                                    &
-     &     (/jrid_in,nlhd_in+1,ntype_in,1/)                             &
-     &     ,vr_tmp)                                                     
+      CALL io_read(vrid,(/1,1,1,1/),(/jrid_in,nlhd_in+1,ntype_in,1/),"vr_tmp",vr_tmp)
       vr(:jrid_in,0:nlhd_in,:ntype_in,1:1)=vr_tmp 
       IF (jspins>1) THEN
          if (jspins_in<2) then
               vr(:jrid_in,0:nlhd_in,:ntype_in,2:2)=vr(:jrid_in,0:nlhd_in,:ntype_in,1:1)
          else
-            CALL io_read(vrid,(/1,1,1,2/),                                 &
-     &      (/jrid_in,nlhd_in+1,ntype_in,1/)                             &
-     &      ,vr_tmp)
+            CALL io_read(vrid,(/1,1,1,2/),(/jrid_in,nlhd_in+1,ntype_in,1/),"vr_tmp",vr_tmp)
             vr(:jrid_in,0:nlhd_in,:ntype_in,2:2)=vr_tmp
          endif
       ENDIF 
@@ -321,17 +323,16 @@
       vpw=0.0
                                                                         
       ALLOCATE(pwd_in(n3d_in,1,2))
-      CALL io_read(pwid,(/1,1,1/),                                      &
-     &        (/n3d_in,1,2/),pwd_in)
-      vpw(1:min(n3d_in,stars%nq3),1)=                             &
-     &     cmplx(pwd_in(1:min(n3d_in,stars%nq3),1,1),pwd_in(1:min(n3d_in&
-     &     ,stars%nq3),1,2))
+      CALL io_read(pwid,(/1,1,1/),(/n3d_in,1,2/),"pwd_in",pwd_in)
+      vpw(1:min(n3d_in,stars%ng3),1)=                             &
+     &     cmplx(pwd_in(1:min(n3d_in,stars%ng3),1,1),pwd_in(1:min(n3d_in&
+     &     ,stars%ng3),1,2))
      if (jspins>1) Then
          if (jspins_in<2) then
-              vpw(1:min(n3d_in,stars%nq3),2)=vpw(1:min(n3d_in,stars%nq3),1)
+              vpw(1:min(n3d_in,stars%ng3),2)=vpw(1:min(n3d_in,stars%ng3),1)
          else
-            CALL io_read(pwid,(/1,2,1/),(/n3d_in,1,2/),pwd_in)
-            vpw(1:min(n3d_in,stars%nq3),2)=cmplx(pwd_in(1:min(n3d_in,stars%nq3),1,1),pwd_in(1:min(n3d_in,stars%nq3),1,2))
+            CALL io_read(pwid,(/1,2,1/),(/n3d_in,1,2/),"pwd_in",pwd_in)
+            vpw(1:min(n3d_in,stars%ng3),2)=cmplx(pwd_in(1:min(n3d_in,stars%ng3),1,1),pwd_in(1:min(n3d_in,stars%ng3),1,2))
          endif
       endif
       DEALLOCATE(pwd_in)
@@ -348,22 +349,22 @@
          IF (io_dataexists(gid,'pwod')) THEN 
             CALL io_dopen(gid, 'pwod', pwodid, hdferr) 
             ALLOCATE(pwd_in(n3d_in,1,2)) 
-            CALL io_read(pwodid,(/1,1,1/),                              &
-     &           (/n3d_in,1,2/),pwd_in)                                 
-            vpw(1:min(n3d_in,stars%nq3),3)=                             &
-     &         cmplx(pwd_in(1:min(n3d_in,stars%nq3),1,1),               &
-     &          pwd_in(1:min(n3d_in,stars%nq3),1,2))                    
+            CALL io_read(pwodid,(/1,1,1/),(/n3d_in,1,2/),"pwd_in",pwd_in)
+            vpw(1:min(n3d_in,stars%ng3),3)=                             &
+     &         cmplx(pwd_in(1:min(n3d_in,stars%ng3),1,1),               &
+     &          pwd_in(1:min(n3d_in,stars%ng3),1,2))                    
             DEALLOCATE(pwd_in) 
             CALL io_dclose(pwodid,hdferr) 
          ELSE 
-            WRITE(6,*) 'Off-diagonal potential matrix could not be      &
+            WRITE(oUnit,*) 'Off-diagonal potential matrix could not be      &
      &           read and are now set to zero'                          
          ENDIF
          !now rotate the interstitial charge if needed!!!
-         IF (noco%alpha_int.ne.0.0.or.noco%beta_int.ne.0.0) THEN
+         theta=0.0;phi=0.0
+         IF (PRESENT(beta_int)) theta=beta_int
+         IF (PRESENT(alpha_int)) phi=alpha_int
+         IF (theta.ne.0.0.or.phi.ne.0.0) THEN
             call juDFT_warn("Interstitial spin is rotated, only use once in self-consistency")
-            theta=noco%beta_int
-            phi=noco%alpha_int
             !<-- Now rotate the spin-quantisation axis if needed
             u(1,1) =  EXP(-cmplx(0,1)*phi/2)*COS(theta/2)
             u(1,2) = -EXP(-cmplx(0,1)*phi/2)*SIN(theta/2)
@@ -416,12 +417,11 @@
       USE hdf5 
       USE m_gf_types 
       USE m_hdf_tools 
-      USE m_gf_stars 
       IMPLICIT NONE 
       INTEGER,INTENT(IN)        :: file_type 
       INTEGER,INTENT(IN)        :: layer 
       INTEGER,       INTENT(IN) :: jspins 
-      TYPE(t_gfinp), INTENT(IN) :: gfinp 
+      TYPE(t_embinp), INTENT(IN) :: gfinp 
       TYPE(t_atoms), INTENT(IN) :: atoms 
       TYPE(t_stars), INTENT(IN) :: stars 
       TYPE(t_sphhar),INTENT(IN) :: sphhar 
@@ -466,7 +466,7 @@
       else
         CALL io_createvar(gid,"vr", H5T_NATIVE_DOUBLE,vrdim,vrid)
                                                                         
-        pwdim=(/ stars%nq3,jspins,2 /)
+        pwdim=(/ stars%ng3,jspins,2 /)
         CALL io_createvar(gid,"pw", H5T_NATIVE_DOUBLE,pwdim,pwid)
                                                                         
         avdim = (/ 2*stars%mx3+3,jspins+1 /)
@@ -474,7 +474,7 @@
                                                                         
         IF (l_noco) THEN
 ! off-diagonalpart                                                      
-           pwdim=(/ stars%nq3,1,2 /)
+           pwdim=(/ stars%ng3,1,2 /)
            CALL io_createvar(gid,"pwod", H5T_NATIVE_DOUBLE,pwdim,pwodid)
         ENDIF
       endif
@@ -484,7 +484,7 @@
       CALL io_write_att(vrid, "ntype",atoms%ntype) 
       CALL io_write_att(vrid, "jrid",maxval(atoms%jri)) 
       CALL io_write_att(vrid, "nlhd",maxval(sphhar%nlh)) 
-      if (.not.l_valence) CALL io_write_att(pwid, "n3d",stars%nq3)
+      if (.not.l_valence) CALL io_write_att(pwid, "n3d",stars%ng3)
                                                                         
 !                                                                       
 !      write MT-part to file                                            
@@ -492,11 +492,9 @@
                                                                         
       ! Write the spins seperately                                      
       vrdim(4)=1 
-      CALL io_write(vrid,(/1,1,1,1/),vrdim,                             &
-     &     vr(:vrdim(1),0:vrdim(2)-1,:vrdim(3),1:1))                    
+      CALL io_write(vrid,(/1,1,1,1/),vrdim,"vr",vr(:vrdim(1),0:vrdim(2)-1,:vrdim(3),1:1))
       IF (jspins>1) THEN 
-         CALL io_write(vrid,(/1,1,1,2/),vrdim,                          &
-     &     vr(:vrdim(1),0:vrdim(2)-1,:vrdim(3),2:2))                    
+         CALL io_write(vrid,(/1,1,1,2/),vrdim,"vr",vr(:vrdim(1),0:vrdim(2)-1,:vrdim(3),2:2))
       ENDIF 
 
 
@@ -505,26 +503,23 @@
 !      interstitial part                                                
 !                                                                       
       pwstart=(/1,1,1/) 
-      pwcount=(/ stars%nq3,jspins,1 /) 
+      pwcount=(/ stars%ng3,jspins,1 /) 
                                                                         
-      CALL io_write(pwid,pwstart,pwcount,real(vpw(:stars%nq3,:jspins))) 
+      CALL io_write(pwid,pwstart,pwcount,"real",real(vpw(:stars%ng3,:jspins)))
       pwstart=(/1,1,2/) 
-      CALL io_write(pwid,pwstart,pwcount,aimag(vpw(:stars%nq3           &
-     &     ,:jspins)))                                                  
+      CALL io_write(pwid,pwstart,pwcount,"aimag",aimag(vpw(:stars%ng3                ,:jspins)))
       IF (l_noco) THEN 
          pwstart=(/1,1,1/) 
-         pwcount=(/ stars%nq3,1,1 /) 
-         CALL io_write(pwodid,pwstart,pwcount,                          &
-     &        real(vpw(:stars%nq3,3)))                                  
+         pwcount=(/ stars%ng3,1,1 /) 
+         CALL io_write(pwodid,pwstart,pwcount,"real",real(vpw(:stars%ng3,3)))
          pwstart=(/1,1,2/) 
-         CALL io_write(pwodid,pwstart,pwcount,                          &
-     &      aimag(vpw(:stars%nq3,3)))                                   
+         CALL io_write(pwodid,pwstart,pwcount,"aimag",aimag(vpw(:stars%ng3,3)))
       ENDIF 
       CALL priv_writestarinfo(gid,stars) 
                                                                         
       !<-- Write planar av. of charge                                   
       av = priv_getPlanar(stars,vpw) 
-      CALL io_write(avpwid,(/1,1/),shape(av),av)
+      CALL io_write(avpwid,(/1,1/),shape(av),"av",av)
 
       !>                                                                
 !                                                                       
@@ -538,7 +533,7 @@
                                                                         
       !<-- Save the stars if not in the file                            
       IF (.NOT.io_groupexists(fid,"stars")) THEN 
-         CALL gf_WRITE_stars(fid,stars) 
+         CALL priv_write_stars(fid,stars) 
       ENDIF 
       !>                                                                
       CALL io_gclose(fid,hdferr) 
@@ -577,15 +572,55 @@
       CALL io_write_att(vid, "mx2",stars%mx2) 
       CALL io_write_att(vid, "mx3",stars%mx3) 
       !>                                                                
-      CALL io_WRITE(vid,(/1,1,1/),(/nx,ny,nz/),                         &
-     &     stars%ig(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,          &
-     &     -stars%mx3:stars%mx3))                                       
+      CALL io_WRITE(vid,(/1,1,1/),&
+     &     (/nx,ny,nz/),"stars_ig",&
+     &     stars%ig(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,               -stars%mx3:stars%mx3))
       CALL io_dclose(vid,hdferr) 
                                                                         
       END SUBROUTINE 
                                                                         
       !>                                                                
                                                                         
+      !<-- S:priv_write_stars(fid,stars)
+      SUBROUTINE priv_write_stars(fid,stars)
+!-----------------------------------------------
+!     write the star set into the hdf-file (modern t_stars fields;
+!     replaces gf_WRITE_stars from the old gf_stars module)
+!-----------------------------------------------
+      USE hdf5
+      USE m_gf_types
+      USE m_hdf_tools
+      IMPLICIT NONE
+      INTEGER(HID_T),INTENT(IN)  :: fid
+      TYPE(t_stars),INTENT(IN)   :: stars
+
+      INTEGER(HID_T)      :: gid
+      INTEGER             :: hdferr
+
+      IF (io_groupexists(fid,"stars")) RETURN
+
+      CALL io_gcreate(fid,"stars",gid,hdferr)
+      !write attributes
+      CALL io_WRITE_att(gid, "gmax",stars%gmax)
+      CALL io_WRITE_att(gid, "nq3",stars%ng3)
+      CALL io_WRITE_att(gid, "nq2",stars%ng2)
+      CALL io_WRITE_att(gid, "mx1",stars%mx1)
+      CALL io_WRITE_att(gid, "mx2",stars%mx2)
+      CALL io_WRITE_att(gid, "mx3",stars%mx3)
+
+      !write large variables
+      CALL io_WRITE_var(gid,"kv3",stars%kv3)
+      CALL io_WRITE_var(gid,"sk3",stars%sk3)
+      CALL io_WRITE_var(gid,"ig",stars%ig)
+      CALL io_WRITE_var(gid,"nstr",stars%nstr)
+      CALL io_WRITE_var(gid,"kv2",stars%kv2)
+      CALL io_WRITE_var(gid,"sk2",stars%sk2)
+      CALL io_WRITE_var(gid,"nstr2",stars%nstr2)
+      CALL io_WRITE_var(gid,"ig2",stars%ig2)
+      CALL io_gclose(gid,hdferr)
+      END SUBROUTINE priv_write_stars
+      !>
+
       !<-- S:priv_checkstarinfo(gid,stars)                              
       SUBROUTINE priv_checkstarinfo(gid,stars) 
 !******************************************                             
@@ -608,8 +643,8 @@
       !<--open dataset+write attributes                                 
       CALL io_dopen(gid,"starinfo",vid,hdferr) 
       IF (hdferr/=0) THEN 
-         WRITE(6,*) 'No starinfo found in gf_pot' 
-         WRITE(6,*) 'Potential expandion into stars not checked!' 
+         WRITE(oUnit,*) 'No starinfo found in gf_pot' 
+         WRITE(oUnit,*) 'Potential expandion into stars not checked!' 
          WRITE(*,*) 'Warning: starcheck in gf_iodop failed' 
          RETURN 
       ENDIF 
@@ -619,8 +654,7 @@
       CALL io_read_att(vid, "mx3",nz) 
       !>                                                                
       ALLOCATE(ig(-nx:nx,-ny:ny,-nz:nz)) 
-      CALL io_read(vid,(/1,1,1/),(/2*nx+1,2*ny+1,2*nz+1/),              &
-     &     ig(-nx:nx,-ny:ny,-nz:nz))                                    
+      CALL io_read(vid,(/1,1,1/),(/2*nx+1,2*ny+1,2*nz+1/),"ig",ig(-nx:nx,-ny:ny,-nz:nz))
       CALL io_dclose(vid,hdferr) 
       !Check if mapping is ok!                                          
                                                                         
@@ -688,7 +722,7 @@
                                                                         
       !Add z-coordinate as first row                                    
       dz = stars%sk3(stars%ig(0,0,1)) 
-      dz = 2*pimach()/dz/REAL(2*stars%mx3+1) 
+      dz = 2*pi_const/dz/REAL(2*stars%mx3+1) 
       DO n  =-stars%mx3,stars%mx3 
          planar(n,1) = n*dz 
       ENDDO 
@@ -718,10 +752,10 @@
       CHARACTER(LEN = 16)      :: filename 
       LOGICAL                  :: lexist,o 
       INTEGER                  :: hdferr,mpierr,irank,n
-      INTEGER(hid_t)           :: access_prp,rw_prp 
+      INTEGER(hid_t)           :: access_prp
+      INTEGER                  :: rw_prp 
       !>                                                                
 #ifdef CPP_MPI                                                          
-      INCLUDE 'mpif.h' 
 #endif                                                                  
       access_prp = H5P_DEFAULT_f 
       IF (PRESENT(mpi_subcom)) THEN 
@@ -817,7 +851,6 @@
       INTEGER                          :: hdferr,mpierr,irank,isize 
       INTEGER(hid_t),POINTER           :: ID 
 #ifdef CPP_MPI                                                          
-      include "mpif.h" 
 #endif                                                                  
       IF (file == gf_potfile) THEN 
          ID    => pot_id 
@@ -897,11 +930,11 @@
          ELSE
             CALL io_createvar(gid,"coul",H5T_NATIVE_DOUBLE,(/size(vpw,1),2/),pwid)
          ENDIF 
-         CALL io_WRITE(pwid,(/1,1/),(/SIZE(vpw),1/),REAL(vpw)) 
-         CALL io_WRITE(pwid,(/1,2/),(/SIZE(vpw),1/),AIMAG(vpw)) 
+         CALL io_WRITE(pwid,(/1,1/),(/SIZE(vpw),1/),"REAL",REAL(vpw))
+         CALL io_WRITE(pwid,(/1,2/),(/SIZE(vpw),1/),"AIMAG",AIMAG(vpw))
          av = priv_getPlanar(stars,RESHAPE(vpw,(/SIZE(vpw),1/))) 
                                                                         
-         CALL io_WRITE(avid,(/1,1/),SHAPE(av),av) 
+         CALL io_WRITE(avid,(/1,1/),SHAPE(av),"av",av)
          CALL io_dclose(avid,hdferr) 
          CALL io_dclose(pwid,hdferr) 
       ENDIF 
@@ -912,10 +945,8 @@
             CALL io_createvar(gid,"charge", H5T_NATIVE_DOUBLE,(/SIZE(qpw&
      &           ,1),SIZE(qpw,2),2/),pwid)                              
          ENDIF 
-         CALL io_WRITE(pwid,(/1,1,1/),(/SIZE(qpw,1),SIZE(qpw,2),1/)     &
-     &        ,REAL(qpw))                                               
-         CALL io_WRITE(pwid,(/1,1,2/),(/SIZE(qpw,1),SIZE(qpw,2),1/)     &
-     &        ,AIMAG(qpw))                                              
+         CALL io_WRITE(pwid,(/1,1,1/),(/SIZE(qpw,1),SIZE(qpw,2),1/),"REAL",REAL(qpw))
+         CALL io_WRITE(pwid,(/1,1,2/),(/SIZE(qpw,1),SIZE(qpw,2),1/),"AIMAG",AIMAG(qpw))
          CALL io_dclose(pwid,hdferr) 
       ENDIF 
       IF (PRESENT(vr)) THEN
@@ -925,8 +956,7 @@
             CALL io_createvar(gid,"vr", H5T_NATIVE_DOUBLE,(/SIZE(vr,1),  &
      &       SIZE(vr,2),size(vr,3),size(vr,4)/),vrid)
          ENDIF
-         CALL io_WRITE(vrid,(/1,1,1,1/),(/SIZE(vr,1),SIZE(vr,2),         &
-     &    SIZE(vr,3),SIZE(vr,4)/),vr)
+         CALL io_WRITE(vrid,(/1,1,1,1/),(/SIZE(vr,1),SIZE(vr,2),             SIZE(vr,3),SIZE(vr,4)/),"vr",vr)
          CALL io_dclose(vrid,hdferr)
       ENDIF
       CALL io_gclose(gid,hdferr) 
@@ -971,7 +1001,7 @@
             vpw = 0.0 
             n   = MIN(n,SIZE(vpw)) 
          ENDIF 
-         CALL io_READ(pwid,(/1,-1/),(/n,1/),vpw(:n)) 
+         CALL io_READ(pwid,(/1,-1/),(/n,1/),"vpw",vpw(:n))
          CALL io_dclose(pwid,hdferr) 
       ENDIF 
       IF (PRESENT(qpw)) THEN 
@@ -984,8 +1014,7 @@
             DIM(2) = MIN(DIM(2),SIZE(qpw,2)) 
          ENDIF 
                                                                         
-         CALL io_READ(pwid,(/1,1,-1/),(/DIM(1),DIM(2),1/)               &
-     &        ,qpw)                                                     
+         CALL io_READ(pwid,(/1,1,-1/),(/DIM(1),DIM(2),1/),"qpw",qpw)
          CALL io_dclose(pwid,hdferr) 
       ENDIF 
       CALL io_gclose(gid,hdferr) 
@@ -1018,7 +1047,6 @@
 
       !>                                                                
 #ifdef CPP_MPI
-      include "mpif.h"
       integer:: mpierr
       CALL MPI_COMM_RANK(mpi_subcom,irank,mpierr)
 #else
@@ -1039,15 +1067,9 @@
          	exit
       	ENDDO
       	WRITE(filename,"(a6,i0,a4)") trim(file),priv_lastfileNo(file_type)+1,".hdf"
-#if defined(CPP_AIX)&&defined(CPP_MPI)
-	    filename=trim(filename)//"\0"
-	    file=trim(file)//".hdf\0"
-        call rename(file,filename)
-#else
       	WRITE(command,"(a,a,a,a)") "mv ",trim(file),".hdf ",filename
       	WRITE(*,*) "execute:",command
-      	CALL system(command)
-#endif
+      	CALL EXECUTE_COMMAND_LINE(command)
       endif
 
 
@@ -1163,17 +1185,13 @@
       nlhd_in=min(nlhd_in,sphhar%nlhd)
       jrid_in=min(jrid_in,size(vr,1))
       ALLOCATE(vr_tmp(jrid_in,nlhd_in+1,ntype_in,1))
-      CALL io_read(vrid,(/1,1,1,1/),                                    &
-     &     (/jrid_in,nlhd_in+1,ntype_in,1/)                             &
-     &     ,vr_tmp)
+      CALL io_read(vrid,(/1,1,1,1/),(/jrid_in,nlhd_in+1,ntype_in,1/),"vr_tmp",vr_tmp)
       vr(:jrid_in,0:nlhd_in,:ntype_in,1:1)=vr_tmp
       IF (jspins>1) THEN
          if (jspins_in<2) then
               vr(:jrid_in,0:nlhd_in,:ntype_in,2:2)=vr(:jrid_in,0:nlhd_in,:ntype_in,1:1)
          else
-            CALL io_read(vrid,(/1,1,1,2/),                                 &
-     &      (/jrid_in,nlhd_in+1,ntype_in,1/)                             &
-     &      ,vr_tmp)
+            CALL io_read(vrid,(/1,1,1,2/),(/jrid_in,nlhd_in+1,ntype_in,1/),"vr_tmp",vr_tmp)
             vr(:jrid_in,0:nlhd_in,:ntype_in,2:2)=vr_tmp
          endif
       ENDIF
@@ -1188,17 +1206,16 @@
       vpw=0.0
                                                                         
       ALLOCATE(pwd_in(n3d_in,1,2))
-      CALL io_read(pwid,(/1,1,1/),                                      &
-     &        (/n3d_in,1,2/),pwd_in)
-      vpw(1:min(n3d_in,stars%nq3),1)=                             &
-     &     cmplx(pwd_in(1:min(n3d_in,stars%nq3),1,1),pwd_in(1:min(n3d_in&
-     &     ,stars%nq3),1,2))
+      CALL io_read(pwid,(/1,1,1/),(/n3d_in,1,2/),"pwd_in",pwd_in)
+      vpw(1:min(n3d_in,stars%ng3),1)=                             &
+     &     cmplx(pwd_in(1:min(n3d_in,stars%ng3),1,1),pwd_in(1:min(n3d_in&
+     &     ,stars%ng3),1,2))
      if (jspins>1) Then
          if (jspins_in<2) then
-              vpw(1:min(n3d_in,stars%nq3),2)=vpw(1:min(n3d_in,stars%nq3),1)
+              vpw(1:min(n3d_in,stars%ng3),2)=vpw(1:min(n3d_in,stars%ng3),1)
          else
-            CALL io_read(pwid,(/1,2,1/),(/n3d_in,1,2/),pwd_in)
-            vpw(1:min(n3d_in,stars%nq3),2)=cmplx(pwd_in(1:min(n3d_in,stars%nq3),1,1),pwd_in(1:min(n3d_in,stars%nq3),1,2))
+            CALL io_read(pwid,(/1,2,1/),(/n3d_in,1,2/),"pwd_in",pwd_in)
+            vpw(1:min(n3d_in,stars%ng3),2)=cmplx(pwd_in(1:min(n3d_in,stars%ng3),1,1),pwd_in(1:min(n3d_in,stars%ng3),1,2))
          endif
       endif
       DEALLOCATE(pwd_in)
@@ -1329,10 +1346,10 @@
             CALL io_createvar(gid,"pwav",H5T_NATIVE_DOUBLE,(/2*stars%mx3&
      &           +3/),avid)                                             
          ENDIF 
-         CALL io_WRITE(pwid,(/1,1/),(/SIZE(vpw),1/),REAL(vpw)) 
-         CALL io_WRITE(pwid,(/1,2/),(/SIZE(vpw),1/),AIMAG(vpw)) 
+         CALL io_WRITE(pwid,(/1,1/),(/SIZE(vpw),1/),"REAL",REAL(vpw))
+         CALL io_WRITE(pwid,(/1,2/),(/SIZE(vpw),1/),"AIMAG",AIMAG(vpw))
          av = priv_getPlanar(stars,vpw) 
-         CALL io_WRITE(avid,(/1/),SHAPE(av),av) 
+         CALL io_WRITE(avid,(/1/),SHAPE(av),"av",av)
          CALL io_dclose(avid,hdferr) 
          CALL io_dclose(pwid,hdferr) 
       ENDIF 
@@ -1343,10 +1360,8 @@
             CALL io_createvar(gid,"charge", H5T_NATIVE_DOUBLE,(/SIZE(qpw&
      &           ,1),SIZE(qpw,2),2/),pwid)                              
          ENDIF 
-         CALL io_WRITE(pwid,(/1,1,1/),(/SIZE(qpw,1),SIZE(qpw,2),1/)     &
-     &        ,REAL(qpw))                                               
-         CALL io_WRITE(pwid,(/1,1,2/),(/SIZE(qpw,1),SIZE(qpw,2),1/)     &
-     &        ,AIMAG(qpw))                                              
+         CALL io_WRITE(pwid,(/1,1,1/),(/SIZE(qpw,1),SIZE(qpw,2),1/),"REAL",REAL(qpw))
+         CALL io_WRITE(pwid,(/1,1,2/),(/SIZE(qpw,1),SIZE(qpw,2),1/),"AIMAG",AIMAG(qpw))
          CALL io_dclose(pwid,hdferr) 
       ENDIF 
       IF (PRESENT(vr)) THEN
@@ -1356,8 +1371,7 @@
             CALL io_createvar(gid,"vr", H5T_NATIVE_DOUBLE,(/SIZE(vr,1),  &
      &       SIZE(vr,2),size(vr,3),size(vr,4)/),vrid)
          ENDIF
-         CALL io_WRITE(vrid,(/1,1,1,1/),(/SIZE(vr,1),SIZE(vr,2),         &
-     &    SIZE(vr,3),SIZE(vr,4)/),vr)
+         CALL io_WRITE(vrid,(/1,1,1,1/),(/SIZE(vr,1),SIZE(vr,2),             SIZE(vr,3),SIZE(vr,4)/),"vr",vr)
          CALL io_dclose(vrid,hdferr)
       ENDIF
       CALL io_gclose(gid,hdferr) 
@@ -1402,7 +1416,7 @@
             vpw = 0.0 
             n   = MIN(n,SIZE(vpw)) 
          ENDIF 
-         CALL io_READ(pwid,(/1,-1/),(/n,1/),vpw(:n)) 
+         CALL io_READ(pwid,(/1,-1/),(/n,1/),"vpw",vpw(:n))
          CALL io_dclose(pwid,hdferr) 
       ENDIF 
       IF (PRESENT(qpw)) THEN 
@@ -1415,8 +1429,7 @@
             DIM(2) = MIN(DIM(2),SIZE(qpw,2)) 
          ENDIF 
                                                                         
-         CALL io_READ(pwid,(/1,1,-1/),(/DIM(1),DIM(2),1/)               &
-     &        ,qpw)                                                     
+         CALL io_READ(pwid,(/1,1,-1/),(/DIM(1),DIM(2),1/),"qpw",qpw)
          CALL io_dclose(pwid,hdferr) 
       ENDIF 
       CALL io_gclose(gid,hdferr) 

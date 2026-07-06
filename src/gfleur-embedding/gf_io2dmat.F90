@@ -4,7 +4,9 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
       MODULE m_gf_io2dmat 
-#include "juDFT_env.h"
+#ifdef CPP_MPI
+      USE mpi
+#endif
       USE,INTRINSIC::iso_c_binding
 !-----------------------------------------------                        
 ! New version of the subroutines needed to read/write 2D matrices       
@@ -85,7 +87,7 @@
       CONTAINS 
                                                                         
       !<-- S: init                                                      
-      SUBROUTINE init(kpts,gfinp,lapw,sym,layers,jspins,l_noco,mpi    &
+      SUBROUTINE init(kpts,gfinp,lapw,sym,layers,jspins,l_noco,gmpi    &
      &     ,l_tmatmemory)                                               
 !-----------------------------------------------                        
 !                                                                       
@@ -98,12 +100,12 @@
                                                                         
       INTEGER,INTENT(IN)        :: jspins 
       TYPE(t_kpts),INTENT(IN)   :: kpts 
-      TYPE(t_gfinp),INTENT(IN)  :: gfinp 
-      TYPE(t_lapw),INTENT(IN)   :: lapw 
+      TYPE(t_embinp),INTENT(IN)  :: gfinp 
+      TYPE(t_lapw_gf),INTENT(IN)   :: lapw 
       TYPE(t_sym),INTENT(IN)    :: sym 
       TYPE(t_layers),INTENT(IN) :: layers 
       LOGICAL,INTENT(IN)        :: l_noco
-      TYPE(t_mpi),intent(in)    :: mpi
+      TYPE(t_gfmpi),intent(in)    :: gmpi
       LOGICAL,INTENT(OUT)       :: l_tmatmemory 
                                                                         
       !>                                                                
@@ -138,7 +140,7 @@
 
       IF (.NOT.(lexist)) THEN
         !No IO wanted
-        if (gfinp%l_addemb)  CPP_error("addemb set without gf_io-file")
+        if (gfinp%l_addemb)  CALL juDFT_error("addemb set without gf_io-file")
         RETURN
       ENDIF
       !<-- Now read the gf_io file                                      
@@ -184,7 +186,7 @@
      &        = side;iochar2 = rw;iohandle(i)%fileno =id;iohandle(i     &
      &        )%spinrot = spinrot;iohandle(i)%theta=theta;iohandle(i    &
      &        )%phi = phi;iohandle(i)%shift=shift                       
-         IF (iohandle(i)%fileno<1) CPP_error('illegal fileNO in gf_io')
+         IF (iohandle(i)%fileno<1) CALL juDFT_error('illegal fileNO in gf_io')
          IF (iochar1 =='E'.OR.iochar1 =='e') THEN 
             iohandle(i)%mode = IO2D_EMB 
          ELSE IF (iochar1    =='A'.OR.iochar1 =='a') THEN 
@@ -199,7 +201,7 @@
             iohandle(i)%mode = IO2D_G12 
          ELSE 
             WRITE (*,*) 'Unkown IO-mode line:',i,'Mode:',iochar1 
-            CPP_error('gf_io2dmat')
+            CALL juDFT_error('gf_io2dmat')
          ENDIF 
          IF (iochar2 =='r'.OR.iochar2 =='R') THEN 
             iohandle(i)%rw = IO2D_READ 
@@ -209,7 +211,7 @@
             iohandle(i)%rw = IO2D_READWRITE 
          ELSE 
             WRITE (*,*) 'Unkown IO-mode line:',i,'rw:',iochar2 
-            CPP_error('gf_io2dmat')
+            CALL juDFT_error('gf_io2dmat')
          ENDIF 
       ENDDO 
                                                                         
@@ -218,17 +220,17 @@
       if (gfinp%l_addemb) THEN
          !is there an left embedding file?
          if (count(iohandle%mode==IO2D_EMB.and.iohandle%rw==IO2D_READ.and.iohandle%region==1.and.iohandle%side==1)<1) &
-            CPP_error("No left embedding potential supplied with addemb=T")
+            CALL juDFT_error("No left embedding potential supplied with addemb=T")
          if (count(iohandle%mode==IO2D_EMB.and.iohandle%rw==IO2D_READ.and.iohandle%region==1.and.iohandle%side==1)>1) &
-            CPP_error("Multiple left embedding potentials supplied with addemb=T")
+            CALL juDFT_error("Multiple left embedding potentials supplied with addemb=T")
          if (gfinp%l_surface) then
             if (count(iohandle%mode==IO2D_EMB.and.iohandle%rw==IO2D_READ.and.iohandle%region==layers%num_layers.and.iohandle%side==2)>0) &
-                CPP_error("Right embedding potential supplied with addemb=T & surface=T")
+                CALL juDFT_error("Right embedding potential supplied with addemb=T & surface=T")
          else
             if (count(iohandle%mode==IO2D_EMB.and.iohandle%rw==IO2D_READ.and.iohandle%region==layers%num_layers.and.iohandle%side==2)>1) &
-                CPP_error("Multiple right embedding potentials supplied with addemb=T")
+                CALL juDFT_error("Multiple right embedding potentials supplied with addemb=T")
             if (count(iohandle%mode==IO2D_EMB.and.iohandle%rw==IO2D_READ.and.iohandle%region==layers%num_layers.and.iohandle%side==2)<1) &
-                CPP_error("No right embedding potentials supplied with addemb=T")
+                CALL juDFT_error("No right embedding potentials supplied with addemb=T")
          endif
       endif
       !<-- Now read the filenames, the matrix-sizes and the energyshift!
@@ -251,9 +253,9 @@
          iofile(i)%eps_kpts=kpts_eps 
          iofile(i)%eps_energy=en_eps 
          IF (bias) THEN 
-            CPP_error("Bias in gf_io2dmat not used anymore")
+            CALL juDFT_error("Bias in gf_io2dmat not used anymore")
             IF (energy_shift /= 0.0)                                    &
-     &           CPP_error("Both bias+energy_shift in gf_io")
+     &           CALL juDFT_error("Both bias+energy_shift in gf_io")
 !            iofile(i)%energyshift = -1.*gfinp%bias ! bias has to be app
                                                    ! right side         
          ENDIF 
@@ -270,7 +272,7 @@
             ENDIF 
                !loop over iohandles                                     
          ENDDO 
-         IF(foundfileno==0) CPP_error("foundnofileno")
+         IF(foundfileno==0) CALL juDFT_error("foundnofileno")
 !         if(foundfileno.ne.1)call juDFT_error("foundmanyfileno")         
                                                                         
                                                                         
@@ -282,7 +284,7 @@
           IF(iohandle(ii)%fileno == i)THEN 
             IF (iohandle(ii)%mode == IO2D_TMAT.OR.iohandle(ii)%mode== IO2D_CBS) THEN
                IF (iofile(i)%matsize /= 0.AND.iofile(i)%matsize /= 2)   &
-     &              CPP_error("Conflicting file sizes in gf_io")
+     &              CALL juDFT_error("Conflicting file sizes in gf_io")
                iofile(i)%matsize = 2 
                   !transfer matrix: large matrices                      
             ENDIF 
@@ -291,7 +293,7 @@
      &           iohandle(ii)%mode == IO2D_EMBADV .OR.                  &
      &           iohandle(ii)%mode == IO2D_G12) THEN                    
                IF (iofile(i)%matsize /= 0.AND.iofile(i)%matsize /= 1)   &
-     &              CPP_error("Conflicting file sizes in gf_io")
+     &              CALL juDFT_error("Conflicting file sizes in gf_io")
                iofile(i)%matsize = 1 
                   !embedding matrix, surface-green, ....: small matrices
             ENDIF 
@@ -309,7 +311,7 @@
       IF (ANY(iofile%matsize==0)) THEN 
          WRITE(*,*) 'ERROR in reading gf_io' 
          WRITE(*,*) 'You tried to assign an IO to an unkown filenumber' 
-         CPP_error('gf_io')
+         CALL juDFT_error('gf_io')
       ENDIF 
       !>                                                                
       !>                                                                
@@ -382,7 +384,7 @@
            mem%in_mem=(count(iohandle%mode==IO2D_EMB)==2)
          ENDIF
          if (mem%in_mem)THEN
-           IF(priv_create_mpi_memory(mpi,layers,kpts,lapw,jspins,l_noco)) THEN
+           IF(priv_create_mpi_memory(gmpi,layers,kpts,lapw,jspins,l_noco)) THEN
              new_handles=0
              l_tmatmemory=.false.
            ENDIF
@@ -459,22 +461,22 @@
                                                                         
       !>                                                                
       !<-- Write out some information                                   
-      IF (mpi%pe0) THEN
-         WRITE(6,*) "io2Dmat-Setup" 
-         WRITE(6,*) "Handles:",SIZE(iohandle) 
-          WRITE(6,*) "No File Region Side RW Spinrot     Theta   Phi" 
+      IF (gmpi%pe0) THEN
+         WRITE(oUnit,*) "io2Dmat-Setup" 
+         WRITE(oUnit,*) "Handles:",SIZE(iohandle) 
+          WRITE(oUnit,*) "No File Region Side RW Spinrot     Theta   Phi" 
          DO i = 1,SIZE(iohandle) 
-            WRITE(6,'(i2,2x,i2,4x,i2,5x,i2,3x,i2,3x,l1,3x,2(f10.8,1x))')&
+            WRITE(oUnit,'(i2,2x,i2,4x,i2,5x,i2,3x,i2,3x,l1,3x,2(f10.8,1x))')&
      &           i,iohandle(i)%fileno,iohandle(i)%region,iohandle(i     &
      &           )%side,iohandle(i)%rw,iohandle(i)%spinrot,iohandle(i   &
      &           )%theta,iohandle(i)%phi                                
                                                                         
          ENDDO 
-         WRITE(6,*) 
-         WRITE(6,*) "Files:",SIZE(iofile) 
-         WRITE(6,*) "No  Filename  Write           Size" 
+         WRITE(oUnit,*) 
+         WRITE(oUnit,*) "Files:",SIZE(iofile) 
+         WRITE(oUnit,*) "No  Filename  Write           Size" 
          DO i = 1,SIZE(iofile) 
-            WRITE(6,'(i2,3x,a10,2x,l1,6x,i8)')i,iofile(i)%filename      &
+            WRITE(oUnit,'(i2,3x,a10,2x,l1,6x,i8)')i,iofile(i)%filename      &
      &           ,iofile(i)%writeable,iofile(i)%matsize                 
          ENDDO 
       ENDIF 
@@ -501,13 +503,12 @@
 !           (last modified: 2004-00-00) D. Wortmann                     
 !-----------------------------------------------                        
       USE m_gf_types 
-#include "juDFT_env.h"
       USE m_gf_energies,ONLY: gf_NoEn,gf_Z,gf_allz 
       USE m_hdf_accessprp
       IMPLICIT NONE 
       !<--Arguments                                                     
       TYPE(t_file),INTENT(INOUT) :: io_file 
-      TYPE(t_lapw),INTENT(IN)  :: lapw 
+      TYPE(t_lapw_gf),INTENT(IN)  :: lapw 
       TYPE(t_kpts),INTENT(IN)  :: kpts 
       TYPE(t_sym),INTENT(IN)   :: sym 
       INTEGER,INTENT(IN)       :: jspins 
@@ -522,21 +523,21 @@
       INTEGER,ALLOCATABLE  :: gvecs_in(:,:) 
                                                                         
                                                                         
-      INTEGER(hid_t)   :: varid,fspace,access_mode 
+      INTEGER(hid_t)   :: varid,fspace
+      INTEGER          :: access_mode
       INTEGER(hsize_t) :: dims(7),maxdims(7) 
       INTEGER          :: hdferr,irank 
       !>                                                                
       !<--Access properties for MPI                                     
 
 #ifdef CPP_MPI                                                          
-      INCLUDE 'mpif.h' 
       integer :: ierr
       CALL  MPI_COMM_RANK (MPI_COMM_WORLD,irank,hdferr)
 #else                                                                   
       irank=0 
 #endif
                                                                         
-      CPP_juDFT_timestart("io2dmat open:"//io_file%filename)
+      CALL timestart("io2dmat open:"//io_file%filename)
       !>                                                                
       !<--perhaps a supercell embedding potential should be made??      
       CALL priv_generatesupercell(lapw,kpts,jspins) 
@@ -556,7 +557,7 @@
       ENDIF 
 
       !>                                                                
-      IF (.NOT.l_exist.AND..NOT.io_file%writeable) CPP_error("gf_io: file for reading does not exist")
+      IF (.NOT.l_exist.AND..NOT.io_file%writeable) CALL juDFT_error("gf_io: file for reading does not exist")
       IF (l_exist) THEN 
          !<--Check if file can be opened read-only and open file        
          IF (io_file%writeable) THEN 
@@ -567,25 +568,25 @@
          CALL io_hdfopen (TRIM(io_file%filename)//'.hdf',access_Mode,    &
      &        io_file%fid, hdferr,hdf_access_prp(trim(io_file%filename)))
          ! Open dataset
-         CPP_juDFT_timestart("open dataset")
+         CALL timestart("open dataset")
          CALL io_dopen(io_file%fid, '2Dmat', io_file%varid, hdferr)
-         CPP_juDFT_timestop("open dataset")
+         CALL timestop("open dataset")
          !>
          !Open dataset for gmap
-         CPP_juDFT_timestart("open gmap")
+         CALL timestart("open gmap")
          !CALL io_dopen(io_file%fid, 'mapping', io_file%mapid, hdferr)
-         CPP_juDFT_timestop("open gmap")
+         CALL timestop("open gmap")
 
          !>
          !<--Read energies                                              
-         CPP_juDFT_timestart("energy+k mapping")
+         CALL timestart("energy+k mapping")
                                                                         
          CALL io_dopen(io_file%fid, 'energies', varid, hdferr) 
          CALL h5dget_space_f(varid,fspace,hdferr) 
          CALL h5sget_simple_extent_dims_f(fspace,dims,maxdims,hdferr) 
          ALLOCATE(en_in(dims(2))) 
          CALL h5sclose_f(fspace,hdferr) 
-         CALL io_READ(varid,(/-1,1/),(/1,SIZE(en_in)/),en_in) 
+         CALL io_READ(varid,(/-1,1/),(/1,SIZE(en_in)/),"en_in",en_in)
          CALL io_dclose(varid,hdferr) 
          !generate mapping index                                        
          ALLOCATE(io_file%emap(gf_NoEN())) 
@@ -605,7 +606,7 @@
                WRITE(*,*) 'In hdf-file:' 
                WRITE(*,"(999(2f10.5,/))") (en_in(nn),nn = 1,SIZE(en_in))
                write(*,*) "Energy-epsilon:", io_file%eps_energy
-               CPP_error('No matching energy found')
+               CALL juDFT_error('No matching energy found')
             ENDIF 
          ENDDO 
          DEALLOCATE(en_in) 
@@ -618,12 +619,11 @@
          CALL h5sget_simple_extent_dims_f(fspace,dims,maxdims,hdferr) 
          ALLOCATE(kpts_in(2,dims(2))) 
          CALL h5sclose_f(fspace,hdferr) 
-         CALL io_READ(varid,(/1,1/),(/2,SIZE(kpts_in,2)/)               &
-     &        ,kpts_in)                                                 
+         CALL io_READ(varid,(/1,1/),(/2,SIZE(kpts_in,2)/),"kpts_in",kpts_in)
          CALL io_dclose(varid,hdferr) 
          !generate mapping index                                        
-         ALLOCATE(io_file%kmap(kpts%nkpts)) 
-         DO k = 1,kpts%nkpts 
+         ALLOCATE(io_file%kmap(kpts%nkpt)) 
+         DO k = 1,kpts%nkpt 
             !find kpt                                                   
             io_file%kmap(k) =-1 
             DO kk = 1,SIZE(kpts_in,2) 
@@ -637,7 +637,7 @@
                DO kk = 1,SIZE(kpts_in,2) 
                   WRITE(*,*) kpts_in(:,kk) 
                ENDDO 
-               CPP_error('No matching k-point found')
+               CALL juDFT_error('No matching k-point found')
             ENDIF 
          ENDDO 
          DEALLOCATE(kpts_in) 
@@ -650,8 +650,7 @@
          CALL h5sget_simple_extent_dims_f(fspace,dims,maxdims,hdferr) 
          ALLOCATE(gvecs_in(2,dims(2))) 
          CALL h5sclose_f(fspace,hdferr) 
-         CALL io_READ(varid,(/1,1/),(/2,SIZE(gvecs_in,2)/)              &
-     &        ,gvecs_in)                                                
+         CALL io_READ(varid,(/1,1/),(/2,SIZE(gvecs_in,2)/),"gvecs_in",gvecs_in)
          CALL io_dclose(varid,hdferr) 
          !create mapping index                                          
          ALLOCATE(io_file%gmap(SIZE(gvecs_in,2))) 
@@ -674,11 +673,11 @@
          IF (io_file%matsize/=dims(1)) THEN 
             WRITE (*,*) 'In file:',io_file%filename 
             WRITE (*,*) 'Matrix dimension missmatch' 
-            CPP_error('gf_io2dmat')
+            CALL juDFT_error('gf_io2dmat')
          ENDIF 
          !check how many spin's there are...                            
          io_file%spins=dims(4)
-         CPP_juDFT_timestop("energy+k mapping")
+         CALL timestop("energy+k mapping")
 
          !>                                                             
       ELSE !file does not exist
@@ -700,14 +699,14 @@
             OPEN(io_file%fid,ACCESS ='direct',RECL = io_file%matsize**2 &
      &           *16,STATUS ='scratch')                                 
          ELSE
-            CPP_juDFT_timestart("open file")
+            CALL timestart("open file")
 
             CALL h5fcreate_f(TRIM(io_file%filename)//'.hdf'             &
      &           ,H5F_ACC_TRUNC_F,io_file%fid, hdferr,H5P_DEFAULT_f,    &
      &           hdf_access_prp(trim(io_file%filename)))
-            nk = kpts%nkpts 
-            CPP_juDFT_timestop("open file")
-            CPP_juDFT_timestart("create datasets")
+            nk = kpts%nkpt 
+            CALL timestop("open file")
+            CALL timestart("create datasets")
 #ifndef CPP_MPI
             if (io_file%filename(1:1)=='_') nk=1
 #endif
@@ -717,34 +716,34 @@
             !call io_createvar(io_file%fid,"mapping",H5T_NATIVE_INTEGER, &
             !        (/SIZE(lapw%global2dList,2),io_file%spins,nk/),io_file%mapid)
             !>
-            CPP_juDFT_timestop("create datasets")
+            CALL timestop("create datasets")
             !<-- create mapping array for energies                      
-            CPP_juDFT_timestart("energy+k mapping")
+            CALL timestart("energy+k mapping")
 
-            CPP_juDFT_timestart("create energy dataset")
+            CALL timestart("create energy dataset")
             ALLOCATE(io_file%emap(gf_NoEN())) 
             io_file%emap = (/(n,n = 1,gf_NoEn())/) 
             !write energies to file
 
             CALL io_createvar(io_file%fid,"energies",H5T_NATIVE_DOUBLE, &
      &           (/2,gf_NoEn()/),varid)
-            CPP_juDFT_timestop("create energy dataset")
-            CPP_juDFT_timestart("write energy dataset")
-            CALL io_WRITE(varid,(/-1,1/),(/1,gf_NoEn()/),gf_AllZ(0)) 
+            CALL timestop("create energy dataset")
+            CALL timestart("write energy dataset")
+            CALL io_WRITE(varid,(/-1,1/),(/1,gf_NoEn()/),"gf_AllZ",gf_AllZ(0))
             CALL io_dclose(varid,hdferr) 
-            CPP_juDFT_timestop("write energy dataset")
+            CALL timestop("write energy dataset")
             !>                                                          
             !<-- kpts                                                   
-            CPP_juDFT_timestart("create kpts dataset")
-            ALLOCATE(io_file%kmap(kpts%nkpts)) 
-            io_file%kmap = (/ (n,n = 1,kpts%nkpts ) /) 
-            if (nk/=kpts%nkpts) io_file%kmap=1
+            CALL timestart("create kpts dataset")
+            ALLOCATE(io_file%kmap(kpts%nkpt)) 
+            io_file%kmap = (/ (n,n = 1,kpts%nkpt ) /) 
+            if (nk/=kpts%nkpt) io_file%kmap=1
             CALL io_createvar(io_file%fid,"kpts",H5T_NATIVE_DOUBLE,(/2  &
-     &           ,kpts%nkpts/),varid)                                   
-            CALL io_WRITE(varid,(/1,1/),(/2,kpts%nkpts/),kpts%bk(1:2,:))
-            CPP_juDFT_timestop("create kpts dataset")
+     &           ,kpts%nkpt/),varid)                                   
+            CALL io_WRITE(varid,(/1,1/),(/2,kpts%nkpt/),"kpts_bk",kpts%bk(1:2,:))
+            CALL timestop("create kpts dataset")
 
-            CPP_juDFT_timestart("create sym attributes")
+            CALL timestart("create sym attributes")
             !<-- The symmetry attributes                                
             CALL io_WRITE_att(varid,"nsym",sym%nop2) 
             CALL io_WRITE_att(varid,"symop",sym%mrot(1:2,1:2,1:sym%nop2)&
@@ -752,24 +751,23 @@
             !>                                                          
                                                                         
             CALL io_dclose(varid,hdferr) 
-            CPP_juDFT_timestop("create sym attributes")
-            CPP_juDFT_timestart("create gvec dataset")
+            CALL timestop("create sym attributes")
+            CALL timestart("create gvec dataset")
             !>                                                          
             !<-- The gvectors                                           
             ALLOCATE(io_file%gmap(SIZE(lapw%global2dList,2))) 
             io_file%gmap = (/(n,n = 1,SIZE(io_file%gmap))/) 
             CALL io_createvar(io_file%fid,"gvecs",H5T_NATIVE_INTEGER,(/2&
      &           ,SIZE(io_file%gmap)/),varid)                           
-            CALL io_WRITE(varid,(/1,1/),(/2,SIZE(io_file%gmap)/)        &
-     &           ,lapw%global2Dlist(:,:))                               
+            CALL io_WRITE(varid,(/1,1/),(/2,SIZE(io_file%gmap)/),"lapw_global2Dlist",lapw%global2Dlist(:,:))
             CALL io_dclose(varid,hdferr)
-            CPP_juDFT_timestop("create gvec dataset")
-            CPP_juDFT_timestop("energy+k mapping")
+            CALL timestop("create gvec dataset")
+            CALL timestop("energy+k mapping")
 
             !>                                                          
          ENDIF 
       ENDIF 
-      CPP_juDFT_timestop("io2dmat open:"//io_file%filename)
+      CALL timestop("io2dmat open:"//io_file%filename)
       END SUBROUTINE 
                                                                         
       !>                                                                
@@ -806,11 +804,10 @@
 !********************************************************************** 
       USE m_hdf_tools,ONLY:io_WRITE 
       USE m_gf_types 
-#include "juDFT_env.h"
       IMPLICIT NONE 
       INTEGER,INTENT(IN)          :: mode,region,side 
       INTEGER,INTENT(IN)          :: jspin,nk,en 
-      TYPE(t_lapw),INTENT(IN)     :: lapw 
+      TYPE(t_lapw_gf),INTENT(IN)     :: lapw 
       COMPLEX,INTENT(IN)          :: mat(:,:) 
                                                                         
       INTEGER :: fileid
@@ -824,7 +821,7 @@
       !First get the fileid                                             
       fileid = priv_getFILEHANDLE(IO2D_WRITE,mode,region,side) 
       IF (fileid<1) RETURN
-      CPP_juDFT_timestart("gf_write2dmat")
+      CALL timestart("gf_write2dmat")
 
       !Check if this is a noco calculation
       if (jspin==1.and.size(mat,1)>iofile(fileid)%matscale*lapw%nv2(1)) then
@@ -839,18 +836,18 @@
 
       !Write Data to file
        if (size(a,4)==1) then
-            CALL io_WRITE(iofile(fileid)%varid,                               &
-     &     (/1,1,1,jspin,iofile(fileid)%emap(en),iofile(fileid)%kmap(nk)/), &
-     &     (/SIZE(a,1),SIZE(a,2),2,1,1,1/),A(:,:,:,1))
+            CALL io_WRITE(iofile(fileid)%varid,(/1,1,1,jspin,iofile(fileid)%emap(en),iofile(fileid)%kmap(nk)/),&
+     &     (/SIZE(a,1),SIZE(a,2),2,1,1,1/),"A",&
+     &     A(:,:,:,1))
 
        else !in noco-case write all spins at once
-            CALL io_WRITE(iofile(fileid)%varid,                               &
-     &     (/1,1,1,1,iofile(fileid)%emap(en),iofile(fileid)%kmap(nk)/), &
-     &     (/SIZE(a,1),SIZE(a,2),2,4,1,1/),A(:,:,:,:))
+            CALL io_WRITE(iofile(fileid)%varid,(/1,1,1,1,iofile(fileid)%emap(en),iofile(fileid)%kmap(nk)/),&
+     &     (/SIZE(a,1),SIZE(a,2),2,4,1,1/),"A",&
+     &     A(:,:,:,:))
 
        endif
        deallocate (A)
-       CPP_juDFT_timestop("gf_write2dmat")
+       CALL timestop("gf_write2dmat")
 
       end subroutine
 
@@ -859,7 +856,7 @@
       USE m_gf_types
       IMPLICIT NONE
       INTEGER,INTENT(IN)          :: jspin,fileid
-      TYPE(t_lapw),INTENT(IN)     :: lapw
+      TYPE(t_lapw_gf),INTENT(IN)     :: lapw
       COMPLEX,INTENT(IN)          :: mat(:,:)
       real,intent(inout)          :: a(:,:,:,:)
                                                                         
@@ -894,18 +891,18 @@
                                                                         
 
       IF (iofile(fileid)%no_hdf) &
-         CPP_error("Non-HDF-file no longer supported in gf_io2dmat")
+         CALL juDFT_error("Non-HDF-file no longer supported in gf_io2dmat")
 
                                                                         
                                                                         
       IF (iofile(fileid)%spins<jspin) THEN 
          WRITE(*,*) "In file jspin=",iofile(fileid)%spins 
          WRITE(*,*) "In this setup jspin=",jspin 
-         CPP_error('gf_io2dmat: Wrong no of spins in writing')
+         CALL juDFT_error('gf_io2dmat: Wrong no of spins in writing')
       ENDIF 
       !<-- Check size                                                   
       IF (SIZE(mat,2) /= SIZE(mat,1))                                   &
-     &     CPP_error('gf_io2dmat: No square matrix')
+     &     CALL juDFT_error('gf_io2dmat: No square matrix')
                                                                         
       !>                                                                
                                                                         
@@ -917,7 +914,7 @@
 
       DO i = 1,lapw%nv2(min(jspin,2))
          n1=lapw%g2map(i)
-         if (n1==0) CPP_error("Uups")
+         if (n1==0) CALL juDFT_error("Uups")
          IF (iofile(fileid)%gmap(n1) == 0.OR.iofile(fileid)%gmap(n1)>SIZE(A,1)) CYCLE
          DO ii = 1,lapw%nv2(min(jspin,2))
             n2=lapw%g2map(ii)
@@ -938,7 +935,7 @@
       USE m_gf_energies
       IMPLICIT NONE
       Type(t_layers),intent(in) :: layers
-      TYPE(t_lapw),intent(in)   :: lapw
+      TYPE(t_lapw_gf),intent(in)   :: lapw
       integer,intent(in)        :: jspins,nkpts
       logical,intent(in)        :: l_noco
 
@@ -982,11 +979,10 @@
       USE m_hdf_tools,ONLY:io_WRITE 
       USE m_gf_types 
       USE m_constants 
-#include "juDFT_env.h"
       IMPLICIT NONE 
       INTEGER,INTENT(IN)         :: mode,region,side 
       INTEGER,INTENT(IN)         :: jspin,nk,en 
-      TYPE(t_lapw),INTENT(IN)    :: lapw 
+      TYPE(t_lapw_gf),INTENT(IN)    :: lapw 
       COMPLEX,INTENT(OUT)        :: mat(:,:) 
       INTEGER,INTENT(IN),OPTIONAL :: pos1,pos2 
       LOGICAL                     :: read2dmat 
@@ -1008,7 +1004,7 @@
       fileid = priv_getFILEHANDLE(IO2D_READ,mode,region,side) 
 
       IF (fileid<1) RETURN 
-      CPP_juDFT_timestart("gf_read2dmat")
+      CALL timestart("gf_read2dmat")
       !<-- check if matrix cosists of several blocks                    
       IF (.NOT.PRESENT(pos1).AND.iofile(fileid)%matscale == 2           &
      &     .AND.SIZE(mat,1)>lapw%nv2_tot) THEN                          
@@ -1022,7 +1018,7 @@
          l = gf_read2dmat(mode,region,side,en,nk,jspin,                 &
      &        lapw,mat(nv2+1:2*nv2,1:nv2),1,2)                          
          read2dmat = l 
-         CPP_juDFT_timestop("gf_read2dmat")
+         CALL timestop("gf_read2dmat")
          RETURN 
       ENDIF 
       IF (PRESENT(pos1)) THEN 
@@ -1053,14 +1049,14 @@
      &           ,mat(nv2+1:2*nv2,1:nv2),pos1,pos2)                     
             read2dmat = l 
             CALL priv_rotspin(mode,region,side,nv2,mat)
-            CPP_juDFT_timestop("gf_read2dmat")
+            CALL timestop("gf_read2dmat")
             RETURN 
          ENDIF 
       ENDIF 
       !>                                                                
       !<-- read from simple direct access file                          
       IF (iofile(fileid)%no_hdf) THEN 
-                IF (jspin>2) CPP_error("HDF-file needed for noco in gf_io2dmat")
+                IF (jspin>2) CALL juDFT_error("HDF-file needed for noco in gf_io2dmat")
          IF (PRESENT(pos1)) THEN 
             start1 = 4 
             start2 = pos1+2*(pos2-1) 
@@ -1072,7 +1068,7 @@
 !         WRITE(*,*) "r",iofile(fileid)%fid,en,MINVAL(ABS(mat))         
 !     +        ,MAXVAL(ABS(mat))                                        
          read2dmat = .TRUE.
-         CPP_juDFT_timestop("gf_read2dmat")
+         CALL timestop("gf_read2dmat")
          RETURN 
       ENDIF 
       !>                                                                
@@ -1094,7 +1090,7 @@
          mat = CMPLX(0.0,0.0) 
                               !not present
          read2dmat=.true.
-         CPP_juDFT_timestop("gf_read2dmat")
+         CALL timestop("gf_read2dmat")
          RETURN 
       ENDIF 
       ENDIF 
@@ -1102,7 +1098,7 @@
                                                                         
       !<-- Check size                                                   
       IF (SIZE(mat,2) /= SIZE(mat,1))                                   &
-     &     CPP_error('gf_io2dmat: No square matrix')
+     &     CALL juDFT_error('gf_io2dmat: No square matrix')
       !>                                                                
                                                                         
                                                                         
@@ -1110,12 +1106,12 @@
       !<-- read from hdf-file                                           
       ALLOCATE(A(iofile(fileid)%matsize/iofile(fileid)%matscale         &
      &     ,iofile(fileid)%matsize/iofile(fileid)%matscale,2))          
-      CALL io_READ(iofile(fileid)%varid,                                &
-     &     (/start1,start2,1,spin,iofile(fileid)%emap(en),iofile(fileid &
-     &     )%kmap(nk)/),(/SIZE(a,1),SIZE(a,2),1,1,1,1/),A(:,:,1))       
-      CALL io_READ(iofile(fileid)%varid,                                &
-     &     (/start1,start2,2,spin,iofile(fileid)%emap(en),iofile(fileid &
-     &     )%kmap(nk)/),(/SIZE(a,1),SIZE(a,2),1,1,1,1/),A(:,:,2))       
+      CALL io_READ(iofile(fileid)%varid,(/start1,start2,1,spin,iofile(fileid)%emap(en),iofile(fileid      )%kmap(nk)/),&
+     &     (/SIZE(a,1),SIZE(a,2),1,1,1,1/),"A",&
+     &     A(:,:,1))
+      CALL io_READ(iofile(fileid)%varid,(/start1,start2,2,spin,iofile(fileid)%emap(en),iofile(fileid      )%kmap(nk)/),&
+     &     (/SIZE(a,1),SIZE(a,2),1,1,1,1/),"A",&
+     &     A(:,:,2))
       !>                                                                
                                                                         
                                                                         
@@ -1126,7 +1122,7 @@
       IF (ANY(s /= 0.0)) THEN 
          DO i = 1,SIZE(phase,1)
             DO ii = 1,SIZE(phase,2)
-               phase(i,ii) = EXP(CMPLX(0.0,2.*pimach())*dot_PRODUCT(s     &
+               phase(i,ii) = EXP(CMPLX(0.0,2.*pi_const)*dot_PRODUCT(s     &
      &              ,lapw%global2dlist(:,i)-lapw%global2dlist(:,ii)))   
             ENDDO 
          ENDDO 
@@ -1159,7 +1155,7 @@
       !>                                                                
                                                                         
       read2dmat = .TRUE. 
-      CPP_juDFT_timestop("gf_read2dmat")
+      CALL timestop("gf_read2dmat")
       END FUNCTION 
                                                                         
       !>                                                                
@@ -1254,7 +1250,7 @@
            !write(*,*) "No handle:",rw,mode,region,side                 
            RETURN 
       ENDIF 
-      IF (.NOT.ALLOCATED(iofile)) CPP_error("internal error in gf_io2dmat")
+      IF (.NOT.ALLOCATED(iofile)) CALL juDFT_error("internal error in gf_io2dmat")
       priv_getFilehandle = iohandle(priv_getFilehandle)%fileno 
                                                                         
       END FUNCTION 
@@ -1326,7 +1322,7 @@
       !<--Arguments                                                     
       INTEGER,INTENT(IN)        :: jspins 
       TYPE(t_kpts),INTENT(IN)   :: kpts 
-      TYPE(t_lapw),INTENT(IN)   :: lapw 
+      TYPE(t_lapw_gf),INTENT(IN)   :: lapw 
       !>                                                                
       !<-- Locals                                                       
       REAL                :: trans(2,2) 
@@ -1364,8 +1360,8 @@
          !matix is given                                                
          old_to_new=.FALSE.;file1=" ";file2=" " 
          READ(99,CONVERT,ERR = 100,END = 100) 
-         IF (file1           ==" ".OR.file2 ==" ") CPP_error("No valid filename in conversion")
-         WRITE(6,*) file1," => ",file2 
+         IF (file1           ==" ".OR.file2 ==" ") CALL juDFT_error("No valid filename in conversion")
+         WRITE(oUnit,*) file1," => ",file2 
          WRITE(*,*) file1," => ",file2 
          !by default, the transformation matrix is supposed to transform
          !the new-basis vectors of the lattice into the old vectors     
@@ -1376,21 +1372,20 @@
          !<-- read old file                                             
          CALL io_hdfopen (TRIM(file1)//'.hdf',H5F_ACC_RDONLY_F,          &
      &        fid_old, hdferr)                                          
-         IF (hdferr/=0) CPP_error("No valid filename:"//TRIM(file1)//'.hdf')
+         IF (hdferr/=0) CALL juDFT_error("No valid filename:"//TRIM(file1)//'.hdf')
          !<-- Read old k-points                                         
          CALL io_dopen(fid_old, 'kpts', varid, hdferr) 
          CALL h5dget_space_f(varid,fspace,hdferr) 
          CALL h5sget_simple_extent_dims_f(fspace,dims,maxdims,hdferr) 
          ALLOCATE(k_old(2,dims(2))) 
          CALL h5sclose_f(fspace,hdferr) 
-         CALL io_READ(varid,(/1,1/),(/2,SIZE(k_old,2)/)                 &
-     &        ,k_old)                                                   
+         CALL io_READ(varid,(/1,1/),(/2,SIZE(k_old,2)/),"k_old",k_old)
          !<-- read the symmetry infos                                   
          CALL io_READ_att(varid,"nsym",n) 
          ALLOCATE(sym(2,2,n)) 
          CALL io_READ_att(varid,"symop",sym) 
          CALL io_dclose(varid,hdferr) 
-         WRITE(6,*) "Old symmetry operations found:",n 
+         WRITE(oUnit,*) "Old symmetry operations found:",n 
          !>                                                             
          !<-- Calculate a suitable eps for finding a k-vector           
          eps = 1.0 
@@ -1401,7 +1396,7 @@
             ENDDO 
          ENDDO 
          eps = eps*tolerance 
-         WRITE(6,*) "K-point tolerance in matching:",eps 
+         WRITE(oUnit,*) "K-point tolerance in matching:",eps 
          !>                                                             
          !>                                                             
          !<-- Read old gvectors                                         
@@ -1411,8 +1406,7 @@
          CALL h5sget_simple_extent_dims_f(fspace,dims,maxdims,hdferr) 
          ALLOCATE(g_old(2,dims(2))) 
          CALL h5sclose_f(fspace,hdferr) 
-         CALL io_READ(varid,(/1,1/),(/2,SIZE(g_old,2)/)                 &
-     &        ,g_old)                                                   
+         CALL io_READ(varid,(/1,1/),(/2,SIZE(g_old,2)/),"g_old",g_old)
          CALL io_dclose(varid,hdferr) 
                                                                         
          !>                                                             
@@ -1425,10 +1419,10 @@
                                                                         
          CALL h5fcreate_f(TRIM(file2)//'.hdf'                           &
      &        ,H5F_ACC_TRUNC_F,fid_new, hdferr)                         
-         IF (hdferr /= 0) CPP_error("Could not create:"//TRIM(file2)//'.hdf')
+         IF (hdferr /= 0) CALL juDFT_error("Could not create:"//TRIM(file2)//'.hdf')
          CALL io_createvar(fid_new,"2Dmat",H5T_NATIVE_DOUBLE,           &
      &        (/SIZE(lapw%global2dlist,2),SIZE(lapw%global2dlist,2),2   &
-     &        ,jspins,gf_NoEn(),kpts%nkpts/),varid_new)                 
+     &        ,jspins,gf_NoEn(),kpts%nkpt/),varid_new)                 
                                                                         
          !>                                                             
          !<-- create mapping array for energies                         
@@ -1436,15 +1430,15 @@
          !write energies to file                                        
          CALL io_createvar(fid_new,"energies",H5T_NATIVE_DOUBLE,        &
      &        (/2,gf_NoEn()/),varid)                                    
-         CALL io_WRITE(varid,(/-1,1/),(/1,gf_NoEn()/),gf_AllZ(0)) 
+         CALL io_WRITE(varid,(/-1,1/),(/1,gf_NoEn()/),"gf_AllZ",gf_AllZ(0))
          CALL io_dclose(varid,hdferr) 
                                                                         
          !>                                                             
          !<-- kpts                                                      
                                                                         
          CALL io_createvar(fid_new,"kpts",H5T_NATIVE_DOUBLE,(/2         &
-     &        ,kpts%nkpts/),varid)                                      
-         CALL io_WRITE(varid,(/1,1/),(/2,kpts%nkpts/),kpts%bk(1:2,:)) 
+     &        ,kpts%nkpt/),varid)                                      
+         CALL io_WRITE(varid,(/1,1/),(/2,kpts%nkpt/),"kpts_bk",kpts%bk(1:2,:))
          CALL io_dclose(varid,hdferr) 
                                                                         
          !>                                                             
@@ -1452,8 +1446,7 @@
                                                                         
          CALL io_createvar(fid_new,"gvecs",H5T_NATIVE_INTEGER,(/2       &
      &        ,SIZE(lapw%global2Dlist,2)/),varid)                       
-         CALL io_WRITE(varid,(/1,1/),(/2,SIZE(lapw%global2Dlist,2)/)    &
-     &        ,lapw%global2Dlist(:,:))                                  
+         CALL io_WRITE(varid,(/1,1/),(/2,SIZE(lapw%global2Dlist,2)/),"lapw_global2Dlist",lapw%global2Dlist(:,:))
          CALL io_dclose(varid,hdferr) 
                                                                         
          !>                                                             
@@ -1469,14 +1462,15 @@
          DO jsp = 1,jspins 
             DO en  = 1,gf_NoEn() 
                !<-read the old-embedding potential for all kpts         
-               CALL io_READ(varid_old,(/1,1,1,jsp,en,1/),(/SIZE(g_old,2)&
-     &              ,SIZE(g_old,2),2,1,1,SIZE(k_old,2)/),sigma_old)     
+               CALL io_READ(varid_old,(/1,1,1,jsp,en,1/),&
+     &     (/SIZE(g_old,2)              ,SIZE(g_old,2),2,1,1,SIZE(k_old,2)/),"sigma_old",&
+     &     sigma_old)
                !>                                                       
                !<-- process all new kpts                                
-               DO nk = 1,kpts%nkpts 
-                  WRITE(6,"(//,'Processing jspin = '                    &
+               DO nk = 1,kpts%nkpt 
+                  WRITE(oUnit,"(//,'Processing jspin = '                    &
      &                ,i1,' Energy =',i5,//)")jsp,en                    
-                  WRITE(6,"(a,i3,a,2(f0.6,2x))") "Processing kpoint ",nk&
+                  WRITE(oUnit,"(a,i3,a,2(f0.6,2x))") "Processing kpoint ",nk&
      &                 ," : ",kpts%bk(1:2,nk)                           
                   !<-- generate a map of all k+g to corresponding old va
                   DO ng = 1,SIZE(lapw%global2dlist,2) 
@@ -1502,11 +1496,11 @@
      &                    )lapw%global2dlist(:,ng)," => ",g_old(:       &
      &                    ,gmap(ng))," + ",kvec(:)                      &
      &                    ," Problem with k-mapping"                    
-                     IF (gmap(ng) == 0) WRITE(6,"(2i5,a)")              &
+                     IF (gmap(ng) == 0) WRITE(oUnit,"(2i5,a)")              &
      &                    lapw%global2dlist(:,ng)                       &
      &                    ," Problem with g-mapping"                    
                      IF (kmap(ng) /= 0.AND.gmap(ng) /= 0)               &
-     &                    WRITE(6,'(2i5,a,2i5,a,2(f0.5,2x))')           &
+     &                    WRITE(oUnit,'(2i5,a,2i5,a,2(f0.5,2x))')           &
      &                    lapw%global2dlist(:,ng)," => ",g_old(:,gmap(ng&
      &                    ))," + ",k_old(:,kmap(ng))                    
                      !>                                                 
@@ -1514,7 +1508,7 @@
                   !>                                                    
                                                                         
                   !<-- are there missing k-points??                     
-                  IF (ANY(kmap == 0)) CPP_error("k-points set incompatible in old data")
+                  IF (ANY(kmap == 0)) CALL juDFT_error("k-points set incompatible in old data")
                   !>                                                    
                                                                         
                   !<-- Now construct the new embedding potential        
@@ -1532,8 +1526,9 @@
                   ENDDO 
                   !>                                                    
                   !<-- Write the embedding potential to the file        
-                  CALL io_WRITE(varid_new,(/1,1,1,jsp,en,nk/),(/SIZE(sigma_new,1),SIZE(sigma_new,2),2,1,1,1/)   &
-     &                 ,sigma_new)                                      
+                  CALL io_WRITE(varid_new,(/1,1,1,jsp,en,nk/),&
+     &     (/SIZE(sigma_new,1),SIZE(sigma_new,2),2,1,1,1/),"sigma_new",&
+     &     sigma_new)
                   !>                                                    
                ENDDO 
                !>                                                       
@@ -1550,7 +1545,7 @@
       ENDDO 
   100 CLOSE(99) 
       !>                                                                
-       CPP_error("Generated supercell embedding potential")
+       CALL juDFT_error("Generated supercell embedding potential")
       END SUBROUTINE 
       !>                                                                
                                                                         
@@ -1595,18 +1590,16 @@
       LOGICAL FUNCTION priv_create_MPI_memory(mpi_d,layer,kpts,lapw,jspins,l_noco) result(ok)
       USE m_gf_types
       USE m_gf_energies
-      !use mpi
+      !use gmpi
       IMPLICIT NONE
-      TYPE(t_mpi),INTENT(IN)     :: mpi_d
+      TYPE(t_gfmpi),INTENT(IN)     :: mpi_d
       TYPE(t_layers),INTENT(IN)  :: layer
-      TYPE(t_lapw),INTENT(IN)    :: lapw
+      TYPE(t_lapw_gf),INTENT(IN)    :: lapw
       TYPE(t_kpts),INTENT(IN)    :: kpts
       INTEGER,INTENT(IN)         :: jspins
       LOGICAL,INTENT(IN)         :: l_noco
-
-      include 'mpif.h'
       INTEGER :: n,l,irank,nk,nl,rank_index,e,cmplx_size
-      INTEGER :: k_list(kpts%nkpts),l_list(layer%num_layers)
+      INTEGER :: k_list(kpts%nkpt),l_list(layer%num_layers)
       INTEGER :: stat(MPI_STATUS_SIZE)
       TYPE(c_ptr)::ptr,ptr1
       ok=.false.
@@ -1615,13 +1608,13 @@
       IF (l_noco)  mem%spins=4
       mem%l_noco=l_noco
       !Determine mapping of k-points and layers
-      ALLOCATE(mem%mem_map(kpts%nkpts,layer%num_layers))
+      ALLOCATE(mem%mem_map(kpts%nkpt,layer%num_layers))
       mem%mem_map=-1
-      IF (mpi_d%irank>0) THEN
-          CALL MPI_SEND(mpi_d%k_kperpe,1,MPI_INTEGER,0,1,MPI_COMM_WORLD,e)
-          CALL MPI_SEND(mpi_d%kl_layerperpe,1,MPI_INTEGER,0,2,MPI_COMM_WORLD,e)
-          CALL MPI_SEND(mpi_d%k_kpts,mpi_d%k_kperpe,MPI_INTEGER,0,3,MPI_COMM_WORLD,e)
-          CALL MPI_SEND(mpi_d%kl_layers,mpi_d%kl_layerperpe,MPI_INTEGER,0,4,MPI_COMM_WORLD,e)
+      IF (mpi_d%fmpi%irank>0) THEN
+          CALL MPI_SEND(mpi_d%k_kperpe,1,MPI_INTEGER,0,1,mpi_d%fmpi%mpi_comm,e)
+          CALL MPI_SEND(mpi_d%kl_layerperpe,1,MPI_INTEGER,0,2,mpi_d%fmpi%mpi_comm,e)
+          CALL MPI_SEND(mpi_d%k_kpts,mpi_d%k_kperpe,MPI_INTEGER,0,3,mpi_d%fmpi%mpi_comm,e)
+          CALL MPI_SEND(mpi_d%kl_layers,mpi_d%kl_layerperpe,MPI_INTEGER,0,4,mpi_d%fmpi%mpi_comm,e)
        ELSE
           nk=mpi_d%k_kperpe
           nl=mpi_d%kl_layerperpe
@@ -1630,40 +1623,40 @@
                  mem%mem_map(mpi_d%k_kpts(n),mpi_d%kl_layers(l))=0
                ENDDO
           ENDDO
-          DO irank=0,mpi_d%isize-1
+          DO irank=0,mpi_d%fmpi%isize-1
              If (irank==0) THEN
                 k_list(:nk)=mpi_d%k_kpts
                 l_list(:nl)=mpi_d%kl_layers
              ELSE
-                CALL MPI_RECV(nk,1,MPI_INTEGER,irank,1,MPI_COMM_WORLD,stat,e)
-                CALL MPI_RECV(nl,1,MPI_INTEGER,irank,2,MPI_COMM_WORLD,stat,e)
-                CALL MPI_RECV(k_list,nk,MPI_INTEGER,irank,3,MPI_COMM_WORLD,stat,e)
-                CALL MPI_RECV(l_list,nl,MPI_INTEGER,irank,4,MPI_COMM_WORLD,stat,e)
+                CALL MPI_RECV(nk,1,MPI_INTEGER,irank,1,mpi_d%fmpi%mpi_comm,stat,e)
+                CALL MPI_RECV(nl,1,MPI_INTEGER,irank,2,mpi_d%fmpi%mpi_comm,stat,e)
+                CALL MPI_RECV(k_list,nk,MPI_INTEGER,irank,3,mpi_d%fmpi%mpi_comm,stat,e)
+                CALL MPI_RECV(l_list,nl,MPI_INTEGER,irank,4,mpi_d%fmpi%mpi_comm,stat,e)
              ENDIF
              rank_index=irank
              DO n=1,nk
                DO l=1,nl
                  mem%mem_map(k_list(n),l_list(l))=rank_index
-                 rank_index=rank_index+mpi_d%isize
+                 rank_index=rank_index+mpi_d%fmpi%isize
                ENDDO
              ENDDO
            ENDDO
        ENDIF
 
-       IF (mpi_d%irank==0) THEN
+       IF (mpi_d%fmpi%irank==0) THEN
           write(*,*) "Memory map"
           write(*,*) "nk  layer  map"
-          DO n=1,kpts%nkpts
+          DO n=1,kpts%nkpt
             do l=1,layer%num_layers
                write(*,*) n,l,mem%mem_map(n,l)
             enddo
           enddo
        endif
 
-       CALL MPI_BCAST(mem%mem_map,size(mem%mem_map),MPI_INTEGER,0,MPI_COMM_WORLD,e)
+       CALL MPI_BCAST(mem%mem_map,size(mem%mem_map),MPI_INTEGER,0,mpi_d%fmpi%mpi_comm,e)
 
        !Determine the amount of local datasets
-       n=count(mod(mem%mem_map,mpi_d%isize)==mpi_d%irank)
+       n=count(mod(mem%mem_map,mpi_d%fmpi%isize)==mpi_d%fmpi%irank)
        call MPI_Type_size(MPI_DOUBLE_COMPLEX, cmplx_size, e)
        mem%buffersize_tmat=2*mem%matsize*mem%matsize*mem%spins*gf_noEN()*2*n
        mem%buffersize_sigma=mem%matsize*mem%matsize*mem%spins*gf_noEN()*2*n
@@ -1675,25 +1668,25 @@
            return
        ENDIF
        !write Info
-       write(0,"(a,i5,a,f10.3,a,i8,a,i8)") "Rank:",mpi_d%irank," created a window of ",Mem%buffersize_sigma*cmplx_size/1048576.,"Mbyte for sigma ->",&
+       write(0,"(a,i5,a,f10.3,a,i8,a,i8)") "Rank:",mpi_d%fmpi%irank," created a window of ",Mem%buffersize_sigma*cmplx_size/1048576.,"Mbyte for sigma ->",&
                            mem%buffersize_sigma/mem%stride_sigma," Slots of ",mem%stride_sigma*cmplx_size
-       write(0,"(a,i5,a,f10.3,a,i8,a,i8)") "Rank:",mpi_d%irank," created a window of ",mem%buffersize_tmat/1048576.,"Mbyte for tmat ->",&
+       write(0,"(a,i5,a,f10.3,a,i8,a,i8)") "Rank:",mpi_d%fmpi%irank," created a window of ",mem%buffersize_tmat/1048576.,"Mbyte for tmat ->",&
                            mem%buffersize_tmat/mem%stride_tmat," Slots of ",mem%stride_tmat*cmplx_size
 
 
        !CALL MPI_ALLOC_MEM(int(mem%buffersize_sigma*cmplx_size,MPI_ADDRESS_KIND),MPI_INFO_NULL,ptr,e)
        !CALL c_f_pointer(ptr,mem%buffer_sigma,(/mem%buffersize_sigma/))
        ALLOCATE(mem%buffer_sigma(mem%buffersize_sigma),stat=e)
-       IF (e.ne.0) CPP_error("Could not allocated MPI-Data (sigma) in gf_io2dmat")
+       IF (e.ne.0) CALL juDFT_error("Could not allocated MPI-Data (sigma) in gf_io2dmat")
        !CALL MPI_ALLOC_MEM(int(mem%buffersize_tmat*cmplx_size,MPI_ADDRESS_KIND),MPI_INFO_NULL,ptr1,e)
        !CALL c_f_pointer(ptr1,mem%buffer_tmat,(/mem%buffersize_tmat/))
        ALLOCATE(mem%buffer_tmat(mem%buffersize_tmat),stat=e)
-       IF (e.ne.0) CPP_error("Could not allocated MPI-Data (tmat) in gf_io2dmat")
+       IF (e.ne.0) CALL juDFT_error("Could not allocated MPI-Data (tmat) in gf_io2dmat")
        !create windows
        CALL MPI_WIN_CREATE(mem%buffer_sigma, int(mem%buffersize_sigma*cmplx_size,MPI_ADDRESS_KIND),mem%stride_sigma*cmplx_Size,  &
-               Mpi_INFO_NULL, MPI_COMM_WORLD, mem%mem_handle_sigma, e)
+               Mpi_INFO_NULL, mpi_d%fmpi%mpi_comm, mem%mem_handle_sigma, e)
        CALL MPI_WIN_CREATE(mem%buffer_tmat, int(mem%buffersize_tmat*cmplx_size,MPI_ADDRESS_KIND),mem%stride_tmat*cmplx_size,  &
-               MPI_INFO_NULL, MPI_COMM_WORLD, mem%mem_handle_tmat, e)
+               MPI_INFO_NULL, mpi_d%fmpi%mpi_comm, mem%mem_handle_tmat, e)
 
 
        CALL  gf_io2dmat_memorysync()
@@ -1704,7 +1697,6 @@
 #ifdef CPP_MPI
       !USE MPI
       IMPLICIT NONE
-      include 'mpif.h'
       INTEGER::e,irank
       IF (.not.mem%in_mem) RETURN
       CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,e)
@@ -1718,7 +1710,6 @@
       !USE MPI
       USE m_gf_energies
       IMPLICIT NONE
-      include 'mpif.h'
       INTEGER,INTENT(IN)      ::mode,layer,side,en,nk,jspin
       COMPLEX,INTENT(OUT)     ::data(:,:)
       LOGICAL,INTENT(IN),OPTIONAL::rec
@@ -1741,7 +1732,7 @@
          RETURN
       ENDIF
       if ((mode==IO2d_emb.and.size(data)>mem%matsize**2).or.(mode==IO2d_tmat.and.size(data)>4*mem%matsize**2)) &
-            CPP_error("BUG: size error in mpi_memory_read")
+            CALL juDFT_error("BUG: size error in mpi_memory_read")
       !Determine PE that holds the data
       CALL MPI_COMM_SIZE(MPI_COMM_WORLD,isize,e)
       pe=mod(mem%mem_map(nk,layer),isize)
@@ -1797,7 +1788,6 @@
 !      USE MPI
       USE m_gf_energies
       IMPLICIT NONE
-      include 'mpif.h'
       INTEGER,INTENT(IN)      ::mode,layer,side,en,nk,jspin
       COMPLEX,INTENT(IN)      ::data(:,:)
       logical,intent(in),optional::rec
@@ -1819,7 +1809,7 @@
       CALL MPI_COMM_RANK(MPI_COMM_WORLD,mype,e)
       if ((mode==IO2d_emb.and.size(data)>mem%matsize**2).or.(mode==IO2d_tmat.and.size(data)>4*mem%matsize**2)) THEN
             write(0,*) size(data),mem%matsize
-            CPP_error("BUG: size error in mpi_memory_write")
+            CALL juDFT_error("BUG: size error in mpi_memory_write")
       endif
       !Determine PE that holds the data
       CALL MPI_COMM_SIZE(MPI_COMM_WORLD,isize,e)

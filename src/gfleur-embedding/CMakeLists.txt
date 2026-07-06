@@ -15,6 +15,17 @@ src/gfleur-embedding/gf_invertmatrix.F90
 src/gfleur-embedding/gf_quadrature.F90
 src/gfleur-embedding/gf_bessel.F90
 src/gfleur-embedding/gf_math.F90
+src/gfleur-embedding/gf_mpi_groups.F90
+src/gfleur-embedding/gf_tmatregularize.F90
+src/gfleur-embedding/gf_kkrpoints.F90
+src/gfleur-embedding/gf_energies.F90
+src/gfleur-embedding/gf_io2dmat.F90
+src/gfleur-embedding/gf_iodop.F90
+src/gfleur-embedding/gf_ioCoulBoundary.F90
+src/gfleur-embedding/gf_iotmat.F90
+src/gfleur-embedding/gf_writetrans.F90
+src/gfleur-embedding/gf_enpara.F90
+src/gfleur-embedding/gf_iogfinp.F90
 )
 
 #--- not yet ported ------------------------------------------------------
@@ -49,8 +60,6 @@ src/gfleur-embedding/gf_math.F90
 #src/gfleur-embedding/gf_embdos.F90
 #src/gfleur-embedding/gf_embedding.F90
 #src/gfleur-embedding/gf_embpot_postprocess.F90
-#src/gfleur-embedding/gf_energies.F90
-#src/gfleur-embedding/gf_enpara.F90
 #src/gfleur-embedding/gf_flipPot.F90
 #src/gfleur-embedding/gf_fnaeproj.F90
 #src/gfleur-embedding/gf_gencdn.F90
@@ -67,13 +76,7 @@ src/gfleur-embedding/gf_math.F90
 #src/gfleur-embedding/gf_inp2plot.F90
 #src/gfleur-embedding/gf_inp_describe.F90
 #src/gfleur-embedding/gf_intcoul.F90
-#src/gfleur-embedding/gf_io2dmat.F90
-#src/gfleur-embedding/gf_ioCoulBoundary.F90
-#src/gfleur-embedding/gf_iodop.F90
-#src/gfleur-embedding/gf_iogfinp.F90
 #src/gfleur-embedding/gf_iosetup.F90
-#src/gfleur-embedding/gf_iotmat.F90
-#src/gfleur-embedding/gf_kkrpoints.F90
 #src/gfleur-embedding/gf_kpts.F90
 #src/gfleur-embedding/gf_kptsp1x1.F90
 #src/gfleur-embedding/gf_landauer.F90
@@ -83,7 +86,6 @@ src/gfleur-embedding/gf_math.F90
 #src/gfleur-embedding/gf_metric.F90
 #src/gfleur-embedding/gf_mix.F90
 #src/gfleur-embedding/gf_mkposdef.F90
-#src/gfleur-embedding/gf_mpi_groups.F90
 #src/gfleur-embedding/gf_noco.F90
 #src/gfleur-embedding/gf_nognofinalize.F90
 #src/gfleur-embedding/gf_optional.F90
@@ -114,12 +116,10 @@ src/gfleur-embedding/gf_math.F90
 #src/gfleur-embedding/gf_surfprojo.F90
 #src/gfleur-embedding/gf_tlmplminit.F90
 #src/gfleur-embedding/gf_tmat.F90
-#src/gfleur-embedding/gf_tmatregularize.F90
 #src/gfleur-embedding/gf_totalmix.F90
 #src/gfleur-embedding/gf_vacuum.F90
 #src/gfleur-embedding/gf_vacuum_charge.F90
 #src/gfleur-embedding/gf_vacuum_hs.F90
 #src/gfleur-embedding/gf_vacuum_pot.F90
 #src/gfleur-embedding/gf_vgen.F90
-#src/gfleur-embedding/gf_writetrans.F90
 #src/gfleur-embedding/gfleur.F90
