@@ -9,6 +9,7 @@ src/gfleur-embedding/main/gfleur.F90
 src/gfleur-embedding/main/gf_init.F90
 src/gfleur-embedding/main/gf_fleur_init_layer.F90
 src/gfleur-embedding/gf_types.F90
+src/gfleur-embedding/gf_apws.F90
 src/gfleur-embedding/gf_fft_singleton.F90
 src/gfleur-embedding/gf_fft.F90
 src/gfleur-embedding/gf_version.F90
@@ -39,7 +40,6 @@ src/gfleur-embedding/gf_iogfinp.F90
 #src/gfleur-embedding/gf_CBS_embtest.F90
 #src/gfleur-embedding/gf_ab_coef.F90
 #src/gfleur-embedding/gf_addembnohelpregion.F90
-#src/gfleur-embedding/gf_apws.F90
 #src/gfleur-embedding/gf_ballpartfourier.F90
 #src/gfleur-embedding/gf_bandbending.F90
 #src/gfleur-embedding/gf_boundaryembpot.F90

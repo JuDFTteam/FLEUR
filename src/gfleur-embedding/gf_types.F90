@@ -124,9 +124,9 @@ MODULE m_gf_types
       INTEGER :: nv2_tot
       !actual no of G's inside the rkmax sphere for this k (jspin)
       INTEGER :: nv_sphere(2)
-      !actual no of 2D-G's for this k / its dimension
+      !actual no of 2D-G's for this k / the dimensions
       INTEGER :: nv2(2)
-      INTEGER :: nv2d
+      INTEGER :: nvd, nv2d
       !cylinder basis (all G_z for the in-plane stars) in use?
       LOGICAL :: l_cylinder
       !3D basis index -> 2D basis index (per G, per spin)
