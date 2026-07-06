@@ -15,6 +15,7 @@ src/gfleur-embedding/gf_curvy2dprojector.F90
 src/gfleur-embedding/gf_spectrum.F90
 src/gfleur-embedding/gf_tlmplminit.F90
 src/gfleur-embedding/gf_hs1lapw.F90
+src/gfleur-embedding/gf_ab_coef.F90
 src/gfleur-embedding/gf_hsdata.F90
 src/gfleur-embedding/gf_hs_int.F90
 src/gfleur-embedding/gf_curvystep.F90
@@ -49,7 +50,6 @@ src/gfleur-embedding/gf_iogfinp.F90
 #src/gfleur-embedding/fleur_psqpw.F90
 #src/gfleur-embedding/gf_CBS.F90
 #src/gfleur-embedding/gf_CBS_embtest.F90
-#src/gfleur-embedding/gf_ab_coef.F90
 #src/gfleur-embedding/gf_addembnohelpregion.F90
 #src/gfleur-embedding/gf_bandbending.F90
 #src/gfleur-embedding/gf_boundaryembpot.F90

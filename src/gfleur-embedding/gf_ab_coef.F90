@@ -10,7 +10,7 @@
       integer,save             :: ab_spin
       public:: gf_ab_coef_calc,gf_ab_coef_delete,gf_ab_coef_matrix,gf_ab_coef_vector
       CONTAINS 
-      SUBROUTINE gf_ab_coef_calc(l_noco,jspin,bk,sym,el,vr0,atoms,cell,lapw)
+      SUBROUTINE gf_ab_coef_calc(l_noco,jspin,bk,sym,el,vr0,atoms,cell,lapw,lapw_gf)
       !Calculate the ab_coefs and store in a local module variable
       USE m_gf_types
 	  !Arguments
@@ -21,6 +21,7 @@
       REAL,INTENT(IN)          :: el(0:,:,:)
       TYPE(t_sym),INTENT(IN)   :: sym
       TYPE(t_lapw),INTENT(IN)  :: lapw
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
       TYPE(t_cell),INTENT(IN)  :: cell
       TYPE(t_atoms),INTENT(IN) :: atoms
 	  !Locals
@@ -29,15 +30,15 @@
       else
       	   ab_spin=1
       endif
-	  ALLOCATE(ab_coef(maxval(lapw%nv_sphere),0:MAXVAL(atoms%lmax)*(MAXVAL(atoms%lmax)+2),atoms%nat,2,ab_spin))
+	  ALLOCATE(ab_coef(maxval(lapw_gf%nv_sphere),0:MAXVAL(atoms%lmax)*(MAXVAL(atoms%lmax)+2),atoms%nat,2,ab_spin))
 
 	  if (ab_spin==1) then
-	      call priv_ab_coef(jspin,bk,sym,el(:,:,jspin),vr0(:,:,jspin),atoms,cell,lapw,  &
+	      call priv_ab_coef(jspin,bk,sym,el(:,:,jspin),vr0(:,:,jspin),atoms,cell,lapw,lapw_gf,  &
 	                        ab_coef(:,:,:,:,1))
 	  else
-	      call priv_ab_coef(1,bk,sym,el(:,:,1),vr0(:,:,1),atoms,cell,lapw,  &
+	      call priv_ab_coef(1,bk,sym,el(:,:,1),vr0(:,:,1),atoms,cell,lapw,lapw_gf,  &
 	                        ab_coef(:,:,:,:,1))
-	      call priv_ab_coef(2,bk,sym,el(:,:,2),vr0(:,:,2),atoms,cell,lapw,  &
+	      call priv_ab_coef(2,bk,sym,el(:,:,2),vr0(:,:,2),atoms,cell,lapw,lapw_gf,  &
 	                        ab_coef(:,:,:,:,2))
 	  endif
       END SUBROUTINE
@@ -72,16 +73,18 @@
       end function
 
       SUBROUTINE priv_ab_coef(jspin,bk,sym,                               &
-     &     el,vr0,atoms,cell,lapw,ab)                                   
+     &     el,vr0,atoms,cell,lapw,lapw_gf,ab)                                   
 !*********************************************************************  
 !     Returns the LAPW a+b coefs for the given k-point.                 
 !     WARNING: array ab is pretty large                                 
 !                                           Daniel Wortmann             
 !*********************************************************************  
-      USE m_fleur_interface,ONLY:fleur_ylm,fleur_dsphbs,fleur_sphbes 
-      USE m_constants ,ONLY: pimach 
+      USE m_ylm
+      USE m_sphbes
+      USE m_dsphbs
+      USE m_radfun
+      USE m_constants ,ONLY: pimach
       USE m_gf_types 
-      USE m_fleur_interface,ONLY:fleur_radfun 
       IMPLICIT NONE 
 !     Arguments                                                         
       INTEGER,INTENT(IN)       :: jspin 
@@ -92,9 +95,10 @@
                                               ! enparas                 
       REAL,INTENT(IN)          :: el(0:,:) 
       TYPE(t_sym),INTENT(IN)   :: sym 
-      TYPE(t_lapw),INTENT(IN)  :: lapw 
-      TYPE(t_cell),INTENT(IN)  :: cell 
-      TYPE(t_atoms),INTENT(IN) :: atoms 
+      TYPE(t_lapw),INTENT(IN)  :: lapw
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
+      TYPE(t_cell),INTENT(IN)  :: cell
+      TYPE(t_atoms),INTENT(IN) :: atoms
       COMPLEX, INTENT(OUT)     :: ab(:,0:,:,:) 
                                                                         
 !     locals                                                            
@@ -117,10 +121,12 @@
       REAL    :: rdum 
                                         !not used afterwards            
       REAL,ALLOCATABLE :: f(:,:),g(:,:) 
-                                                      !MT-lapws         
-      REAL,ALLOCATABLE :: us(:),dus(:),duds(:),uds(:) 
-                                                                        
-      ALLOCATE(f(maxval(atoms%jri),2),g(maxval(atoms%jri),2)) 
+                                                      !MT-lapws
+      TYPE(t_usdus) :: ud
+      REAL,ALLOCATABLE :: us(:),dus(:),duds(:),uds(:)
+
+      CALL ud%init(atoms,jspin)
+      ALLOCATE(f(atoms%jmtd,2),g(atoms%jmtd,2))
       ALLOCATE(us(0:maxval(atoms%lmax)),dus(0:maxval(atoms%lmax)),      &
      &     duds(0:maxval(atoms%lmax)),uds(0:maxval(atoms%lmax)))
                                                                         
@@ -137,36 +143,33 @@
 !   The radial functions                                                
 !                                                                       
          DO l=0,atoms%lmax(ntyp)
-            CALL fleur_radfun(                                          &
-     &           l,el(l,ntyp),vr0(:,ntyp),ntyp,atoms,f,g,us(l)          &
-     &           ,dus(l),uds(l),duds(l),rdum,nodeu,noded,rdum)          
+            CALL radfun(l,ntyp,jspin,el(l,ntyp),vr0(:,ntyp),atoms,      &
+     &                  f,g,ud,nodeu,noded,rdum)
+            us(l) = ud%us(l,ntyp,jspin)
+            dus(l) = ud%dus(l,ntyp,jspin)
+            uds(l) = ud%uds(l,ntyp,jspin)
+            duds(l) = ud%duds(l,ntyp,jspin)
          ENDDO 
          DO na=1,atoms%neq(ntyp) 
             nat=nat+1 
-            DO n=1,lapw%nv_sphere(jspin)
-               fk(1)=bk(1)+lapw%k%k1(n,jspin) 
-               fk(2)=bk(2)+lapw%k%k2(n,jspin) 
-               fk(3)=bk(3)+lapw%k%k3(n,jspin) 
+            DO n=1,lapw_gf%nv_sphere(jspin)
+               fk(1)=bk(1)+lapw%k1(n,jspin) 
+               fk(2)=bk(2)+lapw%k2(n,jspin) 
+               fk(3)=bk(3)+lapw%k3(n,jspin) 
                phase =EXP(CMPLX(0.0, tpi* (fk(1)*atoms%taual(1,nat)+    &
      &              fk(2)*atoms%taual(2,nat)+                           &
      &              fk(3)*atoms%taual(3,nat))))                         
-               nap=sym%invtab(atoms%ngopr(nat)) 
+               nap=sym%invtab(sym%ngopr(nat)) 
                fkr=MATMUL(fk,real(sym%mrot(:,:,nap))) 
                fkp=MATMUL(fkr,cell%bmat) 
                !CALL cotra3(fkr,fkp,cell%bmat)                          
 !     ----> generate spherical harmonics                                
-               CALL fleur_ylm(                                          &
-     &              maxval(atoms%lmax),fkp,                             &
-     &              ylm)                                                
-               r1 = atoms%rmt(ntyp)*lapw%k%rk(n,jspin) 
-               CALL fleur_sphbes(                                       &
-     &              maxval(atoms%lmax),r1,                              &
-     &              fj)                                                 
-               CALL fleur_dsphbs(                                       &
-     &              maxval(atoms%lmax),r1,fj,                           &
-     &              dfj)                                                
+               CALL ylm4(maxval(atoms%lmax),fkp,ylm)                                                
+               r1 = atoms%rmt(ntyp)*lapw%rk(n,jspin) 
+               CALL sphbes(maxval(atoms%lmax),r1,fj)                                                 
+               CALL dsphbs(maxval(atoms%lmax),r1,fj,dfj)                                                
                DO  l = 0,atoms%lmax(ntyp)
-                  df = lapw%k%rk(n,jspin)*dfj(l) 
+                  df = lapw%rk(n,jspin)*dfj(l) 
                   wronk=uds(l)*dus(l)-                                  &
      &                 us(l)*duds(l)                                    
                                     !This disabled code has to be used f
