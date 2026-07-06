@@ -180,6 +180,10 @@ MODULE m_gf_types
       !(lapw_dim_nvd/nv2d/nbasfcn are module-global in m_types_lapw and
       !must be restored via lapw%init_dim before per-layer kernels run)
       INTEGER :: nvd = 0, nv2d = 0, nbasfcn = 0
+      !the GF-specific LAPW bookkeeping of this layer (dimensions,
+      !cylinder mode, global 2D lists; the per-k parts are refilled by
+      !gf_apws inside the k-loops)
+      TYPE(t_lapw_gf) :: lapw_gf
       !potential and density of the layer
       TYPE(t_potden) :: vTot
       TYPE(t_potden) :: cdn_new

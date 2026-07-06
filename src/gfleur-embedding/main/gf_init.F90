@@ -27,6 +27,10 @@ CONTAINS
       USE m_gf_energies, gf_energies_init => init
       USE m_gf_mpi_groups
       USE m_gf_writetrans
+      USE m_gf_apws, ONLY: gf_apws_dim
+      USE m_gf_stepsanaly, ONLY: gf_initstepsanaly, gf_calcstepsanaly
+      USE m_gf_io2dmat, ONLY: io2dmat_init => init
+      USE m_gf_iotmat, ONLY: init_tmat_storage
       USE m_gaunt, ONLY: gaunt_init
       USE m_xmlOutput
 #ifdef CPP_HDF
@@ -41,6 +45,7 @@ CONTAINS
       TYPE(t_kpts), INTENT(OUT)     :: gkpts !the common 2D BZ k-points
 
       INTEGER :: i, outxmlFileID, ierr
+      LOGICAL :: l_tmatmemory
       CHARACTER(len=100) :: filename_add, xml_add
 
 #ifdef CPP_MPI
@@ -104,6 +109,48 @@ CONTAINS
 
       !Setup the k x layer x energy parallelization
       CALL gf_setup_mpi_groups(gmpi, layers, gkpts, gf_noen())
+
+      !GF-specific LAPW dimensions (cylinder basis, global 2D lists)
+      CALL gf_out_newheader('LAPW basis dimensions')
+      DO i = 1, layers%num_layers
+         CALL gf_apws_dim(ld(i)%fi%input%jspins, ld(i)%nococonv%qss, gkpts, embinp, &
+                          ld(i)%fi%cell, ld(i)%fi%input%rkmax, &
+                          (/MINVAL(ld(i)%fi%atoms%rmt*ld(i)%fi%atoms%lmax), &
+                            MAXVAL(ld(i)%fi%atoms%rmt*ld(i)%fi%atoms%lmax)/), &
+                          ld(i)%lapw_gf, i)
+         !the cylinder basis can exceed the standard lapw_dim results
+         ld(i)%nvd = MAX(ld(i)%nvd, ld(i)%lapw_gf%nvd)
+         ld(i)%nv2d = MAX(ld(i)%nv2d, ld(i)%lapw_gf%nv2d)
+         ld(i)%nbasfcn = ld(i)%lapw_gf%nvd + ld(i)%fi%atoms%nlotot
+         IF (ld(i)%fi%noco%l_noco) ld(i)%nbasfcn = 2*ld(i)%nbasfcn
+      END DO
+
+      !Setup of the analytical step functions of the layers
+      CALL timestart("Setup of step-functions")
+      DO i = 1, layers%num_layers
+         CALL gf_initstepsanaly(ld(i)%stars, embinp%napw(i))
+         IF (gmpi%pe0) THEN
+            !height of the physical region: from &LAYERS or the full cell
+            IF (layers%c(i) > 0.0) THEN
+               CALL gf_calcstepsanaly(i, ld(i)%fi%cell, ld(i)%stars, embinp%napw(i), &
+                                      ld(i)%fi%atoms, layers%c(i))
+            ELSE
+               CALL gf_calcstepsanaly(i, ld(i)%fi%cell, ld(i)%stars, embinp%napw(i), &
+                                      ld(i)%fi%atoms, ld(i)%fi%cell%amat(3, 3))
+            END IF
+         END IF
+      END DO
+      CALL timestop("Setup of step-functions")
+
+      !open the 2D-matrix store (embedding potentials, G, T)
+      CALL timestart("init io2dmat")
+      CALL io2dmat_init(gkpts, embinp, ld(1)%lapw_gf, ld(1)%fi%sym, layers, &
+                        ld(1)%fi%input%jspins, ld(1)%fi%noco%l_noco, gmpi, l_tmatmemory)
+      CALL timestop("init io2dmat")
+      IF (l_tmatmemory) THEN
+         CALL init_tmat_storage(ld(1)%fi%noco%l_noco, gf_noen(), layers%num_layers, &
+                                SIZE(ld(1)%lapw_gf%global2dList, 2))
+      END IF
 
       !sanity checks on the input switches
       CALL priv_setup_test(embinp, gfmix)

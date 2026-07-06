@@ -19,7 +19,7 @@
      &                     mx1,mx2,                                     &
      &                     circlestep)                                  
                                                                         
-      USE m_constants, ONLY: pimach 
+      USE m_constants, ONLY: pi_const 
       USE m_gf_bessel 
                                                                         
       IMPLICIT NONE 
@@ -41,7 +41,7 @@
       COMPLEX             :: phase 
       REAL                :: argument 
                                                                         
-      pi=pimach() 
+      pi=pi_const 
       DO n = 1,SIZE(rmt) 
                                                       !cut right dividin
        IF(abs(c/2.0-taual(3,n)*amat33)<rmt(n))THEN 
@@ -108,7 +108,7 @@
      &     mx1,mx2,                                                     &
      &     circlestep)                                                  
                                                                         
-      USE m_constants, ONLY: pimach 
+      USE m_constants, ONLY: pi_const 
       USE m_gf_embdesc 
       USE m_gf_bessel 
                                                                         
@@ -128,7 +128,7 @@
       COMPLEX             :: phase 
       REAL                :: argument 
                                                                         
-      pi=pimach() 
+      pi=pi_const 
                   !in-out                                               
        DO i = 1,2 
          IF (i == 1) nn = embdesc%cut_atoms_in 

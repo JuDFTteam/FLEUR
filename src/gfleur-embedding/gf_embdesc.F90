@@ -4,6 +4,7 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
       MODULE m_gf_embdesc 
+      USE m_constants, ONLY: oUnit
       use m_juDFT
       use m_juDFT 
       IMPLICIT NONE
@@ -86,23 +87,23 @@
          IF ((d1%cut_atoms_in /= d2%cut_atoms_out).OR.(d1%cut_atoms_out &
      &        /= d2%cut_atoms_in)) THEN                                 
             gf_checkdesc         =  .FALSE. 
-            WRITE(6,*) "No of atoms cutting the plane:" 
-            WRITE(6,*) "         D1:", d1%cut_atoms_in,                 &
+            WRITE(oUnit,*) "No of atoms cutting the plane:" 
+            WRITE(oUnit,*) "         D1:", d1%cut_atoms_in,                 &
      &           d1%cut_atoms_out                                       
-            WRITE(6,*) "         D2:", d2%cut_atoms_in,                 &
+            WRITE(oUnit,*) "         D2:", d2%cut_atoms_in,                 &
      &           d2%cut_atoms_out                                       
          ENDIF 
       ELSE 
          IF (d1%cut_atoms_in /= d2%cut_atoms_in) THEN 
             gf_checkdesc         =  .FALSE. 
-            WRITE(6,*) "No of atoms cutting the plane:" 
-            WRITE(6,*) "         from within:", d1%cut_atoms_in,        &
+            WRITE(oUnit,*) "No of atoms cutting the plane:" 
+            WRITE(oUnit,*) "         from within:", d1%cut_atoms_in,        &
      &           d2%cut_atoms_in                                        
          ENDIF 
          IF (d1%cut_atoms_out /= d2%cut_atoms_out) THEN 
             gf_checkdesc          =  .FALSE. 
-            WRITE(6,*) "No of atoms cutting the plane:" 
-            WRITE(6,*) "         from outside:", d1%cut_atoms_out,      &
+            WRITE(oUnit,*) "No of atoms cutting the plane:" 
+            WRITE(oUnit,*) "         from outside:", d1%cut_atoms_out,      &
      &           d2%cut_atoms_out                                       
          ENDIF 
       ENDIF 
@@ -111,16 +112,16 @@
       !<--Check setup                                                   
                                                                         
       IF (ABS(d1%dist_aux - d2%dist_aux) > 2.E-3 )THEN 
-         WRITE(6,*) "Distance dist_aux:", d1%dist_aux,d2%dist_aux
+         WRITE(oUnit,*) "Distance dist_aux:", d1%dist_aux,d2%dist_aux
          WRITE(*,*) "WARNING: dist_aux differs, might indicate wrong setup"
          WRITE(*,*) "Distance dist_aux:", d1%dist_aux,d2%dist_aux
       ENDIF 
       IF (ANY(ABS(d1%ucell - d2%ucell) > 1E-4).OR.                      &
      &    ANY(ABS(amat(1:2,1:2) - d2%ucell) > 1E-4) ) THEN              
          gf_checkdesc = .FALSE. 
-         WRITE(6,*) "2DUnit cell:" 
-         WRITE(6,"(2f15.6)") d1%ucell
-         WRITE(6,"(2f15.6)") d2%ucell
+         WRITE(oUnit,*) "2DUnit cell:" 
+         WRITE(oUnit,"(2f15.6)") d1%ucell
+         WRITE(oUnit,"(2f15.6)") d2%ucell
          write(6,"(2f15.6)") amat(1:2,1:2)
       ENDIF 
                                                                         
@@ -132,21 +133,21 @@
      &        (ANY(ABS(d1%atoms_rmt(:d1%cut_atoms_out,2)               &
      &        -d2%atoms_rmt(:d2%cut_atoms_in,1)) > 1E-4))) THEN         
             gf_checkdesc = .FALSE. 
-            WRITE(6,*) "MT-radius of atoms differ" 
+            WRITE(oUnit,*) "MT-radius of atoms differ" 
          ENDIF 
       ELSE 
          IF (ANY(ABS(d1%atoms_rmt(:d1%cut_atoms_in,1) -                 &
      &        d2%atoms_rmt(:d2%cut_atoms_in,1)) > 1E-4)) THEN           
             gf_checkdesc = .FALSE. 
-            WRITE(6,*) "MT-radius of 'in'-atoms differ" 
-            WRITE(6,*) d1%atoms_rmt(:d1%cut_atoms_in,1)                 &
+            WRITE(oUnit,*) "MT-radius of 'in'-atoms differ" 
+            WRITE(oUnit,*) d1%atoms_rmt(:d1%cut_atoms_in,1)                 &
      &           ,d2%atoms_rmt(:d2%cut_atoms_in,1)                      
          ENDIF 
          IF (ANY(ABS(d1%atoms_rmt(:d1%cut_atoms_out,2) -                &
      &        d2%atoms_rmt(:d2%cut_atoms_out,2)) > 1E-4)) THEN          
             gf_checkdesc = .FALSE. 
-            WRITE(6,*) "MT-radius of 'out'-atoms differ" 
-            WRITE(6,*) d1%atoms_rmt(:d1%cut_atoms_out,2)                &
+            WRITE(oUnit,*) "MT-radius of 'out'-atoms differ" 
+            WRITE(oUnit,*) d1%atoms_rmt(:d1%cut_atoms_out,2)                &
      &           ,d2%atoms_rmt(:d2%cut_atoms_out,2)                     
          ENDIF 
       ENDIF 
@@ -159,21 +160,21 @@
      &        (ANY(ABS(d1%atoms_z(:d1%cut_atoms_out,2)                 &
      &        -d2%atoms_z(:d2%cut_atoms_in,1)) > 1E-4)))THEN            
             gf_checkdesc = .FALSE. 
-            WRITE(6,*) "Z-Values of atoms differ" 
+            WRITE(oUnit,*) "Z-Values of atoms differ" 
          ENDIF 
       ELSE 
          IF (ANY(ABS(d1%atoms_z(:d1%cut_atoms_in,1) -                   &
      &        d2%atoms_z(:d2%cut_atoms_in,1)) > 1E-4)) THEN             
             gf_checkdesc = .FALSE. 
-            WRITE(6,*) "Z-Values of 'in'-atoms differ" 
-            WRITE(6,*) d1%atoms_z(:d1%cut_atoms_in,1)                   &
+            WRITE(oUnit,*) "Z-Values of 'in'-atoms differ" 
+            WRITE(oUnit,*) d1%atoms_z(:d1%cut_atoms_in,1)                   &
      &           ,d2%atoms_z(:d2%cut_atoms_in,1)                        
          ENDIF 
          IF (ANY(ABS(d1%atoms_z(:d1%cut_atoms_out,2) -                  &
      &        d2%atoms_z(:d2%cut_atoms_out,2)) > 1E-4)) THEN            
             gf_checkdesc = .FALSE. 
-            WRITE(6,*) "Z-Values of 'out'-atoms differ" 
-            WRITE(6,*) d1%atoms_z(:d1%cut_atoms_out,2)                  &
+            WRITE(oUnit,*) "Z-Values of 'out'-atoms differ" 
+            WRITE(oUnit,*) d1%atoms_z(:d1%cut_atoms_out,2)                  &
      &           ,d2%atoms_z(:d2%cut_atoms_out,2)                       
          ENDIF 
       ENDIF 
@@ -202,8 +203,8 @@
                ENDDO 
             ENDDO 
             IF (.NOT.same) THEN 
-               WRITE(6,*) "Positions of atoms differ" 
-               WRITE(6,*) d1%atoms_pos(:,n,1)                           &
+               WRITE(oUnit,*) "Positions of atoms differ" 
+               WRITE(oUnit,*) d1%atoms_pos(:,n,1)                           &
      &              ,d2%atoms_pos(:,:d2%cut_atoms_out,2)                
                gf_checkdesc = .FALSE. 
             ENDIF 
@@ -217,8 +218,8 @@
                ENDDO 
             ENDDO 
             IF (.NOT.same) THEN 
-               WRITE(6,*) "Positions of atoms differ" 
-               WRITE(6,*) d1%atoms_pos(:,n,2)                           &
+               WRITE(oUnit,*) "Positions of atoms differ" 
+               WRITE(oUnit,*) d1%atoms_pos(:,n,2)                           &
      &              ,d2%atoms_pos(:,:d2%cut_atoms_in,1)                 
                gf_checkdesc = .FALSE. 
             ENDIF 
@@ -233,8 +234,8 @@
                ENDDO 
             ENDDO 
             IF (.NOT.same) THEN 
-               WRITE(6,*) "Positions of 'in'-atoms differ" 
-               WRITE(6,*) d1%atoms_pos(:,n,1)                           &
+               WRITE(oUnit,*) "Positions of 'in'-atoms differ" 
+               WRITE(oUnit,*) d1%atoms_pos(:,n,1)                           &
      &              ,d2%atoms_pos(:,:d2%cut_atoms_in,1)                 
                gf_checkdesc = .FALSE. 
             ENDIF 
@@ -248,8 +249,8 @@
                ENDDO 
             ENDDO 
             IF (.NOT.same) THEN 
-               WRITE(6,*) "Positions of 'out'-atoms differ" 
-               WRITE(6,*) d1%atoms_pos(:,n,2)                           &
+               WRITE(oUnit,*) "Positions of 'out'-atoms differ" 
+               WRITE(oUnit,*) d1%atoms_pos(:,n,2)                           &
      &              ,d2%atoms_pos(:,:d2%cut_atoms_out,2)                
                gf_checkdesc = .FALSE. 
             ENDIF 
@@ -259,45 +260,45 @@
                                                                         
       !<-- if not same, print list                                      
       IF (.NOT.gf_checkdesc) THEN 
-         WRITE(6,"(a30,2x,a30)") "First embedding plane"                &
+         WRITE(oUnit,"(a30,2x,a30)") "First embedding plane"                &
      &        ,"Second embedding plane"                                 
-         WRITE(6,"(a20,f10.6,2x,f10.6)") "Thickness of Delta volume:"   &
+         WRITE(oUnit,"(a20,f10.6,2x,f10.6)") "Thickness of Delta volume:"   &
      &        ,d1%dist_aux,d2%dist_aux                                  
-         WRITE(6,"(a20,i10,2x,i10)") "Cut atoms(in)",d1%cut_atoms_in    &
+         WRITE(oUnit,"(a20,i10,2x,i10)") "Cut atoms(in)",d1%cut_atoms_in    &
      &        ,d2%cut_atoms_in                                          
          DO n = 1,MAX(d1%cut_atoms_in,d2%cut_atoms_in) 
             IF (n <= d1%cut_atoms_in) THEN 
                IF (n <= d2%cut_atoms_in) THEN 
-                  WRITE(6,"(2(4(f5.3,1x),i6,2x))") d1%atoms_pos(:,n,1)  &
+                  WRITE(oUnit,"(2(4(f5.3,1x),i6,2x))") d1%atoms_pos(:,n,1)  &
      &                 ,d1%atoms_rmt(n,1),d1%atoms_z(n,1),d2%atoms_pos(:&
      &                 ,n,1),d2%atoms_rmt(n,1),d2%atoms_z(n,1)          
                ELSE 
-                  WRITE(6,("(2(4(f5.3,1x),i6,2x))")) d1%atoms_pos(:,n,1)&
+                  WRITE(oUnit,("(2(4(f5.3,1x),i6,2x))")) d1%atoms_pos(:,n,1)&
      &                 ,d1%atoms_rmt(n,1),d1%atoms_z(n,1)               
                ENDIF 
             ELSE 
                IF (n <= d2%cut_atoms_in) THEN 
-                  WRITE(6,"(32x,4(f5.3,1x),i6,2x)") d2%atoms_pos(:,n,1) &
+                  WRITE(oUnit,"(32x,4(f5.3,1x),i6,2x)") d2%atoms_pos(:,n,1) &
      &                 ,d2%atoms_rmt(n,1),d2%atoms_z(n,1)               
                ENDIF 
             ENDIF 
          ENDDO 
                                                                         
-         WRITE(6,"(a20,i10,2x,i10)") "Cut atoms(out)"                   &
+         WRITE(oUnit,"(a20,i10,2x,i10)") "Cut atoms(out)"                   &
      &        ,d1%cut_atoms_out,d2%cut_atoms_out                        
          DO n = 1,MAX(d1%cut_atoms_out,d2%cut_atoms_out) 
             IF (n <= d1%cut_atoms_out) THEN 
                IF (n <= d2%cut_atoms_out) THEN 
-                  WRITE(6,"(2(4(f5.3,1x),i6,2x))") d1%atoms_pos(:,n,2)  &
+                  WRITE(oUnit,"(2(4(f5.3,1x),i6,2x))") d1%atoms_pos(:,n,2)  &
      &                 ,d1%atoms_rmt(n,2),d1%atoms_z(n,2),d2%atoms_pos(:&
      &                 ,n,2),d2%atoms_rmt(n,2),d2%atoms_z(n,2)          
                ELSE 
-                  WRITE(6,"(2(4(f5.3,1x),i6,2x))") d1%atoms_pos(:,n,2)  &
+                  WRITE(oUnit,"(2(4(f5.3,1x),i6,2x))") d1%atoms_pos(:,n,2)  &
      &                 ,d1%atoms_rmt(n,2),d1%atoms_z(n,2)               
                ENDIF 
             ELSE 
                IF (n <= d2%cut_atoms_out) THEN 
-                  WRITE(6,"(32x,4(f5.3,1x),i6,2x)") d2%atoms_pos(:,n,2) &
+                  WRITE(oUnit,"(32x,4(f5.3,1x),i6,2x)") d2%atoms_pos(:,n,2) &
      &                 ,d2%atoms_rmt(n,2),d2%atoms_z(n,2)               
                ENDIF 
             ENDIF 

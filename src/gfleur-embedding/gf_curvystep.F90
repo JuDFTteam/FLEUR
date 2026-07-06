@@ -18,7 +18,7 @@
      &                     mx1,mx2,mx3,                                 &
      &                     curvystep)                                   
                                                                         
-      USE m_constants, ONLY: pimach 
+      USE m_constants, ONLY: pi_const 
       USE m_gf_curvypartfourier, ONLY: gf_curvypartfou 
                                                                         
       IMPLICIT NONE 
@@ -41,7 +41,7 @@
       COMPLEX             :: phase 
       REAL                :: argument 
                                                                         
-      pi=pimach() 
+      pi=pi_const 
       DO n = 1,SIZE(rmt) 
                                                       !cut right dividin
        IF(abs(c/2.0-taual(3,n)*amat33)<rmt(n))THEN 
@@ -138,7 +138,7 @@
       COMPLEX             :: phase 
       REAL                :: argument,pi,sgn,sgnn 
                                                                         
-      pi=pimach() 
+      pi=pi_const 
       IF (right) THEN 
          sgn =-1.0 
       ELSE 

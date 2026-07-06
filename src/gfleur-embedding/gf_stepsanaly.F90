@@ -80,7 +80,7 @@
                                                                         
       END SUBROUTINE gf_initstepsanaly 
                                                                         
-      SUBROUTINE gf_calcstepsanaly(layer,cell,stars,napw)
+      SUBROUTINE gf_calcstepsanaly(layer,cell,stars,napw,atoms,c_in)
 !********************************************************************   
 !     Generate the stepfunctions needed in GFLEUR                       
 !     (last modified: 06-10-09) D. Wortmann                             
@@ -99,7 +99,12 @@
       INTEGER,INTENT(IN)       :: layer
       TYPE(t_stars),INTENT(IN) :: stars 
       TYPE(t_cell),INTENT(IN)  :: cell 
-      INTEGER,INTENT(IN)       :: napw 
+      INTEGER,INTENT(IN)       :: napw
+      !the atoms of the layer and the height of its physical region -
+      !used to construct the step-function geometry when no old-style
+      !gf_setup.hdf with a stepinfo group is present
+      TYPE(t_atoms),INTENT(IN) :: atoms
+      REAL,INTENT(IN)          :: c_in
       !>                                                                
       !<-- Locals                                                       
                                                                         
@@ -134,28 +139,42 @@
                                                                         
       WRITE(*,*) "Generating Step-function:",layer 
       !>                                                                
-      !<-- read all information needed                                  
-      CALL io_hdfopen('gf_setup.hdf',H5F_ACC_RDONLY_F,ffid,hdferr) 
-      CALL io_gopen(ffid,io_layername(layer),fid,hdferr) 
-      CALL io_gopen (fid,'stepinfo',gid,hdferr) 
-      IF (hdferr <0 )  CALL juDFT_error                                   &
-     &     ('Information about step functions not found')               
-                                                                        
-                                                                        
-      CALL io_READ_att(gid, "c",c) 
-      CALL io_READ_att(gid,"ncutat",ncutat) 
-      CALL io_READ_att(gid,"nnewat",newat) 
-      ALLOCATE(newpos(3,newat),cutpos(3,ncutat)) 
-      ALLOCATE(newrmt(newat),cutrmt(ncutat)) 
-      CALL io_READ_att(gid,"newpos",newpos) 
-      CALL io_READ_att(gid,"newrmt",newrmt) 
-      IF (ncutat>0) THEN 
-         CALL io_READ_att(gid,"cutpos",cutpos) 
-         CALL io_READ_att(gid,"cutrmt",cutrmt) 
-      ENDIF 
-      CALL io_gclose (gid, hdferr) 
-      CALL io_gclose (fid, hdferr) 
-      CALL io_hdfclose(ffid,hdferr) 
+      !<-- obtain the step-function geometry
+      INQUIRE(FILE='gf_setup.hdf',EXIST=success)
+      IF (success) THEN
+         !old-style override: read the stepinfo group
+         CALL io_hdfopen('gf_setup.hdf',H5F_ACC_RDONLY_F,ffid,hdferr)
+         CALL io_gopen(ffid,io_layername(layer),fid,hdferr)
+         CALL io_gopen (fid,'stepinfo',gid,hdferr)
+         IF (hdferr <0 )  CALL juDFT_error                              &
+     &        ('Information about step functions not found')
+         CALL io_READ_att(gid, "c",c)
+         CALL io_READ_att(gid,"ncutat",ncutat)
+         CALL io_READ_att(gid,"nnewat",newat)
+         ALLOCATE(newpos(3,newat),cutpos(3,ncutat))
+         ALLOCATE(newrmt(newat),cutrmt(ncutat))
+         CALL io_READ_att(gid,"newpos",newpos)
+         CALL io_READ_att(gid,"newrmt",newrmt)
+         IF (ncutat>0) THEN
+            CALL io_READ_att(gid,"cutpos",cutpos)
+            CALL io_READ_att(gid,"cutrmt",cutrmt)
+         ENDIF
+         CALL io_gclose (gid, hdferr)
+         CALL io_gclose (fid, hdferr)
+         CALL io_hdfclose(ffid,hdferr)
+      ELSE
+         !standard case: the MT holes are the atoms of the layer, no
+         !cut atoms, physical height from the input
+         c = c_in
+         newat = atoms%nat
+         ncutat = 0
+         ALLOCATE(newpos(3,newat),cutpos(3,1))
+         ALLOCATE(newrmt(newat),cutrmt(1))
+         DO n = 1, atoms%nat
+            newpos(:,n) = atoms%taual(:,n)
+            newrmt(n) = atoms%rmt(atoms%itype(n))
+         ENDDO
+      ENDIF
       !>                                                                
                                                                         
       !<-- generate the step-functions                                  
@@ -469,7 +488,7 @@
            ENDDO 
           ENDDO 
          ENDDO 
-         DO in=1,stars%nq3 
+         DO in=1,stars%ng3 
             vpw_w(in)=vpw_w(in)/stars%nstr(in) 
          ENDDO 
       ENDIF 
@@ -600,7 +619,7 @@
             ENDDO 
          ENDDO 
       ENDDO 
-      DO in = 1,stars%nq2 
+      DO in = 1,stars%ng2 
          vpw_w(:,in) = vpw_w(:,in)/stars%nstr2(in) 
       ENDDO 
       !>                                                                
@@ -651,14 +670,29 @@
       INTEGER               :: hdferr,hdfdim(3),d(3)
       REAL,ALLOCATABLE:: tmp_r(:,:,:) 
       REAL,ALLOCATABLE:: tmp_i(:,:,:) 
+      LOGICAL         :: l_file
       !>                                                                
 
       access_prp=H5P_DEFAULT_f 
 
-      !<-- Check if file gf_setup.hdf contains group stepsanaly         
+      !<-- Check if the step-file contains group stepsanaly         
                                                                         
-      CALL io_hdfopen ('gf_setup.hdf',H5F_ACC_RDONLY_F, ffid, hdferr     &
-     &     ,access_prp)                                                 
+      INQUIRE(FILE='gf_steps.hdf',EXIST=l_file)
+      IF (.NOT.l_file) THEN
+         IF (.NOT.PRESENT(success)) CALL juDFT_error                    &
+     &        ("No Stepfunction file found")
+         success = .FALSE.
+         RETURN
+      ENDIF
+      CALL io_hdfopen ('gf_steps.hdf',H5F_ACC_RDONLY_F, ffid, hdferr     &
+     &     ,access_prp)
+      IF (.NOT.io_groupexists(ffid,io_layername(layer))) THEN
+         IF (.NOT.PRESENT(success)) CALL juDFT_error                    &
+     &        ("No Stepfunction found0")
+         success = .FALSE.
+         CALL io_hdfclose (ffid, hdferr)
+         RETURN
+      ENDIF
       CALL io_gopen(ffid,io_layername(layer),fid,hdferr) 
       IF(.NOT.io_groupexists(fid,'stepsanaly')) THEN 
          IF (.NOT.PRESENT(success)) CALL juDFT_error                      &
@@ -697,46 +731,36 @@
       !<--read the stepfunctions needed                                 
       IF (PRESENT(stepkomplett)) THEN 
          CALL io_dopen(gid, 'stepkomplett', varid, hdferr) 
-         CALL io_READ(varid, (/1,1,1,1/),                               &
-     &         (/hdfdim(1),hdfdim(2),hdfdim(3),1/),tmp_r)
-         CALL io_READ(varid, (/1,1,1,2/),                               &
-     &         (/hdfdim(1),hdfdim(2),hdfdim(3),1/),tmp_i)
+         CALL io_READ(varid,(/1,1,1,1/),(/hdfdim(1),hdfdim(2),hdfdim(3),1/),"tmp_r",tmp_r)
+         CALL io_READ(varid,(/1,1,1,2/),(/hdfdim(1),hdfdim(2),hdfdim(3),1/),"tmp_i",tmp_i)
          stepkomplett = cmplx(tmp_r(-s_mx1:s_mx1,-s_mx2:s_mx2,-s_mx3:s_mx3),tmp_i(-s_mx1:s_mx1,-s_mx2:s_mx2,-s_mx3:s_mx3))
          CALL io_dclose(varid, hdferr) 
       ENDIF 
       IF (PRESENT(stephelpreg_r)) THEN 
          CALL io_dopen(gid, 'stephelpreg_r', varid, hdferr) 
-         CALL io_READ(varid, (/1,1,1,1/),                               &
-     &         (/hdfdim(1),hdfdim(2),hdfdim(3),1/),tmp_r)
-         CALL io_READ(varid, (/1,1,1,2/),                               &
-     &         (/hdfdim(1),hdfdim(2),hdfdim(3),1/),tmp_i)
+         CALL io_READ(varid,(/1,1,1,1/),(/hdfdim(1),hdfdim(2),hdfdim(3),1/),"tmp_r",tmp_r)
+         CALL io_READ(varid,(/1,1,1,2/),(/hdfdim(1),hdfdim(2),hdfdim(3),1/),"tmp_i",tmp_i)
          stephelpreg_r = cmplx(tmp_r(-s_mx1:s_mx1,-s_mx2:s_mx2,-s_mx3:s_mx3),tmp_i(-s_mx1:s_mx1,-s_mx2:s_mx2,-s_mx3:s_mx3))
          CALL io_dclose(varid, hdferr) 
       ENDIF 
       IF (PRESENT(stephelpreg_l)) THEN 
          CALL io_dopen(gid, 'stephelpreg_l', varid, hdferr) 
-                  CALL io_READ(varid, (/1,1,1,1/),                               &
-     &         (/hdfdim(1),hdfdim(2),hdfdim(3),1/),tmp_r)
-         CALL io_READ(varid, (/1,1,1,2/),                               &
-     &         (/hdfdim(1),hdfdim(2),hdfdim(3),1/),tmp_i)
+                  CALL io_READ(varid,(/1,1,1,1/),(/hdfdim(1),hdfdim(2),hdfdim(3),1/),"tmp_r",tmp_r)
+         CALL io_READ(varid,(/1,1,1,2/),(/hdfdim(1),hdfdim(2),hdfdim(3),1/),"tmp_i",tmp_i)
          stephelpreg_l = cmplx(tmp_r(-s_mx1:s_mx1,-s_mx2:s_mx2,-s_mx3:s_mx3),tmp_i(-s_mx1:s_mx1,-s_mx2:s_mx2,-s_mx3:s_mx3))
          CALL io_dclose(varid, hdferr) 
       ENDIF 
       IF (PRESENT(stepphys)) THEN 
          CALL io_dopen(gid, 'stepphys', varid, hdferr)
-                  CALL io_READ(varid, (/1,1,1,1/),                               &
-     &         (/hdfdim(1),hdfdim(2),hdfdim(3),1/),tmp_r)
-         CALL io_READ(varid, (/1,1,1,2/),                               &
-     &         (/hdfdim(1),hdfdim(2),hdfdim(3),1/),tmp_i)
+                  CALL io_READ(varid,(/1,1,1,1/),(/hdfdim(1),hdfdim(2),hdfdim(3),1/),"tmp_r",tmp_r)
+         CALL io_READ(varid,(/1,1,1,2/),(/hdfdim(1),hdfdim(2),hdfdim(3),1/),"tmp_i",tmp_i)
          stepphys = cmplx(tmp_r(-s_mx1:s_mx1,-s_mx2:s_mx2,-s_mx3:s_mx3),tmp_i(-s_mx1:s_mx1,-s_mx2:s_mx2,-s_mx3:s_mx3))
          CALL io_dclose(varid, hdferr) 
       ENDIF 
       IF (PRESENT(stepMTOUT)) THEN 
          CALL io_dopen(gid, 'stepMTOUT', varid, hdferr) 
-         CALL io_READ(varid, (/1,1,1,1/),                               &
-     &         (/hdfdim(1),hdfdim(2),hdfdim(3),1/),tmp_r)
-         CALL io_READ(varid, (/1,1,1,2/),                               &
-     &         (/hdfdim(1),hdfdim(2),hdfdim(3),1/),tmp_i)
+         CALL io_READ(varid,(/1,1,1,1/),(/hdfdim(1),hdfdim(2),hdfdim(3),1/),"tmp_r",tmp_r)
+         CALL io_READ(varid,(/1,1,1,2/),(/hdfdim(1),hdfdim(2),hdfdim(3),1/),"tmp_i",tmp_i)
          stepmtout = cmplx(tmp_r(-s_mx1:s_mx1,-s_mx2:s_mx2,-s_mx3:s_mx3),tmp_i(-s_mx1:s_mx1,-s_mx2:s_mx2,-s_mx3:s_mx3))
          CALL io_dclose(varid, hdferr) 
       ENDIF 
@@ -781,9 +805,19 @@
       !<-- Locals                                                       
       INTEGER(HID_T) :: fid,gid,varid,ffid 
       INTEGER        :: hdferr 
+      LOGICAL        :: l_file
                                                                         
       !>                                                                
-      CALL io_hdfopen ('gf_setup.hdf',H5F_ACC_RDWR_F,ffid, hdferr) 
+      INQUIRE(FILE='gf_steps.hdf',EXIST=l_file)
+      IF (l_file) THEN
+         CALL io_hdfopen ('gf_steps.hdf',H5F_ACC_RDWR_F,ffid, hdferr)
+      ELSE
+         CALL h5fcreate_f('gf_steps.hdf',H5F_ACC_TRUNC_F,ffid,hdferr)
+      ENDIF
+      IF (.NOT.io_groupexists(ffid,io_layername(layer))) THEN
+         CALL io_gcreate(ffid,io_layername(layer),fid,hdferr)
+         CALL io_gclose(fid,hdferr)
+      ENDIF
       CALL io_gopen(ffid,io_layername(layer),fid,hdferr) 
       IF(io_groupexists(fid,'stepsanaly')) THEN 
          CALL io_gdelete(fid,'stepsanaly',hdferr) 
@@ -796,54 +830,48 @@
       IF (PRESENT(stepkomplett)) THEN 
        CALL io_createvar(gid,"stepkomplett",H5T_NATIVE_DOUBLE,          &
      &    (/s_dim(1),s_dim(2),s_dim(3),2/),varid)                       
-       CALL io_WRITE(varid,(/1,1,1,1/),(/s_dim(1),s_dim(2),s_dim(3),1/),&
-     &                        real(stepkomplett(-s_mx1:s_mx1,           &
-     &            -s_mx2:s_mx2,-s_mx3:s_mx3))                       )   
-       CALL io_WRITE(varid,(/1,1,1,2/),(/s_dim(1),s_dim(2),s_dim(3),1/),&
-     &                        imag(stepkomplett(-s_mx1:s_mx1,           &
-     &            -s_mx2:s_mx2,-s_mx3:s_mx3))                       )   
+       CALL io_WRITE(varid,(/1,1,1,1/),&
+     &     (/s_dim(1),s_dim(2),s_dim(3),1/),"stepkomplett",&
+     &     real(stepkomplett(-s_mx1:s_mx1,                       -s_mx2:s_mx2,-s_mx3:s_mx3)))
+       CALL io_WRITE(varid,(/1,1,1,2/),&
+     &     (/s_dim(1),s_dim(2),s_dim(3),1/),"stepkomplett",&
+     &     imag(stepkomplett(-s_mx1:s_mx1,                       -s_mx2:s_mx2,-s_mx3:s_mx3)))
        CALL io_dclose(varid,hdferr) 
       ENDIF 
                                                                         
       IF (PRESENT(stephelpreg_r)) THEN 
        CALL io_createvar(gid,"stephelpreg_r",H5T_NATIVE_DOUBLE,         &
      &    (/s_dim(1),s_dim(2),s_dim(3),2/),varid)                       
-       CALL io_WRITE(varid,(/1,1,1,1/),(/s_dim(1),s_dim(2),s_dim(3),1/),&
-     &                        REAL(stephelpreg_r(-s_mx1:s_mx1,          &
-     &            -s_mx2:s_mx2,-s_mx3:s_mx3))                       )   
-       CALL io_WRITE(varid,(/1,1,1,2/),(/s_dim(1),s_dim(2),s_dim(3),1/),&
-     &                        imag(stephelpreg_r(-s_mx1:s_mx1,          &
-     &            -s_mx2:s_mx2,-s_mx3:s_mx3))                       )   
+       CALL io_WRITE(varid,(/1,1,1,1/),&
+     &     (/s_dim(1),s_dim(2),s_dim(3),1/),"stephelpreg_r",&
+     &     REAL(stephelpreg_r(-s_mx1:s_mx1,                      -s_mx2:s_mx2,-s_mx3:s_mx3)))
+       CALL io_WRITE(varid,(/1,1,1,2/),&
+     &     (/s_dim(1),s_dim(2),s_dim(3),1/),"stephelpreg_r",&
+     &     imag(stephelpreg_r(-s_mx1:s_mx1,                      -s_mx2:s_mx2,-s_mx3:s_mx3)))
        CALL io_dclose(varid,hdferr) 
       ENDIF 
                                                                         
       IF (PRESENT(stephelpreg_l)) THEN 
        CALL io_createvar(gid,"stephelpreg_l",H5T_NATIVE_DOUBLE,         &
      &    (/s_dim(1),s_dim(2),s_dim(3),2/),varid)                       
-       CALL io_WRITE(varid,(/1,1,1,1/),(/s_dim(1),s_dim(2),s_dim(3),1/),&
-     &                        REAL(stephelpreg_l))                      
-       CALL io_WRITE(varid,(/1,1,1,2/),(/s_dim(1),s_dim(2),s_dim(3),1/),&
-     &                        imag(stephelpreg_l))                      
+       CALL io_WRITE(varid,(/1,1,1,1/),(/s_dim(1),s_dim(2),s_dim(3),1/),"stephelpreg_l",REAL(stephelpreg_l))
+       CALL io_WRITE(varid,(/1,1,1,2/),(/s_dim(1),s_dim(2),s_dim(3),1/),"stephelpreg_l",imag(stephelpreg_l))
        CALL io_dclose(varid,hdferr) 
       ENDIF 
                                                                         
       IF (PRESENT(stepMTOUT)) THEN 
        CALL io_createvar(gid,"stepMTOUT",H5T_NATIVE_DOUBLE,             &
      &    (/s_dim(1),s_dim(2),s_dim(3),2/),varid)                       
-       CALL io_WRITE(varid,(/1,1,1,1/),(/s_dim(1),s_dim(2),s_dim(3),1/),&
-     &                        REAL(stepMTOUT))                          
-       CALL io_WRITE(varid,(/1,1,1,2/),(/s_dim(1),s_dim(2),s_dim(3),1/),&
-     &                        imag(stepMTOUT))                          
+       CALL io_WRITE(varid,(/1,1,1,1/),(/s_dim(1),s_dim(2),s_dim(3),1/),"stepMTOUT",REAL(stepMTOUT))
+       CALL io_WRITE(varid,(/1,1,1,2/),(/s_dim(1),s_dim(2),s_dim(3),1/),"stepMTOUT",imag(stepMTOUT))
        CALL io_dclose(varid,hdferr) 
       ENDIF 
                                                                         
       IF (PRESENT(stepphys)) THEN 
        CALL io_createvar(gid,"stepphys",H5T_NATIVE_DOUBLE,              &
      &    (/s_dim(1),s_dim(2),s_dim(3),2/),varid)                       
-       CALL io_WRITE(varid,(/1,1,1,1/),(/s_dim(1),s_dim(2),s_dim(3),1/),&
-     &                        REAL(stepphys))                           
-       CALL io_WRITE(varid,(/1,1,1,2/),(/s_dim(1),s_dim(2),s_dim(3),1/),&
-     &                        imag(stepphys))                           
+       CALL io_WRITE(varid,(/1,1,1,1/),(/s_dim(1),s_dim(2),s_dim(3),1/),"stepphys",REAL(stepphys))
+       CALL io_WRITE(varid,(/1,1,1,2/),(/s_dim(1),s_dim(2),s_dim(3),1/),"stepphys",imag(stepphys))
        CALL io_dclose(varid,hdferr) 
       ENDIF 
                                                                         
@@ -868,7 +896,7 @@
 !  and zero outside of the MTs.                                         
 !  Frank Freimuth, April 2007                                           
 !-----------------------------------------------                        
-      USE m_constants,ONLY:PIMACH 
+      USE m_constants, ONLY: pi_const 
       IMPLICIT NONE 
       !<-- Arguments                                                    
       REAL ,INTENT(IN)       :: omtil,bmat(3,3) 
@@ -884,7 +912,7 @@
                                                                         
                                                                         
                                                                         
-      tpi=2.*pimach() 
+      tpi=2.*pi_const 
                                                                         
       stepmtfui = cmplx(0.0,0.0) 
                                                                         
@@ -1006,7 +1034,7 @@
 !  the MT-spheres and which is zero otherwise.                          
 !  Frank Freimuth, April 2007                                           
 !-----------------------------------------------                        
-      USE m_constants,ONLY:PIMACH 
+      USE m_constants, ONLY: pi_const 
       USE m_gf_ballpartfourier,ONLY:ballpartfou
       IMPLICIT NONE 
       !<-- Arguments                                                    
@@ -1025,8 +1053,8 @@
       !>                                                                
                                                                         
                                                                         
-      pi=pimach() 
-      tpi=2.*pimach() 
+      pi=pi_const 
+      tpi=2.*pi_const 
                                                                         
       step = cmplx(0.0,0.0) 
                                                                         
@@ -1118,7 +1146,7 @@
 !  the MT-spheres and which is zero otherwise.                          
 !  Frank Freimuth, April 2007                                           
 !-----------------------------------------------                        
-      USE m_constants,ONLY:PIMACH 
+      USE m_constants, ONLY: pi_const 
       USE m_gf_ballpartfourier,ONLY:ballpartfou
       IMPLICIT NONE 
       !<-- Arguments                                                    
@@ -1137,8 +1165,8 @@
       !>                                                                
                                                                         
                                                                         
-      pi=pimach() 
-      tpi=2.*pimach() 
+      pi=pi_const 
+      tpi=2.*pi_const 
                                                                         
       step = cmplx(0.0,0.0) 
                                                                         
@@ -1193,7 +1221,7 @@
 !  the MT-spheres and which is zero otherwise.                          
 !  Frank Freimuth, April 2007                                           
 !-----------------------------------------------                        
-      USE m_constants,ONLY:PIMACH 
+      USE m_constants, ONLY: pi_const 
       USE m_gf_ballpartfourier,ONLY:ballpartfou
       IMPLICIT NONE 
       !<-- Arguments                                                    
@@ -1212,8 +1240,8 @@
       !>                                                                
                                                                         
                                                                         
-      pi=pimach() 
-      tpi=2.*pimach() 
+      pi=pi_const 
+      tpi=2.*pi_const 
                                                                         
       step = cmplx(0.0,0.0) 
                                                                         

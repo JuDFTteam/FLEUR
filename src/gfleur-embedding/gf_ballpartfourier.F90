@@ -19,7 +19,7 @@
       SUBROUTINE ballpartfou(radius_in,zcoor,kpara_in,                  &
      &                          korthogo_in,value)                      
       USE m_quadrature 
-      USE m_constants,ONLY:pimach 
+      USE m_constants, ONLY: pi_const 
       IMPLICIT NONE 
       REAL,INTENT(IN) :: radius_in 
       REAL,INTENT(IN) :: zcoor 
@@ -36,7 +36,7 @@
       REAL,ALLOCATABLE :: work(:) 
       INTEGER,ALLOCATABLE :: iwork(:) 
                                                                         
-      pi = pimach() 
+      pi = pi_const 
       radius = radius_in 
       kpara = kpara_in 
       korthogo = korthogo_in 
