@@ -40,7 +40,7 @@
       END SUBROUTINE 
       !>                                                                
                                                                         
-      SUBROUTINE gf_uhuproj(layer,jspin,lapw,cell,l_nohelpregion,l_sph)
+      SUBROUTINE gf_uhuproj(layer,jspin,lapw,lapw_gf,cell,l_nohelpregion,l_sph)
 !****************************************************************       
 !        Construct the surface projections of eigenvector-matrices.     
 !        The surface projections are called uhuprojone and              
@@ -52,7 +52,8 @@
       IMPLICIT NONE 
       INTEGER, INTENT(IN)       :: layer 
       INTEGER, INTENT(IN)       :: jspin 
-      TYPE(t_lapw),INTENT(IN)   :: lapw 
+      TYPE(t_lapw),INTENT(IN)   :: lapw
+      TYPE(t_lapw_gf),INTENT(IN):: lapw_gf
       TYPE(t_cell),INTENT(IN)   :: cell 
       LOGICAL, INTENT(IN)       :: l_nohelpregion,l_sph
                                                                         
@@ -62,7 +63,7 @@
       COMPLEX,ALLOCATABLE       :: uhuprojone_tmp(:,:) 
                                                                         
       if (l_sph) then
-        matsize=lapw%nmat_sphere
+        matsize=lapw_gf%nmat_sphere
       else
         matsize=lapw%nmat
       endif
@@ -71,15 +72,15 @@
 !      write(777,*)uhumatrix(:,:)                                       
 !      close(777)                                                       
                                                                         
-      ALLOCATE( uhuprojone(2*lapw%nv2_tot,matsize)) 
+      ALLOCATE( uhuprojone(2*lapw_gf%nv2_tot,matsize)) 
       IF(.NOT.l_nohelpregion)THEN 
        uhuprojone=cmplx(0.0,0.0) 
        exp1=exp(cmplx(0.0,-1.0*cell%bmat(3,3)*cell%z1)) 
        DO n2=1,matsize 
          DO n1=1,lapw%nv_tot 
-          f1=1/sqrt(cell%amat(3,3))*exp1**lapw%k%k3(n1,jspin) 
-          uhuprojone(lapw%k%kp(n1,jspin),n2)=                           &
-     &     uhuprojone(lapw%k%kp(n1,jspin),n2)+f1*uhumatrix(n1,n2)       
+          f1=1/sqrt(cell%amat(3,3))*exp1**lapw%k3(n1,jspin) 
+          uhuprojone(lapw%kp(n1,jspin),n2)=                           &
+     &     uhuprojone(lapw%kp(n1,jspin),n2)+f1*uhumatrix(n1,n2)       
                !n1                                                      
          ENDDO 
              !n2                                                        
@@ -87,9 +88,9 @@
        exp1=exp(cmplx(0.0,1.0*cell%bmat(3,3)*cell%z1)) 
        DO n2=1,matsize 
         DO n1=1,lapw%nv_tot 
-         f1=1/sqrt(cell%amat(3,3))*exp1**lapw%k%k3(n1,jspin) 
-         uhuprojone(lapw%nv2_tot+lapw%k%kp(n1,jspin),n2)=               &
-     &       uhuprojone(lapw%nv2_tot+lapw%k%kp(n1,jspin),n2)+           &
+         f1=1/sqrt(cell%amat(3,3))*exp1**lapw%k3(n1,jspin) 
+         uhuprojone(lapw_gf%nv2_tot+lapw%kp(n1,jspin),n2)=               &
+     &       uhuprojone(lapw_gf%nv2_tot+lapw%kp(n1,jspin),n2)+           &
      &       f1*uhumatrix(n1,n2)                                        
               !n1                                                       
         ENDDO 
@@ -97,23 +98,23 @@
        ENDDO 
       ELSE 
                                                                         
-         CALL gf_curvy2dprojector(layer,cell,lapw,.TRUE.) 
+         CALL gf_curvy2dprojector(layer,cell,lapw,lapw_gf,.TRUE.) 
                                                                         
 !         CALL gf_curvy2dproject(lapw,uhumatrix,uhuprojone)             
-        ALLOCATE( uhuprojone_tmp(2*lapw%nv2_tot,matsize)) 
-        CALL gf_get_curvy2dproject(lapw,uhuprojone_tmp) 
-!        uhuprojone_tmp(1:lapw%nv2_tot,1:matsize) =                     
-!     =              curvyproject(1:lapw%nv2_tot,1:matsize,1)           
-!        uhuprojone_tmp(lapw%nv2_tot+1:2*lapw%nv2_tot,1:matsize) =      
-!     =              curvyproject(1:lapw%nv2_tot,1:matsize,2)           
+        ALLOCATE( uhuprojone_tmp(2*lapw_gf%nv2_tot,matsize)) 
+        CALL gf_get_curvy2dproject(lapw,lapw_gf,uhuprojone_tmp) 
+!        uhuprojone_tmp(1:lapw_gf%nv2_tot,1:matsize) =                     
+!     =              curvyproject(1:lapw_gf%nv2_tot,1:matsize,1)           
+!        uhuprojone_tmp(lapw_gf%nv2_tot+1:2*lapw_gf%nv2_tot,1:matsize) =      
+!     =              curvyproject(1:lapw_gf%nv2_tot,1:matsize,2)           
 !        uhuprojone = matmul(uhuprojone_tmp,uhumatrix)                  
-        CALL zgemm('N','N',2*lapw%nv2_tot,matsize,matsize,              &
-     &             cmplx(1.0,0.0),uhuprojone_tmp,2*lapw%nv2_tot,        &
+        CALL zgemm('N','N',2*lapw_gf%nv2_tot,matsize,matsize,              &
+     &             cmplx(1.0,0.0),uhuprojone_tmp,2*lapw_gf%nv2_tot,        &
      &             uhumatrix,matsize,                                   &
-     &             cmplx(0.0,0.0),uhuprojone,2*lapw%nv2_tot)            
+     &             cmplx(0.0,0.0),uhuprojone,2*lapw_gf%nv2_tot)            
         DEALLOCATE( uhuprojone_tmp) 
       ENDIF 
-      ALLOCATE(uhuprojtwo(matsize,2*lapw%nv2_tot)) 
+      ALLOCATE(uhuprojtwo(matsize,2*lapw_gf%nv2_tot)) 
       uhuprojtwo=transpose(conjg(uhuprojone)) 
       END SUBROUTINE gf_uhuproj 
 #ifdef CPP_WANNIER                                                      

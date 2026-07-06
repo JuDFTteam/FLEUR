@@ -11,6 +11,12 @@ src/gfleur-embedding/main/gf_fleur_init_layer.F90
 src/gfleur-embedding/gf_types.F90
 src/gfleur-embedding/gf_apws.F90
 src/gfleur-embedding/gf_stepsanaly.F90
+src/gfleur-embedding/gf_curvy2dprojector.F90
+src/gfleur-embedding/gf_spectrum.F90
+src/gfleur-embedding/gf_tlmplminit.F90
+src/gfleur-embedding/gf_hs1lapw.F90
+src/gfleur-embedding/gf_hsdata.F90
+src/gfleur-embedding/gf_hs_int.F90
 src/gfleur-embedding/gf_curvystep.F90
 src/gfleur-embedding/gf_circlestep.F90
 src/gfleur-embedding/gf_curvypartfourier.F90
@@ -38,7 +44,6 @@ src/gfleur-embedding/gf_iogfinp.F90
 )
 
 #--- not yet ported ------------------------------------------------------
-#src/gfleur-embedding/fleur_hsetup.F90
 #src/gfleur-embedding/fleur_interface.F90
 #src/gfleur-embedding/fleur_pot.F90
 #src/gfleur-embedding/fleur_psqpw.F90
@@ -58,7 +63,6 @@ src/gfleur-embedding/gf_iogfinp.F90
 #src/gfleur-embedding/gf_current.F90
 #src/gfleur-embedding/gf_current4.F90
 #src/gfleur-embedding/gf_current_single.F90
-#src/gfleur-embedding/gf_curvy2dprojector.F90
 #src/gfleur-embedding/gf_dos.F90
 #src/gfleur-embedding/gf_embdos.F90
 #src/gfleur-embedding/gf_embedding.F90
@@ -73,9 +77,6 @@ src/gfleur-embedding/gf_iogfinp.F90
 #src/gfleur-embedding/gf_gfleur_propagate.F90
 #src/gfleur-embedding/gf_gmatfromtmat.F90
 #src/gfleur-embedding/gf_gproj.F90
-#src/gfleur-embedding/gf_hs1lapw.F90
-#src/gfleur-embedding/gf_hsdata.F90
-#src/gfleur-embedding/gf_hsint.F90
 #src/gfleur-embedding/gf_inp2plot.F90
 #src/gfleur-embedding/gf_inp_describe.F90
 #src/gfleur-embedding/gf_intcoul.F90
@@ -111,9 +112,7 @@ src/gfleur-embedding/gf_iogfinp.F90
 #src/gfleur-embedding/gf_rsmesh.F90
 #src/gfleur-embedding/gf_rt_coefs.F90
 #src/gfleur-embedding/gf_shiftatoms.F90
-#src/gfleur-embedding/gf_spectrum.F90
 #src/gfleur-embedding/gf_surfprojo.F90
-#src/gfleur-embedding/gf_tlmplminit.F90
 #src/gfleur-embedding/gf_tmat.F90
 #src/gfleur-embedding/gf_totalmix.F90
 #src/gfleur-embedding/gf_vacuum.F90

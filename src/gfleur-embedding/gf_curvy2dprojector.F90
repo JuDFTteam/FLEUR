@@ -4,7 +4,6 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
       MODULE m_gf_curvy2dprojector 
-#include "juDFT_env.h"
       IMPLICIT NONE
       PRIVATE 
       COMPLEX, ALLOCATABLE, SAVE :: curvyproject(:,:,:)
@@ -25,7 +24,7 @@
 !     This has to be done only once, at start up.                       
 !     Frank Freimuth, October 2007                                      
 !**************************************************                     
-      SUBROUTINE gf_curvy2dinit(layer,lapw,cell,l_twothreeproj) 
+      SUBROUTINE gf_curvy2dinit(layer,lapw,lapw_gf,cell,l_twothreeproj)
                                                                         
                                                                         
       USE m_gf_types 
@@ -37,9 +36,10 @@
       USE m_gf_math 
                                                                         
       IMPLICIT NONE 
-      INTEGER,INTENT(IN)       :: layer 
-      TYPE(t_lapw),INTENT(IN)  :: lapw 
-      TYPE(t_cell),INTENT(IN)  :: cell 
+      INTEGER,INTENT(IN)       :: layer
+      TYPE(t_lapw),INTENT(IN)  :: lapw
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
+      TYPE(t_cell),INTENT(IN)  :: cell
       LOGICAL, INTENT(IN)      :: l_twothreeproj 
                                                                         
       !COMPLEX, ALLOCATABLE :: circlestep(:,:,:)
@@ -55,10 +55,10 @@
                                                                         
                                                                         
 !kmax values (large enough for potential)                               
-      k1max = ABS(lapw%g_max(1))+5
-      k2max = ABS(lapw%g_max(2))+5
-      k3max = MAXVAL(ABS(lapw%k%K3(:lapw%nvd,1)))+5
-      CPP_juDFT_timestart("Curvy Projectors construction I")
+      k1max = ABS(lapw_gf%g_max(1))+5
+      k2max = ABS(lapw_gf%g_max(2))+5
+      k3max = MAXVAL(ABS(lapw%k3(:lapw_gf%nvd,1)))+5
+      CALL timestart("Curvy Projectors construction I")
       IF(.NOT.l_twothreeproj)k3max = 0 
 #ifdef CPP_NEVER
       CALL io_hdfopen('gf_setup.hdf',H5F_ACC_RDWR_F,ffid,hdferr) 
@@ -143,16 +143,17 @@
       CALL io_createvar(gid,"circlestep", H5T_NATIVE_DOUBLE,(/           &
      &     2,SIZE(circlestep,1),SIZE(circlestep,2),SIZE(circlestep,3)/)&
      &     ,did)                                                        
-      CALL io_WRITE(did,(/-1,1,1,1/),(/1,SIZE(circlestep,1)             &
-     &     ,SIZE(circlestep,2),SIZE(circlestep,3)/),circlestep)         
+      CALL io_WRITE(did,(/-1,1,1,1/),&
+     &     (/1,SIZE(circlestep,1)                  ,SIZE(circlestep,2),SIZE(circlestep,3)/),"circlestep",&
+     &     circlestep)
       CALL io_dclose(did,hdferr) 
                                                                         
       CALL io_createvar(gid,"curvystep", H5T_NATIVE_DOUBLE,(/            &
      &     2,SIZE(curvystep,1),SIZE(curvystep,2),SIZE(curvystep,3)     &
      &     ,SIZE(curvystep,4)/),did)                                    
-      CALL io_WRITE(did,(/-1,1,1,1,1/),(/1,SIZE(curvystep,1)            &
-     &     ,SIZE(curvystep,2),SIZE(curvystep,3),SIZE(curvystep,4)/)     &
-     &     ,curvystep)                                                  
+      CALL io_WRITE(did,(/-1,1,1,1,1/),&
+     &     (/1,SIZE(curvystep,1)                 ,SIZE(curvystep,2),SIZE(curvystep,3),SIZE(curvystep,4)/),"curvystep",&
+     &     curvystep)
       CALL io_dclose(did,hdferr) 
                                                                         
       CALL io_gclose(gid,hdferr) 
@@ -163,7 +164,7 @@
 #endif
       !CALL io_gclose(fid,hdferr)
       CALL io_hdfclose(ffid,hdferr)
-      CPP_juDFT_timestop("Curvy Projectors construction I")
+      CALL timestop("Curvy Projectors construction I")
 
       END SUBROUTINE gf_curvy2dinit 
                                                                         
@@ -179,7 +180,7 @@
 !                                                                       
 !**************************************************                     
       SUBROUTINE gf_curvy2dprojector(layer,                             &
-     &     cell,lapw,l_twothreeproj)                                    
+     &     cell,lapw,lapw_gf,l_twothreeproj)                                    
       USE m_gf_types 
       use m_juDFT 
       USE m_gf_math 
@@ -189,12 +190,13 @@
       IMPLICIT NONE 
       INTEGER,INTENT(IN)       :: layer 
       TYPE(t_cell),INTENT(IN)  :: cell 
-      TYPE(t_lapw),INTENT(IN)  :: lapw 
+      TYPE(t_lapw),INTENT(IN)  :: lapw
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
       LOGICAL,INTENT(IN)       :: l_twothreeproj 
                                                                         
       !COMPLEX, ALLOCATABLE :: circlestep(:,:,:)
       !COMPLEX, ALLOCATABLE :: curvystep (:,:,:,:)
-      COMPLEX              :: curvy2dproj_tmp(lapw%nv2(1),lapw%nv(1),2) 
+      COMPLEX              :: curvy2dproj_tmp(lapw_gf%nv2(1),lapw%nv(1),2) 
       COMPLEX              :: exp1,norm,normcircle 
       INTEGER              :: n1,n2 
       INTEGER              :: k1max,k2max,k1,k2,k3max,k3,n3 
@@ -211,29 +213,29 @@
          !try to read data from file
          !rewind(701+layer,err=100)
          !read(701+layer,err=100,end=100) n1,n2
-         !if (n1==lapw%nv2(1).and.n2==lapw%nv(1)) then
+         !if (n1==lapw_gf%nv2(1).and.n2==lapw%nv(1)) then
          !   if(.not.allocated(curvyproject)) allocate(curvyproject(n1,n2,2))
         ! 	read(701+layer,err=100,end=100) curvyproject
         ! 	stored_layer=layer
          !	return
          !endif
          !reading failed
-         CALL gf_curvy2dinit(layer,lapw,cell,l_twothreeproj)
+         CALL gf_curvy2dinit(layer,lapw,lapw_gf,cell,l_twothreeproj)
          stored_layer = layer 
       ELSE 
          IF (ALLOCATED(curvyproject)) THEN 
-            IF (SIZE(curvyproject,1) == lapw%nv2(1).AND.                 &
+            IF (SIZE(curvyproject,1) == lapw_gf%nv2(1).AND.                 &
      &           SIZE(curvyproject,2) == lapw%nv(1)) THEN
                RETURN 
             ENDIF
          ENDIF
       ENDIF 
 
-      CPP_juDFT_timestart("Curvy Projectors construction II")
+      CALL timestart("Curvy Projectors construction II")
                                                                         
-      k1max=maxval(abs(lapw%kp%k1p(:lapw%nv2(1),1)))+2 
-      k2max=maxval(abs(lapw%kp%k2p(:lapw%nv2(1),1)))+2 
-      k3max = MAXVAL(ABS(lapw%k%k3(:lapw%nv(1),1))) 
+      k1max=maxval(abs(lapw_gf%k1p(:lapw_gf%nv2(1),1)))+2 
+      k2max=maxval(abs(lapw_gf%k2p(:lapw_gf%nv2(1),1)))+2 
+      k3max = MAXVAL(ABS(lapw%k3(:lapw%nv(1),1))) 
                                                                         
                                                                         
                                                                         
@@ -273,14 +275,15 @@
      !&                   -k_old(3):k_old(3),2))
                                                                         
       CALL io_dopen(gid,"circlestep",did,hdferr) 
-      CALL io_READ(did,(/-1,1,1,1/),(/1,SIZE(circlestep,1)              &
-     &     ,SIZE(circlestep,2),SIZE(circlestep,3)/),circlestep)         
+      CALL io_READ(did,(/-1,1,1,1/),&
+     &     (/1,SIZE(circlestep,1)                   ,SIZE(circlestep,2),SIZE(circlestep,3)/),"circlestep",&
+     &     circlestep)
       CALL io_dclose(did,hdferr) 
                                                                         
       CALL io_dopen(gid,"curvystep",did,hdferr) 
-      CALL io_read(did,(/-1,1,1,1,1/),(/1,SIZE(curvystep,1)             &
-     &     ,SIZE(curvystep,2),SIZE(curvystep,3),SIZE(curvystep,4)/)     &
-     &     ,curvystep)                                                  
+      CALL io_read(did,(/-1,1,1,1,1/),&
+     &     (/1,SIZE(curvystep,1)                  ,SIZE(curvystep,2),SIZE(curvystep,3),SIZE(curvystep,4)/),"curvystep",&
+     &     curvystep)
       CALL io_dclose(did,hdferr) 
                                                                         
       CALL io_gclose(gid,hdferr) 
@@ -306,14 +309,14 @@
      &   curvyoverlaps(-2*k1max:2*k1max,-2*k2max:2*k2max,1:2)+          &
      &   curvystep(-2*k1max:2*k1max,-2*k2max:2*k2max,0,1:2)*norm        
                                                                         
-      ALLOCATE( basisoverlaps(lapw%nv2(1),lapw%nv2(1),2) ) 
-      ALLOCATE( basisoverlaps_inv(lapw%nv2(1),lapw%nv2(1),2) ) 
+      ALLOCATE( basisoverlaps(lapw_gf%nv2(1),lapw_gf%nv2(1),2) ) 
+      ALLOCATE( basisoverlaps_inv(lapw_gf%nv2(1),lapw_gf%nv2(1),2) ) 
                                                                         
                                                                         
-      DO n2=1,lapw%nv2(1) 
-        DO n1=1,lapw%nv2(1) 
-           k1=lapw%kp%k1p(n2,1)-lapw%kp%k1p(n1,1) 
-           k2=lapw%kp%k2p(n2,1)-lapw%kp%k2p(n1,1) 
+      DO n2=1,lapw_gf%nv2(1) 
+        DO n1=1,lapw_gf%nv2(1) 
+           k1=lapw_gf%k1p(n2,1)-lapw_gf%k1p(n1,1) 
+           k2=lapw_gf%k2p(n2,1)-lapw_gf%k2p(n1,1) 
            basisoverlaps(n1,n2,1)=curvyoverlaps(k1,k2,1) 
            basisoverlaps(n1,n2,2)=curvyoverlaps(k1,k2,2) 
         ENDDO 
@@ -332,7 +335,7 @@
 !***************************************************************        
       IF(l_twothreeproj)THEN 
       if (allocated(curvyproject)) DEALLOCATE(curvyproject)
-      ALLOCATE(curvyproject(lapw%nv2(1),lapw%nv(1),2)) 
+      ALLOCATE(curvyproject(lapw_gf%nv2(1),lapw%nv(1),2)) 
       norm=cmplx(1.0/sqrt(cell%amat(3,3)),0.0) 
       normcircle=cmplx(sqrt(cell%amat(3,3))/cell%omtil,0.0) 
       curvyproject(:,:,:)=cmplx(0.0,0.0) 
@@ -340,20 +343,20 @@
                                                                         
 !generate the 2d-kronecker delta                                        
       DO n1=1,lapw%nv(1) 
-         curvyproject(lapw%k%kp(n1,1),n1,1)=                            &
-     &          exp1**(-1.0*lapw%k%k3(n1,1))*norm                       
+         curvyproject(lapw%kp(n1,1),n1,1)=                            &
+     &          exp1**(-1.0*lapw%k3(n1,1))*norm                       
       ENDDO 
       DO n1=1,lapw%nv(1) 
-         curvyproject(lapw%k%kp(n1,1),n1,2)=                            &
-     &          exp1**( 1.0*lapw%k%k3(n1,1))*norm                       
+         curvyproject(lapw%kp(n1,1),n1,2)=                            &
+     &          exp1**( 1.0*lapw%k3(n1,1))*norm                       
       ENDDO 
                                                                         
 !subtract the circle                                                    
       DO n2=1,lapw%nv(1) 
-         k3=lapw%k%k3(n2,1) 
-         DO n1=1,lapw%nv2(1) 
-            k1=lapw%k%k1(n2,1)-lapw%kp%k1p(n1,1) 
-            k2=lapw%k%k2(n2,1)-lapw%kp%k2p(n1,1) 
+         k3=lapw%k3(n2,1) 
+         DO n1=1,lapw_gf%nv2(1) 
+            k1=lapw%k1(n2,1)-lapw_gf%k1p(n1,1) 
+            k2=lapw%k2(n2,1)-lapw_gf%k2p(n1,1) 
                                                                         
             curvyproject(n1,n2,1)=                                      &
      &          curvyproject(n1,n2,1)-                                  &
@@ -365,10 +368,10 @@
       ENDDO 
                                                                         
       DO n2=1,lapw%nv(1) 
-         k3=lapw%k%k3(n2,1) 
-         DO n1=1,lapw%nv2(1) 
-            k1=lapw%k%k1(n2,1)-lapw%kp%k1p(n1,1) 
-            k2=lapw%k%k2(n2,1)-lapw%kp%k2p(n1,1) 
+         k3=lapw%k3(n2,1) 
+         DO n1=1,lapw_gf%nv2(1) 
+            k1=lapw%k1(n2,1)-lapw_gf%k1p(n1,1) 
+            k2=lapw%k2(n2,1)-lapw_gf%k2p(n1,1) 
             curvyproject(n1,n2,2)=                                      &
      &          curvyproject(n1,n2,2)-                                  &
      &          exp1**(1.0*k3)*normcircle*                              &
@@ -381,10 +384,10 @@
 !add the integrals over the sphere surfaces                             
                                                                         
       DO n2=1,lapw%nv(1) 
-         k3=lapw%k%k3(n2,1) 
-         DO n1=1,lapw%nv2(1) 
-            k1=lapw%k%k1(n2,1)-lapw%kp%k1p(n1,1) 
-            k2=lapw%k%k2(n2,1)-lapw%kp%k2p(n1,1) 
+         k3=lapw%k3(n2,1) 
+         DO n1=1,lapw_gf%nv2(1) 
+            k1=lapw%k1(n2,1)-lapw_gf%k1p(n1,1) 
+            k2=lapw%k2(n2,1)-lapw_gf%k2p(n1,1) 
             curvyproject(n1,n2,1)=                                      &
      &          curvyproject(n1,n2,1)+                                  &
      &          exp1**(-1.0*k3)*normcircle*                             &
@@ -395,10 +398,10 @@
       ENDDO 
                                                                         
       DO n2=1,lapw%nv(1) 
-         k3=lapw%k%k3(n2,1) 
-         DO n1=1,lapw%nv2(1) 
-            k1=lapw%k%k1(n2,1)-lapw%kp%k1p(n1,1) 
-            k2=lapw%k%k2(n2,1)-lapw%kp%k2p(n1,1) 
+         k3=lapw%k3(n2,1) 
+         DO n1=1,lapw_gf%nv2(1) 
+            k1=lapw%k1(n2,1)-lapw_gf%k1p(n1,1) 
+            k2=lapw%k2(n2,1)-lapw_gf%k2p(n1,1) 
             curvyproject(n1,n2,2)=                                      &
      &          curvyproject(n1,n2,2)+                                  &
      &          exp1**(1.0*k3)*normcircle*                              &
@@ -410,9 +413,9 @@
                                                                         
       curvy2dproj_tmp=curvyproject 
       curvyproject=cmplx(0.0,0.0) 
-      DO n3=1,lapw%nv2(1) 
+      DO n3=1,lapw_gf%nv2(1) 
        DO n2=1,lapw%nv(1) 
-        DO n1=1,lapw%nv2(1) 
+        DO n1=1,lapw_gf%nv2(1) 
            curvyproject(n1,n2,1)=curvyproject(n1,n2,1)+                 &
      &                       basisoverlaps_inv(n1,n3,1)*                &
      &                         curvy2dproj_tmp(n3,n2,1)                 
@@ -420,9 +423,9 @@
        ENDDO 
       ENDDO 
                                                                         
-      DO n3=1,lapw%nv2(1) 
+      DO n3=1,lapw_gf%nv2(1) 
        DO n2=1,lapw%nv(1) 
-        DO n1=1,lapw%nv2(1) 
+        DO n1=1,lapw_gf%nv2(1) 
            curvyproject(n1,n2,2)=curvyproject(n1,n2,2)+                 &
      &                       basisoverlaps_inv(n1,n3,2)*                &
      &                         curvy2dproj_tmp(n3,n2,2)                 
@@ -431,11 +434,11 @@
       ENDDO 
             !l_twothreeproj                                             
       ENDIF
-      CPP_juDFT_timestop("Curvy Projectors construction II")
+      CALL timestop("Curvy Projectors construction II")
 
       !Save to SCRATCH file
       !open(701+layer,STATUS='SCRATCH',form="unformatted")
-      !write(701+layer) lapw%nv2(1),lapw%nv(1)
+      !write(701+layer) lapw_gf%nv2(1),lapw%nv(1)
       !write(701+layer) curvyproject
       END SUBROUTINE gf_curvy2dprojector 
                                                                         
@@ -446,7 +449,7 @@
       end subroutine
 
       !<-- S:gf_curvy2dproject(lapw,matrix,proj,transposed)             
-      SUBROUTINE gf_get_curvy2dproject(lapw,proj,transposed) 
+      SUBROUTINE gf_get_curvy2dproject(lapw,lapw_gf,proj,transposed)
 !-----------------------------------------------                        
 !                                                                       
 !           (last modified:08-06-30) D. Wortmann                        
@@ -454,7 +457,8 @@
       USE m_gf_types 
       IMPLICIT NONE 
       !<--Arguments                                                     
-      TYPE(t_lapw),INTENT(IN)      :: lapw 
+      TYPE(t_lapw),INTENT(IN)      :: lapw
+      TYPE(t_lapw_gf),INTENT(IN)   :: lapw_gf
       COMPLEX,INTENT(OUT)          :: proj(:,:) 
       LOGICAL,INTENT(IN),OPTIONAL  :: transposed 
       !>                                                                
@@ -469,49 +473,49 @@
 
       IF (.NOT.tp) THEN 
          !<-- normal projector
-         if (size(proj,2)>lapw%nmat_sphere) then
+         if (size(proj,2)>lapw_gf%nmat_sphere) then
              nv=lapw%nv(1)
              nmat=lapw%nmat
          else
-             nv=lapw%nv_sphere(1)
-             nmat=lapw%nmat_sphere
+             nv=lapw_gf%nv_sphere(1)
+             nmat=lapw_gf%nmat_sphere
          endif
-         proj(1:lapw%nv2(1),1:nv) = curvyproject(1:lapw%nv2(1),1:nv,1)
-         proj(lapw%nv2_tot+1:lapw%nv2_tot+lapw%nv2(1),1:nv) =   &
-     &        curvyproject(1:lapw%nv2(1),1:nv,2)
+         proj(1:lapw_gf%nv2(1),1:nv) = curvyproject(1:lapw_gf%nv2(1),1:nv,1)
+         proj(lapw_gf%nv2_tot+1:lapw_gf%nv2_tot+lapw_gf%nv2(1),1:nv) =   &
+     &        curvyproject(1:lapw_gf%nv2(1),1:nv,2)
                                                                         
-         IF (lapw%nv2(1) /= lapw%nv2_tot) THEN 
+         IF (lapw_gf%nv2(1) /= lapw_gf%nv2_tot) THEN 
             !noco                                                       
-            proj(lapw%nv2_tot/2+1:lapw%nv2_tot/2+lapw%nv2(1),nmat/2+1:nmat/2+nv) =               &
-     &           curvyproject(1:lapw%nv2(1),1:nv,1)
-            proj(3*lapw%nv2_tot/2+1:3*lapw%nv2_tot/2+lapw%nv2(1)        &
+            proj(lapw_gf%nv2_tot/2+1:lapw_gf%nv2_tot/2+lapw_gf%nv2(1),nmat/2+1:nmat/2+nv) =               &
+     &           curvyproject(1:lapw_gf%nv2(1),1:nv,1)
+            proj(3*lapw_gf%nv2_tot/2+1:3*lapw_gf%nv2_tot/2+lapw_gf%nv2(1)        &
      &           ,nmat/2+1:nmat/2+nv) =               &
-     &           curvyproject(1:lapw%nv2(1),1:nv,2)
+     &           curvyproject(1:lapw_gf%nv2(1),1:nv,2)
          ENDIF 
          !>                                                             
       ELSE 
          !<-- transposed version
-         if (size(proj,1)>lapw%nmat_sphere) then
+         if (size(proj,1)>lapw_gf%nmat_sphere) then
              nv=lapw%nv(1)
              nmat=lapw%nmat
          else
-             nv=lapw%nv_sphere(1)
-             nmat=lapw%nmat_sphere
+             nv=lapw_gf%nv_sphere(1)
+             nmat=lapw_gf%nmat_sphere
 
          endif
-         proj(1:nv,1:lapw%nv2(1)) = TRANSPOSE(CONJG(            &
-     &        curvyproject(1:lapw%nv2(1),1:nv,1)))
-         proj(1:nv,lapw%nv2_tot+1:lapw%nv2_tot+lapw%nv2(1)) =   &
-     &        TRANSPOSE(CONJG(curvyproject(1:lapw%nv2(1),1:nv,2)&
+         proj(1:nv,1:lapw_gf%nv2(1)) = TRANSPOSE(CONJG(            &
+     &        curvyproject(1:lapw_gf%nv2(1),1:nv,1)))
+         proj(1:nv,lapw_gf%nv2_tot+1:lapw_gf%nv2_tot+lapw_gf%nv2(1)) =   &
+     &        TRANSPOSE(CONJG(curvyproject(1:lapw_gf%nv2(1),1:nv,2)&
      &        ))                                                        
-          IF (lapw%nv2(1) /= lapw%nv2_tot) THEN 
+          IF (lapw_gf%nv2(1) /= lapw_gf%nv2_tot) THEN 
              !noco                                                      
-             proj(nmat/2+1:nmat/2+nv,lapw%nv2_tot/2   &
-     &            +1:lapw%nv2_tot/2+lapw%nv2(1)) =                      &
-     &            TRANSPOSE(CONJG(curvyproject(1:lapw%nv2(1),1:nv,1)))
-             proj(nmat/2+1:nmat/2+nv,3*lapw%nv2_tot/2 &
-     &            +1:3*lapw%nv2_tot/2+lapw%nv2(1)) =                    &
-     &            TRANSPOSE(CONJG(curvyproject(1:lapw%nv2(1),1:nv,2)))
+             proj(nmat/2+1:nmat/2+nv,lapw_gf%nv2_tot/2   &
+     &            +1:lapw_gf%nv2_tot/2+lapw_gf%nv2(1)) =                      &
+     &            TRANSPOSE(CONJG(curvyproject(1:lapw_gf%nv2(1),1:nv,1)))
+             proj(nmat/2+1:nmat/2+nv,3*lapw_gf%nv2_tot/2 &
+     &            +1:3*lapw_gf%nv2_tot/2+lapw_gf%nv2(1)) =                    &
+     &            TRANSPOSE(CONJG(curvyproject(1:lapw_gf%nv2(1),1:nv,2)))
           ENDIF 
           !>                                                            
       ENDIF 
