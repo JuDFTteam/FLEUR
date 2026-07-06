@@ -4,6 +4,7 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
       MODULE m_gf_makepseudocharge 
+      USE m_constants, ONLY: oUnit
       IMPLICIT NONE
                                                                         
 !      PRIVATE                                                          
@@ -11,8 +12,7 @@
 !      PUBLIC gf_makepseudocharge                                       
       CONTAINS 
       !<-- S: gf_makepseudocharge(layer,jspins,atoms,stars,sphhar,cell,s
-      SUBROUTINE  gf_makepseudocharge(layer,jspins,atoms,stars,sphhar   &
-     &     ,cell,sym,layers,noco,mpi)
+      SUBROUTINE  gf_makepseudocharge(layer,jspins,ld,layers,gmpi)
 !-----------------------------------------------                        
 ! DESC:Construct the pseudo charge                                      
 !           (last modified: 07-11-20) D. Wortmann                       
@@ -22,20 +22,17 @@
       USE m_fleur_psqpw 
       USE m_gf_stepsanaly 
       USE m_gf_plot 
+      USE m_constants, ONLY: POTDEN_TYPE_DEN
       IMPLICIT NONE 
       !<--Arguments                                                     
       INTEGER                    :: layer,jspins 
-      TYPE(t_atoms),INTENT(IN)   :: atoms 
-      TYPE(t_stars),INTENT(IN)   :: stars 
-      TYPE(t_sphhar),INTENT(IN)  :: sphhar 
-      TYPE(t_cell),INTENT(IN)    :: cell 
-      TYPE(t_sym),INTENT(IN)     :: sym 
+      TYPE(t_gflayer),INTENT(IN) :: ld
       TYPE(t_layers),INTENT(IN)  :: layers 
-      type(t_noco),INTENT(IN)    :: noco
-      TYPE(t_mpi),INTENT(IN)     :: mpi 
+      TYPE(t_gfmpi),INTENT(IN)   :: gmpi
       !>                                                                
       !<-- Locals                                                       
-      COMPLEX :: vr(1:2*stars%mx3+1), vrr(1:2*stars%mx3+1) 
+      TYPE(t_potden) :: den
+      COMPLEX :: vr(1:2*ld%stars%mx3+1), vrr(1:2*ld%stars%mx3+1) 
                                                                         
       COMPLEX,ALLOCATABLE :: qpw(:,:),psq(:),ppsq(:,:) 
       REAL   ,ALLOCATABLE :: rho(:,:,:,:) 
@@ -43,9 +40,12 @@
       INTEGER             :: gz,index,l 
       LOGICAL             :: l_exists 
       INTEGER             :: n,n2,n3
-      !>                                                                
-                                                                        
-      ALLOCATE(qpw(stars%nq3,jspins),psq(stars%nq3)) 
+      !>
+
+      ASSOCIATE(atoms=>ld%fi%atoms, stars=>ld%stars, sphhar=>ld%sphhar, &
+     &          cell=>ld%fi%cell, sym=>ld%fi%sym, noco=>ld%fi%noco,     &
+     &          mpi=>gmpi)
+      ALLOCATE(qpw(stars%ng3,jspins),psq(stars%ng3)) 
                                                                         
       ALLOCATE(rho(maxval(atoms%jri),0:maxval(sphhar%nlh),atoms%ntype   &
      &     ,jspins))                                                    
@@ -61,12 +61,15 @@
          rho(:,:,:,1)=rho(:,:,:,1)+rho(:,:,:,2) 
       ENDIF 
                                                                         
-      CALL fleur_psqpw(mpi%self_subcom,atoms,stars,sphhar,cell,sym      &
-     &     ,qpw,rho,psq)                                                
+      CALL den%init(ld%stars,ld%fi%atoms,ld%sphhar,ld%fi%vacuum,        &
+     &              ld%fi%noco,jspins,POTDEN_TYPE_DEN)
+      den%mt = rho
+      den%pw = qpw
+      CALL fleur_psqpw(gmpi%fmpi,ld,den,1,psq)                                                
 !      CALL gf_plot(layer,stars,cell,atoms,sym,1,qpw,GF_PLOT_CHARGE)!res
 !     $     ,1/)),GF_PLOT_CHARGE)                                       
       !<-- convolute with step-function                                 
-      ALLOCATE(ppsq(2*stars%mx3+1,stars%nq2))
+      ALLOCATE(ppsq(2*stars%mx3+1,stars%ng2))
       ppsq=0.0
       DO n=1,size(psq)
          n2=stars%ig2(n)
@@ -99,7 +102,8 @@
       WRITE(*,*) "Pseudo:",layer 
       CALL priv_plotPlanars(stars,qpw(:,1),psq,ppsq) 
       CALL gf_iodop_writepseudo(layer,ppsq,mpi%iodop_subcom) 
-      DEALLOCATE(qpw,psq,rho,ppsq) 
+      DEALLOCATE(qpw,psq,rho,ppsq)
+      END ASSOCIATE
       END SUBROUTINE 
       !>                                                                
                                                                         
@@ -115,7 +119,7 @@
       IMPLICIT NONE 
       !<--Arguments                                                     
       TYPE(t_stars),INTENT(IN) :: stars 
-      COMPLEX,INTENT(IN)       :: qpw(stars%nq3), psq(stars%nq3),ppsq(: &
+      COMPLEX,INTENT(IN)       :: qpw(stars%ng3), psq(stars%ng3),ppsq(: &
      &     ,:)                                                          
                                                                         
       !>                                                                
@@ -137,14 +141,14 @@
       vz(:,1) = fft(vz(:,1),inv = .TRUE.) 
       vz(:,2) = fft(vz(:,2),inv = .TRUE.) 
       vz(:,3) = fft(ppsq(:,1),inv = .TRUE.) 
-      WRITE(6,*) "Constructed pseudo-charge" 
-      WRITE(6,*) "z      qpw          psq       ppsq" 
+      WRITE(oUnit,*) "Constructed pseudo-charge" 
+      WRITE(oUnit,*) "z      qpw          psq       ppsq" 
       DO n = -stars%mx3,stars%mx3
          IF (n<0) THEN 
-            WRITE(6,"(i5,1x,3(f0.7,1x))") n,REAL(vz(n+2*stars%mx3+1,1))   &
+            WRITE(oUnit,"(i5,1x,3(f0.7,1x))") n,REAL(vz(n+2*stars%mx3+1,1))   &
      &           ,REAL(vz(n+2*stars%mx3+1,2)),REAL(vz(n+2*stars%mx3+1,3))
          ELSE 
-            WRITE(6,"(i5,1x,3(f0.7,1x))") n,REAL(vz(n,1)),REAL(vz(n,2)) &
+            WRITE(oUnit,"(i5,1x,3(f0.7,1x))") n,REAL(vz(n,1)),REAL(vz(n,2)) &
      &           ,REAL(vz(n,3))                                         
          ENDIF 
       ENDDO 

@@ -315,8 +315,7 @@
                                                                         
       IF (PRODUCT(dim) == 2*SIZE(proj)) THEN 
                                                                         
-         CALL io_read(did,(/-1,1,1,1,1/),(/1,size(proj,1),size(proj,2)  &
-     &        ,SIZE(proj,3),SIZE(proj,4)/),proj)                        
+         CALL io_read(did,(/-1,1,1,1,1/),(/1,size(proj,1),size(proj,2)          ,SIZE(proj,3),SIZE(proj,4)/),"proj",proj)
          ok = .TRUE. 
       ELSE 
                                                                         
@@ -360,8 +359,7 @@
                                                                         
       CALL io_createvar(fid,"totalprojector",H5T_NATIVE_DOUBLE,(/2      &
      &     ,SIZE(proj,1),SIZE(proj,2),SIZE(proj,3),SIZE(proj,4)/),did)  
-      CALL io_WRITE(did,(/-1,1,1,1,1/),(/1,SIZE(proj,1),SIZE(proj,2)    &
-     &     ,SIZE(proj,3),SIZE(proj,4)/),proj)                           
+      CALL io_WRITE(did,(/-1,1,1,1,1/),(/1,SIZE(proj,1),SIZE(proj,2)         ,SIZE(proj,3),SIZE(proj,4)/),"proj",proj)
                                                                         
       CALL io_dclose (did, hdferr) 
       CALL io_gclose (fid, hdferr) 

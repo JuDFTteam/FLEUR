@@ -4,6 +4,7 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
       MODULE m_gf_makeCoulBoundary 
+      USE m_constants, ONLY: oUnit
           IMPLICIT NONE
       CONTAINS 
                                                                         
@@ -36,26 +37,26 @@
       INTEGER             :: status 
       !>                                                                
                                                                         
-      ALLOCATE(curvyproj(stars%nq2,stars%nq3,2),STAT = status) 
+      ALLOCATE(curvyproj(stars%ng2,stars%ng3,2),STAT = status) 
       IF (status /= 0) THEN 
          WRITE(*,*) "WARNING, could not generate boundary potential" 
          RETURN 
       ENDIF 
-      ALLOCATE(vpw(stars%nq3),qpw(stars%nq3)) 
-      ALLOCATE(v_bound(stars%nq2)) 
+      ALLOCATE(vpw(stars%ng3),qpw(stars%ng3)) 
+      ALLOCATE(v_bound(stars%ng2)) 
       CALL gf_lodcoul(GF_POTFILE,layer,vpw = vpw(:)) 
       CALL gf_makePotProjector(layer,layers,cell,stars,.FALSE.          &
      &     ,curvyproj)                                                  
                                                                         
       IF (layer == 1) THEN 
-         WRITE(6,*) "Save Coulomb potential for left boundary" 
+         WRITE(oUnit,*) "Save Coulomb potential for left boundary" 
          !left side                                                     
          v_bound = MATMUL(curvyproj(:,:,1),vpw(:)) 
          CALL gf_SAVEcoulboundary(1,1,v_bound) 
       ENDIF 
       IF (layer == layers%num_layers) THEN 
          !right side                                                    
-         WRITE(6,*) "Save Coulomb potential for right boundary" 
+         WRITE(oUnit,*) "Save Coulomb potential for right boundary" 
          v_bound = MATMUL(curvyproj(:,:,2),vpw(:)) 
          CALL gf_SAVEcoulboundary(layer,2,v_bound) 
       ENDIF 

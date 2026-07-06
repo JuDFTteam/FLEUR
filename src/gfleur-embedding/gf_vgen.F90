@@ -55,7 +55,7 @@ CONTAINS
         TYPE(t_layers),INTENT(IN)    :: layers
         TYPE(t_noco),INTENT(IN)      :: noco(:)
         TYPE(t_enpara),INTENT(IN)    :: enpara(:)
-        TYPE(t_potential),INTENT(INOUT) :: potential(:)
+        TYPE(t_potden),INTENT(INOUT) :: potential(:)
         !     ..
         !     .. Array Arguments ..
         COMPLEX,INTENT(OUT) :: pot_aux(:,:)
@@ -90,11 +90,11 @@ CONTAINS
             layer = mpi%kl_layers(layer_loop)
             CALL gf_vgen_READ(layer,gfinp,                                 &
             stars(layer),sphhar(layer),sym,cell(layer),atoms(layer)   &
-            ,mpi,jspins,pot_aux,potential(layer)%vpw,potential(layer  &
-            )%vr,noco(1))
+            ,mpi,jspins,pot_aux,potential(layer)%pw,potential(layer  &
+            )%mt,noco(1))
             CALL gf_plot(layer,stars(layer),cell(layer),atoms(layer),sym   &
-            ,jspins,potential(layer)%vpw,GF_PLOT_TOTPOT,sphhar(layer) &
-            ,potential(layer)%vr)
+            ,jspins,potential(layer)%pw,GF_PLOT_TOTPOT,sphhar(layer) &
+            ,potential(layer)%mt)
         ENDDO
         WRITE(6,*) "Reading potential from gf_pot.hdf ... done"
                                                                         
@@ -246,7 +246,7 @@ CONTAINS
         TYPE(t_atoms),INTENT(IN)     :: atoms
         TYPE(t_xcpot),INTENT(INOUT)  :: xcpot
         TYPE(t_mpi),INTENT(IN)       :: mpi
-        TYPE(t_potential),INTENT(IN) :: potential
+        TYPE(t_potden),INTENT(IN) :: potential
         TYPE(T_noco),INTENT(IN)      :: noco
         LOGICAL                      :: l_nohelpregion
         !>
@@ -307,7 +307,7 @@ CONTAINS
 8010    FORMAT (/,5x                                                      &
         ,'Loading interstitial coulomb potential in layer:',i3)
         !      CALL gf_lodcoul(GF_POTFILE,layer,vpw=vpw(:,1))
-        vpw(:,1) = potential%vpw(:,1)
+        vpw(:,1) = potential%pw(:,1)
         IF (SIZE(vpw,2)>1) vpw(:,2:)=0.0
         !>
                                                                         

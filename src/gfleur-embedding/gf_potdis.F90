@@ -10,7 +10,7 @@
       CONTAINS 
       SUBROUTINE gf_potdis(                                             &
      &                 jspins,atoms,stars,sphhar,mpi,sym,               &
-     &                 cell,l_pot,layer,distance,volume,enpara)
+     &                 cell,c_layer,l_pot,layer,distance,volume,enpara)
 !*****************************************************************      
 !     DESC:READ's in the old and new potential/charge-density and       
 !     calculates the distances in MT+INT                                
@@ -22,13 +22,15 @@
       USE m_gf_fft 
       USE m_gf_iodop 
       USE m_gf_stepsanaly 
-      USE m_fleur_interface, ONLY : fleur_intgr3 
+      USE m_intgr, ONLY : intgr3 
       USE m_gf_plot 
       IMPLICIT NONE 
 !     Arguments                                                         
       TYPE(t_atoms),INTENT(IN)  :: atoms 
       TYPE(t_stars),INTENT(IN)  :: stars 
-      TYPE(t_cell),INTENT(IN)   :: cell 
+      TYPE(t_cell),INTENT(IN)   :: cell
+      !height of the physical region of the layer (was cell%c)
+      REAL,INTENT(IN)           :: c_layer
       TYPE(t_sphhar),INTENT(IN) :: sphhar 
       TYPE(t_mpi),INTENT(IN)    :: mpi 
       TYPE(t_sym),INTENT(IN)    :: sym 
@@ -46,9 +48,9 @@
      &     )                                                            
       REAL,ALLOCATABLE :: rh(:) 
       REAL             :: rh_s,totaldist 
-      COMPLEX          :: vpw_old(stars%nq3,3) 
-      COMPLEX          :: vpw_new(stars%nq3,3) 
-      COMPLEX          :: vpw_dif(stars%nq3,3) 
+      COMPLEX          :: vpw_old(stars%ng3,3) 
+      COMPLEX          :: vpw_new(stars%ng3,3) 
+      COMPLEX          :: vpw_dif(stars%ng3,3) 
       REAL             :: vpw_r(0:27*stars%mx1*stars%mx2*stars%mx3-1) 
       INTEGER          :: fileid 
       INTEGER          :: j,pl_mode 
@@ -132,7 +134,7 @@
 !     &                              (atoms%rmsh(j,n))**3*sqrt(fpi)
              ENDIF 
             ENDDO 
-            DO lh = 1,sphhar%nlh(atoms%ntypsy(na)) 
+            DO lh = 1,sphhar%nlh(sym%ntypsy(na)) 
               IF(.NOT.l_pot)THEN 
                 DO j=1,atoms%jri(n) 
                   rh(j) = rh(j) + vr_dif(j,lh,n,js)*vr_dif(j,lh,n,js)/  &
@@ -145,7 +147,7 @@
                 ENDDO 
               ENDIF 
             ENDDO 
-            CALL fleur_intgr3(rh,atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n&
+            CALL intgr3(rh,atoms%rmsh(:,n),atoms%dx(n),atoms%jri(n&
      &           ),rh_s)                                                
             dis(n,js) = sqrt(atoms%neq(n)*rh_s/atoms%volmts(n)) 
             totaldist=totaldist+atoms%neq(n)*rh_s 
@@ -170,21 +172,21 @@
       ENDDO 
       !<-- Output                                                       
                                                                         
-      WRITE(6,*) "Layer:",layer 
+      WRITE(oUnit,*) "Layer:",layer 
       IF (l_pot) THEN 
-         WRITE(6,'(a,a)')                                               &
+         WRITE(oUnit,'(a,a)')                                               &
      &        'Detailed Listing of Potential-Distances follows'         &
      &        ,'(in a.u.)'                                              
       ELSE 
-         WRITE(6,'(a,a)')                                               &
+         WRITE(oUnit,'(a,a)')                                               &
      &        'Detailed Listing of Charge-Density-Distances follows'    &
      &        ,'(in mBohr/a.u.)'                                        
       ENDIF 
       IF (jspins>1) THEN 
-         WRITE(6,'(a)')                                                 &
+         WRITE(oUnit,'(a)')                                                 &
      &   'Atom:       First Spin      Second Spin     Magnetisation'    
       ELSE 
-         WRITE(6,'(a)')                                                 &
+         WRITE(oUnit,'(a)')                                                 &
      &        'Atom:    Distance'                                       
       ENDIF 
       IF(l_pot) THEN 
@@ -193,9 +195,9 @@
          rh_s = 1000.0 
       ENDIF 
       DO n = 1,atoms%ntype 
-         WRITE(6,8000) n,dis(n,1:jspin)*rh_s 
+         WRITE(oUnit,8000) n,dis(n,1:jspin)*rh_s 
       ENDDO 
-      WRITE(6,8010) disint(1:jspin)*rh_s 
+      WRITE(oUnit,8010) disint(1:jspin)*rh_s 
  8000 FORMAT ('----> ',i3,':',3f13.6) 
  8010 FORMAT ('----> INT:',3f13.6) 
                                                                         
@@ -203,12 +205,12 @@
 
                                                                         
       IF (PRESENT(distance)) distance   = distance+abs(totaldist)
-      rh_s=cell%area*cell%c
+      rh_s=cell%area*c_layer
       IF (PRESENT(volume)) volume = volume+rh_s
       IF (l_pot) THEN 
-         WRITE(6,*) layer," Layer Distance =",SQRT(abs(totaldist)/rh_s)
+         WRITE(oUnit,*) layer," Layer Distance =",SQRT(abs(totaldist)/rh_s)
       ELSE 
-         WRITE(6,*) layer," Layer Distance =",1000*SQRT(abs(totaldist)/rh_s)
+         WRITE(oUnit,*) layer," Layer Distance =",1000*SQRT(abs(totaldist)/rh_s)
       ENDIF 
       !>                                                                
       DEALLOCATE(vr_old,vr_new,vr_dif,rh) 
@@ -217,7 +219,8 @@
 
       subroutine gf_project_differences(layer,atoms,enpara,vr,drho)
       use m_gf_types
-      use m_fleur_interface
+      use m_intgr, only: intgr3
+        use m_radfun
       implicit none
       integer,intent(in)        :: layer
       type(t_atoms),intent(in)  :: atoms
@@ -228,6 +231,7 @@
 
       integer   :: jspin,itype,l,jspins,noded,nodeu
       real      :: norm,norm1,us,dus,uds,duds,ddn,wronk
+      TYPE(t_usdus) :: ud_loc
       real      :: l_proj(0:2)
       real,allocatable::f(:,:),ff(:,:),s(:),rho(:)
 
@@ -241,22 +245,22 @@
       DO jspin=1,jspins
         DO itype=1,atoms%ntype
             rho=drho(:,0,itype,jspin)/atoms%rmsh(:,itype)**2
-            CALL fleur_intgr3(abs(rho),atoms%rmsh(:,itype),atoms%dx(itype),atoms%jri(itype),norm1)
+            CALL intgr3(abs(rho),atoms%rmsh(:,itype),atoms%dx(itype),atoms%jri(itype),norm1)
             DO l=0,2
-                CALL fleur_radfun(                                             &
-                l,enpara%el(l,itype,jspin),vr(:,1,itype,jspin),itype,atoms,    &
-                f(:,:),ff(:,:),                                                &
-                us,dus,uds,duds,ddn,nodeu,noded,wronk)
+                IF (.NOT.ALLOCATED(ud_loc%us)) CALL ud_loc%init(atoms,jspin)
+                CALL radfun(l,itype,jspin,enpara%el0(l,itype,jspin),          &
+                            vr(:,1,itype,jspin),atoms,f(:,:),ff(:,:),          &
+                            ud_loc,nodeu,noded,wronk)
                  !construct the square of wavefunction
                  s=(f(:,1)*f(:,1)+f(:,2)*f(:,2))/atoms%rmsh(:,itype)**2
-                 CALL fleur_intgr3(s,atoms%rmsh(:,itype),atoms%dx(itype),atoms%jri(itype),norm)
+                 CALL intgr3(s,atoms%rmsh(:,itype),atoms%dx(itype),atoms%jri(itype),norm)
                  s=s/norm
-                 CALL fleur_intgr3(s*rho,atoms%rmsh(:,itype),atoms%dx(itype),atoms%jri(itype),l_proj(l))
+                 CALL intgr3(s*rho,atoms%rmsh(:,itype),atoms%dx(itype),atoms%jri(itype),l_proj(l))
                  rho=rho-s*l_proj(l)
             enddo !l-loop
-            CALL fleur_intgr3(abs(rho),atoms%rmsh(:,itype),atoms%dx(itype),atoms%jri(itype),norm)
-            write(6,"(a8,i3,i2,i5,5(e12.4,1x))") 'l-dist',layer,jspin,itype,l_proj,norm,norm1
-            write(6,"(a8,i3,i2,i5,4(f7.4,1x))") 'l-rdist',layer,jspin,itype,l_proj/sum(l_proj),norm1/norm
+            CALL intgr3(abs(rho),atoms%rmsh(:,itype),atoms%dx(itype),atoms%jri(itype),norm)
+            write(oUnit,"(a8,i3,i2,i5,5(e12.4,1x))") 'l-dist',layer,jspin,itype,l_proj,norm,norm1
+            write(oUnit,"(a8,i3,i2,i5,4(f7.4,1x))") 'l-rdist',layer,jspin,itype,l_proj/sum(l_proj),norm1/norm
 
         enddo !atoms
       enddo !jspins

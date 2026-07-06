@@ -18,8 +18,8 @@
 !                                                                       
 !                          D. Wortmann                                  
 !******************************************                             
-      USE m_constants,ONLY:pimach 
-      USE m_fleur_interface, ONLY : fleur_intgr3 
+      USE m_constants, ONLY: pi_const, oUnit 
+      USE m_intgr, ONLY : intgr3 
       USE m_gf_types 
       USE m_gf_stepsanaly 
       IMPLICIT NONE 
@@ -41,7 +41,7 @@
                                                     !charges            
       REAL    :: q,qis,qistot,qtot,qmt(atoms%ntype) 
       REAL    :: w 
-      COMPLEX :: warped(stars%nq3) 
+      COMPLEX :: warped(stars%ng3) 
       LOGICAL :: lexists 
       !>                                                                
                                                                         
@@ -52,9 +52,9 @@
          !<--mt charge                                                  
                                                                         
          DO n = 1,atoms%ntype 
-            CALL fleur_intgr3(rho(:,0,n,jspin),atoms%rmsh(:,n)          &
+            CALL intgr3(rho(:,0,n,jspin),atoms%rmsh(:,n)                &
      &           ,atoms%dx(n),atoms%jri(n),w)                           
-            qmt(n) = w*SQRT(4*pimach()) 
+            qmt(n) = w*SQRT(4*pi_const) 
             q = q + atoms%neq(n)*qmt(n) 
          ENDDO 
                                                                         
@@ -70,7 +70,7 @@
          !>                                                             
          qistot = qistot + qis 
          q = q + qis 
-         WRITE (6,FMT=8000) jspin,q,qis, (qmt(n),n=1,atoms%ntype) 
+         WRITE (oUnit,FMT=8000) jspin,q,qis, (qmt(n),n=1,atoms%ntype) 
          qtot = qtot + q 
       ENDDO 
       !Sum up positive charge                                           
@@ -79,7 +79,7 @@
          q=q+atoms%zatom(n)*atoms%neq(n) 
       ENDDO 
                                                                         
-      WRITE (6,FMT=8020) qtot,q,q-qtot 
+      WRITE (oUnit,FMT=8020) qtot,q,q-qtot 
                                                                         
  8000 FORMAT (/,10x,'total charge for spin',i3,'=',f11.6,/,10x,         &
      &       'interst. charge =   ',f11.6,/,                            &

@@ -143,9 +143,7 @@
 
       OPEN(98,FILE = TRIM(filename),FORM ='formatted'                   &
      &     ,STATUS ='replace')                                          
-      CALL xsf_WRITE_atoms(                                             &
-     &     98,.TRUE.,.FALSE.,cell%amat,atoms%neq,                       &
-     &     atoms%zatom,atoms%pos)                                       
+      CALL xsf_WRITE_atoms(98,atoms,.TRUE.,cell%amat)                                       
       CALL xsf_WRITE_header(98,.FALSE.,filename,box(:,1),box(:,2)       &
      &     ,box(:,3),pos,npoints)
 
@@ -182,7 +180,7 @@
 !-----------------------------------------------                        
       USE m_gf_types 
       USE m_constants 
-      USE m_fleur_INTERFACE,ONLY:fleur_ylm 
+      USE m_ylm 
       IMPLICIT NONE 
       !<--Arguments                                                     
       INTEGER, INTENT (IN)       :: n,na 
@@ -204,14 +202,14 @@
                                                                         
       !>                                                                
                                                                         
-      nd = atoms%ntypsy(na) 
-      nopa = atoms%ngopr(na) 
+      nd = sym%ntypsy(na) 
+      nopa = sym%ngopr(na) 
       x(:) = p(:) - atoms%pos(:,na) 
       sx = sqrt(dot_product(x,x)) 
                                                                         
       IF (nopa/=1) THEN 
          !switch to internal units                                      
-         rcc = MATMUL(cell%bmat,x)/2.0/pimach() 
+         rcc = MATMUL(cell%bmat,x)/2.0/pi_const 
          !rotate into representative                                    
          p = MATMUL(sym%mrot(:,:,nopa),rcc) 
          !switch back to cartesian units                                
@@ -221,9 +219,7 @@
          IF (sx>=atoms%rmsh(j,n)) EXIT 
       ENDDO 
       jr = j 
-      CALL fleur_ylm(                                                   &
-     &          atoms%lmax(n),x,                                        &
-     &          ylm)                                                    
+      CALL ylm4(atoms%lmax(n),x,ylm)                                                    
       xd1 = 0.0 
       xd2 = 0.0 
       DO lh = 0, sphhar%nlh(nd) 
@@ -269,7 +265,7 @@
 !-----------------------------------------------                        
       USE m_gf_types 
       USE m_constants 
-      USE m_fleur_interface,ONLY:fleur_starf3 
+      USE m_starf 
       IMPLICIT NONE 
       !<--Arguments                                                     
       REAL   ,INTENT(IN)         :: bmat(3,3) 
@@ -284,13 +280,13 @@
       COMPLEX             :: sf3(SIZE(qpw)) 
       INTEGER             :: k 
       !>                                                                
-      rcc=matmul(bmat,p)/2./pimach() 
-      CALL fleur_starf3(                                                &
-     &     sym%nop,stars%nq3,sym%symor,stars%kv3,sym%mrot,sym%tau,rcc   &
+      rcc=matmul(bmat,p)/2./pi_const 
+      CALL starf3(                                                &
+     &     sym%nop,stars%ng3,sym%symor,stars%kv3,sym%mrot,sym%tau,rcc   &
      &     ,sym%invtab,sf3)                                             
 !                                                                       
       xdnout = 0.0 
-      DO k = 1,stars%nq3 
+      DO k = 1,stars%ng3 
          xdnout = xdnout + real(qpw(k)*sf3(k))*stars%nstr(k) 
       ENDDO 
       END FUNCTION 

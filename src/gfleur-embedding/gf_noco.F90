@@ -55,7 +55,7 @@ module m_gf_noco
         real,parameter:: eps= 1.0e-20
         real          :: pi
 
-        pi=pimach()
+        pi=pi_const
 
          mx      =  2*real(q(3))
          my      = -2*aimag(q(3))

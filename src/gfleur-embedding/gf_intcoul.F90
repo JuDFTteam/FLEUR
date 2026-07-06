@@ -39,7 +39,7 @@ MODULE m_gf_intcoul
       TYPE(t_sym),INTENT(IN)       :: sym
       TYPE(t_mpi),INTENT(IN)       :: mpi
       TYPE(t_embinp),INTENT(IN)     :: gfinp
-      TYPE(t_potential),INTENT(INOUT) :: potential(:)
+      TYPE(t_potden),INTENT(INOUT) :: potential(:)
       REAL   ,INTENT(OUT)          :: vac_pot
 
 	  !locals
@@ -62,7 +62,7 @@ MODULE m_gf_intcoul
 	  ALLOCATE(pdata(maxval(lay%points),4,size(lay)-2))
 
       !map the boundary charges
-      DO n2=1,stars(1)%nq2
+      DO n2=1,stars(1)%ng2
           DO layer=2,size(lay)-1
           	CALL priv_make_boundary_charge(lay(layer),lay(layer-1),lay(layer+1),n2)
           ENDDO
@@ -73,7 +73,7 @@ MODULE m_gf_intcoul
        	CALL priv_join_charges(lay(layer),lay(layer-1),lay(layer+1),stars(layer-1),cell(layer-1))
       ENDDO
 
-      DO n2=1,stars(1)%nq2
+      DO n2=1,stars(1)%ng2
           !loop over all layers and generate potential
           DO layer=2,size(lay)-1
           	!CALL priv_make_boundary_charge(lay(layer),lay(layer-1),lay(layer+1),n2)
@@ -97,12 +97,12 @@ MODULE m_gf_intcoul
       ENDDO
       DO layer=1,layers%num_layers
       	CALL gf_wrtcoul(GF_POTFILE,layer,stars(layer),potential(layer  &
-     &        )%vpw(:,1))
+     &        )%pw(:,1))
         DO n=-stars(layer)%mx3,stars(layer)%mx3
-           write(44,*) n,potential(layer)%vpw(max(1,stars(layer)%ig(0,0,n)),1)
+           write(44,*) n,potential(layer)%pw(max(1,stars(layer)%ig(0,0,n)),1)
         enddo
         CALL gf_plot(layer,stars(layer),cell(layer),atoms(layer),sym,1,                     &
-        potential(layer)%vpw(:,:),GF_PLOT_HARTREE)
+        potential(layer)%pw(:,:),GF_PLOT_HARTREE)
 
 
       ENDDO
@@ -143,14 +143,14 @@ MODULE m_gf_intcoul
      	 lay(l)%rmt2=atoms(l-1)%rmt**2
 
      	 lay(l)%points=stars(l-1)%mx3*2+1
-     	 allocate(lay(l)%gz_max(stars(l-1)%nq2))
-     	 DO n=1,stars(l-1)%nq2
+     	 allocate(lay(l)%gz_max(stars(l-1)%ng2))
+     	 DO n=1,stars(l-1)%ng2
      	    lay(l)%gz_max(n)=maxval(stars(l-1)%kv3(3,:),mask=stars(l-1)%ig2==n)
      	 ENDDO
      	 ALLOCATE(lay(l)%project(lay(l)%points,2))
      	 ALLOCATE(lay(l)%dproject(lay(l)%points,2))
      	 ALLOCATE(lay(l)%potential(lay(l)%points))
-     	 ALLOCATE(lay(l)%ps_charge_boundary(lay(l)%points,stars(1)%nq2))
+     	 ALLOCATE(lay(l)%ps_charge_boundary(lay(l)%points,stars(1)%ng2))
 
 
      	 !construct the projectors
@@ -191,22 +191,22 @@ MODULE m_gf_intcoul
 	corr=0.0
 	mat=0.0
 	rs=0.0
-	IF (pr) WRITE(6,*) "Uncorrected Boundary values n2=",n2
-	IF (pr) WRITE(6,*) "Left Bulk:",left(n2)
+	IF (pr) WRITE(oUnit,*) "Uncorrected Boundary values n2=",n2
+	IF (pr) WRITE(oUnit,*) "Left Bulk:",left(n2)
 
 	DO n=2,size(lay)-1
 		v(1)=dot_product(conjg(lay(n)%project(:,1)),lay(n)%potential)
 	    v(2)=dot_product(conjg(lay(n)%project(:,2)),lay(n)%potential)
 	    dv(1)=dot_product(conjg(lay(n)%dproject(:,1)),lay(n)%potential)
 	    dv(2)=dot_product(conjg(lay(n)%dproject(:,2)),lay(n)%potential)
-	    IF (pr) WRITE(6,"(a,i4,4f10.4)") "L",n,v(1),dv(1)
-	    IF (pr) WRITE(6,"(a,i4,4f10.4)") "R",n,v(2),dv(2)
+	    IF (pr) WRITE(oUnit,"(a,i4,4f10.4)") "L",n,v(1),dv(1)
+	    IF (pr) WRITE(oUnit,"(a,i4,4f10.4)") "R",n,v(2),dv(2)
 	 ENDDO
 	 IF (pr) THEN
 	   IF (l_surface) THEN
-	      WRITE(6,*) "Surface calculation:",right(n2)
+	      WRITE(oUnit,*) "Surface calculation:",right(n2)
 	   ELSE
-	 	  WRITE(6,*) "Right Bulk:",right(n2)
+	 	  WRITE(oUnit,*) "Right Bulk:",right(n2)
 	   ENDIF
 	ENDIF
 	!Construct the linear equation
@@ -281,16 +281,16 @@ MODULE m_gf_intcoul
 	    column=column+2
  	ENDDO
  	IF (pr) THEN
- 		WRITE(6,*) "Matching Matrix"
+ 		WRITE(oUnit,*) "Matching Matrix"
 		DO row=1,size(mat,1)
-	    	WRITE(6,"(999f8.4)") mat(row,:)
+	    	WRITE(oUnit,"(999f8.4)") mat(row,:)
 		ENDDO
-		WRITE(6,*) "Right-hand side"
-		WRITE(6,"(999f8.4)") rs(:)
+		WRITE(oUnit,*) "Right-hand side"
+		WRITE(oUnit,"(999f8.4)") rs(:)
     ENDIF
 	a=lin_equation(mat,rs)
-    IF (pr) WRITE(6,*) "Solution"
-	IF (pr) WRITE(6,"(999f8.4)") a(:)
+    IF (pr) WRITE(oUnit,*) "Solution"
+	IF (pr) WRITE(oUnit,"(999f8.4)") a(:)
 	!now correct the potential in all layers
 	i=1
 	DO n=2,size(lay)-1
@@ -302,20 +302,20 @@ MODULE m_gf_intcoul
 	ENDDO
 	!print the boundary values
 	!IF (n2/=1) RETURN
-	WRITE(6,*) "Boundary values n2=",n2
-	WRITE(6,*) "Left Bulk:",left(n2)
+	WRITE(oUnit,*) "Boundary values n2=",n2
+	WRITE(oUnit,*) "Left Bulk:",left(n2)
 	DO n=2,size(lay)-1
 	     v(1)=dot_product(conjg(lay(n)%project(:,1)),lay(n)%potential)
 	     v(2)=dot_product(conjg(lay(n)%project(:,2)),lay(n)%potential)
 	     dv(1)=dot_product(conjg(lay(n)%dproject(:,1)),lay(n)%potential)
 	     dv(2)=dot_product(conjg(lay(n)%dproject(:,2)),lay(n)%potential)
-	    WRITE(6,"(a,i4,4f10.4)") "L",n,v(1),dv(1)
-	    WRITE(6,"(a,i4,4f10.4)") "R",n,v(2),dv(2)
+	    WRITE(oUnit,"(a,i4,4f10.4)") "L",n,v(1),dv(1)
+	    WRITE(oUnit,"(a,i4,4f10.4)") "R",n,v(2),dv(2)
 	 ENDDO
 	 IF (l_surface) THEN
-	   WRITE(6,*) "Surface Calculation:",right(n2)
+	   WRITE(oUnit,*) "Surface Calculation:",right(n2)
 	 ELSE
-	 	WRITE(6,*) "Right Bulk:",right(n2)
+	 	WRITE(oUnit,*) "Right Bulk:",right(n2)
      ENDIF
      if (pr) vac_pot=v(2)
      END SUBROUTINE
@@ -385,7 +385,7 @@ MODULE m_gf_intcoul
      SUBROUTINE priv_collect_potentials(lay,potential,stars,n2)
      IMPLICIT NONE
      TYPE(t_chargelayer),INTENT(IN)  ::lay(:)
-     TYPE(t_potential),INTENT(INOUT) ::potential(:)
+     TYPE(t_potden),INTENT(INOUT) ::potential(:)
      TYPE(t_stars),INTENT(IN)        ::stars(:)
      INTEGER,INTENT(IN)              ::n2
 
@@ -400,7 +400,7 @@ MODULE m_gf_intcoul
 	        IF (abs(g)>stars(layer)%mx3) CYCLE
 	        index=stars(layer)%ig(stars(layer)%kv2(1,n2),stars(layer)%kv2(2,n2),g)
 	        IF (index==0) CYCLE
-	        potential(layer)%vpw(index,1)=potential(layer)%vpw(index,1)+lay(l)%potential(n)
+	        potential(layer)%pw(index,1)=potential(layer)%pw(index,1)+lay(l)%potential(n)
 	    ENDDO
 	 ENDDO
 	 END SUBROUTINE
@@ -512,13 +512,13 @@ MODULE m_gf_intcoul
       IF (hdferr /= 0) CALL juDFT_error("Could not read left Boundary charge")
       CALL io_dopen(gid,"pseudo",did,hdferr)
       CALL io_datadim(did,dim)
-      ALLOCATE(lay(1)%pseudo_charge(DIM(2),stars%nq2))
+      ALLOCATE(lay(1)%pseudo_charge(DIM(2),stars%ng2))
       lay(1)%points=dim(2)
       lay(1)%pseudo_charge = 0.0
-      IF (DIM(3)>stars%nq2) DIM(3) = stars%nq2
-      IF (DIM(3) /= stars%nq2) WRITE(*,*) "WARNING         ! Insuficient coulomb charge in left embpot"
+      IF (DIM(3)>stars%ng2) DIM(3) = stars%ng2
+      IF (DIM(3) /= stars%ng2) WRITE(*,*) "WARNING         ! Insuficient coulomb charge in left embpot"
       dim(1)=1
-      CALL io_READ(did,(/-1,1,1/),dim,lay(1)%pseudo_charge(:,:DIM(3)))
+      CALL io_READ(did,(/-1,1,1/),dim,"lay",lay(1)%pseudo_charge(:,:DIM(3)))
       CALL io_dclose(did,hdferr)
       CALL io_READ_att(gid,"c",lay(1)%c)
       CALL io_READ_att(gid,"dt",lay(1)%dt)
@@ -526,11 +526,11 @@ MODULE m_gf_intcoul
       CALL io_dopen(gid,"rmt",did,hdferr)
       CALL io_datadim(did,dim)
       ALLOCATE(lay(1)%rmt2(dim(1)),lay(1)%atpos(3,dim(1)))
-      CALL io_read(did,(/1/),dim,lay(1)%rmt2)
+      CALL io_read(did,(/1/),dim,"lay",lay(1)%rmt2)
       lay(1)%rmt2=lay(1)%rmt2**2
       CALL io_dclose(did,hdferr)
       CALL io_dopen(gid,"atpos",did,hdferr)
-      CALL io_read(did,(/1,1/),(/3,dim(1)/),lay(1)%atpos)
+      CALL io_read(did,(/1,1/),(/3,dim(1)/),"lay",lay(1)%atpos)
       CALL io_dclose(did,hdferr)
 
       CALL io_gclose(gid,hdferr)
@@ -538,7 +538,7 @@ MODULE m_gf_intcoul
       !shift the charge if needed
       !print *, "Manual shifting of psq"
       !d=(/0.5,0.5/)
-      !DO n2=1,stars%nq2
+      !DO n2=1,stars%ng2
       !    ph=exp(cmplx(0,2.*pi_const*dot_product(d,stars%kv2(:,n2))))
       !    lay(1)%pseudo_charge(:,n2)=lay(1)%pseudo_charge(:,n2)*ph
       !ENDDO
@@ -553,13 +553,13 @@ MODULE m_gf_intcoul
          IF (hdferr /= 0) CALL juDFT_error("Could not read right Boundary charge")
          CALL io_dopen(gid,"pseudo",did,hdferr)
          CALL io_datadim(did,dim)
-         ALLOCATE(lay(SIZE(lay))%pseudo_charge(DIM(2),stars%nq2))
+         ALLOCATE(lay(SIZE(lay))%pseudo_charge(DIM(2),stars%ng2))
          lay(size(lay))%points=dim(2)
          lay(SIZE(lay))%pseudo_charge = 0.0
-         IF (DIM(3)>stars%nq2) DIM(3)    = stars%nq2
-         IF (DIM(3) /= stars%nq2) WRITE(*,*)  "WARNING      ! Insuficient coulomb charge in right embpot"
+         IF (DIM(3)>stars%ng2) DIM(3)    = stars%ng2
+         IF (DIM(3) /= stars%ng2) WRITE(*,*)  "WARNING      ! Insuficient coulomb charge in right embpot"
          DIM(1) = 1
-         CALL io_READ(did,(/-1,1,1/),dim,lay(SIZE(lay))%pseudo_charge(:,:DIM(3)))
+         CALL io_READ(did,(/-1,1,1/),dim,"lay",lay(SIZE(lay))%pseudo_charge(:,:DIM(3)))
          CALL io_dclose(did,hdferr)
          CALL io_READ_att(gid,"c",lay(SIZE(lay))%c)
          CALL io_READ_att(gid,"dt",lay(SIZE(lay))%dt)
@@ -567,15 +567,15 @@ MODULE m_gf_intcoul
          CALL io_dopen(gid,"rmt",did,hdferr)
          CALL io_datadim(did,dim)
          ALLOCATE(lay(SIZE(lay))%rmt2(dim(1)),lay(SIZE(lay))%atpos(3,dim(1)))
-         CALL io_read(did,(/1/),dim,lay(SIZE(lay))%rmt2)
+         CALL io_read(did,(/1/),dim,"lay",lay(SIZE(lay))%rmt2)
          lay(SIZE(lay))%rmt2=lay(SIZE(lay))%rmt2**2
          CALL io_dclose(did,hdferr)
          CALL io_dopen(gid,"atpos",did,hdferr)
-         CALL io_read(did,(/1,1/),(/3,dim(1)/),lay(SIZE(lay))%atpos)
+         CALL io_read(did,(/1,1/),(/3,dim(1)/),"lay",lay(SIZE(lay))%atpos)
          CALL io_dclose(did,hdferr)
          CALL io_gclose(gid,hdferr)
       ELSE
-         ALLOCATE(lay(SIZE(lay))%pseudo_charge(3,stars%nq2))
+         ALLOCATE(lay(SIZE(lay))%pseudo_charge(3,stars%ng2))
          lay(SIZE(lay))%pseudo_charge=0.0
          lay(SIZE(lay))%c=lay(1)%c
          lay(SIZE(lay))%dt=lay(1)%dt
@@ -584,7 +584,7 @@ MODULE m_gf_intcoul
      !shift the charge if needed
      ! print *, "Manual shifting of psq"
      ! d=(/0.5,0.5/)
-     ! DO n2=1,stars%nq2
+     ! DO n2=1,stars%ng2
      !     ph=exp(cmplx(0,2.*pi_const*dot_product(d,stars%kv2(:,n2))))
      !     lay(size(lay))%pseudo_charge(:,n2)=lay(size(lay))%pseudo_charge(:,n2)*ph
      ! ENDDO
@@ -672,7 +672,7 @@ MODULE m_gf_intcoul
       ! For all layers
       ! Put pseudo-charge onto real-space grid
 
-      DO n2=1,stars%nq2
+      DO n2=1,stars%ng2
           layer%pseudo_charge(:,n2)=fft(layer%pseudo_charge(:,n2),inv=.true.)
           !layer%pseudo_charge(:,n2)=0.0
 
@@ -763,7 +763,7 @@ MODULE m_gf_intcoul
               ENDDO
          ENDDO
       ENDDO !n3 loop
-      DO n2=1,stars%nq2
+      DO n2=1,stars%ng2
           layer%pseudo_charge(:,n2)=fft(layer%pseudo_charge(:,n2))/layer%points
       ENDDO
 
@@ -1116,8 +1116,8 @@ MODULE m_gf_intcoul
 	        pdata(:lay(l)%points,i,l-1)=fft(pdata(:lay(l)%points,i,l-1),inv=.TRUE.)
 	    ENDDO
 	ENDDO
-    WRITE(6,*) "Potential for n2=",n2
-    WRITE(6,*) "Layer nz charge correction_charge potential smooth_potential"
+    WRITE(oUnit,*) "Potential for n2=",n2
+    WRITE(oUnit,*) "Layer nz charge correction_charge potential smooth_potential"
     DO l=2,size(lay)-1
        DO n=1,lay(l)%points
            if ((n-1.)<=lay(l)%points/2.) then
@@ -1126,7 +1126,7 @@ MODULE m_gf_intcoul
               z1=lay(l)%dt/lay(l)%points*(n-1)-lay(l)%dt
            endif
            z2= sum(lay(2:l-1)%c)+lay(l)%c/2+z1
-           WRITE(6,"(2i5,999f15.9)") l-1,n,z1,z2,real(pdata(n,:,l-1))
+           WRITE(oUnit,"(2i5,999f15.9)") l-1,n,z1,z2,real(pdata(n,:,l-1))
        ENDDO
    ENDDO
 

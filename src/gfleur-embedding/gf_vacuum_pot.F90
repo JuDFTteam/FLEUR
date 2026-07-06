@@ -17,7 +17,7 @@ module m_gf_vacuum_pot
 
 	subroutine gf_vacuum_makepot_g0(efield,delz,rht,vz)
 	use m_qsf
-	use m_constants,onlY:pimach
+	USE m_constants, ONLY: pi_const, oUnit
 	implicit none
 	real,intent(in):: efield
     real,intent(in):: delz
@@ -31,7 +31,7 @@ module m_gf_vacuum_pot
     CALL qsf(delz,rht,sig,nmz,1)
 	sig = sig(nmz) - sig
 
-	write(6,*) "Vacuum-Charge integral:",sig(1)
+	write(oUnit,*) "Vacuum-Charge integral:",sig(1)
 
     CALL qsf(delz,sig,vz,nmz,1)
     vz=-4.*pi_const*(vz(nmz)-vz)
@@ -44,9 +44,9 @@ module m_gf_vacuum_pot
     endif
 
 
-    write(6,*) "g_parallel=0 of Coulomb pot in Vacuum"
+    write(oUnit,*) "g_parallel=0 of Coulomb pot in Vacuum"
     do n=1,nmz
-    	write(6,"(i5,5(1x,f10.5))") n,vz(n),rht(n),sig(n)
+    	write(oUnit,"(i5,5(1x,f10.5))") n,vz(n),rht(n),sig(n)
     enddo
 
     end subroutine
@@ -54,7 +54,7 @@ module m_gf_vacuum_pot
     subroutine gf_vacuum_makepot_g(delz,g,n2,rhtxy,vxy)
 	use m_qsf
 	USE m_intgr, ONLY : intgz1
-    USE m_constants, ONLY : pimach
+    USE m_constants, ONLY: pi_const, oUnit
 
 	implicit none
 	real,intent(in)    :: delz,g
@@ -140,7 +140,7 @@ module m_gf_vacuum_pot
 	type(t_stars),intent(in) ::stars
 	!Local variables
 	real    :: qz(nmz,jspins)
-	complex :: qxy(nmzxy,stars%nq2-1,jspins)
+	complex :: qxy(nmzxy,stars%ng2-1,jspins)
 	real    :: q(nmz)
 
 	call gf_iodop_readvacuum(GF_CDNFILE,qxy,qz)
@@ -170,9 +170,9 @@ module m_gf_vacuum_pot
 
 
     !read the charge density
-    allocate(rht(nmz,jspins),rhtxy(nmzxy,stars%nq2-1,jspins))
+    allocate(rht(nmz,jspins),rhtxy(nmzxy,stars%ng2-1,jspins))
     if (.not.allocated(q_z)) then
-    	allocate(q_z(nmz,jspins),q_xy(nmzxy,stars%nq2-1,jspins))
+    	allocate(q_z(nmz,jspins),q_xy(nmzxy,stars%ng2-1,jspins))
     endif
 	call gf_iodop_readvacuum(GF_CDNFILE,rhtxy,rht)
 	q_z=rht
@@ -186,17 +186,17 @@ module m_gf_vacuum_pot
 
 
 	!Generate potential
-	allocate(vz(nmz),vxy(nmzxy,stars%nq2-1))
+	allocate(vz(nmz),vxy(nmzxy,stars%ng2-1))
 	call gf_vacuum_makepot_g0(efield,delz,rht(:,1),vz)
 
-	DO n=2,stars%nq2
+	DO n=2,stars%ng2
 		call gf_vacuum_makepot_g(delz,stars%sk2(n),n,rhtxy(:,:,1),vxy)
 	enddo
 
 	!return the boundary values
 	vb(1)=(vz(4)/3.-11./6.*vz(1)+3.*vz(2)-3./2.*vz(3))/delz
 
-    write(6,"(a,3(f10.8,2x))") "Slope at vacuum-interstitial boundary:",real(vb(1))
+    write(oUnit,"(a,3(f10.8,2x))") "Slope at vacuum-interstitial boundary:",real(vb(1))
     if (l_fixed) then
          vb(1)=vz(1)
     else
@@ -208,7 +208,7 @@ module m_gf_vacuum_pot
 	  endif
 	endif
 
-	do n=2,stars%nq2
+	do n=2,stars%ng2
 		vb(n)=vxy(1,n-1)
 	enddo
 	deallocate(rht,rhtxy)
@@ -217,13 +217,10 @@ module m_gf_vacuum_pot
 	subroutine gf_vacuum_totalpot(vb,stars,xcpot,cell,jspins,l_noco,mpi_com)
 	use m_gf_types
 	use m_gf_iodop
-    use m_vvacxc
-    use m_vvacxcg
-    use m_od_types
     implicit none
 	real,intent(inout)      :: vb
 	type(t_stars),intent(in):: stars
-	type(t_xcpot),intent(in):: xcpot
+	CLASS(t_xcpot),intent(in):: xcpot
 	type(t_cell),intent(in) :: cell
 	integer,intent(in)      :: jspins,mpi_com
 	logical,intent(in)      :: l_noco
@@ -231,27 +228,27 @@ module m_gf_vacuum_pot
 
 	real        :: evac
 	COMPLEX     :: cdomvz(nmz,2)
-    COMPLEX     :: cdomvxy(nmzxy,stars%nq2-1,2)
+    COMPLEX     :: cdomvxy(nmzxy,stars%ng2-1,2)
     REAL        :: excz(nmz,2)
-    COMPLEX     :: excxy(nmzxy,stars%nq2-1,2)
+    COMPLEX     :: excxy(nmzxy,stars%ng2-1,2)
 	real,allocatable    :: rht(:,:),rht_xc(:,:,:),vz_xc(:,:,:)
 	complex,allocatable :: rhtxy(:,:,:),rhtxy_xc(:,:,:,:),vxy_xc(:,:,:,:)
 	integer             :: ichsmrg
 	REAL                :: rhmn
-	type(od_inp)        :: odi
+	!type(od_inp)        :: odi (oneD support removed)
 
 	!shift the g==0 coulomb potential
-	write(6,*) "Vacuum potential boundary:",vb,vz(1)
+	write(oUnit,*) "Vacuum potential boundary:",vb,vz(1)
 	vb=vb-vz(1)
 	vz=vz+vb
 	!read density
 	if (l_noco) then
-	   allocate(rht(nmz,4),rhtxy(nmzxy,stars%nq2-1,3))
+	   allocate(rht(nmz,4),rhtxy(nmzxy,stars%ng2-1,3))
 	else
-	   allocate(rht(nmz,jspins),rhtxy(nmzxy,stars%nq2-1,jspins))
+	   allocate(rht(nmz,jspins),rhtxy(nmzxy,stars%ng2-1,jspins))
 	endif
 	call gf_iodop_readvacuum(GF_CDNFILE,rhtxy,rht)
-	allocate(rht_xc(nmz,2,jspins),rhtxy_xc(nmzxy,stars%nq2-1,2,jspins))
+	allocate(rht_xc(nmz,2,jspins),rhtxy_xc(nmzxy,stars%ng2-1,2,jspins))
 	rht_xc(:,1,:jspins)=rht(:,:jspins)     !need extra dimension for nvac
 	rhtxy_xc(:,:,1,:jspins)=rhtxy(:,:,:jspins)
 	if (l_noco) then
@@ -273,29 +270,11 @@ module m_gf_vacuum_pot
 	endif
 	if (allocated(vz)) deallocate(vz,vxy)  !deallocate saved module variable
 	!Calculate xc-potential
-	IF ( (xcpot%igrd == 0) .and. (xcpot%icorr /= -1) ) THEN
-		call vvacxc(                                                                 &
-        	   stars%mx1,stars%mx2,nmz,nmzxy,stars%nq2,jspins,9*stars%mx1*stars%mx2, &
-           	   xcpot%icorr,.false.,xcpot%krla,nmzxy,jspins,stars%nq2,nmz,stars%nstr2,&
-           	   rhtxy_xc,rht_xc,cdomvxy,cdomvz,l_noco,                                &
-               stars%kimax2,stars%igfft2,stars%pgfft2,1,                             &
-               vxy_xc,vz_xc,                                                         &
-               excxy,excz)
-    ELSE
-
-	    rhmn=1e+10
-	    odi%d1=.false.
-	    write(*,*) jspins
-        CALL vvacxcg(                                                                                              &
-               stars%mx1,stars%mx2,nmz,nmzxy,stars%nq2,jspins,size(stars%igfft2,1)+1,9*stars%mx1*stars%mx2,1,0.0,  &
-               delz,xcpot%icorr,.false.,nmzxy,jspins,stars%nq2,cell%bmat,nmz,stars%nstr2,                          &
-               stars%pgft2x,stars%pgft2y,stars%pgft2xx,stars%pgft2yy,stars%pgft2xy,                                &
-               xcpot%igrd,xcpot%ndvgrd,xcpot%chng,ichsmrg,                  &
-               rhtxy_xc,rht_xc,cdomvxy,cdomvz,l_noco,.false.,(/0.0,0.0,0.0/),                                            & !lnoco=flase
-               stars%kimax2,stars%igfft2,stars%pgfft2,odi,                                                         &
-               vxy_xc,vz_xc,rhmn,                                                                                 &
-               excxy,excz)
-    ENDIF
+	!TODO(port): the vacuum XC of the simplevacuum mode still uses the
+	!old vvacxc/vvacxcg interfaces; rework onto the modern vvac_xc
+	!(t_potden-based) is pending.
+	CALL juDFT_error("simplevacuum vacuum-XC not yet ported",              &
+     &     calledby="gf_vacuum_pot")
 
 	rht(:,:jspins)=vz_xc(:,1,:)
 	rhtxy(:,:,:jspins)=vxy_xc(:,:,1,:)

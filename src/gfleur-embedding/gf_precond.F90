@@ -78,7 +78,7 @@ module m_gf_precond
 
          if (btest(mix%precond,1)) then
             !Apply Kerker scheme
-            DO n = 2,stars%nq3
+            DO n = 2,stars%ng3
                 d_qpw(n,jspin) = d_qpw(n,jspin)/(1.0+mix%k_kerker**2/stars%sk3(n)**2)
             ENDDO
             call priv_plot(stars,d_qpw(:,jspin),5,layer,"After Kerker")
@@ -93,7 +93,7 @@ module m_gf_precond
              ,atoms%ntype,size(stars%sk3),1,maxval(atoms%lmax),atoms%lmax,atoms%ntypsy,atoms%jri,atoms%dx,atoms%rmsh           &
              ,atoms%ntype,sym%nop,SIZE(atoms%taual,2),sym%symor,cell%bmat,sym%tau,atoms%taual,atoms%neq,stars%kv3,sym%mrot          &
              ,sym%invtab,sphhar%nmem,sphhar%nlh,sphhar%mlh,sphhar%llh,sphhar%clnu,odi,ods,mpi%irank,mpi%isize,1       &
-             ,4,stars%nq3,stars%nstr,stars%sk3,d_qpw(:,jspin)-psq,rho)
+             ,4,stars%ng3,stars%nstr,stars%sk3,d_qpw(:,jspin)-psq,rho)
          d_rho(:,:,:,jspin)=d_rho(:,:,:,jspin)+rho
     enddo
 
@@ -146,7 +146,7 @@ module m_gf_precond
     nz2=(stars%mx3*2+1)-nz1
 
 
-    DO n2=1,min(stars%nq2,n2_maxstar)
+    DO n2=1,min(stars%ng2,n2_maxstar)
         rho=0.0
         DO n=-stars%mx3,stars%mx3
             if (n<0) then

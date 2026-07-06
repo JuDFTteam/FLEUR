@@ -31,9 +31,9 @@ module m_gf_precond_stepweight
     if (.not.io_dataexists(fid,"stepf_evalue")) THEN
         !Allocate lot of memory!!!
         mx3=(int(stars%mx3/2)-1)*2
-        allocate(step(stars%nq3,stars%nq3))
-        allocate(evalues(stars%nq3))
-        allocate(eigenvectors(stars%nq3,stars%nq3))
+        allocate(step(stars%ng3,stars%ng3))
+        allocate(evalues(stars%ng3))
+        allocate(eigenvectors(stars%ng3,stars%ng3))
         allocate(ustep(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,-mx3:mx3))
 
         !get Stepfunction
@@ -43,8 +43,8 @@ module m_gf_precond_stepweight
         &     ustep)
 
         !Construct matrix of step-function
-        DO n=1,stars%nq3
-        do nn=1,stars%nq3
+        DO n=1,stars%ng3
+        do nn=1,stars%ng3
             k=stars%kv3(:,n)-stars%kv3(:,nn)
             if (any(abs(k)>(/stars%mx1,stars%mx2,mx3/))) cycle
             step(n,nn)=ustep(k(1),k(2),k(3))
@@ -54,7 +54,7 @@ module m_gf_precond_stepweight
         call eigenvalues(step,evalues,eigenvectors)
 
         call io_write_var(fid,"stepf_evalue",real(evalues))
-        call io_write_var(fid,"stepf_evector",reshape(transfer(eigenvectors,(/1.0,0.0/)),(/2,stars%nq3,stars%nq3/)))
+        call io_write_var(fid,"stepf_evector",reshape(transfer(eigenvectors,(/1.0,0.0/)),(/2,stars%ng3,stars%ng3/)))
 
     endif
     call io_gclose (fid, hdferr)
@@ -79,8 +79,8 @@ module m_gf_precond_stepweight
     integer             :: n,nn
     integer(hid_t) :: fid,ffid
     integer        ::hdferr
-    allocate(evalue(stars%nq3))
-    allocate(evector(2,stars%nq3,stars%nq3))
+    allocate(evalue(stars%ng3))
+    allocate(evector(2,stars%ng3,stars%ng3))
 
     CALL io_hdfopen ('gf_setup.hdf', H5F_ACC_RDONLY_F, ffid, hdferr)
     CALL io_check('gf_precond_stepweight%priv_get_di..:',hdferr)
@@ -95,12 +95,12 @@ module m_gf_precond_stepweight
 
     n=count(abs(evalue)>cutoff)
 
-    write(6,*) "Layer:",layer," used planewaves:",n
+    write(oUnit,*) "Layer:",layer," used planewaves:",n
 
 
-    allocate(eigenvectors(stars%nq3,n))
+    allocate(eigenvectors(stars%ng3,n))
     nn=0
-    DO n=1,stars%nq3
+    DO n=1,stars%ng3
       if (abs(evalue(n))<=cutoff) cycle
       nn=nn+1
       eigenvectors(:,nn)=cmplx(evector(1,:,n),evector(2,:,n))

@@ -285,7 +285,7 @@
       TYPE(t_cell),INTENT(IN)   :: cell 
       TYPE(t_lapw),INTENT(IN)   :: lapw 
       INTEGER,INTENT(IN)        :: jspins,nkpts
-      TYPE(t_potential),INTENT(IN) :: potential(:) 
+      TYPE(t_potden),INTENT(IN) :: potential(:) 
       TYPE(t_enpara),INTENT(IN)    :: enpara(:)
       LOGICAL,INTENT(IN)           :: l_noco
 
@@ -364,7 +364,7 @@
                     DO jspin=1,jspins
                           CALL fleur_radfun(                                       &
      &                  l,enpara(layer)%el(l+1,itype,jspin),potential(layer &
-     &                    )%vr(:,0,itype,jspin),itype,atoms(layer),f(:,:,jspin),g(: &
+     &                    )%mt(:,0,itype,jspin),itype,atoms(layer),f(:,:,jspin),g(: &
      &                   ,:,jspin),us,dus,uds,duds,ddn(l,itype,layer,jspin),nodeu,noded  &
      &                  ,wronk)
                     ENDDO

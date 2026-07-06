@@ -9,7 +9,7 @@
       CONTAINS 
       SUBROUTINE gf_propagate_embpot_right(                             &
      &                                    layer,en,nk,jspin,            &
-     &                                    lapw,embpot_in,l_nohelpregion,&
+     &                                    lapw,lapw_gf,embpot_in,l_nohelpregion,&
      &                                    embpot_out)                   
 !*********************************************                          
 !     Propagate right embedding potential.                              
@@ -21,20 +21,21 @@
       IMPLICIT NONE 
       INTEGER, INTENT(IN)     :: layer 
       INTEGER, INTENT(IN)     :: en,nk,jspin 
-      TYPE(t_lapw),INTENT(IN) :: lapw 
+      TYPE(t_lapw),INTENT(IN) :: lapw
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
       COMPLEX, INTENT(IN)     :: embpot_in (:,:) 
       LOGICAL, INTENT(IN)     :: l_nohelpregion 
       COMPLEX, INTENT(OUT)    :: embpot_out(:,:) 
                                                                         
       COMPLEX,ALLOCATABLE:: tmat(:,:) 
                                                                         
-      ALLOCATE( tmat(2*lapw%nv2_tot,2*lapw%nv2_tot) ) 
+      ALLOCATE( tmat(2*lapw_gf%nv2_tot,2*lapw_gf%nv2_tot) ) 
                                                                         
       CALL gf_read_tmat2(                                               &
      &                   layer,en,nk,jspin,                             &
-     &                   lapw,                                          &
+     &                   lapw_gf,                                       &
      &                   tmat)                                          
-      CALL gf_propaemb(.TRUE.,lapw%nv2_tot,embpot_in,tmat,embpot_out) 
+      CALL gf_propaemb(.TRUE.,lapw_gf%nv2_tot,embpot_in,tmat,embpot_out) 
                                                                         
       IF(.NOT.l_nohelpregion)THEN 
 !          CALL juDFT_error("not yet implemented",calledby="gf_propagate_embpot.F90")
@@ -45,7 +46,7 @@
                                                                         
       SUBROUTINE gf_propagate_embpot_left(                              &
      &                                    layer,en,nk,jspin,            &
-     &                                    lapw,embpot_in,l_nohelpregion,&
+     &                                    lapw,lapw_gf,embpot_in,l_nohelpregion,&
      &                                    embpot_out)                   
 !*********************************************                          
 !     Propagate left embedding potential.                               
@@ -57,20 +58,21 @@
       IMPLICIT NONE 
       INTEGER, INTENT(IN)     :: layer 
       INTEGER, INTENT(IN)     :: en,nk,jspin 
-      TYPE(t_lapw),INTENT(IN) :: lapw 
+      TYPE(t_lapw),INTENT(IN) :: lapw
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
       COMPLEX, INTENT(IN)     :: embpot_in (:,:) 
       LOGICAL, INTENT(IN)     :: l_nohelpregion 
       COMPLEX, INTENT(OUT)    :: embpot_out(:,:) 
                                                                         
       COMPLEX,ALLOCATABLE:: tmat(:,:) 
                                                                         
-      ALLOCATE( tmat(2*lapw%nv2_tot,2*lapw%nv2_tot) ) 
+      ALLOCATE( tmat(2*lapw_gf%nv2_tot,2*lapw_gf%nv2_tot) ) 
                                                                         
       CALL gf_read_tmat2(                                               &
      &                   layer,en,nk,jspin,                             &
-     &                   lapw,                                          &
+     &                   lapw_gf,                                       &
      &                   tmat)                                          
-      CALL gf_propaemb(.FALSE.,lapw%nv2_tot,embpot_in,tmat,embpot_out) 
+      CALL gf_propaemb(.FALSE.,lapw_gf%nv2_tot,embpot_in,tmat,embpot_out) 
                                                                         
       IF(.NOT.l_nohelpregion)THEN 
 !          CALL juDFT_error("not yet implemented",calledby="gf_propagate_embpot.F90")

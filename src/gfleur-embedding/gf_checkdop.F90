@@ -26,8 +26,9 @@
       !  The key part of of the code is taken from FLEUR checkdop       
       !              (last modified: 04-07-03) D. Wortmann              
       !-----------------------------------------------                  
-      USE m_constants,ONLY:pimach 
-      USE m_fleur_INTERFACE,ONLY:fleur_ylm,fleur_starf3 
+      USE m_constants, ONLY: pi_const, oUnit 
+      USE m_ylm
+      USE m_starf 
       USE m_gf_types 
       IMPLICIT NONE 
       !<--Arguments                                                     
@@ -49,7 +50,7 @@
       INTEGER             :: na,n,nn,j,i,jspin,jspins,lh,mem,ll1,lm 
                                                                     !sta
       REAL                :: av,dms(2),rms(2),s,maxerr 
-      COMPLEX             :: sf3(stars%nq3) 
+      COMPLEX             :: sf3(stars%ng3) 
       COMPLEX             :: ylm((MAXVAL(atoms%lmax)+1)**2 ) 
       REAL                :: rcc(3),x(3) 
                                      !No of testing points              
@@ -60,11 +61,11 @@
       jspins = MIN(SIZE(fr,4),SIZE(fpw,2)) 
                                                                         
       !>                                                                
-      WRITE(6,*) 
+      WRITE(oUnit,*) 
       IF (cdn) THEN 
-         WRITE(6,*) "Checking continuity of the charge density" 
+         WRITE(oUnit,*) "Checking continuity of the charge density" 
       ELSE 
-         WRITE(6,*) "Checking continuity of the potential" 
+         WRITE(oUnit,*) "Checking continuity of the potential" 
       ENDIF 
       !<-- Loop over all atoms                                          
                                                                         
@@ -75,9 +76,9 @@
             na = na+1 
             !<--Write info header                                       
             IF (jspins == 1) THEN 
-               WRITE(6,8000) n,nn 
+               WRITE(oUnit,8000) n,nn 
             ELSE 
-               WRITE(6,8010) n,nn 
+               WRITE(oUnit,8010) n,nn 
             ENDIF 
  8000       FORMAT (/,'    int.-m.t. boundary: atom type =',i2,' atom=' &
      &           ,i2,/,t2,'      int-coord',t20,'      cart-coord',t42  &
@@ -96,10 +97,10 @@
             DO j = 1,np 
                !<-- Calculate values in Interstitial                    
                                                                         
-               rcc=matmul(cell%bmat,p(:,j))/2./pimach() 
+               rcc=matmul(cell%bmat,p(:,j))/2./pi_const 
                !CALL cotra1(p(:,j),rcc,cell%bmat)                       
-               CALL fleur_starf3(                                       &
-     &              sym%nop,stars%nq3,sym%symor,stars%kv3,sym%mrot      &
+               CALL starf3(&
+     &              sym%nop,stars%ng3,sym%symor,stars%kv3,sym%mrot      &
      &              ,sym%tau,rcc,sym%invtab,sf3)                        
                DO jspin = 1,jspins 
                   v1(j,jspin) = SUM(REAL(fpw(:,jspin)*sf3(:))           &
@@ -110,27 +111,25 @@
                !<-- Values in MT                                        
                                                                         
                x(:) = p(:,j) - atoms%pos(:,na) 
-               IF (atoms%ngopr(na) /= 1) THEN 
+               IF (sym%ngopr(na) /= 1) THEN 
                   !switch to internal units, rotate and go back to      
                   !cartesian                                            
-                  rcc = MATMUL(cell%bmat,x)/2./pimach() 
+                  rcc = MATMUL(cell%bmat,x)/2./pi_const 
                   !CALL cotra1(x,rcc,cell%bmat)                         
-                  rcc = MATMUL(sym%mrot(:,:,atoms%ngopr(na)),rcc) 
+                  rcc = MATMUL(sym%mrot(:,:,sym%ngopr(na)),rcc) 
                   x=matmul(cell%amat,rcc) 
                   !CALL cotra0(rcc,x,cell%amat)                         
                ENDIF 
-               CALL fleur_ylm(                                          &
-     &              atoms%lmax(n),x,                                    &
-     &              ylm)                                                
+               CALL ylm4(atoms%lmax(n),x,ylm)                                                
                v2(j,:) = 0.0 
-               DO lh   = 0,sphhar%nlh(atoms%ntypsy(na)) 
+               DO lh   = 0,sphhar%nlh(sym%ntypsy(na)) 
                   s    = 0.0 
-                  ll1  = sphhar%llh(lh,atoms%ntypsy(na))                &
-     &                 * (sphhar%llh(lh,atoms%ntypsy(na)) + 1 ) + 1     
-                  DO mem = 1,sphhar%nmem(lh,atoms%ntypsy(na)) 
-                     lm  = ll1 + sphhar%mlh(mem,lh,atoms%ntypsy(na)) 
+                  ll1  = sphhar%llh(lh,sym%ntypsy(na))                &
+     &                 * (sphhar%llh(lh,sym%ntypsy(na)) + 1 ) + 1     
+                  DO mem = 1,sphhar%nmem(lh,sym%ntypsy(na)) 
+                     lm  = ll1 + sphhar%mlh(mem,lh,sym%ntypsy(na)) 
                      s   = s + REAL(sphhar%clnu(mem,lh                  &
-     &                    ,atoms%ntypsy(na))* ylm(lm))                  
+     &                    ,sym%ntypsy(na))* ylm(lm))                  
                   ENDDO 
                   IF (cdn) s = s / (atoms%rmt(n)*atoms%rmt(n)) 
                   DO jspin=1,jspins 
@@ -141,13 +140,13 @@
                !<--Write info                                           
                                                                         
                !IF (j <= 8) THEN
-                  rcc=matmul(cell%bmat,p(:,j))/2./pimach() 
+                  rcc=matmul(cell%bmat,p(:,j))/2./pi_const 
                   !CALL cotra1(p(1,j),rcc,cell%bmat)                    
                   IF (jspins == 1) THEN 
-                     WRITE (6,8020) rcc,(p(i,j),i = 1,3),v1(j,1),v2(j,1)
+                     WRITE (oUnit,8020) rcc,(p(i,j),i = 1,3),v1(j,1),v2(j,1)
                      write(66,8020) rcc,(p(i,j),i = 1,3),v1(j,1),v2(j,1)
                   ELSE 
-                     WRITE (6,8020) rcc,(p(i,j),i = 1,3),v1(j,1),v2(j,1)&
+                     WRITE (oUnit,8020) rcc,(p(i,j),i = 1,3),v1(j,1),v2(j,1)&
      &                    ,v1(j,2),v2(j,2)                              
                   ENDIF 
 
@@ -168,13 +167,13 @@
                maxerr=max(maxerr,abs(rms(jspin))*av) 
             ENDDO 
             IF (jspins == 1) THEN 
-               WRITE(6,8030) SUM(v1(:,1))/np,SUM(v2(:,1))/np 
+               WRITE(oUnit,8030) SUM(v1(:,1))/np,SUM(v2(:,1))/np 
             ELSE 
-               WRITE(6,8030) SUM(v1(:,1))/np,SUM(v2(:,1))/np,SUM(v1(:,2)&
+               WRITE(oUnit,8030) SUM(v1(:,1))/np,SUM(v2(:,1))/np,SUM(v1(:,2)&
      &              )/np,SUM(v2(:,2))/np                                
             ENDIF 
-            WRITE(6,8040) (rms(jspin),jspin = 1,jspins) 
-            WRITE(6,8050) (dms(jspin),jspin = 1,jspins) 
+            WRITE(oUnit,8040) (rms(jspin),jspin = 1,jspins) 
+            WRITE(oUnit,8050) (dms(jspin),jspin = 1,jspins) 
  8030       FORMAT (29x,'averages: ',4f10.6) 
  8040       FORMAT (5x,'rms (percent): ',2f15.6) 
  8050       FORMAT (5x,'dms (percent): ',2f15.6) 
@@ -188,16 +187,16 @@
       !<--check is missmatch is too big                                 
                                                                         
       IF(cdn.AND.maxerr>maxerr_cdn) THEN 
-         WRITE(6,*) "Too large missmatch in Charge" 
-         WRITE(6,*) maxerr,">",maxerr_cdn 
-         WRITE(6,*) "If this is acceptable, you might change the ",     &
+         WRITE(oUnit,*) "Too large missmatch in Charge" 
+         WRITE(oUnit,*) maxerr,">",maxerr_cdn 
+         WRITE(oUnit,*) "If this is acceptable, you might change the ",     &
      &        "compile-time value in gf_checkdop"                       
          CALL juDFT_error("gf_checkdop:INT-MT charge-test failed") 
       ENDIF 
       IF((.NOT.cdn).AND.maxerr>maxerr_pot) THEN 
-         WRITE(6,*) "Too large missmatch in Potential" 
-         WRITE(6,*) maxerr,">",maxerr_pot 
-         WRITE(6,*) "If this is acceptable, you might change the ",     &
+         WRITE(oUnit,*) "Too large missmatch in Potential" 
+         WRITE(oUnit,*) maxerr,">",maxerr_pot 
+         WRITE(oUnit,*) "If this is acceptable, you might change the ",     &
      &        "compile-time value in gf_checkdop"                       
          CALL juDFT_error("gf_checkdop:INT-MT Potential-test failed") 
       ENDIF 
@@ -258,7 +257,7 @@
 !         code taken from FLEUR                                         
 !           (last modified: 05-03-22) D. Wortmann                       
 !-----------------------------------------------                        
-      USE m_constants, ONLY : pimach 
+      USE m_constants, ONLY: pi_const, oUnit 
       IMPLICIT NONE 
       REAL,INTENT(IN)     :: r 
       REAL   ,INTENT(IN)  :: pos(3) 
@@ -272,7 +271,7 @@
 !     ..                                                                
       DO i = 1,SIZE(p,2) 
          tc = 2.0*(real(i)*sqrt13-INT(i*sqrt13)) - 1.0 
-         phi = 2.0*pimach()*(real(i)*sqrt7-AINT(i*sqrt7)) 
+         phi = 2.0*pi_const*(real(i)*sqrt7-AINT(i*sqrt7)) 
          t = sqrt(1.0-tc*tc) 
          x(1) = t*cos(phi) 
          x(2) = t*sin(phi) 
@@ -285,7 +284,7 @@
          call random_number(phi)
          if (phi>0.5) tc=-1.*tc
          call random_number(phi)
-         phi=phi*2.0*pimach()
+         phi=phi*2.0*pi_const
          t = sqrt(1.0-tc*tc)
          x(1) = t*cos(phi)
          x(2) = t*sin(phi)

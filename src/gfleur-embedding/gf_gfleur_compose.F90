@@ -50,7 +50,7 @@ CONTAINS
         TYPE(t_mpi),INTENT(IN)::mpi
         TYPE(t_lapw),INTENT(INOUT)::lapw
         COMPLEX,INTENT(IN)::pot_aux(2,2)
-        TYPE(t_charge),INTENT(INOUT)::charge
+        TYPE(t_potden),INTENT(INOUT)::charge
         TYPE(t_atoms),INTENT(IN)    :: atoms
         TYPE(t_sphhar),INTENT(IN)   :: sphhar
         TYPE(t_stars),INTENT(IN)    :: stars
@@ -196,8 +196,8 @@ CONTAINS
             MAXVAL(atoms%ntypsy),enpara,vr(:,0,:,:),              &
             G_sum,atoms,stars,sphhar,                             &
             cell,sym,kpts,                                &
-            charge%pwd_new(:,:),                                  &
-            charge%rho_new(:,0:,:,:),                             &
+            charge%pw(:,:),                                  &
+            charge%mt(:,0:,:,:),                             &
             charge%qmtl_new(:,:))
 
             CPP_juDFT_timestop("gf_cdnskval") 

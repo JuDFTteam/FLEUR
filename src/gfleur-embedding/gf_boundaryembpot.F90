@@ -52,17 +52,19 @@
          dp(1) = gfinp%dp1 
          dp(2) = gfinp%dp2 
          IF (side == 1) dp=-1*dp
-         DO n2 = 1,stars(layer)%nq2 
+         DO n2 = 1,stars(layer)%ng2 
             kg = stars(layer)%kv2(:,n2) 
             phase(n2) = EXP(CMPLX(0.0,2.*pi_const*dot_PRODUCT(dp,kg))) 
             psq(:,n2) =psq(:,n2)*phase(n2) 
          ENDDO 
          !>                                                             
-         CALL priv_savepseudo(side,layers,atoms(layer),cell(layer),dp,psq)
+         CALL priv_savepseudo(side,layers,atoms(layer),cell(layer),                &
+     &        MERGE(layers%c(layer),cell(layer)%amat(3,3),layers%c(layer)>0.0),      &
+     &        dp,psq)
          !read coulomb-pot                                              
-         ALLOCATE(vpw(stars(layer)%nq3)) 
+         ALLOCATE(vpw(stars(layer)%ng3)) 
          CALL gf_lodcoul(GF_POTFILE,layer,vpw = vpw(:)) 
-         ALLOCATE(vb(stars(layer)%nq2)) 
+         ALLOCATE(vb(stars(layer)%ng2)) 
          CALL priv_calcboundary(side,layer,layers,stars(layer),vpw,pos  &
      &        ,vb)                                                      
          !vb = vb*phase
@@ -129,7 +131,7 @@
       ENDIF 
       write(*,*) side,exp1
       vb = 0.0 
-      DO n2 = 1,stars%nq2 
+      DO n2 = 1,stars%ng2 
          DO n =-stars%mx3,stars%mx3 
             index = stars%ig(stars%kv2(1,n2),stars%kv2(2,n2),n) 
             IF (index == 0) CYCLE 
@@ -181,7 +183,7 @@
       !>                                                                
                                                                         
       !<-- S:priv_savepseudo(side,layers,psq)                           
-      SUBROUTINE priv_savepseudo(side,layers,atoms,cell,dp,psq)
+      SUBROUTINE priv_savepseudo(side,layers,atoms,cell,c_layer,dp,psq)
 !-----------------------------------------------                        
 !                                                                       
 !           (last modified:08-07-10) D. Wortmann                        
@@ -196,6 +198,8 @@
       TYPE(t_layers),INTENT(IN) :: layers
       type(t_atoms),INTENT(IN)  :: atoms
       TYPE(t_cell),INTENT(IN)   :: cell
+      !height of the physical region (was cell%c)
+      REAL,INTENT(IN)          :: c_layer
       REAL,INTENT(IN)           :: dp(2)
       COMPLEX,INTENT(IN)        :: psq(:,:) 
                                                                         
@@ -222,7 +226,7 @@
       CALL io_gcreate(fid,"Boundary",gid,hdferr) 
       CALL io_createvar(gid,"pseudo", H5T_NATIVE_DOUBLE,(/2,SIZE(psq,1) &
      &     ,SIZE(psq,2)/),did)                                          
-      CALL io_WRITE(did,(/-1,1,1/),(/1,SIZE(psq,1),SIZE(psq,2)/),psq) 
+      CALL io_WRITE(did,(/-1,1,1/),(/1,SIZE(psq,1),SIZE(psq,2)/),"psq",psq)
       CALL io_dclose(did,hdferr) 
       CALL io_WRITE_att(gid,"c",layers%c(layer)) 
       CALL io_WRITE_att(gid,"dt",layers%dt(layer)) 
@@ -233,7 +237,7 @@
       DO n=1,atoms%ntype
         DO nn=1,atoms%neq(n)
            na=na+1
-           if (abs(atoms%pos(3,na))-cell%c/2<atoms%rmt(n)) THEN
+           if (abs(atoms%pos(3,na))-c_layer/2<atoms%rmt(n)) THEN
               natoms=natoms+1
               rmt(natoms)=atoms%rmt(n)
               atpos(1:2,natoms)=atoms%pos(1:2,na)+matmul(cell%amat(1:2,1:2),dp)
@@ -244,11 +248,11 @@
 
 
       CALL io_createvar(gid,"rmt", H5T_NATIVE_DOUBLE,(/natoms/),did)
-      CALL io_WRITE(did,(/1/),(/natoms/),rmt(:natoms))
+      CALL io_WRITE(did,(/1/),(/natoms/),"rmt",rmt(:natoms))
       CALL io_dclose(did,hdferr)
 
       CALL io_createvar(gid,"atpos", H5T_NATIVE_DOUBLE,(/3,natoms/),did)
-      CALL io_WRITE(did,(/1,1/),(/3,natoms/),atpos(:,:natoms))
+      CALL io_WRITE(did,(/1,1/),(/3,natoms/),"atpos",atpos(:,:natoms))
       CALL io_dclose(did,hdferr)
 
       CALL io_gclose(gid,hdferr) 
