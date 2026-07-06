@@ -4,10 +4,18 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_gfleur_driver
-   !Driver of the Green's-function embedding code. Currently a stub that
-   !verifies the gfleur executable can initialize from inp.xml using the
-   !standard FLEUR machinery; it grows into gf_init/gfleur_execute during
-   !the port.
+   !**********************************************************************
+   !     Driver of the embedding Green-function code on the basis of
+   !     the FLEUR code.
+   !
+   !     Daniel Wortmann 2000-2004
+   !     Layer decomposition: Frank Freimuth, November 2007
+   !
+   !     CALL tree:
+   !     gfleur
+   !     |-gf_init             (per-layer init from inp.xml + gf_inp)
+   !     |-gfleur_execute      (SCF / transport / CBS ... loops)
+   !**********************************************************************
 #ifdef CPP_MPI
    USE mpi
 #endif
@@ -19,43 +27,68 @@ CONTAINS
    SUBROUTINE gfleur_run(l_mpi_multithreaded)
       USE m_types
       USE m_constants
-      USE m_fleur_init
+      USE m_gf_types
+      USE m_gf_init
       LOGICAL, INTENT(IN) :: l_mpi_multithreaded
 
-      TYPE(t_fleurinput) :: fi
-      TYPE(t_mpi)        :: fmpi
-      TYPE(t_sphhar)     :: sphhar
-      TYPE(t_stars)      :: stars
-      TYPE(t_enpara)     :: enpara
-      TYPE(t_results)    :: results
-      TYPE(t_nococonv)   :: nococonv
-      TYPE(t_wann)       :: wann
-      TYPE(t_hybdat)     :: hybdat
-      TYPE(t_mpdata)     :: mpdata
-      CLASS(t_forcetheo), ALLOCATABLE :: forcetheo
-      CLASS(t_xcpot), ALLOCATABLE     :: xcpot
+      TYPE(t_gfmpi)   :: gmpi
+      TYPE(t_embinp)  :: embinp
+      TYPE(t_gfmix)   :: gfmix
+      TYPE(t_layers)  :: layers
+      TYPE(t_gflayer), ALLOCATABLE :: ld(:)
+      TYPE(t_kpts)    :: gkpts
 
-      CHARACTER(len=100) :: filename_add
-
-      fmpi%l_mpi_multithreaded = l_mpi_multithreaded
+      gmpi%fmpi%l_mpi_multithreaded = l_mpi_multithreaded
 #ifdef CPP_MPI
-      fmpi%mpi_comm = MPI_COMM_WORLD
+      gmpi%fmpi%mpi_comm = MPI_COMM_WORLD
 #else
-      fmpi%mpi_comm = 1
+      gmpi%fmpi%mpi_comm = 1
 #endif
 
-      CALL timestart("GFLEUR Initialization")
-      filename_add = ""
-      CALL fleur_init(fmpi, fi, sphhar, stars, nococonv, forcetheo, enpara, xcpot, &
-                      results, wann, hybdat, mpdata, filename_add)
-      CALL timestop("GFLEUR Initialization")
+      CALL gf_init(gmpi, embinp, gfmix, layers, ld, gkpts)
 
-      IF (fmpi%irank == 0) THEN
-         WRITE (oUnit, *) "GFLEUR stub: FLEUR initialization completed"
-         WRITE (oUnit, *) "   ntype=", fi%atoms%ntype, " nat=", fi%atoms%nat
-         WRITE (oUnit, *) "   ng3  =", stars%ng3, " ng2=", stars%ng2
-      END IF
+      CALL gfleur_execute(gmpi, embinp, gfmix, layers, ld, gkpts)
    END SUBROUTINE gfleur_run
+
+   SUBROUTINE gfleur_execute(gmpi, embinp, gfmix, layers, ld, gkpts)
+      !The self-consistency / transport / CBS loops of gfleur.
+      !
+      !Port status: the initialization chain is fully ported; the
+      !computational kernels (H/S + T-matrix setup, propagation,
+      !Green-function composition, density generation, layered Coulomb
+      !solver, mixing) are re-enabled step by step on top of the modern
+      !FLEUR kernels.
+      USE m_types
+      USE m_constants
+      USE m_gf_types
+      IMPLICIT NONE
+      TYPE(t_gfmpi), INTENT(INOUT)  :: gmpi
+      TYPE(t_embinp), INTENT(INOUT) :: embinp
+      TYPE(t_gfmix), INTENT(INOUT)  :: gfmix
+      TYPE(t_layers), INTENT(IN)    :: layers
+      TYPE(t_gflayer), INTENT(INOUT) :: ld(:)
+      TYPE(t_kpts), INTENT(IN)      :: gkpts
+
+      INTEGER :: i
+
+      IF (gmpi%pe0) THEN
+         WRITE (oUnit, *)
+         WRITE (oUnit, "(a)") "GFLEUR setup summary:"
+         WRITE (oUnit, "(a,i0)") "  layers : ", layers%num_layers
+         WRITE (oUnit, "(a,i0)") "  k-points (2D BZ): ", gkpts%nkpt
+         WRITE (oUnit, "(a,i0)") "  spins  : ", ld(1)%fi%input%jspins
+         DO i = 1, layers%num_layers
+            WRITE (oUnit, "(a,i0,a,i0,a,i0,a,i0,a,i0)") "  layer ", i, &
+               ": ntype=", ld(i)%fi%atoms%ntype, " nat=", ld(i)%fi%atoms%nat, &
+               " ng3=", ld(i)%stars%ng3, " nvd=", ld(i)%nvd
+         END DO
+      END IF
+
+      !The computational kernels are not yet wired up in the port -
+      !stop cleanly after the verified initialization.
+      CALL juDFT_end("GFLEUR init done - computational kernels not yet ported", &
+                     gmpi%fmpi%irank)
+   END SUBROUTINE gfleur_execute
 END MODULE m_gfleur_driver
 
 PROGRAM gfleur

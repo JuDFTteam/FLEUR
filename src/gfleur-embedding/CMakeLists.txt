@@ -6,6 +6,8 @@
 
 set(gfleur_F90
 src/gfleur-embedding/main/gfleur.F90
+src/gfleur-embedding/main/gf_init.F90
+src/gfleur-embedding/main/gf_fleur_init_layer.F90
 src/gfleur-embedding/gf_types.F90
 src/gfleur-embedding/gf_fft_singleton.F90
 src/gfleur-embedding/gf_fft.F90
@@ -76,7 +78,6 @@ src/gfleur-embedding/gf_iogfinp.F90
 #src/gfleur-embedding/gf_inp2plot.F90
 #src/gfleur-embedding/gf_inp_describe.F90
 #src/gfleur-embedding/gf_intcoul.F90
-#src/gfleur-embedding/gf_iosetup.F90
 #src/gfleur-embedding/gf_kpts.F90
 #src/gfleur-embedding/gf_kptsp1x1.F90
 #src/gfleur-embedding/gf_landauer.F90
@@ -108,7 +109,6 @@ src/gfleur-embedding/gf_iogfinp.F90
 #src/gfleur-embedding/gf_rholocorbs.F90
 #src/gfleur-embedding/gf_rsmesh.F90
 #src/gfleur-embedding/gf_rt_coefs.F90
-#src/gfleur-embedding/gf_setup.F90
 #src/gfleur-embedding/gf_shiftatoms.F90
 #src/gfleur-embedding/gf_spectrum.F90
 #src/gfleur-embedding/gf_stars.F90
