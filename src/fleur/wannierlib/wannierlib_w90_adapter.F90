@@ -17,6 +17,7 @@ MODULE m_wannierlib_w90_adapter
   USE m_wannierlib_interpolate_op
   USE m_wannierlib_interpolate_velocity
   USE m_wannierlib_interpolate_current
+  USE m_wannierlib_interpolate_eigenstates
 #ifdef CPP_WANNLIB_API
   USE w90_library, ONLY : lib_common_type, w90_set_comm, w90_set_option, w90_input_setopt, &
                           w90_get_nn, w90_get_nnkp, w90_get_gkpb, w90_set_eigval, &
@@ -259,6 +260,9 @@ CONTAINS
       CASE ('orbitalCurrent')
         CALL wannierlib_interpolate_current(this, cell, kpts, eig, u_matrix, amn_local, &
                                             SUM(l0_coarse, DIM=4), 'bands_wann_orbcurrent.dat', irank)
+      CASE ('eigenstates')
+        ! Wannier-Hamiltonian eigenvectors C(k') (the H-gauge rotation U^(H)), written as a matrix
+        CALL wannierlib_interpolate_eigenstates(this, cell, kpts, eig, u_matrix, amn_local, irank)
       CASE DEFAULT
         IF (irank == 0) WRITE(oUnit,'(a)') 'wannierlib: operator "'//TRIM(this%op_name(iop))//&
                                            '" not yet implemented -> skipped'
@@ -357,6 +361,8 @@ CONTAINS
         CALL ren('bands_wann_spincurrent', suffix)
       CASE ('orbitalCurrent')
         CALL ren('bands_wann_orbcurrent', suffix)
+      CASE ('eigenstates')
+        CALL ren('bands_wann_eigenstates', suffix)
       END SELECT
     END DO
   CONTAINS

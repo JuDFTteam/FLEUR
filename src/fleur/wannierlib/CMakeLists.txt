@@ -9,6 +9,7 @@ src/fleur/wannierlib/wannierlib_interpolate_op.F90
 src/fleur/wannierlib/wannierlib_socmat_melem.F90
 src/fleur/wannierlib/wannierlib_interpolate_velocity.F90
 src/fleur/wannierlib/wannierlib_interpolate_current.F90
+src/fleur/wannierlib/wannierlib_interpolate_eigenstates.F90
 src/fleur/wannierlib/wannierlib_w90_adapter.F90
 src/fleur/wannierlib/wannierlib_main.F90
 src/fleur/wannierlib/wannierlib_tlmw.F90

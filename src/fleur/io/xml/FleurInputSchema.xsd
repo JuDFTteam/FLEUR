@@ -3030,6 +3030,7 @@
                <xsd:enumeration value="velocity"/>
                <xsd:enumeration value="hamiltonian_r"/>
                <xsd:enumeration value="position_r"/>
+               <xsd:enumeration value="eigenstates"/>
                <xsd:enumeration value="spinCurrent"/>
                <xsd:enumeration value="orbitalCurrent"/>
                <xsd:enumeration value="spinTorque"/>
