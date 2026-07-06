@@ -363,7 +363,7 @@
                 DO l  = 0,3
                     DO jspin=1,jspins
                           CALL fleur_radfun(                                       &
-     &                  l,enpara(layer)%el(l+1,itype,jspin),potential(layer &
+     &                  l,enpara(layer)%el0(l+1,itype,jspin),potential(layer &
      &                    )%mt(:,0,itype,jspin),itype,atoms(layer),f(:,:,jspin),g(: &
      &                   ,:,jspin),us,dus,uds,duds,ddn(l,itype,layer,jspin),nodeu,noded  &
      &                  ,wronk)

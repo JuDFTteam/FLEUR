@@ -4,13 +4,14 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
       MODULE m_gf_gencdn 
+      USE m_constants, ONLY: oUnit
       use m_juDFT
       use m_juDFT 
       IMPLICIT NONE
       CONTAINS 
       SUBROUTINE gf_gencdn(layer,jspin,l_chargefromstates,              &
      &     jspins,gfinp,atoms,cell,sym,kpts,stars,sphhar,mpi,enpara     &
-     &     ,vr,qpw,rho,qmtl,neigd,soc,l_noco,qtot_el,qtot_nuc)
+     &     ,vr,qpw,rho,qmtl,neigd,l_noco,qtot_el,qtot_nuc)
 !*****************************************************************      
 ! DESC:This subroutine constructes the charge-density from the Green    
 ! function. It can be considered as the GF-version of cdngen            
@@ -29,7 +30,7 @@
 !     .. Scalar Arguments ..                                            
       INTEGER, INTENT(IN)          :: jspin,jspins,layer 
       TYPE(t_atoms),INTENT(INOUT)  :: atoms 
-      TYPE(t_gfinp),INTENT(IN)     :: gfinp 
+      TYPE(t_embinp),INTENT(IN)     :: gfinp 
       TYPE(t_sphhar),INTENT(IN)    :: sphhar 
       TYPE(t_sym),INTENT(INOUT)    :: sym 
       TYPE(t_kpts),INTENT(IN)      :: kpts 
@@ -37,7 +38,6 @@
       TYPE(t_stars),INTENT(IN)     :: stars 
       TYPE(t_mpi),INTENT(IN)       :: mpi 
       TYPE(t_enpara),INTENT(INOUT) :: enpara 
-      TYPE(t_soc),INTENT(IN)       :: soc 
 !Arguments for cdnstates
       LOGICAL,INTENT(IN)           :: l_noco
       LOGICAL,INTENT(IN)           :: l_chargefromstates 
@@ -100,14 +100,14 @@
       ENDIF 
                                                                         
 !Plot l-like charges!                                                   
-      WRITE (6,FMT=8000) layer 
+      WRITE (oUnit,FMT=8000) layer 
  8000 FORMAT (/,i3,5x,'l-like charge',/,t6,'atom',t15,'s',t24,'p',      &
      &     t33,'d',t42,'f',t51,'total')                                 
       DO itype=1,atoms%ntype 
-         WRITE (6,FMT = 8100) layer,itype, (qmtl(l,itype),l=0,3),       &
+         WRITE (oUnit,FMT = 8100) layer,itype, (qmtl(l,itype),l=0,3),       &
      &        sum(qmtl(:,itype))                                        
       ENDDO 
-      WRITE (6,FMT=8200) layer,sum(qmtl(:,:)) 
+      WRITE (oUnit,FMT=8200) layer,sum(qmtl(:,:)) 
  8200 FORMAT (/,i3,5x,'total valence charge in MT-spheres:',f12.5) 
  8100 FORMAT (i3,' -->',i2,2x,4f9.5,2x,f9.5) 
       CALL priv_plotPlanar(stars,qpw) 
@@ -190,13 +190,13 @@
       DO n = 1,SIZE(qpw,2) 
          vz(:,n) = fft(vz(:,n),inv = .TRUE.) 
       ENDDO 
-      WRITE(6,*) "Planar Charge" 
-      WRITE(6,*) "z      qpw        " 
+      WRITE(oUnit,*) "Planar Charge" 
+      WRITE(oUnit,*) "z      qpw        " 
       DO n = -stars%mx3+1,stars%mx3-1 
          IF (n<0) THEN 
-            WRITE(6,"(i5,1x,3(f0.7,1x))") n,REAL(vz(n+2*stars%mx3,:)) 
+            WRITE(oUnit,"(i5,1x,3(f0.7,1x))") n,REAL(vz(n+2*stars%mx3,:)) 
          ELSE 
-            WRITE(6,"(i5,1x,3(f0.7,1x))") n,REAL(vz(n,:)) 
+            WRITE(oUnit,"(i5,1x,3(f0.7,1x))") n,REAL(vz(n,:)) 
          ENDIF 
       ENDDO 
                                                                         

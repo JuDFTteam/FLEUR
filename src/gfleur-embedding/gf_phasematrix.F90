@@ -10,59 +10,60 @@
       PUBLIC getLargePhaseMatrix,initPhaseMatrix,getPhaseMatrix 
       CONTAINS 
       !<--S: initPhaseMatrix(lapw,cell,gfinp,l_noco)                    
-      SUBROUTINE initPhaseMatrix(jspin,lapw,cell,gfinp,l_noco) 
+      SUBROUTINE initPhaseMatrix(jspin,lapw,lapw_gf,cell,gfinp,l_noco)
       ! INITIALIZES THE MODULE                                          
       ! The Phase factors are calculated and stored in P                
       USE m_gf_types 
       IMPLICIT NONE 
       INTEGER,INTENT(IN)     :: jspin 
-      TYPE(t_lapw),INTENT(IN) :: lapw 
+      TYPE(t_lapw),INTENT(IN) :: lapw
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
       TYPE(t_cell),INTENT(IN) :: cell 
-      TYPE(t_gfinp),INTENT(IN) :: gfinp 
+      TYPE(t_embinp),INTENT(IN) :: gfinp 
       LOGICAL, INTENT(IN)     :: l_noco 
       ! Locals                                                          
       INTEGER::n 
       REAL   ::dp(3),kg(3),dpr(3),kgr(3),s 
                                                                         
       IF (ALLOCATED(P)) THEN 
-         IF (SIZE(P)/=lapw%nv2_tot) THEN 
+         IF (SIZE(P)/=lapw_gf%nv2_tot) THEN 
             !The size of the phasematrix must be changed because        
             !2d-basis size is changed...                                
             DEALLOCATE(P) 
-            ALLOCATE(P(lapw%nv2_tot)) 
+            ALLOCATE(P(lapw_gf%nv2_tot)) 
          ENDIF 
       ELSE 
-         ALLOCATE(P(lapw%nv2_tot)) 
+         ALLOCATE(P(lapw_gf%nv2_tot)) 
       ENDIF 
       P(:) = CMPLX(0.0,0.0) 
       dp(3) = 0 
       kg(3) = 0 
       IF (l_noco) THEN 
-         DO n = 1, Lapw%nv2_Tot/2 
+         DO n = 1, lapw_gf%nv2_tot/2 
             dp(1) = gfinp%dp1 
             dp(2) = gfinp%dp2 
             dpr=matmul(cell%amat,dp) 
 !            CALL COTRA0(dp,dpr,Cell%amat)                              
                                            !k-dependence cancels!       
-            kg(1) =lapw%kp%k1p(n,jspin) 
+            kg(1) =lapw_gf%k1p(n,jspin) 
                                            !                            
-            kg(2) =lapw%kp%k2p(n,jspin) 
+            kg(2) =lapw_gf%k2p(n,jspin) 
             kgr=matmul(kg,cell%bmat) 
 !           CALL COTRA3(kg,kgr,Cell%bmat)                               
             s = DOT_PRODUCT(kgr,dpr) 
             P(n) = EXP(CMPLX(0,s)) 
-            P(n+lapw%nv2_tot/2) = EXP(CMPLX(0,s)) 
+            P(n+lapw_gf%nv2_tot/2) = EXP(CMPLX(0,s)) 
          ENDDO 
       ELSE 
-         DO n = 1, Lapw%nv2_Tot 
+         DO n = 1, lapw_gf%nv2_tot 
             dp(1) = gfinp%dp1 
             dp(2) = gfinp%dp2 
             dpr=matmul(cell%amat,dp) 
             !CALL COTRA0(dp,dpr,Cell%amat)                              
                                            !k-dependence cancels!       
-            kg(1) =lapw%kp%k1p(n,jspin) 
+            kg(1) =lapw_gf%k1p(n,jspin) 
                                            !                            
-            kg(2) =lapw%kp%k2p(n,jspin) 
+            kg(2) =lapw_gf%k2p(n,jspin) 
             kgr=matmul(kg,cell%bmat) 
             !CALL COTRA3(kg,kgr,Cell%bmat)                              
             s = DOT_PRODUCT(kgr,dpr) 
@@ -72,7 +73,7 @@
       END SUBROUTINE 
       !>                                                                
       FUNCTION getPhaseMatrix() RESULT(PM) 
-      !returns a lapw%nv2_tot x lapw%nv2_tot Matrix of Phase factors    
+      !returns a lapw_gf%nv2_tot x lapw_gf%nv2_tot Matrix of Phase factors    
       IMPLICIT NONE 
       COMPLEX::PM(SIZE(P),SIZE(P)) 
       INTEGER::i 
@@ -83,7 +84,7 @@
       END FUNCTION 
                                                                         
       FUNCTION getLargePhaseMatrix() RESULT(PM) 
-      !returns a 2*lapw%nv2_tot x 2*lapw%nv2_tot Matrix of Phase factors
+      !returns a 2*lapw_gf%nv2_tot x 2*lapw_gf%nv2_tot Matrix of Phase factors
       IMPLICIT NONE 
       COMPLEX::PM(2*SIZE(P),2*SIZE(P)) 
       INTEGER::nv2,i 

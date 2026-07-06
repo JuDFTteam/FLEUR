@@ -13,7 +13,7 @@
 !***************************************************************        
       CONTAINS 
                                      !mpi,                              
-      SUBROUTINE gf_rholocorbs(atoms,                                   &
+      SUBROUTINE gf_rholocorbs(atoms,fmpi,                              &
      &           itype,enpara,vr,jspin,f,g,                             &
      &           us,dus,uds,duds,ddn,lapw,                              &
      &           cell,sym,bk,                                           &
@@ -22,12 +22,13 @@
                                                                         
       USE m_radflo 
       USE m_ylm 
-      USE m_constants ,ONLY: pimach 
+      USE m_constants, ONLY: pi_const, oUnit 
       USE m_gf_types 
                                                                         
       IMPLICIT NONE 
       TYPE(t_cell),INTENT(IN)  :: cell 
-      TYPE(t_atoms),INTENT(IN) :: atoms 
+      TYPE(t_atoms),INTENT(IN) :: atoms
+      TYPE(t_mpi),INTENT(IN)   :: fmpi
       TYPE(t_enpara),INTENT(IN):: enpara 
       TYPE(t_lapw),INTENT(IN)  :: lapw 
       TYPE(t_sym),INTENT(IN)   :: sym 
@@ -47,6 +48,7 @@
       REAL,INTENT(OUT) :: dulon(atoms%nlod,atoms%ntype) 
       REAL,INTENT(OUT) :: uloulopn(atoms%nlod,atoms%nlod,atoms%ntype) 
                                                                         
+      TYPE(t_usdus) :: ud_lo
       INTEGER jmtd,lmaxd,nlod,ntype,lo,l,bas,nalo,nat 
       INTEGER loc,naup,ind,natom,locnum,invloop,k 
       INTEGER nap,locvec,lm 
@@ -64,31 +66,27 @@
       jmtd=maxval(atoms%jri) 
       nlod=atoms%nlod 
       ntype=atoms%ntype 
-      tpi=2*pimach() 
-      const=4*pimach()/sqrt(cell%omtil) 
+      tpi=2*pi_const 
+      const=4*pi_const/sqrt(cell%omtil) 
       ci=cmplx(0.0,1.0) 
                                                                         
-      ALLOCATE(ulos(nlod,ntype)) 
-      ALLOCATE(dulos(nlod,ntype)) 
+      ALLOCATE(ulos(nlod,ntype))
+      ALLOCATE(dulos(nlod,ntype))
+      !ud_lo declared below
       ALLOCATE(uuilon(nlod,ntype),duilon(nlod,ntype)) 
       ALLOCATE(ulouilopn(nlod,nlod,ntype)) 
                                                                         
-      CALL radflo(                                                      &
-     &        atoms%ntype,atoms%nlod,1,                                 &
-     &        jmtd,                                                     &
-     &        lmaxd,itype,jspin,                                        &
-     &        enpara%ello(1:atoms%nlod,1:atoms%ntype,jspin),            &
-     &        vr(1:jmtd,itype,jspin),atoms%jri(itype),                  &
-     &        atoms%rmsh(1,itype),atoms%dx(itype),                      &
-     &        f,                                                        &
-     &        g,                                                        &
-     &        atoms%llo,                                                &
-     &        atoms%nlo,                                                &
-     &        atoms%l_dulo(1:atoms%nlod,itype),                         &
-     &        1,                                                        &
-     &        atoms%ulo_der,                                            &
-     &        ulos,dulos,uulon,dulon,uloulopn,                          &
-     &        uuilon,duilon,ulouilopn,flo)                              
+      !modern radflo: LO boundary values/overlaps go into a t_usdus
+      CALL ud_lo%init(atoms,jspin)
+      CALL radflo(atoms,itype,jspin,                                    &
+     &        enpara%ello0(1:atoms%nlod,1:atoms%ntype,jspin),           &
+     &        vr(1:jmtd,itype,jspin),f,g,fmpi,ud_lo,                    &
+     &        uuilon,duilon,ulouilopn,flo)
+      ulos = ud_lo%ulos(:,:,jspin)
+      dulos = ud_lo%dulos(:,:,jspin)
+      uulon = ud_lo%uulon(:,:,jspin)
+      dulon = ud_lo%dulon(:,:,jspin)
+      uloulopn = ud_lo%uloulopn(:,:,:,jspin)                              
                                        !jspins,                         
                           !mpi%irank,                                   
                                                                         
@@ -118,10 +116,10 @@
       DO ind=1,itype 
          naup=nalo+atoms%neq(ind)-1 
          DO natom=nalo,naup 
-            IF(atoms%invsat(natom)==2)CYCLE 
+            IF(sym%invsat(natom)==2)CYCLE 
             DO loc=1,atoms%nlo(ind) 
                basindex(natom,loc)=bas 
-               locnum=(atoms%invsat(natom)+1)*(2*atoms%llo(loc,ind)+1) 
+               locnum=(sym%invsat(natom)+1)*(2*atoms%llo(loc,ind)+1) 
                bas=bas+locnum 
                   !loc                                                  
             ENDDO 
@@ -137,17 +135,18 @@
                                                                         
       nalo=naup-atoms%neq(itype)+1 
       DO natom=nalo,naup 
-        IF(atoms%invsat(natom)==2)CYCLE 
+        IF(sym%invsat(natom)==2)CYCLE 
         DO loc=1,atoms%nlo(itype) 
           l=atoms%llo(loc,itype) 
           bas=basindex(natom,loc) 
           locnum=2*atoms%llo(loc,itype)+1 
-          DO invloop=0,atoms%invsat(natom) 
+          DO invloop=0,sym%invsat(natom) 
             DO ind=1,locnum 
-              locvec=lapw%kveclo(bas) 
-              v(1)=bk(1)+lapw%k%k1(locvec,jspin) 
-              v(2)=bk(2)+lapw%k%k2(locvec,jspin) 
-              v(3)=bk(3)+lapw%k%k3(locvec,jspin) 
+              !modern LO bookkeeping: G-index of this LO basis fct
+              locvec=lapw%kvec(ind,loc,natom)
+              v(1)=bk(1)+lapw%k1(locvec,jspin) 
+              v(2)=bk(2)+lapw%k2(locvec,jspin) 
+              v(3)=bk(3)+lapw%k3(locvec,jspin) 
               arg=    v(1)*atoms%taual(1,natom) 
               arg=arg+v(2)*atoms%taual(2,natom) 
               arg=arg+v(3)*atoms%taual(3,natom) 
@@ -156,7 +155,7 @@
               phase=phase*const*(atoms%rmt(itype))**2/2 
               phase=phase*ci**l 
               IF(invloop==1) CALL juDFT_error("not yet implemented",calledby="gf_rholocorbs.F90")
-              nap=sym%invtab(atoms%ngopr(natom)) 
+              nap=sym%invtab(sym%ngopr(natom)) 
               fkr=MATMUL(v,real(sym%mrot(:,:,nap))) 
               fkp=MATMUL(fkr,cell%bmat) 
               CALL ylm4(3,fkp,ylm) 

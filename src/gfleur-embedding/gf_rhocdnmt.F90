@@ -7,7 +7,7 @@
       use m_juDFT
           IMPLICIT NONE
       CONTAINS 
-      SUBROUTINE gf_rhocdnmt(atoms,lapw,enpara,                         &
+      SUBROUTINE gf_rhocdnmt(atoms,fmpi,lapw,lapw_gf,enpara,            &
      &     gmat,sphhar,jspin,cell,sym,bk,                               &
      &     f,g,ddn,vr,                                          &
      &     us,dus,uds,duds,                                             &
@@ -41,10 +41,8 @@
 !                                       Frank Freimuth, June 2008       
 !********************************************************************** 
       !<--Use                                                           
-                                                                        
-#include "cpp_double.h"
-      USE m_fleur_interface,ONLY: fleur_gaunt 
-      USE m_constants,ONLY:Pimach 
+      USE m_gaunt, ONLY: gaunt1 
+      USE m_constants, ONLY: pi_const, oUnit 
       USE m_gf_types 
       USE m_gf_rholocorbs 
       use m_gf_ab_coef
@@ -56,8 +54,10 @@
       INTEGER,INTENT(IN)       :: jspin 
                                                      ! The Green functio
       COMPLEX, INTENT(IN)      :: gmat(:,:) 
-      TYPE(T_atoms),INTENT(IN) :: atoms 
-      TYPE(t_lapw),INTENT(IN)  :: lapw 
+      TYPE(T_atoms),INTENT(IN) :: atoms
+      TYPE(t_mpi),INTENT(IN)   :: fmpi 
+      TYPE(t_lapw),INTENT(IN)  :: lapw
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
       TYPE(t_sphhar),INTENT(IN):: sphhar 
       TYPE(t_sym),INTENT(IN)   :: sym 
       TYPE(t_enpara),INTENT(IN):: enpara 
@@ -101,8 +101,7 @@
       REAL                :: dulon(atoms%nlod,atoms%ntype) 
       REAL                :: uloulopn(atoms%nlod,atoms%nlod,atoms%ntype) 
       INTEGER             :: lnonsph(atoms%ntype) 
-      COMPLEX CPP_BLAS_cdotc 
-      EXTERNAL CPP_BLAS_cdotc 
+      COMPLEX,ALLOCATABLE :: abv1(:),abv2(:)
                                                                         
                                                                         
                                                                         
@@ -115,8 +114,8 @@
       lnonsph(1:atoms%ntype)=atoms%lmax(1:atoms%ntype)
                                                                         
       !>                                                                
-      sfp=2./SQRT(pimach())
-      pi=pimach() 
+      sfp=2./SQRT(pi_const)
+      pi=pi_const 
       neqmax=maxval(atoms%neq(1:atoms%ntype)) 
       lmax=MAXVAL(atoms%lmax)
       lmxam=MAXVAL(lnonsph) 
@@ -154,25 +153,25 @@
       !loop over atoms                                                  
       DO itype=1,atoms%ntype 
                                !ntypsy stores sym for atom not atomtype!
-         ns=atoms%ntypsy(nt+1) 
+         ns=sym%ntypsy(nt+1) 
          lmpmax=lnonsph(itype) 
          lmpmax=lmpmax*(lmpmax+2)+1 
          minat=nt+1 
          maxat=nt+atoms%neq(itype) 
-         ALLOCATE(vecmat(lapw%nv_sphere(jspin),                                &
+         ALLOCATE(vecmat(lapw_gf%nv_sphere(jspin),                                &
      &            0:lmpmax-1,1:atoms%neq(itype),1:2))                   
-         CALL CPP_BLAS_cgemm('T','N',lapw%nv_sphere(jspin),                    &
-     &              lmpmax*2*atoms%neq(itype),lapw%nv_sphere(jspin),           &
+         CALL zgemm('T','N',lapw_gf%nv_sphere(jspin),                    &
+     &              lmpmax*2*atoms%neq(itype),lapw_gf%nv_sphere(jspin),           &
      &              cmplx(1.0,0.0),                                     &
      &              gmat,size(gmat,1),                                  &
      &              gf_ab_coef_matrix(lmpmax,minat,maxat,jspin),              &
-     &              lapw%nv_sphere(jspin),                                    &
+     &              lapw_gf%nv_sphere(jspin),                                    &
      &              cmplx(0.0,0.0),                                     &
      &              vecmat(:,0:lmpmax-1,1:atoms%neq(itype),1:2),        &
-     &              lapw%nv_sphere(jspin))
+     &              lapw_gf%nv_sphere(jspin))
                                                                         
          IF(atoms%nlo(itype)>=1)THEN 
-            CALL gf_rholocorbs(atoms,itype,enpara,vr,jspin,             &
+            CALL gf_rholocorbs(atoms,fmpi,itype,enpara,vr,jspin,        &
      &                 f(:,:,:,itype),g(:,:,:,itype),                   &
      &                 us,dus,uds,duds,ddn,lapw,cell,sym,bk,            &
      &                 flo,alocof,blocof,clocof,basindex,               &
@@ -187,25 +186,25 @@
             ALLOCATE( rightlomat(nloitype,                              &
      &                          0:lmpmax-1,1:atoms%neq(itype),1:2) )    
             DO na=1,atoms%neq(itype) 
-              CALL CPP_BLAS_cgemm('T','N',nloitype,                     &
-     &              lmpmax*2,lapw%nv_sphere(jspin),                            &
+              CALL zgemm('T','N',nloitype,                     &
+     &              lmpmax*2,lapw_gf%nv_sphere(jspin),                            &
      &              cmplx(1.0,0.0),                                     &
-     &              gmat(1,lapw%nv_sphere(jspin)+basindex(nt+na,1)),           &
+     &              gmat(:,lapw_gf%nv_sphere(jspin:)+basindex(nt+na,1)),           &
      &              size(gmat,1),                                       &
-     &              gf_ab_coef_matrix(lmpmax,na+nt,na+nt,jspin),lapw%nv_sphere(jspin),    &
+     &              gf_ab_coef_matrix(lmpmax,na+nt,na+nt,jspin),lapw_gf%nv_sphere(jspin),    &
      &              cmplx(0.0,0.0),                                     &
      &              leftlomat(:,0:lmpmax-1,na,1:2),                     &
      &              nloitype)                                           
                                                                         
-              CALL CPP_BLAS_cgemm('N','N',                              &
-     &              nloitype,lmpmax*2,lapw%nv_sphere(jspin),                   &
+              CALL zgemm('N','N',                              &
+     &              nloitype,lmpmax*2,lapw_gf%nv_sphere(jspin),                   &
      &              cmplx(1.0,0.0),                                     &
-     &              gmat( (lapw%nv_sphere(jspin)+basindex(nt+na,1)):           &
-     &                (lapw%nv_sphere(jspin)+basindex(nt+na,1)+nloitype-1),    &
-     &                 1:lapw%nv_sphere(jspin)),                               &
+     &              gmat( (lapw_gf%nv_sphere(jspin)+basindex(nt+na,1)):           &
+     &                (lapw_gf%nv_sphere(jspin)+basindex(nt+na,1)+nloitype-1),    &
+     &                 1:lapw_gf%nv_sphere(jspin)),                               &
      &              nloitype,                                           &
      &              conjg(gf_ab_coef_matrix(lmpmax,na+nt,na+nt,jspin)),             &
-     &              lapw%nv_sphere(jspin),cmplx(0.0,0.0),                     &
+     &              lapw_gf%nv_sphere(jspin),cmplx(0.0,0.0),                     &
      &              rightlomat(:,0:lmpmax-1,na,1:2),                    &
      &              nloitype)                                           
                   !na                                                   
@@ -256,7 +255,7 @@
                                            !m not found!                
                         IF (jmem==0) CYCLE 
                         coef=CONJG(sphhar%clnu(jmem,lh,ns))             &
-     &                       *       fleur_gaunt(l,lv,lp,m,mv,mp        &
+     &                       *       gaunt1(l,lv,lp,m,mv,mp        &
      &                       ,MAXVAL(atoms%lmax))
                                            !this test triangular eq.    
                         IF (coef==0) CYCLE 
@@ -393,14 +392,18 @@
                      DO na=1,atoms%neq(itype) 
                        n=nt+na 
                         !Use BLAS to construct the uu,ud,du,dd          
-                       uu=uu+(CPP_BLAS_cdotc(lapw%nv_sphere(jspin),            &
-     &                  gf_ab_coef_vector(lmp,n,1,jspin),1,vecmat(:,lm,na,1),1))
-                       ud=ud+(CPP_BLAS_cdotc(lapw%nv_sphere(jspin),            &
-     &                  gf_ab_coef_vector(lmp,n,2,jspin),1,vecmat(:,lm,na,1),1))
-                       dd=dd+(CPP_BLAS_cdotc(lapw%nv_sphere(jspin),            &
-     &                  gf_ab_coef_vector(lmp,n,2,jspin),1,vecmat(:,lm,na,2),1))
-                       du=du+(CPP_BLAS_cdotc(lapw%nv_sphere(jspin),            &
-     &                  gf_ab_coef_vector(lmp,n,1,jspin),1,vecmat(:,lm,na,2),1))
+                       !DOT_PRODUCT instead of zdotc (broken in
+                       !Apple's Accelerate BLAS)
+                       abv1=gf_ab_coef_vector(lmp,n,1,jspin)
+                       abv2=gf_ab_coef_vector(lmp,n,2,jspin)
+                       uu=uu+DOT_PRODUCT(abv1(:lapw_gf%nv_sphere(jspin)),&
+     &                       vecmat(:lapw_gf%nv_sphere(jspin),lm,na,1))
+                       ud=ud+DOT_PRODUCT(abv2(:lapw_gf%nv_sphere(jspin)),&
+     &                       vecmat(:lapw_gf%nv_sphere(jspin),lm,na,1))
+                       dd=dd+DOT_PRODUCT(abv2(:lapw_gf%nv_sphere(jspin)),&
+     &                       vecmat(:lapw_gf%nv_sphere(jspin),lm,na,2))
+                       du=du+DOT_PRODUCT(abv1(:lapw_gf%nv_sphere(jspin)),&
+     &                       vecmat(:lapw_gf%nv_sphere(jspin),lm,na,2))
                                                                         
                      ENDDO 
                      !>                                                 
@@ -422,49 +425,49 @@
                         DO locind2=0,locnum2-1 
                                                                         
                          locorbuu=locorbuu+alocof(bas1+locind1,lm,na)*  &
-     &                     gmat(lapw%nv_sphere(jspin)+locind1+bas1,            &
-     &                          lapw%nv_sphere(jspin)+locind2+bas2)*           &
+     &                     gmat(lapw_gf%nv_sphere(jspin)+locind1+bas1,            &
+     &                          lapw_gf%nv_sphere(jspin)+locind2+bas2)*           &
      &                          conjg(alocof(bas2+locind2,lmp,na))      
                                                                         
                          locorbdd=locorbdd+blocof(bas1+locind1,lm,na)*  &
-     &                     gmat(lapw%nv_sphere(jspin)+locind1+bas1,            &
-     &                          lapw%nv_sphere(jspin)+locind2+bas2)*           &
+     &                     gmat(lapw_gf%nv_sphere(jspin)+locind1+bas1,            &
+     &                          lapw_gf%nv_sphere(jspin)+locind2+bas2)*           &
      &                          conjg(blocof(bas2+locind2,lmp,na))      
                                                                         
                          locorbud=locorbud+alocof(bas1+locind1,lm,na)*  &
-     &                     gmat(lapw%nv_sphere(jspin)+locind1+bas1,            &
-     &                          lapw%nv_sphere(jspin)+locind2+bas2)*           &
+     &                     gmat(lapw_gf%nv_sphere(jspin)+locind1+bas1,            &
+     &                          lapw_gf%nv_sphere(jspin)+locind2+bas2)*           &
      &                          conjg(blocof(bas2+locind2,lmp,na))      
                                                                         
                          locorbdu=locorbdu+blocof(bas1+locind1,lm,na)*  &
-     &                     gmat(lapw%nv_sphere(jspin)+locind1+bas1,            &
-     &                          lapw%nv_sphere(jspin)+locind2+bas2)*           &
+     &                     gmat(lapw_gf%nv_sphere(jspin)+locind1+bas1,            &
+     &                          lapw_gf%nv_sphere(jspin)+locind2+bas2)*           &
      &                          conjg(alocof(bas2+locind2,lmp,na))      
                                                                         
                          locorbulo=locorbulo+alocof(bas1+locind1,lm,na)*&
-     &                     gmat(lapw%nv_sphere(jspin)+locind1+bas1,            &
-     &                          lapw%nv_sphere(jspin)+locind2+bas2)*           &
+     &                     gmat(lapw_gf%nv_sphere(jspin)+locind1+bas1,            &
+     &                          lapw_gf%nv_sphere(jspin)+locind2+bas2)*           &
      &                          conjg(clocof(bas2+locind2,lmp,na))      
                                                                         
                          locorbdlo=locorbdlo+blocof(bas1+locind1,lm,na)*&
-     &                     gmat(lapw%nv_sphere(jspin)+locind1+bas1,            &
-     &                          lapw%nv_sphere(jspin)+locind2+bas2)*           &
+     &                     gmat(lapw_gf%nv_sphere(jspin)+locind1+bas1,            &
+     &                          lapw_gf%nv_sphere(jspin)+locind2+bas2)*           &
      &                          conjg(clocof(bas2+locind2,lmp,na))      
                                                                         
                          locorblou=locorblou+clocof(bas1+locind1,lm,na)*&
-     &                     gmat(lapw%nv_sphere(jspin)+locind1+bas1,            &
-     &                          lapw%nv_sphere(jspin)+locind2+bas2)*           &
+     &                     gmat(lapw_gf%nv_sphere(jspin)+locind1+bas1,            &
+     &                          lapw_gf%nv_sphere(jspin)+locind2+bas2)*           &
      &                          conjg(alocof(bas2+locind2,lmp,na))      
                                                                         
                          locorblod=locorblod+clocof(bas1+locind1,lm,na)*&
-     &                     gmat(lapw%nv_sphere(jspin)+locind1+bas1,            &
-     &                          lapw%nv_sphere(jspin)+locind2+bas2)*           &
+     &                     gmat(lapw_gf%nv_sphere(jspin)+locind1+bas1,            &
+     &                          lapw_gf%nv_sphere(jspin)+locind2+bas2)*           &
      &                          conjg(blocof(bas2+locind2,lmp,na))      
                                                                         
                          locorblolo=locorblolo+                         &
      &                     clocof(bas1+locind1,lm,na)*                  &
-     &                     gmat(lapw%nv_sphere(jspin)+locind1+bas1,            &
-     &                          lapw%nv_sphere(jspin)+locind2+bas2)*           &
+     &                     gmat(lapw_gf%nv_sphere(jspin)+locind1+bas1,            &
+     &                          lapw_gf%nv_sphere(jspin)+locind2+bas2)*           &
      &                          conjg(clocof(bas2+locind2,lmp,na))      
                                                                         
                               !locind2                                  

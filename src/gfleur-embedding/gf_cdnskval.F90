@@ -64,8 +64,8 @@
                                                                         
       !>                                                                
       !<--Locals                                                        
-      REAL :: epar(0:size(enpara%el,1)-1,                               &
-     &         size(enpara%el,2),size(enpara%el,3))                     
+      REAL :: epar(0:size(enpara%el0,1)-1,                               &
+     &         size(enpara%el0,2),size(enpara%el0,3))                     
                                                    !0:lmaxd,ntypd,jspd  
                                                 !radial basis           
       REAL,ALLOCATABLE :: ddn(:,:),fg(:,:,:,:,:) 
@@ -140,7 +140,7 @@
       qpw = 0.0 
       rho = 0.0 
       qmtl = 0.0 
-      epar=enpara%el 
+      epar=enpara%el0 
                                                                         
       !<-- Calculate interstitial charge                                
 

@@ -61,11 +61,12 @@
                                                                         
       CONTAINS 
 
-      subroutine gf_simple_vac(en,nk,lapw,kpts,cell,vacuum_energy,sigma,efield)
+      subroutine gf_simple_vac(en,nk,lapw,lapw_gf,kpts,cell,vacuum_energy,sigma,efield)
       USE m_gf_types
       USE m_gf_energies
       integer,intent(in)       :: en,nk
       type(t_lapw),intent(in)  :: lapw
+      type(t_lapw_gf),intent(in) :: lapw_gf
       type(t_kpts),intent(in)  :: kpts
       type(t_cell),intent(in)  :: cell
       real,intent(in)          :: vacuum_energy
@@ -77,13 +78,13 @@
 
 
       nn=size(sigma,1)
-      if (lapw%nv2(1)<nn) nn=nn/2 !noco calculation
+      if (lapw_gf%nv2(1)<nn) nn=nn/2 !noco calculation
       if (present(efield)) THEN
-         if (abs(efield)>epsilon(0.0)) CALL vacuum_EField(en,nk,lapw,kpts,cell,vacuum_energy,sigma,efield)
+         if (abs(efield)>epsilon(0.0)) CALL vacuum_EField(en,nk,lapw,lapw_gf,kpts,cell,vacuum_energy,sigma,efield)
       ELSE
         sigma=cmplx(0.0,0.0)
         DO n=1,nn
-          gk=MATMUL(cell%bmat(1:2,1:2),kpts%bk(1:2,nk)+(/lapw%kp%k1p(n,1),lapw%kp%k2p(n,1)/))
+          gk=MATMUL(cell%bmat(1:2,1:2),kpts%bk(1:2,nk)+(/lapw_gf%k1p(n,1),lapw_gf%k2p(n,1)/))
           s=dot_PRODUCT(gk,gk)
           sigma(n,n)=cmplx(0,0.5)* SQRT(2*(gf_Z(en,0)-vacuum_energy)-s)
         enddo
@@ -95,7 +96,7 @@
       end subroutine
 
 
-       SUBROUTINE vacuum_EField(en,nk,lapw,kpts,cell,vacuum_energy,sigma,efield)
+       SUBROUTINE vacuum_EField(en,nk,lapw,lapw_gf,kpts,cell,vacuum_energy,sigma,efield)
 !******************************************
 ! calculates numericaly the embedding potential for
 ! linear E-field E*z+V_vac applyed to the system
@@ -107,6 +108,7 @@
       IMPLICIT NONE
       integer,intent(in)       :: en,nk
       type(t_lapw),intent(in)  :: lapw
+      type(t_lapw_gf),intent(in) :: lapw_gf
       type(t_kpts),intent(in)  :: kpts
       type(t_cell),intent(in)  :: cell
       real,intent(in)          :: vacuum_energy
@@ -136,12 +138,12 @@
 
       !CALCULATE PHI and DPHI
       nn=size(sigma,1)
-      if (lapw%nv2(1)<nn) nn=nn/2 !noco calculation
+      if (lapw_gf%nv2(1)<nn) nn=nn/2 !noco calculation
 
       DO n=1,nn
            !initial wavefunction
            !inf. in vacuum region V=vac_pot
-           gk=MATMUL(cell%bmat(:2,:2),kpts%bk(1:2,nk)+(/lapw%kp%k1p(n,1),lapw%kp%k2p(n,1)/))
+           gk=MATMUL(cell%bmat(:2,:2),kpts%bk(1:2,nk)+(/lapw_gf%k1p(n,1),lapw_gf%k2p(n,1)/))
            s=dot_PRODUCT(gk,gk)
            !numerical integration ksq=k**2xh**2
                           !set up k^2*h^2 array
@@ -321,7 +323,7 @@
                                                                         
                                                                         
 #ifdef CPP_DEBUG                                                        
-       WRITE (6,*) "s ",s," vac_pot ",vac_pot 
+       WRITE (oUnit,*) "s ",s," vac_pot ",vac_pot 
 #endif                                                                  
                                                                         
        phi(gridpts) = exp(I*sqrt(2.0*(gf_Z(en,0)-vac_pot)-s)            &
@@ -542,7 +544,7 @@
        s=dot_PRODUCT(gk,gk) 
                                                                         
 #ifdef CPP_DEBUG                                                        
-       WRITE (6,*) "s ",s," vac_pot ",vac_pot 
+       WRITE (oUnit,*) "s ",s," vac_pot ",vac_pot 
 #endif                                                                  
                                                                         
        phi(gridpts) = exp(I*sqrt(2.0*(gf_Z(en,0)-V(gridpts) )-s)        &
@@ -687,8 +689,8 @@
 
                                                                         
       !<-- S: gf_vacuum_init(jspin,cell,kpts,kp,gfinp,vac_pot)          
-      SUBROUTINE gf_vacuum_init(jspin,cell,kpts,lapw,gfinp,vac_pot_in,  &
-     &           stars,l_noco_in)
+      SUBROUTINE gf_vacuum_init(jspin,cell,kpts,lapw,lapw_gf,gfinp,     &
+     &           vac_pot_in,stars,l_noco_in)
 !******************************************                             
 !     Initializes the private variables of the module                   
 !                          D. Wortmann                                  
@@ -699,8 +701,9 @@
       INTEGER,INTENT(IN)             :: jspin 
       TYPE(t_cell),INTENT(IN)        :: cell 
       TYPE(t_kpts),INTENT(IN)        :: kpts 
-      TYPE(t_lapw),INTENT(IN)        :: lapw 
-      TYPE(t_gfinp),INTENT(IN)       :: gfinp 
+      TYPE(t_lapw),INTENT(IN)        :: lapw
+      TYPE(t_lapw_gf),INTENT(IN),TARGET :: lapw_gf
+      TYPE(t_embinp),INTENT(IN)       :: gfinp 
       TYPE(t_stars),INTENT(IN)       :: stars 
       REAL   ,INTENT(IN)             :: vac_pot_in
       logical,intent(in)             :: l_noco_in
@@ -708,8 +711,8 @@
       coordconv = cell%bmat(1:2,1:2) 
       allocate(bk(size(kpts%bk,1),size(kpts%bk,2)))
       bk        = kpts%bk 
-      k1p       => lapw%kp%k1p(:,jspin) 
-      k2p       => lapw%kp%k2p(:,jspin) 
+      k1p       => lapw_gf%k1p(:,jspin) 
+      k2p       => lapw_gf%k2p(:,jspin) 
                                  ! d/2                                  
       d         = cell%z1 
                                      ! dt/2                             
@@ -751,7 +754,7 @@
 
       subroutine gf_vacuum_check_vacpot(vpw,stars,c,vac_pot)
       use m_gf_types
-      use m_constants,only:pimach
+      USE m_constants, ONLY: pi_const, oUnit
       use m_gf_fft_singleton
       implicit none
       type(t_stars),intent(in)::stars
@@ -780,15 +783,15 @@
 
 
 
-      write(6,*) "Vacuum potential calculation"
+      write(oUnit,*) "Vacuum potential calculation"
 
 	  v(1,1)=maxval(real(v(:,1)))
 	  if (size(v,2)>1) v(1,2)=maxval(real(v(:,2)))
 
-      write(6,*) "Potential:",real(v(1,:))
+      write(oUnit,*) "Potential:",real(v(1,:))
       k=min(size(v,2),2)
       vac_pot=sum(real(v(1,:k)))/k
-      write(6,*) "Vacpot:",vac_pot
+      write(oUnit,*) "Vacpot:",vac_pot
 
       end subroutine
                                                                         
@@ -807,23 +810,23 @@
       xdist_sq = xdistance*xdistance 
                                                                         
       !set up potential mesh                                            
-!      WRITE (6,*) ''                                                   
-!      WRITE (6,*) '#EFie potential meshpoint, V, z (a.u.),z (fftbox u)'
+!      WRITE (oUnit,*) ''                                                   
+!      WRITE (oUnit,*) '#EFie potential meshpoint, V, z (a.u.),z (fftbox u)'
       DO ii=1,gridpts 
          x(ii)=REAL(ii)*xdistance; 
          V(ii) = vac_pot+(EField*x(ii)) 
-!        WRITE (6,'(I6,3F11.5)') ii,V(ii),(x(ii))                       
+!        WRITE (oUnit,'(I6,3F11.5)') ii,V(ii),(x(ii))                       
 !     &         ,(x(ii))*(mx3-1)/dt  !to out file                       
       END DO 
-!      WRITE (6,*) '#EField potential END'                              
-!      WRITE (6,*) ''                                                   
+!      WRITE (oUnit,*) '#EField potential END'                              
+!      WRITE (oUnit,*) ''                                                   
                                                                         
                                                                         
 #ifdef CPP_DEBUG_IMAGEPOTI_V0                                           
 !    SET POTENTIAL CONSTANT FOR TESTING                                 
       V0=vac_pot 
       V =vac_pot 
-      WRITE (6,*) "SET POTENTIAL CONSTANT=V0=",V0," FOR TESTING" 
+      WRITE (oUnit,*) "SET POTENTIAL CONSTANT=V0=",V0," FOR TESTING" 
 #endif                                                                  
                                                                         
       END SUBROUTINE 
@@ -866,20 +869,20 @@
                                                                         
                                                                         
       !set up potential mesh                                            
-!      WRITE (6,*) ''                                                   
-!      WRITE (6,*) '#IMAGE potential meshpoint, V, z (a.u.),z (fftbox u)
+!      WRITE (oUnit,*) ''                                                   
+!      WRITE (oUnit,*) '#IMAGE potential meshpoint, V, z (a.u.),z (fftbox u)
 !       DO ii=1,gridpts                                                 
-!         WRITE (6,'(I6,3F11.5)') ii,V(ii),(imageplane+x(ii))           
+!         WRITE (oUnit,'(I6,3F11.5)') ii,V(ii),(imageplane+x(ii))           
 !     &          ,(imageplane+x(ii))*(mx3-1)/dt  !to out file           
 !      END DO                                                           
-!      WRITE (6,*) '#IMAGE potential END'                               
-!      WRITE (6,*) ''                                                   
+!      WRITE (oUnit,*) '#IMAGE potential END'                               
+!      WRITE (oUnit,*) ''                                                   
                                                                         
                                                                         
                                                                         
       !set up mixed potential mesh                                      
-!     WRITE (6,*) ''                                                    
-!     WRITE (6,*) '#MIXEDIM. potential meshpoint, V, z, fftbox'         
+!     WRITE (oUnit,*) ''                                                    
+!     WRITE (oUnit,*) '#MIXEDIM. potential meshpoint, V, z, fftbox'         
       cutoff = INT(0.16/xdistance) 
       IF (cutoff>gridpts-2) THEN 
 
@@ -888,7 +891,7 @@
       DO ii=1,cutoff 
 !         V(ii) = (1-IBETA(z))*V_LDA(ii)+IBETA(z)*V(ii);                
           V(ii) = V(cutoff+1) 
-!         WRITE (6,'(I6,3F11.5)') ii,V(ii),(imageplane+x(ii))           
+!         WRITE (oUnit,'(I6,3F11.5)') ii,V(ii),(imageplane+x(ii))           
 !    &         ,(imageplane+x(ii))*(mx3-1)/dt  !to out file             
       END DO 
       DO ii=cutoff,gridpts 
@@ -899,7 +902,7 @@
 !    SET POTENTIAL CONSTANT FOR TESTING                                 
       V0=vac_pot 
       V =vac_pot 
-      WRITE (6,*) "SET IMAGEPOTENTIAL CONSTANT=V0=",V0," FOR TESTING" 
+      WRITE (oUnit,*) "SET IMAGEPOTENTIAL CONSTANT=V0=",V0," FOR TESTING" 
 #endif                                                                  
                                                                         
       END SUBROUTINE 
@@ -908,7 +911,7 @@
                                                                         
                                                                         
       !<-- S: gf_vacuum(gfinp,lapw,kp(:,jsp),en,nk,jsp)                 
-      SUBROUTINE gf_vacuum(gfinp,lapw,en,nk,jsp) 
+      SUBROUTINE gf_vacuum(gfinp,lapw,lapw_gf,en,nk,jsp)
 !******************************************                             
 !     Calculate Embedding potential with a potential in Vacuum which    
 !     might be different from zero. See Eq. 5.50 from my Thesis!        
@@ -925,12 +928,13 @@
       USE m_gf_io2dmat 
       IMPLICIT NONE 
       !<--Arguments                                                     
-      TYPE(t_gfinp),INTENT(IN) :: gfinp 
-      TYPE(t_lapw),INTENT(IN)  :: lapw 
+      TYPE(t_embinp),INTENT(IN) :: gfinp
+      TYPE(t_lapw),INTENT(IN)  :: lapw
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
       INTEGER,INTENT(IN)       :: en,nk,jsp 
       !>                                                                
       !<--Locals                                                        
-      COMPLEX               :: embpot(lapw%nv2d,lapw%nv2d) 
+      COMPLEX               :: embpot(lapw_gf%nv2d,lapw_gf%nv2d) 
       INTEGER               :: n 
       COMPLEX               :: kl,kr 
       COMPLEX               :: I 
@@ -939,9 +943,9 @@
       !>                                                                
       d=gfinp%dp1 
       embpot=0.0 
-      DO n=1,lapw%nv2(jsp) 
-         kl=SQRT(2*gf_Z(en,0)-lapw%kp%rkp(n,jsp)**2) 
-         kr=SQRT(2*(gf_Z(en,0)-gfinp%dp2)-lapw%kp%rkp(n,jsp)**2) 
+      DO n=1,lapw_gf%nv2(jsp) 
+         kl=SQRT(2*gf_Z(en,0)-lapw_gf%rkp(n,jsp)**2) 
+         kr=SQRT(2*(gf_Z(en,0)-gfinp%dp2)-lapw_gf%rkp(n,jsp)**2) 
          embpot(n,n)=I/2*kl*(kr*COS(kl*d)+I*kl*SIN(kl*d))/(kl*COS(kl*d) &
      &        +I*kr*SIN(kl*d))                                          
       ENDDO 

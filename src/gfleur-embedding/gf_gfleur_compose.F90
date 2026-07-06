@@ -101,7 +101,7 @@ CONTAINS
         IF (gfinp%l_dos.or.gfinp%l_charge) THEN
             CPP_juDFT_timestart("gf_ab_coef")
             CALL gf_ab_coef_calc(noco%l_noco,jspin,kpts%bk(:,nk),sym                        &
-            ,enpara%el,vr(:,0,:,:),atoms,cell         &
+            ,enpara%el0,vr(:,0,:,:),atoms,cell         &
             ,lapw)
             CPP_juDFT_timestop("gf_ab_coef")
         ENDIF
@@ -193,7 +193,7 @@ CONTAINS
             CPP_juDFT_timestart("gf_cdnskval") 
             CALL gf_cdnskval(noco%l_noco,                                           &
             lapw,jspin,nk,                                        &
-            MAXVAL(atoms%ntypsy),enpara,vr(:,0,:,:),              &
+            MAXVAL(sym%ntypsy),enpara,vr(:,0,:,:),              &
             G_sum,atoms,stars,sphhar,                             &
             cell,sym,kpts,                                &
             charge%pw(:,:),                                  &

@@ -15,7 +15,7 @@ module m_gf_vacuum_charge
 
     public gf_vacuum_makecharge,gf_vacuum_writecharge
     contains
-    recursive subroutine gf_vacuum_makecharge(stars,lapw,sym,cell,kpts,enpara,layers,l_noco,jspin,jspins,nk)
+    recursive subroutine gf_vacuum_makecharge(fmpi,vacuum,input,nococonv,stars,lapw,lapw_gf,sym,cell,kpts,enpara,layers,l_noco,jspin,jspins,nk)
     ! subroutine that generates a new vacuum charge for all energies and the current spin&kpoint
     use m_gf_iodop
     use m_gf_types
@@ -23,13 +23,20 @@ module m_gf_vacuum_charge
     use m_gf_energies
     use m_gf_math
     use m_gf_vacuum_hs
-    use m_constants,ONLY:pimach
+    use m_vacuz
+    use m_vacudz
+    USE m_constants, ONLY: pi_const, oUnit
 
     implicit none
     !Arguments
+    type(t_mpi),intent(in)   :: fmpi
+    type(t_vacuum),intent(in):: vacuum
+    type(t_input),intent(in) :: input
+    type(t_nococonv),intent(in):: nococonv
     type(t_stars),intent(in) :: stars
     type(t_cell),intent(in)  :: cell
     type(t_lapw),intent(in)  :: lapw
+    type(t_lapw_gf),intent(in) :: lapw_gf
     type(t_sym),intent(in)   :: sym
     type(t_enpara),intent(in):: enpara
     type(t_kpts),intent(in)  :: kpts
@@ -40,11 +47,11 @@ module m_gf_vacuum_charge
     !Local variables
     integer  :: en,n1,n2,n,nv2,ng,n3d_star,nn
     real     :: v(3),ev,vz(nmz,jspins)
-    complex  :: scale,vxy(nmzxy,stars%nq2-1,1)
-    complex  :: h_mat(lapw%nv2(jspin)*2,lapw%nv2(jspin)*2)
-    complex  :: s_mat(lapw%nv2(jspin)*2,lapw%nv2(jspin)*2)
-    complex  :: g(lapw%nv2(jspin)*2,lapw%nv2(jspin)*2)
-    complex  :: sigma(lapw%nv2(jspin),lapw%nv2(jspin))
+    complex  :: scale,vxy(nmzxy,stars%ng2-1,1)
+    complex  :: h_mat(lapw_gf%nv2(jspin)*2,lapw_gf%nv2(jspin)*2)
+    complex  :: s_mat(lapw_gf%nv2(jspin)*2,lapw_gf%nv2(jspin)*2)
+    complex  :: g(lapw_gf%nv2(jspin)*2,lapw_gf%nv2(jspin)*2)
+    complex  :: sigma(lapw_gf%nv2(jspin),lapw_gf%nv2(jspin))
     complex  :: g1(nmz),g2(nmz)
 
     real,allocatable    :: u(:,:,:),ud(:,:,:)
@@ -52,16 +59,16 @@ module m_gf_vacuum_charge
 
     real :: norm,evac
 
-    norm=pimach()*cell%area
+    norm=pi_const*cell%area
 
     if (jspins==1) norm=norm/2
 
-    nv2=lapw%nv2(jspin)
+    nv2=lapw_gf%nv2(jspin)
 
     if (l_noco) then
         call juDFT_warn("Generation of vacuum charge is spin-diagonal in noco-case")
-        call gf_vacuum_makecharge(stars,lapw,sym,cell,kpts,enpara,layers,.false.,1,jspins,nk)
-        call gf_vacuum_makecharge(stars,lapw,sym,cell,kpts,enpara,layers,.false.,2,jspins,nk)
+        call gf_vacuum_makecharge(fmpi,vacuum,input,nococonv,stars,lapw,lapw_gf,sym,cell,kpts,enpara,layers,.false.,1,jspins,nk)
+        call gf_vacuum_makecharge(fmpi,vacuum,input,nococonv,stars,lapw,lapw_gf,sym,cell,kpts,enpara,layers,.false.,2,jspins,nk)
         return
     endif
 
@@ -70,12 +77,12 @@ module m_gf_vacuum_charge
     call gf_iodop_readvacuum(GF_POTFILE,vxy,vz)
 
     !Generate z-dependent basis functions
-    ALLOCATE(u(nmz,lapw%nv2(jspin),jspins),ud(nmz,lapw%nv2(jspin),jspins))
+    ALLOCATE(u(nmz,lapw_gf%nv2(jspin),jspins),ud(nmz,lapw_gf%nv2(jspin),jspins))
     allocate(uz(nv2,jspins),udz(nv2,jspins),duz(nv2,jspins),dudz(nv2,jspins),ddnv(nv2,jspins))
 
 
     if (nk==1.and.jspin==1) then
-        allocate(qz(nmz,jspins),qxy(nmzxy,stars%nq2-1,jspins))
+        allocate(qz(nmz,jspins),qxy(nmzxy,stars%ng2-1,jspins))
         qz=0.0
         qxy=0.0
     endif
@@ -86,8 +93,8 @@ module m_gf_vacuum_charge
             call juDFT_warn("Vacuum level below highest energy point")
             evac=vz(nmz,jspin)-0.01
         endif
-        DO ng = 1,lapw%nv2(jspin)
-            v(1:2)=kpts%bk(1:2,nk)+(/lapw%kp%k1p(ng,jspin),lapw%kp%k2p(ng,jspin)/)
+        DO ng = 1,lapw_gf%nv2(jspin)
+            v(1:2)=kpts%bk(1:2,nk)+(/lapw_gf%k1p(ng,jspin),lapw_gf%k2p(ng,jspin)/)
             v(3) = 0.0
             ev = evac - 0.5*dot_product(v,matmul(transpose(cell%bbmat),v))
             CALL vacuz(ev,vz(:,jspin),vz(nmz,jspin),nmz,delz,uz(ng,jspin),duz(ng,jspin),u(:,ng,jspin))
@@ -101,14 +108,14 @@ module m_gf_vacuum_charge
             ud(:,ng,jspin) = scale*ud(:,ng,jspin)
         end do
         !Generate Hamiltonian & overlapp matrix
-        Call gf_vacuum_getHS(stars,lapw,jspin,jspins,nk,l_noco,sym,kpts,evac,cell,h_mat,s_mat,l_sym=.false.)
+        Call gf_vacuum_getHS(fmpi,vacuum,input,nococonv,stars,lapw,lapw_gf,jspin,jspins,nk,l_noco,sym,kpts,evac,cell,h_mat,s_mat,l_sym=.false.)
 
 
 
     DO en=1,gf_noen()
         g=0.0
         !call juDFT_error("Not implemeted")
-        call gf_GETEMB2(sigma,1,layers%num_layers+1,en,nk,jspin,lapw)
+        call gf_GETEMB2(sigma,1,layers%num_layers+1,en,nk,jspin,lapw,lapw_gf)
         sigma=sigma
         g=gf_z(en,layers%num_layers)*s_mat-h_mat
         !g=conjg(g)
@@ -126,11 +133,11 @@ module m_gf_vacuum_charge
             g(:nv2,:nv2)=mat_inverse(g(:nv2,:nv2))
             !g=mat_inverse(g)
 
-            DO n=1,stars%nq2
+            DO n=1,stars%ng2
                 g1=0;g2=0
                 DO n1=1,nv2
                     DO n2=1,nv2
-                        n3d_star=stars%ig(lapw%kp%k1p(n1,jspin)-lapw%kp%k1p(n2,jspin),lapw%kp%k2p(n1,jspin)-lapw%kp%k2p(n2,jspin),0)
+                        n3d_star=stars%ig(lapw_gf%k1p(n1,jspin)-lapw_gf%k1p(n2,jspin),lapw_gf%k2p(n1,jspin)-lapw_gf%k2p(n2,jspin),0)
                         if (n3d_star/=0) then
                            if (stars%ig2(n3d_star)==n)then
                               g1=g1+g(n1,n2)*u(:,n1,jspin)*u(:,n2,jspin)
@@ -140,7 +147,7 @@ module m_gf_vacuum_charge
                               !Debug
                            endif
                         endif
-                        n3d_star=stars%ig(lapw%kp%k1p(n2,jspin)-lapw%kp%k1p(n1,jspin),lapw%kp%k2p(n2,jspin)-lapw%kp%k2p(n1,jspin),0)
+                        n3d_star=stars%ig(lapw_gf%k1p(n2,jspin)-lapw_gf%k1p(n1,jspin),lapw_gf%k2p(n2,jspin)-lapw_gf%k2p(n1,jspin),0)
                         if (n3d_star/=0) then
                            if (stars%ig2(n3d_star)==n) then
                                g2=g2+g(n1,n2)*u(:,n1,jspin)*u(:,n2,jspin)
@@ -153,9 +160,9 @@ module m_gf_vacuum_charge
                     enddo
                 enddo
                 if (n==1) then
-                    qz(:,jspin)=qz(:,jspin)+kpts%weight(nk)*gf_weightz(en)*(g1-conjg(g2))*cmplx(0,0.5)/norm/stars%nstr2(n)
+                    qz(:,jspin)=qz(:,jspin)+kpts%wtkpt(nk)*gf_weightz(en)*(g1-conjg(g2))*cmplx(0,0.5)/norm/stars%nstr2(n)
                 else
-                    qxy(:,n-1,jspin)=qxy(:,n-1,jspin)+kpts%weight(nk)*gf_weightz(en)*cmplx(0,0.5)*(g1(:nmzxy)-cmplx(g2(:nmzxy)))/norm/stars%nstr2(n)
+                    qxy(:,n-1,jspin)=qxy(:,n-1,jspin)+kpts%wtkpt(nk)*gf_weightz(en)*cmplx(0,0.5)*(g1(:nmzxy)-cmplx(g2(:nmzxy)))/norm/stars%nstr2(n)
                 endif
             enddo
         enddo
@@ -167,7 +174,7 @@ module m_gf_vacuum_charge
     use m_gf_types
     use m_gf_iodop
     implicit none
-    type(t_mpi),intent(in)   :: mpi
+    TYPE(t_gfmpi),intent(in)   :: mpi
     call gf_iodop_writevacuum(GF_CDNFILE,qxy,real(qz),mpi%self_subcom)
     deallocate(qz,qxy)
     end subroutine

@@ -30,9 +30,9 @@
       TYPE(t_atoms),INTENT(IN)  :: atoms(:) 
       TYPE(t_sphhar),INTENT(IN) :: sphhar(:) 
       TYPE(t_stars),INTENT(IN)  :: stars(:) 
-      TYPE(t_mix),INTENT(IN)    :: mix 
-      TYPE(t_gfinp),INTENT(IN)  :: gfinp 
-      TYPE(t_mpi),intent(in)    :: mpi
+      TYPE(t_gfmix),INTENT(IN)    :: mix 
+      TYPE(t_embinp),INTENT(IN)  :: gfinp 
+      TYPE(t_gfmpi),intent(in)    :: mpi
       !>                                                                
       !<-- Locals                                                       
       INTEGER,PARAMETER   :: maxiter = 100 
@@ -82,10 +82,10 @@
       DO layer = 1,layers%num_layers 
          ALLOCATE( vr(MAXVAL(Atoms(layer)%jri),0:MAXVAL(Sphhar(layer    &
      &        )%nlh),Atoms(layer)%ntype,Jspins))                        
-         ALLOCATE( vpw(stars(layer)%nq3,jspins) ) 
+         ALLOCATE( vpw(stars(layer)%ng3,jspins) ) 
          ALLOCATE( vr_diff(MAXVAL(Atoms(layer)%jri)                     &
      &        ,0:MAXVAL(Sphhar(layer)%nlh),Atoms(layer)%ntype,Jspins))  
-         ALLOCATE( vpw_diff(stars(layer)%nq3,jspins) ) 
+         ALLOCATE( vpw_diff(stars(layer)%ng3,jspins) ) 
                                                                         
          CALL gf_loddop(GF_CDNSTARTFILE,layer,jspins,                   &
      &        atoms(layer),stars(layer),sphhar(layer),                  &

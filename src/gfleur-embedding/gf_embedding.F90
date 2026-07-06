@@ -4,7 +4,6 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
       MODULE m_gf_embedding 
-#include "juDFT_env.h"
       use m_juDFT 
       IMPLICIT NONE
 !-----------------------------------------------                        
@@ -25,7 +24,7 @@
                                                                         
       !<--S: gf_setemb(region,en,nk,jspin,lapw,gij)                     
 
-      SUBROUTINE gf_setemb(region,en,nk,jspin,lapw,gij) 
+      SUBROUTINE gf_setemb(region,en,nk,jspin,lapw,lapw_gf,gij)
 !********************************************************************** 
 !     * This SUBROUTINE saves the embedding potential for the           
 !     * region, energy and spin                                         
@@ -35,10 +34,11 @@
 !********************************************************************** 
       USE m_gf_math,ONLY:mat_inverse 
       USE m_gf_io2Dmat 
-      USE m_gf_types,ONLY:t_lapw 
+      USE m_gf_types,ONLY:t_lapw,t_lapw_gf
       IMPLICIT NONE 
       INTEGER,INTENT(IN)       :: region,en,jspin,nk 
       TYPE(t_lapw),INTENT(IN)  :: lapw 
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
       COMPLEX,INTENT(IN)       :: gij(:,:) 
                                                                         
       INTEGER :: nv2,side 
@@ -56,7 +56,7 @@
      &        nv2*(side-1)+1:nv2*(side-1)+nv2))                         
          !write(*,*) region,side,a(1,1)                                 
          IF (side==1) A=-1.0*A 
-         CALL gf_write2Dmat(IO2D_EMB,region,side,en,nk,jspin,lapw,A) 
+         CALL gf_write2Dmat(IO2D_EMB,region,side,en,nk,jspin,lapw_gf,A) 
                                                                         
                                                                         
       ENDDO 
@@ -66,7 +66,7 @@
       !>                                                                
       !<--S: gf_getemb(G1,G2,region,en,nk,jspin,altpot)                 
                                                                         
-      SUBROUTINE gf_GETEMB(G1,G2,region,en,nk,jspin,lapw,altpot) 
+      SUBROUTINE gf_GETEMB(G1,G2,region,en,nk,jspin,lapw,lapw_gf,altpot)
 !********************************************************************** 
 !     * This SUBROUTINE returns the correct embedding potentials for the
 !     * region, energy, kpoint and spin                                 
@@ -79,6 +79,7 @@
       USE m_gf_vacuum 
       IMPLICIT NONE 
       TYPE(t_lapw),INTENT(IN)       :: lapw 
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
       INTEGER,INTENT(IN)            :: en,nk,jspin,region 
       COMPLEX,INTENT(OUT)           :: G1(:,:),G2(:,:) 
       LOGICAL,OPTIONAL,INTENT(IN)   :: altpot 
@@ -91,8 +92,8 @@
       ENDIF 
                                                                         
                                                                         
-      notused=gf_read2dmat(key,region,1,en,nk,jspin,lapw,G1) 
-      IF(.NOT.gf_read2dmat(key,region,2,en,nk,jspin,lapw,G2)) THEN 
+      notused=gf_read2dmat(key,region,1,en,nk,jspin,lapw_gf,G1) 
+      IF(.NOT.gf_read2dmat(key,region,2,en,nk,jspin,lapw_gf,G2)) THEN 
          !on second side we might have a vacuum                         
          !IF (region == 1) CALL gf_vacuum_embpot(en,nk,g2)
          CALL juDFT_warn("UUPS, no vacuum potential in gf_embedding")
@@ -103,7 +104,7 @@
       !>                                                                
       !<--S: gf_getemb2(G1,side,region,en,nk,jspin,altpot)              
 
-      SUBROUTINE gf_GETEMB2(G1,side,region,en,nk,jspin,lapw,altpot) 
+      SUBROUTINE gf_GETEMB2(G1,side,region,en,nk,jspin,lapw,lapw_gf,altpot)
 !********************************************************************** 
 !     * This SUBROUTINE returns the correct embedding potentials for the
 !     * region, energy, kpoint and spin                                 
@@ -116,6 +117,7 @@
       USE m_gf_vacuum_hs
       IMPLICIT NONE 
       TYPE(t_lapw),INTENT(IN)       :: lapw 
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
       INTEGER,INTENT(IN)            :: en,nk,jspin,region,side 
       COMPLEX,INTENT(OUT)           :: G1(:,:) 
       LOGICAL,OPTIONAL,INTENT(IN)   :: altpot 
@@ -126,16 +128,16 @@
       IF(PRESENT(altpot)) THEN 
          IF(altpot) key = IO2D_EMBADV 
       ENDIF 
-      CPP_juDFT_timestart("IO: reading embpot") 
+      CALL timestart("IO: reading embpot") 
                                                                         
-      notused=gf_read2dmat(key,region,side,en,nk,jspin,lapw,G1)
-      CPP_juDFT_timestop("IO: reading embpot")
+      notused=gf_read2dmat(key,region,side,en,nk,jspin,lapw_gf,G1)
+      CALL timestop("IO: reading embpot")
       IF (side == 2.AND..NOT.notused) THEN 
          CALL gf_generate_embpot(en,jspin,g1)
       ENDIF 
 
 !      if(.not.notused) CALL juDFT_error("not usable",calledby="gf_embedding.F90")
-!      IF(.NOT.gf_read2dmat(key,region,2,en,nk,jspin,lapw,G2)) THEN     
+!      IF(.NOT.gf_read2dmat(key,region,2,en,nk,jspin,lapw_gf,G2)) THEN     
 !         !on second side we might have a vacuum                        
 !         IF (region == 1) CALL gf_vacuum_embpot(en,nk,g2)              
 !      ENDIF                                                            
@@ -200,7 +202,7 @@
                                                                         
       !<-- S: gf_addemb_g1g2(jspin,lapw,bz,z1,z2,H,G1,G2,l_noco,altpot,f
                                                                         
-      SUBROUTINE gf_ADDEMB_g1g2(jspin,lapw,bz,z1,z2,H,G1,G2,            &
+      SUBROUTINE gf_ADDEMB_g1g2(jspin,lapw,lapw_gf,bz,z1,z2,H,G1,G2,    &
      &     l_noco,factor)                                               
                                                                         
 !********************************************************************** 
@@ -217,12 +219,13 @@
 !        -we must therefore have the same Sigma on both sides for a     
 !            system with z-reflection symmetry                          
 !                                                                       
-      USE m_constants, ONLY: pimach 
+      USE m_constants, ONLY: pi_const, oUnit 
       USE m_gf_types 
                                                                         
       IMPLICIT NONE 
       INTEGER,INTENT(IN)          :: jspin 
       TYPE(t_lapw),INTENT(IN)     :: lapw 
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
       REAL,INTENT(IN)             :: bz,z1,z2 
       COMPLEX,INTENT(INOUT)       :: H(:,:) 
       COMPLEX,INTENT(IN)          :: G1(:,:),G2(:,:) 
@@ -239,45 +242,45 @@
       exp1 = exp(cmplx(0.0,bz*z1)) 
       exp2 = exp(cmplx(0.0,bz*z2)) 
       IF (l_noco) THEN 
-         DO n1=1,lapw%nv_tot_sphere/2
-            DO n2=1,lapw%nv_tot_sphere/2
-               e1=exp1**(lapw%k%k3(n2,jspin)-lapw%k%k3(n1,jspin)) 
-               e2=exp2**(lapw%k%k3(n2,jspin)-lapw%k%k3(n1,jspin)) 
+         DO n1=1,lapw_gf%nv_tot_sphere/2
+            DO n2=1,lapw_gf%nv_tot_sphere/2
+               e1=exp1**(lapw%k3(n2,jspin)-lapw%k3(n1,jspin)) 
+               e2=exp2**(lapw%k3(n2,jspin)-lapw%k3(n1,jspin)) 
 !               up up                                                   
                            !second durface !first surface               
                H(n1,n2) =                                               &
-     &              (e1*G1(lapw%k%kp(n1,jspin),lapw%k%kp(n2,jspin))     &
-     &              +e2*(G2(lapw%k%kp(n1,jspin),lapw%k%kp(n2,jspin))))  &
+     &              (e1*G1(lapw%kp(n1,jspin),lapw%kp(n2,jspin))     &
+     &              +e2*(G2(lapw%kp(n1,jspin),lapw%kp(n2,jspin))))  &
      &              /norm+H(n1,n2)                                      
 !               up dn                                                   
                                         !second durface !first surface  
-               H(n1+lapw%nv_tot_sphere/2,n2) =                                 &
-     &              (e1*G1(lapw%k%kp(n1,jspin)+lapw%nv2_tot/2           &
-     &              ,lapw%k%kp(n2,jspin))+e2*G2(lapw%k%kp(n1,jspin)     &
-     &              +lapw%nv2_tot/2,lapw%k%kp(n2,jspin)))/norm+H(n1     &
-     &              +lapw%nv_tot_sphere/2,n2)
+               H(n1+lapw_gf%nv_tot_sphere/2,n2) =                                 &
+     &              (e1*G1(lapw%kp(n1,jspin)+lapw_gf%nv2_tot/2           &
+     &              ,lapw%kp(n2,jspin))+e2*G2(lapw%kp(n1,jspin)     &
+     &              +lapw_gf%nv2_tot/2,lapw%kp(n2,jspin)))/norm+H(n1     &
+     &              +lapw_gf%nv_tot_sphere/2,n2)
 !               dn up                                                   
-               H(n1,n2+lapw%nv_tot_sphere/2)=(e1*                              &
-     &              (G1(lapw%k%kp(n1,jspin),lapw%k%kp(n2,jspin)         &
-     &              +lapw%nv2_tot/2))+e2*(G2(lapw%k%kp(n1,jspin)        &
-     &              ,lapw%k%kp(n2,jspin)+lapw%nv2_tot/2)))/norm+H(n1,n2 &
-     &              +lapw%nv_tot_sphere/2)
+               H(n1,n2+lapw_gf%nv_tot_sphere/2)=(e1*                              &
+     &              (G1(lapw%kp(n1,jspin),lapw%kp(n2,jspin)         &
+     &              +lapw_gf%nv2_tot/2))+e2*(G2(lapw%kp(n1,jspin)        &
+     &              ,lapw%kp(n2,jspin)+lapw_gf%nv2_tot/2)))/norm+H(n1,n2 &
+     &              +lapw_gf%nv_tot_sphere/2)
 !               dn dn                                                   
-               H(n1+lapw%nv_tot_sphere/2,n2+lapw%nv_tot/2) = (e1*              &
-     &              G1(lapw%k%kp(n1,jspin)+lapw%nv2_tot/2,lapw%k%kp(n2  &
-     &              ,jspin)+lapw%nv2_tot/2)+e2                          &
-     &              *G2(lapw%k%kp(n1,jspin)+lapw%nv2_tot/2,lapw%k%kp(n2 &
-     &              ,jspin)+lapw%nv2_tot/2))/norm+H(n1                  &
-     &              +lapw%nv_tot_sphere/2,n2+lapw%nv_tot_sphere/2)
+               H(n1+lapw_gf%nv_tot_sphere/2,n2+lapw%nv_tot/2) = (e1*              &
+     &              G1(lapw%kp(n1,jspin)+lapw_gf%nv2_tot/2,lapw%kp(n2  &
+     &              ,jspin)+lapw_gf%nv2_tot/2)+e2                          &
+     &              *G2(lapw%kp(n1,jspin)+lapw_gf%nv2_tot/2,lapw%kp(n2 &
+     &              ,jspin)+lapw_gf%nv2_tot/2))/norm+H(n1                  &
+     &              +lapw_gf%nv_tot_sphere/2,n2+lapw_gf%nv_tot_sphere/2)
             ENDDO 
          ENDDO 
       ELSE 
-         DO n1=1,lapw%nv_tot_sphere
-            DO n2=1,lapw%nv_tot_sphere
-               H(n1,n2) = (exp1**(lapw%k%k3(n2,jspin)-lapw%k%k3(n1,jspin&
-     &              ))*G1(lapw%k%kp(n1,jspin),lapw%k%kp(n2,jspin))      &
-     &              +exp2**(lapw%k%k3(n2,jspin)-lapw%k%k3(n1,jspin      &
-     &              ))*G2(lapw%k%kp(n1,jspin),lapw%k%kp(n2,jspin)))     &
+         DO n1=1,lapw_gf%nv_tot_sphere
+            DO n2=1,lapw_gf%nv_tot_sphere
+               H(n1,n2) = (exp1**(lapw%k3(n2,jspin)-lapw%k3(n1,jspin&
+     &              ))*G1(lapw%kp(n1,jspin),lapw%kp(n2,jspin))      &
+     &              +exp2**(lapw%k3(n2,jspin)-lapw%k3(n1,jspin      &
+     &              ))*G2(lapw%kp(n1,jspin),lapw%kp(n2,jspin)))     &
      &              /norm+H(n1,n2)                                      
                                                                    !seco
             ENDDO 
@@ -288,7 +291,7 @@
       !>                                                                
       !<--S: gf_addemb(lapw,en,nk,jspin,region,bz,z1,z2,H,altpot,factor)
                                                                         
-      SUBROUTINE gf_ADDEMB(lapw,en,nk,jspin,region,bz,z1,z2             &
+      SUBROUTINE gf_ADDEMB(lapw,lapw_gf,en,nk,jspin,region,bz,z1,z2     &
      &     ,H,l_noco,altpot,factor)                                     
                                                                         
 !********************************************************************** 
@@ -305,7 +308,7 @@
 !        -we must therefore have the same Sigma on both sides for a     
 !            system with z-reflection symmetry                          
 !                                                                       
-      USE m_constants, ONLY: pimach 
+      USE m_constants, ONLY: pi_const, oUnit 
       USE m_gf_types 
       IMPLICIT NONE 
       INTEGER,INTENT(IN)      :: en,nk,jspin,region 
@@ -313,6 +316,7 @@
       COMPLEX,INTENT(INOUT)   :: H(:,:) 
       LOGICAL, INTENT(IN)     :: l_noco 
       TYPE(t_lapw),INTENT(IN) :: lapw 
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
       LOGICAL,OPTIONAL,INTENT(IN) :: altpot 
                                                 !Needed in gf_getlessers
       REAL   ,OPTIONAL,INTENT(IN) :: factor 
@@ -320,26 +324,26 @@
       COMPLEX,ALLOCATABLE::G1(:,:),G2(:,:) 
                                                                         
                                                                         
-      ALLOCATE(G1(lapw%nv2_tot,lapw%nv2_tot),G2(lapw%nv2_tot            &
-     &     ,lapw%nv2_tot))                                              
+      ALLOCATE(G1(lapw_gf%nv2_tot,lapw_gf%nv2_tot),G2(lapw_gf%nv2_tot            &
+     &     ,lapw_gf%nv2_tot))                                              
                                                                         
       !<-- First get the embedding potential                            
       IF (PRESENT(altpot)) THEN 
-         CALL gf_GETEMB(G1,G2,region,en,nk,jspin,lapw,altpot) 
+         CALL gf_GETEMB(G1,G2,region,en,nk,jspin,lapw,lapw_gf,altpot) 
       ELSE 
-         CALL gf_GETEMB(G1,G2,region,en,nk,jspin,lapw) 
+         CALL gf_GETEMB(G1,G2,region,en,nk,jspin,lapw,lapw_gf)
       ENDIF 
       !>                                                                
       !<-- call gf_addemb_g1g2 to actual add the emb-potential          
       IF (PRESENT(altpot)) THEN 
          IF (PRESENT(factor)) THEN 
-            CALL gf_addemb_g1g2(jspin,lapw,bz,z1,z2,H,G1,G2,l_noco      &
+            CALL gf_addemb_g1g2(jspin,lapw,lapw_gf,bz,z1,z2,H,G1,G2,l_noco      &
      &           ,factor)                                               
          ELSE 
-            CALL gf_addemb_g1g2(jspin,lapw,bz,z1,z2,H,G1,G2,l_noco) 
+            CALL gf_addemb_g1g2(jspin,lapw,lapw_gf,bz,z1,z2,H,G1,G2,l_noco) 
          ENDIF 
       ELSE 
-         CALL gf_addemb_g1g2(jspin,lapw,bz,z1,z2,H,G1,G2,l_noco) 
+         CALL gf_addemb_g1g2(jspin,lapw,lapw_gf,bz,z1,z2,H,G1,G2,l_noco) 
       ENDIF 
       !>                                                                
       DEALLOCATE(g1,g2) 
@@ -349,7 +353,7 @@
       !<--S: gf_generateEmbPot(en,nk,jspin,nv2,l_pe0,ev,ew,T1,T2,curr,la
                                                                         
       SUBROUTINE gf_generateEmbPot(en,nk,jspin,l_pe0,ev,ew,T1,T2        &
-     &     ,curr,lapw,gfinp,layer)                                      
+     &     ,curr,lapw,lapw_gf,gfinp,layer)                                      
 !******************************************                             
 !                                                                       
 !                          D. Wortmann                                  
@@ -370,7 +374,8 @@
       INTEGER,INTENT(IN)       :: en,nk,jspin 
       LOGICAL,INTENT(IN)       :: l_pe0 
       TYPE(t_lapw),INTENT(IN)  :: lapw 
-      TYPE(t_gfinp),INTENT(IN)  :: gfinp 
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
+      TYPE(t_embinp),INTENT(IN)  :: gfinp 
       INTEGER,INTENT(IN)        :: layer 
                                                                         
       !>                                                                
@@ -378,8 +383,8 @@
       LOGICAL,SAVE          :: firstcall = .TRUE. 
       TYPE(t_embdesc),SAVE  :: desc_right,desc_left,desc_tmp 
       REAL                  :: miss 
-      COMPLEX               :: sigma1(lapw%nv2_tot,lapw%nv2_tot) 
-      COMPLEX               :: sigma2(lapw%nv2_tot,lapw%nv2_tot) 
+      COMPLEX               :: sigma1(lapw_gf%nv2_tot,lapw_gf%nv2_tot) 
+      COMPLEX               :: sigma2(lapw_gf%nv2_tot,lapw_gf%nv2_tot) 
       !>                                                                
                                                                         
       !<-- Write the descriptors to the files                           
@@ -408,7 +413,7 @@
                                                                         
       !<-- First for region II, side 2                                  
       IF (layer == 0) THEN 
-         CALL priv_make_emb(curr,ev,ew,2,2,en,nk,jspin,lapw,gfinp) 
+         CALL priv_make_emb(curr,ev,ew,2,2,en,nk,jspin,lapw,lapw_gf,gfinp) 
       ENDIF 
                                                                         
       !>                                                                
@@ -423,9 +428,9 @@
                                                                         
       ev = MATMUL(t2,ev) 
       IF (layer == 0) THEN 
-         CALL priv_make_emb(curr,ev,ew,1,1,en,nk,jspin,lapw,gfinp) 
+         CALL priv_make_emb(curr,ev,ew,1,1,en,nk,jspin,lapw,lapw_gf,gfinp) 
       ELSE 
-         CALL priv_make_emb(curr,ev,ew,layer,1,en,nk,jspin,lapw,gfinp) 
+         CALL priv_make_emb(curr,ev,ew,layer,1,en,nk,jspin,lapw,lapw_gf,gfinp) 
       ENDIF 
                                                                         
       !>                                                                
@@ -435,9 +440,9 @@
       ev = MATMUL(t1,ev) 
       ! For region I, side 2                                            
       IF (layer == 0) THEN 
-         CALL priv_make_emb(curr,ev,ew,1,2,en,nk,jspin,lapw,gfinp) 
+         CALL priv_make_emb(curr,ev,ew,1,2,en,nk,jspin,lapw,lapw_gf,gfinp) 
       ELSE 
-         CALL priv_make_emb(curr,ev,ew,1,2,en,nk,jspin,lapw,gfinp) 
+         CALL priv_make_emb(curr,ev,ew,1,2,en,nk,jspin,lapw,lapw_gf,gfinp) 
       ENDIF 
       !>                                                                
       IF (layer/=0) RETURN 
@@ -446,14 +451,14 @@
       !Since (\tilde{S}_2) and S_2 are connect by lattice vector the    
       !embedding potential should be equal except for a basis transforma
       !due to the PhaseMatrix  
-      IF(gf_read2dmat(IO2D_EMB,1,1,en,nk,jspin,lapw,sigma1).AND.        &
-     &     gf_read2dmat(IO2D_EMB,1,1,en,nk,jspin,lapw,sigma2)) THEN     
+      IF(gf_read2dmat(IO2D_EMB,1,1,en,nk,jspin,lapw_gf,sigma1).AND.        &
+     &     gf_read2dmat(IO2D_EMB,1,1,en,nk,jspin,lapw_gf,sigma2)) THEN     
          sigma2 =MATMUL(getPhaseMatrix(),sigma2)
          sigma2 = MATMUL(sigma2,mat_inverse(getPhaseMatrix()))                    
          miss = MAXVAL(ABS(sigma1-sigma2)) 
                                                                         
          IF (l_pe0) THEN 
-            WRITE(6,*) 'Missmatch of EmbPot:',miss 
+            WRITE(oUnit,*) 'Missmatch of EmbPot:',miss 
             IF (miss>0.1) THEN 
                WRITE(*,*)                                               &
      &              "Something wrong with generated embedding potential"
@@ -471,7 +476,7 @@
       !>                                                                
                                                                         
       !<-- S: priv_make_emb(curr,ev,ew,region,side,en,nk,jspin,lapw,gfin
-      SUBROUTINE priv_make_emb(curr,ev,ew,region,side,en,nk,jspin,lapw  &
+      SUBROUTINE priv_make_emb(curr,ev,ew,region,side,en,nk,jspin,lapw,lapw_gf  &
      &     ,gfinp)                                                      
 !-----------------------------------------------                        
 !                                                                       
@@ -485,7 +490,8 @@
       COMPLEX,INTENT(IN)       :: ev(:,:),ew(:) 
       INTEGER,INTENT(IN)       :: region,side,en,nk,jspin 
       TYPE(t_lapw),INTENT(IN)  :: lapw 
-      TYPE(t_gfinp),INTENT(IN) :: gfinp 
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
+      TYPE(t_embinp),INTENT(IN) :: gfinp 
       !>                                                                
       !<-- Locals                                                       
       INTEGER             :: indx(SIZE(curr)/2) 
@@ -503,7 +509,7 @@
                                                                         
       indx     = priv_selectIndex(curr,sign) 
       sigma(:,:) = priv_calculate_sigma(ev(1:nv2,indx),ev(nv2           &
-     &     +1:,indx),ew(indx),gfinp,lapw,sign)                          
+     &     +1:,indx),ew(indx),gfinp,lapw,lapw_gf,sign)                          
                                                                         
       !<-- Improve embpots                                              
                                                                         
@@ -512,19 +518,19 @@
             !correct it if necessary !Untested!!!                       
 !            CALL gf_CBS_embtest(gpot(:,:,1,s),ev_sorted,ew_sorted      
 !     +           ,curr_sorted)                                         
-            CALL priv_cutembpot(lapw,en,jspin,sigma(:,:)) 
+            CALL priv_cutembpot(lapw,lapw_gf,en,jspin,sigma(:,:)) 
          ENDIF 
                                                                         
          !>                                                             
       !<-- Write Embpots to file                                        
                                                                         
-      CALL gf_write2dmat(IO2D_EMB,region,side,en,nk,jspin,lapw,sigma) 
+      CALL gf_write2dmat(IO2D_EMB,region,side,en,nk,jspin,lapw_gf,sigma) 
                                                                         
                                                                         
       indx_full(:nv2) = priv_selectIndex(curr,1.0) 
       indx_full(nv2+1:) = priv_selectIndex(curr,-1.0) 
                                                                         
-      CALL gf_write2dmat(IO2D_CBS,region,side,en,nk,jspin,lapw,ev(:     &
+      CALL gf_write2dmat(IO2D_CBS,region,side,en,nk,jspin,lapw_gf,ev(:     &
      &     ,indx_full))                                                 
                                                                         
       !>                                                                
@@ -572,7 +578,7 @@
       !>                                                                
       !<-- S: priv_cutembpot(lapw,en,jspin,sigma)                       
                                                                         
-      SUBROUTINE  priv_cutembpot(lapw,en,jspin,sigma) 
+      SUBROUTINE  priv_cutembpot(lapw,lapw_gf,en,jspin,sigma)
 !-----------------------------------------------                        
 !                                                                       
 !           (last modified: 2004-00-00) D. Wortmann                     
@@ -582,6 +588,7 @@
       IMPLICIT NONE 
       !<--Arguments                                                     
       TYPE(t_lapw),INTENT(IN) :: lapw 
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
       INTEGER,INTENT(IN)      :: en,jspin 
       COMPLEX,INTENT(INOUT)   :: sigma(:,:) 
       !>                                                                
@@ -593,15 +600,15 @@
                                                                         
                                                                         
       RETURN 
-      g_max = MAXVAL(lapw%kp%rkp)*fraction 
-      DO n1 = 1,lapw%nv2_tot 
-         DO n2 = 1,lapw%nv2_tot 
-            s=sqrt(lapw%kp%rkp(n1,jspin)**2+lapw%kp%rkp(n2,jspin)**2) 
+      g_max = MAXVAL(lapw_gf%rkp)*fraction 
+      DO n1 = 1,lapw_gf%nv2_tot 
+         DO n2 = 1,lapw_gf%nv2_tot 
+            s=sqrt(lapw_gf%rkp(n1,jspin)**2+lapw_gf%rkp(n2,jspin)**2) 
             IF (s>g_max) THEN 
                IF (n1==n2) THEN 
                   !On diagonal set analytic value                       
                   sigma(n1,n2) = cmplx(0.,.5)*sqrt(gf_z(en,0)           &
-     &                 -lapw%kp%rkp(n1,jspin)**2)                       
+     &                 -lapw_gf%rkp(n1,jspin)**2)                       
                ELSE 
                   sigma(n1,n2)=0.0 
                ENDIF 
@@ -615,7 +622,7 @@
                                                                         
       !<-- F: priv_calculate_sigma(psi,delpsi,ew)                       
                                                                         
-      FUNCTION priv_calculate_sigma(psi,delpsi,ew,gfinp,lapw,sign)      &
+      FUNCTION priv_calculate_sigma(psi,delpsi,ew,gfinp,lapw,lapw_gf,sign) &
      &     RESULT(sigma)                                                
 !-----------------------------------------------                        
 !                                                                       
@@ -629,7 +636,8 @@
       COMPLEX,INTENT(IN)       :: psi(:,:),delpsi(:,:) 
       COMPLEX,INTENT(IN)       :: ew(:) 
       TYPE(t_lapw),INTENT(IN)  :: lapw 
-      TYPE(t_gfinp),INTENT(IN) :: gfinp 
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
+      TYPE(t_embinp),INTENT(IN) :: gfinp 
       REAL   ,INTENT(IN)       :: sign 
       COMPLEX                  :: sigma(SIZE(psi,1),SIZE(psi,2)) 
       !>                                                                
@@ -649,8 +657,8 @@
          IF (ABS(AIMAG(ew(n)))>gfinp%kappa_max) THEN 
 !            E = -0.5*AIMAG(ew(n))**2-e_shift !Pseudo energy            
             corr_delpsi(:,n)=0.0 
-!            DO nn = 1,lapw%nv2_tot                                     
-!               corr_delpsi(nn,n) = AIMAG(SQRT(E-lapw%kp%rkp(nn,1)**2/2.
+!            DO nn = 1,lapw_gf%nv2_tot                                     
+!               corr_delpsi(nn,n) = AIMAG(SQRT(E-lapw_gf%rkp(nn,1)**2/2.
 !     $              ))*psi(nn,n)                                       
 !            ENDDO                                                      
          ELSE 
@@ -658,7 +666,7 @@
             corr_delpsi(:,n)=delpsi(:,n) 
          ENDIF 
       ENDDO 
-!      WRITE(*,*) "States: ",lapw%nv2_tot," Replaced: ",lapw%nv2_tot-i  
+!      WRITE(*,*) "States: ",lapw_gf%nv2_tot," Replaced: ",lapw_gf%nv2_tot-i  
                                                                         
       sigma = mat_inverse(psi) 
       sigma = sign*0.5*MATMUL(delpsi,sigma) 

@@ -18,7 +18,7 @@
                                                                         
       !<-- F: gf_apply_metric(stars,atoms,sphhar,jspins,num_layers,a)   
       FUNCTION gf_apply_metric(l_surface,l_potmix,mpi,stars,atoms,cell,sphhar     &
-     &     ,jspins,num_layers,a)RESULT(b)                               
+     &     ,sym,jspins,num_layers,a)RESULT(b)                               
 !-----------------------------------------------                        
 !                                                                       
 !             (last modified: 2004-00-00) D. Wortmann                   
@@ -29,11 +29,12 @@
       IMPLICIT NONE 
       !<-- Arguments                                                    
       LOGICAL,INTENT(IN)         :: l_potmix,l_surface
-      TYPE(t_mpi),INTENT(IN)     :: mpi 
+      TYPE(t_gfmpi),INTENT(IN)     :: mpi 
       TYPE(t_stars),INTENT(IN)   :: stars(:) 
       TYPE(t_atoms),INTENT(IN)   :: atoms(:) 
       TYPE(t_sphhar),INTENT(IN)  :: sphhar(:) 
-      TYPE(t_cell),INTENT(IN)    :: cell(:) 
+      TYPE(t_cell),INTENT(IN)    :: cell(:)
+      TYPE(t_sym),INTENT(IN)     :: sym(:)
       INTEGER,INTENT(IN)         :: jspins,num_layers 
       REAL   ,INTENT(IN)         :: a(:) 
       REAL                       :: b(size(a)) 
@@ -46,35 +47,35 @@
       real                :: wght(nmz)
       !>                                                                
                                                                         
-      ALLOCATE(vpw(MAXVAL(stars%nq3))) 
-      ALLOCATE(vpw_w(MAXVAL(stars%nq3))) 
+      ALLOCATE(vpw(MAXVAL(stars%ng3))) 
+      ALLOCATE(vpw_w(MAXVAL(stars%ng3))) 
       !<-- apply the metric                                             
       imap = 0 
       DO layer = 1,num_layers 
          DO js = 1,jspins 
             !interstitial                                               
-            vpw(:stars(layer)%nq3) = CMPLX(a(imap+1:imap+stars(layer    &
-     &           )%nq3),a(imap+1+stars(layer)%nq3:imap+2*stars(layer    &
-     &           )%nq3))                                                
-            IF (stars(layer)%nq3<SIZE(vpw)) vpw(stars(layer)%nq3+1:) = 0.0
+            vpw(:stars(layer)%ng3) = CMPLX(a(imap+1:imap+stars(layer    &
+     &           )%ng3),a(imap+1+stars(layer)%ng3:imap+2*stars(layer    &
+     &           )%ng3))                                                
+            IF (stars(layer)%ng3<SIZE(vpw)) vpw(stars(layer)%ng3+1:) = 0.0
             CALL gf_initstepsanaly(stars(layer),0)
             CALL gf_gspaceconvolve(layer,stars(layer), &
      &           .0,vpw(:),vpw_w(:))
-            b(imap+1:imap+stars(layer)%nq3) = REAL(vpw_w(:stars(layer   &
-     &           )%nq3))*cell(layer)%omtil                              
+            b(imap+1:imap+stars(layer)%ng3) = REAL(vpw_w(:stars(layer   &
+     &           )%ng3))*cell(layer)%omtil                              
 
-            imap = imap+stars(layer)%nq3 
-            b(imap+1:imap+stars(layer)%nq3) = AIMAG(vpw_w(:stars(layer  &
-     &           )%nq3))*cell(layer)%omtil
+            imap = imap+stars(layer)%ng3 
+            b(imap+1:imap+stars(layer)%ng3) = AIMAG(vpw_w(:stars(layer  &
+     &           )%ng3))*cell(layer)%omtil
 
-            imap = imap+stars(layer)%nq3 
+            imap = imap+stars(layer)%ng3 
             !muffin-tin part                                            
             na = 1 
             DO  n = 1,atoms(layer)%ntype 
                dxn = atoms(layer)%neq(n)*atoms(layer)%dx(n)/3.0E0 
                dxn2 = 2.0E0 *dxn 
                dxn4 = 4.0E0 *dxn 
-               DO l = 0,sphhar(layer)%nlh(atoms(layer)%ntypsy(na)) 
+               DO l = 0,sphhar(layer)%nlh(sym(layer)%ntypsy(na)) 
                   imap = imap + 1 
                   b(imap) = a(imap)*dxn/atoms(layer)%rmsh(1,n) 
                                            !charge density mixing       
@@ -125,7 +126,7 @@
              b(imap+1:imap+nmz)=a(imap+1:imap+nmz)*wght(:nmz)*dvol
              imap=imap+nmz
              call metr_z0(nmzxy,wght)
-             DO n=1,stars(1)%nq2-1
+             DO n=1,stars(1)%ng2-1
                 b(imap+1:imap+nmzxy)=a(imap+1:imap+nmzxy)*wght(:nmzxy)*dvol*stars(1)%nstr2(n+1)
                 imap=imap+nmzxy
                 b(imap+1:imap+nmzxy)=a(imap+1:imap+nmzxy)*wght(:nmzxy)*dvol*stars(1)%nstr2(n+1)

@@ -7,7 +7,7 @@
           IMPLICIT NONE
       CONTAINS 
       SUBROUTINE gf_pwden(                                              &
-     &     lapw,stars,jspin,omtil,G,                                    &
+     &     lapw,lapw_gf,stars,jspin,omtil,G,                            &
      &     qpw)                                                         
 !*********************************************************************  
 !     Calculates the interstitial charge density from the               
@@ -16,11 +16,12 @@
 !     Daniel Wortmann                                                   
 !*********************************************************************  
       USE m_gf_types 
-      USE m_constants,ONLY:pimach 
+      USE m_constants, ONLY: pi_const, oUnit 
       IMPLICIT NONE 
 !                                                                       
 !     .. Scalar Arguments ..                                            
-      TYPE(t_lapw),INTENT(IN) :: lapw 
+      TYPE(t_lapw),INTENT(IN) :: lapw
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
       INTEGER, INTENT (IN)    :: jspin 
       REAL,    INTENT (IN)    :: omtil 
 !     ..                                                                
@@ -35,21 +36,21 @@
       COMPLEX :: dg,phase 
       COMPLEX,ALLOCATABLE::rg(:,:,:) 
                                                                         
-      pi=pimach() 
+      pi=pi_const 
       ALLOCATE(rg(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,            &
      &     -stars%mx3:stars%mx3))                                       
                                                                         
       rg=CMPLX(0.0,0.0) 
                                 ! Calculate the reduced G-function      
-      DO n1=1,lapw%nv_sphere(jspin)
-!         IF (ABS(lapw%k%k3(n1,jspin))>stars%mx3) CYCLE                 
-         DO n2=1,lapw%nv_sphere(jspin)
-!            IF (ABS(lapw%k%k3(n2,jspin))>stars%mx3) CYCLE              
-            i1 = lapw%k%k1(n2,jspin) - lapw%k%k1(n1,jspin) 
+      DO n1=1,lapw_gf%nv_sphere(jspin)
+!         IF (ABS(lapw%k3(n1,jspin))>stars%mx3) CYCLE                 
+         DO n2=1,lapw_gf%nv_sphere(jspin)
+!            IF (ABS(lapw%k3(n2,jspin))>stars%mx3) CYCLE              
+            i1 = lapw%k1(n2,jspin) - lapw%k1(n1,jspin) 
             IF (iabs(i1)>stars%mx1) CYCLE 
-            i2 = lapw%k%k2(n2,jspin) - lapw%k%k2(n1,jspin) 
+            i2 = lapw%k2(n2,jspin) - lapw%k2(n1,jspin) 
             IF (iabs(i2)>stars%mx2) CYCLE 
-            i3 = lapw%k%k3(n2,jspin) - lapw%k%k3(n1,jspin) 
+            i3 = lapw%k3(n2,jspin) - lapw%k3(n1,jspin) 
             IF (iabs(i3)>stars%mx3) CYCLE 
             rg(i1,i2,i3)=rg(i1,i2,i3)+g(n2,n1) 
          ENDDO 

@@ -6,7 +6,6 @@
 ! Module that contains code to diagonalize the vacuum Hamiltonian
 Module m_gf_vacuum_hs
       use m_juDFT
-#include "cpp_double.h"
 	use m_juDFT
     implicit none
     private
@@ -20,14 +19,18 @@ Module m_gf_vacuum_hs
 
     public gf_vacuum_diagonalize,gf_generate_embpot, gf_vacuum_getHS
 	contains
-    subroutine gf_vacuum_diagonalize(mpi,lapw,stars,cell,sym,kpts,enpara,jspins,nk,l_noco)
+    subroutine gf_vacuum_diagonalize(fmpi,vacuum,input,nococonv,lapw,lapw_gf,stars,cell,sym,kpts,enpara,jspins,nk,l_noco)
     ! Set up the vacuum Hamiltonian and diagonalize it, store resulting eigenvectors and eigenvalues
     ! for later use
 	use m_gf_types
 	use m_gf_iodop,only:gf_iodop_readvacuum,GF_POTFILE
     implicit none
     type(t_lapw),intent(in) ::  lapw
-    type(t_mpi),intent(in)  ::  mpi
+    type(t_lapw_gf),intent(in) :: lapw_gf
+    type(t_mpi),intent(in)  ::  fmpi
+    type(t_vacuum),intent(in) :: vacuum
+    type(t_input),intent(in)  :: input
+    type(t_nococonv),intent(in) :: nococonv
     type(t_stars),intent(in):: stars
     type(t_cell),intent(in) ::  cell
     type(t_sym),intent(in)  ::   sym
@@ -38,7 +41,7 @@ Module m_gf_vacuum_hs
 
 	integer :: n,nv2,jspin,jsps
 	real    :: wronk,evac_array(2,jspins)
-	complex,dimension(lapw%nv2(jspins),lapw%nv2(jspins)) :: tuuv,tudv,tduv,tddv
+	complex,dimension(lapw_gf%nv2(jspins),lapw_gf%nv2(jspins)) :: tuuv,tudv,tduv,tddv
 	complex,allocatable::s_mat(:,:)
 
     !workspace for LAPACK
@@ -51,7 +54,7 @@ Module m_gf_vacuum_hs
     integer::iwork_d(1)
 
     if (.true.) then !All PE calculate vacuum!
-		nv2=lapw%nv2_tot
+		nv2=lapw_gf%nv2_tot
 
 	    if (allocated(h_mat)) then
     		deallocate(h_mat,eigval,uz,duz,udz,dudz,ddnv)
@@ -66,10 +69,10 @@ Module m_gf_vacuum_hs
         ENDIF
 	    do jspin=1,jsps
 		!enpara%evac -0.1!
-		   call gf_vacuum_getHS(stars,lapw,jspin,jspins,nk,l_noco,sym,kpts,enpara%evac(1,jspin),cell,h_mat(:,:,jspin),s_mat(:,:))
+		   call gf_vacuum_getHS(fmpi,vacuum,input,nococonv,stars,lapw,lapw_gf,jspin,jspins,nk,l_noco,sym,kpts,enpara%evac(1,jspin),cell,h_mat(:,:,jspin),s_mat(:,:))
 		   !Call Lapack to determine workspace
 	 	   if (jspin==1) then
-	 		  CALL CPP_LAPACK_chegvd(1,'V','U',2*nv2,h_mat(:,:,jspin),2*nv2   &
+	 		  CALL zhegvd(1,'V','U',2*nv2,h_mat(:,:,jspin),2*nv2   &
                  ,s_mat,2*nv2,eigval,work_d,-1,rwork_d,-1,iwork_d             &
                  ,-1,n)
      		  lwork = work_d(1)
@@ -81,7 +84,7 @@ Module m_gf_vacuum_hs
      	    endif
      	  !Diagonalize
 
-     	  CALL CPP_LAPACK_chegvd(1,'V','U',2*nv2,h_mat(:,:,jspin),2*nv2     &
+     	  CALL zhegvd(1,'V','U',2*nv2,h_mat(:,:,jspin),2*nv2     &
                ,s_mat,2*nv2,eigval(:,jspin),work,lwork,rwork,lrwork,iwork          &
                ,liwork,n)
           if (n/=0) call juDFT_error("Could not diagonalize Vacuum Hamiltonian")
@@ -100,7 +103,6 @@ Module m_gf_vacuum_hs
 	type(t_mpi),intent(in)::mpi
 	integer,intent(in)    ::jspins
 #ifdef CPP_MPI
-	INCLUDE 'mpif.h'
 	integer:: nv2,ierr(3)
 
 	if (mpi%pe0) then
@@ -114,22 +116,27 @@ Module m_gf_vacuum_hs
        allocate(h_mat(2*nv2,2*nv2,jspins),eigval(2*nv2,jspins))
        allocate(uz(nv2,jspins),udz(nv2,jspins),duz(nv2,jspins),dudz(nv2,jspins),ddnv(nv2,jspins))
     endif
-    CALL MPI_BCAST(h_mat,size(h_mat),CPP_MPI_COMPLEX,0,MPI_COMM_WORLD,ierr)
-    CALL MPI_BCAST(eigval,size(eigval),CPP_MPI_REAL,0,MPI_COMM_WORLD,ierr)
-    CALL MPI_BCAST(uz,size(uz),CPP_MPI_REAL,0,MPI_COMM_WORLD,ierr)
-    CALL MPI_BCAST(udz,size(udz),CPP_MPI_REAL,0,MPI_COMM_WORLD,ierr)
-    CALL MPI_BCAST(duz,size(duz),CPP_MPI_REAL,0,MPI_COMM_WORLD,ierr)
-    CALL MPI_BCAST(dudz,size(dudz),CPP_MPI_REAL,0,MPI_COMM_WORLD,ierr)
-    CALL MPI_BCAST(ddnv,size(ddnv),CPP_MPI_REAL,0,MPI_COMM_WORLD,ierr)
+    CALL MPI_BCAST(h_mat,size(h_mat),MPI_DOUBLE_COMPLEX,0,MPI_COMM_WORLD,ierr)
+    CALL MPI_BCAST(eigval,size(eigval),MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+    CALL MPI_BCAST(uz,size(uz),MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+    CALL MPI_BCAST(udz,size(udz),MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+    CALL MPI_BCAST(duz,size(duz),MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+    CALL MPI_BCAST(dudz,size(dudz),MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
+    CALL MPI_BCAST(ddnv,size(ddnv),MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,ierr)
 #endif
 	end subroutine
 
-	subroutine 	gf_vacuum_getHS(stars,lapw,jspin,jspins,nk,l_noco,sym,kpts,enpara_vac,cell,h_mat,s_mat,l_sym)
+	subroutine 	gf_vacuum_getHS(fmpi,vacuum,input,nococonv,stars,lapw,lapw_gf,jspin,jspins,nk,l_noco,sym,kpts,enpara_vac,cell,h_mat,s_mat,l_sym)
 	use m_gf_types
-	use m_vacfun
+	use m_vacfun !modern interface
 	use m_gf_iodop
     implicit none
+    type(t_mpi),intent(in)::     fmpi
+    type(t_vacuum),intent(in)::  vacuum
+    type(t_input),intent(in)::   input
+    type(t_nococonv),intent(in)::nococonv
     type(t_lapw),intent(in)::    lapw
+    type(t_lapw_gf),intent(in):: lapw_gf
     type(t_stars),intent(in)::   stars
     type(t_cell),intent(in)::    cell
     type(t_sym),intent(in)::     sym
@@ -143,60 +150,45 @@ Module m_gf_vacuum_hs
 	!locals
 	logical :: symmetrize
 	integer :: nv2,n,nn,jsp
+	integer,allocatable :: kvac(:,:,:)
+	complex,allocatable :: vxy4(:,:,:,:)
 	real    :: wronk
-	complex,dimension(lapw%nv2_tot,lapw%nv2_tot) :: tuuv,tudv,tduv,tddv
-    real,allocatable        ::   vz(:,:,:),vz_in(:,:)
+	complex,dimension(lapw_gf%nv2_tot,lapw_gf%nv2_tot) :: tuuv,tudv,tduv,tddv
+    complex,allocatable     ::   vz(:,:,:)
+    real,allocatable        ::   vz_in(:,:)
     complex,allocatable     ::   vxy(:,:,:)
     real::evac_array(2,jspins)
     symmetrize=.true.
     if (present(l_sym)) symmetrize=l_sym
     allocate(vz(nmz,2,4))
 	if (l_noco) then
-	    allocate(vz_in(nmz,4),vxy(nmzxy,stars%nq2-1,3))
+	    allocate(vz_in(nmz,4),vxy(nmzxy,stars%ng2-1,3))
 	else
-	    allocate(vz_in(nmz,jspins),vxy(nmzxy,stars%nq2-1,jspins))
+	    allocate(vz_in(nmz,jspins),vxy(nmzxy,stars%ng2-1,jspins))
 	endif
 	!read the vacuum potential
 	call gf_iodop_readvacuum(GF_POTFILE,vxy,vz_in)
 	vz=0.0
 	vz(:,1,:size(vz_in,2))=vz_in(:,:)
 
-	nv2=lapw%nv2(jspin)
+	nv2=lapw_gf%nv2(jspin)
     evac_array=enpara_vac
 
-    call vacfun(                                                                              &
-        	nmzxy,nmz,nv2,stars%mx1,stars%mx2,stars%mx3,stars%nq2,stars%nq3,jspins,         &
-        	jspin,jspins,l_noco,(/.0,.0,.0/),1,                                                        &
-        	nmzxy,nmz,sym%invs2,delz,stars%ig2,stars%ig,stars%rgphs,                              &
-        	cell%bbmat,1,evac_array,kpts%bk(:,nk),                                                      &
-        	vxy(:,:,jspin),vz,lapw%kp%k1p(:nv2,:),lapw%kp%k2p(:nv2,:),lapw%nv2,                                                   &
-        	tuuv(:nv2,:nv2),tddv(:nv2,:nv2),tudv(:nv2,:nv2),tduv(:nv2,:nv2),      &
+    !modern vacfun interface
+    ALLOCATE(kvac(2,SIZE(lapw_gf%k1p,1),SIZE(lapw_gf%k1p,2)))
+    kvac(1,:,:)=lapw_gf%k1p
+    kvac(2,:,:)=lapw_gf%k2p
+    ALLOCATE(vxy4(SIZE(vxy,1),SIZE(vxy,2),1,SIZE(vxy,3)))
+    vxy4(:,:,1,:)=vxy
+    call vacfun(fmpi,vacuum,stars,input,nococonv,jspin,jspin,           &
+        	cell,1,evac_array,kpts%bk(:,nk),                                &
+        	vxy4,vz,kvac,lapw_gf%nv2,                                       &
+        	tuuv(:nv2,:nv2),tddv(:nv2,:nv2),tudv(:nv2,:nv2),tduv(:nv2,:nv2),&
         	uz(:nv2,:),duz(:nv2,:),udz(:nv2,:),dudz(:nv2,:),ddnv(:nv2,:),wronk)
+    DEALLOCATE(kvac,vxy4)
      if (l_noco) then
-            !now we have to get the off-diagonal terms of the matrices
-            call vacfun(                                                                              &
-        	nmzxy,nmz,maxval(lapw%nv2),stars%mx1,stars%mx2,stars%mx3,stars%nq2,stars%nq3,jspins,         &
-        	jspin,jspins,l_noco,(/.0,.0,.0/),2,                                                        &
-        	nmzxy,nmz,sym%invs2,delz,stars%ig2,stars%ig,stars%rgphs,                              &
-        	cell%bbmat,1,evac_array,kpts%bk(:,nk),                                                      &
-        	vxy(:,:,2),vz,lapw%kp%k1p(:nv2,:),lapw%kp%k2p(:nv2,:),lapw%nv2,                                                   &
-        	tuuv(nv2+1:,nv2+1:),tddv(nv2+1:,nv2+1:),tudv(nv2+1:,nv2+1:),tduv(nv2+1:,nv2+1:),         &
-        	uz(nv2+1:,:),duz(nv2+1:,:),udz(nv2+1:,:),dudz(nv2+1:,:),ddnv(nv2+1:,:),wronk)
-        	call vacfun(                                                                              &
-        	nmzxy,nmz,maxval(lapw%nv2),stars%mx1,stars%mx2,stars%mx3,stars%nq2,stars%nq3,jspins,         &
-        	jspin,jspins,l_noco,(/.0,.0,.0/),3,                                                        &
-        	nmzxy,nmz,sym%invs2,delz,stars%ig2,stars%ig,stars%rgphs,                              &
-        	cell%bbmat,1,evac_array,kpts%bk(:,nk),                                                      &
-        	vxy(:,:,3),vz,lapw%kp%k1p(:nv2,:),lapw%kp%k2p(:nv2,:),lapw%nv2,                                                   &
-        	tuuv(:nv2,nv2+1:),tddv(:nv2,nv2+1:),tudv(:nv2,nv2+1:),tduv(:nv2,nv2+1:),   &
-        	uz(:nv2,:),duz(:nv2,:),udz(:nv2,:),dudz(:nv2,:),ddnv(:nv2,:),wronk)
-
-        	tuuv(nv2+1:,:nv2)=conjg(tuuv(:nv2,nv2+1:))
-        	tudv(nv2+1:,:nv2)=conjg(tudv(:nv2,nv2+1:))
-        	tduv(nv2+1:,:nv2)=conjg(tduv(:nv2,nv2+1:))
-        	tddv(nv2+1:,:nv2)=conjg(tddv(:nv2,nv2+1:))
-
-     	    nv2=lapw%nv2_tot
+            CALL juDFT_error("noco not yet supported in the gfleur port",&
+                             calledby="gf_vacuum_hs")
      endif
      !Setup of Hamiltonian
      h_mat(:nv2,:nv2)=tuuv
@@ -207,8 +199,8 @@ Module m_gf_vacuum_hs
      jsp=jspin
      DO n=1,nv2
         nn=n
-        if (n>lapw%nv2(jspin)) then
-             nn=n-lapw%nv2(jspin)
+        if (n>lapw_gf%nv2(jspin)) then
+             nn=n-lapw_gf%nv2(jspin)
              jsp=1
         endif
      	h_mat(n,n)=h_mat(n,n)+0.5*uz(nn,jsp)*duz(nn,jsp)
@@ -226,12 +218,12 @@ Module m_gf_vacuum_hs
      DO n=1,nv2
      	s_mat(n,n)=1
      enddo
-     DO n=1,lapw%nv2(jspin)
+     DO n=1,lapw_gf%nv2(jspin)
         s_mat(nv2+n,nv2+n)=ddnv(n,jspin)
      enddo
      if (l_noco) then
-       DO n=1,lapw%nv2(2)
-          s_mat(nv2+lapw%nv2(1)+n,nv2+lapw%nv2(1)+n)=ddnv(n,2)
+       DO n=1,lapw_gf%nv2(2)
+          s_mat(nv2+lapw_gf%nv2(1)+n,nv2+lapw_gf%nv2(1)+n)=ddnv(n,2)
        enddo
      endif
 

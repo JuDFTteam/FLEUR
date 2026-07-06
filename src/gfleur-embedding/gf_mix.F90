@@ -4,6 +4,10 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
       MODULE m_gf_mix 
+#ifdef CPP_MPI
+      USE mpi
+#endif
+      USE m_constants, ONLY: oUnit
 !-------------------------------------------------------------          
 !Module provides an interface to the mixing part of FLEUR               
 !as used in the GF-code                                                 
@@ -44,8 +48,8 @@
       TYPE(t_noco),INTENT(IN)   :: noco(:) 
       TYPE(t_sym),INTENT(IN)    :: sym 
       type(t_enpara),intent(in) :: enpara(:)
-      TYPE(t_gfinp),INTENT(IN)  :: gfinp 
-      TYPE(t_mix),INTENT(IN)    :: mix 
+      TYPE(t_embinp),INTENT(IN)  :: gfinp 
+      TYPE(t_gfmix),INTENT(IN)    :: mix 
       TYPE(t_layers),INTENT(IN) :: layers 
       INTEGER,INTENT(IN)        :: jspins
                                                                         
@@ -58,7 +62,6 @@
                                                                         
       !>                                                                
 #ifdef CPP_MPI                                                          
-      INCLUDE "mpif.h" 
       CALL MPI_BARRIER(MPI_COMM_WORLD,ierr) 
 #endif                                                                  
                                                                         
@@ -79,7 +82,7 @@
      &        ,sphhar(layer),mpi,sym,cell(layer),gfinp%l_potmix         &
      &        ,layer,distance,volume,enpara(layer))
       ENDDO 
-      WRITE(6,*) "Total distance of all layers:",1000*SQRT(distance     &
+      WRITE(oUnit,*) "Total distance of all layers:",1000*SQRT(distance     &
      &     /volume)                                                     
                                                                         
       !>                                                                
@@ -98,12 +101,12 @@
                                                                         
       len = 0 
       DO layer = 1,layers%num_layers 
-         len  = len+2*stars(layer)%nq3 +                                &
+         len  = len+2*stars(layer)%ng3 +                                &
      &        atoms(layer)%ntype*(MAXVAL(sphhar(layer)%nlh)+1)          &
      &        *MAXVAL(atoms(layer)%jri)                                 
                                                                         
       ENDDO 
-      if (gfinp%l_surface) len=len+nmz+2*nmz*stars(1)%nq2-1
+      if (gfinp%l_surface) len=len+nmz+2*nmz*stars(1)%ng2-1
 
       len = len*jspins 
                                                                         
@@ -145,43 +148,43 @@
       !<-- Calculate the Distance                                       
       metric = gf_apply_metric(gfinp%l_surface,gfinp%l_potmix,mpi,stars,atoms,cell,sphhar   &
      &     ,jspins,layers%num_layers,fsm)
-      write(6,*) "Distance for all layers:"
+      write(oUnit,*) "Distance for all layers:"
       DO layer=1,layers%num_layers
-          write(6,"('Layer:',i5,' distance=',f0.8)") layer, 1000.*SQRT(ABS(dot_PRODUCT(metric(datastart(layer):dataend(layer)) &
+          write(oUnit,"('Layer:',i5,' distance=',f0.8)") layer, 1000.*SQRT(ABS(dot_PRODUCT(metric(datastart(layer):dataend(layer)) &
      &     ,fsm(datastart(layer):dataend(layer))))/cell(layer)%vol)
           ds=datastart(layer)
           dl=dataend(layer)-datastart(layer)
           dl=dl/jspins
-          write(6,"('    Interstitial distance=',f0.8)")   &
-                1000.*SQRT(ABS(dot_PRODUCT(metric(ds:ds+stars(layer)%nq3),fsm(ds:ds+stars(layer)%nq3)))/cell(layer)%volint)
-          write(6,"('    MT distance          =',f0.8)")   &
-                1000.*SQRT(ABS(dot_PRODUCT(metric(ds+stars(layer)%nq3+1:ds+dl),fsm(ds+stars(layer)%nq3+1:ds+dl)))/(cell(layer)%vol-cell(layer)%volint))
+          write(oUnit,"('    Interstitial distance=',f0.8)")   &
+                1000.*SQRT(ABS(dot_PRODUCT(metric(ds:ds+stars(layer)%ng3),fsm(ds:ds+stars(layer)%ng3)))/cell(layer)%volint)
+          write(oUnit,"('    MT distance          =',f0.8)")   &
+                1000.*SQRT(ABS(dot_PRODUCT(metric(ds+stars(layer)%ng3+1:ds+dl),fsm(ds+stars(layer)%ng3+1:ds+dl)))/(cell(layer)%vol-cell(layer)%volint))
           if (jspins==2) then
              ds=ds+dl+1
-             write(6,"('    Interstitial distance=',f0.8)")   &
-                1000.*SQRT(ABS(dot_PRODUCT(metric(ds:ds+stars(layer)%nq3),fsm(ds:ds+stars(layer)%nq3)))/cell(layer)%volint)
-             write(6,"('    MT distance=          ',f0.8)")   &
-                1000.*SQRT(ABS(dot_PRODUCT(metric(ds+stars(layer)%nq3+1:ds+dl),fsm(ds+stars(layer)%nq3+1:ds+dl)))/(cell(layer)%vol-cell(layer)%volint))
+             write(oUnit,"('    Interstitial distance=',f0.8)")   &
+                1000.*SQRT(ABS(dot_PRODUCT(metric(ds:ds+stars(layer)%ng3),fsm(ds:ds+stars(layer)%ng3)))/cell(layer)%volint)
+             write(oUnit,"('    MT distance=          ',f0.8)")   &
+                1000.*SQRT(ABS(dot_PRODUCT(metric(ds+stars(layer)%ng3+1:ds+dl),fsm(ds+stars(layer)%ng3+1:ds+dl)))/(cell(layer)%vol-cell(layer)%volint))
           endif
       enddo
       if (gfinp%l_surface) &
-           write(6,"('Vacuum:',5x,' distance=',f0.8)") 1000.*SQRT(ABS(dot_PRODUCT(metric(dataend(layers%num_layers:)) &
+           write(oUnit,"('Vacuum:',5x,' distance=',f0.8)") 1000.*SQRT(ABS(dot_PRODUCT(metric(dataend(layers%num_layers:)) &
      &     ,fsm(dataend(layers%num_layers:)))))/cell(1)%area/10
-      WRITE(6,*) "Mix: total distance =", 1000.*SQRT(ABS(dot_PRODUCT(metric,fsm))/SUM(cell%vol))
+      WRITE(oUnit,*) "Mix: total distance =", 1000.*SQRT(ABS(dot_PRODUCT(metric,fsm))/SUM(cell%vol))
       !>                                                                
       !<--Stepsize
       sm=sm-sm_old
       metric = gf_apply_metric(gfinp%l_surface,gfinp%l_potmix,mpi,stars,atoms,cell,sphhar   &
      &     ,jspins,layers%num_layers,sm)
-      write(6,*) "Stepsize for all layers:"
+      write(oUnit,*) "Stepsize for all layers:"
       DO layer=1,layers%num_layers
-          write(6,"('Layer:',i5,' step=',f0.8)") layer, 1000.*SQRT(ABS(dot_PRODUCT(metric(datastart(layer):dataend(layer)) &
+          write(oUnit,"('Layer:',i5,' step=',f0.8)") layer, 1000.*SQRT(ABS(dot_PRODUCT(metric(datastart(layer):dataend(layer)) &
      &     ,sm(datastart(layer):dataend(layer)))))/cell(layer)%vol
       enddo
       if (gfinp%l_surface) &
-           write(6,"('Vacuum:',5x,' step=',f0.8)") 1000.*SQRT(ABS(dot_PRODUCT(metric(dataend(layers%num_layers:)) &
+           write(oUnit,"('Vacuum:',5x,' step=',f0.8)") 1000.*SQRT(ABS(dot_PRODUCT(metric(dataend(layers%num_layers:)) &
      &     ,sm(dataend(layers%num_layers:)))))/cell(1)%area/10
-      WRITE(6,*) "Mix: total stepsize =", 1000.*SQRT(ABS(dot_PRODUCT(metric,sm))/SUM(cell%vol))
+      WRITE(oUnit,*) "Mix: total stepsize =", 1000.*SQRT(ABS(dot_PRODUCT(metric,sm))/SUM(cell%vol))
 
       DEALLOCATE (sm,fsm,metric,sm_old)
                                                                         
@@ -215,7 +218,7 @@
       TYPE(t_stars),INTENT(IN)  :: stars(:)
       type(t_cell),intent(in)   :: cell(:)
       type(t_sym),intent(in)    :: sym
-      type(t_mix),intent(in)    :: mix
+      TYPE(t_gfmix),intent(in)    :: mix
       INTEGER,INTENT(IN)        :: jspins 
       INTEGER,INTENT(OUT)       :: dataend(:),datastart(:) 
       REAL   ,INTENT(OUT)       :: sout(:),fsout(:)
@@ -228,8 +231,6 @@
       COMPLEX,ALLOCATABLE :: vpw(:,:,:),vxy(:,:,:,:)
       LOGICAL             :: fixed(layers%num_layers+1),lexist
 #ifdef CPP_MPI                                                          
-      include "mpif.h" 
-#include "cpp_double.h"                                                 
 #endif                                                                  
                                                                         
       !>                                                                
@@ -255,7 +256,7 @@
          datastart(layer) = offset+1 
          !<-- read charge                                               
                                                                         
-         ALLOCATE(vpw(stars(layer)%nq3,jspins,2))
+         ALLOCATE(vpw(stars(layer)%ng3,jspins,2))
          ALLOCATE(rho(MAXVAL(atoms(layer)%jri),0:MAXVAL(sphhar(layer    &
      &        )%nlh),atoms(layer)%ntype,jspins,2))
          CALL gf_loddop(fileid,layer,jspins,                            &
@@ -280,20 +281,20 @@
          !>                                                             
          DO js = 1,jspins 
             !put plane-waves on real-space grid                         
-            sout(offset+1:offset+stars(layer)%nq3) =                    &
-     &           REAL(vpw(:stars(layer)%nq3,js,1))
-            fsout(offset+1:offset+stars(layer)%nq3) =                    &
-     &           REAL(vpw(:stars(layer)%nq3,js,2))
-            offset = offset+stars(layer)%nq3 
-            sout(offset+1:offset+stars(layer)%nq3) =                    &
-     &           AIMAG(vpw(:stars(layer)%nq3,js,1))
-            fsout(offset+1:offset+stars(layer)%nq3) =                    &
-     &           AIMAG(vpw(:stars(layer)%nq3,js,2))
-            offset = offset+stars(layer)%nq3 
+            sout(offset+1:offset+stars(layer)%ng3) =                    &
+     &           REAL(vpw(:stars(layer)%ng3,js,1))
+            fsout(offset+1:offset+stars(layer)%ng3) =                    &
+     &           REAL(vpw(:stars(layer)%ng3,js,2))
+            offset = offset+stars(layer)%ng3 
+            sout(offset+1:offset+stars(layer)%ng3) =                    &
+     &           AIMAG(vpw(:stars(layer)%ng3,js,1))
+            fsout(offset+1:offset+stars(layer)%ng3) =                    &
+     &           AIMAG(vpw(:stars(layer)%ng3,js,2))
+            offset = offset+stars(layer)%ng3 
             !put mt charge on grid                                      
             na = 1 
             DO n = 1,atoms(layer)%ntype 
-               DO l = 0,sphhar(layer)%nlh(atoms(layer)%ntypsy(na)) 
+               DO l = 0,sphhar(layer)%nlh(sym%ntypsy(na)) 
                   DO i = 1,atoms(layer)%jri(n) 
                      offset       = offset +1 
                      sout(offset) = rho(i,l,n,js,1)
@@ -312,7 +313,7 @@
       !in case of a surface calculation we have to add the surface charge
 
       if (l_surface) then
-         allocate(vz(nmz,jspins,2),vxy(nmzxy,stars(1)%nq2-1,jspins,2))
+         allocate(vz(nmz,jspins,2),vxy(nmzxy,stars(1)%ng2-1,jspins,2))
          call gf_iodop_readvacuum(GF_CDNFILE,vxy(:,:,:,1),vz(:,:,1),old=.true.)
          call gf_iodop_readvacuum(GF_CDNFILE,vxy(:,:,:,2),vz(:,:,2))
          if (fixed(layers%num_layers+1)) then
@@ -326,7 +327,7 @@
             sout(offset+1:offset+nmz) = vz(:,js,1)
             fsout(offset+1:offset+nmz) = vz(:,js,2)
             offset=offset+nmz
-            DO n=1,stars(1)%nq2-1
+            DO n=1,stars(1)%ng2-1
                 sout(offset+1:offset+nmzxy) = real(vxy(:,n,js,1))
                 sout(offset+nmzxy+1:offset+2*nmzxy)= aimag(vxy(:,n,js,1))
                 fsout(offset+1:offset+nmzxy) = real(vxy(:,n,js,2))
@@ -362,7 +363,7 @@
       TYPE(t_sphhar),INTENT(IN) :: sphhar(:) 
       TYPE(t_atoms),INTENT(IN)  :: atoms(:) 
       TYPE(t_stars),INTENT(IN)  :: stars(:) 
-      TYPE(t_gfinp),INTENT(IN)  :: gfinp 
+      TYPE(t_embinp),INTENT(IN)  :: gfinp 
       INTEGER,INTENT(IN)        :: jspins 
       REAL   ,INTENT(IN)        :: smix(:) 
       logical,intent(in)        :: l_surface
@@ -378,18 +379,18 @@
                                                                         
       offset = 0 
       DO layer = 1,layers%num_layers 
-         ALLOCATE(vpw(stars(layer)%nq3,jspins)) 
+         ALLOCATE(vpw(stars(layer)%ng3,jspins)) 
          ALLOCATE(rho(MAXVAL(atoms(layer)%jri),0:MAXVAL(sphhar(layer    &
      &        )%nlh),atoms(layer)%ntype,jspins))                        
          DO js = 1,jspins 
-            vpw(:stars(layer)%nq3,js) = CMPLX(smix(offset+1:offset      &
-     &           +stars(layer)%nq3),smix(offset+1+stars(layer           &
-     &           )%nq3:offset+2*stars(layer)%nq3))                      
-            offset = offset+2*stars(layer)%nq3 
+            vpw(:stars(layer)%ng3,js) = CMPLX(smix(offset+1:offset      &
+     &           +stars(layer)%ng3),smix(offset+1+stars(layer           &
+     &           )%ng3:offset+2*stars(layer)%ng3))                      
+            offset = offset+2*stars(layer)%ng3 
             !put mt charge on grid                                      
             na = 1 
             DO n = 1,atoms(layer)%ntype 
-               DO l = 0,sphhar(layer)%nlh(atoms(layer)%ntypsy(na)) 
+               DO l = 0,sphhar(layer)%nlh(sym%ntypsy(na)) 
                   DO i = 1,atoms(layer)%jri(n) 
                      offset = offset +1 
                      rho(i,l,n,js) = smix(offset) 
@@ -407,11 +408,11 @@
             !layers                                                     
       ENDDO 
       if (l_surface) then
-         allocate(vz(nmz,jspins),vxy(nmzxy,stars(1)%nq2-1,jspins))
+         allocate(vz(nmz,jspins),vxy(nmzxy,stars(1)%ng2-1,jspins))
          DO js = 1,jspins
             vz(:,js)=smix(offset+1:offset+nmz)
             offset=offset+nmz
-            DO n=1,stars(1)%nq2-1
+            DO n=1,stars(1)%ng2-1
                 vxy(:,n,js)=cmplx(smix(offset+1:offset+nmzxy),smix(offset+nmzxy+1:offset+2*nmzxy))
                 offset=offset+2*nmzxy
             enddo

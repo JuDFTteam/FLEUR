@@ -4,6 +4,10 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
       MODULE m_gf_charge 
+#ifdef CPP_MPI
+      USE mpi
+#endif
+      USE m_constants, ONLY: oUnit
           IMPLICIT NONE
 !-----------------------------------------------                        
 ! DESC:Mix and possibly write out the charge                            
@@ -30,12 +34,12 @@
       !<-- Arguments                                                    
                                                                         
       INTEGER,INTENT(IN)        :: jspins 
-      TYPE(t_mpi),INTENT(IN)    :: mpi 
+      TYPE(t_gfmpi),INTENT(IN)    :: mpi 
       TYPE(t_stars),INTENT(IN)  :: stars 
       TYPE(t_atoms),INTENT(IN)  :: atoms 
       TYPE(t_cell),INTENT(IN)   :: cell 
-      TYPE(t_mix),INTENT(IN)    :: mix 
-      TYPE(t_gfinp),INTENT(IN)  :: gfinp 
+      TYPE(t_gfmix),INTENT(IN)    :: mix 
+      TYPE(t_embinp),INTENT(IN)  :: gfinp 
       TYPE(t_sphhar),INTENT(IN) :: sphhar 
       TYPE(t_noco),INTENT(IN)   :: noco 
       TYPE(t_sym),INTENT(IN)    :: sym 
@@ -76,7 +80,7 @@
             ENDIF 
             IF (layer == i) EXIT loop 
          ENDDO loop 
-         WRITE(6,*) "Qfix:",fix(i) 
+         WRITE(oUnit,*) "Qfix:",fix(i) 
          rho = fix(i)*rho 
          pwd = fix(i)*pwd 
   100    CLOSE(99) 
@@ -115,8 +119,6 @@
       INTEGER             :: rank,e(3) 
       !>                                                                
 #ifdef CPP_MPI                                                          
-#include "cpp_double.h"                                                 
-      INCLUDE "mpif.h" 
 #endif                                                                  
       q_nuc = SUM(qtot_nuc) 
       q_el = SUM(qtot_el) 
@@ -127,24 +129,24 @@
       CALL MPI_COMM_RANK(MPI_COMM_WORLD,rank,e) 
       IF (rank == 0) THEN 
          CALL MPI_REDUCE(MPI_IN_PLACE,q_nuc,1,                          &
-     &        CPP_MPI_REAL,                                             &
+     &        MPI_DOUBLE_PRECISION,                                             &
      &        MPI_SUM,0,MPI_COMM_WORLD,e)                               
          CALL MPI_REDUCE(MPI_IN_PLACE,q_el,1,                           &
-     &        CPP_MPI_REAL,                                             &
+     &        MPI_DOUBLE_PRECISION,                                             &
      &        MPI_SUM,0,MPI_COMM_WORLD,e)                               
       ELSE 
          CALL MPI_REDUCE(q_nuc,MPI_IN_PLACE,1,                          &
-     &        CPP_MPI_REAL,                                             &
+     &        MPI_DOUBLE_PRECISION,                                             &
      &        MPI_SUM,0,MPI_COMM_WORLD,e)                               
          CALL MPI_REDUCE(q_el,MPI_IN_PLACE,1,                           &
-     &        CPP_MPI_REAL,                                             &
+     &        MPI_DOUBLE_PRECISION,                                             &
      &        MPI_SUM,0,MPI_COMM_WORLD,e)                               
       ENDIF 
       CALL MPI_BCAST(q_nuc,1,                                           &
-     &     CPP_MPI_REAL,                                                &
+     &     MPI_DOUBLE_PRECISION,                                                &
      &     0,MPI_COMM_WORLD,e)                                          
       CALL MPI_BCAST(q_el,1,                                            &
-     &     CPP_MPI_REAL,                                                &
+     &     MPI_DOUBLE_PRECISION,                                                &
      &     0,MPI_COMM_WORLD,e)                                          
 #endif                                                                  
       qtot_nuc(0) = q_nuc 
