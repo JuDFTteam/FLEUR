@@ -4,8 +4,9 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_wannierlib_w90_adapter
-  USE m_constants, ONLY : oUnit, namat_const
+  USE m_constants, ONLY : oUnit, namat_const, hartree_to_ev_const
   USE m_juDFT
+  USE m_wannierlib_ft, ONLY : wannierlib_ft_to_real
   USE m_xmlOutput
   USE m_types_atoms
   USE m_types_cell
@@ -13,6 +14,9 @@ MODULE m_wannierlib_w90_adapter
   USE m_types_mpi
   USE m_types_wannierlib
   USE m_wannierlib_interpolate
+  USE m_wannierlib_interpolate_op
+  USE m_wannierlib_interpolate_velocity
+  USE m_wannierlib_interpolate_current
 #ifdef CPP_WANNLIB_API
   USE w90_library, ONLY : lib_common_type, w90_set_comm, w90_set_option, w90_input_setopt, &
                           w90_get_nn, w90_get_nnkp, w90_get_gkpb, w90_set_eigval, &
@@ -114,7 +118,7 @@ CONTAINS
 #endif
   END SUBROUTINE init_w90
 
-  SUBROUTINE run_w90(this, cell, kpts, mmn, amn, eig, irank)
+  SUBROUTINE run_w90(this, cell, kpts, mmn, amn, eig, irank, s0_coarse, l0_coarse, soc0_coarse, s0pa_coarse, mmn_full)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
     TYPE(t_cell), INTENT(IN) :: cell
     TYPE(t_kpts), INTENT(IN) :: kpts
@@ -122,9 +126,20 @@ CONTAINS
     COMPLEX, TARGET, INTENT(IN) :: amn(:, :, :)
     REAL, TARGET, INTENT(IN) :: eig(:, :)
     INTEGER, INTENT(IN) :: irank
+    COMPLEX, INTENT(IN) :: s0_coarse(:, :, :, :)   ! (num_bands,num_bands,3,nk) Bloch spin (l_spin)
+    COMPLEX, INTENT(IN) :: l0_coarse(:, :, :, :, :) ! (num_bands,num_bands,3,nat,nk) Bloch L per atom (l_orbmom)
+    COMPLEX, INTENT(IN) :: soc0_coarse(:, :, :, :) ! (num_bands,num_bands,1,nk) Bloch SOC (l_socop)
+    COMPLEX, INTENT(IN) :: s0pa_coarse(:, :, :, :, :) ! (num_bands,num_bands,3,nat,nk) per-atom MT spin
+    COMPLEX, INTENT(IN) :: mmn_full(:, :, :, :)       ! (nb,nb,nntot,nkptf) full overlaps, rank 0 only (Berry connection)
 
-    INTEGER :: ierr,num_kpts
+    INTEGER :: ierr,num_kpts,iop,nbnd_c,nat_c,nkc
+    INTEGER :: idom, ndom
+    CHARACTER(LEN=8) :: dkind(3), dsuf(3)
+    LOGICAL :: lex
     COMPLEX, ALLOCATABLE :: u_matrix(:, :, :), mmn_local(:, :, :, :), amn_local(:, :, :)
+    COMPLEX, ALLOCATABLE :: aw_k(:, :, :, :)          ! (nw,nw,3,nk) Wannier Berry connection A^(W)_alpha(k)
+    COMPLEX, ALLOCATABLE :: hamk_r(:, :, :)           ! (nw,nw,nk) Wannier-gauge Hamiltonian (for H(R) export)
+    LOGICAL :: l_hr_done, l_ar_done                   ! tight-binding H(R)/A(R) written once (domain-independent)
 
 
     IF (.NOT.this%l_wannierize) RETURN
@@ -162,12 +177,391 @@ CONTAINS
     CALL w90_wannierise(wannierlib_w90main, oUnit, oUnit, ierr)
     IF (ierr /= 0) CALL juDFT_error('w90_wannierise failed in wannierlib adapter', calledby='run_w90')
 
-    ! Wannier-gauge band interpolation (u_matrix = MLWF gauge, amn_local = disentangled u_opt).
-    IF (this%l_interpolation) CALL wannierlib_interpolate(this, cell, kpts, eig, u_matrix, amn_local, irank)
+    ! ---- opt-in output domains (<path>/<plane>/<grid>); none declared -> legacy single pass ----
+    ! order matters: generated domains (plane/grid) overwrite kpts_interpol and are renamed;
+    ! the unsuffixed path/legacy domain runs LAST so its base-named output is not clobbered
+    ! and it restores the user's original kpts_interpol before interpolating.
+    ndom = 0
+    IF (this%l_dom_plane) THEN; ndom=ndom+1; dkind(ndom)='plane'; dsuf(ndom)='_plane'; END IF
+    IF (this%l_dom_grid)  THEN; ndom=ndom+1; dkind(ndom)='grid';  dsuf(ndom)='_grid';  END IF
+    IF (this%l_dom_path)  THEN; ndom=ndom+1; dkind(ndom)='path';  dsuf(ndom)='';       END IF
+    IF (ndom == 0) THEN; ndom=1; dkind(1)='legacy'; dsuf(1)=''; END IF
+    ! back up a user-provided kpts_interpol that a generated (plane/grid) domain would overwrite
+    IF (irank==0 .AND. (this%l_dom_plane .OR. this%l_dom_grid)) THEN
+      INQUIRE(file='kpts_interpol', exist=lex)
+      IF (lex) CALL wl_shell('cp -f kpts_interpol .kpts_interpol_userbak')
+    END IF
+
+    l_hr_done = .FALSE.; l_ar_done = .FALSE.   ! H(R)/A(R) are domain-independent: write once
+    DO idom = 1, ndom
+    IF (irank==0) CALL wannierlib_write_domain_kpts(this, TRIM(dkind(idom)))
+
+    ! Wannier-gauge interpolation: dispatch by looping over the requested operator list.
+    ! Each operator supplies its own Bloch matrix on the coarse mesh (s0/l0/soc0_coarse);
+    ! steps (2)-(5) are the shared generic driver. u_matrix = MLWF gauge, amn_local = u_opt.
+    DO iop = 1, this%n_ops
+      SELECT CASE (TRIM(this%op_name(iop)))
+      CASE ('hamiltonian')
+        CALL wannierlib_interpolate(this, cell, kpts, eig, u_matrix, amn_local, irank)
+      CASE ('spin')
+        ! total spin (MT-sum + interstitial): via the generic operator driver (3 comps)
+        IF (this%op_total(iop) == 1) &
+          CALL wannierlib_interpolate_operator(this, cell, kpts, eig, u_matrix, amn_local, &
+                                               s0_coarse, 3, 'bands_wann_spin.dat', irank)
+        ! per-atom (site-resolved) muffin-tin spin moment: 3*nat components in one file
+        IF (this%op_peratom(iop) == 1) THEN
+          nbnd_c = SIZE(s0pa_coarse, 1); nat_c = SIZE(s0pa_coarse, 4); nkc = SIZE(s0pa_coarse, 5)
+          CALL wannierlib_interpolate_operator(this, cell, kpts, eig, u_matrix, amn_local, &
+                                               RESHAPE(s0pa_coarse, (/nbnd_c, nbnd_c, 3*nat_c, nkc/)), &
+                                               3*nat_c, 'bands_wann_spin_peratom.dat', irank)
+        END IF
+      CASE ('orbital')
+        nbnd_c = SIZE(l0_coarse, 1); nat_c = SIZE(l0_coarse, 4); nkc = SIZE(l0_coarse, 5)
+        ! total (site-summed) orbital moment
+        IF (this%op_total(iop) == 1) &
+          CALL wannierlib_interpolate_operator(this, cell, kpts, eig, u_matrix, amn_local, &
+                                               SUM(l0_coarse, DIM=4), 3, 'bands_wann_orbmom.dat', irank)
+        ! per-atom (site-resolved): flatten (comp,atom) -> 3*nat components in one file
+        IF (this%op_peratom(iop) == 1) &
+          CALL wannierlib_interpolate_operator(this, cell, kpts, eig, u_matrix, amn_local, &
+                                               RESHAPE(l0_coarse, (/nbnd_c, nbnd_c, 3*nat_c, nkc/)), &
+                                               3*nat_c, 'bands_wann_orbmom_peratom.dat', irank)
+      CASE ('soc')
+        CALL wannierlib_interpolate_operator(this, cell, kpts, eig, u_matrix, amn_local, &
+                                             soc0_coarse, 1, 'bands_wann_soc.dat', irank)
+      CASE ('velocity')
+        ! Wannier Berry connection A^(W)_alpha(k) from the full overlaps (rank 0 only).
+        ! Piece 2: build + validate via the Wannier-centre check (calibrates conj/sign).
+        IF (irank == 0 .AND. .NOT.ALLOCATED(aw_k)) THEN
+          CALL wannierlib_build_berry_aw(this, kpts, mmn_full, amn_local, u_matrix, aw_k)
+          CALL wannierlib_check_berry_centres(this, kpts, aw_k)
+        END IF
+        IF (.NOT.ALLOCATED(aw_k)) ALLOCATE(aw_k(1, 1, 1, 1))   ! stub on non-root ranks for the dummy arg
+        CALL wannierlib_interpolate_velocity(this, cell, kpts, eig, u_matrix, amn_local, aw_k, irank)
+      CASE ('hamiltonian_r')
+        ! export the Wannier Hamiltonian H(R) in W90 _hr.dat format (domain-independent -> once)
+        IF (irank == 0 .AND. .NOT. l_hr_done) THEN
+          CALL wannierlib_build_hamk(this, eig, u_matrix, amn_local, hamk_r)
+          CALL wannierlib_write_hr(this, cell, kpts, hamk_r)
+          l_hr_done = .TRUE.
+        END IF
+      CASE ('position_r')
+        ! export the Berry connection A(R) = <0n|r|Rm> in W90 _r.dat format (write once)
+        IF (irank == 0 .AND. .NOT. l_ar_done) THEN
+          IF (.NOT. ALLOCATED(aw_k)) &
+            CALL wannierlib_build_berry_aw(this, kpts, mmn_full, amn_local, u_matrix, aw_k)
+          CALL wannierlib_write_ar(this, cell, kpts, aw_k)
+          l_ar_done = .TRUE.
+        END IF
+      CASE ('spinCurrent')
+        CALL wannierlib_interpolate_current(this, cell, kpts, eig, u_matrix, amn_local, &
+                                            s0_coarse, 'bands_wann_spincurrent.dat', irank)
+      CASE ('orbitalCurrent')
+        CALL wannierlib_interpolate_current(this, cell, kpts, eig, u_matrix, amn_local, &
+                                            SUM(l0_coarse, DIM=4), 'bands_wann_orbcurrent.dat', irank)
+      CASE DEFAULT
+        IF (irank == 0) WRITE(oUnit,'(a)') 'wannierlib: operator "'//TRIM(this%op_name(iop))//&
+                                           '" not yet implemented -> skipped'
+      END SELECT
+    END DO
+    ! rename this domain's outputs (plane/grid -> _plane/_grid; path/legacy: no suffix)
+    IF (irank==0 .AND. LEN_TRIM(dsuf(idom))>0) CALL wannierlib_rename_domain_outputs(this, TRIM(dsuf(idom)))
+    END DO   ! idom
+
+    ! restore the user's original kpts_interpol if we overwrote it
+    IF (irank==0 .AND. (this%l_dom_plane .OR. this%l_dom_grid)) THEN
+      INQUIRE(file='.kpts_interpol_userbak', exist=lex)
+      IF (lex) CALL wl_shell('mv -f .kpts_interpol_userbak kpts_interpol')
+    END IF
 
     call timestop('run_w90')
 #endif
   END SUBROUTINE run_w90
+
+  ! Write kpts_interpol for a generated output domain (plane/grid). For an explicit
+  ! <path file="..">, copy that file to kpts_interpol; legacy/default path uses the
+  ! existing kpts_interpol as-is. Rank-0 file I/O only.
+  SUBROUTINE wannierlib_write_domain_kpts(this, kind)
+    TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
+    CHARACTER(LEN=*), INTENT(IN) :: kind
+    INTEGER :: i, j, k, iu, np
+    REAL :: t1, t2, kf(3)
+    LOGICAL :: lex2
+    np = 0
+    SELECT CASE (TRIM(kind))
+    CASE ('path', 'legacy')
+      ! restore the user's original kpts_interpol if a generated (plane/grid) domain overwrote it
+      INQUIRE(file='.kpts_interpol_userbak', exist=lex2)
+      IF (lex2) CALL wl_shell('cp -f .kpts_interpol_userbak kpts_interpol')
+      ! explicit <path file="..">: use that file as the k-list (default 'kpts_interpol' -> no-op)
+      IF (TRIM(kind) == 'path' .AND. TRIM(this%path_file) /= 'kpts_interpol') THEN
+        INQUIRE(file=TRIM(this%path_file), exist=lex2)
+        IF (.NOT. lex2) CALL juDFT_error('wannierlib: <path>/@file "'//TRIM(this%path_file)//'" not found', &
+                                         calledby='wannierlib_write_domain_kpts')
+        CALL wl_shell('cp -f '//TRIM(this%path_file)//' kpts_interpol')
+      END IF
+      RETURN
+    CASE ('plane')
+      np = this%plane_n1 * this%plane_n2
+      OPEN(newunit=iu, file='kpts_interpol', status='replace')
+      WRITE(iu,'(i0)') np
+      DO i = 0, this%plane_n1 - 1
+        t1 = REAL(i) / REAL(MAX(1, this%plane_n1 - 1))
+        DO j = 0, this%plane_n2 - 1
+          t2 = REAL(j) / REAL(MAX(1, this%plane_n2 - 1))
+          kf = this%plane_origin + t1 * this%plane_v1 + t2 * this%plane_v2
+          WRITE(iu,'(3(f18.12,1x))') kf
+        END DO
+      END DO
+      CLOSE(iu)
+    CASE ('grid')
+      np = this%grid_mesh(1) * this%grid_mesh(2) * this%grid_mesh(3)
+      OPEN(newunit=iu, file='kpts_interpol', status='replace')
+      WRITE(iu,'(i0)') np
+      DO i = 0, this%grid_mesh(1) - 1
+      DO j = 0, this%grid_mesh(2) - 1
+      DO k = 0, this%grid_mesh(3) - 1
+        kf(1) = (REAL(i) + this%grid_shift(1)) / REAL(this%grid_mesh(1))
+        kf(2) = (REAL(j) + this%grid_shift(2)) / REAL(this%grid_mesh(2))
+        kf(3) = (REAL(k) + this%grid_shift(3)) / REAL(this%grid_mesh(3))
+        WRITE(iu,'(3(f18.12,1x))') kf
+      END DO
+      END DO
+      END DO
+      CLOSE(iu)
+    END SELECT
+  END SUBROUTINE wannierlib_write_domain_kpts
+
+  ! Rename this domain's operator output files bands_wann_<x>.dat -> bands_wann_<x><suffix>.dat
+  SUBROUTINE wannierlib_rename_domain_outputs(this, suffix)
+    TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
+    CHARACTER(LEN=*), INTENT(IN) :: suffix
+    INTEGER :: iop
+    DO iop = 1, this%n_ops
+      SELECT CASE (TRIM(this%op_name(iop)))
+      CASE ('hamiltonian')
+        CALL ren('bands_wann_interpol', suffix)
+        CALL ren('bands_wann_interpol_ev', suffix)
+      CASE ('spin')
+        IF (this%op_total(iop) == 1)   CALL ren('bands_wann_spin', suffix)
+        IF (this%op_peratom(iop) == 1) CALL ren('bands_wann_spin_peratom', suffix)
+      CASE ('orbital')
+        IF (this%op_total(iop) == 1)   CALL ren('bands_wann_orbmom', suffix)
+        IF (this%op_peratom(iop) == 1) CALL ren('bands_wann_orbmom_peratom', suffix)
+      CASE ('soc')
+        CALL ren('bands_wann_soc', suffix)
+      CASE ('velocity')
+        CALL ren('bands_wann_velocity', suffix)
+        CALL ren('bands_wann_berrycurv', suffix)
+      CASE ('spinCurrent')
+        CALL ren('bands_wann_spincurrent', suffix)
+      CASE ('orbitalCurrent')
+        CALL ren('bands_wann_orbcurrent', suffix)
+      END SELECT
+    END DO
+  CONTAINS
+    SUBROUTINE ren(base, suf)
+      CHARACTER(LEN=*), INTENT(IN) :: base, suf
+      LOGICAL :: lexr
+      INQUIRE(file=TRIM(base)//'.dat', exist=lexr)
+      IF (lexr) CALL wl_shell('mv -f '//TRIM(base)//'.dat '//TRIM(base)//TRIM(suf)//'.dat')
+    END SUBROUTINE ren
+  END SUBROUTINE wannierlib_rename_domain_outputs
+
+  ! Run a shell command (synchronous) and abort with a clear message if it fails,
+  ! so a failed cp/mv in the domain file-shuffling never passes silently.
+  SUBROUTINE wl_shell(cmd)
+    CHARACTER(LEN=*), INTENT(IN) :: cmd
+    INTEGER :: cs, es
+    cs = 0; es = 0
+    CALL EXECUTE_COMMAND_LINE(cmd, wait=.TRUE., cmdstat=cs, exitstat=es)
+    IF (cs /= 0 .OR. es /= 0) CALL juDFT_error('wannierlib: shell command failed: '//TRIM(cmd), &
+                                               calledby='wl_shell')
+  END SUBROUTINE wl_shell
+
+  ! Build the Wannier-gauge Berry connection A^(W)_alpha(k) = i sum_b w_b b_alpha (M^(W,b)(k) - delta),
+  ! with M^(W,b)(k) = V(k)^dagger M^(0,b)(k) V(k_b), V = u_opt.u_matrix, k_b = nnlist(b,k).
+  ! Uses the FULL overlaps mmn_full and the kmesh (wb/bk/nnlist) from wannierlib_w90main. Rank 0.
+  SUBROUTINE wannierlib_build_berry_aw(this, kpts, mmn_full, u_opt, u_matrix, aw_k)
+    TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
+    TYPE(t_kpts), INTENT(IN) :: kpts
+    COMPLEX, INTENT(IN) :: mmn_full(:, :, :, :)   ! (nb,nb,nntot,nk)
+    COMPLEX, INTENT(IN) :: u_opt(:, :, :)         ! (nb,nw,nk)
+    COMPLEX, INTENT(IN) :: u_matrix(:, :, :)      ! (nw,nw,nk)
+    COMPLEX, ALLOCATABLE, INTENT(OUT) :: aw_k(:, :, :, :)  ! (nw,nw,3,nk)
+#ifdef CPP_WANNLIB_API
+    INTEGER :: nb, nw, nk, nnt, k, kb, nn, a, i
+    REAL :: wb, b(3)
+    COMPLEX, ALLOCATABLE :: Vk(:, :), Vkb(:, :), Mw(:, :), tmp(:, :)
+    nb = this%num_bands; nw = this%num_wann; nk = kpts%nkptf
+    nnt = wannierlib_w90main%kmesh_info%nntot
+    ALLOCATE(aw_k(nw, nw, 3, nk), source=CMPLX(0.0, 0.0))
+    ALLOCATE(Vk(nb, nw), Vkb(nb, nw), Mw(nw, nw), tmp(nb, nw))
+    DO k = 1, nk
+      Vk = MATMUL(u_opt(:, :, k), u_matrix(:, :, k))
+      DO nn = 1, nnt
+        kb = wannierlib_w90main%kmesh_info%nnlist(k, nn)   ! w90 shape: nnlist(num_kpts, nntot)
+        IF (kb < 1 .OR. kb > nk) CALL juDFT_error('wannierlib: nnlist neighbour index out of range', &
+                                                  calledby='wannierlib_build_berry_aw')
+        wb = wannierlib_w90main%kmesh_info%wb(nn)
+        b  = wannierlib_w90main%kmesh_info%bk(:, nn, k)
+        Vkb = MATMUL(u_opt(:, :, kb), u_matrix(:, :, kb))
+        tmp = MATMUL(mmn_full(:, :, nn, k), Vkb)             ! (nb x nw)
+        Mw  = MATMUL(CONJG(TRANSPOSE(Vk)), tmp)              ! (nw x nw) = M^(W,b)(k)
+        DO i = 1, nw
+          Mw(i, i) = Mw(i, i) - CMPLX(1.0, 0.0)             ! subtract delta on the diagonal
+        END DO
+        DO a = 1, 3
+          aw_k(:, :, a, k) = aw_k(:, :, a, k) + CMPLX(0.0, wb*b(a)) * Mw
+        END DO
+      END DO
+    END DO
+    DEALLOCATE(Vk, Vkb, Mw, tmp)
+#endif
+  END SUBROUTINE wannierlib_build_berry_aw
+
+  ! Validation: the diagonal of A^(W)_alpha at R=0, (1/Nk) sum_k A^(W)_alpha,nn(k), is the
+  ! Wannier centre <r_alpha>_n (Marzari-Vanderbilt). Compare to w90_get_centres to calibrate
+  ! the conj/sign convention of the overlaps. Writes berry_centre_check.dat (rank 0).
+  SUBROUTINE wannierlib_check_berry_centres(this, kpts, aw_k)
+    TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
+    TYPE(t_kpts), INTENT(IN) :: kpts
+    COMPLEX, INTENT(IN) :: aw_k(:, :, :, :)     ! (nw,nw,3,nk)
+#ifdef CPP_WANNLIB_API
+    INTEGER :: nw, nk, k, a, n, iu
+    COMPLEX :: aR0
+    REAL, ALLOCATABLE :: wc(:, :)
+    nw = this%num_wann; nk = kpts%nkptf
+    ALLOCATE(wc(3, nw))
+    CALL w90_get_centres(wannierlib_w90main, wc)
+    OPEN(newunit=iu, file='berry_centre_check.dat', status='replace')
+    WRITE(iu,'(a)') '# n  alpha    Re[A_nn(R=0)]        -Re[A_nn(R=0)]       w90_centre(Bohr)'
+    DO n = 1, nw
+      DO a = 1, 3
+        aR0 = CMPLX(0.0, 0.0)
+        DO k = 1, nk
+          aR0 = aR0 + aw_k(n, n, a, k)
+        END DO
+        aR0 = aR0 / REAL(nk)
+        WRITE(iu,'(2i4,3(2x,f18.10))') n, a, REAL(aR0), -REAL(aR0), wc(a, n)
+      END DO
+    END DO
+    CLOSE(iu)
+    DEALLOCATE(wc)
+    WRITE(oUnit,'(a)') 'wannierlib: wrote berry_centre_check.dat (A^(W) R=0 diag vs w90 centres)'
+#endif
+  END SUBROUTINE wannierlib_check_berry_centres
+
+  ! Build the Wannier-gauge Hamiltonian ham_k = U^dag diag(eigval2) U (same as m_wannierlib_interpolate).
+  SUBROUTINE wannierlib_build_hamk(this, eig, u_matrix, u_opt, ham_k)
+    TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
+    REAL,    INTENT(IN) :: eig(:, :)
+    COMPLEX, INTENT(IN) :: u_matrix(:, :, :), u_opt(:, :, :)
+    COMPLEX, ALLOCATABLE, INTENT(OUT) :: ham_k(:, :, :)
+    INTEGER :: nw, nb, nk, k, i, j, m, counter
+    LOGICAL :: have_dis
+    REAL, ALLOCATABLE :: eigval2(:, :), eigval_opt(:)
+    nw = this%num_wann; nb = this%num_bands; nk = SIZE(u_matrix, 3); have_dis = (nb > nw)
+    ALLOCATE(eigval2(nw, nk), source=0.0)
+    IF (have_dis) THEN
+      ALLOCATE(eigval_opt(nb))
+      DO k = 1, nk
+        counter = 0; eigval_opt = 0.0
+        DO j = 1, nb
+          IF (eig(j, k) >= this%dis_win_min .AND. eig(j, k) <= this%dis_win_max) THEN
+            counter = counter + 1; eigval_opt(counter) = eig(j, k)
+          END IF
+        END DO
+        DO m = 1, nw
+          DO i = 1, counter
+            eigval2(m, k) = eigval2(m, k) + eigval_opt(i) * ABS(u_opt(i, m, k))**2
+          END DO
+        END DO
+      END DO
+      DEALLOCATE(eigval_opt)
+    ELSE
+      eigval2(1:nw, :) = eig(1:nw, :)
+    END IF
+    ALLOCATE(ham_k(nw, nw, nk), source=CMPLX(0.0, 0.0))
+    DO k = 1, nk
+      DO j = 1, nw
+        DO i = 1, nw
+          DO m = 1, nw
+            ham_k(i, j, k) = ham_k(i, j, k) + eigval2(m, k) * CONJG(u_matrix(m, i, k)) * u_matrix(m, j, k)
+          END DO
+        END DO
+      END DO
+    END DO
+    DEALLOCATE(eigval2)
+  END SUBROUTINE wannierlib_build_hamk
+
+  ! Write H(R) in Wannier90 seedname_hr.dat format (energies in eV). Rank-0 only.
+  SUBROUTINE wannierlib_write_hr(this, cell, kpts, ham_k)
+    TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
+    TYPE(t_cell), INTENT(IN) :: cell
+    TYPE(t_kpts), INTENT(IN) :: kpts
+    COMPLEX, INTENT(IN) :: ham_k(:, :, :)
+    COMPLEX, ALLOCATABLE :: hr(:, :, :)
+    INTEGER, ALLOCATABLE :: irvec(:, :), ndegen(:)
+    INTEGER :: nrpts, nw, irpt, i, j, iu, c
+    CALL wannierlib_ft_to_real(cell, ham_k, kpts, hr, irvec, ndegen, nrpts)
+    nw = this%num_wann
+    OPEN(newunit=iu, file='WF_hr.dat', status='replace')
+    WRITE(iu,'(a)') ' written by FLEUR wannierlib : H(R) in eV, W90 hr format'
+    WRITE(iu,'(i12)') nw
+    WRITE(iu,'(i12)') nrpts
+    c = 0
+    DO irpt = 1, nrpts
+      WRITE(iu,'(i5)',advance='no') ndegen(irpt); c = c + 1
+      IF (MOD(c,15) == 0) WRITE(iu,'(a)') ''
+    END DO
+    IF (MOD(c,15) /= 0) WRITE(iu,'(a)') ''
+    DO irpt = 1, nrpts
+      DO j = 1, nw
+        DO i = 1, nw
+          WRITE(iu,'(5i5,2f18.10)') irvec(:,irpt), i, j, &
+              hartree_to_ev_const*REAL(hr(i,j,irpt)), hartree_to_ev_const*AIMAG(hr(i,j,irpt))
+        END DO
+      END DO
+    END DO
+    CLOSE(iu)
+    WRITE(oUnit,'(a,i0,a)') 'wannierlib: wrote WF_hr.dat (H(R), ', nrpts, ' R-vectors, eV)'
+    DEALLOCATE(hr, irvec, ndegen)
+  END SUBROUTINE wannierlib_write_hr
+
+  ! Write A(R) = <0n|r_alpha|Rm> in Wannier90 seedname_r.dat format (positions in Angstrom). Rank-0.
+  SUBROUTINE wannierlib_write_ar(this, cell, kpts, aw_k)
+    TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
+    TYPE(t_cell), INTENT(IN) :: cell
+    TYPE(t_kpts), INTENT(IN) :: kpts
+    COMPLEX, INTENT(IN) :: aw_k(:, :, :, :)          ! (nw,nw,3,nk)
+    COMPLEX, ALLOCATABLE :: ar(:, :, :, :), a1(:, :, :)
+    INTEGER, ALLOCATABLE :: irvec(:, :), ndegen(:)
+    INTEGER :: nrpts, nw, irpt, i, j, a, iu
+    REAL, PARAMETER :: bohr2ang = 0.5291772109
+    nw = this%num_wann
+    DO a = 1, 3
+      CALL wannierlib_ft_to_real(cell, aw_k(:,:,a,:), kpts, a1, irvec, ndegen, nrpts)
+      IF (a == 1) ALLOCATE(ar(nw, nw, nrpts, 3))
+      ar(:,:,:,a) = a1
+      DEALLOCATE(a1)
+    END DO
+    OPEN(newunit=iu, file='WF_r.dat', status='replace')
+    WRITE(iu,'(a)') ' written by FLEUR wannierlib : A(R)=<0n|r|Rm> in Ang, W90 r format'
+    WRITE(iu,'(i12)') nw
+    WRITE(iu,'(i12)') nrpts
+    DO irpt = 1, nrpts
+      DO j = 1, nw
+        DO i = 1, nw
+          WRITE(iu,'(5i5,6f18.10)') irvec(:,irpt), i, j, &
+            (bohr2ang*REAL(ar(i,j,irpt,a)), bohr2ang*AIMAG(ar(i,j,irpt,a)), a=1,3)
+        END DO
+      END DO
+    END DO
+    CLOSE(iu)
+    WRITE(oUnit,'(a,i0,a)') 'wannierlib: wrote WF_r.dat (A(R), ', nrpts, ' R-vectors, Ang)'
+    DEALLOCATE(ar, irvec, ndegen)
+  END SUBROUTINE wannierlib_write_ar
 
   SUBROUTINE report_w90(this)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: this

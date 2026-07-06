@@ -10,6 +10,9 @@ MODULE m_wannierlib_main
    USE m_wannierlib_mmnkb
    USE m_wannierlib_ujugaunt
    USE m_wannierlib_w90_adapter
+   USE m_wannierlib_spin_melem, ONLY: wannierlib_spin_peratom, wannierlib_spin_bloch
+   USE m_wannierlib_orbmom_melem
+   USE m_wannierlib_socmat_melem
    USE m_types_atoms
    USE m_types_cell
    USE m_types_input
@@ -47,14 +50,20 @@ CONTAINS
       TYPE(t_results), INTENT(IN) :: results
       INTEGER, INTENT(IN) :: eig_id
 
-      INTEGER :: ikpt, itype, nntot_w90, ierr, jspin, jspin_comp
+      INTEGER :: ikpt, itype, nntot_w90, ierr, jspin, jspin_comp, iop
       COMPLEX, ALLOCATABLE :: amn(:, :, :)
       COMPLEX, ALLOCATABLE :: mmn(:, :, :, :)
+      COMPLEX, ALLOCATABLE :: mmn_full(:, :, :, :)   ! (num_bands,num_bands,nntot,nkptf) full overlaps on rank 0 (Berry/interband velocity)
+      LOGICAL :: l_need_mmn_full                     ! velocity/current requested -> gather mmn to rank 0
       COMPLEX, ALLOCATABLE :: ujug(:, :, :, :, :, :)
       REAL, ALLOCATABLE :: kdiff(:, :)
       INTEGER, ALLOCATABLE :: nnkp(:, :), gkpb(:, :, :)
       INTEGER, ALLOCATABLE :: distk(:)
       real, allocatable :: eig(:, :)
+      COMPLEX, ALLOCATABLE :: s0_coarse(:, :, :, :)   ! (num_bands,num_bands,3,nkptf) Bloch spin, rank 0
+      COMPLEX, ALLOCATABLE :: l0_coarse(:, :, :, :, :) ! (num_bands,num_bands,3,nat,nkptf) Bloch L per atom, rank 0
+      COMPLEX, ALLOCATABLE :: soc0_coarse(:, :, :, :) ! (num_bands,num_bands,1,nkptf) Bloch SOC, rank 0
+      COMPLEX, ALLOCATABLE :: s0pa_coarse(:, :, :, :, :) ! (num_bands,num_bands,3,nat,nkptf) per-atom MT spin, rank 0
       TYPE(t_usdus) :: usdus
       TYPE(t_lapw) :: lapw
       TYPE(t_mat) :: zMat
@@ -82,6 +91,22 @@ CONTAINS
       DO itype = 1, atoms%ntype
          CALL radfun(itype)%generate_radial_functions(atoms, input, enpara, fmpi, vtot, itype, usdus=usdus)
       END DO
+
+      ! Spin operator: build Bloch-basis S0(k) on the full coarse mesh (rank 0), with a
+      ! sum-rule check on the first few k. Needs only Bloch eigenstates -> runs early.
+      ! Operator Bloch matrices S0(k), L0(k), SOC0(k) on the coarse mesh (rank 0), one k-pass.
+      IF ((this%l_spin .OR. this%l_orbmom .OR. this%l_socop) .AND. l_wannierlib_spinors .AND. fmpi%irank == 0) THEN
+         ALLOCATE(s0_coarse(this%num_bands, this%num_bands, 3, kpts%nkptf))
+         ALLOCATE(l0_coarse(this%num_bands, this%num_bands, 3, atoms%nat, kpts%nkptf))
+         ALLOCATE(soc0_coarse(this%num_bands, this%num_bands, 1, kpts%nkptf))
+         ALLOCATE(s0pa_coarse(this%num_bands, this%num_bands, 3, atoms%nat, kpts%nkptf))
+         CALL wannierlib_operator_coarse(this, atoms, input, sym, cell, noco, nococonv, kpts, &
+                                         stars, usdus, radfun, enpara, fmpi, vtot, eig_id, l_real_wann, &
+                                         s0_coarse, l0_coarse, soc0_coarse, s0pa_coarse)
+      ELSE
+         ALLOCATE(s0_coarse(1, 1, 1, 1)); ALLOCATE(l0_coarse(1, 1, 1, 1, 1)); ALLOCATE(soc0_coarse(1, 1, 1, 1))
+         ALLOCATE(s0pa_coarse(1, 1, 1, 1, 1))
+      END IF
 
       ALLOCATE(distk(kpts%nkptf), stat=ierr)
       IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating distk', calledby='wannierlib_main')
@@ -141,6 +166,23 @@ CONTAINS
 
          mmn = conjg(mmn)
 
+         ! --- gather the distributed (per-rank) mmn into a full-nkptf buffer on rank 0,
+         !     needed by the Berry connection for the interband velocity / currents. ---
+         l_need_mmn_full = .FALSE.
+         DO iop = 1, this%n_ops
+            SELECT CASE (TRIM(this%op_name(iop)))
+            CASE ('velocity', 'spinCurrent', 'orbitalCurrent', 'position_r'); l_need_mmn_full = .TRUE.
+            END SELECT
+         END DO
+         IF (l_need_mmn_full) THEN
+            CALL wannierlib_gather_mmn(fmpi, distk, kpts%nkptf, this%num_bands, nntot_w90, mmn, mmn_full)
+            ! validation hook: dump the gathered overlaps (rank 0) so a parallel run can be
+            ! compared byte-for-byte against a serial reference .mmn (WF*_gathered vs WF*).
+            IF (fmpi%irank == 0) CALL wannierlib_write_mmn(this, mmn_full, kpts, nnkp, gkpb, jspin, '_gathered')
+         ELSE
+            ALLOCATE(mmn_full(1, 1, 1, 1))
+         END IF
+
          IF (fmpi%isize == 1) THEN
             amn_file = spin12(jspin)//'.amn'
             call wann_write_amn(fmpi%mpi_comm, .true., amn_file, "Testing amn", &
@@ -152,18 +194,79 @@ CONTAINS
          END IF
 
          call wannierlib_create_eig(this, results, kpts, MERGE(1, jspin, l_wannierlib_spinors), eig)
-         CALL run_w90(this, cell, kpts, mmn, amn, eig, fmpi%irank)
+         CALL run_w90(this, cell, kpts, mmn, amn, eig, fmpi%irank, s0_coarse, l0_coarse, soc0_coarse, s0pa_coarse, mmn_full)
          if (fmpi%isize == 1) CALL report_w90(this)
 
          IF (ALLOCATED(amn)) DEALLOCATE (amn)
          IF (ALLOCATED(mmn)) DEALLOCATE (mmn)
+         IF (ALLOCATED(mmn_full)) DEALLOCATE (mmn_full)
          IF (ALLOCATED(eig)) DEALLOCATE (eig)
 
       END DO
 
       IF (ALLOCATED(distk)) DEALLOCATE(distk)
+      IF (ALLOCATED(s0_coarse)) DEALLOCATE(s0_coarse)
+      IF (ALLOCATED(l0_coarse)) DEALLOCATE(l0_coarse)
+      IF (ALLOCATED(soc0_coarse)) DEALLOCATE(soc0_coarse)
+      IF (ALLOCATED(s0pa_coarse)) DEALLOCATE(s0pa_coarse)
 
    END SUBROUTINE wannierlib_main
+
+   !> Build the requested Bloch-basis operator matrices on the FULL coarse mesh
+   !> (rank 0): spin S0(k) (if l_spin) and/or orbital L0(k) (if l_orbmom), sharing
+   !> the (get_z + calc_abc) work in one k-pass. Needs only the ab-initio spinor
+   !> eigenstates (no U), so it runs before the wannierization.
+   SUBROUTINE wannierlib_operator_coarse(this, atoms, input, sym, cell, noco, nococonv, kpts, &
+                                         stars, usdus, radfun, enpara, fmpi, vtot, eig_id, l_real_wann, &
+                                         s0_coarse, l0_coarse, soc0_coarse, s0pa_coarse)
+      TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
+      TYPE(t_atoms), INTENT(IN) :: atoms
+      TYPE(t_input), INTENT(IN) :: input
+      TYPE(t_sym), INTENT(IN) :: sym
+      TYPE(t_cell), INTENT(IN) :: cell
+      TYPE(t_noco), INTENT(IN) :: noco
+      TYPE(t_nococonv), INTENT(IN) :: nococonv
+      TYPE(t_kpts), INTENT(IN) :: kpts
+      TYPE(t_stars), INTENT(IN) :: stars
+      TYPE(t_usdus), INTENT(INOUT) :: usdus     ! INOUT: spnorb (SOC) fills it
+      TYPE(t_radfun), INTENT(IN) :: radfun(:)
+      TYPE(t_enpara), INTENT(IN) :: enpara
+      TYPE(t_mpi), INTENT(IN) :: fmpi
+      TYPE(t_potden), INTENT(IN) :: vtot
+      INTEGER, INTENT(IN) :: eig_id
+      LOGICAL, INTENT(IN) :: l_real_wann
+      COMPLEX, INTENT(OUT) :: s0_coarse(:, :, :, :)   ! (num_bands,num_bands,3,nkptf) spin
+      COMPLEX, INTENT(OUT) :: l0_coarse(:, :, :, :, :) ! (num_bands,num_bands,3,nat,nkptf) orbital L per atom
+      COMPLEX, INTENT(OUT) :: soc0_coarse(:, :, :, :) ! (num_bands,num_bands,1,nkptf) SOC
+      COMPLEX, INTENT(OUT) :: s0pa_coarse(:, :, :, :, :) ! (num_bands,num_bands,3,nat,nkptf) per-atom MT spin
+
+      TYPE(t_abc), ALLOCATABLE :: abc_s(:, :)
+      TYPE(t_lapw) :: lapw
+      TYPE(t_mat) :: zMat
+      INTEGER :: ikpt, itype, isp
+
+      ALLOCATE(abc_s(atoms%ntype, 2))
+      DO ikpt = 1, kpts%nkptf
+         ! noco: get_z returns the FULL spinor; both local components via calc_abc(jspin=1,2)
+         CALL wannierlib_get_z(this, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, &
+                               ikpt, 1, l_real_wann, lapw, zMat)
+         DO isp = 1, 2
+            DO itype = 1, atoms%ntype
+               CALL abc_s(itype, isp)%init(input, atoms, radfun(itype)%n_r, this%num_bands, itype)
+               CALL abc_s(itype, isp)%calc_abc(input, atoms, sym, cell, lapw, this%num_bands, usdus, &
+                                               noco, nococonv, isp, itype, zMat)
+            END DO
+         END DO
+         IF (this%l_spin) CALL wannierlib_spin_peratom(atoms, abc_s, radfun, s0pa_coarse(:, :, :, :, ikpt))
+         IF (this%l_spin) CALL wannierlib_spin_bloch(atoms, abc_s, radfun, nococonv, stars, lapw, zMat, &
+                                    this%num_bands, ikpt, s0_coarse(:, :, :, ikpt), ikpt <= 3)
+         IF (this%l_orbmom) CALL wannierlib_orbmom_bloch(atoms, abc_s, radfun, l0_coarse(:, :, :, :, ikpt))
+         IF (this%l_socop) CALL wannierlib_socmat_bloch(atoms, noco, nococonv, input, fmpi, enpara, vtot, &
+                                    usdus, abc_s, this%num_bands, soc0_coarse(:, :, :, ikpt))
+      END DO
+
+      DEALLOCATE(abc_s)
+   END SUBROUTINE wannierlib_operator_coarse
 
    subroutine wannierlib_create_eig(this, results, kpts, jspin, eig)
       TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
@@ -211,6 +314,68 @@ CONTAINS
          END DO k_loop
       END DO
    END SUBROUTINE wannierlib_kdiff
+
+   ! Gather the k-distributed overlap matrix mmn (each rank owns COUNT(distk==irank)
+   ! k-points, in ascending global-k order) into a full-nkptf buffer on rank 0. Robust
+   ! for ANY distk map: MPI_Gatherv of per-rank chunks + reorder to global-k order.
+   ! mmn_full is (nb,nb,nntot,nkptf) on rank 0 and (1,1,1,1) elsewhere. Serial: a copy.
+   SUBROUTINE wannierlib_gather_mmn(fmpi, distk, nkptf, nb, nntot, mmn_loc, mmn_full)
+#ifdef CPP_MPI
+      use mpi
+#endif
+      TYPE(t_mpi), INTENT(IN) :: fmpi
+      INTEGER, INTENT(IN) :: distk(:), nkptf, nb, nntot
+      COMPLEX, INTENT(IN) :: mmn_loc(:, :, :, :)                 ! (nb,nb,nntot,nk_local)
+      COMPLEX, ALLOCATABLE, INTENT(OUT) :: mmn_full(:, :, :, :)
+      INTEGER :: bs, r, ik, ierr, nk_local
+#ifdef CPP_MPI
+      INTEGER, ALLOCATABLE :: recvcnt(:), displ(:), locidx(:)
+      COMPLEX, ALLOCATABLE :: recvbuf(:)
+#endif
+      bs = nb*nb*nntot
+      nk_local = SIZE(mmn_loc, 4)
+
+      IF (fmpi%isize == 1) THEN                     ! serial: local IS the full set
+         ALLOCATE(mmn_full(nb, nb, nntot, nkptf))
+         mmn_full = mmn_loc
+         RETURN
+      END IF
+
+#ifdef CPP_MPI
+      ALLOCATE(recvcnt(0:fmpi%isize-1), displ(0:fmpi%isize-1))
+      DO r = 0, fmpi%isize-1
+         recvcnt(r) = bs * COUNT(distk == r)
+      END DO
+      displ(0) = 0
+      DO r = 1, fmpi%isize-1
+         displ(r) = displ(r-1) + recvcnt(r-1)
+      END DO
+      IF (fmpi%irank == 0) THEN
+         ALLOCATE(recvbuf(bs*nkptf))
+      ELSE
+         ALLOCATE(recvbuf(1))
+      END IF
+      CALL MPI_Gatherv(mmn_loc, bs*nk_local, MPI_DOUBLE_COMPLEX, &
+                       recvbuf, recvcnt, displ, MPI_DOUBLE_COMPLEX, 0, fmpi%mpi_comm, ierr)
+      IF (fmpi%irank == 0) THEN
+         ALLOCATE(mmn_full(nb, nb, nntot, nkptf))
+         ALLOCATE(locidx(0:fmpi%isize-1)); locidx = 0
+         DO ik = 1, nkptf                           ! place each block at its global-k slot
+            r = distk(ik)
+            mmn_full(:, :, :, ik) = RESHAPE(recvbuf(displ(r)+locidx(r)*bs+1 : displ(r)+locidx(r)*bs+bs), &
+                                            (/ nb, nb, nntot /))
+            locidx(r) = locidx(r) + 1
+         END DO
+         DEALLOCATE(locidx)
+      ELSE
+         ALLOCATE(mmn_full(1, 1, 1, 1))
+      END IF
+      DEALLOCATE(recvcnt, displ, recvbuf)
+#else
+      ALLOCATE(mmn_full(nb, nb, nntot, nkptf))
+      mmn_full = mmn_loc
+#endif
+   END SUBROUTINE wannierlib_gather_mmn
 
    subroutine wannierlib_write_mmn(this, mmnk, kpts, nnkp, gkpb, jspin, fending)
       TYPE(t_wannierlib_wannierize), INTENT(IN) :: this

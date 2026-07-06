@@ -17,7 +17,32 @@ MODULE m_types_wannierlib
 
   TYPE, EXTENDS(t_fleurinput_base) :: t_wannierlib_wannierize
     LOGICAL :: l_wannierize = .FALSE.
-    LOGICAL :: l_interpolation = .FALSE.   ! build H(R) + interpolate bands (XML @interpolation)
+    ! Convenience flags DERIVED from the operator list ops(:) below (set in read_xml).
+    ! They gate the coarse-mesh provider calls; the actual dispatch loops over ops(:).
+    LOGICAL :: l_interpolation = .FALSE.   ! an <operator name="hamiltonian"> is requested
+    LOGICAL :: l_spin = .FALSE.            ! an <operator name="spin"> is requested
+    LOGICAL :: l_orbmom = .FALSE.          ! an <operator name="orbital"> is requested
+    LOGICAL :: l_socop = .FALSE.           ! an <operator name="soc"> is requested
+
+    ! --- opt-in output domains (<path>/<plane>/<grid> children of <interpolation>) ---
+    ! Each declared domain interpolates the operators on its own k-set and writes
+    ! bands_wann_*[_plane|_grid].dat. If NONE is declared, the legacy single-pass
+    ! behaviour (read kpts_interpol, unsuffixed output) is used -> byte-identical.
+    LOGICAL :: l_dom_path  = .FALSE.       ! <path/>  1D band path (from path_file)
+    LOGICAL :: l_dom_plane = .FALSE.       ! <plane/> 2D plane origin + i*v1 + j*v2
+    LOGICAL :: l_dom_grid  = .FALSE.       ! <grid/>  3D uniform full-BZ mesh
+    CHARACTER(LEN=64) :: path_file = 'kpts_interpol'
+    REAL    :: plane_origin(3) = 0.0, plane_v1(3) = 0.0, plane_v2(3) = 0.0
+    INTEGER :: plane_n1 = 0, plane_n2 = 0
+    INTEGER :: grid_mesh(3) = 0
+    REAL    :: grid_shift(3) = 0.0
+
+    ! --- operator table: one entry per <operator name=".."> child of <interpolation> ---
+    INTEGER :: n_ops = 0
+    CHARACTER(LEN=20), ALLOCATABLE :: op_name(:)    ! operator identifier (hamiltonian/spin/orbital/soc/...)
+    CHARACTER(LEN=32), ALLOCATABLE :: op_comp(:)    ! requested components (Phase 2); '' = all of the operator rank
+    INTEGER, ALLOCATABLE :: op_total(:)             ! 1 = write summed-over-atoms projection (default)
+    INTEGER, ALLOCATABLE :: op_peratom(:)           ! 1 = also write per-atom (site-resolved) projection (Phase 2)
 
     INTEGER :: num_wann = 0
     INTEGER :: num_bands = 0
@@ -276,6 +301,21 @@ CONTAINS
 
     CALL mpi_bc(this%l_wannierize, rank, mpi_comm)
     CALL mpi_bc(this%l_interpolation, rank, mpi_comm)
+    CALL mpi_bc(this%l_spin, rank, mpi_comm)
+    CALL mpi_bc(this%l_orbmom, rank, mpi_comm)
+    CALL mpi_bc(this%l_socop, rank, mpi_comm)
+    ! Output-domain flags: only these must agree on all ranks (they set the domain-loop
+    ! count ndom). The plane/grid params (fixed-size arrays) and path_file are consumed
+    ! ONLY on rank 0 (which writes kpts_interpol and does all domain file I/O), so they
+    ! are not broadcast -- and mpi_bc has no specific for explicit-shape arrays anyway.
+    CALL mpi_bc(this%l_dom_path, rank, mpi_comm)
+    CALL mpi_bc(this%l_dom_plane, rank, mpi_comm)
+    CALL mpi_bc(this%l_dom_grid, rank, mpi_comm)
+    CALL mpi_bc(this%n_ops, rank, mpi_comm)
+    CALL mpi_bc(this%op_name, rank, mpi_comm)
+    CALL mpi_bc(this%op_comp, rank, mpi_comm)
+    CALL mpi_bc(this%op_total, rank, mpi_comm)
+    CALL mpi_bc(this%op_peratom, rank, mpi_comm)
     CALL mpi_bc(this%num_wann, rank, mpi_comm)
     CALL mpi_bc(this%num_bands, rank, mpi_comm)
     CALL mpi_bc(this%min_band, rank, mpi_comm)
@@ -316,9 +356,10 @@ CONTAINS
     CHARACTER(LEN=200) :: xPathA
     CHARACTER(LEN=200) :: xPathP
     CHARACTER(LEN=32) :: spin_label
-    INTEGER :: numberNodes
+    CHARACTER(LEN=255) :: sbuf
+    INTEGER :: numberNodes, ios
     INTEGER :: nSpecies, iType, nProjType, iProj, ip, nProjTotal
-    LOGICAL :: has_wannierize, has_numBands, has_minBand, has_maxBand
+    LOGICAL :: has_wannierize
     CHARACTER(LEN=20) :: species_name
 
     xPathA = '/fleurInput/output/wannierlib'
@@ -332,9 +373,8 @@ CONTAINS
       this%l_wannierize = evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@wannierize'))
     END IF
 
-    IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@interpolation') == 1) THEN
-      this%l_interpolation = evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@interpolation'))
-    END IF
+    ! Operator selection is now the <interpolation>/<operator> list (parsed below),
+    ! not flat @interpolation/@spinoperator/@orbmom/@socop attributes.
 
     xPathA = '/fleurInput/output/wannierlib/bands'
     IF (xml%getNumberOfNodes(xPathA) == 1) THEN
@@ -351,14 +391,92 @@ CONTAINS
       this%dis_win_max = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@disWinMax'))
       this%dis_froz_min = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@disFrozMin'))
       this%dis_froz_max = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@disFrozMax'))
-      this%dis_num_iter = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@disNumIter'))
-      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@wannNumIter') == 1) &
-         this%num_iter = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@wannNumIter'))
+      this%dis_num_iter = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@numIter'))
       this%dis_mix_ratio = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mixRatio'))
-      this%dis_conv_tol = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@disConvTol'))
-      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@wannConvTol') == 1) &
-         this%conv_tol = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@wannConvTol'))
+      this%dis_conv_tol = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@convTol'))
     END IF
+
+    ! --- wannierization (MLWF iteration controls); defaults to the disentanglement values ---
+    this%num_iter = this%dis_num_iter
+    this%conv_tol = this%dis_conv_tol
+    xPathA = '/fleurInput/output/wannierlib/wannierization'
+    IF (xml%getNumberOfNodes(xPathA) == 1) THEN
+      this%num_iter = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@numIter'))
+      this%conv_tol = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@convTol'))
+    END IF
+
+    ! --- interpolation domain + operator list ---
+    xPathA = '/fleurInput/output/wannierlib/interpolation'
+    IF (xml%getNumberOfNodes(xPathA) == 1) THEN
+      ! --- opt-in output domains: <path>/<plane>/<grid> children of <interpolation> ---
+      xPathP = TRIM(ADJUSTL(xPathA))//'/path'
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))) == 1) THEN
+        this%l_dom_path = .TRUE.
+        IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@file') == 1) &
+          this%path_file = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@file'))
+      END IF
+      xPathP = TRIM(ADJUSTL(xPathA))//'/plane'
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))) == 1) THEN
+        this%l_dom_plane = .TRUE.
+        IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@origin') == 1) THEN
+          sbuf = xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@origin')
+          READ(sbuf, *, iostat=ios) this%plane_origin
+          IF (ios /= 0) CALL juDFT_error('wannierlib: <plane>/@origin needs 3 reals', calledby='read_xml_wannierlib')
+        END IF
+        sbuf = xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@v1')
+        READ(sbuf, *, iostat=ios) this%plane_v1
+        IF (ios /= 0) CALL juDFT_error('wannierlib: <plane>/@v1 needs 3 reals', calledby='read_xml_wannierlib')
+        sbuf = xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@v2')
+        READ(sbuf, *, iostat=ios) this%plane_v2
+        IF (ios /= 0) CALL juDFT_error('wannierlib: <plane>/@v2 needs 3 reals', calledby='read_xml_wannierlib')
+        this%plane_n1 = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@n1'))
+        this%plane_n2 = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@n2'))
+      END IF
+      xPathP = TRIM(ADJUSTL(xPathA))//'/grid'
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))) == 1) THEN
+        this%l_dom_grid = .TRUE.
+        sbuf = xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@mesh')
+        READ(sbuf, *, iostat=ios) this%grid_mesh
+        IF (ios /= 0) CALL juDFT_error('wannierlib: <grid>/@mesh needs 3 integers', calledby='read_xml_wannierlib')
+        IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@shift') == 1) THEN
+          sbuf = xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@shift')
+          READ(sbuf, *, iostat=ios) this%grid_shift
+          IF (ios /= 0) CALL juDFT_error('wannierlib: <grid>/@shift needs 3 reals', calledby='read_xml_wannierlib')
+        END IF
+      END IF
+
+      this%n_ops = xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/operator')
+    END IF
+
+    ALLOCATE(this%op_name(this%n_ops), this%op_comp(this%n_ops), this%op_total(this%n_ops), this%op_peratom(this%n_ops))
+    DO iProj = 1, this%n_ops
+      WRITE(xPathP, '(A,I0,A)') '/fleurInput/output/wannierlib/interpolation/operator[', iProj, ']'
+      this%op_name(iProj) = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@name'))
+      this%op_comp(iProj) = ''
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@comp') == 1) &
+         this%op_comp(iProj) = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@comp'))
+      this%op_total(iProj) = 1
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@total') == 1) THEN
+        IF (.NOT. evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@total'))) this%op_total(iProj) = 0
+      END IF
+      this%op_peratom(iProj) = 0
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@perAtom') == 1) THEN
+        IF (evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@perAtom'))) this%op_peratom(iProj) = 1
+      END IF
+
+      ! derive convenience flags that gate the coarse-mesh provider calls.
+      ! Class-C operators auto-request their prerequisite coarse matrices:
+      !   spinCurrent = {v,sigma} needs the spin coarse matrix; orbitalCurrent needs L.
+      !   velocity is built from H alone, so it needs no coarse provider.
+      SELECT CASE (TRIM(this%op_name(iProj)))
+      CASE ('hamiltonian');    this%l_interpolation = .TRUE.
+      CASE ('spin');           this%l_spin = .TRUE.
+      CASE ('orbital');        this%l_orbmom = .TRUE.
+      CASE ('soc');            this%l_socop = .TRUE.
+      CASE ('spinCurrent');    this%l_spin = .TRUE.
+      CASE ('orbitalCurrent'); this%l_orbmom = .TRUE.
+      END SELECT
+    END DO
 
     nSpecies = xml%getNumberOfNodes('/fleurInput/atomSpecies/species')
     nProjTotal = 0
