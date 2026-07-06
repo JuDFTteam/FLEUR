@@ -24,8 +24,80 @@ MODULE m_wannierlib_ft
   USE m_types_kpts
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: wannierlib_ft_interpolate
+  PUBLIC :: wannierlib_ft_interpolate, wannierlib_ft_velocity, wannierlib_ft_to_real
 CONTAINS
+
+  !> Coarse-mesh Wannier-gauge matrix -> real space: mat_r(R) = (1/Nk) sum_k e^{-i2pi k.R} mat_k(k),
+  !> over the Wigner-Seitz R-mesh (same irvec/ndegen as the interpolation). Used to export the
+  !> tight-binding operators H(R), A(R) in Wannier90 _hr.dat / _r.dat format for external post-proc.
+  SUBROUTINE wannierlib_ft_to_real(cell, mat_k, kpts, mat_r, irvec, ndegen, nrpts)
+    TYPE(t_cell), INTENT(IN) :: cell
+    COMPLEX, INTENT(IN) :: mat_k(:, :, :)     ! (nw, nw, nk)  Wannier-gauge matrix on coarse mesh
+    TYPE(t_kpts), INTENT(IN) :: kpts
+    COMPLEX, ALLOCATABLE, INTENT(OUT) :: mat_r(:, :, :)      ! (nw, nw, nrpts)
+    INTEGER, ALLOCATABLE, INTENT(OUT) :: irvec(:, :), ndegen(:)
+    INTEGER, INTENT(OUT) :: nrpts
+    INTEGER :: nw, nk, k, irpt, mp_grid(3)
+    REAL :: rdotk
+    nw = SIZE(mat_k, 1); nk = SIZE(mat_k, 3); mp_grid = kpts%nkpt3
+    CALL wigner_seitz(cell, mp_grid, irvec, ndegen, nrpts)
+    ALLOCATE(mat_r(nw, nw, nrpts), source=CMPLX(0.0, 0.0))
+    DO irpt = 1, nrpts
+      DO k = 1, nk
+        rdotk = tpi_const * DOT_PRODUCT(kpts%bkf(:, k), REAL(irvec(:, irpt)))
+        mat_r(:, :, irpt) = mat_r(:, :, irpt) + (EXP(CMPLX(0.0, -rdotk)) / REAL(nk)) * mat_k(:, :, k)
+      END DO
+    END DO
+  END SUBROUTINE wannierlib_ft_to_real
+
+  !> Velocity interpolation v_alpha(k') = dH/dk_alpha in the Wannier gauge:
+  !>    v_alpha(k') = sum_R  i R_cart(alpha) e^{+i2pi k'.R} / ndegen(R) * mat_r(R)
+  !> with mat_r the Wannier-gauge Hamiltonian in real space (same mat_r as the core)
+  !> and R_cart = amat . irvec the Cartesian lattice vector (Bohr). Returns the three
+  !> Cartesian components. Projected on the band eigenvectors, the DIAGONAL <n|v|n> =
+  !> dE_n/dk is exact; off-diagonal elements omit the Berry-connection (gauge) term,
+  !> so use the diagonal (band velocity) only until the position operator is available.
+  SUBROUTINE wannierlib_ft_velocity(cell, mat_k, kpts, kfrac, vel_interp)
+    TYPE(t_cell), INTENT(IN) :: cell
+    COMPLEX, INTENT(IN) :: mat_k(:, :, :)     ! (nw, nw, nk)  Wannier-gauge H on coarse mesh
+    TYPE(t_kpts), INTENT(IN) :: kpts
+    REAL,    INTENT(IN) :: kfrac(:, :)        ! (3, nfine)
+    COMPLEX, ALLOCATABLE, INTENT(OUT) :: vel_interp(:, :, :, :)  ! (nw, nw, 3, nfine)
+
+    INTEGER :: nw, nk, nfine, k, irpt, ip, nrpts, mp_grid(3), alpha
+    INTEGER, ALLOCATABLE :: irvec(:, :), ndegen(:)
+    COMPLEX, ALLOCATABLE :: mat_r(:, :, :)
+    REAL :: rdotk, rcart(3)
+    COMPLEX :: base
+
+    nw = SIZE(mat_k, 1); nk = SIZE(mat_k, 3); nfine = SIZE(kfrac, 2)
+    mp_grid = kpts%nkpt3
+    CALL wigner_seitz(cell, mp_grid, irvec, ndegen, nrpts)
+
+    ! coarse mesh -> R  (identical to the core)
+    ALLOCATE(mat_r(nw, nw, nrpts), source=CMPLX(0.0, 0.0))
+    DO irpt = 1, nrpts
+      DO k = 1, nk
+        rdotk = tpi_const * DOT_PRODUCT(kpts%bkf(:, k), REAL(irvec(:, irpt)))
+        mat_r(:, :, irpt) = mat_r(:, :, irpt) + (EXP(CMPLX(0.0, -rdotk)) / REAL(nk)) * mat_k(:, :, k)
+      END DO
+    END DO
+
+    ! R -> fine path, weighted by i R_cart(alpha)
+    ALLOCATE(vel_interp(nw, nw, 3, nfine), source=CMPLX(0.0, 0.0))
+    DO ip = 1, nfine
+      DO irpt = 1, nrpts
+        rcart = MATMUL(cell%amat, REAL(irvec(:, irpt)))
+        rdotk = tpi_const * DOT_PRODUCT(kfrac(:, ip), REAL(irvec(:, irpt)))
+        base = EXP(CMPLX(0.0, rdotk)) / REAL(ndegen(irpt))
+        DO alpha = 1, 3
+          vel_interp(:, :, alpha, ip) = vel_interp(:, :, alpha, ip) + &
+              CMPLX(0.0, rcart(alpha)) * base * mat_r(:, :, irpt)
+        END DO
+      END DO
+    END DO
+    DEALLOCATE(mat_r, irvec, ndegen)
+  END SUBROUTINE wannierlib_ft_velocity
 
   !> Fourier-interpolate a coarse-mesh k-space matrix onto a fine k-path.
   SUBROUTINE wannierlib_ft_interpolate(cell, mat_k, kpts, kfrac, mat_interp)
