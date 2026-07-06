@@ -22,7 +22,7 @@ module m_gf_precond
     type(t_cell),intent(in)   :: cell
     type(t_sym),intent(in)    :: sym
     type(t_mpi),intent(in)    :: mpi
-    type(t_mix),intent(in)    :: mix
+    TYPE(t_gfmix),intent(in)    :: mix
     integer,intent(in)        :: jspins
     complex,intent(inout)     :: d_qpw(:,:)
     real,intent(inout)        :: d_rho(:,:,:,:)

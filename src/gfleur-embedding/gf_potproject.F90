@@ -195,7 +195,7 @@
                                                                         
       bmat = 0.0 
       bmat(1:2,1:2) = cell%bmat(1:2,1:2) 
-      bmat(3,3) = 2*pimach()/d_total 
+      bmat(3,3) = 2*pi_const/d_total 
                                                                         
                                                                         
       k1max = MAXVAL(stars%kv2(1,:size(curvy2dproj,1))) 
@@ -216,10 +216,10 @@
       curvy2dproj(:,:,:,:)=cmplx(0.0,0.0) 
       DO side = 1,2 
          IF (side == 2) THEN 
-            exp1  = EXP(CMPLX(0.0,2*pimach()/d_total*(d_total-d_aux) )) 
+            exp1  = EXP(CMPLX(0.0,2*pi_const/d_total*(d_total-d_aux) )) 
             embdesc => embdesc_right 
          ELSE 
-            exp1  = EXP(CMPLX(0.0,2*pimach()/d_total*d_aux)) 
+            exp1  = EXP(CMPLX(0.0,2*pi_const/d_total*d_aux)) 
             embdesc => embdesc_left 
          ENDIF 
          !generate the 2d-kronecker delta                               
@@ -264,9 +264,9 @@
       ENDDO 
                                                                         
       IF (surface) THEN 
-         exp1 = EXP(CMPLX(0.0,2.*pimach()/d_total*(d_total-d_aux-7      &
+         exp1 = EXP(CMPLX(0.0,2.*pi_const/d_total*(d_total-d_aux-7      &
      &        *delta_point)))                                           
-         exp2 = EXP(CMPLX(0.0,2.*pimach()/d_total*(d_total-d_aux-8      &
+         exp2 = EXP(CMPLX(0.0,2.*pi_const/d_total*(d_total-d_aux-8      &
      &        *delta_point)))                                           
          DO n  = 1,mx3 
             curvy2dproj(1,1,n,2) = (exp1**gz_map(n)-exp2**gz_map(n))    &

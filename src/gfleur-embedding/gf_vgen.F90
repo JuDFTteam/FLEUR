@@ -43,7 +43,7 @@ CONTAINS
         !..   Scalar Arguments .. ..
         INTEGER, INTENT (IN)         :: jspins
         LOGICAL, INTENT (IN)         :: vchk
-        TYPE(t_gfinp),INTENT(IN)     :: gfinp
+        TYPE(t_embinp),INTENT(IN)     :: gfinp
         TYPE(t_stars),INTENT(IN)     :: stars(:)
         TYPE(t_sphhar),INTENT(IN)    :: sphhar(:)
         TYPE(t_sym),INTENT(IN)       :: sym
@@ -51,7 +51,7 @@ CONTAINS
         TYPE(t_atoms),INTENT(IN)     :: atoms(:)
         TYPE(t_mpi),INTENT(IN)       :: mpi
         TYPE(t_xcpot),INTENT(INOUT)  :: xcpot(:)
-        TYPE(t_mix),INTENT(IN)       :: mix
+        TYPE(t_gfmix),INTENT(IN)       :: mix
         TYPE(t_layers),INTENT(IN)    :: layers
         TYPE(t_noco),INTENT(IN)      :: noco(:)
         TYPE(t_enpara),INTENT(IN)    :: enpara(:)
@@ -126,7 +126,7 @@ CONTAINS
         !     .. Scalar Arguments ..
         INTEGER,INTENT(IN)        ::layer
         INTEGER, INTENT (IN)      ::jspins
-        TYPE(t_gfinp),INTENT(IN)  ::gfinp
+        TYPE(t_embinp),INTENT(IN)  ::gfinp
         TYPE(t_stars),INTENT(IN)  ::stars
         TYPE(t_sphhar),INTENT(IN) ::sphhar
         TYPE(t_sym),INTENT(IN)    ::sym
@@ -174,7 +174,7 @@ CONTAINS
         vr_c=vr
         DO jspin=1,jspins
             DO n = 1,atoms%ntype
-                vr_c(:atoms%jri(n),0,n,jspin) = SQRT(4*pimach())            &
+                vr_c(:atoms%jri(n),0,n,jspin) = SQRT(4*pi_const)            &
                 *         vr(:atoms%jri(n),0,n,jspin)/atoms%rmsh(:,n)
             ENDDO
         ENDDO
@@ -238,7 +238,7 @@ CONTAINS
         INTEGER, INTENT (IN)         :: layer
         INTEGER, INTENT (IN)         :: jspins
         LOGICAL, INTENT (IN)         :: vchk
-        TYPE(t_gfinp),INTENT(IN)     :: gfinp
+        TYPE(t_embinp),INTENT(IN)     :: gfinp
         TYPE(t_stars),INTENT(IN)     :: stars
         TYPE(t_sphhar),INTENT(IN)    :: sphhar
         TYPE(t_sym),INTENT(IN)       :: sym
@@ -349,7 +349,7 @@ CONTAINS
         ! store v(l=0) component as r*v(l=0)/sqrt(4pi)
         DO js = 1,jspins
             DO  n = 1,atoms%ntype
-                vr(:,0,n,js) = atoms%rmsh(:,n)*vr(:,0,n,js)/sqrt(4*pimach())
+                vr(:,0,n,js) = atoms%rmsh(:,n)*vr(:,0,n,js)/sqrt(4*pi_const)
             ENDDO
         ENDDO
 

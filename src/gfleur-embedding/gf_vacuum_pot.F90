@@ -34,7 +34,7 @@ module m_gf_vacuum_pot
 	write(6,*) "Vacuum-Charge integral:",sig(1)
 
     CALL qsf(delz,sig,vz,nmz,1)
-    vz=-4.*pimach()*(vz(nmz)-vz)
+    vz=-4.*pi_const*(vz(nmz)-vz)
 
     !Add an electric field if specified
     if (abs(Efield)>1E-9) then
@@ -97,7 +97,7 @@ module m_gf_vacuum_pot
          e_p = exp_save( g*z  )
          test = e_m*(alph0+betaz) + e_p*alphaz
          IF ( 2.0 * test == test ) test = cmplx(0.0,0.0)
-         vxy(imz,n2-1) =  2.*pimach()/g * test
+         vxy(imz,n2-1) =  2.*pi_const/g * test
          z = z + delz
     enddo
 

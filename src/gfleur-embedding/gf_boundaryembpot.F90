@@ -26,7 +26,7 @@
       TYPE(t_stars),INTENT(IN)  :: stars(:) 
       TYPE(t_cell),INTENT(IN)   :: cell(:) 
       TYPE(t_atoms),INTENT(IN)  :: atoms(:)
-      TYPE(t_gfinp),INTENT(IN)  :: gfinp 
+      TYPE(t_embinp),INTENT(IN)  :: gfinp 
       !>                                                                
       !<-- Locals                                                       
       REAL                :: pos 
@@ -54,7 +54,7 @@
          IF (side == 1) dp=-1*dp
          DO n2 = 1,stars(layer)%nq2 
             kg = stars(layer)%kv2(:,n2) 
-            phase(n2) = EXP(CMPLX(0.0,2.*pimach()*dot_PRODUCT(dp,kg))) 
+            phase(n2) = EXP(CMPLX(0.0,2.*pi_const*dot_PRODUCT(dp,kg))) 
             psq(:,n2) =psq(:,n2)*phase(n2) 
          ENDDO 
          !>                                                             
@@ -121,10 +121,10 @@
       pos=0.0
       vb = 0.0 
       IF (side == 1) THEN 
-         exp1   = EXP(CMPLX(0.0,-2.*pimach()/layers%dt(layer)*(          &
+         exp1   = EXP(CMPLX(0.0,-2.*pi_const/layers%dt(layer)*(          &
      &        layers%c(layer)/2.-pos)))
       ELSE 
-         exp1 = EXP(CMPLX(0.0,-2.*pimach()/layers%dt(layer)              &
+         exp1 = EXP(CMPLX(0.0,-2.*pi_const/layers%dt(layer)              &
      &        *(-layers%c(layer)/2.+pos)))
       ENDIF 
       write(*,*) side,exp1

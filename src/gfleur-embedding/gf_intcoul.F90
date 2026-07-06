@@ -7,7 +7,6 @@ MODULE m_gf_intcoul
       use m_juDFT
 	  USE m_gf_types
 	  USE m_constants
-#include "juDFT_env.h"
       IMPLICIT NONE
       PRIVATE
       REAL,PARAMETER:: CORRECT_CUTOFF=0.5 ! cutoff determine how many g_|| to fix
@@ -39,7 +38,7 @@ MODULE m_gf_intcoul
       TYPE(t_cell),INTENT(IN)      :: cell(:)
       TYPE(t_sym),INTENT(IN)       :: sym
       TYPE(t_mpi),INTENT(IN)       :: mpi
-      TYPE(t_gfinp),INTENT(IN)     :: gfinp
+      TYPE(t_embinp),INTENT(IN)     :: gfinp
       TYPE(t_potential),INTENT(INOUT) :: potential(:)
       REAL   ,INTENT(OUT)          :: vac_pot
 
@@ -50,7 +49,7 @@ MODULE m_gf_intcoul
 	  REAL:: pos_l,pos_r
 	  INTEGER,PARAMETER::printn2=1
 
-      CPP_juDFT_timestart("gf_intcoul:setup")
+      CALL timestart("gf_intcoul:setup")
 	  ! read charges and generate setup
 	  ALLOCATE(lay(layers%num_layers+2))
           lay%points=0
@@ -110,7 +109,7 @@ MODULE m_gf_intcoul
 
 
 
-      CPP_juDFT_timestop("gf_intcoul:setup")
+      CALL timestop("gf_intcoul:setup")
 
       END SUBROUTINE
 
@@ -158,7 +157,7 @@ MODULE m_gf_intcoul
      	 DO n = 1,lay(l)%points
            g = n-1
            IF (n>lay(l)%points/2+1) g=n-lay(l)%points-1
-           g=cmplx(0.0,1.0)*g*2.*pimach()/lay(l)%dt
+           g=cmplx(0.0,1.0)*g*2.*pi_const/lay(l)%dt
            lay(l)%project(n,1)=exp(g*(-lay(l)%c/2))
            lay(l)%project(n,2)=exp(g*(lay(l)%c/2))
            lay(l)%dproject(n,1)=g*exp(g*(-lay(l)%c/2))
@@ -540,7 +539,7 @@ MODULE m_gf_intcoul
       !print *, "Manual shifting of psq"
       !d=(/0.5,0.5/)
       !DO n2=1,stars%nq2
-      !    ph=exp(cmplx(0,2.*pimach()*dot_product(d,stars%kv2(:,n2))))
+      !    ph=exp(cmplx(0,2.*pi_const*dot_product(d,stars%kv2(:,n2))))
       !    lay(1)%pseudo_charge(:,n2)=lay(1)%pseudo_charge(:,n2)*ph
       !ENDDO
       !Warning
@@ -586,7 +585,7 @@ MODULE m_gf_intcoul
      ! print *, "Manual shifting of psq"
      ! d=(/0.5,0.5/)
      ! DO n2=1,stars%nq2
-     !     ph=exp(cmplx(0,2.*pimach()*dot_product(d,stars%kv2(:,n2))))
+     !     ph=exp(cmplx(0,2.*pi_const*dot_product(d,stars%kv2(:,n2))))
      !     lay(size(lay))%pseudo_charge(:,n2)=lay(size(lay))%pseudo_charge(:,n2)*ph
      ! ENDDO
 
@@ -635,7 +634,7 @@ MODULE m_gf_intcoul
 	      DO i=1,leftlayer%points
 	        g=i-1
 	      	IF (i>leftlayer%points/2+1) g=i-leftlayer%points-1
-	      	charge_left(n)=charge_left(n)+leftlayer%pseudo_charge(i,n2)*exp(cmplx(0.0,pos_left(n)*g*2*pimach()/leftlayer%dt))
+	      	charge_left(n)=charge_left(n)+leftlayer%pseudo_charge(i,n2)*exp(cmplx(0.0,pos_left(n)*g*2*pi_const/leftlayer%dt))
 	  	  ENDDO
 	  ENDDO
 
@@ -647,7 +646,7 @@ MODULE m_gf_intcoul
 	      DO i=1,rightlayer%points
 	        g=i-1
 	      	IF (i>rightlayer%points/2+1) g=i-rightlayer%points-1
-	      	charge_right(n)=charge_right(n)+rightlayer%pseudo_charge(i,n2)*exp(cmplx(0.0,pos_right(n)*g*2*pimach()/rightlayer%dt))
+	      	charge_right(n)=charge_right(n)+rightlayer%pseudo_charge(i,n2)*exp(cmplx(0.0,pos_right(n)*g*2*pi_const/rightlayer%dt))
 	  	  ENDDO
 	  ENDDO
 
@@ -833,11 +832,11 @@ MODULE m_gf_intcoul
           DO n=1,size(g2)
                 g=n-1
                 IF (n>size(g2)/2+1) g=n-size(g2)-1
-                g=(g*2.*pimach()/lay%dt/2.0)**2
+                g=(g*2.*pi_const/lay%dt/2.0)**2
                 IF (abs(g)<1E-90) THEN
                     g2(n)=0.0
                 ELSE
-                    g2(n)=g2(n)*4.*pimach()/g
+                    g2(n)=g2(n)*4.*pi_const/g
                  !print *, "NoPot"
                 ENDIF
           ENDDO
@@ -883,10 +882,10 @@ MODULE m_gf_intcoul
       DO n=1,lay%points
          g=n-1
          IF (n>lay%points/2+1) g=n-lay%points-1
-         g=(g*2.*pimach()/lay%dt)**2+stars%sk2(n2)**2
+         g=(g*2.*pi_const/lay%dt)**2+stars%sk2(n2)**2
          !g>0 here!
            !print *,"NoPot"
-          lay%potential(n)=lay%potential(n)*4.*pimach()/g
+          lay%potential(n)=lay%potential(n)*4.*pi_const/g
      ENDDO
 
 
@@ -944,9 +943,9 @@ MODULE m_gf_intcoul
                  corr(n,:)=0.0
                  cycle
            endif
-           g=(g*2.*pimach()/lay%dt)**2+stars%sk2(n2)**2
-           corr(n,1)=corr(n,1)*4.*pimach()/g
-           corr(n,2)=corr(n,2)*4.*pimach()/g
+           g=(g*2.*pi_const/lay%dt)**2+stars%sk2(n2)**2
+           corr(n,1)=corr(n,1)*4.*pi_const/g
+           corr(n,2)=corr(n,2)*4.*pi_const/g
         ENDDO
      endif
 
@@ -975,7 +974,7 @@ MODULE m_gf_intcoul
 	 DO n = 1,lay%points
          gg = n-1
          IF (n>lay%points/2+1) gg=n-lay%points-1
-         gg=cmplx(0.0,1.0)*gg*2.*pimach()/lay%dt
+         gg=cmplx(0.0,1.0)*gg*2.*pi_const/lay%dt
          test1(:)=test1(:)+corr(n,1)*gg*exp(gg*pos)
      enddo
      do n=1,size(test1)
@@ -1052,9 +1051,9 @@ MODULE m_gf_intcoul
      DO n=1,points
         g=n-1
         IF (n>points/2+1) g=n-points-1
-        g=(g*2.*pimach()/lay%dt)**2+stars%sk2(n2)**2
-        corr(n,1)=corr(n,1)*4.*pimach()/g
-        corr(n,2)=corr(n,2)*4.*pimach()/g
+        g=(g*2.*pi_const/lay%dt)**2+stars%sk2(n2)**2
+        corr(n,1)=corr(n,1)*4.*pi_const/g
+        corr(n,2)=corr(n,2)*4.*pi_const/g
      ENDDO
      endif
 
@@ -1070,7 +1069,7 @@ MODULE m_gf_intcoul
      	DO n = 1,lay%points
          gg = n-1
          IF (n>lay%points/2+1) gg=n-lay%points-1
-         gg=cmplx(0.0,1.0)*gg*2.*pimach()/lay%dt
+         gg=cmplx(0.0,1.0)*gg*2.*pi_const/lay%dt
          dc=dc+corr(n,1)*gg
         enddo
      else
@@ -1093,7 +1092,7 @@ MODULE m_gf_intcoul
 	 DO n = 1,lay%points
          gg = n-1
          IF (n>lay%points/2+1) gg=n-lay%points-1
-         gg=cmplx(0.0,1.0)*gg*2.*pimach()/lay%dt
+         gg=cmplx(0.0,1.0)*gg*2.*pi_const/lay%dt
          test1(:)=test1(:)+corr(n,1)*gg*exp(gg*pos)
      enddo
      do n=1,size(test1)
