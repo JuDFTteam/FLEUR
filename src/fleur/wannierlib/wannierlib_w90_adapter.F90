@@ -4,7 +4,7 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_wannierlib_w90_adapter
-  USE m_constants, ONLY : oUnit, namat_const, hartree_to_ev_const
+  USE m_constants, ONLY : oUnit, namat_const, hartree_to_ev_const, bohr_to_angstrom_const
   USE m_juDFT
   USE m_wannierlib_ft, ONLY : wannierlib_ft_to_real
   USE m_xmlOutput
@@ -72,7 +72,7 @@ CONTAINS
     CALL w90_set_option(wannierlib_w90main, 'num_atoms', atoms%nat)
     CALL w90_set_option(wannierlib_w90main, 'mp_grid', mp_grid)
     CALL w90_set_option(wannierlib_w90main, 'kpoints', kpts%bkf)
-    CALL w90_set_option(wannierlib_w90main, 'unit_cell_cart', cell%amat)
+    CALL w90_set_option(wannierlib_w90main, 'unit_cell_cart', bohr_to_angstrom_const*cell%amat)
     CALL w90_set_option(wannierlib_w90main, 'distk', distk)
 
     ALLOCATE(atoms_frac(atoms%nat), stat=ierr)
