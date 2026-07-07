@@ -17,66 +17,64 @@ contains
 
         use m_dfpt_dynmat_sym , only : ft_dyn_direct, ft_fcm_weight, unfold_grid
 
-        type(t_fleurinput), intent(in) :: fi  
-        complex, intent(in) :: matElement(:,:,:,:)               ! nu',nu, kpoints, spin
-        complex, intent(in) :: U_mat(:,:,:,:)                    ! bloch, wannier, kpoint, jspin 
-        type(t_kpts),intent(in) :: kpts_coarse                   ! on the coarse Wannier k-mesh  
+        type(t_fleurinput), intent(in) :: fi
+        complex, intent(in) :: matElement(:,:,:)                 ! nu',nu, kpoints
+        complex, intent(in) :: U_mat(:,:,:)                      ! bloch, wannier, kpoint
+        type(t_kpts),intent(in) :: kpts_coarse                   ! on the coarse Wannier k-mesh
         real,intent(in) :: kpts_fine(:,:)                        ! to interpolate onto
-        complex,allocatable,intent(out) :: matInterpol(:,:,:,:)  ! interpolate matrix element  (nwann,nwann,kpts,jspin)
-        type(t_kpts),optional,intent(in) :: qpts_coarse          ! on the coarse Wannier k-mesh  
-        type(t_kpts),optional,intent(in) :: qpts_fine            ! to interpolate onto 
-        
+        complex,allocatable,intent(out) :: matInterpol(:,:,:)    ! interpolate matrix element  (nwann,nwann,kpts)
+        type(t_kpts),optional,intent(in) :: qpts_coarse          ! on the coarse Wannier k-mesh
+        type(t_kpts),optional,intent(in) :: qpts_fine            ! to interpolate onto
 
-        integer :: ikpt, iSpin , nu , iNupr, boxSize, nx, ny, nz, iGrid, ix , iy , iz
+
+        integer :: ikpt , nu , iNupr, boxSize, nx, ny, nz, iGrid, ix , iy , iz
         integer :: ft_lim(2,3), bigBox_lim(2,3) ! discrete fourier box limits
         type(t_cell) :: cell
         integer, allocatable  :: supercellR(:,:)
-        real, allocatable  :: FTweight(:) 
+        real, allocatable  :: FTweight(:)
 
         complex,allocatable :: fft_grid(:,:,:)                     ! matrix elements in realspace on grid (wannier gauge)
-        complex,allocatable :: matWannier(:,:,:,:,:,:)               ! matrix elements in realspace (wannier gauge)
-        complex,allocatable :: matRot(:,:)                          ! rotated matrix elements in wannier gauge 
+        complex,allocatable :: matWannier(:,:,:,:,:)               ! matrix elements in realspace (wannier gauge)
+        complex,allocatable :: matRot(:,:)                          ! rotated matrix elements in wannier gauge
         real :: bkpt(3)
 
         integer :: nwann, nfine
-        
+
         nwann = size(U_mat, 2)
         nfine = size(kpts_fine,2)
 
         allocate(fft_grid(nwann,nwann,size(matElement,3)))
-        allocate(matInterpol(nwann,nwann,nfine,size(matElement,4)))
+        allocate(matInterpol(nwann,nwann,nfine))
         matInterpol = cmplx(0.0, 0.0)
         allocate(matRot(nwann,nwann))
         matRot = cmplx(0.0,0.0)
 
 
         ft_lim(2,:) = kpts_coarse%nkpt3(:)/2
-        ft_lim(1,:) = ft_lim(2,:) - kpts_coarse%nkpt3(:) + 1       
-        
+        ft_lim(1,:) = ft_lim(2,:) - kpts_coarse%nkpt3(:) + 1
+
         allocate(matWannier(nwann,nwann,0:(kpts_coarse%nkpt3(1)-1),&
-                            0:(kpts_coarse%nkpt3(2)-1),0:(kpts_coarse%nkpt3(3)-1),size(matElement,4)))
+                            0:(kpts_coarse%nkpt3(2)-1),0:(kpts_coarse%nkpt3(3)-1)))
         matWannier = cmplx(0.0,0.0)
 
 
-        do iSpin = 1 , size(matElement,4)
-            fft_grid = cmplx(0.0,0.0)
-            do ikpt = 1 , kpts_coarse%nkpt
+        fft_grid = cmplx(0.0,0.0)
+        do ikpt = 1 , kpts_coarse%nkpt
 
-                bkpt = kpts_coarse%bk(:, ikpt)
+            bkpt = kpts_coarse%bk(:, ikpt)
 
-                ! rotate the matrix elements into wannier gauge
-                ! U^dagger M U
-                matRot(:,:) = matmul(conjg(transpose(U_mat(:,:,ikpt,ispin))),matmul(matElement(:,:,ikpt,iSpin),U_mat(:,:,ikpt,ispin)))
-                
-                call ft_dyn_direct(ft_lim,1,bkpt,matRot,fft_grid(:,:,:))
-            end do ! ikpt 
-            
-            ! unfold the grid to nx,ny,nz indexing 
+            ! rotate the matrix elements into wannier gauge
+            ! U^dagger M U
+            matRot(:,:) = matmul(conjg(transpose(U_mat(:,:,ikpt))),matmul(matElement(:,:,ikpt),U_mat(:,:,ikpt)))
 
-            fft_grid(:,:,:)=fft_grid(:,:,:)/kpts_coarse%nkpt
-            call unfold_grid(ft_lim, fft_grid, matWannier(:,:,:,:,:,iSpin))
-        end do !ispin 
-        ! interpolate to fine mesh with WS construction 
+            call ft_dyn_direct(ft_lim,1,bkpt,matRot,fft_grid(:,:,:))
+        end do ! ikpt
+
+        ! unfold the grid to nx,ny,nz indexing
+
+        fft_grid(:,:,:)=fft_grid(:,:,:)/kpts_coarse%nkpt
+        call unfold_grid(ft_lim, fft_grid, matWannier(:,:,:,:,:))
+        ! interpolate to fine mesh with WS construction
         bigBox_lim(2,:) =   2*kpts_coarse%nkpt3(:)
         bigBox_lim(1,:) = - 2*kpts_coarse%nkpt3(:) 
         
@@ -98,11 +96,9 @@ contains
         cell = fi%cell
         call cell%calculate_WSweight(supercellR,FTweight,scaleSupercell=kpts_coarse%nkpt3(:))
 
-        do ispin = 1 , size(matElement,4)
-            do ikpt = 1 , nfine
-                call ft_fcm_weight(-1,ft_lim,bigBox_lim,FTweight,kpts_fine(:,ikpt),matInterpol(:,:,ikpt,ispin),matWannier(:,:,:,:,:,iSpin))
-            end do !ikpt 
-        end do ! ispin 
+        do ikpt = 1 , nfine
+            call ft_fcm_weight(-1,ft_lim,bigBox_lim,FTweight,kpts_fine(:,ikpt),matInterpol(:,:,ikpt),matWannier(:,:,:,:,:))
+        end do !ikpt
 
 
 
@@ -118,19 +114,19 @@ contains
         use m_dfpt_dynmat_sym , only : ft_dyn_direct, ft_fcm_weight, unfold_grid
 
         type(t_fleurinput), intent(in) :: fi
-        complex, intent(in) :: matElement(:,:,:,:,:)              ! nu',nu, kpoints, qpts, spin (nu' at k+q, nu at k)
-        complex, intent(in) :: U_mat(:,:,:,:)                     ! bloch, wannier, kpoint, jspin
+        complex, intent(in) :: matElement(:,:,:,:)                ! nu',nu, kpoints, qpts (nu' at k+q, nu at k)
+        complex, intent(in) :: U_mat(:,:,:)                       ! bloch, wannier, kpoint
         type(t_kpts),intent(in) :: kpts_coarse                    ! on the coarse Wannier k-mesh
         real,intent(in) :: kpts_fine(:,:)                         ! fine k-mesh to interpolate onto
-        complex,allocatable,intent(out) :: matInterpol(:,:,:,:,:) ! interpolated matrix element  (nwann,nwann,kpts,qpts,jspin)
+        complex,allocatable,intent(out) :: matInterpol(:,:,:,:)   ! interpolated matrix element  (nwann,nwann,kpts,qpts)
         type(t_kpts),intent(in) :: qpts_coarse                    ! on the coarse Wannier q-mesh
         real,intent(in) :: qpts_fine(:,:)                         ! fine q-mesh to interpolate onto
 
 
-        integer :: iSpin, ikpt, iqpt, ik_fine, iq_fine, ikqpt, ix, iy, iz
+        integer :: ikpt, iqpt, ik_fine, iq_fine, ikqpt, ix, iy, iz
         integer :: ft_lim_k(2,3), ft_lim_q(2,3), bigBox_lim_k(2,3), bigBox_lim_q(2,3) ! fourier box limits
         integer :: boxSize_k, boxSize_q, iGrid
-        integer :: nwann, nspin, nk_c, nq_c, nk_fine, nq_fine
+        integer :: nwann, nk_c, nq_c, nk_fine, nq_fine
         integer :: nk1, nk2, nk3, nq1, nq2, nq3
         type(t_cell) :: cell
         integer, allocatable :: supercellR_k(:,:), supercellR_q(:,:)
@@ -144,7 +140,6 @@ contains
         real :: bkqpt(3)
 
         nwann   = size(U_mat, 2)
-        nspin   = size(matElement, 5)
         nk_c    = kpts_coarse%nkpt
         nq_c    = qpts_coarse%nkpt
         nk_fine = size(kpts_fine, 2)
@@ -170,7 +165,7 @@ contains
         allocate(tempMat(nwann,nwann, nk_c, 0:nq1-1,0:nq2-1,0:nq3-1))
         allocate(matWannier(nwann,nwann, 0:nk1-1,0:nk2-1,0:nk3-1, 0:nq1-1,0:nq2-1,0:nq3-1))
         allocate(tempMat2(nwann,nwann, 0:nk1-1,0:nk2-1,0:nk3-1))
-        allocate(matInterpol(nwann,nwann,nk_fine,nq_fine,nspin))
+        allocate(matInterpol(nwann,nwann,nk_fine,nq_fine))
         matInterpol = cmplx(0.0, 0.0)
 
         ! Wigner-Seitz weights and big-box supercell R vectors, one set per mesh
@@ -208,60 +203,57 @@ contains
         call cell%calculate_WSweight(supercellR_k,FTweight_k,scaleSupercell=kpts_coarse%nkpt3(:))
         call cell%calculate_WSweight(supercellR_q,FTweight_q,scaleSupercell=qpts_coarse%nkpt3(:))
 
-        do iSpin = 1 , nspin
-            ! forward fourier transform ( k-space ---> Realspace )
-            ! fourier transform of the q-mesh --> R_p
-            tempMat = cmplx(0.0,0.0)
-            do ikpt = 1 , nk_c
-                fftq = cmplx(0.0,0.0)
-                do iqpt = 1 , nq_c
-                    ! fold k+q back into the BZ to find the stored U(k+q)=U(tilde k)
-                    bkqpt  = kpts_coarse%bk(:,ikpt) + qpts_coarse%bk(:,iqpt)
-                    ikqpt = kpts_coarse%get_nk(bkqpt)
-                    if (ikqpt < 1) call juDFT_error("k+q not on the coarse mesh (q must connect k-points)", &
-                                                  calledby="wannier_matrixq_interpolate")
-                    ! rotate the matrix element into wannier gauge: U^dagger(k+q) M(k,q) U(k)
-                    matRot(:,:) = matmul(conjg(transpose(U_mat(:,:,ikqpt,iSpin))),matmul(matElement(:,:,ikpt,iqpt,iSpin), U_mat(:,:,ikpt,iSpin)))
-                    call ft_dyn_direct(ft_lim_q, 1, qpts_coarse%bk(:,iqpt), matRot, fftq)
-                end do !iqpt
-                fftq = fftq / nq_c
-                call unfold_grid(ft_lim_q, fftq, tempMat(:,:,ikpt,:,:,:))
-            end do !ikpt
+        ! forward fourier transform ( k-space ---> Realspace )
+        ! fourier transform of the q-mesh --> R_p
+        tempMat = cmplx(0.0,0.0)
+        do ikpt = 1 , nk_c
+            fftq = cmplx(0.0,0.0)
+            do iqpt = 1 , nq_c
+                ! fold k+q back into the BZ to find the stored U(k+q)=U(tilde k)
+                bkqpt  = kpts_coarse%bk(:,ikpt) + qpts_coarse%bk(:,iqpt)
+                ikqpt = kpts_coarse%get_nk(bkqpt)
+                if (ikqpt < 1) call juDFT_error("k+q not on the coarse mesh (q must connect k-points)", &
+                                              calledby="wannier_matrixq_interpolate")
+                ! rotate the matrix element into wannier gauge: U^dagger(k+q) M(k,q) U(k)
+                matRot(:,:) = matmul(conjg(transpose(U_mat(:,:,ikqpt))),matmul(matElement(:,:,ikpt,iqpt), U_mat(:,:,ikpt)))
+                call ft_dyn_direct(ft_lim_q, 1, qpts_coarse%bk(:,iqpt), matRot, fftq)
+            end do !iqpt
+            fftq = fftq / nq_c
+            call unfold_grid(ft_lim_q, fftq, tempMat(:,:,ikpt,:,:,:))
+        end do !ikpt
 
-            ! fourier transfrom k -> R_e, for each R_p grid point ----
-            do iz=0,nq3-1
-                do iy=0,nq2-1
-                    do ix=0,nq1-1
-                        fftk = cmplx(0.0,0.0)
-                        do ikpt = 1 , nk_c
-                            call ft_dyn_direct(ft_lim_k, 1, kpts_coarse%bk(:,ikpt), tempMat(:,:,ikpt,ix,iy,iz), fftk)
-                        end do !ikpt
-                        fftk = fftk / nk_c
-                        call unfold_grid(ft_lim_k, fftk, matWannier(:,:,:,:,:,ix,iy,iz))
+        ! fourier transfrom k -> R_e, for each R_p grid point ----
+        do iz=0,nq3-1
+            do iy=0,nq2-1
+                do ix=0,nq1-1
+                    fftk = cmplx(0.0,0.0)
+                    do ikpt = 1 , nk_c
+                        call ft_dyn_direct(ft_lim_k, 1, kpts_coarse%bk(:,ikpt), tempMat(:,:,ikpt,ix,iy,iz), fftk)
+                    end do !ikpt
+                    fftk = fftk / nk_c
+                    call unfold_grid(ft_lim_k, fftk, matWannier(:,:,:,:,:,ix,iy,iz))
+                end do
+            end do
+        end do
+
+        ! backwards fourier transform ( Realspace --> kspace )
+        do iq_fine = 1 , nq_fine
+            ! ---- stage 1: R_p -> q', for each R_e grid point ----
+            tempMat2 = cmplx(0.0,0.0)
+            do iz=0,nk3-1
+                do iy=0,nk2-1
+                    do ix=0,nk1-1
+                        call ft_fcm_weight(-1, ft_lim_q, bigBox_lim_q, FTweight_q, qpts_fine(:,iq_fine), &
+                                           tempMat2(:,:,ix,iy,iz), matWannier(:,:,ix,iy,iz,:,:,:))
                     end do
                 end do
             end do
-
-            ! backwards fourier transform ( Realspace --> kspace )
-            do iq_fine = 1 , nq_fine
-                ! ---- stage 1: R_p -> q', for each R_e grid point ----
-                tempMat2 = cmplx(0.0,0.0)
-                do iz=0,nk3-1
-                    do iy=0,nk2-1
-                        do ix=0,nk1-1
-                            call ft_fcm_weight(-1, ft_lim_q, bigBox_lim_q, FTweight_q, qpts_fine(:,iq_fine), &
-                                               tempMat2(:,:,ix,iy,iz), matWannier(:,:,ix,iy,iz,:,:,:))
-                        end do
-                    end do
-                end do
-                ! ---- stage 2: R_e -> k' ----
-                do ik_fine = 1 , nk_fine
-                    call ft_fcm_weight(-1, ft_lim_k, bigBox_lim_k, FTweight_k, kpts_fine(:,ik_fine), &
-                                       matInterpol(:,:,ik_fine,iq_fine,iSpin), tempMat2(:,:,:,:,:))
-                end do !ik_fine
-            end do !iq_fine
-
-        end do ! iSpin
+            ! ---- stage 2: R_e -> k' ----
+            do ik_fine = 1 , nk_fine
+                call ft_fcm_weight(-1, ft_lim_k, bigBox_lim_k, FTweight_k, kpts_fine(:,ik_fine), &
+                                   matInterpol(:,:,ik_fine,iq_fine), tempMat2(:,:,:,:,:))
+            end do !ik_fine
+        end do !iq_fine
 
     end subroutine
 

@@ -27,15 +27,15 @@ contains
         real,    allocatable :: rwork(:)
         complex, allocatable :: H_bloch(:,:,:,:)
         complex, allocatable :: H_interpol(:,:,:,:)
-        complex, allocatable :: H_interpol_spin(:,:,:,:)
+        complex, allocatable :: H_interpol_spin(:,:,:)
         complex, allocatable :: work(:)
-        complex, allocatable :: U_full(:,:,:,:)
+        complex, allocatable :: U_full(:,:,:)
         real :: kpath_coord, dk(3) , dk_cart(3)
         integer :: iout , nfine , ioutEv
 
         class(t_mat),allocatable :: hmat_tmp
         class(t_mat),allocatable :: zMat_tmp
-        class(t_solver), allocatable   :: solver, transform 
+        class(t_solver), allocatable   :: solver, transform
 
         if (.not. fi%wannierlib%l_wannierize) return
         if (.not. allocated(results%U_mat)) &
@@ -71,25 +71,25 @@ contains
         ! ---------------------------------------------------------------
         allocate(H_interpol(num_wann, num_wann, nfine , fi%input%jspins))
         H_interpol = cmplx(0.0, 0.0)
-        allocate(U_full(num_bands, num_wann, fi%kpts%nkptf, 1))
+        allocate(U_full(num_bands, num_wann, fi%kpts%nkptf))
 
         do jspin = 1, fi%input%jspins
             if (num_bands /= num_wann) then
                 ! U_full = U_dis @ U_wann  shape: (num_bands x num_wann)
                 do ikpt = 1, fi%kpts%nkptf
-                    U_full(:,:,ikpt,1) = matmul(results%U_dis(:,:,ikpt,jspin), &
-                                                results%U_mat(:,:,ikpt,jspin))
+                    U_full(:,:,ikpt) = matmul(results%U_dis(:,:,ikpt,jspin), &
+                                              results%U_mat(:,:,ikpt,jspin))
                 end do
             else
-                U_full(:,:,:,1) = results%U_mat(:,:,:,jspin)
+                U_full(:,:,:) = results%U_mat(:,:,:,jspin)
             end if
             call timestart("Wannier Transformation")
-            call wannier_matrix_interpolate(fi, H_bloch(:,:,:,jspin:jspin), &
-                                            U_full,                          &
-                                            fi%kpts, kpts_fine,              &
+            call wannier_matrix_interpolate(fi, H_bloch(:,:,:,jspin), &
+                                            U_full,                      &
+                                            fi%kpts, kpts_fine,          &
                                             H_interpol_spin)
             call timestop("Wannier Transformation")
-            H_interpol(:,:,:,jspin) = H_interpol_spin(:,:,:,1)
+            H_interpol(:,:,:,jspin) = H_interpol_spin(:,:,:)
             deallocate(H_interpol_spin)
         end do
         
@@ -168,15 +168,15 @@ contains
         real,    allocatable :: rwork(:)
         complex, allocatable :: H_bloch(:,:,:,:,:)
         complex, allocatable :: H_interpol(:,:,:,:)
-        complex, allocatable :: H_interpol_spin(:,:,:,:,:)
+        complex, allocatable :: H_interpol_spin(:,:,:,:)
         complex, allocatable :: work(:)
-        complex, allocatable :: U_full(:,:,:,:)
+        complex, allocatable :: U_full(:,:,:)
         real :: kpath_coord, dk(3) , dk_cart(3)
         integer :: iout , nfine , ioutEv
 
         class(t_mat),allocatable :: hmat_tmp
         class(t_mat),allocatable :: zMat_tmp
-        class(t_solver), allocatable   :: solver, transform 
+        class(t_solver), allocatable   :: solver, transform
 
         type(t_kpts) :: qpts_coarse
 
@@ -220,25 +220,25 @@ contains
         ! ---------------------------------------------------------------
         allocate(H_interpol(num_wann, num_wann, nfine, fi%input%jspins))
         H_interpol = cmplx(0.0, 0.0)
-        allocate(U_full(num_bands, num_wann, fi%kpts%nkptf, 1))
+        allocate(U_full(num_bands, num_wann, fi%kpts%nkptf))
 
         do jspin = 1, fi%input%jspins
             if (num_bands /= num_wann) then
                 ! U_full = U_dis @ U_wann  shape: (num_bands x num_wann)
                 do ikpt = 1, fi%kpts%nkptf
-                    U_full(:,:,ikpt,1) = matmul(results%U_dis(:,:,ikpt,jspin), &
-                                                results%U_mat(:,:,ikpt,jspin))
+                    U_full(:,:,ikpt) = matmul(results%U_dis(:,:,ikpt,jspin), &
+                                              results%U_mat(:,:,ikpt,jspin))
                 end do
             else
-                U_full(:,:,:,1) = results%U_mat(:,:,:,jspin)
+                U_full(:,:,:) = results%U_mat(:,:,:,jspin)
             end if
             call timestart("Wannier Transformation")
-            call wannier_matrixq_interpolate(fi, H_bloch(:,:,:,:,jspin:jspin), &
-                                            U_full,                          &
-                                            fi%kpts, kpts_fine,              &
+            call wannier_matrixq_interpolate(fi, H_bloch(:,:,:,:,jspin), &
+                                            U_full,                         &
+                                            fi%kpts, kpts_fine,             &
                                             H_interpol_spin,qpts_coarse,bqpt)
             call timestop("Wannier Transformation")
-            H_interpol(:,:,:,jspin) = H_interpol_spin(:,:,:,1,1)
+            H_interpol(:,:,:,jspin) = H_interpol_spin(:,:,:,1)
             deallocate(H_interpol_spin)
         end do
         
@@ -317,15 +317,15 @@ contains
         real,    allocatable :: rwork(:)
         complex, allocatable :: H_bloch(:,:,:,:,:)
         complex, allocatable :: H_interpol(:,:,:,:,:)
-        complex, allocatable :: H_interpol_spin(:,:,:,:,:)
+        complex, allocatable :: H_interpol_spin(:,:,:,:)
         complex, allocatable :: work(:)
-        complex, allocatable :: U_full(:,:,:,:)
+        complex, allocatable :: U_full(:,:,:)
         real :: kpath_coord, dk(3) , dk_cart(3)
         integer :: iout , nfine , ioutEv, iqpt
 
         class(t_mat),allocatable :: hmat_tmp
         class(t_mat),allocatable :: zMat_tmp
-        class(t_solver), allocatable   :: solver, transform 
+        class(t_solver), allocatable   :: solver, transform
 
         type(t_kpts) :: qpts_coarse
         type(t_fleurinput) :: fi_local
@@ -337,7 +337,7 @@ contains
             call juDFT_error('U_mat not allocated; run wannierization first', &
                              calledby='interpolate_bandstructure')
 
-        num_bands = 9 
+        num_bands = 9
         num_wann  = 9 
 
         fi_local = fi 
@@ -381,20 +381,20 @@ contains
         ! ---------------------------------------------------------------
         allocate(H_interpol(num_wann, num_wann, nfine, size(bqpt,2) ,fi%input%jspins))
         H_interpol = cmplx(0.0, 0.0)
-        allocate(U_full(num_bands, num_wann, fi%kpts%nkptf, 1))
-        U_full = 0.0 
+        allocate(U_full(num_bands, num_wann, fi%kpts%nkptf))
+        U_full = 0.0
         do jspin = 1, fi%input%jspins
             do ib = 1 , num_bands
-                U_full(ib,ib,:,:) = 1.0 
-            end do 
-            
+                U_full(ib,ib,:) = 1.0
+            end do
+
             call timestart("Wannier Transformation")
-            call wannier_matrixq_interpolate(fi, H_bloch(:,:,:,:,jspin:jspin), &
-                                            U_full,                          &
-                                            fi%kpts, kpts_fine,              &
+            call wannier_matrixq_interpolate(fi, H_bloch(:,:,:,:,jspin), &
+                                            U_full,                         &
+                                            fi%kpts, kpts_fine,             &
                                             H_interpol_spin,qpts_coarse,bqpt)
             call timestop("Wannier Transformation")
-            H_interpol(:,:,:,:,jspin) = H_interpol_spin(:,:,:,:,1)
+            H_interpol(:,:,:,:,jspin) = H_interpol_spin(:,:,:,:)
             deallocate(H_interpol_spin)
         end do
 
@@ -425,15 +425,15 @@ contains
         real,    allocatable :: rwork(:)
         complex, allocatable :: H_bloch(:,:,:,:,:)
         complex, allocatable :: H_interpol(:,:,:,:,:)
-        complex, allocatable :: H_interpol_spin(:,:,:,:,:)
+        complex, allocatable :: H_interpol_spin(:,:,:,:)
         complex, allocatable :: work(:)
-        complex, allocatable :: U_full(:,:,:,:)
+        complex, allocatable :: U_full(:,:,:)
         real :: kpath_coord, dk(3) , dk_cart(3)
         integer :: iout , nfine , ioutEv, iqpt
 
         class(t_mat),allocatable :: hmat_tmp
         class(t_mat),allocatable :: zMat_tmp
-        class(t_solver), allocatable   :: solver, transform 
+        class(t_solver), allocatable   :: solver, transform
 
         type(t_kpts) :: qpts_coarse
         type(t_fleurinput) :: fi_local
@@ -491,23 +491,23 @@ contains
         ! ---------------------------------------------------------------
         allocate(H_interpol(num_wann, num_wann, nfine, 3 ,fi%input%jspins))
         H_interpol = cmplx(0.0, 0.0)
-        allocate(U_full(num_bands, num_wann, fi%kpts%nkptf, 1))
-        U_full = 0.0 
+        allocate(U_full(num_bands, num_wann, fi%kpts%nkptf))
+        U_full = 0.0
         do jspin = 1, fi%input%jspins
             do ikpt = 1 ,fi%kpts%nkptf
-                U_full(1,2,ikpt,jspin) = -sin(tpi_const*(fi%kpts%bkf(1,ikpt)))*sin(tpi_const*(fi%kpts%bkf(2,ikpt)))*sin(tpi_const*(fi%kpts%bkf(3,ikpt)))
-                U_full(2,1,ikpt,jspin) = sin(tpi_const*(fi%kpts%bkf(1,ikpt)))*sin(tpi_const*(fi%kpts%bkf(2,ikpt)))*sin(tpi_const*(fi%kpts%bkf(3,ikpt)))
-                U_full(1,1,ikpt,jspin) = cos(tpi_const*(fi%kpts%bkf(1,ikpt)))*cos(tpi_const*(fi%kpts%bkf(2,ikpt)))*cos(tpi_const*(fi%kpts%bkf(3,ikpt)))
-                U_full(2,2,ikpt,jspin) = cos(tpi_const*(fi%kpts%bkf(1,ikpt)))*cos(tpi_const*(fi%kpts%bkf(2,ikpt)))*cos(tpi_const*(fi%kpts%bkf(3,ikpt)))
-            end do 
-            
+                U_full(1,2,ikpt) = -sin(tpi_const*(fi%kpts%bkf(1,ikpt)))*sin(tpi_const*(fi%kpts%bkf(2,ikpt)))*sin(tpi_const*(fi%kpts%bkf(3,ikpt)))
+                U_full(2,1,ikpt) = sin(tpi_const*(fi%kpts%bkf(1,ikpt)))*sin(tpi_const*(fi%kpts%bkf(2,ikpt)))*sin(tpi_const*(fi%kpts%bkf(3,ikpt)))
+                U_full(1,1,ikpt) = cos(tpi_const*(fi%kpts%bkf(1,ikpt)))*cos(tpi_const*(fi%kpts%bkf(2,ikpt)))*cos(tpi_const*(fi%kpts%bkf(3,ikpt)))
+                U_full(2,2,ikpt) = cos(tpi_const*(fi%kpts%bkf(1,ikpt)))*cos(tpi_const*(fi%kpts%bkf(2,ikpt)))*cos(tpi_const*(fi%kpts%bkf(3,ikpt)))
+            end do
+
             call timestart("Wannier Transformation")
-            call wannier_matrixq_interpolate(fi, H_bloch(:,:,:,:,jspin:jspin), &
-                                            U_full,                          &
-                                            fi%kpts, kpts_fine,              &
+            call wannier_matrixq_interpolate(fi, H_bloch(:,:,:,:,jspin), &
+                                            U_full,                         &
+                                            fi%kpts, kpts_fine,             &
                                             H_interpol_spin,qpts_coarse,bqpt)
             call timestop("Wannier Transformation")
-            H_interpol(:,:,:,:,jspin) = H_interpol_spin(:,:,:,:,1)
+            H_interpol(:,:,:,:,jspin) = H_interpol_spin(:,:,:,:)
             deallocate(H_interpol_spin)
         end do
 
