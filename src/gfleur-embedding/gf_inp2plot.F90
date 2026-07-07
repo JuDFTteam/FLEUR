@@ -35,7 +35,7 @@
       !<--Arguments                                                     
       TYPE(t_atoms),INTENT(IN)  :: atoms 
       TYPE(t_cell),INTENT(IN)   :: cell 
-      TYPE(t_gfinp),INTENT(IN)  :: gfinp 
+      TYPE(t_embinp),INTENT(IN)  :: gfinp 
       !>                                                                
       !<--Locals                                                        
                                                                         

@@ -7,7 +7,7 @@ MODULE m_gf_embpot_postprocess
 !Created by wortmann on Sep 10, 2012
     IMPLICIT NONE
     CONTAINS
-    SUBROUTINE gf_embpot_spectral(jspin,nk,gfinp,layers,lapw,cell,kpts)
+    SUBROUTINE gf_embpot_spectral(jspin,nk,gfinp,layers,lapw,lapw_gf,cell,kpts)
     !This subroutine calculates the green function at the embedding plane
     !It uses the embedding potential of the layer=1,side=1 as input
     !Additionally, the embedding potential of layer=layers%num_layers,side=2 can be used
@@ -21,9 +21,10 @@ MODULE m_gf_embpot_postprocess
     USE m_gf_io2dmat
     IMPLICIT NONE
     INTEGER,INTENT(IN)       :: jspin,nk
-    TYPE(t_gfinp),INTENT(IN) :: gfinp
+    TYPE(t_embinp),INTENT(IN) :: gfinp
     TYPE(t_layers),INTENT(IN):: layers
     TYPE(t_lapw),INTENT(IN)  :: lapw
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
     TYPE(t_cell),INTENT(IN)  :: cell
     TYPE(t_kpts),INTENT(IN)  :: kpts
 
@@ -40,10 +41,10 @@ MODULE m_gf_embpot_postprocess
     ENDIF
 
     DO en=1,gf_noen()
-        CALL gf_GETEMB2(sig1,1,1,en,nk,jspin,lapw)
-        IF (gf_io2dmatFID(IO2D_EMB,layers%num_layers,2,IO2D_READ)>0) CALL gf_GETEMB2(sig2,layers%num_layers,2,en,nk,jspin,lapw)
+        CALL gf_GETEMB2(sig1,1,1,en,nk,jspin,lapw,lapw_gf)
+        IF (gf_io2dmatFID(IO2D_EMB,layers%num_layers,2,IO2D_READ)>0) CALL gf_GETEMB2(sig2,layers%num_layers,2,en,nk,jspin,lapw,lapw_gf)
         IF (gfinp%l_simplevacuum) THEN
-            CALL gf_simple_vac(en,nk,lapw,kpts,cell,gfinp%vacuum_energy,sig2,gfinp%efield)
+            CALL gf_simple_vac(en,nk,lapw,lapw_gf,kpts,cell,gfinp%vacuum_energy,sig2,gfinp%efield)
         ENDIF
         sig1=sig1+sig2+imag_matrix
 

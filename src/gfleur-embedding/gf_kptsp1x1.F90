@@ -30,7 +30,7 @@
       TYPE(t_cell),INTENT(IN)  :: cell 
       TYPE(t_sym),INTENT(IN)   :: sym 
       TYPE(t_kpts),INTENT(IN)  :: kpts 
-      TYPE(t_gfinp),INTENT(IN) :: gfinp 
+      TYPE(t_embinp),INTENT(IN) :: gfinp 
       !>                                                                
       !<-- Locals                                                       
       REAL                :: transmat(3,3) 
@@ -39,12 +39,12 @@
       TYPE(t_cell)        :: cell1 
       TYPE(t_sym)         :: sym1 
       REAL                :: kp(3) 
-      REAL                :: kp_ALL(3,kpts%nkpts*sym%nop2*maxngvec) 
-      INTEGER             :: kp_new_nk(kpts%nkpts*sym%nop2*maxngvec) 
-      INTEGER             :: kp_ALL_nk(kpts%nkpts*sym%nop2*maxngvec) 
+      REAL                :: kp_ALL(3,kpts%nkpt*sym%nop2*maxngvec) 
+      INTEGER             :: kp_new_nk(kpts%nkpt*sym%nop2*maxngvec) 
+      INTEGER             :: kp_ALL_nk(kpts%nkpt*sym%nop2*maxngvec) 
       INTEGER             :: n,nk,nk_all,nk_new,nk_new_all,nn 
-      REAL                :: kp_all_new(3,kpts%nkpts*sym%nop2*maxngvec) 
-      REAL                :: kp_new(3,kpts%nkpts*sym%nop2*maxngvec) 
+      REAL                :: kp_all_new(3,kpts%nkpt*sym%nop2*maxngvec) 
+      REAL                :: kp_new(3,kpts%nkpt*sym%nop2*maxngvec) 
       !>                                                                
                                                                         
       !<-- Read small setup                                             
@@ -63,9 +63,9 @@
       !<-- Use symops to fill the BZ, check for duplicates              
       WRITE(*,*) "List of all possible old kpts:" 
       nk_all=0 
-      DO nk = 1,kpts%nkpts 
+      DO nk = 1,kpts%nkpt 
          kp=kpts%bk(:,nk) 
-!         kp = MATMUL(kpts%bk(:,nk),cell%amat)/2/pimach()               
+!         kp = MATMUL(kpts%bk(:,nk),cell%amat)/2/pi_const               
          symloop:DO n = 1,sym%nop2 
             kp = MATMUL(REAL(sym%mrot(:,:,n)),kp) 
             !test if new kpts                                           
@@ -137,7 +137,7 @@
       !<--Now write output                                              
 
       OPEN(99,FILE="kpts.info") 
-      WRITE(99,"(2i5)") nk_new,kpts%nkpts 
+      WRITE(99,"(2i5)") nk_new,kpts%nkpt 
       DO n=1,nk_new 
          WRITE(98,"(2i5)") n,kp_new_nk(n) 
       ENDDO 

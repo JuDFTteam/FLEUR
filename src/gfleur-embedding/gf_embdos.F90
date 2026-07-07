@@ -8,7 +8,7 @@
                                                                         
       CONTAINS 
       !<-- S:gf_embdos(jspins,lapw,kpts,cell,noco,gfinp)                
-      SUBROUTINE gf_embdos(jspins,lapw,kpts,cell,noco,gfinp) 
+      SUBROUTINE gf_embdos(jspins,atoms,input,sym,nococonv,lapw,lapw_gf,kpts,cell,noco,gfinp)
 !-----------------------------------------------                        
 ! DESC:Calculate eigenvalues of imag(Sigma) and interpret this as a kind
 !                 Daniel Wortmann, (08-04-17)                           
@@ -21,11 +21,16 @@
       IMPLICIT NONE 
       !<-- Arguments                                                    
       INTEGER,INTENT(IN)         :: jspins 
-      TYPE(t_lapw),INTENT(INOUT) :: lapw 
+      TYPE(t_atoms),INTENT(IN)   :: atoms
+      TYPE(t_input),INTENT(IN)   :: input
+      TYPE(t_sym),INTENT(IN)     :: sym
+      TYPE(t_nococonv),INTENT(IN):: nococonv
+      TYPE(t_lapw),INTENT(INOUT) :: lapw
+      TYPE(t_lapw_gf),INTENT(INOUT) :: lapw_gf
       TYPE(t_kpts),INTENT(IN)    :: kpts 
       TYPE(t_cell),INTENT(IN)    :: cell 
       TYPE(t_noco),INTENT(IN)    :: noco 
-      TYPE(t_gfinp),INTENT(IN)   :: gfinp 
+      TYPE(t_embinp),INTENT(IN)   :: gfinp 
                                                                         
       !>                                                                
       !<-- Locals                                                       
@@ -37,10 +42,10 @@
       OPEN(98,FILE ="gf_embdos_S") 
       OPEN(97,FILE ="gf_embdos_AS") 
       DO jspin = 1,jspins 
-         DO nk = 1,kpts%nkpts 
+         DO nk = 1,kpts%nkpt 
             CALL gf_apws(                                               &
-     &           jspins,jspin,kpts%bk(:,nk),.FALSE.,noco,gfinp,cell,lapw&
-     &           ,1)                                                    
+     &           jspins,jspin,kpts%bk(:,nk),.FALSE.,atoms,input,sym,    &
+     &           noco,nococonv,gfinp,cell,lapw,lapw_gf,1)                                                    
             DO n = 1,lapw_gf%nv2(1) 
                IF (lapw_gf%k1p(n,1) == 1.AND.lapw_gf%k2p(n,1) == 2) in1 &
      &              = n                                                 
@@ -52,7 +57,7 @@
             ALLOCATE(ew(lapw_gf%nv2_tot)) 
             DO en = 1,gf_Noen() 
                sigma = 0.0 
-               CALL gf_getemb2(sigma,1,1,en,nk,jspin,lapw) 
+               CALL gf_getemb2(sigma,1,1,en,nk,jspin,lapw,lapw_gf)
                sigma = imag2d(sigma) 
                CALL eigenvalues(sigma,ew,ev) 
                WRITE(98,"(4i5,999(1x,f0.6))") jspin,nk,en,COUNT((ABS(ew &

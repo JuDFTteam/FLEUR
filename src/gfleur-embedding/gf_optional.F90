@@ -14,7 +14,7 @@
       PUBLIC gf_OPTIONAL 
       CONTAINS 
       !<-- S: gf_optional(jspins,cell,gfinp,lapw,noco,kpts,sym)         
-      SUBROUTINE gf_optional(jspins,cell,gfinp,lapw,noco,kpts,sym) 
+      SUBROUTINE gf_optional(jspins,atoms,input,nococonv,cell,gfinp,lapw,lapw_gf,noco,kpts,sym) 
 !-----------------------------------------------                        
 !    Checks for various files and calls corresponding routines          
 !           (last modified: 05-08-17) D. Wortmann                       
@@ -26,8 +26,12 @@
       !<--Arguments                                                     
       INTEGER,INTENT(IN)         :: jspins 
       TYPE(t_lapw),INTENT(INOUT) :: lapw 
-      TYPE(t_gfinp),INTENT(IN)   :: gfinp 
+      TYPE(t_embinp),INTENT(IN)   :: gfinp 
       TYPE(t_cell),INTENT(IN)    :: cell 
+      TYPE(t_atoms),INTENT(IN)   :: atoms
+      TYPE(t_input),INTENT(IN)   :: input
+      TYPE(t_nococonv),INTENT(IN):: nococonv
+      TYPE(t_lapw_gf),INTENT(INOUT) :: lapw_gf
       TYPE(t_noco),INTENT(IN)    :: noco 
       TYPE(t_kpts),INTENT(IN)    :: kpts 
       TYPE(t_sym),INTENT(IN)     :: sym 
@@ -44,7 +48,7 @@
       ENDIF 
       INQUIRE(FILE ='embdos_inp',EXIST = l_exist) 
       IF (l_exist) THEN 
-         CALL gf_embdos(jspins,lapw,kpts,cell,noco,gfinp) 
+         CALL gf_embdos(jspins,atoms,input,sym,nococonv,lapw,lapw_gf,kpts,cell,noco,gfinp)
           CALL juDFT_end("embdos")
       ENDIF 
       END SUBROUTINE 

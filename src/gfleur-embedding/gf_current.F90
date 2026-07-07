@@ -4,6 +4,7 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
       MODULE m_gf_current 
+      USE m_constants, ONLY: oUnit
       use m_juDFT 
       USE m_gf_math 
       IMPLICIT NONE
@@ -22,7 +23,7 @@
       CONTAINS 
       !<-- S:gf_current(Nv2,nk,jspin,sym,cell,gfinp,bkpts)              
                                                                         
-      SUBROUTINE gf_current(Nv2,nk,jspin,sym,cell,gfinp,mpi,bkpts,lapw)
+      SUBROUTINE gf_current(Nv2,nk,jspin,sym,cell,gfinp,mpi,bkpts,lapw,lapw_gf)
 !******************************************                             
 !     New subroutine to calculate the current using different possible  
 !     formulas                                                          
@@ -40,9 +41,10 @@
       INTEGER,INTENT(IN)        :: nv2,nk,jspin 
       TYPE(t_sym),INTENT(IN)    :: sym 
       TYPE(t_cell),INTENT(IN)   :: cell 
-      TYPE(t_gfinp),INTENT(IN)  :: gfinp 
-      TYPE(t_mpi),INTENT(IN)    :: mpi 
-      TYPE(t_lapw),INTENT(IN)   :: lapw 
+      TYPE(t_embinp),INTENT(IN)  :: gfinp 
+      TYPE(t_gfmpi),INTENT(IN)    :: mpi 
+      TYPE(t_lapw),INTENT(IN)   :: lapw
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
       REAL,INTENT(IN)           :: bkpts(:,:) 
                                                                         
       !>                                                                
@@ -62,14 +64,14 @@
       !<--Output information                                            
                                                                         
       IF (jspin==1.AND.nk==1.AND.mpi%pe0) THEN 
-         WRITE(6,*) 'Calculating the current' 
-         WRITE(6,*) 'Formulas implemented      used' 
-         WRITE(6,*) 'Landauer on two planes  ',btest(gfinp%curr,0) 
-         WRITE(6,*) 'Landauer on one plane   ',btest(gfinp%curr,1) 
-         WRITE(6,*) 'Bardeen (Transfer H.)   ',btest(gfinp%curr,2) 
-         WRITE(6,*) 'Ishida                  ',btest(gfinp%curr,3) 
-         WRITE(6,*) 'Folding ImG1ImG2        ',btest(gfinp%curr,4) 
-         WRITE(6,*) 'Channel decomposed      ',btest(gfinp%curr,5) 
+         WRITE(oUnit,*) 'Calculating the current' 
+         WRITE(oUnit,*) 'Formulas implemented      used' 
+         WRITE(oUnit,*) 'Landauer on two planes  ',btest(gfinp%curr,0) 
+         WRITE(oUnit,*) 'Landauer on one plane   ',btest(gfinp%curr,1) 
+         WRITE(oUnit,*) 'Bardeen (Transfer H.)   ',btest(gfinp%curr,2) 
+         WRITE(oUnit,*) 'Ishida                  ',btest(gfinp%curr,3) 
+         WRITE(oUnit,*) 'Folding ImG1ImG2        ',btest(gfinp%curr,4) 
+         WRITE(oUnit,*) 'Channel decomposed      ',btest(gfinp%curr,5) 
       ENDIF 
                                                                         
       !>                                                                
@@ -83,7 +85,7 @@
                                                                         
          DO region=1,2 
             CALL gf_GETEMB(embpot(:,:,1,region),embpot(:,:,2,region)    &
-     &           ,region,en,nk,jspin,lapw)                              
+     &           ,region,en,nk,jspin,lapw,lapw_gf)                              
 !            DO side=1,2                                                
 !               embpot_ok(side,region)=gf_read2dmat(IO2D_EMB,region,side
 !     +              ,nk,jspin,embpot(:,:,side,region))                 

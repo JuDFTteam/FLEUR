@@ -32,15 +32,15 @@
       TYPE(t_stars),INTENT(IN)      :: stars 
       TYPE(t_sphhar),INTENT(IN)     :: sphhar 
       TYPE(t_enpara),INTENT(INOUT)  :: enpara 
-      TYPE(t_gfinp),INTENT(IN)      :: gfinp 
-      TYPE(t_mpi),INTENT(IN)        :: mpi 
+      TYPE(t_embinp),INTENT(IN)      :: gfinp 
+      TYPE(t_gfmpi),INTENT(IN)        :: mpi 
       TYPE(t_noco),INTENT(IN)       :: noco
                                                                         
       !>                                                                
       !<-- Locals                                                       
       INTEGER           :: n,na 
       LOGICAL           :: l_exist 
-      COMPLEX           :: vpw(stars%nq3,jspins) 
+      COMPLEX           :: vpw(stars%ng3,jspins) 
       REAL              :: vr(MAXVAL(Atoms%jri),0:MAXVAL(Sphhar%nlh),   &
      &     Atoms%ntype,Jspins)                                          
       REAL,ALLOCATABLE  :: el_tmp(:),ello_tmp(:) 
@@ -75,25 +75,25 @@
       !>                                                                
       !<-- The energy -parameters....                                   
 
-      ALLOCATE(el_tmp(SIZE(enpara%el,1)),ello_tmp(SIZE(enpara%ello,1))) 
+      ALLOCATE(el_tmp(SIZE(enpara%el0,1)),ello_tmp(SIZE(enpara%ello0,1))) 
       na = 1
       DO n = 1,atoms%ntype 
          !flip up/down spin if positive position                        
          IF (atoms%pos(3,na)>0) THEN 
-            el_tmp = enpara%el(:,n,1) 
-            enpara%el(:,n,1) = enpara%el(:,n,2) 
-            enpara%el(:,n,2) = el_tmp 
-            ello_tmp = enpara%ello(:,n,1) 
-            enpara%ello(:,n,1) = enpara%ello(:,n,2) 
-            enpara%ello(:,n,2) = ello_tmp 
+            el_tmp = enpara%el0(:,n,1) 
+            enpara%el0(:,n,1) = enpara%el0(:,n,2) 
+            enpara%el0(:,n,2) = el_tmp 
+            ello_tmp = enpara%ello0(:,n,1) 
+            enpara%ello0(:,n,1) = enpara%ello0(:,n,2) 
+            enpara%ello0(:,n,2) = ello_tmp 
          ENDIF 
          !if at zero, average spin!                                     
          IF (atoms%pos(3,na)>0) THEN 
-            enpara%el(:,n,1) = (enpara%el(:,n,2)+enpara%el(:,n,1))/2 
-            enpara%el(:,n,2) = enpara%el(:,n,1) 
-            enpara%ello(:,n,1) = (enpara%ello(:,n,2)+enpara%ello(:,n,1))&
+            enpara%el0(:,n,1) = (enpara%el0(:,n,2)+enpara%el0(:,n,1))/2 
+            enpara%el0(:,n,2) = enpara%el0(:,n,1) 
+            enpara%ello0(:,n,1) = (enpara%ello0(:,n,2)+enpara%ello0(:,n,1))&
      &           /2                                                     
-            enpara%ello(:,n,2) = enpara%ello(:,n,1) 
+            enpara%ello0(:,n,2) = enpara%ello0(:,n,1) 
          ENDIF 
          na = na+atoms%neq(n) 
       ENDDO 

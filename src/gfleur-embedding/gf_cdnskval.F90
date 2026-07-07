@@ -7,8 +7,8 @@
       IMPLICIT NONE
 #define cdebug                                                          
       CONTAINS 
-      recursive SUBROUTINE gf_cdnskval(l_noco,                          &
-     &     lapw,jspin,nk,nsymt,enpara,vr,                               &
+      recursive SUBROUTINE gf_cdnskval(l_noco,fmpi,                     &
+     &     lapw,lapw_gf,jspin,nk,nsymt,enpara,vr,                       &
      &     Gfkt,atoms,stars,sphhar,cell,sym,kpts,                       &
      &     qpw_s,rho_s,qmtl_s)                                          
                                                                         
@@ -29,8 +29,7 @@
       USE m_gf_pwden 
       USE m_gf_rhocdnmt 
       USE m_gf_types 
-#include "juDFT_env.h" 
-      USE m_fleur_interface,ONLY:fleur_radfun 
+      USE m_radfun 
                                                                         
       IMPLICIT NONE 
       !<--Arguments                                                     
@@ -43,7 +42,9 @@
       TYPE(t_cell),INTENT(IN)    :: cell 
       TYPE(t_sphhar),INTENT(IN)  :: sphhar 
       TYPE(t_stars),INTENT(IN)   :: stars 
-      TYPE(t_lapw),INTENT(IN)    :: lapw 
+      TYPE(t_mpi),INTENT(IN)     :: fmpi
+      TYPE(t_lapw),INTENT(IN)    :: lapw
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
       TYPE(t_enpara),INTENT(IN)  :: enpara 
       TYPE(t_kpts),INTENT(IN)    :: kpts 
       !>                                                                
@@ -76,6 +77,7 @@
       REAL  wronk 
                                                 !for radfun             
       INTEGER          :: noded,nodeu 
+      TYPE(t_usdus) :: ud_loc
       COMPLEX,ALLOCATABLE ::  qpw(:)
       REAL   ,ALLOCATABLE ::  rho(:,:,:,:) 
       REAL   ,ALLOCATABLE :: qmtl(:,:)
@@ -95,8 +97,8 @@
                 gs(nv+1:nv+nlo,:nv)=gfkt(2*nv+1:2*nv+nlo,:nv)
                 gs(nv+1:nv+nlo,nv+1:nv+nlo)=gfkt(2*nv+1:2*nv+nlo,2*nv+1:2*nv+nlo)
             endif
-            call gf_cdnskval(.false.,                                           &
-              lapw,1,nk,nsymt,enpara,vr,                               &
+            call gf_cdnskval(.false.,fmpi,                                      &
+              lapw,lapw_gf,1,nk,nsymt,enpara,vr,                               &
               Gs,                        &
               atoms,stars,sphhar,cell,sym,kpts,               &
               qpw_s,rho_s,qmtl_s)
@@ -107,8 +109,8 @@
                 gs(nv+1:nv+nlo,:nv)=gfkt(2*nv+nlo+1:2*nv+2*nlo,nv+1:2*nv)
                 gs(nv+1:nv+nlo,nv+1:nv+nlo)=gfkt(2*nv+nlo+1:2*nv+2*nlo,2*nv+nlo+1:2*nv+2*nlo)
             endif
-            call gf_cdnskval(.false.,                                           &
-             lapw,2,nk,nsymt,enpara,vr,                               &
+            call gf_cdnskval(.false.,fmpi,                                      &
+             lapw,lapw_gf,2,nk,nsymt,enpara,vr,                               &
               Gfkt(size(gfkt,1)/2+1:,size(gfkt,2)/2+1:),                        &
               atoms,stars,sphhar,cell,sym,kpts,               &
               qpw_s,rho_s,qmtl_s)
@@ -144,21 +146,21 @@
                                                                         
       !<-- Calculate interstitial charge                                
 
-      CPP_juDFT_timestart("gf_pwden") 
+      CALL timestart("gf_pwden") 
       CALL gf_pwden(                                                    &
-     &     lapw,stars,jspin,cell%omtil,                                 &
+     &     lapw,lapw_gf,stars,jspin,cell%omtil,                                 &
      &     GFKT,                                                        &
      &     qpw)                                                         
-      CPP_juDFT_timestop("gf_pwden") 
+      CALL timestop("gf_pwden") 
 
       !>
-      qpw_s(:,jspin) = qpw_s(:,jspin)+kpts%weight(nk)*qpw
+      qpw_s(:,jspin) = qpw_s(:,jspin)+kpts%wtkpt(nk)*qpw
       deallocate(qpw)
       if (jspin>2) return ! No calculation of 3rd component for MTs
                                                                         
       !<--Calculate MT charge                                           
 
-      CPP_juDFT_timestart("gf_rhocdnmt") 
+      CALL timestart("gf_rhocdnmt") 
                                                                         
       !<-- Set up radial functions                                      
                                                                         
@@ -170,33 +172,37 @@
       ALLOCATE(uds(0:MAXVAL(atoms%lmax),atoms%ntype))
       ALLOCATE(duds(0:MAXVAL(atoms%lmax),atoms%ntype))
       DO itype = 1,atoms%ntype 
+         IF (.NOT.ALLOCATED(ud_loc%us)) CALL ud_loc%init(atoms,jspin)
          DO l = 0,atoms%lmax(itype)
-            CALL fleur_radfun(                                          &
-     &           l,epar(l,itype,jspin),vr(:,itype,jspin),itype,atoms,   &
+            CALL radfun(l,itype,jspin,epar(l,itype,jspin),              &
+     &           vr(:,itype,jspin),atoms,                               &
      &           fg(:,:,l,itype,1),fg(:,:,l,itype,2),                   &
-     &           us(l,itype),dus(l,itype),                              &
-     &           uds(l,itype),duds(l,itype),ddn(l,itype),               &
-     &           nodeu,noded,wronk)                                     
+     &           ud_loc,nodeu,noded,wronk)
+            us(l,itype) = ud_loc%us(l,itype,jspin)
+            dus(l,itype) = ud_loc%dus(l,itype,jspin)
+            uds(l,itype) = ud_loc%uds(l,itype,jspin)
+            duds(l,itype) = ud_loc%duds(l,itype,jspin)
+            ddn(l,itype) = ud_loc%ddn(l,itype,jspin)
          ENDDO 
       ENDDO 
                                                                         
                                                                         
                                                                         
       !>                                                                
-      CALL gf_rhocdnmt(atoms,lapw,enpara,                               &
+      CALL gf_rhocdnmt(atoms,fmpi,lapw,lapw_gf,enpara,                 &
      &     gfkt,sphhar,jspin,cell,sym,kpts%bk(:,nk),                    &
      &     fg(:,:,:,:,1),fg(:,:,:,:,2),ddn,vr,                  &
      &     us,dus,uds,duds,                                             &
      &     rho(:,0:,:,:),qmtl)                                          
-      CPP_juDFT_timestop("gf_rhocdnmt") 
+      CALL timestop("gf_rhocdnmt") 
 
       !>                                                                
                                                                         
       DEALLOCATE(fg,ddn,us,dus,uds,duds) 
                                                                         
 
-      rho_s = rho_s+kpts%weight(nk)*rho 
-      qmtl_s = qmtl_s+kpts%weight(nk)*qmtl 
+      rho_s = rho_s+kpts%wtkpt(nk)*rho 
+      qmtl_s = qmtl_s+kpts%wtkpt(nk)*qmtl 
       DEALLOCATE(rho,qmtl)
       END SUBROUTINE gf_cdnskval 
       END                                           

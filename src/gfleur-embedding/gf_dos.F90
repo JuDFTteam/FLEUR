@@ -4,6 +4,9 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
       MODULE m_gf_dos 
+#ifdef CPP_MPI
+      USE mpi
+#endif
       use m_juDFT 
       USE hdf5 
       USE m_hdf_tools 
@@ -28,20 +31,20 @@
       CONTAINS 
       !<-- S:gf_dos_plane(g,gfinp,lapw,cell,en,jspin,wk,nk)             
                                                                         
-      SUBROUTINE gf_dos_plane(g,gfinp,lapw,cell,en,jspin,wk,nk) 
+      SUBROUTINE gf_dos_plane(g,gfinp,lapw,lapw_gf,cell,en,jspin,wk,nk) 
 !*****************************************************************      
 !  Calculate the DOS on some plane in the vacuum                        
 !*****************************************************************      
-#include "cpp_double.h"
       USE m_gf_types 
       USE m_gf_fft_singleton 
       IMPLICIT NONE 
 !     Arguments                                                         
                                            ! Green function             
       COMPLEX, INTENT(IN)        :: g(:,:) 
-      TYPE(t_gfinp),INTENT(IN)   :: gfinp 
+      TYPE(t_embinp),INTENT(IN)   :: gfinp 
       TYPE(t_cell),INTENT(IN)    :: cell 
       TYPE(t_lapw),INTENT(IN)    :: lapw 
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
                                                 !energy,spin            
       INTEGER,INTENT(IN)         :: en,jspin,nk 
                                        !weight of kpt                   
@@ -97,10 +100,8 @@
      &              *work(n1,n2,n1,n2)                                  
             ENDDO 
          ENDDO 
-         CALL io_WRITE(surfdos_id,(/1,1,1,z,en,nk,jspin/),(/1,nx,ny,1,1 &
-     &        ,1,1,1/),REAL(surf_dos))                                  
-         CALL io_WRITE(surfdos_id,(/2,1,1,z,en,nk,jspin/),(/1,nx,ny,1,1 &
-     &        ,1,1,1/),AIMAG(surf_dos))                                 
+         CALL io_WRITE(surfdos_id,(/1,1,1,z,en,nk,jspin/),(/1,nx,ny,1,1         ,1,1,1/),"surf_dos",REAL(surf_dos))
+         CALL io_WRITE(surfdos_id,(/2,1,1,z,en,nk,jspin/),(/1,nx,ny,1,1         ,1,1,1/),"surf_dos",AIMAG(surf_dos))
          !>                                                             
       ENDDO 
       DEALLOCATE(work,surf_dos) 
@@ -112,12 +113,11 @@
       !<-- S:gf_dos_mt                                                  
                                                                         
       recursive SUBROUTINE gf_dos_mt(layer,atoms,gfinp,                           &
-     &     gmat,sym,en,jspin_in,wk,nk,l_noco,lapw)
+     &     gmat,sym,en,jspin_in,wk,nk,l_noco,lapw,lapw_gf)
 !*****************************************************************      
 !     This subroutine constructs the density matrix for l<4 for all     
 !     atom types.                                                       
 !*****************************************************************      
-#include "cpp_double.h"
       USE m_gf_types 
       use m_gf_ab_coef
       IMPLICIT NONE 
@@ -126,9 +126,10 @@
                                               ! The Green function      
       COMPLEX, INTENT(IN)        :: gmat(:,:) 
       TYPE(T_atoms),INTENT(IN)   :: atoms 
-      TYPE(t_gfinp),INTENT(IN)   :: gfinp 
+      TYPE(t_embinp),INTENT(IN)   :: gfinp 
       TYPE(t_sym),INTENT(IN)     :: sym
       type(t_lapw),intent(in)    :: lapw
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
                                                              ! lapw info
                                                 !energy,spin            
       INTEGER,INTENT(IN)         :: en,jspin_in,nk
@@ -158,20 +159,20 @@
                                                 !tmp arrays for lapack-g
       COMPLEX,ALLOCATABLE ::vec1(:),vec2(:) 
       COMPLEX,ALLOCATABLE:: ldos_mat(:,:,:,:) 
-      COMPLEX CPP_BLAS_cdotu 
-      EXTERNAL CPP_BLAS_cdotu 
+      COMPLEX zdotu 
+      EXTERNAL zdotu 
 
       ! In case of NOCO, call this subroutine recursivly
       if (l_noco) THEN
       	call gf_dos_mt(layer,atoms,gfinp,                           &
      &     gmat(:size(gmat,1)/2,:size(gmat,2)/2)                    &
-     &     ,sym,en,1,wk,nk,.false.,lapw)
+     &     ,sym,en,1,wk,nk,.false.,lapw,lapw_gf)
         call gf_dos_mt(layer,atoms,gfinp,                           &
      &     gmat(size(gmat,1)/2+1:,size(gmat,2)/2+1:)                    &
-     &     ,sym,en,2,wk,nk,.false.,lapw)
+     &     ,sym,en,2,wk,nk,.false.,lapw,lapw_gf)
         call gf_dos_mt(layer,atoms,gfinp,                           &
      &     gmat(:size(gmat,1)/2,size(gmat,2)/2+1:)                    &
-     &     ,sym,en,3,wk,nk,.false.,lapw)
+     &     ,sym,en,3,wk,nk,.false.,lapw,lapw_gf)
         return
       endif
       !<--Before first call, the wigner-matrixes and radial normalisatio
@@ -209,16 +210,16 @@
                                                                         
                      !Use BLAS to construct the uu,dd
 
-                     CALL CPP_BLAS_cgemv('n',lapw_gf%nv_sphere(jspin)            &
+                     CALL zgemv('n',lapw_gf%nv_sphere(jspin)            &
      &                    ,lapw_gf%nv_sphere(jspin),CMPLX(1.0,0.0),gmat             &
      &                    ,SIZE(gmat,1),CONJG(gf_ab_coef_vector(lmp,nt,1,jspin2))      &
      &                    ,1,CMPLX(0.0,0.0),vec1,1)                     
-                     CALL CPP_BLAS_cgemv('n',lapw_gf%nv_sphere(jspin)            &
+                     CALL zgemv('n',lapw_gf%nv_sphere(jspin)            &
      &                    ,lapw_gf%nv_sphere(jspin),CMPLX(1.0,0.0),gmat             &
      &                    ,SIZE(gmat,1),CONJG(gf_ab_coef_vector(lmp,nt,2,jspin2))      &
      &                    ,1,CMPLX(0.0,0.0),vec2,1)                     
-                     uu=(CPP_BLAS_cdotu(lapw_gf%nv_sphere(jspin),gf_ab_coef_vector(lm,nt,1,jspin1),1,vec1,1))
-                     dd=(CPP_BLAS_cdotu(lapw_gf%nv_sphere(jspin),gf_ab_coef_vector(lm,nt,2,jspin1),1,vec2,1))
+                     uu=(zdotu(lapw_gf%nv_sphere(jspin),gf_ab_coef_vector(lm,nt,1,jspin1),1,vec1,1))
+                     dd=(zdotu(lapw_gf%nv_sphere(jspin),gf_ab_coef_vector(lm,nt,2,jspin1),1,vec2,1))
                      if (jspin_in==3) uu=uu*ddn(l,itype,layer,4)
                      n_tmp(m,mp) = (ddn(l,itype,layer,jspin_in)*dd+uu)           &
      &                    /atoms%neq(itype)                             
@@ -253,10 +254,8 @@
                                                                         
       !>                                                                
                                                                         
-      CALL io_WRITE(ldos_id,(/1,1,1,1,1,en,nk,jspin_in,layer/),(/1,7,7,4   &
-     &     ,atoms%ntype,1,1,1,1/),REAL(ldos_mat))                       
-      CALL io_WRITE(ldos_id,(/2,1,1,1,1,en,nk,jspin_in,layer/),(/1,7,7,4   &
-     &     ,atoms%ntype,1,1,1,1/),AIMAG(ldos_mat))                      
+      CALL io_WRITE(ldos_id,(/1,1,1,1,1,en,nk,jspin_in,layer/),(/1,7,7,4        ,atoms%ntype,1,1,1,1/),"ldos_mat",REAL(ldos_mat))
+      CALL io_WRITE(ldos_id,(/2,1,1,1,1,en,nk,jspin_in,layer/),(/1,7,7,4        ,atoms%ntype,1,1,1,1/),"ldos_mat",AIMAG(ldos_mat))
                                                                         
       DEALLOCATE(vec1,vec2,ldos_mat) 
                                                                         
@@ -266,7 +265,7 @@
       !>                                                                
       !<-- S:gf_dos_init                                                
                                                                         
-      SUBROUTINE gf_dos_init(layers,gfinp,atoms,cell,sym,lapw,jspins    &
+      SUBROUTINE gf_dos_init(layers,gfinp,atoms,cell,sym,lapw,lapw_gf,jspins    &
      &     ,nkpts,potential,enpara,l_noco)
 !******************************************                             
 !     initial PRIVATE arrays of the MODULE                              
@@ -275,15 +274,17 @@
       USE m_gf_types 
       USE m_gf_energies 
       USE m_intgr
-      USE m_fleur_interface,ONLY:fleur_radfun,fleur_d_wigner 
+      USE m_radfun
+      USE m_dwigner 
       IMPLICIT NONE 
       !<--Arguments                                                     
       TYPE(t_layers),INTENT(IN) :: layers 
       TYPE(t_atoms),INTENT(IN)  :: atoms(:) 
-      TYPE(t_gfinp),INTENT(IN)  :: gfinp 
+      TYPE(t_embinp),INTENT(IN)  :: gfinp 
       TYPE(t_sym),INTENT(IN)    :: sym 
       TYPE(t_cell),INTENT(IN)   :: cell 
       TYPE(t_lapw),INTENT(IN)   :: lapw 
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
       INTEGER,INTENT(IN)        :: jspins,nkpts
       TYPE(t_potden),INTENT(IN) :: potential(:) 
       TYPE(t_enpara),INTENT(IN)    :: enpara(:)
@@ -295,6 +296,7 @@
       INTEGER :: itype,l,layer,jspd,jspin
                                        !dummy args                      
       REAL    :: duds,dus,uds,us,wronk 
+      TYPE(t_usdus) :: ud_loc
                                        !for radfun                      
       INTEGER :: noded,nodeu 
       REAL,ALLOCATABLE :: f(:,:,:),g(:,:,:)
@@ -304,7 +306,6 @@
       INTEGER(hid_t)   :: access_prp,access_mode 
       INTEGER          :: hdferr 
 #ifdef CPP_HDFMPI
-      INCLUDE 'mpif.h' 
       CALL h5pcreate_f(H5P_FILE_ACCESS_F, access_prp, hdferr) 
       CALL io_check("Could not create access properties",hdferr) 
       CALL h5pset_fapl_mpio_f(access_prp, MPI_COMM_WORLD,               &
@@ -362,11 +363,14 @@
             DO itype = 1,atoms(layer)%ntype
                 DO l  = 0,3
                     DO jspin=1,jspins
-                          CALL fleur_radfun(                                       &
-     &                  l,enpara(layer)%el0(l+1,itype,jspin),potential(layer &
-     &                    )%mt(:,0,itype,jspin),itype,atoms(layer),f(:,:,jspin),g(: &
-     &                   ,:,jspin),us,dus,uds,duds,ddn(l,itype,layer,jspin),nodeu,noded  &
-     &                  ,wronk)
+                          IF (.NOT.ALLOCATED(ud_loc%us))                 &
+     &                        CALL ud_loc%init(atoms(layer),jspins)
+                          CALL radfun(l,itype,jspin,                        &
+     &                       enpara(layer)%el0(l+1,itype,jspin),            &
+     &                       potential(layer)%mt(:,0,itype,jspin),          &
+     &                       atoms(layer),f(:,:,jspin),g(:,:,jspin),        &
+     &                       ud_loc,nodeu,noded,wronk)
+                          ddn(l,itype,layer,jspin)=ud_loc%ddn(l,itype,jspin)
                     ENDDO
                     IF (l_noco) THEN
                          CALL intgr0(g(:,1,1)*g(:,1,2)+g(:,2,1)*g(:,2,2),atoms(layer)%rmsh(1,itype),  &
@@ -384,9 +388,7 @@
       IF (.NOT.firstcall) RETURN 
       !<-- set up wigner matrices                                       
                                                                         
-      CALL fleur_d_wigner(                                              &
-     &     sym%nop,sym%mrot,cell%bmat,3,                                &
-     &     d_wgn)                                                       
+      CALL d_wigner(sym%nop,sym%mrot,cell%bmat,3,d_wgn)                                                       
                                                                         
       !>                                                                
       !<--local symmetry ops (see mapatom of FLEUR)                     
@@ -439,14 +441,13 @@
       USE m_gf_energies 
       USE m_gf_types 
       USE m_gf_math,ONLY:interpolate_analytic 
-#include "juDFT_env.h"
       IMPLICIT NONE 
       !<--Arguments                                                     
-      TYPE(t_mpi),INTENT(IN)  :: mpi
+      TYPE(t_gfmpi),INTENT(IN)  :: mpi
       TYPE(t_atoms),INTENT(IN)  :: atoms(:) 
       TYPE(t_cell),INTENT(IN)   :: cell(:) 
       TYPE(t_layers),INTENT(IN) :: layers 
-      TYPE(t_gfinp),INTENT(IN)  :: gfinp 
+      TYPE(t_embinp),INTENT(IN)  :: gfinp 
       INTEGER,INTENT(IN)        :: jspins,nkpts 
                                                                         
       !>                                                                
@@ -495,7 +496,7 @@
                                                                         
 
       !first close the gf_setup.hdf file
-      CPP_juDFT_timestart("Closing gf_dos.hdf")
+      CALL timestart("Closing gf_dos.hdf")
       if (ldos_id.ne.0) then
          CALL io_dclose(ldos_id,n) 
          CALL io_dclose(intdos_id,n)
@@ -504,7 +505,7 @@
          ENDIF 
          CALL io_hdfclose(fid,n) 
       endif
-      CPP_juDFT_timestop("Closing gf_dos.hdf")
+      CALL timestop("Closing gf_dos.hdf")
       INQUIRE(FILE ="gf_dos",EXIST = l_gf_dos)
       l_dos= 0
       tot_dos=.FALSE.
@@ -513,7 +514,7 @@
       ELSE
          WRITE(*,*) "Writing DOS"
          !Open hdf-file and datasets
-         CPP_juDFT_timestart("Opening gf_dos.hdf")
+         CALL timestart("Opening gf_dos.hdf")
          call io_hdfopen("gf_dos.hdf",H5F_ACC_RDONLY_F,fid)
          call io_dopen(fid,"bands",ldos_id)
 
@@ -523,7 +524,7 @@
          IF (gfinp%l_surface) THEN
             call io_dopen(fid,"surface",surfdos_id)
          endif
-         CPP_juDFT_timestop("Opening gf_dos.hdf")
+         CALL timestop("Opening gf_dos.hdf")
          OPEN(99,FILE="gf_dos",STATUS='old') 
          ndos=0 
          !<--loop over input until end of file                          
@@ -601,7 +602,7 @@
                CALL priv_totdos(n,dos_dia(:,:,0),dos) 
                IF (tot_dos(n,layer)) THEN 
                   ndos = ndos+1 
-                  WRITE(6,'(a,i4,a,i3,a)') "Column "                    &
+                  WRITE(oUnit,'(a,i4,a,i3,a)') "Column "                    &
      &                 ,ndos," : atom =",n," totaldos"                  
                   dos_raw(:,:jspins,ndos) = dos_dia(:,:jspins,0) 
                ENDIF 
@@ -616,7 +617,7 @@
                   IF (l_dos(l,n,layer) == 1.OR.l_dos(l,n,layer)>2)      &
      &                 THEN                                             
                      ndos = ndos+1 
-                     WRITE(6,'(a,i4,a,i3,a,i1)')                        &
+                     WRITE(oUnit,'(a,i4,a,i3,a,i1)')                        &
      &                    "Column ",ndos," : atom =",n,",l =",l         
                                                                         
                      dos_raw(:,:jspins,ndos) = dos_dia(:,:jspins,0) 
@@ -624,7 +625,7 @@
                   IF (l_dos(l,n,layer)>1) THEN 
                      DO ll = 1,2*l+1 
                         ndos = ndos+1 
-                        IF (jspin == 1) WRITE(6,'(a,i4,a,i3,a,i1,a)')   &
+                        IF (jspin == 1) WRITE(oUnit,'(a,i4,a,i3,a,i1,a)')   &
      &                       "Column ",ndos," : atom =",n,",l =",l      &
      &                       ,"sym"                                     
                         dos_raw(:,:jspins,ndos) = dos_dia(:,:jspins     &
@@ -633,7 +634,7 @@
                   ENDIF 
                   IF (l_dos(l,n,layer) == 4) THEN 
                      ndos           = ndos+1
-                     IF (jspin == 1) WRITE(6,'(a,i4,a,i3,a,i1,a)') "Column ",ndos," : atom =",n,",l =",l,"Offdia"
+                     IF (jspin == 1) WRITE(oUnit,'(a,i4,a,i3,a,i1,a)') "Column ",ndos," : atom =",n,",l =",l,"Offdia"
                      dos_raw(:,:jspins,ndos) = offdia(:,:jspins) 
                   ENDIF 
                ENDIF 
@@ -676,7 +677,7 @@
          ELSE 
             energy = energy*2 
          ENDIF 
-         WRITE(6,*) "Eigenvalue sum:",energy,energy/cell(layer)%vol 
+         WRITE(oUnit,*) "Eigenvalue sum:",energy,energy/cell(layer)%vol 
          !>                                                             
                                                                         
       ENDDO 
@@ -730,22 +731,23 @@
       !>                                                                
                                                                         
       !<-- S:gf_dos_int(layer,mpi,lapw,stars,jspin,omtil,G,en,nk)       
-      RECURSIVE SUBROUTINE gf_dos_INT(gfinp,layer,mpi,lapw,stars,jspin,omtil,G,wk &
+      RECURSIVE SUBROUTINE gf_dos_INT(gfinp,layer,mpi,lapw,lapw_gf,stars,jspin,omtil,G,wk &
      &     ,en,nk,l_noco)
 !-----------------------------------------------                        
 !                                                                       
 !           (last modified:10-03-04) D. Wortmann                        
 !-----------------------------------------------                        
       USE m_gf_types 
-      USE m_constants,ONLY:pimach 
+      USE m_constants, ONLY: pi_const, oUnit 
       USE m_gf_stepsanaly 
       USE m_hdf_tools 
       IMPLICIT NONE 
       !<-- Arguments                                                    
-      TYPE(t_gfinp),INTENT(IN) :: gfinp 
+      TYPE(t_embinp),INTENT(IN) :: gfinp 
       INTEGER,INTENT(IN)      :: layer 
-      TYPE(t_mpi),INTENT(IN)  :: mpi 
+      TYPE(t_gfmpi),INTENT(IN)  :: mpi 
       TYPE(t_lapw),INTENT(IN) :: lapw 
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
       INTEGER, INTENT (IN)    :: jspin 
       REAL,    INTENT (IN)    :: omtil 
       TYPE(t_stars),INTENT(IN) :: stars 
@@ -764,19 +766,19 @@
 
       !In noco-case call subroutine recursively
       if (l_noco) THEN
-        call gf_dos_int(gfinp,layer,mpi,lapw,stars,1,omtil,    &
+        call gf_dos_int(gfinp,layer,mpi,lapw,lapw_gf,stars,1,omtil,    &
             G(:size(G,1)/2,:size(g,2)/2),                      &
             wk,en,nk,.false.)
-     call gf_dos_int(gfinp,layer,mpi,lapw,stars,2,omtil,    &
+     call gf_dos_int(gfinp,layer,mpi,lapw,lapw_gf,stars,2,omtil,    &
             G(size(G,1)/2+1:,size(g,2)/2+1:),                      &
             wk,en,nk,.false.)
       endif
 
 
-      pi = pimach() 
+      pi = pi_const 
       ALLOCATE(rg(-stars%mx1:stars%mx1,-stars%mx2:stars%mx2,            &
      &     -stars%mx3:stars%mx3))                                       
-      ALLOCATE(qpw(stars%nq3),qpw_w(stars%nq3)) 
+      ALLOCATE(qpw(stars%ng3),qpw_w(stars%ng3)) 
       qpw = 0.0 
       rg=CMPLX(0.0,0.0) 
       !<-- Calculate the reduced G-function                             
@@ -815,10 +817,8 @@
       CALL gf_initstepsanaly(stars,gfinp%napw(layer)) 
       CALL gf_gspaceconvolve(layer,stars,0.0,qpw,qpw_w)
                                                                         
-      CALL io_WRITE(intdos_id,(/1,en,nk,jspin,layer/),(/1,1             &
-     &     ,1,1,1/),wk*REAL(qpw_w(1)))                                  
-      CALL io_WRITE(intdos_id,(/2,en,nk,jspin,layer/),(/1,1             &
-     &     ,1,1,1/),wk*AIMAG(qpw_w(1)))                                 
+      CALL io_WRITE(intdos_id,(/1,en,nk,jspin,layer/),(/1,1                  ,1,1,1/),"wk",wk*REAL(qpw_w(1)))
+      CALL io_WRITE(intdos_id,(/2,en,nk,jspin,layer/),(/1,1                  ,1,1,1/),"wk",wk*AIMAG(qpw_w(1)))
       !>                                                                
                                                                         
       DEALLOCATE(qpw,qpw_w,rg) 
@@ -837,7 +837,7 @@
 !     D. Wortmann                                                       
 !******************************************                             
       USE m_gf_energies 
-      use m_constants,only:pimach
+      USE m_constants, ONLY: pi_const, oUnit
       IMPLICIT NONE 
       INTEGER,INTENT(IN)     :: layer 
       COMPLEX,INTENT(OUT)    :: dos(:,:,:,:,:,:) 
@@ -871,14 +871,16 @@
       ENDIF 
       DO jsp = 1,SIZE(dos,6) 
          DO nk = 1,nkpts 
-            call io_read(intdos_id,(/-1,1,nk,jsp,layer/),(/2,n_energies,1,1,1/),c_tmp)
+            CALL io_read(intdos_id,(/-1,1,nk,jsp,layer/),(/2,n_energies,1,1,1/),"c_tmp",c_tmp)
             int_dos(:,jsp)=int_dos(:,jsp)+c_tmp
             DO en = 1,n_energies 
                !Read for this energy                                    
-               CALL io_READ(ldos_id,(/1,1,1,1,1,en,nk,jsp,layer/),(/1,7 &
-     &              ,7,4,SIZE(dos,4),1,1,1,1/),tmp(1,:,:,:,:))          
-               CALL io_READ(ldos_id,(/2,1,1,1,1,en,nk,jsp,layer/),(/1,7 &
-     &              ,7,4,SIZE(dos,4),1,1,1,1/),tmp(2,:,:,:,:))          
+               CALL io_READ(ldos_id,(/1,1,1,1,1,en,nk,jsp,layer/),&
+     &     (/1,7               ,7,4,SIZE(dos,4),1,1,1,1/),"tmp",&
+     &     tmp(1,:,:,:,:))
+               CALL io_READ(ldos_id,(/2,1,1,1,1,en,nk,jsp,layer/),&
+     &     (/1,7               ,7,4,SIZE(dos,4),1,1,1,1/),"tmp",&
+     &     tmp(2,:,:,:,:))
 
                !CALL io_READ(intdos_id,(/1,en,nk,jsp,layer/),(/2,1,1,1,1/),s_tmp)
                !int_dos(en,jsp) = int_dos(en,jsp)+CMPLX(s_tmp(1),s_tmp(2)&
@@ -898,7 +900,7 @@
                      ENDDO 
                   ENDDO 
                   WRITE(99,"(2i5,999(1x,f0.8))") jsp,nk,REAL(gf_Z(en,0))&
-     &                 ,band/(cmplx(0,1.)*pimach())
+     &                 ,band/(cmplx(0,1.)*pi_const)
                ENDIF 
                dos(:,:,:,:,en,jsp) = dos(:,:,:,:,en,jsp)+CMPLX(tmp(1,:,:&
      &              ,:,:),tmp(2,:,:,:,:))                               
@@ -942,8 +944,7 @@
             dos =0.0 
             DO nk = 1,nkpts 
                !Read for this energy                                    
-               CALL io_read(surfdos_id,(/2,1,1,1,en,nk,jsp/),(/1,nx     &
-     &              ,ny,nz,1,1,1,1/),dos)                               
+               CALL io_read(surfdos_id,(/2,1,1,1,en,nk,jsp/),(/1,nx                   ,ny,nz,1,1,1,1/),"dos",dos)
                IF (l_band) THEN 
                   DO l = 1,nx 
                      DO ll = 1,ny 

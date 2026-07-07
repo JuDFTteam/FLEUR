@@ -7,7 +7,7 @@
           IMPLICIT NONE
       CONTAINS 
       SUBROUTINE gf_propaembcurr(                                       &
-     &           layers,nv2,en,nk,jspin,lapw,                           &
+     &           layers,nv2,en,nk,jspin,lapw,lapw_gf,                           &
      &           bkpts,sym,cell,mpi)
 !************************************************                       
 !     Calculate the current by propagating the                          
@@ -22,13 +22,14 @@
                                                                         
       IMPLICIT NONE 
       TYPE(t_layers),INTENT(IN)::layers 
-      type(t_mpi),intent(in)::mpi
+      type(t_gfmpi),intent(in)::mpi
 
       INTEGER,INTENT(IN)::nv2 
       INTEGER,INTENT(IN)::en 
       INTEGER,INTENT(IN)::nk 
       INTEGER,INTENT(IN)::jspin 
       TYPE(t_lapw),INTENT(IN)::lapw 
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
       REAL,INTENT(IN)::bkpts(:,:) 
       TYPE(t_sym),INTENT(IN)::sym 
       TYPE(t_cell),INTENT(IN)::cell 
@@ -45,10 +46,10 @@
                                                                         
       CALL gf_read_tmat(                                                &
      &                          layers,nv2,en,nk,jspin,                 &
-     &                          lapw,                                   &
+     &                          lapw_gf,                                &
      &                          tmat)                                   
                                                                         
-      CALL gf_getemb(g1,g2,1,en,nk,jspin,lapw) 
+      CALL gf_getemb(g1,g2,1,en,nk,jspin,lapw,lapw_gf)
       embpot_in=-2*g1 
       g2=2*g2 
       CALL gf_propaemb(.FALSE.,nv2,embpot_in,tmat,embpot_out) 
@@ -70,7 +71,7 @@
       USE m_gf_math 
       USE m_gf_types 
       IMPLICIT NONE
-      type(t_mpi),intent(in)::mpi
+      type(t_gfmpi),intent(in)::mpi
 
       INTEGER,INTENT(IN)  :: en 
       INTEGER,INTENT(IN)  :: nk 

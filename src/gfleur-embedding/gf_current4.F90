@@ -4,6 +4,7 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
       MODULE m_gf_current4 
+      USE m_constants, ONLY: oUnit
       IMPLICIT NONE
       PRIVATE 
       PUBLIC::gf_current4 
@@ -55,14 +56,14 @@
           if (layer<1.or.layer>num_layers) call juDFT_error("Impossible choice of layer index",calledby="gf_current4")
           curr%imag(n)=imag
 
-          write(6,*) n,curr%totalnum_currents,curr%layer(n),curr%imag(n)
+          write(oUnit,*) n,curr%totalnum_currents,curr%layer(n),curr%imag(n)
 
        ENDDO
        close(99)
       END subroutine gf_current4_read
 
       SUBROUTINE gf_current4(                                           &
-     &           layers,l_noco,en,nk,jspin,lapw,                        &
+     &           layers,l_noco,en,nk,jspin,lapw,lapw_gf,                        &
      &           bkpts,sym,cell,gfinp,mpi)
 !************************************************                       
 !     Calculate the current on the basis of                             
@@ -81,16 +82,17 @@
                                                                         
       IMPLICIT NONE 
       TYPE(t_layers),INTENT(IN)::layers 
-      type(t_mpi),intent(in)   :: mpi
+      type(t_gfmpi),intent(in)   :: mpi
       LOGICAL,INTENT(IN)       :: l_noco 
       INTEGER,INTENT(IN)::en 
       INTEGER,INTENT(IN)::nk 
       INTEGER,INTENT(IN)::jspin 
       TYPE(t_lapw),INTENT(IN)::lapw 
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
       REAL,INTENT(IN)::bkpts(:,:) 
       TYPE(t_sym),INTENT(IN)::sym 
       TYPE(t_cell),INTENT(IN)::cell 
-      TYPE(t_gfinp),INTENT(IN)::gfinp 
+      TYPE(t_embinp),INTENT(IN)::gfinp 
 
       if (firstcall) THEN
               inquire(file="gf_current4",exist=new)
@@ -98,20 +100,20 @@
               if (new) call gf_current4_read(layers%num_layers)
       ENDIF
       if (.not.new) THEN
-         call gf_current4_old(                                           &
-     &           layers,l_noco,en,nk,jspin,lapw,                        &
+         call gf_current4_old( &
+     &           layers,l_noco,en,nk,jspin,lapw,lapw_gf,                        &
      &           bkpts,sym,cell,gfinp,mpi)
          return
       endif
       !
       call gf_current4_new( &
-     &           layers,l_noco,en,nk,jspin,lapw,                        &
+     &           layers,l_noco,en,nk,jspin,lapw,lapw_gf,                        &
      &           bkpts,sym,cell,gfinp,mpi)
 
       END subroutine gf_current4
 
       SUBROUTINE gf_current4_new(                                           &
-     &           layers,l_noco,en,nk,jspin,lapw,                        &
+     &           layers,l_noco,en,nk,jspin,lapw,lapw_gf,                        &
      &           bkpts,sym,cell,gfinp,mpi)
 !************************************************
 !     Calculate the current on the basis of
@@ -130,16 +132,17 @@
 
       IMPLICIT NONE
       TYPE(t_layers),INTENT(IN)::layers
-      type(t_mpi),intent(in)   :: mpi
+      type(t_gfmpi),intent(in)   :: mpi
       LOGICAL,INTENT(IN)       :: l_noco
       INTEGER,INTENT(IN)::en
       INTEGER,INTENT(IN)::nk
       INTEGER,INTENT(IN)::jspin
       TYPE(t_lapw),INTENT(IN)::lapw
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
       REAL,INTENT(IN)::bkpts(:,:)
       TYPE(t_sym),INTENT(IN)::sym
       TYPE(t_cell),INTENT(IN)::cell
-      TYPE(t_gfinp),INTENT(IN)::gfinp
+      TYPE(t_embinp),INTENT(IN)::gfinp
                                                                         
       COMPLEX,ALLOCATABLE:: g1(:,:),g2(:,:) 
       INTEGER            :: layer,n,c
@@ -151,8 +154,8 @@
       n = 1
       DO c=1,curr%num_currents
          layer=curr%layer(c)
-         CALL gf_getemb2(g1,1,layer+1,en,nk,jspin,lapw)
-         CALL gf_getemb2(g2,2,layer,  en,nk,jspin,lapw)
+         CALL gf_getemb2(g1,1,layer+1,en,nk,jspin,lapw,lapw_gf)
+         CALL gf_getemb2(g2,2,layer,  en,nk,jspin,lapw,lapw_gf)
          IF (curr%landauer(c)) THEN
             CALL gf_landauer1plane(l_noco,                                 &
      &        g1,                                                       &
@@ -171,7 +174,7 @@
 
 
       SUBROUTINE gf_current4_old(                                           &
-     &           layers,l_noco,en,nk,jspin,lapw,                        &
+     &           layers,l_noco,en,nk,jspin,lapw,lapw_gf,                        &
      &           bkpts,sym,cell,gfinp,mpi)
 !************************************************
 !     Calculate the current on the basis of
@@ -190,16 +193,17 @@
 
       IMPLICIT NONE
       TYPE(t_layers),INTENT(IN)::layers
-      type(t_mpi),intent(in)   :: mpi
+      type(t_gfmpi),intent(in)   :: mpi
       LOGICAL,INTENT(IN)       :: l_noco
       INTEGER,INTENT(IN)::en
       INTEGER,INTENT(IN)::nk
       INTEGER,INTENT(IN)::jspin
       TYPE(t_lapw),INTENT(IN)::lapw
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
       REAL,INTENT(IN)::bkpts(:,:)
       TYPE(t_sym),INTENT(IN)::sym
       TYPE(t_cell),INTENT(IN)::cell
-      TYPE(t_gfinp),INTENT(IN)::gfinp
+      TYPE(t_embinp),INTENT(IN)::gfinp
 
       COMPLEX,ALLOCATABLE:: g1(:,:),g2(:,:)
       INTEGER            :: layer,n
@@ -210,8 +214,8 @@
 
       n = 1
       DO layer = 1,layers%num_layers-1
-         CALL gf_getemb2(g1,1,layer+1,en,nk,jspin,lapw)
-         CALL gf_getemb2(g2,2,layer,  en,nk,jspin,lapw)
+         CALL gf_getemb2(g1,1,layer+1,en,nk,jspin,lapw,lapw_gf)
+         CALL gf_getemb2(g2,2,layer,  en,nk,jspin,lapw,lapw_gf)
          CALL gf_landauer1plane(l_noco,                                 &
      &        g1,                                                       &
      &        g2,                                                       &

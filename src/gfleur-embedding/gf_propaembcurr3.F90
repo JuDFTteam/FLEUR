@@ -9,7 +9,7 @@
       PUBLIC::gf_propaembcurr3 
       CONTAINS 
       SUBROUTINE gf_propaembcurr3(                                      &
-     &           layers,nv2,en,nk,jspin,lapw,                           &
+     &           layers,nv2,en,nk,jspin,lapw,lapw_gf,                           &
      &           bkpts,sym,cell,gfinp,mpi)
 !************************************************                       
 !     Calculate the current by propagating the                          
@@ -26,16 +26,17 @@
                                                                         
       IMPLICIT NONE 
       TYPE(t_layers),INTENT(IN)::layers 
-      type(t_mpi),intent(in)   ::mpi
+      type(t_gfmpi),intent(in)   ::mpi
       INTEGER,INTENT(IN)::nv2 
       INTEGER,INTENT(IN)::en 
       INTEGER,INTENT(IN)::nk 
       INTEGER,INTENT(IN)::jspin 
       TYPE(t_lapw),INTENT(IN)::lapw 
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
       REAL,INTENT(IN)::bkpts(:,:) 
       TYPE(t_sym),INTENT(IN)::sym 
       TYPE(t_cell),INTENT(IN)::cell 
-      TYPE(t_gfinp),INTENT(IN)::gfinp 
+      TYPE(t_embinp),INTENT(IN)::gfinp 
                                                                         
       COMPLEX,ALLOCATABLE:: g1(:,:),g2(:,:) 
       COMPLEX,ALLOCATABLE:: embpot_right(:,:,:),embpot_left(:,:,:) 
@@ -47,14 +48,14 @@
       ALLOCATE( embpot_left (nv2,nv2,1:layers%num_layers+1) ) 
       ALLOCATE( embpot_right(nv2,nv2,0:layers%num_layers) ) 
                                                                         
-      CALL gf_getemb2(g1,1,1,en,nk,jspin,lapw) 
-      CALL gf_getemb2(g2,2,layers%num_layers,en,nk,jspin,lapw) 
+      CALL gf_getemb2(g1,1,1,en,nk,jspin,lapw,lapw_gf) 
+      CALL gf_getemb2(g2,2,layers%num_layers,en,nk,jspin,lapw,lapw_gf) 
                                                                         
       embpot_left(:,:,1)=cmplx(-2.0,0.0)*g1 
 !propagate left embedding potential                                     
       DO layer=1,layers%num_layers 
          CALL gf_propagate_embpot_left(layer,en,nk,jspin,               &
-     &                                 lapw,embpot_left(:,:,layer),     &
+     &                                 lapw,lapw_gf,embpot_left(:,:,layer),     &
      &                                 gfinp%l_nohelpregion,            &
      &                                 embpot_left(:,:,layer+1))        
       ENDDO 
@@ -64,7 +65,7 @@
 !propagate right embedding potential                                    
       DO layer=layers%num_layers,1,-1 
          CALL gf_propagate_embpot_right(layer,en,nk,jspin,              &
-     &                                 lapw,embpot_right(:,:,layer),    &
+     &                                 lapw,lapw_gf,embpot_right(:,:,layer),    &
      &                                 gfinp%l_nohelpregion,            &
      &                                 embpot_right(:,:,layer-1))       
       ENDDO 

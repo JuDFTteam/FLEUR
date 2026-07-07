@@ -8,7 +8,7 @@ module m_gf_bandbending
       implicit none
       contains
 
-      subroutine gf_bandbending(lapw,jspins,nkpts)
+      subroutine gf_bandbending(lapw,lapw_gf,jspins,nkpts)
       use m_gf_types
       use m_gf_energies
       use m_gf_io2dmat
@@ -20,6 +20,7 @@ module m_gf_bandbending
       implicit none
       integer,intent(in)      :: jspins,nkpts
       type(t_lapw),intent(in) :: lapw
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
 
       logical :: l_exist
       integer :: no_layers,n,nk,en,en_mod,jspin
@@ -58,11 +59,11 @@ module m_gf_bandbending
                      write(*,*) "Energy out of range:",energies(en)
                      CYCLE
                 ENDIF
-                CALL gf_GETEMB2(embpot_in,1,1,en_mod,nk,jspin,lapw)
+                CALL gf_GETEMB2(embpot_in,1,1,en_mod,nk,jspin,lapw,lapw_gf)
                 DO n=1,no_layers
                     en_mod=get_energy_index(energies(en)-bend(n),energies)
                     CALL gf_read_tmat2(                                               &
-     &                   1,en_mod,nk,jspin,lapw,                                          &
+     &                   1,en_mod,nk,jspin,lapw_gf,                                       &
      &                   tmat)
                     CALL gf_propaemb(.FALSE.,lapw_gf%nv2_tot,embpot_in,   &
      &                      tmat,embpot_out)
@@ -70,7 +71,7 @@ module m_gf_bandbending
                     embpot_out=matmul(embpot_in,mat_inverse(getPhaseMatrix()))
                 ENDDO
                 CALL gf_write2Dmat(IO2D_EMB,2,1,en,nk,jspin,&
-     &               lapw,embpot_in)
+     &               lapw_gf,embpot_in)
            ENDDO
         ENDDO
       ENDDO

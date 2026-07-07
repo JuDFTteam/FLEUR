@@ -6,16 +6,17 @@
 module m_gf_current_single
     implicit none
     contains
-    subroutine gf_current_single(layers,lapw,cell,sym,mpi,bkpts,nk,en,jspin,sigmaL)
+    subroutine gf_current_single(layers,lapw,lapw_gf,cell,sym,mpi,bkpts,nk,en,jspin,sigmaL)
         use m_gf_types
         USE m_gf_writetrans,ONLY:writetrans
         USE m_gf_embedding
         implicit none
         type(t_layers),intent(in):: layers
         type(t_lapw),intent(in) :: lapw
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
         type(t_cell),intent(in) :: cell
         type(t_sym),intent(in)  :: sym
-        type(t_mpi),intent(in)  :: mpi
+        TYPE(t_gfmpi),intent(in)  :: mpi
         real,intent(in)         :: bkpts(:,:)
         integer,intent(in)      :: nk,en,jspin
         complex,intent(in)      :: sigmaL(:,:)
@@ -26,7 +27,7 @@ module m_gf_current_single
 
         l_noco=.not.(lapw_gf%nv2_tot==lapw_gf%nv2(1))
 
-        CALL gf_getemb2(sigmaR,2,layers%num_layers,en,nk,jspin,lapw)
+        CALL gf_getemb2(sigmaR,2,layers%num_layers,en,nk,jspin,lapw,lapw_gf)
         CALL gf_landauer1plane(l_noco,                                 &
      &        sigmaL,                                                       &
      &        sigmaR,                                                       &

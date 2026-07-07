@@ -9,7 +9,7 @@
       PUBLIC::gf_propaembcurr2 
       CONTAINS 
       SUBROUTINE gf_propaembcurr2(                                      &
-     &           layers,nv2,en,nk,jspin,lapw,                           &
+     &           layers,nv2,en,nk,jspin,lapw,lapw_gf,                           &
      &           bkpts,sym,cell,mpi)
 !************************************************                       
 !     Calculate the current by propagating the                          
@@ -24,13 +24,14 @@
                                                                         
       IMPLICIT NONE 
       TYPE(t_layers),INTENT(IN)::layers
-      type(t_mpi),intent(in)::mpi
+      type(t_gfmpi),intent(in)::mpi
 
       INTEGER,INTENT(IN)::nv2 
       INTEGER,INTENT(IN)::en 
       INTEGER,INTENT(IN)::nk 
       INTEGER,INTENT(IN)::jspin 
       TYPE(t_lapw),INTENT(IN)::lapw 
+      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
       REAL,INTENT(IN)::bkpts(:,:) 
       TYPE(t_sym),INTENT(IN)::sym 
       TYPE(t_cell),INTENT(IN)::cell 
@@ -46,14 +47,14 @@
       ALLOCATE( embpot_in(nv2,nv2) ) 
       ALLOCATE( embpot_out(nv2,nv2) ) 
                                                                         
-      CALL gf_getemb(g1,g2,1,en,nk,jspin,lapw) 
+      CALL gf_getemb(g1,g2,1,en,nk,jspin,lapw,lapw_gf)
                                                                         
       embpot_in=2*g1 
                                                                         
       DO layer=1,layers%num_layers 
          CALL gf_read_tmat2(                                            &
      &                          layer,en,nk,jspin,                      &
-     &                          lapw,                                   &
+     &                          lapw_gf,                                &
      &                          tmat)                                   
          embpot_in=-embpot_in 
                                                                         
@@ -84,7 +85,7 @@
       USE m_gf_math 
       USE m_gf_types 
       IMPLICIT NONE 
-      type(t_mpi),intent(in)::mpi
+      type(t_gfmpi),intent(in)::mpi
       INTEGER,INTENT(IN)  :: en 
       INTEGER,INTENT(IN)  :: nk 
       INTEGER,INTENT(IN)  :: jspin 

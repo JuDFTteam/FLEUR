@@ -4,6 +4,7 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
       MODULE m_gf_kpts 
+      USE m_constants, ONLY: oUnit
           IMPLICIT NONE
       CONTAINS 
       SUBROUTINE gf_loadkpts(cell,sym,l_pe0,kpts) 
@@ -31,26 +32,26 @@
       IF (testchar =="&") THEN 
          CALL priv_transformkpts(kpts,sym) 
       ELSE 
-         READ (41,"(i5,f20.10)") kpts%nkpts,fscale 
+         READ (41,"(i5,f20.10)") kpts%nkpt,fscale 
          IF (fscale==0.0) fscale = 1.0 
-         ALLOCATE(kpts%bk(3,kpts%nkpts)                                 &
-     &        ,kpts%weight(kpts%nkpts))                                 
+         ALLOCATE(kpts%bk(3,kpts%nkpt)                                 &
+     &        ,kpts%wtkpt(kpts%nkpt))                                 
          kpts%bk(3,:) = 0.0 
-         DO nk = 1,kpts%nkpts 
-            READ (41,"(4f10.5)") (kpts%bk(i,nk),i=1,2),kpts%weight(nk) 
+         DO nk = 1,kpts%nkpt 
+            READ (41,"(4f10.5)") (kpts%bk(i,nk),i=1,2),kpts%wtkpt(nk) 
 !         kpts%bk(:,nk)=matmul(cell%amat,kpts%bk(:,nk))/tpi/fscale      
             kpts%bk(:,nk) = kpts%bk(:,nk)/fscale 
          ENDDO 
       ENDIF 
       CLOSE (41) 
-      WRITE(*,*) "Read ",kpts%nkpts," k-points" 
+      WRITE(*,*) "Read ",kpts%nkpt," k-points" 
                                                                         
        !<-- output symmetry equivalent-kpoint-list,set weights          
        CALL priv_symkpt(sym,cell,kpts,l_pe0) 
        !>                                                               
-       IF (ABS(SUM(kpts%weight)-1.0)>0.01) THEN 
+       IF (ABS(SUM(kpts%wtkpt)-1.0)>0.01) THEN 
           WRITE(*,*) "Error: Total sum of kpts-weight incorrect" 
-          WRITE(*,*) "Sum:",sum(kpts%weight),' should be 1.0' 
+          WRITE(*,*) "Sum:",sum(kpts%wtkpt),' should be 1.0' 
           WRITE(*,*) "Set one weight to negative value to assign the"   &
      &         ," weights according to symmetry"                        
           CALL juDFT_error("gf_kpts") 
@@ -77,14 +78,14 @@
       !<--Locals                                                        
                                                                         
       INTEGER :: nk,n,i,nk1 
-      INTEGER :: nkpt(kpts%nkpts) 
+      INTEGER :: nkpt(kpts%nkpt) 
       LOGICAL :: new 
-      REAL    :: bk(2),bk2(2,sym%nop,kpts%nkpts) 
+      REAL    :: bk(2),bk2(2,sym%nop,kpts%nkpt) 
                                                                         
       !>                                                                
                                                                         
                                                                         
-      DO nk=1,kpts%nkpts 
+      DO nk=1,kpts%nkpt 
          nkpt(nk)=0 
          DO n=1,sym%nop 
             bk=MATMUL(kpts%bk(1:2,nk),1.0*sym%mrot(1:2,1:2,n)) 
@@ -101,19 +102,19 @@
             ENDIF 
          ENDDO 
       ENDDO 
-      IF (ANY(kpts%weight<0))  kpts%weight=REAL(nkpt)/SUM(nkpt) 
+      IF (ANY(kpts%wtkpt<0))  kpts%wtkpt=REAL(nkpt)/SUM(nkpt) 
       !if on pe0 write to output-file                                   
       IF(lpe0) THEN 
-         WRITE(6,8120) kpts%nkpts 
-         WRITE(6,8121) SUM(nkpt) 
+         WRITE(oUnit,8120) kpts%nkpt 
+         WRITE(oUnit,8121) SUM(nkpt) 
  8120    FORMAT (1x,/,' number of k-points  =',i5) 
  8121    FORMAT (1x,'         ->in total BZ:',i6,/,'   No  Sym ',5x,    &
      &        'coordinates',t37,'weights')                              
-         DO nk=1,kpts%nkpts 
+         DO nk=1,kpts%nkpt 
             DO i=1,nkpt(nk) 
                bk(1:2) = MATMUL(bk2(1:2,i,nk),cell%bmat(1:2,1:2)) 
-               WRITE(6,'(i5,1x,i4,1x,3(f20.15,1x))')nk,i,bk(1),bk(2)    &
-     &              ,kpts%weight(nk)                                    
+               WRITE(oUnit,'(i5,1x,i4,1x,3(f20.15,1x))')nk,i,bk(1),bk(2)    &
+     &              ,kpts%wtkpt(nk)                                    
             ENDDO 
          ENDDO 
       ENDIF 
@@ -196,14 +197,14 @@
          ENDDO 
       ENDDO 
       !Now put kpts into type                                           
-      kpts%nkpts=COUNT(valid(:nk_max)) 
-      ALLOCATE(kpts%bk(3,kpts%nkpts),kpts%weight(kpts%nkpts)) 
+      kpts%nkpt=COUNT(valid(:nk_max)) 
+      ALLOCATE(kpts%bk(3,kpts%nkpt),kpts%wtkpt(kpts%nkpt)) 
       nn = 1 
       DO nk = 1,nk_max 
          IF (valid(nk)) THEN 
             kpts%bk(:2,nn) = bk(:,nk) 
             kpts%bk(3,nn) = 0.0 
-            kpts%weight(nn) =-1. 
+            kpts%wtkpt(nn) =-1. 
             nn=nn+1 
          ENDIF 
       ENDDO 

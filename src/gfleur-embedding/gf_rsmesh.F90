@@ -128,7 +128,7 @@
 !*****************************************************************      
 ! DESC: Sets Box and grid of rs to value corresponding to stars         
 !*****************************************************************      
-      USE m_constants,ONLY:PIMACH 
+      USE m_constants, ONLY: pi_const, oUnit 
       USE m_gf_types
       IMPLICIT NONE 
 !     Arguments                                                         
@@ -170,7 +170,7 @@
                                                                         
       REAL,ALLOCATABLE::afft(:) 
       !check dim                                                        
-      IF (size(pw)/=stars%nq3.OR.                                     &
+      IF (size(pw)/=stars%ng3.OR.                                     &
      &     stars%mx1*3/=rs%grid(1).OR.stars%mx2*3/=rs%grid(2)         &
      &     .OR.stars%mx3*3/=rs%grid(3))                               &
      &      CALL juDFT_error("Invalid Dimensions in gf_rstopw",calledby="gf_rsmesh.F90")
@@ -201,7 +201,7 @@
                                                                         
       REAL,ALLOCATABLE::afft(:) 
       !check dim                                                        
-      IF (size(pw)/=stars%nq3.OR.                                     &
+      IF (size(pw)/=stars%ng3.OR.                                     &
      &     stars%mx1*3/=rs%grid(1).OR.stars%mx2*3/=rs%grid(2)       &
      &     .OR.stars%mx3*3/=rs%grid(3))                               &
      &      CALL juDFT_error("Invalid Dimensions in gf_pwtors",calledby="gf_rsmesh.F90")
@@ -274,7 +274,7 @@
          CALL io_WRITE_Att(varid,'Z_ZERO',rs%z_zero) 
       ENDIF 
       !write data                                                       
-      CALL io_write(varid,(/1,1,1/),abs(rs%grid),rs%data) 
+      CALL io_write(varid,(/1,1,1/),abs(rs%grid),"rs_data",rs%data)
       !close                                                            
       CALL io_dclose(varid,hdferr) 
       END SUBROUTINE 
@@ -372,7 +372,7 @@
       CALL io_read_att(varid,'Z_ZERO',rs%z_zero) 
       !Read the Variable                                                
       ALLOCATE(rs%data(rs%grid(1),rs%grid(2),ABS(rs%grid(3)))) 
-      CALL io_read(varid,(/1,1,1/),abs(rs%grid),rs%data) 
+      CALL io_read(varid,(/1,1,1/),abs(rs%grid),"rs_data",rs%data)
       !done                                                             
       CALL io_dclose(varid,hdferr) 
       END SUBROUTINE 
