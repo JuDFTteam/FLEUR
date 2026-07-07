@@ -316,7 +316,7 @@ contains
         real,    allocatable :: eig_interpol(:,:,:)
         real,    allocatable :: rwork(:)
         complex, allocatable :: H_bloch(:,:,:,:,:)
-        complex, allocatable :: H_interpol(:,:,:,:)
+        complex, allocatable :: H_interpol(:,:,:,:,:)
         complex, allocatable :: H_interpol_spin(:,:,:,:,:)
         complex, allocatable :: work(:)
         complex, allocatable :: U_full(:,:,:,:)
@@ -330,7 +330,7 @@ contains
         type(t_kpts) :: qpts_coarse
         type(t_fleurinput) :: fi_local
 
-        real :: bqpt(3,1)
+        real :: bqpt(3,4)
 
         if (.not. fi%wannierlib%l_wannierize) return
         if (.not. allocated(results%U_mat)) &
@@ -346,8 +346,10 @@ contains
         fi_local%wannierlib%num_bands = 9 
         nfine = size(kpts_fine,2)
 
-        bqpt= 1.0/3.0
-
+        bqpt(:,1)= 0.0/3.0
+        bqpt(:,2)= 1.0/25.0
+        bqpt(:,3)= 1.0/3.0
+        bqpt(:,4)= 1.0/2.0
         qpts_coarse = fi%kpts
 
         if (num_bands /= num_wann .and. .not. allocated(results%U_dis)) &
@@ -377,7 +379,7 @@ contains
         ! Step 2: Wannier interpolation via wannier_matrix_interpolate
         ! rotate H into Wannier gauge and Fourier interpolate to kpts_fine
         ! ---------------------------------------------------------------
-        allocate(H_interpol(num_wann, num_wann, nfine, fi%input%jspins))
+        allocate(H_interpol(num_wann, num_wann, nfine, size(bqpt,2) ,fi%input%jspins))
         H_interpol = cmplx(0.0, 0.0)
         allocate(U_full(num_bands, num_wann, fi%kpts%nkptf, 1))
         U_full = 0.0 
@@ -392,19 +394,132 @@ contains
                                             fi%kpts, kpts_fine,              &
                                             H_interpol_spin,qpts_coarse,bqpt)
             call timestop("Wannier Transformation")
-            H_interpol(:,:,:,jspin) = H_interpol_spin(:,:,:,1,1)
+            H_interpol(:,:,:,:,jspin) = H_interpol_spin(:,:,:,:,1)
             deallocate(H_interpol_spin)
         end do
 
         call save_npy("U_mat.npy",U_full)
         call save_npy("interpoled.npy",h_interpol)
-        call save_npy("k_interpol.py",kpts_fine)
-        call save_npy("k_mesh.py",fi%kpts%bkf)
+        call save_npy("k_interpol.npy",kpts_fine)
+        call save_npy("k_mesh.npy",fi%kpts%bkf)
 
 
         
         deallocate(U_full)
 
     end subroutine test_q_inter
+
+
+    subroutine test_umats(fi, results, kpts_fine)
+
+        use m_available_solvers
+        use m_types_solver
+        use m_constants
+
+        type(t_fleurinput), intent(in) :: fi
+        type(t_results),    intent(in) :: results
+        real,       intent(in) :: kpts_fine(:,:)
+
+        integer  :: num_bands, num_wann, jspin, ib, ikpt, info, lwork
+        real,    allocatable :: eig_interpol(:,:,:)
+        real,    allocatable :: rwork(:)
+        complex, allocatable :: H_bloch(:,:,:,:,:)
+        complex, allocatable :: H_interpol(:,:,:,:,:)
+        complex, allocatable :: H_interpol_spin(:,:,:,:,:)
+        complex, allocatable :: work(:)
+        complex, allocatable :: U_full(:,:,:,:)
+        real :: kpath_coord, dk(3) , dk_cart(3)
+        integer :: iout , nfine , ioutEv, iqpt
+
+        class(t_mat),allocatable :: hmat_tmp
+        class(t_mat),allocatable :: zMat_tmp
+        class(t_solver), allocatable   :: solver, transform 
+
+        type(t_kpts) :: qpts_coarse
+        type(t_fleurinput) :: fi_local
+
+        real :: bqpt(3,4)
+        real :: tmpVal
+
+        if (.not. fi%wannierlib%l_wannierize) return
+        if (.not. allocated(results%U_mat)) &
+            call juDFT_error('U_mat not allocated; run wannierization first', &
+                             calledby='interpolate_bandstructure')
+
+        num_bands = 2
+        num_wann  = 2 
+
+        fi_local = fi 
+
+        fi_local%wannierlib%num_wann= 2 
+        fi_local%wannierlib%num_bands = 2 
+        nfine = size(kpts_fine,2)
+
+        bqpt(:,1)= 0.0/3.0
+        bqpt(:,2)= 1.0/25.0
+        bqpt(:,3)= 1.0/3.0
+        bqpt(:,4)= 1.0/2.0
+
+        qpts_coarse = fi%kpts
+
+        if (num_bands /= num_wann .and. .not. allocated(results%U_dis)) &
+            call juDFT_error('U_dis not allocated; disentanglement data missing', &
+                             calledby='interpolate_bandstructure')
+
+        ! ---------------------------------------------------------------
+        ! Step 1: construct diagonal Bloch Hamiltonian H_k from results%eig
+        ! H_k(n,m,k,s) = eig(min_band+n-1, k_ibz, s) * delta(n,m)
+        ! ---------------------------------------------------------------
+        allocate(H_bloch(num_bands, num_bands, fi%kpts%nkptf, qpts_coarse%nkptf ,fi%input%jspins))
+        H_bloch = cmplx(0.0, 0.0)
+        do jspin = 1, fi%input%jspins
+            do iqpt = 1 , qpts_coarse%nkptf
+                do ikpt = 1, fi%kpts%nkptf                    
+                        H_bloch(1, 1, ikpt, iqpt ,jspin) = sin(tpi_const*(fi%kpts%bkf(1,ikpt)+qpts_coarse%bkf(1,iqpt)))*sin(tpi_const*(fi%kpts%bkf(2,ikpt)+qpts_coarse%bkf(2,iqpt)))*sin(tpi_const*(fi%kpts%bkf(3,ikpt)+qpts_coarse%bkf(3,iqpt))) 
+                        H_bloch(2, 2, ikpt, iqpt ,jspin) = -sin(tpi_const*(fi%kpts%bkf(1,ikpt)+qpts_coarse%bkf(1,iqpt)))*sin(tpi_const*(fi%kpts%bkf(2,ikpt)+qpts_coarse%bkf(2,iqpt)))*sin(tpi_const*(fi%kpts%bkf(3,ikpt)+qpts_coarse%bkf(3,iqpt))) 
+                        H_bloch(1, 2, ikpt, iqpt ,jspin) = cos(tpi_const*(fi%kpts%bkf(1,ikpt)))*cos(tpi_const*(fi%kpts%bkf(2,ikpt)))*cos(tpi_const*(fi%kpts%bkf(3,ikpt)))
+                        H_bloch(2, 1, ikpt, iqpt ,jspin) = cos(tpi_const*(fi%kpts%bkf(1,ikpt)))*cos(tpi_const*(fi%kpts%bkf(2,ikpt)))*cos(tpi_const*(fi%kpts%bkf(3,ikpt)))
+                end do
+            end do 
+        end do
+
+
+        call save_npy("Bloch_funktion.npy", H_bloch)
+        ! ---------------------------------------------------------------
+        ! Step 2: Wannier interpolation via wannier_matrix_interpolate
+        ! rotate H into Wannier gauge and Fourier interpolate to kpts_fine
+        ! ---------------------------------------------------------------
+        allocate(H_interpol(num_wann, num_wann, nfine, 3 ,fi%input%jspins))
+        H_interpol = cmplx(0.0, 0.0)
+        allocate(U_full(num_bands, num_wann, fi%kpts%nkptf, 1))
+        U_full = 0.0 
+        do jspin = 1, fi%input%jspins
+            do ikpt = 1 ,fi%kpts%nkptf
+                U_full(1,2,ikpt,jspin) = -sin(tpi_const*(fi%kpts%bkf(1,ikpt)))*sin(tpi_const*(fi%kpts%bkf(2,ikpt)))*sin(tpi_const*(fi%kpts%bkf(3,ikpt)))
+                U_full(2,1,ikpt,jspin) = sin(tpi_const*(fi%kpts%bkf(1,ikpt)))*sin(tpi_const*(fi%kpts%bkf(2,ikpt)))*sin(tpi_const*(fi%kpts%bkf(3,ikpt)))
+                U_full(1,1,ikpt,jspin) = cos(tpi_const*(fi%kpts%bkf(1,ikpt)))*cos(tpi_const*(fi%kpts%bkf(2,ikpt)))*cos(tpi_const*(fi%kpts%bkf(3,ikpt)))
+                U_full(2,2,ikpt,jspin) = cos(tpi_const*(fi%kpts%bkf(1,ikpt)))*cos(tpi_const*(fi%kpts%bkf(2,ikpt)))*cos(tpi_const*(fi%kpts%bkf(3,ikpt)))
+            end do 
+            
+            call timestart("Wannier Transformation")
+            call wannier_matrixq_interpolate(fi, H_bloch(:,:,:,:,jspin:jspin), &
+                                            U_full,                          &
+                                            fi%kpts, kpts_fine,              &
+                                            H_interpol_spin,qpts_coarse,bqpt)
+            call timestop("Wannier Transformation")
+            H_interpol(:,:,:,:,jspin) = H_interpol_spin(:,:,:,:,1)
+            deallocate(H_interpol_spin)
+        end do
+
+        call save_npy("U_mat.npy",U_full)
+        call save_npy("interpoled.npy",H_interpol)
+        call save_npy("k_interpol.npy",kpts_fine)
+        call save_npy("k_mesh.npy",fi%kpts%bkf)
+
+
+        
+        deallocate(U_full)
+
+    end subroutine test_umats
 
 end module m_wannier_interpolate
