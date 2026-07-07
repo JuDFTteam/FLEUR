@@ -89,10 +89,10 @@ CONTAINS
     CALL w90_set_option(wannierlib_w90main, 'dump_inputs', .FALSE.)
     IF (this%dis_num_iter > 0) CALL w90_set_option(wannierlib_w90main, 'dis_num_iter', this%dis_num_iter)  ! disentanglement (XML numIter)
     IF (this%num_iter > 0)     CALL w90_set_option(wannierlib_w90main, 'num_iter', this%num_iter)          ! MLWF/wannierise (XML wannIter)
-    CALL w90_set_option(wannierlib_w90main, 'dis_win_min', this%dis_win_min)
-    CALL w90_set_option(wannierlib_w90main, 'dis_win_max', this%dis_win_max)
-    CALL w90_set_option(wannierlib_w90main, 'dis_froz_min', this%dis_froz_min)
-    CALL w90_set_option(wannierlib_w90main, 'dis_froz_max', this%dis_froz_max)
+    CALL w90_set_option(wannierlib_w90main, 'dis_win_min', hartree_to_ev_const*this%dis_win_min)
+    CALL w90_set_option(wannierlib_w90main, 'dis_win_max', hartree_to_ev_const*this%dis_win_max)
+    CALL w90_set_option(wannierlib_w90main, 'dis_froz_min', hartree_to_ev_const*this%dis_froz_min)
+    CALL w90_set_option(wannierlib_w90main, 'dis_froz_max', hartree_to_ev_const*this%dis_froz_max)
     IF (this%dis_mix_ratio > 0.0) CALL w90_set_option(wannierlib_w90main, 'dis_mix_ratio', this%dis_mix_ratio)
     IF (this%dis_conv_tol > 0.0) CALL w90_set_option(wannierlib_w90main, 'dis_conv_tol', this%dis_conv_tol)  ! disentanglement (XML disConvTol)
     IF (this%conv_tol > 0.0)     CALL w90_set_option(wannierlib_w90main, 'conv_tol', this%conv_tol)          ! MLWF/wannierise (XML wannConvTol)
@@ -141,6 +141,7 @@ CONTAINS
     COMPLEX, ALLOCATABLE :: aw_k(:, :, :, :)          ! (nw,nw,3,nk) Wannier Berry connection A^(W)_alpha(k)
     COMPLEX, ALLOCATABLE :: hamk_r(:, :, :)           ! (nw,nw,nk) Wannier-gauge Hamiltonian (for H(R) export)
     LOGICAL :: l_hr_done, l_ar_done                   ! tight-binding H(R)/A(R) written once (domain-independent)
+    REAL, ALLOCATABLE, TARGET :: eig_ev(:, :)         ! eigenvalues in eV for the w90 library (banner honesty)
 
 
     IF (.NOT.this%l_wannierize) RETURN
@@ -162,7 +163,10 @@ CONTAINS
   mmn_local = mmn
   amn_local = amn
     !TODO u_matrix should be stored (in results)  
-    CALL w90_set_eigval(wannierlib_w90main, eig)
+    ALLOCATE(eig_ev(SIZE(eig,1), SIZE(eig,2)), stat=ierr)
+    IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating eig_ev buffer', calledby='run_w90')
+    eig_ev = hartree_to_ev_const * eig   ! w90 library expects eV; FLEUR eig are Hartree
+    CALL w90_set_eigval(wannierlib_w90main, eig_ev)
   CALL w90_set_m_local(wannierlib_w90main, mmn_local)
   CALL w90_set_u_opt(wannierlib_w90main, amn_local)
     CALL w90_set_u_matrix(wannierlib_w90main, u_matrix)
