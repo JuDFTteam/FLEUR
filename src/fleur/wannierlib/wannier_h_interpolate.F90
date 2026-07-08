@@ -36,7 +36,6 @@ contains
         real,    allocatable :: band_weight(:,:,:)
         complex, allocatable :: H_bloch(:,:,:,:)
         complex, allocatable :: H_interpol(:,:,:,:)
-        complex, allocatable :: H_interpol_spin(:,:,:)
         complex, allocatable :: work(:)
         complex, allocatable :: U_full(:,:,:)
         integer :: nfine
@@ -101,10 +100,8 @@ contains
             call wannier_matrix_interpolate(fi, H_bloch(:,:,:,jspin), &
                                             U_full,                      &
                                             fi%kpts, kpts_fine,          &
-                                            H_interpol_spin)
+                                            H_interpol(:,:,:,jspin))
             call timestop("Wannier Transformation")
-            H_interpol(:,:,:,jspin) = H_interpol_spin(:,:,:)
-            deallocate(H_interpol_spin)
         end do
         
         deallocate(U_full)

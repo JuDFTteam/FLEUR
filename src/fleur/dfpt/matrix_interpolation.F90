@@ -22,7 +22,7 @@ contains
         complex, intent(in) :: U_mat(:,:,:)                      ! bloch, wannier, kpoint
         type(t_kpts),intent(in) :: kpts_coarse                   ! on the coarse Wannier k-mesh
         real,intent(in) :: kpts_fine(:,:)                        ! to interpolate onto
-        complex,allocatable,intent(out) :: matInterpol(:,:,:)    ! interpolate matrix element  (nwann,nwann,kpts)
+        complex,intent(inout) :: matInterpol(:,:,:)    ! interpolate matrix element  (nwann,nwann,kpts)
         type(t_kpts),optional,intent(in) :: qpts_coarse          ! on the coarse Wannier k-mesh
         type(t_kpts),optional,intent(in) :: qpts_fine            ! to interpolate onto
 
@@ -44,7 +44,6 @@ contains
         nfine = size(kpts_fine,2)
 
         allocate(fft_grid(nwann,nwann,size(matElement,3)))
-        allocate(matInterpol(nwann,nwann,nfine))
         matInterpol = cmplx(0.0, 0.0)
         allocate(matRot(nwann,nwann))
         matRot = cmplx(0.0,0.0)
@@ -118,7 +117,7 @@ contains
         complex, intent(in) :: U_mat(:,:,:)                       ! bloch, wannier, kpoint
         type(t_kpts),intent(in) :: kpts_coarse                    ! on the coarse Wannier k-mesh
         real,intent(in) :: kpts_fine(:,:)                         ! fine k-mesh to interpolate onto
-        complex,allocatable,intent(out) :: matInterpol(:,:,:,:)   ! interpolated matrix element  (nwann,nwann,kpts,qpts)
+        complex,intent(inout) :: matInterpol(:,:,:,:)   ! interpolated matrix element  (nwann,nwann,kpts,qpts)
         type(t_kpts),intent(in) :: qpts_coarse                    ! on the coarse Wannier q-mesh
         real,intent(in) :: qpts_fine(:,:)                         ! fine q-mesh to interpolate onto
 
@@ -165,7 +164,6 @@ contains
         allocate(tempMat(nwann,nwann, nk_c, 0:nq1-1,0:nq2-1,0:nq3-1))
         allocate(matWannier(nwann,nwann, 0:nk1-1,0:nk2-1,0:nk3-1, 0:nq1-1,0:nq2-1,0:nq3-1))
         allocate(tempMat2(nwann,nwann, 0:nk1-1,0:nk2-1,0:nk3-1))
-        allocate(matInterpol(nwann,nwann,nk_fine,nq_fine))
         matInterpol = cmplx(0.0, 0.0)
 
         ! Wigner-Seitz weights and big-box supercell R vectors, one set per mesh
