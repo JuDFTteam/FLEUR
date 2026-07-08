@@ -13,25 +13,39 @@ module m_wannier_interpolate
     implicit none
 
 contains
-    subroutine interpolate_bandstructure(fi, results, kpts_fine)
+    subroutine interpolate_bandstructure(fi, results, kpts_fine,eig_id_interpol,l_write_output)
 
         use m_available_solvers
         use m_types_solver
+        use m_eig66_io
+        use m_banddos_io
+#ifdef CPP_HDF
+        use hdf5
+        use m_hdf_tools
+#endif
 
         type(t_fleurinput), intent(in) :: fi
         type(t_results),    intent(in) :: results
         real,       intent(in) :: kpts_fine(:,:)
+        integer,    intent(in) :: eig_id_interpol
+        logical,    intent(in) :: l_write_output 
 
         integer  :: num_bands, num_wann, jspin, ib, ikpt, info, lwork
         real,    allocatable :: eig_interpol(:,:,:)
         real,    allocatable :: rwork(:)
+        real,    allocatable :: band_weight(:,:,:)
         complex, allocatable :: H_bloch(:,:,:,:)
         complex, allocatable :: H_interpol(:,:,:,:)
         complex, allocatable :: H_interpol_spin(:,:,:)
         complex, allocatable :: work(:)
         complex, allocatable :: U_full(:,:,:)
-        real :: kpath_coord, dk(3) , dk_cart(3)
-        integer :: iout , nfine , ioutEv
+        integer :: nfine
+
+        type(t_kpts)    :: kpts_band
+        type(t_banddos) :: banddosLocal
+#ifdef CPP_HDF
+        integer(HID_T) :: banddosFile_id
+#endif
 
         class(t_mat),allocatable :: hmat_tmp
         class(t_mat),allocatable :: zMat_tmp
@@ -94,6 +108,7 @@ contains
         end do
         
         deallocate(U_full)
+        deallocate(H_bloch)
 
         ! ---------------------------------------------------------------
         ! Step 3: diagonalize interpolated Hamiltonian at each fine k-point
@@ -118,37 +133,46 @@ contains
                     call zMat_tmp%free()
                     deallocate(zMat_tmp)
                 end if 
-            end do 
+                call write_eig(eig_id_interpol, ikpt, jspin, num_wann, num_wann, eig_interpol(:,ikpt,jspin),zMat=zMat_tmp)
+            end do !ikpt 
         end do !jspins
 
         !deallocate(H_interpol)
+        if (l_write_output) then
+            ! Write interpolated eigenvalues into banddos.hdf (/Local/BS/eigenvalues).
+            
+            ! Minimal band-path k-points for banddos.hdf. Mark the two endpoints as special points
+            ! (labeled "S"/"E") so /kpts/specialPointLabels is non-empty for the plotting tools.
+            kpts_band%nkpt = nfine
+            kpts_band%bk   = kpts_fine
+            allocate(kpts_band%wtkpt(nfine))
+            kpts_band%wtkpt = 1.0 / nfine
 
-        ! ---------------------------------------------------------------
-        ! Write interpolated eigenvalues to wann_bands.dat
-        ! Format: kpath_coord  eig_1  eig_2  ...  (one line per k-point)
-        ! ---------------------------------------------------------------
-        open(newunit=iout, file='wann_bands.dat', status='replace')
-        write(iout,'(a)') '# kpath_coord   eig_1  eig_2  ...'
+            kpts_band%numSpecialPoints = 2
+            allocate(kpts_band%specialPointIndices(2))
+            allocate(kpts_band%specialPointNames(2))
+            allocate(kpts_band%specialPoints(3,2))
+            kpts_band%specialPointIndices(1) = 1
+            kpts_band%specialPointNames(1)   = 'S'
+            kpts_band%specialPoints(:,1)     = kpts_fine(:,1)
+            kpts_band%specialPointIndices(2) = nfine
+            kpts_band%specialPointNames(2)   = 'E'
+            kpts_band%specialPoints(:,2)     = kpts_fine(:,nfine)
 
-        open(newunit=ioutEv, file='wann_bands_ev.dat', status='replace')
-        write(ioutEV,'(a)') '# kpath_coord   eig_1  eig_2  ...'
-
-        do jspin = 1, fi%input%jspins
-            if (fi%input%jspins > 1) write(iout,'(a,i1)') '# spin ', jspin
-            kpath_coord = 0.0
-            do ikpt = 1, nfine 
-                if (ikpt > 1) then
-                    dk = kpts_fine(:,ikpt) - kpts_fine(:,ikpt-1)
-                    dk_cart = matmul(fi%cell%bmat,dk)
-                    kpath_coord = kpath_coord + sqrt(dot_product(dk_cart, dk_cart))
-                end if
-                write(iout,'(f12.6,*(2x,f14.8))') kpath_coord, eig_interpol(:,ikpt,jspin)
-                write(ioutEv,'(f12.6,*(2x,f14.8))') kpath_coord, hartree_to_ev_const*eig_interpol(:,ikpt,jspin)
-            end do
-        end do
-
-        close(iout)
-        close(ioutEV)
+#ifdef CPP_HDF
+            banddosLocal      = fi%banddos
+            banddosLocal%band = .true.
+            ! For now use a default weight for projection
+            allocate(band_weight(num_wann, nfine, fi%input%jspins))
+            band_weight = 1.0
+            call openBandDOSFile(banddosFile_id, fi%input, fi%atoms, fi%cell, kpts_band, &
+                                fi%sym, banddosLocal, results%ef)
+            call writeBandData(banddosFile_id, kpts_band, 'Local', 'Total', &
+                            band_weight, eig_interpol)
+            call closeBandDOSFile(banddosFile_id)
+            deallocate(band_weight)
+#endif
+        end if 
         deallocate(eig_interpol)
 
     end subroutine interpolate_bandstructure
