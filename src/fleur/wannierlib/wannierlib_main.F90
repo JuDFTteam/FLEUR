@@ -76,6 +76,7 @@ CONTAINS
       CHARACTER(LEN=7) :: amn_file
       CHARACTER(LEN=3) :: spin12(2)
       INTEGER :: ik_local, nk_local
+      CHARACTER(LEN=6) :: spin_sfx
 
       IF (.NOT. this%l_wannierize) RETURN
 
@@ -194,7 +195,12 @@ CONTAINS
          END IF
 
          call wannierlib_create_eig(this, results, kpts, MERGE(1, jspin, l_wannierlib_spinors), eig)
-         CALL run_w90(this, cell, kpts, mmn, amn, eig, fmpi%irank, s0_coarse, l0_coarse, soc0_coarse, s0pa_coarse, mmn_full)
+         ! collinear jspins=2 (no SOC/noco): the two spin channels wannierise separately;
+         ! tag each channel's interpolation outputs so spin 2 does not overwrite spin 1.
+         spin_sfx = ''
+         IF (input%jspins == 2 .AND. .NOT. l_wannierlib_spinors) WRITE(spin_sfx, '(a,i0)') '_spin', jspin
+         CALL run_w90(this, cell, kpts, mmn, amn, eig, fmpi%irank, s0_coarse, l0_coarse, soc0_coarse, s0pa_coarse, mmn_full, &
+                      spin_suffix=TRIM(spin_sfx))
          if (fmpi%isize == 1) CALL report_w90(this)
 
          IF (ALLOCATED(amn)) DEALLOCATE (amn)

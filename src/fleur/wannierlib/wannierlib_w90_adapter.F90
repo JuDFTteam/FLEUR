@@ -119,7 +119,7 @@ CONTAINS
 #endif
   END SUBROUTINE init_w90
 
-  SUBROUTINE run_w90(this, cell, kpts, mmn, amn, eig, irank, s0_coarse, l0_coarse, soc0_coarse, s0pa_coarse, mmn_full)
+  SUBROUTINE run_w90(this, cell, kpts, mmn, amn, eig, irank, s0_coarse, l0_coarse, soc0_coarse, s0pa_coarse, mmn_full, spin_suffix)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
     TYPE(t_cell), INTENT(IN) :: cell
     TYPE(t_kpts), INTENT(IN) :: kpts
@@ -132,10 +132,12 @@ CONTAINS
     COMPLEX, INTENT(IN) :: soc0_coarse(:, :, :, :) ! (num_bands,num_bands,1,nk) Bloch SOC (l_socop)
     COMPLEX, INTENT(IN) :: s0pa_coarse(:, :, :, :, :) ! (num_bands,num_bands,3,nat,nk) per-atom MT spin
     COMPLEX, INTENT(IN) :: mmn_full(:, :, :, :)       ! (nb,nb,nntot,nkptf) full overlaps, rank 0 only (Berry connection)
+    CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: spin_suffix   ! '_spin1'/'_spin2' for collinear jspins=2; empty otherwise
 
     INTEGER :: ierr,num_kpts,iop,nbnd_c,nat_c,nkc
     INTEGER :: idom, ndom
     CHARACTER(LEN=8) :: dkind(3), dsuf(3)
+    CHARACTER(LEN=16) :: ssfx
     LOGICAL :: lex
     COMPLEX, ALLOCATABLE :: u_matrix(:, :, :), mmn_local(:, :, :, :), amn_local(:, :, :)
     COMPLEX, ALLOCATABLE :: aw_k(:, :, :, :)          ! (nw,nw,3,nk) Wannier Berry connection A^(W)_alpha(k)
@@ -146,6 +148,8 @@ CONTAINS
 
     IF (.NOT.this%l_wannierize) RETURN
     num_kpts = SIZE(amn, 3)
+    ssfx = ''
+    IF (PRESENT(spin_suffix)) ssfx = TRIM(spin_suffix)
 
 #ifndef CPP_WANNLIB_API
     CALL juDFT_error('wannierlib requires Wannier90 module API (w90_library). Rebuild with CPP_WANNLIB_API and matching w90_library.mod.', &
@@ -247,7 +251,7 @@ CONTAINS
         ! export the Wannier Hamiltonian H(R) in W90 _hr.dat format (domain-independent -> once)
         IF (irank == 0 .AND. .NOT. l_hr_done) THEN
           CALL wannierlib_build_hamk(this, eig, u_matrix, amn_local, hamk_r)
-          CALL wannierlib_write_hr(this, cell, kpts, hamk_r)
+          CALL wannierlib_write_hr(this, cell, kpts, hamk_r, TRIM(ssfx))
           l_hr_done = .TRUE.
         END IF
       CASE ('position_r')
@@ -255,7 +259,7 @@ CONTAINS
         IF (irank == 0 .AND. .NOT. l_ar_done) THEN
           IF (.NOT. ALLOCATED(aw_k)) &
             CALL wannierlib_build_berry_aw(this, kpts, mmn_full, amn_local, u_matrix, aw_k)
-          CALL wannierlib_write_ar(this, cell, kpts, aw_k)
+          CALL wannierlib_write_ar(this, cell, kpts, aw_k, TRIM(ssfx))
           l_ar_done = .TRUE.
         END IF
       CASE ('spinCurrent')
@@ -273,7 +277,8 @@ CONTAINS
       END SELECT
     END DO
     ! rename this domain's outputs (plane/grid -> _plane/_grid; path/legacy: no suffix)
-    IF (irank==0 .AND. LEN_TRIM(dsuf(idom))>0) CALL wannierlib_rename_domain_outputs(this, TRIM(dsuf(idom)))
+    IF (irank==0 .AND. LEN_TRIM(TRIM(dsuf(idom))//TRIM(ssfx))>0) &
+      CALL wannierlib_rename_domain_outputs(this, TRIM(dsuf(idom))//TRIM(ssfx))
     END DO   ! idom
 
     ! restore the user's original kpts_interpol if we overwrote it
@@ -506,17 +511,21 @@ CONTAINS
   END SUBROUTINE wannierlib_build_hamk
 
   ! Write H(R) in Wannier90 seedname_hr.dat format (energies in eV). Rank-0 only.
-  SUBROUTINE wannierlib_write_hr(this, cell, kpts, ham_k)
+  SUBROUTINE wannierlib_write_hr(this, cell, kpts, ham_k, suffix)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
     TYPE(t_cell), INTENT(IN) :: cell
     TYPE(t_kpts), INTENT(IN) :: kpts
     COMPLEX, INTENT(IN) :: ham_k(:, :, :)
+    CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: suffix   ! spin tag ('_spin1'/'_spin2') for collinear jspins=2
     COMPLEX, ALLOCATABLE :: hr(:, :, :)
     INTEGER, ALLOCATABLE :: irvec(:, :), ndegen(:)
     INTEGER :: nrpts, nw, irpt, i, j, iu, c
+    CHARACTER(LEN=64) :: fn
     CALL wannierlib_ft_to_real(cell, ham_k, kpts, hr, irvec, ndegen, nrpts)
     nw = this%num_wann
-    OPEN(newunit=iu, file='WF_hr.dat', status='replace')
+    fn = 'WF_hr'
+    IF (PRESENT(suffix)) fn = TRIM(fn)//TRIM(suffix)
+    OPEN(newunit=iu, file=TRIM(fn)//'.dat', status='replace')
     WRITE(iu,'(a)') ' written by FLEUR wannierlib : H(R) in eV, W90 hr format'
     WRITE(iu,'(i12)') nw
     WRITE(iu,'(i12)') nrpts
@@ -540,14 +549,16 @@ CONTAINS
   END SUBROUTINE wannierlib_write_hr
 
   ! Write A(R) = <0n|r_alpha|Rm> in Wannier90 seedname_r.dat format (positions in Angstrom). Rank-0.
-  SUBROUTINE wannierlib_write_ar(this, cell, kpts, aw_k)
+  SUBROUTINE wannierlib_write_ar(this, cell, kpts, aw_k, suffix)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
     TYPE(t_cell), INTENT(IN) :: cell
     TYPE(t_kpts), INTENT(IN) :: kpts
     COMPLEX, INTENT(IN) :: aw_k(:, :, :, :)          ! (nw,nw,3,nk)
+    CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: suffix   ! spin tag ('_spin1'/'_spin2') for collinear jspins=2
     COMPLEX, ALLOCATABLE :: ar(:, :, :, :), a1(:, :, :)
     INTEGER, ALLOCATABLE :: irvec(:, :), ndegen(:)
     INTEGER :: nrpts, nw, irpt, i, j, a, iu
+    CHARACTER(LEN=64) :: fn
     REAL, PARAMETER :: bohr2ang = 0.5291772109
     nw = this%num_wann
     DO a = 1, 3
@@ -556,7 +567,9 @@ CONTAINS
       ar(:,:,:,a) = a1
       DEALLOCATE(a1)
     END DO
-    OPEN(newunit=iu, file='WF_r.dat', status='replace')
+    fn = 'WF_r'
+    IF (PRESENT(suffix)) fn = TRIM(fn)//TRIM(suffix)
+    OPEN(newunit=iu, file=TRIM(fn)//'.dat', status='replace')
     WRITE(iu,'(a)') ' written by FLEUR wannierlib : A(R)=<0n|r|Rm> in Ang, W90 r format'
     WRITE(iu,'(i12)') nw
     WRITE(iu,'(i12)') nrpts
