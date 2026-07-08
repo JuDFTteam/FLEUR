@@ -307,7 +307,9 @@ CONTAINS
                   IF (banddos%l_jdos.and.ispinpr == jsp_end) call jDOS%calc_jDOS(ikpt, noccbd, ev_list, we, atoms, banddos, input, nococonv, itype, radfun(itype), abc(1, abc_itype), abc(2, abc_itype))
                      
                   IF (noco%l_soc .and. ispin == ispinpr) CALL orb%calc_orbmom(abc(ispin, abc_itype), atoms, radfun(itype), we, itype, &
-                                                                              ispin, moments%clmom(:, itype, ispin))  
+                                                                              ispin, moments%clmom(:, itype, ispin))
+                  IF (noco%l_soc .AND. ispin == ispinpr .AND. input%kcrel == 1 .AND. input%jspins == 2) &
+                     CALL orb%calc_hff_orbital(atoms, radfun(itype), itype, ispin, moments%hypFineContribs(:, itype, ispin, 3))
 
                   !Now calculate the density matrix as needed to construct the charge
                   call denmatrix(ispin, ispinpr, itype)%rhonmt(atoms, sphhar, we, noccbd, itype, &
@@ -391,6 +393,11 @@ CONTAINS
          CALL MPI_ALLREDUCE(MPI_IN_PLACE, moments%clmom(1,1,jsp_start), &
                             SIZE(moments%clmom(:,:,jsp_start:jsp_end)), &
                             MPI_DOUBLE_PRECISION, MPI_SUM, fmpi%mpi_comm, iErr)
+         IF (input%kcrel == 1 .AND. input%jspins == 2) THEN
+            CALL MPI_ALLREDUCE(MPI_IN_PLACE, moments%hypFineContribs(-1,1,jsp_start,3), &
+                               SIZE(moments%hypFineContribs(:,:,jsp_start:jsp_end,3)), &
+                               MPI_DOUBLE_PRECISION, MPI_SUM, fmpi%mpi_comm, iErr)
+         END IF
       END IF
 #endif
 
@@ -405,11 +412,21 @@ CONTAINS
       END IF
 
       IF (fmpi%irank == 0) THEN
-         call timestart("print l-like charge")  
+         call timestart("print l-like charge")
          DO itype = 1, atoms%ntype
             call print_l_like_charge(lbound(denmatrix, 1), atoms, radfun(itype), denmatrix, itype)
          ENDDO
          call timestop("print l-like charge")
+         IF (input%kcrel == 1 .AND. input%jspins == 2) THEN
+            DO itype = 1, atoms%ntype
+               DO ispin = jsp_start, jsp_end
+                  moments%hypFineContribs(:, itype, ispin, 1) = moments%hypFineContribs(:, itype, ispin, 1) &
+                     + denmatrix(ispin, ispin, itype)%hff_contact(radfun(itype), atoms, itype, ispin)
+                  moments%hypFineContribs(:, itype, ispin, 2) = moments%hypFineContribs(:, itype, ispin, 2) &
+                     + denmatrix(ispin, ispin, itype)%hff_dipolar(radfun(itype), atoms, sphhar, sym, itype, ispin)
+               END DO
+            END DO
+         END IF
          CALL timestart("denmatrix_to_full")
          !$OMP PARALLEL DO PRIVATE(itype, ispin, ispinpr) DEFAULT(NONE) SHARED(radfun,jsp_start,jsp_end,denmatrix, atoms, fmpi,hub1data,enpara,den, input, sphhar, noco, sym, vTot, moments)
          DO itype = 1, atoms%ntype

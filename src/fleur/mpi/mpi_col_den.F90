@@ -305,8 +305,6 @@ CONTAINS
    ENDIF
    !-lda+U
 
-   IF (PRESENT(hyperfine)) CALL hyperfine%collect(fmpi,atoms,jspin)
-
     CALL timestop("mpi_col_den")
 
 #endif
