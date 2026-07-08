@@ -23,7 +23,7 @@
       CONTAINS 
       !<-- S:gf_current(Nv2,nk,jspin,sym,cell,gfinp,bkpts)              
                                                                         
-      SUBROUTINE gf_current(Nv2,nk,jspin,sym,cell,gfinp,mpi,bkpts,lapw,lapw_gf)
+      SUBROUTINE gf_current(Nv2,nk,jspin,sym,cell,gfinp,fmpi,bkpts,lapw,lapw_gf)
 !******************************************                             
 !     New subroutine to calculate the current using different possible  
 !     formulas                                                          
@@ -42,7 +42,7 @@
       TYPE(t_sym),INTENT(IN)    :: sym 
       TYPE(t_cell),INTENT(IN)   :: cell 
       TYPE(t_embinp),INTENT(IN)  :: gfinp 
-      TYPE(t_gfmpi),INTENT(IN)    :: mpi 
+      TYPE(t_gfmpi),INTENT(IN)    :: fmpi 
       TYPE(t_lapw),INTENT(IN)   :: lapw
       TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
       REAL,INTENT(IN)           :: bkpts(:,:) 
@@ -63,7 +63,7 @@
       ALLOCATE(embpot(nv2,nv2,2,2),gmat(nv2,nv2,2)) 
       !<--Output information                                            
                                                                         
-      IF (jspin==1.AND.nk==1.AND.mpi%pe0) THEN 
+      IF (jspin==1.AND.nk==1.AND.fmpi%pe0) THEN 
          WRITE(oUnit,*) 'Calculating the current' 
          WRITE(oUnit,*) 'Formulas implemented      used' 
          WRITE(oUnit,*) 'Landauer on two planes  ',btest(gfinp%curr,0) 
@@ -166,9 +166,9 @@
                                                                         
          !>                                                             
          IF(BTEST(gfinp%curr,5)) THEN 
-            CALL writetrans(en,nk,jspin,bkpts,sym,cell,8,curr,mpi)
+            CALL writetrans(en,nk,jspin,bkpts,sym,cell,8,curr,fmpi)
          ELSE 
-            CALL writetrans(en,nk,jspin,bkpts,sym,cell,8,curr(1:8),mpi)
+            CALL writetrans(en,nk,jspin,bkpts,sym,cell,8,curr(1:8),fmpi)
          ENDIF 
       ENDDO 
                                                                         

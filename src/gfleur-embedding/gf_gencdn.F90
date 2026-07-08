@@ -10,7 +10,7 @@
       IMPLICIT NONE
       CONTAINS 
       SUBROUTINE gf_gencdn(layer,jspin,l_chargefromstates,              &
-     &     jspins,gfinp,input,atoms,cell,sym,kpts,stars,sphhar,mpi,     &
+     &     jspins,gfinp,input,atoms,cell,sym,kpts,stars,sphhar,fmpi,     &
      &     enpara,vr,qpw,rho,qmtl,neigd,l_noco,qtot_el,qtot_nuc)
 !*****************************************************************      
 ! DESC:This subroutine constructes the charge-density from the Green    
@@ -34,7 +34,7 @@
       TYPE(t_kpts),INTENT(IN)      :: kpts 
       TYPE(t_cell),INTENT(INOUT)   :: cell 
       TYPE(t_stars),INTENT(IN)     :: stars 
-      TYPE(t_gfmpi),INTENT(IN)       :: mpi 
+      TYPE(t_gfmpi),INTENT(IN)       :: fmpi 
       TYPE(t_enpara),INTENT(INOUT) :: enpara 
 !Arguments for cdnstates
       LOGICAL,INTENT(IN)           :: l_noco
@@ -72,13 +72,13 @@
       !<-- Collect charge from different PEs                            
                                                                         
 #ifdef CPP_MPI                                                          
-      IF (mpi%isize/=1) THEN 
-         CALL gf_MPIcollect(rho(:,0:,:,jspin),qpw(:,jspin),qmtl,mpi     &
-     &        ,kpts%nkpts)                                              
+      IF (fmpi%fmpi%isize/=1) THEN
+         CALL juDFT_error("MPI charge collection (gf_MPIcollect) is not "//&
+     &        "yet ported",calledby="gf_gencdn")
       ENDIF 
 #endif                                                                  
                                       ! this PE does not have the       
-      IF (mpi%k_kpts(1) /= 1) RETURN 
+      IF (fmpi%k_kpts(1) /= 1) RETURN 
                                       ! correct layer-charge            
                                                                         
       !>                                                                
@@ -122,7 +122,7 @@
 
          if (jspin==1) CALL gf_wrtdop(GF_cdnfile,layer,jspins,                 &
      &           gfinp,atoms,stars,sphhar,                              &
-     &           rho,qpw,.FALSE.,mpi%self_subcom,.true.)  !write only valence charge to file
+     &           rho,qpw,.FALSE.,fmpi%self_subcom,.true.)  !write only valence charge to file
 
 
          inquire(file="gf_pot_fixedcore.hdf",exist=lexist)
@@ -145,7 +145,7 @@
 !                                                                       
       CALL priv_plotPlanar(stars,qpw) 
       IF (jspin==jspins.or.l_noco) THEN
-         CALL gf_cdntot(layer,mpi%fmpi,jspins,stars,cell,atoms,rho(:,0:,:,:) &
+         CALL gf_cdntot(layer,fmpi%fmpi,jspins,stars,cell,atoms,rho(:,0:,:,:) &
      &        ,qpw(:,:),qtot_el(layer),qtot_nuc(layer))                 
          !<-- generate gf_cdn.diff file for totalcharge mixing          
          IF (gfinp%l_totalmix.AND..NOT.lexist) THEN 
@@ -153,8 +153,8 @@
             rho = rho/qtot_el(layer) 
             CALL gf_wrtdop(GF_cdndifffile,layer,jspins,                 &
      &           gfinp,atoms,stars,sphhar,                              &
-     &           rho,qpw,.FALSE.,mpi%self_subcom)                       
-                                                  !no noco, mpi does not
+     &           rho,qpw,.FALSE.,fmpi%self_subcom)                       
+                                                  !no noco, fmpi does not
          ENDIF 
       ENDIF 
       END SUBROUTINE 

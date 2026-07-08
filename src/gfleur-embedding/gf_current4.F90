@@ -64,7 +64,7 @@
 
       SUBROUTINE gf_current4(                                           &
      &           layers,l_noco,en,nk,jspin,lapw,lapw_gf,                        &
-     &           bkpts,sym,cell,gfinp,mpi)
+     &           bkpts,sym,cell,gfinp,fmpi)
 !************************************************                       
 !     Calculate the current on the basis of                             
 !     the embedding potentials of the same planes.                      
@@ -82,7 +82,7 @@
                                                                         
       IMPLICIT NONE 
       TYPE(t_layers),INTENT(IN)::layers 
-      type(t_gfmpi),intent(in)   :: mpi
+      type(t_gfmpi),intent(in)   :: fmpi
       LOGICAL,INTENT(IN)       :: l_noco 
       INTEGER,INTENT(IN)::en 
       INTEGER,INTENT(IN)::nk 
@@ -102,19 +102,19 @@
       if (.not.new) THEN
          call gf_current4_old( &
      &           layers,l_noco,en,nk,jspin,lapw,lapw_gf,                        &
-     &           bkpts,sym,cell,gfinp,mpi)
+     &           bkpts,sym,cell,gfinp,fmpi)
          return
       endif
       !
       call gf_current4_new( &
      &           layers,l_noco,en,nk,jspin,lapw,lapw_gf,                        &
-     &           bkpts,sym,cell,gfinp,mpi)
+     &           bkpts,sym,cell,gfinp,fmpi)
 
       END subroutine gf_current4
 
       SUBROUTINE gf_current4_new(                                           &
      &           layers,l_noco,en,nk,jspin,lapw,lapw_gf,                        &
-     &           bkpts,sym,cell,gfinp,mpi)
+     &           bkpts,sym,cell,gfinp,fmpi)
 !************************************************
 !     Calculate the current on the basis of
 !     the embedding potentials of the same planes.
@@ -132,7 +132,7 @@
 
       IMPLICIT NONE
       TYPE(t_layers),INTENT(IN)::layers
-      type(t_gfmpi),intent(in)   :: mpi
+      type(t_gfmpi),intent(in)   :: fmpi
       LOGICAL,INTENT(IN)       :: l_noco
       INTEGER,INTENT(IN)::en
       INTEGER,INTENT(IN)::nk
@@ -168,14 +168,14 @@
              n = n+3
          ENDIF
       ENDDO
-      CALL writetrans(en,nk,jspin,bkpts,sym,cell,n,j,mpi)
+      CALL writetrans(en,nk,jspin,bkpts,sym,cell,n,j,fmpi)
 
       END SUBROUTINE gf_current4_new
 
 
       SUBROUTINE gf_current4_old(                                           &
      &           layers,l_noco,en,nk,jspin,lapw,lapw_gf,                        &
-     &           bkpts,sym,cell,gfinp,mpi)
+     &           bkpts,sym,cell,gfinp,fmpi)
 !************************************************
 !     Calculate the current on the basis of
 !     the embedding potentials of the same planes.
@@ -193,7 +193,7 @@
 
       IMPLICIT NONE
       TYPE(t_layers),INTENT(IN)::layers
-      type(t_gfmpi),intent(in)   :: mpi
+      type(t_gfmpi),intent(in)   :: fmpi
       LOGICAL,INTENT(IN)       :: l_noco
       INTEGER,INTENT(IN)::en
       INTEGER,INTENT(IN)::nk
@@ -223,7 +223,7 @@
          CALL gf_bardeen1plane(g1,g2,j(n+2:n+4))
          n = n+5
       ENDDO
-      CALL writetrans(en,nk,jspin,bkpts,sym,cell,n,j,mpi)
+      CALL writetrans(en,nk,jspin,bkpts,sym,cell,n,j,fmpi)
 
       END SUBROUTINE gf_current4_old
       !<-- S: gf_Landauer1Plane                                         

@@ -15,7 +15,7 @@
       !<--S: gf_CBS(nk,Nv2,En,                                          
                                                                         
       SUBROUTINE gf_CBS(layers,layer,nk,bk,En,jspin,gfinp,lapw,lapw_gf,         &
-     &     cell,T,mrot,mpi,T1,T2)                                       
+     &     cell,T,mrot,fmpi,T1,T2)                                       
 !********************************************************************** 
 !     * This SUBROUTINE takes the Transfer-Matrix and calculates        
 !     *the CBS by calculating Eigenvectors and Eigenvalues              
@@ -38,7 +38,7 @@
       INTEGER, INTENT(IN)       :: mrot(:,:,:) 
       TYPE(t_lapw),INTENT(IN)   :: lapw 
       TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
-      TYPE(t_gfmpi)               :: mpi 
+      TYPE(t_gfmpi)               :: fmpi 
       TYPE(t_cell),INTENT(IN)   :: cell 
       TYPE(t_embinp), INTENT(IN) :: gfinp 
       COMPLEX, INTENT(INOUT)    :: T(2*lapw_gf%nv2_tot,2*lapw_gf%nv2_tot) 
@@ -89,7 +89,7 @@
 !      enddo                                                            
       !>                                                                
       CALL timestart("CBS:current")
-      CALL priv_current(en,nk,mpi,lapw,lapw_gf,gfinp,ew,ev,curr)
+      CALL priv_current(en,nk,fmpi,lapw,lapw_gf,gfinp,ew,ev,curr)
       CALL timestop("CBS:current")
                                                                         
                                                                         
@@ -173,7 +173,7 @@
       !set crit. for second complex :: line                             
       IF (gfinp%CBS_bz>0) bz=gfinp%CBS_bz 
       if (.not.gfinp%l_hdfio) THEN
-               CALL outCBS(mpi,nk,en,lapw_gf%nv2_tot,ew(:,2),bz,bk,syms,curr,spinp,logderiv)
+               CALL outCBS(fmpi,nk,en,lapw_gf%nv2_tot,ew(:,2),bz,bk,syms,curr,spinp,logderiv)
       else
                CALL outCBS_HDF(nk,en,jspin,ew(:,2),syms,curr,spinp)
       endif
@@ -183,7 +183,7 @@
                                                                         
       !<-- check symmetry of Eigenvalues                                
                                                                         
-      IF (mpi%pe0) THEN 
+      IF (fmpi%pe0) THEN 
          WRITE(6,'(a,e10.5,a,e10.5,a,f10.5)') 'CBS-eigenvalues max:'    &
      &        ,MAXVAL(ABS(ew(:,1))),'min:',MINVAL(ABS(ew(:,1)))         &
      &        ,'Product:',ABS(ew(MINLOC(ABS(ew(:,1))),1)                &
@@ -196,7 +196,7 @@
       CALL timestart("CBS:gen of Sigma")
       INQUIRE(FILE='noembtest',EXIST=l_noembtest) 
       IF(.NOT.l_noembtest)THEN 
-       CALL gf_generateEmbPot(en,nk,jspin,mpi%pe0,ev,ew(:,2),T1         &
+       CALL gf_generateEmbPot(en,nk,jspin,fmpi%pe0,ev,ew(:,2),T1         &
      &     ,T2,curr,lapw,lapw_gf,gfinp,layer)                                   
       ENDIF 
       CALL timestop("CBS:gen of Sigma")
@@ -208,8 +208,8 @@
                                                                         
       !>                                                                
                                                                         
-      !<-- S:priv_current(mpi,lapw,gfinp,ew,ev,curr)                    
-      recursive SUBROUTINE priv_current(en,nk,mpi,lapw,lapw_gf,gfinp,ew,ev,curr,eps_non_bloch_in)
+      !<-- S:priv_current(fmpi,lapw,gfinp,ew,ev,curr)                    
+      recursive SUBROUTINE priv_current(en,nk,fmpi,lapw,lapw_gf,gfinp,ew,ev,curr,eps_non_bloch_in)
 !-----------------------------------------------                        
 !                                                                       
 !           (last modified:09-10-19) D. Wortmann                        
@@ -220,7 +220,7 @@
       IMPLICIT NONE 
       !<--Arguments                                                     
       INTEGER,INTENT(IN)       :: en,nk 
-      TYPE(t_gfmpi),INTENT(IN)   :: mpi 
+      TYPE(t_gfmpi),INTENT(IN)   :: fmpi 
       TYPE(t_lapw),INTENT(IN ) :: lapw 
       TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
       TYPE(t_embinp),INTENT(IN) :: gfinp 
@@ -270,7 +270,7 @@
             n_evanescent=n_evanescent+1
             IF  (ABS(ew(n,1))>1) n_decay=n_decay+1
             IF (( ABS(curr(n))>gfinp%eps_current .AND.                  &
-     &           AIMAG(gf_Z(en,0))<1E-10).AND.mpi%pe0) THEN             
+     &           AIMAG(gf_Z(en,0))<1E-10).AND.fmpi%pe0) THEN             
                WRITE(oUnit,*)'WARNING! Evanescent with current detected!' 
                WRITE (6,*) '|Lambda|=', ABS(ew(n,1)) 
                WRITE (6,*) 'curr    =', curr(n) 
@@ -294,7 +294,7 @@
                 write(oUnit,*) "Decomposition of States failed,retry with smaller eps_non_bloch:",eps_non_bloch/2.0
                 write(oUnit,*) "Bloch states:",n_bloch," 'in':",n_blochin
                 write(oUnit,*) "Evanescent:",n_evanescent," decaying:",n_decay
-                call priv_current(en,nk,mpi,lapw,lapw_gf,gfinp,ew,ev,curr,eps_non_bloch/2.0)
+                call priv_current(en,nk,fmpi,lapw,lapw_gf,gfinp,ew,ev,curr,eps_non_bloch/2.0)
                 return
          endif
          if (eps_non_bloch<gfinp%eps_non_bloch*1000) then
@@ -302,7 +302,7 @@
                 write(oUnit,*) "Decomposition of States failed,retry with larger eps_non_bloch:",eps_non_bloch*2.0
                 write(oUnit,*) "Bloch states:",n_bloch," 'in':",n_blochin
                 write(oUnit,*) "Evanescent:",n_evanescent," decaying:",n_decay
-                call priv_current(en,nk,mpi,lapw,lapw_gf,gfinp,ew,ev,curr,eps_non_bloch*2.0)
+                call priv_current(en,nk,fmpi,lapw,lapw_gf,gfinp,ew,ev,curr,eps_non_bloch*2.0)
                 return
          endif
          if (n_blochin*2.ne.n_bloch) THEN
@@ -339,7 +339,7 @@
 
 
       SUBROUTINE outCBS_HDF(nk,en,jspin,ew,syms,curr,spinp)
-      !<-- S: outCBS(mpi,nk,en,lapw_gf%nv2_tot,ew,bz,bk,syms)              
+      !<-- S: outCBS(fmpi,nk,en,lapw_gf%nv2_tot,ew,bz,bk,syms)              
       USE m_hdf_tools,ONLY:io_WRITE
       USE m_hdf_accessprp
       IMPLICIT NONE
@@ -409,7 +409,7 @@
       CLOSE(93)
 #endif
       END subroutine
-      SUBROUTINE outCBS(mpi,nk,en,nv2,ew,bz,bk_in,syms,curr_in,spinp_in,logderiv_in)
+      SUBROUTINE outCBS(fmpi,nk,en,nv2,ew,bz,bk_in,syms,curr_in,spinp_in,logderiv_in)
 !*****************************************************************      
 !     This SUBROUTINE writes the CBS into formated files                
 !     the DATA is written in the following FORMAT:                      
@@ -423,7 +423,7 @@
       IMPLICIT NONE 
       !<--Arguments                                                     
       INTEGER,INTENT(IN)    :: nv2,nk,en 
-      TYPE(t_gfmpi),INTENT(IN) :: mpi 
+      TYPE(t_gfmpi),INTENT(IN) :: fmpi 
       REAL,INTENT(IN)       ::bz,bk_in(2) 
       INTEGER,INTENT(IN)    ::syms(:,:) 
       COMPLEX,INTENT(IN)    ::ew(:) 
@@ -442,8 +442,8 @@
       !>                                                                
       !<-- some MPI Stuff                                               
 #ifdef CPP_MPI                                                          
-#include"cpp_double.h"                                                  
-      INCLUDE 'mpif.h' 
+!#include"cpp_double.h"  ! removed (obsolete in modern FLEUR)                                                  
+!      INCLUDE 'mpif.h'   ! removed: fmpi module use-associated via module chain
       INTEGER::rank 
                                     !MPI error+status                   
       INTEGER::e,s(MPI_STATUS_SIZE) 
@@ -464,7 +464,7 @@
       !>                                                                
                                                                         
 #ifdef CPP_MPI                                                          
-      IF (mpi%irank/=0) THEN 
+      IF (fmpi%fmpi%irank/=0) THEN 
          !<--Send data to PE=0                                          
          CALL MPI_SEND(nkp, 1, MPI_INTEGER, 0, 1,MPI_COMM_WORLD, E) 
          CALL MPI_SEND(zz,1,MPI_DOUBLE_COMPLEX,0,2,MPI_COMM_WORLD,E) 
@@ -483,7 +483,7 @@
      &        MPI_COMM_WORLD, E)                                        
          !>                                                             
       ELSE 
-         DO rank=0,mpi%isize-1 
+         DO rank=0,fmpi%fmpi%isize-1 
             !<--On PE0 recieve Data                                     
             IF (rank/=0) THEN 
                CALL MPI_RECV(nkp,1,MPI_INTEGER,rank,1,                  &

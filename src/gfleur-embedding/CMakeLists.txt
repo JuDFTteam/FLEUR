@@ -111,13 +111,9 @@ src/gfleur-embedding/gf_iotmat.F90
 src/gfleur-embedding/gf_writetrans.F90
 src/gfleur-embedding/gf_enpara.F90
 src/gfleur-embedding/gf_iogfinp.F90
+src/gfleur-embedding/gf_vgen.F90
+src/gfleur-embedding/gf_mix.F90
+src/gfleur-embedding/gf_gfleur_basic.F90
+src/gfleur-embedding/gf_gfleur_propagate.F90
+src/gfleur-embedding/gf_gfleur_compose.F90
 )
-
-#--- not yet ported ------------------------------------------------------
-#src/gfleur-embedding/gf_gfleur_compose.F90
-#src/gfleur-embedding/gf_gfleur_propagate.F90
-#src/gfleur-embedding/gf_gfleur_basic.F90
-#src/gfleur-embedding/gf_mix.F90
-#src/gfleur-embedding/fleur_interface.F90
-#src/gfleur-embedding/gf_vgen.F90
-#src/gfleur-embedding/gfleur.F90

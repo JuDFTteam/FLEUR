@@ -1,6 +1,6 @@
 !--------------------------------------------------------------------------------
 ! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
-! This file is part of FLEUR and available as free software under the conditions 
+! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_gf_gfleur_compose
@@ -8,8 +8,8 @@ MODULE m_gf_gfleur_compose
     IMPLICIT NONE
 CONTAINS
     SUBROUTINE gf_gfleur_compose(layer,noco,gfinp,layers,nk,          &
-    jspin,sym,cell,mpi,lapw,lapw_gf,                  &
-    kpts,pot_aux,charge,                      &
+    jspin,sym,cell,fmpi,lapw,lapw_gf,                  &
+    kpts,pot_aux,charge,qmtl_new,                     &
     atoms,stars,sphhar,vr,enpara)
         !****************************************************
         !     num_layers>1 => calculate the properties of the
@@ -46,11 +46,12 @@ CONTAINS
         INTEGER,INTENT(IN)::jspin
         TYPE(t_sym),INTENT(IN)::sym
         TYPE(t_cell),INTENT(IN)::cell
-        TYPE(t_mpi),INTENT(IN)::mpi
+        TYPE(t_gfmpi),INTENT(IN)::fmpi
         TYPE(t_lapw),INTENT(INOUT)::lapw
-      TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
+        TYPE(t_lapw_gf),INTENT(INOUT) :: lapw_gf
         COMPLEX,INTENT(IN)::pot_aux(2,2)
         TYPE(t_potden),INTENT(INOUT)::charge
+        REAL,INTENT(INOUT)          :: qmtl_new(0:,:)
         TYPE(t_atoms),INTENT(IN)    :: atoms
         TYPE(t_sphhar),INTENT(IN)   :: sphhar
         TYPE(t_stars),INTENT(IN)    :: stars
@@ -67,7 +68,7 @@ CONTAINS
         COMPLEX,ALLOCATABLE::embpot_right(:,:)
         INTEGER en,ab_spin
         LOGICAL first_g
-                                                                        
+
         first_g=.TRUE.
 
         ab_spin=1
@@ -86,30 +87,25 @@ CONTAINS
             IF(gfinp%l_spectral)THEN
                 CALL timestart("gf_get_spectrum_sph")
                 CALL gf_spectrum_clean()
-                CALL gf_get_spectrum(layer,jspin,gfinp,cell,lapw,.FALSE.,      &
+                CALL gf_get_spectrum(layer,jspin,gfinp,cell,lapw,lapw_gf,.FALSE.,      &
                 gfinp%l_fullgreen,gfinp%l_nogno,gfinp%l_nohelpregion,     &
                 .false.,nk,.true.)
-                !CALL gf_read_spectrum(layer,nk)
-                !lapw%nmat=lapw_gf%nmat_sphere
-                !lapw%nv=lapw_gf%nv_sphere
-                !lapw%nv_tot=lapw_gf%nv_tot_sphere
                 CALL timestop("gf_get_spectrum_sph")
-
-            ENDIF 
+            ENDIF
             g_sum=cmplx(0.0,0.0)
         ENDIF
         IF (gfinp%l_dos.or.gfinp%l_charge) THEN
             CALL timestart("gf_ab_coef")
             CALL gf_ab_coef_calc(noco%l_noco,jspin,kpts%bk(:,nk),sym                        &
             ,enpara%el0,vr(:,0,:,:),atoms,cell         &
-            ,lapw)
+            ,lapw,lapw_gf)
             CALL timestop("gf_ab_coef")
         ENDIF
         DO en=1,gf_noen()
             IF(gfinp%l_gmat)THEN
                 IF(layers%num_layers==1 .OR. gfinp%l_charge.or.gfinp%l_dos)THEN
                     CALL gf_GFCN(.FALSE.,layer,en,nk,jspin,cell,              &
-                    lapw,gfinp                                 &
+                    lapw,lapw_gf,gfinp                              &
                     ,noco%l_noco,sym%invs,gfinp%l_charge.or.gfinp%l_dos,g,gij)
                     IF(gfinp%l_charge)THEN
                         g_sum = g_sum+gf_weightz(en)*g
@@ -118,14 +114,14 @@ CONTAINS
                     IF (gfinp%l_dos) THEN
                         IF (gfinp%l_nogno) THEN
                         CALL timestart("gf_nognofinalize_single")
-                        CALL gf_nognofinalize(g,layer,lapw,en)
+                        CALL gf_nognofinalize(g,layer,lapw,lapw_gf,en)
                         CALL timestop("gf_nognofinalize_single")
                         endif
                         CALL timestart("gf_dos_mt")
                         CALL gf_dos_mt(layer,atoms,gfinp,                     &
-                        g,sym,en,jspin,kpts%weight(nk),nk,noco%l_noco,lapw)
+                        g,sym,en,jspin,kpts%wtkpt(nk),nk,noco%l_noco,lapw,lapw_gf)
                         IF (gfinp%l_intdos)  CALL gf_dos_INT(gfinp,layer      &
-                        ,mpi,lapw,stars,jspin,cell%omtil,G,kpts%weight(nk&
+                        ,fmpi,lapw,lapw_gf,stars,jspin,cell%omtil,G,kpts%wtkpt(nk&
                         ),en,nk,noco%l_noco)
                         CALL timestop("gf_dos_mt")
                     ENDIF
@@ -139,35 +135,35 @@ CONTAINS
                     ALLOCATE( tmat(2*lapw_gf%nv2_tot,2*lapw_gf%nv2_tot) )
                     CALL gf_read_tmat(                                       &
                     layers,lapw_gf%nv2_tot,en,nk,jspin,        &
-                    lapw,                                   &
+                    lapw_gf,                                &
                     tmat)
                     CALL gf_gmatfromtmat(                                    &
-                    lapw_gf%nv2_tot,en,nk,jspin,lapw,                        &
+                    lapw_gf%nv2_tot,en,nk,jspin,lapw,lapw_gf,               &
                     .TRUE.,cell,                                          &
                     gij(:,:,1),                                           &
                     tmat)
                     DEALLOCATE( tmat )
                 ENDIF
                 CALL gf_landauer(lapw_gf%nv2_tot,en,nk,jspin,cell              &
-                ,sym,lapw,kpts%bk,gij(:,:,1),mpi)
+                ,sym,lapw,lapw_gf,kpts%bk,gij(:,:,1),fmpi)
             ENDIF
             IF (gfinp%curr ==1)THEN
                 CALL gf_propaembcurr(layers,lapw_gf%nv2_tot,en,nk,jspin,       &
-                lapw,kpts%bk,sym,cell,mpi)
+                lapw,lapw_gf,kpts%bk,sym,cell,fmpi)
             ENDIF
             IF (gfinp%curr ==2)THEN
                 CALL gf_propaembcurr2(layers,lapw_gf%nv2_tot,en,nk,jspin,      &
-                lapw,kpts%bk,sym,cell,mpi)
+                lapw,lapw_gf,kpts%bk,sym,cell,fmpi)
             ENDIF
             IF (gfinp%curr ==3)THEN
                 CALL gf_propaembcurr3(layers,                               &
                 lapw_gf%nv2_tot,en,nk,jspin,              &
-                lapw,kpts%bk,sym,cell,gfinp,mpi)
+                lapw,lapw_gf,kpts%bk,sym,cell,gfinp,fmpi)
             ENDIF
             IF (gfinp%curr==4) THEN
                 CALL gf_current4 (layers,                                   &
                 noco%l_noco,en,nk,jspin,                  &
-                lapw,kpts%bk,sym,cell,gfinp,mpi)
+                lapw,lapw_gf,kpts%bk,sym,cell,gfinp,fmpi)
             ENDIF
             IF (gfinp%curr /= 0)  CALL timestop("current(misc)")
             IF ( gfinp%l_tmat ) THEN
@@ -175,10 +171,10 @@ CONTAINS
                 IF (pot_aux(1,jspin) /= pot_aux(2,jspin)) CALL               &
                 juDFT_error                                                  &
                 ("Cannot treat different aux_potentials")
-                                                                        
+
                 CALL gf_tmat(layer,                                          &
                 (layers%num_layers>1),layers,en,nk,jspin,sym,cell,      &
-                mpi,lapw,kpts%bk,gfinp,pot_aux(1,jspin),gij,dgij)
+                fmpi,lapw,lapw_gf,kpts%bk,gfinp,pot_aux(1,jspin),gij,dgij)
                 CALL timestop("gf_tmat")
             ENDIF
 
@@ -187,21 +183,21 @@ CONTAINS
         IF(gfinp%l_charge)THEN
             IF (gfinp%l_nogno) THEN
                 CALL timestart("gf_nognofinalize")
-                CALL gf_nognofinalize(g_sum,layer,lapw)
+                CALL gf_nognofinalize(g_sum,layer,lapw,lapw_gf)
                 CALL timestop("gf_nognofinalize")
             ENDIF
-            CALL timestart("gf_cdnskval") 
-            CALL gf_cdnskval(noco%l_noco,                                           &
-            lapw,jspin,nk,                                        &
+            CALL timestart("gf_cdnskval")
+            CALL gf_cdnskval(noco%l_noco,fmpi%fmpi,                            &
+            lapw,lapw_gf,jspin,nk,                                &
             MAXVAL(sym%ntypsy),enpara,vr(:,0,:,:),              &
             G_sum,atoms,stars,sphhar,                             &
             cell,sym,kpts,                                &
             charge%pw(:,:),                                  &
             charge%mt(:,0:,:,:),                             &
-            charge%qmtl_new(:,:))
+            qmtl_new(:,:))
 
-            CALL timestop("gf_cdnskval") 
-            DEALLOCATE(g_sum) 
+            CALL timestop("gf_cdnskval")
+            DEALLOCATE(g_sum)
         ENDIF
         call gf_ab_coef_delete()
     END SUBROUTINE gf_gfleur_compose

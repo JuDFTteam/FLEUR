@@ -8,7 +8,7 @@
       CONTAINS 
       SUBROUTINE gf_tmat_layers(                                        &
      &                  layer,layers,en,nk,jspin,                       &
-     &                  mpi,lapw,lapw_gf,gfinp,pot_aux,gij,                     &
+     &                  fmpi,lapw,lapw_gf,gfinp,pot_aux,gij,                     &
      &                  tmat)                                           
 !********************************************************************** 
 !     Support for dividing the system into subsystems ("layers"):       
@@ -27,7 +27,7 @@
       INTEGER,      INTENT(IN)             :: layer 
       TYPE(t_layers),INTENT(IN)            :: layers 
       INTEGER,      INTENT(IN)             :: nk,en,jspin 
-      TYPE(t_gfmpi),  INTENT(IN)             :: mpi 
+      TYPE(t_gfmpi),  INTENT(IN)             :: fmpi 
       TYPE(t_embinp),INTENT(IN)             :: gfinp 
       TYPE(t_lapw), INTENT(IN)             :: lapw 
       TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
@@ -62,10 +62,10 @@
       DEALLOCATE( t1 ) 
       END SUBROUTINE gf_tmat_layers 
                                                                         
-      !<-- S:GF_TMAT(en,nk,jspin,sym,cell,mpi,kp,bk,gfinp,gij,dgij)     
+      !<-- S:GF_TMAT(en,nk,jspin,sym,cell,fmpi,kp,bk,gfinp,gij,dgij)     
       SUBROUTINE GF_TMAT(                                               &
      &     layer,l_layers,layers,en,nk,jspin,sym,cell,                  &
-     &     mpi,lapw,lapw_gf,bk,gfinp,pot_aux,                                   &
+     &     fmpi,lapw,lapw_gf,bk,gfinp,pot_aux,                                   &
      &     gij,dgij,on_the_fly)                                         
 !********************************************************************** 
 !     This subroutine is called for all t-matrix related calculations   
@@ -106,7 +106,7 @@
       TYPE(t_layers),INTENT(IN):: layers 
       INTEGER,      INTENT(IN) :: nk,en,jspin 
       REAL,         INTENT(IN) :: bk(:,:) 
-      TYPE(t_gfmpi),  INTENT(IN) :: mpi 
+      TYPE(t_gfmpi),  INTENT(IN) :: fmpi 
       TYPE(t_embinp),INTENT(IN) :: gfinp 
       TYPE(t_lapw),INTENT(IN)  :: lapw 
       TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
@@ -185,12 +185,12 @@
       CALL timestart("gf_CBS")
       IF ( gfinp%l_cbs) THEN 
          CALL gf_CBS(layers,0,nk,bk(:2,nk),en,jspin,gfinp,lapw,lapw_gf, &
-     &        cell, t(:,:),sym%mrot,mpi,TR(:,:,1),TR(:,:,2))            
+     &        cell, t(:,:),sym%mrot,fmpi,TR(:,:,1),TR(:,:,2))            
       ELSE 
          IF (PRESENT(on_the_fly)) THEN 
             IF (on_the_fly)                                             &
      &           CALL gf_CBS(layers,layer,nk,bk(:2,nk),en,jspin,gfinp   &
-     &           ,lapw,lapw_gf,cell, t(:,:),sym%mrot,mpi,TR(:,:,1),TR(:,:,2))   
+     &           ,lapw,lapw_gf,cell, t(:,:),sym%mrot,fmpi,TR(:,:,1),TR(:,:,2))   
          ENDIF 
       ENDIF 
       CALL timestop("gf_CBS")
@@ -199,7 +199,7 @@
       !<-- Do a wavefunction matching using the T-matrix                
       IF (gfinp%curr ==-2) THEN 
          CALL gf_wave_match(lapw_gf%nv2_tot,en,nk,jspin,sym,cell,lapw,   &
-     &        lapw_gf,Tr(:,:,1),gfinp,bk,3,mpi)
+     &        lapw_gf,Tr(:,:,1),gfinp,bk,3,fmpi)
       ENDIF 
       !>                                                                
                                                                         

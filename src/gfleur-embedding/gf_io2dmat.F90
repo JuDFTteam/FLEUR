@@ -779,9 +779,12 @@
 !     All hdf-files are closed, the arrays are not deallocated so this  
 !     will not allow to OPEN the files again                            
 !********************************************************************** 
-      IMPLICIT NONE 
-      INTEGER :: i,hdferr 
-      DO i = 1,size(iofile) 
+      IMPLICIT NONE
+      INTEGER :: i,hdferr
+      !io2dmat_init returns early (and leaves iofile unallocated) when no
+      !gf_io file / no io-handles are present - nothing to close then
+      IF (.NOT.ALLOCATED(iofile)) RETURN
+      DO i = 1,size(iofile)
          IF (iofile(i)%no_hdf) THEN 
             CLOSE(iofile(i)%fid) 
          ELSE 

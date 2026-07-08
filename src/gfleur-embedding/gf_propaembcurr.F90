@@ -8,7 +8,7 @@
       CONTAINS 
       SUBROUTINE gf_propaembcurr(                                       &
      &           layers,nv2,en,nk,jspin,lapw,lapw_gf,                           &
-     &           bkpts,sym,cell,mpi)
+     &           bkpts,sym,cell,fmpi)
 !************************************************                       
 !     Calculate the current by propagating the                          
 !     embedding potentials to the planes by which                       
@@ -22,7 +22,7 @@
                                                                         
       IMPLICIT NONE 
       TYPE(t_layers),INTENT(IN)::layers 
-      type(t_gfmpi),intent(in)::mpi
+      type(t_gfmpi),intent(in)::fmpi
 
       INTEGER,INTENT(IN)::nv2 
       INTEGER,INTENT(IN)::en 
@@ -55,12 +55,12 @@
       CALL gf_propaemb(.FALSE.,nv2,embpot_in,tmat,embpot_out) 
       embpot_out=-embpot_out 
       CALL gf_landauer1plane(en,nk,jspin,bkpts,sym,cell,                &
-     &                        nv2,embpot_out,g2,mpi)
+     &                        nv2,embpot_out,g2,fmpi)
                                                                         
       DEALLOCATE( tmat ) 
       END SUBROUTINE gf_propaembcurr 
                                                                         
-      SUBROUTINE gf_Landauer1Plane(en,nk,jspin,bkpts,sym,cell,nv2,g1,g2,mpi)
+      SUBROUTINE gf_Landauer1Plane(en,nk,jspin,bkpts,sym,cell,nv2,g1,g2,fmpi)
 !c********************************************************************* 
 !c     subroutine to calculate the current from two embedding           
 !c     potentials on the same plane                                     
@@ -71,7 +71,7 @@
       USE m_gf_math 
       USE m_gf_types 
       IMPLICIT NONE
-      type(t_gfmpi),intent(in)::mpi
+      type(t_gfmpi),intent(in)::fmpi
 
       INTEGER,INTENT(IN)  :: en 
       INTEGER,INTENT(IN)  :: nk 
@@ -100,7 +100,7 @@
                                                                         
       j1(1)=-2.*REAL(trace(A-B)) 
                                                                         
-      CALL writetrans(en,nk,jspin,bkpts,sym,cell,3,j1,mpi)
+      CALL writetrans(en,nk,jspin,bkpts,sym,cell,3,j1,fmpi)
                                                                         
                                                                         
       END SUBROUTINE gf_landauer1plane 

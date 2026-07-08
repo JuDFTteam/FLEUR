@@ -92,24 +92,24 @@ Module m_gf_vacuum_hs
       enddo
 	endif
 	!No broadcasting needed as all PE do the vacuum
-	!call priv_mpi_bcast_HS(mpi,jspins)
+	!call priv_mpi_bcast_HS(fmpi,jspins)
 
 	end subroutine
 
-	subroutine priv_mpi_bcast_HS(mpi,jspins)
+	subroutine priv_mpi_bcast_HS(fmpi,jspins)
 	! subroutine to distribute diagonalized vacuum Hamiltonian on all PE
 	use m_gf_types
 	implicit none
-	type(t_mpi),intent(in)::mpi
+	type(t_mpi),intent(in)::fmpi
 	integer,intent(in)    ::jspins
 #ifdef CPP_MPI
-	integer:: nv2,ierr(3)
+	integer:: nv2,ierr
 
-	if (mpi%pe0) then
+	if (fmpi%irank==0) then
 	   nv2=size(uz,1)
 	endif
 	call MPI_BCAST(nv2,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-    if (.not.mpi%pe0) then
+    if (fmpi%irank/=0) then
        if (allocated(h_mat)) then
     	deallocate(h_mat,eigval,uz,duz,udz,dudz,ddnv)
        endif

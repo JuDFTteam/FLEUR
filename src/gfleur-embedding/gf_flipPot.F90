@@ -16,7 +16,7 @@
       CONTAINS 
       !<-- S: gf_flipPot(jspins,atoms,stars,sphhar,enpara,l_noco)       
       SUBROUTINE gf_flipPot(jspins,atoms,stars,sphhar,enpara,gfinp      &
-     &     ,noco,mpi)
+     &     ,noco,fmpi)
 !-----------------------------------------------                        
 !           (last modified: 04-08-17) D. Wortmann                       
 !-----------------------------------------------                        
@@ -33,7 +33,7 @@
       TYPE(t_sphhar),INTENT(IN)     :: sphhar 
       TYPE(t_enpara),INTENT(INOUT)  :: enpara 
       TYPE(t_embinp),INTENT(IN)      :: gfinp 
-      TYPE(t_gfmpi),INTENT(IN)        :: mpi 
+      TYPE(t_gfmpi),INTENT(IN)        :: fmpi 
       TYPE(t_noco),INTENT(IN)       :: noco
                                                                         
       !>                                                                
@@ -57,7 +57,7 @@
       CALL local_flip(atoms,stars,vpw,vr) 
       CALL gf_wrtdop(GF_POTFILE,layer,jspins,                           &
      &     gfinp,atoms,stars,sphhar,                                    &
-     &     vr,vpw,noco%l_noco,mpi%self_subcom)
+     &     vr,vpw,noco%l_noco,fmpi%self_subcom)
                                                                         
       !>                                                                
       !<-- The charge                                                   
@@ -69,7 +69,7 @@
          CALL local_flip(atoms,stars,vpw,vr) 
          CALL gf_wrtdop(GF_CDNFILE,jspins,layer,                        &
      &        gfinp,atoms,stars,sphhar,                                 &
-     &        vr,vpw,noco%l_noco,mpi%self_subcom)
+     &        vr,vpw,noco%l_noco,fmpi%self_subcom)
       ENDIF 
                                                                         
       !>                                                                

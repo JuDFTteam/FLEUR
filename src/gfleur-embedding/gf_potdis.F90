@@ -9,7 +9,7 @@
           public gf_potdis
       CONTAINS 
       SUBROUTINE gf_potdis(                                             &
-     &                 jspins,atoms,stars,sphhar,mpi,sym,               &
+     &                 jspins,atoms,stars,sphhar,fmpi,sym,               &
      &                 cell,c_layer,l_pot,layer,distance,volume,enpara)
 !*****************************************************************      
 !     DESC:READ's in the old and new potential/charge-density and       
@@ -32,7 +32,7 @@
       !height of the physical region of the layer (was cell%c)
       REAL,INTENT(IN)           :: c_layer
       TYPE(t_sphhar),INTENT(IN) :: sphhar 
-      TYPE(t_mpi),INTENT(IN)    :: mpi 
+      TYPE(t_mpi),INTENT(IN)    :: fmpi 
       TYPE(t_sym),INTENT(IN)    :: sym 
       INTEGER,INTENT(IN)        :: jspins 
       LOGICAL,INTENT(IN)        :: l_pot 

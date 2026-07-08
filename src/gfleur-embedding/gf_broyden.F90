@@ -23,7 +23,7 @@ MODULE m_gf_broyden
 !     fm1   : output minus inputcharge density of iteration m-1         
 !################################################################       
 CONTAINS
-    SUBROUTINE gf_broyden(filename,l_potmix,l_surface,mpi,                      &
+    SUBROUTINE gf_broyden(filename,l_potmix,l_surface,fmpi,                      &
         &     imix,maxiter,alpha,fm,stars,atoms,sphhar,cell,sym,jspins     &
         &     ,num_layers,sm)
         USE m_gf_metric
@@ -41,7 +41,7 @@ CONTAINS
         TYPE(t_sphhar),INTENT(IN)  :: sphhar(:)
         TYPE(t_cell),INTENT(IN)    :: cell(:)
         TYPE(t_sym),INTENT(IN)     :: sym(:)
-        TYPE(t_gfmpi),INTENT(IN)     :: mpi
+        TYPE(t_gfmpi),INTENT(IN)     :: fmpi
         INTEGER,INTENT(IN)         :: jspins,num_layers
                                                                         
         !     .. Array Arguments ..
@@ -109,7 +109,7 @@ CONTAINS
         REWIND 57
         nit = mit +1
         IF (nit > maxiter+1) nit = 1
-        IF (mpi%pe0) WRITE (57) nit,alpha,fm,sm
+        IF (fmpi%pe0) WRITE (57) nit,alpha,fm,sm
         !
         IF (mit==1) THEN
             !
@@ -141,7 +141,7 @@ CONTAINS
                 !
                 !     convolute drho(m) with the metric: |fm1> = w|sm1>
                 !
-                fm1 = gf_apply_metric(l_surface,l_potmix,mpi,stars,atoms,cell,sphhar   &
+                fm1 = gf_apply_metric(l_surface,l_potmix,fmpi,stars,atoms,cell,sphhar   &
                     &          ,sym,jspins,num_layers,sm1)
                 !
                 !     calculate the norm of sm1 : <sm1|w|sm1>
@@ -176,7 +176,7 @@ CONTAINS
                 !
                 !     --> multiply fm1 with metric matrix and store in vm:  w |fm1>
                 !
-                vm = gf_apply_metric(l_surface,l_potmix,mpi,stars,atoms,cell,sphhar   &
+                vm = gf_apply_metric(l_surface,l_potmix,fmpi,stars,atoms,cell,sphhar   &
                     &           ,sym,jspins,num_layers,fm1)
                                                                         
                 !
@@ -194,7 +194,7 @@ CONTAINS
                 !
                 !     calculate vm = alpha*wfm1 -\sum <fm1|w|vi> <fi1|w|vi><vi|
                 !     convolute fm1 with the metrik and store in vm
-                vm = gf_apply_metric(l_surface,l_potmix,mpi,stars,atoms,cell,sphhar   &
+                vm = gf_apply_metric(l_surface,l_potmix,fmpi,stars,atoms,cell,sphhar   &
                     &           ,sym,jspins,num_layers,fm1)
                 !
                 DO it = 2,iread
@@ -221,7 +221,7 @@ CONTAINS
             IF (mit>maxiter+1) THEN
                 npos = MOD(mit-2,maxiter)+1
             ENDIF
-            IF (mpi%pe0) WRITE (59,REC = npos) (um(i),i = 1,nmap),(vm(i),i &
+            IF (fmpi%pe0) WRITE (59,REC = npos) (um(i),i = 1,nmap),(vm(i),i &
                 &        = 1,nmap),dfivi
             !
             !     update rho(m+1)

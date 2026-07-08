@@ -46,7 +46,7 @@ CONTAINS
         COMPLEX                  :: work_d(1)
         logical                  :: l_pe0=.true.
 #ifdef CPP_MPI
-      include 'mpif.h'
+!      include 'mpif.h'   ! removed: mpi module use-associated via module chain
       integer  :: irank,ierr
 
       call MPI_COMM_RANK (MPI_COMM_WORLD,irank,ierr)
@@ -190,7 +190,7 @@ SUBROUTINE gf_calcspectrum_simple(layer,lapw,lapw_gf,jspin,l_sph)
         COMPLEX                  :: work_d(1)
         logical                  :: l_pe0=.true.
 #ifdef CPP_MPI
-      include 'mpif.h'
+!      include 'mpif.h'   ! removed: mpi module use-associated via module chain
       integer  :: irank,ierr
 
       call MPI_COMM_RANK (MPI_COMM_WORLD,irank,ierr)

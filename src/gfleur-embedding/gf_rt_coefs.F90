@@ -17,7 +17,7 @@
       !<-- S: gf_wave_match                                             
                                                                         
       SUBROUTINE gf_wave_match(Nv2,en,nk,jspin,sym,cell,lapw,lapw_gf,matrix     &
-     &     ,gfinp,bk,mode,mpi)
+     &     ,gfinp,bk,mode,fmpi)
 !********************************************************************** 
 !     * This SUBROUTINE calculates the current through a INTERFACE      
 !     * The CBS of the two bulks has to be given                        
@@ -36,7 +36,7 @@
       INTEGER,      INTENT(IN) :: Nv2, jspin 
                                        !for output                      
       INTEGER,      INTENT(IN):: en,nk 
-      TYPE(t_gfmpi),intent(in)::mpi
+      TYPE(t_gfmpi),intent(in)::fmpi
 
       TYPE(t_sym),INTENT(IN)  :: sym 
       TYPE(t_cell),INTENT(IN) :: cell 
@@ -135,7 +135,7 @@
       ENDDO 
       !>                                                                
       j_refl = n_ins-j_refl 
-      IF (n_ins>0)    CALL writetrans(en,nk,jspin,bk,sym,cell,2,(/j_trans,j_refl,1.*n_ins,1.*n_trans,1.*n_ref/),mpi)
+      IF (n_ins>0)    CALL writetrans(en,nk,jspin,bk,sym,cell,2,(/j_trans,j_refl,1.*n_ins,1.*n_trans,1.*n_ref/),fmpi)
                                                                         
       END SUBROUTINE 
       !>                                                                

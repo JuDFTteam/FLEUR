@@ -6,7 +6,7 @@
       MODULE m_gf_landauer 
           IMPLICIT NONE
       CONTAINS 
-      SUBROUTINE gf_landauer(nv2,en,nk,jspin,cell,sym,lapw,lapw_gf,bkpts,gij,mpi)
+      SUBROUTINE gf_landauer(nv2,en,nk,jspin,cell,sym,lapw,lapw_gf,bkpts,gij,fmpi)
 !*********************************************************************  
 !     Subroutine to calculate current within the energy loop            
 !     calls subroutines from gf_current                                 
@@ -21,7 +21,7 @@
 #endif                                                                  
       IMPLICIT NONE 
       INTEGER ,INTENT(IN)               :: nv2,en,nk,jspin 
-      type(t_gfmpi),intent(in)::mpi
+      type(t_gfmpi),intent(in)::fmpi
 
       TYPE(t_sym),INTENT(IN)            :: sym 
       TYPE(t_cell),INTENT(IN)           :: cell 
@@ -52,7 +52,7 @@
       !channel decomposition                                            
 !      CALL gf_channels(g1,g2,gij(1:nv2,nv2+1:2*nv2),j(4:),j(3),lapw)   
                                                                         
-      CALL writetrans(en,nk,jspin,bkpts,sym,cell,3,j(1:2),mpi)
+      CALL writetrans(en,nk,jspin,bkpts,sym,cell,3,j(1:2),fmpi)
                                                                         
       DEALLOCATE(g1,g2) 
                                                                         

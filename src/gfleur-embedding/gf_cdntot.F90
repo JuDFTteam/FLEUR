@@ -12,7 +12,7 @@
       CONTAINS 
       !<-- S:                                                           
                                                                         
-      SUBROUTINE gf_cdntot(layer,mpi,jspins,stars,cell,atoms,rho,qpw    &
+      SUBROUTINE gf_cdntot(layer,fmpi,jspins,stars,cell,atoms,rho,qpw    &
      &     ,q_el,q_nuc)                                                 
 !******************************************                             
 !                                                                       
@@ -29,7 +29,7 @@
       TYPE(t_stars),INTENT(IN)       :: stars 
       TYPE(t_cell),INTENT(IN)        :: cell 
       TYPE(t_atoms),INTENT(IN)       :: atoms 
-      TYPE(t_mpi),INTENT(IN)         :: mpi 
+      TYPE(t_mpi),INTENT(IN)         :: fmpi 
       COMPLEX,INTENT(IN)             :: qpw(:,:) 
       REAL   ,INTENT(IN)             :: rho(:,0:,:,:) 
       REAL   ,INTENT(OUT),OPTIONAL   :: q_nuc,q_el 

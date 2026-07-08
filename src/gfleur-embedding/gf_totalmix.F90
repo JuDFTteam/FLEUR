@@ -14,7 +14,7 @@
       CONTAINS 
                                                                         
       !<-- S:gf_totalmix(qtot_nuc,qtot_el)                              
-      SUBROUTINE gf_totalmix(jspins,layers,atoms,sphhar,stars,mix,gfinp,mpi)
+      SUBROUTINE gf_totalmix(jspins,layers,atoms,sphhar,stars,mix,gfinp,fmpi)
 !-----------------------------------------------                        
 !                                                                       
 !           (last modified:09-11-30) D. Wortmann                        
@@ -32,7 +32,7 @@
       TYPE(t_stars),INTENT(IN)  :: stars(:) 
       TYPE(t_gfmix),INTENT(IN)    :: mix 
       TYPE(t_embinp),INTENT(IN)  :: gfinp 
-      TYPE(t_gfmpi),intent(in)    :: mpi
+      TYPE(t_gfmpi),intent(in)    :: fmpi
       !>                                                                
       !<-- Locals                                                       
       INTEGER,PARAMETER   :: maxiter = 100 
@@ -95,7 +95,7 @@
      &        vr_diff,vpw_diff)
          vr = vr+(new(layer)-in(layer,1))*vr_diff 
          vpw = vpw+(new(layer)-in(layer,1))*vpw_diff 
-         CALL gf_renamepot(GF_CDNFILE,mpi%iodop_subcom,layer)
+         CALL gf_renamepot(GF_CDNFILE,fmpi%iodop_subcom,layer)
          CALL gf_wrtdop(GF_CDNFILE,layer,jspins,                        &
      &        gfinp,atoms(layer),stars(layer),sphhar(layer),            &
      &        vr,vpw,.FALSE.,1)                                         

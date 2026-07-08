@@ -103,6 +103,14 @@ CONTAINS
       CALL ld%fi%kpts%init(ld%fi%sym, ld%fi%input%film, .FALSE., .FALSE.)
       CALL convn(fmpi%irank == 0, ld%fi%atoms, ld%stars)
 
+      !potential/density containers of the layer (filled during the SCF)
+      CALL ld%vTot%init(ld%stars, ld%fi%atoms, ld%sphhar, ld%fi%vacuum, &
+                        ld%fi%noco, ld%fi%input%jspins, POTDEN_TYPE_POTTOT)
+      CALL ld%cdn_new%init(ld%stars, ld%fi%atoms, ld%sphhar, ld%fi%vacuum, &
+                           ld%fi%noco, ld%fi%input%jspins, POTDEN_TYPE_DEN)
+      ALLOCATE (ld%qmtl_new(0:MAXVAL(ld%fi%atoms%lmax), ld%fi%atoms%ntype))
+      ld%qmtl_new = 0.0
+
       IF (.NOT. ld%fi%input%film) &
          CALL juDFT_error("gfleur layers must be film calculations", &
                           hint="set film geometry in "//TRIM(filename_add)//"inp.xml", &

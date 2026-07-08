@@ -17,7 +17,7 @@
                                                                         
                                                                         
       !<-- F: gf_apply_metric(stars,atoms,sphhar,jspins,num_layers,a)   
-      FUNCTION gf_apply_metric(l_surface,l_potmix,mpi,stars,atoms,cell,sphhar     &
+      FUNCTION gf_apply_metric(l_surface,l_potmix,fmpi,stars,atoms,cell,sphhar     &
      &     ,sym,jspins,num_layers,a)RESULT(b)                               
 !-----------------------------------------------                        
 !                                                                       
@@ -29,7 +29,7 @@
       IMPLICIT NONE 
       !<-- Arguments                                                    
       LOGICAL,INTENT(IN)         :: l_potmix,l_surface
-      TYPE(t_gfmpi),INTENT(IN)     :: mpi 
+      TYPE(t_gfmpi),INTENT(IN)     :: fmpi 
       TYPE(t_stars),INTENT(IN)   :: stars(:) 
       TYPE(t_atoms),INTENT(IN)   :: atoms(:) 
       TYPE(t_sphhar),INTENT(IN)  :: sphhar(:) 

@@ -26,7 +26,7 @@ MODULE m_gf_intcoul
       LOGICAL,SAVE :: l_fix  !is the vacuum fixed?
       public gf_makeintcoulpot
       CONTAINS
-      SUBROUTINE gf_makeintcoulpot(jspins,layers,stars,mpi,gfinp             &
+      SUBROUTINE gf_makeintcoulpot(jspins,layers,stars,fmpi,gfinp             &
      &     ,potential,vac_pot,atoms,cell,sym)
       USE m_gf_iodop
       USE m_gf_plot
@@ -37,7 +37,7 @@ MODULE m_gf_intcoul
       TYPE(t_atoms),INTENT(IN)     :: atoms(:)
       TYPE(t_cell),INTENT(IN)      :: cell(:)
       TYPE(t_sym),INTENT(IN)       :: sym
-      TYPE(t_mpi),INTENT(IN)       :: mpi
+      TYPE(t_mpi),INTENT(IN)       :: fmpi
       TYPE(t_embinp),INTENT(IN)     :: gfinp
       TYPE(t_potden),INTENT(INOUT) :: potential(:)
       REAL   ,INTENT(OUT)          :: vac_pot

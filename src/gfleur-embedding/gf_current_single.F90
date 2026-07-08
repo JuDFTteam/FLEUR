@@ -6,7 +6,7 @@
 module m_gf_current_single
     implicit none
     contains
-    subroutine gf_current_single(layers,lapw,lapw_gf,cell,sym,mpi,bkpts,nk,en,jspin,sigmaL)
+    subroutine gf_current_single(layers,lapw,lapw_gf,cell,sym,fmpi,bkpts,nk,en,jspin,sigmaL)
         use m_gf_types
         USE m_gf_writetrans,ONLY:writetrans
         USE m_gf_embedding
@@ -16,7 +16,7 @@ module m_gf_current_single
       TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
         type(t_cell),intent(in) :: cell
         type(t_sym),intent(in)  :: sym
-        TYPE(t_gfmpi),intent(in)  :: mpi
+        TYPE(t_gfmpi),intent(in)  :: fmpi
         real,intent(in)         :: bkpts(:,:)
         integer,intent(in)      :: nk,en,jspin
         complex,intent(in)      :: sigmaL(:,:)
@@ -32,7 +32,7 @@ module m_gf_current_single
      &        sigmaL,                                                       &
      &        sigmaR,                                                       &
      &        j,0.0)
-       CALL writetrans(en,nk,jspin,bkpts,sym,cell,2,j,mpi)
+       CALL writetrans(en,nk,jspin,bkpts,sym,cell,2,j,fmpi)
 
 
     end subroutine gf_current_single

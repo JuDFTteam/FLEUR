@@ -169,13 +169,13 @@ module m_gf_vacuum_charge
 
     end subroutine
 
-    subroutine gf_vacuum_writecharge(mpi)
+    subroutine gf_vacuum_writecharge(fmpi)
     !write out the new vacuum charge
     use m_gf_types
     use m_gf_iodop
     implicit none
-    TYPE(t_gfmpi),intent(in)   :: mpi
-    call gf_iodop_writevacuum(GF_CDNFILE,qxy,real(qz),mpi%self_subcom)
+    TYPE(t_gfmpi),intent(in)   :: fmpi
+    call gf_iodop_writevacuum(GF_CDNFILE,qxy,real(qz),fmpi%self_subcom)
     deallocate(qz,qxy)
     end subroutine
 end module m_gf_vacuum_charge

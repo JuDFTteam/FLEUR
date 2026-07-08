@@ -431,7 +431,7 @@
       !>                                                                
       !<-- S:gf_writedos                                                
                                                                         
-      SUBROUTINE gf_writedos(mpi,layers,atoms,cell,gfinp,jspins,nkpts)
+      SUBROUTINE gf_writedos(fmpi,layers,atoms,cell,gfinp,jspins,nkpts)
 !******************************************                             
 !                                                                       
 !                          D. Wortmann                                  
@@ -443,7 +443,7 @@
       USE m_gf_math,ONLY:interpolate_analytic 
       IMPLICIT NONE 
       !<--Arguments                                                     
-      TYPE(t_gfmpi),INTENT(IN)  :: mpi
+      TYPE(t_gfmpi),INTENT(IN)  :: fmpi
       TYPE(t_atoms),INTENT(IN)  :: atoms(:) 
       TYPE(t_cell),INTENT(IN)   :: cell(:) 
       TYPE(t_layers),INTENT(IN) :: layers 
@@ -509,7 +509,7 @@
       INQUIRE(FILE ="gf_dos",EXIST = l_gf_dos)
       l_dos= 0
       tot_dos=.FALSE.
-      IF (.NOT.(l_gf_dos.and.mpi%pe0)) THEN
+      IF (.NOT.(l_gf_dos.and.fmpi%pe0)) THEN
          RETURN 
       ELSE
          WRITE(*,*) "Writing DOS"
@@ -730,8 +730,8 @@
                                                                         
       !>                                                                
                                                                         
-      !<-- S:gf_dos_int(layer,mpi,lapw,stars,jspin,omtil,G,en,nk)       
-      RECURSIVE SUBROUTINE gf_dos_INT(gfinp,layer,mpi,lapw,lapw_gf,stars,jspin,omtil,G,wk &
+      !<-- S:gf_dos_int(layer,fmpi,lapw,stars,jspin,omtil,G,en,nk)       
+      RECURSIVE SUBROUTINE gf_dos_INT(gfinp,layer,fmpi,lapw,lapw_gf,stars,jspin,omtil,G,wk &
      &     ,en,nk,l_noco)
 !-----------------------------------------------                        
 !                                                                       
@@ -745,7 +745,7 @@
       !<-- Arguments                                                    
       TYPE(t_embinp),INTENT(IN) :: gfinp 
       INTEGER,INTENT(IN)      :: layer 
-      TYPE(t_gfmpi),INTENT(IN)  :: mpi 
+      TYPE(t_gfmpi),INTENT(IN)  :: fmpi 
       TYPE(t_lapw),INTENT(IN) :: lapw 
       TYPE(t_lapw_gf),INTENT(IN) :: lapw_gf
       INTEGER, INTENT (IN)    :: jspin 
@@ -766,10 +766,10 @@
 
       !In noco-case call subroutine recursively
       if (l_noco) THEN
-        call gf_dos_int(gfinp,layer,mpi,lapw,lapw_gf,stars,1,omtil,    &
+        call gf_dos_int(gfinp,layer,fmpi,lapw,lapw_gf,stars,1,omtil,    &
             G(:size(G,1)/2,:size(g,2)/2),                      &
             wk,en,nk,.false.)
-     call gf_dos_int(gfinp,layer,mpi,lapw,lapw_gf,stars,2,omtil,    &
+     call gf_dos_int(gfinp,layer,fmpi,lapw,lapw_gf,stars,2,omtil,    &
             G(size(G,1)/2+1:,size(g,2)/2+1:),                      &
             wk,en,nk,.false.)
       endif

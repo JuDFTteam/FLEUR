@@ -10,7 +10,7 @@
       CONTAINS 
       SUBROUTINE gf_propaembcurr3(                                      &
      &           layers,nv2,en,nk,jspin,lapw,lapw_gf,                           &
-     &           bkpts,sym,cell,gfinp,mpi)
+     &           bkpts,sym,cell,gfinp,fmpi)
 !************************************************                       
 !     Calculate the current by propagating the                          
 !     embedding potentials to the planes by which                       
@@ -26,7 +26,7 @@
                                                                         
       IMPLICIT NONE 
       TYPE(t_layers),INTENT(IN)::layers 
-      type(t_gfmpi),intent(in)   ::mpi
+      type(t_gfmpi),intent(in)   ::fmpi
       INTEGER,INTENT(IN)::nv2 
       INTEGER,INTENT(IN)::en 
       INTEGER,INTENT(IN)::nk 
@@ -78,7 +78,7 @@
                                                                         
       ENDDO 
                                                                         
-      CALL writetrans(en,nk,jspin,bkpts,sym,cell,3,j,mpi)
+      CALL writetrans(en,nk,jspin,bkpts,sym,cell,3,j,fmpi)
                                                                         
       END SUBROUTINE gf_propaembcurr3 
                                                                         

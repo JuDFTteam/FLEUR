@@ -17,7 +17,7 @@
                                                                         
       !<-- S: gf_charge(jspins,stars,atoms,cell,mix,gfinp,sphhar,sym,pwd
                                                                         
-      SUBROUTINE gf_charge(jspins,mpi,stars,atoms,cell,mix,gfinp,noco   &
+      SUBROUTINE gf_charge(jspins,fmpi,stars,atoms,cell,mix,gfinp,noco   &
      &     ,sphhar,sym,pwd,rho,layer,fix)                               
 !-----------------------------------------------                        
 !    finalize charge density by writing to file and mixing etc          
@@ -34,7 +34,7 @@
       !<-- Arguments                                                    
                                                                         
       INTEGER,INTENT(IN)        :: jspins 
-      TYPE(t_gfmpi),INTENT(IN)    :: mpi 
+      TYPE(t_gfmpi),INTENT(IN)    :: fmpi 
       TYPE(t_stars),INTENT(IN)  :: stars 
       TYPE(t_atoms),INTENT(IN)  :: atoms 
       TYPE(t_cell),INTENT(IN)   :: cell 
@@ -88,11 +88,11 @@
                                                                         
       !>                                                                
       !<-- save charge                                                  
-      CALL gf_renamepot(gf_cdnfile,mpi%iodop_subcom,layer)
+      CALL gf_renamepot(gf_cdnfile,fmpi%iodop_subcom,layer)
       CALL gf_wrtdop(GF_CDNFILE,layer,jspins,                           &
      &     gfinp,atoms,stars,sphhar,                                    &
-     &     rho(:,0:,:,:),pwd(:,:),.FALSE.,mpi%iodop_subcom)             
-      if (gfinp%l_surface.and.layer==1) call gf_vacuum_writecharge(mpi)
+     &     rho(:,0:,:,:),pwd(:,:),.FALSE.,fmpi%iodop_subcom)             
+      if (gfinp%l_surface.and.layer==1) call gf_vacuum_writecharge(fmpi)
       !>                                                                
                                                                         
                                                                         
@@ -116,7 +116,7 @@
       !<-- Locals                                                       
       REAL                :: q_nuc 
       REAL                :: q_el 
-      INTEGER             :: rank,e(3) 
+      INTEGER             :: rank,e
       !>                                                                
 #ifdef CPP_MPI                                                          
 #endif                                                                  
