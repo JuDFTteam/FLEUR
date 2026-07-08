@@ -33,7 +33,8 @@ MODULE m_xas_driver
    USE m_types_xas, ONLY: t_xas
    USE m_xas_angular, ONLY: xas_cartesian_to_spherical, xas_print_angular_sumrule
    USE m_xas_core, ONLY: t_xas_core_state, xas_extract_core_states, xas_print_core_states
-   USE m_xas_io, ONLY: xas_write_spectrum_text
+   USE m_xas_io, ONLY: xas_write_spectrum_text, xas_open_transition_table, xas_write_transition_rows, &
+                       xas_close_transition_table
    USE m_xas_matrixelements, ONLY: xas_core_band_matrixelements
    USE m_xas_radial, ONLY: xas_radial_dipole_integrals
    USE m_xas_spectrum, ONLY: xas_accumulate_matrix_spectrum
@@ -140,7 +141,9 @@ CONTAINS
       INTEGER, ALLOCATABLE :: ev_list(:)
 
       CHARACTER(LEN=5)   :: eta_label
+      CHARACTER(LEN=4)   :: rank_label
       CHARACTER(LEN=128) :: output_filename
+      CHARACTER(LEN=160) :: transition_filename
       CHARACTER(LEN=128) :: xas_debug_filename
       CHARACTER(LEN=200) :: error_message
       INTEGER :: ikpt_i, ikpt, ikptf, bksym, jsp_loop, jsp, ispin, nbands, nbands_read, itype
@@ -149,6 +152,7 @@ CONTAINS
       INTEGER :: n_final_l_channels, final_l_channels(xas_max_final_l_channels), i_lchan
 	      INTEGER :: n_abc_debug_direct_records, n_abc_debug_star_records
 	      INTEGER :: xas_debug_unit, xas_abc_debug_unit
+      INTEGER :: transition_units(xas_debug_n_pol), star_index
       REAL    :: xas_debug_strength_lchan(xas_max_final_l_channels, xas_debug_n_pol)
       REAL    :: xas_debug_strength_total(xas_debug_n_pol)
       REAL    :: xas_debug_strength_lchan_reduced(xas_max_final_l_channels, xas_debug_n_pol)
@@ -179,6 +183,7 @@ CONTAINS
 	      n_abc_debug_direct_records = 0
 	      n_abc_debug_star_records = 0
 	      l_xas_angular_sumrule_printed = .FALSE.
+      transition_units = -1
 
       IF (.NOT. xas%l_xas) RETURN
       IF (.NOT. ALLOCATED(results%w_iks)) THEN
@@ -232,6 +237,17 @@ CONTAINS
       DO i_char = 1, LEN(eta_label)
          IF (eta_label(i_char:i_char) == ".") eta_label(i_char:i_char) = "p"
       END DO
+
+      IF (xas%write_transitions) THEN
+         WRITE(rank_label, '(i4.4)') fmpi%irank
+         DO i_pol = 1, xas_debug_n_pol
+            IF (.NOT. xas%polarizations(i_pol)) CYCLE
+            transition_filename = TRIM(xas%output_prefix)//"_"//TRIM(xas%edge)//"_"// &
+                                  xas_debug_pol_label(i_pol)//"_transitions_rank"//rank_label//".dat"
+            CALL xas_open_transition_table(TRIM(transition_filename), xas%edge, xas%absorber_z, &
+                                           xas_debug_pol_label(i_pol), fmpi%irank, transition_units(i_pol))
+         END DO
+      END IF
 
       ! Keep FLEUR eig/occupation spin channels separate from the local MT
       ! spinor components used by the XAS dipole matrix element. In noco
@@ -417,8 +433,10 @@ CONTAINS
                IF (xas_use_spatial_star) THEN
                   CALL xas_count_star_members(kpts, ikpt, nstar)
                   CALL xas_star_member_weight(kpts, ikpt, wk_star)
+                  star_index = 0
                   DO ikptf = 1, kpts%nkptf
                      IF (kpts%bkp(ikptf) /= ikpt) CYCLE
+                     star_index = star_index + 1
                      bksym = kpts%bksym(ikptf)
                      wk_current = wk_star
 
@@ -507,6 +525,11 @@ CONTAINS
                                                                 iatom_l, lmax_xas, matrix)
                            END IF
                            CALL xas_debug_report_underflow(l_xas_debug_fp, "xas_core_band_matrixelements", unit=xas_debug_unit)
+                           IF (xas%write_transitions) THEN
+                              CALL xas_write_transition_rows(transition_units(i_pol), ikptf, ikpt, star_index, &
+                                 atoms%firstAtom(itype) + iatom_l - 1, itype, eig_band, core_states(1)%energy, &
+                                 occ_band, wk_current, matrix, hartree_to_ev_const)
+                           END IF
                            CALL xas_debug_clear_underflow(l_xas_debug_fp)
                            CALL xas_accumulate_matrix_spectrum(energy_grid, eig_band, occ_band, wk_current, &
                                                                core_states(1)%energy, matrix, xas%eta, intensity(:, i_pol), "gaussian")
@@ -579,6 +602,11 @@ CONTAINS
                                                              iatom_l, lmax_xas, matrix)
                         END IF
                         CALL xas_debug_report_underflow(l_xas_debug_fp, "xas_core_band_matrixelements", unit=xas_debug_unit)
+                        IF (xas%write_transitions) THEN
+                           CALL xas_write_transition_rows(transition_units(i_pol), ikpt, ikpt, 1, &
+                              atoms%firstAtom(itype) + iatom_l - 1, itype, eig_band, core_states(1)%energy, &
+                              occ_band, wk_current, matrix, hartree_to_ev_const)
+                        END IF
                         CALL xas_debug_clear_underflow(l_xas_debug_fp)
                         CALL xas_accumulate_matrix_spectrum(energy_grid, eig_band, occ_band, wk_current, &
                                                             core_states(1)%energy, matrix, xas%eta, intensity(:, i_pol), "gaussian")
@@ -598,6 +626,12 @@ CONTAINS
          END DO
          DEALLOCATE(radial_xas, core_states)
       END DO
+
+      IF (xas%write_transitions) THEN
+         DO i_pol = 1, xas_debug_n_pol
+            CALL xas_close_transition_table(transition_units(i_pol))
+         END DO
+      END IF
 
       ! Rank-local k-point/star contributions are additive. Reduce them once
       ! after the k loops, then let rank 0 do all text/debug output.
@@ -737,6 +771,11 @@ CONTAINS
       END IF
       WRITE(unit, '(a,a)') " Polarizations            : ", TRIM(xas_polarization_string(xas%polarizations))
       WRITE(unit, '(a,a)') " Output prefix            : ", TRIM(xas%output_prefix)
+      WRITE(unit, '(a,l1)') " Write transition table  : ", xas%write_transitions
+      IF (xas%write_transitions) THEN
+         WRITE(unit, '(a)') " NOTE: transition-resolved XAS output may be large."
+         WRITE(unit, '(a)') "       One rank-suffixed table is written per requested polarization and MPI rank."
+      END IF
       WRITE(unit, '(a)') " ----------------------------------------------------"
    END SUBROUTINE xas_print_setup_summary_unit
 

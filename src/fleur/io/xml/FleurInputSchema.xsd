@@ -4157,6 +4157,11 @@
       <xsd:attribute default="401" name="nEnergy" type="xsd:positiveInteger" use="optional"/>
       <xsd:attribute default="x y z" name="polarizations" type="StringVecType" use="optional"/>
       <xsd:attribute default="xas" name="outputPrefix" type="xsd:string" use="optional"/>
+      <xsd:attribute default="F" name="writeTransitions" type="FleurBool" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Write rank-local, unbroadened transition tables for diagnostics and RIXS preparation.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
    </xsd:complexType>
 
    <xsd:complexType name="ElectronConfigType">

@@ -28,6 +28,7 @@ MODULE m_types_xas
       INTEGER :: n_energy = 401
       LOGICAL :: polarizations(3) = [.TRUE., .TRUE., .TRUE.]
       CHARACTER(LEN=64) :: output_prefix = "xas"
+      LOGICAL :: write_transitions = .FALSE.
    CONTAINS
       PROCEDURE :: read_xml => read_xml_xas
       PROCEDURE :: mpi_bc => mpi_bc_xas
@@ -61,6 +62,7 @@ CONTAINS
       CALL mpi_bc(this%polarizations(2), rank, mpi_comm)
       CALL mpi_bc(this%polarizations(3), rank, mpi_comm)
       CALL mpi_bc(rank, mpi_comm, this%output_prefix)
+      CALL mpi_bc(this%write_transitions, rank, mpi_comm)
    END SUBROUTINE mpi_bc_xas
 
    SUBROUTINE read_xml_xas(this, xml)
@@ -82,6 +84,7 @@ CONTAINS
       this%n_energy = 401
       this%polarizations = [.TRUE., .TRUE., .TRUE.]
       this%output_prefix = "xas"
+      this%write_transitions = .FALSE.
 
       number_nodes = xml%GetNumberOfNodes('/fleurInput/output/xas')
       IF (number_nodes == 0) RETURN
@@ -136,6 +139,9 @@ CONTAINS
          this%output_prefix = TRIM(ADJUSTL(xml%GetAttributeValue('/fleurInput/output/xas/@outputPrefix')))
       END IF
       IF (LEN_TRIM(this%output_prefix) == 0) CALL juDFT_error("XAS outputPrefix must not be empty.", calledby="m_types_xas")
+      IF (xml%GetNumberOfNodes('/fleurInput/output/xas/@writeTransitions') == 1) THEN
+         this%write_transitions = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/xas/@writeTransitions'))
+      END IF
       CALL xas_validate_edge_name(this%edge)
    END SUBROUTINE read_xml_xas
 
