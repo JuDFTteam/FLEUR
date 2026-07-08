@@ -71,7 +71,7 @@ CONTAINS
     END IF
     !
     ! setup eigenvalues
-    CALL etabinit(atoms,input, vr, etab,ntab,ltab,nkmust)
+    CALL etabinit(atoms, input, iType, vr(:,iType), etab, ntab, ltab, nkmust)
     !
     ncmsh = atoms%msh
     ! ---> set up densities

@@ -116,6 +116,7 @@ SUBROUTINE cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
          END DO
       ELSE
          IF(PRESENT(EnergyDen)) call juDFT_error("Energyden not implemented for relativistic core calculations")
+         WRITE(oUnit,'(/,/,12x,a)') 'core e.v. initialization'
          DO iType = 1, atoms%ntype
             l_useOtherCoreSolver = .FALSE.
             CALL coredr(input,atoms,iType,seig, outDen%mt,sphhar,vr0,qint,rh,l_useOtherCoreSolver)
