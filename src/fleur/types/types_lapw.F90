@@ -365,7 +365,7 @@ CONTAINS
          TYPE(t_noco), INTENT(IN)   :: noco
          TYPE(t_nococonv), INTENT(IN)   :: nococonv
 
-         INTEGER:: n, na, nn, np, lo, nkvec_sv, nkvec(atoms%nlod, 2), iindex
+         INTEGER:: n, na, na1, nn, np, lo, nkvec_sv, nkvec(atoms%nlod, 2), iindex
          IF (.NOT. ALLOCATED(lapw%kvec)) THEN
             ALLOCATE (lapw%kvec(2*(2*atoms%llod + 1), atoms%nlod, atoms%nat))
             ALLOCATE (lapw%nkvec(atoms%nlod, atoms%nat));lapw%nkvec=0
@@ -377,7 +377,21 @@ CONTAINS
          DO n = 1, atoms%ntype
             DO nn = 1, atoms%neq(n)
                na = na + 1
-               if (sym%invsat(na) > 1) cycle
+               if (sym%invsat(na) > 1) then
+                  ! Copy LO setup from inversion partner (atom1).
+                  ! When the invsat shortcut is active, atom2 is skipped in
+                  ! calc_abc so this data is unused. When the shortcut is
+                  ! disabled (e.g. SOC), atom2 is computed directly and needs
+                  ! valid nkvec/index_lo/kvec pointing to the same z-vector
+                  ! positions as atom1 (the invsat LO block covers both atoms).
+                  na1 = sym%invsatnr(na)
+                  DO lo = 1, atoms%nlo(n)
+                     lapw%nkvec(lo, na)   = lapw%nkvec(lo, na1)
+                     lapw%index_lo(lo, na) = lapw%index_lo(lo, na1)
+                     lapw%kvec(:, lo, na)  = lapw%kvec(:, lo, na1)
+                  END DO
+                  cycle
+               end if
                np = sym%invtab(sym%ngopr(na))
                CALL priv_vec_for_lo(atoms, input, sym, na, n, np, noco, nococonv, lapw, cell)
                DO lo = 1, atoms%nlo(n)

@@ -401,6 +401,14 @@ CONTAINS
       END IF
 #endif
 
+      IF (noco%l_soc) THEN
+         DO itype = 1, atoms%ntype
+            DO ispin = jsp_start, jsp_end
+               CALL priv_sym_clmom(sym, cell, moments%clmom(:, itype, ispin))
+            END DO
+         END DO
+      END IF
+
       IF (gfinp%n > 0 .AND. PRESENT(greensfImagPart)) THEN
          IF (greensfImagPart%l_calc) THEN
             call timestart("Green's function: Imag Part collect")
@@ -456,6 +464,42 @@ CONTAINS
       CALL timestop("cdnval")
 
    END SUBROUTINE cdnval
+
+   SUBROUTINE priv_sym_clmom(sym, cell, L)
+      ! Symmetrize the orbital moment pseudovector L over all crystal symmetry
+      ! operations. L is accumulated from the symmetry-reduced BZ: each
+      ! representative k-point carries the full star weight but contributes
+      ! only its own L value, not the average over all star members. For
+      ! components of L that are invariant under the symmetry group this is
+      ! exact, but components that are not invariant acquire spurious
+      ! contributions. Averaging det(R)*R_cart*L over all operations projects
+      ! L onto the physically correct invariant subspace regardless of crystal
+      ! structure or magnetization direction.
+      USE m_types_sym
+      USE m_types_cell
+      USE m_constants, ONLY: tpi_const
+      IMPLICIT NONE
+      TYPE(t_sym),  INTENT(IN)    :: sym
+      TYPE(t_cell), INTENT(IN)    :: cell
+      REAL,         INTENT(INOUT) :: L(3)
+
+      INTEGER :: iop, det
+      REAL    :: L_sum(3), mrot_r(3,3), R_cart(3,3), amatinv(3,3)
+
+      ! cell%bmat = tpi_const * amat^{-1}  (see types_cell.f90)
+      amatinv = cell%bmat / tpi_const
+
+      L_sum = 0.0
+      DO iop = 1, sym%nop
+         mrot_r = REAL(sym%mrot(:, :, iop))
+         R_cart = MATMUL(cell%amat, MATMUL(mrot_r, amatinv))
+         det = sym%mrot(1,1,iop)*(sym%mrot(2,2,iop)*sym%mrot(3,3,iop) - sym%mrot(2,3,iop)*sym%mrot(3,2,iop)) &
+              -sym%mrot(1,2,iop)*(sym%mrot(2,1,iop)*sym%mrot(3,3,iop) - sym%mrot(2,3,iop)*sym%mrot(3,1,iop)) &
+              +sym%mrot(1,3,iop)*(sym%mrot(2,1,iop)*sym%mrot(3,2,iop) - sym%mrot(2,2,iop)*sym%mrot(3,1,iop))
+         L_sum = L_sum + det * MATMUL(R_cart, L)
+      END DO
+      L = L_sum / sym%nop
+   END SUBROUTINE priv_sym_clmom
 
    !TODO: this has to be added again...
    !IF(gfinp%n>0 .AND. PRESENT(greensfImagPart)) THEN

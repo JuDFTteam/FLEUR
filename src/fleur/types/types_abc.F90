@@ -166,7 +166,9 @@ CONTAINS
       
 
 !Use inversion symmetry explicitely
-      l_useinversionsym = any(sym%invsat == 2)!.and.(.not.noco%l_soc).and.(.not.present(nat_start))
+! The identity A^{-p}_{lm} = (-1)^{l+m} (A^p_{l,-m})^* holds only for real
+! eigenvectors. With SOC the eigenvectors are complex, so skip this shortcut.
+      l_useinversionsym = any(sym%invsat == 2) .and. (.not.noco%l_soc)
 
       CALL timestart("fjgj coefficients")
       CALL fjgj%calculate(input, atoms, cell, lapw, noco, usdus, iType, jspin)
@@ -348,22 +350,8 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
 !$acc exit data delete(fjgj)
       DEALLOCATE (work_c)
 
-! Treatment of atoms inversion symmetric to others
+! Treatment of atoms inversion symmetric to others (never reached for SOC)
       IF (l_useinversionsym) THEN
-!Comment on SOC case:
-!
-!                           -p,n       (l+m)   p,n  *
-! Usually, we exploit that A     = (-1)      (A    )  if p and -p are the positions
-!                           l,m                l,-m
-! of two atoms related by inversion symmetry and the coefficients are considered to
-! be in the local frame of the representative atom. This is possible, if z is real.
-! After SOC, however, the eigenvectors z are complex and this is no longer possible
-! so the z has to enter, not z*. This is done within the k-loop.
-!                                    -p,n       m   p,n  *
-! When called from hsohelp, we need A     = (-1)  (A    ) because we don't have to
-!                                     l,m           l,-m                    l
-! rotate, but in the sums in hsoham only products A*  A   enter and the (-1) cancels.
-!                                                  lm  lm
          DO iAtom_l = 1, atoms%neq(itype)
             iatom = iatom_l - 1 + atoms%firstAtom(itype)
             IF (sym%invsat(iAtom) .EQ. 1) THEN
@@ -479,7 +467,9 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
 
 
 !Use inversion symmetry explicitely
-      l_useinversionsym = any(sym%invsat == 2)!.and.(.not.noco%l_soc).and.(.not.present(nat_start))
+! The identity A^{-p}_{lm} = (-1)^{l+m} (A^p_{l,-m})^* holds only for real
+! eigenvectors. With SOC the eigenvectors are complex, so skip this shortcut.
+      l_useinversionsym = any(sym%invsat == 2) .and. (.not.noco%l_soc)
 
       CALL timestart("fjgj coefficients")
       CALL fjgj%calculate(input, atoms, cell, lapw, noco, usdus, iType, jspin)
@@ -631,22 +621,8 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
       DEALLOCATE (work_c)
 
 
-! Treatment of atoms inversion symmetric to others
+! Treatment of atoms inversion symmetric to others (never reached for SOC)
       IF (l_useinversionsym) THEN
-!Comment on SOC case:
-!
-!                           -p,n       (l+m)   p,n  *
-! Usually, we exploit that A     = (-1)      (A    )  if p and -p are the positions
-!                           l,m                l,-m
-! of two atoms related by inversion symmetry and the coefficients are considered to
-! be in the local frame of the representative atom. This is possible, if z is real.
-! After SOC, however, the eigenvectors z are complex and this is no longer possible
-! so the z has to enter, not z*. This is done within the k-loop.
-!                                    -p,n       m   p,n  *
-! When called from hsohelp, we need A     = (-1)  (A    ) because we don't have to
-!                                     l,m           l,-m                    l
-! rotate, but in the sums in hsoham only products A*  A   enter and the (-1) cancels.
-!                                                  lm  lm
          DO iAtom = atoms%firstatom(itype),atoms%firstAtom(itype)+atoms%neq(itype)-1
             IF (sym%invsat(iAtom) .EQ. 1) THEN
                jAtom = sym%invsatnr(iAtom)
