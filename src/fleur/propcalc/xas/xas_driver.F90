@@ -32,6 +32,7 @@ MODULE m_xas_driver
    USE m_types_usdus, ONLY: t_usdus
    USE m_types_xas, ONLY: t_xas
    USE m_xas_angular, ONLY: xas_cartesian_to_spherical, xas_print_angular_sumrule
+   USE m_xas_amplitudes, ONLY: t_xas_transition_amplitudes
    USE m_xas_core, ONLY: t_xas_core_state, xas_extract_core_states, xas_print_core_states
    USE m_xas_io, ONLY: xas_write_spectrum_text, xas_open_transition_table, xas_write_transition_rows, &
                        xas_close_transition_table
@@ -1256,16 +1257,16 @@ CONTAINS
       REAL,    INTENT(IN) :: occ_band(:)
       REAL,    INTENT(IN) :: wk
 
-      INTEGER :: i_band, i_mj
+      TYPE(t_xas_transition_amplitudes) :: amplitudes
+      INTEGER :: i_band
       REAL    :: empty_factor
 
       strength = 0.0
       DO i_band = 1, MIN(SIZE(matrix, 1), SIZE(occ_band))
          empty_factor = 1.0 - occ_band(i_band)
          IF (empty_factor <= 1.0e-10) CYCLE
-         DO i_mj = 1, SIZE(matrix, 2)
-            strength = strength + wk*empty_factor*ABS(matrix(i_band, i_mj))**2
-         END DO
+         CALL amplitudes%set_from_matrix_row(matrix, i_band)
+         strength = strength + wk*empty_factor*amplitudes%absM2
       END DO
    END FUNCTION xas_debug_transition_strength
 

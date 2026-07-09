@@ -6,6 +6,7 @@
 
 MODULE m_xas_io
    USE m_juDFT, ONLY: juDFT_error
+   USE m_xas_amplitudes, ONLY: t_xas_transition_amplitudes
    IMPLICIT NONE
    PRIVATE
 
@@ -82,6 +83,7 @@ CONTAINS
       REAL,    INTENT(IN) :: eig_band(:), core_energy, occupation(:), k_weight, hartree_to_ev
       COMPLEX, INTENT(IN) :: matrix(:, :)
 
+      TYPE(t_xas_transition_amplitudes) :: amplitudes
       INTEGER :: band
       REAL :: one_minus_occ, abs_m2, transition_energy
 
@@ -92,7 +94,10 @@ CONTAINS
          one_minus_occ = 1.0 - occupation(band)
          IF (one_minus_occ <= 1.0e-10) CYCLE
          transition_energy = eig_band(band) - core_energy
-         abs_m2 = SUM(ABS(matrix(band, :))**2)
+         ! XAS writes the incoherent sum over mj; the complex amplitudes are
+         ! kept as an explicit object for later RIXS amplitude products.
+         CALL amplitudes%set_from_matrix_row(matrix, band)
+         abs_m2 = amplitudes%absM2
          WRITE(io_unit, '(6(i0,1x),7(es24.16e3,1x))') ikpt_full, ikpt_parent, star_index, band, &
             absorber_atom, absorber_type, transition_energy, transition_energy*hartree_to_ev, occupation(band), &
             k_weight, one_minus_occ, abs_m2, k_weight*one_minus_occ*abs_m2

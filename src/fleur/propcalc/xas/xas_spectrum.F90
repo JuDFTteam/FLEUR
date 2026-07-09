@@ -6,6 +6,7 @@
 
 MODULE m_xas_spectrum
    USE m_juDFT, ONLY: juDFT_error
+   USE m_xas_amplitudes, ONLY: t_xas_transition_amplitudes
    IMPLICIT NONE
    PRIVATE
 
@@ -42,8 +43,9 @@ CONTAINS
       REAL,              INTENT(INOUT) :: intensity(:)
       CHARACTER(LEN=*), OPTIONAL, INTENT(IN) :: broadening_type
 
-      INTEGER :: i_grid, i_band, i_mj
-      REAL    :: transition_energy, occ_factor, strength, matrix_strength, gaussian, delta
+      TYPE(t_xas_transition_amplitudes) :: amplitudes
+      INTEGER :: i_grid, i_band
+      REAL    :: transition_energy, occ_factor, strength, gaussian, delta
 
       CALL xas_check_spectrum_inputs(energy_grid, eig_band, occ_band, matrix, eta, intensity, broadening_type)
 
@@ -51,12 +53,10 @@ CONTAINS
          occ_factor = 1.0 - occ_band(i_band)
          IF (occ_factor <= xas_occ_tol) CYCLE
 
-         strength = 0.0
-         DO i_mj = 1, SIZE(matrix, 2)
-            matrix_strength = ABS(matrix(i_band, i_mj))**2
-            IF (matrix_strength < TINY(matrix_strength)) CYCLE
-            strength = strength + matrix_strength
-         END DO
+         ! Keep the complex M(mj) amplitudes explicit before the XAS
+         ! incoherent sum. RIXS will need coherent amplitude products later.
+         CALL amplitudes%set_from_matrix_row(matrix, i_band, l_skip_tiny=.TRUE.)
+         strength = amplitudes%absM2
          IF (strength < TINY(strength)) CYCLE
 
          transition_energy = eig_band(i_band) - epsilon_c
