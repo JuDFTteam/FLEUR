@@ -54,32 +54,47 @@ CONTAINS
     COMPLEX,           INTENT(OUT) :: s0(:, :, :)        ! (num_bands, num_bands, 3)
     LOGICAL,           INTENT(IN)  :: l_check            ! print the spin sum-rule for this k
 
-    COMPLEX, ALLOCATABLE :: o_uu(:, :), o_dd(:, :), o_ud(:, :), o_du(:, :)
-    INTEGER :: nb, io_dn, gb(3)
+    COMPLEX, ALLOCATABLE :: oi_uu(:, :), oi_dd(:, :), oi_ud(:, :), oi_du(:, :)  ! interstitial blocks (global)
+    COMPLEX, ALLOCATABLE :: c_uu(:, :), c_dd(:, :), c_ud(:, :), c_du(:, :)      ! total-trace copies for sum-rule
+    COMPLEX, ALLOCATABLE :: spa(:, :, :, :)                                      ! per-atom MT spin (global)
+    INTEGER :: nb, io_dn, gb(3), na
 
     nb    = num_bands
     io_dn = lapw%nv(1) + atoms%nlotot      ! row offset of the spin-down block in zMat
     gb    = 0                              ! b = 0 (same k, on-site)
 
-    ALLOCATE(o_uu(nb, nb), o_dd(nb, nb), o_ud(nb, nb), o_du(nb, nb))
-    o_uu = CMPLX(0.0, 0.0); o_dd = CMPLX(0.0, 0.0)
-    o_ud = CMPLX(0.0, 0.0); o_du = CMPLX(0.0, 0.0)
+    ALLOCATE(oi_uu(nb, nb), oi_dd(nb, nb), oi_ud(nb, nb), oi_du(nb, nb))
+    oi_uu = CMPLX(0.0, 0.0); oi_dd = CMPLX(0.0, 0.0)
+    oi_ud = CMPLX(0.0, 0.0); oi_du = CMPLX(0.0, 0.0)
 
-    ! ---- muffin-tin part (calc_abc already applied the local<->global rotation) ----
-    CALL wannierlib_spin_mt_block(atoms, abc, radfun, o_uu, o_dd, o_ud, o_du)
-
-    ! ---- interstitial part (global frame, b=0), block-selected by spin offset ----
+    ! ---- interstitial part only (global frame, b=0), block-selected by spin offset ----
     !   o_ab: bra spin a -> ioff, ket spin b -> ioff_b ;  up offset 0, dn offset io_dn
-    CALL wannierlib_mmnkb_int(stars, lapw, lapw, 1, 1, zMat, zMat, gb, o_uu, ioff=0,     ioff_b=0)
-    CALL wannierlib_mmnkb_int(stars, lapw, lapw, 1, 1, zMat, zMat, gb, o_dd, ioff=io_dn, ioff_b=io_dn)
-    CALL wannierlib_mmnkb_int(stars, lapw, lapw, 1, 1, zMat, zMat, gb, o_ud, ioff=0,     ioff_b=io_dn)
-    CALL wannierlib_mmnkb_int(stars, lapw, lapw, 1, 1, zMat, zMat, gb, o_du, ioff=io_dn, ioff_b=0)
+    CALL wannierlib_mmnkb_int(stars, lapw, lapw, 1, 1, zMat, zMat, gb, oi_uu, ioff=0,     ioff_b=0)
+    CALL wannierlib_mmnkb_int(stars, lapw, lapw, 1, 1, zMat, zMat, gb, oi_dd, ioff=io_dn, ioff_b=io_dn)
+    CALL wannierlib_mmnkb_int(stars, lapw, lapw, 1, 1, zMat, zMat, gb, oi_ud, ioff=0,     ioff_b=io_dn)
+    CALL wannierlib_mmnkb_int(stars, lapw, lapw, 1, 1, zMat, zMat, gb, oi_du, ioff=io_dn, ioff_b=0)
 
-    ! ---- assemble Pauli matrices; check the sum rule on selected k ----
-    CALL wannierlib_pauli_from_blocks(o_uu, o_dd, o_ud, o_du, s0)
-    IF (l_check) CALL wannierlib_spin_sumrule(s0, o_uu, o_dd, ik, tol=1.0e-3)
+    ! ---- total spin (GLOBAL) = interstitial Pauli + sum_atom (MT per-atom, rotated to global) ----
+    !   the MT part must be summed per-atom AFTER the local->global rotation, otherwise an
+    !   AFM (beta_2=pi) would add two local-frame "+" moments and the total would not vanish.
+    CALL wannierlib_pauli_from_blocks(oi_uu, oi_dd, oi_ud, oi_du, s0)
+    ALLOCATE(spa(nb, nb, 3, atoms%nat))
+    CALL wannierlib_spin_peratom(atoms, abc, radfun, nococonv, spa)
+    DO na = 1, atoms%nat
+      s0(:, :, :) = s0(:, :, :) + spa(:, :, :, na)
+    END DO
 
-    DEALLOCATE(o_uu, o_dd, o_ud, o_du)
+    ! ---- sum rule: the norm o_uu+o_dd is a (frame-invariant) trace; rebuild the total
+    !      diagonal from interstitial + MT-local just for the diagnostic print ----
+    IF (l_check) THEN
+      ALLOCATE(c_uu(nb, nb), c_dd(nb, nb), c_ud(nb, nb), c_du(nb, nb))
+      c_uu = oi_uu; c_dd = oi_dd; c_ud = oi_ud; c_du = oi_du
+      CALL wannierlib_spin_mt_block(atoms, abc, radfun, c_uu, c_dd, c_ud, c_du)
+      CALL wannierlib_spin_sumrule(s0, c_uu, c_dd, ik, tol=1.0e-3)
+      DEALLOCATE(c_uu, c_dd, c_ud, c_du)
+    END IF
+
+    DEALLOCATE(oi_uu, oi_dd, oi_ud, oi_du, spa)
   END SUBROUTINE wannierlib_spin_bloch
 
   !> Assemble the three Pauli matrices at one k from the four global spin-block
@@ -149,19 +164,29 @@ CONTAINS
     END DO
   END SUBROUTINE wannierlib_spin_mt_block
 
-  !> Per-atom (site-resolved) muffin-tin Pauli spin: spa(nb,nb,3,nat).
-  !> Same MT contraction as wannierlib_spin_mt_block but KEEPING the global atom
-  !> index na instead of summing. The interstitial is NOT site-resolvable and is
-  !> excluded here, so spa is the muffin-tin site spin (the physical local moment;
-  !> in an AFM this is +M on one sublattice and -M on the other).
-  SUBROUTINE wannierlib_spin_peratom(atoms, abc, radfun, spa)
-    TYPE(t_atoms),  INTENT(IN)  :: atoms
-    TYPE(t_abc),    INTENT(IN)  :: abc(:, :)        ! (ntype, 2 spin)
-    TYPE(t_radfun), INTENT(IN)  :: radfun(:)
-    COMPLEX,        INTENT(OUT) :: spa(:, :, :, :)  ! (nb,nb,3,nat): 1=sx 2=sy 3=sz per atom
+  !> Per-atom (site-resolved) muffin-tin Pauli spin: spa(nb,nb,3,nat), rotated to
+  !> the GLOBAL spin frame. Same MT contraction as wannierlib_spin_mt_block but
+  !> KEEPING the global atom index na instead of summing. The interstitial is NOT
+  !> site-resolvable and is excluded here, so spa is the muffin-tin site spin (the
+  !> physical local moment; in an AFM this is +M on one sublattice and -M on the
+  !> other).
+  !>
+  !> The abc%cof are LOCAL-frame spinor coefficients (calc_abc combines the two
+  !> spinor blocks in each atom's local quantization axis). For a collinear FM_z
+  !> (beta=0) local==global, but for a noncollinear/AFM texture (beta_a /= 0) each
+  !> atom's (sx,sy,sz) must be rotated local->global by R_z(alpha_a) R_y(beta_a)
+  !> using the noco angles, or the AFM sublattice comes out with the wrong sign
+  !> (both moments look "+"). We apply that rotation per atom here.
+  SUBROUTINE wannierlib_spin_peratom(atoms, abc, radfun, nococonv, spa)
+    TYPE(t_atoms),    INTENT(IN)  :: atoms
+    TYPE(t_abc),      INTENT(IN)  :: abc(:, :)        ! (ntype, 2 spin)
+    TYPE(t_radfun),   INTENT(IN)  :: radfun(:)
+    TYPE(t_nococonv), INTENT(IN)  :: nococonv         ! %alph(:), %beta(:) per type
+    COMPLEX,          INTENT(OUT) :: spa(:, :, :, :)  ! (nb,nb,3,nat): 1=sx 2=sy 3=sz per atom, GLOBAL frame
 
     INTEGER :: nb, i, j, ntyp, iat, na, l, ll1, mm, lm, n_r, n_r2
-    COMPLEX :: loc(2, 2)
+    COMPLEX :: loc(2, 2), cx, cy, cz
+    REAL    :: ca, sa, cb, sb
 
     nb = SIZE(spa, 1)
     spa = CMPLX(0.0, 0.0)
@@ -172,6 +197,8 @@ CONTAINS
           DO iat = 1, atoms%neq(ntyp)
             na = na + 1
             loc = CMPLX(0.0, 0.0)
+            ca = COS(nococonv%alph(ntyp)); sa = SIN(nococonv%alph(ntyp))
+            cb = COS(nococonv%beta(ntyp)); sb = SIN(nococonv%beta(ntyp))
             DO l = 0, atoms%lmax(ntyp)
               ll1 = l*(l + 1)
               DO mm = -l, l
@@ -186,9 +213,14 @@ CONTAINS
                 END DO
               END DO
             END DO
-            spa(i,j,1,na) = loc(1,2) + loc(2,1)                ! sigma_x
-            spa(i,j,2,na) = -ImagUnit * (loc(1,2) - loc(2,1))  ! sigma_y
-            spa(i,j,3,na) = loc(1,1) - loc(2,2)                ! sigma_z
+            ! local-frame Pauli components at this site ...
+            cx = loc(1,2) + loc(2,1)                ! sigma_x (local)
+            cy = -ImagUnit * (loc(1,2) - loc(2,1))  ! sigma_y (local)
+            cz = loc(1,1) - loc(2,2)                ! sigma_z (local)
+            ! ... rotated local->global by R_z(alpha) R_y(beta) (noco convention)
+            spa(i,j,1,na) =  ca*cb*cx - sa*cy + ca*sb*cz
+            spa(i,j,2,na) =  sa*cb*cx + ca*cy + sa*sb*cz
+            spa(i,j,3,na) = -sb*cx           + cb*cz
           END DO
         END DO
       END DO

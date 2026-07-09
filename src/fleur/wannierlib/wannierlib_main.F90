@@ -263,7 +263,7 @@ CONTAINS
                                                noco, nococonv, isp, itype, zMat)
             END DO
          END DO
-         IF (this%l_spin) CALL wannierlib_spin_peratom(atoms, abc_s, radfun, s0pa_coarse(:, :, :, :, ikpt))
+         IF (this%l_spin) CALL wannierlib_spin_peratom(atoms, abc_s, radfun, nococonv, s0pa_coarse(:, :, :, :, ikpt))
          IF (this%l_spin) CALL wannierlib_spin_bloch(atoms, abc_s, radfun, nococonv, stars, lapw, zMat, &
                                     this%num_bands, ikpt, s0_coarse(:, :, :, ikpt), ikpt <= 3)
          IF (this%l_orbmom) CALL wannierlib_orbmom_bloch(atoms, abc_s, radfun, l0_coarse(:, :, :, :, ikpt))
