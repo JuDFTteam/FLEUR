@@ -3,6 +3,9 @@ ${CMAKE_SOURCE_DIR}/src/fleur/propcalc/xas/xas_angular.F90
 ${CMAKE_SOURCE_DIR}/src/fleur/propcalc/xas/xas_amplitudes.F90
 ${CMAKE_SOURCE_DIR}/src/fleur/propcalc/xas/xas_core.F90
 ${CMAKE_SOURCE_DIR}/src/fleur/propcalc/xas/xas_transitions.F90
+${CMAKE_SOURCE_DIR}/src/fleur/propcalc/xas/rixs_spectrum.F90
+${CMAKE_SOURCE_DIR}/src/fleur/propcalc/xas/rixs_io.F90
+${CMAKE_SOURCE_DIR}/src/fleur/propcalc/xas/rixs_driver.F90
 ${CMAKE_SOURCE_DIR}/src/fleur/propcalc/xas/xas_driver.F90
 ${CMAKE_SOURCE_DIR}/src/fleur/propcalc/xas/xas_io.F90
 ${CMAKE_SOURCE_DIR}/src/fleur/propcalc/xas/xas_matrixelements.F90

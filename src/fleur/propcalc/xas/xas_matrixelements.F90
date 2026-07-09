@@ -14,6 +14,7 @@ MODULE m_xas_matrixelements
    PRIVATE
 
    PUBLIC :: xas_core_band_matrixelements
+   PUBLIC :: xas_band_core_emission_matrixelements
    PUBLIC :: xas_print_largest_matrixelement_partials
 
 CONTAINS
@@ -103,6 +104,36 @@ CONTAINS
          END DO
       END DO
    END SUBROUTINE xas_core_band_matrixelements
+
+   SUBROUTINE xas_band_core_emission_matrixelements(abc_spin, radfun, radial_xas, core_state, eps_sph, iAtom_l, lmax, matrix, &
+                                                    final_l, spin_frame_transform)
+      ! Returns M_emit(band,mj,eps)=<core,mj|D_eps^\dagger|band>.
+      ! The existing XAS routine computes <band|D_eps|core>, so emission is
+      ! its complex conjugate. Keep this convention centralized for RIXS.
+      TYPE(t_abc),            INTENT(IN)  :: abc_spin(:)
+      TYPE(t_radfun),         INTENT(IN)  :: radfun
+      REAL,                   INTENT(IN)  :: radial_xas(:, 0:, :)
+      TYPE(t_xas_core_state), INTENT(IN)  :: core_state
+      COMPLEX,                INTENT(IN)  :: eps_sph(-1:1)
+      INTEGER,                INTENT(IN)  :: iAtom_l, lmax
+      COMPLEX,                INTENT(OUT) :: matrix(:, :)
+      INTEGER, OPTIONAL,      INTENT(IN)  :: final_l
+      COMPLEX, OPTIONAL,      INTENT(IN)  :: spin_frame_transform(:, :)
+
+      IF (PRESENT(final_l) .AND. PRESENT(spin_frame_transform)) THEN
+         CALL xas_core_band_matrixelements(abc_spin, radfun, radial_xas, core_state, eps_sph, iAtom_l, lmax, matrix, &
+                                           final_l=final_l, spin_frame_transform=spin_frame_transform)
+      ELSE IF (PRESENT(final_l)) THEN
+         CALL xas_core_band_matrixelements(abc_spin, radfun, radial_xas, core_state, eps_sph, iAtom_l, lmax, matrix, &
+                                           final_l=final_l)
+      ELSE IF (PRESENT(spin_frame_transform)) THEN
+         CALL xas_core_band_matrixelements(abc_spin, radfun, radial_xas, core_state, eps_sph, iAtom_l, lmax, matrix, &
+                                           spin_frame_transform=spin_frame_transform)
+      ELSE
+         CALL xas_core_band_matrixelements(abc_spin, radfun, radial_xas, core_state, eps_sph, iAtom_l, lmax, matrix)
+      END IF
+      matrix = CONJG(matrix)
+   END SUBROUTINE xas_band_core_emission_matrixelements
 
    SUBROUTINE xas_print_largest_matrixelement_partials(abc_spin, radfun, radial_xas, core_state, eps_sph, iAtom_l, lmax, &
                                                        n_print, out_unit)

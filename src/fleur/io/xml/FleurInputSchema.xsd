@@ -4070,6 +4070,11 @@
                <xsd:documentation>Parameters for independent-particle core-level XAS postprocessing.</xsd:documentation>
             </xsd:annotation>
          </xsd:element>
+         <xsd:element maxOccurs="1" minOccurs="0" name="rixs" type="RIXSOutputType">
+            <xsd:annotation>
+               <xsd:documentation>Parameters for a minimal independent-particle RIXS postprocessing prototype.</xsd:documentation>
+            </xsd:annotation>
+         </xsd:element>
          <xsd:element maxOccurs="1" minOccurs="0" name="wannier" type="WannierOutputType">
             <xsd:annotation>
                <xsd:documentation>Parameters for Wannier function generation.</xsd:documentation>
@@ -4160,6 +4165,33 @@
       <xsd:attribute default="F" name="writeTransitions" type="FleurBool" use="optional">
          <xsd:annotation>
             <xsd:documentation>Write rank-local, unbroadened transition tables for diagnostics and RIXS preparation.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+   </xsd:complexType>
+
+   <xsd:complexType name="RIXSOutputType">
+      <xsd:annotation>
+         <xsd:documentation>
+            Minimal guarded independent-particle RIXS prototype. Energies are
+            given in Hartree. The first implementation is direct same-k,
+            scalar/no-SOC, and does not use symmetry-star reconstruction.
+         </xsd:documentation>
+      </xsd:annotation>
+      <xsd:attribute default="T" name="l_rixs" type="FleurBool" use="optional"/>
+      <xsd:attribute name="absorberZ" type="xsd:positiveInteger" use="optional"/>
+      <xsd:attribute name="edge" type="xsd:string" use="optional"/>
+      <xsd:attribute name="omegaIn" type="FleurDouble" use="optional"/>
+      <xsd:attribute name="gammaCore" type="FleurDouble" use="optional"/>
+      <xsd:attribute name="lossMin" type="FleurDouble" use="optional"/>
+      <xsd:attribute name="lossMax" type="FleurDouble" use="optional"/>
+      <xsd:attribute name="nLoss" type="xsd:positiveInteger" use="optional"/>
+      <xsd:attribute name="etaLoss" type="FleurDouble" use="optional"/>
+      <xsd:attribute default="x" name="incomingPolarizations" type="StringVecType" use="optional"/>
+      <xsd:attribute default="x" name="outgoingPolarizations" type="StringVecType" use="optional"/>
+      <xsd:attribute default="rixs" name="outputPrefix" type="xsd:string" use="optional"/>
+      <xsd:attribute default="F" name="writeContributions" type="FleurBool" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Write rank-local valence/intermediate-band contribution tables for RIXS diagnostics.</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
    </xsd:complexType>

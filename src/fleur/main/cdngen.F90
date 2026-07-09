@@ -52,6 +52,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,xas,banddos,sliceplot,vacuum,&
    USE m_types_eigdos
    USE m_types_dos
    USE m_types_hyperfine
+   USE m_rixs_driver, ONLY: rixs_run_driver
    USE m_xas_driver, ONLY: xas_run_driver
 
    USE m_force_sf ! Klueppelberg (force level 3)
@@ -178,6 +179,8 @@ SUBROUTINE cdngen(eig_id,fmpi,input,xas,banddos,sliceplot,vacuum,&
    ! it reuses the converged potential, eigenvalues, occupations, and MT basis.
    IF (xas%l_xas) CALL xas_run_driver(eig_id, fmpi, input, xas, kpts, atoms, sym, cell, noco, nococonv, &
                                       enpara, vTot, results)
+   IF (xas%l_rixs) CALL rixs_run_driver(eig_id, fmpi, input, xas, kpts, atoms, sym, cell, noco, nococonv, &
+                                        enpara, vTot, results)
    CALL timestop("cdngen: cdnval")
 
    call val_den%copyPotDen(outDen)
@@ -214,7 +217,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,xas,banddos,sliceplot,vacuum,&
       ENDIF
    ENDIF
 
-   IF (banddos%vacdos.or.banddos%dos.or.banddos%band.or.input%cdinf.or.xas%l_xas) THEN
+   IF (banddos%vacdos.or.banddos%dos.or.banddos%band.or.input%cdinf.or.xas%l_xas.or.xas%l_rixs) THEN
       CALL juDFT_end("Charge density postprocessing done.",fmpi%irank)
    END IF
 
