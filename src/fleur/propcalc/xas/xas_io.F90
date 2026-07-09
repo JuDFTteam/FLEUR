@@ -8,14 +8,15 @@ MODULE m_xas_io
    USE m_juDFT, ONLY: juDFT_error
    USE m_xas_core, ONLY: t_xas_core_state
    USE m_xas_transitions, ONLY: t_xas_core_descriptor, t_xas_transition_record, &
-                                xas_attach_polarization_amplitude, xas_core_descriptor_from_state, &
-                                xas_init_transition_record, xas_transition_absM2, &
-                                xas_transition_total_weighted_strength
+                                xas_attach_l_channel_amplitudes, xas_attach_polarization_amplitude, &
+                                xas_core_descriptor_from_state, xas_init_transition_record, xas_transition_absM2, &
+                                xas_transition_l_reconstruction_error, xas_transition_total_weighted_strength
    IMPLICIT NONE
    PRIVATE
 
    PUBLIC :: xas_write_spectrum_text
    PUBLIC :: xas_open_transition_table, xas_write_transition_rows, xas_close_transition_table
+   PUBLIC :: xas_l_channel_reconstruction_error
 
 CONTAINS
 
@@ -83,7 +84,7 @@ CONTAINS
 
    SUBROUTINE xas_write_transition_rows(io_unit, ikpt_full, ikpt_parent, star_index, bksym, absorber_atom, absorber_type, &
                                         spin_channel, core_state, pol_id, pol_label, eps_sph, eig_band, occupation, &
-                                        k_weight, matrix, hartree_to_ev)
+                                        k_weight, matrix, hartree_to_ev, final_l, matrix_lchan)
       INTEGER, INTENT(IN) :: io_unit, ikpt_full, ikpt_parent, star_index, bksym, absorber_atom, absorber_type, spin_channel
       TYPE(t_xas_core_state), INTENT(IN) :: core_state
       INTEGER, INTENT(IN) :: pol_id
@@ -91,6 +92,8 @@ CONTAINS
       COMPLEX, INTENT(IN) :: eps_sph(:)
       REAL,    INTENT(IN) :: eig_band(:), occupation(:), k_weight, hartree_to_ev
       COMPLEX, INTENT(IN) :: matrix(:, :)
+      INTEGER, OPTIONAL, INTENT(IN) :: final_l(:)
+      COMPLEX, OPTIONAL, INTENT(IN) :: matrix_lchan(:, :, :)
 
       TYPE(t_xas_core_descriptor) :: core
       TYPE(t_xas_transition_record) :: record
@@ -108,6 +111,9 @@ CONTAINS
                                          absorber_atom, absorber_type, spin_channel, eig_band(band), &
                                          occupation(band), k_weight)
          CALL xas_attach_polarization_amplitude(record, pol_id, pol_label, eps_sph, matrix, band)
+         IF (PRESENT(final_l) .AND. PRESENT(matrix_lchan)) THEN
+            CALL xas_attach_l_channel_amplitudes(record, final_l, matrix_lchan, band)
+         END IF
          transition_energy = record%transition_energy
          abs_m2 = xas_transition_absM2(record)
          WRITE(io_unit, '(6(i0,1x),7(es24.16e3,1x))') ikpt_full, ikpt_parent, star_index, band, &
@@ -115,6 +121,39 @@ CONTAINS
             record%k_weight, record%one_minus_occ, abs_m2, xas_transition_total_weighted_strength(record)
       END DO
    END SUBROUTINE xas_write_transition_rows
+
+   SUBROUTINE xas_l_channel_reconstruction_error(max_error, core_state, pol_id, pol_label, eps_sph, eig_band, occupation, &
+                                                 k_weight, matrix, final_l, matrix_lchan, max_checks)
+      REAL,                  INTENT(INOUT) :: max_error
+      TYPE(t_xas_core_state), INTENT(IN)    :: core_state
+      INTEGER,               INTENT(IN)    :: pol_id
+      CHARACTER(LEN=*),      INTENT(IN)    :: pol_label
+      COMPLEX,               INTENT(IN)    :: eps_sph(:)
+      REAL,                  INTENT(IN)    :: eig_band(:), occupation(:), k_weight
+      COMPLEX,               INTENT(IN)    :: matrix(:, :)
+      INTEGER,               INTENT(IN)    :: final_l(:)
+      COMPLEX,               INTENT(IN)    :: matrix_lchan(:, :, :)
+      INTEGER, OPTIONAL,     INTENT(IN)    :: max_checks
+
+      TYPE(t_xas_core_descriptor) :: core
+      TYPE(t_xas_transition_record) :: record
+      INTEGER :: band, n_checked, n_limit
+
+      n_limit = HUGE(1)
+      IF (PRESENT(max_checks)) n_limit = max_checks
+      CALL xas_core_descriptor_from_state(core, core_state)
+      n_checked = 0
+      DO band = 1, SIZE(eig_band)
+         IF (1.0 - occupation(band) <= 1.0e-10) CYCLE
+         CALL xas_init_transition_record(record, core, 1, 1, 1, 1, band, 1, 1, 1, eig_band(band), &
+                                         occupation(band), k_weight)
+         CALL xas_attach_polarization_amplitude(record, pol_id, pol_label, eps_sph, matrix, band)
+         CALL xas_attach_l_channel_amplitudes(record, final_l, matrix_lchan, band)
+         max_error = MAX(max_error, xas_transition_l_reconstruction_error(record))
+         n_checked = n_checked + 1
+         IF (n_checked >= n_limit) EXIT
+      END DO
+   END SUBROUTINE xas_l_channel_reconstruction_error
 
    SUBROUTINE xas_close_transition_table(io_unit)
       INTEGER, INTENT(INOUT) :: io_unit

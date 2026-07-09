@@ -17,7 +17,11 @@ MODULE m_xas_transitions
    PUBLIC :: xas_core_descriptor_from_state
    PUBLIC :: xas_init_transition_record
    PUBLIC :: xas_attach_polarization_amplitude
+   PUBLIC :: xas_attach_l_channel_amplitudes
+   PUBLIC :: xas_allowed_final_l_channels
    PUBLIC :: xas_transition_absM2
+   PUBLIC :: xas_transition_absM2_l
+   PUBLIC :: xas_transition_l_reconstruction_error
    PUBLIC :: xas_transition_total_weighted_strength
 
    TYPE t_xas_core_descriptor
@@ -37,6 +41,10 @@ MODULE m_xas_transitions
       CHARACTER(LEN=1) :: pol_label = ""
       COMPLEX, ALLOCATABLE :: eps_sph(:)
       TYPE(t_xas_transition_amplitudes) :: amp
+      ! Complex final-l amplitudes. Their incoherent strengths are useful
+      ! diagnostics, but the full XAS observable uses the coherent total amp.
+      INTEGER, ALLOCATABLE :: final_l(:)
+      TYPE(t_xas_transition_amplitudes), ALLOCATABLE :: amp_l(:)
    END TYPE t_xas_polarized_amplitudes
 
    TYPE t_xas_transition_record
@@ -138,6 +146,68 @@ CONTAINS
       CALL record%pol_amp(n_pol)%amp%set_from_matrix_row(matrix, band, twice_mj=record%core%twice_mj)
    END SUBROUTINE xas_attach_polarization_amplitude
 
+   SUBROUTINE xas_attach_l_channel_amplitudes(record, final_l, matrix_lchan, band, pol_index)
+      TYPE(t_xas_transition_record), INTENT(INOUT) :: record
+      INTEGER,                       INTENT(IN)    :: final_l(:), band
+      COMPLEX,                       INTENT(IN)    :: matrix_lchan(:, :, :)
+      INTEGER, OPTIONAL,             INTENT(IN)    :: pol_index
+
+      INTEGER :: i_l, i_pol, n_channels
+
+      IF (.NOT. ALLOCATED(record%pol_amp)) THEN
+         CALL juDFT_error("XAS transition record has no polarization amplitudes for l-channel storage", &
+                          calledby="m_xas_transitions")
+      END IF
+      IF (.NOT. ALLOCATED(record%core%twice_mj)) THEN
+         CALL juDFT_error("XAS transition record has no core twice_mj mapping", calledby="m_xas_transitions")
+      END IF
+      IF (band /= record%band) THEN
+         CALL juDFT_error("XAS transition l-channel band mismatch", calledby="m_xas_transitions")
+      END IF
+      IF (SIZE(matrix_lchan, 1) < band .OR. SIZE(matrix_lchan, 3) < SIZE(final_l)) THEN
+         CALL juDFT_error("XAS l-channel matrix dimensions are too small", calledby="m_xas_transitions")
+      END IF
+
+      i_pol = 1
+      IF (PRESENT(pol_index)) i_pol = pol_index
+      IF (i_pol < 1 .OR. i_pol > SIZE(record%pol_amp)) THEN
+         CALL juDFT_error("Invalid XAS transition polarization index for l channels", calledby="m_xas_transitions")
+      END IF
+
+      n_channels = SIZE(final_l)
+      IF (ALLOCATED(record%pol_amp(i_pol)%final_l)) DEALLOCATE(record%pol_amp(i_pol)%final_l)
+      IF (ALLOCATED(record%pol_amp(i_pol)%amp_l)) DEALLOCATE(record%pol_amp(i_pol)%amp_l)
+      ALLOCATE(record%pol_amp(i_pol)%final_l(n_channels))
+      ALLOCATE(record%pol_amp(i_pol)%amp_l(n_channels))
+      record%pol_amp(i_pol)%final_l = final_l
+
+      DO i_l = 1, n_channels
+         CALL record%pol_amp(i_pol)%amp_l(i_l)%set_from_matrix_row(matrix_lchan(:, :, i_l), band, &
+                                                                    twice_mj=record%core%twice_mj)
+      END DO
+   END SUBROUTINE xas_attach_l_channel_amplitudes
+
+   SUBROUTINE xas_allowed_final_l_channels(core, lmax, n_channels, final_l)
+      TYPE(t_xas_core_descriptor), INTENT(IN)  :: core
+      INTEGER,                     INTENT(IN)  :: lmax
+      INTEGER,                     INTENT(OUT) :: n_channels
+      INTEGER,                     INTENT(OUT) :: final_l(:)
+
+      n_channels = 0
+      final_l = -1
+      IF (core%lc - 1 >= 0 .AND. core%lc - 1 <= lmax) THEN
+         n_channels = n_channels + 1
+         IF (n_channels <= SIZE(final_l)) final_l(n_channels) = core%lc - 1
+      END IF
+      IF (core%lc + 1 <= lmax) THEN
+         n_channels = n_channels + 1
+         IF (n_channels <= SIZE(final_l)) final_l(n_channels) = core%lc + 1
+      END IF
+      IF (n_channels > SIZE(final_l)) THEN
+         CALL juDFT_error("Too many XAS final-l channels", calledby="m_xas_transitions")
+      END IF
+   END SUBROUTINE xas_allowed_final_l_channels
+
    REAL FUNCTION xas_transition_absM2(record, pol_index) RESULT(abs_m2)
       TYPE(t_xas_transition_record), INTENT(IN) :: record
       INTEGER, OPTIONAL,             INTENT(IN) :: pol_index
@@ -154,6 +224,63 @@ CONTAINS
       END IF
       abs_m2 = record%pol_amp(i_pol)%amp%absM2
    END FUNCTION xas_transition_absM2
+
+   REAL FUNCTION xas_transition_absM2_l(record, i_l, pol_index) RESULT(abs_m2)
+      TYPE(t_xas_transition_record), INTENT(IN) :: record
+      INTEGER,                       INTENT(IN) :: i_l
+      INTEGER, OPTIONAL,             INTENT(IN) :: pol_index
+
+      INTEGER :: i_pol
+
+      i_pol = 1
+      IF (PRESENT(pol_index)) i_pol = pol_index
+      IF (.NOT. ALLOCATED(record%pol_amp)) THEN
+         CALL juDFT_error("XAS transition record has no polarization amplitudes", calledby="m_xas_transitions")
+      END IF
+      IF (i_pol < 1 .OR. i_pol > SIZE(record%pol_amp)) THEN
+         CALL juDFT_error("Invalid XAS transition polarization index", calledby="m_xas_transitions")
+      END IF
+      IF (.NOT. ALLOCATED(record%pol_amp(i_pol)%amp_l)) THEN
+         CALL juDFT_error("XAS transition record has no l-channel amplitudes", calledby="m_xas_transitions")
+      END IF
+      IF (i_l < 1 .OR. i_l > SIZE(record%pol_amp(i_pol)%amp_l)) THEN
+         CALL juDFT_error("Invalid XAS transition l-channel index", calledby="m_xas_transitions")
+      END IF
+      abs_m2 = record%pol_amp(i_pol)%amp_l(i_l)%absM2
+   END FUNCTION xas_transition_absM2_l
+
+   REAL FUNCTION xas_transition_l_reconstruction_error(record, pol_index) RESULT(max_error)
+      TYPE(t_xas_transition_record), INTENT(IN) :: record
+      INTEGER, OPTIONAL,             INTENT(IN) :: pol_index
+
+      INTEGER :: i_pol, i_l, i_mj
+      COMPLEX, ALLOCATABLE :: m_sum(:)
+
+      i_pol = 1
+      IF (PRESENT(pol_index)) i_pol = pol_index
+      IF (.NOT. ALLOCATED(record%pol_amp)) THEN
+         CALL juDFT_error("XAS transition record has no polarization amplitudes", calledby="m_xas_transitions")
+      END IF
+      IF (i_pol < 1 .OR. i_pol > SIZE(record%pol_amp)) THEN
+         CALL juDFT_error("Invalid XAS transition polarization index", calledby="m_xas_transitions")
+      END IF
+      IF (.NOT. ALLOCATED(record%pol_amp(i_pol)%amp_l)) THEN
+         CALL juDFT_error("XAS transition record has no l-channel amplitudes", calledby="m_xas_transitions")
+      END IF
+
+      ALLOCATE(m_sum(record%pol_amp(i_pol)%amp%n_mj), SOURCE=CMPLX(0.0, 0.0))
+      DO i_l = 1, SIZE(record%pol_amp(i_pol)%amp_l)
+         IF (record%pol_amp(i_pol)%amp_l(i_l)%n_mj /= SIZE(m_sum)) THEN
+            CALL juDFT_error("XAS l-channel amplitude dimension mismatch", calledby="m_xas_transitions")
+         END IF
+         m_sum = m_sum + record%pol_amp(i_pol)%amp_l(i_l)%m
+      END DO
+
+      max_error = 0.0
+      DO i_mj = 1, SIZE(m_sum)
+         max_error = MAX(max_error, ABS(record%pol_amp(i_pol)%amp%m(i_mj) - m_sum(i_mj)))
+      END DO
+   END FUNCTION xas_transition_l_reconstruction_error
 
    REAL FUNCTION xas_transition_total_weighted_strength(record, pol_index) RESULT(strength)
       TYPE(t_xas_transition_record), INTENT(IN) :: record

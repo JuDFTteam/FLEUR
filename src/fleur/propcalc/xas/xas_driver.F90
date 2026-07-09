@@ -34,8 +34,8 @@ MODULE m_xas_driver
    USE m_xas_angular, ONLY: xas_cartesian_to_spherical, xas_print_angular_sumrule
    USE m_xas_amplitudes, ONLY: t_xas_transition_amplitudes
    USE m_xas_core, ONLY: t_xas_core_state, xas_extract_core_states, xas_print_core_states
-   USE m_xas_io, ONLY: xas_write_spectrum_text, xas_open_transition_table, xas_write_transition_rows, &
-                       xas_close_transition_table
+   USE m_xas_io, ONLY: xas_write_spectrum_text, xas_l_channel_reconstruction_error, xas_open_transition_table, &
+                       xas_write_transition_rows, xas_close_transition_table
    USE m_xas_matrixelements, ONLY: xas_core_band_matrixelements
    USE m_xas_radial, ONLY: xas_radial_dipole_integrals
    USE m_xas_spectrum, ONLY: xas_accumulate_matrix_spectrum
@@ -65,6 +65,10 @@ MODULE m_xas_driver
    ! Developer pure-angular sum-rule diagnostic. Enable manually when checking
    ! angular isotropy; it does not affect spectra.
    LOGICAL, PARAMETER :: xas_debug_angular_sumrule = .FALSE.
+   ! Developer check that the coherent total amplitude equals the sum of
+   ! complex final-l channel amplitudes for sampled transitions.
+   LOGICAL, PARAMETER :: xas_debug_l_channel_reconstruction = .FALSE.
+   INTEGER, PARAMETER :: xas_debug_l_channel_reconstruction_max_checks = 2
    ! Developer symmetry-basis diagnostic. Enable manually to print the raw
    ! lattice/fractional operations and the Cartesian/proper rotations used by
    ! XAS Wigner-D and SU(2) star reconstruction.
@@ -160,11 +164,12 @@ CONTAINS
       REAL    :: xas_debug_strength_total_reduced(xas_debug_n_pol), xas_debug_strength_cross_reduced(xas_debug_n_pol)
       REAL    :: weight_sums_local(2), weight_sums_reduced(2)
       REAL    :: transition_min, transition_max, transition_padding, transition_step, occ, debug_strength
-      REAL    :: debug_avg, debug_rel_xz
+      REAL    :: debug_avg, debug_rel_xz, lchan_reconstruction_error_local, lchan_reconstruction_error_reduced
       REAL    :: wk_current, wk_star, weight_sum_parent, weight_sum_star
+      INTEGER :: mpi_ierr
       INTEGER :: underflow_local(1), underflow_reduced(1)
       LOGICAL :: l_real, l_xas_debug_fp, l_xas_debug_strength, l_xas_debug_kpt_strength, l_root
-      LOGICAL :: l_spinor_abc, l_xas_angular_sumrule_printed
+      LOGICAL :: l_spinor_abc, l_xas_angular_sumrule_printed, l_need_lchan_matrix
 
       l_root = fmpi%irank == 0
       l_xas_debug_fp = xas_debug_verbosity >= 3
@@ -184,6 +189,8 @@ CONTAINS
 	      n_abc_debug_direct_records = 0
 	      n_abc_debug_star_records = 0
 	      l_xas_angular_sumrule_printed = .FALSE.
+      lchan_reconstruction_error_local = 0.0
+      lchan_reconstruction_error_reduced = 0.0
       transition_units = -1
 
       IF (.NOT. xas%l_xas) RETURN
@@ -259,6 +266,7 @@ CONTAINS
       IF (l_xas_debug_strength) THEN
          ALLOCATE(xas_debug_strength_spin(xas_debug_n_pol, n_spin_channels), SOURCE=0.0)
       END IF
+      l_need_lchan_matrix = l_xas_debug_strength .OR. xas%write_transitions .OR. xas_debug_l_channel_reconstruction
       DO ikpt_i = 1, SIZE(fmpi%k_list)
          ikpt = fmpi%k_list(ikpt_i)
          IF (kpts%wtkpt(ikpt) <= 0.0) CYCLE
@@ -426,9 +434,11 @@ CONTAINS
 	               END IF
 
                ALLOCATE(matrix(nbands, SIZE(core_states(1)%twice_mj)))
+               IF (l_need_lchan_matrix) THEN
+                  ALLOCATE(matrix_lchan(nbands, SIZE(core_states(1)%twice_mj), n_final_l_channels))
+               END IF
                IF (l_xas_debug_strength) THEN
                   ALLOCATE(matrix_debug(nbands, SIZE(core_states(1)%twice_mj)))
-                  ALLOCATE(matrix_lchan(nbands, SIZE(core_states(1)%twice_mj), n_final_l_channels))
                END IF
 
                IF (xas_use_spatial_star) THEN
@@ -526,11 +536,32 @@ CONTAINS
                                                                 iatom_l, lmax_xas, matrix)
                            END IF
                            CALL xas_debug_report_underflow(l_xas_debug_fp, "xas_core_band_matrixelements", unit=xas_debug_unit)
+                           IF (xas%write_transitions .OR. xas_debug_l_channel_reconstruction) THEN
+                              DO i_lchan = 1, n_final_l_channels
+                                 IF (l_spinor_abc) THEN
+                                    CALL xas_core_band_matrixelements(abc_star_spin, radfun, radial_xas, core_states(1), eps_sph, &
+                                                                      iatom_l, lmax_xas, matrix_lchan(:, :, i_lchan), &
+                                                                      final_l=final_l_channels(i_lchan), &
+                                                                      spin_frame_transform=spin_frame_transform)
+                                 ELSE
+                                    CALL xas_core_band_matrixelements(abc_star_spin, radfun, radial_xas, core_states(1), eps_sph, &
+                                                                      iatom_l, lmax_xas, matrix_lchan(:, :, i_lchan), &
+                                                                      final_l=final_l_channels(i_lchan))
+                                 END IF
+                              END DO
+                           END IF
                            IF (xas%write_transitions) THEN
                               CALL xas_write_transition_rows(transition_units(i_pol), ikptf, ikpt, star_index, bksym, &
                                  atoms%firstAtom(itype) + iatom_l - 1, itype, jsp_loop, core_states(1), i_pol, &
                                  xas_debug_pol_label(i_pol), eps_sph, eig_band, occ_band, wk_current, matrix, &
-                                 hartree_to_ev_const)
+                                 hartree_to_ev_const, final_l_channels(1:n_final_l_channels), &
+                                 matrix_lchan(:, :, 1:n_final_l_channels))
+                           END IF
+                           IF (xas_debug_l_channel_reconstruction) THEN
+                              CALL xas_l_channel_reconstruction_error(lchan_reconstruction_error_local, core_states(1), i_pol, &
+                                 xas_debug_pol_label(i_pol), eps_sph, eig_band, occ_band, wk_current, matrix, &
+                                 final_l_channels(1:n_final_l_channels), matrix_lchan(:, :, 1:n_final_l_channels), &
+                                 xas_debug_l_channel_reconstruction_max_checks)
                            END IF
                            CALL xas_debug_clear_underflow(l_xas_debug_fp)
                            CALL xas_accumulate_matrix_spectrum(energy_grid, eig_band, occ_band, wk_current, &
@@ -604,11 +635,32 @@ CONTAINS
                                                              iatom_l, lmax_xas, matrix)
                         END IF
                         CALL xas_debug_report_underflow(l_xas_debug_fp, "xas_core_band_matrixelements", unit=xas_debug_unit)
+                        IF (xas%write_transitions .OR. xas_debug_l_channel_reconstruction) THEN
+                           DO i_lchan = 1, n_final_l_channels
+                              IF (l_spinor_abc) THEN
+                                 CALL xas_core_band_matrixelements(abc_spin, radfun, radial_xas, core_states(1), eps_sph, &
+                                                                   iatom_l, lmax_xas, matrix_lchan(:, :, i_lchan), &
+                                                                   final_l=final_l_channels(i_lchan), &
+                                                                   spin_frame_transform=spin_frame_transform)
+                              ELSE
+                                 CALL xas_core_band_matrixelements(abc_spin, radfun, radial_xas, core_states(1), eps_sph, &
+                                                                   iatom_l, lmax_xas, matrix_lchan(:, :, i_lchan), &
+                                                                   final_l=final_l_channels(i_lchan))
+                              END IF
+                           END DO
+                        END IF
                         IF (xas%write_transitions) THEN
                            CALL xas_write_transition_rows(transition_units(i_pol), ikpt, ikpt, 1, 1, &
                               atoms%firstAtom(itype) + iatom_l - 1, itype, jsp_loop, core_states(1), i_pol, &
                               xas_debug_pol_label(i_pol), eps_sph, eig_band, occ_band, wk_current, matrix, &
-                              hartree_to_ev_const)
+                              hartree_to_ev_const, final_l_channels(1:n_final_l_channels), &
+                              matrix_lchan(:, :, 1:n_final_l_channels))
+                        END IF
+                        IF (xas_debug_l_channel_reconstruction) THEN
+                           CALL xas_l_channel_reconstruction_error(lchan_reconstruction_error_local, core_states(1), i_pol, &
+                              xas_debug_pol_label(i_pol), eps_sph, eig_band, occ_band, wk_current, matrix, &
+                              final_l_channels(1:n_final_l_channels), matrix_lchan(:, :, 1:n_final_l_channels), &
+                              xas_debug_l_channel_reconstruction_max_checks)
                         END IF
                         CALL xas_debug_clear_underflow(l_xas_debug_fp)
                         CALL xas_accumulate_matrix_spectrum(energy_grid, eig_band, occ_band, wk_current, &
@@ -622,7 +674,8 @@ CONTAINS
                   END DO
                END IF
 
-               IF (l_xas_debug_strength) DEALLOCATE(matrix_debug, matrix_lchan)
+               IF (l_xas_debug_strength) DEALLOCATE(matrix_debug)
+               IF (l_need_lchan_matrix) DEALLOCATE(matrix_lchan)
 
                DEALLOCATE(matrix, abc_spin, eig_band, occ_band, ev_list)
             END DO
@@ -648,6 +701,12 @@ CONTAINS
       underflow_local = [n_underflow_spectrum]
       underflow_reduced = 0
       CALL mpi_sum_reduce(underflow_local, underflow_reduced, fmpi%mpi_comm)
+      lchan_reconstruction_error_reduced = lchan_reconstruction_error_local
+#ifdef CPP_MPI
+      CALL MPI_Allreduce(lchan_reconstruction_error_local, lchan_reconstruction_error_reduced, 1, MPI_REAL, MPI_MAX, &
+                         fmpi%mpi_comm, mpi_ierr)
+      IF (mpi_ierr /= 0) CALL juDFT_error("MPI_Allreduce failed for XAS l-channel reconstruction check", calledby="m_xas_driver")
+#endif
 
       IF (l_xas_debug_strength) THEN
          ALLOCATE(xas_debug_strength_spin_reduced(SIZE(xas_debug_strength_spin, 1), &
@@ -680,6 +739,12 @@ CONTAINS
          WRITE(*, '(a,i0,a,i0,a,i0,a)') "XAS DEBUG: summed ", n_absorber_atoms, &
                                         " total absorber atoms with Z=", xas%absorber_z, &
                                         " over ", n_absorber_types, " atom types"
+         IF (xas_debug_l_channel_reconstruction) THEN
+            WRITE(*, '(a,es18.10)') "XAS DEBUG final-l reconstruction max |M-sum_l M_l|=", &
+                                    lchan_reconstruction_error_reduced
+            WRITE(xas_debug_unit, '(a,es18.10)') "XAS DEBUG final-l reconstruction max |M-sum_l M_l|=", &
+                                                lchan_reconstruction_error_reduced
+         END IF
          WRITE(xas_debug_unit, '(a,i0,a,i0,a,i0,a)') "XAS DEBUG: summed ", n_absorber_atoms, &
                                                      " total absorber atoms with Z=", xas%absorber_z, &
                                                      " over ", n_absorber_types, " atom types"
