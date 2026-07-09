@@ -14,19 +14,23 @@ MODULE m_xas_amplitudes
    TYPE t_xas_transition_amplitudes
       INTEGER :: n_mj = 0
       COMPLEX, ALLOCATABLE :: m(:)
+      ! Maps m(:) one-to-one to physical doubled core magnetic sublevels 2*m_j.
+      INTEGER, ALLOCATABLE :: twice_mj(:)
       REAL :: absM2 = 0.0
    CONTAINS
       PROCEDURE :: set_from_matrix_row => xas_transition_amplitudes_set_from_matrix_row
+      PROCEDURE :: set_twice_mj => xas_transition_amplitudes_set_twice_mj
       PROCEDURE :: compute_absM2 => xas_transition_amplitudes_compute_absM2
    END TYPE t_xas_transition_amplitudes
 
 CONTAINS
 
-   SUBROUTINE xas_transition_amplitudes_set_from_matrix_row(this, matrix, band, l_skip_tiny)
+   SUBROUTINE xas_transition_amplitudes_set_from_matrix_row(this, matrix, band, l_skip_tiny, twice_mj)
       CLASS(t_xas_transition_amplitudes), INTENT(INOUT) :: this
       COMPLEX,                            INTENT(IN)    :: matrix(:, :)
       INTEGER,                            INTENT(IN)    :: band
       LOGICAL, OPTIONAL,                  INTENT(IN)    :: l_skip_tiny
+      INTEGER, OPTIONAL,                  INTENT(IN)    :: twice_mj(:)
 
       IF (band < 1 .OR. band > SIZE(matrix, 1)) THEN
          CALL juDFT_error("Invalid band in XAS transition amplitudes", calledby="m_xas_amplitudes")
@@ -39,8 +43,24 @@ CONTAINS
       IF (.NOT. ALLOCATED(this%m)) ALLOCATE(this%m(this%n_mj))
 
       this%m = matrix(band, :)
+      IF (PRESENT(twice_mj)) CALL this%set_twice_mj(twice_mj)
       CALL this%compute_absM2(l_skip_tiny)
    END SUBROUTINE xas_transition_amplitudes_set_from_matrix_row
+
+   SUBROUTINE xas_transition_amplitudes_set_twice_mj(this, twice_mj)
+      CLASS(t_xas_transition_amplitudes), INTENT(INOUT) :: this
+      INTEGER,                            INTENT(IN)    :: twice_mj(:)
+
+      IF (this%n_mj /= 0 .AND. SIZE(twice_mj) /= this%n_mj) THEN
+         CALL juDFT_error("XAS twice_mj mapping does not match amplitude dimension", calledby="m_xas_amplitudes")
+      END IF
+      this%n_mj = SIZE(twice_mj)
+      IF (ALLOCATED(this%twice_mj)) THEN
+         IF (SIZE(this%twice_mj) /= this%n_mj) DEALLOCATE(this%twice_mj)
+      END IF
+      IF (.NOT. ALLOCATED(this%twice_mj)) ALLOCATE(this%twice_mj(this%n_mj))
+      this%twice_mj = twice_mj
+   END SUBROUTINE xas_transition_amplitudes_set_twice_mj
 
    SUBROUTINE xas_transition_amplitudes_compute_absM2(this, l_skip_tiny)
       CLASS(t_xas_transition_amplitudes), INTENT(INOUT) :: this
@@ -54,6 +74,11 @@ CONTAINS
          CALL juDFT_error("XAS transition amplitudes are not allocated", calledby="m_xas_amplitudes")
       END IF
       this%n_mj = SIZE(this%m)
+      IF (ALLOCATED(this%twice_mj)) THEN
+         IF (SIZE(this%twice_mj) /= this%n_mj) THEN
+            CALL juDFT_error("XAS twice_mj mapping does not match allocated amplitudes", calledby="m_xas_amplitudes")
+         END IF
+      END IF
 
       l_skip = .FALSE.
       IF (PRESENT(l_skip_tiny)) l_skip = l_skip_tiny

@@ -527,9 +527,10 @@ CONTAINS
                            END IF
                            CALL xas_debug_report_underflow(l_xas_debug_fp, "xas_core_band_matrixelements", unit=xas_debug_unit)
                            IF (xas%write_transitions) THEN
-                              CALL xas_write_transition_rows(transition_units(i_pol), ikptf, ikpt, star_index, &
-                                 atoms%firstAtom(itype) + iatom_l - 1, itype, eig_band, core_states(1)%energy, &
-                                 occ_band, wk_current, matrix, hartree_to_ev_const)
+                              CALL xas_write_transition_rows(transition_units(i_pol), ikptf, ikpt, star_index, bksym, &
+                                 atoms%firstAtom(itype) + iatom_l - 1, itype, jsp_loop, core_states(1), i_pol, &
+                                 xas_debug_pol_label(i_pol), eps_sph, eig_band, occ_band, wk_current, matrix, &
+                                 hartree_to_ev_const)
                            END IF
                            CALL xas_debug_clear_underflow(l_xas_debug_fp)
                            CALL xas_accumulate_matrix_spectrum(energy_grid, eig_band, occ_band, wk_current, &
@@ -604,9 +605,10 @@ CONTAINS
                         END IF
                         CALL xas_debug_report_underflow(l_xas_debug_fp, "xas_core_band_matrixelements", unit=xas_debug_unit)
                         IF (xas%write_transitions) THEN
-                           CALL xas_write_transition_rows(transition_units(i_pol), ikpt, ikpt, 1, &
-                              atoms%firstAtom(itype) + iatom_l - 1, itype, eig_band, core_states(1)%energy, &
-                              occ_band, wk_current, matrix, hartree_to_ev_const)
+                           CALL xas_write_transition_rows(transition_units(i_pol), ikpt, ikpt, 1, 1, &
+                              atoms%firstAtom(itype) + iatom_l - 1, itype, jsp_loop, core_states(1), i_pol, &
+                              xas_debug_pol_label(i_pol), eps_sph, eig_band, occ_band, wk_current, matrix, &
+                              hartree_to_ev_const)
                         END IF
                         CALL xas_debug_clear_underflow(l_xas_debug_fp)
                         CALL xas_accumulate_matrix_spectrum(energy_grid, eig_band, occ_band, wk_current, &

@@ -6,7 +6,11 @@
 
 MODULE m_xas_io
    USE m_juDFT, ONLY: juDFT_error
-   USE m_xas_amplitudes, ONLY: t_xas_transition_amplitudes
+   USE m_xas_core, ONLY: t_xas_core_state
+   USE m_xas_transitions, ONLY: t_xas_core_descriptor, t_xas_transition_record, &
+                                xas_attach_polarization_amplitude, xas_core_descriptor_from_state, &
+                                xas_init_transition_record, xas_transition_absM2, &
+                                xas_transition_total_weighted_strength
    IMPLICIT NONE
    PRIVATE
 
@@ -77,30 +81,38 @@ CONTAINS
                             "total_weighted_strength"
    END SUBROUTINE xas_open_transition_table
 
-   SUBROUTINE xas_write_transition_rows(io_unit, ikpt_full, ikpt_parent, star_index, absorber_atom, absorber_type, &
-                                        eig_band, core_energy, occupation, k_weight, matrix, hartree_to_ev)
-      INTEGER, INTENT(IN) :: io_unit, ikpt_full, ikpt_parent, star_index, absorber_atom, absorber_type
-      REAL,    INTENT(IN) :: eig_band(:), core_energy, occupation(:), k_weight, hartree_to_ev
+   SUBROUTINE xas_write_transition_rows(io_unit, ikpt_full, ikpt_parent, star_index, bksym, absorber_atom, absorber_type, &
+                                        spin_channel, core_state, pol_id, pol_label, eps_sph, eig_band, occupation, &
+                                        k_weight, matrix, hartree_to_ev)
+      INTEGER, INTENT(IN) :: io_unit, ikpt_full, ikpt_parent, star_index, bksym, absorber_atom, absorber_type, spin_channel
+      TYPE(t_xas_core_state), INTENT(IN) :: core_state
+      INTEGER, INTENT(IN) :: pol_id
+      CHARACTER(LEN=*), INTENT(IN) :: pol_label
+      COMPLEX, INTENT(IN) :: eps_sph(:)
+      REAL,    INTENT(IN) :: eig_band(:), occupation(:), k_weight, hartree_to_ev
       COMPLEX, INTENT(IN) :: matrix(:, :)
 
-      TYPE(t_xas_transition_amplitudes) :: amplitudes
+      TYPE(t_xas_core_descriptor) :: core
+      TYPE(t_xas_transition_record) :: record
       INTEGER :: band
       REAL :: one_minus_occ, abs_m2, transition_energy
 
       IF (SIZE(eig_band) /= SIZE(occupation) .OR. SIZE(matrix, 1) < SIZE(eig_band)) THEN
          CALL juDFT_error("Inconsistent XAS transition-table dimensions", calledby="m_xas_io")
       END IF
+      CALL xas_core_descriptor_from_state(core, core_state)
       DO band = 1, SIZE(eig_band)
          one_minus_occ = 1.0 - occupation(band)
          IF (one_minus_occ <= 1.0e-10) CYCLE
-         transition_energy = eig_band(band) - core_energy
-         ! XAS writes the incoherent sum over mj; the complex amplitudes are
-         ! kept as an explicit object for later RIXS amplitude products.
-         CALL amplitudes%set_from_matrix_row(matrix, band)
-         abs_m2 = amplitudes%absM2
+         CALL xas_init_transition_record(record, core, ikpt_parent, ikpt_full, star_index, bksym, band, &
+                                         absorber_atom, absorber_type, spin_channel, eig_band(band), &
+                                         occupation(band), k_weight)
+         CALL xas_attach_polarization_amplitude(record, pol_id, pol_label, eps_sph, matrix, band)
+         transition_energy = record%transition_energy
+         abs_m2 = xas_transition_absM2(record)
          WRITE(io_unit, '(6(i0,1x),7(es24.16e3,1x))') ikpt_full, ikpt_parent, star_index, band, &
-            absorber_atom, absorber_type, transition_energy, transition_energy*hartree_to_ev, occupation(band), &
-            k_weight, one_minus_occ, abs_m2, k_weight*one_minus_occ*abs_m2
+            absorber_atom, absorber_type, transition_energy, transition_energy*hartree_to_ev, record%occupation, &
+            record%k_weight, record%one_minus_occ, abs_m2, xas_transition_total_weighted_strength(record)
       END DO
    END SUBROUTINE xas_write_transition_rows
 
