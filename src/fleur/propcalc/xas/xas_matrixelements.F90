@@ -15,6 +15,8 @@ MODULE m_xas_matrixelements
 
    PUBLIC :: xas_core_band_matrixelements
    PUBLIC :: xas_band_core_emission_matrixelements
+   PUBLIC :: xas_core_band_matrixelements_one_spin
+   PUBLIC :: xas_band_core_emission_matrixelements_one_spin
    PUBLIC :: xas_print_largest_matrixelement_partials
 
 CONTAINS
@@ -134,6 +136,78 @@ CONTAINS
       END IF
       matrix = CONJG(matrix)
    END SUBROUTINE xas_band_core_emission_matrixelements
+
+   SUBROUTINE xas_core_band_matrixelements_one_spin(abc, radfun, radial_xas_spin, core_state, eps_sph, iAtom_l, lmax, &
+                                                    spin_index, matrix, final_l)
+      ! Helper for scalar spin-degenerate traces such as RIXS. The same scalar
+      ! orbital abc coefficients are reused for both spin labels; spin_index
+      ! only selects the spin-angular Clebsch/core channel. This is not a
+      ! spin-polarized calculation.
+      TYPE(t_abc),            INTENT(IN)  :: abc
+      TYPE(t_radfun),         INTENT(IN)  :: radfun
+      REAL,                   INTENT(IN)  :: radial_xas_spin(:, 0:)
+      TYPE(t_xas_core_state), INTENT(IN)  :: core_state
+      COMPLEX,                INTENT(IN)  :: eps_sph(-1:1)
+      INTEGER,                INTENT(IN)  :: iAtom_l, lmax, spin_index
+      COMPLEX,                INTENT(OUT) :: matrix(:, :)
+      INTEGER, OPTIONAL,      INTENT(IN)  :: final_l
+
+      INTEGER :: band, i_mj, sigma, l, m, lm, iOrd, nbands
+      COMPLEX :: angular, radial_sum
+
+      CALL xas_check_single_spin_inputs(abc, radfun, radial_xas_spin, core_state, iAtom_l, lmax, matrix)
+      IF (PRESENT(final_l)) THEN
+         IF (final_l < 0 .OR. final_l > lmax) THEN
+            CALL juDFT_error("Invalid final_l in single-spin XAS matrix elements", calledby="m_xas_matrixelements")
+         END IF
+      END IF
+
+      nbands = SIZE(abc%cof, 1)
+      sigma = xas_sigma_from_spin_index(spin_index)
+      matrix = CMPLX(0.0, 0.0)
+
+      DO i_mj = 1, SIZE(core_state%twice_mj)
+         DO l = 0, lmax
+            IF (PRESENT(final_l)) THEN
+               IF (l /= final_l) CYCLE
+            END IF
+            DO m = -l, l
+               lm = l*(l + 1) + m
+               angular = xas_dipole_angular_coeff(l, m, core_state%lc, core_state%twice_j, &
+                                                   core_state%twice_mj(i_mj), sigma, eps_sph)
+               IF (ABS(angular) == 0.0) CYCLE
+               DO band = 1, nbands
+                  radial_sum = CMPLX(0.0, 0.0)
+                  DO iOrd = 1, radfun%n_r(l)
+                     radial_sum = radial_sum + CONJG(abc%cof(band, lm, iOrd, iAtom_l))*radial_xas_spin(iOrd, l)
+                  END DO
+                  matrix(band, i_mj) = matrix(band, i_mj) + angular*radial_sum
+               END DO
+            END DO
+         END DO
+      END DO
+   END SUBROUTINE xas_core_band_matrixelements_one_spin
+
+   SUBROUTINE xas_band_core_emission_matrixelements_one_spin(abc, radfun, radial_xas_spin, core_state, eps_sph, iAtom_l, &
+                                                             lmax, spin_index, matrix, final_l)
+      TYPE(t_abc),            INTENT(IN)  :: abc
+      TYPE(t_radfun),         INTENT(IN)  :: radfun
+      REAL,                   INTENT(IN)  :: radial_xas_spin(:, 0:)
+      TYPE(t_xas_core_state), INTENT(IN)  :: core_state
+      COMPLEX,                INTENT(IN)  :: eps_sph(-1:1)
+      INTEGER,                INTENT(IN)  :: iAtom_l, lmax, spin_index
+      COMPLEX,                INTENT(OUT) :: matrix(:, :)
+      INTEGER, OPTIONAL,      INTENT(IN)  :: final_l
+
+      IF (PRESENT(final_l)) THEN
+         CALL xas_core_band_matrixelements_one_spin(abc, radfun, radial_xas_spin, core_state, eps_sph, iAtom_l, lmax, &
+                                                   spin_index, matrix, final_l=final_l)
+      ELSE
+         CALL xas_core_band_matrixelements_one_spin(abc, radfun, radial_xas_spin, core_state, eps_sph, iAtom_l, lmax, &
+                                                   spin_index, matrix)
+      END IF
+      matrix = CONJG(matrix)
+   END SUBROUTINE xas_band_core_emission_matrixelements_one_spin
 
    SUBROUTINE xas_print_largest_matrixelement_partials(abc_spin, radfun, radial_xas, core_state, eps_sph, iAtom_l, lmax, &
                                                        n_print, out_unit)
@@ -278,6 +352,52 @@ CONTAINS
          END IF
       END IF
    END SUBROUTINE xas_check_matrixelement_inputs
+
+   SUBROUTINE xas_check_single_spin_inputs(abc, radfun, radial_xas_spin, core_state, iAtom_l, lmax, matrix)
+      TYPE(t_abc),            INTENT(IN) :: abc
+      TYPE(t_radfun),         INTENT(IN) :: radfun
+      REAL,                   INTENT(IN) :: radial_xas_spin(:, 0:)
+      TYPE(t_xas_core_state), INTENT(IN) :: core_state
+      INTEGER,                INTENT(IN) :: iAtom_l, lmax
+      COMPLEX,                INTENT(IN) :: matrix(:, :)
+
+      INTEGER :: l, lm_max_needed, nbands
+
+      IF (.NOT. ALLOCATED(radfun%n_r)) THEN
+         CALL juDFT_error("radfun%n_r is not allocated in single-spin XAS matrix elements", calledby="m_xas_matrixelements")
+      END IF
+      IF (.NOT. ALLOCATED(core_state%twice_mj)) THEN
+         CALL juDFT_error("core_state%twice_mj is not allocated in single-spin XAS matrix elements", calledby="m_xas_matrixelements")
+      END IF
+      IF (.NOT. ALLOCATED(abc%cof)) THEN
+         CALL juDFT_error("abc%cof is not allocated in single-spin XAS matrix elements", calledby="m_xas_matrixelements")
+      END IF
+      IF (lmax < 0 .OR. lmax > UBOUND(radfun%n_r, 1)) THEN
+         CALL juDFT_error("Invalid lmax in single-spin XAS matrix elements", calledby="m_xas_matrixelements")
+      END IF
+      IF (UBOUND(radial_xas_spin, 2) < lmax) THEN
+         CALL juDFT_error("radial_xas_spin l dimension is too small", calledby="m_xas_matrixelements")
+      END IF
+      IF (SIZE(radial_xas_spin, 1) < MAXVAL(radfun%n_r(0:lmax))) THEN
+         CALL juDFT_error("radial_xas_spin radial-order dimension is too small", calledby="m_xas_matrixelements")
+      END IF
+      nbands = SIZE(abc%cof, 1)
+      IF (iAtom_l < LBOUND(abc%cof, 4) .OR. iAtom_l > UBOUND(abc%cof, 4)) THEN
+         CALL juDFT_error("iAtom_l outside abc atom dimension in single-spin XAS matrix elements", calledby="m_xas_matrixelements")
+      END IF
+      lm_max_needed = lmax*(lmax + 2)
+      IF (UBOUND(abc%cof, 2) < lm_max_needed) THEN
+         CALL juDFT_error("lmax exceeds abc lm dimension in single-spin XAS matrix elements", calledby="m_xas_matrixelements")
+      END IF
+      DO l = 0, lmax
+         IF (SIZE(abc%cof, 3) < radfun%n_r(l)) THEN
+            CALL juDFT_error("abc radial-order dimension is too small in single-spin XAS matrix elements", calledby="m_xas_matrixelements")
+         END IF
+      END DO
+      IF (SIZE(matrix, 1) < nbands .OR. SIZE(matrix, 2) < SIZE(core_state%twice_mj)) THEN
+         CALL juDFT_error("matrix output dimensions are too small in single-spin XAS matrix elements", calledby="m_xas_matrixelements")
+      END IF
+   END SUBROUTINE xas_check_single_spin_inputs
 
    INTEGER FUNCTION xas_sigma_from_spin_index(ispin) RESULT(sigma)
       INTEGER, INTENT(IN) :: ispin

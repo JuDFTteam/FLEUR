@@ -7,6 +7,7 @@
 MODULE m_rixs_io
    USE m_constants, ONLY: hartree_to_ev_const
    USE m_juDFT, ONLY: juDFT_error
+   USE m_rixs_spectrum, ONLY: rixs_scalar_spin_trace_abs2
    USE m_types_xas, ONLY: t_xas
    USE m_xas_spectrum, ONLY: xas_gaussian_broadening
    IMPLICIT NONE
@@ -71,6 +72,11 @@ CONTAINS
                                                      omega_in*hartree_to_ev_const, " eV)"
       WRITE(io_unit, '(a,i0)') "# MPI rank = ", mpi_rank
       WRITE(io_unit, '(a)') "# This file contains only contributions evaluated by this MPI rank."
+      WRITE(io_unit, '(a)') "# Scalar RIXS uses the spin-degenerate incoherent trace over final electron/hole spin labels."
+      WRITE(io_unit, '(a)') "# amplitude_abs2 is sum_{sigma_v,sigma_n} |A_{sigma_v sigma_n}|^2."
+      WRITE(io_unit, '(a)') "# amplitude_real and amplitude_imag are zero placeholders for scalar S1 production."
+      WRITE(io_unit, '(a)') "# No single coherent complex amplitude represents the spin-traced contribution."
+      WRITE(io_unit, '(a)') "# weighted_strength = k_weight * f_v * (1 - f_n) * amplitude_abs2."
       WRITE(io_unit, '(a)') "# columns:"
       WRITE(io_unit, '(a)') "# ikpt band_v band_n absorber_atom absorber_type "// &
                             "eps_v_Ha eps_n_Ha core_energy_Ha occupation_v occupation_n k_weight "// &
@@ -79,23 +85,24 @@ CONTAINS
    END SUBROUTINE rixs_open_contribution_table
 
    SUBROUTINE rixs_write_contribution_rows(io_unit, ikpt, absorber_atom, absorber_type, eig_band, occupation, k_weight, &
-                                           core_energy, omega_in, gamma_core, matrix_abs, matrix_emit, loss_grid, eta_loss, &
-                                           contribution_intensity)
+                                           core_energy, omega_in, gamma_core, matrix_abs_spin, matrix_emit_spin, loss_grid, &
+                                           eta_loss, contribution_intensity)
       INTEGER, INTENT(IN) :: io_unit, ikpt, absorber_atom, absorber_type
       REAL,    INTENT(IN) :: eig_band(:), occupation(:), k_weight, core_energy, omega_in, gamma_core
-      COMPLEX, INTENT(IN) :: matrix_abs(:, :), matrix_emit(:, :)
+      COMPLEX, INTENT(IN) :: matrix_abs_spin(:, :, :), matrix_emit_spin(:, :, :)
       REAL,    INTENT(IN), OPTIONAL :: loss_grid(:), eta_loss
       REAL,    INTENT(INOUT), OPTIONAL :: contribution_intensity(:)
 
       INTEGER :: band_v, band_n, i_grid
       REAL :: occupation_v, occupation_n, vacancy_n, loss_energy, denominator_abs2, amplitude_abs2
       REAL :: weighted_strength, gaussian
-      COMPLEX :: denominator, amplitude
+      COMPLEX :: denominator
       LOGICAL :: l_accumulate_check
 
       IF (io_unit == -1) RETURN
-      IF (SIZE(eig_band) /= SIZE(occupation) .OR. SIZE(matrix_abs, 1) < SIZE(eig_band) .OR. &
-          SIZE(matrix_emit, 1) < SIZE(eig_band) .OR. SIZE(matrix_abs, 2) /= SIZE(matrix_emit, 2)) THEN
+      IF (SIZE(eig_band) /= SIZE(occupation) .OR. SIZE(matrix_abs_spin, 1) < SIZE(eig_band) .OR. &
+          SIZE(matrix_emit_spin, 1) < SIZE(eig_band) .OR. SIZE(matrix_abs_spin, 2) /= SIZE(matrix_emit_spin, 2) .OR. &
+          SIZE(matrix_abs_spin, 3) /= SIZE(matrix_emit_spin, 3)) THEN
          CALL juDFT_error("Inconsistent RIXS contribution-table dimensions", calledby="m_rixs_io")
       END IF
       l_accumulate_check = PRESENT(loss_grid) .AND. PRESENT(eta_loss) .AND. PRESENT(contribution_intensity)
@@ -115,8 +122,8 @@ CONTAINS
          DO band_v = 1, SIZE(eig_band)
             occupation_v = occupation(band_v)
             IF (occupation_v <= 1.0e-10) CYCLE
-            amplitude = SUM(matrix_emit(band_v, :)*matrix_abs(band_n, :))/denominator
-            amplitude_abs2 = ABS(amplitude)**2
+            amplitude_abs2 = rixs_scalar_spin_trace_abs2(matrix_abs_spin(band_n, :, :), matrix_emit_spin(band_v, :, :), &
+                                                         denominator)
             IF (amplitude_abs2 < TINY(amplitude_abs2)) CYCLE
             loss_energy = eig_band(band_n) - eig_band(band_v)
             weighted_strength = k_weight*occupation_v*vacancy_n*amplitude_abs2
@@ -130,7 +137,7 @@ CONTAINS
             WRITE(io_unit, '(5(i0,1x),15(es24.16e3,1x))') ikpt, band_v, band_n, absorber_atom, absorber_type, &
                eig_band(band_v), eig_band(band_n), core_energy, occupation_v, occupation_n, k_weight, &
                loss_energy, loss_energy*hartree_to_ev_const, REAL(denominator), AIMAG(denominator), denominator_abs2, &
-               REAL(amplitude), AIMAG(amplitude), amplitude_abs2, weighted_strength
+               0.0, 0.0, amplitude_abs2, weighted_strength
          END DO
       END DO
    END SUBROUTINE rixs_write_contribution_rows
@@ -166,6 +173,7 @@ CONTAINS
       WRITE(*, '(a,a)') " Outgoing polarizations   : ", TRIM(rixs_polarization_string(rixs%rixs_out_polarizations))
       WRITE(*, '(a,a)') " Output prefix            : ", TRIM(rixs%rixs_output_prefix)
       WRITE(*, '(a)') " Approximation            : direct same-k independent-particle"
+      WRITE(*, '(a)') " Scalar spin treatment    : spin-degenerate S1 trace"
       WRITE(*, '(a)') " Symmetry treatment       : full-k only, no star reconstruction"
       WRITE(*, '(a)') " SOC/noco                 : disabled/guarded"
       WRITE(*, '(a,l1)') " Write contributions      : ", rixs%rixs_write_contributions

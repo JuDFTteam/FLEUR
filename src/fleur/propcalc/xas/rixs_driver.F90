@@ -13,7 +13,7 @@ MODULE m_rixs_driver
    USE m_rixs_io, ONLY: rixs_close_contribution_table, rixs_energy_label, rixs_open_contribution_table, &
                         rixs_print_contribution_check, rixs_print_pair_summary, rixs_print_setup_summary, &
                         rixs_write_contribution_rows, rixs_write_spectrum_text
-   USE m_rixs_spectrum, ONLY: rixs_accumulate_direct_spectrum
+   USE m_rixs_spectrum, ONLY: rixs_accumulate_scalar_spin_trace_spectrum
    USE m_types_abc, ONLY: t_abc
    USE m_types_atoms, ONLY: t_atoms
    USE m_types_cell, ONLY: t_cell
@@ -33,7 +33,7 @@ MODULE m_rixs_driver
    USE m_types_xas, ONLY: t_xas
    USE m_xas_angular, ONLY: xas_cartesian_to_spherical
    USE m_xas_core, ONLY: t_xas_core_state, xas_extract_core_states
-   USE m_xas_matrixelements, ONLY: xas_band_core_emission_matrixelements, xas_core_band_matrixelements
+   USE m_xas_matrixelements, ONLY: xas_band_core_emission_matrixelements_one_spin, xas_core_band_matrixelements_one_spin
    USE m_xas_radial, ONLY: xas_radial_dipole_integrals
    IMPLICIT NONE
    PRIVATE
@@ -69,7 +69,7 @@ CONTAINS
       TYPE(t_abc), ALLOCATABLE :: abc_spin(:)
 
       COMPLEX :: eps_cart(3), eps_in_sph(-1:1), eps_out_sph(-1:1)
-      COMPLEX, ALLOCATABLE :: matrix_abs(:, :), matrix_emit(:, :)
+      COMPLEX, ALLOCATABLE :: matrix_abs_spin(:, :, :), matrix_emit_spin(:, :, :)
       REAL, ALLOCATABLE :: loss_grid(:), intensity(:, :, :), intensity_reduced(:, :, :)
       REAL, ALLOCATABLE :: contribution_intensity(:, :, :), contribution_intensity_reduced(:, :, :)
       REAL, ALLOCATABLE :: radial_xas(:, :, :)
@@ -186,8 +186,8 @@ CONTAINS
             ALLOCATE(abc_spin(1))
             CALL abc_spin(1)%init(input, atoms, radfun%n_r, nbands, itype)
             CALL abc_spin(1)%calc_abc(input, atoms, sym, cell, lapw, nbands, usdus, noco, nococonv, jsp, itype, zMat)
-            ALLOCATE(matrix_abs(nbands, SIZE(core_states(1)%twice_mj)))
-            ALLOCATE(matrix_emit(nbands, SIZE(core_states(1)%twice_mj)))
+            ALLOCATE(matrix_abs_spin(nbands, SIZE(core_states(1)%twice_mj), 2))
+            ALLOCATE(matrix_emit_spin(nbands, SIZE(core_states(1)%twice_mj), 2))
 
             DO iatom_l = 1, atoms%neq(itype)
                DO i_pin = 1, rixs_n_pol
@@ -195,30 +195,33 @@ CONTAINS
                   eps_cart = CMPLX(0.0, 0.0)
                   eps_cart(i_pin) = CMPLX(1.0, 0.0)
                   CALL xas_cartesian_to_spherical(eps_cart, eps_in_sph)
-                  CALL xas_core_band_matrixelements(abc_spin, radfun, radial_xas, core_states(1), eps_in_sph, &
-                                                    iatom_l, lmax_rixs, matrix_abs)
+                  DO ispin = 1, 2
+                     CALL xas_core_band_matrixelements_one_spin(abc_spin(1), radfun, radial_xas(:, 0:, 1), &
+                        core_states(1), eps_in_sph, iatom_l, lmax_rixs, ispin, matrix_abs_spin(:, :, ispin))
+                  END DO
 
                   DO i_pout = 1, rixs_n_pol
                      IF (.NOT. rixs%rixs_out_polarizations(i_pout)) CYCLE
                      eps_cart = CMPLX(0.0, 0.0)
                      eps_cart(i_pout) = CMPLX(1.0, 0.0)
                      CALL xas_cartesian_to_spherical(eps_cart, eps_out_sph)
-                     CALL xas_band_core_emission_matrixelements(abc_spin, radfun, radial_xas, core_states(1), eps_out_sph, &
-                                                                iatom_l, lmax_rixs, matrix_emit)
-                     CALL rixs_accumulate_direct_spectrum(loss_grid, eig_band, occ_band, kpts%wtkpt(ikpt), &
-                                                          core_states(1)%energy, rixs%rixs_omega_in, rixs%rixs_gamma_core, &
-                                                          rixs%rixs_eta_loss, matrix_abs, matrix_emit, &
-                                                          intensity(:, i_pin, i_pout))
+                     DO ispin = 1, 2
+                        CALL xas_band_core_emission_matrixelements_one_spin(abc_spin(1), radfun, radial_xas(:, 0:, 1), &
+                           core_states(1), eps_out_sph, iatom_l, lmax_rixs, ispin, matrix_emit_spin(:, :, ispin))
+                     END DO
+                     CALL rixs_accumulate_scalar_spin_trace_spectrum(loss_grid, eig_band, occ_band, kpts%wtkpt(ikpt), &
+                        core_states(1)%energy, rixs%rixs_omega_in, rixs%rixs_gamma_core, rixs%rixs_eta_loss, &
+                        matrix_abs_spin, matrix_emit_spin, intensity(:, i_pin, i_pout))
                      IF (rixs%rixs_write_contributions) THEN
                         CALL rixs_write_contribution_rows(contribution_units(i_pin, i_pout), ikpt, &
                            atoms%firstAtom(itype) + iatom_l - 1, itype, eig_band, occ_band, kpts%wtkpt(ikpt), &
-                           core_states(1)%energy, rixs%rixs_omega_in, rixs%rixs_gamma_core, matrix_abs, matrix_emit, &
+                           core_states(1)%energy, rixs%rixs_omega_in, rixs%rixs_gamma_core, matrix_abs_spin, matrix_emit_spin, &
                            loss_grid, rixs%rixs_eta_loss, contribution_intensity(:, i_pin, i_pout))
                      END IF
                   END DO
                END DO
             END DO
-            DEALLOCATE(matrix_abs, matrix_emit, abc_spin, ev_list, eig_band, occ_band)
+            DEALLOCATE(matrix_abs_spin, matrix_emit_spin, abc_spin, ev_list, eig_band, occ_band)
          END DO
          DEALLOCATE(radial_xas, core_states)
       END DO
