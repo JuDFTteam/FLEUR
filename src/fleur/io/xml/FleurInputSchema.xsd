@@ -3045,9 +3045,11 @@
 
    <xsd:complexType name="WannierlibPathType">
       <xsd:annotation>
-         <xsd:documentation>1D output domain: interpolate operators along a k-path (band structure). Reads the fractional k-points from 'file' (default kpts_interpol).</xsd:documentation>
+         <xsd:documentation>1D output domain: interpolate operators along a k-path (band structure). Source of k-points, in order of precedence: 'listName' reuses an existing named kPointList from kpts.xml (e.g. the band path "path-2"), optionally subdivided by 'npts' (segments split into npts pieces; npts&lt;=1 = list as-is); otherwise 'file' reads fractional k-points from a flat file (default kpts_interpol).</xsd:documentation>
       </xsd:annotation>
       <xsd:attribute name="file" type="xsd:string" use="optional"/>
+      <xsd:attribute name="listName" type="xsd:string" use="optional"/>
+      <xsd:attribute name="npts" type="xsd:nonNegativeInteger" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="WannierlibPlaneType">

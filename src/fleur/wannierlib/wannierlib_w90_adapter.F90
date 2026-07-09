@@ -306,6 +306,17 @@ CONTAINS
       ! restore the user's original kpts_interpol if a generated (plane/grid) domain overwrote it
       INQUIRE(file='.kpts_interpol_userbak', exist=lex2)
       IF (lex2) CALL wl_shell('cp -f .kpts_interpol_userbak kpts_interpol')
+      ! <path listName=".."> : write the (optionally subdivided) named list as kpts_interpol.
+      ! Takes precedence over @file; path_kpts was filled from kpts.xml in read_xml.
+      IF (TRIM(kind) == 'path' .AND. this%path_np > 0) THEN
+        OPEN(newunit=iu, file='kpts_interpol', status='replace')
+        WRITE(iu,'(i0)') this%path_np
+        DO i = 1, this%path_np
+          WRITE(iu,'(3(f18.12,1x))') this%path_kpts(:, i)
+        END DO
+        CLOSE(iu)
+        RETURN
+      END IF
       ! explicit <path file="..">: use that file as the k-list (default 'kpts_interpol' -> no-op)
       IF (TRIM(kind) == 'path' .AND. TRIM(this%path_file) /= 'kpts_interpol') THEN
         INQUIRE(file=TRIM(this%path_file), exist=lex2)

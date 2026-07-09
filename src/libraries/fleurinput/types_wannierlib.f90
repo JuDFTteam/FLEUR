@@ -36,6 +36,15 @@ MODULE m_types_wannierlib
     INTEGER :: plane_n1 = 0, plane_n2 = 0
     INTEGER :: grid_mesh(3) = 0
     REAL    :: grid_shift(3) = 0.0
+    ! <path listName=".." npts="F"/>: reuse an existing named kPointList from kpts.xml
+    ! (e.g. the band path "path-2") as the interpolation k-set, subdividing each segment
+    ! into F pieces (npts<=1 -> use the list points as-is). listName takes precedence over
+    ! @file. The k-points are extracted from the XML in read_xml (into path_kpts) and are
+    ! consumed ONLY on rank 0 in write_domain_kpts -> not broadcast (like plane/grid).
+    CHARACTER(LEN=64) :: path_listname = ''
+    INTEGER :: path_npts = 0
+    INTEGER :: path_np = 0
+    REAL, ALLOCATABLE :: path_kpts(:, :)
 
     ! --- operator table: one entry per <operator name=".."> child of <interpolation> ---
     INTEGER :: n_ops = 0
@@ -414,6 +423,12 @@ CONTAINS
         this%l_dom_path = .TRUE.
         IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@file') == 1) &
           this%path_file = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@file'))
+        IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@listName') == 1) &
+          this%path_listname = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@listName'))
+        IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@npts') == 1) &
+          this%path_npts = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@npts'))
+        ! <path listName=".."> : pull the named list's k-points now (XML is available here)
+        IF (LEN_TRIM(this%path_listname) > 0) CALL read_named_kpath_wannierlib(this, xml)
       END IF
       xPathP = TRIM(ADJUSTL(xPathA))//'/plane'
       IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))) == 1) THEN
@@ -578,5 +593,72 @@ CONTAINS
     END IF
 
   END SUBROUTINE read_xml_wannierlib
+
+  ! Extract a named kPointList (e.g. the band path "path-2") from the XML tree and store it
+  ! as the <path> interpolation k-set, subdividing each segment into path_npts pieces. Uses
+  ! the same XML idiom as t_kpts%read_xml (evaluatefirst consumes the kx,ky,kz tokens, so it
+  ! also handles fraction coordinates like "11.00/24.00"). Runs wherever read_xml runs; the
+  ! result (path_kpts) is consumed only on rank 0, so it is not broadcast.
+  SUBROUTINE read_named_kpath_wannierlib(this, xml)
+    USE m_types_xml
+    USE m_calculator, ONLY: evaluatefirst
+    CLASS(t_wannierlib_wannierize), INTENT(INOUT) :: this
+    TYPE(t_xml), INTENT(INOUT) :: xml
+
+    CHARACTER(LEN=255) :: path, path2, str
+    INTEGER :: nlist, i, idx, nraw, iseg, isub, np, fac
+    REAL, ALLOCATABLE :: raw(:, :)
+    REAL :: t
+
+    ! resolve listName -> kPointList index (same scan as t_kpts%read_xml)
+    nlist = xml%getNumberOfNodes('/fleurInput/cell/bzIntegration/kPointLists/kPointList')
+    idx = 0
+    DO i = 1, nlist
+      WRITE (path, '(a,i0,a)') '/fleurInput/cell/bzIntegration/kPointLists/kPointList[', i, ']'
+      IF (TRIM(ADJUSTL(this%path_listname)) == TRIM(ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(path))//'/@name')))) THEN
+        idx = i
+        EXIT
+      END IF
+    END DO
+    IF (idx == 0) CALL juDFT_error('wannierlib: <path>/@listName "'//TRIM(this%path_listname)// &
+                                   '" not found in kPointLists', calledby='read_named_kpath_wannierlib')
+
+    WRITE (path, '(a,i0,a)') '/fleurInput/cell/bzIntegration/kPointLists/kPointList[', idx, ']'
+    nraw = xml%getNumberOfNodes(TRIM(ADJUSTL(path))//'/kPoint')
+    IF (nraw < 2) CALL juDFT_error('wannierlib: <path>/@listName needs a list with >= 2 k-points', &
+                                   calledby='read_named_kpath_wannierlib')
+    ALLOCATE(raw(3, nraw))
+    DO i = 1, nraw
+      WRITE (path2, '(a,a,i0,a)') TRIM(ADJUSTL(path)), '/kPoint[', i, ']'
+      str = xml%getAttributeValue(TRIM(ADJUSTL(path2)), .TRUE.)
+      raw(1, i) = evaluatefirst(str)
+      raw(2, i) = evaluatefirst(str)
+      raw(3, i) = evaluatefirst(str)
+    END DO
+
+    fac = this%path_npts
+    IF (fac < 1) fac = 1
+    IF (fac == 1) THEN
+      ! use the list points as-is
+      np = nraw
+      ALLOCATE(this%path_kpts(3, np))
+      this%path_kpts = raw
+    ELSE
+      ! subdivide each segment into fac pieces: (nraw-1)*fac + 1 points total
+      ALLOCATE(this%path_kpts(3, (nraw - 1) * fac + 1))
+      np = 0
+      DO iseg = 1, nraw - 1
+        DO isub = 0, fac - 1
+          np = np + 1
+          t = REAL(isub) / REAL(fac)
+          this%path_kpts(:, np) = (1.0 - t) * raw(:, iseg) + t * raw(:, iseg + 1)
+        END DO
+      END DO
+      np = np + 1
+      this%path_kpts(:, np) = raw(:, nraw)   ! closing endpoint
+    END IF
+    this%path_np = np
+    DEALLOCATE(raw)
+  END SUBROUTINE read_named_kpath_wannierlib
 
 END MODULE m_types_wannierlib
