@@ -86,11 +86,13 @@ CONTAINS
 
    SUBROUTINE rixs_write_contribution_rows(io_unit, ikpt, absorber_atom, absorber_type, eig_band, occupation, k_weight, &
                                            core_energy, omega_in, gamma_core, matrix_abs_spin, matrix_emit_spin, loss_grid, &
-                                           eta_loss, contribution_intensity)
+                                           eta_loss, valence_band_min, valence_band_max, intermediate_band_min, &
+                                           intermediate_band_max, contribution_intensity)
       INTEGER, INTENT(IN) :: io_unit, ikpt, absorber_atom, absorber_type
       REAL,    INTENT(IN) :: eig_band(:), occupation(:), k_weight, core_energy, omega_in, gamma_core
       COMPLEX, INTENT(IN) :: matrix_abs_spin(:, :, :), matrix_emit_spin(:, :, :)
       REAL,    INTENT(IN), OPTIONAL :: loss_grid(:), eta_loss
+      INTEGER, INTENT(IN) :: valence_band_min, valence_band_max, intermediate_band_min, intermediate_band_max
       REAL,    INTENT(INOUT), OPTIONAL :: contribution_intensity(:)
 
       INTEGER :: band_v, band_n, i_grid
@@ -105,6 +107,13 @@ CONTAINS
           SIZE(matrix_abs_spin, 3) /= SIZE(matrix_emit_spin, 3)) THEN
          CALL juDFT_error("Inconsistent RIXS contribution-table dimensions", calledby="m_rixs_io")
       END IF
+      IF (valence_band_min < 1 .OR. valence_band_max > SIZE(eig_band) .OR. valence_band_min > valence_band_max) THEN
+         CALL juDFT_error("Invalid RIXS valence band bounds in contribution table", calledby="m_rixs_io")
+      END IF
+      IF (intermediate_band_min < 1 .OR. intermediate_band_max > SIZE(eig_band) .OR. &
+          intermediate_band_min > intermediate_band_max) THEN
+         CALL juDFT_error("Invalid RIXS intermediate band bounds in contribution table", calledby="m_rixs_io")
+      END IF
       l_accumulate_check = PRESENT(loss_grid) .AND. PRESENT(eta_loss) .AND. PRESENT(contribution_intensity)
       IF (l_accumulate_check) THEN
          IF (SIZE(loss_grid) /= SIZE(contribution_intensity)) THEN
@@ -113,13 +122,13 @@ CONTAINS
          IF (eta_loss <= 0.0) CALL juDFT_error("etaLoss must be positive in RIXS contribution check", calledby="m_rixs_io")
       END IF
 
-      DO band_n = 1, SIZE(eig_band)
+      DO band_n = intermediate_band_min, intermediate_band_max
          occupation_n = occupation(band_n)
          vacancy_n = 1.0 - occupation_n
          IF (vacancy_n <= 1.0e-10) CYCLE
          denominator = CMPLX(omega_in - (eig_band(band_n) - core_energy), gamma_core)
          denominator_abs2 = ABS(denominator)**2
-         DO band_v = 1, SIZE(eig_band)
+         DO band_v = valence_band_min, valence_band_max
             occupation_v = occupation(band_v)
             IF (occupation_v <= 1.0e-10) CYCLE
             amplitude_abs2 = rixs_scalar_spin_trace_abs2(matrix_abs_spin(band_n, :, :), matrix_emit_spin(band_v, :, :), &
@@ -175,6 +184,17 @@ CONTAINS
       WRITE(*, '(a)') " Approximation            : direct same-k independent-particle"
       WRITE(*, '(a)') " Scalar spin treatment    : spin-degenerate S1 trace"
       WRITE(*, '(a)') " Symmetry treatment       : full-k only, no star reconstruction"
+      WRITE(*, '(a,a)') " Valence band window      : ", TRIM(rixs_band_window_string(rixs%l_rixs_valence_band_min, &
+                                                                                         rixs%rixs_valence_band_min, &
+                                                                                         rixs%l_rixs_valence_band_max, &
+                                                                                         rixs%rixs_valence_band_max))
+      WRITE(*, '(a,a)') " Intermediate band window : ", TRIM(rixs_band_window_string(rixs%l_rixs_intermediate_band_min, &
+                                                                                         rixs%rixs_intermediate_band_min, &
+                                                                                         rixs%l_rixs_intermediate_band_max, &
+                                                                                         rixs%rixs_intermediate_band_max))
+      IF (rixs%l_rixs_valence_band_max .OR. rixs%l_rixs_intermediate_band_max) THEN
+         WRITE(*, '(a)') " NOTE: RIXS band-window upper bounds are clamped to the available bands at each k point."
+      END IF
       WRITE(*, '(a)') " SOC/noco                 : disabled/guarded"
       WRITE(*, '(a,l1)') " Write contributions      : ", rixs%rixs_write_contributions
       IF (rixs%rixs_write_contributions) THEN
@@ -231,6 +251,22 @@ CONTAINS
       WRITE(*, '(a,es18.10)') "   max rel diff = ", max_rel_diff
       WRITE(*, '(a,a)') "   status       = ", TRIM(status)
    END SUBROUTINE rixs_print_contribution_check
+
+   FUNCTION rixs_band_window_string(l_min, band_min, l_max, band_max) RESULT(label)
+      LOGICAL, INTENT(IN) :: l_min, l_max
+      INTEGER, INTENT(IN) :: band_min, band_max
+      CHARACTER(LEN=32) :: label
+
+      IF (.NOT. l_min .AND. .NOT. l_max) THEN
+         label = "all"
+      ELSE IF (l_min .AND. l_max) THEN
+         WRITE(label, '(i0,a,i0)') band_min, " ... ", band_max
+      ELSE IF (l_min) THEN
+         WRITE(label, '(i0,a)') band_min, " ... all"
+      ELSE
+         WRITE(label, '(a,i0)') "1 ... ", band_max
+      END IF
+   END FUNCTION rixs_band_window_string
 
    FUNCTION rixs_polarization_string(polarizations) RESULT(pol_string)
       LOGICAL, INTENT(IN) :: polarizations(3)

@@ -18,7 +18,9 @@ MODULE m_rixs_spectrum
 CONTAINS
 
    SUBROUTINE rixs_accumulate_scalar_spin_trace_spectrum(loss_grid, eig_band, occ_band, wk, core_energy, omega_in, gamma_core, &
-                                                         eta_loss, matrix_abs_spin, matrix_emit_spin, intensity)
+                                                         eta_loss, matrix_abs_spin, matrix_emit_spin, valence_band_min, &
+                                                         valence_band_max, intermediate_band_min, intermediate_band_max, &
+                                                         intensity)
       ! In the guarded scalar jspins=1 prototype the bands are spin-degenerate.
       ! The final electron and valence-hole spin labels are orthogonal final
       ! states, so they are traced incoherently:
@@ -28,6 +30,7 @@ CONTAINS
       REAL,    INTENT(IN)    :: loss_grid(:), eig_band(:), occ_band(:)
       REAL,    INTENT(IN)    :: wk, core_energy, omega_in, gamma_core, eta_loss
       COMPLEX, INTENT(IN)    :: matrix_abs_spin(:, :, :), matrix_emit_spin(:, :, :)
+      INTEGER, INTENT(IN)    :: valence_band_min, valence_band_max, intermediate_band_min, intermediate_band_max
       REAL,    INTENT(INOUT) :: intensity(:)
 
       INTEGER :: i_grid, n_band, v_band
@@ -35,13 +38,14 @@ CONTAINS
       COMPLEX :: denominator
 
       CALL rixs_check_spin_trace_inputs(loss_grid, eig_band, occ_band, matrix_abs_spin, matrix_emit_spin, gamma_core, eta_loss, &
+                                        valence_band_min, valence_band_max, intermediate_band_min, intermediate_band_max, &
                                         intensity)
 
-      DO n_band = 1, SIZE(eig_band)
+      DO n_band = intermediate_band_min, intermediate_band_max
          vacancy_n = 1.0 - occ_band(n_band)
          IF (vacancy_n <= rixs_occ_tol) CYCLE
          denominator = CMPLX(omega_in - (eig_band(n_band) - core_energy), gamma_core)
-         DO v_band = 1, SIZE(eig_band)
+         DO v_band = valence_band_min, valence_band_max
             f_v = occ_band(v_band)
             IF (f_v <= rixs_occ_tol) CYCLE
 
@@ -84,10 +88,12 @@ CONTAINS
    END FUNCTION rixs_scalar_spin_trace_abs2
 
    SUBROUTINE rixs_check_spin_trace_inputs(loss_grid, eig_band, occ_band, matrix_abs_spin, matrix_emit_spin, gamma_core, &
-                                           eta_loss, intensity)
+                                           eta_loss, valence_band_min, valence_band_max, intermediate_band_min, &
+                                           intermediate_band_max, intensity)
       REAL,    INTENT(IN) :: loss_grid(:), eig_band(:), occ_band(:)
       COMPLEX, INTENT(IN) :: matrix_abs_spin(:, :, :), matrix_emit_spin(:, :, :)
       REAL,    INTENT(IN) :: gamma_core, eta_loss, intensity(:)
+      INTEGER, INTENT(IN) :: valence_band_min, valence_band_max, intermediate_band_min, intermediate_band_max
 
       IF (gamma_core <= 0.0) CALL juDFT_error("gammaCore must be positive in RIXS spin trace", calledby="m_rixs_spectrum")
       IF (eta_loss <= 0.0) CALL juDFT_error("etaLoss must be positive in RIXS spin trace", calledby="m_rixs_spectrum")
@@ -105,6 +111,13 @@ CONTAINS
       END IF
       IF (SIZE(matrix_abs_spin, 3) /= SIZE(matrix_emit_spin, 3) .OR. SIZE(matrix_abs_spin, 3) < 1) THEN
          CALL juDFT_error("RIXS spin-trace absorption/emission spin dimensions differ", calledby="m_rixs_spectrum")
+      END IF
+      IF (valence_band_min < 1 .OR. valence_band_max > SIZE(eig_band) .OR. valence_band_min > valence_band_max) THEN
+         CALL juDFT_error("RIXS valence band loop bounds are invalid", calledby="m_rixs_spectrum")
+      END IF
+      IF (intermediate_band_min < 1 .OR. intermediate_band_max > SIZE(eig_band) .OR. &
+          intermediate_band_min > intermediate_band_max) THEN
+         CALL juDFT_error("RIXS intermediate band loop bounds are invalid", calledby="m_rixs_spectrum")
       END IF
    END SUBROUTINE rixs_check_spin_trace_inputs
 

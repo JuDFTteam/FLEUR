@@ -83,6 +83,7 @@ CONTAINS
       CHARACTER(LEN=240) :: error_message
       INTEGER :: ikpt_i, ikpt, jsp, nbands, nbands_read, itype, ispin, max_order, nbasfcn, lmax_rixs
       INTEGER :: i_grid, i_band, iatom_l, i_pin, i_pout, n_absorber_types, n_absorber_atoms
+      INTEGER :: valence_band_min, valence_band_max, intermediate_band_min, intermediate_band_max
       INTEGER :: contribution_units(rixs_n_pol, rixs_n_pol)
       LOGICAL :: l_root, l_real
 
@@ -170,7 +171,14 @@ CONTAINS
             ALLOCATE(eig_band(nbands), occ_band(nbands))
             eig_band = results%eig(1:nbands, ikpt, jsp)
             occ_band = results%w_iks(1:nbands, ikpt, jsp)/kpts%wtkpt(ikpt)
-            IF (.NOT. rixs_kpoint_has_valence_and_empty(occ_band)) THEN
+            CALL rixs_effective_band_bounds(rixs, nbands, valence_band_min, valence_band_max, &
+                                            intermediate_band_min, intermediate_band_max)
+            IF (valence_band_min > valence_band_max .OR. intermediate_band_min > intermediate_band_max) THEN
+               DEALLOCATE(ev_list, eig_band, occ_band)
+               CYCLE
+            END IF
+            IF (.NOT. rixs_kpoint_has_valence_and_empty(occ_band, valence_band_min, valence_band_max, &
+                                                        intermediate_band_min, intermediate_band_max)) THEN
                DEALLOCATE(ev_list, eig_band, occ_band)
                CYCLE
             END IF
@@ -211,12 +219,14 @@ CONTAINS
                      END DO
                      CALL rixs_accumulate_scalar_spin_trace_spectrum(loss_grid, eig_band, occ_band, kpts%wtkpt(ikpt), &
                         core_states(1)%energy, rixs%rixs_omega_in, rixs%rixs_gamma_core, rixs%rixs_eta_loss, &
-                        matrix_abs_spin, matrix_emit_spin, intensity(:, i_pin, i_pout))
+                        matrix_abs_spin, matrix_emit_spin, valence_band_min, valence_band_max, intermediate_band_min, &
+                        intermediate_band_max, intensity(:, i_pin, i_pout))
                      IF (rixs%rixs_write_contributions) THEN
                         CALL rixs_write_contribution_rows(contribution_units(i_pin, i_pout), ikpt, &
                            atoms%firstAtom(itype) + iatom_l - 1, itype, eig_band, occ_band, kpts%wtkpt(ikpt), &
                            core_states(1)%energy, rixs%rixs_omega_in, rixs%rixs_gamma_core, matrix_abs_spin, matrix_emit_spin, &
-                           loss_grid, rixs%rixs_eta_loss, contribution_intensity(:, i_pin, i_pout))
+                           loss_grid, rixs%rixs_eta_loss, valence_band_min, valence_band_max, intermediate_band_min, &
+                           intermediate_band_max, contribution_intensity(:, i_pin, i_pout))
                      END IF
                   END DO
                END DO
@@ -288,10 +298,30 @@ CONTAINS
       END SELECT
    END SUBROUTINE rixs_check_supported_input
 
-   LOGICAL FUNCTION rixs_kpoint_has_valence_and_empty(occ_band) RESULT(ok)
-      REAL, INTENT(IN) :: occ_band(:)
+   SUBROUTINE rixs_effective_band_bounds(rixs, nbands, valence_band_min, valence_band_max, &
+                                         intermediate_band_min, intermediate_band_max)
+      TYPE(t_xas), INTENT(IN) :: rixs
+      INTEGER,     INTENT(IN) :: nbands
+      INTEGER,     INTENT(OUT) :: valence_band_min, valence_band_max, intermediate_band_min, intermediate_band_max
 
-      ok = ANY(occ_band > rixs_occ_tol) .AND. ANY(1.0 - occ_band > rixs_occ_tol)
+      valence_band_min = 1
+      IF (rixs%l_rixs_valence_band_min) valence_band_min = rixs%rixs_valence_band_min
+      valence_band_max = nbands
+      IF (rixs%l_rixs_valence_band_max) valence_band_max = MIN(rixs%rixs_valence_band_max, nbands)
+
+      intermediate_band_min = 1
+      IF (rixs%l_rixs_intermediate_band_min) intermediate_band_min = rixs%rixs_intermediate_band_min
+      intermediate_band_max = nbands
+      IF (rixs%l_rixs_intermediate_band_max) intermediate_band_max = MIN(rixs%rixs_intermediate_band_max, nbands)
+   END SUBROUTINE rixs_effective_band_bounds
+
+   LOGICAL FUNCTION rixs_kpoint_has_valence_and_empty(occ_band, valence_band_min, valence_band_max, &
+                                                     intermediate_band_min, intermediate_band_max) RESULT(ok)
+      REAL, INTENT(IN) :: occ_band(:)
+      INTEGER, INTENT(IN) :: valence_band_min, valence_band_max, intermediate_band_min, intermediate_band_max
+
+      ok = ANY(occ_band(valence_band_min:valence_band_max) > rixs_occ_tol) .AND. &
+           ANY(1.0 - occ_band(intermediate_band_min:intermediate_band_max) > rixs_occ_tol)
    END FUNCTION rixs_kpoint_has_valence_and_empty
 
 END MODULE m_rixs_driver

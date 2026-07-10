@@ -4189,6 +4189,10 @@
       <xsd:attribute default="x" name="incomingPolarizations" type="StringVecType" use="optional"/>
       <xsd:attribute default="x" name="outgoingPolarizations" type="StringVecType" use="optional"/>
       <xsd:attribute default="rixs" name="outputPrefix" type="xsd:string" use="optional"/>
+      <xsd:attribute name="valenceBandMin" type="xsd:positiveInteger" use="optional"/>
+      <xsd:attribute name="valenceBandMax" type="xsd:positiveInteger" use="optional"/>
+      <xsd:attribute name="intermediateBandMin" type="xsd:positiveInteger" use="optional"/>
+      <xsd:attribute name="intermediateBandMax" type="xsd:positiveInteger" use="optional"/>
       <xsd:attribute default="F" name="writeContributions" type="FleurBool" use="optional">
          <xsd:annotation>
             <xsd:documentation>Write rank-local valence/intermediate-band contribution tables for RIXS diagnostics.</xsd:documentation>

@@ -45,6 +45,14 @@ MODULE m_types_xas
       LOGICAL :: rixs_out_polarizations(3) = [.FALSE., .FALSE., .FALSE.]
       CHARACTER(LEN=64) :: rixs_output_prefix = "rixs"
       LOGICAL :: rixs_write_contributions = .FALSE.
+      LOGICAL :: l_rixs_valence_band_min = .FALSE.
+      LOGICAL :: l_rixs_valence_band_max = .FALSE.
+      INTEGER :: rixs_valence_band_min = 1
+      INTEGER :: rixs_valence_band_max = 1
+      LOGICAL :: l_rixs_intermediate_band_min = .FALSE.
+      LOGICAL :: l_rixs_intermediate_band_max = .FALSE.
+      INTEGER :: rixs_intermediate_band_min = 1
+      INTEGER :: rixs_intermediate_band_max = 1
    CONTAINS
       PROCEDURE :: read_xml => read_xml_xas
       PROCEDURE :: mpi_bc => mpi_bc_xas
@@ -96,6 +104,14 @@ CONTAINS
       CALL mpi_bc(this%rixs_out_polarizations(3), rank, mpi_comm)
       CALL mpi_bc(rank, mpi_comm, this%rixs_output_prefix)
       CALL mpi_bc(this%rixs_write_contributions, rank, mpi_comm)
+      CALL mpi_bc(this%l_rixs_valence_band_min, rank, mpi_comm)
+      CALL mpi_bc(this%l_rixs_valence_band_max, rank, mpi_comm)
+      CALL mpi_bc(this%rixs_valence_band_min, rank, mpi_comm)
+      CALL mpi_bc(this%rixs_valence_band_max, rank, mpi_comm)
+      CALL mpi_bc(this%l_rixs_intermediate_band_min, rank, mpi_comm)
+      CALL mpi_bc(this%l_rixs_intermediate_band_max, rank, mpi_comm)
+      CALL mpi_bc(this%rixs_intermediate_band_min, rank, mpi_comm)
+      CALL mpi_bc(this%rixs_intermediate_band_max, rank, mpi_comm)
    END SUBROUTINE mpi_bc_xas
 
    SUBROUTINE read_xml_xas(this, xml)
@@ -198,6 +214,14 @@ CONTAINS
       this%rixs_out_polarizations = [.FALSE., .FALSE., .FALSE.]
       this%rixs_output_prefix = "rixs"
       this%rixs_write_contributions = .FALSE.
+      this%l_rixs_valence_band_min = .FALSE.
+      this%l_rixs_valence_band_max = .FALSE.
+      this%rixs_valence_band_min = 1
+      this%rixs_valence_band_max = 1
+      this%l_rixs_intermediate_band_min = .FALSE.
+      this%l_rixs_intermediate_band_max = .FALSE.
+      this%rixs_intermediate_band_min = 1
+      this%rixs_intermediate_band_max = 1
    END SUBROUTINE rixs_reset_defaults
 
    SUBROUTINE read_xml_rixs(this, xml)
@@ -297,7 +321,56 @@ CONTAINS
       IF (xml%GetNumberOfNodes('/fleurInput/output/rixs/@writeContributions') == 1) THEN
          this%rixs_write_contributions = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/rixs/@writeContributions'))
       END IF
+      CALL rixs_read_band_windows(this, xml)
    END SUBROUTINE read_xml_rixs
+
+   SUBROUTINE rixs_read_band_windows(this, xml)
+      USE m_types_xml
+      CLASS(t_xas), INTENT(INOUT) :: this
+      TYPE(t_xml),  INTENT(INOUT) :: xml
+
+      this%l_rixs_valence_band_min = xml%GetNumberOfNodes('/fleurInput/output/rixs/@valenceBandMin') == 1
+      this%l_rixs_valence_band_max = xml%GetNumberOfNodes('/fleurInput/output/rixs/@valenceBandMax') == 1
+      this%l_rixs_intermediate_band_min = xml%GetNumberOfNodes('/fleurInput/output/rixs/@intermediateBandMin') == 1
+      this%l_rixs_intermediate_band_max = xml%GetNumberOfNodes('/fleurInput/output/rixs/@intermediateBandMax') == 1
+
+      IF (this%l_rixs_valence_band_min) THEN
+         this%rixs_valence_band_min = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/output/rixs/@valenceBandMin'))
+      END IF
+      IF (this%l_rixs_valence_band_max) THEN
+         this%rixs_valence_band_max = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/output/rixs/@valenceBandMax'))
+      END IF
+      IF (this%l_rixs_intermediate_band_min) THEN
+         this%rixs_intermediate_band_min = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/output/rixs/@intermediateBandMin'))
+      END IF
+      IF (this%l_rixs_intermediate_band_max) THEN
+         this%rixs_intermediate_band_max = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/output/rixs/@intermediateBandMax'))
+      END IF
+
+      IF (this%l_rixs_valence_band_min) THEN
+         IF (this%rixs_valence_band_min <= 0) CALL juDFT_error("RIXS valenceBandMin must be positive.", calledby="m_types_xas")
+      END IF
+      IF (this%l_rixs_valence_band_max) THEN
+         IF (this%rixs_valence_band_max <= 0) CALL juDFT_error("RIXS valenceBandMax must be positive.", calledby="m_types_xas")
+      END IF
+      IF (this%l_rixs_intermediate_band_min) THEN
+         IF (this%rixs_intermediate_band_min <= 0) CALL juDFT_error("RIXS intermediateBandMin must be positive.", calledby="m_types_xas")
+      END IF
+      IF (this%l_rixs_intermediate_band_max) THEN
+         IF (this%rixs_intermediate_band_max <= 0) CALL juDFT_error("RIXS intermediateBandMax must be positive.", calledby="m_types_xas")
+      END IF
+
+      IF (this%l_rixs_valence_band_min .AND. this%l_rixs_valence_band_max) THEN
+         IF (this%rixs_valence_band_min > this%rixs_valence_band_max) THEN
+            CALL juDFT_error("RIXS valenceBandMin must not be larger than valenceBandMax.", calledby="m_types_xas")
+         END IF
+      END IF
+      IF (this%l_rixs_intermediate_band_min .AND. this%l_rixs_intermediate_band_max) THEN
+         IF (this%rixs_intermediate_band_min > this%rixs_intermediate_band_max) THEN
+            CALL juDFT_error("RIXS intermediateBandMin must not be larger than intermediateBandMax.", calledby="m_types_xas")
+         END IF
+      END IF
+   END SUBROUTINE rixs_read_band_windows
 
    SUBROUTINE xas_set_polarization(polarizations, token)
       LOGICAL,          INTENT(INOUT) :: polarizations(3)
