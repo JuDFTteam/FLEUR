@@ -149,3 +149,14 @@ Testset: Greenfunctions
 |     | Greens Function intersite multiple shells            | greens/GreensFunction_IntersiteMultipleShells        | bulk  |                 |         | 2   |
 |     | Greens Function intersite shell construction         | greens/GreensFunction_IntersiteShellConstruction     | bulk  | takes too long! |         | 2   |
 |     | Greens Function intersite shell construction         | greens/GreensFunction_IntersiteShellConstructionFilm | bulk  |                 |         | 2   | 
+
+Testset: Wannier
+------
+
+|     | Description                              | directory name   | marks         | Remarks | CmdLine | MPI |
+| --- | ---------------------------------------- | ---------------- | ------------- | ------- | ------- | --- |
+| +   | Pt no-SOC, wannierlib total spread       | wannier/WannPt   | wannier,bulk  |         |         | 1   |
+| +   | Pt SOC, wannierlib total spread              | wannier/WannPtSOC | wannier,bulk,soc |         |         | 1   |
+| +   | fcc Fe FM noco, wannierlib total spread      | wannier/WannFeFM | wannier,bulk  |         |         | 1   |
+| +   | fcc Fe AFM noco, wannierlib total spread     | wannier/WannFeAFM | wannier,bulk  |         |         | 1   |
+| +   | fcc Fe AFM noco+SOC, wannierlib total spread | wannier/WannFeAFMSOC | wannier,bulk,soc |         |         | 1   |

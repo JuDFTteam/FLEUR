@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<fleurInput fleurInputVersion="0.39">
+   <comment>
+      Fe fcc 2-atom uc                                                                                    
+   </comment>
+   <calculationSetup>
+      <cutoffs Kmax="3.4" Gmax="10.2" GmaxXC="10.2" numbands="88"/>
+      <scfLoop itmax="1" minDistance="0.00001" maxIterBroyd="15" imix="Anderson" alpha="0.05" precondParam="0.0" spinf="2.0"/>
+      <coreElectrons ctail="F" frcor="F" kcrel="0" coretail_lmax="0"/>
+      <xcFunctional name="pbe" relativisticCorrections="F"/>
+      <magnetism jspins="2" l_noco="T" l_ss="F">
+         <qss>0.0 0.0 0.0</qss>
+         <mtNocoParams l_mperp="F" l_mtNocoPot="F" l_relaxSQA="F" mag_mixing_scheme="0" mix_RelaxWeightOffD="1.0" l_constrained="F" mix_constr="1.0"/>
+         <sourceFreeMag l_sourceFree="F" l_scaleMag="F" mag_scale="1.0"/>
+      </magnetism>
+      <soc l_soc="T" theta="0.0" phi="0.0" spav="F"/>
+      <expertModes spex="0" secvar="F"/>
+      <geometryOptimization l_f="F" forcealpha="1.0" forcemix="BFGS" epsdisp="0.00001" epsforce="0.00001"/>
+      <ldaU l_linMix="F" mixParam="0.05" spinf="1.0"/>
+   </calculationSetup>
+   <cell>
+      <bzIntegration valenceElectrons="32.0" mode="hist" fermiSmearingEnergy="0.001">
+         <kPointListSelection listName="w222"/>
+         <!-- k-points included here -->
+         <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="kpts.xml"> </xi:include>
+      </bzIntegration>
+      <!-- symmetry operations included here -->
+      <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="sym.xml"> </xi:include>
+      <bulkLattice scale="1.0">
+         <bravaisMatrix>
+            <row-1>    4.8224683760000007     0.0000000000000000     0.0000000000000000</row-1>
+            <row-2>    0.0000000000000000     4.8224683760000007     0.0000000000000000</row-2>
+            <row-3>    0.0000000000000000     0.0000000000000000     6.8200000000000003</row-3>
+         </bravaisMatrix>
+      </bulkLattice>
+   </cell>
+   <atomSpecies>
+      <species name="Fe-1" element="Fe" atomicNumber="26">
+         <mtSphere radius="2.35" gridPoints="661" logIncrement="0.018"/>
+         <atomicCutoffs lmax="8" lnonsphr="6"/>
+         <electronConfig flipSpins="F">
+            <coreConfig>(1s1/2) (2s1/2) (2p1/2) (2p3/2)</coreConfig>
+            <valenceConfig>(3s1/2) (3p1/2) (3p3/2) (4s1/2) (3d3/2) (3d5/2)</valenceConfig>
+            <stateOccupation state="(3d3/2)" spinUp="1.2" spinDown="1.2"/>
+            <stateOccupation state="(3d5/2)" spinUp="2.9" spinDown="0.7"/>
+         </electronConfig>
+         <energyParameters s="4" p="4" d="3" f="4"/>
+         <lo type="SCLO" l="0" n="3" eDeriv="0"/>
+         <lo type="SCLO" l="1" n="3" eDeriv="0"/>
+         <wannierproj l="2" m="2" spin=""/>
+         <wannierproj l="2" m="3" spin=""/>
+         <wannierproj l="2" m="5" spin=""/>
+         <wannierproj l="-5" m="0" spin=""/>
+      </species>
+   </atomSpecies>
+   <atomGroups>
+      <atomGroup species="Fe-1">
+         <relPos label="                   1">.0000000000 .0000000000 .0000000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+         <nocoParams  alpha="0.0" beta="0.0"/>
+      </atomGroup>
+      <atomGroup species="Fe-1">
+         <relPos label="                   2">1.000/2.000 1.000/2.000 1.000/2.000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+         <nocoParams  alpha="0.0" beta="3.141592653589793"/>
+      </atomGroup>
+   </atomGroups>
+   <output dos="F" band="F" slice="F">
+      <wannierlib wannierize="T">
+        <bands numBands="72" minBand="17" maxBand="88"/>
+        <disentanglement disWinMin="-0.027236" disWinMax="2.177723" disFrozMin="-0.027236" disFrozMax="0.560753" numIter="3000" convTol="0.00001" mixRatio="0.5"/>
+        <wannierization numIter="3000" convTol="0.00001"/>
+      </wannierlib>
+      <checks vchk="F" cdinf="F"/>
+      <bandDOS minEnergy="-.5*Htr" maxEnergy="0.5*Htr" sigma="0.015" storeEVData="T"/>
+      <vacuumDOS vacdos="F" integ="F" star="F" nstars="0" locx1="0.0" locy1="0.0" locx2="0.0" locy2="0.0" nstm="0" tworkf="0.0"/>
+      <unfoldingBand unfoldBand="F" supercellX="1" supercellY="1" supercellZ="1"/>
+      <plotting iplot="0" polar="F">
+         <plot TwoD="T" vec1="  1.0  0.0  0.0" vec2="  0.0  1.0  0.0" vec3="  0.0  0.0  1.0" zero="  0.0  0.0  0.0" file="plot"/>
+      </plotting>
+      <chargeDensitySlicing numkpt="0" minEigenval="0.0" maxEigenval="0.0" nnne="0" pallst="F"/>
+      <specialOutput eonly="F"/>
+      <magneticCircularDichroism mcd="F" energyLo="-10.0" energyUp="0.0"/>
+   </output>
+  <!-- We include the file relax.xml here to enable relaxations (see documentation) -->
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="relax.xml"> <xi:fallback/> </xi:include>
+</fleurInput>
+
+<!--
+Command line when calling inpgen (only for documentation purposes):
+/Users/saez/fleur_versions/fleur-wann_lib/fleur-wannierlib/build.wannlib/inpgen -noco -f Fe-FM_z.inp
+
+Initial (original) inpgen input (only for documentation purposes):
+Fe fcc 2-atom uc
+&input film=f /
+&lattice latsys='tP', a=0.7071068, c=1.0, a0=6.82 /
+2
+26.0 0.0 0.0 0.0
+26.1 0.5 0.5 0.5
+
+&atom element="Fe" id=26.0 bmu=2.20 /
+&atom element="Fe" id=26.1 bmu=2.20 /
+&end /
+-->
