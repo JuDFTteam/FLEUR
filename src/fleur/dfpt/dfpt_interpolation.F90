@@ -100,9 +100,12 @@ contains
         inp_pref = ADJUSTL("fullsym_")
         fmpi_fullsym%l_mpi_multithreaded = fmpi%l_mpi_multithreaded
         fmpi_fullsym%mpi_comm = fmpi%mpi_comm
+        ! Skip setupMPI: this fleur_init only re-reads the fullsym_ input set; the
+        ! parallel-solver setup it would otherwise do is never used here and fails
+        ! when the fullsym q-mesh does not factor evenly onto the MPI ranks.
         call fleur_init(fmpi_fullsym, fi_fullsym, sphhar_fullsym, stars_fullsym, nococonv_fullsym, forcetheo_fullsym, &
                         enpara_fullsym, xcpot_fullsym, results_fullsym, wann_fullsym, hybdat_fullsym, mpdata_fullsym, &
-                        inp_pref)
+                        inp_pref, l_skip_setupmpi=.true.)
         qpts = fi_fullsym%kpts
 
         ALLOCATE(q_list(SIZE(qpts%bk,2)))
