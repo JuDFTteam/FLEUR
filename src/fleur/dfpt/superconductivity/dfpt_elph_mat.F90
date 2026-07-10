@@ -267,12 +267,20 @@ CONTAINS
         type(t_results),     intent(in) :: results
         complex,intent(in)              :: gmat(:,:,:,:,:,:) !(nu,nu',kpoints,spin,iMode,iQ)
 
-        integer :: eig_id_interpol, num_wann , num_bands , ikpt, iMode, ispin  
-#ifdef CPP_MPI 
+        integer :: eig_id_interpol,q_eig_id_interpol, num_wann , num_bands , ikpt, iMode, ispin
+        integer :: iQ, nKept, nSurv, i, ik
+        real    :: qvec(3)
+        real,allocatable :: kqpts_interpol(:,:)
+        integer, allocatable :: fermiKidx(:)   ! fine-mesh k-point indices near E_F
+        real,    allocatable :: fermiKpts(:,:) ! (3, nKept) coords of those k-points
+        integer, allocatable :: kqKeptIdx(:)   ! indices (into fermiK*) where k+q also near E_F
+        real,    allocatable :: kqKeptKpts(:,:), survKpts(:,:), qsingle(:,:)
+
+#ifdef CPP_MPI
         integer :: ierr
 #endif
         complex, allocatable :: U_full(:,:,:,:) !(num_bands,num_wann,ikpt,jspin)
-        complex, allocatable :: matInterpol(:,:,:,:) , gmatInterpol(:,:,:,:,:,:)
+        complex, allocatable :: gmatInterpol_q(:,:,:,:,:,:) !(nwann,nwann,nSurv,1,jspin,mode)
 
         num_bands = fi%wannierlib%max_band - fi%wannierlib%min_band + 1
         num_wann  = fi%wannierlib%num_wann
@@ -284,13 +292,21 @@ CONTAINS
 #ifdef CPP_MPI
             eig_id_interpol = open_eig(MPI_COMM_SELF, num_wann, num_wann, size(fi%dfpt%qvec_interpolate,2), fi%input%jspins, fi%noco%l_noco, &
                                     .true., .false., fi%noco%l_soc, .false., .FALSE., 1)
+            q_eig_id_interpol = open_eig(MPI_COMM_SELF, num_wann, num_wann, size(fi%dfpt%qvec_interpolate,2), fi%input%jspins, fi%noco%l_noco, &
+                                    .true., .false., fi%noco%l_soc, .false., .FALSE., 1)
 #else
             eig_id_interpol = open_eig(fmpi%mpi_comm, num_wann, num_wann, size(fi%dfpt%qvec_interpolate,2), fi%input%jspins, fi%noco%l_noco, &
+                                    .true., .false., fi%noco%l_soc, .false., .FALSE., 1)
+            q_eig_id_interpol = open_eig(fmpi%mpi_comm, num_wann, num_wann, size(fi%dfpt%qvec_interpolate,2), fi%input%jspins, fi%noco%l_noco, &
                                     .true., .false., fi%noco%l_soc, .false., .FALSE., 1)
 #endif
 
             call interpolate_bandstructure(fi,results,fi%dfpt%qvec_interpolate,eig_id_interpol,.false.)
-        
+
+            ! only keep k points where the eigenvalues are close to the fermi energy
+            call select_fermi_kpoints(fi, results, eig_id_interpol, size(fi%dfpt%qvec_interpolate,2), fi%dfpt%qvec_interpolate,fermiKidx, fermiKpts)
+
+
             ! load the Umats from the Wannier step
             allocate(U_full(num_bands,num_wann,fi%kpts%nkptf,fi%input%jspins))
             if (num_bands > num_wann) then 
@@ -302,26 +318,108 @@ CONTAINS
             else 
                 U_full(:,:,:,:) = results%U_mat(:,:,:,:)
             end if 
-            print * , "Loaded Umat"
 
-            allocate(gmatInterpol(num_wann,num_wann,size(fi%dfpt%qvec_interpolate,2),size(fi%dfpt%qvec_interpolate,2),fi%input%jspins,3*fi%atoms%nat))
-            gmatInterpol = cmplx(0.0,0.0)
+            nKept = size(fermiKidx)
+            allocate(kqpts_interpol(3, nKept))
+            allocate(qsingle(3, 1))
+            do iQ = 1 , size(fi%dfpt%qvec_interpolate,2)
+                ! do one q-point at a time
+                qvec = fi%dfpt%qvec_interpolate(:, iQ)
 
-            do iMode = 1 , 3*fi%atoms%nat
-                do ispin = 1 , fi%input%jspins
-                    call wannier_matrixq_interpolate(fi,gmat(:,:,:,ispin,iMode,:),U_full(:,:,:,ispin),fi%kpts,fi%dfpt%qvec_interpolate,gmatInterpol(:,:,:,:,ispin,iMode),fi%kpts,fi%dfpt%qvec_interpolate)
-                end do !ispin
-            end do !iMode
+                ! k+q for every k-point that already passed the k-side E_F test
+                do ik = 1, nKept
+                    kqpts_interpol(:, ik) = fermiKpts(:, ik) + qvec
+                end do
 
+                ! interpolate the bands at those k+q points and keep those also near E_F
+                call interpolate_bandstructure(fi,results,kqpts_interpol,q_eig_id_interpol,.false.)
+                call select_fermi_kpoints(fi, results, q_eig_id_interpol, nKept, kqpts_interpol, kqKeptIdx, kqKeptKpts)
+
+                nSurv = size(kqKeptIdx)
+                if (nSurv == 0) then
+                    ! no k-point has both k and k+q at E_F for this q
+                    deallocate(kqKeptIdx, kqKeptKpts)
+                    cycle
+                end if
+
+                ! surviving k-points: k near E_F (already true) AND k+q near E_F
+                allocate(survKpts(3, nSurv))
+                do i = 1, nSurv
+                    survKpts(:, i) = fermiKpts(:, kqKeptIdx(i))
+                end do
+
+                ! interpolate the matrix element ONLY for the surviving k-points, single q
+                qsingle(:, 1) = qvec
+                allocate(gmatInterpol_q(num_wann, num_wann, nSurv, 1, fi%input%jspins, 3*fi%atoms%nat))
+                gmatInterpol_q = cmplx(0.0, 0.0)
+                do iMode = 1 , 3*fi%atoms%nat
+                    do ispin = 1 , fi%input%jspins
+                        call wannier_matrixq_interpolate(fi,gmat(:,:,:,ispin,iMode,:),U_full(:,:,:,ispin),fi%kpts,survKpts,gmatInterpol_q(:,:,:,:,ispin,iMode),fi%kpts,qsingle)
+                    end do !ispin
+                end do !iMode
+
+                ! TODO: construct linewidth from gmatInterpol_q for this q (inline consume)
+
+                deallocate(gmatInterpol_q, survKpts, kqKeptIdx, kqKeptKpts)
+            end do !iQ
             call close_eig(eig_id_interpol)
+            call close_eig(q_eig_id_interpol)
 
         end if
-        print * , "Done?"
 
 #ifdef CPP_MPI
         CALL MPI_BARRIER(fmpi%mpi_comm, ierr)
 #endif
 
     end subroutine el_ph_wannier_interpolate
+
+    subroutine select_fermi_kpoints(fi, results, eig_id, npoints, coords, keptIdx, keptKpts)
+        ! Read the interpolated eigenvalues stored in eig_id for the point set given by
+        ! coords(:,1:npoints) and keep only those points that have at least one eigenvalue
+        ! within 6*fermiSmearingEnergy of the Fermi energy.
+        use m_eig66_io, only : read_eig
+
+        type(t_fleurinput), intent(in)  :: fi
+        type(t_results),    intent(in)  :: results
+        integer,            intent(in)  :: eig_id, npoints
+        real,               intent(in)  :: coords(:,:)      ! (3, npoints) coords in eig_id order
+        integer, allocatable, intent(out) :: keptIdx(:)     ! indices into 1..npoints near E_F
+        real,    allocatable, intent(out) :: keptKpts(:,:)  ! (3, nKept) packed coords
+
+        integer :: num_wann, jspin, ik, ne, nKept
+        real    :: window
+        real,    allocatable :: eigvals(:)
+        logical, allocatable :: mask(:)
+
+        num_wann = fi%wannierlib%num_wann
+        window   = 6.0 * fi%input%tkb
+
+        allocate(eigvals(num_wann))
+        allocate(mask(npoints))
+        mask = .false.
+
+        ! A point is kept if any band at any spin lies within the window of E_F.
+        do jspin = 1, fi%input%jspins
+            do ik = 1, npoints
+                call read_eig(eig_id, ik, jspin, neig=ne, eig=eigvals)
+                if (any(abs(eigvals(:ne) - results%ef) < window)) mask(ik) = .true.
+            end do
+        end do
+
+        nKept = count(mask)
+        allocate(keptIdx(nKept))
+        allocate(keptKpts(3, nKept))
+        nKept = 0
+        do ik = 1, npoints
+            if (mask(ik)) then
+                nKept = nKept + 1
+                keptIdx(nKept)    = ik
+                keptKpts(:,nKept) = coords(:, ik)
+            end if
+        end do
+
+        deallocate(eigvals, mask)
+
+    end subroutine select_fermi_kpoints
 
 END MODULE  m_dfpt_elph_mat
