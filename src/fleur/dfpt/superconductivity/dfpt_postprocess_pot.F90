@@ -20,7 +20,7 @@ module m_dfpt_postprocess_pot
 
 contains 
 
-    subroutine construct_elph_mat(fmpi,fi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat, &
+    subroutine dfpt_postprocess_elph(fmpi,fi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat, &
                                   rho, vTot, vxc,results,eig_id,resultsq,q_eig_id,l_real)
 
         use m_types 
@@ -63,6 +63,7 @@ contains
         type(t_potden) :: grRho3(3), grVtot3(3), grVext3(3), grVc3(3),grgrVext3x3(3,3)
 
         integer :: ikpt, iQ ,iDir, iDtype, iPerturb ,iArray, iMode, killcont(6), bandWindowSize
+        integer :: bandWindow(2)
         logical :: l_dummy , l_exist
         complex :: pref 
         complex, allocatable :: dynMat(:,:) , eigenVecs(:,:)
@@ -98,10 +99,22 @@ contains
         allocate(q_list(size(fi%dfpt%qvec,2)))  
         q_list = (/(iArray, iArray=1,SIZE(fi%dfpt%qvec,2), 1)/)
 
-        bandWindowSize = fi%dfpt%bandWindow(2) - fi%dfpt%bandWindow(1) + 1 
+        ! Determine the band window for the electron-phonon matrix elements.
+        if (fi%wannierlib%l_wannierize) then
+           bandWindow = [fi%wannierlib%min_band, fi%wannierlib%max_band]
+        else
+           if (.not. allocated(fi%dfpt%bandWindow)) &
+              call juDFT_error("dfpt bandWindow is required when not wannierizing",calledby="construct_elph_mat")
+           bandWindow = fi%dfpt%bandWindow
+        end if
+
+        if (bandWindow(1) < 1 .or. bandWindow(2) < bandWindow(1)) &
+           call juDFT_error("Invalid band window in construct_elph_mat",calledby="construct_elph_mat")
+
+        bandWindowSize = bandWindow(2) - bandWindow(1) + 1
 
         allocate(dynMat(3*fi%atoms%nat,3*fi%atoms%nat))
-        allocate(gmat(bandWindowSize,bandWindowSize,fi%kpts%nkpt,fi%input%jspins,3*fi%atoms%nat,size(q_list)))        
+        allocate(gmat(bandWindowSize,bandWindowSize,fi%kpts%nkpt,fi%input%jspins,3*fi%atoms%nat,size(q_list)))
         allocate(gmatCart(bandWindowSize,bandWindowSize,fi%kpts%nkpt,fi%input%jspins))
         dynMat = cmplx(0,0)
         gmat = cmplx(0,0)
@@ -178,11 +191,11 @@ contains
                     vTot1%mt(:,0:,iDtype,:) = vTot1%mt(:,0:,iDtype,:) + grVtot3(iDir)%mt(:,0:,iDtype,:)
 
                     ! construct the electron-phonon element in cartesian basis 
-                    call timestart("elph element")
-                    CALL matrix_element(sternheimerJob,fi,sphhar,results,fmpi,enpara,nococonv,starsq,vTot1,vTot1Im,vTot,rho, qpts%bk(:, iQ),&
-                                        eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatCart,fi%dfpt%bandWindow) 
+                    call timestart("construction elph element")
+                    call construct_elph_element(sternheimerJob,fi,sphhar,results,fmpi,enpara,nococonv,starsq,vTot1,vTot1Im,vTot,rho, qpts%bk(:, iQ),&
+                                        eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatCart,bandWindow)
 
-                    call timestop("elph element")
+                    call timestop("construction elph element")
 
                     ! construct the electron-phonon element in the normal basis  
                     if (fmpi%irank == 0 ) then 
@@ -208,18 +221,18 @@ contains
 
             call timestop("q-point elph")
   
-            ! Now do IO with el-ph matrix element 
-  
+     
         end do !iQ
+        ! free some memory
+        deallocate(gmatCart)
+
+        if (fmpi%irank==0) print * , "Starting thhe construction of the interpolation"
+
+        ! Perform Wannier interpolation
+        if (fi%wannierlib%l_wannierize) call el_ph_wannier_interpolate(fmpi,fi,results,gmat)
 
 
-
-    end subroutine construct_elph_mat
-
-
-
-
-
+    end subroutine dfpt_postprocess_elph
 
 
     subroutine read_dynmats(natoms,iQ,dynMat)

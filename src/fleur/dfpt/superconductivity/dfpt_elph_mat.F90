@@ -25,173 +25,7 @@ MODULE m_dfpt_elph_mat
     IMPLICIT NONE
 
 CONTAINS
-    SUBROUTINE dfpt_elph_mat(fi,xcpot,sphhar,stars,nococonv,qpts,fmpi,results, resultsq, results1, enpara,hybdat, rho,vTot,grRho,grVtot,iQ,eig_id,q_eig_id,l_real,denIn1,denIn1Im,eigenVecs,eigenVals)
-
-        USE m_vgen
-        USE m_make_stars
-        USE m_dfpt_vgen
-        USE m_eig66_io, ONLY : write_eig, read_eig
-        USE m_dosbin
-        USE m_smooth
-        USE m_dfpt_fermie, ONLY : sfermi
-        USE m_dfpt_elph_linewidth
-        
-
-
-
-        IMPLICIT NONE 
-
-
-        TYPE(t_fleurinput), INTENT(IN) :: fi
-        CLASS(t_xcpot),     INTENT(IN)    :: xcpot
-        TYPE(t_stars),INTENT(IN) :: stars
-        TYPE(t_nococonv), INTENT(IN) :: nococonv
-        TYPE(t_mpi), INTENT(IN) :: fmpi
-        TYPE(t_results), INTENT(IN) :: results,resultsq,results1
-        TYPE(t_enpara), INTENT(IN) :: enpara
-        TYPE(t_sphhar), INTENT(IN)  :: sphhar
-        TYPE(t_kpts), INTENT(IN) :: qpts 
-        TYPE(t_hybdat),     INTENT(INOUT) :: hybdat
-        TYPE(t_potden), INTENT(IN) :: rho,vTot,grRho(3),grVtot(3)
-        INTEGER,INTENT(IN)         :: iQ,eig_id,q_eig_id
-        LOGICAL,INTENT(IN)         :: l_real
-        TYPE(t_potden), ALLOCATABLE,  INTENT(IN)     :: denIn1(:) , denIn1Im(:)
-        COMPLEX, ALLOCATABLE, INTENT(INOUT) :: eigenVecs(:,:) ! Only allocated on irank 0
-        REAL,ALLOCATABLE, INTENT(INOUT) :: eigenVals(:) ! Only allocated on irank 0
-
-        
-        TYPE(t_potden) :: vTot1,vTot1Im,denIn1_loc, denIn1Im_loc, rho_loc
-
-
-        TYPE(t_stars) :: starsq
-        type(t_sternheimerJob) :: sternheimerJob
-        INTEGER :: iDtype, iDir, killcont(6) ,iMode , iPerturb
-        REAL :: bqpt(3)
-        COMPLEX,ALLOCATABLE:: gmatCart(:,:,:,:) !(nu',nu,kpoints,jsp)
-        COMPLEX,ALLOCATABLE:: gmat(:,:,:,:,:) !(nu',nu,kpoints,jsp,normal_mode)
-        REAL, ALLOCATABLE :: ph_linewidth(:) !(normal_mode)
-        INTEGER ::  nuWindow(2,2)  ! ,nbasfcnq_min
-
-
-#ifdef CPP_MPI
-        INTEGER :: ierr
-#endif 
-
-        REAL                                      :: atomic_mass_array(118)
-
-        atomic_mass_array = atomicMasses_const * massInElectronMasses
-        ! killcont can be used to blot out certain contricutions to the
-        ! perturbed matrices.
-        ! In this order: V1_pw_pw, T1_pw, S1_pw, V1_MT, ikGH0_MT, ikGS0_MT
-        killcont = [1,1,1,1,1,1]
-        
-
-        call sternheimerJob%init(fi,l_phonon=.true.)
-
-        !Up to now only irank == 0 knows the eigenvecs plus eigenvals 
-        IF (.NOT. ALLOCATED(eigenVecs)) ALLOCATE(eigenVecs(3*fi%atoms%nat,3*fi%atoms%nat))
-        IF (.NOT. ALLOCATED(eigenVals)) ALLOCATE(eigenVals(3*fi%atoms%nat))
-
-#ifdef CPP_MPI
-        CALL MPI_BCAST(eigenVecs, size(eigenVecs), MPI_DOUBLE_COMPLEX, 0, fmpi%mpi_comm, ierr)
-        CALL MPI_BCAST(eigenVals, size(eigenVals), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
-#endif 
-
-        CALL rho_loc%copyPotDen(rho)
-        IF (fmpi%irank==0) WRITE(*,*) 'Generating Potentials for Electron-Phonon Matrix Elements'
-        
-        ! Introduce Energy Window for states
-        ! Reduce memory and computational effort
-        bqpt = qpts%bk(:, iQ)
-        ! CALL timestart("Generating the energy window")
-        ! CALL energy_window(fi,fmpi,results,resultsq,nococonv,bqpt,eigenVals,nuWindow)
-        ! CALL timestop("Generating the energy window")
-        
-        DO iDtype=1,fi%atoms%nat
-            DO iDir=1,3
-                CALL denIn1_loc%copyPotDen(denIn1(iDir+3*(iDtype-1)))
-                CALL denIn1Im_loc%copyPotDen(denIn1Im(iDir+3*(iDtype-1)))
-
-                denIn1_loc%mt(:,0:,iDtype,:) = denIn1_loc%mt(:,0:,iDtype,:) - grRho(iDir)%mt(:,0:,iDtype,:)
-                
-                CALL make_stars(starsq, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, qpts%bk(:,iQ), iDtype, iDir)
-                starsq%ufft = stars%ufft
-
-                CALL vTot1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
-                CALL vTot1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
-
-
-                iPerturb = iDir+3*(iDtype-1)
-                
-                CALL timestart("Generating Potential Perturbation")
-                IF (fmpi%irank==0) WRITE(oUnit, *) "vEff1", iDir
-                CALL dfpt_vgen(sternheimerJob,hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
-                           fi%dfpt,fi%cell,fmpi,fi%noco,nococonv,rho_loc,vTot,&
-                           starsq,denIn1Im_loc,vTot1,.TRUE.,vTot1Im,denIn1_loc,iDtype,iDir,[1,1])
-                    
-                CALL timestop("Generating Potential Perturbation")
-
-                ! Add the gradient to potential 
-                vTot1%mt(:,0:,iDtype,:) = vTot1%mt(:,0:,iDtype,:) + grVtot(iDir)%mt(:,0:,iDtype,:)
-
-                CALL timestart("Generate electron-phonon matrix element")
-                ! currenlty this call will lead to segfalse here! 
-                ! reactivate in the future. 
-                CALL matrix_element(sternheimerJob,fi,sphhar,results,fmpi,enpara,nococonv,starsq,vTot1,vTot1Im,vTot,rho_loc,bqpt,eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatCart,nuWindow) ! nbasfcnq_min
-                CALL timestop("Generate electron-phonon matrix element")
-
-                IF (.NOT. ALLOCATED(gmat)) THEN
-                    ALLOCATE(gmat(size(gmatCart,1),size(gmatCart,2),size(gmatCart,3),size(gmatCart,4),3*fi%atoms%nat))
-                    gmat=CMPLX(0.0,0.0)
-                END IF 
-                !TODO Read in the eigenvecotrs from Dynmats, here we can take them from memory
-                !IF (fmpi%irank==0) THEN 
-                    ! Numerics saves the day 
-                    ! Think about Gamma if Frequencies are approximately zero
-                    DO iMode = 1 , 3*fi%atoms%nat
-                        IF (eigenVals(iMode) .LT. 0.0 ) THEN 
-                            gmat(:,:,:,:,iMode) = gmat(:,:,:,:,iMode) + eigenVecs(iPerturb,iMode) * &
-                            &                   ( (-1*ImagUnit) / SQRT(2* atomic_mass_array(fi%atoms%nz(CEILING(iPerturb/3.0))) * SQRT(ABS(eigenVals(iMode)))) ) * gmatCart(:,:,:,:) 
-                        ELSE
-                            gmat(:,:,:,:,iMode) = gmat(:,:,:,:,iMode) + eigenVecs(iPerturb,iMode) / SQRT(2* atomic_mass_array(fi%atoms%nz(CEILING(iPerturb/3.0))) * SQRT(eigenVals(iMode))) * gmatCart(:,:,:,:) 
-                        END IF 
-                    END DO  
-                !END IF 
-                
-                CALL starsq%reset_stars()
-                CALL denIn1_loc%reset_dfpt()
-                CALL denIn1Im_loc%reset_dfpt()
-                CALL vTot1%reset_dfpt()
-                CALL vTot1Im%reset_dfpt()
-                DEALLOCATE(gmatCart)
-            END DO !iDir 
-        END DO !iDtype 
-
-
-        ! Construct the Superconduction temperature 
-#ifdef CPP_MPI
-        CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
-#endif
-        CALL timestart("Linewidth elph")
-        !Set this code block behind a logical in the future 
-        CALL dfpt_ph_linewidth(fi,fmpi,qpts,results,resultsq,results1,eigenVals,gmat,iQ,nuWindow, ph_linewidth) !nbasfcnq_min 
-        CALL timestop("Linewidth elph")
-
-#ifdef CPP_MPI
-        CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
-#endif
-
-        DEALLOCATE(ph_linewidth)
-        DEALLOCATE(gmat)
-        IF (.NOT. fmpi%irank==0) THEN 
-            DEALLOCATE(eigenVals)
-            DEALLOCATE(eigenVecs)
-        END IF 
-
-    END SUBROUTINE dfpt_elph_mat
-
-
-    SUBROUTINE matrix_element(sternheimerJob,fi,sphhar,results,fmpi,enpara,nococonv,starsq,v1real,v1imag,vTot,inden,bqpt,eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatBuffer,nuWindow)
+    SUBROUTINE construct_elph_element(sternheimerJob,fi,sphhar,results,fmpi,enpara,nococonv,starsq,v1real,v1imag,vTot,inden,bqpt,eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatBuffer,nuWindow)
         ! This routine is very similar to dfpt_eigen
         ! However, we do not need the gmat which is slightly different to z1
         ! Output needs to be different 
@@ -419,6 +253,75 @@ CONTAINS
 #endif
 
 
-    END SUBROUTINE matrix_element
+    END SUBROUTINE construct_elph_element
+
+    subroutine el_ph_wannier_interpolate(fmpi,fi,results,gmat)
+
+        use m_eig66_io, only : open_eig,close_eig
+        use m_wannier_interpolate
+        use m_matrix_interpolation
+
+
+        type(t_mpi), intent(in)         :: fmpi
+        type(t_fleurinput) , intent(in) :: fi 
+        type(t_results),     intent(in) :: results
+        complex,intent(in)              :: gmat(:,:,:,:,:,:) !(nu,nu',kpoints,spin,iMode,iQ)
+
+        integer :: eig_id_interpol, num_wann , num_bands , ikpt, iMode, ispin  
+#ifdef CPP_MPI 
+        integer :: ierr
+#endif
+        complex, allocatable :: U_full(:,:,:,:) !(num_bands,num_wann,ikpt,jspin)
+        complex, allocatable :: matInterpol(:,:,:,:) , gmatInterpol(:,:,:,:,:,:)
+
+        num_bands = fi%wannierlib%max_band - fi%wannierlib%min_band + 1
+        num_wann  = fi%wannierlib%num_wann
+
+        if (fmpi%irank==0) then
+
+            ! Size of the interpolated hamiltonian is only num_wann x num_wann
+            ! MPI_COMM_SELF used, as it would lead to wrong RMA problems 
+#ifdef CPP_MPI
+            eig_id_interpol = open_eig(MPI_COMM_SELF, num_wann, num_wann, size(fi%dfpt%qvec_interpolate,2), fi%input%jspins, fi%noco%l_noco, &
+                                    .true., .false., fi%noco%l_soc, .false., .FALSE., 1)
+#else
+            eig_id_interpol = open_eig(fmpi%mpi_comm, num_wann, num_wann, size(fi%dfpt%qvec_interpolate,2), fi%input%jspins, fi%noco%l_noco, &
+                                    .true., .false., fi%noco%l_soc, .false., .FALSE., 1)
+#endif
+
+            call interpolate_bandstructure(fi,results,fi%dfpt%qvec_interpolate,eig_id_interpol,.false.)
+        
+            ! load the Umats from the Wannier step
+            allocate(U_full(num_bands,num_wann,fi%kpts%nkptf,fi%input%jspins))
+            if (num_bands > num_wann) then 
+                do ispin = 1 , fi%input%jspins
+                    do ikpt = 1 , fi%kpts%nkptf
+                        U_full(:,:,ikpt,ispin) = matmul(results%U_dis(:,:,ikpt,ispin),results%U_mat(:,:,ikpt,ispin))
+                    end do 
+                end do 
+            else 
+                U_full(:,:,:,:) = results%U_mat(:,:,:,:)
+            end if 
+            print * , "Loaded Umat"
+
+            allocate(gmatInterpol(num_wann,num_wann,size(fi%dfpt%qvec_interpolate,2),size(fi%dfpt%qvec_interpolate,2),fi%input%jspins,3*fi%atoms%nat))
+            gmatInterpol = cmplx(0.0,0.0)
+
+            do iMode = 1 , 3*fi%atoms%nat
+                do ispin = 1 , fi%input%jspins
+                    call wannier_matrixq_interpolate(fi,gmat(:,:,:,ispin,iMode,:),U_full(:,:,:,ispin),fi%kpts,fi%dfpt%qvec_interpolate,gmatInterpol(:,:,:,:,ispin,iMode),fi%kpts,fi%dfpt%qvec_interpolate)
+                end do !ispin
+            end do !iMode
+
+            call close_eig(eig_id_interpol)
+
+        end if
+        print * , "Done?"
+
+#ifdef CPP_MPI
+        CALL MPI_BARRIER(fmpi%mpi_comm, ierr)
+#endif
+
+    end subroutine el_ph_wannier_interpolate
 
 END MODULE  m_dfpt_elph_mat

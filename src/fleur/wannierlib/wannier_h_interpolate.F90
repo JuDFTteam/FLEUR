@@ -126,11 +126,11 @@ contains
                 call timestart("Diogonalization Wannier")
                 call solver%solve_std_dp(hmat_tmp,num_wann,eig_interpol(:,ikpt,jspin),zMat_tmp)
                 call timestop("Diogonalization Wannier")
+                call write_eig(eig_id_interpol, ikpt, jspin, num_wann, num_wann, eig_interpol(:,ikpt,jspin),zMat=zMat_tmp)
                 if (allocated(zMat_tmp)) then
                     call zMat_tmp%free()
                     deallocate(zMat_tmp)
                 end if 
-                call write_eig(eig_id_interpol, ikpt, jspin, num_wann, num_wann, eig_interpol(:,ikpt,jspin),zMat=zMat_tmp)
             end do !ikpt 
         end do !jspins
 

@@ -163,7 +163,7 @@ CONTAINS
          ! Construct the matrix element from converged potentials
          if (fi%dfpt%l_elph) then 
             call timestart("construction of el-ph matrix elements")
-            call construct_elph_mat(fmpi,fi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,rho,vTot,vxc,results,eig_id,q_results,q_eig_id,l_real)
+            call dfpt_postprocess_elph(fmpi,fi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,rho,vTot,vxc,results,eig_id,q_results,q_eig_id,l_real)
             call timestop("construction of el-ph matrix elements")
          end if 
       end if 
