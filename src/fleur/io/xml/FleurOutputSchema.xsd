@@ -191,8 +191,23 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="densityConvergence" type="DensityConvergenceType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="timing" type="TimingType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="Phonons" type="PhononsType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="wannierlibReport" type="WannierlibReportType"/>
       </xsd:sequence>
    </xsd:group>
+
+   <xsd:complexType name="WannierlibReportType">
+      <xsd:sequence>
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="wannierFunction" type="WannierFunctionType"/>
+      </xsd:sequence>
+   </xsd:complexType>
+
+   <xsd:complexType name="WannierFunctionType">
+      <xsd:attribute name="index" type="xsd:integer" use="required"/>
+      <xsd:attribute name="x" type="xsd:string" use="required"/>
+      <xsd:attribute name="y" type="xsd:string" use="required"/>
+      <xsd:attribute name="z" type="xsd:string" use="required"/>
+      <xsd:attribute name="spread" type="xsd:string" use="required"/>
+   </xsd:complexType>
 
    <xsd:complexType name="IterationType">
       <xsd:sequence>
