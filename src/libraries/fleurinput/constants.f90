@@ -57,9 +57,10 @@ MODULE m_constants
   INTEGER, PARAMETER :: KPTS_KIND_TRIA_BULK   = 3
   INTEGER, PARAMETER :: KPTS_KIND_TRIA        = 4
   INTEGER, PARAMETER :: KPTS_KIND_SPEX_MESH   = 5
+  INTEGER, PARAMETER :: KPTS_KIND_PLANE       = 6
 
-  CHARACTER(LEN=11),DIMENSION(0:5),PARAMETER :: kptsKindString_consts = &
-     (/'unspecified','mesh       ','path       ','tria-bulk  ','tria       ','SPEX mesh  ' /)
+  CHARACTER(LEN=11),DIMENSION(0:6),PARAMETER :: kptsKindString_consts = &
+     (/'unspecified','mesh       ','path       ','tria-bulk  ','tria       ','SPEX mesh  ','plane      ' /)
 
   INTEGER, PARAMETER :: BZINT_METHOD_HIST  = 0
   INTEGER, PARAMETER :: BZINT_METHOD_GAUSS = 1

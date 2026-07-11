@@ -45,6 +45,15 @@ MODULE m_types_wannierlib
     INTEGER :: path_npts = 0
     INTEGER :: path_np = 0
     REAL, ALLOCATABLE :: path_kpts(:, :)
+    ! <plane listName=".."/> / <grid listName=".."/>: reuse a named kPointList (as-is)
+    ! from kpts.xml as the plane/grid k-set instead of generating it inline. Filled in
+    ! read_xml (into plane_kpts/grid_kpts), consumed on rank 0 in write_domain_kpts.
+    CHARACTER(LEN=64) :: plane_listname = ''
+    INTEGER :: plane_np = 0
+    REAL, ALLOCATABLE :: plane_kpts(:, :)
+    CHARACTER(LEN=64) :: grid_listname = ''
+    INTEGER :: grid_np = 0
+    REAL, ALLOCATABLE :: grid_kpts(:, :)
 
     ! --- operator table: one entry per <operator name=".."> child of <interpolation> ---
     INTEGER :: n_ops = 0
@@ -433,30 +442,41 @@ CONTAINS
       xPathP = TRIM(ADJUSTL(xPathA))//'/plane'
       IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))) == 1) THEN
         this%l_dom_plane = .TRUE.
-        IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@origin') == 1) THEN
-          sbuf = xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@origin')
-          READ(sbuf, *, iostat=ios) this%plane_origin
-          IF (ios /= 0) CALL juDFT_error('wannierlib: <plane>/@origin needs 3 reals', calledby='read_xml_wannierlib')
+        IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@listName') == 1) THEN
+          ! reuse a named kPointList from kpts.xml as-is
+          this%plane_listname = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@listName'))
+          CALL read_named_klist_wannierlib(xml, this%plane_listname, this%plane_kpts, this%plane_np)
+        ELSE
+          IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@origin') == 1) THEN
+            sbuf = xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@origin')
+            READ(sbuf, *, iostat=ios) this%plane_origin
+            IF (ios /= 0) CALL juDFT_error('wannierlib: <plane>/@origin needs 3 reals', calledby='read_xml_wannierlib')
+          END IF
+          sbuf = xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@v1')
+          READ(sbuf, *, iostat=ios) this%plane_v1
+          IF (ios /= 0) CALL juDFT_error('wannierlib: <plane>/@v1 needs 3 reals', calledby='read_xml_wannierlib')
+          sbuf = xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@v2')
+          READ(sbuf, *, iostat=ios) this%plane_v2
+          IF (ios /= 0) CALL juDFT_error('wannierlib: <plane>/@v2 needs 3 reals', calledby='read_xml_wannierlib')
+          this%plane_n1 = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@n1'))
+          this%plane_n2 = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@n2'))
         END IF
-        sbuf = xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@v1')
-        READ(sbuf, *, iostat=ios) this%plane_v1
-        IF (ios /= 0) CALL juDFT_error('wannierlib: <plane>/@v1 needs 3 reals', calledby='read_xml_wannierlib')
-        sbuf = xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@v2')
-        READ(sbuf, *, iostat=ios) this%plane_v2
-        IF (ios /= 0) CALL juDFT_error('wannierlib: <plane>/@v2 needs 3 reals', calledby='read_xml_wannierlib')
-        this%plane_n1 = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@n1'))
-        this%plane_n2 = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@n2'))
       END IF
       xPathP = TRIM(ADJUSTL(xPathA))//'/grid'
       IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))) == 1) THEN
         this%l_dom_grid = .TRUE.
-        sbuf = xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@mesh')
-        READ(sbuf, *, iostat=ios) this%grid_mesh
-        IF (ios /= 0) CALL juDFT_error('wannierlib: <grid>/@mesh needs 3 integers', calledby='read_xml_wannierlib')
-        IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@shift') == 1) THEN
-          sbuf = xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@shift')
-          READ(sbuf, *, iostat=ios) this%grid_shift
-          IF (ios /= 0) CALL juDFT_error('wannierlib: <grid>/@shift needs 3 reals', calledby='read_xml_wannierlib')
+        IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@listName') == 1) THEN
+          this%grid_listname = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@listName'))
+          CALL read_named_klist_wannierlib(xml, this%grid_listname, this%grid_kpts, this%grid_np)
+        ELSE
+          sbuf = xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@mesh')
+          READ(sbuf, *, iostat=ios) this%grid_mesh
+          IF (ios /= 0) CALL juDFT_error('wannierlib: <grid>/@mesh needs 3 integers', calledby='read_xml_wannierlib')
+          IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@shift') == 1) THEN
+            sbuf = xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@shift')
+            READ(sbuf, *, iostat=ios) this%grid_shift
+            IF (ios /= 0) CALL juDFT_error('wannierlib: <grid>/@shift needs 3 reals', calledby='read_xml_wannierlib')
+          END IF
         END IF
       END IF
 
@@ -660,5 +680,44 @@ CONTAINS
     this%path_np = np
     DEALLOCATE(raw)
   END SUBROUTINE read_named_kpath_wannierlib
+
+  SUBROUTINE read_named_klist_wannierlib(xml, listname, arr, np)
+    ! Load a named kPointList from kpts.xml as-is (no subdivision) into arr(3,np).
+    ! Used by <plane listName=".."/> and <grid listName=".."/>.
+    USE m_types_xml
+    USE m_calculator, ONLY: evaluatefirst
+    TYPE(t_xml), INTENT(INOUT)       :: xml
+    CHARACTER(LEN=*), INTENT(IN)     :: listname
+    REAL, ALLOCATABLE, INTENT(OUT)   :: arr(:, :)
+    INTEGER, INTENT(OUT)             :: np
+
+    CHARACTER(LEN=255) :: path, path2, str
+    INTEGER :: nlist, i, idx
+
+    nlist = xml%getNumberOfNodes('/fleurInput/cell/bzIntegration/kPointLists/kPointList')
+    idx = 0
+    DO i = 1, nlist
+      WRITE (path, '(a,i0,a)') '/fleurInput/cell/bzIntegration/kPointLists/kPointList[', i, ']'
+      IF (TRIM(ADJUSTL(listname)) == TRIM(ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(path))//'/@name')))) THEN
+        idx = i
+        EXIT
+      END IF
+    END DO
+    IF (idx == 0) CALL juDFT_error('wannierlib: listName "'//TRIM(ADJUSTL(listname))// &
+                                   '" not found in kPointLists', calledby='read_named_klist_wannierlib')
+
+    WRITE (path, '(a,i0,a)') '/fleurInput/cell/bzIntegration/kPointLists/kPointList[', idx, ']'
+    np = xml%getNumberOfNodes(TRIM(ADJUSTL(path))//'/kPoint')
+    IF (np < 1) CALL juDFT_error('wannierlib: listName "'//TRIM(ADJUSTL(listname))// &
+                                 '" has no k-points', calledby='read_named_klist_wannierlib')
+    ALLOCATE(arr(3, np))
+    DO i = 1, np
+      WRITE (path2, '(a,a,i0,a)') TRIM(ADJUSTL(path)), '/kPoint[', i, ']'
+      str = xml%getAttributeValue(TRIM(ADJUSTL(path2)), .TRUE.)
+      arr(1, i) = evaluatefirst(str)
+      arr(2, i) = evaluatefirst(str)
+      arr(3, i) = evaluatefirst(str)
+    END DO
+  END SUBROUTINE read_named_klist_wannierlib
 
 END MODULE m_types_wannierlib

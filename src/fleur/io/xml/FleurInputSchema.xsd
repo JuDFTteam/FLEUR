@@ -2489,6 +2489,7 @@
       <xsd:restriction base="xsd:string">
          <xsd:enumeration value="mesh"/>
          <xsd:enumeration value="path"/>
+         <xsd:enumeration value="plane"/>
          <xsd:enumeration value="tria-bulk"/>
          <xsd:enumeration value="tria"/>
          <xsd:enumeration value="SPEX-mesh"/> <!-- This is deprecated. Use 'spex-mesh' -->
@@ -3057,17 +3058,19 @@
          <xsd:documentation>2D output domain: interpolate on a plane k(i,j)=origin + i/(n1-1) v1 + j/(n2-1) v2 (fractional reciprocal coords). e.g. kz=0 slice: origin="0 0 0" v1="1 0 0" v2="0 1 0".</xsd:documentation>
       </xsd:annotation>
       <xsd:attribute name="origin" type="xsd:string" use="optional" default="0.0 0.0 0.0"/>
-      <xsd:attribute name="v1" type="xsd:string" use="required"/>
-      <xsd:attribute name="v2" type="xsd:string" use="required"/>
-      <xsd:attribute name="n1" type="xsd:integer" use="required"/>
-      <xsd:attribute name="n2" type="xsd:integer" use="required"/>
+      <xsd:attribute name="listName" type="xsd:string" use="optional"/>
+      <xsd:attribute name="v1" type="xsd:string" use="optional"/>
+      <xsd:attribute name="v2" type="xsd:string" use="optional"/>
+      <xsd:attribute name="n1" type="xsd:integer" use="optional"/>
+      <xsd:attribute name="n2" type="xsd:integer" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="WannierlibGridType">
       <xsd:annotation>
          <xsd:documentation>3D output domain: interpolate on a uniform Gamma-centred full-BZ mesh. mesh="nx ny nz"; optional shift="sx sy sz" (fractions of a mesh step).</xsd:documentation>
       </xsd:annotation>
-      <xsd:attribute name="mesh" type="xsd:string" use="required"/>
+      <xsd:attribute name="listName" type="xsd:string" use="optional"/>
+      <xsd:attribute name="mesh" type="xsd:string" use="optional"/>
       <xsd:attribute name="shift" type="xsd:string" use="optional" default="0.0 0.0 0.0"/>
    </xsd:complexType>
 

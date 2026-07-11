@@ -224,6 +224,8 @@ CONTAINS
                IF(numNodes.EQ.1) this%nkpt3(3) = evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@nz'))
             CASE ('path')
                this%kptsKind = KPTS_KIND_PATH
+            CASE ('plane')
+               this%kptsKind = KPTS_KIND_PLANE
             CASE ('tria')
                this%kptsKind = KPTS_KIND_TRIA
             CASE ('tria-bulk')
