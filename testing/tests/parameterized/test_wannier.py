@@ -23,7 +23,7 @@ SPREAD_TOL = 1.0e-5
 
 
 @pytest.mark.fleur
-@pytest.mark.wannier
+@pytest.mark.wannierlib
 @pytest.mark.parametrize(("dir", "desc", "cmdline", "mpi_procs"), all_tests)
 def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number):
     """Run the wannierlib test and, on top of the default out.xml checks,

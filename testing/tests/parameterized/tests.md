@@ -155,8 +155,8 @@ Testset: Wannier
 
 |     | Description                              | directory name   | marks         | Remarks | CmdLine | MPI |
 | --- | ---------------------------------------- | ---------------- | ------------- | ------- | ------- | --- |
-|     | Pt no-SOC, wannierlib total spread       | wannier/WannPt   | wannier,bulk  |         |         | 1   |
-|     | Pt SOC, wannierlib total spread              | wannier/WannPtSOC | wannier,bulk,soc |         |         | 1   |
-|     | fcc Fe FM noco, wannierlib total spread      | wannier/WannFeFM | wannier,bulk  |         |         | 1   |
-|     | fcc Fe AFM noco, wannierlib total spread     | wannier/WannFeAFM | wannier,bulk  |         |         | 1   |
-|     | fcc Fe AFM noco+SOC, wannierlib total spread | wannier/WannFeAFMSOC | wannier,bulk,soc |         |         | 1   |
+| +   | Pt no-SOC, wannierlib total spread       | wannier/WannPt   | wannierlib,bulk  |         |         | 1   |
+| +   | Pt SOC, wannierlib total spread              | wannier/WannPtSOC | wannierlib,bulk,soc |         |         | 1   |
+| +   | fcc Fe FM noco, wannierlib total spread      | wannier/WannFeFM | wannierlib,bulk  |         |         | 1   |
+| +   | fcc Fe AFM noco, wannierlib total spread     | wannier/WannFeAFM | wannierlib,bulk  |         |         | 1   |
+| +   | fcc Fe AFM noco+SOC, wannierlib total spread | wannier/WannFeAFMSOC | wannierlib,bulk,soc |         |         | 1   |
