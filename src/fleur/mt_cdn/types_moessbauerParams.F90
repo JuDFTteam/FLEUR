@@ -17,7 +17,9 @@ MODULE m_types_moessbauerParams
       ! the orbital contribution to the valence hyperfine field is only
       ! meaningful with spin-orbit coupling, l_hyperfine additionally
       ! requires noco%l_soc -- with SOC off, enabling valenceHyperfine in
-      ! inp.xml is equivalent to leaving it off.
+      ! inp.xml is equivalent to leaving it off. It is also restricted to
+      ! kcrel=1, so that valence and core hyperfine fields are only ever
+      ! reported together, never with just one of the two available.
       LOGICAL :: l_hyperfine
       LOGICAL :: l_calcEFG
       LOGICAL :: l_calcIsomerShift
@@ -68,9 +70,10 @@ MODULE m_types_moessbauerParams
       this%l_calcIsomerShift = input%l_moessbauerIsomerShift
       this%l_calcCoreHyperfine = input%l_moessbauerCoreHyperfine
       ! Valence hyperfine field needs jspins==2 (spin density) and, for a
-      ! meaningful orbital term, noco%l_soc
+      ! meaningful orbital term, noco%l_soc; restricted to kcrel=1 so it is
+      ! only ever calculated/reported alongside the core hyperfine field.
       this%l_hyperfine = input%l_moessbauerValenceHyperfine .AND. noco%l_soc &
-                         .AND. (input%jspins.EQ.2)
+                         .AND. (input%jspins.EQ.2) .AND. (input%kcrel.EQ.1)
 
       IF (.NOT.ALLOCATED(this%hypFineContribs)) THEN
          ALLOCATE(this%hypFineContribs(-1:3,atoms%ntype,input%jspins,3))
