@@ -110,28 +110,25 @@ MODULE m_efg
       REAL,    INTENT(IN) :: rmsh(:)
 
       INTEGER, PARAMETER :: nFit = 4
-      REAL :: x(nFit), yr(nFit), yi(nFit)
-      REAL :: sx, sxx, sx2
-      REAL :: ar, br, ai, bi
+      REAL    :: rSq(nFit)
+      COMPLEX :: ratio(nFit)
+      REAL    :: sumRSq, sumRSqSq, lsqDenom
+      COMPLEX :: slope, intercept
       INTEGER :: i
 
       DO i = 1, nFit
-         x(i)  = rmsh(i)**2
-         yr(i) = REAL(vals(i)) / rmsh(i)**2
-         yi(i) = AIMAG(vals(i)) / rmsh(i)**2
+         rSq(i)   = rmsh(i)**2
+         ratio(i) = vals(i) / rmsh(i)**2
       END DO
 
-      sx  = SUM(x)
-      sxx = SUM(x*x)
-      sx2 = REAL(nFit)*sxx - sx*sx
+      sumRSq   = SUM(rSq)
+      sumRSqSq = SUM(rSq*rSq)
+      lsqDenom = REAL(nFit)*sumRSqSq - sumRSq*sumRSq
 
-      br = (REAL(nFit)*SUM(x*yr) - sx*SUM(yr)) / sx2
-      ar = (SUM(yr) - br*sx) / REAL(nFit)
+      slope     = (REAL(nFit)*SUM(rSq*ratio) - sumRSq*SUM(ratio)) / lsqDenom
+      intercept = (SUM(ratio) - slope*sumRSq) / REAL(nFit)
 
-      bi = (REAL(nFit)*SUM(x*yi) - sx*SUM(yi)) / sx2
-      ai = (SUM(yi) - bi*sx) / REAL(nFit)
-
-      extrapolate_r0 = CMPLX(ar,ai)
+      extrapolate_r0 = intercept
 
    END FUNCTION extrapolate_r0
 
