@@ -143,7 +143,7 @@ MODULE m_types_moessbauerParams
       REAL    :: indefInteg(atoms%jmtd), sphrDen(atoms%jmtd)
       REAL    :: avgDenAtMesh(nFitPoints)
       LOGICAL :: isSmaller
-      CHARACTER(LEN=100) :: warnMsg
+      CHARACTER(LEN=150) :: warnMsg
 
       IF (fmpi%irank /= 0) RETURN
       IF (.NOT.this%l_calcIsomerShift) RETURN

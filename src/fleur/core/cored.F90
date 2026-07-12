@@ -45,7 +45,7 @@ CONTAINS
       INTEGER iRad
       LOGICAL isSmaller, l_isoShiftOK
       REAL nucRad, alpha, smallIsoVal, largeIsoVal, stateIsoShift
-      CHARACTER(LEN=100) :: warnMsg
+      CHARACTER(LEN=150) :: warnMsg
       !     ..
       !     .. Local Arrays ..
 
