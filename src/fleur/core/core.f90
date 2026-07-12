@@ -2,7 +2,7 @@ MODULE m_core
 
    CONTAINS
    
-   SUBROUTINE core(mrad,vt,bt,zz,stval,dx,nlshell,nqntab,lqntab,jtop,ectab,rhochr,rhospn)
+   SUBROUTINE core(mrad,vt,bt,zz,stval,dx,nlshell,nqntab,lqntab,jtop,ectab,rhochr,rhospn,bhff_out,isomerShift_out)
 
       USE m_constants
       USE m_felim
@@ -26,8 +26,9 @@ MODULE m_core
       REAL,    INTENT (IN) :: bt(mrad),vt(mrad)
       REAL,    INTENT (OUT) :: rhochr(mrad),rhospn(mrad)
       REAL,    INTENT (INOUT) :: ectab(100)
+      REAL,    INTENT (OUT) :: bhff_out(15),isomerShift_out(15)
 
-      REAL    :: bhf,bsum,btot,dvstep,ec,elim,qcor,spcor,tolvar,vz,xmj,ec_sv
+      REAL    :: bhf,bsum,dvstep,ec,elim,qcor,spcor,tolvar,vz,xmj,ec_sv
       REAL    :: isoShift, alpha, smallRadDenVal, largeRadDenVal, averageDen, nucRad
       INTEGER :: i,ic,ic1,ic2,ie,iflag,ii,ilshell,imin,ir,ish,istart,iter
       INTEGER :: itermax,iv,j,jv,kap1,kap2,l,lll,muem05,n,ncor,nmatch,node
@@ -98,7 +99,6 @@ MODULE m_core
       ! INITIALIZE QUANTUM NUMBERS  NQN  AND  L
       ! ---------------------------------------
       
-      btot = 0.0
       ic = 0
       
       DO ilshell = 1,nlshell ! nl  - loop
@@ -322,8 +322,6 @@ MODULE m_core
                indefInteg = 0.0
                CALL intgr2(rchr(:),rc(:),dx,jtop,indefInteg)
 
-!               smallRadDenVal = indefInteg(iRad-1)*sfp_const / ((4.0/3.0)*pi_const*(rc(iRad-1)**3.0))
-!               largeRadDenVal = indefInteg(iRad)*sfp_const / ((4.0/3.0)*pi_const*(rc(iRad)**3.0))
                smallRadDenVal = indefInteg(iRad-1) / ((4.0/3.0)*pi_const*(rc(iRad-1)**3.0))
                largeRadDenVal = indefInteg(iRad) / ((4.0/3.0)*pi_const*(rc(iRad)**3.0))
                averageDen = (1.0-alpha)*smallRadDenVal + alpha*largeRadDenVal
@@ -381,12 +379,10 @@ MODULE m_core
             
          END DO ! \mu  - loop end
          
-         WRITE (oUnit,FMT='(I4,A1,26X,2F16.3)') nqn,txtl(l),bhff(ilshell),isomerShift(ilshell)
-         btot = bhff(ilshell) + btot
-
       END DO ! nl  - loop end
-      
-      WRITE (oUnit,FMT='(''HFTOT:'',25X,F16.3)') btot
+
+      bhff_out(1:nlshell) = bhff(1:nlshell)
+      isomerShift_out(1:nlshell) = isomerShift(1:nlshell)
 
       qcor = rsimp(mrad,rhochr,rc,jtop,dx)
       WRITE (oUnit,FMT=8020) 'charge',qcor

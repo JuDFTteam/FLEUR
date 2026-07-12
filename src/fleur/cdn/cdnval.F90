@@ -15,7 +15,7 @@ CONTAINS
 
    SUBROUTINE cdnval(eig_id, fmpi, kpts, jspin, noco, nococonv, input, banddos, cell, atoms, enpara, stars, &
                      vacuum, sphhar, sym, vTot, cdnvalJob, den, dos, vacdos, results, &
-                     moments, gfinp, hub1inp, hub1data, coreSpecInput, mcd, slab, orbcomp, jDOS, greensfImagPart)
+                     moments, moessbauerParams, gfinp, hub1inp, hub1data, coreSpecInput, mcd, slab, orbcomp, jDOS, greensfImagPart)
 
       !************************************************************************************
       !     This is the FLEUR valence density generator
@@ -61,6 +61,7 @@ CONTAINS
       USE m_types_orbcomp
       USE m_types_denmatrix
       USE m_types_radfun
+      USE m_types_moessbauerParams
       use m_l_like
       use m_types_abc
       use m_types_orbmom, only: t_orbmom
@@ -94,6 +95,7 @@ CONTAINS
       TYPE(t_dos), INTENT(INOUT) :: dos
       TYPE(t_vacdos), INTENT(INOUT) :: vacdos
       TYPE(t_moments), INTENT(INOUT) :: moments
+      TYPE(t_moessbauerParams), OPTIONAL, INTENT(INOUT) :: moessbauerParams
       TYPE(t_hub1data), OPTIONAL, INTENT(INOUT) :: hub1data
       TYPE(t_coreSpecInput), OPTIONAL, INTENT(IN)    :: coreSpecInput
       TYPE(t_mcd), INTENT(INOUT) :: mcd
@@ -110,6 +112,7 @@ CONTAINS
       INTEGER :: iErr, nbands, noccbd, iType, ispinpr, ispin123
       INTEGER :: skip_t, skip_tt, nbasfcn,abc_itype
       LOGICAL :: l_real, l_corespec, l_empty
+      LOGICAL :: l_moessbauerHFF
 
       ! Local Arrays
       REAL, ALLOCATABLE  :: we(:), eig(:)
@@ -130,6 +133,9 @@ CONTAINS
       TYPE(t_abc), allocatable    :: abc(:, :)
 
       CALL timestart("cdnval")
+
+      l_moessbauerHFF = .FALSE.
+      IF (PRESENT(moessbauerParams)) l_moessbauerHFF = moessbauerParams%l_hyperfine
 
       call timestart("init")
       l_real = sym%invs .AND. (.NOT. noco%l_soc) .AND. (.NOT. noco%l_noco) .AND. atoms%n_hia == 0
@@ -308,8 +314,9 @@ CONTAINS
                      
                   IF (noco%l_soc .and. ispin == ispinpr) CALL orb%calc_orbmom(abc(ispin, abc_itype), atoms, radfun(itype), we, itype, &
                                                                               ispin, moments%clmom(:, itype, ispin))
-                  IF (noco%l_soc .AND. ispin == ispinpr .AND. input%kcrel == 1 .AND. input%jspins == 2) &
-                     CALL orb%calc_hff_orbital(atoms, radfun(itype), itype, ispin, moments%hypFineContribs(:, itype, ispin, 3))
+                  IF (noco%l_soc .AND. ispin == ispinpr .AND. l_moessbauerHFF &
+                      .AND. PRESENT(moessbauerParams)) &
+                     CALL orb%calc_hff_orbital(atoms, radfun(itype), itype, ispin, moessbauerParams%hypFineContribs(:, itype, ispin, 3))
 
                   !Now calculate the density matrix as needed to construct the charge
                   call denmatrix(ispin, ispinpr, itype)%rhonmt(atoms, sphhar, we, noccbd, itype, &
@@ -393,9 +400,9 @@ CONTAINS
          CALL MPI_ALLREDUCE(MPI_IN_PLACE, moments%clmom(1,1,jsp_start), &
                             SIZE(moments%clmom(:,:,jsp_start:jsp_end)), &
                             MPI_DOUBLE_PRECISION, MPI_SUM, fmpi%mpi_comm, iErr)
-         IF (input%kcrel == 1 .AND. input%jspins == 2) THEN
-            CALL MPI_ALLREDUCE(MPI_IN_PLACE, moments%hypFineContribs(-1,1,jsp_start,3), &
-                               SIZE(moments%hypFineContribs(:,:,jsp_start:jsp_end,3)), &
+         IF (l_moessbauerHFF .AND. PRESENT(moessbauerParams)) THEN
+            CALL MPI_ALLREDUCE(MPI_IN_PLACE, moessbauerParams%hypFineContribs(-1,1,jsp_start,3), &
+                               SIZE(moessbauerParams%hypFineContribs(:,:,jsp_start:jsp_end,3)), &
                                MPI_DOUBLE_PRECISION, MPI_SUM, fmpi%mpi_comm, iErr)
          END IF
       END IF
@@ -425,12 +432,12 @@ CONTAINS
             call print_l_like_charge(lbound(denmatrix, 1), atoms, radfun(itype), denmatrix, itype)
          ENDDO
          call timestop("print l-like charge")
-         IF (input%kcrel == 1 .AND. input%jspins == 2) THEN
+         IF (l_moessbauerHFF .AND. PRESENT(moessbauerParams)) THEN
             DO itype = 1, atoms%ntype
                DO ispin = jsp_start, jsp_end
-                  moments%hypFineContribs(:, itype, ispin, 1) = moments%hypFineContribs(:, itype, ispin, 1) &
+                  moessbauerParams%hypFineContribs(:, itype, ispin, 1) = moessbauerParams%hypFineContribs(:, itype, ispin, 1) &
                      + denmatrix(ispin, ispin, itype)%hff_contact(radfun(itype), atoms, itype, ispin)
-                  moments%hypFineContribs(:, itype, ispin, 2) = moments%hypFineContribs(:, itype, ispin, 2) &
+                  moessbauerParams%hypFineContribs(:, itype, ispin, 2) = moessbauerParams%hypFineContribs(:, itype, ispin, 2) &
                      + denmatrix(ispin, ispin, itype)%hff_dipolar(radfun(itype), atoms, sphhar, sym, itype, ispin)
                END DO
             END DO

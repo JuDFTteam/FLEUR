@@ -10,7 +10,7 @@ MODULE m_cdncore
 CONTAINS
 
 SUBROUTINE cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
-                   stars,cell,sphhar,atoms,vTot,outDen,moments,results, EnergyDen)
+                   stars,cell,sphhar,atoms,vTot,outDen,moments,results,moessbauerParams, EnergyDen)
 
    USE m_constants
    USE m_judft
@@ -19,6 +19,7 @@ SUBROUTINE cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
    USE m_cored
    USE m_coredr
    USE m_types
+   USE m_types_moessbauerParams
    USE m_xmlOutput
 
 #ifdef CPP_MPI
@@ -44,6 +45,7 @@ SUBROUTINE cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
    TYPE(t_potden),     INTENT(INOUT)           :: outDen
    TYPE(t_moments),    INTENT(INOUT)           :: moments
    TYPE(t_results),    INTENT(INOUT)           :: results
+   TYPE(t_moessbauerParams), OPTIONAL, INTENT(INOUT) :: moessbauerParams
    TYPE(t_potden),     INTENT(INOUT), OPTIONAL :: EnergyDen
 
    INTEGER                          :: jspin, n, iType, ierr
@@ -105,9 +107,11 @@ SUBROUTINE cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
          DO iType = 1, atoms%ntype
             DO jspin = 1,input%jspins
                IF(PRESENT(EnergyDen)) THEN
-                  CALL cored(input,jspin,iType,atoms,outDen%mt,sphhar,l_CoreDenPresent,vr0(:,:,jspin), qint,rh ,tec,seig, EnergyDen=EnergyDen%mt)
+                  CALL cored(input,jspin,iType,atoms,outDen%mt,sphhar,l_CoreDenPresent,vr0(:,:,jspin), qint,rh ,tec,seig, EnergyDen=EnergyDen%mt, &
+                             moessbauerParams=moessbauerParams)
                ELSE
-                  CALL cored(input,jspin,iType,atoms,outDen%mt,sphhar,l_CoreDenPresent,vr0(:,:,jspin), qint,rh ,tec,seig)
+                  CALL cored(input,jspin,iType,atoms,outDen%mt,sphhar,l_CoreDenPresent,vr0(:,:,jspin), qint,rh ,tec,seig, &
+                             moessbauerParams=moessbauerParams)
                ENDIF
 
                rhTemp(:,iType,jspin) = rh(:,iType,jspin)
@@ -119,7 +123,7 @@ SUBROUTINE cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
          WRITE(oUnit,'(/,/,12x,a)') 'core e.v. initialization'
          DO iType = 1, atoms%ntype
             l_useOtherCoreSolver = .FALSE.
-            CALL coredr(input,atoms,iType,seig, outDen%mt,sphhar,vr0,qint,rh,l_useOtherCoreSolver)
+            CALL coredr(input,atoms,iType,seig, outDen%mt,sphhar,vr0,qint,rh,l_useOtherCoreSolver,moessbauerParams)
             results%seigc = results%seigc + seig
             IF (l_useOtherCoreSolver) THEN
                DO jspin = 1,input%jspins

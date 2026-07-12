@@ -6,7 +6,7 @@
 MODULE m_coredr
    implicit none
 CONTAINS
-  SUBROUTINE coredr(input,atoms,iType,seig, rho,sphhar, vrs, qints,rhc,l_useOtherCoreSolver)
+  SUBROUTINE coredr(input,atoms,iType,seig, rho,sphhar, vrs, qints,rhc,l_useOtherCoreSolver,moessbauerParams)
     !     *******************************************************
     !     *****   set up the core densities for compounds   *****
     !     *****   for relativistic core                     *****
@@ -19,9 +19,10 @@ CONTAINS
     USE m_types_input
     USE m_types_atoms
     USE m_types_sphhar
-    
+    USE m_types_moessbauerParams
+
     IMPLICIT NONE
-    
+
     TYPE(t_input),INTENT(IN)     :: input
     TYPE(t_sphhar),INTENT(IN)    :: sphhar
     TYPE(t_atoms),INTENT(IN)     :: atoms
@@ -35,7 +36,11 @@ CONTAINS
     REAL,    INTENT (INOUT) :: rho(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
     REAL,    INTENT (OUT)   :: rhc(atoms%msh,atoms%ntype,input%jspins),qints(atoms%ntype,input%jspins)
     LOGICAL, INTENT (INOUT) :: l_useOtherCoreSolver
+    TYPE(t_moessbauerParams), OPTIONAL, INTENT(INOUT) :: moessbauerParams
     !     ..
+    !     .. Local core-shell hyperfine/isomer-shift arrays (from spratm/core) ..
+    INTEGER :: nshell, nqntab_shell(15), lqntab_shell(15)
+    REAL    :: bhff_shell(15), isomerShift_shell(15)
     !     .. Local Scalars ..
     REAL dxx,rnot,sume,t2,t2b,z,t1,rr,d,v1,v2
     INTEGER i,j,jspin,k,ncmsh
@@ -114,9 +119,13 @@ CONTAINS
     z = atoms%zatom(iType)
     dxx = atoms%dx(iType)
 
-    CALL spratm(atoms%msh,vrd,brd,z,rnot,dxx,ncmsh,etab(1,iType),ntab(1,iType),ltab(1,iType), sume,rhochr,rhospn)
+    CALL spratm(atoms%msh,vrd,brd,z,rnot,dxx,ncmsh,etab(1,iType),ntab(1,iType),ltab(1,iType), sume,rhochr,rhospn,&
+                nshell,nqntab_shell,lqntab_shell,bhff_shell,isomerShift_shell)
 
     seig = seig + atoms%neq(iType)*sume
+
+    IF (PRESENT(moessbauerParams)) &
+       CALL moessbauerParams%setCoreHFF(iType,nshell,nqntab_shell,lqntab_shell,bhff_shell,isomerShift_shell)
     !
     !     rho_up=2(ir) = (rhochr(ir)  + rhospn(ir))*0.5
     !     rho_dw=1(ir) = (rhochr(ir)  - rhospn(ir))*0.5

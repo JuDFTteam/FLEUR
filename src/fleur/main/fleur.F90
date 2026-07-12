@@ -78,6 +78,7 @@ CONTAINS
       USE m_dfpt_vefield
       USE m_checkdopall
       USE m_store_load_hybrid
+      USE m_types_moessbauerParams
 
 !$    USE omp_lib
 
@@ -102,6 +103,7 @@ CONTAINS
       TYPE(t_potden)   :: vTot, vx, vCoul, vxc, exc
       TYPE(t_potden)   :: inDen, outDen, EnergyDen, sliceDen,coreden
       TYPE(t_hub1data) :: hub1data
+      TYPE(t_moessbauerParams) :: moessbauerParams
 
       TYPE(t_greensf), ALLOCATABLE :: greensFunction(:)
       TYPE(t_log_message)  :: log
@@ -349,8 +351,10 @@ CONTAINS
          END IF
 
          CALL timestart("generation of potential")
+         CALL moessbauerParams%init(fi%input, fi%noco, fi%atoms)
          CALL vgen(hybdat, fi%field, fi%input, xcpot, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, &
-                   fi%cell,   fi%sliceplot, fmpi, results, fi%noco, nococonv, EnergyDen, inDen, vTot, vx, vCoul, vxc, exc)
+                   fi%cell,   fi%sliceplot, fmpi, results, fi%noco, nococonv, EnergyDen, inDen, vTot, vx, vCoul, vxc, exc, &
+                   moessbauerParams)
          CALL timestop("generation of potential")
 
          ! Scale the magnetization back.
@@ -540,7 +544,8 @@ CONTAINS
             CALL cdngen(eig_id, fmpi, input_soc, fi%banddos, fi%sliceplot, fi%vacuum, &
                         fi%kpts, fi%atoms, sphhar, stars, fi%sym, fi%gfinp, fi%hub1inp, &
                         enpara, fi%cell, fi%field, fi%noco, nococonv, vTot, results,   fi%corespecinput, &
-                        archiveType, xcpot, outDen, EnergyDen, coreden,greensFunction, hub1data,vxc,exc)
+                        archiveType, xcpot, outDen, EnergyDen, coreden,greensFunction, hub1data,vxc,exc,&
+                        moessbauerParams)
             ! The density matrix for DFT+Hubbard1 only changes in hubbard1_setup and is kept constant otherwise
             outDen%mmpMat(:, :, fi%atoms%n_u + 1:fi%atoms%n_u + fi%atoms%n_hia, :) = inDen%mmpMat(:, :, fi%atoms%n_u + 1:fi%atoms%n_u + fi%atoms%n_hia, :)
 
@@ -612,6 +617,8 @@ CONTAINS
 ! !$
 ! !$                CALL potdis(stars,fi%vacuum,fi%atoms,sphhar, fi%input,fi%cell,fi%sym)
 ! !$             END IF
+
+            CALL moessbauerParams%printAll(fmpi, fi%atoms)
 
             ! total energy
             CALL timestart('determination of total energy')

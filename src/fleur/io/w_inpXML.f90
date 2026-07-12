@@ -650,6 +650,12 @@ WRITE (fileNum, 242) fr(1.0)
 420   FORMAT('      <specialOutput eonly="', l1, '"/>')
       WRITE (fileNum, 420) input%eonly
 
+!      <moessbauerParams electricFieldGradient="T" isomerShift="T" coreHyperfine="T" valenceHyperfine="T"/>
+425   FORMAT('      <moessbauerParams electricFieldGradient="', l1, '" isomerShift="', l1, &
+                    '" coreHyperfine="', l1, '" valenceHyperfine="', l1, '"/>')
+      WRITE (fileNum, 425) input%l_moessbauerEFG, input%l_moessbauerIsomerShift, &
+                           input%l_moessbauerCoreHyperfine, input%l_moessbauerValenceHyperfine
+
 !      <magneticCircularDichroism energyLo="-10.0" energyUp="0.0"/>
 430   FORMAT('      <magneticCircularDichroism mcd="',l1,'" energyLo="', a, '" energyUp="', a, '"/>')
       WRITE (fileNum, 430) banddos%l_mcd,fr(banddos%e_mcd_lo), fr(banddos%e_mcd_up)

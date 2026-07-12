@@ -91,6 +91,10 @@ MODULE m_types_input
   INTEGER :: rdmftStatesAbove=0
   INTEGER :: rdmftFunctional=0
   INTEGER :: lResMax = -1
+  LOGICAL :: l_moessbauerEFG=.TRUE.
+  LOGICAL :: l_moessbauerIsomerShift=.TRUE.
+  LOGICAL :: l_moessbauerCoreHyperfine=.TRUE.
+  LOGICAL :: l_moessbauerValenceHyperfine=.TRUE.
 CONTAINS
   PROCEDURE :: read_xml=>read_xml_input
   PROCEDURE :: init => init_input
@@ -179,7 +183,11 @@ SUBROUTINE mpi_bc_input(this,mpi_comm,irank)
    CALL mpi_bc(this%lResMax,rank,mpi_comm)
    CALL mpi_bc(this%charge_excited,rank,mpi_comm)
    CALL mpi_bc(this%charge_shift,rank,mpi_comm)
-   
+   CALL mpi_bc(this%l_moessbauerEFG,rank,mpi_comm)
+   CALL mpi_bc(this%l_moessbauerIsomerShift,rank,mpi_comm)
+   CALL mpi_bc(this%l_moessbauerCoreHyperfine,rank,mpi_comm)
+   CALL mpi_bc(this%l_moessbauerValenceHyperfine,rank,mpi_comm)
+
 END SUBROUTINE mpi_bc_input
 
 SUBROUTINE read_xml_input(this,xml)
@@ -436,6 +444,19 @@ SUBROUTINE read_xml_input(this,xml)
       numberNodes = xml%GetNumberOfNodes(xPathA)
       IF (numberNodes.EQ.1) THEN
          this%eonly = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eonly'))
+      END IF
+      ! Read in optional moessbauerParams switches (all on by default)
+      this%l_moessbauerEFG = .TRUE.
+      this%l_moessbauerIsomerShift = .TRUE.
+      this%l_moessbauerCoreHyperfine = .TRUE.
+      this%l_moessbauerValenceHyperfine = .TRUE.
+      xPathA = '/fleurInput/output/moessbauerParams'
+      numberNodes = xml%GetNumberOfNodes(xPathA)
+      IF (numberNodes.EQ.1) THEN
+         this%l_moessbauerEFG = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@electricFieldGradient'))
+         this%l_moessbauerIsomerShift = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@isomerShift'))
+         this%l_moessbauerCoreHyperfine = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@coreHyperfine'))
+         this%l_moessbauerValenceHyperfine = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@valenceHyperfine'))
       END IF
       ! Read in optional vacuumDOS parameters
       xPathA = '/fleurInput/output/vacuumDOS'
