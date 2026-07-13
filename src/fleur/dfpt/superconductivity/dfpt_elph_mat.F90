@@ -257,9 +257,10 @@ CONTAINS
 
     subroutine el_ph_wannier_interpolate(fmpi,fi,results,gmat)
 
-        use m_eig66_io, only : open_eig,close_eig
+        use m_eig66_io, only : open_eig,close_eig,read_eig
         use m_wannier_interpolate
         use m_matrix_interpolation
+        use m_dosbin, only : dos_bin_double
 
 
         type(t_mpi), intent(in)         :: fmpi
@@ -268,19 +269,30 @@ CONTAINS
         complex,intent(in)              :: gmat(:,:,:,:,:,:) !(nu,nu',kpoints,spin,iMode,iQ)
 
         integer :: eig_id_interpol,q_eig_id_interpol, num_wann , num_bands , ikpt, iMode, ispin
-        integer :: iQ, nKept, nSurv, i, ik
+        integer :: iQ, nKept, nSurv, iKept, ne, iWann
         real    :: qvec(3)
         real,allocatable :: kqpts_interpol(:,:)
         integer, allocatable :: fermiKidx(:)   ! fine-mesh k-point indices near E_F
         real,    allocatable :: fermiKpts(:,:) ! (3, nKept) coords of those k-points
         integer, allocatable :: kqKeptIdx(:)   ! indices (into fermiK*) where k+q also near E_F
         real,    allocatable :: kqKeptKpts(:,:), survKpts(:,:), qsingle(:,:)
+        class(t_mat), allocatable :: zMatk, zMatkq ! interpolated eigenvectors (num_wann x num_wann)
+        real,    allocatable :: eigBuff(:), eigBuffq(:)
+        integer, allocatable :: wann_list(:)
+        real,    allocatable :: eigk(:,:,:), eigkq(:,:,:) 
+
+        type(t_mpi)          :: fmpi_line
+        real,    allocatable :: wtkpt_line(:), eGrid(:), linewidth(:,:), ph_linewidth(:)
+        real,    allocatable :: eigenValsQ(:)
+        integer              :: gridPoint, nFermi
+        logical              :: l_firstWrite
 
 #ifdef CPP_MPI
         integer :: ierr
 #endif
         complex, allocatable :: U_full(:,:,:,:) !(num_bands,num_wann,ikpt,jspin)
         complex, allocatable :: gmatInterpol_q(:,:,:,:,:,:) !(nwann,nwann,nSurv,1,jspin,mode)
+        complex, allocatable :: gmatEig(:,:,:,:,:) !(num_wann,num_wann,nSurv,jspin,mode) eigenbasis
 
         num_bands = fi%wannierlib%max_band - fi%wannierlib%min_band + 1
         num_wann  = fi%wannierlib%num_wann
@@ -322,16 +334,39 @@ CONTAINS
             nKept = size(fermiKidx)
             allocate(kqpts_interpol(3, nKept))
             allocate(qsingle(3, 1))
+            allocate(eigBuff(num_wann))
+            allocate(eigBuffq(num_wann))
+            allocate(wann_list(num_wann))
+            wann_list = (/(iWann, iWann=1, num_wann)/)
+
+            allocate(t_mat::zMatk)
+            allocate(t_mat::zMatkq)
+            call zMatk%init(.false., num_wann, num_wann)
+            call zMatkq%init(.false., num_wann, num_wann)
+
+            allocate(eGrid(fi%banddos%ndos_points))
+            allocate(linewidth(fi%banddos%ndos_points, fi%input%jspins))
+            allocate(ph_linewidth(3*fi%atoms%nat))
+            allocate(eigenValsQ(3*fi%atoms%nat))
+            do gridPoint = 1, fi%banddos%ndos_points
+                eGrid(gridPoint) = -8*fi%input%tkb + (16*fi%input%tkb)/(fi%banddos%ndos_points-1.0)*(gridPoint-1.0)
+            end do
+            nFermi = minloc(abs(eGrid), dim=1)   ! grid point closest to E_F
+            ! local serial MPI descriptor: dos_bin_double indexes via fmpi%k_list only
+            fmpi_line%irank    = 0
+            fmpi_line%isize    = 1
+            fmpi_line%mpi_comm = fmpi%mpi_comm
+            l_firstWrite = .true.
+
             do iQ = 1 , size(fi%dfpt%qvec_interpolate,2)
                 ! do one q-point at a time
                 qvec = fi%dfpt%qvec_interpolate(:, iQ)
 
-                ! k+q for every k-point that already passed the k-side E_F test
-                do ik = 1, nKept
-                    kqpts_interpol(:, ik) = fermiKpts(:, ik) + qvec
+                do ikpt = 1, nKept
+                    kqpts_interpol(:, ikpt) = fermiKpts(:, ikpt) + qvec
                 end do
 
-                ! interpolate the bands at those k+q points and keep those also near E_F
+                ! interpolate the bands at k+q and keep those also near E_F
                 call interpolate_bandstructure(fi,results,kqpts_interpol,q_eig_id_interpol,.false.)
                 call select_fermi_kpoints(fi, results, q_eig_id_interpol, nKept, kqpts_interpol, kqKeptIdx, kqKeptKpts)
 
@@ -342,13 +377,13 @@ CONTAINS
                     cycle
                 end if
 
-                ! surviving k-points: k near E_F (already true) AND k+q near E_F
+                ! surviving k-points: k and k+q at E_F
                 allocate(survKpts(3, nSurv))
-                do i = 1, nSurv
-                    survKpts(:, i) = fermiKpts(:, kqKeptIdx(i))
+                do ikpt = 1, nSurv
+                    survKpts(:, ikpt) = fermiKpts(:, kqKeptIdx(ikpt))
                 end do
 
-                ! interpolate the matrix element ONLY for the surviving k-points, single q
+                ! interpolate the matrix element only for the surviving k-points, single q
                 qsingle(:, 1) = qvec
                 allocate(gmatInterpol_q(num_wann, num_wann, nSurv, 1, fi%input%jspins, 3*fi%atoms%nat))
                 gmatInterpol_q = cmplx(0.0, 0.0)
@@ -358,10 +393,65 @@ CONTAINS
                     end do !ispin
                 end do !iMode
 
-                ! TODO: construct linewidth from gmatInterpol_q for this q (inline consume)
+                ! rotate the Wannier-gauge matrix element into the eigenbasis:
+                !   g_eig(k+q,k) = zmat^dagger(k+q) . g_wann(k+q,k) . zmat(k)
+                allocate(gmatEig(num_wann, num_wann, nSurv, fi%input%jspins, 3*fi%atoms%nat))
+                allocate(eigk(num_wann, nSurv, fi%input%jspins))
+                allocate(eigkq(num_wann, nSurv, fi%input%jspins))
+                gmatEig = cmplx(0.0, 0.0)
+                do ispin = 1, fi%input%jspins
+                    do ikpt = 1, nSurv
+                        iKept = kqKeptIdx(ikpt)
+                        call read_eig(eig_id_interpol,  fermiKidx(iKept), ispin, list=wann_list,neig=ne, eig=eigBuff, zmat=zMatk)
+                        call read_eig(q_eig_id_interpol, iKept, ispin, list=wann_list, neig=ne, eig=eigBuffq, zmat=zMatkq)
+                        eigk(:,ikpt,ispin)  = eigBuff
+                        eigkq(:,ikpt,ispin) = eigBuffq
+                        do iMode = 1, 3*fi%atoms%nat
+                            gmatEig(:,:,ikpt,ispin,iMode) = matmul(conjg(transpose(zMatkq%data_c)),matmul( gmatInterpol_q(:,:,ikpt,1,ispin,iMode),zMatk%data_c ))
+                        end do !iMode
+                    end do !ikpt
+                end do !ispin
+                deallocate(gmatInterpol_q)
 
-                deallocate(gmatInterpol_q, survKpts, kqKeptIdx, kqKeptKpts)
+                allocate(fmpi_line%k_list(nSurv))
+                fmpi_line%k_list = (/(ikpt, ikpt=1,nSurv)/)
+                allocate(wtkpt_line(nSurv))
+                wtkpt_line = 1.0 / real(size(fi%dfpt%qvec_interpolate,2))
+
+                eigenValsQ = 1.0   ! TODO(PartA): replace with interpolated eigenVals from dfpt_interpolation
+
+                ph_linewidth = 0.0
+                do iMode = 1, 3*fi%atoms%nat
+                    if (eigenValsQ(iMode) < 0.0) cycle   ! imaginary mode -> linewidth 0
+                    linewidth = 0.0
+                    call dos_bin_double(fmpi_line, fi%input%jspins, wtkpt_line, eGrid, eigk, eigkq, abs(gmatEig(:,:,:,:,iMode))**2, fi%dfpt%smearingGauss, linewidth, results%ef)
+                    do ispin = 1, fi%input%jspins
+                        ph_linewidth(iMode) = ph_linewidth(iMode) + tpi_const*sqrt(eigenValsQ(iMode))*linewidth(nFermi,ispin)
+                    end do
+                end do
+
+                ! write the linewidth for this q
+                if (l_firstWrite) then
+                    open(110, file="linewidth", status='replace', action='write', form='formatted')
+                    l_firstWrite = .false.
+                else
+                    open(110, file="linewidth", status='old', position='append', action='write')
+                end if
+                write(110,*) "q-Point", qvec
+                write(110,*) ph_linewidth(:)
+                close(110)
+
+                deallocate(wtkpt_line, fmpi_line%k_list)
+                deallocate(gmatEig, eigk, eigkq, survKpts, kqKeptIdx, kqKeptKpts)
             end do !iQ
+
+            call zMatk%free()
+            deallocate(zMatk)
+            call zMatkq%free()
+            deallocate(zMatkq)
+            
+            deallocate(eigBuff,eigBuffq, wann_list)
+            deallocate(eGrid, linewidth, ph_linewidth, eigenValsQ)
             call close_eig(eig_id_interpol)
             call close_eig(q_eig_id_interpol)
 

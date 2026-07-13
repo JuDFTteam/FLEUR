@@ -29,7 +29,7 @@ MODULE m_types_dfpt
       INTEGER :: startq = 1          ! Start the q-loop at a specific point
       INTEGER :: stopq  = 0          ! Stop  the q-loop at a specific point
       INTEGER :: i_integration = 1   ! choose integration scheme for ph-linewidth (experimental)
-      REAL    :: smearingGauss = 1e-7 ! Gaussian smearing for pot-response in Film DFPT 
+      REAL    :: smearingGauss = 1e-7 ! Gaussian smearing for binning in el-ph
       LOGICAL :: l_phonon = .FALSE.    
       LOGICAL :: l_efield = .FALSE.
       LOGICAL :: l_efield_scr = .FALSE.
