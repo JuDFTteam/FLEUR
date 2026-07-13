@@ -42,6 +42,7 @@ MODULE m_types_dfpt
 
       REAL, ALLOCATABLE :: qvec(:,:)     ! q vectors for scf 
       REAL, ALLOCATABLE :: qvec_interpolate(:,:) ! q vectors for interpolation
+      REAL, ALLOCATABLE :: kMesh_interpol(:,:) ! k Mesh for Wannier Interpolation
 
       REAL, ALLOCATABLE :: qvec_efield(:,:)
 
@@ -91,6 +92,7 @@ CONTAINS
       CALL mpi_bc(this%i_integration, rank, mpi_comm)
       CALL mpi_bc(this%smearingGauss, rank, mpi_comm)
       CALL mpi_bc(this%qvec, rank, mpi_comm)
+      CALL mpi_bc(this%qvec_interpolate, rank, mpi_comm)
       CALL mpi_bc(this%qvec_efield, rank, mpi_comm)
       CALL mpi_bc(this%l_phonon, rank, mpi_comm)
       CALL mpi_bc(this%l_efield, rank, mpi_comm)
@@ -105,6 +107,7 @@ CONTAINS
       CALL mpi_bc(this%fDiffcut, rank, mpi_comm)
       CALL mpi_bc(this%bandWindow, rank, mpi_comm)
       CALL mpi_bc(this%l_WSinterpol, rank, mpi_comm)
+      CALL mpi_bc(this%kMesh_interpol,rank,mpi_comm)
 
 
    END SUBROUTINE mpi_bc_dfpt
@@ -122,7 +125,7 @@ CONTAINS
       INTEGER::numberNodes
       CHARACTER(len=100) :: xPathA,valueString
       CHARACTER(len=40) :: qptsListName
-      TYPE(t_kpts) :: qpts_from_kpts , path_from_kpts
+      TYPE(t_kpts) :: qpts_from_kpts , path_from_kpts, tmpKpts, tmpQpts
 
       REAL, ALLOCATABLE :: tmp_arr(:)
 
@@ -352,6 +355,38 @@ CONTAINS
           call evaluateList(tmp_arr,valueString)
           this%bandWindow = tmp_arr
          END IF
+
+
+          IF (xml%GetNumberOfNodes('/fleurInput/output/dfpt/postprocess/@qMeshName') == 1) THEN
+          qptsListName = TRIM(ADJUSTL(xml%GetAttributeValue('/fleurInput/output/dfpt/postprocess/@qMeshName')))
+          ! Initialize tmpQpts with the number of k-points from the kpts.xml file
+          tmpQpts%nkpt = xml%GetNumberOfNodes('/fleurInput/cell/bzIntegration/kPointLists/kPointList[@name="'//TRIM(qptsListName)//'"]/kPoint')
+          IF (tmpQpts%nkpt > 0) THEN
+              ALLOCATE(tmpQpts%bk(3, tmpQpts%nkpt))
+              ALLOCATE(tmpQpts%wtkpt(tmpQpts%nkpt))
+              IF (tmpQpts%read_kpts_by_name(trim(xml%filename_add_xml)//"inp.xml", qptsListName)) THEN
+                  IF (ALLOCATED(this%qvec_interpolate)) DEALLOCATE(this%qvec_interpolate)
+                  ALLOCATE(this%qvec_interpolate(3, tmpQpts%nkpt))
+                  this%qvec_interpolate = tmpQpts%bk
+              END IF
+          END IF
+        END IF 
+
+         IF (xml%GetNumberOfNodes('/fleurInput/output/dfpt/postprocess/@kMeshName') == 1) THEN
+          qptsListName = TRIM(ADJUSTL(xml%GetAttributeValue('/fleurInput/output/dfpt/postprocess/@kMeshName')))
+          ! Initialize tmpKpts with the number of k-points from the kpts.xml file
+          tmpKpts%nkpt = xml%GetNumberOfNodes('/fleurInput/cell/bzIntegration/kPointLists/kPointList[@name="'//TRIM(qptsListName)//'"]/kPoint')
+          IF (tmpKpts%nkpt > 0) THEN
+              ALLOCATE(tmpKpts%bk(3, tmpKpts%nkpt))
+              ALLOCATE(tmpKpts%wtkpt(tmpKpts%nkpt))
+              IF (tmpKpts%read_kpts_by_name(trim(xml%filename_add_xml)//"inp.xml", qptsListName)) THEN
+                  IF (ALLOCATED(this%kMesh_interpol)) DEALLOCATE(this%kMesh_interpol)
+                  ALLOCATE(this%kMesh_interpol(3, tmpKpts%nkpt))
+                  this%kMesh_interpol = tmpKpts%bk
+              END IF
+          END IF
+        END IF 
+
 
       END IF
 

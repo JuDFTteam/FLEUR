@@ -260,7 +260,7 @@ CONTAINS
         use m_eig66_io, only : open_eig,close_eig,read_eig
         use m_wannier_interpolate
         use m_matrix_interpolation
-        use m_dosbin, only : dos_bin_double
+        use m_dosbin
 
 
         type(t_mpi), intent(in)         :: fmpi
@@ -296,27 +296,29 @@ CONTAINS
 
         num_bands = fi%wannierlib%max_band - fi%wannierlib%min_band + 1
         num_wann  = fi%wannierlib%num_wann
+        
+        if ( (.not. allocated(fi%dfpt%qvec_interpolate)) .or. (.not. allocated(fi%dfpt%kMesh_interpol))) call juDFT_error("No meshes to interpoalte on.",calledby="dfpt_elph_mat.F90") 
 
         if (fmpi%irank==0) then
 
             ! Size of the interpolated hamiltonian is only num_wann x num_wann
             ! MPI_COMM_SELF used, as it would lead to wrong RMA problems 
 #ifdef CPP_MPI
-            eig_id_interpol = open_eig(MPI_COMM_SELF, num_wann, num_wann, size(fi%dfpt%qvec_interpolate,2), fi%input%jspins, fi%noco%l_noco, &
+            eig_id_interpol = open_eig(MPI_COMM_SELF, num_wann, num_wann, size(fi%dfpt%kMesh_interpol,2), fi%input%jspins, fi%noco%l_noco, &
                                     .true., .false., fi%noco%l_soc, .false., .FALSE., 1)
-            q_eig_id_interpol = open_eig(MPI_COMM_SELF, num_wann, num_wann, size(fi%dfpt%qvec_interpolate,2), fi%input%jspins, fi%noco%l_noco, &
+            q_eig_id_interpol = open_eig(MPI_COMM_SELF, num_wann, num_wann, size(fi%dfpt%kMesh_interpol,2), fi%input%jspins, fi%noco%l_noco, &
                                     .true., .false., fi%noco%l_soc, .false., .FALSE., 1)
 #else
-            eig_id_interpol = open_eig(fmpi%mpi_comm, num_wann, num_wann, size(fi%dfpt%qvec_interpolate,2), fi%input%jspins, fi%noco%l_noco, &
+            eig_id_interpol = open_eig(fmpi%mpi_comm, num_wann, num_wann, size(fi%dfpt%kMesh_interpol,2), fi%input%jspins, fi%noco%l_noco, &
                                     .true., .false., fi%noco%l_soc, .false., .FALSE., 1)
-            q_eig_id_interpol = open_eig(fmpi%mpi_comm, num_wann, num_wann, size(fi%dfpt%qvec_interpolate,2), fi%input%jspins, fi%noco%l_noco, &
+            q_eig_id_interpol = open_eig(fmpi%mpi_comm, num_wann, num_wann, size(fi%dfpt%kMesh_interpol,2), fi%input%jspins, fi%noco%l_noco, &
                                     .true., .false., fi%noco%l_soc, .false., .FALSE., 1)
 #endif
 
-            call interpolate_bandstructure(fi,results,fi%dfpt%qvec_interpolate,eig_id_interpol,.false.)
+            call interpolate_bandstructure(fi,results,fi%dfpt%kMesh_interpol,eig_id_interpol,.false.)
 
             ! only keep k points where the eigenvalues are close to the fermi energy
-            call select_fermi_kpoints(fi, results, eig_id_interpol, size(fi%dfpt%qvec_interpolate,2), fi%dfpt%qvec_interpolate,fermiKidx, fermiKpts)
+            call select_fermi_kpoints(fi, results, eig_id_interpol, size(fi%dfpt%kMesh_interpol,2), fi%dfpt%kMesh_interpol,fermiKidx, fermiKpts)
 
 
             ! load the Umats from the Wannier step
@@ -416,7 +418,7 @@ CONTAINS
                 allocate(fmpi_line%k_list(nSurv))
                 fmpi_line%k_list = (/(ikpt, ikpt=1,nSurv)/)
                 allocate(wtkpt_line(nSurv))
-                wtkpt_line = 1.0 / real(size(fi%dfpt%qvec_interpolate,2))
+                wtkpt_line = 1.0 / real(size(fi%dfpt%kMesh_interpol,2))
 
                 eigenValsQ = 1.0   ! TODO(PartA): replace with interpolated eigenVals from dfpt_interpolation
 

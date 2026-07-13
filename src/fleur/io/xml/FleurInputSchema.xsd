@@ -3582,6 +3582,16 @@
             <xsd:documentation>Gaussian smearing width for integration.</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
+       <xsd:attribute name="kMeshName" type="xsd:string" use="optional">
+               <xsd:annotation>
+                  <xsd:documentation>Name of the k-mesh to interpolate on</xsd:documentation>
+               </xsd:annotation>
+         </xsd:attribute>
+          <xsd:attribute name="qMeshName" type="xsd:string" use="optional">
+               <xsd:annotation>
+                  <xsd:documentation>Name of the q-points to interpolate on.</xsd:documentation>
+               </xsd:annotation>
+         </xsd:attribute>
    </xsd:complexType>
 
    <xsd:simpleType name="BandWindowType">
