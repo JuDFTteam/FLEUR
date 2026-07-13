@@ -254,8 +254,100 @@ CONTAINS
       dyn_mat_q(:,:) = cmplx(0.0,0.0)
 
       call ft_fcm_weight(-1,ft_lim,bigBox_lim,weights,bqpt,dyn_mat_q,dyn_mat_r)
-    
+
    END SUBROUTINE
+
+   SUBROUTINE interpolate_dynmat(atoms, sym, cell, qpts_coarse, dyn_mat_coarse,l_WSinterpol, q_target, dyn_mat_interp)
+      !! Fourier interpolation of the dynamical matrix from a coarse q-mesh onto an
+      !! arbitrary set of target q-points. The coarse (IBZ, "raw") dynamical matrices
+      !! are unfolded and transformed to the real-space (mass-normalized) FCM once via
+      !! ft_dyn, then de-normalized and inverse-transformed (ift_dyn) to every target q.
+      !! The result is NOT diagonalized: it is returned in the convention that
+      !! DiagonalizeDynMat(..., l_scalemass=.TRUE.) expects, so the caller does the
+      !! diagonalization.
+      type(t_atoms), intent(in) :: atoms
+      type(t_sym),   intent(in) :: sym
+      type(t_cell),  intent(in) :: cell
+      type(t_kpts),  intent(in) :: qpts_coarse                  ! coarse q-mesh
+      complex,       intent(in) :: dyn_mat_coarse(:,:,:)        ! (3nat,3nat,nq_coarse)
+      logical,       intent(in) :: l_WSinterpol
+      real,          intent(in) :: q_target(:,:)               ! (3,nTarget)
+      complex, allocatable, intent(out) :: dyn_mat_interp(:,:,:) ! (3nat,3nat,nTarget), NOT diagonalized
+
+      type(t_cell) :: cellLocal
+      integer :: dyn_dim, iq, iDir, iDir2, nx, ny, nz, iGrid, boxSize
+      integer :: ft_lim(2,3), bigBox_lim(2,3)
+      real    :: mass_mat(3*atoms%nat, 3*atoms%nat)
+      integer, allocatable :: supercellR(:,:)
+      real,    allocatable :: FTweight(:)
+      complex, allocatable :: dyn_mat_r(:,:,:,:,:), dyn_mat_q_full(:,:,:), dyn_mat_q(:,:)
+
+      dyn_dim = 3*atoms%nat
+      
+      cellLocal = cell 
+
+      ! Fourier box limits
+      ft_lim(2,:) =  qpts_coarse%nkpt3(:)/2
+      ft_lim(1,:) = ft_lim(2,:) - qpts_coarse%nkpt3(:) + 1
+
+      if (l_WSinterpol) then
+         ! create Wigner-Seitz cell and weights on a bigger fft mesh
+         bigBox_lim(2,:) =   2*qpts_coarse%nkpt3(:)
+         bigBox_lim(1,:) = - 2*qpts_coarse%nkpt3(:)
+         boxSize = (4*qpts_coarse%nkpt3(1)+1) * (4*qpts_coarse%nkpt3(2)+1) * (4*qpts_coarse%nkpt3(3)+1)
+         allocate(FTweight(boxSize))
+         allocate(supercellR(3,boxSize))
+         FTweight = 0.0
+         supercellR = 0
+         iGrid = 1
+         do nz=bigBox_lim(1,3),bigBox_lim(2,3)
+            do ny=bigBox_lim(1,2),bigBox_lim(2,2)
+               do nx=bigBox_lim(1,1),bigBox_lim(2,1)
+                  supercellR(:,iGrid) = (/nx,ny,nz/)
+                  iGrid = iGrid+1
+               end do
+            end do
+         end do
+         call cellLocal%calculate_WSweight(supercellR,FTweight,scaleSupercell=qpts_coarse%nkpt3(:))
+      else
+         ! simple back-transformation
+         bigBox_lim = ft_lim
+         boxSize = (qpts_coarse%nkpt3(1)) * (qpts_coarse%nkpt3(2)) * (qpts_coarse%nkpt3(3))
+         allocate(FTweight(boxSize))
+         FTweight = 1.0
+      end if
+
+      ! coarse q dynamical matrices --> real-space (mass-normalized) FCM
+      allocate(dyn_mat_r(dyn_dim,dyn_dim,0:(qpts_coarse%nkpt3(1)-1),0:(qpts_coarse%nkpt3(2)-1),0:(qpts_coarse%nkpt3(3)-1)))
+      call ft_dyn(atoms, qpts_coarse, sym, ft_lim, cell%amat, dyn_mat_coarse, dyn_mat_r, dyn_mat_q_full)
+
+      ! De-normalize the FCM: the normal diagonalization routines re-apply the mass
+      ! scaling (l_scalemass=.TRUE.), so the FCM must be non-normalized here.
+      do iDir = 1, dyn_dim
+         do iDir2 = 1, dyn_dim
+            mass_mat(iDir,iDir2) = massInElectronMasses * &
+               SQRT(atomicMasses_const(atoms%nz(CEILING(iDir/3.0)))*atomicMasses_const(atoms%nz(CEILING(iDir2/3.0))))
+         end do
+      end do
+      do nz = 0, qpts_coarse%nkpt3(3)-1
+         do ny = 0, qpts_coarse%nkpt3(2)-1
+            do nx = 0, qpts_coarse%nkpt3(1)-1
+               dyn_mat_r(:,:,nx,ny,nz) = dyn_mat_r(:,:,nx,ny,nz) * mass_mat(:,:)
+            end do
+         end do
+      end do
+
+      ! TODO: NAC / polar long-range term (currently inactive in dfpt_interpolation)
+
+      ! inverse Fourier transform onto every target q-point
+      allocate(dyn_mat_interp(dyn_dim,dyn_dim,size(q_target,2)))
+      do iq = 1, size(q_target,2)
+         call ift_dyn(atoms, qpts_coarse, ft_lim, bigBox_lim, FTweight, q_target(:,iq), dyn_mat_r, dyn_mat_q)
+         dyn_mat_interp(:,:,iq) = dyn_mat_q
+         deallocate(dyn_mat_q)
+      end do
+
+   END SUBROUTINE interpolate_dynmat
 
    SUBROUTINE make_sym_list(sym, bqpt, sym_count, sym_list)
       TYPE(t_sym), INTENT(IN)    :: sym

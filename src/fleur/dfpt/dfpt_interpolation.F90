@@ -49,31 +49,24 @@ contains
         type(t_kpts)  :: qpts
         integer, allocatable :: q_list(:)
         
-        integer :: iQ, iread, iDir, iDir2, nx,ny,nz
+        integer :: iQ, iread
 
         ! for IO of dynMats
         real    :: numbers(3*fi%atoms%nat,6*fi%atoms%nat)
-        character(len=100) :: trash, inp_pref 
-        character(len=4)   :: dynfiletag 
+        character(len=100) :: trash, inp_pref
+        character(len=4)   :: dynfiletag
 
         ! dynMat properties
         complex, allocatable   :: eigenFreqs(:), eigenVecs(:,:)
-        complex, allocatable   :: dyn_mat(:,:,:), dyn_mat_r(:,:,:,:,:), dyn_mat_q_full(:,:,:), dyn_mat_pathq(:,:)
-        complex, allocatable   :: dyn_mat_NAC_q(:,:),dyn_mat_NAC_r(:,:,:),dyn_mat_NAC_r_full(:,:,:)
+        complex, allocatable   :: dyn_mat(:,:,:), dyn_mat_interp(:,:,:)
         real,    allocatable   :: eigenVals(:), eigenValsFull(:,:,:)
-        real :: mass_mat(3*fi%atoms%nat, 3*fi%atoms%nat)
 
-        
-        ! helper types 
+
+        ! helper types
         type(t_banddos)                 :: banddosLocal
         type(t_eigdos_list),allocatable :: eigdos(:)
-        type(t_dos), target             :: dos 
+        type(t_dos), target             :: dos
 
-        ! Wigner Seitz Construction 
-        integer, allocatable  :: supercellR(:,:)
-        real, allocatable  :: FTweight(:)
-        integer            :: ft_lim(2,3), bigBox_lim(2,3), iGrid , boxSize
-        
 
         ! If the Dynmats-Files were already created, we can read them in and do postprocessing.
         ! a) Transform the q-Mesh onto real space.
@@ -112,9 +105,6 @@ contains
         q_list = (/(iQ, iQ=1,SIZE(qpts%bk,2), 1)/)
 
         ALLOCATE(dyn_mat(3*fi%atoms%ntype,3*fi%atoms%ntype,SIZE(q_list)))
-        ALLOCATE(dyn_mat_NAC_q(3*fi%atoms%ntype,3*fi%atoms%ntype))
-        ALLOCATE(dyn_mat_NAC_r(qpts%nkptf,3*fi%atoms%ntype,3*fi%atoms%ntype))
-        ALLOCATE(dyn_mat_NAC_r_full(qpts%nkptf,3*fi%atoms%ntype,3*fi%atoms%ntype))
 
         dyn_mat = cmplx(0.0,0.0)
 
@@ -151,93 +141,25 @@ contains
             !    end do
             !end if
 
-            ! Fourier box limits
-            ft_lim(2,:) =  qpts%nkpt3(:)/2
-            ft_lim(1,:) = ft_lim(2,:) - qpts%nkpt3(:) + 1
-            
-            if (fi%dfpt%l_WSinterpol) then 
-                ! create wigner seitz cell and weights on bigger fft mesh  
-                ! we do this here so we dont have to create the weights for every ift_dyn call            
-                bigBox_lim(2,:) =   2*qpts%nkpt3(:)
-                bigBox_lim(1,:) = - 2*qpts%nkpt3(:) 
+            ! Fourier-interpolate the coarse dynamical matrices onto the fine q-mesh
+            call interpolate_dynmat(fi_fullsym%atoms, fi_fullsym%sym, fi%cell, qpts, dyn_mat, &
+                                    fi%dfpt%l_WSinterpol, fi%dfpt%qvec_interpolate, dyn_mat_interp)
 
-                boxSize = (4*qpts%nkpt3(1)+1) * (4*qpts%nkpt3(2)+1) * (4*qpts%nkpt3(3)+1) 
-
-                allocate(FTweight(boxSize))
-                allocate(supercellR(3,boxSize))
-
-                FTweight = 0.0
-                supercellR = 0.0 
-                iGrid = 1
-                do nz=bigBox_lim(1,3),bigBox_lim(2,3)
-                    do ny=bigBox_lim(1,2),bigBox_lim(2,2)
-                        do nx=bigBox_lim(1,1),bigBox_lim(2,1)
-                            supercellR(:,iGrid) = (/nx,ny,nz/)
-                            iGrid = iGrid+1
-                        end do 
-                    end do 
-                end do 
-                call fi_fullsym%cell%calculate_WSweight(supercellR,FTweight,scaleSupercell=qpts%nkpt3(:))
-            else 
-                ! Do a simple backtransformation 
-                bigBox_lim = ft_lim
-                boxSize = (qpts%nkpt3(1)) * (qpts%nkpt3(2)) * (qpts%nkpt3(3)) 
-                allocate(FTweight(boxSize))
-                FTweight = 1.0 
-            end if 
-            
-            allocate(dyn_mat_r(3*fi%atoms%nat,3*fi%atoms%nat,0:(qpts%nkpt3(1)-1),0:(qpts%nkpt3(2)-1),0:(qpts%nkpt3(3)-1)))
-            call ft_dyn(fi_fullsym%atoms, qpts, fi_fullsym%sym, ft_lim, fi%cell%amat ,dyn_mat, dyn_mat_r, dyn_mat_q_full)
-            
-            ! In order to call the normal diagonalisation routines
-            ! The FCM must be not-normalized --> otherwise we find the wrong unit
-            ! Either change here or in dfpt_dynmat_eig.F90 if tag != raw
-            do iDir = 1, 3*fi%atoms%nat
-                do iDir2 = 1, 3*fi%atoms%nat
-                    mass_mat(iDir,iDir2) = massInElectronMasses * &
-                                           SQRT(atomicMasses_const(fi%atoms%nz(CEILING(iDir/3.0)))*atomicMasses_const(fi%atoms%nz(CEILING(iDir2/3.0))))
-                end do
-            end do
-            do nz = 0, qpts%nkpt3(3)-1
-                do ny = 0, qpts%nkpt3(2)-1
-                    do nx = 0, qpts%nkpt3(1)-1
-                        dyn_mat_r(:,:,nx,ny,nz) = dyn_mat_r(:,:,nx,ny,nz) * mass_mat(:,:)
-                    end do
-                end do
-            end do
-
-            if (fi%dfpt%l_polar) then
-                do iQ = 1, qpts%nkptf
-                    dyn_mat_NAC_r = cmplx(0.0,0.0)
-                    call get_NAC_ewald_r(fi_fullsym,qpts,stars_fullsym,dyn_mat_NAC_r,qpts%bkf(:,iQ),iQ)
-                    dyn_mat_NAC_r_full(:,:,:)= dyn_mat_NAC_r_full(:,:,:) + dyn_mat_NAC_r(:,:,:)/qpts%nkptf
-                end do
-            end if
-            ! interpolate to dense grid on a arbitrary q-point
-            ! specified in the inp.xml kpts.xml
-
+            ! diagonalize the interpolated dynamical matrix at each fine q-point
             do iQ = 1, size(fi%dfpt%qvec_interpolate,2)
-                call ift_dyn(fi_fullsym%atoms,fi_fullsym%kpts,ft_lim,bigBox_lim,FTweight,fi%dfpt%qvec_interpolate(:,iQ),dyn_mat_r,dyn_mat_pathq)
-                write(*,*) '-------------------------'
-                !if ((fi%dfpt%l_polar) .and. (norm2(fi%kpts%bk(:,iQ)) .lt. 1e-8)) then
-                !    call get_NAC(fi,fi%kpts,dyn_mat_pathq,iQ)
-                !end if
-                !if (fi%dfpt%l_polar) then
-                !    dyn_mat_NAC_q = cmplx(0.0,0.0)
-                !    call get_NAC_ewald(fi_fullsym,qpts,stars_fullsym,dyn_mat_NAC_q,fi%kpts%bk(:,iQ),iQ)
-                !    dyn_mat_pathq(:,:) = dyn_mat_pathq(:,:)+ dyn_mat_NAC_q(:,:)
-                !end if
                 call timestart("Dynmat diagonalization")
-                call DiagonalizeDynMat(fi%atoms, fi%dfpt%qvec_interpolate(:,iQ), fi%dfpt%calcEigenVec, dyn_mat_pathq, eigenVals, eigenVecs, iQ,.TRUE.,TRIM(dynfiletag),fi%dfpt%l_sumrule_intp,l_writeOutput=.true.)
+                call DiagonalizeDynMat(fi%atoms, fi%dfpt%qvec_interpolate(:,iQ), fi%dfpt%calcEigenVec, &
+                                       dyn_mat_interp(:,:,iQ), eigenVals, eigenVecs, iQ, .TRUE., &
+                                       TRIM(dynfiletag), fi%dfpt%l_sumrule_intp, l_writeOutput=.true.)
                 call timestop("Dynmat diagonalization")
 
                 call timestart("Frequency calculation")
-                call CalculateFrequencies(fi%atoms, iQ, eigenVals, eigenFreqs,TRIM(dynfiletag),fi%dfpt%qvec_interpolate(:,iQ))
+                call CalculateFrequencies(fi%atoms, iQ, eigenVals, eigenFreqs, TRIM(dynfiletag), fi%dfpt%qvec_interpolate(:,iQ))
                 call timestop("Frequency calculation")
 
                 if (fi%dfpt%l_dos) eigenValsFull(:,iQ,1) = eigenFreqs(:) ! save eigenfrequencies in case of dos
 
-                deallocate(eigenVals, eigenVecs, eigenFreqs, dyn_mat_pathq)
+                deallocate(eigenVals, eigenVecs, eigenFreqs)
             end do ! iQ
 
             if (fi%dfpt%l_dos) then 
