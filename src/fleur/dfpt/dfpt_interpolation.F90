@@ -21,7 +21,7 @@ contains
     subroutine dfpt_interpolation(fi,fmpi,nococonv,results)
 
         use m_fleur_init
-        use m_dfpt_dynmat_sym
+        use m_dfpt_dynmat_fourier
         use m_dfpt_dynmat_eig
         use m_make_dos
         use m_types_eigdos

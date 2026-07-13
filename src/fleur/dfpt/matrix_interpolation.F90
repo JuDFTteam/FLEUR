@@ -15,7 +15,7 @@ module m_matrix_interpolation
 contains 
     subroutine wannier_matrix_interpolate(fi,matElement,U_mat,kpts_coarse,kpts_fine,matInterpol,qpts_coarse,qpts_fine)
 
-        use m_dfpt_dynmat_sym , only : ft_dyn_direct, ft_fcm_weight, unfold_grid
+        use m_dfpt_dynmat_fourier , only : ft_dyn_direct, ft_fcm_weight, unfold_grid
 
         type(t_fleurinput), intent(in) :: fi
         complex, intent(in) :: matElement(:,:,:)                 ! nu',nu, kpoints
@@ -110,7 +110,7 @@ contains
         ! The q points have to connect between k points
         ! double fourier transform (R,R) --> (k,q) is done 
 
-        use m_dfpt_dynmat_sym , only : ft_dyn_direct, ft_fcm_weight, unfold_grid
+        use m_dfpt_dynmat_fourier , only : ft_dyn_direct, ft_fcm_weight, unfold_grid
 
         type(t_fleurinput), intent(in) :: fi
         complex, intent(in) :: matElement(:,:,:,:)                ! nu',nu, kpoints, qpts (nu' at k+q, nu at k)
