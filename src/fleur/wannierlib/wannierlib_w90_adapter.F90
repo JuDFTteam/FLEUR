@@ -119,7 +119,7 @@ CONTAINS
 #endif
   END SUBROUTINE init_w90
 
-  SUBROUTINE run_w90(this, cell, kpts, mmn, amn, eig, irank, mmn_full, &
+  SUBROUTINE run_w90(this, cell, kpts, mmn, amn, eig, irank, &
                      s0_loc, l0_loc, soc0_loc, soc4_loc, s0pa_loc, distk, mpi_comm, spin_suffix)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
     TYPE(t_cell), INTENT(IN) :: cell
@@ -134,17 +134,17 @@ CONTAINS
     COMPLEX, INTENT(IN) :: soc0_loc(:, :, :, :)       ! (nb,nb,1,nk_loc) per-rank SOC slice (soc interpolation reduce)
     COMPLEX, INTENT(IN) :: s0pa_loc(:, :, :, :, :)    ! (nb,nb,3,nat,nk_loc) per-rank per-atom MT spin slice (per-atom interpolation reduce)
     INTEGER, INTENT(IN) :: distk(:), mpi_comm
-    COMPLEX, INTENT(IN) :: mmn_full(:, :, :, :)       ! (nb,nb,nntot,nkptf) full overlaps, rank 0 only (Berry connection)
     CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: spin_suffix   ! '_spin1'/'_spin2' for collinear jspins=2; empty otherwise
 
     INTEGER :: ierr,num_kpts,iop,nbnd_c,nat_c,nkc
-    INTEGER :: idom, ndom, nkl_c, jkl
+    INTEGER :: idom, ndom, nkl_c, jkl, aw_nrpts
     INTEGER, ALLOCATABLE :: gk_loc(:)                 ! global-k indices of this rank's coarse slice (interp reduce)
+    INTEGER, ALLOCATABLE :: aw_irvec(:, :), aw_ndegen(:)  ! Wigner-Seitz R-mesh of the reduced Berry connection
     CHARACTER(LEN=8) :: dkind(3), dsuf(3)
     CHARACTER(LEN=16) :: ssfx
     LOGICAL :: lex
     COMPLEX, ALLOCATABLE :: u_matrix(:, :, :), mmn_local(:, :, :, :), amn_local(:, :, :)
-    COMPLEX, ALLOCATABLE :: aw_k(:, :, :, :)          ! (nw,nw,3,nk) Wannier Berry connection A^(W)_alpha(k)
+    COMPLEX, ALLOCATABLE :: aw_r(:, :, :, :)          ! (nw,nw,nrpts,3) reduced Wannier Berry connection A^(W)_alpha(R)
     COMPLEX, ALLOCATABLE :: hamk_r(:, :, :)           ! (nw,nw,nk) Wannier-gauge Hamiltonian (for H(R) export)
     LOGICAL :: l_hr_done, l_ar_done                   ! tight-binding H(R)/A(R) written once (domain-independent)
     REAL, ALLOCATABLE, TARGET :: eig_ev(:, :)         ! eigenvalues in eV for the w90 library (banner honesty)
@@ -216,7 +216,7 @@ CONTAINS
     l_hr_done = .FALSE.; l_ar_done = .FALSE.   ! (legacy flags; operators_r now owns H(R)/A(R))
     ! real-space operator export (Fourier step 3, standalone format) -- once, before interpolation
     CALL wannierlib_write_operators_r(this, cell, kpts, eig, u_matrix, amn_local, &
-                                      s0_loc, l0_loc, soc4_loc, distk, mpi_comm, mmn_full, irank)
+                                      s0_loc, l0_loc, soc4_loc, distk, mpi_comm, mmn, irank)
     DO idom = 1, ndom
     IF (irank==0) CALL wannierlib_write_domain_kpts(this, TRIM(dkind(idom)))
 
@@ -254,14 +254,16 @@ CONTAINS
         CALL wannierlib_interpolate_operator(this, cell, kpts, eig, u_matrix, amn_local, &
                                              soc0_loc, gk_loc, 1, 'bands_wann_soc.dat', irank, mpi_comm)
       CASE ('velocity')
-        ! Wannier Berry connection A^(W)_alpha(k) from the full overlaps (rank 0 only).
-        ! Piece 2: build + validate via the Wannier-centre check (calibrates conj/sign).
-        IF (irank == 0 .AND. .NOT.ALLOCATED(aw_k)) THEN
-          CALL wannierlib_build_berry_aw(this, kpts, mmn_full, amn_local, u_matrix, aw_k)
-          CALL wannierlib_check_berry_centres(this, kpts, aw_k)
+        ! Wannier Berry connection A^(W)_alpha(R): built distributed from the local overlaps and
+        ! reduced (collective, all ranks); the centre check (rank 0) calibrates conj/sign. Built
+        ! once and reused across output domains. amn_local = u_opt.
+        IF (.NOT.ALLOCATED(aw_r)) THEN
+          CALL wannierlib_build_berry_aw_r(this, cell, kpts, mmn, gk_loc, amn_local, u_matrix, mpi_comm, &
+                                           aw_r, aw_irvec, aw_ndegen, aw_nrpts)
+          IF (irank == 0) CALL wannierlib_check_berry_centres(this, aw_r, aw_irvec, aw_nrpts)
         END IF
-        IF (.NOT.ALLOCATED(aw_k)) ALLOCATE(aw_k(1, 1, 1, 1))   ! stub on non-root ranks for the dummy arg
-        CALL wannierlib_interpolate_velocity(this, cell, kpts, eig, u_matrix, amn_local, aw_k, irank)
+        CALL wannierlib_interpolate_velocity(this, cell, kpts, eig, u_matrix, amn_local, &
+                                             aw_r, aw_irvec, aw_ndegen, aw_nrpts, irank)
       CASE ('spinCurrent')
         ! operator part distributed like the generic driver: local Bloch slice + gk_loc + reduce
         CALL wannierlib_interpolate_current(this, cell, kpts, eig, u_matrix, amn_local, &
@@ -424,70 +426,93 @@ CONTAINS
                                                calledby='wl_shell')
   END SUBROUTINE wl_shell
 
-  ! Build the Wannier-gauge Berry connection A^(W)_alpha(k) = i sum_b w_b b_alpha (M^(W,b)(k) - delta),
-  ! with M^(W,b)(k) = V(k)^dagger M^(0,b)(k) V(k_b), V = u_opt.u_matrix, k_b = nnlist(b,k).
-  ! Uses the FULL overlaps mmn_full and the kmesh (wb/bk/nnlist) from wannierlib_w90main. Rank 0.
-  SUBROUTINE wannierlib_build_berry_aw(this, kpts, mmn_full, u_opt, u_matrix, aw_k)
+  ! Build the Wannier-gauge Berry connection in real space A^(W)_alpha(R), distributed:
+  ! each rank forms A^(W)_alpha(k) = i sum_b w_b b_alpha (M^(W,b)(k) - delta) on its OWN k-slice
+  ! (M^(W,b)(k) = V(k)^dagger M^(0,b)(k) V(k_b), V = u_opt.u_matrix, k_b = nnlist(b,k)) from the
+  ! local overlaps mmn_loc (global k = gk_loc), then reduces coarse -> R with the distributed
+  ! FT-reduce (collective). The full-mesh overlaps are never gathered. A^(W)(R) is exactly the
+  ! position operator A(R) = <0n|r|Rm> and the R->k' interpolant used by the velocity/Berry curvature.
+  ! kmesh (wb/bk/nnlist) from wannierlib_w90main. Collective over mpi_comm; result valid on all ranks.
+  SUBROUTINE wannierlib_build_berry_aw_r(this, cell, kpts, mmn_loc, gk_loc, u_opt, u_matrix, mpi_comm, &
+                                         aw_r, irvec, ndegen, nrpts)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
+    TYPE(t_cell), INTENT(IN) :: cell
     TYPE(t_kpts), INTENT(IN) :: kpts
-    COMPLEX, INTENT(IN) :: mmn_full(:, :, :, :)   ! (nb,nb,nntot,nk)
-    COMPLEX, INTENT(IN) :: u_opt(:, :, :)         ! (nb,nw,nk)
-    COMPLEX, INTENT(IN) :: u_matrix(:, :, :)      ! (nw,nw,nk)
-    COMPLEX, ALLOCATABLE, INTENT(OUT) :: aw_k(:, :, :, :)  ! (nw,nw,3,nk)
+    COMPLEX, INTENT(IN) :: mmn_loc(:, :, :, :)    ! (nb,nb,nntot,nk_loc) this rank's overlap slice
+    INTEGER, INTENT(IN) :: gk_loc(:)              ! (nk_loc) global k index of each slice entry
+    COMPLEX, INTENT(IN) :: u_opt(:, :, :)         ! (nb,nw,nk) full mesh
+    COMPLEX, INTENT(IN) :: u_matrix(:, :, :)      ! (nw,nw,nk) full mesh
+    INTEGER, INTENT(IN) :: mpi_comm
+    COMPLEX, ALLOCATABLE, INTENT(OUT) :: aw_r(:, :, :, :)   ! (nw,nw,nrpts,3) reduced Berry connection / A(R)
+    INTEGER, ALLOCATABLE, INTENT(OUT) :: irvec(:, :), ndegen(:)
+    INTEGER, INTENT(OUT) :: nrpts
 #ifdef CPP_WANNLIB_API
-    INTEGER :: nb, nw, nk, nnt, k, kb, nn, a, i
+    INTEGER :: nb, nw, nk, nnt, k, kb, nn, a, i, kl, nkl
     REAL :: wb, b(3)
-    COMPLEX, ALLOCATABLE :: Vk(:, :), Vkb(:, :), Mw(:, :), tmp(:, :)
+    COMPLEX, ALLOCATABLE :: Vk(:, :), Vkb(:, :), Mw(:, :), tmp(:, :), aw_loc(:, :, :, :), a1(:, :, :)
     nb = this%num_bands; nw = this%num_wann; nk = kpts%nkptf
     nnt = wannierlib_w90main%kmesh_info%nntot
-    ALLOCATE(aw_k(nw, nw, 3, nk), source=CMPLX(0.0, 0.0))
+    nkl = SIZE(gk_loc)
+    ALLOCATE(aw_loc(nw, nw, 3, MAX(1, nkl)), source=CMPLX(0.0, 0.0))
     ALLOCATE(Vk(nb, nw), Vkb(nb, nw), Mw(nw, nw), tmp(nb, nw))
-    DO k = 1, nk
+    DO kl = 1, nkl
+      k = gk_loc(kl)
       Vk = MATMUL(u_opt(:, :, k), u_matrix(:, :, k))
       DO nn = 1, nnt
         kb = wannierlib_w90main%kmesh_info%nnlist(k, nn)   ! w90 shape: nnlist(num_kpts, nntot)
         IF (kb < 1 .OR. kb > nk) CALL juDFT_error('wannierlib: nnlist neighbour index out of range', &
-                                                  calledby='wannierlib_build_berry_aw')
+                                                  calledby='wannierlib_build_berry_aw_r')
         wb = wannierlib_w90main%kmesh_info%wb(nn)
         b  = wannierlib_w90main%kmesh_info%bk(:, nn, k)
         Vkb = MATMUL(u_opt(:, :, kb), u_matrix(:, :, kb))
-        tmp = MATMUL(mmn_full(:, :, nn, k), Vkb)             ! (nb x nw)
-        Mw  = MATMUL(CONJG(TRANSPOSE(Vk)), tmp)              ! (nw x nw) = M^(W,b)(k)
+        tmp = MATMUL(mmn_loc(:, :, nn, kl), Vkb)            ! (nb x nw)
+        Mw  = MATMUL(CONJG(TRANSPOSE(Vk)), tmp)             ! (nw x nw) = M^(W,b)(k)
         DO i = 1, nw
-          Mw(i, i) = Mw(i, i) - CMPLX(1.0, 0.0)             ! subtract delta on the diagonal
+          Mw(i, i) = Mw(i, i) - CMPLX(1.0, 0.0)            ! subtract delta on the diagonal
         END DO
         DO a = 1, 3
-          aw_k(:, :, a, k) = aw_k(:, :, a, k) + CMPLX(0.0, wb*b(a)) * Mw
+          aw_loc(:, :, a, kl) = aw_loc(:, :, a, kl) + CMPLX(0.0, wb*b(a)) * Mw
         END DO
       END DO
     END DO
     DEALLOCATE(Vk, Vkb, Mw, tmp)
+    DO a = 1, 3
+      CALL wannierlib_ft_to_real_reduce(cell, kpts, aw_loc(:, :, a, :), gk_loc, mpi_comm, a1, irvec, ndegen, nrpts)
+      IF (a == 1) ALLOCATE(aw_r(nw, nw, nrpts, 3))
+      aw_r(:, :, :, a) = a1; DEALLOCATE(a1)
+    END DO
+    DEALLOCATE(aw_loc)
+#else
+    nrpts = 0
+    ALLOCATE(aw_r(1, 1, 1, 3), irvec(3, 1), ndegen(1))
 #endif
-  END SUBROUTINE wannierlib_build_berry_aw
+  END SUBROUTINE wannierlib_build_berry_aw_r
 
-  ! Validation: the diagonal of A^(W)_alpha at R=0, (1/Nk) sum_k A^(W)_alpha,nn(k), is the
-  ! Wannier centre <r_alpha>_n (Marzari-Vanderbilt). Compare to w90_get_centres to calibrate
-  ! the conj/sign convention of the overlaps. Writes berry_centre_check.dat (rank 0).
-  SUBROUTINE wannierlib_check_berry_centres(this, kpts, aw_k)
+  ! Validation: the diagonal of A^(W)_alpha at R=0 is the Wannier centre <r_alpha>_n
+  ! (Marzari-Vanderbilt). Since A^(W)_alpha(R=0) = (1/Nk) sum_k A^(W)_alpha(k), it is exactly
+  ! the R=0 entry of the reduced aw_r. Compare to w90_get_centres to calibrate the conj/sign
+  ! convention of the overlaps. Writes berry_centre_check.dat (rank 0).
+  SUBROUTINE wannierlib_check_berry_centres(this, aw_r, irvec, nrpts)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
-    TYPE(t_kpts), INTENT(IN) :: kpts
-    COMPLEX, INTENT(IN) :: aw_k(:, :, :, :)     ! (nw,nw,3,nk)
+    COMPLEX, INTENT(IN) :: aw_r(:, :, :, :)     ! (nw,nw,nrpts,3)
+    INTEGER, INTENT(IN) :: irvec(:, :), nrpts
 #ifdef CPP_WANNLIB_API
-    INTEGER :: nw, nk, k, a, n, iu
+    INTEGER :: nw, a, n, iu, irpt, irpt0
     COMPLEX :: aR0
     REAL, ALLOCATABLE :: wc(:, :)
-    nw = this%num_wann; nk = kpts%nkptf
+    nw = this%num_wann
+    irpt0 = 0
+    DO irpt = 1, nrpts
+      IF (ALL(irvec(:, irpt) == 0)) THEN; irpt0 = irpt; EXIT; END IF
+    END DO
+    IF (irpt0 == 0) RETURN   ! no R=0 vector (should not happen) -> skip the check
     ALLOCATE(wc(3, nw))
     CALL w90_get_centres(wannierlib_w90main, wc)
     OPEN(newunit=iu, file='berry_centre_check.dat', status='replace')
     WRITE(iu,'(a)') '# n  alpha    Re[A_nn(R=0)]        -Re[A_nn(R=0)]       w90_centre(Bohr)'
     DO n = 1, nw
       DO a = 1, 3
-        aR0 = CMPLX(0.0, 0.0)
-        DO k = 1, nk
-          aR0 = aR0 + aw_k(n, n, a, k)
-        END DO
-        aR0 = aR0 / REAL(nk)
+        aR0 = aw_r(n, n, irpt0, a)
         WRITE(iu,'(2i4,3(2x,f18.10))') n, a, REAL(aR0), -REAL(aR0), wc(a, n)
       END DO
     END DO
@@ -579,24 +604,16 @@ CONTAINS
   END SUBROUTINE wannierlib_write_hr
 
   ! Write A(R) = <0n|r_alpha|Rm> in Wannier90 seedname_r.dat format (positions in Angstrom). Rank-0.
-  SUBROUTINE wannierlib_write_ar(this, cell, kpts, aw_k, suffix)
+  ! aw_r is the already-reduced Berry connection A^(W)(R) (= A(R)), so no Fourier transform here.
+  SUBROUTINE wannierlib_write_ar(this, aw_r, irvec, nrpts, suffix)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
-    TYPE(t_cell), INTENT(IN) :: cell
-    TYPE(t_kpts), INTENT(IN) :: kpts
-    COMPLEX, INTENT(IN) :: aw_k(:, :, :, :)          ! (nw,nw,3,nk)
+    COMPLEX, INTENT(IN) :: aw_r(:, :, :, :)          ! (nw,nw,nrpts,3) reduced A(R)
+    INTEGER, INTENT(IN) :: irvec(:, :), nrpts
     CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: suffix   ! spin tag ('_spin1'/'_spin2') for collinear jspins=2
-    COMPLEX, ALLOCATABLE :: ar(:, :, :, :), a1(:, :, :)
-    INTEGER, ALLOCATABLE :: irvec(:, :), ndegen(:)
-    INTEGER :: nrpts, nw, irpt, i, j, a, iu
+    INTEGER :: nw, irpt, i, j, a, iu
     CHARACTER(LEN=64) :: fn
     REAL, PARAMETER :: bohr2ang = 0.5291772109
     nw = this%num_wann
-    DO a = 1, 3
-      CALL wannierlib_ft_to_real(cell, aw_k(:,:,a,:), kpts, a1, irvec, ndegen, nrpts)
-      IF (a == 1) ALLOCATE(ar(nw, nw, nrpts, 3))
-      ar(:,:,:,a) = a1
-      DEALLOCATE(a1)
-    END DO
     fn = 'WF1_r'
     IF (PRESENT(suffix)) fn = TRIM(fn)//TRIM(suffix)
     OPEN(newunit=iu, file=TRIM(fn)//'.dat', status='replace')
@@ -607,13 +624,12 @@ CONTAINS
       DO j = 1, nw
         DO i = 1, nw
           WRITE(iu,'(5i5,6f12.6)') irvec(:,irpt), i, j, &
-            (bohr2ang*REAL(ar(i,j,irpt,a)), bohr2ang*AIMAG(ar(i,j,irpt,a)), a=1,3)
+            (bohr2ang*REAL(aw_r(i,j,irpt,a)), bohr2ang*AIMAG(aw_r(i,j,irpt,a)), a=1,3)
         END DO
       END DO
     END DO
     CLOSE(iu)
     WRITE(oUnit,'(a,i0,a)') 'wannierlib: wrote WF1_r.dat (A(R), ', nrpts, ' R-vectors, Ang)'
-    DEALLOCATE(ar, irvec, ndegen)
   END SUBROUTINE wannierlib_write_ar
 
   ! ---------------------------------------------------------------------------
@@ -624,7 +640,7 @@ CONTAINS
   ! anglmomrs.1 (orbital), rssocmat.1 (SOC), wig_vectors.
   ! ---------------------------------------------------------------------------
   SUBROUTINE wannierlib_write_operators_r(this, cell, kpts, eig, u_matrix, u_opt, &
-                                          s0_loc, l0_loc, soc4_loc, distk, mpi_comm, mmn_full, irank)
+                                          s0_loc, l0_loc, soc4_loc, distk, mpi_comm, mmn_loc, irank)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
     TYPE(t_cell), INTENT(IN) :: cell
     TYPE(t_kpts), INTENT(IN) :: kpts
@@ -632,12 +648,12 @@ CONTAINS
     COMPLEX, INTENT(IN) :: u_matrix(:, :, :)         ! (nw,nw,nk) MLWF gauge
     COMPLEX, INTENT(IN) :: u_opt(:, :, :)            ! (nb,nw,nk) disentangled (amn_local)
     COMPLEX, INTENT(IN) :: s0_loc(:, :, :, :), l0_loc(:, :, :, :, :), soc4_loc(:, :, :, :) ! per-rank coarse slices
-    COMPLEX, INTENT(IN) :: mmn_full(:, :, :, :)      ! (nb,nb,nntot,nk), rank 0 (position)
+    COMPLEX, INTENT(IN) :: mmn_loc(:, :, :, :)       ! (nb,nb,nntot,nk_loc) this rank's overlap slice (position/Berry)
     INTEGER, INTENT(IN) :: distk(:), mpi_comm, irank
-    INTEGER :: iop, nb, ik, j, nkl
+    INTEGER :: iop, nb, ik, j, nkl, aw_nrpts
     LOGICAL :: l_wig_done
-    INTEGER, ALLOCATABLE :: gk_loc(:)
-    COMPLEX, ALLOCATABLE :: ham_k(:, :, :), aw_k(:, :, :, :), o0l(:, :, :, :), vloc(:, :, :)
+    INTEGER, ALLOCATABLE :: gk_loc(:), aw_irvec(:, :), aw_ndegen(:)
+    COMPLEX, ALLOCATABLE :: ham_k(:, :, :), aw_r(:, :, :, :), o0l(:, :, :, :), vloc(:, :, :)
     IF (.NOT. this%l_operators_r .OR. this%n_op_r < 1) RETURN   ! all ranks (reduce is collective)
     CALL timestart('wannierlib_write_operators_r')
     nb = this%num_bands
@@ -659,12 +675,11 @@ CONTAINS
           CALL wannierlib_write_hr(this, cell, kpts, ham_k)
           DEALLOCATE(ham_k)
         END IF
-      CASE ('position')      ! Berry from gathered mmn_full -> rank 0 serial
-        IF (irank == 0) THEN
-          CALL wannierlib_build_berry_aw(this, kpts, mmn_full, u_opt, u_matrix, aw_k)
-          CALL wannierlib_write_ar(this, cell, kpts, aw_k)
-          DEALLOCATE(aw_k)
-        END IF
+      CASE ('position')      ! Berry connection A^(W)(R)=A(R): distributed reduce over the local overlaps
+        CALL wannierlib_build_berry_aw_r(this, cell, kpts, mmn_loc, gk_loc, u_opt, u_matrix, mpi_comm, &
+                                         aw_r, aw_irvec, aw_ndegen, aw_nrpts)
+        IF (irank == 0) CALL wannierlib_write_ar(this, aw_r, aw_irvec, aw_nrpts)
+        IF (ALLOCATED(aw_r)) DEALLOCATE(aw_r, aw_irvec, aw_ndegen)
       CASE ('spin')          ! distributed reduce over the coarse spin slice
         CALL wannierlib_op_rs_distributed(this, cell, kpts, vloc, s0_loc, gk_loc, 3, mpi_comm, irank, .FALSE., 'rspauli.1')
       CASE ('orbital')

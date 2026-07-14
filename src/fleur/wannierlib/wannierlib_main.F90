@@ -53,8 +53,6 @@ CONTAINS
       INTEGER :: ikpt, itype, nntot_w90, ierr, jspin, jspin_comp, iop
       COMPLEX, ALLOCATABLE :: amn(:, :, :)
       COMPLEX, ALLOCATABLE :: mmn(:, :, :, :)
-      COMPLEX, ALLOCATABLE :: mmn_full(:, :, :, :)   ! (num_bands,num_bands,nntot,nkptf) full overlaps on rank 0 (Berry/interband velocity)
-      LOGICAL :: l_need_mmn_full                     ! velocity/current requested -> gather mmn to rank 0
       COMPLEX, ALLOCATABLE :: ujug(:, :, :, :, :, :)
       REAL, ALLOCATABLE :: kdiff(:, :)
       INTEGER, ALLOCATABLE :: nnkp(:, :), gkpb(:, :, :)
@@ -174,29 +172,9 @@ CONTAINS
 
          mmn = conjg(mmn)
 
-         ! --- gather the distributed (per-rank) mmn into a full-nkptf buffer on rank 0,
-         !     needed by the Berry connection for the interband velocity / currents. ---
-         ! mmn_full (full overlaps on rank 0) is needed ONLY for the Wannier Berry connection
-         ! A^(W)(k): velocity (interband + Berry curvature) and the position operator A(R).
-         ! The spin/orbital currents do NOT use it (their velocity is the diagonal-exact dH/dk),
-         ! so they must not trigger the gather.
-         l_need_mmn_full = .FALSE.
-         DO iop = 1, this%n_ops
-            SELECT CASE (TRIM(this%op_name(iop)))
-            CASE ('velocity', 'position_r'); l_need_mmn_full = .TRUE.
-            END SELECT
-         END DO
-         DO iop = 1, this%n_op_r
-            IF (TRIM(this%op_r_name(iop)) == 'position') l_need_mmn_full = .TRUE.
-         END DO
-         IF (l_need_mmn_full) THEN
-            CALL wannierlib_gather_mmn(fmpi, distk, kpts%nkptf, this%num_bands, nntot_w90, mmn, mmn_full)
-            ! validation hook: dump the gathered overlaps (rank 0) so a parallel run can be
-            ! compared byte-for-byte against a serial reference .mmn (WF*_gathered vs WF*).
-            IF (fmpi%irank == 0) CALL wannierlib_write_mmn(this, mmn_full, kpts, nnkp, gkpb, jspin, '_gathered')
-         ELSE
-            ALLOCATE(mmn_full(1, 1, 1, 1))
-         END IF
+         ! Fase 3c: the Berry connection A^(W)(R) (velocity interband + Berry curvature, and the
+         ! position operator A(R)) is now built distributed from the per-rank overlap slice mmn +
+         ! an FT-reduce inside run_w90/write_operators_r. The full-mesh overlaps are never gathered.
 
          IF (fmpi%isize == 1) THEN
             amn_file = spin12(jspin)//'.amn'
@@ -213,14 +191,13 @@ CONTAINS
          ! tag each channel's interpolation outputs so spin 2 does not overwrite spin 1.
          spin_sfx = ''
          IF (input%jspins == 2 .AND. .NOT. l_wannierlib_spinors) WRITE(spin_sfx, '(a,i0)') '_spin', jspin
-         CALL run_w90(this, cell, kpts, mmn, amn, eig, fmpi%irank, mmn_full, &
+         CALL run_w90(this, cell, kpts, mmn, amn, eig, fmpi%irank, &
                       s0_loc, l0_loc, soc0_loc, soc4_loc, s0pa_loc, distk, fmpi%mpi_comm, &
                       spin_suffix=TRIM(spin_sfx))
          if (fmpi%isize == 1) CALL report_w90(this)
 
          IF (ALLOCATED(amn)) DEALLOCATE (amn)
          IF (ALLOCATED(mmn)) DEALLOCATE (mmn)
-         IF (ALLOCATED(mmn_full)) DEALLOCATE (mmn_full)
          IF (ALLOCATED(eig)) DEALLOCATE (eig)
 
       END DO
@@ -341,68 +318,6 @@ CONTAINS
          END DO k_loop
       END DO
    END SUBROUTINE wannierlib_kdiff
-
-   ! Gather the k-distributed overlap matrix mmn (each rank owns COUNT(distk==irank)
-   ! k-points, in ascending global-k order) into a full-nkptf buffer on rank 0. Robust
-   ! for ANY distk map: MPI_Gatherv of per-rank chunks + reorder to global-k order.
-   ! mmn_full is (nb,nb,nntot,nkptf) on rank 0 and (1,1,1,1) elsewhere. Serial: a copy.
-   SUBROUTINE wannierlib_gather_mmn(fmpi, distk, nkptf, nb, nntot, mmn_loc, mmn_full)
-#ifdef CPP_MPI
-      use mpi
-#endif
-      TYPE(t_mpi), INTENT(IN) :: fmpi
-      INTEGER, INTENT(IN) :: distk(:), nkptf, nb, nntot
-      COMPLEX, INTENT(IN) :: mmn_loc(:, :, :, :)                 ! (nb,nb,nntot,nk_local)
-      COMPLEX, ALLOCATABLE, INTENT(OUT) :: mmn_full(:, :, :, :)
-      INTEGER :: bs, r, ik, ierr, nk_local
-#ifdef CPP_MPI
-      INTEGER, ALLOCATABLE :: recvcnt(:), displ(:), locidx(:)
-      COMPLEX, ALLOCATABLE :: recvbuf(:)
-#endif
-      bs = nb*nb*nntot
-      nk_local = SIZE(mmn_loc, 4)
-
-      IF (fmpi%isize == 1) THEN                     ! serial: local IS the full set
-         ALLOCATE(mmn_full(nb, nb, nntot, nkptf))
-         mmn_full = mmn_loc
-         RETURN
-      END IF
-
-#ifdef CPP_MPI
-      ALLOCATE(recvcnt(0:fmpi%isize-1), displ(0:fmpi%isize-1))
-      DO r = 0, fmpi%isize-1
-         recvcnt(r) = bs * COUNT(distk == r)
-      END DO
-      displ(0) = 0
-      DO r = 1, fmpi%isize-1
-         displ(r) = displ(r-1) + recvcnt(r-1)
-      END DO
-      IF (fmpi%irank == 0) THEN
-         ALLOCATE(recvbuf(bs*nkptf))
-      ELSE
-         ALLOCATE(recvbuf(1))
-      END IF
-      CALL MPI_Gatherv(mmn_loc, bs*nk_local, MPI_DOUBLE_COMPLEX, &
-                       recvbuf, recvcnt, displ, MPI_DOUBLE_COMPLEX, 0, fmpi%mpi_comm, ierr)
-      IF (fmpi%irank == 0) THEN
-         ALLOCATE(mmn_full(nb, nb, nntot, nkptf))
-         ALLOCATE(locidx(0:fmpi%isize-1)); locidx = 0
-         DO ik = 1, nkptf                           ! place each block at its global-k slot
-            r = distk(ik)
-            mmn_full(:, :, :, ik) = RESHAPE(recvbuf(displ(r)+locidx(r)*bs+1 : displ(r)+locidx(r)*bs+bs), &
-                                            (/ nb, nb, nntot /))
-            locidx(r) = locidx(r) + 1
-         END DO
-         DEALLOCATE(locidx)
-      ELSE
-         ALLOCATE(mmn_full(1, 1, 1, 1))
-      END IF
-      DEALLOCATE(recvcnt, displ, recvbuf)
-#else
-      ALLOCATE(mmn_full(nb, nb, nntot, nkptf))
-      mmn_full = mmn_loc
-#endif
-   END SUBROUTINE wannierlib_gather_mmn
 
    ! Complete the distributed amn: each rank filled only its distk k-slice (zeros elsewhere),
    ! so an MPI_ALLREDUCE(SUM) reassembles the full amn on every rank (needed by w90_set_u_opt).
