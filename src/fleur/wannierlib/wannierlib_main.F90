@@ -63,7 +63,10 @@ CONTAINS
       COMPLEX, ALLOCATABLE :: s0_coarse(:, :, :, :)   ! (num_bands,num_bands,3,nkptf) Bloch spin, rank 0
       COMPLEX, ALLOCATABLE :: l0_coarse(:, :, :, :, :) ! (num_bands,num_bands,3,nat,nkptf) Bloch L per atom, rank 0
       COMPLEX, ALLOCATABLE :: soc0_coarse(:, :, :, :) ! (num_bands,num_bands,1,nkptf) Bloch SOC, rank 0
+      COMPLEX, ALLOCATABLE :: soc4_coarse(:, :, :, :) ! (num_bands,num_bands,4,nkptf) 2x2 SOC blocks (rssocmat.1)
       COMPLEX, ALLOCATABLE :: s0pa_coarse(:, :, :, :, :) ! (num_bands,num_bands,3,nat,nkptf) per-atom MT spin, rank 0
+      COMPLEX, ALLOCATABLE :: s0_loc(:,:,:,:), l0_loc(:,:,:,:,:), soc0_loc(:,:,:,:), soc4_loc(:,:,:,:), s0pa_loc(:,:,:,:,:) ! per-rank slices
+      INTEGER :: nkc_loc   ! # coarse k-points owned by this rank
       TYPE(t_usdus) :: usdus
       TYPE(t_lapw) :: lapw
       TYPE(t_mat) :: zMat
@@ -93,22 +96,7 @@ CONTAINS
          CALL radfun(itype)%generate_radial_functions(atoms, input, enpara, fmpi, vtot, itype, usdus=usdus)
       END DO
 
-      ! Spin operator: build Bloch-basis S0(k) on the full coarse mesh (rank 0), with a
-      ! sum-rule check on the first few k. Needs only Bloch eigenstates -> runs early.
-      ! Operator Bloch matrices S0(k), L0(k), SOC0(k) on the coarse mesh (rank 0), one k-pass.
-      IF ((this%l_spin .OR. this%l_orbmom .OR. this%l_socop) .AND. l_wannierlib_spinors .AND. fmpi%irank == 0) THEN
-         ALLOCATE(s0_coarse(this%num_bands, this%num_bands, 3, kpts%nkptf))
-         ALLOCATE(l0_coarse(this%num_bands, this%num_bands, 3, atoms%nat, kpts%nkptf))
-         ALLOCATE(soc0_coarse(this%num_bands, this%num_bands, 1, kpts%nkptf))
-         ALLOCATE(s0pa_coarse(this%num_bands, this%num_bands, 3, atoms%nat, kpts%nkptf))
-         CALL wannierlib_operator_coarse(this, atoms, input, sym, cell, noco, nococonv, kpts, &
-                                         stars, usdus, radfun, enpara, fmpi, vtot, eig_id, l_real_wann, &
-                                         s0_coarse, l0_coarse, soc0_coarse, s0pa_coarse)
-      ELSE
-         ALLOCATE(s0_coarse(1, 1, 1, 1)); ALLOCATE(l0_coarse(1, 1, 1, 1, 1)); ALLOCATE(soc0_coarse(1, 1, 1, 1))
-         ALLOCATE(s0pa_coarse(1, 1, 1, 1, 1))
-      END IF
-
+      ! distk: which rank owns each global k (moved up: distributes the coarse-operator k-loop)
       ALLOCATE(distk(kpts%nkptf), stat=ierr)
       IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating distk', calledby='wannierlib_main')
       IF (ALLOCATED(fmpi%coulomb_owner) .AND. SIZE(fmpi%coulomb_owner) == kpts%nkptf) THEN
@@ -120,6 +108,49 @@ CONTAINS
          DO ikpt = 1, kpts%nkptf
             distk(ikpt) = MIN((ikpt - 1)/MAX(1, nk_local), MAX(0, fmpi%isize - 1))
          END DO
+      END IF
+
+      ! Operator Bloch matrices on the coarse mesh: k-loop DISTRIBUTED over ranks (each its
+      ! distk slice -> parallel get_z I/O), into per-rank local arrays, then MPI_Gatherv to
+      ! full-on-rank-0 (interpolation consumes the full set). Byte-identical to the serial path.
+      IF ((this%l_spin .OR. this%l_orbmom .OR. this%l_socop) .AND. l_wannierlib_spinors) THEN
+         nkc_loc = MAX(1, COUNT(distk == fmpi%irank))
+         ALLOCATE(s0_loc(this%num_bands, this%num_bands, 3, nkc_loc), source=cmplx(0.0,0.0))
+         ALLOCATE(l0_loc(this%num_bands, this%num_bands, 3, atoms%nat, nkc_loc), source=cmplx(0.0,0.0))
+         ALLOCATE(soc0_loc(this%num_bands, this%num_bands, 1, nkc_loc), source=cmplx(0.0,0.0))
+         ALLOCATE(soc4_loc(this%num_bands, this%num_bands, 4, nkc_loc), source=cmplx(0.0,0.0))
+         ALLOCATE(s0pa_loc(this%num_bands, this%num_bands, 3, atoms%nat, nkc_loc), source=cmplx(0.0,0.0))
+         CALL wannierlib_operator_coarse(this, atoms, input, sym, cell, noco, nococonv, kpts, &
+                                         stars, usdus, radfun, enpara, fmpi, vtot, eig_id, l_real_wann, &
+                                         distk, s0_loc, l0_loc, soc0_loc, soc4_loc, s0pa_loc)
+         ! Full-on-rank-0 coarse arrays are only consumed by the interpolation path. Gather them
+         ! ONLY when interpolation operators are requested; operators_r-only runs skip the gather
+         ! (and its full-array allocation) -> memory scales, no rank-0 wall.
+         IF (this%n_ops > 0) THEN
+            IF (fmpi%irank == 0) THEN
+               ALLOCATE(s0_coarse(this%num_bands, this%num_bands, 3, kpts%nkptf))
+               ALLOCATE(l0_coarse(this%num_bands, this%num_bands, 3, atoms%nat, kpts%nkptf))
+               ALLOCATE(soc0_coarse(this%num_bands, this%num_bands, 1, kpts%nkptf))
+               ALLOCATE(soc4_coarse(this%num_bands, this%num_bands, 4, kpts%nkptf))
+               ALLOCATE(s0pa_coarse(this%num_bands, this%num_bands, 3, atoms%nat, kpts%nkptf))
+            ELSE
+               ALLOCATE(s0_coarse(1,1,1,1)); ALLOCATE(l0_coarse(1,1,1,1,1)); ALLOCATE(soc0_coarse(1,1,1,1))
+               ALLOCATE(soc4_coarse(1,1,1,1)); ALLOCATE(s0pa_coarse(1,1,1,1,1))
+            END IF
+            CALL wannierlib_gather_coarse(fmpi, distk, kpts%nkptf, this%num_bands*this%num_bands*3, s0_loc, s0_coarse)
+            CALL wannierlib_gather_coarse(fmpi, distk, kpts%nkptf, this%num_bands*this%num_bands*3*atoms%nat, l0_loc, l0_coarse)
+            CALL wannierlib_gather_coarse(fmpi, distk, kpts%nkptf, this%num_bands*this%num_bands*1, soc0_loc, soc0_coarse)
+            CALL wannierlib_gather_coarse(fmpi, distk, kpts%nkptf, this%num_bands*this%num_bands*4, soc4_loc, soc4_coarse)
+            CALL wannierlib_gather_coarse(fmpi, distk, kpts%nkptf, this%num_bands*this%num_bands*3*atoms%nat, s0pa_loc, s0pa_coarse)
+         ELSE
+            ALLOCATE(s0_coarse(1,1,1,1)); ALLOCATE(l0_coarse(1,1,1,1,1)); ALLOCATE(soc0_coarse(1,1,1,1))
+            ALLOCATE(soc4_coarse(1,1,1,1)); ALLOCATE(s0pa_coarse(1,1,1,1,1))
+         END IF
+         DEALLOCATE(soc0_loc, s0pa_loc)   ! interp-only locals; keep s0_loc/l0_loc/soc4_loc for operators_r reduce
+      ELSE
+         ALLOCATE(s0_coarse(1, 1, 1, 1)); ALLOCATE(l0_coarse(1, 1, 1, 1, 1)); ALLOCATE(soc0_coarse(1, 1, 1, 1)); ALLOCATE(soc4_coarse(1, 1, 1, 1))
+         ALLOCATE(s0pa_coarse(1, 1, 1, 1, 1))
+         ALLOCATE(s0_loc(1,1,1,1)); ALLOCATE(l0_loc(1,1,1,1,1)); ALLOCATE(soc4_loc(1,1,1,1))
       END IF
 
       CALL init_w90(this, atoms, cell, kpts, fmpi, l_wannierlib_spinors, nntot_w90, nnkp, gkpb, distk)
@@ -175,6 +206,9 @@ CONTAINS
             CASE ('velocity', 'spinCurrent', 'orbitalCurrent', 'position_r'); l_need_mmn_full = .TRUE.
             END SELECT
          END DO
+         DO iop = 1, this%n_op_r
+            IF (TRIM(this%op_r_name(iop)) == 'position') l_need_mmn_full = .TRUE.
+         END DO
          IF (l_need_mmn_full) THEN
             CALL wannierlib_gather_mmn(fmpi, distk, kpts%nkptf, this%num_bands, nntot_w90, mmn, mmn_full)
             ! validation hook: dump the gathered overlaps (rank 0) so a parallel run can be
@@ -199,7 +233,8 @@ CONTAINS
          ! tag each channel's interpolation outputs so spin 2 does not overwrite spin 1.
          spin_sfx = ''
          IF (input%jspins == 2 .AND. .NOT. l_wannierlib_spinors) WRITE(spin_sfx, '(a,i0)') '_spin', jspin
-         CALL run_w90(this, cell, kpts, mmn, amn, eig, fmpi%irank, s0_coarse, l0_coarse, soc0_coarse, s0pa_coarse, mmn_full, &
+         CALL run_w90(this, cell, kpts, mmn, amn, eig, fmpi%irank, s0_coarse, l0_coarse, soc0_coarse, soc4_coarse, s0pa_coarse, mmn_full, &
+                      s0_loc, l0_loc, soc4_loc, distk, fmpi%mpi_comm, &
                       spin_suffix=TRIM(spin_sfx))
          if (fmpi%isize == 1) CALL report_w90(this)
 
@@ -214,6 +249,10 @@ CONTAINS
       IF (ALLOCATED(s0_coarse)) DEALLOCATE(s0_coarse)
       IF (ALLOCATED(l0_coarse)) DEALLOCATE(l0_coarse)
       IF (ALLOCATED(soc0_coarse)) DEALLOCATE(soc0_coarse)
+      IF (ALLOCATED(soc4_coarse)) DEALLOCATE(soc4_coarse)
+      IF (ALLOCATED(s0_loc)) DEALLOCATE(s0_loc)
+      IF (ALLOCATED(l0_loc)) DEALLOCATE(l0_loc)
+      IF (ALLOCATED(soc4_loc)) DEALLOCATE(soc4_loc)
       IF (ALLOCATED(s0pa_coarse)) DEALLOCATE(s0pa_coarse)
 
    END SUBROUTINE wannierlib_main
@@ -224,7 +263,7 @@ CONTAINS
    !> eigenstates (no U), so it runs before the wannierization.
    SUBROUTINE wannierlib_operator_coarse(this, atoms, input, sym, cell, noco, nococonv, kpts, &
                                          stars, usdus, radfun, enpara, fmpi, vtot, eig_id, l_real_wann, &
-                                         s0_coarse, l0_coarse, soc0_coarse, s0pa_coarse)
+                                         distk, s0_coarse, l0_coarse, soc0_coarse, soc4_coarse, s0pa_coarse)
       TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
       TYPE(t_atoms), INTENT(IN) :: atoms
       TYPE(t_input), INTENT(IN) :: input
@@ -241,18 +280,23 @@ CONTAINS
       TYPE(t_potden), INTENT(IN) :: vtot
       INTEGER, INTENT(IN) :: eig_id
       LOGICAL, INTENT(IN) :: l_real_wann
+      INTEGER, INTENT(IN) :: distk(:)   ! rank owner of each global k (distribute the loop)
       COMPLEX, INTENT(OUT) :: s0_coarse(:, :, :, :)   ! (num_bands,num_bands,3,nkptf) spin
       COMPLEX, INTENT(OUT) :: l0_coarse(:, :, :, :, :) ! (num_bands,num_bands,3,nat,nkptf) orbital L per atom
       COMPLEX, INTENT(OUT) :: soc0_coarse(:, :, :, :) ! (num_bands,num_bands,1,nkptf) SOC
+      COMPLEX, INTENT(OUT) :: soc4_coarse(:, :, :, :) ! (num_bands,num_bands,4,nkptf) 2x2 SOC blocks
       COMPLEX, INTENT(OUT) :: s0pa_coarse(:, :, :, :, :) ! (num_bands,num_bands,3,nat,nkptf) per-atom MT spin
 
       TYPE(t_abc), ALLOCATABLE :: abc_s(:, :)
       TYPE(t_lapw) :: lapw
       TYPE(t_mat) :: zMat
-      INTEGER :: ikpt, itype, isp
+      INTEGER :: ikpt, itype, isp, il
 
       ALLOCATE(abc_s(atoms%ntype, 2))
+      il = 0
       DO ikpt = 1, kpts%nkptf
+         IF (distk(ikpt) /= fmpi%irank) CYCLE   ! this rank only computes its own k-slice
+         il = il + 1                            ! local (ascending global-k) index for gather
          ! noco: get_z returns the FULL spinor; both local components via calc_abc(jspin=1,2)
          CALL wannierlib_get_z(this, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, &
                                ikpt, 1, l_real_wann, lapw, zMat)
@@ -263,12 +307,12 @@ CONTAINS
                                                noco, nococonv, isp, itype, zMat)
             END DO
          END DO
-         IF (this%l_spin) CALL wannierlib_spin_peratom(atoms, abc_s, radfun, nococonv, s0pa_coarse(:, :, :, :, ikpt))
+         IF (this%l_spin) CALL wannierlib_spin_peratom(atoms, abc_s, radfun, nococonv, s0pa_coarse(:, :, :, :, il))
          IF (this%l_spin) CALL wannierlib_spin_bloch(atoms, abc_s, radfun, nococonv, stars, lapw, zMat, &
-                                    this%num_bands, ikpt, s0_coarse(:, :, :, ikpt), ikpt <= 3)
-         IF (this%l_orbmom) CALL wannierlib_orbmom_bloch(atoms, abc_s, radfun, l0_coarse(:, :, :, :, ikpt))
+                                    this%num_bands, ikpt, s0_coarse(:, :, :, il), ikpt <= 3)
+         IF (this%l_orbmom) CALL wannierlib_orbmom_bloch(atoms, abc_s, radfun, l0_coarse(:, :, :, :, il))
          IF (this%l_socop) CALL wannierlib_socmat_bloch(atoms, noco, nococonv, input, fmpi, enpara, vtot, &
-                                    usdus, abc_s, this%num_bands, soc0_coarse(:, :, :, ikpt))
+                                    usdus, abc_s, this%num_bands, soc0_coarse(:, :, :, il), soc4_coarse(:, :, :, il))
       END DO
 
       DEALLOCATE(abc_s)
@@ -382,6 +426,56 @@ CONTAINS
       mmn_full = mmn_loc
 #endif
    END SUBROUTINE wannierlib_gather_mmn
+
+   ! Gather a per-rank coarse-operator slice arr_loc(bs, nk_local) (ascending global-k order)
+   ! into arr_full(bs, nkptf) on rank 0. bs = product of all leading dims (nb*nb*ncomp[*nat]).
+   ! Mirrors wannierlib_gather_mmn but generic in bs; arrays passed by sequence association.
+   SUBROUTINE wannierlib_gather_coarse(fmpi, distk, nkptf, bs, arr_loc, arr_full)
+#ifdef CPP_MPI
+      use mpi
+#endif
+      TYPE(t_mpi), INTENT(IN) :: fmpi
+      INTEGER, INTENT(IN) :: distk(:), nkptf, bs
+      COMPLEX, INTENT(IN)  :: arr_loc(bs, *)    ! (bs, nk_local)
+      COMPLEX, INTENT(OUT) :: arr_full(bs, *)   ! (bs, nkptf) on rank 0; stub elsewhere (untouched)
+      INTEGER :: r, ik, ierr, nk_local
+#ifdef CPP_MPI
+      INTEGER, ALLOCATABLE :: recvcnt(:), displ(:), locidx(:)
+      COMPLEX, ALLOCATABLE :: recvbuf(:)
+#endif
+      nk_local = COUNT(distk == fmpi%irank)
+      IF (fmpi%isize == 1) THEN
+         arr_full(:, 1:nkptf) = arr_loc(:, 1:nkptf)
+         RETURN
+      END IF
+#ifdef CPP_MPI
+      ALLOCATE(recvcnt(0:fmpi%isize-1), displ(0:fmpi%isize-1))
+      DO r = 0, fmpi%isize-1
+         recvcnt(r) = bs * COUNT(distk == r)
+      END DO
+      displ(0) = 0
+      DO r = 1, fmpi%isize-1
+         displ(r) = displ(r-1) + recvcnt(r-1)
+      END DO
+      IF (fmpi%irank == 0) THEN
+         ALLOCATE(recvbuf(bs*nkptf))
+      ELSE
+         ALLOCATE(recvbuf(1))
+      END IF
+      CALL MPI_Gatherv(arr_loc, bs*nk_local, MPI_DOUBLE_COMPLEX, &
+                       recvbuf, recvcnt, displ, MPI_DOUBLE_COMPLEX, 0, fmpi%mpi_comm, ierr)
+      IF (fmpi%irank == 0) THEN
+         ALLOCATE(locidx(0:fmpi%isize-1)); locidx = 0
+         DO ik = 1, nkptf
+            r = distk(ik)
+            arr_full(:, ik) = recvbuf(displ(r)+locidx(r)*bs+1 : displ(r)+locidx(r)*bs+bs)
+            locidx(r) = locidx(r) + 1
+         END DO
+         DEALLOCATE(locidx)
+      END IF
+      DEALLOCATE(recvbuf, recvcnt, displ)
+#endif
+   END SUBROUTINE wannierlib_gather_coarse
 
    subroutine wannierlib_write_mmn(this, mmnk, kpts, nnkp, gkpb, jspin, fending)
       TYPE(t_wannierlib_wannierize), INTENT(IN) :: this

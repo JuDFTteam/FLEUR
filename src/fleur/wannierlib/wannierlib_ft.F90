@@ -24,7 +24,10 @@ MODULE m_wannierlib_ft
   USE m_types_kpts
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: wannierlib_ft_interpolate, wannierlib_ft_velocity, wannierlib_ft_to_real
+  PUBLIC :: wannierlib_ft_interpolate, wannierlib_ft_velocity, wannierlib_ft_to_real, wannierlib_ws_vectors, wannierlib_ft_to_real_reduce
+  ! Wigner-Seitz R-vectors depend only on the mesh (operator-independent) -> compute once, cache, reuse.
+  INTEGER, ALLOCATABLE :: ws_irvec_c(:, :), ws_ndegen_c(:)
+  INTEGER :: ws_nrpts_c = 0, ws_mp_c(3) = 0
 CONTAINS
 
   !> Coarse-mesh Wannier-gauge matrix -> real space: mat_r(R) = (1/Nk) sum_k e^{-i2pi k.R} mat_k(k),
@@ -40,7 +43,7 @@ CONTAINS
     INTEGER :: nw, nk, k, irpt, mp_grid(3)
     REAL :: rdotk
     nw = SIZE(mat_k, 1); nk = SIZE(mat_k, 3); mp_grid = kpts%nkpt3
-    CALL wigner_seitz(cell, mp_grid, irvec, ndegen, nrpts)
+    CALL ws_get(cell, mp_grid, irvec, ndegen, nrpts)
     ALLOCATE(mat_r(nw, nw, nrpts), source=CMPLX(0.0, 0.0))
     DO irpt = 1, nrpts
       DO k = 1, nk
@@ -72,7 +75,7 @@ CONTAINS
 
     nw = SIZE(mat_k, 1); nk = SIZE(mat_k, 3); nfine = SIZE(kfrac, 2)
     mp_grid = kpts%nkpt3
-    CALL wigner_seitz(cell, mp_grid, irvec, ndegen, nrpts)
+    CALL ws_get(cell, mp_grid, irvec, ndegen, nrpts)
 
     ! coarse mesh -> R  (identical to the core)
     ALLOCATE(mat_r(nw, nw, nrpts), source=CMPLX(0.0, 0.0))
@@ -116,7 +119,7 @@ CONTAINS
     nw = SIZE(mat_k, 1); nk = SIZE(mat_k, 3); nfine = SIZE(kfrac, 2)
     mp_grid = kpts%nkpt3
 
-    CALL wigner_seitz(cell, mp_grid, irvec, ndegen, nrpts)
+    CALL ws_get(cell, mp_grid, irvec, ndegen, nrpts)
 
     ! coarse mesh -> R
     ALLOCATE(mat_r(nw, nw, nrpts), source=CMPLX(0.0, 0.0))
@@ -197,5 +200,67 @@ CONTAINS
     END DO
     DEALLOCATE(dist)
   END SUBROUTINE wigner_seitz
+
+  ! Cached Wigner-Seitz accessor: computes irvec/ndegen once per (cell,mp_grid), then returns
+  ! copies. Eliminates the ~15x recomputation across operators/components (costly at 16^3+).
+  SUBROUTINE ws_get(cell, mp_grid, irvec, ndegen, nrpts)
+    TYPE(t_cell), INTENT(IN) :: cell
+    INTEGER, INTENT(IN)  :: mp_grid(3)
+    INTEGER, ALLOCATABLE, INTENT(OUT) :: irvec(:, :), ndegen(:)
+    INTEGER, INTENT(OUT) :: nrpts
+    IF (ws_nrpts_c == 0 .OR. ANY(ws_mp_c /= mp_grid)) THEN
+      IF (ALLOCATED(ws_irvec_c)) DEALLOCATE(ws_irvec_c, ws_ndegen_c)
+      CALL wigner_seitz(cell, mp_grid, ws_irvec_c, ws_ndegen_c, ws_nrpts_c)
+      ws_mp_c = mp_grid
+    END IF
+    nrpts = ws_nrpts_c
+    ALLOCATE(irvec(3, nrpts), ndegen(nrpts))
+    irvec = ws_irvec_c; ndegen = ws_ndegen_c
+  END SUBROUTINE ws_get
+
+  !> Distributed coarse-mesh -> real space: each rank sums its OWN k-slice (mat_loc, global
+  !> indices gk_loc), then MPI_ALLREDUCE the small mat_r(nw,nw,nrpts). Same result as the
+  !> serial wannierlib_ft_to_real but never materializes the full-mesh coarse matrix.
+  SUBROUTINE wannierlib_ft_to_real_reduce(cell, kpts, mat_loc, gk_loc, commw, mat_r, irvec, ndegen, nrpts)
+#ifdef CPP_MPI
+    use mpi
+#endif
+    TYPE(t_cell), INTENT(IN) :: cell
+    TYPE(t_kpts), INTENT(IN) :: kpts
+    COMPLEX, INTENT(IN) :: mat_loc(:, :, :)   ! (nw,nw,>=nk_loc) Wannier-gauge, this rank's slice
+    INTEGER, INTENT(IN) :: gk_loc(:)          ! (nk_loc) global k index of each slice entry
+    INTEGER, INTENT(IN) :: commw
+    COMPLEX, ALLOCATABLE, INTENT(OUT) :: mat_r(:, :, :)
+    INTEGER, ALLOCATABLE, INTENT(OUT) :: irvec(:, :), ndegen(:)
+    INTEGER, INTENT(OUT) :: nrpts
+    INTEGER :: nw, kl, irpt, gk, mp_grid(3)
+    REAL :: rdotk
+#ifdef CPP_MPI
+    INTEGER :: ierr
+#endif
+    nw = SIZE(mat_loc, 1); mp_grid = kpts%nkpt3
+    CALL ws_get(cell, mp_grid, irvec, ndegen, nrpts)
+    ALLOCATE(mat_r(nw, nw, nrpts), source=CMPLX(0.0, 0.0))
+    DO irpt = 1, nrpts
+      DO kl = 1, SIZE(gk_loc)
+        gk = gk_loc(kl)
+        rdotk = tpi_const * DOT_PRODUCT(kpts%bkf(:, gk), REAL(irvec(:, irpt)))
+        mat_r(:, :, irpt) = mat_r(:, :, irpt) + (EXP(CMPLX(0.0, -rdotk)) / REAL(kpts%nkptf)) * mat_loc(:, :, kl)
+      END DO
+    END DO
+#ifdef CPP_MPI
+    CALL MPI_ALLREDUCE(MPI_IN_PLACE, mat_r, SIZE(mat_r), MPI_DOUBLE_COMPLEX, MPI_SUM, commw, ierr)
+#endif
+  END SUBROUTINE wannierlib_ft_to_real_reduce
+
+  !> Public wrapper exposing the Wigner-Seitz R-vectors + degeneracies (W90 convention)
+  !> so the real-space operator export (operators_r) can write wig_vectors.
+  SUBROUTINE wannierlib_ws_vectors(cell, mp_grid, irvec, ndegen, nrpts)
+    TYPE(t_cell), INTENT(IN) :: cell
+    INTEGER, INTENT(IN)  :: mp_grid(3)
+    INTEGER, ALLOCATABLE, INTENT(OUT) :: irvec(:, :), ndegen(:)
+    INTEGER, INTENT(OUT) :: nrpts
+    CALL ws_get(cell, mp_grid, irvec, ndegen, nrpts)
+  END SUBROUTINE wannierlib_ws_vectors
 
 END MODULE m_wannierlib_ft
