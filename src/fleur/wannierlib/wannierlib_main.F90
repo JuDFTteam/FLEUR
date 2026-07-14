@@ -174,6 +174,7 @@ CONTAINS
 
             ik_local = 0
             DO ikpt = 1, kpts%nkptf
+               IF (distk(ikpt) /= fmpi%irank) CYCLE   ! each rank computes only its k-slice -> parallel eigenvector I/O
                CALL wannierlib_get_z(this, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, &
                                      ikpt, jspin_comp, l_real_wann, lapw, zMat)
 
@@ -185,16 +186,17 @@ CONTAINS
 
                CALL wannierlib_amn(this, atoms, kpts, ikpt, usdus, radfun, abc, l_nocosoc, jspin_comp, jspin_rad, amn(:, :, ikpt))
 
-               IF (distk(ikpt) == fmpi%irank) THEN
-                  ik_local = ik_local + 1
-                  CALL wannierlib_mmnkb(this, this%num_bands, nntot_w90, ikpt, kpts, nnkp, gkpb, kdiff, &
-                                        ujug, atoms, cell, input, sym, noco, nococonv, usdus, &
-                                        radfun, abc, jspin_comp, jspin_rad, eig_id, stars, lapw, zMat, mmn, ik_local)
-               END IF
+               ik_local = ik_local + 1
+               CALL wannierlib_mmnkb(this, this%num_bands, nntot_w90, ikpt, kpts, nnkp, gkpb, kdiff, &
+                                     ujug, atoms, cell, input, sym, noco, nococonv, usdus, &
+                                     radfun, abc, jspin_comp, jspin_rad, eig_id, stars, lapw, zMat, mmn, ik_local)
             END DO
 
             IF (ALLOCATED(ujug)) DEALLOCATE (ujug)
          END DO
+
+         ! amn was filled only on each rank's distk slice (zeros elsewhere) -> sum to the full set
+         CALL wannierlib_reduce_amn(fmpi, amn)
 
          mmn = conjg(mmn)
 
@@ -476,6 +478,21 @@ CONTAINS
       DEALLOCATE(recvbuf, recvcnt, displ)
 #endif
    END SUBROUTINE wannierlib_gather_coarse
+
+   ! Complete the distributed amn: each rank filled only its distk k-slice (zeros elsewhere),
+   ! so an MPI_ALLREDUCE(SUM) reassembles the full amn on every rank (needed by w90_set_u_opt).
+   SUBROUTINE wannierlib_reduce_amn(fmpi, amn)
+#ifdef CPP_MPI
+      use mpi
+#endif
+      TYPE(t_mpi), INTENT(IN) :: fmpi
+      COMPLEX, INTENT(INOUT) :: amn(:, :, :)
+#ifdef CPP_MPI
+      INTEGER :: ierr
+      IF (fmpi%isize > 1) &
+         CALL MPI_ALLREDUCE(MPI_IN_PLACE, amn, SIZE(amn), MPI_DOUBLE_COMPLEX, MPI_SUM, fmpi%mpi_comm, ierr)
+#endif
+   END SUBROUTINE wannierlib_reduce_amn
 
    subroutine wannierlib_write_mmn(this, mmnk, kpts, nnkp, gkpb, jspin, fending)
       TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
