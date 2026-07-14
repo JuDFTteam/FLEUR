@@ -176,10 +176,14 @@ CONTAINS
 
          ! --- gather the distributed (per-rank) mmn into a full-nkptf buffer on rank 0,
          !     needed by the Berry connection for the interband velocity / currents. ---
+         ! mmn_full (full overlaps on rank 0) is needed ONLY for the Wannier Berry connection
+         ! A^(W)(k): velocity (interband + Berry curvature) and the position operator A(R).
+         ! The spin/orbital currents do NOT use it (their velocity is the diagonal-exact dH/dk),
+         ! so they must not trigger the gather.
          l_need_mmn_full = .FALSE.
          DO iop = 1, this%n_ops
             SELECT CASE (TRIM(this%op_name(iop)))
-            CASE ('velocity', 'spinCurrent', 'orbitalCurrent', 'position_r'); l_need_mmn_full = .TRUE.
+            CASE ('velocity', 'position_r'); l_need_mmn_full = .TRUE.
             END SELECT
          END DO
          DO iop = 1, this%n_op_r
