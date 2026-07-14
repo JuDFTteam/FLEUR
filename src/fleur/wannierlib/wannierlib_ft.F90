@@ -24,7 +24,7 @@ MODULE m_wannierlib_ft
   USE m_types_kpts
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: wannierlib_ft_interpolate, wannierlib_ft_velocity, wannierlib_ft_to_real, wannierlib_ws_vectors, wannierlib_ft_to_real_reduce
+  PUBLIC :: wannierlib_ft_interpolate, wannierlib_ft_velocity, wannierlib_ft_to_real, wannierlib_ws_vectors, wannierlib_ft_to_real_reduce, wannierlib_ft_rtok
   ! Wigner-Seitz R-vectors depend only on the mesh (operator-independent) -> compute once, cache, reuse.
   INTEGER, ALLOCATABLE :: ws_irvec_c(:, :), ws_ndegen_c(:)
   INTEGER :: ws_nrpts_c = 0, ws_mp_c(3) = 0
@@ -252,6 +252,29 @@ CONTAINS
     CALL MPI_ALLREDUCE(MPI_IN_PLACE, mat_r, SIZE(mat_r), MPI_DOUBLE_COMPLEX, MPI_SUM, commw, ierr)
 #endif
   END SUBROUTINE wannierlib_ft_to_real_reduce
+
+  !> R -> fine path only: mat(k') = sum_R e^{+i2pi k'.R} / ndegen(R) * mat_r(R).
+  !> Second half of wannierlib_ft_interpolate, split out so a coarse->R matrix already
+  !> assembled by the distributed reduce (wannierlib_ft_to_real_reduce) can be interpolated
+  !> onto the fine path on rank 0 without rebuilding it from the full coarse mesh.
+  SUBROUTINE wannierlib_ft_rtok(mat_r, irvec, ndegen, nrpts, kfrac, mat_interp)
+    COMPLEX, INTENT(IN) :: mat_r(:, :, :)     ! (nw, nw, nrpts)  real-space matrix
+    INTEGER, INTENT(IN) :: irvec(:, :), ndegen(:), nrpts
+    REAL,    INTENT(IN) :: kfrac(:, :)        ! (3, nfine)    fractional coords of the fine path
+    COMPLEX, ALLOCATABLE, INTENT(OUT) :: mat_interp(:, :, :)  ! (nw, nw, nfine)
+    INTEGER :: nw, nfine, ip, irpt
+    REAL :: rdotk
+    COMPLEX :: fac
+    nw = SIZE(mat_r, 1); nfine = SIZE(kfrac, 2)
+    ALLOCATE(mat_interp(nw, nw, nfine), source=CMPLX(0.0, 0.0))
+    DO ip = 1, nfine
+      DO irpt = 1, nrpts
+        rdotk = tpi_const * DOT_PRODUCT(kfrac(:, ip), REAL(irvec(:, irpt)))
+        fac = EXP(CMPLX(0.0, rdotk)) / REAL(ndegen(irpt))
+        mat_interp(:, :, ip) = mat_interp(:, :, ip) + fac * mat_r(:, :, irpt)
+      END DO
+    END DO
+  END SUBROUTINE wannierlib_ft_rtok
 
   !> Public wrapper exposing the Wigner-Seitz R-vectors + degeneracies (W90 convention)
   !> so the real-space operator export (operators_r) can write wig_vectors.

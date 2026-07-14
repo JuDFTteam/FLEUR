@@ -120,7 +120,7 @@ CONTAINS
   END SUBROUTINE init_w90
 
   SUBROUTINE run_w90(this, cell, kpts, mmn, amn, eig, irank, s0_coarse, l0_coarse, soc0_coarse, soc4_coarse, s0pa_coarse, mmn_full, &
-                     s0_loc, l0_loc, soc4_loc, distk, mpi_comm, spin_suffix)
+                     s0_loc, l0_loc, soc0_loc, soc4_loc, s0pa_loc, distk, mpi_comm, spin_suffix)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
     TYPE(t_cell), INTENT(IN) :: cell
     TYPE(t_kpts), INTENT(IN) :: kpts
@@ -133,13 +133,16 @@ CONTAINS
     COMPLEX, INTENT(IN) :: soc0_coarse(:, :, :, :) ! (num_bands,num_bands,1,nk) Bloch SOC (l_socop)
     COMPLEX, INTENT(IN) :: soc4_coarse(:, :, :, :) ! (num_bands,num_bands,4,nk) 2x2 SOC blocks (rssocmat.1)
     COMPLEX, INTENT(IN) :: s0_loc(:, :, :, :), l0_loc(:, :, :, :, :), soc4_loc(:, :, :, :) ! per-rank coarse slices (operators_r reduce)
+    COMPLEX, INTENT(IN) :: soc0_loc(:, :, :, :)       ! (nb,nb,1,nk_loc) per-rank SOC slice (soc interpolation reduce)
+    COMPLEX, INTENT(IN) :: s0pa_loc(:, :, :, :, :)    ! (nb,nb,3,nat,nk_loc) per-rank per-atom MT spin slice (per-atom interpolation reduce)
     INTEGER, INTENT(IN) :: distk(:), mpi_comm
     COMPLEX, INTENT(IN) :: s0pa_coarse(:, :, :, :, :) ! (num_bands,num_bands,3,nat,nk) per-atom MT spin
     COMPLEX, INTENT(IN) :: mmn_full(:, :, :, :)       ! (nb,nb,nntot,nkptf) full overlaps, rank 0 only (Berry connection)
     CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: spin_suffix   ! '_spin1'/'_spin2' for collinear jspins=2; empty otherwise
 
     INTEGER :: ierr,num_kpts,iop,nbnd_c,nat_c,nkc
-    INTEGER :: idom, ndom
+    INTEGER :: idom, ndom, nkl_c, jkl
+    INTEGER, ALLOCATABLE :: gk_loc(:)                 ! global-k indices of this rank's coarse slice (interp reduce)
     CHARACTER(LEN=8) :: dkind(3), dsuf(3)
     CHARACTER(LEN=16) :: ssfx
     LOGICAL :: lex
@@ -190,6 +193,14 @@ CONTAINS
     CALL w90_wannierise(wannierlib_w90main, oUnit, oUnit, ierr)
     IF (ierr /= 0) CALL juDFT_error('w90_wannierise failed in wannierlib adapter', calledby='run_w90')
 
+    ! global-k indices owned by this rank, ascending order -> matches the per-rank coarse slices
+    ! s0_loc/l0_loc/soc0_loc/s0pa_loc (built in the same distk order); used by the distributed
+    ! operator interpolation reduce below.
+    nkl_c = COUNT(distk == irank); ALLOCATE(gk_loc(nkl_c)); jkl = 0
+    DO iop = 1, SIZE(distk)
+      IF (distk(iop) == irank) THEN; jkl = jkl + 1; gk_loc(jkl) = iop; END IF
+    END DO
+
     ! ---- opt-in output domains (<path>/<plane>/<grid>); none declared -> legacy single pass ----
     ! order matters: generated domains (plane/grid) overwrite kpts_interpol and are renamed;
     ! the unsuffixed path/legacy domain runs LAST so its base-named output is not clobbered
@@ -223,28 +234,28 @@ CONTAINS
         ! total spin (MT-sum + interstitial): via the generic operator driver (3 comps)
         IF (this%op_total(iop) == 1) &
           CALL wannierlib_interpolate_operator(this, cell, kpts, eig, u_matrix, amn_local, &
-                                               s0_coarse, 3, 'bands_wann_spin.dat', irank)
+                                               s0_loc, gk_loc, 3, 'bands_wann_spin.dat', irank, mpi_comm)
         ! per-atom (site-resolved) muffin-tin spin moment: 3*nat components in one file
         IF (this%op_peratom(iop) == 1) THEN
-          nbnd_c = SIZE(s0pa_coarse, 1); nat_c = SIZE(s0pa_coarse, 4); nkc = SIZE(s0pa_coarse, 5)
+          nbnd_c = SIZE(s0pa_loc, 1); nat_c = SIZE(s0pa_loc, 4); nkc = SIZE(s0pa_loc, 5)
           CALL wannierlib_interpolate_operator(this, cell, kpts, eig, u_matrix, amn_local, &
-                                               RESHAPE(s0pa_coarse, (/nbnd_c, nbnd_c, 3*nat_c, nkc/)), &
-                                               3*nat_c, 'bands_wann_spin_peratom.dat', irank)
+                                               RESHAPE(s0pa_loc, (/nbnd_c, nbnd_c, 3*nat_c, nkc/)), &
+                                               gk_loc, 3*nat_c, 'bands_wann_spin_peratom.dat', irank, mpi_comm)
         END IF
       CASE ('orbital')
-        nbnd_c = SIZE(l0_coarse, 1); nat_c = SIZE(l0_coarse, 4); nkc = SIZE(l0_coarse, 5)
+        nbnd_c = SIZE(l0_loc, 1); nat_c = SIZE(l0_loc, 4); nkc = SIZE(l0_loc, 5)
         ! total (site-summed) orbital moment
         IF (this%op_total(iop) == 1) &
           CALL wannierlib_interpolate_operator(this, cell, kpts, eig, u_matrix, amn_local, &
-                                               SUM(l0_coarse, DIM=4), 3, 'bands_wann_orbmom.dat', irank)
+                                               SUM(l0_loc, DIM=4), gk_loc, 3, 'bands_wann_orbmom.dat', irank, mpi_comm)
         ! per-atom (site-resolved): flatten (comp,atom) -> 3*nat components in one file
         IF (this%op_peratom(iop) == 1) &
           CALL wannierlib_interpolate_operator(this, cell, kpts, eig, u_matrix, amn_local, &
-                                               RESHAPE(l0_coarse, (/nbnd_c, nbnd_c, 3*nat_c, nkc/)), &
-                                               3*nat_c, 'bands_wann_orbmom_peratom.dat', irank)
+                                               RESHAPE(l0_loc, (/nbnd_c, nbnd_c, 3*nat_c, nkc/)), &
+                                               gk_loc, 3*nat_c, 'bands_wann_orbmom_peratom.dat', irank, mpi_comm)
       CASE ('soc')
         CALL wannierlib_interpolate_operator(this, cell, kpts, eig, u_matrix, amn_local, &
-                                             soc0_coarse, 1, 'bands_wann_soc.dat', irank)
+                                             soc0_loc, gk_loc, 1, 'bands_wann_soc.dat', irank, mpi_comm)
       CASE ('velocity')
         ! Wannier Berry connection A^(W)_alpha(k) from the full overlaps (rank 0 only).
         ! Piece 2: build + validate via the Wannier-centre check (calibrates conj/sign).
