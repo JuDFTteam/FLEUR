@@ -59,6 +59,8 @@ CONTAINS
       INTEGER, ALLOCATABLE :: distk(:)
       real, allocatable :: eig(:, :)
       COMPLEX, ALLOCATABLE :: s0_loc(:,:,:,:), l0_loc(:,:,:,:,:), soc0_loc(:,:,:,:), soc4_loc(:,:,:,:), s0pa_loc(:,:,:,:,:) ! per-rank slices
+      COMPLEX, ALLOCATABLE :: l0col_loc(:,:,:,:)  ! (nb,nb,3,nk_loc) collinear per-channel Bloch orbital L (operators_r)
+      LOGICAL :: l_col_orb                        ! collinear jspins=2 AND orbital requested in <operators_r>
       INTEGER :: nkc_loc   ! # coarse k-points owned by this rank
       TYPE(t_usdus) :: usdus
       TYPE(t_lapw) :: lapw
@@ -128,6 +130,15 @@ CONTAINS
       CALL init_w90(this, atoms, cell, kpts, fmpi, l_wannierlib_spinors, nntot_w90, nnkp, gkpb, distk)
       CALL wannierlib_kdiff(kpts%nkptf, nntot_w90, kpts%bkf, nnkp, gkpb, kdiff)
 
+      ! collinear jspins=2 (no SOC/noco): the coarse spin/orbital slices are spinor-only (stubs), so
+      ! the per-channel orbital operators_r builds its own Bloch L in the mmn k-loop (reuses abc).
+      l_col_orb = .FALSE.
+      IF (input%jspins == 2 .AND. .NOT. l_wannierlib_spinors .AND. this%l_operators_r) THEN
+         DO iop = 1, this%n_op_r
+            IF (TRIM(this%op_r_name(iop)) == 'orbital') l_col_orb = .TRUE.
+         END DO
+      END IF
+
       DO jspin = 1, MERGE(2, 1, input%jspins == 2 .AND. (.NOT. l_wannierlib_spinors))
 
          ! calculate the  matrices for all k-points
@@ -137,6 +148,11 @@ CONTAINS
          nk_local = COUNT(distk == fmpi%irank)
          ALLOCATE(mmn(this%num_bands, this%num_bands, nntot_w90, nk_local), stat=ierr, source=cmplx(0.0, 0.0))
          IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating local mmn buffer', calledby='wannierlib_main')
+         IF (l_col_orb) THEN
+            ALLOCATE(l0col_loc(this%num_bands, this%num_bands, 3, MAX(1, nk_local)), source=cmplx(0.0, 0.0))
+         ELSE
+            ALLOCATE(l0col_loc(1, 1, 1, 1))
+         END IF
 
          DO jspin_comp = MERGE(1, jspin, l_wannierlib_spinors), MERGE(2, jspin, l_wannierlib_spinors)
             ! jspin_comp = record del eig (spinor up/down). jspin_rad = indice radial:
@@ -162,6 +178,8 @@ CONTAINS
                CALL wannierlib_mmnkb(this, this%num_bands, nntot_w90, ikpt, kpts, nnkp, gkpb, kdiff, &
                                      ujug, atoms, cell, input, sym, noco, nococonv, usdus, &
                                      radfun, abc, jspin_comp, jspin_rad, eig_id, stars, lapw, zMat, mmn, ik_local)
+               ! collinear per-channel orbital L in the Bloch basis (reuses this channel's abc)
+               IF (l_col_orb) CALL wannierlib_orbmom_bloch_collinear(atoms, abc, radfun, jspin_rad, l0col_loc(:, :, :, ik_local))
             END DO
 
             IF (ALLOCATED(ujug)) DEALLOCATE (ujug)
@@ -193,11 +211,12 @@ CONTAINS
          IF (input%jspins == 2 .AND. .NOT. l_wannierlib_spinors) WRITE(spin_sfx, '(a,i0)') '_spin', jspin
          CALL run_w90(this, cell, kpts, mmn, amn, eig, fmpi%irank, &
                       s0_loc, l0_loc, soc0_loc, soc4_loc, s0pa_loc, distk, fmpi%mpi_comm, &
-                      wf_channel=jspin, spin_suffix=TRIM(spin_sfx))
+                      wf_channel=jspin, spin_suffix=TRIM(spin_sfx), l0col_loc=l0col_loc)
          if (fmpi%isize == 1) CALL report_w90(this)
 
          IF (ALLOCATED(amn)) DEALLOCATE (amn)
          IF (ALLOCATED(mmn)) DEALLOCATE (mmn)
+         IF (ALLOCATED(l0col_loc)) DEALLOCATE (l0col_loc)
          IF (ALLOCATED(eig)) DEALLOCATE (eig)
 
       END DO

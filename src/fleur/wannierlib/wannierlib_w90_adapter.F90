@@ -120,7 +120,7 @@ CONTAINS
   END SUBROUTINE init_w90
 
   SUBROUTINE run_w90(this, cell, kpts, mmn, amn, eig, irank, &
-                     s0_loc, l0_loc, soc0_loc, soc4_loc, s0pa_loc, distk, mpi_comm, wf_channel, spin_suffix)
+                     s0_loc, l0_loc, soc0_loc, soc4_loc, s0pa_loc, distk, mpi_comm, wf_channel, spin_suffix, l0col_loc)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
     TYPE(t_cell), INTENT(IN) :: cell
     TYPE(t_kpts), INTENT(IN) :: kpts
@@ -136,6 +136,7 @@ CONTAINS
     INTEGER, INTENT(IN) :: distk(:), mpi_comm
     INTEGER, INTENT(IN), OPTIONAL :: wf_channel            ! collinear jspins=2 spin channel (1/2) for the operators_r WFn seedname; default 1
     CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: spin_suffix   ! '_spin1'/'_spin2' for collinear jspins=2; empty otherwise
+    COMPLEX, INTENT(IN), OPTIONAL :: l0col_loc(:, :, :, :)  ! (nb,nb,3,nk_loc) collinear per-channel Bloch orbital L (operators_r)
 
     INTEGER :: ierr,num_kpts,iop,nbnd_c,nat_c,nkc,wf_ch
     LOGICAL :: l_collinear
@@ -221,7 +222,7 @@ CONTAINS
     l_hr_done = .FALSE.; l_ar_done = .FALSE.   ! (legacy flags; operators_r now owns H(R)/A(R))
     ! real-space operator export (Fourier step 3, standalone format) -- once, before interpolation
     CALL wannierlib_write_operators_r(this, cell, kpts, eig, u_matrix, amn_local, &
-                                      s0_loc, l0_loc, soc4_loc, distk, mpi_comm, mmn, irank, wf_ch, l_collinear)
+                                      s0_loc, l0_loc, soc4_loc, distk, mpi_comm, mmn, irank, wf_ch, l_collinear, l0col_loc)
     DO idom = 1, ndom
     IF (irank==0) CALL wannierlib_write_domain_kpts(this, TRIM(dkind(idom)))
 
@@ -645,7 +646,7 @@ CONTAINS
   ! anglmomrs.1 (orbital), rssocmat.1 (SOC), wig_vectors.
   ! ---------------------------------------------------------------------------
   SUBROUTINE wannierlib_write_operators_r(this, cell, kpts, eig, u_matrix, u_opt, &
-                                          s0_loc, l0_loc, soc4_loc, distk, mpi_comm, mmn_loc, irank, wf_channel, l_collinear)
+                                          s0_loc, l0_loc, soc4_loc, distk, mpi_comm, mmn_loc, irank, wf_channel, l_collinear, l0col_loc)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
     TYPE(t_cell), INTENT(IN) :: cell
     TYPE(t_kpts), INTENT(IN) :: kpts
@@ -657,6 +658,7 @@ CONTAINS
     INTEGER, INTENT(IN) :: distk(:), mpi_comm, irank
     INTEGER, INTENT(IN) :: wf_channel               ! collinear jspins=2 spin channel (1/2); 1 in the spinor case
     LOGICAL, INTENT(IN) :: l_collinear              ! collinear jspins=2 (spin channels separable, per-channel WFn files)
+    COMPLEX, INTENT(IN), OPTIONAL :: l0col_loc(:, :, :, :)  ! (nb,nb,3,nk_loc) collinear per-channel Bloch orbital L
     INTEGER :: iop, nb, ik, j, nkl, aw_nrpts
     LOGICAL :: l_wig_done
     CHARACTER(LEN=8) :: wfpref                       ! 'WF1'/'WF2' seedname prefix for H(R)/position
@@ -700,7 +702,13 @@ CONTAINS
         END IF
       CASE ('orbital')
         IF (l_collinear) THEN
-          IF (irank == 0) WRITE(oUnit,'(a)') 'wannierlib operators_r: collinear orbital (anglmomrs) not yet supported -> skipped (Fase 2b)'
+          ! per-channel Bloch L built in main's mmn loop (single spin) -> reduce -> anglmomrs.{1,2}
+          IF (PRESENT(l0col_loc)) THEN
+            CALL wannierlib_op_rs_distributed(this, cell, kpts, vloc, l0col_loc, gk_loc, 3, mpi_comm, irank, .FALSE., &
+                                              'anglmomrs.'//ACHAR(48+wf_channel))
+          ELSE IF (irank == 0) THEN
+            WRITE(oUnit,'(a)') 'wannierlib operators_r: collinear orbital slice missing -> skipped'
+          END IF
         ELSE
           ALLOCATE(o0l(nb, nb, 3, SIZE(l0_loc, 5))); o0l = SUM(l0_loc, DIM=4)
           CALL wannierlib_op_rs_distributed(this, cell, kpts, vloc, o0l, gk_loc, 3, mpi_comm, irank, .FALSE., 'anglmomrs.1')

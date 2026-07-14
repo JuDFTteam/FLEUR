@@ -22,8 +22,55 @@ MODULE m_wannierlib_orbmom_melem
   USE m_types_radfun
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: wannierlib_orbmom_bloch
+  PUBLIC :: wannierlib_orbmom_bloch, wannierlib_orbmom_bloch_collinear
 CONTAINS
+
+  !> Collinear (jspins=2, no SOC/noco) single-channel variant of wannierlib_orbmom_bloch:
+  !> the two spin channels are separate scalar problems, so L is evaluated on ONE channel's
+  !> coefficients abc(:) (single spin, radial index jspin_rad) instead of summing s=1,2.
+  !> Returns the site-summed (total) L0(:,:,1:3) in the Bloch basis at one k (muffin-tin).
+  SUBROUTINE wannierlib_orbmom_bloch_collinear(atoms, abc, radfun, jspin_rad, l0)
+    TYPE(t_atoms),  INTENT(IN)  :: atoms
+    TYPE(t_abc),    INTENT(IN)  :: abc(:)         ! (ntype) single-channel local-frame coeffs
+    TYPE(t_radfun), INTENT(IN)  :: radfun(:)      ! (ntype) : %integral(n_r,n_r2,l,s,s)
+    INTEGER,        INTENT(IN)  :: jspin_rad      ! radial spin index of this channel
+    COMPLEX,        INTENT(OUT) :: l0(:, :, :)    ! (nb,nb,3): 1=Lx 2=Ly 3=Lz (site-summed)
+
+    INTEGER :: nb, i, j, ntyp, iat, l, ll1, mm, lm, n_r, n_r2, s
+    REAL    :: lplus, lminus, w
+    COMPLEX :: cz, cp, cm    ! L_z, L_+, L_- accumulators for (i,j), summed over atoms
+
+    nb = SIZE(l0, 1); s = jspin_rad
+    l0 = CMPLX(0.0, 0.0)
+    DO j = 1, nb                       ! ket band
+      DO i = 1, nb                     ! bra band
+        cz = CMPLX(0.0, 0.0); cp = CMPLX(0.0, 0.0); cm = CMPLX(0.0, 0.0)
+        DO ntyp = 1, atoms%ntype
+          DO iat = 1, atoms%neq(ntyp)
+            DO l = 0, atoms%lmax(ntyp)
+              ll1 = l*(l + 1)
+              DO mm = -l, l
+                lm = ll1 + mm
+                lplus  = SQRT(REAL((l - mm)*(l + mm + 1)))   ! <m+1|L+|m>
+                lminus = SQRT(REAL((l + mm)*(l - mm + 1)))   ! <m-1|L-|m>
+                DO n_r = 1, abc(ntyp)%n_r(l)
+                  DO n_r2 = 1, abc(ntyp)%n_r(l)
+                    w = radfun(ntyp)%integral(n_r, n_r2, l, s, s)
+                    cz = cz + abc(ntyp)%cof(i,lm,n_r,iat)*CONJG(abc(ntyp)%cof(j,lm,n_r2,iat))*REAL(mm)*w
+                    IF (mm < l) cp = cp + abc(ntyp)%cof(i,lm,n_r,iat)*CONJG(abc(ntyp)%cof(j,lm+1,n_r2,iat))*lplus*w
+                    IF (mm > -l) cm = cm + abc(ntyp)%cof(i,lm,n_r,iat)*CONJG(abc(ntyp)%cof(j,lm-1,n_r2,iat))*lminus*w
+                  END DO
+                END DO
+              END DO
+            END DO
+          END DO
+        END DO
+        l0(i, j, 1) = 0.5 * (cp + cm)              ! Lx = (L+ + L-)/2
+        l0(i, j, 2) = -0.5 * ImagUnit * (cp - cm)  ! Ly = (L+ - L-)/(2i)
+        l0(i, j, 3) = cz                           ! Lz
+      END DO
+    END DO
+  END SUBROUTINE wannierlib_orbmom_bloch_collinear
 
   !> Build L0(:,:,1:3,1:nat) = (Lx,Ly,Lz) per atom in the Bloch basis at one k
   !> (muffin-tin). The site-summed (total) operator is SUM over the last index; the
