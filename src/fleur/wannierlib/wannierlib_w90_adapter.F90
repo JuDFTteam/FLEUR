@@ -120,7 +120,7 @@ CONTAINS
   END SUBROUTINE init_w90
 
   SUBROUTINE run_w90(this, cell, kpts, mmn, amn, eig, irank, &
-                     s0_loc, l0_loc, soc0_loc, soc4_loc, s0pa_loc, distk, mpi_comm, wf_channel, spin_suffix, l0col_loc)
+                     s0_loc, l0_loc, soc0_loc, soc4_loc, s0pa_loc, distk, mpi_comm, wf_channel, spin_suffix, l0col_loc, v_out)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
     TYPE(t_cell), INTENT(IN) :: cell
     TYPE(t_kpts), INTENT(IN) :: kpts
@@ -137,6 +137,7 @@ CONTAINS
     INTEGER, INTENT(IN), OPTIONAL :: wf_channel            ! collinear jspins=2 spin channel (1/2) for the operators_r WFn seedname; default 1
     CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: spin_suffix   ! '_spin1'/'_spin2' for collinear jspins=2; empty otherwise
     COMPLEX, INTENT(IN), OPTIONAL :: l0col_loc(:, :, :, :)  ! (nb,nb,3,nk_loc) collinear per-channel Bloch orbital L (operators_r)
+    COMPLEX, INTENT(OUT), OPTIONAL :: v_out(:, :, :)        ! (num_bands,num_wann,nkptf) gauge V=u_opt.u_matrix (collinear combined spin)
 
     INTEGER :: ierr,num_kpts,iop,nbnd_c,nat_c,nkc,wf_ch
     LOGICAL :: l_collinear
@@ -195,6 +196,14 @@ CONTAINS
 
     CALL w90_wannierise(wannierlib_w90main, oUnit, oUnit, ierr)
     IF (ierr /= 0) CALL juDFT_error('w90_wannierise failed in wannierlib adapter', calledby='run_w90')
+
+    ! export the full gauge V(k) = u_opt(k) . u_matrix(k) (disentangled + MLWF), needed by the
+    ! collinear combined spin operator which rotates the cross-spin overlap with both channels' V.
+    IF (PRESENT(v_out)) THEN
+      DO iop = 1, num_kpts
+        v_out(:, :, iop) = MATMUL(amn_local(:, :, iop), u_matrix(:, :, iop))
+      END DO
+    END IF
 
     ! global-k indices owned by this rank, ascending order -> matches the per-rank coarse slices
     ! s0_loc/l0_loc/soc0_loc/s0pa_loc (built in the same distk order); used by the distributed
@@ -693,10 +702,10 @@ CONTAINS
         IF (irank == 0) CALL wannierlib_write_ar(this, aw_r, aw_irvec, aw_nrpts, TRIM(wfpref))
         IF (ALLOCATED(aw_r)) DEALLOCATE(aw_r, aw_irvec, aw_ndegen)
       CASE ('spin')          ! distributed reduce over the coarse spin slice
-        ! collinear spin channels are separately wannierised -> the coarse spin/orbital slices are
-        ! not built (stubs); the per-channel operators are Fase 2b. Skip here (H(R)/position only).
+        ! collinear: the spin operator is combined (2N) across both channels, so it is written once
+        ! after both wannierisations by wannierlib_rspauli_collinear (main), not per channel here.
         IF (l_collinear) THEN
-          IF (irank == 0) WRITE(oUnit,'(a)') 'wannierlib operators_r: collinear spin (rspauli) not yet supported -> skipped (Fase 2b)'
+          CONTINUE
         ELSE
           CALL wannierlib_op_rs_distributed(this, cell, kpts, vloc, s0_loc, gk_loc, 3, mpi_comm, irank, .FALSE., 'rspauli.1')
         END IF
