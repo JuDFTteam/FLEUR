@@ -19,50 +19,91 @@
 !>  (position-operator) term. The projected current is therefore the leading
 !>  (intraband) contribution -- exact for the diagonal v, approximate where the
 !>  anticommutator mixes interband elements. A rigorous version needs the position
-!>  operator A(R) (Class B), added in a later stage. Master rank only.
+!>  operator A(R) (Class B), added in a later stage.
 !>  Output: kdist, [ E_n(eV), j_xx, j_xy, j_xz, j_yx, ... j_zz (eV*bohr) ] per band.
+!>
+!>  Parallelism: the operator part O_beta(k) is distributed exactly like the generic
+!>  operator driver (m_wannierlib_interpolate_op) -- each rank builds O_W,beta on its
+!>  own k-slice and reduces to O_beta(R) (collective); rank 0 then does R -> fine path,
+!>  the velocity build, diagonalization and write. The full-mesh coarse operator is
+!>  never materialized.
 MODULE m_wannierlib_interpolate_current
   USE m_juDFT
   USE m_constants, ONLY : oUnit, hartree_to_ev_const
   USE m_types_cell
   USE m_types_kpts
   USE m_types_wannierlib
-  USE m_wannierlib_ft, ONLY : wannierlib_ft_interpolate, wannierlib_ft_velocity
+  USE m_wannierlib_ft, ONLY : wannierlib_ft_interpolate, wannierlib_ft_velocity, &
+                              wannierlib_ft_to_real_reduce, wannierlib_ft_rtok
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: wannierlib_interpolate_current
 CONTAINS
 
-  SUBROUTINE wannierlib_interpolate_current(this, cell, kpts, eig, u_matrix, u_opt, o0, outfile, irank)
+  SUBROUTINE wannierlib_interpolate_current(this, cell, kpts, eig, u_matrix, u_opt, o0_loc, gk_loc, outfile, irank, mpicm)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
     TYPE(t_cell), INTENT(IN) :: cell
     TYPE(t_kpts), INTENT(IN) :: kpts
     REAL,    INTENT(IN) :: eig(:, :)              ! (num_bands, nk)
-    COMPLEX, INTENT(IN) :: u_matrix(:, :, :)      ! (num_wann, num_wann, nk)  MLWF gauge
-    COMPLEX, INTENT(IN) :: u_opt(:, :, :)         ! (num_bands, num_wann, nk) disentangled
-    COMPLEX, INTENT(IN) :: o0(:, :, :, :)         ! (num_bands, num_bands, 3, nk) Bloch spin OR orbital
+    COMPLEX, INTENT(IN) :: u_matrix(:, :, :)      ! (num_wann, num_wann, nk)  MLWF gauge (full mesh)
+    COMPLEX, INTENT(IN) :: u_opt(:, :, :)         ! (num_bands, num_wann, nk) disentangled (full mesh)
+    COMPLEX, INTENT(IN) :: o0_loc(:, :, :, :)     ! (num_bands, num_bands, 3, nk_loc) this rank's Bloch spin OR orbital slice
+    INTEGER, INTENT(IN) :: gk_loc(:)              ! (nk_loc) global k index of each slice entry
     CHARACTER(LEN=*), INTENT(IN) :: outfile
-    INTEGER, INTENT(IN) :: irank
+    INTEGER, INTENT(IN) :: irank, mpicm
 
     INTEGER :: num_wann, num_bands, nk, k, i, j, m, counter, ip, np, ios, iu, info, lwork, al, be, c
+    INTEGER :: nkl, kl, nrpts
     LOGICAL :: have_dis, lexist
     REAL    :: kpath, dk(3), dkc(3)
     REAL,    ALLOCATABLE :: eigval2(:, :), eigval_opt(:), kfrac(:, :), evals(:), rwork(:), jexp(:)
-    COMPLEX, ALLOCATABLE :: ham_k(:, :, :), ow_k(:, :, :, :), H_interp(:, :, :), o_interp(:, :, :, :)
-    COMPLEX, ALLOCATABLE :: v_interp(:, :, :, :), hk(:, :), work(:), vmat(:, :), tmp(:, :), cvec(:, :)
-    COMPLEX, ALLOCATABLE :: jmat(:, :), jc(:, :)
+    COMPLEX, ALLOCATABLE :: ham_k(:, :, :), H_interp(:, :, :), o_interp(:, :, :, :)
+    COMPLEX, ALLOCATABLE :: v_interp(:, :, :, :), hk(:, :), work(:), vloc(:, :, :), tmp(:, :), cvec(:, :)
+    COMPLEX, ALLOCATABLE :: jmat(:, :), jc(:, :), ow_loc(:, :, :, :), o_r(:, :, :, :), o1(:, :, :)
+    INTEGER, ALLOCATABLE :: irvec(:, :), ndegen(:)
     COMPLEX :: wq(1)
 
-    IF (irank /= 0) RETURN
     num_wann  = this%num_wann
     num_bands = this%num_bands
     nk        = kpts%nkptf
     have_dis  = (num_bands > num_wann)
     CALL timestart('wannierlib_interpolate_current')
 
+    ! ---- PHASE A (ALL ranks): O_W,beta(k) = V(gk)^dagger O0_beta V(gk) on this rank's k-slice,
+    !      then coarse -> real space O_beta(R) via the distributed FT-reduce (collective). ----
+    nkl = SIZE(gk_loc)
+    ALLOCATE(vloc(num_bands, num_wann, MAX(1, nkl)), source=CMPLX(0.0, 0.0))
+    DO kl = 1, nkl
+      vloc(:, :, kl) = MATMUL(u_opt(:, :, gk_loc(kl)), u_matrix(:, :, gk_loc(kl)))
+    END DO
+    ALLOCATE(ow_loc(num_wann, num_wann, 3, MAX(1, nkl)), source=CMPLX(0.0, 0.0))
+    ALLOCATE(tmp(num_bands, num_wann))
+    DO kl = 1, nkl
+      DO be = 1, 3
+        tmp = MATMUL(o0_loc(:, :, be, kl), vloc(:, :, kl))
+        ow_loc(:, :, be, kl) = MATMUL(CONJG(TRANSPOSE(vloc(:, :, kl))), tmp)
+      END DO
+    END DO
+    DEALLOCATE(tmp, vloc)
+    DO be = 1, 3
+      CALL wannierlib_ft_to_real_reduce(cell, kpts, ow_loc(:, :, be, :), gk_loc, mpicm, o1, irvec, ndegen, nrpts)
+      IF (be == 1) ALLOCATE(o_r(num_wann, num_wann, nrpts, 3))
+      o_r(:, :, :, be) = o1; DEALLOCATE(o1)
+    END DO
+    DEALLOCATE(ow_loc)
+
+    ! only rank 0 does the R -> fine-path interpolation, velocity build, diagonalization and write
+    IF (irank /= 0) THEN
+      IF (ALLOCATED(o_r)) DEALLOCATE(o_r)
+      IF (ALLOCATED(irvec)) DEALLOCATE(irvec, ndegen)
+      CALL timestop('wannierlib_interpolate_current'); RETURN
+    END IF
+
     INQUIRE(file='kpts_interpol', exist=lexist)
     IF (.NOT. lexist) THEN
       WRITE(oUnit,'(a)') 'wannierlib current interpolation: no kpts_interpol file -> skipped'
+      IF (ALLOCATED(o_r)) DEALLOCATE(o_r)
+      IF (ALLOCATED(irvec)) DEALLOCATE(irvec, ndegen)
       CALL timestop('wannierlib_interpolate_current'); RETURN
     END IF
     OPEN(newunit=iu, file='kpts_interpol', status='old')
@@ -75,7 +116,7 @@ CONTAINS
     END DO
     CLOSE(iu)
 
-    ! ---- H_W(k) via eigval2 (same construction as the validated band driver) ----
+    ! ---- H_W(k) via eigval2 (same construction as the validated band driver), full mesh on rank 0 ----
     ALLOCATE(eigval2(num_wann, nk), source=0.0)
     IF (have_dis) THEN
       ALLOCATE(eigval_opt(num_bands))
@@ -108,28 +149,18 @@ CONTAINS
       END DO
     END DO
 
-    ! ---- O_W,beta(k) = V^dagger O0_beta V,   V = u_opt . u_matrix ----
-    ALLOCATE(vmat(num_bands, num_wann), tmp(num_bands, num_wann))
-    ALLOCATE(ow_k(num_wann, num_wann, 3, nk), source=CMPLX(0.0, 0.0))
-    DO k = 1, nk
-      vmat = MATMUL(u_opt(:, :, k), u_matrix(:, :, k))
-      DO be = 1, 3
-        tmp = MATMUL(o0(:, :, be, k), vmat)
-        ow_k(:, :, be, k) = MATMUL(CONJG(TRANSPOSE(vmat)), tmp)
-      END DO
-    END DO
-
-    ! ---- interpolate H (eigenvectors), v = dH/dk (3), and O_beta (3) ----
+    ! ---- interpolate H (eigenvectors), v = dH/dk (3), and O_beta (3, R -> k' from the reduced O(R)) ----
     CALL wannierlib_ft_interpolate(cell, ham_k, kpts, kfrac, H_interp)
     CALL wannierlib_ft_velocity(cell, ham_k, kpts, kfrac, v_interp)     ! (nw,nw,3,np)
     ALLOCATE(o_interp(num_wann, num_wann, 3, np))
     BLOCK
       COMPLEX, ALLOCATABLE :: o_one(:, :, :)
       DO be = 1, 3
-        CALL wannierlib_ft_interpolate(cell, ow_k(:, :, be, :), kpts, kfrac, o_one)
+        CALL wannierlib_ft_rtok(o_r(:, :, :, be), irvec, ndegen, nrpts, kfrac, o_one)
         o_interp(:, :, be, :) = o_one
       END DO
     END BLOCK
+    DEALLOCATE(o_r, irvec, ndegen)
 
     ! ---- diagonalize H(k'); j_{al,be} = 1/2 { v_al, O_be }; project diagonal; write 9 comps ----
     ALLOCATE(evals(num_wann), hk(num_wann, num_wann), cvec(num_wann, num_wann), &

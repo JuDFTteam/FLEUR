@@ -119,7 +119,7 @@ CONTAINS
 #endif
   END SUBROUTINE init_w90
 
-  SUBROUTINE run_w90(this, cell, kpts, mmn, amn, eig, irank, s0_coarse, l0_coarse, soc0_coarse, soc4_coarse, s0pa_coarse, mmn_full, &
+  SUBROUTINE run_w90(this, cell, kpts, mmn, amn, eig, irank, mmn_full, &
                      s0_loc, l0_loc, soc0_loc, soc4_loc, s0pa_loc, distk, mpi_comm, spin_suffix)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
     TYPE(t_cell), INTENT(IN) :: cell
@@ -128,15 +128,12 @@ CONTAINS
     COMPLEX, TARGET, INTENT(IN) :: amn(:, :, :)
     REAL, TARGET, INTENT(IN) :: eig(:, :)
     INTEGER, INTENT(IN) :: irank
-    COMPLEX, INTENT(IN) :: s0_coarse(:, :, :, :)   ! (num_bands,num_bands,3,nk) Bloch spin (l_spin)
-    COMPLEX, INTENT(IN) :: l0_coarse(:, :, :, :, :) ! (num_bands,num_bands,3,nat,nk) Bloch L per atom (l_orbmom)
-    COMPLEX, INTENT(IN) :: soc0_coarse(:, :, :, :) ! (num_bands,num_bands,1,nk) Bloch SOC (l_socop)
-    COMPLEX, INTENT(IN) :: soc4_coarse(:, :, :, :) ! (num_bands,num_bands,4,nk) 2x2 SOC blocks (rssocmat.1)
-    COMPLEX, INTENT(IN) :: s0_loc(:, :, :, :), l0_loc(:, :, :, :, :), soc4_loc(:, :, :, :) ! per-rank coarse slices (operators_r reduce)
+    ! per-rank coarse operator slices (ascending global-k order = gk_loc); all interpolation
+    ! and current drivers consume these via the distributed FT-reduce (no full-mesh gather).
+    COMPLEX, INTENT(IN) :: s0_loc(:, :, :, :), l0_loc(:, :, :, :, :), soc4_loc(:, :, :, :) ! spin / orbital / 2x2 SOC blocks
     COMPLEX, INTENT(IN) :: soc0_loc(:, :, :, :)       ! (nb,nb,1,nk_loc) per-rank SOC slice (soc interpolation reduce)
     COMPLEX, INTENT(IN) :: s0pa_loc(:, :, :, :, :)    ! (nb,nb,3,nat,nk_loc) per-rank per-atom MT spin slice (per-atom interpolation reduce)
     INTEGER, INTENT(IN) :: distk(:), mpi_comm
-    COMPLEX, INTENT(IN) :: s0pa_coarse(:, :, :, :, :) ! (num_bands,num_bands,3,nat,nk) per-atom MT spin
     COMPLEX, INTENT(IN) :: mmn_full(:, :, :, :)       ! (nb,nb,nntot,nkptf) full overlaps, rank 0 only (Berry connection)
     CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: spin_suffix   ! '_spin1'/'_spin2' for collinear jspins=2; empty otherwise
 
@@ -224,7 +221,7 @@ CONTAINS
     IF (irank==0) CALL wannierlib_write_domain_kpts(this, TRIM(dkind(idom)))
 
     ! Wannier-gauge interpolation: dispatch by looping over the requested operator list.
-    ! Each operator supplies its own Bloch matrix on the coarse mesh (s0/l0/soc0_coarse);
+    ! Each operator supplies its own per-rank Bloch slice on the coarse mesh (s0/l0/soc0_loc);
     ! steps (2)-(5) are the shared generic driver. u_matrix = MLWF gauge, amn_local = u_opt.
     DO iop = 1, this%n_ops
       SELECT CASE (TRIM(this%op_name(iop)))
@@ -266,11 +263,12 @@ CONTAINS
         IF (.NOT.ALLOCATED(aw_k)) ALLOCATE(aw_k(1, 1, 1, 1))   ! stub on non-root ranks for the dummy arg
         CALL wannierlib_interpolate_velocity(this, cell, kpts, eig, u_matrix, amn_local, aw_k, irank)
       CASE ('spinCurrent')
+        ! operator part distributed like the generic driver: local Bloch slice + gk_loc + reduce
         CALL wannierlib_interpolate_current(this, cell, kpts, eig, u_matrix, amn_local, &
-                                            s0_coarse, 'bands_wann_spincurrent.dat', irank)
+                                            s0_loc, gk_loc, 'bands_wann_spincurrent.dat', irank, mpi_comm)
       CASE ('orbitalCurrent')
         CALL wannierlib_interpolate_current(this, cell, kpts, eig, u_matrix, amn_local, &
-                                            SUM(l0_coarse, DIM=4), 'bands_wann_orbcurrent.dat', irank)
+                                            SUM(l0_loc, DIM=4), gk_loc, 'bands_wann_orbcurrent.dat', irank, mpi_comm)
       CASE ('eigenstates')
         ! Wannier-Hamiltonian eigenvectors C(k') (the H-gauge rotation U^(H)), written as a matrix
         CALL wannierlib_interpolate_eigenstates(this, cell, kpts, eig, u_matrix, amn_local, irank)

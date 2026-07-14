@@ -55,17 +55,11 @@ CONTAINS
       COMPLEX, ALLOCATABLE :: mmn(:, :, :, :)
       COMPLEX, ALLOCATABLE :: mmn_full(:, :, :, :)   ! (num_bands,num_bands,nntot,nkptf) full overlaps on rank 0 (Berry/interband velocity)
       LOGICAL :: l_need_mmn_full                     ! velocity/current requested -> gather mmn to rank 0
-      LOGICAL :: l_need_gather                        ! spin/orbital current requested -> gather full coarse arrays to rank 0
       COMPLEX, ALLOCATABLE :: ujug(:, :, :, :, :, :)
       REAL, ALLOCATABLE :: kdiff(:, :)
       INTEGER, ALLOCATABLE :: nnkp(:, :), gkpb(:, :, :)
       INTEGER, ALLOCATABLE :: distk(:)
       real, allocatable :: eig(:, :)
-      COMPLEX, ALLOCATABLE :: s0_coarse(:, :, :, :)   ! (num_bands,num_bands,3,nkptf) Bloch spin, rank 0
-      COMPLEX, ALLOCATABLE :: l0_coarse(:, :, :, :, :) ! (num_bands,num_bands,3,nat,nkptf) Bloch L per atom, rank 0
-      COMPLEX, ALLOCATABLE :: soc0_coarse(:, :, :, :) ! (num_bands,num_bands,1,nkptf) Bloch SOC, rank 0
-      COMPLEX, ALLOCATABLE :: soc4_coarse(:, :, :, :) ! (num_bands,num_bands,4,nkptf) 2x2 SOC blocks (rssocmat.1)
-      COMPLEX, ALLOCATABLE :: s0pa_coarse(:, :, :, :, :) ! (num_bands,num_bands,3,nat,nkptf) per-atom MT spin, rank 0
       COMPLEX, ALLOCATABLE :: s0_loc(:,:,:,:), l0_loc(:,:,:,:,:), soc0_loc(:,:,:,:), soc4_loc(:,:,:,:), s0pa_loc(:,:,:,:,:) ! per-rank slices
       INTEGER :: nkc_loc   ! # coarse k-points owned by this rank
       TYPE(t_usdus) :: usdus
@@ -124,34 +118,11 @@ CONTAINS
          CALL wannierlib_operator_coarse(this, atoms, input, sym, cell, noco, nococonv, kpts, &
                                          stars, usdus, radfun, enpara, fmpi, vtot, eig_id, l_real_wann, &
                                          distk, s0_loc, l0_loc, soc0_loc, soc4_loc, s0pa_loc)
-         ! Fase 3a: the interpolation operators (spin/orbital/soc, total & per-atom) now consume
-         ! the per-rank LOCAL coarse slices + a distributed FT-reduce inside run_w90, so they no
-         ! longer need the full-mesh arrays materialized on rank 0. Only the spin/orbital CURRENTS
-         ! still read the full s0_coarse/l0_coarse (Fase 3b will migrate them) -> gather on demand.
-         l_need_gather = .FALSE.
-         DO iop = 1, this%n_ops
-            SELECT CASE (TRIM(this%op_name(iop)))
-            CASE ('spinCurrent', 'orbitalCurrent'); l_need_gather = .TRUE.
-            END SELECT
-         END DO
-         IF (l_need_gather) THEN
-            IF (fmpi%irank == 0) THEN
-               ALLOCATE(s0_coarse(this%num_bands, this%num_bands, 3, kpts%nkptf))
-               ALLOCATE(l0_coarse(this%num_bands, this%num_bands, 3, atoms%nat, kpts%nkptf))
-            ELSE
-               ALLOCATE(s0_coarse(1,1,1,1)); ALLOCATE(l0_coarse(1,1,1,1,1))
-            END IF
-            CALL wannierlib_gather_coarse(fmpi, distk, kpts%nkptf, this%num_bands*this%num_bands*3, s0_loc, s0_coarse)
-            CALL wannierlib_gather_coarse(fmpi, distk, kpts%nkptf, this%num_bands*this%num_bands*3*atoms%nat, l0_loc, l0_coarse)
-         ELSE
-            ALLOCATE(s0_coarse(1,1,1,1)); ALLOCATE(l0_coarse(1,1,1,1,1))
-         END IF
-         ! soc0/soc4/s0pa full-mesh arrays are no longer consumed (interp uses local slices) -> stubs
-         ALLOCATE(soc0_coarse(1,1,1,1)); ALLOCATE(soc4_coarse(1,1,1,1)); ALLOCATE(s0pa_coarse(1,1,1,1,1))
-         ! keep ALL per-rank locals (s0_loc/l0_loc/soc0_loc/soc4_loc/s0pa_loc) alive for the run_w90 reduce
+         ! Fase 3a/3b: ALL interpolation and current operators (spin/orbital/soc, total &
+         ! per-atom, spin/orbital current) consume the per-rank LOCAL coarse slices + a
+         ! distributed FT-reduce inside run_w90. The full-mesh coarse arrays are never
+         ! materialized on rank 0. Keep the locals alive for the run_w90 reduce.
       ELSE
-         ALLOCATE(s0_coarse(1, 1, 1, 1)); ALLOCATE(l0_coarse(1, 1, 1, 1, 1)); ALLOCATE(soc0_coarse(1, 1, 1, 1)); ALLOCATE(soc4_coarse(1, 1, 1, 1))
-         ALLOCATE(s0pa_coarse(1, 1, 1, 1, 1))
          ALLOCATE(s0_loc(1,1,1,1)); ALLOCATE(l0_loc(1,1,1,1,1)); ALLOCATE(soc4_loc(1,1,1,1))
          ALLOCATE(soc0_loc(1,1,1,1)); ALLOCATE(s0pa_loc(1,1,1,1,1))
       END IF
@@ -238,7 +209,7 @@ CONTAINS
          ! tag each channel's interpolation outputs so spin 2 does not overwrite spin 1.
          spin_sfx = ''
          IF (input%jspins == 2 .AND. .NOT. l_wannierlib_spinors) WRITE(spin_sfx, '(a,i0)') '_spin', jspin
-         CALL run_w90(this, cell, kpts, mmn, amn, eig, fmpi%irank, s0_coarse, l0_coarse, soc0_coarse, soc4_coarse, s0pa_coarse, mmn_full, &
+         CALL run_w90(this, cell, kpts, mmn, amn, eig, fmpi%irank, mmn_full, &
                       s0_loc, l0_loc, soc0_loc, soc4_loc, s0pa_loc, distk, fmpi%mpi_comm, &
                       spin_suffix=TRIM(spin_sfx))
          if (fmpi%isize == 1) CALL report_w90(this)
@@ -251,16 +222,11 @@ CONTAINS
       END DO
 
       IF (ALLOCATED(distk)) DEALLOCATE(distk)
-      IF (ALLOCATED(s0_coarse)) DEALLOCATE(s0_coarse)
-      IF (ALLOCATED(l0_coarse)) DEALLOCATE(l0_coarse)
-      IF (ALLOCATED(soc0_coarse)) DEALLOCATE(soc0_coarse)
-      IF (ALLOCATED(soc4_coarse)) DEALLOCATE(soc4_coarse)
       IF (ALLOCATED(s0_loc)) DEALLOCATE(s0_loc)
       IF (ALLOCATED(l0_loc)) DEALLOCATE(l0_loc)
       IF (ALLOCATED(soc0_loc)) DEALLOCATE(soc0_loc)
       IF (ALLOCATED(soc4_loc)) DEALLOCATE(soc4_loc)
       IF (ALLOCATED(s0pa_loc)) DEALLOCATE(s0pa_loc)
-      IF (ALLOCATED(s0pa_coarse)) DEALLOCATE(s0pa_coarse)
 
    END SUBROUTINE wannierlib_main
 
@@ -433,56 +399,6 @@ CONTAINS
       mmn_full = mmn_loc
 #endif
    END SUBROUTINE wannierlib_gather_mmn
-
-   ! Gather a per-rank coarse-operator slice arr_loc(bs, nk_local) (ascending global-k order)
-   ! into arr_full(bs, nkptf) on rank 0. bs = product of all leading dims (nb*nb*ncomp[*nat]).
-   ! Mirrors wannierlib_gather_mmn but generic in bs; arrays passed by sequence association.
-   SUBROUTINE wannierlib_gather_coarse(fmpi, distk, nkptf, bs, arr_loc, arr_full)
-#ifdef CPP_MPI
-      use mpi
-#endif
-      TYPE(t_mpi), INTENT(IN) :: fmpi
-      INTEGER, INTENT(IN) :: distk(:), nkptf, bs
-      COMPLEX, INTENT(IN)  :: arr_loc(bs, *)    ! (bs, nk_local)
-      COMPLEX, INTENT(OUT) :: arr_full(bs, *)   ! (bs, nkptf) on rank 0; stub elsewhere (untouched)
-      INTEGER :: r, ik, ierr, nk_local
-#ifdef CPP_MPI
-      INTEGER, ALLOCATABLE :: recvcnt(:), displ(:), locidx(:)
-      COMPLEX, ALLOCATABLE :: recvbuf(:)
-#endif
-      nk_local = COUNT(distk == fmpi%irank)
-      IF (fmpi%isize == 1) THEN
-         arr_full(:, 1:nkptf) = arr_loc(:, 1:nkptf)
-         RETURN
-      END IF
-#ifdef CPP_MPI
-      ALLOCATE(recvcnt(0:fmpi%isize-1), displ(0:fmpi%isize-1))
-      DO r = 0, fmpi%isize-1
-         recvcnt(r) = bs * COUNT(distk == r)
-      END DO
-      displ(0) = 0
-      DO r = 1, fmpi%isize-1
-         displ(r) = displ(r-1) + recvcnt(r-1)
-      END DO
-      IF (fmpi%irank == 0) THEN
-         ALLOCATE(recvbuf(bs*nkptf))
-      ELSE
-         ALLOCATE(recvbuf(1))
-      END IF
-      CALL MPI_Gatherv(arr_loc, bs*nk_local, MPI_DOUBLE_COMPLEX, &
-                       recvbuf, recvcnt, displ, MPI_DOUBLE_COMPLEX, 0, fmpi%mpi_comm, ierr)
-      IF (fmpi%irank == 0) THEN
-         ALLOCATE(locidx(0:fmpi%isize-1)); locidx = 0
-         DO ik = 1, nkptf
-            r = distk(ik)
-            arr_full(:, ik) = recvbuf(displ(r)+locidx(r)*bs+1 : displ(r)+locidx(r)*bs+bs)
-            locidx(r) = locidx(r) + 1
-         END DO
-         DEALLOCATE(locidx)
-      END IF
-      DEALLOCATE(recvbuf, recvcnt, displ)
-#endif
-   END SUBROUTINE wannierlib_gather_coarse
 
    ! Complete the distributed amn: each rank filled only its distk k-slice (zeros elsewhere),
    ! so an MPI_ALLREDUCE(SUM) reassembles the full amn on every rank (needed by w90_set_u_opt).
