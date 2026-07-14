@@ -120,7 +120,7 @@ CONTAINS
   END SUBROUTINE init_w90
 
   SUBROUTINE run_w90(this, cell, kpts, mmn, amn, eig, irank, &
-                     s0_loc, l0_loc, soc0_loc, soc4_loc, s0pa_loc, distk, mpi_comm, spin_suffix)
+                     s0_loc, l0_loc, soc0_loc, soc4_loc, s0pa_loc, distk, mpi_comm, wf_channel, spin_suffix)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
     TYPE(t_cell), INTENT(IN) :: cell
     TYPE(t_kpts), INTENT(IN) :: kpts
@@ -134,9 +134,11 @@ CONTAINS
     COMPLEX, INTENT(IN) :: soc0_loc(:, :, :, :)       ! (nb,nb,1,nk_loc) per-rank SOC slice (soc interpolation reduce)
     COMPLEX, INTENT(IN) :: s0pa_loc(:, :, :, :, :)    ! (nb,nb,3,nat,nk_loc) per-rank per-atom MT spin slice (per-atom interpolation reduce)
     INTEGER, INTENT(IN) :: distk(:), mpi_comm
+    INTEGER, INTENT(IN), OPTIONAL :: wf_channel            ! collinear jspins=2 spin channel (1/2) for the operators_r WFn seedname; default 1
     CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: spin_suffix   ! '_spin1'/'_spin2' for collinear jspins=2; empty otherwise
 
-    INTEGER :: ierr,num_kpts,iop,nbnd_c,nat_c,nkc
+    INTEGER :: ierr,num_kpts,iop,nbnd_c,nat_c,nkc,wf_ch
+    LOGICAL :: l_collinear
     INTEGER :: idom, ndom, nkl_c, jkl, aw_nrpts
     INTEGER, ALLOCATABLE :: gk_loc(:)                 ! global-k indices of this rank's coarse slice (interp reduce)
     INTEGER, ALLOCATABLE :: aw_irvec(:, :), aw_ndegen(:)  ! Wigner-Seitz R-mesh of the reduced Berry connection
@@ -154,6 +156,9 @@ CONTAINS
     num_kpts = SIZE(amn, 3)
     ssfx = ''
     IF (PRESENT(spin_suffix)) ssfx = TRIM(spin_suffix)
+    wf_ch = 1
+    IF (PRESENT(wf_channel)) wf_ch = wf_channel
+    l_collinear = (LEN_TRIM(ssfx) > 0)   ! collinear jspins=2 -> per-channel operators_r (WF1/WF2)
 
 #ifndef CPP_WANNLIB_API
     CALL juDFT_error('wannierlib requires Wannier90 module API (w90_library). Rebuild with CPP_WANNLIB_API and matching w90_library.mod.', &
@@ -216,7 +221,7 @@ CONTAINS
     l_hr_done = .FALSE.; l_ar_done = .FALSE.   ! (legacy flags; operators_r now owns H(R)/A(R))
     ! real-space operator export (Fourier step 3, standalone format) -- once, before interpolation
     CALL wannierlib_write_operators_r(this, cell, kpts, eig, u_matrix, amn_local, &
-                                      s0_loc, l0_loc, soc4_loc, distk, mpi_comm, mmn, irank)
+                                      s0_loc, l0_loc, soc4_loc, distk, mpi_comm, mmn, irank, wf_ch, l_collinear)
     DO idom = 1, ndom
     IF (irank==0) CALL wannierlib_write_domain_kpts(this, TRIM(dkind(idom)))
 
@@ -566,12 +571,12 @@ CONTAINS
   END SUBROUTINE wannierlib_build_hamk
 
   ! Write H(R) in Wannier90 seedname_hr.dat format (energies in eV). Rank-0 only.
-  SUBROUTINE wannierlib_write_hr(this, cell, kpts, ham_k, suffix)
+  SUBROUTINE wannierlib_write_hr(this, cell, kpts, ham_k, wfpref)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
     TYPE(t_cell), INTENT(IN) :: cell
     TYPE(t_kpts), INTENT(IN) :: kpts
     COMPLEX, INTENT(IN) :: ham_k(:, :, :)
-    CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: suffix   ! spin tag ('_spin1'/'_spin2') for collinear jspins=2
+    CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: wfpref   ! seedname prefix 'WF1'/'WF2' (collinear jspins=2 channel); default 'WF1'
     COMPLEX, ALLOCATABLE :: hr(:, :, :)
     INTEGER, ALLOCATABLE :: irvec(:, :), ndegen(:)
     INTEGER :: nrpts, nw, irpt, i, j, iu, c
@@ -579,7 +584,7 @@ CONTAINS
     CALL wannierlib_ft_to_real(cell, ham_k, kpts, hr, irvec, ndegen, nrpts)
     nw = this%num_wann
     fn = 'WF1_hr'
-    IF (PRESENT(suffix)) fn = TRIM(fn)//TRIM(suffix)
+    IF (PRESENT(wfpref)) fn = TRIM(wfpref)//'_hr'
     OPEN(newunit=iu, file=TRIM(fn)//'.dat', status='replace')
     WRITE(iu,'(a)') ' written by FLEUR wannierlib : H(R) in eV, W90 hr format'
     WRITE(iu,'(i12)') nw
@@ -599,23 +604,23 @@ CONTAINS
       END DO
     END DO
     CLOSE(iu)
-    WRITE(oUnit,'(a,i0,a)') 'wannierlib: wrote WF1_hr.dat (H(R), ', nrpts, ' R-vectors, eV)'
+    WRITE(oUnit,'(a)') 'wannierlib: wrote '//TRIM(fn)//'.dat (H(R), eV)'
     DEALLOCATE(hr, irvec, ndegen)
   END SUBROUTINE wannierlib_write_hr
 
   ! Write A(R) = <0n|r_alpha|Rm> in Wannier90 seedname_r.dat format (positions in Angstrom). Rank-0.
   ! aw_r is the already-reduced Berry connection A^(W)(R) (= A(R)), so no Fourier transform here.
-  SUBROUTINE wannierlib_write_ar(this, aw_r, irvec, nrpts, suffix)
+  SUBROUTINE wannierlib_write_ar(this, aw_r, irvec, nrpts, wfpref)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
     COMPLEX, INTENT(IN) :: aw_r(:, :, :, :)          ! (nw,nw,nrpts,3) reduced A(R)
     INTEGER, INTENT(IN) :: irvec(:, :), nrpts
-    CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: suffix   ! spin tag ('_spin1'/'_spin2') for collinear jspins=2
+    CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: wfpref   ! seedname prefix 'WF1'/'WF2' (collinear jspins=2 channel); default 'WF1'
     INTEGER :: nw, irpt, i, j, a, iu
     CHARACTER(LEN=64) :: fn
     REAL, PARAMETER :: bohr2ang = 0.5291772109
     nw = this%num_wann
     fn = 'WF1_r'
-    IF (PRESENT(suffix)) fn = TRIM(fn)//TRIM(suffix)
+    IF (PRESENT(wfpref)) fn = TRIM(wfpref)//'_r'
     OPEN(newunit=iu, file=TRIM(fn)//'.dat', status='replace')
     WRITE(iu,'(a)') ' written by FLEUR wannierlib : A(R)=<0n|r|Rm> in Ang, W90 r format'
     WRITE(iu,'(i12)') nw
@@ -629,7 +634,7 @@ CONTAINS
       END DO
     END DO
     CLOSE(iu)
-    WRITE(oUnit,'(a,i0,a)') 'wannierlib: wrote WF1_r.dat (A(R), ', nrpts, ' R-vectors, Ang)'
+    WRITE(oUnit,'(a)') 'wannierlib: wrote '//TRIM(fn)//'.dat (A(R), Ang)'
   END SUBROUTINE wannierlib_write_ar
 
   ! ---------------------------------------------------------------------------
@@ -640,7 +645,7 @@ CONTAINS
   ! anglmomrs.1 (orbital), rssocmat.1 (SOC), wig_vectors.
   ! ---------------------------------------------------------------------------
   SUBROUTINE wannierlib_write_operators_r(this, cell, kpts, eig, u_matrix, u_opt, &
-                                          s0_loc, l0_loc, soc4_loc, distk, mpi_comm, mmn_loc, irank)
+                                          s0_loc, l0_loc, soc4_loc, distk, mpi_comm, mmn_loc, irank, wf_channel, l_collinear)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
     TYPE(t_cell), INTENT(IN) :: cell
     TYPE(t_kpts), INTENT(IN) :: kpts
@@ -650,8 +655,11 @@ CONTAINS
     COMPLEX, INTENT(IN) :: s0_loc(:, :, :, :), l0_loc(:, :, :, :, :), soc4_loc(:, :, :, :) ! per-rank coarse slices
     COMPLEX, INTENT(IN) :: mmn_loc(:, :, :, :)       ! (nb,nb,nntot,nk_loc) this rank's overlap slice (position/Berry)
     INTEGER, INTENT(IN) :: distk(:), mpi_comm, irank
+    INTEGER, INTENT(IN) :: wf_channel               ! collinear jspins=2 spin channel (1/2); 1 in the spinor case
+    LOGICAL, INTENT(IN) :: l_collinear              ! collinear jspins=2 (spin channels separable, per-channel WFn files)
     INTEGER :: iop, nb, ik, j, nkl, aw_nrpts
     LOGICAL :: l_wig_done
+    CHARACTER(LEN=8) :: wfpref                       ! 'WF1'/'WF2' seedname prefix for H(R)/position
     INTEGER, ALLOCATABLE :: gk_loc(:), aw_irvec(:, :), aw_ndegen(:)
     COMPLEX, ALLOCATABLE :: ham_k(:, :, :), aw_r(:, :, :, :), o0l(:, :, :, :), vloc(:, :, :)
     IF (.NOT. this%l_operators_r .OR. this%n_op_r < 1) RETURN   ! all ranks (reduce is collective)
@@ -666,28 +674,44 @@ CONTAINS
     DO j = 1, nkl
       vloc(:, :, j) = MATMUL(u_opt(:, :, gk_loc(j)), u_matrix(:, :, gk_loc(j)))
     END DO
+    ! collinear jspins=2: per-channel seedname WF1/WF2 for H(R)/position; spinor case keeps WF1.
+    WRITE(wfpref, '(a,i0)') 'WF', wf_channel
     IF (irank == 0) THEN; l_wig_done = .FALSE.; CALL wannierlib_write_wig_once(cell, kpts, l_wig_done); END IF
     DO iop = 1, this%n_op_r
       SELECT CASE (TRIM(this%op_r_name(iop)))
       CASE ('hamiltonian')   ! cheap, no coarse array -> rank 0 serial
         IF (irank == 0) THEN
           CALL wannierlib_build_hamk(this, eig, u_matrix, u_opt, ham_k)
-          CALL wannierlib_write_hr(this, cell, kpts, ham_k)
+          CALL wannierlib_write_hr(this, cell, kpts, ham_k, TRIM(wfpref))
           DEALLOCATE(ham_k)
         END IF
       CASE ('position')      ! Berry connection A^(W)(R)=A(R): distributed reduce over the local overlaps
         CALL wannierlib_build_berry_aw_r(this, cell, kpts, mmn_loc, gk_loc, u_opt, u_matrix, mpi_comm, &
                                          aw_r, aw_irvec, aw_ndegen, aw_nrpts)
-        IF (irank == 0) CALL wannierlib_write_ar(this, aw_r, aw_irvec, aw_nrpts)
+        IF (irank == 0) CALL wannierlib_write_ar(this, aw_r, aw_irvec, aw_nrpts, TRIM(wfpref))
         IF (ALLOCATED(aw_r)) DEALLOCATE(aw_r, aw_irvec, aw_ndegen)
       CASE ('spin')          ! distributed reduce over the coarse spin slice
-        CALL wannierlib_op_rs_distributed(this, cell, kpts, vloc, s0_loc, gk_loc, 3, mpi_comm, irank, .FALSE., 'rspauli.1')
+        ! collinear spin channels are separately wannierised -> the coarse spin/orbital slices are
+        ! not built (stubs); the per-channel operators are Fase 2b. Skip here (H(R)/position only).
+        IF (l_collinear) THEN
+          IF (irank == 0) WRITE(oUnit,'(a)') 'wannierlib operators_r: collinear spin (rspauli) not yet supported -> skipped (Fase 2b)'
+        ELSE
+          CALL wannierlib_op_rs_distributed(this, cell, kpts, vloc, s0_loc, gk_loc, 3, mpi_comm, irank, .FALSE., 'rspauli.1')
+        END IF
       CASE ('orbital')
-        ALLOCATE(o0l(nb, nb, 3, SIZE(l0_loc, 5))); o0l = SUM(l0_loc, DIM=4)
-        CALL wannierlib_op_rs_distributed(this, cell, kpts, vloc, o0l, gk_loc, 3, mpi_comm, irank, .FALSE., 'anglmomrs.1')
-        DEALLOCATE(o0l)
+        IF (l_collinear) THEN
+          IF (irank == 0) WRITE(oUnit,'(a)') 'wannierlib operators_r: collinear orbital (anglmomrs) not yet supported -> skipped (Fase 2b)'
+        ELSE
+          ALLOCATE(o0l(nb, nb, 3, SIZE(l0_loc, 5))); o0l = SUM(l0_loc, DIM=4)
+          CALL wannierlib_op_rs_distributed(this, cell, kpts, vloc, o0l, gk_loc, 3, mpi_comm, irank, .FALSE., 'anglmomrs.1')
+          DEALLOCATE(o0l)
+        END IF
       CASE ('spin_orbit')
-        CALL wannierlib_op_rs_distributed(this, cell, kpts, vloc, soc4_loc, gk_loc, 4, mpi_comm, irank, .TRUE., 'rssocmat.1')
+        IF (l_collinear) THEN
+          IF (irank == 0) WRITE(oUnit,'(a)') 'wannierlib operators_r: spin_orbit has no collinear (no-SOC) meaning -> skipped'
+        ELSE
+          CALL wannierlib_op_rs_distributed(this, cell, kpts, vloc, soc4_loc, gk_loc, 4, mpi_comm, irank, .TRUE., 'rssocmat.1')
+        END IF
       CASE DEFAULT
         IF (irank == 0) WRITE(oUnit,'(a)') 'wannierlib operators_r: unknown operator "'//TRIM(this%op_r_name(iop))//'" -> skipped'
       END SELECT

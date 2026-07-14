@@ -193,7 +193,7 @@ CONTAINS
          IF (input%jspins == 2 .AND. .NOT. l_wannierlib_spinors) WRITE(spin_sfx, '(a,i0)') '_spin', jspin
          CALL run_w90(this, cell, kpts, mmn, amn, eig, fmpi%irank, &
                       s0_loc, l0_loc, soc0_loc, soc4_loc, s0pa_loc, distk, fmpi%mpi_comm, &
-                      spin_suffix=TRIM(spin_sfx))
+                      wf_channel=jspin, spin_suffix=TRIM(spin_sfx))
          if (fmpi%isize == 1) CALL report_w90(this)
 
          IF (ALLOCATED(amn)) DEALLOCATE (amn)
