@@ -23,6 +23,7 @@ MODULE m_types_wannierlib
     LOGICAL :: l_spin = .FALSE.            ! an <operator name="spin"> is requested
     LOGICAL :: l_orbmom = .FALSE.          ! an <operator name="orbital"> is requested
     LOGICAL :: l_socop = .FALSE.           ! an <operator name="soc"> is requested
+    LOGICAL :: l_operators_r = .FALSE.     ! an <operators_r> block (real-space O(R) export) is present
 
     ! --- opt-in output domains (<path>/<plane>/<grid> children of <interpolation>) ---
     ! Each declared domain interpolates the operators on its own k-set and writes
@@ -61,6 +62,10 @@ MODULE m_types_wannierlib
     CHARACTER(LEN=32), ALLOCATABLE :: op_comp(:)    ! requested components (Phase 2); '' = all of the operator rank
     INTEGER, ALLOCATABLE :: op_total(:)             ! 1 = write summed-over-atoms projection (default)
     INTEGER, ALLOCATABLE :: op_peratom(:)           ! 1 = also write per-atom (site-resolved) projection (Phase 2)
+
+    ! --- operators_r table: one entry per <operators_r>/<operator name=".."> child ---
+    INTEGER :: n_op_r = 0
+    CHARACTER(LEN=20), ALLOCATABLE :: op_r_name(:)  ! hamiltonian/position/spin/orbital(/spin_orbit)
 
     INTEGER :: num_wann = 0
     INTEGER :: num_bands = 0
@@ -334,6 +339,9 @@ CONTAINS
     CALL mpi_bc(this%op_comp, rank, mpi_comm)
     CALL mpi_bc(this%op_total, rank, mpi_comm)
     CALL mpi_bc(this%op_peratom, rank, mpi_comm)
+    CALL mpi_bc(this%l_operators_r, rank, mpi_comm)
+    CALL mpi_bc(this%n_op_r, rank, mpi_comm)
+    CALL mpi_bc(this%op_r_name, rank, mpi_comm)
     CALL mpi_bc(this%num_wann, rank, mpi_comm)
     CALL mpi_bc(this%num_bands, rank, mpi_comm)
     CALL mpi_bc(this%min_band, rank, mpi_comm)
@@ -510,6 +518,24 @@ CONTAINS
       CASE ('soc');            this%l_socop = .TRUE.
       CASE ('spinCurrent');    this%l_spin = .TRUE.
       CASE ('orbitalCurrent'); this%l_orbmom = .TRUE.
+      END SELECT
+    END DO
+
+    ! --- operators_r: real-space operator matrices O(R) (Fourier step 3, no interpolation).
+    !     Groups <operator name=".."> children written to standalone-format files. ---
+    xPathA = '/fleurInput/output/wannierlib/operators_r'
+    IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))) == 1) THEN
+      this%l_operators_r = .TRUE.
+      this%n_op_r = xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/operator')
+    END IF
+    ALLOCATE(this%op_r_name(this%n_op_r))
+    DO iProj = 1, this%n_op_r
+      WRITE(xPathP, '(A,I0,A)') '/fleurInput/output/wannierlib/operators_r/operator[', iProj, ']'
+      this%op_r_name(iProj) = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@name'))
+      SELECT CASE (TRIM(this%op_r_name(iProj)))
+      CASE ('spin');       this%l_spin = .TRUE.
+      CASE ('orbital');    this%l_orbmom = .TRUE.
+      CASE ('spin_orbit'); this%l_socop = .TRUE.
       END SELECT
     END DO
 

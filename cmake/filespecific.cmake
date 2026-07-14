@@ -19,7 +19,7 @@ if (CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
    set_source_files_properties(${CMAKE_SOURCE_DIR}/src/fleur/vgen/psqpw.F90 PROPERTIES COMPILE_FLAGS -O1)
    set_source_files_properties(${CMAKE_SOURCE_DIR}/src/fleur/vgen/mpmom.F90 PROPERTIES COMPILE_FLAGS -O1)
    set_source_files_properties(${CMAKE_SOURCE_DIR}/src/fleur/cdn/cdnovlp.F90 PROPERTIES COMPILE_FLAGS -O1)
-   set_source_files_properties(${CMAKE_SOURCE_DIR}/src/fleur/juphon/dfpt_interpolation.F90 PROPERTIES COMPILE_FLAGS -O1)
+   set_source_files_properties(${CMAKE_SOURCE_DIR}/src/fleur/juphon/dfpt_interpolation.F90 PROPERTIES COMPILE_FLAGS -O0)
    
    if (CMAKE_Fortran_COMPILER_VERSION VERSION_LESS "14.1.0.0")
       set_source_files_properties(${CMAKE_SOURCE_DIR}/src/fleur/vgen/vmtxcg.F90 PROPERTIES COMPILE_FLAGS -no-openmp)

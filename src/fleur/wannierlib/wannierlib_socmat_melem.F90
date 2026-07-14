@@ -34,7 +34,7 @@ MODULE m_wannierlib_socmat_melem
 CONTAINS
 
   !> Build H0_SOC(:,:) (single component) in the Bloch basis at one k.
-  SUBROUTINE wannierlib_socmat_bloch(atoms, noco, nococonv, input, fmpi, enpara, vtot, usdus, abc, nb, soc0)
+  SUBROUTINE wannierlib_socmat_bloch(atoms, noco, nococonv, input, fmpi, enpara, vtot, usdus, abc, nb, soc0, soc4)
     TYPE(t_atoms),    INTENT(IN)    :: atoms
     TYPE(t_noco),     INTENT(IN)    :: noco
     TYPE(t_nococonv), INTENT(IN)    :: nococonv
@@ -46,6 +46,7 @@ CONTAINS
     TYPE(t_abc),      INTENT(IN)    :: abc(:, :)     ! (ntype, 2 spin) local-frame coeffs
     INTEGER,          INTENT(IN)    :: nb
     COMPLEX,          INTENT(OUT)   :: soc0(:, :, :) ! (nb,nb,1) SOC operator (single component)
+    COMPLEX,          INTENT(OUT)   :: soc4(:, :, :) ! (nb,nb,4) 2x2 SOC spin blocks, c=(ii-1)*2+jj (rssocmat.1)
 
     COMPLEX, ALLOCATABLE :: ahelp(:, :, :, :), bhelp(:, :, :, :), chelp(:, :, :, :, :)
     COMPLEX, ALLOCATABLE :: hsomtx(:, :, :, :)
@@ -80,7 +81,13 @@ CONTAINS
 
     ! ---- relativistic radial SOC integrals + L.S angular/spin matrix (computed ONCE) ----
     IF (.NOT. rsoc_ready) THEN
-      CALL spnorb(atoms, noco, nococonv, input, fmpi, enpara, vtot%mt, usdus, rsoc_cache, .TRUE.)
+      ! spnorb (via sorad) OVERWRITES usdus. Use a PRIVATE copy so the shared usdus that
+      ! feeds the wannierization (amn/mmn) is left intact -> reproducible spread with SOC.
+      BLOCK
+        TYPE(t_usdus) :: usdus_soc
+        usdus_soc = usdus
+        CALL spnorb(atoms, noco, nococonv, input, fmpi, enpara, vtot%mt, usdus_soc, rsoc_cache, .TRUE.)
+      END BLOCK
       rsoc_cache%soangl = CONJG(rsoc_cache%soangl)
       rsoc_ready = .TRUE.
     END IF
@@ -96,6 +103,11 @@ CONTAINS
 
     ! ---- full spinor matrix element = sum over the 2x2 spin blocks ----
     soc0(:, :, 1) = hsomtx(:, :, 1, 1) + hsomtx(:, :, 1, 2) + hsomtx(:, :, 2, 1) + hsomtx(:, :, 2, 2)
+    ! the 4 spin blocks (uncollapsed) for the real-space SOC export rssocmat.1: c=(ii-1)*2+jj
+    soc4(:, :, 1) = hsomtx(:, :, 1, 1)   ! jj=1, ii=1
+    soc4(:, :, 2) = hsomtx(:, :, 2, 1)   ! jj=2, ii=1
+    soc4(:, :, 3) = hsomtx(:, :, 1, 2)   ! jj=1, ii=2
+    soc4(:, :, 4) = hsomtx(:, :, 2, 2)   ! jj=2, ii=2
 
     DEALLOCATE(ahelp, bhelp, chelp, hsomtx)
   END SUBROUTINE wannierlib_socmat_bloch
