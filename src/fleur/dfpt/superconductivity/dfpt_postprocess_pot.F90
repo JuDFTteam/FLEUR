@@ -54,7 +54,7 @@ contains
 
         type(t_hub1data) :: hub1data
         type(t_stars) :: starsq
-        type(t_kpts)  :: kqpts , qpts
+        type(t_kpts)  :: kqpts 
         type(t_sternheimerJob) :: sternheimerJob
         type(t_potden) :: vTot1, vTot1Im, den1, den1Im, rho_local
         type(t_results) :: dummy_results
@@ -66,7 +66,7 @@ contains
         integer :: bandWindow(2)
         logical :: l_dummy , l_exist
         complex :: pref 
-        complex, allocatable :: dynMat(:,:) , eigenVecs(:,:)
+        complex, allocatable :: dynMats(:,:,:) , eigenVecs(:,:)
         real, allocatable :: eigenVals(:)
         complex, allocatable :: gmatCart(:,:,:,:) ! (nu',nu,kpoints,jsp)
         complex, allocatable :: gmat(:,:,:,:,:,:) ! (nu',nu,kpoints,jsp,iMode,iQ)
@@ -91,13 +91,8 @@ contains
 
         call rho_local%copyPotDen(rho)
         
-         ! create a kpts type that contains the necessary q-vectors 
-        qpts = fi%kpts
-        deallocate(qpts%bk)
-        allocate(qpts%bk,mold=fi%dfpt%qvec) ! this is not nice. Maybe change the expected type in dfpt_sternheimer/make_stars
-        qpts%bk(:, :size(fi%dfpt%qvec,2)) = fi%dfpt%qvec
-        allocate(q_list(size(fi%dfpt%qvec,2)))  
-        q_list = (/(iArray, iArray=1,SIZE(fi%dfpt%qvec,2), 1)/)
+        allocate(q_list(fi%dfpt%qvec%nkpt))
+        q_list = (/(iArray, iArray=1,fi%dfpt%qvec%nkpt, 1)/)
 
         ! Determine the band window for the electron-phonon matrix elements.
         if (fi%wannierlib%l_wannierize) then
@@ -113,10 +108,10 @@ contains
 
         bandWindowSize = bandWindow(2) - bandWindow(1) + 1
 
-        allocate(dynMat(3*fi%atoms%nat,3*fi%atoms%nat))
+        allocate(dynMats(3*fi%atoms%nat,3*fi%atoms%nat,size(q_list)))
         allocate(gmat(bandWindowSize,bandWindowSize,fi%kpts%nkpt,fi%input%jspins,3*fi%atoms%nat,size(q_list)))
         allocate(gmatCart(bandWindowSize,bandWindowSize,fi%kpts%nkpt,fi%input%jspins))
-        dynMat = cmplx(0,0)
+        dynMats = cmplx(0.0,0.0)
         gmat = cmplx(0,0)
         gmatCart= cmplx(0.0,0.0)
 
@@ -131,8 +126,8 @@ contains
                 call timestart("dynMat IO")
                 ! Read in eigenvectors and eigenvalues for given q-point
                 ! Be careful only irank 0 has eigenVals and eigenVecs allocated 
-                call read_dynmats(fi%atoms%nat,iQ,dynMat)
-                CALL DiagonalizeDynMat(fi%atoms, qpts%bk(:,q_list(iQ)), fi%dfpt%calcEigenVec, dynMat(:,:), eigenVals, eigenVecs, q_list(iQ),.false.,"raw",.false.,l_writeOutput=.false.)
+                call read_dynmats(fi%atoms%nat,iQ,dynMats(:,:,iQ))
+                CALL DiagonalizeDynMat(fi%atoms, fi%dfpt%qvec%bk(:,q_list(iQ)), fi%dfpt%calcEigenVec, dynMats(:,:,iQ), eigenVals, eigenVecs, q_list(iQ),.false.,"raw",.false.,l_writeOutput=.false.)
                 call timestop("dynMat IO")
             end if 
 
@@ -149,7 +144,7 @@ contains
                     iPerturb = iDir+3*(iDtype-1)
 
 
-                    call make_stars(starsq, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, qpts%bk(:,iQ), iDtype, iDir,sternheimerJob%l_efield)
+                    call make_stars(starsq, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, fi%dfpt%qvec%bk(:,iQ), iDtype, iDir,sternheimerJob%l_efield)
                     starsq%ufft = stars%ufft
 
                     call den1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
@@ -192,7 +187,7 @@ contains
 
                     ! construct the electron-phonon element in cartesian basis 
                     call timestart("construction elph element")
-                    call construct_elph_element(sternheimerJob,fi,sphhar,results,fmpi,enpara,nococonv,starsq,vTot1,vTot1Im,vTot,rho, qpts%bk(:, iQ),&
+                    call construct_elph_element(sternheimerJob,fi,sphhar,results,fmpi,enpara,nococonv,starsq,vTot1,vTot1Im,vTot,rho, fi%dfpt%qvec%bk(:, iQ),&
                                         eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatCart,bandWindow)
 
                     call timestop("construction elph element")
@@ -229,7 +224,7 @@ contains
         if (fmpi%irank==0) print * , "Starting thhe construction of the interpolation"
 
         ! Perform Wannier interpolation
-        if (fi%wannierlib%l_wannierize) call el_ph_wannier_interpolate(fmpi,fi,results,gmat)
+        if (fi%wannierlib%l_wannierize) call el_ph_wannier_interpolate(fmpi,fi,results,dynMats,gmat)
 
 
     end subroutine dfpt_postprocess_elph

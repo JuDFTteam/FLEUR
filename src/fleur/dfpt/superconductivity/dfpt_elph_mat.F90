@@ -255,17 +255,19 @@ CONTAINS
 
     END SUBROUTINE construct_elph_element
 
-    subroutine el_ph_wannier_interpolate(fmpi,fi,results,gmat)
+    subroutine el_ph_wannier_interpolate(fmpi,fi,results,dynMats,gmat)
 
         use m_eig66_io, only : open_eig,close_eig,read_eig
         use m_wannier_interpolate
         use m_matrix_interpolation
         use m_dosbin
-
+        use m_dfpt_dynmat_fourier
+        use m_dfpt_dynmat_eig
 
         type(t_mpi), intent(in)         :: fmpi
         type(t_fleurinput) , intent(in) :: fi 
         type(t_results),     intent(in) :: results
+        complex,intent(in)              :: dynMats(:,:,:) !(3*nat,3*nat,nqcoarse)
         complex,intent(in)              :: gmat(:,:,:,:,:,:) !(nu,nu',kpoints,spin,iMode,iQ)
 
         integer :: eig_id_interpol,q_eig_id_interpol, num_wann , num_bands , ikpt, iMode, ispin
@@ -293,32 +295,33 @@ CONTAINS
         complex, allocatable :: U_full(:,:,:,:) !(num_bands,num_wann,ikpt,jspin)
         complex, allocatable :: gmatInterpol_q(:,:,:,:,:,:) !(nwann,nwann,nSurv,1,jspin,mode)
         complex, allocatable :: gmatEig(:,:,:,:,:) !(num_wann,num_wann,nSurv,jspin,mode) eigenbasis
+        complex, allocatable :: dynMat_interpol(:,:,:)
 
         num_bands = fi%wannierlib%max_band - fi%wannierlib%min_band + 1
         num_wann  = fi%wannierlib%num_wann
         
-        if ( (.not. allocated(fi%dfpt%qvec_interpolate)) .or. (.not. allocated(fi%dfpt%kMesh_interpol))) call juDFT_error("No meshes to interpoalte on.",calledby="dfpt_elph_mat.F90") 
+        if ( (.not. allocated(fi%dfpt%qpts_interpol%bk)) .or. (.not. allocated(fi%dfpt%kpts_interpol%bk))) call juDFT_error("No meshes to interpoalte on.",calledby="dfpt_elph_mat.F90")
 
         if (fmpi%irank==0) then
 
             ! Size of the interpolated hamiltonian is only num_wann x num_wann
             ! MPI_COMM_SELF used, as it would lead to wrong RMA problems 
 #ifdef CPP_MPI
-            eig_id_interpol = open_eig(MPI_COMM_SELF, num_wann, num_wann, size(fi%dfpt%kMesh_interpol,2), fi%input%jspins, fi%noco%l_noco, &
+            eig_id_interpol = open_eig(MPI_COMM_SELF, num_wann, num_wann, fi%dfpt%kpts_interpol%nkpt, fi%input%jspins, fi%noco%l_noco, &
                                     .true., .false., fi%noco%l_soc, .false., .FALSE., 1)
-            q_eig_id_interpol = open_eig(MPI_COMM_SELF, num_wann, num_wann, size(fi%dfpt%kMesh_interpol,2), fi%input%jspins, fi%noco%l_noco, &
+            q_eig_id_interpol = open_eig(MPI_COMM_SELF, num_wann, num_wann, fi%dfpt%kpts_interpol%nkpt, fi%input%jspins, fi%noco%l_noco, &
                                     .true., .false., fi%noco%l_soc, .false., .FALSE., 1)
 #else
-            eig_id_interpol = open_eig(fmpi%mpi_comm, num_wann, num_wann, size(fi%dfpt%kMesh_interpol,2), fi%input%jspins, fi%noco%l_noco, &
+            eig_id_interpol = open_eig(fmpi%mpi_comm, num_wann, num_wann, fi%dfpt%kpts_interpol%nkpt, fi%input%jspins, fi%noco%l_noco, &
                                     .true., .false., fi%noco%l_soc, .false., .FALSE., 1)
-            q_eig_id_interpol = open_eig(fmpi%mpi_comm, num_wann, num_wann, size(fi%dfpt%kMesh_interpol,2), fi%input%jspins, fi%noco%l_noco, &
+            q_eig_id_interpol = open_eig(fmpi%mpi_comm, num_wann, num_wann, fi%dfpt%kpts_interpol%nkpt, fi%input%jspins, fi%noco%l_noco, &
                                     .true., .false., fi%noco%l_soc, .false., .FALSE., 1)
 #endif
 
-            call interpolate_bandstructure(fi,results,fi%dfpt%kMesh_interpol,eig_id_interpol,.false.)
+            call interpolate_bandstructure(fi,results,fi%dfpt%kpts_interpol%bk,eig_id_interpol,.false.)
 
             ! only keep k points where the eigenvalues are close to the fermi energy
-            call select_fermi_kpoints(fi, results, eig_id_interpol, size(fi%dfpt%kMesh_interpol,2), fi%dfpt%kMesh_interpol,fermiKidx, fermiKpts)
+            call select_fermi_kpoints(fi, results, eig_id_interpol, fi%dfpt%kpts_interpol%nkpt, fi%dfpt%kpts_interpol%bk,fermiKidx, fermiKpts)
 
 
             ! load the Umats from the Wannier step
@@ -349,7 +352,6 @@ CONTAINS
             allocate(eGrid(fi%banddos%ndos_points))
             allocate(linewidth(fi%banddos%ndos_points, fi%input%jspins))
             allocate(ph_linewidth(3*fi%atoms%nat))
-            allocate(eigenValsQ(3*fi%atoms%nat))
             do gridPoint = 1, fi%banddos%ndos_points
                 eGrid(gridPoint) = -8*fi%input%tkb + (16*fi%input%tkb)/(fi%banddos%ndos_points-1.0)*(gridPoint-1.0)
             end do
@@ -360,9 +362,9 @@ CONTAINS
             fmpi_line%mpi_comm = fmpi%mpi_comm
             l_firstWrite = .true.
 
-            do iQ = 1 , size(fi%dfpt%qvec_interpolate,2)
+            do iQ = 1 , fi%dfpt%qpts_interpol%nkpt
                 ! do one q-point at a time
-                qvec = fi%dfpt%qvec_interpolate(:, iQ)
+                qvec = fi%dfpt%qpts_interpol%bk(:, iQ)
 
                 do ikpt = 1, nKept
                     kqpts_interpol(:, ikpt) = fermiKpts(:, ikpt) + qvec
@@ -415,12 +417,17 @@ CONTAINS
                 end do !ispin
                 deallocate(gmatInterpol_q)
 
+                ! interpolate the dynMat and find the eigenvalue
+                ! TODO: make kpts with qvec.  
+                ! call interpolate_dynmat(fi%atoms,fi%sym,fi%cell,fi%dfpt%qvec,dynMats,fi%dfpt%l_WSinterpol,qsingle,dynMat_interpol)
+                ! call DiagonalizeDynMat(fi%atoms, qvec, fi%dfpt%calcEigenVec, dynMat_interpol(:,:,1), eigenValsQ, eigenVecs, iQ, .true., &
+                                    !    'band', .false., l_writeOutput=.false.)
+
+
                 allocate(fmpi_line%k_list(nSurv))
                 fmpi_line%k_list = (/(ikpt, ikpt=1,nSurv)/)
                 allocate(wtkpt_line(nSurv))
-                wtkpt_line = 1.0 / real(size(fi%dfpt%kMesh_interpol,2))
-
-                eigenValsQ = 1.0   ! TODO(PartA): replace with interpolated eigenVals from dfpt_interpolation
+                wtkpt_line = 1.0 / real(fi%dfpt%kpts_interpol%nkpt)
 
                 ph_linewidth = 0.0
                 do iMode = 1, 3*fi%atoms%nat
@@ -444,7 +451,7 @@ CONTAINS
                 close(110)
 
                 deallocate(wtkpt_line, fmpi_line%k_list)
-                deallocate(gmatEig, eigk, eigkq, survKpts, kqKeptIdx, kqKeptKpts)
+                deallocate(gmatEig, eigk, eigkq, survKpts, kqKeptIdx, kqKeptKpts, eigenValsQ)
             end do !iQ
 
             call zMatk%free()
@@ -453,7 +460,7 @@ CONTAINS
             deallocate(zMatkq)
             
             deallocate(eigBuff,eigBuffq, wann_list)
-            deallocate(eGrid, linewidth, ph_linewidth, eigenValsQ)
+            deallocate(eGrid, linewidth, ph_linewidth)
             call close_eig(eig_id_interpol)
             call close_eig(q_eig_id_interpol)
 

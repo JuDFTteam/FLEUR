@@ -143,18 +143,17 @@ contains
 
             ! Fourier-interpolate the coarse dynamical matrices onto the fine q-mesh
             call interpolate_dynmat(fi_fullsym%atoms, fi_fullsym%sym, fi%cell, qpts, dyn_mat, &
-                                    fi%dfpt%l_WSinterpol, fi%dfpt%qvec_interpolate, dyn_mat_interp)
+                                    fi%dfpt%l_WSinterpol, fi%dfpt%qpts_interpol%bk, dyn_mat_interp)
 
             ! diagonalize the interpolated dynamical matrix at each fine q-point
-            do iQ = 1, size(fi%dfpt%qvec_interpolate,2)
+            do iQ = 1, fi%dfpt%qpts_interpol%nkpt
                 call timestart("Dynmat diagonalization")
-                call DiagonalizeDynMat(fi%atoms, fi%dfpt%qvec_interpolate(:,iQ), fi%dfpt%calcEigenVec, &
-                                       dyn_mat_interp(:,:,iQ), eigenVals, eigenVecs, iQ, .TRUE., &
+                call DiagonalizeDynMat(fi%atoms, fi%dfpt%qpts_interpol%bk(:,iQ), fi%dfpt%calcEigenVec, dyn_mat_interp(:,:,iQ), eigenVals, eigenVecs, iQ, .TRUE., &
                                        TRIM(dynfiletag), fi%dfpt%l_sumrule_intp, l_writeOutput=.true.)
                 call timestop("Dynmat diagonalization")
 
                 call timestart("Frequency calculation")
-                call CalculateFrequencies(fi%atoms, iQ, eigenVals, eigenFreqs, TRIM(dynfiletag), fi%dfpt%qvec_interpolate(:,iQ))
+                call CalculateFrequencies(fi%atoms, iQ, eigenVals, eigenFreqs, TRIM(dynfiletag), fi%dfpt%qpts_interpol%bk(:,iQ))
                 call timestop("Frequency calculation")
 
                 if (fi%dfpt%l_dos) eigenValsFull(:,iQ,1) = eigenFreqs(:) ! save eigenfrequencies in case of dos

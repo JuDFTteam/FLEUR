@@ -7,6 +7,7 @@
 MODULE m_types_dfpt
    USE m_judft
    USE m_types_fleurinput_base
+   USE m_types_kpts
    IMPLICIT NONE
    PRIVATE
 
@@ -37,14 +38,13 @@ MODULE m_types_dfpt
       LOGICAL :: l_polar = .FALSE.
       LOGICAL :: l_bfield = .FALSE.
       LOGICAL :: l_symVacLevel = .TRUE. ! Symmetrize the vacua levels  
-      LOGICAL :: l_WSinterpol = .FALSE.
-
-
-      REAL, ALLOCATABLE :: qvec(:,:)     ! q vectors for scf 
-      REAL, ALLOCATABLE :: qvec_interpolate(:,:) ! q vectors for interpolation
-      REAL, ALLOCATABLE :: kMesh_interpol(:,:) ! k Mesh for Wannier Interpolation
+      LOGICAL :: l_WSinterpol = .TRUE.
 
       REAL, ALLOCATABLE :: qvec_efield(:,:)
+
+      TYPE(t_kpts) :: qvec            ! q vectors for scf 
+      TYPE(t_kpts) :: qpts_interpol   ! q mesh for interpolation
+      TYPE(t_kpts) :: kpts_interpol   ! k mesh for Wannier interpolation
 
       INTEGER, ALLOCATABLE :: bandWindow(:)  ! Window of Blochstates we want to consider
 
@@ -91,8 +91,8 @@ CONTAINS
       CALL mpi_bc(this%stopq, rank, mpi_comm)
       CALL mpi_bc(this%i_integration, rank, mpi_comm)
       CALL mpi_bc(this%smearingGauss, rank, mpi_comm)
-      CALL mpi_bc(this%qvec, rank, mpi_comm)
-      CALL mpi_bc(this%qvec_interpolate, rank, mpi_comm)
+      CALL this%qvec%mpi_bc(mpi_comm, rank)
+      CALL this%qpts_interpol%mpi_bc(mpi_comm, rank)
       CALL mpi_bc(this%qvec_efield, rank, mpi_comm)
       CALL mpi_bc(this%l_phonon, rank, mpi_comm)
       CALL mpi_bc(this%l_efield, rank, mpi_comm)
@@ -107,10 +107,53 @@ CONTAINS
       CALL mpi_bc(this%fDiffcut, rank, mpi_comm)
       CALL mpi_bc(this%bandWindow, rank, mpi_comm)
       CALL mpi_bc(this%l_WSinterpol, rank, mpi_comm)
-      CALL mpi_bc(this%kMesh_interpol,rank,mpi_comm)
+      CALL this%kpts_interpol%mpi_bc(mpi_comm, rank)
 
 
    END SUBROUTINE mpi_bc_dfpt
+
+   SUBROUTINE read_kpts_list(xml, listName, kpts_out)
+      !! Read the k-point list <listName> from inp.xml/kpts.xml into a t_kpts
+      !! (populates nkpt, bk and wtkpt).
+      USE m_types_xml
+      TYPE(t_xml),      INTENT(INOUT) :: xml
+      CHARACTER(len=*), INTENT(IN)    :: listName
+      TYPE(t_kpts),     INTENT(INOUT) :: kpts_out
+
+      kpts_out%nkpt = xml%GetNumberOfNodes('/fleurInput/cell/bzIntegration/kPointLists/kPointList[@name="'//TRIM(listName)//'"]/kPoint')
+      IF (kpts_out%nkpt > 0) THEN
+         IF (ALLOCATED(kpts_out%bk))    DEALLOCATE(kpts_out%bk)
+         IF (ALLOCATED(kpts_out%wtkpt)) DEALLOCATE(kpts_out%wtkpt)
+         ALLOCATE(kpts_out%bk(3, kpts_out%nkpt))
+         ALLOCATE(kpts_out%wtkpt(kpts_out%nkpt))
+         IF (.NOT. kpts_out%read_kpts_by_name(TRIM(xml%filename_add_xml)//"inp.xml", TRIM(listName))) &
+            CALL juDFT_error("Could not read kPointList '"//TRIM(listName)//"'", calledby="types_dfpt.F90")
+      END IF
+   END SUBROUTINE read_kpts_list
+
+   SUBROUTINE read_qvec_list(xml, path, kpts_out)
+      !! Read an inline <qVectors>/<q> list at <path> into a t_kpts
+      !! (sets nkpt and fills bk; assigns uniform weights).
+      USE m_types_xml
+      TYPE(t_xml),      INTENT(INOUT) :: xml
+      CHARACTER(len=*), INTENT(IN)    :: path
+      TYPE(t_kpts),     INTENT(INOUT) :: kpts_out
+
+      REAL, ALLOCATABLE :: q(:,:)
+      INTEGER :: n
+
+      q = xml%read_q_list(TRIM(path))     ! (3,n) from the <q> nodes
+      n = SIZE(q, 2)
+      IF (n > 0) THEN
+         IF (ALLOCATED(kpts_out%bk))    DEALLOCATE(kpts_out%bk)
+         IF (ALLOCATED(kpts_out%wtkpt)) DEALLOCATE(kpts_out%wtkpt)
+         ALLOCATE(kpts_out%bk(3, n))
+         ALLOCATE(kpts_out%wtkpt(n))
+         kpts_out%bk    = q
+         kpts_out%nkpt  = n
+         kpts_out%wtkpt = 1.0 / real(n)   ! inline <q> has no weights; uniform default
+      END IF
+   END SUBROUTINE read_qvec_list
 
    SUBROUTINE read_xml_dfpt(this, xml)
       USE m_types_xml
@@ -125,7 +168,7 @@ CONTAINS
       INTEGER::numberNodes
       CHARACTER(len=100) :: xPathA,valueString
       CHARACTER(len=40) :: qptsListName
-      TYPE(t_kpts) :: qpts_from_kpts , path_from_kpts, tmpKpts, tmpQpts
+      TYPE(t_kpts) :: qpts_from_kpts
 
       REAL, ALLOCATABLE :: tmp_arr(:)
 
@@ -235,23 +278,15 @@ CONTAINS
           this%l_symVacLevel    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/dfpt/phonon/@l_symVacLevel'))
          END IF
 
-        allocate(this%qvec(0,0))
-        this%qvec=xml%read_q_list('/fleurInput/output/dfpt/phonon/qVectors')
+        ! inline <qVectors> list (if present)
+        call read_qvec_list(xml, '/fleurInput/output/dfpt/phonon/qVectors', this%qvec)
 
-        IF (xml%GetNumberOfNodes('/fleurInput/output/dfpt/phonon/@qptsListName') == 1) THEN
+        ! a named kPointList overrides the inline list
+         IF (xml%GetNumberOfNodes('/fleurInput/output/dfpt/phonon/@qptsListName') == 1) THEN
           qptsListName = TRIM(ADJUSTL(xml%GetAttributeValue('/fleurInput/output/dfpt/phonon/@qptsListName')))
-          ! Initialize qpts_from_kpts with the number of k-points from the kpts.xml file
-          qpts_from_kpts%nkpt = xml%GetNumberOfNodes('/fleurInput/cell/bzIntegration/kPointLists/kPointList[@name="'//TRIM(qptsListName)//'"]/kPoint')
-          IF (qpts_from_kpts%nkpt > 0) THEN
-              ALLOCATE(qpts_from_kpts%bk(3, qpts_from_kpts%nkpt))
-              ALLOCATE(qpts_from_kpts%wtkpt(qpts_from_kpts%nkpt))
-              IF (qpts_from_kpts%read_kpts_by_name(trim(xml%filename_add_xml)//"inp.xml", qptsListName)) THEN
-                  IF (ALLOCATED(this%qvec)) DEALLOCATE(this%qvec)
-                  ALLOCATE(this%qvec(3, qpts_from_kpts%nkpt))
-                  this%qvec = qpts_from_kpts%bk
-              END IF
-          END IF
-        END IF
+          call read_kpts_list(xml, qptsListName, this%qvec)
+         END IF
+
 
         ! efield read-in
         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/dfpt/efield')
@@ -309,17 +344,7 @@ CONTAINS
 
           IF (xml%GetNumberOfNodes('/fleurInput/output/dfpt/interpolation/@qptsListName') == 1) THEN
           qptsListName = TRIM(ADJUSTL(xml%GetAttributeValue('/fleurInput/output/dfpt/interpolation/@qptsListName')))
-          ! Initialize path_from_kpts with the number of k-points from the kpts.xml file
-          path_from_kpts%nkpt = xml%GetNumberOfNodes('/fleurInput/cell/bzIntegration/kPointLists/kPointList[@name="'//TRIM(qptsListName)//'"]/kPoint')
-          IF (path_from_kpts%nkpt > 0) THEN
-              ALLOCATE(path_from_kpts%bk(3, path_from_kpts%nkpt))
-              ALLOCATE(path_from_kpts%wtkpt(path_from_kpts%nkpt))
-              IF (path_from_kpts%read_kpts_by_name(trim(xml%filename_add_xml)//"inp.xml", qptsListName)) THEN
-                  IF (ALLOCATED(this%qvec_interpolate)) DEALLOCATE(this%qvec_interpolate)
-                  ALLOCATE(this%qvec_interpolate(3, path_from_kpts%nkpt))
-                  this%qvec_interpolate = path_from_kpts%bk
-              END IF
-          END IF
+          call read_kpts_list(xml, qptsListName, this%qpts_interpol)
         END IF
 
         ! postprocess read-in
@@ -359,33 +384,13 @@ CONTAINS
 
           IF (xml%GetNumberOfNodes('/fleurInput/output/dfpt/postprocess/@qMeshName') == 1) THEN
           qptsListName = TRIM(ADJUSTL(xml%GetAttributeValue('/fleurInput/output/dfpt/postprocess/@qMeshName')))
-          ! Initialize tmpQpts with the number of k-points from the kpts.xml file
-          tmpQpts%nkpt = xml%GetNumberOfNodes('/fleurInput/cell/bzIntegration/kPointLists/kPointList[@name="'//TRIM(qptsListName)//'"]/kPoint')
-          IF (tmpQpts%nkpt > 0) THEN
-              ALLOCATE(tmpQpts%bk(3, tmpQpts%nkpt))
-              ALLOCATE(tmpQpts%wtkpt(tmpQpts%nkpt))
-              IF (tmpQpts%read_kpts_by_name(trim(xml%filename_add_xml)//"inp.xml", qptsListName)) THEN
-                  IF (ALLOCATED(this%qvec_interpolate)) DEALLOCATE(this%qvec_interpolate)
-                  ALLOCATE(this%qvec_interpolate(3, tmpQpts%nkpt))
-                  this%qvec_interpolate = tmpQpts%bk
-              END IF
-          END IF
-        END IF 
+          call read_kpts_list(xml, qptsListName, this%qpts_interpol)
+        END IF
 
          IF (xml%GetNumberOfNodes('/fleurInput/output/dfpt/postprocess/@kMeshName') == 1) THEN
           qptsListName = TRIM(ADJUSTL(xml%GetAttributeValue('/fleurInput/output/dfpt/postprocess/@kMeshName')))
-          ! Initialize tmpKpts with the number of k-points from the kpts.xml file
-          tmpKpts%nkpt = xml%GetNumberOfNodes('/fleurInput/cell/bzIntegration/kPointLists/kPointList[@name="'//TRIM(qptsListName)//'"]/kPoint')
-          IF (tmpKpts%nkpt > 0) THEN
-              ALLOCATE(tmpKpts%bk(3, tmpKpts%nkpt))
-              ALLOCATE(tmpKpts%wtkpt(tmpKpts%nkpt))
-              IF (tmpKpts%read_kpts_by_name(trim(xml%filename_add_xml)//"inp.xml", qptsListName)) THEN
-                  IF (ALLOCATED(this%kMesh_interpol)) DEALLOCATE(this%kMesh_interpol)
-                  ALLOCATE(this%kMesh_interpol(3, tmpKpts%nkpt))
-                  this%kMesh_interpol = tmpKpts%bk
-              END IF
-          END IF
-        END IF 
+          call read_kpts_list(xml, qptsListName, this%kpts_interpol)
+        END IF
 
 
       END IF
@@ -395,16 +400,20 @@ CONTAINS
       
    END SUBROUTINE read_xml_dfpt
 
-   SUBROUTINE init_dfpt(this,cell,input)
+   SUBROUTINE init_dfpt(this,cell,input,sym,noco)
 
     USE m_types_cell
     USE m_types_input
     USE m_inv3
     USE m_constants
+    USE m_types_sym
+    USE m_types_noco
 
       CLASS(t_dfpt), INTENT(INOUT) :: this
       TYPE(t_cell),    INTENT(IN)     :: cell
       TYPE(t_input),   intent(in)     :: input
+      TYPE(t_sym),     intent(in)     :: sym
+      TYPE(t_noco),    intent(in)     :: noco
       INTEGER                            :: iDir
       REAL                               :: qvec_ext(3), qvec_int(3)
 
@@ -423,29 +432,32 @@ CONTAINS
         end do
       end if 
 
-      if (input%film .and. allocated(this%qvec)) then
-         if (size(this%qvec,2) > 1) THEN
-            ! Due to stability we do not calculate the Gamma-Point in the case of 
-            ! Film-DFPT but slighlty next to it  
-            do iq = 1 , size(this%qvec,2)
-               if (norm2(this%qvec(:,iq)) .LT. 1e-8 ) then 
-                  tmp_vec=0.0
-                  if (iq == 1 ) then ! starting q-Point --> interpolate to iQ+1
-                     tmp_vec = this%qvec(:,iq+1) - this%qvec(:,iq) 
-                  else ! interpolate to iQ-1 
-                     tmp_vec = this%qvec(:,iq-1) - this%qvec(:,iq) 
-                  end if 
-                  ! construct a vector with length 1 
-                  tmp_vec = tmp_vec / norm2(tmp_vec)
-                  ! add to the gamma point
-                  this%qvec(:,iq) = this%qvec(:,iq) + this%qlim*tmp_vec  
-               end if  
-            end do
-         end if
-      end if 
+      ! if (input%film .and. allocated(this%qvec)) then
+      !    if (size(this%qvec,2) > 1) THEN
+      !       ! Due to stability we do not calculate the Gamma-Point in the case of 
+      !       ! Film-DFPT but slighlty next to it  
+      !       do iq = 1 , size(this%qvec,2)
+      !          if (norm2(this%qvec(:,iq)) .LT. 1e-8 ) then 
+      !             tmp_vec=0.0
+      !             if (iq == 1 ) then ! starting q-Point --> interpolate to iQ+1
+      !                tmp_vec = this%qvec(:,iq+1) - this%qvec(:,iq) 
+      !             else ! interpolate to iQ-1 
+      !                tmp_vec = this%qvec(:,iq-1) - this%qvec(:,iq) 
+      !             end if 
+      !             ! construct a vector with length 1 
+      !             tmp_vec = tmp_vec / norm2(tmp_vec)
+      !             ! add to the gamma point
+      !             this%qvec(:,iq) = this%qvec(:,iq) + this%qlim*tmp_vec  
+      !          end if  
+      !       end do
+      !    end if
+      ! end if 
 
  
-
+      ! Build the full BZ (nkptf, bkf, bkp, bksym) for the interpolation meshes.
+      if (allocated(this%qvec%bk)) call this%qvec%init(sym, input%film, .false., (noco%l_soc.or.noco%l_ss))
+      if (allocated(this%qpts_interpol%bk)) call this%qpts_interpol%init(sym, input%film, .false., (noco%l_soc.or.noco%l_ss))
+      if (allocated(this%kpts_interpol%bk)) call this%kpts_interpol%init(sym, input%film, .false., (noco%l_soc.or.noco%l_ss))
 
    END SUBROUTINE init_dfpt
 
@@ -472,9 +484,9 @@ CONTAINS
     END IF 
 
     if (this%l_phonon ) then 
-      if (allocated(this%qvec)) then 
-        if (size(this%qvec) .eq. 0 ) call juDFT_warn("No q-Points were given while trying to do a phonon calculation. Please insert q points",calledby="types_dfpt.F90")    
-      end if     
+      if (allocated(this%qvec%bk)) then
+        if (this%qvec%nkpt .eq. 0 ) call juDFT_warn("No q-Points were given while trying to do a phonon calculation. Please insert q points",calledby="types_dfpt.F90")
+      end if
     end if 
 
    END SUBROUTINE precheck_dfpt

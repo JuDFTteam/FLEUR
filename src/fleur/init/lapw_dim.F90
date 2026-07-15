@@ -72,9 +72,9 @@ CONTAINS
             q_vectors = 0.0
             q_vectors(:,:size(dfpt%qvec_efield,2))=dfpt%qvec_efield
          ElSE
-            ALLOCATE(q_vectors(3,SIZE(dfpt%qvec,2)+1))
-            q_vectors = 0.0 ! with this we force the gamma point to be within the dim search 
-            q_vectors(:,:size(dfpt%qvec,2))=dfpt%qvec
+            ALLOCATE(q_vectors(3,dfpt%qvec%nkpt+1))
+            q_vectors = 0.0 ! with this we force the gamma point to be within the dim search
+            q_vectors(:,:dfpt%qvec%nkpt)=dfpt%qvec%bk
          END IF
          q_vectors= 2*q_vectors ! To get right qvec in i.e. line 113 and bellow
       ELSE
