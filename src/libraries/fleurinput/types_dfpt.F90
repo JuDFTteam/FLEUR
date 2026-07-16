@@ -455,10 +455,18 @@ CONTAINS
 
  
       ! Build the full BZ (nkptf, bkf, bkp, bksym) for the interpolation meshes.
-      if (allocated(this%qvec%bk)) call this%qvec%init(sym, input%film, .false., (noco%l_soc.or.noco%l_ss))
-      if (allocated(this%qpts_interpol%bk)) call this%qpts_interpol%init(sym, input%film, .false., (noco%l_soc.or.noco%l_ss))
-      if (allocated(this%kpts_interpol%bk)) call this%kpts_interpol%init(sym, input%film, .false., (noco%l_soc.or.noco%l_ss))
-
+      if (allocated(this%qvec%bk)) then 
+        call this%qvec%init(sym, input%film, .false., (noco%l_soc.or.noco%l_ss))
+        this%qvec%nkpt3 = this%qvec%calcNkpt3()
+      end if 
+      if (allocated(this%qpts_interpol%bk)) then 
+        call this%qpts_interpol%init(sym, input%film, .false., (noco%l_soc.or.noco%l_ss))
+        this%qpts_interpol%nkpt3 = this%qpts_interpol%calcNkpt3()
+      end if 
+      if (allocated(this%kpts_interpol%bk)) then 
+        call this%kpts_interpol%init(sym, input%film, .false., (noco%l_soc.or.noco%l_ss))
+        this%kpts_interpol%nkpt3 = this%kpts_interpol%calcNkpt3() 
+      end if 
    END SUBROUTINE init_dfpt
 
    SUBROUTINE precheck_dfpt(this,xml)

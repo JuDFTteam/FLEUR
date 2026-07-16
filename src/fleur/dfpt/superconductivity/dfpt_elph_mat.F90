@@ -286,8 +286,9 @@ CONTAINS
         type(t_mpi)          :: fmpi_line
         real,    allocatable :: wtkpt_line(:), eGrid(:), linewidth(:,:), ph_linewidth(:)
         real,    allocatable :: eigenValsQ(:)
+        complex, allocatable :: eigenVecs(:,:)
         integer              :: gridPoint, nFermi
-        logical              :: l_firstWrite
+        integer              :: lw_unit
 
 #ifdef CPP_MPI
         integer :: ierr
@@ -360,7 +361,7 @@ CONTAINS
             fmpi_line%irank    = 0
             fmpi_line%isize    = 1
             fmpi_line%mpi_comm = fmpi%mpi_comm
-            l_firstWrite = .true.
+            open(newunit=lw_unit, file="linewidth", status='replace', action='write', form='formatted')
 
             do iQ = 1 , fi%dfpt%qpts_interpol%nkpt
                 ! do one q-point at a time
@@ -378,6 +379,9 @@ CONTAINS
                 if (nSurv == 0) then
                     ! no k-point has both k and k+q at E_F for this q
                     deallocate(kqKeptIdx, kqKeptKpts)
+                    ph_linewidth = 0.0 
+                    write(lw_unit,*) "q-Point", qvec
+                    write(lw_unit,*)  ph_linewidth
                     cycle
                 end if
 
@@ -418,10 +422,10 @@ CONTAINS
                 deallocate(gmatInterpol_q)
 
                 ! interpolate the dynMat and find the eigenvalue
-                ! TODO: make kpts with qvec.  
-                ! call interpolate_dynmat(fi%atoms,fi%sym,fi%cell,fi%dfpt%qvec,dynMats,fi%dfpt%l_WSinterpol,qsingle,dynMat_interpol)
-                ! call DiagonalizeDynMat(fi%atoms, qvec, fi%dfpt%calcEigenVec, dynMat_interpol(:,:,1), eigenValsQ, eigenVecs, iQ, .true., &
-                                    !    'band', .false., l_writeOutput=.false.)
+                call interpolate_dynmat(fi%atoms,fi%sym,fi%cell,fi%dfpt%qvec,dynMats,fi%dfpt%l_WSinterpol,qsingle,dynMat_interpol)
+                call DiagonalizeDynMat(fi%atoms, qvec, fi%dfpt%calcEigenVec, dynMat_interpol(:,:,1), eigenValsQ, eigenVecs, iQ, .true., &
+                                       'band', .false., l_writeOutput=.false.)
+
 
 
                 allocate(fmpi_line%k_list(nSurv))
@@ -433,26 +437,20 @@ CONTAINS
                 do iMode = 1, 3*fi%atoms%nat
                     if (eigenValsQ(iMode) < 0.0) cycle   ! imaginary mode -> linewidth 0
                     linewidth = 0.0
-                    call dos_bin_double(fmpi_line, fi%input%jspins, wtkpt_line, eGrid, eigk, eigkq, abs(gmatEig(:,:,:,:,iMode))**2, fi%dfpt%smearingGauss, linewidth, results%ef)
+                    call dos_bin_double(fmpi_line, fi%input%jspins, wtkpt_line, eGrid, eigk, eigkq, abs(gmatEig(:,:,:,:,iMode))**2, fi%input%tkb, linewidth, results%ef)
                     do ispin = 1, fi%input%jspins
                         ph_linewidth(iMode) = ph_linewidth(iMode) + tpi_const*sqrt(eigenValsQ(iMode))*linewidth(nFermi,ispin)
                     end do
                 end do
 
                 ! write the linewidth for this q
-                if (l_firstWrite) then
-                    open(110, file="linewidth", status='replace', action='write', form='formatted')
-                    l_firstWrite = .false.
-                else
-                    open(110, file="linewidth", status='old', position='append', action='write')
-                end if
-                write(110,*) "q-Point", qvec
-                write(110,*) ph_linewidth(:)
-                close(110)
+                write(lw_unit,*) "q-Point", qvec
+                write(lw_unit,*) ph_linewidth(:)
 
                 deallocate(wtkpt_line, fmpi_line%k_list)
-                deallocate(gmatEig, eigk, eigkq, survKpts, kqKeptIdx, kqKeptKpts, eigenValsQ)
+                deallocate(gmatEig, eigk, eigkq, survKpts, kqKeptIdx, kqKeptKpts)
             end do !iQ
+            close(lw_unit)
 
             call zMatk%free()
             deallocate(zMatk)
