@@ -66,10 +66,10 @@ contains
         integer :: bandWindow(2)
         logical :: l_dummy , l_exist
         complex :: pref 
-        complex, allocatable :: dynMats(:,:,:) , eigenVecs(:,:)
-        real, allocatable :: eigenVals(:)
-        complex, allocatable :: gmatCart(:,:,:,:) ! (nu',nu,kpoints,jsp)
-        complex, allocatable :: gmat(:,:,:,:,:,:) ! (nu',nu,kpoints,jsp,iMode,iQ)
+        complex, allocatable :: dynMats(:,:,:) !, eigenVecs(:,:)
+        !real, allocatable :: eigenVals(:)
+        complex, allocatable :: gmatCart(:,:,:,:,:,:) ! (nu',nu,kpoints,jsp,iPerturb,iQ)
+        !complex, allocatable :: gmat(:,:,:,:,:,:) ! (nu',nu,kpoints,jsp,iMode,iQ)
         integer, allocatable :: q_list(:)
 
         character(len=20) :: dfpt_tag
@@ -78,9 +78,9 @@ contains
 #ifdef CPP_MPI 
         integer :: ierr
 #endif 
-        real    :: atomic_mass_array(118)
+        !real    :: atomic_mass_array(118)
 
-        atomic_mass_array = atomicMasses_const * massInElectronMasses
+        !atomic_mass_array = atomicMasses_const * massInElectronMasses
         ! killcont can be used to blot out certain contricutions to the
         ! perturbed matrices.
         ! In this order: V1_pw_pw, T1_pw, S1_pw, V1_MT, ikGH0_MT, ikGS0_MT
@@ -109,10 +109,10 @@ contains
         bandWindowSize = bandWindow(2) - bandWindow(1) + 1
 
         allocate(dynMats(3*fi%atoms%nat,3*fi%atoms%nat,size(q_list)))
-        allocate(gmat(bandWindowSize,bandWindowSize,fi%kpts%nkpt,fi%input%jspins,3*fi%atoms%nat,size(q_list)))
-        allocate(gmatCart(bandWindowSize,bandWindowSize,fi%kpts%nkpt,fi%input%jspins))
+        !allocate(gmat(bandWindowSize,bandWindowSize,fi%kpts%nkpt,fi%input%jspins,3*fi%atoms%nat,size(q_list)))
+        allocate(gmatCart(bandWindowSize,bandWindowSize,fi%kpts%nkpt,fi%input%jspins,3*fi%atoms%nat,size(q_list)))
         dynMats = cmplx(0.0,0.0)
-        gmat = cmplx(0,0)
+        !gmat = cmplx(0,0)
         gmatCart= cmplx(0.0,0.0)
 
         call timestart("Gradient generation")
@@ -127,7 +127,7 @@ contains
                 ! Read in eigenvectors and eigenvalues for given q-point
                 ! Be careful only irank 0 has eigenVals and eigenVecs allocated 
                 call read_dynmats(fi%atoms%nat,iQ,dynMats(:,:,iQ))
-                CALL DiagonalizeDynMat(fi%atoms, fi%dfpt%qvec%bk(:,q_list(iQ)), fi%dfpt%calcEigenVec, dynMats(:,:,iQ), eigenVals, eigenVecs, q_list(iQ),.false.,"raw",.false.,l_writeOutput=.false.)
+                !CALL DiagonalizeDynMat(fi%atoms, fi%dfpt%qvec%bk(:,q_list(iQ)), fi%dfpt%calcEigenVec, dynMats(:,:,iQ), eigenVals, eigenVecs, q_list(iQ),.false.,"raw",.false.,l_writeOutput=.false.)
                 call timestop("dynMat IO")
             end if 
 
@@ -188,19 +188,19 @@ contains
                     ! construct the electron-phonon element in cartesian basis 
                     call timestart("construction elph element")
                     call construct_elph_element(sternheimerJob,fi,sphhar,results,fmpi,enpara,nococonv,starsq,vTot1,vTot1Im,vTot,rho, fi%dfpt%qvec%bk(:, iQ),&
-                                        eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatCart,bandWindow)
+                                        eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatCart(:,:,:,:,iPerturb,iQ),bandWindow)
 
                     call timestop("construction elph element")
 
-                    ! construct the electron-phonon element in the normal basis  
-                    if (fmpi%irank == 0 ) then 
-                        do iMode = 1 , 3*fi%atoms%nat    
-                            pref = 1.0 
-                            if (eigenVals(iMode) .lt. 0.0) pref = -1*ImagUnit
-                            gmat(:,:,:,:,iMode,iQ) =  gmat(:,:,:,:,iMode,iQ) + eigenVecs(iPerturb,iMode) * & 
-                                                pref / sqrt(2* atomic_mass_array(fi%atoms%nz(ceiling(iPerturb/3.0))) * sqrt(abs(eigenVals(iMode))) ) * gmatCart(:,:,:,:)     
-                        end do 
-                    end if 
+                    ! ! construct the electron-phonon element in the normal basis  
+                    ! if (fmpi%irank == 0 ) then 
+                    !     do iMode = 1 , 3*fi%atoms%nat    
+                    !         pref = 1.0 
+                    !         if (eigenVals(iMode) .lt. 0.0) pref = -1*ImagUnit
+                    !         gmat(:,:,:,:,iMode,iQ) =  gmat(:,:,:,:,iMode,iQ) + eigenVecs(iPerturb,iMode) * & 
+                    !                             pref / sqrt(2* atomic_mass_array(fi%atoms%nz(ceiling(iPerturb/3.0))) * sqrt(abs(eigenVals(iMode))) ) * gmatCart(:,:,:,:)     
+                    !     end do 
+                    ! end if 
                     
                     ! reset some variables 
                     call starsq%reset_stars()
@@ -218,15 +218,13 @@ contains
   
      
         end do !iQ
-        ! free some memory
-        deallocate(gmatCart)
 
         if (fmpi%irank==0) print * , "Starting thhe construction of the interpolation"
 
         ! Perform Wannier interpolation
         if (fi%wannierlib%l_wannierize) then 
             call timestart("Wannier Interpolation elph")
-            call el_ph_wannier_interpolate(fmpi,fi,results,dynMats,gmat)
+            call el_ph_wannier_interpolate(fmpi,fi,results,dynMats,gmatCart)
             call timestop("Wannier Interpolation elph")
         end if 
 

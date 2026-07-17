@@ -95,7 +95,7 @@ CONTAINS
                     CALL mpi_allreduce(MPI_IN_PLACE, linewidth, size(linewidth), MPI_DOUBLE_PRECISION, MPI_SUM, fmpi%mpi_comm, ierr)
 #endif
                     DO ispin = 1, jspins
-                        CALL smooth(eGrid, linewidth(:,ispin), fi%dfpt%smearingGauss, size(eGrid))
+                        CALL smooth(eGrid, linewidth(:,ispin), fi%input%tkb, size(eGrid))
                         ph_linewidth(iMode) = ph_linewidth(iMode) + tpi_const*linewidth(nZero,ispin)
                     END DO
                 END DO
@@ -108,7 +108,7 @@ CONTAINS
                     linewidth = 0.0
                     ! delta(eps_k - E_F) * delta(eps_k+q - E_F); Gaussian smearing done inside
                     CALL dos_bin_double(fmpi, jspins, wtkpt, eGrid, eig_k, eig_kq, &
-                                        gmat2(:,:,:,:,iMode), fi%dfpt%smearingGauss, linewidth, ef)
+                                        gmat2(:,:,:,:,iMode), fi%input%tkb, linewidth, ef)
 #ifdef CPP_MPI
                     CALL mpi_allreduce(MPI_IN_PLACE, linewidth, size(linewidth), MPI_DOUBLE_PRECISION, MPI_SUM, fmpi%mpi_comm, ierr)
 #endif
