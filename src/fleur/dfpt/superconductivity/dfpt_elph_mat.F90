@@ -260,9 +260,9 @@ CONTAINS
         use m_eig66_io, only : open_eig,close_eig,read_eig
         use m_wannier_interpolate
         use m_matrix_interpolation
-        use m_dosbin
         use m_dfpt_dynmat_fourier
         use m_dfpt_dynmat_eig
+        use m_dfpt_elph_linewidth 
 
         type(t_mpi), intent(in)         :: fmpi
         type(t_fleurinput) , intent(in) :: fi 
@@ -284,10 +284,9 @@ CONTAINS
         real,    allocatable :: eigk(:,:,:), eigkq(:,:,:) 
 
         type(t_mpi)          :: fmpi_line
-        real,    allocatable :: wtkpt_line(:), eGrid(:), linewidth(:,:), ph_linewidth(:)
+        real,    allocatable :: wtkpt_line(:), ph_linewidth(:)
         real,    allocatable :: eigenValsQ(:)
         complex, allocatable :: eigenVecs(:,:)
-        integer              :: gridPoint, nFermi
         integer              :: lw_unit
 
 #ifdef CPP_MPI
@@ -350,17 +349,14 @@ CONTAINS
             call zMatk%init(.false., num_wann, num_wann)
             call zMatkq%init(.false., num_wann, num_wann)
 
-            allocate(eGrid(fi%banddos%ndos_points))
-            allocate(linewidth(fi%banddos%ndos_points, fi%input%jspins))
             allocate(ph_linewidth(3*fi%atoms%nat))
-            do gridPoint = 1, fi%banddos%ndos_points
-                eGrid(gridPoint) = -8*fi%input%tkb + (16*fi%input%tkb)/(fi%banddos%ndos_points-1.0)*(gridPoint-1.0)
-            end do
-            nFermi = minloc(abs(eGrid), dim=1)   ! grid point closest to E_F
-            ! local serial MPI descriptor: dos_bin_double indexes via fmpi%k_list only
+            ! local serial MPI descriptor: identity k_list over the surviving points, and a
+            ! self-communicator so the MPI_ALLREDUCE inside dfpt_ph_linewidth is a no-op here.
             fmpi_line%irank    = 0
             fmpi_line%isize    = 1
-            fmpi_line%mpi_comm = fmpi%mpi_comm
+#ifdef CPP_MPI
+            fmpi_line%mpi_comm = MPI_COMM_SELF
+#endif
             open(newunit=lw_unit, file="linewidth", status='replace', action='write', form='formatted')
 
             do iQ = 1 , fi%dfpt%qpts_interpol%nkpt
@@ -433,15 +429,8 @@ CONTAINS
                 allocate(wtkpt_line(nSurv))
                 wtkpt_line = 1.0 / real(fi%dfpt%kpts_interpol%nkpt)
 
-                ph_linewidth = 0.0
-                do iMode = 1, 3*fi%atoms%nat
-                    if (eigenValsQ(iMode) < 0.0) cycle   ! imaginary mode -> linewidth 0
-                    linewidth = 0.0
-                    call dos_bin_double(fmpi_line, fi%input%jspins, wtkpt_line, eGrid, eigk, eigkq, abs(gmatEig(:,:,:,:,iMode))**2, fi%input%tkb, linewidth, results%ef)
-                    do ispin = 1, fi%input%jspins
-                        ph_linewidth(iMode) = ph_linewidth(iMode) + tpi_const*sqrt(eigenValsQ(iMode))*linewidth(nFermi,ispin)
-                    end do
-                end do
+                ! phonon linewidth for this q (single/double delta via fi%dfpt%i_integration)
+                call dfpt_ph_linewidth(fi, fmpi_line, wtkpt_line, eigk, eigkq, gmatEig, eigenValsQ, results%ef, ph_linewidth)
 
                 ! write the linewidth for this q
                 write(lw_unit,*) "q-Point", qvec
@@ -458,7 +447,7 @@ CONTAINS
             deallocate(zMatkq)
             
             deallocate(eigBuff,eigBuffq, wann_list)
-            deallocate(eGrid, linewidth, ph_linewidth)
+            deallocate(ph_linewidth)
             call close_eig(eig_id_interpol)
             call close_eig(q_eig_id_interpol)
 
