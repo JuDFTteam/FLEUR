@@ -36,7 +36,6 @@ MODULE m_types_secvar
     SUBROUTINE initialize(this, l_noco, ikpt, eig_id, input, fmpi, lapw, atoms)
         use m_eig66_io
         use m_types_input
-        use m_types_mpimat
         CLASS(t_secvar), INTENT(INOUT) :: this
         LOGICAL, INTENT(IN) :: l_noco
         INTEGER, INTENT(IN) :: ikpt, eig_id
@@ -44,9 +43,9 @@ MODULE m_types_secvar
         TYPE(t_mpi),   TARGET, INTENT(IN) :: fmpi
         TYPE(t_lapw),  TARGET, INTENT(IN) :: lapw
         TYPE(t_atoms), TARGET, INTENT(IN) :: atoms
-        
-        INTEGER :: i, j, jsp, nspin 
-        
+
+        INTEGER :: jsp, nspin
+
         ! Implementation of initialization for SOC second variation
         this%ikpt = ikpt
         this%eig_id = eig_id
@@ -61,30 +60,11 @@ MODULE m_types_secvar
         nspin=merge(2,1,l_noco)
         this%nmat_second=nspin*this%lapw%nmat
 
-#ifdef CPP_MPI
-        IF (fmpi%n_size>1) THEN
-           !Eigenvalue parallelization: distribute the matrix blocks row-cyclically
-           !(full rows, columns distributed cyclically) over the sub_comm group.
-           allocate(t_mpimat::this%mat(1:nspin,1:nspin))
-           do i=1,nspin
-              do j=1,nspin
-                 call this%mat(i,j)%init(.false.,this%ne_first,this%ne_first,fmpi%sub_comm,MPIMAT_ROWCYCLIC)
-              end do
-           end do
-        ELSE
-#endif
-           allocate(t_mat::this%mat(1:nspin,1:nspin))
-           do i=1,nspin
-              do j=1,nspin
-                 call this%mat(i,j)%init(merge(.false.,input%l_real,l_noco),this%ne_first,this%ne_first)
-              end do
-           end do
-#ifdef CPP_MPI
-        END IF
-#endif
+        !Note: this%mat is not allocated here; the operator matrix is computed
+        !and allocated by the matrix_element_factory and handed over via MOVE_ALLOC
 
         !Read the eigenvalues of the original problem for each spin channel, needed for the diagonalization in second variation
-        
+
         allocate(this%zmat(input%jspins))
         allocate(this%eig(this%ne_first,input%jspins))
         DO jsp=1,input%jspins

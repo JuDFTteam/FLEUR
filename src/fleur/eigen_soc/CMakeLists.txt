@@ -8,6 +8,7 @@ src/fleur/eigen_soc/ssomat.F90
 src/fleur/eigen_soc/types_secvar.F90
 src/fleur/eigen_soc/types_matelements.F90
 src/fleur/eigen_soc/types_matelements_soc.F90
+src/fleur/eigen_soc/matrix_element_factory.F90
 src/fleur/eigen_soc/secvar_soc.F90
 #src/fleur/eigen_soc/types_secvar_soc.F90
 )

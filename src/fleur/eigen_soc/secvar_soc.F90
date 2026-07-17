@@ -13,6 +13,7 @@ CONTAINS
     SUBROUTINE secvar_soc_kpts(atoms, noco, nococonv, input, sym, cell, enpara, lapw, vtot, rsoc, fmpi, ikpt, eig_id, ne_out, eigval_out)
         USE m_types_secvar
         USE m_types_matelements_soc
+        USE m_matrix_element_factory
         USE m_types
 
         TYPE(t_atoms),   INTENT(IN) :: atoms
@@ -42,9 +43,15 @@ CONTAINS
            write(oUnit,*) secvar%eig(1:secvar%ne_first, 2)
         end if
 
-        ! Initialize the SOC matrix element evaluator and compute matrix elements
+        ! Initialize the SOC matrix element evaluator and compute matrix elements.
+        ! The factory reads the eigenvectors, provides the abc coefficients and
+        ! radial functions (cached for reuse with other matrix elements) and
+        ! allocates the result matrix.
         CALL matelements%init(atoms, noco, input, sym, cell, enpara, lapw, vtot, rsoc,  fmpi, nococonv)
-        CALL matelements%add_matrix_elements(secvar%zmat, secvar%mat)
+        CALL matrix_element_factory(matelements, eig_id, ikpt, input, atoms, sym, cell, &
+                                    noco, nococonv, enpara, lapw, vtot, fmpi)
+        ! Hand the computed operator matrix over to the second-variation problem
+        CALL MOVE_ALLOC(matelements%mat, secvar%mat)
 
         ! Add the first-variation eigenvalues on the diagonal
         CALL secvar%add_diagonal_elements()
@@ -65,8 +72,9 @@ CONTAINS
 
 
     SUBROUTINE secvar_soc(eig_id, fmpi, nococonv, vTot, enpara, fi, results)
-        use m_types 
-      
+        use m_types
+        use m_matrix_element_factory
+
         INTEGER,            INTENT(IN)    :: eig_id
         TYPE(t_mpi),        INTENT(INOUT) :: fmpi
         TYPE(t_nococonv),   INTENT(IN)    :: nococonv
@@ -98,6 +106,9 @@ CONTAINS
         call rsoc%init(fi%atoms)
         call rsoc%rad_matrix(fi%atoms, fi%noco, nococonv, fi%input, fmpi, enpara, vTot)
         call rsoc%angles(fi%atoms,fmpi,nococonv%theta,nococonv%phi)
+        ! The potential changed since the last call, so all cached data
+        ! (eigenvectors, abc coefficients, radial functions) is invalid
+        CALL matrix_element_factory_reset()
         ! Loop over k-points assigned to this MPI task
         DO nk_i = 1, SIZE(fmpi%k_list)
             nk = fmpi%k_list(nk_i)
@@ -106,7 +117,9 @@ CONTAINS
                             enpara, lapw, vTot, rsoc, fmpi, nk, eig_id, &
                             ne_out=results%neig(nk, 1), eigval_out=results%eig(:, nk, 1))
         END DO
-        
+        ! Free the cached data
+        CALL matrix_element_factory_reset()
+
 #ifdef CPP_MPI
         CALL MPI_ALLREDUCE(MPI_IN_PLACE, results%neig(:, 1), &
                            fi%kpts%nkpt, MPI_INTEGER, MPI_SUM, fmpi%mpi_comm, ierr)

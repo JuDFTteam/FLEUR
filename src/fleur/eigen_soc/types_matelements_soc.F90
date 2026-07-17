@@ -35,7 +35,7 @@ MODULE m_types_matelements_soc
         TYPE(t_nococonv),POINTER :: nococonv => NULL()
     CONTAINS
         PROCEDURE :: init => init
-        PROCEDURE :: add_matrix_elements => add_matrix_elements
+        PROCEDURE :: calc_matrix_elements => calc_matrix_elements
     END TYPE t_matelements_soc
 
 CONTAINS
@@ -54,6 +54,12 @@ CONTAINS
         TYPE(t_mpi),    TARGET, INTENT(IN) :: fmpi
         TYPE(t_nococonv), TARGET, INTENT(IN) :: nococonv
 
+        !SOC is a spinor operator coupling the two spin channels, while the
+        !first-variation wave functions are pure spin states; the result
+        !matrix hence has a 2x2 spinor structure
+        this%spinoroperator = .TRUE.
+        this%spinorwavefcts = .FALSE.
+
         this%atoms  => atoms
         this%noco   => noco
         this%input  => input
@@ -67,53 +73,39 @@ CONTAINS
         this%nococonv => nococonv
     end subroutine init
 
-    subroutine add_matrix_elements(this, zmat, mat_inout)
+    subroutine calc_matrix_elements(this, zmat, abc, radfun, usdus)
         use m_types_abc
         use m_types_radfun
         use m_types_nococonv
 
         CLASS(t_matelements_soc), INTENT(INOUT) :: this
-        TYPE(t_mat),  INTENT(IN) :: zMat(:)
-        CLASS(t_mat), INTENT(INOUT),optional,target :: mat_inout(:,:)
+        TYPE(t_mat),    INTENT(IN) :: zMat(:)   !unused, SOC works on the abc coefficients only
+        TYPE(t_abc),    INTENT(IN) :: abc(:,:)  !(2,ntype)
+        TYPE(t_radfun), INTENT(IN) :: radfun(:) !unused, the radial integrals are precomputed in rsoc
+        TYPE(t_usdus),  INTENT(IN) :: usdus     !unused
 
-        TYPE(t_mat), pointer::mat(:,:)
-        class(t_mat), pointer :: mat_block
-
-        type(t_abc) :: abc(2)
-        type(t_usdus) :: usdus
-        type(t_radfun) :: radfun
-      INTEGER :: num_bands
-      integer :: n, l, m, lm, ll1, jcof, icof
+        INTEGER :: num_bands
+        integer :: n, l, m, lm, ll1, jcof, icof
         integer :: i, j, j0, i1, j1, na, lm1, m1
         complex :: cof_lm
 
-
-        if (present(mat_inout)) then
-            mat => mat_inout
-        else
-            mat => this%mat
-        end if   
-        
-        if (size(mat,1) /= 2 .or. size(mat,2) /= 2 ) then
-            call judft_bug("add_matrix_elements: The matrix must be a 2x2 spinor matrix.")
+        if (.not.allocated(this%mat)) then
+            call judft_bug("calc_matrix_elements: The result matrix is not allocated.")
         end if
-        num_bands = mat(1,1)%matsize1
+        if (size(this%mat,1) /= 2 .or. size(this%mat,2) /= 2 ) then
+            call judft_bug("calc_matrix_elements: The matrix must be a 2x2 spinor matrix.")
+        end if
+        if (size(abc,1) /= 2 .or. size(abc,2) /= this%atoms%ntype) then
+            call judft_bug("calc_matrix_elements: The abc coefficients must have shape (2,ntype).")
+        end if
+        num_bands = size(abc(1,1)%cof,1)
+        !matsize1 equals the global number of bands also for the row-cyclic
+        !distributed t_mpimat blocks (full rows are local there)
+        if (this%mat(1,1)%matsize1 /= num_bands) then
+            call judft_bug("calc_matrix_elements: The matrix size does not match the abc coefficients.")
+        end if
 
-        
         DO n = 1,this%atoms%ntype
-         call radfun%generate_radial_functions(this%atoms, this%input, this%enpara, this%fmpi, this%vtot, n, usdus_out=usdus)
-         !calculate the abc coefficients for this atom type and both spins
-         
-         call abc(1)%init(this%input, this%atoms, num_bands, n)
-         call abc(1)%calc_abc(this%input, this%atoms, this%sym, this%cell, this%lapw, num_bands, usdus, this%noco, this%nococonv, 1, n, zMat(1))
-        
-         if (this%input%jspins == 2) then
-            call abc(2)%init(this%input, this%atoms, num_bands, n)
-            call abc(2)%calc_abc(this%input, this%atoms, this%sym, this%cell, this%lapw, num_bands, usdus, this%noco, this%nococonv, 2, n, zMat(2))
-         else
-            abc(2) = abc(1)
-         end if
-         
          DO j1=1,2
             DO i1=1,2
                !Distribute the column (ket) band index row-cyclically over the
@@ -126,16 +118,16 @@ CONTAINS
                         ll1 = l*(l+1)
                         DO m = -l,l
                            lm = ll1 + m
-                           DO jcof=1,abc(1)%n_r(l)
+                           DO jcof=1,abc(1,n)%n_r(l)
                               cof_lm = CMPLX(0.,0.)
                               DO m1 = -l,l
                                  lm1 = ll1 + m1
-                                 cof_lm = cof_lm + conjg(this%rsoc%soangl(l,m,i1,l,m1,j1))*conjg(abc(j1)%cof(j,lm1,jcof,na))
+                                 cof_lm = cof_lm + conjg(this%rsoc%soangl(l,m,i1,l,m1,j1))*conjg(abc(j1,n)%cof(j,lm1,jcof,na))
                               ENDDO
-                              DO icof=1,abc(1)%n_r(l)
+                              DO icof=1,abc(1,n)%n_r(l)
                                  DO i=1, num_bands
-                                    mat(i1,j1)%data_c(i,j0) = mat(i1,j1)%data_c(i,j0) +&
-                                    abc(i1)%cof(i,lm,icof,na)*this%rsoc%rso(icof,jcof,n,l,i1,j1)*cof_lm
+                                    this%mat(i1,j1)%data_c(i,j0) = this%mat(i1,j1)%data_c(i,j0) +&
+                                    abc(i1,n)%cof(i,lm,icof,na)*this%rsoc%rso(icof,jcof,n,l,i1,j1)*cof_lm
                                  ENDDO
                               ENDDO
                            ENDDO
@@ -146,6 +138,6 @@ CONTAINS
             ENDDO   !i1 spin
          ENDDO !!j1 spin
       enddo !n atom types
-         
-    END SUBROUTINE add_matrix_elements
+
+    END SUBROUTINE calc_matrix_elements
 END MODULE m_types_matelements_soc  

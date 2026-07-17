@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -54,7 +54,9 @@ contains
       type(t_mpi), intent(IN)     :: fmpi
       type(t_potden), intent(IN)             :: vtot
       integer, intent(in)                    :: itype
-      type(t_usdus), intent(OUT),optional    :: usdus_out
+      !accumulates data for all itype this routine is called for; on a cache
+      !hit (data for itype already generated) it is left untouched
+      type(t_usdus), intent(INOUT),optional  :: usdus_out
 
       !temp variables not really used but required by genMTBasis
       type(t_usdus) :: usdus
@@ -67,8 +69,12 @@ contains
       real,allocatable:: rf(:)
       real :: ovlp
       call timestart("generate radial functions")
-      call usdus%init(atoms,input%jspins)
-   
+      if (present(usdus_out)) then
+         if (.not.allocated(usdus_out%us)) call usdus_out%init(atoms, input%jspins)
+      else
+         call usdus%init(atoms,input%jspins)
+      end if
+
       !check if data is already available
       if (this%itype /= itype .or. .not.allocated(this%r)) THEN
          !init type
@@ -78,9 +84,13 @@ contains
          allocate (this%r( atoms%jmtd, 2,maxval(this%n_r),0:atoms%lmaxd, input%jspins),source=0.0)
          if (allocated(this%integral)) deallocate (this%integral)
          allocate (this%integral(maxval(this%n_r), maxval(this%n_r),0:atoms%lmaxd, input%jspins,input%jspins),source=0.0)
-         
+
          do ispin = 1, input%jspins
-            call genMTBasis(atoms, enpara, vTot, fmpi, iType, ispin, usdus, f, g, flo, hub1data, l_writeArg=.false.)
+            if (present(usdus_out)) then
+               call genMTBasis(atoms, enpara, vTot, fmpi, iType, ispin, usdus_out, f, g, flo, hub1data, l_writeArg=.false.)
+            else
+               call genMTBasis(atoms, enpara, vTot, fmpi, iType, ispin, usdus, f, g, flo, hub1data, l_writeArg=.false.)
+            end if
             do l = 0, atoms%lmax(itype)
                this%R( 1:atoms%jri(itype), 1:2, 1,l, ispin) = f(1:atoms%jri(itype), 1:2, l)
                this%R( 1:atoms%jri(itype), 1:2, 2,l, ispin) = g(1:atoms%jri(itype), 1:2, l)
@@ -112,10 +122,7 @@ contains
             ENDDO
          ENDDO         
       end if
-      if (present(usdus_out)) then
-         usdus_out = usdus
-      end if   
-      call timestop("generate radial functions")        
+      call timestop("generate radial functions")
 
    end subroutine
 
