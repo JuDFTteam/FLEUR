@@ -15,6 +15,8 @@ module m_types_denmatrix
       procedure, pass :: init
       procedure, pass :: rhonmt
       procedure, pass :: l_like_charge
+      procedure, pass :: hff_contact
+      procedure, pass :: hff_dipolar
       procedure, pass :: to_full_density
       procedure, pass  :: mpi_collect
    end type
@@ -77,6 +79,118 @@ contains
          END DO
       END DO
    end function
+
+   function hff_contact(this, radfun, atoms, itype, ispin) result(contribs)
+      use m_types_radfun
+      use m_types_atoms
+      use m_intgr, only: intgr3
+      use m_constants, only: pi_const, c_light
+      implicit none
+      class(t_denmatrix), intent(in)  :: this
+      type(t_radfun),     intent(in)  :: radfun
+      type(t_atoms),      intent(in)  :: atoms
+      integer,            intent(in)  :: itype, ispin
+      real                            :: contribs(-1:3)
+
+      integer :: l, i, j, lmax
+      real    :: radThomson, thomsonInt
+      real    :: integrand(atoms%jmtd)
+
+      contribs = 0.0
+      lmax = min(3, atoms%lmax(itype))
+      radThomson = atoms%zatom(itype) / c_light(1.0)**2
+
+      do l = 0, lmax
+         do i = 1, radfun%n_r(l)
+            do j = 1, radfun%n_r(l)
+               ! Thomson-smeared integrand: large component only, per-atom
+               integrand(1:atoms%jri(itype)) = radfun%R(1:atoms%jri(itype), 1, i, l, ispin) &
+                                             * radfun%R(1:atoms%jri(itype), 1, j, l, ispin) &
+                                             * 0.5 * radThomson &
+                                             / (4.0 * pi_const * atoms%rmsh(1:atoms%jri(itype), itype)**2 &
+                                                * (atoms%rmsh(1:atoms%jri(itype), itype) + 0.5*radThomson)**2)
+               call intgr3(integrand(1:atoms%jri(itype)), atoms%rmsh(1:atoms%jri(itype), itype), &
+                           atoms%dx(itype), atoms%jri(itype), thomsonInt)
+               thomsonInt = real(this%mat(i, j, l, l, 0)) * thomsonInt / atoms%neq(itype)
+               contribs(l) = contribs(l) + thomsonInt
+               contribs(-1) = contribs(-1) + thomsonInt
+            end do
+         end do
+      end do
+   end function hff_contact
+
+   function hff_dipolar(this, radfun, atoms, sphhar, sym, itype, ispin) result(contribs)
+      !! Compute the spin-dipolar hyperfine field contribution for atom type itype
+      !! and spin channel ispin from the density matrix.
+      !! Returns contribs(-1:3) where -1 = total (all l), 0..3 = s,p,d,f channel.
+      !! The stored quantity is <(3cos^2(theta)-1)/r^3>_ispin computed via the
+      !! Y_2^0 content of the lattice harmonics.  For cubic symmetry, returns zero
+      !! by symmetry (no Y_2^0 in any lattice harmonic).
+      !! Both large and small radial components enter the 1/r^3 matrix element.
+      use m_types_radfun
+      use m_types_atoms
+      use m_types_sphhar
+      use m_types_sym
+      use m_intgr, only: intgr3
+      use m_constants, only: pi_const
+      implicit none
+      class(t_denmatrix), intent(in)  :: this
+      type(t_radfun),     intent(in)  :: radfun
+      type(t_atoms),      intent(in)  :: atoms
+      type(t_sphhar),     intent(in)  :: sphhar
+      type(t_sym),        intent(in)  :: sym
+      integer,            intent(in)  :: itype, ispin
+      real                            :: contribs(-1:3)
+
+      integer :: l, lp, i, j, lh, jmem, lmax, ns, jri
+      real    :: fy20(0:sphhar%nlhd), invR3Int, contrib_ij, twoSqrt4pi5
+      real    :: integrand(atoms%jmtd)
+      logical :: any_Y20
+
+      contribs = 0.0
+      ns = sym%ntypsy(atoms%firstAtom(itype))
+      jri = atoms%jri(itype)
+      lmax = min(3, atoms%lmax(itype))
+
+      ! Find Y_2^0 content of each lattice harmonic
+      fy20 = 0.0
+      any_Y20 = .false.
+      do lh = 0, sphhar%nlh(ns)
+         if (sphhar%llh(lh, ns) /= 2) cycle
+         do jmem = 1, sphhar%nmem(lh, ns)
+            if (sphhar%mlh(jmem, lh, ns) == 0) then
+               fy20(lh) = fy20(lh) + real(sphhar%clnu(jmem, lh, ns))
+               any_Y20 = .true.
+            end if
+         end do
+      end do
+      if (.not. any_Y20) return   ! zero by symmetry (e.g. cubic)
+
+      ! (3cos^2(theta)-1) = 2 * sqrt(4pi/5) * Y_2^0(theta)  (real spherical harmonic)
+      twoSqrt4pi5 = 2.0 * sqrt(4.0 * pi_const / 5.0)
+
+      do lh = 0, sphhar%nlh(ns)
+         if (abs(fy20(lh)) < 1.0e-14) cycle
+         do l = 0, lmax
+            do lp = 0, l   ! lower triangular; off-diagonal mat entries doubled by rhonmt
+               do i = 1, radfun%n_r(l)
+                  do j = 1, radfun%n_r(lp)
+                     integrand(1:jri) = &
+                        (radfun%R(1:jri, 1, i, l, ispin) * radfun%R(1:jri, 1, j, lp, ispin) &
+                       + radfun%R(1:jri, 2, i, l, ispin) * radfun%R(1:jri, 2, j, lp, ispin)) &
+                       / atoms%rmsh(1:jri, itype)**3
+                     call intgr3(integrand(1:jri), atoms%rmsh(1:jri, itype), &
+                                 atoms%dx(itype), jri, invR3Int)
+                     contrib_ij = twoSqrt4pi5 * fy20(lh) * real(this%mat(i, j, l, lp, lh)) &
+                                * invR3Int / atoms%neq(itype)
+                     contribs(-1) = contribs(-1) + contrib_ij
+                     if (l == lp) contribs(l) = contribs(l) + contrib_ij
+                  end do
+               end do
+            end do
+         end do
+      end do
+   end function hff_dipolar
 
    subroutine rhonmt(this, atoms, sphhar, we, ne, itype, sym, l_less_effort,abc, abc1, we1, bqpt, abc1m)
     !! Subroutine to construct all non-spherical MT density coefficients (for a

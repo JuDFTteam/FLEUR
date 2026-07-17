@@ -3185,6 +3185,36 @@
       </xsd:attribute>
    </xsd:complexType>
 
+   <xsd:complexType name="MoessbauerParamsSetupType">
+      <xsd:annotation>
+         <xsd:documentation>Switches for the calculation and reporting of Moessbauer-related parameters at the nuclei.</xsd:documentation>
+      </xsd:annotation>
+      <xsd:attribute default="T" name="electricFieldGradient" type="FleurBool" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Electric field gradient tensor at the nuclei.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute default="T" name="isomerShift" type="FleurBool" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Contact charge density (isomer shift) at the nuclei.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute default="T" name="coreHyperfine" type="FleurBool" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Core-electron hyperfine field and isomer shift, per core shell.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute default="T" name="valenceHyperfine" type="FleurBool" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>
+               Valence-electron hyperfine field (contact/dipolar/orbital contributions).
+               The orbital contribution requires spin-orbit coupling to be enabled to be
+               meaningful; without SOC this category is equivalent to being switched off.
+            </xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+   </xsd:complexType>
+
    <xsd:complexType name="SpecialOutputType">
       <xsd:annotation>
          <xsd:documentation>Special output options for advanced use cases.</xsd:documentation>
@@ -4060,6 +4090,17 @@
             </xsd:annotation>
          </xsd:element>
          <xsd:element maxOccurs="1" minOccurs="0" name="specialOutput" type="SpecialOutputType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="moessbauerParams" type="MoessbauerParamsSetupType">
+            <xsd:annotation>
+               <xsd:documentation>
+                  Switches for calculating and reporting Moessbauer-related parameters at the
+                  nuclei (electric field gradient, isomer shift, core and valence hyperfine
+                  fields). All categories are on by default. The valenceHyperfine category
+                  only gives meaningful (nonzero orbital) results with spin-orbit coupling
+                  enabled; without SOC it is equivalent to being switched off.
+               </xsd:documentation>
+            </xsd:annotation>
+         </xsd:element>
          <xsd:element maxOccurs="1" minOccurs="0" name="coreSpectrum" type="CoreSpecOutputType">
             <xsd:annotation>
                <xsd:documentation>Parameters for core-level spectroscopy calculations.</xsd:documentation>

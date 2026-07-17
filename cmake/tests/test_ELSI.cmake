@@ -59,6 +59,16 @@ if (DEFINED CLI_FLEUR_USE_ELSI)
                   list(APPEND ELSI_CMAKE_ARGS -DCMAKE_CUDA_ARCHITECTURES=${CMAKE_MATCH_1})
                endif()
             endif()
+            # All ELSI sub-libraries land in ${ELSI_BINARY_DIR}/lib/ because ELSI sets
+            # CMAKE_ARCHIVE_OUTPUT_DIRECTORY globally to ${PROJECT_BINARY_DIR}/lib.
+            set(ELSI_SUBLIBS
+                ${ELSI_BINARY_DIR}/lib/libelpa.a
+                ${ELSI_BINARY_DIR}/lib/libNTPoly.a
+                ${ELSI_BINARY_DIR}/lib/libOMM.a
+                ${ELSI_BINARY_DIR}/lib/libMatrixSwitch.a
+                ${ELSI_BINARY_DIR}/lib/libfortjson.a
+                ${ELSI_BINARY_DIR}/lib/libchase.a
+            )
             if (FLEUR_COMPILE_SCALAPACK)
                list(APPEND ELSI_CMAKE_ARGS
                     -DSCALAPACK_DIR=${CMAKE_BINARY_DIR}/external/SCALAPACK-git
@@ -70,7 +80,7 @@ if (DEFINED CLI_FLEUR_USE_ELSI)
                    CMAKE_ARGS ${ELSI_CMAKE_ARGS}
                    BUILD_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR> --target elsi
                    INSTALL_COMMAND ""
-                   BUILD_BYPRODUCTS ${ELSI_BINARY_DIR}/lib/libelsi.a
+                   BUILD_BYPRODUCTS ${ELSI_BINARY_DIR}/lib/libelsi.a ${ELSI_SUBLIBS}
                    DEPENDS scalapack
                )
             else()
@@ -81,13 +91,14 @@ if (DEFINED CLI_FLEUR_USE_ELSI)
                    CMAKE_ARGS ${ELSI_CMAKE_ARGS}
                    BUILD_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR> --target elsi
                    INSTALL_COMMAND ""
-                   BUILD_BYPRODUCTS ${ELSI_BINARY_DIR}/lib/libelsi.a
+                   BUILD_BYPRODUCTS ${ELSI_BINARY_DIR}/lib/libelsi.a ${ELSI_SUBLIBS}
                )
             endif()
 
             add_library(elsi STATIC IMPORTED GLOBAL)
             add_dependencies(elsi ELSI)
             set_property(TARGET elsi PROPERTY IMPORTED_LOCATION "${ELSI_BINARY_DIR}/lib/libelsi.a")
+            set_property(TARGET elsi PROPERTY INTERFACE_LINK_LIBRARIES "${ELSI_SUBLIBS};${CMAKE_CXX_IMPLICIT_LINK_LIBRARIES}")
             include_directories("${ELSI_BINARY_DIR}/include")
             include_directories("${ELSI_BINARY_DIR}/modules")
             include_directories("${ELSI_BINARY_DIR}/mod")

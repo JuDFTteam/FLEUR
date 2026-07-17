@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2022 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -77,9 +77,6 @@ CONTAINS
       INTEGER, ALLOCATABLE      :: ev_list(:), q_ev_list(:)
       COMPLEX, ALLOCATABLE      :: tempVec(:), tempMat1(:), tempMat2(:), z1H(:,:), z1S(:,:), tempMat3(:), z1H2(:,:), z1S2(:,:)
       REAL,    ALLOCATABLE      :: eigk(:), eigq(:), eigs1(:), eigBuffer(:,:,:)
-
-      COMPLEX  zdotc
-      EXTERNAL zdotc
 
 
 #ifndef _OPENACC  
@@ -203,8 +200,7 @@ CONTAINS
                   IF (l_real) THEN
                      eigs1(nu) = REAL(DOT_PRODUCT(zMatk%data_r(:nbasfcn,nu),tempVec))
                   ELSE
-                     eigs1(nu) = REAL(zdotc(nbasfcn,zMatk%data_c(:nbasfcn,nu),1,tempVec,1))
-                     !eigs1(nu) = REAL(DOT_PRODUCT(zMatk%data_c(:nbasfcn,nu),tempVec))
+                     eigs1(nu) = REAL(DOT_PRODUCT(zMatk%data_c(:nbasfcn,nu),tempVec))
                   END IF
                ELSE
                   eigs1(nu) = 0
@@ -279,8 +275,7 @@ CONTAINS
                   IF (l_real) THEN
                      eigs1(nu) = eigs1(nu) - eigk(nu)*REAL(DOT_PRODUCT(zMatk%data_r(:nbasfcn,nu),tempVec))
                   ELSE
-                     eigs1(nu) = eigs1(nu) - eigk(nu)*REAL(zdotc(nbasfcn,zMatk%data_c(:nbasfcn,nu),1,tempVec,1))
-                     !eigs1(nu) = eigs1(nu) - eigk(nu)*REAL(DOT_PRODUCT(zMatk%data_c(:nbasfcn,nu),tempVec))
+                     eigs1(nu) = eigs1(nu) - eigk(nu)*REAL(DOT_PRODUCT(zMatk%data_c(:nbasfcn,nu),tempVec))
                   END IF
                ELSE
                   eigs1(nu) = 0

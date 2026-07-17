@@ -113,6 +113,7 @@ CONTAINS
       USE m_setabc1lo
       USE m_hsmt_fjgj
       USE m_hsmt_ab
+      USE m_abcoeff_store
       USE m_types_mat
 
       IMPLICIT NONE
@@ -195,7 +196,7 @@ CONTAINS
 
 ! Allocations
       CALL fjgj%alloc(MAXVAL(lapw%nv), atoms%lmaxd, jspin, noco)
-      ALLOCATE (abCoeffs(2*atoms%lmaxd*(atoms%lmaxd + 2) + 2, MAXVAL(lapw%nv)))
+      ! abCoeffs is allocated (and filled) inside hsmt_ab.
       ALLOCATE (abTemp(SIZE(this%cof, 1), 0:2*SIZE(this%cof, 2) - 1))
       ALLOCATE (fgpl(3, MAXVAL(lapw%nv)))
       ALLOCATE (work_c(MAXVAL(lapw%nv), ne))
@@ -203,11 +204,13 @@ CONTAINS
 
 ! Initializations
       acof_size = size(this%cof, 1)
-!$acc enter data create(abTemp,fjgj,fjgj%fj,fjgj%gj,work_c,abcoeffs)
+!$acc enter data create(abTemp,fjgj,fjgj%fj,fjgj%gj,work_c)
       
 
 !Use inversion symmetry explicitely
-      l_useinversionsym = any(sym%invsat == 2)!.and.(.not.noco%l_soc).and.(.not.present(nat_start))
+! The identity A^{-p}_{lm} = (-1)^{l+m} (A^p_{l,-m})^* holds only for real
+! eigenvectors. With SOC the eigenvectors are complex, so skip this shortcut.
+      l_useinversionsym = any(sym%invsat == 2) .and. (.not.noco%l_soc)
 
       CALL timestart("fjgj coefficients")
       CALL fjgj%calculate(input, atoms, cell, lapw, noco, usdus, iType, jspin)
@@ -297,7 +300,7 @@ CONTAINS
 ! variant with zgemm
 
 !$acc host_data use_device(work_c,abCoeffs,abTemp)
-CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),abCoeffs,2*atoms%lmaxd*(atoms%lmaxd+2)+2,CMPLX(0.0,0.0),abTemp,acof_size)
+CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),abCoeffs,SIZE(abCoeffs,1),CMPLX(0.0,0.0),abTemp,acof_size)
 !$acc end host_data
 !$acc update self(abTemp)
 !stop "DEBUG"
@@ -311,6 +314,12 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
 !$OMP END PARALLEL DO
 
             CALL timestop("gemm")
+            ! abCoeffs is (re)allocated per call inside hsmt_ab; release the
+            ! device copy it created and the host array before the next call.
+            !$acc exit data delete(abCoeffs)
+            ! Hand abCoeffs to the optional store for later reuse (no-op unless on).
+            CALL abcoeff_store_save(abCoeffs, lapw%nk, iintsp, jspin, iAtom)
+            IF (ALLOCATED(abCoeffs)) DEALLOCATE(abCoeffs)
 
             CALL timestart("local orbitals")
 ! Treatment of local orbitals
@@ -379,26 +388,12 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
             CALL timestop("local orbitals")
          END DO ! loop over interstitial spin
       END DO ! loop over atoms
-!$acc exit data delete(abTemp,fjgj%fj,fjgj%gj,work_c,abcoeffs)
+!$acc exit data delete(abTemp,fjgj%fj,fjgj%gj,work_c)
 !$acc exit data delete(fjgj)
       DEALLOCATE (work_c)
 
-! Treatment of atoms inversion symmetric to others
+! Treatment of atoms inversion symmetric to others (never reached for SOC)
       IF (l_useinversionsym) THEN
-!Comment on SOC case:
-!
-!                           -p,n       (l+m)   p,n  *
-! Usually, we exploit that A     = (-1)      (A    )  if p and -p are the positions
-!                           l,m                l,-m
-! of two atoms related by inversion symmetry and the coefficients are considered to
-! be in the local frame of the representative atom. This is possible, if z is real.
-! After SOC, however, the eigenvectors z are complex and this is no longer possible
-! so the z has to enter, not z*. This is done within the k-loop.
-!                                    -p,n       m   p,n  *
-! When called from hsohelp, we need A     = (-1)  (A    ) because we don't have to
-!                                     l,m           l,-m                    l
-! rotate, but in the sums in hsoham only products A*  A   enter and the (-1) cancels.
-!                                                  lm  lm
          DO iAtom_l = 1, atoms%neq(itype)
             iatom = iatom_l - 1 + atoms%firstAtom(itype)
             IF (sym%invsat(iAtom) .EQ. 1) THEN
@@ -439,6 +434,7 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
       USE m_setabc1lo
       USE m_hsmt_fjgj
       USE m_hsmt_ab
+      USE m_abcoeff_store
       USE m_types_mat
 
       IMPLICIT NONE
@@ -532,18 +528,20 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
 
 ! Allocations
       CALL fjgj%alloc(MAXVAL(lapw%nv), atoms%lmaxd, jspin, noco)
-      ALLOCATE (abCoeffs(2*atoms%lmaxd*(atoms%lmaxd + 2) + 2, MAXVAL(lapw%nv)))
+      ! abCoeffs is allocated (and filled) inside hsmt_ab.
       ALLOCATE (abTemp(SIZE(this%cof, 1), 0:2*SIZE(this%cof, 2) - 1))
       ALLOCATE (fgpl(3, MAXVAL(lapw%nv)))
       ALLOCATE (work_c(MAXVAL(lapw%nv), ne))
 
 ! Initializations
       acof_size = size(this%cof, 1)
-!$acc enter data create(abTemp,fjgj,fjgj%fj,fjgj%gj,work_c,abcoeffs)
+!$acc enter data create(abTemp,fjgj,fjgj%fj,fjgj%gj,work_c)
 
 
 !Use inversion symmetry explicitely
-      l_useinversionsym = any(sym%invsat == 2)!.and.(.not.noco%l_soc).and.(.not.present(nat_start))
+! The identity A^{-p}_{lm} = (-1)^{l+m} (A^p_{l,-m})^* holds only for real
+! eigenvectors. With SOC the eigenvectors are complex, so skip this shortcut.
+      l_useinversionsym = any(sym%invsat == 2) .and. (.not.noco%l_soc)
 
       CALL timestart("fjgj coefficients")
       CALL fjgj%calculate(input, atoms, cell, lapw, noco, usdus, iType, jspin)
@@ -611,7 +609,13 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
                force%bveccof(i, :, :, iAtom) = force%bveccof(i, :, :, iAtom) + helpMat_force(:, :)
             END DO
             CALL timestop("force contributions")
-      
+            ! abCoeffs is (re)allocated per call inside hsmt_ab; release the
+            ! device copy it created and the host array before the next call.
+            !$acc exit data delete(abCoeffs)
+            ! Hand abCoeffs to the optional store for later reuse (no-op unless on).
+            CALL abcoeff_store_save(abCoeffs, lapw%nk, iintsp, jspin, iAtom)
+            IF (ALLOCATED(abCoeffs)) DEALLOCATE(abCoeffs)
+
 
             CALL timestart("local orbitals")
 ! Treatment of local orbitals
@@ -684,27 +688,13 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
             CALL timestop("local orbitals")
          END DO ! loop over interstitial spin
       END DO ! loop over atoms
-!$acc exit data delete(abTemp,fjgj%fj,fjgj%gj,work_c,abcoeffs)
+!$acc exit data delete(abTemp,fjgj%fj,fjgj%gj,work_c)
 !$acc exit data delete(fjgj)
       DEALLOCATE (work_c)
 
 
-! Treatment of atoms inversion symmetric to others
+! Treatment of atoms inversion symmetric to others (never reached for SOC)
       IF (l_useinversionsym) THEN
-!Comment on SOC case:
-!
-!                           -p,n       (l+m)   p,n  *
-! Usually, we exploit that A     = (-1)      (A    )  if p and -p are the positions
-!                           l,m                l,-m
-! of two atoms related by inversion symmetry and the coefficients are considered to
-! be in the local frame of the representative atom. This is possible, if z is real.
-! After SOC, however, the eigenvectors z are complex and this is no longer possible
-! so the z has to enter, not z*. This is done within the k-loop.
-!                                    -p,n       m   p,n  *
-! When called from hsohelp, we need A     = (-1)  (A    ) because we don't have to
-!                                     l,m           l,-m                    l
-! rotate, but in the sums in hsoham only products A*  A   enter and the (-1) cancels.
-!                                                  lm  lm
          DO iAtom = atoms%firstatom(itype),atoms%firstAtom(itype)+atoms%neq(itype)-1
             IF (sym%invsat(iAtom) .EQ. 1) THEN
                jAtom = sym%invsatnr(iAtom)
