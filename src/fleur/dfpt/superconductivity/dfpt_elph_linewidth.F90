@@ -69,6 +69,7 @@ CONTAINS
 
             CASE(1)   ! single delta with Fermi occupation factors
                 ! multiply |g|^2 by (f(eps_k) - f(eps_k+q)) so only occ -> unocc scattering contributes
+                CALL timestart("Fermi factor multiplication")
                 DO ispin = 1, jspins
                     DO nk_i = 1, size(fmpi%k_list)
                         nk = fmpi%k_list(nk_i)
@@ -81,7 +82,9 @@ CONTAINS
                         END DO ! nu
                     END DO ! nk
                 END DO ! ispin
+                CALL timestop("Fermi factor multiplication")
 
+                CALL timestart("Single-delta binning")
                 DO iMode = 1, nmode
                     IF (eigenVals(iMode) < 0.0) CYCLE   ! imaginary mode -> linewidth 0
                     linewidth = 0.0
@@ -96,8 +99,10 @@ CONTAINS
                         ph_linewidth(iMode) = ph_linewidth(iMode) + tpi_const*linewidth(nZero,ispin)
                     END DO
                 END DO
+                CALL timestop("Single-delta binning")
 
             CASE(2)   ! double delta
+                CALL timestart("Double-delta binning")
                 DO iMode = 1, nmode
                     IF (eigenVals(iMode) < 0.0) CYCLE   ! imaginary mode -> linewidth 0
                     linewidth = 0.0
@@ -112,6 +117,7 @@ CONTAINS
                         ph_linewidth(iMode) = ph_linewidth(iMode) + tpi_const*SQRT(eigenVals(iMode))*linewidth(nZero,ispin)
                     END DO
                 END DO
+                CALL timestop("Double-delta binning")
 
             CASE DEFAULT
                 CALL juDFT_error("dfpt_ph_linewidth: only i_integration=1 (single delta) or 2 (double delta) supported", &

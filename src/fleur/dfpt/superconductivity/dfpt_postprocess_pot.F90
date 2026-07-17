@@ -224,8 +224,11 @@ contains
         if (fmpi%irank==0) print * , "Starting thhe construction of the interpolation"
 
         ! Perform Wannier interpolation
-        if (fi%wannierlib%l_wannierize) call el_ph_wannier_interpolate(fmpi,fi,results,dynMats,gmat)
-
+        if (fi%wannierlib%l_wannierize) then 
+            call timestart("Wannier Interpolation elph")
+            call el_ph_wannier_interpolate(fmpi,fi,results,dynMats,gmat)
+            call timestop("Wannier Interpolation elph")
+        end if 
 
     end subroutine dfpt_postprocess_elph
 
