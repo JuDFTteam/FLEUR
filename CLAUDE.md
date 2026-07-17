@@ -37,6 +37,20 @@ Useful configure flags not shown above:
 
 Pre-configured machine setups for HPC clusters (JURECA, HAWK, SUPERMUC, CLAIX, etc.) live in `cmake/machines/`.
 
+### Double-precision compilation
+
+FLEUR source code uses plain, undecorated `real` declarations throughout (not explicit `real(kind=dp)` typing). Double precision is enforced by a compiler flag chosen per-compiler in `cmake/tests/test_precision.cmake`, applied per-target (not via global `CMAKE_Fortran_FLAGS`):
+
+| Compiler | Flag |
+|---|---|
+| Intel / NAG | `-r8` |
+| GNU (gfortran) | `-fdefault-real-8;-fdefault-double-8` |
+| NVHPC / PGI | `-Mr8;-Mr8intrinsics` |
+| IBM XL | `-qrealsize=8` |
+| Cray | `-s real64` |
+
+A normal FLEUR build always applies this flag — do not assume plain `real` means single precision when reading source.
+
 ## Running Tests
 
 Tests use pytest and require a built FLEUR. The easiest way from the build directory:
