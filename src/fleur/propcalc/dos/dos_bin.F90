@@ -130,33 +130,34 @@ CONTAINS
 
       de = abs(egrid(2)-egrid(1))
       g = 0.0
-      shift = 0.0 
+      shift = 0.0
 
       IF (PRESENT(energyShift)) shift=energyShift
       emin = MINVAL(egrid)
       DO jsp = 1, SIZE(matrix_element,4)
          DO nk_i = 1 , size(matrix_element,3)
             nk = fmpi%k_list(nk_i)
-            wk = wtkpt(nk) / de 
+            wk = wtkpt(nk) / de
                DO nu = 1 , SIZE(matrix_element,2)
-                  gridk = 0.0 
+                  ! delta(eps_nu(k) - E_F)
+                  gridk = 0.0
                   i = NINT((eig(nu,nk,jsp) -shift - emin)/de) + 1
-                  IF ( (i.LE.size(gridk,1)) .AND. (i.GE.1) ) THEN
-                        DO iNupr = 1 , size(matrix_element,1)
-                           gridq = 0.0 
-                           j = NINT((eigq(iNupr,nk,jsp) -shift - emin)/de) + 1
-                           IF ( (j.LE.size(gridq,1)) .AND. (j.GE.1) ) THEN
-                              gridk(i) = gridk(i) + wk*matrix_element(iNupr,nu,nk_i,jsp)* 2.0/jspins
-                              CALL smooth(egrid,gridk,smearing,size(egrid))
-                              gridq(j) = gridq(j) + 1
-                              CALL smooth(egrid,gridq,smearing,size(egrid))
-                              g(:,jsp) = g(:,jsp) + gridk(:)*gridq(:) 
-                           END IF !gridq
-                        END DO ! iNupr
-                     END IF ! gridk
-               END DO ! nu 
-         END DO  ! k 
-      END DO  ! jsp 
+                  IF ( (i.GT.size(gridk,1)) .OR. (i.LT.1) ) CYCLE
+                  gridk(i) = 1.0 / de
+                  CALL smooth(egrid,gridk,smearing,size(egrid))
+                  DO iNupr = 1 , size(matrix_element,1)
+                     ! delta(eps_nu'(k+q) - E_F)
+                     gridq = 0.0
+                     j = NINT((eigq(iNupr,nk,jsp) -shift - emin)/de) + 1
+                     IF ( (j.GT.size(gridq,1)) .OR. (j.LT.1) ) CYCLE
+                     gridq(j) = 1.0 / de
+                     CALL smooth(egrid,gridq,smearing,size(egrid))
+                     g(:,jsp) = g(:,jsp) + wk*de*matrix_element(iNupr,nu,nk_i,jsp)*2.0/jspins &
+                                          * gridk(:)*gridq(:)
+                  END DO ! iNupr
+               END DO ! nu
+         END DO  ! k
+      END DO  ! jsp
 
    END SUBROUTINE dos_bin_double
 END MODULE m_dosbin
