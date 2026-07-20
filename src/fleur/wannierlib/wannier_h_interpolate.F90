@@ -63,12 +63,11 @@ contains
             call juDFT_error('U_dis not allocated; disentanglement data missing', &
                              calledby='interpolate_bandstructure')
 
-        ! ---------------------------------------------------------------
-        ! Step 1: construct diagonal Bloch Hamiltonian H_k from results%eig
-        ! H_k(n,m,k,s) = eig(min_band+n-1, k_ibz, s) * delta(n,m)
-        ! ---------------------------------------------------------------
+
+        ! construct diagonal Bloch Hamiltonian H_k
         allocate(H_bloch(num_bands, num_bands, fi%kpts%nkptf, fi%input%jspins))
         H_bloch = cmplx(0.0, 0.0)
+        call timestart("Setup Bloch Hamiltonain")
         do jspin = 1, fi%input%jspins
             do ikpt = 1, fi%kpts%nkptf
                 do ib = 1, num_bands
@@ -77,11 +76,10 @@ contains
                 end do
             end do
         end do
+        call timestop("Setup Bloch Hamiltonain")
 
-        ! ---------------------------------------------------------------
-        ! Step 2: Wannier interpolation via wannier_matrix_interpolate
-        ! rotate H into Wannier gauge and Fourier interpolate to kpts_fine
-        ! ---------------------------------------------------------------
+
+        ! Wannier interpolation
         allocate(H_interpol(num_wann, num_wann, nfine , fi%input%jspins))
         H_interpol = cmplx(0.0, 0.0)
         allocate(U_full(num_bands, num_wann, fi%kpts%nkptf))
@@ -96,25 +94,21 @@ contains
             else
                 U_full(:,:,:) = results%U_mat(:,:,:,jspin)
             end if
-            call timestart("Wannier Transformation")
+            call timestart("Wannier Interpolation")
             call wannier_matrix_interpolate(fi, H_bloch(:,:,:,jspin), &
                                             U_full,                      &
                                             fi%kpts, kpts_fine,          &
                                             H_interpol(:,:,:,jspin))
-            call timestop("Wannier Transformation")
+            call timestop("Wannier Interpolation")
         end do
         
         deallocate(U_full)
         deallocate(H_bloch)
 
-        ! ---------------------------------------------------------------
-        ! Step 3: diagonalize interpolated Hamiltonian at each fine k-point
-        ! ---------------------------------------------------------------
-      
-         ! The Wannier-gauge Hamiltonian H_W(k) = sum_R exp(i k.R) H(R) is complex
-        ! Hermitian, not real symmetric, even when fi%sym%invs is true: inversion
-        ! symmetry only makes the LAPW Hamiltonian real in a special gauge, not the
-        ! Wannier gauge produced by w90. Always diagonalize the complex matrix.
+  
+        ! diagonalize to get the eigenvalues 
+        ! In wannier gauge, hamiltonian and zmat complex, even if its real 
+        ! beforehand 
         allocate(eig_interpol(num_wann, nfine, fi%input%jspins))
         allocate (t_mat::hmat_tmp)
         call hmat_tmp%init(.false.,num_wann,num_wann)
@@ -134,10 +128,9 @@ contains
             end do !ikpt 
         end do !jspins
 
-        !deallocate(H_interpol)
+
         if (l_write_output) then
-            ! Write interpolated eigenvalues into banddos.hdf (/Local/BS/eigenvalues).
-            
+            ! Write interpolated eigenvalues into banddos.hdf (/Local/BS/eigenvalues).            
             ! Minimal band-path k-points for banddos.hdf. Mark the two endpoints as special points
             ! (labeled "S"/"E") so /kpts/specialPointLabels is non-empty for the plotting tools.
             kpts_band%nkpt = nfine

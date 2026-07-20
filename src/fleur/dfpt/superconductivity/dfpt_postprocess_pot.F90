@@ -186,11 +186,11 @@ contains
                     vTot1%mt(:,0:,iDtype,:) = vTot1%mt(:,0:,iDtype,:) + grVtot3(iDir)%mt(:,0:,iDtype,:)
 
                     ! construct the electron-phonon element in cartesian basis 
-                    call timestart("construction elph element")
+                    call timestart("generate elph element")
                     call construct_elph_element(sternheimerJob,fi,sphhar,results,fmpi,enpara,nococonv,starsq,vTot1,vTot1Im,vTot,rho, fi%dfpt%qvec%bk(:, iQ),&
                                         eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatCart(:,:,:,:,iPerturb,iQ),bandWindow)
 
-                    call timestop("construction elph element")
+                    call timestop("generate elph element")
 
                     ! ! construct the electron-phonon element in the normal basis  
                     ! if (fmpi%irank == 0 ) then 

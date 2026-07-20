@@ -57,6 +57,7 @@ contains
         matWannier = cmplx(0.0,0.0)
 
 
+        call timestart("Forward FT + Wannier gauge")
         fft_grid = cmplx(0.0,0.0)
         do ikpt = 1 , kpts_coarse%nkpt
 
@@ -73,7 +74,10 @@ contains
 
         fft_grid(:,:,:)=fft_grid(:,:,:)/kpts_coarse%nkpt
         call unfold_grid(ft_lim, fft_grid, matWannier(:,:,:,:,:))
+        call timestop("Forward FT + Wannier gauge")
+
         ! interpolate to fine mesh with WS construction
+        call timestart("Wigner-Seitz weights")
         bigBox_lim(2,:) =   2*kpts_coarse%nkpt3(:)
         bigBox_lim(1,:) = - 2*kpts_coarse%nkpt3(:) 
         
@@ -94,10 +98,13 @@ contains
         ! compute WS weights for the WS cell
         cell = fi%cell
         call cell%calculate_WSweight(supercellR,FTweight,scaleSupercell=kpts_coarse%nkpt3(:))
+        call timestop("Wigner-Seitz weights")
 
+        call timestart("Backward FT")
         do ikpt = 1 , nfine
             call ft_fcm_weight(-1,ft_lim,bigBox_lim,FTweight,kpts_fine(:,ikpt),matInterpol(:,:,ikpt),matWannier(:,:,:,:,:))
         end do !ikpt
+        call timestop("Backward FT")
 
 
 
@@ -167,6 +174,7 @@ contains
         matInterpol = cmplx(0.0, 0.0)
 
         ! Wigner-Seitz weights and big-box supercell R vectors, one set per mesh
+        call timestart("Wigner-Seitz weights (k and q)")
         bigBox_lim_k(2,:) =   2*kpts_coarse%nkpt3(:)
         bigBox_lim_k(1,:) = - 2*kpts_coarse%nkpt3(:)
         boxSize_k = (4*nk1+1) * (4*nk2+1) * (4*nk3+1)
@@ -200,9 +208,11 @@ contains
         cell = fi%cell
         call cell%calculate_WSweight(supercellR_k,FTweight_k,scaleSupercell=kpts_coarse%nkpt3(:))
         call cell%calculate_WSweight(supercellR_q,FTweight_q,scaleSupercell=qpts_coarse%nkpt3(:))
+        call timestop("Wigner-Seitz weights (k and q)")
 
         ! forward fourier transform ( k-space ---> Realspace )
         ! fourier transform of the q-mesh --> R_p
+        call timestart("Forward FT + Wannier gauge")
         tempMat = cmplx(0.0,0.0)
         do ikpt = 1 , nk_c
             fftq = cmplx(0.0,0.0)
@@ -219,8 +229,10 @@ contains
             fftq = fftq / nq_c
             call unfold_grid(ft_lim_q, fftq, tempMat(:,:,ikpt,:,:,:))
         end do !ikpt
+        call timestop("Forward FT + Wannier gauge")
 
         ! fourier transfrom k -> R_e, for each R_p grid point ----
+        call timestart("Forward FT")
         do iz=0,nq3-1
             do iy=0,nq2-1
                 do ix=0,nq1-1
@@ -233,8 +245,10 @@ contains
                 end do
             end do
         end do
+        call timestop("Forward FT")
 
         ! backwards fourier transform ( Realspace --> kspace )
+        call timestart("Backward FT")
         do iq_fine = 1 , nq_fine
             ! ---- stage 1: R_p -> q', for each R_e grid point ----
             tempMat2 = cmplx(0.0,0.0)
@@ -252,6 +266,7 @@ contains
                                    matInterpol(:,:,ik_fine,iq_fine), tempMat2(:,:,:,:,:))
             end do !ik_fine
         end do !iq_fine
+        call timestop("Backward FT")
 
     end subroutine
 

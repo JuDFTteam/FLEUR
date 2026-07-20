@@ -43,20 +43,20 @@ def generate_sunburst_plot(json_file, output_file="juDFT_times_plot.html", scali
         else:
             variance=0
             ncalls=1    
-        if runtime==0: 
+        if runtime==0:
             runtime=total
             percent=100
         else:
             percent=total/runtime*100
         if scaling_data:
             scaling=scaling_data['totaltime']/total
-        
+
         current_path = f"{parent}/{timer}" if parent else timer
-        if timer == "Total Run":
+        is_root = (timer == "Total Run")
+        if is_root:
             timer="" #reset parent timer
-        else:
-            rows.append({"id": current_path, "label": timer, "parent": parent, "runtime": total,"percent": f'{percent:.2f}%',"calls":ncalls, "variance": variance, "scaling": scaling})
-            print(rows[-1])
+
+        child_rows = []
         if 'subtimers' in data:
             if scaling_data:
                 sbtimer_scaling=scaling_data['subtimers']
@@ -64,9 +64,19 @@ def generate_sunburst_plot(json_file, output_file="juDFT_times_plot.html", scali
                 if scaling_data:
                     subtimer_scale=sbtimer_scaling.pop(0)
                 else:
-                    subtimer_scale=None  
-                rows.extend(flatten_json(subtimer, timer,runtime,subtimer_scale))
-    
+                    subtimer_scale=None
+                child_rows.append(flatten_json(subtimer, timer,runtime,subtimer_scale))
+
+
+        children_total = sum(cr[0]["runtime"] for cr in child_rows if cr)
+        plotted_total = max(total, children_total)
+
+        if not is_root:
+            rows.append({"id": current_path, "label": timer, "parent": parent, "runtime": plotted_total,"percent": f'{percent:.2f}%',"calls":ncalls, "variance": variance, "scaling": scaling})
+            print(rows[-1])
+        for cr in child_rows:
+            rows.extend(cr)
+
         return rows
 
     flat_data = flatten_json(data,scaling_data=scaling_data)
