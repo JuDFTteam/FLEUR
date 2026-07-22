@@ -297,6 +297,7 @@ CONTAINS
         complex, allocatable :: gmatInterpol_q(:,:,:,:,:,:) !(nwann,nwann,nSurv,1,jspin,mode)
         complex, allocatable :: gmatEig(:,:,:,:,:) !(num_wann,num_wann,nSurv,jspin,mode) eigenbasis
         complex, allocatable :: dynMat_interpol(:,:,:)
+        type(t_wann_ft), allocatable :: ftRealspace(:,:) !(3*nat, jspins) q-independent forward transforms, built once
         real    :: atomic_mass_array(118)
 
         num_bands = fi%wannierlib%max_band - fi%wannierlib%min_band + 1
@@ -381,6 +382,16 @@ CONTAINS
         if (fmpi%irank==0) &
             open(newunit=lw_unit, file="linewidth", status='replace', action='write', form='formatted')
 
+        ! Build the real-space Wannier-gauge element once.
+        call timestart("Forward FT elph-element")
+        allocate(ftRealspace(3*fi%atoms%nat, fi%input%jspins))
+        do iMode = 1 , 3*fi%atoms%nat
+            do ispin = 1 , fi%input%jspins
+                call wannier_matrixq_forward(fi,gmatCart(:,:,:,ispin,iMode,:),U_full(:,:,:,ispin),fi%kpts,fi%kpts,ftRealspace(iMode,ispin))
+            end do !ispin
+        end do !iMode
+        call timestop("Forward FT elph-element")
+
         do iQ = 1 , fi%dfpt%qpts_interpol%nkpt
             call timestart("q-point (el-ph interpolation)")
             ! do one q-point at a time
@@ -414,7 +425,8 @@ CONTAINS
                 gmatInterpol_q = cmplx(0.0, 0.0)
                 do iMode = 1 , 3*fi%atoms%nat
                     do ispin = 1 , fi%input%jspins
-                        call wannier_matrixq_interpolate(fi,gmatCart(:,:,:,ispin,iMode,:),U_full(:,:,:,ispin),fi%kpts,survKpts,gmatInterpol_q(:,:,:,:,ispin,iMode),fi%kpts,qsingle)
+                        ! only the backward FT depends on this q (qsingle) and the surviving k-points
+                        call wannier_matrixq_backward(ftRealspace(iMode,ispin),survKpts,qsingle,gmatInterpol_q(:,:,:,:,ispin,iMode))
                     end do !ispin
                 end do !iMode
                 call timestop("Matrix element interpolation")
@@ -498,6 +510,7 @@ CONTAINS
         end if
         if (nLocK > 0) call close_eig(eig_id_interpol)
         deallocate(ph_linewidth, qsingle)
+        deallocate(ftRealspace)
 
 #ifdef CPP_MPI
         CALL MPI_BARRIER(fmpi%mpi_comm, ierr)
