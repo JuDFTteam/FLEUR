@@ -271,19 +271,20 @@ CONTAINS
         complex,intent(in)              :: gmatCart(:,:,:,:,:,:) !(nu,nu',kpoints,spin,iPerturb,iQ)
 
         integer :: eig_id_interpol,q_eig_id_interpol, num_wann , num_bands , ikpt, iMode, ispin, iPerturb
-        integer :: iQ, nKept, nSurv, iKept, ne, iWann
-        real    :: qvec(3), pref 
+        integer :: iQ, nKept, nSurv, iKept, ne, iWann, i, nLocK, nInterpol
+        real    :: qvec(3), pref
         real,allocatable :: kqpts_interpol(:,:)
-        integer, allocatable :: fermiKidx(:)   ! fine-mesh k-point indices near E_F
+        integer, allocatable :: myIdx(:)       ! this rank's global fine-k indices
+        real,    allocatable :: myKpts(:,:)    ! (3, nLocK) this rank's slice of the fine k-mesh
+        integer, allocatable :: fermiKidx(:)   ! local fine-mesh k-point indices near E_F
         real,    allocatable :: fermiKpts(:,:) ! (3, nKept) coords of those k-points
         integer, allocatable :: kqKeptIdx(:)   ! indices (into fermiK*) where k+q also near E_F
         real,    allocatable :: kqKeptKpts(:,:), survKpts(:,:), qsingle(:,:)
         class(t_mat), allocatable :: zMatk, zMatkq ! interpolated eigenvectors (num_wann x num_wann)
         real,    allocatable :: eigBuff(:), eigBuffq(:)
         integer, allocatable :: wann_list(:)
-        real,    allocatable :: eigk(:,:,:), eigkq(:,:,:) 
+        real,    allocatable :: eigk(:,:,:), eigkq(:,:,:)
 
-        type(t_mpi)          :: fmpi_line
         real,    allocatable :: wtkpt_line(:), ph_linewidth(:)
         real,    allocatable :: eigenValsQ(:)
         complex, allocatable :: eigenVecs(:,:), eigenFreqs(:)
@@ -305,98 +306,102 @@ CONTAINS
 
         if ( (.not. allocated(fi%dfpt%qpts_interpol%bk)) .or. (.not. allocated(fi%dfpt%kpts_interpol%bk))) call juDFT_error("No meshes to interpoalte on.",calledby="dfpt_elph_mat.F90")
 
-        if (fmpi%irank==0) then
+        ! distribute the interpolated k-mesh across ranks (round-robin / strided)
+        nInterpol = fi%dfpt%kpts_interpol%nkpt
+        myIdx = (/(i, i = fmpi%irank+1, nInterpol, fmpi%isize)/)
+        nLocK  = size(myIdx)
+        allocate(myKpts(3, nLocK))
+        do ikpt = 1, nLocK
+            myKpts(:, ikpt) = fi%dfpt%kpts_interpol%bk(:, myIdx(ikpt))
+        end do
 
-            ! Size of the interpolated hamiltonian is only num_wann x num_wann
-            ! MPI_COMM_SELF used, as it would lead to wrong RMA problems 
+        ! load the Umats from the Wannier step
+        call timestart("Load Wannier U matrices")
+        allocate(U_full(num_bands,num_wann,fi%kpts%nkptf,fi%input%jspins))
+        if (num_bands > num_wann) then
+            do ispin = 1 , fi%input%jspins
+                do ikpt = 1 , fi%kpts%nkptf
+                    U_full(:,:,ikpt,ispin) = matmul(results%U_dis(:,:,ikpt,ispin),results%U_mat(:,:,ikpt,ispin))
+                end do
+            end do
+        else
+            U_full(:,:,:,:) = results%U_mat(:,:,:,:)
+        end if
+        call timestop("Load Wannier U matrices")
+
+        ! diagnostic: verify the matrix-element interpolation 
+        if (fmpi%irank==0) call check_matrixq_roundtrip(fi, gmatCart, U_full)
+
+        if (nLocK > 0) then
+            ! Size of the interpolated hamiltonian is only num_wann x num_wann.
+            ! MPI_COMM_SELF: each rank keeps a private (in-memory) eig store for its own k-slice.
 #ifdef CPP_MPI
-            eig_id_interpol = open_eig(MPI_COMM_SELF, num_wann, num_wann, fi%dfpt%kpts_interpol%nkpt, fi%input%jspins, fi%noco%l_noco, &
-                                    .true., .false., fi%noco%l_soc, .false., .FALSE., 1)
-            q_eig_id_interpol = open_eig(MPI_COMM_SELF, num_wann, num_wann, fi%dfpt%kpts_interpol%nkpt, fi%input%jspins, fi%noco%l_noco, &
+            eig_id_interpol = open_eig(MPI_COMM_SELF, num_wann, num_wann, nLocK, fi%input%jspins, fi%noco%l_noco, &
                                     .true., .false., fi%noco%l_soc, .false., .FALSE., 1)
 #else
-            eig_id_interpol = open_eig(fmpi%mpi_comm, num_wann, num_wann, fi%dfpt%kpts_interpol%nkpt, fi%input%jspins, fi%noco%l_noco, &
-                                    .true., .false., fi%noco%l_soc, .false., .FALSE., 1)
-            q_eig_id_interpol = open_eig(fmpi%mpi_comm, num_wann, num_wann, fi%dfpt%kpts_interpol%nkpt, fi%input%jspins, fi%noco%l_noco, &
+            eig_id_interpol = open_eig(fmpi%mpi_comm, num_wann, num_wann, nLocK, fi%input%jspins, fi%noco%l_noco, &
                                     .true., .false., fi%noco%l_soc, .false., .FALSE., 1)
 #endif
-
             call timestart("Bandstructure interpolation (k-mesh)")
-            call interpolate_bandstructure(fi,results,fi%dfpt%kpts_interpol%bk,eig_id_interpol,.false.)
+            call interpolate_bandstructure(fi,results,myKpts,eig_id_interpol,.false.)
             call timestop("Bandstructure interpolation (k-mesh)")
 
             ! only keep k points where the eigenvalues are close to the fermi energy
             call timestart("Fermi k-point selection")
-            call select_fermi_kpoints(fi, results, eig_id_interpol, fi%dfpt%kpts_interpol%nkpt, fi%dfpt%kpts_interpol%bk,fermiKidx, fermiKpts)
+            call select_fermi_kpoints(fi, results, eig_id_interpol, nLocK, myKpts, fermiKidx, fermiKpts)
             call timestop("Fermi k-point selection")
+        else
+            allocate(fermiKidx(0), fermiKpts(3,0))
+        end if
+        nKept = size(fermiKidx)
 
-
-            ! load the Umats from the Wannier step
-            call timestart("Load Wannier U matrices")
-            allocate(U_full(num_bands,num_wann,fi%kpts%nkptf,fi%input%jspins))
-            if (num_bands > num_wann) then
-                do ispin = 1 , fi%input%jspins
-                    do ikpt = 1 , fi%kpts%nkptf
-                        U_full(:,:,ikpt,ispin) = matmul(results%U_dis(:,:,ikpt,ispin),results%U_mat(:,:,ikpt,ispin))
-                    end do
-                end do
-            else
-                U_full(:,:,:,:) = results%U_mat(:,:,:,:)
-            end if
-            call timestop("Load Wannier U matrices")
-
-            ! diagnostic: verify the matrix-element interpolation is exact on the coarse (k,q) grid
-            call check_matrixq_roundtrip(fi, gmatCart, U_full)
-
-            nKept = size(fermiKidx)
+        ! per-rank scratch for the k+q interpolation over the surviving k-points
+        if (nKept > 0) then
+#ifdef CPP_MPI
+            q_eig_id_interpol = open_eig(MPI_COMM_SELF, num_wann, num_wann, nKept, fi%input%jspins, fi%noco%l_noco, &
+                                    .true., .false., fi%noco%l_soc, .false., .FALSE., 1)
+#else
+            q_eig_id_interpol = open_eig(fmpi%mpi_comm, num_wann, num_wann, nKept, fi%input%jspins, fi%noco%l_noco, &
+                                    .true., .false., fi%noco%l_soc, .false., .FALSE., 1)
+#endif
             allocate(kqpts_interpol(3, nKept))
-            allocate(qsingle(3, 1))
             allocate(eigBuff(num_wann))
             allocate(eigBuffq(num_wann))
             allocate(wann_list(num_wann))
             wann_list = (/(iWann, iWann=1, num_wann)/)
-
             allocate(t_mat::zMatk)
             allocate(t_mat::zMatkq)
             call zMatk%init(.false., num_wann, num_wann)
             call zMatkq%init(.false., num_wann, num_wann)
+        end if
 
-            allocate(ph_linewidth(3*fi%atoms%nat))
-            ! local serial MPI descriptor: identity k_list over the surviving points, and a
-            ! self-communicator so the MPI_ALLREDUCE inside dfpt_ph_linewidth is a no-op here.
-            fmpi_line%irank    = 0
-            fmpi_line%isize    = 1
-#ifdef CPP_MPI
-            fmpi_line%mpi_comm = MPI_COMM_SELF
-#endif
+        allocate(qsingle(3, 1))
+        allocate(ph_linewidth(3*fi%atoms%nat))
+
+        if (fmpi%irank==0) &
             open(newunit=lw_unit, file="linewidth", status='replace', action='write', form='formatted')
 
-            do iQ = 1 , fi%dfpt%qpts_interpol%nkpt
-                call timestart("q-point (el-ph interpolation)")
-                ! do one q-point at a time
-                qvec = fi%dfpt%qpts_interpol%bk(:, iQ)
+        do iQ = 1 , fi%dfpt%qpts_interpol%nkpt
+            call timestart("q-point (el-ph interpolation)")
+            ! do one q-point at a time
+            qvec = fi%dfpt%qpts_interpol%bk(:, iQ)
+            qsingle(:, 1) = qvec
+            ph_linewidth = 0.0
 
+            nSurv = 0
+            if (nKept > 0) then
                 do ikpt = 1, nKept
                     kqpts_interpol(:, ikpt) = fermiKpts(:, ikpt) + qvec
                 end do
-
                 ! interpolate the bands at k+q and keep those also near E_F
                 call timestart("k+q bandstructure + Fermi selection")
                 call interpolate_bandstructure(fi,results,kqpts_interpol,q_eig_id_interpol,.false.)
                 call select_fermi_kpoints(fi, results, q_eig_id_interpol, nKept, kqpts_interpol, kqKeptIdx, kqKeptKpts)
                 call timestop("k+q bandstructure + Fermi selection")
-
                 nSurv = size(kqKeptIdx)
-                if (nSurv == 0) then
-                    ! no k-point has both k and k+q at E_F for this q
-                    deallocate(kqKeptIdx, kqKeptKpts)
-                    ph_linewidth = 0.0
-                    write(lw_unit,*) "q-Point", qvec
-                    write(lw_unit,*)  ph_linewidth
-                    call timestop("q-point (el-ph interpolation)")
-                    cycle
-                end if
+            end if
 
+            if (nSurv > 0) then
                 ! surviving k-points: k and k+q at E_F
                 allocate(survKpts(3, nSurv))
                 do ikpt = 1, nSurv
@@ -405,7 +410,6 @@ CONTAINS
 
                 ! interpolate the matrix element only for the surviving k-points, single q
                 call timestart("Matrix element interpolation")
-                qsingle(:, 1) = qvec
                 allocate(gmatInterpol_q(num_wann, num_wann, nSurv, 1, fi%input%jspins, 3*fi%atoms%nat))
                 gmatInterpol_q = cmplx(0.0, 0.0)
                 do iMode = 1 , 3*fi%atoms%nat
@@ -415,17 +419,19 @@ CONTAINS
                 end do !iMode
                 call timestop("Matrix element interpolation")
 
-                ! interpolate the dynMat and find the eigenvalue
+                ! interpolate the dynMat and find the eigenvalue (redundant on all ranks; output on rank 0)
                 call timestart("Dynmat Interpolation")
                 call interpolate_dynmat(fi%atoms,fi%sym,fi%cell,fi%dfpt%qvec,dynMats,fi%dfpt%l_WSinterpol,qsingle,dynMat_interpol)
                 call timestop("Dynmat Interpolation")
                 call timestart("Dynmat diagonalization")
                 call DiagonalizeDynMat(fi%atoms, qvec, fi%dfpt%calcEigenVec, dynMat_interpol(:,:,1), eigenValsQ, eigenVecs, iQ, .true., &
-                                       'band', .false., l_writeOutput=.true.)
+                                       'band', .false., l_writeOutput=(fmpi%irank==0))
                 call timestop("Dynmat diagonalization")
-                call timestart("Frequency calculation")
-                call CalculateFrequencies(fi%atoms,iQ,eigenValsQ,eigenFreqs,"band",qvec)
-                call timestop("Frequency calculation")
+                if (fmpi%irank==0) then
+                    call timestart("Frequency calculation")
+                    call CalculateFrequencies(fi%atoms,iQ,eigenValsQ,eigenFreqs,"band",qvec)
+                    call timestop("Frequency calculation")
+                end if
 
                 ! rotate the Wannier-gauge matrix element into the eigenbasis:
                 !   g_eig(k+q,k) = zmat^dagger(k+q) . g_wann(k+q,k) . zmat(k)
@@ -442,50 +448,56 @@ CONTAINS
                         eigk(:,ikpt,ispin)  = eigBuff
                         eigkq(:,ikpt,ispin) = eigBuffq
                         do iMode = 1, 3*fi%atoms%nat
-                            pref = 1.0 
+                            pref = 1.0
                             if (eigenValsQ(iMode) .lt. 0.0) pref = -1*ImagUnit
                             do iPerturb = 1, 3*fi%atoms%nat
-                                gmatEig(:,:,ikpt,ispin,iMode) =  gmatEig(:,:,ikpt,ispin,iMode)  +  eigenVecs(iPerturb,iMode) * & 
-                                                                pref / sqrt(2* atomic_mass_array(fi%atoms%nz(ceiling(iPerturb/3.0))) * sqrt(abs(eigenValsQ(iMode))) ) *& 
+                                gmatEig(:,:,ikpt,ispin,iMode) =  gmatEig(:,:,ikpt,ispin,iMode)  +  eigenVecs(iPerturb,iMode) * &
+                                                                pref / sqrt(2* atomic_mass_array(fi%atoms%nz(ceiling(iPerturb/3.0))) * sqrt(abs(eigenValsQ(iMode))) ) *&
                                                                 matmul(conjg(transpose(zMatkq%data_c)),matmul( gmatInterpol_q(:,:,ikpt,1,ispin,iPerturb),zMatk%data_c ))
-                            end do ! iPerturb 
+                            end do ! iPerturb
                         end do !iMode
                     end do !ikpt
                 end do !ispin
                 deallocate(gmatInterpol_q)
                 call timestop("Eigenbasis rotation")
 
-                allocate(fmpi_line%k_list(nSurv))
-                fmpi_line%k_list = (/(ikpt, ikpt=1,nSurv)/)
                 allocate(wtkpt_line(nSurv))
-                wtkpt_line = 1.0 / real(fi%dfpt%kpts_interpol%nkpt)
+                wtkpt_line = 1.0 / real(nInterpol)   ! global normalization
 
                 ! phonon linewidth for this q (single/double delta via fi%dfpt%i_integration)
                 call timestart("Phonon linewidth construction")
-                call dfpt_ph_linewidth(fi, fmpi_line, wtkpt_line, eigk, eigkq, gmatEig, eigenValsQ, results%ef, ph_linewidth)
+                call dfpt_ph_linewidth(fi, wtkpt_line, eigk, eigkq, gmatEig, eigenValsQ, results%ef, ph_linewidth)
                 call timestop("Phonon linewidth construction")
 
-                ! write the linewidth for this q
+                deallocate(wtkpt_line)
+                deallocate(gmatEig, eigk, eigkq, survKpts)
+            end if
+            if (allocated(kqKeptIdx))  deallocate(kqKeptIdx)
+            if (allocated(kqKeptKpts)) deallocate(kqKeptKpts)
+
+            ! sum the per-rank partial linewidths into the full linewidth for this q
+#ifdef CPP_MPI
+            CALL mpi_allreduce(mpi_in_place, ph_linewidth, size(ph_linewidth), mpi_double_precision, mpi_sum, fmpi%mpi_comm, ierr)
+#endif
+            if (fmpi%irank==0) then
                 write(lw_unit,*) "q-Point", qvec
                 write(lw_unit,*) ph_linewidth(:)
+            end if
+            call timestop("q-point (el-ph interpolation)")
+        end do !iQ
 
-                deallocate(wtkpt_line, fmpi_line%k_list)
-                deallocate(gmatEig, eigk, eigkq, survKpts, kqKeptIdx, kqKeptKpts)
-                call timestop("q-point (el-ph interpolation)")
-            end do !iQ
-            close(lw_unit)
+        if (fmpi%irank==0) close(lw_unit)
 
+        if (nKept > 0) then
             call zMatk%free()
             deallocate(zMatk)
-            call zMatkq%free()
+            call zMatkq%free() 
             deallocate(zMatkq)
-            
-            deallocate(eigBuff,eigBuffq, wann_list)
-            deallocate(ph_linewidth)
-            call close_eig(eig_id_interpol)
+            deallocate(eigBuff, eigBuffq, wann_list, kqpts_interpol)
             call close_eig(q_eig_id_interpol)
-
         end if
+        if (nLocK > 0) call close_eig(eig_id_interpol)
+        deallocate(ph_linewidth, qsingle)
 
 #ifdef CPP_MPI
         CALL MPI_BARRIER(fmpi%mpi_comm, ierr)
