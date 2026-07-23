@@ -132,7 +132,6 @@ CONTAINS
       ! additive rho_21=m_x+i*m_y would be nicer and more convenient/consistent.
       !--------------------------------------------------------------------------
 
-      IMPLICIT NONE
       TYPE(t_sym),    INTENT(IN)  :: sym
       TYPE(t_stars),  INTENT(IN)  :: stars
       TYPE(t_atoms),  INTENT(IN)  :: atoms
