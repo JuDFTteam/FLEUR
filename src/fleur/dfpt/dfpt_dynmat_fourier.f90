@@ -89,13 +89,68 @@ CONTAINS
       END DO
    END SUBROUTINE
 
-   subroutine ft_fcm_weight(isn,ft_lim,bigBoxLim,weights,bqpt,dyn_mat_q,dyn_mat_r)
-      ! Fourier transform for a fourier transform from a bigger box
-      ! make use of weights to enforce correct periodicity 
-      ! isn =  1 : k -> r 
-      ! isn = -1 : r -> k
+   subroutine build_ws_ft(ft_lim,bigBoxLim,weights,nNZ,Rvecs,indStored,weightNZ)
+      ! Precompute the compact list of nonzero Wigner-Seitz weights 
+      !   Rvecs(:,i) : big-box integer coordinates (ix,iy,iz) for the phase factor
+      !   indStored(:,i) : the modulo-folded 0-based storage indices (nx,ny,nz)
+      !   weightNZ(i)    : the (nonzero) weight value
+      integer, intent(in)  :: ft_lim(2,3), bigBoxLim(2,3)
+      real,    intent(in)  :: weights(:)
+      integer, intent(out) :: nNZ
+      integer, allocatable, intent(out) :: Rvecs(:,:), indStored(:,:)
+      real,    allocatable, intent(out) :: weightNZ(:)
 
-      integer, intent(in) :: isn 
+      integer :: iGrid, ix, iy, iz, nx, ny, nz, i
+
+      nNZ = count(weights /= 0.0)
+      allocate(Rvecs(3,nNZ), indStored(3,nNZ), weightNZ(nNZ))
+
+      iGrid = 0
+      i = 0
+      do iz=bigBoxLim(1,3),bigBoxLim(2,3)
+         do iy=bigBoxLim(1,2),bigBoxLim(2,2)
+            do ix=bigBoxLim(1,1),bigBoxLim(2,1)
+               iGrid = iGrid+1
+               if (weights(iGrid) == 0.0) cycle
+               i = i+1
+               Rvecs(:,i) = (/ix,iy,iz/)
+               ! map to smaller box using ft_lim bounds, shift to 0-based storage
+               nx = ft_lim(1,1) + modulo(ix - ft_lim(1,1), ft_lim(2,1) - ft_lim(1,1) + 1)
+               ny = ft_lim(1,2) + modulo(iy - ft_lim(1,2), ft_lim(2,2) - ft_lim(1,2) + 1)
+               nz = ft_lim(1,3) + modulo(iz - ft_lim(1,3), ft_lim(2,3) - ft_lim(1,3) + 1)
+               indStored(:,i) = (/nx - ft_lim(1,1), ny - ft_lim(1,2), nz - ft_lim(1,3)/)
+               weightNZ(i) = weights(iGrid)
+            end do
+         end do
+      end do
+   end subroutine
+
+   subroutine ft_fcm_weight_packed(isn,nNZ,Rvecs,indStored,weightNZ,bqpt,dyn_mat_q,dyn_mat_r)
+      ! Backward FT from a bigger box, iterating the precomputed nonzero-weight
+      ! points (see build_ws_ft). isn = -1 : r -> k (all callers), isn = 1 : k -> r.
+      integer, intent(in) :: isn
+      integer, intent(in) :: nNZ
+      integer, intent(in) :: Rvecs(:,:), indStored(:,:)
+      real,    intent(in) :: weightNZ(:)
+      real,    intent(in) :: bqpt(3)
+
+      complex, intent(inout) :: dyn_mat_q(:,:)
+      complex, intent(in)    :: dyn_mat_r(:,:,0:,0:,0:)
+
+      integer :: i
+      real    :: phas
+      complex :: phase_fac
+
+      do i = 1, nNZ
+         phas = isn*tpi_const*(bqpt(1)*Rvecs(1,i)+bqpt(2)*Rvecs(2,i)+bqpt(3)*Rvecs(3,i))
+         phase_fac = cmplx(cos(phas),sin(phas))
+         dyn_mat_q(:,:) = dyn_mat_q(:,:) + phase_fac*weightNZ(i)*dyn_mat_r(:,:,indStored(1,i),indStored(2,i),indStored(3,i))
+      end do
+   end subroutine
+
+   subroutine ft_fcm_weight(isn,ft_lim,bigBoxLim,weights,bqpt,dyn_mat_q,dyn_mat_r)
+      ! Perform a weighted fourier transform 
+      integer, intent(in) :: isn
       integer, intent(in) :: ft_lim(2,3), bigBoxlim(2,3)
       real,    intent(in) :: bqpt(3)
       real,    intent(in) :: weights(:)
@@ -103,30 +158,13 @@ CONTAINS
       complex,intent(inout) :: dyn_mat_q(:,:)
       complex,intent(in) :: dyn_mat_r(:,:,0:,0:,0:)
 
-      integer :: iGrid, ix, iy, iz, nx, ny, nz 
-      real    :: phas
-      complex :: phase_fac
+      integer :: nNZ
+      integer, allocatable :: Rvecs(:,:), indStored(:,:)
+      real,    allocatable :: weightNZ(:)
 
-      iGrid=0
-      do iz=bigBoxlim(1,3),bigBoxlim(2,3)
-         do iy=bigBoxlim(1,2),bigBoxlim(2,2)
-            do ix=bigBoxlim(1,1),bigBoxlim(2,1)
-               iGrid = iGrid+1
-               phas=isn*tpi_const*(bqpt(1)*ix+bqpt(2)*iy+bqpt(3)*iz)
-               phase_fac=cmplx(cos(phas),sin(phas))
-               ! map to smaller box using ft_lim bounds
-               nx = ft_lim(1,1) + modulo(ix - ft_lim(1,1), ft_lim(2,1) - ft_lim(1,1) + 1)
-               ny = ft_lim(1,2) + modulo(iy - ft_lim(1,2), ft_lim(2,2) - ft_lim(1,2) + 1)
-               nz = ft_lim(1,3) + modulo(iz - ft_lim(1,3), ft_lim(2,3) - ft_lim(1,3) + 1)
-               ! shift to storage indices (0-based)
-               nx = nx - ft_lim(1,1)
-               ny = ny - ft_lim(1,2)
-               nz = nz - ft_lim(1,3)
-               dyn_mat_q(:,:)    = dyn_mat_q(:,:)    + phase_fac*weights(iGrid)*dyn_mat_r(:,:,nx,ny,nz)
-            end do 
-         end do 
-      end do 
-   end subroutine 
+      call build_ws_ft(ft_lim,bigBoxLim,weights,nNZ,Rvecs,indStored,weightNZ)
+      call ft_fcm_weight_packed(isn,nNZ,Rvecs,indStored,weightNZ,bqpt,dyn_mat_q,dyn_mat_r)
+   end subroutine
 
    subroutine unfold_grid(ft_lim, grid, cube)
         !  Unfold a flat Fourier grid (as accumulated by the discrete fourier transform into
@@ -233,27 +271,27 @@ CONTAINS
       END DO
    END SUBROUTINE
 
-   SUBROUTINE ift_dyn(atoms,qpts,ft_lim,bigBox_lim,weights,bqpt,dyn_mat_r,dyn_mat_q)
+   SUBROUTINE ift_dyn(atoms,qpts,nNZ,Rvecs,indStored,weightNZ,bqpt,dyn_mat_r,dyn_mat_q)
       !! Transforms the dynamical matrix on a real space lattice vector grid
       !! (--> mass-normalized FCM) back onto a specific q vector provided as
       !! input (bqpt) by the inverse Fourier Transformation as compared to
-      !! SUBROUTINE ft_dyn.
       type(t_atoms), intent(in) :: atoms
       type(t_kpts),  intent(in) :: qpts
-      integer,  intent(in) :: ft_lim(2,3), bigBox_lim(2,3)
-      real,     intent(in) :: weights(:) 
+      integer,       intent(in) :: nNZ
+      integer,       intent(in) :: Rvecs(:,:), indStored(:,:)
+      real,          intent(in) :: weightNZ(:)
       real,          intent(in) :: bqpt(3)
       complex,       intent(in) :: dyn_mat_r(:,:,0:,0:,0:)
       complex, allocatable, intent(out) :: dyn_mat_q(:,:)
 
-      integer :: dyn_dim 
+      integer :: dyn_dim
 
       dyn_dim = 3*atoms%nat
 
       allocate(dyn_mat_q(dyn_dim,dyn_dim))
       dyn_mat_q(:,:) = cmplx(0.0,0.0)
 
-      call ft_fcm_weight(-1,ft_lim,bigBox_lim,weights,bqpt,dyn_mat_q,dyn_mat_r)
+      call ft_fcm_weight_packed(-1,nNZ,Rvecs,indStored,weightNZ,bqpt,dyn_mat_q,dyn_mat_r)
 
    END SUBROUTINE
 
@@ -280,6 +318,9 @@ CONTAINS
       real    :: mass_mat(3*atoms%nat, 3*atoms%nat)
       integer, allocatable :: supercellR(:,:)
       real,    allocatable :: FTweight(:)
+      integer :: nNZ                              ! packed nonzero-weight list (built once)
+      integer, allocatable :: Rvecs(:,:), indStored(:,:)
+      real,    allocatable :: weightNZ(:)
       complex, allocatable :: dyn_mat_r(:,:,:,:,:), dyn_mat_q_full(:,:,:), dyn_mat_q(:,:)
 
       dyn_dim = 3*atoms%nat
@@ -317,6 +358,8 @@ CONTAINS
          FTweight = 1.0
       end if
 
+      call build_ws_ft(ft_lim, bigBox_lim, FTweight, nNZ, Rvecs, indStored, weightNZ)
+
       ! coarse q dynamical matrices --> real-space (mass-normalized) FCM
       allocate(dyn_mat_r(dyn_dim,dyn_dim,0:(qpts_coarse%nkpt3(1)-1),0:(qpts_coarse%nkpt3(2)-1),0:(qpts_coarse%nkpt3(3)-1)))
       call ft_dyn(atoms, qpts_coarse, sym, ft_lim, cell%amat, dyn_mat_coarse, dyn_mat_r, dyn_mat_q_full)
@@ -342,7 +385,7 @@ CONTAINS
       ! inverse Fourier transform onto every target q-point
       allocate(dyn_mat_interp(dyn_dim,dyn_dim,size(q_target,2)))
       do iq = 1, size(q_target,2)
-         call ift_dyn(atoms, qpts_coarse, ft_lim, bigBox_lim, FTweight, q_target(:,iq), dyn_mat_r, dyn_mat_q)
+         call ift_dyn(atoms, qpts_coarse, nNZ, Rvecs, indStored, weightNZ, q_target(:,iq), dyn_mat_r, dyn_mat_q)
          dyn_mat_interp(:,:,iq) = dyn_mat_q
          deallocate(dyn_mat_q)
       end do

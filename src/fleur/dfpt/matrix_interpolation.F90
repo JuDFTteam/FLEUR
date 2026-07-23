@@ -21,12 +21,18 @@ module m_matrix_interpolation
         integer :: bigBox_lim_k(2,3), bigBox_lim_q(2,3)
         real,    allocatable :: FTweight_k(:), FTweight_q(:)
         complex, allocatable :: matWannier(:,:,:,:,:,:,:,:)   ! nwann,nwann, R_e cube, R_p cube
+        ! packed nonzero Wigner-Seitz weights for the backward FT (built once):
+        !   *_Rvecs(:,i) big-box coords (phase), *_indStored(:,i) 0-based storage idx, *_weightNZ(i) weight
+        integer :: ws_k_nNZ = 0, ws_q_nNZ = 0
+        integer, allocatable :: ws_k_Rvecs(:,:), ws_k_indStored(:,:)
+        integer, allocatable :: ws_q_Rvecs(:,:), ws_q_indStored(:,:)
+        real,    allocatable :: ws_k_weightNZ(:), ws_q_weightNZ(:)
     end type t_wann_ft
 
 contains
     subroutine wannier_matrix_interpolate(fi,matElement,U_mat,kpts_coarse,kpts_fine,matInterpol,qpts_coarse,qpts_fine)
 
-        use m_dfpt_dynmat_fourier , only : ft_dyn_direct, ft_fcm_weight, unfold_grid
+        use m_dfpt_dynmat_fourier , only : ft_dyn_direct, build_ws_ft, ft_fcm_weight_packed, unfold_grid
 
         type(t_fleurinput), intent(in) :: fi
         complex, intent(in) :: matElement(:,:,:)                 ! nu',nu, kpoints
@@ -48,6 +54,10 @@ contains
         complex,allocatable :: matWannier(:,:,:,:,:)               ! matrix elements in realspace (wannier gauge)
         complex,allocatable :: matRot(:,:)                          ! rotated matrix elements in wannier gauge
         real :: bkpt(3)
+
+        integer :: nNZ                              ! packed nonzero-weight list (built once)
+        integer, allocatable :: Rvecs(:,:), indStored(:,:)
+        real,    allocatable :: weightNZ(:)
 
         integer :: nwann, nfine
 
@@ -109,11 +119,12 @@ contains
         ! compute WS weights for the WS cell
         cell = fi%cell
         call cell%calculate_WSweight(supercellR,FTweight,scaleSupercell=kpts_coarse%nkpt3(:))
+        call build_ws_ft(ft_lim, bigBox_lim, FTweight, nNZ, Rvecs, indStored, weightNZ)
         call timestop("Wigner-Seitz weights")
 
         call timestart("Backward FT")
         do ikpt = 1 , nfine
-            call ft_fcm_weight(-1,ft_lim,bigBox_lim,FTweight,kpts_fine(:,ikpt),matInterpol(:,:,ikpt),matWannier(:,:,:,:,:))
+            call ft_fcm_weight_packed(-1,nNZ,Rvecs,indStored,weightNZ,kpts_fine(:,ikpt),matInterpol(:,:,ikpt),matWannier(:,:,:,:,:))
         end do !ikpt
         call timestop("Backward FT")
 
@@ -148,7 +159,7 @@ contains
 
         ! Build the real-space Wannier-gauge matWannier and the Wigner-Seitz weights.
         
-        use m_dfpt_dynmat_fourier , only : ft_dyn_direct, unfold_grid
+        use m_dfpt_dynmat_fourier , only : ft_dyn_direct, unfold_grid, build_ws_ft
 
         type(t_fleurinput), intent(in)  :: fi
         complex,            intent(in)  :: matElement(:,:,:,:)    ! nu',nu, kpoints, qpts (nu' at k+q, nu at k)
@@ -225,6 +236,8 @@ contains
         cell = fi%cell
         call cell%calculate_WSweight(supercellR_k,ft%FTweight_k,scaleSupercell=kpts_coarse%nkpt3(:))
         call cell%calculate_WSweight(supercellR_q,ft%FTweight_q,scaleSupercell=qpts_coarse%nkpt3(:))
+        call build_ws_ft(ft%ft_lim_k, ft%bigBox_lim_k, ft%FTweight_k, ft%ws_k_nNZ, ft%ws_k_Rvecs, ft%ws_k_indStored, ft%ws_k_weightNZ)
+        call build_ws_ft(ft%ft_lim_q, ft%bigBox_lim_q, ft%FTweight_q, ft%ws_q_nNZ, ft%ws_q_Rvecs, ft%ws_q_indStored, ft%ws_q_weightNZ)
         call timestop("Wigner-Seitz weights (k and q)")
 
         ! forward fourier transform ( k-space ---> Realspace )
@@ -270,7 +283,7 @@ contains
 
         ! Backward Fourier transform of the precomputed real-space to fine k space
     
-        use m_dfpt_dynmat_fourier , only : ft_fcm_weight
+        use m_dfpt_dynmat_fourier , only : ft_fcm_weight_packed
 
         type(t_wann_ft), intent(in)    :: ft
         real,            intent(in)    :: kpts_fine(:,:)          ! fine k-mesh to interpolate onto
@@ -294,14 +307,14 @@ contains
             do iz=0,ft%nk3-1
                 do iy=0,ft%nk2-1
                     do ix=0,ft%nk1-1
-                        call ft_fcm_weight(-1, ft%ft_lim_q, ft%bigBox_lim_q, ft%FTweight_q, qpts_fine(:,iq_fine), &
+                        call ft_fcm_weight_packed(-1, ft%ws_q_nNZ, ft%ws_q_Rvecs, ft%ws_q_indStored, ft%ws_q_weightNZ, qpts_fine(:,iq_fine), &
                                            tempMat2(:,:,ix,iy,iz), ft%matWannier(:,:,ix,iy,iz,:,:,:))
                     end do
                 end do
             end do
             ! ---- stage 2: R_e -> k' ----
             do ik_fine = 1 , nk_fine
-                call ft_fcm_weight(-1, ft%ft_lim_k, ft%bigBox_lim_k, ft%FTweight_k, kpts_fine(:,ik_fine), &
+                call ft_fcm_weight_packed(-1, ft%ws_k_nNZ, ft%ws_k_Rvecs, ft%ws_k_indStored, ft%ws_k_weightNZ, kpts_fine(:,ik_fine), &
                                    matInterpol(:,:,ik_fine,iq_fine), tempMat2(:,:,:,:,:))
             end do !ik_fine
         end do !iq_fine
