@@ -24,6 +24,9 @@ module m_types_rsoc
        implicit none
      class(t_rsoc),INTENT(INOUT):: this
      class(t_atoms),INTENT(IN)   :: atoms
+     IF (atoms%max_radial_functions < 1) &
+        CALL judft_error("t_rsoc%init: atoms%max_radial_functions not set (<1)", &
+                         hint="Likely missing from mpi_bc_atoms")
      ALLOCATE(this%soangl(atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2,&
          atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2),source=cmplx(0.0,0.0))
      allocate(this%rso(atoms%max_radial_functions,atoms%max_radial_functions,atoms%ntype,0:atoms%lmaxd,2,2),source=0.0)

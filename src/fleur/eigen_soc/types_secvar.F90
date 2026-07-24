@@ -44,7 +44,8 @@ MODULE m_types_secvar
         TYPE(t_lapw),  TARGET, INTENT(IN) :: lapw
         TYPE(t_atoms), TARGET, INTENT(IN) :: atoms
 
-        INTEGER :: jsp, nspin
+        INTEGER :: jsp, nspin, jj
+        LOGICAL :: l_real_zmat
 
         ! Implementation of initialization for SOC second variation
         this%ikpt = ikpt
@@ -53,8 +54,14 @@ MODULE m_types_secvar
         this%lapw  => lapw
         this%atoms => atoms
 
+        ! Use the number of states actually stored for this k-point, not the
+        ! requested input%neig; reading beyond it would pull uninitialized eig
+        ! storage (stale window memory under MPI-RMA). Consistent with the
+        ! clamp in matrix_element_factory so the matrix size matches.
         this%ne_first=input%neig
-        this%ne_second=input%neig*2
+        CALL read_eig(eig_id, this%ikpt, 1, neig=this%ne_first)
+        this%ne_first=MIN(input%neig, this%ne_first)
+        this%ne_second=this%ne_first*2
 
         this%nmat_first=lapw%nmat
         nspin=merge(2,1,l_noco)
@@ -65,11 +72,17 @@ MODULE m_types_secvar
 
         !Read the eigenvalues of the original problem for each spin channel, needed for the diagonalization in second variation
 
+        ! In SOC/noncollinear mode the first-variation eigenvectors are stored
+        ! as complex objects in eig66; keep zmat complex when reading them.
+        l_real_zmat = input%l_real .AND. (.NOT. l_noco)
         allocate(this%zmat(input%jspins))
         allocate(this%eig(this%ne_first,input%jspins))
         DO jsp=1,input%jspins
-            call this%zmat(jsp)%init(input%l_real,this%nmat_first,this%ne_first) 
-           CALL read_eig(eig_id,this%ikpt,jsp, neig=this%ne_first,eig=this%eig(:,jsp),zmat=this%zmat(jsp))
+            call this%zmat(jsp)%init(l_real_zmat,this%nmat_first,this%ne_first)
+            ! read exactly ne_first states (do not pass neig= here: it is
+            ! INTENT(OUT) and would reset ne_first back to the full stored count)
+            CALL read_eig(eig_id,this%ikpt,jsp, list=[(jj,jj=1,this%ne_first)], &
+                          eig=this%eig(:,jsp), zmat=this%zmat(jsp))
         end do
 
     END SUBROUTINE initialize
@@ -112,14 +125,9 @@ MODULE m_types_secvar
     subroutine diagonalize(this)
         use m_eigen_diag
         use m_types_mpimat
-        use m_types_solver
-        use m_available_solvers, only: select_solver
         CLASS(t_secvar), INTENT(INOUT) :: this
         class(t_mat),allocatable :: hmat
         integer :: ne_loc
-#ifdef CPP_MPI
-        class(t_solver),allocatable :: solver,transform
-#endif
 
         allocate(this%eigval(this%ne_second))
         ne_loc = this%ne_second   ! disposable: eigen_diag_std ne is INOUT (becomes local count)
@@ -127,12 +135,6 @@ MODULE m_types_secvar
         select type(refmat=>this%mat(1,1))
         type is (t_mpimat)
 #ifdef CPP_MPI
-            !Parallel: clear hard error if no parallel standard solver (e.g. ELPA) is available.
-            call select_solver(.TRUE., diag_solver=solver, diag_transform=transform)
-            IF (.NOT.solver%standard) CALL judft_error( &
-               "secvar_soc: no parallel standard eigensolver available. Build FLEUR with ELPA "// &
-               "or run without eigenvalue parallelization (n_size=1).")
-
             !Redistribute the row-cyclic spinor blocks into a single 2D block-cyclic
             !matrix on sub_comm and diagonalize across the whole group. The (2,1) block
             !is omitted: the solver consults only the upper triangle and synthesizes it
@@ -142,6 +144,9 @@ MODULE m_types_secvar
             call hmat%init(.false., this%ne_second, this%ne_second, this%fmpi%sub_comm, MPIMAT_2D_BLOCK_CYCLIC)
             call hmat%copy(this%mat(1,1),1,1)
             call hmat%copy(this%mat(2,2),this%ne_first+1,this%ne_first+1)
+            ! Merge lower into upper so the upper triangle is explicitly
+            ! Hermitian-consistent before diagonalization.
+            call mingeselle(this%mat(2,1), this%mat(1,2))
             call hmat%copy(this%mat(1,2),1,this%ne_first+1)
             call timestop("Matrix redistribution")
 
@@ -200,8 +205,15 @@ MODULE m_types_secvar
                eig%data_c = conjg(ev_rc%data_c(r0+1:r0+this%ne_first, :))
                !Back-transform the locally-owned columns into the original LAPW basis.
                call this%zmat(jsp)%multiply(eig, backtransformed)
-               call write_eig(this%eig_id, this%ikpt, jsp, neig=this%ne_second, neig_total=this%ne_second, &
-                              eig=this%eigval, n_start=this%fmpi%n_size, n_end=this%fmpi%n_rank, zmat=backtransformed)
+                    ! Match the non-SOC eigen path: only one rank per sub_comm writes
+                    ! neig/eig metadata, all ranks write their distributed columns.
+                    if (this%fmpi%n_rank == 0) then
+                        call write_eig(this%eig_id, this%ikpt, jsp, neig=this%ne_second, neig_total=this%ne_second, &
+                                            eig=this%eigval, n_start=this%fmpi%n_size, n_end=this%fmpi%n_rank, zmat=backtransformed)
+                    else
+                        call write_eig(this%eig_id, this%ikpt, jsp, neig=this%ne_second, &
+                                            n_start=this%fmpi%n_size, n_end=this%fmpi%n_rank, zmat=backtransformed)
+                    end if
             END DO
             call ev_rc%free()
 #endif

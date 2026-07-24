@@ -95,10 +95,21 @@ CONTAINS
         TYPE(t_mpi),       INTENT(IN) :: fmpi
         INTEGER, OPTIONAL, INTENT(IN) :: ev_list(:) !select these states, default: all
 
-        INTEGER :: num_bands, n, jsp
+        INTEGER :: num_bands, n, jsp, neig_actual
+        LOGICAL :: l_real_zmat
+        INTEGER, ALLOCATABLE :: read_list(:)
 
         num_bands = input%neig
-        IF (PRESENT(ev_list)) num_bands = SIZE(ev_list)
+        IF (PRESENT(ev_list)) THEN
+            num_bands = SIZE(ev_list)
+        ELSE
+            ! Only as many states as are actually stored for this k-point are
+            ! available; requesting more would read uninitialized eig storage
+            ! (harmless zeros in serial mem/DA, but stale window memory under
+            ! MPI-RMA). Clamp to the stored count, as the old alineso did.
+            CALL read_eig(eig_id, ikpt, 1, neig=neig_actual)
+            num_bands = MIN(num_bands, neig_actual)
+        END IF
 
         !Radial functions and energy derivatives: k-independent, so generated
         !only once per SCF iteration (i.e. after each factory reset)
@@ -120,13 +131,17 @@ CONTAINS
             !t_secvar%initialize (needed there for the back-transform); a getter
             !for zmat_store could avoid this duplication.
             ALLOCATE(zmat_store(input%jspins))
+            ! In SOC/noncollinear mode the eigenvectors are stored as complex
+            ! objects in eig66 and must be read into complex matrices.
+            l_real_zmat = input%l_real .AND. (.NOT.(noco%l_soc .OR. noco%l_noco))
+            IF (PRESENT(ev_list)) THEN
+                read_list = ev_list
+            ELSE
+                read_list = [(n, n = 1, num_bands)]
+            END IF
             DO jsp = 1, input%jspins
-                CALL zmat_store(jsp)%init(input%l_real, lapw%nmat, num_bands)
-                IF (PRESENT(ev_list)) THEN
-                    CALL read_eig(eig_id, ikpt, jsp, list=ev_list, zmat=zmat_store(jsp))
-                ELSE
-                    CALL read_eig(eig_id, ikpt, jsp, zmat=zmat_store(jsp))
-                END IF
+                CALL zmat_store(jsp)%init(l_real_zmat, lapw%nmat, num_bands)
+                CALL read_eig(eig_id, ikpt, jsp, list=read_list, zmat=zmat_store(jsp))
             END DO
 
             !Calculate the abc coefficients for all atom types and both spins

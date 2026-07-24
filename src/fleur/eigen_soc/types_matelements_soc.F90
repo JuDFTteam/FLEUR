@@ -122,7 +122,7 @@ CONTAINS
                               cof_lm = CMPLX(0.,0.)
                               DO m1 = -l,l
                                  lm1 = ll1 + m1
-                                 cof_lm = cof_lm + conjg(this%rsoc%soangl(l,m,i1,l,m1,j1))*conjg(abc(j1,n)%cof(j,lm1,jcof,na))
+                                 cof_lm = cof_lm + this%rsoc%soangl(l,m,i1,l,m1,j1)*conjg(abc(j1,n)%cof(j,lm1,jcof,na))
                               ENDDO
                               DO icof=1,abc(1,n)%n_r(l)
                                  DO i=1, num_bands

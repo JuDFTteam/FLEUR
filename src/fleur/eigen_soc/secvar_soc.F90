@@ -33,6 +33,7 @@ CONTAINS
 
         TYPE(t_secvar)          :: secvar
         TYPE(t_matelements_soc) :: matelements
+        INTEGER :: ncopy
 
         ! Initialize the second variation matrix
         CALL secvar%initialize(.TRUE., ikpt, eig_id, input, fmpi, lapw, atoms)
@@ -61,7 +62,10 @@ CONTAINS
 
         ! Return eigenvalues to caller if requested
         IF (PRESENT(ne_out))     ne_out = secvar%ne_second
-        IF (PRESENT(eigval_out)) eigval_out(:secvar%ne_second) = secvar%eigval
+        IF (PRESENT(eigval_out)) THEN
+            ncopy = MIN(secvar%ne_second, SIZE(eigval_out), SIZE(secvar%eigval))
+            eigval_out(:ncopy) = secvar%eigval(:ncopy)
+        END IF
         write(oUnit,*) "SOC eigenvalues for k-point ", ikpt
         write(oUnit,*) secvar%eigval(1:secvar%ne_second)
 
@@ -86,7 +90,7 @@ CONTAINS
         TYPE(t_lapw)  :: lapw
         TYPE(t_rsoc)  :: rsoc
         TYPE(t_sym)   :: sym_l
-        INTEGER :: nk, nk_i
+        INTEGER :: nk, nk_i, neig_soc
 #ifdef CPP_MPI
         INTEGER :: ierr
 #endif
@@ -98,7 +102,10 @@ CONTAINS
         ! The SOC angular matrix elements (soangl) are set up in the global frame.
         ! Hence the basis matching coefficients must not be rotated into the local
         ! frame of the representative atom, so we disable the atom rotation here
-        ! (consistent with eigenso, where sym%ngopr is forced to 1).
+        ! (consistent with eigenso, where sym%ngopr is forced to 1). Otherwise
+        ! hsmt_ab/the LO setup rotate the abc coefficients into each atom's local
+        ! frame, which is inconsistent with the global-frame soangl and yields
+        ! wrong SOC matrix elements for symmetry-related (e.g. -k) k-points.
         sym_l = fi%sym
         sym_l%ngopr = 1
 
@@ -113,21 +120,28 @@ CONTAINS
         DO nk_i = 1, SIZE(fmpi%k_list)
             nk = fmpi%k_list(nk_i)
             CALL lapw%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, sym_l, nk, fi%cell, fmpi)
-            CALL secvar_soc_kpts(fi%atoms, fi%noco, nococonv, fi%input, sym_l, fi%cell, &
-                            enpara, lapw, vTot, rsoc, fmpi, nk, eig_id, &
-                            ne_out=results%neig(nk, 1), eigval_out=results%eig(:, nk, 1))
+            IF (fmpi%n_rank == 0) THEN
+               CALL secvar_soc_kpts(fi%atoms, fi%noco, nococonv, fi%input, sym_l, fi%cell, &
+                               enpara, lapw, vTot, rsoc, fmpi, nk, eig_id, &
+                               ne_out=results%neig(nk, 1), eigval_out=results%eig(:, nk, 1))
+            ELSE
+               CALL secvar_soc_kpts(fi%atoms, fi%noco, nococonv, fi%input, sym_l, fi%cell, &
+                               enpara, lapw, vTot, rsoc, fmpi, nk, eig_id)
+            END IF
         END DO
         ! Free the cached data
         CALL matrix_element_factory_reset()
 
 #ifdef CPP_MPI
+    neig_soc = SIZE(results%eig, 1)
         CALL MPI_ALLREDUCE(MPI_IN_PLACE, results%neig(:, 1), &
-                           fi%kpts%nkpt, MPI_INTEGER, MPI_SUM, fmpi%mpi_comm, ierr)
-        CALL MPI_ALLREDUCE(MPI_IN_PLACE, results%eig(:2*fi%input%neig,:,1), &
-                           2*fi%input%neig*fi%kpts%nkpt, MPI_DOUBLE_PRECISION, MPI_MIN, fmpi%mpi_comm, ierr)
+                           fi%kpts%nkpt, MPI_INTEGER, MPI_MAX, fmpi%mpi_comm, ierr)
+    CALL MPI_ALLREDUCE(MPI_IN_PLACE, results%eig(:neig_soc,:,1), &
+               neig_soc*fi%kpts%nkpt, MPI_DOUBLE_PRECISION, MPI_MIN, fmpi%mpi_comm, ierr)
 #endif
         if (fi%input%jspins == 2) then
-           results%eig(:2*fi%input%neig,:,2) = results%eig(:2*fi%input%neig,:,1)
+       neig_soc = SIZE(results%eig, 1)
+       results%eig(:neig_soc,:,2) = results%eig(:neig_soc,:,1)
            results%neig(:, 2) = results%neig(:, 1)
         end if
     END SUBROUTINE secvar_soc
