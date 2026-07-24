@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2024 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -289,6 +289,7 @@ CONTAINS
         real,    allocatable :: eigenValsQ(:)
         complex, allocatable :: eigenVecs(:,:), eigenFreqs(:)
         integer              :: lw_unit
+        real                  :: sqrtOmegaMax
 
 #ifdef CPP_MPI
         integer :: ierr
@@ -330,8 +331,10 @@ CONTAINS
         end if
         call timestop("Load Wannier U matrices")
 
-        ! diagnostic: verify the matrix-element interpolation 
+        ! diagnostic: verify the matrix-element interpolation
         if (fmpi%irank==0) call check_matrixq_roundtrip(fi, gmatCart, U_full)
+
+        sqrtOmegaMax = global_phonon_energy_bound(fi, dynMats)
 
         if (nLocK > 0) then
             ! Size of the interpolated hamiltonian is only num_wann x num_wann.
@@ -349,7 +352,7 @@ CONTAINS
 
             ! only keep k points where the eigenvalues are close to the fermi energy
             call timestart("Fermi k-point selection")
-            call select_fermi_kpoints(fi, results, eig_id_interpol, nLocK, myKpts, fermiKidx, fermiKpts)
+            call select_fermi_kpoints(fi, results, eig_id_interpol, nLocK, myKpts, fermiKidx, fermiKpts, omegaMax=sqrtOmegaMax)
             call timestop("Fermi k-point selection")
         else
             allocate(fermiKidx(0), fermiKpts(3,0))
@@ -399,6 +402,20 @@ CONTAINS
             qsingle(:, 1) = qvec
             ph_linewidth = 0.0
 
+            ! interpolate the dynMat and find the eigenvalue for this q
+            call timestart("Dynmat Interpolation")
+            call interpolate_dynmat(fi%atoms,fi%sym,fi%cell,fi%dfpt%qvec,dynMats,fi%dfpt%l_WSinterpol,qsingle,dynMat_interpol)
+            call timestop("Dynmat Interpolation")
+            call timestart("Dynmat diagonalization")
+            call DiagonalizeDynMat(fi%atoms, qvec, fi%dfpt%calcEigenVec, dynMat_interpol(:,:,1), eigenValsQ, eigenVecs, iQ, .true., &
+                                   'band', .false., l_writeOutput=(fmpi%irank==0))
+            call timestop("Dynmat diagonalization")
+            if (fmpi%irank==0) then
+                call timestart("Frequency calculation")
+                call CalculateFrequencies(fi%atoms,iQ,eigenValsQ,eigenFreqs,"band",qvec)
+                call timestop("Frequency calculation")
+            end if
+
             nSurv = 0
             if (nKept > 0) then
                 do ikpt = 1, nKept
@@ -407,7 +424,7 @@ CONTAINS
                 ! interpolate the bands at k+q and keep those also near E_F
                 call timestart("k+q bandstructure + Fermi selection")
                 call interpolate_bandstructure(fi,results,kqpts_interpol,q_eig_id_interpol,.false.)
-                call select_fermi_kpoints(fi, results, q_eig_id_interpol, nKept, kqpts_interpol, kqKeptIdx, kqKeptKpts)
+                call select_fermi_kpoints(fi, results, q_eig_id_interpol, nKept, kqpts_interpol, kqKeptIdx, kqKeptKpts, omegaMax=maxval(sqrt(abs(eigenValsQ))))
                 call timestop("k+q bandstructure + Fermi selection")
                 nSurv = size(kqKeptIdx)
             end if
@@ -425,25 +442,10 @@ CONTAINS
                 gmatInterpol_q = cmplx(0.0, 0.0)
                 do iMode = 1 , 3*fi%atoms%nat
                     do ispin = 1 , fi%input%jspins
-                        ! only the backward FT depends on this q (qsingle) and the surviving k-points
                         call wannier_matrixq_backward(ftRealspace(iMode,ispin),survKpts,qsingle,gmatInterpol_q(:,:,:,:,ispin,iMode))
                     end do !ispin
                 end do !iMode
                 call timestop("Matrix element interpolation")
-
-                ! interpolate the dynMat and find the eigenvalue (redundant on all ranks; output on rank 0)
-                call timestart("Dynmat Interpolation")
-                call interpolate_dynmat(fi%atoms,fi%sym,fi%cell,fi%dfpt%qvec,dynMats,fi%dfpt%l_WSinterpol,qsingle,dynMat_interpol)
-                call timestop("Dynmat Interpolation")
-                call timestart("Dynmat diagonalization")
-                call DiagonalizeDynMat(fi%atoms, qvec, fi%dfpt%calcEigenVec, dynMat_interpol(:,:,1), eigenValsQ, eigenVecs, iQ, .true., &
-                                       'band', .false., l_writeOutput=(fmpi%irank==0))
-                call timestop("Dynmat diagonalization")
-                if (fmpi%irank==0) then
-                    call timestart("Frequency calculation")
-                    call CalculateFrequencies(fi%atoms,iQ,eigenValsQ,eigenFreqs,"band",qvec)
-                    call timestop("Frequency calculation")
-                end if
 
                 ! rotate the Wannier-gauge matrix element into the eigenbasis:
                 !   g_eig(k+q,k) = zmat^dagger(k+q) . g_wann(k+q,k) . zmat(k)
@@ -474,9 +476,8 @@ CONTAINS
                 call timestop("Eigenbasis rotation")
 
                 allocate(wtkpt_line(nSurv))
-                wtkpt_line = 1.0 / real(nInterpol)   ! global normalization
+                wtkpt_line = 1.0 / real(nInterpol)  
 
-                ! phonon linewidth for this q (single/double delta via fi%dfpt%i_integration)
                 call timestart("Phonon linewidth construction")
                 call dfpt_ph_linewidth(fi, wtkpt_line, eigk, eigkq, gmatEig, eigenValsQ, results%ef, ph_linewidth)
                 call timestop("Phonon linewidth construction")
@@ -518,10 +519,34 @@ CONTAINS
 
     end subroutine el_ph_wannier_interpolate
 
-    subroutine select_fermi_kpoints(fi, results, eig_id, npoints, coords, keptIdx, keptKpts)
+    function global_phonon_energy_bound(fi, dynMats) result(omegaMax)
+        ! compute maxvalue of the eigenValues of dynMat
+        use m_dfpt_dynmat_eig, only : DiagonalizeDynMat
+
+        type(t_fleurinput), intent(in) :: fi
+        complex,             intent(in) :: dynMats(:,:,:) !(3*nat,3*nat,nqcoarse)
+        real :: omegaMax
+
+        integer :: iQc
+        real,    allocatable :: wTmp(:)
+        complex, allocatable :: aTmp(:,:)
+
+        omegaMax = 0.0
+        if (fi%dfpt%i_integration /= 1) return
+
+        do iQc = 1, fi%dfpt%qvec%nkpt
+            call DiagonalizeDynMat(fi%atoms, fi%dfpt%qvec%bk(:,iQc), .false., dynMats(:,:,iQc), &
+                                   wTmp, aTmp, iQc, .true., "prescan", .false., .false.)
+            omegaMax = max(omegaMax, maxval(sqrt(abs(wTmp))))
+            deallocate(wTmp, aTmp)
+        end do
+
+    end function global_phonon_energy_bound
+
+    subroutine select_fermi_kpoints(fi, results, eig_id, npoints, coords, keptIdx, keptKpts, omegaMax)
         ! Read the interpolated eigenvalues stored in eig_id for the point set given by
         ! coords(:,1:npoints) and keep only those points that have at least one eigenvalue
-        ! within 6*fermiSmearingEnergy of the Fermi energy.
+        ! within window of the Fermi energy.
         use m_eig66_io, only : read_eig
 
         type(t_fleurinput), intent(in)  :: fi
@@ -530,6 +555,7 @@ CONTAINS
         real,               intent(in)  :: coords(:,:)      ! (3, npoints) coords in eig_id order
         integer, allocatable, intent(out) :: keptIdx(:)     ! indices into 1..npoints near E_F
         real,    allocatable, intent(out) :: keptKpts(:,:)  ! (3, nKept) packed coords
+        real,    optional,    intent(in)  :: omegaMax        ! phonon energy scale (Hartree), i_integration=1 only
 
         integer :: num_wann, jspin, ik, ne, nKept
         real    :: window
@@ -538,6 +564,7 @@ CONTAINS
 
         num_wann = fi%wannierlib%num_wann
         window   = 6.0 * fi%input%tkb
+        if (fi%dfpt%i_integration == 1 .and. present(omegaMax)) window = 6.0 * max(fi%input%tkb, omegaMax)
 
         allocate(eigvals(num_wann))
         allocate(mask(npoints))
