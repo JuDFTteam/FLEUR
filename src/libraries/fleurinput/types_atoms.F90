@@ -94,6 +94,13 @@ MODULE m_types_atoms
   INTEGER, ALLOCATABLE::nlol(:, :)
   !true if LO is formed by \dot u (
   LOGICAL, ALLOCATABLE::l_dulo(:, :)
+  !true if LO is a relativistic local orbital (relLO, j=l-1/2 branch); always at the tail of that type's LO list
+  LOGICAL, ALLOCATABLE::l_relLO(:, :)
+  !principal quantum number n of a relLO (nlod,ntype), as given in the input; needed by the Dirac solver (differ)
+  !used to construct radflo/sorad's radial function, kept on atoms (not enpara) so no signature change is needed there
+  INTEGER, ALLOCATABLE::nqn_relLO(:, :)
+  !no of relLO entries per atom type (ntype)
+  INTEGER, ALLOCATABLE::nRelLO(:)
   !no of sphhar for atom type(ntype
   INTEGER, ALLOCATABLE ::nlhtyp(:)
   !Calculate forces for this atom?
@@ -202,6 +209,9 @@ SUBROUTINE mpi_bc_atoms(this,mpi_comm,irank)
  CALL mpi_bc(this%ulo_der,rank,mpi_comm)
  CALL mpi_bc(this%nlol,rank,mpi_comm)
  CALL mpi_bc(this%l_dulo,rank,mpi_comm)
+ CALL mpi_bc(this%l_relLO,rank,mpi_comm)
+ CALL mpi_bc(this%nqn_relLO,rank,mpi_comm)
+ CALL mpi_bc(this%nRelLO,rank,mpi_comm)
  CALL mpi_bc(this%nlhtyp,rank,mpi_comm)
  CALL mpi_bc(this%l_geo,rank,mpi_comm)
  CALL mpi_bc(this%rmt,rank,mpi_comm)
@@ -321,6 +331,7 @@ SUBROUTINE read_xml_atoms(this,xml)
  INTEGER,ALLOCATABLE::lNumbers(:),nNumbers(:)
  LOGICAL           :: relaxx,relaxy,relaxz,l_flipElectronConfigSpins
  INTEGER,ALLOCATABLE :: itmp(:,:)
+ CHARACTER(len=20)   :: loType
  REAL                :: down,up,dr,radius,vca_charge
  CHARACTER(len=20)   :: state
  this%ntype= xml%get_ntype()
@@ -356,6 +367,12 @@ SUBROUTINE read_xml_atoms(this,xml)
  ALLOCATE(this%llo(this%nlod,this%ntype))
  this%llo=0
  ALLOCATE(this%ulo_der(this%nlod,this%ntype))
+ ALLOCATE(this%l_relLO(this%nlod,this%ntype))
+ this%l_relLO=.FALSE.
+ ALLOCATE(this%nqn_relLO(this%nlod,this%ntype))
+ this%nqn_relLO=0
+ ALLOCATE(this%nRelLO(this%ntype))
+ this%nRelLO=0
  ALLOCATE(this%speciesname(this%ntype))
  ALLOCATE(this%lda_atom(this%ntype))
  ALLOCATE(this%l_nonpolbas(this%ntype))
@@ -442,13 +459,42 @@ SUBROUTINE read_xml_atoms(this,xml)
           CALL judft_error('Error in LO input: l quantum number count does not equal n quantum number count')
        END IF
        IF (.NOT. ALLOCATED(this%llo)) ALLOCATE(this%llo(1,this%ntype),this%ulo_der(1,this%ntype))
+       loType = TRIM(ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@type')))
        DO i=1,lNumCount
           this%llo(this%nlo(n)+i,n) = lNumbers(i)
           this%ulo_der(this%nlo(n)+i,n) = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPath))//'/@eDeriv'))
+          this%l_relLO(this%nlo(n)+i,n) = (loType=='relLO')
+          IF (this%l_relLO(this%nlo(n)+i,n)) THEN
+             IF (lNumbers(i)<1 .OR. lNumbers(i)>3) THEN
+                CALL judft_error("relLO local orbitals are only defined for l=1 (p), l=2 (d) or l=3 (f)",calledby="read_xml_atoms")
+             END IF
+             IF (this%ulo_der(this%nlo(n)+i,n)/=0) THEN
+                CALL judft_error("relLO local orbitals require eDeriv=0",calledby="read_xml_atoms")
+             END IF
+             this%nqn_relLO(this%nlo(n)+i,n) = nNumbers(i)
+          END IF
        ENDDO
        this%nlo(n) = this%nlo(n) +lnumcount
        DEALLOCATE (lNumbers, nNumbers)
     END DO
+
+    ! relLO entries must be the last entries in this type's LO list: fleurinput_postprocess.f90
+    ! reduces atoms%nlo (once the run's SOC/noco mode is known) to exclude them with a plain
+    ! reduced loop bound, and other XML consumers of the LO index (e.g. enpara's qn_ello) walk
+    ! the <lo> tags independently in file order without reordering — so silently permuting
+    ! atoms%llo/l_relLO here would desync those indices instead.
+    ! Note: the <lo> tags are parsed positionally a second time, fully independently, in
+    ! types_enparaXML.f90 (read_xml_enpara, building qn_ello) -- any future reordering here
+    ! would have to be mirrored there too, or it reintroduces exactly that desync.
+    this%nRelLO(n) = COUNT(this%l_relLO(1:this%nlo(n),n))
+    IF (this%nRelLO(n) > 0) THEN
+       DO i = 1, this%nlo(n) - this%nRelLO(n)
+          IF (this%l_relLO(i,n)) THEN
+             CALL judft_error("relLO local orbitals must be declared after all other local orbitals of the same species",&
+                  calledby="read_xml_atoms")
+          END IF
+       END DO
+    END IF
     !LDA+U
     DO i = 1,xml%getNumberOfNodes(TRIM(ADJUSTL(xPaths))//'/ldaU')
        WRITE(xpath,*) TRIM(ADJUSTL(xPaths))//'/ldaU[',i,']'
@@ -689,7 +735,6 @@ END DO
        this%nlotot = this%nlotot + this%neq(n) * ( 2*this%llo(l,n) + 1 )
     END DO
  END DO
-
 
  ALLOCATE(this%nlhtyp(xml%get_ntype()))
 

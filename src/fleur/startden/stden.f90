@@ -367,7 +367,7 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,input,cell,field,xcpot,noco 
                   ELSE
                      IF (l_found(lnum(i,n)).AND.(atoms%nlo(n).GT.0)) THEN
                         DO ilo = 1, atoms%nlo(n)
-                           IF (atoms%llo(ilo,n).EQ.lnum(i,n)) THEN
+                           IF (atoms%llo(ilo,n).EQ.lnum(i,n) .AND. .NOT.atoms%l_relLO(ilo,n)) THEN
                               IF (.NOT.llo_found(ilo)) THEN
                                  enpara%ello0(ilo,n,ispin) = eig(i,ispin,n)
                                  IF ((enpara%ello0(ilo,n,ispin).GT.input_elup).OR.&

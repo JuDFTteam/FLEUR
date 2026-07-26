@@ -46,7 +46,7 @@ CONTAINS
 
       ! Local Scalars
       INTEGER :: l,lm,j1,j2,jsp
-      INTEGER :: n,m,s
+      INTEGER :: n,m,s,lo
       COMPLEX :: one
 
       CALL timestart("local_hamiltonian")
@@ -100,6 +100,27 @@ CONTAINS
       !Setup of soc parameters for first-variation SOC
       IF (noco%l_soc.AND.noco%l_noco.AND..NOT.noco%l_ss) THEN
          CALL spnorb(atoms,noco,nococonv,input,fmpi,enpara,v%mt,ud,td%rsoc,.FALSE.,hub1inp,hub1data)
+
+         ! relLO: correct the relLO's diagonal spherical-Hamiltonian t-matrix.
+         ! tlmplm set the relLO's own element (tuloulo) to ello = epsilon, the DIRAC j=l-1/2
+         ! eigenvalue, which already contains the spin-orbit interaction
+         ! of that branch. But H_sph must carry the SCALAR-relativistic (SOC-free) value,
+         ! exactly as an ordinary LO's ello does; the first-variational SOC is
+         ! then added, once, by hsmt_soc. So only the relLO's OWN element is corrected here:
+         !     <relLO|H_sph|relLO> = epsilon + (l+1)*I_so,   I_so = rsoc%rsoploplop(n,lo,lo),
+         ! with H_sph = H_Dirac - H_SO
+         DO n = 1, atoms%ntype
+            DO lo = 1, atoms%nlo(n)
+               IF (.NOT.atoms%l_relLO(lo,n)) CYCLE
+               l = atoms%llo(lo,n)
+               DO jsp = 1, input%jspins
+                  DO m = -l, l
+                     td%tuloulo_newer(m,m,lo,lo,n,jsp,jsp) = td%tuloulo_newer(m,m,lo,lo,n,jsp,jsp) &
+                          + REAL(l+1) * td%rsoc%rsoploplop(n,lo,lo,jsp,jsp)
+                  END DO
+               END DO
+            END DO
+         END DO
       END IF
       CALL timestop("local_hamiltonian")
    END SUBROUTINE 

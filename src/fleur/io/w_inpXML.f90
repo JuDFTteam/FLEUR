@@ -498,6 +498,9 @@ WRITE (fileNum, 242) fr(1.0)
             IF (n .LT. 0) THEN
                loType = 'HELO'
             END IF
+            IF (atoms%l_relLO(ilo, iAtomType)) THEN
+               loType = 'relLO'
+            END IF
             n = ABS(n)
 324         FORMAT('         <lo type="', a, '" l="', i0, '" n="', i0, '" eDeriv="', i0, '"/>')
             WRITE (fileNum, 324) TRIM(ADJUSTL(loType)), l, n, atoms%ulo_der(ilo, iAtomType)

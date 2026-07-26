@@ -84,6 +84,7 @@ Testset: Noco
 | +   | Noco,SOC, one atom, mag. in y direction       | noco/1atSOCy            | bulk,soc                     |                   |         | 2   |
 | +   | Noco,SOC, one atom, mag. in z direction       | noco/1atSOCz            | bulk,soc                     |                   |         | 2   |
 | +   | Noco,SOC, one atom, mag. in non-sym direction | noco/1atSOC             | bulk,soc                     |                   |         | 2   |
+| +   | Noco, SOC, two eq. atoms, relLOs              | noco/relLO              | bulk,soc                     |                   |         | 2   |
 | +   | FFNNoco, one atom, mag. in x direction        | noco/1atFFNx            | bulk,hdf                     |                   |         | 2   |
 | +   | FFNNoco, one atom, mag. in y direction        | noco/1atFFNy            | bulk,hdf                     |                   |         | 2   |
 | +   | Fe fcc spin-spiral                            | noco/Fe_fcc             | bulk                         |                   |         | 2   |

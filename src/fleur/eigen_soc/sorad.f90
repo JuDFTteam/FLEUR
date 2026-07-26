@@ -13,6 +13,7 @@ CONTAINS
 
     USE m_constants, ONLY : c_light
     USE m_intgr,     ONLY : intgr0
+    USE m_relLO_dirac, ONLY : relLO_dirac_radial
     USE m_sointg
     USE m_radsra
     USE m_radsrd
@@ -47,13 +48,14 @@ CONTAINS
     REAL, ALLOCATABLE :: p(:,:),pd(:,:),q(:,:),qd(:,:),plo(:,:)
     REAL, ALLOCATABLE :: plop(:,:),glo(:,:),fint(:),pqlo(:,:)
     REAL, ALLOCATABLE :: filo(:,:)
-    REAL, ALLOCATABLE :: v0(:),vso(:,:),qlo(:,:),vrTmp(:)
+    REAL, ALLOCATABLE :: v0(:),vso(:,:),qlo(:,:),vrTmp(:),qsafe(:,:)
     !     ..
-    
+
     IF (atoms%jri(ntyp)>atoms%jmtd)  CALL juDFT_error("atoms%jri(ntyp).GT.atoms%jmtd",calledby ="sorad")
 
     ALLOCATE (p(atoms%jmtd,2),pd(atoms%jmtd,2),q(atoms%jmtd,2),plo(atoms%jmtd,2),fint(atoms%jmtd),&
-              qlo(atoms%jmtd,2),plop(atoms%jmtd,2),qd(atoms%jmtd,2),v0(atoms%jmtd),vso(atoms%jmtd,2),vrTmp(atoms%jmtd) )
+              qlo(atoms%jmtd,2),plop(atoms%jmtd,2),qd(atoms%jmtd,2),v0(atoms%jmtd),vso(atoms%jmtd,2),vrTmp(atoms%jmtd),&
+              qsafe(atoms%jmtd,2) )
     p = 0.0
     pd = 0.0
     q = 0.0
@@ -65,6 +67,7 @@ CONTAINS
     v0 = 0.0
     vso = 0.0
     vrTmp = 0.0
+    qsafe = 0.0
     
 
     DO l = 0,atoms%lmax(ntyp) 
@@ -97,6 +100,11 @@ CONTAINS
                       usdus%uds(l,ntyp,jspin),usdus%duds(l,ntyp,jspin),&
                       usdus%ddn(l,ntyp,jspin),noded,pd(:,jspin),qd(:,jspin),&
                       p(:,jspin),q(:,jspin),usdus%dus(l,ntyp,jspin))
+
+          ! protected copy of q(:,jspin): the ilop-loop below reuses q(:,1) as scratch
+          ! output space, so relLO's orthogonalization must read u_l's small component
+          ! from here instead of (possibly by-then-clobbered) q.
+          qsafe(:,jspin) = q(:,jspin)
 
        END DO     ! end of spin loop
 
@@ -153,6 +161,13 @@ CONTAINS
                 vrTmp = vr(:,jspin)
                 if (atoms%l_nonpolbas(ntyp)) vrTmp = (vr(:,1)+vr(:,2))/2.0
                 e = enpara%ello0(ilo,ntyp,jspin)
+                IF (atoms%l_relLO(ilo,ntyp)) THEN
+                   ! relLO: the bare Dirac j=l-1/2 solution d0, used directly as the third
+                   ! radial function of the confined LO that setabc1lo builds from {u,u-dot,d0}.
+                   CALL relLO_dirac_radial(atoms,ntyp,l,atoms%nqn_relLO(ilo,ntyp),e,vrTmp,&
+                        plo(:,jspin),qlo(:,jspin),usdus%ulos(ilo,ntyp,jspin),usdus%dulos(ilo,ntyp,jspin))
+                   CYCLE
+                END IF
                 CALL radsra(e,l,vrtmp,atoms%rmsh(1,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),c_light(1.0),&
                             usdus%ulos(ilo,ntyp,jspin),usdus%dulos(ilo,ntyp,jspin),&
                             nodeu,plo(:,jspin),qlo(:,jspin))
@@ -206,7 +221,7 @@ CONTAINS
              ENDDO
 
              DO iSpin = 1,input%jspins
-                fint(:) = plo(:,iSpin) *  p(:,iSpin) + qlo(:,iSpin) *  q(:,iSpin)
+                fint(:) = plo(:,iSpin) *  p(:,iSpin) + qlo(:,iSpin) *  qsafe(:,iSpin)
                 CALL intgr0(fint,atoms%rmsh(1,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),usdus%uulon(ilo,ntyp,iSpin))
                 fint(:) = plo(:,iSpin) * pd(:,iSpin) + qlo(:,iSpin) * qd(:,iSpin)
                 CALL intgr0(fint,atoms%rmsh(1,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),usdus%dulon(ilo,ntyp,iSpin))
@@ -219,6 +234,13 @@ CONTAINS
                       vrTmp = vr(:,jspin)
                       IF (atoms%l_nonpolbas(ntyp)) vrTmp = (vr(:,1) + vr(:,2)) / 2.0
                       e = enpara%ello0(ilop,ntyp,jspin)
+                      IF (atoms%l_relLO(ilop,ntyp)) THEN
+                         ! relLO ilop: Dirac radial function, for the relLO<->relLO SOC integral
+                         ! rsoploplop below (used by the 1st-variation SOC, hsmt_soc_offdiag).
+                         CALL relLO_dirac_radial(atoms,ntyp,l,atoms%nqn_relLO(ilop,ntyp),e,vrTmp,&
+                              plop(:,jspin),q(:,1),ulops,dulops)
+                         CYCLE
+                      END IF
                       CALL radsra(e,l,vrtmp,atoms%rmsh(1,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),c_light(1.0),&
                                   ulops,dulops,nodeu,plop(:,jspin),q(:,1))
                       !+apw+lo
@@ -272,7 +294,7 @@ CONTAINS
 
     ENDDO ! end of l-loop
 
-    DEALLOCATE ( p,pd,q,qd,plo,plop,qlo,fint,v0,vso )
+    DEALLOCATE ( p,pd,q,qd,plo,plop,qlo,fint,v0,vso,qsafe )
     !      rsoplop (:,:,:,:) = 0.0
     !      rsoplopd(:,:,:,:) = 0.0
     !      rsopplo (:,:,:,:) = 0.0
