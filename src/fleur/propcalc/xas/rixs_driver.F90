@@ -11,8 +11,9 @@ MODULE m_rixs_driver
    USE m_juDFT, ONLY: juDFT_error
    USE m_mpi_reduce_tool, ONLY: mpi_sum_reduce
    USE m_rixs_io, ONLY: rixs_close_contribution_table, rixs_energy_label, rixs_open_contribution_table, &
+                        rixs_open_spinor_contribution_table, &
                         rixs_print_contribution_check, rixs_print_pair_summary, rixs_print_setup_summary, &
-                        rixs_write_contribution_rows, rixs_write_spectrum_text
+                        rixs_write_contribution_rows, rixs_write_spinor_contribution_rows, rixs_write_spectrum_text
    USE m_rixs_spectrum, ONLY: rixs_accumulate_scalar_spin_trace_spectrum, rixs_accumulate_spinor_spectrum
    USE m_types_abc, ONLY: t_abc
    USE m_types_atoms, ONLY: t_atoms
@@ -111,9 +112,15 @@ CONTAINS
                contribution_filename = TRIM(rixs%rixs_output_prefix)//"_"//TRIM(rixs%rixs_edge)//"_"// &
                                        rixs_pol_label(i_pin)//"_"//rixs_pol_label(i_pout)// &
                                        "_omega"//TRIM(omega_label)//"_contrib_rank"//rank_label//".dat"
-               CALL rixs_open_contribution_table(TRIM(contribution_filename), rixs%rixs_edge, rixs%rixs_absorber_z, &
-                                                 rixs_pol_label(i_pin), rixs_pol_label(i_pout), rixs%rixs_omega_in, &
-                                                 fmpi%irank, contribution_units(i_pin, i_pout))
+               IF (l_spinor_rixs) THEN
+                  CALL rixs_open_spinor_contribution_table(TRIM(contribution_filename), rixs%rixs_edge, &
+                     rixs%rixs_absorber_z, rixs_pol_label(i_pin), rixs_pol_label(i_pout), rixs%rixs_omega_in, &
+                     fmpi%irank, contribution_units(i_pin, i_pout))
+               ELSE
+                  CALL rixs_open_contribution_table(TRIM(contribution_filename), rixs%rixs_edge, rixs%rixs_absorber_z, &
+                                                    rixs_pol_label(i_pin), rixs_pol_label(i_pout), rixs%rixs_omega_in, &
+                                                    fmpi%irank, contribution_units(i_pin, i_pout))
+               END IF
             END DO
          END DO
       END IF
@@ -267,11 +274,19 @@ CONTAINS
                            intermediate_band_max, intensity(:, i_pin, i_pout))
                      END IF
                      IF (rixs%rixs_write_contributions) THEN
-                        CALL rixs_write_contribution_rows(contribution_units(i_pin, i_pout), ikpt, &
-                           atoms%firstAtom(itype) + iatom_l - 1, itype, eig_band, occ_band, kpts%wtkpt(ikpt), &
-                           core_states(1)%energy, rixs%rixs_omega_in, rixs%rixs_gamma_core, matrix_abs_spin, matrix_emit_spin, &
-                           loss_grid, rixs%rixs_eta_loss, valence_band_min, valence_band_max, intermediate_band_min, &
-                           intermediate_band_max, contribution_intensity(:, i_pin, i_pout))
+                        IF (l_spinor_rixs) THEN
+                           CALL rixs_write_spinor_contribution_rows(contribution_units(i_pin, i_pout), ikpt, &
+                              atoms%firstAtom(itype) + iatom_l - 1, itype, eig_band, occ_band, kpts%wtkpt(ikpt), &
+                              core_states(1)%energy, rixs%rixs_omega_in, rixs%rixs_gamma_core, matrix_abs, matrix_emit, &
+                              loss_grid, rixs%rixs_eta_loss, valence_band_min, valence_band_max, intermediate_band_min, &
+                              intermediate_band_max, contribution_intensity(:, i_pin, i_pout))
+                        ELSE
+                           CALL rixs_write_contribution_rows(contribution_units(i_pin, i_pout), ikpt, &
+                              atoms%firstAtom(itype) + iatom_l - 1, itype, eig_band, occ_band, kpts%wtkpt(ikpt), &
+                              core_states(1)%energy, rixs%rixs_omega_in, rixs%rixs_gamma_core, matrix_abs_spin, &
+                              matrix_emit_spin, loss_grid, rixs%rixs_eta_loss, valence_band_min, valence_band_max, &
+                              intermediate_band_min, intermediate_band_max, contribution_intensity(:, i_pin, i_pout))
+                        END IF
                      END IF
                   END DO
                END DO
@@ -317,7 +332,8 @@ CONTAINS
                IF (rixs%rixs_write_contributions) THEN
                   CALL rixs_print_contribution_check(rixs_pol_label(i_pin), rixs_pol_label(i_pout), &
                                                      intensity_reduced(:, i_pin, i_pout), &
-                                                     contribution_intensity_reduced(:, i_pin, i_pout))
+                                                     contribution_intensity_reduced(:, i_pin, i_pout), &
+                                                     l_spinor=l_spinor_rixs)
                END IF
                CALL rixs_write_spectrum_text(TRIM(output_filename), loss_grid, intensity_reduced(:, i_pin, i_pout))
                WRITE(*, '(a,a)') "RIXS wrote spectrum to ", TRIM(output_filename)
@@ -342,10 +358,6 @@ CONTAINS
       END IF
       IF (noco%l_noco .AND. input%jspins /= 2) THEN
          CALL juDFT_error("First-variation spinor RIXS requires input%jspins=2 to construct both local spinor abc components.", &
-                          calledby="m_rixs_driver")
-      END IF
-      IF (noco%l_noco .AND. rixs%rixs_write_contributions) THEN
-         CALL juDFT_error("Spinor RIXS contribution output is not implemented in Stage 1; set writeContributions='F'.", &
                           calledby="m_rixs_driver")
       END IF
       IF (kpts%nkpt /= kpts%nkptf) THEN

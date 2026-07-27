@@ -15,6 +15,7 @@ MODULE m_rixs_spectrum
    PUBLIC :: rixs_accumulate_scalar_spin_trace_spectrum
    PUBLIC :: rixs_scalar_spin_trace_abs2
    PUBLIC :: rixs_accumulate_spinor_spectrum
+   PUBLIC :: rixs_spinor_amplitude
 
 CONTAINS
 
@@ -117,7 +118,7 @@ CONTAINS
             IF (vacancy_n <= rixs_occ_tol) CYCLE
 
             denominator = CMPLX(omega_in - (eig_band(n_band) - core_energy), gamma_core)
-            amplitude = SUM(matrix_emit(v_band, :)*matrix_abs(n_band, :))/denominator
+            amplitude = rixs_spinor_amplitude(matrix_emit(v_band, :), matrix_abs(n_band, :), denominator)
             strength = ABS(amplitude)**2
             IF (strength < TINY(strength)) CYCLE
             weight = wk*f_v*vacancy_n
@@ -131,6 +132,12 @@ CONTAINS
          END DO
       END DO
    END SUBROUTINE rixs_accumulate_spinor_spectrum
+
+   COMPLEX FUNCTION rixs_spinor_amplitude(emit_by_mj, abs_by_mj, denominator) RESULT(amplitude)
+      COMPLEX, INTENT(IN) :: emit_by_mj(:), abs_by_mj(:), denominator
+
+      amplitude = SUM(emit_by_mj*abs_by_mj)/denominator
+   END FUNCTION rixs_spinor_amplitude
 
    SUBROUTINE rixs_check_spinor_inputs(loss_grid, eig_band, occ_band, matrix_abs, matrix_emit, gamma_core, eta_loss, &
                                        valence_band_min, valence_band_max, intermediate_band_min, intermediate_band_max, &
