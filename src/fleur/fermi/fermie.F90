@@ -58,7 +58,7 @@ CONTAINS
     !REAL,    INTENT (OUT):: w(:,:,:) !(input%neig,kpts%nkpt,dimension%jspd)
     !     ..
     !     .. Local Scalars ..
-    REAL del  ,spindg,ssc ,ws,zc,weight,efermi,seigv,bandgap
+    REAL del  ,spindg,ssc ,ws,zc,weight,efermi,seigv,bandgap,sigma
     INTEGER i,idummy,j,jsp,k,l,n,nbands,nstef,nv,nmat,nspins,ex,min_kpt
     INTEGER n_help,m_spins,mspin,sslice(2)
     LOGICAL :: l_output,l_output_stored
@@ -370,13 +370,33 @@ CONTAINS
             exit kloop
          endif
       ENDDO kloop
-      if (k==kpts%nkpt+1) then 
+      if (k==kpts%nkpt+1) then
          write(oUnit,*) "Direct bandgap for spin ",j,": ",bandgap," Htr"
          write(oUnit,*) "at k-point ",min_kpt," with k-vector ",kpts%bk(:,min_kpt)
       endif
-   enddo 
+   enddo
 
-   END IF   
+   !--->   density of states at the Fermi energy on the coarse k-mesh
+   !        Gaussian smearing with width input%tkb (consistent with the
+   !        double-delta binning used for the el-ph phonon linewidths).
+   !        results%dos_ef is the total DOS (both spins) in states/Htr.
+   sigma = input%tkb
+   results%dos_ef = 0.0
+   IF (sigma>0.0) THEN
+      DO jsp = 1,nspins
+         DO k = 1,kpts%nkpt
+            DO i = 1,results%neig(k,jsp)
+               results%dos_ef = results%dos_ef + kpts%wtkpt(k)*spindg &
+                  * EXP(-0.5*((results%eig(i,k,jsp)-results%ef)/sigma)**2) &
+                  / (SQRT(tpi_const)*sigma)
+            END DO
+         END DO
+      END DO
+   END IF
+   IF (l_output) WRITE (oUnit,'(/,10x,a,f20.10,a)') &
+      'density of states at E_F (Gauss, both spins): ',results%dos_ef,' states/Htr'
+
+   END IF
 
     RETURN
 8020 FORMAT (/,'FERMIE:',/,&

@@ -23,6 +23,7 @@ MODULE m_types_misc
       REAL, ALLOCATABLE    :: force_vdw(:,:)   !< vdw-Forces calculated on all atoms (for each spin)
       REAL, ALLOCATABLE    :: force_old(:,:) !< Forces on all atoms from last iteration
       REAL                 :: ef        !<Fermie energy
+      REAL                 :: dos_ef=0.0 !<DOS at the Fermi energy (states/Htr, both spins) on the coarse k-mesh, Gaussian smearing input%tkb
       REAL                 :: seigc     !<sum of the core eigenvalues
       REAL                 :: seigv     !<weighted sum of the occupied valence eigenvalues
       REAL                 :: ts        !<entropy contribution to the free energy
@@ -134,6 +135,7 @@ CONTAINS
       thisResults%last_occdistance    = -1.0
       thisResults%bandgap         = 0.0
       thisResults%ef              = 0.0
+      thisResults%dos_ef          = 0.0
       thisResults%tkb_loc         = 0.0
 
       neigd2 = MIN(input%neig,lapw_dim_nbasfcn)
@@ -187,6 +189,7 @@ CONTAINS
       thisResults%last_occdistance    = -1.0
       thisResults%bandgap         = 0.0
       thisResults%ef              = 0.0
+      thisResults%dos_ef          = 0.0
 
       thisResults%force = 0.0
       thisResults%force_old = 0.0

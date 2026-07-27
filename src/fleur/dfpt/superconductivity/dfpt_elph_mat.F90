@@ -288,7 +288,8 @@ CONTAINS
         real,    allocatable :: wtkpt_line(:), ph_linewidth(:)
         real,    allocatable :: eigenValsQ(:)
         complex, allocatable :: eigenVecs(:,:), eigenFreqs(:)
-        integer              :: lw_unit
+        integer              :: lw_unit, cs_unit
+        real                 :: lambda_iso, lambda_q
         real                  :: sqrtOmegaMax
 
 #ifdef CPP_MPI
@@ -382,8 +383,15 @@ CONTAINS
         allocate(qsingle(3, 1))
         allocate(ph_linewidth(3*fi%atoms%nat))
 
-        if (fmpi%irank==0) &
+        lambda_iso = 0.0
+
+        if (fmpi%irank==0) then
             open(newunit=lw_unit, file="linewidth", status='replace', action='write', form='formatted')
+            open(newunit=cs_unit, file="coupling_strength", status='replace', action='write', form='formatted')
+            write(cs_unit,*) "# isotropic el-ph coupling: N(E_F), mode frequencies omega_qnu, lambda_q per q"
+            write(cs_unit,*) "# N(E_F) [states/Htr, both spins]:", results%dos_ef
+            write(cs_unit,*) "# omega_qnu = sqrt(|eigenValsQ|) [internal units], negative = imaginary mode"
+        end if
 
         ! Build the real-space Wannier-gauge element once.
         call timestart("Forward FT elph-element")
@@ -408,13 +416,13 @@ CONTAINS
             call timestop("Dynmat Interpolation")
             call timestart("Dynmat diagonalization")
             call DiagonalizeDynMat(fi%atoms, qvec, fi%dfpt%calcEigenVec, dynMat_interpol(:,:,1), eigenValsQ, eigenVecs, iQ, .true., &
-                                   'band', .false., l_writeOutput=(fmpi%irank==0))
+                                   'band', .false., l_writeOutput=.false.)
             call timestop("Dynmat diagonalization")
-            if (fmpi%irank==0) then
-                call timestart("Frequency calculation")
-                call CalculateFrequencies(fi%atoms,iQ,eigenValsQ,eigenFreqs,"band",qvec)
-                call timestop("Frequency calculation")
-            end if
+            ! if (fmpi%irank==0) then
+            !     call timestart("Frequency calculation")
+            !     call CalculateFrequencies(fi%atoms,iQ,eigenValsQ,eigenFreqs,"band",qvec)
+            !     call timestop("Frequency calculation")
+            ! end if
 
             nSurv = 0
             if (nKept > 0) then
@@ -495,11 +503,35 @@ CONTAINS
             if (fmpi%irank==0) then
                 write(lw_unit,*) "q-Point", qvec
                 write(lw_unit,*) ph_linewidth(:)
+                ! isotropic el-ph coupling: lambda_q = sum_nu gamma_qnu / (pi N(E_F) omega_qnu^2)
+                ! accumulated with a uniform q-weight (1/nqpt).
+                lambda_q = 0.0
+                if (results%dos_ef > 0.0) then
+                    do iMode = 1, 3*fi%atoms%nat
+                        if (eigenValsQ(iMode) <= 0.0) cycle   ! skip imaginary modes
+                        lambda_q = lambda_q + ph_linewidth(iMode) / (pi_const*results%dos_ef*eigenValsQ(iMode))
+                    end do
+                    lambda_iso = lambda_iso + lambda_q / real(fi%dfpt%qpts_interpol%nkpt)
+                end if
+
+                ! per-q intermediates for checkpointing / offline alpha^2F(omega)
+                write(cs_unit,*) "q-Point", qvec
+                write(cs_unit,*) "omega_qnu:", sign(sqrt(abs(eigenValsQ)), eigenValsQ)    ! signed frequency; <0 = imaginary mode
+                write(cs_unit,*) "lambda_q:", lambda_q
             end if
             call timestop("q-point (el-ph interpolation)")
         end do !iQ
 
-        if (fmpi%irank==0) close(lw_unit)
+        if (fmpi%irank==0) then
+            if (results%dos_ef > 0.0) then
+                write(lw_unit,*) "N(E_F) [states/Htr, both spins]:", results%dos_ef
+                write(lw_unit,*) "Isotropic el-ph coupling constant lambda:", lambda_iso
+            else
+                write(lw_unit,*) "N(E_F) not available (results%dos_ef<=0); lambda not computed."
+            end if
+            close(lw_unit)
+            close(cs_unit)
+        end if
 
         if (nKept > 0) then
             call zMatk%free()
