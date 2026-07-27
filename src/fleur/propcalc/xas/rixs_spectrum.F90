@@ -14,6 +14,7 @@ MODULE m_rixs_spectrum
 
    PUBLIC :: rixs_accumulate_scalar_spin_trace_spectrum
    PUBLIC :: rixs_scalar_spin_trace_abs2
+   PUBLIC :: rixs_accumulate_spinor_spectrum
 
 CONTAINS
 
@@ -86,6 +87,81 @@ CONTAINS
          END DO
       END DO
    END FUNCTION rixs_scalar_spin_trace_abs2
+
+   SUBROUTINE rixs_accumulate_spinor_spectrum(loss_grid, eig_band, occ_band, wk, core_energy, omega_in, gamma_core, &
+                                              eta_loss, matrix_abs, matrix_emit, valence_band_min, valence_band_max, &
+                                              intermediate_band_min, intermediate_band_max, intensity)
+      ! First-variation noco bands already contain a coherent two-component
+      ! spinor. The spin components are contracted inside the XAS matrix-element
+      ! routines, so RIXS forms one coherent core-mj amplitude per (v,n,k,atom)
+      ! and must not apply the scalar spin-degenerate S1 trace.
+      REAL,    INTENT(IN)    :: loss_grid(:), eig_band(:), occ_band(:)
+      REAL,    INTENT(IN)    :: wk, core_energy, omega_in, gamma_core, eta_loss
+      COMPLEX, INTENT(IN)    :: matrix_abs(:, :), matrix_emit(:, :)
+      INTEGER, INTENT(IN)    :: valence_band_min, valence_band_max, intermediate_band_min, intermediate_band_max
+      REAL,    INTENT(INOUT) :: intensity(:)
+
+      INTEGER :: i_grid, n_band, v_band
+      REAL    :: f_v, vacancy_n, weight, loss_energy, gaussian, strength
+      COMPLEX :: amplitude, denominator
+
+      CALL rixs_check_spinor_inputs(loss_grid, eig_band, occ_band, matrix_abs, matrix_emit, gamma_core, eta_loss, &
+                                    valence_band_min, valence_band_max, intermediate_band_min, intermediate_band_max, &
+                                    intensity)
+
+      DO v_band = valence_band_min, valence_band_max
+         f_v = occ_band(v_band)
+         IF (f_v <= rixs_occ_tol) CYCLE
+         DO n_band = intermediate_band_min, intermediate_band_max
+            vacancy_n = 1.0 - occ_band(n_band)
+            IF (vacancy_n <= rixs_occ_tol) CYCLE
+
+            denominator = CMPLX(omega_in - (eig_band(n_band) - core_energy), gamma_core)
+            amplitude = SUM(matrix_emit(v_band, :)*matrix_abs(n_band, :))/denominator
+            strength = ABS(amplitude)**2
+            IF (strength < TINY(strength)) CYCLE
+            weight = wk*f_v*vacancy_n
+            IF (weight <= 0.0) CYCLE
+            loss_energy = eig_band(n_band) - eig_band(v_band)
+            DO i_grid = 1, SIZE(loss_grid)
+               gaussian = xas_gaussian_broadening(loss_grid(i_grid) - loss_energy, eta_loss)
+               IF (gaussian == 0.0) CYCLE
+               intensity(i_grid) = intensity(i_grid) + weight*strength*gaussian
+            END DO
+         END DO
+      END DO
+   END SUBROUTINE rixs_accumulate_spinor_spectrum
+
+   SUBROUTINE rixs_check_spinor_inputs(loss_grid, eig_band, occ_band, matrix_abs, matrix_emit, gamma_core, eta_loss, &
+                                       valence_band_min, valence_band_max, intermediate_band_min, intermediate_band_max, &
+                                       intensity)
+      REAL,    INTENT(IN) :: loss_grid(:), eig_band(:), occ_band(:)
+      COMPLEX, INTENT(IN) :: matrix_abs(:, :), matrix_emit(:, :)
+      REAL,    INTENT(IN) :: gamma_core, eta_loss, intensity(:)
+      INTEGER, INTENT(IN) :: valence_band_min, valence_band_max, intermediate_band_min, intermediate_band_max
+
+      IF (gamma_core <= 0.0) CALL juDFT_error("gammaCore must be positive in spinor RIXS", calledby="m_rixs_spectrum")
+      IF (eta_loss <= 0.0) CALL juDFT_error("etaLoss must be positive in spinor RIXS", calledby="m_rixs_spectrum")
+      IF (SIZE(loss_grid) /= SIZE(intensity)) THEN
+         CALL juDFT_error("loss grid and intensity sizes differ in spinor RIXS", calledby="m_rixs_spectrum")
+      END IF
+      IF (SIZE(eig_band) /= SIZE(occ_band)) THEN
+         CALL juDFT_error("spinor RIXS eig_band and occ_band sizes differ", calledby="m_rixs_spectrum")
+      END IF
+      IF (SIZE(matrix_abs, 1) < SIZE(eig_band) .OR. SIZE(matrix_emit, 1) < SIZE(eig_band)) THEN
+         CALL juDFT_error("spinor RIXS matrix band dimensions are too small", calledby="m_rixs_spectrum")
+      END IF
+      IF (SIZE(matrix_abs, 2) /= SIZE(matrix_emit, 2) .OR. SIZE(matrix_abs, 2) < 1) THEN
+         CALL juDFT_error("spinor RIXS absorption/emission mj dimensions differ", calledby="m_rixs_spectrum")
+      END IF
+      IF (valence_band_min < 1 .OR. valence_band_max > SIZE(eig_band) .OR. valence_band_min > valence_band_max) THEN
+         CALL juDFT_error("spinor RIXS valence band loop bounds are invalid", calledby="m_rixs_spectrum")
+      END IF
+      IF (intermediate_band_min < 1 .OR. intermediate_band_max > SIZE(eig_band) .OR. &
+          intermediate_band_min > intermediate_band_max) THEN
+         CALL juDFT_error("spinor RIXS intermediate band loop bounds are invalid", calledby="m_rixs_spectrum")
+      END IF
+   END SUBROUTINE rixs_check_spinor_inputs
 
    SUBROUTINE rixs_check_spin_trace_inputs(loss_grid, eig_band, occ_band, matrix_abs_spin, matrix_emit_spin, gamma_core, &
                                            eta_loss, valence_band_min, valence_band_max, intermediate_band_min, &

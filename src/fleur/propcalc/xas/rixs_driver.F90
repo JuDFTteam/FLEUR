@@ -13,7 +13,7 @@ MODULE m_rixs_driver
    USE m_rixs_io, ONLY: rixs_close_contribution_table, rixs_energy_label, rixs_open_contribution_table, &
                         rixs_print_contribution_check, rixs_print_pair_summary, rixs_print_setup_summary, &
                         rixs_write_contribution_rows, rixs_write_spectrum_text
-   USE m_rixs_spectrum, ONLY: rixs_accumulate_scalar_spin_trace_spectrum
+   USE m_rixs_spectrum, ONLY: rixs_accumulate_scalar_spin_trace_spectrum, rixs_accumulate_spinor_spectrum
    USE m_types_abc, ONLY: t_abc
    USE m_types_atoms, ONLY: t_atoms
    USE m_types_cell, ONLY: t_cell
@@ -33,7 +33,8 @@ MODULE m_rixs_driver
    USE m_types_xas, ONLY: t_xas
    USE m_xas_angular, ONLY: xas_cartesian_to_spherical
    USE m_xas_core, ONLY: t_xas_core_state, xas_extract_core_states
-   USE m_xas_matrixelements, ONLY: xas_band_core_emission_matrixelements_one_spin, xas_core_band_matrixelements_one_spin
+   USE m_xas_matrixelements, ONLY: xas_band_core_emission_matrixelements, xas_band_core_emission_matrixelements_one_spin, &
+                                  xas_core_band_matrixelements, xas_core_band_matrixelements_one_spin
    USE m_xas_radial, ONLY: xas_radial_dipole_integrals
    IMPLICIT NONE
    PRIVATE
@@ -69,6 +70,8 @@ CONTAINS
       TYPE(t_abc), ALLOCATABLE :: abc_spin(:)
 
       COMPLEX :: eps_cart(3), eps_in_sph(-1:1), eps_out_sph(-1:1)
+      COMPLEX :: spin_frame_transform(2, 2)
+      COMPLEX, ALLOCATABLE :: matrix_abs(:, :), matrix_emit(:, :)
       COMPLEX, ALLOCATABLE :: matrix_abs_spin(:, :, :), matrix_emit_spin(:, :, :)
       REAL, ALLOCATABLE :: loss_grid(:), intensity(:, :, :), intensity_reduced(:, :, :)
       REAL, ALLOCATABLE :: contribution_intensity(:, :, :), contribution_intensity_reduced(:, :, :)
@@ -85,18 +88,19 @@ CONTAINS
       INTEGER :: i_grid, i_band, iatom_l, i_pin, i_pout, n_absorber_types, n_absorber_atoms
       INTEGER :: valence_band_min, valence_band_max, intermediate_band_min, intermediate_band_max
       INTEGER :: contribution_units(rixs_n_pol, rixs_n_pol)
-      LOGICAL :: l_root, l_real
+      LOGICAL :: l_root, l_real, l_spinor_rixs
 
       IF (.NOT. rixs%l_rixs) RETURN
 
       l_root = fmpi%irank == 0
       contribution_units = -1
       CALL rixs_check_supported_input(input, rixs, kpts, noco)
+      l_spinor_rixs = noco%l_noco
       IF (.NOT. ALLOCATED(results%w_iks)) THEN
          CALL juDFT_error("results%w_iks is not allocated in rixs_run_driver", calledby="m_rixs_driver")
       END IF
 
-      IF (l_root) CALL rixs_print_setup_summary(rixs)
+      IF (l_root) CALL rixs_print_setup_summary(rixs, noco%l_noco, noco%l_soc)
       omega_label = rixs_energy_label(rixs%rixs_omega_in)
       IF (rixs%rixs_write_contributions) THEN
          WRITE(rank_label, '(i4.4)') fmpi%irank
@@ -143,11 +147,18 @@ CONTAINS
       ALLOCATE(flo(atoms%jmtd, 2, atoms%nlod, input%jspins))
 
       jsp = 1
-      l_real = sym%invs .AND. atoms%n_hia == 0
+      l_real = sym%invs .AND. (.NOT. noco%l_soc) .AND. (.NOT. noco%l_noco) .AND. atoms%n_hia == 0
       DO itype = 1, atoms%ntype
          IF (atoms%nz(itype) /= rixs%rixs_absorber_z) CYCLE
-         CALL genMTBasis(atoms, enpara, vTot, fmpi, itype, jsp, usdus, &
-                         f(:, :, 0:, jsp), g(:, :, 0:, jsp), flo(:, :, :, jsp), l_writeArg=.FALSE.)
+         IF (l_spinor_rixs) THEN
+            DO ispin = 1, input%jspins
+               CALL genMTBasis(atoms, enpara, vTot, fmpi, itype, ispin, usdus, &
+                               f(:, :, 0:, ispin), g(:, :, 0:, ispin), flo(:, :, :, ispin), l_writeArg=.FALSE.)
+            END DO
+         ELSE
+            CALL genMTBasis(atoms, enpara, vTot, fmpi, itype, jsp, usdus, &
+                            f(:, :, 0:, jsp), g(:, :, 0:, jsp), flo(:, :, :, jsp), l_writeArg=.FALSE.)
+         END IF
          CALL xas_extract_core_states(atoms, itype, rixs%rixs_edge, vTot%mt(1:atoms%jri(itype), 0, itype, 1), core_states)
          IF (SIZE(core_states) < 1) THEN
             WRITE(error_message, '(a,a,a,i0,a,i0)') "No core state found for requested RIXS edge ", TRIM(rixs%rixs_edge), &
@@ -160,6 +171,13 @@ CONTAINS
          ALLOCATE(radial_xas(max_order, 0:atoms%lmaxd, input%jspins), SOURCE=0.0)
          CALL xas_radial_dipole_integrals(atoms, itype, radfun, core_states(1)%p_core, radial_xas)
          lmax_rixs = atoms%lmax(itype)
+         IF (l_spinor_rixs) THEN
+            ! abc%calc_abc returns the two first-variation components in the
+            ! local MT spin frame. Rotate the global core spin-angular
+            ! coefficients with the identical validated XAS U^\dagger
+            ! convention before contracting them with these local components.
+            spin_frame_transform = CONJG(TRANSPOSE(nococonv%umat(itype)))
+         END IF
 
          DO ikpt_i = 1, SIZE(fmpi%k_list)
             ikpt = fmpi%k_list(ikpt_i)
@@ -184,18 +202,30 @@ CONTAINS
             END IF
 
             CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpt, cell, fmpi)
-            nbasfcn = lapw%nv(1) + atoms%nlotot
+            nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*atoms%nlotot, &
+                            lapw%nv(1) + atoms%nlotot, l_spinor_rixs)
             CALL zMat%init(l_real, nbasfcn, nbands)
             CALL read_eig(eig_id, ikpt, jsp, list=ev_list, neig=nbands_read, zmat=zMat)
             IF (nbands_read < nbands) THEN
                CALL juDFT_error("read_eig returned fewer bands than requested in RIXS", calledby="m_rixs_driver")
             END IF
 
-            ALLOCATE(abc_spin(1))
-            CALL abc_spin(1)%init(input, atoms, radfun%n_r, nbands, itype)
-            CALL abc_spin(1)%calc_abc(input, atoms, sym, cell, lapw, nbands, usdus, noco, nococonv, jsp, itype, zMat)
-            ALLOCATE(matrix_abs_spin(nbands, SIZE(core_states(1)%twice_mj), 2))
-            ALLOCATE(matrix_emit_spin(nbands, SIZE(core_states(1)%twice_mj), 2))
+            IF (l_spinor_rixs) THEN
+               ALLOCATE(abc_spin(2))
+               DO ispin = 1, 2
+                  CALL abc_spin(ispin)%init(input, atoms, radfun%n_r, nbands, itype)
+                  CALL abc_spin(ispin)%calc_abc(input, atoms, sym, cell, lapw, nbands, usdus, noco, nococonv, &
+                                                ispin, itype, zMat)
+               END DO
+               ALLOCATE(matrix_abs(nbands, SIZE(core_states(1)%twice_mj)))
+               ALLOCATE(matrix_emit(nbands, SIZE(core_states(1)%twice_mj)))
+            ELSE
+               ALLOCATE(abc_spin(1))
+               CALL abc_spin(1)%init(input, atoms, radfun%n_r, nbands, itype)
+               CALL abc_spin(1)%calc_abc(input, atoms, sym, cell, lapw, nbands, usdus, noco, nococonv, jsp, itype, zMat)
+               ALLOCATE(matrix_abs_spin(nbands, SIZE(core_states(1)%twice_mj), 2))
+               ALLOCATE(matrix_emit_spin(nbands, SIZE(core_states(1)%twice_mj), 2))
+            END IF
 
             DO iatom_l = 1, atoms%neq(itype)
                DO i_pin = 1, rixs_n_pol
@@ -203,24 +233,39 @@ CONTAINS
                   eps_cart = CMPLX(0.0, 0.0)
                   eps_cart(i_pin) = CMPLX(1.0, 0.0)
                   CALL xas_cartesian_to_spherical(eps_cart, eps_in_sph)
-                  DO ispin = 1, 2
-                     CALL xas_core_band_matrixelements_one_spin(abc_spin(1), radfun, radial_xas(:, 0:, 1), &
-                        core_states(1), eps_in_sph, iatom_l, lmax_rixs, ispin, matrix_abs_spin(:, :, ispin))
-                  END DO
+                  IF (l_spinor_rixs) THEN
+                     CALL xas_core_band_matrixelements(abc_spin, radfun, radial_xas, core_states(1), eps_in_sph, &
+                                                       iatom_l, lmax_rixs, matrix_abs, &
+                                                       spin_frame_transform=spin_frame_transform)
+                  ELSE
+                     DO ispin = 1, 2
+                        CALL xas_core_band_matrixelements_one_spin(abc_spin(1), radfun, radial_xas(:, 0:, 1), &
+                           core_states(1), eps_in_sph, iatom_l, lmax_rixs, ispin, matrix_abs_spin(:, :, ispin))
+                     END DO
+                  END IF
 
                   DO i_pout = 1, rixs_n_pol
                      IF (.NOT. rixs%rixs_out_polarizations(i_pout)) CYCLE
                      eps_cart = CMPLX(0.0, 0.0)
                      eps_cart(i_pout) = CMPLX(1.0, 0.0)
                      CALL xas_cartesian_to_spherical(eps_cart, eps_out_sph)
-                     DO ispin = 1, 2
-                        CALL xas_band_core_emission_matrixelements_one_spin(abc_spin(1), radfun, radial_xas(:, 0:, 1), &
-                           core_states(1), eps_out_sph, iatom_l, lmax_rixs, ispin, matrix_emit_spin(:, :, ispin))
-                     END DO
-                     CALL rixs_accumulate_scalar_spin_trace_spectrum(loss_grid, eig_band, occ_band, kpts%wtkpt(ikpt), &
-                        core_states(1)%energy, rixs%rixs_omega_in, rixs%rixs_gamma_core, rixs%rixs_eta_loss, &
-                        matrix_abs_spin, matrix_emit_spin, valence_band_min, valence_band_max, intermediate_band_min, &
-                        intermediate_band_max, intensity(:, i_pin, i_pout))
+                     IF (l_spinor_rixs) THEN
+                        CALL xas_band_core_emission_matrixelements(abc_spin, radfun, radial_xas, core_states(1), &
+                           eps_out_sph, iatom_l, lmax_rixs, matrix_emit, spin_frame_transform=spin_frame_transform)
+                        CALL rixs_accumulate_spinor_spectrum(loss_grid, eig_band, occ_band, kpts%wtkpt(ikpt), &
+                           core_states(1)%energy, rixs%rixs_omega_in, rixs%rixs_gamma_core, rixs%rixs_eta_loss, &
+                           matrix_abs, matrix_emit, valence_band_min, valence_band_max, intermediate_band_min, &
+                           intermediate_band_max, intensity(:, i_pin, i_pout))
+                     ELSE
+                        DO ispin = 1, 2
+                           CALL xas_band_core_emission_matrixelements_one_spin(abc_spin(1), radfun, radial_xas(:, 0:, 1), &
+                              core_states(1), eps_out_sph, iatom_l, lmax_rixs, ispin, matrix_emit_spin(:, :, ispin))
+                        END DO
+                        CALL rixs_accumulate_scalar_spin_trace_spectrum(loss_grid, eig_band, occ_band, kpts%wtkpt(ikpt), &
+                           core_states(1)%energy, rixs%rixs_omega_in, rixs%rixs_gamma_core, rixs%rixs_eta_loss, &
+                           matrix_abs_spin, matrix_emit_spin, valence_band_min, valence_band_max, intermediate_band_min, &
+                           intermediate_band_max, intensity(:, i_pin, i_pout))
+                     END IF
                      IF (rixs%rixs_write_contributions) THEN
                         CALL rixs_write_contribution_rows(contribution_units(i_pin, i_pout), ikpt, &
                            atoms%firstAtom(itype) + iatom_l - 1, itype, eig_band, occ_band, kpts%wtkpt(ikpt), &
@@ -231,7 +276,12 @@ CONTAINS
                   END DO
                END DO
             END DO
-            DEALLOCATE(matrix_abs_spin, matrix_emit_spin, abc_spin, ev_list, eig_band, occ_band)
+            IF (l_spinor_rixs) THEN
+               DEALLOCATE(matrix_abs, matrix_emit)
+            ELSE
+               DEALLOCATE(matrix_abs_spin, matrix_emit_spin)
+            END IF
+            DEALLOCATE(abc_spin, ev_list, eig_band, occ_band)
          END DO
          DEALLOCATE(radial_xas, core_states)
       END DO
@@ -282,14 +332,28 @@ CONTAINS
       TYPE(t_kpts),  INTENT(IN) :: kpts
       TYPE(t_noco),  INTENT(IN) :: noco
 
-      IF (input%jspins /= 1) THEN
-         CALL juDFT_error("The first RIXS prototype is guarded to scalar input%jspins=1 calculations.", calledby="m_rixs_driver")
+      IF (noco%l_soc .AND. .NOT. noco%l_noco) THEN
+         CALL juDFT_error("Second-variation SOC RIXS is unsupported because the validated first-variation two-component "// &
+                          "local spinor abc representation is unavailable.", calledby="m_rixs_driver")
       END IF
-      IF (noco%l_noco .OR. noco%l_soc) THEN
-         CALL juDFT_error("The first RIXS prototype does not support noco or SOC yet.", calledby="m_rixs_driver")
+      IF (.NOT. noco%l_noco .AND. input%jspins /= 1) THEN
+         CALL juDFT_error("Scalar RIXS requires input%jspins=1; collinear spin-polarized RIXS is not supported.", &
+                          calledby="m_rixs_driver")
+      END IF
+      IF (noco%l_noco .AND. input%jspins /= 2) THEN
+         CALL juDFT_error("First-variation spinor RIXS requires input%jspins=2 to construct both local spinor abc components.", &
+                          calledby="m_rixs_driver")
+      END IF
+      IF (noco%l_noco .AND. rixs%rixs_write_contributions) THEN
+         CALL juDFT_error("Spinor RIXS contribution output is not implemented in Stage 1; set writeContributions='F'.", &
+                          calledby="m_rixs_driver")
       END IF
       IF (kpts%nkpt /= kpts%nkptf) THEN
-         CALL juDFT_error("The first RIXS prototype requires a full-k/no-symmetry k-point set (nkpt == nkptf).", calledby="m_rixs_driver")
+         ! Keep RIXS on explicit full-k points: spinor time-reversal star
+         ! reconstruction is not implemented, and current XAS star helpers omit
+         ! non-symmorphic translation phases that coherent RIXS amplitudes need.
+         CALL juDFT_error("RIXS requires a full-k/no-star k-point set (nkpt == nkptf); symmetry-star RIXS is unsupported.", &
+                          calledby="m_rixs_driver")
       END IF
       SELECT CASE (TRIM(ADJUSTL(rixs%rixs_edge)))
       CASE ("K", "k", "1s1/2", "1S1/2", "L2", "l2", "2p1/2", "2P1/2", "L3", "l3", "2p3/2", "2P3/2")

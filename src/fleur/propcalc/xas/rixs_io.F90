@@ -161,8 +161,9 @@ CONTAINS
       IF (io_status /= 0) CALL juDFT_error("Cannot close RIXS contribution table", calledby="m_rixs_io")
    END SUBROUTINE rixs_close_contribution_table
 
-   SUBROUTINE rixs_print_setup_summary(rixs)
+   SUBROUTINE rixs_print_setup_summary(rixs, l_noco, l_soc)
       TYPE(t_xas), INTENT(IN) :: rixs
+      LOGICAL,     INTENT(IN) :: l_noco, l_soc
 
       WRITE(*, '(a)') " ---------- RIXS setup ------------------------------"
       WRITE(*, '(a,l1)') " RIXS enabled             : ", rixs%l_rixs
@@ -182,8 +183,13 @@ CONTAINS
       WRITE(*, '(a,a)') " Outgoing polarizations   : ", TRIM(rixs_polarization_string(rixs%rixs_out_polarizations))
       WRITE(*, '(a,a)') " Output prefix            : ", TRIM(rixs%rixs_output_prefix)
       WRITE(*, '(a)') " Approximation            : direct same-k independent-particle"
-      WRITE(*, '(a)') " Scalar spin treatment    : spin-degenerate S1 trace"
+      IF (l_noco) THEN
+         WRITE(*, '(a)') " Spinor treatment         : first-variation coherent core-mj amplitude"
+      ELSE
+         WRITE(*, '(a)') " Scalar spin treatment    : spin-degenerate S1 trace"
+      END IF
       WRITE(*, '(a)') " Symmetry treatment       : full-k only, no star reconstruction"
+      WRITE(*, '(a)') " Absorber-site sum        : incoherent local-site intensities"
       WRITE(*, '(a,a)') " Valence band window      : ", TRIM(rixs_band_window_string(rixs%l_rixs_valence_band_min, &
                                                                                          rixs%rixs_valence_band_min, &
                                                                                          rixs%l_rixs_valence_band_max, &
@@ -195,8 +201,12 @@ CONTAINS
       IF (rixs%l_rixs_valence_band_max .OR. rixs%l_rixs_intermediate_band_max) THEN
          WRITE(*, '(a)') " NOTE: RIXS band-window upper bounds are clamped to the available bands at each k point."
       END IF
-      WRITE(*, '(a)') " SOC/noco                 : disabled/guarded"
+      WRITE(*, '(a,l1)') " Noco enabled             : ", l_noco
+      WRITE(*, '(a,l1)') " SOC enabled              : ", l_soc
       WRITE(*, '(a,l1)') " Write contributions      : ", rixs%rixs_write_contributions
+      IF (l_noco .AND. .NOT. rixs%rixs_write_contributions) THEN
+         WRITE(*, '(a)') " Spinor contribution output: not requested"
+      END IF
       IF (rixs%rixs_write_contributions) THEN
          WRITE(*, '(a)') " NOTE: RIXS contribution output may be very large."
          WRITE(*, '(a)') "       One rank-suffixed table is written per requested polarization pair and MPI rank."
