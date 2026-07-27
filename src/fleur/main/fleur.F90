@@ -116,7 +116,7 @@ CONTAINS
       INTEGER :: iter, iterHF, i, n, i_gf
       INTEGER :: wannierspin
       LOGICAL :: l_opti, l_cont, l_qfix, l_real, l_olap, l_error, l_dummy
-      LOGICAL :: l_forceTheorem, l_lastIter, l_exist
+      LOGICAL :: l_forceTheorem, l_lastIter, l_exist, l_useAuxGGA
       REAL    :: fix, sfscale, rdummy, tempDistance
       REAL    :: mmpmatDistancePrev, occDistancePrev
       REAL    :: iterRuntime
@@ -301,12 +301,12 @@ CONTAINS
 8100        FORMAT(/, 10x, '   iter=  ', i5)
          END IF !fmpi%irank==0
 
-         
-         if (xcpot%is_MetaGGA().and.(real(EnergyDen%pw(1,1)) < -1E98)) then
-             ! In the first iteration, we do not have a valid kinetic energy density, so we use an auxiliary GGA potential for the XC part. 
-             ! This is needed to avoid NaNs in the potential and to get a reasonable starting density for the self-consistency loop. 
-             ! The auxiliary GGA potential is constructed from the input parameters and does not require a kinetic energy density.
-            !In this iteration we do not have a valid kinetic energy density, so we use AUX_GGA. 
+         l_useAuxGGA = .FALSE.
+         IF (xcpot%is_MetaGGA()) THEN
+            IF (real(EnergyDen%pw(1,1)) < -1E98) l_useAuxGGA = .TRUE.
+         ENDIF
+         if (l_useAuxGGA) then
+            ! In the first iteration, we do not have a valid kinetic energy density, so we use an auxiliary GGA potential for the XC part.
             CALL xcpot%create_from_aux(xcpot_iter)
             print *,"Using auxiliary GGA potential for the first iteration of MetaGGA calculation."
          else
@@ -320,9 +320,11 @@ CONTAINS
             IF (.NOT.fi%sliceplot%slice) THEN
                CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi, fi%sym, fi%cell, &
                               fi%noco, nococonv, inDen, PLOT_INPDEN, fi%sliceplot)
-               if (real(EnergyDen%pw(1,1)) < -1E98) &
-                  CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi, fi%sym, fi%cell, &
-                                 fi%noco, nococonv, EnergyDen, PLOT_ENERGYDEN, fi%sliceplot)
+               IF (xcpot%is_MetaGGA()) THEN
+                  if (real(EnergyDen%pw(1,1)) < -1E98) &
+                     CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi, fi%sym, fi%cell, &
+                                    fi%noco, nococonv, EnergyDen, PLOT_ENERGYDEN, fi%sliceplot)
+               ENDIF
                                  
             ELSE
                CALL sliceDen%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN)
