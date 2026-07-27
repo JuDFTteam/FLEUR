@@ -304,8 +304,10 @@ CONTAINS
                CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi,   fi%sym, fi%cell, &
                               fi%noco, nococonv, sliceDen, PLOT_INPDEN, fi%sliceplot)
             END IF
-            IF ((fmpi%irank .EQ. 0) .AND. (fi%sliceplot%iplot .EQ. 2)) THEN
-               CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
+            IF (fi%sliceplot%iplot .EQ. 2) THEN
+               ! Collective stop: all ranks call juDFT_end so it does a clean
+               ! MPI_BARRIER+MPI_FINALIZE instead of a single-rank MPI_ABORT.
+               CALL juDFT_end("Stopped self consistency loop after plots have been generated.", fmpi%irank)
             END IF
          END IF
 
@@ -547,8 +549,9 @@ CONTAINS
                CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi, fi%sym, fi%cell, &
                               fi%noco, nococonv, outDen, PLOT_OUTDEN_Y_CORE, fi%sliceplot)
 
-               IF ((fi%sliceplot%iplot .NE. 0) .AND. (fmpi%irank .EQ. 0) .AND. (fi%sliceplot%iplot .LT. 64) .AND. (MODULO(fi%sliceplot%iplot, 2) .NE. 1)) THEN
-                  CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
+               IF ((fi%sliceplot%iplot .NE. 0) .AND. (fi%sliceplot%iplot .LT. 64) .AND. (MODULO(fi%sliceplot%iplot, 2) .NE. 1)) THEN
+                  ! Collective stop (see above): pass fmpi%irank so all ranks finalize cleanly.
+                  CALL juDFT_end("Stopped self consistency loop after plots have been generated.", fmpi%irank)
                END IF
             END IF
 
@@ -750,8 +753,9 @@ CONTAINS
          ! is the last plottable t_potden to appear in the scf loop and with no mixed density written out (so it is quasi
          ! post-process).
 
-         IF ((fi%sliceplot%iplot .NE. 0) .AND. (fmpi%irank .EQ. 0)) THEN
-            CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
+         IF (fi%sliceplot%iplot .NE. 0) THEN
+            ! Collective stop (see above): pass fmpi%irank so all ranks finalize cleanly.
+            CALL juDFT_end("Stopped self consistency loop after plots have been generated.", fmpi%irank)
          END IF
 
       END DO scfloop ! DO WHILE (l_cont)

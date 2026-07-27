@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -10,6 +10,7 @@ MODULE m_vgen_finalize
    USE m_constants
    USE m_lattHarmsSphHarmsConv
 
+   implicit none
 CONTAINS
 
    SUBROUTINE vgen_finalize(fmpi ,field,cell,atoms,stars,vacuum,sym,noco,nococonv,input,xcpot,sphhar,vTot,vCoul,denRot,sliceplot)
@@ -140,8 +141,8 @@ CONTAINS
          CALL subPotDen(vxcForPlotting,vTot,vCoul)
          CALL makeplots(stars, atoms, sphhar, vacuum, input, fmpi , sym, cell, &
                         noco,nococonv, vxcForPlotting, PLOT_POT_VXC, sliceplot)
-         IF ((fmpi%irank.EQ.0).AND.(sliceplot%iplot.LT.32).AND.(MODULO(sliceplot%iplot,2).NE.1)) THEN
-            CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
+         IF ((sliceplot%iplot.LT.32).AND.(MODULO(sliceplot%iplot,2).NE.1)) THEN
+            CALL juDFT_end("Stopped self consistency loop after plots have been generated.", fmpi%irank)
          END IF
       END IF
 
