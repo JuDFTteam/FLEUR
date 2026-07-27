@@ -37,6 +37,7 @@ CONTAINS
       use m_types_sliceplot
       USE m_types_xcpot
       USE m_types_xcpot_inbuild_nofunction
+      USE m_libxc_xctyp
       USE m_types_noco
       use m_types_enparaxml
       USE m_types_forcetheo
@@ -118,8 +119,9 @@ CONTAINS
       INTEGER               :: idum
       CHARACTER(len=1)     ::  check
 
-      CHARACTER(len=50) :: xcpotName, xcName, xName, cName
-      INTEGER           :: xIndex, cIndex, commaIndex
+      CHARACTER(len=200) :: xcpotName, xName, cName
+      LOGICAL           :: l_libxcID, l_auxGGA
+      INTEGER           :: xID, cID, auxXID, auxCID
       CHARACTER(len=20) :: speciesName
       CHARACTER(len=150) :: format
       CHARACTER(len=20) :: mixingScheme
@@ -187,16 +189,22 @@ CONTAINS
       CLASS IS (t_xcpot_inbuild_nf)
          xcpotName = TRIM(ADJUSTL(xcpot%inbuild_name))
          IF (xcpotName(1:5).EQ.'LibXC') THEN
-            xcName = "LibXC"
-            xIndex = index(xcpotName, 'Exch:')
-            cIndex = index(xcpotName, 'Cor:')
-            commaIndex = index(xcpotName, ',')
-            xName = TRIM(ADJUSTL(xcpotName(xIndex+5:commaIndex-1)))
-            cName = TRIM(ADJUSTL(xcpotName(cIndex+4:LEN(TRIM(xcpotName) ))))
+            CALL parse_libxc_xctyp(xcpotName, l_libxcID, xName, cName, xID, cID, l_auxGGA, auxXID, auxCID)
             WRITE (fileNum, '(a)') '      <xcFunctional name="LibXC" relativisticCorrections="F">'
-            !         <LibXCName  exchange="lda_x" correlation="lda_c_vwn"/> 
-133         FORMAT('         <LibXCName exchange="', a, '" correlation="', a, '"/>')
-            WRITE (fileNum, 133) TRIM(xName), TRIM(cName)
+            IF (l_libxcID) THEN
+!         <LibXCID exchange="645" correlation="642"/>
+132         FORMAT('         <LibXCID exchange="', i0, '" correlation="', i0, '"/>')
+               WRITE (fileNum, 132) xID, cID
+            ELSE
+               !         <LibXCName  exchange="lda_x" correlation="lda_c_vwn"/>
+133            FORMAT('         <LibXCName exchange="', a, '" correlation="', a, '"/>')
+               WRITE (fileNum, 133) TRIM(xName), TRIM(cName)
+            ENDIF
+            IF (l_auxGGA) THEN
+!         <AuxGGA exchange="101" correlation="130"/>
+134         FORMAT('         <AuxGGA exchange="', i0, '" correlation="', i0, '"/>')
+               WRITE (fileNum, 134) auxXID, auxCID
+            ENDIF
             WRITE (fileNum, '(a)') '      </xcFunctional>'
          ELSE
             !      <xcFunctional name="pbe" relativisticCorrections="F">

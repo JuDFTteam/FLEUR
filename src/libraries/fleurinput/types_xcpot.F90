@@ -44,7 +44,7 @@ MODULE m_types_xcpot
       !For inbuild
 
       LOGICAL          :: l_inbuild = .FALSE.
-      CHARACTER(len=50):: inbuild_name = "vwn"
+      CHARACTER(len=200):: inbuild_name = "vwn"
       LOGICAL          :: l_relativistic = .FALSE.
       LOGICAL          :: l_bj = .FALSE.  !> Use Becke-Johnson exchange potential (Eq. 2, Tran et al. 2007)
 

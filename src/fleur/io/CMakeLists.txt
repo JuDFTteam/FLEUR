@@ -23,6 +23,7 @@ src/fleur/io/greensf_io.F90
 src/fleur/io/writeBasis.F90
 src/fleur/io/writeOutHeader.F90
 src/fleur/io/wrtdop.f90
+src/fleur/io/libxc_xctyp.F90
 src/fleur/io/w_inpXML.f90
 src/fleur/io/writeOutParameters.f90
 src/fleur/io/xsf_io.f90

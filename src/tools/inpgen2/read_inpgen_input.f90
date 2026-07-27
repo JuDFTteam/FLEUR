@@ -507,7 +507,7 @@ CONTAINS
     CHARACTER(len=*),INTENT(in)::line
     TYPE(t_xcpot_inbuild_nf),INTENT(INOUT) :: xcpot
     LOGICAL::relxc
-    CHARACTER(len=50) :: xctyp
+    CHARACTER(len=200) :: xctyp
     NAMELIST /exco/   xctyp, relxc
     INTEGER :: ios
 

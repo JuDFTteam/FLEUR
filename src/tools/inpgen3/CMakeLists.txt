@@ -56,6 +56,7 @@ ${FLEUR_SRC}/init/compile_descr.F90
 ${FLEUR_SRC}/init/ss_sym.f
 ${FLEUR_SRC}/global/sort.f90
 ${FLEUR_SRC}/math/inv3.f90
+${FLEUR_SRC}/io/libxc_xctyp.F90
 w_inpXML.f90
 
 kpoints/divi.f
