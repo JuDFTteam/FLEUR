@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -20,6 +20,7 @@ module m_scalapack
    type, extends(t_solver)::t_solver_scalapack
    contains
       procedure        :: solve_gev => scalapack_gev  !solver for generalized eigenvalue problem
+      procedure        :: solve_std_dp => scalapack_std  !solver for standard eigenvalue problem (double precision)
       procedure        :: to_std => scalapack_reduction     !transform the H of the generalized problem to a std problem
       procedure        :: backtrans => scalapack_recover  !transform the Eigenvalue back to the generalized problem
    end type
@@ -39,7 +40,7 @@ contains
       solver%parallel = .true.
       solver%serial = .false.
       solver%generalized = .true.
-      solver%standard = .false.
+      solver%standard = .true.
       solver%single_precision = .false.
       solver%transform = .true.
       solver%GPU = .false.
@@ -312,6 +313,227 @@ contains
 #endif
 #endif
    end subroutine scalapack_gev
+
+   subroutine scalapack_std(self, hmat, ne, eig, zmat)
+      !
+      !----------------------------------------------------
+      !- Parallel eigensystem solver for a STANDARD problem
+      !  H x = lambda x, using SCALAPACK (pzheevx/pdsyevx).
+      !  Mirrors scalapack_gev but without an overlap matrix.
+      !
+      ! hmat ..... Hamiltonian matrix
+      ! ne ....... number of ev's searched (and found) on this node
+      !            On input, overall number of ev's searched
+      ! eig ...... all eigenvalues, output
+      ! zmat ..... local eigenvectors, output
+      !----------------------------------------------------
+      !
+      implicit none
+      class(t_solver_scalapack) :: self
+      class(t_mat), intent(INOUT)    :: hmat
+      class(t_mat), allocatable, intent(OUT)::zmat
+      real, intent(out)              :: eig(:)
+      integer, intent(INOUT)         :: ne
+
+#ifdef CPP_SCALAPACK
+      !...  Local variables
+      !
+      integer i, ierr, err
+      integer, allocatable :: iwork(:)
+      real, allocatable :: rwork(:)
+      integer              :: lrwork
+
+      !
+      !  ScaLAPACK things
+      character(len=1)    :: uplo
+      integer              :: num, num1, num2, liwork, lwork2, np0, mq0
+      integer              :: iceil, numroc, nn, nb
+      integer, allocatable :: ifail(:), iclustr(:)
+      real                 :: abstol, orfac = 1.e-4, dlamch
+      real, allocatable     :: eig2(:), gap(:)
+      real, allocatable :: work2_r(:)
+      complex, allocatable :: work2_c(:)
+
+      external iceil, numroc
+      external dlamch
+
+#ifdef FLEUR_USE_SCOREP
+
+      SCOREP_RECORDING_OFF()
+#endif
+      select type (hmat)
+      type IS (t_mpimat)
+
+         allocate (eig2(hmat%global_size1))
+         allocate (t_mpimat::zmat)
+         call zmat%init(hmat)
+
+         num = max(1, min(ne, hmat%global_size1)) ! number of states solved for
+
+         abstol = 2.0*dlamch('S') ! PDLAMCH gave an error on ZAMpano
+
+         nb = hmat%blacsdata%blacs_desc(5)! Blocking factor
+         if (nb .ne. hmat%blacsdata%blacs_desc(6)) call judft_error("Different block sizes for rows/columns not supported")
+
+         !
+         nn = max(max(hmat%global_size1, nb), 2)
+         np0 = numroc(nn, nb, 0, 0, hmat%blacsdata%nprow)
+         mq0 = numroc(max(max(num, nb), 2), nb, 0, 0, hmat%blacsdata%npcol)
+         if (hmat%l_real) then
+            lwork2 = 5*hmat%global_size1 + max(5*nn, np0*mq0 + 2*nb*nb) + &
+                     iceil(num, hmat%blacsdata%nprow*hmat%blacsdata%npcol)*nn + 10*hmat%global_size1
+            allocate (work2_r(lwork2), stat=err) ! Allocate more in case of clusters
+         else
+            lwork2 = hmat%global_size1 + max(nb*(np0 + 1), 3)
+            allocate (work2_c(lwork2), stat=err)
+         end if
+         if (err .ne. 0) then
+            write (*, *) 'work2  :', err, lwork2
+            call juDFT_error('Failed to allocated "work2"', calledby='scalapack_std')
+         end if
+
+         liwork = 6*max(max(hmat%global_size1, hmat%blacsdata%nprow*hmat%blacsdata%npcol + 1), 4)
+         allocate (iwork(liwork), stat=err)
+         if (err .ne. 0) then
+            write (*, *) 'iwork  :', err, liwork
+            call juDFT_error('Failed to allocated "iwork"', calledby='scalapack_std')
+         end if
+         allocate (ifail(hmat%global_size1), stat=err)
+         if (err .ne. 0) then
+            write (*, *) 'ifail  :', err, hmat%global_size1
+            call juDFT_error('Failed to allocated "ifail"', calledby='scalapack_std')
+         end if
+         allocate (iclustr(2*hmat%blacsdata%nprow*hmat%blacsdata%npcol), stat=err)
+         if (err .ne. 0) then
+            write (*, *) 'iclustr:', err, 2*hmat%blacsdata%nprow*hmat%blacsdata%npcol
+            call juDFT_error('Failed to allocated "iclustr"', calledby='scalapack_std')
+         end if
+         allocate (gap(hmat%blacsdata%nprow*hmat%blacsdata%npcol), stat=err)
+         if (err .ne. 0) then
+            write (*, *) 'gap    :', err, hmat%blacsdata%nprow*hmat%blacsdata%npcol
+            call juDFT_error('Failed to allocated "gap"', calledby='scalapack_std')
+         end if
+         !
+         !     Compute size of workspace
+         !
+         call timestart("SCALAPACK WORKSPACE")
+         if (hmat%l_real) then
+            uplo = 'U'
+            call pdsyevx('V', 'I', 'U', hmat%global_size1, hmat%data_r, 1, 1, &
+                         hmat%blacsdata%blacs_desc, 0.0, 1.0, 1, num, abstol, num1, num2, eig2, orfac, &
+                         zmat%data_r, 1, 1, hmat%blacsdata%blacs_desc, work2_r, -1, iwork, -1, ifail, iclustr, gap, ierr)
+            if (ierr .ne. 0) then
+               write (*, *) 'ERROR: pdsyevx workspace query failed: ierr=', ierr, ' n=', hmat%global_size1, ' iu=', num
+               call juDFT_error('SCALAPACK workspace query failed in pdsyevx', calledby='scalapack_std')
+            end if
+            if (work2_r(1) .gt. lwork2) then
+               lwork2 = work2_r(1) + 20*hmat%global_size1
+               deallocate (work2_r)
+               allocate (work2_r(lwork2), stat=err) ! Allocate even more in case of clusters
+               if (err .ne. 0) then
+                  write (*, *) 'work2  :', err, lwork2
+                  call juDFT_error('Failed to allocated "work2"', calledby='scalapack_std')
+               end if
+            end if
+         else
+            lrwork = 4*hmat%global_size1 + max(5*nn, np0*mq0) + &
+                     iceil(num, hmat%blacsdata%nprow*hmat%blacsdata%npcol)*nn + 10*hmat%global_size1
+            ! Allocate more in case of clusters
+            allocate (rwork(lrwork), stat=ierr)
+            if (ierr /= 0) then
+               write (*, *) 'ERROR: scalapack_std: Allocating rwork failed'
+               call juDFT_error('Failed to allocated "rwork"', calledby='scalapack_std')
+            end if
+
+            call pzheevx('V', 'I', 'U', hmat%global_size1, hmat%data_c, 1, 1, &
+                         hmat%blacsdata%blacs_desc, 0.0, 1.0, 1, num, abstol, num1, num2, eig2, orfac, &
+                         zmat%data_c, 1, 1, hmat%blacsdata%blacs_desc, work2_c, -1, rwork, -1, iwork, -1, &
+                         ifail, iclustr, gap, ierr)
+            if (ierr .ne. 0) then
+               write (*, *) 'ERROR: pzheevx workspace query failed: ierr=', ierr, ' n=', hmat%global_size1, ' iu=', num
+               call juDFT_error('SCALAPACK workspace query failed in pzheevx', calledby='scalapack_std')
+            end if
+            if (int(real(work2_c(1))) .gt. lwork2) then
+               lwork2 = int(real(work2_c(1))) + 20*hmat%global_size1
+               deallocate (work2_c)
+               allocate (work2_c(lwork2), stat=err)
+               if (err /= 0) then
+                  write (*, *) 'ERROR: scalapack_std: Allocating work2 failed:', lwork2
+                  call juDFT_error('Failed to allocated "work2"', calledby='scalapack_std')
+               end if
+            end if
+            if (rwork(1) .gt. lrwork) then
+               lrwork = rwork(1) + 20*hmat%global_size1
+               deallocate (rwork)
+               ! Allocate even more in case of clusters
+               allocate (rwork(lrwork), stat=err)
+               if (err /= 0) then
+                  write (*, *) 'ERROR: scalapack_std: Allocating rwork failed: ', lrwork
+                  call juDFT_error('Failed to allocated "rwork"', calledby='scalapack_std')
+               end if
+            end if
+         end if
+         if (iwork(1) .gt. liwork) then
+            liwork = iwork(1)
+            deallocate (iwork)
+            allocate (iwork(liwork), stat=err)
+            if (err /= 0) then
+               write (*, *) 'ERROR: scalapack_std: Allocating iwork failed: ', liwork
+               call juDFT_error('Failed to allocated "iwork"', calledby='scalapack_std')
+            end if
+         end if
+         call timestop("SCALAPACK WORKSPACE")
+         !
+         !     Now solve standard eigenvalue problem
+         !
+         if (hmat%l_real) then
+            call timestart("SCALAPACK PDSYEVX")
+            call pdsyevx('V', 'I', 'U', hmat%global_size1, hmat%data_r, 1, 1, &
+                         hmat%blacsdata%blacs_desc, 1.0, 1.0, 1, num, abstol, num1, num2, eig2, orfac, &
+                         zmat%data_r, 1, 1, hmat%blacsdata%blacs_desc, work2_r, lwork2, iwork, liwork, &
+                         ifail, iclustr, gap, ierr)
+            call timestop("SCALAPACK PDSYEVX")
+         else
+            call timestart("SCALAPACK PZHEEVX")
+            call pzheevx('V', 'I', 'U', hmat%global_size1, hmat%data_c, 1, 1, &
+                         hmat%blacsdata%blacs_desc, 1.0, 1.0, 1, num, abstol, num1, num2, eig2, orfac, &
+                         zmat%data_c, 1, 1, hmat%blacsdata%blacs_desc, work2_c, lwork2, rwork, lrwork, iwork, liwork, &
+                         ifail, iclustr, gap, ierr)
+            call timestop("SCALAPACK PZHEEVX")
+            deallocate (rwork)
+         end if
+         if (ierr .ne. 0) then
+            if (mod(ierr, 2) /= 0) then
+               eigs: do i = 1, ne
+                  if (ifail(i) /= 0) then
+                  else
+                     exit eigs
+                  end if
+               end do eigs
+            end if
+            if (mod(ierr/4, 2) .ne. 0) then
+            end if
+            if (mod(ierr/8, 2) .ne. 0) then
+               call judft_warn("SCALAPACK failed to solve eigenvalue problem", calledby="scalapack.f90")
+            end if
+         end if
+         if (num2 < num1) then
+            write (oUnit, *) 'Not all eigenvalues wanted are found'
+            write (oUnit, *) 'number of eigenvalues/vectors wanted', num1
+            write (oUnit, *) 'number of eigenvalues/vectors found', num2
+         end if
+         !
+         !     Each process has all eigenvalues in output
+         eig(:num2) = eig2(:num2)
+         deallocate (eig2)
+      class DEFAULT
+         call judft_error("Wrong type (1) in scalapack_std")
+      end select
+#ifdef FLEUR_USE_SCOREP
+      SCOREP_RECORDING_ON()
+#endif
+#endif
+   end subroutine scalapack_std
 
    subroutine scalapack_reduction(self, hmat, smat, ne)
       !Simple driver to transform Generalized Eigenvalue Problem to Standard problem using LAPACK routine
