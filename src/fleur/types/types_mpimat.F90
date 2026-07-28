@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -424,15 +424,18 @@ CONTAINS
       call timestop("mpimat_add_transpose")
    END SUBROUTINE mpimat_add_transpose
 
-   SUBROUTINE mpimat_copy(mat, mat1, n1, n2)
+   SUBROUTINE mpimat_copy(mat, mat1, n1, n2, m1, m2)
       IMPLICIT NONE
       CLASS(t_mpimat), INTENT(INOUT)::mat
       CLASS(t_mat), INTENT(IN)      ::mat1
       INTEGER, INTENT(IN) ::n1, n2
-      INTEGER :: irank, err
+      INTEGER, INTENT(IN), OPTIONAL :: m1, m2  !> offsets into source matrix
+      INTEGER :: irank, err, s1, s2
       LOGICAL :: can_use_fast_redist
-
       call timestart("mpimat_copy")
+
+      s1 = 1; if (present(m1)) s1 = m1
+      s2 = 1; if (present(m2)) s2 = m2
 
       select type (mat1)
       type is (t_mpimat)
@@ -464,9 +467,9 @@ CONTAINS
             call cyclic_column_to_2Dblock_cyclic(mat1,mat,n1,n2)
          else
             IF (mat%l_real) THEN
-               CALL pdgemr2d(Mat1%global_size1, mat1%global_size2, mat1%data_r, 1, 1, mat1%blacsdata%blacs_desc, mat%data_r, n1, n2, mat%blacsdata%blacs_desc, mat1%blacsdata%blacs_desc(2))
+               CALL pdgemr2d(Mat1%global_size1, mat1%global_size2, mat1%data_r, s1, s2, mat1%blacsdata%blacs_desc, mat%data_r, n1, n2, mat%blacsdata%blacs_desc, mat1%blacsdata%blacs_desc(2))
             ELSE
-               CALL pzgemr2d(mat1%global_size1, mat1%global_size2, mat1%data_c, 1, 1, mat1%blacsdata%blacs_desc, mat%data_c, n1, n2, mat%blacsdata%blacs_desc, mat1%blacsdata%blacs_desc(2))
+               CALL pzgemr2d(mat1%global_size1, mat1%global_size2, mat1%data_c, s1, s2, mat1%blacsdata%blacs_desc, mat%data_c, n1, n2, mat%blacsdata%blacs_desc, mat1%blacsdata%blacs_desc(2))
             END IF
          endif   
       CLASS DEFAULT

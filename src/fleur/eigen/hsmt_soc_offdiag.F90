@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -57,7 +57,7 @@ CONTAINS
     CALL hsmt_spinor_soc(n,nococonv,chi,isigma)
        
     !$acc parallel present(fjgj,fjgj%fj,fjgj%gj,h11,h12,h21,h22)create(cph,dot,fct,xlegend,plegend,dplegend) default(none) copyin(n) &
-    !$acc &copyin(chi,isigma,td,td%rsoc%rsopp,td%rsoc%rsopdp,td%rsoc%rsoppd,td%rsoc%rsopdpd)&
+    !$acc &copyin(chi,isigma,td,td%rsoc,td%rsoc%rso)&
     !$acc &copyin(nococonv,nococonv%alph,nococonv%beta,lapw,lapw%nv,lapw%gvec,lapw%gk,atoms,atoms%firstatom,atoms%neq,atoms%taual,atoms%lmax)&
     !$acc &copyin(fmpi,fleg1,fleg2,fl2p1) 
         
@@ -95,10 +95,10 @@ CONTAINS
              DO j2=1,2
                 DO j1=1,2
                     fct(j1,j2)  = fct(j1,j2)+cph * dplegend(l3)*fl2p1(l)*(&
-                    fjgj%fj(ki,l,j1,1)*fjgj%fj(kj,l,j2,1) *td%rsoc%rsopp(n,l,j1,j2) + &
-                    fjgj%fj(ki,l,j1,1)*fjgj%gj(kj,l,j2,1) *td%rsoc%rsopdp(n,l,j1,j2) + &
-                    fjgj%gj(ki,l,j1,1)*fjgj%fj(kj,l,j2,1) *td%rsoc%rsoppd(n,l,j1,j2) + &
-                    fjgj%gj(ki,l,j1,1)*fjgj%gj(kj,l,j2,1) *td%rsoc%rsopdpd(n,l,j1,j2)) &
+                    fjgj%fj(ki,l,j1,1)*fjgj%fj(kj,l,j2,1) *td%rsoc%rso(1,1,n,l,j1,j2) + &
+                    fjgj%fj(ki,l,j1,1)*fjgj%gj(kj,l,j2,1) *td%rsoc%rso(2,1,n,l,j1,j2) + &
+                    fjgj%gj(ki,l,j1,1)*fjgj%fj(kj,l,j2,1) *td%rsoc%rso(1,2,n,l,j1,j2) + &
+                    fjgj%gj(ki,l,j1,1)*fjgj%gj(kj,l,j2,1) *td%rsoc%rso(2,2,n,l,j1,j2)) &
                     * (isigma(j1,j2,1)*cross_k(1)+isigma(j1,j2,2)*cross_k(2)+ isigma(j1,j2,3)*cross_k(3))
                 ENDDO
               ENDDO
@@ -167,7 +167,7 @@ CONTAINS
        fleg2(l) = REAL(l)/REAL(l+1)
        fl2p1(l) = REAL(l+l+1)/fpi_const
     END DO
-    !!$acc data copyin(td,td%rsoc%rsopp,td%rsoc%rsopdp,td%rsoc%rsoppd,td%rsoc%rsopdpd)
+    !!$acc data copyin(td,td%rsoc,td%rsoc%rso)
     !CPP_OMP PARALLEL DEFAULT(NONE)&
     !CPP_OMP SHARED(n,lapw,atoms,td,fjgj,nococonv,fl2p1,fleg1,fleg2,hmat,fmpi)&
     !CPP_OMP PRIVATE(kii,ki,ski,kj,plegend,dplegend,l,j1,j2,angso,chi)&
@@ -248,10 +248,10 @@ CONTAINS
              DO j1=1,2
                 DO j2=1,2      
                   fct(:NVEC_rem)  =cph(:NVEC_rem) * dplegend(:NVEC_rem,l3)*fl2p1(l)*(&
-                  fjgj%fj(ki,l,j1,1)*fjgj%fj(kj_off:kj_vec,l,j2,1) *td%rsoc%rsopp(n,l,j1,j2) + &
-                  fjgj%fj(ki,l,j1,1)*fjgj%gj(kj_off:kj_vec,l,j2,1) *td%rsoc%rsopdp(n,l,j1,j2) + &
-                  fjgj%gj(ki,l,j1,1)*fjgj%fj(kj_off:kj_vec,l,j2,1) *td%rsoc%rsoppd(n,l,j1,j2) + &
-                  fjgj%gj(ki,l,j1,1)*fjgj%gj(kj_off:kj_vec,l,j2,1) *td%rsoc%rsopdpd(n,l,j1,j2)) &
+                  fjgj%fj(ki,l,j1,1)*fjgj%fj(kj_off:kj_vec,l,j2,1) *td%rsoc%rso(1,1,n,l,j1,j2) + &
+                  fjgj%fj(ki,l,j1,1)*fjgj%gj(kj_off:kj_vec,l,j2,1) *td%rsoc%rso(2,1,n,l,j1,j2) + &
+                  fjgj%gj(ki,l,j1,1)*fjgj%fj(kj_off:kj_vec,l,j2,1) *td%rsoc%rso(1,2,n,l,j1,j2) + &
+                  fjgj%gj(ki,l,j1,1)*fjgj%gj(kj_off:kj_vec,l,j2,1) *td%rsoc%rso(2,2,n,l,j1,j2)) &
                   * angso(:NVEC_rem,j1,j2)
 
                   hmat(1,1)%data_c(kj_off:kj_vec,kii)=hmat(1,1)%data_c(kj_off:kj_vec,kii) + chi(1,1,j1,j2)*fct(:NVEC_rem)
@@ -314,6 +314,7 @@ CONTAINS
     REAL, ALLOCATABLE :: plegend(:,:),dplegend(:,:)
     COMPLEX, ALLOCATABLE :: cph(:)
     REAL                 :: alo1(atoms%nlod,2),blo1(atoms%nlod,2),clo1(atoms%nlod,2)
+    INTEGER              :: lo_slot(atoms%nlod),lo_cnt(0:atoms%lmaxd)
     CALL timestart("offdiagonal soc-setup LO")
 
     DO l = 0,atoms%lmaxd
@@ -336,6 +337,16 @@ CONTAINS
     alo1=alo1*fpi_const/SQRT(cell%omtil)* ((atoms%rmt(n)**2)/2)
     blo1=blo1*fpi_const/SQRT(cell%omtil)* ((atoms%rmt(n)**2)/2)
     clo1=clo1*fpi_const/SQRT(cell%omtil)* ((atoms%rmt(n)**2)/2)
+
+    !Map each LO to its radial-function slot in rsoc%rso: slot 1=u, 2=udot,
+    !3.. = LOs of the same l in the order they appear in atoms%llo (same ordering
+    !as in types_radfun%generate_radial_functions).
+    lo_cnt = 0
+    DO lo = 1,atoms%nlo(n)
+       l = atoms%llo(lo,n)
+       lo_cnt(l) = lo_cnt(l) + 1
+       lo_slot(lo) = 2 + lo_cnt(l)
+    ENDDO
 
     associate(h11=>hmat(1,1)%data_c,h12=>hmat(1,2)%data_c,h21=>hmat(2,1)%data_c,h22=>hmat(2,2)%data_c)
 
@@ -383,9 +394,9 @@ CONTAINS
               !$acc kernels default(none) &
               !$acc &present(h11,h12,h21,h22)&
               !$acc &present(fjgj,fjgj%fj,fjgj%gj)&
-              !$acc &copyin(chi,isigma,td,td%rsoc%rsopp,td%rsoc%rsopdp,td%rsoc%rsoppd,td%rsoc%rsopdpd,td%rsoc%rsoplop,td%rsoc%rsoplopd,td%rsoc%rsoploplop,td%rsoc%rsopplo,td%rsoc%rsopdplo)&
+              !$acc &copyin(chi,isigma,td,td%rsoc,td%rsoc%rso)&
               !$acc &copyin(lapw,lapw%gk,lapw%nv,lapw%index_lo,lapw%kvec)&
-              !$acc &copyin(alo1,blo1,clo1,cph,dplegend,fl2p1,atoms,atoms%nlo,atoms%llo)&
+              !$acc &copyin(alo1,blo1,clo1,cph,dplegend,fl2p1,atoms,atoms%nlo,atoms%llo,lo_slot)&
               !$acc &create(cross_k) 
               DO j1=1,2
                 DO j2=1,2
@@ -397,12 +408,12 @@ CONTAINS
                     cross_k(2)=lapw%gk(3,ki,1)*lapw%gk(1,kj,1)- lapw%gk(1,ki,1)*lapw%gk(3,kj,1)
                     cross_k(3)=lapw%gk(1,ki,1)*lapw%gk(2,kj,1)- lapw%gk(2,ki,1)*lapw%gk(1,kj,1)
                     fct  =cph(kj) * dplegend(kj,l)*fl2p1(l)*(&
-                    alo1(lo,j1)*fjgj%fj(kj,l,j2,1) *td%rsoc%rsopp(n,l,j1,j2) + &
-                    alo1(lo,j1)*fjgj%gj(kj,l,j2,1) *td%rsoc%rsopdp(n,l,j1,j2) + &
-                    blo1(lo,j1)*fjgj%fj(kj,l,j2,1) *td%rsoc%rsoppd(n,l,j1,j2) + &
-                    blo1(lo,j1)*fjgj%gj(kj,l,j2,1) *td%rsoc%rsopdpd(n,l,j1,j2)+ &
-                    clo1(lo,j1)*fjgj%fj(kj,l,j2,1) *td%rsoc%rsopplo(n,lo,j1,j2) + &
-                    clo1(lo,j1)*fjgj%gj(kj,l,j2,1) *td%rsoc%rsopdplo(n,lo,j1,j2)) &
+                    alo1(lo,j1)*fjgj%fj(kj,l,j2,1) *td%rsoc%rso(1,1,n,l,j1,j2) + &
+                    alo1(lo,j1)*fjgj%gj(kj,l,j2,1) *td%rsoc%rso(2,1,n,l,j1,j2) + &
+                    blo1(lo,j1)*fjgj%fj(kj,l,j2,1) *td%rsoc%rso(1,2,n,l,j1,j2) + &
+                    blo1(lo,j1)*fjgj%gj(kj,l,j2,1) *td%rsoc%rso(2,2,n,l,j1,j2)+ &
+                    clo1(lo,j1)*fjgj%fj(kj,l,j2,1) *td%rsoc%rso(1,lo_slot(lo),n,l,j1,j2) + &
+                    clo1(lo,j1)*fjgj%gj(kj,l,j2,1) *td%rsoc%rso(2,lo_slot(lo),n,l,j1,j2)) &
                     *  (isigma(j1,j2,1)*cross_k(1)+isigma(j1,j2,2)*cross_k(2)+ isigma(j1,j2,3)*cross_k(3))
                     h11(kj,locol_loc)=h11(kj,locol_loc) + chi(1,1,j1,j2)*fct
                     h12(kj,locol_loc)=h12(kj,locol_loc) + chi(1,2,j1,j2)*fct
@@ -421,15 +432,15 @@ CONTAINS
                         lorow= lapw%nv(1)+lapw%index_lo(ilo,na)+nkvecp !local row
                         if (lorow>locol_mat) cycle
                         fct  =cph(kj) * dplegend(kj,l)*fl2p1(l)*(&
-                        alo1(lo,j1)*alo1(ilo,j2) *td%rsoc%rsopp(n,l,j1,j2) + &
-                        alo1(lo,j1)*blo1(ilo,j2) *td%rsoc%rsopdp(n,l,j1,j2) + &
-                        alo1(lo,j1)*clo1(ilo,j2) *td%rsoc%rsoplop(n,ilo,j1,j2) + &
-                        blo1(lo,j1)*alo1(ilo,j2) *td%rsoc%rsoppd(n,l,j1,j2) + &
-                        blo1(lo,j1)*blo1(ilo,j2) *td%rsoc%rsopdpd(n,l,j1,j2)+ &
-                        blo1(lo,j1)*clo1(ilo,j2) *td%rsoc%rsoplopd(n,ilo,j1,j2)+ &
-                        clo1(lo,j1)*alo1(ilo,j2) *td%rsoc%rsopplo(n,lo,j1,j2) + &
-                        clo1(lo,j1)*blo1(ilo,j2) *td%rsoc%rsopdplo(n,lo,j1,j2)+ &
-                        clo1(lo,j1)*clo1(ilo,j2) *td%rsoc%rsoploplop(n,lo,ilo,j1,j2)) &
+                        alo1(lo,j1)*alo1(ilo,j2) *td%rsoc%rso(1,1,n,l,j1,j2) + &
+                        alo1(lo,j1)*blo1(ilo,j2) *td%rsoc%rso(2,1,n,l,j1,j2) + &
+                        alo1(lo,j1)*clo1(ilo,j2) *td%rsoc%rso(lo_slot(ilo),1,n,l,j1,j2) + &
+                        blo1(lo,j1)*alo1(ilo,j2) *td%rsoc%rso(1,2,n,l,j1,j2) + &
+                        blo1(lo,j1)*blo1(ilo,j2) *td%rsoc%rso(2,2,n,l,j1,j2)+ &
+                        blo1(lo,j1)*clo1(ilo,j2) *td%rsoc%rso(lo_slot(ilo),2,n,l,j1,j2)+ &
+                        clo1(lo,j1)*alo1(ilo,j2) *td%rsoc%rso(1,lo_slot(lo),n,l,j1,j2) + &
+                        clo1(lo,j1)*blo1(ilo,j2) *td%rsoc%rso(2,lo_slot(lo),n,l,j1,j2)+ &
+                        clo1(lo,j1)*clo1(ilo,j2) *td%rsoc%rso(lo_slot(lo),lo_slot(ilo),n,l,j1,j2)) &
                        *  (isigma(j1,j2,1)*cross_k(1)+isigma(j1,j2,2)*cross_k(2)+ isigma(j1,j2,3)*cross_k(3))
                         h11(lorow,locol_loc)=h11(lorow,locol_loc) + chi(1,1,j1,j2)*fct
                         h12(lorow,locol_loc)=h12(lorow,locol_loc) + chi(1,2,j1,j2)*fct

@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_local_Hamiltonian
    USE m_judft
    IMPLICIT NONE
@@ -20,7 +25,7 @@ CONTAINS
       ! etc. In the diagonal case, Cholesky decompose the nonspherical part of
       ! the Hamiltonian by shifting the diagonal part upwards until the matrix
       ! is positive-definite.
-      USE m_spnorb
+      USE m_constants
       USE m_tlmplm
       USE m_types
     
@@ -46,7 +51,7 @@ CONTAINS
 
       ! Local Scalars
       INTEGER :: l,lm,j1,j2,jsp
-      INTEGER :: n,m,s,lo
+      INTEGER :: n,m,s
       COMPLEX :: one
 
       CALL timestart("local_hamiltonian")
@@ -98,30 +103,9 @@ CONTAINS
       END DO
 
       !Setup of soc parameters for first-variation SOC
-      IF (noco%l_soc.AND.noco%l_noco.AND..NOT.noco%l_ss) THEN
-         CALL spnorb(atoms,noco,nococonv,input,fmpi,enpara,v%mt,ud,td%rsoc,.FALSE.,hub1inp,hub1data)
+      IF (noco%l_soc.AND.noco%l_noco.AND..NOT.noco%l_ss) &
+         CALL add_soc(fmpi,atoms,noco,nococonv,input,enpara,v,hub1inp,hub1data,td)
 
-         ! relLO: correct the relLO's diagonal spherical-Hamiltonian t-matrix.
-         ! tlmplm set the relLO's own element (tuloulo) to ello = epsilon, the DIRAC j=l-1/2
-         ! eigenvalue, which already contains the spin-orbit interaction
-         ! of that branch. But H_sph must carry the SCALAR-relativistic (SOC-free) value,
-         ! exactly as an ordinary LO's ello does; the first-variational SOC is
-         ! then added, once, by hsmt_soc. So only the relLO's OWN element is corrected here:
-         !     <relLO|H_sph|relLO> = epsilon + (l+1)*I_so,   I_so = rsoc%rsoploplop(n,lo,lo),
-         ! with H_sph = H_Dirac - H_SO
-         DO n = 1, atoms%ntype
-            DO lo = 1, atoms%nlo(n)
-               IF (.NOT.atoms%l_relLO(lo,n)) CYCLE
-               l = atoms%llo(lo,n)
-               DO jsp = 1, input%jspins
-                  DO m = -l, l
-                     td%tuloulo_newer(m,m,lo,lo,n,jsp,jsp) = td%tuloulo_newer(m,m,lo,lo,n,jsp,jsp) &
-                          + REAL(l+1) * td%rsoc%rsoploplop(n,lo,lo,jsp,jsp)
-                  END DO
-               END DO
-            END DO
-         END DO
-      END IF
       CALL timestop("local_hamiltonian")
    END SUBROUTINE 
 
@@ -207,6 +191,73 @@ CONTAINS
          END DO
       END DO
     END SUBROUTINE
+
+   SUBROUTINE add_soc(fmpi,atoms,noco,nococonv,input,enpara,v,hub1inp,hub1data,td)
+      ! Setup of the soc parameters for first-variation SOC and the resulting
+      ! correction of the relativistic LOs' spherical Hamiltonian.
+      USE m_constants
+      USE m_types
+
+      TYPE(t_mpi),      INTENT(IN)    :: fmpi
+      TYPE(t_atoms),    INTENT(IN)    :: atoms
+      TYPE(t_noco),     INTENT(IN)    :: noco
+      TYPE(t_nococonv), INTENT(IN)    :: nococonv
+      TYPE(t_input),    INTENT(IN)    :: input
+      TYPE(t_enpara),   INTENT(IN)    :: enpara
+      TYPE(t_potden),   INTENT(IN)    :: v
+      TYPE(t_hub1inp),  INTENT(IN)    :: hub1inp
+      TYPE(t_hub1data), INTENT(INOUT) :: hub1data
+      TYPE(t_tlmplm),   INTENT(INOUT) :: td
+
+      INTEGER :: n,l,m,jsp,lo,i_hia
+      INTEGER :: lo_slot(atoms%nlod),lo_cnt(0:atoms%lmaxd)
+
+      ! Fill the unified radial SOC matrix rsoc%rso used by hsmt_soc_offdiag.
+      ! (This replaces the former spnorb call; the angular matrix elements are
+      ! built from the Pauli matrices in hsmt_soc_offdiag, so soangl is not needed.)
+      IF (.NOT.ALLOCATED(td%rsoc%rso)) CALL td%rsoc%init(atoms)
+      CALL td%rsoc%rad_matrix(atoms,noco,nococonv,input,fmpi,enpara,v)
+      ! Derive the Hubbard-1 SOC parameter xi from the radial matrix element
+      ! <u|V_SO|u> = rso(1,1,...) (formerly taken from rsopp in spnorb).
+      IF (fmpi%irank==0) THEN
+         DO i_hia = 1, atoms%n_hia
+            IF (hub1inp%l_soc_given(i_hia)) CYCLE
+            n = atoms%lda_u(atoms%n_u+i_hia)%atomType
+            l = atoms%lda_u(atoms%n_u+i_hia)%l
+            hub1data%xi(i_hia) = 2.0*td%rsoc%rso(1,1,n,l,1,1)*hartree_to_ev_const
+         END DO
+      END IF
+
+      ! relLO: correct the relLO's diagonal spherical-Hamiltonian t-matrix.
+      ! tlmplm set the relLO's own element (tuloulo) to ello = epsilon, the DIRAC j=l-1/2
+      ! eigenvalue, which already contains the spin-orbit interaction
+      ! of that branch. But H_sph must carry the SCALAR-relativistic (SOC-free) value,
+      ! exactly as an ordinary LO's ello does; the first-variational SOC is
+      ! then added, once, by hsmt_soc. So only the relLO's OWN element is corrected here:
+      !     <relLO|H_sph|relLO> = epsilon + (l+1)*I_so,   I_so = rsoc%rso(slot,slot,n,l),
+      ! with H_sph = H_Dirac - H_SO
+      DO n = 1, atoms%ntype
+         ! Map each LO to its radial-function slot in rsoc%rso: slot 1=u, 2=udot,
+         ! 3.. = LOs of the same l in the order they appear in atoms%llo (same
+         ! ordering as in types_radfun%generate_radial_functions).
+         lo_cnt = 0
+         DO lo = 1, atoms%nlo(n)
+            l = atoms%llo(lo,n)
+            lo_cnt(l) = lo_cnt(l) + 1
+            lo_slot(lo) = 2 + lo_cnt(l)
+         END DO
+         DO lo = 1, atoms%nlo(n)
+            IF (.NOT.atoms%l_relLO(lo,n)) CYCLE
+            l = atoms%llo(lo,n)
+            DO jsp = 1, input%jspins
+               DO m = -l, l
+                  td%tuloulo_newer(m,m,lo,lo,n,jsp,jsp) = td%tuloulo_newer(m,m,lo,lo,n,jsp,jsp) &
+                       + REAL(l+1) * td%rsoc%rso(lo_slot(lo),lo_slot(lo),n,l,jsp,jsp)
+               END DO
+            END DO
+         END DO
+      END DO
+   END SUBROUTINE
 
     subroutine cholesky_decompose(matrix,e_shift,atoms,ud,jsp)
     USE m_types

@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -187,6 +187,7 @@ SUBROUTINE mpi_bc_atoms(this,mpi_comm,irank)
  CALL mpi_bc(this%llod,rank,mpi_comm)
  CALL mpi_bc(this%nlotot,rank,mpi_comm)
  CALL mpi_bc(this%lmaxd,rank,mpi_comm)
+ CALL mpi_bc(this%max_radial_functions,rank,mpi_comm)
  CALL mpi_bc(this%n_u,rank,mpi_comm)
  CALL mpi_bc(this%n_v,rank,mpi_comm)
  CALL mpi_bc(this%n_vPairs,rank,mpi_comm)
