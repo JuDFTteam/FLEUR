@@ -1910,7 +1910,7 @@
       </xsd:annotation>
       <xsd:attribute name="type" type="EParamSelectionEnum" use="required">
          <xsd:annotation>
-            <xsd:documentation>Type of local orbital: SCLO for semicore, HELO for high-energy.</xsd:documentation>
+            <xsd:documentation>Type of local orbital: SCLO for semicore, HELO for high-energy, relLO for a relativistic local orbital (j=l-1/2 branch, requires l=1,2 or 3 and eDeriv=0).</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
       <xsd:attribute name="l" type="AngularMomentumNumberType" use="required">
@@ -1946,6 +1946,7 @@
       <xsd:restriction base="xsd:string">
          <xsd:enumeration value="SCLO"/>
          <xsd:enumeration value="HELO"/>
+         <xsd:enumeration value="relLO"/>
       </xsd:restriction>
    </xsd:simpleType>
 

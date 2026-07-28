@@ -1,9 +1,10 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_outcdn
+   implicit none
 
 CONTAINS
 
@@ -64,19 +65,10 @@ CONTAINS
 
       REAL :: lattvec(3)
       COMPLEX :: xd1, xd2,s
-      !print*,"Im in outcdn"
-      !print*,"sum(potDen%pw)",sum(potDen%pw)
-      !WRITE (oUnit,*) "checkdopall in outcdn"
-      !CALL checkDOPALL(input, sphhar, stars,atoms, sym, vacuum, cell,potDen,1)
-      !print*,"at the beginning of outcdn"
-      !print*,"n",n
       l_dfpt = .FALSE. 
       IF (PRESENT(potDenIm)) THEN
          l_dfpt = .TRUE.
       END IF
-      !stop
-      !print*,"l_dfpt",l_dfpt
-      !l_dfpt = .TRUE.
       ALLOCATE( sf2(stars%ng2),sf3(stars%ng3),ylm((atoms%lmaxd+1)**2))
       ivac=iv
 
@@ -84,8 +76,6 @@ CONTAINS
          IF (iflag.NE.0) THEN
             ! Interstitial part:
             rcc=matmul(cell%bmat,p)/tpi_const
-            !print*,"rcc",rcc
-            !stop
             IF (l_dfpt) THEN
                !print*,"Im doing starsf"
                CALL starf3(sym%nop, stars%ng3, sym%symor, stars%kv3, sym%mrot, &
@@ -94,12 +84,8 @@ CONTAINS
                CALL starf3(sym%nop, stars%ng3, sym%symor, stars%kv3, sym%mrot, &
                sym%tau, rcc, sym%invtab, sf3)
             END IF
-            !print*,"sf3",sf3
             !WIP make correct for DFPT, same as for MT part
             xdnout=dot_product(real(potDen%pw(:,jsp)*sf3(:)),stars%nstr)
-            !print*,"xdnout IR",xdnout
-            !print*,"before return"
-            !stop
             RETURN
 
          ENDIF
@@ -154,31 +140,13 @@ CONTAINS
 
       nd = sym%ntypsy(na)
       nopa = sym%ngopr(na)
-      sx = 0.0
-      DO  i = 1,3
-         !print*,"cell%amat(:,i)",cell%amat(:,i)
-         IF (l_dfpt) THEN
-            x(i) = p(i) - atoms%pos(i,na)!)+dot_product(cell%amat(:,i),(/lattvec_index(1),lattvec_index(2),lattvec_index(3)/))
-            !print*,"x(i)",x(i)
-            !print*,"x(i)+lattvec",x(i)+ dot_product(cell%amat(:,i),(/lattvec_index(1),lattvec_index(2),lattvec_index(3)/))
-         ELSE 
-            x(i) = p(i) - atoms%pos(i,na)
-         END IF
-         sx = sx + x(i)*x(i)
-      END DO
-      sx = sqrt(sx)
+      x = p - atoms%pos(:, na)
+      sx = sqrt(sum(x * x))
       IF (nopa.NE.1) THEN
          ! Switch to internal units.
          rcc=matmul(cell%bmat,x)/tpi_const
          ! Rotate into representative.
-         DO  i = 1,3
-            p(i) = 0.
-            DO  j = 1,3
-               
-                  p(i) = p(i) + sym%mrot(i,j,nopa)*rcc(j)
-               
-            END DO
-         END DO
+         p = matmul(sym%mrot(:,:,nopa), rcc)
          ! Switch back to cartesian units.
          x=matmul(cell%amat,p)
       END IF
@@ -191,14 +159,10 @@ CONTAINS
       xd2 = 0.0
       DO  lh = 0, sphhar%nlh(nd)
          ll1 = sphhar%llh(lh,nd) * ( sphhar%llh(lh,nd) + 1 ) + 1
-         !ll1 = 1
-         !print*,"ll1",ll1
          s = cmplx(0.0)
-         !print*,"memory sucks 3"
          DO mem = 1,sphhar%nmem(lh,nd)
             lm = ll1 + sphhar%mlh(mem,lh,nd)
             s = s + sphhar%clnu(mem,lh,nd)*ylm(lm) 
-            !print*,"sphhar%clnu(mem,lh,nd)*ylm(lm) ",sphhar%clnu(mem,lh,nd)*ylm(lm) 
          ENDDO
          IF (l_potential) THEN
             xd1 = xd1 + potDen%mt(jr,lh,n,jsp)*s
@@ -207,11 +171,9 @@ CONTAINS
             END IF
          ELSE
             xd1 = xd1 + potDen%mt(jr,lh,n,jsp)*s/(atoms%rmsh(jr,n)**2)
-            !print*,"l_dfpt",l_dfpt
             IF (l_dfpt) THEN
                xd1 = xd1 + cmplx(0.0,1.0)*potDenIm%mt(jr,lh,n,jsp)*s/(atoms%rmsh(jr,n)**2)
             END IF 
-            !print*,"Im here 2"
          END IF
          IF (jr.EQ.atoms%jri(n)) CYCLE
          IF (l_potential) THEN
@@ -226,28 +188,10 @@ CONTAINS
             END IF
          END IF
       ENDDO
-      !print*,"made it through the stuff"
-      !stop
       If (l_dfpt) THEN
-         !print*,"lattvec_index",lattvec_index
          lattvec = MATMUL(cell%amat,(/-lattvec_index(1),-lattvec_index(2),-lattvec_index(3)/))
-         !print*,"lattvec",lattvec
-         !print*,"getting shift"
-         !print*,"na",na
-         !print*,"atoms%pos",atoms%pos(:,na)
-         !print*,"stars%center",stars%center
-         !print*,"phase factor",exp(CMPLX(0.0,1.0)*tpi_const*dot_product( stars%center,lattvec))
-         !check_mt = na
-         !check_mt = check_mt*4
-         !print*,"stars%center",stars%center
-         !print*,"na/100",check_mt
-         !print*,"dot_product(stars%center,atoms%taual(:,n)))",dot_product(stars%center,lattvec)
-         !print*,"xd1",xd1
-         !print*,"dot_product( lattvec,lattvec)",dot_product( (/-lattvec_index(1),-lattvec_index(2),-lattvec_index(3)/),(/-lattvec_index(1),-lattvec_index(2),-lattvec_index(3)/))
          xd1 = xd1*exp(CMPLX(0.0,1.0)*tpi_const*dot_product( stars%center,(/-lattvec_index(1),-lattvec_index(2),-lattvec_index(3)/)))
-         !print*,"xd1*exp(..)",xd1
          xd2 = xd2*exp(CMPLX(0.0,1.0)*tpi_const*dot_product( stars%center,(/-lattvec_index(1),-lattvec_index(2),-lattvec_index(3)/)))
-         !print*,"xd2",xd2
       END IF
       !WIP: introduce some kind of switch in case dfpt real and imag part
       xd1_r = real(xd1)
@@ -255,12 +199,8 @@ CONTAINS
       IF (jr.EQ.atoms%jri(n)) THEN
          xdnout = xd1_r
       ELSE
-         xdnout = xd2_r + (xd2_r-xd1_r)* (sx-atoms%rmsh(jr,n))/ &
+         xdnout = xd1_r + (xd2_r-xd1_r)* (sx-atoms%rmsh(jr,n))/ &
                   (atoms%rmsh(jr+1,n)-atoms%rmsh(jr,n))
       END IF
-      !print*,"xdnout",xdnout
-      8000 FORMAT (2f10.6)
-
-      RETURN
    END SUBROUTINE outcdn
 END MODULE m_outcdn
