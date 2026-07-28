@@ -164,23 +164,32 @@ SUBROUTINE cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
          END IF
       END IF
    END DO
-   DO jspin = 1,input%jspins
-      IF (input%ctail) THEN
-         IF (noco%l_noco.and.jspin==1) THEN
-            rh(:,:,1)=(rh(:,:,1)+rh(:,:,2))/2.
-            rh(:,:,2)=rh(:,:,1)
-         END IF
-         IF(PRESENT(EnergyDen)) call juDFT_error("Energyden not implemented for ctail")
+   IF (input%ctail) THEN
+      IF(PRESENT(EnergyDen)) call juDFT_error("Energyden not implemented for ctail")
+      IF (noco%l_noco) THEN
+         ! The core tails have to be rotated from the local spin frames of the
+         ! atoms into the global frame of the interstitial (and back into the local
+         ! frames when they are added to the muffin-tin spheres again).
+         IF (input%jspins.NE.2) CALL juDFT_error("l_noco=T requires jspins=2",calledby="cdncore")
+         IF (input%l_f) CALL juDFT_error("Forces are not implemented for noco calculations with ctail=T",&
+                                         hint="Set /calculationSetup/coreElectrons/@ctail to F.",calledby="cdncore")
+         CALL cdnovlp_noco(fmpi,sphhar,stars,atoms,sym,vacuum,cell,input,noco,nococonv,&
+                           l_st,rh,outDen%pw,outDen%mt,outDen%vac,.FALSE.)
+      ELSE
+         DO jspin = 1,input%jspins
             !+gu hope this works as well
             CALL cdnovlp(fmpi,sphhar,stars,atoms,sym,vacuum,&
                          cell,input ,l_st,jspin,rh(:,:,jspin),&
                          outDen%pw,outDen%mt,outDen%vac,.FALSE.,vTot%pw_w,vTot%mt)
-      ELSE IF ((fmpi%irank==0).AND.(.NOT.noco%l_noco)) THEN
+         END DO
+      END IF
+   ELSE IF ((fmpi%irank==0).AND.(.NOT.noco%l_noco)) THEN
+      DO jspin = 1,input%jspins
          DO iType = 1,atoms%ntype
             outDen%pw(1,jspin) = outDen%pw(1,jspin) + qint(iType,jspin) / (input%jspins * cell%volint)
          END DO
-      END IF
-   END DO
+      END DO
+   END IF
 
    IF (input%kcrel==0) THEN
       IF (fmpi%irank==0) THEN

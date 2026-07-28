@@ -62,11 +62,35 @@ MODULE m_nocoInputCheck
 !     generated
 !      ENDIF
 
-!---> make sure coretails are switched off
+!---> check the coretail option (see cdnovlp_noco for the implementation)
       IF (input%ctail) THEN
-         WRITE (oUnit,*) 'This non-collinear version of the flapw program'
-         WRITE (oUnit,*) 'cannot be used with the coretail option!! '
-         CALL juDFT_error("Coretail option cannot be used!!!",hint="Set /calculationSetup/coreElectrons/@ctail to F in the FLEUR input file.",calledby="nocoInputCheck")
+         IF (input%l_f) THEN
+            WRITE (oUnit,*) 'Forces are not implemented for non-collinear'
+            WRITE (oUnit,*) 'calculations with the coretail option.'
+            CALL juDFT_error("Forces cannot be used together with l_noco=T and ctail=T!!!",&
+                             hint="Set /calculationSetup/coreElectrons/@ctail to F in the FLEUR input file.",&
+                             calledby="nocoInputCheck")
+         END IF
+         IF (noco%l_ss) THEN
+            ! For a spin spiral the transverse part of the core-tail
+            ! magnetization is not lattice periodic in the rotating frame. Its
+            ! treatment would require form factors evaluated at |G+q| for
+            ! individual G vectors instead of |G| for stars. Only the charge and
+            ! the longitudinal part of the core-tail magnetization are added.
+            WRITE (oUnit,*) 'The transverse part of the core-tail magnetization'
+            WRITE (oUnit,*) 'is neglected in spin-spiral calculations.'
+            CALL juDFT_warn("Transverse core-tail magnetization is neglected for spin spirals",&
+                            hint="This is a small effect. Set ctail=F to avoid the coretail treatment altogether.",&
+                            calledby="nocoInputCheck")
+         END IF
+         IF (.NOT.noco%l_mperp) THEN
+            ! Without the off-diagonal parts of the MT density matrix the
+            ! core tails of the neighboring atoms can only be added to the
+            ! diagonal of the local density matrix. This conserves the charge,
+            ! but the direction information of these tails is lost.
+            WRITE (oUnit,*) 'The off-diagonal part of the core tails in the muffin-tin'
+            WRITE (oUnit,*) 'spheres is neglected because l_mperp=F.'
+         END IF
       END IF
 
 !---> make sure that moments are not relaxed and constrained

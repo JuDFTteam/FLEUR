@@ -2128,6 +2128,11 @@
             <xsd:documentation>Maximum wall-clock time (in seconds) allowed before starting an SCF iteration. Used to manage computational resources.</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
+      <xsd:attribute default="F" name="sdNocoIR" type="FleurBool" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Allow the starting density to be non-collinear in the interstitial region: the spin-polarized tails of the atomic densities are rotated from the local spin frames of the atoms into the global frame instead of being averaged over the spins. Only relevant for l_noco=T. If the attribute is not present it is assumed to be F.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
    </xsd:complexType>
 
    <xsd:complexType name="VacDOSType">

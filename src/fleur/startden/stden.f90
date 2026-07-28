@@ -50,7 +50,7 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,input,cell,field,xcpot,noco 
    REAL d,del,fix,h,r,rnot,z,bm,qdel,va,cl,j_state,mj,mj_state,ms
    REAL denz1(1,1),vacxpot(1,1),vacpot(1,1)
    INTEGER i,ivac,iza,j,jr,k,n,n1,ispin
-   INTEGER nw,ilo,natot,nat,l,atomType,istate,i_u,kappa,m
+   INTEGER nw,ilo,natot,nat,l,atomType,istate,i_u,kappa,m,archiveType
 
 
    ! Local Arrays
@@ -61,7 +61,7 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,input,cell,field,xcpot,noco 
    INTEGER lnum(29,atoms%ntype),nst(atoms%ntype)
    INTEGER, ALLOCATABLE :: state_indices(:)
    INTEGER jrc(atoms%ntype)
-   LOGICAL l_found(0:3),llo_found(atoms%nlod),l_st
+   LOGICAL l_found(0:3),llo_found(atoms%nlod),l_st,l_nocoIR
    REAL,ALLOCATABLE   :: occ(:,:)
    COMPLEX,ALLOCATABLE :: pw_tmp(:,:)
    COMPLEX,ALLOCATABLE :: mmpmat_tmp(:,:,:,:)
@@ -71,10 +71,22 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,input,cell,field,xcpot,noco 
    DATA del/1.e-6/
    PARAMETER (l_st=.true.)
 
-   !use the init_potden_simple routine to prevent extra dimensions from noco calculations
+   !sdNocoIR: is the starting density allowed to be non-collinear in the
+   !interstitial region? If not, the interstitial and the vacuum region of the
+   !starting density are kept spin degenerate (the historical behaviour).
+   l_nocoIR = noco%l_noco.AND.input%sdNocoIR
+
+   !use the init_potden_simple routine to be able to set the extra dimensions of
+   !noco calculations explicitly. They are only needed if the starting density
+   !may be non-collinear in the interstitial region.
    CALL den%init(stars%ng3,atoms%jmtd,atoms%msh,sphhar%nlhd,atoms%ntype,&
-                 atoms%n_denmat,atoms%n_vPairs,input%jspins,.FALSE.,.FALSE.,POTDEN_TYPE_DEN,&
-                 vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
+                 atoms%n_denmat,atoms%n_vPairs,input%jspins,l_nocoIR,l_nocoIR.AND.noco%l_mperp,&
+                 POTDEN_TYPE_DEN,vacuum%nmzd,vacuum%nmzxyd,stars%ng2)
+
+   !the local spin frames of the atom types are needed to superpose the
+   !spin-polarized atomic densities in the global frame, see below
+   CALL nococonv%init(noco)
+   CALL nococonv%init_ss(noco,atoms)
 
    ALLOCATE ( rat(atoms%msh,atoms%ntype),eig(29,input%jspins,atoms%ntype) )
    ALLOCATE ( rh(atoms%msh,atoms%ntype,input%jspins),rh1(atoms%msh,atoms%ntype,input%jspins) )
@@ -200,25 +212,32 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,input,cell,field,xcpot,noco 
 
    CALL timestop("stden - init")
 
-   if (noco%l_noco) THEN
-      rh1(:,:,1)=0.5*(rh1(:,:,1)+rh1(:,:,2))
-      rh1(:,:,2)=rh1(:,:,1)
-   ENDIF   
-   DO ispin = 1, input%jspins
-      CALL cdnovlp(fmpi,sphhar,stars,atoms,sym,vacuum,&
-                   cell,input ,l_st,ispin,rh1(:,:,ispin),&
-                   den%pw,den%mt,den%vac,.TRUE.)
-      !roa-
-   END DO
-
-   if (noco%l_noco) THEN
-      den%pw(:,1)=(den%pw(:,1)+den%pw(:,2))*0.5
-      den%pw(:,2)=den%pw(:,1)
-      if (input%film) THEN
-         den%vac(:,:,:,1)=(den%vac(:,:,:,1)+den%vac(:,:,:,2))*0.5
-         den%vac(:,:,:,2)=den%vac(:,:,:,1)
-      endif   
-   endif
+   IF (l_nocoIR) THEN
+      ! The muffin-tin part of the starting density is set up in the local spin
+      ! frame of each atom type, while the interstitial and the vacuum are
+      ! described in the global frame. The spin-polarized tails of the atomic
+      ! densities are therefore rotated from the local frames into the global
+      ! one before they are superposed there, and the result is rotated back
+      ! into the local frames where it is added to the muffin-tin spheres.
+      CALL cdnovlp_noco(fmpi,sphhar,stars,atoms,sym,vacuum,cell,input,noco,nococonv,&
+                        l_st,rh1,den%pw,den%mt,den%vac,.TRUE.)
+   ELSE
+      ! Without a non-collinear interstitial region the tails of the atomic
+      ! densities are averaged over the spins, so that their superposition does
+      ! not depend on the local spin frames of the atoms at all. This already
+      ! makes the interstitial and the vacuum region spin degenerate (qfix
+      ! scales all spins alike), so nothing has to be averaged afterwards.
+      IF (noco%l_noco) THEN
+         rh1(:,:,1)=0.5*(rh1(:,:,1)+rh1(:,:,2))
+         rh1(:,:,2)=rh1(:,:,1)
+      END IF
+      DO ispin = 1, input%jspins
+         CALL cdnovlp(fmpi,sphhar,stars,atoms,sym,vacuum,&
+                      cell,input ,l_st,ispin,rh1(:,:,ispin),&
+                      den%pw,den%mt,den%vac,.TRUE.)
+         !roa-
+      END DO
+   END IF
 
    ! Check the normalization of total density
    CALL timestart("stden - qfix")
@@ -227,14 +246,13 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,input,cell,field,xcpot,noco 
    CALL timestart("stden - finalize")
    !Rotate density into global frame if l_alignSQA
    IF (any(noco%l_alignMT)) then
-     allocate(nococonv%beta(atoms%ntype),nococonv%alph(atoms%ntype))
-     nococonv%beta=noco%beta_inp
-     nococonv%alph=noco%alph_inp
      CALL toGlobalSpinFrame(noco, nococonv, vacuum, sphhar, stars, sym,   cell, input, atoms, Den)
-     Allocate(pw_tmp(size(den%pw,1),3))
-     pw_tmp=0.0
-     pw_tmp(:,:size(den%pw,2))=den%pw
-     call move_alloc(pw_tmp,den%pw)
+     IF (size(den%pw,2)<3) THEN
+       Allocate(pw_tmp(size(den%pw,1),3))
+       pw_tmp=0.0
+       pw_tmp(:,:size(den%pw,2))=den%pw
+       call move_alloc(pw_tmp,den%pw)
+     ENDIF
    ENDIF
    IF(input%ldauSpinoffd) THEN
       allocate(mmpmat_tmp(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const,SIZE(den%mmpmat,3),3))
@@ -307,13 +325,12 @@ SUBROUTINE stden(fmpi,sphhar,stars,atoms,sym,vacuum,input,cell,field,xcpot,noco 
       ! Write superposed density onto density file
       den%iter = 0
  
-      if (noco%l_noco) THEN
-         den%pw(:,1)=(den%pw(:,1)+den%pw(:,2))*0.5
-         den%pw(:,2)=den%pw(:,1)
-      endif
       CALL timestart("stden - write density")
+      archiveType = CDN_ARCHIVE_TYPE_CDN1_const
+      IF (l_nocoIR) archiveType = CDN_ARCHIVE_TYPE_NOCO_const !to store the off-diagonal parts
+      IF (any(noco%l_alignMT)) archiveType = CDN_ARCHIVE_TYPE_FFN_const
       CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,&
-          merge(CDN_ARCHIVE_TYPE_FFN_const,CDN_ARCHIVE_TYPE_CDN1_const,any(noco%l_alignMT)),&
+          archiveType,&
           CDN_INPUT_DEN_const,1,-1.0,0.0,-1.0,-1.0,.TRUE.,den)
       CALL timestop("stden - write density")
       ! Check continuity

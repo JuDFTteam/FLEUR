@@ -163,7 +163,7 @@ CONTAINS
       WRITE (fileNum, 110) fr(input%rkmax), fr(input%gmax), fr(xcpot%gmaxxc), input%gw_neigd
 
 !      <scfLoop itmax="9" maxIterBroyd="99" imix="Anderson" alpha="0.05" precondParam="0.0" spinf="2.00"/>
-120   FORMAT('      <scfLoop itmax="', i0, '" minDistance="', a, '" maxIterBroyd="', i0, '" imix="', a, '" alpha="', a, '" precondParam="', a, '" spinf="', a, '"/>')
+120   FORMAT('      <scfLoop itmax="', i0, '" minDistance="', a, '" maxIterBroyd="', i0, '" imix="', a, '" alpha="', a, '" precondParam="', a, '" spinf="', a, '" sdNocoIR="', l1, '"/>')
       SELECT CASE (input%imix)
       CASE (1)
          mixingScheme = 'straight'
@@ -178,7 +178,7 @@ CONTAINS
       CASE DEFAULT
          mixingScheme = 'errorUnknownMixing'
       END SELECT
-      WRITE (fileNum, 120) input%itmax, fr(input%minDistance), input%maxiter, TRIM(mixingScheme), fr(input%alpha), fr(input%preconditioning_param), fr(input%spinf)
+      WRITE (fileNum, 120) input%itmax, fr(input%minDistance), input%maxiter, TRIM(mixingScheme), fr(input%alpha), fr(input%preconditioning_param), fr(input%spinf), input%sdNocoIR
 
 !      <coreElectrons ctail="T" frcor="F" kcrel="0" coretail_lmax="0" l_core_confpot="T"/>
 130   FORMAT('      <coreElectrons ctail="', l1, '" frcor="', l1, '" kcrel="', i0, '" coretail_lmax="', i0, '"/>')
