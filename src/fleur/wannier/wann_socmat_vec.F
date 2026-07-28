@@ -24,8 +24,9 @@ c
 c     Frank Freimuth
 c***********************************************************************
       USE m_types
-      USE m_spnorb
-      USE m_hsoham
+c     Legacy second-variation SOC removed (m_spnorb/m_sorad/m_hsoham).
+c     USE m_spnorb
+c     USE m_hsoham
       implicit none
 
       TYPE(t_mpi),INTENT(IN)      :: fmpi
@@ -64,10 +65,15 @@ c***********************************************************************
       complex,allocatable :: bhelp(:,:,:,:)
       COMPLEX,ALLOCATABLE :: hsomtx(:,:,:,:)
 
-      TYPE(t_rsoc)::rsoc
+c     TYPE(t_rsoc)::rsoc
       TYPE(t_usdus):: usdus
 
       call timestart("wann_socmat_vec")
+
+      CALL juDFT_error(
+     +   "wann_socmat_vec: legacy second-variation SOC was removed",
+     +   calledby="wann_socmat_vec",
+     +   hint="Port this path to the radial SOC matrix t_rsoc%rso.")
       nwdd=1
       nw=1
       nsz=neigd
@@ -105,20 +111,22 @@ c***********************************************************************
      +         usdus%dulon(atoms%nlod,atoms%ntype,jspd))
 
 
-      CALL spnorb(
-     >         atoms,noco,nococonv,input,fmpi, enpara,
-     >         vr,usdus,rsoc,.true.)
+c     CALL spnorb(
+c    >         atoms,noco,nococonv,input,fmpi, enpara,
+c    >         vr,usdus,rsoc,.true.)
+
+      hsomtx = cmplx(0.0,0.0)
 
       do compo=1,3
-        rsoc%soangl= cmplx(0.0,0.0)
-
-
-        CALL spnorb_angles(atoms,fmpi,nococonv%theta,
-     >        nococonv%phi,rsoc%soangl,compo)
-
-        CALL hsoham(atoms,noco,input,nsz,neigd,chelp,rsoc,ahelp,
-     >            bhelp,1,natd,fmpi%n_rank,fmpi%n_size,fmpi%SUB_COMM,
-     <            hsomtx)
+c       rsoc%soangl= cmplx(0.0,0.0)
+c
+c
+c       CALL spnorb_angles(atoms,fmpi,nococonv%theta,
+c    >        nococonv%phi,rsoc%soangl,compo)
+c
+c       CALL hsoham(atoms,noco,input,nsz,neigd,chelp,rsoc,ahelp,
+c    >            bhelp,1,natd,fmpi%n_rank,fmpi%n_size,fmpi%SUB_COMM,
+c    <            hsomtx)
 
         do i1 = 1,2
          do i2 = 1,2
