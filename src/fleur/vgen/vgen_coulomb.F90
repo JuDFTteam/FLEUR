@@ -13,7 +13,7 @@ module m_vgen_coulomb
 contains
 
   subroutine vgen_coulomb( ispin, fmpi,    input, field, vacuum, sym, stars, &
-             cell, sphhar, atoms, dosf, den, vCoul, results, sternheimerJob, juphon, dfptdenimag, dfptvCoulimag, dfptden0, stars2, iDtype, iDir, iDir2 )
+             cell, sphhar, atoms, dosf, den, vCoul, results, sternheimerJob, dfpt, dfptdenimag, dfptvCoulimag, dfptden0, stars2, iDtype, iDir, iDir2 )
     !----------------------------------------------------------------------------
     ! FLAPW potential generator
     !----------------------------------------------------------------------------
@@ -58,7 +58,7 @@ contains
     type(t_results),    intent(inout), optional  :: results
 
     type(t_sternheimerJob), optional, intent(in) :: sternheimerJob
-    type(t_juphon),     optional,     intent(in) :: juphon
+    type(t_dfpt),     optional,     intent(in) :: dfpt
 
     TYPE(t_potden),     OPTIONAL, INTENT(IN)     :: dfptdenimag,  dfptden0
     TYPE(t_potden),     OPTIONAL, INTENT(INOUT)  :: dfptvCoulimag
@@ -132,7 +132,7 @@ contains
         call vvacxy( stars, vacuum, cell, sym, input, field, den%vac(:vacuum%nmzxyd,:,:,ispin), vCoul%vac(:vacuum%nmzxyd,:,:,ispin), alphm, l_dfptvgen )
         call timestop( "Vacuum" )
         if ( l_dfptvgen ) then 
-          if (juphon%l_symVacLevel ) constantShift =  (vCoul%vac(vacuum%nmzd,1,1,ispin)  - vCoul%vac(vacuum%nmzd,1,2,ispin)) / 2
+          if (dfpt%l_symVacLevel ) constantShift =  (vCoul%vac(vacuum%nmzd,1,1,ispin)  - vCoul%vac(vacuum%nmzd,1,2,ispin)) / 2
         end if 
       end if
 
@@ -161,7 +161,7 @@ contains
                               vCoul%vac(:,:,:,ispin), &
                                 rhobar, sig1dh, vz1dh, alphm, vslope, l_dfptvgen )
             if (l_dfptvgen) THEN 
-              if (juphon%l_symVacLevel .AND. (irec2 == 1) ) vintcza = vintcza + constantShift
+              if (dfpt%l_symVacLevel .AND. (irec2 == 1) ) vintcza = vintcza + constantShift
               vintcza = vintcza * gaussian
             end if 
             af1(i) = real( vintcza )
@@ -199,7 +199,7 @@ contains
           end do
         end do
         if (l_dfptvgen) then 
-          if  (juphon%l_symVacLevel) vCoul%vac(:,1,:,ispin) = vCoul%vac(:,1,:,ispin) + constantShift
+          if  (dfpt%l_symVacLevel) vCoul%vac(:,1,:,ispin) = vCoul%vac(:,1,:,ispin) + constantShift
         end if 
         !sigma_disc = sigma_loc
         if (l_gradientEfield) then 

@@ -9,7 +9,8 @@ MODULE m_vgen
 CONTAINS
 
    SUBROUTINE vgen(hybdat,field,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
-                   cell ,sliceplot,fmpi,results,noco,nococonv,EnergyDen,den,vTot,vx,vCoul,vxc,exc)
+                   cell ,sliceplot,fmpi,results,noco,nococonv,EnergyDen,den,vTot,vx,vCoul,vxc,exc,&
+                   moessbauerParams)
       !--------------------------------------------------------------------------
       ! FLAPW potential generator (main routine)
       !
@@ -37,6 +38,7 @@ CONTAINS
       USE m_force_sf ! Klueppelberg (force level 3)
       USE m_fleur_vdW
       use m_vgen_constraint
+      USE m_types_moessbauerParams
       IMPLICIT NONE
 
       TYPE(t_results),   INTENT(INOUT) :: results
@@ -58,6 +60,7 @@ CONTAINS
       TYPE(t_potden),    INTENT(IN)    :: EnergyDen
       TYPE(t_potden),    INTENT(INOUT) :: den
       TYPE(t_potden),    INTENT(INOUT) :: vTot, vx, vCoul, vxc, exc
+      TYPE(t_moessbauerParams), OPTIONAL, INTENT(INOUT) :: moessbauerParams
 
       TYPE(t_potden)                   :: workden, denRot
 
@@ -139,6 +142,8 @@ CONTAINS
       CALL vx%distribute(fmpi%mpi_comm)
       CALL vxc%distribute(fmpi%mpi_comm)
       CALL exc%distribute(fmpi%mpi_comm)
+
+      IF (PRESENT(moessbauerParams)) CALL moessbauerParams%calcEFG(atoms, sym, sphhar, fmpi, vCoul)
 
       ! Klueppelberg (force level 3)
       IF (input%l_f.AND.(input%f_level.GE.3).AND.(fmpi%irank.EQ.0)) THEN

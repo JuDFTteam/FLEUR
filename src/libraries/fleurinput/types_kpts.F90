@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -145,22 +145,44 @@ CONTAINS
       USE m_calculator
       CLASS(t_kpts), INTENT(inout):: this
       character(len=*),INTENT(IN) :: filename,name
-      
+
       character(len=150):: line
-      integer           :: error,n,fid
+      integer           :: error,n,fid,nlines
 
       OPEN(newunit=fid,file=filename,action='READ')
       read_kpts_by_name=.false.
       DO while(.not. read_kpts_by_name)
          read(fid,"(a)",iostat=error) line
-         IF (error.ne.0) exit 
+         IF (error.ne.0) exit
          IF (index(line,"kPointList ")>0) THEN
             line=line(index(line,'name="')+6:)
             line=line(:index(line,'"')-1)
             if (line==trim(name)) THEN
                !Found kpointlist with correct name
-               DO n=1,this%nkpt
+               !The count attribute of the kPointList is optional in the schema,
+               !so first count the kPoint elements up to the closing tag
+               this%nkpt=0
+               nlines=0
+               DO
+                  read(fid,"(a)",iostat=error) line
+                  IF (error.ne.0) exit
+                  nlines=nlines+1
+                  IF (index(line,"</kPointList")>0) exit
+                  IF (index(line,"<kPoint")>0) this%nkpt=this%nkpt+1
+               ENDDO
+               IF (allocated(this%bk)) deallocate(this%bk)
+               IF (allocated(this%wtkpt)) deallocate(this%wtkpt)
+               ALLOCATE(this%bk(3,this%nkpt))
+               ALLOCATE(this%wtkpt(this%nkpt))
+               !Go back to the first line after the kPointList tag and read the data
+               DO n=1,nlines
+                  backspace(fid)
+               ENDDO
+               n=0
+               DO while (n<this%nkpt)
                   read(fid,"(a)") line
+                  IF (index(line,"<kPoint")==0) cycle
+                  n=n+1
                   line=line(index(line,"weight"):)
                   line=line(index(line,'"')+1:)
                   this%wtkpt(n)=evaluateFirstOnly(line(:index(line,'"')-1))
@@ -168,9 +190,9 @@ CONTAINS
                   this%bk(1, n) = evaluatefirst(line)
                   this%bk(2, n) = evaluatefirst(line)
                   this%bk(3, n) = evaluatefirst(line)
-               ENDDO   
+               ENDDO
                read_kpts_by_name=.true.
-            endif   
+            endif
          ENDIF
          if (index(line,'<xi:include xmlns:xi="http://www.w3.org/2001/XInclude"')>0) THEN
             line=line(index(line,'href="')+6:)
@@ -179,7 +201,7 @@ CONTAINS
          endif
       enddo
       close(fid)
-   end function      
+   end function
 
    SUBROUTINE read_xml_kptsByIndex(this, filename_add, xml, kptsIndex)
       USE m_types_xml
@@ -251,10 +273,14 @@ CONTAINS
                WRITE(*,*) 'WARNING: Unknown k point list type. Assuming "unspecified"'
          END SELECT
       END IF
-      this%nkpt = evaluateFirstOnly(xml%GetAttributeValue(TRIM(path)//'/@count'))
+      !The number of k-points is determined by counting the kPoint elements;
+      !the count attribute is optional in the schema and only cross-checked if present
       numNodes = xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/kPoint')
-      IF (numNodes.NE.this%nkpt) THEN
-         CALL judft_error("Inconsistent number of k-points in kPointList: "//TRIM(ADJUSTL(this%kptsName)))
+      this%nkpt = numNodes
+      IF (xml%GetNumberOfNodes(TRIM(ADJUSTL(path))//'/@count').EQ.1) THEN
+         IF (evaluateFirstIntOnly(xml%GetAttributeValue(TRIM(path)//'/@count')).NE.this%nkpt) THEN
+            CALL judft_error("Inconsistent number of k-points in kPointList: "//TRIM(ADJUSTL(this%kptsName)))
+         END IF
       END IF
 
       ! count special points
@@ -291,10 +317,10 @@ CONTAINS
          END DO
       END IF
 
-      ALLOCATE (this%bk(3, this%nkpt))
-      ALLOCATE (this%wtkpt(this%nkpt))
       if (.not. this%read_kpts_by_name(TRIM(filename_add)//"inp.xml",this%kptsName)) THEN
          print *,"WARNING, new k-point reader could not be used. Please check your inp.xml/kpts.xml"
+         ALLOCATE (this%bk(3, this%nkpt))
+         ALLOCATE (this%wtkpt(this%nkpt))
          DO i = 1, this%nkpt
             WRITE (path2, "(a,a,i0,a)") TRIM(ADJUSTL(path)), "/kPoint[", i, "]"
             this%wtkpt(i) = evaluateFirstOnly(xml%GetAttributeValue(TRIM(ADJUSTL(path2))//'/@weight',.true.))

@@ -27,7 +27,7 @@ MODULE m_types_fleurinput
   USE m_types_enparaXML
   USE m_types_gfinp
   USE m_types_hub1inp
-  USE m_types_juPhon
+  USE m_types_dfpt
   IMPLICIT NONE
 
   TYPE t_fleurinput
@@ -50,7 +50,7 @@ MODULE m_types_fleurinput
     TYPE(t_kpts)::kpts
     type(t_gfinp)::gfinp
     type(t_hub1inp)::hub1inp
-    type(t_juPhon)::juPhon
+    type(t_dfpt)::dfpt
   end type t_fleurinput
 
 

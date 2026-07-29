@@ -17,7 +17,7 @@ MODULE m_winpXML
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 CONTAINS
    SUBROUTINE w_inpXML( &
-      atoms, vacuum, input, stars, sliceplot, forcetheo, banddos, juPhon, &
+      atoms, vacuum, input, stars, sliceplot, forcetheo, banddos, dfpt, &
       cell, sym, xcpot, noco,   mpinp, hybinp, kptsArray, kptsSelection, enpara, &
       gfinp, hub1inp, l_explicitIn, l_includeIn, filename, add_filename)
 
@@ -40,7 +40,7 @@ CONTAINS
       USE m_types_noco
       use m_types_enparaxml
       USE m_types_forcetheo
-      USE m_types_juPhon
+      USE m_types_dfpt
 
       USE m_juDFT
       USE m_constants
@@ -62,7 +62,7 @@ CONTAINS
       TYPE(t_hybinp), INTENT(IN)   :: hybinp
       TYPE(t_cell), INTENT(IN)     :: cell
       TYPE(t_banddos), INTENT(IN)  :: banddos
-      TYPE(t_juPhon), INTENT(IN)   :: juPhon
+      TYPE(t_dfpt), INTENT(IN)   :: dfpt
       TYPE(t_sliceplot), INTENT(IN):: sliceplot
       CLASS(t_xcpot), INTENT(IN)   :: xcpot
       TYPE(t_noco), INTENT(IN)     :: noco
@@ -125,7 +125,7 @@ CONTAINS
       CHARACTER(len=20) :: mixingScheme
       CHARACTER(len=10) :: loType
       CHARACTER(len=10) :: bzIntMode
-      LOGICAL ::   l_explicit, l_nocoOpt, l_gfOpt, l_include(4)
+      LOGICAL ::   l_explicit, l_nocoOpt, l_gfOpt, l_dfptOpt, l_include(4)
       INTEGER :: iAtomType, startCoreStates, endCoreStates
       CHARACTER(len=100) :: posString(3)
       CHARACTER(len=7) :: str
@@ -136,6 +136,7 @@ CONTAINS
       l_explicit = l_explicitIn .OR. .not. present(filename)
       l_nocoOpt = noco%l_noco .OR. juDFT_was_argument("-noco")
       l_gfOpt = gfinp%n>0 .OR. juDFT_was_argument("-greensf")
+      l_dfptOpt = dfpt%l_dfpt .OR. juDFT_was_argument("-dfpt")
 
       band = .false.
       nw = 1
@@ -181,12 +182,12 @@ CONTAINS
 
 !      <coreElectrons ctail="T" frcor="F" kcrel="0" coretail_lmax="0" l_core_confpot="T"/>
 130   FORMAT('      <coreElectrons ctail="', l1, '" frcor="', l1, '" kcrel="', i0, '" coretail_lmax="', i0, '"/>')
-      WRITE (fileNum, 130) input%ctail, input%frcor, input%kcrel, input%coretail_lmax
+      WRITE (fileNum, 130) input%ctail .and. .not. l_dfptOpt, input%frcor, input%kcrel, input%coretail_lmax
 
       SELECT TYPE (xcpot)
       CLASS IS (t_xcpot_inbuild_nf)
          xcpotName = TRIM(ADJUSTL(xcpot%inbuild_name))
-         IF (xcpotName(1:5).EQ.'LibXC') THEN
+         IF (xcpotName(1:5).EQ.'LibXC'.or. l_dfptOpt) THEN
             xcName = "LibXC"
             xIndex = index(xcpotName, 'Exch:')
             cIndex = index(xcpotName, 'Cor:')
@@ -196,6 +197,8 @@ CONTAINS
             WRITE (fileNum, '(a)') '      <xcFunctional name="LibXC" relativisticCorrections="F">'
             !         <LibXCName  exchange="lda_x" correlation="lda_c_vwn"/> 
 133         FORMAT('         <LibXCName exchange="', a, '" correlation="', a, '"/>')
+            IF (l_dfptOpt) xName = 'lda_x'
+            IF (l_dfptOpt) cName = 'lda_c_vwn'
             WRITE (fileNum, 133) TRIM(xName), TRIM(cName)
             WRITE (fileNum, '(a)') '      </xcFunctional>'
          ELSE
@@ -614,9 +617,9 @@ WRITE (fileNum, 242) fr(1.0)
 395   FORMAT('      <unfoldingBand unfoldBand="', l1, '" supercellX="', i0, '" supercellY="', i0, '" supercellZ="', i0, '"/>')
       WRITE (fileNum, 395) banddos%unfoldband, banddos%s_cell_x, banddos%s_cell_y, banddos%s_cell_z
 
-!!      <juPhon l_potout="F" l_eigout="F"/>
-!396   FORMAT('      <juPhon l_potout="', l1, '" l_eigout="', l1, '"/>')
-!      WRITE (fileNum, 396) juPhon%l_potout, juPhon%l_eigout
+!!      <dfpt l_potout="F" l_eigout="F"/>
+!396   FORMAT('      <dfpt l_potout="', l1, '" l_eigout="', l1, '"/>')
+!      WRITE (fileNum, 396) dfpt%l_potout, dfpt%l_eigout
 
 !      <plotting iplot="0" />
       IF(SIZE(sliceplot%plot)>0) THEN
@@ -631,6 +634,14 @@ WRITE (fileNum, 242) fr(1.0)
          WRITE (fileNum, 402) sliceplot%iplot, sliceplot%polar
       ENDIF
 
+      IF(l_explicit .OR. l_dfptOpt) THEN
+         WRITE (fileNum, '(a)') '      <dfpt l_dfpt="F" l_phonon="F" l_borneffcharge="F" l_efield="F" l_bfield="F">'
+         WRITE (fileNum, '(a)') '         <phonon l_sumrule="F" qptsListName="default-1"/>'
+         WRITE (fileNum, '(a)') '         <efield qlim="1.0/100"/>'
+         WRITE (fileNum, '(a)') '         <interpolation l_WSinterpol="T" qptsListName="default-1"/>'
+         WRITE (fileNum, '(a)') '      </dfpt>'
+      ENDIF
+
 !      <chargeDensitySlicing numkpt="0" minEigenval="0.000000" maxEigenval="0.000000" nnne="0" pallst="F"/>
 410   FORMAT('      <chargeDensitySlicing numkpt="', i0, '" minEigenval="', a, '" maxEigenval="', a, '" nnne="', i0, '" pallst="', l1, '"/>')
       WRITE (fileNum, 410) sliceplot%kk, fr(sliceplot%e1s), fr(sliceplot%e2s), sliceplot%nnne, input%pallst
@@ -638,6 +649,12 @@ WRITE (fileNum, 242) fr(1.0)
 !      <specialOutput form66="F" eonly="F" bmt="F"/>
 420   FORMAT('      <specialOutput eonly="', l1, '"/>')
       WRITE (fileNum, 420) input%eonly
+
+!      <moessbauerParams electricFieldGradient="T" isomerShift="T" coreHyperfine="T" valenceHyperfine="T"/>
+425   FORMAT('      <moessbauerParams electricFieldGradient="', l1, '" isomerShift="', l1, &
+                    '" coreHyperfine="', l1, '" valenceHyperfine="', l1, '"/>')
+      WRITE (fileNum, 425) input%l_moessbauerEFG, input%l_moessbauerIsomerShift, &
+                           input%l_moessbauerCoreHyperfine, input%l_moessbauerValenceHyperfine
 
 !      <magneticCircularDichroism energyLo="-10.0" energyUp="0.0"/>
 430   FORMAT('      <magneticCircularDichroism mcd="',l1,'" energyLo="', a, '" energyUp="', a, '"/>')

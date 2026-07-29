@@ -48,7 +48,7 @@ include(src/fleur/forcetheorem/CMakeLists.txt)
 include(src/fleur/rdmft/CMakeLists.txt)
 include(src/fleur/greensf/CMakeLists.txt)
 include(src/fleur/tetra/CMakeLists.txt)
-include(src/fleur/juphon/CMakeLists.txt)
+include(src/fleur/dfpt/CMakeLists.txt)
 include(src/fleur/mt_cdn/CMakeLists.txt)
 
 file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/modules/fleur")

@@ -184,13 +184,15 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="orbitalMomentsInMTSpheres" type="MTOrbMagneticMomentsType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="constrainingField" type="BConstraintType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="rdmft" type="RDMFTOutType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="moessbauerParams" type="MoessbauerParamsType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="totalEnergy" type="TotalEnergyType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="totalForcesOnRepresentativeAtoms" type="OutTotalForcesType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="ldaUDensityMatrix" type="LDAUDensityMatrixType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="ldaUDensityMatrixConvergence" type="LDAUDensityMatrixConvergenceType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="densityConvergence" type="DensityConvergenceType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="timing" type="TimingType"/>
-         <xsd:element maxOccurs="1" minOccurs="0" name="Phonons" type="PhononsType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="phonon" type="PhononsType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="DFPTEfield" type="efieldType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="wannierlibReport" type="WannierlibReportType"/>
       </xsd:sequence>
    </xsd:group>
@@ -438,6 +440,85 @@
       <xsd:attribute name="kinEnergy" type="xsd:double" use="required"/>
       <xsd:attribute name="eigValSum" type="xsd:double" use="required"/>
       <xsd:attribute name="lostElectrons" type="xsd:double" use="required"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="MoessbauerParamsType">
+      <xsd:sequence>
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="valenceHyperfineField" type="MoessbauerValenceHyperfineType"/>
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="coreHyperfineField" type="MoessbauerCoreHyperfineType"/>
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="coreIsomerShift" type="MoessbauerCoreIsomerShiftType"/>
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="isomerShift" type="MoessbauerIsomerShiftType"/>
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="electricFieldGradient" type="MoessbauerEFGType"/>
+      </xsd:sequence>
+      <xsd:attribute name="unitsHFF" type="xsd:string" use="required"/>
+      <xsd:attribute name="unitsIS" type="xsd:string" use="required"/>
+      <xsd:attribute name="unitsEFG" type="xsd:string" use="required"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="MoessbauerEFGType">
+      <xsd:simpleContent>
+         <xsd:extension base="DoubleVecType">
+            <xsd:attribute name="atomType" type="xsd:positiveInteger" use="required"/>
+            <xsd:attribute name="VXX" type="xsd:double" use="required"/>
+            <xsd:attribute name="VYY" type="xsd:double" use="required"/>
+            <xsd:attribute name="VZZ" type="xsd:double" use="required"/>
+            <xsd:attribute name="asymParam" type="xsd:double" use="required"/>
+         </xsd:extension>
+      </xsd:simpleContent>
+   </xsd:complexType>
+
+   <xsd:complexType name="MoessbauerIsomerShiftType">
+      <xsd:attribute name="atomType" type="xsd:positiveInteger" use="required"/>
+      <xsd:attribute name="nucleusRadius" type="xsd:double" use="required"/>
+      <xsd:attribute name="averageDensity" type="xsd:double" use="required"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="MoessbauerCoreHyperfineType">
+      <xsd:sequence>
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="shell" type="MoessbauerCoreShellType"/>
+      </xsd:sequence>
+      <xsd:attribute name="atomType" type="xsd:positiveInteger" use="required"/>
+      <xsd:attribute name="hffTotal" type="xsd:double" use="required"/>
+      <xsd:attribute name="isTotal" type="xsd:double" use="required"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="MoessbauerCoreShellType">
+      <xsd:attribute name="n" type="xsd:positiveInteger" use="required"/>
+      <xsd:attribute name="l" type="xsd:nonNegativeInteger" use="required"/>
+      <xsd:attribute name="hff" type="xsd:double" use="required"/>
+      <xsd:attribute name="isomerShift" type="xsd:double" use="required"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="MoessbauerCoreIsomerShiftType">
+      <xsd:sequence>
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="shell" type="MoessbauerCoreIsomerShellType"/>
+      </xsd:sequence>
+      <xsd:attribute name="atomType" type="xsd:positiveInteger" use="required"/>
+      <xsd:attribute name="isTotal" type="xsd:double" use="required"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="MoessbauerCoreIsomerShellType">
+      <xsd:attribute name="n" type="xsd:positiveInteger" use="required"/>
+      <xsd:attribute name="l" type="xsd:nonNegativeInteger" use="required"/>
+      <xsd:attribute name="isomerShift" type="xsd:double" use="required"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="MoessbauerValenceHyperfineType">
+      <xsd:sequence>
+         <xsd:element maxOccurs="1" minOccurs="1" name="contact" type="MoessbauerHFFContribType"/>
+         <xsd:element maxOccurs="1" minOccurs="1" name="dipolar" type="MoessbauerHFFContribType"/>
+         <xsd:element maxOccurs="1" minOccurs="1" name="orbital" type="MoessbauerHFFContribType"/>
+         <xsd:element maxOccurs="1" minOccurs="1" name="all" type="MoessbauerHFFContribType"/>
+      </xsd:sequence>
+      <xsd:attribute name="atomType" type="xsd:positiveInteger" use="required"/>
+   </xsd:complexType>
+
+   <xsd:complexType name="MoessbauerHFFContribType">
+      <xsd:attribute name="total" type="xsd:double" use="required"/>
+      <xsd:attribute name="s" type="xsd:double" use="required"/>
+      <xsd:attribute name="p" type="xsd:double" use="required"/>
+      <xsd:attribute name="d" type="xsd:double" use="required"/>
+      <xsd:attribute name="f" type="xsd:double" use="required"/>
    </xsd:complexType>
 
    <xsd:complexType name="SlaterIntegralsListType">
@@ -795,7 +876,6 @@
    <xsd:complexType name="PhononsType">
       <xsd:sequence>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="dynMat" type="dynMatType"/>
-         <xsd:element maxOccurs="unbounded" minOccurs="0" name="efield" type="efieldType"/> 
       </xsd:sequence>
    </xsd:complexType>
 

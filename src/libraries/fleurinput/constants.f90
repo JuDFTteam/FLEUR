@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -136,7 +136,7 @@ MODULE m_constants
 
   INTEGER,DIMENSION(6),PARAMETER :: nobleGasNumStatesList_const=(/1, 4, 7, 12, 17, 24/)
 
-  ! juPhon stuff:
+  ! dfpt stuff:
   complex, dimension(3, 3), parameter  :: Tmatrix0 = reshape( &
                                               [(0.7071067811865475, 0.),(0.,-0.7071067811865475),(0., 0.),&
                                                (0., 0.),(0., 0.),(1., 0.), &

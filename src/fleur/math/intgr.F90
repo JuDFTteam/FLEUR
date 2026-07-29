@@ -544,7 +544,7 @@ END SUBROUTINE intgr3_modern
 
    END SUBROUTINE
 
-   ! For juPhon:
+   ! For dfpt (juPhon):
    SUBROUTINE intgr3LinIntp(y,r,h,jri,z, i1)
 
        USE m_juDFT_stop, ONLY : juDFT_error

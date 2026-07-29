@@ -1,21 +1,22 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <fleurOutput fleurOutputVersion="0.38">
-   <programVersion version="fleur 41">
-      <compilationInfo date="2025-07-09T16:27:35" user="bornhake" host="iff1146" flag="-fiopenmp -qmkl  -assume byterecl -no-wrap-margin -I/Data/ias-1/bornhake/clean_code/build.local/external/libxc" link="lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64;/usr/lib64/libxml2.so"/>
-      <gitInfo version="MaX-R8.0-8-g21b5249d2-dirty" branch="develop" lastCommitHash="21b5249d2acade2cca566658004cbc3a6cc20b0d"/>
+   <programVersion version="fleur 42">
+      <compilationInfo date="2026-06-01T15:40:08" user="bornhake" host="iffcluster1801" flag="I/Users/bornhake/develop/hdf5-1.12.3/hdf5/include -fiopenmp -qmkl  -assume byterecl -no-wrap-margin -fPIC -I/D" link="lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64;-L/Users/bornhake/develop/hdf5-1.12.3/hdf5/lib;/usr/lib64/libxml"/>
+      <gitInfo version="MaX-R8.0-397-g86acd2704-dirty" branch="refactor-dfpt-driver" lastCommitHash="86acd2704101b836412f66cc5cb2855647aaf999"/>
       <targetComputerArchitectures>GEN</targetComputerArchitectures>
       <precision type="DOUBLE"/>
       <targetStructureClass> </targetStructureClass>
       <additionalCompilerFlags>CPP_MPI             CPP_HDF</additionalCompilerFlags>
+      <programExecution commandLine="/Data/ias-1/bornhake/clean_code/build/fleur_MPI"/>
    </programVersion>
    <parallelSetup>
       <openMP ompThreads="1"/>
       <mpi mpiProcesses="1"/>
-      <mem memoryPerNode="32336492 kB"/>
+      <mem memoryPerNode="131730880 kB"/>
    </parallelSetup>
-   <startDateAndTime date="2025/07/09" time="16:30:06" zone="+0200"/>
+   <startDateAndTime date="2026/06/02" time="14:05:46" zone="+0200"/>
    <!-- Now follows a dump of the inp.xml file after evaluating the Schema -->
-  <fleurInput fleurInputVersion="0.38">
+  <fleurInput fleurInputVersion="0.39">
      <comment>
         Cu fcc
      </comment>
@@ -26,14 +27,14 @@
    <xcFunctional name="LibXC" relativisticCorrections="F">
            <LibXCName exchange="lda_x" correlation="lda_c_vwn"/>
         </xcFunctional>
-  <magnetism jspins="1" l_noco="F" l_ss="F" l_J="F" swsp="F" lflip="F" l_onlyMtStDen="F" fixed_moment="0.0"/>
+  <magnetism jspins="1" l_noco="F" l_ss="F" l_J="F" swsp="F" lflip="F" l_onlyMtStDen="F"/>
         <soc l_soc="F" theta="0.0" phi="0.0" spav="F" off="F" soc66="T"/>
         <expertModes spex="0" secvar="F" vdW="NONE" vdW_tol="0.0005" pot8="F" eig66="F" lpr="0" isec1="99" warp_factor="1.0"/>
-        <geometryOptimization l_f="F" forcealpha="1.0" forcemix="BFGS" epsdisp="0.00001" epsforce="0.00001" f_level="-1" qfix="0" force_converged="0.00001"/>
+        <geometryOptimization l_f="F" forcealpha="1.0" forcemix="BFGS" epsdisp="0.00001" epsforce="0.00001" f_level="-1" l_driftForce="F" qfix="0" force_converged="0.00001"/>
         <ldaU l_linMix="F" mixParam="0.05" spinf="1.0" l_adjEnpara="F" l_spinoffd="F" l_nonsphDC="F" l_initialGuess="F"/>
      </calculationSetup>
      <cell>
-        <bzIntegration valenceElectrons="11.0" mode="hist" fermiSmearingEnergy="0.0005" l_bloechl="F">
+        <bzIntegration valenceElectrons="11.0" mode="hist" fermiSmearingEnergy="0.0005" l_bloechl="F" charge_excited="0.0" charge_shift="0.0">
            <kPointListSelection listName="default-1"/>
            <kPointLists>
               <kPointList name="default-1" count="1" nx="1" ny="1" nz="1" type="mesh">
@@ -76,7 +77,7 @@
      </atomGroups>
      <output dos="F" band="F" slice="F" coreSpec="F" wannier="F" eig66="F">
         <checks vchk="F" cdinf="F" disp="F" sympsi="F"/>
-        <bandDOS minEnergy="-.5*Htr" maxEnergy="0.5*Htr" sigma="0.015" storeEVData="T" all_atoms="T" orbcomp="F" jDOS="F" numberPoints="1321"/>
+        <bandDOS minEnergy="-.5*Htr" maxEnergy="0.5*Htr" sigma="0.015" storeEVData="T" all_atoms="T" orbcomp="F" globalspin="F" jDOS="F" jointDOS="F" numberPoints="1321"/>
         <vacuumDOS vacdos="F" integ="F" star="F" nstars="0" locx1="0.0" locy1="0.0" locx2="0.0" locy2="0.0" nstm="0" tworkf="0.0"/>
         <unfoldingBand unfoldBand="F" supercellX="1" supercellY="1" supercellZ="1" useOlap="T"/>
         <plotting iplot="0" polar="F" format="1">
@@ -89,25 +90,6 @@
     <!-- We include the file relax.xml here to enable relaxations (see documentation) -->
   
   </fleurInput>
-  <!--
-  Initial (original) inpgen input (only for documentation purposes):
-  Cu fcc
-  
-  0.0 1.0 1.0 ! a1
-  1.0 0.0 1.0 ! a2
-  1.0 1.0 0.0 ! a3
-  6.650896828 ! aa
-  0.5 0.5 0.5 ! scale
-  
-  1 ! num atoms
-  29.1 0.0 0.0 0.0
-  
-  &atom element="Cu" id=29.1 lmax=6 lnonsph=4 jri=981 rmt=0.95*2.29000000 /
-  &comp kmax=3.0 gmax=9.0 gmaxxc=9.0 ctail=F  /
-  &exco xctyp='vwn' /
-  &kpt div1=1 div2=1 div3=1 tkb=0.0005 /
-  
-  -->
    <!-- END of dump of the inp.xml file -->
    <numericalParameters>
       <atomsInCell nat="1" ntype="1" jmtd="981" n_u="0" n_hia="0" n_opc="0"/>
@@ -177,7 +159,7 @@
             <extrapolationTo0K value="-1652.8769658315"/>
          </totalEnergy>
          <densityConvergence units="me/bohr^3">
-            <chargeDensity spin="1" distance="70.6283606811"/>
+            <chargeDensity spin="1" distance="70.6283606810"/>
          </densityConvergence>
       </iteration>
       <iteration numberForCurrentRun="    2" overallNumber="    2">
@@ -189,7 +171,7 @@
          </energyParameters>
          <eigenvalues>
             <eigenvaluesAt spin="1" ikpt="1" k_x="0.00000000" k_y="0.00000000" k_z="0.00000000">
-                      -0.0584239777        0.2430151253        0.2446260557        0.2446260570        0.2824302255
+                      -0.0584239777        0.2430151253        0.2446260555        0.2446260571        0.2824302255
                        0.2853739323        1.1677724470        1.2875185782        1.2875185822
             </eigenvaluesAt>
          </eigenvalues>
@@ -247,7 +229,7 @@
          </energyParameters>
          <eigenvalues>
             <eigenvaluesAt spin="1" ikpt="1" k_x="0.00000000" k_y="0.00000000" k_z="0.00000000">
-                      -0.0596048446        0.2320948248        0.2327202164        0.2327202169        0.2705956983
+                      -0.0596048446        0.2320948248        0.2327202163        0.2327202169        0.2705956983
                        0.2717360732        1.1678096893        1.2862891597        1.2862891629
             </eigenvaluesAt>
          </eigenvalues>
@@ -279,7 +261,7 @@
                <coreElectrons value="-945.5402262107"/>
                <valenceElectrons value="2.0887882965"/>
             </sumOfEigenvalues>
-            <densityCoulombPotentialIntegral value="-2536.8749400185"/>
+            <densityCoulombPotentialIntegral value="-2536.8749400186"/>
             <densityEffectivePotentialIntegral value="-2623.1243290929"/>
             <chargeDenXCDenIntegral value="-65.1421503002"/>
             <FockExchangeEnergyValence value="0.0000000000"/>
@@ -293,7 +275,7 @@
             <extrapolationTo0K value="-1652.8528633686"/>
          </totalEnergy>
          <densityConvergence units="me/bohr^3">
-            <chargeDensity spin="1" distance="59.7799856620"/>
+            <chargeDensity spin="1" distance="59.7799856619"/>
          </densityConvergence>
       </iteration>
       <iteration numberForCurrentRun="    4" overallNumber="    4">
@@ -305,8 +287,8 @@
          </energyParameters>
          <eigenvalues>
             <eigenvaluesAt spin="1" ikpt="1" k_x="0.00000000" k_y="0.00000000" k_z="0.00000000">
-                      -0.0698642954        0.1292125350        0.1292125423        0.1382509431        0.1537360152
-                       0.1701407004        1.1680180931        1.2691966513        1.2752994466
+                      -0.0698642954        0.1292125340        0.1292125432        0.1382509431        0.1537360152
+                       0.1701407004        1.1680180931        1.2691966513        1.2752994459
             </eigenvaluesAt>
          </eigenvalues>
          <bandgap value="27.1536271591" units="eV"/>
@@ -351,7 +333,7 @@
             <extrapolationTo0K value="-1652.8436261087"/>
          </totalEnergy>
          <densityConvergence units="me/bohr^3">
-            <chargeDensity spin="1" distance="53.0931195471"/>
+            <chargeDensity spin="1" distance="53.0931195470"/>
          </densityConvergence>
       </iteration>
       <iteration numberForCurrentRun="    5" overallNumber="    5">
@@ -363,11 +345,11 @@
          </energyParameters>
          <eigenvalues>
             <eigenvaluesAt spin="1" ikpt="1" k_x="0.00000000" k_y="0.00000000" k_z="0.00000000">
-                      -0.0719500148        0.1198974681        0.1198974701        0.1223149674        0.1470601790
-                       0.1514323822        1.1673863613        1.2696746364        1.2713805251
+                      -0.0719500148        0.1198974679        0.1198974703        0.1223149674        0.1470601790
+                       0.1514323822        1.1673863613        1.2696746364        1.2713805250
             </eigenvaluesAt>
          </eigenvalues>
-         <bandgap value="27.6455161315" units="eV"/>
+         <bandgap value="27.6455161314" units="eV"/>
          <sumValenceSingleParticleEnergies value="1.0258725218" units="Htr"/>
          <FermiEnergy value="0.1514323822" units="Htr"/>
          <valenceDensity>
@@ -409,9 +391,9 @@
             <extrapolationTo0K value="-1652.8373009617"/>
          </totalEnergy>
          <densityConvergence units="me/bohr^3">
-            <chargeDensity spin="1" distance="45.4574575838"/>
+            <chargeDensity spin="1" distance="45.4574575841"/>
          </densityConvergence>
       </iteration>
    </scfLoop>
-   <endDateAndTime date="2025/07/09" time="16:30:06" zone="+0200"/>
+   <endDateAndTime date="2026/06/02" time="14:05:46" zone="+0200"/>
 </fleurOutput>

@@ -18,7 +18,7 @@ MODULE m_winpXML
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 CONTAINS
    SUBROUTINE w_inpXML( &
-      atoms, vacuum, input, stars, sliceplot, forcetheo, banddos, juPhon, &
+      atoms, vacuum, input, stars, sliceplot, forcetheo, banddos, dfpt, &
       cell, sym, xcpot, noco,   mpinp, hybinp, kptsArray, kptsSelection, enpara, &
       gfinp, hub1inp, l_explicitIn, l_includeIn, filename, add_filename)
  
@@ -41,7 +41,7 @@ CONTAINS
       USE m_types_noco
       use m_types_enparaxml
       USE m_types_forcetheo
-      USE m_types_juPhon
+      USE m_types_dfpt
 
       USE m_juDFT
       USE m_constants
@@ -63,7 +63,7 @@ CONTAINS
       TYPE(t_hybinp), INTENT(IN)   :: hybinp
       TYPE(t_cell), INTENT(IN)     :: cell
       TYPE(t_banddos), INTENT(IN)  :: banddos
-      TYPE(t_juPhon), INTENT(IN)   :: juPhon
+      TYPE(t_dfpt), INTENT(IN)   :: dfpt
       TYPE(t_sliceplot), INTENT(IN):: sliceplot
       CLASS(t_xcpot), INTENT(IN)   :: xcpot
       TYPE(t_noco), INTENT(IN)     :: noco

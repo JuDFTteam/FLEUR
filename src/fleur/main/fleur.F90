@@ -72,12 +72,14 @@ CONTAINS
       USE m_writeBasis
       USE m_RelaxSpinAxisMagn
       USE m_dfpt
+      USE m_abcoeff_store
       !For vTot1 efield WIP
       USE m_make_stars
       USE m_dfpt_vefield
       USE m_checkdopall
       USE m_store_load_hybrid
       USE m_wannierlib_main
+      USE m_types_moessbauerParams
 
 !$    USE omp_lib
 
@@ -102,6 +104,7 @@ CONTAINS
       TYPE(t_potden)   :: vTot, vx, vCoul, vxc, exc
       TYPE(t_potden)   :: inDen, outDen, EnergyDen, sliceDen,coreden
       TYPE(t_hub1data) :: hub1data
+      TYPE(t_moessbauerParams) :: moessbauerParams
 
       TYPE(t_greensf), ALLOCATABLE :: greensFunction(:)
       TYPE(t_log_message)  :: log
@@ -244,9 +247,7 @@ CONTAINS
          hybdat%eig_id = eig_id
       ENDIF
  
-      ! TODO: Isn't this comment kind of lost here?
-      ! Rotate cdn to local frame if specified.
-
+      call abcoeff_store_init(fi%input, fi%noco, fi%kpts, fi%atoms)
 
       CALL timestop("Open/allocate eigenvector storage")
 
@@ -286,7 +287,6 @@ CONTAINS
             WRITE (oUnit, FMT=8100) iter
 8100        FORMAT(/, 10x, '   iter=  ', i5)
          END IF !fmpi%irank==0
-
 
          CALL inDen%distribute(fmpi%mpi_comm)
          CALL nococonv%mpi_bc(fmpi%mpi_comm)
@@ -353,8 +353,10 @@ CONTAINS
          END IF
 
          CALL timestart("generation of potential")
+         CALL moessbauerParams%init(fi%input, fi%noco, fi%atoms)
          CALL vgen(hybdat, fi%field, fi%input, xcpot, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, &
-                   fi%cell,   fi%sliceplot, fmpi, results, fi%noco, nococonv, EnergyDen, inDen, vTot, vx, vCoul, vxc, exc)
+                   fi%cell,   fi%sliceplot, fmpi, results, fi%noco, nococonv, EnergyDen, inDen, vTot, vx, vCoul, vxc, exc, &
+                   moessbauerParams)
          CALL timestop("generation of potential")
 
          ! Scale the magnetization back.
@@ -392,6 +394,8 @@ CONTAINS
 
          CALL forcetheo%start(vtot, fmpi%irank==0)
          forcetheoloop: DO WHILE (forcetheo%next_job(fmpi,l_lastIter, fi%atoms, fi%noco, nococonv))
+
+            call abcoeff_store_free() !Use new abcoeffs 
 
             CALL timestart("H generation and diagonalization (total)")
 
@@ -549,9 +553,10 @@ CONTAINS
             CALL outDen%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN)
             outDen%iter = inDen%iter
             CALL cdngen(eig_id, fmpi, input_soc, fi%banddos, fi%sliceplot, fi%vacuum, &
-                        fi%kpts, fi%atoms, sphhar, stars, fi%sym, fi%juphon, fi%gfinp, fi%hub1inp, &
+                        fi%kpts, fi%atoms, sphhar, stars, fi%sym, fi%gfinp, fi%hub1inp, &
                         enpara, fi%cell, fi%field, fi%noco, nococonv, vTot, results,   fi%corespecinput, &
-                        archiveType, xcpot, outDen, EnergyDen, coreden,greensFunction, hub1data,vxc,exc)
+                        archiveType, xcpot, outDen, EnergyDen, coreden,greensFunction, hub1data,vxc,exc,&
+                        moessbauerParams)
             ! The density matrix for DFT+Hubbard1 only changes in hubbard1_setup and is kept constant otherwise
             outDen%mmpMat(:, :, fi%atoms%n_u + 1:fi%atoms%n_u + fi%atoms%n_hia, :) = inDen%mmpMat(:, :, fi%atoms%n_u + 1:fi%atoms%n_u + fi%atoms%n_hia, :)
 
@@ -595,13 +600,13 @@ CONTAINS
 #endif
             CALL timestop("generation of new charge density (total)")
 
-            IF (fi%juPhon%l_dfpt) THEN
+            IF (fi%dfpt%l_dfpt) THEN
                ! Sideline the actual scf loop for a phonon calculation.
                ! It is assumed that the density was converged beforehand.
                 CALL timestop("Iteration")
-                CALL timestart("juPhon DFPT")
+                CALL timestart("DFPT")
                 CALL dfpt(fi, sphhar, stars, nococonv, fi%kpts, fmpi, results, enpara, outDen, vTot, vxc, eig_id, xcpot, hybdat, mpdata, forcetheo)
-                CALL timestop("juPhon DFPT")
+                CALL timestop("DFPT")
                 CALL juDFT_end("DFPT calculation finished.",fmpi%irank)
             END IF
 
@@ -623,6 +628,8 @@ CONTAINS
 ! !$
 ! !$                CALL potdis(stars,fi%vacuum,fi%atoms,sphhar, fi%input,fi%cell,fi%sym)
 ! !$             END IF
+
+            CALL moessbauerParams%printAll(fmpi, fi%atoms)
 
             ! total energy
             CALL timestart('determination of total energy')

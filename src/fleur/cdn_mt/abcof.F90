@@ -1,11 +1,12 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2020 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_abcof
 
+   implicit none
 CONTAINS
 
   ! The subroutine abcof calculates the A, B, and C coefficients for the
@@ -30,6 +31,7 @@ USE m_setabc1lo
 USE m_abclocdn
 USE m_hsmt_fjgj
 USE m_hsmt_ab
+USE m_abcoeff_store
 
 IMPLICIT NONE
 
@@ -90,14 +92,14 @@ INTEGER,OPTIONAL,INTENT(IN):: nat_start,nat_stop
 
     ! Allocations
     CALL fjgj%alloc(MAXVAL(lapw%nv),atoms%lmaxd,jspin,noco)
-    ALLOCATE(abCoeffs(2*atoms%lmaxd*(atoms%lmaxd+2)+2,MAXVAL(lapw%nv)))
+    ! abCoeffs is allocated (and filled) inside hsmt_ab.
     ALLOCATE(abTemp(SIZE(acof,1),0:2*SIZE(acof,2)-1))
     ALLOCATE(fgpl(3,MAXVAL(lapw%nv)))
     ALLOCATE (work_c(MAXVAL(lapw%nv),ne))
 
     ! Initializations
     acof_size=size(acof,1)
-    !$acc enter data create(abTemp,fjgj,fjgj%fj,fjgj%gj,work_c,abcoeffs)
+    !$acc enter data create(abTemp,fjgj,fjgj%fj,fjgj%gj,work_c)
     acof(:,:,:)   = CMPLX(0.0,0.0)
     bcof(:,:,:)   = CMPLX(0.0,0.0)
     ccof(:,:,:,:) = CMPLX(0.0,0.0)
@@ -217,7 +219,7 @@ INTEGER,OPTIONAL,INTENT(IN):: nat_start,nat_stop
 
 
              !$acc host_data use_device(work_c,abCoeffs,abTemp)
-             CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),abCoeffs,2*atoms%lmaxd*(atoms%lmaxd+2)+2,CMPLX(0.0,0.0),abTemp,acof_size)
+             CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),abCoeffs,SIZE(abCoeffs,1),CMPLX(0.0,0.0),abTemp,acof_size)
              !$acc end host_data
              !$acc update self(abTemp)
              !stop "DEBUG"
@@ -338,9 +340,15 @@ INTEGER,OPTIONAL,INTENT(IN):: nat_start,nat_stop
                    DEALLOCATE (workTrans_c)
                 ENDIF
              END IF
+             ! abCoeffs is (re)allocated per call inside hsmt_ab; release the
+             ! device copy it created and the host array before the next call.
+             !$acc exit data delete(abCoeffs)
+             ! Hand abCoeffs to the optional store for later reuse (no-op unless on).
+             CALL abcoeff_store_save(abCoeffs, lapw%nk, iintsp, jspin, iAtom)
+             IF (ALLOCATED(abCoeffs)) DEALLOCATE(abCoeffs)
        END DO ! loop over interstitial spin
     END DO ! loop over atoms
-    !$acc exit data delete(abTemp,fjgj%fj,fjgj%gj,work_c,abcoeffs)
+    !$acc exit data delete(abTemp,fjgj%fj,fjgj%gj,work_c)
     !$acc exit data delete(fjgj)
     DEALLOCATE(work_c)
     IF(l_force) THEN
@@ -438,6 +446,7 @@ USE m_setabc1lo
 USE m_abclocdn
 USE m_hsmt_fjgj
 USE m_hsmt_ab
+USE m_abcoeff_store
 USE m_types_cdnval
 IMPLICIT NONE
 
