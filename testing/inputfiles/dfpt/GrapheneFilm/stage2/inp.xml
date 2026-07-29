@@ -4,7 +4,7 @@
       Graphen Monolayer                                                                                   
    </comment>
    <calculationSetup>
-      <cutoffs Kmax="3.0" Gmax="9.0" GmaxXC="9.0" numbands="all"/>
+      <cutoffs Kmax="2.0" Gmax="6.0" GmaxXC="6.0" numbands="all"/>
       <scfLoop itmax="1" minDistance="0.00001" maxIterBroyd="15" imix="Anderson" alpha="0.05" precondParam="0.8" spinf="2.0"/>
       <coreElectrons ctail="F" frcor="F" kcrel="0" coretail_lmax="0"/>
       <xcFunctional name="LibXC" relativisticCorrections="F">
