@@ -288,8 +288,10 @@ CONTAINS
 
       TYPE(t_lapw) :: lapw
       TYPE(t_mat)  :: zMat
+      TYPE(t_mat)  :: zc(2)      ! the two spinor components, read separately (l_soc, no noco)
       TYPE(t_abc), ALLOCATABLE :: abc(:, :)
       INTEGER :: iop, ik, il, isp, isp1, isp2, itype, jspin_rad
+      LOGICAL :: l_colspinor
 
       IF (SIZE(ops) < 1) RETURN
       DO iop = 1, SIZE(ops)
@@ -316,25 +318,51 @@ CONTAINS
          isp1 = ctx%jspin; isp2 = ctx%jspin
       END IF
 
+      ! Spinor wavefunctions whose two components are NOT already stacked by get_z: that is
+      ! the l_soc=T / l_noco=F case, where each component is a separate eig record.
+      l_colspinor = ctx%l_spinors .AND. (.NOT. ctx%noco%l_noco)
+
       ALLOCATE(abc(ctx%atoms%ntype, 2))
       il = 0
       DO ik = 1, ctx%kpts%nkptf
          IF (ops(1)%p%distk(ik) /= ops(1)%p%irank) CYCLE   ! this rank computes only its own k-slice
          il = il + 1
 
-         ! spinor mode: the full 2N spinor sits in record 1; collinear: record ctx%jspin
-         CALL wannierlib_get_z(ctx%wann, ctx%eig_id, ctx%input, ctx%atoms, ctx%noco, ctx%nococonv, &
-                               ctx%kpts, ctx%sym, ctx%cell, ik, MERGE(1, ctx%jspin, ctx%l_spinors), &
-                               ctx%l_real_wann, lapw, zMat)
+         ! Load this k-point's eigenvector(s).
+         !   l_noco=T          : get_z returns the whole 2N spinor from record 1.
+         !   l_soc=T, l_noco=F : get_z returns only N rows, and the two spinor components
+         !     live in records 1 and 2 -- so read both, exactly as the AMN/MMN pass does,
+         !     and stack them into the 2N layout the interstitial expects. Without this the
+         !     spin-down half is never read: the muffin-tin counts the up block twice and
+         !     the interstitial addresses a down block that is not there.
+         IF (l_colspinor) THEN
+            CALL wannierlib_get_z(ctx%wann, ctx%eig_id, ctx%input, ctx%atoms, ctx%noco, ctx%nococonv, &
+                                  ctx%kpts, ctx%sym, ctx%cell, ik, 1, ctx%l_real_wann, lapw, zc(1))
+            CALL wannierlib_get_z(ctx%wann, ctx%eig_id, ctx%input, ctx%atoms, ctx%noco, ctx%nococonv, &
+                                  ctx%kpts, ctx%sym, ctx%cell, ik, 2, ctx%l_real_wann, lapw, zc(2))
+            CALL melem_stack_spinor(zc(1), zc(2), zMat)
+         ELSE
+            CALL wannierlib_get_z(ctx%wann, ctx%eig_id, ctx%input, ctx%atoms, ctx%noco, ctx%nococonv, &
+                                  ctx%kpts, ctx%sym, ctx%cell, ik, MERGE(1, ctx%jspin, ctx%l_spinors), &
+                                  ctx%l_real_wann, lapw, zMat)
+         END IF
 
          DO isp = isp1, isp2
             ! radial spin index: with jspins=1 only one set of radials exists -> use 1
             jspin_rad = MERGE(1, isp, ctx%input%jspins == 1)
             DO itype = 1, ctx%atoms%ntype
                CALL abc(itype, isp)%init(ctx%input, ctx%atoms, ctx%wann%num_bands, itype)
-               CALL abc(itype, isp)%calc_abc(ctx%input, ctx%atoms, ctx%sym, ctx%cell, lapw, &
-                                             ctx%wann%num_bands, ctx%usdus, ctx%noco, ctx%nococonv, &
-                                             jspin_rad, itype, zMat)
+               ! each abc must be built from ITS OWN spinor component; jspin_rad (already
+               ! capped at input%jspins above) then only selects the radial set.
+               IF (l_colspinor) THEN
+                  CALL abc(itype, isp)%calc_abc(ctx%input, ctx%atoms, ctx%sym, ctx%cell, lapw, &
+                                                ctx%wann%num_bands, ctx%usdus, ctx%noco, ctx%nococonv, &
+                                                jspin_rad, itype, zc(isp))
+               ELSE
+                  CALL abc(itype, isp)%calc_abc(ctx%input, ctx%atoms, ctx%sym, ctx%cell, lapw, &
+                                                ctx%wann%num_bands, ctx%usdus, ctx%noco, ctx%nococonv, &
+                                                jspin_rad, itype, zMat)
+               END IF
             END DO
          END DO
 
@@ -551,5 +579,26 @@ CONTAINS
       this%nb = 0; this%nw = 0; this%ncomp = 0; this%nsites = 1
       this%min_band = -1; this%max_band = -1
    END SUBROUTINE free
+
+   !> Stack the two spin components of a collinear-basis spinor (l_soc=T, l_noco=F, one eig
+   !> record each) into the single 2N matrix the l_noco path produces, so every consumer
+   !> downstream -- notably the interstitial in melem_spin, which addresses the down block at
+   !> row offset nv(1)+nlotot -- sees one layout. The shared LAPW basis is checked, not assumed.
+   SUBROUTINE melem_stack_spinor(zup, zdn, zspinor)
+      TYPE(t_mat), INTENT(IN)  :: zup, zdn
+      TYPE(t_mat), INTENT(OUT) :: zspinor
+      INTEGER :: n, nb
+      IF (zup%matsize1 /= zdn%matsize1 .OR. zup%matsize2 /= zdn%matsize2) &
+         CALL juDFT_error('melem_stack_spinor: the two spin records differ in shape; the &
+                          &spin-up and spin-down LAPW bases must match for l_noco=F', &
+                          calledby='melem_stack_spinor')
+      IF (zup%l_real .OR. zdn%l_real) &
+         CALL juDFT_error('melem_stack_spinor: a SOC spinor cannot be stored in a real matrix', &
+                          calledby='melem_stack_spinor')
+      n = zup%matsize1; nb = zup%matsize2
+      CALL zspinor%init(.FALSE., 2*n, nb)
+      zspinor%data_c(1:n,     1:nb) = zup%data_c(1:n, 1:nb)
+      zspinor%data_c(n+1:2*n, 1:nb) = zdn%data_c(1:n, 1:nb)
+   END SUBROUTINE melem_stack_spinor
 
 END MODULE m_types_matrixelement
