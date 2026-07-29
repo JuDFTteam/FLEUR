@@ -1488,7 +1488,7 @@ def collect_all_judft_messages():
     # source code is top dir, to much other stuff in there, thats why hardcode source dirs for speed
     # and to avoid problems with binaries and so on.
     src_folders = ['cdn', 'cdn_mt', 'core', 'diagonalization', 'propcalc/dos', 'propcalc/eels', 'eigen',
-     'eigen_soc', 'fermi', 'fft', '../tools/fleurinput', 'force',
+     'soc', 'secvar', 'matrixelements', 'fermi', 'fft', '../tools/fleurinput', 'force',
     'forcetheorem', 'global', 'greensf', 'hybrid',  'init', '../tools/inpgen2',
     'io', 'juDFT', '../tools/inpgen2/kpoints',  'ldaX', 'main', 'math', 'mix', 'mpi', 'startden', 'propcalc/orbdep',
     'rdmft', 'tetra', 'types', 'vgen', 'wannier', 'xc-pot'

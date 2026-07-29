@@ -93,7 +93,9 @@ src/
     dfpt/          # Density functional perturbation theory (phonons)
     diagonalization/ # Eigenvalue solvers
     eigen/         # Hamiltonian/overlap matrix construction
-    eigen_soc/     # Spin-orbit coupling
+    soc/           # Spin-orbit coupling (angular/radial SOC matrix elements)
+    secvar/        # Second-variation eigenvalue problem (SOC)
+    matrixelements/ # Matrix elements of physical operators (spin, orbital, SOC, position, ...)
     fft/           # Fast Fourier transforms
     force/         # Hellmann-Feynman forces
     greensf/       # Green's functions

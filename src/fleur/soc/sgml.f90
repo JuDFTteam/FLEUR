@@ -1,4 +1,10 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_sgml
+   implicit none
   CONTAINS
   REAL FUNCTION sgml(l1,m1,is1,l2,m2,is2)
     USE m_juDFT
