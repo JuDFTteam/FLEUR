@@ -132,6 +132,11 @@ CONTAINS
     INTEGER :: nb, i, j, ntyp, iat, l, ll1, mm, lm, n_r, n_r2
     COMPLEX :: loc(2, 2)
 
+    ! Radial spin slots. radfun%integral is allocated (.,.,.,jspins,jspins), so with a
+    ! single radial set (jspins=1, e.g. l_soc=T/l_noco=F) all four spin blocks share
+    ! slot 1; indexing 2 there ran past the array. Bound read from the array itself.
+    INTEGER :: js1, js2
+    js1 = 1; js2 = MERGE(1, 2, SIZE(radfun(1)%integral, 4) < 2)
     nb = SIZE(o_uu, 1)
     DO j = 1, nb                       ! ket band
       DO i = 1, nb                     ! bra band
@@ -147,9 +152,9 @@ CONTAINS
                 DO n_r = 1, abc(ntyp, 1)%n_r(l)
                   DO n_r2 = 1, abc(ntyp, 1)%n_r(l)
                     loc(1, 1) = loc(1, 1) + abc(ntyp,1)%cof(i,lm,n_r,iat)*CONJG(abc(ntyp,1)%cof(j,lm,n_r2,iat))*radfun(ntyp)%integral(n_r,n_r2,l,1,1)
-                    loc(2, 2) = loc(2, 2) + abc(ntyp,2)%cof(i,lm,n_r,iat)*CONJG(abc(ntyp,2)%cof(j,lm,n_r2,iat))*radfun(ntyp)%integral(n_r,n_r2,l,2,2)
-                    loc(1, 2) = loc(1, 2) + abc(ntyp,1)%cof(i,lm,n_r,iat)*CONJG(abc(ntyp,2)%cof(j,lm,n_r2,iat))*radfun(ntyp)%integral(n_r,n_r2,l,1,2)
-                    loc(2, 1) = loc(2, 1) + abc(ntyp,2)%cof(i,lm,n_r,iat)*CONJG(abc(ntyp,1)%cof(j,lm,n_r2,iat))*radfun(ntyp)%integral(n_r,n_r2,l,2,1)
+                    loc(2, 2) = loc(2, 2) + abc(ntyp,2)%cof(i,lm,n_r,iat)*CONJG(abc(ntyp,2)%cof(j,lm,n_r2,iat))*radfun(ntyp)%integral(n_r,n_r2,l,js2,js2)
+                    loc(1, 2) = loc(1, 2) + abc(ntyp,1)%cof(i,lm,n_r,iat)*CONJG(abc(ntyp,2)%cof(j,lm,n_r2,iat))*radfun(ntyp)%integral(n_r,n_r2,l,js1,js2)
+                    loc(2, 1) = loc(2, 1) + abc(ntyp,2)%cof(i,lm,n_r,iat)*CONJG(abc(ntyp,1)%cof(j,lm,n_r2,iat))*radfun(ntyp)%integral(n_r,n_r2,l,js2,js1)
                   END DO
                 END DO
               END DO
@@ -188,6 +193,11 @@ CONTAINS
     COMPLEX :: loc(2, 2), cx, cy, cz
     REAL    :: ca, sa, cb, sb
 
+    ! Radial spin slots. radfun%integral is allocated (.,.,.,jspins,jspins), so with a
+    ! single radial set (jspins=1, e.g. l_soc=T/l_noco=F) all four spin blocks share
+    ! slot 1; indexing 2 there ran past the array. Bound read from the array itself.
+    INTEGER :: js1, js2
+    js1 = 1; js2 = MERGE(1, 2, SIZE(radfun(1)%integral, 4) < 2)
     nb = SIZE(spa, 1)
     spa = CMPLX(0.0, 0.0)
     DO j = 1, nb
@@ -206,9 +216,9 @@ CONTAINS
                 DO n_r = 1, abc(ntyp, 1)%n_r(l)
                   DO n_r2 = 1, abc(ntyp, 1)%n_r(l)
                     loc(1,1) = loc(1,1) + abc(ntyp,1)%cof(i,lm,n_r,iat)*CONJG(abc(ntyp,1)%cof(j,lm,n_r2,iat))*radfun(ntyp)%integral(n_r,n_r2,l,1,1)
-                    loc(2,2) = loc(2,2) + abc(ntyp,2)%cof(i,lm,n_r,iat)*CONJG(abc(ntyp,2)%cof(j,lm,n_r2,iat))*radfun(ntyp)%integral(n_r,n_r2,l,2,2)
-                    loc(1,2) = loc(1,2) + abc(ntyp,1)%cof(i,lm,n_r,iat)*CONJG(abc(ntyp,2)%cof(j,lm,n_r2,iat))*radfun(ntyp)%integral(n_r,n_r2,l,1,2)
-                    loc(2,1) = loc(2,1) + abc(ntyp,2)%cof(i,lm,n_r,iat)*CONJG(abc(ntyp,1)%cof(j,lm,n_r2,iat))*radfun(ntyp)%integral(n_r,n_r2,l,2,1)
+                    loc(2,2) = loc(2,2) + abc(ntyp,2)%cof(i,lm,n_r,iat)*CONJG(abc(ntyp,2)%cof(j,lm,n_r2,iat))*radfun(ntyp)%integral(n_r,n_r2,l,js2,js2)
+                    loc(1,2) = loc(1,2) + abc(ntyp,1)%cof(i,lm,n_r,iat)*CONJG(abc(ntyp,2)%cof(j,lm,n_r2,iat))*radfun(ntyp)%integral(n_r,n_r2,l,js1,js2)
+                    loc(2,1) = loc(2,1) + abc(ntyp,2)%cof(i,lm,n_r,iat)*CONJG(abc(ntyp,1)%cof(j,lm,n_r2,iat))*radfun(ntyp)%integral(n_r,n_r2,l,js2,js1)
                   END DO
                 END DO
               END DO
