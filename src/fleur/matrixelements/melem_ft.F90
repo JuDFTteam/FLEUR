@@ -17,14 +17,14 @@
 !>  Wannier-gauge Hamiltonian H_W(k) interpolates the band structure; feeding
 !>  it a spin / orbital-moment / position operator interpolates that operator.
 !>  A new operator interpolator only has to build its own mat_k(k) and reuse
-!>  this core unchanged (see m_wannierlib_interpolate for the H example).
-MODULE m_wannierlib_ft
+!>  this core unchanged (see m_melem_interpolate_ham for the H example).
+MODULE m_melem_ft
   USE m_constants, ONLY : tpi_const
   USE m_types_cell
   USE m_types_kpts
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: wannierlib_ft_interpolate, wannierlib_ft_velocity, wannierlib_ft_to_real, wannierlib_ws_vectors, wannierlib_ft_to_real_reduce, wannierlib_ft_rtok
+  PUBLIC :: melem_ft_interpolate, melem_ft_velocity, melem_ft_to_real, melem_ws_vectors, melem_ft_to_real_reduce, melem_ft_rtok
   ! Wigner-Seitz R-vectors depend only on the mesh (operator-independent) -> compute once, cache, reuse.
   INTEGER, ALLOCATABLE :: ws_irvec_c(:, :), ws_ndegen_c(:)
   INTEGER :: ws_nrpts_c = 0, ws_mp_c(3) = 0
@@ -33,7 +33,7 @@ CONTAINS
   !> Coarse-mesh Wannier-gauge matrix -> real space: mat_r(R) = (1/Nk) sum_k e^{-i2pi k.R} mat_k(k),
   !> over the Wigner-Seitz R-mesh (same irvec/ndegen as the interpolation). Used to export the
   !> tight-binding operators H(R), A(R) in Wannier90 _hr.dat / _r.dat format for external post-proc.
-  SUBROUTINE wannierlib_ft_to_real(cell, mat_k, kpts, mat_r, irvec, ndegen, nrpts)
+  SUBROUTINE melem_ft_to_real(cell, mat_k, kpts, mat_r, irvec, ndegen, nrpts)
     TYPE(t_cell), INTENT(IN) :: cell
     COMPLEX, INTENT(IN) :: mat_k(:, :, :)     ! (nw, nw, nk)  Wannier-gauge matrix on coarse mesh
     TYPE(t_kpts), INTENT(IN) :: kpts
@@ -51,7 +51,7 @@ CONTAINS
         mat_r(:, :, irpt) = mat_r(:, :, irpt) + (EXP(CMPLX(0.0, -rdotk)) / REAL(nk)) * mat_k(:, :, k)
       END DO
     END DO
-  END SUBROUTINE wannierlib_ft_to_real
+  END SUBROUTINE melem_ft_to_real
 
   !> Velocity interpolation v_alpha(k') = dH/dk_alpha in the Wannier gauge:
   !>    v_alpha(k') = sum_R  i R_cart(alpha) e^{+i2pi k'.R} / ndegen(R) * mat_r(R)
@@ -60,7 +60,7 @@ CONTAINS
   !> Cartesian components. Projected on the band eigenvectors, the DIAGONAL <n|v|n> =
   !> dE_n/dk is exact; off-diagonal elements omit the Berry-connection (gauge) term,
   !> so use the diagonal (band velocity) only until the position operator is available.
-  SUBROUTINE wannierlib_ft_velocity(cell, mat_k, kpts, kfrac, vel_interp)
+  SUBROUTINE melem_ft_velocity(cell, mat_k, kpts, kfrac, vel_interp)
     TYPE(t_cell), INTENT(IN) :: cell
     COMPLEX, INTENT(IN) :: mat_k(:, :, :)     ! (nw, nw, nk)  Wannier-gauge H on coarse mesh
     TYPE(t_kpts), INTENT(IN) :: kpts
@@ -100,10 +100,10 @@ CONTAINS
       END DO
     END DO
     DEALLOCATE(mat_r, irvec, ndegen)
-  END SUBROUTINE wannierlib_ft_velocity
+  END SUBROUTINE melem_ft_velocity
 
   !> Fourier-interpolate a coarse-mesh k-space matrix onto a fine k-path.
-  SUBROUTINE wannierlib_ft_interpolate(cell, mat_k, kpts, kfrac, mat_interp)
+  SUBROUTINE melem_ft_interpolate(cell, mat_k, kpts, kfrac, mat_interp)
     TYPE(t_cell), INTENT(IN) :: cell
     COMPLEX, INTENT(IN) :: mat_k(:, :, :)     ! (nw, nw, nk)  Wannier-gauge matrix on coarse mesh
     TYPE(t_kpts), INTENT(IN) :: kpts
@@ -141,7 +141,7 @@ CONTAINS
       END DO
     END DO
     DEALLOCATE(mat_r, irvec, ndegen)
-  END SUBROUTINE wannierlib_ft_interpolate
+  END SUBROUTINE melem_ft_interpolate
 
   !> Wigner-Seitz supercell R vectors + degeneracies (replicates W90
   !> hamiltonian_wigner_seitz). Kept local to preserve W90's exact ndegen
@@ -220,8 +220,8 @@ CONTAINS
 
   !> Distributed coarse-mesh -> real space: each rank sums its OWN k-slice (mat_loc, global
   !> indices gk_loc), then MPI_ALLREDUCE the small mat_r(nw,nw,nrpts). Same result as the
-  !> serial wannierlib_ft_to_real but never materializes the full-mesh coarse matrix.
-  SUBROUTINE wannierlib_ft_to_real_reduce(cell, kpts, mat_loc, gk_loc, commw, mat_r, irvec, ndegen, nrpts)
+  !> serial melem_ft_to_real but never materializes the full-mesh coarse matrix.
+  SUBROUTINE melem_ft_to_real_reduce(cell, kpts, mat_loc, gk_loc, commw, mat_r, irvec, ndegen, nrpts)
 #ifdef CPP_MPI
     use mpi
 #endif
@@ -251,13 +251,13 @@ CONTAINS
 #ifdef CPP_MPI
     CALL MPI_ALLREDUCE(MPI_IN_PLACE, mat_r, SIZE(mat_r), MPI_DOUBLE_COMPLEX, MPI_SUM, commw, ierr)
 #endif
-  END SUBROUTINE wannierlib_ft_to_real_reduce
+  END SUBROUTINE melem_ft_to_real_reduce
 
   !> R -> fine path only: mat(k') = sum_R e^{+i2pi k'.R} / ndegen(R) * mat_r(R).
-  !> Second half of wannierlib_ft_interpolate, split out so a coarse->R matrix already
-  !> assembled by the distributed reduce (wannierlib_ft_to_real_reduce) can be interpolated
+  !> Second half of melem_ft_interpolate, split out so a coarse->R matrix already
+  !> assembled by the distributed reduce (melem_ft_to_real_reduce) can be interpolated
   !> onto the fine path on rank 0 without rebuilding it from the full coarse mesh.
-  SUBROUTINE wannierlib_ft_rtok(mat_r, irvec, ndegen, nrpts, kfrac, mat_interp)
+  SUBROUTINE melem_ft_rtok(mat_r, irvec, ndegen, nrpts, kfrac, mat_interp)
     COMPLEX, INTENT(IN) :: mat_r(:, :, :)     ! (nw, nw, nrpts)  real-space matrix
     INTEGER, INTENT(IN) :: irvec(:, :), ndegen(:), nrpts
     REAL,    INTENT(IN) :: kfrac(:, :)        ! (3, nfine)    fractional coords of the fine path
@@ -274,16 +274,16 @@ CONTAINS
         mat_interp(:, :, ip) = mat_interp(:, :, ip) + fac * mat_r(:, :, irpt)
       END DO
     END DO
-  END SUBROUTINE wannierlib_ft_rtok
+  END SUBROUTINE melem_ft_rtok
 
   !> Public wrapper exposing the Wigner-Seitz R-vectors + degeneracies (W90 convention)
   !> so the real-space operator export (operators_r) can write wig_vectors.
-  SUBROUTINE wannierlib_ws_vectors(cell, mp_grid, irvec, ndegen, nrpts)
+  SUBROUTINE melem_ws_vectors(cell, mp_grid, irvec, ndegen, nrpts)
     TYPE(t_cell), INTENT(IN) :: cell
     INTEGER, INTENT(IN)  :: mp_grid(3)
     INTEGER, ALLOCATABLE, INTENT(OUT) :: irvec(:, :), ndegen(:)
     INTEGER, INTENT(OUT) :: nrpts
     CALL ws_get(cell, mp_grid, irvec, ndegen, nrpts)
-  END SUBROUTINE wannierlib_ws_vectors
+  END SUBROUTINE melem_ws_vectors
 
-END MODULE m_wannierlib_ft
+END MODULE m_melem_ft

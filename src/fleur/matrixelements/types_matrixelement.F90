@@ -17,7 +17,7 @@
 !>                        to the DEFERRED calc_bloch -> O^0(k) local slice o0_loc.
 !>    (2) to_wannier    : gauge rotation O_W = V^dagger O^0 V with V = u_opt.u_matrix
 !>                        on the local k-slice, then the distributed FT-reduce
-!>                        (m_wannierlib_ft) k -> R  ->  o_r(nw,nw,nrpts,ncomp).
+!>                        (m_melem_ft) k -> R  ->  o_r(nw,nw,nrpts,ncomp).
 !>                        [COLLECTIVE over mpi_comm]
 !>    (3) interpolate   : R -> arbitrary k' list (Wannier interpolation of O).
 !>    (4) write_bloch / write_realspace : plain-text IO of O^0(k) resp. O(R).
@@ -33,8 +33,8 @@
 !>     (e.g. t_matrixelement_overlap) overriding calc_coarse with an mmn-style loop.
 !>   * hamiltonian: bypasses the Bloch pass (built from eig + U on the full mesh);
 !>     a derived type overriding calc_coarse (no-op) and to_wannier.
-!>   * orbital / soc derived types: wrappers of wannierlib_orbmom_bloch(_collinear)
-!>     and wannierlib_socmat_bloch (the latter mutates ctx%usdus and consumes
+!>   * orbital / soc derived types: wrappers of melem_orbmom_bloch(_collinear)
+!>     and melem_socmat_bloch (the latter mutates ctx%usdus and consumes
 !>     ctx%enpara/vtot/fmpi, which the context already carries).
 !>   * band-projected output (zheev on H(k'), <O>_n = [C^dagger O C]_nn, the
 !>     bands_wann_*.dat files): composed by the future driver from the interpolate()
@@ -355,7 +355,7 @@ CONTAINS
    !> COLLECTIVE over mpi_comm (contains an MPI_ALLREDUCE); u_matrix/u_opt must be
    !> the full-mesh matrices, replicated on every rank.
    SUBROUTINE to_wannier(this, ctx, u_matrix, u_opt)
-      USE m_wannierlib_ft, ONLY : wannierlib_ft_to_real_reduce
+      USE m_melem_ft, ONLY : melem_ft_to_real_reduce
       CLASS(t_matrixelement), INTENT(INOUT) :: this
       TYPE(t_mel_context),    INTENT(IN)    :: ctx
       COMPLEX, INTENT(IN) :: u_matrix(:, :, :)  ! (nw, nw, nkptf) MLWF gauge, full mesh
@@ -387,7 +387,7 @@ CONTAINS
 
       IF (ALLOCATED(this%o_r)) DEALLOCATE(this%o_r)
       DO a = 1, this%ncomp
-         CALL wannierlib_ft_to_real_reduce(ctx%cell, ctx%kpts, ow_loc(:, :, a, :), this%gk_loc, &
+         CALL melem_ft_to_real_reduce(ctx%cell, ctx%kpts, ow_loc(:, :, a, :), this%gk_loc, &
                                            this%mpi_comm, o1, this%irvec, this%ndegen, this%nrpts)
          IF (a == 1) ALLOCATE(this%o_r(this%nw, this%nw, this%nrpts, this%ncomp))
          this%o_r(:, :, :, a) = o1
@@ -402,7 +402,7 @@ CONTAINS
    !> O(k') = sum_R e^{+i 2pi k'.R} / ndegen(R) * O(R), per component. Local (o_r is
    !> replicated after to_wannier), usable on any rank.
    SUBROUTINE interpolate(this, kfrac, o_interp)
-      USE m_wannierlib_ft, ONLY : wannierlib_ft_rtok
+      USE m_melem_ft, ONLY : melem_ft_rtok
       CLASS(t_matrixelement), INTENT(IN)  :: this
       REAL,                   INTENT(IN)  :: kfrac(:, :)           ! (3, np) fractional k'
       COMPLEX, ALLOCATABLE,   INTENT(OUT) :: o_interp(:, :, :, :)  ! (nw, nw, ncomp, np)
@@ -416,7 +416,7 @@ CONTAINS
       CALL timestart('melem interpolate')
       ALLOCATE(o_interp(this%nw, this%nw, this%ncomp, SIZE(kfrac, 2)))
       DO a = 1, this%ncomp
-         CALL wannierlib_ft_rtok(this%o_r(:, :, :, a), this%irvec, this%ndegen, this%nrpts, &
+         CALL melem_ft_rtok(this%o_r(:, :, :, a), this%irvec, this%ndegen, this%nrpts, &
                                  kfrac, o_one)
          o_interp(:, :, a, :) = o_one
          DEALLOCATE(o_one)

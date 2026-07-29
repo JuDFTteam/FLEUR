@@ -8,26 +8,26 @@
 !>
 !>  Pipeline:
 !>    H_W(k)      : same Wannier-gauge Hamiltonian as the band/operator drivers
-!>    v_W,alpha(k') = FT[ i R_cart(alpha) H_W ]     (m_wannierlib_ft: velocity variant)
+!>    v_W,alpha(k') = FT[ i R_cart(alpha) H_W ]     (m_melem_ft: velocity variant)
 !>    H(k')       = FT[ H_W ] -> diag -> E_n(k'), C(k')
 !>    <v_alpha>_n = [ C^dagger v_W,alpha(k') C ]_nn   (diagonal band velocity, exact)
 !>
 !>  The diagonal <n|v|n> = dE_n/dk needs no gauge (Berry-connection) correction, so
 !>  it is exact here. Output bands_wann_velocity.dat: kdist, [ E_n(eV), vx, vy, vz ]
 !>  per band, with v in eV*bohr (dE/dk). Master rank only.
-MODULE m_wannierlib_interpolate_velocity
+MODULE m_melem_interpolate_velocity
   USE m_juDFT
   USE m_constants, ONLY : oUnit, hartree_to_ev_const
   USE m_types_cell
   USE m_types_kpts
   USE m_types_wannierlib
-  USE m_wannierlib_ft, ONLY : wannierlib_ft_interpolate, wannierlib_ft_velocity, wannierlib_ft_rtok
+  USE m_melem_ft, ONLY : melem_ft_interpolate, melem_ft_velocity, melem_ft_rtok
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: wannierlib_interpolate_velocity
+  PUBLIC :: melem_interpolate_velocity
 CONTAINS
 
-  SUBROUTINE wannierlib_interpolate_velocity(this, cell, kpts, eig, u_matrix, u_opt, aw_r, irvec, ndegen, nrpts, irank)
+  SUBROUTINE melem_interpolate_velocity(this, cell, kpts, eig, u_matrix, u_opt, aw_r, irvec, ndegen, nrpts, irank)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
     TYPE(t_cell), INTENT(IN) :: cell
     TYPE(t_kpts), INTENT(IN) :: kpts
@@ -52,20 +52,20 @@ CONTAINS
     num_bands = this%num_bands
     nk        = kpts%nkptf
     have_dis  = (num_bands > num_wann)
-    CALL timestart('wannierlib_interpolate_velocity')
+    CALL timestart('melem_interpolate_velocity')
 
     INQUIRE(file='kpts_interpol', exist=lexist)
     IF (.NOT. lexist) THEN
       WRITE(oUnit,'(a)') 'wannierlib velocity interpolation: no kpts_interpol file -> skipped'
-      CALL timestop('wannierlib_interpolate_velocity'); RETURN
+      CALL timestop('melem_interpolate_velocity'); RETURN
     END IF
     OPEN(newunit=iu, file='kpts_interpol', status='old')
     READ(iu, *, iostat=ios) np
-    IF (ios /= 0 .OR. np <= 0) CALL juDFT_error('bad kpts_interpol header', calledby='wannierlib_interpolate_velocity')
+    IF (ios /= 0 .OR. np <= 0) CALL juDFT_error('bad kpts_interpol header', calledby='melem_interpolate_velocity')
     ALLOCATE(kfrac(3, np))
     DO ip = 1, np
       READ(iu, *, iostat=ios) kfrac(:, ip)
-      IF (ios /= 0) CALL juDFT_error('bad kpts_interpol line', calledby='wannierlib_interpolate_velocity')
+      IF (ios /= 0) CALL juDFT_error('bad kpts_interpol line', calledby='melem_interpolate_velocity')
     END DO
     CLOSE(iu)
 
@@ -103,8 +103,8 @@ CONTAINS
     END DO
 
     ! ---- interpolate H (for eigenvectors) and v = dH/dk (velocity variant of the core) ----
-    CALL wannierlib_ft_interpolate(cell, ham_k, kpts, kfrac, H_interp)
-    CALL wannierlib_ft_velocity(cell, ham_k, kpts, kfrac, v_interp)   ! (nw,nw,3,np)  = dH/dk
+    CALL melem_ft_interpolate(cell, ham_k, kpts, kfrac, H_interp)
+    CALL melem_ft_velocity(cell, ham_k, kpts, kfrac, v_interp)   ! (nw,nw,3,np)  = dH/dk
 
     ! ---- interband part: R -> k' of the reduced Wannier Berry connection A^(W)_a(R) -> A^(W)_a(k') ----
     l_berry = (nrpts > 0 .AND. SIZE(aw_r, 1) == num_wann .AND. SIZE(aw_r, 4) == 3)
@@ -113,7 +113,7 @@ CONTAINS
       BLOCK
         COMPLEX, ALLOCATABLE :: a_one(:, :, :)
         DO a = 1, 3
-          CALL wannierlib_ft_rtok(aw_r(:, :, :, a), irvec, ndegen, nrpts, kfrac, a_one)
+          CALL melem_ft_rtok(aw_r(:, :, :, a), irvec, ndegen, nrpts, kfrac, a_one)
           A_interp(:, :, a, :) = a_one
         END DO
       END BLOCK
@@ -139,7 +139,7 @@ CONTAINS
     DO ip = 1, np
       hk = H_interp(:, :, ip)
       CALL zheev('V', 'U', num_wann, hk, num_wann, evals, work, lwork, rwork, info)
-      IF (info /= 0) CALL juDFT_error('zheev failed', calledby='wannierlib_interpolate_velocity')
+      IF (info /= 0) CALL juDFT_error('zheev failed', calledby='melem_interpolate_velocity')
       cvec = hk
       IF (ip > 1) THEN
         dk = kfrac(:, ip) - kfrac(:, ip-1); dkc = MATMUL(cell%bmat, dk)
@@ -203,7 +203,7 @@ CONTAINS
     CLOSE(iu)
     IF (l_berry) CLOSE(iuc)
     WRITE(oUnit,'(a,i0,a)') 'wannierlib velocity interpolation: wrote bands_wann_velocity.dat (', np, ' k-points)'
-    CALL timestop('wannierlib_interpolate_velocity')
-  END SUBROUTINE wannierlib_interpolate_velocity
+    CALL timestop('melem_interpolate_velocity')
+  END SUBROUTINE melem_interpolate_velocity
 
-END MODULE m_wannierlib_interpolate_velocity
+END MODULE m_melem_interpolate_velocity

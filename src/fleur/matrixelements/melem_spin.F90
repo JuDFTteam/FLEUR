@@ -12,17 +12,17 @@
 !>  wavefunctions (no updown.mmn0 on disk). It is the Bloch-basis input O^(0)
 !>  of the operator-interpolation pipeline: the driver rotates it to the Wannier
 !>  gauge (V^dagger S0 V) and hands each Cartesian component to the generic core
-!>  m_wannierlib_ft.
+!>  m_melem_ft.
 !>
 !>  The four spin-block overlaps  o_ab(m,n) = <phi^a_m|phi^b_n>  (a,b = global
 !>  spin up=1/dn=2) are the sum of two pieces, each block-selected by spin:
 !>    * interstitial : reuse wannierlib_mmnkb_int at b=0 (global frame, no rot.);
-!>    * muffin-tin   : wannierlib_spin_mt_block below, mirrored on the library
+!>    * muffin-tin   : melem_spin_mt_block below, mirrored on the library
 !>                     routine wannierlib_mmk0_sph (abc%cof + radfun%integral, so
 !>                     u/udot/LO are all included), extended to cross spin. The
 !>                     local<->global spin rotation is already applied by the
 !>                     modern calc_abc, so no ccchi is re-applied here.
-MODULE m_wannierlib_spin_melem
+MODULE m_melem_spin
   USE m_juDFT
   USE m_constants, ONLY : ImagUnit, oUnit
   USE m_types_atoms
@@ -35,14 +35,14 @@ MODULE m_wannierlib_spin_melem
   USE m_wannierlib_mmkb_int, ONLY : wannierlib_mmnkb_int
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: wannierlib_spin_bloch, wannierlib_pauli_from_blocks, wannierlib_spin_mt_block, &
-            wannierlib_spin_sumrule, wannierlib_spin_peratom
+  PUBLIC :: melem_spin_bloch, melem_pauli_from_blocks, melem_spin_mt_block, &
+            melem_spin_sumrule, melem_spin_peratom
 CONTAINS
 
   !> Bloch-basis spin matrices at one k, MT + interstitial. Returns s0(nb,nb,3)
   !> and prints the sum-rule check. abc(:,:) = (ntype, 2 spin); zMat holds the
   !> full two-component spinor (spin-down block at row offset nv(1)+nlotot).
-  SUBROUTINE wannierlib_spin_bloch(atoms, abc, radfun, nococonv, stars, lapw, zMat, num_bands, ik, s0, l_check)
+  SUBROUTINE melem_spin_bloch(atoms, abc, radfun, nococonv, stars, lapw, zMat, num_bands, ik, s0, l_check)
     TYPE(t_atoms),     INTENT(IN)  :: atoms
     TYPE(t_abc),       INTENT(IN)  :: abc(:, :)          ! (ntype, 2)
     TYPE(t_radfun),    INTENT(IN)  :: radfun(:)          ! (ntype)
@@ -77,9 +77,9 @@ CONTAINS
     ! ---- total spin (GLOBAL) = interstitial Pauli + sum_atom (MT per-atom, rotated to global) ----
     !   the MT part must be summed per-atom AFTER the local->global rotation, otherwise an
     !   AFM (beta_2=pi) would add two local-frame "+" moments and the total would not vanish.
-    CALL wannierlib_pauli_from_blocks(oi_uu, oi_dd, oi_ud, oi_du, s0)
+    CALL melem_pauli_from_blocks(oi_uu, oi_dd, oi_ud, oi_du, s0)
     ALLOCATE(spa(nb, nb, 3, atoms%nat))
-    CALL wannierlib_spin_peratom(atoms, abc, radfun, nococonv, spa)
+    CALL melem_spin_peratom(atoms, abc, radfun, nococonv, spa)
     DO na = 1, atoms%nat
       s0(:, :, :) = s0(:, :, :) + spa(:, :, :, na)
     END DO
@@ -89,25 +89,25 @@ CONTAINS
     IF (l_check) THEN
       ALLOCATE(c_uu(nb, nb), c_dd(nb, nb), c_ud(nb, nb), c_du(nb, nb))
       c_uu = oi_uu; c_dd = oi_dd; c_ud = oi_ud; c_du = oi_du
-      CALL wannierlib_spin_mt_block(atoms, abc, radfun, c_uu, c_dd, c_ud, c_du)
-      CALL wannierlib_spin_sumrule(s0, c_uu, c_dd, ik, tol=1.0e-3)
+      CALL melem_spin_mt_block(atoms, abc, radfun, c_uu, c_dd, c_ud, c_du)
+      CALL melem_spin_sumrule(s0, c_uu, c_dd, ik, tol=1.0e-3)
       DEALLOCATE(c_uu, c_dd, c_ud, c_du)
     END IF
 
     DEALLOCATE(oi_uu, oi_dd, oi_ud, oi_du, spa)
-  END SUBROUTINE wannierlib_spin_bloch
+  END SUBROUTINE melem_spin_bloch
 
   !> Assemble the three Pauli matrices at one k from the four global spin-block
   !> overlaps (interstitial + MT already summed into o_ab):
   !>   S_z = o_uu - o_dd ;  S_x = o_ud + o_du ;  S_y = -i (o_ud - o_du)
-  SUBROUTINE wannierlib_pauli_from_blocks(o_uu, o_dd, o_ud, o_du, s0)
+  SUBROUTINE melem_pauli_from_blocks(o_uu, o_dd, o_ud, o_du, s0)
     COMPLEX, INTENT(IN)  :: o_uu(:, :), o_dd(:, :), o_ud(:, :), o_du(:, :)  ! (nb,nb)
     COMPLEX, INTENT(OUT) :: s0(:, :, :)                                     ! (nb,nb,3) 1=x 2=y 3=z
 
     s0(:, :, 1) = o_ud + o_du                    ! sigma_x
     s0(:, :, 2) = -ImagUnit * (o_ud - o_du)      ! sigma_y
     s0(:, :, 3) = o_uu - o_dd                    ! sigma_z
-  END SUBROUTINE wannierlib_pauli_from_blocks
+  END SUBROUTINE melem_pauli_from_blocks
 
   !> Muffin-tin contribution to the four spin-block overlaps
   !>   o_ss'(m,n) += <phi^s_m | phi^s'_n>_MT ,   s,s' in {1,2}.
@@ -123,7 +123,7 @@ CONTAINS
   !> outdated. For a single global axis (Fe-FM_z, beta=0) local==global. A true
   !> noncollinear texture (Mn3Ir) would need a global-frame rotation downstream, but
   !> the spin sum rule (norm, |<sigma>|) is rotation-invariant, so this suffices here.
-  SUBROUTINE wannierlib_spin_mt_block(atoms, abc, radfun, o_uu, o_dd, o_ud, o_du)
+  SUBROUTINE melem_spin_mt_block(atoms, abc, radfun, o_uu, o_dd, o_ud, o_du)
     TYPE(t_atoms),  INTENT(IN) :: atoms
     TYPE(t_abc),    INTENT(IN) :: abc(:, :)        ! (ntype, 2 spin) local-frame coeffs
     TYPE(t_radfun), INTENT(IN) :: radfun(:)        ! (ntype) : %integral(n_r,n_r2,l,1,1)
@@ -162,10 +162,10 @@ CONTAINS
         o_du(i, j) = o_du(i, j) + loc(2, 1)
       END DO
     END DO
-  END SUBROUTINE wannierlib_spin_mt_block
+  END SUBROUTINE melem_spin_mt_block
 
   !> Per-atom (site-resolved) muffin-tin Pauli spin: spa(nb,nb,3,nat), rotated to
-  !> the GLOBAL spin frame. Same MT contraction as wannierlib_spin_mt_block but
+  !> the GLOBAL spin frame. Same MT contraction as melem_spin_mt_block but
   !> KEEPING the global atom index na instead of summing. The interstitial is NOT
   !> site-resolvable and is excluded here, so spa is the muffin-tin site spin (the
   !> physical local moment; in an AFM this is +M on one sublattice and -M on the
@@ -177,7 +177,7 @@ CONTAINS
   !> atom's (sx,sy,sz) must be rotated local->global by R_z(alpha_a) R_y(beta_a)
   !> using the noco angles, or the AFM sublattice comes out with the wrong sign
   !> (both moments look "+"). We apply that rotation per atom here.
-  SUBROUTINE wannierlib_spin_peratom(atoms, abc, radfun, nococonv, spa)
+  SUBROUTINE melem_spin_peratom(atoms, abc, radfun, nococonv, spa)
     TYPE(t_atoms),    INTENT(IN)  :: atoms
     TYPE(t_abc),      INTENT(IN)  :: abc(:, :)        ! (ntype, 2 spin)
     TYPE(t_radfun),   INTENT(IN)  :: radfun(:)
@@ -225,13 +225,13 @@ CONTAINS
         END DO
       END DO
     END DO
-  END SUBROUTINE wannierlib_spin_peratom
+  END SUBROUTINE melem_spin_peratom
 
   !> Sum-rule / sanity check on the Bloch-basis spin matrices at one k.
   !> With interstitial + MT summed, spin-trace orthonormality gives
   !>   o_uu(m,m) + o_dd(m,m) = 1  (norm), and the per-band spin |<sigma>_m| <= 1.
   !> For a magnet with the moment along z: <sigma_z>_m ~ +/-1, <sigma_xy>_m ~ 0.
-  SUBROUTINE wannierlib_spin_sumrule(s0, o_uu, o_dd, ik, tol)
+  SUBROUTINE melem_spin_sumrule(s0, o_uu, o_dd, ik, tol)
     COMPLEX, INTENT(IN) :: s0(:, :, :)         ! (nb,nb,3)
     COMPLEX, INTENT(IN) :: o_uu(:, :), o_dd(:, :)
     INTEGER, INTENT(IN) :: ik
@@ -255,6 +255,6 @@ CONTAINS
     ELSE
       WRITE(oUnit, '(a,i0,a)') '  WARNING: ', nbad, ' bands violate norm=1 or |<s>|<=1'
     END IF
-  END SUBROUTINE wannierlib_spin_sumrule
+  END SUBROUTINE melem_spin_sumrule
 
-END MODULE m_wannierlib_spin_melem
+END MODULE m_melem_spin

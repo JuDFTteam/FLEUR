@@ -16,7 +16,7 @@
 !>  hsoham does MPI_BARRIER/MPI_REDUCE on SUB_COMM; since this runs on the master
 !>  rank only we pass MPI_COMM_SELF (n_size=1, all atoms local) so the collectives
 !>  are trivial. Local orbitals are neglected in this first version (chelp = 0).
-MODULE m_wannierlib_socmat_melem
+MODULE m_melem_socmat
   USE m_juDFT
   USE m_spnorb
   USE m_hsoham
@@ -27,14 +27,14 @@ MODULE m_wannierlib_socmat_melem
 #endif
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: wannierlib_socmat_bloch
+  PUBLIC :: melem_socmat_bloch
   ! spnorb is k-independent: compute rsoc once and cache it (also avoids 512x printing)
   TYPE(t_rsoc), SAVE :: rsoc_cache
   LOGICAL,      SAVE :: rsoc_ready = .FALSE.
 CONTAINS
 
   !> Build H0_SOC(:,:) (single component) in the Bloch basis at one k.
-  SUBROUTINE wannierlib_socmat_bloch(atoms, noco, nococonv, input, fmpi, enpara, vtot, usdus, abc, nb, soc0, soc4)
+  SUBROUTINE melem_socmat_bloch(atoms, noco, nococonv, input, fmpi, enpara, vtot, usdus, abc, nb, soc0, soc4)
     TYPE(t_atoms),    INTENT(IN)    :: atoms
     TYPE(t_noco),     INTENT(IN)    :: noco
     TYPE(t_nococonv), INTENT(IN)    :: nococonv
@@ -110,6 +110,6 @@ CONTAINS
     soc4(:, :, 4) = hsomtx(:, :, 2, 2)   ! jj=2, ii=2
 
     DEALLOCATE(ahelp, bhelp, chelp, hsomtx)
-  END SUBROUTINE wannierlib_socmat_bloch
+  END SUBROUTINE melem_socmat_bloch
 
-END MODULE m_wannierlib_socmat_melem
+END MODULE m_melem_socmat

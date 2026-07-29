@@ -3,6 +3,17 @@
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
+!--------------------------------------------------------------------------------
+!>  Driver of the library-mode wannierization: build the projections A_mn(k) and the
+!>  neighbour overlaps M_mn(k,b) that Wannier90 needs, drive the Wannier90 library, and
+!>  report the resulting centres and spreads.
+!>
+!>  Matrix elements of physical operators (spin, orbital moment, SOC, position, velocity,
+!>  currents) are NOT built here: they live in src/fleur/matrixelements/ and are reached
+!>  through m_melem_driver. This module only hands that layer what it cannot obtain on its
+!>  own -- the k-point distribution, the per-k abc coefficients of the collinear channels,
+!>  the Wannier gauge, and the b-mesh -- so that adding an operator never touches this file.
+!--------------------------------------------------------------------------------
 MODULE m_wannierlib_main
    USE m_types, ONLY: t_stars, t_results
    USE m_wannierlib_get_z
@@ -10,12 +21,10 @@ MODULE m_wannierlib_main
    USE m_wannierlib_mmnkb
    USE m_wannierlib_ujugaunt
    USE m_wannierlib_w90_adapter
-   USE m_wannierlib_spin_melem, ONLY: wannierlib_spin_peratom, wannierlib_spin_bloch, wannierlib_spin_mt_block
-   USE m_wannierlib_mmkb_int, ONLY: wannierlib_mmnkb_int
-   USE m_wannierlib_ft, ONLY: wannierlib_ft_to_real_reduce
-   USE m_wannierlib_orbmom_melem
-   USE m_wannierlib_socmat_melem
-   USE m_constants, ONLY: ImagUnit, oUnit
+   USE m_melem_driver, ONLY: t_melem_coarse, melem_run, melem_rspauli_collinear, &
+                             melem_orbmom_bloch_collinear
+   USE m_types_melem_bmesh, ONLY: t_melem_bmesh
+   USE m_constants, ONLY: oUnit
    USE m_types_atoms
    USE m_types_cell
    USE m_types_input
@@ -53,7 +62,7 @@ CONTAINS
       TYPE(t_results), INTENT(IN) :: results
       INTEGER, INTENT(IN) :: eig_id
 
-      INTEGER :: ikpt, itype, nntot_w90, ierr, jspin, jspin_comp, iop
+      INTEGER :: ikpt, itype, nntot_w90, ierr, jspin, jspin_comp
       COMPLEX, ALLOCATABLE :: amn(:, :, :)
       COMPLEX, ALLOCATABLE :: mmn(:, :, :, :)
       COMPLEX, ALLOCATABLE :: ujug(:, :, :, :, :, :)
@@ -61,12 +70,9 @@ CONTAINS
       INTEGER, ALLOCATABLE :: nnkp(:, :), gkpb(:, :, :)
       INTEGER, ALLOCATABLE :: distk(:)
       real, allocatable :: eig(:, :)
-      COMPLEX, ALLOCATABLE :: s0_loc(:,:,:,:), l0_loc(:,:,:,:,:), soc0_loc(:,:,:,:), soc4_loc(:,:,:,:), s0pa_loc(:,:,:,:,:) ! per-rank slices
-      COMPLEX, ALLOCATABLE :: l0col_loc(:,:,:,:)  ! (nb,nb,3,nk_loc) collinear per-channel Bloch orbital L (operators_r)
-      COMPLEX, ALLOCATABLE :: v_ch(:,:,:,:)       ! (nb,nw,nkptf,2) per-channel gauge V (collinear combined spin)
-      LOGICAL :: l_col_orb                        ! collinear jspins=2 AND orbital requested in <operators_r>
-      LOGICAL :: l_col_spin                       ! collinear jspins=2 AND spin requested in <operators_r>
-      INTEGER :: nkc_loc   ! # coarse k-points owned by this rank
+      COMPLEX, ALLOCATABLE :: u_matrix(:, :, :), u_opt(:, :, :)   ! Wannier gauge factors from w90
+      TYPE(t_melem_coarse) :: melem   ! the operator (matrix-element) side, see m_melem_driver
+      TYPE(t_melem_bmesh) :: bmesh    ! b-shell weights handed to the operator side
       TYPE(t_usdus) :: usdus
       TYPE(t_lapw) :: lapw
       TYPE(t_mat) :: zMat
@@ -110,47 +116,16 @@ CONTAINS
          END DO
       END IF
 
-      ! Operator Bloch matrices on the coarse mesh: k-loop DISTRIBUTED over ranks (each its
-      ! distk slice -> parallel get_z I/O), into per-rank local arrays, then MPI_Gatherv to
-      ! full-on-rank-0 (interpolation consumes the full set). Byte-identical to the serial path.
-      IF ((this%l_spin .OR. this%l_orbmom .OR. this%l_socop) .AND. l_wannierlib_spinors) THEN
-         nkc_loc = MAX(1, COUNT(distk == fmpi%irank))
-         ALLOCATE(s0_loc(this%num_bands, this%num_bands, 3, nkc_loc), source=cmplx(0.0,0.0))
-         ALLOCATE(l0_loc(this%num_bands, this%num_bands, 3, atoms%nat, nkc_loc), source=cmplx(0.0,0.0))
-         ALLOCATE(soc0_loc(this%num_bands, this%num_bands, 1, nkc_loc), source=cmplx(0.0,0.0))
-         ALLOCATE(soc4_loc(this%num_bands, this%num_bands, 4, nkc_loc), source=cmplx(0.0,0.0))
-         ALLOCATE(s0pa_loc(this%num_bands, this%num_bands, 3, atoms%nat, nkc_loc), source=cmplx(0.0,0.0))
-         CALL wannierlib_operator_coarse(this, atoms, input, sym, cell, noco, nococonv, kpts, &
-                                         stars, usdus, radfun, enpara, fmpi, vtot, eig_id, l_real_wann, &
-                                         distk, s0_loc, l0_loc, soc0_loc, soc4_loc, s0pa_loc)
-         ! Fase 3a/3b: ALL interpolation and current operators (spin/orbital/soc, total &
-         ! per-atom, spin/orbital current) consume the per-rank LOCAL coarse slices + a
-         ! distributed FT-reduce inside run_w90. The full-mesh coarse arrays are never
-         ! materialized on rank 0. Keep the locals alive for the run_w90 reduce.
-      ELSE
-         ALLOCATE(s0_loc(1,1,1,1)); ALLOCATE(l0_loc(1,1,1,1,1)); ALLOCATE(soc4_loc(1,1,1,1))
-         ALLOCATE(soc0_loc(1,1,1,1)); ALLOCATE(s0pa_loc(1,1,1,1,1))
-      END IF
+      ! Hand the k-distribution to the matrix-element layer and let it build whatever Bloch-basis
+      ! operators the input asks for, in one shared coarse k-pass. Needs only the ab-initio
+      ! eigenstates (no gauge), so it runs before the wannierization. All of it is a no-op when
+      ! no operator is requested.
+      CALL melem%init(this, atoms, input, kpts, fmpi, distk, l_wannierlib_spinors)
+      CALL melem%calc(this, atoms, input, sym, cell, noco, nococonv, kpts, &
+                      stars, usdus, radfun, enpara, fmpi, vtot, eig_id, l_real_wann, distk)
 
       CALL init_w90(this, atoms, cell, kpts, fmpi, l_wannierlib_spinors, nntot_w90, nnkp, gkpb, distk)
       CALL wannierlib_kdiff(kpts%nkptf, nntot_w90, kpts%bkf, nnkp, gkpb, kdiff)
-
-      ! collinear jspins=2 (no SOC/noco): the coarse spin/orbital slices are spinor-only (stubs), so
-      ! the per-channel orbital operators_r builds its own Bloch L in the mmn k-loop (reuses abc),
-      ! and the combined 2N spin operator (rspauli.1) is assembled after both channels wannierise
-      ! from their gauges v_ch + the cross-spin overlap.
-      l_col_orb = .FALSE.; l_col_spin = .FALSE.
-      IF (input%jspins == 2 .AND. .NOT. l_wannierlib_spinors .AND. this%l_operators_r) THEN
-         DO iop = 1, this%n_op_r
-            IF (TRIM(this%op_r_name(iop)) == 'orbital') l_col_orb = .TRUE.
-            IF (TRIM(this%op_r_name(iop)) == 'spin')    l_col_spin = .TRUE.
-         END DO
-      END IF
-      IF (l_col_spin) THEN
-         ALLOCATE(v_ch(this%num_bands, this%num_wann, kpts%nkptf, 2), source=cmplx(0.0,0.0))
-      ELSE
-         ALLOCATE(v_ch(1, 1, 1, 1))
-      END IF
 
       DO jspin = 1, MERGE(2, 1, input%jspins == 2 .AND. (.NOT. l_wannierlib_spinors))
 
@@ -161,11 +136,7 @@ CONTAINS
          nk_local = COUNT(distk == fmpi%irank)
          ALLOCATE(mmn(this%num_bands, this%num_bands, nntot_w90, nk_local), stat=ierr, source=cmplx(0.0, 0.0))
          IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating local mmn buffer', calledby='wannierlib_main')
-         IF (l_col_orb) THEN
-            ALLOCATE(l0col_loc(this%num_bands, this%num_bands, 3, MAX(1, nk_local)), source=cmplx(0.0, 0.0))
-         ELSE
-            ALLOCATE(l0col_loc(1, 1, 1, 1))
-         END IF
+         CALL melem%alloc_collinear_orbital(this, nk_local)
 
          DO jspin_comp = MERGE(1, jspin, l_wannierlib_spinors), MERGE(2, jspin, l_wannierlib_spinors)
             ! jspin_comp = record del eig (spinor up/down). jspin_rad = indice radial:
@@ -191,8 +162,11 @@ CONTAINS
                CALL wannierlib_mmnkb(this, this%num_bands, nntot_w90, ikpt, kpts, nnkp, gkpb, kdiff, &
                                      ujug, atoms, cell, input, sym, noco, nococonv, usdus, &
                                      radfun, abc, jspin_comp, jspin_rad, eig_id, stars, lapw, zMat, mmn, ik_local)
-               ! collinear per-channel orbital L in the Bloch basis (reuses this channel's abc)
-               IF (l_col_orb) CALL wannierlib_orbmom_bloch_collinear(atoms, abc, radfun, jspin_rad, l0col_loc(:, :, :, ik_local))
+               ! collinear per-channel orbital L in the Bloch basis: the only matrix element built
+               ! from inside this loop, because it reuses this channel's abc (a separate coarse
+               ! pass would repeat the get_z + calc_abc work for every k).
+               IF (melem%l_col_orb) &
+                  CALL melem_orbmom_bloch_collinear(atoms, abc, radfun, jspin_rad, melem%l0col(:, :, :, ik_local))
             END DO
 
             IF (ALLOCATED(ujug)) DEALLOCATE (ujug)
@@ -202,10 +176,6 @@ CONTAINS
          CALL wannierlib_reduce_amn(fmpi, amn)
 
          mmn = conjg(mmn)
-
-         ! Fase 3c: the Berry connection A^(W)(R) (velocity interband + Berry curvature, and the
-         ! position operator A(R)) is now built distributed from the per-rank overlap slice mmn +
-         ! an FT-reduce inside run_w90/write_operators_r. The full-mesh overlaps are never gathered.
 
          IF (fmpi%isize == 1) THEN
             amn_file = spin12(jspin)//'.amn'
@@ -222,200 +192,39 @@ CONTAINS
          ! tag each channel's interpolation outputs so spin 2 does not overwrite spin 1.
          spin_sfx = ''
          IF (input%jspins == 2 .AND. .NOT. l_wannierlib_spinors) WRITE(spin_sfx, '(a,i0)') '_spin', jspin
-         IF (l_col_spin) THEN
-            CALL run_w90(this, cell, kpts, mmn, amn, eig, fmpi%irank, &
-                         s0_loc, l0_loc, soc0_loc, soc4_loc, s0pa_loc, distk, fmpi%mpi_comm, &
-                         wf_channel=jspin, spin_suffix=TRIM(spin_sfx), l0col_loc=l0col_loc, v_out=v_ch(:,:,:,jspin))
-         ELSE
-            CALL run_w90(this, cell, kpts, mmn, amn, eig, fmpi%irank, &
-                         s0_loc, l0_loc, soc0_loc, soc4_loc, s0pa_loc, distk, fmpi%mpi_comm, &
-                         wf_channel=jspin, spin_suffix=TRIM(spin_sfx), l0col_loc=l0col_loc)
-         END IF
+
+         ! wannierise this channel -> the gauge factors u_matrix (MLWF) and u_opt (disentangled)
+         CALL run_w90(this, cell, kpts, mmn, amn, eig, fmpi%irank, u_matrix, u_opt)
+
+         ! everything operator-related happens in the matrix-element layer, which only needs the
+         ! gauge, the overlaps and the b-mesh. Adding an operator does not touch this file.
+         ! Kept BEFORE report_w90 so the ordering of the operator messages in `out` is unchanged.
+         CALL wannierlib_get_bmesh(this, kpts, bmesh)
+         CALL melem_run(this, cell, kpts, eig, u_matrix, u_opt, melem, mmn, bmesh, distk, fmpi, &
+                        wf_channel=jspin, spin_suffix=TRIM(spin_sfx))
+         CALL bmesh%free()
+
          if (fmpi%isize == 1) CALL report_w90(this)
 
          IF (ALLOCATED(amn)) DEALLOCATE (amn)
          IF (ALLOCATED(mmn)) DEALLOCATE (mmn)
-         IF (ALLOCATED(l0col_loc)) DEALLOCATE (l0col_loc)
+         IF (ALLOCATED(u_matrix)) DEALLOCATE (u_matrix)
+         IF (ALLOCATED(u_opt)) DEALLOCATE (u_opt)
          IF (ALLOCATED(eig)) DEALLOCATE (eig)
 
       END DO
 
-      ! collinear combined 2N spin operator rspauli.1 (once, after both channels wannierised;
-      ! collective FT-reduce of the cross-spin overlap rotated with both channels' gauges v_ch)
-      IF (l_col_spin) CALL wannierlib_rspauli_collinear(this, atoms, input, sym, cell, noco, nococonv, kpts, &
-                             stars, usdus, radfun, eig_id, l_real_wann, distk, fmpi, v_ch)
-      IF (ALLOCATED(v_ch)) DEALLOCATE(v_ch)
+      ! collinear combined 2N spin operator rspauli.1: only assemblable once BOTH channels have
+      ! been wannierised, since it rotates the cross-spin overlap with both gauges. A no-op
+      ! unless the collinear spin operator was requested.
+      CALL melem_rspauli_collinear(this, atoms, input, sym, cell, noco, nococonv, kpts, &
+                                   stars, usdus, radfun, eig_id, l_real_wann, distk, fmpi, melem)
 
+      CALL melem%free()
       IF (ALLOCATED(distk)) DEALLOCATE(distk)
-      IF (ALLOCATED(s0_loc)) DEALLOCATE(s0_loc)
-      IF (ALLOCATED(l0_loc)) DEALLOCATE(l0_loc)
-      IF (ALLOCATED(soc0_loc)) DEALLOCATE(soc0_loc)
-      IF (ALLOCATED(soc4_loc)) DEALLOCATE(soc4_loc)
-      IF (ALLOCATED(s0pa_loc)) DEALLOCATE(s0pa_loc)
 
    END SUBROUTINE wannierlib_main
 
-   !> Build the requested Bloch-basis operator matrices on the FULL coarse mesh
-   !> (rank 0): spin S0(k) (if l_spin) and/or orbital L0(k) (if l_orbmom), sharing
-   !> the (get_z + calc_abc) work in one k-pass. Needs only the ab-initio spinor
-   !> eigenstates (no U), so it runs before the wannierization.
-   SUBROUTINE wannierlib_operator_coarse(this, atoms, input, sym, cell, noco, nococonv, kpts, &
-                                         stars, usdus, radfun, enpara, fmpi, vtot, eig_id, l_real_wann, &
-                                         distk, s0_coarse, l0_coarse, soc0_coarse, soc4_coarse, s0pa_coarse)
-      TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
-      TYPE(t_atoms), INTENT(IN) :: atoms
-      TYPE(t_input), INTENT(IN) :: input
-      TYPE(t_sym), INTENT(IN) :: sym
-      TYPE(t_cell), INTENT(IN) :: cell
-      TYPE(t_noco), INTENT(IN) :: noco
-      TYPE(t_nococonv), INTENT(IN) :: nococonv
-      TYPE(t_kpts), INTENT(IN) :: kpts
-      TYPE(t_stars), INTENT(IN) :: stars
-      TYPE(t_usdus), INTENT(INOUT) :: usdus     ! INOUT: spnorb (SOC) fills it
-      TYPE(t_radfun), INTENT(IN) :: radfun(:)
-      TYPE(t_enpara), INTENT(IN) :: enpara
-      TYPE(t_mpi), INTENT(IN) :: fmpi
-      TYPE(t_potden), INTENT(IN) :: vtot
-      INTEGER, INTENT(IN) :: eig_id
-      LOGICAL, INTENT(IN) :: l_real_wann
-      INTEGER, INTENT(IN) :: distk(:)   ! rank owner of each global k (distribute the loop)
-      COMPLEX, INTENT(OUT) :: s0_coarse(:, :, :, :)   ! (num_bands,num_bands,3,nkptf) spin
-      COMPLEX, INTENT(OUT) :: l0_coarse(:, :, :, :, :) ! (num_bands,num_bands,3,nat,nkptf) orbital L per atom
-      COMPLEX, INTENT(OUT) :: soc0_coarse(:, :, :, :) ! (num_bands,num_bands,1,nkptf) SOC
-      COMPLEX, INTENT(OUT) :: soc4_coarse(:, :, :, :) ! (num_bands,num_bands,4,nkptf) 2x2 SOC blocks
-      COMPLEX, INTENT(OUT) :: s0pa_coarse(:, :, :, :, :) ! (num_bands,num_bands,3,nat,nkptf) per-atom MT spin
-
-      TYPE(t_abc), ALLOCATABLE :: abc_s(:, :)
-      TYPE(t_lapw) :: lapw
-      TYPE(t_mat) :: zMat
-      INTEGER :: ikpt, itype, isp, il
-
-      ALLOCATE(abc_s(atoms%ntype, 2))
-      il = 0
-      DO ikpt = 1, kpts%nkptf
-         IF (distk(ikpt) /= fmpi%irank) CYCLE   ! this rank only computes its own k-slice
-         il = il + 1                            ! local (ascending global-k) index for gather
-         ! noco: get_z returns the FULL spinor; both local components via calc_abc(jspin=1,2)
-         CALL wannierlib_get_z(this, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, &
-                               ikpt, 1, l_real_wann, lapw, zMat)
-         DO isp = 1, 2
-            DO itype = 1, atoms%ntype
-               CALL abc_s(itype, isp)%init(input, atoms, radfun(itype)%n_r, this%num_bands, itype)
-               CALL abc_s(itype, isp)%calc_abc(input, atoms, sym, cell, lapw, this%num_bands, usdus, &
-                                               noco, nococonv, isp, itype, zMat)
-            END DO
-         END DO
-         IF (this%l_spin) CALL wannierlib_spin_peratom(atoms, abc_s, radfun, nococonv, s0pa_coarse(:, :, :, :, il))
-         IF (this%l_spin) CALL wannierlib_spin_bloch(atoms, abc_s, radfun, nococonv, stars, lapw, zMat, &
-                                    this%num_bands, ikpt, s0_coarse(:, :, :, il), ikpt <= 3)
-         IF (this%l_orbmom) CALL wannierlib_orbmom_bloch(atoms, abc_s, radfun, l0_coarse(:, :, :, :, il))
-         IF (this%l_socop) CALL wannierlib_socmat_bloch(atoms, noco, nococonv, input, fmpi, enpara, vtot, &
-                                    usdus, abc_s, this%num_bands, soc0_coarse(:, :, :, il), soc4_coarse(:, :, :, il))
-      END DO
-
-      DEALLOCATE(abc_s)
-   END SUBROUTINE wannierlib_operator_coarse
-
-   !> Collinear (jspins=2, no SOC/noco) combined 2N spin operator -> rspauli.1.
-   !> Over the joint {up-WF, down-WF} space: sigma_z is block-diagonal (+/- identity, WFs are
-   !> orthonormal per channel); sigma_x/sigma_y come from the cross-spin overlap
-   !> o_ud(k) = <psi_k^up | psi_k^dn> (interstitial via wannierlib_mmnkb_int with b=0, muffin-tin
-   !> via wannierlib_spin_mt_block fed with BOTH channels' abc), rotated to the WF gauge with each
-   !> channel's V=u_opt.u_matrix, then FT-reduced (distributed). Rank 0 writes rspauli.1 (2N,
-   !> standalone R i j comp Re Im format). Reuses our own abc machinery -- no updown.mmn0 needed.
-   SUBROUTINE wannierlib_rspauli_collinear(this, atoms, input, sym, cell, noco, nococonv, kpts, &
-                                           stars, usdus, radfun, eig_id, l_real_wann, distk, fmpi, v_ch)
-      TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
-      TYPE(t_atoms), INTENT(IN) :: atoms
-      TYPE(t_input), INTENT(IN) :: input
-      TYPE(t_sym), INTENT(IN) :: sym
-      TYPE(t_cell), INTENT(IN) :: cell
-      TYPE(t_noco), INTENT(IN) :: noco
-      TYPE(t_nococonv), INTENT(IN) :: nococonv
-      TYPE(t_kpts), INTENT(IN) :: kpts
-      TYPE(t_stars), INTENT(IN) :: stars
-      TYPE(t_usdus), INTENT(IN) :: usdus
-      TYPE(t_radfun), INTENT(IN) :: radfun(:)
-      INTEGER, INTENT(IN) :: eig_id
-      LOGICAL, INTENT(IN) :: l_real_wann
-      INTEGER, INTENT(IN) :: distk(:)
-      TYPE(t_mpi), INTENT(IN) :: fmpi
-      COMPLEX, INTENT(IN) :: v_ch(:, :, :, :)   ! (num_bands,num_wann,nkptf,2) gauge V per channel
-
-      TYPE(t_lapw) :: lapw_u, lapw_d
-      TYPE(t_mat)  :: zMat_u, zMat_d
-      TYPE(t_abc), ALLOCATABLE :: abc_both(:, :)   ! (ntype,2): 1=up, 2=dn
-      INTEGER :: nb, nw, n2, nkl, kl, gk, itype, ikpt, iu, irpt, i, j, kk, nrpts, gb(3)
-      INTEGER, ALLOCATABLE :: gk_loc(:), irvec(:, :), ndegen(:)
-      COMPLEX, ALLOCATABLE :: o_uu(:,:), o_dd(:,:), o_ud(:,:), o_du(:,:), Xk(:,:), tmp(:,:)
-      COMPLEX, ALLOCATABLE :: sig_loc(:,:,:,:), s1(:,:,:), sr(:,:,:,:)
-
-      nb = this%num_bands; nw = this%num_wann; n2 = 2*nw; gb = 0
-      nkl = COUNT(distk == fmpi%irank); ALLOCATE(gk_loc(nkl)); j = 0
-      DO ikpt = 1, SIZE(distk)
-        IF (distk(ikpt) == fmpi%irank) THEN; j = j + 1; gk_loc(j) = ikpt; END IF
-      END DO
-      ALLOCATE(abc_both(atoms%ntype, 2))
-      ALLOCATE(o_uu(nb,nb), o_dd(nb,nb), o_ud(nb,nb), o_du(nb,nb), Xk(nw,nw), tmp(nb,nw))
-      ALLOCATE(sig_loc(n2, n2, 3, MAX(1,nkl)), source=CMPLX(0.0,0.0))
-
-      DO kl = 1, nkl
-        gk = gk_loc(kl)
-        ! up + down eigenvectors + local coefficients at this k (same basis, different eigenvectors)
-        CALL wannierlib_get_z(this, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, gk, 1, l_real_wann, lapw_u, zMat_u)
-        DO itype = 1, atoms%ntype
-          CALL abc_both(itype,1)%init(input, atoms, radfun(itype)%n_r, nb, itype)
-          CALL abc_both(itype,1)%calc_abc(input, atoms, sym, cell, lapw_u, nb, usdus, noco, nococonv, 1, itype, zMat_u)
-        END DO
-        CALL wannierlib_get_z(this, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, gk, 2, l_real_wann, lapw_d, zMat_d)
-        DO itype = 1, atoms%ntype
-          CALL abc_both(itype,2)%init(input, atoms, radfun(itype)%n_r, nb, itype)
-          CALL abc_both(itype,2)%calc_abc(input, atoms, sym, cell, lapw_d, nb, usdus, noco, nococonv, 2, itype, zMat_d)
-        END DO
-        ! cross-spin overlap o_ud = <up|dn>: interstitial (b=0) + muffin-tin (both channels' abc)
-        o_uu = CMPLX(0.0,0.0); o_dd = CMPLX(0.0,0.0); o_ud = CMPLX(0.0,0.0); o_du = CMPLX(0.0,0.0)
-        CALL wannierlib_mmnkb_int(stars, lapw_u, lapw_d, 1, 1, zMat_u, zMat_d, gb, o_ud, ioff=0, ioff_b=0)
-        CALL wannierlib_spin_mt_block(atoms, abc_both, radfun, o_uu, o_dd, o_ud, o_du)
-        ! rotate to the WF gauge: X = V_up^dagger o_ud V_dn
-        tmp = MATMUL(o_ud, v_ch(:, :, gk, 2))
-        Xk  = MATMUL(CONJG(TRANSPOSE(v_ch(:, :, gk, 1))), tmp)
-        ! assemble the 2N Pauli in the WF gauge (sigma_z block-diagonal +/- I by orthonormality)
-        DO i = 1, nw
-          sig_loc(i, i, 3, kl)       = CMPLX( 1.0, 0.0)
-          sig_loc(nw+i, nw+i, 3, kl) = CMPLX(-1.0, 0.0)
-        END DO
-        sig_loc(1:nw,    nw+1:n2, 1, kl) = Xk
-        sig_loc(nw+1:n2, 1:nw,    1, kl) = CONJG(TRANSPOSE(Xk))
-        sig_loc(1:nw,    nw+1:n2, 2, kl) = -ImagUnit * Xk
-        sig_loc(nw+1:n2, 1:nw,    2, kl) =  ImagUnit * CONJG(TRANSPOSE(Xk))
-      END DO
-      DEALLOCATE(o_uu, o_dd, o_ud, o_du, Xk, tmp, abc_both)
-
-      ! FT-reduce each of the 3 components (collective), rank 0 writes rspauli.1
-      DO kk = 1, 3
-        CALL wannierlib_ft_to_real_reduce(cell, kpts, sig_loc(:, :, kk, :), gk_loc, fmpi%mpi_comm, s1, irvec, ndegen, nrpts)
-        IF (kk == 1) ALLOCATE(sr(n2, n2, nrpts, 3))
-        sr(:, :, :, kk) = s1; DEALLOCATE(s1)
-      END DO
-      IF (fmpi%irank == 0) THEN
-        OPEN(newunit=iu, file='rspauli.1', status='replace')
-        DO irpt = 1, nrpts
-          DO j = 1, n2
-            DO i = 1, n2
-              DO kk = 1, 3
-                WRITE(iu, '(i3,1x,i3,1x,i3,1x,i3,1x,i3,1x,i3,1x,f20.8,1x,f20.8)') &
-                  irvec(1,irpt), irvec(2,irpt), irvec(3,irpt), i, j, kk, REAL(sr(i,j,irpt,kk)), AIMAG(sr(i,j,irpt,kk))
-              END DO
-            END DO
-          END DO
-        END DO
-        CLOSE(iu)
-        WRITE(oUnit,'(a,i0,a)') 'wannierlib: wrote rspauli.1 (combined 2N collinear spin, ', nrpts, ' R-vectors, distributed FT)'
-      END IF
-      DEALLOCATE(sig_loc, gk_loc)
-      IF (ALLOCATED(sr)) DEALLOCATE(sr)
-      IF (ALLOCATED(irvec)) DEALLOCATE(irvec, ndegen)
-   END SUBROUTINE wannierlib_rspauli_collinear
 
    subroutine wannierlib_create_eig(this, results, kpts, jspin, eig)
       TYPE(t_wannierlib_wannierize), INTENT(IN) :: this

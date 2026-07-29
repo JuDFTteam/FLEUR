@@ -14,22 +14,22 @@
 !>  tight-binding exports). It lets any operator be reconstructed in the band basis
 !>  in post-processing (e.g. <O>_n = [C^dagger O(k') C]_nn) without re-diagonalizing.
 !>
-!>  Builds H_W(k) exactly as the band driver (m_wannierlib_interpolate),
+!>  Builds H_W(k) exactly as the band driver (m_melem_interpolate_ham),
 !>  Fourier-interpolates to H(k') via the shared core, diagonalizes WITH eigenvectors,
 !>  and writes C(k'). Master rank only.
-MODULE m_wannierlib_interpolate_eigenstates
+MODULE m_melem_interpolate_eigenstates
   USE m_juDFT
   USE m_constants, ONLY : oUnit
   USE m_types_cell
   USE m_types_kpts
   USE m_types_wannierlib
-  USE m_wannierlib_ft, ONLY : wannierlib_ft_interpolate
+  USE m_melem_ft, ONLY : melem_ft_interpolate
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: wannierlib_interpolate_eigenstates
+  PUBLIC :: melem_interpolate_eigenstates
 CONTAINS
 
-  SUBROUTINE wannierlib_interpolate_eigenstates(this, cell, kpts, eig, u_matrix, u_opt, irank)
+  SUBROUTINE melem_interpolate_eigenstates(this, cell, kpts, eig, u_matrix, u_opt, irank)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
     TYPE(t_cell), INTENT(IN) :: cell
     TYPE(t_kpts), INTENT(IN) :: kpts
@@ -51,21 +51,21 @@ CONTAINS
     num_bands = this%num_bands
     nk        = kpts%nkptf
     have_dis  = (num_bands > num_wann)
-    CALL timestart('wannierlib_interpolate_eigenstates')
+    CALL timestart('melem_interpolate_eigenstates')
 
     ! ---- k-mesh from kpts_interpol ----
     INQUIRE(file='kpts_interpol', exist=lexist)
     IF (.NOT. lexist) THEN
       WRITE(oUnit,'(a)') 'wannierlib eigenstates: no kpts_interpol file -> skipped'
-      CALL timestop('wannierlib_interpolate_eigenstates'); RETURN
+      CALL timestop('melem_interpolate_eigenstates'); RETURN
     END IF
     OPEN(newunit=iu, file='kpts_interpol', status='old')
     READ(iu, *, iostat=ios) np
-    IF (ios /= 0 .OR. np <= 0) CALL juDFT_error('bad kpts_interpol header', calledby='wannierlib_interpolate_eigenstates')
+    IF (ios /= 0 .OR. np <= 0) CALL juDFT_error('bad kpts_interpol header', calledby='melem_interpolate_eigenstates')
     ALLOCATE(kfrac(3, np))
     DO ip = 1, np
       READ(iu, *, iostat=ios) kfrac(:, ip)
-      IF (ios /= 0) CALL juDFT_error('bad kpts_interpol line', calledby='wannierlib_interpolate_eigenstates')
+      IF (ios /= 0) CALL juDFT_error('bad kpts_interpol line', calledby='melem_interpolate_eigenstates')
     END DO
     CLOSE(iu)
 
@@ -103,7 +103,7 @@ CONTAINS
     END DO
 
     ! ---- Fourier-interpolate H_W(k) to the fine mesh (shared core) ----
-    CALL wannierlib_ft_interpolate(cell, ham_k, kpts, kfrac, H_interp)
+    CALL melem_ft_interpolate(cell, ham_k, kpts, kfrac, H_interp)
 
     ! ---- diagonalize H(k') WITH eigenvectors; write C(k') ----
     ALLOCATE(evals(num_wann), cvec(num_wann, num_wann), rwork(MAX(1, 3*num_wann-2)))
@@ -119,7 +119,7 @@ CONTAINS
     DO ip = 1, np
       cvec = H_interp(:, :, ip)
       CALL zheev('V', 'U', num_wann, cvec, num_wann, evals, work, lwork, rwork, info)
-      IF (info /= 0) CALL juDFT_error('zheev failed', calledby='wannierlib_interpolate_eigenstates')
+      IF (info /= 0) CALL juDFT_error('zheev failed', calledby='melem_interpolate_eigenstates')
       IF (ip > 1) THEN
         dk = kfrac(:, ip) - kfrac(:, ip-1); dkc = MATMUL(cell%bmat, dk)
         kpath = kpath + SQRT(DOT_PRODUCT(dkc, dkc))
@@ -133,7 +133,7 @@ CONTAINS
     END DO
     CLOSE(iu)
     WRITE(oUnit,'(a,i0,a)') 'wannierlib eigenstates: wrote bands_wann_eigenstates.dat (', np, ' k-points)'
-    CALL timestop('wannierlib_interpolate_eigenstates')
-  END SUBROUTINE wannierlib_interpolate_eigenstates
+    CALL timestop('melem_interpolate_eigenstates')
+  END SUBROUTINE melem_interpolate_eigenstates
 
-END MODULE m_wannierlib_interpolate_eigenstates
+END MODULE m_melem_interpolate_eigenstates

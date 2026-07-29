@@ -10,7 +10,7 @@
 !>  Example/skeleton derived type proving the abstract interface: everything shared
 !>  (eigenstate read, abc coefficients, gauge rotation, FT, interpolation, IO) is
 !>  inherited from t_matrixelement; only the deferred per-k Bloch builder is bound,
-!>  and it is a one-line delegation to the existing provider m_wannierlib_spin_melem
+!>  and it is a one-line delegation to the existing provider m_melem_spin
 !>  (muffin-tin blocks from abc x radfun%integral + interstitial from the spinor zMat).
 !>
 !>  Spinor mode only: the on-site Pauli operator needs both spinor components in one
@@ -20,14 +20,14 @@
 !>
 !>  Planned (documented only): a per-atom variant t_mel_spin_peratom with
 !>  init_melem(ctx, 'spin_peratom', 3*atoms%nat, nsites=atoms%nat), delegating to
-!>  wannierlib_spin_peratom and RESHAPEing (nb,nb,3,nat) -> (nb,nb,3*nat).
+!>  melem_spin_peratom and RESHAPEing (nb,nb,3,nat) -> (nb,nb,3*nat).
 MODULE m_types_mel_spin
    USE m_juDFT
    USE m_types_matrixelement
    USE m_types_lapw
    USE m_types_mat
    USE m_types_abc
-   USE m_wannierlib_spin_melem, ONLY : wannierlib_spin_bloch
+   USE m_melem_spin, ONLY : melem_spin_bloch
    IMPLICIT NONE
    PRIVATE
 
@@ -63,7 +63,7 @@ CONTAINS
       TYPE(t_abc),         INTENT(IN)    :: abc(:, :)     ! (ntype, 2)
       COMPLEX,             INTENT(INOUT) :: o0_k(:, :, :) ! (nb, nb, 3)
 
-      CALL wannierlib_spin_bloch(ctx%atoms, abc, ctx%radfun, ctx%nococonv, ctx%stars, &
+      CALL melem_spin_bloch(ctx%atoms, abc, ctx%radfun, ctx%nococonv, ctx%stars, &
                                  lapw, zMat, this%nb, ik, o0_k, ik <= 3)
    END SUBROUTINE mel_spin_calc_bloch
 

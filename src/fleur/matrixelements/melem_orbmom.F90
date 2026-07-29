@@ -14,7 +14,7 @@
 !>  rotation is needed (the spin trace is frame-invariant). The radial part is the
 !>  ordinary overlap radfun%integral (L does not touch it). Interstitial and vacuum
 !>  contributions to L are neglected (orbital moment is a muffin-tin quantity).
-MODULE m_wannierlib_orbmom_melem
+MODULE m_melem_orbmom
   USE m_juDFT
   USE m_constants, ONLY : ImagUnit
   USE m_types_atoms
@@ -22,14 +22,14 @@ MODULE m_wannierlib_orbmom_melem
   USE m_types_radfun
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: wannierlib_orbmom_bloch, wannierlib_orbmom_bloch_collinear
+  PUBLIC :: melem_orbmom_bloch, melem_orbmom_bloch_collinear
 CONTAINS
 
-  !> Collinear (jspins=2, no SOC/noco) single-channel variant of wannierlib_orbmom_bloch:
+  !> Collinear (jspins=2, no SOC/noco) single-channel variant of melem_orbmom_bloch:
   !> the two spin channels are separate scalar problems, so L is evaluated on ONE channel's
   !> coefficients abc(:) (single spin, radial index jspin_rad) instead of summing s=1,2.
   !> Returns the site-summed (total) L0(:,:,1:3) in the Bloch basis at one k (muffin-tin).
-  SUBROUTINE wannierlib_orbmom_bloch_collinear(atoms, abc, radfun, jspin_rad, l0)
+  SUBROUTINE melem_orbmom_bloch_collinear(atoms, abc, radfun, jspin_rad, l0)
     TYPE(t_atoms),  INTENT(IN)  :: atoms
     TYPE(t_abc),    INTENT(IN)  :: abc(:)         ! (ntype) single-channel local-frame coeffs
     TYPE(t_radfun), INTENT(IN)  :: radfun(:)      ! (ntype) : %integral(n_r,n_r2,l,s,s)
@@ -70,12 +70,12 @@ CONTAINS
         l0(i, j, 3) = cz                           ! Lz
       END DO
     END DO
-  END SUBROUTINE wannierlib_orbmom_bloch_collinear
+  END SUBROUTINE melem_orbmom_bloch_collinear
 
   !> Build L0(:,:,1:3,1:nat) = (Lx,Ly,Lz) per atom in the Bloch basis at one k
   !> (muffin-tin). The site-summed (total) operator is SUM over the last index; the
   !> per-atom slices are the site-resolved projections. na is the GLOBAL atom index.
-  SUBROUTINE wannierlib_orbmom_bloch(atoms, abc, radfun, l0)
+  SUBROUTINE melem_orbmom_bloch(atoms, abc, radfun, l0)
     TYPE(t_atoms),  INTENT(IN)  :: atoms
     TYPE(t_abc),    INTENT(IN)  :: abc(:, :)      ! (ntype, 2 spin) local-frame coeffs
     TYPE(t_radfun), INTENT(IN)  :: radfun(:)      ! (ntype) : %integral(n_r,n_r2,l,s,s)
@@ -119,6 +119,6 @@ CONTAINS
         END DO
       END DO
     END DO
-  END SUBROUTINE wannierlib_orbmom_bloch
+  END SUBROUTINE melem_orbmom_bloch
 
-END MODULE m_wannierlib_orbmom_melem
+END MODULE m_melem_orbmom

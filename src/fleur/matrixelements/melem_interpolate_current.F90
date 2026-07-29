@@ -23,24 +23,24 @@
 !>  Output: kdist, [ E_n(eV), j_xx, j_xy, j_xz, j_yx, ... j_zz (eV*bohr) ] per band.
 !>
 !>  Parallelism: the operator part O_beta(k) is distributed exactly like the generic
-!>  operator driver (m_wannierlib_interpolate_op) -- each rank builds O_W,beta on its
+!>  operator driver (m_melem_interpolate_op) -- each rank builds O_W,beta on its
 !>  own k-slice and reduces to O_beta(R) (collective); rank 0 then does R -> fine path,
 !>  the velocity build, diagonalization and write. The full-mesh coarse operator is
 !>  never materialized.
-MODULE m_wannierlib_interpolate_current
+MODULE m_melem_interpolate_current
   USE m_juDFT
   USE m_constants, ONLY : oUnit, hartree_to_ev_const
   USE m_types_cell
   USE m_types_kpts
   USE m_types_wannierlib
-  USE m_wannierlib_ft, ONLY : wannierlib_ft_interpolate, wannierlib_ft_velocity, &
-                              wannierlib_ft_to_real_reduce, wannierlib_ft_rtok
+  USE m_melem_ft, ONLY : melem_ft_interpolate, melem_ft_velocity, &
+                              melem_ft_to_real_reduce, melem_ft_rtok
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: wannierlib_interpolate_current
+  PUBLIC :: melem_interpolate_current
 CONTAINS
 
-  SUBROUTINE wannierlib_interpolate_current(this, cell, kpts, eig, u_matrix, u_opt, o0_loc, gk_loc, outfile, irank, mpicm)
+  SUBROUTINE melem_interpolate_current(this, cell, kpts, eig, u_matrix, u_opt, o0_loc, gk_loc, outfile, irank, mpicm)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
     TYPE(t_cell), INTENT(IN) :: cell
     TYPE(t_kpts), INTENT(IN) :: kpts
@@ -67,7 +67,7 @@ CONTAINS
     num_bands = this%num_bands
     nk        = kpts%nkptf
     have_dis  = (num_bands > num_wann)
-    CALL timestart('wannierlib_interpolate_current')
+    CALL timestart('melem_interpolate_current')
 
     ! ---- PHASE A (ALL ranks): O_W,beta(k) = V(gk)^dagger O0_beta V(gk) on this rank's k-slice,
     !      then coarse -> real space O_beta(R) via the distributed FT-reduce (collective). ----
@@ -86,7 +86,7 @@ CONTAINS
     END DO
     DEALLOCATE(tmp, vloc)
     DO be = 1, 3
-      CALL wannierlib_ft_to_real_reduce(cell, kpts, ow_loc(:, :, be, :), gk_loc, mpicm, o1, irvec, ndegen, nrpts)
+      CALL melem_ft_to_real_reduce(cell, kpts, ow_loc(:, :, be, :), gk_loc, mpicm, o1, irvec, ndegen, nrpts)
       IF (be == 1) ALLOCATE(o_r(num_wann, num_wann, nrpts, 3))
       o_r(:, :, :, be) = o1; DEALLOCATE(o1)
     END DO
@@ -96,7 +96,7 @@ CONTAINS
     IF (irank /= 0) THEN
       IF (ALLOCATED(o_r)) DEALLOCATE(o_r)
       IF (ALLOCATED(irvec)) DEALLOCATE(irvec, ndegen)
-      CALL timestop('wannierlib_interpolate_current'); RETURN
+      CALL timestop('melem_interpolate_current'); RETURN
     END IF
 
     INQUIRE(file='kpts_interpol', exist=lexist)
@@ -104,15 +104,15 @@ CONTAINS
       WRITE(oUnit,'(a)') 'wannierlib current interpolation: no kpts_interpol file -> skipped'
       IF (ALLOCATED(o_r)) DEALLOCATE(o_r)
       IF (ALLOCATED(irvec)) DEALLOCATE(irvec, ndegen)
-      CALL timestop('wannierlib_interpolate_current'); RETURN
+      CALL timestop('melem_interpolate_current'); RETURN
     END IF
     OPEN(newunit=iu, file='kpts_interpol', status='old')
     READ(iu, *, iostat=ios) np
-    IF (ios /= 0 .OR. np <= 0) CALL juDFT_error('bad kpts_interpol header', calledby='wannierlib_interpolate_current')
+    IF (ios /= 0 .OR. np <= 0) CALL juDFT_error('bad kpts_interpol header', calledby='melem_interpolate_current')
     ALLOCATE(kfrac(3, np))
     DO ip = 1, np
       READ(iu, *, iostat=ios) kfrac(:, ip)
-      IF (ios /= 0) CALL juDFT_error('bad kpts_interpol line', calledby='wannierlib_interpolate_current')
+      IF (ios /= 0) CALL juDFT_error('bad kpts_interpol line', calledby='melem_interpolate_current')
     END DO
     CLOSE(iu)
 
@@ -150,13 +150,13 @@ CONTAINS
     END DO
 
     ! ---- interpolate H (eigenvectors), v = dH/dk (3), and O_beta (3, R -> k' from the reduced O(R)) ----
-    CALL wannierlib_ft_interpolate(cell, ham_k, kpts, kfrac, H_interp)
-    CALL wannierlib_ft_velocity(cell, ham_k, kpts, kfrac, v_interp)     ! (nw,nw,3,np)
+    CALL melem_ft_interpolate(cell, ham_k, kpts, kfrac, H_interp)
+    CALL melem_ft_velocity(cell, ham_k, kpts, kfrac, v_interp)     ! (nw,nw,3,np)
     ALLOCATE(o_interp(num_wann, num_wann, 3, np))
     BLOCK
       COMPLEX, ALLOCATABLE :: o_one(:, :, :)
       DO be = 1, 3
-        CALL wannierlib_ft_rtok(o_r(:, :, :, be), irvec, ndegen, nrpts, kfrac, o_one)
+        CALL melem_ft_rtok(o_r(:, :, :, be), irvec, ndegen, nrpts, kfrac, o_one)
         o_interp(:, :, be, :) = o_one
       END DO
     END BLOCK
@@ -174,7 +174,7 @@ CONTAINS
     DO ip = 1, np
       hk = H_interp(:, :, ip)
       CALL zheev('V', 'U', num_wann, hk, num_wann, evals, work, lwork, rwork, info)
-      IF (info /= 0) CALL juDFT_error('zheev failed', calledby='wannierlib_interpolate_current')
+      IF (info /= 0) CALL juDFT_error('zheev failed', calledby='melem_interpolate_current')
       cvec = hk
       IF (ip > 1) THEN
         dk = kfrac(:, ip) - kfrac(:, ip-1); dkc = MATMUL(cell%bmat, dk)
@@ -202,7 +202,7 @@ CONTAINS
     END DO
     CLOSE(iu)
     WRITE(oUnit,'(a,i0,a)') 'wannierlib current interpolation: wrote '//TRIM(outfile)//' (', np, ' k-points)'
-    CALL timestop('wannierlib_interpolate_current')
-  END SUBROUTINE wannierlib_interpolate_current
+    CALL timestop('melem_interpolate_current')
+  END SUBROUTINE melem_interpolate_current
 
-END MODULE m_wannierlib_interpolate_current
+END MODULE m_melem_interpolate_current
