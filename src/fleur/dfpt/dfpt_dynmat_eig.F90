@@ -234,7 +234,7 @@ module m_dfpt_dynmat_eig
 
   end subroutine diagonalizeDynMat
 
-  subroutine CalculateFrequencies( atoms, iqpt, eigenVals, eigenFreqs, add_tag, qvec )
+  subroutine CalculateFrequencies( atoms, iqpt, eigenVals, eigenFreqs, add_tag, qvec ,l_writeOutput)
 
     USE m_xmlOutput
     implicit none
@@ -250,6 +250,7 @@ module m_dfpt_dynmat_eig
     complex,          allocatable, intent(out) :: eigenFreqs(:)
     character(len=*), intent(in) :: add_tag
     real,             intent(in) :: qvec(3)
+    logical,          intent(in) :: l_writeOutput
 
     ! Scalar variables
     integer                                 :: itype
@@ -272,7 +273,7 @@ module m_dfpt_dynmat_eig
       write(filenameTemp, '("dynMatq=",i4)') iqpt
     end if
     if ((TRIM(add_tag)).EQ."full".OR.(TRIM(add_tag).EQ."band")) filenameTemp = TRIM(add_tag)//"_"//filenameTemp
-    open( 109, file=filenameTemp, status='old', action='write', form='formatted', position='append')
+    if (l_writeOutput) open( 109, file=filenameTemp, status='old', action='write', form='formatted', position='append')
 
     allocate(eigenFreqs(3*atoms%nat))
     eigenFreqs = 0.
@@ -283,8 +284,10 @@ module m_dfpt_dynmat_eig
 
     write(*, *)
     write(*, '(a)') 'Eigenfrequencies in THz'
-    write(109, *)
-    write(109, '(a)') 'Eigenfrequencies in THz'
+    if (l_writeOutput) then 
+      write(109, *)
+      write(109, '(a)') 'Eigenfrequencies in THz'
+    end if 
     iatom = 0
     do itype = 1, atoms%ntype
       do ieqat = 1, atoms%neq(itype)
@@ -299,15 +302,17 @@ module m_dfpt_dynmat_eig
           end if
         end do ! idir
         write(*, "(a,i2,a,1x,3(2es16.8,1x),',',5x)") 'Atom', iatom, ':', eigenFreqs((iatom - 1)* 3 + 1:(iatom - 1)* 3 + 3)
-        write(109, "(a,i2,a,1x,3(2es16.8,1x),',',5x)") 'Atom', iatom, ':', eigenFreqs((iatom - 1)* 3 + 1:(iatom - 1)* 3 + 3)
+        if (l_writeOutput) write(109, "(a,i2,a,1x,3(2es16.8,1x),',',5x)") 'Atom', iatom, ':', eigenFreqs((iatom - 1)* 3 + 1:(iatom - 1)* 3 + 3)
       end do ! ieqat
     end do ! itype
 
 
     write(*, *)
     write(*, '(a)') 'Eigenfrequencies in 1/cm'
-    write(109, *)
-    write(109, '(a)') 'Eigenfrequencies in 1/cm'
+    if (l_writeOutput) then 
+      write(109, *)
+      write(109, '(a)') 'Eigenfrequencies in 1/cm'
+    end if 
     iatom = 0
     do itype = 1, atoms%ntype
       do ieqat = 1, atoms%neq(itype)
@@ -316,7 +321,7 @@ module m_dfpt_dynmat_eig
           eigenFreqs((iatom - 1) * 3 + idir) = eigenFreqs((iatom - 1) * 3 + idir) * 33
         end do ! idir
         write(*, "(a,i2,a,1x,3(2es16.8,1x),',',5x)") 'Atom', iatom, ':', eigenFreqs((iatom - 1)* 3 + 1:(iatom - 1)* 3 + 3)
-        write(109, "(a,i2,a,1x,3(2es16.8,1x),',',5x)") 'Atom', iatom, ':', eigenFreqs((iatom - 1)* 3 + 1:(iatom - 1)* 3 + 3)
+        if (l_writeOutput) write(109, "(a,i2,a,1x,3(2es16.8,1x),',',5x)") 'Atom', iatom, ':', eigenFreqs((iatom - 1)* 3 + 1:(iatom - 1)* 3 + 3)
       end do ! ieqat
     end do ! itype
     close( 109 )

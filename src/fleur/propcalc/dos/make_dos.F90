@@ -55,6 +55,7 @@ CONTAINS
     l_dfpt = PRESENT(dfpt)
     CALL readPrevEFermi(eFermiPrev,l_error)
 
+    eFermi = 0.0 
     IF (.NOT.l_dfpt) eFermi = results%ef
 
     IF(banddos%band) THEN

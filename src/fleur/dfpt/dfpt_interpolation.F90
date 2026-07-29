@@ -84,8 +84,6 @@ contains
             call juDFT_error("Invalid option for post-procession of dynMatfiles.", calledby="dfpt_interpolation.F90")
         end if 
 
-        IF (fi%dfpt%l_dos) allocate(eigenValsFull(3*fi%atoms%nat,fi%kpts%nkpt,fi%input%jspins))
-
         ! Read in the dynMats in the IBZ
         ! We currently rely on a seperate set of files fullsym_* that contain the symmetry
         ! Maybe we should change this in the future.
@@ -100,6 +98,10 @@ contains
                         enpara_fullsym, xcpot_fullsym, results_fullsym, wann_fullsym, hybdat_fullsym, mpdata_fullsym, &
                         inp_pref, l_skip_setupmpi=.true.)
         qpts = fi_fullsym%kpts
+
+
+        IF (fi%dfpt%l_dos) allocate(eigenValsFull(3*fi%atoms%nat,fi%dfpt%qpts_interpol%nkpt,fi%input%jspins))
+
 
         ALLOCATE(q_list(SIZE(qpts%bk,2)))
         q_list = (/(iQ, iQ=1,SIZE(qpts%bk,2), 1)/)
@@ -149,25 +151,28 @@ contains
             do iQ = 1, fi%dfpt%qpts_interpol%nkpt
                 call timestart("Dynmat diagonalization")
                 call DiagonalizeDynMat(fi%atoms, fi%dfpt%qpts_interpol%bk(:,iQ), fi%dfpt%calcEigenVec, dyn_mat_interp(:,:,iQ), eigenVals, eigenVecs, iQ, .TRUE., &
-                                       TRIM(dynfiletag), fi%dfpt%l_sumrule_intp, l_writeOutput=.true.)
+                                       TRIM(dynfiletag), fi%dfpt%l_sumrule_intp, l_writeOutput= (.not.fi%dfpt%l_dos))
                 call timestop("Dynmat diagonalization")
 
                 call timestart("Frequency calculation")
-                call CalculateFrequencies(fi%atoms, iQ, eigenVals, eigenFreqs, TRIM(dynfiletag), fi%dfpt%qpts_interpol%bk(:,iQ))
+                call CalculateFrequencies(fi%atoms, iQ, eigenVals, eigenFreqs, TRIM(dynfiletag), fi%dfpt%qpts_interpol%bk(:,iQ),l_writeOutput=(.not.fi%dfpt%l_dos))
                 call timestop("Frequency calculation")
 
-                if (fi%dfpt%l_dos) eigenValsFull(:,iQ,1) = eigenFreqs(:) ! save eigenfrequencies in case of dos
+                if (fi%dfpt%l_dos) eigenValsFull(:,iQ,1) = sqrt(eigenVals(:)) * 1e3 ! factor so banddos saves in meV 
 
                 deallocate(eigenVals, eigenVecs, eigenFreqs)
             end do ! iQ
 
+            call save_npy("eigenValsFull.npy",eigenValsFull)
             if (fi%dfpt%l_dos) then 
                 banddosLocal = fi%banddos 
                 banddosLocal%dos = .true.
-                call dos%init(fi%input,fi%atoms,fi%kpts,banddosLocal,.false.,eigenValsFull)
+                banddosLocal%e1_dos = minval(eigenValsFull)
+                banddosLocal%e2_dos = maxval(eigenValsFull)
+                call dos%init(fi%input,fi%atoms,fi%dfpt%qpts_interpol,banddosLocal,.false.,eigenValsFull)
                 allocate(eigdos(1))
                 eigdos(1)%p=>dos 
-                call make_dos(fi%kpts,fi%atoms,fi%vacuum,fi%input,fi%banddos,fi%sliceplot,fi%noco,nococonv,fi%sym,fi%cell,results,eigdos,fi%dfpt)
+                call make_dos(fi%dfpt%qpts_interpol,fi%atoms,fi%vacuum,fi%input,banddosLocal,fi%sliceplot,fi%noco,nococonv,fi%sym,fi%cell,results,eigdos,fi%dfpt)
             end if 
         end if !irank==0 
 

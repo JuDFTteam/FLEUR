@@ -261,7 +261,7 @@ module m_types_phonon
             call timestop("Dynmat diagonalization")
 
             call timestart("Frequency calculation")
-            call CalculateFrequencies(fi%atoms, q_list(iQ), eigenVals, eigenFreqs,"raw",qpts%bk(:,q_list(iQ)))
+            call CalculateFrequencies(fi%atoms, q_list(iQ), eigenVals, eigenFreqs,"raw",qpts%bk(:,q_list(iQ)),l_writeOutput=.true.)
             call timestop("Frequency calculation")
         end if 
 
