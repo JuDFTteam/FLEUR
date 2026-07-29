@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -247,20 +247,20 @@ SUBROUTINE dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,
       DO itype = 1, atoms%ntype
          call radfun(itype)%generate_radial_functions(atoms, input, enpara, fmpi, vtot, itype)
          DO ispin = jsp_start, jsp_end
-            call abc(ispin)%init(input, atoms, radfun(itype)%n_r, noccbd, itype)
+            call abc(ispin)%init(input, atoms, noccbd, itype)
             call abc(ispin)%calc_abc(input, atoms, sym, cell, lapw, noccbd, usdus, noco, nococonv, ispin, itype, zMat)
-            call abc1(ispin)%init(input, atoms, radfun(itype)%n_r, noccbd, itype)
+            call abc1(ispin)%init(input, atoms, noccbd, itype)
             call abc1(ispin)%calc_abc(input, atoms, sym, cell, lapwq, noccbd, usdus, noco, nococonv, ispin, itype, zMat1)
             DO ispinpr = ispin,ispin !TODO no real noco here
                                        !In future this could perhaps be generalized according to code in cdnval. The two following if statements have to be understood in this context then.
                
                IF (sternheimerJob%l_IBScorrection.and.idtype==itype) THEN
-                  call abcpref(ispin)%init(input, atoms, radfun(itype)%n_r, noccbd, itype)
+                  call abcpref(ispin)%init(input, atoms, noccbd, itype)
                   call abcpref(ispin)%calc_abc(input, atoms, sym, cell, lapw, noccbd, usdus, noco, nococonv, ispin, itype, zMatPref)
                   abc1(ispin)%cof=abc1(ispin)%cof+abcpref(ispin)%cof
                END IF
                IF (l_minusq) THEN
-                  call abc1m(ispin)%init(input, atoms, radfun(itype)%n_r, noccbd, itype)
+                  call abc1m(ispin)%init(input, atoms, noccbd, itype)
                   call abc1m(ispin)%calc_abc(input, atoms, sym, cell, lapwmq, noccbd, usdus, noco, nococonv, ispin, itype, zMat1m)
                   if (sternheimerJob%l_IBScorrection.and.idtype==itype) then
                      abc1m(ispin)%cof=abc1m(ispin)%cof+abcpref(ispin)%cof

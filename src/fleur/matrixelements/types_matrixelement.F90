@@ -331,8 +331,7 @@ CONTAINS
             ! radial spin index: with jspins=1 only one set of radials exists -> use 1
             jspin_rad = MERGE(1, isp, ctx%input%jspins == 1)
             DO itype = 1, ctx%atoms%ntype
-               CALL abc(itype, isp)%init(ctx%input, ctx%atoms, ctx%radfun(itype)%n_r, &
-                                         ctx%wann%num_bands, itype)
+               CALL abc(itype, isp)%init(ctx%input, ctx%atoms, ctx%wann%num_bands, itype)
                CALL abc(itype, isp)%calc_abc(ctx%input, ctx%atoms, ctx%sym, ctx%cell, lapw, &
                                              ctx%wann%num_bands, ctx%usdus, ctx%noco, ctx%nococonv, &
                                              jspin_rad, itype, zMat)

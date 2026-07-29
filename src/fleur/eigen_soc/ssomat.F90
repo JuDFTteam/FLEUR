@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -22,9 +22,9 @@ CONTAINS
     USE m_types_lapw
     USE m_constants
     USE m_eig66_io
-    USE m_spnorb
     USE m_abcof
     USE m_fermifct
+    USE m_genMTBasis
     use m_types_rsoc
 #ifdef CPP_MPI
     USE mpi
@@ -62,6 +62,7 @@ CONTAINS
 
     COMPLEX, ALLOCATABLE :: matel(:,:,:)
     REAL,    ALLOCATABLE :: eig_shift(:,:,:,:)
+    REAL,    ALLOCATABLE :: f(:,:,:),g(:,:,:),flo(:,:,:)
     Real,    allocatable :: w_iks(:)
     COMPLEX, ALLOCATABLE :: acof(:,:,:,:,:), bcof(:,:,:,:,:)
     COMPLEX, ALLOCATABLE :: ccof(:,:,:,:,:,:)
@@ -88,18 +89,28 @@ CONTAINS
 
 
 
+    !Generate the muffin-tin radial functions and the usdus quantities needed
+    !by abcof. (This replaces the radial part of the former spnorb call.)
     CALL usdus%init(atoms,2)
+    ALLOCATE(f(atoms%jmtd,2,0:atoms%lmaxd),g(atoms%jmtd,2,0:atoms%lmaxd),flo(atoms%jmtd,2,atoms%nlod))
+    DO js=1,input%jspins
+       DO n=1,atoms%ntype
+          CALL genMTBasis(atoms,enpara,v,fmpi,n,js,usdus,f,g,flo,l_writeArg=.FALSE.)
+       ENDDO
+    ENDDO
+    DEALLOCATE(f,g,flo)
 
-
-    !Calculate radial and angular matrix elements of SOC
-    !many directions of SOC at once...
-    CALL spnorb(atoms,noco,nococonv,input,fmpi, enpara, v%mt, usdus, rsoc,.FALSE.)
+    !Calculate the radial spin-orbit matrix elements rsoc%rso. The angular
+    !matrix elements are set up below for the requested SOC directions.
+    CALL rsoc%init(atoms)
+    CALL rsoc%rad_matrix(atoms,noco,nococonv,input,fmpi,enpara,v)
 
     ALLOCATE(soangl(atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2,&
          atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2,SIZE(theta)))
     soangl=0.0
     DO nr=1,SIZE(theta)
-       CALL spnorb_angles(atoms,fmpi,theta(nr),phi(nr),soangl(:,:,:,:,:,:,nr))
+       CALL rsoc%angles(atoms,fmpi,theta(nr),phi(nr))
+       soangl(:,:,:,:,:,:,nr) = rsoc%soangl
     ENDDO
 
     DO nk=fmpi%irank+1,kpts%nkpt,fmpi%isize
@@ -157,10 +168,7 @@ CONTAINS
        DO nr=1,size(theta) !loop over angles
           ! matrix elements within k
           CALL ssomatel(neigf,input,atoms, noco, &
-               soangl(:,:,:,:,:,:,nr),rsoc%rsopp(:,:,:,:),rsoc%rsoppd(:,:,:,:),&
-               rsoc%rsopdp(:,:,:,:),rsoc%rsopdpd(:,:,:,:),rsoc%rsoplop(:,:,:,:), &
-               rsoc%rsoplopd(:,:,:,:),rsoc%rsopdplo(:,:,:,:),rsoc%rsopplo(:,:,:,:),&
-               rsoc%rsoploplop(:,:,:,:,:),&
+               soangl(:,:,:,:,:,:,nr),rsoc%rso,&
                .TRUE.,&
                acof,bcof, ccof,&
                acof,bcof, ccof,&
@@ -200,8 +208,7 @@ CONTAINS
   ! ==================================================================== !
 
   SUBROUTINE ssomatel(neigf,input,atoms, noco,&
-       soangl,rsopp,rsoppd,rsopdp,rsopdpd,rsoplop,&
-       rsoplopd,rsopdplo,rsopplo,rsoploplop,&
+       soangl,rso,&
        diag, &
        acof1,bcof1,ccof1,acof2,bcof2,ccof2,&
        matel )
@@ -213,12 +220,10 @@ CONTAINS
 
     LOGICAL, INTENT(IN)  :: diag
     INTEGER, INTENT(IN)  :: neigf
-    REAL,    INTENT(IN)  :: &
-         rsopp(:,:,:,:), rsoppd(:,:,:,:),&
-         rsopdp(:,:,:,:), rsopdpd(:,:,:,:),  &
-         rsoplop(:,:,:,:),rsoplopd(:,:,:,:),&
-         rsopdplo(:,:,:,:),rsopplo(:,:,:,:),&
-         rsoploplop(:,:,:,:,:)
+    ! Unified radial SOC matrix: rso(icof,jcof,ntype,0:lmaxd,2,2) with the
+    ! radial-function slots 1=u, 2=udot, 3.. = LOs of the same l (in atoms%llo
+    ! order). It replaces the former rsopp/rsoppd/.../rsoploplop arrays.
+    REAL,    INTENT(IN)  :: rso(:,:,:,0:,:,:)
     COMPLEX, INTENT(IN)  :: &
          soangl(:,-atoms%lmaxd:,:,:,-atoms%lmaxd:,:),  &
          acof1(:,0:,:,:,:), &
@@ -232,6 +237,7 @@ CONTAINS
 
     INTEGER :: band1,band2,bandf, n ,na, l,m1,m2,lm1,lm2,&
          jsloc1,jsloc2, js1,js2,jsnumber,ilo,ilop,nat
+    INTEGER :: lo_slot(atoms%nlod),lo_cnt(0:atoms%lmaxd)
     COMPLEX, ALLOCATABLE :: sa(:,:),sb(:,:),sc(:,:,:),ral(:,:,:)
     COMPLEX, ALLOCATABLE :: ra(:,:),rb(:,:),rc(:,:,:),rbl(:,:,:)
 
@@ -260,6 +266,14 @@ CONTAINS
        ! loop over MT
        na= 0
        DO n= 1,atoms%ntype
+          ! Map each LO of this atom type to its radial-function slot in rso:
+          ! slot 1=u, 2=udot, 3.. = LOs of the same l in atoms%llo order.
+          lo_cnt= 0
+          DO ilo= 1,atoms%nlo(n)
+             l= atoms%llo(ilo,n)
+             lo_cnt(l)= lo_cnt(l)+1
+             lo_slot(ilo)= 2+lo_cnt(l)
+          ENDDO
           DO nat= 1,atoms%neq(n)
              na= na+1
 
@@ -312,11 +326,11 @@ CONTAINS
                          rb(jsloc1,lm1)= CMPLX(0.,0.)
                          DO jsloc2= 1,2
                             ra(jsloc1,lm1)= ra(jsloc1,lm1) +  &
-                                 sa(jsloc2,lm1) * rsopp(n,l,jsloc1,jsloc2) &
-                                 + sb(jsloc2,lm1) * rsoppd(n,l,jsloc1,jsloc2)
+                                 sa(jsloc2,lm1) * rso(1,1,n,l,jsloc1,jsloc2) &
+                                 + sb(jsloc2,lm1) * rso(1,2,n,l,jsloc1,jsloc2)
                             rb(jsloc1,lm1)= rb(jsloc1,lm1) +&
-                                 sa(jsloc2,lm1) * rsopdp(n,l,jsloc1,jsloc2)&
-                                 + sb(jsloc2,lm1) * rsopdpd(n,l,jsloc1,jsloc2)
+                                 sa(jsloc2,lm1) * rso(2,1,n,l,jsloc1,jsloc2)&
+                                 + sb(jsloc2,lm1) * rso(2,2,n,l,jsloc1,jsloc2)
                          ENDDO ! jsloc2
                       ENDDO   ! jsloc1
 
@@ -333,12 +347,12 @@ CONTAINS
                          rc(jsloc1,m1,ilo)  = CMPLX(0.,0.)
                          DO jsloc2= 1,2
                             ral(jsloc1,m1,ilo) = ral(jsloc1,m1,ilo) +&
-                                 sc(jsloc2,m1,ilo) * rsopplo(n,ilo,jsloc1,jsloc2)
+                                 sc(jsloc2,m1,ilo) * rso(1,lo_slot(ilo),n,l,jsloc1,jsloc2)
                             rbl(jsloc1,m1,ilo) = rbl(jsloc1,m1,ilo) +&
-                                 sc(jsloc2,m1,ilo) * rsopdplo(n,ilo,jsloc1,jsloc2)
+                                 sc(jsloc2,m1,ilo) * rso(2,lo_slot(ilo),n,l,jsloc1,jsloc2)
                             rc(jsloc1,m1,ilo) = rc(jsloc1,m1,ilo) +&
-                                 sa(jsloc2,lm1) * rsoplop(n,ilo,jsloc1,jsloc2)&
-                                 + sb(jsloc2,lm1) * rsoplopd(n,ilo,jsloc1,jsloc2)
+                                 sa(jsloc2,lm1) * rso(lo_slot(ilo),1,n,l,jsloc1,jsloc2)&
+                                 + sb(jsloc2,lm1) * rso(lo_slot(ilo),2,n,l,jsloc1,jsloc2)
                          ENDDO
                       ENDDO
                    ENDDO
@@ -396,7 +410,7 @@ CONTAINS
                                   DO jsloc2= 1,2
                                      matel(bandf,band2,n)= matel(bandf,band2,n) +&
                                           ccof1(m1,band1,ilo,na,jsloc1,js1)*&
-                                          rsoploplop(n,ilo,ilop,jsloc1,jsloc2)*&
+                                          rso(lo_slot(ilo),lo_slot(ilop),n,l,jsloc1,jsloc2)*&
                                           sc(jsloc2,m1,ilop)
                                   ENDDO   ! jsloc2
                                ENDDO     ! band1

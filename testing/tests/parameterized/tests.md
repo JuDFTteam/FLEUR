@@ -84,6 +84,7 @@ Testset: Noco
 | +   | Noco,SOC, one atom, mag. in y direction       | noco/1atSOCy            | bulk,soc                     |                   |         | 2   |
 | +   | Noco,SOC, one atom, mag. in z direction       | noco/1atSOCz            | bulk,soc                     |                   |         | 2   |
 | +   | Noco,SOC, one atom, mag. in non-sym direction | noco/1atSOC             | bulk,soc                     |                   |         | 2   |
+| +   | Noco, SOC, two eq. atoms, relLOs              | noco/relLO              | bulk,soc                     |                   |         | 2   |
 | +   | FFNNoco, one atom, mag. in x direction        | noco/1atFFNx            | bulk,hdf                     |                   |         | 2   |
 | +   | FFNNoco, one atom, mag. in y direction        | noco/1atFFNy            | bulk,hdf                     |                   |         | 2   |
 | +   | Fe fcc spin-spiral                            | noco/Fe_fcc             | bulk                         |                   |         | 2   |
@@ -93,6 +94,9 @@ Testset: Noco
 | +   | Noco, Mn Monolayer SS q=1,0,0                 | noco/MnFilmSS           | film,spinspiral              |                   |         | 2   |
 | +   | Noco, Mn Monolayer mag. in X                  | noco/MnFilmX            | film                         |                   |         | 2   |
 | +   | Noco, Mn Monolayer mag. in Y                  | noco/MnFilmY            | film                         |                   |         | 2   |
+| +   | Fe bct,noco,non-collinear,coretails           | noco/Fe_bct_ctail       | bulk                         |                   |         | 2   |
+| +   | Noco, Mn Monolayer mag. in X, coretails       | noco/MnFilm_ctail       | film                         |                   |         | 2   |
+| +   | Noco, one atom in x, noco IR starting density | noco/1atx_sdNocoIR      | bulk                         |                   |         | 2   |
 |     | Fe bcc, Flipcdn and noco in MT,x-dir          | noco/Fe_bcc_FlipcdnXLDA | bulk                         | produces warnings |         | 2   |
 |     | Fe bcc, Flipcdn and noco in MT,y-dir          | noco/Fe_bcc_FlipcdnYLDA | bulk                         | produces warnings |         | 2   |
 | +   | relaxation feature of FFN in the MT           | noco/RelaxMT            | bulk,hdf                     |                   |         | 2   |

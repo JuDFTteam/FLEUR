@@ -73,7 +73,7 @@ CONTAINS
       nk_b = nnkp(nk, kk)
       CALL wannierlib_get_z(this, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, nk_b, jspin, l_real_wann, lapw_b, zMat_b)
       DO itype = 1, atoms%ntype
-         CALL abc_b(itype)%init(input, atoms, radfun(itype)%n_r, num_bands, itype)
+         CALL abc_b(itype)%init(input, atoms, num_bands, itype)
          CALL abc_b(itype)%calc_abc(input, atoms, sym, cell, lapw_b, num_bands, usdus, noco, nococonv, jspin_rad, itype, zMat_b)
       END DO
 

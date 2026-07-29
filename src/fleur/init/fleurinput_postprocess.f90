@@ -37,7 +37,7 @@ CONTAINS
     TYPE(t_gfinp),INTENT(IN)    ::gfinp
     REAL    :: unfold(3,3)  !just for the unfolding
     REAL    :: tempPos(3), tempPosIntern(3), distance ! just for LDA+V
-    INTEGER :: i, j
+    INTEGER :: i, j, ilo, l
     call cell%init(DOT_PRODUCT(atoms%volmts(:),atoms%neq(:)))
     call atoms%init(cell)
     CALL sym%init(cell,input%film)
@@ -46,6 +46,43 @@ CONTAINS
     CALL make_sym(sym,cell,atoms,noco ,input,gfinp)
     !call make_xcpot(xcpot,atoms,input)
     CALL noco%init(atoms,input%ldauSpinoffd)
+
+    IF (noco%l_noco.AND.input%jspins==1) THEN
+       CALL judft_error("l_noco=T requires jspins=2",calledby='fleurinput_postprocess')
+    END IF
+
+    ! relLO is a FIRST-VARIATION spin-orbit feature only: it is kept in the basis exactly for
+    ! noco+SOC (l_soc .AND. l_noco), where SOC is folded directly into the
+    ! first-variational Hamiltonian. For every other run mode -- SOC-off, and 2nd-variation SOC
+    ! (l_soc,.NOT.l_noco) -- the relLO is removed ENTIRELY by reducing nlo/nlotot. relLO entries
+    ! are always at the tail of each type's LO list (see read_xml_atoms), so a simple count
+    ! reduction drops them, and every consumer of nlo/nlotot (matrix construction, charge
+    ! density, DOS, forces, MPI, radial-function/SOC-integral/energy-parameter generation, ...)
+    ! is thereby uniformly blind to the relLO whenever it should be.
+    IF (.NOT.(noco%l_soc.AND.noco%l_noco)) THEN
+       atoms%nlo     = atoms%nlo     - atoms%nRelLO
+       atoms%nlotot = 0
+       DO i = 1, atoms%ntype
+          DO j = 1, atoms%nlo(i)
+             atoms%nlotot = atoms%nlotot + atoms%neq(i) * ( 2*atoms%llo(j,i) + 1 )
+          END DO
+       END DO
+       ! keep lo1l/nlol (first LO index / LO count per l, used e.g. by force_a21_lo.f90) in
+       ! sync with the reduced atoms%nlo, mirroring the computation in read_xml_atoms.
+       DO i = 1, atoms%ntype
+          atoms%lo1l(:,i) = 0
+          atoms%nlol(:,i) = 0
+          DO ilo = 1, atoms%nlo(i)
+             l = atoms%llo(ilo,i)
+             IF (ilo==1) THEN
+                atoms%lo1l(l,i) = ilo
+             ELSE IF (l/=atoms%llo(ilo-1,i)) THEN
+                atoms%lo1l(l,i) = ilo
+             END IF
+             atoms%nlol(l,i) = atoms%nlol(l,i) + 1
+          END DO
+       END DO
+    END IF
 
     call check_input_switches(banddos,vacuum,noco,atoms,input,sym,kpts,hybinp)
     ! Check muffin tin radii, only checking, dont use new parameters

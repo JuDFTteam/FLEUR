@@ -14,4 +14,7 @@ src/fleur/matrixelements/melem_interpolate_eigenstates.F90
 src/fleur/matrixelements/melem_driver.F90
 src/fleur/matrixelements/types_matrixelement.F90
 src/fleur/matrixelements/types_mel_spin.F90
+src/fleur/matrixelements/types_matelements.F90
+src/fleur/matrixelements/types_matelements_soc.F90
+src/fleur/matrixelements/matrix_element_factory.F90
 )

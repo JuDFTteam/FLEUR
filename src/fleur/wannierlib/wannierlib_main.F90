@@ -99,7 +99,7 @@ CONTAINS
       !Setup of data structures for amn and mmn calculation for all k-points
       CALL usdus%init(atoms, input%jspins)
       DO itype = 1, atoms%ntype
-         CALL radfun(itype)%generate_radial_functions(atoms, input, enpara, fmpi, vtot, itype, usdus=usdus)
+         CALL radfun(itype)%generate_radial_functions(atoms, input, enpara, fmpi, vtot, itype, usdus_out=usdus)
       END DO
 
       ! distk: which rank owns each global k (moved up: distributes the coarse-operator k-loop)
@@ -151,7 +151,7 @@ CONTAINS
                                      ikpt, jspin_comp, l_real_wann, lapw, zMat)
 
                DO itype = 1, atoms%ntype
-                  CALL abc(itype)%init(input, atoms, radfun(itype)%n_r, this%num_bands, itype)
+                  CALL abc(itype)%init(input, atoms, this%num_bands, itype)
                   CALL abc(itype)%calc_abc(input, atoms, sym, cell, lapw, this%num_bands, usdus, &
                                            noco, nococonv, jspin_rad, itype, zMat)
                END DO

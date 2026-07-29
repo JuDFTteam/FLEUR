@@ -203,7 +203,7 @@ CONTAINS
                                ikpt, 1, l_real_wann, lapw, zMat)
          DO isp = 1, 2
             DO itype = 1, atoms%ntype
-               CALL abc_s(itype, isp)%init(input, atoms, radfun(itype)%n_r, wann%num_bands, itype)
+               CALL abc_s(itype, isp)%init(input, atoms, wann%num_bands, itype)
                CALL abc_s(itype, isp)%calc_abc(input, atoms, sym, cell, lapw, wann%num_bands, usdus, &
                                                noco, nococonv, isp, itype, zMat)
             END DO
@@ -431,12 +431,12 @@ CONTAINS
          ! up + down eigenvectors + local coefficients at this k (same basis, different eigenvectors)
          CALL wannierlib_get_z(wann, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, gk, 1, l_real_wann, lapw_u, zMat_u)
          DO itype = 1, atoms%ntype
-            CALL abc_both(itype, 1)%init(input, atoms, radfun(itype)%n_r, nb, itype)
+            CALL abc_both(itype, 1)%init(input, atoms, nb, itype)
             CALL abc_both(itype, 1)%calc_abc(input, atoms, sym, cell, lapw_u, nb, usdus, noco, nococonv, 1, itype, zMat_u)
          END DO
          CALL wannierlib_get_z(wann, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, gk, 2, l_real_wann, lapw_d, zMat_d)
          DO itype = 1, atoms%ntype
-            CALL abc_both(itype, 2)%init(input, atoms, radfun(itype)%n_r, nb, itype)
+            CALL abc_both(itype, 2)%init(input, atoms, nb, itype)
             CALL abc_both(itype, 2)%calc_abc(input, atoms, sym, cell, lapw_d, nb, usdus, noco, nococonv, 2, itype, zMat_d)
          END DO
          ! cross-spin overlap o_ud = <up|dn>: interstitial (b=0) + muffin-tin (both channels' abc)

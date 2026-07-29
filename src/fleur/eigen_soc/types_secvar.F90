@@ -1,0 +1,255 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
+MODULE m_types_secvar
+    use m_types_mat
+    use m_types_mpi
+    use m_types_lapw
+    use m_types_atoms
+    use m_judft
+    IMPLICIT NONE
+    PRIVATE
+    TYPE :: t_secvar
+        class(t_mat),allocatable :: mat(:,:) !The matrix representation of the operator
+        integer :: ikpt,eig_id !k-point and eigenvalue id
+        integer :: ne_first, ne_second !Number of eigenvalues in the first and second variation
+        integer :: nmat_first, nmat_second !Size of the matrix in the first and second variation
+        TYPE(t_mpi),   POINTER :: fmpi  => NULL()
+        TYPE(t_lapw),  POINTER :: lapw  => NULL()
+        TYPE(t_atoms), POINTER :: atoms => NULL()
+        class(t_mat), allocatable :: eigvec !Eigenvectors of the second variation problem
+        type(t_mat), allocatable :: zmat(:) !Matrix to store the eigenvectors in the original LAPW basis
+        real,allocatable :: eigval(:) !Eigenvalues of the second variation problem
+        real, allocatable :: eig(:,:) !Eigenvalues of the original problem for each spin channel
+        !Number of spin records to write into the eig file in store_eigvec. Defaults to
+        !input%jspins, i.e. one record per first-variation spin channel. Wannier(lib) needs
+        !BOTH spinor components of the SOC eigenvectors, which for jspins=1 means writing two
+        !records out of the single first-variation basis -- see store_eigvec.
+        integer :: nrec_out = 0
+    contains
+        procedure :: initialize
+        procedure :: add_diagonal_elements 
+        procedure :: diagonalize
+        procedure :: store_eigvec
+    END TYPE 
+    public :: t_secvar
+    
+    contains
+    
+    SUBROUTINE initialize(this, l_noco, ikpt, eig_id, input, fmpi, lapw, atoms, l_both_spinors)
+        use m_eig66_io
+        use m_types_input
+        CLASS(t_secvar), INTENT(INOUT) :: this
+        LOGICAL, INTENT(IN) :: l_noco
+        !> Write both spinor components of the SOC eigenvectors to the eig file, even when
+        !> jspins=1 (the caller must have opened the eig file with 2 spin records). Needed by
+        !> Wannier/wannierlib, which reads the up and down spinor as records 1 and 2.
+        LOGICAL, INTENT(IN), OPTIONAL :: l_both_spinors
+        INTEGER, INTENT(IN) :: ikpt, eig_id
+        TYPE(t_input),         INTENT(IN) :: input
+        TYPE(t_mpi),   TARGET, INTENT(IN) :: fmpi
+        TYPE(t_lapw),  TARGET, INTENT(IN) :: lapw
+        TYPE(t_atoms), TARGET, INTENT(IN) :: atoms
+
+        INTEGER :: jsp, nspin, jj
+        LOGICAL :: l_real_zmat
+
+        ! Implementation of initialization for SOC second variation
+        this%ikpt = ikpt
+        this%eig_id = eig_id
+        this%fmpi  => fmpi
+        this%lapw  => lapw
+        this%atoms => atoms
+
+        ! Use the number of states actually stored for this k-point, not the
+        ! requested input%neig; reading beyond it would pull uninitialized eig
+        ! storage (stale window memory under MPI-RMA). Consistent with the
+        ! clamp in matrix_element_factory so the matrix size matches.
+        this%ne_first=input%neig
+        CALL read_eig(eig_id, this%ikpt, 1, neig=this%ne_first)
+        this%ne_first=MIN(input%neig, this%ne_first)
+        this%ne_second=this%ne_first*2
+
+        this%nmat_first=lapw%nmat
+        nspin=merge(2,1,l_noco)
+        this%nmat_second=nspin*this%lapw%nmat
+
+        !Note: this%mat is not allocated here; the operator matrix is computed
+        !and allocated by the matrix_element_factory and handed over via MOVE_ALLOC
+
+        !Read the eigenvalues of the original problem for each spin channel, needed for the diagonalization in second variation
+
+        ! In SOC/noncollinear mode the first-variation eigenvectors are stored
+        ! as complex objects in eig66; keep zmat complex when reading them.
+        l_real_zmat = input%l_real .AND. (.NOT. l_noco)
+        allocate(this%zmat(input%jspins))
+        allocate(this%eig(this%ne_first,input%jspins))
+        DO jsp=1,input%jspins
+            call this%zmat(jsp)%init(l_real_zmat,this%nmat_first,this%ne_first)
+            ! read exactly ne_first states (do not pass neig= here: it is
+            ! INTENT(OUT) and would reset ne_first back to the full stored count)
+            CALL read_eig(eig_id,this%ikpt,jsp, list=[(jj,jj=1,this%ne_first)], &
+                          eig=this%eig(:,jsp), zmat=this%zmat(jsp))
+        end do
+
+        !One output record per first-variation spin channel, unless the caller asks for both
+        !spinor components (then always 2, sharing the single basis when jspins=1).
+        this%nrec_out = input%jspins
+        IF (PRESENT(l_both_spinors)) THEN
+            IF (l_both_spinors) this%nrec_out = 2
+        END IF
+
+    END SUBROUTINE initialize
+
+    SUBROUTINE add_diagonal_elements(this)
+        use m_types_mat
+        use m_types_mpimat
+        CLASS(t_secvar), INTENT(INOUT) :: this
+        INTEGER :: i,jsp,jsp_in,i0
+
+        DO jsp=1,size(this%mat,1)
+        jsp_in = min(size(this%eig,2),jsp)
+        Associate(mat=> this%mat(jsp,jsp))
+        select type(mat)
+        type is (t_mpimat)
+            !Row-cyclic block (nprow=1): every row is local; the diagonal element
+            !(i,i) lives on the rank owning column i, at local column (i-1)/n_size+1.
+            DO i=1,this%ne_first
+               IF (mod(i-1,this%fmpi%n_size)==this%fmpi%n_rank) THEN
+                  i0 = (i-1)/this%fmpi%n_size + 1
+                  mat%data_c(i,i0) = mat%data_c(i,i0) + cmplx(this%eig(i,jsp_in),0.0)
+               END IF
+            END DO
+        type is(t_mat)
+            if (mat%l_real) then  
+                DO i=1,SIZE(mat%data_r,1)
+                    mat%data_r(i,i) = mat%data_r(i,i) + this%eig(i,jsp_in)
+                END DO
+            else
+                DO i=1,SIZE(mat%data_c,1)
+                    mat%data_c(i,i) = mat%data_c(i,i) + cmplx(this%eig(i,jsp_in),0.0)
+                END DO
+            end if
+        end select
+        end associate
+    enddo
+    END SUBROUTINE add_diagonal_elements
+
+
+    subroutine diagonalize(this)
+        use m_eigen_diag
+        use m_types_mpimat
+        CLASS(t_secvar), INTENT(INOUT) :: this
+        class(t_mat),allocatable :: hmat
+        integer :: ne_loc
+
+        allocate(this%eigval(this%ne_second))
+        ne_loc = this%ne_second   ! disposable: eigen_diag_std ne is INOUT (becomes local count)
+
+        select type(refmat=>this%mat(1,1))
+        type is (t_mpimat)
+#ifdef CPP_MPI
+            !Redistribute the row-cyclic spinor blocks into a single 2D block-cyclic
+            !matrix on sub_comm and diagonalize across the whole group. The (2,1) block
+            !is omitted: the solver consults only the upper triangle and synthesizes it
+            !(u2l) as the Hermitian conjugate of the (1,2) block.
+            allocate(t_mpimat::hmat)
+            CALL timestart("Matrix redistribution")
+            call hmat%init(.false., this%ne_second, this%ne_second, this%fmpi%sub_comm, MPIMAT_2D_BLOCK_CYCLIC)
+            call hmat%copy(this%mat(1,1),1,1)
+            call hmat%copy(this%mat(2,2),this%ne_first+1,this%ne_first+1)
+            ! Merge lower into upper so the upper triangle is explicitly
+            ! Hermitian-consistent before diagonalization.
+            call mingeselle(this%mat(2,1), this%mat(1,2))
+            call hmat%copy(this%mat(1,2),1,this%ne_first+1)
+            call timestop("Matrix redistribution")
+
+            CALL timestart("Diagonalization in second variation")
+            call eigen_diag_std(hmat, ne_loc, this%eigval, this%eigvec)
+            call timestop("Diagonalization in second variation")
+#endif
+        type is (t_mat)
+            !Serial: assemble the full 2*ne matrix and diagonalize with LAPACK.
+            allocate(t_mat::this%eigvec)
+            call this%eigvec%init(.false., this%ne_second, this%ne_second)
+            CALL timestart("Matrix redistribution")
+            ALLOCATE (hmat, mold=this%mat(1, 1))
+            call hmat%init(.false., this%ne_second, this%ne_second)
+            call hmat%copy(this%mat(1,1),1,1)
+            call hmat%copy(this%mat(1,2),1,this%ne_first+1)
+            call hmat%copy(this%mat(2,1),this%ne_first+1,1)
+            call hmat%copy(this%mat(2,2),this%ne_first+1,this%ne_first+1)
+            call timestop("Matrix redistribution")
+
+            CALL timestart("Diagonalization in second variation")
+            call eigen_diag_std(hmat, ne_loc, this%eigval, this%eigvec)
+            call timestop("Diagonalization in second variation")
+        end select
+
+    END SUBROUTINE diagonalize
+
+
+    subroutine store_eigvec(this)
+        use m_types_mat
+        use m_types_mpimat
+        use m_eig66_io
+        CLASS(t_secvar), INTENT(INOUT) :: this
+        type(t_mat) :: eig, backtransformed
+        integer :: jsp
+#ifdef CPP_MPI
+        type(t_mpimat) :: ev_rc
+        integer :: r0
+#endif
+
+        select type(ev=>this%eigvec)
+        type is (t_mpimat)
+#ifdef CPP_MPI
+            !Parallel: the eigenvectors come back 2D block-cyclic. Redistribute them to
+            !row-cyclic on sub_comm (full rows local, columns cyclic by n_rank/n_size),
+            !so each rank back-transforms exactly the eigenvectors (columns) it will write.
+            !This column ownership matches the write_eig n_start/n_end convention.
+            call ev_rc%init(.false., this%ne_second, this%ne_second, this%fmpi%sub_comm, MPIMAT_ROWCYCLIC)
+            call ev_rc%copy(ev, 1, 1)
+            call eig%init(.false., this%ne_first, ev_rc%matsize2)
+            call backtransformed%init(.false., this%nmat_first, ev_rc%matsize2)
+            DO jsp=1,this%nrec_out
+               !Spin-up rows are 1..ne_first, spin-down rows ne_first+1..ne_second.
+               r0 = merge(0, this%ne_first, jsp==1)
+               !Conjugate, since the eigenvectors are stored in adjoint form.
+               eig%data_c = conjg(ev_rc%data_c(r0+1:r0+this%ne_first, :))
+               !Back-transform the locally-owned columns into the original LAPW basis. With
+               !jspins=1 both spinor components expand in the SAME first-variation basis, so
+               !zmat(1) is reused for the second record.
+               call this%zmat(min(jsp,size(this%zmat)))%multiply(eig, backtransformed)
+                    ! Match the non-SOC eigen path: only one rank per sub_comm writes
+                    ! neig/eig metadata, all ranks write their distributed columns.
+                    if (this%fmpi%n_rank == 0) then
+                        call write_eig(this%eig_id, this%ikpt, jsp, neig=this%ne_second, neig_total=this%ne_second, &
+                                            eig=this%eigval, n_start=this%fmpi%n_size, n_end=this%fmpi%n_rank, zmat=backtransformed)
+                    else
+                        call write_eig(this%eig_id, this%ikpt, jsp, neig=this%ne_second, &
+                                            n_start=this%fmpi%n_size, n_end=this%fmpi%n_rank, zmat=backtransformed)
+                    end if
+            END DO
+            call ev_rc%free()
+#endif
+        type is (t_mat)
+            !Serial: full local back-transform.
+            call eig%init(.false., this%ne_first, this%ne_second)
+            call backtransformed%init(.false., this%nmat_first, this%ne_second)
+            DO jsp=1,this%nrec_out
+                !Split the eigenvectors into a spin-up and down part
+                call eig%copy(ev, 1, 1, m1=merge(1, this%ne_first+1, jsp==1), m2=1)
+                eig%data_c=conjg(eig%data_c) !Conjugate the eigenvectors, since they are stored in the adjoint form in this%eigvec
+                !Now transform the eigenvectors back to the original LAPW basis. With jspins=1
+                !both spinor components share the SAME first-variation basis -> reuse zmat(1).
+                call this%zmat(min(jsp,size(this%zmat)))%multiply(eig, backtransformed)
+                !Store the backtransformed eigenvectors in the original matrix format
+                call write_eig(this%eig_id, this%ikpt, jsp, neig=this%ne_second, neig_total=this%ne_second, eig=this%eigval, zmat=backtransformed)
+            end do
+        end select
+
+    END SUBROUTINE store_eigvec
+END MODULE m_types_secvar
