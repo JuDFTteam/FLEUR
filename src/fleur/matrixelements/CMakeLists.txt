@@ -1,6 +1,7 @@
 set(fleur_F90 ${fleur_F90}
 src/fleur/matrixelements/types_melem_bmesh.F90
 src/fleur/matrixelements/melem_ft.F90
+src/fleur/matrixelements/melem_io.F90
 src/fleur/matrixelements/melem_spin.F90
 src/fleur/matrixelements/melem_orbmom.F90
 src/fleur/matrixelements/melem_socmat.F90

@@ -29,6 +29,7 @@ MODULE m_melem_operators_r
   USE m_types_wannierlib
   USE m_types_melem_bmesh
   USE m_melem_ft, ONLY : melem_ft_to_real, melem_ws_vectors, melem_ft_to_real_reduce
+  USE m_melem_io, ONLY : melem_write_realspace
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: melem_write_operators_r, melem_op_rs_distributed, melem_build_berry_aw_r
@@ -186,6 +187,7 @@ CONTAINS
     COMPLEX, INTENT(IN) :: ham_k(:, :, :)
     CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: wfpref   ! seedname prefix 'WF1'/'WF2' (collinear jspins=2 channel); default 'WF1'
     COMPLEX, ALLOCATABLE :: hr(:, :, :)
+    COMPLEX, ALLOCATABLE :: hr4(:, :, :, :)   ! one-component view for the shared writer
     INTEGER, ALLOCATABLE :: irvec(:, :), ndegen(:)
     INTEGER :: nrpts, nw, irpt, i, j, iu, c
     CHARACTER(LEN=64) :: fn
@@ -193,25 +195,9 @@ CONTAINS
     nw = this%num_wann
     fn = 'WF1_hr'
     IF (PRESENT(wfpref)) fn = TRIM(wfpref)//'_hr'
-    OPEN(newunit=iu, file=TRIM(fn)//'.dat', status='replace')
-    WRITE(iu,'(a)') ' written by FLEUR wannierlib : H(R) in eV, W90 hr format'
-    WRITE(iu,'(i12)') nw
-    WRITE(iu,'(i12)') nrpts
-    c = 0
-    DO irpt = 1, nrpts
-      WRITE(iu,'(i5)',advance='no') ndegen(irpt); c = c + 1
-      IF (MOD(c,15) == 0) WRITE(iu,'(a)') ''
-    END DO
-    IF (MOD(c,15) /= 0) WRITE(iu,'(a)') ''
-    DO irpt = 1, nrpts
-      DO j = 1, nw
-        DO i = 1, nw
-          WRITE(iu,'(5i5,2f12.6)') irvec(:,irpt), i, j, &
-              hartree_to_ev_const*REAL(hr(i,j,irpt)), hartree_to_ev_const*AIMAG(hr(i,j,irpt))
-        END DO
-      END DO
-    END DO
-    CLOSE(iu)
+    ALLOCATE(hr4(nw, nw, nrpts, 1)); hr4(:, :, :, 1) = hr(1:nw, 1:nw, 1:nrpts)
+    CALL melem_write_realspace(hr4, irvec, ndegen, nrpts, nw, 1, 'hr', TRIM(fn)//'.dat', 0)
+    DEALLOCATE(hr4)
     WRITE(oUnit,'(a)') 'wannierlib: wrote '//TRIM(fn)//'.dat (H(R), eV)'
     DEALLOCATE(hr, irvec, ndegen)
   END SUBROUTINE melem_write_hr
@@ -229,19 +215,7 @@ CONTAINS
     nw = this%num_wann
     fn = 'WF1_r'
     IF (PRESENT(wfpref)) fn = TRIM(wfpref)//'_r'
-    OPEN(newunit=iu, file=TRIM(fn)//'.dat', status='replace')
-    WRITE(iu,'(a)') ' written by FLEUR wannierlib : A(R)=<0n|r|Rm> in Ang, W90 r format'
-    WRITE(iu,'(i12)') nw
-    WRITE(iu,'(i12)') nrpts
-    DO irpt = 1, nrpts
-      DO j = 1, nw
-        DO i = 1, nw
-          WRITE(iu,'(5i5,6f12.6)') irvec(:,irpt), i, j, &
-            (bohr2ang*REAL(aw_r(i,j,irpt,a)), bohr2ang*AIMAG(aw_r(i,j,irpt,a)), a=1,3)
-        END DO
-      END DO
-    END DO
-    CLOSE(iu)
+    CALL melem_write_realspace(aw_r, irvec, [(0, i = 1, nrpts)], nrpts, nw, 3, 'r', TRIM(fn)//'.dat', 0)
     WRITE(oUnit,'(a)') 'wannierlib: wrote '//TRIM(fn)//'.dat (A(R), Ang)'
   END SUBROUTINE melem_write_ar
 
@@ -368,20 +342,8 @@ CONTAINS
     END DO
     DEALLOCATE(ow_loc)
     IF (irank == 0) THEN
-      OPEN(newunit=iu, file=TRIM(fname), status='replace')
-      IF (is_soc) THEN
-        DO irpt = 1, nrpts; DO i = 1, nw; DO j = 1, nw; DO ii = 1, 2; DO jj = 1, 2
-          c = (ii-1)*2 + jj
-          WRITE(iu, '(i3,1x,i3,1x,i3,1x,i3,1x,i3,1x,i3,1x,i3,1x,f20.8,1x,f20.8)') &
-            irvec(1,irpt), irvec(2,irpt), irvec(3,irpt), i, j, jj, ii, REAL(or_(i,j,irpt,c)), AIMAG(or_(i,j,irpt,c))
-        END DO; END DO; END DO; END DO; END DO
-      ELSE
-        DO irpt = 1, nrpts; DO j = 1, nw; DO i = 1, nw; DO kk = 1, ncomp
-          WRITE(iu, '(i3,1x,i3,1x,i3,1x,i3,1x,i3,1x,i3,1x,f20.8,1x,f20.8)') &
-            irvec(1,irpt), irvec(2,irpt), irvec(3,irpt), i, j, kk, REAL(or_(i,j,irpt,kk)), AIMAG(or_(i,j,irpt,kk))
-        END DO; END DO; END DO; END DO
-      END IF
-      CLOSE(iu)
+      CALL melem_write_realspace(or_, irvec, ndegen, nrpts, nw, ncomp, &
+                                 MERGE('soc    ', 'generic', is_soc), TRIM(fname), irank)
       WRITE(oUnit, '(a,i0,a)') 'wannierlib: wrote '//TRIM(fname)//' (', nrpts, ' R-vectors, distributed FT)'
     END IF
     IF (ALLOCATED(or_)) DEALLOCATE(or_)
