@@ -32,8 +32,8 @@ CONTAINS
   SUBROUTINE melem_orbmom_bloch_collinear(atoms, abc, radfun, jspin_rad, l0)
     TYPE(t_atoms),  INTENT(IN)  :: atoms
     TYPE(t_abc),    INTENT(IN)  :: abc(:)         ! (ntype) single-channel local-frame coeffs
-    TYPE(t_radfun), INTENT(IN)  :: radfun(:)      ! (ntype) : %integral(n_r,n_r2,l,s,s)
-    INTEGER,        INTENT(IN)  :: jspin_rad      ! radial spin index of this channel
+    TYPE(t_radfun), INTENT(IN)  :: radfun(:)      ! (ntype) : %integral(.,.,l,jspins,jspins)
+    INTEGER,        INTENT(IN)  :: jspin_rad      ! radial spin slot of this channel (<= jspins)
     COMPLEX,        INTENT(OUT) :: l0(:, :, :)    ! (nb,nb,3): 1=Lx 2=Ly 3=Lz (site-summed)
 
     INTEGER :: nb, i, j, ntyp, iat, l, ll1, mm, lm, n_r, n_r2, s
@@ -78,14 +78,18 @@ CONTAINS
   SUBROUTINE melem_orbmom_bloch(atoms, abc, radfun, l0)
     TYPE(t_atoms),  INTENT(IN)  :: atoms
     TYPE(t_abc),    INTENT(IN)  :: abc(:, :)      ! (ntype, 2 spin) local-frame coeffs
-    TYPE(t_radfun), INTENT(IN)  :: radfun(:)      ! (ntype) : %integral(n_r,n_r2,l,s,s)
+    TYPE(t_radfun), INTENT(IN)  :: radfun(:)      ! (ntype) : %integral(.,.,l,jspins,jspins)
     COMPLEX,        INTENT(OUT) :: l0(:, :, :, :) ! (nb,nb,3,nat): 1=Lx 2=Ly 3=Lz per atom
 
-    INTEGER :: nb, i, j, ntyp, iat, na, l, ll1, mm, lm, n_r, n_r2, s
+    INTEGER :: nb, i, j, ntyp, iat, na, l, ll1, mm, lm, n_r, n_r2, s, sr
     REAL    :: lplus, lminus, w
     COMPLEX :: cz, cp, cm    ! L_z, L_+, L_- accumulators for (i,j) of ONE atom
 
+    ! Radial spin slot. radfun%integral is allocated (.,.,.,jspins,jspins), so with a
+    ! single radial set (jspins=1, e.g. l_soc=T/l_noco=F) both spin channels share slot
+    ! 1; indexing 2 there ran past the array. Bound read from the array itself.
     nb = SIZE(l0, 1)
+    sr = MERGE(1, 2, SIZE(radfun(1)%integral, 4) < 2)
     l0 = CMPLX(0.0, 0.0)
     DO j = 1, nb                       ! ket band
       DO i = 1, nb                     ! bra band
@@ -103,7 +107,7 @@ CONTAINS
                 DO s = 1, 2            ! L is spin-diagonal: sum both local spin components
                   DO n_r = 1, abc(ntyp, s)%n_r(l)
                     DO n_r2 = 1, abc(ntyp, s)%n_r(l)
-                      w = radfun(ntyp)%integral(n_r, n_r2, l, s, s)
+                      w = radfun(ntyp)%integral(n_r, n_r2, l, MIN(s, sr), MIN(s, sr))
                       cz = cz + abc(ntyp,s)%cof(i,lm,n_r,iat)*CONJG(abc(ntyp,s)%cof(j,lm,n_r2,iat))*REAL(mm)*w
                       IF (mm < l) cp = cp + abc(ntyp,s)%cof(i,lm,n_r,iat)*CONJG(abc(ntyp,s)%cof(j,lm+1,n_r2,iat))*lplus*w
                       IF (mm > -l) cm = cm + abc(ntyp,s)%cof(i,lm,n_r,iat)*CONJG(abc(ntyp,s)%cof(j,lm-1,n_r2,iat))*lminus*w
