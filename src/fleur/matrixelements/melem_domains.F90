@@ -37,11 +37,11 @@ CONTAINS
       IF (lex2) CALL melem_shell('cp -f .kpts_interpol_userbak kpts_interpol')
       ! <path listName=".."> : write the (optionally subdivided) named list as kpts_interpol.
       ! Takes precedence over @file; path_kpts was filled from kpts.xml in read_xml.
-      IF (TRIM(kind) == 'path' .AND. this%path_np > 0) THEN
+      IF (TRIM(kind) == 'path' .AND. this%path_kset%nkpt > 0) THEN
         OPEN(newunit=iu, file='kpts_interpol', status='replace')
-        WRITE(iu,'(i0)') this%path_np
-        DO i = 1, this%path_np
-          WRITE(iu,'(3(f18.12,1x))') this%path_kpts(:, i)
+        WRITE(iu,'(i0)') this%path_kset%nkpt
+        DO i = 1, this%path_kset%nkpt
+          WRITE(iu,'(3(f18.12,1x))') this%path_kset%bk(:, i)
         END DO
         CLOSE(iu)
         RETURN
@@ -55,48 +55,20 @@ CONTAINS
       END IF
       RETURN
     CASE ('plane')
-      IF (this%plane_np > 0) THEN     ! <plane listName=".."/>: use the named list as-is
+      IF (this%plane_kset%nkpt > 0) THEN     ! <plane listName=".."/>: use the named list as-is
         OPEN(newunit=iu, file='kpts_interpol', status='replace')
-        WRITE(iu,'(i0)') this%plane_np
-        DO i = 1, this%plane_np
-          WRITE(iu,'(3(f18.12,1x))') this%plane_kpts(:, i)
-        END DO
-        CLOSE(iu)
-      ELSE
-        np = this%plane_n1 * this%plane_n2
-        OPEN(newunit=iu, file='kpts_interpol', status='replace')
-        WRITE(iu,'(i0)') np
-        DO i = 0, this%plane_n1 - 1
-          t1 = REAL(i) / REAL(MAX(1, this%plane_n1 - 1))
-          DO j = 0, this%plane_n2 - 1
-            t2 = REAL(j) / REAL(MAX(1, this%plane_n2 - 1))
-            kf = this%plane_origin + t1 * this%plane_v1 + t2 * this%plane_v2
-            WRITE(iu,'(3(f18.12,1x))') kf
-          END DO
+        WRITE(iu,'(i0)') this%plane_kset%nkpt
+        DO i = 1, this%plane_kset%nkpt
+          WRITE(iu,'(3(f18.12,1x))') this%plane_kset%bk(:, i)
         END DO
         CLOSE(iu)
       END IF
     CASE ('grid')
-      IF (this%grid_np > 0) THEN      ! <grid listName=".."/>: use the named list as-is
+      IF (this%grid_kset%nkpt > 0) THEN      ! <grid listName=".."/>: use the named list as-is
         OPEN(newunit=iu, file='kpts_interpol', status='replace')
-        WRITE(iu,'(i0)') this%grid_np
-        DO i = 1, this%grid_np
-          WRITE(iu,'(3(f18.12,1x))') this%grid_kpts(:, i)
-        END DO
-        CLOSE(iu)
-      ELSE
-        np = this%grid_mesh(1) * this%grid_mesh(2) * this%grid_mesh(3)
-        OPEN(newunit=iu, file='kpts_interpol', status='replace')
-        WRITE(iu,'(i0)') np
-        DO i = 0, this%grid_mesh(1) - 1
-        DO j = 0, this%grid_mesh(2) - 1
-        DO k = 0, this%grid_mesh(3) - 1
-          kf(1) = (REAL(i) + this%grid_shift(1)) / REAL(this%grid_mesh(1))
-          kf(2) = (REAL(j) + this%grid_shift(2)) / REAL(this%grid_mesh(2))
-          kf(3) = (REAL(k) + this%grid_shift(3)) / REAL(this%grid_mesh(3))
-          WRITE(iu,'(3(f18.12,1x))') kf
-        END DO
-        END DO
+        WRITE(iu,'(i0)') this%grid_kset%nkpt
+        DO i = 1, this%grid_kset%nkpt
+          WRITE(iu,'(3(f18.12,1x))') this%grid_kset%bk(:, i)
         END DO
         CLOSE(iu)
       END IF
