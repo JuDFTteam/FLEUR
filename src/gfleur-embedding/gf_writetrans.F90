@@ -57,7 +57,7 @@
 
 #ifdef CPP_HDFMPI
       call h5pcreate_f(H5P_FILE_ACCESS_F, access_prp, hdferr)
-      CALL h5pset_fapl_mpiposix_f(access_prp, gmpi%samelayer_subcom,.false.,hdferr)
+      CALL h5pset_fapl_mpio_f(access_prp, gmpi%samelayer_subcom, MPI_INFO_NULL, hdferr)
 #else
       access_prp=H5P_DEFAULT_f
 #endif

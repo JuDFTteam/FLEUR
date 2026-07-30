@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -41,7 +41,7 @@ module m_hdf_accessprp
       character(len=128)::path
 #ifdef CPP_HDFMPI
       LOGICAL :: l_mpi
-      CALL MPI_INITALIZED(l_mpi,ierr)
+    CALL MPI_INITIALIZED(l_mpi,ierr)
 #endif
 
       IF (.not.present(setupfile)) THEN
