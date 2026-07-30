@@ -118,11 +118,21 @@ L_HERM_TOL = 1.0e-10
 L_SUM_TOL = 1.0e-4
 L_TRANSVERSE_ZERO = ("WannFeBccSOC",)
 L_SUM_ZERO = ("WannFeAFMColSOC",)
-# WannPtSOCOps is non-magnetic and belongs in L_SUM_ZERO on the physics, but measures
-# (+0.032, +0.046, +0.090) against a max |L_nn| of 0.17 -- see the open orbital-operator
-# bug. It is not the manifold: the same run satisfies the spin sum rule above, and sigma
-# and L transform the same way under time reversal.
-# WannFeAFMSOCOps is absent for the reason it is absent from NONMAGNETIC.
+# Both rules need num_wann == num_bands. A disentangled manifold does not inherit time
+# reversal, so the sum over it is not the physical moment: on w222 every k is its own
+# time-reversal partner, the cancellation has to happen within each k, and that needs the
+# selected subspace to be T-invariant. It is not -- with Kramers doublets, keeping one
+# combination of a degenerate pair leaves Omega_I unchanged, so the minimum is degenerate
+# exactly at the edge of the subspace and nothing steers the iteration to the symmetric
+# solution. Measured on Pt at fixed num_wann = 20, changing only whether there is anything
+# to select: 20 bands for 20 WFs gives 1e-8 in all three components (and in the spin sums),
+# 36 bands for 20 WFs gives (+0.029, +0.037, +0.075). The individual |L_nn| are larger in
+# the first case, so this is cancellation, not small numbers.
+#
+# Hence WannPtSOCOps (36 -> 18) and WannFeAFMSOCOps (72 -> 36) are excluded, and the two
+# that are listed have num_wann == num_bands. The same caveat applies to the spin sums
+# above: WannPtSOCOps only passes NONMAGNETIC on tolerance (0.008, 0.011, 0.001), not by
+# cancelling.
 
 
 def _anglmom_r0(path):
