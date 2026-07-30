@@ -105,6 +105,56 @@ def _rspauli_r0_diagonal_sums(path):
     return tot
 
 
+# anglmomrs.1 holds L(R). Two things are checked, both reference-free.
+#
+# L(R=0) is a matrix of <w_0i|L|w_0j> and must be hermitian, whatever the gauge.
+L_HERM_TOL = 1.0e-10
+# The trace over the manifold is gauge-invariant (a unitary mixing of the WFs leaves it
+# alone), so it is a basin-independent quantity like Omega_I, and symmetry fixes it:
+# spin-orbit coupling ties L to S but does not by itself produce a net orbital moment.
+# Breaking time reversal does. A collinear magnet along z may therefore carry L_z, but
+# its transverse components must vanish; an antiferromagnet with a sublattice-symmetric
+# manifold must give zero in all three.
+L_SUM_TOL = 1.0e-4
+L_TRANSVERSE_ZERO = ("WannFeBccSOC",)
+L_SUM_ZERO = ("WannFeAFMColSOC",)
+# WannPtSOCOps is non-magnetic and belongs in L_SUM_ZERO on the physics, but measures
+# (+0.032, +0.046, +0.090) against a max |L_nn| of 0.17 -- see the open orbital-operator
+# bug. It is not the manifold: the same run satisfies the spin sum rule above, and sigma
+# and L transform the same way under time reversal.
+# WannFeAFMSOCOps is absent for the reason it is absent from NONMAGNETIC.
+
+
+def _anglmom_r0(path):
+    """R=0 block of a 'generic'-format O(R) file as {comp: {(i,j): complex}}."""
+    blocks = {}
+    with open(path) as fh:
+        for line in fh:
+            f = line.split()
+            if len(f) < 8 or not (f[0] == f[1] == f[2] == "0"):
+                continue
+            blocks.setdefault(f[5], {})[(int(f[3]), int(f[4]))] = complex(
+                float(f[6]), float(f[7]))
+    return blocks
+
+
+def _anglmom_r0_traces(path):
+    """Per-component trace of the R=0 block: sum_n <w_0n|L|w_0n>."""
+    return {c: sum(v.real for (i, j), v in b.items() if i == j)
+            for c, b in _anglmom_r0(path).items()}
+
+
+def _anglmom_r0_hermiticity(path):
+    """Largest |L_ij - conj(L_ji)| over the R=0 block, worst component."""
+    worst = 0.0
+    for b in _anglmom_r0(path).values():
+        for (i, j), v in b.items():
+            w = b.get((j, i))
+            if w is not None:
+                worst = max(worst, abs(v - w.conjugate()))
+    return worst
+
+
 def _rspauli_r0_diagonal_max(path):
     """Largest |Re O_nn| over the R=0 diagonal of a 'generic'-format O(R) file.
     Layout (see m_matrixelement_io): R1 R2 R3  i j comp  Re Im."""
@@ -163,3 +213,24 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
             assert abs(total) < SPIN_SUM_TOL, (
                 f"rspauli.1: transverse spin sum (component {comp}) is {total}, but a "
                 f"collinear magnet along z must give 0 (tol {SPIN_SUM_TOL})")
+
+    if test_id in OPERATOR_FILES:
+        worst = _anglmom_r0_hermiticity(res["anglmomrs.1"])
+        assert worst < L_HERM_TOL, (
+            f"anglmomrs.1: L(R=0) is off hermitian by {worst}; <w_0i|L|w_0j> and "
+            f"<w_0j|L|w_0i>* must agree (tol {L_HERM_TOL})")
+
+    if test_id in L_SUM_ZERO:
+        traces = _anglmom_r0_traces(res["anglmomrs.1"])
+        for comp, total in sorted(traces.items()):
+            assert abs(total) < L_SUM_TOL, (
+                f"anglmomrs.1: trace of component {comp} is {total}, but this manifold "
+                f"carries no net orbital moment (tol {L_SUM_TOL})")
+
+    if test_id in L_TRANSVERSE_ZERO:
+        traces = _anglmom_r0_traces(res["anglmomrs.1"])
+        for comp in ("1", "2"):
+            total = traces.get(comp, 0.0)
+            assert abs(total) < L_SUM_TOL, (
+                f"anglmomrs.1: transverse orbital moment (component {comp}) is {total}, "
+                f"but a collinear magnet along z must give 0 (tol {L_SUM_TOL})")
