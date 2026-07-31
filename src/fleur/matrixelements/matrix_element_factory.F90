@@ -24,9 +24,10 @@ MODULE m_matrix_element_factory
     LOGICAL                     :: radfun_valid = .FALSE.
 
     !Cached data for one k-point, keyed on (eig_id, ikpt, band selection)
-    TYPE(t_mat), ALLOCATABLE :: zmat_store(:)   !(jspins) eigenvectors as read
+    TYPE(t_mat), ALLOCATABLE :: zmat_store(:)   !(nrec) eigenvectors as read
     TYPE(t_abc), ALLOCATABLE :: abc_store(:,:)  !(2,ntype) matching coefficients
     INTEGER              :: cached_eig_id = -1, cached_ikpt = -1
+    INTEGER              :: cached_nrec = -1   !record layout the cache was filled with
     INTEGER, ALLOCATABLE :: cached_list(:)      !band selection; unallocated=all bands
     LOGICAL              :: cache_valid = .FALSE.
 
@@ -49,14 +50,16 @@ CONTAINS
         IF (ALLOCATED(cached_list)) DEALLOCATE(cached_list)
         cached_eig_id = -1
         cached_ikpt   = -1
+        cached_nrec   = -1
         cache_valid   = .FALSE.
     END SUBROUTINE reset_k_cache
 
-    LOGICAL FUNCTION cache_hit(eig_id, ikpt, ev_list)
-        INTEGER, INTENT(IN)           :: eig_id, ikpt
+    LOGICAL FUNCTION cache_hit(eig_id, ikpt, nrec, ev_list)
+        INTEGER, INTENT(IN)           :: eig_id, ikpt, nrec
         INTEGER, OPTIONAL, INTENT(IN) :: ev_list(:)
 
-        cache_hit = cache_valid .AND. eig_id == cached_eig_id .AND. ikpt == cached_ikpt
+        cache_hit = cache_valid .AND. eig_id == cached_eig_id .AND. ikpt == cached_ikpt &
+                    .AND. nrec == cached_nrec
         IF (.NOT.cache_hit) RETURN
         IF (PRESENT(ev_list) .NEQV. ALLOCATED(cached_list)) THEN
             cache_hit = .FALSE.
@@ -67,7 +70,8 @@ CONTAINS
     END FUNCTION cache_hit
 
     SUBROUTINE matrix_element_factory(matel, eig_id, ikpt, input, atoms, sym, cell, &
-                                      noco, nococonv, enpara, lapw, vtot, fmpi, ev_list)
+                                      noco, nococonv, enpara, lapw, vtot, fmpi, ev_list, &
+                                      l_both_spinors)
         USE m_types_matelements
         USE m_types_input
         USE m_types_atoms
@@ -80,6 +84,7 @@ CONTAINS
         USE m_types_potden
         USE m_types_mpi
         USE m_eig66_io, ONLY: read_eig
+        USE m_judft, ONLY: judft_error
 
         CLASS(t_matelements), INTENT(INOUT) :: matel
         INTEGER,           INTENT(IN) :: eig_id, ikpt
@@ -94,10 +99,26 @@ CONTAINS
         TYPE(t_potden),    INTENT(IN) :: vtot
         TYPE(t_mpi),       INTENT(IN) :: fmpi
         INTEGER, OPTIONAL, INTENT(IN) :: ev_list(:) !select these states, default: all
+        !> Read records 1 and 2 as the two components of one spinor, which is how the
+        !> eigenvectors are stored once spin-orbit coupling has been applied: two records
+        !> while input%jspins is 1. Absent, input%jspins records are read, each an
+        !> independent spin channel. Which of the two an eig file holds depends on the
+        !> stage of the calculation rather than on any flag, so it cannot be decided here.
+        LOGICAL, OPTIONAL, INTENT(IN) :: l_both_spinors
 
-        INTEGER :: num_bands, n, jsp, neig_actual
+        INTEGER :: num_bands, n, jsp, jsp_rad, nrec, neig_actual
         LOGICAL :: l_real_zmat
         INTEGER, ALLOCATABLE :: read_list(:)
+
+        nrec = input%jspins
+        IF (PRESENT(l_both_spinors)) THEN
+            IF (l_both_spinors) THEN
+                IF (.NOT.noco%l_soc .OR. noco%l_noco) CALL judft_error( &
+                    'matrix_element_factory: spinor records only exist for l_soc=T, l_noco=F', &
+                    calledby='matrix_element_factory')
+                nrec = 2
+            END IF
+        END IF
 
         num_bands = input%neig
         IF (PRESENT(ev_list)) THEN
@@ -123,14 +144,14 @@ CONTAINS
         END IF
 
         !Eigenvectors and abc coefficients for this k-point and band selection
-        IF (.NOT.cache_hit(eig_id, ikpt, ev_list)) THEN
+        IF (.NOT.cache_hit(eig_id, ikpt, nrec, ev_list)) THEN
             CALL reset_k_cache()
 
             !Read and select the state vectors
             !TODO: at the secvar_soc call site the eigenvectors are also read in
             !t_secvar%initialize (needed there for the back-transform); a getter
             !for zmat_store could avoid this duplication.
-            ALLOCATE(zmat_store(input%jspins))
+            ALLOCATE(zmat_store(nrec))
             ! In SOC/noncollinear mode the eigenvectors are stored as complex
             ! objects in eig66 and must be read into complex matrices.
             l_real_zmat = input%l_real .AND. (.NOT.(noco%l_soc .OR. noco%l_noco))
@@ -139,7 +160,7 @@ CONTAINS
             ELSE
                 read_list = [(n, n = 1, num_bands)]
             END IF
-            DO jsp = 1, input%jspins
+            DO jsp = 1, nrec
                 CALL zmat_store(jsp)%init(l_real_zmat, lapw%nmat, num_bands)
                 CALL read_eig(eig_id, ikpt, jsp, list=read_list, zmat=zmat_store(jsp))
             END DO
@@ -147,16 +168,22 @@ CONTAINS
             !Calculate the abc coefficients for all atom types and both spins
             ALLOCATE(abc_store(2, atoms%ntype))
             DO n = 1, atoms%ntype
-                DO jsp = 1, input%jspins
+                DO jsp = 1, nrec
+                    !The radial set is only input%jspins wide, so a single set serves
+                    !both records of a spinor.
+                    jsp_rad = MERGE(1, jsp, input%jspins == 1)
                     CALL abc_store(jsp,n)%init(input, atoms, num_bands, n)
                     CALL abc_store(jsp,n)%calc_abc(input, atoms, sym, cell, lapw, num_bands, &
-                                                   usdus_store, noco, nococonv, jsp, n, zmat_store(jsp))
+                                                   usdus_store, noco, nococonv, jsp_rad, n, zmat_store(jsp))
                 END DO
-                IF (input%jspins == 1) abc_store(2,n) = abc_store(1,n)
+                !With one record the second spin channel is the same state vector. With
+                !two they are the halves of a spinor and must not be equated.
+                IF (nrec == 1) abc_store(2,n) = abc_store(1,n)
             END DO
 
             cached_eig_id = eig_id
             cached_ikpt   = ikpt
+            cached_nrec   = nrec
             IF (PRESENT(ev_list)) cached_list = ev_list
             cache_valid = .TRUE.
         END IF
