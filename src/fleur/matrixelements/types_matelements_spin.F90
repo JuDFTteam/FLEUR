@@ -22,6 +22,7 @@ MODULE m_types_matelements_spin
    USE m_types_stars
    USE m_types_lapw
    USE m_types_nococonv
+   USE m_melem_overlap, ONLY: melem_overlap_interstitial
    USE m_constants, ONLY: ImagUnit
    USE m_judft
    IMPLICIT NONE
@@ -90,10 +91,14 @@ CONTAINS
       ! ---- interstitial: the spin-down rows of the spinor start at io_dn ----
       io_dn = this%lapw%nv(1) + this%atoms%nlotot
       ALLOCATE(oi(nb, nb, 2, 2))
-      CALL overlap_interstitial(this%stars, this%lapw, zmat(1), 0,     0,     oi(:,:,1,1))
-      CALL overlap_interstitial(this%stars, this%lapw, zmat(1), io_dn, io_dn, oi(:,:,2,2))
-      CALL overlap_interstitial(this%stars, this%lapw, zmat(1), 0,     io_dn, oi(:,:,1,2))
-      CALL overlap_interstitial(this%stars, this%lapw, zmat(1), io_dn, 0,     oi(:,:,2,1))
+      CALL melem_overlap_interstitial(this%stars, this%lapw, this%lapw, zmat(1), zmat(1), &
+                                      0,     0,     oi(:,:,1,1))
+      CALL melem_overlap_interstitial(this%stars, this%lapw, this%lapw, zmat(1), zmat(1), &
+                                      io_dn, io_dn, oi(:,:,2,2))
+      CALL melem_overlap_interstitial(this%stars, this%lapw, this%lapw, zmat(1), zmat(1), &
+                                      0,     io_dn, oi(:,:,1,2))
+      CALL melem_overlap_interstitial(this%stars, this%lapw, this%lapw, zmat(1), zmat(1), &
+                                      io_dn, 0,     oi(:,:,2,1))
       DO j1 = 1, 2
          DO i1 = 1, 2
             this%mat(i1,j1)%data_c(:,:) = this%mat(i1,j1)%data_c(:,:) + oi(:,:,i1,j1)
@@ -162,46 +167,5 @@ CONTAINS
          END DO
       END DO
    END SUBROUTINE calc_matrix_elements
-
-   !> Interstitial overlap of two spinor components of one eigenvector at one k,
-   !>    ovl(m,n) = <psi^a_m | psi^b_n>_interstitial ,
-   !> with ioff_a and ioff_b selecting the rows of zmat that carry each component.
-   !> The step function supplies the overlap of two plane waves over the interstitial,
-   !> Theta(G_n - G_m); ig maps that difference to its star and rgphs its phase.
-   SUBROUTINE overlap_interstitial(stars, lapw, zmat, ioff_a, ioff_b, ovl)
-      TYPE(t_stars), INTENT(IN)  :: stars
-      TYPE(t_lapw),  INTENT(IN)  :: lapw
-      TYPE(t_mat),   INTENT(IN)  :: zmat
-      INTEGER,       INTENT(IN)  :: ioff_a, ioff_b
-      COMPLEX,       INTENT(OUT) :: ovl(:,:)
-
-      COMPLEX, ALLOCATABLE :: stepf(:,:), zstep(:,:)
-      INTEGER :: nv, nb, i, j, i1, i2, i3, in
-
-      IF (zmat%l_real) &
-         CALL judft_bug("overlap_interstitial: a spinor cannot be held in a real matrix")
-
-      nv = lapw%nv(1)
-      nb = SIZE(ovl, 1)
-      ALLOCATE(stepf(nv, nv), source=CMPLX(0.0, 0.0))
-      ALLOCATE(zstep(nv, nb))
-
-      DO i = 1, nv
-         DO j = 1, nv
-            i1 = lapw%k1(j,1) - lapw%k1(i,1)
-            i2 = lapw%k2(j,1) - lapw%k2(i,1)
-            i3 = lapw%k3(j,1) - lapw%k3(i,1)
-            in = stars%ig(i1, i2, i3)
-            IF (in == 0) CYCLE
-            stepf(j,i) = CONJG(stars%rgphs(i1,i2,i3) * stars%ustep(in))
-         END DO
-      END DO
-
-      CALL zgemm('T', 'N', nv, nb, nv, CMPLX(1.0,0.0), stepf, nv, &
-                 zmat%data_c(1+ioff_b, 1), zmat%matsize1, CMPLX(0.0,0.0), zstep, nv)
-      zstep = CONJG(zstep)
-      CALL zgemm('T', 'N', nb, nb, nv, CMPLX(1.0,0.0), zmat%data_c(1+ioff_a, 1), zmat%matsize1, &
-                 zstep, nv, CMPLX(0.0,0.0), ovl, nb)
-   END SUBROUTINE overlap_interstitial
 
 END MODULE m_types_matelements_spin

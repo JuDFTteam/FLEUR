@@ -61,7 +61,7 @@ MODULE m_melem_driver
    USE m_melem_interpolate_current, ONLY: melem_interpolate_current
    USE m_melem_interpolate_eigenstates, ONLY: melem_interpolate_eigenstates
    USE m_wannierlib_get_z, ONLY: wannierlib_get_z
-   USE m_wannierlib_mmkb_int, ONLY: wannierlib_mmnkb_int
+   USE m_melem_overlap, ONLY: melem_overlap_interstitial
    IMPLICIT NONE
    PRIVATE
 
@@ -421,7 +421,7 @@ CONTAINS
    !> Collinear (jspins=2, no SOC/noco) combined 2N spin operator -> rspauli.1.
    !> Over the joint {up-WF, down-WF} space: sigma_z is block-diagonal (+/- identity, WFs are
    !> orthonormal per channel); sigma_x/sigma_y come from the cross-spin overlap
-   !> o_ud(k) = <psi_k^up | psi_k^dn> (interstitial via wannierlib_mmnkb_int with b=0, muffin-tin
+   !> o_ud(k) = <psi_k^up | psi_k^dn> (interstitial overlap, muffin-tin
    !> via melem_spin_mt_block fed with BOTH channels' abc), rotated to the WF gauge with each
    !> channel's V = u_opt.u_matrix (coarse%v_ch), then FT-reduced (distributed). Rank 0 writes
    !> rspauli.1 (2N, standalone R i j comp Re Im format). Reuses our own abc machinery -- no
@@ -479,7 +479,7 @@ CONTAINS
          END DO
          ! cross-spin overlap o_ud = <up|dn>: interstitial (b=0) + muffin-tin (both channels' abc)
          o_uu = CMPLX(0.0, 0.0); o_dd = CMPLX(0.0, 0.0); o_ud = CMPLX(0.0, 0.0); o_du = CMPLX(0.0, 0.0)
-         CALL wannierlib_mmnkb_int(stars, lapw_u, lapw_d, 1, 1, zMat_u, zMat_d, gb, o_ud, ioff=0, ioff_b=0)
+         CALL melem_overlap_interstitial(stars, lapw_u, lapw_d, zMat_u, zMat_d, 0, 0, o_ud)
          CALL melem_spin_mt_block(atoms, abc_both, radfun, o_uu, o_dd, o_ud, o_du)
          ! rotate to the WF gauge: X = V_up^dagger o_ud V_dn
          tmp = MATMUL(o_ud, coarse%v_ch(:, :, gk, 2))
