@@ -47,7 +47,9 @@ MODULE m_melem_driver
    USE m_types_abc
    USE m_types_wannierlib
    USE m_types_melem_bmesh
-   USE m_melem_spin, ONLY: melem_spin_peratom, melem_spin_bloch, melem_spin_mt_block
+   USE m_melem_spin, ONLY: melem_spin_peratom, melem_spin_bloch, melem_spin_mt_block, &
+                           melem_pauli_from_blocks, melem_spin_sumrule
+   USE m_types_matelements_spin, ONLY: t_matelements_spin
    USE m_melem_orbmom, ONLY: melem_orbmom_bloch, melem_orbmom_bloch_collinear
    USE m_melem_socmat, ONLY: melem_socmat_bloch
    USE m_melem_ft, ONLY: melem_ft_to_real_reduce
@@ -188,7 +190,8 @@ CONTAINS
 
       TYPE(t_abc), ALLOCATABLE :: abc_s(:, :)
       TYPE(t_lapw) :: lapw
-      TYPE(t_mat) :: zMat
+      TYPE(t_mat) :: zMat(1)
+      TYPE(t_matelements_spin) :: spinop
       TYPE(t_mat) :: zc(2)   ! the two spinor components when get_z does not stack them
       INTEGER :: ikpt, itype, isp, il, jspin_rad
 
@@ -208,13 +211,13 @@ CONTAINS
          !     block that is not there (non-magnetic Pt then sums to <sigma_z> = +N/2, not 0).
          IF (noco%l_noco) THEN
             CALL wannierlib_get_z(wann, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, &
-                                  ikpt, 1, l_real_wann, lapw, zMat)
+                                  ikpt, 1, l_real_wann, lapw, zMat(1))
          ELSE
             CALL wannierlib_get_z(wann, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, &
                                   ikpt, 1, l_real_wann, lapw, zc(1))
             CALL wannierlib_get_z(wann, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, &
                                   ikpt, 2, l_real_wann, lapw, zc(2))
-            CALL melem_stack_spinor(zc(1), zc(2), zMat)
+            CALL melem_stack_spinor(zc(1), zc(2), zMat(1))
          END IF
          DO isp = 1, 2
             ! The index handed to calc_abc must belong to the zMat it is given and must never
@@ -225,7 +228,7 @@ CONTAINS
                CALL abc_s(isp, itype)%init(input, atoms, wann%num_bands, itype)
                IF (noco%l_noco) THEN
                   CALL abc_s(isp, itype)%calc_abc(input, atoms, sym, cell, lapw, wann%num_bands, usdus, &
-                                                  noco, nococonv, jspin_rad, itype, zMat)
+                                                  noco, nococonv, jspin_rad, itype, zMat(1))
                ELSE
                   CALL abc_s(isp, itype)%calc_abc(input, atoms, sym, cell, lapw, wann%num_bands, usdus, &
                                                   noco, nococonv, jspin_rad, itype, zc(isp))
@@ -233,8 +236,19 @@ CONTAINS
             END DO
          END DO
          IF (wann%l_spin) CALL melem_spin_peratom(atoms, abc_s, radfun, nococonv, this%s0pa(:, :, :, :, il))
-         IF (wann%l_spin) CALL melem_spin_bloch(atoms, abc_s, radfun, nococonv, stars, lapw, zMat, &
-                                                wann%num_bands, ikpt, this%s0(:, :, :, il), ikpt <= 3)
+         IF (wann%l_spin) THEN
+            !The operator keeps the four spin blocks; the three Pauli components follow
+            !from them, so only the blocks are computed here.
+            CALL spinop%init(atoms, stars, lapw, nococonv)
+            CALL spinop%init_mat(wann%num_bands)
+            CALL spinop%calc_matrix_elements(zMat, abc_s, radfun, usdus)
+            CALL melem_pauli_from_blocks(spinop%mat(1,1)%data_c, spinop%mat(2,2)%data_c, &
+                                         spinop%mat(1,2)%data_c, spinop%mat(2,1)%data_c, &
+                                         this%s0(:, :, :, il))
+            IF (ikpt <= 3) CALL melem_spin_sumrule(this%s0(:, :, :, il), &
+                                                   spinop%mat(1,1)%data_c, spinop%mat(2,2)%data_c, &
+                                                   ikpt, tol=1.0e-3)
+         END IF
          IF (wann%l_orbmom) CALL melem_orbmom_bloch(atoms, abc_s, radfun, this%l0(:, :, :, :, il))
          IF (wann%l_socop) CALL melem_socmat_bloch(atoms, noco, nococonv, input, fmpi, enpara, vtot, &
                                                   usdus, abc_s, wann%num_bands, this%soc0(:, :, :, il), &
