@@ -77,7 +77,7 @@ CONTAINS
   !> per-atom slices are the site-resolved projections. na is the GLOBAL atom index.
   SUBROUTINE melem_orbmom_bloch(atoms, abc, radfun, l0)
     TYPE(t_atoms),  INTENT(IN)  :: atoms
-    TYPE(t_abc),    INTENT(IN)  :: abc(:, :)      ! (ntype, 2 spin) local-frame coeffs
+    TYPE(t_abc),    INTENT(IN)  :: abc(:, :)      ! (2 spin, ntype) local-frame coeffs
     TYPE(t_radfun), INTENT(IN)  :: radfun(:)      ! (ntype) : %integral(.,.,l,jspins,jspins)
     COMPLEX,        INTENT(OUT) :: l0(:, :, :, :) ! (nb,nb,3,nat): 1=Lx 2=Ly 3=Lz per atom
 
@@ -105,12 +105,12 @@ CONTAINS
                 lplus  = SQRT(REAL((l - mm)*(l + mm + 1)))   ! <m+1|L+|m>
                 lminus = SQRT(REAL((l + mm)*(l - mm + 1)))   ! <m-1|L-|m>
                 DO s = 1, 2            ! L is spin-diagonal: sum both local spin components
-                  DO n_r = 1, abc(ntyp, s)%n_r(l)
-                    DO n_r2 = 1, abc(ntyp, s)%n_r(l)
+                  DO n_r = 1, abc(s, ntyp)%n_r(l)
+                    DO n_r2 = 1, abc(s, ntyp)%n_r(l)
                       w = radfun(ntyp)%integral(n_r, n_r2, l, MIN(s, sr), MIN(s, sr))
-                      cz = cz + abc(ntyp,s)%cof(i,lm,n_r,iat)*CONJG(abc(ntyp,s)%cof(j,lm,n_r2,iat))*REAL(mm)*w
-                      IF (mm < l) cp = cp + abc(ntyp,s)%cof(i,lm,n_r,iat)*CONJG(abc(ntyp,s)%cof(j,lm+1,n_r2,iat))*lplus*w
-                      IF (mm > -l) cm = cm + abc(ntyp,s)%cof(i,lm,n_r,iat)*CONJG(abc(ntyp,s)%cof(j,lm-1,n_r2,iat))*lminus*w
+                      cz = cz + abc(s, ntyp)%cof(i,lm,n_r,iat)*CONJG(abc(s, ntyp)%cof(j,lm,n_r2,iat))*REAL(mm)*w
+                      IF (mm < l) cp = cp + abc(s, ntyp)%cof(i,lm,n_r,iat)*CONJG(abc(s, ntyp)%cof(j,lm+1,n_r2,iat))*lplus*w
+                      IF (mm > -l) cm = cm + abc(s, ntyp)%cof(i,lm,n_r,iat)*CONJG(abc(s, ntyp)%cof(j,lm-1,n_r2,iat))*lminus*w
                     END DO
                   END DO
                 END DO

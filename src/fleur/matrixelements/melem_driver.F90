@@ -194,7 +194,7 @@ CONTAINS
 
       IF (.NOT. this%l_active) RETURN   ! nothing requested, or no spinor wavefunctions -> slices are stubs
 
-      ALLOCATE (abc_s(atoms%ntype, 2))
+      ALLOCATE (abc_s(2, atoms%ntype))
       il = 0
       DO ikpt = 1, kpts%nkptf
          IF (distk(ikpt) /= fmpi%irank) CYCLE   ! this rank only computes its own k-slice
@@ -222,12 +222,12 @@ CONTAINS
             ! the radial arrays it indexes are only that wide anyway.
             jspin_rad = MERGE(1, isp, input%jspins == 1)
             DO itype = 1, atoms%ntype
-               CALL abc_s(itype, isp)%init(input, atoms, wann%num_bands, itype)
+               CALL abc_s(isp, itype)%init(input, atoms, wann%num_bands, itype)
                IF (noco%l_noco) THEN
-                  CALL abc_s(itype, isp)%calc_abc(input, atoms, sym, cell, lapw, wann%num_bands, usdus, &
+                  CALL abc_s(isp, itype)%calc_abc(input, atoms, sym, cell, lapw, wann%num_bands, usdus, &
                                                   noco, nococonv, jspin_rad, itype, zMat)
                ELSE
-                  CALL abc_s(itype, isp)%calc_abc(input, atoms, sym, cell, lapw, wann%num_bands, usdus, &
+                  CALL abc_s(isp, itype)%calc_abc(input, atoms, sym, cell, lapw, wann%num_bands, usdus, &
                                                   noco, nococonv, jspin_rad, itype, zc(isp))
                END IF
             END DO

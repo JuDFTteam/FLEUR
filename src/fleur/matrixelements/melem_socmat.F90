@@ -53,7 +53,7 @@ CONTAINS
     TYPE(t_enpara),   INTENT(IN)    :: enpara
     TYPE(t_potden),   INTENT(IN)    :: vtot
     TYPE(t_usdus),    INTENT(INOUT) :: usdus
-    TYPE(t_abc),      INTENT(IN)    :: abc(:, :)     ! (ntype, 2 spin) local-frame coeffs
+    TYPE(t_abc),      INTENT(IN)    :: abc(:, :)     ! (2 spin, ntype) local-frame coeffs
     INTEGER,          INTENT(IN)    :: nb
     COMPLEX,          INTENT(OUT)   :: soc0(:, :, :) ! (nb,nb,1) SOC operator (single component)
     COMPLEX,          INTENT(OUT)   :: soc4(:, :, :) ! (nb,nb,4) 2x2 SOC spin blocks, c=(ii-1)*2+jj

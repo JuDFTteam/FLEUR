@@ -40,11 +40,11 @@ MODULE m_melem_spin
 CONTAINS
 
   !> Bloch-basis spin matrices at one k, MT + interstitial. Returns s0(nb,nb,3)
-  !> and prints the sum-rule check. abc(:,:) = (ntype, 2 spin); zMat holds the
+  !> and prints the sum-rule check. abc(:,:) = (2 spin, ntype); zMat holds the
   !> full two-component spinor (spin-down block at row offset nv(1)+nlotot).
   SUBROUTINE melem_spin_bloch(atoms, abc, radfun, nococonv, stars, lapw, zMat, num_bands, ik, s0, l_check)
     TYPE(t_atoms),     INTENT(IN)  :: atoms
-    TYPE(t_abc),       INTENT(IN)  :: abc(:, :)          ! (ntype, 2)
+    TYPE(t_abc),       INTENT(IN)  :: abc(:, :)          ! (2, ntype)
     TYPE(t_radfun),    INTENT(IN)  :: radfun(:)          ! (ntype)
     TYPE(t_nococonv),  INTENT(IN)  :: nococonv           ! %alph(:), %beta(:) per type
     TYPE(t_stars),     INTENT(IN)  :: stars
@@ -125,7 +125,7 @@ CONTAINS
   !> the spin sum rule (norm, |<sigma>|) is rotation-invariant, so this suffices here.
   SUBROUTINE melem_spin_mt_block(atoms, abc, radfun, o_uu, o_dd, o_ud, o_du)
     TYPE(t_atoms),  INTENT(IN) :: atoms
-    TYPE(t_abc),    INTENT(IN) :: abc(:, :)        ! (ntype, 2 spin) local-frame coeffs
+    TYPE(t_abc),    INTENT(IN) :: abc(:, :)        ! (2 spin, ntype) local-frame coeffs
     TYPE(t_radfun), INTENT(IN) :: radfun(:)        ! (ntype) : %integral(n_r,n_r2,l,1,1)
     COMPLEX, INTENT(INOUT) :: o_uu(:, :), o_dd(:, :), o_ud(:, :), o_du(:, :)   ! (nb,nb)
 
@@ -149,12 +149,12 @@ CONTAINS
               DO iat = 1, atoms%neq(ntyp)
                 ! radial overlap carries the spin indices (jspins=2: up/down radials differ):
                 !   loc(s1,s2) uses integral(n_r,n_r2,l,s1,s2)
-                DO n_r = 1, abc(ntyp, 1)%n_r(l)
-                  DO n_r2 = 1, abc(ntyp, 1)%n_r(l)
-                    loc(1, 1) = loc(1, 1) + abc(ntyp,1)%cof(i,lm,n_r,iat)*CONJG(abc(ntyp,1)%cof(j,lm,n_r2,iat))*radfun(ntyp)%integral(n_r,n_r2,l,1,1)
-                    loc(2, 2) = loc(2, 2) + abc(ntyp,2)%cof(i,lm,n_r,iat)*CONJG(abc(ntyp,2)%cof(j,lm,n_r2,iat))*radfun(ntyp)%integral(n_r,n_r2,l,js2,js2)
-                    loc(1, 2) = loc(1, 2) + abc(ntyp,1)%cof(i,lm,n_r,iat)*CONJG(abc(ntyp,2)%cof(j,lm,n_r2,iat))*radfun(ntyp)%integral(n_r,n_r2,l,js1,js2)
-                    loc(2, 1) = loc(2, 1) + abc(ntyp,2)%cof(i,lm,n_r,iat)*CONJG(abc(ntyp,1)%cof(j,lm,n_r2,iat))*radfun(ntyp)%integral(n_r,n_r2,l,js2,js1)
+                DO n_r = 1, abc(1, ntyp)%n_r(l)
+                  DO n_r2 = 1, abc(1, ntyp)%n_r(l)
+                    loc(1, 1) = loc(1, 1) + abc(1, ntyp)%cof(i,lm,n_r,iat)*CONJG(abc(1, ntyp)%cof(j,lm,n_r2,iat))*radfun(ntyp)%integral(n_r,n_r2,l,1,1)
+                    loc(2, 2) = loc(2, 2) + abc(2, ntyp)%cof(i,lm,n_r,iat)*CONJG(abc(2, ntyp)%cof(j,lm,n_r2,iat))*radfun(ntyp)%integral(n_r,n_r2,l,js2,js2)
+                    loc(1, 2) = loc(1, 2) + abc(1, ntyp)%cof(i,lm,n_r,iat)*CONJG(abc(2, ntyp)%cof(j,lm,n_r2,iat))*radfun(ntyp)%integral(n_r,n_r2,l,js1,js2)
+                    loc(2, 1) = loc(2, 1) + abc(2, ntyp)%cof(i,lm,n_r,iat)*CONJG(abc(1, ntyp)%cof(j,lm,n_r2,iat))*radfun(ntyp)%integral(n_r,n_r2,l,js2,js1)
                   END DO
                 END DO
               END DO
@@ -184,7 +184,7 @@ CONTAINS
   !> (both moments look "+"). We apply that rotation per atom here.
   SUBROUTINE melem_spin_peratom(atoms, abc, radfun, nococonv, spa)
     TYPE(t_atoms),    INTENT(IN)  :: atoms
-    TYPE(t_abc),      INTENT(IN)  :: abc(:, :)        ! (ntype, 2 spin)
+    TYPE(t_abc),      INTENT(IN)  :: abc(:, :)        ! (2 spin, ntype)
     TYPE(t_radfun),   INTENT(IN)  :: radfun(:)
     TYPE(t_nococonv), INTENT(IN)  :: nococonv         ! %alph(:), %beta(:) per type
     COMPLEX,          INTENT(OUT) :: spa(:, :, :, :)  ! (nb,nb,3,nat): 1=sx 2=sy 3=sz per atom, GLOBAL frame
@@ -213,12 +213,12 @@ CONTAINS
               ll1 = l*(l + 1)
               DO mm = -l, l
                 lm = ll1 + mm
-                DO n_r = 1, abc(ntyp, 1)%n_r(l)
-                  DO n_r2 = 1, abc(ntyp, 1)%n_r(l)
-                    loc(1,1) = loc(1,1) + abc(ntyp,1)%cof(i,lm,n_r,iat)*CONJG(abc(ntyp,1)%cof(j,lm,n_r2,iat))*radfun(ntyp)%integral(n_r,n_r2,l,1,1)
-                    loc(2,2) = loc(2,2) + abc(ntyp,2)%cof(i,lm,n_r,iat)*CONJG(abc(ntyp,2)%cof(j,lm,n_r2,iat))*radfun(ntyp)%integral(n_r,n_r2,l,js2,js2)
-                    loc(1,2) = loc(1,2) + abc(ntyp,1)%cof(i,lm,n_r,iat)*CONJG(abc(ntyp,2)%cof(j,lm,n_r2,iat))*radfun(ntyp)%integral(n_r,n_r2,l,js1,js2)
-                    loc(2,1) = loc(2,1) + abc(ntyp,2)%cof(i,lm,n_r,iat)*CONJG(abc(ntyp,1)%cof(j,lm,n_r2,iat))*radfun(ntyp)%integral(n_r,n_r2,l,js2,js1)
+                DO n_r = 1, abc(1, ntyp)%n_r(l)
+                  DO n_r2 = 1, abc(1, ntyp)%n_r(l)
+                    loc(1,1) = loc(1,1) + abc(1, ntyp)%cof(i,lm,n_r,iat)*CONJG(abc(1, ntyp)%cof(j,lm,n_r2,iat))*radfun(ntyp)%integral(n_r,n_r2,l,1,1)
+                    loc(2,2) = loc(2,2) + abc(2, ntyp)%cof(i,lm,n_r,iat)*CONJG(abc(2, ntyp)%cof(j,lm,n_r2,iat))*radfun(ntyp)%integral(n_r,n_r2,l,js2,js2)
+                    loc(1,2) = loc(1,2) + abc(1, ntyp)%cof(i,lm,n_r,iat)*CONJG(abc(2, ntyp)%cof(j,lm,n_r2,iat))*radfun(ntyp)%integral(n_r,n_r2,l,js1,js2)
+                    loc(2,1) = loc(2,1) + abc(2, ntyp)%cof(i,lm,n_r,iat)*CONJG(abc(1, ntyp)%cof(j,lm,n_r2,iat))*radfun(ntyp)%integral(n_r,n_r2,l,js2,js1)
                   END DO
                 END DO
               END DO
