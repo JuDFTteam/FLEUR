@@ -171,7 +171,7 @@ subroutine dosdata_smooth(eigdos,banddos)
   ENDDO
 END subroutine
 
-subroutine write_dos(eigdos,hdf_id)
+subroutine write_dos(eigdos,hdf_id,l_dfpt)
 #ifdef CPP_HDF
     use HDF5
     use m_banddos_io
@@ -182,17 +182,22 @@ subroutine write_dos(eigdos,hdf_id)
 #else
     integer,       intent(in) ::hdf_id
 #endif
+    logical,       intent(in) ::l_dfpt
     integer:: jspin,i,ind,id, n
     character(len=100)::filename
     real,allocatable:: dos_grid(:)
     LOGICAL l_printTextDOS
+    real :: prefactor 
+
+    prefactor = 1.0
+    if (l_dfpt) prefactor = 0.5 
 
     l_printTextDOS = .TRUE.
 
 #ifdef CPP_HDF
     DO n=1,eigdos%get_num_weights()
       print *, "writedos:",n,eigdos%get_num_weights()
-      call writedosData(hdf_ID,eigdos%name_of_dos,eigdos%get_dos_grid(),eigdos%get_weight_name(n),eigdos%dos(:,:,n))
+      call writedosData(hdf_ID,eigdos%name_of_dos,eigdos%get_dos_grid(),eigdos%get_weight_name(n),prefactor*eigdos%dos(:,:,n))
     enddo
     IF(eigdos%get_num_weights().GT.40) THEN
        WRITE(*,*) 'Number of weights in ', TRIM(ADJUSTL(eigdos%name_of_dos)),' DOS too large for simple text output.'
@@ -211,7 +216,7 @@ subroutine write_dos(eigdos,hdf_id)
       write(*,"(999a21)") filename,(eigdos%get_weight_name(id),id=1,eigdos%get_num_weights())
       dos_grid=eigdos%get_dos_grid()
       DO i=1,size(dos_grid)
-        write(999,"(999(e20.8,1x))") dos_grid(i)*hartree_to_ev_const,(eigdos%dos(i,jspin,id)/hartree_to_ev_const,id=1,eigdos%get_num_weights())
+        write(999,"(999(e20.8,1x))") dos_grid(i)*hartree_to_ev_const,(prefactor*eigdos%dos(i,jspin,id)/hartree_to_ev_const,id=1,eigdos%get_num_weights())
       ENDDO
       close(999)
       write(*,*) "done:",filename

@@ -163,7 +163,6 @@ contains
                 deallocate(eigenVals, eigenVecs, eigenFreqs)
             end do ! iQ
 
-            call save_npy("eigenValsFull.npy",eigenValsFull)
             if (fi%dfpt%l_dos) then 
                 banddosLocal = fi%banddos 
                 banddosLocal%dos = .true.
