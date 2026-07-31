@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -23,11 +23,7 @@ MODULE m_types_mpimat
    ! These are now defined in t_mat base type!
    LOGICAL :: firstCopyCall = .true.
 
-#ifdef __INTEL_COMPILER
-   LOGICAL:: use_pdgemr2d=.true.
-#else
    LOGICAL:: use_pdgemr2d=.false.
-#endif         
    LOGICAL:: use_fast_redist=.false.
 
    !<This data-type extends the basic t_mat for distributed matrices.
@@ -424,15 +420,18 @@ CONTAINS
       call timestop("mpimat_add_transpose")
    END SUBROUTINE mpimat_add_transpose
 
-   SUBROUTINE mpimat_copy(mat, mat1, n1, n2)
+   SUBROUTINE mpimat_copy(mat, mat1, n1, n2, m1, m2)
       IMPLICIT NONE
       CLASS(t_mpimat), INTENT(INOUT)::mat
       CLASS(t_mat), INTENT(IN)      ::mat1
       INTEGER, INTENT(IN) ::n1, n2
-      INTEGER :: irank, err
+      INTEGER, INTENT(IN), OPTIONAL :: m1, m2  !> offsets into source matrix
+      INTEGER :: irank, err, s1, s2
       LOGICAL :: can_use_fast_redist
-
       call timestart("mpimat_copy")
+
+      s1 = 1; if (present(m1)) s1 = m1
+      s2 = 1; if (present(m2)) s2 = m2
 
       select type (mat1)
       type is (t_mpimat)
@@ -464,9 +463,9 @@ CONTAINS
             call cyclic_column_to_2Dblock_cyclic(mat1,mat,n1,n2)
          else
             IF (mat%l_real) THEN
-               CALL pdgemr2d(Mat1%global_size1, mat1%global_size2, mat1%data_r, 1, 1, mat1%blacsdata%blacs_desc, mat%data_r, n1, n2, mat%blacsdata%blacs_desc, mat1%blacsdata%blacs_desc(2))
+               CALL pdgemr2d(Mat1%global_size1, mat1%global_size2, mat1%data_r, s1, s2, mat1%blacsdata%blacs_desc, mat%data_r, n1, n2, mat%blacsdata%blacs_desc, mat1%blacsdata%blacs_desc(2))
             ELSE
-               CALL pzgemr2d(mat1%global_size1, mat1%global_size2, mat1%data_c, 1, 1, mat1%blacsdata%blacs_desc, mat%data_c, n1, n2, mat%blacsdata%blacs_desc, mat1%blacsdata%blacs_desc(2))
+               CALL pzgemr2d(mat1%global_size1, mat1%global_size2, mat1%data_c, s1, s2, mat1%blacsdata%blacs_desc, mat%data_c, n1, n2, mat%blacsdata%blacs_desc, mat1%blacsdata%blacs_desc(2))
             END IF
          endif   
       CLASS DEFAULT
@@ -1415,8 +1414,17 @@ CONTAINS
       INTEGER,ALLOCATABLE:: map(:,:)
       INTEGER,ALLOCATABLE:: row_map(:)
       INTEGER,ALLOCATABLE:: col_map(:)
+      INTEGER,ALLOCATABLE:: row_count(:),row_offset(:),row_perm(:)
+      REAL,ALLOCATABLE   :: buffer_r(:,:)
+      COMPLEX,ALLOCATABLE:: buffer_c(:,:)
       INTEGER            :: win_handle
       INTEGER:: ierr,blocksize,global_col,global_col2d,n_col2d,n,ir
+      INTEGER:: nbuf,ibuf
+
+      !Too many outstanding RMA operations slow down the MPI library considerably,
+      !so only a few columns are kept in flight (and never more than a few MB).
+      INTEGER,PARAMETER  :: MAX_BUFFER_COLUMN=16
+      INTEGER,PARAMETER  :: MAX_BUFFER_BYTE=4*1024*1024
 
       blocksize=mat2d%blacsdata%blacs_desc(5) !blocksize is assumed to be the same for both dimensions
       call MPI_COMM_SIZE(mat%blacsdata%mpi_com,isize,ierr)
@@ -1428,17 +1436,71 @@ CONTAINS
       !which row/column of processor grid contains the data
       row_map=get_vector_map(mat%global_size1,offset1,blocksize,np_row)
       col_map=get_vector_map(mat%global_size2,offset2,blocksize,np_col)
-      call create_RMA_win(mat2d,offset1,np_row,my_row,blocksize,mat2d%blacsdata%mpi_com,win_handle) 
+      !The rows going to one processor row are collected in a single contiguous
+      !segment of the send buffer, so that one mpi_put per processor row suffices
+      call get_row_segments(row_map,np_row,row_count,row_offset,row_perm)
+
+      !The buffers must not be overwritten before the mpi_put reading them has
+      !completed locally. Instead of completing every single put, the buffers of
+      !several columns are held in a ring which is flushed when it wraps around.
+      nbuf=MAX_BUFFER_BYTE/(MAX(mat%matsize1,1)*MERGE(8,16,mat%l_real))
+      nbuf=MAX(1,MIN(nbuf,MAX_BUFFER_COLUMN,mat%matsize2))
+      IF (mat%l_real) THEN
+         ALLOCATE(buffer_r(mat%matsize1,nbuf))
+      ELSE
+         ALLOCATE(buffer_c(mat%matsize1,nbuf))
+      ENDIF
+
+      call create_RMA_win(mat2d,offset1,np_row,my_row,blocksize,mat2d%blacsdata%mpi_com,win_handle)
       call MPI_WIN_LOCK_ALL(0, win_handle, ierr)
       global_col=irank+1
+      ibuf=0
       DO n=1,mat%matsize2 !loop over all local columns
-         !first fence before all the commm
-         call send_column(mat,n,global_col,offset2,blocksize,np_col,col_map(global_col),row_map,map(:,col_map(global_col)),win_handle,irank)
+         ibuf=ibuf+1
+         IF (ibuf>nbuf) THEN !all buffers are in use, wait until they can be reused
+            call MPI_WIN_FLUSH_LOCAL_ALL(win_handle,ierr)
+            ibuf=1
+         ENDIF
+         call send_column(mat,n,global_col,offset2,blocksize,np_col,col_map(global_col),&
+                          row_count,row_offset,row_perm,map(:,col_map(global_col)),win_handle,&
+                          buffer_r,buffer_c,ibuf)
          global_col=global_col+isize !the next local column corresponds to this global column
       ENDDO
-      call MPI_WIN_UNLOCK_ALL(win_handle, ierr)
+      call MPI_WIN_UNLOCK_ALL(win_handle, ierr) !this completes all outstanding operations
       call mpi_win_free(win_handle,ierr)
    end subroutine
+
+   subroutine get_row_segments(row_map,np_row,row_count,row_offset,row_perm)
+      !For each processor row of the target grid, the rows it receives are stored
+      !as one contiguous segment of the send buffer. row_perm gives the position
+      !in that buffer for every row of the local column.
+      implicit none
+      integer,intent(in)              :: row_map(:) !processor row receiving a given row
+      integer,intent(in)              :: np_row
+      integer,allocatable,intent(out) :: row_count(:)  !rows per processor row
+      integer,allocatable,intent(out) :: row_offset(:) !start of the segments in the buffer
+      integer,allocatable,intent(out) :: row_perm(:)
+
+      integer:: n,r
+
+      ALLOCATE(row_count(0:np_row-1),row_offset(0:np_row-1),row_perm(SIZE(row_map)))
+
+      row_count=0
+      DO n=1,SIZE(row_map)
+         row_count(row_map(n))=row_count(row_map(n))+1
+      ENDDO
+      row_offset(0)=0
+      DO r=1,np_row-1
+         row_offset(r)=row_offset(r-1)+row_count(r-1)
+      ENDDO
+      !row_count is reused as a cursor here and ends up holding the counts again
+      row_count=0
+      DO n=1,SIZE(row_map)
+         r=row_map(n)
+         row_count(r)=row_count(r)+1
+         row_perm(n)=row_offset(r)+row_count(r)
+      ENDDO
+   END subroutine
 
    subroutine generate_map_to_irank(nprow,npcol,myrow,mycol,irank,ictxt,mpi_com,map)
       implicit none
@@ -1471,44 +1533,53 @@ CONTAINS
       ENDDO
    END function   
 
-   subroutine send_column(mat,n_col1D,n_col,offset2,blocksize,np_col,my_col,row_map,gridmap,win_handle,irank)
+   subroutine send_column(mat,n_col1D,n_col,offset2,blocksize,np_col,my_col,row_count,row_offset,&
+                          row_perm,gridmap,win_handle,buffer_r,buffer_c,ibuf)
       implicit none
       type(t_mpimat),intent(in)::mat
       integer,intent(in):: n_col1d,n_col   ! local column to send, global on sending side
-      INTEGER,intent(in):: offset2,blocksize,np_col,my_col,irank
-      integer,intent(in):: row_map(:)        ! mapping of the (local) index of the row to the processor row in the gridmap
+      INTEGER,intent(in):: offset2,blocksize,np_col,my_col
+      integer,intent(in):: row_count(0:)     ! number of rows going to each processor row in the gridmap
+      integer,intent(in):: row_offset(0:)    ! start of the corresponding segment in the send buffer
+      integer,intent(in):: row_perm(:)       ! position of a row of the local column in the send buffer
       integer,intent(in):: gridmap(0:)       ! mapping of the processor to the MPI irank
       integer,intent(in):: win_handle
+      real,allocatable,intent(inout)   :: buffer_r(:,:) ! ring of send buffers, only ibuf is touched here
+      complex,allocatable,intent(inout):: buffer_c(:,:)
+      integer,intent(in):: ibuf
 
-      integer:: myrow,send_size,ierr,n,nn
+      integer:: myrow,send_size,ierr,n,nn,i
       integer(MPI_ADDRESS_KIND)::disp
-
-      real,allocatable:: buffer_r(:)
-      complex,allocatable:: buffer_c(:)
-      if (mat%l_real) THEN
-         allocate(buffer_r(mat%matsize1))
-      else
-         allocate(buffer_c(mat%matsize1))
-      endif   
 
       !First find the local column on the recieving processors
       call infog1l(n_col+offset2-1,blocksize,np_col,my_col,0,n,nn)
       disp=n-1
 
+      !Sort the column into the buffer such that the data for each processor row
+      !of the target grid ends up in one contiguous segment
+      if (mat%l_real) THEN
+         DO i=1,mat%matsize1
+            buffer_r(row_perm(i),ibuf)=mat%data_r(i,n_col1d)
+         ENDDO
+      else
+         DO i=1,mat%matsize1
+            buffer_c(row_perm(i),ibuf)=mat%data_c(i,n_col1d)
+         ENDDO
+      endif
+
       DO myrow=0,size(gridmap)-1
-         send_size=count(row_map==myrow)
+         send_size=row_count(myrow)
          if (send_size==0) cycle
          if (mat%l_real) THEN
-            buffer_r(1:send_size)=pack(mat%data_r(:,n_col1d),row_map==myrow)
-            call mpi_put(buffer_r,send_size,MPI_DOUBLE_PRECISION,gridmap(myrow),disp,send_size, &
+            call mpi_put(buffer_r(row_offset(myrow)+1,ibuf),send_size,MPI_DOUBLE_PRECISION,gridmap(myrow),disp,send_size, &
                          MPI_DOUBLE_PRECISION,win_handle,ierr)
          else
-            buffer_c(1:send_size)=pack(mat%data_c(:,n_col1d),row_map==myrow)
-            call mpi_put(buffer_c,send_size,MPI_DOUBLE_COMPLEX,gridmap(myrow),disp,send_size, &
+            call mpi_put(buffer_c(row_offset(myrow)+1,ibuf),send_size,MPI_DOUBLE_COMPLEX,gridmap(myrow),disp,send_size, &
                          MPI_DOUBLE_COMPLEX,win_handle,ierr)
-         endif   
+         endif
       ENDDO
-      
+      !The caller completes these operations before the buffer is reused
+
    END subroutine
    
    subroutine create_RMA_win(mat,offset1,np_row,my_row,blocksize,mpi_comm,win_handle)

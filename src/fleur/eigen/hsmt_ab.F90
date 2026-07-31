@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -49,6 +49,7 @@ CONTAINS
       USE m_ylm
       USE m_hsmt_fjgj
       USE m_matmul_dgemm
+      USE m_abcoeff_store
 
       TYPE(t_sym),      INTENT(IN)    :: sym
       TYPE(t_cell),     INTENT(IN)    :: cell
@@ -64,7 +65,7 @@ CONTAINS
       INTEGER,          INTENT(OUT)   :: ab_size
     !     ..
     !     .. Array Arguments ..
-      COMPLEX,          INTENT(INOUT) :: abCoeffs(:,:)
+      COMPLEX, ALLOCATABLE, INTENT(OUT) :: abCoeffs(:,:)
     !Optional arguments if abc coef for LOs are needed
       COMPLEX, INTENT(INOUT), OPTIONAL :: abclo(:, :, :, :)
       REAL,    INTENT(IN),    OPTIONAL :: alo1(:), blo1(:), clo1(:)
@@ -73,7 +74,7 @@ CONTAINS
       REAL    :: term, bmrot(3, 3)
       COMPLEX :: c_ph(MAXVAL(lapw%nv), MERGE(2, 1, noco%l_ss.OR.ANY(noco%l_unrestrictMT) &
                                                           & .OR.ANY(noco%l_spinoffd_ldau)))
-      LOGICAL :: l_apw, l_abclo
+      LOGICAL :: l_apw, l_abclo, l_skip_calc
 
       REAL,    ALLOCATABLE :: gkrot(:, :)
       COMPLEX, ALLOCATABLE :: ylm(:, :)
@@ -85,35 +86,49 @@ CONTAINS
       ! l_apw=ALL(fjgj%gj==0.0)
       l_apw = .FALSE.
 
-      ! We skip the initialization for speed
-      ! abCoeffs=0.0
-      call timestart("init")
-      np = sym%invtab(sym%ngopr(na))
-      CALL lapw%phase_factors(igSpin, atoms%taual(:, na), nococonv%qss, c_ph(:, igSpin))
-      bmrot = TRANSPOSE(MATMUL(1.0 * sym%mrot(:, :, np), cell%bmat))
+      ! Allocate the output matching coefficients to their exact size, or retrieve
+      ! them from the optional storage (m_abcoeff_store). If valid stored
+      ! coefficients are returned -- and no LO coefficients are requested (abclo is
+      ! not cached) -- the computation below can be skipped entirely.
+      ! l_apw is .FALSE., so the array always needs 2*ab_size rows.
+      l_skip_calc = abcoeff_store_alloc(abCoeffs, 2*ab_size, lapw%nv(igSpin), lapw%nk, igSpin, ilSpin, na) 
+      
+      if (l_skip_calc.and..not.l_abclo) then
+         !$acc enter data copyin(abCoeffs)
+         return !nothing to do, coefficients are already stored and copied to device
+      else
+         !$acc enter data create(abCoeffs(1:2*ab_size, 1:lapw%nv(igSpin)))
+      end if
+      
+         ! We skip the initialization for speed
+         ! abCoeffs=0.0
+         call timestart("init")
+         np = sym%invtab(sym%ngopr(na))
+         CALL lapw%phase_factors(igSpin, atoms%taual(:, na), nococonv%qss, c_ph(:, igSpin))
+         bmrot = TRANSPOSE(MATMUL(1.0 * sym%mrot(:, :, np), cell%bmat))
 
-      ALLOCATE(ylm((lmax+1)**2, lapw%nv(igSpin)), stat=ierr)
-      IF (ierr /= 0) CALL juDFT_error("Couldn't allocate ylm")
-      ALLOCATE(gkrot(3,lapw%nv(igSpin)), stat=ierr)
-      IF (ierr /= 0) CALL juDFT_error("Couldn't allocate gkrot")
+         ALLOCATE(ylm((lmax+1)**2, lapw%nv(igSpin)), stat=ierr)
+         IF (ierr /= 0) CALL juDFT_error("Couldn't allocate ylm")
+         ALLOCATE(gkrot(3,lapw%nv(igSpin)), stat=ierr)
+         IF (ierr /= 0) CALL juDFT_error("Couldn't allocate gkrot")
 
-      ! Generate spherical harmonics
-      ! gkrot = matmul(bmrot, lapw%vk(:,:,igSpin))
-      ! These two lines should eventually move to the GPU:
-      !CALL dgemm("N","N", 3, lapw%nv(igSpin), 3, 1.0, bmrot, 3, lapw%vk(:,:,igSpin), 3, 0.0, gkrot, 3)
-      call blas_matmul(3,lapw%nv(igSpin),3,bmrot,lapw%vk(:,:,igspin),gkrot)
-      CALL ylm4_batched(lmax,gkrot,ylm)
-      call timestop("init")
-      call timestart("loop")
+         ! Generate spherical harmonics
+         ! gkrot = matmul(bmrot, lapw%vk(:,:,igSpin))
+         ! These two lines should eventually move to the GPU:
+         !CALL dgemm("N","N", 3, lapw%nv(igSpin), 3, 1.0, bmrot, 3, lapw%vk(:,:,igSpin), 3, 0.0, gkrot, 3)
+         call blas_matmul(3,lapw%nv(igSpin),3,bmrot,lapw%vk(:,:,igspin),gkrot)
+         CALL ylm4_batched(lmax,gkrot,ylm)
+         call timestop("init")
+         call timestart("loop")
 #ifndef _OPENACC
       !$OMP PARALLEL DO DEFAULT(none) &
       !$OMP& SHARED(lapw,lmax,c_ph,igSpin,abCoeffs,fjgj,abclo,cell,atoms,sym) &
-      !$OMP& SHARED(l_abclo,alo1,blo1,clo1,ab_size,na,n,ilSpin,bmrot, ylm) &
+      !$OMP& SHARED(l_abclo,alo1,blo1,clo1,ab_size,na,n,ilSpin,bmrot, ylm,l_skip_calc) &
       !$OMP& PRIVATE(k,l,ll1,m,lm,term,invsfct,lo,nkvec) &
       !$OMP& PRIVATE(lmMin,lmMax)
 #else
       !$acc kernels present(abCoeffs) default(none)
-      abCoeffs(:,:)=0.0
+      if (.not.l_skip_calc) abCoeffs(:,:)=0.0
       !$acc end kernels
 #endif
       
@@ -123,6 +138,8 @@ CONTAINS
       !$acc present(abclo,alo1,blo1,clo1)&
       !$acc private(k,l,lm,invsfct,lo,term,lmMin,lmMax)  default(none)
       DO k = 1,lapw%nv(igSpin)
+         if (.not.l_skip_calc) then
+
          !$acc  loop vector private(l,lmMin,lmMax)
          DO l = 0,lmax
             lmMin = l*(l+1) + 1 - l
@@ -131,7 +148,7 @@ CONTAINS
             abCoeffs(ab_size+lmMin:ab_size+lmMax,k) = fjgj%gj(k,l,ilSpin,igSpin)*c_ph(k,igSpin) * CONJG(ylm(lmMin:lmMax, k))
          END DO
          !$acc end loop
-
+         endif
          IF (l_abclo) THEN
             ! Determine also the abc coeffs for LOs
             invsfct=MERGE(1,2,sym%invsat(na).EQ.0)
@@ -160,7 +177,7 @@ CONTAINS
       !$OMP END PARALLEL DO
 #endif
       call timestop("loop")
-
+   
 
       IF (.NOT.l_apw) ab_size=ab_size*2
    END SUBROUTINE hsmt_ab

@@ -163,7 +163,7 @@ CONTAINS
       WRITE (fileNum, 110) fr(input%rkmax), fr(input%gmax), fr(xcpot%gmaxxc), input%gw_neigd
 
 !      <scfLoop itmax="9" maxIterBroyd="99" imix="Anderson" alpha="0.05" precondParam="0.0" spinf="2.00"/>
-120   FORMAT('      <scfLoop itmax="', i0, '" minDistance="', a, '" maxIterBroyd="', i0, '" imix="', a, '" alpha="', a, '" precondParam="', a, '" spinf="', a, '"/>')
+120   FORMAT('      <scfLoop itmax="', i0, '" minDistance="', a, '" maxIterBroyd="', i0, '" imix="', a, '" alpha="', a, '" precondParam="', a, '" spinf="', a, '" sdNocoIR="', l1, '"/>')
       SELECT CASE (input%imix)
       CASE (1)
          mixingScheme = 'straight'
@@ -178,7 +178,7 @@ CONTAINS
       CASE DEFAULT
          mixingScheme = 'errorUnknownMixing'
       END SELECT
-      WRITE (fileNum, 120) input%itmax, fr(input%minDistance), input%maxiter, TRIM(mixingScheme), fr(input%alpha), fr(input%preconditioning_param), fr(input%spinf)
+      WRITE (fileNum, 120) input%itmax, fr(input%minDistance), input%maxiter, TRIM(mixingScheme), fr(input%alpha), fr(input%preconditioning_param), fr(input%spinf), input%sdNocoIR
 
 !      <coreElectrons ctail="T" frcor="F" kcrel="0" coretail_lmax="0" l_core_confpot="T"/>
 130   FORMAT('      <coreElectrons ctail="', l1, '" frcor="', l1, '" kcrel="', i0, '" coretail_lmax="', i0, '"/>')
@@ -498,6 +498,9 @@ WRITE (fileNum, 242) fr(1.0)
             IF (n .LT. 0) THEN
                loType = 'HELO'
             END IF
+            IF (atoms%l_relLO(ilo, iAtomType)) THEN
+               loType = 'relLO'
+            END IF
             n = ABS(n)
 324         FORMAT('         <lo type="', a, '" l="', i0, '" n="', i0, '" eDeriv="', i0, '"/>')
             WRITE (fileNum, 324) TRIM(ADJUSTL(loType)), l, n, atoms%ulo_der(ilo, iAtomType)
@@ -649,6 +652,12 @@ WRITE (fileNum, 242) fr(1.0)
 !      <specialOutput form66="F" eonly="F" bmt="F"/>
 420   FORMAT('      <specialOutput eonly="', l1, '"/>')
       WRITE (fileNum, 420) input%eonly
+
+!      <moessbauerParams electricFieldGradient="T" isomerShift="T" coreHyperfine="T" valenceHyperfine="T"/>
+425   FORMAT('      <moessbauerParams electricFieldGradient="', l1, '" isomerShift="', l1, &
+                    '" coreHyperfine="', l1, '" valenceHyperfine="', l1, '"/>')
+      WRITE (fileNum, 425) input%l_moessbauerEFG, input%l_moessbauerIsomerShift, &
+                           input%l_moessbauerCoreHyperfine, input%l_moessbauerValenceHyperfine
 
 !      <magneticCircularDichroism energyLo="-10.0" energyUp="0.0"/>
 430   FORMAT('      <magneticCircularDichroism mcd="',l1,'" energyLo="', a, '" energyUp="', a, '"/>')

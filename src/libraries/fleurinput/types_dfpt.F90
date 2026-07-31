@@ -122,7 +122,7 @@ CONTAINS
       INTEGER::numberNodes
       CHARACTER(len=100) :: xPathA,valueString
       CHARACTER(len=40) :: qptsListName
-      TYPE(t_kpts) :: qpts_from_kpts
+      TYPE(t_kpts) :: qpts_from_kpts , path_from_kpts
 
       REAL, ALLOCATABLE :: tmp_arr(:)
 
@@ -269,52 +269,52 @@ CONTAINS
 
 
         ! interpolation read-in 
-        numberNodes = xml%GetNumberOfNodes('/fleurInput/output/dfpt/dfptInterpolate')
+        numberNodes = xml%GetNumberOfNodes('/fleurInput/output/dfpt/interpolation')
 
         if ((numberNodes /= 1) .and. this%l_intp) call juDFT_error("Please specify the interpolation with the interpolation tag",calledby="types_dfpt.F90")
          
-         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/dfpt/dfptInterpolate/@l_band')
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/dfpt/interpolation/@l_band')
 
          IF (numberNodes == 1) THEN
-           this%l_band  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/dfpt/dfptInterpolate/@l_band'))
+           this%l_band  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/dfpt/interpolation/@l_band'))
          END IF
 
-         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/dfpt/dfptInterpolate/@l_dos')
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/dfpt/interpolation/@l_dos')
 
          IF (numberNodes == 1) THEN
-           this%l_dos  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/dfpt/dfptInterpolate/@l_dos'))
+           this%l_dos  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/dfpt/interpolation/@l_dos'))
          END IF
 
-         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/dfpt/dfptInterpolate/@l_WSinterpol')
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/dfpt/interpolation/@l_WSinterpol')
 
          IF (numberNodes == 1) THEN
-          this%l_WSinterpol    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/dfpt/dfptInterpolate/@l_WSinterpol'))
+          this%l_WSinterpol    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/dfpt/interpolation/@l_WSinterpol'))
          END IF
 
-         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/dfpt/dfptInterpolate/@l_polar')
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/dfpt/interpolation/@l_polar')
 
          IF (numberNodes == 1) THEN
-           this%l_polar    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/dfpt/dfptInterpolate/@l_polar'))
+           this%l_polar    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/dfpt/interpolation/@l_polar'))
          END IF
 
-          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/dfpt/phonon/@l_sumrule')
+          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/dfpt/interpolation/@l_sumrule')
 
          IF (numberNodes == 1) THEN
-           this%l_sumrule_intp  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/dfpt/phonon/@l_sumrule'))
+           this%l_sumrule_intp  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/dfpt/interpolation/@l_sumrule'))
          END IF
 
 
-          IF (xml%GetNumberOfNodes('/fleurInput/output/dfpt/dfptInterpolate/@qptsListName') == 1) THEN
-          qptsListName = TRIM(ADJUSTL(xml%GetAttributeValue('/fleurInput/output/dfpt/dfptInterpolate/@qptsListName')))
-          ! Initialize qpts_from_kpts with the number of k-points from the kpts.xml file
-          qpts_from_kpts%nkpt = xml%GetNumberOfNodes('/fleurInput/cell/bzIntegration/kPointLists/kPointList[@name="'//TRIM(qptsListName)//'"]/kPoint')
-          IF (qpts_from_kpts%nkpt > 0) THEN
-              ALLOCATE(qpts_from_kpts%bk(3, qpts_from_kpts%nkpt))
-              ALLOCATE(qpts_from_kpts%wtkpt(qpts_from_kpts%nkpt))
-              IF (qpts_from_kpts%read_kpts_by_name(trim(xml%filename_add_xml)//"inp.xml", qptsListName)) THEN
+          IF (xml%GetNumberOfNodes('/fleurInput/output/dfpt/interpolation/@qptsListName') == 1) THEN
+          qptsListName = TRIM(ADJUSTL(xml%GetAttributeValue('/fleurInput/output/dfpt/interpolation/@qptsListName')))
+          ! Initialize path_from_kpts with the number of k-points from the kpts.xml file
+          path_from_kpts%nkpt = xml%GetNumberOfNodes('/fleurInput/cell/bzIntegration/kPointLists/kPointList[@name="'//TRIM(qptsListName)//'"]/kPoint')
+          IF (path_from_kpts%nkpt > 0) THEN
+              ALLOCATE(path_from_kpts%bk(3, path_from_kpts%nkpt))
+              ALLOCATE(path_from_kpts%wtkpt(path_from_kpts%nkpt))
+              IF (path_from_kpts%read_kpts_by_name(trim(xml%filename_add_xml)//"inp.xml", qptsListName)) THEN
                   IF (ALLOCATED(this%qvec_interpolate)) DEALLOCATE(this%qvec_interpolate)
-                  ALLOCATE(this%qvec_interpolate(3, qpts_from_kpts%nkpt))
-                  this%qvec_interpolate = qpts_from_kpts%bk
+                  ALLOCATE(this%qvec_interpolate(3, path_from_kpts%nkpt))
+                  this%qvec_interpolate = path_from_kpts%bk
               END IF
           END IF
         END IF

@@ -181,12 +181,13 @@ CONTAINS
                 END IF
              END IF
           ENDDO ! l
-          ! Now for the lo's
+          ! Now for the lo's.
           DO ilo = 1, atoms%nlo(n)
              l = atoms%llo(ilo,n)
              IF( enpara%qn_ello(ilo,n,jsp).NE.0) THEN
                 lo_doneLocal(ilo,n,jsp) = .TRUE.
-                ello0Local(ilo,n,jsp)=find_enpara(.TRUE.,l,n,jsp,enpara%qn_ello(ilo,n,jsp),atoms,enpara%vr(:,n,jsp),elo_lo_local(ilo,n),elo_up_local(ilo,n))
+                ello0Local(ilo,n,jsp)=find_enpara(.TRUE.,l,n,jsp,enpara%qn_ello(ilo,n,jsp),atoms,enpara%vr(:,n,jsp),elo_lo_local(ilo,n),elo_up_local(ilo,n),&
+                     l_relLO=atoms%l_relLO(ilo,n))
              ELSE
                 ello0Local(ilo,n,jsp) = enpara%ello0(ilo,n,jsp)
                 lo_doneLocal(ilo,n,jsp) = .FALSE.
@@ -403,9 +404,17 @@ CONTAINS
           DO l=0,3
              IF (enpara%el0(l,n,jsp)==NINT(enpara%el0(l,n,jsp))) enpara%qn_el(l,n,jsp)=NINT(enpara%el0(l,n,jsp))
           ENDDO
-          enpara%qn_ello(:,n,jsp)=0
+          enpara%qn_ello(1:atoms%nlo(n),n,jsp)=0
           DO l=1,atoms%nlo(n)
              IF (enpara%ello0(l,n,jsp)==NINT(enpara%ello0(l,n,jsp))) enpara%qn_ello(l,n,jsp)=NINT(enpara%ello0(l,n,jsp))
+          ENDDO
+          ! relLO: the legacy "enpara" file predates relLO and cannot carry a correct entry
+          ! for it -- so its energy parameter must always be (re)determined from the stored
+          ! XML quantum number rather than trusting whatever the file provided.
+          DO lo = 1, atoms%nlo(n)
+             IF (atoms%l_relLO(lo,n)) THEN
+                enpara%qn_ello(lo,n,jsp) = atoms%nqn_relLO(lo,n)
+             END IF
           ENDDO
           !
           !--->    set the energy parameters with l>3 to the value of l=3

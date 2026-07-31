@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -62,7 +62,7 @@ MODULE m_types_abc
 
 CONTAINS
 
-   SUBROUTINE abc_init(this, input, atoms, n_r_in , noccbd, itype)
+   SUBROUTINE abc_init(this, input, atoms, noccbd, itype)
 
       USE m_types_atoms
       USE m_types_input
@@ -70,15 +70,27 @@ CONTAINS
       IMPLICIT NONE
 
       CLASS(t_abc), INTENT(INOUT) :: this
-      INTEGER, INTENT(IN)   :: n_r_in(0:)
       TYPE(t_atoms), INTENT(IN)    :: atoms
       TYPE(t_input), INTENT(IN)    :: input
 
       INTEGER, INTENT(IN)    :: itype, noccbd
+      INTEGER :: n_r(0:atoms%lmaxd)
+
+      IF (itype < 1 .OR. itype > atoms%ntype) THEN
+         CALL judft_error("abc_init: invalid atom type index", calledby="types_abc")
+      END IF
+      IF (noccbd < 1) THEN
+         CALL judft_error("abc_init: noccbd must be >= 1", calledby="types_abc")
+      END IF
+      n_r = atoms%num_radial_functions_per_l(itype)
+
+      IF (MAXVAL(n_r) < 1) THEN
+         CALL judft_error("abc_init: radial function count must be >= 1", calledby="types_abc")
+      END IF
 
       IF (ALLOCATED(this%cof)) DEALLOCATE (this%cof,this%n_r)
-      allocate(this%n_r(0:size(n_r_in)-1))
-      this%n_r(0:)=n_r_in(0:)
+      allocate(this%n_r(0:ubound(n_r,1)))
+      this%n_r = n_r
       ALLOCATE (this%cof(noccbd, 0:atoms%lmax(itype)*(atoms%lmax(itype) + 2), maxval(this%n_r), atoms%neq(itype)))
       this%cof = CMPLX(0.0, 0.0)
 
@@ -101,6 +113,7 @@ CONTAINS
       USE m_setabc1lo
       USE m_hsmt_fjgj
       USE m_hsmt_ab
+      USE m_abcoeff_store
       USE m_types_mat
 
       IMPLICIT NONE
@@ -150,10 +163,40 @@ CONTAINS
       IF (zmat%l_real) THEN
          IF (noco%l_noco) CALL judft_bug("BUG in abcof, l_noco but real?")
       END IF
+      IF (.NOT.ALLOCATED(this%cof)) THEN
+         CALL judft_error("calc_abc: coefficients not initialized (call init first)", calledby="types_abc")
+      END IF
+      IF (.NOT.ALLOCATED(this%n_r)) THEN
+         CALL judft_error("calc_abc: radial-function metadata not initialized", calledby="types_abc")
+      END IF
+      IF (itype < 1 .OR. itype > atoms%ntype) THEN
+         CALL judft_error("calc_abc: invalid atom type index", calledby="types_abc")
+      END IF
+      IF (jspin < 1 .OR. jspin > input%jspins) THEN
+         CALL judft_error("calc_abc: invalid spin index", calledby="types_abc")
+      END IF
+      IF (ne < 1 .OR. ne > SIZE(this%cof,1)) THEN
+         CALL judft_error("calc_abc: ne out of bounds for initialized coefficient storage", calledby="types_abc")
+      END IF
+      IF (LBOUND(this%n_r,1) /= 0 .OR. UBOUND(this%n_r,1) < atoms%lmax(itype)) THEN
+         CALL judft_error("calc_abc: n_r metadata inconsistent with atom lmax", calledby="types_abc")
+      END IF
+      IF (LBOUND(this%cof,2) /= 0) THEN
+         CALL judft_error("calc_abc: coefficient lm dimension must be 0-based", calledby="types_abc")
+      END IF
+      IF (SIZE(this%cof,2) /= atoms%lmax(itype)*(atoms%lmax(itype) + 2) + 1) THEN
+         CALL judft_error("calc_abc: coefficient lm dimension inconsistent with atom lmax", calledby="types_abc")
+      END IF
+      IF (SIZE(this%cof,3) < MAXVAL(this%n_r(0:atoms%lmax(itype)))) THEN
+         CALL judft_error("calc_abc: coefficient radial dimension too small", calledby="types_abc")
+      END IF
+      IF (SIZE(this%cof,4) /= atoms%neq(itype)) THEN
+         CALL judft_error("calc_abc: coefficient atom dimension inconsistent with neq(itype)", calledby="types_abc")
+      END IF
 
 ! Allocations
       CALL fjgj%alloc(MAXVAL(lapw%nv), atoms%lmaxd, jspin, noco)
-      ALLOCATE (abCoeffs(2*atoms%lmaxd*(atoms%lmaxd + 2) + 2, MAXVAL(lapw%nv)))
+      ! abCoeffs is allocated (and filled) inside hsmt_ab.
       ALLOCATE (abTemp(SIZE(this%cof, 1), 0:2*SIZE(this%cof, 2) - 1))
       ALLOCATE (fgpl(3, MAXVAL(lapw%nv)))
       ALLOCATE (work_c(MAXVAL(lapw%nv), ne))
@@ -161,11 +204,13 @@ CONTAINS
 
 ! Initializations
       acof_size = size(this%cof, 1)
-!$acc enter data create(abTemp,fjgj,fjgj%fj,fjgj%gj,work_c,abcoeffs)
+!$acc enter data create(abTemp,fjgj,fjgj%fj,fjgj%gj,work_c)
       
 
 !Use inversion symmetry explicitely
-      l_useinversionsym = any(sym%invsat == 2)!.and.(.not.noco%l_soc).and.(.not.present(nat_start))
+! The identity A^{-p}_{lm} = (-1)^{l+m} (A^p_{l,-m})^* holds only for real
+! eigenvectors. With SOC the eigenvectors are complex, so skip this shortcut.
+      l_useinversionsym = any(sym%invsat == 2) .and. (.not.noco%l_soc)
 
       CALL timestart("fjgj coefficients")
       CALL fjgj%calculate(input, atoms, cell, lapw, noco, usdus, iType, jspin)
@@ -255,7 +300,7 @@ CONTAINS
 ! variant with zgemm
 
 !$acc host_data use_device(work_c,abCoeffs,abTemp)
-CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),abCoeffs,2*atoms%lmaxd*(atoms%lmaxd+2)+2,CMPLX(0.0,0.0),abTemp,acof_size)
+CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),abCoeffs,SIZE(abCoeffs,1),CMPLX(0.0,0.0),abTemp,acof_size)
 !$acc end host_data
 !$acc update self(abTemp)
 !stop "DEBUG"
@@ -269,6 +314,12 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
 !$OMP END PARALLEL DO
 
             CALL timestop("gemm")
+            ! abCoeffs is (re)allocated per call inside hsmt_ab; release the
+            ! device copy it created and the host array before the next call.
+            !$acc exit data delete(abCoeffs)
+            ! Hand abCoeffs to the optional store for later reuse (no-op unless on).
+            CALL abcoeff_store_save(abCoeffs, lapw%nk, iintsp, jspin, iAtom)
+            IF (ALLOCATED(abCoeffs)) DEALLOCATE(abCoeffs)
 
             CALL timestart("local orbitals")
 ! Treatment of local orbitals
@@ -337,26 +388,12 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
             CALL timestop("local orbitals")
          END DO ! loop over interstitial spin
       END DO ! loop over atoms
-!$acc exit data delete(abTemp,fjgj%fj,fjgj%gj,work_c,abcoeffs)
+!$acc exit data delete(abTemp,fjgj%fj,fjgj%gj,work_c)
 !$acc exit data delete(fjgj)
       DEALLOCATE (work_c)
 
-! Treatment of atoms inversion symmetric to others
+! Treatment of atoms inversion symmetric to others (never reached for SOC)
       IF (l_useinversionsym) THEN
-!Comment on SOC case:
-!
-!                           -p,n       (l+m)   p,n  *
-! Usually, we exploit that A     = (-1)      (A    )  if p and -p are the positions
-!                           l,m                l,-m
-! of two atoms related by inversion symmetry and the coefficients are considered to
-! be in the local frame of the representative atom. This is possible, if z is real.
-! After SOC, however, the eigenvectors z are complex and this is no longer possible
-! so the z has to enter, not z*. This is done within the k-loop.
-!                                    -p,n       m   p,n  *
-! When called from hsohelp, we need A     = (-1)  (A    ) because we don't have to
-!                                     l,m           l,-m                    l
-! rotate, but in the sums in hsoham only products A*  A   enter and the (-1) cancels.
-!                                                  lm  lm
          DO iAtom_l = 1, atoms%neq(itype)
             iatom = iatom_l - 1 + atoms%firstAtom(itype)
             IF (sym%invsat(iAtom) .EQ. 1) THEN
@@ -397,6 +434,7 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
       USE m_setabc1lo
       USE m_hsmt_fjgj
       USE m_hsmt_ab
+      USE m_abcoeff_store
       USE m_types_mat
 
       IMPLICIT NONE
@@ -457,21 +495,53 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
       IF (zmat%l_real) THEN
          IF (noco%l_noco) CALL judft_bug("BUG in abcof, l_noco but real?")
       END IF
+      IF (.NOT.ALLOCATED(this%cof)) THEN
+         CALL judft_error("calc_force_abc: coefficients not initialized (call init first)", calledby="types_abc")
+      END IF
+      IF (.NOT.ALLOCATED(this%n_r)) THEN
+         CALL judft_error("calc_force_abc: radial-function metadata not initialized", calledby="types_abc")
+      END IF
+      IF (itype < 1 .OR. itype > atoms%ntype) THEN
+         CALL judft_error("calc_force_abc: invalid atom type index", calledby="types_abc")
+      END IF
+      IF (jspin < 1 .OR. jspin > input%jspins) THEN
+         CALL judft_error("calc_force_abc: invalid spin index", calledby="types_abc")
+      END IF
+      IF (ne < 1 .OR. ne > SIZE(this%cof,1)) THEN
+         CALL judft_error("calc_force_abc: ne out of bounds for initialized coefficient storage", calledby="types_abc")
+      END IF
+      IF (LBOUND(this%n_r,1) /= 0 .OR. UBOUND(this%n_r,1) < atoms%lmax(itype)) THEN
+         CALL judft_error("calc_force_abc: n_r metadata inconsistent with atom lmax", calledby="types_abc")
+      END IF
+      IF (LBOUND(this%cof,2) /= 0) THEN
+         CALL judft_error("calc_force_abc: coefficient lm dimension must be 0-based", calledby="types_abc")
+      END IF
+      IF (SIZE(this%cof,2) /= atoms%lmax(itype)*(atoms%lmax(itype) + 2) + 1) THEN
+         CALL judft_error("calc_force_abc: coefficient lm dimension inconsistent with atom lmax", calledby="types_abc")
+      END IF
+      IF (SIZE(this%cof,3) < MAXVAL(this%n_r(0:atoms%lmax(itype)))) THEN
+         CALL judft_error("calc_force_abc: coefficient radial dimension too small", calledby="types_abc")
+      END IF
+      IF (SIZE(this%cof,4) /= atoms%neq(itype)) THEN
+         CALL judft_error("calc_force_abc: coefficient atom dimension inconsistent with neq(itype)", calledby="types_abc")
+      END IF
 
 ! Allocations
       CALL fjgj%alloc(MAXVAL(lapw%nv), atoms%lmaxd, jspin, noco)
-      ALLOCATE (abCoeffs(2*atoms%lmaxd*(atoms%lmaxd + 2) + 2, MAXVAL(lapw%nv)))
+      ! abCoeffs is allocated (and filled) inside hsmt_ab.
       ALLOCATE (abTemp(SIZE(this%cof, 1), 0:2*SIZE(this%cof, 2) - 1))
       ALLOCATE (fgpl(3, MAXVAL(lapw%nv)))
       ALLOCATE (work_c(MAXVAL(lapw%nv), ne))
 
 ! Initializations
       acof_size = size(this%cof, 1)
-!$acc enter data create(abTemp,fjgj,fjgj%fj,fjgj%gj,work_c,abcoeffs)
+!$acc enter data create(abTemp,fjgj,fjgj%fj,fjgj%gj,work_c)
 
 
 !Use inversion symmetry explicitely
-      l_useinversionsym = any(sym%invsat == 2)!.and.(.not.noco%l_soc).and.(.not.present(nat_start))
+! The identity A^{-p}_{lm} = (-1)^{l+m} (A^p_{l,-m})^* holds only for real
+! eigenvectors. With SOC the eigenvectors are complex, so skip this shortcut.
+      l_useinversionsym = any(sym%invsat == 2) .and. (.not.noco%l_soc)
 
       CALL timestart("fjgj coefficients")
       CALL fjgj%calculate(input, atoms, cell, lapw, noco, usdus, iType, jspin)
@@ -539,7 +609,13 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
                force%bveccof(i, :, :, iAtom) = force%bveccof(i, :, :, iAtom) + helpMat_force(:, :)
             END DO
             CALL timestop("force contributions")
-      
+            ! abCoeffs is (re)allocated per call inside hsmt_ab; release the
+            ! device copy it created and the host array before the next call.
+            !$acc exit data delete(abCoeffs)
+            ! Hand abCoeffs to the optional store for later reuse (no-op unless on).
+            CALL abcoeff_store_save(abCoeffs, lapw%nk, iintsp, jspin, iAtom)
+            IF (ALLOCATED(abCoeffs)) DEALLOCATE(abCoeffs)
+
 
             CALL timestart("local orbitals")
 ! Treatment of local orbitals
@@ -612,27 +688,13 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
             CALL timestop("local orbitals")
          END DO ! loop over interstitial spin
       END DO ! loop over atoms
-!$acc exit data delete(abTemp,fjgj%fj,fjgj%gj,work_c,abcoeffs)
+!$acc exit data delete(abTemp,fjgj%fj,fjgj%gj,work_c)
 !$acc exit data delete(fjgj)
       DEALLOCATE (work_c)
 
 
-! Treatment of atoms inversion symmetric to others
+! Treatment of atoms inversion symmetric to others (never reached for SOC)
       IF (l_useinversionsym) THEN
-!Comment on SOC case:
-!
-!                           -p,n       (l+m)   p,n  *
-! Usually, we exploit that A     = (-1)      (A    )  if p and -p are the positions
-!                           l,m                l,-m
-! of two atoms related by inversion symmetry and the coefficients are considered to
-! be in the local frame of the representative atom. This is possible, if z is real.
-! After SOC, however, the eigenvectors z are complex and this is no longer possible
-! so the z has to enter, not z*. This is done within the k-loop.
-!                                    -p,n       m   p,n  *
-! When called from hsohelp, we need A     = (-1)  (A    ) because we don't have to
-!                                     l,m           l,-m                    l
-! rotate, but in the sums in hsoham only products A*  A   enter and the (-1) cancels.
-!                                                  lm  lm
          DO iAtom = atoms%firstatom(itype),atoms%firstAtom(itype)+atoms%neq(itype)-1
             IF (sym%invsat(iAtom) .EQ. 1) THEN
                jAtom = sym%invsatnr(iAtom)
