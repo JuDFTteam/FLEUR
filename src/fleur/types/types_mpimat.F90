@@ -32,7 +32,11 @@ MODULE m_types_mpimat
    !<This can be used to perform scalapack calls on the matrix with little additional input.
    !<The copy procedure is overwritten from t_mat to enable also redistribution of the matrix.
    TYPE t_blacsdata
-      INTEGER:: no_use
+      INTEGER, POINTER :: no_use => null()       !> number of t_mpimat using the BLACS grid of this
+      !> descriptor. Every t_mpimat owns its own t_blacsdata (the descriptors may
+      !> differ, e.g. in the global matrix size), but several of them can name the
+      !> same BLACS context. They then share this reference count, so that the grid
+      !> is destroyed by whoever releases the last reference to it.
       INTEGER:: mpi_com                          !> mpi-communiator over which matrix is distributed
       INTEGER:: blacs_desc(dlen_)                !> blacs descriptor
       !> 1: =1
@@ -66,6 +70,7 @@ MODULE m_types_mpimat
       procedure   :: print_type => mpimat_print_type
       PROCEDURE   :: linear_problem => t_mpimat_lproblem
       PROCEDURE   :: is_column_cyclic
+      PROCEDURE   :: share_blacsgrid => mpimat_share_blacsgrid !<use the BLACS grid of another matrix
 #ifndef __INTEL_COMPILER      
       FINAL :: finalize,finalize_1d,finalize_2d,finalize_3d
 #endif      
@@ -172,8 +177,7 @@ CONTAINS
       if (present(res)) Then
          select type (res)
          type is (t_mpimat)
-            res%blacsdata => mat1%blacsdata
-            res%blacsdata%no_use = res%blacsdata%no_use + 1
+            CALL res%share_blacsgrid(mat1)
             res%matsize1 = mat1%matsize1
             res%matsize2 = mat1%matsize2
             res%global_size1 = mat1%global_size1
@@ -558,45 +562,69 @@ CONTAINS
       CALL mat%copy(mat1, 1, 1)
    END SUBROUTINE mpimat_move
 
+   SUBROUTINE mpimat_share_blacsgrid(mat, templ)
+      !>Let mat use the BLACS grid of templ.
+      !!
+      !!mat gets its own copy of the descriptor, so that it may be adjusted (e.g. to
+      !!a different global matrix size), but the reference count of the grid stays
+      !!shared with templ. Both matrices have to be released, the grid is destroyed
+      !!by whichever of them is released last.
+      IMPLICIT NONE
+      CLASS(t_mpimat), INTENT(INOUT) :: mat
+      CLASS(t_mpimat), INTENT(IN)    :: templ
+
+      IF (.NOT. ASSOCIATED(templ%blacsdata)) &
+         CALL judft_bug("share_blacsgrid: the template matrix has no BLACS grid")
+
+      CALL priv_release_blacsdata(mat%blacsdata) !in case mat had a grid of its own
+      ALLOCATE (mat%blacsdata)
+      mat%blacsdata = templ%blacsdata !this associates no_use with the shared reference count
+      IF (.NOT. ASSOCIATED(mat%blacsdata%no_use)) THEN
+         !The grid of templ is not reference counted yet, start counting now
+         ALLOCATE (mat%blacsdata%no_use)
+         mat%blacsdata%no_use = 1
+         templ%blacsdata%no_use => mat%blacsdata%no_use
+      END IF
+      mat%blacsdata%no_use = mat%blacsdata%no_use + 1
+   END SUBROUTINE mpimat_share_blacsgrid
+
+   SUBROUTINE priv_release_blacsdata(blacsdata)
+      !>Release one reference to a BLACS grid and discard the descriptor.
+      !!
+      !!The grid is only destroyed when the last t_mpimat using it is released.
+      !!Note that this has to be called explicitly (e.g. by free).
+      IMPLICIT NONE
+      TYPE(t_blacsdata), POINTER, INTENT(INOUT) :: blacsdata
+      INTEGER :: ierr
+
+      IF (.NOT. ASSOCIATED(blacsdata)) RETURN
+      IF (ASSOCIATED(blacsdata%no_use)) THEN
+         blacsdata%no_use = blacsdata%no_use - 1
+         IF (blacsdata%no_use < 1) THEN
+#ifdef CPP_SCALAPACK
+            IF (blacsdata%blacs_desc(2) /= -1) CALL BLACS_GRIDEXIT(blacsdata%blacs_desc(2), ierr)
+#endif
+            DEALLOCATE (blacsdata%no_use)
+         END IF
+      END IF
+      DEALLOCATE (blacsdata)
+   END SUBROUTINE priv_release_blacsdata
+
    SUBROUTINE finalize(mat)
       IMPLICIT NONE
       TYPE(t_mpimat), INTENT(INOUT) :: mat
-      INTEGER :: ierr
-      IF (ASSOCIATED(mat%blacsdata)) THEN
-         IF (mat%blacsdata%no_use > 1) THEN
-            mat%blacsdata%no_use = mat%blacsdata%no_use - 1
-            mat%blacsdata => null()
-         ELSE
-#ifdef CPP_SCALAPACK
-            if (mat%blacsdata%blacs_desc(2) /= -1) THEN
-               CALL BLACS_GRIDEXIT(mat%blacsdata%blacs_desc(2), ierr)
-               DEALLOCATE (mat%blacsdata)
-            endif   
-#endif
-         END IF
-      END IF
-      
+
+      CALL priv_release_blacsdata(mat%blacsdata)
    END SUBROUTINE finalize
 
    SUBROUTINE finalize_1d(mat)
       IMPLICIT NONE
 
       TYPE(t_mpimat), INTENT(INOUT) :: mat(:)
-      INTEGER                      :: i,ierr
+      INTEGER                      :: i
+
       DO i = 1, size(mat)
-         IF (ASSOCIATED(mat(i)%blacsdata)) THEN
-            IF (mat(i)%blacsdata%no_use > 1) THEN
-               mat(i)%blacsdata%no_use = mat(i)%blacsdata%no_use - 1
-               mat(i)%blacsdata => null()
-            ELSE
-#ifdef CPP_SCALAPACK
-               if (mat(i)%blacsdata%blacs_desc(2) /= -1) THEN
-                  CALL BLACS_GRIDEXIT(mat(i)%blacsdata%blacs_desc(2), ierr)
-                  DEALLOCATE (mat(i)%blacsdata)
-               endif   
-#endif
-            END IF
-         END IF
+         CALL priv_release_blacsdata(mat(i)%blacsdata)
       END DO
    END SUBROUTINE finalize_1d
 
@@ -604,23 +632,11 @@ CONTAINS
       IMPLICIT NONE
 
       TYPE(t_mpimat), INTENT(INOUT) :: mat(:, :)
-      INTEGER                      :: i, j,ierr
+      INTEGER                      :: i, j
 
       DO i = 1, size(mat, dim=1)
          DO j = 1, size(mat, dim=2)
-            IF (ASSOCIATED(mat(i,j)%blacsdata)) THEN
-               IF (mat(i,j)%blacsdata%no_use > 1) THEN
-                  mat(i,j)%blacsdata%no_use = mat(i,j)%blacsdata%no_use - 1
-                  mat(i,j)%blacsdata => null()
-               ELSE
-#ifdef CPP_SCALAPACK
-                  if (mat(i,j)%blacsdata%blacs_desc(2) /= -1) THEN
-                     CALL BLACS_GRIDEXIT(mat(i,j)%blacsdata%blacs_desc(2), ierr)
-                     DEALLOCATE (mat(i,j)%blacsdata)
-                  endif   
-#endif
-               END IF
-            END IF
+            CALL priv_release_blacsdata(mat(i,j)%blacsdata)
          END DO
       END DO
    END SUBROUTINE finalize_2d
@@ -628,24 +644,12 @@ CONTAINS
    SUBROUTINE finalize_3d(mat)
       IMPLICIT NONE
       TYPE(t_mpimat), INTENT(INOUT) :: mat(:, :, :)
-      INTEGER                      :: i, j, k, ierr
+      INTEGER                      :: i, j, k
 
       DO i = 1, size(mat, dim=1)
          DO j = 1, size(mat, dim=2)
             DO k = 1, size(mat, dim=3)
-               IF (ASSOCIATED(mat(i,j,k)%blacsdata)) THEN
-                  IF (mat(i,j,k)%blacsdata%no_use > 1) THEN
-                     mat(i,j,k)%blacsdata%no_use = mat(i,j,k)%blacsdata%no_use - 1
-                     mat(i,j,k)%blacsdata => null()
-                  ELSE
-#ifdef CPP_SCALAPACK
-                     if (mat(i,j,k)%blacsdata%blacs_desc(2) /= -1) THEN
-                        CALL BLACS_GRIDEXIT(mat(i,j,k)%blacsdata%blacs_desc(2), ierr)
-                        DEALLOCATE (mat(i,j,k)%blacsdata)
-                     endif   
-#endif
-                  END IF
-               END IF
+               CALL priv_release_blacsdata(mat(i,j,k)%blacsdata)
             END DO
          END DO
       END DO
@@ -654,23 +658,10 @@ CONTAINS
    SUBROUTINE mpimat_free(mat)
       IMPLICIT NONE
       CLASS(t_mpimat), INTENT(INOUT) :: mat
-      INTEGER :: ierr
-     
+
       IF (ALLOCATED(mat%data_r)) DEALLOCATE (mat%data_r)
       IF (ALLOCATED(mat%data_c)) DEALLOCATE (mat%data_c)
-      IF (ASSOCIATED(mat%blacsdata)) THEN
-         IF (mat%blacsdata%no_use > 1) THEN
-            mat%blacsdata%no_use = mat%blacsdata%no_use - 1
-            mat%blacsdata => null()
-         ELSE
-#ifdef CPP_SCALAPACK
-            if (mat%blacsdata%blacs_desc(2) /= -1) THEN
-               CALL BLACS_GRIDEXIT(mat%blacsdata%blacs_desc(2), ierr)
-               DEALLOCATE (mat%blacsdata)
-            endif   
-#endif
-         END IF
-      END IF
+      CALL priv_release_blacsdata(mat%blacsdata)
    END SUBROUTINE mpimat_free
 
    !>Initialization of the distributed matrix.
@@ -708,10 +699,14 @@ CONTAINS
          IF (PRESENT(nb_y)) nby = nb_y
          mat%global_size1 = matsize1
          mat%global_size2 = matsize2
-         mat%blacsdata%no_use = 1
       end if
       CALL priv_create_blacsgrid(mpi_subcom, dist_type, matsize1, matsize2, nbx, nby, &
                                  mat%blacsdata, mat%matsize1, mat%matsize2)
+
+      !This matrix is the first user of its new grid. The reference count has to be
+      !set up after priv_create_blacsgrid, its intent(out) argument resets it.
+      ALLOCATE (mat%blacsdata%no_use)
+      mat%blacsdata%no_use = 1
 
       mat%blacsdata%mpi_com = mpi_subcom
       CALL mat%alloc(l_real) !Attention,sizes determined in call to priv_create_blacsgrid
@@ -739,10 +734,8 @@ CONTAINS
       SELECT TYPE (templ)
       TYPE IS (t_mpimat)
          mat%l_real = templ%l_real
+         CALL mat%share_blacsgrid(templ)
          IF (PRESENT(global_size1) .AND. PRESENT(global_size2)) THEN
-            ALLOCATE (mat%blacsdata)
-            mat%blacsdata = templ%blacsdata
-            mat%blacsdata%no_use = mat%blacsdata%no_use + 1
             mat%blacsdata%blacs_desc(3) = global_size1
             mat%blacsdata%blacs_desc(4) = global_size2
             mat%global_size1 = global_size1
@@ -756,8 +749,6 @@ CONTAINS
             mat%matsize2 = templ%matsize2
             mat%global_size1 = templ%global_size1
             mat%global_size2 = templ%global_size2
-            mat%blacsdata => templ%blacsdata
-            mat%blacsdata%no_use = mat%blacsdata%no_use + 1
          END IF
          CALL mat%alloc()
 
