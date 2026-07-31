@@ -407,7 +407,7 @@ CONTAINS
 
                ALLOCATE(abc_spin(n_local_spins))
                DO ispin = 1, n_local_spins
-                  CALL abc_spin(ispin)%init(input, atoms, radfun%n_r, nbands, itype)
+                  CALL abc_spin(ispin)%init(input, atoms, nbands, itype)
                END DO
                IF (l_spinor_abc) THEN
                   DO ispin = 1, n_local_spins

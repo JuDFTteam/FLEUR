@@ -220,7 +220,7 @@ CONTAINS
             IF (l_spinor_rixs) THEN
                ALLOCATE(abc_spin(2))
                DO ispin = 1, 2
-                  CALL abc_spin(ispin)%init(input, atoms, radfun%n_r, nbands, itype)
+                  CALL abc_spin(ispin)%init(input, atoms, nbands, itype)
                   CALL abc_spin(ispin)%calc_abc(input, atoms, sym, cell, lapw, nbands, usdus, noco, nococonv, &
                                                 ispin, itype, zMat)
                END DO
@@ -228,7 +228,7 @@ CONTAINS
                ALLOCATE(matrix_emit(nbands, SIZE(core_states(1)%twice_mj)))
             ELSE
                ALLOCATE(abc_spin(1))
-               CALL abc_spin(1)%init(input, atoms, radfun%n_r, nbands, itype)
+               CALL abc_spin(1)%init(input, atoms, nbands, itype)
                CALL abc_spin(1)%calc_abc(input, atoms, sym, cell, lapw, nbands, usdus, noco, nococonv, jsp, itype, zMat)
                ALLOCATE(matrix_abs_spin(nbands, SIZE(core_states(1)%twice_mj), 2))
                ALLOCATE(matrix_emit_spin(nbands, SIZE(core_states(1)%twice_mj), 2))

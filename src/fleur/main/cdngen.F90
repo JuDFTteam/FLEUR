@@ -52,7 +52,6 @@ SUBROUTINE cdngen(eig_id,fmpi,input,xas,banddos,sliceplot,vacuum,&
    USE m_types_greensfContourData
    USE m_types_eigdos
    USE m_types_dos
-   USE m_types_hyperfine
    USE m_rixs_driver, ONLY: rixs_run_driver
    USE m_xas_driver, ONLY: xas_run_driver
    USE m_types_moessbauerParams
