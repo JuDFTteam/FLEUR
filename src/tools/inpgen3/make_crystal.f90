@@ -40,7 +40,6 @@ CONTAINS
     LOGICAL :: l_posCorrected(3)
     REAL    :: rest, det
     REAL,PARAMETER :: eps7 = 1.0e-7
-    INTEGER,PARAMETER :: invs_matrix(3,3)=RESHAPE([-1,0,0,0,-1,0,0,0,-1],[3,3])
     INTEGER,ALLOCATABLE :: inpgen_atom_for_type(:)
     REAL,ALLOCATABLE    :: mag_mom_tmp(:,:)
 

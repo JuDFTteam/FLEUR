@@ -302,6 +302,7 @@ module m_VYukawaFilm
     use m_constants
     use m_types
     use m_cfft
+    use m_lagrange3
     implicit none
 
     type(t_stars),  intent(in)  :: stars
@@ -409,17 +410,16 @@ module m_VYukawaFilm
           jz = rz      ! index of maximal vacuum grid point below z_i
           q = rz - jz  ! factor in Lagrange basis polynomials
           if ( irec2 == 1 ) then
-            VIz(iz,irec2) = 0.5     * ( q - 1. ) * ( q - 2. ) * REAL(VVnew(jz,   1, jvac)) &
-                          -       q *              ( q - 2. ) * REAL(VVnew(jz+1, 1, jvac)) &
-                          + 0.5 * q * ( q - 1. )              * REAL(VVnew(jz+2, 1, jvac))
+            VIz(iz,irec2) = lagrange3( q, REAL(VVnew(jz,1,jvac)), REAL(VVnew(jz+1,1,jvac)), &
+                                          REAL(VVnew(jz+2,1,jvac)) )
           else if ( jz + 2 <= vacuum%nmzxy ) then
-            VIz(iz,irec2) = 0.5 *     ( q - 1. ) * ( q - 2. ) * VVnew(jz,  irec2,jvac) &
-                          -       q              * ( q - 2. ) * VVnew(jz+1,irec2,jvac) &
-                          + 0.5 * q * ( q - 1. )              * VVnew(jz+2,irec2,jvac)
-          if ( vacuum%nvac==1 .and. ivac == 2 ) THEN
-            call stars%map_2nd_vac(vacuum,irec2,irec2r,phas)
-            VIz(iz,irec2r) = phas*VIz(iz,irec2) 
-          endif  
+            irec2r = irec2
+            phas   = cmplx(1.0,0.0)
+            ! gather the lower-vacuum value of star irec2 from the upper vacuum
+            if ( vacuum%nvac==1 .and. ivac == 2 ) call stars%map_2nd_vac(vacuum,irec2,irec2r,phas)
+            VIz(iz,irec2) = phas * lagrange3( q, VVnew(jz,  irec2r,jvac), &
+                                                 VVnew(jz+1,irec2r,jvac), &
+                                                 VVnew(jz+2,irec2r,jvac) )
           end if
         end do
       end do
@@ -660,6 +660,7 @@ module m_VYukawaFilm
     use m_constants
     use m_types
     use m_cfft
+    use m_lagrange3
     implicit none
 
     type(t_stars),  intent(in)  :: stars
@@ -789,17 +790,15 @@ module m_VYukawaFilm
           jz = rz      ! index of maximal vacuum grid point below z_i
           q = rz - jz  ! factor in Lagrange basis polynomials
           if ( irec2 == 1 ) then
-            VIz(iz,irec2) = 0.5     * ( q - 1. ) * ( q - 2. ) * VVz(jz,  jvac) &
-                          -       q *              ( q - 2. ) * VVz(jz+1,jvac) &
-                          + 0.5 * q * ( q - 1. )              * VVz(jz+2,jvac)
+            VIz(iz,irec2) = lagrange3( q, VVz(jz,jvac), VVz(jz+1,jvac), VVz(jz+2,jvac) )
           else if ( jz + 2 <= vacuum%nmzxy ) then
-            VIz(iz,irec2) = 0.5 *     ( q - 1. ) * ( q - 2. ) * VVxy(jz,  irec2,jvac) &
-                          -       q              * ( q - 2. ) * VVxy(jz+1,irec2,jvac) &
-                          + 0.5 * q * ( q - 1. )              * VVxy(jz+2,irec2,jvac)
-            if ( vacuum%nvac==1 .and. ivac == 2 ) THEN
-              call stars%map_2nd_vac(vacuum,irec2,irec2r,phas)
-              VIz(iz,irec2r) = phas*VIz(iz,irec2) 
-            endif  
+            irec2r = irec2
+            phas   = cmplx(1.0,0.0)
+            ! gather the lower-vacuum value of star irec2 from the upper vacuum
+            if ( vacuum%nvac==1 .and. ivac == 2 ) call stars%map_2nd_vac(vacuum,irec2,irec2r,phas)
+            VIz(iz,irec2) = phas * lagrange3( q, VVxy(jz,  irec2r,jvac), &
+                                                 VVxy(jz+1,irec2r,jvac), &
+                                                 VVxy(jz+2,irec2r,jvac) )
           end if
         end do
       end do

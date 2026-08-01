@@ -506,13 +506,7 @@ CONTAINS
           END IF
        END IF
 
-       IF(vacuum%nvac.EQ.1) THEN
-          IF (sym%invs) THEN
-             den%vac(:,:,2,:) = CONJG(den%vac(:,:,1,:))
-          ELSE
-             den%vac(:,:,2,:) = den%vac(:,:,1,:)
-          END IF
-       END IF
+       CALL stars%fill_2nd_vac(vacuum,den%vac)
 
       if (any(noco%l_constrained).or.any(noco%l_fixedMoment)) THEN
          CALL writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&

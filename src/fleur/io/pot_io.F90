@@ -217,16 +217,7 @@ MODULE m_pot_io
 
          potentialType = POTENTIAL_TYPE_IN_const
 
-         IF(vacuum%nvac.EQ.1) THEN
-            !pot%vacz(:,2,:) = pot%vacz(:,1,:)
-            IF (sym%invs) THEN
-               !pot%vacxy(:,:,2,:) = CONJG(pot%vacxy(:,:,1,:))
-               pot%vac(:,:,2,:) = CONJG(pot%vac(:,:,1,:))
-            ELSE
-               !pot%vacxy(:,:,2,:) = pot%vacxy(:,:,1,:)
-               pot%vac(:,:,2,:) = pot%vac(:,:,1,:)
-            END IF
-         END IF
+         CALL stars%fill_2nd_vac(vacuum,pot%vac)
          CALL writePotentialHDF(input, fileID, archiveName, potentialType,&
                                 currentStarsIndex, currentLatharmsIndex, currentStructureIndex,&
                                 currentStepfunctionIndex,iter,pot,fpw,noco%l_noco,any(noco%l_unrestrictMT))

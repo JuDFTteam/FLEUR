@@ -103,7 +103,10 @@ MODULE m_checks
         IF ((input%f_level.GT.0.).AND.input%l_f) THEN
            call judft_warn("Enhanced forces are not implemented for film calculations.",hint="Set the f_level tag to 0.")
         END IF
-        if (.not.sym%symor) call judft_warn("Non-symorphic films probably do not work correctly. Either proceed with caution or use a symorphic setup (symor=T in inpgen)")
+        if (input%film.and.noco%l_noco.and..not.sym%symor) &
+           call judft_warn("Nonsymmorphic films are only tested for collinear calculations; the noncollinear case is not verified.",&
+                           hint="Proceed with caution, or use a symorphic setup (symor=T in inpgen).",&
+                           calledby="check_input_switches")
        maxpos=0.0;minpos=0.0
        DO n=1,atoms%ntype
          na=atoms%firstAtom(n) - 1

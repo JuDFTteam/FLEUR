@@ -116,11 +116,6 @@
                       READ (nu,END=200,ERR=200) ivdummy
                       READ (nu,END=200,ERR=200) nmzn,z1n,delzn
                       READ (nu,END=200,ERR=200) (fvac(i,1,ivac,jsp),i=1,nmzn)
-                      IF (vacuum%nvac.EQ.1) THEN
-                         DO i=1,nmzn
-                            fvac(i,1,2,jsp)=fvac(i,1,1,jsp)
-                         ENDDO
-                      ENDIF
                       IF (jsp<=SIZE(fvac,4)) THEN
                          READ (nu,END=200,ERR=200) nq2n,nmzxyn
                          !+gu
@@ -145,17 +140,6 @@
                             ELSE
                                READ (nu,END=200,ERR=200) (fvac(j,k,ivac,jsp),j=1,nmzxyn)
                             END IF
-                            IF (vacuum%nvac.EQ.1) THEN
-                               IF (sym%invs) THEN
-                                  DO j = 1,nmzxyn
-                                     fvac(j,k,2,jsp) = CONJG(fvac(j,k,1,jsp))
-                                  ENDDO
-                               ELSE
-                                  DO j = 1,nmzxyn
-                                     fvac(j,k,2,jsp) = fvac(j,k,1,jsp)
-                                  ENDDO
-                               ENDIF
-                            ENDIF
                          ENDDO
                          !+gu
                          DO k = 1,n_diff
@@ -170,6 +154,7 @@
                          END IF
                       ENDIF
                    ENDDO
+                   CALL stars%fill_2nd_vac(vacuum,fvac)
                 END IF
              ENDIF
           ENDDO

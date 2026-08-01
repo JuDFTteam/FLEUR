@@ -105,7 +105,7 @@ contains
             alphm(irec2,1) = cmplx( alpha(vacuum%nmzxy,1,1,irec2), alpha(vacuum%nmzxy,1,2,irec2) )
             if ( vacuum%nvac == 1 ) then
                call stars%map_2nd_vac(vacuum,irec2,irec2r,phas)
-               alphm(irec2r,2) = phas * cmplx(alpha(vacuum%nmzxy,1,1,irec2),alpha(vacuum%nmzxy,1,2,irec2))
+               alphm(irec2,2) = phas * cmplx(alpha(vacuum%nmzxy,1,1,irec2r),alpha(vacuum%nmzxy,1,2,irec2r))
             else
                alphm(irec2,2) = cmplx( alpha(vacuum%nmzxy,2,1,irec2), alpha(vacuum%nmzxy,2,2,irec2) )
             end if
@@ -174,7 +174,7 @@ contains
             alphm(irec2,1) = cmplx( alpha(vacuum%nmzxy,1,1,irec2), alpha(vacuum%nmzxy,1,2,irec2) )
             if ( vacuum%nvac == 1 ) then
                call stars%map_2nd_vac(vacuum,irec2,irec2r,phas)
-               alphm(irec2r,2) = phas * cmplx(alpha(vacuum%nmzxy,1,1,irec2),alpha(vacuum%nmzxy,1,2,irec2))
+               alphm(irec2,2) = phas * cmplx(alpha(vacuum%nmzxy,1,1,irec2r),alpha(vacuum%nmzxy,1,2,irec2r))
             else
                alphm(irec2,2) = cmplx( alpha(vacuum%nmzxy,2,1,irec2), alpha(vacuum%nmzxy,2,2,irec2) )
             end if
