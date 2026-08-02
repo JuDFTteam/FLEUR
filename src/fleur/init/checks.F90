@@ -48,8 +48,9 @@ MODULE m_checks
 #endif
     END SUBROUTINE check_command_line
 
-    SUBROUTINE check_input_switches(banddos,vacuum,noco,atoms,input,sym,kpts,hybinp)
+    SUBROUTINE check_input_switches(banddos,vacuum,noco,atoms,input,sym,kpts,hybinp,cell)
       USE m_nocoInputCheck
+      USE m_socsym
       USE m_types_fleurinput
       USE m_constants
       type(t_banddos),INTENT(IN)::banddos
@@ -60,9 +61,11 @@ MODULE m_checks
       type(t_sym),INTENT(IN)    :: sym
       type(t_kpts),INTENT(IN)   :: kpts
       type(t_hybinp),intent(in) :: hybinp
+      type(t_cell),INTENT(IN)   :: cell
 
       integer :: i,n,na
       real :: maxpos,minpos
+      logical :: socError(sym%nop)
 
      ! Check DOS related stuff (from inped)
      IF(banddos%l_jDOS.AND..NOT.noco%l_noco) THEN
@@ -97,6 +100,16 @@ MODULE m_checks
      END IF
 
      IF (noco%l_noco) CALL nocoInputCheck(atoms,input,sym,vacuum,noco)
+
+     IF (noco%l_soc.AND.(sym%nop>1)) THEN
+        CALL soc_sym(sym%nop,sym%mrot,noco%theta_inp,noco%phi_inp,cell%amat,socError)
+        IF (ANY(socError)) THEN
+           CALL juDFT_warn("Symmetry operations incompatible with spin quantization axis are present.",&
+                           hint="Recreate the input with inpgen while l_soc=T is set, so that the symmetry is &
+                                &reduced accordingly, or use the '-nosym' command line option of inpgen.",&
+                           calledby="check_input_switches")
+        END IF
+     END IF
 
      !In film case check centering of film
      if ( input%film ) then
