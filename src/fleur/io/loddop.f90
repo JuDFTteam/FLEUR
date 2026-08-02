@@ -5,6 +5,11 @@
                           it,fr,fpw,fvac)
           !     ***********************************************************
           !     reload formatted density or potential   c.l.fu
+          !
+          !     Note: For films with vacuum%nvac==1 only the upper vacuum is
+          !     stored in the file. Callers that use the vacuum data have to
+          !     reconstruct the lower vacuum by calling stars%fill_2nd_vac
+          !     themselves.
           !     ***********************************************************
 
           USE m_types
@@ -154,7 +159,6 @@
                          END IF
                       ENDIF
                    ENDDO
-                   CALL stars%fill_2nd_vac(vacuum,fvac)
                 END IF
              ENDIF
           ENDDO

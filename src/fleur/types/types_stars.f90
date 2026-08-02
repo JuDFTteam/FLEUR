@@ -442,6 +442,11 @@ CONTAINS
        RETURN
     END IF
 
+    IF (.NOT.(ALLOCATED(stars%kv2).AND.ALLOCATED(stars%i2g).AND.ALLOCATED(stars%r2gphs))) &
+       CALL judft_error("map_2nd_vac: stars object lacks 2D star data", calledby="map_2nd_vac")
+    IF (.NOT.(ALLOCATED(vacuum%mrot2).AND.ALLOCATED(vacuum%tau2))) &
+       CALL judft_error("map_2nd_vac: vacuum object lacks the symmetry operation relating both vacua", calledby="map_2nd_vac")
+
     kr = matmul(stars%kv2(:,n2),vacuum%mrot2)
     n2_src = stars%i2g(kr(1),kr(2))
     arg = -tpi_const* ( stars%kv2(1,n2)*vacuum%tau2(1) + stars%kv2(2,n2)*vacuum%tau2(2) )

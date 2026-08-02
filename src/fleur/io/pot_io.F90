@@ -155,6 +155,8 @@ MODULE m_pot_io
          CALL loddop(stars,vacuum,atoms,sphhar,input,sym,&
                      iUnit,iter,fr,fpw,fvac)
 
+         CALL stars%fill_2nd_vac(vacuum,fvac)
+
          CLOSE(iUnit)
       END IF
 

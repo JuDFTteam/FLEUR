@@ -314,6 +314,8 @@ CONTAINS
        CALL loddop(stars,vacuum,atoms,sphhar,input,sym,&
             iUnit,den%iter,den%mt,den%pw,den%vac)
 
+       CALL stars%fill_2nd_vac(vacuum,den%vac)
+
        ! read in additional data if l_noco and data is present
        IF ((archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const).AND.l_rhomatFile) THEN
           READ (iUnit,iostat=datend) (den%pw(k,3),k=1,stars%ng3)
