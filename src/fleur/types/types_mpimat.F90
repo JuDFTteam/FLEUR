@@ -37,6 +37,8 @@ MODULE m_types_mpimat
       !> differ, e.g. in the global matrix size), but several of them can name the
       !> same BLACS context. They then share this reference count, so that the grid
       !> is destroyed by whoever releases the last reference to it.
+      !> Invariant: an associated t_blacsdata always has an associated reference
+      !> count. Use priv_new_blacsdata to create one, never a bare ALLOCATE.
       INTEGER:: mpi_com                          !> mpi-communiator over which matrix is distributed
       INTEGER:: blacs_desc(dlen_)                !> blacs descriptor
       !> 1: =1
@@ -71,6 +73,7 @@ MODULE m_types_mpimat
       PROCEDURE   :: linear_problem => t_mpimat_lproblem
       PROCEDURE   :: is_column_cyclic
       PROCEDURE   :: share_blacsgrid => mpimat_share_blacsgrid !<use the BLACS grid of another matrix
+      PROCEDURE   :: set_mpi_com => mpimat_set_mpi_com !<fix the communicator before the grid is known
 #ifndef __INTEL_COMPILER      
       FINAL :: finalize,finalize_1d,finalize_2d,finalize_3d
 #endif      
@@ -575,18 +578,46 @@ CONTAINS
 
       IF (.NOT. ASSOCIATED(templ%blacsdata)) &
          CALL judft_bug("share_blacsgrid: the template matrix has no BLACS grid")
+      IF (.NOT. ASSOCIATED(templ%blacsdata%no_use)) &
+         CALL judft_bug("share_blacsgrid: the grid of the template matrix is not reference counted")
 
       CALL priv_release_blacsdata(mat%blacsdata) !in case mat had a grid of its own
       ALLOCATE (mat%blacsdata)
       mat%blacsdata = templ%blacsdata !this associates no_use with the shared reference count
-      IF (.NOT. ASSOCIATED(mat%blacsdata%no_use)) THEN
-         !The grid of templ is not reference counted yet, start counting now
-         ALLOCATE (mat%blacsdata%no_use)
-         mat%blacsdata%no_use = 1
-         templ%blacsdata%no_use => mat%blacsdata%no_use
-      END IF
       mat%blacsdata%no_use = mat%blacsdata%no_use + 1
    END SUBROUTINE mpimat_share_blacsgrid
+
+   SUBROUTINE mpimat_set_mpi_com(mat, mpi_com)
+      !!This is for code that has to decide on the communicator earlier than on the
+      !!matrix size. The descriptor is marked as naming no BLACS grid, the grid is
+      !!set up by the later call to init.
+      IMPLICIT NONE
+      CLASS(t_mpimat), INTENT(INOUT) :: mat
+      INTEGER, INTENT(IN)            :: mpi_com
+
+      INTEGER :: com
+
+      com = mpi_com !mpi_com might be a component of the blacsdata released below
+      CALL priv_release_blacsdata(mat%blacsdata)
+      CALL priv_new_blacsdata(mat%blacsdata)
+      mat%blacsdata%mpi_com = com
+   END SUBROUTINE mpimat_set_mpi_com
+
+   SUBROUTINE priv_new_blacsdata(blacsdata)
+      !!Create a t_blacsdata that does not name a BLACS grid yet.
+      !!
+      !!This is the only place where a t_blacsdata is created, so that the reference
+      !!count of its grid always exists (see the no_use component of t_blacsdata).
+      !!blacs_desc(2)=-1 marks the descriptor as naming no grid, hence releasing it
+      !!before a grid was set up does not try to exit one.
+      IMPLICIT NONE
+      TYPE(t_blacsdata), POINTER, INTENT(OUT) :: blacsdata
+
+      ALLOCATE (blacsdata)
+      ALLOCATE (blacsdata%no_use)
+      blacsdata%no_use = 1
+      blacsdata%blacs_desc(2) = -1
+   END SUBROUTINE priv_new_blacsdata
 
    SUBROUTINE priv_release_blacsdata(blacsdata)
       !>Release one reference to a BLACS grid and discard the descriptor.
@@ -685,7 +716,7 @@ CONTAINS
       call timestart("mpimat_init")
    IF (.NOT. (PRESENT(matsize1) .AND. PRESENT(matsize2) .AND. PRESENT(mpi_subcom) .AND. PRESENT(l_real) .AND. PRESENT(dist_type))) &
       CALL judft_error("Optional arguments must be present in mpimat_init")
-      ALLOCATE (mat%blacsdata, stat=ierr)
+      CALL priv_new_blacsdata(mat%blacsdata)
       if (mpi_subcom == MPI_COMM_NULL) Then
          mat%blacsdata%blacs_desc(2) = -1
          mat%global_size1 = matsize1
@@ -702,11 +733,6 @@ CONTAINS
       end if
       CALL priv_create_blacsgrid(mpi_subcom, dist_type, matsize1, matsize2, nbx, nby, &
                                  mat%blacsdata, mat%matsize1, mat%matsize2)
-
-      !This matrix is the first user of its new grid. The reference count has to be
-      !set up after priv_create_blacsgrid, its intent(out) argument resets it.
-      ALLOCATE (mat%blacsdata%no_use)
-      mat%blacsdata%no_use = 1
 
       mat%blacsdata%mpi_com = mpi_subcom
       CALL mat%alloc(l_real) !Attention,sizes determined in call to priv_create_blacsgrid
@@ -766,7 +792,7 @@ CONTAINS
       INTEGER, INTENT(IN) :: m1, m2
       INTEGER, INTENT(INOUT)::nbc, nbr
       INTEGER, INTENT(IN) :: dist_type
-      type(t_blacsdata), INTENT(OUT)::blacsdata
+      type(t_blacsdata), INTENT(INOUT)::blacsdata
       INTEGER, INTENT(OUT):: local_size1, local_size2
 
 #ifdef CPP_SCALAPACK
