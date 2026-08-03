@@ -1,0 +1,12 @@
+# Common restart and auxiliary files copied into SQAy_np1, SQAy_np2, and SQAy_np4
+ a9f933efef49be9df755c22ca1379210b4799c40945015a38b64c286f09967fc  cdn.hdf
+8b1c2f7ef35c8b3ffc9e23d800ed620fdf4cb2cb6fdc04e719b07938efbc0a5e  kpts.xml
+5e5548cf35ffb55f1ce021fe65f4e40e1cf705156a7db02cbb7ca6e28c225753  sym.xml
+
+# Run-specific inp.xml files differ only in outputPrefix
+7db78429a19a4cfd82bf9f07b03050bf05b7688ac7687527348530f9cfd39fc9  SQAy_np1/inp.xml
+b9c2efbba4f7ddc83327adc22e1aa6d0a0f5b0c0552c137cd3d9ea54eaae165b  SQAy_np2/inp.xml
+c60bdbd0514ae41df7088474e207a521bf6ff4e34b3135e7fc21e87b54e67462  SQAy_np4/inp.xml
+
+# Preserved Stage 2 serial spectrum
+dba8c89b523a633fcf1ff0b839188f7cdf3e0344d38463c98b0b65f656ddec0d  SQAy_stage2_serial_spectrum.dat

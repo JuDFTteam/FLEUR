@@ -1,8 +1,9 @@
-# Scalar independent-particle RIXS prototype
+# Independent-particle RIXS prototype
 
-This note describes the current XML-controlled, guarded RIXS prototype in FLEUR.
-It is intended for early independent-particle calculations and diagnostics, not
-as a complete production RIXS theory.
+This note describes the current XML-controlled, guarded scalar and
+first-variation spinor RIXS prototype in FLEUR. It is intended for early
+independent-particle calculations and diagnostics, not as a complete
+production RIXS theory.
 
 ## Current scope
 
@@ -12,17 +13,21 @@ linear incoming/outgoing polarizations.
 
 Currently supported:
 
-- scalar `jspins=1` calculations only;
+- scalar `jspins=1` calculations;
+- first-variation noco spinor calculations with `jspins=2`;
 - edges `K`, `L2`, and `L3`;
 - linear polarizations `x`, `y`, and `z`;
 - absorber selection by `absorberZ`;
 - optional rank-local contribution tables;
 - optional valence/intermediate band windows;
+- pure k-point and shared-k-point-subgroup MPI layouts;
 - MPI reduction of the broadened spectrum.
 
 Current guards and limitations:
 
-- no SOC or noco RIXS yet;
+- no collinear spin-polarized scalar RIXS;
+- no second-variation SOC RIXS; SOC is supported through the validated
+  first-variation noco spinor path;
 - full-k/no-star k meshes only, i.e. `nkpt == nkptf`;
 - no momentum transfer yet;
 - no explicit core hole;
@@ -52,6 +57,11 @@ Here `v` is an occupied valence band, `n` is an intermediate unoccupied band,
 `a` is an absorber atom, and `mj` labels the selected core sublevel. Occupation
 filtering remains active: valence states require `f_vk > tol`, and intermediate
 states require `1 - f_nk > tol`.
+
+For first-variation spinor bands, FLEUR instead stores the coherent complex
+core-`mj` amplitude for each valence/intermediate band pair and local absorber
+atom. The final spectrum remains an incoherent sum over distinct band-pair and
+absorber-site final states.
 
 ## Minimal XML input
 
@@ -246,8 +256,63 @@ weight is:
 weighted_strength = k_weight * f_v * (1 - f_n) * amplitude_abs2
 ```
 
+For first-variation spinor RIXS, `amplitude_real` and `amplitude_imag` store
+the coherent core-`mj` amplitude for the band pair, and `amplitude_abs2` is its
+squared modulus.
+
 When contribution output is enabled, FLEUR also prints a
 contribution-to-spectrum consistency check. It should report `PASS`.
+
+## MPI execution model
+
+FLEUR has two MPI levels. `fmpi%irank/isize` identify ranks in the global
+communicator, while `fmpi%n_rank/n_size` identify ranks in the subgroup that
+collaborates on one k point. All ranks in a k-point subgroup share the same
+`fmpi%k_list`; iterating over that list does not by itself assign unique RIXS
+work to subgroup ranks.
+
+RIXS currently evaluates each k point serially rather than distributing its
+band-pair transitions within a subgroup. Consequently, only the subgroup root
+(`fmpi%n_rank == 0`) evaluates RIXS matrix elements, contribution rows, and the
+local spectrum for that subgroup. Other subgroup ranks retain zero local RIXS
+arrays and still participate in the collective global reductions. Global rank
+zero (`fmpi%irank == 0`) remains responsible for the final spectrum files and
+summary output.
+
+This gives correct results for both:
+
+- pure k-point parallelism, for example `-pe_per_kpt 1`;
+- layouts where multiple MPI ranks share each k point.
+
+The latter layout currently provides correctness but no intra-k-point RIXS
+speedup, because transition-pair parallelization has not been implemented.
+
+## MPI validation and degenerate manifolds
+
+The tracked validation package is in
+`testing/validation/rixs_mpi`. It exercises 1-, 2-, and 4-rank pure k-point
+layouts and the shared-k-point subgroup-root path. The validation requires
+MPI-invariant spectra, complete transition coverage, contribution-spectrum
+reconstruction, and correct row arithmetic.
+
+Individual band-labelled contribution rows are not physical invariants when
+an eigensolver chooses different bases inside degenerate valence or
+intermediate subspaces. A unitary rotation can redistribute
+`amplitude_abs2` and `weighted_strength` among those rows while leaving the
+spectrum unchanged. The validator therefore:
+
+1. Matches rows by the discrete identity `ikpt`, valence band, intermediate
+   band, absorber atom, and absorber type.
+2. Compares `loss_energy_Ha` separately within `1e-12` Ha.
+3. Constructs valence and intermediate manifolds independently from
+   `eps_v_Ha` and `eps_n_Ha`, using a fixed `1e-10` Ha degeneracy threshold.
+4. Requires identical manifold membership and a complete Cartesian product of
+   valence and intermediate states in every compared layout.
+5. Compares manifold-summed `amplitude_abs2` and `weighted_strength` with the
+   unchanged spectrum comparison tolerance.
+
+Raw per-band differences and their worst transition identities remain in the
+report as diagnostics. Manifolds are never chosen from loss energy alone.
 
 ## Setup summary
 
@@ -268,12 +333,12 @@ Valence band window      : 1 ... 20
 Intermediate band window : 21 ... 80
 ```
 
-## Future Ir L3-edge applications
+## Ir L3-edge applications
 
-Ir L3-edge materials, including intended future CaIrO3-type applications,
-require SOC/noco RIXS support and later pseudospin or `j_eff` analysis for a
-physically meaningful interpretation. They should not be used as the principal
-example for the current scalar-only prototype.
+Ir L3-edge materials, including CaIrO3-type applications, can use the validated
+first-variation noco spinor path. Second-variation SOC, pseudospin, and `j_eff`
+analysis remain outside the current implementation, so interpretation still
+requires care beyond the independent-particle spectrum.
 
 ## Practical validation checklist
 

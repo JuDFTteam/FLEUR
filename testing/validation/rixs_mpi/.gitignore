@@ -1,0 +1,17 @@
+SQAy_np*/FleurInputSchema.xsd
+SQAy_np*/FleurOutputSchema.xsd
+SQAy_np*/Local.*
+SQAy_np*/banddos.hdf
+SQAy_np*/fleur_stderr.log
+SQAy_np*/fleur_stdout.log
+SQAy_np*/job_environment_*.log
+SQAy_np*/juDFT_times.json
+SQAy_np*/out
+SQAy_np*/out.xml
+SQAy_np*/runlog.json
+SQAy_np*/usage.json
+SQAy_np*/*_contrib_rank*.dat
+SQAy_np*/*_rixs.dat
+mpi_comparison_report.txt
+slurm-*.err
+slurm-*.out

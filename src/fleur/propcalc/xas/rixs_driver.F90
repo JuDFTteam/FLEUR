@@ -89,11 +89,12 @@ CONTAINS
       INTEGER :: i_grid, i_band, iatom_l, i_pin, i_pout, n_absorber_types, n_absorber_atoms
       INTEGER :: valence_band_min, valence_band_max, intermediate_band_min, intermediate_band_max
       INTEGER :: contribution_units(rixs_n_pol, rixs_n_pol)
-      LOGICAL :: l_root, l_real, l_spinor_rixs
+      LOGICAL :: l_root, l_kpt_group_root, l_real, l_spinor_rixs
 
       IF (.NOT. rixs%l_rixs) RETURN
 
       l_root = fmpi%irank == 0
+      l_kpt_group_root = fmpi%n_rank == 0
       contribution_units = -1
       CALL rixs_check_supported_input(input, rixs, kpts, noco)
       l_spinor_rixs = noco%l_noco
@@ -148,6 +149,9 @@ CONTAINS
          ALLOCATE(contribution_intensity(rixs%rixs_n_loss, rixs_n_pol, rixs_n_pol), SOURCE=0.0)
       END IF
 
+      ! fmpi%k_list is shared by all ranks in a k-point subgroup. RIXS currently
+      ! performs serial work for each k-point, so only subgroup roots calculate it.
+      IF (l_kpt_group_root) THEN
       CALL usdus%init(atoms, input%jspins)
       ALLOCATE(f(atoms%jmtd, 2, 0:atoms%lmaxd, input%jspins))
       ALLOCATE(g(atoms%jmtd, 2, 0:atoms%lmaxd, input%jspins))
@@ -300,6 +304,7 @@ CONTAINS
          END DO
          DEALLOCATE(radial_xas, core_states)
       END DO
+      END IF
 
       IF (rixs%rixs_write_contributions) THEN
          DO i_pin = 1, rixs_n_pol

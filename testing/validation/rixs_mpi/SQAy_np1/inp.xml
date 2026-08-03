@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<fleurInput fleurInputVersion="0.39">
+   <comment>
+      bcc Fe primitive bulk XAS test
+   </comment>
+   <calculationSetup>
+      <cutoffs Kmax="3.5" Gmax="10.5" GmaxXC="10.5" numbands="160"/>
+      <scfLoop itmax="1" minDistance="0.00001" maxIterBroyd="15" imix="Anderson" alpha="0.05" precondParam="0.0" spinf="2.0"/>
+      <coreElectrons ctail="F" frcor="F" kcrel="0" coretail_lmax="0"/>
+      <xcFunctional name="pbe" relativisticCorrections="F"/>
+      <magnetism jspins="2" l_noco="T" l_ss="F">
+         <qss>0.0 0.0 0.0</qss>
+         <mtNocoParams l_mperp="F" l_mtNocoPot="F" l_relaxSQA="F" mag_mixing_scheme="0" mix_RelaxWeightOffD="1.0" l_constrained="F" mix_constr="1.0"/>
+         <sourceFreeMag l_sourceFree="F" l_scaleMag="F" mag_scale="1.0"/>
+      </magnetism>
+      <soc l_soc="T" theta="0.0" phi="0.0" spav="F"/>
+      <expertModes spex="0" secvar="F"/>
+      <geometryOptimization l_f="F" forcealpha="1.0" forcemix="BFGS" epsdisp="0.00001" epsforce="0.00001"/>
+      <ldaU l_linMix="F" mixParam="0.05" spinf="1.0"/>
+   </calculationSetup>
+   <cell>
+      <bzIntegration valenceElectrons="16.0" mode="hist" fermiSmearingEnergy="0.001">
+         <kPointListSelection listName="333"/>
+         <!-- k-points included here -->
+         <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="kpts.xml"> </xi:include>
+      </bzIntegration>
+      <!-- symmetry operations included here -->
+      <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="sym.xml"> </xi:include>
+      <bulkLattice scale="1.0">
+         <bravaisMatrix>
+            <row-1>    2.7084500000000000    -2.7084500000000000     2.7084500000000000</row-1>
+            <row-2>    2.7084500000000000     2.7084500000000000    -2.7084500000000000</row-2>
+            <row-3>   -2.7084500000000000     2.7084500000000000     2.7084500000000000</row-3>
+         </bravaisMatrix>
+      </bulkLattice>
+   </cell>
+   <atomSpecies>
+      <species name="Iron (Fe)" element="Fe" atomicNumber="26">
+         <mtSphere radius="2.29" gridPoints="757" logIncrement="0.016"/>
+         <atomicCutoffs lmax="8" lnonsphr="6"/>
+         <electronConfig flipSpins="F">
+            <coreConfig>(1s1/2) (2s1/2) (2p1/2) (2p3/2)</coreConfig>
+            <valenceConfig>(3s1/2) (3p1/2) (3p3/2) (4s1/2) (3d3/2) (3d5/2)</valenceConfig>
+            <stateOccupation state="(3d3/2)" spinUp="1.2" spinDown="1.2"/>
+            <stateOccupation state="(3d5/2)" spinUp="1.8" spinDown="1.8"/>
+         </electronConfig>
+         <energyParameters s="4" p="4" d="3" f="4"/>
+         <lo type="SCLO" l="0" n="3" eDeriv="0"/>
+         <lo type="SCLO" l="1" n="3" eDeriv="0"/>
+      </species>
+   </atomSpecies>
+   <atomGroups>
+      <atomGroup species="Iron (Fe)">
+         <relPos label="                   1">.0000000000 .0000000000 .0000000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+         <nocoParams  alpha="Pi/2.0" beta="Pi/2.0"/>
+      </atomGroup>
+   </atomGroups>
+   <output dos="t" band="F" slice="F">
+      <rixs l_rixs="T"
+            absorberZ="26"
+            edge="L3"
+            omegaIn="25.2776419634"
+            gammaCore="0.20"
+            lossMin="0.0"
+            lossMax="4.0"
+            nLoss="401"
+            etaLoss="0.03"
+            incomingPolarizations="x"
+            outgoingPolarizations="x"
+            outputPrefix="rixs_mpi_np1"
+            writeContributions="T"/>
+      <checks vchk="F" cdinf="F"/>
+      <bandDOS minEnergy="-.5*Htr" maxEnergy="0.5*Htr" sigma="0.015" storeEVData="T"/>
+      <vacuumDOS vacdos="F" integ="F" star="F" nstars="0" locx1="0.0" locy1="0.0" locx2="0.0" locy2="0.0" nstm="0" tworkf="0.0"/>
+      <unfoldingBand unfoldBand="F" supercellX="1" supercellY="1" supercellZ="1"/>
+      <plotting iplot="0" polar="F">
+         <plot TwoD="T" vec1="  1.0  0.0  0.0" vec2="  0.0  1.0  0.0" vec3="  0.0  0.0  1.0" zero="  0.0  0.0  0.0" file="plot"/>
+      </plotting>
+      <chargeDensitySlicing numkpt="0" minEigenval="0.0" maxEigenval="0.0" nnne="0" pallst="F"/>
+      <specialOutput eonly="F"/>
+      <magneticCircularDichroism mcd="F" energyLo="-10.0" energyUp="0.0"/>
+   </output>
+  <!-- We include the file relax.xml here to enable relaxations (see documentation) -->
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="relax.xml"> <xi:fallback/> </xi:include>
+</fleurInput>
+
+<!--
+Command line when calling inpgen (only for documentation purposes):
+inpgen -noco -nosym -f input
+
+Initial (original) inpgen input (only for documentation purposes):
+bcc Fe primitive bulk XAS test
+
+&input film=F cartesian=F /
+
+  0.5   0.5  -0.5
+
+  0.5  -0.5   0.5
+
+ -0.5   0.5   0.5
+
+  5.4169
+
+  1.0   1.0   1.0
+
+1
+
+26  0.0 0.0 0.0
+
+&soc 1.5708 0.0 /
+&comp jspins=2 /
+&kpt div1=12 div2=12 div3=12/
+-->
