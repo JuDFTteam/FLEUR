@@ -78,7 +78,7 @@ MODULE m_vham
                 ll1atom1=latom1*(latom1+1)
                 norm1_W = usdus%ddn(latom1,atoms%itype(natom1),jspin)**0.5
                 CALL fjgj%calculate(input,atoms,cell,lapw,noco,usdus,atoms%itype(natom1),jspin)
-                CALL hsmt_ab(sym,atoms,noco,nococonv,jspin,1,atoms%itype(natom1),natom1,cell,lapw,fjgj,abG1,abSizeG1,.FALSE.)
+                CALL hsmt_ab(sym,atoms,noco,nococonv,jspin,1,atoms%itype(natom1),natom1,cell,lapw,fjgj,abG1,abSizeG1,.FALSE.,l_store=.TRUE.)
                 Do atom2=1,atoms%lda_v(i_v)%numOtherAtoms
                     natom2=atoms%lda_v(i_v)%otherAtomIndices(atom2)
                     latom2=atoms%lda_v(i_v)%otherAtomL
@@ -86,7 +86,7 @@ MODULE m_vham
                     norm2_W = usdus%ddn(latom2,atoms%itype(natom2),jspin)**0.5
                     power_fac=(cmplx(0, -1)**latom1) *(cmplx(0, 1)**latom2) 
                     CALL fjgj%calculate(input,atoms,cell,lapw,noco,usdus,atoms%itype(natom2),jspin)
-                    CALL hsmt_ab(sym,atoms,noco,nococonv,jspin,1,atoms%itype(natom2),natom2,cell,lapw,fjgj,abG2,abSizeG2,.FALSE.)
+                    CALL hsmt_ab(sym,atoms,noco,nococonv,jspin,1,atoms%itype(natom2),natom2,cell,lapw,fjgj,abG2,abSizeG2,.FALSE.,l_store=.TRUE.)
                     DO iG2=1,lapw%nv(jspin)
                         exponent=EXP(cmplx(0.0,tpi_const)*dot_product(atoms%lda_v(i_v)%atomShifts(:,atom2),(kpts%bk(:,kptindx)+lapw%gvec(:, iG2,jspin))))
                         temp_nIJ(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)=TRANSPOSE(conjg(den%nIJ_llp_mmp(:,:,i_pair,jspin)))
@@ -109,12 +109,12 @@ MODULE m_vham
                     ENDDO
                     !$acc exit data delete(abG2)
                     ! cache abG2 for later reuse (no-op unless storage enabled)
-                    CALL abcoeff_store_save(abG2, lapw%nk, 1, jspin, natom2)
+                    CALL abcoeff_store_save(abG2, lapw%nk, 1, jspin, natom2, .FALSE.)
                     i_pair=i_pair+1
                 ENDDO
                 !$acc exit data delete(abG1)
                 ! cache abG1 for later reuse (no-op unless storage enabled)
-                CALL abcoeff_store_save(abG1, lapw%nk, 1, jspin, natom1)
+                CALL abcoeff_store_save(abG1, lapw%nk, 1, jspin, natom1, .FALSE.)
             ENDDO
 
 

@@ -289,7 +289,7 @@ CONTAINS
 ! Calculation of a, b coefficients for LAPW basis functions
             CALL timestart("hsmt_ab")
 !!$acc data copyin(fjgj,fjgj%fj,fjgj%gj) copyout(abcoeffs)
-            CALL hsmt_ab(sym, atoms, noco, nococonv, jspin, iintsp, iType, iAtom, cell, lapw, fjgj, abCoeffs, abSize, .FALSE.)
+            CALL hsmt_ab(sym, atoms, noco, nococonv, jspin, iintsp, iType, iAtom, cell, lapw, fjgj, abCoeffs, abSize, .FALSE., l_store=.TRUE.)
 !!$acc end data
             abSize = abSize/2
             CALL timestop("hsmt_ab")
@@ -318,7 +318,7 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
             ! device copy it created and the host array before the next call.
             !$acc exit data delete(abCoeffs)
             ! Hand abCoeffs to the optional store for later reuse (no-op unless on).
-            CALL abcoeff_store_save(abCoeffs, lapw%nk, iintsp, jspin, iAtom)
+            CALL abcoeff_store_save(abCoeffs, lapw%nk, iintsp, jspin, iAtom, .FALSE.)
             IF (ALLOCATED(abCoeffs)) DEALLOCATE(abCoeffs)
 
             CALL timestart("local orbitals")
@@ -571,7 +571,7 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
 ! Calculation of a, b coefficients for LAPW basis functions
             CALL timestart("hsmt_ab")
 !!$acc data copyin(fjgj,fjgj%fj,fjgj%gj) copyout(abcoeffs)
-            CALL hsmt_ab(sym, atoms, noco, nococonv, jspin, iintsp, iType, iAtom, cell, lapw, fjgj, abCoeffs, abSize, .FALSE.)
+            CALL hsmt_ab(sym, atoms, noco, nococonv, jspin, iintsp, iType, iAtom, cell, lapw, fjgj, abCoeffs, abSize, .FALSE., l_store=.TRUE.)
 !!$acc end data
             abSize = abSize/2
             CALL timestop("hsmt_ab")
@@ -613,7 +613,7 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
             ! device copy it created and the host array before the next call.
             !$acc exit data delete(abCoeffs)
             ! Hand abCoeffs to the optional store for later reuse (no-op unless on).
-            CALL abcoeff_store_save(abCoeffs, lapw%nk, iintsp, jspin, iAtom)
+            CALL abcoeff_store_save(abCoeffs, lapw%nk, iintsp, jspin, iAtom, .FALSE.)
             IF (ALLOCATED(abCoeffs)) DEALLOCATE(abCoeffs)
 
 

@@ -135,7 +135,7 @@ CONTAINS
             ! [local spin primed -> '; global spin primed -> pr]
             CALL timestart("hsmt_ab_1")
             CALL hsmt_ab(sym, atoms, noco, nococonv, ilSpin, igSpin, n, na, cell, &
-                       & lapw, fjgj, abCoeffs, ab_size, .TRUE.)
+                       & lapw, fjgj, abCoeffs, ab_size, .TRUE., l_store=.TRUE.)
             CALL timestop("hsmt_ab_1")
             CALL timestart("zgemm1")
             IF (l_samelapw.AND.(ilSpinPr==ilSpin)) THEN
@@ -356,13 +356,14 @@ CONTAINS
             !$acc exit data delete(abCoeffs)
             ! Hand the (unprimed) abCoeffs to the optional store for later reuse
             ! (no-op unless storage is enabled).
-            CALL abcoeff_store_save(abCoeffs, lapw%nk, igSpin, ilSpin, na)
+            CALL abcoeff_store_save(abCoeffs, lapw%nk, igSpin, ilSpin, na, .TRUE.)
             IF (ALLOCATED(abCoeffs)) DEALLOCATE(abCoeffs)
             IF (ALLOCATED(abCoeffsPr)) THEN
                !$acc exit data delete(abCoeffsPr)
-               ! abCoeffsPr (primed lapwPr/fjgjPr) is intentionally NOT stored: it
-               ! would share the (nk,igSpin,ilSpin,na) key with the unprimed
-               ! abCoeffs and corrupt that slot.
+               ! abCoeffsPr (primed lapwPr/fjgjPr) takes no part in the storage at
+               ! all: the hsmt_ab calls above are made without l_store, so it is
+               ! neither retrieved from nor saved to the slot it would share with
+               ! the unprimed abCoeffs.
                DEALLOCATE(abCoeffsPr)
             END IF
          END IF

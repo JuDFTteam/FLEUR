@@ -115,7 +115,7 @@ CONTAINS
          call timestop("abcoeffs copy")
       ELSE
          call timestart("hsmt_ab2")
-         CALL hsmt_ab(sym,atoms,noco,nococonv,ilSpin,igSpin,ntyp,na,cell,lapw,fjgj,abCoeffs,ab_size,.TRUE.,abclo,alo1(:,ilSpin),blo1(:,ilSpin),clo1(:,ilSpin))
+         CALL hsmt_ab(sym,atoms,noco,nococonv,ilSpin,igSpin,ntyp,na,cell,lapw,fjgj,abCoeffs,ab_size,.TRUE.,abclo,alo1(:,ilSpin),blo1(:,ilSpin),clo1(:,ilSpin),l_store=.TRUE.)
          call timestop("hsmt_ab2")
       END IF
    
@@ -322,7 +322,7 @@ CONTAINS
          ! branch above). The copy branch holds primed data, which must not be
          ! cached under the unprimed (nk,igSpin,ilSpin,na) key.
          IF (.NOT.(ilSpin==ilSpinPr.AND.igSpinPr==igSpin.AND.l_samelapw)) &
-              CALL abcoeff_store_save(abcoeffs, lapw%nk, igSpin, ilSpin, na)
+              CALL abcoeff_store_save(abcoeffs, lapw%nk, igSpin, ilSpin, na, .TRUE.)
          IF (ALLOCATED(abcoeffs)) DEALLOCATE(abcoeffs)
       END IF
 

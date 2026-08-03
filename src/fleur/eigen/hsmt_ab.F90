@@ -12,7 +12,7 @@ MODULE m_hsmt_ab
 
 CONTAINS
 
-   SUBROUTINE hsmt_ab(sym,atoms,noco,nococonv,ilSpin,igSpin,n,na,cell,lapw,fjgj,abCoeffs,ab_size,l_nonsph,abclo,alo1,blo1,clo1)
+   SUBROUTINE hsmt_ab(sym,atoms,noco,nococonv,ilSpin,igSpin,n,na,cell,lapw,fjgj,abCoeffs,ab_size,l_nonsph,abclo,alo1,blo1,clo1,l_store)
       !! Construct the matching coefficients of the form:
       !! \begin{aligned}
       !! a_{l,m,p}^{\mu,\boldsymbol{G}}(\boldsymbol{k}) = e^{i \boldsymbol{K}\cdot\boldsymbol{\tau}_{\mu}}
@@ -69,17 +69,26 @@ CONTAINS
     !Optional arguments if abc coef for LOs are needed
       COMPLEX, INTENT(INOUT), OPTIONAL :: abclo(:, :, :, :)
       REAL,    INTENT(IN),    OPTIONAL :: alo1(:), blo1(:), clo1(:)
+    !Set this to .TRUE. to let the call take part in the optional abCoeffs storage
+    !(m_abcoeff_store). Only permitted if lapw/fjgj are the canonical (unprimed)
+    !basis AND the caller hands the result back via abcoeff_store_save with the
+    !same l_nonsph: the storage key cannot tell a q-shifted (lapwq/fjgjq) or
+    !otherwise primed set of coefficients apart from the canonical one. Defaults
+    !to .FALSE., i.e. no storage.
+      LOGICAL, INTENT(IN),    OPTIONAL :: l_store
 
       INTEGER :: np, k, l, ll1, m, lmax, nkvec, lo, lm, invsfct, lmMin, lmMax, ierr
       REAL    :: term, bmrot(3, 3)
       COMPLEX :: c_ph(MAXVAL(lapw%nv), MERGE(2, 1, noco%l_ss.OR.ANY(noco%l_unrestrictMT) &
                                                           & .OR.ANY(noco%l_spinoffd_ldau)))
-      LOGICAL :: l_apw, l_abclo, l_skip_calc
+      LOGICAL :: l_apw, l_abclo, l_skip_calc, l_useStore
 
       REAL,    ALLOCATABLE :: gkrot(:, :)
       COMPLEX, ALLOCATABLE :: ylm(:, :)
 
       l_abclo = PRESENT(abclo)
+      l_useStore = .FALSE.
+      IF (PRESENT(l_store)) l_useStore = l_store
       lmax = MERGE(atoms%lnonsph(n), atoms%lmax(n), l_nonsph)
       ab_size = lmax*(lmax+2) + 1
       ! TODO: replace APW+lo check (may actually be a broken trick) by something simpler
@@ -91,11 +100,20 @@ CONTAINS
       ! coefficients are returned -- and no LO coefficients are requested (abclo is
       ! not cached) -- the computation below can be skipped entirely.
       ! l_apw is .FALSE., so the array always needs 2*ab_size rows.
-      l_skip_calc = abcoeff_store_alloc(abCoeffs, 2*ab_size, lapw%nv(igSpin), lapw%nk, igSpin, ilSpin, na) 
-      
+      l_skip_calc = abcoeff_store_alloc(abCoeffs, 2*ab_size, lapw%nv(igSpin), lapw%nk, igSpin, ilSpin, na, &
+                                      & l_nonsph, l_useStore)
+
       if (l_skip_calc.and..not.l_abclo) then
          !$acc enter data copyin(abCoeffs)
+         ! Same ab_size convention as on the regular exit at the end of the routine.
+         IF (.NOT.l_apw) ab_size = ab_size*2
          return !nothing to do, coefficients are already stored and copied to device
+      else if (l_skip_calc) then
+         ! Reused coefficients, but the LO coefficients (abclo) are not cached and
+         ! still have to be computed below. The abCoeffs part of the k-loop is
+         ! skipped in that case, so the cached host values have to be uploaded --
+         ! merely creating (uninitialised) device memory would leave garbage there.
+         !$acc enter data copyin(abCoeffs)
       else
          !$acc enter data create(abCoeffs)
       end if
