@@ -54,7 +54,7 @@ EXPECTED_OMEGA_TOTAL = {
 OMEGA_TOTAL_RTOL = 0.01
 
 # Real-space operator files written by <operators_r>, per test id. Their presence is
-# asserted by the fixture; rspauli.1 is additionally checked for physical bounds below.
+# asserted by the fixture; their contents are checked below.
 _OP_R_FILES = ["WF1_hr.dat", "rspauli.1", "anglmomrs.1", "rssocmat.1", "wig_vectors"]
 OPERATOR_FILES = {
     "WannPtSOCOps": _OP_R_FILES,
@@ -62,6 +62,10 @@ OPERATOR_FILES = {
     "WannFeAFMColSOC": _OP_R_FILES,
     "WannFeAFMSOCOps": _OP_R_FILES,
 }
+
+# The operator files in the generic O(R) format, the ones whose values can be read without
+# knowing how many index columns they carry.
+GENERIC_OP_FILES = ("rspauli.1", "anglmomrs.1", "rssocmat.1")
 
 # <w_0n|sigma_a|w_0n> is a Pauli expectation value on a normalized Wannier function, so
 # |.| <= 1 holds elementwise -- for any gauge, which makes it basin-independent. This is
@@ -179,6 +183,24 @@ def _rspauli_r0_diagonal_max(path):
     return worst
 
 
+def _nonzero_entries(path):
+    """Number of entries of an O(R) file that are not exactly zero.
+
+    Reads the real and imaginary parts as the last two fields rather than at a fixed
+    column: the number of index columns before them is not the same in every file, since
+    a spinor operator is indexed by two spin labels where a vector operator carries one
+    component label."""
+    n = 0
+    with open(path) as fh:
+        for line in fh:
+            f = line.split()
+            if len(f) < 8:
+                continue
+            if float(f[-2]) != 0.0 or float(f[-1]) != 0.0:
+                n += 1
+    return n
+
+
 @pytest.mark.fleur
 @pytest.mark.wannierlib
 @pytest.mark.parametrize(("dir", "desc", "cmdline", "mpi_procs"), all_tests)
@@ -202,6 +224,15 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
         assert abs(omega - ref) < OMEGA_TOTAL_RTOL * ref, (
             f"total spread Omega {omega} deviates from reference {ref} by more than "
             f"{100 * OMEGA_TOTAL_RTOL}% -- more than a wannierise basin change")
+
+    if test_id in OPERATOR_FILES:
+        # Every other rule here is an upper bound -- the Pauli bound, the vanishing spin
+        # sums, the vanishing orbital traces -- and a file of zeros satisfies all of them,
+        # so an operator that computes nothing passes every check made on its output.
+        for name in GENERIC_OP_FILES:
+            assert _nonzero_entries(res[name]) > 0, (
+                f"{name}: every entry is zero, so the operator wrote a correctly shaped "
+                "file with nothing in it")
 
     if test_id in OPERATOR_FILES:
         worst = _rspauli_r0_diagonal_max(res["rspauli.1"])
