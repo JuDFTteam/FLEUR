@@ -97,7 +97,7 @@ CONTAINS
          !$acc enter data copyin(abCoeffs)
          return !nothing to do, coefficients are already stored and copied to device
       else
-         !$acc enter data create(abCoeffs(1:2*ab_size, 1:lapw%nv(igSpin)))
+         !$acc enter data create(abCoeffs)
       end if
       
          ! We skip the initialization for speed
