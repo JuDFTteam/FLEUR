@@ -375,7 +375,7 @@ CONTAINS
       SELECT CASE (TRIM(ADJUSTL(rixs%rixs_edge)))
       CASE ("K", "k", "1s1/2", "1S1/2", "L2", "l2", "2p1/2", "2P1/2", "L3", "l3", "2p3/2", "2P3/2")
       CASE DEFAULT
-         CALL juDFT_error("Unsupported RIXS edge. Supported first-prototype edges are K, L2, and L3.", calledby="m_rixs_driver")
+         CALL juDFT_error("Unsupported RIXS edge. Supported RIXS edges are K, L2, and L3.", calledby="m_rixs_driver")
       END SELECT
    END SUBROUTINE rixs_check_supported_input
 

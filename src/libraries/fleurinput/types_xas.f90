@@ -29,9 +29,9 @@ MODULE m_types_xas
       LOGICAL :: polarizations(3) = [.TRUE., .TRUE., .TRUE.]
       CHARACTER(LEN=64) :: output_prefix = "xas"
       LOGICAL :: write_transitions = .FALSE.
-      ! Minimal independent-particle RIXS prototype input. Kept here for now
-      ! so the first guarded implementation can reuse the existing XAS
-      ! postprocessing plumbing without broad call-signature churn.
+      ! Independent-particle RIXS input shares this type with XAS because both
+      ! paths use the same core-state and matrix-element postprocessing
+      ! infrastructure.
       LOGICAL :: l_rixs = .FALSE.
       INTEGER :: rixs_absorber_z = -1
       CHARACTER(LEN=16) :: rixs_edge = "L3"
@@ -384,7 +384,7 @@ CONTAINS
       CASE ("z", "Z")
          polarizations(3) = .TRUE.
       CASE DEFAULT
-         CALL juDFT_error("Unsupported XAS polarization. Use linear x, y, z for now.", calledby="m_types_xas")
+         CALL juDFT_error("Unsupported XAS/RIXS polarization. Use linear x, y, z for now.", calledby="m_types_xas")
       END SELECT
    END SUBROUTINE xas_set_polarization
 

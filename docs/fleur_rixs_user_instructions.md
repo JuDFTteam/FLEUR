@@ -90,10 +90,10 @@ If no `<rixs>` section is present, RIXS is off.
 
 ## Recommended first physical example: MgO O K edge
 
-MgO is a useful first physical example for the current scalar RIXS prototype:
-it has a small cell, a scalar/no-SOC treatment is appropriate as a first test of the present implementation, 
-and the O K edge avoids the L-edge core spin-angular
-complications.
+MgO is a useful first physical example for the scalar RIXS branch: it has a
+small cell, and the O K edge avoids the L-edge core spin-angular complications.
+The validated MgO benchmark specifically uses scalar PBE without SOC or noco,
+an explicit full-k/no-star list, 60 bands, and occupied bands `1 ... 8`.
 
 The following block is a convenient starting point:
 
@@ -101,7 +101,7 @@ The following block is a convenient starting point:
 <rixs l_rixs="T"
       absorberZ="8"
       edge="K"
-      omegaIn="20.0"
+      omegaIn="18.94"
       gammaCore="0.20"
       lossMin="0.0"
       lossMax="2.0"
@@ -113,21 +113,22 @@ The following block is a convenient starting point:
       writeContributions="T"/>
 ```
 
-The values of `omegaIn`, `lossMin`, and `lossMax` are illustrative only. Before
-using them for interpretation, inspect the calculated O K-edge XAS spectrum or
-transition table and choose `omegaIn` near the desired resonance. The energy-loss
-window should then be chosen wide enough to contain the relevant valence-to-
-conduction excitation energies.
+For the validated scalar MgO calculation, `omegaIn="18.94"` Ha was selected
+from the calculated O K-edge XAS maximum. This incident energy and the band
+indices below are benchmark-specific, not general O K-edge defaults. For a new
+structure, functional, or k mesh, inspect its calculated XAS spectrum or
+transition table and select the desired resonance again. The loss window and
+number of loss points are analysis choices and should be converged for the
+relevant valence-to-conduction excitation energies.
 
-For quick diagnostic runs, optional band windows can keep the explicit
-valence/intermediate loops and contribution tables small. The actual band
-indices must be adapted to the calculated MgO band structure:
+The validated calculation used occupied bands `1 ... 8` and unoccupied bands
+`9 ... 60`. The corresponding optional RIXS band windows are:
 
 ```xml
 <rixs l_rixs="T"
       absorberZ="8"
       edge="K"
-      omegaIn="20.0"
+      omegaIn="18.94"
       gammaCore="0.20"
       lossMin="0.0"
       lossMax="4.0"
@@ -137,15 +138,17 @@ indices must be adapted to the calculated MgO band structure:
       outgoingPolarizations="x"
       outputPrefix="rixs_mgo_ok_xx"
       writeContributions="T"
-      valenceBandMax="4"
-      intermediateBandMin="5"
-      intermediateBandMax="13"/>
+      valenceBandMin="1"
+      valenceBandMax="8"
+      intermediateBandMin="9"
+      intermediateBandMax="60"/>
 ```
 
-In this example, bands `1 ... 4` are treated as candidate valence bands and
-bands `5 ... 13` as candidate intermediate bands, subject to the normal
-occupation/vacancy filters. These numbers are not universal MgO settings; they
-are just a compact example for a small scalar test calculation.
+These windows remain subject to the normal occupation/vacancy filters. They
+apply to the validated 60-band MgO fixture and must be adapted if the band
+ordering, electron count, or requested number of bands changes. The strongest
+O K-edge intermediate transitions in this benchmark are mainly in bands
+`9 ... 13`, but bands through 60 were retained for the validated spectrum.
 
 ## Attributes
 

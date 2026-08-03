@@ -23,7 +23,7 @@ CONTAINS
                                                          eta_loss, matrix_abs_spin, matrix_emit_spin, valence_band_min, &
                                                          valence_band_max, intermediate_band_min, intermediate_band_max, &
                                                          intensity)
-      ! In the guarded scalar jspins=1 prototype the bands are spin-degenerate.
+      ! In the scalar jspins=1 branch the bands are spin-degenerate.
       ! The final electron and valence-hole spin labels are orthogonal final
       ! states, so they are traced incoherently:
       !   sum_{sigma_v,sigma_n} |sum_mj M_emit(sigma_v) M_abs(sigma_n)/denom|^2.

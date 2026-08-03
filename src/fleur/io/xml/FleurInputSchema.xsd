@@ -4119,7 +4119,7 @@
          </xsd:element>
          <xsd:element maxOccurs="1" minOccurs="0" name="rixs" type="RIXSOutputType">
             <xsd:annotation>
-               <xsd:documentation>Parameters for a minimal independent-particle RIXS postprocessing prototype.</xsd:documentation>
+               <xsd:documentation>Parameters for guarded independent-particle RIXS postprocessing.</xsd:documentation>
             </xsd:annotation>
          </xsd:element>
          <xsd:element maxOccurs="1" minOccurs="0" name="wannier" type="WannierOutputType">
@@ -4219,9 +4219,12 @@
    <xsd:complexType name="RIXSOutputType">
       <xsd:annotation>
          <xsd:documentation>
-            Minimal guarded independent-particle RIXS prototype. Energies are
-            given in Hartree. The first implementation is direct same-k,
-            scalar/no-SOC, and does not use symmetry-star reconstruction.
+            Guarded direct same-k independent-particle RIXS. Energies are given
+            in Hartree. Supported spin treatments are scalar jspins=1 without
+            noco/SOC and first-variation noco spinors with jspins=2, with or
+            without first-variation SOC. RIXS requires an explicit full-k list
+            and does not use symmetry-star reconstruction. Collinear
+            spin-polarized scalar RIXS and second-variation SOC are unsupported.
          </xsd:documentation>
       </xsd:annotation>
       <xsd:attribute default="T" name="l_rixs" type="FleurBool" use="optional"/>
