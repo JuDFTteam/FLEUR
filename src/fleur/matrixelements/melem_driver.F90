@@ -47,7 +47,7 @@ MODULE m_melem_driver
    USE m_types_abc
    USE m_types_wannierlib
    USE m_types_melem_bmesh
-   USE m_melem_spin, ONLY: melem_spin_peratom, melem_spin_bloch, melem_spin_mt_block, &
+   USE m_melem_spin, ONLY: melem_spin_peratom, melem_spin_mt_block, &
                            melem_pauli_from_blocks, melem_spin_sumrule
    USE m_types_matelements_spin, ONLY: t_matelements_spin
    USE m_types_matelements_soc, ONLY: t_matelements_soc

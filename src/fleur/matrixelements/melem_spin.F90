@@ -15,13 +15,11 @@
 !>  m_melem_ft.
 !>
 !>  The four spin-block overlaps  o_ab(m,n) = <phi^a_m|phi^b_n>  (a,b = global
-!>  spin up=1/dn=2) are the sum of two pieces, each block-selected by spin:
-!>    * interstitial : reuse wannierlib_mmnkb_int at b=0 (global frame, no rot.);
-!>    * muffin-tin   : melem_spin_mt_block below, mirrored on the library
-!>                     routine wannierlib_mmk0_sph (abc%cof + radfun%integral, so
-!>                     u/udot/LO are all included), extended to cross spin. The
-!>                     local<->global spin rotation is already applied by the
-!>                     modern calc_abc, so no ccchi is re-applied here.
+!>  spin up=1/dn=2) take their muffin-tin contribution from melem_spin_mt_block
+!>  below: abc%cof contracted with radfun%integral, so u, udot and the local
+!>  orbitals are all included, extended to cross spin. The local-to-global spin
+!>  rotation is already applied when the abc coefficients are built, so no
+!>  further rotation is applied here.
 MODULE m_melem_spin
   USE m_juDFT
   USE m_constants, ONLY : ImagUnit, oUnit
@@ -32,70 +30,11 @@ MODULE m_melem_spin
   USE m_types_stars
   USE m_types_lapw
   USE m_types_mat
-  USE m_wannierlib_mmkb_int, ONLY : wannierlib_mmnkb_int
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: melem_spin_bloch, melem_pauli_from_blocks, melem_spin_mt_block, &
+  PUBLIC :: melem_pauli_from_blocks, melem_spin_mt_block, &
             melem_spin_sumrule, melem_spin_peratom
 CONTAINS
-
-  !> Bloch-basis spin matrices at one k, MT + interstitial. Returns s0(nb,nb,3)
-  !> and prints the sum-rule check. abc(:,:) = (2 spin, ntype); zMat holds the
-  !> full two-component spinor (spin-down block at row offset nv(1)+nlotot).
-  SUBROUTINE melem_spin_bloch(atoms, abc, radfun, nococonv, stars, lapw, zMat, num_bands, ik, s0, l_check)
-    TYPE(t_atoms),     INTENT(IN)  :: atoms
-    TYPE(t_abc),       INTENT(IN)  :: abc(:, :)          ! (2, ntype)
-    TYPE(t_radfun),    INTENT(IN)  :: radfun(:)          ! (ntype)
-    TYPE(t_nococonv),  INTENT(IN)  :: nococonv           ! %alph(:), %beta(:) per type
-    TYPE(t_stars),     INTENT(IN)  :: stars
-    TYPE(t_lapw),      INTENT(IN)  :: lapw
-    TYPE(t_mat),       INTENT(IN)  :: zMat               ! full spinor eigenvectors at k
-    INTEGER,           INTENT(IN)  :: num_bands, ik
-    COMPLEX,           INTENT(OUT) :: s0(:, :, :)        ! (num_bands, num_bands, 3)
-    LOGICAL,           INTENT(IN)  :: l_check            ! print the spin sum-rule for this k
-
-    COMPLEX, ALLOCATABLE :: oi_uu(:, :), oi_dd(:, :), oi_ud(:, :), oi_du(:, :)  ! interstitial blocks (global)
-    COMPLEX, ALLOCATABLE :: c_uu(:, :), c_dd(:, :), c_ud(:, :), c_du(:, :)      ! total-trace copies for sum-rule
-    COMPLEX, ALLOCATABLE :: spa(:, :, :, :)                                      ! per-atom MT spin (global)
-    INTEGER :: nb, io_dn, gb(3), na
-
-    nb    = num_bands
-    io_dn = lapw%nv(1) + atoms%nlotot      ! row offset of the spin-down block in zMat
-    gb    = 0                              ! b = 0 (same k, on-site)
-
-    ALLOCATE(oi_uu(nb, nb), oi_dd(nb, nb), oi_ud(nb, nb), oi_du(nb, nb))
-    oi_uu = CMPLX(0.0, 0.0); oi_dd = CMPLX(0.0, 0.0)
-    oi_ud = CMPLX(0.0, 0.0); oi_du = CMPLX(0.0, 0.0)
-
-    ! ---- interstitial part only (global frame, b=0), block-selected by spin offset ----
-    !   o_ab: bra spin a -> ioff, ket spin b -> ioff_b ;  up offset 0, dn offset io_dn
-    CALL wannierlib_mmnkb_int(stars, lapw, lapw, 1, 1, zMat, zMat, gb, oi_uu, ioff=0,     ioff_b=0)
-    CALL wannierlib_mmnkb_int(stars, lapw, lapw, 1, 1, zMat, zMat, gb, oi_dd, ioff=io_dn, ioff_b=io_dn)
-    CALL wannierlib_mmnkb_int(stars, lapw, lapw, 1, 1, zMat, zMat, gb, oi_ud, ioff=0,     ioff_b=io_dn)
-    CALL wannierlib_mmnkb_int(stars, lapw, lapw, 1, 1, zMat, zMat, gb, oi_du, ioff=io_dn, ioff_b=0)
-
-    ! ---- total spin (GLOBAL) = interstitial Pauli + sum_atom (MT per-atom, rotated to global) ----
-    !   the MT part must be summed per-atom AFTER the local->global rotation, otherwise an
-    !   AFM (beta_2=pi) would add two local-frame "+" moments and the total would not vanish.
-    CALL melem_pauli_from_blocks(oi_uu, oi_dd, oi_ud, oi_du, s0)
-    ALLOCATE(spa(nb, nb, 3, atoms%nat))
-    CALL melem_spin_peratom(atoms, abc, radfun, nococonv, spa)
-    DO na = 1, atoms%nat
-      s0(:, :, :) = s0(:, :, :) + spa(:, :, :, na)
-    END DO
-
-    ! ---- sum rule: the norm o_uu+o_dd is a (frame-invariant) trace; rebuild the total
-    !      diagonal from interstitial + MT-local just for the diagnostic print ----
-    IF (l_check) THEN
-      ALLOCATE(c_uu(nb, nb), c_dd(nb, nb), c_ud(nb, nb), c_du(nb, nb))
-      c_uu = oi_uu; c_dd = oi_dd; c_ud = oi_ud; c_du = oi_du
-      CALL melem_spin_mt_block(atoms, abc, radfun, c_uu, c_dd, c_ud, c_du)
-      CALL melem_spin_sumrule(s0, c_uu, c_dd, ik, tol=1.0e-3)
-      DEALLOCATE(c_uu, c_dd, c_ud, c_du)
-    END IF
-
-    DEALLOCATE(oi_uu, oi_dd, oi_ud, oi_du, spa)
-  END SUBROUTINE melem_spin_bloch
 
   !> Assemble the three Pauli matrices at one k from the four global spin-block
   !> overlaps (interstitial + MT already summed into o_ab):
