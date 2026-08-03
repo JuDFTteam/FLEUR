@@ -14,7 +14,8 @@ MODULE m_rixs_driver
                         rixs_open_spinor_contribution_table, &
                         rixs_print_contribution_check, rixs_print_pair_summary, rixs_print_setup_summary, &
                         rixs_write_contribution_rows, rixs_write_spinor_contribution_rows, rixs_write_spectrum_text
-   USE m_rixs_spectrum, ONLY: rixs_accumulate_scalar_spin_trace_spectrum, rixs_accumulate_spinor_spectrum
+   USE m_rixs_spectrum, ONLY: rixs_accumulate_scalar_spin_trace_spectrum, rixs_accumulate_spinor_spectrum, &
+                              rixs_occupation_tolerance
    USE m_types_abc, ONLY: t_abc
    USE m_types_atoms, ONLY: t_atoms
    USE m_types_cell, ONLY: t_cell
@@ -41,7 +42,6 @@ MODULE m_rixs_driver
    PRIVATE
 
    INTEGER, PARAMETER :: rixs_n_pol = 3
-   REAL, PARAMETER :: rixs_occ_tol = 1.0e-10
    CHARACTER(LEN=1), PARAMETER :: rixs_pol_label(rixs_n_pol) = [CHARACTER(LEN=1) :: "x", "y", "z"]
 
    PUBLIC :: rixs_run_driver
@@ -103,6 +103,19 @@ CONTAINS
       END IF
 
       IF (l_root) CALL rixs_print_setup_summary(rixs, noco%l_noco, noco%l_soc)
+      n_absorber_types = 0
+      n_absorber_atoms = 0
+      DO itype = 1, atoms%ntype
+         IF (atoms%nz(itype) == rixs%rixs_absorber_z) THEN
+            n_absorber_types = n_absorber_types + 1
+            n_absorber_atoms = n_absorber_atoms + atoms%neq(itype)
+         END IF
+      END DO
+      IF (n_absorber_types == 0) THEN
+         WRITE(error_message, '(a,i0)') "No atom types found for requested RIXS absorber Z=", rixs%rixs_absorber_z
+         CALL juDFT_error(TRIM(error_message), calledby="m_rixs_driver")
+      END IF
+
       omega_label = rixs_energy_label(rixs%rixs_omega_in)
       IF (rixs%rixs_write_contributions) THEN
          WRITE(rank_label, '(i4.4)') fmpi%irank
@@ -124,19 +137,6 @@ CONTAINS
                END IF
             END DO
          END DO
-      END IF
-
-      n_absorber_types = 0
-      n_absorber_atoms = 0
-      DO itype = 1, atoms%ntype
-         IF (atoms%nz(itype) == rixs%rixs_absorber_z) THEN
-            n_absorber_types = n_absorber_types + 1
-            n_absorber_atoms = n_absorber_atoms + atoms%neq(itype)
-         END IF
-      END DO
-      IF (n_absorber_types == 0) THEN
-         WRITE(error_message, '(a,i0)') "No atom types found for requested RIXS absorber Z=", rixs%rixs_absorber_z
-         CALL juDFT_error(TRIM(error_message), calledby="m_rixs_driver")
       END IF
 
       ALLOCATE(loss_grid(rixs%rixs_n_loss))
@@ -401,8 +401,8 @@ CONTAINS
       REAL, INTENT(IN) :: occ_band(:)
       INTEGER, INTENT(IN) :: valence_band_min, valence_band_max, intermediate_band_min, intermediate_band_max
 
-      ok = ANY(occ_band(valence_band_min:valence_band_max) > rixs_occ_tol) .AND. &
-           ANY(1.0 - occ_band(intermediate_band_min:intermediate_band_max) > rixs_occ_tol)
+      ok = ANY(occ_band(valence_band_min:valence_band_max) > rixs_occupation_tolerance) .AND. &
+           ANY(1.0 - occ_band(intermediate_band_min:intermediate_band_max) > rixs_occupation_tolerance)
    END FUNCTION rixs_kpoint_has_valence_and_empty
 
 END MODULE m_rixs_driver

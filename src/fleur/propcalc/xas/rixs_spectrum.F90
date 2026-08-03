@@ -10,8 +10,9 @@ MODULE m_rixs_spectrum
    IMPLICIT NONE
    PRIVATE
 
-   REAL, PARAMETER :: rixs_occ_tol = 1.0e-10
+   REAL, PARAMETER :: rixs_occupation_tolerance = 1.0e-10
 
+   PUBLIC :: rixs_occupation_tolerance
    PUBLIC :: rixs_accumulate_scalar_spin_trace_spectrum
    PUBLIC :: rixs_scalar_spin_trace_abs2
    PUBLIC :: rixs_accumulate_spinor_spectrum
@@ -45,11 +46,11 @@ CONTAINS
 
       DO n_band = intermediate_band_min, intermediate_band_max
          vacancy_n = 1.0 - occ_band(n_band)
-         IF (vacancy_n <= rixs_occ_tol) CYCLE
+         IF (vacancy_n <= rixs_occupation_tolerance) CYCLE
          denominator = CMPLX(omega_in - (eig_band(n_band) - core_energy), gamma_core)
          DO v_band = valence_band_min, valence_band_max
             f_v = occ_band(v_band)
-            IF (f_v <= rixs_occ_tol) CYCLE
+            IF (f_v <= rixs_occupation_tolerance) CYCLE
 
             strength = rixs_scalar_spin_trace_abs2(matrix_abs_spin(n_band, :, :), matrix_emit_spin(v_band, :, :), denominator)
             IF (strength < TINY(strength)) CYCLE
@@ -112,10 +113,10 @@ CONTAINS
 
       DO v_band = valence_band_min, valence_band_max
          f_v = occ_band(v_band)
-         IF (f_v <= rixs_occ_tol) CYCLE
+         IF (f_v <= rixs_occupation_tolerance) CYCLE
          DO n_band = intermediate_band_min, intermediate_band_max
             vacancy_n = 1.0 - occ_band(n_band)
-            IF (vacancy_n <= rixs_occ_tol) CYCLE
+            IF (vacancy_n <= rixs_occupation_tolerance) CYCLE
 
             denominator = CMPLX(omega_in - (eig_band(n_band) - core_energy), gamma_core)
             amplitude = rixs_spinor_amplitude(matrix_emit(v_band, :), matrix_abs(n_band, :), denominator)
