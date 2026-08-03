@@ -5,7 +5,6 @@ src/fleur/matrixelements/melem_io.F90
 src/fleur/matrixelements/melem_overlap.F90
 src/fleur/matrixelements/melem_spin.F90
 src/fleur/matrixelements/melem_orbmom.F90
-src/fleur/matrixelements/melem_socmat.F90
 src/fleur/matrixelements/melem_domains.F90
 src/fleur/matrixelements/melem_operators_r.F90
 src/fleur/matrixelements/melem_interpolate_ham.F90

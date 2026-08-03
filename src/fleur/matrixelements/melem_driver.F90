@@ -20,8 +20,8 @@
 !>    melem_rspauli_collinear   the collinear (jspins=2) combined 2N spin operator, which can
 !>                          only be assembled once BOTH spin channels have been wannierised.
 !>
-!>  The Bloch-basis providers themselves live in m_melem_spin / m_melem_orbmom /
-!>  m_melem_socmat, the k <-> R Fourier core in m_melem_ft, the real-space writers in
+!>  The Bloch-basis providers themselves live in m_melem_spin / m_melem_orbmom and in the
+!>  t_matelements types, the k <-> R Fourier core in m_melem_ft, the real-space writers in
 !>  m_melem_operators_r and the per-operator band interpolation in the m_melem_interpolate_*
 !>  modules. Nothing here knows about the Wannier90 library: the only piece of W90 state the
 !>  operators need (the b-shell weights of the position/Berry operator, and the reference
@@ -50,8 +50,9 @@ MODULE m_melem_driver
    USE m_melem_spin, ONLY: melem_spin_peratom, melem_spin_bloch, melem_spin_mt_block, &
                            melem_pauli_from_blocks, melem_spin_sumrule
    USE m_types_matelements_spin, ONLY: t_matelements_spin
+   USE m_types_matelements_soc, ONLY: t_matelements_soc
+   USE m_types_rsoc, ONLY: t_rsoc
    USE m_melem_orbmom, ONLY: melem_orbmom_bloch, melem_orbmom_bloch_collinear
-   USE m_melem_socmat, ONLY: melem_socmat_bloch
    USE m_melem_ft, ONLY: melem_ft_to_real_reduce
    USE m_melem_domains, ONLY: melem_write_domain_kpts, melem_rename_domain_outputs, melem_shell
    USE m_melem_operators_r, ONLY: melem_write_operators_r, melem_build_berry_aw_r, melem_check_berry_centres
@@ -179,7 +180,7 @@ CONTAINS
       TYPE(t_nococonv), INTENT(IN) :: nococonv
       TYPE(t_kpts), INTENT(IN) :: kpts
       TYPE(t_stars), INTENT(IN) :: stars
-      TYPE(t_usdus), INTENT(INOUT) :: usdus     ! INOUT: spnorb (SOC) fills it
+      TYPE(t_usdus), INTENT(IN) :: usdus
       TYPE(t_radfun), INTENT(IN) :: radfun(:)
       TYPE(t_enpara), INTENT(IN) :: enpara
       TYPE(t_mpi), INTENT(IN) :: fmpi
@@ -192,10 +193,28 @@ CONTAINS
       TYPE(t_lapw) :: lapw
       TYPE(t_mat) :: zMat(1)
       TYPE(t_matelements_spin) :: spinop
+      TYPE(t_matelements_soc) :: socop
+      TYPE(t_rsoc) :: rsoc
       TYPE(t_mat) :: zc(2)   ! the two spinor components when get_z does not stack them
       INTEGER :: ikpt, itype, isp, il, jspin_rad
 
       IF (.NOT. this%l_active) RETURN   ! nothing requested, or no spinor wavefunctions -> slices are stubs
+
+      !> The relativistic radial SOC integrals and the L.S angular matrix depend on the
+      !> potential and the quantisation axis, not on k, so they are built once here. The
+      !> angular part is evaluated on the axis the calculation is quantised along.
+      IF (wann%l_socop) THEN
+         !> The SOC operator distributes its column band index over the eigenvector
+         !> sub-communicator, while this pass gives every rank whole matrices for its own
+         !> k-points. With n_size > 1 it would fill only part of each column block.
+         IF (fmpi%n_size /= 1) CALL judft_error( &
+            "melem_coarse_calc: the SOC operator needs whole matrices per rank", &
+            hint="run k-parallel (n_size = 1); eigenvector parallelism is not supported here", &
+            calledby="melem_coarse_calc")
+         CALL rsoc%init(atoms)
+         CALL rsoc%rad_matrix(atoms, noco, nococonv, input, fmpi, enpara, vtot)
+         CALL rsoc%angles(atoms, fmpi, nococonv%theta, nococonv%phi)
+      END IF
 
       ALLOCATE (abc_s(2, atoms%ntype))
       il = 0
@@ -250,9 +269,20 @@ CONTAINS
                                                    ikpt, tol=1.0e-3)
          END IF
          IF (wann%l_orbmom) CALL melem_orbmom_bloch(atoms, abc_s, radfun, this%l0(:, :, :, :, il))
-         IF (wann%l_socop) CALL melem_socmat_bloch(atoms, noco, nococonv, input, fmpi, enpara, vtot, &
-                                                  usdus, abc_s, wann%num_bands, this%soc0(:, :, :, il), &
-                                                  this%soc4(:, :, :, il))
+         IF (wann%l_socop) THEN
+            !The operator keeps the four spin blocks. A spinor wavefunction has both
+            !components, so its expectation value of a spinor operator is the sum of all
+            !four; the blocks themselves are what the real-space export carries.
+            CALL socop%init(atoms, noco, input, sym, cell, enpara, lapw, vtot, rsoc, fmpi, nococonv)
+            CALL socop%init_mat(wann%num_bands)
+            CALL socop%calc_matrix_elements(zMat, abc_s, radfun, usdus)
+            this%soc4(:, :, 1, il) = socop%mat(1, 1)%data_c
+            this%soc4(:, :, 2, il) = socop%mat(1, 2)%data_c
+            this%soc4(:, :, 3, il) = socop%mat(2, 1)%data_c
+            this%soc4(:, :, 4, il) = socop%mat(2, 2)%data_c
+            this%soc0(:, :, 1, il) = socop%mat(1, 1)%data_c + socop%mat(1, 2)%data_c &
+                                   + socop%mat(2, 1)%data_c + socop%mat(2, 2)%data_c
+         END IF
       END DO
 
       DEALLOCATE (abc_s)
