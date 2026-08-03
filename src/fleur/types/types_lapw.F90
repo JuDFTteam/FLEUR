@@ -368,9 +368,12 @@ CONTAINS
          INTEGER:: n, na, na1, nn, np, lo, nkvec_sv, nkvec(atoms%nlod, 2), iindex
          IF (.NOT. ALLOCATED(lapw%kvec)) THEN
             ALLOCATE (lapw%kvec(2*(2*atoms%llod + 1), atoms%nlod, atoms%nat))
-            ALLOCATE (lapw%nkvec(atoms%nlod, atoms%nat));lapw%nkvec=0
+            ALLOCATE (lapw%nkvec(atoms%nlod, atoms%nat))
             ALLOCATE (lapw%index_lo(atoms%nlod, atoms%nat))
          ENDIF
+         lapw%kvec = 0
+         lapw%nkvec = 0
+         lapw%index_lo = 0
          iindex = 0
          na = 0
          nkvec_sv = 0

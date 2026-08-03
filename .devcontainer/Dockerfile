@@ -24,6 +24,12 @@ RUN apt-get update && \
 
 RUN python3 -m pip install --no-cache-dir --break-system-packages pre-commit fprettify fortls
 
+# Node.js LTS + Claude Code CLI (so it can be used from inside the container)
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends nodejs && \
+    npm install -g @anthropic-ai/claude-code && \
+    rm -rf /var/lib/apt/lists/*
+
 ENV CC=gcc
 ENV CXX=g++
 ENV FC=gfortran

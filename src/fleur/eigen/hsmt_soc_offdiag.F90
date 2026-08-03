@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -11,6 +11,12 @@
 MODULE m_hsmt_soc_offdiag
   USE m_juDFT
   IMPLICIT NONE
+
+  !Development switch: set to .TRUE. to have hsmt_soc_offdiag_check verify the
+  !closed-form SOC angular factor against an explicit spherical-harmonic reference
+  !(see that routine for what is tested). Always compiled, never on in production.
+  LOGICAL, PARAMETER :: l_checkSOCangular = .FALSE.
+
 CONTAINS
 #ifdef _OPENACC
   SUBROUTINE hsmt_soc_offdiag(n,atoms,cell,fmpi,nococonv,lapw,sym,usdus,td,fjgj,hmat)
@@ -57,7 +63,7 @@ CONTAINS
     CALL hsmt_spinor_soc(n,nococonv,chi,isigma)
        
     !$acc parallel present(fjgj,fjgj%fj,fjgj%gj,h11,h12,h21,h22)create(cph,dot,fct,xlegend,plegend,dplegend) default(none) copyin(n) &
-    !$acc &copyin(chi,isigma,td,td%rsoc%rsopp,td%rsoc%rsopdp,td%rsoc%rsoppd,td%rsoc%rsopdpd)&
+    !$acc &copyin(chi,isigma,td,td%rsoc,td%rsoc%rso)&
     !$acc &copyin(nococonv,nococonv%alph,nococonv%beta,lapw,lapw%nv,lapw%gvec,lapw%gk,atoms,atoms%firstatom,atoms%neq,atoms%taual,atoms%lmax)&
     !$acc &copyin(fmpi,fleg1,fleg2,fl2p1) 
         
@@ -95,10 +101,10 @@ CONTAINS
              DO j2=1,2
                 DO j1=1,2
                     fct(j1,j2)  = fct(j1,j2)+cph * dplegend(l3)*fl2p1(l)*(&
-                    fjgj%fj(ki,l,j1,1)*fjgj%fj(kj,l,j2,1) *td%rsoc%rsopp(n,l,j1,j2) + &
-                    fjgj%fj(ki,l,j1,1)*fjgj%gj(kj,l,j2,1) *td%rsoc%rsopdp(n,l,j1,j2) + &
-                    fjgj%gj(ki,l,j1,1)*fjgj%fj(kj,l,j2,1) *td%rsoc%rsoppd(n,l,j1,j2) + &
-                    fjgj%gj(ki,l,j1,1)*fjgj%gj(kj,l,j2,1) *td%rsoc%rsopdpd(n,l,j1,j2)) &
+                    fjgj%fj(kj,l,j1,1)*fjgj%fj(ki,l,j2,1) *td%rsoc%rso(1,1,n,l,j1,j2) + &
+                    fjgj%gj(kj,l,j1,1)*fjgj%fj(ki,l,j2,1) *td%rsoc%rso(2,1,n,l,j1,j2) + &
+                    fjgj%fj(kj,l,j1,1)*fjgj%gj(ki,l,j2,1) *td%rsoc%rso(1,2,n,l,j1,j2) + &
+                    fjgj%gj(kj,l,j1,1)*fjgj%gj(ki,l,j2,1) *td%rsoc%rso(2,2,n,l,j1,j2)) &
                     * (isigma(j1,j2,1)*cross_k(1)+isigma(j1,j2,2)*cross_k(2)+ isigma(j1,j2,3)*cross_k(3))
                 ENDDO
               ENDDO
@@ -160,6 +166,9 @@ CONTAINS
 
     CALL timestart("offdiagonal soc-setup")
 
+    !Development check, off by default; see l_checkSOCangular at the top of this module.
+    IF (l_checkSOCangular) CALL hsmt_soc_offdiag_check(n,atoms,fmpi,nococonv,lapw)
+
     !$acc update self(hmat(1,1)%data_c,hmat(2,1)%data_c,hmat(1,2)%data_c,hmat(2,2)%data_c)
 
     DO l = 0,atoms%lmaxd
@@ -167,7 +176,7 @@ CONTAINS
        fleg2(l) = REAL(l)/REAL(l+1)
        fl2p1(l) = REAL(l+l+1)/fpi_const
     END DO
-    !!$acc data copyin(td,td%rsoc%rsopp,td%rsoc%rsopdp,td%rsoc%rsoppd,td%rsoc%rsopdpd)
+    !!$acc data copyin(td,td%rsoc,td%rsoc%rso)
     !CPP_OMP PARALLEL DEFAULT(NONE)&
     !CPP_OMP SHARED(n,lapw,atoms,td,fjgj,nococonv,fl2p1,fleg1,fleg2,hmat,fmpi)&
     !CPP_OMP PRIVATE(kii,ki,ski,kj,plegend,dplegend,l,j1,j2,angso,chi)&
@@ -248,10 +257,10 @@ CONTAINS
              DO j1=1,2
                 DO j2=1,2      
                   fct(:NVEC_rem)  =cph(:NVEC_rem) * dplegend(:NVEC_rem,l3)*fl2p1(l)*(&
-                  fjgj%fj(ki,l,j1,1)*fjgj%fj(kj_off:kj_vec,l,j2,1) *td%rsoc%rsopp(n,l,j1,j2) + &
-                  fjgj%fj(ki,l,j1,1)*fjgj%gj(kj_off:kj_vec,l,j2,1) *td%rsoc%rsopdp(n,l,j1,j2) + &
-                  fjgj%gj(ki,l,j1,1)*fjgj%fj(kj_off:kj_vec,l,j2,1) *td%rsoc%rsoppd(n,l,j1,j2) + &
-                  fjgj%gj(ki,l,j1,1)*fjgj%gj(kj_off:kj_vec,l,j2,1) *td%rsoc%rsopdpd(n,l,j1,j2)) &
+                  fjgj%fj(kj_off:kj_vec,l,j1,1)*fjgj%fj(ki,l,j2,1) *td%rsoc%rso(1,1,n,l,j1,j2) + &
+                  fjgj%gj(kj_off:kj_vec,l,j1,1)*fjgj%fj(ki,l,j2,1) *td%rsoc%rso(2,1,n,l,j1,j2) + &
+                  fjgj%fj(kj_off:kj_vec,l,j1,1)*fjgj%gj(ki,l,j2,1) *td%rsoc%rso(1,2,n,l,j1,j2) + &
+                  fjgj%gj(kj_off:kj_vec,l,j1,1)*fjgj%gj(ki,l,j2,1) *td%rsoc%rso(2,2,n,l,j1,j2)) &
                   * angso(:NVEC_rem,j1,j2)
 
                   hmat(1,1)%data_c(kj_off:kj_vec,kii)=hmat(1,1)%data_c(kj_off:kj_vec,kii) + chi(1,1,j1,j2)*fct(:NVEC_rem)
@@ -314,6 +323,7 @@ CONTAINS
     REAL, ALLOCATABLE :: plegend(:,:),dplegend(:,:)
     COMPLEX, ALLOCATABLE :: cph(:)
     REAL                 :: alo1(atoms%nlod,2),blo1(atoms%nlod,2),clo1(atoms%nlod,2)
+    INTEGER              :: lo_slot(atoms%nlod),lo_cnt(0:atoms%lmaxd)
     CALL timestart("offdiagonal soc-setup LO")
 
     DO l = 0,atoms%lmaxd
@@ -336,6 +346,16 @@ CONTAINS
     alo1=alo1*fpi_const/SQRT(cell%omtil)* ((atoms%rmt(n)**2)/2)
     blo1=blo1*fpi_const/SQRT(cell%omtil)* ((atoms%rmt(n)**2)/2)
     clo1=clo1*fpi_const/SQRT(cell%omtil)* ((atoms%rmt(n)**2)/2)
+
+    !Map each LO to its radial-function slot in rsoc%rso: slot 1=u, 2=udot,
+    !3.. = LOs of the same l in the order they appear in atoms%llo (same ordering
+    !as in types_radfun%generate_radial_functions).
+    lo_cnt = 0
+    DO lo = 1,atoms%nlo(n)
+       l = atoms%llo(lo,n)
+       lo_cnt(l) = lo_cnt(l) + 1
+       lo_slot(lo) = 2 + lo_cnt(l)
+    ENDDO
 
     associate(h11=>hmat(1,1)%data_c,h12=>hmat(1,2)%data_c,h21=>hmat(2,1)%data_c,h22=>hmat(2,2)%data_c)
 
@@ -364,8 +384,8 @@ CONTAINS
                 plegend(kj,1) = DOT_PRODUCT(lapw%gk(1:3,kj,1),lapw%gk(1:3,ki,1))
               END DO
               DO ll = 1,l - 1
-                plegend(:,ll+1) = fleg1(l)*plegend(:,1)*plegend(:,ll) - fleg2(l)*plegend(:,ll-1)
-                dplegend(:,ll+1)=REAL(l+1)*plegend(:,ll)+plegend(:,1)*dplegend(:,ll)
+                plegend(:,ll+1) = fleg1(ll)*plegend(:,1)*plegend(:,ll) - fleg2(ll)*plegend(:,ll-1)
+                dplegend(:,ll+1)=REAL(ll+1)*plegend(:,ll)+plegend(:,1)*dplegend(:,ll)
               END DO
               !--->             set up phase factors
               cph = 0.0
@@ -383,9 +403,9 @@ CONTAINS
               !$acc kernels default(none) &
               !$acc &present(h11,h12,h21,h22)&
               !$acc &present(fjgj,fjgj%fj,fjgj%gj)&
-              !$acc &copyin(chi,isigma,td,td%rsoc%rsopp,td%rsoc%rsopdp,td%rsoc%rsoppd,td%rsoc%rsopdpd,td%rsoc%rsoplop,td%rsoc%rsoplopd,td%rsoc%rsoploplop,td%rsoc%rsopplo,td%rsoc%rsopdplo)&
+              !$acc &copyin(chi,isigma,td,td%rsoc,td%rsoc%rso)&
               !$acc &copyin(lapw,lapw%gk,lapw%nv,lapw%index_lo,lapw%kvec)&
-              !$acc &copyin(alo1,blo1,clo1,cph,dplegend,fl2p1,atoms,atoms%nlo,atoms%llo)&
+              !$acc &copyin(alo1,blo1,clo1,cph,dplegend,fl2p1,atoms,atoms%nlo,atoms%llo,lo_slot)&
               !$acc &create(cross_k) 
               DO j1=1,2
                 DO j2=1,2
@@ -397,12 +417,12 @@ CONTAINS
                     cross_k(2)=lapw%gk(3,ki,1)*lapw%gk(1,kj,1)- lapw%gk(1,ki,1)*lapw%gk(3,kj,1)
                     cross_k(3)=lapw%gk(1,ki,1)*lapw%gk(2,kj,1)- lapw%gk(2,ki,1)*lapw%gk(1,kj,1)
                     fct  =cph(kj) * dplegend(kj,l)*fl2p1(l)*(&
-                    alo1(lo,j1)*fjgj%fj(kj,l,j2,1) *td%rsoc%rsopp(n,l,j1,j2) + &
-                    alo1(lo,j1)*fjgj%gj(kj,l,j2,1) *td%rsoc%rsopdp(n,l,j1,j2) + &
-                    blo1(lo,j1)*fjgj%fj(kj,l,j2,1) *td%rsoc%rsoppd(n,l,j1,j2) + &
-                    blo1(lo,j1)*fjgj%gj(kj,l,j2,1) *td%rsoc%rsopdpd(n,l,j1,j2)+ &
-                    clo1(lo,j1)*fjgj%fj(kj,l,j2,1) *td%rsoc%rsopplo(n,lo,j1,j2) + &
-                    clo1(lo,j1)*fjgj%gj(kj,l,j2,1) *td%rsoc%rsopdplo(n,lo,j1,j2)) &
+                    alo1(lo,j2)*fjgj%fj(kj,l,j1,1) *td%rsoc%rso(1,1,n,l,j1,j2) + &
+                    alo1(lo,j2)*fjgj%gj(kj,l,j1,1) *td%rsoc%rso(2,1,n,l,j1,j2) + &
+                    blo1(lo,j2)*fjgj%fj(kj,l,j1,1) *td%rsoc%rso(1,2,n,l,j1,j2) + &
+                    blo1(lo,j2)*fjgj%gj(kj,l,j1,1) *td%rsoc%rso(2,2,n,l,j1,j2)+ &
+                    clo1(lo,j2)*fjgj%fj(kj,l,j1,1) *td%rsoc%rso(1,lo_slot(lo),n,l,j1,j2) + &
+                    clo1(lo,j2)*fjgj%gj(kj,l,j1,1) *td%rsoc%rso(2,lo_slot(lo),n,l,j1,j2)) &
                     *  (isigma(j1,j2,1)*cross_k(1)+isigma(j1,j2,2)*cross_k(2)+ isigma(j1,j2,3)*cross_k(3))
                     h11(kj,locol_loc)=h11(kj,locol_loc) + chi(1,1,j1,j2)*fct
                     h12(kj,locol_loc)=h12(kj,locol_loc) + chi(1,2,j1,j2)*fct
@@ -421,15 +441,15 @@ CONTAINS
                         lorow= lapw%nv(1)+lapw%index_lo(ilo,na)+nkvecp !local row
                         if (lorow>locol_mat) cycle
                         fct  =cph(kj) * dplegend(kj,l)*fl2p1(l)*(&
-                        alo1(lo,j1)*alo1(ilo,j2) *td%rsoc%rsopp(n,l,j1,j2) + &
-                        alo1(lo,j1)*blo1(ilo,j2) *td%rsoc%rsopdp(n,l,j1,j2) + &
-                        alo1(lo,j1)*clo1(ilo,j2) *td%rsoc%rsoplop(n,ilo,j1,j2) + &
-                        blo1(lo,j1)*alo1(ilo,j2) *td%rsoc%rsoppd(n,l,j1,j2) + &
-                        blo1(lo,j1)*blo1(ilo,j2) *td%rsoc%rsopdpd(n,l,j1,j2)+ &
-                        blo1(lo,j1)*clo1(ilo,j2) *td%rsoc%rsoplopd(n,ilo,j1,j2)+ &
-                        clo1(lo,j1)*alo1(ilo,j2) *td%rsoc%rsopplo(n,lo,j1,j2) + &
-                        clo1(lo,j1)*blo1(ilo,j2) *td%rsoc%rsopdplo(n,lo,j1,j2)+ &
-                        clo1(lo,j1)*clo1(ilo,j2) *td%rsoc%rsoploplop(n,lo,ilo,j1,j2)) &
+                        alo1(lo,j2)*alo1(ilo,j1) *td%rsoc%rso(1,1,n,l,j1,j2) + &
+                        alo1(lo,j2)*blo1(ilo,j1) *td%rsoc%rso(2,1,n,l,j1,j2) + &
+                        alo1(lo,j2)*clo1(ilo,j1) *td%rsoc%rso(lo_slot(ilo),1,n,l,j1,j2) + &
+                        blo1(lo,j2)*alo1(ilo,j1) *td%rsoc%rso(1,2,n,l,j1,j2) + &
+                        blo1(lo,j2)*blo1(ilo,j1) *td%rsoc%rso(2,2,n,l,j1,j2)+ &
+                        blo1(lo,j2)*clo1(ilo,j1) *td%rsoc%rso(lo_slot(ilo),2,n,l,j1,j2)+ &
+                        clo1(lo,j2)*alo1(ilo,j1) *td%rsoc%rso(1,lo_slot(lo),n,l,j1,j2) + &
+                        clo1(lo,j2)*blo1(ilo,j1) *td%rsoc%rso(2,lo_slot(lo),n,l,j1,j2)+ &
+                        clo1(lo,j2)*clo1(ilo,j1) *td%rsoc%rso(lo_slot(ilo),lo_slot(lo),n,l,j1,j2)) &
                        *  (isigma(j1,j2,1)*cross_k(1)+isigma(j1,j2,2)*cross_k(2)+ isigma(j1,j2,3)*cross_k(3))
                         h11(lorow,locol_loc)=h11(lorow,locol_loc) + chi(1,1,j1,j2)*fct
                         h12(lorow,locol_loc)=h12(lorow,locol_loc) + chi(1,2,j1,j2)*fct
@@ -452,36 +472,210 @@ CONTAINS
 
     RETURN
   END SUBROUTINE hsmt_soc_offdiag_LO
-END MODULE m_hsmt_soc_offdiag
+  SUBROUTINE hsmt_soc_offdiag_check(n,atoms,fmpi,nococonv,lapw)
+    !! Development check for the closed-form SOC angular factor. Always compiled but
+    !! only called when l_checkSOCangular (top of this module) is set to .TRUE.; it is
+    !! wired into the CPU branch of hsmt_soc_offdiag only.
+    !!
+    !! hsmt_soc_offdiag evaluates the angular part of the first-variation SOC matrix
+    !! element in closed form. With k_row = gk(kj), k_col = gk(ki), x = k_row.k_col and
+    !! cross_k = k_col x k_row it uses
+    !!
+    !!   A_code(j1,j2) = fl2p1(l) * P_l'(x) * sum_a isigma(j1,j2,a) cross_k(a)
+    !!
+    !! where isigma(j1,j2,a) = <chi_j1|i*sigma_a|chi_j2> in the local spin basis. The
+    !! exact expression it stands for is
+    !!
+    !!   A(j1,j2) = sum_{mr,mc} Y_lmr(k_row) Y*_lmc(k_col) <l mr j1|L.sigma|l mc j2>
+    !!            = sum_a V_a(l) <chi_j1|sigma_a|chi_j2>,
+    !!   V_a(l)   = sum_{mr,mc} Y_lmr(k_row) Y*_lmc(k_col) <l mr|L_a|l mc>.
+    !!
+    !! Two independent checks are run:
+    !!
+    !! 1. "Ylm": the addition theorem  V_a(l) = fl2p1(l) * P_l'(x) * i * cross_k(a),
+    !!    evaluated from ylm4 and explicit L_a matrices. Spin-free and valid at any
+    !!    spin-frame angle, so it covers P_l' for every l. P_l' is built here with the
+    !!    array recursion of hsmt_soc_offdiag_LO, i.e. this is the check that pins the
+    !!    LO path (the LAPW-LAPW block uses the equivalent rolling three-slot form).
+    !!
+    !! 2. "anglso": the full per-spin-block element against ylm4 + anglso, which
+    !!    returns <l m1 is1|L.sigma|l m2 is2> directly. This is the only check that
+    !!    tests the (m,spin) pairing, i.e. that j1 is the row and j2 the column. It is
+    !!    reported together with the row/column-exchanged pairing that preceded this
+    !!    convention; the exchanged one must NOT vanish for j1/=j2.
+    !!    CAUTION: anglso's default l_standard_euler_angles=.FALSE. branch flips the
+    !!    spin x and y axes (see the comment in anglso.f90), so it agrees with the
+    !!    standard rotation only for beta=alpha=0, and there only up to a sign in the
+    !!    spin-off-diagonal blocks (compensated below). For a rotated frame it is a
+    !!    different operator, not a reference, and this check is therefore skipped.
+    USE m_constants, ONLY : fpi_const,oUnit
+    USE m_types
+    USE m_hsmt_spinor
+    USE m_anglso
+    USE m_ylm
+    IMPLICIT NONE
+    TYPE(t_mpi),INTENT(IN)        :: fmpi
+    TYPE(t_nococonv),INTENT(IN)   :: nococonv
+    TYPE(t_atoms),INTENT(IN)      :: atoms
+    TYPE(t_lapw),INTENT(IN)       :: lapw
+    INTEGER,INTENT(IN)            :: n
 
-#if false
-   !Code snipplet useful for debugging only
-      !            fct(:NVEC_rem)  =cph(:NVEC_rem) * dplegend(:NVEC_rem,l3)*fl2p1(l)*(&
-      !            fjkiln*fjgj%fj(kj_off:kj_vec,l,j2,1) *td%rsoc%rsopp(n,l,j1,j2) ) &
-      !            * angso(:NVEC_rem,j1,j2) 
-             
-      !            BLOCK
-      !              use m_anglso
-      !              USE m_ylm
-      !              INTEGER :: m1,m2,is1,is2,lm1,lm2
-      !              COMPLEX :: soangl(0:atoms%lmaxd,-atoms%lmaxd:atoms%lmaxd,2,-atoms%lmaxd:atoms%lmaxd,2),angso2
-      !              COMPLEX :: ylm1( (atoms%lmaxd+1)**2 ), ylm2( (atoms%lmaxd+1)**2 )
-      !              INTEGER :: ispjsp(2)
-      !              if (kj_off/=kj_vec) call judft_error("DEBUG Problem")
-      !              DATA ispjsp/1,-1/
-      !                   CALL ylm4(l,lapw%gk(:,ki,1),ylm1)
-      !                   CALL ylm4(l,lapw%gk(:,kj,1),ylm2)
-      !                   angso2=0.0
-      !                   is1=ispjsp(j1)
-      !                   is2=ispjsp(j2)
-      !                   DO m1=-l,l
-      !                      lm1=l*(l+1)+m1+1
-      !                      DO m2=-l,l
-      !                        lm2=l*(l+1)+m2+1
-      !                        angso2=angso2+ylm1(lm1)*conjg(ylm2(lm2))* &
-      !                           anglso(nococonv%beta(n),nococonv%alph(n),l,m1,is1,l,m2,is2)
-      !                     ENDDO
-      !                  ENDDO
-      !                  fct(1)=angso2*fjgj%fj(ki,l,j1,1)*fjgj%fj(kj_off,l,j2,1) *td%rsoc%rsopp(n,l,j1,j2)
-      !            END BLOCK     
-#endif
+    INTEGER, PARAMETER :: NSAMPLE = 12          !k-vectors sampled per side
+    INTEGER, PARAMETER :: ispjsp(2) = [1,-1]
+    REAL,    PARAMETER :: TOL = 1.0e-10
+
+    INTEGER :: l,ll,j1,j2,mr,mc,ki,kj,ika,ikb,stride,lmr,lmc,a
+    REAL    :: x,dpl,cross_k(3),sgn,lplus,lminus
+    REAL    :: fleg1(0:atoms%lmaxd),fleg2(0:atoms%lmaxd),fl2p1(0:atoms%lmaxd)
+    REAL    :: pl(0:atoms%lmaxd),dpleg(0:atoms%lmaxd)
+    REAL    :: dev_ylm,scale_ylm,worst,sample_scale,cnorm
+    REAL    :: dev(2,2,2),scale_s(2,2)
+    LOGICAL :: l_unrot
+    COMPLEX :: chi(2,2,2,2),isigma(2,2,3)
+    COMPLEX :: a_code,a_ref,a_swap,lel(3),vvec(3),yy
+    COMPLEX :: ylm_row((atoms%lmaxd+1)**2),ylm_col((atoms%lmaxd+1)**2)
+
+    IF (fmpi%irank/=0) RETURN
+    IF (lapw%nv(1)<2) RETURN
+
+    DO l = 0,atoms%lmaxd
+       fleg1(l) = REAL(l+l+1)/REAL(l+1)
+       fleg2(l) = REAL(l)/REAL(l+1)
+       fl2p1(l) = REAL(l+l+1)/fpi_const
+    END DO
+    CALL hsmt_spinor_soc(n,nococonv,chi,isigma)
+
+    l_unrot = ABS(nococonv%beta(n))<1.0e-8 .AND. ABS(nococonv%alph(n))<1.0e-8
+
+    WRITE (oUnit,'(/,a,i0,a,f9.5,a,f9.5)') &
+         " SOC-angular-check: atom type ",n, &
+         "   beta=",nococonv%beta(n),"  alpha=",nococonv%alph(n)
+    IF (l_unrot) THEN
+       WRITE (oUnit,'(a)') "   columns: |Ylm| = addition-theorem deviation (spin-free);"
+       WRITE (oUnit,'(a)') "            |anglso| = full element vs ylm4+anglso, per spin block;"
+       WRITE (oUnit,'(a)') "            |swapped| = same with the row/column (m,spin) pairing"
+       WRITE (oUnit,'(a)') "            exchanged, which must NOT vanish for j1/=j2."
+       WRITE (oUnit,'(a)') "   all deviations relative;  l  j1  j2      |Ylm|    |anglso|   |swapped|"
+    ELSE
+       WRITE (oUnit,'(a)') "   rotated spin frame: the anglso check is skipped (its default"
+       WRITE (oUnit,'(a)') "   l_standard_euler_angles=.FALSE. branch flips the spin x/y axes"
+       WRITE (oUnit,'(a)') "   and is not a reference here). Only the spin-free Ylm check runs."
+       WRITE (oUnit,'(a)') "   all deviations relative;  l               |Ylm|"
+    END IF
+
+    worst = 0.0
+    stride = MAX(1,lapw%nv(1)/NSAMPLE)
+    DO l = 1,atoms%lmax(n)
+       dev = 0.0 ; scale_s = 0.0 ; dev_ylm = 0.0 ; scale_ylm = 0.0
+       DO ika = 1,lapw%nv(1),stride
+          ki = ika                       !column
+          !gk is (k+G)/|k+G|; for k+G=0 (Gamma with G=0) it degenerates to the null
+          !vector and carries no direction, so such a basis function is skipped here.
+          IF (DOT_PRODUCT(lapw%gk(:,ki,1),lapw%gk(:,ki,1))<0.5) CYCLE
+          CALL ylm4(l,lapw%gk(:,ki,1),ylm_col)
+          DO ikb = 1,lapw%nv(1),stride
+             kj = ikb                    !row
+             IF (kj==ki) CYCLE           !cross product vanishes, nothing to test
+             IF (DOT_PRODUCT(lapw%gk(:,kj,1),lapw%gk(:,kj,1))<0.5) CYCLE
+             CALL ylm4(l,lapw%gk(:,kj,1),ylm_row)
+
+             !--- P_l'(x) with the array recursion of hsmt_soc_offdiag_LO
+             x = DOT_PRODUCT(lapw%gk(1:3,kj,1),lapw%gk(1:3,ki,1))
+             pl = 0.0 ; dpleg = 0.0
+             pl(0) = 1.0 ; dpleg(0) = 0.0
+             pl(1) = x   ; dpleg(1) = 1.0
+             DO ll = 1,l-1
+                pl(ll+1)    = fleg1(ll)*x*pl(ll) - fleg2(ll)*pl(ll-1)
+                dpleg(ll+1) = REAL(ll+1)*pl(ll) + x*dpleg(ll)
+             END DO
+             dpl = dpleg(l)
+
+             cross_k(1)=lapw%gk(2,ki,1)*lapw%gk(3,kj,1)-lapw%gk(3,ki,1)*lapw%gk(2,kj,1)
+             cross_k(2)=lapw%gk(3,ki,1)*lapw%gk(1,kj,1)-lapw%gk(1,ki,1)*lapw%gk(3,kj,1)
+             cross_k(3)=lapw%gk(1,ki,1)*lapw%gk(2,kj,1)-lapw%gk(2,ki,1)*lapw%gk(1,kj,1)
+
+             !--- check 1: V_a(l) = fl2p1 * P_l' * i * cross_k(a)
+             vvec = CMPLX(0.0,0.0)
+             DO mr = -l,l
+                lmr = l*(l+1)+mr+1
+                DO mc = -l,l
+                   lmc = l*(l+1)+mc+1
+                   yy = ylm_row(lmr)*CONJG(ylm_col(lmc))
+                   !<l mr|L_a|l mc>: L+ raises mc, L- lowers it
+                   lplus  = 0.0 ; lminus = 0.0
+                   IF (mr==mc+1) lplus  = SQRT(REAL((l-mc)*(l+mc+1)))
+                   IF (mr==mc-1) lminus = SQRT(REAL((l+mc)*(l-mc+1)))
+                   lel(1) = CMPLX(0.5*(lplus+lminus),0.0)              !L_x
+                   lel(2) = CMPLX(0.0,-0.5*(lplus-lminus))             !L_y = (L+ - L-)/(2i)
+                   lel(3) = CMPLX(0.0,0.0)
+                   IF (mr==mc) lel(3) = CMPLX(REAL(mc),0.0)            !L_z
+                   vvec(:) = vvec(:) + yy*lel(:)
+                END DO
+             END DO
+             !relative per sample, so a near-degenerate k-pair (|cross_k|->0, where both
+             !sides vanish) cannot dominate a global maximum
+             sample_scale = 0.0
+             DO a = 1,3
+                sample_scale = MAX(sample_scale,ABS(vvec(a)))
+             END DO
+             cnorm = SQRT(DOT_PRODUCT(cross_k,cross_k))
+             IF (sample_scale>1.0e-8 .AND. cnorm>1.0e-8) THEN
+                DO a = 1,3
+                   dev_ylm = MAX(dev_ylm, &
+                        ABS(vvec(a)-fl2p1(l)*dpl*CMPLX(0.0,1.0)*cross_k(a))/sample_scale)
+                END DO
+                scale_ylm = 1.0
+             END IF
+
+             !--- check 2: full element against ylm4 + anglso (unrotated frames only)
+             IF (.NOT.l_unrot) CYCLE
+             DO j1 = 1,2      !row (bra) local spin
+                DO j2 = 1,2   !column (ket) local spin
+                   a_code = fl2p1(l)*dpl*( isigma(j1,j2,1)*cross_k(1) &
+                                          +isigma(j1,j2,2)*cross_k(2) &
+                                          +isigma(j1,j2,3)*cross_k(3) )
+                   sgn = MERGE(1.0,-1.0,j1==j2)   !anglso convention, see header
+                   a_ref  = CMPLX(0.0,0.0)
+                   a_swap = CMPLX(0.0,0.0)
+                   DO mr = -l,l
+                      lmr = l*(l+1)+mr+1
+                      DO mc = -l,l
+                         lmc = l*(l+1)+mc+1
+                         yy = ylm_row(lmr)*CONJG(ylm_col(lmc))
+                         a_ref  = a_ref  + yy*anglso(nococonv%beta(n),nococonv%alph(n), &
+                                                     l,mr,ispjsp(j1),l,mc,ispjsp(j2))
+                         a_swap = a_swap + yy*anglso(nococonv%beta(n),nococonv%alph(n), &
+                                                     l,mr,ispjsp(j2),l,mc,ispjsp(j1))
+                      END DO
+                   END DO
+                   dev(1,j1,j2) = MAX(dev(1,j1,j2),ABS(a_code-sgn*a_ref))
+                   dev(2,j1,j2) = MAX(dev(2,j1,j2),ABS(a_code-sgn*a_swap))
+                   scale_s(j1,j2) = MAX(scale_s(j1,j2),ABS(a_ref))
+                END DO
+             END DO
+          END DO
+       END DO
+
+       IF (scale_ylm>1.0e-12) worst = MAX(worst,dev_ylm)
+       IF (l_unrot) THEN
+          DO j1 = 1,2
+             DO j2 = 1,2
+                IF (scale_s(j1,j2)<1.0e-12) CYCLE
+                worst = MAX(worst,dev(1,j1,j2)/scale_s(j1,j2))
+                WRITE (oUnit,'(3i4,3f12.8)') l,j1,j2,dev_ylm, &
+                     dev(1,j1,j2)/scale_s(j1,j2),dev(2,j1,j2)/scale_s(j1,j2)
+             END DO
+          END DO
+       ELSE
+          WRITE (oUnit,'(i4,12x,f12.8)') l,dev_ylm
+       END IF
+    END DO
+
+    IF (worst<TOL) THEN
+       WRITE (oUnit,'(a,e12.4)') " SOC-angular-check: PASS, worst relative deviation ",worst
+    ELSE
+       WRITE (oUnit,'(a,e12.4)') " SOC-angular-check: FAIL, worst relative deviation ",worst
+    END IF
+
+  END SUBROUTINE hsmt_soc_offdiag_check
+END MODULE m_hsmt_soc_offdiag

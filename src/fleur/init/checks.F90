@@ -48,8 +48,9 @@ MODULE m_checks
 #endif
     END SUBROUTINE check_command_line
 
-    SUBROUTINE check_input_switches(banddos,vacuum,noco,atoms,input,sym,kpts,hybinp)
+    SUBROUTINE check_input_switches(banddos,vacuum,noco,atoms,input,sym,kpts,hybinp,cell)
       USE m_nocoInputCheck
+      USE m_socsym
       USE m_types_fleurinput
       USE m_constants
       type(t_banddos),INTENT(IN)::banddos
@@ -60,9 +61,11 @@ MODULE m_checks
       type(t_sym),INTENT(IN)    :: sym
       type(t_kpts),INTENT(IN)   :: kpts
       type(t_hybinp),intent(in) :: hybinp
+      type(t_cell),INTENT(IN)   :: cell
 
       integer :: i,n,na
       real :: maxpos,minpos
+      logical :: socError(sym%nop)
 
      ! Check DOS related stuff (from inped)
      IF(banddos%l_jDOS.AND..NOT.noco%l_noco) THEN
@@ -98,12 +101,25 @@ MODULE m_checks
 
      IF (noco%l_noco) CALL nocoInputCheck(atoms,input,sym,vacuum,noco)
 
+     IF (noco%l_soc.AND.(sym%nop>1)) THEN
+        CALL soc_sym(sym%nop,sym%mrot,noco%theta_inp,noco%phi_inp,cell%amat,socError)
+        IF (ANY(socError)) THEN
+           CALL juDFT_warn("Symmetry operations incompatible with spin quantization axis are present.",&
+                           hint="Recreate the input with inpgen while l_soc=T is set, so that the symmetry is &
+                                &reduced accordingly, or use the '-nosym' command line option of inpgen.",&
+                           calledby="check_input_switches")
+        END IF
+     END IF
+
      !In film case check centering of film
      if ( input%film ) then
         IF ((input%f_level.GT.0.).AND.input%l_f) THEN
            call judft_warn("Enhanced forces are not implemented for film calculations.",hint="Set the f_level tag to 0.")
         END IF
-        if (.not.sym%symor) call judft_warn("Non-symorphic films probably do not work correctly. Either proceed with caution or use a symorphic setup (symor=T in inpgen)")
+        if (input%film.and.noco%l_noco.and..not.sym%symor) &
+           call judft_warn("Nonsymmorphic films are only tested for collinear calculations; the noncollinear case is not verified.",&
+                           hint="Proceed with caution, or use a symorphic setup (symor=T in inpgen).",&
+                           calledby="check_input_switches")
        maxpos=0.0;minpos=0.0
        DO n=1,atoms%ntype
          na=atoms%firstAtom(n) - 1

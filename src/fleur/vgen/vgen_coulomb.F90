@@ -191,7 +191,7 @@ contains
               !                 ENDIF
               !       ----> only stars within g_max sphere (shz oct.97)
               if ( irec3 /= 0 ) then
-                xint = cmplx( af1(i), bf1(i) ) * ani
+                xint = cmplx( af1(i), bf1(i) ) * ani * conjg( stars%rgphs(stars%kv2(1,irec2),stars%kv2(2,irec2),k3) )
                 nzst1 = stars%nstr(irec3) / stars%nstr2(irec2)
                 vCoul%pw(irec3,1) = vCoul%pw(irec3,1) + xint / nzst1
               end if

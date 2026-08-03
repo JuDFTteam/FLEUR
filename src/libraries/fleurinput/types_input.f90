@@ -53,6 +53,7 @@ MODULE m_types_input
   REAL    :: alpha=0.05
   REAL    :: preconditioning_param=0.0
   REAL    :: spinf=2.0
+  LOGICAL :: sdNocoIR=.FALSE. !Is the starting density allowed to be non-collinear in the interstitial region?
   REAL    :: tkb=0.001
   INTEGER :: bz_integration=BZINT_METHOD_HIST
   LOGICAL :: l_bloechl=.FALSE. !Are the bloechl corrections used for bz_integration=BZINT_METHOD_TETRA
@@ -148,6 +149,7 @@ SUBROUTINE mpi_bc_input(this,mpi_comm,irank)
    CALL mpi_bc(this%alpha,rank,mpi_comm)
    CALL mpi_bc(this%preconditioning_param,rank,mpi_comm)
    CALL mpi_bc(this%spinf,rank,mpi_comm)
+   CALL mpi_bc(this%sdNocoIR,rank,mpi_comm)
    CALL mpi_bc(this%tkb,rank,mpi_comm)
    CALL mpi_bc(this%bz_integration,rank,mpi_comm)
    CALL mpi_bc(this%l_bloechl,rank,mpi_comm)
@@ -258,6 +260,10 @@ SUBROUTINE read_xml_input(this,xml)
    this%alpha = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@alpha'))
    this%preconditioning_param = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@precondParam'))
    this%spinf = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@spinf'))
+   !optional switch; if it is not present the starting density stays collinear in the interstitial region
+   IF (xml%GetNumberOfNodes('/fleurInput/calculationSetup/scfLoop/@sdNocoIR')==1) THEN
+      this%sdNocoIR = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@sdNocoIR'))
+   END IF
    ! Get parameters for core electrons
    this%ctail = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/coreElectrons/@ctail'))
    this%coretail_lmax = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/coreElectrons/@coretail_lmax'))

@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -35,7 +35,7 @@ contains
       this%n_r(0:)=atoms%num_radial_functions_per_l(itype)
    end subroutine
 
-   subroutine generate_radial_functions(this, atoms, input, enpara, fmpi, vtot, iType, hub1data, usdus)
+   subroutine generate_radial_functions(this, atoms, input, enpara, fmpi, vtot, iType, hub1data,usdus_out)
       use m_genMTBasis
       use m_types_atoms
       use m_types_input
@@ -52,9 +52,11 @@ contains
       type(t_enpara), intent(IN)   :: enpara
       type(t_hub1data), intent(IN),optional :: hub1data
       type(t_mpi), intent(IN)     :: fmpi
-      type(t_potden), intent(IN)   :: vtot
-      type(t_usdus), intent(inout), optional :: usdus
+      type(t_potden), intent(IN)             :: vtot
       integer, intent(in)                    :: itype
+      !accumulates data for all itype this routine is called for; on a cache
+      !hit (data for itype already generated) it is left untouched
+      type(t_usdus), intent(INOUT),optional  :: usdus_out
 
       !temp variables not really used but required by genMTBasis
       type(t_usdus) :: usdus_tmp
@@ -67,12 +69,12 @@ contains
       real,allocatable:: rf(:)
       real :: ovlp
       call timestart("generate radial functions")
-      if (present(usdus)) then
-         if (.not. allocated(usdus%us)) call usdus%init(atoms,input%jspins)
+      if (present(usdus_out)) then
+         if (.not.allocated(usdus_out%us)) call usdus_out%init(atoms, input%jspins)
       else
-         call usdus_tmp%init(atoms,input%jspins)
+         call usdus%init(atoms,input%jspins)
       end if
-   
+
       !check if data is already available
       if (this%itype /= itype .or. .not.allocated(this%r)) THEN
          !init type
@@ -82,12 +84,12 @@ contains
          allocate (this%r( atoms%jmtd, 2,maxval(this%n_r),0:atoms%lmaxd, input%jspins),source=0.0)
          if (allocated(this%integral)) deallocate (this%integral)
          allocate (this%integral(maxval(this%n_r), maxval(this%n_r),0:atoms%lmaxd, input%jspins,input%jspins),source=0.0)
-         
+
          do ispin = 1, input%jspins
-            if (present(usdus)) then
-               call genMTBasis(atoms, enpara, vTot, fmpi, iType, ispin, usdus, f, g, flo, hub1data, l_writeArg=.false.)
+            if (present(usdus_out)) then
+               call genMTBasis(atoms, enpara, vTot, fmpi, iType, ispin, usdus_out, f, g, flo, hub1data, l_writeArg=.false.)
             else
-               call genMTBasis(atoms, enpara, vTot, fmpi, iType, ispin, usdus_tmp, f, g, flo, hub1data, l_writeArg=.false.)
+               call genMTBasis(atoms, enpara, vTot, fmpi, iType, ispin, usdus, f, g, flo, hub1data, l_writeArg=.false.)
             end if
             do l = 0, atoms%lmax(itype)
                this%R( 1:atoms%jri(itype), 1:2, 1,l, ispin) = f(1:atoms%jri(itype), 1:2, l)
@@ -120,7 +122,8 @@ contains
             ENDDO
          ENDDO         
       end if
-      call timestop("generate radial functions")        
+      call timestop("generate radial functions")
+
    end subroutine
 
    
