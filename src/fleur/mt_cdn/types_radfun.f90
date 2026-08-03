@@ -59,7 +59,7 @@ contains
       type(t_usdus), intent(INOUT),optional  :: usdus_out
 
       !temp variables not really used but required by genMTBasis
-      type(t_usdus) :: usdus_tmp
+      type(t_usdus) :: usdus
       !radial functions to copy into type
       real            :: f(atoms%jmtd, 2, 0:atoms%lmaxd)
       real            :: g(atoms%jmtd, 2, 0:atoms%lmaxd)

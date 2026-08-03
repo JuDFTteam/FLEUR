@@ -19,7 +19,6 @@ MODULE m_wannierlib_mmnkb
   USE m_types_kpts
   USE m_types_noco
   USE m_types_nococonv
-  USE m_types_radfun
   USE m_types_sym
   USE m_types_usdus
   USE m_types_wannierlib
@@ -27,7 +26,7 @@ MODULE m_wannierlib_mmnkb
 CONTAINS
 
   SUBROUTINE wannierlib_mmnkb(this, num_bands, nntot, nk, kpts, nnkp, gkpb, kdiff, ujug, atoms, cell, input, sym, noco, nococonv, usdus, &
-                              radfun, abc, jspin, eig_id, stars, lapw, zMat, mmn, nk_local)
+                              abc, jspin, eig_id, stars, lapw, zMat, mmn, nk_local)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
     INTEGER, INTENT(IN) :: num_bands
     INTEGER, INTENT(IN) :: nntot
@@ -44,7 +43,6 @@ CONTAINS
     TYPE(t_noco), INTENT(IN) :: noco
     TYPE(t_nococonv), INTENT(IN) :: nococonv
     TYPE(t_usdus), INTENT(IN) :: usdus
-    TYPE(t_radfun), INTENT(IN) :: radfun(atoms%ntype)
     TYPE(t_abc), INTENT(IN) :: abc(:)
     INTEGER, INTENT(IN) :: jspin
     INTEGER, INTENT(IN) :: eig_id
@@ -70,7 +68,7 @@ CONTAINS
       nk_b = nnkp(nk, kk)
       CALL wannierlib_get_z(this, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, nk_b, jspin, input%l_real, lapw_b, zMat_b)
       DO itype = 1, atoms%ntype
-         CALL abc_b(itype)%init(input, atoms, radfun(itype)%n_r, num_bands, itype)
+         CALL abc_b(itype)%init(input, atoms, num_bands, itype)
          CALL abc_b(itype)%calc_abc(input, atoms, sym, cell, lapw_b, num_bands, usdus, noco, nococonv, jspin, itype, zMat_b)
       END DO
 

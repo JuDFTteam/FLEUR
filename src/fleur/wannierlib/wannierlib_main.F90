@@ -76,7 +76,7 @@ CONTAINS
       !Setup of data structures for amn and mmn calculation for all k-points
       CALL usdus%init(atoms, input%jspins)
       DO itype = 1, atoms%ntype
-         CALL radfun(itype)%generate_radial_functions(atoms, input, enpara, fmpi, vtot, itype, usdus=usdus)
+         CALL radfun(itype)%generate_radial_functions(atoms, input, enpara, fmpi, vtot, itype, usdus_out=usdus)
       END DO
 
       ALLOCATE(distk(kpts%nkptf), stat=ierr)
@@ -114,7 +114,7 @@ CONTAINS
                                      ikpt, jspin_comp, input%l_real, lapw, zMat)
 
                DO itype = 1, atoms%ntype
-                  CALL abc(itype)%init(input, atoms, radfun(itype)%n_r, this%num_bands, itype)
+                  CALL abc(itype)%init(input, atoms, this%num_bands, itype)
                   CALL abc(itype)%calc_abc(input, atoms, sym, cell, lapw, this%num_bands, usdus, &
                                            noco, nococonv, jspin_comp, itype, zMat)
                END DO
@@ -125,7 +125,7 @@ CONTAINS
                   ik_local = ik_local + 1
                   CALL wannierlib_mmnkb(this, this%num_bands, nntot_w90, ikpt, kpts, nnkp, gkpb, kdiff, &
                                         ujug, atoms, cell, input, sym, noco, nococonv, usdus, &
-                                        radfun, abc, jspin_comp, eig_id, stars, lapw, zMat, mmn, ik_local)
+                                        abc, jspin_comp, eig_id, stars, lapw, zMat, mmn, ik_local)
                END IF
             END DO
 
