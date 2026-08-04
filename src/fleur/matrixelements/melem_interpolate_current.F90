@@ -32,7 +32,7 @@ MODULE m_melem_interpolate_current
   USE m_constants, ONLY : oUnit, hartree_to_ev_const
   USE m_types_cell
   USE m_types_kpts
-  USE m_types_wannierlib
+  USE m_types_melem_manifold, ONLY: t_melem_manifold
   USE m_melem_ft, ONLY : melem_ft_interpolate, melem_ft_velocity, &
                               melem_ft_to_real_reduce, melem_ft_rtok
   IMPLICIT NONE
@@ -41,7 +41,7 @@ MODULE m_melem_interpolate_current
 CONTAINS
 
   SUBROUTINE melem_interpolate_current(this, cell, kpts, eig, u_matrix, u_opt, o0_loc, gk_loc, outfile, irank, mpicm)
-    TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
+    TYPE(t_melem_manifold), INTENT(IN) :: this
     TYPE(t_cell), INTENT(IN) :: cell
     TYPE(t_kpts), INTENT(IN) :: kpts
     REAL,    INTENT(IN) :: eig(:, :)              ! (num_bands, nk)

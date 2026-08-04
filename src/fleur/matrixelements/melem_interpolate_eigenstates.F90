@@ -22,7 +22,7 @@ MODULE m_melem_interpolate_eigenstates
   USE m_constants, ONLY : oUnit
   USE m_types_cell
   USE m_types_kpts
-  USE m_types_wannierlib
+  USE m_types_melem_manifold, ONLY: t_melem_manifold
   USE m_melem_ft, ONLY : melem_ft_interpolate
   IMPLICIT NONE
   PRIVATE
@@ -30,7 +30,7 @@ MODULE m_melem_interpolate_eigenstates
 CONTAINS
 
   SUBROUTINE melem_interpolate_eigenstates(this, cell, kpts, eig, u_matrix, u_opt, irank)
-    TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
+    TYPE(t_melem_manifold), INTENT(IN) :: this
     TYPE(t_cell), INTENT(IN) :: cell
     TYPE(t_kpts), INTENT(IN) :: kpts
     REAL,    INTENT(IN) :: eig(:, :)          ! (num_bands, nk)

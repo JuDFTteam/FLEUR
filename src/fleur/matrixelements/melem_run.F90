@@ -20,6 +20,7 @@ MODULE m_melem_run
    USE m_types_wannierlib
    USE m_types_melem_bmesh
    USE m_melem_coarse, ONLY: t_melem_coarse
+   USE m_types_melem_manifold, ONLY: t_melem_manifold
    USE m_melem_domains, ONLY: melem_write_domain_kpts, melem_rename_domain_outputs, melem_shell
    USE m_melem_operators_r, ONLY: melem_write_operators_r, melem_build_berry_aw_r, melem_check_berry_centres
    USE m_melem_interpolate_ham, ONLY: melem_interpolate_ham
@@ -57,6 +58,7 @@ CONTAINS
       CHARACTER(LEN=8) :: dkind(3), dsuf(3)
       CHARACTER(LEN=16) :: ssfx
       LOGICAL :: lex, l_collinear
+      TYPE(t_melem_manifold) :: manifold
 
       IF (.NOT. wann%l_wannierize) RETURN
       irank = fmpi%irank; mpi_comm = fmpi%mpi_comm
@@ -65,6 +67,9 @@ CONTAINS
       wf_ch = 1
       IF (PRESENT(wf_channel)) wf_ch = wf_channel
       l_collinear = (LEN_TRIM(ssfx) > 0)   ! collinear jspins=2 -> per-channel operators_r (WF1/WF2)
+
+      !> what every interpolation needs of the request, built once
+      CALL manifold%init(wann%num_bands, wann%num_wann, wann%dis_win_min, wann%dis_win_max)
 
       CALL timestart('melem_run')
 
@@ -113,19 +118,20 @@ CONTAINS
          DO iop = 1, wann%n_ops
             SELECT CASE (TRIM(wann%op_name(iop)))
             CASE ('hamiltonian')
-               CALL melem_interpolate_ham(wann, cell, kpts, eig, u_matrix, u_opt, irank)
+               IF (wann%l_interpolation) &
+                  CALL melem_interpolate_ham(manifold, cell, kpts, eig, u_matrix, u_opt, irank)
             CASE ('spin')
                ! total spin (MT-sum + interstitial): via the generic operator driver (3 comps)
                IF (wann%op_total(iop) == 1) &
-                  CALL melem_interpolate_operator(wann, cell, kpts, eig, u_matrix, u_opt, &
+                  CALL melem_interpolate_operator(manifold, cell, kpts, eig, u_matrix, u_opt, &
                                                   coarse%s0, gk_loc, 3, 'bands_wann_spin.dat', irank, mpi_comm)
             CASE ('orbital')
                ! total (site-summed) orbital moment
                IF (wann%op_total(iop) == 1) &
-                  CALL melem_interpolate_operator(wann, cell, kpts, eig, u_matrix, u_opt, &
+                  CALL melem_interpolate_operator(manifold, cell, kpts, eig, u_matrix, u_opt, &
                                                   SUM(coarse%l0, DIM=4), gk_loc, 3, 'bands_wann_orbmom.dat', irank, mpi_comm)
             CASE ('soc')
-               CALL melem_interpolate_operator(wann, cell, kpts, eig, u_matrix, u_opt, &
+               CALL melem_interpolate_operator(manifold, cell, kpts, eig, u_matrix, u_opt, &
                                                coarse%soc0, gk_loc, 1, 'bands_wann_soc.dat', irank, mpi_comm)
             CASE ('velocity')
                ! Wannier Berry connection A^(W)_alpha(R): built distributed from the local overlaps
@@ -136,18 +142,18 @@ CONTAINS
                                               aw_r, aw_irvec, aw_ndegen, aw_nrpts)
                   IF (irank == 0) CALL melem_check_berry_centres(wann, aw_r, aw_irvec, aw_nrpts, bmesh)
                END IF
-               CALL melem_interpolate_velocity(wann, cell, kpts, eig, u_matrix, u_opt, &
+               CALL melem_interpolate_velocity(manifold, cell, kpts, eig, u_matrix, u_opt, &
                                                aw_r, aw_irvec, aw_ndegen, aw_nrpts, irank)
             CASE ('spinCurrent')
                ! operator part distributed like the generic driver: local Bloch slice + gk_loc + reduce
-               CALL melem_interpolate_current(wann, cell, kpts, eig, u_matrix, u_opt, &
+               CALL melem_interpolate_current(manifold, cell, kpts, eig, u_matrix, u_opt, &
                                               coarse%s0, gk_loc, 'bands_wann_spincurrent.dat', irank, mpi_comm)
             CASE ('orbitalCurrent')
-               CALL melem_interpolate_current(wann, cell, kpts, eig, u_matrix, u_opt, &
+               CALL melem_interpolate_current(manifold, cell, kpts, eig, u_matrix, u_opt, &
                                               SUM(coarse%l0, DIM=4), gk_loc, 'bands_wann_orbcurrent.dat', irank, mpi_comm)
             CASE ('eigenstates')
                ! Wannier-Hamiltonian eigenvectors C(k') (the H-gauge rotation U^(H)), as a matrix
-               CALL melem_interpolate_eigenstates(wann, cell, kpts, eig, u_matrix, u_opt, irank)
+               CALL melem_interpolate_eigenstates(manifold, cell, kpts, eig, u_matrix, u_opt, irank)
             CASE DEFAULT
                IF (irank == 0) WRITE (oUnit, '(a)') 'wannierlib: operator "'//TRIM(wann%op_name(iop))// &
                   '" not yet implemented -> skipped'
