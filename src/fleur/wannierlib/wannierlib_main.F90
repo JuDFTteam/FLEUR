@@ -149,7 +149,7 @@ CONTAINS
             ik_local = 0
             DO ikpt = 1, kpts%nkptf
                IF (distk(ikpt) /= fmpi%irank) CYCLE   ! each rank computes only its k-slice -> parallel eigenvector I/O
-               CALL wannierlib_get_z(this, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, &
+               CALL wannierlib_get_z(this%min_band, this%max_band, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, &
                                      ikpt, jspin_comp, l_real_wann, lapw, zMat)
 
                DO itype = 1, atoms%ntype
@@ -161,7 +161,7 @@ CONTAINS
                CALL wannierlib_amn(this, atoms, kpts, ikpt, usdus, radfun, abc, l_nocosoc, jspin_comp, jspin_rad, amn(:, :, ikpt))
 
                ik_local = ik_local + 1
-               CALL wannierlib_mmnkb(this, this%num_bands, nntot_w90, ikpt, kpts, nnkp, gkpb, kdiff, &
+               CALL wannierlib_mmnkb(this%min_band, this%max_band, this%num_bands, nntot_w90, ikpt, kpts, nnkp, gkpb, kdiff, &
                                      ujug, atoms, cell, input, sym, noco, nococonv, usdus, &
                                      radfun, abc, jspin_comp, jspin_rad, eig_id, stars, lapw, zMat, mmn, ik_local)
                ! collinear per-channel orbital L in the Bloch basis: the only matrix element built
@@ -219,7 +219,8 @@ CONTAINS
       ! collinear combined 2N spin operator rspauli.1: only assemblable once BOTH channels have
       ! been wannierised, since it rotates the cross-spin overlap with both gauges. A no-op
       ! unless the collinear spin operator was requested.
-      CALL melem_rspauli_collinear(this, atoms, input, sym, cell, noco, nococonv, kpts, &
+      CALL melem_rspauli_collinear(this%num_bands, this%num_wann, this%min_band, this%max_band, &
+                                   atoms, input, sym, cell, noco, nococonv, kpts, &
                                    stars, usdus, radfun, eig_id, l_real_wann, distk, fmpi, melem)
 
       CALL melem%free()

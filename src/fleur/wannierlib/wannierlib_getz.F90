@@ -16,12 +16,13 @@ MODULE m_wannierlib_get_z
   USE m_types_sym
   USE m_types_lapw
   USE m_types_spinor_layout, ONLY: t_spinor_layout
-  USE m_types_wannierlib
   IMPLICIT NONE
 CONTAINS
 
-  SUBROUTINE wannierlib_get_z(this, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, nk, jspin, l_real, lapw, zMat)
-    TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
+  !> min_band/max_band select the band window; they are plain integers so that this
+  !> routine, and everything that only forwards them, needs nothing of the Wannier input.
+  SUBROUTINE wannierlib_get_z(min_band, max_band, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, nk, jspin, l_real, lapw, zMat)
+    INTEGER, INTENT(IN) :: min_band, max_band
     INTEGER, INTENT(IN) :: eig_id
     TYPE(t_input), INTENT(IN) :: input
     TYPE(t_atoms), INTENT(IN) :: atoms
@@ -40,13 +41,13 @@ CONTAINS
     TYPE(t_spinor_layout) :: layout
     INTEGER, ALLOCATABLE :: ev_list(:)
 
-    IF (this%min_band < 1 .OR. this%max_band < this%min_band) THEN
+    IF (min_band < 1 .OR. max_band < min_band) THEN
       CALL juDFT_error("Invalid band window in wannierlib_get_z", calledby="wannierlib_get_z")
     END IF
 
-    num_selected = this%max_band - this%min_band + 1
+    num_selected = max_band - min_band + 1
     ALLOCATE(ev_list(num_selected))
-    ev_list = [(i, i=this%min_band, this%max_band)]
+    ev_list = [(i, i=min_band, max_band)]
 
     CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, nk, cell)
 

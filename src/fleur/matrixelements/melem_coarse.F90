@@ -216,12 +216,12 @@ CONTAINS
          !     the muffin-tin counts the up block twice and the interstitial addresses a down
          !     block that is not there (non-magnetic Pt then sums to <sigma_z> = +N/2, not 0).
          IF (noco%l_noco) THEN
-            CALL wannierlib_get_z(wann, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, &
+            CALL wannierlib_get_z(wann%min_band, wann%max_band, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, &
                                   ikpt, 1, l_real_wann, lapw, zMat(1))
          ELSE
-            CALL wannierlib_get_z(wann, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, &
+            CALL wannierlib_get_z(wann%min_band, wann%max_band, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, &
                                   ikpt, 1, l_real_wann, lapw, zc(1))
-            CALL wannierlib_get_z(wann, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, &
+            CALL wannierlib_get_z(wann%min_band, wann%max_band, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, &
                                   ikpt, 2, l_real_wann, lapw, zc(2))
             CALL melem_stack_spinor(zc(1), zc(2), zMat(1))
          END IF

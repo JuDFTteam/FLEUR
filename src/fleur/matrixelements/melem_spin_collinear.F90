@@ -26,7 +26,6 @@ MODULE m_melem_spin_collinear
    USE m_types_mat
    USE m_types_radfun
    USE m_types_abc
-   USE m_types_wannierlib
    USE m_melem_coarse, ONLY: t_melem_coarse
    USE m_melem_spin, ONLY: melem_spin_mt_block
    USE m_melem_ft, ONLY: melem_ft_to_real_reduce
@@ -39,9 +38,10 @@ MODULE m_melem_spin_collinear
 
 CONTAINS
 
-   SUBROUTINE melem_rspauli_collinear(wann, atoms, input, sym, cell, noco, nococonv, kpts, &
+   SUBROUTINE melem_rspauli_collinear(num_bands, num_wann, min_band, max_band, atoms, input, sym, cell, noco, nococonv, kpts, &
                                       stars, usdus, radfun, eig_id, l_real_wann, distk, fmpi, coarse)
-      TYPE(t_wannierlib_wannierize), INTENT(IN) :: wann
+      INTEGER, INTENT(IN) :: num_bands, num_wann     !> sizes of the Bloch and Wannier manifolds
+      INTEGER, INTENT(IN) :: min_band, max_band      !> band window, forwarded to get_z
       TYPE(t_atoms), INTENT(IN) :: atoms
       TYPE(t_input), INTENT(IN) :: input
       TYPE(t_sym), INTENT(IN) :: sym
@@ -68,7 +68,7 @@ CONTAINS
 
       IF (.NOT. coarse%l_col_spin) RETURN
 
-      nb = wann%num_bands; nw = wann%num_wann; n2 = 2*nw; gb = 0
+      nb = num_bands; nw = num_wann; n2 = 2*nw; gb = 0
       nkl = COUNT(distk == fmpi%irank); ALLOCATE (gk_loc(nkl)); j = 0
       DO ikpt = 1, SIZE(distk)
          IF (distk(ikpt) == fmpi%irank) THEN; j = j + 1; gk_loc(j) = ikpt; END IF
@@ -80,12 +80,12 @@ CONTAINS
       DO kl = 1, nkl
          gk = gk_loc(kl)
          ! up + down eigenvectors + local coefficients at this k (same basis, different eigenvectors)
-         CALL wannierlib_get_z(wann, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, gk, 1, l_real_wann, lapw_u, zMat_u)
+         CALL wannierlib_get_z(min_band, max_band, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, gk, 1, l_real_wann, lapw_u, zMat_u)
          DO itype = 1, atoms%ntype
             CALL abc_both(itype, 1)%init(input, atoms, nb, itype)
             CALL abc_both(itype, 1)%calc_abc(input, atoms, sym, cell, lapw_u, nb, usdus, noco, nococonv, 1, itype, zMat_u)
          END DO
-         CALL wannierlib_get_z(wann, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, gk, 2, l_real_wann, lapw_d, zMat_d)
+         CALL wannierlib_get_z(min_band, max_band, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, gk, 2, l_real_wann, lapw_d, zMat_d)
          DO itype = 1, atoms%ntype
             CALL abc_both(itype, 2)%init(input, atoms, nb, itype)
             CALL abc_both(itype, 2)%calc_abc(input, atoms, sym, cell, lapw_d, nb, usdus, noco, nococonv, MERGE(1, 2, input%jspins == 1), itype, zMat_d)

@@ -23,13 +23,12 @@ MODULE m_wannierlib_mmnkb
   USE m_types_radfun
   USE m_types_sym
   USE m_types_usdus
-  USE m_types_wannierlib
   IMPLICIT NONE
 CONTAINS
 
-  SUBROUTINE wannierlib_mmnkb(this, num_bands, nntot, nk, kpts, nnkp, gkpb, kdiff, ujug, atoms, cell, input, sym, noco, nococonv, usdus, &
+  SUBROUTINE wannierlib_mmnkb(min_band, max_band, num_bands, nntot, nk, kpts, nnkp, gkpb, kdiff, ujug, atoms, cell, input, sym, noco, nococonv, usdus, &
                               radfun, abc, jspin, jspin_rad, eig_id, stars, lapw, zMat, mmn, nk_local)
-    TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
+    INTEGER, INTENT(IN) :: min_band, max_band   !> forwarded to get_z for the neighbour k
     INTEGER, INTENT(IN) :: num_bands
     INTEGER, INTENT(IN) :: nntot
     INTEGER, INTENT(IN) :: nk
@@ -74,7 +73,7 @@ CONTAINS
     CALL layout%init(input, noco, lapw, atoms)
     DO kk = 1, nntot
       nk_b = nnkp(nk, kk)
-      CALL wannierlib_get_z(this, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, nk_b, jspin, l_real_wann, lapw_b, zMat_b)
+      CALL wannierlib_get_z(min_band, max_band, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, nk_b, jspin, l_real_wann, lapw_b, zMat_b)
       CALL layout_b%init(input, noco, lapw_b, atoms)
       DO itype = 1, atoms%ntype
          CALL abc_b(itype)%init(input, atoms, num_bands, itype)
