@@ -167,4 +167,5 @@ Testset: Wannier
 | +   | Pt SOC, wannierlib real-space operators O(R) | wannier/WannPtSOCOps | wannierlib,bulk,soc |         |         | 1   |
 | +   | bcc Fe FM collinear+SOC, wannierlib O(R)     | wannier/WannFeBccSOC | wannierlib,bulk,soc |         |         | 1   |
 | +   | fcc Fe AFM collinear+SOC, wannierlib O(R)    | wannier/WannFeAFMColSOC | wannierlib,bulk,soc |         |         | 1   |
+| +   | bcc Fe FM collinear no-SOC, wannierlib O(R)  | wannier/WannFeBcc | wannierlib,bulk |         |         | 1   |
 | +   | fcc Fe AFM noco+SOC, wannierlib O(R)         | wannier/WannFeAFMSOCOps | wannierlib,bulk,soc |         |         | 1   |

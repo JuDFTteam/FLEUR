@@ -4,8 +4,10 @@ import pytest
 Regression tests for the wannierlib feature (library-mode Wannier90 in FLEUR).
 On top of the default out.xml comparison + schema validation these check the
 Wannier spread decomposition. Systems cover the distinct FLEUR paths: no-SOC,
-SOC (spinor), noco (jspins=2), AFM. WannPtSOCOps additionally covers the coarse
-t_matrixelement pass (<operators_r>). Band interpolation: future round.
+SOC (spinor), noco (jspins=2), AFM, and collinear jspins=2 without SOC -- the
+only path that wannierises each spin channel separately and writes the .2
+operator files. WannPtSOCOps additionally covers the coarse t_matrixelement
+pass (<operators_r>). Band interpolation: future round.
 """
 from read_tests import read_tests
 all_tests = read_tests("wannier")
@@ -34,6 +36,10 @@ EXPECTED_OMEGA_I = {
     "WannFeBccSOC":     5.297505637,  # bcc Fe FM, COLLINEAR (jspins=2, l_noco=F) + SOC
     "WannFeAFMColSOC": 12.795211616,  # fcc Fe AFM, COLLINEAR + SOC: two sublattices, so the
                                       # spin sums cancel exactly -- the strongest check here
+    # bcc Fe FM, COLLINEAR without SOC (jspins=2, l_noco=F, l_soc=F): the two channels are
+    # separate eigenproblems, so each is wannierised on its own and there is one Omega per
+    # channel. Values in channel order. This is the only test of that combination.
+    "WannFeBcc": (2.606987082, 2.686421493),
     "WannFeAFMSOCOps": 16.694344590,  # fcc Fe AFM, noco + SOC, now with <operators_r>: the
                                       # only coverage of the spin operator on the noco branch
 }
@@ -49,6 +55,7 @@ EXPECTED_OMEGA_TOTAL = {
     "WannFeBccSOC":     7.161120494,
     "WannFeAFMColSOC": 17.193476140,
     "WannFeAFMSOCOps": 21.362891487,
+    "WannFeBcc": (3.578178416, 3.711415341),
 }
 # Loose on purpose: absorbs a basin change, still catches a gross regression.
 OMEGA_TOTAL_RTOL = 0.01
@@ -56,16 +63,21 @@ OMEGA_TOTAL_RTOL = 0.01
 # Real-space operator files written by <operators_r>, per test id. Their presence is
 # asserted by the fixture; their contents are checked below.
 _OP_R_FILES = ["WF1_hr.dat", "rspauli.1", "anglmomrs.1", "rssocmat.1", "wig_vectors"]
+# The collinear no-SOC path writes one set per spin channel. It has no spin-orbit operator
+# to export, and the spin operator is left out too: melem_rspauli_collinear aborts when the
+# eigenvectors are real, which they are here. Add <operator name="spin"/> once that is fixed.
+_OP_R_FILES_2CH = ["WF1_hr.dat", "WF2_hr.dat", "anglmomrs.1", "anglmomrs.2", "wig_vectors"]
 OPERATOR_FILES = {
     "WannPtSOCOps": _OP_R_FILES,
     "WannFeBccSOC":     _OP_R_FILES,
     "WannFeAFMColSOC": _OP_R_FILES,
     "WannFeAFMSOCOps": _OP_R_FILES,
+    "WannFeBcc":        _OP_R_FILES_2CH,
 }
 
 # The operator files in the generic O(R) format, the ones whose values can be read without
 # knowing how many index columns they carry.
-GENERIC_OP_FILES = ("rspauli.1", "anglmomrs.1", "rssocmat.1")
+GENERIC_OP_FILES = ("rspauli.1", "anglmomrs.1", "anglmomrs.2", "rssocmat.1")
 
 # <w_0n|sigma_a|w_0n> is a Pauli expectation value on a normalized Wannier function, so
 # |.| <= 1 holds elementwise -- for any gauge, which makes it basin-independent. This is
@@ -121,7 +133,12 @@ L_HERM_TOL = 1.0e-10
 # manifold must give zero in all three.
 L_SUM_TOL = 1.0e-4
 L_TRANSVERSE_ZERO = ("WannFeBccSOC",)
-L_SUM_ZERO = ("WannFeAFMColSOC",)
+# WannFeBcc has no spin-orbit coupling at all, so nothing ties L to the lattice and all
+# three traces vanish -- for a sharper reason than the antiferromagnet's cancellation: the
+# Bloch states are real, and L is imaginary in a real basis, so the gauge-invariant trace is
+# exactly zero even though the individual |<w_n|L|w_n>| are not (the Wannier gauge is
+# complex). num_wann == num_bands == 6, so the caveat below does not apply.
+L_SUM_ZERO = ("WannFeAFMColSOC", "WannFeBcc")
 # Both rules need num_wann == num_bands. A disentangled manifold does not inherit time
 # reversal, so the sum over it is not the physical moment: on w222 every k is its own
 # time-reversal partner, the cancellation has to happen within each k, and that needs the
@@ -183,6 +200,18 @@ def _rspauli_r0_diagonal_max(path):
     return worst
 
 
+def _as_tuple(v):
+    """A reference is either one number or one per wannierised spin channel."""
+    return v if isinstance(v, tuple) else (v,)
+
+
+def _last_n(values, n):
+    """The last n matches, so a per-iteration echo of the same label cannot shift them."""
+    vals = values if isinstance(values, list) else [values]
+    assert len(vals) >= n, f"expected {n} values in the output, found {len(vals)}"
+    return vals[-n:]
+
+
 def _nonzero_entries(path):
     """Number of entries of an O(R) file that are not exactly zero.
 
@@ -213,28 +242,34 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
                              cmdline_args=cmdline, mpi_procs=mpi_procs)
 
     if test_id in EXPECTED_OMEGA_I:
-        omega_i = grep_number(res["out"], "Omega I", split="=", res_index=-1)
-        assert abs(omega_i - EXPECTED_OMEGA_I[test_id]) < OMEGA_I_TOL, (
-            f"gauge-invariant spread Omega_I {omega_i} deviates from reference "
-            f"{EXPECTED_OMEGA_I[test_id]} (tol {OMEGA_I_TOL})")
+        # A tuple means the run wannierises more than once -- one collinear spin channel
+        # after the other -- so every value is checked, in the order they are written.
+        refs = _as_tuple(EXPECTED_OMEGA_I[test_id])
+        got = _last_n(grep_number(res["out"], "Omega I", split="=", res_index=None), len(refs))
+        for ch, (ref, omega_i) in enumerate(zip(refs, got), start=1):
+            assert abs(omega_i - ref) < OMEGA_I_TOL, (
+                f"gauge-invariant spread Omega_I {omega_i} of channel {ch} deviates from "
+                f"reference {ref} (tol {OMEGA_I_TOL})")
 
     if test_id in EXPECTED_OMEGA_TOTAL:
-        ref = EXPECTED_OMEGA_TOTAL[test_id]
-        omega = grep_number(res["out"], "Omega Total", split="=", res_index=-1)
-        assert abs(omega - ref) < OMEGA_TOTAL_RTOL * ref, (
-            f"total spread Omega {omega} deviates from reference {ref} by more than "
-            f"{100 * OMEGA_TOTAL_RTOL}% -- more than a wannierise basin change")
+        refs = _as_tuple(EXPECTED_OMEGA_TOTAL[test_id])
+        got = _last_n(grep_number(res["out"], "Omega Total", split="=", res_index=None),
+                      len(refs))
+        for ch, (ref, omega) in enumerate(zip(refs, got), start=1):
+            assert abs(omega - ref) < OMEGA_TOTAL_RTOL * ref, (
+                f"total spread Omega {omega} of channel {ch} deviates from reference {ref} "
+                f"by more than {100 * OMEGA_TOTAL_RTOL}% -- more than a basin change")
 
     if test_id in OPERATOR_FILES:
         # Every other rule here is an upper bound -- the Pauli bound, the vanishing spin
         # sums, the vanishing orbital traces -- and a file of zeros satisfies all of them,
         # so an operator that computes nothing passes every check made on its output.
-        for name in GENERIC_OP_FILES:
+        for name in [f for f in OPERATOR_FILES[test_id] if f in GENERIC_OP_FILES]:
             assert _nonzero_entries(res[name]) > 0, (
                 f"{name}: every entry is zero, so the operator wrote a correctly shaped "
                 "file with nothing in it")
 
-    if test_id in OPERATOR_FILES:
+    if "rspauli.1" in OPERATOR_FILES.get(test_id, ()):
         worst = _rspauli_r0_diagonal_max(res["rspauli.1"])
         assert worst < PAULI_BOUND, (
             f"rspauli.1: max |<w_0n|sigma|w_0n>| = {worst} exceeds the Pauli bound 1; "
@@ -255,18 +290,18 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
                 f"rspauli.1: transverse spin sum (component {comp}) is {total}, but a "
                 f"collinear magnet along z must give 0 (tol {SPIN_SUM_TOL})")
 
-    if test_id in OPERATOR_FILES:
-        worst = _anglmom_r0_hermiticity(res["anglmomrs.1"])
+    for name in [f for f in OPERATOR_FILES.get(test_id, ()) if f.startswith("anglmomrs")]:
+        worst = _anglmom_r0_hermiticity(res[name])
         assert worst < L_HERM_TOL, (
-            f"anglmomrs.1: L(R=0) is off hermitian by {worst}; <w_0i|L|w_0j> and "
+            f"{name}: L(R=0) is off hermitian by {worst}; <w_0i|L|w_0j> and "
             f"<w_0j|L|w_0i>* must agree (tol {L_HERM_TOL})")
 
     if test_id in L_SUM_ZERO:
-        traces = _anglmom_r0_traces(res["anglmomrs.1"])
-        for comp, total in sorted(traces.items()):
-            assert abs(total) < L_SUM_TOL, (
-                f"anglmomrs.1: trace of component {comp} is {total}, but this manifold "
-                f"carries no net orbital moment (tol {L_SUM_TOL})")
+        for name in [f for f in OPERATOR_FILES[test_id] if f.startswith("anglmomrs")]:
+            for comp, total in sorted(_anglmom_r0_traces(res[name]).items()):
+                assert abs(total) < L_SUM_TOL, (
+                    f"{name}: trace of component {comp} is {total}, but this manifold "
+                    f"carries no net orbital moment (tol {L_SUM_TOL})")
 
     if test_id in L_TRANSVERSE_ZERO:
         traces = _anglmom_r0_traces(res["anglmomrs.1"])
