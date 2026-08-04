@@ -23,6 +23,24 @@ MODULE m_types_jointdos
       procedure      :: postprocessing
    END TYPE t_jointDOS
 CONTAINS
+   subroutine permute(vec,idx)
+      !Reorder vec according to the index list idx, i.e. vec=vec(idx).
+      !NOTE: This is deliberately written as an explicit loop instead of an
+      !      array assignment with a vector subscript. nvfortran (23.9) hits an
+      !      internal compiler error ("flowgraph: node is zero") on such gather
+      !      assignments when the file is compiled with -acc.
+      real, intent(inout) :: vec(:)
+      integer, intent(in) :: idx(:)
+      real    :: tmp(size(idx))
+      integer :: i
+      DO i=1,size(idx)
+         tmp(i)=vec(idx(i))
+      ENDDO
+      DO i=1,size(idx)
+         vec(i)=tmp(i)
+      ENDDO
+   end subroutine permute
+
    subroutine postprocessing(this, noco,nococonv, banddos, alldos, ef)
       use m_types_atoms
       use m_types_noco
@@ -36,21 +54,24 @@ CONTAINS
       TYPE(t_nococonv), INTENT(IN)    :: nococonv
       TYPE(t_banddos), INTENT(IN)    :: banddos
       real, intent(in),optional       :: ef
-      type(t_dos),pointer :: dos 
-      integer :: ikpt, ispin, jspin, ii, ntype, l, i, j, iispin,n 
+      type(t_dos),pointer :: dos
+      integer :: ikpt, ispin, jspin, ii, ntype, l, i, j, iispin,n,n_dos
       integer :: idx(size(this%eig,1))
       !find a DOS of type t_dos from the given alldos for the postprocessing
-      dosloop:DO n=1,size(alldos)
+      !NOTE: Do not EXIT out of the SELECT TYPE construct here. nvfortran (23.9)
+      !      generates a broken flowgraph for that and dies with an ICE.
+      n_dos=0
+      NULLIFY(dos)
+      DO n=1,size(alldos)
          if (.not. associated(alldos(n)%p)) cycle
-         associate(d=>alldos(n)%p)
-         select type(d)
+         select type(d=>alldos(n)%p)
             type is (t_dos)
                dos=>d
-               exit dosloop
+               n_dos=n
          end select
-         end associate
-      end do dosloop
-      if (n>size(alldos)) then
+         if (n_dos>0) exit
+      end do
+      if (n_dos==0) then
          call judft_error("No eigdos of type t_dos found for jointDOS postprocessing")
       end if
 
@@ -86,12 +107,12 @@ CONTAINS
                   enddo
                   !Sort the results according to excitation energy
                   CALL sort(idx(:ii),this%eig(:ii,ikpt,iispin))
-                  this%eig(:ii,ikpt,iispin)=this%eig(idx(:ii),ikpt,iispin)
-                  this%qis(:ii,ikpt,iispin)=this%qis(idx(:ii),ikpt,iispin)
-                  this%qTot(:ii,ikpt,iispin)=this%qTot(idx(:ii),ikpt,iispin)
+                  CALL permute(this%eig(:ii,ikpt,iispin),idx(:ii))
+                  CALL permute(this%qis(:ii,ikpt,iispin),idx(:ii))
+                  CALL permute(this%qTot(:ii,ikpt,iispin),idx(:ii))
                   DO ntype=1,size(banddos%dos_typelist)
                      DO l=0,3
-                        this%qal(l,ntype,:ii,ikpt,iispin)=this%qal(l,ntype,idx(:ii),ikpt,iispin)
+                        CALL permute(this%qal(l,ntype,:ii,ikpt,iispin),idx(:ii))
                      ENDDO
                   ENDDO
                enddo   
@@ -120,12 +141,14 @@ CONTAINS
             ENDDO
             !Sort the results according to excitation energy
             CALL sort(idx(:ii),this%eig(:ii,ikpt,1))
-            this%eig(:ii,ikpt,:)=this%eig(idx(:ii),ikpt,:)
-            this%qis(:ii,ikpt,:)=this%qis(idx(:ii),ikpt,:)
-            this%qTot(:ii,ikpt,:)=this%qTot(idx(:ii),ikpt,:)
-            DO ntype=1,size(banddos%dos_typelist)
-               DO l=0,3
-                  this%qal(l,ntype,:ii,ikpt,:)=this%qal(l,ntype,idx(:ii),ikpt,:)
+            DO iispin=1,size(this%eig,3)
+               CALL permute(this%eig(:ii,ikpt,iispin),idx(:ii))
+               CALL permute(this%qis(:ii,ikpt,iispin),idx(:ii))
+               CALL permute(this%qTot(:ii,ikpt,iispin),idx(:ii))
+               DO ntype=1,size(banddos%dos_typelist)
+                  DO l=0,3
+                     CALL permute(this%qal(l,ntype,:ii,ikpt,iispin),idx(:ii))
+                  ENDDO
                ENDDO
             ENDDO
          ENDIF
