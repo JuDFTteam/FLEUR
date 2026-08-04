@@ -42,8 +42,9 @@ MODULE m_types_spinor_layout
       INTEGER :: row_dn    = 0        !> first spin-down row of a stacked spinor, else 0
       INTEGER :: n_radial  = -1       !> radial sets available to contract with
    CONTAINS
-      PROCEDURE :: init    => spinor_layout_init
-      PROCEDURE :: nbasfcn => spinor_layout_nbasfcn
+      PROCEDURE :: init       => spinor_layout_init
+      PROCEDURE :: nbasfcn    => spinor_layout_nbasfcn
+      PROCEDURE :: row_offset => spinor_layout_row_offset
    END TYPE t_spinor_layout
 
    PUBLIC :: t_spinor_layout, radial_slot, n_radial_of
@@ -134,6 +135,16 @@ CONTAINS
       INTEGER,        INTENT(IN) :: isp
       radial_slot = MIN(isp, n_radial_of(radfun))
    END FUNCTION radial_slot
+
+
+   PURE INTEGER FUNCTION spinor_layout_row_offset(this, isp)
+      !> Row at which spin component isp begins inside one record. Zero unless the
+      !> spinor arrives stacked, where the second component starts at row_dn.
+      CLASS(t_spinor_layout), INTENT(IN) :: this
+      INTEGER,                INTENT(IN) :: isp
+      spinor_layout_row_offset = 0
+      IF (this%l_stacked .AND. isp == 2) spinor_layout_row_offset = this%row_dn
+   END FUNCTION spinor_layout_row_offset
 
 
    PURE INTEGER FUNCTION spinor_layout_nbasfcn(this, lapw, atoms)

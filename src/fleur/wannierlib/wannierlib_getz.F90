@@ -15,6 +15,7 @@ MODULE m_wannierlib_get_z
   USE m_types_nococonv
   USE m_types_sym
   USE m_types_lapw
+  USE m_types_spinor_layout, ONLY: t_spinor_layout
   USE m_types_wannierlib
   IMPLICIT NONE
 CONTAINS
@@ -36,6 +37,7 @@ CONTAINS
     TYPE(t_mat), INTENT(OUT) :: zMat
 
     INTEGER :: num_selected, i, nbasfcn
+    TYPE(t_spinor_layout) :: layout
     INTEGER, ALLOCATABLE :: ev_list(:)
 
     IF (this%min_band < 1 .OR. this%max_band < this%min_band) THEN
@@ -50,7 +52,8 @@ CONTAINS
 
     ! noco: el espinor 2N esta en UN solo record (jspin=1). Para noco leemos siempre el
     ! record 1 y devolvemos el 2N COMPLETO; abcof/mmkb_int extraen el spin via offsets.
-    nbasfcn = MERGE(lapw%nv(1) + lapw%nv(2) + 2*atoms%nlotot, lapw%nv(1) + atoms%nlotot, noco%l_noco)
+    CALL layout%init(input, noco, lapw, atoms)
+    nbasfcn = layout%nbasfcn(lapw, atoms)
     CALL zMat%init(l_real, nbasfcn, num_selected)
     CALL read_eig(eig_id, nk, MERGE(1, jspin, noco%l_noco), list=ev_list, zmat=zMat,&
           kpts=kpts,input=input,noco=noco,nococonv=nococonv,sym=sym,atoms=atoms,cell=cell)

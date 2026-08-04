@@ -13,6 +13,7 @@ MODULE m_wannierlib_mmnkb
   USE m_wannierlib_mmkb_sph
   USE m_types
   USE m_types_abc
+  USE m_types_spinor_layout, ONLY: t_spinor_layout
   USE m_types_atoms
   USE m_types_cell
   USE m_types_input
@@ -60,6 +61,7 @@ CONTAINS
     TYPE(t_lapw) :: lapw_b
     INTEGER :: kk, nk_b, itype
     LOGICAL :: l_real_wann
+    TYPE(t_spinor_layout) :: layout, layout_b
 
     IF (.NOT.ALLOCATED(mmn)) THEN
       IF ((num_bands > 0) .AND. (kpts%nkpt > 0) .AND. (nntot > 0)) THEN
@@ -69,17 +71,18 @@ CONTAINS
     END IF
   
     l_real_wann = input%l_real .AND. .NOT. noco%l_soc
+    CALL layout%init(input, noco, lapw, atoms)
     DO kk = 1, nntot
       nk_b = nnkp(nk, kk)
       CALL wannierlib_get_z(this, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, nk_b, jspin, l_real_wann, lapw_b, zMat_b)
+      CALL layout_b%init(input, noco, lapw_b, atoms)
       DO itype = 1, atoms%ntype
          CALL abc_b(itype)%init(input, atoms, num_bands, itype)
          CALL abc_b(itype)%calc_abc(input, atoms, sym, cell, lapw_b, num_bands, usdus, noco, nococonv, jspin_rad, itype, zMat_b)
       END DO
 
       CALL wannierlib_mmnkb_int(stars, lapw, lapw_b, jspin_rad, jspin_rad, zMat, zMat_b, gkpb(:, nk, kk), mmn(:, :, kk, nk_local), &
-                                ioff=MERGE(lapw%nv(1)+atoms%nlotot, 0, noco%l_noco .AND. jspin==2), &
-                                ioff_b=MERGE(lapw_b%nv(1)+atoms%nlotot, 0, noco%l_noco .AND. jspin==2))
+                                ioff=layout%row_offset(jspin), ioff_b=layout_b%row_offset(jspin))
       CALL wannierlib_mmkb_sph(atoms, abc, abc_b, kpts%bkf(:, nnkp(nk, kk)), gkpb(:, nk, kk), kpts%bkf(:, nk), ujug, kdiff, nntot, mmn(:, :, kk, nk_local))
     END DO
 
