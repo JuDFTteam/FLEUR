@@ -63,6 +63,7 @@
         <wannierization numIter="3000" convTol="0.00001"/>
         <operators_r>
           <operator name="hamiltonian"/>
+          <operator name="spin"/>
           <operator name="orbital"/>
         </operators_r>
       </wannierlib>

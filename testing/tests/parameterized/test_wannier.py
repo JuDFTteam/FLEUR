@@ -63,10 +63,11 @@ OMEGA_TOTAL_RTOL = 0.01
 # Real-space operator files written by <operators_r>, per test id. Their presence is
 # asserted by the fixture; their contents are checked below.
 _OP_R_FILES = ["WF1_hr.dat", "rspauli.1", "anglmomrs.1", "rssocmat.1", "wig_vectors"]
-# The collinear no-SOC path writes one set per spin channel. It has no spin-orbit operator
-# to export, and the spin operator is left out too: melem_rspauli_collinear aborts when the
-# eigenvectors are real, which they are here. Add <operator name="spin"/> once that is fixed.
-_OP_R_FILES_2CH = ["WF1_hr.dat", "WF2_hr.dat", "anglmomrs.1", "anglmomrs.2", "wig_vectors"]
+# The collinear no-SOC path writes one set per spin channel, and no spin-orbit operator.
+# rspauli.1 is single: melem_rspauli_collinear assembles one 2N matrix out of both channels
+# once they are wannierised.
+_OP_R_FILES_2CH = ["WF1_hr.dat", "WF2_hr.dat", "anglmomrs.1", "anglmomrs.2",
+                   "rspauli.1", "wig_vectors"]
 OPERATOR_FILES = {
     "WannPtSOCOps": _OP_R_FILES,
     "WannFeBccSOC":     _OP_R_FILES,
@@ -105,7 +106,16 @@ NONMAGNETIC = ("WannPtSOCOps", "WannFeAFMColSOC")
 # mix-up between the spin channels in the jspins=2 branch of the coarse pass -- where the
 # radial index is isp and the radial-integral slot is 2, neither of which WannPtSOCOps
 # exercises. Components are 1=sigma_x, 2=sigma_y, 3=sigma_z.
-COLLINEAR_Z = ("WannFeBccSOC",)
+COLLINEAR_Z = ("WannFeBccSOC", "WannFeBcc")
+
+# Without spin-orbit coupling the 2N Pauli is assembled from two separately wannierised
+# channels, so sigma_z is block-diagonal and orthonormality within each channel fixes its
+# R=0 diagonal at exactly +/-1 -- nw of each. That is sharper than the Pauli bound: it pins
+# the value instead of bounding it, and it is what a broken gauge rotation of the cross-spin
+# overlap would fail. Only sigma_z: the transverse components live entirely in the
+# off-diagonal blocks, so their diagonal is zero by construction.
+SIGMA_Z_UNIT = ("WannFeBcc",)
+SIGMA_Z_TOL = 1.0e-8
 
 
 def _rspauli_r0_diagonal_sums(path):
@@ -289,6 +299,14 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
             assert abs(total) < SPIN_SUM_TOL, (
                 f"rspauli.1: transverse spin sum (component {comp}) is {total}, but a "
                 f"collinear magnet along z must give 0 (tol {SPIN_SUM_TOL})")
+
+    if test_id in SIGMA_Z_UNIT:
+        diag = [v for (i, j), v in _anglmom_r0(res["rspauli.1"]).get("3", {}).items() if i == j]
+        assert diag, "rspauli.1: no sigma_z entries on the R=0 diagonal"
+        worst = max(abs(abs(v.real) - 1.0) for v in diag)
+        assert worst < SIGMA_Z_TOL, (
+            f"rspauli.1: a sigma_z diagonal entry is off +/-1 by {worst}, but each Wannier "
+            f"function lies wholly in one spin channel (tol {SIGMA_Z_TOL})")
 
     for name in [f for f in OPERATOR_FILES.get(test_id, ()) if f.startswith("anglmomrs")]:
         worst = _anglmom_r0_hermiticity(res[name])

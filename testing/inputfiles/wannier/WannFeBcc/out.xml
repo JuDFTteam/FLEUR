@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <fleurOutput fleurOutputVersion="0.38">
    <programVersion version="fleur 42">
-      <compilationInfo date="2026-08-04T11:06:04" user="saez" host="iffcluster1907" flag="I/Users/saez/hdf5-parallel/include -I/Users/saez/hdf5-parallel/include -fiopenmp -qmkl  -assume byterecl -no-w" link="annier90_lib;-L/Users/saez/hdf5-parallel/lib;-L/Users/saez/hdf5-parallel/lib;/usr/lib64/libxml2.so"/>
-      <gitInfo version="MaX-R8.1-239-g1e40eb40b-dirty" branch="wannierlib-v2" lastCommitHash="1e40eb40b664278e88770f5bcbf28e0358530c8f"/>
+      <compilationInfo date="2026-08-04T16:44:17" user="saez" host="iffcluster1904" flag="I/Users/saez/hdf5-parallel/include -I/Users/saez/hdf5-parallel/include -fiopenmp -qmkl  -assume byterecl -no-w" link="annier90_lib;-L/Users/saez/hdf5-parallel/lib;-L/Users/saez/hdf5-parallel/lib;/usr/lib64/libxml2.so"/>
+      <gitInfo version="MaX-R8.1-240-gefc5a7bd4-dirty" branch="wannierlib-v2" lastCommitHash="efc5a7bd4a63e5dd3b0aa35aef30d7aadc9de48d"/>
       <targetComputerArchitectures>GEN</targetComputerArchitectures>
       <precision type="DOUBLE"/>
       <targetStructureClass> </targetStructureClass>
@@ -14,7 +14,7 @@
       <mpi mpiProcesses="1"/>
       <mem memoryPerNode="131753864 kB"/>
    </parallelSetup>
-   <startDateAndTime date="2026/08/04" time="16:36:51" zone="+0200"/>
+   <startDateAndTime date="2026/08/04" time="17:39:34" zone="+0200"/>
    <!-- Now follows a dump of the inp.xml file after evaluating the Schema -->
   <fleurInput fleurInputVersion="0.39">
      <comment>
@@ -644,6 +644,7 @@
           <wannierization numIter="3000" convTol="0.00001"/>
           <operators_r>
             <operator name="hamiltonian"/>
+            <operator name="spin"/>
             <operator name="orbital"/>
           </operators_r>
         </wannierlib>
@@ -901,5 +902,5 @@
          </wannierlibReport>
       </iteration>
    </scfLoop>
-   <endDateAndTime date="2026/08/04" time="16:36:55" zone="+0200"/>
+   <endDateAndTime date="2026/08/04" time="17:39:38" zone="+0200"/>
 </fleurOutput>
