@@ -32,8 +32,7 @@ MODULE m_melem_spin
   USE m_types_mat
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: melem_pauli_from_blocks, melem_spin_mt_block, &
-            melem_spin_sumrule, melem_spin_peratom
+  PUBLIC :: melem_pauli_from_blocks, melem_spin_mt_block, melem_spin_sumrule
 CONTAINS
 
   !> Assemble the three Pauli matrices at one k from the four global spin-block
@@ -107,74 +106,6 @@ CONTAINS
       END DO
     END DO
   END SUBROUTINE melem_spin_mt_block
-
-  !> Per-atom (site-resolved) muffin-tin Pauli spin: spa(nb,nb,3,nat), rotated to
-  !> the GLOBAL spin frame. Same MT contraction as melem_spin_mt_block but
-  !> KEEPING the global atom index na instead of summing. The interstitial is NOT
-  !> site-resolvable and is excluded here, so spa is the muffin-tin site spin (the
-  !> physical local moment; in an AFM this is +M on one sublattice and -M on the
-  !> other).
-  !>
-  !> The abc%cof are LOCAL-frame spinor coefficients (calc_abc combines the two
-  !> spinor blocks in each atom's local quantization axis). For a collinear FM_z
-  !> (beta=0) local==global, but for a noncollinear/AFM texture (beta_a /= 0) each
-  !> atom's (sx,sy,sz) must be rotated local->global by R_z(alpha_a) R_y(beta_a)
-  !> using the noco angles, or the AFM sublattice comes out with the wrong sign
-  !> (both moments look "+"). We apply that rotation per atom here.
-  SUBROUTINE melem_spin_peratom(atoms, abc, radfun, nococonv, spa)
-    TYPE(t_atoms),    INTENT(IN)  :: atoms
-    TYPE(t_abc),      INTENT(IN)  :: abc(:, :)        ! (2 spin, ntype)
-    TYPE(t_radfun),   INTENT(IN)  :: radfun(:)
-    TYPE(t_nococonv), INTENT(IN)  :: nococonv         ! %alph(:), %beta(:) per type
-    COMPLEX,          INTENT(OUT) :: spa(:, :, :, :)  ! (nb,nb,3,nat): 1=sx 2=sy 3=sz per atom, GLOBAL frame
-
-    INTEGER :: nb, i, j, ntyp, iat, na, l, ll1, mm, lm, n_r, n_r2
-    COMPLEX :: loc(2, 2), cx, cy, cz
-    REAL    :: ca, sa, cb, sb
-
-    ! Radial spin slots. radfun%integral is allocated (.,.,.,jspins,jspins), so with a
-    ! single radial set (jspins=1, e.g. l_soc=T/l_noco=F) all four spin blocks share
-    ! slot 1; indexing 2 there ran past the array. Bound read from the array itself.
-    INTEGER :: js1, js2
-    js1 = 1; js2 = MERGE(1, 2, SIZE(radfun(1)%integral, 4) < 2)
-    nb = SIZE(spa, 1)
-    spa = CMPLX(0.0, 0.0)
-    DO j = 1, nb
-      DO i = 1, nb
-        na = 0
-        DO ntyp = 1, atoms%ntype
-          DO iat = 1, atoms%neq(ntyp)
-            na = na + 1
-            loc = CMPLX(0.0, 0.0)
-            ca = COS(nococonv%alph(ntyp)); sa = SIN(nococonv%alph(ntyp))
-            cb = COS(nococonv%beta(ntyp)); sb = SIN(nococonv%beta(ntyp))
-            DO l = 0, atoms%lmax(ntyp)
-              ll1 = l*(l + 1)
-              DO mm = -l, l
-                lm = ll1 + mm
-                DO n_r = 1, abc(1, ntyp)%n_r(l)
-                  DO n_r2 = 1, abc(1, ntyp)%n_r(l)
-                    loc(1,1) = loc(1,1) + abc(1, ntyp)%cof(i,lm,n_r,iat)*CONJG(abc(1, ntyp)%cof(j,lm,n_r2,iat))*radfun(ntyp)%integral(n_r,n_r2,l,1,1)
-                    loc(2,2) = loc(2,2) + abc(2, ntyp)%cof(i,lm,n_r,iat)*CONJG(abc(2, ntyp)%cof(j,lm,n_r2,iat))*radfun(ntyp)%integral(n_r,n_r2,l,js2,js2)
-                    loc(1,2) = loc(1,2) + abc(1, ntyp)%cof(i,lm,n_r,iat)*CONJG(abc(2, ntyp)%cof(j,lm,n_r2,iat))*radfun(ntyp)%integral(n_r,n_r2,l,js1,js2)
-                    loc(2,1) = loc(2,1) + abc(2, ntyp)%cof(i,lm,n_r,iat)*CONJG(abc(1, ntyp)%cof(j,lm,n_r2,iat))*radfun(ntyp)%integral(n_r,n_r2,l,js2,js1)
-                  END DO
-                END DO
-              END DO
-            END DO
-            ! local-frame Pauli components at this site ...
-            cx = loc(1,2) + loc(2,1)                ! sigma_x (local)
-            cy = -ImagUnit * (loc(1,2) - loc(2,1))  ! sigma_y (local)
-            cz = loc(1,1) - loc(2,2)                ! sigma_z (local)
-            ! ... rotated local->global by R_z(alpha) R_y(beta) (noco convention)
-            spa(i,j,1,na) =  ca*cb*cx - sa*cy + ca*sb*cz
-            spa(i,j,2,na) =  sa*cb*cx + ca*cy + sa*sb*cz
-            spa(i,j,3,na) = -sb*cx           + cb*cz
-          END DO
-        END DO
-      END DO
-    END DO
-  END SUBROUTINE melem_spin_peratom
 
   !> Sum-rule / sanity check on the Bloch-basis spin matrices at one k.
   !> With interstitial + MT summed, spin-trace orthonormality gives

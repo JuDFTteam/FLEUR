@@ -55,7 +55,6 @@ MODULE m_types_wannierlib
     CHARACTER(LEN=20), ALLOCATABLE :: op_name(:)    ! operator identifier (hamiltonian/spin/orbital/soc/...)
     CHARACTER(LEN=32), ALLOCATABLE :: op_comp(:)    ! requested components (Phase 2); '' = all of the operator rank
     INTEGER, ALLOCATABLE :: op_total(:)             ! 1 = write summed-over-atoms projection (default)
-    INTEGER, ALLOCATABLE :: op_peratom(:)           ! 1 = also write per-atom (site-resolved) projection (Phase 2)
 
     ! --- operators_r table: one entry per <operators_r>/<operator name=".."> child ---
     INTEGER :: n_op_r = 0
@@ -332,7 +331,6 @@ CONTAINS
     CALL mpi_bc(this%op_name, rank, mpi_comm)
     CALL mpi_bc(this%op_comp, rank, mpi_comm)
     CALL mpi_bc(this%op_total, rank, mpi_comm)
-    CALL mpi_bc(this%op_peratom, rank, mpi_comm)
     CALL mpi_bc(this%l_operators_r, rank, mpi_comm)
     CALL mpi_bc(this%n_op_r, rank, mpi_comm)
     CALL mpi_bc(this%op_r_name, rank, mpi_comm)
@@ -469,7 +467,7 @@ CONTAINS
       this%n_ops = xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/operator')
     END IF
 
-    ALLOCATE(this%op_name(this%n_ops), this%op_comp(this%n_ops), this%op_total(this%n_ops), this%op_peratom(this%n_ops))
+    ALLOCATE(this%op_name(this%n_ops), this%op_comp(this%n_ops), this%op_total(this%n_ops))
     DO iProj = 1, this%n_ops
       WRITE(xPathP, '(A,I0,A)') '/fleurInput/output/wannierlib/interpolation/operator[', iProj, ']'
       this%op_name(iProj) = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@name'))
@@ -479,10 +477,6 @@ CONTAINS
       this%op_total(iProj) = 1
       IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@total') == 1) THEN
         IF (.NOT. evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@total'))) this%op_total(iProj) = 0
-      END IF
-      this%op_peratom(iProj) = 0
-      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@perAtom') == 1) THEN
-        IF (evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@perAtom'))) this%op_peratom(iProj) = 1
       END IF
 
       ! derive convenience flags that gate the coarse-mesh provider calls.

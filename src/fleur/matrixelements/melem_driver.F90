@@ -47,7 +47,7 @@ MODULE m_melem_driver
    USE m_types_abc
    USE m_types_wannierlib
    USE m_types_melem_bmesh
-   USE m_melem_spin, ONLY: melem_spin_peratom, melem_spin_mt_block, &
+   USE m_melem_spin, ONLY: melem_spin_mt_block, &
                            melem_pauli_from_blocks, melem_spin_sumrule
    USE m_types_matelements_spin, ONLY: t_matelements_spin
    USE m_types_matelements_soc, ONLY: t_matelements_soc
@@ -75,7 +75,6 @@ MODULE m_melem_driver
       COMPLEX, ALLOCATABLE :: l0(:, :, :, :, :)   !< (nb,nb,3,nat,nk_loc)  orbital L per atom
       COMPLEX, ALLOCATABLE :: soc0(:, :, :, :)    !< (nb,nb,1,nk_loc)      SOC
       COMPLEX, ALLOCATABLE :: soc4(:, :, :, :)    !< (nb,nb,4,nk_loc)      2x2 SOC spinor blocks
-      COMPLEX, ALLOCATABLE :: s0pa(:, :, :, :, :) !< (nb,nb,3,nat,nk_loc)  per-atom MT spin
       !> collinear jspins=2 only: per-channel Bloch orbital L, filled from the wannierization's
       !> own mmn k-loop (see add_collinear_orbital) because the spinor coarse pass does not run.
       COMPLEX, ALLOCATABLE :: l0col(:, :, :, :)   !< (nb,nb,3,nk_loc)
@@ -123,10 +122,9 @@ CONTAINS
          ALLOCATE (this%l0(wann%num_bands, wann%num_bands, 3, atoms%nat, nkc_loc), source=cmplx(0.0, 0.0))
          ALLOCATE (this%soc0(wann%num_bands, wann%num_bands, 1, nkc_loc), source=cmplx(0.0, 0.0))
          ALLOCATE (this%soc4(wann%num_bands, wann%num_bands, 4, nkc_loc), source=cmplx(0.0, 0.0))
-         ALLOCATE (this%s0pa(wann%num_bands, wann%num_bands, 3, atoms%nat, nkc_loc), source=cmplx(0.0, 0.0))
       ELSE
          ALLOCATE (this%s0(1, 1, 1, 1)); ALLOCATE (this%l0(1, 1, 1, 1, 1)); ALLOCATE (this%soc4(1, 1, 1, 1))
-         ALLOCATE (this%soc0(1, 1, 1, 1)); ALLOCATE (this%s0pa(1, 1, 1, 1, 1))
+         ALLOCATE (this%soc0(1, 1, 1, 1))
       END IF
 
       ! collinear jspins=2 (no SOC/noco): the coarse spin/orbital slices above are spinor-only
@@ -276,7 +274,6 @@ CONTAINS
                END IF
             END DO
          END DO
-         IF (wann%l_spin) CALL melem_spin_peratom(atoms, abc_s, radfun, nococonv, this%s0pa(:, :, :, :, il))
          IF (wann%l_spin) THEN
             !The operator keeps the four spin blocks; the three Pauli components follow
             !from them, so only the blocks are computed here.
@@ -349,7 +346,7 @@ CONTAINS
       INTEGER, INTENT(IN), OPTIONAL :: wf_channel            !< collinear spin channel (1/2); default 1
       CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: spin_suffix  !< '_spin1'/'_spin2' collinear; empty otherwise
 
-      INTEGER :: iop, k, nbnd_c, nat_c, nkc, wf_ch, irank, mpi_comm
+      INTEGER :: iop, k, wf_ch, irank, mpi_comm
       INTEGER :: idom, ndom, nkl_c, jkl, aw_nrpts
       INTEGER, ALLOCATABLE :: gk_loc(:), aw_irvec(:, :), aw_ndegen(:)
       COMPLEX, ALLOCATABLE :: aw_r(:, :, :, :)         ! (nw,nw,nrpts,3) Wannier Berry connection A^(W)(R)
@@ -418,24 +415,11 @@ CONTAINS
                IF (wann%op_total(iop) == 1) &
                   CALL melem_interpolate_operator(wann, cell, kpts, eig, u_matrix, u_opt, &
                                                   coarse%s0, gk_loc, 3, 'bands_wann_spin.dat', irank, mpi_comm)
-               ! per-atom (site-resolved) muffin-tin spin moment: 3*nat components in one file
-               IF (wann%op_peratom(iop) == 1) THEN
-                  nbnd_c = SIZE(coarse%s0pa, 1); nat_c = SIZE(coarse%s0pa, 4); nkc = SIZE(coarse%s0pa, 5)
-                  CALL melem_interpolate_operator(wann, cell, kpts, eig, u_matrix, u_opt, &
-                                                  RESHAPE(coarse%s0pa, (/nbnd_c, nbnd_c, 3*nat_c, nkc/)), &
-                                                  gk_loc, 3*nat_c, 'bands_wann_spin_peratom.dat', irank, mpi_comm)
-               END IF
             CASE ('orbital')
-               nbnd_c = SIZE(coarse%l0, 1); nat_c = SIZE(coarse%l0, 4); nkc = SIZE(coarse%l0, 5)
                ! total (site-summed) orbital moment
                IF (wann%op_total(iop) == 1) &
                   CALL melem_interpolate_operator(wann, cell, kpts, eig, u_matrix, u_opt, &
                                                   SUM(coarse%l0, DIM=4), gk_loc, 3, 'bands_wann_orbmom.dat', irank, mpi_comm)
-               ! per-atom (site-resolved): flatten (comp,atom) -> 3*nat components in one file
-               IF (wann%op_peratom(iop) == 1) &
-                  CALL melem_interpolate_operator(wann, cell, kpts, eig, u_matrix, u_opt, &
-                                                  RESHAPE(coarse%l0, (/nbnd_c, nbnd_c, 3*nat_c, nkc/)), &
-                                                  gk_loc, 3*nat_c, 'bands_wann_orbmom_peratom.dat', irank, mpi_comm)
             CASE ('soc')
                CALL melem_interpolate_operator(wann, cell, kpts, eig, u_matrix, u_opt, &
                                                coarse%soc0, gk_loc, 1, 'bands_wann_soc.dat', irank, mpi_comm)
@@ -592,7 +576,6 @@ CONTAINS
       IF (ALLOCATED(this%l0)) DEALLOCATE (this%l0)
       IF (ALLOCATED(this%soc0)) DEALLOCATE (this%soc0)
       IF (ALLOCATED(this%soc4)) DEALLOCATE (this%soc4)
-      IF (ALLOCATED(this%s0pa)) DEALLOCATE (this%s0pa)
       IF (ALLOCATED(this%l0col)) DEALLOCATE (this%l0col)
       IF (ALLOCATED(this%v_ch)) DEALLOCATE (this%v_ch)
       this%l_col_orb = .FALSE.; this%l_col_spin = .FALSE.

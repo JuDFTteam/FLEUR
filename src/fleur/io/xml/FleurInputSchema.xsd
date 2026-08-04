@@ -3584,7 +3584,6 @@
       </xsd:attribute>
       <xsd:attribute name="comp" type="xsd:string" use="optional"/>
       <xsd:attribute name="total" type="FleurBool" use="optional" default="T"/>
-      <xsd:attribute name="perAtom" type="FleurBool" use="optional" default="F"/>
    </xsd:complexType>
 
    <xsd:complexType name="WannierlibPathType">
