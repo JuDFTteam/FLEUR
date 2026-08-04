@@ -277,7 +277,7 @@ CONTAINS
          IF (wann%l_spin) THEN
             !The operator keeps the four spin blocks; the three Pauli components follow
             !from them, so only the blocks are computed here.
-            CALL spinop%init(atoms, stars, lapw, nococonv)
+            CALL spinop%init(atoms, stars, lapw, nococonv, input, noco)
             CALL spinop%init_mat(wann%num_bands)
             CALL spinop%calc_matrix_elements(zMat, abc_s, radfun, usdus)
             CALL melem_pauli_from_blocks(spinop%mat(1,1)%data_c, spinop%mat(2,2)%data_c, &

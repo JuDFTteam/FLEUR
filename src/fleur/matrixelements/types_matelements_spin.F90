@@ -17,7 +17,9 @@ MODULE m_types_matelements_spin
    USE m_types_mat
    USE m_types_abc
    USE m_types_radfun
-   USE m_types_spinor_layout, ONLY: radial_slot
+   USE m_types_spinor_layout, ONLY: t_spinor_layout, radial_slot, LAYOUT_SPINOR
+   USE m_types_input
+   USE m_types_noco
    USE m_types_usdus
    USE m_types_atoms
    USE m_types_stars
@@ -34,6 +36,7 @@ MODULE m_types_matelements_spin
       TYPE(t_stars),    POINTER :: stars    => NULL()
       TYPE(t_lapw),     POINTER :: lapw     => NULL()
       TYPE(t_nococonv), POINTER :: nococonv => NULL()
+      TYPE(t_spinor_layout)     :: layout
    CONTAINS
       PROCEDURE :: init                 => init
       PROCEDURE :: calc_matrix_elements => calc_matrix_elements
@@ -43,12 +46,14 @@ MODULE m_types_matelements_spin
 
 CONTAINS
 
-   SUBROUTINE init(this, atoms, stars, lapw, nococonv)
+   SUBROUTINE init(this, atoms, stars, lapw, nococonv, input, noco)
       CLASS(t_matelements_spin), INTENT(INOUT) :: this
       TYPE(t_atoms),    TARGET,  INTENT(IN)    :: atoms
       TYPE(t_stars),    TARGET,  INTENT(IN)    :: stars
       TYPE(t_lapw),     TARGET,  INTENT(IN)    :: lapw     !> changes with k
       TYPE(t_nococonv), TARGET,  INTENT(IN)    :: nococonv
+      TYPE(t_input),             INTENT(IN)    :: input
+      TYPE(t_noco),             INTENT(IN)     :: noco
 
       !> sigma couples the two spin channels, so the result is a 2x2 block matrix
       this%spinoroperator = .TRUE.
@@ -58,6 +63,12 @@ CONTAINS
       this%stars    => stars
       this%lapw     => lapw
       this%nococonv => nococonv
+
+      !> The caller hands over a whole spinor either way: one 2N record when the
+      !> Hamiltonian was non-collinear, two records stacked by the caller otherwise.
+      !> Saying so is what makes row_dn meaningful here.
+      CALL this%layout%init(input, noco, lapw, atoms, &
+                            l_both_spinors=(noco%l_soc .AND. .NOT.noco%l_noco))
    END SUBROUTINE init
 
    SUBROUTINE calc_matrix_elements(this, zmat, abc, radfun, usdus)
@@ -87,8 +98,12 @@ CONTAINS
 
       js2 = radial_slot(radfun, 2)
 
+      IF (this%layout%layout /= LAYOUT_SPINOR) &
+         CALL judft_bug("calc_matrix_elements: the spin operator needs a spinor, and the &
+                        &layout of this k-point is not one")
+
       ! ---- interstitial: the spin-down rows of the spinor start at io_dn ----
-      io_dn = this%lapw%nv(1) + this%atoms%nlotot
+      io_dn = this%layout%row_dn
       ALLOCATE(oi(nb, nb, 2, 2))
       CALL melem_overlap_interstitial(this%stars, this%lapw, this%lapw, zmat(1), zmat(1), &
                                       0,     0,     oi(:,:,1,1))
