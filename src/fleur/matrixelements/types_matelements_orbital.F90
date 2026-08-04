@@ -26,6 +26,7 @@ MODULE m_types_matelements_orbital
    USE m_types_mat
    USE m_types_abc
    USE m_types_radfun
+   USE m_types_spinor_layout, ONLY: radial_slot
    USE m_types_usdus
    USE m_types_atoms
    USE m_constants, ONLY: ImagUnit
@@ -97,7 +98,7 @@ CONTAINS
       !> radfun%integral is allocated (.,.,.,jspins,jspins), so with a single radial
       !> set both spinor components have to read slot 1; indexing 2 there ran past
       !> the array. The bound is read from the array itself.
-      sr = MERGE(1, 2, SIZE(radfun(1)%integral, 4) < 2)
+      sr = radial_slot(radfun, 2)
 
       DO j = 1, nb                     ! ket band
          DO i = 1, nb                  ! bra band

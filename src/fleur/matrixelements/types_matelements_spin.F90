@@ -17,6 +17,7 @@ MODULE m_types_matelements_spin
    USE m_types_mat
    USE m_types_abc
    USE m_types_radfun
+   USE m_types_spinor_layout, ONLY: radial_slot
    USE m_types_usdus
    USE m_types_atoms
    USE m_types_stars
@@ -84,9 +85,7 @@ CONTAINS
       IF (this%mat(1,1)%matsize1 /= nb) &
          CALL judft_bug("calc_matrix_elements: the matrix size does not match the abc coefficients")
 
-      !> The radial set is only input%jspins wide, so a single set serves both
-      !> spinor components.
-      js2 = MERGE(1, 2, SIZE(radfun(1)%integral, 4) < 2)
+      js2 = radial_slot(radfun, 2)
 
       ! ---- interstitial: the spin-down rows of the spinor start at io_dn ----
       io_dn = this%lapw%nv(1) + this%atoms%nlotot

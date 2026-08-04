@@ -13,6 +13,7 @@ MODULE m_matrix_element_factory
     USE m_types_mat
     USE m_types_abc
     USE m_types_radfun
+    USE m_types_spinor_layout, ONLY: radial_slot
     USE m_types_usdus
     IMPLICIT NONE
     PRIVATE
@@ -169,9 +170,8 @@ CONTAINS
             ALLOCATE(abc_store(2, atoms%ntype))
             DO n = 1, atoms%ntype
                 DO jsp = 1, nrec
-                    !The radial set is only input%jspins wide, so a single set serves
-                    !both records of a spinor.
-                    jsp_rad = MERGE(1, jsp, input%jspins == 1)
+                    !A single radial set serves both records of a spinor.
+                    jsp_rad = radial_slot(radfun_store, jsp)
                     CALL abc_store(jsp,n)%init(input, atoms, num_bands, n)
                     CALL abc_store(jsp,n)%calc_abc(input, atoms, sym, cell, lapw, num_bands, &
                                                    usdus_store, noco, nococonv, jsp_rad, n, zmat_store(jsp))

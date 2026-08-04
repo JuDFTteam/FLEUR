@@ -39,6 +39,7 @@ MODULE m_wannierlib_main
    USE m_types_usdus
    USE m_types_mat
    USE m_types_radfun
+   USE m_types_spinor_layout, ONLY: radial_slot
    USE m_types_abc
    USE m_types_wannierlib
 
@@ -139,9 +140,8 @@ CONTAINS
          CALL melem%alloc_collinear_orbital(this, nk_local)
 
          DO jspin_comp = MERGE(1, jspin, l_wannierlib_spinors), MERGE(2, jspin, l_wannierlib_spinors)
-            ! jspin_comp = record del eig (spinor up/down). jspin_rad = indice radial:
-            ! con jspins=1 solo existe 1 set de radiales -> usar 1 para ambas componentes.
-            jspin_rad = MERGE(1, jspin_comp, input%jspins == 1)
+            ! jspin_comp = record del eig (spinor up/down); jspin_rad = indice radial.
+            jspin_rad = radial_slot(radfun, jspin_comp)
             CALL wannierlib_ujugaunt(atoms, cell, nntot_w90, kdiff, radfun, radfun, jspin_rad, jspin_rad, .FALSE., 1, ujug)
 
             ik_local = 0

@@ -15,6 +15,10 @@ MODULE m_types_spinor_layout
    !> whole spinor of 2N rows when the Hamiltonian was set up non-collinearly. This
    !> type carries the distinction next to the count, so a consumer asks instead of
    !> re-deriving it from the input flags.
+   !>
+   !> radial_slot is a function of the radial array rather than a method, because the
+   !> number of radial sets is a property of that array and every caller already holds
+   !> it. Nothing else about the layout is needed to answer it.
 
    USE m_judft
    USE m_types_input
@@ -38,12 +42,11 @@ MODULE m_types_spinor_layout
       INTEGER :: row_dn    = 0        !> first spin-down row of a stacked spinor, else 0
       INTEGER :: n_radial  = -1       !> radial sets available to contract with
    CONTAINS
-      PROCEDURE :: init        => spinor_layout_init
-      PROCEDURE :: radial_slot => spinor_layout_radial_slot
-      PROCEDURE :: nbasfcn     => spinor_layout_nbasfcn
+      PROCEDURE :: init    => spinor_layout_init
+      PROCEDURE :: nbasfcn => spinor_layout_nbasfcn
    END TYPE t_spinor_layout
 
-   PUBLIC :: t_spinor_layout
+   PUBLIC :: t_spinor_layout, radial_slot, n_radial_of
 
 CONTAINS
 
@@ -94,7 +97,7 @@ CONTAINS
       IF (this%layout == LAYOUT_SPINOR) this%row_dn = lapw%nv(1) + atoms%nlotot
 
       IF (PRESENT(radfun)) THEN
-         this%n_radial = SIZE(radfun(1)%integral, 4)
+         this%n_radial = n_radial_of(radfun)
       ELSE
          this%n_radial = input%jspins
       END IF
@@ -114,14 +117,23 @@ CONTAINS
    END SUBROUTINE spinor_layout_init
 
 
-   PURE INTEGER FUNCTION spinor_layout_radial_slot(this, isp)
-      !> The radial set to contract spin component isp with. Clamped, because a
-      !> spinor has two components while a single potential generates one radial
-      !> set: asking for slot 2 there reads past the array.
-      CLASS(t_spinor_layout), INTENT(IN) :: this
-      INTEGER,                INTENT(IN) :: isp
-      spinor_layout_radial_slot = MIN(isp, this%n_radial)
-   END FUNCTION spinor_layout_radial_slot
+   PURE INTEGER FUNCTION n_radial_of(radfun)
+      !> How many radial sets exist, read from the array that will be indexed. This is
+      !> not the same statement as input%jspins, which says how many were asked for, and
+      !> the point of reading it here is that the two can disagree.
+      TYPE(t_radfun), INTENT(IN) :: radfun(:)
+      n_radial_of = SIZE(radfun(1)%integral, 4)
+   END FUNCTION n_radial_of
+
+
+   PURE INTEGER FUNCTION radial_slot(radfun, isp)
+      !> The radial set to contract spin component isp with. Clamped, because a spinor
+      !> has two components while a single potential generates one radial set: asking
+      !> for slot 2 there reads past the array.
+      TYPE(t_radfun), INTENT(IN) :: radfun(:)
+      INTEGER,        INTENT(IN) :: isp
+      radial_slot = MIN(isp, n_radial_of(radfun))
+   END FUNCTION radial_slot
 
 
    PURE INTEGER FUNCTION spinor_layout_nbasfcn(this, lapw, atoms)

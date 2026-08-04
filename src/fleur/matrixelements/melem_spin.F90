@@ -26,6 +26,7 @@ MODULE m_melem_spin
   USE m_types_atoms
   USE m_types_abc
   USE m_types_radfun
+  USE m_types_spinor_layout, ONLY: radial_slot
   USE m_types_nococonv
   USE m_types_stars
   USE m_types_lapw
@@ -70,11 +71,9 @@ CONTAINS
     INTEGER :: nb, i, j, ntyp, iat, l, ll1, mm, lm, n_r, n_r2
     COMPLEX :: loc(2, 2)
 
-    ! Radial spin slots. radfun%integral is allocated (.,.,.,jspins,jspins), so with a
-    ! single radial set (jspins=1, e.g. l_soc=T/l_noco=F) all four spin blocks share
-    ! slot 1; indexing 2 there ran past the array. Bound read from the array itself.
+    ! The four spin blocks are indexed with the slots of their own components.
     INTEGER :: js1, js2
-    js1 = 1; js2 = MERGE(1, 2, SIZE(radfun(1)%integral, 4) < 2)
+    js1 = radial_slot(radfun, 1); js2 = radial_slot(radfun, 2)
     nb = SIZE(o_uu, 1)
     DO j = 1, nb                       ! ket band
       DO i = 1, nb                     ! bra band

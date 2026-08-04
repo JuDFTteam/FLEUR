@@ -44,6 +44,7 @@ MODULE m_melem_driver
    USE m_types_usdus
    USE m_types_mat
    USE m_types_radfun
+   USE m_types_spinor_layout, ONLY: radial_slot
    USE m_types_abc
    USE m_types_wannierlib
    USE m_types_melem_bmesh
@@ -259,10 +260,9 @@ CONTAINS
             CALL melem_stack_spinor(zc(1), zc(2), zMat(1))
          END IF
          DO isp = 1, 2
-            ! The index handed to calc_abc must belong to the zMat it is given and must never
-            ! exceed input%jspins -- calc_abc rejects that since the develop SOC refactor, and
-            ! the radial arrays it indexes are only that wide anyway.
-            jspin_rad = MERGE(1, isp, input%jspins == 1)
+            ! The index handed to calc_abc must belong to the zMat it is given and must
+            ! never exceed the width of the radial arrays it indexes.
+            jspin_rad = radial_slot(radfun, isp)
             DO itype = 1, atoms%ntype
                CALL abc_s(isp, itype)%init(input, atoms, wann%num_bands, itype)
                IF (noco%l_noco) THEN
