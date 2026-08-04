@@ -26,6 +26,7 @@ MODULE m_types_spinor_layout
    USE m_types_lapw
    USE m_types_atoms
    USE m_types_radfun
+   USE m_types_mat
 
    IMPLICIT NONE
    PRIVATE
@@ -47,7 +48,7 @@ MODULE m_types_spinor_layout
       PROCEDURE :: row_offset => spinor_layout_row_offset
    END TYPE t_spinor_layout
 
-   PUBLIC :: t_spinor_layout, radial_slot, n_radial_of
+   PUBLIC :: t_spinor_layout, radial_slot, n_radial_of, melem_stack_spinor
 
 CONTAINS
 
@@ -159,5 +160,21 @@ CONTAINS
          spinor_layout_nbasfcn = lapw%nv(1) + atoms%nlotot
       END IF
    END FUNCTION spinor_layout_nbasfcn
+
+   SUBROUTINE melem_stack_spinor(zup, zdn, zspinor)
+      TYPE(t_mat), INTENT(IN)  :: zup, zdn
+      TYPE(t_mat), INTENT(OUT) :: zspinor
+      INTEGER :: n, nb
+      IF (zup%matsize1 /= zdn%matsize1 .OR. zup%matsize2 /= zdn%matsize2) &
+         CALL juDFT_error('melem_stack_spinor: the two spin records differ in shape', &
+                          calledby='melem_stack_spinor')
+      IF (zup%l_real .OR. zdn%l_real) &
+         CALL juDFT_error('melem_stack_spinor: a SOC spinor cannot be stored in a real matrix', &
+                          calledby='melem_stack_spinor')
+      n = zup%matsize1; nb = zup%matsize2
+      CALL zspinor%init(.FALSE., 2*n, nb)
+      zspinor%data_c(1:n,     1:nb) = zup%data_c(1:n, 1:nb)
+      zspinor%data_c(n+1:2*n, 1:nb) = zdn%data_c(1:n, 1:nb)
+   END SUBROUTINE melem_stack_spinor
 
 END MODULE m_types_spinor_layout

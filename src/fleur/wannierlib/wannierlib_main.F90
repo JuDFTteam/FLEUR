@@ -21,8 +21,10 @@ MODULE m_wannierlib_main
    USE m_wannierlib_mmnkb
    USE m_wannierlib_ujugaunt
    USE m_wannierlib_w90_adapter
-   USE m_melem_driver, ONLY: t_melem_coarse, melem_run, melem_rspauli_collinear, &
-                             melem_orbmom_bloch_collinear
+   USE m_melem_coarse, ONLY: t_melem_coarse
+   USE m_melem_run, ONLY: melem_run
+   USE m_melem_spin_collinear, ONLY: melem_rspauli_collinear
+   USE m_melem_orbmom, ONLY: melem_orbmom_bloch_collinear
    USE m_types_melem_bmesh, ONLY: t_melem_bmesh
    USE m_constants, ONLY: oUnit
    USE m_types_atoms
