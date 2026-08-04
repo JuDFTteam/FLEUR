@@ -52,7 +52,8 @@ MODULE m_melem_driver
    USE m_types_matelements_spin, ONLY: t_matelements_spin
    USE m_types_matelements_soc, ONLY: t_matelements_soc
    USE m_types_rsoc, ONLY: t_rsoc
-   USE m_melem_orbmom, ONLY: melem_orbmom_bloch, melem_orbmom_bloch_collinear
+   USE m_types_matelements_orbital, ONLY: t_matelements_orbital
+   USE m_melem_orbmom, ONLY: melem_orbmom_bloch_collinear
    USE m_melem_ft, ONLY: melem_ft_to_real_reduce
    USE m_melem_domains, ONLY: melem_write_domain_kpts, melem_rename_domain_outputs, melem_shell
    USE m_melem_operators_r, ONLY: melem_write_operators_r, melem_build_berry_aw_r, melem_check_berry_centres
@@ -194,9 +195,12 @@ CONTAINS
       TYPE(t_mat) :: zMat(1)
       TYPE(t_matelements_spin) :: spinop
       TYPE(t_matelements_soc) :: socop
+      !> One instance per (Cartesian component, atom): L_x and L_y are different
+      !> operators, and the site resolution is an output of its own.
+      TYPE(t_matelements_orbital), ALLOCATABLE :: orbop(:, :)
       TYPE(t_rsoc) :: rsoc
       TYPE(t_mat) :: zc(2)   ! the two spinor components when get_z does not stack them
-      INTEGER :: ikpt, itype, isp, il, jspin_rad
+      INTEGER :: ikpt, itype, isp, il, jspin_rad, ic, na, iatom
 
       IF (.NOT. this%l_active) RETURN   ! nothing requested, or no spinor wavefunctions -> slices are stubs
 
@@ -214,6 +218,24 @@ CONTAINS
          CALL rsoc%init(atoms)
          CALL rsoc%rad_matrix(atoms, noco, nococonv, input, fmpi, enpara, vtot)
          CALL rsoc%angles(atoms, fmpi, nococonv%theta, nococonv%phi)
+      END IF
+
+      !> Set up once, outside the k loop: what an instance binds to -- a component and
+      !> a site -- is the same at every k, since L has no interstitial part and so
+      !> never needs the plane-wave set of a given k. The k dependence of the matrix
+      !> elements arrives with the abc coefficients, once per k; init_mat clears the
+      !> result matrices there and reuses the allocation.
+      IF (wann%l_orbmom) THEN
+         ALLOCATE (orbop(3, atoms%nat))
+         na = 0
+         DO itype = 1, atoms%ntype
+            DO iatom = 1, atoms%neq(itype)
+               na = na + 1
+               DO ic = 1, 3
+                  CALL orbop(ic, na)%init(atoms, ic, itype, iatom)
+               END DO
+            END DO
+         END DO
       END IF
 
       ALLOCATE (abc_s(2, atoms%ntype))
@@ -268,7 +290,18 @@ CONTAINS
                                                    spinop%mat(1,1)%data_c, spinop%mat(2,2)%data_c, &
                                                    ikpt, tol=1.0e-3)
          END IF
-         IF (wann%l_orbmom) CALL melem_orbmom_bloch(atoms, abc_s, radfun, this%l0(:, :, :, :, il))
+         IF (wann%l_orbmom) THEN
+            !The site-summed total is a plain sum over the last index, because L needs
+            !no local-to-global rotation: it is spin-diagonal and its trace is
+            !frame-invariant.
+            DO na = 1, atoms%nat
+               DO ic = 1, 3
+                  CALL orbop(ic, na)%init_mat(wann%num_bands)
+                  CALL orbop(ic, na)%calc_matrix_elements(zMat, abc_s, radfun, usdus)
+                  this%l0(:, :, ic, na, il) = orbop(ic, na)%mat(1, 1)%data_c
+               END DO
+            END DO
+         END IF
          IF (wann%l_socop) THEN
             !The operator keeps the four spin blocks. A spinor wavefunction has both
             !components, so its expectation value of a spinor operator is the sum of all

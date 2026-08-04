@@ -22,13 +22,13 @@ MODULE m_melem_orbmom
   USE m_types_radfun
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: melem_orbmom_bloch, melem_orbmom_bloch_collinear
+  PUBLIC :: melem_orbmom_bloch_collinear
 CONTAINS
 
-  !> Collinear (jspins=2, no SOC/noco) single-channel variant of melem_orbmom_bloch:
-  !> the two spin channels are separate scalar problems, so L is evaluated on ONE channel's
-  !> coefficients abc(:) (single spin, radial index jspin_rad) instead of summing s=1,2.
-  !> Returns the site-summed (total) L0(:,:,1:3) in the Bloch basis at one k (muffin-tin).
+  !> Site-summed L0(:,:,1:3) at one k for a single spin channel: with jspins=2 and no
+  !> SOC or noco the two channels are separate scalar problems, so the coefficients
+  !> arrive for one channel only (abc(:), radial index jspin_rad) and there is nothing
+  !> to sum over spin. Muffin-tin only, as the orbital moment is.
   SUBROUTINE melem_orbmom_bloch_collinear(atoms, abc, radfun, jspin_rad, l0)
     TYPE(t_atoms),  INTENT(IN)  :: atoms
     TYPE(t_abc),    INTENT(IN)  :: abc(:)         ! (ntype) single-channel local-frame coeffs
@@ -71,58 +71,5 @@ CONTAINS
       END DO
     END DO
   END SUBROUTINE melem_orbmom_bloch_collinear
-
-  !> Build L0(:,:,1:3,1:nat) = (Lx,Ly,Lz) per atom in the Bloch basis at one k
-  !> (muffin-tin). The site-summed (total) operator is SUM over the last index; the
-  !> per-atom slices are the site-resolved projections. na is the GLOBAL atom index.
-  SUBROUTINE melem_orbmom_bloch(atoms, abc, radfun, l0)
-    TYPE(t_atoms),  INTENT(IN)  :: atoms
-    TYPE(t_abc),    INTENT(IN)  :: abc(:, :)      ! (2 spin, ntype) local-frame coeffs
-    TYPE(t_radfun), INTENT(IN)  :: radfun(:)      ! (ntype) : %integral(.,.,l,jspins,jspins)
-    COMPLEX,        INTENT(OUT) :: l0(:, :, :, :) ! (nb,nb,3,nat): 1=Lx 2=Ly 3=Lz per atom
-
-    INTEGER :: nb, i, j, ntyp, iat, na, l, ll1, mm, lm, n_r, n_r2, s, sr
-    REAL    :: lplus, lminus, w
-    COMPLEX :: cz, cp, cm    ! L_z, L_+, L_- accumulators for (i,j) of ONE atom
-
-    ! Radial spin slot. radfun%integral is allocated (.,.,.,jspins,jspins), so with a
-    ! single radial set (jspins=1, e.g. l_soc=T/l_noco=F) both spin channels share slot
-    ! 1; indexing 2 there ran past the array. Bound read from the array itself.
-    nb = SIZE(l0, 1)
-    sr = MERGE(1, 2, SIZE(radfun(1)%integral, 4) < 2)
-    l0 = CMPLX(0.0, 0.0)
-    DO j = 1, nb                       ! ket band
-      DO i = 1, nb                     ! bra band
-        na = 0
-        DO ntyp = 1, atoms%ntype
-          DO iat = 1, atoms%neq(ntyp)
-            na = na + 1
-            cz = CMPLX(0.0, 0.0); cp = CMPLX(0.0, 0.0); cm = CMPLX(0.0, 0.0)
-            DO l = 0, atoms%lmax(ntyp)
-              ll1 = l*(l + 1)
-              DO mm = -l, l
-                lm = ll1 + mm
-                lplus  = SQRT(REAL((l - mm)*(l + mm + 1)))   ! <m+1|L+|m>
-                lminus = SQRT(REAL((l + mm)*(l - mm + 1)))   ! <m-1|L-|m>
-                DO s = 1, 2            ! L is spin-diagonal: sum both local spin components
-                  DO n_r = 1, abc(s, ntyp)%n_r(l)
-                    DO n_r2 = 1, abc(s, ntyp)%n_r(l)
-                      w = radfun(ntyp)%integral(n_r, n_r2, l, MIN(s, sr), MIN(s, sr))
-                      cz = cz + abc(s, ntyp)%cof(i,lm,n_r,iat)*CONJG(abc(s, ntyp)%cof(j,lm,n_r2,iat))*REAL(mm)*w
-                      IF (mm < l) cp = cp + abc(s, ntyp)%cof(i,lm,n_r,iat)*CONJG(abc(s, ntyp)%cof(j,lm+1,n_r2,iat))*lplus*w
-                      IF (mm > -l) cm = cm + abc(s, ntyp)%cof(i,lm,n_r,iat)*CONJG(abc(s, ntyp)%cof(j,lm-1,n_r2,iat))*lminus*w
-                    END DO
-                  END DO
-                END DO
-              END DO
-            END DO
-            l0(i, j, 1, na) = 0.5 * (cp + cm)              ! Lx = (L+ + L-)/2
-            l0(i, j, 2, na) = -0.5 * ImagUnit * (cp - cm)  ! Ly = (L+ - L-)/(2i)
-            l0(i, j, 3, na) = cz                           ! Lz
-          END DO
-        END DO
-      END DO
-    END DO
-  END SUBROUTINE melem_orbmom_bloch
 
 END MODULE m_melem_orbmom

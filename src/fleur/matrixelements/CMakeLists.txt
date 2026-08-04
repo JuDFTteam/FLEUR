@@ -16,5 +16,6 @@ src/fleur/matrixelements/melem_driver.F90
 src/fleur/matrixelements/types_matelements.F90
 src/fleur/matrixelements/types_matelements_soc.F90
 src/fleur/matrixelements/types_matelements_spin.F90
+src/fleur/matrixelements/types_matelements_orbital.F90
 src/fleur/matrixelements/matrix_element_factory.F90
 )
