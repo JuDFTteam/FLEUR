@@ -16,7 +16,7 @@
 !--------------------------------------------------------------------------------
 MODULE m_wannierlib_main
    USE m_types, ONLY: t_stars, t_results
-   USE m_wannierlib_get_z
+   USE m_melem_get_z
    USE m_types_melem_request, ONLY: t_melem_request
    USE m_types_melem_manifold, ONLY: t_melem_manifold
    USE m_types_melem_domains, ONLY: t_melem_domains
@@ -163,7 +163,7 @@ CONTAINS
             ik_local = 0
             DO ikpt = 1, kpts%nkptf
                IF (distk(ikpt) /= fmpi%irank) CYCLE   ! each rank computes only its k-slice -> parallel eigenvector I/O
-               CALL wannierlib_get_z(this%min_band, this%max_band, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, &
+               CALL melem_get_z(this%min_band, this%max_band, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, &
                                      ikpt, jspin_comp, l_real_wann, lapw, zMat)
 
                DO itype = 1, atoms%ntype

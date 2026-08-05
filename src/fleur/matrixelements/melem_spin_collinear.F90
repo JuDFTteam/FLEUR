@@ -30,7 +30,7 @@ MODULE m_melem_spin_collinear
    USE m_melem_spin, ONLY: melem_spin_mt_block
    USE m_melem_ft, ONLY: melem_ft_to_real_reduce
    USE m_melem_overlap, ONLY: melem_overlap_interstitial
-   USE m_wannierlib_get_z, ONLY: wannierlib_get_z
+   USE m_melem_get_z, ONLY: melem_get_z
    IMPLICIT NONE
    PRIVATE
 
@@ -80,12 +80,12 @@ CONTAINS
       DO kl = 1, nkl
          gk = gk_loc(kl)
          ! up + down eigenvectors + local coefficients at this k (same basis, different eigenvectors)
-         CALL wannierlib_get_z(min_band, max_band, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, gk, 1, l_real_wann, lapw_u, zMat_u)
+         CALL melem_get_z(min_band, max_band, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, gk, 1, l_real_wann, lapw_u, zMat_u)
          DO itype = 1, atoms%ntype
             CALL abc_both(itype, 1)%init(input, atoms, nb, itype)
             CALL abc_both(itype, 1)%calc_abc(input, atoms, sym, cell, lapw_u, nb, usdus, noco, nococonv, 1, itype, zMat_u)
          END DO
-         CALL wannierlib_get_z(min_band, max_band, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, gk, 2, l_real_wann, lapw_d, zMat_d)
+         CALL melem_get_z(min_band, max_band, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, gk, 2, l_real_wann, lapw_d, zMat_d)
          DO itype = 1, atoms%ntype
             CALL abc_both(itype, 2)%init(input, atoms, nb, itype)
             CALL abc_both(itype, 2)%calc_abc(input, atoms, sym, cell, lapw_d, nb, usdus, noco, nococonv, MERGE(1, 2, input%jspins == 1), itype, zMat_d)

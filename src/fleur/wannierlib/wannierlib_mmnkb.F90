@@ -9,7 +9,7 @@
 MODULE m_wannierlib_mmnkb
   USE m_juDFT
   USE m_wannierlib_mmkb_int
-  USE m_wannierlib_get_z
+  USE m_melem_get_z
   USE m_wannierlib_mmkb_sph
   USE m_types
   USE m_types_abc
@@ -73,7 +73,7 @@ CONTAINS
     CALL layout%init(input, noco, lapw, atoms)
     DO kk = 1, nntot
       nk_b = nnkp(nk, kk)
-      CALL wannierlib_get_z(min_band, max_band, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, nk_b, jspin, l_real_wann, lapw_b, zMat_b)
+      CALL melem_get_z(min_band, max_band, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, nk_b, jspin, l_real_wann, lapw_b, zMat_b)
       CALL layout_b%init(input, noco, lapw_b, atoms)
       DO itype = 1, atoms%ntype
          CALL abc_b(itype)%init(input, atoms, num_bands, itype)

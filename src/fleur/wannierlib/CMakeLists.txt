@@ -12,5 +12,4 @@ src/fleur/wannierlib/wannierlib_mmk0_vac.F90
 src/fleur/wannierlib/wannierlib_mmkb_vac.F90
 src/fleur/wannierlib/wannierlib_mmkb_sph.F90
 src/fleur/wannierlib/wannierlib_ujugaunt.F90
-src/fleur/wannierlib/wannierlib_getz.F90
 )

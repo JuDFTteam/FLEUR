@@ -40,7 +40,7 @@ MODULE m_melem_coarse
    USE m_types_matelements_soc, ONLY: t_matelements_soc
    USE m_types_rsoc, ONLY: t_rsoc
    USE m_types_matelements_orbital, ONLY: t_matelements_orbital
-   USE m_wannierlib_get_z, ONLY: wannierlib_get_z
+   USE m_melem_get_z, ONLY: melem_get_z
    IMPLICIT NONE
    PRIVATE
 
@@ -219,12 +219,12 @@ CONTAINS
          !     the muffin-tin counts the up block twice and the interstitial addresses a down
          !     block that is not there (non-magnetic Pt then sums to <sigma_z> = +N/2, not 0).
          IF (noco%l_noco) THEN
-            CALL wannierlib_get_z(manifold%min_band, manifold%max_band, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, &
+            CALL melem_get_z(manifold%min_band, manifold%max_band, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, &
                                   ikpt, 1, l_real_wann, lapw, zMat(1))
          ELSE
-            CALL wannierlib_get_z(manifold%min_band, manifold%max_band, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, &
+            CALL melem_get_z(manifold%min_band, manifold%max_band, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, &
                                   ikpt, 1, l_real_wann, lapw, zc(1))
-            CALL wannierlib_get_z(manifold%min_band, manifold%max_band, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, &
+            CALL melem_get_z(manifold%min_band, manifold%max_band, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, &
                                   ikpt, 2, l_real_wann, lapw, zc(2))
             CALL melem_stack_spinor(zc(1), zc(2), zMat(1))
          END IF
