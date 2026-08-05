@@ -17,10 +17,10 @@ MODULE m_melem_run
    USE m_types_cell
    USE m_types_kpts
    USE m_types_mpi
-   USE m_types_wannierlib
    USE m_types_melem_bmesh
    USE m_melem_coarse, ONLY: t_melem_coarse
    USE m_types_melem_manifold, ONLY: t_melem_manifold
+   USE m_types_melem_request, ONLY: t_melem_request
    USE m_types_melem_domains, ONLY: t_melem_domains
    USE m_melem_domains, ONLY: melem_write_domain_kpts, melem_rename_domain_outputs, melem_shell
    USE m_melem_operators_r, ONLY: melem_write_operators_r, melem_build_berry_aw_r, melem_check_berry_centres
@@ -36,9 +36,11 @@ MODULE m_melem_run
 
 CONTAINS
 
-   SUBROUTINE melem_run(wann, cell, kpts, eig, u_matrix, u_opt, coarse, mmn, bmesh, distk, fmpi, &
-                        wf_channel, spin_suffix)
-      TYPE(t_wannierlib_wannierize), INTENT(IN) :: wann
+   SUBROUTINE melem_run(request, manifold, domains, cell, kpts, eig, u_matrix, u_opt, coarse, &
+                        mmn, bmesh, distk, fmpi, wf_channel, spin_suffix)
+      TYPE(t_melem_request), INTENT(IN) :: request
+      TYPE(t_melem_manifold), INTENT(IN) :: manifold
+      TYPE(t_melem_domains), INTENT(IN) :: domains
       TYPE(t_cell), INTENT(IN) :: cell
       TYPE(t_kpts), INTENT(IN) :: kpts
       REAL, INTENT(IN) :: eig(:, :)                    !< (nb,nk)
@@ -59,24 +61,13 @@ CONTAINS
       CHARACTER(LEN=8) :: dkind(3), dsuf(3)
       CHARACTER(LEN=16) :: ssfx
       LOGICAL :: lex, l_collinear
-      TYPE(t_melem_manifold) :: manifold
-      TYPE(t_melem_domains) :: domains
 
-      IF (.NOT. wann%l_wannierize) RETURN
       irank = fmpi%irank; mpi_comm = fmpi%mpi_comm
       ssfx = ''
       IF (PRESENT(spin_suffix)) ssfx = TRIM(spin_suffix)
       wf_ch = 1
       IF (PRESENT(wf_channel)) wf_ch = wf_channel
       l_collinear = (LEN_TRIM(ssfx) > 0)   ! collinear jspins=2 -> per-channel operators_r (WF1/WF2)
-
-      !> what every interpolation needs of the request, built once
-      CALL manifold%init(wann%num_bands, wann%num_wann, wann%dis_win_min, wann%dis_win_max, &
-                         wann%min_band, wann%max_band)
-
-      !> where the interpolations are to be evaluated, built once
-      CALL domains%init(wann%l_dom_path, wann%l_dom_plane, wann%l_dom_grid, wann%path_file, &
-                        wann%path_kset, wann%plane_kset, wann%grid_kset)
 
       CALL timestart('melem_run')
 
@@ -112,7 +103,7 @@ CONTAINS
       END IF
 
       ! (2) real-space operator export (Fourier step 3, standalone format) -- once, before interpolation
-      CALL melem_write_operators_r(wann, cell, kpts, eig, u_matrix, u_opt, &
+      CALL melem_write_operators_r(manifold, request, cell, kpts, eig, u_matrix, u_opt, &
                                    coarse%s0, coarse%l0, coarse%soc4, bmesh, distk, mpi_comm, mmn, &
                                    irank, wf_ch, l_collinear, coarse%l0col)
 
@@ -122,19 +113,18 @@ CONTAINS
       DO idom = 1, ndom
          IF (irank == 0) CALL melem_write_domain_kpts(domains, TRIM(dkind(idom)))
 
-         DO iop = 1, wann%n_ops
-            SELECT CASE (TRIM(wann%op_name(iop)))
+         DO iop = 1, request%n_ops
+            SELECT CASE (TRIM(request%op_name(iop)))
             CASE ('hamiltonian')
-               IF (wann%l_interpolation) &
-                  CALL melem_interpolate_ham(manifold, cell, kpts, eig, u_matrix, u_opt, irank)
+               CALL melem_interpolate_ham(manifold, cell, kpts, eig, u_matrix, u_opt, irank)
             CASE ('spin')
                ! total spin (MT-sum + interstitial): via the generic operator driver (3 comps)
-               IF (wann%op_total(iop) == 1) &
+               IF (request%op_total(iop) == 1) &
                   CALL melem_interpolate_operator(manifold, cell, kpts, eig, u_matrix, u_opt, &
                                                   coarse%s0, gk_loc, 3, 'bands_wann_spin.dat', irank, mpi_comm)
             CASE ('orbital')
                ! total (site-summed) orbital moment
-               IF (wann%op_total(iop) == 1) &
+               IF (request%op_total(iop) == 1) &
                   CALL melem_interpolate_operator(manifold, cell, kpts, eig, u_matrix, u_opt, &
                                                   SUM(coarse%l0, DIM=4), gk_loc, 3, 'bands_wann_orbmom.dat', irank, mpi_comm)
             CASE ('soc')
@@ -145,9 +135,9 @@ CONTAINS
                ! and reduced (collective, all ranks); the centre check (rank 0) calibrates conj/sign.
                ! Built once and reused across output domains.
                IF (.NOT. ALLOCATED(aw_r)) THEN
-                  CALL melem_build_berry_aw_r(wann, cell, kpts, mmn, gk_loc, u_opt, u_matrix, bmesh, mpi_comm, &
+                  CALL melem_build_berry_aw_r(manifold, cell, kpts, mmn, gk_loc, u_opt, u_matrix, bmesh, mpi_comm, &
                                               aw_r, aw_irvec, aw_ndegen, aw_nrpts)
-                  IF (irank == 0) CALL melem_check_berry_centres(wann, aw_r, aw_irvec, aw_nrpts, bmesh)
+                  IF (irank == 0) CALL melem_check_berry_centres(manifold, aw_r, aw_irvec, aw_nrpts, bmesh)
                END IF
                CALL melem_interpolate_velocity(manifold, cell, kpts, eig, u_matrix, u_opt, &
                                                aw_r, aw_irvec, aw_ndegen, aw_nrpts, irank)
@@ -162,13 +152,13 @@ CONTAINS
                ! Wannier-Hamiltonian eigenvectors C(k') (the H-gauge rotation U^(H)), as a matrix
                CALL melem_interpolate_eigenstates(manifold, cell, kpts, eig, u_matrix, u_opt, irank)
             CASE DEFAULT
-               IF (irank == 0) WRITE (oUnit, '(a)') 'wannierlib: operator "'//TRIM(wann%op_name(iop))// &
+               IF (irank == 0) WRITE (oUnit, '(a)') 'wannierlib: operator "'//TRIM(request%op_name(iop))// &
                   '" not yet implemented -> skipped'
             END SELECT
          END DO
          ! rename this domain's outputs (plane/grid -> _plane/_grid; path/legacy: no suffix)
          IF (irank == 0 .AND. LEN_TRIM(TRIM(dsuf(idom))//TRIM(ssfx)) > 0) &
-            CALL melem_rename_domain_outputs(wann, TRIM(dsuf(idom))//TRIM(ssfx))
+            CALL melem_rename_domain_outputs(request, TRIM(dsuf(idom))//TRIM(ssfx))
       END DO   ! idom
 
       ! restore the user's original kpts_interpol if we overwrote it

@@ -14,8 +14,8 @@
 !>  bookkeeping and has nothing to do with the Wannier90 library API.
 MODULE m_melem_domains
   USE m_juDFT
-  USE m_types_wannierlib
   USE m_types_melem_domains, ONLY: t_melem_domains
+  USE m_types_melem_request, ONLY: t_melem_request
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: melem_write_domain_kpts, melem_rename_domain_outputs, melem_shell
@@ -78,7 +78,7 @@ CONTAINS
 
   ! Rename this domain's operator output files bands_wann_<x>.dat -> bands_wann_<x><suffix>.dat
   SUBROUTINE melem_rename_domain_outputs(this, suffix)
-    TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
+    TYPE(t_melem_request), INTENT(IN) :: this
     CHARACTER(LEN=*), INTENT(IN) :: suffix
     INTEGER :: iop
     DO iop = 1, this%n_ops

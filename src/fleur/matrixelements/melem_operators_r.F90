@@ -26,7 +26,8 @@ MODULE m_melem_operators_r
   USE m_constants, ONLY : oUnit, hartree_to_ev_const
   USE m_types_cell
   USE m_types_kpts
-  USE m_types_wannierlib
+  USE m_types_melem_manifold, ONLY : t_melem_manifold
+  USE m_types_melem_request, ONLY : t_melem_request
   USE m_types_melem_bmesh
   USE m_melem_ft, ONLY : melem_ft_to_real, melem_ws_vectors, melem_ft_to_real_reduce
   USE m_melem_io, ONLY : melem_write_realspace
@@ -47,7 +48,7 @@ CONTAINS
   ! Collective over mpi_comm; result valid on all ranks.
   SUBROUTINE melem_build_berry_aw_r(this, cell, kpts, mmn_loc, gk_loc, u_opt, u_matrix, bmesh, mpi_comm, &
                                          aw_r, irvec, ndegen, nrpts)
-    TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
+    TYPE(t_melem_manifold), INTENT(IN) :: this
     TYPE(t_cell), INTENT(IN) :: cell
     TYPE(t_kpts), INTENT(IN) :: kpts
     COMPLEX, INTENT(IN) :: mmn_loc(:, :, :, :)    ! (nb,nb,nntot,nk_loc) this rank's overlap slice
@@ -110,7 +111,7 @@ CONTAINS
   ! conj/sign convention of the overlaps. Writes berry_centre_check.dat (rank 0).
   ! No reference centres available -> the check is silently skipped.
   SUBROUTINE melem_check_berry_centres(this, aw_r, irvec, nrpts, bmesh)
-    TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
+    TYPE(t_melem_manifold), INTENT(IN) :: this
     COMPLEX, INTENT(IN) :: aw_r(:, :, :, :)     ! (nw,nw,nrpts,3)
     INTEGER, INTENT(IN) :: irvec(:, :), nrpts
     TYPE(t_melem_bmesh), INTENT(IN) :: bmesh
@@ -138,7 +139,7 @@ CONTAINS
 
   ! Build the Wannier-gauge Hamiltonian ham_k = U^dag diag(eigval2) U (same as m_melem_interpolate_ham).
   SUBROUTINE melem_build_hamk(this, eig, u_matrix, u_opt, ham_k)
-    TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
+    TYPE(t_melem_manifold), INTENT(IN) :: this
     REAL,    INTENT(IN) :: eig(:, :)
     COMPLEX, INTENT(IN) :: u_matrix(:, :, :), u_opt(:, :, :)
     COMPLEX, ALLOCATABLE, INTENT(OUT) :: ham_k(:, :, :)
@@ -181,7 +182,7 @@ CONTAINS
 
   ! Write H(R) in Wannier90 seedname_hr.dat format (energies in eV). Rank-0 only.
   SUBROUTINE melem_write_hr(this, cell, kpts, ham_k, wfpref)
-    TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
+    TYPE(t_melem_manifold), INTENT(IN) :: this
     TYPE(t_cell), INTENT(IN) :: cell
     TYPE(t_kpts), INTENT(IN) :: kpts
     COMPLEX, INTENT(IN) :: ham_k(:, :, :)
@@ -205,7 +206,7 @@ CONTAINS
   ! Write A(R) = <0n|r_alpha|Rm> in Wannier90 seedname_r.dat format (positions in Angstrom). Rank-0.
   ! aw_r is the already-reduced Berry connection A^(W)(R) (= A(R)), so no Fourier transform here.
   SUBROUTINE melem_write_ar(this, aw_r, irvec, nrpts, wfpref)
-    TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
+    TYPE(t_melem_manifold), INTENT(IN) :: this
     COMPLEX, INTENT(IN) :: aw_r(:, :, :, :)          ! (nw,nw,nrpts,3) reduced A(R)
     INTEGER, INTENT(IN) :: irvec(:, :), nrpts
     CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: wfpref   ! seedname prefix 'WF1'/'WF2' (collinear jspins=2 channel); default 'WF1'
@@ -226,9 +227,10 @@ CONTAINS
   ! over MPI ranks. Files: WF1_hr.dat (H, eV), WF1_r.dat (position, Ang), rspauli.1 (spin),
   ! anglmomrs.1 (orbital), rssocmat.1 (SOC), wig_vectors.
   ! ---------------------------------------------------------------------------
-  SUBROUTINE melem_write_operators_r(this, cell, kpts, eig, u_matrix, u_opt, &
+  SUBROUTINE melem_write_operators_r(this, request, cell, kpts, eig, u_matrix, u_opt, &
                                           s0_loc, l0_loc, soc4_loc, bmesh, distk, mpi_comm, mmn_loc, irank, wf_channel, l_collinear, l0col_loc)
-    TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
+    TYPE(t_melem_manifold), INTENT(IN) :: this
+    TYPE(t_melem_request), INTENT(IN) :: request
     TYPE(t_cell), INTENT(IN) :: cell
     TYPE(t_kpts), INTENT(IN) :: kpts
     REAL,    INTENT(IN) :: eig(:, :)
@@ -246,7 +248,7 @@ CONTAINS
     CHARACTER(LEN=8) :: wfpref                       ! 'WF1'/'WF2' seedname prefix for H(R)/position
     INTEGER, ALLOCATABLE :: gk_loc(:), aw_irvec(:, :), aw_ndegen(:)
     COMPLEX, ALLOCATABLE :: ham_k(:, :, :), aw_r(:, :, :, :), o0l(:, :, :, :), vloc(:, :, :)
-    IF (.NOT. this%l_operators_r .OR. this%n_op_r < 1) RETURN   ! all ranks (reduce is collective)
+    IF (.NOT. request%l_operators_r .OR. request%n_op_r < 1) RETURN   ! all ranks (reduce is collective)
     CALL timestart('melem_write_operators_r')
     nb = this%num_bands
     nkl = COUNT(distk == irank); ALLOCATE(gk_loc(nkl)); j = 0
@@ -261,8 +263,8 @@ CONTAINS
     ! collinear jspins=2: per-channel seedname WF1/WF2 for H(R)/position; spinor case keeps WF1.
     WRITE(wfpref, '(a,i0)') 'WF', wf_channel
     IF (irank == 0) THEN; l_wig_done = .FALSE.; CALL melem_write_wig_once(cell, kpts, l_wig_done); END IF
-    DO iop = 1, this%n_op_r
-      SELECT CASE (TRIM(this%op_r_name(iop)))
+    DO iop = 1, request%n_op_r
+      SELECT CASE (TRIM(request%op_r_name(iop)))
       CASE ('hamiltonian')   ! cheap, no coarse array -> rank 0 serial
         IF (irank == 0) THEN
           CALL melem_build_hamk(this, eig, u_matrix, u_opt, ham_k)
@@ -303,7 +305,7 @@ CONTAINS
           CALL melem_op_rs_distributed(this, cell, kpts, vloc, soc4_loc, gk_loc, 4, mpi_comm, irank, .TRUE., 'rssocmat.1')
         END IF
       CASE DEFAULT
-        IF (irank == 0) WRITE(oUnit,'(a)') 'wannierlib operators_r: unknown operator "'//TRIM(this%op_r_name(iop))//'" -> skipped'
+        IF (irank == 0) WRITE(oUnit,'(a)') 'wannierlib operators_r: unknown operator "'//TRIM(request%op_r_name(iop))//'" -> skipped'
       END SELECT
     END DO
     DEALLOCATE(gk_loc, vloc)
@@ -314,7 +316,7 @@ CONTAINS
   ! ow_loc = V(gk)^dagger o0_loc V(gk) for its k-slice, FT-reduces to O(R), rank 0 writes.
   ! is_soc=.TRUE. -> rssocmat.1 format (R i j jj ii); else rspauli/anglmomrs (R i j comp).
   SUBROUTINE melem_op_rs_distributed(this, cell, kpts, vloc, o0_loc, gk_loc, ncomp, mpi_comm, irank, is_soc, fname)
-    TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
+    TYPE(t_melem_manifold), INTENT(IN) :: this
     TYPE(t_cell), INTENT(IN) :: cell
     TYPE(t_kpts), INTENT(IN) :: kpts
     COMPLEX, INTENT(IN) :: vloc(:, :, :)                      ! (nb,nw,>=nk_loc) precomputed gauge V(gk)

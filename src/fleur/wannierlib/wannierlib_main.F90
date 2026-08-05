@@ -19,6 +19,7 @@ MODULE m_wannierlib_main
    USE m_wannierlib_get_z
    USE m_types_melem_request, ONLY: t_melem_request
    USE m_types_melem_manifold, ONLY: t_melem_manifold
+   USE m_types_melem_domains, ONLY: t_melem_domains
    USE m_wannierlib_amn
    USE m_wannierlib_mmnkb
    USE m_wannierlib_ujugaunt
@@ -86,6 +87,7 @@ CONTAINS
       LOGICAL :: l_wannierlib_spinors
       TYPE(t_melem_request) :: request
       TYPE(t_melem_manifold) :: manifold
+      TYPE(t_melem_domains) :: domains
       LOGICAL :: l_nocosoc
       LOGICAL :: l_real_wann
       INTEGER :: jspin_rad
@@ -132,6 +134,8 @@ CONTAINS
                         this%op_r_name, this%op_name, this%op_total)
       CALL manifold%init(this%num_bands, this%num_wann, this%dis_win_min, this%dis_win_max, &
                          this%min_band, this%max_band)
+      CALL domains%init(this%l_dom_path, this%l_dom_plane, this%l_dom_grid, this%path_file, &
+                        this%path_kset, this%plane_kset, this%grid_kset)
 
       CALL melem%init(request, manifold, atoms, input, kpts, fmpi, distk, l_wannierlib_spinors)
       CALL melem%calc(request, manifold, atoms, input, sym, cell, noco, nococonv, kpts, &
@@ -212,7 +216,8 @@ CONTAINS
          ! gauge, the overlaps and the b-mesh. Adding an operator does not touch this file.
          ! Kept BEFORE report_w90 so the ordering of the operator messages in `out` is unchanged.
          CALL wannierlib_get_bmesh(this, kpts, bmesh)
-         CALL melem_run(this, cell, kpts, eig, u_matrix, u_opt, melem, mmn, bmesh, distk, fmpi, &
+         CALL melem_run(request, manifold, domains, cell, kpts, eig, u_matrix, u_opt, melem, &
+                        mmn, bmesh, distk, fmpi, &
                         wf_channel=jspin, spin_suffix=TRIM(spin_sfx))
          CALL bmesh%free()
 
