@@ -71,7 +71,8 @@ CONTAINS
       l_collinear = (LEN_TRIM(ssfx) > 0)   ! collinear jspins=2 -> per-channel operators_r (WF1/WF2)
 
       !> what every interpolation needs of the request, built once
-      CALL manifold%init(wann%num_bands, wann%num_wann, wann%dis_win_min, wann%dis_win_max)
+      CALL manifold%init(wann%num_bands, wann%num_wann, wann%dis_win_min, wann%dis_win_max, &
+                         wann%min_band, wann%max_band)
 
       !> where the interpolations are to be evaluated, built once
       CALL domains%init(wann%l_dom_path, wann%l_dom_plane, wann%l_dom_grid, wann%path_file, &

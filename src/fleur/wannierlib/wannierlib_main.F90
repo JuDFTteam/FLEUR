@@ -17,6 +17,8 @@
 MODULE m_wannierlib_main
    USE m_types, ONLY: t_stars, t_results
    USE m_wannierlib_get_z
+   USE m_types_melem_request, ONLY: t_melem_request
+   USE m_types_melem_manifold, ONLY: t_melem_manifold
    USE m_wannierlib_amn
    USE m_wannierlib_mmnkb
    USE m_wannierlib_ujugaunt
@@ -82,6 +84,8 @@ CONTAINS
       TYPE(t_radfun) :: radfun(atoms%ntype)
       TYPE(t_abc) :: abc(atoms%ntype)
       LOGICAL :: l_wannierlib_spinors
+      TYPE(t_melem_request) :: request
+      TYPE(t_melem_manifold) :: manifold
       LOGICAL :: l_nocosoc
       LOGICAL :: l_real_wann
       INTEGER :: jspin_rad
@@ -123,8 +127,14 @@ CONTAINS
       ! operators the input asks for, in one shared coarse k-pass. Needs only the ab-initio
       ! eigenstates (no gauge), so it runs before the wannierization. All of it is a no-op when
       ! no operator is requested.
-      CALL melem%init(this, atoms, input, kpts, fmpi, distk, l_wannierlib_spinors)
-      CALL melem%calc(this, atoms, input, sym, cell, noco, nococonv, kpts, &
+      ! what the matrix-element layer is being asked for, and on which bands
+      CALL request%init(this%l_spin, this%l_orbmom, this%l_socop, this%l_operators_r, &
+                        this%op_r_name, this%op_name, this%op_total)
+      CALL manifold%init(this%num_bands, this%num_wann, this%dis_win_min, this%dis_win_max, &
+                         this%min_band, this%max_band)
+
+      CALL melem%init(request, manifold, atoms, input, kpts, fmpi, distk, l_wannierlib_spinors)
+      CALL melem%calc(request, manifold, atoms, input, sym, cell, noco, nococonv, kpts, &
                       stars, usdus, radfun, enpara, fmpi, vtot, eig_id, l_real_wann, distk)
 
       CALL init_w90(this, atoms, cell, kpts, fmpi, l_wannierlib_spinors, nntot_w90, nnkp, gkpb, distk)
@@ -139,7 +149,7 @@ CONTAINS
          nk_local = COUNT(distk == fmpi%irank)
          ALLOCATE(mmn(this%num_bands, this%num_bands, nntot_w90, nk_local), stat=ierr, source=cmplx(0.0, 0.0))
          IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating local mmn buffer', calledby='wannierlib_main')
-         CALL melem%alloc_collinear_orbital(this, nk_local)
+         CALL melem%alloc_collinear_orbital(manifold, nk_local)
 
          DO jspin_comp = MERGE(1, jspin, l_wannierlib_spinors), MERGE(2, jspin, l_wannierlib_spinors)
             ! jspin_comp = record del eig (spinor up/down); jspin_rad = indice radial.
