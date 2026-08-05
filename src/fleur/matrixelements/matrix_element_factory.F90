@@ -13,7 +13,7 @@ MODULE m_matrix_element_factory
     USE m_types_mat
     USE m_types_abc
     USE m_types_radfun
-    USE m_types_spinor_layout, ONLY: radial_slot
+    USE m_types_spinor_layout, ONLY: radial_slot, melem_stack_spinor
     USE m_types_usdus
     IMPLICIT NONE
     PRIVATE
@@ -26,6 +26,10 @@ MODULE m_matrix_element_factory
 
     !Cached data for one k-point, keyed on (eig_id, ikpt, band selection)
     TYPE(t_mat), ALLOCATABLE :: zmat_store(:)   !(nrec) eigenvectors as read
+    !Allocated only when the two records are the halves of one spinor: the same state
+    !as a single matrix of 2N rows. A consumer that addresses a spin block by row offset
+    !needs that shape; one that contracts record by record uses zmat_store.
+    TYPE(t_mat), ALLOCATABLE :: zmat_spinor(:)  !(1)
     TYPE(t_abc), ALLOCATABLE :: abc_store(:,:)  !(2,ntype) matching coefficients
     INTEGER              :: cached_eig_id = -1, cached_ikpt = -1
     INTEGER              :: cached_nrec = -1   !record layout the cache was filled with
@@ -46,8 +50,9 @@ CONTAINS
     END SUBROUTINE matrix_element_factory_reset
 
     SUBROUTINE reset_k_cache()
-        IF (ALLOCATED(zmat_store)) DEALLOCATE(zmat_store)
-        IF (ALLOCATED(abc_store))  DEALLOCATE(abc_store)
+        IF (ALLOCATED(zmat_store))  DEALLOCATE(zmat_store)
+        IF (ALLOCATED(zmat_spinor)) DEALLOCATE(zmat_spinor)
+        IF (ALLOCATED(abc_store))   DEALLOCATE(abc_store)
         IF (ALLOCATED(cached_list)) DEALLOCATE(cached_list)
         cached_eig_id = -1
         cached_ikpt   = -1
@@ -110,16 +115,27 @@ CONTAINS
         INTEGER :: num_bands, n, jsp, jsp_rad, nrec, neig_actual
         LOGICAL :: l_real_zmat
         INTEGER, ALLOCATABLE :: read_list(:)
+        LOGICAL :: l_spinor_records
+        INTEGER :: n_comp
 
+        l_spinor_records = .FALSE.
+        IF (PRESENT(l_both_spinors)) l_spinor_records = l_both_spinors
+        IF (l_spinor_records .AND. (.NOT.noco%l_soc .OR. noco%l_noco)) CALL judft_error( &
+            'matrix_element_factory: spinor records only exist for l_soc=T, l_noco=F', &
+            calledby='matrix_element_factory')
+
+        !One record per potential, with two exceptions. Non-collinearly the Hamiltonian was
+        !2N x 2N and the whole spinor sits in a single record whatever jspins says. After a
+        !second variation there are two records even for one potential.
         nrec = input%jspins
-        IF (PRESENT(l_both_spinors)) THEN
-            IF (l_both_spinors) THEN
-                IF (.NOT.noco%l_soc .OR. noco%l_noco) CALL judft_error( &
-                    'matrix_element_factory: spinor records only exist for l_soc=T, l_noco=F', &
-                    calledby='matrix_element_factory')
-                nrec = 2
-            END IF
-        END IF
+        IF (noco%l_noco)      nrec = 1
+        IF (l_spinor_records) nrec = 2
+
+        !How many spin components the state HAS, which is not how many records it is stored
+        !in: non-collinearly both components live inside the single record, and a state with
+        !no spin structure has one component that serves as both.
+        n_comp = 1
+        IF (noco%l_noco .OR. l_spinor_records .OR. input%jspins == 2) n_comp = 2
 
         num_bands = input%neig
         IF (PRESENT(ev_list)) THEN
@@ -166,19 +182,33 @@ CONTAINS
                 CALL read_eig(eig_id, ikpt, jsp, list=read_list, zmat=zmat_store(jsp))
             END DO
 
+            !Two records that are the halves of one spinor are also kept stacked, so that
+            !what is handed over is the whole state in one matrix however the eig file
+            !stored it. Without this a consumer that reads the spin-down block at
+            !nv(1) + nlotot addresses one row past the end of an N-row record, and the
+            !values it finds there are plausible rather than obviously wrong.
+            IF (l_spinor_records) THEN
+                ALLOCATE(zmat_spinor(1))
+                CALL melem_stack_spinor(zmat_store(1), zmat_store(2), zmat_spinor(1))
+            END IF
+
             !Calculate the abc coefficients for all atom types and both spins
             ALLOCATE(abc_store(2, atoms%ntype))
             DO n = 1, atoms%ntype
-                DO jsp = 1, nrec
-                    !A single radial set serves both records of a spinor.
+                DO jsp = 1, n_comp
+                    !A single radial set serves both components of a spinor.
                     jsp_rad = radial_slot(radfun_store, jsp)
                     CALL abc_store(jsp,n)%init(input, atoms, num_bands, n)
+                    !One record per component when they were stored separately; the single
+                    !record for both when it holds the whole spinor, where the spin index
+                    !is what selects the block.
                     CALL abc_store(jsp,n)%calc_abc(input, atoms, sym, cell, lapw, num_bands, &
-                                                   usdus_store, noco, nococonv, jsp_rad, n, zmat_store(jsp))
+                                                   usdus_store, noco, nococonv, jsp_rad, n, &
+                                                   zmat_store(MIN(jsp, nrec)))
                 END DO
-                !With one record the second spin channel is the same state vector. With
-                !two they are the halves of a spinor and must not be equated.
-                IF (nrec == 1) abc_store(2,n) = abc_store(1,n)
+                !A state with no spin structure is its own second channel. Two real
+                !components must never be equated.
+                IF (n_comp == 1) abc_store(2,n) = abc_store(1,n)
             END DO
 
             cached_eig_id = eig_id
@@ -202,8 +232,15 @@ CONTAINS
         CALL matel%init_mat(num_bands)
 #endif
 
-        !Compute the matrix elements
-        CALL matel%calc_matrix_elements(zmat_store, abc_store, radfun_store, usdus_store)
+        !Compute the matrix elements. zmat is the state at this k-point in as few matrices
+        !as it takes: one when it is a whole spinor, two when the records are independent
+        !spin channels. The abc coefficients stay per record either way, since each is
+        !contracted with its own component.
+        IF (ALLOCATED(zmat_spinor)) THEN
+            CALL matel%calc_matrix_elements(zmat_spinor, abc_store, radfun_store, usdus_store)
+        ELSE
+            CALL matel%calc_matrix_elements(zmat_store, abc_store, radfun_store, usdus_store)
+        END IF
 
     END SUBROUTINE matrix_element_factory
 

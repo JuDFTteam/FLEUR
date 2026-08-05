@@ -28,7 +28,11 @@ MODULE m_types_matelements
         SUBROUTINE calc_matrix_elements_iface(this, zmat, abc, radfun, usdus)
             IMPORT :: t_matelements, t_mat, t_abc, t_radfun, t_usdus
             CLASS(t_matelements), INTENT(INOUT) :: this
-            TYPE(t_mat),    INTENT(IN) :: zmat(:)   !> (jspins) eigenvectors
+            !> The state at this k-point in as few matrices as it takes: ONE when it is a
+            !> whole spinor -- natively so, or stacked by the producer -- and TWO when the
+            !> records are independent spin channels. SIZE(zmat) is therefore not jspins,
+            !> and a consumer that addresses a spin block by row offset needs the first case.
+            TYPE(t_mat),    INTENT(IN) :: zmat(:)
             TYPE(t_abc),    INTENT(IN) :: abc(:,:)  !> (2,ntype) matching coefficients
             TYPE(t_radfun), INTENT(IN) :: radfun(:) !> (ntype) radial functions and their MT integrals
             TYPE(t_usdus),  INTENT(IN) :: usdus     !> values/derivatives at the MT boundary, all types and spins
