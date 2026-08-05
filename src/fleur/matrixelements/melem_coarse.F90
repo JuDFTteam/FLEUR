@@ -36,6 +36,7 @@ MODULE m_melem_coarse
    USE m_types_melem_request, ONLY: t_melem_request
    USE m_types_melem_manifold, ONLY: t_melem_manifold
    USE m_melem_spin, ONLY: melem_pauli_from_blocks, melem_spin_sumrule, melem_spin_mt_block
+   USE m_melem_orbmom, ONLY: melem_orbmom_bloch_collinear
    USE m_melem_overlap, ONLY: melem_overlap_interstitial
    USE m_types_matelements_spin, ONLY: t_matelements_spin
    USE m_types_matelements_soc, ONLY: t_matelements_soc
@@ -55,7 +56,7 @@ MODULE m_melem_coarse
       COMPLEX, ALLOCATABLE :: soc4(:, :, :, :)    !< (nb,nb,4,nk_loc)      2x2 SOC spinor blocks
       !> collinear jspins=2 only: per-channel Bloch orbital L, filled from the wannierization's
       !> own mmn k-loop (see add_collinear_orbital) because the spinor coarse pass does not run.
-      COMPLEX, ALLOCATABLE :: l0col(:, :, :, :)   !< (nb,nb,3,nk_loc)
+      COMPLEX, ALLOCATABLE :: l0col(:, :, :, :, :) !< (nb,nb,3,channel,nk_loc)
       !> collinear jspins=2 only: the cross-spin overlap <up|dn> per k, in the Bloch basis.
       !> It is the ingredient of the combined 2N spin operator, and it needs no gauge, so it
       !> is built here with the other coarse matrices even though the operator itself cannot
@@ -72,7 +73,6 @@ MODULE m_melem_coarse
    CONTAINS
       PROCEDURE :: init => melem_coarse_init
       PROCEDURE :: calc => melem_coarse_calc
-      PROCEDURE :: alloc_collinear_orbital => melem_coarse_alloc_collinear_orbital
       PROCEDURE :: free => melem_coarse_free
    END TYPE t_melem_coarse
 
@@ -126,23 +126,15 @@ CONTAINS
       ELSE
          ALLOCATE (this%v_ch(1, 1, 1, 1)); ALLOCATE (this%x0(1, 1, 1))
       END IF
-      ! l0col is (re)sized per spin channel by alloc_collinear_orbital; allocate a stub now so it
-      ! is never passed unallocated to the OPTIONAL dummy of melem_write_operators_r.
-      IF (.NOT. ALLOCATED(this%l0col)) ALLOCATE (this%l0col(1, 1, 1, 1))
-   END SUBROUTINE melem_coarse_init
-
-   SUBROUTINE melem_coarse_alloc_collinear_orbital(this, manifold, nk_local)
-      CLASS(t_melem_coarse), INTENT(INOUT) :: this
-      TYPE(t_melem_manifold), INTENT(IN) :: manifold
-      INTEGER, INTENT(IN) :: nk_local
-
-      IF (ALLOCATED(this%l0col)) DEALLOCATE (this%l0col)
+      ! Both channels are held at once: they are produced in one k-pass before either
+      ! wannierization runs, and consumed one channel at a time afterwards.
       IF (this%l_col_orb) THEN
-         ALLOCATE (this%l0col(manifold%num_bands, manifold%num_bands, 3, MAX(1, nk_local)), source=cmplx(0.0, 0.0))
+         ALLOCATE (this%l0col(manifold%num_bands, manifold%num_bands, 3, 2, &
+                              MAX(1, COUNT(distk == fmpi%irank))), source=cmplx(0.0, 0.0))
       ELSE
-         ALLOCATE (this%l0col(1, 1, 1, 1))
+         ALLOCATE (this%l0col(1, 1, 1, 1, 1))
       END IF
-   END SUBROUTINE melem_coarse_alloc_collinear_orbital
+   END SUBROUTINE melem_coarse_init
 
    SUBROUTINE melem_coarse_calc(this, request, manifold, atoms, input, sym, cell, noco, nococonv, kpts, &
                                 stars, usdus, radfun, enpara, fmpi, vtot, eig_id, l_real_wann, distk)
@@ -180,8 +172,8 @@ CONTAINS
 
       !> Row 5 -- two spin channels, no spinors -- has no coarse operator slices, but the
       !> cross-spin overlap its combined spin operator needs is still a k-by-k Bloch matrix.
-      IF (this%l_col_spin) &
-         CALL melem_coarse_cross_spin(this, manifold, atoms, input, sym, cell, noco, nococonv, &
+      IF (this%l_col_spin .OR. this%l_col_orb) &
+         CALL melem_coarse_collinear(this, manifold, atoms, input, sym, cell, noco, nococonv, &
                                       kpts, stars, usdus, radfun, eig_id, l_real_wann, distk, fmpi)
 
       IF (.NOT. this%l_active) RETURN   ! nothing requested, or no spinor wavefunctions -> slices are stubs
@@ -301,9 +293,9 @@ CONTAINS
       DEALLOCATE (abc_s)
    END SUBROUTINE melem_coarse_calc
 
-   SUBROUTINE melem_coarse_cross_spin(this, manifold, atoms, input, sym, cell, noco, nococonv, &
+   SUBROUTINE melem_coarse_collinear(this, manifold, atoms, input, sym, cell, noco, nococonv, &
                                       kpts, stars, usdus, radfun, eig_id, l_real_wann, distk, fmpi)
-      !> The cross-spin overlap <up|dn> of a collinear jspins=2 calculation, per k-point of
+      !> What a collinear jspins=2 calculation needs from the eigenvectors, per k-point of
       !> this rank's slice: interstitial part plus the muffin-tin contraction of the two
       !> channels' matching coefficients. The two channels are separate eigenproblems with
       !> the same basis, so both records are read at every k.
@@ -328,7 +320,7 @@ CONTAINS
       TYPE(t_mat)  :: zMat_u, zMat_d
       TYPE(t_abc), ALLOCATABLE :: abc_both(:, :)   ! (ntype,2): 1=up, 2=dn
       COMPLEX, ALLOCATABLE :: o_uu(:, :), o_dd(:, :), o_ud(:, :), o_du(:, :)
-      INTEGER :: nb, ikpt, il, itype
+      INTEGER :: nb, ikpt, il, itype, ch
 
       nb = manifold%num_bands
       ALLOCATE (abc_both(atoms%ntype, 2))
@@ -352,14 +344,24 @@ CONTAINS
             CALL abc_both(itype, 2)%calc_abc(input, atoms, sym, cell, lapw_d, nb, usdus, noco, &
                                              nococonv, MERGE(1, 2, input%jspins == 1), itype, zMat_d)
          END DO
-         o_uu = CMPLX(0.0, 0.0); o_dd = CMPLX(0.0, 0.0); o_ud = CMPLX(0.0, 0.0); o_du = CMPLX(0.0, 0.0)
-         CALL melem_overlap_interstitial(stars, lapw_u, lapw_d, zMat_u, zMat_d, 0, 0, o_ud)
-         CALL melem_spin_mt_block(atoms, abc_both, radfun, o_uu, o_dd, o_ud, o_du)
-         this%x0(:, :, il) = o_ud
+         IF (this%l_col_spin) THEN
+            o_uu = CMPLX(0.0, 0.0); o_dd = CMPLX(0.0, 0.0); o_ud = CMPLX(0.0, 0.0); o_du = CMPLX(0.0, 0.0)
+            CALL melem_overlap_interstitial(stars, lapw_u, lapw_d, zMat_u, zMat_d, 0, 0, o_ud)
+            CALL melem_spin_mt_block(atoms, abc_both, radfun, o_uu, o_dd, o_ud, o_du)
+            this%x0(:, :, il) = o_ud
+         END IF
+         !> L is spin-diagonal, so each channel has its own and neither needs the other.
+         IF (this%l_col_orb) THEN
+            DO ch = 1, 2
+               CALL melem_orbmom_bloch_collinear(atoms, abc_both(:, ch), radfun, &
+                                                 MERGE(1, ch, input%jspins == 1), &
+                                                 this%l0col(:, :, :, ch, il))
+            END DO
+         END IF
       END DO
 
       DEALLOCATE (abc_both, o_uu, o_dd, o_ud, o_du)
-   END SUBROUTINE melem_coarse_cross_spin
+   END SUBROUTINE melem_coarse_collinear
 
    SUBROUTINE melem_coarse_free(this)
       CLASS(t_melem_coarse), INTENT(INOUT) :: this

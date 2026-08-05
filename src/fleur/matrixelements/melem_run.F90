@@ -105,7 +105,7 @@ CONTAINS
       ! (2) real-space operator export (Fourier step 3, standalone format) -- once, before interpolation
       CALL melem_write_operators_r(manifold, request, cell, kpts, eig, u_matrix, u_opt, &
                                    coarse%s0, coarse%l0, coarse%soc4, bmesh, distk, mpi_comm, mmn, &
-                                   irank, wf_ch, l_collinear, coarse%l0col)
+                                   irank, wf_ch, l_collinear, coarse%l0col(:, :, :, wf_ch, :))
 
       ! (3) Wannier-gauge interpolation: dispatch by looping over the requested operator list.
       ! Each operator supplies its own per-rank Bloch slice on the coarse mesh (coarse%s0/l0/soc0);

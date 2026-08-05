@@ -27,7 +27,6 @@ MODULE m_wannierlib_main
    USE m_melem_coarse, ONLY: t_melem_coarse
    USE m_melem_run, ONLY: melem_run
    USE m_melem_spin_collinear, ONLY: melem_rspauli_collinear
-   USE m_melem_orbmom, ONLY: melem_orbmom_bloch_collinear
    USE m_types_melem_bmesh, ONLY: t_melem_bmesh
    USE m_constants, ONLY: oUnit
    USE m_types_atoms
@@ -153,7 +152,6 @@ CONTAINS
          nk_local = COUNT(distk == fmpi%irank)
          ALLOCATE(mmn(this%num_bands, this%num_bands, nntot_w90, nk_local), stat=ierr, source=cmplx(0.0, 0.0))
          IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating local mmn buffer', calledby='wannierlib_main')
-         CALL melem%alloc_collinear_orbital(manifold, nk_local)
 
          DO jspin_comp = MERGE(1, jspin, l_wannierlib_spinors), MERGE(2, jspin, l_wannierlib_spinors)
             ! jspin_comp = record del eig (spinor up/down); jspin_rad = indice radial.
@@ -178,11 +176,6 @@ CONTAINS
                CALL wannierlib_mmnkb(this%min_band, this%max_band, this%num_bands, nntot_w90, ikpt, kpts, nnkp, gkpb, kdiff, &
                                      ujug, atoms, cell, input, sym, noco, nococonv, usdus, &
                                      radfun, abc, jspin_comp, jspin_rad, eig_id, stars, lapw, zMat, mmn, ik_local)
-               ! collinear per-channel orbital L in the Bloch basis: the only matrix element built
-               ! from inside this loop, because it reuses this channel's abc (a separate coarse
-               ! pass would repeat the get_z + calc_abc work for every k).
-               IF (melem%l_col_orb) &
-                  CALL melem_orbmom_bloch_collinear(atoms, abc, radfun, jspin_rad, melem%l0col(:, :, :, ik_local))
             END DO
 
             IF (ALLOCATED(ujug)) DEALLOCATE (ujug)
