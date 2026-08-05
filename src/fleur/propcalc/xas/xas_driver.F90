@@ -90,9 +90,9 @@ CONTAINS
       ! The current spectrum is a per-selected-absorbing-atom local
       ! muffin-tin XAS signal. It is k-weighted and written in arbitrary units,
       ! but it is not normalized per cell volume, film area, film thickness, or
-      ! number of equivalent atoms. Additive spectral and diagnostic quantities
-      ! are accumulated over the rank-local fmpi%k_list and reduced to rank 0
-      ! before output.
+      ! number of equivalent atoms. fmpi%k_list is shared by all ranks in a
+      ! k-point/eigenvalue subgroup, so only each subgroup root accumulates the
+      ! current serial spectral and diagnostic kernel before reduction to rank 0.
       !
       ! The local dipole approximation intentionally neglects interstitial and
       ! vacuum contributions. This is appropriate for core-level local XAS as a
@@ -169,9 +169,11 @@ CONTAINS
       INTEGER :: mpi_ierr
       INTEGER :: underflow_local(1), underflow_reduced(1)
       LOGICAL :: l_real, l_xas_debug_fp, l_xas_debug_strength, l_xas_debug_kpt_strength, l_root
+      LOGICAL :: l_kpt_group_root
       LOGICAL :: l_spinor_abc, l_xas_angular_sumrule_printed, l_need_lchan_matrix
 
       l_root = fmpi%irank == 0
+      l_kpt_group_root = fmpi%n_rank == 0
       l_xas_debug_fp = xas_debug_verbosity >= 3
       l_xas_debug_strength = xas_debug_verbosity >= 1
       l_xas_debug_kpt_strength = xas_debug_verbosity >= 2
@@ -267,47 +269,51 @@ CONTAINS
          ALLOCATE(xas_debug_strength_spin(xas_debug_n_pol, n_spin_channels), SOURCE=0.0)
       END IF
       l_need_lchan_matrix = l_xas_debug_strength .OR. xas%write_transitions .OR. xas_debug_l_channel_reconstruction
-      DO ikpt_i = 1, SIZE(fmpi%k_list)
-         ikpt = fmpi%k_list(ikpt_i)
-         IF (kpts%wtkpt(ikpt) <= 0.0) CYCLE
-         weight_sum_parent = weight_sum_parent + kpts%wtkpt(ikpt)
-         IF (xas_use_spatial_star) THEN
-            CALL xas_count_star_members(kpts, ikpt, nstar)
-            CALL xas_star_member_weight(kpts, ikpt, wk_star)
-            weight_sum_star = weight_sum_star + REAL(nstar)*wk_star
-         ELSE
-            weight_sum_star = weight_sum_star + kpts%wtkpt(ikpt)
-         END IF
-      END DO
+      IF (l_kpt_group_root) THEN
+         DO ikpt_i = 1, SIZE(fmpi%k_list)
+            ikpt = fmpi%k_list(ikpt_i)
+            IF (kpts%wtkpt(ikpt) <= 0.0) CYCLE
+            weight_sum_parent = weight_sum_parent + kpts%wtkpt(ikpt)
+            IF (xas_use_spatial_star) THEN
+               CALL xas_count_star_members(kpts, ikpt, nstar)
+               CALL xas_star_member_weight(kpts, ikpt, wk_star)
+               weight_sum_star = weight_sum_star + REAL(nstar)*wk_star
+            ELSE
+               weight_sum_star = weight_sum_star + kpts%wtkpt(ikpt)
+            END IF
+         END DO
+      END IF
       transition_min = HUGE(1.0)
       transition_max = -HUGE(1.0)
-      DO itype = 1, atoms%ntype
-         IF (atoms%nz(itype) /= xas%absorber_z) CYCLE
-         CALL xas_debug_clear_underflow(l_xas_debug_fp)
-         CALL xas_extract_core_states(atoms, itype, xas%edge, vTot%mt(1:atoms%jri(itype), 0, itype, 1), core_states)
-         CALL xas_debug_report_underflow(l_xas_debug_fp, "xas_extract_core_states", unit=xas_debug_unit)
-         IF (SIZE(core_states) < 1) THEN
-            WRITE(error_message, '(a,a,a,i0,a,i0)') "No core state found for requested XAS edge ", TRIM(xas%edge), &
-                                                    " in absorber Z=", xas%absorber_z, " atom type ", itype
-            CALL juDFT_error(TRIM(error_message), calledby="m_xas_driver")
-         END IF
-         DO jsp_loop = 1, n_spin_channels
-            jsp = MERGE(1, jsp_loop, noco%l_noco)
-            DO ikpt_i = 1, SIZE(fmpi%k_list)
-               ikpt = fmpi%k_list(ikpt_i)
-               IF (kpts%wtkpt(ikpt) <= 0.0) CYCLE
-               nbands = results%neig(ikpt, jsp)
-               IF (nbands <= 0) CYCLE
-               DO i_band = 1, nbands
-                  occ = results%w_iks(i_band, ikpt, jsp)/kpts%wtkpt(ikpt)
-                  IF (1.0 - occ <= 1.0e-10) CYCLE
-                  transition_min = MIN(transition_min, results%eig(i_band, ikpt, jsp) - core_states(1)%energy)
-                  transition_max = MAX(transition_max, results%eig(i_band, ikpt, jsp) - core_states(1)%energy)
+      IF (l_kpt_group_root) THEN
+         DO itype = 1, atoms%ntype
+            IF (atoms%nz(itype) /= xas%absorber_z) CYCLE
+            CALL xas_debug_clear_underflow(l_xas_debug_fp)
+            CALL xas_extract_core_states(atoms, itype, xas%edge, vTot%mt(1:atoms%jri(itype), 0, itype, 1), core_states)
+            CALL xas_debug_report_underflow(l_xas_debug_fp, "xas_extract_core_states", unit=xas_debug_unit)
+            IF (SIZE(core_states) < 1) THEN
+               WRITE(error_message, '(a,a,a,i0,a,i0)') "No core state found for requested XAS edge ", TRIM(xas%edge), &
+                                                       " in absorber Z=", xas%absorber_z, " atom type ", itype
+               CALL juDFT_error(TRIM(error_message), calledby="m_xas_driver")
+            END IF
+            DO jsp_loop = 1, n_spin_channels
+               jsp = MERGE(1, jsp_loop, noco%l_noco)
+               DO ikpt_i = 1, SIZE(fmpi%k_list)
+                  ikpt = fmpi%k_list(ikpt_i)
+                  IF (kpts%wtkpt(ikpt) <= 0.0) CYCLE
+                  nbands = results%neig(ikpt, jsp)
+                  IF (nbands <= 0) CYCLE
+                  DO i_band = 1, nbands
+                     occ = results%w_iks(i_band, ikpt, jsp)/kpts%wtkpt(ikpt)
+                     IF (1.0 - occ <= 1.0e-10) CYCLE
+                     transition_min = MIN(transition_min, results%eig(i_band, ikpt, jsp) - core_states(1)%energy)
+                     transition_max = MAX(transition_max, results%eig(i_band, ikpt, jsp) - core_states(1)%energy)
+                  END DO
                END DO
             END DO
+            DEALLOCATE(core_states)
          END DO
-         DEALLOCATE(core_states)
-      END DO
+      END IF
       CALL xas_allreduce_transition_window(fmpi, transition_min, transition_max)
       IF (transition_min > transition_max) THEN
          CALL juDFT_error("No empty final-state bands found for XAS", calledby="m_xas_driver")
@@ -330,6 +336,10 @@ CONTAINS
       ! actual endpoints used for the spectrum, not just "automatic".
       IF (l_root) CALL xas_print_resolved_grid_summary(xas, transition_min, transition_max, transition_step, xas_debug_unit)
 
+      ! fmpi%k_list is k-point-subgroup-local and shared by all members of
+      ! fmpi%sub_comm. The current full-band XAS kernel is serial per k-point,
+      ! so only subgroup roots execute it; all ranks join the reductions below.
+      IF (l_kpt_group_root) THEN
       l_real = sym%invs .AND. (.NOT. noco%l_soc) .AND. (.NOT. noco%l_noco) .AND. atoms%n_hia == 0
 
       DO itype = 1, atoms%ntype
@@ -682,6 +692,7 @@ CONTAINS
          END DO
          DEALLOCATE(radial_xas, core_states)
       END DO
+      END IF
 
       IF (xas%write_transitions) THEN
          DO i_pol = 1, xas_debug_n_pol
@@ -689,8 +700,8 @@ CONTAINS
          END DO
       END IF
 
-      ! Rank-local k-point/star contributions are additive. Reduce them once
-      ! after the k loops, then let rank 0 do all text/debug output.
+      ! Subgroup-root k-point/star contributions are additive. Reduce them once
+      ! after the k loops, then let global rank 0 do all text/debug output.
       ALLOCATE(intensity_reduced(SIZE(intensity, 1), SIZE(intensity, 2)), SOURCE=0.0)
       CALL mpi_sum_reduce(intensity, intensity_reduced, fmpi%mpi_comm)
 
