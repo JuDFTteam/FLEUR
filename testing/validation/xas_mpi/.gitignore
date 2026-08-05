@@ -1,0 +1,5 @@
+runs/
+scripts/__pycache__/
+slurm-*.out
+slurm-*.err
+xas_mpi_checkpoint.txt

@@ -1,0 +1,772 @@
+{
+  "approved_executable_sha256": "df4af8292c337614a5755910c7e59634fe638c7cf1ff076127dd501d577e65c4",
+  "canonical_reference_sha256s": {
+    "xas_mpi_L3_x_eta0p030.dat": "69d92a82d38e6b1b5f3ef9d704238ad4937ce2b0357daace21be7d5e5ef55d65",
+    "xas_mpi_L3_y_eta0p030.dat": "90bdf230152675b26557b8e119bc2909fe6f0a38870ccdac13f84ba66ed80973",
+    "xas_mpi_L3_z_eta0p030.dat": "0913a47ab63a0017695218abf19d3407d8878349307b7298b9ff9cb882b75a59"
+  },
+  "fixture_sha256s": {
+    "cdn.hdf": "05feb810fcce3d04e85e1f6e0a35ca4820a6db447d9006732edcd6ebb1c0d535",
+    "inp.xml": "9f10cf55e9e0a749ff249de8c21c23b9e29eb0eb94be8a1f09a39a1bbf916b61",
+    "kpts.xml": "fd898c8132f06fe0b08738a936d7a391cf7db2001e935079375838c0abb0144a",
+    "sym.xml": "369a047a42a76ac2c949c5fb7ba308f60cbe0eb7374a98bc6f6cd741bd37220c"
+  },
+  "generated_utc": "2026-08-05T19:53:26.279330+00:00",
+  "phase1_commit": "b3818dad42aa56fa3a835a9cf8e972e23ea2dd87",
+  "runs": {
+    "np1": {
+      "compiler_versions": [
+        "ifx (IFX) 2025.2.0 20250605",
+        "Copyright (C) 1985-2025 Intel Corporation. All rights reserved.",
+        "Intel(R) oneAPI DPC++/C++ Compiler 2025.2.0 (2025.2.0.20250605)",
+        "Target: x86_64-unknown-linux-gnu",
+        "Thread model: posix",
+        "InstalledDir: /p/software/fs/jurecadc/stages/2026/software/intel-compilers/2025.2.0/compiler/2025.2/bin/compiler",
+        "ifx (IFX) 2025.2.0 20250605",
+        "Copyright (C) 1985-2025 Intel Corporation. All rights reserved."
+      ],
+      "environment_log": "job_environment_15501839.log",
+      "environment_log_sha256": "bdaefcc5a27b3ddb8373cf034da40967ecab24282e6f6a28a7c1ed7e0c390f9d",
+      "executable": {
+        "filesystem_modify_time": "2026-08-05 12:13:30.801481786 +0200",
+        "path": "/p/scratch/cjiff40/Marjana/debug_runs/fleur_xas_mpi_b3818dad/build.xas_mpi_b3818dad/fleur_MPI",
+        "sha256": "df4af8292c337614a5755910c7e59634fe638c7cf1ff076127dd501d577e65c4"
+      },
+      "exit_status": 0,
+      "files": {
+        "RUN_COMPLETE": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "cdn.hdf": "15ecc9d3f3773e5fc67713915fb17c8382094695c8cf6f2bf86755324afa8ddd",
+        "fleur_stderr.log": "df79c4f35067966506f22272c72627171bb4d39f6f2a4cb72f1da66c9f11601d",
+        "fleur_stdout.log": "a0f7e4b44c077d49136783ead658ad692eb4d053beba051d6892db3b0921245b",
+        "inp.xml": "9f10cf55e9e0a749ff249de8c21c23b9e29eb0eb94be8a1f09a39a1bbf916b61",
+        "job_environment_15501839.log": "bdaefcc5a27b3ddb8373cf034da40967ecab24282e6f6a28a7c1ed7e0c390f9d",
+        "kpts.xml": "fd898c8132f06fe0b08738a936d7a391cf7db2001e935079375838c0abb0144a",
+        "out.xml": "ca275096dfa7c6481cdaa7dfb322c45df329d1588d49452062232f242d0e2742",
+        "result_sha256.txt": "1f203d3043144f11c44e865717d0176c0a18fecd9fda93036fff95d0de67a0d2",
+        "sym.xml": "369a047a42a76ac2c949c5fb7ba308f60cbe0eb7374a98bc6f6cd741bd37220c",
+        "xas_mpi_L3_x_eta0p030.dat": "69d92a82d38e6b1b5f3ef9d704238ad4937ce2b0357daace21be7d5e5ef55d65",
+        "xas_mpi_L3_x_transitions_rank0000.dat": "389951cd5197710b49da067f94ce58180512b97c1f288b3ea7f472f1011d02a0",
+        "xas_mpi_L3_y_eta0p030.dat": "90bdf230152675b26557b8e119bc2909fe6f0a38870ccdac13f84ba66ed80973",
+        "xas_mpi_L3_y_transitions_rank0000.dat": "a66878a194749d9aad60aaeb23f913f0ffa69cdf3c2b4025d13117c9c27f553d",
+        "xas_mpi_L3_z_eta0p030.dat": "0913a47ab63a0017695218abf19d3407d8878349307b7298b9ff9cb882b75a59",
+        "xas_mpi_L3_z_transitions_rank0000.dat": "c5f578afb20e1380417b8d84dca4824a39681ac21c0cff3b1800fe015da4cf40"
+      },
+      "finished": "2026-08-05T21:23:30+02:00",
+      "host": "jrc0606.jureca",
+      "launcher": "srun --ntasks=1 --cpus-per-task=1 /p/scratch/cjiff40/Marjana/debug_runs/fleur_xas_mpi_b3818dad/build.xas_mpi_b3818dad/fleur_MPI -warn_only -pe_per_kpt 1",
+      "libraries": {
+        "cmake_version": "4.0.3",
+        "dynamic_linkage": [
+          "libiomp5.so => /p/software/default/stages/2026/software/imkl/2025.2.0/compiler/2025.2/lib/libiomp5.so (0x00001457c7158000)",
+          "\tlibmkl_scalapack_lp64.so.2 => /p/software/default/stages/2026/software/imkl/2025.2.0/mkl/2025.2/lib/libmkl_scalapack_lp64.so.2 (0x00001457c6a4d000)",
+          "\tlibmkl_blacs_intelmpi_lp64.so.2 => /p/software/default/stages/2026/software/imkl/2025.2.0/mkl/2025.2/lib/libmkl_blacs_intelmpi_lp64.so.2 (0x00001457c6a0e000)",
+          "\tlibxml2.so.16 => /p/software/default/stages/2026/software/libxml2/2.14.3-GCCcore-14.3.0/lib/libxml2.so.16 (0x00001457c68c3000)",
+          "\tlibhdf5_fortran.so.310 => /p/software/default/stages/2026/software/HDF5/1.14.6-ipsmpi-2025b/lib/libhdf5_fortran.so.310 (0x00001457c687a000)",
+          "\tlibhdf5.so.310 => /p/software/default/stages/2026/software/HDF5/1.14.6-ipsmpi-2025b/lib/libhdf5.so.310 (0x00001457c640b000)",
+          "\tlibirng.so => /p/software/default/stages/2026/software/imkl/2025.2.0/compiler/2025.2/lib/libirng.so (0x00001457c6312000)",
+          "\tlibmpifort.so.12 => /p/software/default/stages/2026/software/psmpi/5.13.0-1-intel-compilers-2025.2.0/lib/libmpifort.so.12 (0x00001457c6202000)",
+          "\tlibmpi.so.12 => /p/software/default/stages/2026/software/psmpi/5.13.0-1-intel-compilers-2025.2.0/lib/libmpi.so.12 (0x00001457ad867000)",
+          "\tlibimf.so => /p/software/default/stages/2026/software/imkl/2025.2.0/compiler/2025.2/lib/libimf.so (0x00001457ad43e000)",
+          "\tlibhdf5_f90cstub.so.310 => /p/software/default/stages/2026/software/HDF5/1.14.6-ipsmpi-2025b/lib/libhdf5_f90cstub.so.310 (0x00001457ad0aa000)",
+          "\tlibifport.so.5 => /p/software/default/stages/2026/software/intel-compilers/2025.2.0/compiler/2025.2/lib/libifport.so.5 (0x00001457ad080000)",
+          "\tlibifcoremt.so.5 => /p/software/default/stages/2026/software/intel-compilers/2025.2.0/compiler/2025.2/lib/libifcoremt.so.5 (0x00001457acf10000)",
+          "\tlibsvml.so => /p/software/default/stages/2026/software/imkl/2025.2.0/compiler/2025.2/lib/libsvml.so (0x00001457ab8a3000)",
+          "\tlibintlc.so.5 => /p/software/default/stages/2026/software/imkl/2025.2.0/compiler/2025.2/lib/libintlc.so.5 (0x00001457ab841000)"
+        ],
+        "hdf5_version": "1.14.6",
+        "libxml2_version": "2.14.3",
+        "mklroot": "/p/software/default/stages/2026/software/imkl/2025.2.0/mkl/2025.2"
+      },
+      "module_environment": [
+        "Stages/2026",
+        "GCCcore/14.3.0 <H>",
+        "zlib/1.3.1 <H>",
+        "binutils/2.44 <H>",
+        "Intel/2025.2.0",
+        "imkl/2025.2.0",
+        "numactl/2.0.19",
+        "CUDA/13",
+        "UCX-settings/RC",
+        "UCX/default",
+        "pscom/6-default <H>",
+        "OpenSSL/3",
+        "libevent/2.1.12 <H>",
+        "libpciaccess/0.18.1 <H>",
+        "hwloc/2.12.1",
+        "PMIx/5.0.8",
+        "NCCL/default-CUDA-13",
+        "UCC/default",
+        "MPI-settings/UCX",
+        "ParaStationMPI/5.13.0-1",
+        "XZ/5.8.1 <H>",
+        "libxml2/2.14.3 <H>",
+        "libaec/1.1.4",
+        "Perl/5.40.2",
+        "HDF5/1.14.6",
+        "ncurses/6.5 <H>",
+        "bzip2/1.0.8 <H>",
+        "libidn2/2.3.8",
+        "libiconv/1.18 <H>",
+        "libunistring/1.3 <H>",
+        "libpsl/0.21.5",
+        "cURL/8.14.1",
+        "gzip/1.14 <H>",
+        "lz4/1.10.0 <H>",
+        "zstd/1.5.7 <H>",
+        "libarchive/3.8.1",
+        "CMake/4.0.3",
+        "expat/2.7.1 <H>",
+        "gettext/0.25 <H>",
+        "git/2.50.1"
+      ],
+      "mpi_and_launcher_versions": [
+        "slurm 24.11.7-1.20260115gitd2512c3.el9"
+      ],
+      "mpi_layout": {
+        "openmp_threads": 1,
+        "pe_per_kpt": 1,
+        "ranks": 1
+      },
+      "mpi_wrapper_configuration": [
+        "ifx -reentrancy threaded -I/p/software/fs/jurecadc/stages/2026/software/psmpi/5.13.0-1-intel-compilers-2025.2.0/include -I/p/software/fs/jurecadc/stages/2026/software/psmpi/5.13.0-1-intel-compilers-2025.2.0/include -L/p/software/fs/jurecadc/stages/2026/software/psmpi/5.13.0-1-intel-compilers-2025.2.0/lib -lmpifort -Wl,-rpath -Wl,/p/software/fs/jurecadc/stages/2026/software/psmpi/5.13.0-1-intel-compilers-2025.2.0/lib -Wl,--enable-new-dtags -lmpi"
+      ],
+      "out_xml": {
+        "compilation": {
+          "date": "2026-08-05T12:10:06",
+          "flag": "I/p/software/default/stages/2026/software/HDF5/1.14.6-ipsmpi-2025b/include -fiopenmp -qmkl  -assume byterecl -",
+          "host": "jrlogin10.jureca",
+          "link": "L/p/software/default/stages/2026/software/HDF5/1.14.6-ipsmpi-2025b/lib;-lmkl_scalapack_lp64;-lmkl_blacs_intelm",
+          "user": "lezaic1"
+        },
+        "end": {
+          "date": "2026/08/05",
+          "time": "21:23:30",
+          "zone": "+0200"
+        },
+        "execution": {
+          "commandLine": "/p/scratch/cjiff40/Marjana/debug_runs/fleur_xas_mpi_b3818dad/build.xas_mpi_b3818dad/fleur_MPI -warn_only -pe_per_kpt 1"
+        },
+        "git": {
+          "branch": "HEAD",
+          "lastCommitHash": "b3818dad42aa56fa3a835a9cf8e972e23ea2dd87",
+          "version": "MaX-R8.1-205-gb3818dad4"
+        },
+        "mpi": {
+          "mpiProcesses": "1"
+        },
+        "openmp": {
+          "ompThreads": "1"
+        },
+        "program_version": {
+          "version": "fleur 42"
+        },
+        "start": {
+          "date": "2026/08/05",
+          "time": "21:23:27",
+          "zone": "+0200"
+        }
+      },
+      "post_run_restart_sha256": "15ecc9d3f3773e5fc67713915fb17c8382094695c8cf6f2bf86755324afa8ddd",
+      "result_sha256s": {
+        "fleur_stderr.log": "df79c4f35067966506f22272c72627171bb4d39f6f2a4cb72f1da66c9f11601d",
+        "fleur_stdout.log": "a0f7e4b44c077d49136783ead658ad692eb4d053beba051d6892db3b0921245b",
+        "out": "3f9c7f6f3f347e53b79280ac011354e69e06bec00d083b7b5fcf0e7441b2bd97",
+        "out.xml": "ca275096dfa7c6481cdaa7dfb322c45df329d1588d49452062232f242d0e2742",
+        "xas_mpi_L3_x_eta0p030.dat": "69d92a82d38e6b1b5f3ef9d704238ad4937ce2b0357daace21be7d5e5ef55d65",
+        "xas_mpi_L3_x_transitions_rank0000.dat": "389951cd5197710b49da067f94ce58180512b97c1f288b3ea7f472f1011d02a0",
+        "xas_mpi_L3_y_eta0p030.dat": "90bdf230152675b26557b8e119bc2909fe6f0a38870ccdac13f84ba66ed80973",
+        "xas_mpi_L3_y_transitions_rank0000.dat": "a66878a194749d9aad60aaeb23f913f0ffa69cdf3c2b4025d13117c9c27f553d",
+        "xas_mpi_L3_z_eta0p030.dat": "0913a47ab63a0017695218abf19d3407d8878349307b7298b9ff9cb882b75a59",
+        "xas_mpi_L3_z_transitions_rank0000.dat": "c5f578afb20e1380417b8d84dca4824a39681ac21c0cff3b1800fe015da4cf40"
+      },
+      "seed_sha256s": {
+        "cdn.hdf": "05feb810fcce3d04e85e1f6e0a35ca4820a6db447d9006732edcd6ebb1c0d535",
+        "inp.xml": "9f10cf55e9e0a749ff249de8c21c23b9e29eb0eb94be8a1f09a39a1bbf916b61",
+        "kpts.xml": "fd898c8132f06fe0b08738a936d7a391cf7db2001e935079375838c0abb0144a",
+        "sym.xml": "369a047a42a76ac2c949c5fb7ba308f60cbe0eb7374a98bc6f6cd741bd37220c"
+      },
+      "slurm_job_id": "15501839",
+      "source": {
+        "commit": "b3818dad42aa56fa3a835a9cf8e972e23ea2dd87",
+        "status_short": "CLEAN"
+      },
+      "started": "2026-08-05T21:23:24+02:00"
+    },
+    "np2_pure": {
+      "compiler_versions": [
+        "ifx (IFX) 2025.2.0 20250605",
+        "Copyright (C) 1985-2025 Intel Corporation. All rights reserved.",
+        "Intel(R) oneAPI DPC++/C++ Compiler 2025.2.0 (2025.2.0.20250605)",
+        "Target: x86_64-unknown-linux-gnu",
+        "Thread model: posix",
+        "InstalledDir: /p/software/fs/jurecadc/stages/2026/software/intel-compilers/2025.2.0/compiler/2025.2/bin/compiler",
+        "ifx (IFX) 2025.2.0 20250605",
+        "Copyright (C) 1985-2025 Intel Corporation. All rights reserved."
+      ],
+      "environment_log": "job_environment_15501840.log",
+      "environment_log_sha256": "94f69cbe1d1b4ec117e1c05e53ec74f7631bd92088e6431c38cdf1a213a775a3",
+      "executable": {
+        "filesystem_modify_time": "2026-08-05 12:13:30.801481786 +0200",
+        "path": "/p/scratch/cjiff40/Marjana/debug_runs/fleur_xas_mpi_b3818dad/build.xas_mpi_b3818dad/fleur_MPI",
+        "sha256": "df4af8292c337614a5755910c7e59634fe638c7cf1ff076127dd501d577e65c4"
+      },
+      "exit_status": 0,
+      "files": {
+        "RUN_COMPLETE": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "cdn.hdf": "15ecc9d3f3773e5fc67713915fb17c8382094695c8cf6f2bf86755324afa8ddd",
+        "fleur_stderr.log": "3854ce35d1b9e00803f0d83788c00d2ba284559730e7507cbf36e7e423f25b95",
+        "fleur_stdout.log": "632119b2abf37edd9f01739143f50ab4a2ce3ca54929436b0d7e2e326b37983d",
+        "inp.xml": "9f10cf55e9e0a749ff249de8c21c23b9e29eb0eb94be8a1f09a39a1bbf916b61",
+        "job_environment_15501840.log": "94f69cbe1d1b4ec117e1c05e53ec74f7631bd92088e6431c38cdf1a213a775a3",
+        "kpts.xml": "fd898c8132f06fe0b08738a936d7a391cf7db2001e935079375838c0abb0144a",
+        "out.xml": "807f0d96a9846b41b92c91631f8a413b55a2d0798bd1f1d573a5e98c5eeefa17",
+        "result_sha256.txt": "74b8a56fb9aedd7cc46f124e1fb9893131e3ce82084f50d0176ef99d59a74146",
+        "sym.xml": "369a047a42a76ac2c949c5fb7ba308f60cbe0eb7374a98bc6f6cd741bd37220c",
+        "xas_mpi_L3_x_eta0p030.dat": "e60116da70411fd78fa259d33ba1d6ffbd7e436397311ff06c144dc08ae4b5c0",
+        "xas_mpi_L3_x_transitions_rank0000.dat": "6545dfd59ca867b13396bc67b91dbd4d09a11a26aef9f98ee70a34f8c4c912a1",
+        "xas_mpi_L3_x_transitions_rank0001.dat": "077f5c6e5810cceb6ebd455ad038875bdc019f0d29edf9354bb2b639339d41e4",
+        "xas_mpi_L3_y_eta0p030.dat": "8828a6710293e50300e4dfb40677be58d13cdd92bc43439323371bc07de51ce1",
+        "xas_mpi_L3_y_transitions_rank0000.dat": "d5c69a4e7a32e6f761b07f0b402df78d889dda3df3ae21d84d6d875644b02fdc",
+        "xas_mpi_L3_y_transitions_rank0001.dat": "f47f0055ecc6d5cae063826cf781008ab333c2117e5c286eaf853e4ff10b7b71",
+        "xas_mpi_L3_z_eta0p030.dat": "46a979902fd06cfe079f12d749719e2a9f1eb6d5d665e1f7d9919c3f98ba56d9",
+        "xas_mpi_L3_z_transitions_rank0000.dat": "d5a15d0aa3b1ab20ca7c2597375fbf3984b2defd8525e3356695fb6e21a5559f",
+        "xas_mpi_L3_z_transitions_rank0001.dat": "0c8a6230896c3cb131aeb50c58a65c5743ec183e4f780ef4f2efa04d722ffe25"
+      },
+      "finished": "2026-08-05T21:23:30+02:00",
+      "host": "jrc0607.jureca",
+      "launcher": "srun --ntasks=2 --cpus-per-task=1 /p/scratch/cjiff40/Marjana/debug_runs/fleur_xas_mpi_b3818dad/build.xas_mpi_b3818dad/fleur_MPI -warn_only -pe_per_kpt 1",
+      "libraries": {
+        "cmake_version": "4.0.3",
+        "dynamic_linkage": [
+          "libiomp5.so => /p/software/default/stages/2026/software/imkl/2025.2.0/compiler/2025.2/lib/libiomp5.so (0x000014d3681b3000)",
+          "\tlibmkl_scalapack_lp64.so.2 => /p/software/default/stages/2026/software/imkl/2025.2.0/mkl/2025.2/lib/libmkl_scalapack_lp64.so.2 (0x000014d367aa8000)",
+          "\tlibmkl_blacs_intelmpi_lp64.so.2 => /p/software/default/stages/2026/software/imkl/2025.2.0/mkl/2025.2/lib/libmkl_blacs_intelmpi_lp64.so.2 (0x000014d367a69000)",
+          "\tlibxml2.so.16 => /p/software/default/stages/2026/software/libxml2/2.14.3-GCCcore-14.3.0/lib/libxml2.so.16 (0x000014d36791e000)",
+          "\tlibhdf5_fortran.so.310 => /p/software/default/stages/2026/software/HDF5/1.14.6-ipsmpi-2025b/lib/libhdf5_fortran.so.310 (0x000014d3678d5000)",
+          "\tlibhdf5.so.310 => /p/software/default/stages/2026/software/HDF5/1.14.6-ipsmpi-2025b/lib/libhdf5.so.310 (0x000014d367466000)",
+          "\tlibirng.so => /p/software/default/stages/2026/software/imkl/2025.2.0/compiler/2025.2/lib/libirng.so (0x000014d36736d000)",
+          "\tlibmpifort.so.12 => /p/software/default/stages/2026/software/psmpi/5.13.0-1-intel-compilers-2025.2.0/lib/libmpifort.so.12 (0x000014d36725d000)",
+          "\tlibmpi.so.12 => /p/software/default/stages/2026/software/psmpi/5.13.0-1-intel-compilers-2025.2.0/lib/libmpi.so.12 (0x000014d34e8c2000)",
+          "\tlibimf.so => /p/software/default/stages/2026/software/imkl/2025.2.0/compiler/2025.2/lib/libimf.so (0x000014d34e499000)",
+          "\tlibhdf5_f90cstub.so.310 => /p/software/default/stages/2026/software/HDF5/1.14.6-ipsmpi-2025b/lib/libhdf5_f90cstub.so.310 (0x000014d34e105000)",
+          "\tlibifport.so.5 => /p/software/default/stages/2026/software/intel-compilers/2025.2.0/compiler/2025.2/lib/libifport.so.5 (0x000014d34e0db000)",
+          "\tlibifcoremt.so.5 => /p/software/default/stages/2026/software/intel-compilers/2025.2.0/compiler/2025.2/lib/libifcoremt.so.5 (0x000014d34df6b000)",
+          "\tlibsvml.so => /p/software/default/stages/2026/software/imkl/2025.2.0/compiler/2025.2/lib/libsvml.so (0x000014d34c8fe000)",
+          "\tlibintlc.so.5 => /p/software/default/stages/2026/software/imkl/2025.2.0/compiler/2025.2/lib/libintlc.so.5 (0x000014d34c89c000)"
+        ],
+        "hdf5_version": "1.14.6",
+        "libxml2_version": "2.14.3",
+        "mklroot": "/p/software/default/stages/2026/software/imkl/2025.2.0/mkl/2025.2"
+      },
+      "module_environment": [
+        "Stages/2026",
+        "GCCcore/14.3.0 <H>",
+        "zlib/1.3.1 <H>",
+        "binutils/2.44 <H>",
+        "Intel/2025.2.0",
+        "imkl/2025.2.0",
+        "numactl/2.0.19",
+        "CUDA/13",
+        "UCX-settings/RC",
+        "UCX/default",
+        "pscom/6-default <H>",
+        "OpenSSL/3",
+        "libevent/2.1.12 <H>",
+        "libpciaccess/0.18.1 <H>",
+        "hwloc/2.12.1",
+        "PMIx/5.0.8",
+        "NCCL/default-CUDA-13",
+        "UCC/default",
+        "MPI-settings/UCX",
+        "ParaStationMPI/5.13.0-1",
+        "XZ/5.8.1 <H>",
+        "libxml2/2.14.3 <H>",
+        "libaec/1.1.4",
+        "Perl/5.40.2",
+        "HDF5/1.14.6",
+        "ncurses/6.5 <H>",
+        "bzip2/1.0.8 <H>",
+        "libidn2/2.3.8",
+        "libiconv/1.18 <H>",
+        "libunistring/1.3 <H>",
+        "libpsl/0.21.5",
+        "cURL/8.14.1",
+        "gzip/1.14 <H>",
+        "lz4/1.10.0 <H>",
+        "zstd/1.5.7 <H>",
+        "libarchive/3.8.1",
+        "CMake/4.0.3",
+        "expat/2.7.1 <H>",
+        "gettext/0.25 <H>",
+        "git/2.50.1"
+      ],
+      "mpi_and_launcher_versions": [
+        "slurm 24.11.7-1.20260115gitd2512c3.el9"
+      ],
+      "mpi_layout": {
+        "openmp_threads": 1,
+        "pe_per_kpt": 1,
+        "ranks": 2
+      },
+      "mpi_wrapper_configuration": [
+        "ifx -reentrancy threaded -I/p/software/fs/jurecadc/stages/2026/software/psmpi/5.13.0-1-intel-compilers-2025.2.0/include -I/p/software/fs/jurecadc/stages/2026/software/psmpi/5.13.0-1-intel-compilers-2025.2.0/include -L/p/software/fs/jurecadc/stages/2026/software/psmpi/5.13.0-1-intel-compilers-2025.2.0/lib -lmpifort -Wl,-rpath -Wl,/p/software/fs/jurecadc/stages/2026/software/psmpi/5.13.0-1-intel-compilers-2025.2.0/lib -Wl,--enable-new-dtags -lmpi"
+      ],
+      "out_xml": {
+        "compilation": {
+          "date": "2026-08-05T12:10:06",
+          "flag": "I/p/software/default/stages/2026/software/HDF5/1.14.6-ipsmpi-2025b/include -fiopenmp -qmkl  -assume byterecl -",
+          "host": "jrlogin10.jureca",
+          "link": "L/p/software/default/stages/2026/software/HDF5/1.14.6-ipsmpi-2025b/lib;-lmkl_scalapack_lp64;-lmkl_blacs_intelm",
+          "user": "lezaic1"
+        },
+        "end": {
+          "date": "2026/08/05",
+          "time": "21:23:30",
+          "zone": "+0200"
+        },
+        "execution": {
+          "commandLine": "/p/scratch/cjiff40/Marjana/debug_runs/fleur_xas_mpi_b3818dad/build.xas_mpi_b3818dad/fleur_MPI -warn_only -pe_per_kpt 1"
+        },
+        "git": {
+          "branch": "HEAD",
+          "lastCommitHash": "b3818dad42aa56fa3a835a9cf8e972e23ea2dd87",
+          "version": "MaX-R8.1-205-gb3818dad4"
+        },
+        "mpi": {
+          "mpiProcesses": "2"
+        },
+        "openmp": {
+          "ompThreads": "1"
+        },
+        "program_version": {
+          "version": "fleur 42"
+        },
+        "start": {
+          "date": "2026/08/05",
+          "time": "21:23:28",
+          "zone": "+0200"
+        }
+      },
+      "post_run_restart_sha256": "15ecc9d3f3773e5fc67713915fb17c8382094695c8cf6f2bf86755324afa8ddd",
+      "result_sha256s": {
+        "fleur_stderr.log": "3854ce35d1b9e00803f0d83788c00d2ba284559730e7507cbf36e7e423f25b95",
+        "fleur_stdout.log": "632119b2abf37edd9f01739143f50ab4a2ce3ca54929436b0d7e2e326b37983d",
+        "out": "1e152e5e779ec8ca79a91f4aee812fedd908964d80eccc4e482782be7a778307",
+        "out.xml": "807f0d96a9846b41b92c91631f8a413b55a2d0798bd1f1d573a5e98c5eeefa17",
+        "xas_mpi_L3_x_eta0p030.dat": "e60116da70411fd78fa259d33ba1d6ffbd7e436397311ff06c144dc08ae4b5c0",
+        "xas_mpi_L3_x_transitions_rank0000.dat": "6545dfd59ca867b13396bc67b91dbd4d09a11a26aef9f98ee70a34f8c4c912a1",
+        "xas_mpi_L3_x_transitions_rank0001.dat": "077f5c6e5810cceb6ebd455ad038875bdc019f0d29edf9354bb2b639339d41e4",
+        "xas_mpi_L3_y_eta0p030.dat": "8828a6710293e50300e4dfb40677be58d13cdd92bc43439323371bc07de51ce1",
+        "xas_mpi_L3_y_transitions_rank0000.dat": "d5c69a4e7a32e6f761b07f0b402df78d889dda3df3ae21d84d6d875644b02fdc",
+        "xas_mpi_L3_y_transitions_rank0001.dat": "f47f0055ecc6d5cae063826cf781008ab333c2117e5c286eaf853e4ff10b7b71",
+        "xas_mpi_L3_z_eta0p030.dat": "46a979902fd06cfe079f12d749719e2a9f1eb6d5d665e1f7d9919c3f98ba56d9",
+        "xas_mpi_L3_z_transitions_rank0000.dat": "d5a15d0aa3b1ab20ca7c2597375fbf3984b2defd8525e3356695fb6e21a5559f",
+        "xas_mpi_L3_z_transitions_rank0001.dat": "0c8a6230896c3cb131aeb50c58a65c5743ec183e4f780ef4f2efa04d722ffe25"
+      },
+      "seed_sha256s": {
+        "cdn.hdf": "05feb810fcce3d04e85e1f6e0a35ca4820a6db447d9006732edcd6ebb1c0d535",
+        "inp.xml": "9f10cf55e9e0a749ff249de8c21c23b9e29eb0eb94be8a1f09a39a1bbf916b61",
+        "kpts.xml": "fd898c8132f06fe0b08738a936d7a391cf7db2001e935079375838c0abb0144a",
+        "sym.xml": "369a047a42a76ac2c949c5fb7ba308f60cbe0eb7374a98bc6f6cd741bd37220c"
+      },
+      "slurm_job_id": "15501840",
+      "source": {
+        "commit": "b3818dad42aa56fa3a835a9cf8e972e23ea2dd87",
+        "status_short": "CLEAN"
+      },
+      "started": "2026-08-05T21:23:24+02:00"
+    },
+    "np4_pure": {
+      "compiler_versions": [
+        "ifx (IFX) 2025.2.0 20250605",
+        "Copyright (C) 1985-2025 Intel Corporation. All rights reserved.",
+        "Intel(R) oneAPI DPC++/C++ Compiler 2025.2.0 (2025.2.0.20250605)",
+        "Target: x86_64-unknown-linux-gnu",
+        "Thread model: posix",
+        "InstalledDir: /p/software/fs/jurecadc/stages/2026/software/intel-compilers/2025.2.0/compiler/2025.2/bin/compiler",
+        "ifx (IFX) 2025.2.0 20250605",
+        "Copyright (C) 1985-2025 Intel Corporation. All rights reserved."
+      ],
+      "environment_log": "job_environment_15501841.log",
+      "environment_log_sha256": "d63e6a1f9727220d24aa8f18f787fa9270ed659fd7018f53a86c587002bd6ebe",
+      "executable": {
+        "filesystem_modify_time": "2026-08-05 12:13:30.801481786 +0200",
+        "path": "/p/scratch/cjiff40/Marjana/debug_runs/fleur_xas_mpi_b3818dad/build.xas_mpi_b3818dad/fleur_MPI",
+        "sha256": "df4af8292c337614a5755910c7e59634fe638c7cf1ff076127dd501d577e65c4"
+      },
+      "exit_status": 0,
+      "files": {
+        "RUN_COMPLETE": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "cdn.hdf": "15ecc9d3f3773e5fc67713915fb17c8382094695c8cf6f2bf86755324afa8ddd",
+        "fleur_stderr.log": "25de4bff246596c043e6b1dfd8003898c247e919da3b1d6d792e21248cc19c7c",
+        "fleur_stdout.log": "d7587876faf6387de557677acdef06283714e5411284ad922c2577263c40010f",
+        "inp.xml": "9f10cf55e9e0a749ff249de8c21c23b9e29eb0eb94be8a1f09a39a1bbf916b61",
+        "job_environment_15501841.log": "d63e6a1f9727220d24aa8f18f787fa9270ed659fd7018f53a86c587002bd6ebe",
+        "kpts.xml": "fd898c8132f06fe0b08738a936d7a391cf7db2001e935079375838c0abb0144a",
+        "out.xml": "a654d0a209cd2faea983836a7a8eb2d0438cba140f9e0e93910147146bb08e04",
+        "result_sha256.txt": "f2a28567d99e6f7fe8be6c1d4a9dd3ed13b317d85c3f34dae3bd5e2d0c6fbf29",
+        "sym.xml": "369a047a42a76ac2c949c5fb7ba308f60cbe0eb7374a98bc6f6cd741bd37220c",
+        "xas_mpi_L3_x_eta0p030.dat": "9d99fae43162c00326513fe2953663cd265042f2eb596c66fd9b0f5fc8e38fff",
+        "xas_mpi_L3_x_transitions_rank0000.dat": "b9f1ce0bcf3ef755e36bb271c27f693874ce8de286ed1c4a61798600703381be",
+        "xas_mpi_L3_x_transitions_rank0001.dat": "49334236e1386509960533352b4366c50d0604b7baecbbd7d3804a92f655f7ec",
+        "xas_mpi_L3_x_transitions_rank0002.dat": "9e2f468d1517bc7aa8c74e1e05d3d3aafc605cdcc54b34a4df09eb746be19562",
+        "xas_mpi_L3_x_transitions_rank0003.dat": "e19bdc6b6a8df8cf34c082cfc81bad6449f769263b10a591204a67450868c2d3",
+        "xas_mpi_L3_y_eta0p030.dat": "eec800ffdf9560f9648342d34b73b14a0eebb09e86f37b33d77c03973f7c5c9f",
+        "xas_mpi_L3_y_transitions_rank0000.dat": "79a374da6ee36e432809ec8beda6e049545817c0f97a9d30a7e85b617e7a3b78",
+        "xas_mpi_L3_y_transitions_rank0001.dat": "ccb36e19e288914a23daa4bd26bd1b5a7cc8fe31c7f61b00e6fcd2fc628df172",
+        "xas_mpi_L3_y_transitions_rank0002.dat": "00b0689e5578a98fdd6cd8c0552df09af885fc7a4930685e610c39637f2875c5",
+        "xas_mpi_L3_y_transitions_rank0003.dat": "60dc6e3164ac632149e1722d49b80082f203ef1efa7b41dddce333db40811723",
+        "xas_mpi_L3_z_eta0p030.dat": "c19435d1b3dd26756b24fdef867384750199763cc9c46fb45a64105a70ee5c76",
+        "xas_mpi_L3_z_transitions_rank0000.dat": "17f695510be213a927f1aedf70bb65d3d101a93d9617889b5885ea0505e2d3f5",
+        "xas_mpi_L3_z_transitions_rank0001.dat": "4b81b9053505d3090b3c944d6001888defaa4cde8b63294f931c1609b3ca565a",
+        "xas_mpi_L3_z_transitions_rank0002.dat": "27f6c968a47b3996e9b04cccf14b1c642936bf6d9bc0194a32c65f9be6ac0524",
+        "xas_mpi_L3_z_transitions_rank0003.dat": "207f0ac9428ca63195d690f0b9f7ead01c7a6b6ca02e3ab602badb4141af3c2a"
+      },
+      "finished": "2026-08-05T21:23:32+02:00",
+      "host": "jrc0604.jureca",
+      "launcher": "srun --ntasks=4 --cpus-per-task=1 /p/scratch/cjiff40/Marjana/debug_runs/fleur_xas_mpi_b3818dad/build.xas_mpi_b3818dad/fleur_MPI -warn_only -pe_per_kpt 1",
+      "libraries": {
+        "cmake_version": "4.0.3",
+        "dynamic_linkage": [
+          "libiomp5.so => /p/software/default/stages/2026/software/imkl/2025.2.0/compiler/2025.2/lib/libiomp5.so (0x00001477e72ff000)",
+          "\tlibmkl_scalapack_lp64.so.2 => /p/software/default/stages/2026/software/imkl/2025.2.0/mkl/2025.2/lib/libmkl_scalapack_lp64.so.2 (0x00001477e6bf4000)",
+          "\tlibmkl_blacs_intelmpi_lp64.so.2 => /p/software/default/stages/2026/software/imkl/2025.2.0/mkl/2025.2/lib/libmkl_blacs_intelmpi_lp64.so.2 (0x00001477e6bb5000)",
+          "\tlibxml2.so.16 => /p/software/default/stages/2026/software/libxml2/2.14.3-GCCcore-14.3.0/lib/libxml2.so.16 (0x00001477e6a6a000)",
+          "\tlibhdf5_fortran.so.310 => /p/software/default/stages/2026/software/HDF5/1.14.6-ipsmpi-2025b/lib/libhdf5_fortran.so.310 (0x00001477e6a21000)",
+          "\tlibhdf5.so.310 => /p/software/default/stages/2026/software/HDF5/1.14.6-ipsmpi-2025b/lib/libhdf5.so.310 (0x00001477e65b2000)",
+          "\tlibirng.so => /p/software/default/stages/2026/software/imkl/2025.2.0/compiler/2025.2/lib/libirng.so (0x00001477e64b9000)",
+          "\tlibmpifort.so.12 => /p/software/default/stages/2026/software/psmpi/5.13.0-1-intel-compilers-2025.2.0/lib/libmpifort.so.12 (0x00001477e63a9000)",
+          "\tlibmpi.so.12 => /p/software/default/stages/2026/software/psmpi/5.13.0-1-intel-compilers-2025.2.0/lib/libmpi.so.12 (0x00001477cda0e000)",
+          "\tlibimf.so => /p/software/default/stages/2026/software/imkl/2025.2.0/compiler/2025.2/lib/libimf.so (0x00001477cd5e5000)",
+          "\tlibhdf5_f90cstub.so.310 => /p/software/default/stages/2026/software/HDF5/1.14.6-ipsmpi-2025b/lib/libhdf5_f90cstub.so.310 (0x00001477cd251000)",
+          "\tlibifport.so.5 => /p/software/default/stages/2026/software/intel-compilers/2025.2.0/compiler/2025.2/lib/libifport.so.5 (0x00001477cd227000)",
+          "\tlibifcoremt.so.5 => /p/software/default/stages/2026/software/intel-compilers/2025.2.0/compiler/2025.2/lib/libifcoremt.so.5 (0x00001477cd0b7000)",
+          "\tlibsvml.so => /p/software/default/stages/2026/software/imkl/2025.2.0/compiler/2025.2/lib/libsvml.so (0x00001477cba4a000)",
+          "\tlibintlc.so.5 => /p/software/default/stages/2026/software/imkl/2025.2.0/compiler/2025.2/lib/libintlc.so.5 (0x00001477cb9e8000)"
+        ],
+        "hdf5_version": "1.14.6",
+        "libxml2_version": "2.14.3",
+        "mklroot": "/p/software/default/stages/2026/software/imkl/2025.2.0/mkl/2025.2"
+      },
+      "module_environment": [
+        "Stages/2026",
+        "GCCcore/14.3.0 <H>",
+        "zlib/1.3.1 <H>",
+        "binutils/2.44 <H>",
+        "Intel/2025.2.0",
+        "imkl/2025.2.0",
+        "numactl/2.0.19",
+        "CUDA/13",
+        "UCX-settings/RC",
+        "UCX/default",
+        "pscom/6-default <H>",
+        "OpenSSL/3",
+        "libevent/2.1.12 <H>",
+        "libpciaccess/0.18.1 <H>",
+        "hwloc/2.12.1",
+        "PMIx/5.0.8",
+        "NCCL/default-CUDA-13",
+        "UCC/default",
+        "MPI-settings/UCX",
+        "ParaStationMPI/5.13.0-1",
+        "XZ/5.8.1 <H>",
+        "libxml2/2.14.3 <H>",
+        "libaec/1.1.4",
+        "Perl/5.40.2",
+        "HDF5/1.14.6",
+        "ncurses/6.5 <H>",
+        "bzip2/1.0.8 <H>",
+        "libidn2/2.3.8",
+        "libiconv/1.18 <H>",
+        "libunistring/1.3 <H>",
+        "libpsl/0.21.5",
+        "cURL/8.14.1",
+        "gzip/1.14 <H>",
+        "lz4/1.10.0 <H>",
+        "zstd/1.5.7 <H>",
+        "libarchive/3.8.1",
+        "CMake/4.0.3",
+        "expat/2.7.1 <H>",
+        "gettext/0.25 <H>",
+        "git/2.50.1"
+      ],
+      "mpi_and_launcher_versions": [
+        "slurm 24.11.7-1.20260115gitd2512c3.el9"
+      ],
+      "mpi_layout": {
+        "openmp_threads": 1,
+        "pe_per_kpt": 1,
+        "ranks": 4
+      },
+      "mpi_wrapper_configuration": [
+        "ifx -reentrancy threaded -I/p/software/fs/jurecadc/stages/2026/software/psmpi/5.13.0-1-intel-compilers-2025.2.0/include -I/p/software/fs/jurecadc/stages/2026/software/psmpi/5.13.0-1-intel-compilers-2025.2.0/include -L/p/software/fs/jurecadc/stages/2026/software/psmpi/5.13.0-1-intel-compilers-2025.2.0/lib -lmpifort -Wl,-rpath -Wl,/p/software/fs/jurecadc/stages/2026/software/psmpi/5.13.0-1-intel-compilers-2025.2.0/lib -Wl,--enable-new-dtags -lmpi"
+      ],
+      "out_xml": {
+        "compilation": {
+          "date": "2026-08-05T12:10:06",
+          "flag": "I/p/software/default/stages/2026/software/HDF5/1.14.6-ipsmpi-2025b/include -fiopenmp -qmkl  -assume byterecl -",
+          "host": "jrlogin10.jureca",
+          "link": "L/p/software/default/stages/2026/software/HDF5/1.14.6-ipsmpi-2025b/lib;-lmkl_scalapack_lp64;-lmkl_blacs_intelm",
+          "user": "lezaic1"
+        },
+        "end": {
+          "date": "2026/08/05",
+          "time": "21:23:32",
+          "zone": "+0200"
+        },
+        "execution": {
+          "commandLine": "/p/scratch/cjiff40/Marjana/debug_runs/fleur_xas_mpi_b3818dad/build.xas_mpi_b3818dad/fleur_MPI -warn_only -pe_per_kpt 1"
+        },
+        "git": {
+          "branch": "HEAD",
+          "lastCommitHash": "b3818dad42aa56fa3a835a9cf8e972e23ea2dd87",
+          "version": "MaX-R8.1-205-gb3818dad4"
+        },
+        "mpi": {
+          "mpiProcesses": "4"
+        },
+        "openmp": {
+          "ompThreads": "1"
+        },
+        "program_version": {
+          "version": "fleur 42"
+        },
+        "start": {
+          "date": "2026/08/05",
+          "time": "21:23:28",
+          "zone": "+0200"
+        }
+      },
+      "post_run_restart_sha256": "15ecc9d3f3773e5fc67713915fb17c8382094695c8cf6f2bf86755324afa8ddd",
+      "result_sha256s": {
+        "fleur_stderr.log": "25de4bff246596c043e6b1dfd8003898c247e919da3b1d6d792e21248cc19c7c",
+        "fleur_stdout.log": "d7587876faf6387de557677acdef06283714e5411284ad922c2577263c40010f",
+        "out": "fb04c08841b77d632d9b8ea38ced997bf36c6709d50fea6391a32df3ff3556ce",
+        "out.xml": "a654d0a209cd2faea983836a7a8eb2d0438cba140f9e0e93910147146bb08e04",
+        "xas_mpi_L3_x_eta0p030.dat": "9d99fae43162c00326513fe2953663cd265042f2eb596c66fd9b0f5fc8e38fff",
+        "xas_mpi_L3_x_transitions_rank0000.dat": "b9f1ce0bcf3ef755e36bb271c27f693874ce8de286ed1c4a61798600703381be",
+        "xas_mpi_L3_x_transitions_rank0001.dat": "49334236e1386509960533352b4366c50d0604b7baecbbd7d3804a92f655f7ec",
+        "xas_mpi_L3_x_transitions_rank0002.dat": "9e2f468d1517bc7aa8c74e1e05d3d3aafc605cdcc54b34a4df09eb746be19562",
+        "xas_mpi_L3_x_transitions_rank0003.dat": "e19bdc6b6a8df8cf34c082cfc81bad6449f769263b10a591204a67450868c2d3",
+        "xas_mpi_L3_y_eta0p030.dat": "eec800ffdf9560f9648342d34b73b14a0eebb09e86f37b33d77c03973f7c5c9f",
+        "xas_mpi_L3_y_transitions_rank0000.dat": "79a374da6ee36e432809ec8beda6e049545817c0f97a9d30a7e85b617e7a3b78",
+        "xas_mpi_L3_y_transitions_rank0001.dat": "ccb36e19e288914a23daa4bd26bd1b5a7cc8fe31c7f61b00e6fcd2fc628df172",
+        "xas_mpi_L3_y_transitions_rank0002.dat": "00b0689e5578a98fdd6cd8c0552df09af885fc7a4930685e610c39637f2875c5",
+        "xas_mpi_L3_y_transitions_rank0003.dat": "60dc6e3164ac632149e1722d49b80082f203ef1efa7b41dddce333db40811723",
+        "xas_mpi_L3_z_eta0p030.dat": "c19435d1b3dd26756b24fdef867384750199763cc9c46fb45a64105a70ee5c76",
+        "xas_mpi_L3_z_transitions_rank0000.dat": "17f695510be213a927f1aedf70bb65d3d101a93d9617889b5885ea0505e2d3f5",
+        "xas_mpi_L3_z_transitions_rank0001.dat": "4b81b9053505d3090b3c944d6001888defaa4cde8b63294f931c1609b3ca565a",
+        "xas_mpi_L3_z_transitions_rank0002.dat": "27f6c968a47b3996e9b04cccf14b1c642936bf6d9bc0194a32c65f9be6ac0524",
+        "xas_mpi_L3_z_transitions_rank0003.dat": "207f0ac9428ca63195d690f0b9f7ead01c7a6b6ca02e3ab602badb4141af3c2a"
+      },
+      "seed_sha256s": {
+        "cdn.hdf": "05feb810fcce3d04e85e1f6e0a35ca4820a6db447d9006732edcd6ebb1c0d535",
+        "inp.xml": "9f10cf55e9e0a749ff249de8c21c23b9e29eb0eb94be8a1f09a39a1bbf916b61",
+        "kpts.xml": "fd898c8132f06fe0b08738a936d7a391cf7db2001e935079375838c0abb0144a",
+        "sym.xml": "369a047a42a76ac2c949c5fb7ba308f60cbe0eb7374a98bc6f6cd741bd37220c"
+      },
+      "slurm_job_id": "15501841",
+      "source": {
+        "commit": "b3818dad42aa56fa3a835a9cf8e972e23ea2dd87",
+        "status_short": "CLEAN"
+      },
+      "started": "2026-08-05T21:23:24+02:00"
+    },
+    "np4_shared": {
+      "compiler_versions": [
+        "ifx (IFX) 2025.2.0 20250605",
+        "Copyright (C) 1985-2025 Intel Corporation. All rights reserved.",
+        "Intel(R) oneAPI DPC++/C++ Compiler 2025.2.0 (2025.2.0.20250605)",
+        "Target: x86_64-unknown-linux-gnu",
+        "Thread model: posix",
+        "InstalledDir: /p/software/fs/jurecadc/stages/2026/software/intel-compilers/2025.2.0/compiler/2025.2/bin/compiler",
+        "ifx (IFX) 2025.2.0 20250605",
+        "Copyright (C) 1985-2025 Intel Corporation. All rights reserved."
+      ],
+      "environment_log": "job_environment_15501842.log",
+      "environment_log_sha256": "798118db1ad995d0e0a6c9b8577cf8c90b1e1507ac1cf515a100d9429b68c472",
+      "executable": {
+        "filesystem_modify_time": "2026-08-05 12:13:30.801481786 +0200",
+        "path": "/p/scratch/cjiff40/Marjana/debug_runs/fleur_xas_mpi_b3818dad/build.xas_mpi_b3818dad/fleur_MPI",
+        "sha256": "df4af8292c337614a5755910c7e59634fe638c7cf1ff076127dd501d577e65c4"
+      },
+      "exit_status": 0,
+      "files": {
+        "RUN_COMPLETE": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "cdn.hdf": "15ecc9d3f3773e5fc67713915fb17c8382094695c8cf6f2bf86755324afa8ddd",
+        "fleur_stderr.log": "28bfb6ac7744b826cbfa5123b42e433b338fa33c2efeb6f43d22c3fe6b701e41",
+        "fleur_stdout.log": "61bf1300040515f63ee0418f419231fe6078df03b0e62c0b85c785f027d54811",
+        "inp.xml": "9f10cf55e9e0a749ff249de8c21c23b9e29eb0eb94be8a1f09a39a1bbf916b61",
+        "job_environment_15501842.log": "798118db1ad995d0e0a6c9b8577cf8c90b1e1507ac1cf515a100d9429b68c472",
+        "kpts.xml": "fd898c8132f06fe0b08738a936d7a391cf7db2001e935079375838c0abb0144a",
+        "out.xml": "d99f8fe5a1730d1b03f301640689fa022866b93c86f72ed6bd208d84d07019a9",
+        "result_sha256.txt": "b00c8049d74e6e09bfeff65860e4cd1180f0b231368a167b2760c879842938f4",
+        "sym.xml": "369a047a42a76ac2c949c5fb7ba308f60cbe0eb7374a98bc6f6cd741bd37220c",
+        "xas_mpi_L3_x_eta0p030.dat": "e27213e03d72bc52957a0ac7482e724ea3fb2aaf1c7e3b97baec3e4fbcabeb45",
+        "xas_mpi_L3_x_transitions_rank0000.dat": "8b415dcfbebc50d6749a12936d5249c651404cabe09c5aaec84661149e8204a1",
+        "xas_mpi_L3_x_transitions_rank0001.dat": "950c1565450cc6b6e12a31f6d63799718bcc5c18e5e35cfc6fe30100e3ffae66",
+        "xas_mpi_L3_x_transitions_rank0002.dat": "ec620242db49196505597b4bb569f76f4762b9e3e194d52abf3ecbd9037ae1e6",
+        "xas_mpi_L3_x_transitions_rank0003.dat": "bce298ac33ddf269e94e16fa67517f36120f3e0e9d426c9715534fce228c230b",
+        "xas_mpi_L3_y_eta0p030.dat": "98870238e373c60d715b8a5c3934d1abc1d87e1fb2a96ea73eb5d86726c8dda0",
+        "xas_mpi_L3_y_transitions_rank0000.dat": "ab45b6a515d56e8164801e740f30be3495f4b9f76327606cd838e61b72330090",
+        "xas_mpi_L3_y_transitions_rank0001.dat": "2ce1d0249fe19c22e69fbbfea46d887ee8b0144dac3a1daaa496ca4d49316faf",
+        "xas_mpi_L3_y_transitions_rank0002.dat": "397caef4582dd9dc612d6659601794d16b68659ad1f865ce2cbc792d8b647bc6",
+        "xas_mpi_L3_y_transitions_rank0003.dat": "72c9d0f8ae0fe7b90a65a8d57097b4dd341d2ccad776c1b95174ad5afe8ec178",
+        "xas_mpi_L3_z_eta0p030.dat": "60aac792d29c4f7255de256e1104b48ffab5ef1777d94eb6ead6c1480080aad4",
+        "xas_mpi_L3_z_transitions_rank0000.dat": "a5afcac6c63b7068d89805c37698e017dc3466e21ffff94ab8470e617c0e2105",
+        "xas_mpi_L3_z_transitions_rank0001.dat": "352c1d516ca176b58947d7e2f734f994a54e795897155258a7b325132693b4d4",
+        "xas_mpi_L3_z_transitions_rank0002.dat": "37e711df9eb221eac1b8a153c000c7fbf5b9e4e97a544a6061ba42d10d2e66e6",
+        "xas_mpi_L3_z_transitions_rank0003.dat": "291c6500fde8eba69993f66ebffa677970e93a2cab8fc692c89983238e747a45"
+      },
+      "finished": "2026-08-05T21:23:32+02:00",
+      "host": "jrc0605.jureca",
+      "launcher": "srun --ntasks=4 --cpus-per-task=1 /p/scratch/cjiff40/Marjana/debug_runs/fleur_xas_mpi_b3818dad/build.xas_mpi_b3818dad/fleur_MPI -warn_only -pe_per_kpt 2",
+      "libraries": {
+        "cmake_version": "4.0.3",
+        "dynamic_linkage": [
+          "libiomp5.so => /p/software/default/stages/2026/software/imkl/2025.2.0/compiler/2025.2/lib/libiomp5.so (0x000014965aaf8000)",
+          "\tlibmkl_scalapack_lp64.so.2 => /p/software/default/stages/2026/software/imkl/2025.2.0/mkl/2025.2/lib/libmkl_scalapack_lp64.so.2 (0x000014965a3ed000)",
+          "\tlibmkl_blacs_intelmpi_lp64.so.2 => /p/software/default/stages/2026/software/imkl/2025.2.0/mkl/2025.2/lib/libmkl_blacs_intelmpi_lp64.so.2 (0x000014965a3ae000)",
+          "\tlibxml2.so.16 => /p/software/default/stages/2026/software/libxml2/2.14.3-GCCcore-14.3.0/lib/libxml2.so.16 (0x000014965a263000)",
+          "\tlibhdf5_fortran.so.310 => /p/software/default/stages/2026/software/HDF5/1.14.6-ipsmpi-2025b/lib/libhdf5_fortran.so.310 (0x000014965a21a000)",
+          "\tlibhdf5.so.310 => /p/software/default/stages/2026/software/HDF5/1.14.6-ipsmpi-2025b/lib/libhdf5.so.310 (0x0000149659dab000)",
+          "\tlibirng.so => /p/software/default/stages/2026/software/imkl/2025.2.0/compiler/2025.2/lib/libirng.so (0x0000149659cb2000)",
+          "\tlibmpifort.so.12 => /p/software/default/stages/2026/software/psmpi/5.13.0-1-intel-compilers-2025.2.0/lib/libmpifort.so.12 (0x0000149659ba2000)",
+          "\tlibmpi.so.12 => /p/software/default/stages/2026/software/psmpi/5.13.0-1-intel-compilers-2025.2.0/lib/libmpi.so.12 (0x0000149641207000)",
+          "\tlibimf.so => /p/software/default/stages/2026/software/imkl/2025.2.0/compiler/2025.2/lib/libimf.so (0x0000149640dde000)",
+          "\tlibhdf5_f90cstub.so.310 => /p/software/default/stages/2026/software/HDF5/1.14.6-ipsmpi-2025b/lib/libhdf5_f90cstub.so.310 (0x0000149640a4a000)",
+          "\tlibifport.so.5 => /p/software/default/stages/2026/software/intel-compilers/2025.2.0/compiler/2025.2/lib/libifport.so.5 (0x0000149640a20000)",
+          "\tlibifcoremt.so.5 => /p/software/default/stages/2026/software/intel-compilers/2025.2.0/compiler/2025.2/lib/libifcoremt.so.5 (0x00001496408b0000)",
+          "\tlibsvml.so => /p/software/default/stages/2026/software/imkl/2025.2.0/compiler/2025.2/lib/libsvml.so (0x000014963f243000)",
+          "\tlibintlc.so.5 => /p/software/default/stages/2026/software/imkl/2025.2.0/compiler/2025.2/lib/libintlc.so.5 (0x000014963f1e1000)"
+        ],
+        "hdf5_version": "1.14.6",
+        "libxml2_version": "2.14.3",
+        "mklroot": "/p/software/default/stages/2026/software/imkl/2025.2.0/mkl/2025.2"
+      },
+      "module_environment": [
+        "Stages/2026",
+        "GCCcore/14.3.0 <H>",
+        "zlib/1.3.1 <H>",
+        "binutils/2.44 <H>",
+        "Intel/2025.2.0",
+        "imkl/2025.2.0",
+        "numactl/2.0.19",
+        "CUDA/13",
+        "UCX-settings/RC",
+        "UCX/default",
+        "pscom/6-default <H>",
+        "OpenSSL/3",
+        "libevent/2.1.12 <H>",
+        "libpciaccess/0.18.1 <H>",
+        "hwloc/2.12.1",
+        "PMIx/5.0.8",
+        "NCCL/default-CUDA-13",
+        "UCC/default",
+        "MPI-settings/UCX",
+        "ParaStationMPI/5.13.0-1",
+        "XZ/5.8.1 <H>",
+        "libxml2/2.14.3 <H>",
+        "libaec/1.1.4",
+        "Perl/5.40.2",
+        "HDF5/1.14.6",
+        "ncurses/6.5 <H>",
+        "bzip2/1.0.8 <H>",
+        "libidn2/2.3.8",
+        "libiconv/1.18 <H>",
+        "libunistring/1.3 <H>",
+        "libpsl/0.21.5",
+        "cURL/8.14.1",
+        "gzip/1.14 <H>",
+        "lz4/1.10.0 <H>",
+        "zstd/1.5.7 <H>",
+        "libarchive/3.8.1",
+        "CMake/4.0.3",
+        "expat/2.7.1 <H>",
+        "gettext/0.25 <H>",
+        "git/2.50.1"
+      ],
+      "mpi_and_launcher_versions": [
+        "slurm 24.11.7-1.20260115gitd2512c3.el9"
+      ],
+      "mpi_layout": {
+        "openmp_threads": 1,
+        "pe_per_kpt": 2,
+        "ranks": 4
+      },
+      "mpi_wrapper_configuration": [
+        "ifx -reentrancy threaded -I/p/software/fs/jurecadc/stages/2026/software/psmpi/5.13.0-1-intel-compilers-2025.2.0/include -I/p/software/fs/jurecadc/stages/2026/software/psmpi/5.13.0-1-intel-compilers-2025.2.0/include -L/p/software/fs/jurecadc/stages/2026/software/psmpi/5.13.0-1-intel-compilers-2025.2.0/lib -lmpifort -Wl,-rpath -Wl,/p/software/fs/jurecadc/stages/2026/software/psmpi/5.13.0-1-intel-compilers-2025.2.0/lib -Wl,--enable-new-dtags -lmpi"
+      ],
+      "out_xml": {
+        "compilation": {
+          "date": "2026-08-05T12:10:06",
+          "flag": "I/p/software/default/stages/2026/software/HDF5/1.14.6-ipsmpi-2025b/include -fiopenmp -qmkl  -assume byterecl -",
+          "host": "jrlogin10.jureca",
+          "link": "L/p/software/default/stages/2026/software/HDF5/1.14.6-ipsmpi-2025b/lib;-lmkl_scalapack_lp64;-lmkl_blacs_intelm",
+          "user": "lezaic1"
+        },
+        "end": {
+          "date": "2026/08/05",
+          "time": "21:23:32",
+          "zone": "+0200"
+        },
+        "execution": {
+          "commandLine": "/p/scratch/cjiff40/Marjana/debug_runs/fleur_xas_mpi_b3818dad/build.xas_mpi_b3818dad/fleur_MPI -warn_only -pe_per_kpt 2"
+        },
+        "git": {
+          "branch": "HEAD",
+          "lastCommitHash": "b3818dad42aa56fa3a835a9cf8e972e23ea2dd87",
+          "version": "MaX-R8.1-205-gb3818dad4"
+        },
+        "mpi": {
+          "mpiProcesses": "4"
+        },
+        "openmp": {
+          "ompThreads": "1"
+        },
+        "program_version": {
+          "version": "fleur 42"
+        },
+        "start": {
+          "date": "2026/08/05",
+          "time": "21:23:28",
+          "zone": "+0200"
+        }
+      },
+      "post_run_restart_sha256": "15ecc9d3f3773e5fc67713915fb17c8382094695c8cf6f2bf86755324afa8ddd",
+      "result_sha256s": {
+        "fleur_stderr.log": "28bfb6ac7744b826cbfa5123b42e433b338fa33c2efeb6f43d22c3fe6b701e41",
+        "fleur_stdout.log": "61bf1300040515f63ee0418f419231fe6078df03b0e62c0b85c785f027d54811",
+        "out": "194e8d54695760617ca2c406a3749cc5ffe3d9e4adb31860ec8ba122d75c4d35",
+        "out.xml": "d99f8fe5a1730d1b03f301640689fa022866b93c86f72ed6bd208d84d07019a9",
+        "xas_mpi_L3_x_eta0p030.dat": "e27213e03d72bc52957a0ac7482e724ea3fb2aaf1c7e3b97baec3e4fbcabeb45",
+        "xas_mpi_L3_x_transitions_rank0000.dat": "8b415dcfbebc50d6749a12936d5249c651404cabe09c5aaec84661149e8204a1",
+        "xas_mpi_L3_x_transitions_rank0001.dat": "950c1565450cc6b6e12a31f6d63799718bcc5c18e5e35cfc6fe30100e3ffae66",
+        "xas_mpi_L3_x_transitions_rank0002.dat": "ec620242db49196505597b4bb569f76f4762b9e3e194d52abf3ecbd9037ae1e6",
+        "xas_mpi_L3_x_transitions_rank0003.dat": "bce298ac33ddf269e94e16fa67517f36120f3e0e9d426c9715534fce228c230b",
+        "xas_mpi_L3_y_eta0p030.dat": "98870238e373c60d715b8a5c3934d1abc1d87e1fb2a96ea73eb5d86726c8dda0",
+        "xas_mpi_L3_y_transitions_rank0000.dat": "ab45b6a515d56e8164801e740f30be3495f4b9f76327606cd838e61b72330090",
+        "xas_mpi_L3_y_transitions_rank0001.dat": "2ce1d0249fe19c22e69fbbfea46d887ee8b0144dac3a1daaa496ca4d49316faf",
+        "xas_mpi_L3_y_transitions_rank0002.dat": "397caef4582dd9dc612d6659601794d16b68659ad1f865ce2cbc792d8b647bc6",
+        "xas_mpi_L3_y_transitions_rank0003.dat": "72c9d0f8ae0fe7b90a65a8d57097b4dd341d2ccad776c1b95174ad5afe8ec178",
+        "xas_mpi_L3_z_eta0p030.dat": "60aac792d29c4f7255de256e1104b48ffab5ef1777d94eb6ead6c1480080aad4",
+        "xas_mpi_L3_z_transitions_rank0000.dat": "a5afcac6c63b7068d89805c37698e017dc3466e21ffff94ab8470e617c0e2105",
+        "xas_mpi_L3_z_transitions_rank0001.dat": "352c1d516ca176b58947d7e2f734f994a54e795897155258a7b325132693b4d4",
+        "xas_mpi_L3_z_transitions_rank0002.dat": "37e711df9eb221eac1b8a153c000c7fbf5b9e4e97a544a6061ba42d10d2e66e6",
+        "xas_mpi_L3_z_transitions_rank0003.dat": "291c6500fde8eba69993f66ebffa677970e93a2cab8fc692c89983238e747a45"
+      },
+      "seed_sha256s": {
+        "cdn.hdf": "05feb810fcce3d04e85e1f6e0a35ca4820a6db447d9006732edcd6ebb1c0d535",
+        "inp.xml": "9f10cf55e9e0a749ff249de8c21c23b9e29eb0eb94be8a1f09a39a1bbf916b61",
+        "kpts.xml": "fd898c8132f06fe0b08738a936d7a391cf7db2001e935079375838c0abb0144a",
+        "sym.xml": "369a047a42a76ac2c949c5fb7ba308f60cbe0eb7374a98bc6f6cd741bd37220c"
+      },
+      "slurm_job_id": "15501842",
+      "source": {
+        "commit": "b3818dad42aa56fa3a835a9cf8e972e23ea2dd87",
+        "status_short": "CLEAN"
+      },
+      "started": "2026-08-05T21:23:24+02:00"
+    }
+  }
+}
