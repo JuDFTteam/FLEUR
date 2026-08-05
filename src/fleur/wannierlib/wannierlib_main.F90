@@ -232,11 +232,12 @@ CONTAINS
       END DO
 
       ! collinear combined 2N spin operator rspauli.1: only assemblable once BOTH channels have
-      ! been wannierised, since it rotates the cross-spin overlap with both gauges. A no-op
-      ! unless the collinear spin operator was requested.
-      CALL melem_rspauli_collinear(this%num_bands, this%num_wann, this%min_band, this%max_band, &
-                                   atoms, input, sym, cell, noco, nococonv, kpts, &
-                                   stars, usdus, radfun, eig_id, l_real_wann, distk, fmpi, melem)
+      ! been wannierised, since it rotates the cross-spin overlap with both gauges.
+      IF (melem%l_col_spin) &
+         CALL melem_rspauli_collinear(this%num_bands, this%num_wann, this%min_band, this%max_band, &
+                                      atoms, input, sym, cell, noco, nococonv, kpts, &
+                                      stars, usdus, radfun, eig_id, l_real_wann, distk, fmpi, &
+                                      melem%v_ch)
 
       CALL melem%free()
       IF (ALLOCATED(distk)) DEALLOCATE(distk)

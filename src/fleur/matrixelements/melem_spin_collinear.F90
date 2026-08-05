@@ -26,7 +26,6 @@ MODULE m_melem_spin_collinear
    USE m_types_mat
    USE m_types_radfun
    USE m_types_abc
-   USE m_melem_coarse, ONLY: t_melem_coarse
    USE m_melem_spin, ONLY: melem_spin_mt_block
    USE m_melem_ft, ONLY: melem_ft_to_real_reduce
    USE m_melem_overlap, ONLY: melem_overlap_interstitial
@@ -39,7 +38,7 @@ MODULE m_melem_spin_collinear
 CONTAINS
 
    SUBROUTINE melem_rspauli_collinear(num_bands, num_wann, min_band, max_band, atoms, input, sym, cell, noco, nococonv, kpts, &
-                                      stars, usdus, radfun, eig_id, l_real_wann, distk, fmpi, coarse)
+                                      stars, usdus, radfun, eig_id, l_real_wann, distk, fmpi, v_ch)
       INTEGER, INTENT(IN) :: num_bands, num_wann     !> sizes of the Bloch and Wannier manifolds
       INTEGER, INTENT(IN) :: min_band, max_band      !> band window, forwarded to get_z
       TYPE(t_atoms), INTENT(IN) :: atoms
@@ -56,7 +55,11 @@ CONTAINS
       LOGICAL, INTENT(IN) :: l_real_wann
       INTEGER, INTENT(IN) :: distk(:)
       TYPE(t_mpi), INTENT(IN) :: fmpi
-      TYPE(t_melem_coarse), INTENT(IN) :: coarse   !< carries v_ch (num_bands,num_wann,nkptf,2)
+      !> The Wannier gauge V = u_opt.u_matrix of each spin channel, over the whole mesh:
+      !> (num_bands, num_wann, nkptf, channel). Both channels have to be wannierised before
+      !> the cross-spin overlap becomes a spin matrix, which is why they arrive together and
+      !> already assembled rather than being built here.
+      COMPLEX, INTENT(IN) :: v_ch(:, :, :, :)
 
       TYPE(t_lapw) :: lapw_u, lapw_d
       TYPE(t_mat)  :: zMat_u, zMat_d
@@ -66,9 +69,13 @@ CONTAINS
       COMPLEX, ALLOCATABLE :: o_uu(:, :), o_dd(:, :), o_ud(:, :), o_du(:, :), Xk(:, :), tmp(:, :)
       COMPLEX, ALLOCATABLE :: sig_loc(:, :, :, :), s1(:, :, :), sr(:, :, :, :)
 
-      IF (.NOT. coarse%l_col_spin) RETURN
-
       nb = num_bands; nw = num_wann; n2 = 2*nw; gb = 0
+
+      !> The gauges index the same manifolds the overlap does, and a mismatch would be a
+      !> silently wrong rotation rather than a failure.
+      IF (SIZE(v_ch, 1) /= nb .OR. SIZE(v_ch, 2) /= nw .OR. SIZE(v_ch, 4) /= 2) &
+         CALL juDFT_error("melem_rspauli_collinear: the gauges do not match the manifold", &
+                          calledby="melem_rspauli_collinear")
       nkl = COUNT(distk == fmpi%irank); ALLOCATE (gk_loc(nkl)); j = 0
       DO ikpt = 1, SIZE(distk)
          IF (distk(ikpt) == fmpi%irank) THEN; j = j + 1; gk_loc(j) = ikpt; END IF
@@ -95,8 +102,8 @@ CONTAINS
          CALL melem_overlap_interstitial(stars, lapw_u, lapw_d, zMat_u, zMat_d, 0, 0, o_ud)
          CALL melem_spin_mt_block(atoms, abc_both, radfun, o_uu, o_dd, o_ud, o_du)
          ! rotate to the WF gauge: X = V_up^dagger o_ud V_dn
-         tmp = MATMUL(o_ud, coarse%v_ch(:, :, gk, 2))
-         Xk = MATMUL(CONJG(TRANSPOSE(coarse%v_ch(:, :, gk, 1))), tmp)
+         tmp = MATMUL(o_ud, v_ch(:, :, gk, 2))
+         Xk = MATMUL(CONJG(TRANSPOSE(v_ch(:, :, gk, 1))), tmp)
          ! assemble the 2N Pauli in the WF gauge (sigma_z block-diagonal +/- I by orthonormality)
          DO i = 1, nw
             sig_loc(i, i, 3, kl) = CMPLX(1.0, 0.0)
