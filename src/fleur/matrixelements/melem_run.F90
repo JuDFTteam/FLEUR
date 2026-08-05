@@ -21,6 +21,7 @@ MODULE m_melem_run
    USE m_types_melem_bmesh
    USE m_melem_coarse, ONLY: t_melem_coarse
    USE m_types_melem_manifold, ONLY: t_melem_manifold
+   USE m_types_melem_domains, ONLY: t_melem_domains
    USE m_melem_domains, ONLY: melem_write_domain_kpts, melem_rename_domain_outputs, melem_shell
    USE m_melem_operators_r, ONLY: melem_write_operators_r, melem_build_berry_aw_r, melem_check_berry_centres
    USE m_melem_interpolate_ham, ONLY: melem_interpolate_ham
@@ -59,6 +60,7 @@ CONTAINS
       CHARACTER(LEN=16) :: ssfx
       LOGICAL :: lex, l_collinear
       TYPE(t_melem_manifold) :: manifold
+      TYPE(t_melem_domains) :: domains
 
       IF (.NOT. wann%l_wannierize) RETURN
       irank = fmpi%irank; mpi_comm = fmpi%mpi_comm
@@ -70,6 +72,10 @@ CONTAINS
 
       !> what every interpolation needs of the request, built once
       CALL manifold%init(wann%num_bands, wann%num_wann, wann%dis_win_min, wann%dis_win_max)
+
+      !> where the interpolations are to be evaluated, built once
+      CALL domains%init(wann%l_dom_path, wann%l_dom_plane, wann%l_dom_grid, wann%path_file, &
+                        wann%path_kset, wann%plane_kset, wann%grid_kset)
 
       CALL timestart('melem_run')
 
@@ -94,12 +100,12 @@ CONTAINS
       ! the unsuffixed path/legacy domain runs LAST so its base-named output is not clobbered
       ! and it restores the user's original kpts_interpol before interpolating.
       ndom = 0
-      IF (wann%l_dom_plane) THEN; ndom = ndom + 1; dkind(ndom) = 'plane'; dsuf(ndom) = '_plane'; END IF
-      IF (wann%l_dom_grid) THEN; ndom = ndom + 1; dkind(ndom) = 'grid'; dsuf(ndom) = '_grid'; END IF
-      IF (wann%l_dom_path) THEN; ndom = ndom + 1; dkind(ndom) = 'path'; dsuf(ndom) = ''; END IF
+      IF (domains%l_plane) THEN; ndom = ndom + 1; dkind(ndom) = 'plane'; dsuf(ndom) = '_plane'; END IF
+      IF (domains%l_grid) THEN; ndom = ndom + 1; dkind(ndom) = 'grid'; dsuf(ndom) = '_grid'; END IF
+      IF (domains%l_path) THEN; ndom = ndom + 1; dkind(ndom) = 'path'; dsuf(ndom) = ''; END IF
       IF (ndom == 0) THEN; ndom = 1; dkind(1) = 'legacy'; dsuf(1) = ''; END IF
       ! back up a user-provided kpts_interpol that a generated (plane/grid) domain would overwrite
-      IF (irank == 0 .AND. (wann%l_dom_plane .OR. wann%l_dom_grid)) THEN
+      IF (irank == 0 .AND. (domains%l_plane .OR. domains%l_grid)) THEN
          INQUIRE (file='kpts_interpol', exist=lex)
          IF (lex) CALL melem_shell('cp -f kpts_interpol .kpts_interpol_userbak')
       END IF
@@ -113,7 +119,7 @@ CONTAINS
       ! Each operator supplies its own per-rank Bloch slice on the coarse mesh (coarse%s0/l0/soc0);
       ! the remaining steps are the shared generic driver m_melem_interpolate_op.
       DO idom = 1, ndom
-         IF (irank == 0) CALL melem_write_domain_kpts(wann, TRIM(dkind(idom)))
+         IF (irank == 0) CALL melem_write_domain_kpts(domains, TRIM(dkind(idom)))
 
          DO iop = 1, wann%n_ops
             SELECT CASE (TRIM(wann%op_name(iop)))
@@ -165,7 +171,7 @@ CONTAINS
       END DO   ! idom
 
       ! restore the user's original kpts_interpol if we overwrote it
-      IF (irank == 0 .AND. (wann%l_dom_plane .OR. wann%l_dom_grid)) THEN
+      IF (irank == 0 .AND. (domains%l_plane .OR. domains%l_grid)) THEN
          INQUIRE (file='.kpts_interpol_userbak', exist=lex)
          IF (lex) CALL melem_shell('mv -f .kpts_interpol_userbak kpts_interpol')
       END IF

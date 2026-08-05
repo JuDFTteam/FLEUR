@@ -15,6 +15,7 @@
 MODULE m_melem_domains
   USE m_juDFT
   USE m_types_wannierlib
+  USE m_types_melem_domains, ONLY: t_melem_domains
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: melem_write_domain_kpts, melem_rename_domain_outputs, melem_shell
@@ -24,7 +25,7 @@ CONTAINS
   ! <path file="..">, copy that file to kpts_interpol; legacy/default path uses the
   ! existing kpts_interpol as-is. Rank-0 file I/O only.
   SUBROUTINE melem_write_domain_kpts(this, kind)
-    TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
+    TYPE(t_melem_domains), INTENT(IN) :: this
     CHARACTER(LEN=*), INTENT(IN) :: kind
     INTEGER :: i, j, k, iu, np
     REAL :: t1, t2, kf(3)
