@@ -73,6 +73,12 @@ CONTAINS
 
     ! The four spin blocks are indexed with the slots of their own components.
     INTEGER :: js1, js2
+    !> The spin index comes first. An assumed-shape dummy accepts the transpose
+    !> without complaint and reinterprets the two indices on the same memory, which
+    !> is right only when there is a single atom type.
+    IF (SIZE(abc, 1) /= 2 .OR. SIZE(abc, 2) /= atoms%ntype) &
+      CALL judft_bug("melem_spin_mt_block: the coefficients must have shape (2,ntype)")
+
     js1 = radial_slot(radfun, 1); js2 = radial_slot(radfun, 2)
     nb = SIZE(o_uu, 1)
     DO j = 1, nb                       ! ket band

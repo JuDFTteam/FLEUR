@@ -331,12 +331,12 @@ CONTAINS
 
       TYPE(t_lapw) :: lapw_u, lapw_d
       TYPE(t_mat)  :: zMat_u, zMat_d
-      TYPE(t_abc), ALLOCATABLE :: abc_both(:, :)   ! (ntype,2): 1=up, 2=dn
+      TYPE(t_abc), ALLOCATABLE :: abc_both(:, :)   ! (2,ntype): 1=up, 2=dn
       COMPLEX, ALLOCATABLE :: o_uu(:, :), o_dd(:, :), o_ud(:, :), o_du(:, :)
       INTEGER :: nb, ikpt, il, itype, ch
 
       nb = manifold%num_bands
-      ALLOCATE (abc_both(atoms%ntype, 2))
+      ALLOCATE (abc_both(2, atoms%ntype))
       ALLOCATE (o_uu(nb, nb), o_dd(nb, nb), o_ud(nb, nb), o_du(nb, nb))
 
       il = 0
@@ -346,15 +346,15 @@ CONTAINS
          CALL melem_get_z(manifold%min_band, manifold%max_band, eig_id, input, atoms, noco, &
                           nococonv, kpts, sym, cell, ikpt, 1, l_real_wann, lapw_u, zMat_u)
          DO itype = 1, atoms%ntype
-            CALL abc_both(itype, 1)%init(input, atoms, nb, itype)
-            CALL abc_both(itype, 1)%calc_abc(input, atoms, sym, cell, lapw_u, nb, usdus, noco, &
+            CALL abc_both(1, itype)%init(input, atoms, nb, itype)
+            CALL abc_both(1, itype)%calc_abc(input, atoms, sym, cell, lapw_u, nb, usdus, noco, &
                                              nococonv, 1, itype, zMat_u)
          END DO
          CALL melem_get_z(manifold%min_band, manifold%max_band, eig_id, input, atoms, noco, &
                           nococonv, kpts, sym, cell, ikpt, 2, l_real_wann, lapw_d, zMat_d)
          DO itype = 1, atoms%ntype
-            CALL abc_both(itype, 2)%init(input, atoms, nb, itype)
-            CALL abc_both(itype, 2)%calc_abc(input, atoms, sym, cell, lapw_d, nb, usdus, noco, &
+            CALL abc_both(2, itype)%init(input, atoms, nb, itype)
+            CALL abc_both(2, itype)%calc_abc(input, atoms, sym, cell, lapw_d, nb, usdus, noco, &
                                              nococonv, MERGE(1, 2, input%jspins == 1), itype, zMat_d)
          END DO
          IF (this%l_col_spin) THEN
@@ -366,7 +366,7 @@ CONTAINS
          !> L is spin-diagonal, so each channel has its own and neither needs the other.
          IF (this%l_col_orb) THEN
             DO ch = 1, 2
-               CALL melem_orbmom_bloch_collinear(atoms, abc_both(:, ch), radfun, &
+               CALL melem_orbmom_bloch_collinear(atoms, abc_both(ch, :), radfun, &
                                                  MERGE(1, ch, input%jspins == 1), &
                                                  this%l0col(:, :, :, ch, il))
             END DO
