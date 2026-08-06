@@ -36,7 +36,6 @@ MODULE m_melem_coarse
    USE m_types_melem_request, ONLY: t_melem_request
    USE m_types_melem_manifold, ONLY: t_melem_manifold
    USE m_melem_spin, ONLY: melem_pauli_from_blocks, melem_spin_sumrule, melem_spin_mt_block
-   USE m_melem_orbmom, ONLY: melem_orbmom_bloch_collinear
    USE m_melem_overlap, ONLY: melem_overlap_interstitial
    USE m_types_matelements_spin, ONLY: t_matelements_spin
    USE m_types_matelements_soc, ONLY: t_matelements_soc
@@ -332,12 +331,30 @@ CONTAINS
       TYPE(t_lapw) :: lapw_u, lapw_d
       TYPE(t_mat)  :: zMat_u, zMat_d
       TYPE(t_abc), ALLOCATABLE :: abc_both(:, :)   ! (2,ntype): 1=up, 2=dn
+      TYPE(t_matelements_orbital), ALLOCATABLE :: orbop(:, :)   ! (nat, channel)
+      TYPE(t_mat) :: znone(1)   ! L has no interstitial part and never reads the eigenvectors
       COMPLEX, ALLOCATABLE :: o_uu(:, :), o_dd(:, :), o_ud(:, :), o_du(:, :)
-      INTEGER :: nb, ikpt, il, itype, ch
+      INTEGER :: nb, ikpt, il, itype, iatom, na, ch
 
       nb = manifold%num_bands
       ALLOCATE (abc_both(2, atoms%ntype))
       ALLOCATE (o_uu(nb, nb), o_dd(nb, nb), o_ud(nb, nb), o_du(nb, nb))
+
+      !> Bound once, outside the k loop: what an instance binds to -- a site and the
+      !> radial slot of its channel -- is the same at every k. The k dependence arrives
+      !> with the abc coefficients.
+      IF (this%l_col_orb) THEN
+         ALLOCATE (orbop(atoms%nat, 2))
+         DO ch = 1, 2
+            na = 0
+            DO itype = 1, atoms%ntype
+               DO iatom = 1, atoms%neq(itype)
+                  na = na + 1
+                  CALL orbop(na, ch)%init(atoms, itype, iatom, radial_slot(radfun, ch))
+               END DO
+            END DO
+         END DO
+      END IF
 
       il = 0
       DO ikpt = 1, kpts%nkptf
@@ -364,15 +381,22 @@ CONTAINS
             this%x0(:, :, il) = o_ud
          END IF
          !> L is spin-diagonal, so each channel has its own and neither needs the other.
+         !> An instance covers one site, so the sites are added up here; the sum needs no
+         !> local-to-global rotation, L being spin-diagonal with a frame-invariant trace.
          IF (this%l_col_orb) THEN
             DO ch = 1, 2
-               CALL melem_orbmom_bloch_collinear(atoms, abc_both(ch, :), radfun, &
-                                                 MERGE(1, ch, input%jspins == 1), &
-                                                 this%l0col(:, :, :, ch, il))
+               this%l0col(:, :, :, ch, il) = CMPLX(0.0, 0.0)
+               DO na = 1, atoms%nat
+                  CALL orbop(na, ch)%init_mat(nb, n_alpha=3)
+                  CALL orbop(na, ch)%calc_matrix_elements(znone, abc_both(ch:ch, :), radfun, usdus)
+                  this%l0col(:, :, :, ch, il) = this%l0col(:, :, :, ch, il) &
+                                                + orbop(na, ch)%comp(:, :, 1, 1, 1:3)
+               END DO
             END DO
          END IF
       END DO
 
+      IF (ALLOCATED(orbop)) DEALLOCATE (orbop)
       DEALLOCATE (abc_both, o_uu, o_dd, o_ud, o_du)
    END SUBROUTINE melem_coarse_collinear
 

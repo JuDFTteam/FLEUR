@@ -11,8 +11,12 @@
 !>  L acts on the spatial part alone, so it is the identity in spin space: the
 !>  cross-spin blocks vanish and the expectation value over a spinor is the sum of
 !>  its two components. The result is therefore a single matrix and not a 2x2
-!>  block, both spinor flags stay .FALSE., and the sum over the spinor components
-!>  is taken here.
+!>  block, and both spinor flags stay .FALSE.
+!>
+!>  The coefficients handed in are either a spinor, whose two components are summed
+!>  here, or a single collinear channel, which is one component and stands alone.
+!>  Which of the two is declared at init: a radial slot is given for a channel and
+!>  withheld for a spinor, whose components read the slots of their own potentials.
 !>
 !>  L_x and L_y are both built from L_+ and L_-, so an instance per component
 !>  repeats the radial and angular sums rather than sharing them.
@@ -38,6 +42,7 @@ MODULE m_types_matelements_orbital
       TYPE(t_atoms), POINTER :: atoms => NULL()
       INTEGER :: ntyp  = 0     !> atom type
       INTEGER :: iat   = 0     !> which of the equivalent atoms of that type
+      INTEGER :: jspin_rad = 0 !> radial slot of the single channel served; 0 = spinor
    CONTAINS
       PROCEDURE :: init                 => init
       PROCEDURE :: calc_matrix_elements => calc_matrix_elements
@@ -52,15 +57,22 @@ CONTAINS
    !> here: an instance covers one site, and the caller adds them up if it wants the
    !> total. For L that is a plain sum, since it is spin-diagonal and its trace is
    !> invariant under the local-to-global frame rotation.
-   SUBROUTINE init(this, atoms, ntyp, iat)
+   SUBROUTINE init(this, atoms, ntyp, iat, jspin_rad)
       CLASS(t_matelements_orbital), INTENT(INOUT) :: this
       TYPE(t_atoms), TARGET, INTENT(IN) :: atoms
       INTEGER, INTENT(IN) :: ntyp, iat
+      INTEGER, INTENT(IN), OPTIONAL :: jspin_rad   !> present: the coefficients are one channel
 
       IF (ntyp < 1 .OR. ntyp > atoms%ntype) &
          CALL judft_bug("init: the atom type is out of range")
       IF (iat < 1 .OR. iat > atoms%neq(ntyp)) &
          CALL judft_bug("init: the equivalent atom is out of range")
+
+      this%jspin_rad = 0
+      IF (PRESENT(jspin_rad)) THEN
+         IF (jspin_rad < 1) CALL judft_bug("init: the radial slot is out of range")
+         this%jspin_rad = jspin_rad
+      END IF
 
       this%spinoroperator = .FALSE.
       this%spinorwavefcts = .FALSE.
@@ -77,7 +89,7 @@ CONTAINS
       TYPE(t_radfun), INTENT(IN) :: radfun(:) !> (ntype)
       TYPE(t_usdus),  INTENT(IN) :: usdus     !> unused, the radial integrals are in radfun
 
-      INTEGER :: nb, i, j, l, ll1, mm, lm, n_r, n_r2, s, sr
+      INTEGER :: nb, i, j, l, ll1, mm, lm, n_r, n_r2, s, sr, n_comp, slot(2)
       REAL    :: lplus, lminus, w
       COMPLEX :: cz, cp, cm     ! L_z, L_+ and L_- for one (i,j) of this atom
 
@@ -85,8 +97,13 @@ CONTAINS
          CALL judft_bug("calc_matrix_elements: the result matrix is not allocated")
       IF (SIZE(this%mat, 1) /= 1 .OR. SIZE(this%mat, 2) /= 1) &
          CALL judft_bug("calc_matrix_elements: L is spin-diagonal, so the result is a single block")
-      IF (SIZE(abc, 1) /= 2 .OR. SIZE(abc, 2) /= this%atoms%ntype) &
-         CALL judft_bug("calc_matrix_elements: the abc coefficients must have shape (2,ntype)")
+      n_comp = SIZE(abc, 1)
+      IF (n_comp /= 1 .AND. n_comp /= 2) &
+         CALL judft_bug("calc_matrix_elements: the coefficients are either one channel or a spinor")
+      IF (SIZE(abc, 2) /= this%atoms%ntype) &
+         CALL judft_bug("calc_matrix_elements: the coefficients must be indexed by atom type")
+      IF ((this%jspin_rad /= 0) .NEQV. (n_comp == 1)) &
+         CALL judft_bug("calc_matrix_elements: a radial slot belongs to a channel and not to a spinor")
 
       nb = SIZE(abc(1, 1)%cof, 1)
       IF (this%mat(1, 1)%matsize1 /= nb) &
@@ -96,6 +113,11 @@ CONTAINS
       !> set both spinor components have to read slot 1; indexing 2 there ran past
       !> the array. The bound is read from the array itself.
       sr = radial_slot(radfun, 2)
+      IF (n_comp == 1) THEN
+         slot(1) = this%jspin_rad          ! the channel names its own potential
+      ELSE
+         slot(1) = 1; slot(2) = sr         ! a spinor reads both, clamped to what exists
+      END IF
 
       DO j = 1, nb                     ! ket band
          DO i = 1, nb                  ! bra band
@@ -106,10 +128,10 @@ CONTAINS
                   lm = ll1 + mm
                   lplus  = SQRT(REAL((l - mm)*(l + mm + 1)))   ! <m+1|L+|m>
                   lminus = SQRT(REAL((l + mm)*(l - mm + 1)))   ! <m-1|L-|m>
-                  DO s = 1, 2          ! L is spin-diagonal: sum both spinor components
+                  DO s = 1, n_comp     ! L is spin-diagonal: a spinor sums, a channel stands alone
                      DO n_r = 1, abc(s, this%ntyp)%n_r(l)
                         DO n_r2 = 1, abc(s, this%ntyp)%n_r(l)
-                           w = radfun(this%ntyp)%integral(n_r, n_r2, l, MIN(s, sr), MIN(s, sr))
+                           w = radfun(this%ntyp)%integral(n_r, n_r2, l, slot(s), slot(s))
                            cz = cz + abc(s, this%ntyp)%cof(i, lm, n_r, this%iat) &
                                    * CONJG(abc(s, this%ntyp)%cof(j, lm, n_r2, this%iat))*REAL(mm)*w
                            IF (mm < l) cp = cp + abc(s, this%ntyp)%cof(i, lm, n_r, this%iat) &
