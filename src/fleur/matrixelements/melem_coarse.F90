@@ -119,6 +119,23 @@ CONTAINS
             IF (TRIM(request%op_r_name(iop)) == 'spin') this%l_col_spin = .TRUE.
          END DO
       END IF
+      !> An operator nobody will build must not reach the export: the slices stay at their
+      !> stub size, the export reads them anyway, and what comes out is small enough to pass
+      !> for numerical noise instead of for the absence of a calculation.
+      IF (.NOT. this%l_active) THEN
+         IF (request%l_socop) CALL judft_error( &
+            "melem_coarse: the spin-orbit operator was requested without spin-orbit coupling", &
+            hint="remove the operator, or switch on l_soc", calledby="melem_coarse_init")
+         IF (request%l_orbmom .AND. .NOT. this%l_col_orb) CALL judft_error( &
+            "melem_coarse: the orbital operator has no producer in this spin configuration", &
+            hint="it needs spinors (l_soc or l_noco), or jspins=2 with an <operators_r> block", &
+            calledby="melem_coarse_init")
+         IF (request%l_spin .AND. .NOT. this%l_col_spin) CALL judft_error( &
+            "melem_coarse: the spin operator has no producer in this spin configuration", &
+            hint="it needs spinors (l_soc or l_noco), or jspins=2 with an <operators_r> block", &
+            calledby="melem_coarse_init")
+      END IF
+
       IF (this%l_col_spin) THEN
          ALLOCATE (this%v_ch(manifold%num_bands, manifold%num_wann, kpts%nkptf, 2), source=cmplx(0.0, 0.0))
          ALLOCATE (this%x0(manifold%num_bands, manifold%num_bands, MAX(1, COUNT(distk == fmpi%irank))), &
