@@ -182,7 +182,7 @@ CONTAINS
       TYPE(t_matelements_soc) :: socop
       !> One instance per (Cartesian component, atom): L_x and L_y are different
       !> operators, and the site resolution is an output of its own.
-      TYPE(t_matelements_orbital), ALLOCATABLE :: orbop(:, :)
+      TYPE(t_matelements_orbital), ALLOCATABLE :: orbop(:)
       TYPE(t_rsoc) :: rsoc
       TYPE(t_mat) :: zc(2)   ! the two spinor components when get_z does not stack them
       INTEGER :: ikpt, itype, isp, il, jspin_rad, ic, na, iatom
@@ -217,14 +217,12 @@ CONTAINS
       !> elements arrives with the abc coefficients, once per k; init_mat clears the
       !> result matrices there and reuses the allocation.
       IF (request%l_orbmom) THEN
-         ALLOCATE (orbop(3, atoms%nat))
+         ALLOCATE (orbop(atoms%nat))
          na = 0
          DO itype = 1, atoms%ntype
             DO iatom = 1, atoms%neq(itype)
                na = na + 1
-               DO ic = 1, 3
-                  CALL orbop(ic, na)%init(atoms, ic, itype, iatom)
-               END DO
+               CALL orbop(na)%init(atoms, itype, iatom)
             END DO
          END DO
       END IF
@@ -284,11 +282,9 @@ CONTAINS
             !no local-to-global rotation: it is spin-diagonal and its trace is
             !frame-invariant.
             DO na = 1, atoms%nat
-               DO ic = 1, 3
-                  CALL orbop(ic, na)%init_mat(manifold%num_bands)
-                  CALL orbop(ic, na)%calc_matrix_elements(zMat, abc_s, radfun, usdus)
-                  this%l0(:, :, ic, na, il) = orbop(ic, na)%mat(1, 1)%data_c
-               END DO
+               CALL orbop(na)%init_mat(manifold%num_bands, n_alpha=3)
+               CALL orbop(na)%calc_matrix_elements(zMat, abc_s, radfun, usdus)
+               this%l0(:, :, 1:3, na, il) = orbop(na)%comp(:, :, 1, 1, 1:3)
             END DO
          END IF
          IF (request%l_socop) THEN

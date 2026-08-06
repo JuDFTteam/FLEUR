@@ -36,7 +36,6 @@ MODULE m_types_matelements_orbital
 
    TYPE, EXTENDS(t_matelements) :: t_matelements_orbital
       TYPE(t_atoms), POINTER :: atoms => NULL()
-      INTEGER :: compo = 0     !> which component: 1 = L_x, 2 = L_y, 3 = L_z
       INTEGER :: ntyp  = 0     !> atom type
       INTEGER :: iat   = 0     !> which of the equivalent atoms of that type
    CONTAINS
@@ -48,17 +47,16 @@ MODULE m_types_matelements_orbital
 
 CONTAINS
 
-   !> Bind the object to one component of one atom. The site is not summed over
+   !> Bind the object to one atom. All three Cartesian components come out of one pass,
+   !> since L_x and L_y are both built from the same L_+ and L_-. The site is not summed over
    !> here: an instance covers one site, and the caller adds them up if it wants the
    !> total. For L that is a plain sum, since it is spin-diagonal and its trace is
    !> invariant under the local-to-global frame rotation.
-   SUBROUTINE init(this, atoms, compo, ntyp, iat)
+   SUBROUTINE init(this, atoms, ntyp, iat)
       CLASS(t_matelements_orbital), INTENT(INOUT) :: this
       TYPE(t_atoms), TARGET, INTENT(IN) :: atoms
-      INTEGER, INTENT(IN) :: compo, ntyp, iat
+      INTEGER, INTENT(IN) :: ntyp, iat
 
-      IF (compo < 1 .OR. compo > 3) &
-         CALL judft_bug("init: the component index must be 1, 2 or 3")
       IF (ntyp < 1 .OR. ntyp > atoms%ntype) &
          CALL judft_bug("init: the atom type is out of range")
       IF (iat < 1 .OR. iat > atoms%neq(ntyp)) &
@@ -68,7 +66,6 @@ CONTAINS
       this%spinorwavefcts = .FALSE.
 
       this%atoms => atoms
-      this%compo = compo
       this%ntyp  = ntyp
       this%iat   = iat
    END SUBROUTINE init
@@ -128,14 +125,9 @@ CONTAINS
             !> atom, so each element gets exactly one contribution. Adding onto a
             !> cleared matrix would also turn a -0.0 result into +0.0, and the sign of
             !> zero is visible in the exported file.
-            SELECT CASE (this%compo)
-            CASE (1)
-               this%mat(1, 1)%data_c(i, j) = 0.5 * (cp + cm)               ! L_x = (L+ + L-)/2
-            CASE (2)
-               this%mat(1, 1)%data_c(i, j) = -0.5 * ImagUnit * (cp - cm)   ! L_y = (L+ - L-)/(2i)
-            CASE (3)
-               this%mat(1, 1)%data_c(i, j) = cz                            ! L_z
-            END SELECT
+            this%comp(i, j, 1, 1, 1) = 0.5 * (cp + cm)               ! L_x = (L+ + L-)/2
+            this%comp(i, j, 1, 1, 2) = -0.5 * ImagUnit * (cp - cm)   ! L_y = (L+ - L-)/(2i)
+            this%comp(i, j, 1, 1, 3) = cz                            ! L_z
          END DO
       END DO
    END SUBROUTINE calc_matrix_elements
