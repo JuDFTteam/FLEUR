@@ -48,7 +48,7 @@ MODULE m_checks
 #endif
     END SUBROUTINE check_command_line
 
-    SUBROUTINE check_input_switches(banddos,vacuum,noco,atoms,input,sym,kpts,hybinp,cell)
+    SUBROUTINE check_input_switches(banddos,vacuum,noco,atoms,input,sym,kpts,hybinp,mpinp,cell)
       USE m_nocoInputCheck
       USE m_socsym
       USE m_types_fleurinput
@@ -61,6 +61,7 @@ MODULE m_checks
       type(t_sym),INTENT(IN)    :: sym
       type(t_kpts),INTENT(IN)   :: kpts
       type(t_hybinp),intent(in) :: hybinp
+      type(t_mpinp),intent(in)  :: mpinp
       type(t_cell),INTENT(IN)   :: cell
 
       integer :: i,n,na
@@ -147,7 +148,24 @@ MODULE m_checks
 
 #ifndef CPP_HDF
      if (hybinp%l_hybrid) call juDFT_warn("Hybrid calculations should always use HDF5")
-#endif     
+#endif
+
+     IF (hybinp%l_hybrid) THEN
+        ! The interstitial part of a wave-function product is built on an FFT
+        ! grid as psi*_k * ustep * psi_(k+q), and its coefficients are read off
+        ! for the mixed-basis G vectors, |q+G| <= gcutm.  Those coefficients are
+        ! a convolution, sum_G' ustep(G-G') * [psi*psi](G'), with |G'| <= 2*rkmax
+        ! because each wave function is limited by rkmax.  So the step function
+        ! is needed out to 2*rkmax+gcutm -- but ustep is only tabulated on the
+        ! stars, which reach gmax, and t_fftGrid%putFieldOnGrid() silently leaves
+        ! everything beyond that at zero.  gmax therefore bounds how far ustep is
+        ! known, which is what this compares.
+        IF (2*input%rkmax + mpinp%g_cutoff > input%gmax) THEN
+           CALL juDFT_warn("Hybrid functionals: gmax < 2*kmax+gcutm, the step function is truncated inside the wave-function products", &
+                           calledby="check_input_switches", &
+                           hint="Increase gmax to at least 2*kmax+gcutm, or reduce gcutm")
+        END IF
+     END IF
 
    END SUBROUTINE check_input_switches
 

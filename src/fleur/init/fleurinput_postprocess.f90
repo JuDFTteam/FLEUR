@@ -2,7 +2,7 @@ MODULE m_fleurinput_postprocess
   USE m_types_fleurinput
 CONTAINS
   SUBROUTINE fleurinput_postprocess(Cell,Sym,Atoms,Input,Noco,Vacuum,&
-    Banddos,hybinp ,Xcpot,Kpts,gfinp)
+    Banddos,hybinp ,mpinp,Xcpot,Kpts,gfinp)
     USE m_juDFT
     USE m_types_fleurinput
     use m_make_sym
@@ -22,6 +22,7 @@ CONTAINS
     TYPE(t_vacuum),INTENT(INOUT)::vacuum
     TYPE(t_banddos),INTENT(IN)  ::banddos
     TYPE(t_hybinp),INTENT(IN)   :: hybinp 
+    TYPE(t_mpinp),INTENT(IN)    :: mpinp
 
     CLASS(t_xcpot),ALLOCATABLE,INTENT(INOUT)::xcpot
     TYPE(t_kpts),INTENT(INOUT)     ::kpts
@@ -75,7 +76,7 @@ CONTAINS
        END DO
     END IF
 
-    call check_input_switches(banddos,vacuum,noco,atoms,input,sym,kpts,hybinp,cell)
+    call check_input_switches(banddos,vacuum,noco,atoms,input,sym,kpts,hybinp,mpinp,cell)
     ! Check muffin tin radii, only checking, dont use new parameters
     CALL chkmt(atoms,input,vacuum,cell ,.TRUE.)
     !adjust positions by displacements

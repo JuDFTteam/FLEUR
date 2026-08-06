@@ -366,15 +366,15 @@ CONTAINS
       call mpdata%check_radbasfn(atoms, hybinp)
 
       !count basis functions
-      hybdat%nbasp = 0
+      hybdat%n_mt = 0
       DO itype = 1, atoms%ntype
          DO i = 1, atoms%neq(itype)
             DO l = 0, hybinp%lcutm1(itype)
-               hybdat%nbasp = hybdat%nbasp + (2*l+1) * mpdata%num_radbasfn(l, itype)
+               hybdat%n_mt = hybdat%n_mt + (2*l+1) * mpdata%num_radbasfn(l, itype)
             END DO
          END DO
       END DO
-      hybdat%nbasm = hybdat%nbasp + mpdata%n_g
+      hybdat%nbasm = hybdat%n_mt + mpdata%n_g
 
       hybdat%maxlmindx = 0
       do itype = 1,atoms%ntype
