@@ -17,6 +17,17 @@ MODULE m_types_matelements
         LOGICAL :: spinorwavefcts = .FALSE. !> whether the matrix elements are for spinor wave functions
         LOGICAL :: spinoroperator = .FALSE. !> whether the matrix elements are for a spinor operator
         CLASS(t_mat), ALLOCATABLE :: mat(:,:) !> spinor matrix representation: 2x2 blocks if a spinor flag is set, a single block otherwise
+        !> Result of an operator whose components carry Cartesian indices, which mat cannot
+        !> hold: (band, band, spin, spin, component). The component runs over alpha, or over
+        !> the pairs (alpha,beta) in row-major order for an operator with two of them.
+        !>
+        !> This storage and the distributed one are mutually exclusive, and init_mat refuses
+        !> to combine them. Nothing needs both: the only operator that is distributed over the
+        !> eigenvector sub-communicator is spin-orbit, which has no components, and the ones
+        !> that have components run where that parallelism is ruled out.
+        COMPLEX, ALLOCATABLE :: comp(:, :, :, :, :)
+        INTEGER :: n_alpha = 1  !> Cartesian extents the operator declared; 1 means comp is unused
+        INTEGER :: n_beta  = 1
     CONTAINS
         PROCEDURE :: init_mat    !> provide the result matrix with the dimensions implied by the spinor flags
         PROCEDURE :: add         !> accumulate the matrix elements of another object: this = this + other
@@ -43,7 +54,7 @@ MODULE m_types_matelements
 
 CONTAINS
 
-    SUBROUTINE init_mat(this, num_states, mpi_subcomm, l_real)
+    SUBROUTINE init_mat(this, num_states, mpi_subcomm, l_real, n_alpha, n_beta)
         !> Provide the result matrix: a 2x2 block matrix in spin space if the
         !> wave functions or the operator are spinors, a single block otherwise.
         !> If mpi_subcomm is given, the blocks are t_mpimat distributed
@@ -53,14 +64,34 @@ CONTAINS
         !> allocation can be reused for several k-points.
         CLASS(t_matelements), INTENT(INOUT) :: this
         INTEGER, INTENT(IN)           :: num_states  !> global size of each block
+        INTEGER, INTENT(IN), OPTIONAL :: n_alpha, n_beta !> Cartesian extents, default 1 each
         INTEGER, INTENT(IN), OPTIONAL :: mpi_subcomm !> distribute the blocks over this communicator
         LOGICAL, INTENT(IN), OPTIONAL :: l_real      !> default: complex matrix elements
 
-        INTEGER :: nsp, i, j
+        INTEGER :: nsp, i, j, na, nb
         LOGICAL :: l_real_local
 
         l_real_local = .FALSE.
         IF (PRESENT(l_real)) l_real_local = l_real
+
+        na = 1; IF (PRESENT(n_alpha)) na = n_alpha
+        nb = 1; IF (PRESENT(n_beta))  nb = n_beta
+        IF ((na > 1 .OR. nb > 1) .AND. PRESENT(mpi_subcomm)) CALL judft_error( &
+            "init_mat: a component-carrying operator cannot also be distributed", &
+            hint="run it with one rank in the eigenvector sub-communicator", &
+            calledby="init_mat")
+        this%n_alpha = na; this%n_beta = nb
+
+        !Components live in their own contiguous storage, cleared between k-points like mat.
+        IF (na > 1 .OR. nb > 1) THEN
+            IF (ALLOCATED(this%comp)) THEN
+                this%comp = CMPLX(0.0, 0.0)
+            ELSE
+                nsp = MERGE(2, 1, this%spinorwavefcts.OR.this%spinoroperator)
+                ALLOCATE(this%comp(num_states, num_states, nsp, nsp, na*nb), &
+                         source=CMPLX(0.0, 0.0))
+            END IF
+        END IF
 
         nsp = MERGE(2, 1, this%spinorwavefcts.OR.this%spinoroperator)
 
