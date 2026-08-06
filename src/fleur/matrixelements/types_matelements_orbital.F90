@@ -76,6 +76,9 @@ CONTAINS
 
       this%spinoroperator = .FALSE.
       this%spinorwavefcts = .FALSE.
+      !> Three Cartesian components out of one pass, declared here so that a caller
+      !> which does not know which operator it is holding still gets the right store.
+      this%n_alpha = 3
 
       this%atoms => atoms
       this%ntyp  = ntyp

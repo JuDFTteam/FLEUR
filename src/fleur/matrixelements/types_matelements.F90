@@ -64,7 +64,10 @@ CONTAINS
         !> allocation can be reused for several k-points.
         CLASS(t_matelements), INTENT(INOUT) :: this
         INTEGER, INTENT(IN)           :: num_states  !> global size of each block
-        INTEGER, INTENT(IN), OPTIONAL :: n_alpha, n_beta !> Cartesian extents, default 1 each
+        !> Cartesian extents. Absent, the shape the operator declared at its own init is
+        !> used, so a caller that does not know which operator it holds still allocates
+        !> the right store; present, the argument wins.
+        INTEGER, INTENT(IN), OPTIONAL :: n_alpha, n_beta
         INTEGER, INTENT(IN), OPTIONAL :: mpi_subcomm !> distribute the blocks over this communicator
         LOGICAL, INTENT(IN), OPTIONAL :: l_real      !> default: complex matrix elements
 
@@ -74,8 +77,8 @@ CONTAINS
         l_real_local = .FALSE.
         IF (PRESENT(l_real)) l_real_local = l_real
 
-        na = 1; IF (PRESENT(n_alpha)) na = n_alpha
-        nb = 1; IF (PRESENT(n_beta))  nb = n_beta
+        na = this%n_alpha; IF (PRESENT(n_alpha)) na = n_alpha
+        nb = this%n_beta;  IF (PRESENT(n_beta))  nb = n_beta
         IF ((na > 1 .OR. nb > 1) .AND. PRESENT(mpi_subcomm)) CALL judft_error( &
             "init_mat: a component-carrying operator cannot also be distributed", &
             hint="run it with one rank in the eigenvector sub-communicator", &

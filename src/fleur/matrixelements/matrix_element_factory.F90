@@ -233,6 +233,14 @@ CONTAINS
             cache_valid = .TRUE.
         END IF
 
+        !An operator whose result carries Cartesian components keeps them in a store
+        !that has no distributed counterpart, so the two cannot be combined. Say so here
+        !rather than let init_mat abort with the sub-communicator already chosen.
+        IF (fmpi%n_size > 1 .AND. (matel%n_alpha > 1 .OR. matel%n_beta > 1)) CALL judft_error( &
+            'matrix_element_factory: an operator with Cartesian components cannot be distributed', &
+            hint='run k-parallel (n_size = 1); eigenvector parallelism is not supported for it', &
+            calledby='matrix_element_factory')
+
         !Provide the result matrix; its spinor structure (2x2 or single block)
         !follows from the spinor flags of the matrix-element object
 #ifdef CPP_MPI

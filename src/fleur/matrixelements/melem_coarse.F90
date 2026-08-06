@@ -281,7 +281,7 @@ CONTAINS
             !no local-to-global rotation: it is spin-diagonal and its trace is
             !frame-invariant.
             DO na = 1, atoms%nat
-               CALL orbop(na)%init_mat(manifold%num_bands, n_alpha=3)
+               CALL orbop(na)%init_mat(manifold%num_bands)
                CALL orbop(na)%calc_matrix_elements(zMat, abc_s, radfun, usdus)
                this%l0(:, :, 1:3, na, il) = orbop(na)%comp(:, :, 1, 1, 1:3)
             END DO
@@ -387,7 +387,7 @@ CONTAINS
             DO ch = 1, 2
                this%l0col(:, :, :, ch, il) = CMPLX(0.0, 0.0)
                DO na = 1, atoms%nat
-                  CALL orbop(na, ch)%init_mat(nb, n_alpha=3)
+                  CALL orbop(na, ch)%init_mat(nb)
                   CALL orbop(na, ch)%calc_matrix_elements(znone, abc_both(ch:ch, :), radfun, usdus)
                   this%l0col(:, :, :, ch, il) = this%l0col(:, :, :, ch, il) &
                                                 + orbop(na, ch)%comp(:, :, 1, 1, 1:3)
