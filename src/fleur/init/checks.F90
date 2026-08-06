@@ -9,7 +9,7 @@ MODULE m_checks
   USE m_types
   IMPLICIT NONE
   private
-  public :: check_command_line,check_input_switches
+  public :: check_command_line,check_input_switches,check_input_switches_all_pe
   CONTAINS
     SUBROUTINE check_command_line(fmpi)
       !Here we check is command line arguments are OK
@@ -48,7 +48,7 @@ MODULE m_checks
 #endif
     END SUBROUTINE check_command_line
 
-    SUBROUTINE check_input_switches(banddos,vacuum,noco,atoms,input,sym,kpts,hybinp,mpinp,cell)
+    SUBROUTINE check_input_switches(banddos,vacuum,noco,atoms,input,sym,kpts,hybinp,cell)
       USE m_nocoInputCheck
       USE m_socsym
       USE m_types_fleurinput
@@ -61,7 +61,6 @@ MODULE m_checks
       type(t_sym),INTENT(IN)    :: sym
       type(t_kpts),INTENT(IN)   :: kpts
       type(t_hybinp),intent(in) :: hybinp
-      type(t_mpinp),intent(in)  :: mpinp
       type(t_cell),INTENT(IN)   :: cell
 
       integer :: i,n,na
@@ -150,23 +149,42 @@ MODULE m_checks
      if (hybinp%l_hybrid) call juDFT_warn("Hybrid calculations should always use HDF5")
 #endif
 
-     IF (hybinp%l_hybrid) THEN
-        ! The interstitial part of a wave-function product is built on an FFT
-        ! grid as psi*_k * ustep * psi_(k+q), and its coefficients are read off
-        ! for the mixed-basis G vectors, |q+G| <= gcutm.  Those coefficients are
-        ! a convolution, sum_G' ustep(G-G') * [psi*psi](G'), with |G'| <= 2*rkmax
-        ! because each wave function is limited by rkmax.  So the step function
-        ! is needed out to 2*rkmax+gcutm -- but ustep is only tabulated on the
-        ! stars, which reach gmax, and t_fftGrid%putFieldOnGrid() silently leaves
-        ! everything beyond that at zero.  gmax therefore bounds how far ustep is
-        ! known, which is what this compares.
-        IF (2*input%rkmax + mpinp%g_cutoff > input%gmax) THEN
-           CALL juDFT_warn("Hybrid functionals: gmax < 2*kmax+gcutm, the step function is truncated inside the wave-function products", &
-                           calledby="check_input_switches", &
-                           hint="Increase gmax to at least 2*kmax+gcutm, or reduce gcutm")
-        END IF
-     END IF
-
    END SUBROUTINE check_input_switches
+
+    !> Input checks that must be executed by *every* MPI rank.
+    !>
+    !> juDFT_warn/juDFT_error do MPI communication: juDFT_error calls
+    !> collect_messages(), which posts an MPI_isend on MPI_COMM_WORLD to every
+    !> rank.  Emitting a warning that actually fires from a rank-0-only code path
+    !> therefore leaves sends nobody receives (and leaks request handles, since
+    !> collect_messages reuses ihandle(0) for all of them).  check_input_switches
+    !> above is run by PE 0 alone, so any check there that can both fire and
+    !> continue -- i.e. a warning rather than an error -- belongs here instead.
+    !> Call this after fleurinput_mpi_bc, when all ranks have the input.
+    SUBROUTINE check_input_switches_all_pe(input,hybinp,mpinp)
+      USE m_types_fleurinput
+      type(t_input),INTENT(IN)  :: input
+      type(t_hybinp),INTENT(IN) :: hybinp
+      type(t_mpinp),INTENT(IN)  :: mpinp
+
+      IF (hybinp%l_hybrid) THEN
+         ! The interstitial part of a wave-function product is built on an FFT
+         ! grid as psi*_k * ustep * psi_(k+q), and its coefficients are read off
+         ! for the mixed-basis G vectors, |q+G| <= gcutm.  Those coefficients are
+         ! a convolution, sum_G' ustep(G-G') * [psi*psi](G'), with |G'| <= 2*rkmax
+         ! because each wave function is limited by rkmax.  So the step function
+         ! is needed out to 2*rkmax+gcutm -- but ustep is only tabulated on the
+         ! stars, which reach gmax, and t_fftGrid%putFieldOnGrid() silently leaves
+         ! everything beyond that at zero.  gmax therefore bounds how far ustep is
+         ! known, which is what this compares.
+         IF (2*input%rkmax + mpinp%g_cutoff > input%gmax) THEN
+            CALL juDFT_warn("Hybrid functionals: gmax < 2*kmax+gcutm, the step function &
+                            &is truncated inside the wave-function products", &
+                            calledby="check_input_switches_all_pe", &
+                            hint="Increase gmax to at least 2*kmax+gcutm, or reduce gcutm")
+         END IF
+      END IF
+
+    END SUBROUTINE check_input_switches_all_pe
 
   END MODULE m_checks
