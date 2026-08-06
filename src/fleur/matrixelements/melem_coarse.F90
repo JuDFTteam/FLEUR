@@ -31,7 +31,7 @@ MODULE m_melem_coarse
    USE m_types_usdus
    USE m_types_mat
    USE m_types_radfun
-   USE m_types_spinor_layout, ONLY: radial_slot, melem_stack_spinor
+   USE m_types_spinor_layout, ONLY: radial_slot
    USE m_types_abc
    USE m_types_melem_request, ONLY: t_melem_request
    USE m_types_melem_manifold, ONLY: t_melem_manifold
@@ -42,6 +42,7 @@ MODULE m_melem_coarse
    USE m_types_rsoc, ONLY: t_rsoc
    USE m_types_matelements_orbital, ONLY: t_matelements_orbital
    USE m_melem_get_z, ONLY: melem_get_z
+   USE m_matrix_element_factory, ONLY: matrix_element_factory
    IMPLICIT NONE
    PRIVATE
 
@@ -174,17 +175,16 @@ CONTAINS
       LOGICAL, INTENT(IN) :: l_real_wann
       INTEGER, INTENT(IN) :: distk(:)   ! rank owner of each global k (distributes the loop)
 
-      TYPE(t_abc), ALLOCATABLE :: abc_s(:, :)
       TYPE(t_lapw) :: lapw
-      TYPE(t_mat) :: zMat(1)
       TYPE(t_matelements_spin) :: spinop
       TYPE(t_matelements_soc) :: socop
       !> One instance per (Cartesian component, atom): L_x and L_y are different
       !> operators, and the site resolution is an output of its own.
       TYPE(t_matelements_orbital), ALLOCATABLE :: orbop(:)
       TYPE(t_rsoc) :: rsoc
-      TYPE(t_mat) :: zc(2)   ! the two spinor components when get_z does not stack them
-      INTEGER :: ikpt, itype, isp, il, jspin_rad, ic, na, iatom
+      INTEGER, ALLOCATABLE :: ev_list(:)
+      LOGICAL :: l_spinor_records
+      INTEGER :: ikpt, itype, il, ic, na, iatom, ib
 
       !> Row 5 -- two spin channels, no spinors -- has no coarse operator slices, but the
       !> cross-spin overlap its combined spin operator needs is still a k-by-k Bloch matrix.
@@ -226,49 +226,28 @@ CONTAINS
          END DO
       END IF
 
-      ALLOCATE (abc_s(2, atoms%ntype))
+      !> One band window for every operator at every k, in the form the factory selects with.
+      ev_list = [(ib, ib = manifold%min_band, manifold%max_band)]
+
       il = 0
       DO ikpt = 1, kpts%nkptf
          IF (distk(ikpt) /= fmpi%irank) CYCLE   ! this rank only computes its own k-slice
          il = il + 1                            ! local (ascending global-k) index for the reduce
-         ! Load this k-point's eigenvector(s).
-         !   l_noco=T          : get_z returns the whole 2N spinor from record 1.
-         !   l_soc=T, l_noco=F : get_z returns only N rows and the two spinor components live
-         !     in records 1 and 2, so read both and stack them into the 2N layout the
-         !     interstitial expects. Reading record 1 alone leaves the spin-down half unread:
-         !     the muffin-tin counts the up block twice and the interstitial addresses a down
-         !     block that is not there (non-magnetic Pt then sums to <sigma_z> = +N/2, not 0).
-         IF (noco%l_noco) THEN
-            CALL melem_get_z(manifold%min_band, manifold%max_band, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, &
-                                  ikpt, 1, l_real_wann, lapw, zMat(1))
-         ELSE
-            CALL melem_get_z(manifold%min_band, manifold%max_band, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, &
-                                  ikpt, 1, l_real_wann, lapw, zc(1))
-            CALL melem_get_z(manifold%min_band, manifold%max_band, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, &
-                                  ikpt, 2, l_real_wann, lapw, zc(2))
-            CALL melem_stack_spinor(zc(1), zc(2), zMat(1))
-         END IF
-         DO isp = 1, 2
-            ! The index handed to calc_abc must belong to the zMat it is given and must
-            ! never exceed the width of the radial arrays it indexes.
-            jspin_rad = radial_slot(radfun, isp)
-            DO itype = 1, atoms%ntype
-               CALL abc_s(isp, itype)%init(input, atoms, manifold%num_bands, itype)
-               IF (noco%l_noco) THEN
-                  CALL abc_s(isp, itype)%calc_abc(input, atoms, sym, cell, lapw, manifold%num_bands, usdus, &
-                                                  noco, nococonv, jspin_rad, itype, zMat(1))
-               ELSE
-                  CALL abc_s(isp, itype)%calc_abc(input, atoms, sym, cell, lapw, manifold%num_bands, usdus, &
-                                                  noco, nococonv, jspin_rad, itype, zc(isp))
-               END IF
-            END DO
-         END DO
+         !> The basis at this k. It is built here rather than inside the factory because the
+         !> operators need it at their own init; the states themselves the factory reads.
+         CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpt, cell)
+         !> Records 1 and 2 hold the two halves of one spinor whenever the eigenvectors are
+         !> not already stored as whole 2N spinors, which is the l_soc=T, l_noco=F case: the
+         !> factory stacks them. Reading record 1 alone would leave the spin-down half unread,
+         !> and non-magnetic Pt would sum to <sigma_z> = +N/2 instead of 0.
+         l_spinor_records = .NOT. noco%l_noco
          IF (request%l_spin) THEN
             !The operator keeps the four spin blocks; the three Pauli components follow
             !from them, so only the blocks are computed here.
             CALL spinop%init(atoms, stars, lapw, nococonv, input, noco)
-            CALL spinop%init_mat(manifold%num_bands)
-            CALL spinop%calc_matrix_elements(zMat, abc_s, radfun, usdus)
+            CALL matrix_element_factory(spinop, eig_id, ikpt, input, atoms, sym, cell, noco, &
+                                        nococonv, enpara, lapw, vtot, fmpi, ev_list=ev_list, &
+                                        l_both_spinors=l_spinor_records, kpts=kpts)
             CALL melem_pauli_from_blocks(spinop%mat(1,1)%data_c, spinop%mat(2,2)%data_c, &
                                          spinop%mat(1,2)%data_c, spinop%mat(2,1)%data_c, &
                                          this%s0(:, :, :, il))
@@ -281,8 +260,10 @@ CONTAINS
             !no local-to-global rotation: it is spin-diagonal and its trace is
             !frame-invariant.
             DO na = 1, atoms%nat
-               CALL orbop(na)%init_mat(manifold%num_bands)
-               CALL orbop(na)%calc_matrix_elements(zMat, abc_s, radfun, usdus)
+               CALL matrix_element_factory(orbop(na), eig_id, ikpt, input, atoms, sym, cell, &
+                                           noco, nococonv, enpara, lapw, vtot, fmpi, &
+                                           ev_list=ev_list, l_both_spinors=l_spinor_records, &
+                                           kpts=kpts)
                this%l0(:, :, 1:3, na, il) = orbop(na)%comp(:, :, 1, 1, 1:3)
             END DO
          END IF
@@ -291,8 +272,9 @@ CONTAINS
             !components, so its expectation value of a spinor operator is the sum of all
             !four; the blocks themselves are what the real-space export carries.
             CALL socop%init(atoms, noco, input, sym, cell, enpara, lapw, vtot, rsoc, fmpi, nococonv)
-            CALL socop%init_mat(manifold%num_bands)
-            CALL socop%calc_matrix_elements(zMat, abc_s, radfun, usdus)
+            CALL matrix_element_factory(socop, eig_id, ikpt, input, atoms, sym, cell, noco, &
+                                        nococonv, enpara, lapw, vtot, fmpi, ev_list=ev_list, &
+                                        l_both_spinors=l_spinor_records, kpts=kpts)
             this%soc4(:, :, 1, il) = socop%mat(1, 1)%data_c
             this%soc4(:, :, 2, il) = socop%mat(1, 2)%data_c
             this%soc4(:, :, 3, il) = socop%mat(2, 1)%data_c
@@ -302,7 +284,7 @@ CONTAINS
          END IF
       END DO
 
-      DEALLOCATE (abc_s)
+      IF (ALLOCATED(ev_list)) DEALLOCATE (ev_list)
    END SUBROUTINE melem_coarse_calc
 
    SUBROUTINE melem_coarse_collinear(this, manifold, atoms, input, sym, cell, noco, nococonv, &
