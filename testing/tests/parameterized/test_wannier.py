@@ -7,7 +7,10 @@ Wannier spread decomposition. Systems cover the distinct FLEUR paths: no-SOC,
 SOC (spinor), noco (jspins=2), AFM, and collinear jspins=2 without SOC -- the
 only path that wannierises each spin channel separately and writes the .2
 operator files. WannPtSOCOps additionally covers the coarse t_matrixelement
-pass (<operators_r>). Band interpolation: future round.
+pass (<operators_r>). WannFeAFMCol is the only case that reaches that collinear
+path with more than one atom type, which is what distinguishes an index mix-up
+between spin and atom type from a layout that happens to coincide in memory.
+Band interpolation: future round.
 """
 from read_tests import read_tests
 all_tests = read_tests("wannier")
@@ -40,6 +43,11 @@ EXPECTED_OMEGA_I = {
     # separate eigenproblems, so each is wannierised on its own and there is one Omega per
     # channel. Values in channel order. This is the only test of that combination.
     "WannFeBcc": (2.606987082, 2.686421493),
+    # fcc Fe AFM, COLLINEAR without SOC: same combination as WannFeBcc but with two atom
+    # types, so the coefficient arrays are indexed by both spin and type and a transpose
+    # between them no longer coincides in memory. The two channels are the two sublattices
+    # exchanged, which is why their values agree to six digits without being identical.
+    "WannFeAFMCol": (6.393631376, 6.393662951),
     "WannFeAFMSOCOps": 16.694344590,  # fcc Fe AFM, noco + SOC, now with <operators_r>: the
                                       # only coverage of the spin operator on the noco branch
 }
@@ -56,6 +64,7 @@ EXPECTED_OMEGA_TOTAL = {
     "WannFeAFMColSOC": 17.193476140,
     "WannFeAFMSOCOps": 21.362891487,
     "WannFeBcc": (3.578178416, 3.711415341),
+    "WannFeAFMCol": (8.608784572, 8.608791657),
 }
 # Loose on purpose: absorbs a basin change, still catches a gross regression.
 OMEGA_TOTAL_RTOL = 0.01
@@ -74,6 +83,7 @@ OPERATOR_FILES = {
     "WannFeAFMColSOC": _OP_R_FILES,
     "WannFeAFMSOCOps": _OP_R_FILES,
     "WannFeBcc":        _OP_R_FILES_2CH,
+    "WannFeAFMCol":     _OP_R_FILES_2CH,
 }
 
 # The operator files in the generic O(R) format, the ones whose values can be read without
@@ -98,7 +108,7 @@ SPIN_SUM_TOL = 0.05
 # 0.993, so the cancellation to zero is not a small number made out of small numbers.
 # WannFeAFMSOCOps is deliberately absent: its 36 WFs come from disentangling 72 bands, and
 # that manifold does not respect the sublattice symmetry, so no exact rule applies.
-NONMAGNETIC = ("WannPtSOCOps", "WannFeAFMColSOC")
+NONMAGNETIC = ("WannPtSOCOps", "WannFeAFMColSOC", "WannFeAFMCol")
 
 # Collinear magnet quantised along z (theta=phi=0): the longitudinal sum is the manifold's
 # net moment and is free, but the two transverse ones must vanish. Same kind of exact,
@@ -114,7 +124,7 @@ COLLINEAR_Z = ("WannFeBccSOC", "WannFeBcc")
 # the value instead of bounding it, and it is what a broken gauge rotation of the cross-spin
 # overlap would fail. Only sigma_z: the transverse components live entirely in the
 # off-diagonal blocks, so their diagonal is zero by construction.
-SIGMA_Z_UNIT = ("WannFeBcc",)
+SIGMA_Z_UNIT = ("WannFeBcc", "WannFeAFMCol")
 SIGMA_Z_TOL = 1.0e-8
 
 
@@ -148,7 +158,7 @@ L_TRANSVERSE_ZERO = ("WannFeBccSOC",)
 # Bloch states are real, and L is imaginary in a real basis, so the gauge-invariant trace is
 # exactly zero even though the individual |<w_n|L|w_n>| are not (the Wannier gauge is
 # complex). num_wann == num_bands == 6, so the caveat below does not apply.
-L_SUM_ZERO = ("WannFeAFMColSOC", "WannFeBcc")
+L_SUM_ZERO = ("WannFeAFMColSOC", "WannFeBcc", "WannFeAFMCol")
 # Both rules need num_wann == num_bands. A disentangled manifold does not inherit time
 # reversal, so the sum over it is not the physical moment: on w222 every k is its own
 # time-reversal partner, the cancellation has to happen within each k, and that needs the
