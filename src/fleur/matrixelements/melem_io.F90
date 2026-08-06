@@ -11,6 +11,7 @@
 !>    'r'       Wannier90 seedname_r.dat  : header + A(R) in Angstrom, 3 components
 !>    'soc'     R1 R2 R3  i j jj ii  Re Im   (2x2 spinor blocks -> rssocmat.1)
 !>    'generic' R1 R2 R3  i j comp   Re Im   (spin -> rspauli.1, orbital -> anglmomrs.*)
+!>    'cart2'   R1 R2 R3  i j        then nine (alpha,beta) components on the line
 MODULE m_melem_io
    USE m_juDFT
    USE m_constants, ONLY: hartree_to_ev_const
@@ -71,6 +72,19 @@ CONTAINS
                irvec(1,irpt), irvec(2,irpt), irvec(3,irpt), i, j, kk, &
                REAL(o_r(i,j,irpt,kk)), AIMAG(o_r(i,j,irpt,kk))
          END DO; END DO; END DO; END DO
+      CASE ('cart2')
+         !> Two Cartesian indices on one line, as the modern-theory post-processing expects:
+         !> R, band pair, then the nine (alpha,beta) components in row-major order. ncomp must
+         !> be nine; a single-index operator uses 'generic' instead.
+         IF (ncomp /= 9) CALL juDFT_error( &
+            'melem_write_realspace: the cart2 format carries nine Cartesian components', &
+            hint='use the generic format for an operator with one Cartesian index', &
+            calledby='melem_write_realspace')
+         DO irpt = 1, nrpts; DO j = 1, nw; DO i = 1, nw
+            WRITE(iu, '(i3,1x,i3,1x,i3,1x,i3,1x,i3,18(1x,f20.8))') &
+               irvec(1,irpt), irvec(2,irpt), irvec(3,irpt), i, j, &
+               (REAL(o_r(i,j,irpt,kk)), AIMAG(o_r(i,j,irpt,kk)), kk = 1, 9)
+         END DO; END DO; END DO
       CASE DEFAULT
          CALL juDFT_error('melem_write_realspace: unknown format "'//TRIM(fmt)//'"', &
                           calledby='melem_write_realspace')
