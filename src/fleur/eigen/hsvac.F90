@@ -1,10 +1,11 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_hsvac
    USE m_juDFT
+   implicit none
 CONTAINS
    !-----------------------------------------------------------------------------
    ! Calculate the vacuum contribution to the Hamiltonian and Overlap matrix
@@ -13,6 +14,7 @@ CONTAINS
                   & lapw, noco, nococonv, hmat, smat)
 
       USE m_vacfun
+      USE m_vac_map2
       USE m_types
 
       IMPLICIT NONE
@@ -56,21 +58,7 @@ CONTAINS
       d2 = SQRT(cell%omtil/cell%area)
 
       !---> set up mapping function from 3d-->2d lapws
-      DO jspin = 1,input%jspins
-         nv2(jspin) = 0
-         k_loop:DO ikG = 1, lapw%nv(jspin)
-            DO ikG2 = 1, nv2(jspin)
-               IF (all(lapw%gvec(1:2,ikG,jspin)==kvac(1:2,ikG2,jspin))) THEN
-                  map2(ikG,jspin) = ikG2
-                  CYCLE k_loop
-               END IF
-            END DO
-            nv2(jspin) = nv2(jspin) + 1
-            IF (nv2(jspin)>lapw%dim_nv2d())  CALL juDFT_error("hsvac:lapw%dim_nv2d()",calledby ="hsvac")
-            kvac(1:2,nv2(jspin),jspin) = lapw%gvec(1:2,ikG,jspin)
-            map2(ikG,jspin) = nv2(jspin)
-         END DO k_loop
-      END DO
+      CALL vac_map2(lapw, input%jspins, nv2, kvac, map2)
 
       !---> loop over the two vacuua (1: upper; 2: lower)
       DO ivac = 1,2

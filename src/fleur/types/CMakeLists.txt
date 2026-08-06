@@ -36,6 +36,7 @@ src/fleur/types/types_sphhar.f90
 src/fleur/types/types_stars.f90
 src/fleur/types/types_tlmplm.F90
 src/fleur/types/types_usdus.F90
+src/fleur/types/types_vacbasis.F90
 src/fleur/types/types_xcpot_data.F90
 src/fleur/types/types_xcpot_inbuild.F90
 src/fleur/types/types_xcpot_inbuild_nofunction.F90

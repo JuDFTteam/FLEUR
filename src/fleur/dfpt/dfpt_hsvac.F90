@@ -1,10 +1,11 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2023 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_dfpt_hsvac
    USE m_juDFT
+   implicit none
 CONTAINS
    !-----------------------------------------------------------------------------
    ! Calculate the vacuum contribution to the Hamiltonian perturbation
@@ -13,6 +14,7 @@ CONTAINS
                   & lapwq, lapw, noco, nococonv, hmat)
 
       USE m_vacfun
+      USE m_vac_map2
       USE m_types
 
       IMPLICIT NONE
@@ -55,38 +57,9 @@ CONTAINS
 
       d2 = SQRT(cell%omtil/cell%area)
 
-      !---> set up mapping function from 3d-->2d lapws
-      DO jspin = 1,input%jspins
-         nv2(jspin) = 0
-         k_loop:DO ikG = 1, lapw%nv(jspin)
-            DO ikG2 = 1, nv2(jspin)
-               IF (all(lapw%gvec(1:2,ikG,jspin)==kvac(1:2,ikG2,jspin))) THEN
-                  map2(ikG,jspin) = ikG2
-                  CYCLE k_loop
-               END IF
-            END DO
-            nv2(jspin) = nv2(jspin) + 1
-            IF (nv2(jspin)>lapw%dim_nv2d())  CALL juDFT_error("hsvac:lapw%dim_nv2d()",calledby ="hsvac")
-            kvac(1:2,nv2(jspin),jspin) = lapw%gvec(1:2,ikG,jspin)
-            map2(ikG,jspin) = nv2(jspin)
-         END DO k_loop
-      END DO
-
-      DO jspin = 1,input%jspins
-         nv2q(jspin) = 0
-         k_loopq:DO ikG = 1, lapwq%nv(jspin)
-            DO ikG2 = 1, nv2q(jspin)
-               IF (all(lapwq%gvec(1:2,ikG,jspin)==kvacq(1:2,ikG2,jspin))) THEN
-                  map2q(ikG,jspin) = ikG2
-                  CYCLE k_loopq
-               END IF
-            END DO
-            nv2q(jspin) = nv2q(jspin) + 1
-            IF (nv2q(jspin)>lapw%dim_nv2d()) CALL juDFT_error("hsvac:lapw%dim_nv2d()",calledby ="hsvac")
-            kvacq(1:2,nv2q(jspin),jspin) = lapwq%gvec(1:2,ikG,jspin)
-            map2q(ikG,jspin) = nv2q(jspin)
-         END DO k_loopq
-      END DO
+      !---> set up mapping function from 3d-->2d lapws, at k and at k+q
+      CALL vac_map2(lapw,  input%jspins, nv2,  kvac,  map2)
+      CALL vac_map2(lapwq, input%jspins, nv2q, kvacq, map2q)
 
       !---> loop over the two vacuua (1: upper; 2: lower)
       DO ivac = 1,2
