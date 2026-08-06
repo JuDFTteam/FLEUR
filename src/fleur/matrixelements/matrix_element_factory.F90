@@ -77,7 +77,7 @@ CONTAINS
 
     SUBROUTINE matrix_element_factory(matel, eig_id, ikpt, input, atoms, sym, cell, &
                                       noco, nococonv, enpara, lapw, vtot, fmpi, ev_list, &
-                                      l_both_spinors)
+                                      l_both_spinors, kpts)
         USE m_types_matelements
         USE m_types_input
         USE m_types_atoms
@@ -87,6 +87,7 @@ CONTAINS
         USE m_types_nococonv
         USE m_types_enpara
         USE m_types_lapw
+        USE m_types_kpts
         USE m_types_potden
         USE m_types_mpi
         USE m_eig66_io, ONLY: read_eig
@@ -111,8 +112,12 @@ CONTAINS
         !> independent spin channel. Which of the two an eig file holds depends on the
         !> stage of the calculation rather than on any flag, so it cannot be decided here.
         LOGICAL, OPTIONAL, INTENT(IN) :: l_both_spinors
+        !> The k-point mesh. Given, a k-point beyond the irreducible zone is served by rotating
+        !> the states of its parent, which is where they are stored. Absent, only the irreducible
+        !> points can be asked for.
+        TYPE(t_kpts), OPTIONAL, INTENT(IN) :: kpts
 
-        INTEGER :: num_bands, n, jsp, jsp_rad, nrec, neig_actual
+        INTEGER :: num_bands, n, jsp, jsp_rad, nrec, neig_actual, ikpt_stored
         LOGICAL :: l_real_zmat
         INTEGER, ALLOCATABLE :: read_list(:)
         LOGICAL :: l_spinor_records
@@ -145,7 +150,11 @@ CONTAINS
             ! available; requesting more would read uninitialized eig storage
             ! (harmless zeros in serial mem/DA, but stale window memory under
             ! MPI-RMA). Clamp to the stored count, as the old alineso did.
-            CALL read_eig(eig_id, ikpt, 1, neig=neig_actual)
+            ikpt_stored = ikpt
+            IF (PRESENT(kpts)) THEN
+                IF (ikpt > kpts%nkpt) ikpt_stored = kpts%bkp(ikpt)
+            END IF
+            CALL read_eig(eig_id, ikpt_stored, 1, neig=neig_actual)
             num_bands = MIN(num_bands, neig_actual)
         END IF
 
@@ -179,7 +188,13 @@ CONTAINS
             END IF
             DO jsp = 1, nrec
                 CALL zmat_store(jsp)%init(l_real_zmat, lapw%nmat, num_bands)
-                CALL read_eig(eig_id, ikpt, jsp, list=read_list, zmat=zmat_store(jsp))
+                IF (PRESENT(kpts)) THEN
+                    CALL read_eig(eig_id, ikpt, jsp, list=read_list, zmat=zmat_store(jsp), &
+                                  kpts=kpts, input=input, noco=noco, nococonv=nococonv, &
+                                  sym=sym, atoms=atoms, cell=cell)
+                ELSE
+                    CALL read_eig(eig_id, ikpt, jsp, list=read_list, zmat=zmat_store(jsp))
+                END IF
             END DO
 
             !Two records that are the halves of one spinor are also kept stacked, so that
