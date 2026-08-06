@@ -24,17 +24,28 @@ MODULE m_matrix_element_factory
     TYPE(t_usdus)               :: usdus_store      !all types and spins
     LOGICAL                     :: radfun_valid = .FALSE.
 
-    !Cached data for one k-point, keyed on (eig_id, ikpt, band selection)
-    TYPE(t_mat), ALLOCATABLE :: zmat_store(:)   !(nrec) eigenvectors as read
-    !Allocated only when the two records are the halves of one spinor: the same state
-    !as a single matrix of 2N rows. A consumer that addresses a spin block by row offset
-    !needs that shape; one that contracts record by record uses zmat_store.
-    TYPE(t_mat), ALLOCATABLE :: zmat_spinor(:)  !(1)
-    TYPE(t_abc), ALLOCATABLE :: abc_store(:,:)  !(2,ntype) matching coefficients
-    INTEGER              :: cached_eig_id = -1, cached_ikpt = -1
-    INTEGER              :: cached_nrec = -1   !record layout the cache was filled with
-    INTEGER, ALLOCATABLE :: cached_list(:)      !band selection; unallocated=all bands
-    LOGICAL              :: cache_valid = .FALSE.
+    !Everything one k-point contributes, keyed on (eig_id, ikpt, nrec, band selection).
+    TYPE :: t_k_slot
+        TYPE(t_mat), ALLOCATABLE :: zmat(:)         !(nrec) eigenvectors as read
+        !Allocated only when the two records are the halves of one spinor: the same state
+        !as a single matrix of 2N rows. A consumer that addresses a spin block by row offset
+        !needs that shape; one that contracts record by record uses zmat.
+        TYPE(t_mat), ALLOCATABLE :: zmat_spinor(:)  !(1)
+        TYPE(t_abc), ALLOCATABLE :: abc(:,:)        !(2,ntype) matching coefficients
+        INTEGER              :: eig_id = -1, ikpt = -1
+        INTEGER              :: nrec = -1           !record layout it was filled with
+        INTEGER, ALLOCATABLE :: list(:)             !band selection; unallocated = all bands
+        LOGICAL              :: valid = .FALSE.
+        INTEGER              :: stamp = 0           !last use, for the eviction order
+    END TYPE t_k_slot
+
+    !> Three, because that is what the quantities between two neighbours need: the k itself
+    !> and the pair k+b1, k+b2. One would be enough for an operator at a single k, and the
+    !> price of the other two is their share of the eigenvectors and coefficients -- a
+    !> consumer that walks k in order fills all three and reuses none of them.
+    INTEGER, PARAMETER :: N_KSLOT = 3
+    TYPE(t_k_slot) :: kslot(N_KSLOT)
+    INTEGER        :: use_clock = 0
 
     PUBLIC :: matrix_element_factory, matrix_element_factory_reset
 
@@ -50,30 +61,75 @@ CONTAINS
     END SUBROUTINE matrix_element_factory_reset
 
     SUBROUTINE reset_k_cache()
-        IF (ALLOCATED(zmat_store))  DEALLOCATE(zmat_store)
-        IF (ALLOCATED(zmat_spinor)) DEALLOCATE(zmat_spinor)
-        IF (ALLOCATED(abc_store))   DEALLOCATE(abc_store)
-        IF (ALLOCATED(cached_list)) DEALLOCATE(cached_list)
-        cached_eig_id = -1
-        cached_ikpt   = -1
-        cached_nrec   = -1
-        cache_valid   = .FALSE.
+        INTEGER :: is
+        DO is = 1, N_KSLOT
+            CALL clear_slot(kslot(is))
+        END DO
+        use_clock = 0
     END SUBROUTINE reset_k_cache
 
-    LOGICAL FUNCTION cache_hit(eig_id, ikpt, nrec, ev_list)
+    SUBROUTINE clear_slot(sl)
+        TYPE(t_k_slot), INTENT(INOUT) :: sl
+        IF (ALLOCATED(sl%zmat))        DEALLOCATE(sl%zmat)
+        IF (ALLOCATED(sl%zmat_spinor)) DEALLOCATE(sl%zmat_spinor)
+        IF (ALLOCATED(sl%abc))         DEALLOCATE(sl%abc)
+        IF (ALLOCATED(sl%list))        DEALLOCATE(sl%list)
+        sl%eig_id = -1; sl%ikpt = -1; sl%nrec = -1
+        sl%valid  = .FALSE.
+        sl%stamp  = 0
+    END SUBROUTINE clear_slot
+
+    LOGICAL FUNCTION slot_matches(sl, eig_id, ikpt, nrec, ev_list)
+        TYPE(t_k_slot), INTENT(IN)    :: sl
         INTEGER, INTENT(IN)           :: eig_id, ikpt, nrec
         INTEGER, OPTIONAL, INTENT(IN) :: ev_list(:)
 
-        cache_hit = cache_valid .AND. eig_id == cached_eig_id .AND. ikpt == cached_ikpt &
-                    .AND. nrec == cached_nrec
-        IF (.NOT.cache_hit) RETURN
-        IF (PRESENT(ev_list) .NEQV. ALLOCATED(cached_list)) THEN
-            cache_hit = .FALSE.
+        slot_matches = sl%valid .AND. eig_id == sl%eig_id .AND. ikpt == sl%ikpt &
+                       .AND. nrec == sl%nrec
+        IF (.NOT.slot_matches) RETURN
+        IF (PRESENT(ev_list) .NEQV. ALLOCATED(sl%list)) THEN
+            slot_matches = .FALSE.
         ELSE IF (PRESENT(ev_list)) THEN
-            cache_hit = SIZE(ev_list) == SIZE(cached_list)
-            IF (cache_hit) cache_hit = ALL(ev_list == cached_list)
+            slot_matches = SIZE(ev_list) == SIZE(sl%list)
+            IF (slot_matches) slot_matches = ALL(ev_list == sl%list)
         END IF
-    END FUNCTION cache_hit
+    END FUNCTION slot_matches
+
+    !> The slot holding this k, or the one to overwrite if none does. l_hit says which
+    !> of the two happened, so the caller knows whether it still has to fill it. The
+    !> victim is the slot used longest ago, which keeps a k that is revisited on every
+    !> iteration -- the k of a k/k+b pair -- while its neighbours come and go.
+    INTEGER FUNCTION acquire_slot(eig_id, ikpt, nrec, l_hit, ev_list)
+        INTEGER, INTENT(IN)           :: eig_id, ikpt, nrec
+        LOGICAL, INTENT(OUT)          :: l_hit
+        INTEGER, OPTIONAL, INTENT(IN) :: ev_list(:)
+
+        INTEGER :: is, oldest
+
+        DO is = 1, N_KSLOT
+            IF (slot_matches(kslot(is), eig_id, ikpt, nrec, ev_list)) THEN
+                l_hit = .TRUE.
+                acquire_slot = is
+                use_clock = use_clock + 1
+                kslot(is)%stamp = use_clock
+                RETURN
+            END IF
+        END DO
+
+        l_hit = .FALSE.
+        oldest = 1
+        DO is = 1, N_KSLOT
+            IF (.NOT.kslot(is)%valid) THEN
+                oldest = is
+                EXIT
+            END IF
+            IF (kslot(is)%stamp < kslot(oldest)%stamp) oldest = is
+        END DO
+        CALL clear_slot(kslot(oldest))
+        use_clock = use_clock + 1
+        kslot(oldest)%stamp = use_clock
+        acquire_slot = oldest
+    END FUNCTION acquire_slot
 
     SUBROUTINE matrix_element_factory(matel, eig_id, ikpt, input, atoms, sym, cell, &
                                       noco, nococonv, enpara, lapw, vtot, fmpi, ev_list, &
@@ -118,7 +174,8 @@ CONTAINS
         TYPE(t_kpts), OPTIONAL, INTENT(IN) :: kpts
 
         INTEGER :: num_bands, n, jsp, jsp_rad, nrec, neig_actual, ikpt_stored
-        LOGICAL :: l_real_zmat
+        INTEGER :: is
+        LOGICAL :: l_real_zmat, l_hit
         INTEGER, ALLOCATABLE :: read_list(:)
         LOGICAL :: l_spinor_records
         INTEGER :: n_comp
@@ -169,15 +226,16 @@ CONTAINS
             radfun_valid = .TRUE.
         END IF
 
-        !Eigenvectors and abc coefficients for this k-point and band selection
-        IF (.NOT.cache_hit(eig_id, ikpt, nrec, ev_list)) THEN
-            CALL reset_k_cache()
-
+        !Eigenvectors and abc coefficients for this k-point and band selection. Several
+        !k-points are held at once, so asking for a neighbour does not discard the k it is
+        !a neighbour of.
+        is = acquire_slot(eig_id, ikpt, nrec, l_hit, ev_list)
+        IF (.NOT.l_hit) THEN
             !Read and select the state vectors
             !TODO: at the secvar_soc call site the eigenvectors are also read in
             !t_secvar%initialize (needed there for the back-transform); a getter
             !for zmat_store could avoid this duplication.
-            ALLOCATE(zmat_store(nrec))
+            ALLOCATE(kslot(is)%zmat(nrec))
             ! In SOC/noncollinear mode the eigenvectors are stored as complex
             ! objects in eig66 and must be read into complex matrices.
             l_real_zmat = input%l_real .AND. (.NOT.(noco%l_soc .OR. noco%l_noco))
@@ -187,13 +245,13 @@ CONTAINS
                 read_list = [(n, n = 1, num_bands)]
             END IF
             DO jsp = 1, nrec
-                CALL zmat_store(jsp)%init(l_real_zmat, lapw%nmat, num_bands)
+                CALL kslot(is)%zmat(jsp)%init(l_real_zmat, lapw%nmat, num_bands)
                 IF (PRESENT(kpts)) THEN
-                    CALL read_eig(eig_id, ikpt, jsp, list=read_list, zmat=zmat_store(jsp), &
+                    CALL read_eig(eig_id, ikpt, jsp, list=read_list, zmat=kslot(is)%zmat(jsp), &
                                   kpts=kpts, input=input, noco=noco, nococonv=nococonv, &
                                   sym=sym, atoms=atoms, cell=cell)
                 ELSE
-                    CALL read_eig(eig_id, ikpt, jsp, list=read_list, zmat=zmat_store(jsp))
+                    CALL read_eig(eig_id, ikpt, jsp, list=read_list, zmat=kslot(is)%zmat(jsp))
                 END IF
             END DO
 
@@ -203,34 +261,34 @@ CONTAINS
             !nv(1) + nlotot addresses one row past the end of an N-row record, and the
             !values it finds there are plausible rather than obviously wrong.
             IF (l_spinor_records) THEN
-                ALLOCATE(zmat_spinor(1))
-                CALL melem_stack_spinor(zmat_store(1), zmat_store(2), zmat_spinor(1))
+                ALLOCATE(kslot(is)%zmat_spinor(1))
+                CALL melem_stack_spinor(kslot(is)%zmat(1), kslot(is)%zmat(2), kslot(is)%zmat_spinor(1))
             END IF
 
             !Calculate the abc coefficients for all atom types and both spins
-            ALLOCATE(abc_store(2, atoms%ntype))
+            ALLOCATE(kslot(is)%abc(2, atoms%ntype))
             DO n = 1, atoms%ntype
                 DO jsp = 1, n_comp
                     !A single radial set serves both components of a spinor.
                     jsp_rad = radial_slot(radfun_store, jsp)
-                    CALL abc_store(jsp,n)%init(input, atoms, num_bands, n)
+                    CALL kslot(is)%abc(jsp,n)%init(input, atoms, num_bands, n)
                     !One record per component when they were stored separately; the single
                     !record for both when it holds the whole spinor, where the spin index
                     !is what selects the block.
-                    CALL abc_store(jsp,n)%calc_abc(input, atoms, sym, cell, lapw, num_bands, &
+                    CALL kslot(is)%abc(jsp,n)%calc_abc(input, atoms, sym, cell, lapw, num_bands, &
                                                    usdus_store, noco, nococonv, jsp_rad, n, &
-                                                   zmat_store(MIN(jsp, nrec)))
+                                                   kslot(is)%zmat(MIN(jsp, nrec)))
                 END DO
                 !A state with no spin structure is its own second channel. Two real
                 !components must never be equated.
-                IF (n_comp == 1) abc_store(2,n) = abc_store(1,n)
+                IF (n_comp == 1) kslot(is)%abc(2,n) = kslot(is)%abc(1,n)
             END DO
 
-            cached_eig_id = eig_id
-            cached_ikpt   = ikpt
-            cached_nrec   = nrec
-            IF (PRESENT(ev_list)) cached_list = ev_list
-            cache_valid = .TRUE.
+            kslot(is)%eig_id = eig_id
+            kslot(is)%ikpt   = ikpt
+            kslot(is)%nrec   = nrec
+            IF (PRESENT(ev_list)) kslot(is)%list = ev_list
+            kslot(is)%valid = .TRUE.
         END IF
 
         !An operator whose result carries Cartesian components keeps them in a store
@@ -259,10 +317,12 @@ CONTAINS
         !as it takes: one when it is a whole spinor, two when the records are independent
         !spin channels. The abc coefficients stay per record either way, since each is
         !contracted with its own component.
-        IF (ALLOCATED(zmat_spinor)) THEN
-            CALL matel%calc_matrix_elements(zmat_spinor, abc_store, radfun_store, usdus_store)
+        IF (ALLOCATED(kslot(is)%zmat_spinor)) THEN
+            CALL matel%calc_matrix_elements(kslot(is)%zmat_spinor, kslot(is)%abc, &
+                                            radfun_store, usdus_store)
         ELSE
-            CALL matel%calc_matrix_elements(zmat_store, abc_store, radfun_store, usdus_store)
+            CALL matel%calc_matrix_elements(kslot(is)%zmat, kslot(is)%abc, &
+                                            radfun_store, usdus_store)
         END IF
 
     END SUBROUTINE matrix_element_factory
