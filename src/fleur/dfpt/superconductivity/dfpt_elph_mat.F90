@@ -428,6 +428,7 @@ CONTAINS
             qsingle(:, 1) = qvec
             ph_linewidth = 0.0
 
+            if (fmpi%irank==0) write(*,'(a,3f8.3)') "Interpolating on qvec:" , qvec  
             ! interpolate the dynMat and find the eigenvalue for this q
             call timestart("Dynmat Interpolation")
             call interpolate_dynmat(fi%atoms,fi%sym,fi%cell,fi%dfpt%qvec,dynMats,fi%dfpt%l_WSinterpol,qsingle,dynMat_interpol)

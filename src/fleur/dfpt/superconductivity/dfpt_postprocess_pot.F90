@@ -117,7 +117,7 @@ contains
 
         do iQ = 1 , size(q_list)
             call timestart("q-point elph")
-
+            if (fmpi%irank==0) write(*,'(a,3f8.3)') "Computing electron phonon interaction for q:" , fi%dfpt%qvec%bk(:,iQ)
             if (fmpi%irank == 0 ) then 
                 call timestart("dynMat IO")
                 ! Read in eigenvectors and eigenvalues for given q-point
@@ -132,7 +132,7 @@ contains
                     call timestart("Dirloop")
                     
                     write(dfpt_tag,'(a1,i0,a2,i0,a2,i0)') 'q', q_list(iQ), '_b', iDtype, '_j', iDir
-                    if (fmpi%irank==0) write(*,*) "Computing elph for" , fi%dfpt%qvec%bk(:,iQ)
+                    
                     iPerturb = iDir+3*(iDtype-1)
 
 
@@ -203,11 +203,10 @@ contains
     call mpi_bcast(dynMats, size(dynMats), mpi_double_complex, 0, fmpi%mpi_comm, ierr)
 #endif 
 
-        if (fmpi%irank==0) print * , "Starting the construction of the interpolation"
-
         ! Perform Wannier interpolation
         if (fi%wannierlib%l_wannierize) then 
             call timestart("Wannier Interpolation elph")
+            if (fmpi%irank==0) write(*,*) "Starting the construction of the interpolation"
             call el_ph_wannier_interpolate(fmpi,fi,results,dynMats,gmatCart)
             call timestop("Wannier Interpolation elph")
         end if 
