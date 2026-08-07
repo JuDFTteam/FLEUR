@@ -74,7 +74,7 @@ CONTAINS
       ! (1) the full gauge V(k) = u_opt(k) . u_matrix(k) (disentangled + MLWF) of this channel,
       ! needed by the collinear combined spin operator, which rotates the cross-spin overlap
       ! with BOTH channels' V once they are both available.
-      IF (coarse%l_col_spin) THEN
+      IF (coarse%n_channels == 2 .AND. request%has_op_r('spin')) THEN
          DO k = 1, SIZE(u_opt, 3)
             coarse%v_ch(:, :, k, wf_ch) = MATMUL(u_opt(:, :, k), u_matrix(:, :, k))
          END DO

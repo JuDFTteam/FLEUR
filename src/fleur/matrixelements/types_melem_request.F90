@@ -32,7 +32,8 @@ MODULE m_types_melem_request
       CHARACTER(LEN=20), ALLOCATABLE :: op_name(:)
       INTEGER,           ALLOCATABLE :: op_total(:)
    CONTAINS
-      PROCEDURE :: init => melem_request_init
+      PROCEDURE :: init     => melem_request_init
+      PROCEDURE :: has_op_r => melem_request_has_op_r
    END TYPE t_melem_request
 
    !> The operator names this layer knows, one list per thing that can be asked for. They
@@ -98,6 +99,17 @@ CONTAINS
                              hint=op_list_hint(MELEM_OP_R), calledby="melem_request_init")
       END DO
    END SUBROUTINE melem_request_init
+
+   !> Whether the real-space list asked for this operator. Callers used to be handed a
+   !> flag per operator, which meant the same fact was stored twice and could disagree.
+   LOGICAL FUNCTION melem_request_has_op_r(this, name)
+      CLASS(t_melem_request), INTENT(IN) :: this
+      CHARACTER(LEN=*),       INTENT(IN) :: name
+      melem_request_has_op_r = .FALSE.
+      IF (.NOT.this%l_operators_r)        RETURN
+      IF (.NOT.ALLOCATED(this%op_r_name)) RETURN
+      melem_request_has_op_r = melem_op_known(name, this%op_r_name)
+   END FUNCTION melem_request_has_op_r
 
    !> Whether a name appears in one of the lists above.
    LOGICAL FUNCTION melem_op_known(name, list)

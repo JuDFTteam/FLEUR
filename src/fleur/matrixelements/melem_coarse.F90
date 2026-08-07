@@ -53,8 +53,9 @@ MODULE m_melem_coarse
       COMPLEX, ALLOCATABLE :: l0(:, :, :, :, :)   !< (nb,nb,3,nat,nk_loc)  orbital L per atom
       COMPLEX, ALLOCATABLE :: soc0(:, :, :, :)    !< (nb,nb,1,nk_loc)      SOC
       COMPLEX, ALLOCATABLE :: soc4(:, :, :, :)    !< (nb,nb,4,nk_loc)      2x2 SOC spinor blocks
-      !> collinear jspins=2 only: per-channel Bloch orbital L, filled from the wannierization's
-      !> own mmn k-loop (see add_collinear_orbital) because the spinor coarse pass does not run.
+      !> collinear jspins=2 only: the Bloch orbital L of each channel, site-summed. The two
+      !> channels are separate eigenproblems, so L is not one matrix over a spinor but one
+      !> per channel, and melem_coarse_collinear fills both.
       COMPLEX, ALLOCATABLE :: l0col(:, :, :, :, :) !< (nb,nb,3,channel,nk_loc)
       !> collinear jspins=2 only: the cross-spin overlap <up|dn> per k, in the Bloch basis.
       !> It is the ingredient of the combined 2N spin operator, and it needs no gauge, so it
@@ -64,8 +65,10 @@ MODULE m_melem_coarse
       !> collinear jspins=2 only: the gauge V of each spin channel, needed by the combined 2N
       !> spin operator.
       COMPLEX, ALLOCATABLE :: v_ch(:, :, :, :)    !< (nb,nw,nkptf,2)
-      LOGICAL :: l_col_orb = .FALSE.   !< collinear jspins=2 AND orbital requested in <operators_r>
-      LOGICAL :: l_col_spin = .FALSE.  !< collinear jspins=2 AND spin requested in <operators_r>
+      !> How many spin channels wannierise separately: two when jspins=2 without spinors,
+      !> one otherwise. It is a fact about the calculation, where the flags it replaces were
+      !> a copy of what the request already said, kept next to it and able to disagree.
+      INTEGER :: n_channels = 1
       !> .TRUE. only when the spinor coarse slices were really allocated (an operator is requested
       !> AND we have spinor wavefunctions). Gates %calc, so it can never write into the stubs.
       LOGICAL :: l_active = .FALSE.
@@ -90,11 +93,13 @@ CONTAINS
       INTEGER, INTENT(IN) :: distk(:)
       LOGICAL, INTENT(IN) :: l_spinors   !< noco%l_noco .OR. noco%l_soc
 
-      INTEGER :: nkc_loc, iop
+      INTEGER :: nkc_loc
+      LOGICAL :: l_ch_orb, l_ch_spin
 
       ! Operator Bloch matrices on the coarse mesh: the k-loop is DISTRIBUTED over ranks (each
-      ! its distk slice -> parallel get_z I/O) into per-rank local arrays. Every consumer works
-      ! on those slices plus a distributed FT-reduce, so the full mesh is never assembled.
+      ! its distk slice, so the reads the factory does for it are parallel too) into per-rank
+      ! local arrays. Every consumer works on those slices plus a distributed FT-reduce, so the
+      ! full mesh is never assembled.
       this%l_active = (request%l_spin .OR. request%l_orbmom .OR. request%l_socop) .AND. l_spinors
       IF (this%l_active) THEN
          nkc_loc = MAX(1, COUNT(distk == fmpi%irank))
@@ -107,17 +112,14 @@ CONTAINS
          ALLOCATE (this%soc0(1, 1, 1, 1))
       END IF
 
-      ! collinear jspins=2 (no SOC/noco): the coarse spin/orbital slices above are spinor-only
-      ! (stubs), so the per-channel orbital operators_r builds its own Bloch L in the mmn k-loop
-      ! (reusing that loop's abc), and the combined 2N spin operator (rspauli.1) is assembled
-      ! after both channels wannierise from their gauges v_ch + the cross-spin overlap.
-      this%l_col_orb = .FALSE.; this%l_col_spin = .FALSE.
-      IF (input%jspins == 2 .AND. .NOT. l_spinors .AND. request%l_operators_r) THEN
-         DO iop = 1, request%n_op_r
-            IF (TRIM(request%op_r_name(iop)) == 'orbital') this%l_col_orb = .TRUE.
-            IF (TRIM(request%op_r_name(iop)) == 'spin') this%l_col_spin = .TRUE.
-         END DO
-      END IF
+      ! collinear jspins=2 (no SOC/noco): the slices above are spinor-only and stay stubs, so
+      ! this case has a pass of its own. What it needs differs in kind: L per channel rather
+      ! than one matrix over a spinor, and for the combined 2N spin operator (rspauli.1) only
+      ! the cross-spin overlap, since that operator cannot be assembled until both channels
+      ! have wannierised and their gauges v_ch exist.
+      this%n_channels = MERGE(2, 1, input%jspins == 2 .AND. .NOT. l_spinors)
+      l_ch_orb  = this%n_channels == 2 .AND. request%has_op_r('orbital')
+      l_ch_spin = this%n_channels == 2 .AND. request%has_op_r('spin')
       !> An operator nobody will build must not reach the export: the slices stay at their
       !> stub size, the export reads them anyway, and what comes out is small enough to pass
       !> for numerical noise instead of for the absence of a calculation.
@@ -125,17 +127,17 @@ CONTAINS
          IF (request%l_socop) CALL judft_error( &
             "melem_coarse: the spin-orbit operator was requested without spin-orbit coupling", &
             hint="remove the operator, or switch on l_soc", calledby="melem_coarse_init")
-         IF (request%l_orbmom .AND. .NOT. this%l_col_orb) CALL judft_error( &
+         IF (request%l_orbmom .AND. .NOT. l_ch_orb) CALL judft_error( &
             "melem_coarse: the orbital operator has no producer in this spin configuration", &
             hint="it needs spinors (l_soc or l_noco), or jspins=2 with an <operators_r> block", &
             calledby="melem_coarse_init")
-         IF (request%l_spin .AND. .NOT. this%l_col_spin) CALL judft_error( &
+         IF (request%l_spin .AND. .NOT. l_ch_spin) CALL judft_error( &
             "melem_coarse: the spin operator has no producer in this spin configuration", &
             hint="it needs spinors (l_soc or l_noco), or jspins=2 with an <operators_r> block", &
             calledby="melem_coarse_init")
       END IF
 
-      IF (this%l_col_spin) THEN
+      IF (l_ch_spin) THEN
          ALLOCATE (this%v_ch(manifold%num_bands, manifold%num_wann, kpts%nkptf, 2), source=cmplx(0.0, 0.0))
          ALLOCATE (this%x0(manifold%num_bands, manifold%num_bands, MAX(1, COUNT(distk == fmpi%irank))), &
                    source=cmplx(0.0, 0.0))
@@ -144,7 +146,7 @@ CONTAINS
       END IF
       ! Both channels are held at once: they are produced in one k-pass before either
       ! wannierization runs, and consumed one channel at a time afterwards.
-      IF (this%l_col_orb) THEN
+      IF (l_ch_orb) THEN
          ALLOCATE (this%l0col(manifold%num_bands, manifold%num_bands, 3, 2, &
                               MAX(1, COUNT(distk == fmpi%irank))), source=cmplx(0.0, 0.0))
       ELSE
@@ -186,9 +188,11 @@ CONTAINS
 
       !> Row 5 -- two spin channels, no spinors -- has no coarse operator slices, but the
       !> cross-spin overlap its combined spin operator needs is still a k-by-k Bloch matrix.
-      IF (this%l_col_spin .OR. this%l_col_orb) &
-         CALL melem_coarse_collinear(this, manifold, atoms, input, sym, cell, noco, nococonv, &
-                                      kpts, stars, usdus, radfun, enpara, vtot, eig_id, distk, fmpi)
+      IF (this%n_channels == 2 .AND. &
+          (request%has_op_r('spin') .OR. request%has_op_r('orbital'))) &
+         CALL melem_coarse_collinear(this, request, manifold, atoms, input, sym, cell, noco, &
+                                      nococonv, kpts, stars, usdus, radfun, enpara, vtot, &
+                                      eig_id, distk, fmpi)
 
       IF (.NOT. this%l_active) RETURN   ! nothing requested, or no spinor wavefunctions -> slices are stubs
 
@@ -285,13 +289,15 @@ CONTAINS
       IF (ALLOCATED(ev_list)) DEALLOCATE (ev_list)
    END SUBROUTINE melem_coarse_calc
 
-   SUBROUTINE melem_coarse_collinear(this, manifold, atoms, input, sym, cell, noco, nococonv, &
-                                      kpts, stars, usdus, radfun, enpara, vtot, eig_id, distk, fmpi)
+   SUBROUTINE melem_coarse_collinear(this, request, manifold, atoms, input, sym, cell, noco, &
+                                      nococonv, kpts, stars, usdus, radfun, enpara, vtot, &
+                                      eig_id, distk, fmpi)
       !> What a collinear jspins=2 calculation needs from the eigenvectors, per k-point of
       !> this rank's slice: interstitial part plus the muffin-tin contraction of the two
       !> channels' matching coefficients. The two channels are separate eigenproblems with
       !> the same basis, so both records are read at every k.
       CLASS(t_melem_coarse), INTENT(INOUT) :: this
+      TYPE(t_melem_request), INTENT(IN) :: request
       TYPE(t_melem_manifold), INTENT(IN) :: manifold
       TYPE(t_atoms), INTENT(IN) :: atoms
       TYPE(t_input), INTENT(IN) :: input
@@ -323,7 +329,7 @@ CONTAINS
       !> Bound once, outside the k loop: what an instance binds to -- a site and the
       !> radial slot of its channel -- is the same at every k. The k dependence arrives
       !> with the abc coefficients.
-      IF (this%l_col_orb) THEN
+      IF (request%has_op_r('orbital')) THEN
          ALLOCATE (orbop(atoms%nat, 2))
          DO ch = 1, 2
             na = 0
@@ -345,7 +351,7 @@ CONTAINS
          !> Both channels are separate eigenproblems over the same basis, so one lapw serves
          !> them, and the factory reads the two records this k has.
          CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpt, cell)
-         IF (this%l_col_spin) THEN
+         IF (request%has_op_r('spin')) THEN
             !> The operator keeps the four spin blocks. Only the cross-spin one is wanted
             !> here: the combined 2N Pauli is assembled after both channels wannierise, and
             !> it is the block that carries the two gauges.
@@ -358,7 +364,7 @@ CONTAINS
          !> L is spin-diagonal, so each channel has its own and neither needs the other.
          !> An instance covers one site, so the sites are added up here; the sum needs no
          !> local-to-global rotation, L being spin-diagonal with a frame-invariant trace.
-         IF (this%l_col_orb) THEN
+         IF (request%has_op_r('orbital')) THEN
             !> The coefficients of both channels at once, from the same cache the spin
             !> operator just filled; each channel is then served its own row of them.
             CALL matrix_element_states(eig_id, ikpt, input, atoms, sym, cell, noco, nococonv, &
@@ -390,7 +396,7 @@ CONTAINS
       IF (ALLOCATED(this%l0col)) DEALLOCATE (this%l0col)
       IF (ALLOCATED(this%v_ch)) DEALLOCATE (this%v_ch)
       IF (ALLOCATED(this%x0)) DEALLOCATE (this%x0)
-      this%l_col_orb = .FALSE.; this%l_col_spin = .FALSE.
+      this%n_channels = 1
    END SUBROUTINE melem_coarse_free
 
 END MODULE m_melem_coarse

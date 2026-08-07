@@ -232,7 +232,7 @@ CONTAINS
 
       ! collinear combined 2N spin operator rspauli.1: only assemblable once BOTH channels have
       ! been wannierised, since it rotates the cross-spin overlap with both gauges.
-      IF (melem%l_col_spin) &
+      IF (melem%n_channels == 2 .AND. request%has_op_r('spin')) &
          CALL melem_rspauli_collinear(this%num_wann, melem%x0, melem%v_ch, cell, kpts, distk, fmpi)
 
       CALL matrix_element_release_anchor()
