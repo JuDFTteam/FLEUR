@@ -21,8 +21,8 @@ MODULE m_matrix_element_factory
 
     !Cached data that depends only on the potential (not on the k-point).
     !Invalidated by matrix_element_factory_reset only, i.e. once per SCF iteration.
-    TYPE(t_radfun), ALLOCATABLE :: radfun_store(:)  !(ntype)
-    TYPE(t_usdus)               :: usdus_store      !all types and spins
+    TYPE(t_radfun), ALLOCATABLE, TARGET :: radfun_store(:)  !(ntype)
+    TYPE(t_usdus),  TARGET              :: usdus_store      !all types and spins
     LOGICAL                     :: radfun_valid = .FALSE.
 
     !Everything one k-point contributes, keyed on (eig_id, ikpt, nrec, band selection).
@@ -54,7 +54,7 @@ MODULE m_matrix_element_factory
     INTEGER        :: anchor_slot = 0
 
     PUBLIC :: matrix_element_factory, matrix_element_factory_reset, matrix_element_states
-    PUBLIC :: matrix_element_release_anchor
+    PUBLIC :: matrix_element_release_anchor, matrix_element_radial
 
 CONTAINS
 
@@ -152,6 +152,60 @@ CONTAINS
         acquire_slot = oldest
     END FUNCTION acquire_slot
 
+    !> Radial functions and their muffin-tin integrals. They depend on the potential and not
+    !> on the k-point, so they are generated once and kept until the next factory reset --
+    !> i.e. once per SCF iteration.
+    SUBROUTINE ensure_radial(atoms, input, enpara, fmpi, vtot)
+        USE m_types_input
+        USE m_types_atoms
+        USE m_types_enpara
+        USE m_types_potden
+        USE m_types_mpi
+
+        TYPE(t_atoms),  INTENT(IN) :: atoms
+        TYPE(t_input),  INTENT(IN) :: input
+        TYPE(t_enpara), INTENT(IN) :: enpara
+        TYPE(t_mpi),    INTENT(IN) :: fmpi
+        TYPE(t_potden), INTENT(IN) :: vtot
+
+        INTEGER :: n
+
+        IF (radfun_valid) RETURN
+        ALLOCATE(radfun_store(atoms%ntype))
+        DO n = 1, atoms%ntype
+            CALL radfun_store(n)%generate_radial_functions(atoms, input, enpara, fmpi, &
+                                                           vtot, n, usdus_out=usdus_store)
+        END DO
+        radfun_valid = .TRUE.
+    END SUBROUTINE ensure_radial
+
+    !> The radial functions themselves, for a caller that needs them for something the factory
+    !> does not do -- the projections A_mn, the Gaunt overlaps, deciding which radial set a
+    !> spin component reads. It used to generate a second, identical set of its own: the same
+    !> routine over the same types in the same order, and generate_radial_functions fills a
+    !> t_usdus the same way whether or not the caller initialised it first.
+    !>
+    !> What comes back points into the cache and lives until matrix_element_factory_reset.
+    SUBROUTINE matrix_element_radial(atoms, input, enpara, fmpi, vtot, radfun, usdus)
+        USE m_types_input
+        USE m_types_atoms
+        USE m_types_enpara
+        USE m_types_potden
+        USE m_types_mpi
+
+        TYPE(t_atoms),  INTENT(IN) :: atoms
+        TYPE(t_input),  INTENT(IN) :: input
+        TYPE(t_enpara), INTENT(IN) :: enpara
+        TYPE(t_mpi),    INTENT(IN) :: fmpi
+        TYPE(t_potden), INTENT(IN) :: vtot
+        TYPE(t_radfun), POINTER, INTENT(OUT) :: radfun(:)   !> (ntype)
+        TYPE(t_usdus),  POINTER, INTENT(OUT) :: usdus
+
+        CALL ensure_radial(atoms, input, enpara, fmpi, vtot)
+        radfun => radfun_store
+        usdus  => usdus_store
+    END SUBROUTINE matrix_element_radial
+
     !> Make sure the states of one k-point, their matching coefficients and the radial
     !> functions are in the cache, and say which slot holds them and how many bands they
     !> carry. Everything the two public entry points share lives here.
@@ -237,16 +291,7 @@ CONTAINS
             num_bands = MIN(num_bands, neig_actual)
         END IF
 
-        !Radial functions and energy derivatives: k-independent, so generated
-        !only once per SCF iteration (i.e. after each factory reset)
-        IF (.NOT.radfun_valid) THEN
-            ALLOCATE(radfun_store(atoms%ntype))
-            DO n = 1, atoms%ntype
-                CALL radfun_store(n)%generate_radial_functions(atoms, input, enpara, fmpi, &
-                                                               vtot, n, usdus_out=usdus_store)
-            END DO
-            radfun_valid = .TRUE.
-        END IF
+        CALL ensure_radial(atoms, input, enpara, fmpi, vtot)
 
         !Eigenvectors and abc coefficients for this k-point and band selection. Several
         !k-points are held at once, so asking for a neighbour does not discard the k it is

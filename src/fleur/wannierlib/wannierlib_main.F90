@@ -17,7 +17,7 @@
 MODULE m_wannierlib_main
    USE m_types, ONLY: t_stars, t_results
    USE m_matrix_element_factory, ONLY: matrix_element_factory_reset, matrix_element_states, &
-                                       matrix_element_release_anchor
+                                       matrix_element_release_anchor, matrix_element_radial
    USE m_types_melem_request, ONLY: t_melem_request
    USE m_types_melem_manifold, ONLY: t_melem_manifold
    USE m_types_melem_domains, ONLY: t_melem_domains
@@ -68,7 +68,7 @@ CONTAINS
       TYPE(t_results), INTENT(IN) :: results
       INTEGER, INTENT(IN) :: eig_id
 
-      INTEGER :: ikpt, itype, nntot_w90, ierr, jspin, jspin_comp, irec, ib
+      INTEGER :: ikpt, nntot_w90, ierr, jspin, jspin_comp, irec, ib
       INTEGER :: jspin_rad_done   ! radial set the cached ujug was built for; -1 = none yet
       INTEGER, ALLOCATABLE :: ev_list(:)
       COMPLEX, ALLOCATABLE :: amn(:, :, :)
@@ -81,10 +81,10 @@ CONTAINS
       COMPLEX, ALLOCATABLE :: u_matrix(:, :, :), u_opt(:, :, :)   ! Wannier gauge factors from w90
       TYPE(t_melem_coarse) :: melem   ! the operator (matrix-element) side, see m_melem_driver
       TYPE(t_melem_bmesh) :: bmesh    ! b-shell weights handed to the operator side
-      TYPE(t_usdus) :: usdus
+      TYPE(t_usdus), POINTER :: usdus       ! into the factory cache
       TYPE(t_lapw) :: lapw
       TYPE(t_mat), POINTER :: zmat_p(:)     ! into the factory cache
-      TYPE(t_radfun) :: radfun(atoms%ntype)
+      TYPE(t_radfun), POINTER :: radfun(:)  ! likewise; the factory owns them
       TYPE(t_abc), POINTER :: abc_p(:, :)   ! (2,ntype), likewise
       LOGICAL :: l_wannierlib_spinors
       TYPE(t_melem_request) :: request
@@ -105,11 +105,9 @@ CONTAINS
       ! leer un espinor complejo en buffer real mata la parte imaginaria del MMN.
       spin12 = (/'WF1', 'WF2'/)
 
-      !Setup of data structures for amn and mmn calculation for all k-points
-      CALL usdus%init(atoms, input%jspins)
-      DO itype = 1, atoms%ntype
-         CALL radfun(itype)%generate_radial_functions(atoms, input, enpara, fmpi, vtot, itype, usdus_out=usdus)
-      END DO
+      !> The radial functions come from the factory, which keeps them for the operators
+      !> anyway. Generating a second set here produced the same numbers twice.
+      CALL matrix_element_radial(atoms, input, enpara, fmpi, vtot, radfun, usdus)
 
       ! distk: which rank owns each global k (moved up: distributes the coarse-operator k-loop)
       ALLOCATE(distk(kpts%nkptf), stat=ierr)
