@@ -17,6 +17,7 @@
 MODULE m_wannierlib_main
    USE m_types, ONLY: t_stars, t_results
    USE m_melem_get_z
+   USE m_matrix_element_factory, ONLY: matrix_element_factory_reset
    USE m_types_melem_request, ONLY: t_melem_request
    USE m_types_melem_manifold, ONLY: t_melem_manifold
    USE m_types_melem_domains, ONLY: t_melem_domains
@@ -175,7 +176,8 @@ CONTAINS
                ik_local = ik_local + 1
                CALL wannierlib_mmnkb(this%min_band, this%max_band, this%num_bands, nntot_w90, ikpt, kpts, nnkp, gkpb, kdiff, &
                                      ujug, atoms, cell, input, sym, noco, nococonv, usdus, &
-                                     radfun, abc, jspin_comp, jspin_rad, eig_id, stars, lapw, zMat, mmn, ik_local)
+                                     radfun, abc, jspin_comp, jspin_rad, eig_id, stars, lapw, zMat, mmn, ik_local, &
+                                     enpara, vtot, fmpi)
             END DO
 
             IF (ALLOCATED(ujug)) DEALLOCATE (ujug)
@@ -230,6 +232,10 @@ CONTAINS
          CALL melem_rspauli_collinear(this%num_wann, melem%x0, melem%v_ch, cell, kpts, distk, fmpi)
 
       CALL melem%free()
+      !> Give back what the factory cached while walking the k-points. It holds the states
+      !> and their coefficients for several k at a time, which is the largest thing this
+      !> pass leaves behind, and nothing after it reads them.
+      CALL matrix_element_factory_reset()
       IF (ALLOCATED(distk)) DEALLOCATE(distk)
 
    END SUBROUTINE wannierlib_main
