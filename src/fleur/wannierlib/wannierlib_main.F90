@@ -69,6 +69,7 @@ CONTAINS
       INTEGER, INTENT(IN) :: eig_id
 
       INTEGER :: ikpt, itype, nntot_w90, ierr, jspin, jspin_comp, irec, ib
+      INTEGER :: jspin_rad_done   ! radial set the cached ujug was built for; -1 = none yet
       INTEGER, ALLOCATABLE :: ev_list(:)
       COMPLEX, ALLOCATABLE :: amn(:, :, :)
       COMPLEX, ALLOCATABLE :: mmn(:, :, :, :)
@@ -156,10 +157,18 @@ CONTAINS
          ALLOCATE(mmn(this%num_bands, this%num_bands, nntot_w90, nk_local), stat=ierr, source=cmplx(0.0, 0.0))
          IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating local mmn buffer', calledby='wannierlib_main')
 
+         jspin_rad_done = -1
          DO jspin_comp = MERGE(1, jspin, l_wannierlib_spinors), MERGE(2, jspin, l_wannierlib_spinors)
             ! jspin_comp = record del eig (spinor up/down); jspin_rad = indice radial.
             jspin_rad = radial_slot(radfun, jspin_comp)
-            CALL melem_ujugaunt(atoms, cell, nntot_w90, kdiff, radfun, radfun, jspin_rad, jspin_rad, .FALSE., 1, ujug)
+            !> These depend on the radial set and on nothing else in this loop. With a single
+            !> potential both spinor components read the same set, so the second pass would
+            !> rebuild an identical array -- and it is the largest thing built here, lm by lm
+            !> by radial pair by type by neighbour.
+            IF (jspin_rad /= jspin_rad_done) THEN
+               CALL melem_ujugaunt(atoms, cell, nntot_w90, kdiff, radfun, radfun, jspin_rad, jspin_rad, .FALSE., 1, ujug)
+               jspin_rad_done = jspin_rad
+            END IF
 
             ev_list = [(ib, ib = this%min_band, this%max_band)]
             ik_local = 0
@@ -187,8 +196,8 @@ CONTAINS
                                      zmat_p(irec), mmn, ik_local, enpara, vtot, fmpi)
             END DO
 
-            IF (ALLOCATED(ujug)) DEALLOCATE (ujug)
          END DO
+         IF (ALLOCATED(ujug)) DEALLOCATE (ujug)
 
          ! amn was filled only on each rank's distk slice (zeros elsewhere) -> sum to the full set
          CALL wannierlib_reduce_amn(fmpi, amn)
