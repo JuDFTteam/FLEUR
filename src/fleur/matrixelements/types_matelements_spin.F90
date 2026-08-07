@@ -17,7 +17,7 @@ MODULE m_types_matelements_spin
    USE m_types_mat
    USE m_types_abc
    USE m_types_radfun
-   USE m_types_spinor_layout, ONLY: t_spinor_layout, radial_slot, LAYOUT_SPINOR
+   USE m_types_spinor_layout, ONLY: t_spinor_layout, radial_slot, LAYOUT_SPINOR, LAYOUT_CHANNELS
    USE m_types_input
    USE m_types_noco
    USE m_types_usdus
@@ -73,7 +73,11 @@ CONTAINS
 
    SUBROUTINE calc_matrix_elements(this, zmat, abc, radfun, usdus)
       CLASS(t_matelements_spin), INTENT(INOUT) :: this
-      TYPE(t_mat),    INTENT(IN) :: zmat(:)   !> the 2N spinor in one matrix
+      !> The state at this k, either as one 2N matrix holding the whole spinor or as the
+      !> two channels of a collinear calculation, one matrix each. Which of the two is read
+      !> off its size, and it decides where the spin-down rows are: inside the single matrix
+      !> at row_dn, or at the top of the second one.
+      TYPE(t_mat),    INTENT(IN) :: zmat(:)
       TYPE(t_abc),    INTENT(IN) :: abc(:,:)  !> (2,ntype)
       TYPE(t_radfun), INTENT(IN) :: radfun(:) !> (ntype)
       TYPE(t_usdus),  INTENT(IN) :: usdus     !> unused, the radial integrals are in radfun
@@ -81,8 +85,9 @@ CONTAINS
       COMPLEX, ALLOCATABLE :: oi(:,:,:,:)     ! (nb,nb,2,2) interstitial spin blocks
       COMPLEX :: loc(2,2), glo(2,2), cx, cy, cz, gx, gy, gz, trc
       REAL    :: ca, sa, cb, sb
-      INTEGER :: nb, io_dn, i, j, ntyp, iat, l, ll1, mm, lm, n_r, n_r2
+      INTEGER :: nb, i, j, ntyp, iat, l, ll1, mm, lm, n_r, n_r2
       INTEGER :: js2, i1, j1
+      INTEGER :: iu, id, off_u, off_d
       LOGICAL :: l_rot
 
       IF (.NOT.ALLOCATED(this%mat)) &
@@ -98,21 +103,35 @@ CONTAINS
 
       js2 = radial_slot(radfun, 2)
 
-      IF (this%layout%layout /= LAYOUT_SPINOR) &
-         CALL judft_bug("calc_matrix_elements: the spin operator needs a spinor, and the &
-                        &layout of this k-point is not one")
+      !> Where each spin component is to be found. Stacked, both live in one matrix and the
+      !> down rows begin at row_dn; as two channels, each has its own matrix and starts at
+      !> the top. The rest of this routine does not care which of the two it was.
+      SELECT CASE (SIZE(zmat))
+      CASE (1)
+         IF (this%layout%layout /= LAYOUT_SPINOR) &
+            CALL judft_bug("calc_matrix_elements: one matrix holds a whole spinor, and the &
+                           &layout of this k-point does not say so")
+         iu = 1; id = 1; off_u = 0; off_d = this%layout%row_dn
+      CASE (2)
+         IF (this%layout%layout /= LAYOUT_CHANNELS) &
+            CALL judft_bug("calc_matrix_elements: two matrices are two spin channels, and the &
+                           &layout of this k-point does not say so")
+         iu = 1; id = 2; off_u = 0; off_d = 0
+      CASE DEFAULT
+         CALL judft_bug("calc_matrix_elements: the state arrives either as one spinor or as &
+                        &two channels")
+      END SELECT
 
-      ! ---- interstitial: the spin-down rows of the spinor start at io_dn ----
-      io_dn = this%layout%row_dn
+      ! ---- interstitial, one call per spin block ----
       ALLOCATE(oi(nb, nb, 2, 2))
-      CALL melem_overlap_interstitial(this%stars, this%lapw, this%lapw, zmat(1), zmat(1), &
-                                      0,     0,     oi(:,:,1,1))
-      CALL melem_overlap_interstitial(this%stars, this%lapw, this%lapw, zmat(1), zmat(1), &
-                                      io_dn, io_dn, oi(:,:,2,2))
-      CALL melem_overlap_interstitial(this%stars, this%lapw, this%lapw, zmat(1), zmat(1), &
-                                      0,     io_dn, oi(:,:,1,2))
-      CALL melem_overlap_interstitial(this%stars, this%lapw, this%lapw, zmat(1), zmat(1), &
-                                      io_dn, 0,     oi(:,:,2,1))
+      CALL melem_overlap_interstitial(this%stars, this%lapw, this%lapw, zmat(iu), zmat(iu), &
+                                      off_u, off_u, oi(:,:,1,1))
+      CALL melem_overlap_interstitial(this%stars, this%lapw, this%lapw, zmat(id), zmat(id), &
+                                      off_d, off_d, oi(:,:,2,2))
+      CALL melem_overlap_interstitial(this%stars, this%lapw, this%lapw, zmat(iu), zmat(id), &
+                                      off_u, off_d, oi(:,:,1,2))
+      CALL melem_overlap_interstitial(this%stars, this%lapw, this%lapw, zmat(id), zmat(iu), &
+                                      off_d, off_u, oi(:,:,2,1))
       DO j1 = 1, 2
          DO i1 = 1, 2
             this%mat(i1,j1)%data_c(:,:) = this%mat(i1,j1)%data_c(:,:) + oi(:,:,i1,j1)
