@@ -97,7 +97,11 @@ CONTAINS
       ! full mesh is never assembled.
       this%n_channels = MERGE(2, 1, input%jspins == 2 .AND. .NOT. l_spinors)
       this%l_active = (request%l_spin .OR. request%l_orbmom .OR. request%l_socop) .AND. l_spinors
-      l_ch_orb  = this%n_channels == 2 .AND. request%has_op_r('orbital')
+      !> L is spin-diagonal, so each channel has its own and either list is reason enough
+      !> to build it. The cross-spin overlap is only ever wanted by the real-space export:
+      !> the interpolated spin operator does not exist here, see the guard below.
+      l_ch_orb  = this%n_channels == 2 .AND. (request%has_op_r('orbital') .OR. &
+                  request%has_op('orbital') .OR. request%has_op('orbitalCurrent'))
       l_ch_spin = this%n_channels == 2 .AND. request%has_op_r('spin')
       nkc_loc = MAX(1, COUNT(distk == fmpi%irank))
 
@@ -127,13 +131,28 @@ CONTAINS
       !> An operator nobody will build must not reach the export: the slices stay at their
       !> stub size, the export reads them anyway, and what comes out is small enough to pass
       !> for numerical noise instead of for the absence of a calculation.
+      !> Two channels are two eigenproblems, wannierised one after the other, so there is
+      !> no single spin matrix over them to interpolate: within a channel sigma_z is +/-1
+      !> by orthonormality, and the transverse part lives in the cross-spin block, which
+      !> needs BOTH gauges and therefore both wannierizations. It exists only as the
+      !> combined 2N operator in real space. Said here because the summary flag is set by
+      !> the real-space list too: without this the request passed and the stub-sized slice
+      !> reached the interpolation driver, where the shapes do not conform.
+      IF (this%n_channels == 2 .AND. &
+          (request%has_op('spin') .OR. request%has_op('spinCurrent'))) CALL judft_error( &
+         "melem_coarse: the spin operator cannot be interpolated when the two spin "// &
+         "channels are wannierised separately", &
+         hint="ask for it in <operators_r>: there both channels are combined into the "// &
+              "2N rspauli.1, which is the only form this operator has here", &
+         calledby="melem_coarse_init")
+
       IF (.NOT. this%l_active) THEN
          IF (request%l_socop) CALL judft_error( &
             "melem_coarse: the spin-orbit operator was requested without spin-orbit coupling", &
             hint="remove the operator, or switch on l_soc", calledby="melem_coarse_init")
          IF (request%l_orbmom .AND. .NOT. l_ch_orb) CALL judft_error( &
             "melem_coarse: the orbital operator has no producer in this spin configuration", &
-            hint="it needs spinors (l_soc or l_noco), or jspins=2 with an <operators_r> block", &
+            hint="it needs spinors (l_soc or l_noco), or jspins=2", &
             calledby="melem_coarse_init")
          IF (request%l_spin .AND. .NOT. l_ch_spin) CALL judft_error( &
             "melem_coarse: the spin operator has no producer in this spin configuration", &
@@ -187,7 +206,8 @@ CONTAINS
       !> right question per case is what keeps this loop from having to know which is which.
       IF (this%n_channels == 2) THEN
          l_do_spin = request%has_op_r('spin')
-         l_do_orb  = request%has_op_r('orbital')
+         l_do_orb  = request%has_op_r('orbital') .OR. request%has_op('orbital') .OR. &
+                     request%has_op('orbitalCurrent')
          IF (.NOT. (l_do_spin .OR. l_do_orb)) RETURN
       ELSE
          IF (.NOT. this%l_active) RETURN   ! nothing requested, or no spinors -> slices are stubs

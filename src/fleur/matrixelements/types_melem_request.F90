@@ -34,6 +34,7 @@ MODULE m_types_melem_request
    CONTAINS
       PROCEDURE :: init     => melem_request_init
       PROCEDURE :: has_op_r => melem_request_has_op_r
+      PROCEDURE :: has_op   => melem_request_has_op
    END TYPE t_melem_request
 
    !> The operator names this layer knows, one list per thing that can be asked for. They
@@ -110,6 +111,18 @@ CONTAINS
       IF (.NOT.ALLOCATED(this%op_r_name)) RETURN
       melem_request_has_op_r = melem_op_known(name, this%op_r_name)
    END FUNCTION melem_request_has_op_r
+
+   !> Whether the INTERPOLATION list asked for this operator. The three summary flags
+   !> cannot answer it: both lists set them, so l_spin is true for a real-space export as
+   !> much as for an interpolated one -- and the two are not producible in the same spin
+   !> configurations, which is the whole reason the distinction matters.
+   LOGICAL FUNCTION melem_request_has_op(this, name)
+      CLASS(t_melem_request), INTENT(IN) :: this
+      CHARACTER(LEN=*),       INTENT(IN) :: name
+      melem_request_has_op = .FALSE.
+      IF (.NOT.ALLOCATED(this%op_name)) RETURN
+      melem_request_has_op = melem_op_known(name, this%op_name)
+   END FUNCTION melem_request_has_op
 
    !> Whether a name appears in one of the lists above.
    LOGICAL FUNCTION melem_op_known(name, list)
