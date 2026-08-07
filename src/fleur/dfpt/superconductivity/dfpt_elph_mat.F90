@@ -416,7 +416,7 @@ CONTAINS
         allocate(ftRealspace(3*fi%atoms%nat, fi%input%jspins))
         do iMode = 1 , 3*fi%atoms%nat
             do ispin = 1 , fi%input%jspins
-                call wannier_matrixq_forward(fi,gmatCart(:,:,:,ispin,iMode,:),U_full(:,:,:,ispin),fi%kpts,fi%kpts,ftRealspace(iMode,ispin))
+                call wannier_matrixq_forward(fi,gmatCart(:,:,:,ispin,iMode,:),U_full(:,:,:,ispin),fi%kpts,fi%dfpt%qvec,ftRealspace(iMode,ispin))
             end do !ispin
         end do !iMode
         call timestop("Forward FT elph-element")
@@ -778,21 +778,21 @@ CONTAINS
 
         nwann = fi%wannierlib%num_wann
         nkpt  = fi%kpts%nkpt
-        nq    = size(gmat,6)                 ! coarse q-mesh (== nkpt in the current setup)
+        nq    = size(gmat,6)
         allocate(gInterp(nwann,nwann,nkpt,nq), gRef(nwann,nwann,nkpt,nq))
         dmax = 0.0
         dref = 0.0
-        dint = 0.0 
+        dint = 0.0
 
         do ispin = 1, fi%input%jspins
             do iMode = 1, size(gmat,5)
                 ! "after": interpolate the coarse gmat back onto the coarse (k,q) grid
                 call wannier_matrixq_interpolate(fi, gmat(:,:,:,ispin,iMode,:), U_full(:,:,:,ispin), &
-                         fi%kpts, fi%kpts%bk(:,1:nkpt), gInterp, fi%kpts, fi%kpts%bk(:,1:nq))
+                         fi%kpts, fi%kpts%bk(:,1:nkpt), gInterp, fi%dfpt%qvec, fi%dfpt%qvec%bk(:,1:nq))
                 ! "before": coarse Bloch element rotated into the Wannier gauge  (U^dag(k+q) g U(k))
                 do iq = 1, nq
                     do ik = 1, nkpt
-                        ikq = fi%kpts%get_nk(fi%kpts%bk(:,ik) + fi%kpts%bk(:,iq))
+                        ikq = fi%kpts%get_nk(fi%kpts%bk(:,ik) + fi%dfpt%qvec%bk(:,iq))
                         gRef(:,:,ik,iq) = matmul(conjg(transpose(U_full(:,:,ikq,ispin))), &
                                           matmul(gmat(:,:,ik,ispin,iMode,iq), U_full(:,:,ik,ispin)))
                     end do
