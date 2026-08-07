@@ -101,6 +101,12 @@ CONTAINS
         CALL ren('bands_wann_orbcurrent', suffix)
       CASE ('eigenstates')
         CALL ren('bands_wann_eigenstates', suffix)
+      CASE DEFAULT
+        !> Without this an operator added to MELEM_OP_INTERP and to melem_run, but not
+        !> here, would compute and then write its files under the name of another spin
+        !> channel. Silent, and only visible as a file that should exist and does not.
+        CALL judft_bug('melem_rename_domain_outputs: "'//TRIM(this%op_name(iop))// &
+                       '" is an accepted operator with no output names here')
       END SELECT
     END DO
   CONTAINS

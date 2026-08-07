@@ -305,7 +305,9 @@ CONTAINS
           CALL melem_op_rs_distributed(this, cell, kpts, vloc, soc4_loc, gk_loc, 4, mpi_comm, irank, .TRUE., 'rssocmat.1')
         END IF
       CASE DEFAULT
-        IF (irank == 0) WRITE(oUnit,'(a)') 'wannierlib operators_r: unknown operator "'//TRIM(request%op_r_name(iop))//'" -> skipped'
+        !> Accepted by the request, so the gap is this dispatch and not the input.
+        CALL judft_bug('melem_operators_r: "'//TRIM(request%op_r_name(iop))// &
+                       '" is an accepted operator with no branch in this pass')
       END SELECT
     END DO
     DEALLOCATE(gk_loc, vloc)
