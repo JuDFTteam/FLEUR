@@ -3632,6 +3632,16 @@
                   <xsd:documentation>Name of the q-points to interpolate on.</xsd:documentation>
                </xsd:annotation>
          </xsd:attribute>
+         <xsd:attribute name="l_write_epw" type="FleurBool" use="optional">
+            <xsd:annotation>
+               <xsd:documentation>Write the real-space electron-phonon quantities as EPW (epwread) restart files.</xsd:documentation>
+            </xsd:annotation>
+         </xsd:attribute>
+         <xsd:attribute name="epw_prefix" type="xsd:string" use="optional">
+            <xsd:annotation>
+               <xsd:documentation>QE/EPW prefix used for the EPW restart files (e.g. the &lt;prefix&gt;.epmatwp binary).</xsd:documentation>
+            </xsd:annotation>
+         </xsd:attribute>
    </xsd:complexType>
 
    <xsd:simpleType name="BandWindowType">

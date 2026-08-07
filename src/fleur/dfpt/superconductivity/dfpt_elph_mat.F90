@@ -262,7 +262,8 @@ CONTAINS
         use m_matrix_interpolation
         use m_dfpt_dynmat_fourier
         use m_dfpt_dynmat_eig
-        use m_dfpt_elph_linewidth 
+        use m_dfpt_elph_linewidth
+        use m_dfpt_write_epw, only : write_epw_restart_files
 
         type(t_mpi), intent(in)         :: fmpi
         type(t_fleurinput) , intent(in) :: fi 
@@ -420,6 +421,15 @@ CONTAINS
             end do !ispin
         end do !iMode
         call timestop("Forward FT elph-element")
+
+        ! Optionally export the real-space electron-phonon quantities as EPW restart files.
+        if (fmpi%irank==0 .and. fi%dfpt%l_write_epw) then
+            call timestart("Write EPW restart files")
+            call write_epw_restart_files(fi, results, dynMats, U_full, ftRealspace)
+            call timestop("Write EPW restart files")
+        end if
+
+        if (fi%dfpt%l_write_epw) return
 
         do iQ = 1 , fi%dfpt%qpts_interpol%nkpt
             call timestart("q-point (el-ph interpolation)")

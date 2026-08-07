@@ -37,8 +37,10 @@ MODULE m_types_dfpt
       LOGICAL :: l_borneffcharge = .FALSE.
       LOGICAL :: l_polar = .FALSE.
       LOGICAL :: l_bfield = .FALSE.
-      LOGICAL :: l_symVacLevel = .TRUE. ! Symmetrize the vacua levels  
+      LOGICAL :: l_symVacLevel = .TRUE. ! Symmetrize the vacua levels
       LOGICAL :: l_WSinterpol = .TRUE.
+      LOGICAL :: l_write_epw = .FALSE.        ! Write EPW (epwread) restart files after el-ph interpolation
+      CHARACTER(len=100) :: epw_prefix = "fleur" ! QE/EPW prefix for the EPW restart files
 
       REAL, ALLOCATABLE :: qvec_efield(:,:)
 
@@ -107,6 +109,8 @@ CONTAINS
       CALL mpi_bc(this%fDiffcut, rank, mpi_comm)
       CALL mpi_bc(this%bandWindow, rank, mpi_comm)
       CALL mpi_bc(this%l_WSinterpol, rank, mpi_comm)
+      CALL mpi_bc(this%l_write_epw, rank, mpi_comm)
+      CALL mpi_bc(rank, mpi_comm, this%epw_prefix)   ! fixed-length scalar string: (irank, mpi_comm, c) order
       CALL this%kpts_interpol%mpi_bc(mpi_comm, rank)
 
 
@@ -369,6 +373,18 @@ CONTAINS
 
          IF (numberNodes == 1) THEN
            this%smearingGauss  = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/dfpt/postprocess/@smearingGauss'))
+         END IF
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/dfpt/postprocess/@l_write_epw')
+
+         IF (numberNodes == 1) THEN
+           this%l_write_epw  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/dfpt/postprocess/@l_write_epw'))
+         END IF
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/dfpt/postprocess/@epw_prefix')
+
+         IF (numberNodes == 1) THEN
+           this%epw_prefix  = TRIM(ADJUSTL(xml%GetAttributeValue('/fleurInput/output/dfpt/postprocess/@epw_prefix')))
          END IF
 
          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/dfpt/postprocess/@bandWindow')
