@@ -6,7 +6,7 @@
 !--------------------------------------------------------------------------------
 ! Copyright (c) 2026 Peter Gruenberg Institut, Forschungszentrum Juelich, Germany
 !--------------------------------------------------------------------------------
-MODULE m_wannierlib_ujugaunt
+MODULE m_melem_ujugaunt
    USE m_juDFT
    USE m_types_atoms
    USE m_types_cell
@@ -17,11 +17,11 @@ MODULE m_wannierlib_ujugaunt
    USE m_gaunt, ONLY: gaunt1
    IMPLICIT NONE
 CONTAINS
-!   wannierlib_ujugaunt calculates integrals of radial wave functions with
+!   melem_ujugaunt calculates integrals of radial wave functions with
 !   bessel functions and multiplies them with an angular factor.
-!   Calculating them only once gives some speed-up of wannierlib_mmkb_sph.
+!   Calculating them only once gives some speed-up of melem_mmkb_sph.
 !   Frank Freimuth, October 2006, refactored DW in 2026
-   SUBROUTINE wannierlib_ujugaunt(atoms, cell, nntot, kdiff, radfun, radfun_b, jspin, jspin_b, &
+   SUBROUTINE melem_ujugaunt(atoms, cell, nntot, kdiff, radfun, radfun_b, jspin, jspin_b, &
                                   l_q, sign_q, ujug)
       TYPE(t_atoms), INTENT(IN)  :: atoms
       TYPE(t_cell), INTENT(IN)   :: cell
@@ -45,7 +45,7 @@ CONTAINS
       REAL :: bkrot(3)
       COMPLEX :: ylmpp((atoms%lmaxd + 1)**2), factor
 
-      CALL timestart("wannierlib_ujugaunt")
+      CALL timestart("melem_ujugaunt")
       total_nr = 0
       DO n = 1, atoms%ntype
          total_nr = max(total_nr, maxval(radfun(n)%n_r(:)))
@@ -116,7 +116,7 @@ CONTAINS
          end do
       end do
 
-      CALL timestop("wannierlib_ujugaunt")
-   END SUBROUTINE wannierlib_ujugaunt
+      CALL timestop("melem_ujugaunt")
+   END SUBROUTINE melem_ujugaunt
 
-END MODULE m_wannierlib_ujugaunt
+END MODULE m_melem_ujugaunt

@@ -8,9 +8,9 @@
 !--------------------------------------------------------------------------------
 MODULE m_wannierlib_mmnkb
   USE m_juDFT
-  USE m_wannierlib_mmkb_int
+  USE m_melem_mmkb_int
   USE m_matrix_element_factory, ONLY: matrix_element_states
-  USE m_wannierlib_mmkb_sph
+  USE m_melem_mmkb_sph
   USE m_types
   USE m_types_abc
   USE m_types_spinor_layout, ONLY: t_spinor_layout
@@ -93,9 +93,9 @@ CONTAINS
                                  l_both_spinors=(noco%l_soc .AND. .NOT. noco%l_noco), kpts=kpts)
       CALL layout_b%init(input, noco, lapw_b, atoms)
 
-      CALL wannierlib_mmnkb_int(stars, lapw, lapw_b, jspin_rad, jspin_rad, zMat, zMat_b(irec), gkpb(:, nk, kk), mmn(:, :, kk, nk_local), &
+      CALL melem_mmkb_int(stars, lapw, lapw_b, jspin_rad, jspin_rad, zMat, zMat_b(irec), gkpb(:, nk, kk), mmn(:, :, kk, nk_local), &
                                 ioff=layout%row_offset(jspin), ioff_b=layout_b%row_offset(jspin))
-      CALL wannierlib_mmkb_sph(atoms, abc, abc_b(jspin, :), kpts%bkf(:, nnkp(nk, kk)), gkpb(:, nk, kk), kpts%bkf(:, nk), ujug, kdiff, nntot, mmn(:, :, kk, nk_local))
+      CALL melem_mmkb_sph(atoms, abc, abc_b(jspin, :), kpts%bkf(:, nnkp(nk, kk)), gkpb(:, nk, kk), kpts%bkf(:, nk), ujug, kdiff, nntot, mmn(:, :, kk, nk_local))
     END DO
 
     

@@ -6,13 +6,13 @@
 !--------------------------------------------------------------------------------
 ! Copyright (c) 2026 Peter Gruenberg Institut, Forschungszentrum Juelich, Germany
 !--------------------------------------------------------------------------------
-MODULE m_wannierlib_mmkb_int
+MODULE m_melem_mmkb_int
   USE m_juDFT
   USE m_types
   IMPLICIT NONE
 CONTAINS
 
-  SUBROUTINE wannierlib_mmnkb_int(stars, lapw, lapw_b, jspin, jspin_b, zMat, zMat_b, gb, mmnk, ioff, ioff_b)
+  SUBROUTINE melem_mmkb_int(stars, lapw, lapw_b, jspin, jspin_b, zMat, zMat_b, gb, mmnk, ioff, ioff_b)
     TYPE(t_stars), INTENT(IN) :: stars
     TYPE(t_lapw), INTENT(IN) :: lapw
     TYPE(t_lapw), INTENT(IN) :: lapw_b
@@ -34,7 +34,7 @@ CONTAINS
     COMPLEX :: phasefac
     INTEGER :: io, io_b
 
-    CALL timestart("wannierlib_mmnkb_int")
+    CALL timestart("melem_mmkb_int")
 
     nbnd=size(mmnk, 1)
     io = 0;   IF (PRESENT(ioff))   io   = ioff
@@ -90,7 +90,7 @@ CONTAINS
     END IF
 
 
-    CALL timestop("wannierlib_mmnkb_int")
-  END SUBROUTINE wannierlib_mmnkb_int
+    CALL timestop("melem_mmkb_int")
+  END SUBROUTINE melem_mmkb_int
 
-END MODULE m_wannierlib_mmkb_int
+END MODULE m_melem_mmkb_int

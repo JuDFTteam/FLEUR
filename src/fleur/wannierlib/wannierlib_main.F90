@@ -23,7 +23,7 @@ MODULE m_wannierlib_main
    USE m_types_melem_domains, ONLY: t_melem_domains
    USE m_wannierlib_amn
    USE m_wannierlib_mmnkb
-   USE m_wannierlib_ujugaunt
+   USE m_melem_ujugaunt
    USE m_wannierlib_w90_adapter
    USE m_melem_coarse, ONLY: t_melem_coarse
    USE m_melem_run, ONLY: melem_run
@@ -156,7 +156,7 @@ CONTAINS
          DO jspin_comp = MERGE(1, jspin, l_wannierlib_spinors), MERGE(2, jspin, l_wannierlib_spinors)
             ! jspin_comp = record del eig (spinor up/down); jspin_rad = indice radial.
             jspin_rad = radial_slot(radfun, jspin_comp)
-            CALL wannierlib_ujugaunt(atoms, cell, nntot_w90, kdiff, radfun, radfun, jspin_rad, jspin_rad, .FALSE., 1, ujug)
+            CALL melem_ujugaunt(atoms, cell, nntot_w90, kdiff, radfun, radfun, jspin_rad, jspin_rad, .FALSE., 1, ujug)
 
             ev_list = [(ib, ib = this%min_band, this%max_band)]
             ik_local = 0

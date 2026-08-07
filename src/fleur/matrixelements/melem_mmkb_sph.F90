@@ -3,7 +3,7 @@
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
-MODULE m_wannierlib_mmkb_sph
+MODULE m_melem_mmkb_sph
    USE m_juDFT
    USE m_types_abc
    USE m_types_atoms
@@ -11,7 +11,7 @@ MODULE m_wannierlib_mmkb_sph
    IMPLICIT NONE
 CONTAINS
 
-   SUBROUTINE wannierlib_mmkb_sph(atoms, abc, abc_b, bbpt, gb, bkpt, &
+   SUBROUTINE melem_mmkb_sph(atoms, abc, abc_b, bbpt, gb, bkpt, &
                                   ujug, &
                                   kdiff, nntot, mmn)
       TYPE(t_atoms), INTENT(IN) :: atoms
@@ -32,13 +32,13 @@ CONTAINS
       COMPLEX :: phasefac
       COMPLEX, ALLOCATABLE :: cof_b_u(:,:)
 
-      CALL timestart("wannierlib_mmkb_sph")
+      CALL timestart("melem_mmkb_sph")
 
       bpt(:) = bbpt(:) + gb(:) - bkpt(:)
       DO nene = 1, nntot
          IF (ALL(ABS(bpt(:) - kdiff(:, nene)) < 1e-4)) EXIT
       END DO
-      IF (nene == nntot + 1) CALL juDFT_error("cannot find matching nearest neighbor k", calledby="wannierlib_mmkb_sph")
+      IF (nene == nntot + 1) CALL juDFT_error("cannot find matching nearest neighbor k", calledby="melem_mmkb_sph")
 
       DO n = 1, atoms%ntype
          DO nn = 1, atoms%neq(n)
@@ -83,7 +83,7 @@ CONTAINS
          END DO
       END DO
 
-      CALL timestop("wannierlib_mmkb_sph")
-   END SUBROUTINE wannierlib_mmkb_sph
+      CALL timestop("melem_mmkb_sph")
+   END SUBROUTINE melem_mmkb_sph
 
-END MODULE m_wannierlib_mmkb_sph
+END MODULE m_melem_mmkb_sph
