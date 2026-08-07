@@ -44,10 +44,10 @@ MODULE m_matrix_element_factory
     !> price of the other two is their share of the eigenvectors and coefficients -- a
     !> consumer that walks k in order fills all three and reuses none of them.
     INTEGER, PARAMETER :: N_KSLOT = 3
-    TYPE(t_k_slot) :: kslot(N_KSLOT)
+    TYPE(t_k_slot), TARGET :: kslot(N_KSLOT)
     INTEGER        :: use_clock = 0
 
-    PUBLIC :: matrix_element_factory, matrix_element_factory_reset
+    PUBLIC :: matrix_element_factory, matrix_element_factory_reset, matrix_element_states
 
 CONTAINS
 
@@ -131,10 +131,12 @@ CONTAINS
         acquire_slot = oldest
     END FUNCTION acquire_slot
 
-    SUBROUTINE matrix_element_factory(matel, eig_id, ikpt, input, atoms, sym, cell, &
-                                      noco, nococonv, enpara, lapw, vtot, fmpi, ev_list, &
-                                      l_both_spinors, kpts)
-        USE m_types_matelements
+    !> Make sure the states of one k-point, their matching coefficients and the radial
+    !> functions are in the cache, and say which slot holds them and how many bands they
+    !> carry. Everything the two public entry points share lives here.
+    SUBROUTINE ensure_slot(eig_id, ikpt, input, atoms, sym, cell, &
+                           noco, nococonv, enpara, lapw, vtot, fmpi, is, num_bands, ev_list, &
+                           l_both_spinors, kpts)
         USE m_types_input
         USE m_types_atoms
         USE m_types_sym
@@ -149,7 +151,6 @@ CONTAINS
         USE m_eig66_io, ONLY: read_eig
         USE m_judft, ONLY: judft_error
 
-        CLASS(t_matelements), INTENT(INOUT) :: matel
         INTEGER,           INTENT(IN) :: eig_id, ikpt
         TYPE(t_input),     INTENT(IN) :: input
         TYPE(t_atoms),     INTENT(IN) :: atoms
@@ -172,9 +173,10 @@ CONTAINS
         !> the states of its parent, which is where they are stored. Absent, only the irreducible
         !> points can be asked for.
         TYPE(t_kpts), OPTIONAL, INTENT(IN) :: kpts
+        INTEGER, INTENT(OUT) :: is         !> the slot the data ended up in
+        INTEGER, INTENT(OUT) :: num_bands  !> states selected at this k
 
-        INTEGER :: num_bands, n, jsp, jsp_rad, nrec, neig_actual, ikpt_stored
-        INTEGER :: is
+        INTEGER :: n, jsp, jsp_rad, nrec, neig_actual, ikpt_stored
         LOGICAL :: l_real_zmat, l_hit
         INTEGER, ALLOCATABLE :: read_list(:)
         LOGICAL :: l_spinor_records
@@ -183,8 +185,8 @@ CONTAINS
         l_spinor_records = .FALSE.
         IF (PRESENT(l_both_spinors)) l_spinor_records = l_both_spinors
         IF (l_spinor_records .AND. (.NOT.noco%l_soc .OR. noco%l_noco)) CALL judft_error( &
-            'matrix_element_factory: spinor records only exist for l_soc=T, l_noco=F', &
-            calledby='matrix_element_factory')
+            'ensure_slot: spinor records only exist for l_soc=T, l_noco=F', &
+            calledby='ensure_slot')
 
         !One record per potential, with two exceptions. Non-collinearly the Hamiltonian was
         !2N x 2N and the whole spinor sits in a single record whatever jspins says. After a
@@ -291,6 +293,47 @@ CONTAINS
             kslot(is)%valid = .TRUE.
         END IF
 
+    END SUBROUTINE ensure_slot
+
+    !> Evaluate one operator at one k-point.
+    SUBROUTINE matrix_element_factory(matel, eig_id, ikpt, input, atoms, sym, cell, &
+                                      noco, nococonv, enpara, lapw, vtot, fmpi, ev_list, &
+                                      l_both_spinors, kpts)
+        USE m_types_matelements
+        USE m_types_input
+        USE m_types_atoms
+        USE m_types_sym
+        USE m_types_cell
+        USE m_types_noco
+        USE m_types_nococonv
+        USE m_types_enpara
+        USE m_types_lapw
+        USE m_types_kpts
+        USE m_types_potden
+        USE m_types_mpi
+        USE m_judft, ONLY: judft_error
+
+        CLASS(t_matelements), INTENT(INOUT) :: matel
+        INTEGER,           INTENT(IN) :: eig_id, ikpt
+        TYPE(t_input),     INTENT(IN) :: input
+        TYPE(t_atoms),     INTENT(IN) :: atoms
+        TYPE(t_sym),       INTENT(IN) :: sym
+        TYPE(t_cell),      INTENT(IN) :: cell
+        TYPE(t_noco),      INTENT(IN) :: noco
+        TYPE(t_nococonv),  INTENT(IN) :: nococonv
+        TYPE(t_enpara),    INTENT(IN) :: enpara
+        TYPE(t_lapw),      INTENT(IN) :: lapw
+        TYPE(t_potden),    INTENT(IN) :: vtot
+        TYPE(t_mpi),       INTENT(IN) :: fmpi
+        INTEGER, OPTIONAL, INTENT(IN) :: ev_list(:)
+        LOGICAL, OPTIONAL, INTENT(IN) :: l_both_spinors
+        TYPE(t_kpts), OPTIONAL, INTENT(IN) :: kpts
+
+        INTEGER :: is, num_bands
+
+        CALL ensure_slot(eig_id, ikpt, input, atoms, sym, cell, noco, nococonv, enpara, &
+                         lapw, vtot, fmpi, is, num_bands, ev_list, l_both_spinors, kpts)
+
         !An operator whose result carries Cartesian components keeps them in a store
         !that has no distributed counterpart, so the two cannot be combined. Say so here
         !rather than let init_mat abort with the sub-communicator already chosen.
@@ -326,5 +369,55 @@ CONTAINS
         END IF
 
     END SUBROUTINE matrix_element_factory
+
+    !> The states at one k-point and their coefficients, for a consumer that combines two
+    !> k-points itself and so cannot be written as an operator at a single one.
+    !>
+    !> What comes back points into the cache and stays valid until a later request evicts
+    !> that slot. Slots are reused in order of last use, so the data of a k-point asked for
+    !> on every iteration outlives its neighbours; N_KSLOT of them are alive at any time.
+    SUBROUTINE matrix_element_states(eig_id, ikpt, input, atoms, sym, cell, &
+                                     noco, nococonv, enpara, lapw, vtot, fmpi, &
+                                     zmat, abc, ev_list, l_both_spinors, kpts)
+        USE m_types_input
+        USE m_types_atoms
+        USE m_types_sym
+        USE m_types_cell
+        USE m_types_noco
+        USE m_types_nococonv
+        USE m_types_enpara
+        USE m_types_lapw
+        USE m_types_kpts
+        USE m_types_potden
+        USE m_types_mpi
+
+        INTEGER,           INTENT(IN) :: eig_id, ikpt
+        TYPE(t_input),     INTENT(IN) :: input
+        TYPE(t_atoms),     INTENT(IN) :: atoms
+        TYPE(t_sym),       INTENT(IN) :: sym
+        TYPE(t_cell),      INTENT(IN) :: cell
+        TYPE(t_noco),      INTENT(IN) :: noco
+        TYPE(t_nococonv),  INTENT(IN) :: nococonv
+        TYPE(t_enpara),    INTENT(IN) :: enpara
+        TYPE(t_lapw),      INTENT(IN) :: lapw
+        TYPE(t_potden),    INTENT(IN) :: vtot
+        TYPE(t_mpi),       INTENT(IN) :: fmpi
+        !> The states one record per element, which is how they were read: a consumer that
+        !> reaches a spin block by row offset needs them apart. The stacked 2N form the
+        !> operators are given is not handed out here.
+        TYPE(t_mat), POINTER, INTENT(OUT) :: zmat(:)    !> (nrec)
+        TYPE(t_abc), POINTER, INTENT(OUT) :: abc(:,:)   !> (2,ntype)
+        INTEGER, OPTIONAL, INTENT(IN) :: ev_list(:)
+        LOGICAL, OPTIONAL, INTENT(IN) :: l_both_spinors
+        TYPE(t_kpts), OPTIONAL, INTENT(IN) :: kpts
+
+        INTEGER :: is, num_bands
+
+        CALL ensure_slot(eig_id, ikpt, input, atoms, sym, cell, noco, nococonv, enpara, &
+                         lapw, vtot, fmpi, is, num_bands, ev_list, l_both_spinors, kpts)
+
+        zmat => kslot(is)%zmat
+        abc  => kslot(is)%abc
+    END SUBROUTINE matrix_element_states
 
 END MODULE m_matrix_element_factory
