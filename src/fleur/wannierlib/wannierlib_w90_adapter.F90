@@ -190,16 +190,33 @@ CONTAINS
   SUBROUTINE wannierlib_get_bmesh(this, kpts, bmesh)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
     TYPE(t_kpts), INTENT(IN) :: kpts
-    TYPE(t_melem_bmesh), INTENT(OUT) :: bmesh
+    !> INOUT and not OUT: the topology is already in here, put there before the
+    !> wannierisation ran, and OUT would default-initialise it away. What this adds is the
+    !> part only Wannier90 knows -- the shell weights and the b vectors it chose.
+    TYPE(t_melem_bmesh), INTENT(INOUT) :: bmesh
 #ifdef CPP_WANNLIB_API
-    CALL bmesh%free()
+    IF (ALLOCATED(bmesh%wb)) DEALLOCATE(bmesh%wb)
+    IF (ALLOCATED(bmesh%bk)) DEALLOCATE(bmesh%bk)
+    IF (ALLOCATED(bmesh%centres)) DEALLOCATE(bmesh%centres)
+    IF (bmesh%nntot > 0 .AND. wannierlib_w90main%kmesh_info%nntot /= bmesh%nntot) &
+      CALL juDFT_error("wannierlib_get_bmesh: Wannier90 counts a different number of "// &
+                       "neighbours than the topology already set", calledby="wannierlib_get_bmesh")
     bmesh%nntot = wannierlib_w90main%kmesh_info%nntot
     IF (bmesh%nntot < 1) RETURN
     ! w90 shapes: nnlist(num_kpts, nntot), wb(nntot), bk(3, nntot, num_kpts)
-    ALLOCATE(bmesh%nnlist(kpts%nkptf, bmesh%nntot))
     ALLOCATE(bmesh%wb(bmesh%nntot))
     ALLOCATE(bmesh%bk(3, bmesh%nntot, kpts%nkptf))
-    bmesh%nnlist = wannierlib_w90main%kmesh_info%nnlist(1:kpts%nkptf, 1:bmesh%nntot)
+    !> The neighbour list may already be here, put there before the wannierisation ran and
+    !> read since by whoever built the overlaps. Overwriting it would hand a later spin
+    !> channel a different list from the one its overlaps were computed with, so it is only
+    !> filled when nobody set it -- and checked against this source when somebody did.
+    IF (.NOT.ALLOCATED(bmesh%nnlist)) THEN
+      ALLOCATE(bmesh%nnlist(kpts%nkptf, bmesh%nntot))
+      bmesh%nnlist = wannierlib_w90main%kmesh_info%nnlist(1:kpts%nkptf, 1:bmesh%nntot)
+    ELSE IF (ANY(bmesh%nnlist /= wannierlib_w90main%kmesh_info%nnlist(1:kpts%nkptf, 1:bmesh%nntot))) THEN
+      CALL juDFT_error("wannierlib_get_bmesh: the neighbour list already set does not match "// &
+                       "the one Wannier90 reports", calledby="wannierlib_get_bmesh")
+    END IF
     bmesh%wb     = wannierlib_w90main%kmesh_info%wb(1:bmesh%nntot)
     bmesh%bk     = wannierlib_w90main%kmesh_info%bk(:, 1:bmesh%nntot, 1:kpts%nkptf)
     IF (this%num_wann > 0) THEN

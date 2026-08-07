@@ -20,26 +20,22 @@ MODULE m_wannierlib_mmnkb
   USE m_types_kpts
   USE m_types_noco
   USE m_types_nococonv
-  USE m_types_radfun
   USE m_types_sym
-  USE m_types_usdus
+  USE m_types_melem_manifold, ONLY: t_melem_manifold
+  USE m_types_melem_bmesh, ONLY: t_melem_bmesh
   USE m_types_enpara
   USE m_types_potden
   USE m_types_mpi
   IMPLICIT NONE
 CONTAINS
 
-  SUBROUTINE wannierlib_mmnkb(min_band, max_band, num_bands, nntot, nk, kpts, nnkp, gkpb, kdiff, ujug, atoms, cell, input, sym, noco, nococonv, usdus, &
-                              radfun, abc, jspin, jspin_rad, eig_id, stars, lapw, zMat, mmn, nk_local, &
+  SUBROUTINE wannierlib_mmnkb(manifold, bmesh, nk, kpts, ujug, atoms, cell, input, sym, noco, nococonv, &
+                              abc, jspin, jspin_rad, eig_id, stars, lapw, zMat, mmn, nk_local, &
                               enpara, vtot, fmpi)
-    INTEGER, INTENT(IN) :: min_band, max_band   !> the band window asked for at the neighbour k
-    INTEGER, INTENT(IN) :: num_bands
-    INTEGER, INTENT(IN) :: nntot
+    TYPE(t_melem_manifold), INTENT(IN) :: manifold   !> the band window, and how wide it is
+    TYPE(t_melem_bmesh), INTENT(IN) :: bmesh   !> which k is the b-th neighbour, and by which G
     INTEGER, INTENT(IN) :: nk
     TYPE(t_kpts), INTENT(IN) :: kpts
-    INTEGER, INTENT(IN) :: nnkp(:, :)
-    INTEGER, INTENT(IN) :: gkpb(:, :, :)
-    REAL, INTENT(IN) :: kdiff(:, :)
     COMPLEX, INTENT(IN) :: ujug(:, :, :, :, :, :)
     TYPE(t_atoms), INTENT(IN) :: atoms
     TYPE(t_cell), INTENT(IN) :: cell
@@ -47,8 +43,6 @@ CONTAINS
     TYPE(t_sym), INTENT(IN) :: sym
     TYPE(t_noco), INTENT(IN) :: noco
     TYPE(t_nococonv), INTENT(IN) :: nococonv
-    TYPE(t_usdus), INTENT(IN) :: usdus
-    TYPE(t_radfun), INTENT(IN) :: radfun(atoms%ntype)
     TYPE(t_abc), INTENT(IN) :: abc(:)
     INTEGER, INTENT(IN) :: jspin       ! spin fisico (record del eig)
     INTEGER, INTENT(IN) :: jspin_rad   ! indice radial (=1 si jspins=1)
@@ -70,19 +64,19 @@ CONTAINS
     TYPE(t_spinor_layout) :: layout, layout_b
 
     IF (.NOT.ALLOCATED(mmn)) THEN
-      IF ((num_bands > 0) .AND. (kpts%nkpt > 0) .AND. (nntot > 0)) THEN
-        ALLOCATE(mmn(num_bands, num_bands, nntot, kpts%nkpt))
+      IF ((manifold%num_bands > 0) .AND. (kpts%nkpt > 0) .AND. (bmesh%nntot > 0)) THEN
+        ALLOCATE(mmn(manifold%num_bands, manifold%num_bands, bmesh%nntot, kpts%nkpt))
         mmn = CMPLX(0.0, 0.0)
       END IF
     END IF
   
-    ev_list = [(irec, irec = min_band, max_band)]
+    ev_list = [(irec, irec = manifold%min_band, manifold%max_band)]
     !> Non-collinearly the whole spinor is one record; otherwise each spin channel is its
     !> own, and this pass reaches its block by row offset rather than by stacking them.
     irec = MERGE(1, jspin, noco%l_noco)
     CALL layout%init(input, noco, lapw, atoms)
-    DO kk = 1, nntot
-      nk_b = nnkp(nk, kk)
+    DO kk = 1, bmesh%nntot
+      nk_b = bmesh%nnlist(nk, kk)
       !> The neighbour's basis is needed here as well as by the factory, so it is built
       !> here and handed over. The states themselves stay in the factory cache, which holds
       !> more than one k-point: asking for this neighbour does not discard the k it belongs
@@ -93,9 +87,11 @@ CONTAINS
                                  l_both_spinors=(noco%l_soc .AND. .NOT. noco%l_noco), kpts=kpts)
       CALL layout_b%init(input, noco, lapw_b, atoms)
 
-      CALL melem_mmkb_int(stars, lapw, lapw_b, jspin_rad, jspin_rad, zMat, zMat_b(irec), gkpb(:, nk, kk), mmn(:, :, kk, nk_local), &
+      CALL melem_mmkb_int(stars, lapw, lapw_b, jspin_rad, jspin_rad, zMat, zMat_b(irec), bmesh%gkpb(:, nk, kk), mmn(:, :, kk, nk_local), &
                                 ioff=layout%row_offset(jspin), ioff_b=layout_b%row_offset(jspin))
-      CALL melem_mmkb_sph(atoms, abc, abc_b(jspin, :), kpts%bkf(:, nnkp(nk, kk)), gkpb(:, nk, kk), kpts%bkf(:, nk), ujug, kdiff, nntot, mmn(:, :, kk, nk_local))
+      CALL melem_mmkb_sph(atoms, abc, abc_b(jspin, :), kpts%bkf(:, bmesh%nnlist(nk, kk)), &
+                          bmesh%gkpb(:, nk, kk), kpts%bkf(:, nk), ujug, bmesh%kdiff, &
+                          bmesh%nntot, mmn(:, :, kk, nk_local))
     END DO
 
     

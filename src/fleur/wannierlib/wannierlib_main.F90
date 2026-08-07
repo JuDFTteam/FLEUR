@@ -142,6 +142,9 @@ CONTAINS
 
       CALL init_w90(this, atoms, cell, kpts, fmpi, l_wannierlib_spinors, nntot_w90, nnkp, gkpb, distk)
       CALL wannierlib_kdiff(kpts%nkptf, nntot_w90, kpts%bkf, nnkp, gkpb, kdiff)
+      !> The neighbour topology is settled here, before anything is wannierised, and it is
+      !> the same for both spin channels. The shell weights are added later, per channel.
+      CALL bmesh%set_neighbours(nntot_w90, nnkp, gkpb, kdiff)
 
       DO jspin = 1, MERGE(2, 1, input%jspins == 2 .AND. (.NOT. l_wannierlib_spinors))
 
@@ -178,9 +181,9 @@ CONTAINS
                CALL wannierlib_amn(this, atoms, kpts, ikpt, usdus, radfun, abc_p(jspin_comp, :), l_nocosoc, jspin_comp, jspin_rad, amn(:, :, ikpt))
 
                ik_local = ik_local + 1
-               CALL wannierlib_mmnkb(this%min_band, this%max_band, this%num_bands, nntot_w90, ikpt, kpts, nnkp, gkpb, kdiff, &
-                                     ujug, atoms, cell, input, sym, noco, nococonv, usdus, &
-                                     radfun, abc_p(jspin_comp, :), jspin_comp, jspin_rad, eig_id, stars, lapw, &
+               CALL wannierlib_mmnkb(manifold, bmesh, ikpt, kpts, &
+                                     ujug, atoms, cell, input, sym, noco, nococonv, &
+                                     abc_p(jspin_comp, :), jspin_comp, jspin_rad, eig_id, stars, lapw, &
                                      zmat_p(irec), mmn, ik_local, enpara, vtot, fmpi)
             END DO
 
@@ -218,7 +221,6 @@ CONTAINS
          CALL melem_run(request, manifold, domains, cell, kpts, eig, u_matrix, u_opt, melem, &
                         mmn, bmesh, distk, fmpi, &
                         wf_channel=jspin, spin_suffix=TRIM(spin_sfx))
-         CALL bmesh%free()
 
          if (fmpi%isize == 1) CALL report_w90(this)
 
@@ -235,6 +237,9 @@ CONTAINS
       IF (melem%n_channels == 2 .AND. request%has_op_r('spin')) &
          CALL melem_rspauli_collinear(this%num_wann, melem%x0, melem%v_ch, cell, kpts, distk, fmpi)
 
+      !> Freed here and not per channel: the neighbour topology in it was set before the
+      !> spin loop and every channel reads it.
+      CALL bmesh%free()
       CALL matrix_element_release_anchor()
       CALL melem%free()
       !> Give back what the factory cached while walking the k-points. It holds the states
