@@ -10,7 +10,7 @@ operator files. WannPtSOCOps additionally covers the coarse t_matrixelement
 pass (<operators_r>). WannFeAFMCol is the only case that reaches that collinear
 path with more than one atom type, which is what distinguishes an index mix-up
 between spin and atom type from a layout that happens to coincide in memory.
-Band interpolation: future round.
+WannFeBccInterp covers the interpolation drivers, on three output domains.
 """
 from read_tests import read_tests
 all_tests = read_tests("wannier")
@@ -124,9 +124,70 @@ COLLINEAR_Z = ("WannFeBccSOC", "WannFeBcc")
 # the value instead of bounding it, and it is what a broken gauge rotation of the cross-spin
 # overlap would fail. Only sigma_z: the transverse components live entirely in the
 # off-diagonal blocks, so their diagonal is zero by construction.
+# --- Wannier interpolation ----------------------------------------------------------
+#
+# Until this case there was no test of the interpolation at all: five drivers, and the
+# byte-identity references would have stayed identical with the velocity entirely broken,
+# because nothing any of them writes was ever compared.
+#
+# The assertion that carries it is reference-free and basin-independent: Wannier
+# interpolation is EXACT on the mesh it was built from. H_W(k) = V^dagger diag(eig) V is a
+# unitary rotation of the input eigenvalues, so its spectrum IS the input spectrum, and the
+# k -> R -> k round trip is the identity on the original mesh. Interpolating onto w222 --
+# the wannierisation mesh itself -- must therefore reproduce the eigenvalues that the same
+# run wrote into out.xml, whatever basin the wannierisation fell into.
+#
+# It holds only without disentanglement: with num_bands > num_wann the Hamiltonian is built
+# from the projected eigval2 rather than from eig. WannFeBccInterp has 6 bands for 6 Wannier
+# functions, which is why it is the case that carries this.
+INTERP_EXACT = {"WannFeBccInterp": (5, 10)}          # test id -> (minBand, maxBand)
+# Worst measured deviation 4.3e-9 over 8 k-points and both spin channels -- half of the last
+# digit of the f14.8 output. The residual is print rounding, not arithmetic.
+INTERP_EXACT_TOL = 1.0e-8
+
+# One file per interpolation driver, for every declared output domain and every wannierised
+# spin channel. Absence is the check: a driver that silently stops writing is otherwise
+# invisible, since every value test below would pass on a file that is not there.
+INTERP_FILES = {
+    "WannFeBccInterp": [
+        "bands_wann_%s%s_spin%d.dat" % (base, dom, ch)
+        for base in ("interpol", "interpol_ev", "orbmom", "velocity", "berrycurv",
+                     "eigenstates")
+        for dom in ("", "_plane", "_grid")
+        for ch in (1, 2)
+    ] + ["WF1_r.dat", "berry_centre_check.dat"],
+}
+
+# The velocity must be checked on the FINE path and nowhere else: every point of w222 is a
+# high-symmetry point, where dE/dk vanishes by symmetry, so a file of zeros is the correct
+# answer there. The _plane domain is the 240-point path-2 list.
+VELOCITY_FINE = {"WannFeBccInterp": "bands_wann_velocity_plane_spin1.dat"}
+
 SIGMA_Z_UNIT = ("WannFeBcc", "WannFeAFMCol")
 SIGMA_Z_TOL = 1.0e-8
 
+
+def _outxml_eigenvalues(path):
+    """{(spin, ikpt): [eigenvalues, Htr]} from the <eigenvaluesAt> blocks of out.xml."""
+    import re
+    out = {}
+    for m in re.finditer(
+            r'<eigenvaluesAt spin="(\d+)" ikpt="(\d+)"[^>]*>(.*?)</eigenvaluesAt>',
+            open(path).read(), re.S):
+        out[(int(m.group(1)), int(m.group(2)))] = [float(x) for x in m.group(3).split()]
+    return out
+
+
+def _dat_rows(path):
+    """Numeric rows of a bands_wann_*.dat: kdist first, then the per-band payload."""
+    rows = []
+    for line in open(path):
+        if line.lstrip().startswith("#"):
+            continue
+        f = line.split()
+        if len(f) > 1:
+            rows.append([float(x) for x in f])
+    return rows
 
 def _rspauli_r0_diagonal_sums(path):
     """Per-component sum of Re O_nn over the R=0 diagonal of a 'generic'-format O(R) file."""
@@ -258,7 +319,9 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
     gauge-invariant spread Omega_I (tight) and the total Omega (loose). Tests that
     request <operators_r> also get their O(R) exports checked."""
     test_id = dir.split("/")[-1]
-    res = default_fleur_test(dir, files=OPERATOR_FILES.get(test_id),
+    want_files = list(OPERATOR_FILES.get(test_id, ()))
+    want_files += INTERP_FILES.get(test_id, [])
+    res = default_fleur_test(dir, files=want_files or None,
                              cmdline_args=cmdline, mpi_procs=mpi_procs)
 
     if test_id in EXPECTED_OMEGA_I:
@@ -330,6 +393,41 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
                 assert abs(total) < L_SUM_TOL, (
                     f"{name}: trace of component {comp} is {total}, but this manifold "
                     f"carries no net orbital moment (tol {L_SUM_TOL})")
+
+    if test_id in INTERP_EXACT:
+        # The eigenvalues the same run wrote, as the reference for its own interpolation.
+        lo, hi = INTERP_EXACT[test_id]
+        ref = _outxml_eigenvalues(res["out.xml"])
+        assert ref, "out.xml carries no <eigenvaluesAt> blocks to check the interpolation against"
+        for ch in (1, 2):
+            rows = _dat_rows(res["bands_wann_interpol_spin%d.dat" % ch])
+            assert rows, "bands_wann_interpol_spin%d.dat has no data rows" % ch
+            for ik, row in enumerate(rows, start=1):
+                want = sorted(ref[(ch, ik)][lo - 1:hi])
+                have = sorted(row[1:])          # drop kdist
+                assert len(want) == len(have), (
+                    f"channel {ch}, k={ik}: {len(have)} interpolated bands against "
+                    f"{len(want)} in the window {lo}..{hi}")
+                worst = max(abs(a - b) for a, b in zip(want, have))
+                assert worst < INTERP_EXACT_TOL, (
+                    f"channel {ch}, k={ik}: the interpolated bands differ from the input "
+                    f"eigenvalues by {worst}, but Wannier interpolation is exact on the "
+                    f"mesh it was built from (tol {INTERP_EXACT_TOL})")
+
+    if test_id in VELOCITY_FINE:
+        # Shape, and that it is not a file of zeros. dE/dk is only forced to vanish on the
+        # high-symmetry mesh, so on the fine path an all-zero velocity means the driver
+        # produced nothing -- which every other check here would accept.
+        rows = _dat_rows(res[VELOCITY_FINE[test_id]])
+        assert rows, "the velocity file on the fine path has no data rows"
+        nw = (len(rows[0]) - 1) // 4          # per band: E, vx, vy, vz
+        assert nw >= 1 and len(rows[0]) == 1 + 4 * nw, (
+            f"velocity row has {len(rows[0])} columns, not 1 + 4*num_wann")
+        worst = max(abs(r[1 + 4 * b + 1 + a]) for r in rows for b in range(nw)
+                    for a in range(3))
+        assert worst > 0.0, (
+            "every velocity component on the fine path is exactly zero, so the driver "
+            "wrote a correctly shaped file with nothing in it")
 
     if test_id in L_TRANSVERSE_ZERO:
         traces = _anglmom_r0_traces(res["anglmomrs.1"])
