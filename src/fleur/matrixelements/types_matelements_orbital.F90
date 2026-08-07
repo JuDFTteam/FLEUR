@@ -150,9 +150,9 @@ CONTAINS
             !> atom, so each element gets exactly one contribution. Adding onto a
             !> cleared matrix would also turn a -0.0 result into +0.0, and the sign of
             !> zero is visible in the exported file.
-            this%comp(i, j, 1, 1, 1) = 0.5 * (cp + cm)               ! L_x = (L+ + L-)/2
-            this%comp(i, j, 1, 1, 2) = -0.5 * ImagUnit * (cp - cm)   ! L_y = (L+ - L-)/(2i)
-            this%comp(i, j, 1, 1, 3) = cz                            ! L_z
+            this%comp(i, j, 1) = 0.5 * (cp + cm)               ! L_x = (L+ + L-)/2
+            this%comp(i, j, 2) = -0.5 * ImagUnit * (cp - cm)   ! L_y = (L+ - L-)/(2i)
+            this%comp(i, j, 3) = cz                            ! L_z
          END DO
       END DO
    END SUBROUTINE calc_matrix_elements

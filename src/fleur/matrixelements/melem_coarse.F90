@@ -262,7 +262,7 @@ CONTAINS
                                            noco, nococonv, enpara, lapw, vtot, fmpi, &
                                            ev_list=ev_list, l_both_spinors=l_spinor_records, &
                                            kpts=kpts)
-               this%l0(:, :, 1:3, na, il) = orbop(na)%comp(:, :, 1, 1, 1:3)
+               this%l0(:, :, 1:3, na, il) = orbop(na)%comp(:, :, 1:3)
             END DO
          END IF
          IF (request%l_socop) THEN
@@ -370,7 +370,7 @@ CONTAINS
                   CALL orbop(na, ch)%init_mat(nb)
                   CALL orbop(na, ch)%calc_matrix_elements(znone, abc_p(ch:ch, :), radfun, usdus)
                   this%l0col(:, :, :, ch, il) = this%l0col(:, :, :, ch, il) &
-                                                + orbop(na, ch)%comp(:, :, 1, 1, 1:3)
+                                                + orbop(na, ch)%comp(:, :, 1:3)
                END DO
             END DO
          END IF

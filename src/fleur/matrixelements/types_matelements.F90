@@ -25,7 +25,7 @@ MODULE m_types_matelements
         !> to combine them. Nothing needs both: the only operator that is distributed over the
         !> eigenvector sub-communicator is spin-orbit, which has no components, and the ones
         !> that have components run where that parallelism is ruled out.
-        COMPLEX, ALLOCATABLE :: comp(:, :, :, :, :)
+        COMPLEX, ALLOCATABLE :: comp(:, :, :)
         INTEGER :: n_alpha = 1  !> Cartesian extents the operator declared; 1 means comp is unused
         INTEGER :: n_beta  = 1
     CONTAINS
@@ -86,12 +86,13 @@ CONTAINS
         this%n_alpha = na; this%n_beta = nb
 
         !Components live in their own contiguous storage, cleared between k-points like mat.
+        !They carry no spin indices: how the states are structured is what mat says, and a
+        !Cartesian component of the result is one matrix over the bands whatever that was.
         IF (na > 1 .OR. nb > 1) THEN
             IF (ALLOCATED(this%comp)) THEN
                 this%comp = CMPLX(0.0, 0.0)
             ELSE
-                nsp = MERGE(2, 1, this%spinorwavefcts.OR.this%spinoroperator)
-                ALLOCATE(this%comp(num_states, num_states, nsp, nsp, na*nb), &
+                ALLOCATE(this%comp(num_states, num_states, na*nb), &
                          source=CMPLX(0.0, 0.0))
             END IF
         END IF
