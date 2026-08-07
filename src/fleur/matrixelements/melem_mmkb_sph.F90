@@ -48,7 +48,7 @@ CONTAINS
             cph = 2.0*tpi_const*SIN(th)
             phasefac = CMPLX(rph, cph)
 
-            lm = atoms%lmax(n)**2
+            lm = atoms%lmax(n)*(atoms%lmax(n) + 2)
             DO r1 = 1, maxval(abc(n)%n_r)
                DO r2 = 1, maxval(abc_b(n)%n_r)
                   ! M_MT = phasefac * A . (conjg(B).ujug)^T  (convencion de Daniel:

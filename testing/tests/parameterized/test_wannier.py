@@ -29,42 +29,42 @@ all_tests = read_tests("wannier")
 # sanity bound. Values measured at mpi=1 with MKL_CBWR=AVX2 / I_MPI_CBWR=1,
 # 2x2x2 mesh, itmax=1.
 EXPECTED_OMEGA_I = {
-    "WannPt":        4.841101663,  # fcc Pt, no SOC (jspins=1)
-    "WannPtSOC":     9.754734063,  # fcc Pt, SOC (jspins=1, spinor)
-    "WannPtSOCOps":  9.754734063,  # same system + <operators_r>; identical to WannPtSOC
+    "WannPt":        4.841073617,  # fcc Pt, no SOC (jspins=1)
+    "WannPtSOC":     9.754677673,  # fcc Pt, SOC (jspins=1, spinor)
+    "WannPtSOCOps":  9.754677673,  # same system + <operators_r>; identical to WannPtSOC
                                    # to the last digit -- the operator export is gauge-neutral
-    "WannFeFM":     16.713566919,  # fcc Fe FM, noco (jspins=2), no SOC
-    "WannFeAFM":    16.720861134,  # fcc Fe AFM, noco (jspins=2), no SOC
-    "WannFeAFMSOC": 16.694344590,  # fcc Fe AFM, noco (jspins=2) + SOC
-    "WannFeBccSOC":     5.297505637,  # bcc Fe FM, COLLINEAR (jspins=2, l_noco=F) + SOC
-    "WannFeAFMColSOC": 12.795211616,  # fcc Fe AFM, COLLINEAR + SOC: two sublattices, so the
+    "WannFeFM":     16.711628612,  # fcc Fe FM, noco (jspins=2), no SOC
+    "WannFeAFM":    16.718923683,  # fcc Fe AFM, noco (jspins=2), no SOC
+    "WannFeAFMSOC": 16.691730205,  # fcc Fe AFM, noco (jspins=2) + SOC
+    "WannFeBccSOC":     5.297166213,  # bcc Fe FM, COLLINEAR (jspins=2, l_noco=F) + SOC
+    "WannFeAFMColSOC": 12.793658453,  # fcc Fe AFM, COLLINEAR + SOC: two sublattices, so the
                                       # spin sums cancel exactly -- the strongest check here
     # bcc Fe FM, COLLINEAR without SOC (jspins=2, l_noco=F, l_soc=F): the two channels are
     # separate eigenproblems, so each is wannierised on its own and there is one Omega per
     # channel. Values in channel order. This is the only test of that combination.
-    "WannFeBcc": (2.606987082, 2.686421493),
+    "WannFeBcc": (2.606816455, 2.686252738),
     # fcc Fe AFM, COLLINEAR without SOC: same combination as WannFeBcc but with two atom
     # types, so the coefficient arrays are indexed by both spin and type and a transpose
     # between them no longer coincides in memory. The two channels are the two sublattices
     # exchanged, which is why their values agree to six digits without being identical.
-    "WannFeAFMCol": (6.393631376, 6.393662951),
-    "WannFeAFMSOCOps": 16.694344590,  # fcc Fe AFM, noco + SOC, now with <operators_r>: the
+    "WannFeAFMCol": (6.392856068, 6.392887652),
+    "WannFeAFMSOCOps": 16.691730205,  # fcc Fe AFM, noco + SOC, now with <operators_r>: the
                                       # only coverage of the spin operator on the noco branch
 }
 OMEGA_I_TOL = 1.0e-5
 
 EXPECTED_OMEGA_TOTAL = {
-    "WannPt":        6.233122221,
-    "WannPtSOC":    12.446292158,
-    "WannPtSOCOps": 12.446292158,
-    "WannFeFM":     21.934037895,
-    "WannFeAFM":    21.946064187,
-    "WannFeAFMSOC": 21.362891487,
-    "WannFeBccSOC":     7.161120494,
-    "WannFeAFMColSOC": 17.193476140,
-    "WannFeAFMSOCOps": 21.362891487,
-    "WannFeBcc": (3.578178416, 3.711415341),
-    "WannFeAFMCol": (8.608784572, 8.608791657),
+    "WannPt":        7.636581705,
+    "WannPtSOC":    12.482831517,
+    "WannPtSOCOps": 12.482831517,
+    "WannFeFM":     21.932264644,
+    "WannFeAFM":    21.944290608,
+    "WannFeAFMSOC": 21.360495377,
+    "WannFeBccSOC":     9.196293280,
+    "WannFeAFMColSOC": 17.191921727,
+    "WannFeAFMSOCOps": 21.360495377,
+    "WannFeBcc": (3.595596760, 3.707168676),
+    "WannFeAFMCol": (8.608025966, 8.608033056),
 }
 # Loose on purpose: absorbs a basin change, still catches a gross regression.
 OMEGA_TOTAL_RTOL = 0.01
