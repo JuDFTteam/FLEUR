@@ -8,8 +8,9 @@
 !>
 !>    %init   allocate the per-rank slices and decide which of them the requested
 !>            <operator>/<operators_r> lists actually need
-!>    %calc   ONE shared k-pass -- read_eig + abc per k -- feeding the spin, orbital and
-!>            spin-orbit providers, so the eigenvectors are read once for all of them
+!>    %calc   ONE k-pass that builds every requested operator through
+!>            matrix_element_factory, which reads the states and their coefficients and
+!>            keeps them, so one k is read once however many operators ask for it
 !>
 !>  Everything that needs the gauge lives in m_melem_run; the collinear combined spin
 !>  operator, which needs both channels wannierised, in m_melem_spin_collinear.
