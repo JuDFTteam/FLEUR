@@ -15,6 +15,7 @@ MODULE m_matrix_element_factory
     USE m_types_radfun
     USE m_types_spinor_layout, ONLY: radial_slot, melem_stack_spinor
     USE m_types_usdus
+    USE m_judft, ONLY: judft_error
     IMPLICIT NONE
     PRIVATE
 
@@ -46,8 +47,14 @@ MODULE m_matrix_element_factory
     INTEGER, PARAMETER :: N_KSLOT = 3
     TYPE(t_k_slot), TARGET :: kslot(N_KSLOT)
     INTEGER        :: use_clock = 0
+    !> A caller that holds on to one k-point while asking for others anchors it here, and
+    !> that slot is not overwritten while the anchor stands. Order of last use is not enough
+    !> for that case: the anchor is not touched again during the run of neighbours, so it
+    !> would be the oldest by the third of them and go.
+    INTEGER        :: anchor_slot = 0
 
     PUBLIC :: matrix_element_factory, matrix_element_factory_reset, matrix_element_states
+    PUBLIC :: matrix_element_release_anchor
 
 CONTAINS
 
@@ -65,8 +72,14 @@ CONTAINS
         DO is = 1, N_KSLOT
             CALL clear_slot(kslot(is))
         END DO
-        use_clock = 0
+        use_clock   = 0
+        anchor_slot = 0
     END SUBROUTINE reset_k_cache
+
+    SUBROUTINE matrix_element_release_anchor()
+        !> Let the anchored k-point be overwritten again. Cheap to call more than once.
+        anchor_slot = 0
+    END SUBROUTINE matrix_element_release_anchor
 
     SUBROUTINE clear_slot(sl)
         TYPE(t_k_slot), INTENT(INOUT) :: sl
@@ -117,14 +130,22 @@ CONTAINS
         END DO
 
         l_hit = .FALSE.
-        oldest = 1
+        oldest = 0
         DO is = 1, N_KSLOT
+            IF (is == anchor_slot) CYCLE          ! the anchor is off limits
             IF (.NOT.kslot(is)%valid) THEN
                 oldest = is
                 EXIT
             END IF
-            IF (kslot(is)%stamp < kslot(oldest)%stamp) oldest = is
+            IF (oldest == 0) THEN
+                oldest = is
+            ELSE IF (kslot(is)%stamp < kslot(oldest)%stamp) THEN
+                oldest = is
+            END IF
         END DO
+        IF (oldest == 0) CALL judft_error( &
+            'matrix_element_factory: every slot is anchored, so there is none to fill', &
+            calledby='acquire_slot')
         CALL clear_slot(kslot(oldest))
         use_clock = use_clock + 1
         kslot(oldest)%stamp = use_clock
@@ -149,7 +170,6 @@ CONTAINS
         USE m_types_potden
         USE m_types_mpi
         USE m_eig66_io, ONLY: read_eig
-        USE m_judft, ONLY: judft_error
 
         INTEGER,           INTENT(IN) :: eig_id, ikpt
         TYPE(t_input),     INTENT(IN) :: input
@@ -311,7 +331,6 @@ CONTAINS
         USE m_types_kpts
         USE m_types_potden
         USE m_types_mpi
-        USE m_judft, ONLY: judft_error
 
         CLASS(t_matelements), INTENT(INOUT) :: matel
         INTEGER,           INTENT(IN) :: eig_id, ikpt
@@ -378,7 +397,7 @@ CONTAINS
     !> on every iteration outlives its neighbours; N_KSLOT of them are alive at any time.
     SUBROUTINE matrix_element_states(eig_id, ikpt, input, atoms, sym, cell, &
                                      noco, nococonv, enpara, lapw, vtot, fmpi, &
-                                     zmat, abc, ev_list, l_both_spinors, kpts)
+                                     zmat, abc, ev_list, l_both_spinors, kpts, l_anchor)
         USE m_types_input
         USE m_types_atoms
         USE m_types_sym
@@ -410,11 +429,19 @@ CONTAINS
         INTEGER, OPTIONAL, INTENT(IN) :: ev_list(:)
         LOGICAL, OPTIONAL, INTENT(IN) :: l_both_spinors
         TYPE(t_kpts), OPTIONAL, INTENT(IN) :: kpts
+        !> Keep this k-point until the anchor is released. A caller that holds on to what
+        !> comes back while asking for other k-points needs it: without an anchor its slot
+        !> is the oldest by the third of them, and the pointers stop being its own.
+        LOGICAL, OPTIONAL, INTENT(IN) :: l_anchor
 
         INTEGER :: is, num_bands
 
         CALL ensure_slot(eig_id, ikpt, input, atoms, sym, cell, noco, nococonv, enpara, &
                          lapw, vtot, fmpi, is, num_bands, ev_list, l_both_spinors, kpts)
+
+        IF (PRESENT(l_anchor)) THEN
+            IF (l_anchor) anchor_slot = is
+        END IF
 
         zmat => kslot(is)%zmat
         abc  => kslot(is)%abc
