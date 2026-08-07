@@ -60,7 +60,7 @@ CONTAINS
     REAL,    ALLOCATABLE :: kfrac(:, :), evals(:), rwork(:), jexp(:)
     COMPLEX, ALLOCATABLE :: ham_k(:, :, :), H_interp(:, :, :), o_interp(:, :, :, :)
     COMPLEX, ALLOCATABLE :: v_interp(:, :, :, :), hk(:, :), work(:), vloc(:, :, :), tmp(:, :), cvec(:, :)
-    COMPLEX, ALLOCATABLE :: jmat(:, :), jc(:, :), ow_loc(:, :, :, :), o_r(:, :, :, :), o1(:, :, :)
+    COMPLEX, ALLOCATABLE :: jmat(:, :, :), jc(:, :), ow_loc(:, :, :, :), o_r(:, :, :, :), o1(:, :, :)
     INTEGER, ALLOCATABLE :: irvec(:, :), ndegen(:)
     COMPLEX, ALLOCATABLE :: ham_r(:, :, :)
     INTEGER, ALLOCATABLE :: h_irvec(:, :), h_ndegen(:)
@@ -141,7 +141,7 @@ CONTAINS
 
     ! ---- diagonalize H(k'); j_{al,be} = 1/2 { v_al, O_be }; project diagonal; write 9 comps ----
     ALLOCATE(evals(num_wann), hk(num_wann, num_wann), cvec(num_wann, num_wann), &
-             jmat(num_wann, num_wann), jc(num_wann, num_wann), jexp(9), rwork(MAX(1, 3*num_wann-2)))
+             jmat(num_wann, num_wann, 9), jc(num_wann, num_wann), jexp(9), rwork(MAX(1, 3*num_wann-2)))
     CALL zheev('V', 'U', num_wann, hk, num_wann, evals, wq, -1, rwork, info)
     lwork = MAX(1, NINT(REAL(wq(1)))); ALLOCATE(work(lwork))
 
@@ -158,17 +158,22 @@ CONTAINS
         kpath = kpath + SQRT(DOT_PRODUCT(dkc, dkc))
       END IF
       WRITE(iu,'(f12.6)', advance='no') kpath
+      !> The nine anticommutators belong to this k-point, not to a band. Formed here, once:
+      !> inside the band loop below each of them was built num_wann times out of the same two
+      !> matrices. Component order stays xx xy xz yx yy yz zx zy zz.
+      c = 0
+      DO al = 1, 3
+        DO be = 1, 3
+          c = c + 1
+          ! j = 1/2 (v_al O_be + O_be v_al)
+          jmat(:, :, c) = 0.5 * ( MATMUL(v_interp(:, :, al, ip), o_interp(:, :, be, ip)) &
+                                + MATMUL(o_interp(:, :, be, ip), v_interp(:, :, al, ip)) )
+        END DO
+      END DO
       DO m = 1, num_wann
-        c = 0
-        DO al = 1, 3
-          DO be = 1, 3
-            c = c + 1
-            ! j = 1/2 (v_al O_be + O_be v_al)
-            jmat = 0.5 * ( MATMUL(v_interp(:, :, al, ip), o_interp(:, :, be, ip)) &
-                         + MATMUL(o_interp(:, :, be, ip), v_interp(:, :, al, ip)) )
-            jc(:, m) = MATMUL(jmat, cvec(:, m))
-            jexp(c) = hartree_to_ev_const * REAL(DOT_PRODUCT(cvec(:, m), jc(:, m)))
-          END DO
+        DO c = 1, 9
+          jc(:, m) = MATMUL(jmat(:, :, c), cvec(:, m))
+          jexp(c) = hartree_to_ev_const * REAL(DOT_PRODUCT(cvec(:, m), jc(:, m)))
         END DO
         WRITE(iu,'(2x,f14.8)', advance='no') hartree_to_ev_const*evals(m)
         DO c = 1, 9
