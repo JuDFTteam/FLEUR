@@ -16,8 +16,8 @@
 !--------------------------------------------------------------------------------
 MODULE m_wannierlib_main
    USE m_types, ONLY: t_stars, t_results
-   USE m_melem_get_z
-   USE m_matrix_element_factory, ONLY: matrix_element_factory_reset
+   USE m_matrix_element_factory, ONLY: matrix_element_factory_reset, matrix_element_states, &
+                                       matrix_element_release_anchor
    USE m_types_melem_request, ONLY: t_melem_request
    USE m_types_melem_manifold, ONLY: t_melem_manifold
    USE m_types_melem_domains, ONLY: t_melem_domains
@@ -68,7 +68,8 @@ CONTAINS
       TYPE(t_results), INTENT(IN) :: results
       INTEGER, INTENT(IN) :: eig_id
 
-      INTEGER :: ikpt, itype, nntot_w90, ierr, jspin, jspin_comp
+      INTEGER :: ikpt, itype, nntot_w90, ierr, jspin, jspin_comp, irec, ib
+      INTEGER, ALLOCATABLE :: ev_list(:)
       COMPLEX, ALLOCATABLE :: amn(:, :, :)
       COMPLEX, ALLOCATABLE :: mmn(:, :, :, :)
       COMPLEX, ALLOCATABLE :: ujug(:, :, :, :, :, :)
@@ -81,15 +82,14 @@ CONTAINS
       TYPE(t_melem_bmesh) :: bmesh    ! b-shell weights handed to the operator side
       TYPE(t_usdus) :: usdus
       TYPE(t_lapw) :: lapw
-      TYPE(t_mat) :: zMat
+      TYPE(t_mat), POINTER :: zmat_p(:)     ! into the factory cache
       TYPE(t_radfun) :: radfun(atoms%ntype)
-      TYPE(t_abc) :: abc(atoms%ntype)
+      TYPE(t_abc), POINTER :: abc_p(:, :)   ! (2,ntype), likewise
       LOGICAL :: l_wannierlib_spinors
       TYPE(t_melem_request) :: request
       TYPE(t_melem_manifold) :: manifold
       TYPE(t_melem_domains) :: domains
       LOGICAL :: l_nocosoc
-      LOGICAL :: l_real_wann
       INTEGER :: jspin_rad
       CHARACTER(LEN=7) :: amn_file
       CHARACTER(LEN=3) :: spin12(2)
@@ -102,7 +102,6 @@ CONTAINS
       l_nocosoc = noco%l_noco .AND. (.NOT. noco%l_soc)
       ! A.1: input%l_real queda TRUE con inversion aunque haya SOC (n_denmat=0);
       ! leer un espinor complejo en buffer real mata la parte imaginaria del MMN.
-      l_real_wann = input%l_real .AND. .NOT. noco%l_soc
       spin12 = (/'WF1', 'WF2'/)
 
       !Setup of data structures for amn and mmn calculation for all k-points
@@ -159,25 +158,30 @@ CONTAINS
             jspin_rad = radial_slot(radfun, jspin_comp)
             CALL wannierlib_ujugaunt(atoms, cell, nntot_w90, kdiff, radfun, radfun, jspin_rad, jspin_rad, .FALSE., 1, ujug)
 
+            ev_list = [(ib, ib = this%min_band, this%max_band)]
             ik_local = 0
             DO ikpt = 1, kpts%nkptf
                IF (distk(ikpt) /= fmpi%irank) CYCLE   ! each rank computes only its k-slice -> parallel eigenvector I/O
-               CALL melem_get_z(this%min_band, this%max_band, eig_id, input, atoms, noco, nococonv, kpts, sym, cell, &
-                                     ikpt, jspin_comp, l_real_wann, lapw, zMat)
+               !> This k stays put while its neighbours come and go: mmnkb asks the factory
+               !> for one per b, and without the anchor this one would be the oldest by the
+               !> third of them and be overwritten under the pointers held here.
+               CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpt, cell)
+               CALL matrix_element_states(eig_id, ikpt, input, atoms, sym, cell, noco, &
+                                          nococonv, enpara, lapw, vtot, fmpi, zmat_p, abc_p, &
+                                          ev_list=ev_list, &
+                                          l_both_spinors=(noco%l_soc .AND. .NOT. noco%l_noco), &
+                                          kpts=kpts, l_anchor=.TRUE.)
+               !> Non-collinearly the whole spinor is one record; otherwise each channel is
+               !> its own and the spin block is reached by row offset further down.
+               irec = MERGE(1, jspin_comp, noco%l_noco)
 
-               DO itype = 1, atoms%ntype
-                  CALL abc(itype)%init(input, atoms, this%num_bands, itype)
-                  CALL abc(itype)%calc_abc(input, atoms, sym, cell, lapw, this%num_bands, usdus, &
-                                           noco, nococonv, jspin_rad, itype, zMat)
-               END DO
-
-               CALL wannierlib_amn(this, atoms, kpts, ikpt, usdus, radfun, abc, l_nocosoc, jspin_comp, jspin_rad, amn(:, :, ikpt))
+               CALL wannierlib_amn(this, atoms, kpts, ikpt, usdus, radfun, abc_p(jspin_comp, :), l_nocosoc, jspin_comp, jspin_rad, amn(:, :, ikpt))
 
                ik_local = ik_local + 1
                CALL wannierlib_mmnkb(this%min_band, this%max_band, this%num_bands, nntot_w90, ikpt, kpts, nnkp, gkpb, kdiff, &
                                      ujug, atoms, cell, input, sym, noco, nococonv, usdus, &
-                                     radfun, abc, jspin_comp, jspin_rad, eig_id, stars, lapw, zMat, mmn, ik_local, &
-                                     enpara, vtot, fmpi)
+                                     radfun, abc_p(jspin_comp, :), jspin_comp, jspin_rad, eig_id, stars, lapw, &
+                                     zmat_p(irec), mmn, ik_local, enpara, vtot, fmpi)
             END DO
 
             IF (ALLOCATED(ujug)) DEALLOCATE (ujug)
@@ -231,6 +235,7 @@ CONTAINS
       IF (melem%l_col_spin) &
          CALL melem_rspauli_collinear(this%num_wann, melem%x0, melem%v_ch, cell, kpts, distk, fmpi)
 
+      CALL matrix_element_release_anchor()
       CALL melem%free()
       !> Give back what the factory cached while walking the k-points. It holds the states
       !> and their coefficients for several k at a time, which is the largest thing this
