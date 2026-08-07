@@ -21,6 +21,7 @@ MODULE m_melem_interpolate_op
   USE m_types_cell
   USE m_types_kpts
   USE m_types_melem_manifold, ONLY: t_melem_manifold
+  USE m_melem_hamk, ONLY : melem_build_hamk
   USE m_melem_ft, ONLY : melem_ft_interpolate, melem_ft_to_real_reduce, melem_ft_rtok
   IMPLICIT NONE
   PRIVATE
@@ -42,9 +43,9 @@ CONTAINS
 
     INTEGER :: num_wann, num_bands, nk, k, i, j, m, counter, ip, np, ios, iu, info, lwork, a
     INTEGER :: nkl, kl, nrpts
-    LOGICAL :: have_dis, lexist
+    LOGICAL :: lexist
     REAL    :: kpath, dk(3), dkc(3)
-    REAL,    ALLOCATABLE :: eigval2(:, :), eigval_opt(:), kfrac(:, :), evals(:), rwork(:), oexp(:)
+    REAL,    ALLOCATABLE :: kfrac(:, :), evals(:), rwork(:), oexp(:)
     COMPLEX, ALLOCATABLE :: ham_k(:, :, :), H_interp(:, :, :), o_interp(:, :, :, :)
     COMPLEX, ALLOCATABLE :: hk(:, :), work(:), vloc(:, :, :), tmp(:, :), cvec(:, :), oc(:, :, :)
     COMPLEX, ALLOCATABLE :: ow_loc(:, :, :, :), o_r(:, :, :, :), o1(:, :, :)
@@ -54,7 +55,6 @@ CONTAINS
     num_wann  = this%num_wann
     num_bands = this%num_bands
     nk        = kpts%nkptf
-    have_dis  = (num_bands > num_wann)
     CALL timestart('melem_interpolate_operator')
 
     ! ---- PHASE A (ALL ranks): O_W,alpha(k) = V(gk)^dagger O0_alpha V(gk) on this rank's k-slice,
@@ -105,37 +105,7 @@ CONTAINS
     CLOSE(iu)
 
     ! ---- H_W(k) via eigval2 (same construction as the validated band driver), full mesh on rank 0 ----
-    ALLOCATE(eigval2(num_wann, nk), source=0.0)
-    IF (have_dis) THEN
-      ALLOCATE(eigval_opt(num_bands))
-      DO k = 1, nk
-        counter = 0; eigval_opt = 0.0
-        DO j = 1, num_bands
-          IF (eig(j, k) >= this%dis_win_min .AND. eig(j, k) <= this%dis_win_max) THEN
-            counter = counter + 1; eigval_opt(counter) = eig(j, k)
-          END IF
-        END DO
-        DO m = 1, num_wann
-          DO i = 1, counter
-            eigval2(m, k) = eigval2(m, k) + eigval_opt(i) * ABS(u_opt(i, m, k))**2
-          END DO
-        END DO
-      END DO
-      DEALLOCATE(eigval_opt)
-    ELSE
-      eigval2(1:num_wann, :) = eig(1:num_wann, :)
-    END IF
-
-    ALLOCATE(ham_k(num_wann, num_wann, nk), source=CMPLX(0.0, 0.0))
-    DO k = 1, nk
-      DO j = 1, num_wann
-        DO i = 1, num_wann
-          DO m = 1, num_wann
-            ham_k(i, j, k) = ham_k(i, j, k) + eigval2(m, k) * CONJG(u_matrix(m, i, k)) * u_matrix(m, j, k)
-          END DO
-        END DO
-      END DO
-    END DO
+    CALL melem_build_hamk(this, eig, u_matrix, u_opt, ham_k)
 
     ! ---- interpolate H (full mesh -> R -> k', shared core) and the operator (R -> k' only:
     !      O_alpha(R) is already assembled by the distributed reduce above) ----

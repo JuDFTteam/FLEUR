@@ -24,6 +24,7 @@ MODULE m_melem_interpolate_ham
   USE m_types_cell
   USE m_types_kpts
   USE m_types_melem_manifold, ONLY: t_melem_manifold
+  USE m_melem_hamk, ONLY : melem_build_hamk
   USE m_melem_ft, ONLY : melem_ft_interpolate
   IMPLICIT NONE
   PRIVATE
@@ -40,9 +41,9 @@ CONTAINS
     INTEGER, INTENT(IN) :: irank              ! MPI rank (interpolate only on master)
 
     INTEGER :: num_wann, num_bands, nk, k, i, j, m, counter, ip, np, ios, iu, iuev, info, lwork
-    LOGICAL :: have_dis, lexist
+    LOGICAL :: lexist
     REAL    :: kpath, dk(3), dkc(3)
-    REAL,    ALLOCATABLE :: eigval2(:, :), eigval_opt(:), kfrac(:, :), evals(:), rwork(:)
+    REAL,    ALLOCATABLE :: kfrac(:, :), evals(:), rwork(:)
     COMPLEX, ALLOCATABLE :: ham_k(:, :, :), H_interp(:, :, :), hk(:, :), work(:)
     COMPLEX :: wq(1)
 
@@ -51,7 +52,6 @@ CONTAINS
     num_wann  = this%num_wann
     num_bands = this%num_bands
     nk        = kpts%nkptf
-    have_dis  = (num_bands > num_wann)
     CALL timestart('melem_interpolate_ham')
 
     ! ---- k-path from kpts_interpol ----
@@ -71,38 +71,7 @@ CONTAINS
     CLOSE(iu)
 
     ! ---- steps 1+2: eigval2 in the optimal (num_wann) subspace ----
-    ALLOCATE(eigval2(num_wann, nk), source=0.0)
-    IF (have_dis) THEN
-      ALLOCATE(eigval_opt(num_bands))
-      DO k = 1, nk
-        counter = 0; eigval_opt = 0.0
-        DO j = 1, num_bands
-          IF (eig(j, k) >= this%dis_win_min .AND. eig(j, k) <= this%dis_win_max) THEN
-            counter = counter + 1; eigval_opt(counter) = eig(j, k)
-          END IF
-        END DO
-        DO m = 1, num_wann
-          DO i = 1, counter
-            eigval2(m, k) = eigval2(m, k) + eigval_opt(i) * ABS(u_opt(i, m, k))**2
-          END DO
-        END DO
-      END DO
-      DEALLOCATE(eigval_opt)
-    ELSE
-      eigval2(1:num_wann, :) = eig(1:num_wann, :)
-    END IF
-
-    ! ---- step 3: H_W(k) = U^dagger diag(eigval2) U  (num_wann x num_wann) ----
-    ALLOCATE(ham_k(num_wann, num_wann, nk), source=CMPLX(0.0, 0.0))
-    DO k = 1, nk
-      DO j = 1, num_wann
-        DO i = 1, num_wann
-          DO m = 1, num_wann
-            ham_k(i, j, k) = ham_k(i, j, k) + eigval2(m, k) * CONJG(u_matrix(m, i, k)) * u_matrix(m, j, k)
-          END DO
-        END DO
-      END DO
-    END DO
+    CALL melem_build_hamk(this, eig, u_matrix, u_opt, ham_k)
 
     ! ---- generic core: Fourier-interpolate H_W(k) to the fine path ----
     CALL melem_ft_interpolate(cell, ham_k, kpts, kfrac, H_interp)

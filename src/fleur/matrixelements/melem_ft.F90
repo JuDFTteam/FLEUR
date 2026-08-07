@@ -24,7 +24,7 @@ MODULE m_melem_ft
   USE m_types_kpts
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: melem_ft_interpolate, melem_ft_velocity, melem_ft_to_real, melem_ws_vectors, melem_ft_to_real_reduce, melem_ft_rtok
+  PUBLIC :: melem_ft_interpolate, melem_ft_rtok_velocity, melem_ft_to_real, melem_ws_vectors, melem_ft_to_real_reduce, melem_ft_rtok
   ! Wigner-Seitz R-vectors depend only on the mesh (operator-independent) -> compute once, cache, reuse.
   INTEGER, ALLOCATABLE :: ws_irvec_c(:, :), ws_ndegen_c(:)
   INTEGER :: ws_nrpts_c = 0, ws_mp_c(3) = 0
@@ -53,40 +53,26 @@ CONTAINS
     END DO
   END SUBROUTINE melem_ft_to_real
 
-  !> Velocity interpolation v_alpha(k') = dH/dk_alpha in the Wannier gauge:
+  !> Velocity from an ALREADY transformed Wannier-gauge Hamiltonian:
   !>    v_alpha(k') = sum_R  i R_cart(alpha) e^{+i2pi k'.R} / ndegen(R) * mat_r(R)
-  !> with mat_r the Wannier-gauge Hamiltonian in real space (same mat_r as the core)
-  !> and R_cart = amat . irvec the Cartesian lattice vector (Bohr). Returns the three
-  !> Cartesian components. Projected on the band eigenvectors, the DIAGONAL <n|v|n> =
-  !> dE_n/dk is exact; off-diagonal elements omit the Berry-connection (gauge) term,
-  !> so use the diagonal (band velocity) only until the position operator is available.
-  SUBROUTINE melem_ft_velocity(cell, mat_k, kpts, kfrac, vel_interp)
+  !> with R_cart = amat . irvec (Bohr). Takes mat_r rather than the coarse matrix so that a
+  !> caller wanting both H(k') and dH/dk transforms the coarse mesh once: the two used to be
+  !> separate entry points and each rebuilt the same H(R).
+  !>
+  !> Projected on the band eigenvectors the DIAGONAL <n|v|n> = dE_n/dk is exact; off-diagonal
+  !> elements omit the Berry-connection term.
+  SUBROUTINE melem_ft_rtok_velocity(cell, mat_r, irvec, ndegen, nrpts, kfrac, vel_interp)
     TYPE(t_cell), INTENT(IN) :: cell
-    COMPLEX, INTENT(IN) :: mat_k(:, :, :)     ! (nw, nw, nk)  Wannier-gauge H on coarse mesh
-    TYPE(t_kpts), INTENT(IN) :: kpts
+    COMPLEX, INTENT(IN) :: mat_r(:, :, :)     ! (nw, nw, nrpts) Wannier-gauge H in real space
+    INTEGER, INTENT(IN) :: irvec(:, :), ndegen(:), nrpts
     REAL,    INTENT(IN) :: kfrac(:, :)        ! (3, nfine)
     COMPLEX, ALLOCATABLE, INTENT(OUT) :: vel_interp(:, :, :, :)  ! (nw, nw, 3, nfine)
 
-    INTEGER :: nw, nk, nfine, k, irpt, ip, nrpts, mp_grid(3), alpha
-    INTEGER, ALLOCATABLE :: irvec(:, :), ndegen(:)
-    COMPLEX, ALLOCATABLE :: mat_r(:, :, :)
+    INTEGER :: nw, nfine, irpt, ip, alpha
     REAL :: rdotk, rcart(3)
     COMPLEX :: base
 
-    nw = SIZE(mat_k, 1); nk = SIZE(mat_k, 3); nfine = SIZE(kfrac, 2)
-    mp_grid = kpts%nkpt3
-    CALL ws_get(cell, mp_grid, irvec, ndegen, nrpts)
-
-    ! coarse mesh -> R  (identical to the core)
-    ALLOCATE(mat_r(nw, nw, nrpts), source=CMPLX(0.0, 0.0))
-    DO irpt = 1, nrpts
-      DO k = 1, nk
-        rdotk = tpi_const * DOT_PRODUCT(kpts%bkf(:, k), REAL(irvec(:, irpt)))
-        mat_r(:, :, irpt) = mat_r(:, :, irpt) + (EXP(CMPLX(0.0, -rdotk)) / REAL(nk)) * mat_k(:, :, k)
-      END DO
-    END DO
-
-    ! R -> fine path, weighted by i R_cart(alpha)
+    nw = SIZE(mat_r, 1); nfine = SIZE(kfrac, 2)
     ALLOCATE(vel_interp(nw, nw, 3, nfine), source=CMPLX(0.0, 0.0))
     DO ip = 1, nfine
       DO irpt = 1, nrpts
@@ -99,8 +85,7 @@ CONTAINS
         END DO
       END DO
     END DO
-    DEALLOCATE(mat_r, irvec, ndegen)
-  END SUBROUTINE melem_ft_velocity
+  END SUBROUTINE melem_ft_rtok_velocity
 
   !> Fourier-interpolate a coarse-mesh k-space matrix onto a fine k-path.
   SUBROUTINE melem_ft_interpolate(cell, mat_k, kpts, kfrac, mat_interp)
@@ -110,36 +95,14 @@ CONTAINS
     REAL,    INTENT(IN) :: kfrac(:, :)        ! (3, nfine)    fractional coords of the fine path
     COMPLEX, ALLOCATABLE, INTENT(OUT) :: mat_interp(:, :, :)  ! (nw, nw, nfine)
 
-    INTEGER :: nw, nk, nfine, k, irpt, ip, nrpts, mp_grid(3)
+    INTEGER :: nrpts
     INTEGER, ALLOCATABLE :: irvec(:, :), ndegen(:)
     COMPLEX, ALLOCATABLE :: mat_r(:, :, :)
-    REAL :: rdotk
-    COMPLEX :: fac
 
-    nw = SIZE(mat_k, 1); nk = SIZE(mat_k, 3); nfine = SIZE(kfrac, 2)
-    mp_grid = kpts%nkpt3
-
-    CALL ws_get(cell, mp_grid, irvec, ndegen, nrpts)
-
-    ! coarse mesh -> R
-    ALLOCATE(mat_r(nw, nw, nrpts), source=CMPLX(0.0, 0.0))
-    DO irpt = 1, nrpts
-      DO k = 1, nk
-        rdotk = tpi_const * DOT_PRODUCT(kpts%bkf(:, k), REAL(irvec(:, irpt)))
-        fac = EXP(CMPLX(0.0, -rdotk)) / REAL(nk)
-        mat_r(:, :, irpt) = mat_r(:, :, irpt) + fac * mat_k(:, :, k)
-      END DO
-    END DO
-
-    ! R -> fine path
-    ALLOCATE(mat_interp(nw, nw, nfine), source=CMPLX(0.0, 0.0))
-    DO ip = 1, nfine
-      DO irpt = 1, nrpts
-        rdotk = tpi_const * DOT_PRODUCT(kfrac(:, ip), REAL(irvec(:, irpt)))
-        fac = EXP(CMPLX(0.0, rdotk)) / REAL(ndegen(irpt))
-        mat_interp(:, :, ip) = mat_interp(:, :, ip) + fac * mat_r(:, :, irpt)
-      END DO
-    END DO
+    !> The two halves, in the order they have to happen. Kept as one entry point because most
+    !> callers want exactly this; a caller that also needs the derivative uses the halves.
+    CALL melem_ft_to_real(cell, mat_k, kpts, mat_r, irvec, ndegen, nrpts)
+    CALL melem_ft_rtok(mat_r, irvec, ndegen, nrpts, kfrac, mat_interp)
     DEALLOCATE(mat_r, irvec, ndegen)
   END SUBROUTINE melem_ft_interpolate
 

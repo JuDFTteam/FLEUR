@@ -5,6 +5,7 @@ src/fleur/matrixelements/types_melem_domains.F90
 src/fleur/matrixelements/types_melem_request.F90
 src/fleur/matrixelements/types_melem_bmesh.F90
 src/fleur/matrixelements/melem_ft.F90
+src/fleur/matrixelements/melem_hamk.F90
 src/fleur/matrixelements/melem_io.F90
 src/fleur/matrixelements/melem_overlap.F90
 src/fleur/matrixelements/melem_mmkb_int.F90

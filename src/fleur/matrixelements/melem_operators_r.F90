@@ -31,10 +31,11 @@ MODULE m_melem_operators_r
   USE m_types_melem_bmesh
   USE m_melem_ft, ONLY : melem_ft_to_real, melem_ws_vectors, melem_ft_to_real_reduce
   USE m_melem_io, ONLY : melem_write_realspace
+  USE m_melem_hamk, ONLY : melem_build_hamk
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: melem_write_operators_r, melem_op_rs_distributed, melem_build_berry_aw_r
-  PUBLIC :: melem_check_berry_centres, melem_build_hamk, melem_write_hr, melem_write_ar
+  PUBLIC :: melem_check_berry_centres, melem_write_hr, melem_write_ar
   PUBLIC :: melem_write_wig_once
 CONTAINS
 
@@ -136,49 +137,6 @@ CONTAINS
     CLOSE(iu)
     WRITE(oUnit,'(a)') 'wannierlib: wrote berry_centre_check.dat (A^(W) R=0 diag vs w90 centres)'
   END SUBROUTINE melem_check_berry_centres
-
-  ! Build the Wannier-gauge Hamiltonian ham_k = U^dag diag(eigval2) U (same as m_melem_interpolate_ham).
-  SUBROUTINE melem_build_hamk(this, eig, u_matrix, u_opt, ham_k)
-    TYPE(t_melem_manifold), INTENT(IN) :: this
-    REAL,    INTENT(IN) :: eig(:, :)
-    COMPLEX, INTENT(IN) :: u_matrix(:, :, :), u_opt(:, :, :)
-    COMPLEX, ALLOCATABLE, INTENT(OUT) :: ham_k(:, :, :)
-    INTEGER :: nw, nb, nk, k, i, j, m, counter
-    LOGICAL :: have_dis
-    REAL, ALLOCATABLE :: eigval2(:, :), eigval_opt(:)
-    nw = this%num_wann; nb = this%num_bands; nk = SIZE(u_matrix, 3); have_dis = (nb > nw)
-    ALLOCATE(eigval2(nw, nk), source=0.0)
-    IF (have_dis) THEN
-      ALLOCATE(eigval_opt(nb))
-      DO k = 1, nk
-        counter = 0; eigval_opt = 0.0
-        DO j = 1, nb
-          IF (eig(j, k) >= this%dis_win_min .AND. eig(j, k) <= this%dis_win_max) THEN
-            counter = counter + 1; eigval_opt(counter) = eig(j, k)
-          END IF
-        END DO
-        DO m = 1, nw
-          DO i = 1, counter
-            eigval2(m, k) = eigval2(m, k) + eigval_opt(i) * ABS(u_opt(i, m, k))**2
-          END DO
-        END DO
-      END DO
-      DEALLOCATE(eigval_opt)
-    ELSE
-      eigval2(1:nw, :) = eig(1:nw, :)
-    END IF
-    ALLOCATE(ham_k(nw, nw, nk), source=CMPLX(0.0, 0.0))
-    DO k = 1, nk
-      DO j = 1, nw
-        DO i = 1, nw
-          DO m = 1, nw
-            ham_k(i, j, k) = ham_k(i, j, k) + eigval2(m, k) * CONJG(u_matrix(m, i, k)) * u_matrix(m, j, k)
-          END DO
-        END DO
-      END DO
-    END DO
-    DEALLOCATE(eigval2)
-  END SUBROUTINE melem_build_hamk
 
   ! Write H(R) in Wannier90 seedname_hr.dat format (energies in eV). Rank-0 only.
   SUBROUTINE melem_write_hr(this, cell, kpts, ham_k, wfpref)

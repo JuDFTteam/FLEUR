@@ -21,7 +21,8 @@ MODULE m_melem_interpolate_velocity
   USE m_types_cell
   USE m_types_kpts
   USE m_types_melem_manifold, ONLY: t_melem_manifold
-  USE m_melem_ft, ONLY : melem_ft_interpolate, melem_ft_velocity, melem_ft_rtok
+  USE m_melem_hamk, ONLY : melem_build_hamk
+  USE m_melem_ft, ONLY : melem_ft_to_real, melem_ft_rtok_velocity, melem_ft_rtok
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: melem_interpolate_velocity
@@ -40,18 +41,20 @@ CONTAINS
 
     INTEGER :: num_wann, num_bands, nk, k, i, j, m, n, counter, ip, np, ios, iu, iuc, info, lwork, a
     INTEGER :: ax(3), ay(3)
-    LOGICAL :: have_dis, lexist, l_berry
+    LOGICAL :: lexist, l_berry
     REAL    :: kpath, dk(3), dkc(3), de
-    REAL,    ALLOCATABLE :: eigval2(:, :), eigval_opt(:), kfrac(:, :), evals(:), rwork(:), vexp(:), omega(:, :)
+    REAL,    ALLOCATABLE :: kfrac(:, :), evals(:), rwork(:), vexp(:), omega(:, :)
     COMPLEX, ALLOCATABLE :: ham_k(:, :, :), H_interp(:, :, :), v_interp(:, :, :, :), A_interp(:, :, :, :)
     COMPLEX, ALLOCATABLE :: hk(:, :), work(:), cvec(:, :), vc(:, :, :), Hbar(:, :, :), Abar(:, :, :), vfull(:, :, :)
+    COMPLEX, ALLOCATABLE :: ham_r(:, :, :)
+    INTEGER, ALLOCATABLE :: h_irvec(:, :), h_ndegen(:)
+    INTEGER :: h_nrpts
     COMPLEX :: wq(1), acc
 
     IF (irank /= 0) RETURN
     num_wann  = this%num_wann
     num_bands = this%num_bands
     nk        = kpts%nkptf
-    have_dis  = (num_bands > num_wann)
     CALL timestart('melem_interpolate_velocity')
 
     INQUIRE(file='kpts_interpol', exist=lexist)
@@ -70,41 +73,16 @@ CONTAINS
     CLOSE(iu)
 
     ! ---- H_W(k) via eigval2 (same construction as the validated band driver) ----
-    ALLOCATE(eigval2(num_wann, nk), source=0.0)
-    IF (have_dis) THEN
-      ALLOCATE(eigval_opt(num_bands))
-      DO k = 1, nk
-        counter = 0; eigval_opt = 0.0
-        DO j = 1, num_bands
-          IF (eig(j, k) >= this%dis_win_min .AND. eig(j, k) <= this%dis_win_max) THEN
-            counter = counter + 1; eigval_opt(counter) = eig(j, k)
-          END IF
-        END DO
-        DO m = 1, num_wann
-          DO i = 1, counter
-            eigval2(m, k) = eigval2(m, k) + eigval_opt(i) * ABS(u_opt(i, m, k))**2
-          END DO
-        END DO
-      END DO
-      DEALLOCATE(eigval_opt)
-    ELSE
-      eigval2(1:num_wann, :) = eig(1:num_wann, :)
-    END IF
-
-    ALLOCATE(ham_k(num_wann, num_wann, nk), source=CMPLX(0.0, 0.0))
-    DO k = 1, nk
-      DO j = 1, num_wann
-        DO i = 1, num_wann
-          DO m = 1, num_wann
-            ham_k(i, j, k) = ham_k(i, j, k) + eigval2(m, k) * CONJG(u_matrix(m, i, k)) * u_matrix(m, j, k)
-          END DO
-        END DO
-      END DO
-    END DO
+    CALL melem_build_hamk(this, eig, u_matrix, u_opt, ham_k)
 
     ! ---- interpolate H (for eigenvectors) and v = dH/dk (velocity variant of the core) ----
-    CALL melem_ft_interpolate(cell, ham_k, kpts, kfrac, H_interp)
-    CALL melem_ft_velocity(cell, ham_k, kpts, kfrac, v_interp)   ! (nw,nw,3,np)  = dH/dk
+    !> One transform of H_W to real space, then both the interpolant and its derivative
+    !> off the same H(R). They used to be two calls, and each rebuilt H(R) from the coarse
+    !> mesh -- the same sum over every k and every R, twice.
+    CALL melem_ft_to_real(cell, ham_k, kpts, ham_r, h_irvec, h_ndegen, h_nrpts)
+    CALL melem_ft_rtok(ham_r, h_irvec, h_ndegen, h_nrpts, kfrac, H_interp)
+    CALL melem_ft_rtok_velocity(cell, ham_r, h_irvec, h_ndegen, h_nrpts, kfrac, v_interp)
+    DEALLOCATE(ham_r, h_irvec, h_ndegen)
 
     ! ---- interband part: R -> k' of the reduced Wannier Berry connection A^(W)_a(R) -> A^(W)_a(k') ----
     l_berry = (nrpts > 0 .AND. SIZE(aw_r, 1) == num_wann .AND. SIZE(aw_r, 4) == 3)
