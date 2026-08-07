@@ -19,7 +19,33 @@ MODULE m_melem_domains
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: melem_write_domain_kpts, melem_rename_domain_outputs, melem_shell
+  PUBLIC :: melem_read_kset
 CONTAINS
+
+  ! The k-set to interpolate onto, read back from kpts_interpol. .FALSE. when the file is not
+  ! there, which is not an error: each driver says so in its own words, and two of them have
+  ! allocations to give back before they return.
+  !
+  ! It lives next to melem_write_domain_kpts because that is what puts the file there; the
+  ! five drivers used to carry a copy of these ten lines each.
+  LOGICAL FUNCTION melem_read_kset(kfrac, np, calledby) RESULT(l_found)
+    REAL, ALLOCATABLE, INTENT(OUT) :: kfrac(:, :)   ! (3, np) fractional coordinates
+    INTEGER, INTENT(OUT) :: np
+    CHARACTER(LEN=*), INTENT(IN) :: calledby
+    INTEGER :: iu, ios, ip
+    np = 0
+    INQUIRE(file='kpts_interpol', exist=l_found)
+    IF (.NOT. l_found) RETURN
+    OPEN(newunit=iu, file='kpts_interpol', status='old')
+    READ(iu, *, iostat=ios) np
+    IF (ios /= 0 .OR. np <= 0) CALL juDFT_error('bad kpts_interpol header', calledby=calledby)
+    ALLOCATE(kfrac(3, np))
+    DO ip = 1, np
+      READ(iu, *, iostat=ios) kfrac(:, ip)
+      IF (ios /= 0) CALL juDFT_error('bad kpts_interpol line', calledby=calledby)
+    END DO
+    CLOSE(iu)
+  END FUNCTION melem_read_kset
 
   ! Write kpts_interpol for a generated output domain (plane/grid). For an explicit
   ! <path file="..">, copy that file to kpts_interpol; legacy/default path uses the

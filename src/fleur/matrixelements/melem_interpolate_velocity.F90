@@ -22,6 +22,7 @@ MODULE m_melem_interpolate_velocity
   USE m_types_kpts
   USE m_types_melem_manifold, ONLY: t_melem_manifold
   USE m_melem_hamk, ONLY : melem_build_hamk
+  USE m_melem_domains, ONLY : melem_read_kset
   USE m_melem_ft, ONLY : melem_ft_to_real, melem_ft_rtok_velocity, melem_ft_rtok
   IMPLICIT NONE
   PRIVATE
@@ -39,9 +40,9 @@ CONTAINS
     INTEGER, INTENT(IN) :: irvec(:, :), ndegen(:), nrpts   ! Wigner-Seitz R-mesh from the reduce (rank 0 only used)
     INTEGER, INTENT(IN) :: irank
 
-    INTEGER :: num_wann, num_bands, nk, k, i, j, m, n, counter, ip, np, ios, iu, iuc, info, lwork, a
+    INTEGER :: num_wann, num_bands, nk, k, i, j, m, n, counter, ip, np, iu, iuc, info, lwork, a
     INTEGER :: ax(3), ay(3)
-    LOGICAL :: lexist, l_berry
+    LOGICAL :: l_berry
     REAL    :: kpath, dk(3), dkc(3), de
     REAL,    ALLOCATABLE :: kfrac(:, :), evals(:), rwork(:), vexp(:), omega(:, :)
     COMPLEX, ALLOCATABLE :: ham_k(:, :, :), H_interp(:, :, :), v_interp(:, :, :, :), A_interp(:, :, :, :)
@@ -57,20 +58,10 @@ CONTAINS
     nk        = kpts%nkptf
     CALL timestart('melem_interpolate_velocity')
 
-    INQUIRE(file='kpts_interpol', exist=lexist)
-    IF (.NOT. lexist) THEN
+    IF (.NOT. melem_read_kset(kfrac, np, 'melem_interpolate_velocity')) THEN
       WRITE(oUnit,'(a)') 'wannierlib velocity interpolation: no kpts_interpol file -> skipped'
       CALL timestop('melem_interpolate_velocity'); RETURN
     END IF
-    OPEN(newunit=iu, file='kpts_interpol', status='old')
-    READ(iu, *, iostat=ios) np
-    IF (ios /= 0 .OR. np <= 0) CALL juDFT_error('bad kpts_interpol header', calledby='melem_interpolate_velocity')
-    ALLOCATE(kfrac(3, np))
-    DO ip = 1, np
-      READ(iu, *, iostat=ios) kfrac(:, ip)
-      IF (ios /= 0) CALL juDFT_error('bad kpts_interpol line', calledby='melem_interpolate_velocity')
-    END DO
-    CLOSE(iu)
 
     ! ---- H_W(k) via eigval2 (same construction as the validated band driver) ----
     CALL melem_build_hamk(this, eig, u_matrix, u_opt, ham_k)

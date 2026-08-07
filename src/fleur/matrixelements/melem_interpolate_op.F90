@@ -22,6 +22,7 @@ MODULE m_melem_interpolate_op
   USE m_types_kpts
   USE m_types_melem_manifold, ONLY: t_melem_manifold
   USE m_melem_hamk, ONLY : melem_build_hamk
+  USE m_melem_domains, ONLY : melem_read_kset
   USE m_melem_ft, ONLY : melem_ft_interpolate, melem_ft_to_real_reduce, melem_ft_rtok
   IMPLICIT NONE
   PRIVATE
@@ -41,9 +42,8 @@ CONTAINS
     CHARACTER(LEN=*), INTENT(IN) :: outfile
     INTEGER, INTENT(IN) :: irank, mpicm
 
-    INTEGER :: num_wann, num_bands, nk, k, i, j, m, counter, ip, np, ios, iu, info, lwork, a
+    INTEGER :: num_wann, num_bands, nk, k, i, j, m, counter, ip, np, iu, info, lwork, a
     INTEGER :: nkl, kl, nrpts
-    LOGICAL :: lexist
     REAL    :: kpath, dk(3), dkc(3)
     REAL,    ALLOCATABLE :: kfrac(:, :), evals(:), rwork(:), oexp(:)
     COMPLEX, ALLOCATABLE :: ham_k(:, :, :), H_interp(:, :, :), o_interp(:, :, :, :)
@@ -87,22 +87,12 @@ CONTAINS
       CALL timestop('melem_interpolate_operator'); RETURN
     END IF
 
-    INQUIRE(file='kpts_interpol', exist=lexist)
-    IF (.NOT. lexist) THEN
+    IF (.NOT. melem_read_kset(kfrac, np, 'melem_interpolate_operator')) THEN
       WRITE(oUnit,'(a)') 'wannierlib operator interpolation: no kpts_interpol file -> skipped'
       IF (ALLOCATED(o_r)) DEALLOCATE(o_r)
       IF (ALLOCATED(irvec)) DEALLOCATE(irvec, ndegen)
       CALL timestop('melem_interpolate_operator'); RETURN
     END IF
-    OPEN(newunit=iu, file='kpts_interpol', status='old')
-    READ(iu, *, iostat=ios) np
-    IF (ios /= 0 .OR. np <= 0) CALL juDFT_error('bad kpts_interpol header', calledby='melem_interpolate_operator')
-    ALLOCATE(kfrac(3, np))
-    DO ip = 1, np
-      READ(iu, *, iostat=ios) kfrac(:, ip)
-      IF (ios /= 0) CALL juDFT_error('bad kpts_interpol line', calledby='melem_interpolate_operator')
-    END DO
-    CLOSE(iu)
 
     ! ---- H_W(k) via eigval2 (same construction as the validated band driver), full mesh on rank 0 ----
     CALL melem_build_hamk(this, eig, u_matrix, u_opt, ham_k)
