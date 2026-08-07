@@ -228,7 +228,7 @@ CONTAINS
   ! anglmomrs.1 (orbital), rssocmat.1 (SOC), wig_vectors.
   ! ---------------------------------------------------------------------------
   SUBROUTINE melem_write_operators_r(this, request, cell, kpts, eig, u_matrix, u_opt, &
-                                          s0_loc, l0_loc, soc4_loc, bmesh, distk, mpi_comm, mmn_loc, irank, wf_channel, l_collinear, l0col_loc)
+                                          s0_loc, l0_loc, soc4_loc, bmesh, distk, mpi_comm, mmn_loc, irank, wf_channel, l_collinear)
     TYPE(t_melem_manifold), INTENT(IN) :: this
     TYPE(t_melem_request), INTENT(IN) :: request
     TYPE(t_cell), INTENT(IN) :: cell
@@ -236,13 +236,12 @@ CONTAINS
     REAL,    INTENT(IN) :: eig(:, :)
     COMPLEX, INTENT(IN) :: u_matrix(:, :, :)         ! (nw,nw,nk) MLWF gauge
     COMPLEX, INTENT(IN) :: u_opt(:, :, :)            ! (nb,nw,nk) disentangled (amn_local)
-    COMPLEX, INTENT(IN) :: s0_loc(:, :, :, :), l0_loc(:, :, :, :, :), soc4_loc(:, :, :, :) ! per-rank coarse slices
+    COMPLEX, INTENT(IN) :: s0_loc(:, :, :, :), l0_loc(:, :, :, :, :, :), soc4_loc(:, :, :, :) ! per-rank coarse slices
     TYPE(t_melem_bmesh), INTENT(IN) :: bmesh         ! b-shell weights (position/Berry operator)
     COMPLEX, INTENT(IN) :: mmn_loc(:, :, :, :)       ! (nb,nb,nntot,nk_loc) this rank's overlap slice (position/Berry)
     INTEGER, INTENT(IN) :: distk(:), mpi_comm, irank
     INTEGER, INTENT(IN) :: wf_channel               ! collinear jspins=2 spin channel (1/2); 1 in the spinor case
     LOGICAL, INTENT(IN) :: l_collinear              ! collinear jspins=2 (spin channels separable, per-channel WFn files)
-    COMPLEX, INTENT(IN), OPTIONAL :: l0col_loc(:, :, :, :)  ! (nb,nb,3,nk_loc) collinear per-channel Bloch orbital L
     INTEGER :: iop, nb, ik, j, nkl, aw_nrpts
     LOGICAL :: l_wig_done
     CHARACTER(LEN=8) :: wfpref                       ! 'WF1'/'WF2' seedname prefix for H(R)/position
@@ -285,19 +284,13 @@ CONTAINS
           CALL melem_op_rs_distributed(this, cell, kpts, vloc, s0_loc, gk_loc, 3, mpi_comm, irank, .FALSE., 'rspauli.1')
         END IF
       CASE ('orbital')
-        IF (l_collinear) THEN
-          ! per-channel Bloch L built in main's mmn loop (single spin) -> reduce -> anglmomrs.{1,2}
-          IF (PRESENT(l0col_loc)) THEN
-            CALL melem_op_rs_distributed(this, cell, kpts, vloc, l0col_loc, gk_loc, 3, mpi_comm, irank, .FALSE., &
-                                              'anglmomrs.'//ACHAR(48+wf_channel))
-          ELSE IF (irank == 0) THEN
-            WRITE(oUnit,'(a)') 'wannierlib operators_r: collinear orbital slice missing -> skipped'
-          END IF
-        ELSE
-          ALLOCATE(o0l(nb, nb, 3, SIZE(l0_loc, 5))); o0l = SUM(l0_loc, DIM=4)
-          CALL melem_op_rs_distributed(this, cell, kpts, vloc, o0l, gk_loc, 3, mpi_comm, irank, .FALSE., 'anglmomrs.1')
-          DEALLOCATE(o0l)
-        END IF
+        ! Site-summed L of this channel -> reduce -> anglmomrs.<channel>. The spinor case is
+        ! the same thing with one channel, so there is nothing to tell apart here.
+        ALLOCATE(o0l(nb, nb, 3, SIZE(l0_loc, 6)))
+        o0l = SUM(l0_loc(:, :, :, :, wf_channel, :), DIM=4)
+        CALL melem_op_rs_distributed(this, cell, kpts, vloc, o0l, gk_loc, 3, mpi_comm, irank, .FALSE., &
+                                          'anglmomrs.'//ACHAR(48+wf_channel))
+        DEALLOCATE(o0l)
       CASE ('spin_orbit')
         IF (l_collinear) THEN
           IF (irank == 0) WRITE(oUnit,'(a)') 'wannierlib operators_r: spin_orbit has no collinear (no-SOC) meaning -> skipped'

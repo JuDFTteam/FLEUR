@@ -138,7 +138,7 @@ CONTAINS
 
       CALL melem%init(request, manifold, atoms, input, kpts, fmpi, distk, l_wannierlib_spinors)
       CALL melem%calc(request, manifold, atoms, input, sym, cell, noco, nococonv, kpts, &
-                      stars, usdus, radfun, enpara, fmpi, vtot, eig_id, distk)
+                      stars, enpara, fmpi, vtot, eig_id, distk)
 
       CALL init_w90(this, atoms, cell, kpts, fmpi, l_wannierlib_spinors, nntot_w90, nnkp, gkpb, distk)
       CALL wannierlib_kdiff(kpts%nkptf, nntot_w90, kpts%bkf, nnkp, gkpb, kdiff)

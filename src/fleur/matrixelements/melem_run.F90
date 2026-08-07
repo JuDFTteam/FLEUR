@@ -105,7 +105,7 @@ CONTAINS
       ! (2) real-space operator export (Fourier step 3, standalone format) -- once, before interpolation
       CALL melem_write_operators_r(manifold, request, cell, kpts, eig, u_matrix, u_opt, &
                                    coarse%s0, coarse%l0, coarse%soc4, bmesh, distk, mpi_comm, mmn, &
-                                   irank, wf_ch, l_collinear, coarse%l0col(:, :, :, wf_ch, :))
+                                   irank, wf_ch, l_collinear)
 
       ! (3) Wannier-gauge interpolation: dispatch by looping over the requested operator list.
       ! Each operator supplies its own per-rank Bloch slice on the coarse mesh (coarse%s0/l0/soc0);
@@ -126,7 +126,7 @@ CONTAINS
                ! total (site-summed) orbital moment
                IF (request%op_total(iop) == 1) &
                   CALL melem_interpolate_operator(manifold, cell, kpts, eig, u_matrix, u_opt, &
-                                                  SUM(coarse%l0, DIM=4), gk_loc, 3, 'bands_wann_orbmom.dat', irank, mpi_comm)
+                                                  SUM(coarse%l0(:, :, :, :, wf_ch, :), DIM=4), gk_loc, 3, 'bands_wann_orbmom.dat', irank, mpi_comm)
             CASE ('soc')
                CALL melem_interpolate_operator(manifold, cell, kpts, eig, u_matrix, u_opt, &
                                                coarse%soc0, gk_loc, 1, 'bands_wann_soc.dat', irank, mpi_comm)
@@ -147,7 +147,7 @@ CONTAINS
                                               coarse%s0, gk_loc, 'bands_wann_spincurrent.dat', irank, mpi_comm)
             CASE ('orbitalCurrent')
                CALL melem_interpolate_current(manifold, cell, kpts, eig, u_matrix, u_opt, &
-                                              SUM(coarse%l0, DIM=4), gk_loc, 'bands_wann_orbcurrent.dat', irank, mpi_comm)
+                                              SUM(coarse%l0(:, :, :, :, wf_ch, :), DIM=4), gk_loc, 'bands_wann_orbcurrent.dat', irank, mpi_comm)
             CASE ('eigenstates')
                ! Wannier-Hamiltonian eigenvectors C(k') (the H-gauge rotation U^(H)), as a matrix
                CALL melem_interpolate_eigenstates(manifold, cell, kpts, eig, u_matrix, u_opt, irank)
