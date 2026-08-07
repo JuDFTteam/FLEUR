@@ -15,11 +15,9 @@
 !>  m_melem_ft.
 !>
 !>  The four spin-block overlaps  o_ab(m,n) = <phi^a_m|phi^b_n>  (a,b = global
-!>  spin up=1/dn=2) take their muffin-tin contribution from melem_spin_mt_block
-!>  below: abc%cof contracted with radfun%integral, so u, udot and the local
-!>  orbitals are all included, extended to cross spin. The local-to-global spin
-!>  rotation is already applied when the abc coefficients are built, so no
-!>  further rotation is applied here.
+!>  spin up=1/dn=2) are assembled by the spin operator itself, which contracts
+!>  abc%cof with radfun%integral site by site. What is left here is what acts on
+!>  those blocks once they exist: the Pauli components and the sum rule.
 MODULE m_melem_spin
   USE m_juDFT
   USE m_constants, ONLY : ImagUnit, oUnit
@@ -33,7 +31,7 @@ MODULE m_melem_spin
   USE m_types_mat
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: melem_pauli_from_blocks, melem_spin_mt_block, melem_spin_sumrule
+  PUBLIC :: melem_pauli_from_blocks, melem_spin_sumrule
 CONTAINS
 
   !> Assemble the three Pauli matrices at one k from the four global spin-block
@@ -48,69 +46,6 @@ CONTAINS
     s0(:, :, 3) = o_uu - o_dd                    ! sigma_z
   END SUBROUTINE melem_pauli_from_blocks
 
-  !> Muffin-tin contribution to the four spin-block overlaps
-  !>   o_ss'(m,n) += <phi^s_m | phi^s'_n>_MT ,   s,s' in {1,2}.
-  !>
-  !> Mirrors wannierlib_mmk0_sph (same abc%cof + radfun%integral contraction, so
-  !> u / udot / local-orbital channels are all summed via the n_r index), crossing
-  !> the two spinor components abc(:,1) and abc(:,2).
-  !>
-  !> NO explicit spin rotation here: the modern library calc_abc ALREADY applies
-  !> the SU(2) local<->global rotation (ccchi = conjg(nococonv%umat)) and combines
-  !> both spinor blocks, so abc%cof are the (local-frame) spin components. The old
-  !> fleur-8.1 wann_mmk0_updown_sph used raw abcof + an explicit ccchi; that path is
-  !> outdated. For a single global axis (Fe-FM_z, beta=0) local==global. A true
-  !> noncollinear texture (Mn3Ir) would need a global-frame rotation downstream, but
-  !> the spin sum rule (norm, |<sigma>|) is rotation-invariant, so this suffices here.
-  SUBROUTINE melem_spin_mt_block(atoms, abc, radfun, o_uu, o_dd, o_ud, o_du)
-    TYPE(t_atoms),  INTENT(IN) :: atoms
-    TYPE(t_abc),    INTENT(IN) :: abc(:, :)        ! (2 spin, ntype) local-frame coeffs
-    TYPE(t_radfun), INTENT(IN) :: radfun(:)        ! (ntype) : %integral(n_r,n_r2,l,1,1)
-    COMPLEX, INTENT(INOUT) :: o_uu(:, :), o_dd(:, :), o_ud(:, :), o_du(:, :)   ! (nb,nb)
-
-    INTEGER :: nb, i, j, ntyp, iat, l, ll1, mm, lm, n_r, n_r2
-    COMPLEX :: loc(2, 2)
-
-    ! The four spin blocks are indexed with the slots of their own components.
-    INTEGER :: js1, js2
-    !> The spin index comes first. An assumed-shape dummy accepts the transpose
-    !> without complaint and reinterprets the two indices on the same memory, which
-    !> is right only when there is a single atom type.
-    IF (SIZE(abc, 1) /= 2 .OR. SIZE(abc, 2) /= atoms%ntype) &
-      CALL judft_bug("melem_spin_mt_block: the coefficients must have shape (2,ntype)")
-
-    js1 = radial_slot(radfun, 1); js2 = radial_slot(radfun, 2)
-    nb = SIZE(o_uu, 1)
-    DO j = 1, nb                       ! ket band
-      DO i = 1, nb                     ! bra band
-        loc = CMPLX(0.0, 0.0)
-        DO ntyp = 1, atoms%ntype
-          DO l = 0, atoms%lmax(ntyp)
-            ll1 = l*(l + 1)
-            DO mm = -l, l
-              lm = ll1 + mm
-              DO iat = 1, atoms%neq(ntyp)
-                ! radial overlap carries the spin indices (jspins=2: up/down radials differ):
-                !   loc(s1,s2) uses integral(n_r,n_r2,l,s1,s2)
-                DO n_r = 1, abc(1, ntyp)%n_r(l)
-                  DO n_r2 = 1, abc(1, ntyp)%n_r(l)
-                    loc(1, 1) = loc(1, 1) + abc(1, ntyp)%cof(i,lm,n_r,iat)*CONJG(abc(1, ntyp)%cof(j,lm,n_r2,iat))*radfun(ntyp)%integral(n_r,n_r2,l,1,1)
-                    loc(2, 2) = loc(2, 2) + abc(2, ntyp)%cof(i,lm,n_r,iat)*CONJG(abc(2, ntyp)%cof(j,lm,n_r2,iat))*radfun(ntyp)%integral(n_r,n_r2,l,js2,js2)
-                    loc(1, 2) = loc(1, 2) + abc(1, ntyp)%cof(i,lm,n_r,iat)*CONJG(abc(2, ntyp)%cof(j,lm,n_r2,iat))*radfun(ntyp)%integral(n_r,n_r2,l,js1,js2)
-                    loc(2, 1) = loc(2, 1) + abc(2, ntyp)%cof(i,lm,n_r,iat)*CONJG(abc(1, ntyp)%cof(j,lm,n_r2,iat))*radfun(ntyp)%integral(n_r,n_r2,l,js2,js1)
-                  END DO
-                END DO
-              END DO
-            END DO
-          END DO
-        END DO
-        o_uu(i, j) = o_uu(i, j) + loc(1, 1)
-        o_dd(i, j) = o_dd(i, j) + loc(2, 2)
-        o_ud(i, j) = o_ud(i, j) + loc(1, 2)
-        o_du(i, j) = o_du(i, j) + loc(2, 1)
-      END DO
-    END DO
-  END SUBROUTINE melem_spin_mt_block
 
   !> Sum-rule / sanity check on the Bloch-basis spin matrices at one k.
   !> With interstitial + MT summed, spin-trace orthonormality gives

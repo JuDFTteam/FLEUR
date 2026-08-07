@@ -35,14 +35,12 @@ MODULE m_melem_coarse
    USE m_types_abc
    USE m_types_melem_request, ONLY: t_melem_request
    USE m_types_melem_manifold, ONLY: t_melem_manifold
-   USE m_melem_spin, ONLY: melem_pauli_from_blocks, melem_spin_sumrule, melem_spin_mt_block
-   USE m_melem_overlap, ONLY: melem_overlap_interstitial
+   USE m_melem_spin, ONLY: melem_pauli_from_blocks, melem_spin_sumrule
    USE m_types_matelements_spin, ONLY: t_matelements_spin
    USE m_types_matelements_soc, ONLY: t_matelements_soc
    USE m_types_rsoc, ONLY: t_rsoc
    USE m_types_matelements_orbital, ONLY: t_matelements_orbital
-   USE m_melem_get_z, ONLY: melem_get_z
-   USE m_matrix_element_factory, ONLY: matrix_element_factory
+   USE m_matrix_element_factory, ONLY: matrix_element_factory, matrix_element_states
    IMPLICIT NONE
    PRIVATE
 
@@ -154,7 +152,7 @@ CONTAINS
    END SUBROUTINE melem_coarse_init
 
    SUBROUTINE melem_coarse_calc(this, request, manifold, atoms, input, sym, cell, noco, nococonv, kpts, &
-                                stars, usdus, radfun, enpara, fmpi, vtot, eig_id, l_real_wann, distk)
+                                stars, usdus, radfun, enpara, fmpi, vtot, eig_id, distk)
       CLASS(t_melem_coarse), INTENT(INOUT) :: this
       TYPE(t_melem_request), INTENT(IN) :: request
       TYPE(t_melem_manifold), INTENT(IN) :: manifold
@@ -172,7 +170,6 @@ CONTAINS
       TYPE(t_mpi), INTENT(IN) :: fmpi
       TYPE(t_potden), INTENT(IN) :: vtot
       INTEGER, INTENT(IN) :: eig_id
-      LOGICAL, INTENT(IN) :: l_real_wann
       INTEGER, INTENT(IN) :: distk(:)   ! rank owner of each global k (distributes the loop)
 
       TYPE(t_lapw) :: lapw
@@ -190,7 +187,7 @@ CONTAINS
       !> cross-spin overlap its combined spin operator needs is still a k-by-k Bloch matrix.
       IF (this%l_col_spin .OR. this%l_col_orb) &
          CALL melem_coarse_collinear(this, manifold, atoms, input, sym, cell, noco, nococonv, &
-                                      kpts, stars, usdus, radfun, eig_id, l_real_wann, distk, fmpi)
+                                      kpts, stars, usdus, radfun, enpara, vtot, eig_id, distk, fmpi)
 
       IF (.NOT. this%l_active) RETURN   ! nothing requested, or no spinor wavefunctions -> slices are stubs
 
@@ -288,7 +285,7 @@ CONTAINS
    END SUBROUTINE melem_coarse_calc
 
    SUBROUTINE melem_coarse_collinear(this, manifold, atoms, input, sym, cell, noco, nococonv, &
-                                      kpts, stars, usdus, radfun, eig_id, l_real_wann, distk, fmpi)
+                                      kpts, stars, usdus, radfun, enpara, vtot, eig_id, distk, fmpi)
       !> What a collinear jspins=2 calculation needs from the eigenvectors, per k-point of
       !> this rank's slice: interstitial part plus the muffin-tin contraction of the two
       !> channels' matching coefficients. The two channels are separate eigenproblems with
@@ -305,22 +302,22 @@ CONTAINS
       TYPE(t_stars), INTENT(IN) :: stars
       TYPE(t_usdus), INTENT(IN) :: usdus
       TYPE(t_radfun), INTENT(IN) :: radfun(:)
+      TYPE(t_enpara), INTENT(IN) :: enpara
+      TYPE(t_potden), INTENT(IN) :: vtot
       INTEGER, INTENT(IN) :: eig_id
-      LOGICAL, INTENT(IN) :: l_real_wann
       INTEGER, INTENT(IN) :: distk(:)
       TYPE(t_mpi), INTENT(IN) :: fmpi
 
-      TYPE(t_lapw) :: lapw_u, lapw_d
-      TYPE(t_mat)  :: zMat_u, zMat_d
-      TYPE(t_abc), ALLOCATABLE :: abc_both(:, :)   ! (2,ntype): 1=up, 2=dn
+      TYPE(t_lapw) :: lapw
+      TYPE(t_matelements_spin) :: spinop
       TYPE(t_matelements_orbital), ALLOCATABLE :: orbop(:, :)   ! (nat, channel)
       TYPE(t_mat) :: znone(1)   ! L has no interstitial part and never reads the eigenvectors
-      COMPLEX, ALLOCATABLE :: o_uu(:, :), o_dd(:, :), o_ud(:, :), o_du(:, :)
-      INTEGER :: nb, ikpt, il, itype, iatom, na, ch
+      TYPE(t_mat), POINTER :: zmat_p(:)     ! into the factory cache
+      TYPE(t_abc), POINTER :: abc_p(:, :)   ! (2,ntype), likewise
+      INTEGER, ALLOCATABLE :: ev_list(:)
+      INTEGER :: nb, ikpt, il, itype, iatom, na, ch, ib
 
       nb = manifold%num_bands
-      ALLOCATE (abc_both(2, atoms%ntype))
-      ALLOCATE (o_uu(nb, nb), o_dd(nb, nb), o_ud(nb, nb), o_du(nb, nb))
 
       !> Bound once, outside the k loop: what an instance binds to -- a site and the
       !> radial slot of its channel -- is the same at every k. The k dependence arrives
@@ -338,39 +335,39 @@ CONTAINS
          END DO
       END IF
 
+      ev_list = [(ib, ib = manifold%min_band, manifold%max_band)]
+
       il = 0
       DO ikpt = 1, kpts%nkptf
          IF (distk(ikpt) /= fmpi%irank) CYCLE
          il = il + 1
-         CALL melem_get_z(manifold%min_band, manifold%max_band, eig_id, input, atoms, noco, &
-                          nococonv, kpts, sym, cell, ikpt, 1, l_real_wann, lapw_u, zMat_u)
-         DO itype = 1, atoms%ntype
-            CALL abc_both(1, itype)%init(input, atoms, nb, itype)
-            CALL abc_both(1, itype)%calc_abc(input, atoms, sym, cell, lapw_u, nb, usdus, noco, &
-                                             nococonv, 1, itype, zMat_u)
-         END DO
-         CALL melem_get_z(manifold%min_band, manifold%max_band, eig_id, input, atoms, noco, &
-                          nococonv, kpts, sym, cell, ikpt, 2, l_real_wann, lapw_d, zMat_d)
-         DO itype = 1, atoms%ntype
-            CALL abc_both(2, itype)%init(input, atoms, nb, itype)
-            CALL abc_both(2, itype)%calc_abc(input, atoms, sym, cell, lapw_d, nb, usdus, noco, &
-                                             nococonv, MERGE(1, 2, input%jspins == 1), itype, zMat_d)
-         END DO
+         !> Both channels are separate eigenproblems over the same basis, so one lapw serves
+         !> them, and the factory reads the two records this k has.
+         CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpt, cell)
          IF (this%l_col_spin) THEN
-            o_uu = CMPLX(0.0, 0.0); o_dd = CMPLX(0.0, 0.0); o_ud = CMPLX(0.0, 0.0); o_du = CMPLX(0.0, 0.0)
-            CALL melem_overlap_interstitial(stars, lapw_u, lapw_d, zMat_u, zMat_d, 0, 0, o_ud)
-            CALL melem_spin_mt_block(atoms, abc_both, radfun, o_uu, o_dd, o_ud, o_du)
-            this%x0(:, :, il) = o_ud
+            !> The operator keeps the four spin blocks. Only the cross-spin one is wanted
+            !> here: the combined 2N Pauli is assembled after both channels wannierise, and
+            !> it is the block that carries the two gauges.
+            CALL spinop%init(atoms, stars, lapw, nococonv, input, noco)
+            CALL matrix_element_factory(spinop, eig_id, ikpt, input, atoms, sym, cell, noco, &
+                                        nococonv, enpara, lapw, vtot, fmpi, ev_list=ev_list, &
+                                        kpts=kpts)
+            this%x0(:, :, il) = spinop%mat(1, 2)%data_c
          END IF
          !> L is spin-diagonal, so each channel has its own and neither needs the other.
          !> An instance covers one site, so the sites are added up here; the sum needs no
          !> local-to-global rotation, L being spin-diagonal with a frame-invariant trace.
          IF (this%l_col_orb) THEN
+            !> The coefficients of both channels at once, from the same cache the spin
+            !> operator just filled; each channel is then served its own row of them.
+            CALL matrix_element_states(eig_id, ikpt, input, atoms, sym, cell, noco, nococonv, &
+                                       enpara, lapw, vtot, fmpi, zmat_p, abc_p, &
+                                       ev_list=ev_list, kpts=kpts)
             DO ch = 1, 2
                this%l0col(:, :, :, ch, il) = CMPLX(0.0, 0.0)
                DO na = 1, atoms%nat
                   CALL orbop(na, ch)%init_mat(nb)
-                  CALL orbop(na, ch)%calc_matrix_elements(znone, abc_both(ch:ch, :), radfun, usdus)
+                  CALL orbop(na, ch)%calc_matrix_elements(znone, abc_p(ch:ch, :), radfun, usdus)
                   this%l0col(:, :, :, ch, il) = this%l0col(:, :, :, ch, il) &
                                                 + orbop(na, ch)%comp(:, :, 1, 1, 1:3)
                END DO
@@ -379,7 +376,7 @@ CONTAINS
       END DO
 
       IF (ALLOCATED(orbop)) DEALLOCATE (orbop)
-      DEALLOCATE (abc_both, o_uu, o_dd, o_ud, o_du)
+      IF (ALLOCATED(ev_list)) DEALLOCATE (ev_list)
    END SUBROUTINE melem_coarse_collinear
 
    SUBROUTINE melem_coarse_free(this)
