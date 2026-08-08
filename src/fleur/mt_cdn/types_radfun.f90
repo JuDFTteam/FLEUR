@@ -116,7 +116,7 @@ contains
                         +this%r(1:atoms%jri(itype),2,i,l,ispin)*this%r(1:atoms%jri(itype),2,j,l,jspin)
                         CALL intgr0(rf,atoms%rmsh(1,itype),atoms%dx(itype),atoms%jri(itype),ovlp)
                         this%integral(i,j,l,ispin,jspin)=ovlp
-                        this%integral(j,i,l,ispin,jspin)=ovlp
+                        this%integral(j,i,l,jspin,ispin)=ovlp
                      enddo
                   enddo
                ENDDO
