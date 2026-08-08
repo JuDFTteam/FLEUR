@@ -289,6 +289,19 @@ CONTAINS
 ! Calculation of a, b coefficients for LAPW basis functions
             CALL timestart("hsmt_ab")
 !!$acc data copyin(fjgj,fjgj%fj,fjgj%gj) copyout(abcoeffs)
+            ! Own the abCoeffs device mapping here instead of letting hsmt_ab do it.
+            ! hsmt_ab's `enter data` names its own dummy argument, whose descriptor is
+            ! never released by the `exit data delete(abCoeffs)` below -- that names
+            ! the caller's descriptor, a different address.  The orphaned entry then
+            ! sits in the present table over stack that gets reused, and a later
+            ! `enter data` on anything overlapping it (fjgj, above) aborts with
+            ! "variable in data clause is partially present on the device".
+            ! Skipped when the abCoeffs cache is active: it owns the allocation.
+            IF (.NOT.l_use_abcoeff_store) THEN
+               abSize = hsmt_ab_size(atoms, iType, .FALSE.)
+               ALLOCATE(abCoeffs(2*abSize, lapw%nv(iintsp)))
+               !$acc enter data create(abCoeffs)
+            END IF
             CALL hsmt_ab(sym, atoms, noco, nococonv, jspin, iintsp, iType, iAtom, cell, lapw, fjgj, abCoeffs, abSize, .FALSE., l_store=.TRUE.)
 !!$acc end data
             abSize = abSize/2
@@ -571,6 +584,19 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
 ! Calculation of a, b coefficients for LAPW basis functions
             CALL timestart("hsmt_ab")
 !!$acc data copyin(fjgj,fjgj%fj,fjgj%gj) copyout(abcoeffs)
+            ! Own the abCoeffs device mapping here instead of letting hsmt_ab do it.
+            ! hsmt_ab's `enter data` names its own dummy argument, whose descriptor is
+            ! never released by the `exit data delete(abCoeffs)` below -- that names
+            ! the caller's descriptor, a different address.  The orphaned entry then
+            ! sits in the present table over stack that gets reused, and a later
+            ! `enter data` on anything overlapping it (fjgj, above) aborts with
+            ! "variable in data clause is partially present on the device".
+            ! Skipped when the abCoeffs cache is active: it owns the allocation.
+            IF (.NOT.l_use_abcoeff_store) THEN
+               abSize = hsmt_ab_size(atoms, iType, .FALSE.)
+               ALLOCATE(abCoeffs(2*abSize, lapw%nv(iintsp)))
+               !$acc enter data create(abCoeffs)
+            END IF
             CALL hsmt_ab(sym, atoms, noco, nococonv, jspin, iintsp, iType, iAtom, cell, lapw, fjgj, abCoeffs, abSize, .FALSE., l_store=.TRUE.)
 !!$acc end data
             abSize = abSize/2
