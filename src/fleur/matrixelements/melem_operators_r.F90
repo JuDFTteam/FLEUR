@@ -36,7 +36,7 @@ MODULE m_melem_operators_r
   PRIVATE
   PUBLIC :: melem_write_operators_r, melem_op_rs_distributed, melem_build_berry_aw_r
   PUBLIC :: melem_check_berry_centres, melem_write_hr, melem_write_ar
-  PUBLIC :: melem_write_wig_once, melem_write_bmn
+  PUBLIC :: melem_write_wig_once, melem_write_bmn, melem_write_ar_ti
 CONTAINS
 
   ! Build the Wannier-gauge Berry connection in real space A^(W)_alpha(R), distributed:
@@ -243,6 +243,10 @@ CONTAINS
         CALL melem_build_berry_aw_r(this, cell, kpts, mmn_loc, gk_loc, u_opt, u_matrix, bmesh, mpi_comm, &
                                          aw_r, aw_irvec, aw_ndegen, aw_nrpts)
         IF (irank == 0) CALL melem_write_ar(this, aw_r, aw_irvec, aw_nrpts, TRIM(wfpref))
+        !> Y la forma invariante, que es otra cantidad y lleva otro nombre: la de arriba
+        !> alimenta Berry y la velocidad anomala, esta es en la que B y F estan construidas.
+        CALL melem_write_ar_ti(this, cell, kpts, u_matrix, u_opt, mmn_loc, gk_loc, &
+                               bmesh, aw_irvec, aw_nrpts, mpi_comm, irank, TRIM(wfpref))
         IF (ALLOCATED(aw_r)) DEALLOCATE(aw_r, aw_irvec, aw_ndegen)
       CASE ('spin')          ! distributed reduce over the coarse spin slice
         ! collinear: the spin operator is combined (2N) across both channels, so it is written once
@@ -451,6 +455,112 @@ CONTAINS
     END IF
     DEALLOCATE(br)
   END SUBROUTINE melem_write_bmn
+
+
+  ! A(R) = <0n|r|Rm> in the TRANSLATIONALLY INVARIANT form: the phase carries the same
+  ! b . (r_avg - R) centring as B(R), and the Wannier centre is added on the R=0 diagonal.
+  ! This is hamiltonian_write_rmn of the reference, the one that writes _r.dat.
+  !
+  ! It is NOT the same quantity as melem_build_berry_aw_r above, and the two are not close:
+  ! measured on WannFeBccInterp they differ by 0.062 Ang on a scale of 0.082, i.e. 75%.
+  ! Both are correct, for different things -- the non-centred one is the A^(W)(R) of Wang,
+  ! Yates, Souza and Vanderbilt and is what the Berry curvature and the anomalous velocity
+  ! need; this one is what B and F are built in, since their phases carry the same centring.
+  ! Mixing them silently gives a wrong answer, which is why they have different names.
+  SUBROUTINE melem_write_ar_ti(this, cell, kpts, u_matrix, u_opt, mmn_loc, gk_loc, &
+                               bmesh, irvec, nrpts, mpicm, irank, wfpref)
+#ifdef CPP_MPI
+    use mpi
+#endif
+    TYPE(t_melem_manifold), INTENT(IN) :: this
+    TYPE(t_cell), INTENT(IN) :: cell
+    TYPE(t_kpts), INTENT(IN) :: kpts
+    COMPLEX, INTENT(IN) :: u_matrix(:, :, :), u_opt(:, :, :)
+    COMPLEX, INTENT(IN) :: mmn_loc(:, :, :, :)
+    TYPE(t_melem_bmesh), INTENT(IN) :: bmesh
+    INTEGER, INTENT(IN) :: gk_loc(:), irvec(:, :), nrpts, mpicm, irank
+    CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: wfpref
+
+    INTEGER :: nb, nw, nk, nnt, nkl, kl, k, kb, nn, a, i, m, n, irpt, ierr
+    REAL :: r_cart(3), r_avg(3), rdotk0, rdotk
+    COMPLEX :: fac
+    COMPLEX, ALLOCATABLE :: Vk(:, :), Vkb(:, :), tmp(:, :), mw(:, :, :, :), ar(:, :, :, :)
+    COMPLEX, ALLOCATABLE :: a4(:, :, :, :)
+    CHARACTER(LEN=64) :: fn
+
+    nb = this%num_bands; nw = this%num_wann; nk = kpts%nkptf
+    nnt = bmesh%nntot; nkl = SIZE(gk_loc)
+    IF (nnt < 1 .OR. .NOT. ALLOCATED(bmesh%wb) .OR. .NOT. ALLOCATED(bmesh%centres)) THEN
+      IF (irank == 0) WRITE(oUnit,'(a)') &
+        'wannierlib operators_r: the invariant A(R) needs the b-shell weights and the centres -> skipped'
+      RETURN
+    END IF
+
+    ALLOCATE(mw(nw, nw, nnt, MAX(1, nkl)), source=CMPLX(0.0, 0.0))
+    ALLOCATE(Vk(nb, nw), Vkb(nb, nw), tmp(nb, nw))
+    DO kl = 1, nkl
+      k = gk_loc(kl)
+      Vk = MATMUL(u_opt(:, :, k), u_matrix(:, :, k))
+      DO nn = 1, nnt
+        kb = bmesh%nnlist(k, nn)
+        Vkb = MATMUL(u_opt(:, :, kb), u_matrix(:, :, kb))
+        tmp = MATMUL(mmn_loc(:, :, nn, kl), Vkb)
+        mw(:, :, nn, kl) = MATMUL(CONJG(TRANSPOSE(Vk)), tmp)
+      END DO
+    END DO
+    DEALLOCATE(Vk, Vkb, tmp)
+
+    ALLOCATE(ar(3, nw, nw, nrpts), source=CMPLX(0.0, 0.0))
+    DO irpt = 1, nrpts
+      r_cart = MATMUL(cell%amat, REAL(irvec(:, irpt)))
+      DO m = 1, nw
+        DO n = 1, nw
+          r_avg = 0.5 * (bmesh%centres(:, m) + bmesh%centres(:, n) + r_cart)
+          DO kl = 1, nkl
+            k = gk_loc(kl)
+            rdotk0 = tpi_const * DOT_PRODUCT(kpts%bkf(:, k), REAL(irvec(:, irpt)))
+            DO nn = 1, nnt
+              rdotk = rdotk0 - DOT_PRODUCT(bmesh%bk(:, nn, k), r_avg - r_cart)
+              fac = EXP(CMPLX(0.0, -rdotk)) / REAL(nk)
+              DO a = 1, 3
+                ar(a, n, m, irpt) = ar(a, n, m, irpt) + &
+                  CMPLX(0.0, bmesh%wb(nn) * bmesh%bk(a, nn, k)) * mw(n, m, nn, kl) * fac
+              END DO
+            END DO
+          END DO
+        END DO
+      END DO
+    END DO
+    DEALLOCATE(mw)
+#ifdef CPP_MPI
+    CALL MPI_ALLREDUCE(MPI_IN_PLACE, ar, SIZE(ar), MPI_DOUBLE_COMPLEX, MPI_SUM, mpicm, ierr)
+#endif
+
+    IF (irank == 0) THEN
+      !> The centre sits on the R=0 diagonal, where the non-centred form gets it from the
+      !> delta it subtracts instead.
+      DO irpt = 1, nrpts
+        IF (ALL(irvec(:, irpt) == 0)) THEN
+          DO m = 1, nw
+            ar(:, m, m, irpt) = ar(:, m, m, irpt) + bmesh%centres(:, m)
+          END DO
+        END IF
+      END DO
+      fn = 'WF1_r_ti'
+      IF (PRESENT(wfpref)) fn = TRIM(wfpref)//'_r_ti'
+      ALLOCATE(a4(nw, nw, nrpts, 3))
+      DO a = 1, 3
+        DO irpt = 1, nrpts
+          a4(:, :, irpt, a) = ar(a, :, :, irpt)
+        END DO
+      END DO
+      CALL melem_write_realspace(a4, irvec, [(0, i = 1, nrpts)], nrpts, nw, 3, 'rti', &
+                                 TRIM(fn)//'.dat', 0)
+      DEALLOCATE(a4)
+      WRITE(oUnit,'(a)') 'wannierlib: wrote '//TRIM(fn)//'.dat (A(R) translationally invariant, Ang)'
+    END IF
+    DEALLOCATE(ar)
+  END SUBROUTINE melem_write_ar_ti
 
   ! wig_vectors (once): idx R1 R2 R3 ndegen (list-directed; = orbitrans rpts).
   SUBROUTINE melem_write_wig_once(cell, kpts, done)

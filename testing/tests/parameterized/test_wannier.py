@@ -161,7 +161,13 @@ INTERP_FILES = {
          # something. What would pin it down is that B is linear in the eigenvalues,
          # so shifting the spectrum by a constant must move B by that constant times
          # A(R) -- and A is anchored. Until that test exists, this is presence only.
-         "WF1_bmn.dat", "WF2_bmn.dat"],
+         "WF1_bmn.dat", "WF2_bmn.dat",
+         # A(R) in BOTH conventions, which are not the same quantity: measured on this
+         # very case they differ by 0.062 Ang on a scale of 0.082. The _r.dat one is the
+         # WYSV A^(W)(R) that feeds the Berry curvature and the anomalous velocity; the
+         # _r_ti.dat one is the translationally invariant form that B and F are built in.
+         # Presence only -- neither is checked against a value here.
+         "WF1_r_ti.dat", "WF2_r_ti.dat"],
 }
 
 # The velocity must be checked on the FINE path and nowhere else: every point of w222 is a
