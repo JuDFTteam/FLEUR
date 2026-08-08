@@ -223,10 +223,13 @@ CONTAINS
     ! collinear jspins=2: per-channel seedname WF1/WF2 for H(R)/position; spinor case keeps WF1.
     WRITE(wfpref, '(a,i0)') 'WF', wf_channel
     IF (irank == 0) THEN; l_wig_done = .FALSE.; CALL melem_write_wig_once(cell, kpts, l_wig_done); END IF
-    !> H(R) is wanted by the Hamiltonian export and by B(R). Built once, on rank 0, which
-    !> is where both of them write from.
+    !> H(R) is wanted by the Hamiltonian export and by B(R). Built once, and on EVERY rank
+    !> rather than only where it is written: melem_write_bmn is collective, so all of them
+    !> reach it, and handing an unallocated actual to a non-allocatable dummy is undefined
+    !> behaviour that a serial run can never show. It needs only eig, u_matrix and u_opt,
+    !> which every rank already holds, so the duplicated work is the cheap way out.
     l_need_hr = request%has_op_r('hamiltonian') .OR. request%has_op_r('bmn')
-    IF (l_need_hr .AND. irank == 0) THEN
+    IF (l_need_hr) THEN
       CALL melem_build_hamk(this, eig, u_matrix, u_opt, ham_k)
       CALL melem_ft_to_real(cell, ham_k, kpts, ham_r, hr_irvec, hr_ndegen, hr_nrpts)
       DEALLOCATE(ham_k)
