@@ -16,6 +16,7 @@ MODULE m_melem_domains
   USE m_juDFT
   USE m_types_melem_domains, ONLY: t_melem_domains
   USE m_types_melem_request, ONLY: t_melem_request
+  USE m_types_melem_optable, ONLY: WANNIERLIB_INTERP, melem_exposed_find
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: melem_write_domain_kpts, melem_rename_domain_outputs, melem_shell
@@ -106,34 +107,21 @@ CONTAINS
   SUBROUTINE melem_rename_domain_outputs(this, suffix)
     TYPE(t_melem_request), INTENT(IN) :: this
     CHARACTER(LEN=*), INTENT(IN) :: suffix
-    INTEGER :: iop
+    INTEGER :: iop, iRow
+    !> The output names are a column of the exposure table, so an operator added there
+    !> gets renamed without this routine being told about it. Skipping the rename used to
+    !> mean a file written under another spin channel's name -- silent, and visible only as
+    !> a file that should exist and does not.
     DO iop = 1, this%n_ops
-      SELECT CASE (TRIM(this%op_name(iop)))
-      CASE ('hamiltonian')
-        CALL ren('bands_wann_interpol', suffix)
-        CALL ren('bands_wann_interpol_ev', suffix)
-      CASE ('spin')
-        IF (this%op_total(iop) == 1)   CALL ren('bands_wann_spin', suffix)
-      CASE ('orbital')
-        IF (this%op_total(iop) == 1)   CALL ren('bands_wann_orbmom', suffix)
-      CASE ('soc')
-        CALL ren('bands_wann_soc', suffix)
-      CASE ('velocity')
-        CALL ren('bands_wann_velocity', suffix)
-        CALL ren('bands_wann_berrycurv', suffix)
-      CASE ('spinCurrent')
-        CALL ren('bands_wann_spincurrent', suffix)
-      CASE ('orbitalCurrent')
-        CALL ren('bands_wann_orbcurrent', suffix)
-      CASE ('eigenstates')
-        CALL ren('bands_wann_eigenstates', suffix)
-      CASE DEFAULT
-        !> Without this an operator added to MELEM_OP_INTERP and to melem_run, but not
-        !> here, would compute and then write its files under the name of another spin
-        !> channel. Silent, and only visible as a file that should exist and does not.
-        CALL judft_bug('melem_rename_domain_outputs: "'//TRIM(this%op_name(iop))// &
-                       '" is an accepted operator with no output names here')
-      END SELECT
+      iRow = melem_exposed_find(this%op_name(iop), WANNIERLIB_INTERP)
+      IF (iRow == 0) CALL judft_bug('melem_rename_domain_outputs: "'// &
+                                    TRIM(this%op_name(iop))//'" is not in the exposure table')
+      !> Those with a site-summed projection to choose only wrote a file if it was asked for.
+      IF (WANNIERLIB_INTERP(iRow)%honours_total .AND. this%op_total(iop) /= 1) CYCLE
+      IF (LEN_TRIM(WANNIERLIB_INTERP(iRow)%out1) > 0) &
+        CALL ren(TRIM(WANNIERLIB_INTERP(iRow)%out1), suffix)
+      IF (LEN_TRIM(WANNIERLIB_INTERP(iRow)%out2) > 0) &
+        CALL ren(TRIM(WANNIERLIB_INTERP(iRow)%out2), suffix)
     END DO
   CONTAINS
     SUBROUTINE ren(base, suf)

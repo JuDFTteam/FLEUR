@@ -14,6 +14,8 @@ MODULE m_types_melem_request
    !> Bloch matrix before either list can be served and does not care which one asked.
 
    USE m_judft
+   USE m_types_melem_optable, ONLY: WANNIERLIB_INTERP, WANNIERLIB_OPR, &
+                                    melem_exposed_find, melem_exposed_names
 
    IMPLICIT NONE
    PRIVATE
@@ -35,23 +37,8 @@ MODULE m_types_melem_request
       PROCEDURE :: init     => melem_request_init
       PROCEDURE :: has_op_r => melem_request_has_op_r
       PROCEDURE :: has_op   => melem_request_has_op
+      PROCEDURE :: needs_op => melem_request_needs_op
    END TYPE t_melem_request
-
-   !> The operator names this layer knows, one list per thing that can be asked for. They
-   !> are here, next to the record that carries them, because every consumer of the record
-   !> already has it in scope -- and because a name that is spelled here and nowhere else
-   !> should be a loud failure rather than an operator that quietly does not happen.
-   !>
-   !> ADDING AN OPERATOR: put its name in the right list below, then give it a branch in
-   !> each place that dispatches on that list. Miss one and the run stops there naming it,
-   !> instead of finishing with the operator silently absent.
-   !>   interpolation : melem_run (compute) and melem_domains (name the output files)
-   !>   operators_r   : melem_operators_r
-   CHARACTER(LEN=20), PARAMETER, PUBLIC :: MELEM_OP_INTERP(8) = [ &
-      CHARACTER(LEN=20) :: 'hamiltonian', 'spin', 'orbital', 'soc', &
-                           'velocity', 'spinCurrent', 'orbitalCurrent', 'eigenstates']
-   CHARACTER(LEN=20), PARAMETER, PUBLIC :: MELEM_OP_R(5) = [ &
-      CHARACTER(LEN=20) :: 'hamiltonian', 'position', 'spin', 'orbital', 'spin_orbit']
 
    PUBLIC :: t_melem_request, melem_op_known
 
@@ -88,16 +75,16 @@ CONTAINS
       !> operator that never appeared. It stops the run here instead, while it is still
       !> obvious that what is wrong is the input.
       DO iop = 1, this%n_ops
-         IF (.NOT.melem_op_known(this%op_name(iop), MELEM_OP_INTERP)) &
+         IF (melem_exposed_find(this%op_name(iop), WANNIERLIB_INTERP) == 0) &
             CALL judft_error('t_melem_request: "'//TRIM(this%op_name(iop))// &
                              '" is not an operator this layer can interpolate', &
-                             hint=op_list_hint(MELEM_OP_INTERP), calledby="melem_request_init")
+                             hint=melem_exposed_names(WANNIERLIB_INTERP), calledby="melem_request_init")
       END DO
       DO iop = 1, this%n_op_r
-         IF (.NOT.melem_op_known(this%op_r_name(iop), MELEM_OP_R)) &
+         IF (melem_exposed_find(this%op_r_name(iop), WANNIERLIB_OPR) == 0) &
             CALL judft_error('t_melem_request: "'//TRIM(this%op_r_name(iop))// &
                              '" is not an operator this layer can export in real space', &
-                             hint=op_list_hint(MELEM_OP_R), calledby="melem_request_init")
+                             hint=melem_exposed_names(WANNIERLIB_OPR), calledby="melem_request_init")
       END DO
    END SUBROUTINE melem_request_init
 
@@ -124,6 +111,44 @@ CONTAINS
       melem_request_has_op = melem_op_known(name, this%op_name)
    END FUNCTION melem_request_has_op
 
+   !> Whether either list asks for something that needs this CATALOGUE entry built. The
+   !> two lists spell the same operator differently, and the currents ask for one without
+   !> ever naming it, so the answer is a lookup through the exposure tables rather than a
+   !> string match on what the user wrote.
+   LOGICAL FUNCTION melem_request_needs_op(this, opname, interp_only) RESULT(l_needed)
+      CLASS(t_melem_request), INTENT(IN) :: this
+      CHARACTER(LEN=*),       INTENT(IN) :: opname
+      LOGICAL, OPTIONAL,      INTENT(IN) :: interp_only
+      INTEGER :: i, k
+      LOGICAL :: l_interp_only
+      l_needed = .FALSE.
+      l_interp_only = .FALSE.
+      IF (PRESENT(interp_only)) l_interp_only = interp_only
+      IF (ALLOCATED(this%op_name)) THEN
+         DO i = 1, this%n_ops
+            k = melem_exposed_find(this%op_name(i), WANNIERLIB_INTERP)
+            IF (k > 0) THEN
+               IF (TRIM(WANNIERLIB_INTERP(k)%operator) == TRIM(opname)) THEN
+                  l_needed = .TRUE.
+                  RETURN
+               END IF
+            END IF
+         END DO
+      END IF
+      IF (l_interp_only) RETURN
+      IF (this%l_operators_r .AND. ALLOCATED(this%op_r_name)) THEN
+         DO i = 1, this%n_op_r
+            k = melem_exposed_find(this%op_r_name(i), WANNIERLIB_OPR)
+            IF (k > 0) THEN
+               IF (TRIM(WANNIERLIB_OPR(k)%operator) == TRIM(opname)) THEN
+                  l_needed = .TRUE.
+                  RETURN
+               END IF
+            END IF
+         END DO
+      END IF
+   END FUNCTION melem_request_needs_op
+
    !> Whether a name appears in one of the lists above.
    LOGICAL FUNCTION melem_op_known(name, list)
       CHARACTER(LEN=*), INTENT(IN) :: name
@@ -138,15 +163,5 @@ CONTAINS
       END DO
    END FUNCTION melem_op_known
 
-   !> The accepted names on one line, so the error says what to write instead.
-   FUNCTION op_list_hint(list) RESULT(txt)
-      CHARACTER(LEN=*), INTENT(IN) :: list(:)
-      CHARACTER(LEN=200) :: txt
-      INTEGER :: i
-      txt = 'accepted: '
-      DO i = 1, SIZE(list)
-         txt = TRIM(txt)//' '//TRIM(list(i))
-      END DO
-   END FUNCTION op_list_hint
 
 END MODULE m_types_melem_request

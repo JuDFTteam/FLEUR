@@ -100,8 +100,7 @@ CONTAINS
       !> L is spin-diagonal, so each channel has its own and either list is reason enough
       !> to build it. The cross-spin overlap is only ever wanted by the real-space export:
       !> the interpolated spin operator does not exist here, see the guard below.
-      l_ch_orb  = this%n_channels == 2 .AND. (request%has_op_r('orbital') .OR. &
-                  request%has_op('orbital') .OR. request%has_op('orbitalCurrent'))
+      l_ch_orb  = this%n_channels == 2 .AND. request%needs_op('orbital')
       l_ch_spin = this%n_channels == 2 .AND. request%has_op_r('spin')
       nkc_loc = MAX(1, COUNT(distk == fmpi%irank))
 
@@ -138,8 +137,7 @@ CONTAINS
       !> combined 2N operator in real space. Said here because the summary flag is set by
       !> the real-space list too: without this the request passed and the stub-sized slice
       !> reached the interpolation driver, where the shapes do not conform.
-      IF (this%n_channels == 2 .AND. &
-          (request%has_op('spin') .OR. request%has_op('spinCurrent'))) CALL judft_error( &
+      IF (this%n_channels == 2 .AND. request%needs_op('spin', interp_only=.TRUE.)) CALL judft_error( &
          "melem_coarse: the spin operator cannot be interpolated when the two spin "// &
          "channels are wannierised separately", &
          hint="ask for it in <operators_r>: there both channels are combined into the "// &

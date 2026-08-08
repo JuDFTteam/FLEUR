@@ -152,7 +152,7 @@ CONTAINS
                ! Wannier-Hamiltonian eigenvectors C(k') (the H-gauge rotation U^(H)), as a matrix
                CALL melem_interpolate_eigenstates(manifold, cell, kpts, eig, u_matrix, u_opt, irank)
             CASE DEFAULT
-               !> The name is in MELEM_OP_INTERP or it would not have got past the request,
+               !> The name is in WANNIERLIB_INTERP or it would not have got past the request,
                !> so what is missing is the branch here, not the operator.
                CALL judft_bug('melem_run: "'//TRIM(request%op_name(iop))// &
                   '" is an accepted operator with no branch in this pass')

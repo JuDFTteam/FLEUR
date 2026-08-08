@@ -7,6 +7,7 @@
 ! Copyright (c) 2026 Peter Gruenberg Institut, Forschungszentrum Juelich, Germany
 !--------------------------------------------------------------------------------
 MODULE m_types_wannierlib
+  USE m_types_melem_optable, ONLY: WANNIERLIB_INTERP, WANNIERLIB_OPR, melem_exposed_find
   USE m_types_kpts
   USE m_juDFT
   USE m_types_atoms
@@ -376,7 +377,7 @@ CONTAINS
     CHARACTER(LEN=32) :: spin_label
     CHARACTER(LEN=255) :: sbuf
     INTEGER :: numberNodes, ios
-    INTEGER :: nSpecies, iType, nProjType, iProj, ip, nProjTotal
+    INTEGER :: nSpecies, iType, nProjType, iProj, ip, nProjTotal, iRow
     LOGICAL :: has_wannierize
     CHARACTER(LEN=20) :: species_name
 
@@ -483,14 +484,19 @@ CONTAINS
       ! Class-C operators auto-request their prerequisite coarse matrices:
       !   spinCurrent = {v,sigma} needs the spin coarse matrix; orbitalCurrent needs L.
       !   velocity is built from H alone, so it needs no coarse provider.
-      SELECT CASE (TRIM(this%op_name(iProj)))
-      CASE ('hamiltonian');    this%l_interpolation = .TRUE.
-      CASE ('spin');           this%l_spin = .TRUE.
-      CASE ('orbital');        this%l_orbmom = .TRUE.
-      CASE ('soc');            this%l_socop = .TRUE.
-      CASE ('spinCurrent');    this%l_spin = .TRUE.
-      CASE ('orbitalCurrent'); this%l_orbmom = .TRUE.
-      END SELECT
+      !> Which coarse matrix a name needs built for it is a column of the exposure table,
+      !> so a name added there is picked up here without being remembered twice. What is
+      !> left below maps the three CATALOGUE entries onto the three flags, and that mapping
+      !> only grows if the catalogue itself does.
+      iRow = melem_exposed_find(this%op_name(iProj), WANNIERLIB_INTERP)
+      IF (iRow > 0) THEN
+        IF (TRIM(WANNIERLIB_INTERP(iRow)%name) == 'hamiltonian') this%l_interpolation = .TRUE.
+        SELECT CASE (TRIM(WANNIERLIB_INTERP(iRow)%operator))
+        CASE ('spin');       this%l_spin = .TRUE.
+        CASE ('orbital');    this%l_orbmom = .TRUE.
+        CASE ('spin_orbit'); this%l_socop = .TRUE.
+        END SELECT
+      END IF
     END DO
 
     ! --- operators_r: real-space operator matrices O(R) (Fourier step 3, no interpolation).
@@ -504,11 +510,14 @@ CONTAINS
     DO iProj = 1, this%n_op_r
       WRITE(xPathP, '(A,I0,A)') '/fleurInput/output/wannierlib/operators_r/operator[', iProj, ']'
       this%op_r_name(iProj) = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@name'))
-      SELECT CASE (TRIM(this%op_r_name(iProj)))
-      CASE ('spin');       this%l_spin = .TRUE.
-      CASE ('orbital');    this%l_orbmom = .TRUE.
-      CASE ('spin_orbit'); this%l_socop = .TRUE.
-      END SELECT
+      iRow = melem_exposed_find(this%op_r_name(iProj), WANNIERLIB_OPR)
+      IF (iRow > 0) THEN
+        SELECT CASE (TRIM(WANNIERLIB_OPR(iRow)%operator))
+        CASE ('spin');       this%l_spin = .TRUE.
+        CASE ('orbital');    this%l_orbmom = .TRUE.
+        CASE ('spin_orbit'); this%l_socop = .TRUE.
+        END SELECT
+      END IF
     END DO
 
     nSpecies = xml%getNumberOfNodes('/fleurInput/atomSpecies/species')
