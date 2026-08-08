@@ -108,18 +108,17 @@ CONTAINS
          ALLOCATE (this%s0(manifold%num_bands, manifold%num_bands, 3, nkc_loc), source=cmplx(0.0, 0.0))
          ALLOCATE (this%soc0(manifold%num_bands, manifold%num_bands, 1, nkc_loc), source=cmplx(0.0, 0.0))
          ALLOCATE (this%soc4(manifold%num_bands, manifold%num_bands, 4, nkc_loc), source=cmplx(0.0, 0.0))
-      ELSE
-         ALLOCATE (this%s0(1, 1, 1, 1)); ALLOCATE (this%soc4(1, 1, 1, 1))
-         ALLOCATE (this%soc0(1, 1, 1, 1))
       END IF
+      !> Y si no, no se reservan. Un tapon (1,1,1,1) es un array VALIDO con la forma
+      !> equivocada: indexarlo como si tuviera la buena no falla, solo devuelve lo que haya.
+      !> Sin reservar no hay nada que indexar mal, y quien lo pase tiene que declararlo
+      !> ALLOCATABLE y decidir que hace cuando no esta.
 
       !> L is the one slice both paths fill, so both fill the same array. n_channels is 1 for
       !> spinors and 2 for separate channels, and the two cases never overlap.
       IF (this%l_active .OR. l_ch_orb) THEN
          ALLOCATE (this%l0(manifold%num_bands, manifold%num_bands, 3, atoms%nat, &
                            this%n_channels, nkc_loc), source=cmplx(0.0, 0.0))
-      ELSE
-         ALLOCATE (this%l0(1, 1, 1, 1, 1, 1))
       END IF
 
       ! collinear jspins=2 (no SOC/noco): the slices above are spinor-only and stay stubs, so
@@ -162,8 +161,6 @@ CONTAINS
          ALLOCATE (this%v_ch(manifold%num_bands, manifold%num_wann, kpts%nkptf, 2), source=cmplx(0.0, 0.0))
          ALLOCATE (this%x0(manifold%num_bands, manifold%num_bands, MAX(1, COUNT(distk == fmpi%irank))), &
                    source=cmplx(0.0, 0.0))
-      ELSE
-         ALLOCATE (this%v_ch(1, 1, 1, 1)); ALLOCATE (this%x0(1, 1, 1))
       END IF
    END SUBROUTINE melem_coarse_init
 

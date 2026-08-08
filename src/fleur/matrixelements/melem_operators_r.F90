@@ -194,7 +194,9 @@ CONTAINS
     REAL,    INTENT(IN) :: eig(:, :)
     COMPLEX, INTENT(IN) :: u_matrix(:, :, :)         ! (nw,nw,nk) MLWF gauge
     COMPLEX, INTENT(IN) :: u_opt(:, :, :)            ! (nb,nw,nk) disentangled (amn_local)
-    COMPLEX, INTENT(IN) :: s0_loc(:, :, :, :), l0_loc(:, :, :, :, :, :), soc4_loc(:, :, :, :) ! per-rank coarse slices
+    !> Per-rank coarse slices. ALLOCATABLE because a slice nobody asked for is not
+    !> built at all: every use below sits behind the request that would have built it.
+    COMPLEX, ALLOCATABLE, INTENT(IN) :: s0_loc(:, :, :, :), l0_loc(:, :, :, :, :, :), soc4_loc(:, :, :, :)
     TYPE(t_melem_bmesh), INTENT(IN) :: bmesh         ! b-shell weights (position/Berry operator)
     COMPLEX, INTENT(IN) :: mmn_loc(:, :, :, :)       ! (nb,nb,nntot,nk_loc) this rank's overlap slice (position/Berry)
     INTEGER, INTENT(IN) :: distk(:), mpi_comm, irank
