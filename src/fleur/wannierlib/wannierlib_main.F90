@@ -101,8 +101,8 @@ CONTAINS
 
       l_wannierlib_spinors = noco%l_noco .OR. noco%l_soc
       l_nocosoc = noco%l_noco .AND. (.NOT. noco%l_soc)
-      ! A.1: input%l_real queda TRUE con inversion aunque haya SOC (n_denmat=0);
-      ! leer un espinor complejo en buffer real mata la parte imaginaria del MMN.
+      ! A.1: input%l_real stays TRUE with inversion even under SOC (n_denmat=0), and
+      ! reading a complex spinor into a real buffer kills the imaginary part of the MMN.
       spin12 = (/'WF1', 'WF2'/)
 
       !> The radial functions come from the factory, which keeps them for the operators
@@ -157,7 +157,7 @@ CONTAINS
 
          jspin_rad_done = -1
          DO jspin_comp = MERGE(1, jspin, l_wannierlib_spinors), MERGE(2, jspin, l_wannierlib_spinors)
-            ! jspin_comp = record del eig (spinor up/down); jspin_rad = indice radial.
+            ! jspin_comp = the eig record (spinor up/down); jspin_rad = the radial index.
             jspin_rad = radial_slot(radfun, jspin_comp)
             !> These depend on the radial set and on nothing else in this loop. With a single
             !> potential both spinor components read the same set, so the second pass would

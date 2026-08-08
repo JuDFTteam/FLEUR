@@ -22,7 +22,7 @@ CONTAINS
     TYPE(t_mat), INTENT(IN) :: zMat_b
     INTEGER, INTENT(IN) :: gb(3)
     COMPLEX, INTENT(INOUT) :: mmnk(:,:)
-    INTEGER, INTENT(IN), OPTIONAL :: ioff, ioff_b   ! offset noco al bloque spin-down (nv(1)+nlotot)
+    INTEGER, INTENT(IN), OPTIONAL :: ioff, ioff_b   ! noco offset to the spin-down block (nv(1)+nlotot)
 
     INTEGER :: nbnd
     COMPLEX, ALLOCATABLE :: stepf_c(:, :)

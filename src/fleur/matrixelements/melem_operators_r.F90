@@ -246,8 +246,9 @@ CONTAINS
         CALL melem_build_berry_aw_r(this, cell, kpts, mmn_loc, gk_loc, u_opt, u_matrix, bmesh, mpi_comm, &
                                          aw_r, aw_irvec, aw_ndegen, aw_nrpts)
         IF (irank == 0) CALL melem_write_ar(this, aw_r, aw_irvec, aw_nrpts, TRIM(wfpref))
-        !> Y la forma invariante, que es otra cantidad y lleva otro nombre: la de arriba
-        !> alimenta Berry y la velocidad anomala, esta es en la que B y F estan construidas.
+        !> And the translationally invariant form, which is a different quantity under a
+        !> different name: the one above feeds Berry and the anomalous velocity, this one
+        !> is what B and F are built in.
         CALL melem_write_ar_ti(this, cell, kpts, u_matrix, u_opt, mmn_loc, gk_loc, &
                                bmesh, aw_irvec, aw_nrpts, mpi_comm, irank, TRIM(wfpref))
         IF (ALLOCATED(aw_r)) DEALLOCATE(aw_r, aw_irvec, aw_ndegen)

@@ -51,11 +51,11 @@ CONTAINS
             lm = atoms%lmax(n)*(atoms%lmax(n) + 2)
             DO r1 = 1, maxval(abc(n)%n_r)
                DO r2 = 1, maxval(abc_b(n)%n_r)
-                  ! M_MT = phasefac * A . (conjg(B).ujug)^T  (convencion de Daniel:
-                  ! conjg(abc_b) aqui + mmn=conjg(mmn) en main). Se usa matmul porque el
-                  ! zgemm previo pasaba ujug rebanado con leading-dim lm+1 (en vez de
-                  ! lmd+1, como el clasico) -> MKL rechazaba (params 8/10) y la parte MT
-                  ! quedaba en 0. Equivalente exacto a la intencion del zgemm.
+                  ! M_MT = phasefac * A . (conjg(B).ujug)^T  (Daniel's convention:
+                  ! conjg(abc_b) here + mmn=conjg(mmn) in main). matmul rather than zgemm:
+                  ! the previous zgemm passed a slice of ujug with leading dimension lm+1
+                  ! instead of lmd+1, which MKL rejected on parameters 8/10, leaving the
+                  ! muffin-tin part at zero. This is exactly what that zgemm meant to do.
                   mmn = mmn + phasefac*matmul(abc(n)%cof(:, 0:lm, r1, nn), &
                         transpose(matmul(conjg(abc_b(n)%cof(:, 0:lm, r2, nn)), ujug(0:lm, 0:lm, r1, r2, n, nene))))
                enddo

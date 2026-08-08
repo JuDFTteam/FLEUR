@@ -44,8 +44,8 @@ CONTAINS
     TYPE(t_noco), INTENT(IN) :: noco
     TYPE(t_nococonv), INTENT(IN) :: nococonv
     TYPE(t_abc), INTENT(IN) :: abc(:)
-    INTEGER, INTENT(IN) :: jspin       ! spin fisico (record del eig)
-    INTEGER, INTENT(IN) :: jspin_rad   ! indice radial (=1 si jspins=1)
+    INTEGER, INTENT(IN) :: jspin       ! physical spin (the eig record)
+    INTEGER, INTENT(IN) :: jspin_rad   ! radial index (=1 when jspins=1)
     INTEGER, INTENT(IN) :: eig_id
     TYPE(t_stars), INTENT(IN) :: stars
     TYPE(t_lapw), INTENT(IN) :: lapw

@@ -9,7 +9,7 @@
 !>  differs per operator is only the format, selected here by `fmt`:
 !>    'hr'      Wannier90 seedname_hr.dat : header + ndegen block + H(R) in eV
 !>    'r'       Wannier90 seedname_r.dat  : header + A(R) in Angstrom, 3 components
-!>    'rti'     como 'r', pero la forma INVARIANTE BAJO TRASLACION (centrada en r_avg)
+!>    'rti'     like 'r', but the TRANSLATIONALLY INVARIANT form (centred on r_avg)
 !>    'bmn'     Wannier90-like            : header + B(R)=<0n|H r|Rm> in eV*Ang, 3 comps
 !>    'soc'     R1 R2 R3  i j jj ii  Re Im   (2x2 spinor blocks -> rssocmat.1)
 !>    'generic' R1 R2 R3  i j comp   Re Im   (spin -> rspauli.1, orbital -> anglmomrs.*)

@@ -110,10 +110,11 @@ CONTAINS
          ALLOCATE (this%soc0(manifold%num_bands, manifold%num_bands, 1, nkc_loc), source=cmplx(0.0, 0.0))
          ALLOCATE (this%soc4(manifold%num_bands, manifold%num_bands, 4, nkc_loc), source=cmplx(0.0, 0.0))
       END IF
-      !> Y si no, no se reservan. Un tapon (1,1,1,1) es un array VALIDO con la forma
-      !> equivocada: indexarlo como si tuviera la buena no falla, solo devuelve lo que haya.
-      !> Sin reservar no hay nada que indexar mal, y quien lo pase tiene que declararlo
-      !> ALLOCATABLE y decidir que hace cuando no esta.
+      !> Otherwise they are not allocated at all. A (1,1,1,1) stub is a VALID array of
+      !> the wrong shape: indexing it as if it had the right one does not fail, it
+      !> returns whatever is there. Unallocated there is nothing to index wrongly, and
+      !> whoever passes it on has to declare it ALLOCATABLE and decide what to do when
+      !> it is absent.
 
       !> L is the one slice both paths fill, so both fill the same array. n_channels is 1 for
       !> spinors and 2 for separate channels, and the two cases never overlap.
@@ -272,8 +273,8 @@ CONTAINS
             CALL matrix_element_factory(spinop, eig_id, ikpt, input, atoms, sym, cell, noco, &
                                         nococonv, enpara, lapw, vtot, fmpi, ev_list=ev_list, &
                                         l_both_spinors=l_spinor_records, kpts=kpts)
-            !> Los invariantes genericos, una vez por corrida. En k=1 y no en el primer k
-            !> LOCAL: asi lo imprime el rango que posee ese k y no los cuatro a la vez.
+            !> The generic invariants, once per run. On k = 1 and not on the first LOCAL
+            !> k, so the rank that owns it reports and the others stay quiet.
             IF (ikpt == 1) CALL melem_check_provider(spinop, 'spin', ikpt)
             IF (this%n_channels == 1) THEN
                CALL melem_pauli_from_blocks(spinop%mat(1,1)%data_c, spinop%mat(2,2)%data_c, &

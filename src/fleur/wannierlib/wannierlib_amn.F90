@@ -30,8 +30,8 @@ CONTAINS
     TYPE(t_radfun), INTENT(IN) :: radfun(atoms%ntype)
     TYPE(t_abc), INTENT(IN) :: abc(atoms%ntype)
     LOGICAL, INTENT(IN) :: l_nocosoc
-    INTEGER, INTENT(IN) :: jspin       ! spin fisico (filtro de proyecciones)
-    INTEGER, INTENT(IN) :: jspin_rad   ! indice radial (=1 si jspins=1)
+    INTEGER, INTENT(IN) :: jspin       ! physical spin (filters the projections)
+    INTEGER, INTENT(IN) :: jspin_rad   ! radial index (=1 when jspins=1)
     COMPLEX, INTENT(INOUT) :: amn(:,:)
     
     INTEGER :: nwf, nat_local, ntyp, ne, l, m, lm, j, mp, ir
