@@ -66,6 +66,7 @@
           <operator name="spin"/>
           <operator name="orbital"/>
           <operator name="position"/>
+          <operator name="bmn"/>
         </operators_r>
         <interpolation>
           <path listName="w222"/>

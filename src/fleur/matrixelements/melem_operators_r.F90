@@ -23,7 +23,7 @@
 !>  t_melem_bmesh, so this module is free of the Wannier90 library.
 MODULE m_melem_operators_r
   USE m_juDFT
-  USE m_constants, ONLY : oUnit, hartree_to_ev_const
+  USE m_constants, ONLY : oUnit, hartree_to_ev_const, tpi_const
   USE m_types_cell
   USE m_types_kpts
   USE m_types_melem_manifold, ONLY : t_melem_manifold
@@ -36,7 +36,7 @@ MODULE m_melem_operators_r
   PRIVATE
   PUBLIC :: melem_write_operators_r, melem_op_rs_distributed, melem_build_berry_aw_r
   PUBLIC :: melem_check_berry_centres, melem_write_hr, melem_write_ar
-  PUBLIC :: melem_write_wig_once
+  PUBLIC :: melem_write_wig_once, melem_write_bmn
 CONTAINS
 
   ! Build the Wannier-gauge Berry connection in real space A^(W)_alpha(R), distributed:
@@ -139,18 +139,16 @@ CONTAINS
   END SUBROUTINE melem_check_berry_centres
 
   ! Write H(R) in Wannier90 seedname_hr.dat format (energies in eV). Rank-0 only.
-  SUBROUTINE melem_write_hr(this, cell, kpts, ham_k, wfpref)
+  SUBROUTINE melem_write_hr(this, cell, kpts, hr, irvec, ndegen, nrpts, wfpref)
     TYPE(t_melem_manifold), INTENT(IN) :: this
     TYPE(t_cell), INTENT(IN) :: cell
     TYPE(t_kpts), INTENT(IN) :: kpts
-    COMPLEX, INTENT(IN) :: ham_k(:, :, :)
+    COMPLEX, INTENT(IN) :: hr(:, :, :)                 ! H(R), already transformed
+    INTEGER, INTENT(IN) :: irvec(:, :), ndegen(:), nrpts
     CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: wfpref   ! seedname prefix 'WF1'/'WF2' (collinear jspins=2 channel); default 'WF1'
-    COMPLEX, ALLOCATABLE :: hr(:, :, :)
     COMPLEX, ALLOCATABLE :: hr4(:, :, :, :)   ! one-component view for the shared writer
-    INTEGER, ALLOCATABLE :: irvec(:, :), ndegen(:)
-    INTEGER :: nrpts, nw, irpt, i, j, iu, c
+    INTEGER :: nw, irpt, i, j, iu, c
     CHARACTER(LEN=64) :: fn
-    CALL melem_ft_to_real(cell, ham_k, kpts, hr, irvec, ndegen, nrpts)
     nw = this%num_wann
     fn = 'WF1_hr'
     IF (PRESENT(wfpref)) fn = TRIM(wfpref)//'_hr'
@@ -158,7 +156,6 @@ CONTAINS
     CALL melem_write_realspace(hr4, irvec, ndegen, nrpts, nw, 1, 'hr', TRIM(fn)//'.dat', 0)
     DEALLOCATE(hr4)
     WRITE(oUnit,'(a)') 'wannierlib: wrote '//TRIM(fn)//'.dat (H(R), eV)'
-    DEALLOCATE(hr, irvec, ndegen)
   END SUBROUTINE melem_write_hr
 
   ! Write A(R) = <0n|r_alpha|Rm> in Wannier90 seedname_r.dat format (positions in Angstrom). Rank-0.
@@ -206,6 +203,10 @@ CONTAINS
     LOGICAL :: l_wig_done
     CHARACTER(LEN=8) :: wfpref                       ! 'WF1'/'WF2' seedname prefix for H(R)/position
     INTEGER, ALLOCATABLE :: gk_loc(:), aw_irvec(:, :), aw_ndegen(:)
+    INTEGER, ALLOCATABLE :: hr_irvec(:, :), hr_ndegen(:)
+    COMPLEX, ALLOCATABLE :: ham_r(:, :, :)
+    INTEGER :: hr_nrpts
+    LOGICAL :: l_need_hr
     COMPLEX, ALLOCATABLE :: ham_k(:, :, :), aw_r(:, :, :, :), o0l(:, :, :, :), vloc(:, :, :)
     IF (.NOT. request%l_operators_r .OR. request%n_op_r < 1) RETURN   ! all ranks (reduce is collective)
     CALL timestart('melem_write_operators_r')
@@ -222,14 +223,22 @@ CONTAINS
     ! collinear jspins=2: per-channel seedname WF1/WF2 for H(R)/position; spinor case keeps WF1.
     WRITE(wfpref, '(a,i0)') 'WF', wf_channel
     IF (irank == 0) THEN; l_wig_done = .FALSE.; CALL melem_write_wig_once(cell, kpts, l_wig_done); END IF
+    !> H(R) is wanted by the Hamiltonian export and by B(R). Built once, on rank 0, which
+    !> is where both of them write from.
+    l_need_hr = request%has_op_r('hamiltonian') .OR. request%has_op_r('bmn')
+    IF (l_need_hr .AND. irank == 0) THEN
+      CALL melem_build_hamk(this, eig, u_matrix, u_opt, ham_k)
+      CALL melem_ft_to_real(cell, ham_k, kpts, ham_r, hr_irvec, hr_ndegen, hr_nrpts)
+      DEALLOCATE(ham_k)
+    END IF
     DO iop = 1, request%n_op_r
       SELECT CASE (TRIM(request%op_r_name(iop)))
-      CASE ('hamiltonian')   ! cheap, no coarse array -> rank 0 serial
-        IF (irank == 0) THEN
-          CALL melem_build_hamk(this, eig, u_matrix, u_opt, ham_k)
-          CALL melem_write_hr(this, cell, kpts, ham_k, TRIM(wfpref))
-          DEALLOCATE(ham_k)
-        END IF
+      CASE ('hamiltonian')   ! H(R) already built above
+        IF (irank == 0) CALL melem_write_hr(this, cell, kpts, ham_r, hr_irvec, hr_ndegen, &
+                                            hr_nrpts, TRIM(wfpref))
+      CASE ('bmn')           ! collective: the k-sum is distributed like the others
+        CALL melem_write_bmn(this, cell, kpts, eig, u_matrix, u_opt, mmn_loc, gk_loc, &
+                             bmesh, ham_r, hr_irvec, hr_nrpts, mpi_comm, irank, TRIM(wfpref))
       CASE ('position')      ! Berry connection A^(W)(R)=A(R): distributed reduce over the local overlaps
         CALL melem_build_berry_aw_r(this, cell, kpts, mmn_loc, gk_loc, u_opt, u_matrix, bmesh, mpi_comm, &
                                          aw_r, aw_irvec, aw_ndegen, aw_nrpts)
@@ -263,6 +272,7 @@ CONTAINS
                        '" is an accepted operator with no branch in this pass')
       END SELECT
     END DO
+    IF (ALLOCATED(ham_r)) DEALLOCATE(ham_r, hr_irvec, hr_ndegen)
     DEALLOCATE(gk_loc, vloc)
     CALL timestop('melem_write_operators_r')
   END SUBROUTINE melem_write_operators_r
@@ -306,6 +316,141 @@ CONTAINS
     IF (ALLOCATED(or_)) DEALLOCATE(or_)
     IF (ALLOCATED(irvec)) DEALLOCATE(irvec, ndegen)
   END SUBROUTINE melem_op_rs_distributed
+
+  ! ---------------------------------------------------------------------------
+  ! B(R) = <0n| H r_alpha |Rm>, Eq. (83) of Lopez, Vanderbilt, Thonhauser and Souza,
+  ! PRB 85, 014435 (2012), in the translationally invariant form (the r_avg centring).
+  !
+  ! It needs NO uHu. The Hamiltonian enters only through the ab-initio eigenvalues:
+  !
+  !     M^H(k,b) = V(k)^dagger diag(eig(k)) M^(0,b)(k) V(k+b)
+  !
+  ! which is the same neighbour overlap the wannierization was given, weighted by the
+  ! eigenvalues before the gauge is applied on the left.
+  !
+  ! The Fourier sum is NOT the shared one in m_melem_ft: the phase carries an extra
+  ! b . (r_avg - R) that depends on the pair (n,m) through their Wannier centres, so the
+  ! transform cannot be factored out of the band loop. That centring is what makes the
+  ! result independent of where the cell origin sits.
+  !
+  ! NOT VALIDATED NUMERICALLY. There is no reference for B in the test suite and none of
+  ! the reference-free bounds constrains it. What would: B is LINEAR in the eigenvalues,
+  ! so shifting the whole spectrum by a constant must change B by exactly that constant
+  ! times A(R) -- and A is already anchored. That test is not written yet, and until it is
+  ! (or until a reference arrives) the relative normalisation of the two terms below is
+  ! asserted by construction, not measured.
+  SUBROUTINE melem_write_bmn(this, cell, kpts, eig, u_matrix, u_opt, mmn_loc, gk_loc, &
+                             bmesh, ham_r, irvec, nrpts, mpicm, irank, wfpref)
+#ifdef CPP_MPI
+    use mpi
+#endif
+    TYPE(t_melem_manifold), INTENT(IN) :: this
+    TYPE(t_cell), INTENT(IN) :: cell
+    TYPE(t_kpts), INTENT(IN) :: kpts
+    REAL,    INTENT(IN) :: eig(:, :)                 ! (nb,nk) ab-initio, Hartree
+    COMPLEX, INTENT(IN) :: u_matrix(:, :, :)         ! (nw,nw,nk)
+    COMPLEX, INTENT(IN) :: u_opt(:, :, :)            ! (nb,nw,nk)
+    COMPLEX, INTENT(IN) :: mmn_loc(:, :, :, :)       ! (nb,nb,nntot,nk_loc) this rank's slice
+    INTEGER, INTENT(IN) :: gk_loc(:)                 ! (nk_loc) global k of each slice entry
+    TYPE(t_melem_bmesh), INTENT(IN) :: bmesh
+    COMPLEX, INTENT(IN) :: ham_r(:, :, :)            ! (nw,nw,nrpts) H(R), Hartree
+    INTEGER, INTENT(IN) :: irvec(:, :), nrpts, mpicm, irank
+    CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: wfpref
+
+    INTEGER :: nb, nw, nk, nnt, nkl, kl, k, kb, nn, a, i, j, m, n, irpt, ierr
+    REAL    :: r_cart(3), r_avg(3), rdotk0, rdotk
+    COMPLEX :: fac
+    COMPLEX, ALLOCATABLE :: Vk(:, :), Vkb(:, :), tmp(:, :), mh(:, :, :, :), br(:, :, :, :)
+    CHARACTER(LEN=64) :: fn
+
+    nb = this%num_bands; nw = this%num_wann; nk = kpts%nkptf
+    nnt = bmesh%nntot; nkl = SIZE(gk_loc)
+    IF (nnt < 1 .OR. .NOT. ALLOCATED(bmesh%wb) .OR. .NOT. ALLOCATED(bmesh%centres)) THEN
+      IF (irank == 0) WRITE(oUnit,'(a)') &
+        'wannierlib operators_r: B(R) needs the b-shell weights and the Wannier centres -> skipped'
+      RETURN
+    END IF
+
+    ! ---- M^H(k,b) = V(k)^dag diag(eig) M V(k+b) on this rank's k-slice ----
+    ALLOCATE(mh(nw, nw, nnt, MAX(1, nkl)), source=CMPLX(0.0, 0.0))
+    ALLOCATE(Vk(nb, nw), Vkb(nb, nw), tmp(nb, nw))
+    DO kl = 1, nkl
+      k = gk_loc(kl)
+      Vk = MATMUL(u_opt(:, :, k), u_matrix(:, :, k))
+      DO i = 1, nb                      ! the eigenvalue weighting acts on the k side
+        Vk(i, :) = eig(i, k) * Vk(i, :)
+      END DO
+      DO nn = 1, nnt
+        kb = bmesh%nnlist(k, nn)
+        Vkb = MATMUL(u_opt(:, :, kb), u_matrix(:, :, kb))
+        tmp = MATMUL(mmn_loc(:, :, nn, kl), Vkb)
+        mh(:, :, nn, kl) = MATMUL(CONJG(TRANSPOSE(Vk)), tmp)
+      END DO
+    END DO
+    DEALLOCATE(Vk, Vkb, tmp)
+
+    ! ---- the R sum, one phase per (n,m) because the centring depends on the pair ----
+    ALLOCATE(br(3, nw, nw, nrpts), source=CMPLX(0.0, 0.0))
+    DO irpt = 1, nrpts
+      r_cart = MATMUL(cell%amat, REAL(irvec(:, irpt)))
+      DO m = 1, nw
+        DO n = 1, nw
+          r_avg = 0.5 * (bmesh%centres(:, m) + bmesh%centres(:, n) + r_cart)
+          DO kl = 1, nkl
+            k = gk_loc(kl)
+            rdotk0 = tpi_const * DOT_PRODUCT(kpts%bkf(:, k), REAL(irvec(:, irpt)))
+            DO nn = 1, nnt
+              rdotk = rdotk0 - DOT_PRODUCT(bmesh%bk(:, nn, k), r_avg - r_cart)
+              fac = EXP(CMPLX(0.0, -rdotk)) / REAL(nk)
+              DO a = 1, 3
+                br(a, n, m, irpt) = br(a, n, m, irpt) + &
+                  CMPLX(0.0, bmesh%wb(nn) * bmesh%bk(a, nn, k)) * mh(n, m, nn, kl) * fac
+              END DO
+            END DO
+          END DO
+        END DO
+      END DO
+    END DO
+    DEALLOCATE(mh)
+#ifdef CPP_MPI
+    CALL MPI_ALLREDUCE(MPI_IN_PLACE, br, SIZE(br), MPI_DOUBLE_COMPLEX, MPI_SUM, mpicm, ierr)
+#endif
+
+    ! ---- the H(R) term, added once and only where H(R) exists ----
+    IF (irank == 0) THEN
+    DO irpt = 1, nrpts
+      r_cart = MATMUL(cell%amat, REAL(irvec(:, irpt)))
+      DO m = 1, nw
+        DO n = 1, nw
+          r_avg = 0.5 * (bmesh%centres(:, m) + bmesh%centres(:, n) + r_cart)
+          DO a = 1, 3
+            br(a, n, m, irpt) = br(a, n, m, irpt) + (r_avg(a) - r_cart(a)) * ham_r(n, m, irpt)
+          END DO
+        END DO
+      END DO
+    END DO
+    END IF
+
+    IF (irank == 0) THEN
+      fn = 'WF1_bmn'
+      IF (PRESENT(wfpref)) fn = TRIM(wfpref)//'_bmn'
+      BLOCK
+        COMPLEX, ALLOCATABLE :: b4(:, :, :, :)
+        ALLOCATE(b4(nw, nw, nrpts, 3))
+        DO a = 1, 3
+          DO irpt = 1, nrpts
+            b4(:, :, irpt, a) = br(a, :, :, irpt)
+          END DO
+        END DO
+        CALL melem_write_realspace(b4, irvec, [(0, i = 1, nrpts)], nrpts, nw, 3, 'bmn', &
+                                   TRIM(fn)//'.dat', 0)
+        DEALLOCATE(b4)
+      END BLOCK
+      WRITE(oUnit,'(a)') 'wannierlib: wrote '//TRIM(fn)//'.dat (B(R)=<0n|H r|Rm>, eV*Ang) '// &
+                         '-- NOT numerically validated, see melem_write_bmn'
+    END IF
+    DEALLOCATE(br)
+  END SUBROUTINE melem_write_bmn
 
   ! wig_vectors (once): idx R1 R2 R3 ndegen (list-directed; = orbitrans rpts).
   SUBROUTINE melem_write_wig_once(cell, kpts, done)
