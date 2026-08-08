@@ -12,6 +12,7 @@ src/fleur/matrixelements/melem_mmkb_int.F90
 src/fleur/matrixelements/melem_mmkb_sph.F90
 src/fleur/matrixelements/melem_ujugaunt.F90
 src/fleur/matrixelements/melem_spin.F90
+src/fleur/matrixelements/melem_check.F90
 src/fleur/matrixelements/melem_domains.F90
 src/fleur/matrixelements/melem_operators_r.F90
 src/fleur/matrixelements/melem_interpolate_ham.F90
