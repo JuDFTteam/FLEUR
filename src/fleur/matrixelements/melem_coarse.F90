@@ -38,6 +38,7 @@ MODULE m_melem_coarse
    USE m_types_rsoc, ONLY: t_rsoc
    USE m_types_matelements_orbital, ONLY: t_matelements_orbital
    USE m_matrix_element_factory, ONLY: matrix_element_factory
+   USE m_melem_check, ONLY: melem_check_provider
    IMPLICIT NONE
    PRIVATE
 
@@ -271,6 +272,9 @@ CONTAINS
             CALL matrix_element_factory(spinop, eig_id, ikpt, input, atoms, sym, cell, noco, &
                                         nococonv, enpara, lapw, vtot, fmpi, ev_list=ev_list, &
                                         l_both_spinors=l_spinor_records, kpts=kpts)
+            !> Los invariantes genericos, una vez por corrida. En k=1 y no en el primer k
+            !> LOCAL: asi lo imprime el rango que posee ese k y no los cuatro a la vez.
+            IF (ikpt == 1) CALL melem_check_provider(spinop, 'spin', ikpt)
             IF (this%n_channels == 1) THEN
                CALL melem_pauli_from_blocks(spinop%mat(1,1)%data_c, spinop%mat(2,2)%data_c, &
                                             spinop%mat(1,2)%data_c, spinop%mat(2,1)%data_c, &
@@ -294,6 +298,8 @@ CONTAINS
                                               cell, noco, nococonv, enpara, lapw, vtot, fmpi, &
                                               ev_list=ev_list, l_both_spinors=l_spinor_records, &
                                               kpts=kpts)
+                  IF (ikpt == 1 .AND. na == 1 .AND. ch == 1) &
+                     CALL melem_check_provider(orbop(na, ch), 'orbital', ikpt)
                   this%l0(:, :, 1:3, na, ch, il) = orbop(na, ch)%comp(:, :, 1:3)
                END DO
             END DO
@@ -307,6 +313,7 @@ CONTAINS
             CALL matrix_element_factory(socop, eig_id, ikpt, input, atoms, sym, cell, noco, &
                                         nococonv, enpara, lapw, vtot, fmpi, ev_list=ev_list, &
                                         l_both_spinors=l_spinor_records, kpts=kpts)
+            IF (ikpt == 1) CALL melem_check_provider(socop, 'spin_orbit', ikpt)
             this%soc4(:, :, 1, il) = socop%mat(1, 1)%data_c
             this%soc4(:, :, 2, il) = socop%mat(1, 2)%data_c
             this%soc4(:, :, 3, il) = socop%mat(2, 1)%data_c
