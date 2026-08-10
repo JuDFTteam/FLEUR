@@ -26,8 +26,8 @@
 !>  components -- is the most common one. The live example of the same shape with a
 !>  real operator in it is m_types_matelements_orbital; read that one next.
 !>
-!>  See also: the tutorial in August/refactor/tutorial_operadores.pdf, and the
-!>  checklist in this directory's README.md for the other six files to touch.
+!>  See also, in this directory: README.md for the other six files to touch, and
+!>  tutorial_operators.md for the reasoning behind each of them.
 MODULE m_types_matelements_template
    USE m_types_matelements
    USE m_types_mat

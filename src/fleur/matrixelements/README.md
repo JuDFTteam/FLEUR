@@ -1,7 +1,8 @@
 # `matrixelements` — adding an operator
 
-Full tutorial with the reasoning: `August/refactor/tutorial_operadores.pdf`.
-This file is the checklist.
+This file is the checklist. `tutorial_operators.md`, next to it, carries the reasoning:
+the contract of each routine you have to write, the index layout of the coefficient
+arrays, and a worked example.
 
 ## Where things live
 
