@@ -14,8 +14,10 @@ Everything that needs the Wannier gauge `V = u_opt . u_matrix` — the rotation,
 Fourier transform to `R`, the band interpolation, the `O(R)` export and its file
 formats — lives in `../wannierlib/postproc/`.
 
-The seam between the two is two types, `t_melem_manifold` (the band window) and
-`t_melem_request` (which operators were asked for), both of which stay here.
+The seam between the two is two types, `t_melem_window` (which bands were selected)
+and `t_melem_request` (which operators were asked for), both of which stay here.
+`t_melem_manifold` extends the window with `num_wann` and the disentanglement edges
+and lives in `postproc`, so nothing here knows what the bands were selected for.
 `postproc` depends on this directory; this directory depends on nothing of it.
 
 ## First: which of the three are you adding?

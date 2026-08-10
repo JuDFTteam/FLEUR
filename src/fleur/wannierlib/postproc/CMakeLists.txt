@@ -1,4 +1,5 @@
 set(fleur_F90 ${fleur_F90}
+src/fleur/wannierlib/postproc/types_melem_manifold.F90
 src/fleur/wannierlib/postproc/types_melem_domains.F90
 src/fleur/wannierlib/postproc/types_melem_bmesh.F90
 src/fleur/wannierlib/postproc/melem_ft.F90

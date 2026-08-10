@@ -5,23 +5,22 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_types_melem_manifold
-   !> Which Bloch bands the matrix elements are built on: where the window sits in the
-   !> eig file, how many bands that is, how many Wannier functions come out of them, and
-   !> the energy window that selected them.
+   !> The band window plus what the wannierisation makes of it: how many Wannier functions
+   !> come out of those bands, and the energy window that selected them.
    !>
-   !> The position and the size are the same fact stated twice, and the code that reads
-   !> the eig file needs the position while the code that interpolates needs the size.
-   !> Keeping both here is what lets init check that they agree.
+   !> It EXTENDS t_melem_window rather than repeating it, so a consumer that only needs the
+   !> selection takes the parent and one that needs the Wannier side takes this. That is
+   !> what keeps num_wann and the disentanglement window out of the operator layer, which
+   !> has no use for either: the coarse pass is handed the window and never learns what the
+   !> bands were selected for.
 
+   USE m_types_melem_window
    USE m_judft
    IMPLICIT NONE
    PRIVATE
 
-   TYPE t_melem_manifold
-      INTEGER :: num_bands   = -1      !> Bloch bands entering the disentanglement
+   TYPE, EXTENDS(t_melem_window) :: t_melem_manifold
       INTEGER :: num_wann    = -1      !> Wannier functions coming out
-      INTEGER :: min_band    = -1      !> first band of the window, counted in the eig file
-      INTEGER :: max_band    = -1      !> last one
       REAL    :: dis_win_min = 0.0     !> lower edge of the energy window
       REAL    :: dis_win_max = 0.0     !> upper edge
    CONTAINS
@@ -39,10 +38,9 @@ CONTAINS
       REAL,                    INTENT(IN)  :: dis_win_min, dis_win_max
       INTEGER,                 INTENT(IN)  :: min_band, max_band
 
-      this%num_bands   = num_bands
+      CALL this%init_window(num_bands, min_band, max_band)
+
       this%num_wann    = num_wann
-      this%min_band    = min_band
-      this%max_band    = max_band
       this%dis_win_min = dis_win_min
       this%dis_win_max = dis_win_max
 
@@ -53,14 +51,6 @@ CONTAINS
                           &no more of them than bands", calledby="melem_manifold_init")
       IF (dis_win_max < dis_win_min) &
          CALL judft_error("t_melem_manifold: the energy window is inverted", &
-                          calledby="melem_manifold_init")
-      !> The window is read from three attributes of which any one may be left out and
-      !> derived from the other two, so all three given can disagree.
-      IF (min_band < 1 .OR. max_band < min_band) &
-         CALL judft_error("t_melem_manifold: the band window is empty or starts before the &
-                          &first band", calledby="melem_manifold_init")
-      IF (max_band - min_band + 1 /= num_bands) &
-         CALL judft_error("t_melem_manifold: the band window does not hold num_bands bands", &
                           calledby="melem_manifold_init")
    END SUBROUTINE melem_manifold_init
 

@@ -31,7 +31,7 @@ MODULE m_melem_coarse
    USE m_types_stars
    USE m_types_mat
    USE m_types_melem_request, ONLY: t_melem_request
-   USE m_types_melem_manifold, ONLY: t_melem_manifold
+   USE m_types_melem_window, ONLY: t_melem_window
    USE m_melem_spin, ONLY: melem_pauli_from_blocks, melem_spin_sumrule
    USE m_types_matelements_spin, ONLY: t_matelements_spin
    USE m_types_matelements_soc, ONLY: t_matelements_soc
@@ -75,10 +75,10 @@ MODULE m_melem_coarse
 
 CONTAINS
 
-   SUBROUTINE melem_coarse_init(this, request, manifold, atoms, input, kpts, fmpi, distk, l_spinors)
+   SUBROUTINE melem_coarse_init(this, request, window, atoms, input, kpts, fmpi, distk, l_spinors)
       CLASS(t_melem_coarse), INTENT(INOUT) :: this
       TYPE(t_melem_request), INTENT(IN) :: request
-      TYPE(t_melem_manifold), INTENT(IN) :: manifold
+      CLASS(t_melem_window), INTENT(IN) :: window
       TYPE(t_atoms), INTENT(IN) :: atoms
       TYPE(t_input), INTENT(IN) :: input
       TYPE(t_kpts), INTENT(IN) :: kpts
@@ -103,9 +103,9 @@ CONTAINS
       nkc_loc = MAX(1, COUNT(distk == fmpi%irank))
 
       IF (this%l_active) THEN
-         ALLOCATE (this%s0(manifold%num_bands, manifold%num_bands, 3, nkc_loc), source=cmplx(0.0, 0.0))
-         ALLOCATE (this%soc0(manifold%num_bands, manifold%num_bands, 1, nkc_loc), source=cmplx(0.0, 0.0))
-         ALLOCATE (this%soc4(manifold%num_bands, manifold%num_bands, 4, nkc_loc), source=cmplx(0.0, 0.0))
+         ALLOCATE (this%s0(window%num_bands, window%num_bands, 3, nkc_loc), source=cmplx(0.0, 0.0))
+         ALLOCATE (this%soc0(window%num_bands, window%num_bands, 1, nkc_loc), source=cmplx(0.0, 0.0))
+         ALLOCATE (this%soc4(window%num_bands, window%num_bands, 4, nkc_loc), source=cmplx(0.0, 0.0))
       END IF
       !> Otherwise they are not allocated at all. A (1,1,1,1) stub is a VALID array of
       !> the wrong shape: indexing it as if it had the right one does not fail, it
@@ -116,7 +116,7 @@ CONTAINS
       !> L is the one slice both paths fill, so both fill the same array. n_channels is 1 for
       !> spinors and 2 for separate channels, and the two cases never overlap.
       IF (this%l_active .OR. l_ch_orb) THEN
-         ALLOCATE (this%l0(manifold%num_bands, manifold%num_bands, 3, atoms%nat, &
+         ALLOCATE (this%l0(window%num_bands, window%num_bands, 3, atoms%nat, &
                            this%n_channels, nkc_loc), source=cmplx(0.0, 0.0))
       END IF
 
@@ -157,12 +157,12 @@ CONTAINS
       END IF
 
       IF (l_ch_spin) THEN
-         ALLOCATE (this%x0(manifold%num_bands, manifold%num_bands, MAX(1, COUNT(distk == fmpi%irank))), &
+         ALLOCATE (this%x0(window%num_bands, window%num_bands, MAX(1, COUNT(distk == fmpi%irank))), &
                    source=cmplx(0.0, 0.0))
       END IF
    END SUBROUTINE melem_coarse_init
 
-   SUBROUTINE melem_coarse_calc(this, request, manifold, atoms, input, sym, cell, noco, nococonv, kpts, &
+   SUBROUTINE melem_coarse_calc(this, request, window, atoms, input, sym, cell, noco, nococonv, kpts, &
                                 stars, enpara, fmpi, vtot, eig_id, distk)
       !> One pass over this rank's k-slice, building every requested operator through the
       !> factory. Spin channels that wannierise separately are a loop, not a second pass:
@@ -170,7 +170,7 @@ CONTAINS
       !> and, for the spin operator, which part of it anyone will use.
       CLASS(t_melem_coarse), INTENT(INOUT) :: this
       TYPE(t_melem_request), INTENT(IN) :: request
-      TYPE(t_melem_manifold), INTENT(IN) :: manifold
+      CLASS(t_melem_window), INTENT(IN) :: window
       TYPE(t_atoms), INTENT(IN) :: atoms
       TYPE(t_input), INTENT(IN) :: input
       TYPE(t_sym), INTENT(IN) :: sym
@@ -245,7 +245,7 @@ CONTAINS
       END IF
 
       !> One band window for every operator at every k, in the form the factory selects with.
-      ev_list = [(ib, ib = manifold%min_band, manifold%max_band)]
+      ev_list = [(ib, ib = window%min_band, window%max_band)]
 
       !> Records 1 and 2 hold the two halves of one spinor whenever the eigenvectors are not
       !> already stored as whole 2N spinors, which is the l_soc=T, l_noco=F case. Two channels

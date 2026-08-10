@@ -1,6 +1,6 @@
 set(fleur_F90 ${fleur_F90}
 src/fleur/matrixelements/types_spinor_layout.F90
-src/fleur/matrixelements/types_melem_manifold.F90
+src/fleur/matrixelements/types_melem_window.F90
 src/fleur/matrixelements/types_melem_request.F90
 src/fleur/matrixelements/melem_overlap.F90
 src/fleur/matrixelements/melem_mmkb_int.F90
