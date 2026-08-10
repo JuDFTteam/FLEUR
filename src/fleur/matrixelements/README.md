@@ -3,6 +3,21 @@
 Full tutorial with the reasoning: `August/refactor/tutorial_operadores.pdf`.
 This file is the checklist.
 
+## Where things live
+
+This directory holds what computes matrix elements: the providers, the factory that
+reads the states and their coefficients, the neighbour overlaps, and the coarse pass
+that produces `O(k)` on the ab-initio eigenstates. Nothing here knows what a Wannier
+function is.
+
+Everything that needs the Wannier gauge `V = u_opt . u_matrix` — the rotation, the
+Fourier transform to `R`, the band interpolation, the `O(R)` export and its file
+formats — lives in `../wannierlib/postproc/`.
+
+The seam between the two is two types, `t_melem_manifold` (the band window) and
+`t_melem_request` (which operators were asked for), both of which stay here.
+`postproc` depends on this directory; this directory depends on nothing of it.
+
 ## First: which of the three are you adding?
 
 | | Examples | Work |
@@ -22,12 +37,12 @@ catalogue. `hamiltonian` is `V^dagger diag(E) V`; `position` comes from the `M_m
 | 2 | `matrixelements/CMakeLists.txt` | one line, **with** the path prefix |
 | 3 | `fleurinput/types_melem_optable.f90` | a row in `MELEM_OPERATORS` |
 | 4 | `melem_coarse.F90` | three places: the slice, the `ALLOCATE` behind `request%needs_op`, the fill inside the k loop |
-| 5 | `melem_run.F90` and/or `melem_operators_r.F90` | a `CASE` branch |
+| 5 | `../wannierlib/postproc/melem_run.F90` and/or `melem_operators_r.F90` | a `CASE` branch |
 | 6 | `types_melem_optable.f90` | a row in `WANNIERLIB_INTERP` and/or `WANNIERLIB_OPR` |
 | 7 | `fleur/io/xml/FleurInputSchema.xsd` | one `<xsd:enumeration>` |
 
-New on-disk format? Add a `CASE` in `melem_io.F90` — the only file that knows the
-layout. Do not open a file anywhere else.
+New on-disk format? Add a `CASE` in `../wannierlib/postproc/melem_io.F90` — the only
+file that knows the layout. Do not open a file anywhere else.
 
 ## Things that have actually cost us a run
 
