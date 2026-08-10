@@ -58,9 +58,6 @@ MODULE m_melem_coarse
       !> is built here with the other coarse matrices even though the operator itself cannot
       !> be assembled until both channels are wannierised.
       COMPLEX, ALLOCATABLE :: x0(:, :, :)         !< (nb,nb,nk_loc)
-      !> collinear jspins=2 only: the gauge V of each spin channel, needed by the combined 2N
-      !> spin operator.
-      COMPLEX, ALLOCATABLE :: v_ch(:, :, :, :)    !< (nb,nw,nkptf,2)
       !> How many spin channels wannierise separately: two when jspins=2 without spinors,
       !> one otherwise. It is a fact about the calculation, where the flags it replaces were
       !> a copy of what the request already said, kept next to it and able to disagree.
@@ -127,7 +124,7 @@ CONTAINS
       ! this case has a pass of its own. What it needs differs in kind: L per channel rather
       ! than one matrix over a spinor, and for the combined 2N spin operator (rspauli.1) only
       ! the cross-spin overlap, since that operator cannot be assembled until both channels
-      ! have wannierised and their gauges v_ch exist.
+      ! have wannierised and both gauges exist.
       !> An operator nobody will build must not reach the export: the slices stay at their
       !> stub size, the export reads them anyway, and what comes out is small enough to pass
       !> for numerical noise instead of for the absence of a calculation.
@@ -160,7 +157,6 @@ CONTAINS
       END IF
 
       IF (l_ch_spin) THEN
-         ALLOCATE (this%v_ch(manifold%num_bands, manifold%num_wann, kpts%nkptf, 2), source=cmplx(0.0, 0.0))
          ALLOCATE (this%x0(manifold%num_bands, manifold%num_bands, MAX(1, COUNT(distk == fmpi%irank))), &
                    source=cmplx(0.0, 0.0))
       END IF
@@ -335,7 +331,6 @@ CONTAINS
       IF (ALLOCATED(this%l0)) DEALLOCATE (this%l0)
       IF (ALLOCATED(this%soc0)) DEALLOCATE (this%soc0)
       IF (ALLOCATED(this%soc4)) DEALLOCATE (this%soc4)
-      IF (ALLOCATED(this%v_ch)) DEALLOCATE (this%v_ch)
       IF (ALLOCATED(this%x0)) DEALLOCATE (this%x0)
       this%n_channels = 1
    END SUBROUTINE melem_coarse_free

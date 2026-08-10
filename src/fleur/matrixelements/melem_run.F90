@@ -46,7 +46,7 @@ CONTAINS
       REAL, INTENT(IN) :: eig(:, :)                    !< (nb,nk)
       COMPLEX, INTENT(IN) :: u_matrix(:, :, :)         !< (nw,nw,nk) MLWF gauge
       COMPLEX, INTENT(IN) :: u_opt(:, :, :)            !< (nb,nw,nk) disentangled
-      TYPE(t_melem_coarse), INTENT(INOUT) :: coarse    !< INOUT: v_ch of this channel is filled
+      TYPE(t_melem_coarse), INTENT(IN) :: coarse
       COMPLEX, INTENT(IN) :: mmn(:, :, :, :)           !< (nb,nb,nntot,nk_loc) this rank's overlap slice
       TYPE(t_melem_bmesh), INTENT(IN) :: bmesh         !< b-shell weights (position/velocity operators)
       INTEGER, INTENT(IN) :: distk(:)
@@ -54,7 +54,7 @@ CONTAINS
       INTEGER, INTENT(IN), OPTIONAL :: wf_channel            !< collinear spin channel (1/2); default 1
       CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: spin_suffix  !< '_spin1'/'_spin2' collinear; empty otherwise
 
-      INTEGER :: iop, k, wf_ch, irank, mpi_comm
+      INTEGER :: iop, wf_ch, irank, mpi_comm
       INTEGER :: idom, ndom, nkl_c, jkl, aw_nrpts
       INTEGER, ALLOCATABLE :: gk_loc(:), aw_irvec(:, :), aw_ndegen(:)
       COMPLEX, ALLOCATABLE :: aw_r(:, :, :, :)         ! (nw,nw,nrpts,3) Wannier Berry connection A^(W)(R)
@@ -70,15 +70,6 @@ CONTAINS
       l_collinear = (LEN_TRIM(ssfx) > 0)   ! collinear jspins=2 -> per-channel operators_r (WF1/WF2)
 
       CALL timestart('melem_run')
-
-      ! (1) the full gauge V(k) = u_opt(k) . u_matrix(k) (disentangled + MLWF) of this channel,
-      ! needed by the collinear combined spin operator, which rotates the cross-spin overlap
-      ! with BOTH channels' V once they are both available.
-      IF (coarse%n_channels == 2 .AND. request%has_op_r('spin')) THEN
-         DO k = 1, SIZE(u_opt, 3)
-            coarse%v_ch(:, :, k, wf_ch) = MATMUL(u_opt(:, :, k), u_matrix(:, :, k))
-         END DO
-      END IF
 
       ! global-k indices owned by this rank, ascending order -> matches the per-rank coarse
       ! slices in `coarse` (built in the same distk order); used by the distributed reduces.

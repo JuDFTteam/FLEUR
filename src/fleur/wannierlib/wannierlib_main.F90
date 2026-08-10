@@ -79,6 +79,12 @@ CONTAINS
       INTEGER, ALLOCATABLE :: distk(:)
       real, allocatable :: eig(:, :)
       COMPLEX, ALLOCATABLE :: u_matrix(:, :, :), u_opt(:, :, :)   ! Wannier gauge factors from w90
+      !> The gauge of each spin channel, kept across the channel loop: the combined 2N spin
+      !> operator needs BOTH, while u_matrix and u_opt are released at the end of every
+      !> iteration. It lives here rather than in the coarse object, which holds the Bloch
+      !> matrices from before any gauge exists.
+      COMPLEX, ALLOCATABLE :: v_ch(:, :, :, :)   ! (num_bands, num_wann, nkptf, 2)
+      INTEGER :: ik_gauge
       TYPE(t_melem_coarse) :: melem   ! the operator (matrix-element) side, see m_melem_driver
       TYPE(t_melem_bmesh) :: bmesh    ! b-shell weights handed to the operator side
       TYPE(t_usdus), POINTER :: usdus       ! into the factory cache
@@ -221,6 +227,16 @@ CONTAINS
          ! wannierise this channel -> the gauge factors u_matrix (MLWF) and u_opt (disentangled)
          CALL run_w90(this, cell, kpts, mmn, amn, eig, fmpi%irank, u_matrix, u_opt)
 
+         !> Keep this channel's gauge while its two factors are still alive.
+         IF (melem%n_channels == 2 .AND. request%has_op_r('spin')) THEN
+            IF (.NOT. ALLOCATED(v_ch)) &
+               ALLOCATE (v_ch(manifold%num_bands, manifold%num_wann, kpts%nkptf, 2), &
+                         source=CMPLX(0.0, 0.0))
+            DO ik_gauge = 1, SIZE(u_opt, 3)
+               v_ch(:, :, ik_gauge, jspin) = MATMUL(u_opt(:, :, ik_gauge), u_matrix(:, :, ik_gauge))
+            END DO
+         END IF
+
          ! everything operator-related happens in the matrix-element layer, which only needs the
          ! gauge, the overlaps and the b-mesh. Adding an operator does not touch this file.
          ! Kept BEFORE report_w90 so the ordering of the operator messages in `out` is unchanged.
@@ -242,7 +258,8 @@ CONTAINS
       ! collinear combined 2N spin operator rspauli.1: only assemblable once BOTH channels have
       ! been wannierised, since it rotates the cross-spin overlap with both gauges.
       IF (melem%n_channels == 2 .AND. request%has_op_r('spin')) &
-         CALL melem_rspauli_collinear(this%num_wann, melem%x0, melem%v_ch, cell, kpts, distk, fmpi)
+         CALL melem_rspauli_collinear(this%num_wann, melem%x0, v_ch, cell, kpts, distk, fmpi)
+      IF (ALLOCATED(v_ch)) DEALLOCATE (v_ch)
 
       !> Freed here and not per channel: the neighbour topology in it was set before the
       !> spin loop and every channel reads it.
