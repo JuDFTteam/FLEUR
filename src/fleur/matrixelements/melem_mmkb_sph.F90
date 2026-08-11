@@ -51,11 +51,9 @@ CONTAINS
             lm = atoms%lmax(n)*(atoms%lmax(n) + 2)
             DO r1 = 1, maxval(abc(n)%n_r)
                DO r2 = 1, maxval(abc_b(n)%n_r)
-                  ! M_MT = phasefac * A . (conjg(B).ujug)^T  (Daniel's convention:
-                  ! conjg(abc_b) here + mmn=conjg(mmn) in main). matmul rather than zgemm:
-                  ! the previous zgemm passed a slice of ujug with leading dimension lm+1
-                  ! instead of lmd+1, which MKL rejected on parameters 8/10, leaving the
-                  ! muffin-tin part at zero. This is exactly what that zgemm meant to do.
+                  ! M_MT = phasefac * A . (conjg(B).ujug)^T. The ket side is conjugated
+                  ! here and the assembled overlap is conjugated once more by whoever
+                  ! collects it; both halves of that convention are needed together.
                   mmn = mmn + phasefac*matmul(abc(n)%cof(:, 0:lm, r1, nn), &
                         transpose(matmul(conjg(abc_b(n)%cof(:, 0:lm, r2, nn)), ujug(0:lm, 0:lm, r1, r2, n, nene))))
                enddo

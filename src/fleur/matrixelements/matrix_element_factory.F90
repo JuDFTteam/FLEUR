@@ -181,9 +181,7 @@ CONTAINS
 
     !> The radial functions themselves, for a caller that needs them for something the factory
     !> does not do -- the projections A_mn, the Gaunt overlaps, deciding which radial set a
-    !> spin component reads. It used to generate a second, identical set of its own: the same
-    !> routine over the same types in the same order, and generate_radial_functions fills a
-    !> t_usdus the same way whether or not the caller initialised it first.
+    !> spin component reads.
     !>
     !> What comes back points into the cache and lives until matrix_element_factory_reset.
     SUBROUTINE matrix_element_radial(atoms, input, enpara, fmpi, vtot, radfun, usdus)

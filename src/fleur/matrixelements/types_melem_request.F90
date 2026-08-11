@@ -71,9 +71,9 @@ CONTAINS
          CALL judft_error("t_melem_request: every interpolated operator needs its own total flag", &
                           calledby="melem_request_init")
 
-      !> A name nobody downstream recognises used to cost a line in the output and an
-      !> operator that never appeared. It stops the run here instead, while it is still
-      !> obvious that what is wrong is the input.
+      !> A name the exposure tables do not carry stops the run here, with the accepted
+      !> names in the message, rather than leaving an operator silently absent from the
+      !> output.
       DO iop = 1, this%n_ops
          IF (melem_exposed_find(this%op_name(iop), WANNIERLIB_INTERP) == 0) &
             CALL judft_error('t_melem_request: "'//TRIM(this%op_name(iop))// &
@@ -88,8 +88,8 @@ CONTAINS
       END DO
    END SUBROUTINE melem_request_init
 
-   !> Whether the real-space list asked for this operator. Callers used to be handed a
-   !> flag per operator, which meant the same fact was stored twice and could disagree.
+   !> Whether the real-space list asked for this operator. The list is the only record of
+   !> that, so there is no per-operator flag to keep in step with it.
    LOGICAL FUNCTION melem_request_has_op_r(this, name)
       CLASS(t_melem_request), INTENT(IN) :: this
       CHARACTER(LEN=*),       INTENT(IN) :: name
