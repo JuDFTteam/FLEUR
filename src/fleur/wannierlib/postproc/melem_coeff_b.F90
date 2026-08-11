@@ -34,7 +34,7 @@ CONTAINS
   ! The (r - R) of the definition is already carried by the k derivative of the periodic
   ! part, so the sum takes no centring term and needs no Wannier centres.
   !
-  ! NOT VALIDATED NUMERICALLY against a reference: the test suite has none for B.
+  ! Checked on the fly against B^W = H^W A^W, which is exact where V is square.
   SUBROUTINE melem_write_bmn(this, kpts, eig, u_matrix, u_opt, mmn_loc, gk_loc, &
                              bmesh, irvec, nrpts, mpicm, irank, wfpref)
 #ifdef CPP_MPI
@@ -82,6 +82,9 @@ CONTAINS
       END DO
     END DO
     DEALLOCATE(Vk, Vkb, tmp)
+    IF (irank == 0 .AND. nkl > 0) &
+      CALL melem_check_bmn_identity(nb, nw, nnt, gk_loc(1), eig, u_matrix, u_opt, &
+                                    mmn_loc(:, :, :, 1), bmesh)
 
     ! ---- the R sum ----
     ALLOCATE(br(3, nw, nw, nrpts), source=CMPLX(0.0, 0.0))
@@ -122,10 +125,79 @@ CONTAINS
                                    TRIM(fn)//'.dat', 0)
         DEALLOCATE(b4)
       END BLOCK
-      WRITE(oUnit,'(a)') 'wannierlib: wrote '//TRIM(fn)//'.dat (B(R)=<0n|H (r-R)|Rm>, eV*Ang) '// &
-                         '-- NOT numerically validated'
+      WRITE(oUnit,'(a)') 'wannierlib: wrote '//TRIM(fn)//'.dat (B(R)=<0n|H (r-R)|Rm>, eV*Ang)'
     END IF
     DEALLOCATE(br)
   END SUBROUTINE melem_write_bmn
+
+  ! B^W_alpha(k) = H^W(k) . A^W_alpha(k), with H^W = V^dag diag(eig) V.
+  !
+  ! Exact where V is square: there V V^dag is the identity, so the eigenvalue weighting
+  ! splits off the left of the neighbour overlap. Under an outer window V V^dag is a
+  ! projector instead and the identity no longer closes -- what it misses is the part of
+  ! the k derivative that leaves the Wannier subspace, which is the reason B is computed
+  ! at all. The residual is therefore reported there and judged only where it must vanish.
+  !
+  ! One k-point carries the whole statement, since the identity holds per k. Warns and
+  ! never aborts: a broken identity is a reason to look, not a reason to stop a run that
+  ! may still be wanted for something else.
+  SUBROUTINE melem_check_bmn_identity(nb, nw, nnt, k, eig, u_matrix, u_opt, mmn_k, bmesh)
+    INTEGER, INTENT(IN) :: nb, nw, nnt, k
+    REAL,    INTENT(IN) :: eig(:, :)
+    COMPLEX, INTENT(IN) :: u_matrix(:, :, :), u_opt(:, :, :)
+    COMPLEX, INTENT(IN) :: mmn_k(:, :, :)          ! (nb,nb,nntot) at this k
+    TYPE(t_melem_bmesh), INTENT(IN) :: bmesh
+
+    REAL, PARAMETER :: tol = 1.0e-8                ! measured residual is ~3e-13 relative
+    COMPLEX, ALLOCATABLE :: Vp(:, :), Ve(:, :), Vb(:, :), hw(:, :), tw(:, :)
+    COMPLEX, ALLOCATABLE :: aw(:, :, :), bw(:, :, :)
+    REAL    :: dmax, bscale, rel
+    INTEGER :: i, nn, kb, a
+
+    IF (nnt < 1 .OR. .NOT. ALLOCATED(bmesh%wb)) RETURN
+
+    ALLOCATE(Vp(nb, nw), Ve(nb, nw), Vb(nb, nw), hw(nw, nw), tw(nb, nw))
+    ALLOCATE(aw(nw, nw, 3), bw(nw, nw, 3), source=CMPLX(0.0, 0.0))
+    Vp = MATMUL(u_opt(:, :, k), u_matrix(:, :, k))
+    DO i = 1, nb
+      Ve(i, :) = eig(i, k) * Vp(i, :)
+    END DO
+    hw = MATMUL(CONJG(TRANSPOSE(Ve)), Vp)
+    DO nn = 1, nnt
+      kb = bmesh%nnlist(k, nn)
+      Vb = MATMUL(u_opt(:, :, kb), u_matrix(:, :, kb))
+      tw = MATMUL(mmn_k(:, :, nn), Vb)
+      DO a = 1, 3
+        aw(:, :, a) = aw(:, :, a) + CMPLX(0.0, bmesh%wb(nn) * bmesh%bk(a, nn, k)) &
+                                    * MATMUL(CONJG(TRANSPOSE(Vp)), tw)
+        bw(:, :, a) = bw(:, :, a) + CMPLX(0.0, bmesh%wb(nn) * bmesh%bk(a, nn, k)) &
+                                    * MATMUL(CONJG(TRANSPOSE(Ve)), tw)
+      END DO
+    END DO
+
+    dmax = 0.0; bscale = 0.0
+    DO a = 1, 3
+      dmax   = MAX(dmax,   MAXVAL(ABS(bw(:, :, a) - MATMUL(hw, aw(:, :, a)))))
+      bscale = MAX(bscale, MAXVAL(ABS(bw(:, :, a))))
+    END DO
+    rel = MERGE(dmax / bscale, 0.0, bscale > 0.0)
+
+    IF (nb == nw) THEN
+      IF (rel > tol) THEN
+        WRITE(oUnit, '(a,es11.3,a,es11.3,a)') &
+          'wannierlib WARNING: B(R) fails B^W = H^W A^W by ', rel, &
+          ' of its own scale (tolerance ', tol, '), where no window makes it exact'
+      ELSE
+        WRITE(oUnit, '(a,es11.3)') &
+          'wannierlib: B(R) satisfies B^W = H^W A^W, relative residual ', rel
+      END IF
+    ELSE
+      WRITE(oUnit, '(a,es11.3,a)') &
+        'wannierlib: B(R) departs from H^W A^W by ', rel, &
+        ' of its own scale -- the weight the outer window leaves outside the subspace'
+    END IF
+
+    DEALLOCATE(Vp, Ve, Vb, hw, tw, aw, bw)
+  END SUBROUTINE melem_check_bmn_identity
 
 END MODULE m_melem_coeff_b
