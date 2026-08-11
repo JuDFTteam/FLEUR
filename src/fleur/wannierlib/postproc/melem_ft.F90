@@ -17,7 +17,7 @@
 !>  Wannier-gauge Hamiltonian H_W(k) interpolates the band structure; feeding
 !>  it a spin / orbital-moment / position operator interpolates that operator.
 !>  A new operator interpolator only has to build its own mat_k(k) and reuse
-!>  this core unchanged (see m_melem_interpolate_ham for the H example).
+!>  this core unchanged.
 MODULE m_melem_ft
   USE m_constants, ONLY : tpi_const
   USE m_types_cell
@@ -56,8 +56,7 @@ CONTAINS
   !> Velocity from an ALREADY transformed Wannier-gauge Hamiltonian:
   !>    v_alpha(k') = sum_R  i R_cart(alpha) e^{+i2pi k'.R} / ndegen(R) * mat_r(R)
   !> with R_cart = amat . irvec (Bohr). Takes mat_r rather than the coarse matrix so that a
-  !> caller wanting both H(k') and dH/dk transforms the coarse mesh once: the two used to be
-  !> separate entry points and each rebuilt the same H(R).
+  !> caller wanting both H(k') and dH/dk transforms the coarse mesh once.
   !>
   !> Projected on the band eigenvectors the DIAGONAL <n|v|n> = dE_n/dk is exact; off-diagonal
   !> elements omit the Berry-connection term.

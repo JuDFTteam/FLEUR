@@ -114,7 +114,7 @@ CONTAINS
 
     ! ---- interpolate H (eigenvectors), v = dH/dk (3), and O_beta (3, R -> k' from the reduced O(R)) ----
     !> One transform of H_W to real space, then both the interpolant and its derivative
-    !> off the same H(R); they used to be two calls that each rebuilt it.
+    !> off the same H(R).
     CALL melem_ft_to_real(cell, ham_k, kpts, ham_r, h_irvec, h_ndegen, h_nrpts)
     CALL melem_ft_rtok(ham_r, h_irvec, h_ndegen, h_nrpts, kfrac, H_interp)
     CALL melem_ft_rtok_velocity(cell, ham_r, h_irvec, h_ndegen, h_nrpts, kfrac, v_interp)

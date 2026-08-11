@@ -9,8 +9,8 @@
 !>  report the resulting centres and spreads.
 !>
 !>  Matrix elements of physical operators (spin, orbital moment, SOC, position, velocity,
-!>  currents) are NOT built here: they live in src/fleur/matrixelements/ and are reached
-!>  through m_melem_driver. This module only hands that layer what it cannot obtain on its
+!>  currents) are NOT built here: they live in src/fleur/matrixelements/.
+!>  This module only hands that layer what it cannot obtain on its
 !>  own -- the k-point distribution, the per-k abc coefficients of the collinear channels,
 !>  the Wannier gauge, and the b-mesh -- so that adding an operator never touches this file.
 !--------------------------------------------------------------------------------
@@ -85,7 +85,7 @@ CONTAINS
       !> matrices from before any gauge exists.
       COMPLEX, ALLOCATABLE :: v_ch(:, :, :, :)   ! (num_bands, num_wann, nkptf, 2)
       INTEGER :: ik_gauge
-      TYPE(t_melem_coarse) :: melem   ! the operator (matrix-element) side, see m_melem_driver
+      TYPE(t_melem_coarse) :: melem   ! the operator (matrix-element) side
       TYPE(t_melem_bmesh) :: bmesh    ! b-shell weights handed to the operator side
       TYPE(t_usdus), POINTER :: usdus       ! into the factory cache
       TYPE(t_lapw) :: lapw

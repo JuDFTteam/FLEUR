@@ -68,8 +68,7 @@ CONTAINS
 
     ! ---- interpolate H (for eigenvectors) and v = dH/dk (velocity variant of the core) ----
     !> One transform of H_W to real space, then both the interpolant and its derivative
-    !> off the same H(R). They used to be two calls, and each rebuilt H(R) from the coarse
-    !> mesh -- the same sum over every k and every R, twice.
+    !> off the same H(R).
     CALL melem_ft_to_real(cell, ham_k, kpts, ham_r, h_irvec, h_ndegen, h_nrpts)
     CALL melem_ft_rtok(ham_r, h_irvec, h_ndegen, h_nrpts, kfrac, H_interp)
     CALL melem_ft_rtok_velocity(cell, ham_r, h_irvec, h_ndegen, h_nrpts, kfrac, v_interp)

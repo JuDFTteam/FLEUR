@@ -12,10 +12,9 @@
 !>
 !>      A^(W)_alpha(k) = i sum_b w_b b_alpha ( M^(W,b)(k) - delta ) .
 !>
-!>  Those weights are produced by the Wannier90 kmesh setup and used to live in
-!>  m_wannierlib_w90_adapter's saved lib_common_type. Reaching into that from here would
-!>  make the whole matrixelements layer depend on the Wannier90 library, so the
-!>  wannierization side fills this plain bundle instead (wannierlib_get_bmesh) and passes
+!>  Those weights are produced by the Wannier90 kmesh setup. Taking them from there
+!>  directly would make the whole matrixelements layer depend on the Wannier90 library,
+!>  so the wannierization side fills this plain bundle instead and passes
 !>  it in. Any other source of a b-mesh can be plugged in the same way.
 MODULE m_types_melem_bmesh
    IMPLICIT NONE

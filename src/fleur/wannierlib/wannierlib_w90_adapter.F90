@@ -120,7 +120,7 @@ CONTAINS
   !>    u_matrix  the MLWF gauge U(k)
   !>    u_opt     the disentanglement matrix (the projections after w90 has processed them)
   !> The full Wannier gauge is V(k) = u_opt(k) . u_matrix(k). Evaluating operators in that gauge
-  !> is NOT this module's job -- see m_melem_driver.
+  !> is NOT this module's job: the adapter only translates to and from the library.
   SUBROUTINE run_w90(this, cell, kpts, mmn, amn, eig, irank, u_matrix, u_opt)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
     TYPE(t_cell), INTENT(IN) :: cell

@@ -27,8 +27,8 @@ CONTAINS
   ! there, which is not an error: each driver says so in its own words, and two of them have
   ! allocations to give back before they return.
   !
-  ! It lives next to melem_write_domain_kpts because that is what puts the file there; the
-  ! five drivers used to carry a copy of these ten lines each.
+  ! It lives next to the routine that writes that file, so the two halves of the format
+  ! stay together.
   LOGICAL FUNCTION melem_read_kset(kfrac, np, calledby) RESULT(l_found)
     REAL, ALLOCATABLE, INTENT(OUT) :: kfrac(:, :)   ! (3, np) fractional coordinates
     INTEGER, INTENT(OUT) :: np

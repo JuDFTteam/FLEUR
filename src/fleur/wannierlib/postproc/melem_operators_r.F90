@@ -18,9 +18,8 @@
 !>    rssocmat.1     spin-orbit (2x2 spinor blocks)
 !>    wig_vectors    the Wigner-Seitz R-mesh
 !>
-!>  Extracted from m_wannierlib_w90_adapter. The only Wannier90 coupling that came with
-!>  it -- the b-shell weights and the reference Wannier centres -- now arrives as a plain
-!>  t_melem_bmesh, so this module is free of the Wannier90 library.
+!>  The b-shell weights and the reference Wannier centres arrive as a plain t_melem_bmesh,
+!>  so this module is free of the Wannier90 library.
 MODULE m_melem_operators_r
   USE m_juDFT
   USE m_constants, ONLY : oUnit, hartree_to_ev_const, tpi_const

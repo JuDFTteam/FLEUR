@@ -7,9 +7,8 @@
 !>
 !>  Every interpolation driver needs it before it can interpolate anything -- the band
 !>  driver to get the bands, the operator drivers to get the eigenvectors they project on,
-!>  the velocity to differentiate. It used to be written out in each of them, five times
-!>  the same thirty lines, so a correction had five places to reach and the real-space
-!>  export had a sixth copy of its own.
+!>  the velocity to differentiate. It is built here once, so a correction has a single
+!>  place to reach.
 !>
 !>      eigval2(m,k) = sum_i eig_i(k) |u_opt(i,m,k)|^2        (the outer window, if any)
 !>      H_W(i,j,k)   = sum_m eigval2(m,k) conjg(U(m,i,k)) U(m,j,k)
