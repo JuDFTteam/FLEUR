@@ -3,9 +3,6 @@
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
-!--------------------------------------------------------------------------------
-! Copyright (c) 2026 Peter Gruenberg Institut, Forschungszentrum Juelich, Germany
-!--------------------------------------------------------------------------------
 MODULE m_melem_ujugaunt
    USE m_juDFT
    USE m_types_atoms
