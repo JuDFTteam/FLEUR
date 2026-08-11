@@ -40,7 +40,8 @@ MODULE m_melem_operators_r
 CONTAINS
 
   ! Build the Wannier-gauge Berry connection in real space A^(W)_alpha(R), distributed:
-  ! each rank forms A^(W)_alpha(k) = i sum_b w_b b_alpha (M^(W,b)(k) - delta) on its OWN k-slice
+  ! each rank forms A^(W)_alpha(k) on its OWN k-slice, off the diagonal as
+  ! i sum_b w_b b_alpha M^(W,b)_nm(k) and on it as -sum_b w_b b_alpha Im log M^(W,b)_nn(k)
   ! (M^(W,b)(k) = V(k)^dagger M^(0,b)(k) V(k_b), V = u_opt.u_matrix, k_b = nnlist(b,k)) from the
   ! local overlaps mmn_loc (global k = gk_loc), then reduces coarse -> R with the distributed
   ! FT-reduce (collective). The full-mesh overlaps are never gathered. A^(W)(R) is exactly the
@@ -64,6 +65,7 @@ CONTAINS
     INTEGER :: nb, nw, nk, nnt, k, kb, nn, a, i, kl, nkl
     REAL :: wb, b(3)
     COMPLEX, ALLOCATABLE :: Vk(:, :), Vkb(:, :), Mw(:, :), tmp(:, :), aw_loc(:, :, :, :), a1(:, :, :)
+    COMPLEX, ALLOCATABLE :: Mb(:, :)
 
     IF (bmesh%nntot < 1 .OR. .NOT. ALLOCATED(bmesh%nnlist)) THEN
       ! no b-mesh available (e.g. built without the Wannier90 library) -> nothing to build
@@ -75,7 +77,7 @@ CONTAINS
     nnt = bmesh%nntot
     nkl = SIZE(gk_loc)
     ALLOCATE(aw_loc(nw, nw, 3, MAX(1, nkl)), source=CMPLX(0.0, 0.0))
-    ALLOCATE(Vk(nb, nw), Vkb(nb, nw), Mw(nw, nw), tmp(nb, nw))
+    ALLOCATE(Vk(nb, nw), Vkb(nb, nw), Mw(nw, nw), Mb(nw, nw), tmp(nb, nw))
     DO kl = 1, nkl
       k = gk_loc(kl)
       Vk = MATMUL(u_opt(:, :, k), u_matrix(:, :, k))
@@ -88,15 +90,19 @@ CONTAINS
         Vkb = MATMUL(u_opt(:, :, kb), u_matrix(:, :, kb))
         tmp = MATMUL(mmn_loc(:, :, nn, kl), Vkb)            ! (nb x nw)
         Mw  = MATMUL(CONJG(TRANSPOSE(Vk)), tmp)             ! (nw x nw) = M^(W,b)(k)
+        ! The diagonal takes the phase of the overlap and not its linear part, so it
+        ! stays real and reproduces the Wannier centre to the accuracy of the b-shell.
+        ! It needs M^(W,b)_nn /= 0, which a converged wannierisation gives.
+        Mb = CMPLX(0.0, 1.0) * Mw
         DO i = 1, nw
-          Mw(i, i) = Mw(i, i) - CMPLX(1.0, 0.0)            ! subtract delta on the diagonal
+          Mb(i, i) = CMPLX(-AIMAG(LOG(Mw(i, i))), 0.0)
         END DO
         DO a = 1, 3
-          aw_loc(:, :, a, kl) = aw_loc(:, :, a, kl) + CMPLX(0.0, wb*b(a)) * Mw
+          aw_loc(:, :, a, kl) = aw_loc(:, :, a, kl) + wb*b(a) * Mb
         END DO
       END DO
     END DO
-    DEALLOCATE(Vk, Vkb, Mw, tmp)
+    DEALLOCATE(Vk, Vkb, Mw, Mb, tmp)
     DO a = 1, 3
       CALL melem_ft_to_real_reduce(cell, kpts, aw_loc(:, :, a, :), gk_loc, mpi_comm, a1, irvec, ndegen, nrpts)
       IF (a == 1) ALLOCATE(aw_r(nw, nw, nrpts, 3))
