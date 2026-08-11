@@ -130,6 +130,10 @@ CONTAINS
       CASE ('position')      ! Berry connection A^(W)(R)=A(R): distributed reduce over the local overlaps
         CALL melem_build_berry_aw_r(this, cell, kpts, mmn_loc, gk_loc, u_opt, u_matrix, bmesh, mpi_comm, &
                                          aw_r, aw_irvec, aw_ndegen, aw_nrpts)
+        !> The R=0 diagonal is the Wannier centre, so it can be checked against the
+        !> centres the b-mesh carries whenever A is built -- not only when a band
+        !> interpolation happens to be asked for as well.
+        IF (irank == 0) CALL melem_check_berry_centres(this, aw_r, aw_irvec, aw_nrpts, bmesh)
         IF (irank == 0) CALL melem_write_ar(this, aw_r, aw_irvec, aw_nrpts, TRIM(wfpref))
         IF (ALLOCATED(aw_r)) DEALLOCATE(aw_r, aw_irvec, aw_ndegen)
       CASE ('spin')          ! distributed reduce over the coarse spin slice
