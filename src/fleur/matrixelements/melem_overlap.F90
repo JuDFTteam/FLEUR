@@ -11,10 +11,14 @@ MODULE m_melem_overlap
    USE m_types_stars
    USE m_types_lapw
    USE m_types_mat
+   USE m_types_atoms
+   USE m_types_abc
+   USE m_melem_mmkb_int
+   USE m_melem_mmkb_sph
    USE m_judft
    IMPLICIT NONE
    PRIVATE
-   PUBLIC :: melem_overlap_interstitial
+   PUBLIC :: melem_overlap_interstitial, melem_overlap_states
 
 CONTAINS
 
@@ -92,5 +96,39 @@ CONTAINS
                     zstep, nv_a, CMPLX(0.0,0.0), ovl, nb)
       END IF
    END SUBROUTINE melem_overlap_interstitial
+
+   !> The overlap of two sets of states over the whole cell, muffin-tin part and
+   !> interstitial part into the same matrix.
+   !>
+   !> The two sides are independent: each has its own k-point, its own basis and its own
+   !> coefficients, and gb is the reciprocal lattice vector that brings the second one back
+   !> to the first Brillouin zone. Nothing here requires them to be a k-point and one of its
+   !> neighbours; a pair of neighbours of a third point works the same way, with gb the
+   !> difference of the two vectors that folded them.
+   !>
+   !> Both halves accumulate, so ovl carries whatever the caller left in it: it is the
+   !> caller that decides whether a slot starts at zero. And kdiff has to contain the
+   !> difference the two sides span, or the muffin-tin half stops the run rather than
+   !> guessing which table entry to use.
+   SUBROUTINE melem_overlap_states(stars, atoms, lapw_a, lapw_b, zmat_a, zmat_b, &
+                                   abc_a, abc_b, jspin_a, jspin_b, bkpt_a, bkpt_b, gb, &
+                                   ujug, kdiff, nntot, ioff_a, ioff_b, ovl)
+      TYPE(t_stars), INTENT(IN) :: stars
+      TYPE(t_atoms), INTENT(IN) :: atoms
+      TYPE(t_lapw),  INTENT(IN) :: lapw_a, lapw_b
+      TYPE(t_mat),   INTENT(IN) :: zmat_a, zmat_b
+      TYPE(t_abc),   INTENT(IN) :: abc_a(:), abc_b(:)
+      INTEGER,       INTENT(IN) :: jspin_a, jspin_b
+      REAL,          INTENT(IN) :: bkpt_a(3), bkpt_b(3)
+      INTEGER,       INTENT(IN) :: gb(3)
+      COMPLEX,       INTENT(IN) :: ujug(0:, 0:, :, :, :, :)
+      REAL,          INTENT(IN) :: kdiff(:, :)
+      INTEGER,       INTENT(IN) :: nntot, ioff_a, ioff_b
+      COMPLEX,    INTENT(INOUT) :: ovl(:, :)
+
+      CALL melem_mmkb_int(stars, lapw_a, lapw_b, jspin_a, jspin_b, zmat_a, zmat_b, gb, ovl, &
+                          ioff=ioff_a, ioff_b=ioff_b)
+      CALL melem_mmkb_sph(atoms, abc_a, abc_b, bkpt_b, gb, bkpt_a, ujug, kdiff, nntot, ovl)
+   END SUBROUTINE melem_overlap_states
 
 END MODULE m_melem_overlap
