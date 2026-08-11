@@ -333,6 +333,9 @@ CONTAINS
       IF (ALLOCATED(this%soc4)) DEALLOCATE (this%soc4)
       IF (ALLOCATED(this%x0)) DEALLOCATE (this%x0)
       this%n_channels = 1
+      !> l_active gates both the allocations above and the calc pass, so leaving it set
+      !> would describe slices that are no longer there.
+      this%l_active = .FALSE.
    END SUBROUTINE melem_coarse_free
 
 END MODULE m_melem_coarse
