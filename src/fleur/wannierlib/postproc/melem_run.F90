@@ -23,7 +23,8 @@ MODULE m_melem_run
    USE m_types_melem_request, ONLY: t_melem_request
    USE m_types_melem_domains, ONLY: t_melem_domains
    USE m_melem_domains, ONLY: melem_write_domain_kpts, melem_rename_domain_outputs, melem_shell
-   USE m_melem_operators_r, ONLY: melem_write_operators_r, melem_build_berry_aw_r, melem_check_berry_centres
+   USE m_melem_operators_r, ONLY: melem_write_operators_r
+   USE m_melem_coeff_a, ONLY: melem_build_berry_aw_r, melem_check_berry_centres
    USE m_melem_interpolate_ham, ONLY: melem_interpolate_ham
    USE m_melem_interpolate_op, ONLY: melem_interpolate_operator
    USE m_melem_interpolate_velocity, ONLY: melem_interpolate_velocity
