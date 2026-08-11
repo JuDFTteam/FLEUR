@@ -10,7 +10,7 @@
 !>    'hr'      Wannier90 seedname_hr.dat : header + ndegen block + H(R) in eV
 !>    'r'       Wannier90 seedname_r.dat  : header + A(R) in Angstrom, 3 components
 !>    'rti'     like 'r', but the TRANSLATIONALLY INVARIANT form (centred on r_avg)
-!>    'bmn'     Wannier90-like            : header + B(R)=<0n|H r|Rm> in eV*Ang, 3 comps
+!>    'bmn'     Wannier90-like            : header + B(R)=<0n|H (r-R)|Rm> in eV*Ang, 3 comps
 !>    'soc'     R1 R2 R3  i j jj ii  Re Im   (2x2 spinor blocks -> rssocmat.1)
 !>    'generic' R1 R2 R3  i j comp   Re Im   (spin -> rspauli.1, orbital -> anglmomrs.*)
 !>    'cart2'   R1 R2 R3  i j        then nine (alpha,beta) components on the line
@@ -72,7 +72,7 @@ CONTAINS
                (bohr2ang*REAL(o_r(i,j,irpt,kk)), bohr2ang*AIMAG(o_r(i,j,irpt,kk)), kk=1,3)
          END DO; END DO; END DO
       CASE ('bmn')
-         WRITE(iu,'(a)') ' written by FLEUR wannierlib : B(R)=<0n|H r|Rm> in eV*Ang, 3 components'
+         WRITE(iu,'(a)') ' written by FLEUR wannierlib : B(R)=<0n|H (r-R)|Rm> in eV*Ang, 3 components'
          WRITE(iu,'(i12)') nw
          WRITE(iu,'(i12)') nrpts
          DO irpt = 1, nrpts; DO j = 1, nw; DO i = 1, nw
