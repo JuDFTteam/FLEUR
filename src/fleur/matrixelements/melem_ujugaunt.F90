@@ -36,8 +36,10 @@ CONTAINS
 
       COMPLEX, ALLOCATABLE, intent(out) :: ujug(:, :, :, :, :, :)
 
-      REAL, ALLOCATABLE :: uju(:, :, :, :, :)
-      INTEGER :: ikpt_b, i, lwn, n, lpp, l, lp
+      REAL, ALLOCATABLE :: uju(:, :, :, :, :, :)
+      REAL, ALLOCATABLE :: rk_uni(:)
+      INTEGER, ALLOCATABLE :: imod(:)
+      INTEGER :: ikpt_b, i, lwn, n, lpp, l, lp, q, nmod
       INTEGER :: lmini, lmaxi, m, mp, llpp, mpp, r1, r2
       INTEGER :: lmpp, lm, lpmp, total_nr
       REAL :: rk, bpt(3), gs, jlpp(0:atoms%lmaxd)
@@ -50,18 +52,42 @@ CONTAINS
       DO n = 1, atoms%ntype
          total_nr = max(total_nr, maxval(radfun(n)%n_r(:)))
       end do
-      ALLOCATE (uju(total_nr, total_nr, 0:atoms%lmaxd, 0:atoms%lmaxd, 0:atoms%lmaxd), source=0.0)
-      allocate (ujug( 0:atoms%lmaxd*(atoms%lmaxd+2), 0:atoms%lmaxd*(atoms%lmaxd+2), total_nr, total_nr,atoms%ntype, nntot), source=CMPLX(0.0, 0.0))
-
+      !> The modulus of b enters only through j_l(|b| r), inside the radial integral; the
+      !> direction enters through Y_lm(b) and the Gaunt coefficients, which are products.
+      !> Entries of kdiff that share a modulus therefore share the whole radial table.
+      !> Grouped on the exact bit pattern, not on a tolerance: two moduli that differ in
+      !> the last bits stay apart, so the result does not depend on the grouping.
+      ALLOCATE (rk_uni(nntot), imod(nntot))
+      nmod = 0
       DO ikpt_b = 1, nntot
          bpt(:) = kdiff(:, ikpt_b)
          rk = SQRT(DOT_PRODUCT(bpt, MATMUL(cell%bbmat, bpt)))
+         imod(ikpt_b) = 0
+         DO q = 1, nmod
+            IF (rk == rk_uni(q)) THEN
+               imod(ikpt_b) = q
+               EXIT
+            END IF
+         END DO
+         IF (imod(ikpt_b) == 0) THEN
+            nmod = nmod + 1
+            rk_uni(nmod) = rk
+            imod(ikpt_b) = nmod
+         END IF
+      END DO
+      ALLOCATE (uju(total_nr, total_nr, 0:atoms%lmaxd, 0:atoms%lmaxd, 0:atoms%lmaxd, nmod), source=0.0)
+      allocate (ujug( 0:atoms%lmaxd*(atoms%lmaxd+2), 0:atoms%lmaxd*(atoms%lmaxd+2), total_nr, total_nr,atoms%ntype, nntot), source=CMPLX(0.0, 0.0))
 
-         DO n = 1, atoms%ntype
-            lwn = atoms%lmax(n)
+      DO n = 1, atoms%ntype
+         lwn = atoms%lmax(n)
 
+         !> The radial half: once per distinct modulus, not once per vector. Zeroed whole,
+         !> because the branch that survives the selection rule fills only the block that
+         !> this type's n_r reaches and the rest is read back as part of the slice.
+         uju = 0.0
+         DO q = 1, nmod
             DO i = 1, atoms%jri(n)
-               gs = rk*atoms%rmsh(i, n)
+               gs = rk_uni(q)*atoms%rmsh(i, n)
                CALL sphbes(lwn, gs, jlpp)
                jj(:, i) = jlpp(:)
             END DO
@@ -70,10 +96,7 @@ CONTAINS
                DO l = 0, lwn
                   lmini = ABS(lp - l)
                   lmaxi = lp + l
-                  IF ((MOD(l + lp + lpp, 2) == 1) .OR. (lpp < lmini) .OR. (lpp > lmaxi)) THEN
-                     uju(:, :, l, lp, lpp) = 0.0
-
-                  ELSE
+                  IF (.NOT. ((MOD(l + lp + lpp, 2) == 1) .OR. (lpp < lmini) .OR. (lpp > lmaxi))) THEN
                      do r1 = 1, radfun(n)%n_r(l)
                         do r2 = 1, radfun_b(n)%n_r(lp)
                            DO i = 1, atoms%jri(n)
@@ -81,13 +104,18 @@ CONTAINS
                                       radfun(n)%r(i, 2, r1, l, jspin)*radfun_b(n)%r(i, 2, r2, lp, jspin_b))* &
                                      jj(lpp, i)
                            END DO
-                           CALL intgr3(x, atoms%rmsh(1:, n), atoms%dx(n), atoms%jri(n), uju(r1, r2, l, lp, lpp))
+                           CALL intgr3(x, atoms%rmsh(1:, n), atoms%dx(n), atoms%jri(n), uju(r1, r2, l, lp, lpp, q))
                         end do
                      end do
                   END IF
                END DO
             END DO
             end do
+         END DO
+
+         !> The angular half: once per vector of kdiff.
+         DO ikpt_b = 1, nntot
+            bpt(:) = kdiff(:, ikpt_b)
             bkrot = MATMUL(bpt, cell%bmat)
             CALL ylm4(lwn, bkrot, ylmpp)
 
@@ -106,7 +134,8 @@ CONTAINS
                            IF ((lmini <= lp) .AND. (lp <= lmaxi) .AND. (MOD(l + lp + lpp, 2) == 0) .AND. (ABS(mpp) <= lpp)) THEN
                        factor = CONJG(ylmpp(lmpp + 1))*(cmplx(0.0, 1.0)**(l + lpp - lp))*gaunt1(lp, lpp, l, mp, mpp, m, atoms%lmaxd)
                               IF (l_q) factor = (sign_q**lpp)*factor
-                              ujug(lpmp, lm, :,:, n, ikpt_b) = ujug(lpmp, lm, :,:, n, ikpt_b) + factor*uju(:, :, l, lp, lpp)
+                              ujug(lpmp, lm, :,:, n, ikpt_b) = ujug(lpmp, lm, :,:, n, ikpt_b) &
+                                                              + factor*uju(:, :, l, lp, lpp, imod(ikpt_b))
                            END IF
                         END DO
                      END DO
