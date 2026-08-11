@@ -25,12 +25,11 @@ CONTAINS
       INTEGER, INTENT(IN) :: nntot
       COMPLEX, INTENT(INOUT) :: mmn(:, :)
 
-      INTEGER :: i, j, n, nn, na, l, lp, m, mp, lm, lmp, ll, llp, r1, r2
+      INTEGER :: n, nn, na, lm, r1, r2
       INTEGER :: nene
       REAL :: rph, cph, th
       REAL :: bpt(3)
       COMPLEX :: phasefac
-      COMPLEX, ALLOCATABLE :: cof_b_u(:,:)
 
       CALL timestart("melem_mmkb_sph")
 
@@ -57,25 +56,6 @@ CONTAINS
                   mmn = mmn + phasefac*matmul(abc(n)%cof(:, 0:lm, r1, nn), &
                         transpose(matmul(conjg(abc_b(n)%cof(:, 0:lm, r2, nn)), ujug(0:lm, 0:lm, r1, r2, n, nene))))
                enddo
-                  !DO l = 0, atoms%lmax(n)
-                  !   ll = l*(l + 1)
-                  !   DO m = -l, l
-                  !      lm = ll + m
-                  !      DO lp = 0, atoms%lmax(n)
-                  !         llp = lp*(lp + 1)
-                  !         DO mp = -lp, lp
-                  !            lmp = llp + mp
-                  !            DO j = 1, size(mmn, 2)
-                  !               DO i = 1, size(mmn, 1)
-                  !                  mmn(i, j) = mmn(i, j) + phasefac* &
-                  !                      abc(n)%cof(i, lm, r1, nn)*CONJG(abc_b(n)%cof(j, lmp, r2, nn))*ujug(lmp, lm, r1, r2, n, nene)
-                  !               END DO
-                  !            END DO
-                  !         end do
-                  !      end do
-                  !   END DO
-                  !END DO
-               !END DO
             END DO
 
          END DO
