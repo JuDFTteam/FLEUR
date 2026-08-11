@@ -72,7 +72,6 @@ Real space, from `<operators_r>`:
 |---|---|
 | `WF<n>_hr.dat` | `H(R)` in eV, Wannier90 `hr` format |
 | `WF<n>_r.dat` | `A(R) = <0n\|r\|Rm>` in Å, the non-centred WYSV form |
-| `WF<n>_r_ti.dat` | the same in the translationally invariant form |
 | `WF<n>_bmn.dat` | `B(R) = <0n\|H r\|Rm>` in eV·Å — **not numerically validated yet** |
 | `rspauli.1` | spin, 3 components |
 | `anglmomrs.<n>` | orbital moment, 3 components |

@@ -9,7 +9,6 @@
 !>  differs per operator is only the format, selected here by `fmt`:
 !>    'hr'      Wannier90 seedname_hr.dat : header + ndegen block + H(R) in eV
 !>    'r'       Wannier90 seedname_r.dat  : header + A(R) in Angstrom, 3 components
-!>    'rti'     like 'r', but the TRANSLATIONALLY INVARIANT form (centred on r_avg)
 !>    'bmn'     Wannier90-like            : header + B(R)=<0n|H (r-R)|Rm> in eV*Ang, 3 comps
 !>    'soc'     R1 R2 R3  i j jj ii  Re Im   (2x2 spinor blocks -> rssocmat.1)
 !>    'generic' R1 R2 R3  i j comp   Re Im   (spin -> rspauli.1, orbital -> anglmomrs.*)
@@ -55,16 +54,6 @@ CONTAINS
          END DO; END DO; END DO
       CASE ('r')
          WRITE(iu,'(a)') ' written by FLEUR wannierlib : A(R)=<0n|r|Rm> in Ang, W90 r format'
-         WRITE(iu,'(i12)') nw
-         WRITE(iu,'(i12)') nrpts
-         DO irpt = 1, nrpts; DO j = 1, nw; DO i = 1, nw
-            WRITE(iu,'(5i5,6f12.6)') irvec(:,irpt), i, j, &
-               (bohr2ang*REAL(o_r(i,j,irpt,kk)), bohr2ang*AIMAG(o_r(i,j,irpt,kk)), kk=1,3)
-         END DO; END DO; END DO
-      CASE ('rti')
-         WRITE(iu,'(a)') ' written by FLEUR wannierlib : A(R)=<0n|r|Rm> in Ang, TRANSLATIONALLY'
-         WRITE(iu,'(a)') ' INVARIANT form (r_avg centring + centre at R=0). This is the one B and'
-         WRITE(iu,'(a)') ' F are built in; the non-centred WYSV A is in the _r.dat file instead.'
          WRITE(iu,'(i12)') nw
          WRITE(iu,'(i12)') nrpts
          DO irpt = 1, nrpts; DO j = 1, nw; DO i = 1, nw
