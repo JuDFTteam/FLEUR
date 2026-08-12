@@ -8,6 +8,7 @@ src/fleur/wannierlib/postproc/melem_domains.F90
 src/fleur/wannierlib/postproc/melem_hamk.F90
 src/fleur/wannierlib/postproc/melem_coeff_a.F90
 src/fleur/wannierlib/postproc/melem_coeff_b.F90
+src/fleur/wannierlib/postproc/melem_coeff_f.F90
 src/fleur/wannierlib/postproc/melem_operators_r.F90
 src/fleur/wannierlib/postproc/melem_spin_collinear.F90
 src/fleur/wannierlib/postproc/melem_interpolate_ham.F90

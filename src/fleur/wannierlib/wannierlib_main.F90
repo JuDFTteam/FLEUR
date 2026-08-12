@@ -24,6 +24,7 @@ MODULE m_wannierlib_main
    USE m_wannierlib_amn
    USE m_wannierlib_mmnkb
    USE m_melem_ujugaunt
+  USE m_wannierlib_uiu, ONLY: wannierlib_uiu
    USE m_wannierlib_w90_adapter
    USE m_melem_coarse, ONLY: t_melem_coarse
    USE m_melem_run, ONLY: melem_run
@@ -91,6 +92,7 @@ CONTAINS
       TYPE(t_lapw) :: lapw
       TYPE(t_mat), POINTER :: zmat_p(:)     ! into the factory cache
       TYPE(t_radfun), POINTER :: radfun(:)  ! likewise; the factory owns them
+      COMPLEX, ALLOCATABLE :: f0_loc(:, :, :, :, :)  ! (nw,nw,3,3,nk_loc) geometric tensor
       TYPE(t_abc), POINTER :: abc_p(:, :)   ! (2,ntype), likewise
       LOGICAL :: l_wannierlib_spinors
       TYPE(t_melem_request) :: request
@@ -241,7 +243,14 @@ CONTAINS
          ! gauge, the overlaps and the b-mesh. Adding an operator does not touch this file.
          ! Kept BEFORE report_w90 so the ordering of the operator messages in `out` is unchanged.
          CALL wannierlib_get_bmesh(this, kpts, bmesh)
-         CALL melem_run(request, manifold, domains, cell, kpts, eig, u_matrix, u_opt, melem, &
+         !> F wants the gauge at two neighbours at once, so it can be built neither with the
+         !> coarse matrices, which come before any gauge, nor in the post-processing, which
+         !> cannot reach the wavefunctions. It goes here, and only when it was asked for.
+         IF (request%has_op_r('fmn')) &
+            CALL wannierlib_uiu(manifold, bmesh, kpts, atoms, cell, input, sym, noco, nococonv, &
+                                radfun, jspin, l_wannierlib_spinors, eig_id, stars, enpara, &
+                                vtot, fmpi, distk, u_matrix, u_opt, f0_loc)
+         CALL melem_run(request, manifold, domains, cell, kpts, eig, u_matrix, u_opt, melem, f0_loc, &
                         mmn, bmesh, distk, fmpi, &
                         wf_channel=jspin, spin_suffix=TRIM(spin_sfx))
 
@@ -251,6 +260,7 @@ CONTAINS
          IF (ALLOCATED(mmn)) DEALLOCATE (mmn)
          IF (ALLOCATED(u_matrix)) DEALLOCATE (u_matrix)
          IF (ALLOCATED(u_opt)) DEALLOCATE (u_opt)
+         IF (ALLOCATED(f0_loc)) DEALLOCATE (f0_loc)
          IF (ALLOCATED(eig)) DEALLOCATE (eig)
 
       END DO

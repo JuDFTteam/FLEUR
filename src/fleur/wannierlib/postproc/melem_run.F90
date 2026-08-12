@@ -37,7 +37,7 @@ MODULE m_melem_run
 
 CONTAINS
 
-   SUBROUTINE melem_run(request, manifold, domains, cell, kpts, eig, u_matrix, u_opt, coarse, &
+   SUBROUTINE melem_run(request, manifold, domains, cell, kpts, eig, u_matrix, u_opt, coarse, f0_loc, &
                         mmn, bmesh, distk, fmpi, wf_channel, spin_suffix)
       TYPE(t_melem_request), INTENT(IN) :: request
       TYPE(t_melem_manifold), INTENT(IN) :: manifold
@@ -48,6 +48,9 @@ CONTAINS
       COMPLEX, INTENT(IN) :: u_matrix(:, :, :)         !< (nw,nw,nk) MLWF gauge
       COMPLEX, INTENT(IN) :: u_opt(:, :, :)            !< (nb,nw,nk) disentangled
       TYPE(t_melem_coarse), INTENT(IN) :: coarse
+      !> (nw,nw,3,3,nk_loc) the geometric tensor. Unallocated unless it was asked for: it is
+      !> the one operator that cannot be built from what this routine is handed.
+      COMPLEX, ALLOCATABLE, INTENT(IN) :: f0_loc(:, :, :, :, :)
       COMPLEX, INTENT(IN) :: mmn(:, :, :, :)           !< (nb,nb,nntot,nk_loc) this rank's overlap slice
       TYPE(t_melem_bmesh), INTENT(IN) :: bmesh         !< b-shell weights (position/velocity operators)
       INTEGER, INTENT(IN) :: distk(:)
@@ -96,7 +99,7 @@ CONTAINS
 
       ! (2) real-space operator export (Fourier step 3, standalone format) -- once, before interpolation
       CALL melem_write_operators_r(manifold, request, cell, kpts, eig, u_matrix, u_opt, &
-                                   coarse%s0, coarse%l0, coarse%soc4, bmesh, distk, mpi_comm, mmn, &
+                                   coarse%s0, coarse%l0, coarse%soc4, f0_loc, bmesh, distk, mpi_comm, mmn, &
                                    irank, wf_ch, l_collinear)
 
       ! (3) Wannier-gauge interpolation: dispatch by looping over the requested operator list.
