@@ -12,7 +12,7 @@
 !>  a slice that knows one k cannot do it. Only the Fourier sum to R is left.
 MODULE m_melem_coeff_f
   USE m_juDFT
-  USE m_constants, ONLY : oUnit, tpi_const, bohr_to_angstrom_const
+  USE m_constants, ONLY : oUnit, tpi_const
   USE m_types_kpts
   USE m_types_melem_manifold, ONLY : t_melem_manifold
   USE m_melem_io, ONLY : melem_write_realspace
@@ -28,8 +28,8 @@ CONTAINS
   ! The nine components are stored with b running fastest, c = 3*(a-1) + b, which is the
   ! row-major order the cart2 format writes: xx xy xz yx yy yz zx zy zz.
   !
-  ! That format writes what it is handed, so the two lengths are converted to Angstrom here
-  ! rather than there.
+  ! No conversion of length: the shell weights carry Angstrom squared and the b vectors its
+  ! inverse, so what arrives is already Angstrom squared.
   !
   ! Collective: every rank owns a k-slice and the sum over R is reduced across all of them.
   !
@@ -76,7 +76,6 @@ CONTAINS
     IF (irank == 0) THEN
       fn = 'WF1_fmn'
       IF (PRESENT(wfpref)) fn = TRIM(wfpref)//'_fmn'
-      fr = fr * (bohr_to_angstrom_const**2)
       CALL melem_write_realspace(fr, irvec, [(0, irpt = 1, nrpts)], nrpts, nw, 9, 'cart2', &
                                  TRIM(fn)//'.dat', 0)
       WRITE(oUnit,'(a)') 'wannierlib: wrote '//TRIM(fn)//'.dat (F(R)=<0n|r_a r_b|Rm>, Ang^2)'
