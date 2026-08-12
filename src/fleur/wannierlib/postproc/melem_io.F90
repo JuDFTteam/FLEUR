@@ -7,6 +7,10 @@
 !>  operators O(R) consumed by external transport post-processing. The gauge
 !>  rotation and the Fourier transform are operator-independent (melem_ft); what
 !>  differs per operator is only the format, selected here by `fmt`:
+!>
+!>  Energies are converted and lengths are not, because they reach this point from
+!>  different places: the eigenvalues come from FLEUR in Hartree, while the b-mesh the
+!>  position operators are built from comes from Wannier90, already in Angstrom.
 !>    'hr'      Wannier90 seedname_hr.dat : header + ndegen block + H(R) in eV
 !>    'r'       Wannier90 seedname_r.dat  : header + A(R) in Angstrom, 3 components
 !>    'bmn'     Wannier90-like            : header + B(R)=<0n|H (r-R)|Rm> in eV*Ang, 3 comps
@@ -31,7 +35,6 @@ CONTAINS
       INTEGER,          INTENT(IN) :: nrpts, nw, ncomp, irank
       CHARACTER(LEN=*), INTENT(IN) :: fmt, fname
 
-      REAL, PARAMETER :: bohr2ang = 0.5291772109
       INTEGER :: irpt, i, j, kk, ii, jj, c, iu
 
       IF (irank /= 0) RETURN
@@ -58,7 +61,7 @@ CONTAINS
          WRITE(iu,'(i12)') nrpts
          DO irpt = 1, nrpts; DO j = 1, nw; DO i = 1, nw
             WRITE(iu,'(5i5,6f12.6)') irvec(:,irpt), i, j, &
-               (bohr2ang*REAL(o_r(i,j,irpt,kk)), bohr2ang*AIMAG(o_r(i,j,irpt,kk)), kk=1,3)
+               (REAL(o_r(i,j,irpt,kk)), AIMAG(o_r(i,j,irpt,kk)), kk=1,3)
          END DO; END DO; END DO
       CASE ('bmn')
          WRITE(iu,'(a)') ' written by FLEUR wannierlib : B(R)=<0n|H (r-R)|Rm> in eV*Ang, 3 components'
@@ -66,8 +69,8 @@ CONTAINS
          WRITE(iu,'(i12)') nrpts
          DO irpt = 1, nrpts; DO j = 1, nw; DO i = 1, nw
             WRITE(iu,'(5i5,6f12.6)') irvec(:,irpt), i, j, &
-               (hartree_to_ev_const*bohr2ang*REAL(o_r(i,j,irpt,kk)), &
-                hartree_to_ev_const*bohr2ang*AIMAG(o_r(i,j,irpt,kk)), kk=1,3)
+               (hartree_to_ev_const*REAL(o_r(i,j,irpt,kk)), &
+                hartree_to_ev_const*AIMAG(o_r(i,j,irpt,kk)), kk=1,3)
          END DO; END DO; END DO
       CASE ('soc')
          DO irpt = 1, nrpts; DO i = 1, nw; DO j = 1, nw; DO ii = 1, 2; DO jj = 1, 2
