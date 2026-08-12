@@ -25,16 +25,25 @@ MODULE m_types_melem_bmesh
       INTEGER :: nntot = 0                   !< number of b-vectors per k-point
       INTEGER, ALLOCATABLE :: nnlist(:, :)   !< (nk, nntot) global k index of neighbour b of k
       INTEGER, ALLOCATABLE :: gkpb(:, :, :)  !< (3, nk, nntot) G that brings the neighbour back
-      REAL,    ALLOCATABLE :: kdiff(:, :)    !< (3, nntot) the distinct b vectors
-      !> Shell weights: these the wannierisation produces, so they arrive later.
+      !> (3, nntot) the distinct b vectors, in internal coordinates. Deduplicated by value,
+      !> so its second index is a storage slot and not a neighbour slot: the two orders
+      !> coincide only by accident. Look an entry up by value, the way melem_mmkb_sph does,
+      !> or ask shell_vector for the b of a neighbour slot.
+      REAL,    ALLOCATABLE :: kdiff(:, :)
+      !> Shell weights: these the wannierisation produces, so they arrive later. Both stay
+      !> unallocated for as long as the neighbour overlaps are still being built, which is
+      !> where shell_vector is the only way to a b vector.
       REAL,    ALLOCATABLE :: wb(:)          !< (nntot) b-shell weights
-      REAL,    ALLOCATABLE :: bk(:, :, :)    !< (3, nntot, nk) cartesian b vectors
+      !> (3, nntot, nk) the same b vectors CARTESIAN, which is what the weights above are
+      !> paired with. Neither the coordinates nor the index order match kdiff or gkpb.
+      REAL,    ALLOCATABLE :: bk(:, :, :)
       !> Reference Wannier centres, used only by the R=0 Berry-centre calibration check.
       !> Left unallocated when no reference is available -> the check is skipped.
       REAL,    ALLOCATABLE :: centres(:, :)  !< (3, num_wann)
    CONTAINS
       PROCEDURE :: free           => melem_bmesh_free
       PROCEDURE :: set_neighbours => melem_bmesh_set_neighbours
+      PROCEDURE :: shell_vector   => melem_bmesh_shell_vector
    END TYPE t_melem_bmesh
 
    PUBLIC :: t_melem_bmesh
@@ -68,5 +77,21 @@ CONTAINS
       this%gkpb   = gkpb
       this%kdiff  = kdiff
    END SUBROUTINE melem_bmesh_set_neighbours
+
+   !> The b vector of one neighbour slot, in the internal coordinates kdiff is written in:
+   !>
+   !>     b(k, nn) = bkf(nnlist(k, nn)) + gkpb(:, k, nn) - bkf(k)
+   !>
+   !> Needs the topology and nothing else, so it answers from the moment the mesh is known
+   !> and long before the shell weights and their cartesian bk exist. Takes the mesh points
+   !> as a plain array to keep this bundle free of any type.
+   PURE FUNCTION melem_bmesh_shell_vector(this, bkf, k, nn) RESULT(b)
+      CLASS(t_melem_bmesh), INTENT(IN) :: this
+      REAL,    INTENT(IN) :: bkf(:, :)   !> (3, nk) the mesh points
+      INTEGER, INTENT(IN) :: k, nn
+      REAL :: b(3)
+
+      b = bkf(:, this%nnlist(k, nn)) + this%gkpb(:, k, nn) - bkf(:, k)
+   END FUNCTION melem_bmesh_shell_vector
 
 END MODULE m_types_melem_bmesh
