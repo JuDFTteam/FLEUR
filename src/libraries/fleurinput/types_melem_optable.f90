@@ -72,11 +72,12 @@ MODULE m_types_melem_optable
 
    !> <operators_r>/<operator name="..">. No output column: these write legacy names that
    !> carry a channel or a spin-block index, so the writer builds them itself.
-   TYPE(t_melem_exposed), PARAMETER, PUBLIC :: WANNIERLIB_OPR(7) = [ &
+   TYPE(t_melem_exposed), PARAMETER, PUBLIC :: WANNIERLIB_OPR(8) = [ &
       t_melem_exposed('hamiltonian', '',           0, '', '', .FALSE.), &
       t_melem_exposed('position',    '',           0, '', '', .FALSE.), &
       t_melem_exposed('bmn',         '',           0, '', '', .FALSE.), &
       t_melem_exposed('fmn',         '',           0, '', '', .FALSE.), &
+      t_melem_exposed('cmn',         '',           0, '', '', .FALSE.), &
       t_melem_exposed('spin',        'spin',       3, '', '', .FALSE.), &
       t_melem_exposed('orbital',     'orbital',    3, '', '', .FALSE.), &
       t_melem_exposed('spin_orbit',  'spin_orbit', 4, '', '', .FALSE.)]

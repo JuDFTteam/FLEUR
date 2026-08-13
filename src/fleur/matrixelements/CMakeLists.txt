@@ -6,6 +6,9 @@ src/fleur/matrixelements/melem_mmkb_int.F90
 src/fleur/matrixelements/melem_mmkb_sph.F90
 src/fleur/matrixelements/melem_overlap.F90
 src/fleur/matrixelements/melem_ujugaunt.F90
+src/fleur/matrixelements/melem_nablaujugaunt.F90
+src/fleur/matrixelements/melem_nabla_int.F90
+src/fleur/matrixelements/melem_nabla_sph.F90
 src/fleur/matrixelements/melem_spin.F90
 src/fleur/matrixelements/melem_check.F90
 src/fleur/matrixelements/melem_coarse.F90

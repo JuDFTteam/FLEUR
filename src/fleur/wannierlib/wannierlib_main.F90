@@ -25,6 +25,7 @@ MODULE m_wannierlib_main
    USE m_wannierlib_mmnkb
    USE m_melem_ujugaunt
   USE m_wannierlib_uiu, ONLY: wannierlib_uiu
+  USE m_wannierlib_uhu, ONLY: wannierlib_uhu
    USE m_wannierlib_w90_adapter
    USE m_melem_coarse, ONLY: t_melem_coarse
    USE m_melem_run, ONLY: melem_run
@@ -93,6 +94,7 @@ CONTAINS
       TYPE(t_mat), POINTER :: zmat_p(:)     ! into the factory cache
       TYPE(t_radfun), POINTER :: radfun(:)  ! likewise; the factory owns them
       COMPLEX, ALLOCATABLE :: f0_loc(:, :, :, :, :)  ! (nw,nw,3,3,nk_loc) geometric tensor
+      COMPLEX, ALLOCATABLE :: c0_loc(:, :, :, :, :)  ! (nw,nw,3,3,nk_loc) el mismo con H dentro
       TYPE(t_abc), POINTER :: abc_p(:, :)   ! (2,ntype), likewise
       LOGICAL :: l_wannierlib_spinors
       TYPE(t_melem_request) :: request
@@ -250,7 +252,13 @@ CONTAINS
             CALL wannierlib_uiu(manifold, bmesh, kpts, atoms, cell, input, sym, noco, nococonv, &
                                 radfun, jspin, l_wannierlib_spinors, eig_id, stars, enpara, &
                                 vtot, fmpi, distk, u_matrix, u_opt, f0_loc)
-         CALL melem_run(request, manifold, domains, cell, kpts, eig, u_matrix, u_opt, melem, f0_loc, &
+         !> C pide lo mismo que F -el gauge en dos vecinos a la vez- y ademas los
+         !> autovalores del bra, asi que vive aqui por la misma razon.
+         IF (request%has_op_r('cmn')) &
+            CALL wannierlib_uhu(manifold, bmesh, kpts, atoms, cell, input, sym, noco, nococonv, &
+                                radfun, jspin, l_wannierlib_spinors, eig_id, stars, enpara, &
+                                vtot, fmpi, distk, u_matrix, u_opt, c0_loc)
+         CALL melem_run(request, manifold, domains, cell, kpts, eig, u_matrix, u_opt, melem, f0_loc, c0_loc, &
                         mmn, bmesh, distk, fmpi, &
                         wf_channel=jspin, spin_suffix=TRIM(spin_sfx))
 
@@ -261,6 +269,7 @@ CONTAINS
          IF (ALLOCATED(u_matrix)) DEALLOCATE (u_matrix)
          IF (ALLOCATED(u_opt)) DEALLOCATE (u_opt)
          IF (ALLOCATED(f0_loc)) DEALLOCATE (f0_loc)
+         IF (ALLOCATED(c0_loc)) DEALLOCATE (c0_loc)
          IF (ALLOCATED(eig)) DEALLOCATE (eig)
 
       END DO

@@ -34,6 +34,7 @@ MODULE m_melem_operators_r
   USE m_melem_coeff_a, ONLY : melem_build_berry_aw_r, melem_check_berry_centres, melem_write_ar
   USE m_melem_coeff_b, ONLY : melem_write_bmn
   USE m_melem_coeff_f, ONLY : melem_write_fmn
+  USE m_melem_coeff_c, ONLY : melem_write_cmn
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: melem_write_operators_r, melem_op_rs_distributed
@@ -68,7 +69,7 @@ CONTAINS
   ! anglmomrs.1 (orbital), rssocmat.1 (SOC), wig_vectors.
   ! ---------------------------------------------------------------------------
   SUBROUTINE melem_write_operators_r(this, request, cell, kpts, eig, u_matrix, u_opt, &
-                                          s0_loc, l0_loc, soc4_loc, f0_loc, bmesh, distk, mpi_comm, mmn_loc, irank, wf_channel, l_collinear)
+                                          s0_loc, l0_loc, soc4_loc, f0_loc, c0_loc, bmesh, distk, mpi_comm, mmn_loc, irank, wf_channel, l_collinear)
     TYPE(t_melem_manifold), INTENT(IN) :: this
     TYPE(t_melem_request), INTENT(IN) :: request
     TYPE(t_cell), INTENT(IN) :: cell
@@ -82,6 +83,9 @@ CONTAINS
     !> (nw,nw,3,3,nk_loc) the geometric tensor, already contracted over the pairs of
     !> neighbours and already gauged, because that has to happen where the wavefunctions are.
     COMPLEX, ALLOCATABLE, INTENT(IN) :: f0_loc(:, :, :, :, :)
+    !> (nw,nw,3,3,nk_loc) el mismo tensor con el hamiltoniano dentro. Sin asignar
+    !> salvo que se pida, por lo mismo que f0_loc.
+    COMPLEX, ALLOCATABLE, INTENT(IN) :: c0_loc(:, :, :, :, :)
     TYPE(t_melem_bmesh), INTENT(IN) :: bmesh         ! b-shell weights (position/Berry operator)
     COMPLEX, INTENT(IN) :: mmn_loc(:, :, :, :)       ! (nb,nb,nntot,nk_loc) this rank's overlap slice (position/Berry)
     INTEGER, INTENT(IN) :: distk(:), mpi_comm, irank
@@ -118,7 +122,7 @@ CONTAINS
     !> behaviour that a serial run can never show. It needs only eig, u_matrix and u_opt,
     !> which every rank already holds, so the duplicated work is the cheap way out.
     l_need_hr = request%has_op_r('hamiltonian') .OR. request%has_op_r('bmn') &
-                .OR. request%has_op_r('fmn')
+                .OR. request%has_op_r('fmn') .OR. request%has_op_r('cmn')
     IF (l_need_hr) THEN
       CALL melem_build_hamk(this, eig, u_matrix, u_opt, ham_k)
       CALL melem_ft_to_real(cell, ham_k, kpts, ham_r, hr_irvec, hr_ndegen, hr_nrpts)
@@ -134,6 +138,9 @@ CONTAINS
                              bmesh, hr_irvec, hr_nrpts, mpi_comm, irank, TRIM(wfpref))
       CASE ('fmn')           ! collective: only the sum over R is left, the gauge is already in
         CALL melem_write_fmn(this, kpts, f0_loc, gk_loc, hr_irvec, hr_nrpts, mpi_comm, &
+                             irank, TRIM(wfpref))
+      CASE ('cmn')           ! collective: como fmn, el gauge ya viene aplicado
+        CALL melem_write_cmn(this, kpts, c0_loc, gk_loc, hr_irvec, hr_nrpts, mpi_comm, &
                              irank, TRIM(wfpref))
       CASE ('position')      ! Berry connection A^(W)(R)=A(R): distributed reduce over the local overlaps
         CALL melem_build_berry_aw_r(this, cell, kpts, mmn_loc, gk_loc, u_opt, u_matrix, bmesh, mpi_comm, &

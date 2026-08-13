@@ -3620,6 +3620,7 @@
                <xsd:enumeration value="position"/>
                <xsd:enumeration value="bmn"/>
                <xsd:enumeration value="fmn"/>
+               <xsd:enumeration value="cmn"/>
                <xsd:enumeration value="spin"/>
                <xsd:enumeration value="orbital"/>
                <xsd:enumeration value="spin_orbit"/>

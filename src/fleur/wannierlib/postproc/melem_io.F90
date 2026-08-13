@@ -17,6 +17,7 @@
 !>    'soc'     R1 R2 R3  i j jj ii  Re Im   (2x2 spinor blocks -> rssocmat.1)
 !>    'generic' R1 R2 R3  i j comp   Re Im   (spin -> rspauli.1, orbital -> anglmomrs.*)
 !>    'cart2'   R1 R2 R3  i j        then nine (alpha,beta) components on the line
+!>    'cart2e'  como cart2, con la energia convertida a eV
 MODULE m_melem_io
    USE m_juDFT
    USE m_constants, ONLY: hartree_to_ev_const
@@ -97,6 +98,20 @@ CONTAINS
             WRITE(iu, '(i3,1x,i3,1x,i3,1x,i3,1x,i3,18(1x,f20.8))') &
                irvec(1,irpt), irvec(2,irpt), irvec(3,irpt), i, j, &
                (REAL(o_r(i,j,irpt,kk)), AIMAG(o_r(i,j,irpt,kk)), kk = 1, 9)
+         END DO; END DO; END DO
+      CASE ('cart2e')
+         !> El mismo layout que cart2, para un operador que ademas lleva energia. La
+         !> conversion es la unica diferencia, y esta aqui y no en el llamante porque es
+         !> donde vive el contrato de unidades.
+         IF (ncomp /= 9) CALL juDFT_error( &
+            'melem_write_realspace: the cart2e format carries nine Cartesian components', &
+            hint='use the generic format for an operator with one Cartesian index', &
+            calledby='melem_write_realspace')
+         DO irpt = 1, nrpts; DO j = 1, nw; DO i = 1, nw
+            WRITE(iu, '(i3,1x,i3,1x,i3,1x,i3,1x,i3,18(1x,f20.8))') &
+               irvec(1,irpt), irvec(2,irpt), irvec(3,irpt), i, j, &
+               (hartree_to_ev_const*REAL(o_r(i,j,irpt,kk)), &
+                hartree_to_ev_const*AIMAG(o_r(i,j,irpt,kk)), kk = 1, 9)
          END DO; END DO; END DO
       CASE DEFAULT
          CALL juDFT_error('melem_write_realspace: unknown format "'//TRIM(fmt)//'"', &
