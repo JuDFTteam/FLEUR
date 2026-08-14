@@ -352,8 +352,8 @@ contains
                zRot_c = zMatRot%data_c(1:nv_kPrime, 1:nbands)
             end if
 
-            call CPP_zgemm('N', 'N', nv_kPrime, nbands, nv_kPrime, cmplx_1, smat_is%data_c, nv_kPrime, zRot_c, nv_kPrime, cmplx_0, tmp_is, nv_kPrime)
-            call CPP_zgemm('C', 'N', nbands, nbands, nv_kPrime, cmplx_1, zKPrime_c, nv_kPrime, tmp_is, nv_kPrime, cmplx_1, lambda(:, :, ik, isym), nbands)
+            call CPP_zgemm('N', 'N', nv_kPrime, nbands, nv_kPrime, cmplx_1, smat_is%data_c(1, 1), nv_kPrime, zRot_c(1, 1), nv_kPrime, cmplx_0, tmp_is(1, 1), nv_kPrime)
+            call CPP_zgemm('C', 'N', nbands, nbands, nv_kPrime, cmplx_1, zKPrime_c(1, 1), nv_kPrime, tmp_is(1, 1), nv_kPrime, cmplx_1, lambda(1, 1, ik, isym), nbands)
 
             call zMatK%free()
             call zMatRot%free()
@@ -771,8 +771,8 @@ contains
          do l = 0, fi%atoms%lmax(itype)
             nn = n_r(l, itype)
             do m = -l, l
-               call CPP_zgemm('N', 'N', nn, nbands, nn, cmplx_1, olapmt(1, 1, l, itype), maxn_r, ketT(lm + 1, 1), maxlmindx, cmplx_0, tmp, maxn_r)
-               call CPP_zgemm('C', 'N', nbands, nbands, nn, cmplx_1, braT(lm + 1, 1), maxlmindx, tmp, maxn_r, cmplx_1, lam, nbands)
+               call CPP_zgemm('N', 'N', nn, nbands, nn, cmplx_1, olapmt(1, 1, l, itype), maxn_r, ketT(lm + 1, 1), maxlmindx, cmplx_0, tmp(1, 1), maxn_r)
+               call CPP_zgemm('C', 'N', nbands, nbands, nn, cmplx_1, braT(lm + 1, 1), maxlmindx, tmp(1, 1), maxn_r, cmplx_1, lam(1, 1), nbands)
                lm = lm + nn
             end do
          end do
