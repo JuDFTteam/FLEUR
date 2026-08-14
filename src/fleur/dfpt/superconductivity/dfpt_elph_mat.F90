@@ -255,7 +255,7 @@ CONTAINS
 
     END SUBROUTINE construct_elph_element
 
-    subroutine el_ph_wannier_interpolate(fmpi,fi,results,dynMats,gmatCart)
+    subroutine el_ph_wannier_interpolate(fmpi,fi,results,dynMats,gmatCart,qpts_gmat)
 
         use m_eig66_io, only : open_eig,close_eig,read_eig
         use m_wannier_interpolate
@@ -270,6 +270,13 @@ CONTAINS
         type(t_results),     intent(in) :: results
         complex,intent(in)              :: dynMats(:,:,:) !(3*nat,3*nat,nqcoarse)
         complex,intent(in)              :: gmatCart(:,:,:,:,:,:) !(nu,nu',kpoints,spin,iPerturb,iQ)
+        ! q mesh the LAST dimension of gmatCart runs over. Absent (the historical
+        ! case) it is the input q mesh; after symmetry unfolding it is the full
+        ! BZ, which dynMats deliberately does NOT share -- ft_dyn unfolds that
+        ! one itself.
+        type(t_kpts), optional, intent(in) :: qpts_gmat
+
+        type(t_kpts) :: qvec_gmat
 
         integer :: eig_id_interpol,q_eig_id_interpol, num_wann , num_bands , ikpt, iMode, ispin, iPerturb
         integer :: iQ, nKept, nSurv, iKept, ne, iWann, i, nLocKpts, nInterpol
@@ -307,6 +314,13 @@ CONTAINS
         num_bands = fi%wannierlib%max_band - fi%wannierlib%min_band + 1
         num_wann  = fi%wannierlib%num_wann
 
+        if (present(qpts_gmat)) then
+            qvec_gmat = qpts_gmat
+        else
+            qvec_gmat = fi%dfpt%qvec
+        end if
+        if (qvec_gmat%nkpt /= size(gmatCart,6)) call juDFT_error("gmatCart q dimension does not match its q mesh",calledby="el_ph_wannier_interpolate")
+
         atomic_mass_array = atomicMasses_const * massInElectronMasses
 
         if ( (.not. allocated(fi%dfpt%qpts_interpol%bk)) .or. (.not. allocated(fi%dfpt%kpts_interpol%bk))) call juDFT_error("No meshes to interpoalte on.",calledby="dfpt_elph_mat.F90")
@@ -335,7 +349,7 @@ CONTAINS
         call timestop("Load Wannier U matrices")
 
         ! diagnostic: verify the matrix-element interpolation
-        if (fmpi%irank==0) call check_matrixq_roundtrip(fi, gmatCart, U_full)
+        if (fmpi%irank==0) call check_matrixq_roundtrip(fi, gmatCart, U_full, qvec_gmat)
 
         sqrtOmegaMax = global_phonon_energy_bound(fi, dynMats)
 
@@ -417,7 +431,7 @@ CONTAINS
         allocate(gmatRealspace(3*fi%atoms%nat, fi%input%jspins))
         do iMode = 1 , 3*fi%atoms%nat
             do ispin = 1 , fi%input%jspins
-                call wannier_matrixq_forward(fi,gmatCart(:,:,:,ispin,iMode,:),U_full(:,:,:,ispin),fi%kpts,fi%dfpt%qvec,gmatRealspace(iMode,ispin))
+                call wannier_matrixq_forward(fi,gmatCart(:,:,:,ispin,iMode,:),U_full(:,:,:,ispin),fi%kpts,qvec_gmat,gmatRealspace(iMode,ispin))
             end do !ispin
         end do !iMode
         call timestop("Forward FT elph-element")
@@ -772,7 +786,7 @@ CONTAINS
 
     end subroutine select_fermi_kpoints
 
-    subroutine check_matrixq_roundtrip(fi, gmat, U_full)
+    subroutine check_matrixq_roundtrip(fi, gmat, U_full, qvec_gmat)
         ! Round-trip test of the e-ph matrix-element interpolation:
         ! interpolate gmat onto the SAME coarse (k,q) grid and compare (in the
         ! Wannier gauge) to the directly rotated coarse element. On the coarse
@@ -781,6 +795,7 @@ CONTAINS
         type(t_fleurinput), intent(in) :: fi
         complex,            intent(in) :: gmat(:,:,:,:,:,:)   ! (nb,nb,k,jsp,mode,q) Bloch, coarse
         complex,            intent(in) :: U_full(:,:,:,:)     ! (nb,nwann,nkptf,jsp)
+        type(t_kpts),       intent(in) :: qvec_gmat           ! q mesh of gmat's last dimension
 
         integer :: nwann, nkpt, nq, ispin, iMode, ik, iq, ikq
         complex, allocatable :: gInterp(:,:,:,:), gRef(:,:,:,:)
@@ -798,11 +813,11 @@ CONTAINS
             do iMode = 1, size(gmat,5)
                 ! "after": interpolate the coarse gmat back onto the coarse (k,q) grid
                 call wannier_matrixq_interpolate(fi, gmat(:,:,:,ispin,iMode,:), U_full(:,:,:,ispin), &
-                         fi%kpts, fi%kpts%bk(:,1:nkpt), gInterp, fi%dfpt%qvec, fi%dfpt%qvec%bk(:,1:nq))
+                         fi%kpts, fi%kpts%bk(:,1:nkpt), gInterp, qvec_gmat, qvec_gmat%bk(:,1:nq))
                 ! "before": coarse Bloch element rotated into the Wannier gauge  (U^dag(k+q) g U(k))
                 do iq = 1, nq
                     do ik = 1, nkpt
-                        ikq = fi%kpts%get_nk(fi%kpts%bk(:,ik) + fi%dfpt%qvec%bk(:,iq))
+                        ikq = fi%kpts%get_nk(fi%kpts%bk(:,ik) + qvec_gmat%bk(:,iq))
                         gRef(:,:,ik,iq) = matmul(conjg(transpose(U_full(:,:,ikq,ispin))), &
                                           matmul(gmat(:,:,ik,ispin,iMode,iq), U_full(:,:,ik,ispin)))
                     end do

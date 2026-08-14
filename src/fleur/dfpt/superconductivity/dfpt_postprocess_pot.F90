@@ -14,6 +14,7 @@ module m_dfpt_postprocess_pot
 
     USE m_types 
     USE m_constants
+    use m_npy
     
     implicit none
 
@@ -33,6 +34,7 @@ contains
         use m_fermie
         use m_dfpt_generate_gradient
         use m_dfpt_vgen
+        use m_dfpt_lambda
 
         type(t_mpi), intent(in)       :: fmpi
         type(t_fleurinput),intent(in) :: fi 
@@ -54,10 +56,19 @@ contains
 
         type(t_hub1data) :: hub1data
         type(t_stars) :: starsq
-        type(t_kpts)  :: kqpts 
+        type(t_kpts)  :: kqpts
         type(t_sternheimerJob) :: sternheimerJob
         type(t_potden) :: vTot1, vTot1Im, den1, den1Im, rho_local
         type(t_results) :: dummy_results
+
+        ! Symmetry unfolding of the q axis (see dfpt_lambda.F90, README_symmetry.md)
+        type(t_sym)   :: sym_full
+        type(t_kpts)  :: qvec_full, qvec_bz
+        logical :: l_fullsym
+        integer :: ispin
+        complex, allocatable :: lambda(:,:,:,:)
+        integer, allocatable :: ikrot(:,:)
+        complex, allocatable :: gmatCartBZ(:,:,:,:,:,:) ! (nu',nu,kpoints,jsp,iPerturb,iQfull)
 
 
         type(t_potden) :: grRho3(3), grVtot3(3), grVext3(3), grVc3(3),grgrVext3x3(3,3)
@@ -201,15 +212,53 @@ contains
 
 #ifdef CPP_MPI
     call mpi_bcast(dynMats, size(dynMats), mpi_double_complex, 0, fmpi%mpi_comm, ierr)
-#endif 
+#endif
+
+        ! Symmetry unfolding of the el-ph elements onto the full q Brillouin zone.
+        ! The Sternheimer SCF above only ran on the q it was given; if a fullsym_
+        ! input set is present, it supplies the symmetry group and tells us that
+        ! those q were the irreducible wedge, so the rest of the zone is
+        ! reconstructed here instead of being computed. See README_symmetry.md.
+        ! dynMats stays irreducible on purpose: ft_dyn unfolds it internally.
+        inquire(file="fullsym_inp.xml",EXIST=l_fullsym)
+
+        if (l_fullsym) then
+            call timestart("elph symmetry unfolding")
+            if (fmpi%irank==0) write(*,*) "fullsym_inp.xml found: unfolding el-ph elements onto the full q BZ"
+
+            call dfpt_read_fullsym(fmpi,fi,sym_full,qvec_full)
+
+            allocate(gmatCartBZ(bandWindowSize,bandWindowSize,fi%kpts%nkpt,fi%input%jspins,3*fi%atoms%nat,qvec_full%nkptf))
+            gmatCartBZ = cmplx(0.0,0.0)
+
+            ! Lambda carries exactly the bands the matrix elements carry. Its
+            ! unitarity check is what guards the band window: it fails if and
+            ! only if a degenerate multiplet is cut by one of the window edges.
+            do ispin = 1 , fi%input%jspins
+                call dfpt_build_lambda(fi,sym_full,fmpi,enpara,vTot,nococonv,stars,eig_id,ispin,bandWindow,lambda,ikrot)
+                call save_npy("lambda.npy",lambda)
+                !call dfpt_check_lambda(lambda,1e-6)
+                call dfpt_unfold_gmat(fi,sym_full,qvec_full,ispin,lambda,ikrot,gmatCart,gmatCartBZ)
+                call save_npy('gmatCartBZ.npy', gmatCartBZ)
+                deallocate(lambda,ikrot)
+            end do
+
+            call dfpt_qmesh_full_bz(qvec_full,qvec_bz)
+            call timestop("elph symmetry unfolding")
+        end if
 
         ! Perform Wannier interpolation
-        if (fi%wannierlib%l_wannierize) then 
+        if (fi%wannierlib%l_wannierize) then
             call timestart("Wannier Interpolation elph")
             if (fmpi%irank==0) write(*,*) "Starting the construction of the interpolation"
-            call el_ph_wannier_interpolate(fmpi,fi,results,dynMats,gmatCart)
+            if (l_fullsym) then
+                call el_ph_wannier_interpolate(fmpi,fi,results,dynMats,gmatCartBZ,qvec_bz)
+            else
+                call save_npy('gmatCart.npy', gmatCart)
+                call el_ph_wannier_interpolate(fmpi,fi,results,dynMats,gmatCart)
+            end if
             call timestop("Wannier Interpolation elph")
-        end if 
+        end if
 
     end subroutine dfpt_postprocess_elph
 
