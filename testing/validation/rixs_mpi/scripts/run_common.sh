@@ -27,7 +27,11 @@ esac
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 PACKAGE_ROOT=$(cd -- "${SCRIPT_DIR}/.." && pwd)
-RUN_DIR="${PACKAGE_ROOT}/${RUN_DIRECTORY}"
+if [[ "${RUN_DIRECTORY}" = /* ]]; then
+    RUN_DIR=${RUN_DIRECTORY}
+else
+    RUN_DIR="${PACKAGE_ROOT}/${RUN_DIRECTORY}"
+fi
 
 : "${FLEUR_BIN:?Set FLEUR_BIN to the JURECA MPI-enabled FLEUR executable.}"
 

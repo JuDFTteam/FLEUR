@@ -17,6 +17,7 @@ PACKAGE_ROOT=$(cd -- "${SCRIPT_DIR}/.." && pwd)
 cd "${PACKAGE_ROOT}"
 
 export FLEUR_BIN
+export RIXS_MPI_PACKAGE_ROOT="${PACKAGE_ROOT}"
 
 for ranks in 1 2 4; do
     echo "Submitting SQAy ${ranks}-rank validation"
@@ -24,6 +25,7 @@ for ranks in 1 2 4; do
         --account="${SLURM_ACCOUNT}" \
         --partition="${SLURM_PARTITION}" \
         --time="${SLURM_TIME}" \
+        --chdir="${PACKAGE_ROOT}" \
         --export=ALL \
         "scripts/run_np${ranks}.slurm"
 done

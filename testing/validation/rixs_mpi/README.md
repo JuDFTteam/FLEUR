@@ -135,6 +135,11 @@ From this package directory, submit all three jobs with:
 scripts/submit_all.sh
 ```
 
+`submit_all.sh` exports the absolute package root to the batch jobs. This is
+necessary because Slurm may execute a staged copy of each `.slurm` file, for
+which `BASH_SOURCE[0]` points into Slurm's spool directory rather than back to
+this package.
+
 The exact individual commands are:
 
 ```bash
@@ -155,7 +160,8 @@ BLAS thread variables to one, and translate `RIXS_MPI_LAYOUT` into the explicit
 
 Each script:
 
-- derives the package and run directories from its own location;
+- derives the package and run directories from the exported absolute package
+  root, with the Slurm submission directory as a direct-submission fallback;
 - checks `FLEUR_BIN` and the allocated task count;
 - records SLURM variables, loaded modules, launcher information, and dynamic
   libraries in `job_environment_JOBID.log`;
