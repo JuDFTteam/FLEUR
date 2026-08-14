@@ -44,7 +44,7 @@ contains
       use m_types_mpi
       use m_types_potden
       use m_types_usdus
-      use m_intgr
+      use m_radfun_integrals
       implicit none
       class(t_radfun), intent(inout)         ::this
       type(t_atoms), intent(IN)      :: atoms
@@ -65,9 +65,7 @@ contains
       real            :: g(atoms%jmtd, 2, 0:atoms%lmaxd)
       real            :: flo(atoms%jmtd, 2, atoms%nlod)
 
-      integer:: ispin, jspin, i,j, l, n, lo
-      real,allocatable:: rf(:)
-      real :: ovlp
+      integer:: ispin, l, n, lo
       call timestart("generate radial functions")
       if (present(usdus_out)) then
          if (.not.allocated(usdus_out%us)) call usdus_out%init(atoms, input%jspins)
@@ -106,21 +104,8 @@ contains
 
 
          !Calculate the overlaps
-         DO ispin=1,input%jspins
-            DO jspin=1,input%jspins
-               DO l=0,atoms%lmax(itype)
-                  DO i=1,this%n_r(l)
-                     DO j=1,i
-                        rf=this%r(1:atoms%jri(itype),1,i,l,ispin)*this%r(1:atoms%jri(itype),1,j,l,jspin)&
-                        +this%r(1:atoms%jri(itype),2,i,l,ispin)*this%r(1:atoms%jri(itype),2,j,l,jspin)
-                        CALL intgr0(rf,atoms%rmsh(1,itype),atoms%dx(itype),atoms%jri(itype),ovlp)
-                        this%integral(i,j,l,ispin,jspin)=ovlp
-                        this%integral(j,i,l,ispin,jspin)=ovlp
-                     enddo
-                  enddo
-               ENDDO
-            ENDDO
-         ENDDO         
+         CALL calculate_radial_integrals(this%r, this%integral, this%n_r, atoms%rmsh(:, itype), &
+                                         atoms%dx(itype), atoms%jri(itype), atoms%lmax(itype), input%jspins)
       end if
       call timestop("generate radial functions")
 
