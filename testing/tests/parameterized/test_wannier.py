@@ -35,7 +35,11 @@ EXPECTED_OMEGA_I = {
                                    # to the last digit -- the operator export is gauge-neutral
     "WannFeFM":     16.711628612,  # fcc Fe FM, noco (jspins=2), no SOC
     "WannFeAFM":    16.718923683,  # fcc Fe AFM, noco (jspins=2), no SOC
-    "WannFeAFMSOC": 16.691730205,  # fcc Fe AFM, noco (jspins=2) + SOC
+    # fcc Fe AFM, noco (jspins=2) + SOC. This is the only case that is both noco and SOC, so
+    # it is the only one that exercises hsmt_soc_offdiag -- the SOC block between the two
+    # spin channels, which needs the full spinor structure to exist at all. The value moved
+    # from 16.691730205 when that routine was fixed; every other case here is unchanged.
+    "WannFeAFMSOC": 16.687254661,
     "WannFeBccSOC":     5.297166213,  # bcc Fe FM, COLLINEAR (jspins=2, l_noco=F) + SOC
     "WannFeAFMColSOC": 12.793658453,  # fcc Fe AFM, COLLINEAR + SOC: two sublattices, so the
                                       # spin sums cancel exactly -- the strongest check here
@@ -48,8 +52,9 @@ EXPECTED_OMEGA_I = {
     # between them no longer coincides in memory. The two channels are the two sublattices
     # exchanged, which is why their values agree to six digits without being identical.
     "WannFeAFMCol": (6.392856068, 6.392887652),
-    "WannFeAFMSOCOps": 16.691730205,  # fcc Fe AFM, noco + SOC, now with <operators_r>: the
-                                      # only coverage of the spin operator on the noco branch
+    "WannFeAFMSOCOps": 16.687254661,  # fcc Fe AFM, noco + SOC, now with <operators_r>: the
+                                      # only coverage of the spin operator on the noco branch.
+                                      # Same system as WannFeAFMSOC, so it moved with it.
 }
 OMEGA_I_TOL = 1.0e-5
 
