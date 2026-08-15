@@ -34,6 +34,19 @@ MODULE m_types_hybinp
 
 CONTAINS
 
+   !> Refuse film (2D) setups for the hybrid-functional
+   SUBROUTINE check_film_hybrid(input)
+      USE m_types_input
+      IMPLICIT NONE
+      TYPE(t_input), INTENT(IN) :: input
+
+      IF (input%film) THEN
+         CALL juDFT_error("2D film and 1D calculations not implemented for HF/EXX/PBE0/HSE", &
+                          calledby="types_hybinp", &
+                          hint="Use a 3D supercell with enough vacuum, or a semi-local functional")
+      END IF
+   END SUBROUTINE check_film_hybrid
+
    SUBROUTINE mpi_bc_hybinp(this, mpi_comm, irank)
       USE m_mpi_bc_tool
       CLASS(t_hybinp), INTENT(INOUT)::this
@@ -131,10 +144,7 @@ CONTAINS
       integer :: isym, iisym, l, m2, m1
 
       IF (xcpot%is_hybrid() .OR. input%l_rdmft) THEN
-         IF (input%film ) THEN
-            CALL juDFT_error("2D film and 1D calculations not implemented for HF/EXX/PBE0/HSE", &
-                             calledby="fleur", hint="Use a supercell or a different functional")
-         END IF
+         CALL check_film_hybrid(input)
 
          !             IF( ANY( atoms%l_geo  ) )&
          !                  &     CALL juDFT_error("Forces not implemented for HF/PBE0/HSE ",&

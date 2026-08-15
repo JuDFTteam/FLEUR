@@ -30,10 +30,11 @@ MODULE m_types_secvar
         integer :: nrec_out = 0
     contains
         procedure :: initialize
-        procedure :: add_diagonal_elements 
+        procedure :: add_diagonal_elements
         procedure :: diagonalize
         procedure :: store_eigvec
-    END TYPE 
+        procedure :: free => free_secvar
+    END TYPE
     public :: t_secvar
     
     contains
@@ -188,7 +189,43 @@ MODULE m_types_secvar
             call timestop("Diagonalization in second variation")
         end select
 
+        IF (ALLOCATED(hmat)) THEN
+            CALL hmat%free()
+            DEALLOCATE(hmat)
+        END IF
+
     END SUBROUTINE diagonalize
+
+
+    SUBROUTINE free_secvar(this)
+        !Release the matrices of the second variation problem.
+        CLASS(t_secvar), INTENT(INOUT) :: this
+        INTEGER :: i, j
+
+        IF (ALLOCATED(this%mat)) THEN
+            DO j = 1, SIZE(this%mat, 2)
+                DO i = 1, SIZE(this%mat, 1)
+                    CALL this%mat(i,j)%free()
+                END DO
+            END DO
+            DEALLOCATE(this%mat)
+        END IF
+        IF (ALLOCATED(this%eigvec)) THEN
+            CALL this%eigvec%free()
+            DEALLOCATE(this%eigvec)
+        END IF
+        IF (ALLOCATED(this%zmat)) THEN
+            DO i = 1, SIZE(this%zmat)
+                CALL this%zmat(i)%free()
+            END DO
+            DEALLOCATE(this%zmat)
+        END IF
+        IF (ALLOCATED(this%eigval)) DEALLOCATE(this%eigval)
+        IF (ALLOCATED(this%eig))    DEALLOCATE(this%eig)
+        this%fmpi  => NULL()
+        this%lapw  => NULL()
+        this%atoms => NULL()
+    END SUBROUTINE free_secvar
 
 
     subroutine store_eigvec(this)

@@ -67,6 +67,7 @@ MODULE m_types_stars
      PROCEDURE :: init=>init_stars
      PROCEDURE :: dim=>dim_stars
      PROCEDURE :: map_2nd_vac
+     PROCEDURE :: fill_2nd_vac
      PROCEDURE :: reset_stars
   END TYPE t_stars
 CONTAINS
@@ -421,22 +422,59 @@ CONTAINS
 
   END SUBROUTINE dim_stars
 
-  subroutine map_2nd_vac(stars,vacuum,n2,n2_rot,phas)
+  subroutine map_2nd_vac(stars,vacuum,n2,n2_src,phas)
+    !! Relate the lower vacuum to the upper one for films in which only the
+    !! upper vacuum is calculated (vacuum%nvac==1).
     USE m_constants,ONLY: tpi_const
     USE m_types_vacuum
     CLASS(t_stars),INTENT(IN)    :: stars
     TYPE(t_vacuum),INTENT(IN)    :: vacuum
     INTEGER,INTENT(IN)           :: n2
-    INTEGER,INTENT(OUT)          :: n2_rot
+    INTEGER,INTENT(OUT)          :: n2_src
     COMPLEX,INTENT(OUT)          :: phas
 
     INTEGER:: kr(2)
     REAL   :: arg
 
+    IF (vacuum%nvac /= 1) THEN
+       n2_src = n2
+       phas = cmplx(1.0,0.0)
+       RETURN
+    END IF
+
+    IF (.NOT.(ALLOCATED(stars%kv2).AND.ALLOCATED(stars%i2g).AND.ALLOCATED(stars%r2gphs))) &
+       CALL judft_error("map_2nd_vac: stars object lacks 2D star data", calledby="map_2nd_vac")
+    IF (.NOT.(ALLOCATED(vacuum%mrot2).AND.ALLOCATED(vacuum%tau2))) &
+       CALL judft_error("map_2nd_vac: vacuum object lacks the symmetry operation relating both vacua", calledby="map_2nd_vac")
+
     kr = matmul(stars%kv2(:,n2),vacuum%mrot2)
-    n2_rot = stars%i2g(kr(1),kr(2))
-    arg = tpi_const* ( stars%kv2(1,n2)*vacuum%tau2(1) + stars%kv2(2,n2)*vacuum%tau2(2) )
-    phas = cmplx(cos(arg),sin(arg))
+    n2_src = stars%i2g(kr(1),kr(2))
+    arg = -tpi_const* ( stars%kv2(1,n2)*vacuum%tau2(1) + stars%kv2(2,n2)*vacuum%tau2(2) )
+    phas = stars%r2gphs(kr(1),kr(2)) * cmplx(cos(arg),sin(arg))
+  end subroutine
+
+  subroutine fill_2nd_vac(stars,vacuum,vac)
+    !! Fill the lower vacuum of a film from the upper one when only the upper one
+    !! was calculated (vacuum%nvac==1), applying the relation of map_2nd_vac to
+    !! every 2D star and spin. Does nothing if both vacua were calculated.
+    USE m_types_vacuum
+    CLASS(t_stars),INTENT(IN)    :: stars
+    TYPE(t_vacuum),INTENT(IN)    :: vacuum
+    COMPLEX,INTENT(INOUT)        :: vac(:,:,:,:) !(nmzd,ng2,2,nspins)
+
+    INTEGER :: n2,n2_src,js
+    COMPLEX :: phas
+
+    IF (vacuum%nvac /= 1) RETURN
+
+    IF (SIZE(vac,2) < stars%ng2) CALL judft_error("fill_2nd_vac: vac holds fewer than ng2 2D stars", calledby="fill_2nd_vac")
+
+    DO n2 = 1, stars%ng2
+       CALL stars%map_2nd_vac(vacuum,n2,n2_src,phas)
+       DO js = 1, SIZE(vac,4)
+          vac(:,n2,2,js) = phas*vac(:,n2_src,1,js)
+       END DO
+    END DO
 
   end subroutine
 

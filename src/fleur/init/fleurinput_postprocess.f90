@@ -84,7 +84,7 @@ CONTAINS
        END DO
     END IF
 
-    call check_input_switches(banddos,vacuum,noco,atoms,input,sym,kpts,hybinp)
+    call check_input_switches(banddos,vacuum,noco,atoms,input,sym,kpts,hybinp,cell)
     ! Check muffin tin radii, only checking, dont use new parameters
     CALL chkmt(atoms,input,vacuum,cell ,.TRUE.)
     !adjust positions by displacements

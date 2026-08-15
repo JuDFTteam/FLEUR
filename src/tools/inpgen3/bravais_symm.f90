@@ -29,8 +29,6 @@ CONTAINS
     REAL    amet(3,3),b1,b2,b3,d1,d2,d3,dmax,dt
     INTEGER i,k,k1,k2,k3,m1,m2,m3,n1,n2,n3
     INTEGER irot(3,3), tempRot(3,3)
-    INTEGER,PARAMETER :: invs_matrix(3,3)=RESHAPE([-1,0,0,0,-1,0,0,0,-1],[3,3])
-    INTEGER,PARAMETER :: zrfs_matrix(3,3)=RESHAPE([1,0,0,0,1,0,0,0,-1],[3,3])
 
     INTEGER,PARAMETER::neig12=12! max. number of lattice vectors with same length
     ! (max occurs for close-packed fcc: 12)
