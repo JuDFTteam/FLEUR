@@ -72,9 +72,16 @@ MODULE m_types_melem_optable
 
    !> <operators_r>/<operator name="..">. No output column: these write legacy names that
    !> carry a channel or a spin-block index, so the writer builds them itself.
-   TYPE(t_melem_exposed), PARAMETER, PUBLIC :: WANNIERLIB_OPR(8) = [ &
+   TYPE(t_melem_exposed), PARAMETER, PUBLIC :: WANNIERLIB_OPR(9) = [ &
       t_melem_exposed('hamiltonian', '',           0, '', '', .FALSE.), &
       t_melem_exposed('position',    '',           0, '', '', .FALSE.), &
+      !> Second Berry connection, in the postw90 convention: Eq. (44) WYSV06 on the
+      !> diagonal as well (no log branch) and A <- (A + A^dagger)/2 at each k. It is a
+      !> separate name rather than a flag on `position` because both are needed at once:
+      !> `position` writes the _r.dat that orbitrans reads and that carries the Wannier
+      !> centres, while berry.F90 refuses that form for the orbital magnetisation
+      !> ("transl_inv=T disabled for morb"). Writes WF*_rpw.dat.
+      t_melem_exposed('position_pw90', '',         0, '', '', .FALSE.), &
       t_melem_exposed('bmn',         '',           0, '', '', .FALSE.), &
       t_melem_exposed('fmn',         '',           0, '', '', .FALSE.), &
       t_melem_exposed('cmn',         '',           0, '', '', .FALSE.), &

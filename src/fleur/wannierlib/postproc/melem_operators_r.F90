@@ -151,6 +151,16 @@ CONTAINS
         IF (irank == 0) CALL melem_check_berry_centres(this, aw_r, aw_irvec, aw_nrpts, bmesh)
         IF (irank == 0) CALL melem_write_ar(this, aw_r, aw_irvec, aw_nrpts, TRIM(wfpref))
         IF (ALLOCATED(aw_r)) DEALLOCATE(aw_r, aw_irvec, aw_ndegen)
+      CASE ('position_pw90') ! A(R) in the postw90 convention: Eq. (44) on the diagonal too,
+                             ! plus A <- (A + A^dagger)/2 at each k. `position` is NOT touched:
+                             ! orbitrans and the Wannier-centre check need the _r.dat form, and
+                             ! berry.F90 refuses that form for the orbital magnetisation
+                             ! ("transl_inv=T disabled for morb"). Written as WF*_rpw.dat.
+        CALL melem_build_berry_aw_r(this, cell, kpts, mmn_loc, gk_loc, u_opt, u_matrix, bmesh, mpi_comm, &
+                                         aw_r, aw_irvec, aw_ndegen, aw_nrpts, l_pw90=.TRUE.)
+        !> No centre check here: the R=0 diagonal of this variant is not the Wannier centre.
+        IF (irank == 0) CALL melem_write_ar(this, aw_r, aw_irvec, aw_nrpts, TRIM(wfpref), '_rpw')
+        IF (ALLOCATED(aw_r)) DEALLOCATE(aw_r, aw_irvec, aw_ndegen)
       CASE ('spin')          ! distributed reduce over the coarse spin slice
         ! collinear: the spin operator is combined (2N) across both channels, so it is written once
         ! after both wannierisations by melem_rspauli_collinear (main), not per channel here.
