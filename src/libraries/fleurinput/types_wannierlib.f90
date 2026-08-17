@@ -75,6 +75,16 @@ MODULE m_types_wannierlib
     REAL :: dis_mix_ratio = 0.0
     REAL :: dis_conv_tol = 0.0
     REAL :: conv_tol = 0.0       ! MLWF/wannierise convergence (W90 conv_tol); XML @wannConvTol
+    !> Preconditioned gradient in the spread minimisation (W90 precond); XML @precond.
+    !> Off by default, which is also Wannier90's default.
+    !>
+    !> It changes the descent inside a valley, not the functional, so it cannot move the
+    !> minimum -- and measurement confirms it does not: on bcc Fe with the quantisation
+    !> axis along x, y and z it leaves Omega_I identical to every digit and Omega_total
+    !> within 0.02%, and the axis whose localisation was broken came out slightly worse.
+    !> It is exposed because the option exists and someone will want it, not because it
+    !> fixed anything here.
+    LOGICAL :: precond = .FALSE.
 
     INTEGER, ALLOCATABLE :: proj_ntype(:)
     INTEGER, ALLOCATABLE :: proj_atom(:)
@@ -348,6 +358,7 @@ CONTAINS
     CALL mpi_bc(this%dis_mix_ratio, rank, mpi_comm)
     CALL mpi_bc(this%dis_conv_tol, rank, mpi_comm)
     CALL mpi_bc(this%conv_tol, rank, mpi_comm)
+    CALL mpi_bc(this%precond, rank, mpi_comm)
     CALL mpi_bc(this%proj_ntype, rank, mpi_comm)
     CALL mpi_bc(this%proj_atom, rank, mpi_comm)
     CALL mpi_bc(this%proj_species, rank, mpi_comm)
@@ -422,6 +433,7 @@ CONTAINS
     IF (xml%getNumberOfNodes(xPathA) == 1) THEN
       this%num_iter = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@numIter'))
       this%conv_tol = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@convTol'))
+      this%precond = evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@precond'))
     END IF
 
     ! --- interpolation domain + operator list ---

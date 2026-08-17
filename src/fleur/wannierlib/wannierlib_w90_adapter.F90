@@ -91,6 +91,9 @@ CONTAINS
     IF (this%dis_mix_ratio > 0.0) CALL w90_set_option(wannierlib_w90main, 'dis_mix_ratio', this%dis_mix_ratio)
     IF (this%dis_conv_tol > 0.0) CALL w90_set_option(wannierlib_w90main, 'dis_conv_tol', this%dis_conv_tol)  ! disentanglement (XML disConvTol)
     IF (this%conv_tol > 0.0)     CALL w90_set_option(wannierlib_w90main, 'conv_tol', this%conv_tol)          ! MLWF/wannierise (XML wannConvTol)
+    !> Only set when asked: Wannier90's own default is .FALSE., so staying silent keeps
+    !> every existing run byte-identical.
+    IF (this%precond) CALL w90_set_option(wannierlib_w90main, 'precond', .TRUE.)                            ! MLWF/wannierise (XML precond)
 
     seedname = 'fleur_wlib_internal'
     CALL w90_input_setopt(wannierlib_w90main, seedname, oUnit, oUnit, ierr)

@@ -3560,6 +3560,7 @@
       </xsd:annotation>
       <xsd:attribute name="numIter" type="xsd:positiveInteger" use="required"/>
       <xsd:attribute name="convTol" type="FleurDouble" use="required"/>
+      <xsd:attribute default="F" name="precond" type="FleurBool" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="WannierlibOperatorType">
