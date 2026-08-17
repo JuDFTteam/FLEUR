@@ -23,7 +23,7 @@ MODULE m_radovlp
     TYPE(t_input),INTENT(IN)   :: input
     TYPE(t_atoms),INTENT(IN)   :: atoms
     TYPE(t_hub1data), INTENT(IN) :: hub1data
-    TYPE(t_usdus),INTENT(INOUT):: usdus
+    TYPE(t_usdus),INTENT(IN)   :: usdus
 
     !     .. Array Arguments ..
     REAL,    INTENT  (IN):: epar(0:,:,:)!(0:atoms%lmaxd,atoms%ntype,input%jspins)
@@ -40,7 +40,10 @@ MODULE m_radovlp
     REAL :: f(atoms%jmtd,2,0:atoms%lmaxd,input%jspins)
     REAL :: g(atoms%jmtd,2,0:atoms%lmaxd,input%jspins)
     REAL :: vrTmp(atoms%jmtd)
+    TYPE(t_usdus) :: usdusTmp
     !     ..
+    !radfun updates t_usdus; keep this auxiliary overlap calculation local.
+    usdusTmp = usdus
     DO itype = 1,atoms%ntype
        DO l = 0,atoms%lmax(itype)
           l_hia=.FALSE.
@@ -60,7 +63,7 @@ MODULE m_radovlp
              ENDIF
 
              CALL radfun(l,iType,ispin,epar(l,iType,ispin),vrTmp,atoms,&
-                 f(1,1,l,ispin),g(1,1,l,ispin),usdus,nodeu,noded,wronk)
+                 f(1,1,l,ispin),g(1,1,l,ispin),usdusTmp,nodeu,noded,wronk)
 
           ENDDO
           CALL int_21(f,g,atoms,itype,l,uun21,udn21,dun21,ddn21)
