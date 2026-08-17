@@ -5,6 +5,7 @@ __pycache__
 \#*
 build
 build.*
+.claude
 *.o
 *.x
 *.swp
@@ -17,3 +18,4 @@ tags
 old_py
 *.egg-info
 *.dist-info
+
