@@ -13,7 +13,7 @@ PROGRAM n_mat_radial_overlap_test
    TYPE(t_atoms) :: atoms
    TYPE(t_sym) :: sym
    TYPE(t_radfun) :: radfun
-   TYPE(t_abc) :: abc_up, abc_down, abc_cross, abc_unused
+   TYPE(t_abc) :: abc_up, abc_down, abc_cross_left, abc_cross_right
    INTEGER :: ir, j, jj
    INTEGER :: n_r(0:lmax)
    REAL :: rmsh(jri), radial(jri, 2, nr, 0:lmax, jspins)
@@ -60,17 +60,17 @@ PROGRAM n_mat_radial_overlap_test
    atoms%lda_u(1)%l = l_u
    CALL allocate_abc(abc_up)
    CALL allocate_abc(abc_down)
-   CALL allocate_abc(abc_cross)
-   CALL allocate_abc(abc_unused)
+   CALL allocate_abc(abc_cross_left)
+   CALL allocate_abc(abc_cross_right)
    abc_up%cof(1, 6, :, 1) = [CMPLX(0.6, 0.0), CMPLX(-1.1, 0.0)]
    abc_down%cof(1, 6, :, 1) = [CMPLX(0.9, 0.0), CMPLX(0.4, 0.0)]
-   abc_cross%cof(1, 7, 1, 1) = CMPLX(1.25, 0.0)
-   abc_cross%cof(1, 6, 2, 1) = CMPLX(-0.75, 0.0)
+   abc_cross_left%cof(1, 7, 1, 1) = CMPLX(1.25, 0.0)
+   abc_cross_right%cof(1, 6, 2, 1) = CMPLX(-0.75, 0.0)
    weights = 0.8
    mmpMat = CMPLX(0.0, 0.0)
    CALL n_mat(atoms, radfun, sym, 1, weights, abc_up, abc_up, mmpMat(:, :, :, 1), 1, 1, 1)
    CALL n_mat(atoms, radfun, sym, 1, weights, abc_down, abc_down, mmpMat(:, :, :, 2), 1, 2, 2)
-   CALL n_mat(atoms, radfun, sym, 1, weights, abc_cross, abc_unused, mmpMat(:, :, :, 3), 1, 2, 1)
+   CALL n_mat(atoms, radfun, sym, 1, weights, abc_cross_left, abc_cross_right, mmpMat(:, :, :, 3), 1, 2, 1)
 
    expected_up = direct_contraction(abc_up, abc_up, direct(:, :, 1, 1), weights(1))
    expected_down = direct_contraction(abc_down, abc_down, direct(:, :, 2, 2), weights(1))

@@ -65,7 +65,7 @@ MODULE m_nmat
                   DO i = 1,ne
                      DO j=1,size(abc%cof,3)
                         DO jj=1,size(abc1%cof,3)
-                        c_0 = c_0 +  we(i) *  conjg(abc%cof(i,lmp,j,natom))*abc%cof(i,lm,jj,natom)*radfun%integral(j, jj, l, jsp, jsp1)
+                        c_0 = c_0 +  we(i) *  conjg(abc%cof(i,lmp,j,natom))*abc1%cof(i,lm,jj,natom)*radfun%integral(j, jj, l, jsp, jsp1)
                         ENDDO
                      ENDDO
                   ENDDO      
