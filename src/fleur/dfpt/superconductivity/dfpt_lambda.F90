@@ -27,7 +27,7 @@ module m_dfpt_lambda
 
    private
 
-   public :: dfpt_read_fullsym, dfpt_build_lambda, dfpt_check_lambda,dfpt_unfold_gmat, dfpt_qmesh_full_bz
+   public :: dfpt_read_fullsym, dfpt_build_lambda, dfpt_check_lambda, dfpt_unfold_gmat
 
 contains
 
@@ -102,7 +102,7 @@ contains
 
    end subroutine dfpt_read_fullsym
 
-   subroutine dfpt_build_lambda(fi, sym_full, fmpi, enpara, vTot, nococonv, stars, eig_id, jsp, bandWindow, lambda, ikrot)
+   subroutine dfpt_build_lambda(fi, sym_full, fmpi, enpara, vTot, nococonv, stars, eig_id, jsp, bandWindow, lambda, mapped_kpt)
       !! Builds \(\Lambda(\boldsymbol{k},\mathcal{S})\) and the index map
       !! \(\boldsymbol{k}\mapsto S\boldsymbol{k}\) for every k of the mesh and
       !! every operation of the full group.
@@ -122,7 +122,7 @@ contains
       integer,              intent(in)  :: eig_id, jsp
       integer,              intent(in)  :: bandWindow(2)       
       complex, allocatable, intent(out) :: lambda(:, :, :, :)  ! (nb,nb,nkpt,nsym), nb = window size
-      integer, allocatable, intent(out) :: ikrot(:, :)         ! (nkpt,nsym): index of S k
+      integer, allocatable, intent(out) :: mapped_kpt(:, :)         ! (nkpt,nsym): index of S k
 
       type(t_hybinp)       :: hybinp   
       type(t_mpdata)       :: mpdata  
@@ -143,7 +143,7 @@ contains
       complex, allocatable :: c_phase(:), vpw_zero(:)
       complex, allocatable :: zKPrime_c(:, :), zRot_c(:, :), tmp_is(:, :)
 
-      integer, allocatable :: ikrot_inv(:, :), ev_list(:)
+      integer, allocatable :: mapped_kpt_inv(:, :), ev_list(:)
       real,    allocatable :: eig_dummy(:)
 
       integer :: ik, ikPrime, isym, i, itype, nv_kPrime, neig, nbands
@@ -178,8 +178,8 @@ contains
       call setup_rotation_data(fi, sym_full, usdus, jsp, hybinp, mpdata, olapmt, n_r, maxlmindx, maxn_r)
 
       allocate (lambda(nbands, nbands, fi%kpts%nkpt, sym_full%nsym), source=cmplx_0)
-      allocate (ikrot(fi%kpts%nkpt, sym_full%nsym), source=0)
-      allocate (ikrot_inv(fi%kpts%nkpt, sym_full%nsym), source=0)
+      allocate (mapped_kpt(fi%kpts%nkpt, sym_full%nsym), source=0)
+      allocate (mapped_kpt_inv(fi%kpts%nkpt, sym_full%nsym), source=0)
 
       allocate (ev_list(nbands))
       ev_list = [(i, i=bandWindow(1), bandWindow(2))]
@@ -193,8 +193,8 @@ contains
             rkpt = matmul(transpose(mrot), fi%kpts%bkf(:, ik))
             ikPrime = fi%kpts%get_nk(rkpt)
             if (ikPrime < 1 .or. ikPrime > fi%kpts%nkpt) call juDFT_error("S k is not on the k mesh.", calledby="dfpt_build_lambda")
-            ikrot(ik, isym)          = ikPrime
-            ikrot_inv(ikPrime, isym) = ik
+            mapped_kpt(ik, isym)          = ikPrime
+            mapped_kpt_inv(ikPrime, isym) = ik
          end do
       end do
 
@@ -243,7 +243,7 @@ contains
          end if
 
          do isym = 1, sym_full%nsym
-            ik = ikrot_inv(ikPrime, isym)
+            ik = mapped_kpt_inv(ikPrime, isym)
 
             call lapw_k%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, ik, fi%cell)
             call zMatK%init(fi%input%l_real, lapw_k%nv(jsp) + fi%atoms%nlotot, nbands)
@@ -322,29 +322,7 @@ contains
 
    end subroutine dfpt_check_lambda
 
-   subroutine dfpt_qmesh_full_bz(qvec_full, qvec_bz)
-      !! Repackages the symmetry-reduced q mesh as a plain, symmetry-free mesh
-      !! whose `nkpt`/`bk` are the full BZ list, so downstream routines that sum
-      !! over `%nkpt`/`%bk` (matrix_interpolation, the round-trip check) can
-      !! consume the full zone unchanged.
-
-      type(t_kpts), intent(in)  :: qvec_full
-      type(t_kpts), intent(out) :: qvec_bz
-
-      qvec_bz = qvec_full
-      qvec_bz%nkpt = qvec_full%nkptf
-
-      if (allocated(qvec_bz%bk)) deallocate (qvec_bz%bk)
-      allocate (qvec_bz%bk(3, qvec_full%nkptf))
-      qvec_bz%bk = qvec_full%bkf(:, 1:qvec_full%nkptf)
-
-      if (allocated(qvec_bz%wtkpt)) deallocate (qvec_bz%wtkpt)
-      allocate (qvec_bz%wtkpt(qvec_full%nkptf))
-      qvec_bz%wtkpt = 1.0/real(qvec_full%nkptf)
-
-   end subroutine dfpt_qmesh_full_bz
-
-   subroutine dfpt_unfold_gmat(fi, sym_full, qvec_full, jsp, lambda, ikrot, gmatIBZ, gmatFull)
+   subroutine dfpt_unfold_gmat(fi, sym_full, qvec_full, jsp, lambda, mapped_kpt, gmatIBZ, gmatFull)
       !! Fills the full q Brillouin zone from the electron-phonon matrix elements
       !! computed on the irreducible wedge, by
       !! $$\underline{g}^{\kappa'\beta}(S\boldsymbol{k},S\boldsymbol{q})
@@ -368,7 +346,7 @@ contains
       type(t_kpts),       intent(in)    :: qvec_full
       integer,            intent(in)    :: jsp
       complex,            intent(in)    :: lambda(:, :, :, :)        ! (nb,nb,nkpt,nsym), same bands as gmat
-      integer,            intent(in)    :: ikrot(:, :)               ! (nkpt,nsym): index of S k
+      integer,            intent(in)    :: mapped_kpt(:, :)               ! (nkpt,nsym): index of S k
       complex,            intent(in)    :: gmatIBZ(:, :, :, :, :, :) ! (nb,nb,nkpt,jspins,3nat,nkptIBZ)
       complex,            intent(inout) :: gmatFull(:, :, :, :, :, :)! (nb,nb,nkpt,jspins,3nat,nkptf)
 
@@ -429,7 +407,7 @@ contains
          end do
 
          do ik = 1, fi%kpts%nkpt
-            ikPrime = ikrot(ik, isym)
+            ikPrime = mapped_kpt(ik, isym)
             ikq     = fi%kpts%get_nk(fi%kpts%bkf(:, ik) + q_0)
             if (ikq < 1 .or. ikq > fi%kpts%nkpt) then
                call juDFT_error("k+q is not on the k mesh; the q mesh must be commensurate with it.", calledby="dfpt_unfold_gmat")

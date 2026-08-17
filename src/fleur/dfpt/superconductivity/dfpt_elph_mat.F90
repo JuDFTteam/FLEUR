@@ -255,7 +255,76 @@ CONTAINS
 
     END SUBROUTINE construct_elph_element
 
-    subroutine el_ph_wannier_interpolate(fmpi,fi,results,dynMats,gmatCart,qpts_gmat,qpts_dyn,sym_dyn)
+    subroutine el_ph_wannier(fmpi,fi,results,dynMats,gmatCart,qpts_q,sym_q)
+        ! Builds the real-space (Wannier-gauge, q-independent) el-ph matrix element
+        ! and either exports it as EPW restart files or interpolates the isotropic
+        ! el-ph coupling and phonon linewidths onto the fine k/q mesh.
+        !
+        ! gmatCart lives on the full zone of qpts_q (nkptf/bkf), dynMats on its
+        ! irreducible wedge (nkpt/bk); sym_q connects the two.
+
+        use m_matrix_interpolation
+        use m_dfpt_write_epw, only : write_epw_restart_files
+
+        type(t_mpi), intent(in)         :: fmpi
+        type(t_fleurinput) , intent(in) :: fi
+        type(t_results),     intent(in) :: results
+        complex,intent(in)              :: dynMats(:,:,:) !(3*nat,3*nat,nqcoarse)
+        complex,intent(in)              :: gmatCart(:,:,:,:,:,:) !(nu,nu',kpoints,spin,iPerturb,iQfull)
+        type(t_kpts), intent(in)        :: qpts_q
+        type(t_sym),  intent(in)        :: sym_q
+
+        complex, allocatable :: U_full(:,:,:,:) !(num_bands,num_wann,ikpt,jspin)
+        type(t_wann_ft), allocatable :: gmatRealspace(:,:) !(3*nat, jspins) q-independent forward transforms
+        integer :: num_bands, num_wann, ispin, ikpt, iMode
+
+        if (qpts_q%nkptf /= size(gmatCart,6)) call juDFT_error("gmatCart q dimension does not match its q mesh",calledby="el_ph_wannier_interpolate")
+
+        ! Full Wannier gauge matrix: disentanglement (U_dis) composed with Wannierization (U_mat).
+        num_bands = fi%wannierlib%max_band - fi%wannierlib%min_band + 1
+        num_wann  = fi%wannierlib%num_wann
+        call timestart("Load Wannier U matrices")
+        allocate(U_full(num_bands,num_wann,fi%kpts%nkptf,fi%input%jspins))
+        if (num_bands > num_wann) then
+            do ispin = 1 , fi%input%jspins
+                do ikpt = 1 , fi%kpts%nkptf
+                    U_full(:,:,ikpt,ispin) = matmul(results%U_dis(:,:,ikpt,ispin),results%U_mat(:,:,ikpt,ispin))
+                end do
+            end do
+        else
+            U_full(:,:,:,:) = results%U_mat(:,:,:,:)
+        end if
+        call timestop("Load Wannier U matrices")
+
+        ! Construct the realspace representation 
+        call timestart("Forward FT elph-element")
+        allocate(gmatRealspace(3*fi%atoms%nat, fi%input%jspins))
+        do iMode = 1 , 3*fi%atoms%nat
+            do ispin = 1 , fi%input%jspins
+                call wannier_matrixq_forward(fi,gmatCart(:,:,:,ispin,iMode,:),U_full(:,:,:,ispin),fi%kpts,qpts_q,gmatRealspace(iMode,ispin))
+            end do !ispin
+        end do !iMode
+        call timestop("Forward FT elph-element")
+
+        if (fi%dfpt%l_write_epw) then
+            if (fmpi%irank==0) then
+                call timestart("Write EPW restart files")
+                call write_epw_restart_files(fi, results, dynMats, U_full, gmatRealspace, qpts_q, sym_q)
+                call timestop("Write EPW restart files")
+            end if
+            return
+        end if
+
+        call elph_fine_mesh_linewidth(fmpi, fi, results, dynMats, gmatRealspace, qpts_q, sym_q)
+
+    end subroutine el_ph_wannier
+
+    subroutine elph_fine_mesh_linewidth(fmpi, fi, results, dynMats, gmatRealspace, qpts_q, sym_q)
+        ! Interpolates el-ph matrix elements and phonon frequencies onto the fine
+        ! k/q mesh, restricted to the Fermi window, and writes the isotropic
+        ! el-ph coupling constant and per-mode phonon linewidths.
+        !
+        ! dynMats lives on the irreducible wedge of qpts_q; sym_q unfolds it.
 
         use m_eig66_io, only : open_eig,close_eig,read_eig
         use m_wannier_interpolate
@@ -263,28 +332,16 @@ CONTAINS
         use m_dfpt_dynmat_fourier
         use m_dfpt_dynmat_eig
         use m_dfpt_elph_linewidth
-        use m_dfpt_write_epw, only : write_epw_restart_files
 
-        type(t_mpi), intent(in)         :: fmpi
-        type(t_fleurinput) , intent(in) :: fi 
+        type(t_mpi),         intent(in) :: fmpi
+        type(t_fleurinput),  intent(in) :: fi
         type(t_results),     intent(in) :: results
-        complex,intent(in)              :: dynMats(:,:,:) !(3*nat,3*nat,nqcoarse)
-        complex,intent(in)              :: gmatCart(:,:,:,:,:,:) !(nu,nu',kpoints,spin,iPerturb,iQ)
-        ! q mesh the LAST dimension of gmatCart runs over. Absent (the historical
-        ! case) it is the input q mesh; after symmetry unfolding it is the full
-        ! BZ, which dynMats deliberately does NOT share -- ft_dyn unfolds that
-        ! one itself.
-        type(t_kpts), optional, intent(in) :: qpts_gmat
-        ! q mesh dynMats runs over, and its symmetry group. Absent, the input q
-        ! mesh and symmetry are used. Unlike gmatCart, dynMats stays irreducible,
-        ! so these describe a mesh whose %nkpt indexes dynMats while %bkf spans
-        ! the full zone ft_dyn unfolds onto.
-        type(t_kpts), optional, intent(in) :: qpts_dyn
-        type(t_sym),  optional, intent(in) :: sym_dyn
+        complex,             intent(in) :: dynMats(:,:,:)     !(3*nat,3*nat,nqcoarse)
+        type(t_wann_ft),     intent(in) :: gmatRealspace(:,:) !(3*nat, jspins)
+        type(t_kpts),        intent(in) :: qpts_q
+        type(t_sym),         intent(in) :: sym_q
 
-        type(t_kpts) :: qvec_gmat
-
-        integer :: eig_id_interpol,q_eig_id_interpol, num_wann , num_bands , ikpt, iMode, ispin, iPerturb
+        integer :: eig_id_interpol,q_eig_id_interpol, num_wann , ikpt, iMode, ispin, iPerturb
         integer :: iQ, nKept, nSurv, iKept, ne, iWann, i, nLocKpts, nInterpol
         real    :: qvec(3), pref
         real,allocatable :: kqpts_interpol(:,:)
@@ -301,7 +358,7 @@ CONTAINS
 
         real,    allocatable :: wtkpt_line(:), ph_linewidth(:)
         real,    allocatable :: eigenValsQ(:)
-        complex, allocatable :: eigenVecs(:,:), eigenFreqs(:)
+        complex, allocatable :: eigenVecs(:,:)
         integer              :: lw_unit, cs_unit
         real                 :: lambda_iso, lambda_q
         real                  :: sqrtOmegaMax
@@ -310,26 +367,15 @@ CONTAINS
 #ifdef CPP_MPI
         integer :: ierr
 #endif
-        complex, allocatable :: U_full(:,:,:,:) !(num_bands,num_wann,ikpt,jspin)
         complex, allocatable :: gmatInterpol_q(:,:,:,:,:,:) !(nwann,nwann,nSurv,1,jspin,mode)
         complex, allocatable :: gmatEig(:,:,:,:,:) !(num_wann,num_wann,nSurv,jspin,mode) eigenbasis
         complex, allocatable :: dynMat_interpol(:,:,:)
-        type(t_wann_ft), allocatable :: gmatRealspace(:,:) !(3*nat, jspins) q-independent forward transforms, built once
         real    :: atomic_mass_array(118)
 
-        num_bands = fi%wannierlib%max_band - fi%wannierlib%min_band + 1
-        num_wann  = fi%wannierlib%num_wann
-
-        if (present(qpts_gmat)) then
-            qvec_gmat = qpts_gmat
-        else
-            qvec_gmat = fi%dfpt%qvec
-        end if
-        if (qvec_gmat%nkpt /= size(gmatCart,6)) call juDFT_error("gmatCart q dimension does not match its q mesh",calledby="el_ph_wannier_interpolate")
-
-        atomic_mass_array = atomicMasses_const * massInElectronMasses
-
         if ( (.not. allocated(fi%dfpt%qpts_interpol%bk)) .or. (.not. allocated(fi%dfpt%kpts_interpol%bk))) call juDFT_error("No meshes to interpoalte on.",calledby="dfpt_elph_mat.F90")
+
+        num_wann = fi%wannierlib%num_wann
+        atomic_mass_array = atomicMasses_const * massInElectronMasses
 
         ! distribute the interpolated k-mesh across ranks (round-robin / strided)
         nInterpol = fi%dfpt%kpts_interpol%nkpt
@@ -340,24 +386,7 @@ CONTAINS
             myKpts(:, ikpt) = fi%dfpt%kpts_interpol%bk(:, myIdx(ikpt))
         end do
 
-        ! load the Umats from the Wannier step
-        call timestart("Load Wannier U matrices")
-        allocate(U_full(num_bands,num_wann,fi%kpts%nkptf,fi%input%jspins))
-        if (num_bands > num_wann) then
-            do ispin = 1 , fi%input%jspins
-                do ikpt = 1 , fi%kpts%nkptf
-                    U_full(:,:,ikpt,ispin) = matmul(results%U_dis(:,:,ikpt,ispin),results%U_mat(:,:,ikpt,ispin))
-                end do
-            end do
-        else
-            U_full(:,:,:,:) = results%U_mat(:,:,:,:)
-        end if
-        call timestop("Load Wannier U matrices")
-
-        ! diagnostic: verify the matrix-element interpolation
-        if (fmpi%irank==0) call check_matrixq_roundtrip(fi, gmatCart, U_full, qvec_gmat)
-
-        sqrtOmegaMax = global_phonon_energy_bound(fi, dynMats)
+        sqrtOmegaMax = global_phonon_energy_bound(fi, dynMats, qpts_q)
 
         eig_id_interpol = -1   ! only opened/used on ranks with nLocKpts > 0
 
@@ -425,31 +454,6 @@ CONTAINS
             write(cs_unit,*) "# omega_qnu = sqrt(|eigenValsQ|) [internal units], negative = imaginary mode"
         end if
 
-        if (fmpi%irank==0) then 
-            write(12,*) "nscf ef" , results%ef
-            write(12,*) "dos ef" , results%dos_ef
-            write(12,*) "interpolated ef" , ef_interp
-            write(12,*) "interpolated dos(ef)" , dos_ef_interp
-        end if
-
-        ! Build the real-space Wannier-gauge element once.
-        call timestart("Forward FT elph-element")
-        allocate(gmatRealspace(3*fi%atoms%nat, fi%input%jspins))
-        do iMode = 1 , 3*fi%atoms%nat
-            do ispin = 1 , fi%input%jspins
-                call wannier_matrixq_forward(fi,gmatCart(:,:,:,ispin,iMode,:),U_full(:,:,:,ispin),fi%kpts,qvec_gmat,gmatRealspace(iMode,ispin))
-            end do !ispin
-        end do !iMode
-        call timestop("Forward FT elph-element")
-
-        ! Optionally export the real-space electron-phonon quantities as EPW restart files.
-        if (fmpi%irank==0 .and. fi%dfpt%l_write_epw) then
-            call timestart("Write EPW restart files")
-            call write_epw_restart_files(fi, results, dynMats, U_full, gmatRealspace, qpts_dyn, sym_dyn)
-            call timestop("Write EPW restart files")
-        end if
-
-        if (fi%dfpt%l_write_epw) return
 
         do iQ = 1 , fi%dfpt%qpts_interpol%nkpt
             call timestart("q-point (el-ph interpolation)")
@@ -461,17 +465,12 @@ CONTAINS
             if (fmpi%irank==0) write(*,'(a,3f8.3)') "Interpolating on qvec:" , qvec  
             ! interpolate the dynMat and find the eigenvalue for this q
             call timestart("Dynmat Interpolation")
-            call interpolate_dynmat(fi%atoms,fi%sym,fi%cell,fi%dfpt%qvec,dynMats,fi%dfpt%l_WSinterpol,qsingle,dynMat_interpol)
+            call interpolate_dynmat(fi%atoms,sym_q,fi%cell,qpts_q,dynMats,fi%dfpt%l_WSinterpol,qsingle,dynMat_interpol)
             call timestop("Dynmat Interpolation")
             call timestart("Dynmat diagonalization")
             call DiagonalizeDynMat(fi%atoms, qvec, fi%dfpt%calcEigenVec, dynMat_interpol(:,:,1), eigenValsQ, eigenVecs, iQ, .true., &
                                    'band', .false., l_writeOutput=.false.)
             call timestop("Dynmat diagonalization")
-            ! if (fmpi%irank==0) then
-            !     call timestart("Frequency calculation")
-            !     call CalculateFrequencies(fi%atoms,iQ,eigenValsQ,eigenFreqs,"band",qvec)
-            !     call timestop("Frequency calculation")
-            ! end if
 
             nSurv = 0
             if (nKept > 0) then
@@ -593,20 +592,20 @@ CONTAINS
         end if
         if (nLocKpts > 0) call close_eig(eig_id_interpol)
         deallocate(ph_linewidth, qsingle)
-        deallocate(gmatRealspace)
 
 #ifdef CPP_MPI
         CALL MPI_BARRIER(fmpi%mpi_comm, ierr)
 #endif
 
-    end subroutine el_ph_wannier_interpolate
+    end subroutine elph_fine_mesh_linewidth
 
-    function global_phonon_energy_bound(fi, dynMats) result(omegaMax)
+    function global_phonon_energy_bound(fi, dynMats, qpts_q) result(omegaMax)
         ! compute maxvalue of the eigenValues of dynMat
         use m_dfpt_dynmat_eig, only : DiagonalizeDynMat
 
         type(t_fleurinput), intent(in) :: fi
         complex,             intent(in) :: dynMats(:,:,:) !(3*nat,3*nat,nqcoarse)
+        type(t_kpts),        intent(in) :: qpts_q
         real :: omegaMax
 
         integer :: iQc
@@ -616,8 +615,8 @@ CONTAINS
         omegaMax = 0.0
         if (fi%dfpt%i_integration /= 1) return
 
-        do iQc = 1, fi%dfpt%qvec%nkpt
-            call DiagonalizeDynMat(fi%atoms, fi%dfpt%qvec%bk(:,iQc), .false., dynMats(:,:,iQc), &
+        do iQc = 1, qpts_q%nkpt
+            call DiagonalizeDynMat(fi%atoms, qpts_q%bk(:,iQc), .false., dynMats(:,:,iQc), &
                                    wTmp, aTmp, iQc, .true., "prescan", .false., .false.)
             omegaMax = max(omegaMax, maxval(sqrt(abs(wTmp))))
             deallocate(wTmp, aTmp)
@@ -791,56 +790,5 @@ CONTAINS
         deallocate(eigvals, mask)
 
     end subroutine select_fermi_kpoints
-
-    subroutine check_matrixq_roundtrip(fi, gmat, U_full, qvec_gmat)
-        ! Round-trip test of the e-ph matrix-element interpolation:
-        ! interpolate gmat onto the SAME coarse (k,q) grid and compare (in the
-        ! Wannier gauge) to the directly rotated coarse element. On the coarse
-        ! grid the Fourier interpolation is exact, so this must match to ~1e-10.
-        use m_matrix_interpolation
-        type(t_fleurinput), intent(in) :: fi
-        complex,            intent(in) :: gmat(:,:,:,:,:,:)   ! (nb,nb,k,jsp,mode,q) Bloch, coarse
-        complex,            intent(in) :: U_full(:,:,:,:)     ! (nb,nwann,nkptf,jsp)
-        type(t_kpts),       intent(in) :: qvec_gmat           ! q mesh of gmat's last dimension
-
-        integer :: nwann, nkpt, nq, ispin, iMode, ik, iq, ikq
-        complex, allocatable :: gInterp(:,:,:,:), gRef(:,:,:,:)
-        real :: dmax, dref,dint
-
-        nwann = fi%wannierlib%num_wann
-        nkpt  = fi%kpts%nkpt
-        nq    = size(gmat,6)
-        allocate(gInterp(nwann,nwann,nkpt,nq), gRef(nwann,nwann,nkpt,nq))
-        dmax = 0.0
-        dref = 0.0
-        dint = 0.0
-
-        do ispin = 1, fi%input%jspins
-            do iMode = 1, size(gmat,5)
-                ! "after": interpolate the coarse gmat back onto the coarse (k,q) grid
-                call wannier_matrixq_interpolate(fi, gmat(:,:,:,ispin,iMode,:), U_full(:,:,:,ispin), &
-                         fi%kpts, fi%kpts%bk(:,1:nkpt), gInterp, qvec_gmat, qvec_gmat%bk(:,1:nq))
-                ! "before": coarse Bloch element rotated into the Wannier gauge  (U^dag(k+q) g U(k))
-                do iq = 1, nq
-                    do ik = 1, nkpt
-                        ikq = fi%kpts%get_nk(fi%kpts%bk(:,ik) + qvec_gmat%bk(:,iq))
-                        gRef(:,:,ik,iq) = matmul(conjg(transpose(U_full(:,:,ikq,ispin))), &
-                                          matmul(gmat(:,:,ik,ispin,iMode,iq), U_full(:,:,ik,ispin)))
-                    end do
-                end do
-                dmax = max(dmax, maxval(abs(gInterp - gRef)))
-                dref = max(dref, maxval(abs(gRef)))
-                dint = max(dint, maxval(abs(gInterp)))
-            end do
-        end do
-
-        write(44,'(a)')        '--- e-ph matrix-element interpolation round-trip (coarse grid) ---'
-        write(44,'(a,es12.4)') '   max |g_after - g_before| = ', dmax
-        write(44,'(a,es12.4)') '   max |g_before| (scale)   = ', dref
-        write(44,'(a,es12.4)') '   max |g_after| (scale)   = ', dint
-        write(44,'(a,es12.4)') '   relative deviation        = ', dmax/max(dref,1e-30)
-        write(44,'(a)')        '   (should be ~1e-10; large => interpolation loses/rescales gmat)'
-        deallocate(gInterp, gRef)
-    end subroutine check_matrixq_roundtrip
 
 END MODULE  m_dfpt_elph_mat

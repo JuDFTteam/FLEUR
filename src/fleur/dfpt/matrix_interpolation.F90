@@ -165,7 +165,7 @@ contains
         complex,            intent(in)  :: matElement(:,:,:,:)    ! nu',nu, kpoints, qpts (nu' at k+q, nu at k)
         complex,            intent(in)  :: U_mat(:,:,:)           ! bloch, wannier, kpoint
         type(t_kpts),       intent(in)  :: kpts_coarse            ! coarse Wannier k-mesh
-        type(t_kpts),       intent(in)  :: qpts_coarse            ! coarse Wannier q-mesh
+        type(t_kpts),       intent(in)  :: qpts_coarse            ! coarse Wannier q-mesh, summed over its full zone (nkptf/bkf)
         type(t_wann_ft),    intent(out) :: ft
 
         integer :: ikpt, iqpt, ikqpt, ix, iy, iz, iGrid
@@ -180,7 +180,7 @@ contains
 
         nwann = size(U_mat, 2)
         nk_c  = kpts_coarse%nkpt
-        nq_c  = qpts_coarse%nkpt
+        nq_c  = qpts_coarse%nkptf
 
         nk1 = kpts_coarse%nkpt3(1); nk2 = kpts_coarse%nkpt3(2); nk3 = kpts_coarse%nkpt3(3)
         nq1 = qpts_coarse%nkpt3(1); nq2 = qpts_coarse%nkpt3(2); nq3 = qpts_coarse%nkpt3(3)
@@ -248,13 +248,13 @@ contains
             fftq = cmplx(0.0,0.0)
             do iqpt = 1 , nq_c
                 ! fold k+q back into the BZ to find the stored U(k+q)=U(tilde k)
-                bkqpt  = kpts_coarse%bk(:,ikpt) + qpts_coarse%bk(:,iqpt)
+                bkqpt  = kpts_coarse%bk(:,ikpt) + qpts_coarse%bkf(:,iqpt)
                 ikqpt = kpts_coarse%get_nk(bkqpt)
                 if (ikqpt < 1) call juDFT_error("k+q not on the coarse mesh (q must connect k-points)", &
                                               calledby="wannier_matrixq_forward")
                 ! rotate the matrix element into wannier gauge: U^dagger(k+q) M(k,q) U(k)
                 matRot(:,:) = matmul(conjg(transpose(U_mat(:,:,ikqpt))),matmul(matElement(:,:,ikpt,iqpt), U_mat(:,:,ikpt)))
-                call ft_dyn_direct(ft%ft_lim_q, 1, qpts_coarse%bk(:,iqpt), matRot, fftq)
+                call ft_dyn_direct(ft%ft_lim_q, 1, qpts_coarse%bkf(:,iqpt), matRot, fftq)
             end do !iqpt
             fftq = fftq / nq_c
             call unfold_grid(ft%ft_lim_q, fftq, tempMat(:,:,ikpt,:,:,:))

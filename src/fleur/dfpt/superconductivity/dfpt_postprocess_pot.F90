@@ -14,7 +14,6 @@ module m_dfpt_postprocess_pot
 
     USE m_types 
     USE m_constants
-    use m_npy
     
     implicit none
 
@@ -62,12 +61,12 @@ contains
         type(t_results) :: dummy_results
 
         ! Symmetry unfolding of the q axis (see dfpt_lambda.F90, README_symmetry.md)
-        type(t_sym)   :: sym_full
-        type(t_kpts)  :: qvec_full, qvec_bz
+        type(t_sym)   :: sym_qpts
+        type(t_kpts)  :: qpts
         logical :: l_fullsym
         integer :: ispin
         complex, allocatable :: lambda(:,:,:,:)
-        integer, allocatable :: ikrot(:,:)
+        integer, allocatable :: mapped_kpt(:,:)
         complex, allocatable :: gmatCartBZ(:,:,:,:,:,:) ! (nu',nu,kpoints,jsp,iPerturb,iQfull)
 
 
@@ -215,48 +214,36 @@ contains
 #endif
 
         ! Symmetry unfolding of the el-ph elements onto the full q Brillouin zone.
-        ! The Sternheimer SCF above only ran on the q it was given; if a fullsym_
-        ! input set is present, it supplies the symmetry group and tells us that
-        ! those q were the irreducible wedge, so the rest of the zone is
-        ! reconstructed here instead of being computed. See README_symmetry.md.
-        ! dynMats stays irreducible on purpose: ft_dyn unfolds it internally.
+        ! Without fullsym_inp.xml the input mesh and its group are used, where the
+        ! unfolding degenerates to a copy plus the time-reversal partners.
         inquire(file="fullsym_inp.xml",EXIST=l_fullsym)
 
+        call timestart("elph symmetry unfolding")
         if (l_fullsym) then
-            call timestart("elph symmetry unfolding")
             if (fmpi%irank==0) write(*,*) "fullsym_inp.xml found: unfolding el-ph elements onto the full q BZ"
-
-            call dfpt_read_fullsym(fmpi,fi,sym_full,qvec_full)
-
-            allocate(gmatCartBZ(bandWindowSize,bandWindowSize,fi%kpts%nkpt,fi%input%jspins,3*fi%atoms%nat,qvec_full%nkptf))
-            gmatCartBZ = cmplx(0.0,0.0)
-
-            ! Lambda carries exactly the bands the matrix elements carry. Its
-            ! unitarity check is what guards the band window: it fails if and
-            ! only if a degenerate multiplet is cut by one of the window edges.
-            do ispin = 1 , fi%input%jspins
-                call dfpt_build_lambda(fi,sym_full,fmpi,enpara,vTot,nococonv,stars,eig_id,ispin,bandWindow,lambda,ikrot)
-                call save_npy("lambda.npy",lambda)
-                !call dfpt_check_lambda(lambda,1e-6)
-                call dfpt_unfold_gmat(fi,sym_full,qvec_full,ispin,lambda,ikrot,gmatCart,gmatCartBZ)
-                call save_npy('gmatCartBZ.npy', gmatCartBZ)
-                deallocate(lambda,ikrot)
-            end do
-
-            call dfpt_qmesh_full_bz(qvec_full,qvec_bz)
-            call timestop("elph symmetry unfolding")
+            call dfpt_read_fullsym(fmpi,fi,sym_qpts,qpts)
+        else
+            sym_qpts  = fi%sym
+            qpts = fi%dfpt%qvec
         end if
+
+        allocate(gmatCartBZ(bandWindowSize,bandWindowSize,fi%kpts%nkpt,fi%input%jspins,3*fi%atoms%nat,qpts%nkptf))
+        gmatCartBZ = cmplx(0.0,0.0)
+
+        ! Construct the phases between rotation and what the solver at k' produced
+        do ispin = 1 , fi%input%jspins
+            call dfpt_build_lambda(fi,sym_qpts,fmpi,enpara,vTot,nococonv,stars,eig_id,ispin,bandWindow,lambda,mapped_kpt)
+            !call dfpt_check_lambda(lambda,1e-6)
+            call dfpt_unfold_gmat(fi,sym_qpts,qpts,ispin,lambda,mapped_kpt,gmatCart,gmatCartBZ)
+            deallocate(lambda,mapped_kpt)
+        end do
+        call timestop("elph symmetry unfolding")
 
         ! Perform Wannier interpolation
         if (fi%wannierlib%l_wannierize) then
             call timestart("Wannier Interpolation elph")
-            if (fmpi%irank==0) write(*,*) "Starting the construction of the interpolation"
-            if (l_fullsym) then
-                call el_ph_wannier_interpolate(fmpi,fi,results,dynMats,gmatCartBZ,qvec_bz,qvec_full,sym_full)
-            else
-                call save_npy('gmatCart.npy', gmatCart)
-                call el_ph_wannier_interpolate(fmpi,fi,results,dynMats,gmatCart)
-            end if
+            if (fmpi%irank==0) write(*,*) "Starting the interpolation of the matrix element"
+            call el_ph_wannier(fmpi,fi,results,dynMats,gmatCartBZ,qpts,sym_qpts)
             call timestop("Wannier Interpolation elph")
         end if
 
@@ -289,10 +276,8 @@ contains
         do iread = 1, 3 + 3*natoms !Loop over dynmat rows
             if (iread<4) then
                 read( 3001,*) trash
-                !write(*,*) iread, trash
             else
                 read( 3001,*) numbers(iread-3,:)
-                !write(*,*) iread, numbers(iread-3,:)
                 dynMat(iread-3,:) = cmplx(numbers(iread-3,::2),numbers(iread-3,2::2))
             end if
         end do ! iread
