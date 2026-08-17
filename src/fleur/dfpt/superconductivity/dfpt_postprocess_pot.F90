@@ -252,7 +252,7 @@ contains
             call timestart("Wannier Interpolation elph")
             if (fmpi%irank==0) write(*,*) "Starting the construction of the interpolation"
             if (l_fullsym) then
-                call el_ph_wannier_interpolate(fmpi,fi,results,dynMats,gmatCartBZ,qvec_bz)
+                call el_ph_wannier_interpolate(fmpi,fi,results,dynMats,gmatCartBZ,qvec_bz,qvec_full,sym_full)
             else
                 call save_npy('gmatCart.npy', gmatCart)
                 call el_ph_wannier_interpolate(fmpi,fi,results,dynMats,gmatCart)

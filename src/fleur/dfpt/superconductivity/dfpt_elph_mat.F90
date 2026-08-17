@@ -255,7 +255,7 @@ CONTAINS
 
     END SUBROUTINE construct_elph_element
 
-    subroutine el_ph_wannier_interpolate(fmpi,fi,results,dynMats,gmatCart,qpts_gmat)
+    subroutine el_ph_wannier_interpolate(fmpi,fi,results,dynMats,gmatCart,qpts_gmat,qpts_dyn,sym_dyn)
 
         use m_eig66_io, only : open_eig,close_eig,read_eig
         use m_wannier_interpolate
@@ -275,6 +275,12 @@ CONTAINS
         ! BZ, which dynMats deliberately does NOT share -- ft_dyn unfolds that
         ! one itself.
         type(t_kpts), optional, intent(in) :: qpts_gmat
+        ! q mesh dynMats runs over, and its symmetry group. Absent, the input q
+        ! mesh and symmetry are used. Unlike gmatCart, dynMats stays irreducible,
+        ! so these describe a mesh whose %nkpt indexes dynMats while %bkf spans
+        ! the full zone ft_dyn unfolds onto.
+        type(t_kpts), optional, intent(in) :: qpts_dyn
+        type(t_sym),  optional, intent(in) :: sym_dyn
 
         type(t_kpts) :: qvec_gmat
 
@@ -439,7 +445,7 @@ CONTAINS
         ! Optionally export the real-space electron-phonon quantities as EPW restart files.
         if (fmpi%irank==0 .and. fi%dfpt%l_write_epw) then
             call timestart("Write EPW restart files")
-            call write_epw_restart_files(fi, results, dynMats, U_full, gmatRealspace)
+            call write_epw_restart_files(fi, results, dynMats, U_full, gmatRealspace, qpts_dyn, sym_dyn)
             call timestop("Write EPW restart files")
         end if
 

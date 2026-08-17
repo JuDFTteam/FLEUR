@@ -54,13 +54,21 @@ module m_dfpt_write_epw
 
 contains
 
-   subroutine write_epw_restart_files(fi, results, dynMats, U_full, ftRealspace)
+   subroutine write_epw_restart_files(fi, results, dynMats, U_full, ftRealspace, qpts_dyn, sym_dyn)
       !! Orchestrate writing all EPW restart files. Call on rank 0 only.
+      !!
+      !! qpts_dyn/sym_dyn describe the q mesh dynMats lives on. They are needed
+      !! when dynMats is irreducible: ft_dyn unfolds it onto qpts_dyn%bkf using
+      !! sym_dyn, and qpts_dyn%nkpt3 sets the phonon Fourier box. Absent, the
+      !! input q mesh and symmetry are used, which is correct exactly when the
+      !! stored q already are the full zone.
       type(t_fleurinput), intent(in) :: fi
       type(t_results),    intent(in) :: results
       complex,            intent(in) :: dynMats(:,:,:)       ! (3nat,3nat,nq_coarse) mass-normalized D(q)
       complex,            intent(in) :: U_full(:,:,:,:)      ! (num_bands,num_wann,nkptf,jspins)
       type(t_wann_ft),    intent(in) :: ftRealspace(:,:)     ! (3*nat, jspins) elph real-space tensors
+      type(t_kpts), optional, intent(in) :: qpts_dyn
+      type(t_sym),  optional, intent(in) :: sym_dyn
 
       integer :: nbndsub, nmodes, nat, ispin
       integer :: nrr_k, nrr_q, nrr_g
@@ -97,7 +105,7 @@ contains
       call unpack_cube(chw_cube, ftRealspace(1,ispin)%ws_k_indStored, nrr_k, htr2ry, chw)
 
       ! --- dynamical matrix real space (R_q) on the coarse phonon q-mesh ---
-      call build_rdw(fi, dynMats, nmodes, rdw, irvec_q, weight_q, nrr_q)
+      call build_rdw(fi, dynMats, nmodes, rdw, irvec_q, weight_q, nrr_q, qpts_dyn, sym_dyn)
 
       write (oUnit,'(/,a)') "Writing EPW (epwread) restart files:"
       write (oUnit,'(a,5(1x,i0))') "   nbndsub, nmodes, nrr_k, nrr_q, nrr_g =", nbndsub, nmodes, nrr_k, nrr_q, nrr_g
@@ -172,10 +180,16 @@ contains
       call unfold_grid(ft_lim, fft_grid, cube)
    end subroutine build_chw_cube
 
-   subroutine build_rdw(fi, dynMats, nmodes, rdw, Rvecs_q, weightNZ_q, nrr_q)
-      !! Real-space dynamical matrix (rdw) on the coarse PHONON q-mesh (fi%dfpt%qvec),
-      !! together with the phonon Wigner-Seitz list (irvec_q, ndegen_q = 1/weight).
+   subroutine build_rdw(fi, dynMats, nmodes, rdw, Rvecs_q, weightNZ_q, nrr_q, qpts_dyn, sym_dyn)
+      !! Real-space dynamical matrix (rdw) on the coarse PHONON q-mesh, together
+      !! with the phonon Wigner-Seitz list (irvec_q, ndegen_q = 1/weight).
       !! This mesh is independent of the electron/e-ph (k-mesh) WS lists.
+      !!
+      !! The mesh comes from qpts_dyn/sym_dyn when given, else from fi%dfpt%qvec
+      !! and fi%sym. Both the Fourier box (nkpt3) and the unfolding inside ft_dyn
+      !! must refer to the FULL zone, so passing an irreducible fi%dfpt%qvec here
+      !! silently shrinks the box and leaves the star members unfilled.
+      !!
       !! Scaling into EPW's convention (see module header):
       !!   rdw block(a,b) = 4 * amu_ry * sqrt(m_a m_b) * D_norm(R).
       type(t_fleurinput),   intent(in)  :: fi
@@ -185,6 +199,8 @@ contains
       integer, allocatable, intent(out) :: Rvecs_q(:,:)      ! (3,nrr_q) WS vectors (un-negated)
       real,    allocatable, intent(out) :: weightNZ_q(:)     ! (nrr_q)   = 1/ndegen
       integer,              intent(out) :: nrr_q
+      type(t_kpts), optional, intent(in) :: qpts_dyn
+      type(t_sym),  optional, intent(in) :: sym_dyn
 
       integer :: nq(3), ft_lim(2,3), bigBox(2,3), boxSize, ix, iy, iz, iGrid, ia, ja, i0, j0
       real    :: fac
@@ -192,8 +208,26 @@ contains
       real,    allocatable :: FTweight(:)
       complex, allocatable :: cube(:,:,:,:,:), dyn_mat_q_full(:,:,:)
       type(t_cell) :: cellLocal
+      type(t_kpts) :: qpts
+      type(t_sym)  :: symq
 
-      nq = fi%dfpt%qvec%nkpt3(:)
+      if (present(qpts_dyn) .neqv. present(sym_dyn)) then
+         call juDFT_error("build_rdw needs the q mesh and its symmetry group together.", calledby="build_rdw")
+      end if
+
+      if (present(qpts_dyn)) then
+         qpts = qpts_dyn
+         symq = sym_dyn
+      else
+         qpts = fi%dfpt%qvec
+         symq = fi%sym
+      end if
+
+      if (size(dynMats, 3) < qpts%nkpt) then
+         call juDFT_error("Fewer dynamical matrices than irreducible q points.", calledby="build_rdw")
+      end if
+
+      nq = qpts%nkpt3(:)
 
       ! Fourier box and Wigner-Seitz weights of the coarse phonon q-mesh supercell
       ! (mirrors interpolate_dynmat / wannier_matrixq_forward: big box +-2N, always WS).
@@ -219,7 +253,7 @@ contains
 
       ! D_norm(R) = (1/Nq) sum_q e^{+i q.R} D(q)   (symmetry-unfolded to the full BZ)
       allocate(cube(nmodes,nmodes,0:nq(1)-1,0:nq(2)-1,0:nq(3)-1))
-      call ft_dyn(fi%atoms, fi%dfpt%qvec, fi%sym, ft_lim, fi%cell%amat, dynMats, cube, dyn_mat_q_full)
+      call ft_dyn(fi%atoms, qpts, symq, ft_lim, fi%cell%amat, dynMats, cube, dyn_mat_q_full)
 
       ! per-(atom,atom) block mass/energy scaling (see module header)
       do ia = 1, fi%atoms%nat
