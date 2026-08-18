@@ -16,7 +16,7 @@ make you take explicitly.
 | What it is | Examples already in the tree | What you touch |
 |---|---|---|
 | **A real operator** — a contraction over the states, `O_mn(k) = <psi_m\|O\|psi_n>` | `spin`, `orbital`, `spin_orbit` | catalogue + provider + coarse slice + exposure (**route A**) |
-| **Only an exposure** — the coarse matrix already exists; you want another file or a derived quantity | `spinCurrent`, `orbitalCurrent` (both reuse `spin` / `orbital`) | one table row + one branch (**route B**) |
+| **Only an exposure** — the coarse matrix already exists; you want another file or a derived quantity | `soc` (reuses `spin_orbit` under another name) | one table row + one branch (**route B**) |
 | **Not an operator at all** — it comes out of the neighbour overlaps or the eigenvalues | `hamiltonian`, `position`, `velocity`, `bmn`, `eigenstates` | a row with `operator=''` + a driver of its own (**route C**) |
 
 > **The rule in one line.** If it is not a contraction over the states, it does not belong
@@ -275,11 +275,11 @@ it, there is no provider and no new slice. One row pointing at the existing cata
 is enough:
 
 ```fortran
-t_melem_exposed('spinCurrent', 'spin', 3, 'bands_wann_spincurrent', '', .FALSE.)
+t_melem_exposed('soc', 'spin_orbit', 1, 'bands_wann_soc', '', .FALSE.)
 ```
 
 That row says three things at once: the name is accepted in `<interpolation>`, serving it
-requires the `spin` matrix — even though the user never writes that word — and the result
+requires the `spin_orbit` matrix — even though the user never writes that word — and the result
 has three components. The reader, the coarse pass and the dispatch all read it from there.
 
 | Column | Meaning |
@@ -384,8 +384,7 @@ gate, which is the stub above.
    collinear channels. It is one array, not two.
 
 5. **Exposure.** Two rows: `'orbital'` in `WANNIERLIB_INTERP` (with
-   `honours_total = .TRUE.`) and in `WANNIERLIB_OPR`. Plus `'orbitalCurrent'`, which points
-   at the same catalogue entry without being an operator.
+   `honours_total = .TRUE.`) and in `WANNIERLIB_OPR`.
 
 6. **Outputs.** `bands_wann_orbmom.dat` when interpolated; `anglmomrs.<channel>` in real
    space. Note the suffix carries the channel — that is why `WANNIERLIB_OPR` has no output
@@ -393,16 +392,11 @@ gate, which is the stub above.
 
 ---
 
-## Appendix: one open inconsistency
+## Appendix: a name the schema accepts and the tables do not
 
-The schema accepts `spinTorque` and `orbitalTorque` in `<interpolation>`. **Neither is in**
-`WANNIERLIB_INTERP`.
-
-So an input with `<operator name="spinTorque"/>` *validates against the schema* and then
-stops in `melem_request_init` with *"is not an operator this layer can interpolate"*. The
-failure is clean and the message lists the accepted names, so it is not dangerous — but the
-two enumerations have drifted apart, and the schema promises something that does not exist.
-
-Two reasonable ways out: drop them from the XSD until they are implemented, or keep them
-and accept that the schema documents an intention. The first looks better, because the
-schema is the first thing a new user reads.
+The enumeration in the XSD and `WANNIERLIB_INTERP` are two lists that have to agree, and
+nothing enforces it. If they drift, an input validates against the schema and then stops in
+`melem_request_init` with *"is not an operator this layer can interpolate"*. The failure is
+clean and the message lists the accepted names, so the cost is a confusing session rather
+than a wrong number — but the schema is the first thing a new user reads, so it should not
+promise what does not exist. Add the row and the enumeration in the same commit.

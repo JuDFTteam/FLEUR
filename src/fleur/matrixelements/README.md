@@ -26,7 +26,7 @@ and lives in `postproc`, so nothing here knows what the bands were selected for.
 | | Examples | Work |
 |---|---|---|
 | **A real operator** — a contraction over the states, `O_mn(k) = <psi_m|O|psi_n>` | `spin`, `orbital`, `spin_orbit` | catalogue + provider + coarse slice + exposure |
-| **Only an exposure** — the coarse matrix already exists | `spinCurrent`, `orbitalCurrent` | one table row + one branch |
+| **Only an exposure** — the coarse matrix already exists | `soc` (reuses `spin_orbit`) | one table row + one branch |
 | **Not an operator at all** — built from neighbour overlaps or eigenvalues | `hamiltonian`, `position`, `velocity`, `bmn`, `eigenstates` | row with `operator=''` + a driver of its own |
 
 **The rule:** if it is not a contraction over the states, it does not go in the
@@ -75,9 +75,9 @@ Never byte-identity between different numbers of ranks: the reduction tree chang
 
 `types_matelements_template.F90` is in `CMakeLists.txt` although nothing calls it.
 A skeleton that is not compiled stops matching the interface it claims to
-demonstrate and nothing says so — which is how `FleurInputSchema.xsd` came to accept
-`spinTorque` and `orbitalTorque` while neither exposure table has them. Compiled, a
-change to `t_matelements` breaks the build on the commit that makes it.
+demonstrate and nothing says so — which is how `FleurInputSchema.xsd` once accepted
+two operator names that neither exposure table had, until someone noticed by hand.
+Compiled, a change to `t_matelements` breaks the build on the commit that makes it.
 
 It costs one object file. The `CMakeLists.txt` entry is a commit of its own, so
 dropping the pattern is a single revert — and if you do drop it, take the

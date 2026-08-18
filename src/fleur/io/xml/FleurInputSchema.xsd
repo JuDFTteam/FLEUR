@@ -3578,8 +3578,6 @@
                <xsd:enumeration value="eigenstates"/>
                <xsd:enumeration value="spinCurrent"/>
                <xsd:enumeration value="orbitalCurrent"/>
-               <xsd:enumeration value="spinTorque"/>
-               <xsd:enumeration value="orbitalTorque"/>
             </xsd:restriction>
          </xsd:simpleType>
       </xsd:attribute>
