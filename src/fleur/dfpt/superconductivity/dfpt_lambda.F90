@@ -102,10 +102,11 @@ contains
 
    end subroutine dfpt_read_fullsym
 
-   subroutine dfpt_build_lambda(fi, sym_full, fmpi, enpara, vTot, nococonv, stars, eig_id, jsp, bandWindow, lambda, mapped_kpt)
+   subroutine dfpt_build_lambda(fi, sym_full, fmpi, enpara, vTot, nococonv, stars, eig_id, jsp, bandWindow, lambda, mapped_kpt, eig_win)
       !! Builds \(\Lambda(\boldsymbol{k},\mathcal{S})\) and the index map
       !! \(\boldsymbol{k}\mapsto S\boldsymbol{k}\) for every k of the mesh and
-      !! every operation of the full group.
+      !! every operation of the full group. `eig_win` returns the band-window
+      !! eigenvalues for `dfpt_check_lambda`.
 
       use m_eig66_io,   only: read_eig
       use m_trafo,      only: waveftrafo_gen_zmat, waveftrafo_gen_cmt
@@ -123,6 +124,7 @@ contains
       integer,              intent(in)  :: bandWindow(2)       
       complex, allocatable, intent(out) :: lambda(:, :, :, :)  ! (nb,nb,nkpt,nsym), nb = window size
       integer, allocatable, intent(out) :: mapped_kpt(:, :)         ! (nkpt,nsym): index of S k
+      real,    allocatable, intent(out) :: eig_win(:, :)       ! (nb,nkpt) window eigenvalues
 
       type(t_hybinp)       :: hybinp   
       type(t_mpdata)       :: mpdata  
@@ -144,7 +146,7 @@ contains
       complex, allocatable :: zKPrime_c(:, :), zRot_c(:, :), tmp_is(:, :)
 
       integer, allocatable :: mapped_kpt_inv(:, :), ev_list(:)
-      real,    allocatable :: eig_dummy(:)
+      real,    allocatable :: eig_all(:)
 
       integer :: ik, ikPrime, isym, i, itype, nv_kPrime, neig, nbands
       integer :: mrot(3, 3), invmrot(3, 3)
@@ -183,7 +185,6 @@ contains
 
       allocate (ev_list(nbands))
       ev_list = [(i, i=bandWindow(1), bandWindow(2))]
-      allocate (eig_dummy(nbands), source=0.0)
       allocate (c_phase(nbands), source=cmplx_0)
 
       ! k -> S k map, and its inverse 
@@ -202,15 +203,26 @@ contains
       ! Spread over ranks and reduced back; each slot is written by exactly one rank
       call timestart("dfpt lambda: cmt")
       allocate (cmt_all(nbands, maxlmindx, fi%atoms%nat, fi%kpts%nkpt), source=cmplx_0)
+      allocate (eig_win(nbands, fi%kpts%nkpt), source=0.0)
+      allocate (eig_all(bandWindow(2)))
       do ik = fmpi%irank + 1, fi%kpts%nkpt, fmpi%isize
          call lapw_k%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, ik, fi%cell)
          call zMatK%init(fi%input%l_real, lapw_k%nv(jsp) + fi%atoms%nlotot, nbands)
-         call read_eig(eig_id, ik, jsp, list=ev_list, neig=neig, eig=eig_dummy, zmat=zMatK)
+         ! read_eig applies ev_list to zmat only; eig always comes back from band 1,
+         ! and the HDF backend rejects a buffer shorter than neig.
+         call read_eig(eig_id, ik, jsp, neig=neig)
+         if (size(eig_all) < neig) then
+            deallocate (eig_all)
+            allocate (eig_all(neig))
+         end if
+         call read_eig(eig_id, ik, jsp, list=ev_list, neig=neig, eig=eig_all, zmat=zMatK)
+         eig_win(:, ik) = eig_all(bandWindow(1):bandWindow(2))
          call cmt_from_z(fi, usdus, nococonv, lapw_k, zMatK, jsp, nbands, maxlmindx, cmt_all(:, :, :, ik))
          call zMatK%free()
       end do
 #ifdef CPP_MPI
       call MPI_ALLREDUCE(MPI_IN_PLACE, cmt_all, size(cmt_all), MPI_DOUBLE_COMPLEX, MPI_SUM, fmpi%mpi_comm, ierr)
+      call MPI_ALLREDUCE(MPI_IN_PLACE, eig_win, size(eig_win), MPI_DOUBLE_PRECISION, MPI_SUM, fmpi%mpi_comm, ierr)
 #endif
       call timestop("dfpt lambda: cmt")
 
@@ -226,7 +238,7 @@ contains
          nv_kPrime = lapw_kPrime%nv(jsp)
 
          call zMatKPrime%init(fi%input%l_real, nv_kPrime + fi%atoms%nlotot, nbands)
-         call read_eig(eig_id, ikPrime, jsp, list=ev_list, neig=neig, eig=eig_dummy, zmat=zMatKPrime)
+         call read_eig(eig_id, ikPrime, jsp, list=ev_list, neig=neig, zmat=zMatKPrime)
 
          ! Ordinary interstitial overlap at k'
          ! Basis has no gauge freedom |phi_Sk> = |phi_k'> 
@@ -248,7 +260,7 @@ contains
             call lapw_k%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, ik, fi%cell)
             call zMatK%init(fi%input%l_real, lapw_k%nv(jsp) + fi%atoms%nlotot, nbands)
             call zMatRot%init(fi%input%l_real, nv_kPrime + fi%atoms%nlotot, nbands)
-            call read_eig(eig_id, ik, jsp, list=ev_list, neig=neig, eig=eig_dummy, zmat=zMatK)
+            call read_eig(eig_id, ik, jsp, list=ev_list, neig=neig, zmat=zMatK)
 
             ! Plane waves first: in the real case waveftrafo_gen_zmat picks a
             ! per-band phase to keep the rotated z real; gen_cmt must reuse it.
@@ -288,34 +300,81 @@ contains
 
    end subroutine dfpt_build_lambda
 
-   subroutine dfpt_check_lambda(lambda, tol)
-      !! Unitarity check on every \(\Lambda(\boldsymbol{k},\mathcal{S})\) block.
-      !! Catches both a rotation/overlap error and a degenerate multiplet
-      !! straddling a band-window edge (the window block of a unitary matrix is
-      !! unitary exactly when no multiplet is cut).
+   subroutine dfpt_check_lambda(fi, lambda, eig_win, tol)
+      !! Unitarity check on every \(\Lambda(\boldsymbol{k},\mathcal{S})\) block,
+      !! restricted per k to the bands the Wannier disentanglement keeps. Reports
+      !! the deviation over the whole window as well, but only warns on the
+      !! restricted block.
+      !!
+      !! \(\Lambda\) is block-diagonal in energy, so any band subset that cuts a
+      !! degenerate multiplet is non-unitary by construction. In a metal there is
+      !! generally **no** band index at which the window can be closed - in bcc Nb
+      !! the minimum gap over the mesh is exactly zero across a dozen bands - so a
+      !! check over the full window always fires and says nothing. Bands outside
+      !! `dis_win_min .. dis_win_max` carry no Wannier weight and are dropped here;
+      !! without disentanglement the whole window is checked. The eigenvalue sets
+      !! at k and Sk are identical, so one mask serves rows and columns.
 
-      complex, intent(in) :: lambda(:, :, :, :)
-      real,    intent(in) :: tol
+      type(t_fleurinput), intent(in) :: fi
+      complex,            intent(in) :: lambda(:, :, :, :)
+      real,               intent(in) :: eig_win(:, :)
+      real,               intent(in) :: tol
 
-      integer :: ik, isym, i, nb
-      real    :: devMax
-      complex, allocatable :: prod(:, :)
+      integer :: ik, isym, i, j, nb, nsel, nselMin, nselMax
+      real    :: devMax, devFull, eFloor, eCeil
+      integer, allocatable :: sel(:)
+      complex, allocatable :: sub(:, :), prod(:, :)
+
+      if (fi%wannierlib%l_wannierize .and. fi%wannierlib%dis_win_max > fi%wannierlib%dis_win_min) then
+         eFloor = fi%wannierlib%dis_win_min
+         eCeil  = fi%wannierlib%dis_win_max
+      else
+         eFloor = -huge(1.0)
+         eCeil  =  huge(1.0)
+      end if
 
       nb = size(lambda, 1)
-      allocate (prod(nb, nb))
-      devMax = 0.0
+      allocate (sel(nb), sub(nb, nb), prod(nb, nb))
+      devMax  = 0.0
+      devFull = 0.0
+      nselMin = nb
+      nselMax = 0
 
-      do isym = 1, size(lambda, 4)
-         do ik = 1, size(lambda, 3)
+      do ik = 1, size(lambda, 3)
+         nsel = 0
+         do i = 1, nb
+            if (eig_win(i, ik) >= eFloor .and. eig_win(i, ik) <= eCeil) then
+               nsel = nsel + 1
+               sel(nsel) = i
+            end if
+         end do
+         nselMin = min(nselMin, nsel)
+         nselMax = max(nselMax, nsel)
+
+         do isym = 1, size(lambda, 4)
             prod = matmul(conjg(transpose(lambda(:, :, ik, isym))), lambda(:, :, ik, isym))
             do i = 1, nb
                prod(i, i) = prod(i, i) - cmplx_1
             end do
-            devMax = max(devMax, maxval(abs(prod)))
+            devFull = max(devFull, maxval(abs(prod)))
+
+            if (nsel == 0) cycle
+            do j = 1, nsel
+               do i = 1, nsel
+                  sub(i, j) = lambda(sel(i), sel(j), ik, isym)
+               end do
+            end do
+            prod(:nsel, :nsel) = matmul(conjg(transpose(sub(:nsel, :nsel))), sub(:nsel, :nsel))
+            do i = 1, nsel
+               prod(i, i) = prod(i, i) - cmplx_1
+            end do
+            devMax = max(devMax, maxval(abs(prod(:nsel, :nsel))))
          end do
       end do
 
-      write (oUnit, '(a,es12.4)') "dfpt_check_lambda: max |Lambda^dag Lambda - 1| = ", devMax
+      write (oUnit, '(a,i0,a,i0,a,i0)') "dfpt_check_lambda: checked ", nselMin, " to ", nselMax, " of ", nb
+      write (oUnit, '(a,es12.4)') "dfpt_check_lambda: max |Lambda^dag Lambda - 1|, checked bands = ", devMax
+      write (oUnit, '(a,es12.4)') "dfpt_check_lambda: max |Lambda^dag Lambda - 1|, full window   = ", devFull
       if (devMax > tol) then
          call juDFT_warn("Lambda is not unitary to tolerance; the unfolded el-ph elements will be wrong.", calledby="dfpt_check_lambda")
       end if
@@ -331,13 +390,32 @@ contains
       !!         \sum_\alpha S_{\beta\alpha}\,
       !!         \underline{g}^{\kappa\alpha}(\boldsymbol{k},\boldsymbol{q})\Big]
       !!    \Lambda^\dagger(\boldsymbol{k},\mathcal{S})$$
-      !! (Eq. (9) of README_symmetry.md). `lambda` is supplied by the caller.
+      !! `lambda` is supplied by the caller. \(\boldsymbol{R}_{S\kappa}
+      !! =S\boldsymbol{\tau}_\kappa+\boldsymbol{v}-\boldsymbol{\tau}_{p(\kappa)}\)
+      !! with \(\kappa\) the **source** atom, so `rlat` is a lattice vector by
+      !! construction and the phase is a genuine \(e^{-i(S\boldsymbol{q})\cdot
+      !! \boldsymbol{R}}\). Evaluating it at the image atom instead makes `rlat`
+      !! non-integral whenever `mapped_atom` is not an involution, so do not
+      !! "align" this with `rotate_dynmat`'s destination-indexed \(f\).
+      !!
+      !! That routine looks like it uses a different convention (`mrot` and
+      !! \(\boldsymbol{q}_{\mathrm{rep}}\) instead of `invmrot` and
+      !! \(\boldsymbol{q}_{\mathrm{full}}\)); it does not. With
+      !! \(\boldsymbol{q}_{\mathrm{full}}=S^{-T}\boldsymbol{q}_{\mathrm{rep}}\),
+      !! \(\boldsymbol{q}_{\mathrm{full}}\cdot(S\boldsymbol{\tau}_\alpha
+      !! -\boldsymbol{\tau}_{p(\alpha)})
+      !! =\boldsymbol{q}_{\mathrm{rep}}\cdot(\boldsymbol{\tau}_\alpha
+      !! -S^{-1}\boldsymbol{\tau}_{p(\alpha)})\), so the two forms are the same
+      !! phase. See `changed_phase_convention.md` §6.
       !!
       !! For the time-reversal half (`isym > nop`), `invmrot`/`mapped_atom` are
       !! only tabulated up to `nop`, so the real-space operation used here is
-      !! `-invmrot` at index `isym - nop`, and the source block is conjugated
-      !! per \(g^{\kappa\alpha}(-\boldsymbol{k},-\boldsymbol{q})
-      !! =[g^{\kappa\alpha}(\boldsymbol{k},\boldsymbol{q})]^{*}\).
+      !! `-invmrot` at index `isym - nop` (which recovers the spatial \(S\), since
+      !! `get_sym_operation_int_coord` returns it negated), and the source block is
+      !! conjugated per \(g^{\kappa\alpha}(-\boldsymbol{k},-\boldsymbol{q})
+      !! =[g^{\kappa\alpha}(\boldsymbol{k},\boldsymbol{q})]^{*}\). `bkf` already
+      !! carries the \(\boldsymbol{q}\to-\boldsymbol{q}\) sign, so the phase
+      !! conjugates itself and needs no extra `conjg`.
 
       use m_inv3
 
@@ -380,6 +458,9 @@ contains
          iq   = qvec_full%bkp(iqf)
          isym = qvec_full%bksym(iqf)
          call sym_full%get_sym_operation_int_coord(isym, mrot, invmrot, trans, l_trs)
+         if (.not.all(abs(trans) < 1e-9)) then
+            call juDFT_error("el-ph unfolding with non-symmorphic symmetries is not supported; redo the IBZ run with a symmorphic group.", calledby="dfpt_unfold_gmat")
+         end if
 
          iopAtom = isym
          rotReal = invmrot

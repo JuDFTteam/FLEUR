@@ -67,6 +67,7 @@ contains
         integer :: ispin
         complex, allocatable :: lambda(:,:,:,:)
         integer, allocatable :: mapped_kpt(:,:)
+        real,    allocatable :: eig_win(:,:)
         complex, allocatable :: gmatCartBZ(:,:,:,:,:,:) ! (nu',nu,kpoints,jsp,iPerturb,iQfull)
 
 
@@ -232,8 +233,8 @@ contains
 
         ! Construct the phases between rotation and what the solver at k' produced
         do ispin = 1 , fi%input%jspins
-            call dfpt_build_lambda(fi,sym_qpts,fmpi,enpara,vTot,nococonv,stars,eig_id,ispin,bandWindow,lambda,mapped_kpt)
-            !call dfpt_check_lambda(lambda,1e-6)
+            call dfpt_build_lambda(fi,sym_qpts,fmpi,enpara,vTot,nococonv,stars,eig_id,ispin,bandWindow,lambda,mapped_kpt,eig_win)
+            if (fmpi%irank==0) call dfpt_check_lambda(fi,lambda,eig_win,1e-6)
             call dfpt_unfold_gmat(fi,sym_qpts,qpts,ispin,lambda,mapped_kpt,gmatCart,gmatCartBZ)
             deallocate(lambda,mapped_kpt)
         end do
