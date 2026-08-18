@@ -494,7 +494,6 @@ CONTAINS
 
       ! derive convenience flags that gate the coarse-mesh provider calls.
       ! Class-C operators auto-request their prerequisite coarse matrices:
-      !   spinCurrent = {v,sigma} needs the spin coarse matrix; orbitalCurrent needs L.
       !   velocity is built from H alone, so it needs no coarse provider.
       !> Which coarse matrix a name needs built for it is a column of the exposure table,
       !> so a name added there is picked up here without being remembered twice. What is

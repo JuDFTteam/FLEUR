@@ -58,7 +58,7 @@ MODULE m_types_melem_optable
    END TYPE t_melem_exposed
 
    !> <interpolation>/<operator name="..">
-   TYPE(t_melem_exposed), PARAMETER, PUBLIC :: WANNIERLIB_INTERP(8) = [ &
+   TYPE(t_melem_exposed), PARAMETER, PUBLIC :: WANNIERLIB_INTERP(6) = [ &
       t_melem_exposed('hamiltonian',    '',           0, 'bands_wann_interpol',     &
                       'bands_wann_interpol_ev', .FALSE.), &
       t_melem_exposed('spin',           'spin',       3, 'bands_wann_spin',         '', .TRUE.), &
@@ -66,8 +66,6 @@ MODULE m_types_melem_optable
       t_melem_exposed('soc',            'spin_orbit', 1, 'bands_wann_soc',          '', .FALSE.), &
       t_melem_exposed('velocity',       '',           0, 'bands_wann_velocity',     &
                       'bands_wann_berrycurv', .FALSE.), &
-      t_melem_exposed('spinCurrent',    'spin',       3, 'bands_wann_spincurrent',  '', .FALSE.), &
-      t_melem_exposed('orbitalCurrent', 'orbital',    3, 'bands_wann_orbcurrent',   '', .FALSE.), &
       t_melem_exposed('eigenstates',    '',           0, 'bands_wann_eigenstates',  '', .FALSE.)]
 
    !> <operators_r>/<operator name="..">. No output column: these write legacy names that

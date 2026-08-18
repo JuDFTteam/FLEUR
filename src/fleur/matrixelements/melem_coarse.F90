@@ -199,8 +199,7 @@ CONTAINS
       !> right question per case is what keeps this loop from having to know which is which.
       IF (this%n_channels == 2) THEN
          l_do_spin = request%has_op_r('spin')
-         l_do_orb  = request%has_op_r('orbital') .OR. request%has_op('orbital') .OR. &
-                     request%has_op('orbitalCurrent')
+         l_do_orb  = request%has_op_r('orbital') .OR. request%has_op('orbital')
          IF (.NOT. (l_do_spin .OR. l_do_orb)) RETURN
       ELSE
          IF (.NOT. this%l_active) RETURN   ! nothing requested, or no spinors -> slices are stubs

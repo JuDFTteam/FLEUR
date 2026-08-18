@@ -15,7 +15,6 @@ src/fleur/wannierlib/postproc/melem_spin_collinear.F90
 src/fleur/wannierlib/postproc/melem_interpolate_ham.F90
 src/fleur/wannierlib/postproc/melem_interpolate_op.F90
 src/fleur/wannierlib/postproc/melem_interpolate_velocity.F90
-src/fleur/wannierlib/postproc/melem_interpolate_current.F90
 src/fleur/wannierlib/postproc/melem_interpolate_eigenstates.F90
 src/fleur/wannierlib/postproc/melem_run.F90
 )

@@ -3576,8 +3576,6 @@
                <xsd:enumeration value="soc"/>
                <xsd:enumeration value="velocity"/>
                <xsd:enumeration value="eigenstates"/>
-               <xsd:enumeration value="spinCurrent"/>
-               <xsd:enumeration value="orbitalCurrent"/>
             </xsd:restriction>
          </xsd:simpleType>
       </xsd:attribute>

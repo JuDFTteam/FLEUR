@@ -28,7 +28,6 @@ MODULE m_melem_run
    USE m_melem_interpolate_ham, ONLY: melem_interpolate_ham
    USE m_melem_interpolate_op, ONLY: melem_interpolate_operator
    USE m_melem_interpolate_velocity, ONLY: melem_interpolate_velocity
-   USE m_melem_interpolate_current, ONLY: melem_interpolate_current
    USE m_melem_interpolate_eigenstates, ONLY: melem_interpolate_eigenstates
    IMPLICIT NONE
    PRIVATE
@@ -138,13 +137,6 @@ CONTAINS
                END IF
                CALL melem_interpolate_velocity(manifold, cell, kpts, eig, u_matrix, u_opt, &
                                                aw_r, aw_irvec, aw_ndegen, aw_nrpts, irank)
-            CASE ('spinCurrent')
-               ! operator part distributed like the generic driver: local Bloch slice + gk_loc + reduce
-               CALL melem_interpolate_current(manifold, cell, kpts, eig, u_matrix, u_opt, &
-                                              coarse%s0, gk_loc, 'bands_wann_spincurrent.dat', irank, mpi_comm)
-            CASE ('orbitalCurrent')
-               CALL melem_interpolate_current(manifold, cell, kpts, eig, u_matrix, u_opt, &
-                                              SUM(coarse%l0(:, :, :, :, wf_ch, :), DIM=4), gk_loc, 'bands_wann_orbcurrent.dat', irank, mpi_comm)
             CASE ('eigenstates')
                ! Wannier-Hamiltonian eigenvectors C(k') (the H-gauge rotation U^(H)), as a matrix
                CALL melem_interpolate_eigenstates(manifold, cell, kpts, eig, u_matrix, u_opt, irank)
