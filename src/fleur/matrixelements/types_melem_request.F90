@@ -40,7 +40,7 @@ MODULE m_types_melem_request
       PROCEDURE :: needs_op => melem_request_needs_op
    END TYPE t_melem_request
 
-   PUBLIC :: t_melem_request, melem_op_known
+   PUBLIC :: t_melem_request
 
 CONTAINS
 

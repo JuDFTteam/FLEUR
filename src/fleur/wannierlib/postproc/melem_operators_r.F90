@@ -38,7 +38,6 @@ MODULE m_melem_operators_r
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: melem_write_operators_r, melem_op_rs_distributed
-  PUBLIC :: melem_write_hr, melem_write_wig_once
 CONTAINS
 
   ! Write H(R) in Wannier90 seedname_hr.dat format (energies in eV). Rank-0 only.

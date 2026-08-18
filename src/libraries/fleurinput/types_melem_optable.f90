@@ -87,7 +87,7 @@ MODULE m_types_melem_optable
       t_melem_exposed('orbital',     'orbital',    3, '', '', .FALSE.), &
       t_melem_exposed('spin_orbit',  'spin_orbit', 4, '', '', .FALSE.)]
 
-   PUBLIC :: melem_exposed_find, melem_operator_find, melem_exposed_names
+   PUBLIC :: melem_exposed_find, melem_exposed_names
 
 CONTAINS
 

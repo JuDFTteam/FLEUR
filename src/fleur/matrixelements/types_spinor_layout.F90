@@ -48,7 +48,7 @@ MODULE m_types_spinor_layout
       PROCEDURE :: row_offset => spinor_layout_row_offset
    END TYPE t_spinor_layout
 
-   PUBLIC :: t_spinor_layout, radial_slot, n_radial_of, melem_stack_spinor
+   PUBLIC :: t_spinor_layout, radial_slot, melem_stack_spinor
 
 CONTAINS
 
