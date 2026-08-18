@@ -83,8 +83,8 @@ CONTAINS
     !> (nw,nw,3,3,nk_loc) the geometric tensor, already contracted over the pairs of
     !> neighbours and already gauged, because that has to happen where the wavefunctions are.
     COMPLEX, ALLOCATABLE, INTENT(IN) :: f0_loc(:, :, :, :, :)
-    !> (nw,nw,3,3,nk_loc) el mismo tensor con el hamiltoniano dentro. Sin asignar
-    !> salvo que se pida, por lo mismo que f0_loc.
+    !> (nw,nw,3,3,nk_loc) the same tensor with the Hamiltonian inside. Unallocated
+    !> unless it was asked for, for the same reason as f0_loc.
     COMPLEX, ALLOCATABLE, INTENT(IN) :: c0_loc(:, :, :, :, :)
     TYPE(t_melem_bmesh), INTENT(IN) :: bmesh         ! b-shell weights (position/Berry operator)
     COMPLEX, INTENT(IN) :: mmn_loc(:, :, :, :)       ! (nb,nb,nntot,nk_loc) this rank's overlap slice (position/Berry)

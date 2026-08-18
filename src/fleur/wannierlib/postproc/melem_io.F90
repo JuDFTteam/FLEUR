@@ -17,7 +17,7 @@
 !>    'soc'     R1 R2 R3  i j jj ii  Re Im   (2x2 spinor blocks -> rssocmat.1)
 !>    'generic' R1 R2 R3  i j comp   Re Im   (spin -> rspauli.1, orbital -> anglmomrs.*)
 !>    'cart2'   R1 R2 R3  i j        then nine (alpha,beta) components on the line
-!>    'cart2e'  como cart2, con la energia convertida a eV
+!>    'cart2e'  as cart2, with the energy converted to eV
 MODULE m_melem_io
    USE m_juDFT
    USE m_constants, ONLY: hartree_to_ev_const
@@ -100,9 +100,9 @@ CONTAINS
                (REAL(o_r(i,j,irpt,kk)), AIMAG(o_r(i,j,irpt,kk)), kk = 1, 9)
          END DO; END DO; END DO
       CASE ('cart2e')
-         !> El mismo layout que cart2, para un operador que ademas lleva energia. La
-         !> conversion es la unica diferencia, y esta aqui y no en el llamante porque es
-         !> donde vive el contrato de unidades.
+         !> The cart2 layout, for an operator that carries energy as well. The conversion
+         !> is the only difference, and it happens here rather than in the caller because
+         !> this is where the unit contract lives.
          IF (ncomp /= 9) CALL juDFT_error( &
             'melem_write_realspace: the cart2e format carries nine Cartesian components', &
             hint='use the generic format for an operator with one Cartesian index', &

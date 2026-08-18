@@ -51,7 +51,7 @@ CONTAINS
       !> (nw,nw,3,3,nk_loc) the geometric tensor. Unallocated unless it was asked for: it is
       !> the one operator that cannot be built from what this routine is handed.
       COMPLEX, ALLOCATABLE, INTENT(IN) :: f0_loc(:, :, :, :, :)
-      !> El mismo, con el hamiltoniano dentro.
+      !> The same one, with the Hamiltonian inside.
       COMPLEX, ALLOCATABLE, INTENT(IN) :: c0_loc(:, :, :, :, :)
       COMPLEX, INTENT(IN) :: mmn(:, :, :, :)           !< (nb,nb,nntot,nk_loc) this rank's overlap slice
       TYPE(t_melem_bmesh), INTENT(IN) :: bmesh         !< b-shell weights (position/velocity operators)

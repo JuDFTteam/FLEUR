@@ -252,8 +252,8 @@ CONTAINS
             CALL wannierlib_uiu(manifold, bmesh, kpts, atoms, cell, input, sym, noco, nococonv, &
                                 radfun, jspin, l_wannierlib_spinors, eig_id, stars, enpara, &
                                 vtot, fmpi, distk, u_matrix, u_opt, f0_loc)
-         !> C pide lo mismo que F -el gauge en dos vecinos a la vez- y ademas los
-         !> autovalores del bra, asi que vive aqui por la misma razon.
+         !> C asks for what F asks -- the gauge at two neighbours at once -- and for the
+         !> eigenvalues of the bra on top, so it lives here for the same reason.
          IF (request%has_op_r('cmn')) &
             CALL wannierlib_uhu(manifold, bmesh, kpts, atoms, cell, input, sym, noco, nococonv, &
                                 radfun, jspin, l_wannierlib_spinors, eig_id, stars, enpara, &
