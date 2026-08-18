@@ -1,5 +1,4 @@
 set(fleur_F90 ${fleur_F90}
-src/fleur/wannierlib/wannierlib_amn_stub.F90
 src/fleur/wannierlib/wannierlib_mmnkb.F90
 src/fleur/wannierlib/wannierlib_uiu.F90
 src/fleur/wannierlib/wannierlib_uhu.F90
