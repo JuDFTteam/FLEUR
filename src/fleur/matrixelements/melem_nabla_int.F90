@@ -12,9 +12,9 @@
 !>  two basis sets is untouched and the two matrix products that follow are the ones the
 !>  plain overlap already does.
 !>
-!>  Returns p and not nabla, so the caller has no factor to add here; the muffin-tin half
-!>  returns nabla and is the one that carries the -i. The two halves are only comparable
-!>  once that is applied.
+!>  Returns p and not nabla, so the caller has no factor to add. The muffin-tin half starts
+!>  from a tabulated gradient but applies the -i itself, so it returns p as well and the two
+!>  can simply be added.
 MODULE m_melem_nabla_int
   USE m_juDFT
   USE m_types

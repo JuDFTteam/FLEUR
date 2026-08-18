@@ -3,8 +3,9 @@
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
-!>  Provider of the spin (Pauli) operator matrix elements in the Bloch basis,
-!>  on-site (b = 0, same k):
+!>  What acts on the four spin-block overlaps once they exist: the Pauli components and
+!>  the sum rule. The blocks themselves come from t_matelements_spin, which is the provider;
+!>  this module is not one. On-site (b = 0, same k):
 !>
 !>      S0_alpha,mn(k) = < psi_mk | sigma_alpha | psi_nk > ,   alpha = x,y,z
 !>
