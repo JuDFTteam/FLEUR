@@ -27,6 +27,7 @@ MODULE m_melem_interpolate_ham
   USE m_melem_hamk, ONLY : melem_build_hamk
   USE m_melem_domains, ONLY : melem_read_kset
   USE m_melem_ft, ONLY : melem_ft_interpolate
+  USE m_melem_interp_util, ONLY : melem_kpath, melem_zheev_workspace
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: melem_interpolate_ham
@@ -41,17 +42,13 @@ CONTAINS
     COMPLEX, INTENT(IN) :: u_opt(:, :, :)     ! (num_bands, num_wann, nk)  disentangled
     INTEGER, INTENT(IN) :: irank              ! MPI rank (interpolate only on master)
 
-    INTEGER :: num_wann, num_bands, nk, k, i, j, m, counter, ip, np, iu, iuev, info, lwork
-    REAL    :: kpath, dk(3), dkc(3)
-    REAL,    ALLOCATABLE :: kfrac(:, :), evals(:), rwork(:)
+    INTEGER :: num_wann, ip, np, iu, iuev, info, lwork
+    REAL,    ALLOCATABLE :: kfrac(:, :), kdist(:), evals(:), rwork(:)
     COMPLEX, ALLOCATABLE :: ham_k(:, :, :), H_interp(:, :, :), hk(:, :), work(:)
-    COMPLEX :: wq(1)
 
     IF (irank /= 0) RETURN                      ! only the master holds the full U(k)
 
     num_wann  = this%num_wann
-    num_bands = this%num_bands
-    nk        = kpts%nkptf
     CALL timestart('melem_interpolate_ham')
 
     ! ---- k-path from kpts_interpol ----
@@ -60,6 +57,8 @@ CONTAINS
       CALL timestop('melem_interpolate_ham'); RETURN
     END IF
 
+    CALL melem_kpath(cell, kfrac, kdist)   ! abscissa of the output, from the mesh just read
+
     ! ---- steps 1+2: eigval2 in the optimal (num_wann) subspace ----
     CALL melem_build_hamk(this, eig, u_matrix, u_opt, ham_k)
 
@@ -67,25 +66,19 @@ CONTAINS
     CALL melem_ft_interpolate(cell, ham_k, kpts, kfrac, H_interp)
 
     ! ---- diagonalize interpolated H(k') (complex Hermitian) ----
-    ALLOCATE(evals(num_wann), hk(num_wann, num_wann), rwork(MAX(1, 3*num_wann-2)))
-    CALL zheev('N', 'U', num_wann, hk, num_wann, evals, wq, -1, rwork, info)
-    lwork = MAX(1, NINT(REAL(wq(1)))); ALLOCATE(work(lwork))
+    ALLOCATE(evals(num_wann), hk(num_wann, num_wann))
+    CALL melem_zheev_workspace('N', num_wann, work, rwork, lwork)
 
     OPEN(newunit=iu,   file='bands_wann_interpol.dat',    status='replace')
     OPEN(newunit=iuev, file='bands_wann_interpol_ev.dat', status='replace')
     WRITE(iu,  '(a)') '# kdist   E_1..E_numwann  (Htr)'
     WRITE(iuev,'(a)') '# kdist   E_1..E_numwann  (eV, absolute)'
-    kpath = 0.0
     DO ip = 1, np
       hk = H_interp(:, :, ip)
       CALL zheev('N', 'U', num_wann, hk, num_wann, evals, work, lwork, rwork, info)
       IF (info /= 0) CALL juDFT_error('zheev failed', calledby='melem_interpolate_ham')
-      IF (ip > 1) THEN
-        dk = kfrac(:, ip) - kfrac(:, ip-1); dkc = MATMUL(cell%bmat, dk)
-        kpath = kpath + SQRT(DOT_PRODUCT(dkc, dkc))
-      END IF
-      WRITE(iu,  '(f12.6,*(2x,f14.8))') kpath, evals(:)
-      WRITE(iuev,'(f12.6,*(2x,f14.8))') kpath, hartree_to_ev_const * evals(:)
+      WRITE(iu,  '(f12.6,*(2x,f14.8))') kdist(ip), evals(:)
+      WRITE(iuev,'(f12.6,*(2x,f14.8))') kdist(ip), hartree_to_ev_const * evals(:)
     END DO
     CLOSE(iu); CLOSE(iuev)
     WRITE(oUnit,'(a,i0,a)') 'wannierlib interpolation: wrote bands_wann_interpol.dat (', np, ' k-points)'

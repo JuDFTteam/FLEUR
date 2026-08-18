@@ -24,6 +24,7 @@ MODULE m_melem_interpolate_op
   USE m_melem_hamk, ONLY : melem_build_hamk
   USE m_melem_domains, ONLY : melem_read_kset
   USE m_melem_ft, ONLY : melem_ft_interpolate, melem_ft_to_real_reduce, melem_ft_rtok
+  USE m_melem_interp_util, ONLY : melem_kpath, melem_zheev_workspace
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: melem_interpolate_operator
@@ -42,19 +43,16 @@ CONTAINS
     CHARACTER(LEN=*), INTENT(IN) :: outfile
     INTEGER, INTENT(IN) :: irank, mpicm
 
-    INTEGER :: num_wann, num_bands, nk, k, i, j, m, counter, ip, np, iu, info, lwork, a
+    INTEGER :: num_wann, num_bands, m, ip, np, iu, info, lwork, a
     INTEGER :: nkl, kl, nrpts
-    REAL    :: kpath, dk(3), dkc(3)
-    REAL,    ALLOCATABLE :: kfrac(:, :), evals(:), rwork(:), oexp(:)
+    REAL,    ALLOCATABLE :: kfrac(:, :), kdist(:), evals(:), rwork(:), oexp(:)
     COMPLEX, ALLOCATABLE :: ham_k(:, :, :), H_interp(:, :, :), o_interp(:, :, :, :)
     COMPLEX, ALLOCATABLE :: hk(:, :), work(:), vloc(:, :, :), tmp(:, :), cvec(:, :), oc(:, :, :)
     COMPLEX, ALLOCATABLE :: ow_loc(:, :, :, :), o_r(:, :, :, :), o1(:, :, :)
     INTEGER, ALLOCATABLE :: irvec(:, :), ndegen(:)
-    COMPLEX :: wq(1)
 
     num_wann  = this%num_wann
     num_bands = this%num_bands
-    nk        = kpts%nkptf
     CALL timestart('melem_interpolate_operator')
 
     ! ---- PHASE A (ALL ranks): O_W,alpha(k) = V(gk)^dagger O0_alpha V(gk) on this rank's k-slice,
@@ -94,6 +92,8 @@ CONTAINS
       CALL timestop('melem_interpolate_operator'); RETURN
     END IF
 
+    CALL melem_kpath(cell, kfrac, kdist)   ! abscissa of the output, from the mesh just read
+
     ! ---- H_W(k) via eigval2 (same construction as the validated band driver), full mesh on rank 0 ----
     CALL melem_build_hamk(this, eig, u_matrix, u_opt, ham_k)
 
@@ -112,26 +112,20 @@ CONTAINS
 
     ! ---- diagonalize H(k') with eigenvectors, project operator, write ----
     ALLOCATE(evals(num_wann), hk(num_wann, num_wann), cvec(num_wann, num_wann), &
-             oc(num_wann, num_wann, ncomp), oexp(ncomp), rwork(MAX(1, 3*num_wann-2)))
-    CALL zheev('V', 'U', num_wann, hk, num_wann, evals, wq, -1, rwork, info)
-    lwork = MAX(1, NINT(REAL(wq(1)))); ALLOCATE(work(lwork))
+             oc(num_wann, num_wann, ncomp), oexp(ncomp))
+    CALL melem_zheev_workspace('V', num_wann, work, rwork, lwork)
 
     OPEN(newunit=iu, file=outfile, status='replace')
     WRITE(iu,'(a,i0,a)') '# kdist   [ E_n(eV)  <O_1>_n .. <O_', ncomp, '>_n ] for n=1..num_wann'
-    kpath = 0.0
     DO ip = 1, np
       hk = H_interp(:, :, ip)
       CALL zheev('V', 'U', num_wann, hk, num_wann, evals, work, lwork, rwork, info)
       IF (info /= 0) CALL juDFT_error('zheev failed', calledby='melem_interpolate_operator')
       cvec = hk
-      IF (ip > 1) THEN
-        dk = kfrac(:, ip) - kfrac(:, ip-1); dkc = MATMUL(cell%bmat, dk)
-        kpath = kpath + SQRT(DOT_PRODUCT(dkc, dkc))
-      END IF
       DO a = 1, ncomp
         oc(:, :, a) = MATMUL(o_interp(:, :, a, ip), cvec)
       END DO
-      WRITE(iu,'(f12.6)', advance='no') kpath
+      WRITE(iu,'(f12.6)', advance='no') kdist(ip)
       DO m = 1, num_wann
         DO a = 1, ncomp
           oexp(a) = REAL(DOT_PRODUCT(cvec(:, m), oc(:, m, a)))

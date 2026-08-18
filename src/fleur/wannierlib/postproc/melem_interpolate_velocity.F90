@@ -24,6 +24,7 @@ MODULE m_melem_interpolate_velocity
   USE m_melem_hamk, ONLY : melem_build_hamk
   USE m_melem_domains, ONLY : melem_read_kset
   USE m_melem_ft, ONLY : melem_ft_to_real, melem_ft_rtok_velocity, melem_ft_rtok
+  USE m_melem_interp_util, ONLY : melem_kpath, melem_zheev_workspace
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: melem_interpolate_velocity
@@ -40,28 +41,28 @@ CONTAINS
     INTEGER, INTENT(IN) :: irvec(:, :), ndegen(:), nrpts   ! Wigner-Seitz R-mesh from the reduce (rank 0 only used)
     INTEGER, INTENT(IN) :: irank
 
-    INTEGER :: num_wann, num_bands, nk, k, i, j, m, n, counter, ip, np, iu, iuc, info, lwork, a
+    INTEGER :: num_wann, m, n, ip, np, iu, iuc, info, lwork, a
     INTEGER :: ax(3), ay(3)
     LOGICAL :: l_berry
-    REAL    :: kpath, dk(3), dkc(3), de
-    REAL,    ALLOCATABLE :: kfrac(:, :), evals(:), rwork(:), vexp(:), omega(:, :)
+    REAL    :: de
+    REAL,    ALLOCATABLE :: kfrac(:, :), kdist(:), evals(:), rwork(:), vexp(:), omega(:, :)
     COMPLEX, ALLOCATABLE :: ham_k(:, :, :), H_interp(:, :, :), v_interp(:, :, :, :), A_interp(:, :, :, :)
     COMPLEX, ALLOCATABLE :: hk(:, :), work(:), cvec(:, :), vc(:, :, :), Hbar(:, :, :), Abar(:, :, :), vfull(:, :, :)
     COMPLEX, ALLOCATABLE :: ham_r(:, :, :)
     INTEGER, ALLOCATABLE :: h_irvec(:, :), h_ndegen(:)
     INTEGER :: h_nrpts
-    COMPLEX :: wq(1), acc
+    COMPLEX :: acc
 
     IF (irank /= 0) RETURN
     num_wann  = this%num_wann
-    num_bands = this%num_bands
-    nk        = kpts%nkptf
     CALL timestart('melem_interpolate_velocity')
 
     IF (.NOT. melem_read_kset(kfrac, np, 'melem_interpolate_velocity')) THEN
       WRITE(oUnit,'(a)') 'wannierlib velocity interpolation: no kpts_interpol file -> skipped'
       CALL timestop('melem_interpolate_velocity'); RETURN
     END IF
+
+    CALL melem_kpath(cell, kfrac, kdist)   ! abscissa of the output, from the mesh just read
 
     ! ---- H_W(k) via eigval2 (same construction as the validated band driver) ----
     CALL melem_build_hamk(this, eig, u_matrix, u_opt, ham_k)
@@ -89,13 +90,12 @@ CONTAINS
 
     ! ---- diagonalize H(k'), project the diagonal band velocity, write ----
     ALLOCATE(evals(num_wann), hk(num_wann, num_wann), cvec(num_wann, num_wann), &
-             vc(num_wann, num_wann, 3), vexp(3), rwork(MAX(1, 3*num_wann-2)))
+             vc(num_wann, num_wann, 3), vexp(3))
     IF (l_berry) ALLOCATE(Hbar(num_wann, num_wann, 3), Abar(num_wann, num_wann, 3), &
                           vfull(num_wann, num_wann, 3), omega(3, num_wann))
     ax = (/ 2, 3, 1 /)   ! Omega_gamma = eps_{gamma,alpha,beta}: (Ox<-yz, Oy<-zx, Oz<-xy)
     ay = (/ 3, 1, 2 /)
-    CALL zheev('V', 'U', num_wann, hk, num_wann, evals, wq, -1, rwork, info)
-    lwork = MAX(1, NINT(REAL(wq(1)))); ALLOCATE(work(lwork))
+    CALL melem_zheev_workspace('V', num_wann, work, rwork, lwork)
 
     OPEN(newunit=iu, file='bands_wann_velocity.dat', status='replace')
     WRITE(iu,'(a)') '# kdist   [ E_n(eV)  vx vy vz (eV*bohr, dE/dk) ] for n=1..num_wann'
@@ -103,21 +103,16 @@ CONTAINS
       OPEN(newunit=iuc, file='bands_wann_berrycurv.dat', status='replace')
       WRITE(iuc,'(a)') '# kdist   [ E_n(eV)  Omega_x Omega_y Omega_z (bohr^2) ] for n=1..num_wann'
     END IF
-    kpath = 0.0
     DO ip = 1, np
       hk = H_interp(:, :, ip)
       CALL zheev('V', 'U', num_wann, hk, num_wann, evals, work, lwork, rwork, info)
       IF (info /= 0) CALL juDFT_error('zheev failed', calledby='melem_interpolate_velocity')
       cvec = hk
-      IF (ip > 1) THEN
-        dk = kfrac(:, ip) - kfrac(:, ip-1); dkc = MATMUL(cell%bmat, dk)
-        kpath = kpath + SQRT(DOT_PRODUCT(dkc, dkc))
-      END IF
       DO a = 1, 3
         vc(:, :, a) = MATMUL(v_interp(:, :, a, ip), cvec)         ! v_interp_a . C
       END DO
       ! ---- diagonal band velocity <n|v|n> = dE_n/dk (unchanged, byte-identical) ----
-      WRITE(iu,'(f12.6)', advance='no') kpath
+      WRITE(iu,'(f12.6)', advance='no') kdist(ip)
       DO m = 1, num_wann
         DO a = 1, 3
           vexp(a) = hartree_to_ev_const * REAL(DOT_PRODUCT(cvec(:, m), vc(:, m, a)))
@@ -158,7 +153,7 @@ CONTAINS
             omega(a, n) = -2.0 * AIMAG(acc)
           END DO
         END DO
-        WRITE(iuc,'(f12.6)', advance='no') kpath
+        WRITE(iuc,'(f12.6)', advance='no') kdist(ip)
         DO m = 1, num_wann
           WRITE(iuc,'(2x,f14.8)', advance='no') hartree_to_ev_const*evals(m)
           DO a = 1, 3
