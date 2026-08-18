@@ -26,6 +26,8 @@ MODULE m_wannierlib_mmnkb
   USE m_types_potden
   USE m_types_mpi
   IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: wannierlib_mmnkb
 CONTAINS
 
   SUBROUTINE wannierlib_mmnkb(manifold, bmesh, nk, kpts, ujug, atoms, cell, input, sym, noco, nococonv, &

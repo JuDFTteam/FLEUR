@@ -19,6 +19,8 @@ MODULE m_wannierlib_amn
   USE m_wannierlib_tlmw
   USE m_wannierlib_rad_twd
   IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: wannierlib_amn
 CONTAINS
 
   SUBROUTINE wannierlib_amn(wannierlib, atoms, kpts, ikpt, usdus, radfun, abc, l_nocosoc, jspin, jspin_rad, amn)

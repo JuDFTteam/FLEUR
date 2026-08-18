@@ -16,6 +16,8 @@ MODULE m_wannierlib_rad_twd
   USE m_clebsch
   USE m_types_wannierlib
   IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: wannierlib_rad_twd, wannierlib_soc_tlmw
 CONTAINS
 
   SUBROUTINE wannierlib_rad_twd(wannierlib, atoms, nwfs, ikpt, usdus, radfun,  jspin, rads)

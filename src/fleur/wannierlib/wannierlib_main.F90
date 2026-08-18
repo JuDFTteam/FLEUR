@@ -52,6 +52,8 @@ MODULE m_wannierlib_main
 
    use m_wann_write_amn
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: wannierlib_main
 CONTAINS
 
    SUBROUTINE wannierlib_main(this, atoms, cell, input, kpts, sym, noco, nococonv, stars, enpara, fmpi, vtot, results, eig_id)

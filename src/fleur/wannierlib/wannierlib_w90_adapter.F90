@@ -21,6 +21,8 @@ MODULE m_wannierlib_w90_adapter
                           w90_get_centres, w90_get_spreads
 #endif
   IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: init_w90, run_w90, wannierlib_get_bmesh, report_w90
 #ifdef CPP_WANNLIB_API
   TYPE(lib_common_type), SAVE, PUBLIC :: wannierlib_w90main
 #endif

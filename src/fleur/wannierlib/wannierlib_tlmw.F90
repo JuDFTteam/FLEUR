@@ -10,6 +10,8 @@ MODULE m_wannierlib_tlmw
   USE m_juDFT
   USE m_types_wannierlib
   IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: wannierlib_tlmw
 CONTAINS
 
   SUBROUTINE wannierlib_tlmw(wannierlib, nwfs, l_nocosoc, jspin, tlmwf)
