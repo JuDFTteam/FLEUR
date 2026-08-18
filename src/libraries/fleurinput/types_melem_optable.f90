@@ -105,20 +105,6 @@ CONTAINS
       END DO
    END FUNCTION melem_exposed_find
 
-   !> Where an operator sits in the catalogue, or 0 for a name that is not one.
-   PURE INTEGER FUNCTION melem_operator_find(name) RESULT(idx)
-      CHARACTER(LEN=*), INTENT(IN) :: name
-      INTEGER :: i
-      idx = 0
-      IF (LEN_TRIM(name) == 0) RETURN
-      DO i = 1, SIZE(MELEM_OPERATORS)
-         IF (TRIM(name) == TRIM(MELEM_OPERATORS(i)%name)) THEN
-            idx = i
-            RETURN
-         END IF
-      END DO
-   END FUNCTION melem_operator_find
-
    !> The accepted names on one line, so an error can say what to write instead.
    PURE FUNCTION melem_exposed_names(table) RESULT(txt)
       TYPE(t_melem_exposed), INTENT(IN) :: table(:)
