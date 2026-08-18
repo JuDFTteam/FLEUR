@@ -523,7 +523,7 @@ CONTAINS
                             if (eigenValsQ(iMode) .lt. 0.0) pref = -1*ImagUnit
                             do iPerturb = 1, 3*fi%atoms%nat
                                 gmatEig(:,:,ikpt,ispin,iMode) =  gmatEig(:,:,ikpt,ispin,iMode)  +  eigenVecs(iPerturb,iMode) * &
-                                                                pref / sqrt(2* atomic_mass_array(fi%atoms%nz(ceiling(iPerturb/3.0))) * sqrt(abs(eigenValsQ(iMode))) ) *&
+                                                                pref / sqrt(2* atomic_mass_array(fi%atoms%nz(fi%atoms%itype(ceiling(iPerturb/3.0)))) * sqrt(abs(eigenValsQ(iMode))) ) *&
                                                                 matmul(conjg(transpose(zMatkq%data_c)),matmul( gmatInterpol_q(:,:,ikpt,1,ispin,iPerturb),zMatk%data_c ))
                             end do ! iPerturb
                         end do !iMode

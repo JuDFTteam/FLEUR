@@ -369,7 +369,7 @@ CONTAINS
       do iDir = 1, dyn_dim
          do iDir2 = 1, dyn_dim
             mass_mat(iDir,iDir2) = massInElectronMasses * &
-               SQRT(atomicMasses_const(atoms%nz(CEILING(iDir/3.0)))*atomicMasses_const(atoms%nz(CEILING(iDir2/3.0))))
+               SQRT(atomicMasses_const(atoms%nz(atoms%itype(CEILING(iDir/3.0))))*atomicMasses_const(atoms%nz(atoms%itype(CEILING(iDir2/3.0)))))
          end do
       end do
       do nz = 0, qpts_coarse%nkpt3(3)-1
