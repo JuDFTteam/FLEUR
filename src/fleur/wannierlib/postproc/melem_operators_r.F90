@@ -33,8 +33,7 @@ MODULE m_melem_operators_r
   USE m_melem_hamk, ONLY : melem_build_hamk
   USE m_melem_coeff_a, ONLY : melem_build_berry_aw_r, melem_check_berry_centres, melem_write_ar
   USE m_melem_coeff_b, ONLY : melem_write_bmn
-  USE m_melem_coeff_f, ONLY : melem_write_fmn
-  USE m_melem_coeff_c, ONLY : melem_write_cmn
+  USE m_melem_coeff_tensor, ONLY : melem_write_fmn, melem_write_cmn
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: melem_write_operators_r, melem_op_rs_distributed
