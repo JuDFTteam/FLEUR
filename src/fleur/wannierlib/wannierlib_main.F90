@@ -121,19 +121,8 @@ CONTAINS
       !> anyway. Generating a second set here produced the same numbers twice.
       CALL matrix_element_radial(atoms, input, enpara, fmpi, vtot, radfun, usdus)
 
-      ! distk: which rank owns each global k (moved up: distributes the coarse-operator k-loop)
-      ALLOCATE(distk(kpts%nkptf), stat=ierr)
-      IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating distk', calledby='wannierlib_main')
-      IF (ALLOCATED(fmpi%coulomb_owner) .AND. SIZE(fmpi%coulomb_owner) == kpts%nkptf) THEN
-         distk = fmpi%coulomb_owner
-      ELSE
-         ! Fallback to contiguous block distribution if no global owner map is available.
-         nk_local = kpts%nkptf/MAX(1, fmpi%isize)
-         IF (MOD(kpts%nkptf, MAX(1, fmpi%isize)) > 0) nk_local = nk_local + 1
-         DO ikpt = 1, kpts%nkptf
-            distk(ikpt) = MIN((ikpt - 1)/MAX(1, nk_local), MAX(0, fmpi%isize - 1))
-         END DO
-      END IF
+      ! Settled before anything else: it distributes the coarse-operator k-loop too.
+      CALL wannierlib_distribute_k(kpts, fmpi, distk)
 
       ! Hand the k-distribution to the matrix-element layer and let it build whatever Bloch-basis
       ! operators the input asks for, in one shared coarse k-pass. Needs only the ab-initio
@@ -294,6 +283,34 @@ CONTAINS
       IF (ALLOCATED(distk)) DEALLOCATE(distk)
 
    END SUBROUTINE wannierlib_main
+
+   !> Which rank owns each global k-point.
+   !>
+   !> Prefers the map fmpi already carries, so this pass is distributed exactly like the one
+   !> that filled it. Without such a map the k-points are cut into contiguous blocks, and that
+   !> is a fallback and not a policy: it ignores whatever the rest of the run decided, and
+   !> exists so that a missing map does not stop the calculation.
+   SUBROUTINE wannierlib_distribute_k(kpts, fmpi, distk)
+      TYPE(t_kpts), INTENT(IN) :: kpts
+      TYPE(t_mpi),  INTENT(IN) :: fmpi
+      INTEGER, ALLOCATABLE, INTENT(OUT) :: distk(:)   !> (nkptf) owning rank of each k
+
+      INTEGER :: ikpt, nk_per_rank, ierr
+
+      ALLOCATE(distk(kpts%nkptf), stat=ierr)
+      IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating distk', &
+                                      calledby='wannierlib_distribute_k')
+      IF (ALLOCATED(fmpi%coulomb_owner) .AND. SIZE(fmpi%coulomb_owner) == kpts%nkptf) THEN
+         distk = fmpi%coulomb_owner
+      ELSE
+         !> Block size, not the count this rank ends up with -- the two differ on the last rank.
+         nk_per_rank = kpts%nkptf/MAX(1, fmpi%isize)
+         IF (MOD(kpts%nkptf, MAX(1, fmpi%isize)) > 0) nk_per_rank = nk_per_rank + 1
+         DO ikpt = 1, kpts%nkptf
+            distk(ikpt) = MIN((ikpt - 1)/MAX(1, nk_per_rank), MAX(0, fmpi%isize - 1))
+         END DO
+      END IF
+   END SUBROUTINE wannierlib_distribute_k
 
 
    subroutine wannierlib_create_eig(this, results, kpts, jspin, eig)
