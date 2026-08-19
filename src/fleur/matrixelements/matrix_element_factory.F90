@@ -13,7 +13,8 @@ MODULE m_matrix_element_factory
     USE m_types_mat
     USE m_types_abc
     USE m_types_radfun
-    USE m_types_spinor_layout, ONLY: radial_slot, melem_stack_spinor
+    USE m_types_spinor_layout, ONLY: t_spinor_layout, radial_slot, melem_stack_spinor, &
+                                     LAYOUT_SCALAR
     USE m_types_usdus
     USE m_judft, ONLY: judft_error
     IMPLICIT NONE
@@ -253,25 +254,22 @@ CONTAINS
         INTEGER, ALLOCATABLE :: read_list(:)
         LOGICAL :: l_spinor_records
         INTEGER :: n_comp
+        TYPE(t_spinor_layout) :: layout
 
         l_spinor_records = .FALSE.
         IF (PRESENT(l_both_spinors)) l_spinor_records = l_both_spinors
-        IF (l_spinor_records .AND. (.NOT.noco%l_soc .OR. noco%l_noco)) CALL judft_error( &
-            'ensure_slot: spinor records only exist for l_soc=T, l_noco=F', &
-            calledby='ensure_slot')
 
-        !One record per potential, with two exceptions. Non-collinearly the Hamiltonian was
-        !2N x 2N and the whole spinor sits in a single record whatever jspins says. After a
-        !second variation there are two records even for one potential.
-        nrec = input%jspins
-        IF (noco%l_noco)      nrec = 1
-        IF (l_spinor_records) nrec = 2
-
-        !How many spin components the state HAS, which is not how many records it is stored
-        !in: non-collinearly both components live inside the single record, and a state with
-        !no spin structure has one component that serves as both.
-        n_comp = 1
-        IF (noco%l_noco .OR. l_spinor_records .OR. input%jspins == 2) n_comp = 2
+        !> How many records the eigenvectors of this k-point occupy, and how many spin
+        !> components the state HAS, which is not the same number: non-collinearly both
+        !> components live inside a single record. t_spinor_layout owns that classification
+        !> and validates it, so it is asked here instead of derived a second time.
+        !>
+        !> radfun is deliberately not passed: the radial functions are ensured further down,
+        !> so layout%n_radial would fall back to input%jspins rather than to the extent of
+        !> the array. Only nrec and layout are taken from here.
+        CALL layout%init(input, noco, lapw, atoms, l_both_spinors=l_spinor_records)
+        nrec   = layout%nrec
+        n_comp = MERGE(2, 1, layout%layout /= LAYOUT_SCALAR)
 
         num_bands = input%neig
         IF (PRESENT(ev_list)) THEN
