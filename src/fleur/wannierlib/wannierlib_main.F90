@@ -16,14 +16,12 @@
 !--------------------------------------------------------------------------------
 MODULE m_wannierlib_main
    USE m_types, ONLY: t_stars, t_results
-   USE m_matrix_element_factory, ONLY: matrix_element_factory_reset, matrix_element_states, &
+   USE m_matrix_element_factory, ONLY: matrix_element_factory_reset, &
                                        matrix_element_release_anchor, matrix_element_radial
    USE m_types_melem_request, ONLY: t_melem_request
    USE m_types_melem_manifold, ONLY: t_melem_manifold
    USE m_types_melem_domains, ONLY: t_melem_domains
-   USE m_wannierlib_amn
-   USE m_wannierlib_mmnkb
-   USE m_melem_ujugaunt
+   USE m_wannierlib_build_amn_mmn, ONLY: wannierlib_build_amn_mmn
   USE m_wannierlib_uiu, ONLY: wannierlib_uiu
   USE m_wannierlib_uhu, ONLY: wannierlib_uhu
    USE m_wannierlib_w90_adapter
@@ -46,7 +44,6 @@ MODULE m_wannierlib_main
    USE m_types_usdus
    USE m_types_mat
    USE m_types_radfun
-   USE m_types_spinor_layout, ONLY: radial_slot
    USE m_types_abc
    USE m_types_wannierlib
 
@@ -72,12 +69,9 @@ CONTAINS
       TYPE(t_results), INTENT(IN) :: results
       INTEGER, INTENT(IN) :: eig_id
 
-      INTEGER :: ikpt, nntot_w90, ierr, jspin, jspin_comp, irec, ib
-      INTEGER :: jspin_rad_done   ! radial set the cached ujug was built for; -1 = none yet
-      INTEGER, ALLOCATABLE :: ev_list(:)
+      INTEGER :: nntot_w90, jspin
       COMPLEX, ALLOCATABLE :: amn(:, :, :)
       COMPLEX, ALLOCATABLE :: mmn(:, :, :, :)
-      COMPLEX, ALLOCATABLE :: ujug(:, :, :, :, :, :)
       REAL, ALLOCATABLE :: kdiff(:, :)
       INTEGER, ALLOCATABLE :: nnkp(:, :), gkpb(:, :, :)
       INTEGER, ALLOCATABLE :: distk(:)
@@ -92,21 +86,16 @@ CONTAINS
       TYPE(t_melem_coarse) :: melem   ! the operator (matrix-element) side
       TYPE(t_melem_bmesh) :: bmesh    ! b-shell weights handed to the operator side
       TYPE(t_usdus), POINTER :: usdus       ! into the factory cache
-      TYPE(t_lapw) :: lapw
-      TYPE(t_mat), POINTER :: zmat_p(:)     ! into the factory cache
       TYPE(t_radfun), POINTER :: radfun(:)  ! likewise; the factory owns them
       COMPLEX, ALLOCATABLE :: f0_loc(:, :, :, :, :)  ! (nw,nw,3,3,nk_loc) geometric tensor
       COMPLEX, ALLOCATABLE :: c0_loc(:, :, :, :, :)  ! (nw,nw,3,3,nk_loc) el mismo con H dentro
-      TYPE(t_abc), POINTER :: abc_p(:, :)   ! (2,ntype), likewise
       LOGICAL :: l_wannierlib_spinors
       TYPE(t_melem_request) :: request
       TYPE(t_melem_manifold) :: manifold
       TYPE(t_melem_domains) :: domains
       LOGICAL :: l_nocosoc
-      INTEGER :: jspin_rad
       CHARACTER(LEN=7) :: amn_file
       CHARACTER(LEN=3) :: spin12(2)
-      INTEGER :: ik_local, nk_local
       CHARACTER(LEN=6) :: spin_sfx
 
       IF (.NOT. this%l_wannierize) RETURN
@@ -148,55 +137,10 @@ CONTAINS
 
       DO jspin = 1, MERGE(2, 1, input%jspins == 2 .AND. (.NOT. l_wannierlib_spinors))
 
-         ! calculate the  matrices for all k-points
-         ALLOCATE (amn(this%num_bands, this%num_wann, kpts%nkptf), stat=ierr, source=cmplx(0.0, 0.0))
-         IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating amn buffer', calledby='wannierlib_main')
-
-         nk_local = COUNT(distk == fmpi%irank)
-         ALLOCATE(mmn(this%num_bands, this%num_bands, nntot_w90, nk_local), stat=ierr, source=cmplx(0.0, 0.0))
-         IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating local mmn buffer', calledby='wannierlib_main')
-
-         jspin_rad_done = -1
-         DO jspin_comp = MERGE(1, jspin, l_wannierlib_spinors), MERGE(2, jspin, l_wannierlib_spinors)
-            ! jspin_comp = the eig record (spinor up/down); jspin_rad = the radial index.
-            jspin_rad = radial_slot(radfun, jspin_comp)
-            !> These depend on the radial set and on nothing else in this loop. With a single
-            !> potential both spinor components read the same set, so the second pass would
-            !> rebuild an identical array -- and it is the largest thing built here, lm by lm
-            !> by radial pair by type by neighbour.
-            IF (jspin_rad /= jspin_rad_done) THEN
-               CALL melem_ujugaunt(atoms, cell, nntot_w90, kdiff, radfun, radfun, jspin_rad, jspin_rad, .FALSE., 1, ujug)
-               jspin_rad_done = jspin_rad
-            END IF
-
-            ev_list = [(ib, ib = this%min_band, this%max_band)]
-            ik_local = 0
-            DO ikpt = 1, kpts%nkptf
-               IF (distk(ikpt) /= fmpi%irank) CYCLE   ! each rank computes only its k-slice -> parallel eigenvector I/O
-               !> This k stays put while its neighbours come and go: mmnkb asks the factory
-               !> for one per b, and without the anchor this one would be the oldest by the
-               !> third of them and be overwritten under the pointers held here.
-               CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ikpt, cell)
-               CALL matrix_element_states(eig_id, ikpt, input, atoms, sym, cell, noco, &
-                                          nococonv, enpara, lapw, vtot, fmpi, zmat_p, abc_p, &
-                                          ev_list=ev_list, &
-                                          l_both_spinors=(noco%l_soc .AND. .NOT. noco%l_noco), &
-                                          kpts=kpts, l_anchor=.TRUE.)
-               !> Non-collinearly the whole spinor is one record; otherwise each channel is
-               !> its own and the spin block is reached by row offset further down.
-               irec = MERGE(1, jspin_comp, noco%l_noco)
-
-               CALL wannierlib_amn(this, atoms, kpts, ikpt, usdus, radfun, abc_p(jspin_comp, :), l_nocosoc, jspin_comp, jspin_rad, amn(:, :, ikpt))
-
-               ik_local = ik_local + 1
-               CALL wannierlib_mmnkb(manifold, bmesh, ikpt, kpts, &
-                                     ujug, atoms, cell, input, sym, noco, nococonv, &
-                                     abc_p(jspin_comp, :), jspin_comp, jspin_rad, eig_id, stars, lapw, &
-                                     zmat_p(irec), mmn, ik_local, enpara, vtot, fmpi)
-            END DO
-
-         END DO
-         IF (ALLOCATED(ujug)) DEALLOCATE (ujug)
+         CALL wannierlib_build_amn_mmn(this, manifold, bmesh, atoms, cell, input, kpts, sym, &
+                                       noco, nococonv, stars, enpara, fmpi, vtot, eig_id, &
+                                       radfun, usdus, distk, kdiff, nntot_w90, jspin, &
+                                       l_wannierlib_spinors, l_nocosoc, amn, mmn)
 
          ! amn was filled only on each rank's distk slice (zeros elsewhere) -> sum to the full set
          CALL wannierlib_reduce_amn(fmpi, amn)
