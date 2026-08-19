@@ -94,7 +94,7 @@ CONTAINS
       vgauge(:, :, k) = MATMUL(u_opt(:, :, k), u_matrix(:, :, k))
     END DO
 
-    CALL uiu_diffs(bmesh, kpts%bkf, kdp, npair)
+    CALL bmesh%pair_diffs(kpts%bkf, kdp, npair)
 
     lo = MERGE(1, jspin, l_spinors)
     hi = MERGE(2, jspin, l_spinors)
@@ -117,50 +117,6 @@ CONTAINS
     CALL matrix_element_release_anchor()
     DEALLOCATE (vgauge, kdp)
   END SUBROUTINE wannierlib_uiu
-
-  !> The distinct b2 - b1 vectors, which are the ones the muffin-tin half of a pair overlap
-  !> needs a radial table for. Deduplicated by value and in internal coordinates, so the
-  !> result goes straight into melem_ujugaunt and is matched by melem_mmkb_sph the way the
-  !> neighbour table is.
-  !>
-  !> Swept over every k rather than assumed uniform: on a uniform mesh every k gives the same
-  !> set and the sweep is redundant, and where it is not the table has to cover all of them
-  !> or a pair overlap stops the run.
-  SUBROUTINE uiu_diffs(bmesh, bkf, kdiff_pair, npair)
-    TYPE(t_melem_bmesh), INTENT(IN) :: bmesh
-    REAL, INTENT(IN) :: bkf(:, :)   !> (3, nk) the mesh points
-    REAL, ALLOCATABLE, INTENT(OUT) :: kdiff_pair(:, :)
-    INTEGER, INTENT(OUT) :: npair
-
-    REAL :: d(3)
-    INTEGER :: k, b1, b2, i
-    LOGICAL :: seen
-
-    ALLOCATE (kdiff_pair(3, bmesh%nntot**2))
-    kdiff_pair = 0.0
-    npair = 0
-
-    DO k = 1, SIZE(bmesh%nnlist, 1)
-      DO b1 = 1, bmesh%nntot
-        DO b2 = 1, bmesh%nntot
-          d = bmesh%shell_vector(bkf, k, b2) - bmesh%shell_vector(bkf, k, b1)
-          seen = .FALSE.
-          DO i = 1, npair
-            IF (ALL(ABS(kdiff_pair(:, i) - d) <= 1.0e-4)) THEN
-              seen = .TRUE.
-              EXIT
-            END IF
-          END DO
-          IF (seen) CYCLE
-          IF (npair == SIZE(kdiff_pair, 2)) CALL juDFT_error( &
-            'wannierlib: more distinct b2-b1 vectors than pairs of neighbours', &
-            calledby='uiu_diffs')
-          npair = npair + 1
-          kdiff_pair(:, npair) = d
-        END DO
-      END DO
-    END DO
-  END SUBROUTINE uiu_diffs
 
   !> One k-point's contribution, accumulated into its slice of f0.
   !>

@@ -108,7 +108,7 @@ CONTAINS
       vgauge(:, :, k) = MATMUL(u_opt(:, :, k), u_matrix(:, :, k))
     END DO
 
-    CALL uhu_diffs(bmesh, kpts%bkf, kdp, npair)
+    CALL bmesh%pair_diffs(kpts%bkf, kdp, npair)
 
     lo = MERGE(1, jspin, l_spinors)
     hi = MERGE(2, jspin, l_spinors)
@@ -134,45 +134,6 @@ CONTAINS
     DEALLOCATE (vgauge, kdp)
     CALL timestop("wannierlib_uhu")
   END SUBROUTINE wannierlib_uhu
-
-  !> The distinct b2 - b1 vectors, which are what both radial tables are indexed by.
-  !> Identical in contract to the one the pair overlaps use: deduplicated by value, in
-  !> internal coordinates, and swept over every k rather than assumed uniform.
-  SUBROUTINE uhu_diffs(bmesh, bkf, kdiff_pair, npair)
-    TYPE(t_melem_bmesh), INTENT(IN) :: bmesh
-    REAL, INTENT(IN) :: bkf(:, :)
-    REAL, ALLOCATABLE, INTENT(OUT) :: kdiff_pair(:, :)
-    INTEGER, INTENT(OUT) :: npair
-
-    REAL :: d(3)
-    INTEGER :: k, b1, b2, i
-    LOGICAL :: seen
-
-    ALLOCATE (kdiff_pair(3, bmesh%nntot**2))
-    kdiff_pair = 0.0
-    npair = 0
-
-    DO k = 1, SIZE(bmesh%nnlist, 1)
-      DO b1 = 1, bmesh%nntot
-        DO b2 = 1, bmesh%nntot
-          d = bmesh%shell_vector(bkf, k, b2) - bmesh%shell_vector(bkf, k, b1)
-          seen = .FALSE.
-          DO i = 1, npair
-            IF (ALL(ABS(kdiff_pair(:, i) - d) <= 1.0e-4)) THEN
-              seen = .TRUE.
-              EXIT
-            END IF
-          END DO
-          IF (seen) CYCLE
-          IF (npair == SIZE(kdiff_pair, 2)) CALL juDFT_error( &
-            'wannierlib: more distinct b2-b1 vectors than pairs of neighbours', &
-            calledby='uhu_diffs')
-          npair = npair + 1
-          kdiff_pair(:, npair) = d
-        END DO
-      END DO
-    END DO
-  END SUBROUTINE uhu_diffs
 
   !> One k-point's contribution, accumulated into its slice of c0.
   !>

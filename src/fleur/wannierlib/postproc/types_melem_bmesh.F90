@@ -17,6 +17,7 @@
 !>  so the wannierization side fills this plain bundle instead and passes
 !>  it in. Any other source of a b-mesh can be plugged in the same way.
 MODULE m_types_melem_bmesh
+   USE m_judft, ONLY: juDFT_error
    IMPLICIT NONE
    PRIVATE
 
@@ -44,6 +45,7 @@ MODULE m_types_melem_bmesh
       PROCEDURE :: free           => melem_bmesh_free
       PROCEDURE :: set_neighbours => melem_bmesh_set_neighbours
       PROCEDURE :: shell_vector   => melem_bmesh_shell_vector
+      PROCEDURE :: pair_diffs     => melem_bmesh_pair_diffs
    END TYPE t_melem_bmesh
 
    PUBLIC :: t_melem_bmesh
@@ -93,5 +95,53 @@ CONTAINS
 
       b = bkf(:, this%nnlist(k, nn)) + this%gkpb(:, k, nn) - bkf(:, k)
    END FUNCTION melem_bmesh_shell_vector
+
+   !> The distinct b2 - b1 vectors, which are the ones the muffin-tin half of a pair overlap
+   !> needs a radial table for. Deduplicated by value and in internal coordinates, so the
+   !> result goes straight into melem_ujugaunt and is matched by melem_mmkb_sph the way the
+   !> neighbour table is.
+   !>
+   !> Swept over every k rather than assumed uniform: on a uniform mesh every k gives the same
+   !> set and the sweep is redundant, and where it is not the table has to cover all of them
+   !> or a pair overlap stops the run.
+   !>
+   !> Lives on the mesh because that is all it needs. uHu and uIu each carried an identical
+   !> private copy, and which difference vectors exist is a property of the topology rather
+   !> than of either consumer.
+   SUBROUTINE melem_bmesh_pair_diffs(this, bkf, kdiff_pair, npair)
+      CLASS(t_melem_bmesh), INTENT(IN) :: this
+      REAL, INTENT(IN) :: bkf(:, :)                    !> (3, nk) the mesh points
+      REAL, ALLOCATABLE, INTENT(OUT) :: kdiff_pair(:, :)
+      INTEGER, INTENT(OUT) :: npair
+
+      REAL :: d(3)
+      INTEGER :: k, b1, b2, i
+      LOGICAL :: seen
+
+      ALLOCATE (kdiff_pair(3, this%nntot**2))
+      kdiff_pair = 0.0
+      npair = 0
+
+      DO k = 1, SIZE(this%nnlist, 1)
+         DO b1 = 1, this%nntot
+            DO b2 = 1, this%nntot
+               d = this%shell_vector(bkf, k, b2) - this%shell_vector(bkf, k, b1)
+               seen = .FALSE.
+               DO i = 1, npair
+                  IF (ALL(ABS(kdiff_pair(:, i) - d) <= 1.0e-4)) THEN
+                     seen = .TRUE.
+                     EXIT
+                  END IF
+               END DO
+               IF (seen) CYCLE
+               IF (npair == SIZE(kdiff_pair, 2)) CALL juDFT_error( &
+                  'wannierlib: more distinct b2-b1 vectors than pairs of neighbours', &
+                  calledby='melem_bmesh_pair_diffs')
+               npair = npair + 1
+               kdiff_pair(:, npair) = d
+            END DO
+         END DO
+      END DO
+   END SUBROUTINE melem_bmesh_pair_diffs
 
 END MODULE m_types_melem_bmesh
