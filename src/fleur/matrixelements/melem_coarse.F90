@@ -38,7 +38,7 @@ MODULE m_melem_coarse
    USE m_types_rsoc, ONLY: t_rsoc
    USE m_types_matelements_orbital, ONLY: t_matelements_orbital
    USE m_matrix_element_factory, ONLY: matrix_element_factory
-   USE m_melem_check, ONLY: melem_check_provider
+   USE m_melem_check, ONLY: melem_check_provider, melem_check_matrix
    IMPLICIT NONE
    PRIVATE
 
@@ -275,11 +275,19 @@ CONTAINS
                CALL melem_pauli_from_blocks(spinop%mat(1,1)%data_c, spinop%mat(2,2)%data_c, &
                                             spinop%mat(1,2)%data_c, spinop%mat(2,1)%data_c, &
                                             this%s0(:, :, :, il))
+               !> The provider check cleared the four spin blocks; this one clears the Pauli
+               !> combination built out of them, which is what leaves this module. A
+               !> transposed block index survives the first check and fails here.
+               IF (ikpt == 1) CALL melem_check_matrix(this%s0(:, :, :, il), 'spin (assembled)', ikpt)
                IF (ikpt <= 3) CALL melem_spin_sumrule(this%s0(:, :, :, il), &
                                                       spinop%mat(1,1)%data_c, spinop%mat(2,2)%data_c, &
                                                       ikpt, tol=1.0e-3)
             ELSE
                this%x0(:, :, il) = spinop%mat(1, 2)%data_c
+               !> Not Hermitian on its own -- the cross-spin block is the adjoint of the
+               !> other one, not of itself -- so only finite and non-zero are asked of it.
+               IF (ikpt == 1) CALL melem_check_matrix(this%x0(:, :, il:il), 'spin cross-block', &
+                                                     ikpt, l_hermitian=.FALSE.)
             END IF
          END IF
 
@@ -294,9 +302,12 @@ CONTAINS
                                               cell, noco, nococonv, enpara, lapw, vtot, fmpi, &
                                               ev_list=ev_list, l_both_spinors=l_spinor_records, &
                                               kpts=kpts)
-                  IF (ikpt == 1 .AND. na == 1 .AND. ch == 1) &
-                     CALL melem_check_provider(orbop(na, ch), 'orbital', ikpt)
                   this%l0(:, :, 1:3, na, ch, il) = orbop(na, ch)%comp(:, :, 1:3)
+                  IF (ikpt == 1 .AND. na == 1 .AND. ch == 1) THEN
+                     CALL melem_check_provider(orbop(na, ch), 'orbital', ikpt)
+                     CALL melem_check_matrix(this%l0(:, :, 1:3, na, ch, il), &
+                                             'orbital (assembled)', ikpt)
+                  END IF
                END DO
             END DO
          END IF
@@ -316,6 +327,13 @@ CONTAINS
             this%soc4(:, :, 4, il) = socop%mat(2, 2)%data_c
             this%soc0(:, :, 1, il) = socop%mat(1, 1)%data_c + socop%mat(1, 2)%data_c &
                                    + socop%mat(2, 1)%data_c + socop%mat(2, 2)%data_c
+            IF (ikpt == 1) THEN
+               !> The sum over the four blocks is Hermitian even though two of them are not:
+               !> 12 + 21 is, being a matrix plus its adjoint.
+               CALL melem_check_matrix(this%soc0(:, :, 1:1, il), 'spin_orbit (assembled)', ikpt)
+               CALL melem_check_matrix(this%soc4(:, :, :, il), 'spin_orbit blocks', ikpt, &
+                                       l_hermitian=.FALSE.)
+            END IF
          END IF
       END DO
 

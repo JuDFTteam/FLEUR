@@ -68,7 +68,7 @@ CONTAINS
 
       IF (SIZE(o, 2) /= nb) CALL judft_bug("melem_check_matrix: the matrix is not square")
 
-      WRITE(oUnit, '(a,i0,a)') 'wannierlib provider check ['//TRIM(name)//'], k = ', ik, ':'
+      WRITE(oUnit, '(a,i0,a)') 'wannierlib invariants ['//TRIM(name)//'], k = ', ik, ':'
 
       !> Written as "not (|x| <= HUGE)" and not as "|x| > HUGE" on purpose: every
       !> comparison with a NaN is false, so the negated form is the one that catches it.
