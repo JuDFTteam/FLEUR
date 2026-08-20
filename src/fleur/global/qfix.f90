@@ -14,7 +14,7 @@ MODULE m_qfix
   ! rank.
 
 CONTAINS
-  SUBROUTINE qfix(fmpi,stars,nococonv,atoms,sym,vacuum,sphhar,input,cell ,&
+  SUBROUTINE qfix(fmpi,stars,nococonv,atoms,sym,vacuum,sphhar,input,cell,field,&
                   den,l_noco,l_printData,l_par,force_fix,fix,fix_pw_only)
 
     USE m_types
@@ -25,20 +25,20 @@ CONTAINS
     IMPLICIT NONE
 
     !     .. Scalar Arguments ..
-    TYPE(t_mpi),INTENT(IN)       :: fmpi
-    TYPE(t_nococonv),INTENT(IN)  :: nococonv
-    TYPE(t_stars),INTENT(IN)     :: stars
-    TYPE(t_atoms),INTENT(IN)     :: atoms
-    TYPE(t_sym),INTENT(IN)       :: sym
-    TYPE(t_vacuum),INTENT(IN)    :: vacuum
-    TYPE(t_sphhar),INTENT(IN)    :: sphhar
-    TYPE(t_input),INTENT(IN)     :: input
-
-    TYPE(t_cell),INTENT(IN)      :: cell
-    TYPE(t_potden),INTENT(INOUT) :: den
-    LOGICAL,INTENT(IN)           :: l_noco,l_printData,force_fix,l_par
-    REAL,    INTENT (OUT)        :: fix
-    LOGICAL,INTENT(IN),OPTIONAL  :: fix_pw_only
+    TYPE(t_mpi),      INTENT(IN)           :: fmpi
+    TYPE(t_nococonv), INTENT(IN)           :: nococonv
+    TYPE(t_stars),    INTENT(IN)           :: stars
+    TYPE(t_atoms),    INTENT(IN)           :: atoms
+    TYPE(t_sym),      INTENT(IN)           :: sym
+    TYPE(t_vacuum),   INTENT(IN)           :: vacuum
+    TYPE(t_sphhar),   INTENT(IN)           :: sphhar
+    TYPE(t_input),    INTENT(IN)           :: input
+    TYPE(t_cell),     INTENT(IN)           :: cell
+    TYPE(t_field),    INTENT(IN)           :: field
+    TYPE(t_potden),   INTENT(INOUT)        :: den
+    LOGICAL,          INTENT(IN)           :: l_noco,l_printData,force_fix,l_par
+    REAL,             INTENT(OUT)          :: fix
+    LOGICAL,          INTENT(IN), OPTIONAL :: fix_pw_only
     !     .. Local Scalars ..
     LOGICAL :: l_qfixfile,fixtotal
     LOGICAL :: l_firstcall=.true.
@@ -60,8 +60,8 @@ CONTAINS
 
     IF (fmpi%irank.EQ.0) THEN
        !The total nucleii charge
-       zc=SUM(atoms%neq(:)*atoms%zatom(:))
-       !zc = zc + 2*input%sigma !TODO : reactivate fields
+       zc = SUM(atoms%neq(:)*atoms%zatom(:))
+       zc = zc + 2 * field%efield%sigma
 
        IF (fixtotal) THEN
           !-roa

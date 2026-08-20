@@ -12,7 +12,7 @@ MODULE m_make_dos
   !
 CONTAINS
   SUBROUTINE make_dos(kpts,atoms,vacuum,input,banddos,&
-                      sliceplot,noco,nococonv,sym,cell,results,eigdos,juPhon )
+                      sliceplot,noco,nococonv,sym,cell,results,eigdos,dfpt )
     USE m_types
     USE m_constants
     USE m_cdn_io
@@ -40,7 +40,7 @@ CONTAINS
     TYPE(t_results),INTENT(IN)   :: results
     CLASS(t_eigdos_list),INTENT(IN)   :: eigdos(:)
 
-    TYPE(t_juPhon),OPTIONAL,INTENT(IN) :: juPhon
+    TYPE(t_dfpt),OPTIONAL,INTENT(IN) :: dfpt
 
     !    locals
     INTEGER :: ne,ikpt,kspin,j,i,n
@@ -52,7 +52,7 @@ CONTAINS
 #else
     INTEGER :: banddosFile_id
 #endif
-    l_dfpt = PRESENT(juPhon)
+    l_dfpt = PRESENT(dfpt)
     CALL readPrevEFermi(eFermiPrev,l_error)
 
     IF (.NOT.l_dfpt) eFermi = results%ef

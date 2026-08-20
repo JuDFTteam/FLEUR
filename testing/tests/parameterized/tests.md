@@ -44,6 +44,9 @@ Testset: Films
 | +   | Si Film, plotting              | film/SiFilmPlot      |       |                                     |         | 2   |
 | +   | Si Film, plotting,slicing      | film/SiFilmSlicePlot |       |                                     |         | 2   |
 | +   | Pt 3 layers,soc,inversion      | film/Pt-3            | soc   |                                     |         | 2   |
+| +   | Film, nonsymmorphic z-glide+inversion | film/FilmGlideInvs |    | Nonsymmorphic 2D group; 2D/3D star phases; vacuum-2 by inversion |     | 1   |
+| +   | Film, nonsymmorphic z-glide+in-plane mirror | film/FilmGlideSort |    | No symmorphic inversion/z-mirror: in-plane ops must be sorted first |     | 1   |
+| +   | Film, hexagonal, in-plane 2-fold axis | film/FilmHex2fold |    | Operation removed by 7c06dc2d9; vacuum-2 by in-plane mirror |     | 1   |
 
 
 Testset: Forces
@@ -60,12 +63,12 @@ Testset: DFPT
 |     | Description   | directory name              | marks | Remarks      | CmdLine | MPI |
 | --- | ----------------------- | ----------------- | ----- | ------------ | ------- | --- |
 | +   | Cu bulk fcc, Gamma only | dfpt/CuBulkGamma  | libxc | partly ready |         |   1 |
-| +   | SiC bulk fcc, Gamma only BEC| dfpt/SiCBulk-BEC  | libxc | partly ready |         |   1 |
-| +   | Cu bulk fcc, K-mesh     | dfpt/CuBulkKmesh  | libxc | partly ready |         |   1 |
+| +   | SiC bulk fcc, Gamma only BEC| dfpt/SiCBulk-BEC  | libxc |          |         |   1 |
+| +   | Cu bulk fcc, K-mesh     | dfpt/CuBulkKmesh  | libxc |              |         |   1 |
 | +   | C bulk fcc              | dfpt/CBulk        | libxc | partly ready |         |   1 |
 | +   | C bulk fcc BEC             | dfpt/CBulk-BEC        | libxc | partly ready |         |   1 |
-| +   | Graphene Film           | dfpt/GrapheneFilm | libxc | partly ready |         |   1 |
-| +   | V bulk bcc, mpi         | dfpt/VBulkMPI     | libxc | partly ready |         |   2 |
+| +   | Graphene Film           | dfpt/GrapheneFilm | libxc |              |         |   1 |
+| +   | V bulk bcc, mpi         | dfpt/VBulkMPI     | libxc |              |         |   2 |
 
 
 Testset: Noco
@@ -84,6 +87,7 @@ Testset: Noco
 | +   | Noco,SOC, one atom, mag. in y direction       | noco/1atSOCy            | bulk,soc                     |                   |         | 2   |
 | +   | Noco,SOC, one atom, mag. in z direction       | noco/1atSOCz            | bulk,soc                     |                   |         | 2   |
 | +   | Noco,SOC, one atom, mag. in non-sym direction | noco/1atSOC             | bulk,soc                     |                   |         | 2   |
+| +   | Noco, SOC, two eq. atoms, relLOs              | noco/relLO              | bulk,soc                     |                   |         | 2   |
 | +   | FFNNoco, one atom, mag. in x direction        | noco/1atFFNx            | bulk,hdf                     |                   |         | 2   |
 | +   | FFNNoco, one atom, mag. in y direction        | noco/1atFFNy            | bulk,hdf                     |                   |         | 2   |
 | +   | Fe fcc spin-spiral                            | noco/Fe_fcc             | bulk                         |                   |         | 2   |
@@ -93,6 +97,9 @@ Testset: Noco
 | +   | Noco, Mn Monolayer SS q=1,0,0                 | noco/MnFilmSS           | film,spinspiral              |                   |         | 2   |
 | +   | Noco, Mn Monolayer mag. in X                  | noco/MnFilmX            | film                         |                   |         | 2   |
 | +   | Noco, Mn Monolayer mag. in Y                  | noco/MnFilmY            | film                         |                   |         | 2   |
+| +   | Fe bct,noco,non-collinear,coretails           | noco/Fe_bct_ctail       | bulk                         |                   |         | 2   |
+| +   | Noco, Mn Monolayer mag. in X, coretails       | noco/MnFilm_ctail       | film                         |                   |         | 2   |
+| +   | Noco, one atom in x, noco IR starting density | noco/1atx_sdNocoIR      | bulk                         |                   |         | 2   |
 |     | Fe bcc, Flipcdn and noco in MT,x-dir          | noco/Fe_bcc_FlipcdnXLDA | bulk                         | produces warnings |         | 2   |
 |     | Fe bcc, Flipcdn and noco in MT,y-dir          | noco/Fe_bcc_FlipcdnYLDA | bulk                         | produces warnings |         | 2   |
 | +   | relaxation feature of FFN in the MT           | noco/RelaxMT            | bulk,hdf                     |                   |         | 2   |
@@ -107,7 +114,7 @@ Testset: Experimental
 | +   | Bulk Al one iteration, LibXC                   | extra/Al_libxc_PBE      | bulk,libxc    |                           |         | 2   |
 |     | Test of GW interface 1                         | extra/gw1Interface      | bulk          | inp.xml files too old     |         | 2   |
 |     | Test of GW interface 2                         | extra/gw2Interface      | bulk          | inp.xml files too old     |         | 2   |
-| +   | Sm jDOS decomposition                          | extra/SmAtomjDOS        | bulk,dos      |                           |         | 2   |
+|     | Sm jDOS decomposition                          | extra/SmAtomjDOS        | bulk,dos      |                           |         | 2   |
 | +   | C: simple test for the Wannier code            | extra/Cwann             | bulk,wannier  |                           |         | 2   |
 |     | TiO2 EELS spectrum                             | extra/TiO2eels          | bulk,eels     | inp.xml too old           |         | 2   |
 | +   | Hubbard1 using SOC                             | extra/Gd_Hubbard1       | bulk,edsolver |                           |         | 2   |

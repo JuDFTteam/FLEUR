@@ -1,11 +1,12 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2020 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_abcof
 
+   implicit none
 CONTAINS
 
   ! The subroutine abcof calculates the A, B, and C coefficients for the
@@ -30,6 +31,7 @@ USE m_setabc1lo
 USE m_abclocdn
 USE m_hsmt_fjgj
 USE m_hsmt_ab
+USE m_abcoeff_store
 
 IMPLICIT NONE
 
@@ -90,14 +92,14 @@ INTEGER,OPTIONAL,INTENT(IN):: nat_start,nat_stop
 
     ! Allocations
     CALL fjgj%alloc(MAXVAL(lapw%nv),atoms%lmaxd,jspin,noco)
-    ALLOCATE(abCoeffs(2*atoms%lmaxd*(atoms%lmaxd+2)+2,MAXVAL(lapw%nv)))
+    ! abCoeffs is allocated (and filled) inside hsmt_ab.
     ALLOCATE(abTemp(SIZE(acof,1),0:2*SIZE(acof,2)-1))
     ALLOCATE(fgpl(3,MAXVAL(lapw%nv)))
     ALLOCATE (work_c(MAXVAL(lapw%nv),ne))
 
     ! Initializations
     acof_size=size(acof,1)
-    !$acc enter data create(abTemp,fjgj,fjgj%fj,fjgj%gj,work_c,abcoeffs)
+    !$acc enter data create(abTemp,fjgj,fjgj%fj,fjgj%gj,work_c)
     acof(:,:,:)   = CMPLX(0.0,0.0)
     bcof(:,:,:)   = CMPLX(0.0,0.0)
     ccof(:,:,:,:) = CMPLX(0.0,0.0)
@@ -205,7 +207,22 @@ INTEGER,OPTIONAL,INTENT(IN):: nat_start,nat_stop
              ! Calculation of a, b coefficients for LAPW basis functions
              CALL timestart("hsmt_ab")
              !!$acc data copyin(fjgj,fjgj%fj,fjgj%gj) copyout(abcoeffs)
-             CALL hsmt_ab(sym,atoms,noco,nococonv,jspin,iintsp,iType,iAtom,cell,lapw,fjgj,abCoeffs,abSize,.FALSE.)
+             ! Own the abCoeffs mapping in the caller's scope -- see types_abc.F90 for why
+             ! hsmt_ab must not do the `enter data` on its own dummy argument.
+             IF (.NOT.l_use_abcoeff_store) THEN
+                abSize = hsmt_ab_size(atoms, iType, .FALSE.)
+                IF (ALLOCATED(abCoeffs)) THEN
+                   IF (SIZE(abCoeffs,1)/=2*abSize .OR. SIZE(abCoeffs,2)/=lapw%nv(iintsp)) THEN
+                      !$acc exit data delete(abCoeffs)
+                      DEALLOCATE(abCoeffs)
+                   END IF
+                END IF
+                IF (.NOT.ALLOCATED(abCoeffs)) THEN
+                   ALLOCATE(abCoeffs(2*abSize, lapw%nv(iintsp)))
+                   !$acc enter data create(abCoeffs)
+                END IF
+             END IF
+             CALL hsmt_ab(sym,atoms,noco,nococonv,jspin,iintsp,iType,iAtom,cell,lapw,fjgj,abCoeffs,abSize,.FALSE.,l_store=.TRUE.)
              !!$acc end data
              abSize = abSize / 2
              CALL timestop("hsmt_ab")
@@ -217,7 +234,7 @@ INTEGER,OPTIONAL,INTENT(IN):: nat_start,nat_stop
 
 
              !$acc host_data use_device(work_c,abCoeffs,abTemp)
-             CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),abCoeffs,2*atoms%lmaxd*(atoms%lmaxd+2)+2,CMPLX(0.0,0.0),abTemp,acof_size)
+             CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),abCoeffs,SIZE(abCoeffs,1),CMPLX(0.0,0.0),abTemp,acof_size)
              !$acc end host_data
              !$acc update self(abTemp)
              !stop "DEBUG"
@@ -338,9 +355,15 @@ INTEGER,OPTIONAL,INTENT(IN):: nat_start,nat_stop
                    DEALLOCATE (workTrans_c)
                 ENDIF
              END IF
+             ! abCoeffs is (re)allocated per call inside hsmt_ab; release the
+             ! device copy it created and the host array before the next call.
+             !$acc exit data delete(abCoeffs)
+             ! Hand abCoeffs to the optional store for later reuse (no-op unless on).
+             CALL abcoeff_store_save(abCoeffs, lapw%nk, iintsp, jspin, iAtom, .FALSE.)
+             IF (ALLOCATED(abCoeffs)) DEALLOCATE(abCoeffs)
        END DO ! loop over interstitial spin
     END DO ! loop over atoms
-    !$acc exit data delete(abTemp,fjgj%fj,fjgj%gj,work_c,abcoeffs)
+    !$acc exit data delete(abTemp,fjgj%fj,fjgj%gj,work_c)
     !$acc exit data delete(fjgj)
     DEALLOCATE(work_c)
     IF(l_force) THEN
@@ -438,6 +461,7 @@ USE m_setabc1lo
 USE m_abclocdn
 USE m_hsmt_fjgj
 USE m_hsmt_ab
+USE m_abcoeff_store
 USE m_types_cdnval
 IMPLICIT NONE
 
@@ -466,12 +490,16 @@ INTEGER,OPTIONAL,INTENT(IN):: nat_start,nat_stop
 integer:: itype,lo,l,na,m,lm,n_l(0:atoms%lmaxd)
 
 call abcof(input,atoms,sym,cell,lapw,ne,usdus,noco,nococonv,ispin,&
-eigVecCoefs%abcof(:,0:,1,:,ispin),eigVecCoefs%abcof(:,0:,2,:,ispin),&
+eigVecCoefs%abcof(:,0:,0,:,ispin),eigVecCoefs%abcof(:,0:,1,:,ispin),&
 ccof(-atoms%llod:,:,:,:),zMat,eig,force)
+
+! Preserve the explicit LO coefficients for consumers that still read
+! eigVecCoeffs%ccof directly, such as the Green's-function path.
+eigVecCoefs%ccof(:,:,:,:,ispin) = ccof
 
 !Now put the c-coef into the correct abcof
 DO itype=1,atoms%ntype
-   n_l=2
+   n_l=1
    DO lo=1,atoms%nlo(itype)
       l=atoms%llo(lo,itype)
       n_l(l)=n_l(l)+1

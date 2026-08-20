@@ -9,8 +9,7 @@ MODULE m_optional
   use mpi 
 #endif
 CONTAINS
-  SUBROUTINE OPTIONAL(fmpi, atoms,sphhar,vacuum,&
-       stars,input,sym, cell, sliceplot, xcpot, noco)
+  SUBROUTINE OPTIONAL(fmpi, atoms,sphhar,vacuum,stars,input,sym,cell,field,sliceplot,xcpot,noco)
     !
     !----------------------------------------
     ! this routine is called by: fleur.F90
@@ -61,15 +60,14 @@ CONTAINS
 
     TYPE(t_mpi),INTENT(IN)      :: fmpi
     TYPE(t_atoms),INTENT(IN)    :: atoms
-
     TYPE(t_sphhar),INTENT(IN)   :: sphhar
     TYPE(t_sym),INTENT(IN)      :: sym
     TYPE(t_stars),INTENT(IN)    :: stars
-     
     TYPE(t_input),INTENT(IN)    :: input
     TYPE(t_noco),INTENT(IN)     :: noco
     TYPE(t_vacuum),INTENT(IN)   :: vacuum
     TYPE(t_cell),INTENT(IN)     :: cell
+    TYPE(t_field),INTENT(IN)    :: field
     CLASS(t_xcpot),INTENT(IN)   :: xcpot
     TYPE(t_sliceplot),INTENT(IN):: sliceplot
     !     ..
@@ -121,8 +119,7 @@ CONTAINS
        !   END IF
        !END IF
 
-       CALL stden(fmpi,sphhar,stars,atoms,sym,vacuum,&
-                  input,cell,xcpot,noco )
+       CALL stden(fmpi,sphhar,stars,atoms,sym,vacuum,input,cell,field,xcpot,noco )
 
        !
        !input%total=strho

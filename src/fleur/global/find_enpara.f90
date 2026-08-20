@@ -15,7 +15,7 @@ CONTAINS
   !> Function to determine the energy parameter given the quantum number and the potential
   !! Different schemes are implemented. Nqn (main quantum number) is used as a switch.
   !! This code was previously in lodpot.f
-  REAL FUNCTION find_enpara(lo,l,n,jsp,nqn,atoms,vr,e_lo,e_up,l_scalar_relativi)RESULT(e)
+  REAL FUNCTION find_enpara(lo,l,n,jsp,nqn,atoms,vr,e_lo,e_up,l_scalar_relativi,l_relLO)RESULT(e)
     USE m_types_setup
     USE m_radsra
     USE m_differ
@@ -27,7 +27,19 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)::atoms
     REAL,INTENT(IN):: vr(:)
     LOGICAL, OPTIONAL, INTENT(IN) :: l_scalar_relativi
-    
+    LOGICAL, OPTIONAL, INTENT(IN) :: l_relLO
+
+    IF(PRESENT(l_relLO)) THEN
+       IF (l_relLO) THEN
+          ! relLO energy = the Dirac j=l-1/2 bound state that priv_method1 already
+          ! computes internally; l_relLO makes it return that branch alone.
+          IF (l<1 .OR. l>3) CALL judft_error("relLO local orbitals are only defined for l=1 (p), &
+               &l=2 (d) or l=3 (f)",calledby="find_enpara")
+          e = priv_method1(.TRUE.,l,n,jsp,nqn,atoms,vr,e_lo,e_up,l_relLO=.TRUE.)
+          RETURN
+       END IF
+    END IF
+
     IF(PRESENT(l_scalar_relativi)) THEN
        e = priv_scalar_relativi(lo,l,n,jsp,nqn,atoms,vr,e_lo,e_up)
        RETURN
@@ -38,7 +50,7 @@ CONTAINS
   END FUNCTION find_enpara
 
 
-  REAL FUNCTION priv_method1(lo,l,n,jsp,nqn,atoms,vr,e_lo,e_up)RESULT(e)
+  REAL FUNCTION priv_method1(lo,l,n,jsp,nqn,atoms,vr,e_lo,e_up,l_relLO)RESULT(e)
     USE m_types_setup
     USE m_radsra
     USE m_differ
@@ -49,6 +61,7 @@ CONTAINS
     REAL,INTENT(OUT)  :: e_lo,e_up
     TYPE(t_atoms),INTENT(IN)::atoms
     REAL,INTENT(IN):: vr(:)
+    LOGICAL,OPTIONAL,INTENT(IN):: l_relLO   ! return the j=l-1/2 branch alone (relLO)
 
 
     INTEGER j,ilo,i
@@ -161,6 +174,12 @@ CONTAINS
        fn = REAL(nqn) ; fl = REAL(l) ; fj = fl-0.5
        CALL differ(fn,fl,fj,c,atoms%zatom(n),atoms%dx(n),atoms%rmsh(1,n),&
             rn,d,msh,vrd, e1, f(:,1),f(:,2),ierr)
+       IF (PRESENT(l_relLO)) THEN
+          IF (l_relLO) THEN
+             e = e1   ! relLO: keep only the j=l-1/2 branch, no 2:1 j-average
+             RETURN
+          END IF
+       END IF
        e = (2.0*e + e1 ) / 3.0
     ENDIF
   END FUNCTION priv_method1

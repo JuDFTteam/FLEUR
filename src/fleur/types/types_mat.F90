@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_types_mat
 #ifdef _OPENACC
    use openacc
@@ -67,7 +72,7 @@ CONTAINS
          CLASS(t_mat), INTENT(INOUT)      :: mat
          class(t_mat), INTENT(IN)         :: mat2
          complex,intent(in),optional      :: alpha_c
-         complex,intent(in),optional      :: alpha_r
+         real,intent(in),optional         :: alpha_r
    
          real:: a_r
          complex:: a_c
@@ -81,6 +86,10 @@ CONTAINS
       
          a_r=1.0
          if(present(alpha_r)) a_r=alpha_r
+
+         if (mat%l_real .neqv. mat2%l_real) call judft_error("add: matrix type mismatch")
+         if (mat%matsize1 /= mat2%matsize1 .or. mat%matsize2 /= mat2%matsize2) &
+            call judft_error("add: matrix size mismatch")
          
 #ifdef _OPENACC
          if (mat%l_real) THEN 
@@ -144,12 +153,13 @@ CONTAINS
       real, allocatable    :: rwork(:)
       complex, allocatable :: cwork(:)
 
-      if(A%matsize2 /= b%matsize2) call judft_error("least-squares dimension problem")
+      if(A%matsize1 /= b%matsize1) call judft_error("least-squares dimension problem")
       if(A%l_real .neqv. b%l_real) call judft_error("least-squares kind problem")
 
       m = A%matsize1
       n = A%matsize2
       nrhs = b%matsize2
+      if (b%matsize1 < max(m,n)) call judft_error("least-squares RHS has too few rows")
       if(A%l_real) then
          lda = size(A%data_r,1)
          ldb = size(b%data_r,1)
@@ -308,7 +318,7 @@ CONTAINS
       integer :: i,j
 
       call timestart("copy lower to upper matrix")
-      if(mat%matsize1 /= mat%matsize2) call judft_error("l2u only works for square matricies")
+      if(mat%matsize1 /= mat%matsize2) call judft_error("l2u only works for square matrices")
 
       if(mat%l_real) then
          do i = 1,mat%matsize1
@@ -334,7 +344,7 @@ CONTAINS
       integer :: i,j
 
       call timestart("copy upper to lower matrix")
-      if(mat%matsize1 /= mat%matsize2) call judft_error("l2u only works for square matricies")
+      if(mat%matsize1 /= mat%matsize2) call judft_error("l2u only works for square matrices")
       if(mat%l_real) then
          do i = 1,mat%matsize1
             do j = 1,i-1
@@ -405,7 +415,7 @@ CONTAINS
 
    SUBROUTINE t_mat_lproblem(mat, vec)
       IMPLICIT NONE
-      CLASS(t_mat), INTENT(IN)     :: mat
+      CLASS(t_mat), INTENT(INOUT)     :: mat
       class(t_mat), INTENT(INOUT)   :: vec
 
       INTEGER:: lwork, info
@@ -425,7 +435,7 @@ CONTAINS
       end select
 
       IF ((mat%l_real .NEQV. vec%l_real) .OR. (mat%matsize1 .NE. mat%matsize2) .OR. (mat%matsize1 .NE. vec%matsize1)) then
-         CALL judft_error("Invalid matices in t_mat_lproblem")
+         CALL judft_error("Invalid matrices in t_mat_lproblem")
       endif 
 
 #ifdef _OPENACC
@@ -463,11 +473,12 @@ CONTAINS
                         vec%data_r, vec%matsize1, INFO)
                IF (INFO > 0) THEN
                   !Matrix was not positive definite
+                  ALLOCATE (ipiv(mat%matsize1))
                   lwork = -1; ALLOCATE (work(1))
                   CALL DSYSV('Upper', mat%matsize1, vec%matsize2, mat%data_r, mat%matsize1, IPIV, &
                            vec%data_r, vec%matsize1, WORK, LWORK, INFO)
                   lwork = INT(work(1))
-                  DEALLOCATE (work); ALLOCATE (ipiv(mat%matsize1), work(lwork))
+                  DEALLOCATE (work); ALLOCATE (work(lwork))
                   CALL DSYSV('Upper', mat%matsize1, vec%matsize2, mat%data_r, mat%matsize1, IPIV, &
                            vec%data_r, vec%matsize1, WORK, LWORK, INFO)
                   IF (info .NE. 0) CALL judft_error("Could not solve linear equation, matrix singular")
@@ -506,7 +517,7 @@ CONTAINS
       if(l_real) then 
          sz = size(data_r,1)
          allocate(r_work(lwork), stat=ierr)
-         if(ierr /= 0) call juDFT_error("cant' alloc r_work")
+         if(ierr /= 0) call juDFT_error("can't alloc r_work")
 
          !$acc data create(r_work) copyout(devinfo)
             !$acc host_data use_device(data_r, r_work, ipiv, devinfo)
@@ -518,7 +529,7 @@ CONTAINS
       else
          sz = size(data_c,1)
          allocate(c_work(lwork), stat=ierr)
-         if(ierr /= 0) call juDFT_error("cant' alloc c_work")
+         if(ierr /= 0) call juDFT_error("can't alloc c_work")
 
          !$acc data create(c_work) copyout(devinfo)
             !$acc host_data use_device(data_c, c_work, ipiv, devinfo)
@@ -598,8 +609,8 @@ CONTAINS
       INTEGER::i, j
       IF ((mat%matsize1 .NE. mat1%matsize2) .OR. &
           (mat%matsize2 .NE. mat1%matsize1)) &
-         CALL judft_error("Matrix sizes missmatch in add_transpose")
-      IF (mat%l_real .AND. mat1%l_real) THEN
+          CALL judft_error("Matrix sizes mismatch in add_transpose")
+         IF (mat%l_real .AND. mat1%l_real) THEN
          DO i = 1, mat%matsize2
             DO j = i + 1, mat%matsize1
                mat%data_r(j, i) = mat1%data_r(i, j)
@@ -688,10 +699,10 @@ CONTAINS
             write (*,*) "Failed to allocate mem of shape: [" &
                        // int2str(mat%matsize1) // ", " //  int2str(mat%matsize2) // "]"
             if(present(mat_name)) then
-               CALL judft_error("Allocation of memmory failed for mat datatype. Name:" // trim(mat_name), &
+               CALL judft_error("Allocation of memory failed for mat datatype. Name:" // trim(mat_name), &
                                        hint="Errormessage: " // trim(errmsg))
             else
-               CALL judft_error("Allocation of memmory failed for mat datatype", &
+               CALL judft_error("Allocation of memory failed for mat datatype", &
                                        hint="Errormessage: " // trim(errmsg))
             endif
          endif
@@ -700,7 +711,7 @@ CONTAINS
       ELSE
          ALLOCATE (mat%data_r(0, 0))
          ALLOCATE (mat%data_c(mat%matsize1, mat%matsize2), STAT=err, errmsg=errmsg)
-         IF (err /= 0) CALL judft_error("Allocation of memmory failed for mat datatype", &
+         IF (err /= 0) CALL judft_error("Allocation of memory failed for mat datatype", &
                                         hint="Errormessage: " // trim(errmsg))
          mat%data_c = 0.0
          IF (PRESENT(init)) mat%data_c = init
@@ -718,7 +729,8 @@ CONTAINS
       integer           :: m,n,k, lda, ldb, ldc
       character(len=1)  :: transA_i, transB_i
       type(t_mat)       :: tmp
-      logical           :: run_on_gpu 
+      logical           :: run_on_gpu, l_mixed
+      complex, allocatable :: mat1_c(:,:), mat2_c(:,:)
 
       call timestart("t_mat_multiply")
 
@@ -738,9 +750,11 @@ CONTAINS
          k = mat1%matsize1
       endif
 
-      if(mat1%l_real .neqv. mat2%l_real) call judft_error("can only multiply matricies of the same type")
+      l_mixed = mat1%l_real .neqv. mat2%l_real
 
-      if(mat1%l_real) then
+      if(l_mixed) then
+         run_on_gpu = .False.
+      elseif(mat1%l_real) then
 #ifdef _OPENACC
          run_on_gpu = acc_is_present(mat1%data_r) .and. acc_is_present(mat2%data_r)
          if(present(res)) then
@@ -785,7 +799,10 @@ CONTAINS
       IF (present(res)) THEN
          ! prepare res matrix
          if(res%allocated()) then
-            if(res%l_real .neqv. mat1%l_real) then
+            if(l_mixed) then
+               if(res%l_real) call juDFT_error("res must be complex for mixed real/complex multiply")
+               if(any(shape(res%data_c) /= [m,n])) call juDFT_error("res must be of the correct size!")
+            elseif(res%l_real .neqv. mat1%l_real) then
                call juDFT_error("res must be of the correct type")
             else
                if(res%l_real) then
@@ -802,14 +819,27 @@ CONTAINS
             call juDFT_error("res must be allocated")
          endif
 
-         ldc = merge(size(res%data_r, dim=1), size(res%data_c, dim=1), mat2%l_real)
+         ldc = size(res%data_c, dim=1)
+         if(.not. l_mixed) ldc = merge(size(res%data_r, dim=1), size(res%data_c, dim=1), mat2%l_real)
          if(ldc < max(1,m)) call judft_error("problem with ldc")
 
          if(run_on_gpu) then
             call perform_cublas_gemm(mat1%l_real, transA_i,transB_i,m,n,k, lda, ldb, ldc,&
                                     mat1%data_r, mat1%data_c, mat2%data_r, mat2%data_c, res%data_r, res%data_c)
          else
-            IF (mat1%l_real) THEN
+            IF (l_mixed) THEN
+               if(mat1%l_real) then
+                  allocate(mat1_c(size(mat1%data_r,1), size(mat1%data_r,2)))
+                  mat1_c = mat1%data_r
+                  call zgemm(transA_i,transB_i,m,n,k,cmplx_1, mat1_c, lda, mat2%data_c, ldb, cmplx_0, res%data_c, ldc)
+                  deallocate(mat1_c)
+               else
+                  allocate(mat2_c(size(mat2%data_r,1), size(mat2%data_r,2)))
+                  mat2_c = mat2%data_r
+                  call zgemm(transA_i,transB_i,m,n,k,cmplx_1, mat1%data_c, lda, mat2_c, ldb, cmplx_0, res%data_c, ldc)
+                  deallocate(mat2_c)
+               endif
+            ELSEIF (mat1%l_real) THEN
                call dgemm(transA_i,transB_i,m,n,k, 1.0, mat1%data_r, lda, mat2%data_r, ldb, 0.0, res%data_r, ldc)
             ELSE
                call zgemm(transA_i,transB_i,m,n,k,cmplx_1, mat1%data_c, lda, mat2%data_c, ldb, cmplx_0,res%data_c, ldc)
@@ -819,7 +849,8 @@ CONTAINS
          if (mat1%matsize1  /= mat1%matsize2 .or. mat2%matsize2 /= mat2%matsize1)&
             CALL judft_error("Cannot multiply matrices inplace because of non-matching dimensions", hint="This is a BUG in FLEUR, please report")
 
-         call tmp%alloc(mat1%l_real, n,n)
+         ! for mixed, result is always complex
+         call tmp%alloc(merge(.false., mat1%l_real, l_mixed), n,n)
          ldc = merge(size(tmp%data_r, dim=1), size(tmp%data_c, dim=1), tmp%l_real)
          if(ldc < max(1,m)) call judft_error("problem with ldc")
 
@@ -830,7 +861,22 @@ CONTAINS
             call mat1%copy(tmp,1,1)
             !$acc end data
          else
-            if (mat1%l_real) THEN
+            IF (l_mixed) THEN
+               if(mat1%l_real) then
+                  allocate(mat1_c(size(mat1%data_r,1), size(mat1%data_r,2)))
+                  mat1_c = mat1%data_r
+                  call zgemm(transA_i,transB_i,n,n,n,cmplx_1, mat1_c, lda, mat2%data_c, ldb, cmplx_0, tmp%data_c, ldc)
+                  deallocate(mat1_c)
+               else
+                  allocate(mat2_c(size(mat2%data_r,1), size(mat2%data_r,2)))
+                  mat2_c = mat2%data_r
+                  call zgemm(transA_i,transB_i,n,n,n,cmplx_1, mat1%data_c, lda, mat2_c, ldb, cmplx_0, tmp%data_c, ldc)
+                  deallocate(mat2_c)
+               endif
+               ! convert mat1 to complex to hold the result
+               call mat1%free()
+               call mat1%alloc(.false., n, n)
+            ELSEIF (mat1%l_real) THEN
                call dgemm(transA_i,transB_i,n,n,n, 1.0, mat1%data_r, lda, mat2%data_r, ldb, 0.0, tmp%data_r, ldc)
             ELSE
                call zgemm(transA_i,transB_i,n,n,n,cmplx_1, mat1%data_c, lda, mat2%data_c, ldb, cmplx_0, tmp%data_c, ldc)
@@ -930,7 +976,6 @@ CONTAINS
             i = ((n - 1)*n)/2 + nn
             mat1%data_c(n, nn) = conjg(packed_c(i))
             mat1%data_c(nn, n) = packed_c(i)
-            i = i + 1
          end DO
       end DO
       !$OMP END PARALLEL DO
@@ -941,7 +986,6 @@ CONTAINS
       CLASS(t_mat), INTENT(IN)      :: mat
       COMPLEX                       :: packed(mat%matsize1*(mat%matsize1 + 1)/2)
       integer :: n, nn, i
-      real, parameter :: tol = 1e-5
       if (mat%matsize1 .ne. mat%matsize2) call judft_error("Could not pack no-square matrix", hint='This is a BUG, please report')
 
       if (mat%l_real) THEN
@@ -987,15 +1031,15 @@ CONTAINS
       if (mat%l_real) THEN
          ALLOCATE (work_r(mat%matsize1))
          call dgetrf(mat%matsize1, mat%matsize1, mat%data_r, size(mat%data_r, 1), ipiv, info)
-         if (info .ne. 0) call judft_error("Failed to invert matrix: dpotrf failed.")
+          if (info .ne. 0) call judft_error("Failed to invert matrix: dgetrf failed.")
          call dgetri(mat%matsize1, mat%data_r, size(mat%data_r, 1), ipiv, work_r, size(work_r), info)
-         if (info .ne. 0) call judft_error("Failed to invert matrix: dpotrf failed.")
+          if (info .ne. 0) call judft_error("Failed to invert matrix: dgetri failed.")
       else
          ALLOCATE (work_c(mat%matsize1))
          call zgetrf(mat%matsize1, mat%matsize1, mat%data_c, size(mat%data_c, 1), ipiv, info)
-         if (info .ne. 0) call judft_error("Failed to invert matrix: dpotrf failed.")
+          if (info .ne. 0) call judft_error("Failed to invert matrix: zgetrf failed.")
          call zgetri(mat%matsize1, mat%data_c, size(mat%data_c, 1), ipiv, work_c, size(work_c), info)
-         if (info .ne. 0) call judft_error("Failed to invert matrix: dpotrf failed.")
+          if (info .ne. 0) call judft_error("Failed to invert matrix: zgetri failed.")
       end if
       call timestop("invert matrix")
    end subroutine t_mat_inverse
@@ -1004,24 +1048,44 @@ CONTAINS
       IMPLICIT NONE
       CLASS(t_mat), INTENT(INOUT):: mat
       CLASS(t_mat), INTENT(INOUT):: mat1
+      logical :: src_real
+      integer :: s1, s2
+
+      src_real = mat1%l_real
+      s1 = mat1%matsize1
+      s2 = mat1%matsize2
+
+      if (.not. mat1%allocated()) call judft_error("t_mat_move: source matrix not allocated")
+
+      call mat%free()
+      mat%l_real = src_real
+      mat%matsize1 = s1
+      mat%matsize2 = s2
       !Special case, the full matrix is copied. Then use move alloc
-      IF (mat%l_real) THEN
+      IF (src_real) THEN
          CALL move_ALLOC(mat1%data_r, mat%data_r)
+         ALLOCATE(mat%data_c(0,0))
       ELSE
          CALL move_ALLOC(mat1%data_c, mat%data_c)
+         ALLOCATE(mat%data_r(0,0))
       END IF
+      call mat1%free()
    END SUBROUTINE t_mat_move
 
-   SUBROUTINE t_mat_copy(mat, mat1, n1, n2)
+   SUBROUTINE t_mat_copy(mat, mat1, n1, n2, m1, m2)
       IMPLICIT NONE
       CLASS(t_mat), INTENT(INOUT):: mat
       class(t_mat), INTENT(IN)   :: mat1
       INTEGER, INTENT(IN)        :: n1, n2
+      INTEGER, INTENT(IN), OPTIONAL :: m1, m2  !> offsets into source matrix
 
-      INTEGER:: i1, i2, j1, j2
+      INTEGER:: i1, i2, j1, j2, s1, s2
       logical:: both_on_gpu, tmp
 
       call timestart("t_mat_copy")
+
+      s1 = 1; if (present(m1)) s1 = m1
+      s2 = 1; if (present(m2)) s2 = m2
 
       if(.not. mat%allocated()) then
 #ifdef _OPENACC
@@ -1053,17 +1117,17 @@ CONTAINS
          call judft_error("you can only copy a t_mat to a t_mat")
       end select
 
-      i1 = mat%matsize1 - n1 + 1  !space available for first dimension
+      i1 = mat%matsize1 - n1 + 1  !space available for first dimension in target
       i2 = mat%matsize2 - n2 + 1
-      i1 = MIN(i1, mat1%matsize1)
-      i2 = MIN(i2, mat1%matsize2)
+      i1 = MIN(i1, mat1%matsize1 - s1 + 1)
+      i2 = MIN(i2, mat1%matsize2 - s2 + 1)
 
       if(both_on_GPU )then
          if(mat%l_real) then
             !$acc kernels present(mat, mat%data_r, mat1, mat1%data_r)
             do j1 = 1,i1 
                do j2 = 1,i2 
-                  mat%data_r(n1+j1-1, n2+j2-1) = mat1%data_r(j1,j2)
+                  mat%data_r(n1+j1-1, n2+j2-1) = mat1%data_r(s1+j1-1, s2+j2-1)
                enddo
             enddo
             !$acc end kernels
@@ -1071,16 +1135,16 @@ CONTAINS
             !$acc kernels present(mat, mat%data_c, mat1, mat1%data_c)
             do j1 = 1,i1 
                do j2 = 1,i2 
-                  mat%data_c(n1+j1-1, n2+j2-1) = mat1%data_c(j1,j2)
+                  mat%data_c(n1+j1-1, n2+j2-1) = mat1%data_c(s1+j1-1, s2+j2-1)
                enddo
             enddo
             !$acc end kernels
          endif
       else
          IF (mat%l_real) THEN
-            call dlacpy("N", i1, i2, mat1%data_r, size(mat1%data_r, 1),  mat%data_r(n1,n2), size(mat%data_r,1) )
+            call dlacpy("N", i1, i2, mat1%data_r(s1,s2), size(mat1%data_r, 1),  mat%data_r(n1,n2), size(mat%data_r,1) )
          ELSE
-            call zlacpy("N", i1, i2, mat1%data_c, size(mat1%data_c, 1),  mat%data_c(n1,n2), size(mat%data_c,1) )
+            call zlacpy("N", i1, i2, mat1%data_c(s1,s2), size(mat1%data_c, 1),  mat%data_c(n1,n2), size(mat%data_c,1) )
          END IF
       endif
 
@@ -1090,7 +1154,6 @@ CONTAINS
    SUBROUTINE t_mat_clear(mat)
       IMPLICIT NONE
       CLASS(t_mat), INTENT(INOUT):: mat
-      INTEGER :: i
 
       IF (mat%l_real) THEN
          call dlaset("A",mat%matsize1,mat%matsize2,0.0,0.0,mat%data_r,mat%matsize1)
@@ -1136,11 +1199,11 @@ CONTAINS
       unsymmetry = 0.0
 
       if (mat%matsize1 /= mat%matsize2) then
-         call judft_error("Rectangular matricies can't be symmetric")
+         call judft_error("Rectangular matrices can't be symmetric")
       else
          n = mat%matsize1
          if (mat%l_real) THEN
-            unsymmetry = maxval(mat%data_r(:n, :n) - transpose(mat%data_r(:n, :n)))
+            unsymmetry = maxval(abs(mat%data_r(:n, :n) - transpose(mat%data_r(:n, :n))))
          else
             unsymmetry = maxval(abs(mat%data_c(:n, :n) - conjg(transpose(mat%data_c(:n, :n)))))
          endif

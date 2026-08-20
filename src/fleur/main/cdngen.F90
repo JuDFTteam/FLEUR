@@ -11,9 +11,10 @@ MODULE m_cdngen
 CONTAINS
 
 SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
-                  kpts,atoms,sphhar,stars,sym,juphon,gfinp,hub1inp,&
-                  enpara,cell,noco,nococonv,vTot,results ,coreSpecInput,&
-                  archiveType, xcpot,outDen,EnergyDen,core_den,greensFunction,hub1data,vxc,exc)
+                  kpts,atoms,sphhar,stars,sym,gfinp,hub1inp,&
+                  enpara,cell,field,noco,nococonv,vTot,results ,coreSpecInput,&
+                  archiveType, xcpot,outDen,EnergyDen,core_den,greensFunction,hub1data,vxc,exc,&
+                  moessbauerParams)
 
    !*****************************************************
    !    Charge density generator
@@ -51,7 +52,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    USE m_types_greensfContourData
    USE m_types_eigdos
    USE m_types_dos
-   USE m_types_hyperfine
+   USE m_types_moessbauerParams
 
    USE m_force_sf ! Klueppelberg (force level 3)
 
@@ -70,9 +71,9 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_noco),INTENT(IN)          :: noco
    TYPE(t_nococonv),INTENT(INOUT)   :: nococonv
    TYPE(t_sym),INTENT(IN)           :: sym
-   TYPE(t_juphon),INTENT(IN)        :: juphon
    TYPE(t_stars),INTENT(IN)         :: stars
    TYPE(t_cell),INTENT(IN)          :: cell
+   TYPE(t_field),INTENT(IN)         :: field
    TYPE(t_kpts),INTENT(IN)          :: kpts
    TYPE(t_sphhar),INTENT(IN)        :: sphhar
    TYPE(t_atoms),INTENT(IN)         :: atoms
@@ -86,6 +87,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_potden),INTENT(INOUT)     :: outDen, EnergyDen
    TYPE(t_potden),INTENT(OUT),optional       :: core_den
    TYPE(t_potden),INTENT(INOUT),OPTIONAL:: vxc, exc
+   TYPE(t_moessbauerParams), OPTIONAL, INTENT(INOUT) :: moessbauerParams
 
    !Scalar Arguments
    INTEGER, INTENT (IN)             :: eig_id, archiveType
@@ -103,7 +105,6 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_greensfImagPart) :: greensfImagPart
    TYPE(t_potden)          :: val_den
    TYPE(t_greensfContourData) :: contour(gfinp%numberContours)
-   TYPE(t_hyperfine)       :: hyperfine
 
 
    !Local Scalars
@@ -111,7 +112,6 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    INTEGER               :: jspin, ierr
    INTEGER               :: dim_idx
    INTEGER               :: i_gf,iContour,n
-
    TYPE(t_eigdos_list),allocatable :: eigdos(:)
 
 #ifdef CPP_HDF
@@ -157,8 +157,6 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
       hub1data%cdn_atomic = 0.0
    ENDIF
 
-   CALL hyperfine%init(input, atoms)
-
    IF (fmpi%irank == 0) CALL openXMLElementNoAttributes('valenceDensity')
 
    !In a non-collinear calcuation where the off-diagonal part of the
@@ -170,7 +168,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
       CALL cdnvalJob%init(fmpi,input,kpts,noco,results,jspin)
       IF (sliceplot%slice) CALL cdnvalJob%select_slice(sliceplot,results,input,kpts,noco,jspin)
       CALL cdnval(eig_id,fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,enpara,stars,vacuum,&
-                  sphhar,sym,vTot ,cdnvalJob,outDen,dos,vacdos,results,moments,gfinp,&
+                  sphhar,sym,vTot ,cdnvalJob,outDen,dos,vacdos,results,moments,moessbauerParams,gfinp,&
                   hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,jDOS,greensfImagPart)
    END DO
    CALL timestop("cdngen: cdnval")
@@ -227,15 +225,13 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    !   CALL makeplots(stars, atoms, sphhar, vacuum, input, fmpi , sym, cell, noco,nococonv, outDen, PLOT_OUTDEN_Y_CORE, sliceplot)
    !END IF
 
-   CALL hyperfine%printValenceHyperfine(input, atoms, fmpi, moments)
-
    CALL timestart("cdngen: cdncore")
    if(xcpot%exc_is_MetaGGA()) then
       CALL cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
-                   stars,cell,sphhar,atoms,vTot,outDen,moments,results, EnergyDen)
+                   stars,cell,sphhar,atoms,vTot,outDen,moments,results,moessbauerParams, EnergyDen)
    else
       CALL cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
-                   stars,cell,sphhar,atoms,vTot,outDen,moments,results)
+                   stars,cell,sphhar,atoms,vTot,outDen,moments,results,moessbauerParams)
    endif
    call core_den%subPotDen(outDen, val_den)
    CALL timestop("cdngen: cdncore")
@@ -255,13 +251,14 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
 
   
    IF (fmpi%irank == 0) CALL openXMLElementNoAttributes('allElectronCharges')
-   CALL qfix(fmpi,stars,nococonv,atoms,sym,vacuum,sphhar,input,cell ,outDen,noco%l_noco,.TRUE.,l_par=.TRUE.,force_fix=.TRUE.,fix=fix)
+   CALL qfix(fmpi,stars,nococonv,atoms,sym,vacuum,sphhar,input,cell,field,outDen,noco%l_noco,.TRUE.,.TRUE.,.TRUE.,fix)
    IF (fmpi%irank == 0) CALL closeXMLElement('allElectronCharges')
    IF (input%jspins == 2) THEN
       !Calculate and write out spin densities at the nucleus and magnetic moments in the spheres
       IF (fmpi%irank == 0) THEN
          CALL spinMoments(input,atoms,noco,nococonv,den=outDen,results=results)
          CALL orbMoments(input,atoms,noco,nococonv,moments)
+         CALL write_output_struct_xsf(atoms,nococonv,outDen)
          if (any(noco%l_constrained).or.any(noco%l_fixedMoment)) call nococonv%update_b_cons(atoms,noco,vtot,outDen)
       END IF
 
@@ -270,7 +267,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
       !moments are relaxed or a constraint B-field is calculated.
    END IF
 
-   CALL hyperfine%calcPrintIsomerShifts(input,atoms,fmpi,outDen)
+   IF (PRESENT(moessbauerParams)) CALL moessbauerParams%calcIS(input,atoms,fmpi,outDen)
 
    Perform_metagga = Allocated(Energyden%Mt) &
                    .And. (Xcpot%Exc_is_metagga() .Or. Xcpot%Vx_is_metagga())
@@ -296,6 +293,80 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    END IF
 
 END SUBROUTINE cdngen
+
+SUBROUTINE write_output_struct_xsf(atoms,nococonv,outDen)
+
+   USE m_types
+
+   IMPLICIT NONE
+
+   TYPE(t_atoms),INTENT(IN)      :: atoms
+   TYPE(t_nococonv),INTENT(INOUT):: nococonv
+   TYPE(t_potden),INTENT(IN)     :: outDen
+
+   INTEGER, PARAMETER            :: inUnit = 97, outUnitLocal = 98
+   LOGICAL                       :: l_exists
+   INTEGER                       :: ios, iAtom, iType, atomCount
+   INTEGER                       :: zatom
+   REAL                          :: x, y, z
+   REAL, ALLOCATABLE             :: mag_mom_xsf(:,:), magm_type(:,:), theta(:), phi(:)
+   CHARACTER(len=1024)           :: line
+
+   INQUIRE(file='struct.xsf', exist=l_exists)
+   IF (.NOT.l_exists) RETURN
+
+   ALLOCATE(mag_mom_xsf(3,atoms%nat), magm_type(3,atoms%ntype), theta(atoms%ntype), phi(atoms%ntype))
+   CALL nococonv%avg_moments(outDen,atoms,magm_type,theta,phi)
+
+   mag_mom_xsf = 0.0
+   DO iType = 1, atoms%ntype
+      DO iAtom = atoms%firstAtom(iType), atoms%firstAtom(iType) + atoms%neq(iType) - 1
+         mag_mom_xsf(:,iAtom) = magm_type(:,iType)
+      END DO
+   END DO
+   OPEN(inUnit, file='struct.xsf', status='old', action='read', iostat=ios)
+   IF (ios /= 0) THEN
+      DEALLOCATE(mag_mom_xsf, magm_type, theta, phi)
+      RETURN
+   END IF
+
+   OPEN(outUnitLocal, file='output-struct.xsf', status='replace', action='write', iostat=ios)
+   IF (ios /= 0) THEN
+      CLOSE(inUnit)
+      DEALLOCATE(mag_mom_xsf, magm_type, theta, phi)
+      RETURN
+   END IF
+
+   DO
+      READ(inUnit,'(A)',iostat=ios) line
+      IF (ios /= 0) EXIT
+
+      WRITE(outUnitLocal,'(A)') TRIM(line)
+      IF (TRIM(ADJUSTL(line)) /= 'PRIMCOORD') CYCLE
+
+      READ(inUnit,'(A)',iostat=ios) line
+      IF (ios /= 0) EXIT
+      WRITE(outUnitLocal,'(A)') TRIM(line)
+
+      atomCount = atoms%nat
+      DO iAtom = 1, atomCount
+         READ(inUnit,'(A)',iostat=ios) line
+         IF (ios /= 0) EXIT
+
+         READ(line,*,iostat=ios) zatom, x, y, z
+         IF (ios /= 0) THEN
+            WRITE(outUnitLocal,'(A)') TRIM(line)
+         ELSE
+            WRITE(outUnitLocal,'(i4,2x,6(f0.7,1x))') zatom, x, y, z, mag_mom_xsf(:,iAtom)
+         END IF
+      END DO
+   END DO
+
+   CLOSE(inUnit)
+   CLOSE(outUnitLocal)
+   DEALLOCATE(mag_mom_xsf, magm_type, theta, phi)
+
+END SUBROUTINE write_output_struct_xsf
 
 SUBROUTINE initialize_eigdos_types(eigdos, dos, jointDOS, vacdos, mcd, slab, orbcomp, jDOS, &
                                     input, atoms, kpts, banddos, noco, results, cell)

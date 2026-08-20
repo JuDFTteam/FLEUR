@@ -26,7 +26,7 @@ contains
 
       call setup_q_and_qnorm(fi, mpdata, qs, qnorms)
 
-      rdum = (fpi_const)**(1.5)/fi%cell%vol**2*gmat(1, 1)
+      rdum = (fpi_const)**(1.5)/fi%cell%omtil**2*gmat(1, 1)
 
       !$OMP PARALLEL DO default(none) schedule(dynamic) &
       !$OMP shared(fmpi, pgptm1, ngptm1, hybdat, fi, pqnrm, mpdata) &
@@ -36,14 +36,14 @@ contains
       DO igpt0 = 1, ngptm1(1)
          igpt2 = pgptm1(igpt0, 1)
          if(igpt2 /= 1) then
-            ix = hybdat%nbasp + igpt2
+            ix = hybdat%n_mt + igpt2
             pe_ix = mod((ix-1), fmpi%n_size)
             ix_loc = ((ix-1)/fmpi%n_size) +1
             if(pe_ix == fmpi%n_rank) then
                iqnrm2 = pqnrm(igpt2, 1)
                igptp2 = mpdata%gptm_ptr(igpt2, 1)
                DO igpt1 = 2, igpt2
-                  iy = hybdat%nbasp + igpt1
+                  iy = hybdat%n_mt + igpt1
                   iqnrm1 = pqnrm(igpt1, 1)
                   igptp1 = mpdata%gptm_ptr(igpt1, 1)
                   rdum1 = dot_PRODUCT(qs(:,igptp1), qs(:,igptp2))/(qnorms(igptp1)*qnorms(igptp2))

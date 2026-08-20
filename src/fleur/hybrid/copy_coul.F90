@@ -149,7 +149,7 @@ contains
          END DO
       END DO
 
-      ix = hybdat%nbasp + 1
+      ix = hybdat%n_mt + 1
       call glob_to_loc(fmpi, ix, pe_ix, ix_loc)
       IF (ikpt == 1 .and. pe_ix == fmpi%n_rank) THEN
          !
@@ -437,7 +437,7 @@ contains
 
                if(fmpi%n_rank == 0) then
                   DO igpt = 1, mpdata%n_g(ikpt)
-                     ix =  hybdat%nbasp + igpt
+                     ix =  hybdat%n_mt + igpt
                      call glob_to_loc(fmpi, ix, pe_ix, ix_loc)
                      tmp_idx = ix_loc - loc_froms(pe_ix) + 1 + displs(pe_ix)
                      IF (fi%sym%invs) THEN
@@ -466,8 +466,8 @@ contains
       integer :: loc_sizes(fmpi%n_size)
       integer :: loc_from, loc_to, my_size, ierr
 
-      call range_from_glob_to_loc(fmpi, hybdat%nbasp + 1, loc_from)
-      call range_to_glob_to_loc(fmpi, hybdat%nbasp + mpdata%n_g(ikpt), loc_to)
+      call range_from_glob_to_loc(fmpi, hybdat%n_mt + 1, loc_from)
+      call range_to_glob_to_loc(fmpi, hybdat%n_mt + mpdata%n_g(ikpt), loc_to)
 
       my_size = loc_to - loc_from + 1
 #ifdef CPP_MPI
@@ -521,7 +521,7 @@ contains
       TYPE(t_hybdat), INTENT(IN)        :: hybdat
       integer :: loc_froms(fmpi%n_size), ierr, loc_from
 
-      call range_from_glob_to_loc(fmpi, hybdat%nbasp + 1, loc_from)
+      call range_from_glob_to_loc(fmpi, hybdat%n_mt + 1, loc_from)
 
 #ifdef CPP_MPI
       call MPI_Allgather(loc_from, 1, MPI_INTEGER, loc_froms, 1, MPI_INTEGER, fmpi%sub_comm, ierr)
@@ -571,7 +571,7 @@ contains
             CALL BLACS_GRIDMAP(blacs_desc(2), umap, 1, 1, 1)
             
             call pzgemr2d(mpdata%n_g(ikpt), mpdata%n_g(ikpt), &
-                        coulomb%data_c, hybdat%nbasp + 1, hybdat%nbasp + 1, coulomb%blacsdata%blacs_desc, &
+                        coulomb%data_c, hybdat%n_mt + 1, hybdat%n_mt + 1, coulomb%blacsdata%blacs_desc, &
                         loc_cpy%data_c,1,  1,  blacs_desc, coulomb%blacsdata%blacs_desc(2))
 
 
@@ -592,7 +592,7 @@ contains
             CALL BLACS_GRIDMAP(blacs_desc(2), umap, 1, 1, 1)
 
             call pzgemr2d(mpdata%n_g(ikpt), mpdata%n_g(ikpt), &
-                        coulomb%data_c, hybdat%nbasp + 1, hybdat%nbasp + 1, coulomb%blacsdata%blacs_desc, &
+                        coulomb%data_c, hybdat%n_mt + 1, hybdat%n_mt + 1, coulomb%blacsdata%blacs_desc, &
                         hybdat%coul(ikpt)%mtir%data_c, ic+1, ic+1,  blacs_desc, coulomb%blacsdata%blacs_desc(2))
 
          endif
@@ -602,9 +602,9 @@ contains
          do ix = 1, mpdata%n_g(ikpt)
             do iy = 1, mpdata%n_g(ikpt) 
                if(fi%sym%invs) then
-                  hybdat%coul(ikpt)%mtir%data_r(ic + iy, ic + ix) = real(coulomb%data_c(hybdat%nbasp + iy, hybdat%nbasp + ix))
+                  hybdat%coul(ikpt)%mtir%data_r(ic + iy, ic + ix) = real(coulomb%data_c(hybdat%n_mt + iy, hybdat%n_mt + ix))
                else
-                  hybdat%coul(ikpt)%mtir%data_c(ic + iy, ic + ix) = coulomb%data_c(hybdat%nbasp + iy, hybdat%nbasp + ix)
+                  hybdat%coul(ikpt)%mtir%data_c(ic + iy, ic + ix) = coulomb%data_c(hybdat%n_mt + iy, hybdat%n_mt + ix)
                endif
             enddo 
          enddo

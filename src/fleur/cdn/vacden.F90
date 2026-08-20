@@ -715,7 +715,7 @@ CONTAINS
                               uj = u(banddos%izlay(jj,1),ikGPr,jspin)
                               uej = ue(banddos%izlay(jj,1),ikGPr,jspin)
                               vacdos%qvlay(ev_list(n),jj,ivac,ikpt,jspin) = vacdos%qvlay(ev_list(n),jj,ivac,ikpt,jspin)& 
-                                                                        +REAL((aa*ui*uj + bb*uei*uej+ab*uei*uj+ba*ui**uej)*factorx*factory)
+                                                                        +REAL((aa*ui*uj + bb*uei*uej+ab*uei*uj+ba*ui*uej)*factorx*factory)
                            END IF
                         END DO
                      END DO
@@ -803,9 +803,9 @@ CONTAINS
                      IF (iabs(i2).GT.stars%mx2) CYCLE
                      ig3 = stars%ig(i1,i2,i3)
                      IF (ig3.EQ.0)  CYCLE
-                     phs = stars%rgphs(i1,i2,i3)
+                     phs = CONJG(stars%r2gphs(i1,i2))
                      ig3p = stars%ig(-i1,-i2,i3)
-                     phsp = stars%rgphs(-i1,-i2,i3)
+                     phsp = CONJG(stars%r2gphs(-i1,-i2))
                      ind2 = stars%i2g(i1,i2)
                      ind2p = stars%i2g(-i1,-i2)
                      aa = 0.0
@@ -841,7 +841,7 @@ CONTAINS
                   IF (iabs(i2).GT.stars%mx2) CYCLE
                   ig3 = stars%ig(i1,i2,i3)
                   IF (ig3.EQ.0)  CYCLE
-                  phs = stars%rgphs(i1,i2,i3)
+                  phs = CONJG(stars%r2gphs(i1,i2)) ! 2D star phase, see above
                   ind2 = stars%i2g(i1,i2)
                   IF ( ind2.EQ.1) THEN
                      !--->                non-warping part (1st star G=0)
@@ -950,7 +950,7 @@ CONTAINS
                      IF (iabs(i1).GT.stars%mx1) CYCLE
                      IF (iabs(i2).GT.stars%mx2) CYCLE
                      IF (ig3.EQ.0) CYCLE
-                     phs = stars%rgphs(i1,i2,i3)
+                     phs = CONJG(stars%r2gphs(i1,i2)) ! 2D star phase, see above
                      aa = 0.0
                      bb = 0.0
                      ba = 0.0
@@ -1007,8 +1007,8 @@ CONTAINS
                      ind2p = stars%i2g(-i1,-i2)
                      IF ((ind2.GE.2.AND.ind2.LE.banddos%nstars).OR.&
                         (ind2p.GE.2.AND.ind2p.LE.banddos%nstars)) THEN
-                        phs = stars%rgphs(i1,i2,i3)
-                        phsp = stars%rgphs(-i1,-i2,i3)
+                        phs = CONJG(stars%r2gphs(i1,i2))   ! 2D star phase, see above
+                        phsp = CONJG(stars%r2gphs(-i1,-i2))
                         aa = CONJG(ac(ikGPr,n,jspin))*ac(ikG,n,jspin)
                         bb = CONJG(bc(ikGPr,n,jspin))*bc(ikG,n,jspin)
                         ab = CONJG(ac(ikGPr,n,jspin))*bc(ikG,n,jspin)
@@ -1022,7 +1022,7 @@ CONTAINS
                            IF (ind2.GE.2.AND.ind2.LE.banddos%nstars) &
                                vacdos%qstars(ind2-1,ev_list(n),jj,ivac,ikpt,jspin) = vacdos%qstars(ind2-1,ev_list(n),jj,ivac,ikpt,jspin)+ t1*phs/stars%nstr2(ind2)
                            IF (ind2p.GE.2.AND.ind2p.LE.banddos%nstars) &
-                               vacdos%qstars(ind2p-1,ev_list(n),jj,ivac,ikpt,jspin) = vacdos%qstars(ind2p-1,ev_list(n),jj,ivac,ikpt,jspin) +CONJG(t1)*phs/stars%nstr2(ind2p)
+                               vacdos%qstars(ind2p-1,ev_list(n),jj,ivac,ikpt,jspin) = vacdos%qstars(ind2p-1,ev_list(n),jj,ivac,ikpt,jspin) +CONJG(t1)*phsp/stars%nstr2(ind2p)
                         END DO
                      END IF
                   END DO

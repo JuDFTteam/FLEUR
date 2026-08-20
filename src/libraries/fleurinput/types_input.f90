@@ -53,6 +53,7 @@ MODULE m_types_input
   REAL    :: alpha=0.05
   REAL    :: preconditioning_param=0.0
   REAL    :: spinf=2.0
+  LOGICAL :: sdNocoIR=.FALSE. !Is the starting density allowed to be non-collinear in the interstitial region?
   REAL    :: tkb=0.001
   INTEGER :: bz_integration=BZINT_METHOD_HIST
   LOGICAL :: l_bloechl=.FALSE. !Are the bloechl corrections used for bz_integration=BZINT_METHOD_TETRA
@@ -91,6 +92,10 @@ MODULE m_types_input
   INTEGER :: rdmftStatesAbove=0
   INTEGER :: rdmftFunctional=0
   INTEGER :: lResMax = -1
+  LOGICAL :: l_moessbauerEFG=.TRUE.
+  LOGICAL :: l_moessbauerIsomerShift=.TRUE.
+  LOGICAL :: l_moessbauerCoreHyperfine=.TRUE.
+  LOGICAL :: l_moessbauerValenceHyperfine=.TRUE.
 CONTAINS
   PROCEDURE :: read_xml=>read_xml_input
   PROCEDURE :: init => init_input
@@ -144,6 +149,7 @@ SUBROUTINE mpi_bc_input(this,mpi_comm,irank)
    CALL mpi_bc(this%alpha,rank,mpi_comm)
    CALL mpi_bc(this%preconditioning_param,rank,mpi_comm)
    CALL mpi_bc(this%spinf,rank,mpi_comm)
+   CALL mpi_bc(this%sdNocoIR,rank,mpi_comm)
    CALL mpi_bc(this%tkb,rank,mpi_comm)
    CALL mpi_bc(this%bz_integration,rank,mpi_comm)
    CALL mpi_bc(this%l_bloechl,rank,mpi_comm)
@@ -179,7 +185,11 @@ SUBROUTINE mpi_bc_input(this,mpi_comm,irank)
    CALL mpi_bc(this%lResMax,rank,mpi_comm)
    CALL mpi_bc(this%charge_excited,rank,mpi_comm)
    CALL mpi_bc(this%charge_shift,rank,mpi_comm)
-   
+   CALL mpi_bc(this%l_moessbauerEFG,rank,mpi_comm)
+   CALL mpi_bc(this%l_moessbauerIsomerShift,rank,mpi_comm)
+   CALL mpi_bc(this%l_moessbauerCoreHyperfine,rank,mpi_comm)
+   CALL mpi_bc(this%l_moessbauerValenceHyperfine,rank,mpi_comm)
+
 END SUBROUTINE mpi_bc_input
 
 SUBROUTINE read_xml_input(this,xml)
@@ -250,6 +260,10 @@ SUBROUTINE read_xml_input(this,xml)
    this%alpha = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@alpha'))
    this%preconditioning_param = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@precondParam'))
    this%spinf = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@spinf'))
+   !optional switch; if it is not present the starting density stays collinear in the interstitial region
+   IF (xml%GetNumberOfNodes('/fleurInput/calculationSetup/scfLoop/@sdNocoIR')==1) THEN
+      this%sdNocoIR = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/scfLoop/@sdNocoIR'))
+   END IF
    ! Get parameters for core electrons
    this%ctail = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/coreElectrons/@ctail'))
    this%coretail_lmax = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/calculationSetup/coreElectrons/@coretail_lmax'))
@@ -436,6 +450,19 @@ SUBROUTINE read_xml_input(this,xml)
       numberNodes = xml%GetNumberOfNodes(xPathA)
       IF (numberNodes.EQ.1) THEN
          this%eonly = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eonly'))
+      END IF
+      ! Read in optional moessbauerParams switches (all on by default)
+      this%l_moessbauerEFG = .TRUE.
+      this%l_moessbauerIsomerShift = .TRUE.
+      this%l_moessbauerCoreHyperfine = .TRUE.
+      this%l_moessbauerValenceHyperfine = .TRUE.
+      xPathA = '/fleurInput/output/moessbauerParams'
+      numberNodes = xml%GetNumberOfNodes(xPathA)
+      IF (numberNodes.EQ.1) THEN
+         this%l_moessbauerEFG = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@electricFieldGradient'))
+         this%l_moessbauerIsomerShift = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@isomerShift'))
+         this%l_moessbauerCoreHyperfine = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@coreHyperfine'))
+         this%l_moessbauerValenceHyperfine = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@valenceHyperfine'))
       END IF
       ! Read in optional vacuumDOS parameters
       xPathA = '/fleurInput/output/vacuumDOS'

@@ -1,16 +1,18 @@
 MODULE m_cored
 CONTAINS
-   SUBROUTINE cored(input, jspin, iType, atoms, rho,  sphhar, l_CoreDenPresent, vr, qint, rhc, tec, seig, l_useOtherCoreSolver, EnergyDen)
+   SUBROUTINE cored(input, jspin, iType, atoms, rho,  sphhar, l_CoreDenPresent, vr, qint, rhc, tec, seig, l_useOtherCoreSolver, EnergyDen, &
+                     moessbauerParams)
       !     *******************************************************
       !     *****   set up the core densities for compounds.  *****
       !     *****                      d.d.koelling           *****
       !     *******************************************************
       USE m_juDFT
-      USE m_intgr, ONLY : intgr3,intgr0,intgr1
+      USE m_intgr, ONLY : intgr3,intgr0,intgr1,intgr2
       USE m_constants
       !USE m_setcor
       USE m_differ
       USE m_types
+      USE m_types_moessbauerParams
       USE m_cdn_io
       USE m_xmlOutput
       IMPLICIT NONE
@@ -32,12 +34,18 @@ CONTAINS
       REAL, INTENT(INOUT)           :: tec(atoms%ntype,input%jspins)
       LOGICAL, INTENT (INOUT), OPTIONAL :: l_useOtherCoreSolver
       REAL, INTENT(INOUT), OPTIONAL :: EnergyDen(atoms%jmtd,0:sphhar%nlhd,atoms%ntype,input%jspins)
+      TYPE(t_moessbauerParams), OPTIONAL, INTENT(INOUT) :: moessbauerParams
 
       !     ..
       !     .. Local Scalars ..
       REAL eig,fj,fl,fn,qOutside,rad,rhos,rhs,sea,sume,t2
       REAL d,dxx,rn,rnot,z,t1,rr,r,lambd,c,bmu,weight, aux_weight
       INTEGER i,j,korb,ncmsh,nm,nm1,nst ,l,ierr
+      INTEGER ilshell, nShQ, lShQ, n_prev, l_prev
+      INTEGER iRad
+      LOGICAL isSmaller, l_isoShiftOK
+      REAL nucRad, alpha, smallIsoVal, largeIsoVal, stateIsoShift
+      CHARACTER(LEN=150) :: warnMsg
       !     ..
       !     .. Local Arrays ..
 
@@ -49,6 +57,9 @@ CONTAINS
       CHARACTER(LEN=20) :: attributes(6)
       REAL stateEnergies(29)
       LOGICAL l_useThisCoreSolver
+      INTEGER shellN(15), shellL(15)
+      REAL shellIsomerShift(15)
+      REAL indefInteg(atoms%msh)
       !     ..
 
       l_useThisCoreSolver = .TRUE.
@@ -59,8 +70,11 @@ CONTAINS
       c = c_light(1.0)
       seig = 0.0
       !
-      IF(.NOT.l_useThisCoreSolver) RETURN
-      
+      IF(.NOT.l_useThisCoreSolver) THEN
+         IF (PRESENT(moessbauerParams)) moessbauerParams%nCoreShells(iType) = 0
+         RETURN
+      END IF
+
       IF (input%frcor.and.l_CoreDenPresent) THEN
          rnot = atoms%rmsh(1,iType) ; dxx = atoms%dx(iType)
          ncmsh = NINT( LOG( (atoms%rmt(iType)+10.0)/rnot ) / dxx + 1 )
@@ -83,7 +97,10 @@ CONTAINS
          seig = seig + atoms%neq(iType)*sea
       END IF
       
-      IF (input%frcor.and.l_CoreDenPresent) RETURN
+      IF (input%frcor.and.l_CoreDenPresent) THEN
+         IF (PRESENT(moessbauerParams)) moessbauerParams%nCoreShells(iType) = 0
+         RETURN
+      END IF
 
       !     ---> set up densities
 
@@ -91,6 +108,27 @@ CONTAINS
       z = atoms%zatom(iType)
       !         rn = rmt(iType)
       dxx = atoms%dx(iType)
+
+      ! Locate the mesh bracket around the nuclear radius, for the
+      ! shell-wise isomer shift below (same 2-point linear interpolation as
+      ! the kcrel=1 core solver in core.f90).
+      nucRad = r0_const*(atomicMasses_const(atoms%nz(iType))**(1.0/3.0))
+      l_isoShiftOK = (atoms%rmsh(1,iType) < nucRad)
+      IF (.NOT.l_isoShiftOK) THEN
+         IF (jspin==1) THEN
+            WRITE(warnMsg,'(a,i0,a)') 'Nuclear radius smaller than smallest radial mesh point for atom type ', &
+                                       iType, ' -- skipping its core isomer shift'
+            WRITE(*,'(a)') TRIM(warnMsg)
+         END IF
+      ELSE
+         iRad = 0
+         isSmaller = .TRUE.
+         DO WHILE (isSmaller)
+            iRad = iRad + 1
+            IF (atoms%rmsh(iRad,iType).GE.nucRad) isSmaller = .FALSE.
+         END DO
+         alpha = (nucRad - atoms%rmsh(iRad-1,iType)) / (atoms%rmsh(iRad,iType) - atoms%rmsh(iRad-1,iType))
+      END IF
       bmu = 0.0
       !CALL setcor(iType,input%jspins,atoms,input,bmu,nst,kappa,nprnc,occ_h)
       CALL atoms%econf(iType)%get_core(nst,nprnc,kappa,occ_h)
@@ -140,6 +178,12 @@ CONTAINS
       IF (input%gw==1 .OR. input%gw==3) WRITE(15) nst,atoms%rmsh(1:atoms%jri(iType),iType)
 
       stateEnergies = 0.0
+      ilshell = 0
+      n_prev = -999
+      l_prev = -999
+      shellN = 0
+      shellL = 0
+      shellIsomerShift = 0.0
       DO korb = 1,nst
          IF (occ(korb) /= 0.0) THEN
             fn = nprnc(korb)
@@ -167,6 +211,32 @@ CONTAINS
                rhoss(j) = rhoss(j) + rhcs(j)
             ENDDO
 
+            nShQ = nprnc(korb)
+            lShQ = NINT(fl)
+            IF (nShQ /= n_prev .OR. lShQ /= l_prev) THEN
+               ilshell = ilshell + 1
+               shellN(ilshell) = nShQ
+               shellL(ilshell) = lShQ
+               n_prev = nShQ
+               l_prev = lShQ
+            END IF
+
+            ! Shell-wise isomer shift: average density enclosed within the
+            ! nuclear sphere, from this state's own density rhcs, using the
+            ! same 2-point linear bracket interpolation at r=nucRad as the
+            ! kcrel=1 core solver (core.f90). Same /jspins normalization as
+            ! used above for rhoc=rhoss/input%jspins. Skipped entirely if the
+            ! nuclear radius is smaller than the innermost mesh point (see
+            ! l_isoShiftOK above).
+            IF (l_isoShiftOK) THEN
+               CALL intgr2(rhcs(1:atoms%jri(iType)), atoms%rmsh(1:atoms%jri(iType),iType), atoms%dx(iType), &
+                           atoms%jri(iType), indefInteg(1:atoms%jri(iType)))
+               smallIsoVal = indefInteg(iRad-1) / ((4.0/3.0)*pi_const*(atoms%rmsh(iRad-1,iType)**3.0))
+               largeIsoVal = indefInteg(iRad) / ((4.0/3.0)*pi_const*(atoms%rmsh(iRad,iType)**3.0))
+               stateIsoShift = (1.0-alpha)*smallIsoVal + alpha*largeIsoVal
+               shellIsomerShift(ilshell) = shellIsomerShift(ilshell) + stateIsoShift/input%jspins
+            END IF
+
             IF(present(EnergyDen)) THEN
                !rhoss_aux = rhoss
                DO j = 1,ncmsh
@@ -177,6 +247,10 @@ CONTAINS
             ENDIF
          ENDIF
       ENDDO
+
+      IF (PRESENT(moessbauerParams)) THEN
+         CALL moessbauerParams%accumCoreIS(iType, ilshell, shellN, shellL, shellIsomerShift, l_isoShiftOK)
+      END IF
 
       !     ---->update spherical charge density rho with the core density.
       !     ---->for spin-polarized (jspins=2), take only half the density

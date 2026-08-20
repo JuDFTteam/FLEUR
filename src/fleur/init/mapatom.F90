@@ -176,7 +176,7 @@
 
       ENDIF
 
-      !IF(gfinp%n > 0) THEN ! TODO: Bind this to a switch gfinp%n > 0 .OR. juPhon%l_dos
+      !IF(gfinp%n > 0) THEN ! TODO: Bind this to a switch gfinp%n > 0 .OR. dfpt%l_dos
          ! Create mapped_atom array
          ! Store, where atoms are mapped to when symmetry operations are applied
          IF ( .NOT. ALLOCATED(sym%mapped_atom)) ALLOCATE(sym%mapped_atom(sym%nop,atoms%nat),source=0)

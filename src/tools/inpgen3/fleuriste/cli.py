@@ -6,6 +6,7 @@ managing k-points, and generating SLURM job scripts.
 """
 
 import sys
+import re
 from pathlib import Path
 from typing import Optional
 
@@ -692,7 +693,9 @@ def analyse():
 @click.option('--scaling', '-s', 'scaling_file', type=click.Path(exists=True),
               default=None,
               help='Optional second juDFT_times.json for scaling comparison.')
-def analyse_times(json_file, output, scaling_file):
+@click.option('--color-range', type=str, default=None,
+              help='Optional colorscale range as min-max (e.g. 0-4.0).')
+def analyse_times(json_file, output, scaling_file, color_range):
     """Generate a sunburst plot from a juDFT timing JSON file.
 
     JSON_FILE defaults to juDFT_times.json in the current directory when
@@ -703,6 +706,7 @@ def analyse_times(json_file, output, scaling_file):
       fleuriste analyse times
       fleuriste analyse times juDFT_times.json -o timing.html
       fleuriste analyse times juDFT_times.json --scaling juDFT_times_ref.json
+    fleuriste analyse times juDFT_times.json --color-range 0-4.0
     """
     if json_file is None:
         default = Path.cwd() / "juDFT_times.json"
@@ -720,8 +724,25 @@ def analyse_times(json_file, output, scaling_file):
     if scaling_file:
         click.echo(f"Scaling reference    : {scaling_file}")
 
+    parsed_color_range = None
+    if color_range is not None:
+        match = re.fullmatch(r'\s*([+-]?\d*\.?\d+)\s*-\s*([+-]?\d*\.?\d+)\s*', color_range)
+        if not match:
+            raise click.ClickException(
+                "Invalid --color-range format. Use min-max, e.g. --color-range 0-4.0"
+            )
+        parsed_color_range = [float(match.group(1)), float(match.group(2))]
+        if parsed_color_range[0] > parsed_color_range[1]:
+            raise click.ClickException("Invalid --color-range: min must be <= max.")
+        click.echo(f"Color range          : {parsed_color_range[0]}-{parsed_color_range[1]}")
+
     try:
-        generate_sunburst_plot(json_file, output_file=output, scalingFile=scaling_file)
+        generate_sunburst_plot(
+            json_file,
+            output_file=output,
+            scalingFile=scaling_file,
+            color_range=parsed_color_range,
+        )
     except Exception as exc:
         raise click.ClickException(str(exc))
 

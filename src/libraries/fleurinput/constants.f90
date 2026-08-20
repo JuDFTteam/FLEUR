@@ -20,6 +20,8 @@ MODULE m_constants
   INTEGER,          PARAMETER :: coreState_const = 1
   INTEGER,          PARAMETER :: valenceState_const = 2
   INTEGER,          PARAMETER :: lmaxU_const = 3
+  INTEGER,          PARAMETER :: invs_matrix(3,3)=RESHAPE([-1,0,0,0,-1,0,0,0,-1],[3,3])
+  INTEGER,          PARAMETER :: zrfs_matrix(3,3)=RESHAPE([1,0,0,0,1,0,0,0,-1],[3,3])
   COMPLEX,          PARAMETER :: cmplx_0=(0.0,0.0)
   COMPLEX,          PARAMETER :: cmplx_1=(1.0,0.0)
   REAL,             PARAMETER :: pi_const=3.1415926535897932
@@ -135,7 +137,7 @@ MODULE m_constants
 
   INTEGER,DIMENSION(6),PARAMETER :: nobleGasNumStatesList_const=(/1, 4, 7, 12, 17, 24/)
 
-  ! juPhon stuff:
+  ! dfpt stuff:
   complex, dimension(3, 3), parameter  :: Tmatrix0 = reshape( &
                                               [(0.7071067811865475, 0.),(0.,-0.7071067811865475),(0., 0.),&
                                                (0., 0.),(0., 0.),(1., 0.), &

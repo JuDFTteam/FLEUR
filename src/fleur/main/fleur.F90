@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -28,8 +28,8 @@ MODULE m_fleur
    !! one-dimensional        --- y.mokrousov   2002
    !! exchange parameters    --- m.lezaic      2004
    !!                            g.bihlmayer, s.bluegel 1999
+   implicit none
 
-   IMPLICIT NONE
 CONTAINS
    SUBROUTINE fleur_execute(fmpi, fi, sphhar, stars, nococonv, forcetheo, enpara, results, &
                             xcpot, wann, hybdat, mpdata)
@@ -46,7 +46,7 @@ CONTAINS
       USE m_vgen_coulomb
       USE m_writexcstuff
       USE m_eigen
-      USE m_eigenso
+      USE m_secvar_soc
       USE m_fermie
       USE m_cdngen
       USE m_totale
@@ -72,11 +72,13 @@ CONTAINS
       USE m_writeBasis
       USE m_RelaxSpinAxisMagn
       USE m_dfpt
+      USE m_abcoeff_store
       !For vTot1 efield WIP
       USE m_make_stars
       USE m_dfpt_vefield
       USE m_checkdopall
       USE m_store_load_hybrid
+      USE m_types_moessbauerParams
 
 !$    USE omp_lib
 
@@ -101,6 +103,7 @@ CONTAINS
       TYPE(t_potden)   :: vTot, vx, vCoul, vxc, exc
       TYPE(t_potden)   :: inDen, outDen, EnergyDen, sliceDen,coreden
       TYPE(t_hub1data) :: hub1data
+      TYPE(t_moessbauerParams) :: moessbauerParams
 
       TYPE(t_greensf), ALLOCATABLE :: greensFunction(:)
       TYPE(t_log_message)  :: log
@@ -130,7 +133,7 @@ CONTAINS
       ! Check, whether we already have a suitable density file and if not,
       ! generate a starting density.
       CALL optional(fmpi, fi%atoms, sphhar, fi%vacuum, stars, fi%input, &
-                    fi%sym, fi%cell, fi%sliceplot, xcpot, fi%noco)
+                    fi%sym, fi%cell, fi%field, fi%sliceplot, xcpot, fi%noco)
 
       IF (fi%input%l_wann .AND. (.NOT. wann%l_bs_comf)) THEN
          ! TODO: If this warning is commented out, can it be erased?
@@ -186,7 +189,7 @@ CONTAINS
       !END IF
 
       CALL timestart("Qfix main")
-      CALL qfix(fmpi, stars,nococonv, fi%atoms, fi%sym, fi%vacuum, sphhar, fi%input, fi%cell,   inDen, fi%noco%l_noco, .FALSE., .FALSE., .FALSE., fix)
+      CALL qfix(fmpi, stars,nococonv, fi%atoms, fi%sym, fi%vacuum, sphhar, fi%input, fi%cell, fi%field, inDen, fi%noco%l_noco, .FALSE., .FALSE., .FALSE., fix)
       !CALL magMoms(fi%input,fi%atoms,fi%noco,nococonv,den=inDen)
       CALL timestop("Qfix main")
 
@@ -242,9 +245,7 @@ CONTAINS
          hybdat%eig_id = eig_id
       ENDIF
  
-      ! TODO: Isn't this comment kind of lost here?
-      ! Rotate cdn to local frame if specified.
-
+      call abcoeff_store_init(fi%input, fi%noco, fi%kpts, fi%atoms)
 
       CALL timestop("Open/allocate eigenvector storage")
 
@@ -285,7 +286,6 @@ CONTAINS
 8100        FORMAT(/, 10x, '   iter=  ', i5)
          END IF !fmpi%irank==0
 
-
          CALL inDen%distribute(fmpi%mpi_comm)
          CALL nococonv%mpi_bc(fmpi%mpi_comm)
 
@@ -304,8 +304,10 @@ CONTAINS
                CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi,   fi%sym, fi%cell, &
                               fi%noco, nococonv, sliceDen, PLOT_INPDEN, fi%sliceplot)
             END IF
-            IF ((fmpi%irank .EQ. 0) .AND. (fi%sliceplot%iplot .EQ. 2)) THEN
-               CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
+            IF (fi%sliceplot%iplot .EQ. 2) THEN
+               ! Collective stop: all ranks call juDFT_end so it does a clean
+               ! MPI_BARRIER+MPI_FINALIZE instead of a single-rank MPI_ABORT.
+               CALL juDFT_end("Stopped self consistency loop after plots have been generated.", fmpi%irank)
             END IF
          END IF
 
@@ -351,8 +353,10 @@ CONTAINS
          END IF
 
          CALL timestart("generation of potential")
+         CALL moessbauerParams%init(fi%input, fi%noco, fi%atoms)
          CALL vgen(hybdat, fi%field, fi%input, xcpot, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, &
-                   fi%cell,   fi%sliceplot, fmpi, results, fi%noco, nococonv, EnergyDen, inDen, vTot, vx, vCoul, vxc, exc)
+                   fi%cell,   fi%sliceplot, fmpi, results, fi%noco, nococonv, EnergyDen, inDen, vTot, vx, vCoul, vxc, exc, &
+                   moessbauerParams)
          CALL timestop("generation of potential")
 
          ! Scale the magnetization back.
@@ -391,6 +395,8 @@ CONTAINS
          CALL forcetheo%start(vtot, fmpi%irank==0)
          forcetheoloop: DO WHILE (forcetheo%next_job(fmpi,l_lastIter, fi%atoms, fi%noco, nococonv))
 
+            call abcoeff_store_free() !Use new abcoeffs 
+
             CALL timestart("H generation and diagonalization (total)")
 
             CALL timestart("eigen")
@@ -398,6 +404,8 @@ CONTAINS
             CALL timestart("Updating energy parameters")
             CALL enpara%update(fmpi, fi%atoms, fi%vacuum, fi%input, vToT, hub1data)
             CALL timestop("Updating energy parameters")
+
+            IF (fi%hybinp%l_hybrid) hybdat%results%te_hfex%valence = 0.0
 
             IF (.NOT. fi%input%eig66(1)) THEN
                CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv,  &
@@ -413,7 +421,7 @@ CONTAINS
                IF(hybdat%l_calhf) hybdat%results%te_hfex%core = 2*hybdat%results%te_hfex%core
             END IF
             ! Send all result of local total energies to the r ! TODO: Is half the comment missing?
-            IF (fi%hybinp%l_hybrid .AND. hybdat%l_calhf) THEN
+            IF (fi%hybinp%l_hybrid) THEN
                results%te_hfex=hybdat%results%te_hfex
 #ifdef CPP_MPI
                CALL fmpi%set_root_comm()
@@ -430,8 +438,8 @@ CONTAINS
             CALL timestart("2nd variation SOC")
             IF (fi%noco%l_soc .AND. .NOT. fi%noco%l_noco .AND. .NOT. fi%INPUT%eig66(1)) THEN
                IF (fi%hybinp%l_hybrid) hybdat%results = results !Store old eigenvalues for later call to fermie
-               CALL eigenso(eig_id, fmpi, stars, sphhar, nococonv, vTot, enpara, results, fi%hub1inp, hub1data,fi)
-            ENDIF   
+               CALL secvar_soc(eig_id, fmpi, nococonv, vTot, enpara, fi, results)
+            ENDIF
             CALL timestop("2nd variation SOC")
             CALL timestop("H generation and diagonalization (total)")
 
@@ -441,10 +449,8 @@ CONTAINS
 
             ! Fermi level and occupancies
             input_soc = fi%input
-            IF (fi%noco%l_soc .AND. (.NOT. fi%noco%l_noco)) THEN
-               input_soc = fi%input
-               input_soc%neig = 2*fi%input%neig
-            END IF
+            IF (fi%noco%l_soc .AND. (.NOT. fi%noco%l_noco)) input_soc%neig = 2*fi%input%neig
+            
 
             IF (fi%input%gw>0) THEN
                IF (fmpi%irank==0) THEN
@@ -458,18 +464,13 @@ CONTAINS
 
             CALL timestart("determination of fermi energy")
 
-            IF (fi%noco%l_soc .AND. (.NOT. fi%noco%l_noco)) THEN
-               input_soc%zelec = fi%input%zelec*2               
-               IF (fi%hybinp%l_hybrid) &
-                  CALL fermie(hybdat%eig_id, fmpi, fi%kpts, fi%input, fi%noco, enpara%epara_min, fi%cell, hybdat%results)
-               CALL fermie(eig_id, fmpi, fi%kpts, input_soc, fi%noco, enpara%epara_min, fi%cell, results)
-
-               results%seigv = results%seigv / 2.0
-               results%ts = results%ts / 2.0
-            ELSE
-               CALL fermie(eig_id, fmpi, fi%kpts, fi%input, fi%noco, enpara%epara_min, fi%cell, results)
+            CALL fermie(eig_id, fmpi, fi%kpts, input_soc, fi%noco, enpara%epara_min, fi%cell, results)
+            
+            IF (fi%noco%l_soc .AND. (.NOT. fi%noco%l_noco) .AND. fi%hybinp%l_hybrid) THEN
+               CALL fermie(hybdat%eig_id, fmpi, fi%kpts, fi%input, fi%noco, enpara%epara_min, fi%cell, hybdat%results)
+            else
                IF (fi%hybinp%l_hybrid) hybdat%results = results
-            ENDIF
+            endif   
             IF (fi%hybinp%l_hybrid) CALL store_state_weights_hybrid(fi, fmpi, results)
 #ifdef CPP_MPI
             CALL MPI_BCAST(results%ef, 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
@@ -538,9 +539,10 @@ CONTAINS
             CALL outDen%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN)
             outDen%iter = inDen%iter
             CALL cdngen(eig_id, fmpi, input_soc, fi%banddos, fi%sliceplot, fi%vacuum, &
-                        fi%kpts, fi%atoms, sphhar, stars, fi%sym, fi%juphon, fi%gfinp, fi%hub1inp, &
-                        enpara, fi%cell, fi%noco, nococonv, vTot, results,   fi%corespecinput, &
-                        archiveType, xcpot, outDen, EnergyDen, coreden,greensFunction, hub1data,vxc,exc)
+                        fi%kpts, fi%atoms, sphhar, stars, fi%sym, fi%gfinp, fi%hub1inp, &
+                        enpara, fi%cell, fi%field, fi%noco, nococonv, vTot, results,   fi%corespecinput, &
+                        archiveType, xcpot, outDen, EnergyDen, coreden,greensFunction, hub1data,vxc,exc,&
+                        moessbauerParams)
             ! The density matrix for DFT+Hubbard1 only changes in hubbard1_setup and is kept constant otherwise
             outDen%mmpMat(:, :, fi%atoms%n_u + 1:fi%atoms%n_u + fi%atoms%n_hia, :) = inDen%mmpMat(:, :, fi%atoms%n_u + 1:fi%atoms%n_u + fi%atoms%n_hia, :)
 
@@ -549,8 +551,9 @@ CONTAINS
                CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi, fi%sym, fi%cell, &
                               fi%noco, nococonv, outDen, PLOT_OUTDEN_Y_CORE, fi%sliceplot)
 
-               IF ((fi%sliceplot%iplot .NE. 0) .AND. (fmpi%irank .EQ. 0) .AND. (fi%sliceplot%iplot .LT. 64) .AND. (MODULO(fi%sliceplot%iplot, 2) .NE. 1)) THEN
-                  CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
+               IF ((fi%sliceplot%iplot .NE. 0) .AND. (fi%sliceplot%iplot .LT. 64) .AND. (MODULO(fi%sliceplot%iplot, 2) .NE. 1)) THEN
+                  ! Collective stop (see above): pass fmpi%irank so all ranks finalize cleanly.
+                  CALL juDFT_end("Stopped self consistency loop after plots have been generated.", fmpi%irank)
                END IF
             END IF
 
@@ -584,13 +587,13 @@ CONTAINS
 #endif
             CALL timestop("generation of new charge density (total)")
 
-            IF (fi%juPhon%l_dfpt) THEN
+            IF (fi%dfpt%l_dfpt) THEN
                ! Sideline the actual scf loop for a phonon calculation.
                ! It is assumed that the density was converged beforehand.
                 CALL timestop("Iteration")
-                CALL timestart("juPhon DFPT")
+                CALL timestart("DFPT")
                 CALL dfpt(fi, sphhar, stars, nococonv, fi%kpts, fmpi, results, enpara, outDen, vTot, vxc, eig_id, xcpot, hybdat, mpdata, forcetheo)
-                CALL timestop("juPhon DFPT")
+                CALL timestop("DFPT")
                 CALL juDFT_end("DFPT calculation finished.",fmpi%irank)
             END IF
 
@@ -612,6 +615,8 @@ CONTAINS
 ! !$
 ! !$                CALL potdis(stars,fi%vacuum,fi%atoms,sphhar, fi%input,fi%cell,fi%sym)
 ! !$             END IF
+
+            CALL moessbauerParams%printAll(fmpi, fi%atoms)
 
             ! total energy
             CALL timestart('determination of total energy')
@@ -672,9 +677,6 @@ CONTAINS
                l_cont = l_cont .AND. (iter < 100) ! Security stop for non-converging nested PBE calculations
             END IF
 
-            IF (hybdat%l_subvxc) THEN
-               results%te_hfex%valence = 0
-            END IF
          ELSE IF (fi%atoms%n_hia > 0) THEN
             l_cont = l_cont .AND. (iter < fi%input%itmax) !The SCF cycle reached the maximum iteration
             l_cont = l_cont .AND. ((fi%input%mindistance <= results%last_distance) .OR. fi%input%l_f)
@@ -750,8 +752,9 @@ CONTAINS
          ! is the last plottable t_potden to appear in the scf loop and with no mixed density written out (so it is quasi
          ! post-process).
 
-         IF ((fi%sliceplot%iplot .NE. 0) .AND. (fmpi%irank .EQ. 0)) THEN
-            CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
+         IF (fi%sliceplot%iplot .NE. 0) THEN
+            ! Collective stop (see above): pass fmpi%irank so all ranks finalize cleanly.
+            CALL juDFT_end("Stopped self consistency loop after plots have been generated.", fmpi%irank)
          END IF
 
       END DO scfloop ! DO WHILE (l_cont)

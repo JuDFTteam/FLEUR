@@ -23,6 +23,39 @@ MODULE m_types_jointdos
       procedure      :: postprocessing
    END TYPE t_jointDOS
 CONTAINS
+   !NOTE: charge_mag is a module procedure on purpose. It is only used by
+   !      postprocessing and would naturally be an internal procedure there,
+   !      but nvfortran (23.9) cannot compile this module if postprocessing has
+   !      a CONTAINS section: it emits the internal subprogram and the static
+   !      block holding the host association under the same mangled name and
+   !      then dies with "cannot be a common block and a subprogram", or, when
+   !      -g is added, with "Internal compiler error. flowgraph: node is zero".
+   !      Do not turn this back into an internal procedure.
+   function charge_mag(vec1,vec2)
+      real :: charge_mag(2)
+      real, intent(in):: vec1(:)
+      real, intent(in):: vec2(:)
+      real :: rho1,mz1,rho2,mz2
+      real, parameter :: eps_rho = 1.0e-10
+
+      !distribution into charge and magnetisation parts (mz only, other components are directly given in density matrix vector), factor 1/2 included later
+      rho1=vec1(1)+vec1(2)
+      mz1=vec1(1)-vec1(2)
+      rho2=vec2(1)+vec2(2)
+      mz2=vec2(1)-vec2(2)
+      if (abs(rho1) < eps_rho.or. abs(rho2) < eps_rho) THEN
+         charge_mag(1)=0.0
+         charge_mag(2)=0.0
+         return
+      endif
+      charge_mag(1)= 0.25*rho1*rho2  !charge part
+      charge_mag(2)= 0.25*mz1*mz2+vec1(3)*vec2(3)+vec1(4)*vec2(4) !mag part
+      !Convert to sum and difference
+      rho1=charge_mag(1)
+      charge_mag(1) = 0.5*(rho1+charge_mag(2))
+      charge_mag(2) = 0.5*(rho1-charge_mag(2))
+   end function charge_mag
+
    subroutine postprocessing(this, noco,nococonv, banddos, alldos, ef)
       use m_types_atoms
       use m_types_noco
@@ -36,21 +69,22 @@ CONTAINS
       TYPE(t_nococonv), INTENT(IN)    :: nococonv
       TYPE(t_banddos), INTENT(IN)    :: banddos
       real, intent(in),optional       :: ef
-      type(t_dos),pointer :: dos 
-      integer :: ikpt, ispin, jspin, ii, ntype, l, i, j, iispin,n 
+      type(t_dos),pointer :: dos
+      integer :: ikpt, ispin, jspin, ii, ntype, l, i, j, iispin,n,n_dos
       integer :: idx(size(this%eig,1))
       !find a DOS of type t_dos from the given alldos for the postprocessing
-      dosloop:DO n=1,size(alldos)
+      n_dos=0
+      NULLIFY(dos)
+      DO n=1,size(alldos)
          if (.not. associated(alldos(n)%p)) cycle
-         associate(d=>alldos(n)%p)
-         select type(d)
+         select type(d=>alldos(n)%p)
             type is (t_dos)
                dos=>d
-               exit dosloop
+               n_dos=n
+               exit
          end select
-         end associate
-      end do dosloop
-      if (n>size(alldos)) then
+      end do
+      if (n_dos==0) then
          call judft_error("No eigdos of type t_dos found for jointDOS postprocessing")
       end if
 
@@ -120,46 +154,20 @@ CONTAINS
             ENDDO
             !Sort the results according to excitation energy
             CALL sort(idx(:ii),this%eig(:ii,ikpt,1))
-            this%eig(:ii,ikpt,:)=this%eig(idx(:ii),ikpt,:)
-            this%qis(:ii,ikpt,:)=this%qis(idx(:ii),ikpt,:)
-            this%qTot(:ii,ikpt,:)=this%qTot(idx(:ii),ikpt,:)
-            DO ntype=1,size(banddos%dos_typelist)
-               DO l=0,3
-                  this%qal(l,ntype,:ii,ikpt,:)=this%qal(l,ntype,idx(:ii),ikpt,:)
+            DO iispin=1,size(this%eig,3)
+               this%eig(:ii,ikpt,iispin)=this%eig(idx(:ii),ikpt,iispin)
+               this%qis(:ii,ikpt,iispin)=this%qis(idx(:ii),ikpt,iispin)
+               this%qTot(:ii,ikpt,iispin)=this%qTot(idx(:ii),ikpt,iispin)
+               DO ntype=1,size(banddos%dos_typelist)
+                  DO l=0,3
+                     this%qal(l,ntype,:ii,ikpt,iispin)=this%qal(l,ntype,idx(:ii),ikpt,iispin)
+                  ENDDO
                ENDDO
             ENDDO
          ENDIF
             
       ENDDO
-   
-   contains 
-       function charge_mag(vec1,vec2)
-          real :: charge_mag(2)
-          real, intent(in):: vec1(:)
-          real, intent(in):: vec2(:)
-          real :: rho1,mz1,rho2,mz2
-          real, parameter :: eps_rho = 1.0e-10
 
-          !distribution into charge and magnetisation parts (mz only, other components are directly given in density matrix vector), factor 1/2 included later
-          rho1=vec1(1)+vec1(2)
-          mz1=vec1(1)-vec1(2)
-          rho2=vec2(1)+vec2(2)
-          mz2=vec2(1)-vec2(2)
-          if (abs(rho1) < eps_rho.or. abs(rho2) < eps_rho) THEN
-               charge_mag(1)=0.0
-               charge_mag(2)=0.0
-               return
-          endif
-          charge_mag(1)= 0.25*rho1*rho2  !charge part
-          charge_mag(2)= 0.25*mz1*mz2+vec1(3)*vec2(3)+vec1(4)*vec2(4) !mag part
-          !Convert to sum and difference 
-          rho1=charge_mag(1)
-          charge_mag(1) = 0.5*(rho1+charge_mag(2))
-          charge_mag(2) = 0.5*(rho1-charge_mag(2))
-
-          
-
-      end function charge_mag    
    end subroutine postprocessing
    
    

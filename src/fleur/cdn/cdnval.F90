@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -15,7 +15,7 @@ CONTAINS
 
    SUBROUTINE cdnval(eig_id, fmpi, kpts, jspin, noco, nococonv, input, banddos, cell, atoms, enpara, stars, &
                      vacuum, sphhar, sym, vTot, cdnvalJob, den, dos, vacdos, results, &
-                     moments, gfinp, hub1inp, hub1data, coreSpecInput, mcd, slab, orbcomp, jDOS, greensfImagPart)
+                     moments, moessbauerParams, gfinp, hub1inp, hub1data, coreSpecInput, mcd, slab, orbcomp, jDOS, greensfImagPart)
 
       !************************************************************************************
       !     This is the FLEUR valence density generator
@@ -43,6 +43,7 @@ CONTAINS
       USE m_greensfCalcImagPart
       USE m_local_hamiltonian
       USE m_greensfCalcScalarProducts
+      USE m_abcof
       !USE m_cdnmt       ! calculate the density and orbital moments etc.
       !USE m_orbmom      ! coeffd for orbital moments
       USE m_qmtsl       ! These subroutines divide the input%film into banddos%layers
@@ -60,6 +61,7 @@ CONTAINS
       USE m_types_orbcomp
       USE m_types_denmatrix
       USE m_types_radfun
+      USE m_types_moessbauerParams
       use m_l_like
       use m_types_abc
       use m_types_orbmom, only: t_orbmom
@@ -68,7 +70,6 @@ CONTAINS
       USE m_mpi_col_den ! collect density data from parallel nodes
 #endif
       USE m_nIJmat
-
       IMPLICIT NONE
 
       TYPE(t_results), INTENT(INOUT) :: results
@@ -94,6 +95,7 @@ CONTAINS
       TYPE(t_dos), INTENT(INOUT) :: dos
       TYPE(t_vacdos), INTENT(INOUT) :: vacdos
       TYPE(t_moments), INTENT(INOUT) :: moments
+      TYPE(t_moessbauerParams), OPTIONAL, INTENT(INOUT) :: moessbauerParams
       TYPE(t_hub1data), OPTIONAL, INTENT(INOUT) :: hub1data
       TYPE(t_coreSpecInput), OPTIONAL, INTENT(IN)    :: coreSpecInput
       TYPE(t_mcd), INTENT(INOUT) :: mcd
@@ -110,6 +112,7 @@ CONTAINS
       INTEGER :: iErr, nbands, noccbd, iType, ispinpr, ispin123
       INTEGER :: skip_t, skip_tt, nbasfcn,abc_itype
       LOGICAL :: l_real, l_corespec, l_empty
+      LOGICAL :: l_moessbauerHFF
 
       ! Local Arrays
       REAL, ALLOCATABLE  :: we(:), eig(:)
@@ -125,10 +128,14 @@ CONTAINS
       TYPE(t_tlmplm)            :: tlmplm
       TYPE(t_greensfBZintCoeffs):: greensfBZintCoeffs
       TYPE(t_scalarGF), ALLOCATABLE :: scalarGF(:)
+      TYPE(t_eigVecCoeffs)      :: eigVecCoeffs
       TYPE(t_radfun)             :: radfun(atoms%ntype)
       TYPE(t_abc), allocatable    :: abc(:, :)
 
       CALL timestart("cdnval")
+
+      l_moessbauerHFF = .FALSE.
+      IF (PRESENT(moessbauerParams)) l_moessbauerHFF = moessbauerParams%l_hyperfine
 
       call timestart("init")
       l_real = sym%invs .AND. (.NOT. noco%l_soc) .AND. (.NOT. noco%l_noco) .AND. atoms%n_hia == 0
@@ -255,6 +262,18 @@ CONTAINS
 
          call timestop("init k-loop")
          IF (noccbd .LE. 0) CYCLE ! Note: This jump has to be after the MPI_BARRIER is called
+         IF (gfinp%n > 0 .AND. PRESENT(greensfImagPart)) THEN
+            IF (greensfImagPart%l_calc) THEN
+               CALL eigVecCoeffs%init(input, atoms, jsp, noccbd, gfinp%l_mperp)
+               IF (gfinp%l_mperp .AND. noco%l_noco) THEN
+                  DO ispin = 1, input%jspins
+                     CALL abcof_new(input, atoms, sym, cell, lapw, noccbd, usdus, noco, nococonv, ispin, eigVecCoeffs, zMat)
+                  END DO
+               ELSE
+                  CALL abcof_new(input, atoms, sym, cell, lapw, noccbd, usdus, noco, nococonv, jsp, eigVecCoeffs, zMat)
+               END IF
+            END IF
+         END IF
          call timestart("Atoms loop")
          ! valence density in the atomic spheres
          !!$OMP PARALLEL DO DEFAULT(NONE) PRIVATE(itype, ispin, ispinpr, ispin123, abc_itype, abc) &
@@ -266,7 +285,7 @@ CONTAINS
             call radfun(itype)%generate_radial_functions(atoms, input, enpara, fmpi, vtot, iType)
             DO ispin = jsp_start, jsp_end
                IF (input%l_f) CALL force%init2(noccbd, input, atoms)
-               call abc(ispin, abc_itype)%init(input, atoms, radfun(itype)%n_r, noccbd, itype)
+               call abc(ispin, abc_itype)%init(input, atoms, noccbd, itype)
                call abc(ispin, abc_itype)%calc_abc(input, atoms, sym, cell, lapw, noccbd, usdus, noco, nococonv, ispin, itype, zMat)
                DO ispinpr = jsp_start, ispin
                   ispin123 = merge(ispin, 3, ispin == ispinpr) !sometimes the "3rd" spin is the off-diagonal part
@@ -291,10 +310,13 @@ CONTAINS
                      CALL slab%calc_mt_slab(itype,ispin,ikpt,atoms,ev_list,noccbd,abc(ispin,abc_itype),radfun(itype))                            
                   end if
                   !Decomposition into total angular momentum states
-                  IF (banddos%l_jdos.and.ispinpr == jsp_end) call jDOS%calc_jDOS(ikpt, noccbd, ev_list, we, atoms, banddos, input, radfun(itype), abc(1, abc_itype), abc(2, abc_itype))
+                  IF (banddos%l_jdos.and.ispinpr == jsp_end) call jDOS%calc_jDOS(ikpt, noccbd, ev_list, we, atoms, banddos, input, nococonv, itype, radfun(itype), abc(1, abc_itype), abc(2, abc_itype))
                      
                   IF (noco%l_soc .and. ispin == ispinpr) CALL orb%calc_orbmom(abc(ispin, abc_itype), atoms, radfun(itype), we, itype, &
-                                                                              ispin, moments%clmom(:, itype, ispin))  
+                                                                              ispin, moments%clmom(:, itype, ispin))
+                  IF (noco%l_soc .AND. ispin == ispinpr .AND. l_moessbauerHFF &
+                      .AND. PRESENT(moessbauerParams)) &
+                     CALL orb%calc_hff_orbital(atoms, radfun(itype), itype, ispin, moessbauerParams%hypFineContribs(:, itype, ispin, 3))
 
                   !Now calculate the density matrix as needed to construct the charge
                   call denmatrix(ispin, ispinpr, itype)%rhonmt(atoms, sphhar, we, noccbd, itype, &
@@ -337,6 +359,23 @@ CONTAINS
          IF (input%l_sympsi .and. allocated(dos%jsym)) THEN
             CALL sympsi(lapw, jspin, sym, noccbd, cell, eig, noco, dos%jsym(:, ikpt, jspin), zMat)
          END IF
+         IF (gfinp%n > 0 .AND. PRESENT(greensfImagPart)) THEN
+            IF (greensfImagPart%l_calc) THEN
+               IF (gfinp%l_mperp) THEN
+                  DO ispin = 1, 3
+                     CALL greensfBZint(ikpt, noccbd, ispin, gfinp, sym, atoms, noco, nococonv, input, kpts, &
+                                       scalarGF, eigVecCoeffs, greensfBZintCoeffs)
+                     CALL greensfCalcImagPart_single_kpt(ikpt, ikpt_i, ev_list, ispin, gfinp, atoms, input, kpts, noco, fmpi, &
+                                                         results, greensfBZintCoeffs, greensfImagPart)
+                  END DO
+               ELSE
+                  CALL greensfBZint(ikpt, noccbd, jsp, gfinp, sym, atoms, noco, nococonv, input, kpts, &
+                                    scalarGF, eigVecCoeffs, greensfBZintCoeffs)
+                  CALL greensfCalcImagPart_single_kpt(ikpt, ikpt_i, ev_list, jsp, gfinp, atoms, input, kpts, noco, fmpi, &
+                                                      results, greensfBZintCoeffs, greensfImagPart)
+               END IF
+            END IF
+         END IF
       END DO ! end of k-point loop
 
 #ifdef CPP_MPI
@@ -353,7 +392,29 @@ CONTAINS
             end do
          END DO
       END DO
+      ! Reduce orbital moments: each rank accumulated clmom from its own k-points.
+      ! Only reduce the spin components updated in this cdnval call (jsp_start:jsp_end),
+      ! because cdnval is called once per jspin for non-mperp. Reducing the full array
+      ! would multiply spin-1 clmom by N_ranks on the jspin=2 call.
+      IF (noco%l_soc) THEN
+         CALL MPI_ALLREDUCE(MPI_IN_PLACE, moments%clmom(1,1,jsp_start), &
+                            SIZE(moments%clmom(:,:,jsp_start:jsp_end)), &
+                            MPI_DOUBLE_PRECISION, MPI_SUM, fmpi%mpi_comm, iErr)
+         IF (l_moessbauerHFF .AND. PRESENT(moessbauerParams)) THEN
+            CALL MPI_ALLREDUCE(MPI_IN_PLACE, moessbauerParams%hypFineContribs(-1,1,jsp_start,3), &
+                               SIZE(moessbauerParams%hypFineContribs(:,:,jsp_start:jsp_end,3)), &
+                               MPI_DOUBLE_PRECISION, MPI_SUM, fmpi%mpi_comm, iErr)
+         END IF
+      END IF
 #endif
+
+      IF (noco%l_soc) THEN
+         DO itype = 1, atoms%ntype
+            DO ispin = jsp_start, jsp_end
+               CALL priv_sym_clmom(sym, cell, moments%clmom(:, itype, ispin))
+            END DO
+         END DO
+      END IF
 
       IF (gfinp%n > 0 .AND. PRESENT(greensfImagPart)) THEN
          IF (greensfImagPart%l_calc) THEN
@@ -366,11 +427,21 @@ CONTAINS
       END IF
 
       IF (fmpi%irank == 0) THEN
-         call timestart("print l-like charge")  
+         call timestart("print l-like charge")
          DO itype = 1, atoms%ntype
             call print_l_like_charge(lbound(denmatrix, 1), atoms, radfun(itype), denmatrix, itype)
          ENDDO
          call timestop("print l-like charge")
+         IF (l_moessbauerHFF .AND. PRESENT(moessbauerParams)) THEN
+            DO itype = 1, atoms%ntype
+               DO ispin = jsp_start, jsp_end
+                  moessbauerParams%hypFineContribs(:, itype, ispin, 1) = moessbauerParams%hypFineContribs(:, itype, ispin, 1) &
+                     + denmatrix(ispin, ispin, itype)%hff_contact(radfun(itype), atoms, itype, ispin)
+                  moessbauerParams%hypFineContribs(:, itype, ispin, 2) = moessbauerParams%hypFineContribs(:, itype, ispin, 2) &
+                     + denmatrix(ispin, ispin, itype)%hff_dipolar(radfun(itype), atoms, sphhar, sym, itype, ispin)
+               END DO
+            END DO
+         END IF
          CALL timestart("denmatrix_to_full")
          !$OMP PARALLEL DO PRIVATE(itype, ispin, ispinpr) DEFAULT(NONE) SHARED(radfun,jsp_start,jsp_end,denmatrix, atoms, fmpi,hub1data,enpara,den, input, sphhar, noco, sym, vTot, moments)
          DO itype = 1, atoms%ntype
@@ -400,6 +471,42 @@ CONTAINS
       CALL timestop("cdnval")
 
    END SUBROUTINE cdnval
+
+   SUBROUTINE priv_sym_clmom(sym, cell, L)
+      ! Symmetrize the orbital moment pseudovector L over all crystal symmetry
+      ! operations. L is accumulated from the symmetry-reduced BZ: each
+      ! representative k-point carries the full star weight but contributes
+      ! only its own L value, not the average over all star members. For
+      ! components of L that are invariant under the symmetry group this is
+      ! exact, but components that are not invariant acquire spurious
+      ! contributions. Averaging det(R)*R_cart*L over all operations projects
+      ! L onto the physically correct invariant subspace regardless of crystal
+      ! structure or magnetization direction.
+      USE m_types_sym
+      USE m_types_cell
+      USE m_constants, ONLY: tpi_const
+      IMPLICIT NONE
+      TYPE(t_sym),  INTENT(IN)    :: sym
+      TYPE(t_cell), INTENT(IN)    :: cell
+      REAL,         INTENT(INOUT) :: L(3)
+
+      INTEGER :: iop, det
+      REAL    :: L_sum(3), mrot_r(3,3), R_cart(3,3), amatinv(3,3)
+
+      ! cell%bmat = tpi_const * amat^{-1}  (see types_cell.f90)
+      amatinv = cell%bmat / tpi_const
+
+      L_sum = 0.0
+      DO iop = 1, sym%nop
+         mrot_r = REAL(sym%mrot(:, :, iop))
+         R_cart = MATMUL(cell%amat, MATMUL(mrot_r, amatinv))
+         det = sym%mrot(1,1,iop)*(sym%mrot(2,2,iop)*sym%mrot(3,3,iop) - sym%mrot(2,3,iop)*sym%mrot(3,2,iop)) &
+              -sym%mrot(1,2,iop)*(sym%mrot(2,1,iop)*sym%mrot(3,3,iop) - sym%mrot(2,3,iop)*sym%mrot(3,1,iop)) &
+              +sym%mrot(1,3,iop)*(sym%mrot(2,1,iop)*sym%mrot(3,2,iop) - sym%mrot(2,2,iop)*sym%mrot(3,1,iop))
+         L_sum = L_sum + det * MATMUL(R_cart, L)
+      END DO
+      L = L_sum / sym%nop
+   END SUBROUTINE priv_sym_clmom
 
    !TODO: this has to be added again...
    !IF(gfinp%n>0 .AND. PRESENT(greensfImagPart)) THEN

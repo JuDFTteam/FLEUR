@@ -40,6 +40,7 @@ add_library(juDFT STATIC
 ${judft_HDF}
 fpErrorDetection.c
 gpu_mem_usage.c
+mem_usage.c
 usage_data.F90
 logging.f90
 info.F90
@@ -63,7 +64,9 @@ if (JUDFT_USE_GPU)
 target_compile_definitions(juDFT PUBLIC CPP_GPU)
 if (JUDFT_USE_NVTX)
   target_compile_definitions(juDFT PUBLIC CPP_NVTX)
-endif() 
+  #nvtx.F90 calls into the NVTX library, so everything linking juDFT needs it
+  target_link_libraries(juDFT PUBLIC nvToolsExt)
+endif()
 endif()
 if (JUDFT_USE_MPI)
   target_compile_definitions(juDFT PUBLIC CPP_MPI)

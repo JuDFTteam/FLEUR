@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -12,7 +12,30 @@ MODULE m_hsmt_ab
 
 CONTAINS
 
-   SUBROUTINE hsmt_ab(sym,atoms,noco,nococonv,ilSpin,igSpin,n,na,cell,lapw,fjgj,abCoeffs,ab_size,l_nonsph,abclo,alo1,blo1,clo1)
+   !> Row count of one half of abCoeffs, i.e. ab_size *before* the final doubling.
+   !>
+   !> Exposed so that a caller can allocate and map abCoeffs itself
+   !> (abCoeffs(2*hsmt_ab_size(...), lapw%nv(igSpin))).  That matters for OpenACC:
+   !> if hsmt_ab does the `enter data` on its own dummy argument while the caller
+   !> does the matching `exit data delete`, the two name different descriptors, and
+   !> the one created here is never released -- it survives as a stale present-table
+   !> entry at a stack address that is later reused, so a subsequent `enter data` on
+   !> any aggregate overlapping it fails with "partially present".  Keeping both
+   !> halves in the caller's scope removes that asymmetry.
+   PURE INTEGER FUNCTION hsmt_ab_size(atoms, n, l_nonsph)
+      USE m_types_atoms
+      IMPLICIT NONE
+      TYPE(t_atoms), INTENT(IN) :: atoms
+      INTEGER, INTENT(IN)       :: n
+      LOGICAL, INTENT(IN)       :: l_nonsph
+
+      INTEGER :: lmax
+
+      lmax = MERGE(atoms%lnonsph(n), atoms%lmax(n), l_nonsph)
+      hsmt_ab_size = lmax*(lmax + 2) + 1
+   END FUNCTION hsmt_ab_size
+
+   SUBROUTINE hsmt_ab(sym,atoms,noco,nococonv,ilSpin,igSpin,n,na,cell,lapw,fjgj,abCoeffs,ab_size,l_nonsph,abclo,alo1,blo1,clo1,l_store)
       !! Construct the matching coefficients of the form:
       !! \begin{aligned}
       !! a_{l,m,p}^{\mu,\boldsymbol{G}}(\boldsymbol{k}) = e^{i \boldsymbol{K}\cdot\boldsymbol{\tau}_{\mu}}
@@ -49,6 +72,7 @@ CONTAINS
       USE m_ylm
       USE m_hsmt_fjgj
       USE m_matmul_dgemm
+      USE m_abcoeff_store
 
       TYPE(t_sym),      INTENT(IN)    :: sym
       TYPE(t_cell),     INTENT(IN)    :: cell
@@ -64,56 +88,99 @@ CONTAINS
       INTEGER,          INTENT(OUT)   :: ab_size
     !     ..
     !     .. Array Arguments ..
-      COMPLEX,          INTENT(INOUT) :: abCoeffs(:,:)
+      ! INTENT(INOUT), not (OUT): an INTENT(OUT) allocatable is deallocated on entry,
+      ! which would discard an array the caller allocated and already mapped.
+      COMPLEX, ALLOCATABLE, INTENT(INOUT) :: abCoeffs(:,:)
     !Optional arguments if abc coef for LOs are needed
       COMPLEX, INTENT(INOUT), OPTIONAL :: abclo(:, :, :, :)
       REAL,    INTENT(IN),    OPTIONAL :: alo1(:), blo1(:), clo1(:)
+    !Set this to .TRUE. to let the call take part in the optional abCoeffs storage
+    !(m_abcoeff_store). Only permitted if lapw/fjgj are the canonical (unprimed)
+    !basis AND the caller hands the result back via abcoeff_store_save with the
+    !same l_nonsph: the storage key cannot tell a q-shifted (lapwq/fjgjq) or
+    !otherwise primed set of coefficients apart from the canonical one. Defaults
+    !to .FALSE., i.e. no storage.
+      LOGICAL, INTENT(IN),    OPTIONAL :: l_store
 
       INTEGER :: np, k, l, ll1, m, lmax, nkvec, lo, lm, invsfct, lmMin, lmMax, ierr
       REAL    :: term, bmrot(3, 3)
       COMPLEX :: c_ph(MAXVAL(lapw%nv), MERGE(2, 1, noco%l_ss.OR.ANY(noco%l_unrestrictMT) &
                                                           & .OR.ANY(noco%l_spinoffd_ldau)))
-      LOGICAL :: l_apw, l_abclo
+      LOGICAL :: l_apw, l_abclo, l_skip_calc, l_useStore, l_caller_owns
 
       REAL,    ALLOCATABLE :: gkrot(:, :)
       COMPLEX, ALLOCATABLE :: ylm(:, :)
 
       l_abclo = PRESENT(abclo)
+      l_useStore = .FALSE.
+      IF (PRESENT(l_store)) l_useStore = l_store
       lmax = MERGE(atoms%lnonsph(n), atoms%lmax(n), l_nonsph)
       ab_size = lmax*(lmax+2) + 1
       ! TODO: replace APW+lo check (may actually be a broken trick) by something simpler
       ! l_apw=ALL(fjgj%gj==0.0)
       l_apw = .FALSE.
 
-      ! We skip the initialization for speed
-      ! abCoeffs=0.0
-      call timestart("init")
-      np = sym%invtab(sym%ngopr(na))
-      CALL lapw%phase_factors(igSpin, atoms%taual(:, na), nococonv%qss, c_ph(:, igSpin))
-      bmrot = TRANSPOSE(MATMUL(1.0 * sym%mrot(:, :, np), cell%bmat))
+      ! Allocate the output matching coefficients to their exact size, or retrieve
+      ! them from the optional storage (m_abcoeff_store). If valid stored
+      ! coefficients are returned -- and no LO coefficients are requested (abclo is
+      ! not cached) -- the computation below can be skipped entirely.
+      ! l_apw is .FALSE., so the array always needs 2*ab_size rows.
+      ! When the caller has already allocated (and mapped) abCoeffs it owns the whole
+      ! lifetime, including the `enter data`; do not touch either here.
+      l_caller_owns = ALLOCATED(abCoeffs)
+      IF (l_caller_owns) THEN
+         l_skip_calc = .FALSE.
+      ELSE
+         l_skip_calc = abcoeff_store_alloc(abCoeffs, 2*ab_size, lapw%nv(igSpin), lapw%nk, igSpin, ilSpin, na, &
+                                         & l_nonsph, l_useStore)
+      END IF
 
-      ALLOCATE(ylm((lmax+1)**2, lapw%nv(igSpin)), stat=ierr)
-      IF (ierr /= 0) CALL juDFT_error("Couldn't allocate ylm")
-      ALLOCATE(gkrot(3,lapw%nv(igSpin)), stat=ierr)
-      IF (ierr /= 0) CALL juDFT_error("Couldn't allocate gkrot")
+      if (l_caller_owns) then
+         continue  ! mapping is the caller's
+      else if (l_skip_calc.and..not.l_abclo) then
+         !$acc enter data copyin(abCoeffs)
+         ! Same ab_size convention as on the regular exit at the end of the routine.
+         IF (.NOT.l_apw) ab_size = ab_size*2
+         return !nothing to do, coefficients are already stored and copied to device
+      else if (l_skip_calc) then
+         ! Reused coefficients, but the LO coefficients (abclo) are not cached and
+         ! still have to be computed below. The abCoeffs part of the k-loop is
+         ! skipped in that case, so the cached host values have to be uploaded --
+         ! merely creating (uninitialised) device memory would leave garbage there.
+         !$acc enter data copyin(abCoeffs)
+      else
+         !$acc enter data create(abCoeffs)
+      end if
+      
+         ! We skip the initialization for speed
+         ! abCoeffs=0.0
+         call timestart("init")
+         np = sym%invtab(sym%ngopr(na))
+         CALL lapw%phase_factors(igSpin, atoms%taual(:, na), nococonv%qss, c_ph(:, igSpin))
+         bmrot = TRANSPOSE(MATMUL(1.0 * sym%mrot(:, :, np), cell%bmat))
 
-      ! Generate spherical harmonics
-      ! gkrot = matmul(bmrot, lapw%vk(:,:,igSpin))
-      ! These two lines should eventually move to the GPU:
-      !CALL dgemm("N","N", 3, lapw%nv(igSpin), 3, 1.0, bmrot, 3, lapw%vk(:,:,igSpin), 3, 0.0, gkrot, 3)
-      call blas_matmul(3,lapw%nv(igSpin),3,bmrot,lapw%vk(:,:,igspin),gkrot)
-      CALL ylm4_batched(lmax,gkrot,ylm)
-      call timestop("init")
-      call timestart("loop")
+         ALLOCATE(ylm((lmax+1)**2, lapw%nv(igSpin)), stat=ierr)
+         IF (ierr /= 0) CALL juDFT_error("Couldn't allocate ylm")
+         ALLOCATE(gkrot(3,lapw%nv(igSpin)), stat=ierr)
+         IF (ierr /= 0) CALL juDFT_error("Couldn't allocate gkrot")
+
+         ! Generate spherical harmonics
+         ! gkrot = matmul(bmrot, lapw%vk(:,:,igSpin))
+         ! These two lines should eventually move to the GPU:
+         !CALL dgemm("N","N", 3, lapw%nv(igSpin), 3, 1.0, bmrot, 3, lapw%vk(:,:,igSpin), 3, 0.0, gkrot, 3)
+         call blas_matmul(3,lapw%nv(igSpin),3,bmrot,lapw%vk(:,:,igspin),gkrot)
+         CALL ylm4_batched(lmax,gkrot,ylm)
+         call timestop("init")
+         call timestart("loop")
 #ifndef _OPENACC
       !$OMP PARALLEL DO DEFAULT(none) &
       !$OMP& SHARED(lapw,lmax,c_ph,igSpin,abCoeffs,fjgj,abclo,cell,atoms,sym) &
-      !$OMP& SHARED(l_abclo,alo1,blo1,clo1,ab_size,na,n,ilSpin,bmrot, ylm) &
+      !$OMP& SHARED(l_abclo,alo1,blo1,clo1,ab_size,na,n,ilSpin,bmrot, ylm,l_skip_calc) &
       !$OMP& PRIVATE(k,l,ll1,m,lm,term,invsfct,lo,nkvec) &
       !$OMP& PRIVATE(lmMin,lmMax)
 #else
       !$acc kernels present(abCoeffs) default(none)
-      abCoeffs(:,:)=0.0
+      if (.not.l_skip_calc) abCoeffs(:,:)=0.0
       !$acc end kernels
 #endif
       
@@ -123,6 +190,8 @@ CONTAINS
       !$acc present(abclo,alo1,blo1,clo1)&
       !$acc private(k,l,lm,invsfct,lo,term,lmMin,lmMax)  default(none)
       DO k = 1,lapw%nv(igSpin)
+         if (.not.l_skip_calc) then
+
          !$acc  loop vector private(l,lmMin,lmMax)
          DO l = 0,lmax
             lmMin = l*(l+1) + 1 - l
@@ -131,7 +200,7 @@ CONTAINS
             abCoeffs(ab_size+lmMin:ab_size+lmMax,k) = fjgj%gj(k,l,ilSpin,igSpin)*c_ph(k,igSpin) * CONJG(ylm(lmMin:lmMax, k))
          END DO
          !$acc end loop
-
+         endif
          IF (l_abclo) THEN
             ! Determine also the abc coeffs for LOs
             invsfct=MERGE(1,2,sym%invsat(na).EQ.0)
@@ -160,7 +229,7 @@ CONTAINS
       !$OMP END PARALLEL DO
 #endif
       call timestop("loop")
-
+   
 
       IF (.NOT.l_apw) ab_size=ab_size*2
    END SUBROUTINE hsmt_ab

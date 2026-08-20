@@ -314,6 +314,8 @@ CONTAINS
        CALL loddop(stars,vacuum,atoms,sphhar,input,sym,&
             iUnit,den%iter,den%mt,den%pw,den%vac)
 
+       CALL stars%fill_2nd_vac(vacuum,den%vac)
+
        ! read in additional data if l_noco and data is present
        IF ((archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const).AND.l_rhomatFile) THEN
           READ (iUnit,iostat=datend) (den%pw(k,3),k=1,stars%ng3)
@@ -506,13 +508,7 @@ CONTAINS
           END IF
        END IF
 
-       IF(vacuum%nvac.EQ.1) THEN
-          IF (sym%invs) THEN
-             den%vac(:,:,2,:) = CONJG(den%vac(:,:,1,:))
-          ELSE
-             den%vac(:,:,2,:) = den%vac(:,:,1,:)
-          END IF
-       END IF
+       CALL stars%fill_2nd_vac(vacuum,den%vac)
 
       if (any(noco%l_constrained).or.any(noco%l_fixedMoment)) THEN
          CALL writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
@@ -1029,7 +1025,7 @@ CONTAINS
 #endif
   END SUBROUTINE storeStructureIfNew
 
-  SUBROUTINE transform_by_moving_atoms(fmpi,stars,atoms,vacuum, cell, sym, sphhar,input ,noco,nococonv)
+  SUBROUTINE transform_by_moving_atoms(fmpi,stars,atoms,vacuum,cell,field,sym,sphhar,input,noco,nococonv)
     USE m_types
     USE m_constants
     USE m_qfix
@@ -1041,8 +1037,8 @@ CONTAINS
     TYPE(t_vacuum),INTENT(IN)   :: vacuum
     TYPE(t_sphhar),INTENT(IN)   :: sphhar
     TYPE(t_input),INTENT(IN)    :: input
-     
     TYPE(t_cell),INTENT(IN)     :: cell
+    TYPE(t_field),INTENT(IN)    :: field
     TYPE(t_noco),INTENT(IN)     :: noco
     TYPE(t_nococonv),INTENT(IN)     :: nococonv
     
@@ -1124,13 +1120,13 @@ CONTAINS
        SELECT CASE(input%qfix)
        CASE (0,1) !just qfix the density
           IF (fmpi%irank==0) WRITE(oUnit,*) "Using qfix to adjust density"
-          IF (fmpi%irank==0) CALL qfix(fmpi,stars,nococonv,atoms,sym,vacuum,sphhar,input,cell ,&
+          IF (fmpi%irank==0) CALL qfix(fmpi,stars,nococonv,atoms,sym,vacuum,sphhar,input,cell,field,&
                den,noco%l_noco,.FALSE.,.FALSE.,force_fix=.TRUE.,fix=fix)
        CASE(2,3)
-          IF (fmpi%irank==0) CALL qfix(fmpi,stars,nococonv,atoms,sym,vacuum,sphhar,input,cell ,&
+          IF (fmpi%irank==0) CALL qfix(fmpi,stars,nococonv,atoms,sym,vacuum,sphhar,input,cell,field,&
                den,noco%l_noco,.FALSE.,.FALSE.,force_fix=.TRUE.,fix=fix,fix_pw_only=.TRUE.)
        CASE(4,5)
-          IF (fmpi%irank==0) CALL fix_by_gaussian(shifts,atoms,nococonv,stars,fmpi,sym,vacuum,sphhar,input ,cell,noco,den)
+          IF (fmpi%irank==0) CALL fix_by_gaussian(shifts,atoms,nococonv,stars,fmpi,sym,vacuum,sphhar,input,cell,field,noco,den)
        CASE default
           CALL judft_error("Wrong choice of qfix in input")
        END SELECT

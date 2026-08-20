@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -23,11 +23,8 @@ MODULE m_types_mpimat
    ! These are now defined in t_mat base type!
    LOGICAL :: firstCopyCall = .true.
 
-#ifdef __INTEL_COMPILER
-   LOGICAL:: use_pdgemr2d=.true.
-#else
    LOGICAL:: use_pdgemr2d=.false.
-#endif         
+   LOGICAL:: use_fast_redist=.false.
 
    !<This data-type extends the basic t_mat for distributed matrices.
    !<
@@ -35,7 +32,13 @@ MODULE m_types_mpimat
    !<This can be used to perform scalapack calls on the matrix with little additional input.
    !<The copy procedure is overwritten from t_mat to enable also redistribution of the matrix.
    TYPE t_blacsdata
-      INTEGER:: no_use
+      INTEGER, POINTER :: no_use => null()       !> number of t_mpimat using the BLACS grid of this
+      !> descriptor. Every t_mpimat owns its own t_blacsdata (the descriptors may
+      !> differ, e.g. in the global matrix size), but several of them can name the
+      !> same BLACS context. They then share this reference count, so that the grid
+      !> is destroyed by whoever releases the last reference to it.
+      !> Invariant: an associated t_blacsdata always has an associated reference
+      !> count. Use priv_new_blacsdata to create one, never a bare ALLOCATE.
       INTEGER:: mpi_com                          !> mpi-communiator over which matrix is distributed
       INTEGER:: blacs_desc(dlen_)                !> blacs descriptor
       !> 1: =1
@@ -69,17 +72,19 @@ MODULE m_types_mpimat
       procedure   :: print_type => mpimat_print_type
       PROCEDURE   :: linear_problem => t_mpimat_lproblem
       PROCEDURE   :: is_column_cyclic
+      PROCEDURE   :: share_blacsgrid => mpimat_share_blacsgrid !<use the BLACS grid of another matrix
+      PROCEDURE   :: set_mpi_com => mpimat_set_mpi_com !<fix the communicator before the grid is known
 #ifndef __INTEL_COMPILER      
       FINAL :: finalize,finalize_1d,finalize_2d,finalize_3d
 #endif      
    END TYPE t_mpimat
 
-   PUBLIC t_blacsdata, t_mpimat, mingeselle
+   PUBLIC :: t_blacsdata, t_mpimat, mingeselle
 
 CONTAINS
    SUBROUTINE t_mpimat_lproblem(mat, vec)
       IMPLICIT NONE
-      CLASS(t_mpimat), INTENT(IN)   :: mat
+      CLASS(t_mpimat), INTENT(INOUT)   :: mat
       class(t_mat), INTENT(INOUT)   :: vec
 
       integer :: ipiv(mat%global_size1), info
@@ -175,7 +180,7 @@ CONTAINS
       if (present(res)) Then
          select type (res)
          type is (t_mpimat)
-            res%blacsdata = mat1%blacsdata
+            CALL res%share_blacsgrid(mat1)
             res%matsize1 = mat1%matsize1
             res%matsize2 = mat1%matsize2
             res%global_size1 = mat1%global_size1
@@ -401,7 +406,7 @@ CONTAINS
 
             CALL pdgeadd('t', mat1%global_size1, mat1%global_size2, 1.0, mat1%data_r, 1, 1, mat1%blacsdata%blacs_desc, 1.0, mat%data_r, 1, 1, mat%blacsdata%blacs_desc)
          ELSE
-            CALL pzgeadd('c', mat1%global_size1, mat1%global_size2, CMPLX(1.0, 0.0), mat1%data_c, 1, 1, mat1%blacsdata%blacs_desc, CMPLX(1.0, 0.0), mat%data_c, 1, 1, mat1%blacsdata%blacs_desc)
+            CALL pzgeadd('c', mat1%global_size1, mat1%global_size2, CMPLX(1.0, 0.0), mat1%data_c, 1, 1, mat1%blacsdata%blacs_desc, CMPLX(1.0, 0.0), mat%data_c, 1, 1, mat%blacsdata%blacs_desc)
 #endif
          END IF
          !Now multiply the diagonal of the matrix by 1/2
@@ -422,14 +427,18 @@ CONTAINS
       call timestop("mpimat_add_transpose")
    END SUBROUTINE mpimat_add_transpose
 
-   SUBROUTINE mpimat_copy(mat, mat1, n1, n2)
+   SUBROUTINE mpimat_copy(mat, mat1, n1, n2, m1, m2)
       IMPLICIT NONE
       CLASS(t_mpimat), INTENT(INOUT)::mat
       CLASS(t_mat), INTENT(IN)      ::mat1
       INTEGER, INTENT(IN) ::n1, n2
-      INTEGER :: irank, err
-
+      INTEGER, INTENT(IN), OPTIONAL :: m1, m2  !> offsets into source matrix
+      INTEGER :: irank, err, s1, s2
+      LOGICAL :: can_use_fast_redist
       call timestart("mpimat_copy")
+
+      s1 = 1; if (present(m1)) s1 = m1
+      s2 = 1; if (present(m2)) s2 = m2
 
       select type (mat1)
       type is (t_mpimat)
@@ -447,16 +456,23 @@ CONTAINS
          else
             use_pdgemr2d = .false.
          end if
+         use_fast_redist = judft_was_argument("-use_fast_redist")
       end if
       SELECT TYPE (mat1)
       TYPE IS (t_mpimat)
-         if (mat1%is_column_cyclic().and..not.mat%is_column_cyclic().and..not.use_pdgemr2d) THEN
+         can_use_fast_redist = mat1%is_column_cyclic().and..not.mat%is_column_cyclic().and.&
+                              (n1>=1).and.(n2>=1).and.&
+                              (n1+mat1%global_size1-1<=mat%global_size1).and.&
+                              (n2+mat1%global_size2-1<=mat%global_size2)
+         if (can_use_fast_redist.and..not.use_pdgemr2d.and.use_fast_redist) THEN
+            call cyclic_column_to_2Dblock_cyclic_fast(mat1,mat,n1,n2)
+         else if (can_use_fast_redist.and..not.use_pdgemr2d) then
             call cyclic_column_to_2Dblock_cyclic(mat1,mat,n1,n2)
          else
             IF (mat%l_real) THEN
-               CALL pdgemr2d(Mat1%global_size1, mat1%global_size2, mat1%data_r, 1, 1, mat1%blacsdata%blacs_desc, mat%data_r, n1, n2, mat%blacsdata%blacs_desc, mat1%blacsdata%blacs_desc(2))
+               CALL pdgemr2d(Mat1%global_size1, mat1%global_size2, mat1%data_r, s1, s2, mat1%blacsdata%blacs_desc, mat%data_r, n1, n2, mat%blacsdata%blacs_desc, mat1%blacsdata%blacs_desc(2))
             ELSE
-               CALL pzgemr2d(mat1%global_size1, mat1%global_size2, mat1%data_c, 1, 1, mat1%blacsdata%blacs_desc, mat%data_c, n1, n2, mat%blacsdata%blacs_desc, mat1%blacsdata%blacs_desc(2))
+               CALL pzgemr2d(mat1%global_size1, mat1%global_size2, mat1%data_c, s1, s2, mat1%blacsdata%blacs_desc, mat%data_c, n1, n2, mat%blacsdata%blacs_desc, mat1%blacsdata%blacs_desc(2))
             END IF
          endif   
       CLASS DEFAULT
@@ -549,45 +565,97 @@ CONTAINS
       CALL mat%copy(mat1, 1, 1)
    END SUBROUTINE mpimat_move
 
+   SUBROUTINE mpimat_share_blacsgrid(mat, templ)
+      !>Let mat use the BLACS grid of templ.
+      !!
+      !!mat gets its own copy of the descriptor, so that it may be adjusted (e.g. to
+      !!a different global matrix size), but the reference count of the grid stays
+      !!shared with templ. Both matrices have to be released, the grid is destroyed
+      !!by whichever of them is released last.
+      IMPLICIT NONE
+      CLASS(t_mpimat), INTENT(INOUT) :: mat
+      CLASS(t_mpimat), INTENT(IN)    :: templ
+
+      IF (.NOT. ASSOCIATED(templ%blacsdata)) &
+         CALL judft_bug("share_blacsgrid: the template matrix has no BLACS grid")
+      IF (.NOT. ASSOCIATED(templ%blacsdata%no_use)) &
+         CALL judft_bug("share_blacsgrid: the grid of the template matrix is not reference counted")
+
+      CALL priv_release_blacsdata(mat%blacsdata) !in case mat had a grid of its own
+      ALLOCATE (mat%blacsdata)
+      mat%blacsdata = templ%blacsdata !this associates no_use with the shared reference count
+      mat%blacsdata%no_use = mat%blacsdata%no_use + 1
+   END SUBROUTINE mpimat_share_blacsgrid
+
+   SUBROUTINE mpimat_set_mpi_com(mat, mpi_com)
+      !!This is for code that has to decide on the communicator earlier than on the
+      !!matrix size. The descriptor is marked as naming no BLACS grid, the grid is
+      !!set up by the later call to init.
+      IMPLICIT NONE
+      CLASS(t_mpimat), INTENT(INOUT) :: mat
+      INTEGER, INTENT(IN)            :: mpi_com
+
+      INTEGER :: com
+
+      com = mpi_com !mpi_com might be a component of the blacsdata released below
+      CALL priv_release_blacsdata(mat%blacsdata)
+      CALL priv_new_blacsdata(mat%blacsdata)
+      mat%blacsdata%mpi_com = com
+   END SUBROUTINE mpimat_set_mpi_com
+
+   SUBROUTINE priv_new_blacsdata(blacsdata)
+      !!Create a t_blacsdata that does not name a BLACS grid yet.
+      !!
+      !!This is the only place where a t_blacsdata is created, so that the reference
+      !!count of its grid always exists (see the no_use component of t_blacsdata).
+      !!blacs_desc(2)=-1 marks the descriptor as naming no grid, hence releasing it
+      !!before a grid was set up does not try to exit one.
+      IMPLICIT NONE
+      TYPE(t_blacsdata), POINTER, INTENT(OUT) :: blacsdata
+
+      ALLOCATE (blacsdata)
+      ALLOCATE (blacsdata%no_use)
+      blacsdata%no_use = 1
+      blacsdata%blacs_desc(2) = -1
+   END SUBROUTINE priv_new_blacsdata
+
+   SUBROUTINE priv_release_blacsdata(blacsdata)
+      !>Release one reference to a BLACS grid and discard the descriptor.
+      !!
+      !!The grid is only destroyed when the last t_mpimat using it is released.
+      !!Note that this has to be called explicitly (e.g. by free).
+      IMPLICIT NONE
+      TYPE(t_blacsdata), POINTER, INTENT(INOUT) :: blacsdata
+      INTEGER :: ierr
+
+      IF (.NOT. ASSOCIATED(blacsdata)) RETURN
+      IF (ASSOCIATED(blacsdata%no_use)) THEN
+         blacsdata%no_use = blacsdata%no_use - 1
+         IF (blacsdata%no_use < 1) THEN
+#ifdef CPP_SCALAPACK
+            IF (blacsdata%blacs_desc(2) /= -1) CALL BLACS_GRIDEXIT(blacsdata%blacs_desc(2), ierr)
+#endif
+            DEALLOCATE (blacsdata%no_use)
+         END IF
+      END IF
+      DEALLOCATE (blacsdata)
+   END SUBROUTINE priv_release_blacsdata
+
    SUBROUTINE finalize(mat)
       IMPLICIT NONE
       TYPE(t_mpimat), INTENT(INOUT) :: mat
-      INTEGER :: ierr
-      IF (ASSOCIATED(mat%blacsdata)) THEN
-         IF (mat%blacsdata%no_use > 1) THEN
-            mat%blacsdata%no_use = mat%blacsdata%no_use - 1
-            mat%blacsdata => null()
-         ELSE
-#ifdef CPP_SCALAPACK
-            if (mat%blacsdata%blacs_desc(2) /= -1) THEN
-               CALL BLACS_GRIDEXIT(mat%blacsdata%blacs_desc(2), ierr)
-               DEALLOCATE (mat%blacsdata)
-            endif   
-#endif
-         END IF
-      END IF
-      
+
+      CALL priv_release_blacsdata(mat%blacsdata)
    END SUBROUTINE finalize
 
    SUBROUTINE finalize_1d(mat)
       IMPLICIT NONE
 
       TYPE(t_mpimat), INTENT(INOUT) :: mat(:)
-      INTEGER                      :: i,ierr
+      INTEGER                      :: i
+
       DO i = 1, size(mat)
-         IF (ASSOCIATED(mat(i)%blacsdata)) THEN
-            IF (mat(i)%blacsdata%no_use > 1) THEN
-               mat(i)%blacsdata%no_use = mat(i)%blacsdata%no_use - 1
-               mat(i)%blacsdata => null()
-            ELSE
-#ifdef CPP_SCALAPACK
-               if (mat(i)%blacsdata%blacs_desc(2) /= -1) THEN
-                  CALL BLACS_GRIDEXIT(mat(i)%blacsdata%blacs_desc(2), ierr)
-                  DEALLOCATE (mat(i)%blacsdata)
-               endif   
-#endif
-            END IF
-         END IF
+         CALL priv_release_blacsdata(mat(i)%blacsdata)
       END DO
    END SUBROUTINE finalize_1d
 
@@ -595,23 +663,11 @@ CONTAINS
       IMPLICIT NONE
 
       TYPE(t_mpimat), INTENT(INOUT) :: mat(:, :)
-      INTEGER                      :: i, j,ierr
+      INTEGER                      :: i, j
 
       DO i = 1, size(mat, dim=1)
          DO j = 1, size(mat, dim=2)
-            IF (ASSOCIATED(mat(i,j)%blacsdata)) THEN
-               IF (mat(i,j)%blacsdata%no_use > 1) THEN
-                  mat(i,j)%blacsdata%no_use = mat(i,j)%blacsdata%no_use - 1
-                  mat(i,j)%blacsdata => null()
-               ELSE
-#ifdef CPP_SCALAPACK
-                  if (mat(i,j)%blacsdata%blacs_desc(2) /= -1) THEN
-                     CALL BLACS_GRIDEXIT(mat(i,j)%blacsdata%blacs_desc(2), ierr)
-                     DEALLOCATE (mat(i,j)%blacsdata)
-                  endif   
-#endif
-               END IF
-            END IF
+            CALL priv_release_blacsdata(mat(i,j)%blacsdata)
          END DO
       END DO
    END SUBROUTINE finalize_2d
@@ -619,24 +675,12 @@ CONTAINS
    SUBROUTINE finalize_3d(mat)
       IMPLICIT NONE
       TYPE(t_mpimat), INTENT(INOUT) :: mat(:, :, :)
-      INTEGER                      :: i, j, k, ierr
+      INTEGER                      :: i, j, k
 
       DO i = 1, size(mat, dim=1)
          DO j = 1, size(mat, dim=2)
             DO k = 1, size(mat, dim=3)
-               IF (ASSOCIATED(mat(i,j,k)%blacsdata)) THEN
-                  IF (mat(i,j,k)%blacsdata%no_use > 1) THEN
-                     mat(i,j,k)%blacsdata%no_use = mat(i,j,k)%blacsdata%no_use - 1
-                     mat(i,j,k)%blacsdata => null()
-                  ELSE
-#ifdef CPP_SCALAPACK
-                     if (mat(i,j,k)%blacsdata%blacs_desc(2) /= -1) THEN
-                        CALL BLACS_GRIDEXIT(mat(i,j,k)%blacsdata%blacs_desc(2), ierr)
-                        DEALLOCATE (mat(i,j,k)%blacsdata)
-                     endif   
-#endif
-                  END IF
-               END IF
+               CALL priv_release_blacsdata(mat(i,j,k)%blacsdata)
             END DO
          END DO
       END DO
@@ -645,23 +689,10 @@ CONTAINS
    SUBROUTINE mpimat_free(mat)
       IMPLICIT NONE
       CLASS(t_mpimat), INTENT(INOUT) :: mat
-      INTEGER :: ierr
-     
+
       IF (ALLOCATED(mat%data_r)) DEALLOCATE (mat%data_r)
       IF (ALLOCATED(mat%data_c)) DEALLOCATE (mat%data_c)
-      IF (ASSOCIATED(mat%blacsdata)) THEN
-         IF (mat%blacsdata%no_use > 1) THEN
-            mat%blacsdata%no_use = mat%blacsdata%no_use - 1
-            mat%blacsdata => null()
-         ELSE
-#ifdef CPP_SCALAPACK
-            if (mat%blacsdata%blacs_desc(2) /= -1) THEN
-               CALL BLACS_GRIDEXIT(mat%blacsdata%blacs_desc(2), ierr)
-               DEALLOCATE (mat%blacsdata)
-            endif   
-#endif
-         END IF
-      END IF
+      CALL priv_release_blacsdata(mat%blacsdata)
    END SUBROUTINE mpimat_free
 
    !>Initialization of the distributed matrix.
@@ -683,7 +714,9 @@ CONTAINS
       CALL mpi_comm_rank(MPI_COMM_WORLD, irank, ierr)
 
       call timestart("mpimat_init")
-      ALLOCATE (mat%blacsdata, stat=ierr)
+   IF (.NOT. (PRESENT(matsize1) .AND. PRESENT(matsize2) .AND. PRESENT(mpi_subcom) .AND. PRESENT(l_real) .AND. PRESENT(dist_type))) &
+      CALL judft_error("Optional arguments must be present in mpimat_init")
+      CALL priv_new_blacsdata(mat%blacsdata)
       if (mpi_subcom == MPI_COMM_NULL) Then
          mat%blacsdata%blacs_desc(2) = -1
          mat%global_size1 = matsize1
@@ -695,11 +728,8 @@ CONTAINS
          nby = priv_get_blocksize()
          IF (PRESENT(nb_x)) nbx = nb_x
          IF (PRESENT(nb_y)) nby = nb_y
-         IF (.NOT. (PRESENT(matsize1) .AND. PRESENT(matsize2) .AND. PRESENT(mpi_subcom) .AND. PRESENT(l_real) .AND. PRESENT(dist_type))) &
-            CALL judft_error("Optional arguments must be present in mpimat_init")
          mat%global_size1 = matsize1
          mat%global_size2 = matsize2
-         mat%blacsdata%no_use = 1
       end if
       CALL priv_create_blacsgrid(mpi_subcom, dist_type, matsize1, matsize2, nbx, nby, &
                                  mat%blacsdata, mat%matsize1, mat%matsize2)
@@ -725,16 +755,13 @@ CONTAINS
       INTEGER, INTENT(IN), OPTIONAL    :: global_size1, global_size2
       character(len=*), intent(in), optional :: mat_name
 
-      INTEGER::numroc
-      EXTERNAL::numroc
+      INTEGER, EXTERNAL :: numroc
 
       SELECT TYPE (templ)
       TYPE IS (t_mpimat)
          mat%l_real = templ%l_real
+         CALL mat%share_blacsgrid(templ)
          IF (PRESENT(global_size1) .AND. PRESENT(global_size2)) THEN
-            ALLOCATE (mat%blacsdata)
-            mat%blacsdata = templ%blacsdata
-            mat%blacsdata%no_use = mat%blacsdata%no_use + 1
             mat%blacsdata%blacs_desc(3) = global_size1
             mat%blacsdata%blacs_desc(4) = global_size2
             mat%global_size1 = global_size1
@@ -748,8 +775,6 @@ CONTAINS
             mat%matsize2 = templ%matsize2
             mat%global_size1 = templ%global_size1
             mat%global_size2 = templ%global_size2
-            mat%blacsdata => templ%blacsdata
-            mat%blacsdata%no_use = mat%blacsdata%no_use + 1
          END IF
          CALL mat%alloc()
 
@@ -767,7 +792,7 @@ CONTAINS
       INTEGER, INTENT(IN) :: m1, m2
       INTEGER, INTENT(INOUT)::nbc, nbr
       INTEGER, INTENT(IN) :: dist_type
-      type(t_blacsdata), INTENT(OUT)::blacsdata
+      type(t_blacsdata), INTENT(INOUT)::blacsdata
       INTEGER, INTENT(OUT):: local_size1, local_size2
 
 #ifdef CPP_SCALAPACK
@@ -981,7 +1006,7 @@ CONTAINS
             c_help_size = 0
 
             ! determine number of elements to send to other pe's
-            ! and calculate the dimensions of c_helpi
+            ! and calculate the dimensions of c_help
             ! rows of c_help correspond to columns of mat_in and vice versa
 
             DO ki = 1, mat_in%matsize2
@@ -1271,6 +1296,130 @@ CONTAINS
    end function
 
 #ifdef CPP_SCALAPACK
+   subroutine cyclic_column_to_2Dblock_cyclic_fast(mat,mat2d,offset1,offset2)
+      implicit none
+      class(t_mpimat),intent(in)   ::mat
+      class(t_mpimat),intent(inout)::mat2d
+      integer,intent(in),optional  ::offset1,offset2
+
+      integer, external :: indxl2g
+      integer :: o1, o2
+      integer :: ierr, irank, isize, i, j, n
+      integer :: np_row, np_col, my_row, my_col
+      integer :: mb, nb, rsrc, csrc
+      integer :: gi_src, gj_src, gi_dst, gj_dst
+      integer :: prow_dst, pcol_dst, rank_dst
+      integer :: li_dst, lj_dst, dummy
+      integer :: total_send, total_recv, pos
+      integer, allocatable :: map(:,:)
+      integer, allocatable :: send_counts(:), recv_counts(:)
+      integer, allocatable :: send_displ(:), recv_displ(:), cursor(:)
+      integer, allocatable :: send_i(:), send_j(:), recv_i(:), recv_j(:)
+      real, allocatable    :: send_r(:), recv_r(:)
+      complex, allocatable :: send_c(:), recv_c(:)
+
+      o1 = 1
+      if (present(offset1)) o1 = offset1
+      o2 = 1
+      if (present(offset2)) o2 = offset2
+
+      call MPI_COMM_SIZE(mat%blacsdata%mpi_com, isize, ierr)
+      call MPI_COMM_RANK(mat%blacsdata%mpi_com, irank, ierr)
+      call blacs_gridinfo(mat2d%blacsdata%blacs_desc(2), np_row, np_col, my_row, my_col)
+
+      mb = mat2d%blacsdata%blacs_desc(5)
+      nb = mat2d%blacsdata%blacs_desc(6)
+      rsrc = mat2d%blacsdata%blacs_desc(7)
+      csrc = mat2d%blacsdata%blacs_desc(8)
+
+      call generate_map_to_irank(np_row,np_col,my_row,my_col,irank,mat2d%blacsdata%blacs_desc(2),mat%blacsdata%mpi_com,map)
+
+      allocate(send_counts(isize), recv_counts(isize), send_displ(isize), recv_displ(isize), cursor(isize))
+      send_counts = 0
+
+      do j = 1, mat%matsize2
+         gj_src = indxl2g(j, mat%blacsdata%blacs_desc(6), mat%blacsdata%mycol, mat%blacsdata%blacs_desc(8), mat%blacsdata%npcol)
+         gj_dst = gj_src + o2 - 1
+         pcol_dst = mod((gj_dst-1)/nb + csrc, np_col)
+         do i = 1, mat%matsize1
+            gi_src = indxl2g(i, mat%blacsdata%blacs_desc(5), mat%blacsdata%myrow, mat%blacsdata%blacs_desc(7), mat%blacsdata%nprow)
+            gi_dst = gi_src + o1 - 1
+            prow_dst = mod((gi_dst-1)/mb + rsrc, np_row)
+            rank_dst = map(prow_dst, pcol_dst)
+            send_counts(rank_dst+1) = send_counts(rank_dst+1) + 1
+         end do
+      end do
+
+      call MPI_ALLTOALL(send_counts, 1, MPI_INTEGER, recv_counts, 1, MPI_INTEGER, mat%blacsdata%mpi_com, ierr)
+
+      send_displ(1) = 0
+      recv_displ(1) = 0
+      do n = 2, isize
+         send_displ(n) = send_displ(n-1) + send_counts(n-1)
+         recv_displ(n) = recv_displ(n-1) + recv_counts(n-1)
+      end do
+      total_send = send_displ(isize) + send_counts(isize)
+      total_recv = recv_displ(isize) + recv_counts(isize)
+
+      allocate(send_i(max(1,total_send)), send_j(max(1,total_send)))
+      allocate(recv_i(max(1,total_recv)), recv_j(max(1,total_recv)))
+      if (mat%l_real) then
+         allocate(send_r(max(1,total_send)), recv_r(max(1,total_recv)))
+      else
+         allocate(send_c(max(1,total_send)), recv_c(max(1,total_recv)))
+      end if
+
+      cursor = send_displ + 1
+      do j = 1, mat%matsize2
+         gj_src = indxl2g(j, mat%blacsdata%blacs_desc(6), mat%blacsdata%mycol, mat%blacsdata%blacs_desc(8), mat%blacsdata%npcol)
+         gj_dst = gj_src + o2 - 1
+         pcol_dst = mod((gj_dst-1)/nb + csrc, np_col)
+         do i = 1, mat%matsize1
+            gi_src = indxl2g(i, mat%blacsdata%blacs_desc(5), mat%blacsdata%myrow, mat%blacsdata%blacs_desc(7), mat%blacsdata%nprow)
+            gi_dst = gi_src + o1 - 1
+            prow_dst = mod((gi_dst-1)/mb + rsrc, np_row)
+            rank_dst = map(prow_dst, pcol_dst)
+            pos = cursor(rank_dst+1)
+            call infog1l(gi_dst, mb, np_row, prow_dst, rsrc, li_dst, dummy)
+            call infog1l(gj_dst, nb, np_col, pcol_dst, csrc, lj_dst, dummy)
+            send_i(pos) = li_dst
+            send_j(pos) = lj_dst
+            if (mat%l_real) then
+               send_r(pos) = mat%data_r(i, j)
+            else
+               send_c(pos) = mat%data_c(i, j)
+            end if
+            cursor(rank_dst+1) = pos + 1
+         end do
+      end do
+
+      call MPI_ALLTOALLV(send_i, send_counts, send_displ, MPI_INTEGER, recv_i, recv_counts, recv_displ, MPI_INTEGER, mat%blacsdata%mpi_com, ierr)
+      call MPI_ALLTOALLV(send_j, send_counts, send_displ, MPI_INTEGER, recv_j, recv_counts, recv_displ, MPI_INTEGER, mat%blacsdata%mpi_com, ierr)
+      if (mat%l_real) then
+         call MPI_ALLTOALLV(send_r, send_counts, send_displ, MPI_DOUBLE_PRECISION, recv_r, recv_counts, recv_displ, MPI_DOUBLE_PRECISION, mat%blacsdata%mpi_com, ierr)
+      else
+         call MPI_ALLTOALLV(send_c, send_counts, send_displ, MPI_DOUBLE_COMPLEX, recv_c, recv_counts, recv_displ, MPI_DOUBLE_COMPLEX, mat%blacsdata%mpi_com, ierr)
+      end if
+
+      if (mat%l_real) then
+         do n = 1, total_recv
+            mat2d%data_r(recv_i(n), recv_j(n)) = recv_r(n)
+         end do
+      else
+         do n = 1, total_recv
+            mat2d%data_c(recv_i(n), recv_j(n)) = recv_c(n)
+         end do
+      end if
+
+      if (allocated(send_r)) deallocate(send_r)
+      if (allocated(recv_r)) deallocate(recv_r)
+      if (allocated(send_c)) deallocate(send_c)
+      if (allocated(recv_c)) deallocate(recv_c)
+      deallocate(send_i, send_j, recv_i, recv_j)
+      deallocate(send_counts, recv_counts, send_displ, recv_displ, cursor)
+      if (allocated(map)) deallocate(map)
+   end subroutine
+
    subroutine cyclic_column_to_2Dblock_cyclic(mat,mat2d,offset1,offset2)
       use iso_c_binding
       implicit none 
@@ -1282,8 +1431,17 @@ CONTAINS
       INTEGER,ALLOCATABLE:: map(:,:)
       INTEGER,ALLOCATABLE:: row_map(:)
       INTEGER,ALLOCATABLE:: col_map(:)
+      INTEGER,ALLOCATABLE:: row_count(:),row_offset(:),row_perm(:)
+      REAL,ALLOCATABLE   :: buffer_r(:,:)
+      COMPLEX,ALLOCATABLE:: buffer_c(:,:)
       INTEGER            :: win_handle
       INTEGER:: ierr,blocksize,global_col,global_col2d,n_col2d,n,ir
+      INTEGER:: nbuf,ibuf
+
+      !Too many outstanding RMA operations slow down the MPI library considerably,
+      !so only a few columns are kept in flight (and never more than a few MB).
+      INTEGER,PARAMETER  :: MAX_BUFFER_COLUMN=16
+      INTEGER,PARAMETER  :: MAX_BUFFER_BYTE=4*1024*1024
 
       blocksize=mat2d%blacsdata%blacs_desc(5) !blocksize is assumed to be the same for both dimensions
       call MPI_COMM_SIZE(mat%blacsdata%mpi_com,isize,ierr)
@@ -1295,15 +1453,71 @@ CONTAINS
       !which row/column of processor grid contains the data
       row_map=get_vector_map(mat%global_size1,offset1,blocksize,np_row)
       col_map=get_vector_map(mat%global_size2,offset2,blocksize,np_col)
-      call create_RMA_win(mat2d,offset1,np_row,my_row,blocksize,mat2d%blacsdata%mpi_com,win_handle) 
+      !The rows going to one processor row are collected in a single contiguous
+      !segment of the send buffer, so that one mpi_put per processor row suffices
+      call get_row_segments(row_map,np_row,row_count,row_offset,row_perm)
+
+      !The buffers must not be overwritten before the mpi_put reading them has
+      !completed locally. Instead of completing every single put, the buffers of
+      !several columns are held in a ring which is flushed when it wraps around.
+      nbuf=MAX_BUFFER_BYTE/(MAX(mat%matsize1,1)*MERGE(8,16,mat%l_real))
+      nbuf=MAX(1,MIN(nbuf,MAX_BUFFER_COLUMN,mat%matsize2))
+      IF (mat%l_real) THEN
+         ALLOCATE(buffer_r(mat%matsize1,nbuf))
+      ELSE
+         ALLOCATE(buffer_c(mat%matsize1,nbuf))
+      ENDIF
+
+      call create_RMA_win(mat2d,offset1,np_row,my_row,blocksize,mat2d%blacsdata%mpi_com,win_handle)
+      call MPI_WIN_LOCK_ALL(0, win_handle, ierr)
       global_col=irank+1
+      ibuf=0
       DO n=1,mat%matsize2 !loop over all local columns
-         !first fence before all the commm
-         call send_column(mat,n,global_col,offset2,blocksize,np_col,col_map(global_col),row_map,map(:,col_map(global_col)),win_handle,irank)
+         ibuf=ibuf+1
+         IF (ibuf>nbuf) THEN !all buffers are in use, wait until they can be reused
+            call MPI_WIN_FLUSH_LOCAL_ALL(win_handle,ierr)
+            ibuf=1
+         ENDIF
+         call send_column(mat,n,global_col,offset2,blocksize,np_col,col_map(global_col),&
+                          row_count,row_offset,row_perm,map(:,col_map(global_col)),win_handle,&
+                          buffer_r,buffer_c,ibuf)
          global_col=global_col+isize !the next local column corresponds to this global column
       ENDDO
+      call MPI_WIN_UNLOCK_ALL(win_handle, ierr) !this completes all outstanding operations
       call mpi_win_free(win_handle,ierr)
    end subroutine
+
+   subroutine get_row_segments(row_map,np_row,row_count,row_offset,row_perm)
+      !For each processor row of the target grid, the rows it receives are stored
+      !as one contiguous segment of the send buffer. row_perm gives the position
+      !in that buffer for every row of the local column.
+      implicit none
+      integer,intent(in)              :: row_map(:) !processor row receiving a given row
+      integer,intent(in)              :: np_row
+      integer,allocatable,intent(out) :: row_count(:)  !rows per processor row
+      integer,allocatable,intent(out) :: row_offset(:) !start of the segments in the buffer
+      integer,allocatable,intent(out) :: row_perm(:)
+
+      integer:: n,r
+
+      ALLOCATE(row_count(0:np_row-1),row_offset(0:np_row-1),row_perm(SIZE(row_map)))
+
+      row_count=0
+      DO n=1,SIZE(row_map)
+         row_count(row_map(n))=row_count(row_map(n))+1
+      ENDDO
+      row_offset(0)=0
+      DO r=1,np_row-1
+         row_offset(r)=row_offset(r-1)+row_count(r-1)
+      ENDDO
+      !row_count is reused as a cursor here and ends up holding the counts again
+      row_count=0
+      DO n=1,SIZE(row_map)
+         r=row_map(n)
+         row_count(r)=row_count(r)+1
+         row_perm(n)=row_offset(r)+row_count(r)
+      ENDDO
+   END subroutine
 
    subroutine generate_map_to_irank(nprow,npcol,myrow,mycol,irank,ictxt,mpi_com,map)
       implicit none
@@ -1336,46 +1550,53 @@ CONTAINS
       ENDDO
    END function   
 
-   subroutine send_column(mat,n_col1D,n_col,offset2,blocksize,np_col,my_col,row_map,gridmap,win_handle,irank)
+   subroutine send_column(mat,n_col1D,n_col,offset2,blocksize,np_col,my_col,row_count,row_offset,&
+                          row_perm,gridmap,win_handle,buffer_r,buffer_c,ibuf)
       implicit none
       type(t_mpimat),intent(in)::mat
       integer,intent(in):: n_col1d,n_col   ! local column to send, global on sending side
-      INTEGER,intent(in):: offset2,blocksize,np_col,my_col,irank
-      integer,intent(in):: row_map(:)        ! mapping of the (local) index of the row to the processor row in the gridmap
+      INTEGER,intent(in):: offset2,blocksize,np_col,my_col
+      integer,intent(in):: row_count(0:)     ! number of rows going to each processor row in the gridmap
+      integer,intent(in):: row_offset(0:)    ! start of the corresponding segment in the send buffer
+      integer,intent(in):: row_perm(:)       ! position of a row of the local column in the send buffer
       integer,intent(in):: gridmap(0:)       ! mapping of the processor to the MPI irank
       integer,intent(in):: win_handle
+      real,allocatable,intent(inout)   :: buffer_r(:,:) ! ring of send buffers, only ibuf is touched here
+      complex,allocatable,intent(inout):: buffer_c(:,:)
+      integer,intent(in):: ibuf
 
-      integer:: myrow,send_size,ierr,n,nn
+      integer:: myrow,send_size,ierr,n,nn,i
       integer(MPI_ADDRESS_KIND)::disp
-      integer:: req(size(gridmap))
-
-      real,allocatable:: buffer_r(:)
-      complex,allocatable:: buffer_c(:)
-      if (mat%l_real) THEN
-         allocate(buffer_r(mat%matsize1))
-      else
-         allocate(buffer_c(mat%matsize1))
-      endif   
 
       !First find the local column on the recieving processors
       call infog1l(n_col+offset2-1,blocksize,np_col,my_col,0,n,nn)
       disp=n-1
 
+      !Sort the column into the buffer such that the data for each processor row
+      !of the target grid ends up in one contiguous segment
+      if (mat%l_real) THEN
+         DO i=1,mat%matsize1
+            buffer_r(row_perm(i),ibuf)=mat%data_r(i,n_col1d)
+         ENDDO
+      else
+         DO i=1,mat%matsize1
+            buffer_c(row_perm(i),ibuf)=mat%data_c(i,n_col1d)
+         ENDDO
+      endif
+
       DO myrow=0,size(gridmap)-1
-         send_size=count(row_map==myrow)
+         send_size=row_count(myrow)
+         if (send_size==0) cycle
          if (mat%l_real) THEN
-            buffer_r(1:send_size)=pack(mat%data_r(:,n_col1d),row_map==myrow)
-            CALL MPI_WIN_LOCK(MPI_LOCK_SHARED, gridmap(myrow), 0, win_handle, ierr)
-            call mpi_put(buffer_r,send_size,MPI_DOUBLE_PRECISION,gridmap(myrow),disp,send_size,MPI_DOUBLE_PRECISION,win_handle,ierr)
-            call MPI_WIN_UNLOCK(gridmap(myrow), win_handle, ierr)
+            call mpi_put(buffer_r(row_offset(myrow)+1,ibuf),send_size,MPI_DOUBLE_PRECISION,gridmap(myrow),disp,send_size, &
+                         MPI_DOUBLE_PRECISION,win_handle,ierr)
          else
-            buffer_c(1:send_size)=pack(mat%data_c(:,n_col1d),row_map==myrow)
-            CALL MPI_WIN_LOCK(MPI_LOCK_SHARED, gridmap(myrow), 0, win_handle, ierr)
-            call mpi_put(buffer_c,send_size,MPI_DOUBLE_COMPLEX,gridmap(myrow),disp,send_size,MPI_DOUBLE_complex,win_handle,ierr)
-            call MPI_WIN_UNLOCK(gridmap(myrow), win_handle, ierr)
-         endif   
+            call mpi_put(buffer_c(row_offset(myrow)+1,ibuf),send_size,MPI_DOUBLE_COMPLEX,gridmap(myrow),disp,send_size, &
+                         MPI_DOUBLE_COMPLEX,win_handle,ierr)
+         endif
       ENDDO
-      
+      !The caller completes these operations before the buffer is reused
+
    END subroutine
    
    subroutine create_RMA_win(mat,offset1,np_row,my_row,blocksize,mpi_comm,win_handle)
@@ -1407,8 +1628,6 @@ CONTAINS
 
       
    END subroutine
-
-   
 
   
 #endif

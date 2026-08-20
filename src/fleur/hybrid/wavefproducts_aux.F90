@@ -49,20 +49,15 @@ CONTAINS
       call timestart("wavef_IS_FFT")
       max_igptm = mpdata%n_g(iq)
 
+      ! 2*rkmax covers the product of two wave functions, gcutm the mixed-basis
+      ! G vectors whose coefficients are read off further down; together they are
+      ! the convolution reach needed from ustep.
       gcutoff = (2*fi%input%rkmax + fi%mpinp%g_cutoff) * fi%hybinp%fftcut
       inv_vol = 1/sqrt(fi%cell%omtil)
       psize = bandof - bandoi + 1
-      !this is for the exact result. Christoph recommend 2*gmax+gcutm for later
-      if (2*fi%input%rkmax + fi%mpinp%g_cutoff > fi%input%gmax) then
-         write (*, *) "WARNING: not accurate enough: 2*kmax+gcutm >= fi%input%gmax"
-         !call juDFT_error("not accurate enough: 2*kmax+gcutm >= fi%input%gmax")
-      endif
 
       call stepf%init(fi%cell, fi%sym, gcutoff)
-      block
-         type(t_cell)         :: cell !unused 
-         call stepf%putfieldOnGrid(stars, stars%ustep)
-      end block
+      call stepf%putfieldOnGrid(stars, stars%ustep)
       call fft%init(stepf%dimensions, .false., batch_size=1, l_gpu=.True.)
       !$acc data copyin(stepf, stepf%grid, stepf%gridlength)
          ! after we transform psi_k*stepf*psi_kqpt back  to 
@@ -134,7 +129,7 @@ CONTAINS
 !            call timestop("alloc&init")
 
             !$acc data copyin(z_k, z_k%l_real, z_k%data_r, z_k%data_c, lapw, lapw%nv, lapw%gvec)&
-            !$acc      copyin(hybdat, hybdat%nbasp, g_ptr, grid, grid%dimensions, jsp)&
+            !$acc      copyin(hybdat, hybdat%n_mt, g_ptr, grid, grid%dimensions, jsp)&
             !$acc      create(psi_k, prod)
 #ifndef _OPENACC
                !$OMP DO
@@ -168,7 +163,7 @@ CONTAINS
                      do iob = 1, psize
                         !$acc loop independent
                         DO igptm = 1, max_igptm
-                           cprod%data_r(hybdat%nbasp + igptm, iob + (iband - 1)*psize) = real(prod(g_ptr(igptm), iob))
+                           cprod%data_r(hybdat%n_mt + igptm, iob + (iband - 1)*psize) = real(prod(g_ptr(igptm), iob))
                         enddo
                      enddo
                      !$acc end kernels
@@ -178,7 +173,7 @@ CONTAINS
                      do iob = 1, psize
                         !$acc loop independent
                         DO igptm = 1, max_igptm
-                           cprod%data_c(hybdat%nbasp + igptm, iob + (iband - 1)*psize) = prod(g_ptr(igptm), iob)
+                           cprod%data_c(hybdat%n_mt + igptm, iob + (iband - 1)*psize) = prod(g_ptr(igptm), iob)
                         enddo
                      enddo
                      !$acc end kernels

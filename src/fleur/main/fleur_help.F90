@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -57,6 +57,7 @@ CONTAINS
     CALL print_argument("-diag")
     CALL print_argument("-eig")
     CALL print_argument("-disable_progress_thread")
+    CALL print_argument("-abcoeff_store")
     WRITE(*,'(a)')""
     WRITE(*,'(a)')"Options useful for debugging:"
     CALL print_argument("-warn_only")
@@ -125,7 +126,9 @@ CONTAINS
          )
     CALL new_argument(0,"-serial_diag","Use serial diagonalization in parallel code","")
     CALL new_argument(0,"-disable_progress_thread","Do not use progress_thread","")
+    CALL new_argument(0,"-abcoeff_store","Cache and reuse the LAPW matching coefficients (abCoeffs) computed in hsmt_ab","")
     CALL new_argument(0,"-use_scalapack_redist","Use Scalapack for redistributing the matices","")   
+    CALL new_argument(0,"-use_fast_redist","Use specialized fast row-cyclic to 2D redistribution in mpimat_copy","")
     !Debugging
     CALL new_argument(0,"-warn_only","Continue execution after a warning message","")
     CALL new_argument(0,"-trace","Try to generate a stacktrace in case of an error","")

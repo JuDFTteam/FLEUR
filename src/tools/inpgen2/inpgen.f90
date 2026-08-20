@@ -48,7 +48,7 @@ PROGRAM inpgen
   USE m_types_mpinp
   USE m_constants
   USE m_types_xml
-  USE m_types_juPhon
+  USE m_types_dfpt
   use m_make_sym
   USE m_types_profile
 
@@ -82,7 +82,7 @@ PROGRAM inpgen
       TYPE(t_gfinp)    :: gfinp
       TYPE(t_hub1inp)  :: hub1inp
       TYPE(t_enparaXML):: enparaxml
-      TYPE(t_juPhon)   :: juPhon
+      TYPE(t_dfpt)   :: dfpt
       TYPE(t_profile)  :: profile
 
       INTEGER            :: idum, kptsUnit, inpOldUnit, ios, inpgenIUnit
@@ -347,7 +347,7 @@ PROGRAM inpgen
          INQUIRE(file=filename,exist=l_exist)
          IF(l_exist) CALL system('mv '//trim(filename)//' '//trim(filename)//'_old')
          CALL w_inpxml(&
-              atoms,vacuum,input,stars,sliceplot,forcetheo,banddos, juPhon,&
+              atoms,vacuum,input,stars,sliceplot,forcetheo,banddos, dfpt,&
               cell,sym,xcpot,noco ,mpinp,hybinp,kpts,kptsSelection,enpara,gfinp,&
               hub1inp,l_explicit,l_include,filename,filename_add)
          if (.not.l_include(2)) CALL sym%print_XML(99,TRIM(filename_add)//"sym.xml")

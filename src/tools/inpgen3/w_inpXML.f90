@@ -18,7 +18,7 @@ MODULE m_winpXML
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 CONTAINS
    SUBROUTINE w_inpXML( &
-      atoms, vacuum, input, stars, sliceplot, forcetheo, banddos, juPhon, &
+      atoms, vacuum, input, stars, sliceplot, forcetheo, banddos, dfpt, &
       cell, sym, xcpot, noco,   mpinp, hybinp, kptsArray, kptsSelection, enpara, &
       gfinp, hub1inp, l_explicitIn, l_includeIn, filename, add_filename)
  
@@ -41,7 +41,7 @@ CONTAINS
       USE m_types_noco
       use m_types_enparaxml
       USE m_types_forcetheo
-      USE m_types_juPhon
+      USE m_types_dfpt
 
       USE m_juDFT
       USE m_constants
@@ -63,7 +63,7 @@ CONTAINS
       TYPE(t_hybinp), INTENT(IN)   :: hybinp
       TYPE(t_cell), INTENT(IN)     :: cell
       TYPE(t_banddos), INTENT(IN)  :: banddos
-      TYPE(t_juPhon), INTENT(IN)   :: juPhon
+      TYPE(t_dfpt), INTENT(IN)   :: dfpt
       TYPE(t_sliceplot), INTENT(IN):: sliceplot
       CLASS(t_xcpot), INTENT(IN)   :: xcpot
       TYPE(t_noco), INTENT(IN)     :: noco
@@ -163,7 +163,7 @@ CONTAINS
       WRITE (fileNum, 110) fr(input%rkmax), fr(input%gmax), fr(xcpot%gmaxxc), input%gw_neigd
 
 !      <scfLoop itmax="9" maxIterBroyd="99" imix="Anderson" alpha="0.05" precondParam="0.0" spinf="2.00"/>
-120   FORMAT('      <scfLoop itmax="', i0, '" minDistance="', a, '" maxIterBroyd="', i0, '" imix="', a, '" alpha="', a, '" precondParam="', a, '" spinf="', a, '"/>')
+120   FORMAT('      <scfLoop itmax="', i0, '" minDistance="', a, '" maxIterBroyd="', i0, '" imix="', a, '" alpha="', a, '" precondParam="', a, '" spinf="', a, '" sdNocoIR="', l1, '"/>')
       SELECT CASE (input%imix)
       CASE (1)
          mixingScheme = 'straight'
@@ -178,7 +178,7 @@ CONTAINS
       CASE DEFAULT
          mixingScheme = 'errorUnknownMixing'
       END SELECT
-      WRITE (fileNum, 120) input%itmax, fr(input%minDistance), input%maxiter, TRIM(mixingScheme), fr(input%alpha), fr(input%preconditioning_param), fr(input%spinf)
+      WRITE (fileNum, 120) input%itmax, fr(input%minDistance), input%maxiter, TRIM(mixingScheme), fr(input%alpha), fr(input%preconditioning_param), fr(input%spinf), input%sdNocoIR
 
 !      <coreElectrons ctail="T" frcor="F" kcrel="0" coretail_lmax="0" l_core_confpot="T"/>
 130   FORMAT('      <coreElectrons ctail="', l1, '" frcor="', l1, '" kcrel="', i0, '" coretail_lmax="', i0, '"/>')
@@ -503,6 +503,9 @@ WRITE (fileNum, 242) fr(1.0)
             loType = 'SCLO'
             IF (n .LT. 0) THEN
                loType = 'HELO'
+            END IF
+            IF (atoms%l_relLO(ilo, iAtomType)) THEN
+               loType = 'relLO'
             END IF
             n = ABS(n)
 324         FORMAT('         <lo type="', a, '" l="', i0, '" n="', i0, '" eDeriv="', i0, '"/>')

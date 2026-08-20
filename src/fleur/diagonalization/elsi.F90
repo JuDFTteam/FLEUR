@@ -1,11 +1,12 @@
 !-------------------------------------------------------------------------------
-! Copyright (c) 2023 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 module m_elsi
    use m_types_solver
+   implicit none
 
    type, extends(t_solver)::t_solver_elsi
    contains
@@ -16,8 +17,8 @@ module m_elsi
 contains
 
    function get_solver_elsi() result(solver)
-      type(t_solver_elsi), pointer::solver
-      allocate (solver)
+      class(t_solver), allocatable :: solver
+      allocate (t_solver_elsi :: solver)
       solver%name = "elsi"
 #ifdef CPP_ELSI
       solver%available = .true.
@@ -31,6 +32,7 @@ contains
       solver%single_precision = .false.
       solver%transform = .false.
       solver%GPU = .false.
+      solver%use_sp = .false.
    end function
 
    subroutine elsi_gev(self, hmat, smat, ne, eig, zmat, ikpt)
@@ -55,7 +57,7 @@ contains
 #ifdef CPP_ELSI
       !...  Local variables
       !
-      integer           :: blk, nev, myid, np, ierr, i
+      integer           :: blk
       integer, parameter :: BLACS_DENSE = 0
       type(elsi_handle) :: eh
       class(t_mat), allocatable :: evec
@@ -111,7 +113,7 @@ contains
          call elsi_ev_complex(eh, hmat%data_c, smat%data_c, eig_tmp, evec%data_c)
       end if
       call timestop("elsi_ev")
-      call timestart("redistribute")
+      call timestart("set output")
       !Copy data into correct data structures
       eig = eig_tmp(:size(eig))
       select type (evec)
@@ -125,21 +127,12 @@ contains
          end if
       type IS (t_mpimat)
          allocate (t_mpimat::zmat)
-         call zmat%init(evec%l_real, evec%global_size1, evec%global_size1, evec%blacsdata%mpi_com, MPIMAT_ROWCYCLIC)
+         call zmat%init(evec)
          call zmat%copy(evec, 1, 1)
-         !determine ev assigned to this rank
-         nev = ne
-         ne = 0
-         call MPI_COMM_RANK(evec%blacsdata%mpi_com, myid, ierr)
-         call MPI_COMM_SIZE(evec%blacsdata%mpi_com, np, ierr)
-         do i = myid + 1, nev, np
-            ne = ne + 1
-            !   eig(ne)=eigenvalues(i)
-         end do
 
       end select
       call evec%free()
-      call timestop("redistribute")
+      call timestop("set output")
       call elsi_finalize(eh)
       call timestop("ELSI")
 
