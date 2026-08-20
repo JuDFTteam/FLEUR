@@ -59,8 +59,6 @@ module m_magmoments
            elseif(present(den)) THEN
               CALL intgr3(den%mt(:,0,iType,1),atoms%rmsh(:,iType),atoms%dx(iType),atoms%jri(iType),up)
               CALL intgr3(den%mt(:,0,iType,2),atoms%rmsh(:,iType),atoms%dx(iType),atoms%jri(iType),down)
-              print*,"up",up
-              print*,"down",down
               up=up*sfp_const;down=down*sfp_const
            endif   
            off_diag=0.0
@@ -184,7 +182,6 @@ module m_magmoments
            write(oUnit,'(i6,1x,f9.6," | ",5(f9.6,1x)," |    ---       ---    ",f9.6,"    ---          ---           ",a)') &
             itype,sqrt(dot_product(magmom(1:3),magmom(1:3))),magmom,alpha,beta,magmomL(3),grepstring
         else
-           print*,"Im here"
            write(oUnit,'(i6,1x,f9.6," |    ---       ---       ---       ---         ---   |    ---       ---       ---       ---          ---           ",a)') &
            itype,magmom(3),grepstring
         endif
