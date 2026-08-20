@@ -303,12 +303,9 @@ CONTAINS
          l_metal = ANY(results%w_iks*2.0/fi%input%jspins>1e-6.AND.results%w_iks*2.0/fi%input%jspins<1.0-1e-6)
 
          CALL timestart("Fermi energy and occupation derivative")
-         !print*,"IMhere"
-         print*,"results%tkb_loc",results%tkb_loc
-         IF (norm2(bqpt)<1e-8.AND.l_metal) THEN
-            print*,"Im calculating fermie"
+         
+         IF (norm2(bqpt)<1e-8 .and. l_metal) THEN ! l_metal to be removed
             CALL dfpt_fermie(fmpi,fi%kpts,fi%input,fi%noco,results,results1)
-            !stop
          ELSE
             results1%ef = 0.0
             results1%w_iks = 0.0

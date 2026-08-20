@@ -307,7 +307,7 @@ CONTAINS
     LOGICAL :: do_dfpt
 
     do_dfpt = .FALSE.
-    IF (PRESENT(l_dfpt)) do_dfpt = l_dfpt
+    IF (PRESENT(l_dfpt)) do_dfpt = l_dfpt !remove
     CALL init_potden_simple(pd,stars%ng3,atoms%jmtd,atoms%msh,sphhar%nlhd,atoms%ntype,&
          atoms%n_denmat,atoms%n_vPairs,jspins,noco%l_noco,noco%l_mperp,potden_type,&
          vacuum%nmzd,vacuum%nmzxyd,stars%ng2,do_dfpt)

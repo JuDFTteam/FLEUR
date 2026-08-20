@@ -157,12 +157,6 @@ CONTAINS
             neig   = MINVAL(results%neig(:,jsp))
             efermi = results%ef
 
-            !$OMP parallel do default(none) &
-            !$OMP shared(kpts,nc,neig,vol,input,results,results1,jsp,efermi) &
-            !$OMP shared(crossterm_acc,sumdwdeps_acc) &
-            !$OMP private(itet,iband,etetra,icorn,ikptTarget,sumdwdeps,crossterm) &
-            !$OMP private(j,etetraP,etetraM,dwdeps) &
-            !$OMP collapse(2)
             DO itet = 1, kpts%ntet
                DO iband = 1, neig
 
@@ -187,14 +181,12 @@ CONTAINS
                         crossterm = crossterm + dwdeps * results1%eig(iband,kpts%ntetra(j,itet),jsp)
                      END DO
 
-                     !$OMP critical
                      crossterm_acc(iband,ikptTarget,jsp) = crossterm_acc(iband,ikptTarget,jsp) + crossterm
                      sumdwdeps_acc(iband,ikptTarget,jsp) = sumdwdeps_acc(iband,ikptTarget,jsp) + sumdwdeps
-                     !$OMP end critical
+
                   END DO
                END DO
             END DO
-            !$OMP end parallel do
          END DO
 
          ef_num = 0.0
