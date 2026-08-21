@@ -48,59 +48,26 @@ CONTAINS
     CLOSE(iu)
   END FUNCTION melem_read_kset
 
-  ! Write kpts_interpol for a generated output domain (plane/grid). For an explicit
-  ! <path file="..">, copy that file to kpts_interpol; legacy/default path uses the
-  ! existing kpts_interpol as-is. Rank-0 file I/O only.
-  SUBROUTINE melem_write_domain_kpts(this, kind)
+  ! Write domain idom's k-set as kpts_interpol. There is no domain kind to dispatch on:
+  ! every one is a named kPointList, so the index is all this needs. Rank-0 file I/O only,
+  ! which is also the only place the k-sets exist.
+  SUBROUTINE melem_write_domain_kpts(this, idom)
     TYPE(t_melem_domains), INTENT(IN) :: this
-    CHARACTER(LEN=*), INTENT(IN) :: kind
-    INTEGER :: i, j, k, iu, np
-    REAL :: t1, t2, kf(3)
-    LOGICAL :: lex2
-    np = 0
-    SELECT CASE (TRIM(kind))
-    CASE ('path', 'legacy')
-      ! restore the user's original kpts_interpol if a generated (plane/grid) domain overwrote it
-      INQUIRE(file='.kpts_interpol_userbak', exist=lex2)
-      IF (lex2) CALL melem_shell('cp -f .kpts_interpol_userbak kpts_interpol')
-      ! <path listName=".."> : write the (optionally subdivided) named list as kpts_interpol.
-      ! Takes precedence over @file; path_kpts was filled from kpts.xml in read_xml.
-      IF (TRIM(kind) == 'path' .AND. this%path_kset%nkpt > 0) THEN
-        OPEN(newunit=iu, file='kpts_interpol', status='replace')
-        WRITE(iu,'(i0)') this%path_kset%nkpt
-        DO i = 1, this%path_kset%nkpt
-          WRITE(iu,'(3(f18.12,1x))') this%path_kset%bk(:, i)
-        END DO
-        CLOSE(iu)
-        RETURN
-      END IF
-      ! explicit <path file="..">: use that file as the k-list (default 'kpts_interpol' -> no-op)
-      IF (TRIM(kind) == 'path' .AND. TRIM(this%path_file) /= 'kpts_interpol') THEN
-        INQUIRE(file=TRIM(this%path_file), exist=lex2)
-        IF (.NOT. lex2) CALL juDFT_error('wannierlib: <path>/@file "'//TRIM(this%path_file)//'" not found', &
-                                         calledby='melem_write_domain_kpts')
-        CALL melem_shell('cp -f '//TRIM(this%path_file)//' kpts_interpol')
-      END IF
-      RETURN
-    CASE ('plane')
-      IF (this%plane_kset%nkpt > 0) THEN     ! <plane listName=".."/>: use the named list as-is
-        OPEN(newunit=iu, file='kpts_interpol', status='replace')
-        WRITE(iu,'(i0)') this%plane_kset%nkpt
-        DO i = 1, this%plane_kset%nkpt
-          WRITE(iu,'(3(f18.12,1x))') this%plane_kset%bk(:, i)
-        END DO
-        CLOSE(iu)
-      END IF
-    CASE ('grid')
-      IF (this%grid_kset%nkpt > 0) THEN      ! <grid listName=".."/>: use the named list as-is
-        OPEN(newunit=iu, file='kpts_interpol', status='replace')
-        WRITE(iu,'(i0)') this%grid_kset%nkpt
-        DO i = 1, this%grid_kset%nkpt
-          WRITE(iu,'(3(f18.12,1x))') this%grid_kset%bk(:, i)
-        END DO
-        CLOSE(iu)
-      END IF
-    END SELECT
+    INTEGER, INTENT(IN) :: idom
+    INTEGER :: i, iu, np
+
+    IF (.NOT. ALLOCATED(this%kset)) CALL juDFT_bug( &
+      'melem_write_domain_kpts: called where the k-sets do not exist (off rank 0?)')
+    np = this%kset(idom)%nkpt
+    IF (np <= 0) CALL juDFT_error('melem_write_domain_kpts: domain has an empty k-set', &
+                                  calledby='melem_write_domain_kpts')
+
+    OPEN(newunit=iu, file='kpts_interpol', status='replace')
+    WRITE(iu,'(i0)') np
+    DO i = 1, np
+      WRITE(iu,'(3(f18.12,1x))') this%kset(idom)%bk(:, i)
+    END DO
+    CLOSE(iu)
   END SUBROUTINE melem_write_domain_kpts
 
   ! Rename this domain's operator output files bands_wann_<x>.dat -> bands_wann_<x><suffix>.dat

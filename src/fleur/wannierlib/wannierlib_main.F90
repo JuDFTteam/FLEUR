@@ -122,8 +122,7 @@ CONTAINS
                         this%op_r_name, this%op_name, this%op_total)
       CALL manifold%init(this%num_bands, this%num_wann, this%dis_win_min, this%dis_win_max, &
                          this%min_band, this%max_band)
-      CALL domains%init(this%l_dom_path, this%l_dom_plane, this%l_dom_grid, this%path_file, &
-                        this%path_kset, this%plane_kset, this%grid_kset)
+      CALL domains%init(this%n_domains, this%dom_kset, this%dom_suffix)
 
       CALL melem%init(request, manifold, atoms, input, kpts, fmpi, distk, l_wannierlib_spinors)
       CALL melem%calc(request, manifold, atoms, input, sym, cell, noco, nococonv, kpts, &

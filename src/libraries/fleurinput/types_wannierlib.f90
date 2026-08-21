@@ -29,27 +29,22 @@ MODULE m_types_wannierlib
 
     ! --- opt-in output domains (<path>/<plane>/<grid> children of <interpolation>) ---
     ! Each declared domain interpolates the operators on its own k-set and writes
-    ! bands_wann_*[_plane|_grid].dat. If NONE is declared, the legacy single-pass
-    ! behaviour (read kpts_interpol, unsuffixed output) is used -> byte-identical.
-    LOGICAL :: l_dom_path  = .FALSE.       ! <path/>  1D band path (from path_file)
-    LOGICAL :: l_dom_plane = .FALSE.       ! <plane/> 2D plane origin + i*v1 + j*v2
-    LOGICAL :: l_dom_grid  = .FALSE.       ! <grid/>  3D uniform full-BZ mesh
-    CHARACTER(LEN=64) :: path_file = 'kpts_interpol'
+    ! bands_wann_*[_plane|_grid].dat. Each requires a listName naming a kPointList, so
+    ! declaring none is an error rather than a silent no-op.
+    !> One entry per <domain>. n_domains is broadcast because it sets the domain loop count
+    !> on every rank; the k-sets and suffixes are NOT, because only rank 0 writes the k-set
+    !> file and renames the outputs. Nothing outside rank 0 may read or validate them.
+    INTEGER :: n_domains = 0
+    TYPE(t_kpts), ALLOCATABLE :: dom_kset(:)
+    CHARACTER(LEN=64), ALLOCATABLE :: dom_suffix(:)
     ! <path listName=".." npts="F"/>: reuse an existing named kPointList from kpts.xml
     ! (e.g. the band path "path-2") as the interpolation k-set, subdividing each segment
     ! into F pieces (npts<=1 -> use the list points as-is). listName takes precedence over
     ! @file. The k-points are extracted from the XML in read_xml (into path_kpts) and are
     ! consumed ONLY on rank 0 in write_domain_kpts -> not broadcast (like plane/grid).
-    CHARACTER(LEN=64) :: path_listname = ''
-    INTEGER :: path_npts = 0
-    TYPE(t_kpts) :: path_kset
     ! <plane listName=".."/> / <grid listName=".."/>: reuse a named kPointList (as-is)
     ! from kpts.xml as the plane/grid k-set instead of generating it inline. Filled in
     ! read_xml (into plane_kpts/grid_kpts), consumed on rank 0 in write_domain_kpts.
-    CHARACTER(LEN=64) :: plane_listname = ''
-    TYPE(t_kpts) :: plane_kset
-    CHARACTER(LEN=64) :: grid_listname = ''
-    TYPE(t_kpts) :: grid_kset
 
     ! --- operator table: one entry per <operator name=".."> child of <interpolation> ---
     INTEGER :: n_ops = 0
@@ -331,13 +326,11 @@ CONTAINS
     CALL mpi_bc(this%l_spin, rank, mpi_comm)
     CALL mpi_bc(this%l_orbmom, rank, mpi_comm)
     CALL mpi_bc(this%l_socop, rank, mpi_comm)
-    ! Output-domain flags: only these must agree on all ranks (they set the domain-loop
-    ! count ndom). The plane/grid params (fixed-size arrays) and path_file are consumed
-    ! ONLY on rank 0 (which writes kpts_interpol and does all domain file I/O), so they
-    ! are not broadcast -- and mpi_bc has no specific for explicit-shape arrays anyway.
-    CALL mpi_bc(this%l_dom_path, rank, mpi_comm)
-    CALL mpi_bc(this%l_dom_plane, rank, mpi_comm)
-    CALL mpi_bc(this%l_dom_grid, rank, mpi_comm)
+    ! Only the domain COUNT is broadcast: it sets the loop bound on every rank. The k-sets
+    ! and suffixes stay on rank 0, which is the only one that writes the k-set file and
+    ! renames the outputs -- so on any other rank dom_kset is unallocated, and reading or
+    ! validating it there is a bug, not a missing broadcast.
+    CALL mpi_bc(this%n_domains, rank, mpi_comm)
     CALL mpi_bc(this%n_ops, rank, mpi_comm)
     CALL mpi_bc(this%op_name, rank, mpi_comm)
     CALL mpi_bc(this%op_comp, rank, mpi_comm)
@@ -386,6 +379,8 @@ CONTAINS
     CHARACTER(LEN=200) :: xPathA
     CHARACTER(LEN=200) :: xPathP
     CHARACTER(LEN=32) :: spin_label
+    CHARACTER(LEN=64) :: dom_name
+    INTEGER :: idom, jdom, dom_npts
     CHARACTER(LEN=255) :: sbuf
     INTEGER :: numberNodes, ios
     INTEGER :: nSpecies, iType, nProjType, iProj, ip, nProjTotal, iRow
@@ -439,42 +434,37 @@ CONTAINS
     ! --- interpolation domain + operator list ---
     xPathA = '/fleurInput/output/wannierlib/interpolation'
     IF (xml%getNumberOfNodes(xPathA) == 1) THEN
-      ! --- opt-in output domains: <path>/<plane>/<grid> children of <interpolation> ---
-      xPathP = TRIM(ADJUSTL(xPathA))//'/path'
-      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))) == 1) THEN
-        this%l_dom_path = .TRUE.
-        IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@file') == 1) &
-          this%path_file = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@file'))
-        IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@listName') == 1) &
-          this%path_listname = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@listName'))
-        IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@npts') == 1) &
-          this%path_npts = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@npts'))
-        ! <path listName=".."> : pull the named list's k-points now (XML is available here)
-        IF (LEN_TRIM(this%path_listname) > 0) CALL read_named_kpath_wannierlib(this, xml)
-      END IF
-      xPathP = TRIM(ADJUSTL(xPathA))//'/plane'
-      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))) == 1) THEN
-        this%l_dom_plane = .TRUE.
-        ! listName is mandatory: the k-set is a named kPointList from kpts.xml, read with
-        ! the standard t_kpts routine (the same one DFPT uses), which follows the xi:include.
-        IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@listName') /= 1) &
-          CALL juDFT_error('wannierlib: <plane> requires a listName referencing a named kPointList', &
-                           calledby='read_xml_wannierlib')
-        this%plane_listname = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@listName'))
-        IF (.NOT. this%plane_kset%read_kpts_by_name(TRIM(xml%filename_add_xml)//"inp.xml", TRIM(this%plane_listname))) &
-          CALL juDFT_error('wannierlib: <plane>/@listName "'//TRIM(this%plane_listname)// &
-                           '" not found in kPointLists', calledby='read_xml_wannierlib')
-      END IF
-      xPathP = TRIM(ADJUSTL(xPathA))//'/grid'
-      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))) == 1) THEN
-        this%l_dom_grid = .TRUE.
-        IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@listName') /= 1) &
-          CALL juDFT_error('wannierlib: <grid> requires a listName referencing a named kPointList', &
-                           calledby='read_xml_wannierlib')
-        this%grid_listname = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@listName'))
-        IF (.NOT. this%grid_kset%read_kpts_by_name(TRIM(xml%filename_add_xml)//"inp.xml", TRIM(this%grid_listname))) &
-          CALL juDFT_error('wannierlib: <grid>/@listName "'//TRIM(this%grid_listname)// &
-                           '" not found in kPointLists', calledby='read_xml_wannierlib')
+      ! --- output domains: one <domain> per set of k-points, repeatable ---
+      this%n_domains = xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/domain')
+      IF (this%n_domains > 0) THEN
+        ALLOCATE(this%dom_kset(this%n_domains))
+        ALLOCATE(this%dom_suffix(this%n_domains))
+        this%dom_suffix = ''
+        DO idom = 1, this%n_domains
+          WRITE(xPathP, '(a,i0,a)') TRIM(ADJUSTL(xPathA))//'/domain[', idom, ']'
+          ! @listName is use="required" in the schema, so absence cannot reach here; an
+          ! EMPTY name can, and would send read_kpts_by_name looking for a nameless list.
+          dom_name = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@listName'))
+          IF (LEN_TRIM(dom_name) == 0) &
+            CALL juDFT_error('wannierlib: <domain> has an empty listName', &
+                             calledby='read_xml_wannierlib')
+          IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@suffix') == 1) &
+            this%dom_suffix(idom) = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@suffix'))
+          dom_npts = 0
+          IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@npts') == 1) &
+            dom_npts = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@npts'))
+          ! Pulled now, while the XML is still open.
+          CALL read_domain_kset_wannierlib(this%dom_kset(idom), xml, dom_name, dom_npts)
+        END DO
+        !> Two domains sharing a suffix would write over each other, and the unsuffixed one
+        !> is the base name, so there is room for exactly one of those.
+        DO idom = 1, this%n_domains - 1
+          DO jdom = idom + 1, this%n_domains
+            IF (TRIM(this%dom_suffix(idom)) == TRIM(this%dom_suffix(jdom))) &
+              CALL juDFT_error('wannierlib: two <domain> entries share the suffix "'// &
+                               TRIM(this%dom_suffix(idom))//'"', calledby='read_xml_wannierlib')
+          END DO
+        END DO
       END IF
 
       this%n_ops = xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/operator')
@@ -632,54 +622,61 @@ CONTAINS
 
   END SUBROUTINE read_xml_wannierlib
 
-  ! Extract a named kPointList (e.g. the band path "path-2") from the XML tree and store it
-  ! as the <path> interpolation k-set, subdividing each segment into path_npts pieces. Uses
-  ! the same XML idiom as t_kpts%read_xml (evaluatefirst consumes the kx,ky,kz tokens, so it
-  ! also handles fraction coordinates like "11.00/24.00"). Runs wherever read_xml runs; the
-  ! result (path_kpts) is consumed only on rank 0, so it is not broadcast.
-  !> Load <path>/@listName from kpts.xml with the standard t_kpts routine and, if
-  !> @npts > 1, subdivide each segment into npts pieces. Replaces a hand-rolled XML scan.
-  SUBROUTINE read_named_kpath_wannierlib(this, xml)
+  !> One domain's k-set: the named kPointList, optionally with each segment subdivided into
+  !> npts pieces. Read with the standard t_kpts routine, which follows the xi:include, so a
+  !> list may live in kpts.xml or in any file included from inp.xml.
+  !>
+  !> Subdividing only makes sense for a list whose order is a path; on a plane or a mesh the
+  !> caller leaves npts at its default and the list is taken as it stands.
+  !>
+  !> Runs wherever read_xml runs, but the result is consumed only on rank 0, so it is never
+  !> broadcast -- see the note on dom_kset.
+  SUBROUTINE read_domain_kset_wannierlib(kset, xml, listname, npts)
     USE m_types_xml
-    CLASS(t_wannierlib_wannierize), INTENT(INOUT) :: this
+    TYPE(t_kpts), INTENT(OUT) :: kset
     TYPE(t_xml), INTENT(INOUT) :: xml
+    CHARACTER(LEN=*), INTENT(IN) :: listname
+    INTEGER, INTENT(IN) :: npts
 
     TYPE(t_kpts) :: raw_kset
     INTEGER :: nraw, iseg, isub, np, fac
     REAL, ALLOCATABLE :: raw(:, :)
     REAL :: t
 
-    IF (.NOT. raw_kset%read_kpts_by_name(TRIM(xml%filename_add_xml)//"inp.xml", TRIM(this%path_listname))) &
-      CALL juDFT_error('wannierlib: <path>/@listName "'//TRIM(this%path_listname)// &
-                       '" not found in kPointLists', calledby='read_named_kpath_wannierlib')
+    IF (.NOT. raw_kset%read_kpts_by_name(TRIM(xml%filename_add_xml)//"inp.xml", TRIM(listname))) &
+      CALL juDFT_error('wannierlib: <domain>/@listName "'//TRIM(listname)// &
+                       '" not found in kPointLists', calledby='read_domain_kset_wannierlib')
     nraw = raw_kset%nkpt
-    IF (nraw < 2) CALL juDFT_error('wannierlib: <path>/@listName needs a list with >= 2 k-points', &
-                                   calledby='read_named_kpath_wannierlib')
+    IF (nraw < 1) CALL juDFT_error('wannierlib: <domain>/@listName "'//TRIM(listname)// &
+                                   '" is empty', calledby='read_domain_kset_wannierlib')
+    IF (nraw < 2 .AND. npts > 1) &
+      CALL juDFT_error('wannierlib: @npts needs a list with at least two k-points to subdivide', &
+                       calledby='read_domain_kset_wannierlib')
     ALLOCATE(raw(3, nraw))
     raw = raw_kset%bk(:, 1:nraw)
 
-    fac = this%path_npts
+    fac = npts
     IF (fac < 1) fac = 1
     IF (fac == 1) THEN
       np = nraw
-      ALLOCATE(this%path_kset%bk(3, np))
-      this%path_kset%bk = raw
+      ALLOCATE(kset%bk(3, np))
+      kset%bk = raw
     ELSE
-      ALLOCATE(this%path_kset%bk(3, (nraw - 1) * fac + 1))
+      ALLOCATE(kset%bk(3, (nraw - 1) * fac + 1))
       np = 0
       DO iseg = 1, nraw - 1
         DO isub = 0, fac - 1
           np = np + 1
           t = REAL(isub) / REAL(fac)
-          this%path_kset%bk(:, np) = (1.0 - t) * raw(:, iseg) + t * raw(:, iseg + 1)
+          kset%bk(:, np) = (1.0 - t) * raw(:, iseg) + t * raw(:, iseg + 1)
         END DO
       END DO
       np = np + 1
-      this%path_kset%bk(:, np) = raw(:, nraw)
+      kset%bk(:, np) = raw(:, nraw)
     END IF
-    this%path_kset%nkpt = np
+    kset%nkpt = np
     DEALLOCATE(raw)
-  END SUBROUTINE read_named_kpath_wannierlib
+  END SUBROUTINE read_domain_kset_wannierlib
 
 
 END MODULE m_types_wannierlib

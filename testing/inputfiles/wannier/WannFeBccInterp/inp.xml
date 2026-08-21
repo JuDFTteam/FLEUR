@@ -69,9 +69,9 @@
           <operator name="bmn"/>
         </operators_r>
         <interpolation>
-          <path listName="w222"/>
-          <plane listName="path-2"/>
-          <grid listName="w222"/>
+          <domain listName="path-2" suffix="_plane"/>
+          <domain listName="w222" suffix="_grid"/>
+          <domain listName="w222"/>
           <operator name="hamiltonian"/>
           <operator name="orbital"/>
           <operator name="velocity"/>

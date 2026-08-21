@@ -5,14 +5,18 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_types_melem_domains
-   !> Where an interpolation is to be evaluated: which output domains were asked for and
-   !> the k-set of each one.
+   !> Where an interpolation is to be evaluated: one entry per <domain>, each a k-set and
+   !> the suffix its output files carry.
    !>
-   !> The three domains are not interchangeable. A plane and a grid carry their k-points
-   !> with them, so an empty k-set there means nothing was resolved. A path may instead
-   !> name a file, and its default name is the one the interpolation reads anyway, so a
-   !> path with neither k-set nor a name of its own is a request to use what is already
-   !> on disk rather than an incomplete one.
+   !> There is nothing else to distinguish them. Whether a k-set traces a line, covers a
+   !> plane or fills the zone is a property of the list the user named, not something this
+   !> code needs to know: every domain is interpolated the same way and differs only in
+   !> where its output lands.
+   !>
+   !> IMPORTANT: the k-sets and suffixes exist ONLY on rank 0, because only rank 0 writes
+   !> the k-set file and renames the outputs. n is broadcast and bounds the domain loop on
+   !> every rank; the arrays are not, so they are unallocated off rank 0. Do not read or
+   !> validate them there -- a check on nkpt in this init aborted every non-root rank.
 
    USE m_judft
    USE m_types_kpts
@@ -21,13 +25,9 @@ MODULE m_types_melem_domains
    PRIVATE
 
    TYPE t_melem_domains
-      LOGICAL :: l_path  = .FALSE.   !> 1D path
-      LOGICAL :: l_plane = .FALSE.   !> 2D plane
-      LOGICAL :: l_grid  = .FALSE.   !> 3D uniform mesh
-      CHARACTER(LEN=64) :: path_file = 'kpts_interpol'  !> k-list file of the path domain
-      TYPE(t_kpts) :: path_kset      !> empty unless the path was given as a named list
-      TYPE(t_kpts) :: plane_kset
-      TYPE(t_kpts) :: grid_kset
+      INTEGER :: n = 0                              !> number of domains (broadcast)
+      TYPE(t_kpts),      ALLOCATABLE :: kset(:)     !> (n) rank 0 only
+      CHARACTER(LEN=64), ALLOCATABLE :: suffix(:)   !> (n) rank 0 only
    CONTAINS
       PROCEDURE :: init => melem_domains_init
    END TYPE t_melem_domains
@@ -36,25 +36,18 @@ MODULE m_types_melem_domains
 
 CONTAINS
 
-   SUBROUTINE melem_domains_init(this, l_path, l_plane, l_grid, path_file, &
-                                 path_kset, plane_kset, grid_kset)
+   !> kset and suffix are the input type's arrays, which only rank 0 has. They are copied
+   !> when present and left alone otherwise, so this runs on every rank without asking who
+   !> it is: n alone decides how many times the domain loop turns.
+   SUBROUTINE melem_domains_init(this, n, kset, suffix)
       CLASS(t_melem_domains), INTENT(OUT) :: this
-      LOGICAL,                INTENT(IN)  :: l_path, l_plane, l_grid
-      CHARACTER(LEN=*),       INTENT(IN)  :: path_file
-      TYPE(t_kpts),           INTENT(IN)  :: path_kset, plane_kset, grid_kset
+      INTEGER,                INTENT(IN)  :: n
+      TYPE(t_kpts),      ALLOCATABLE, INTENT(IN) :: kset(:)
+      CHARACTER(LEN=64), ALLOCATABLE, INTENT(IN) :: suffix(:)
 
-      this%l_path  = l_path
-      this%l_plane = l_plane
-      this%l_grid  = l_grid
-      this%path_file  = path_file
-      this%path_kset  = path_kset
-      this%plane_kset = plane_kset
-      this%grid_kset  = grid_kset
-
-      !> An empty name would send the path domain to read the current directory itself.
-      IF (l_path .AND. LEN_TRIM(path_file) == 0) &
-         CALL judft_error("t_melem_domains: the path domain has neither k-set nor file name", &
-                          calledby="melem_domains_init")
+      this%n = n
+      IF (ALLOCATED(kset))   this%kset   = kset
+      IF (ALLOCATED(suffix)) this%suffix = suffix
    END SUBROUTINE melem_domains_init
 
 END MODULE m_types_melem_domains

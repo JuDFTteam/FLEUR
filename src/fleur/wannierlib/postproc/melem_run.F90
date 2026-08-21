@@ -63,9 +63,8 @@ CONTAINS
       INTEGER :: idom, ndom, nkl_c, jkl, aw_nrpts
       INTEGER, ALLOCATABLE :: gk_loc(:), aw_irvec(:, :), aw_ndegen(:)
       COMPLEX, ALLOCATABLE :: aw_r(:, :, :, :)         ! (nw,nw,nrpts,3) Wannier Berry connection A^(W)(R)
-      CHARACTER(LEN=8) :: dkind(3), dsuf(3)
       CHARACTER(LEN=16) :: ssfx
-      LOGICAL :: lex, l_collinear
+      LOGICAL :: l_collinear
 
       irank = fmpi%irank; mpi_comm = fmpi%mpi_comm
       ssfx = ''
@@ -83,20 +82,23 @@ CONTAINS
          IF (distk(iop) == irank) THEN; jkl = jkl + 1; gk_loc(jkl) = iop; END IF
       END DO
 
-      ! ---- opt-in output domains (<path>/<plane>/<grid>); none declared -> legacy single pass ----
-      ! order matters: generated domains (plane/grid) overwrite kpts_interpol and are renamed;
-      ! the unsuffixed path/legacy domain runs LAST so its base-named output is not clobbered
-      ! and it restores the user's original kpts_interpol before interpolating.
-      ndom = 0
-      IF (domains%l_plane) THEN; ndom = ndom + 1; dkind(ndom) = 'plane'; dsuf(ndom) = '_plane'; END IF
-      IF (domains%l_grid) THEN; ndom = ndom + 1; dkind(ndom) = 'grid'; dsuf(ndom) = '_grid'; END IF
-      IF (domains%l_path) THEN; ndom = ndom + 1; dkind(ndom) = 'path'; dsuf(ndom) = ''; END IF
-      IF (ndom == 0) THEN; ndom = 1; dkind(1) = 'legacy'; dsuf(1) = ''; END IF
-      ! back up a user-provided kpts_interpol that a generated (plane/grid) domain would overwrite
-      IF (irank == 0 .AND. (domains%l_plane .OR. domains%l_grid)) THEN
-         INQUIRE (file='kpts_interpol', exist=lex)
-         IF (lex) CALL melem_shell('cp -f kpts_interpol .kpts_interpol_userbak')
-      END IF
+      ! ---- output domains: one per <domain>, in the order they were declared ----
+      !> A suffixed domain's files are renamed after it runs, so an unsuffixed domain
+      !> declared before one that is suffixed would have its base-named output taken. The
+      !> reader rejects a repeated suffix, which leaves at most one unsuffixed domain, and
+      !> declaring it last is the user's business rather than something to reorder here.
+      ndom = domains%n
+      !> Only a contradiction is an error: operators to interpolate but nowhere to do it.
+      !> This pass runs on every wannierisation, so most calculations arrive here with
+      !> neither, and that is not a request that failed -- it is no request at all.
+      !>
+      !> Asking for operators without saying where used to fall through to a hand-written
+      !> k-point file, and without one every driver reported "skipped": the run produced
+      !> nothing and said so only in the output file.
+      IF (request%n_ops > 0 .AND. ndom == 0) CALL juDFT_error( &
+         'wannierlib: <interpolation> asks for operators but declares no output domain', &
+         hint='add a <domain> with a listName naming a kPointList', &
+         calledby='melem_run')
 
       ! (2) real-space operator export (Fourier step 3, standalone format) -- once, before interpolation
       CALL melem_write_operators_r(manifold, request, cell, kpts, eig, u_matrix, u_opt, &
@@ -107,7 +109,7 @@ CONTAINS
       ! Each operator supplies its own per-rank Bloch slice on the coarse mesh (coarse%s0/l0/soc0);
       ! the remaining steps are the shared generic driver m_melem_interpolate_op.
       DO idom = 1, ndom
-         IF (irank == 0) CALL melem_write_domain_kpts(domains, TRIM(dkind(idom)))
+         IF (irank == 0) CALL melem_write_domain_kpts(domains, idom)
 
          DO iop = 1, request%n_ops
             SELECT CASE (TRIM(request%op_name(iop)))
@@ -147,16 +149,15 @@ CONTAINS
                   '" is an accepted operator with no branch in this pass')
             END SELECT
          END DO
-         ! rename this domain's outputs (plane/grid -> _plane/_grid; path/legacy: no suffix)
-         IF (irank == 0 .AND. LEN_TRIM(TRIM(dsuf(idom))//TRIM(ssfx)) > 0) &
-            CALL melem_rename_domain_outputs(request, TRIM(dsuf(idom))//TRIM(ssfx))
+         !> Rename this domain's outputs. Nested rather than a single .AND.: Fortran does
+         !> not promise to stop evaluating at the first false, and domains%suffix exists
+         !> only on rank 0.
+         IF (irank == 0) THEN
+            IF (LEN_TRIM(TRIM(domains%suffix(idom))//TRIM(ssfx)) > 0) &
+               CALL melem_rename_domain_outputs(request, TRIM(domains%suffix(idom))//TRIM(ssfx))
+         END IF
       END DO   ! idom
 
-      ! restore the user's original kpts_interpol if we overwrote it
-      IF (irank == 0 .AND. (domains%l_plane .OR. domains%l_grid)) THEN
-         INQUIRE (file='.kpts_interpol_userbak', exist=lex)
-         IF (lex) CALL melem_shell('mv -f .kpts_interpol_userbak kpts_interpol')
-      END IF
 
       IF (ALLOCATED(aw_r)) DEALLOCATE (aw_r, aw_irvec, aw_ndegen)
       DEALLOCATE (gk_loc)
