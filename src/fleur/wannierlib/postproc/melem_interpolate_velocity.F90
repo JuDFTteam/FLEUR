@@ -22,7 +22,6 @@ MODULE m_melem_interpolate_velocity
   USE m_types_kpts
   USE m_types_melem_manifold, ONLY: t_melem_manifold
   USE m_melem_hamk, ONLY : melem_build_hamk
-  USE m_melem_domains, ONLY : melem_read_kset
   USE m_melem_ft, ONLY : melem_ft_to_real, melem_ft_rtok_velocity, melem_ft_rtok
   USE m_melem_interp_util, ONLY : melem_kpath, melem_zheev_workspace
   IMPLICIT NONE
@@ -30,7 +29,7 @@ MODULE m_melem_interpolate_velocity
   PUBLIC :: melem_interpolate_velocity
 CONTAINS
 
-  SUBROUTINE melem_interpolate_velocity(this, cell, kpts, eig, u_matrix, u_opt, aw_r, irvec, ndegen, nrpts, irank)
+  SUBROUTINE melem_interpolate_velocity(this, cell, kpts, eig, u_matrix, u_opt, aw_r, irvec, ndegen, nrpts, kfrac, out1, out2, irank)
     TYPE(t_melem_manifold), INTENT(IN) :: this
     TYPE(t_cell), INTENT(IN) :: cell
     TYPE(t_kpts), INTENT(IN) :: kpts
@@ -39,13 +38,19 @@ CONTAINS
     COMPLEX, INTENT(IN) :: u_opt(:, :, :)         ! (num_bands, num_wann, nk) disentangled
     COMPLEX, INTENT(IN) :: aw_r(:, :, :, :)       ! (num_wann,num_wann,nrpts,3) Berry connection A^(W)_a(R), reduced
     INTEGER, INTENT(IN) :: irvec(:, :), ndegen(:), nrpts   ! Wigner-Seitz R-mesh from the reduce (rank 0 only used)
+    !> The domain's k-set and the names its files take, both decided by the caller: the
+    !> k-points come from a named kPointList and the names from the exposure table plus the
+    !> domain suffix. Unallocated off rank 0, which never reaches them.
+    REAL, ALLOCATABLE, INTENT(IN) :: kfrac(:, :)          !> (3, np) fractional mesh
+    CHARACTER(LEN=*), INTENT(IN) :: out1
+    CHARACTER(LEN=*), INTENT(IN) :: out2
     INTEGER, INTENT(IN) :: irank
 
     INTEGER :: num_wann, m, n, ip, np, iu, iuc, info, lwork, a
     INTEGER :: ax(3), ay(3)
     LOGICAL :: l_berry
     REAL    :: de
-    REAL,    ALLOCATABLE :: kfrac(:, :), kdist(:), evals(:), rwork(:), vexp(:), omega(:, :)
+    REAL,    ALLOCATABLE :: kdist(:), evals(:), rwork(:), vexp(:), omega(:, :)
     COMPLEX, ALLOCATABLE :: ham_k(:, :, :), H_interp(:, :, :), v_interp(:, :, :, :), A_interp(:, :, :, :)
     COMPLEX, ALLOCATABLE :: hk(:, :), work(:), cvec(:, :), vc(:, :, :), Hbar(:, :, :), Abar(:, :, :), vfull(:, :, :)
     COMPLEX, ALLOCATABLE :: ham_r(:, :, :)
@@ -57,10 +62,7 @@ CONTAINS
     num_wann  = this%num_wann
     CALL timestart('melem_interpolate_velocity')
 
-    IF (.NOT. melem_read_kset(kfrac, np, 'melem_interpolate_velocity')) THEN
-      WRITE(oUnit,'(a)') 'wannierlib velocity interpolation: no kpts_interpol file -> skipped'
-      CALL timestop('melem_interpolate_velocity'); RETURN
-    END IF
+    np = SIZE(kfrac, 2)   ! the caller resolved the domain; there is nothing to skip
 
     CALL melem_kpath(cell, kfrac, kdist)   ! abscissa of the output, from the mesh just read
 
@@ -97,10 +99,10 @@ CONTAINS
     ay = (/ 3, 1, 2 /)
     CALL melem_zheev_workspace('V', num_wann, work, rwork, lwork)
 
-    OPEN(newunit=iu, file='bands_wann_velocity.dat', status='replace')
+    OPEN(newunit=iu, file=TRIM(out1)//'.dat', status='replace')
     WRITE(iu,'(a)') '# kdist   [ E_n(eV)  vx vy vz (eV*bohr, dE/dk) ] for n=1..num_wann'
     IF (l_berry) THEN
-      OPEN(newunit=iuc, file='bands_wann_berrycurv.dat', status='replace')
+      OPEN(newunit=iuc, file=TRIM(out2)//'.dat', status='replace')
       WRITE(iuc,'(a)') '# kdist   [ E_n(eV)  Omega_x Omega_y Omega_z (bohr^2) ] for n=1..num_wann'
     END IF
     DO ip = 1, np
@@ -165,7 +167,7 @@ CONTAINS
     END DO
     CLOSE(iu)
     IF (l_berry) CLOSE(iuc)
-    WRITE(oUnit,'(a,i0,a)') 'wannierlib velocity interpolation: wrote bands_wann_velocity.dat (', np, ' k-points)'
+    WRITE(oUnit,'(a,i0,a)') 'wannierlib velocity interpolation: wrote '//TRIM(out1)//'.dat (', np, ' k-points)'
     CALL timestop('melem_interpolate_velocity')
   END SUBROUTINE melem_interpolate_velocity
 

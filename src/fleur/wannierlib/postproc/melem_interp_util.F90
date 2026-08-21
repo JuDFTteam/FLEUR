@@ -8,7 +8,7 @@
 !>
 !>  Nothing here is operator-specific: it is the bookkeeping every driver repeats
 !>  around its own loop over the interpolation mesh. The Fourier transforms
-!>  themselves live in m_melem_ft, the k-set reading in m_melem_domains.
+!>  themselves live in m_melem_ft; the k-set arrives as an argument from m_melem_run.
 MODULE m_melem_interp_util
   USE m_juDFT
   USE m_types_cell

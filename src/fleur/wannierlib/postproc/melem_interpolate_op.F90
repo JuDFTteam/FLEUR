@@ -11,7 +11,7 @@
 !>    O_alpha(k')  = FT[ O_W,alpha ]            (shared core m_melem_ft)
 !>    H(k')        = FT[ H_W ] -> diag -> E_n(k'), C(k')
 !>    <O_alpha>_n(k') = [ C^dagger O_alpha(k') C ]_nn
-!>  and writes 'outfile': kdist, [ E_n(eV), <O_1>_n, ..., <O_ncomp>_n ] per band.
+!>  and writes <outfile>.dat: kdist, [ E_n(eV), <O_1>_n, ..., <O_ncomp>_n ] per band.
 !>
 !>  A new operator only supplies its O0(k) (a provider) and calls this with the
 !>  right ncomp/outfile -- steps above are never rewritten. Master rank only.
@@ -22,7 +22,6 @@ MODULE m_melem_interpolate_op
   USE m_types_kpts
   USE m_types_melem_manifold, ONLY: t_melem_manifold
   USE m_melem_hamk, ONLY : melem_build_hamk
-  USE m_melem_domains, ONLY : melem_read_kset
   USE m_melem_ft, ONLY : melem_ft_interpolate, melem_ft_to_real_reduce, melem_ft_rtok
   USE m_melem_interp_util, ONLY : melem_kpath, melem_zheev_workspace
   IMPLICIT NONE
@@ -30,7 +29,7 @@ MODULE m_melem_interpolate_op
   PUBLIC :: melem_interpolate_operator
 CONTAINS
 
-  SUBROUTINE melem_interpolate_operator(this, cell, kpts, eig, u_matrix, u_opt, o0_loc, gk_loc, ncomp, outfile, irank, mpicm)
+  SUBROUTINE melem_interpolate_operator(this, cell, kpts, eig, u_matrix, u_opt, o0_loc, gk_loc, ncomp, kfrac, outfile, irank, mpicm)
     TYPE(t_melem_manifold), INTENT(IN) :: this
     TYPE(t_cell), INTENT(IN) :: cell
     TYPE(t_kpts), INTENT(IN) :: kpts
@@ -41,11 +40,15 @@ CONTAINS
     INTEGER, INTENT(IN) :: gk_loc(:)              ! (nk_loc) global k index of each slice entry
     INTEGER, INTENT(IN) :: ncomp
     CHARACTER(LEN=*), INTENT(IN) :: outfile
+    !> The domain's k-set and the names its files take, both decided by the caller: the
+    !> k-points come from a named kPointList and the names from the exposure table plus the
+    !> domain suffix. Unallocated off rank 0, which never reaches them.
+    REAL, ALLOCATABLE, INTENT(IN) :: kfrac(:, :)          !> (3, np) fractional mesh
     INTEGER, INTENT(IN) :: irank, mpicm
 
     INTEGER :: num_wann, num_bands, m, ip, np, iu, info, lwork, a
     INTEGER :: nkl, kl, nrpts
-    REAL,    ALLOCATABLE :: kfrac(:, :), kdist(:), evals(:), rwork(:), oexp(:)
+    REAL,    ALLOCATABLE :: kdist(:), evals(:), rwork(:), oexp(:)
     COMPLEX, ALLOCATABLE :: ham_k(:, :, :), H_interp(:, :, :), o_interp(:, :, :, :)
     COMPLEX, ALLOCATABLE :: hk(:, :), work(:), vloc(:, :, :), tmp(:, :), cvec(:, :), oc(:, :, :)
     COMPLEX, ALLOCATABLE :: ow_loc(:, :, :, :), o_r(:, :, :, :), o1(:, :, :)
@@ -85,12 +88,7 @@ CONTAINS
       CALL timestop('melem_interpolate_operator'); RETURN
     END IF
 
-    IF (.NOT. melem_read_kset(kfrac, np, 'melem_interpolate_operator')) THEN
-      WRITE(oUnit,'(a)') 'wannierlib operator interpolation: no kpts_interpol file -> skipped'
-      IF (ALLOCATED(o_r)) DEALLOCATE(o_r)
-      IF (ALLOCATED(irvec)) DEALLOCATE(irvec, ndegen)
-      CALL timestop('melem_interpolate_operator'); RETURN
-    END IF
+    np = SIZE(kfrac, 2)   ! the caller resolved the domain; there is nothing to skip
 
     CALL melem_kpath(cell, kfrac, kdist)   ! abscissa of the output, from the mesh just read
 
@@ -115,7 +113,7 @@ CONTAINS
              oc(num_wann, num_wann, ncomp), oexp(ncomp))
     CALL melem_zheev_workspace('V', num_wann, work, rwork, lwork)
 
-    OPEN(newunit=iu, file=outfile, status='replace')
+    OPEN(newunit=iu, file=TRIM(outfile)//'.dat', status='replace')
     WRITE(iu,'(a,i0,a)') '# kdist   [ E_n(eV)  <O_1>_n .. <O_', ncomp, '>_n ] for n=1..num_wann'
     DO ip = 1, np
       hk = H_interp(:, :, ip)
@@ -138,7 +136,7 @@ CONTAINS
       WRITE(iu,'(a)') ''
     END DO
     CLOSE(iu)
-    WRITE(oUnit,'(a,i0,a)') 'wannierlib operator interpolation: wrote '//TRIM(outfile)//' (', np, ' k-points)'
+    WRITE(oUnit,'(a,i0,a)') 'wannierlib operator interpolation: wrote '//TRIM(outfile)//'.dat (', np, ' k-points)'
     CALL timestop('melem_interpolate_operator')
   END SUBROUTINE melem_interpolate_operator
 

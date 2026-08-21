@@ -33,7 +33,7 @@ once per channel.
     <operator name="spin"/>
   </operators_r>
   <interpolation>
-    <path listName="path-2"/>
+    <domain listName="path-2"/>
     <operator name="hamiltonian"/>
     <operator name="velocity"/>
   </interpolation>
@@ -52,17 +52,31 @@ the accepted list in the message.
 
 ## Output domains
 
-Inside `<interpolation>`, up to three domains can be asked for at once. Each one is a
-**named `kPointList`** from `kpts.xml`:
+Inside `<interpolation>`, declare one `<domain>` per set of k-points you want the operators
+evaluated on. There is no limit and no kinds: a domain is a **named `kPointList`** plus,
+when there is more than one, a suffix that keeps their files apart.
 
 ```xml
-<path  listName="path-2"/>   <!-- 1D: band structure   -> no suffix -->
-<plane listName="kz0"/>      <!-- 2D: a slice          -> _plane    -->
-<grid  listName="w222"/>     <!-- 3D: a full-BZ mesh   -> _grid     -->
+<domain listName="path-2"/>                 <!-- bands_wann_*.dat        -->
+<domain listName="kz0"    suffix="_plane"/> <!-- bands_wann_*_plane.dat  -->
+<domain listName="w222"   suffix="_grid"/>  <!-- bands_wann_*_grid.dat   -->
 ```
 
-The suffix goes on the file name, so the three do not overwrite each other. Declaring none
-falls back to reading `kpts_interpol`.
+Whether a list traces a line, covers a plane or fills the zone is a property of the list,
+not something FLEUR is told: every domain is interpolated the same way. With a single
+domain you write no suffix and the files keep their base names.
+
+`listName` names the input, `suffix` names the output, and they are separate on purpose --
+two domains may share a list (the same path subdivided differently by `@npts`), and the
+file names are read by other tools, so you choose them. At most one domain may go without
+a suffix, and a repeated one is rejected.
+
+The lists themselves come from `inp.xml`: `inpgen` writes them into `kpts.xml`, which is
+`<xi:include>`d, and any other included file works too -- they are found by name with the
+standard `t_kpts%read_kpts_by_name`, the same routine DFPT uses. There is no way to point
+at a k-point file of your own, and that is deliberate: all input lives in `inp.xml`.
+
+Declaring operators to interpolate but no domain is an error, not a silent no-op.
 
 ## What comes out
 

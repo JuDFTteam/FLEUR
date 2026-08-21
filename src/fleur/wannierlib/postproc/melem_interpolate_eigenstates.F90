@@ -24,7 +24,6 @@ MODULE m_melem_interpolate_eigenstates
   USE m_types_kpts
   USE m_types_melem_manifold, ONLY: t_melem_manifold
   USE m_melem_hamk, ONLY : melem_build_hamk
-  USE m_melem_domains, ONLY : melem_read_kset
   USE m_melem_ft, ONLY : melem_ft_interpolate
   USE m_melem_interp_util, ONLY : melem_kpath, melem_zheev_workspace
   IMPLICIT NONE
@@ -32,17 +31,22 @@ MODULE m_melem_interpolate_eigenstates
   PUBLIC :: melem_interpolate_eigenstates
 CONTAINS
 
-  SUBROUTINE melem_interpolate_eigenstates(this, cell, kpts, eig, u_matrix, u_opt, irank)
+  SUBROUTINE melem_interpolate_eigenstates(this, cell, kpts, eig, u_matrix, u_opt, kfrac, out1, irank)
     TYPE(t_melem_manifold), INTENT(IN) :: this
     TYPE(t_cell), INTENT(IN) :: cell
     TYPE(t_kpts), INTENT(IN) :: kpts
     REAL,    INTENT(IN) :: eig(:, :)          ! (num_bands, nk)
     COMPLEX, INTENT(IN) :: u_matrix(:, :, :)  ! (num_wann, num_wann, nk)   MLWF gauge
     COMPLEX, INTENT(IN) :: u_opt(:, :, :)     ! (num_bands, num_wann, nk)  disentangled
+    !> The domain's k-set and the names its files take, both decided by the caller: the
+    !> k-points come from a named kPointList and the names from the exposure table plus the
+    !> domain suffix. Unallocated off rank 0, which never reaches them.
+    REAL, ALLOCATABLE, INTENT(IN) :: kfrac(:, :)          !> (3, np) fractional mesh
+    CHARACTER(LEN=*), INTENT(IN) :: out1
     INTEGER, INTENT(IN) :: irank
 
     INTEGER :: num_wann, i, j, ip, np, iu, info, lwork
-    REAL,    ALLOCATABLE :: kfrac(:, :), kdist(:), evals(:), rwork(:)
+    REAL,    ALLOCATABLE :: kdist(:), evals(:), rwork(:)
     COMPLEX, ALLOCATABLE :: ham_k(:, :, :), H_interp(:, :, :), cvec(:, :), work(:)
 
     IF (irank /= 0) RETURN                      ! only the master holds the full U(k)
@@ -51,10 +55,7 @@ CONTAINS
     CALL timestart('melem_interpolate_eigenstates')
 
     ! ---- k-mesh from kpts_interpol ----
-    IF (.NOT. melem_read_kset(kfrac, np, 'melem_interpolate_eigenstates')) THEN
-      WRITE(oUnit,'(a)') 'wannierlib eigenstates: no kpts_interpol file -> skipped'
-      CALL timestop('melem_interpolate_eigenstates'); RETURN
-    END IF
+    np = SIZE(kfrac, 2)   ! the caller resolved the domain; there is nothing to skip
 
     CALL melem_kpath(cell, kfrac, kdist)   ! abscissa of the output, from the mesh just read
 
@@ -68,7 +69,7 @@ CONTAINS
     ALLOCATE(evals(num_wann), cvec(num_wann, num_wann))
     CALL melem_zheev_workspace('V', num_wann, work, rwork, lwork)
 
-    OPEN(newunit=iu, file='bands_wann_eigenstates.dat', status='replace')
+    OPEN(newunit=iu, file=TRIM(out1)//'.dat', status='replace')
     WRITE(iu,'(a)') '# Wannier-Hamiltonian eigenstates C(k): H(k) C = C E, columns of C = band'
     WRITE(iu,'(a)') '# eigenvectors in the Wannier (tight-binding) basis (Hamiltonian-gauge U^(H)).'
     WRITE(iu,'(a,i0,a,i0)') '# num_wann = ', num_wann, ' ,  n_kpts = ', np
@@ -85,7 +86,7 @@ CONTAINS
       END DO
     END DO
     CLOSE(iu)
-    WRITE(oUnit,'(a,i0,a)') 'wannierlib eigenstates: wrote bands_wann_eigenstates.dat (', np, ' k-points)'
+    WRITE(oUnit,'(a,i0,a)') 'wannierlib eigenstates: wrote '//TRIM(out1)//'.dat (', np, ' k-points)'
     CALL timestop('melem_interpolate_eigenstates')
   END SUBROUTINE melem_interpolate_eigenstates
 

@@ -21,8 +21,8 @@ MODULE m_melem_run
    USE m_melem_coarse, ONLY: t_melem_coarse
    USE m_types_melem_manifold, ONLY: t_melem_manifold
    USE m_types_melem_request, ONLY: t_melem_request
+   USE m_types_melem_optable, ONLY: WANNIERLIB_INTERP, melem_exposed_find
    USE m_types_melem_domains, ONLY: t_melem_domains
-   USE m_melem_domains, ONLY: melem_write_domain_kpts, melem_rename_domain_outputs, melem_shell
    USE m_melem_operators_r, ONLY: melem_write_operators_r
    USE m_melem_coeff_a, ONLY: melem_build_berry_aw_r, melem_check_berry_centres
    USE m_melem_interpolate_ham, ONLY: melem_interpolate_ham
@@ -64,6 +64,12 @@ CONTAINS
       INTEGER, ALLOCATABLE :: gk_loc(:), aw_irvec(:, :), aw_ndegen(:)
       COMPLEX, ALLOCATABLE :: aw_r(:, :, :, :)         ! (nw,nw,nrpts,3) Wannier Berry connection A^(W)(R)
       CHARACTER(LEN=16) :: ssfx
+      CHARACTER(LEN=80) :: dsfx
+      INTEGER :: np_dom, iRow
+      REAL, ALLOCATABLE :: kfrac(:, :)
+      !> (n_ops, 2) the two output basenames of each operator, already carrying the domain
+      !> suffix. Built from the exposure table so the table stays the one place a name lives.
+      CHARACTER(LEN=80), ALLOCATABLE :: outname(:, :)
       LOGICAL :: l_collinear
 
       irank = fmpi%irank; mpi_comm = fmpi%mpi_comm
@@ -109,25 +115,44 @@ CONTAINS
       ! Each operator supplies its own per-rank Bloch slice on the coarse mesh (coarse%s0/l0/soc0);
       ! the remaining steps are the shared generic driver m_melem_interpolate_op.
       DO idom = 1, ndom
-         IF (irank == 0) CALL melem_write_domain_kpts(domains, idom)
+         !> The domain's k-points and the tail its files carry. Both are rank-0 material:
+         !> kfrac stays unallocated elsewhere and every driver returns before touching it,
+         !> while the suffix is broadcast because it is small and the name is built here.
+         IF (ALLOCATED(kfrac)) DEALLOCATE(kfrac)
+         IF (irank == 0) THEN
+            np_dom = domains%kset(idom)%nkpt
+            ALLOCATE(kfrac(3, np_dom))
+            kfrac = domains%kset(idom)%bk(:, 1:np_dom)
+         END IF
+         dsfx = TRIM(domains%suffix(idom))//TRIM(ssfx)
+         IF (.NOT. ALLOCATED(outname)) ALLOCATE(outname(MAX(1, request%n_ops), 2))
+         DO iop = 1, request%n_ops
+            iRow = melem_exposed_find(request%op_name(iop), WANNIERLIB_INTERP)
+            IF (iRow == 0) CALL judft_bug('melem_run: "'//TRIM(request%op_name(iop))// &
+               '" is not in the exposure table')
+            outname(iop, 1) = TRIM(WANNIERLIB_INTERP(iRow)%out1)//TRIM(dsfx)
+            outname(iop, 2) = TRIM(WANNIERLIB_INTERP(iRow)%out2)//TRIM(dsfx)
+         END DO
 
          DO iop = 1, request%n_ops
             SELECT CASE (TRIM(request%op_name(iop)))
             CASE ('hamiltonian')
-               CALL melem_interpolate_ham(manifold, cell, kpts, eig, u_matrix, u_opt, irank)
+               CALL melem_interpolate_ham(manifold, cell, kpts, eig, u_matrix, u_opt, kfrac, &
+                                          outname(iop, 1), outname(iop, 2), irank)
             CASE ('spin')
                ! total spin (MT-sum + interstitial): via the generic operator driver (3 comps)
                IF (request%op_total(iop) == 1) &
                   CALL melem_interpolate_operator(manifold, cell, kpts, eig, u_matrix, u_opt, &
-                                                  coarse%s0, gk_loc, 3, 'bands_wann_spin.dat', irank, mpi_comm)
+                                                  coarse%s0, gk_loc, 3, kfrac, outname(iop, 1), irank, mpi_comm)
             CASE ('orbital')
                ! total (site-summed) orbital moment
                IF (request%op_total(iop) == 1) &
                   CALL melem_interpolate_operator(manifold, cell, kpts, eig, u_matrix, u_opt, &
-                                                  SUM(coarse%l0(:, :, :, :, wf_ch, :), DIM=4), gk_loc, 3, 'bands_wann_orbmom.dat', irank, mpi_comm)
+                                                  SUM(coarse%l0(:, :, :, :, wf_ch, :), DIM=4), gk_loc, 3, kfrac, &
+                                                  outname(iop, 1), irank, mpi_comm)
             CASE ('soc')
                CALL melem_interpolate_operator(manifold, cell, kpts, eig, u_matrix, u_opt, &
-                                               coarse%soc0, gk_loc, 1, 'bands_wann_soc.dat', irank, mpi_comm)
+                                               coarse%soc0, gk_loc, 1, kfrac, outname(iop, 1), irank, mpi_comm)
             CASE ('velocity')
                ! Wannier Berry connection A^(W)_alpha(R): built distributed from the local overlaps
                ! and reduced (collective, all ranks); the centre check (rank 0) calibrates conj/sign.
@@ -138,10 +163,12 @@ CONTAINS
                   IF (irank == 0) CALL melem_check_berry_centres(manifold, aw_r, aw_irvec, aw_nrpts, bmesh)
                END IF
                CALL melem_interpolate_velocity(manifold, cell, kpts, eig, u_matrix, u_opt, &
-                                               aw_r, aw_irvec, aw_ndegen, aw_nrpts, irank)
+                                               aw_r, aw_irvec, aw_ndegen, aw_nrpts, kfrac, &
+                                               outname(iop, 1), outname(iop, 2), irank)
             CASE ('eigenstates')
                ! Wannier-Hamiltonian eigenvectors C(k') (the H-gauge rotation U^(H)), as a matrix
-               CALL melem_interpolate_eigenstates(manifold, cell, kpts, eig, u_matrix, u_opt, irank)
+               CALL melem_interpolate_eigenstates(manifold, cell, kpts, eig, u_matrix, u_opt, kfrac, &
+                                                  outname(iop, 1), irank)
             CASE DEFAULT
                !> The name is in WANNIERLIB_INTERP or it would not have got past the request,
                !> so what is missing is the branch here, not the operator.
@@ -149,13 +176,6 @@ CONTAINS
                   '" is an accepted operator with no branch in this pass')
             END SELECT
          END DO
-         !> Rename this domain's outputs. Nested rather than a single .AND.: Fortran does
-         !> not promise to stop evaluating at the first false, and domains%suffix exists
-         !> only on rank 0.
-         IF (irank == 0) THEN
-            IF (LEN_TRIM(TRIM(domains%suffix(idom))//TRIM(ssfx)) > 0) &
-               CALL melem_rename_domain_outputs(request, TRIM(domains%suffix(idom))//TRIM(ssfx))
-         END IF
       END DO   ! idom
 
 

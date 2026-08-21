@@ -233,14 +233,19 @@ A row in `WANNIERLIB_INTERP` and a branch in the `SELECT CASE` of
 ```fortran
 CASE ('my_operator')
    CALL melem_interpolate_operator(manifold, cell, kpts, eig, u_matrix, u_opt, &
-                                   coarse%myo0, gk_loc, 3, 'bands_wann_myop.dat', &
+                                   coarse%myo0, gk_loc, 3, kfrac, outname(iop, 1), &
                                    irank, mpicm)
 ```
+
+`kfrac` is the current domain's k-set and `outname(iop, 1)` its output basename, both
+resolved by the loop around this `SELECT CASE`: the name comes from the `out1` column of
+your `WANNIERLIB_INTERP` row with the domain suffix already on it, and the driver appends
+`.dat`. Neither is something a new operator has to build.
 
 That is all. `melem_interpolate_operator` is the generic driver and does everything else
 **for any operator**: `O_W(k) = V^dagger O(k) V`, the distributed transform to `R`, the
 transform back on the output domain, the diagonalisation of `H(k')` and the projection.
-The only thing a new operator contributes is its component count and a file name.
+The only thing a new operator contributes is its component count and the name in the table.
 
 ### For the real-space export — `<operators_r><operator name=".."/>`
 

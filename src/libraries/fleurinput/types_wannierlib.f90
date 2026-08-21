@@ -331,6 +331,10 @@ CONTAINS
     ! renames the outputs -- so on any other rank dom_kset is unallocated, and reading or
     ! validating it there is a bug, not a missing broadcast.
     CALL mpi_bc(this%n_domains, rank, mpi_comm)
+    !> The suffixes ARE broadcast, unlike the k-sets: they are a handful of short strings,
+    !> and the output name is built inside the domain loop, which every rank turns. Leaving
+    !> them on rank 0 segfaulted rank 7 -- and not rank 1, so a two-rank suite passed.
+    CALL mpi_bc(this%dom_suffix, rank, mpi_comm)
     CALL mpi_bc(this%n_ops, rank, mpi_comm)
     CALL mpi_bc(this%op_name, rank, mpi_comm)
     CALL mpi_bc(this%op_comp, rank, mpi_comm)

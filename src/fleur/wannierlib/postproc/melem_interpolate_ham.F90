@@ -25,7 +25,6 @@ MODULE m_melem_interpolate_ham
   USE m_types_kpts
   USE m_types_melem_manifold, ONLY: t_melem_manifold
   USE m_melem_hamk, ONLY : melem_build_hamk
-  USE m_melem_domains, ONLY : melem_read_kset
   USE m_melem_ft, ONLY : melem_ft_interpolate
   USE m_melem_interp_util, ONLY : melem_kpath, melem_zheev_workspace
   IMPLICIT NONE
@@ -33,17 +32,23 @@ MODULE m_melem_interpolate_ham
   PUBLIC :: melem_interpolate_ham
 CONTAINS
 
-  SUBROUTINE melem_interpolate_ham(this, cell, kpts, eig, u_matrix, u_opt, irank)
+  SUBROUTINE melem_interpolate_ham(this, cell, kpts, eig, u_matrix, u_opt, kfrac, out1, out2, irank)
     TYPE(t_melem_manifold), INTENT(IN) :: this
     TYPE(t_cell), INTENT(IN) :: cell
     TYPE(t_kpts), INTENT(IN) :: kpts
     REAL,    INTENT(IN) :: eig(:, :)          ! (num_bands, nk)
     COMPLEX, INTENT(IN) :: u_matrix(:, :, :)  ! (num_wann, num_wann, nk)   MLWF gauge
     COMPLEX, INTENT(IN) :: u_opt(:, :, :)     ! (num_bands, num_wann, nk)  disentangled
+    !> The domain's k-set and the names its files take, both decided by the caller: the
+    !> k-points come from a named kPointList and the names from the exposure table plus the
+    !> domain suffix. Unallocated off rank 0, which never reaches them.
+    REAL, ALLOCATABLE, INTENT(IN) :: kfrac(:, :)          !> (3, np) fractional mesh
+    CHARACTER(LEN=*), INTENT(IN) :: out1
+    CHARACTER(LEN=*), INTENT(IN) :: out2
     INTEGER, INTENT(IN) :: irank              ! MPI rank (interpolate only on master)
 
     INTEGER :: num_wann, ip, np, iu, iuev, info, lwork
-    REAL,    ALLOCATABLE :: kfrac(:, :), kdist(:), evals(:), rwork(:)
+    REAL,    ALLOCATABLE :: kdist(:), evals(:), rwork(:)
     COMPLEX, ALLOCATABLE :: ham_k(:, :, :), H_interp(:, :, :), hk(:, :), work(:)
 
     IF (irank /= 0) RETURN                      ! only the master holds the full U(k)
@@ -52,10 +57,7 @@ CONTAINS
     CALL timestart('melem_interpolate_ham')
 
     ! ---- k-path from kpts_interpol ----
-    IF (.NOT. melem_read_kset(kfrac, np, 'melem_interpolate_ham')) THEN
-      WRITE(oUnit,'(a)') 'wannierlib interpolation: no kpts_interpol file -> skipped'
-      CALL timestop('melem_interpolate_ham'); RETURN
-    END IF
+    np = SIZE(kfrac, 2)   ! the caller resolved the domain; there is nothing to skip
 
     CALL melem_kpath(cell, kfrac, kdist)   ! abscissa of the output, from the mesh just read
 
@@ -69,8 +71,8 @@ CONTAINS
     ALLOCATE(evals(num_wann), hk(num_wann, num_wann))
     CALL melem_zheev_workspace('N', num_wann, work, rwork, lwork)
 
-    OPEN(newunit=iu,   file='bands_wann_interpol.dat',    status='replace')
-    OPEN(newunit=iuev, file='bands_wann_interpol_ev.dat', status='replace')
+    OPEN(newunit=iu,   file=TRIM(out1)//'.dat', status='replace')
+    OPEN(newunit=iuev, file=TRIM(out2)//'.dat', status='replace')
     WRITE(iu,  '(a)') '# kdist   E_1..E_numwann  (Htr)'
     WRITE(iuev,'(a)') '# kdist   E_1..E_numwann  (eV, absolute)'
     DO ip = 1, np
@@ -81,7 +83,7 @@ CONTAINS
       WRITE(iuev,'(f12.6,*(2x,f14.8))') kdist(ip), hartree_to_ev_const * evals(:)
     END DO
     CLOSE(iu); CLOSE(iuev)
-    WRITE(oUnit,'(a,i0,a)') 'wannierlib interpolation: wrote bands_wann_interpol.dat (', np, ' k-points)'
+    WRITE(oUnit,'(a,i0,a)') 'wannierlib interpolation: wrote '//TRIM(out1)//'.dat (', np, ' k-points)'
     CALL timestop('melem_interpolate_ham')
   END SUBROUTINE melem_interpolate_ham
 
