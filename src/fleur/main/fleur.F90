@@ -406,6 +406,8 @@ CONTAINS
             CALL enpara%update(fmpi, fi%atoms, fi%vacuum, fi%input, vToT, hub1data)
             CALL timestop("Updating energy parameters")
 
+            IF (fi%hybinp%l_hybrid) hybdat%results%te_hfex%valence = 0.0
+
             IF (.NOT. fi%input%eig66(1)) THEN
                CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv,  &
                           hybdat, iter, eig_id, results, inDen, vToT, vx, hub1data)
@@ -420,7 +422,7 @@ CONTAINS
                IF(hybdat%l_calhf) hybdat%results%te_hfex%core = 2*hybdat%results%te_hfex%core
             END IF
             ! Send all result of local total energies to the r ! TODO: Is half the comment missing?
-            IF (fi%hybinp%l_hybrid .AND. hybdat%l_calhf) THEN
+            IF (fi%hybinp%l_hybrid) THEN
                results%te_hfex=hybdat%results%te_hfex
 #ifdef CPP_MPI
                CALL fmpi%set_root_comm()
@@ -685,9 +687,6 @@ CONTAINS
                l_cont = l_cont .AND. (iter < 100) ! Security stop for non-converging nested PBE calculations
             END IF
 
-            IF (hybdat%l_subvxc) THEN
-               results%te_hfex%valence = 0
-            END IF
          ELSE IF (fi%atoms%n_hia > 0) THEN
             l_cont = l_cont .AND. (iter < fi%input%itmax) !The SCF cycle reached the maximum iteration
             l_cont = l_cont .AND. ((fi%input%mindistance <= results%last_distance) .OR. fi%input%l_f)

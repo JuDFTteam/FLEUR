@@ -29,7 +29,7 @@ MODULE m_types_sym
       !multiplication table
       INTEGER, ALLOCATABLE :: multab(:, :) !(nop,nop)
       !No of 2D-sym ops
-      INTEGER ::nop2
+      INTEGER ::nop2 = -1
       !Wigner matrix for lda+u
       COMPLEX, ALLOCATABLE :: d_wgn(:, :, :, :)
       !Phase factors for offidagonal lda+u
