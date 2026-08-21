@@ -56,7 +56,7 @@ contains
       class(t_forcetheo), allocatable :: forcetheo_fullsym
 
       character(len=100) :: inp_pref
-      integer            :: iQ, ik, isym
+      integer            :: iQ, ik, isym, iatom
       integer            :: mrot(3, 3), invmrot(3, 3)
       logical            :: l_trs
       real               :: trans(3), rkpt(3)
@@ -86,6 +86,14 @@ contains
       do iQ = 1, qvec_full%nkpt
          if (any(abs(qvec_full%bk(:, iQ) - fi%dfpt%qvec%bk(:, iQ)) > 1e-7)) then
             call juDFT_error("fullsym_ q mesh ordering differs from dfpt%qvec; the q<iQ>_* and dynMatq=<iQ> file names would be mismatched.", calledby="dfpt_read_fullsym")
+         end if
+      end do
+
+      ! sym_full%mapped_atom is indexed with fi%atoms, so both cells must list the
+      ! atoms in the same order even though the type grouping differs.
+      do iatom = 1, fi%atoms%nat
+         if (any(abs(fi_fullsym%atoms%taual(:, iatom) - fi%atoms%taual(:, iatom)) > 1e-7)) then
+            call juDFT_error("fullsym_ atom ordering differs from the DFPT cell; the atom map would be wrong.", calledby="dfpt_read_fullsym")
          end if
       end do
 
@@ -386,36 +394,17 @@ contains
       !! computed on the irreducible wedge, by
       !! $$\underline{g}^{\kappa'\beta}(S\boldsymbol{k},S\boldsymbol{q})
       !!   =\Lambda(\boldsymbol{k}+\boldsymbol{q},\mathcal{S})
-      !!    \Big[e^{-i(S\boldsymbol{q})\cdot\boldsymbol{R}_{S\kappa}}
+      !!    \Big[e^{+i(S\boldsymbol{q})\cdot\boldsymbol{R}_{S\kappa}}
       !!         \sum_\alpha S_{\beta\alpha}\,
       !!         \underline{g}^{\kappa\alpha}(\boldsymbol{k},\boldsymbol{q})\Big]
       !!    \Lambda^\dagger(\boldsymbol{k},\mathcal{S})$$
       !! `lambda` is supplied by the caller. \(\boldsymbol{R}_{S\kappa}
       !! =S\boldsymbol{\tau}_\kappa+\boldsymbol{v}-\boldsymbol{\tau}_{p(\kappa)}\)
-      !! with \(\kappa\) the **source** atom, so `rlat` is a lattice vector by
-      !! construction and the phase is a genuine \(e^{-i(S\boldsymbol{q})\cdot
-      !! \boldsymbol{R}}\). Evaluating it at the image atom instead makes `rlat`
-      !! non-integral whenever `mapped_atom` is not an involution, so do not
-      !! "align" this with `rotate_dynmat`'s destination-indexed \(f\).
+      !! is indexed by the **source** atom \(\kappa\)
       !!
-      !! That routine looks like it uses a different convention (`mrot` and
-      !! \(\boldsymbol{q}_{\mathrm{rep}}\) instead of `invmrot` and
-      !! \(\boldsymbol{q}_{\mathrm{full}}\)); it does not. With
-      !! \(\boldsymbol{q}_{\mathrm{full}}=S^{-T}\boldsymbol{q}_{\mathrm{rep}}\),
-      !! \(\boldsymbol{q}_{\mathrm{full}}\cdot(S\boldsymbol{\tau}_\alpha
-      !! -\boldsymbol{\tau}_{p(\alpha)})
-      !! =\boldsymbol{q}_{\mathrm{rep}}\cdot(\boldsymbol{\tau}_\alpha
-      !! -S^{-1}\boldsymbol{\tau}_{p(\alpha)})\), so the two forms are the same
-      !! phase. See `changed_phase_convention.md` §6.
-      !!
-      !! For the time-reversal half (`isym > nop`), `invmrot`/`mapped_atom` are
-      !! only tabulated up to `nop`, so the real-space operation used here is
-      !! `-invmrot` at index `isym - nop` (which recovers the spatial \(S\), since
-      !! `get_sym_operation_int_coord` returns it negated), and the source block is
-      !! conjugated per \(g^{\kappa\alpha}(-\boldsymbol{k},-\boldsymbol{q})
-      !! =[g^{\kappa\alpha}(\boldsymbol{k},\boldsymbol{q})]^{*}\). `bkf` already
-      !! carries the \(\boldsymbol{q}\to-\boldsymbol{q}\) sign, so the phase
-      !! conjugates itself and needs no extra `conjg`.
+      !! For `isym > nop` (time reversal), `invmrot`/`mapped_atom` are only
+      !! tabulated up to `nop`, so the spatial operation is `-invmrot` at index
+      !! `isym - nop`, and the source block is conjugated
 
       use m_inv3
 
@@ -458,10 +447,7 @@ contains
          iq   = qvec_full%bkp(iqf)
          isym = qvec_full%bksym(iqf)
          call sym_full%get_sym_operation_int_coord(isym, mrot, invmrot, trans, l_trs)
-         if (.not.all(abs(trans) < 1e-9)) then
-            call juDFT_error("el-ph unfolding with non-symmorphic symmetries is not supported; redo the IBZ run with a symmorphic group.", calledby="dfpt_unfold_gmat")
-         end if
-
+         
          iopAtom = isym
          rotReal = invmrot
          if (l_trs) then
@@ -483,7 +469,7 @@ contains
             jAtom = sym_full%mapped_atom(iopAtom, iAtom)
             atomMap(iAtom) = jAtom
             rlat = matmul(real(rotReal), fi%atoms%taual(:, iAtom)) + trans - fi%atoms%taual(:, jAtom)
-            phas = -tpi_const*dot_product(q_f, rlat)
+            phas = tpi_const*dot_product(q_f, rlat)
             phaseAtom(iAtom) = cmplx(cos(phas), sin(phas))
          end do
 
@@ -542,7 +528,7 @@ contains
 
       lmaxd = fi%atoms%lmaxd
 
-      call hybinp%gen_map(fi%atoms, sym_full)
+      call gen_map_all_atoms(fi%atoms, sym_full, hybinp)
 
       ! Wigner d matrices, l = 0..lmaxd, including the time-reversal half
       allocate (hybinp%d_wgn2(-lmaxd:lmaxd, -lmaxd:lmaxd, 0:lmaxd, sym_full%nsym))
@@ -611,6 +597,57 @@ contains
       end do
 
    end subroutine setup_rotation_data
+
+   subroutine gen_map_all_atoms(atoms, sym_full, hybinp)
+      !! Atom map and lattice-vector table for `waveftrafo_gen_cmt`, searching all
+      !! atoms rather than only the equivalents of one type. `t_hybinp%gen_map`
+      !! restricts the search to `neq(itype)`.
+      !! DFPT runs with -nosym, types are broken up
+
+      use m_map_to_unit
+
+      type(t_atoms),  intent(in)    :: atoms
+      type(t_sym),    intent(in)    :: sym_full
+      type(t_hybinp), intent(inout) :: hybinp
+
+      integer :: iatom, jatom, isym, iisym, ratom
+      real    :: rtaual(3), dist, minDist
+
+      if (allocated(hybinp%map))  deallocate (hybinp%map)
+      if (allocated(hybinp%tvec)) deallocate (hybinp%tvec)
+      allocate (hybinp%map(atoms%nat, sym_full%nsym), source=0)
+      allocate (hybinp%tvec(3, atoms%nat, sym_full%nsym), source=0)
+
+      do isym = 1, sym_full%nsym
+         iisym = isym
+         if (isym > sym_full%nop) iisym = isym - sym_full%nop
+
+         do iatom = 1, atoms%nat
+            rtaual = matmul(sym_full%mrot(:, :, iisym), atoms%taual(:, iatom)) + sym_full%tau(:, iisym)
+
+            ratom   = 0
+            minDist = 1e33
+            do jatom = 1, atoms%nat
+               dist = norm2(map_to_unit(rtaual - atoms%taual(:, jatom)))
+               if (dist < minDist) then
+                  minDist = dist
+                  ratom   = jatom
+               end if
+            end do
+
+            if (minDist > 1e-6) then
+               call juDFT_error("No image atom for a full-group operation; the fullsym_ cell does not match the DFPT cell.", calledby="gen_map_all_atoms")
+            end if
+            if (atoms%nz(atoms%itype(ratom)) /= atoms%nz(atoms%itype(iatom))) then
+               call juDFT_error("Symmetry maps an atom onto a different element.", calledby="gen_map_all_atoms")
+            end if
+
+            hybinp%map(iatom, isym)     = ratom
+            hybinp%tvec(:, iatom, isym) = nint(rtaual - atoms%taual(:, ratom))
+         end do
+      end do
+
+   end subroutine gen_map_all_atoms
 
    subroutine cmt_from_z(fi, usdus, nococonv, lapw, zMat, jsp, nbands, maxlmindx, cmt)
       !! Expands an eigenvector into muffin-tin coefficients, in the hybrid-code

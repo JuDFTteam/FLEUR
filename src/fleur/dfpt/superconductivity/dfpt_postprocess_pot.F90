@@ -236,7 +236,7 @@ contains
             call dfpt_build_lambda(fi,sym_qpts,fmpi,enpara,vTot,nococonv,stars,eig_id,ispin,bandWindow,lambda,mapped_kpt,eig_win)
             if (fmpi%irank==0) call dfpt_check_lambda(fi,lambda,eig_win,1e-6)
             call dfpt_unfold_gmat(fi,sym_qpts,qpts,ispin,lambda,mapped_kpt,gmatCart,gmatCartBZ)
-            deallocate(lambda,mapped_kpt)
+            deallocate(lambda,mapped_kpt,eig_win)
         end do
         call timestop("elph symmetry unfolding")
 

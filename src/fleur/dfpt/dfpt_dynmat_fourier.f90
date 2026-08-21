@@ -44,11 +44,9 @@ CONTAINS
          q_full = qpts%bkf(:,iqfull)
          isym = qpts%bksym(iqfull)
          call sym%get_sym_operation_int_coord(isym,mrot,invmrot,trans,l_inv)
-         if (.not. all(trans == 0 )) call juDFT_error("dynMat interpolation with non symmorphic symmetries is currently not supported. & 
-                                                      Please redo the calculation of the IBZ and interpolation with a symmorphic group.",calledby="dfpt_dynmat_sym.f90")
          if (l_inv) isym = isym - sym%nop ! the corresponding symmetry operation 
          dyn_mat_qsym(:,:) = cmplx(0.0,0.0)
-         call rotate_dynmat(atoms,sym,isym,mrot,invmrot,l_inv,amat,qpts%bk(:,iq),dyn_mat_q(:,:,iq),dyn_mat_qsym)
+         call rotate_dynmat(atoms,sym,isym,invmrot,l_inv,amat,trans,q_full,dyn_mat_q(:,:,iq),dyn_mat_qsym)
          dyn_mat_qsym(:,:) = dyn_mat_qsym(:,:)
          dyn_mat_q_full(:,:,iqfull) = dyn_mat_qsym
 
@@ -189,38 +187,37 @@ CONTAINS
         end do !iz
     end subroutine unfold_grid
 
-   SUBROUTINE rotate_dynmat(atoms,sym,isym,mrot,invmrot,l_inv,amat,bqpt,dyn,dyn_mat_qsym)
+   SUBROUTINE rotate_dynmat(atoms,sym,isym,invmrot,l_inv,amat,trans,q_full,dyn,dyn_mat_qsym)
       !! Applies a symmetry operation to the dynamical matrix of an IBZ q vector
-      !! to find the matrix of its mapped q vector in the full BZ. This is done
-      !! by using the symmetry relation of the FCM when a symmetry operation
-      !! \(\underline{B}\) maps atoms \(\beta',\alpha'\) onto \(\beta,\alpha\)
-      !! in Cartesian coordinates 
-      !! (\(\underline{B}\boldsymbol{\tau}_{\beta'}=\boldsymbol{\tau}_{\beta}\))
-      !! $$\underline{\Phi}_{\alpha'+\boldsymbol{R},\beta'}=\underline{B}\underline{\Phi}_{\alpha+\underline{B}\boldsymbol{R},\beta}\underline{B}^{-1}$$
-      !! Resulting (with the definition of the DM as the mass-scaled Fourier Transform
-      !! of the FCM) in the corresponding relation:
-      !! $$\underline{D}_{\alpha',\beta'}(\boldsymbol{q})=p(\alpha,\beta)*\underline{B}\underline{D}_{\alpha,\beta}(\boldsymbol{q}_{\mathrm{rep}})\underline{B}^{-1}$$
-      !! with a phase factor
-      !! $$f(\alpha,\beta)=exp(ix),x=\boldsymbol{q}_{\mathrm{red}}\cdot(\boldsymbol{\tau}_{\beta'}-\boldsymbol{\tau}_{\alpha'})-\boldsymbol{q}_{\mathrm{red}}\cdot(\boldsymbol{\tau}_{\beta}-\boldsymbol{\tau}_{\alpha})$$
-      !! which can be written as a product
-      !! $$f(\alpha,\beta) = f(\alpha)f^{*}(\beta), f(\alpha)=exp(i(\boldsymbol{q}_{\mathrm{red}}\cdot\boldsymbol{\tau}_{\alpha}-\boldsymbol{q}_{\mathrm{red}}\cdot\boldsymbol{\tau}_{\alpha'})).$$
-      !! The real space rotation is related to the rotation matrix of the symmetry operation by the Bravais matrix of the system
-      !! $$\underline{B}=\underline{A}\underline{S}^{-1}\underline{A}^{-1}$$
+      !! to find the matrix of its mapped q vector in the full BZ:
+      !! $$\underline{D}_{p(\alpha),p(\beta)}(\boldsymbol{q}_{\mathrm{full}})=f(\alpha)f^{*}(\beta)\,\underline{B}\,\underline{D}_{\alpha,\beta}(\boldsymbol{q}_{\mathrm{rep}})\,\underline{B}^{-1}$$
+      !! with \(\underline{B}=\underline{A}S\underline{A}^{-1}\) and the lattice-vector phase
+      !! $$f(\alpha)=e^{+i2\pi\boldsymbol{q}_{\mathrm{full}}\cdot\boldsymbol{R}_{S\alpha}},\quad\boldsymbol{R}_{S\alpha}=S\boldsymbol{\tau}_{\alpha}+\boldsymbol{v}-\boldsymbol{\tau}_{p(\alpha)}$$
+      !! read at the source atom \(\alpha\). For `isym > nop` the spatial \(S\) is
+      !! `-invmrot`, the source block is conjugated, and `q_full` already carries
+      !! the \(\boldsymbol{q}\to-\boldsymbol{q}\) sign.
+      !!
+      !! `dfpt_lambda::dfpt_unfold_gmat` carries \(f^{*}\) on the same
+      !! \(\boldsymbol{R}_{S\alpha}\). That is not an inconsistency: the two meet
+      !! on opposite sides of \(g^{\nu}=\sum_{\kappa\alpha}e^{\nu}_{\kappa\alpha}
+      !! g^{\kappa\alpha}\), so the phases have to cancel there. See
+      !! `changed_phase_convention.md`.
       USE m_inv3
       type(t_atoms), INTENT(IN)    :: atoms
       type(t_sym),   INTENT(IN)    :: sym
       INTEGER,       INTENT(IN)    :: isym
-      INTEGER,          INTENT(IN)    :: mrot(3,3)
-      INTEGER,          INTENT(IN)    :: invmrot(3,3) 
+      INTEGER,       INTENT(IN)    :: invmrot(3,3)
       LOGICAL,       INTENT(IN)    :: l_inv
       REAL,          INTENT(IN)    :: amat(3,3)
-      REAL,          INTENT(IN)    :: bqpt(3)
+      REAL,          INTENT(IN)    :: trans(3)
+      REAL,          INTENT(IN)    :: q_full(3)
       COMPLEX,       INTENT(IN)    :: dyn(:,:)
       COMPLEX,       INTENT(INOUT) :: dyn_mat_qsym(:,:)
-      
-      INTEGER :: iAtom, jAtom , iAtom_map, jAtom_map
+
+      INTEGER :: iAtom, jAtom
       INTEGER :: iAlpha, iBeta, iAlpha_map, iBeta_map
-      REAL    :: invamat(3,3), phas, det , pos_map(3)
+      INTEGER :: rotReal(3,3)
+      REAL    :: invamat(3,3), phas, det, rlat(3)
       COMPLEX :: brot(3,3), temp_mat_1(3,3), temp_mat_2(3,3)
       COMPLEX :: phase_fac
 
@@ -228,42 +225,33 @@ CONTAINS
       COMPLEX :: phase_map(atoms%nat)
 
       CALL inv3(amat,invamat,det)
-      temp_mat_1 = MATMUL(invmrot,invamat)
+
+      rotReal = invmrot
+      IF (l_inv) rotReal = -invmrot ! get_sym_operation_int_coord negates the spatial part for isym > nop
+
+      temp_mat_1 = MATMUL(REAL(rotReal),invamat)
       brot = MATMUL(amat,temp_mat_1)
-      
-      ! Find the q vector in the full BZ
-      !q_full = MATMUL(transpose(mrot),bqpt)
-      
-      ! Calculate the array of phases
+
       DO iAtom = 1, atoms%nat
          jAtom = sym%mapped_atom(isym,iAtom)
-         ! Create list to which atom we map 
-         map(iAtom)=jAtom
-         ! Find rotated atom position
-         pos_map = matmul(mrot, atoms%taual(:,iAtom))
-         IF (l_inv) pos_map = -1 * pos_map ! Inversion does not exist in real space, 
-                                           ! we have to introduce a minus that negates the minus of mrot
-         ! Calculate the phase factor f(alpha)
-         phas= tpi_const*(dot_product(bqpt(:),atoms%taual(:,jAtom)) - dot_product(bqpt(:), pos_map(:))) 
-         phase_fac=cmplx(cos(phas),sin(phas))
-         phase_map(iAtom)=phase_fac
+         map(iAtom) = jAtom
+         rlat = MATMUL(REAL(rotReal),atoms%taual(:,iAtom)) + trans - atoms%taual(:,jAtom)
+         phas = tpi_const*dot_product(q_full,rlat)
+         phase_map(iAtom) = cmplx(cos(phas),sin(phas))
       END DO
- 
-      IF (l_inv) phase_map = conjg(phase_map) ! inversion maps q -> -q which results in a complex conjugate of the phase
+
       ! Transform the dynamical matrix from the representative atom and q vector to the unfolded ones
       DO iAtom=1, atoms%nat
          iAlpha = 3*(iAtom-1)
          iAlpha_map = 3*(map(iAtom)-1)
-         iAtom_map = map(iAtom)
          DO jAtom=1, atoms%nat
             iBeta = 3*(jAtom-1)
             iBeta_map = 3*(map(jAtom)-1)
-            jAtom_map = map(jAtom)
             temp_mat_1 = dyn(iAlpha+1:iAlpha+3,iBeta+1:iBeta+3)
             if (l_inv) temp_mat_1 = conjg(temp_mat_1) ! inversion maps q -> -q  , which results into a conjugate
             temp_mat_2 = MATMUL(brot,temp_mat_1)
             temp_mat_1 = MATMUL(temp_mat_2,TRANSPOSE(brot))
-            phase_fac=phase_map(iAtom_map)*conjg(phase_map(jAtom_map))
+            phase_fac = phase_map(iAtom)*conjg(phase_map(jAtom))
 
             dyn_mat_qsym(iAlpha_map+1:iAlpha_map+3,iBeta_map+1:iBeta_map+3) &
           = dyn_mat_qsym(iAlpha_map+1:iAlpha_map+3,iBeta_map+1:iBeta_map+3) + phase_fac*temp_mat_1
