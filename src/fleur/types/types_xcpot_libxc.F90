@@ -465,6 +465,8 @@ CONTAINS
          IF (xcpot%func_vxc_id_c > 0) THEN
             CALL xc_f90_lda_fxc(xcpot%vxc_func_c, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), fxc_tmp)
             fxc_tmp = fxc_tmp + fx_tmp
+         ELSE
+            fxc_tmp = fx_tmp
          ENDIF
       ENDIF
       fxc = TRANSPOSE(fxc_tmp)
