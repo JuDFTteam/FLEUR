@@ -5,7 +5,7 @@
    </comment>
    <calculationSetup>
       <cutoffs Kmax="3.0" Gmax="9.0" GmaxXC="9.0" numbands="0"/>
-      <scfLoop itmax="6" minDistance="0.00001" maxIterBroyd="15" imix="Anderson" alpha="0.05" precondParam="0.0" spinf="2.0"/>
+      <scfLoop itmax="8" minDistance="0.00001" maxIterBroyd="15" imix="Anderson" alpha="0.05" precondParam="0.0" spinf="2.0"/>
       <coreElectrons ctail="F" frcor="F" kcrel="0" coretail_lmax="0"/>
       <xcFunctional name="LibXC" relativisticCorrections="F">
          <LibXCName exchange="LDA_X" correlation="LDA_C_VWN"/>
