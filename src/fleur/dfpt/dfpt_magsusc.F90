@@ -36,11 +36,10 @@ contains
 
         type(t_potden)                     :: vExt1, vExt1Im
         type(t_stars)                      :: starsq_vext
-        complex, allocatable               :: pwwq2(:,:),tempval_pw,tempval_mt, denIn1_pw(:), dieltensor_HF(:)
+        complex, allocatable               :: pwwq2(:,:),tempval_pw,tempval_mt, denIn1_pw(:)
         real, allocatable                  :: denIn1_mt(:,:,:),denIn1_mt_Im(:,:,:) 
         integer                            :: iDir_col,iType,iSpin
         complex                            :: diel_tensor_int_IR(3),diel_tensor_int_MT(3)
-        complex, allocatable               :: diel_tensor_int_MT_atom(:,:)
         character(len=20)                  :: status_string,densave_string,vextsave_string
         character(len=20)                  :: filename_string
         real                               ::qvec_int(3)
@@ -54,7 +53,6 @@ contains
         ! \rho(1)V_{ext}(1) integral (HF)
         diel_tensor_int_IR = CMPLX(0.0,0.0)
         diel_tensor_int_MT = CMPLX(0.0,0.0)
-        diel_tensor_int_MT_atom = cmplx(0.0,0.0)
 
 
         do iSpin=1,2 
