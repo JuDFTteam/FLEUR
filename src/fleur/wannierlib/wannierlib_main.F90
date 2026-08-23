@@ -82,7 +82,6 @@ CONTAINS
       !> iteration. It lives here rather than in the coarse object, which holds the Bloch
       !> matrices from before any gauge exists.
       COMPLEX, ALLOCATABLE :: v_ch(:, :, :, :)   ! (num_bands, num_wann, nkptf, 2)
-      INTEGER :: ik_gauge
       TYPE(t_melem_coarse) :: melem   ! the operator (matrix-element) side
       TYPE(t_melem_bmesh) :: bmesh    ! b-shell weights handed to the operator side
       TYPE(t_usdus), POINTER :: usdus       ! into the factory cache
@@ -165,15 +164,8 @@ CONTAINS
          ! wannierise this channel -> the gauge factors u_matrix (MLWF) and u_opt (disentangled)
          CALL run_w90(this, cell, kpts, mmn, amn, eig, fmpi%irank, u_matrix, u_opt)
 
-         !> Keep this channel's gauge while its two factors are still alive.
-         IF (melem%n_channels == 2 .AND. request%has_op_r('spin')) THEN
-            IF (.NOT. ALLOCATED(v_ch)) &
-               ALLOCATE (v_ch(manifold%num_bands, manifold%num_wann, kpts%nkptf, 2), &
-                         source=CMPLX(0.0, 0.0))
-            DO ik_gauge = 1, SIZE(u_opt, 3)
-               v_ch(:, :, ik_gauge, jspin) = MATMUL(u_opt(:, :, ik_gauge), u_matrix(:, :, ik_gauge))
-            END DO
-         END IF
+         CALL wannierlib_keep_gauge(melem%n_channels, request%has_op_r('spin'), manifold, &
+                                    kpts%nkptf, jspin, u_opt, u_matrix, v_ch)
 
          ! everything operator-related happens in the matrix-element layer, which only needs the
          ! gauge, the overlaps and the b-mesh. Adding an operator does not touch this file.
@@ -254,6 +246,34 @@ CONTAINS
          END DO
       END IF
    END SUBROUTINE wannierlib_distribute_k
+
+   !> Keep this spin channel's Wannier gauge V = u_opt u_matrix while both factors are alive.
+   !>
+   !> Only the collinear two-channel spin operator needs it, and only it can say so: the
+   !> combined 2N matrix cannot be assembled until BOTH channels have wannierised, while
+   !> u_opt and u_matrix are released at the end of every iteration. Anything that wants a
+   !> gauge later has to have kept it here.
+   !>
+   !> A no-op unless there are two channels and the spin operator was asked for, so the
+   !> caller can call it unconditionally.
+   SUBROUTINE wannierlib_keep_gauge(n_channels, l_want_spin, manifold, nkptf, jspin, &
+                                    u_opt, u_matrix, v_ch)
+      INTEGER, INTENT(IN) :: n_channels
+      LOGICAL, INTENT(IN) :: l_want_spin
+      TYPE(t_melem_manifold), INTENT(IN) :: manifold
+      INTEGER, INTENT(IN) :: nkptf, jspin
+      COMPLEX, INTENT(IN) :: u_opt(:, :, :), u_matrix(:, :, :)
+      COMPLEX, ALLOCATABLE, INTENT(INOUT) :: v_ch(:, :, :, :)   !> (nb, nw, nkptf, 2)
+
+      INTEGER :: ik
+
+      IF (n_channels /= 2 .OR. .NOT. l_want_spin) RETURN
+      IF (.NOT. ALLOCATED(v_ch)) &
+         ALLOCATE (v_ch(manifold%num_bands, manifold%num_wann, nkptf, 2), source=CMPLX(0.0, 0.0))
+      DO ik = 1, SIZE(u_opt, 3)
+         v_ch(:, :, ik, jspin) = MATMUL(u_opt(:, :, ik), u_matrix(:, :, ik))
+      END DO
+   END SUBROUTINE wannierlib_keep_gauge
 
 
    subroutine wannierlib_create_eig(this, results, kpts, jspin, eig)
