@@ -48,7 +48,7 @@ CONTAINS
     INTEGER, INTENT(IN) :: irvec(:, :), ndegen(:), nrpts
     CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: wfpref   ! seedname prefix 'WF1'/'WF2' (collinear jspins=2 channel); default 'WF1'
     COMPLEX, ALLOCATABLE :: hr4(:, :, :, :)   ! one-component view for the shared writer
-    INTEGER :: nw, irpt, i, j, iu, c
+    INTEGER :: nw
     CHARACTER(LEN=64) :: fn
     nw = this%num_wann
     fn = 'WF1_hr'
@@ -206,7 +206,7 @@ CONTAINS
     CHARACTER(LEN=*), INTENT(IN) :: fname
     COMPLEX, ALLOCATABLE :: ow_loc(:, :, :, :), or_(:, :, :, :), o1(:, :, :), tmp(:, :)
     INTEGER, ALLOCATABLE :: irvec(:, :), ndegen(:)
-    INTEGER :: nb, nw, nkl, kl, a, nrpts, irpt, i, j, kk, ii, jj, c, iu
+    INTEGER :: nb, nw, nkl, kl, a, nrpts
     nb = SIZE(o0_loc, 1); nw = this%num_wann; nkl = SIZE(gk_loc)
     ALLOCATE(ow_loc(nw, nw, ncomp, MAX(1, nkl)), source=CMPLX(0.0, 0.0))
     ALLOCATE(tmp(nb, nw))

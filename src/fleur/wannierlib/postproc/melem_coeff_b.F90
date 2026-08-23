@@ -51,7 +51,7 @@ CONTAINS
     INTEGER, INTENT(IN) :: irvec(:, :), nrpts, mpicm, irank
     CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: wfpref
 
-    INTEGER :: nb, nw, nk, nnt, nkl, kl, k, kb, nn, a, i, j, m, n, irpt, ierr
+    INTEGER :: nb, nw, nk, nnt, nkl, kl, k, kb, nn, a, i, m, n, irpt, ierr
     REAL    :: rdotk0
     COMPLEX :: fac
     COMPLEX, ALLOCATABLE :: Vk(:, :), Vkb(:, :), tmp(:, :), mh(:, :, :, :), br(:, :, :, :)

@@ -158,7 +158,7 @@ CONTAINS
     INTEGER, INTENT(IN) :: irvec(:, :), nrpts
     CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: wfpref   ! seedname prefix 'WF1'/'WF2' (collinear jspins=2 channel); default 'WF1'
     CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: suffix   ! '_r' (default) or '_rpw' for the postw90 variant
-    INTEGER :: nw, irpt, i, j, a, iu
+    INTEGER :: nw, i
     CHARACTER(LEN=64) :: fn
     REAL, PARAMETER :: bohr2ang = 0.5291772109
     nw = this%num_wann
