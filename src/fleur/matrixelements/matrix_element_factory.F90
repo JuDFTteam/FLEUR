@@ -16,7 +16,7 @@ MODULE m_matrix_element_factory
     USE m_types_spinor_layout, ONLY: t_spinor_layout, radial_slot, melem_stack_spinor, &
                                      LAYOUT_SCALAR
     USE m_types_usdus
-    USE m_judft, ONLY: judft_error
+    USE m_judft, ONLY: judft_error, judft_bug
     IMPLICIT NONE
     PRIVATE
 
@@ -144,9 +144,12 @@ CONTAINS
                 oldest = is
             END IF
         END DO
-        IF (oldest == 0) CALL judft_error( &
-            'matrix_element_factory: every slot is anchored, so there is none to fill', &
-            calledby='acquire_slot')
+        !> Cannot happen while the anchor is one slot: the loop skips exactly that one of
+        !> N_KSLOT and any other sets oldest. Kept as an assertion because the alternative
+        !> to aborting is returning 0 and letting the caller index kslot(0), and because it
+        !> would start happening the day the anchor becomes a set or N_KSLOT drops to one.
+        IF (oldest == 0) CALL judft_bug( &
+            'acquire_slot: no slot to fill, though only one of them can be anchored')
         CALL clear_slot(kslot(oldest))
         use_clock = use_clock + 1
         kslot(oldest)%stamp = use_clock

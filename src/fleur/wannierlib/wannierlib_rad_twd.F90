@@ -189,12 +189,22 @@ CONTAINS
     CALL timestart('wannierlib_soc_tlmw')
     DO nwf = 1, nwfs
       l = lwf(nwf)
-      IF (l < 0) CALL juDFT_error('not yet implemented', calledby='wannierlib_soc_tlmw')
+      !> A negative l is a hybrid, and a hybrid has no single l to couple to a spin: the
+      !> |j, m_j> guess built here is defined per l, while sp3 mixes l=0 and l=1. The same
+      !> orbital works as an (l, m) projection, which m_wannierlib_tlmw does handle.
+      IF (l < 0) CALL juDFT_error('wannierlib: a hybrid orbital has no j-resolved projection', &
+                                  hint='ask for this Wannier function with (l, m) instead', &
+                                  calledby='wannierlib_soc_tlmw')
       j = jwf(nwf)
       jm = jmwf(nwf)
-      IF (j < 0) CALL juDFT_error('jwf', calledby='wannierlib_soc_tlmw')
-      IF (ABS(jm) - j > 1e-10) CALL juDFT_error('jmwf', calledby='wannierlib_soc_tlmw')
-      IF (ABS(l + 0.5 - j) > 1e-10 .AND. ABS(l - 0.5 - j) > 1e-10) CALL juDFT_error('regula trianguli violata', calledby='wannierlib_soc_tlmw')
+      IF (j < 0) CALL juDFT_error('wannierlib: a projection was given a negative j', &
+                                  calledby='wannierlib_soc_tlmw')
+      IF (ABS(jm) - j > 1e-10) CALL juDFT_error('wannierlib: a projection has |m_j| > j', &
+                                  calledby='wannierlib_soc_tlmw')
+      !> j = l +/- 1/2 is the only coupling one l allows.
+      IF (ABS(l + 0.5 - j) > 1e-10 .AND. ABS(l - 0.5 - j) > 1e-10) &
+        CALL juDFT_error('wannierlib: j is neither l+1/2 nor l-1/2 for this projection', &
+                         calledby='wannierlib_soc_tlmw')
       tlmwf(0:3, -3:3, nwf) = CMPLX(0.0, 0.0)
       DO m = -l, l
         tlmwf(l, m, nwf) = clebsch(REAL(l), 0.5, REAL(m), 1.5 - jspin, j, jm)
