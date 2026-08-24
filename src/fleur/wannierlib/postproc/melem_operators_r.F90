@@ -13,6 +13,9 @@
 !>  Files written (legacy formats, consumed by external transport post-processing):
 !>    WF<n>_hr.dat   H(R) in eV, Wannier90 hr format
 !>    WF<n>_r.dat    A(R) = <0n|r|Rm> in Angstrom, Wannier90 r format
+!>    WF<n>_rpw.dat  the same A(R) in the postw90 convention
+!>    WF<n>_bmn.dat  B(R) = <0n|H (r-R)|Rm>
+!>    WF<n>_fmn.dat  F(R) = <0n|r_a r_b|Rm>, and _cmn.dat with H in the middle
 !>    rspauli.1      spin (3 components)
 !>    anglmomrs.<n>  orbital moment (3 components)
 !>    rssocmat.1     spin-orbit (2x2 spinor blocks)

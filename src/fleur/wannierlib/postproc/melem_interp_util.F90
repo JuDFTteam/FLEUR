@@ -20,9 +20,11 @@ CONTAINS
   !>  Cumulative distance along the interpolation mesh: the abscissa written as
   !>  the first column of every bands_wann_*.dat, in the units of cell%bmat.
   !>
-  !>  Only a path gives this a physical meaning. A plane or a grid still yields a
-  !>  monotonically growing number, which is why those domains also write the
-  !>  fractional coordinates -- see the <path>/<plane>/<grid> writers.
+  !>  Only a path gives this a physical meaning. On a domain that is not one -- a
+  !>  plane, a grid -- the number still grows monotonically but is not a coordinate,
+  !>  and of the drivers only the eigenstates one writes kx,ky,kz beside it. The
+  !>  others write the abscissa alone, so such an output is matched to its input
+  !>  kPointList by row order and by nothing else.
   SUBROUTINE melem_kpath(cell, kfrac, kdist)
     TYPE(t_cell), INTENT(IN) :: cell
     REAL, INTENT(IN) :: kfrac(:, :)                 ! (3, np) fractional mesh, in path order

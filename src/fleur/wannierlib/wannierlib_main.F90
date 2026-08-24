@@ -167,8 +167,10 @@ CONTAINS
          CALL wannierlib_keep_gauge(melem%n_channels, request%has_op_r('spin'), manifold, &
                                     kpts%nkptf, jspin, u_opt, u_matrix, v_ch)
 
-         ! everything operator-related happens in the matrix-element layer, which only needs the
-         ! gauge, the overlaps and the b-mesh. Adding an operator does not touch this file.
+         ! everything operator-related happens in the matrix-element layer, which only needs
+         ! the gauge, the overlaps and the b-mesh. The exception is right below: an operator
+         ! whose input needs the wavefunctions AFTER the gauge is known can be built neither
+         ! there nor in the post-processing, and only those touch this file.
          ! Kept BEFORE report_w90 so the ordering of the operator messages in `out` is unchanged.
          CALL wannierlib_get_bmesh(this, kpts, bmesh)
          !> F wants the gauge at two neighbours at once, so it can be built neither with the

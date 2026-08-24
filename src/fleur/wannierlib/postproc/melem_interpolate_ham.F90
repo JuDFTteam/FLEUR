@@ -56,7 +56,7 @@ CONTAINS
     num_wann  = this%num_wann
     CALL timestart('melem_interpolate_ham')
 
-    ! ---- k-path from kpts_interpol ----
+    ! ---- the domain's k-set, already resolved by the caller ----
     np = SIZE(kfrac, 2)   ! the caller resolved the domain; there is nothing to skip
 
     CALL melem_kpath(cell, kfrac, kdist)   ! abscissa of the output, from the mesh just read

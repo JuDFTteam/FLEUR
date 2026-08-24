@@ -27,24 +27,18 @@ MODULE m_types_wannierlib
     LOGICAL :: l_socop = .FALSE.           ! an <operator name="soc"> is requested
     LOGICAL :: l_operators_r = .FALSE.     ! an <operators_r> block (real-space O(R) export) is present
 
-    ! --- opt-in output domains (<path>/<plane>/<grid> children of <interpolation>) ---
-    ! Each declared domain interpolates the operators on its own k-set and writes
-    ! bands_wann_*[_plane|_grid].dat. Each requires a listName naming a kPointList, so
-    ! declaring none is an error rather than a silent no-op.
-    !> One entry per <domain>. n_domains is broadcast because it sets the domain loop count
-    !> on every rank; the k-sets and suffixes are NOT, because only rank 0 writes the k-set
-    !> file and renames the outputs. Nothing outside rank 0 may read or validate them.
+    ! --- opt-in output domains (<domain> children of <interpolation>) ---
+    ! One <domain> per set of k-points the operators are evaluated on, repeatable and
+    ! without kinds: @listName (required) names a kPointList of kpts.xml, @suffix tails the
+    ! output names, @npts subdivides each segment of the list. Operators declared with no
+    ! domain are an error rather than a silent no-op.
+    !> One entry per <domain>. The count and the suffixes ARE broadcast -- the first sets
+    !> the domain loop bound on every rank, the second is read inside that loop, where the
+    !> output name is built. The k-sets are not: only rank 0 reaches the writers. Reading
+    !> dom_kset off rank 0 is undefined behaviour, and a two-rank run can pass with it.
     INTEGER :: n_domains = 0
     TYPE(t_kpts), ALLOCATABLE :: dom_kset(:)
     CHARACTER(LEN=64), ALLOCATABLE :: dom_suffix(:)
-    ! <path listName=".." npts="F"/>: reuse an existing named kPointList from kpts.xml
-    ! (e.g. the band path "path-2") as the interpolation k-set, subdividing each segment
-    ! into F pieces (npts<=1 -> use the list points as-is). listName takes precedence over
-    ! @file. The k-points are extracted from the XML in read_xml (into path_kpts) and are
-    ! consumed ONLY on rank 0 in write_domain_kpts -> not broadcast (like plane/grid).
-    ! <plane listName=".."/> / <grid listName=".."/>: reuse a named kPointList (as-is)
-    ! from kpts.xml as the plane/grid k-set instead of generating it inline. Filled in
-    ! read_xml (into plane_kpts/grid_kpts), consumed on rank 0 in write_domain_kpts.
 
     ! --- operator table: one entry per <operator name=".."> child of <interpolation> ---
     INTEGER :: n_ops = 0
