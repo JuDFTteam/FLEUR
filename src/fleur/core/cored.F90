@@ -118,7 +118,7 @@ CONTAINS
          IF (jspin==1) THEN
             WRITE(warnMsg,'(a,i0,a)') 'Nuclear radius smaller than smallest radial mesh point for atom type ', &
                                        iType, ' -- skipping its core isomer shift'
-            CALL juDFT_warn(TRIM(warnMsg), calledby='cored')
+            WRITE(*,'(a)') TRIM(warnMsg)
          END IF
       ELSE
          iRad = 0

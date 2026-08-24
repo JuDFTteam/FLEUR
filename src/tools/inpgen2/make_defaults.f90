@@ -140,7 +140,7 @@ CONTAINS
              min_dtild=MAX(MAXVAL(ABS(atoms%pos(3,atoms%firstAtom(n):atoms%firstAtom(n)+atoms%neq(n)-1))+atoms%rmt(n)),min_dtild)
           ENDDO
           IF (ABS(vacuum%dvac)<=abs(cell%amat(3,3)))THEN
-             vacuum%dvac=2*min_dtild+0.2
+             vacuum%dvac=2*min_dtild+0.8
           ELSE
              vacuum%dvac=2*min_dtild-vacuum%dvac
           ENDIF

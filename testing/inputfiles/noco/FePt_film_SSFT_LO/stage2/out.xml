@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<fleurOutput fleurOutputVersion="0.37">
-   <programVersion version="fleur 39">
-      <compilationInfo date="2024-08-22T16:56:03" user="micha" host="iff1745" flag="MAKE_Fortran_FLAGS" link="LEUR_LIBRARIES"/>
-      <gitInfo version="MaX-R7.1-187-g7dadf0d7f-dirty" branch="develop" lastCommitHash="7dadf0d7fdc2c925a1e145fa5f9c7f39184b55d5"/>
+<fleurOutput fleurOutputVersion="0.38">
+   <programVersion version="fleur 42">
+      <compilationInfo date="2026-08-01T16:50:09" user="micha" host="iff1745" flag="-fiopenmp -qmkl  -assume byterecl -no-wrap-margin -fPIC" link="usr/lib64/libxml2.so"/>
+      <gitInfo version="MaX-R8.1-181-g7dc2d1b01-dirty" branch="develop" lastCommitHash="7dc2d1b01fe2f15a574a2113a3c2aec75244106f"/>
       <targetComputerArchitectures>GEN</targetComputerArchitectures>
       <precision type="DOUBLE"/>
       <targetStructureClass> </targetStructureClass>
-      <additionalCompilerFlags>CPP_MPI             CPP_HDF            CPP_WANN</additionalCompilerFlags>
+      <additionalCompilerFlags>CPP_HDF</additionalCompilerFlags>
+      <programExecution commandLine="/Users/micha/FLEUR-git-repo2/fleur/build.symcheck/fleur -warn_only"/>
    </programVersion>
    <parallelSetup>
-      <openMP ompThreads="1"/>
-      <mpi mpiProcesses="2"/>
-      <mem memoryPerNode="32637976 kB"/>
+      <openMP ompThreads="4"/>
+      <mem memoryPerNode="32568748 kB"/>
    </parallelSetup>
-   <startDateAndTime date="2024/08/22" time="18:18:45" zone="+0200"/>
+   <startDateAndTime date="2026/08/04" time="18:36:50" zone="+0200"/>
    <!-- Now follows a dump of the inp.xml file after evaluating the Schema -->
   <fleurInput fleurInputVersion="0.38">
      <comment>
@@ -139,127 +139,127 @@
       <iteration numberForCurrentRun="    1" overallNumber="    6">
          <Forcetheorem_Loop calculationType="SSDISP" No="1">
             <energyParameters units="Htr">
-               <atomicEP atomType="1" spin="1" branch="4s" branchLowest="-3.44" branchHighest="1.55" value="-0.3435251003"/>
-               <atomicEP atomType="1" spin="1" branch="4p" branchLowest="-2.19" branchHighest="2.15" value="-0.2079746051"/>
-               <atomicEP atomType="1" spin="1" branch="3d" branchLowest="-9.99" branchHighest="-0.17" value="-0.3134300785"/>
-               <atomicEP atomType="1" spin="1" branch="4f" branchLowest="-9.99" branchHighest="3.15" value="0.1069294620"/>
-               <loAtomicEP atomType="1" spin="1" branch="3s" branchLowest="-30.03" branchHighest="-3.44" value="-3.4532114104"/>
-               <loAtomicEP atomType="1" spin="1" branch="3p" branchLowest="-25.62" branchHighest="-2.19" value="-2.2192461810"/>
-               <atomicEP atomType="2" spin="1" branch="6s" branchLowest="-3.76" branchHighest="1.88" value="-0.4417641458"/>
-               <atomicEP atomType="2" spin="1" branch="6p" branchLowest="-2.01" branchHighest="3.07" value="-0.2929087536"/>
-               <atomicEP atomType="2" spin="1" branch="5d" branchLowest="-11.28" branchHighest="0.17" value="-0.3119854454"/>
-               <atomicEP atomType="2" spin="1" branch="5f" branchLowest="-2.62" branchHighest="2.53" value="-0.0091804585"/>
-               <loAtomicEP atomType="2" spin="1" branch="5p" branchLowest="-19.07" branchHighest="-2.01" value="-2.1401369198"/>
-               <vacuumEP vacuum="1" spin="1" vzIR="-0.2325267989" vzInf="-0.0000234857" value="-0.2500234857"/>
-               <vacuumEP vacuum="2" spin="1" vzIR="-0.2364154681" vzInf="-0.0291241301" value="-0.2791241301"/>
-               <atomicEP atomType="1" spin="2" branch="4s" branchLowest="-3.30" branchHighest="1.65" value="-0.3069374510"/>
-               <atomicEP atomType="1" spin="2" branch="4p" branchLowest="-2.05" branchHighest="2.24" value="-0.1752952145"/>
-               <atomicEP atomType="1" spin="2" branch="3d" branchLowest="-9.99" branchHighest="-0.03" value="-0.2053047394"/>
-               <atomicEP atomType="1" spin="2" branch="4f" branchLowest="-9.99" branchHighest="3.25" value="0.1364994645"/>
-               <loAtomicEP atomType="1" spin="2" branch="3s" branchLowest="-29.96" branchHighest="-3.30" value="-3.3153467763"/>
-               <loAtomicEP atomType="1" spin="2" branch="3p" branchLowest="-25.56" branchHighest="-2.05" value="-2.0852095860"/>
-               <atomicEP atomType="2" spin="2" branch="6s" branchLowest="-3.75" branchHighest="1.89" value="-0.4320383133"/>
-               <atomicEP atomType="2" spin="2" branch="6p" branchLowest="-2.00" branchHighest="3.08" value="-0.2836656442"/>
-               <atomicEP atomType="2" spin="2" branch="5d" branchLowest="-11.28" branchHighest="0.18" value="-0.2992315529"/>
-               <atomicEP atomType="2" spin="2" branch="5f" branchLowest="-2.62" branchHighest="2.54" value="-0.0000316660"/>
-               <loAtomicEP atomType="2" spin="2" branch="5p" branchLowest="-19.07" branchHighest="-2.00" value="-2.1265220354"/>
-               <vacuumEP vacuum="1" spin="2" vzIR="-0.2325267989" vzInf="-0.0000234857" value="-0.2500234857"/>
-               <vacuumEP vacuum="2" spin="2" vzIR="-0.2364154681" vzInf="-0.0291241301" value="-0.2791241301"/>
+               <atomicEP atomType="1" spin="1" branch="4s" branchLowest="-3.44" branchHighest="1.55" value="-0.3435111988"/>
+               <atomicEP atomType="1" spin="1" branch="4p" branchLowest="-2.19" branchHighest="2.15" value="-0.2079605648"/>
+               <atomicEP atomType="1" spin="1" branch="3d" branchLowest="-9.99" branchHighest="-0.17" value="-0.3134204459"/>
+               <atomicEP atomType="1" spin="1" branch="4f" branchLowest="-9.99" branchHighest="3.15" value="0.1069436319"/>
+               <loAtomicEP atomType="1" spin="1" branch="3s" branchLowest="-30.03" branchHighest="-3.44" value="-3.4532034721"/>
+               <loAtomicEP atomType="1" spin="1" branch="3p" branchLowest="-25.62" branchHighest="-2.19" value="-2.2192379340"/>
+               <atomicEP atomType="2" spin="1" branch="6s" branchLowest="-3.76" branchHighest="1.88" value="-0.4417859707"/>
+               <atomicEP atomType="2" spin="1" branch="6p" branchLowest="-2.01" branchHighest="3.07" value="-0.2929311102"/>
+               <atomicEP atomType="2" spin="1" branch="5d" branchLowest="-11.28" branchHighest="0.17" value="-0.3120009480"/>
+               <atomicEP atomType="2" spin="1" branch="5f" branchLowest="-2.62" branchHighest="2.53" value="-0.0092032060"/>
+               <loAtomicEP atomType="2" spin="1" branch="5p" branchLowest="-19.07" branchHighest="-2.01" value="-2.1401401769"/>
+               <vacuumEP vacuum="1" spin="1" vzIR="-0.2325339218" vzInf="-0.0000234857" value="-0.2500234857"/>
+               <vacuumEP vacuum="2" spin="1" vzIR="-0.2363453536" vzInf="-0.0290189186" value="-0.2790189186"/>
+               <atomicEP atomType="1" spin="2" branch="4s" branchLowest="-3.30" branchHighest="1.65" value="-0.3069181020"/>
+               <atomicEP atomType="1" spin="2" branch="4p" branchLowest="-2.05" branchHighest="2.24" value="-0.1752761666"/>
+               <atomicEP atomType="1" spin="2" branch="3d" branchLowest="-9.99" branchHighest="-0.03" value="-0.2052827581"/>
+               <atomicEP atomType="1" spin="2" branch="4f" branchLowest="-9.99" branchHighest="3.25" value="0.1365183218"/>
+               <loAtomicEP atomType="1" spin="2" branch="3s" branchLowest="-29.96" branchHighest="-3.30" value="-3.3153240674"/>
+               <loAtomicEP atomType="1" spin="2" branch="3p" branchLowest="-25.56" branchHighest="-2.05" value="-2.0851868369"/>
+               <atomicEP atomType="2" spin="2" branch="6s" branchLowest="-3.75" branchHighest="1.89" value="-0.4320518432"/>
+               <atomicEP atomType="2" spin="2" branch="6p" branchLowest="-2.00" branchHighest="3.08" value="-0.2836796421"/>
+               <atomicEP atomType="2" spin="2" branch="5d" branchLowest="-11.28" branchHighest="0.18" value="-0.2992396842"/>
+               <atomicEP atomType="2" spin="2" branch="5f" branchLowest="-2.62" branchHighest="2.54" value="-0.0000457679"/>
+               <loAtomicEP atomType="2" spin="2" branch="5p" branchLowest="-19.07" branchHighest="-2.00" value="-2.1265204853"/>
+               <vacuumEP vacuum="1" spin="2" vzIR="-0.2325339218" vzInf="-0.0000234857" value="-0.2500234857"/>
+               <vacuumEP vacuum="2" spin="2" vzIR="-0.2363453536" vzInf="-0.0290189186" value="-0.2790189186"/>
             </energyParameters>
             <eigenvalues>
                <eigenvaluesAt spin="1" ikpt="1" k_x="-0.25000000" k_y="0.25000000" k_z="0.00000000">
-                         -3.4531810362       -3.3153473690       -2.2215698112       -2.2213552897       -2.2126814265
-                         -2.1044158662       -2.0949248394       -2.0939250945       -2.0918000187       -2.0866895430
-                         -2.0849187892       -2.0827946904       -2.0803518150       -2.0796170906       -0.3607241627
-                         -0.3398139764       -0.3359040347       -0.3324992534       -0.3281945642       -0.3091329028
-                         -0.2993963235       -0.2885337482       -0.2854078318       -0.2831187097       -0.2689129700
-                         -0.2651820393       -0.2605944436       -0.2580818288       -0.2514449523       -0.2436552095
-                         -0.2364714544       -0.1975265122       -0.1957557839       -0.1817226703       -0.1721898447
-                         -0.1584838879       -0.1198609480       -0.0973791331       -0.0503692323       -0.0254514482
-                          0.0222437422        0.0321979248        0.0999761296        0.1113305760        0.1292042987
-                          0.1523291307        0.1790046209        0.1876383461        0.2421083818        0.2495962271
+                         -3.4531729437       -3.3153244453       -2.2215573879       -2.2213509822       -2.2126733231
+                         -2.1044139473       -2.0949265013       -2.0939348096       -2.0917913865       -2.0866685040
+                         -2.0848997694       -2.0827814179       -2.0803431211       -2.0796147571       -0.3607339907
+                         -0.3398202441       -0.3359053685       -0.3324992170       -0.3281968048       -0.3091238980
+                         -0.2993845658       -0.2885360741       -0.2854197258       -0.2831195320       -0.2689146397
+                         -0.2651954830       -0.2605971723       -0.2580848423       -0.2514457966       -0.2436571710
+                         -0.2364734112       -0.1975042772       -0.1957335396       -0.1817059531       -0.1721673615
+                         -0.1584676499       -0.1198401250       -0.0973574756       -0.0503683068       -0.0254446119
+                          0.0222611891        0.0322181385        0.1000013222        0.1113568153        0.1292096139
+                          0.1523377931        0.1790294739        0.1876638648        0.2421235010        0.2496134573
                </eigenvaluesAt>
                <eigenvaluesAt spin="1" ikpt="2" k_x="0.25000000" k_y="0.25000000" k_z="0.00000000">
-                         -3.4531810362       -3.3153473690       -2.2215698112       -2.2213552897       -2.2126814265
-                         -2.1044158662       -2.0949248394       -2.0939250945       -2.0918000187       -2.0866895430
-                         -2.0849187892       -2.0827946904       -2.0803518150       -2.0796170906       -0.3607241627
-                         -0.3398139764       -0.3359040347       -0.3324992534       -0.3281945642       -0.3091329028
-                         -0.2993963235       -0.2885337482       -0.2854078318       -0.2831187097       -0.2689129700
-                         -0.2651820393       -0.2605944436       -0.2580818288       -0.2514449523       -0.2436552095
-                         -0.2364714544       -0.1975265122       -0.1957557839       -0.1817226703       -0.1721898447
-                         -0.1584838879       -0.1198609480       -0.0973791331       -0.0503692323       -0.0254514482
-                          0.0222437422        0.0321979248        0.0999761296        0.1113305760        0.1292042987
-                          0.1523291307        0.1790046209        0.1876383461        0.2421083818        0.2495962271
+                         -3.4531729437       -3.3153244453       -2.2215573879       -2.2213509822       -2.2126733231
+                         -2.1044139473       -2.0949265013       -2.0939348096       -2.0917913865       -2.0866685040
+                         -2.0848997694       -2.0827814179       -2.0803431211       -2.0796147571       -0.3607339907
+                         -0.3398202441       -0.3359053685       -0.3324992170       -0.3281968048       -0.3091238980
+                         -0.2993845658       -0.2885360741       -0.2854197258       -0.2831195320       -0.2689146397
+                         -0.2651954830       -0.2605971723       -0.2580848423       -0.2514457966       -0.2436571710
+                         -0.2364734112       -0.1975042772       -0.1957335396       -0.1817059531       -0.1721673615
+                         -0.1584676499       -0.1198401250       -0.0973574756       -0.0503683068       -0.0254446119
+                          0.0222611891        0.0322181385        0.1000013222        0.1113568153        0.1292096139
+                          0.1523377931        0.1790294739        0.1876638648        0.2421235010        0.2496134573
                </eigenvaluesAt>
             </eigenvalues>
-            <bandgap value="0.0481839701" units="eV"/>
-            <sumValenceSingleParticleEnergies value="-37.3676504251" units="Htr"/>
-            <FermiEnergy value="-0.1966411481" units="Htr"/>
+            <bandgap value="0.0481842236" units="eV"/>
+            <sumValenceSingleParticleEnergies value="-37.3675483374" units="Htr"/>
+            <FermiEnergy value="-0.1966189084" units="Htr"/>
          </Forcetheorem_Loop>
          <Forcetheorem_Loop calculationType="SSDISP" No="2">
             <energyParameters units="Htr">
-               <atomicEP atomType="1" spin="1" branch="4s" branchLowest="-3.44" branchHighest="1.55" value="-0.3435251003"/>
-               <atomicEP atomType="1" spin="1" branch="4p" branchLowest="-2.19" branchHighest="2.15" value="-0.2079746051"/>
-               <atomicEP atomType="1" spin="1" branch="3d" branchLowest="-9.99" branchHighest="-0.17" value="-0.3134300785"/>
-               <atomicEP atomType="1" spin="1" branch="4f" branchLowest="-9.99" branchHighest="3.15" value="0.1069294620"/>
-               <loAtomicEP atomType="1" spin="1" branch="3s" branchLowest="-30.03" branchHighest="-3.44" value="-3.4532114104"/>
-               <loAtomicEP atomType="1" spin="1" branch="3p" branchLowest="-25.62" branchHighest="-2.19" value="-2.2192461810"/>
-               <atomicEP atomType="2" spin="1" branch="6s" branchLowest="-3.76" branchHighest="1.88" value="-0.4417641458"/>
-               <atomicEP atomType="2" spin="1" branch="6p" branchLowest="-2.01" branchHighest="3.07" value="-0.2929087536"/>
-               <atomicEP atomType="2" spin="1" branch="5d" branchLowest="-11.28" branchHighest="0.17" value="-0.3119854454"/>
-               <atomicEP atomType="2" spin="1" branch="5f" branchLowest="-2.62" branchHighest="2.53" value="-0.0091804585"/>
-               <loAtomicEP atomType="2" spin="1" branch="5p" branchLowest="-19.07" branchHighest="-2.01" value="-2.1401369198"/>
-               <vacuumEP vacuum="1" spin="1" vzIR="-0.2325267989" vzInf="-0.0000234857" value="-0.2500234857"/>
-               <vacuumEP vacuum="2" spin="1" vzIR="-0.2364154681" vzInf="-0.0291241301" value="-0.2791241301"/>
-               <atomicEP atomType="1" spin="2" branch="4s" branchLowest="-3.30" branchHighest="1.65" value="-0.3069374510"/>
-               <atomicEP atomType="1" spin="2" branch="4p" branchLowest="-2.05" branchHighest="2.24" value="-0.1752952145"/>
-               <atomicEP atomType="1" spin="2" branch="3d" branchLowest="-9.99" branchHighest="-0.03" value="-0.2053047394"/>
-               <atomicEP atomType="1" spin="2" branch="4f" branchLowest="-9.99" branchHighest="3.25" value="0.1364994645"/>
-               <loAtomicEP atomType="1" spin="2" branch="3s" branchLowest="-29.96" branchHighest="-3.30" value="-3.3153467763"/>
-               <loAtomicEP atomType="1" spin="2" branch="3p" branchLowest="-25.56" branchHighest="-2.05" value="-2.0852095860"/>
-               <atomicEP atomType="2" spin="2" branch="6s" branchLowest="-3.75" branchHighest="1.89" value="-0.4320383133"/>
-               <atomicEP atomType="2" spin="2" branch="6p" branchLowest="-2.00" branchHighest="3.08" value="-0.2836656442"/>
-               <atomicEP atomType="2" spin="2" branch="5d" branchLowest="-11.28" branchHighest="0.18" value="-0.2992315529"/>
-               <atomicEP atomType="2" spin="2" branch="5f" branchLowest="-2.62" branchHighest="2.54" value="-0.0000316660"/>
-               <loAtomicEP atomType="2" spin="2" branch="5p" branchLowest="-19.07" branchHighest="-2.00" value="-2.1265220354"/>
-               <vacuumEP vacuum="1" spin="2" vzIR="-0.2325267989" vzInf="-0.0000234857" value="-0.2500234857"/>
-               <vacuumEP vacuum="2" spin="2" vzIR="-0.2364154681" vzInf="-0.0291241301" value="-0.2791241301"/>
+               <atomicEP atomType="1" spin="1" branch="4s" branchLowest="-3.44" branchHighest="1.55" value="-0.3435111988"/>
+               <atomicEP atomType="1" spin="1" branch="4p" branchLowest="-2.19" branchHighest="2.15" value="-0.2079605648"/>
+               <atomicEP atomType="1" spin="1" branch="3d" branchLowest="-9.99" branchHighest="-0.17" value="-0.3134204459"/>
+               <atomicEP atomType="1" spin="1" branch="4f" branchLowest="-9.99" branchHighest="3.15" value="0.1069436319"/>
+               <loAtomicEP atomType="1" spin="1" branch="3s" branchLowest="-30.03" branchHighest="-3.44" value="-3.4532034721"/>
+               <loAtomicEP atomType="1" spin="1" branch="3p" branchLowest="-25.62" branchHighest="-2.19" value="-2.2192379340"/>
+               <atomicEP atomType="2" spin="1" branch="6s" branchLowest="-3.76" branchHighest="1.88" value="-0.4417859707"/>
+               <atomicEP atomType="2" spin="1" branch="6p" branchLowest="-2.01" branchHighest="3.07" value="-0.2929311102"/>
+               <atomicEP atomType="2" spin="1" branch="5d" branchLowest="-11.28" branchHighest="0.17" value="-0.3120009480"/>
+               <atomicEP atomType="2" spin="1" branch="5f" branchLowest="-2.62" branchHighest="2.53" value="-0.0092032060"/>
+               <loAtomicEP atomType="2" spin="1" branch="5p" branchLowest="-19.07" branchHighest="-2.01" value="-2.1401401769"/>
+               <vacuumEP vacuum="1" spin="1" vzIR="-0.2325339218" vzInf="-0.0000234857" value="-0.2500234857"/>
+               <vacuumEP vacuum="2" spin="1" vzIR="-0.2363453536" vzInf="-0.0290189186" value="-0.2790189186"/>
+               <atomicEP atomType="1" spin="2" branch="4s" branchLowest="-3.30" branchHighest="1.65" value="-0.3069181020"/>
+               <atomicEP atomType="1" spin="2" branch="4p" branchLowest="-2.05" branchHighest="2.24" value="-0.1752761666"/>
+               <atomicEP atomType="1" spin="2" branch="3d" branchLowest="-9.99" branchHighest="-0.03" value="-0.2052827581"/>
+               <atomicEP atomType="1" spin="2" branch="4f" branchLowest="-9.99" branchHighest="3.25" value="0.1365183218"/>
+               <loAtomicEP atomType="1" spin="2" branch="3s" branchLowest="-29.96" branchHighest="-3.30" value="-3.3153240674"/>
+               <loAtomicEP atomType="1" spin="2" branch="3p" branchLowest="-25.56" branchHighest="-2.05" value="-2.0851868369"/>
+               <atomicEP atomType="2" spin="2" branch="6s" branchLowest="-3.75" branchHighest="1.89" value="-0.4320518432"/>
+               <atomicEP atomType="2" spin="2" branch="6p" branchLowest="-2.00" branchHighest="3.08" value="-0.2836796421"/>
+               <atomicEP atomType="2" spin="2" branch="5d" branchLowest="-11.28" branchHighest="0.18" value="-0.2992396842"/>
+               <atomicEP atomType="2" spin="2" branch="5f" branchLowest="-2.62" branchHighest="2.54" value="-0.0000457679"/>
+               <loAtomicEP atomType="2" spin="2" branch="5p" branchLowest="-19.07" branchHighest="-2.00" value="-2.1265204853"/>
+               <vacuumEP vacuum="1" spin="2" vzIR="-0.2325339218" vzInf="-0.0000234857" value="-0.2500234857"/>
+               <vacuumEP vacuum="2" spin="2" vzIR="-0.2363453536" vzInf="-0.0290189186" value="-0.2790189186"/>
             </energyParameters>
             <eigenvalues>
                <eigenvaluesAt spin="1" ikpt="1" k_x="-0.25000000" k_y="0.25000000" k_z="0.00000000">
-                         -3.3853457352       -3.3831779077       -2.2215635141       -2.2213539083       -2.2126892406
-                         -2.1044778663       -2.0949670142       -2.0944622640       -2.0916333671       -2.0864070871
-                         -2.0848668469       -2.0827355469       -2.0804034790       -2.0794770558       -0.3762040271
-                         -0.3423321752       -0.3380462304       -0.3354254100       -0.3251546480       -0.3147688864
-                         -0.3018316951       -0.2923929102       -0.2827811052       -0.2809391399       -0.2724307657
-                         -0.2632188370       -0.2549795822       -0.2500608763       -0.2369699531       -0.2313725018
-                         -0.2262183476       -0.1936786470       -0.1920676244       -0.1766903813       -0.1715731581
-                         -0.1608829997       -0.1352339621       -0.0825668624       -0.0706881579       -0.0049782435
-                         -0.0001645552        0.0473378952        0.0694397919        0.0829670537        0.1379680577
-                          0.1453186163        0.1906406246        0.2198087548        0.2245917866        0.2436722539
+                         -3.3853303051       -3.3831623217       -2.2215511198       -2.2213496006       -2.2126811376
+                         -2.1044758951       -2.0949686164       -2.0944713871       -2.0916249651       -2.0863849414
+                         -2.0848486452       -2.0827215145       -2.0803951552       -2.0794758520       -0.3762147769
+                         -0.3423393207       -0.3380511690       -0.3354246843       -0.3251559375       -0.3147652301
+                         -0.3018303181       -0.2923931414       -0.2827769766       -0.2809345642       -0.2724337391
+                         -0.2632186789       -0.2549778437       -0.2500614126       -0.2369719351       -0.2313809244
+                         -0.2262294527       -0.1936589957       -0.1920404928       -0.1766799219       -0.1715518299
+                         -0.1608667077       -0.1352136048       -0.0825628953       -0.0706709739       -0.0049587466
+                         -0.0001554908        0.0473449576        0.0694461593        0.0829993901        0.1379948861
+                          0.1453443194        0.1906570490        0.2198268531        0.2246126203        0.2436827375
                </eigenvaluesAt>
                <eigenvaluesAt spin="1" ikpt="2" k_x="0.25000000" k_y="0.25000000" k_z="0.00000000">
-                         -3.3853477069       -3.3831769041       -2.2215641523       -2.2213545916       -2.2126819926
-                         -2.1044829016       -2.0949707649       -2.0944274646       -2.0916302673       -2.0864119645
-                         -2.0848663826       -2.0827355764       -2.0804010278       -2.0794862384       -0.3797090019
-                         -0.3407768067       -0.3382092627       -0.3359057609       -0.3244327517       -0.3143347006
-                         -0.3016875407       -0.2922694507       -0.2821865032       -0.2814758542       -0.2720658725
-                         -0.2643397459       -0.2544198340       -0.2502395795       -0.2368278203       -0.2314347347
-                         -0.2256454963       -0.1937300978       -0.1918926068       -0.1765377057       -0.1718544004
-                         -0.1607953418       -0.1383528581       -0.0847577766       -0.0673570057       -0.0069830869
-                          0.0033460628        0.0504557295        0.0726328299        0.0805986203        0.1405135408
-                          0.1439396695        0.1934659837        0.2185112665        0.2274055299        0.2424457851
+                         -3.3853322771       -3.3831613180       -2.2215517587       -2.2213502841       -2.2126738874
+                         -2.1044809349       -2.0949723633       -2.0944365566       -2.0916218673       -2.0863898397
+                         -2.0848481720       -2.0827215850       -2.0803926940       -2.0794849972       -0.3797234106
+                         -0.3407817090       -0.3382156223       -0.3359046110       -0.3244323913       -0.3143302848
+                         -0.3016865779       -0.2922698335       -0.2821804376       -0.2814726626       -0.2720686189
+                         -0.2643409805       -0.2544181850       -0.2502401904       -0.2368293060       -0.2314423975
+                         -0.2256560208       -0.1937102582       -0.1918655526       -0.1765278197       -0.1718327176
+                         -0.1607790480       -0.1383327701       -0.0847567298       -0.0673384567       -0.0069646628
+                          0.0033558198        0.0504642911        0.0726417883        0.0806311713        0.1405399770
+                          0.1439650606        0.1934827157        0.2185285745        0.2274278202        0.2424510912
                </eigenvaluesAt>
             </eigenvalues>
-            <bandgap value="0.0438381585" units="eV"/>
-            <sumValenceSingleParticleEnergies value="-37.3422871693" units="Htr"/>
-            <FermiEnergy value="-0.1928429541" units="Htr"/>
+            <bandgap value="0.0440417060" units="eV"/>
+            <sumValenceSingleParticleEnergies value="-37.3421799429" units="Htr"/>
+            <FermiEnergy value="-0.1928195374" units="Htr"/>
          </Forcetheorem_Loop>
          <Forcetheorem_SSDISP qvectors="2" units="Htr">
-            <Entry q="1" ev-sum="-37.3676504"/>
-            <Entry q="2" ev-sum="-37.3422872"/>
+            <Entry q="1" ev-sum="-37.3675483"/>
+            <Entry q="2" ev-sum="-37.3421799"/>
          </Forcetheorem_SSDISP>
       </iteration>
    </scfLoop>
-   <endDateAndTime date="2024/08/22" time="18:18:46" zone="+0200"/>
+   <endDateAndTime date="2026/08/04" time="18:36:51" zone="+0200"/>
 </fleurOutput>

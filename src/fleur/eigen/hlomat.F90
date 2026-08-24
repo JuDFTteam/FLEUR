@@ -99,6 +99,21 @@ CONTAINS
       !$acc data create(abclo,abcloPr)
       !$acc data copyin(alo1,blo1,clo1,fjgjPr,fjgjpr%fj,fjgjpr%gj,tlmplm,tlmplm%h_loc_LO,tlmplm%h_lo)
       call timestart("hsmt_ab")
+      ! Own the abCoeffs mapping in the caller's scope -- see types_abc.F90 for why
+      ! hsmt_ab must not do the `enter data` on its own dummy argument.
+      IF (.NOT.l_use_abcoeff_store) THEN
+         ab_size_Pr = hsmt_ab_size(atoms, ntyp, .TRUE.)
+         IF (ALLOCATED(abCoeffsPr)) THEN
+            IF (SIZE(abCoeffsPr,1)/=2*ab_size_Pr .OR. SIZE(abCoeffsPr,2)/=lapwPr%nv(igSpinPr)) THEN
+               !$acc exit data delete(abCoeffsPr)
+               DEALLOCATE(abCoeffsPr)
+            END IF
+         END IF
+         IF (.NOT.ALLOCATED(abCoeffsPr)) THEN
+            ALLOCATE(abCoeffsPr(2*ab_size_Pr, lapwPr%nv(igSpinPr)))
+            !$acc enter data create(abCoeffsPr)
+         END IF
+      END IF
       CALL hsmt_ab(sym,atoms,noco,nococonv,ilSpinPr,igSpinPr,ntyp,na,cell,lapwPr,fjgjPr,abCoeffsPr,ab_size_Pr,.TRUE.,abcloPr,alo1(:,ilSpinPr),blo1(:,ilSpinPr),clo1(:,ilSpinPr))
       call timestop("hsmt_ab")
       !we need the "unprimed" abcoeffs
@@ -115,7 +130,22 @@ CONTAINS
          call timestop("abcoeffs copy")
       ELSE
          call timestart("hsmt_ab2")
-         CALL hsmt_ab(sym,atoms,noco,nococonv,ilSpin,igSpin,ntyp,na,cell,lapw,fjgj,abCoeffs,ab_size,.TRUE.,abclo,alo1(:,ilSpin),blo1(:,ilSpin),clo1(:,ilSpin))
+         ! Own the abCoeffs mapping in the caller's scope -- see types_abc.F90 for why
+         ! hsmt_ab must not do the `enter data` on its own dummy argument.
+         IF (.NOT.l_use_abcoeff_store) THEN
+            ab_size = hsmt_ab_size(atoms, ntyp, .TRUE.)
+            IF (ALLOCATED(abCoeffs)) THEN
+               IF (SIZE(abCoeffs,1)/=2*ab_size .OR. SIZE(abCoeffs,2)/=lapw%nv(igSpin)) THEN
+                  !$acc exit data delete(abCoeffs)
+                  DEALLOCATE(abCoeffs)
+               END IF
+            END IF
+            IF (.NOT.ALLOCATED(abCoeffs)) THEN
+               ALLOCATE(abCoeffs(2*ab_size, lapw%nv(igSpin)))
+               !$acc enter data create(abCoeffs)
+            END IF
+         END IF
+         CALL hsmt_ab(sym,atoms,noco,nococonv,ilSpin,igSpin,ntyp,na,cell,lapw,fjgj,abCoeffs,ab_size,.TRUE.,abclo,alo1(:,ilSpin),blo1(:,ilSpin),clo1(:,ilSpin),l_store=.TRUE.)
          call timestop("hsmt_ab2")
       END IF
    
@@ -322,7 +352,7 @@ CONTAINS
          ! branch above). The copy branch holds primed data, which must not be
          ! cached under the unprimed (nk,igSpin,ilSpin,na) key.
          IF (.NOT.(ilSpin==ilSpinPr.AND.igSpinPr==igSpin.AND.l_samelapw)) &
-              CALL abcoeff_store_save(abcoeffs, lapw%nk, igSpin, ilSpin, na)
+              CALL abcoeff_store_save(abcoeffs, lapw%nk, igSpin, ilSpin, na, .TRUE.)
          IF (ALLOCATED(abcoeffs)) DEALLOCATE(abcoeffs)
       END IF
 

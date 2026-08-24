@@ -155,6 +155,8 @@ CONTAINS
                              fi%sliceplot, fi%banddos, fi%mpinp, fi%hybinp,   fi%coreSpecInput, Wann, &
                              Xcpot, Forcetheo_data, fi%kpts, Enparaxml, fi%gfinp, fi%hub1inp, fmpi%Mpi_comm, fi%dfpt)
       !Remaining init is done using all PE
+      !Checks that emit a warning and continue must run here, not in fleurinput_postprocess above: see check_input_switches_all_pe.
+      CALL check_input_switches_all_pe(fi%input, fi%hybinp, fi%mpinp)
       call make_xcpot(fmpi, xcpot, fi%atoms, fi%input)
       if (fi%noco%l_noco.and..not.xcpot%vxc_is_LDA()) call judft_warn("Noco should be used only with LDA",hint="GGA calculations and l_noco=T can be very error prone due.")
       CALL nococonv%init(fi%noco)

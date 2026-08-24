@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<fleurOutput fleurOutputVersion="0.38">
+   <programVersion version="fleur 42">
+      <compilationInfo date="2026-08-01T16:50:09" user="micha" host="iff1745" flag="-fiopenmp -qmkl  -assume byterecl -no-wrap-margin -fPIC" link="usr/lib64/libxml2.so"/>
+      <gitInfo version="MaX-R8.1-181-g7dc2d1b01-dirty" branch="develop" lastCommitHash="7dc2d1b01fe2f15a574a2113a3c2aec75244106f"/>
+      <targetComputerArchitectures>GEN</targetComputerArchitectures>
+      <precision type="DOUBLE"/>
+      <targetStructureClass> </targetStructureClass>
+      <additionalCompilerFlags>CPP_HDF</additionalCompilerFlags>
+      <programExecution commandLine="/Users/micha/FLEUR-git-repo2/fleur/build.symcheck/fleur"/>
+   </programVersion>
+   <parallelSetup>
+      <openMP ompThreads="1"/>
+      <mem memoryPerNode="32568748 kB"/>
+   </parallelSetup>
+   <startDateAndTime date="2026/08/01" time="18:53:12" zone="+0200"/>
+   <!-- Now follows a dump of the inp.xml file after evaluating the Schema -->
+  <fleurInput fleurInputVersion="0.39">
+     <comment>
+        LiBe hexagonal film with an in-plane 2-fold axis (C2 about the cartesian y-axis)
+     </comment>
+     <calculationSetup>
+        <cutoffs Kmax="3.4" Gmax="10.2" GmaxXC="10.2" numbands="0" Gmaxz="0.0"/>
+        <scfLoop itmax="1" minDistance="0.00001" maxIterBroyd="15" imix="Anderson" alpha="0.05" precondParam="0.8" spinf="2.0" sdNocoIR="T"/>
+        <coreElectrons ctail="T" frcor="F" kcrel="0" coretail_lmax="0" l_core_confpot="T"/>
+        <xcFunctional name="pbe" relativisticCorrections="F"/>
+        <magnetism jspins="1" l_noco="F" l_ss="F" l_J="F" swsp="F" lflip="F" l_onlyMtStDen="F">
+           <qss>0.0 0.0 0.0</qss>
+           <mtNocoParams l_mperp="F" l_mtNocoPot="F" l_relaxSQA="F" mag_mixing_scheme="0" mix_RelaxWeightOffD="1.0" l_constrained="F" mix_constr="1.0"/>
+           <sourceFreeMag l_sourceFree="F" l_scaleMag="F" mag_scale="1.0"/>
+        </magnetism>
+        <soc l_soc="F" theta="0.0" phi="0.0" spav="F" off="F" soc66="T"/>
+        <prodBasis gcutm="2.9" tolerance="0.0001" ewaldlambda="3" lexp="16" bands="0" fftcut="1.0"/>
+        <expertModes spex="0" secvar="F" vdW="NONE" vdW_tol="0.0005" pot8="F" eig66="F" lpr="0" isec1="99" warp_factor="1.0"/>
+        <geometryOptimization l_f="F" forcealpha="1.0" forcemix="BFGS" epsdisp="0.00001" epsforce="0.00001" f_level="-1" l_driftForce="F" qfix="0" force_converged="0.00001"/>
+        <ldaU l_linMix="F" mixParam="0.05" spinf="1.0" l_adjEnpara="F" l_spinoffd="F" l_nonsphDC="F" l_initialGuess="F"/>
+        <ldaHIA itmaxHubbard1="5" minoccDistance="0.01" minmatDistance="0.001" beta="100.0" dftspinpol="F" n_occpm="2" fullMatch="T" l_nonsphDC="T" l_correctEtot="T" l_forceHIAiteration="F"/>
+     </calculationSetup>
+     <cell>
+        <bzIntegration valenceElectrons="5.0" mode="hist" fermiSmearingEnergy="0.001" l_bloechl="F" charge_excited="0.0" charge_shift="0.0">
+           <kPointListSelection listName="default-1"/>
+           <!-- k-points included here -->
+           <kPointLists>
+              <kPointList name="default-1" count="2" nx="2" ny="2" nz="1" type="mesh">
+                 <kPoint weight="     2.0000000000000" label="">   1.00/4.00    1.00/4.00    0.00/2.00</kPoint>
+                 <kPoint weight="     2.0000000000000" label="">   1.00/4.00   -1.00/4.00    0.00/2.00</kPoint>
+              </kPointList>
+           </kPointLists>
+        </bzIntegration>
+        <!-- symmetry operations included here -->
+        <symmetryOperations>
+           <symOp>
+              <row-1>1 0 0 .0000000000</row-1>
+              <row-2>0 1 0 .0000000000</row-2>
+              <row-3>0 0 1 .0000000000</row-3>
+           </symOp>
+           <symOp>
+              <row-1>-1 1 0 .0000000000</row-1>
+              <row-2>0 1 0 .0000000000</row-2>
+              <row-3>0 0 -1 .0000000000</row-3>
+           </symOp>
+        </symmetryOperations>
+        <filmLattice scale="1.0" dVac="3.88" dTilda="6.38">
+           <bravaisMatrixFilm>
+              <row-1>   12.0000000000000000     0.0000000000000000</row-1>
+              <row-2>   -6.0000000000000000    10.3923048454000000</row-2>
+           </bravaisMatrixFilm>
+           <vacuumEnergyParameters vacuum="1" spinUp="-.25" spinDown="-.25"/>
+        </filmLattice>
+     </cell>
+     <atomSpecies>
+        <species name="Lithium (Li)" element="Li" atomicNumber="3">
+           <mtSphere radius="1.78" gridPoints="589" logIncrement="0.017"/>
+           <atomicCutoffs lmax="6" lnonsphr="4"/>
+           <electronConfig flipSpins="F">
+              <coreConfig>(1s1/2)</coreConfig>
+              <valenceConfig>(2s1/2)</valenceConfig>
+              <stateOccupation state="(2s1/2)" spinUp="0.5" spinDown="0.5"/>
+           </electronConfig>
+           <energyParameters s="2" p="2" d="3" f="4"/>
+           <prodBasis lcutm="4" lcutwf="6" select="4 0 4 2"/>
+           <modInitDen flipSpinPhi="0.0" flipSpinTheta="0.0" flipSpinScale="F" magMom="0.0"/>
+        </species>
+        <species name="Beryllium (Be)" element="Be" atomicNumber="4">
+           <mtSphere radius="1.78" gridPoints="589" logIncrement="0.017"/>
+           <atomicCutoffs lmax="6" lnonsphr="4"/>
+           <electronConfig flipSpins="F">
+              <coreConfig>(1s1/2)</coreConfig>
+              <valenceConfig>(2s1/2)</valenceConfig>
+           </electronConfig>
+           <energyParameters s="2" p="2" d="3" f="4"/>
+           <prodBasis lcutm="4" lcutwf="6" select="4 0 4 2"/>
+           <modInitDen flipSpinPhi="0.0" flipSpinTheta="0.0" flipSpinScale="F" magMom="0.0"/>
+        </species>
+     </atomSpecies>
+     <atomGroups>
+        <atomGroup species="Lithium (Li)">
+           <filmPos label="                   1" wannier="F" alignToSpin="F">1.000/10.000 1.000/5.000 .0000000000</filmPos>
+           <force calculate="T" relaxXYZ="TTT"/>
+           <nocoParams alpha="0.0" beta="0.0" l_magn="F" M="0.0"/>
+        </atomGroup>
+        <atomGroup species="Beryllium (Be)">
+           <filmPos label="                   2" wannier="F" alignToSpin="F">9.000/20.000 3.000/10.000 .0600000000</filmPos>
+           <filmPos label="                   3" wannier="F" alignToSpin="F">-3.000/20.000 3.000/10.000 -.0600000000</filmPos>
+           <force calculate="T" relaxXYZ="TTT"/>
+           <nocoParams alpha="0.0" beta="0.0" l_magn="F" M="0.0"/>
+        </atomGroup>
+     </atomGroups>
+     <output dos="F" band="F" slice="F" coreSpec="F" wannier="F" eig66="F">
+        <checks vchk="F" cdinf="F" disp="F" sympsi="F"/>
+        <bandDOS minEnergy="-.5*Htr" maxEnergy="0.5*Htr" sigma="0.015" storeEVData="T" all_atoms="T" orbcomp="F" globalspin="F" jDOS="F" jointDOS="F" numberPoints="1321"/>
+        <vacuumDOS vacdos="F" integ="F" star="F" nstars="0" locx1="0.0" locy1="0.0" locx2="0.0" locy2="0.0" nstm="0" tworkf="0.0"/>
+        <unfoldingBand unfoldBand="F" supercellX="1" supercellY="1" supercellZ="1" useOlap="T"/>
+        <plotting iplot="0" polar="F" format="1">
+           <plot TwoD="T" vec1="  1.0  0.0  0.0" vec2="  0.0  1.0  0.0" vec3="  0.0  0.0  1.0" zero="  0.0  0.0 -0.5" file="plot" cartesian="F" grid="30 30 30" onlyMT="F" typeMT="0" vecField="F" edgesAllSides="T"/>
+        </plotting>
+        <dfpt l_dfpt="F" l_phonon="F" l_borneffcharge="F" l_efield="F" l_bfield="F">
+           <phonon l_sumrule="F" qptsListName="default-1" l_symVacLevel="F"/>
+           <efield qlim="1.0/100"/>
+           <interpolation l_WSinterpol="T" qptsListName="default-1"/>
+        </dfpt>
+        <chargeDensitySlicing numkpt="0" minEigenval="0.0" maxEigenval="0.0" nnne="0" pallst="F"/>
+        <specialOutput eonly="F" form66="F" bmt="F"/>
+        <moessbauerParams electricFieldGradient="T" isomerShift="T" coreHyperfine="T" valenceHyperfine="T"/>
+        <magneticCircularDichroism mcd="F" energyLo="-10.0" energyUp="0.0"/>
+     </output>
+    <!-- We include the file relax.xml here to enable relaxations (see documentation) -->
+  
+  </fleurInput>
+  <!--
+  Command line when calling inpgen (only for documentation purposes):
+  /Users/micha/FLEUR-git-repo2/fleur/build.symcheck/inpgen -f inp_gen -explicit
+  
+  Initial (original) inpgen input (only for documentation purposes):
+  LiBe hexagonal film with an in-plane 2-fold axis (C2 about the cartesian y-axis)
+  &input film=T cartesian=F /
+       12.0000000000       0.0000000000       0.0000000000
+       -6.0000000000      10.3923048454       0.0000000000
+        0.0000000000       0.0000000000      20.0000000000
+        1.0000000000
+        1.0000000000       1.0000000000       1.0000000000
+  
+        3
+        3       0.1000000000       0.2000000000       0.0000000000
+        4       0.4500000000       0.3000000000       0.0600000000
+        4      -0.1500000000       0.3000000000      -0.0600000000
+  &kpt div1=2 div2=2 div3=1 /
+  -->
+   <!-- END of dump of the inp.xml file -->
+   <numericalParameters>
+      <atomsInCell nat="3" ntype="2" jmtd="589" n_u="0" n_hia="0" n_opc="0"/>
+      <basis nvd="535" lmaxd="6" nlotot="0"/>
+      <density ng3="7176" ng2="1039"/>
+      <bands numbands="5"/>
+      <volumes unitCell="483.865713" interstitial="412.994499" omegaTilda="795.634858" surfaceArea="124.707658" z1="1.94000000">
+         <mtVolume atomType="1" mtRadius="1.78000000" mtVolume="23.62373794"/>
+         <mtVolume atomType="2" mtRadius="1.78000000" mtVolume="23.62373794"/>
+      </volumes>
+      <kPointList weightScale="1.00000000" count="         2">
+         <kPoint weight="0.500000">0.250000            0.250000            0.000000</kPoint>
+         <kPoint weight="0.500000">0.250000           -0.250000            0.000000</kPoint>
+      </kPointList>
+   </numericalParameters>
+   <scfLoop>
+      <iteration numberForCurrentRun="    1" overallNumber="    1">
+         <energyParameters units="Htr">
+            <atomicEP atomType="1" spin="1" branch="2s" branchLowest="-1.84" branchHighest="2.75" value="-0.1960439271"/>
+            <atomicEP atomType="1" spin="1" branch="2p" branchLowest="-9.99" branchHighest="1.77" value="-0.1100646546"/>
+            <atomicEP atomType="1" spin="1" branch="3d" branchLowest="-9.99" branchHighest="4.16" value="0.0793692799"/>
+            <atomicEP atomType="1" spin="1" branch="4f" branchLowest="-9.99" branchHighest="6.76" value="0.2391533173"/>
+            <atomicEP atomType="2" spin="1" branch="2s" branchLowest="-3.89" branchHighest="1.81" value="-0.3626725206"/>
+            <atomicEP atomType="2" spin="1" branch="2p" branchLowest="-9.99" branchHighest="1.33" value="-0.2356196976"/>
+            <atomicEP atomType="2" spin="1" branch="3d" branchLowest="-9.99" branchHighest="3.86" value="-0.0309055113"/>
+            <atomicEP atomType="2" spin="1" branch="4f" branchLowest="-9.99" branchHighest="6.51" value="0.1295753611"/>
+            <vacuumEP vacuum="1" spin="1" vzIR="-0.2369317097" vzInf="0.0000000000" value="-0.2500000000"/>
+         </energyParameters>
+         <eigenvalues>
+            <eigenvaluesAt spin="1" ikpt="1" k_x="0.25000000" k_y="0.25000000" k_z="0.00000000">-0.2712036698       -0.2233906879       -0.1501617281       -0.1377388554       -0.1244088805</eigenvaluesAt>
+            <eigenvaluesAt spin="1" ikpt="2" k_x="0.25000000" k_y="-0.25000000" k_z="0.00000000">-0.2744412617       -0.2211932202       -0.1492151969       -0.1280778414       -0.1158162642</eigenvaluesAt>
+         </eigenvalues>
+         <bandgap value="0.0257564248" units="eV"/>
+         <sumValenceSingleParticleEnergies value="-1.1400272478" units="Htr"/>
+         <FermiEnergy value="-0.1496884625" units="Htr"/>
+         <valenceDensity>
+            <mtCharges spin="1">
+               <mtCharge atomType="1" total="0.2805726" s="0.1222494" p="0.1523744" d="0.0051641" f="0.0007207"/>
+               <mtCharge atomType="2" total="0.6377996" s="0.4475367" p="0.1889275" d="0.0011876" f="0.0001369"/>
+            </mtCharges>
+            <spinDependentCharge spin="1" total="4.9998754" interstitial="2.5551085" mtSpheres="1.5561718" vacuum1="0.4442975"/>
+            <totalCharge value="4.9998753641"/>
+         </valenceDensity>
+         <coreStates atomType="     1" atomicNumber="  3" spin="1" kinEnergy="      7.1088702094" eigValSum="     -3.7876686859" lostElectrons=" 0.018709">
+            <state n="1" l="0" j="0.5" energy="-1.8938343430" weight="1.0000000000"/>
+         </coreStates>
+         <coreStates atomType="     2" atomicNumber="  4" spin="1" kinEnergy="     13.4263958846" eigValSum="     -7.8041796869" lostElectrons=" 0.001216">
+            <state n="1" l="0" j="0.5" energy="-3.9020898434" weight="1.0000000000"/>
+         </coreStates>
+         <allElectronCharges>
+            <spinDependentCharge spin="1" total="10.9998754" interstitial="2.5743993" mtSpheres="7.5355059" vacuum1="0.4449851"/>
+            <totalCharge value="10.9998754146"/>
+            <fixedCharges>
+               <spinDependentCharge spin="1" total="11.0000000" interstitial="2.5744284" mtSpheres="7.5355913" vacuum1="0.4449901"/>
+               <totalCharge value="11.0000000000"/>
+            </fixedCharges>
+         </allElectronCharges>
+         <moessbauerParams unitsHFF="kG" unitsIS="e/bohr^3" unitsEFG="Htr/bohr^2">
+            <electricFieldGradient atomType="1" VXX="-0.02623" VYY="-0.03704" VZZ="0.06327" asymParam="0.17075">
+               0.06324 0.00000 0.00173
+               0.00000 -0.02623 0.00000
+               0.00173 0.00000 -0.03701
+            </electricFieldGradient>
+            <electricFieldGradient atomType="2" VXX="-0.01559" VYY="-0.02195" VZZ="0.03753" asymParam="0.16947">
+               0.03456 0.01220 0.00041
+               0.01220 -0.01263 0.00036
+               0.00041 0.00036 -0.02193
+            </electricFieldGradient>
+         </moessbauerParams>
+         <totalEnergy                                    value="      -36.7742076687" units="Htr">
+            <sumOfEigenvalues                            value="      -20.5360553074">
+               <coreElectrons value="-19.3960280597"/>
+               <valenceElectrons value="-1.1400272478"/>
+            </sumOfEigenvalues>
+            <densityCoulombPotentialIntegral value="-47.9134552495"/>
+            <densityEffectivePotentialIntegral value="-57.3980898112"/>
+            <chargeDenXCDenIntegral value="-7.4189106882"/>
+            <FockExchangeEnergyValence value="0.0000000000"/>
+            <FockExchangeEnergyCore value="0.0000000000"/>
+            <atomTypeDependentContributions atomType="1">
+               <electronNucleiInteractionDifferentMTs value="8.3127335701"/>
+               <MadelungTerm value="-0.2761788603"/>
+            </atomTypeDependentContributions>
+            <atomTypeDependentContributions atomType="2">
+               <electronNucleiInteractionDifferentMTs value="31.6750512112"/>
+               <MadelungTerm value="-1.9966402179"/>
+            </atomTypeDependentContributions>
+            <tkbTimesEntropy value="0.0013318289"/>
+            <freeEnergy value="-36.7755394976"/>
+            <extrapolationTo0K value="-36.7748735832"/>
+         </totalEnergy>
+         <densityConvergence units="me/bohr^3">
+            <chargeDensity spin="1" distance="5.4842784465"/>
+         </densityConvergence>
+      </iteration>
+   </scfLoop>
+   <endDateAndTime date="2026/08/01" time="18:53:13" zone="+0200"/>
+</fleurOutput>

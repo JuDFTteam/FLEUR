@@ -41,7 +41,7 @@ contains
 #endif
 
       call timestart("spmm_invs")
-      mat_in_line = mat_in(hybdat%nbasp + 1, :)
+      mat_in_line = mat_in(hybdat%n_mt + 1, :)
       
       n_vec = size(mat_in, 2)
 
@@ -167,7 +167,7 @@ contains
                         indx3 = indx3 + ishift1
                      END DO
 
-                     IF (indx3 /= hybdat%nbasp) call judft_error('spmvec: error counting index indx3')
+                     IF (indx3 /= hybdat%n_mt) call judft_error('spmvec: error counting index indx3')
 
                      n_size = mpdata%num_radbasfn(l, itype) - 1
                      max_lcut_plus_1 = maxval(fi%hybinp%lcutm1) + 1
@@ -256,7 +256,7 @@ contains
                indx2 = indx1 + mpdata%num_radbasfn(0, itype) - 2
                n_size = mpdata%num_radbasfn(0, itype) - 1
                do i_vec = 1, n_vec
-                  mat_out(hybdat%nbasp + 1, i_vec) = mat_out(hybdat%nbasp + 1, i_vec) &
+                  mat_out(hybdat%n_mt + 1, i_vec) = mat_out(hybdat%n_mt + 1, i_vec) &
                                                    + dot_product(mt2_tmp(:n_size, 0, maxval(fi%hybinp%lcutm1) + 1, iatom), &
                                                                   mat_in(indx1:indx2, i_vec))
                enddo

@@ -44,6 +44,9 @@ Testset: Films
 | +   | Si Film, plotting              | film/SiFilmPlot      |       |                                     |         | 2   |
 | +   | Si Film, plotting,slicing      | film/SiFilmSlicePlot |       |                                     |         | 2   |
 | +   | Pt 3 layers,soc,inversion      | film/Pt-3            | soc   |                                     |         | 2   |
+| +   | Film, nonsymmorphic z-glide+inversion | film/FilmGlideInvs |    | Nonsymmorphic 2D group; 2D/3D star phases; vacuum-2 by inversion |     | 1   |
+| +   | Film, nonsymmorphic z-glide+in-plane mirror | film/FilmGlideSort |    | No symmorphic inversion/z-mirror: in-plane ops must be sorted first |     | 1   |
+| +   | Film, hexagonal, in-plane 2-fold axis | film/FilmHex2fold |    | Operation removed by 7c06dc2d9; vacuum-2 by in-plane mirror |     | 1   |
 
 
 Testset: Forces
