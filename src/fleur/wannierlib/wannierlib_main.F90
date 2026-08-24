@@ -15,6 +15,7 @@
 !>  the Wannier gauge, and the b-mesh -- so that adding an operator never touches this file.
 !--------------------------------------------------------------------------------
 MODULE m_wannierlib_main
+   USE m_juDFT
    USE m_types, ONLY: t_stars, t_results
    USE m_matrix_element_factory, ONLY: matrix_element_factory_reset, &
                                        matrix_element_release_anchor, matrix_element_radial
@@ -98,6 +99,17 @@ CONTAINS
       CHARACTER(LEN=6) :: spin_sfx
 
       IF (.NOT. this%l_wannierize) RETURN
+
+      !> A film is refused rather than served short. Both halves of the pair overlap and both
+      !> halves of the momentum stop at the interstitial -- this layer has no vacuum term at
+      !> all -- so on a film everything built from them would be missing the vacuum region and
+      !> would report nothing: the wannierization itself, and with it position, velocity, bmn,
+      !> fmn, cmn and spin. An incomplete number that looks plausible is worse than a stop.
+      IF (input%film) CALL juDFT_error( &
+         'wannierlib: the library mode has no vacuum contribution and cannot treat films', &
+         hint='the pair overlaps and the momentum stop at the interstitial; a film needs the '// &
+              'classic wannier interface, which has the vacuum routines', &
+         calledby='wannierlib_main')
 
       l_wannierlib_spinors = noco%l_noco .OR. noco%l_soc
       l_nocosoc = noco%l_noco .AND. (.NOT. noco%l_soc)
