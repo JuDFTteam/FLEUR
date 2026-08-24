@@ -3,13 +3,19 @@
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
+!>  The muffin-tin half of <u_a| e^{-i b.r} |u_b>: a phase per atom and a matrix product
+!>  per pair of radial slots, against the table m_melem_ujugaunt tabulated beforehand.
+!>
+!>  The b it works at is found in kdiff BY VALUE rather than by neighbour index: kdiff is
+!>  deduplicated, so its slot order and the neighbour order coincide only by accident.
+!>
+!>  Accumulates into the same mmn the interstitial half fills.
 MODULE m_melem_mmkb_sph
    USE m_juDFT
    USE m_types_abc
    USE m_types_atoms
    USE m_constants, ONLY: tpi_const
    IMPLICIT NONE
-  !> As with the interstitial half: one routine, called by m_melem_overlap.
    PRIVATE
    PUBLIC :: melem_mmkb_sph
 CONTAINS

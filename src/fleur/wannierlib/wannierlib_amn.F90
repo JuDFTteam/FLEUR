@@ -3,6 +3,18 @@
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
+!>  A_mn(k) = <psi_mk | g_n>, the overlap of each Bloch state with each trial orbital, which
+!>  is what tells Wannier90 where to start.
+!>
+!>  Assembles what the other two halves produce: the radial functions from
+!>  m_wannierlib_rad_twd, the angular coefficients from m_wannierlib_tlmw or its spin-orbit
+!>  counterpart, and the augmentation coefficients of the state, which arrive already
+!>  computed. Nothing here reads an eigenvector: the state reaches it as abc.
+!>
+!>  A trial orbital may be rotated, and the rotation is applied to its angular coefficients
+!>  with Wigner D matrices rather than to the harmonics themselves.
+!>
+!>  Fills one k-point's column of amn, which the caller sums over its own k-slice.
 MODULE m_wannierlib_amn
   USE m_juDFT
   USE m_constants

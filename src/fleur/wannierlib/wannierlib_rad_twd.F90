@@ -3,6 +3,16 @@
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
+!>  The radial half of a projection, and the angular one for spin-orbit.
+!>
+!>  wannierlib_rad_twd evaluates each trial orbital's radial function on the muffin-tin mesh
+!>  of its atom, matched to the LAPW basis there. Projections outside a muffin tin are
+!>  refused rather than approximated: the trial orbital has to live where the radial
+!>  functions do.
+!>
+!>  wannierlib_soc_tlmw is the spin-orbit counterpart of m_wannierlib_tlmw: with SOC the
+!>  trial orbital is named by (j, m_j) instead of (l, m), so its expansion in the complex
+!>  harmonics is a Clebsch-Gordan coefficient rather than a table lookup.
 MODULE m_wannierlib_rad_twd
   USE m_juDFT
   USE m_constants

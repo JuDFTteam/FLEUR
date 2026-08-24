@@ -3,6 +3,16 @@
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
+!>  The radial integrals the muffin-tin overlap contracts against: a radial pair against a
+!>  Bessel function, times an angular factor from a Gaunt coefficient.
+!>
+!>  Tabulated once per distinct b, which is the whole point -- built here, the loop over
+!>  states in m_melem_mmkb_sph has only matrices left to multiply. It is also the largest
+!>  array this pass builds, lm by lm by radial pair by type by neighbour, so it is worth
+!>  keeping across everything that shares a radial set.
+!>
+!>  m_melem_nablaujugaunt is the same tabulation with the gradient in it, and carries the
+!>  detail of the radial derivative and of the two angular channels a gradient reaches.
 MODULE m_melem_ujugaunt
    USE m_juDFT
    USE m_types_atoms
@@ -13,7 +23,6 @@ MODULE m_melem_ujugaunt
    USE m_intgr, ONLY: intgr3
    USE m_gaunt, ONLY: gaunt1
    IMPLICIT NONE
-  !> One routine, and the radial tables it builds are its only product.
    PRIVATE
    PUBLIC :: melem_ujugaunt
 CONTAINS

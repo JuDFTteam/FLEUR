@@ -3,12 +3,19 @@
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
+!>  The interstitial half of <u_a| e^{-i b.r} |u_b>: the step function between the two
+!>  basis sets, contracted with the coefficients of bra and ket by the two matrix products
+!>  that follow it.
+!>
+!>  The two sides are independent -- their own lapw, their own zMat, their own spin -- and
+!>  gb is the reciprocal lattice vector that brings the ket's k-point back into the zone.
+!>  That the caller happens to use them with k and k+b is its business, not this routine's.
+!>
+!>  Accumulates into mmnk, so the muffin-tin half can be added on top.
 MODULE m_melem_mmkb_int
   USE m_juDFT
   USE m_types
   IMPLICIT NONE
-  !> The single routine here is the whole module: an interstitial half-overlap that the
-  !> assembler in m_melem_overlap calls. Nothing else belongs in its surface.
   PRIVATE
   PUBLIC :: melem_mmkb_int
 CONTAINS

@@ -3,6 +3,19 @@
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
+!>  The angular half of a projection: the trial orbital the user asked for, written in the
+!>  basis of complex spherical harmonics the wavefunction is expanded in.
+!>
+!>  tlm holds the real harmonics of Wannier90's convention -- p_x = (Y_1,-1 - Y_1,1)/sqrt(2),
+!>  p_y = i(Y_1,-1 + Y_1,1)/sqrt(2), and so on -- and tlmwf then picks, per Wannier function,
+!>  the combination its (l, mr) names.
+!>
+!>  A NEGATIVE l is a hybrid, and that is where the coefficients stop being one row of tlm:
+!>  sp3 mixes l=0 and l=1 with 1/sqrt(3) and 1/sqrt(6), sp3d2 reaches l=2 as well. Those are
+!>  the guesses that localise on a bond rather than on an atom.
+!>
+!>  m_wannierlib_rad_twd carries the same table for the spin-orbit case, where the orbital is
+!>  named by (j, m_j) and the coefficients are Clebsch-Gordan instead.
 MODULE m_wannierlib_tlmw
   USE m_juDFT
   USE m_types_wannierlib
