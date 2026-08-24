@@ -21,8 +21,8 @@ MODULE m_melem_coeff_b
 CONTAINS
 
   ! ---------------------------------------------------------------------------
-  ! B(R) = <0n| H r_alpha |Rm>, Eq. (83) of Lopez, Vanderbilt, Thonhauser and Souza,
-  ! PRB 85, 014435 (2012), in the translationally invariant form (the r_avg centring).
+  ! B(R) = <0n| H (r - R) |Rm>, Eq. (83) of Lopez, Vanderbilt, Thonhauser and Souza,
+  ! PRB 85, 014435 (2012), in its plain form: no centring phase, no Wannier centres.
   !
   ! It needs NO uHu. The Hamiltonian enters only through the ab-initio eigenvalues:
   !
