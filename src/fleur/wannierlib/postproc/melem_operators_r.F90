@@ -140,7 +140,7 @@ CONTAINS
       CASE ('fmn')           ! collective: only the sum over R is left, the gauge is already in
         CALL melem_write_fmn(this, kpts, f0_loc, gk_loc, hr_irvec, hr_nrpts, mpi_comm, &
                              irank, TRIM(wfpref))
-      CASE ('cmn')           ! collective: como fmn, el gauge ya viene aplicado
+      CASE ('cmn')           ! collective: like fmn, the gauge is already applied
         CALL melem_write_cmn(this, kpts, c0_loc, gk_loc, hr_irvec, hr_nrpts, mpi_comm, &
                              irank, TRIM(wfpref))
       CASE ('position')      ! Berry connection A^(W)(R)=A(R): distributed reduce over the local overlaps

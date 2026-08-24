@@ -87,7 +87,7 @@ CONTAINS
       TYPE(t_usdus), POINTER :: usdus       ! into the factory cache
       TYPE(t_radfun), POINTER :: radfun(:)  ! likewise; the factory owns them
       COMPLEX, ALLOCATABLE :: f0_loc(:, :, :, :, :)  ! (nw,nw,3,3,nk_loc) geometric tensor
-      COMPLEX, ALLOCATABLE :: c0_loc(:, :, :, :, :)  ! (nw,nw,3,3,nk_loc) el mismo con H dentro
+      COMPLEX, ALLOCATABLE :: c0_loc(:, :, :, :, :)  ! (nw,nw,3,3,nk_loc) the same one with H inside
       LOGICAL :: l_wannierlib_spinors
       TYPE(t_melem_request) :: request
       TYPE(t_melem_manifold) :: manifold
