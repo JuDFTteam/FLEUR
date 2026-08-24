@@ -2,7 +2,7 @@
 
 This file is the checklist. `tutorial_operators.md`, next to it, carries the reasoning:
 the contract of each routine you have to write, the index layout of the coefficient
-arrays, and a worked example.
+arrays, the three sources a driver can draw on, and a worked example.
 
 ## Where things live
 
@@ -19,20 +19,24 @@ The seam between the two is two types, `t_melem_window` (which bands were select
 and `t_melem_request` (which operators were asked for), both of which stay here.
 `t_melem_manifold` extends the window with `num_wann` and the disentanglement edges
 and lives in `postproc`, so nothing here knows what the bands were selected for.
-`postproc` depends on this directory; this directory depends on nothing of it.
+`postproc` depends on this directory; this directory depends on nothing of it, and
+`testing/tests/structure/test_layering.py` fails if that ever changes.
 
 ## First: which of the three are you adding?
 
-| | Examples | Work |
-|---|---|---|
-| **A real operator** — a contraction over the states, `O_mn(k) = <psi_m|O|psi_n>` | `spin`, `orbital`, `spin_orbit` | catalogue + provider + coarse slice + exposure |
-| **Only an exposure** — the coarse matrix already exists | `soc` (reuses `spin_orbit`) | one table row + one branch |
-| **Not an operator at all** — built from neighbour overlaps or eigenvalues | `hamiltonian`, `position`, `velocity`, `bmn`, `eigenstates` | row with `operator=''` + a driver of its own |
+- **A real operator** — a contraction over the states, `O_mn(k) = <psi_m|O|psi_n>`
+  (`spin`, `orbital`, `spin_orbit`). Route A, the seven touchpoints below.
+- **Only an exposure** — the coarse matrix already exists (`soc` reuses `spin_orbit`).
+  Route B: one table row and one branch.
+- **Not an operator at all** — built from the neighbour overlaps or the eigenvalues
+  (`hamiltonian`, `velocity`, `eigenstates`, `position`, `position_pw90`, `bmn`, `fmn`,
+  `cmn`). Route C: a row with `operator=''` and a driver of your own.
 
 **The rule:** if it is not a contraction over the states, it does not go in the
-catalogue. `hamiltonian` is `V^dagger diag(E) V`; `position` comes from the `M_mn`.
+catalogue. Route C is the majority — eight of the twelve exposed names — and the tutorial's §5 is
+the one to read before writing a line of it.
 
-## The seven touchpoints (a real operator)
+## The seven touchpoints (route A)
 
 | # | File | What to add |
 |---|---|---|
@@ -44,25 +48,20 @@ catalogue. `hamiltonian` is `V^dagger diag(E) V`; `position` comes from the `M_m
 | 6 | `types_melem_optable.f90` | a row in `WANNIERLIB_INTERP` and/or `WANNIERLIB_OPR` |
 | 7 | `fleur/io/xml/FleurInputSchema.xsd` | one `<xsd:enumeration>` |
 
+Route B is 5, 6 and 7. Route C is 5, 6 and 7 plus the driver itself — and, only if it
+needs the wavefunctions after the gauge is known, one `IF` in `wannierlib_main.F90`.
+
 New on-disk format? Add a `CASE` in `../wannierlib/postproc/melem_io.F90` — the only
 file that knows the layout. Do not open a file anywhere else.
 
-## Things that have actually cost us a run
+## Before you debug
 
-- `mpi_comm` as a dummy name clashes with `use mpi` (#6401). Use `mpicm`.
-- **Passing an unallocated `ALLOCATABLE` to a collective routine with a
-  non-allocatable dummy is undefined behaviour, and a serial run can never show it.**
-  If the callee is collective, every rank must reach it with a valid actual.
-- Never allocate a `(1,1,1,1)` stub for something nobody asked for. A stub is a
-  *valid* array of the wrong shape: indexing it wrongly does not fail.
-- `lm = lmax*(lmax + 2)`, not `lmax**2`.
-- Bare `real` in FLEUR is double precision.
-- `fleurinput/CMakeLists.txt` lists files **without** the path prefix; this directory's
-  lists them **with** it.
-- Ask `request%needs_op('name')`, not the `l_spin`/`l_orbmom`/`l_socop` flags — those
-  summarise both lists and cannot tell interpolation from real-space export.
+The symptom-to-cause table is in `tutorial_operators.md` §7. The two that cost the most
+runs, in short: a dummy argument named `mpi_comm` clashes with `use mpi` (`#6401`, use
+`mpicm`), and handing an unallocated `ALLOCATABLE` to a **collective** routine is
+undefined behaviour that a serial run — and a two-rank suite — can pass without showing.
 
-## Validating it
+## The validation criterion
 
 **Byte-identity at the same rank count; `Omega_I` across different rank counts.**
 Never byte-identity between different numbers of ranks: the reduction tree changes.
@@ -70,6 +69,7 @@ Never byte-identity between different numbers of ranks: the reduction tree chang
 
 - tests: `testing/tests/parameterized/test_wannier.py`
 - inputs: `testing/inputfiles/wannier/`
+- layering: `testing/tests/structure/test_layering.py`
 
 ## Why the template is compiled
 
