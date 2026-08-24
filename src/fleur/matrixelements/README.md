@@ -1,8 +1,8 @@
 # `matrixelements` — adding an operator
 
-This file is the checklist. `tutorial_operators.md`, next to it, carries the reasoning:
-the contract of each routine you have to write, the index layout of the coefficient
-arrays, the three sources a driver can draw on, and a worked example.
+This file is the checklist. `tutorial_operators.md`, next to it, carries what no single
+file can: which of three routes you are on, the sequences that cross files, and the
+mistakes. The contract of each routine is in that routine's own header.
 
 ## Where things live
 
