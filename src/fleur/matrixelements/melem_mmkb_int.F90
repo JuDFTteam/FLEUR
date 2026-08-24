@@ -3,13 +3,14 @@
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
-!--------------------------------------------------------------------------------
-! Copyright (c) 2026 Peter Gruenberg Institut, Forschungszentrum Juelich, Germany
-!--------------------------------------------------------------------------------
 MODULE m_melem_mmkb_int
   USE m_juDFT
   USE m_types
   IMPLICIT NONE
+  !> The single routine here is the whole module: an interstitial half-overlap that the
+  !> assembler in m_melem_overlap calls. Nothing else belongs in its surface.
+  PRIVATE
+  PUBLIC :: melem_mmkb_int
 CONTAINS
 
   SUBROUTINE melem_mmkb_int(stars, lapw, lapw_b, jspin, jspin_b, zMat, zMat_b, gb, mmnk, ioff, ioff_b)

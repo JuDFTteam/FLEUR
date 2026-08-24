@@ -20,6 +20,10 @@ MODULE m_types_matelements_soc
     USE m_types_potden
     USE m_judft
     IMPLICIT NONE
+   !> Only the type. init and calc_matrix_elements are reached through it -- secvar_soc
+   !> and melem_coarse both call them as bindings -- so they are not part of the surface.
+    PRIVATE
+    PUBLIC :: t_matelements_soc
 
     TYPE, EXTENDS(t_matelements) :: t_matelements_soc
         TYPE(t_atoms),  POINTER :: atoms  => NULL()

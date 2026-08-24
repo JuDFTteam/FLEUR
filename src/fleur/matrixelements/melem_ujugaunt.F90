@@ -13,6 +13,9 @@ MODULE m_melem_ujugaunt
    USE m_intgr, ONLY: intgr3
    USE m_gaunt, ONLY: gaunt1
    IMPLICIT NONE
+  !> One routine, and the radial tables it builds are its only product.
+   PRIVATE
+   PUBLIC :: melem_ujugaunt
 CONTAINS
 !   melem_ujugaunt calculates integrals of radial wave functions with
 !   bessel functions and multiplies them with an angular factor.

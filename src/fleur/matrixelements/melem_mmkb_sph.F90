@@ -9,6 +9,9 @@ MODULE m_melem_mmkb_sph
    USE m_types_atoms
    USE m_constants, ONLY: tpi_const
    IMPLICIT NONE
+  !> As with the interstitial half: one routine, called by m_melem_overlap.
+   PRIVATE
+   PUBLIC :: melem_mmkb_sph
 CONTAINS
 
    SUBROUTINE melem_mmkb_sph(atoms, abc, abc_b, bbpt, gb, bkpt, &
