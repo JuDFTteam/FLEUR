@@ -21,6 +21,10 @@ MODULE m_wannierlib_w90_adapter
                           w90_get_centres, w90_get_spreads
 #endif
   IMPLICIT NONE
+
+  !> Matches the value the classic path writes (wann_wan90prep.F). Not exposed in the input:
+  !> nobody in the group has ever tuned it, they all use 200.
+  INTEGER, PARAMETER :: WANNIERLIB_SEARCH_SHELLS = 200
   PRIVATE
   PUBLIC :: init_w90, run_w90, wannierlib_get_bmesh, report_w90
 #ifdef CPP_WANNLIB_API
@@ -86,6 +90,13 @@ CONTAINS
     CALL w90_set_option(wannierlib_w90main, 'dump_inputs', .FALSE.)
     IF (this%dis_num_iter > 0) CALL w90_set_option(wannierlib_w90main, 'dis_num_iter', this%dis_num_iter)  ! disentanglement (XML numIter)
     IF (this%num_iter > 0)     CALL w90_set_option(wannierlib_w90main, 'num_iter', this%num_iter)          ! MLWF/wannierise (XML wannIter)
+    !> How many neighbour shells w90 may try before it gives up on the B1 condition. Its own
+    !> default is 36, which is not enough for a film: the mesh is dense in plane and a single
+    !> point in z, so shell after shell is rejected by the SVD test and 36 runs out at
+    !> 14x14x1. The classic path has written 200 into the .win since it was added
+    !> (wann_wan90prep.F:387), and 200 is what the group uses; passing nothing left the
+    !> library mode on w90's default and made it fail where the classic would not.
+    CALL w90_set_option(wannierlib_w90main, 'search_shells', WANNIERLIB_SEARCH_SHELLS)
     CALL w90_set_option(wannierlib_w90main, 'dis_win_min', hartree_to_ev_const*this%dis_win_min)
     CALL w90_set_option(wannierlib_w90main, 'dis_win_max', hartree_to_ev_const*this%dis_win_max)
     CALL w90_set_option(wannierlib_w90main, 'dis_froz_min', hartree_to_ev_const*this%dis_froz_min)
