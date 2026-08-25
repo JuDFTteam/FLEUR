@@ -102,16 +102,6 @@ CONTAINS
 
       IF (.NOT. this%l_wannierize) RETURN
 
-      !> A film is refused rather than served short. Both halves of the pair overlap and both
-      !> halves of the momentum stop at the interstitial -- this layer has no vacuum term at
-      !> all -- so on a film everything built from them would be missing the vacuum region and
-      !> would report nothing: the wannierization itself, and with it position, velocity, bmn,
-      !> fmn, cmn and spin. An incomplete number that looks plausible is worse than a stop.
-      IF (input%film) CALL juDFT_error( &
-         'wannierlib: the library mode has no vacuum contribution and cannot treat films', &
-         hint='the pair overlaps and the momentum stop at the interstitial; a film needs the '// &
-              'classic wannier interface, which has the vacuum routines', &
-         calledby='wannierlib_main')
 
       l_wannierlib_spinors = noco%l_noco .OR. noco%l_soc
       l_nocosoc = noco%l_noco .AND. (.NOT. noco%l_soc)
@@ -133,6 +123,30 @@ CONTAINS
       ! what the matrix-element layer is being asked for, and on which bands
       CALL request%init(this%l_spin, this%l_orbmom, this%l_socop, this%l_operators_r, &
                         this%op_r_name, this%op_name, this%op_total)
+      !> On a film, refuse by name rather than as a whole. The pair overlap has its vacuum
+      !> half now, so the wannierization itself works and with it everything built from mmn:
+      !> hamiltonian, eigenstates, position, velocity, bmn. Three quantities still stop at
+      !> the interstitial and would come out short without saying so.
+      IF (input%film) THEN
+         !> wannierlib_uiu and wannierlib_uhu ask melem_overlap_states for the pair overlap
+         !> without the vacuum expansions, and C also needs a momentum that has no vacuum
+         !> part at all.
+         IF (request%has_op_r('fmn') .OR. request%has_op_r('cmn')) CALL juDFT_error( &
+            'wannierlib: fmn and cmn have no vacuum contribution and cannot be asked for on a film', &
+            hint='everything built from the neighbour overlaps does work on a film; these two '// &
+                 'need the vacuum halves of the pair overlap and of the momentum', &
+            calledby='wannierlib_main')
+         !> The spin operator sums the muffin tins and the interstitial. In a film there is a
+         !> third region carrying spin density and this layer does not reach it. The orbital
+         !> moment and the spin-orbit operator are muffin-tin quantities by construction, not
+         !> by omission, so they are unaffected.
+         IF (request%has_op('spin') .OR. request%has_op_r('spin')) CALL juDFT_error( &
+            'wannierlib: the spin operator has no vacuum contribution and cannot be asked for on a film', &
+            hint='it sums the muffin tins and the interstitial only; orbital and spin_orbit are '// &
+                 'muffin-tin quantities and do work on a film', &
+            calledby='wannierlib_main')
+      END IF
+
       CALL manifold%init(this%num_bands, this%num_wann, this%dis_win_min, this%dis_win_max, &
                          this%min_band, this%max_band)
       CALL domains%init(this%n_domains, this%dom_kset, this%dom_suffix)

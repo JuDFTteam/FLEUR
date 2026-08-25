@@ -86,6 +86,15 @@ CONTAINS
 
       CALL timestart('melem_vacabc')
 
+      !> An instance is reused: the ket side is expanded once per neighbour, so everything
+      !> here is freed first. t_abc's own calc_abc does the same for the muffin-tin
+      !> coefficients, and leaving it out is a "severe (151)" on the second neighbour.
+      IF (ALLOCATED(this%ac)) DEALLOCATE (this%ac)
+      IF (ALLOCATED(this%bc)) DEALLOCATE (this%bc)
+      IF (ALLOCATED(this%u)) DEALLOCATE (this%u)
+      IF (ALLOCATED(this%ue)) DEALLOCATE (this%ue)
+      IF (ALLOCATED(this%kvac)) DEALLOCATE (this%kvac)
+
       nmz = vacuum%nmz
       nvac = vacuum%nvac
       nv = lapw%nv(jspin)
