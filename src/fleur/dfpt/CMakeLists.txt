@@ -10,6 +10,7 @@ src/fleur/dfpt/dfpt_vgen.F90
 src/fleur/dfpt/get_int_perturbation.f90
 src/fleur/dfpt/get_mt_perturbation.f90
 src/fleur/dfpt/dfpt_vgen_finalize.F90
+src/fleur/dfpt/dfpt_gga_kernel.F90
 src/fleur/dfpt/dfpt_vmt_xc.F90
 src/fleur/dfpt/dfpt_vis_xc.F90
 src/fleur/dfpt/dfpt_vvac_xc.F90

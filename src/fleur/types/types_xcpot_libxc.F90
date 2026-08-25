@@ -15,7 +15,7 @@ MODULE m_types_xcpot_libxc
    IMPLICIT NONE
 
 #ifdef CPP_LIBXC
-   PRIVATE :: write_xc_info
+   PRIVATE :: write_xc_info, check_fxc_available
 #endif
 
    TYPE,EXTENDS(t_xcpot):: t_xcpot_libxc
@@ -45,6 +45,7 @@ MODULE m_types_xcpot_libxc
       PROCEDURE        :: get_vxc => xcpot_get_vxc
       PROCEDURE        :: get_exc => xcpot_get_exc
       PROCEDURE        :: get_fxc => xcpot_get_fxc
+      PROCEDURE        :: get_fxc_gga => xcpot_get_fxc_gga
       PROCEDURE, NOPASS :: alloc_gradients => xcpot_alloc_gradients
       !Not             overloeaded...
       PROCEDURE        :: init => xcpot_init
@@ -459,7 +460,7 @@ CONTAINS
       ALLOCATE (fx_tmp(SIZE(fxc, 2), SIZE(fxc, 1))); fx_tmp = 0.0
 
       IF (xcpot%needs_grad().OR.xcpot%exc_is_MetaGGA()) THEN
-         CALL judft_error("Bug: You called get_fxc for a (meta)GGA potential. This is not implemented (yet?).")
+         CALL judft_error("Bug: You called get_fxc for a (meta)GGA potential. Use get_fxc_gga instead.")
       ELSE  !LDA potentials
          CALL xc_f90_lda_fxc(xcpot%vxc_func_x, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), fx_tmp)
          IF (xcpot%func_vxc_id_c > 0) THEN
@@ -473,6 +474,55 @@ CONTAINS
 
 #endif
    END SUBROUTINE xcpot_get_fxc
+
+   SUBROUTINE xcpot_get_fxc_gga(xcpot, jspins, rh, sigma, vsigma, v2rho2, v2rhosigma, v2sigma2)
+      !! Second derivatives of a GGA energy density plus the undifferentiated vsigma.
+      !! All kernel arrays keep the libxc layout with the spin-like index first.
+      use iso_c_binding
+
+      IMPLICIT NONE
+
+      CLASS(t_xcpot_libxc), INTENT(IN)  :: xcpot
+      INTEGER,              INTENT(IN)  :: jspins
+      REAL,                 INTENT(IN)  :: rh(:, :)     ! (points, jspins)
+      REAL,                 INTENT(IN)  :: sigma(:, :)  ! (n_sigma, points)
+      REAL,                 INTENT(OUT) :: vsigma(:, :) ! (n_sigma, points)
+      REAL,                 INTENT(OUT) :: v2rho2(:, :) ! (2*jspins-1, points)
+      REAL,                 INTENT(OUT) :: v2rhosigma(:, :), v2sigma2(:, :)
+
+#ifdef CPP_LIBXC
+      REAL,ALLOCATABLE :: rh_t(:,:), vrho_dummy(:,:)
+      REAL,ALLOCATABLE :: vsigma_c(:,:), v2rho2_c(:,:), v2rhosigma_c(:,:), v2sigma2_c(:,:)
+      integer(kind=c_size_t) :: np
+
+      IF (.NOT.xcpot%needs_grad()) CALL judft_error("Bug: get_fxc_gga called for a non-GGA potential.")
+      IF (xcpot%exc_is_MetaGGA()) CALL judft_error("Bug: get_fxc_gga called for a MetaGGA potential.")
+
+      np = SIZE(rh, 1, kind=c_size_t)
+      !libxc uses the spin as a first index, hence we have to transpose....
+      ALLOCATE (rh_t(SIZE(rh, 2), SIZE(rh, 1)))
+      rh_t = TRANSPOSE(rh)
+      ALLOCATE (vrho_dummy(SIZE(rh, 2), SIZE(rh, 1)))
+
+      CALL check_fxc_available(xcpot%vxc_func_x)
+      CALL xc_f90_gga_vxc(xcpot%vxc_func_x, np, rh_t, sigma, vrho_dummy, vsigma)
+      CALL xc_f90_gga_fxc(xcpot%vxc_func_x, np, rh_t, sigma, v2rho2, v2rhosigma, v2sigma2)
+
+      IF (xcpot%func_vxc_id_c > 0) THEN
+         CALL check_fxc_available(xcpot%vxc_func_c)
+         ALLOCATE (vsigma_c, mold=vsigma)
+         ALLOCATE (v2rho2_c, mold=v2rho2)
+         ALLOCATE (v2rhosigma_c, mold=v2rhosigma)
+         ALLOCATE (v2sigma2_c, mold=v2sigma2)
+         CALL xc_f90_gga_vxc(xcpot%vxc_func_c, np, rh_t, sigma, vrho_dummy, vsigma_c)
+         CALL xc_f90_gga_fxc(xcpot%vxc_func_c, np, rh_t, sigma, v2rho2_c, v2rhosigma_c, v2sigma2_c)
+         vsigma     = vsigma     + vsigma_c
+         v2rho2     = v2rho2     + v2rho2_c
+         v2rhosigma = v2rhosigma + v2rhosigma_c
+         v2sigma2   = v2sigma2   + v2sigma2_c
+      ENDIF
+#endif
+   END SUBROUTINE xcpot_get_fxc_gga
 
    SUBROUTINE xcpot_alloc_gradients(ngrid, jspins, grad)
       INTEGER, INTENT(IN)         :: jspins, ngrid
@@ -573,6 +623,19 @@ CONTAINS
       integer              :: family
       family = xc_f90_func_info_get_family(xc_f90_func_get_info(xc_func))
    END FUNCTION xc_get_family
+
+   SUBROUTINE check_fxc_available(xc_func)
+      !! Stops with a readable message if the functional has no analytic second derivative.
+      IMPLICIT NONE
+      TYPE(xc_f90_func_t),INTENT(IN) :: xc_func
+      TYPE(xc_f90_func_info_t)       :: xc_info
+
+      xc_info = xc_f90_func_get_info(xc_func)
+      IF (IAND(xc_f90_func_info_get_flags(xc_info),XC_FLAGS_HAVE_FXC) == 0) THEN
+         CALL judft_error("The libxc functional '"//TRIM(xc_f90_func_info_get_name(xc_info))// &
+                          "' provides no analytic second derivative and can not be used with DFPT.")
+      END IF
+   END SUBROUTINE check_fxc_available
 #endif
 
 END MODULE m_types_xcpot_libxc
