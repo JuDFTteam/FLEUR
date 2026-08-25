@@ -36,9 +36,7 @@ MODULE m_melem_mmkb_vac
 
 CONTAINS
 
-   SUBROUTINE melem_mmkb_vac(vacuum, cell, vac, vac_b, gb, mmnk, vacchi)
-      TYPE(t_vacuum), INTENT(IN) :: vacuum
-      TYPE(t_cell), INTENT(IN) :: cell
+   SUBROUTINE melem_mmkb_vac(vac, vac_b, gb, mmnk, vacchi)
       TYPE(t_melem_vacabc), INTENT(IN) :: vac      !< the bra side, already expanded
       TYPE(t_melem_vacabc), INTENT(IN) :: vac_b    !< the ket side
       INTEGER, INTENT(IN) :: gb(3)
@@ -51,15 +49,15 @@ CONTAINS
       COMPLEX :: chi, uu, ud, du, dd
       REAL, ALLOCATABLE :: re(:), im(:)
 
-      nmz = vacuum%nmz
-      delz = vacuum%delz
-      z1 = cell%z1
+      nmz = vac%nmz
+      delz = vac%delz
+      z1 = vac%z1
       nb = SIZE(mmnk, 1)
       nb_b = SIZE(mmnk, 2)
       chi = CMPLX(1.0, 0.0)
       IF (PRESENT(vacchi)) chi = vacchi
 
-      IF (vac%nmz /= nmz .OR. vac_b%nmz /= nmz) CALL juDFT_error( &
+      IF (vac_b%nmz /= nmz .OR. vac_b%delz /= delz .OR. vac_b%z1 /= z1) CALL juDFT_error( &
          'melem_mmkb_vac: the two expansions were built on different z meshes', &
          calledby='melem_mmkb_vac')
       IF (SIZE(vac%ac, 2) < nb .OR. SIZE(vac_b%ac, 2) < nb_b) CALL juDFT_error( &
@@ -73,7 +71,7 @@ CONTAINS
          sgn = vac%slot_sign(islot)
          iv = vac%slot_vac(islot)
          iv_b = vac_b%slot_vac(islot)
-         zks = gb(3)*cell%bmat(3, 3)*sgn
+         zks = gb(3)*vac%bmat33*sgn
 
          DO l = 1, vac%nv2
             DO lp = 1, vac_b%nv2
@@ -88,7 +86,7 @@ CONTAINS
 
                DO j = 1, nb_b
                   DO i = 1, nb
-                     mmnk(i, j) = mmnk(i, j) + cell%area*chi*( &
+                     mmnk(i, j) = mmnk(i, j) + vac%area*chi*( &
                                   vac%ac(l, i, islot)*CONJG(vac_b%ac(lp, j, islot))*uu + &
                                   vac%ac(l, i, islot)*CONJG(vac_b%bc(lp, j, islot))*ud + &
                                   vac%bc(l, i, islot)*CONJG(vac_b%ac(lp, j, islot))*du + &

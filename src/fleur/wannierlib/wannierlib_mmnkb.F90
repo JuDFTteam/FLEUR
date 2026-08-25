@@ -6,6 +6,7 @@
 MODULE m_wannierlib_mmnkb
   USE m_juDFT
   USE m_melem_overlap, ONLY: melem_overlap_states
+  USE m_types_melem_vacabc, ONLY: t_melem_vacabc
   USE m_matrix_element_factory, ONLY: matrix_element_states
   USE m_types
   USE m_types_abc
@@ -29,7 +30,7 @@ CONTAINS
 
   SUBROUTINE wannierlib_mmnkb(manifold, bmesh, nk, kpts, ujug, atoms, cell, input, sym, noco, nococonv, &
                               abc, jspin, jspin_rad, eig_id, stars, lapw, zMat, mmn, nk_local, &
-                              enpara, vtot, fmpi)
+                              enpara, vtot, fmpi, vacuum)
     TYPE(t_melem_manifold), INTENT(IN) :: manifold   !> the band window, and how wide it is
     TYPE(t_melem_bmesh), INTENT(IN) :: bmesh   !> which k is the b-th neighbour, and by which G
     INTEGER, INTENT(IN) :: nk
@@ -53,6 +54,8 @@ CONTAINS
     TYPE(t_enpara), INTENT(IN) :: enpara   !> the factory generates the radial functions itself
     TYPE(t_potden), INTENT(IN) :: vtot
     TYPE(t_mpi), INTENT(IN) :: fmpi
+    !> Only a film uses it: the expansions stay unbuilt otherwise and the overlap skips them.
+    TYPE(t_vacuum), INTENT(IN) :: vacuum
 
     TYPE(t_mat), POINTER :: zMat_b(:)   !> points into the factory cache, one entry per record
     TYPE(t_abc), POINTER :: abc_b(:, :) !> (2,ntype), likewise
@@ -60,6 +63,7 @@ CONTAINS
     INTEGER :: kk, nk_b, irec
     INTEGER, ALLOCATABLE :: ev_list(:)
     TYPE(t_spinor_layout) :: layout, layout_b
+    TYPE(t_melem_vacabc) :: vac, vac_b
 
     IF (.NOT.ALLOCATED(mmn)) THEN
       IF ((manifold%num_bands > 0) .AND. (kpts%nkpt > 0) .AND. (bmesh%nntot > 0)) THEN
@@ -73,6 +77,9 @@ CONTAINS
     !> own, and this pass reaches its block by row offset rather than by stacking them.
     irec = MERGE(1, jspin, noco%l_noco)
     CALL layout%init(input, noco, lapw, atoms)
+    !> This k is the bra of every neighbour below, so its expansion is built once.
+    IF (input%film) CALL vac%calc(vacuum, cell, enpara, vtot, lapw, jspin_rad, zMat, &
+                                  manifold%num_bands, ioff=layout%row_offset(jspin))
     DO kk = 1, bmesh%nntot
       nk_b = bmesh%nnlist(nk, kk)
       !> The neighbour's basis is needed here as well as by the factory, so it is built
@@ -84,6 +91,9 @@ CONTAINS
                                  enpara, lapw_b, vtot, fmpi, zMat_b, abc_b, ev_list=ev_list, &
                                  l_both_spinors=(noco%l_soc .AND. .NOT. noco%l_noco), kpts=kpts)
       CALL layout_b%init(input, noco, lapw_b, atoms)
+      IF (input%film) CALL vac_b%calc(vacuum, cell, enpara, vtot, lapw_b, jspin_rad, &
+                                      zMat_b(irec), manifold%num_bands, &
+                                      ioff=layout_b%row_offset(jspin))
 
       CALL melem_overlap_states(stars, atoms, lapw, lapw_b, zMat, zMat_b(irec), &
                                 abc, abc_b(jspin, :), jspin_rad, jspin_rad, &
@@ -91,7 +101,7 @@ CONTAINS
                                 bmesh%gkpb(:, nk, kk), ujug, bmesh%kdiff, bmesh%nntot, &
                                 ioff_a=layout%row_offset(jspin), &
                                 ioff_b=layout_b%row_offset(jspin), &
-                                ovl=mmn(:, :, kk, nk_local))
+                                ovl=mmn(:, :, kk, nk_local), vac_a=vac, vac_b=vac_b)
     END DO
 
     

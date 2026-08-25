@@ -19,6 +19,7 @@ MODULE m_wannierlib_build_amn_mmn
    USE m_types, ONLY: t_stars
    USE m_types_atoms
    USE m_types_cell
+   USE m_types_vacuum
    USE m_types_input
    USE m_types_kpts
    USE m_types_lapw
@@ -48,12 +49,13 @@ CONTAINS
    SUBROUTINE wannierlib_build_amn_mmn(this, manifold, bmesh, atoms, cell, input, kpts, sym, &
                                        noco, nococonv, stars, enpara, fmpi, vtot, eig_id, &
                                        radfun, usdus, distk, kdiff, nntot_w90, jspin, &
-                                       l_wannierlib_spinors, l_nocosoc, amn, mmn)
+                                       l_wannierlib_spinors, l_nocosoc, amn, mmn, vacuum)
       TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
       TYPE(t_melem_manifold), INTENT(IN) :: manifold
       TYPE(t_melem_bmesh),    INTENT(IN) :: bmesh
       TYPE(t_atoms),    INTENT(IN) :: atoms
       TYPE(t_cell),     INTENT(IN) :: cell
+      TYPE(t_vacuum),   INTENT(IN) :: vacuum
       TYPE(t_input),    INTENT(IN) :: input
       TYPE(t_kpts),     INTENT(IN) :: kpts
       TYPE(t_sym),      INTENT(IN) :: sym
@@ -126,7 +128,7 @@ CONTAINS
             CALL wannierlib_mmnkb(manifold, bmesh, ikpt, kpts, &
                                   ujug, atoms, cell, input, sym, noco, nococonv, &
                                   abc_p(jspin_comp, :), jspin_comp, jspin_rad, eig_id, stars, lapw, &
-                                  zmat_p(irec), mmn, ik_local, enpara, vtot, fmpi)
+                                  zmat_p(irec), mmn, ik_local, enpara, vtot, fmpi, vacuum)
          END DO
 
       END DO

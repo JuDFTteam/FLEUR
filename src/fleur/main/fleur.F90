@@ -488,7 +488,7 @@ CONTAINS
             IF (fi%wannierlib%l_wannierize) THEN
                CALL timestart("wannierlib")
                CALL wannierlib_main(fi%wannierlib, fi%atoms, fi%cell, input_soc, fi%kpts, fi%sym, fi%noco, nococonv, stars, enpara, fmpi, &
-                                    vTot, results, eig_id)
+                                    vTot, results, eig_id, fi%vacuum)
                CALL timestop("wannierlib")
                CALL juDFT_end("Wannierization done. Fleur ends.", fmpi%irank)
             END IF

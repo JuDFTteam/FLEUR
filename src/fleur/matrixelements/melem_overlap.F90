@@ -15,6 +15,8 @@ MODULE m_melem_overlap
    USE m_types_abc
    USE m_melem_mmkb_int
    USE m_melem_mmkb_sph
+   USE m_melem_mmkb_vac, ONLY: melem_mmkb_vac
+   USE m_types_melem_vacabc, ONLY: t_melem_vacabc
    USE m_judft
    IMPLICIT NONE
    PRIVATE
@@ -97,8 +99,12 @@ CONTAINS
       END IF
    END SUBROUTINE melem_overlap_interstitial
 
-   !> The overlap of two sets of states over the whole cell, muffin-tin part and
-   !> interstitial part into the same matrix.
+   !> The overlap of two sets of states over the whole cell: muffin-tin part, interstitial
+   !> part and, on a film, vacuum part, all into the same matrix.
+   !>
+   !> The vacuum expansions are optional and a bulk caller leaves them out. Handing them in
+   !> unexpanded (nv2 == 0) is the same as leaving them out, so a caller that has them only
+   !> sometimes needs one call site rather than two.
    !>
    !> The two sides are independent: each has its own k-point, its own basis and its own
    !> coefficients, and gb is the reciprocal lattice vector that brings the second one back
@@ -112,7 +118,7 @@ CONTAINS
    !> guessing which table entry to use.
    SUBROUTINE melem_overlap_states(stars, atoms, lapw_a, lapw_b, zmat_a, zmat_b, &
                                    abc_a, abc_b, jspin_a, jspin_b, bkpt_a, bkpt_b, gb, &
-                                   ujug, kdiff, nntot, ioff_a, ioff_b, ovl)
+                                   ujug, kdiff, nntot, ioff_a, ioff_b, ovl, vac_a, vac_b)
       TYPE(t_stars), INTENT(IN) :: stars
       TYPE(t_atoms), INTENT(IN) :: atoms
       TYPE(t_lapw),  INTENT(IN) :: lapw_a, lapw_b
@@ -125,10 +131,18 @@ CONTAINS
       REAL,          INTENT(IN) :: kdiff(:, :)
       INTEGER,       INTENT(IN) :: nntot, ioff_a, ioff_b
       COMPLEX,    INTENT(INOUT) :: ovl(:, :)
+      TYPE(t_melem_vacabc), INTENT(IN), OPTIONAL :: vac_a, vac_b
+
+      LOGICAL :: l_vac
 
       CALL melem_mmkb_int(stars, lapw_a, lapw_b, jspin_a, jspin_b, zmat_a, zmat_b, gb, ovl, &
                           ioff=ioff_a, ioff_b=ioff_b)
       CALL melem_mmkb_sph(atoms, abc_a, abc_b, bkpt_b, gb, bkpt_a, ujug, kdiff, nntot, ovl)
+
+      !> Two statements because Fortran does not promise to stop at the first .AND.
+      l_vac = .FALSE.
+      IF (PRESENT(vac_a) .AND. PRESENT(vac_b)) l_vac = (vac_a%nv2 > 0 .AND. vac_b%nv2 > 0)
+      IF (l_vac) CALL melem_mmkb_vac(vac_a, vac_b, gb, ovl)
    END SUBROUTINE melem_overlap_states
 
 END MODULE m_melem_overlap

@@ -33,6 +33,7 @@ MODULE m_wannierlib_main
    USE m_constants, ONLY: oUnit
    USE m_types_atoms
    USE m_types_cell
+   USE m_types_vacuum
    USE m_types_input
    USE m_types_kpts
    USE m_types_lapw
@@ -54,10 +55,11 @@ MODULE m_wannierlib_main
    PUBLIC :: wannierlib_main
 CONTAINS
 
-   SUBROUTINE wannierlib_main(this, atoms, cell, input, kpts, sym, noco, nococonv, stars, enpara, fmpi, vtot, results, eig_id)
+   SUBROUTINE wannierlib_main(this, atoms, cell, input, kpts, sym, noco, nococonv, stars, enpara, fmpi, vtot, results, eig_id, vacuum)
       TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
       TYPE(t_atoms), INTENT(IN) :: atoms
       TYPE(t_cell), INTENT(IN) :: cell
+      TYPE(t_vacuum), INTENT(IN) :: vacuum
       TYPE(t_input), INTENT(IN) :: input
       TYPE(t_kpts), INTENT(IN) :: kpts
       TYPE(t_sym), INTENT(IN) :: sym
@@ -150,7 +152,7 @@ CONTAINS
          CALL wannierlib_build_amn_mmn(this, manifold, bmesh, atoms, cell, input, kpts, sym, &
                                        noco, nococonv, stars, enpara, fmpi, vtot, eig_id, &
                                        radfun, usdus, distk, kdiff, nntot_w90, jspin, &
-                                       l_wannierlib_spinors, l_nocosoc, amn, mmn)
+                                       l_wannierlib_spinors, l_nocosoc, amn, mmn, vacuum)
 
          ! amn was filled only on each rank's distk slice (zeros elsewhere) -> sum to the full set
          CALL wannierlib_reduce_amn(fmpi, amn)

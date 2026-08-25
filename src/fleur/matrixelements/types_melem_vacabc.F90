@@ -47,6 +47,13 @@ MODULE m_types_melem_vacabc
       INTEGER, ALLOCATABLE :: kvac(:, :)    !< (2, nv2) the distinct parallel G
       INTEGER :: nv2 = 0
       INTEGER :: nmz = 0
+      !> The z mesh and the geometry the expansion was built on. They travel with the data
+      !> because a consumer handed a different t_vacuum or t_cell would integrate the same
+      !> ac/bc on the wrong mesh and say nothing.
+      REAL :: delz = 0.0
+      REAL :: z1 = 0.0
+      REAL :: area = 0.0
+      REAL :: bmat33 = 0.0
       INTEGER :: slot_vac(2) = 0            !< whose u/ue each slot reads
       REAL :: slot_sign(2) = 0.0            !< +1 the stored side, -1 the other one
    CONTAINS
@@ -104,6 +111,10 @@ CONTAINS
       END DO gloop
 
       this%nmz = nmz
+      this%delz = vacuum%delz
+      this%z1 = cell%z1
+      this%area = cell%area
+      this%bmat33 = cell%bmat(3, 3)
       ALLOCATE (this%u(nmz, this%nv2, nvac), this%ue(nmz, this%nv2, nvac))
       ALLOCATE (this%ac(this%nv2, nbnd, 2), this%bc(this%nv2, nbnd, 2))
       this%ac = CMPLX(0.0, 0.0)
