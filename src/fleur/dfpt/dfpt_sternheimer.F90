@@ -299,12 +299,11 @@ CONTAINS
          ! If q=0, the eigenenergy perturbation is /=0 and if we do not
          ! look at a semiconductor or an insulator, there will be a
          ! perturbation of the occupation numbers as well.
-         ! Test for metallicity: to be tested if this workes reliably
+         ! Test for metallicity: WIP
          l_metal = ANY(results%w_iks*2.0/fi%input%jspins>1e-6.AND.results%w_iks*2.0/fi%input%jspins<1.0-1e-6)
 
          CALL timestart("Fermi energy and occupation derivative")
-         
-         IF (norm2(bqpt)<1e-8 .and. l_metal) THEN ! l_metal to be removed
+         IF (norm2(bqpt)<1e-8.AND.l_metal) THEN
             CALL dfpt_fermie(fmpi,fi%kpts,fi%input,fi%noco,results,results1)
          ELSE
             results1%ef = 0.0

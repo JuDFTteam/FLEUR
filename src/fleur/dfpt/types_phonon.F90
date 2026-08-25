@@ -9,6 +9,7 @@ module m_types_phonon
 
     use m_juDFT
     use m_types_dfpt_scf
+    use m_dfpt_NAC
 
     implicit none 
 
@@ -77,14 +78,15 @@ module m_types_phonon
         outEii2 = this%Eii2        
     end subroutine get_Eii2
     
-    subroutine get_dynNAC(this,outDynNAC)
+    subroutine get_dynNAC(this,fi,outDynNAC)
         class(t_phonon), intent(in) :: this
+        type(t_fleurinput), intent(in) :: fi 
         complex, allocatable, intent(out) :: outDynNAC(:,:)
 
         if (allocated(outDynNAC)) deallocate(outDynNAC)
         allocate(outDynNAC,mold=this%dynMatNac)
-
-        outDynNAC = this%dynMatNac        
+        call dfpt_NAC(fi,outDynNAC)
+        !outDynNAC = this%dynMatNac        
     end subroutine get_dynNAC
 
 
@@ -251,9 +253,9 @@ module m_types_phonon
 
         if (fmpi%irank==0) then 
             ! Add NAC contribution
-            if (l_gamma .and. dfpt%l_polar) then 
-                call this%get_dynNAC(dynMatNac)
-                dyn_mat(iQ,:,:) = dyn_mat(iQ,:,:) + dynMatNac(:,:) 
+            if (l_gamma .and. dfpt%l_polar) then
+                call this%get_dynNAC(fi,dynMatNac)
+                dyn_mat(iQ,:,:) = dyn_mat(iQ,:,:) + dynMatNac(:,:)
             end if 
 
             call timestart("Dynmat diagonalization")

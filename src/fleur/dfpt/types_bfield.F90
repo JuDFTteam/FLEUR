@@ -122,7 +122,7 @@ contains
         call this%get_magnetic_susc(magnetic_susc)
         if (fmpi%irank == 0) then
             write(*,*) 'Scf calculation for Zeeman field perturbation finished'
-            write(*,*) 'Magnetic susceptibility : ', magnetic_susc
+            write(*,*) 'Magnetic susceptibility in a.u. per unit cell: ', magnetic_susc
         end if
     end subroutine write_outfiles_bfield
 
