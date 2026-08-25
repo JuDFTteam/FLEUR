@@ -7,6 +7,8 @@ MODULE m_wannierlib_mmnkb
   USE m_juDFT
   USE m_melem_overlap, ONLY: melem_overlap_states
   USE m_types_melem_vacabc, ONLY: t_melem_vacabc
+  USE m_melem_overlap, ONLY: melem_overlap_check_identity
+  USE m_types_radfun
   USE m_matrix_element_factory, ONLY: matrix_element_states
   USE m_types
   USE m_types_abc
@@ -30,7 +32,7 @@ CONTAINS
 
   SUBROUTINE wannierlib_mmnkb(manifold, bmesh, nk, kpts, ujug, atoms, cell, input, sym, noco, nococonv, &
                               abc, jspin, jspin_rad, eig_id, stars, lapw, zMat, mmn, nk_local, &
-                              enpara, vtot, fmpi, vacuum)
+                              enpara, vtot, fmpi, vacuum, radfun)
     TYPE(t_melem_manifold), INTENT(IN) :: manifold   !> the band window, and how wide it is
     TYPE(t_melem_bmesh), INTENT(IN) :: bmesh   !> which k is the b-th neighbour, and by which G
     INTEGER, INTENT(IN) :: nk
@@ -56,6 +58,8 @@ CONTAINS
     TYPE(t_mpi), INTENT(IN) :: fmpi
     !> Only a film uses it: the expansions stay unbuilt otherwise and the overlap skips them.
     TYPE(t_vacuum), INTENT(IN) :: vacuum
+    !> Only the M(k,k) check uses them, to tabulate the b = 0 entry the neighbour table lacks.
+    TYPE(t_radfun), INTENT(IN) :: radfun(:)
 
     TYPE(t_mat), POINTER :: zMat_b(:)   !> points into the factory cache, one entry per record
     TYPE(t_abc), POINTER :: abc_b(:, :) !> (2,ntype), likewise
@@ -80,6 +84,12 @@ CONTAINS
     !> This k is the bra of every neighbour below, so its expansion is built once.
     IF (input%film) CALL vac%calc(vacuum, cell, enpara, vtot, lapw, jspin_rad, zMat, &
                                   manifold%num_bands, ioff=layout%row_offset(jspin))
+    !> One k is enough for an invariant: M(k,k) = 1 tests the regions, not the mesh. Only
+    !> the rank that owns this k reaches the line, so oUnit is written by one rank.
+    IF (nk == 1) CALL melem_overlap_check_identity(stars, atoms, cell, lapw, zMat, abc, &
+                                                   radfun, jspin_rad, layout%row_offset(jspin), &
+                                                   manifold%num_bands, nk, vac=vac)
+
     DO kk = 1, bmesh%nntot
       nk_b = bmesh%nnlist(nk, kk)
       !> The neighbour's basis is needed here as well as by the factory, so it is built

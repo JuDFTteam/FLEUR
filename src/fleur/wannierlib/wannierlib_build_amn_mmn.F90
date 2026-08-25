@@ -128,7 +128,7 @@ CONTAINS
             CALL wannierlib_mmnkb(manifold, bmesh, ikpt, kpts, &
                                   ujug, atoms, cell, input, sym, noco, nococonv, &
                                   abc_p(jspin_comp, :), jspin_comp, jspin_rad, eig_id, stars, lapw, &
-                                  zmat_p(irec), mmn, ik_local, enpara, vtot, fmpi, vacuum)
+                                  zmat_p(irec), mmn, ik_local, enpara, vtot, fmpi, vacuum, radfun)
          END DO
 
       END DO

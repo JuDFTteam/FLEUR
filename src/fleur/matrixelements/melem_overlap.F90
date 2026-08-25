@@ -13,14 +13,20 @@ MODULE m_melem_overlap
    USE m_types_mat
    USE m_types_atoms
    USE m_types_abc
+   USE m_types_cell
+   USE m_types_radfun
    USE m_melem_mmkb_int
    USE m_melem_mmkb_sph
    USE m_melem_mmkb_vac, ONLY: melem_mmkb_vac
    USE m_types_melem_vacabc, ONLY: t_melem_vacabc
+   USE m_melem_ujugaunt, ONLY: melem_ujugaunt
+   USE m_melem_check, ONLY: MELEM_CHECK_TOL
+   USE m_constants, ONLY: oUnit
    USE m_judft
    IMPLICIT NONE
    PRIVATE
    PUBLIC :: melem_overlap_interstitial, melem_overlap_states
+   PUBLIC :: melem_overlap_check_identity
 
 CONTAINS
 
@@ -144,5 +150,82 @@ CONTAINS
       IF (PRESENT(vac_a) .AND. PRESENT(vac_b)) l_vac = (vac_a%nv2 > 0 .AND. vac_b%nv2 > 0)
       IF (l_vac) CALL melem_mmkb_vac(vac_a, vac_b, gb, ovl)
    END SUBROUTINE melem_overlap_states
+
+   !>  M_mn(k, k) has to be the identity. The eigenvectors are orthonormal over the whole
+   !>  cell, so the regional halves of the overlap must add up to delta_mn -- and this is the
+   !>  one invariant that exercises every region at once.
+   !>
+   !>  It is the only test that can tell a WRONG vacuum term from a missing one. On a film
+   !>  the interpolated bands come out exact on the coarse mesh whatever the gauge, because
+   !>  H_W is then a unitary rotation of the input spectrum, so they cannot see it. This can:
+   !>  a region left out, or counted with the wrong measure, shows up here immediately.
+   !>
+   !>  It works in bulk too, with two halves instead of three, which is what makes it usable:
+   !>  bulk is the control. If bulk is clean and a film is not, the vacuum term is at fault
+   !>  rather than the check.
+   !>
+   !>  Warns rather than stops, like m_melem_check: a tolerance right for one basis is not
+   !>  obviously right for the next.
+   SUBROUTINE melem_overlap_check_identity(stars, atoms, cell, lapw, zmat, abc, radfun, &
+                                           jspin_rad, ioff, nbnd, ik, vac, tol, l_ok)
+      TYPE(t_stars), INTENT(IN) :: stars
+      TYPE(t_atoms), INTENT(IN) :: atoms
+      TYPE(t_cell),  INTENT(IN) :: cell
+      TYPE(t_lapw),  INTENT(IN) :: lapw
+      TYPE(t_mat),   INTENT(IN) :: zmat
+      TYPE(t_abc),   INTENT(IN) :: abc(:)
+      TYPE(t_radfun), INTENT(IN) :: radfun(:)
+      INTEGER, INTENT(IN) :: jspin_rad, ioff, nbnd, ik
+      TYPE(t_melem_vacabc), INTENT(IN), OPTIONAL :: vac
+      REAL, INTENT(IN), OPTIONAL :: tol
+      LOGICAL, INTENT(OUT), OPTIONAL :: l_ok
+
+      REAL :: kdiff0(3, 1), t, dmax, omax, d
+      COMPLEX, ALLOCATABLE :: ujug0(:, :, :, :, :, :), ovl(:, :)
+      INTEGER :: i, j
+      CHARACTER(LEN=12) :: reg
+
+      t = MELEM_CHECK_TOL
+      IF (PRESENT(tol)) t = tol
+      reg = 'MT+int'
+      !> Two statements: an unbuilt expansion may be passed in bulk, and Fortran does not
+      !> promise to stop at the first .AND.
+      IF (PRESENT(vac)) THEN
+         IF (vac%nv2 > 0) reg = 'MT+int+vac'
+      END IF
+
+      !> b = 0 needs its own one-entry table: the muffin-tin half finds b in kdiff BY VALUE,
+      !> and the neighbour table has no zero in it.
+      kdiff0 = 0.0
+      CALL melem_ujugaunt(atoms, cell, 1, kdiff0, radfun, radfun, jspin_rad, jspin_rad, &
+                          .FALSE., 1, ujug0)
+
+      ALLOCATE (ovl(nbnd, nbnd), source=CMPLX(0.0, 0.0))
+      CALL melem_overlap_states(stars, atoms, lapw, lapw, zmat, zmat, abc, abc, &
+                                jspin_rad, jspin_rad, lapw%bkpt, lapw%bkpt, [0, 0, 0], &
+                                ujug0, kdiff0, 1, ioff, ioff, ovl, vac_a=vac, vac_b=vac)
+
+      dmax = 0.0; omax = 0.0
+      DO j = 1, nbnd
+         DO i = 1, nbnd
+            IF (i == j) THEN
+               d = ABS(ovl(i, j) - CMPLX(1.0, 0.0)); dmax = MAX(dmax, d)
+            ELSE
+               d = ABS(ovl(i, j)); omax = MAX(omax, d)
+            END IF
+         END DO
+      END DO
+
+      IF (dmax > t .OR. omax > t) THEN
+         WRITE (oUnit, '(a,i0,a,2(a,es12.4))') 'wannierlib overlap check [k=', ik, ', '// &
+            TRIM(reg)//']: M(k,k) is not the identity', '  diagonal ', dmax, '  off-diagonal ', omax
+      ELSE
+         WRITE (oUnit, '(a,i0,a,2(a,es12.4))') 'wannierlib overlap check [k=', ik, ', '// &
+            TRIM(reg)//']: M(k,k) = 1 ok', '  diagonal ', dmax, '  off-diagonal ', omax
+      END IF
+      IF (PRESENT(l_ok)) l_ok = (dmax <= t .AND. omax <= t)
+
+      DEALLOCATE (ovl, ujug0)
+   END SUBROUTINE melem_overlap_check_identity
 
 END MODULE m_melem_overlap
