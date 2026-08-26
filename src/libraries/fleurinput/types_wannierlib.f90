@@ -61,6 +61,21 @@ MODULE m_types_wannierlib
     REAL :: dis_froz_max = 0.0
     INTEGER :: dis_num_iter = 0
     INTEGER :: num_iter = 0      ! MLWF/wannierise iterations (W90 num_iter); XML @wannNumIter
+    !> Projectability disentanglement (W90 dis_froz_proj / dis_proj_min / dis_proj_max).
+    !> Off by default, which is also Wannier90's default -- and W90 says why in its own
+    !> source: "upon reading AMN we do not know where it comes from". We do: ours are the
+    !> atomic projections this code builds, so the criterion is meaningful here.
+    !>
+    !> It replaces the ENERGY frozen window by one on p_i(k) = sum_j |A_ij(k)|^2, the share
+    !> of a Bloch state that lies in the span of the trial orbitals. Below proj_min a state
+    !> is discarded outright -- even from the middle of the outer window, which an energy cut
+    !> cannot do -- and at or above proj_max it is frozen.
+    !>
+    !> It needs a full-rank amn: with the spinor guard broken the matrix came out rank
+    !> num_wann/2 and p ran up to 1.98, which W90 rejects outright. Fixed in 38b46f7e4.
+    LOGICAL :: dis_froz_proj = .FALSE.
+    REAL :: dis_proj_min = 0.01
+    REAL :: dis_proj_max = 0.95
     REAL :: dis_mix_ratio = 0.0
     REAL :: dis_conv_tol = 0.0
     REAL :: conv_tol = 0.0       ! MLWF/wannierise convergence (W90 conv_tol); XML @wannConvTol
@@ -346,6 +361,9 @@ CONTAINS
     CALL mpi_bc(this%dis_froz_max, rank, mpi_comm)
     CALL mpi_bc(this%dis_num_iter, rank, mpi_comm)
     CALL mpi_bc(this%num_iter, rank, mpi_comm)
+    CALL mpi_bc(this%dis_froz_proj, rank, mpi_comm)
+    CALL mpi_bc(this%dis_proj_min, rank, mpi_comm)
+    CALL mpi_bc(this%dis_proj_max, rank, mpi_comm)
     CALL mpi_bc(this%dis_mix_ratio, rank, mpi_comm)
     CALL mpi_bc(this%dis_conv_tol, rank, mpi_comm)
     CALL mpi_bc(this%conv_tol, rank, mpi_comm)
@@ -414,6 +432,9 @@ CONTAINS
       this%dis_win_max = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@disWinMax'))
       this%dis_froz_min = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@disFrozMin'))
       this%dis_froz_max = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@disFrozMax'))
+      this%dis_froz_proj = evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@disFrozProj'))
+      this%dis_proj_min = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@disProjMin'))
+      this%dis_proj_max = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@disProjMax'))
       this%dis_num_iter = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@numIter'))
       this%dis_mix_ratio = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mixRatio'))
       this%dis_conv_tol = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@convTol'))

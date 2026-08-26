@@ -3552,6 +3552,9 @@
       <xsd:attribute name="numIter" type="xsd:positiveInteger" use="required"/>
       <xsd:attribute name="convTol" type="FleurDouble" use="required"/>
       <xsd:attribute name="mixRatio" type="FleurDouble" use="required"/>
+      <xsd:attribute default="F" name="disFrozProj" type="FleurBool" use="optional"/>
+      <xsd:attribute default="0.01" name="disProjMin" type="FleurDouble" use="optional"/>
+      <xsd:attribute default="0.95" name="disProjMax" type="FleurDouble" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="WannierlibWannierizationType">

@@ -106,6 +106,14 @@ CONTAINS
     IF (this%conv_tol > 0.0)     CALL w90_set_option(wannierlib_w90main, 'conv_tol', this%conv_tol)          ! MLWF/wannierise (XML wannConvTol)
     !> Only set when asked: Wannier90's own default is .FALSE., so staying silent keeps
     !> every existing run byte-identical.
+    !> Projectability disentanglement: only set when asked, so silence leaves W90 on its own
+    !> energy-window default and every existing run byte-identical. The two thresholds go with
+    !> it -- W90 validates both to [0,1] and would abort on anything else.
+    IF (this%dis_froz_proj) THEN
+       CALL w90_set_option(wannierlib_w90main, 'dis_froz_proj', .TRUE.)
+       CALL w90_set_option(wannierlib_w90main, 'dis_proj_min', this%dis_proj_min)
+       CALL w90_set_option(wannierlib_w90main, 'dis_proj_max', this%dis_proj_max)
+    END IF
     IF (this%precond) CALL w90_set_option(wannierlib_w90main, 'precond', .TRUE.)                            ! MLWF/wannierise (XML precond)
 
     seedname = 'fleur_wlib_internal'
