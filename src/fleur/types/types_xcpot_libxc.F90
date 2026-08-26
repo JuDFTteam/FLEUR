@@ -44,7 +44,7 @@ MODULE m_types_xcpot_libxc
       PROCEDURE        :: get_exchange_weight => xcpot_get_exchange_weight
       PROCEDURE        :: get_vxc => xcpot_get_vxc
       PROCEDURE        :: get_exc => xcpot_get_exc
-      PROCEDURE        :: get_fxc => xcpot_get_fxc
+      PROCEDURE        :: get_fxc_lda => xcpot_get_fxc_lda
       PROCEDURE        :: get_fxc_gga => xcpot_get_fxc_gga
       PROCEDURE, NOPASS :: alloc_gradients => xcpot_alloc_gradients
       !Not             overloeaded...
@@ -439,7 +439,7 @@ CONTAINS
 #endif
    END SUBROUTINE xcpot_get_exc
 
-   SUBROUTINE xcpot_get_fxc(xcpot, jspins, rh, fxc)
+   SUBROUTINE xcpot_get_fxc_lda(xcpot, jspins, rh, fxc)
       USE, INTRINSIC :: IEEE_ARITHMETIC
       use iso_c_binding
 
@@ -459,21 +459,17 @@ CONTAINS
       ALLOCATE (fxc_tmp(SIZE(fxc, 2), SIZE(fxc, 1))); fxc_tmp = 0.0
       ALLOCATE (fx_tmp(SIZE(fxc, 2), SIZE(fxc, 1))); fx_tmp = 0.0
 
-      IF (xcpot%needs_grad().OR.xcpot%exc_is_MetaGGA()) THEN
-         CALL judft_error("Bug: You called get_fxc for a (meta)GGA potential. Use get_fxc_gga instead.")
-      ELSE  !LDA potentials
-         CALL xc_f90_lda_fxc(xcpot%vxc_func_x, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), fx_tmp)
-         IF (xcpot%func_vxc_id_c > 0) THEN
-            CALL xc_f90_lda_fxc(xcpot%vxc_func_c, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), fxc_tmp)
-            fxc_tmp = fxc_tmp + fx_tmp
-         ELSE
-            fxc_tmp = fx_tmp
-         ENDIF
+      CALL xc_f90_lda_fxc(xcpot%vxc_func_x, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), fx_tmp)
+      IF (xcpot%func_vxc_id_c > 0) THEN
+         CALL xc_f90_lda_fxc(xcpot%vxc_func_c, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), fxc_tmp)
+         fxc_tmp = fxc_tmp + fx_tmp
+      ELSE
+         fxc_tmp = fx_tmp
       ENDIF
       fxc = TRANSPOSE(fxc_tmp)
 
 #endif
-   END SUBROUTINE xcpot_get_fxc
+   END SUBROUTINE xcpot_get_fxc_lda
 
    SUBROUTINE xcpot_get_fxc_gga(xcpot, jspins, rh, sigma, vsigma, v2rho2, v2rhosigma, v2sigma2)
       !! Second derivatives of a GGA energy density plus the undifferentiated vsigma.
@@ -494,9 +490,6 @@ CONTAINS
       REAL,ALLOCATABLE :: rh_t(:,:), vrho_dummy(:,:)
       REAL,ALLOCATABLE :: vsigma_c(:,:), v2rho2_c(:,:), v2rhosigma_c(:,:), v2sigma2_c(:,:)
       integer(kind=c_size_t) :: np
-
-      IF (.NOT.xcpot%needs_grad()) CALL judft_error("Bug: get_fxc_gga called for a non-GGA potential.")
-      IF (xcpot%exc_is_MetaGGA()) CALL judft_error("Bug: get_fxc_gga called for a MetaGGA potential.")
 
       np = SIZE(rh, 1, kind=c_size_t)
       !libxc uses the spin as a first index, hence we have to transpose....

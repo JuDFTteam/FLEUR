@@ -114,7 +114,7 @@ CONTAINS
             DEALLOCATE(drivsigmaT,drivsigma1,drivsigma1Im,drivsigmaMT)
          ELSE
             ALLOCATE(f_xc(npoints,nfxc))
-            CALL xcpot%get_fxc(input%jspins, ch, f_xc)
+            CALL xcpot%get_fxc_lda(input%jspins, ch, f_xc)
 
             v_xc1 = 0.0
             v_xc1Im = 0.0

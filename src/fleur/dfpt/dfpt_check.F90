@@ -21,14 +21,11 @@ CONTAINS
 
         LOGICAL :: l_libxc
         LOGICAL :: l_exist
+        LOGICAL :: l_samefamily
 
         l_libxc = .FALSE.
         l_exist = .FALSE.
 
-        ! compiled with libxc ? 
-#ifndef CPP_LIBXC
-      IF (l_xc) CALL judft_error("You compiled Fleur without libxc but want to use DFPT. Please fix that.",calledby="dfpt_check.F90")
-#endif
         !Symmetry
         IF (fi%sym%nop.GT.1) CALL judft_error("dfpt uses only unit symmetry. Please redo the calculation without symmetry.",calledby="dfpt_check.F90")
 
@@ -38,13 +35,26 @@ CONTAINS
         !Noco
         IF (fi%noco%l_noco) CALL judft_error("dfpt doesn't do non-collinear systems yet.",calledby="dfpt_check.F90")
 
-        !libxc
+        ! compiled with libxc ? 
+#ifndef CPP_LIBXC
+      CALL judft_error("You compiled Fleur without libxc but want to use DFPT. Please fix that.",calledby="dfpt_check.F90")
+#endif
+
+        !is libxc?
         SELECT TYPE(xcpot)
         TYPE IS (t_xcpot_libxc)
             l_libxc=.TRUE.
         END SELECT
 
         IF (.NOT.l_libxc) CALL judft_error("dfpt needs libxc functionals.",calledby="dfpt_check.F90")
+
+        IF (xcpot%is_hybrid()) CALL judft_error("dfpt doesn't support hybrid functionals.",calledby="dfpt_check.F90")
+
+        !The xc response picks its branch from the correlation family alone
+        !correlation and exchange must match. 
+        IF (xcpot%func_vxc_id_c.LE.0) CALL judft_error("dfpt needs a correlation functional.",calledby="dfpt_check.F90")
+        l_samefamily = (xcpot%vx_is_LDA().AND.xcpot%vc_is_LDA()).OR.(xcpot%vx_is_gga().AND.xcpot%vc_is_gga())
+        IF (.NOT.l_samefamily) CALL judft_error("dfpt needs exchange and correlation both from LDA or both from GGA.",calledby="dfpt_check.F90")
 
         !GGA
         IF (xcpot%needs_grad().AND.fi%input%film) CALL judft_error("GGA functionals are not supported for film setups yet.",calledby="dfpt_check.F90")

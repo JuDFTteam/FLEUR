@@ -99,7 +99,7 @@ MODULE m_dfpt_vvac_xc
       !         calculate the exchange-correlation potential in  real space
 
 #ifdef CPP_LIBXC 
-      CALL xcpot%get_fxc(input%jspins, rho, f_xc)
+      CALL xcpot%get_fxc_lda(input%jspins, rho, f_xc)
 #endif
     
       !SELECT TYPE(xcpot)

@@ -121,7 +121,7 @@ CONTAINS
          CALL dfpt_gga_grdotgr(gradRho,gradRho1Im,gradDrivsigma,gradDrivsigma1Im,v_xc1Im)
       ELSE
          ALLOCATE(f_xc(npt,nfxc))
-         CALL xcpot%get_fxc(input%jspins, rho, f_xc)
+         CALL xcpot%get_fxc_lda(input%jspins, rho, f_xc)
 
          v_xc1 = 0.0
          v_xc1Im = 0.0
