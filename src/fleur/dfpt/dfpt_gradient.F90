@@ -14,7 +14,7 @@ module m_dfpt_gradient
 
 contains
 
-    subroutine mt_gradient_new(atoms, sphhar, sym, r2FlhMt, GrFshMt)
+    subroutine mt_gradient_lh(atoms, sphhar, sym, r2FlhMt, GrFshMt)
 
       use m_gaunt, only : gaunt1
 
@@ -100,7 +100,7 @@ contains
           end do ! oqn_l
       end do ! itype
 
-    end subroutine mt_gradient_new
+    end subroutine mt_gradient_lh
 
     subroutine derivative_loc(f, itype, atoms, df)
 

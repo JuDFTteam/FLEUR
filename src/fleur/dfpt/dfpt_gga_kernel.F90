@@ -5,116 +5,116 @@
 !--------------------------------------------------------------------------------
 module m_dfpt_gga_kernel
    !! Region independent assembly of the GGA part of the xc potential response
-   !! Dv_xc = Dvrho - div(H) from the libxc kernels vsigma, v2rho2, v2rhosigma
-   !! and v2sigma2. The divergence is expanded by the product rule: the terms
-   !! containing a Laplacian are done in dfpt_gga_local, the remaining two
-   !! grad.grad terms in dfpt_gga_grterms once the caller has supplied the
-   !! gradients of vsigma and of Dvsigma.
+   !! v_xc1 = driv1 - div(H) from the libxc kernels drivsigma, driv2rho2,
+   !! driv2rhosigma and driv2sigma2. The divergence is expanded by the product
+   !! rule: the terms containing a Laplacian are done in dfpt_gga_assemble, the
+   !! remaining two grad.grad terms in dfpt_gga_grdotgr once the caller has
+   !! supplied the gradients of drivsigma and drivsigma1.
    !!
    !! Everything is linear in the response, so the real and the imaginary
-   !! channel of Drho are two independent calls sharing the same kernels.
+   !! channel of rho1 are two independent calls sharing the same kernels.
 
    implicit none
    private
 
-   ! Symmetric packing of v2sigma2, libxc order [11,12,13,22,23,33]
-   integer, parameter :: ss_idx(3,3) = reshape([1,2,3, 2,4,5, 3,5,6],[3,3])
+   ! Symmetric packing of driv2sigma2, libxc order [11,12,13,22,23,33]
+   integer, parameter :: sigmaIdx(3,3) = reshape([1,2,3, 2,4,5, 3,5,6],[3,3])
 
-   public :: dfpt_gga_local, dfpt_gga_grterms
+   public :: dfpt_gga_assemble, dfpt_gga_grdotgr
 
 contains
 
-   subroutine dfpt_gga_local(vsigma, v2rho2, v2rhosigma, v2sigma2, grad0, grad1, rho1, v_xc1, dvsigma1)
+   subroutine dfpt_gga_assemble(drivsigma, driv2rho2, driv2rhosigma, driv2sigma2, gradRho, gradRho1, rho1, v_xc1, drivsigma1)
       !! Local part of the GGA potential response for one channel. Returns v_xc1
-      !! including the Laplacian terms of -div(H), and Dvsigma in dvsigma1, whose
-      !! gradient the caller has to feed back through dfpt_gga_grterms.
+      !! including the Laplacian terms of -div(H), and the response of drivsigma,
+      !! whose gradient the caller has to feed back through dfpt_gga_grdotgr.
       use m_types
 
       implicit none
 
-      real,              intent(in)  :: vsigma(:,:)     ! (n_sigma, points)
-      real,              intent(in)  :: v2rho2(:,:)     ! (2*jspins-1, points)
-      real,              intent(in)  :: v2rhosigma(:,:) ! (jspins*n_sigma, points)
-      real,              intent(in)  :: v2sigma2(:,:)   ! (1 or 6, points)
-      type(t_gradients), intent(in)  :: grad0, grad1
-      real,              intent(in)  :: rho1(:,:)       ! (points, jspins)
-      real,              intent(out) :: v_xc1(:,:)      ! (points, jspins)
-      real,              intent(out) :: dvsigma1(:,:)   ! (points, n_sigma)
+      real,              intent(in)  :: drivsigma(:,:)     ! (n_sigma, points)
+      real,              intent(in)  :: driv2rho2(:,:)     ! (2*jspins-1, points)
+      real,              intent(in)  :: driv2rhosigma(:,:) ! (jspins*n_sigma, points)
+      real,              intent(in)  :: driv2sigma2(:,:)   ! (1 or 6, points)
+      type(t_gradients), intent(in)  :: gradRho, gradRho1
+      real,              intent(in)  :: rho1(:,:)          ! (points, jspins)
+      real,              intent(out) :: v_xc1(:,:)         ! (points, jspins)
+      real,              intent(out) :: drivsigma1(:,:)    ! (points, n_sigma)
 
-      integer :: i, mu, nu
-      real    :: ds(3)
+      integer :: ipt, isig, jsig ! sig counts libxc convention of stored (up,up ; up,down ; down;down)
+      real    :: sigma1(3)
 
       v_xc1 = 0.0
-      dvsigma1 = 0.0
+      drivsigma1 = 0.0
 
       if (size(rho1,2) == 1) then
-         do i = 1, size(rho1,1)
-            ds(1) = 2.0*dot_product(grad0%gr(:,i,1),grad1%gr(:,i,1))
+         do ipt = 1, size(rho1,1)
+            sigma1(1) = 2.0*dot_product(gradRho%gr(:,ipt,1),gradRho1%gr(:,ipt,1))
 
-            v_xc1(i,1) = v2rho2(1,i)*rho1(i,1) + v2rhosigma(1,i)*ds(1)
-            dvsigma1(i,1) = v2rhosigma(1,i)*rho1(i,1) + v2sigma2(1,i)*ds(1)
+            v_xc1(ipt,1) = driv2rho2(1,ipt)*rho1(ipt,1) + driv2rhosigma(1,ipt)*sigma1(1)
+            drivsigma1(ipt,1) = driv2rhosigma(1,ipt)*rho1(ipt,1) + driv2sigma2(1,ipt)*sigma1(1)
 
-            v_xc1(i,1) = v_xc1(i,1) - 2.0*dvsigma1(i,1)*grad0%laplace(i,1)
-            v_xc1(i,1) = v_xc1(i,1) - 2.0*vsigma(1,i)*grad1%laplace(i,1)
+            v_xc1(ipt,1) = v_xc1(ipt,1) - 2.0*drivsigma1(ipt,1)*gradRho%laplace(ipt,1)
+            v_xc1(ipt,1) = v_xc1(ipt,1) - 2.0*drivsigma(1,ipt)*gradRho1%laplace(ipt,1)
          end do
       else
-         do i = 1, size(rho1,1)
-            ds(1) = 2.0*dot_product(grad0%gr(:,i,1),grad1%gr(:,i,1))
-            ds(2) = dot_product(grad0%gr(:,i,1),grad1%gr(:,i,2)) + dot_product(grad0%gr(:,i,2),grad1%gr(:,i,1))
-            ds(3) = 2.0*dot_product(grad0%gr(:,i,2),grad1%gr(:,i,2))
+         do ipt = 1, size(rho1,1)
+            sigma1(1) = 2.0*dot_product(gradRho%gr(:,ipt,1),gradRho1%gr(:,ipt,1))
+            sigma1(2) = dot_product(gradRho%gr(:,ipt,1),gradRho1%gr(:,ipt,2)) + dot_product(gradRho%gr(:,ipt,2),gradRho1%gr(:,ipt,1))
+            sigma1(3) = 2.0*dot_product(gradRho%gr(:,ipt,2),gradRho1%gr(:,ipt,2))
 
-            v_xc1(i,1) = v2rho2(1,i)*rho1(i,1) + v2rho2(2,i)*rho1(i,2)
-            v_xc1(i,2) = v2rho2(2,i)*rho1(i,1) + v2rho2(3,i)*rho1(i,2)
+            v_xc1(ipt,1) = driv2rho2(1,ipt)*rho1(ipt,1) + driv2rho2(2,ipt)*rho1(ipt,2)
+            v_xc1(ipt,2) = driv2rho2(2,ipt)*rho1(ipt,1) + driv2rho2(3,ipt)*rho1(ipt,2)
 
-            do mu = 1, 3
-               v_xc1(i,1) = v_xc1(i,1) + v2rhosigma(mu,i)*ds(mu)
-               v_xc1(i,2) = v_xc1(i,2) + v2rhosigma(3+mu,i)*ds(mu)
-               dvsigma1(i,mu) = v2rhosigma(mu,i)*rho1(i,1) + v2rhosigma(3+mu,i)*rho1(i,2)
-               do nu = 1, 3
-                  dvsigma1(i,mu) = dvsigma1(i,mu) + v2sigma2(ss_idx(mu,nu),i)*ds(nu)
+            do isig = 1, 3
+               v_xc1(ipt,1) = v_xc1(ipt,1) + driv2rhosigma(isig,ipt)*sigma1(isig)
+               v_xc1(ipt,2) = v_xc1(ipt,2) + driv2rhosigma(3+isig,ipt)*sigma1(isig)
+               drivsigma1(ipt,isig) = driv2rhosigma(isig,ipt)*rho1(ipt,1) + driv2rhosigma(3+isig,ipt)*rho1(ipt,2)
+               do jsig = 1, 3
+                  drivsigma1(ipt,isig) = drivsigma1(ipt,isig) + driv2sigma2(sigmaIdx(isig,jsig),ipt)*sigma1(jsig)
                end do
             end do
 
-            v_xc1(i,1) = v_xc1(i,1) - 2.0*dvsigma1(i,1)*grad0%laplace(i,1) - dvsigma1(i,2)*grad0%laplace(i,2)
-            v_xc1(i,1) = v_xc1(i,1) - 2.0*vsigma(1,i)*grad1%laplace(i,1) - vsigma(2,i)*grad1%laplace(i,2)
-            v_xc1(i,2) = v_xc1(i,2) - 2.0*dvsigma1(i,3)*grad0%laplace(i,2) - dvsigma1(i,2)*grad0%laplace(i,1)
-            v_xc1(i,2) = v_xc1(i,2) - 2.0*vsigma(3,i)*grad1%laplace(i,2) - vsigma(2,i)*grad1%laplace(i,1)
+            v_xc1(ipt,1) = v_xc1(ipt,1) - 2.0*drivsigma1(ipt,1)*gradRho%laplace(ipt,1) - drivsigma1(ipt,2)*gradRho%laplace(ipt,2)
+            v_xc1(ipt,1) = v_xc1(ipt,1) - 2.0*drivsigma(1,ipt)*gradRho1%laplace(ipt,1) - drivsigma(2,ipt)*gradRho1%laplace(ipt,2)
+            v_xc1(ipt,2) = v_xc1(ipt,2) - 2.0*drivsigma1(ipt,3)*gradRho%laplace(ipt,2) - drivsigma1(ipt,2)*gradRho%laplace(ipt,1)
+            v_xc1(ipt,2) = v_xc1(ipt,2) - 2.0*drivsigma(3,ipt)*gradRho1%laplace(ipt,2) - drivsigma(2,ipt)*gradRho1%laplace(ipt,1)
          end do
       end if
-   end subroutine dfpt_gga_local
+   end subroutine dfpt_gga_assemble
 
-   subroutine dfpt_gga_grterms(grad0, grad1, grad_vsigma, grad_dvsigma, v_xc1)
+   subroutine dfpt_gga_grdotgr(gradRho, gradRho1, gradDrivsigma, gradDrivsigma1, v_xc1)
       !! Adds the two grad.grad terms of -div(H) to the potential response of one
-      !! channel. grad_vsigma and grad_dvsigma hold the n_sigma fields in the slot
-      !! that grad usually reserves for the spin.
+      !! channel. gradDrivsigma and gradDrivsigma1 hold the n_sigma fields in the
+      !! slot that a gradient usually reserves for the spin.
       use m_types
 
       implicit none
 
-      type(t_gradients), intent(in)    :: grad0, grad1
-      type(t_gradients), intent(in)    :: grad_vsigma, grad_dvsigma
+      type(t_gradients), intent(in)    :: gradRho, gradRho1
+      type(t_gradients), intent(in)    :: gradDrivsigma, gradDrivsigma1
       real,              intent(inout) :: v_xc1(:,:)
 
-      integer :: i
+      integer :: ipt
 
       if (size(v_xc1,2) == 1) then
-         do i = 1, size(v_xc1,1)
-            v_xc1(i,1) = v_xc1(i,1) - 2.0*dot_product(grad_dvsigma%gr(:,i,1),grad0%gr(:,i,1))
-            v_xc1(i,1) = v_xc1(i,1) - 2.0*dot_product(grad_vsigma%gr(:,i,1),grad1%gr(:,i,1))
+         do ipt = 1, size(v_xc1,1)
+            v_xc1(ipt,1) = v_xc1(ipt,1) - 2.0*dot_product(gradDrivsigma1%gr(:,ipt,1),gradRho%gr(:,ipt,1))
+            v_xc1(ipt,1) = v_xc1(ipt,1) - 2.0*dot_product(gradDrivsigma%gr(:,ipt,1),gradRho1%gr(:,ipt,1))
          end do
       else
-         do i = 1, size(v_xc1,1)
-            v_xc1(i,1) = v_xc1(i,1) - 2.0*dot_product(grad_dvsigma%gr(:,i,1),grad0%gr(:,i,1))
-            v_xc1(i,1) = v_xc1(i,1) - dot_product(grad_dvsigma%gr(:,i,2),grad0%gr(:,i,2))
-            v_xc1(i,1) = v_xc1(i,1) - 2.0*dot_product(grad_vsigma%gr(:,i,1),grad1%gr(:,i,1))
-            v_xc1(i,1) = v_xc1(i,1) - dot_product(grad_vsigma%gr(:,i,2),grad1%gr(:,i,2))
+         do ipt = 1, size(v_xc1,1)
+            v_xc1(ipt,1) = v_xc1(ipt,1) - 2.0*dot_product(gradDrivsigma1%gr(:,ipt,1),gradRho%gr(:,ipt,1))
+            v_xc1(ipt,1) = v_xc1(ipt,1) - dot_product(gradDrivsigma1%gr(:,ipt,2),gradRho%gr(:,ipt,2))
+            v_xc1(ipt,1) = v_xc1(ipt,1) - 2.0*dot_product(gradDrivsigma%gr(:,ipt,1),gradRho1%gr(:,ipt,1))
+            v_xc1(ipt,1) = v_xc1(ipt,1) - dot_product(gradDrivsigma%gr(:,ipt,2),gradRho1%gr(:,ipt,2))
 
-            v_xc1(i,2) = v_xc1(i,2) - 2.0*dot_product(grad_dvsigma%gr(:,i,3),grad0%gr(:,i,2))
-            v_xc1(i,2) = v_xc1(i,2) - dot_product(grad_dvsigma%gr(:,i,2),grad0%gr(:,i,1))
-            v_xc1(i,2) = v_xc1(i,2) - 2.0*dot_product(grad_vsigma%gr(:,i,3),grad1%gr(:,i,2))
-            v_xc1(i,2) = v_xc1(i,2) - dot_product(grad_vsigma%gr(:,i,2),grad1%gr(:,i,1))
+            v_xc1(ipt,2) = v_xc1(ipt,2) - 2.0*dot_product(gradDrivsigma1%gr(:,ipt,3),gradRho%gr(:,ipt,2))
+            v_xc1(ipt,2) = v_xc1(ipt,2) - dot_product(gradDrivsigma1%gr(:,ipt,2),gradRho%gr(:,ipt,1))
+            v_xc1(ipt,2) = v_xc1(ipt,2) - 2.0*dot_product(gradDrivsigma%gr(:,ipt,3),gradRho1%gr(:,ipt,2))
+            v_xc1(ipt,2) = v_xc1(ipt,2) - dot_product(gradDrivsigma%gr(:,ipt,2),gradRho1%gr(:,ipt,1))
          end do
       end if
-   end subroutine dfpt_gga_grterms
+   end subroutine dfpt_gga_grdotgr
 
 end module m_dfpt_gga_kernel

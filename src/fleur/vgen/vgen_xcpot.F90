@@ -23,8 +23,8 @@ CONTAINS
       !!
       !! DFPT case: Calculate Vxc1 instead of Vxc. For this we need fxc, the xc Kernel.
       !! The calculation changes dramatically, so we enter different subroutines for it.
-      !! TODO: They only work for LDA right now. GGA requires some mathematical considerations
-      !! and will have to use grad_rho1 as input as well.
+      !! Interstitial and MT also handle GGA, where the gradients of rho1 enter as well.
+      !! The vacuum is still LDA only.
 
       USE m_types
       USE m_constants

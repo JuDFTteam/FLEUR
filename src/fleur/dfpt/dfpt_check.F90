@@ -24,6 +24,11 @@ CONTAINS
 
         l_libxc = .FALSE.
         l_exist = .FALSE.
+
+        ! compiled with libxc ? 
+#ifndef CPP_LIBXC
+      IF (l_xc) CALL judft_error("You compiled Fleur without libxc but want to use DFPT. Please fix that.",calledby="dfpt_check.F90")
+#endif
         !Symmetry
         IF (fi%sym%nop.GT.1) CALL judft_error("dfpt uses only unit symmetry. Please redo the calculation without symmetry.",calledby="dfpt_check.F90")
 
@@ -42,7 +47,7 @@ CONTAINS
         IF (.NOT.l_libxc) CALL judft_error("dfpt needs libxc functionals.",calledby="dfpt_check.F90")
 
         !GGA
-        IF (xcpot%needs_grad()) CALL judft_error("GGA functionals are not supported yet.",calledby="dfpt_check.F90")
+        IF (xcpot%needs_grad().AND.fi%input%film) CALL judft_error("GGA functionals are not supported for film setups yet.",calledby="dfpt_check.F90")
 
         !MetaGGA
         IF (xcpot%exc_is_MetaGGA() .or. xcpot%vx_is_MetaGGA()) CALL judft_error("dfpt doesn't do MetaGGA functionals.",calledby="dfpt_check.F90")
