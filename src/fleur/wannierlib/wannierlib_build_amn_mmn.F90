@@ -122,7 +122,7 @@ CONTAINS
             !> its own and the spin block is reached by row offset further down.
             irec = MERGE(1, jspin_comp, noco%l_noco)
 
-            CALL wannierlib_amn(this, atoms, kpts, ikpt, usdus, radfun, abc_p(jspin_comp, :), l_nocosoc, jspin_comp, jspin_rad, amn(:, :, ikpt))
+            CALL wannierlib_amn(this, atoms, kpts, ikpt, usdus, radfun, abc_p(jspin_comp, :), l_nocosoc, l_wannierlib_spinors, jspin_comp, jspin_rad, amn(:, :, ikpt))
 
             ik_local = ik_local + 1
             CALL wannierlib_mmnkb(manifold, bmesh, ikpt, kpts, &

@@ -24,10 +24,15 @@ MODULE m_wannierlib_tlmw
   PUBLIC :: wannierlib_tlmw
 CONTAINS
 
-  SUBROUTINE wannierlib_tlmw(wannierlib, nwfs, l_nocosoc, jspin, tlmwf)
+  SUBROUTINE wannierlib_tlmw(wannierlib, nwfs, l_nocosoc, l_spinors, jspin, tlmwf)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: wannierlib
     INTEGER, INTENT(IN) :: nwfs
     LOGICAL, INTENT(IN) :: l_nocosoc
+    !> True whenever the run carries spinors (noco OR soc). The column guard below
+    !> needs THIS, not l_nocosoc: l_nocosoc is noco AND NOT soc, so under SOC it is
+    !> false and the guard went inert -- both spinor components then filled all
+    !> num_wann columns and the projection matrix came out rank num_wann/2.
+    LOGICAL, INTENT(IN) :: l_spinors
     INTEGER, INTENT(IN) :: jspin
     COMPLEX, INTENT(OUT) :: tlmwf(0:3, -3:3, nwfs)
 
@@ -78,7 +83,7 @@ CONTAINS
     tlmwf = CMPLX(0.0, 0.0)
 
     DO nwf = 1, nwfs
-      IF (l_nocosoc .AND. ((3 - 2 * jspin) /= wannierlib%proj_spin(nwf))) CYCLE
+      IF (l_spinors .AND. ((3 - 2 * jspin) /= wannierlib%proj_spin(nwf))) CYCLE
 
       lr = wannierlib%proj_l(nwf)
       mr = wannierlib%proj_m(nwf)

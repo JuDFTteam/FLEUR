@@ -35,7 +35,7 @@ MODULE m_wannierlib_amn
   PUBLIC :: wannierlib_amn
 CONTAINS
 
-  SUBROUTINE wannierlib_amn(wannierlib, atoms, kpts, ikpt, usdus, radfun, abc, l_nocosoc, jspin, jspin_rad, amn)
+  SUBROUTINE wannierlib_amn(wannierlib, atoms, kpts, ikpt, usdus, radfun, abc, l_nocosoc, l_spinors, jspin, jspin_rad, amn)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: wannierlib
     TYPE(t_atoms), INTENT(IN) :: atoms
     TYPE(t_kpts), INTENT(IN) :: kpts
@@ -44,6 +44,7 @@ CONTAINS
     TYPE(t_radfun), INTENT(IN) :: radfun(atoms%ntype)
     TYPE(t_abc), INTENT(IN) :: abc(atoms%ntype)
     LOGICAL, INTENT(IN) :: l_nocosoc
+    LOGICAL, INTENT(IN) :: l_spinors
     INTEGER, INTENT(IN) :: jspin       ! physical spin (filters the projections)
     INTEGER, INTENT(IN) :: jspin_rad   ! radial index (=1 when jspins=1)
     COMPLEX, INTENT(INOUT) :: amn(:,:)
@@ -74,7 +75,7 @@ CONTAINS
     IF (l_nocosoc .AND. has_soc_proj) THEN
       CALL wannierlib_soc_tlmw(wannierlib%num_wann, wannierlib%proj_l, wannierlib%proj_j, wannierlib%proj_mj, jspin, tlmwf)
     ELSE
-      CALL wannierlib_tlmw(wannierlib, wannierlib%num_wann, l_nocosoc, jspin, tlmwf)
+      CALL wannierlib_tlmw(wannierlib, wannierlib%num_wann, l_nocosoc, l_spinors, jspin, tlmwf)
     END IF
 
     CALL eulerrot(wannierlib%num_wann, wannierlib%proj_alpha, wannierlib%proj_beta, wannierlib%proj_gamma, amx)
