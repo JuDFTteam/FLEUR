@@ -22,9 +22,22 @@ MODULE m_wannierlib_w90_adapter
 #endif
   IMPLICIT NONE
 
-  !> Matches the value the classic path writes (wann_wan90prep.F). Not exposed in the input:
-  !> nobody in the group has ever tuned it, they all use 200.
-  INTEGER, PARAMETER :: WANNIERLIB_SEARCH_SHELLS = 200
+  !> How many neighbour shells Wannier90 may look through for a set of b vectors that
+  !> satisfies the completeness relation. The classic path (wann_wan90prep.F) writes 200 and
+  !> nobody in the group ever tuned it, because in a bulk cell 200 is already generous.
+  !>
+  !> A FILM is what makes this a real parameter. The out-of-plane reciprocal vector has the
+  !> fixed length 2pi/dtilda while the in-plane ones shrink as the mesh is refined, so the one
+  !> shell that carries any z information sinks further down a list ordered by length with
+  !> every refinement. Run out of list before reaching it and Wannier90 rejects shell after
+  !> shell by SVD and stops -- measured on Fe monolayer, dtilda = 9.68 bohr: 200 shells reach
+  !> 1.0885 Ang^-1 and 2pi/dtilda is 1.227 Ang^-1, so 48x48x1 dies just short of it.
+  !>
+  !> 1000 covers the meshes this is used with (through 64x64x1). It costs a search that grows
+  !> linearly and one nnshell(num_kpts, search_shells) table -- 16 MB at 4096 k-points, which
+  !> is nothing next to what a run of that size already holds. Wannier90 sets no upper bound
+  !> of its own; it dimensions its arrays from this value.
+  INTEGER, PARAMETER :: WANNIERLIB_SEARCH_SHELLS = 1000
   PRIVATE
   PUBLIC :: init_w90, run_w90, wannierlib_get_bmesh, report_w90
 #ifdef CPP_WANNLIB_API
