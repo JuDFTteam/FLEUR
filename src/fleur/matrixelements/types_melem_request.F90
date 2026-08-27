@@ -33,6 +33,11 @@ MODULE m_types_melem_request
       INTEGER :: n_ops = 0
       CHARACTER(LEN=20), ALLOCATABLE :: op_name(:)
       INTEGER,           ALLOCATABLE :: op_total(:)
+      !> HOW to interpolate rather than what: minimum-distance replica selection (MDRS,
+      !> Wannier90's use_ws_distance). It rides with the interpolation list because it is a
+      !> property of that pass alone -- the coarse Bloch matrices and the O(R) export are
+      !> the same with it on or off.
+      LOGICAL :: l_ws_distance = .FALSE.
    CONTAINS
       PROCEDURE :: init     => melem_request_init
       PROCEDURE :: has_op_r => melem_request_has_op_r
@@ -45,12 +50,13 @@ MODULE m_types_melem_request
 CONTAINS
 
    SUBROUTINE melem_request_init(this, l_spin, l_orbmom, l_socop, &
-                                 l_operators_r, op_r_name, op_name, op_total)
+                                 l_operators_r, op_r_name, op_name, op_total, l_ws_distance)
       CLASS(t_melem_request), INTENT(OUT) :: this
       LOGICAL,          INTENT(IN) :: l_spin, l_orbmom, l_socop, l_operators_r
       CHARACTER(LEN=*), INTENT(IN) :: op_r_name(:)   !> the O(R) list, possibly empty
       CHARACTER(LEN=*), INTENT(IN) :: op_name(:)     !> the interpolation list, possibly empty
       INTEGER,          INTENT(IN) :: op_total(:)
+      LOGICAL,          INTENT(IN) :: l_ws_distance
 
       INTEGER :: iop
 
@@ -66,6 +72,7 @@ CONTAINS
       this%n_ops         = SIZE(op_name)
       this%op_name       = op_name
       this%op_total      = op_total
+      this%l_ws_distance = l_ws_distance
 
       IF (SIZE(op_total) /= SIZE(op_name)) &
          CALL judft_error("t_melem_request: every interpolated operator needs its own total flag", &

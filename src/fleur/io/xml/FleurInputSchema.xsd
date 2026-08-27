@@ -3633,6 +3633,7 @@
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="domain" type="WannierlibDomainType"/>
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="operator" type="WannierlibOperatorType"/>
       </xsd:sequence>
+      <xsd:attribute default="F" name="useWsDistance" type="FleurBool" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="WannierlibOutputType">

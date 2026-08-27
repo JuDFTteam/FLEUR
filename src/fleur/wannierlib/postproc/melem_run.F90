@@ -29,6 +29,7 @@ MODULE m_melem_run
    USE m_melem_interpolate_op, ONLY: melem_interpolate_operator
    USE m_melem_interpolate_velocity, ONLY: melem_interpolate_velocity
    USE m_melem_interpolate_eigenstates, ONLY: melem_interpolate_eigenstates
+   USE m_melem_ft, ONLY: melem_mdrs_set, melem_mdrs_clear
    IMPLICIT NONE
    PRIVATE
 
@@ -111,6 +112,21 @@ CONTAINS
                                    coarse%s0, coarse%l0, coarse%soc4, f0_loc, c0_loc, bmesh, distk, mpi_comm, mmn, &
                                    irank, wf_ch, l_collinear)
 
+      !> MDRS, switched on once for every operator and every output domain rather than per
+      !> call: interpolating H with it and an operator without it would put the two in
+      !> different gauges, and the projection of one on the other is what gets written.
+      !>
+      !> Deliberately AFTER the O(R) export: what melem_write_operators_r writes is H(R) in
+      !> the plain Wannier90 convention, which is what its readers expect -- Wannier90 itself
+      !> stores _hr.dat that way and applies the replica average when it reads it back.
+      IF (request%l_ws_distance) THEN
+         IF (.NOT. ALLOCATED(bmesh%centres)) CALL juDFT_error( &
+            'wannierlib: useWsDistance needs the Wannier centres and none were reported', &
+            hint='it requires the Wannier90 library build (CPP_WANNLIB_API)', &
+            calledby='melem_run')
+         CALL melem_mdrs_set(cell, kpts%nkpt3, bmesh%centres, irank)
+      END IF
+
       ! (3) Wannier-gauge interpolation: dispatch by looping over the requested operator list.
       ! Each operator supplies its own per-rank Bloch slice on the coarse mesh (coarse%s0/l0/soc0);
       ! the remaining steps are the shared generic driver m_melem_interpolate_op.
@@ -179,6 +195,7 @@ CONTAINS
       END DO   ! idom
 
 
+      CALL melem_mdrs_clear()   ! the state must not outlive the wannierization it describes
       IF (ALLOCATED(aw_r)) DEALLOCATE (aw_r, aw_irvec, aw_ndegen)
       DEALLOCATE (gk_loc)
       CALL timestop('melem_run')

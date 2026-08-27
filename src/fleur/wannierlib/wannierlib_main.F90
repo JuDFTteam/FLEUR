@@ -122,7 +122,7 @@ CONTAINS
       ! no operator is requested.
       ! what the matrix-element layer is being asked for, and on which bands
       CALL request%init(this%l_spin, this%l_orbmom, this%l_socop, this%l_operators_r, &
-                        this%op_r_name, this%op_name, this%op_total)
+                        this%op_r_name, this%op_name, this%op_total, this%l_ws_distance)
       !> On a film, refuse by name rather than as a whole. The pair overlap has its vacuum
       !> half now, so the wannierization itself works and with it everything built from mmn:
       !> hamiltonian, eigenstates, position, velocity, bmn. Three quantities still stop at

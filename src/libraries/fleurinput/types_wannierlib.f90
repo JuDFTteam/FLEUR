@@ -40,6 +40,20 @@ MODULE m_types_wannierlib
     TYPE(t_kpts), ALLOCATABLE :: dom_kset(:)
     CHARACTER(LEN=64), ALLOCATABLE :: dom_suffix(:)
 
+    !> Minimum distance replica selection (W90 use_ws_distance); XML @useWsDistance on
+    !> <interpolation>. Off by default; Wannier90's own default is on, and the difference is
+    !> deliberate -- with it off this reproduces every band this code has written so far.
+    !>
+    !> The plain Fourier sum phases the hopping <0m|H|Rn> as e^{ikR}, as if it joined cell
+    !> ORIGINS. It does not: m sits at tau_m and n at tau_n, so the real separation is
+    !> R + tau_n - tau_m. Assigning by R alone is discontinuous at the Wigner-Seitz boundary,
+    !> H(R) then decays slowly, and a slowly decaying Fourier series rings. Averaging over
+    !> the tied minimum-distance replicas restores the real distance.
+    !>
+    !> It earns its keep where the centres sit far from the origin -- bond-centred, or pushed
+    !> into the vacuum of a film -- and where the cell is anisotropic.
+    LOGICAL :: l_ws_distance = .FALSE.
+
     ! --- operator table: one entry per <operator name=".."> child of <interpolation> ---
     INTEGER :: n_ops = 0
     CHARACTER(LEN=20), ALLOCATABLE :: op_name(:)    ! operator identifier (hamiltonian/spin/orbital/soc/...)
@@ -332,6 +346,7 @@ CONTAINS
 
     CALL mpi_bc(this%l_wannierize, rank, mpi_comm)
     CALL mpi_bc(this%l_interpolation, rank, mpi_comm)
+    CALL mpi_bc(this%l_ws_distance, rank, mpi_comm)
     CALL mpi_bc(this%l_spin, rank, mpi_comm)
     CALL mpi_bc(this%l_orbmom, rank, mpi_comm)
     CALL mpi_bc(this%l_socop, rank, mpi_comm)
@@ -486,6 +501,8 @@ CONTAINS
         END DO
       END IF
 
+      this%l_ws_distance = evaluateFirstBoolOnly( &
+        xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@useWsDistance'))
       this%n_ops = xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/operator')
     END IF
 
