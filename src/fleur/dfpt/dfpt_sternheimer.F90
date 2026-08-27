@@ -78,7 +78,7 @@ CONTAINS
 
       INTEGER :: archiveType, iter, killcont(6), iterm, realiter
       REAL    :: bqpt(3), bmqpt(3)
-      LOGICAL :: l_cont, l_exist, l_lastIter, l_dummy, strho, onedone, final_SH_it, l_minusq, l_existm
+      LOGICAL :: l_cont, l_exist, l_lastIter, l_dummy, strho, onedone, final_SH_it, l_minusq, l_existm, l_metal
 
 
       TYPE(t_banddos)  :: banddosdummy
@@ -299,9 +299,12 @@ CONTAINS
          ! If q=0, the eigenenergy perturbation is /=0 and if we do not
          ! look at a semiconductor or an insulator, there will be a
          ! perturbation of the occupation numbers as well.
+         ! Test for metallicity: WIP
+         l_metal = ANY(results%w_iks*2.0/fi%input%jspins>1e-6.AND.results%w_iks*2.0/fi%input%jspins<1.0-1e-6)
+
          CALL timestart("Fermi energy and occupation derivative")
-         IF (norm2(bqpt)<1e-8.AND.ABS(results%tkb_loc)>1e-12) THEN
-            CALL dfpt_fermie(eig_id,dfpt_eig_id,fmpi,fi%kpts,fi%input,fi%noco,results,results1)
+         IF (norm2(bqpt)<1e-8.AND.l_metal) THEN
+            CALL dfpt_fermie(fmpi,fi%kpts,fi%input,fi%noco,results,results1)
          ELSE
             results1%ef = 0.0
             results1%w_iks = 0.0
@@ -311,7 +314,7 @@ CONTAINS
          IF (l_minusq) THEN
             CALL timestart("Fermi energy and occupation minus derivative")
             IF (norm2(bqpt)<1e-8) THEN
-               CALL dfpt_fermie(eig_id,dfpt_eigm_id,fmpi,fi%kpts,fi%input,fi%noco,results,results1m)
+               CALL dfpt_fermie(fmpi,fi%kpts,fi%input,fi%noco,results,results1m)
             ELSE
                results1m%ef = 0.0
                results1m%w_iks = 0.0
