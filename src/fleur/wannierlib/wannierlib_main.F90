@@ -23,6 +23,7 @@ MODULE m_wannierlib_main
    USE m_types_melem_manifold, ONLY: t_melem_manifold
    USE m_types_melem_domains, ONLY: t_melem_domains
    USE m_wannierlib_build_amn_mmn, ONLY: wannierlib_build_amn_mmn
+   USE m_wannierlib_plot, ONLY: wannierlib_plot_wf
   USE m_wannierlib_uiu, ONLY: wannierlib_uiu
   USE m_wannierlib_uhu, ONLY: wannierlib_uhu
    USE m_wannierlib_w90_adapter
@@ -194,6 +195,15 @@ CONTAINS
 
          CALL wannierlib_keep_gauge(melem%n_channels, request%has_op_r('spin'), manifold, &
                                     kpts%nkptf, jspin, u_opt, u_matrix, v_ch)
+
+         ! Draw the Wannier functions, if anybody asked. Here and not earlier because the
+         ! gauge is what makes them: it costs a second pass over this rank's k-points to
+         ! read the states back, and what comes out is num_wann grids rather than the
+         ! whole basis tabulated at every k.
+         IF (this%l_plot_wf) &
+            CALL wannierlib_plot_wf(this, atoms, cell, input, sym, stars, vacuum, noco, nococonv, &
+                                    enpara, vtot, kpts, fmpi, eig_id, radfun, distk, &
+                                    jspin, l_wannierlib_spinors, u_matrix, u_opt)
 
          ! everything operator-related happens in the matrix-element layer, which only needs
          ! the gauge, the overlaps and the b-mesh. The exception is right below: an operator

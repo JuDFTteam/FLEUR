@@ -3648,6 +3648,11 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="interpolation" type="WannierlibInterpolationType"/>
       </xsd:all>
       <xsd:attribute default="F" name="wannierize" type="FleurBool" use="optional"/>
+      <xsd:attribute default="F" name="plotWF" type="FleurBool" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Write the Wannier functions on a real-space grid, as XSF files one per function (block A: real part, block B: modulus). Off by default because it costs a second pass over the k-points. The region is one unit cell centred on the origin, on a 40x40x40 grid; how much of each function falls on the edge of that box is reported, so a clipped picture is visible rather than silent. Not available for spinor Wannier functions (noco or SOC).</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
    </xsd:complexType>
 
    <xsd:complexType name="RelaxationType">

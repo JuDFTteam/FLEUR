@@ -8,4 +8,5 @@ src/fleur/wannierlib/wannierlib_main.F90
 src/fleur/wannierlib/wannierlib_tlmw.F90
 src/fleur/wannierlib/wannierlib_rad_twd.F90
 src/fleur/wannierlib/wannierlib_amn.F90
+src/fleur/wannierlib/wannierlib_plot.F90
 )

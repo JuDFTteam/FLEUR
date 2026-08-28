@@ -26,6 +26,11 @@ MODULE m_types_wannierlib
     LOGICAL :: l_orbmom = .FALSE.          ! an <operator name="orbital"> is requested
     LOGICAL :: l_socop = .FALSE.           ! an <operator name="soc"> is requested
     LOGICAL :: l_operators_r = .FALSE.     ! an <operators_r> block (real-space O(R) export) is present
+    !> Opt-in: put the Wannier functions themselves on a real-space grid and write them
+    !> as XSF. Off by default because it costs a second pass over the k-points, reading
+    !> the states back once the gauge is known; nothing else in the run needs it.
+    !> XML @plotWF.
+    LOGICAL :: l_plot_wf = .FALSE.
 
     ! --- opt-in output domains (<domain> children of <interpolation>) ---
     ! One <domain> per set of k-points the operators are evaluated on, repeatable and
@@ -364,6 +369,7 @@ CONTAINS
     CALL mpi_bc(this%op_comp, rank, mpi_comm)
     CALL mpi_bc(this%op_total, rank, mpi_comm)
     CALL mpi_bc(this%l_operators_r, rank, mpi_comm)
+    CALL mpi_bc(this%l_plot_wf, rank, mpi_comm)
     CALL mpi_bc(this%n_op_r, rank, mpi_comm)
     CALL mpi_bc(this%op_r_name, rank, mpi_comm)
     CALL mpi_bc(this%num_wann, rank, mpi_comm)
@@ -428,6 +434,8 @@ CONTAINS
     IF (has_wannierize) THEN
       this%l_wannierize = evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@wannierize'))
     END IF
+    IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@plotWF') == 1) &
+      this%l_plot_wf = evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@plotWF'))
 
     ! Operator selection is now the <interpolation>/<operator> list (parsed below),
     ! not flat @interpolation/@spinoperator/@orbmom/@socop attributes.
