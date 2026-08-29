@@ -4248,6 +4248,23 @@
             <xsd:documentation>Write rank-local valence/intermediate-band contribution tables for RIXS diagnostics.</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
+      <xsd:attribute default="F" name="writeStateCharacter" type="FleurBool" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>
+               Write rank-local HDF5 annotations of the local absorber-site d-spin character of bands in the
+               configured RIXS valence and intermediate windows. These state weights characterize participating
+               bands; they are not an incoherent decomposition of RIXS intensity. First-variation spinor RIXS only.
+            </xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="stateLigandZ" type="xsd:positiveInteger" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>
+               Atomic number of candidate ligands used to construct the local structural frame when
+               writeStateCharacter is enabled. All physical atoms in every matching atom group are candidates.
+            </xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
    </xsd:complexType>
 
    <xsd:complexType name="ElectronConfigType">

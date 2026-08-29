@@ -17,6 +17,7 @@ MODULE m_local_d_spin_frame_transform
    PUBLIC :: spinor_local_to_global
    PUBLIC :: local_d_spin_native_to_structural
    PUBLIC :: transform_local_d_spin_density
+   PUBLIC :: transform_local_d_spin_density_with_matrix
 
 CONTAINS
 
@@ -123,6 +124,28 @@ CONTAINS
       COMPLEX :: orbital_transform(-local_d_l:local_d_l, -local_d_l:local_d_l)
       COMPLEX :: spin_transform(local_d_n_spins, local_d_n_spins)
       COMPLEX :: combined(2*local_d_n_orbitals, 2*local_d_n_orbitals)
+
+      IF (SIZE(rho_native, 1) /= local_d_n_orbitals .OR. SIZE(rho_native, 2) /= local_d_n_spins .OR. &
+          SIZE(rho_native, 3) /= local_d_n_orbitals .OR. SIZE(rho_native, 4) /= local_d_n_spins) THEN
+         CALL juDFT_error("Native d-spin density must have dimensions (5,2,5,2)", &
+                          calledby="m_local_d_spin_frame_transform")
+      END IF
+      CALL local_d_spin_native_to_structural(local_to_global, native_mt_to_global, &
+                                             orbital_transform, spin_transform, combined)
+      CALL transform_local_d_spin_density_with_matrix(rho_native,combined,rho_structural)
+      IF (PRESENT(orbital_global_to_local)) orbital_global_to_local = orbital_transform
+      IF (PRESENT(spin_native_to_local)) spin_native_to_local = spin_transform
+   END SUBROUTINE transform_local_d_spin_density
+
+   SUBROUTINE transform_local_d_spin_density_with_matrix(rho_native, combined_native_to_local, rho_structural)
+      ! Apply a previously constructed common orbital-spin frame transform.
+      ! This entry point permits a site-level transform to be cached and reused
+      ! for many bands without changing the established transformation algebra.
+      COMPLEX, INTENT(IN) :: rho_native(-local_d_l:, :, -local_d_l:, :)
+      COMPLEX, INTENT(IN) :: combined_native_to_local(2*local_d_n_orbitals,2*local_d_n_orbitals)
+      COMPLEX, INTENT(OUT) :: rho_structural(-local_d_l:local_d_l, local_d_n_spins, &
+                                             -local_d_l:local_d_l, local_d_n_spins)
+
       COMPLEX :: rho_flat(2*local_d_n_orbitals, 2*local_d_n_orbitals)
       COMPLEX :: transformed(2*local_d_n_orbitals, 2*local_d_n_orbitals)
       INTEGER :: m, mp, ispin, jspin, row, column
@@ -132,8 +155,6 @@ CONTAINS
          CALL juDFT_error("Native d-spin density must have dimensions (5,2,5,2)", &
                           calledby="m_local_d_spin_frame_transform")
       END IF
-      CALL local_d_spin_native_to_structural(local_to_global, native_mt_to_global, &
-                                             orbital_transform, spin_transform, combined)
       DO m = -local_d_l, local_d_l
          DO ispin = 1, local_d_n_spins
             row = (m + local_d_l)*local_d_n_spins + ispin
@@ -145,7 +166,8 @@ CONTAINS
             END DO
          END DO
       END DO
-      transformed = MATMUL(combined, MATMUL(rho_flat, CONJG(TRANSPOSE(combined))))
+      transformed = MATMUL(combined_native_to_local, &
+                           MATMUL(rho_flat,CONJG(TRANSPOSE(combined_native_to_local))))
       DO m = -local_d_l, local_d_l
          DO ispin = 1, local_d_n_spins
             row = (m + local_d_l)*local_d_n_spins + ispin
@@ -157,9 +179,7 @@ CONTAINS
             END DO
          END DO
       END DO
-      IF (PRESENT(orbital_global_to_local)) orbital_global_to_local = orbital_transform
-      IF (PRESENT(spin_native_to_local)) spin_native_to_local = spin_transform
-   END SUBROUTINE transform_local_d_spin_density
+   END SUBROUTINE transform_local_d_spin_density_with_matrix
 
    SUBROUTINE initialize_real_d_tensors(tensors)
       REAL, INTENT(OUT) :: tensors(3, 3, local_d_n_orbitals)

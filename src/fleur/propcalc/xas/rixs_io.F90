@@ -377,6 +377,12 @@ CONTAINS
       WRITE(*, '(a,l1)') " Noco enabled             : ", l_noco
       WRITE(*, '(a,l1)') " SOC enabled              : ", l_soc
       WRITE(*, '(a,l1)') " Write contributions      : ", rixs%rixs_write_contributions
+      IF (rixs%rixs_write_state_character) THEN
+         WRITE(*, '(a,l1)') " Write state character    : ", rixs%rixs_write_state_character
+         WRITE(*, '(a,i0)') " State-character ligand Z : ", rixs%rixs_state_ligand_z
+         WRITE(*, '(a)') " State-character meaning  : band annotations, not RIXS intensity fractions"
+         WRITE(*, '(a)') " State-character output   : rank-local HDF5 shards on k-point subgroup roots"
+      END IF
       IF (l_noco .AND. .NOT. rixs%rixs_write_contributions) THEN
          WRITE(*, '(a)') " Spinor contribution output: not requested"
       END IF

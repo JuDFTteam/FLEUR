@@ -45,6 +45,8 @@ MODULE m_types_xas
       LOGICAL :: rixs_out_polarizations(3) = [.FALSE., .FALSE., .FALSE.]
       CHARACTER(LEN=64) :: rixs_output_prefix = "rixs"
       LOGICAL :: rixs_write_contributions = .FALSE.
+      LOGICAL :: rixs_write_state_character = .FALSE.
+      INTEGER :: rixs_state_ligand_z = -1
       LOGICAL :: l_rixs_valence_band_min = .FALSE.
       LOGICAL :: l_rixs_valence_band_max = .FALSE.
       INTEGER :: rixs_valence_band_min = 1
@@ -104,6 +106,8 @@ CONTAINS
       CALL mpi_bc(this%rixs_out_polarizations(3), rank, mpi_comm)
       CALL mpi_bc(rank, mpi_comm, this%rixs_output_prefix)
       CALL mpi_bc(this%rixs_write_contributions, rank, mpi_comm)
+      CALL mpi_bc(this%rixs_write_state_character, rank, mpi_comm)
+      CALL mpi_bc(this%rixs_state_ligand_z, rank, mpi_comm)
       CALL mpi_bc(this%l_rixs_valence_band_min, rank, mpi_comm)
       CALL mpi_bc(this%l_rixs_valence_band_max, rank, mpi_comm)
       CALL mpi_bc(this%rixs_valence_band_min, rank, mpi_comm)
@@ -214,6 +218,8 @@ CONTAINS
       this%rixs_out_polarizations = [.FALSE., .FALSE., .FALSE.]
       this%rixs_output_prefix = "rixs"
       this%rixs_write_contributions = .FALSE.
+      this%rixs_write_state_character = .FALSE.
+      this%rixs_state_ligand_z = -1
       this%l_rixs_valence_band_min = .FALSE.
       this%l_rixs_valence_band_max = .FALSE.
       this%rixs_valence_band_min = 1
@@ -320,6 +326,16 @@ CONTAINS
       IF (LEN_TRIM(this%rixs_output_prefix) == 0) CALL juDFT_error("RIXS outputPrefix must not be empty.", calledby="m_types_xas")
       IF (xml%GetNumberOfNodes('/fleurInput/output/rixs/@writeContributions') == 1) THEN
          this%rixs_write_contributions = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/rixs/@writeContributions'))
+      END IF
+      IF (xml%GetNumberOfNodes('/fleurInput/output/rixs/@writeStateCharacter') == 1) THEN
+         this%rixs_write_state_character = &
+            evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/rixs/@writeStateCharacter'))
+      END IF
+      IF (xml%GetNumberOfNodes('/fleurInput/output/rixs/@stateLigandZ') == 1) THEN
+         this%rixs_state_ligand_z = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/output/rixs/@stateLigandZ'))
+      END IF
+      IF (this%rixs_write_state_character .AND. this%rixs_state_ligand_z <= 0) THEN
+         CALL juDFT_error("RIXS writeStateCharacter requires a positive stateLigandZ.",calledby="m_types_xas")
       END IF
       CALL rixs_read_band_windows(this, xml)
    END SUBROUTINE read_xml_rixs

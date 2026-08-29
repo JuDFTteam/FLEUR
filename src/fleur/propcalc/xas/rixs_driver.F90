@@ -16,6 +16,10 @@ MODULE m_rixs_driver
                         rixs_write_contribution_rows, rixs_write_spinor_contribution_rows, rixs_write_spectrum_text
    USE m_rixs_spectrum, ONLY: rixs_accumulate_scalar_spin_trace_spectrum, rixs_accumulate_spinor_spectrum, &
                               rixs_occupation_tolerance
+   USE m_rixs_state_character, ONLY: t_rixs_state_character_context, rixs_characterize_site_bands, &
+                                      rixs_finalize_state_character_context, &
+                                      rixs_prepare_state_character_context
+   USE m_rixs_state_character_core, ONLY: rixs_state_hdf_available
    USE m_types_abc, ONLY: t_abc
    USE m_types_atoms, ONLY: t_atoms
    USE m_types_cell, ONLY: t_cell
@@ -69,6 +73,7 @@ CONTAINS
       TYPE(t_mat) :: zMat
       TYPE(t_xas_core_state), ALLOCATABLE :: core_states(:)
       TYPE(t_abc), ALLOCATABLE :: abc_spin(:)
+      TYPE(t_rixs_state_character_context) :: state_character_context
 
       COMPLEX :: eps_cart(3), eps_in_sph(-1:1), eps_out_sph(-1:1)
       COMPLEX :: spin_frame_transform(2, 2)
@@ -152,6 +157,10 @@ CONTAINS
       ! fmpi%k_list is shared by all ranks in a k-point subgroup. RIXS currently
       ! performs serial work for each k-point, so only subgroup roots calculate it.
       IF (l_kpt_group_root) THEN
+      IF (rixs%rixs_write_state_character) THEN
+         CALL rixs_prepare_state_character_context(state_character_context,rixs%rixs_state_ligand_z, &
+            rixs%rixs_output_prefix,rixs%rixs_edge,fmpi%irank,rixs%rixs_absorber_z,atoms,cell,input%film,nococonv)
+      END IF
       CALL usdus%init(atoms, input%jspins)
       ALLOCATE(f(atoms%jmtd, 2, 0:atoms%lmaxd, input%jspins))
       ALLOCATE(g(atoms%jmtd, 2, 0:atoms%lmaxd, input%jspins))
@@ -239,6 +248,11 @@ CONTAINS
             END IF
 
             DO iatom_l = 1, atoms%neq(itype)
+               IF (rixs%rixs_write_state_character) THEN
+                  CALL rixs_characterize_site_bands(state_character_context,abc_spin,radfun,atoms,itype,iatom_l, &
+                     ikpt,kpts%bk(:,ikpt),kpts%wtkpt(ikpt),eig_band,occ_band,valence_band_min,valence_band_max, &
+                     intermediate_band_min,intermediate_band_max)
+               END IF
                DO i_pin = 1, rixs_n_pol
                   IF (.NOT. rixs%rixs_in_polarizations(i_pin)) CYCLE
                   eps_cart = CMPLX(0.0, 0.0)
@@ -304,6 +318,7 @@ CONTAINS
          END DO
          DEALLOCATE(radial_xas, core_states)
       END DO
+      IF (rixs%rixs_write_state_character) CALL rixs_finalize_state_character_context(state_character_context)
       END IF
 
       IF (rixs%rixs_write_contributions) THEN
@@ -363,6 +378,14 @@ CONTAINS
       END IF
       IF (noco%l_noco .AND. input%jspins /= 2) THEN
          CALL juDFT_error("First-variation spinor RIXS requires input%jspins=2 to construct both local spinor abc components.", &
+                          calledby="m_rixs_driver")
+      END IF
+      IF (rixs%rixs_write_state_character .AND. .NOT.noco%l_noco) THEN
+         CALL juDFT_error("RIXS state-character output requires first-variation spinor states (l_noco=T).", &
+                          calledby="m_rixs_driver")
+      END IF
+      IF (rixs%rixs_write_state_character .AND. .NOT.rixs_state_hdf_available) THEN
+         CALL juDFT_error("RIXS state-character output requires an HDF5-enabled FLEUR build.", &
                           calledby="m_rixs_driver")
       END IF
       IF (kpts%nkpt /= kpts%nkptf) THEN

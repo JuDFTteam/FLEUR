@@ -68,7 +68,7 @@ ${CMAKE_SOURCE_DIR}/testing/small-testcodes/local_coordination_test.F90
 )
 
 add_executable(local_coordination_test EXCLUDE_FROM_ALL ${local_coordination_test_files})
-target_link_libraries(local_coordination_test juDFT ${FLEUR_LIBRARIES} ${FLEUR_LINK_LIBRARIES})
+target_link_libraries(local_coordination_test fleurinput juDFT ${FLEUR_LIBRARIES} ${FLEUR_LINK_LIBRARIES})
 set_target_properties(local_coordination_test PROPERTIES
    Fortran_MODULE_DIRECTORY modules/local_coordination_test
    COMPILE_OPTIONS -Imodules/local_coordination_test
