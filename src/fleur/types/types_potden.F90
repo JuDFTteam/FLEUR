@@ -304,16 +304,12 @@ CONTAINS
     INTEGER,INTENT(IN)       :: jspins, potden_type
     LOGICAL, OPTIONAL, INTENT(IN) :: l_dfpt
 
-    LOGICAL :: do_dfpt
-
-    do_dfpt = .FALSE.
-    IF (PRESENT(l_dfpt)) do_dfpt = l_dfpt !remove
     CALL init_potden_simple(pd,stars%ng3,atoms%jmtd,atoms%msh,sphhar%nlhd,atoms%ntype,&
          atoms%n_denmat,atoms%n_vPairs,jspins,noco%l_noco,noco%l_mperp,potden_type,&
-         vacuum%nmzd,vacuum%nmzxyd,stars%ng2,do_dfpt)
+         vacuum%nmzd,vacuum%nmzxyd,stars%ng2,l_dfpt=l_dfpt)
   END SUBROUTINE init_potden_types
 
-  SUBROUTINE init_potden_simple(pd,ng3,jmtd,coreMsh,nlhd,ntype,n_u,n_vPairs,jspins,nocoExtraDim,nocoExtraMTDim,potden_type,nmzd,nmzxyd,n2d,do_dfpt)
+  SUBROUTINE init_potden_simple(pd,ng3,jmtd,coreMsh,nlhd,ntype,n_u,n_vPairs,jspins,nocoExtraDim,nocoExtraMTDim,potden_type,nmzd,nmzxyd,n2d,l_dfpt)
     USE m_constants
     USE m_judft
     IMPLICIT NONE
@@ -321,13 +317,13 @@ CONTAINS
     INTEGER,INTENT(IN)          :: ng3,jmtd,coreMsh,nlhd,ntype,n_u,n_vPairs,jspins,potden_type
     LOGICAL,INTENT(IN)          :: nocoExtraDim,nocoExtraMTDim
     INTEGER,INTENT(IN)          :: nmzd,nmzxyd,n2d
-    LOGICAL,OPTIONAL,INTENT(IN) :: do_dfpt
+    LOGICAL,OPTIONAL,INTENT(IN) :: l_dfpt
 
     INTEGER:: err(3)
-    LOGICAL :: l_dfpt
+    LOGICAL :: do_dfpt
 
-    l_dfpt = .FALSE.
-    IF (PRESENT(do_dfpt)) l_dfpt = do_dfpt
+    do_dfpt = .FALSE.
+    IF (PRESENT(l_dfpt)) do_dfpt = l_dfpt
 
     err=0
     pd%iter=0
@@ -341,7 +337,7 @@ CONTAINS
     IF(ALLOCATED(pd%mmpMat)) DEALLOCATE (pd%mmpMat)
     IF(ALLOCATED(pd%nIJ_llp_mmp)) DEALLOCATE (pd%nIJ_llp_mmp)
 
-    IF (l_dfpt) THEN
+    IF (do_dfpt) THEN
       ALLOCATE (pd%pw(ng3,MERGE(4,jspins,nocoExtraDim)),stat=err(1))
     ELSE
       ALLOCATE (pd%pw(ng3,MERGE(3,jspins,nocoExtraDim)),stat=err(1))

@@ -7,8 +7,8 @@ src/fleur/dfpt/dfpt_dynmat.F90
 src/fleur/dfpt/dfpt_eii2.F90
 src/fleur/dfpt/dfpt_dynmat_eig.F90
 src/fleur/dfpt/dfpt_vgen.F90
-src/fleur/dfpt/get_int_perturbation.f90
-src/fleur/dfpt/get_mt_perturbation.f90
+src/fleur/dfpt/dfpt_int_perturbation.f90
+src/fleur/dfpt/dfpt_mt_perturbation.f90
 src/fleur/dfpt/dfpt_vgen_finalize.F90
 src/fleur/dfpt/dfpt_vmt_xc.F90
 src/fleur/dfpt/dfpt_vis_xc.F90

@@ -17,8 +17,8 @@ CONTAINS
       !! Noco case: Correctly rotate back the potential into a 2x2 matrix (TODO)
         USE m_types
         USE m_constants
-        USE m_get_int_perturbation
-        USE m_get_mt_perturbation
+        USE m_dfpt_int_perturbation
+        USE m_dfpt_mt_perturbation
         USE m_fft3d
         
         !USE m_rotate_mt_den_tofrom_local

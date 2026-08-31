@@ -35,8 +35,8 @@ CONTAINS
       USE m_vgen_xcpot
       USE m_vgen_finalize
       USE m_rotate_mt_den_tofrom_local
-      USE m_get_int_perturbation
-      USE m_get_mt_perturbation
+      USE m_dfpt_int_perturbation
+      USE m_dfpt_mt_perturbation
       USE m_dfpt_vgen_finalize
       USE m_dfpt_vefield
       USE m_dfpt_vbfield

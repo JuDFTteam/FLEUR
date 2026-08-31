@@ -4,7 +4,7 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
-MODULE m_get_mt_perturbation
+MODULE m_dfpt_mt_perturbation
     USE m_juDFT
     USE m_polangle
     USE m_types
@@ -202,4 +202,4 @@ CONTAINS
 
     END SUBROUTINE get_mt_global_perturbation
 
-END MODULE m_get_mt_perturbation
+END MODULE m_dfpt_mt_perturbation

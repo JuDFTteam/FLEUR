@@ -4,7 +4,7 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
-MODULE m_get_int_perturbation
+MODULE m_dfpt_int_perturbation
     USE m_juDFT
     USE m_fft3d
     USE m_types
@@ -200,4 +200,4 @@ CONTAINS
         END DO
 
     END SUBROUTINE get_int_global_perturbation
-END MODULE m_get_int_perturbation
+END MODULE m_dfpt_int_perturbation
