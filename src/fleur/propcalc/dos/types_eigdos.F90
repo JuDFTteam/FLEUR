@@ -187,17 +187,19 @@ subroutine write_dos(eigdos,hdf_id,l_dfpt)
     character(len=100)::filename
     real,allocatable:: dos_grid(:)
     LOGICAL l_printTextDOS
-    real :: prefactor 
+    real :: prefactor, conversion
 
     prefactor = 1.0
-    if (l_dfpt) prefactor = 0.5 
+    conversion = 1.0 
+    if (l_dfpt) prefactor = 0.5
+    if (l_dfpt) conversion = 1e-3 ! stored DOS as states/meV
 
     l_printTextDOS = .TRUE.
 
 #ifdef CPP_HDF
     DO n=1,eigdos%get_num_weights()
       print *, "writedos:",n,eigdos%get_num_weights()
-      call writedosData(hdf_ID,eigdos%name_of_dos,eigdos%get_dos_grid(),eigdos%get_weight_name(n),prefactor*eigdos%dos(:,:,n))
+      call writedosData(hdf_ID,eigdos%name_of_dos,eigdos%get_dos_grid(),eigdos%get_weight_name(n),conversion*prefactor*eigdos%dos(:,:,n))
     enddo
     IF(eigdos%get_num_weights().GT.40) THEN
        WRITE(*,*) 'Number of weights in ', TRIM(ADJUSTL(eigdos%name_of_dos)),' DOS too large for simple text output.'
