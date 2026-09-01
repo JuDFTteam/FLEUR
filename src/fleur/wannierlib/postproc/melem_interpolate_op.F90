@@ -29,7 +29,8 @@ MODULE m_melem_interpolate_op
   PUBLIC :: melem_interpolate_operator
 CONTAINS
 
-  SUBROUTINE melem_interpolate_operator(this, cell, kpts, eig, u_matrix, u_opt, o0_loc, gk_loc, ncomp, kfrac, outfile, irank, mpicm)
+  SUBROUTINE melem_interpolate_operator(this, cell, kpts, eig, u_matrix, u_opt, o0_loc, gk_loc, &
+                                        ncomp, kfrac, outfile, irank, mpicm, bound)
     TYPE(t_melem_manifold), INTENT(IN) :: this
     TYPE(t_cell), INTENT(IN) :: cell
     TYPE(t_kpts), INTENT(IN) :: kpts
@@ -45,9 +46,32 @@ CONTAINS
     !> domain suffix. Unallocated off rank 0, which never reaches them.
     REAL, ALLOCATABLE, INTENT(IN) :: kfrac(:, :)          !> (3, np) fractional mesh
     INTEGER, INTENT(IN) :: irank, mpicm
+    !> The physical bound on <O>, for the operators that have one: |<sigma>| <= 1. Checked
+    !> and warned about, not enforced. Without this line an overshoot passes unnoticed: the
+    !> file is written, the bands are good, and only the operator lies.
+    !>
+    !> Wannier interpolation is exact ON the coarse mesh whatever O(R) looks like, and
+    !> between its points only as good as the decay of O(R). The gauge is chosen to make
+    !> H(R) short-ranged; nothing asks the same of any other operator. Measured on bcc Fe
+    !> relative to R=0 and out to 14 Ang: |H(R)| falls to 1.1e-4 while |S(R)| flattens at
+    !> 5e-2, ~450x larger. Refining the coarse mesh does not converge it -- max |<sigma>|
+    !> reads 1.62, 1.55, 1.42, 1.66, 1.65 for 8^3..16^3, no trend -- and MDRS cannot help,
+    !> since it reselects replicas rather than making the coefficients decay.
+    !>
+    !> Without SOC the same run is exact: spin commutes with H, every Wannier function is a
+    !> pure spinor, S_z(R) is a single delta at R=0 and |<sigma>| comes out 1.000000. The
+    !> non-decaying weight is there too, but it sits in the transverse spin-flip block that
+    !> no band expectation value sees. SOC mixes the sectors and lets it through, so it
+    !> unmasks the tail rather than creating it.
+    !>
+    !> So the useful question before trusting an interpolated operator is not the mesh but:
+    !> does its O(R) decay? Integrated quantities survive anyway (the spin moment comes out
+    !> at 2.252 against 2.254 on the converged coarse mesh); pointwise values do not.
+    REAL, INTENT(IN), OPTIONAL :: bound
 
     INTEGER :: num_wann, num_bands, m, ip, np, iu, info, lwork, a
     INTEGER :: nkl, kl, nrpts
+    REAL    :: omax
     REAL,    ALLOCATABLE :: kdist(:), evals(:), rwork(:), oexp(:)
     COMPLEX, ALLOCATABLE :: ham_k(:, :, :), H_interp(:, :, :), o_interp(:, :, :, :)
     COMPLEX, ALLOCATABLE :: hk(:, :), work(:), vloc(:, :, :), tmp(:, :), cvec(:, :), oc(:, :, :)
@@ -113,6 +137,7 @@ CONTAINS
              oc(num_wann, num_wann, ncomp), oexp(ncomp))
     CALL melem_zheev_workspace('V', num_wann, work, rwork, lwork)
 
+    omax = 0.0
     OPEN(newunit=iu, file=TRIM(outfile)//'.dat', status='replace')
     WRITE(iu,'(a,i0,a)') '# kdist   [ E_n(eV)  <O_1>_n .. <O_', ncomp, '>_n ] for n=1..num_wann'
     DO ip = 1, np
@@ -128,14 +153,26 @@ CONTAINS
         DO a = 1, ncomp
           oexp(a) = REAL(DOT_PRODUCT(cvec(:, m), oc(:, m, a)))
         END DO
+        omax = MAX(omax, SQRT(SUM(oexp(:)**2)))
         WRITE(iu,'(2x,f14.8)', advance='no') hartree_to_ev_const*evals(m)
         DO a = 1, ncomp
-          WRITE(iu,'(2x,f12.6)', advance='no') oexp(a)
+          WRITE(iu,'(2x,f14.9)', advance='no') oexp(a)
         END DO
       END DO
       WRITE(iu,'(a)') ''
     END DO
     CLOSE(iu)
+    WRITE(oUnit,'(a,es12.5)') 'wannierlib operator interpolation: max |<O>| over the domain = ', omax
+    IF (PRESENT(bound)) THEN
+      IF (omax > bound*(1.0 + 1.0e-6)) THEN
+        WRITE(oUnit,'(a,es12.5,a,es12.5,a)') &
+          'wannierlib operator interpolation: WARNING max |<O>| = ', omax, &
+          ' exceeds the physical bound ', bound, &
+          ' -- the interpolation overshoots where the operator is not smooth in k;'
+        WRITE(oUnit,'(a)') &
+          '   the values ON the coarse mesh do respect it. Do not trust pointwise values.'
+      END IF
+    END IF
     WRITE(oUnit,'(a,i0,a)') 'wannierlib operator interpolation: wrote '//TRIM(outfile)//'.dat (', np, ' k-points)'
     CALL timestop('melem_interpolate_operator')
   END SUBROUTINE melem_interpolate_operator

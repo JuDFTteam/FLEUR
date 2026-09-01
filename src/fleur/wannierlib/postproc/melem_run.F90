@@ -157,9 +157,12 @@ CONTAINS
                                           outname(iop, 1), outname(iop, 2), irank)
             CASE ('spin')
                ! total spin (MT-sum + interstitial): via the generic operator driver (3 comps)
+               ! bound=1: <sigma> of a normalised spinor cannot exceed 1, so the driver can
+               ! say so when the interpolation overshoots. Only spin has a bound this simple.
                IF (request%op_total(iop) == 1) &
                   CALL melem_interpolate_operator(manifold, cell, kpts, eig, u_matrix, u_opt, &
-                                                  coarse%s0, gk_loc, 3, kfrac, outname(iop, 1), irank, mpi_comm)
+                                                  coarse%s0, gk_loc, 3, kfrac, outname(iop, 1), irank, mpi_comm, &
+                                                  bound=1.0)
             CASE ('orbital')
                ! total (site-summed) orbital moment
                IF (request%op_total(iop) == 1) &
