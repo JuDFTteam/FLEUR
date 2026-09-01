@@ -3864,6 +3864,11 @@
                <xsd:documentation>Parameters for post-processing of DFPT calculations.</xsd:documentation>
             </xsd:annotation>
          </xsd:element>
+         <xsd:element minOccurs="0" name="bfield" type="DFPTBfieldType">
+            <xsd:annotation>
+               <xsd:documentation>Parameters for magnetic (Zeeman) field calculations using DFPT.</xsd:documentation>
+            </xsd:annotation>
+         </xsd:element>
          <xsd:element minOccurs="0" name="postprocess" type="DFPTPostprocessType">
             <xsd:annotation>
                <xsd:documentation>Parameters for post-processing of DFPT calculations.</xsd:documentation>
@@ -3912,7 +3917,7 @@
       </xsd:attribute>
       <xsd:attribute name="l_bfield" type="FleurBool" use="optional">
          <xsd:annotation>
-            <xsd:documentation>Include (bare) electric field perturbation.</xsd:documentation>
+            <xsd:documentation>Include (bare) magnetic (Zeeman) field perturbation.</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
    </xsd:complexType>
@@ -3970,6 +3975,19 @@
          </xsd:attribute>
    </xsd:complexType>
 
+
+   <xsd:complexType name="DFPTBfieldType">
+      <xsd:annotation>
+            <xsd:documentation>Parameters specifying the magnetic (Zeeman) field DFPT calculation.</xsd:documentation>
+      </xsd:annotation>
+         <xsd:all>
+            <xsd:element maxOccurs="1" minOccurs="0" name="qVectors" type="QListType">
+               <xsd:annotation>
+                  <xsd:documentation>List of q-vectors for the magnetic field perturbation. Only the Gamma point is supported so far; defaults to Gamma if omitted.</xsd:documentation>
+               </xsd:annotation>
+            </xsd:element>
+         </xsd:all>
+   </xsd:complexType>
 
    <xsd:complexType name="DFPTEfieldType">
       <xsd:annotation>

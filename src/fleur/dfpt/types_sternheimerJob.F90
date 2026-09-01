@@ -165,7 +165,9 @@ module m_types_sternheimerJob
 
             this%l_bfield = .true. 
 
-            jobSize = 1 ! all 3 cartesian directions 
+            ! One job per q point. The Zeeman field has no cartesian direction index;
+            ! the field enters as a scalar (spin diagonal) perturbation.
+            jobSize = size(fi%dfpt%qvec,2)
 
             allocate(this%iJobList(jobSize))
             allocate(this%iQList(jobSize))
@@ -174,18 +176,20 @@ module m_types_sternheimerJob
             allocate(this%needs_postprocessing(jobSize))
             allocate(this%needs_eigen(jobSize))
 
-            iJob = 1 
-            this%needs_postprocessing(:) = .false. 
-            this%needs_eigen(:) = .true. 
-            
-            do iDir = 1 , 1 !WIP
-                this%iJobList(iJob)   = iJob
-                this%iQList(iJob)     = iDir
-                this%iDtypeList(iJob) = 1 
-                this%iDirList(iJob)   = iDir 
-                iJob = iJob + 1 
-            end do !iDir 
-        end if 
+            iJob = 1
+            this%needs_postprocessing(:) = .false.
+            this%needs_eigen(:) = .true.
+
+            do iQ = 1 , jobSize
+                do iDir = 1 , 1 ! this can be kept for future expansion 
+                    this%iJobList(iJob)   = iJob
+                    this%iQList(iJob)     = iQ
+                    this%iDtypeList(iJob) = 1
+                    this%iDirList(iJob)   = 1
+                    iJob = iJob + 1
+                end do
+            end do !iQ
+        end if
 
         if (l_borncharges) then 
             this%l_BEC           = .true. 
