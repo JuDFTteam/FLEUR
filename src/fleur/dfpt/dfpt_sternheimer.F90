@@ -299,8 +299,11 @@ CONTAINS
          ! If q=0, the eigenenergy perturbation is /=0 and if we do not
          ! look at a semiconductor or an insulator, there will be a
          ! perturbation of the occupation numbers as well.
-         ! Test for metallicity: WIP
-         l_metal = ANY(results%w_iks*2.0/fi%input%jspins>1e-6.AND.results%w_iks*2.0/fi%input%jspins<1.0-1e-6)
+         IF (fi%input%bz_integration==BZINT_METHOD_TETRA) THEN
+            l_metal = ANY(results%w_iks*2.0/fi%input%jspins>1e-6.AND.results%w_iks*2.0/fi%input%jspins<1.0-1e-6)
+         ELSE
+            l_metal = ABS(results%tkb_loc)>1e-12
+         END IF
 
          CALL timestart("Fermi energy and occupation derivative")
          IF (norm2(bqpt)<1e-8.AND.l_metal) THEN
