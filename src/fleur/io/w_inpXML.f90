@@ -638,10 +638,26 @@ WRITE (fileNum, 242) fr(1.0)
       ENDIF
 
       IF(l_explicit .OR. l_dfptOpt) THEN
-         WRITE (fileNum, '(a)') '      <dfpt l_dfpt="F" l_phonon="F" l_borneffcharge="F" l_efield="F" l_bfield="F">'
-         WRITE (fileNum, '(a)') '         <phonon l_sumrule="F" qptsListName="default-1"/>'
-         WRITE (fileNum, '(a)') '         <efield qlim="1.0/100"/>'
-         WRITE (fileNum, '(a)') '         <interpolation l_WSinterpol="T" qptsListName="default-1"/>'
+440      FORMAT('      <dfpt l_dfpt="', l1, '" l_scf="', l1, '" l_interpolate="', l1, &
+                '" l_postprocess="', l1, '" l_rm_qhdf="', l1, '" l_phonon="', l1, &
+                '" l_efield="', l1, '" l_borneffcharge="', l1, '" l_bfield="', l1, '">')
+         WRITE (fileNum, 440) dfpt%l_dfpt, dfpt%l_scf, dfpt%l_intp, dfpt%l_postprocess, dfpt%l_rm_qhdf, &
+                              dfpt%l_phonon, dfpt%l_efield, dfpt%l_borneffcharge, dfpt%l_bfield
+
+441      FORMAT('         <phonon l_sumrule="', l1, '" startq="', i0, '" qptsListName="', a, '"/>')
+         WRITE (fileNum, 441) dfpt%l_sumrule_scf, dfpt%startq, TRIM(ADJUSTL(kptsSelection(1)))
+
+443      FORMAT('         <efield l_efield_scr="', l1, '" qlim="', a, '"/>')
+         WRITE (fileNum, 443) dfpt%l_efield_scr, fr(dfpt%qlim)
+
+444      FORMAT('         <interpolation l_band="', l1, '" l_dos="', l1, '" l_sumrule="', l1, &
+                '" l_polar="', l1, '" qptsListName="', a, '"/>')
+         WRITE (fileNum, 444) dfpt%l_band, dfpt%l_dos, dfpt%l_sumrule_intp, dfpt%l_polar, TRIM(ADJUSTL(kptsSelection(1)))
+
+445      FORMAT('         <postprocess l_elph="', l1,  &
+                '" l_write_epw="', l1, '" epw_prefix="', a, '"/>')
+         WRITE (fileNum, 445) dfpt%l_elph, dfpt%l_write_epw, TRIM(dfpt%epw_prefix)
+
          WRITE (fileNum, '(a)') '      </dfpt>'
       ENDIF
 
