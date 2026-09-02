@@ -13,6 +13,8 @@ MODULE m_types_potden
      COMPLEX,ALLOCATABLE :: pw(:,:),pw_w(:,:)
      !                      mt(radial_grid, sphhar, atom, spin)
      REAL,ALLOCATABLE    :: mt(:,:,:,:)
+     !Imaginary part of mt; allocated only for DFPT since the density response is complex.
+     REAL,ALLOCATABLE    :: mtIm(:,:,:,:)
      COMPLEX,ALLOCATABLE :: vac(:,:,:,:)
      !For angles of density/potential in noco case
      REAL,ALLOCATABLE  :: theta_pw(:)
@@ -81,6 +83,14 @@ CONTAINS
     ELSE
        CALL MPI_REDUCE(this%mt,this%mt,size(this%mt),MPI_DOUBLE_PRECISION,MPI_SUM,0,fmpi_comm,ierr)
     END IF
+    !mtIm
+    IF (ALLOCATED(this%mtIm)) THEN
+       IF (irank==0) THEN
+          CALL MPI_REDUCE(MPI_IN_PLACE,this%mtIm,size(this%mtIm),MPI_DOUBLE_PRECISION,MPI_SUM,0,fmpi_comm,ierr)
+       ELSE
+          CALL MPI_REDUCE(this%mtIm,this%mtIm,size(this%mtIm),MPI_DOUBLE_PRECISION,MPI_SUM,0,fmpi_comm,ierr)
+       END IF
+    END IF
     IF (PRESENT(the_other)) THEN
        !mt
        IF (irank==0) THEN
@@ -130,6 +140,7 @@ CONTAINS
     call mpi_bc(this%pw,0,fmpi_comm)
     IF (ALLOCATED(this%pw_w)) CALL mpi_bc(this%pw_w ,0,fmpi_comm)
     CALL mpi_bc(this%mt ,0,fmpi_comm)
+    IF (ALLOCATED(this%mtIm)) CALL mpi_bc(this%mtIm,0,fmpi_comm)
     IF (ALLOCATED(this%vac)) CALL mpi_bc(this%vac,0,fmpi_comm)
     IF (ALLOCATED(this%mmpMat)) CALL mpi_bc(this%mmpMat,0,fmpi_comm)
     IF (ALLOCATED(this%nIJ_llp_mmp)) CALL mpi_bc(this%nIJ_llp_mmp,0,fmpi_comm)
@@ -227,6 +238,11 @@ CONTAINS
     ! implicit allocation would break the bounds staring at 0
     if(.not. allocated(PotDen3%mt)) allocate(PotDen3%mt, mold=PotDen1%mt)
 
+    if (allocated(PotDen1%mtIm) .and. allocated(PotDen2%mtIm)) then
+      if(.not. allocated(PotDen3%mtIm)) allocate(PotDen3%mtIm, mold=PotDen1%mtIm)
+      PotDen3%mtIm     = PotDen1%mtIm + PotDen2%mtIm
+    end if
+
     PotDen3%mt         = PotDen1%mt + PotDen2%mt
     PotDen3%pw         = PotDen1%pw + PotDen2%pw
     PotDen3%vac      = PotDen1%vac + PotDen2%vac
@@ -251,6 +267,11 @@ CONTAINS
     ! The following allocates are countermeasures to valgrind complaints
     if(.not. allocated(PotDen3%vac)) allocate(PotDen3%vac, mold=PotDen1%vac)
 
+    if (allocated(PotDen1%mtIm) .and. allocated(PotDen2%mtIm)) then
+      if(.not. allocated(PotDen3%mtIm)) allocate(PotDen3%mtIm, mold=PotDen1%mtIm)
+      PotDen3%mtIm     = PotDen1%mtIm - PotDen2%mtIm
+    end if
+
     PotDen3%mt         = PotDen1%mt - PotDen2%mt
     PotDen3%pw         = PotDen1%pw - PotDen2%pw
     PotDen3%vac        = PotDen1%vac - PotDen2%vac
@@ -274,6 +295,11 @@ CONTAINS
     
     ! The following allocates are countermeasures to valgrind complaints
     if(.not. allocated(PotDenCopy%vac)) allocate(PotDenCopy%vac, mold=PotDen%vac)
+
+    if (allocated(PotDen%mtIm)) then
+      if(.not. allocated(PotDenCopy%mtIm)) allocate(PotDenCopy%mtIm, mold=PotDen%mtIm)
+      PotDenCopy%mtIm     = PotDen%mtIm
+    end if
 
     PotDenCopy%mt         = PotDen%mt
     PotDenCopy%pw         = PotDen%pw
@@ -319,7 +345,7 @@ CONTAINS
     INTEGER,INTENT(IN)          :: nmzd,nmzxyd,n2d
     LOGICAL,OPTIONAL,INTENT(IN) :: l_dfpt
 
-    INTEGER:: err(3)
+    INTEGER:: err(4)
     LOGICAL :: do_dfpt
 
     do_dfpt = .FALSE.
@@ -330,6 +356,7 @@ CONTAINS
     pd%potdenType=potden_type
     IF(ALLOCATED(pd%pw)) DEALLOCATE (pd%pw)
     IF(ALLOCATED(pd%mt)) DEALLOCATE (pd%mt)
+    IF(ALLOCATED(pd%mtIm)) DEALLOCATE (pd%mtIm)
     IF(ALLOCATED(pd%vac)) DEALLOCATE (pd%vac)
     IF(ALLOCATED(pd%qint)) DEALLOCATE (pd%qint)
     IF(ALLOCATED(pd%tec)) DEALLOCATE (pd%tec)
@@ -338,11 +365,13 @@ CONTAINS
     IF(ALLOCATED(pd%nIJ_llp_mmp)) DEALLOCATE (pd%nIJ_llp_mmp)
 
     IF (do_dfpt) THEN
-      ALLOCATE (pd%pw(ng3,MERGE(4,jspins,nocoExtraDim)),stat=err(1))
+      ALLOCATE (pd%pw(ng3,MERGE(4,jspins,nocoExtraDim)),stat=err(1)) !needed since hermicity is no longer applicable
+      ALLOCATE (pd%mt(jmtd,0:nlhd,ntype,MERGE(4,jspins,nocoExtraDim)),stat=err(2))
+      ALLOCATE (pd%mtIm(jmtd,0:nlhd,ntype,MERGE(4,jspins,nocoExtraDim)),stat=err(4))
     ELSE
       ALLOCATE (pd%pw(ng3,MERGE(3,jspins,nocoExtraDim)),stat=err(1))
+      ALLOCATE (pd%mt(jmtd,0:nlhd,ntype,MERGE(4,jspins,nocoExtraMTDim)),stat=err(2))
     END IF
-    ALLOCATE (pd%mt(jmtd,0:nlhd,ntype,MERGE(4,jspins,nocoExtraMTDim)),stat=err(2))
     ALLOCATE (pd%vac(nmzd,n2d,2,MERGE(3,jspins,nocoExtraDim)),stat=err(3))
     ALLOCATE (pd%qint(ntype,jspins))
     ALLOCATE (pd%tec(ntype,jspins))
@@ -354,6 +383,7 @@ CONTAINS
     IF (ANY(err>0)) CALL judft_error("Not enough memory allocating potential or density")
     pd%pw=CMPLX(0.0,0.0)
     pd%mt=0.0
+    IF (ALLOCATED(pd%mtIm)) pd%mtIm=0.0
     pd%vac=CMPLX(0.0,0.0)
     pd%qint = 0.0
     pd%tec = 0.0
@@ -549,6 +579,7 @@ CONTAINS
     pd%mtCore = 0.0
     pd%mmpMat = CMPLX(0.0,0.0)
     pd%nIJ_llp_mmp = CMPLX(0.0,0.0)
+    IF (ALLOCATED(pd%mtIm)) pd%mtIm=0.0
     IF (ALLOCATED(pd%pw_w)) DEALLOCATE(pd%pw_w)
   END SUBROUTINE resetPotDen
 
@@ -559,6 +590,7 @@ CONTAINS
     CLASS(t_potden),INTENT(INOUT) :: pd
 
     IF (ALLOCATED(pd%mt)) DEALLOCATE(pd%mt)
+    IF (ALLOCATED(pd%mtIm)) DEALLOCATE(pd%mtIm)
     IF (ALLOCATED(pd%pw)) DEALLOCATE(pd%pw)
     IF (ALLOCATED(pd%pw_w)) DEALLOCATE(pd%pw_w)
   END SUBROUTINE reset_dfpt
