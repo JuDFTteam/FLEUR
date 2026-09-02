@@ -96,8 +96,10 @@ CONTAINS
             END SELECT
 
             ALLOCATE(drivsigma1(npoints,n_sigma),drivsigma1Im(npoints,n_sigma))
+            call timestart("dfpt_gga_assemble")
             CALL dfpt_gga_assemble(drivsigma,driv2rho2,driv2rhosigma,driv2sigma2,gradRho,gradRho1,ch1,v_xc1,drivsigma1)
             CALL dfpt_gga_assemble(drivsigma,driv2rho2,driv2rhosigma,driv2sigma2,gradRho,gradRho1Im,ch1Im,v_xc1Im,drivsigma1Im)
+            call timestop("dfpt_gga_assemble")
 
             !The MT expansion carries the exp(iqr) phase already, so no q-shift is
             !needed and the two channels are independent real round trips.
@@ -107,8 +109,10 @@ CONTAINS
             CALL mt_gradient_ftgrid(xcpot,atoms,sym,sphhar,noco_loco,n,drivsigma1,drivsigmaMT,gradDrivsigma1)
             CALL mt_gradient_ftgrid(xcpot,atoms,sym,sphhar,noco_loco,n,drivsigma1Im,drivsigmaMT,gradDrivsigma1Im)
 
+            call timestart("dfpt_gga_grdotgr")
             CALL dfpt_gga_grdotgr(gradRho,gradRho1,gradDrivsigma,gradDrivsigma1,v_xc1)
             CALL dfpt_gga_grdotgr(gradRho,gradRho1Im,gradDrivsigma,gradDrivsigma1Im,v_xc1Im)
+            call timestop("dfpt_gga_grdotgr")
 
             DEALLOCATE(drivsigma,driv2rho2,driv2rhosigma,driv2sigma2)
             DEALLOCATE(drivsigmaT,drivsigma1,drivsigma1Im,drivsigmaMT)

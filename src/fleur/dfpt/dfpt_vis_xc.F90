@@ -87,8 +87,10 @@ CONTAINS
          END SELECT
 
          ALLOCATE(drivsigma1(npt,n_sigma),drivsigma1Im(npt,n_sigma))
+         call timestart("dfpt_gga_assemble")
          CALL dfpt_gga_assemble(drivsigma,driv2rho2,driv2rhosigma,driv2sigma2,gradRho,gradRho1,rho1,v_xc1,drivsigma1)
          CALL dfpt_gga_assemble(drivsigma,driv2rho2,driv2rhosigma,driv2sigma2,gradRho,gradRho1Im,rho1Im,v_xc1Im,drivsigma1Im)
+         call timestop("dfpt_gga_assemble")
 
          !drivsigma1 is expanded in stars below, so a spike in the tail of the
          !density would pollute the whole cell.
@@ -117,8 +119,10 @@ CONTAINS
          CALL pw_to_grid(.TRUE.,n_sigma,.FALSE.,starsq,cell,drivsigma1PW,gradDrivsigma1,xcpot,gradim=gradDrivsigma1Im)
          call timestop("gradient of drivsigma")
 
+         call timestart("dfpt_gga_grdotgr")
          CALL dfpt_gga_grdotgr(gradRho,gradRho1,gradDrivsigma,gradDrivsigma1,v_xc1)
          CALL dfpt_gga_grdotgr(gradRho,gradRho1Im,gradDrivsigma,gradDrivsigma1Im,v_xc1Im)
+         call timestop("dfpt_gga_grdotgr")
       ELSE
          ALLOCATE(f_xc(npt,nfxc))
          CALL xcpot%get_fxc_lda(input%jspins, rho, f_xc)
