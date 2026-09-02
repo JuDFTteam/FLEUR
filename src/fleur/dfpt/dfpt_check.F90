@@ -56,9 +56,6 @@ CONTAINS
         l_samefamily = (xcpot%vx_is_LDA().AND.xcpot%vc_is_LDA()).OR.(xcpot%vx_is_gga().AND.xcpot%vc_is_gga())
         IF (.NOT.l_samefamily) CALL judft_error("dfpt needs exchange and correlation both from LDA or both from GGA.",calledby="dfpt_check.F90")
 
-        !GGA
-        IF (xcpot%needs_grad().AND.fi%input%film) CALL judft_error("GGA functionals are not supported for film setups yet.",calledby="dfpt_check.F90")
-
         !MetaGGA
         IF (xcpot%exc_is_MetaGGA() .or. xcpot%vx_is_MetaGGA()) CALL judft_error("dfpt doesn't do MetaGGA functionals.",calledby="dfpt_check.F90")
 
