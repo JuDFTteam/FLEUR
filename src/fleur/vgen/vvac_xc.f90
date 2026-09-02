@@ -56,7 +56,6 @@ CONTAINS
     !     .. Local Scalars ..
     INTEGER :: js,nt,i,iq,irec2,nmz0,nmzdiff,ivac,ip,ngrid
     REAL    :: rhti,zro,fgz,rhmnv,d_15,bmat1(3,3),rd
-    LOGICAL :: l_libxc
     !     ..
     !     .. Local Arrays ..
     REAL, ALLOCATABLE :: rho(:,:),v_xc(:,:),v_x(:,:),e_xc(:,:)
@@ -64,15 +63,6 @@ CONTAINS
     TYPE(t_gradients)::grad
 
     !     .. unused input (needed for other noco GGA-implementations) ..
-    
-    l_libxc=.FALSE.
-
-    !SELECT TYPE(xcpot)
-    !TYPE IS (t_xcpot_libxc)
-    !   IF (xcpot%needs_grad()) THEN
-    !      CALL judft_error("libxc GGA functionals not implemented in film setups")
-    !   END IF
-    !END SELECT
 
     ngrid=vacuum%nvac*(vacuum%nmzxy*ifftd2+vacuum%nmz)
 
@@ -87,24 +77,18 @@ CONTAINS
 
     SELECT TYPE(xcpot)
     TYPE IS (t_xcpot_libxc)
-       l_libxc=.TRUE.
        IF (xcpot%needs_grad()) THEN
+          ! the inbuild handles the cutoff in its routine
+          ! for the libxc we need to explicitly call the cutoff function
+          ! Note: to mimic inbuild behavior, put cutoff before xcpot%get_vxc
+          ! the cutoff here is done for a better containing of the libxc block
+          CALL xcpot%apply_vac_cutoffs(rho,grad)
           CALL libxc_postprocess_gga_vac(xcpot,input,cell,stars,vacuum ,v_xc,grad)
           CALL libxc_postprocess_gga_vac(xcpot,input,cell,stars,vacuum ,v_x,grad)
        END IF
     END SELECT
 
     call vac_from_grid(stars,vacuum,v_xc,ifftd2,vxc%vac)
-
-    !IF (l_libxc.AND.xcpot%needs_grad()) THEN
-    !   CALL save_npy('vxc_gga_vac_libxc.npy',v_xc)
-    !ELSE IF (l_libxc.AND.(.NOT.xcpot%needs_grad())) THEN
-    !  CALL save_npy('vxc_lda_vac_libxc.npy',v_xc)
-    !ELSE IF ((.NOT.l_libxc).AND.xcpot%needs_grad()) THEN
-    !   CALL save_npy('vxc_gga_vac_inbuild.npy',v_xc)
-    !ELSE
-    !  CALL save_npy('vxc_lda_vac_inbuild.npy',v_xc)
-    !END IF
 
     IF (ALLOCATED(exc%vac)) THEN
       ALLOCATE ( e_xc(ngrid,1) ); e_xc=0.0

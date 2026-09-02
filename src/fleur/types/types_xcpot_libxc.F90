@@ -49,9 +49,38 @@ MODULE m_types_xcpot_libxc
       !Not             overloeaded...
       PROCEDURE        :: init => xcpot_init
       PROCEDURE,NOPASS :: apply_cutoffs
+      PROCEDURE,NOPASS :: apply_vac_cutoffs
    END TYPE t_xcpot_libxc
    PUBLIC t_xcpot_libxc
 CONTAINS
+  subroutine apply_vac_cutoffs(rh,grad,l_cut)
+    ! Drops the vacuum points that carry too little density to evaluate a GGA on.
+    ! mimics the behaviour of the inbuild GGA cutoffs 
+    real,                           intent(inout) :: rh(:,:)
+    type(t_gradients),              intent(inout) :: grad
+    logical, allocatable, optional, intent(out)   :: l_cut(:)
+
+    ! Density below which the in-build GGA drops its gradient terms (vxcepbe)
+    real, parameter :: den_cut = 2.01e-14
+    integer :: i
+    logical :: l_drop
+
+    if (present(l_cut)) allocate(l_cut(size(rh,1)))
+
+    do i = 1, size(rh,1)
+      l_drop = sum(rh(i,:)) < den_cut
+      if (present(l_cut)) l_cut(i) = l_drop
+      if (.not.l_drop) cycle
+      rh(i,:) = 0.0
+      if (allocated(grad%sigma)) grad%sigma(:,i) = 0.0
+      if (allocated(grad%gr)) grad%gr(:,i,:) = 0.0
+      if (allocated(grad%laplace)) grad%laplace(i,:) = 0.0
+      ! vsigma is computed by libxc before cutoff masking; cutoff is here
+      if (allocated(grad%vsigma)) grad%vsigma(:,i) = 0.0
+    end do
+
+  end subroutine apply_vac_cutoffs
+
   subroutine apply_cutoffs(density_cutoff,rh,grad)
     real,intent(INOUT) :: rh(:,:)
     real,INTENT(IN)    :: density_cutoff
