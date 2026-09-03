@@ -26,7 +26,7 @@ module m_dfpt_born_effcharge
 
 contains 
 
-    subroutine dfpt_born_eff_charge_element_nef(sternheimerJob,fi,stars,starsq,sphhar,fmpi,rho,denIn1,denIn1Im,grRho,BEC_element,BEC_contributions_element,iDir_den,q_sign,hybdat,xcpot,nococonv,vTot)
+    subroutine dfpt_born_eff_charge_element_nef(sternheimerJob,fi,stars,starsq,sphhar,fmpi,rho,denIn1,grRho,BEC_element,BEC_contributions_element,iDir_den,q_sign,hybdat,xcpot,nococonv,vTot)
 
 
         type(t_sternheimerJob), intent(in) :: sternheimerJob 
@@ -34,7 +34,7 @@ contains
         type(t_sphhar),    intent(in)      :: sphhar
         TYPE(t_stars),      INTENT(IN)     :: stars, starsq
         type(t_potden), intent(inout)         :: rho
-        type(t_potden), intent(inout)         :: denIn1,denIn1Im
+        type(t_potden), intent(inout)         :: denIn1
         type(t_potden),optional, intent(in)     ::grRho
         TYPE(t_mpi),        intent(in)     :: fmpi
         complex, intent(inout)             :: BEC_element(:,:)
@@ -46,7 +46,7 @@ contains
         TYPE(t_nococonv),   INTENT(IN)    :: nococonv
         TYPE(t_potden),     INTENT(IN)    :: vTot
 
-        type(t_potden)                     :: vExt1pho, vExt1Impho
+        type(t_potden)                     :: vExt1pho
         type(t_stars)                      :: starsq_vextpho
         TYPE(t_fftgrid)                    :: fftgrid_dummy
         complex, allocatable               :: pwwq2(:),pww2(:),denIn1_pw(:),rho_pw(:),theta1full0(:,:,:),theta1full(:,:,:),theta1_pw0(:,:,:),theta1_pw(:,:,:)
@@ -82,7 +82,7 @@ contains
         !remove spin dependence
         denIn1_pw  = (denIn1%pw(:,1)+denIn1%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
         denIn1_mt = (denIn1%mt(:,0:,:,1)+denIn1%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
-        denIn1_mt_Im = (denIn1Im%mt(:,0:,:,1)+denIn1Im%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
+        denIn1_mt_Im = (denIn1%mtIm(:,0:,:,1)+denIn1%mtIm(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
 
 
 
@@ -101,11 +101,10 @@ contains
                 CALL den1Im_dummy%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN, l_dfpt=.FALSE.)
 
                 CALL vExt1pho%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
-                CALL vExt1Impho%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
                 print*,"right before it"
                 CALL dfpt_vgen(sternheimerJob,hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                             fi%dfpt,fi%cell,fmpi,fi%noco,nococonv,rho_loc0,vTot,&
-                            starsq,den1Im_dummy,vExt1pho,.FALSE.,vExt1Impho,den1_dummy,iDtype,iDir,[1,1],l_vextpho=.TRUE.)
+                            starsq,vExt1pho,.FALSE.,den1_dummy,iDtype,iDir,[1,1],l_vextpho=.TRUE.)
                 
                 print*,"sum(vExt1pho%pw(:,1))", sum(vExt1pho%pw(:,1))
                 !stop
@@ -118,7 +117,7 @@ contains
                 !starsq_vext%ufft = starsq%ufft !why again
                 !call vExt1%init(starsq_vext, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
                 !call vExt1Im%init(starsq_vext, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
-                !call dfpt_vefield(fi%dfpt,starsq_vext,fi%atoms,fi%sym,sphhar,fi%cell,vExt1,vExt1Im,iQ,q_sign)
+                !call dfpt_vefield(fi%dfpt,starsq_vext,fi%atoms,fi%sym,sphhar,fi%cell,vExt1,iQ,q_sign)
                 !interstitial
                 pwwq2 = CMPLX(0.0,0.0)
                 !print*,"I make it this far"
@@ -135,7 +134,7 @@ contains
                 !stop
                 do iType = 1, fi%atoms%ntype
                     tempval_mt = CMPLX(0.0,0.0) 
-                    call dfpt_int_mt(fi%atoms, sphhar, fi%sym, iType, denIn1_mt, denIn1_mt_Im, vExt1pho%mt(:,0:,:,1), vExt1Impho%mt(:,0:,:,1), tempval_mt)
+                    call dfpt_int_mt(fi%atoms, sphhar, fi%sym, iType, denIn1_mt, denIn1_mt_Im, vExt1pho%mt(:,0:,:,1), vExt1pho%mtIm(:,0:,:,1), tempval_mt)
                     BEC_element(iDtype,iDir) =  BEC_element(iDtype,iDir) + tempval_mt
                     print*,"BEC_element(iDtype,iDir) ",BEC_element(iDtype,iDir) 
                     BEC_contributions_element(iDtype,iDir,1) =  BEC_contributions_element(iDtype,iDir,1) + tempval_mt
@@ -151,7 +150,7 @@ contains
     end subroutine dfpt_born_eff_charge_element_nef
 
 
-    subroutine dfpt_born_eff_charge_element(fi,stars,starsq,sphhar,fmpi,rho,denIn1,denIn1Im,grRho,BEC_element,BEC_contributions_element,iDir_den,iDType,iQ,q_sign)
+    subroutine dfpt_born_eff_charge_element(fi,stars,starsq,sphhar,fmpi,rho,denIn1,grRho,BEC_element,BEC_contributions_element,iDir_den,iDType,iQ,q_sign)
 
 
         type(t_fleurinput), intent(in)     :: fi
@@ -159,7 +158,7 @@ contains
         TYPE(t_stars),      INTENT(IN)     :: stars, starsq
         type(t_potden), intent(in)         :: rho
         ! type(t_potden), intent(inout)         :: rho_core
-        type(t_potden), intent(in)         :: denIn1,denIn1Im
+        type(t_potden), intent(in)         :: denIn1
         type(t_potden),optional, intent(in)     ::grRho
         TYPE(t_mpi),        intent(in)     :: fmpi
         !complex, intent(in)                 :: grrho_val(:,:,:,:)
@@ -167,7 +166,7 @@ contains
         complex, intent(inout)             :: BEC_contributions_element(:)
         integer, intent(in)                :: iDir_den,iQ,q_sign,iDType
 
-        type(t_potden)                     :: vExt1, vExt1Im
+        type(t_potden)                     :: vExt1
         type(t_stars)                      :: starsq_vext
         TYPE(t_fftgrid)                    :: fftgrid_dummy
         complex, allocatable               :: pwwq2(:),denIn1_pw(:),rho_pw(:),theta1full(:,:,:),theta1_pw0(:,:,:),theta1_pw(:,:,:)
@@ -191,7 +190,7 @@ contains
         !remove spin dependence
         denIn1_pw  = (denIn1%pw(:,1)+denIn1%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
         denIn1_mt = (denIn1%mt(:,0:,:,1)+denIn1%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
-        denIn1_mt_Im = (denIn1Im%mt(:,0:,:,1)+denIn1Im%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
+        denIn1_mt_Im = (denIn1%mtIm(:,0:,:,1)+denIn1%mtIm(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
 
 
         IF (.FALSE.) denIn1_mt(:,0:,iDType) = &
@@ -210,14 +209,13 @@ contains
         tempval_pw = CMPLX(0.0,0.0)
 
         call vExt1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
-        call vExt1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
-        call dfpt_vefield(fi%dfpt,starsq,fi%atoms,fi%sym,sphhar,fi%cell,vExt1,vExt1Im,iQ,q_sign)
+        call dfpt_vefield(fi%dfpt,starsq,fi%atoms,fi%sym,sphhar,fi%cell,vExt1,iQ,q_sign)
 
         !interstitial
         pwwq2 = CMPLX(0.0,0.0)
         CALL dfpt_convol_big(1, starsq, stars, vExt1%pw(:,1), CMPLX(1.0,0.0)*stars%ufft, pwwq2)
         CALL dfpt_int_pw(starsq, fi%cell, denIn1_pw, pwwq2, tempval_pw)
-        !call dfpt_checkdopall(fi, sphhar, starsq,vExt1,vExt1Im,denIn1,denIn1Im) 
+        !call dfpt_checkdopall(fi, sphhar, starsq,vExt1,denIn1) 
         !print*,"convol(theta*vext1)*n1",tempval_pw
         BEC_element = BEC_element + 2*tempval_pw 
         BEC_contributions_element(1) = BEC_contributions_element(1) + tempval_pw
@@ -246,7 +244,7 @@ contains
         !MT integral:   
         do iType = 1, fi%atoms%ntype
             tempval_mt = CMPLX(0.0,0.0) 
-            call dfpt_int_mt(fi%atoms, sphhar, fi%sym, iType, denIn1_mt, denIn1_mt_Im, vExt1%mt(:,0:,:,1), vExt1Im%mt(:,0:,:,1), tempval_mt)
+            call dfpt_int_mt(fi%atoms, sphhar, fi%sym, iType, denIn1_mt, denIn1_mt_Im, vExt1%mt(:,0:,:,1), vExt1%mtIm(:,0:,:,1), tempval_mt)
             BEC_element =  BEC_element + 2*tempval_mt
             BEC_contributions_element(2) =  BEC_contributions_element(2) + tempval_mt
             BEC_contributions_element(8+iType) =  BEC_contributions_element(8+iType) + tempval_mt
@@ -302,7 +300,7 @@ contains
         
         write(9989,FMT=8000) "IR Theta1 rho V1ext new              ", tempval_SF_IR
         tempval_SF = cmplx(0.0,0.0)
-        CALL dfpt_int_mt_sf(fi%atoms, sphhar, fi%sym, iDir_den, iDType, rho_mt, vExt1%mt(:,0:,:,1), vExt1Im%mt(:,0:,:,1), tempval_SF)
+        CALL dfpt_int_mt_sf(fi%atoms, sphhar, fi%sym, iDir_den, iDType, rho_mt, vExt1%mt(:,0:,:,1), vExt1%mtIm(:,0:,:,1), tempval_SF)
         !dyn_row_HF(col_index) = dyn_row_HF(col_index) + tempval
         write(9989,FMT=8000) "SF rho Vext1 efield                 ", tempval_SF
         !write(9989,'(A,1X,G0)') "SF rho Vext1 efield", tempval_SF
@@ -313,7 +311,7 @@ contains
         !stop
         grRho_mt =(grRho%mt(:,0:,:,1)+grRho%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
         !grRho_mt =(grrho_val(:,0:,:,1)+grrho_val(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
-        call dfpt_int_mt(fi%atoms, sphhar, fi%sym, iDType, grRho_mt, grRho_mt*0, vExt1%mt(:,0:,:,1), vExt1Im%mt(:,0:,:,1), tempval_grrho)
+        call dfpt_int_mt(fi%atoms, sphhar, fi%sym, iDType, grRho_mt, grRho_mt*0, vExt1%mt(:,0:,:,1), vExt1%mtIm(:,0:,:,1), tempval_grrho)
         !print*,"tempval_grrho",tempval_grrho
         !stop
         BEC_contributions_element(5) = BEC_contributions_element(5) + tempval_grrho
@@ -442,27 +440,25 @@ contains
         !write(*,*) '-------------------------'
     end subroutine write_born_effective_charge
 
-        subroutine dfpt_checkdopall(fi, sphhar, starsq,vExt1,vExt1Im,denIn1,denIn1Im)
+        subroutine dfpt_checkdopall(fi, sphhar, starsq,vExt1,denIn1)
         
         type(t_fleurinput), intent(in)     :: fi
         type(t_sphhar),    intent(in)      :: sphhar
         TYPE(t_stars),      INTENT(IN)     ::  starsq
-        type(t_potden), intent(in)         :: vExt1, vExt1Im
-        type(t_potden), intent(in)         :: denIn1,denIn1Im
+        type(t_potden), intent(in)         :: vExt1
+        type(t_potden), intent(in)         :: denIn1
 
-        type(t_potden)                     :: product,productIm
+        type(t_potden)                     :: product
         TYPE(t_fftgrid) :: fftgrid_pot, fftgrid_den, fftgrid_product
 
         WRITE (oUnit,*) "potential perturbation checkdopall"
-        CALL checkDOPALL(fi%input, sphhar, starsq,fi%atoms, fi%sym, fi%vacuum, fi%cell,vExt1,1, vExt1Im,'vext1')
+        CALL checkDOPALL(fi%input, sphhar, starsq,fi%atoms, fi%sym, fi%vacuum, fi%cell,vExt1,1,'vext1')
         
         WRITE (oUnit,*) "density response checkdopall"
-        CALL checkDOPALL(fi%input, sphhar, starsq,fi%atoms, fi%sym, fi%vacuum, fi%cell,denIn1,1, denIn1Im,'den1')
+        CALL checkDOPALL(fi%input, sphhar, starsq,fi%atoms, fi%sym, fi%vacuum, fi%cell,denIn1,1,'den1')
 
         product =vExt1
-        productIm =vExt1
         CALL product%resetPotDen()
-        CALL productIm%resetPotDen()
         print*,"vext1%pw(:,1)",sum(vext1%pw(:,1))
         print*,"denIn1%pw(:,1)",sum(denIn1%pw(:,1))
         print*,"product%pw(:,1)",sum(product%pw(:,1))
@@ -492,10 +488,10 @@ contains
         WRITE (oUnit,*) "trying new stuff"
         !Do MT shit
         product%mt= 0.0
-        productIm%mt= 0.0
-        !CALL product_MT(fi,sphhar,product%mt,productIm%mt)
+        product%mtIm= 0.0
+        !CALL product_MT(fi,sphhar,product%mt,product%mtIm)
         !stop
-        CALL checkDOPALL(fi%input, sphhar, starsq,fi%atoms, fi%sym, fi%vacuum, fi%cell,product,1, product,'v1n1')
+        CALL checkDOPALL(fi%input, sphhar, starsq,fi%atoms, fi%sym, fi%vacuum, fi%cell,product,1,'v1n1')
 
         stop
     

@@ -30,8 +30,8 @@ CONTAINS
    SUBROUTINE dfpt_sternheimer(sternheimerJob, fi, xcpot, sphhar, stars, starsq, nococonv, qpts, fmpi, results, resultsq, enpara, hybdat, dfpt, &
                                rho, vTot, grRho, grVtot, grVext, iQ, iDType, iDir, dfpt_tag, eig_id, &
                                l_real, results1, dfpt_eig_id, dfpt_eig_id2, q_eig_id, &
-                               denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, &
-                               starsmq, resultsmq, dfpt_eigm_id, dfpt_eigm_id2, qm_eig_id, results1m, vTot1m, vTot1mIm)
+                               denIn1, vTot1, vC1, &
+                               starsmq, resultsmq, dfpt_eigm_id, dfpt_eigm_id2, qm_eig_id, results1m, vTot1m)
 
       TYPE(t_sternheimerJob), INTENT(IN) :: sternheimerJob
       TYPE(t_fleurinput), INTENT(IN)     :: fi
@@ -48,7 +48,7 @@ CONTAINS
       TYPE(t_dfpt),     INTENT(IN)     :: dfpt
       TYPE(t_potden),     INTENT(IN)     :: rho, vTot, grRho, grVtot, grVext
 
-      TYPE(t_potden),     INTENT(INOUT) :: denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im
+      TYPE(t_potden),     INTENT(INOUT) :: denIn1, vTot1, vC1
 
       INTEGER,            INTENT(IN)    :: iQ, iDtype, iDir, eig_id, q_eig_id
       LOGICAL,            INTENT(IN)    :: l_real
@@ -62,7 +62,7 @@ CONTAINS
       TYPE(t_results), OPTIONAL, INTENT(INOUT) :: resultsmq, results1m
       INTEGER,         OPTIONAL, INTENT(IN)    :: qm_eig_id
       INTEGER,         OPTIONAL, INTENT(IN)    :: dfpt_eigm_id, dfpt_eigm_id2
-      TYPE(t_potden),  OPTIONAL, INTENT(INOUT) :: vTot1m, vTot1mIm
+      TYPE(t_potden),  OPTIONAL, INTENT(INOUT) :: vTot1m
 
             ! for plotting:
       TYPE(t_sliceplot)   :: sliceplot_int
@@ -83,8 +83,8 @@ CONTAINS
 
       TYPE(t_banddos)  :: banddosdummy
       TYPE(t_field)    :: field2
-      TYPE(t_potden)  :: denOut1, denOut1Im, rho_loc, rho_loc0
-      TYPE(t_potden)   :: denIn1m, denIn1mIm, denOut1m, denOut1mIm !, dummy_gr
+      TYPE(t_potden)  :: denOut1, rho_loc, rho_loc0
+      TYPE(t_potden)   :: denIn1m, denOut1m !, dummy_gr
       character(len=40)                  :: densave_string
       character(len=20)  :: name_string
 
@@ -115,9 +115,8 @@ CONTAINS
       CALL make_stars(starsq, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, qpts%bk(:,iQ), iDtype, iDir,sternheimerJob%l_efield)
       starsq%ufft = stars%ufft
 
-      ! Initialize the density perturbation; denIn1Im is only for the imaginary MT part
+      ! Initialize the density perturbation; the imaginary MT part rides in denIn1%mtIm
       CALL denIn1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN, l_dfpt=.TRUE.)
-      CALL denIn1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN, l_dfpt=.FALSE.)
       INQUIRE(FILE=TRIM(dfpt_tag)//'.hdf',EXIST=l_exist)
 
       IF (l_minusq) THEN
@@ -125,7 +124,6 @@ CONTAINS
          starsmq%ufft = stars%ufft
 
          CALL denIn1m%init(starsmq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN, l_dfpt=.TRUE.)
-         CALL denIn1mIm%init(starsmq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN, l_dfpt=.FALSE.)
          INQUIRE(FILE=TRIM(dfpt_tag)//'m.hdf',EXIST=l_existm)
       END IF
       archiveType = CDN_ARCHIVE_TYPE_CDN1_const
@@ -154,11 +152,11 @@ CONTAINS
       IF (fmpi%irank==0.AND.l_exist) CALL readDensity(starsq, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
                                                       fi%input, fi%sym, archiveType, CDN_INPUT_DEN_const, 0, &
                                                       results1%ef, results1%last_distance, l_dummy, denIn1,  &
-                                                      inFilename=TRIM(dfpt_tag),denIm=denIn1Im)
+                                                      inFilename=TRIM(dfpt_tag))
       IF (fmpi%irank==0.AND.l_exist.AND.l_minusq) CALL readDensity(starsmq, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
                                                       fi%input, fi%sym, archiveType, CDN_INPUT_DEN_const, 0, &
                                                       results1m%ef, results1m%last_distance, l_dummy, denIn1m,  &
-                                                      inFilename=TRIM(dfpt_tag)//'m',denIm=denIn1mIm)
+                                                      inFilename=TRIM(dfpt_tag)//'m')
 
       IF (fmpi%irank==0.AND..NOT.l_exist) denIn1%iter = 1
       ! we store in q*hdf only the z(1) response of the density response. Add the gradient here. 
@@ -169,16 +167,13 @@ CONTAINS
       
       ! Initialize the potentials and save the q vector to a local variable
       CALL vTot1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
-      CALL vTot1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
 
       CALL vC1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
-      CALL vC1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
 
       bqpt = qpts%bk(:, iQ)
 
       IF (l_minusq) THEN
          CALL vTot1m%init(starsmq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
-         CALL vTot1mIm%init(starsmq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
          bmqpt = -qpts%bk(:, iQ)
       END IF
 
@@ -194,11 +189,9 @@ CONTAINS
          END IF !fmpi%irank==0
 
          CALL denIn1%distribute(fmpi%mpi_comm)
-         CALL denIn1Im%distribute(fmpi%mpi_comm)
 
          IF (l_minusq) THEN
             CALL denIn1m%distribute(fmpi%mpi_comm)
-            CALL denIn1mIm%distribute(fmpi%mpi_comm)
          END IF
          ! Generate the potential perturbation:
          ! Vext1 for the starting perturbation
@@ -208,24 +201,24 @@ CONTAINS
             if (fmpi%irank==0) write(oUnit, *) "vExt1", iDir
             CALL dfpt_vgen(sternheimerJob,hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                            dfpt,fi%cell,fmpi,fi%noco,nococonv_int,rho_loc0,vTot,&
-                           starsq,denIn1Im,vTot1,.FALSE.,vTot1Im,denIn1,iDtype,iDir,[1,1])!-?
+                           starsq,vTot1,.FALSE.,denIn1,iDtype,iDir,[1,1])!-?
                            ! Last variable: [m,n] dictates with [1/0, 1/0], whether or not we take
                            ! V1*Theta and V*Theta1 into account respectively. For [1,1] all is
                            ! contained.
             IF (l_minusq) THEN
                CALL dfpt_vgen(sternheimerJob,hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                               dfpt,fi%cell,fmpi,fi%noco,nococonv,rho_loc0,vTot,&
-                              starsmq,denIn1mIm,vTot1m,.FALSE.,vTot1mIm,denIn1m,iDtype,iDir,[1,1])!-?
+                              starsmq,vTot1m,.FALSE.,denIn1m,iDtype,iDir,[1,1])!-?
             END IF
          ELSE
             if (fmpi%irank==0) write(oUnit, *) "vEff1", iDir
             CALL dfpt_vgen(sternheimerJob,hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                            dfpt,fi%cell,fmpi,fi%noco,nococonv,rho_loc,vTot,&
-                           starsq,denIn1Im,vTot1,.TRUE.,vTot1Im,denIn1,iDtype,iDir,[1,1])
+                           starsq,vTot1,.TRUE.,denIn1,iDtype,iDir,[1,1])
             IF (l_minusq) THEN
                CALL dfpt_vgen(sternheimerJob,hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                               dfpt,fi%cell,fmpi,fi%noco,nococonv,rho_loc,vTot,&
-                              starsmq,denIn1mIm,vTot1m,.TRUE.,vTot1mIm,denIn1m,iDtype,iDir,[1,1])
+                              starsmq,vTot1m,.TRUE.,denIn1m,iDtype,iDir,[1,1])
             END IF
          END IF
          ! For the calculation of the dynamical matrix, we need VC1 additionally
@@ -233,7 +226,7 @@ CONTAINS
             if (fmpi%irank==0) write(oUnit, *) "vC1", iDir
             CALL dfpt_vgen(sternheimerJob,hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                            dfpt,fi%cell,fmpi,fi%noco,nococonv,rho_loc,vTot,&
-                           starsq,denIn1Im,vC1,.FALSE.,vC1Im,denIn1,iDtype,iDir,[0,0])
+                           starsq,vC1,.FALSE.,denIn1,iDtype,iDir,[0,0])
             
          END IF
 
@@ -272,10 +265,10 @@ CONTAINS
          ! Calculate the perturbed expansion coefficients z1 --> saved to results1
          CALL timestart("dfpt eigen")
          IF (.NOT.final_SH_it) THEN
-            CALL dfpt_eigen(sternheimerJob, fi, sphhar, results, resultsq, results1, fmpi, enpara, nococonv, starsq, vTot1, vTot1Im, &
+            CALL dfpt_eigen(sternheimerJob, fi, sphhar, results, resultsq, results1, fmpi, enpara, nococonv, starsq, vTot1, &
                                 vTot, rho, bqpt, eig_id, q_eig_id, dfpt_eig_id, iDir, iDtype, killcont, l_real, .TRUE.)
          ELSE
-            CALL dfpt_eigen(sternheimerJob, fi, sphhar, results, resultsq, results1, fmpi, enpara, nococonv, starsq, vTot1, vTot1Im, &
+            CALL dfpt_eigen(sternheimerJob, fi, sphhar, results, resultsq, results1, fmpi, enpara, nococonv, starsq, vTot1, &
                                 vTot, rho, bqpt, eig_id, q_eig_id, dfpt_eig_id, iDir, iDtype, killcont, l_real, .FALSE., dfpt_eig_id2)
          END IF
          CALL timestop("dfpt eigen")
@@ -283,10 +276,10 @@ CONTAINS
          IF (l_minusq) THEN
             CALL timestart("dfpt minus eigen")
             IF (.NOT.final_SH_it) THEN
-               CALL dfpt_eigen(sternheimerJob, fi, sphhar, results, resultsmq, results1m, fmpi, enpara, nococonv, starsmq, vTot1m, vTot1mIm, &
+               CALL dfpt_eigen(sternheimerJob, fi, sphhar, results, resultsmq, results1m, fmpi, enpara, nococonv, starsmq, vTot1m, &
                                    vTot, rho, bmqpt, eig_id, qm_eig_id, dfpt_eigm_id, iDir, iDtype, killcont, l_real, .TRUE.)
             ELSE
-               CALL dfpt_eigen(sternheimerJob, fi, sphhar, results, resultsmq, results1m, fmpi, enpara, nococonv, starsmq, vTot1m, vTot1mIm, &
+               CALL dfpt_eigen(sternheimerJob, fi, sphhar, results, resultsmq, results1m, fmpi, enpara, nococonv, starsmq, vTot1m, &
                                    vTot, rho, bmqpt, eig_id, qm_eig_id, dfpt_eigm_id, iDir, iDtype, killcont, l_real, .FALSE., dfpt_eigm_id2)
             END IF
             CALL timestop("dfpt minus eigen")
@@ -355,18 +348,17 @@ CONTAINS
          !print*,"before denOut1"
          CALL timestart("generation of new charge density (total)")
          CALL denOut1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN, l_dfpt=.TRUE.)
-         CALL denOut1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN, l_dfpt=.FALSE.)
          denOut1%iter = denIn1%iter
          IF (.NOT.l_minusq) THEN
             CALL dfpt_cdngen(sternheimerJob,eig_id,dfpt_eig_id,fmpi,fi%input,banddosdummy,fi%vacuum,&
                              fi%kpts,fi%atoms,sphhar,starsq,fi%sym,fi%gfinp,fi%hub1inp,&
                              enpara,fi%cell,fi%noco,nococonv,vTot,results,results1,&
-                             archiveType,xcpot,denOut1,denOut1Im,bqpt,iDtype,iDir,l_real)
+                             archiveType,xcpot,denOut1,bqpt,iDtype,iDir,l_real)
          ELSE
             CALL dfpt_cdngen(sternheimerJob,eig_id,dfpt_eig_id,fmpi,fi%input,banddosdummy,fi%vacuum,&
                              fi%kpts,fi%atoms,sphhar,starsq,fi%sym,fi%gfinp,fi%hub1inp,&
                              enpara,fi%cell,fi%noco,nococonv,vTot,results,results1,&
-                             archiveType,xcpot,denOut1,denOut1Im,bqpt,iDtype,iDir,l_real,&
+                             archiveType,xcpot,denOut1,bqpt,iDtype,iDir,l_real,&
                              qm_eig_id,dfpt_eigm_id,starsmq,results1m)
          END IF
          CALL timestop("generation of new charge density (total)")
@@ -374,11 +366,10 @@ CONTAINS
          IF (l_minusq) THEN
             CALL timestart("generation of new charge density (total)")
             CALL denOut1m%init(starsmq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN, l_dfpt=.TRUE.)
-            CALL denOut1mIm%init(starsmq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN, l_dfpt=.FALSE.)
             CALL dfpt_cdngen(sternheimerJob,eig_id,dfpt_eigm_id,fmpi,fi%input,banddosdummy,fi%vacuum,&
                              fi%kpts,fi%atoms,sphhar,starsmq,fi%sym,fi%gfinp,fi%hub1inp,&
                              enpara,fi%cell,fi%noco,nococonv,vTot,results,results1m,&
-                             archiveType,xcpot,denOut1m,denOut1mIm,-bqpt,iDtype,iDir,l_real,&
+                             archiveType,xcpot,denOut1m,-bqpt,iDtype,iDir,l_real,&
                              q_eig_id,dfpt_eig_id,starsq,results1)
             CALL timestop("generation of new charge density (total)")
          END IF
@@ -388,7 +379,6 @@ CONTAINS
          IF (strho) THEN
             strho = .FALSE.
             denIn1 = denOut1
-            denIn1Im = denOut1Im
 
 
             IF (sternheimerJob%l_IBScorrection) denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
@@ -396,7 +386,6 @@ CONTAINS
             CALL timestop("Sternheimer Iteration")
             IF (l_minusq) THEN
                denIn1m = denOut1m
-               denIn1mIm = denOut1mIm
                IF (sternheimerJob%l_IBScorrection) denIn1m%mt(:,0:,iDtype,:) = denIn1m%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
             END IF
 
@@ -409,13 +398,11 @@ CONTAINS
             !print*,"in one done"
             onedone = .TRUE.
             denIn1 = denOut1
-            denIn1Im = denOut1Im
             IF (sternheimerJob%l_IBScorrection) denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
             IF (fmpi%irank==0) write(*,*) "1st 'real' density perturbation generated."
             CALL timestop("Sternheimer Iteration")
             IF (l_minusq) THEN
                denIn1m = denOut1m
-               denIn1mIm = denOut1mIm
                IF (sternheimerJob%l_IBScorrection) denIn1m%mt(:,0:,iDtype,:) = denIn1m%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
             END IF
             CYCLE scfloop
@@ -423,11 +410,9 @@ CONTAINS
 
 
          CALL denIn1%distribute(fmpi%mpi_comm)
-         CALL denIn1Im%distribute(fmpi%mpi_comm)
 
          IF (l_minusq) THEN
             CALL denIn1m%distribute(fmpi%mpi_comm)
-            CALL denIn1mIm%distribute(fmpi%mpi_comm)
          END IF
 
 
@@ -458,7 +443,7 @@ CONTAINS
          CALL mix_charge(field2, fmpi, (iter == fi%input%itmax .OR. judft_was_argument("-mix_io")), starsq, &
                          fi%atoms, sphhar, fi%vacuum, fi%input, fi%sym, fi%cell, fi%noco, nococonv, &
                          archiveType, xcpot, iter, denIn1, denOut1, results1,l_runhia=.false.,sliceplot=fi%sliceplot,&
-                         inDenIm=denIn1Im, outDenIm=denOut1Im, dfpt_tag=dfpt_tag)
+                         dfpt_tag=dfpt_tag)
          CALL timestop("DFPT mixing")
 
          IF (sternheimerJob%l_IBScorrection) denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
@@ -470,7 +455,7 @@ CONTAINS
             CALL mix_charge(field2, fmpi, (iter == fi%input%itmax .OR. judft_was_argument("-mix_io")), starsmq, &
                             fi%atoms, sphhar, fi%vacuum, fi%input, fi%sym, fi%cell, fi%noco, nococonv, &
                             archiveType, xcpot, iterm, denIn1m, denOut1m, results1m, l_runhia=.false.,sliceplot=fi%sliceplot,&
-                            inDenIm=denIn1Im, outDenIm=denOut1Im, dfpt_tag=dfpt_tag)
+                            dfpt_tag=dfpt_tag)
             CALL timestop("DFPT mixing")
 
             IF (sternheimerJob%l_IBScorrection) denIn1m%mt(:,0:,iDtype,:) = denIn1m%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)

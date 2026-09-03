@@ -10,7 +10,7 @@ use mpi
 USE m_judft
 
 CONTAINS
-   SUBROUTINE dfpt_vmt_xc(fmpi,sphhar,atoms,den,den1,den1im,xcpot,input,sym,noco,vTot,dfptvTotimag)
+   SUBROUTINE dfpt_vmt_xc(fmpi,sphhar,atoms,den,den1,xcpot,input,sym,noco,vTot)
       use m_libxc_postprocess_gga
       USE m_mt_tofrom_grid
       USE m_types_xcpot_inbuild
@@ -24,9 +24,9 @@ CONTAINS
       TYPE(t_sym),INTENT(IN)         :: sym
       TYPE(t_sphhar),INTENT(IN)      :: sphhar
       TYPE(t_atoms),INTENT(IN)       :: atoms
-      TYPE(t_potden),INTENT(IN)      :: den, den1, den1im
+      TYPE(t_potden),INTENT(IN)      :: den, den1
       TYPE(t_noco), INTENT(IN)       :: noco
-      TYPE(t_potden),INTENT(INOUT)   :: vTot, dfptvTotimag
+      TYPE(t_potden),INTENT(INOUT)   :: vTot
       !     ..
       !     .. Local Scalars ..
       TYPE(t_gradients)     :: grad
@@ -68,7 +68,7 @@ CONTAINS
       n_stride=fmpi%isize
       IF (fmpi%irank>0) THEN
          vTot%mt=0.0
-         dfptvTotimag%mt=0.0
+         vTot%mtIm=0.0
       ENDIF
 #else
       n_start=1
@@ -81,7 +81,7 @@ CONTAINS
 
          CALL mt_to_grid(.FALSE., input%jspins, atoms,sym,sphhar,.FALSE.,den%mt(:,0:,n,:),n,noco_loco,grad,ch)
          CALL mt_to_grid(.FALSE., input%jspins, atoms,sym,sphhar,.FALSE.,den1%mt(:,0:,n,:),n,noco_loco,grad,chre)
-         CALL mt_to_grid(.FALSE., input%jspins, atoms,sym,sphhar,.FALSE.,den1im%mt(:,0:,n,:),n,noco_loco,grad,chim)
+         CALL mt_to_grid(.FALSE., input%jspins, atoms,sym,sphhar,.FALSE.,den1%mtIm(:,0:,n,:),n,noco_loco,grad,chim)
 
 #ifdef CPP_LIBXC
         CALL xcpot%get_fxc(input%jspins, ch, f_xc)
@@ -102,7 +102,7 @@ CONTAINS
         END DO
 
          CALL mt_from_grid(atoms,sym,sphhar,n,input%jspins,v_xc1re,vTot%mt(:,0:,n,:))
-         CALL mt_from_grid(atoms,sym,sphhar,n,input%jspins,v_xc1im,dfptvTotimag%mt(:,0:,n,:))
+         CALL mt_from_grid(atoms,sym,sphhar,n,input%jspins,v_xc1im,vTot%mtIm(:,0:,n,:))
 
          DEALLOCATE (ch,chre,chim,f_xc,v_xc1re,v_xc1im)
       ENDDO
@@ -110,7 +110,7 @@ CONTAINS
       CALL finish_mt_grid()
 #ifdef CPP_MPI
       CALL MPI_ALLREDUCE(MPI_IN_PLACE,vTot%mt,SIZE(vTot%mt),MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)
-      CALL MPI_ALLREDUCE(MPI_IN_PLACE,dfptvTotimag%mt,SIZE(dfptvTotimag%mt),MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)
+      CALL MPI_ALLREDUCE(MPI_IN_PLACE,vTot%mtIm,SIZE(vTot%mtIm),MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)
 #endif
       !
       RETURN

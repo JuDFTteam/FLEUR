@@ -10,7 +10,7 @@ module m_dfpt_vefield
 
 contains
     
-    subroutine dfpt_vefield(dfpt,starsq,atoms,sym,sphhar,cell,dfptvefield,dfptvefieldimag,iDir,q_sign)
+    subroutine dfpt_vefield(dfpt,starsq,atoms,sym,sphhar,cell,dfptvefield,iDir,q_sign)
         !Currently only spin=1
 
         use m_types
@@ -32,7 +32,7 @@ contains
         type(t_sym),        intent(in)               :: sym
         type(t_sphhar),     intent(in)               :: sphhar
         type(t_cell),       intent(in)               :: cell
-        type(t_potden),     intent(inout)            :: dfptvefield, dfptvefieldimag
+        type(t_potden),     intent(inout)            :: dfptvefield
         integer,             intent(in)              :: iDir 
         integer,            intent(in)               :: q_sign
 
@@ -104,7 +104,7 @@ contains
         ! return final potential:
         !dfptvefield%pw(:,:) = dfptvefield%pw(:,:)
         dfptvefield%mt(:,:,:,1) = resultreal(:,:,:,1) 
-        dfptvefieldimag%mt(:,:,:,1) = resultimag(:,:,:,1) 
+        dfptvefield%mtIm(:,:,:,1) = resultimag(:,:,:,1) 
 
         !do n = 1,atoms%ntype
 
@@ -113,9 +113,9 @@ contains
         !write(densave_string,"(a,i0,a)")"vext1_it1_mt_",iDir,".npy"
         !call save_npy(densave_string, dfptvefield%mt(:,:,:,1))
         !write(densave_string,"(a,i0,a)")"vext1_it1_mtIm_",iDir,".npy"
-        !call save_npy(densave_string, dfptvefieldimag%mt(:,:,:,1))
+        !call save_npy(densave_string, dfptvefield%mtIm(:,:,:,1))
         !stop
-        !print*,"max(dfptvefieldimag%mt(:,:,:,1))",dfptvefieldimag%mt(:,:,:,1)
+        !print*,"max(dfptvefield%mtIm(:,:,:,1))",dfptvefield%mtIm(:,:,:,1)
     end subroutine dfpt_vefield
 
 

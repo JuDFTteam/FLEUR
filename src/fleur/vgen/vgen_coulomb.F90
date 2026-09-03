@@ -13,7 +13,7 @@ module m_vgen_coulomb
 contains
 
   subroutine vgen_coulomb( ispin, fmpi,    input, field, vacuum, sym, stars, &
-             cell, sphhar, atoms, dosf, den, vCoul, results, sternheimerJob, dfpt, dfptdenimag, dfptvCoulimag, dfptden0, stars2, iDtype, iDir, iDir2 )
+             cell, sphhar, atoms, dosf, den, vCoul, results, sternheimerJob, dfpt, dfptden0, stars2, iDtype, iDir, iDir2 )
     !----------------------------------------------------------------------------
     ! FLAPW potential generator
     !----------------------------------------------------------------------------
@@ -60,8 +60,7 @@ contains
     type(t_sternheimerJob), optional, intent(in) :: sternheimerJob
     type(t_dfpt),     optional,     intent(in) :: dfpt
 
-    TYPE(t_potden),     OPTIONAL, INTENT(IN)     :: dfptdenimag,  dfptden0
-    TYPE(t_potden),     OPTIONAL, INTENT(INOUT)  :: dfptvCoulimag
+    TYPE(t_potden),     OPTIONAL, INTENT(IN)     :: dfptden0
     TYPE(t_stars),      OPTIONAL, INTENT(IN)     :: stars2
     INTEGER, OPTIONAL, INTENT(IN)                :: iDtype, iDir ! DFPT: Type and direction of displaced atom
     INTEGER, OPTIONAL, INTENT(IN)                :: iDir2 ! DFPT: 2nd direction for 2nd order VC
@@ -112,11 +111,11 @@ contains
     ! PSEUDO-CHARGE DENSITY COEFFICIENTS
     call timestart( "psqpw" )
     ! If we do DFPT, the MT density perturbation has an imaginary part that needs to be explicitly carried
-    !     ! as another variable dfptdenimag%mt and results in the same component for the Coulomb potential later on.
+    !     ! in den%mtIm and results in the same component for the Coulomb potential later on.
     !     ! Also, the ionic qlm behave differently.
     call psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym,   &
           &  den, ispin, .false., vCoul%potdenType, psq, sternheimerJob,&
-          & dfptdenimag, stars2, iDtype, iDir, dfptden0, iDir2 )
+          & stars2, iDtype, iDir, dfptden0, iDir2 )
     call timestop( "psqpw" )
 
     ! VACUUM POTENTIAL
@@ -285,10 +284,8 @@ contains
     call MPI_BCAST( vcoul%pw, size(vcoul%pw), MPI_DOUBLE_COMPLEX, 0, fmpi%mpi_comm, ierr )
     CALL MPI_BARRIER(fmpi%mpi_comm,ierr) !should be totally useless, but ...
 #endif
-
-    call vmts( input, fmpi, stars, sphhar, atoms, sym, cell, dosf, vCoul%pw(:,ispin), &
-               den%mt(:,0:,:,ispin), vCoul%potdenType, vCoul%mt(:,0:,:,ispin), ispin, sternheimerJob, &
-               dfptdenimag, dfptvCoulimag, iDtype, iDir, iDir2 )
+    call vmts( input, fmpi, stars, sphhar, atoms, sym, cell, dosf, vCoul, den, &
+               ispin, sternheimerJob, iDtype=iDtype, iDir=iDir, iDir2=iDir2 )
     call timestop( "MT-spheres" )
 
     if( vCoul%potdenType == POTDEN_TYPE_POTYUK ) return

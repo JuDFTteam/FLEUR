@@ -119,7 +119,7 @@ contains
 8030  FORMAT (10i10)
   end SUBROUTINE distance
 
-   SUBROUTINE dfpt_distance(irank,vol,jspins,nmzxyd,fsm,inden,outden,indenIm,outdenIm,results,fsm_mag)
+   SUBROUTINE dfpt_distance(irank,vol,jspins,nmzxyd,fsm,inden,outden,results,fsm_mag)
       USE m_types
       USE m_types_mixvector
       USE m_constants
@@ -131,7 +131,7 @@ contains
       REAL,    INTENT(IN) :: vol
 
       TYPE(t_mixvector), INTENT(IN)    :: fsm
-      TYPE(t_potden),    INTENT(INOUT) :: inden,outden,indenIm,outdenIm
+      TYPE(t_potden),    INTENT(INOUT) :: inden,outden
       TYPE(t_results),   INTENT(INOUT) :: results
       TYPE(t_mixvector), INTENT(OUT)   :: fsm_mag
 
@@ -147,8 +147,8 @@ contains
       IF (jspins==2) THEN
          CALL fsm_mag%alloc()
          ! calculate Magnetisation-difference
-         CALL fsm_mag%from_density(outden,nmzxyd,swapspin=.TRUE.,denIm=outDenIm)
-         CALL fmMet%from_density(inden,nmzxyd,swapspin=.TRUE.,denIm=inDenIm)
+         CALL fsm_mag%from_density(outden,nmzxyd,swapspin=.TRUE.)
+         CALL fmMet%from_density(inden,nmzxyd,swapspin=.TRUE.)
          fsm_mag=fsm_mag-fmMet
       END IF
 

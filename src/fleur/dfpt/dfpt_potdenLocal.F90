@@ -12,7 +12,7 @@ MODULE m_dfpt_potdenLocal
 
 
 CONTAINS
-    SUBROUTINE create_typesLocal(fi,fmpi,sym,cell,input,sphhar,vacuum,noco,stars,potdenLocal,atomsLocal,qvec,iDir,iDtype)
+    SUBROUTINE create_typesLocal(fi,fmpi,sym,cell,input,sphhar,vacuum,noco,stars,potdenLocal,atomsLocal,qvec,iDir,iDtype,l_dfpt)
         
         ! This subroutine creates the types with a bigger Gmaxz Cutoff
         ! Nessesary for the Film-Mode Calcaultion 
@@ -41,12 +41,18 @@ CONTAINS
         TYPE(t_atoms),INTENT(OUT)   :: atomsLocal
         REAL, OPTIONAL, INTENT(IN)    :: qvec(3)
         INTEGER, OPTIONAL, INTENT(IN) :: iDir,iDtype
+        LOGICAL, OPTIONAL, INTENT(IN) :: l_dfpt
 
+        LOGICAL :: l_dfptLocal
+
+
+        l_dfptLocal = .FALSE.
+        IF (PRESENT(l_dfpt)) l_dfptLocal = l_dfpt
 
         call make_stars(stars,sym,fi%atoms,vacuum,sphhar,input,cell,noco,fmpi,qvec,iDtype,iDir,gmaxzLocal=fi%dfpt%gmaxzLocal)
         atomsLocal = fi%atoms
         call convn(fmpi%irank == 0, atomsLocal, stars)
-        call potdenLocal%init(stars,atomsLocal,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_POTTOT)
+        call potdenLocal%init(stars,atomsLocal,sphhar,vacuum,noco,input%jspins,POTDEN_TYPE_POTTOT,l_dfpt=l_dfptLocal)
 
     END SUBROUTINE create_typesLocal
 

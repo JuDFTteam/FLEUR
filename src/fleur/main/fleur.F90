@@ -108,14 +108,6 @@ CONTAINS
       TYPE(t_greensf), ALLOCATABLE :: greensFunction(:)
       TYPE(t_log_message)  :: log
 
-
-      ! response plotting debugging
-      TYPE(t_stars)                   :: starsq
-      TYPE(t_potden)                   :: dfptvefield, dfptvefieldimag   
-      INTEGER                         :: iDir, iDtype
-      TYPE(t_sliceplot)   :: sliceplot_int
-      TYPE(t_nococonv)    :: nococonv_int
-
       INTEGER :: eig_id, archiveType, num_threads
       INTEGER :: iter, iterHF, i, n, i_gf
       INTEGER :: wannierspin

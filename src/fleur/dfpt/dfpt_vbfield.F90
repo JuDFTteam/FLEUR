@@ -6,7 +6,7 @@
 MODULE m_dfpt_vbfield
    USE m_juDFT
 CONTAINS
-  SUBROUTINE dfpt_vbfield(input,stars,noco,atoms,vTot,vTotIm)
+  SUBROUTINE dfpt_vbfield(input,stars,noco,atoms,vTot)
     !This subroutine calculates the Zeeman field perturbation
     USE m_types
     USE m_constants
@@ -17,7 +17,7 @@ CONTAINS
     TYPE(t_noco),INTENT(IN) ::noco
     TYPE(t_stars),INTENT(IN) :: stars
     TYPE(t_atoms),INTENT(IN)::atoms
-    TYPE(t_potden),INTENT(INOUT)::vTot,vTotIm
+    TYPE(t_potden),INTENT(INOUT)::vTot
 
     INTEGER :: iType
     REAL    :: bsign
@@ -30,7 +30,7 @@ CONTAINS
 
     vTot%pw(:,:)     = 0.0
     vTot%mt(:,:,:,:) = 0.0
-    vTotIm%mt(:,:,:,:) = 0.0
+    vTot%mtIm(:,:,:,:) = 0.0
 
     IF (l_afm) THEN
        !No IR contribution; alternate sign between sublattices in MT

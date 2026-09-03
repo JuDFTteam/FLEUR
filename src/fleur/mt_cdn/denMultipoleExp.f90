@@ -35,7 +35,7 @@ SUBROUTINE denMultipoleExp(input, fmpi, atoms, sphhar, stars, sym, cell,   den)
       END IF
       qlm = CMPLX(0.0,0.0)
       workDen = den
-      CALL mpmom(input,fmpi,atoms,sphhar,stars,sym,cell ,workDen%pw(1:,1),workDen%mt(:,0:,1:,1),POTDEN_TYPE_DEN,qlm,1,l_coreCharge=.FALSE.)
+      CALL mpmom(input,fmpi,atoms,sphhar,stars,sym,cell ,workDen,POTDEN_TYPE_DEN,qlm,1,l_coreCharge=.FALSE.)
       IF(fmpi%irank.EQ.0) THEN
          WRITE(oUnit,*) '======================================='
       END IF
@@ -45,7 +45,7 @@ SUBROUTINE denMultipoleExp(input, fmpi, atoms, sphhar, stars, sym, cell,   den)
          WRITE(oUnit,*) '======================================='
       END IF
       qlm = CMPLX(0.0,0.0)
-      CALL mpmom(input,fmpi,atoms,sphhar,stars,sym,cell ,workDen%pw(1:,2),workDen%mt(:,0:,1:,2),POTDEN_TYPE_DEN,qlm,2,l_coreCharge=.FALSE.)
+      CALL mpmom(input,fmpi,atoms,sphhar,stars,sym,cell ,workDen,POTDEN_TYPE_DEN,qlm,2,l_coreCharge=.FALSE.)
       IF(fmpi%irank.EQ.0) THEN
          WRITE(oUnit,*) '======================================='
       END IF
@@ -58,7 +58,7 @@ SUBROUTINE denMultipoleExp(input, fmpi, atoms, sphhar, stars, sym, cell,   den)
    qlm = CMPLX(0.0,0.0)
    workDen = den
    IF(input%jspins == 2) CALL workDen%SpinsToChargeAndMagnetisation()
-   CALL mpmom(input,fmpi,atoms,sphhar,stars,sym,cell ,workDen%pw(1:,1),workDen%mt(:,0:,1:,1),POTDEN_TYPE_DEN,qlm,1,l_coreCharge=.FALSE.)
+   CALL mpmom(input,fmpi,atoms,sphhar,stars,sym,cell ,workDen,POTDEN_TYPE_DEN,qlm,1,l_coreCharge=.FALSE.)
    IF(fmpi%irank.EQ.0) THEN
       WRITE(oUnit,*) '======================================='
    END IF
@@ -69,7 +69,7 @@ SUBROUTINE denMultipoleExp(input, fmpi, atoms, sphhar, stars, sym, cell,   den)
          WRITE(oUnit,*) '======================================='
       END IF
       qlm = CMPLX(0.0,0.0)
-      CALL mpmom(input,fmpi,atoms,sphhar,stars,sym,cell ,workDen%pw(1:,2),workDen%mt(:,0:,1:,2),POTDEN_TYPE_DEN,qlm,2,l_coreCharge=.FALSE.)
+      CALL mpmom(input,fmpi,atoms,sphhar,stars,sym,cell ,workDen,POTDEN_TYPE_DEN,qlm,2,l_coreCharge=.FALSE.)
       IF(fmpi%irank.EQ.0) THEN
          WRITE(oUnit,*) '======================================='
       END IF

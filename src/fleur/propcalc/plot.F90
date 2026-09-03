@@ -544,7 +544,7 @@ CONTAINS
    END SUBROUTINE matrixsplit
 
    SUBROUTINE savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, fmpi , sym, cell, &
-                     noco, nococonv,score, potnorm, denName, denf, denA1, denA2, denA3,denf_im,name_string)
+                     noco, nococonv,score, potnorm, denName, denf, denA1, denA2, denA3,name_string)
       USE m_outcdn
       USE m_xsf_io
 #ifdef CPP_MPI
@@ -595,7 +595,6 @@ CONTAINS
       TYPE(t_potden),    OPTIONAL, INTENT(IN) :: denA1
       TYPE(t_potden),    OPTIONAL, INTENT(IN) :: denA2
       TYPE(t_potden),    OPTIONAL, INTENT(IN) :: denA3
-      TYPE(t_potden),    OPTIONAL, INTENT(IN) :: denf_im
       character(len=20), INTENT(IN),OPTIONAL  :: name_string
 
       REAL    :: tec, qint, phi0, angss
@@ -603,7 +602,7 @@ CONTAINS
       INTEGER :: nplot, nt, jm, jspin, numInDen, numOutFiles
       LOGICAL :: twodim, cartesian, xsf, polar,unwind
 
-      TYPE(t_potden),     ALLOCATABLE :: den(:),denIm(:)
+      TYPE(t_potden),     ALLOCATABLE :: den(:)
       REAL,               ALLOCATABLE :: xdnout(:)
       REAL,               ALLOCATABLE :: tempResults(:,:,:,:)
       REAL,               ALLOCATABLE :: points(:,:,:,:)
@@ -642,11 +641,10 @@ CONTAINS
          den(2)          = denA1
          numInDen        = 2
          numOutFiles     = 2
-      ELSE IF (PRESENT(denf_im)) THEN
-         ALLOCATE(den(1),denIm(1))
+      ELSE IF (ALLOCATED(denf%mtIm)) THEN
+         ALLOCATE(den(1))
          print*,"Imaginary part"
          den(1)          = denf
-         denIm(1)        = denf_im
          l_dfpt          = .TRUE.
          numInDen        = 1
          numOutFiles     = 1
@@ -811,7 +809,7 @@ CONTAINS
 
          !WRITE (oUnit,*) "checkdopall in savxsf"
          ! find out what the problem ist
-         CALL checkDOPALL(input, sphhar, stars,atoms, sym, vacuum, cell,denf,1,denf_im) 
+         CALL checkDOPALL(input, sphhar, stars,atoms, sym, vacuum, cell,denf,1) 
          !print*,"sum(denf%pw)",sum(denf%pw)
          CALL timestart("loop over points")
          !print*, "loop over points", fmpi%irank
@@ -824,7 +822,7 @@ CONTAINS
          DO iz = strt,fin
             !$OMP PARALLEL DO DEFAULT(none) &
             !$OMP& SHARED(iz,grid,zero,vec1,vec2,vec3,twodim,input,cell ,numInDen,potnorm) &
-            !$OMP& SHARED(stars,vacuum,sphhar,atoms,sym,den,denIm,l_dfpt,sliceplot,noco,points) &
+            !$OMP& SHARED(stars,vacuum,sphhar,atoms,sym,den,l_dfpt,sliceplot,noco,points) &
             !$OMP& SHARED(unwind,polar,tempResults,tempVecs,nplo,qssc,xsf,NumOutFiles) &
             !$OMP& PRIVATE(ix,point,nt,na,pt,lattvec_index,iv,iflag,xdnout,angss,help,phi0)
             DO iy = 0, grid(2)-1
@@ -859,7 +857,7 @@ CONTAINS
                      IF (l_dfpt) THEN
                         CALL outcdn(pt,nt,na,iv,iflag,1,potnorm,stars,&
                                  vacuum,sphhar,atoms,sym,cell ,&
-                                 den(i),xdnout(i),denIm(i),lattvec_index)
+                                 den(i),xdnout(i),lattvec_index)
                      ELSE
                         CALL outcdn(pt,nt,na,iv,iflag,1,potnorm,stars,&
                         vacuum,sphhar,atoms,sym,cell ,&
@@ -1074,7 +1072,7 @@ CONTAINS
    END SUBROUTINE matrixplot
 
    SUBROUTINE procplot(stars, atoms, sphhar, sliceplot,vacuum, input, fmpi , sym, cell, &
-                       noco, nococonv,denmat, plot_const,denmat_im,name_string)
+                       noco, nococonv,denmat, plot_const,name_string)
 
       ! According to iplot, we process which exact plots we make after we assured
       ! that we do any. n-th digit (from the back) of iplot ==1 --> plot with
@@ -1097,7 +1095,6 @@ CONTAINS
       TYPE(t_nococonv),  INTENT(IN)    :: nococonv
       TYPE(t_potden),    INTENT(IN)    :: denmat
       INTEGER,           INTENT(IN)    :: plot_const
-      TYPE(t_potden),    INTENT(IN), OPTIONAL    :: denmat_im
       character(len=20), INTENT(IN),OPTIONAL  :: name_string
 
       INTEGER            :: i
@@ -1115,7 +1112,7 @@ CONTAINS
             IF (PRESENT(name_string)) THEN
                denName = name_string
             ELSE
-               IF (PRESENT(denmat_im)) THEN
+               IF (ALLOCATED(denmat%mtIm)) THEN
                   denName = 'den1'
                ELSE 
                   denName = 'denIn'
@@ -1136,7 +1133,7 @@ CONTAINS
             END IF
          ELSE
             CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, fmpi  , sym, cell, &
-                        noco, nococonv,score, potnorm, denName, denmat,denf_im=denmat_im)
+                        noco, nococonv,score, potnorm, denName, denmat)
          END IF
       END IF
 
@@ -1254,7 +1251,7 @@ CONTAINS
          IF (PRESENT(name_string)) THEN
             denName = name_string
          ELSE
-            IF (PRESENT(denmat_im)) THEN
+            IF (ALLOCATED(denmat%mtIm)) THEN
                denName = 'vTot1'
             ELSE
                denName = 'vTot'
@@ -1274,7 +1271,7 @@ CONTAINS
             END IF
          ELSE
             CALL savxsf(sliceplot,stars, atoms, sphhar, vacuum, input,fmpi  , sym, cell, &
-                        noco, nococonv, score, potnorm, denName, denmat,denf_im=denmat_im)
+                        noco, nococonv, score, potnorm, denName, denmat)
          END IF
       END IF
 
@@ -1322,7 +1319,7 @@ CONTAINS
    END SUBROUTINE procplot
 
    SUBROUTINE makeplots(stars, atoms, sphhar, vacuum, input, fmpi,   sym, cell, &
-                        noco, nococonv,denmat, plot_const, sliceplot,denmat_im,name_string)
+                        noco, nococonv,denmat, plot_const, sliceplot,name_string)
       USE m_Relaxspinaxismagn
       ! Checks, based on the iplot switch that is given in the input, whether or
       ! not plots should be made. Before the plot command is processed, we check
@@ -1346,7 +1343,6 @@ CONTAINS
       TYPE(t_potden),    INTENT(INOUT) :: denmat
       INTEGER,           INTENT(IN)    :: plot_const
       TYPE(t_sliceplot), INTENT(IN)    :: sliceplot
-      TYPE(t_potden),    INTENT(INOUT), OPTIONAL :: denmat_im
       character(len=20), INTENT(IN),OPTIONAL  :: name_string
       LOGICAL :: allowplot
       INTEGER :: ierr
@@ -1368,10 +1364,10 @@ CONTAINS
          CALL checkplotinp(fmpi)
          IF (PRESENT(name_string)) THEN
          CALL procplot(stars, atoms, sphhar,sliceplot, vacuum, input,fmpi,   sym, cell, &
-                       noco, nococonv, denmat, plot_const,denmat_im,name_string)
+                       noco, nococonv, denmat, plot_const,name_string)
          ELSE
             CALL procplot(stars, atoms, sphhar,sliceplot, vacuum, input,fmpi,   sym, cell, &
-            noco, nococonv, denmat, plot_const,denmat_im)
+            noco, nococonv, denmat, plot_const)
          END IF
          CALL toLocalSpinFrame(fmpi,vacuum, sphhar, stars, sym,   cell, noco, nococonv, input, atoms,.false., denmat,.true.)
       END IF

@@ -87,7 +87,7 @@ module m_types_efield
     end subroutine q_indepent_properties_efield
 
     subroutine postprocessing_scf_efield(this,sternheimerJob,fi,stars,starsq,sphhar,xcpot,nococonv,hybdat,fmpi,qpts,q_list,iQ,iDtype,iDir,eig_id,dfpt_eig_id, &
-                                          dfpt_eig_id2,enpara,results,results1,l_real,dfpt,rho,vTot,grRho3,grVext3,grVc3,den1,vTot1,den1Im,vTot1Im,vC1,vC1Im)
+                                          dfpt_eig_id2,enpara,results,results1,l_real,dfpt,rho,vTot,grRho3,grVext3,grVc3,den1,vTot1,vC1)
         
         
         use m_types
@@ -111,8 +111,8 @@ module m_types_efield
         type(t_results),intent(inout)    :: results, results1
         logical,intent(in)               :: l_real
         type(t_dfpt),intent(in)        :: dfpt
-        type(t_potden),intent(in)        :: rho,vTot,grRho3(3),grVext3(3),grVC3(3),den1,vTot1,den1Im,vTot1Im
-        type(t_potden),intent(inout)     :: vC1,vC1Im
+        type(t_potden),intent(in)        :: rho,vTot,grRho3(3),grVext3(3),grVC3(3),den1,vTot1
+        type(t_potden),intent(inout)     :: vC1
 
         
         complex,allocatable :: diel_tensor(:,:)
@@ -122,7 +122,7 @@ module m_types_efield
 
 
         call timestart("Dielecten row")
-        call dfpt_dielecten_HF_int(sternheimerJob,fi,stars,starsq,sphhar,fmpi,den1,den1Im,diel_tensor(iDir,:),rho,iDir,1)
+        call dfpt_dielecten_HF_int(sternheimerJob,fi,stars,starsq,sphhar,fmpi,den1,diel_tensor(iDir,:),rho,iDir,1)
         call timestop("Dielecten row")
         
         call this%set_dielecTen(diel_tensor)

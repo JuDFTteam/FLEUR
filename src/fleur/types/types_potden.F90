@@ -148,18 +148,23 @@ CONTAINS
   end subroutine distribute
 
   SUBROUTINE sum_both_spin(this,that)
+    USE m_judft
     IMPLICIT NONE
     CLASS(t_potden),INTENT(INOUT)   :: this
     TYPE(t_potden),INTENT(INOUT),OPTIONAL :: that
 
     IF (PRESENT(that)) THEN
+       IF (ALLOCATED(this%mtIm).NEQV.ALLOCATED(that%mtIm)) &
+          CALL judft_bug("mtIm allocation mismatch between this and that",calledby="sum_both_spin")
        IF (SIZE(this%pw,2)>1) THEN
           that%mt(:,0:,:,1)=this%mt(:,0:,:,1)+this%mt(:,0:,:,2)
+          IF (ALLOCATED(this%mtIm)) that%mtIm(:,0:,:,1)=this%mtIm(:,0:,:,1)+this%mtIm(:,0:,:,2)
           that%pw(:,1)=this%pw(:,1)+this%pw(:,2)
           that%vac(:,:,:,1)=this%vac(:,:,:,1)+this%vac(:,:,:,2)
           IF (ALLOCATED(that%pw_w).AND.ALLOCATED(this%pw_w)) that%pw_w(:,1)=this%pw_w(:,1)+this%pw_w(:,2)
        ELSE
           that%mt(:,0:,:,1)=this%mt(:,0:,:,1)
+          IF (ALLOCATED(this%mtIm)) that%mtIm(:,0:,:,1)=this%mtIm(:,0:,:,1)
           that%pw(:,1)=this%pw(:,1)
           that%vac(:,:,:,1)=this%vac(:,:,:,1)
           IF (ALLOCATED(that%pw_w).AND.ALLOCATED(this%pw_w)) that%pw_w(:,1)=this%pw_w(:,1)
@@ -167,6 +172,7 @@ CONTAINS
     ELSE
        IF (SIZE(this%pw,2)>1) THEN
           this%mt(:,0:,:,1)=this%mt(:,0:,:,1)+this%mt(:,0:,:,2)
+          IF (ALLOCATED(this%mtIm)) this%mtIm(:,0:,:,1)=this%mtIm(:,0:,:,1)+this%mtIm(:,0:,:,2)
           this%pw(:,1)=this%pw(:,1)+this%pw(:,2)
           this%vac(:,:,:,1)=this%vac(:,:,:,1)+this%vac(:,:,:,2)
           IF (ALLOCATED(this%pw_w)) this%pw_w(:,1)=this%pw_w(:,1)+this%pw_w(:,2)
@@ -175,17 +181,23 @@ CONTAINS
   END SUBROUTINE sum_both_spin
 
   SUBROUTINE copy_both_spin(this,that)
+    USE m_judft
     IMPLICIT NONE
     CLASS(t_potden),INTENT(IN)   :: this
     TYPE(t_potden),INTENT(INOUT) :: that
 
+    IF (ALLOCATED(this%mtIm).NEQV.ALLOCATED(that%mtIm)) &
+       CALL judft_bug("mtIm allocation mismatch between this and that",calledby="copy_both_spin")
+
     that%mt(:,0:,:,1)=this%mt(:,0:,:,1)
+    IF (ALLOCATED(this%mtIm)) that%mtIm(:,0:,:,1)=this%mtIm(:,0:,:,1)
     that%pw(:,1)=this%pw(:,1)
     that%vac(:,:,:,1)=this%vac(:,:,:,1)
     IF (ALLOCATED(that%pw_w).AND.ALLOCATED(this%pw_w)) that%pw_w(:,1)=this%pw_w(:,1)
 
     IF (SIZE(that%mt,4)>1) THEN
        that%mt(:,0:,:,2)=this%mt(:,0:,:,1)
+       IF (ALLOCATED(this%mtIm)) that%mtIm(:,0:,:,2)=this%mtIm(:,0:,:,1)
        that%pw(:,2)=this%pw(:,1)
        that%vac(:,:,:,2)=this%vac(:,:,:,1)
        IF (ALLOCATED(that%pw_w).AND.ALLOCATED(this%pw_w)) that%pw_w(:,2)=this%pw_w(:,1)
@@ -227,6 +239,7 @@ CONTAINS
   end subroutine
 
   subroutine addPotDen( PotDen3, PotDen1, PotDen2 )
+    use m_judft
     implicit none
     class(t_potden), intent(in)    :: PotDen1
     class(t_potden), intent(in)    :: PotDen2
@@ -238,9 +251,14 @@ CONTAINS
     ! implicit allocation would break the bounds staring at 0
     if(.not. allocated(PotDen3%mt)) allocate(PotDen3%mt, mold=PotDen1%mt)
 
+    if (allocated(PotDen1%mtIm).neqv.allocated(PotDen2%mtIm)) &
+       call judft_bug("mtIm allocation mismatch between operands",calledby="addPotDen")
+
     if (allocated(PotDen1%mtIm) .and. allocated(PotDen2%mtIm)) then
       if(.not. allocated(PotDen3%mtIm)) allocate(PotDen3%mtIm, mold=PotDen1%mtIm)
       PotDen3%mtIm     = PotDen1%mtIm + PotDen2%mtIm
+    else if (allocated(PotDen3%mtIm)) then
+      deallocate(PotDen3%mtIm)
     end if
 
     PotDen3%mt         = PotDen1%mt + PotDen2%mt
@@ -253,6 +271,7 @@ CONTAINS
   end subroutine
 
   subroutine subPotDen( PotDen3, PotDen1, PotDen2 )
+    use m_judft
     implicit none
     class(t_potden), intent(in)    :: PotDen1
     class(t_potden), intent(in)    :: PotDen2
@@ -267,9 +286,14 @@ CONTAINS
     ! The following allocates are countermeasures to valgrind complaints
     if(.not. allocated(PotDen3%vac)) allocate(PotDen3%vac, mold=PotDen1%vac)
 
+    if (allocated(PotDen1%mtIm).neqv.allocated(PotDen2%mtIm)) &
+       call judft_bug("mtIm allocation mismatch between operands",calledby="subPotDen")
+
     if (allocated(PotDen1%mtIm) .and. allocated(PotDen2%mtIm)) then
       if(.not. allocated(PotDen3%mtIm)) allocate(PotDen3%mtIm, mold=PotDen1%mtIm)
       PotDen3%mtIm     = PotDen1%mtIm - PotDen2%mtIm
+    else if (allocated(PotDen3%mtIm)) then
+      deallocate(PotDen3%mtIm)
     end if
 
     PotDen3%mt         = PotDen1%mt - PotDen2%mt
@@ -299,6 +323,8 @@ CONTAINS
     if (allocated(PotDen%mtIm)) then
       if(.not. allocated(PotDenCopy%mtIm)) allocate(PotDenCopy%mtIm, mold=PotDen%mtIm)
       PotDenCopy%mtIm     = PotDen%mtIm
+    else if (allocated(PotDenCopy%mtIm)) then
+      deallocate(PotDenCopy%mtIm)
     end if
 
     PotDenCopy%mt         = PotDen%mt

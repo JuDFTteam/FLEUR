@@ -127,18 +127,18 @@ CONTAINS
       l_pot = .FALSE. !Is this a potential?
    END SUBROUTINE mixvector_reset
 
-   SUBROUTINE mixvector_from_density(vec, den, nmzxyd, swapspin, denIm)
+   SUBROUTINE mixvector_from_density(vec, den, nmzxyd, swapspin)
       USE m_types
       IMPLICIT NONE
       CLASS(t_mixvector), INTENT(INOUT)    :: vec
       TYPE(t_potden), INTENT(inout)    :: Den
       INTEGER, INTENT(IN) :: nmzxyd
       LOGICAL, INTENT(IN), OPTIONAL         :: swapspin
-      TYPE(t_potden), INTENT(INOUT), OPTIONAL :: denIm
       INTEGER:: js, ii, n, l, iv, jspin, mmpSize, nIJ_llp_mmpSize, offset
+      LOGICAL :: l_dfpt
 
+      l_dfpt = ALLOCATED(den%mtIm)
       CALL den%DISTRIBUTE(mix_mpi_comm)
-      IF (PRESENT(denIm)) CALL denIm%DISTRIBUTE(mix_mpi_comm)
       DO js = 1, MERGE(jspins, 3,.NOT. l_noco)
          jspin = js
          IF (PRESENT(swapspin)) THEN
@@ -149,21 +149,21 @@ CONTAINS
             IF (pw_here) THEN
                if (js==1.and.l_noco) THEN
                   vec%vec_pw(pw_start(js):pw_start(js) + stars%ng3 - 1) = 0.5*REAL(den%pw(:, 1)+den%pw(:,2))
-                  IF ((.NOT. sym%invs).OR.PRESENT(denIm)) THEN
+                  IF ((.NOT. sym%invs).OR.l_dfpt) THEN
                      vec%vec_pw(pw_start(js) + stars%ng3:pw_start(js) + 2*stars%ng3 - 1) = 0.5*AIMAG(den%pw(:, 1)+den%pw(:,2))
                   ENDIF
                elseif(js==2.and.l_noco) THEN
                   vec%vec_pw(pw_start(js):pw_start(js) + stars%ng3 - 1) = 0.5*REAL(den%pw(:, 1)-den%pw(:,2))
-                  IF ((.NOT. sym%invs).OR.PRESENT(denIm)) THEN
+                  IF ((.NOT. sym%invs).OR.l_dfpt) THEN
                      vec%vec_pw(pw_start(js) + stars%ng3:pw_start(js) + 2*stars%ng3 - 1) = 0.5*AIMAG(den%pw(:, 1)-den%pw(:,2))
                   ENDIF
                else   
                   vec%vec_pw(pw_start(js):pw_start(js) + stars%ng3 - 1) = REAL(den%pw(:, jspin))
-                  IF (js>2.or.(.NOT. sym%invs).OR.PRESENT(denIm)) THEN
+                  IF (js>2.or.(.NOT. sym%invs).OR.l_dfpt) THEN
                                vec%vec_pw(pw_start(js) + stars%ng3:pw_start(js) + 2*stars%ng3 - 1) = AIMAG(den%pw(:, jspin))
                   endif             
                endif   
-               IF ((js == 3).AND.PRESENT(denIm)) THEN
+               IF ((js == 3).AND.l_dfpt) THEN
                   vec%vec_pw(pw_start(js) + 2*stars%ng3:pw_start(js) + 3*stars%ng3 - 1) =  REAL(den%pw(:, 4))
                   vec%vec_pw(pw_start(js) + 3*stars%ng3:pw_start(js) + 4*stars%ng3 - 1) = AIMAG(den%pw(:, 4))
                END IF
@@ -176,7 +176,7 @@ CONTAINS
                      !construct density
                      vec%vec_vac(ii + 1:ii + SIZE(den%vac, 1)) = 0.5*REAL(den%vac(:, 1, iv, 1)+den%vac(:, 1, iv, 2))
                      ii = ii + SIZE(den%vac, 1)
-                     IF (PRESENT(denIm)) THEN
+                     IF (l_dfpt) THEN
                         vec%vec_vac(ii + 1:ii + SIZE(den%vac, 1)) = 0.5*AIMAG(den%vac(:, 1, iv, jspin)+den%vac(:, 1, iv, 2))
                         ii = ii + SIZE(den%vac, 1)
                      END IF
@@ -193,7 +193,7 @@ CONTAINS
 
                      vec%vec_vac(ii + 1:ii + SIZE(den%vac, 1)) = 0.5*REAL(den%vac(:, 1, iv, 1)-den%vac(:, 1, iv, 2))
                      ii = ii + SIZE(den%vac, 1)
-                     IF (PRESENT(denIm)) THEN
+                     IF (l_dfpt) THEN
                         vec%vec_vac(ii + 1:ii + SIZE(den%vac, 1)) = 0.5*AIMAG(den%vac(:, 1, iv, jspin)-den%vac(:, 1, iv, 2))
                         ii = ii + SIZE(den%vac, 1)
                      END IF
@@ -208,7 +208,7 @@ CONTAINS
                   else
                      vec%vec_vac(ii + 1:ii + SIZE(den%vac, 1)) = REAL(den%vac(:, 1, iv, jspin))
                      ii = ii + SIZE(den%vac, 1)
-                     IF (PRESENT(denIm)) THEN
+                     IF (l_dfpt) THEN
                         vec%vec_vac(ii + 1:ii + SIZE(den%vac, 1)) = AIMAG(den%vac(:, 1, iv, jspin))
                         ii = ii + SIZE(den%vac, 1)
                      END IF
@@ -230,7 +230,7 @@ CONTAINS
             IF (mt_here .AND. (js < 3 .OR. l_mtnocopot)) THEN
                !This PE stores some(or all) MT data
                ii = mt_start(js) - 1
-               IF (.NOT.PRESENT(denIm)) THEN
+               IF (.NOT.l_dfpt) THEN
                   DO n = mt_rank + 1, atoms%ntype, mt_size
                      if (js==1 .and. l_noco) then 
                         !Construct charge
@@ -270,7 +270,7 @@ CONTAINS
                   END DO
                   DO n = mt_rank + 1, atoms%ntype, mt_size
                      DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
-                        vec%vec_mt(ii + 1:ii + atoms%jri(n)) = denIm%mt(:atoms%jri(n), l, n, jspin)
+                        vec%vec_mt(ii + 1:ii + atoms%jri(n)) = den%mtIm(:atoms%jri(n), l, n, jspin)
                         ii = ii + atoms%jri(n)
                      END DO
                   END DO
@@ -283,7 +283,7 @@ CONTAINS
                      END DO
                      DO n = mt_rank + 1, atoms%ntype, mt_size
                         DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
-                           vec%vec_mt(ii + 1:ii + atoms%jri(n)) = denIm%mt(:atoms%jri(n), l, n, 4)
+                           vec%vec_mt(ii + 1:ii + atoms%jri(n)) = den%mtIm(:atoms%jri(n), l, n, 4)
                            ii = ii + atoms%jri(n)
                         END DO
                      END DO
@@ -306,19 +306,18 @@ CONTAINS
 
    END SUBROUTINE mixvector_from_density
 
-   SUBROUTINE mixvector_to_density(vec, den, nmzxyd, denIm)
+   SUBROUTINE mixvector_to_density(vec, den, nmzxyd)
       USE m_types
       IMPLICIT NONE
       CLASS(t_mixvector), INTENT(IN)    :: vec
       TYPE(t_potden), INTENT(INOUT) :: den
-      TYPE(t_potden), INTENT(INOUT), OPTIONAL :: denIm
       INTEGER,INTENT(IN) :: nmzxyd
       INTEGER:: js, i, ii, n, l, iv, mmpSize, nIJ_llp_mmpSize, offset
 
       LOGICAL :: l_dfpt
       REAL :: vacOffdiagTemp(SIZE(den%vac, 1))
 
-      l_dfpt = PRESENT(denIm)
+      l_dfpt = ALLOCATED(den%mtIm)
 
       DO js = 1, MERGE(jspins, 3,.NOT. l_noco)
          IF (spin_here(js)) THEN
@@ -346,7 +345,7 @@ CONTAINS
                IF (l_dfpt) THEN
                   DO n = mt_rank + 1, atoms%ntype, mt_size
                      DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
-                        denIm%mt(:atoms%jri(n), l, n, js) = vec%vec_mt(ii:ii + atoms%jri(n) - 1)
+                        den%mtIm(:atoms%jri(n), l, n, js) = vec%vec_mt(ii:ii + atoms%jri(n) - 1)
                         ii = ii + atoms%jri(n)
                      ENDDO
                   ENDDO
@@ -361,7 +360,7 @@ CONTAINS
                   IF (l_dfpt) THEN
                      DO n = mt_rank + 1, atoms%ntype, mt_size
                         DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
-                           denIm%mt(:atoms%jri(n), l, n, 4) = vec%vec_mt(ii:ii + atoms%jri(n) - 1)
+                           den%mtIm(:atoms%jri(n), l, n, 4) = vec%vec_mt(ii:ii + atoms%jri(n) - 1)
                            ii = ii + atoms%jri(n)
                         ENDDO
                      ENDDO
@@ -416,7 +415,7 @@ CONTAINS
       IF (.NOT.l_dfpt) THEN
          CALL den%collect(mix_mpi_comm)
       ELSE
-         CALL den%collect(mix_mpi_comm,denIm)
+         CALL den%collect(mix_mpi_comm)
       END IF
 
       !Restore up/down density

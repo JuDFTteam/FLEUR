@@ -12,7 +12,7 @@ MODULE m_dfpt_vgen_finalize
 
 CONTAINS
 
-   SUBROUTINE dfpt_vgen_finalize(sternheimerJob,fmpi,atoms,stars,sym,noco,nococonv,input,sphhar,vTot,vTot1,vTot1imag,denRot,den1Rot,den1imRot,starsq,killcont)
+   SUBROUTINE dfpt_vgen_finalize(sternheimerJob,fmpi,atoms,stars,sym,noco,nococonv,input,sphhar,vTot,vTot1,denRot,den1Rot,theta1_mt,phi1_mt,theta1_pw,phi1_pw,starsq,killcont)
       !! Collinear case: put V1Theta+VTheta1 into V1%pw_w together
       !! Noco case: Correctly rotate back the potential into a 2x2 matrix (TODO)
         USE m_types
@@ -35,7 +35,8 @@ CONTAINS
         TYPE(t_input),    INTENT(IN)      :: input
         TYPE(t_sphhar),   INTENT(IN)      :: sphhar
         TYPE(t_potden),   INTENT(IN)      :: vTot
-        TYPE(t_potden),   INTENT(INOUT)   :: vTot1, vTot1imag, denRot, den1Rot, den1imRot
+        TYPE(t_potden),   INTENT(INOUT)   :: vTot1, denRot, den1Rot
+        COMPLEX, ALLOCATABLE, INTENT(IN)  :: theta1_mt(:,:), phi1_mt(:,:), theta1_pw(:), phi1_pw(:)
         INTEGER, INTENT(IN) :: killcont(2)
 
         INTEGER                         :: i, js, ifft3, iIBScorrection
@@ -61,8 +62,8 @@ CONTAINS
                CALL fft3d(v1re, v1im, vTot1%pw_w(:, js), starsq, -1)
             END DO
         ELSE IF(noco%l_noco) THEN
-            CALL get_int_global_perturbation(stars,atoms,sym,input,denRot,den1Rot,den1imRot,vTot,vTot1,starsq)
-            IF (any(noco%l_unrestrictMT)) CALL get_mt_global_perturbation(atoms,sphhar,sym,denRot,den1Rot,den1imRot,noco,vTot,vTot1,vTot1imag)
+            CALL get_int_global_perturbation(stars,atoms,sym,input,denRot,den1Rot,theta1_pw,phi1_pw,vTot,vTot1,starsq)
+            IF (any(noco%l_unrestrictMT)) CALL get_mt_global_perturbation(atoms,sphhar,sym,denRot,den1Rot,theta1_mt,phi1_mt,noco,vTot,vTot1)
         END IF
 
     END SUBROUTINE dfpt_vgen_finalize

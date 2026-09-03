@@ -25,7 +25,7 @@ MODULE m_dfpt_elph_mat
     IMPLICIT NONE
 
 CONTAINS
-    SUBROUTINE dfpt_elph_mat(fi,xcpot,sphhar,stars,nococonv,qpts,fmpi,results, resultsq, results1, enpara,hybdat, rho,vTot,grRho,grVtot,iQ,eig_id,q_eig_id,l_real,denIn1,denIn1Im,eigenVecs,eigenVals)
+    SUBROUTINE dfpt_elph_mat(fi,xcpot,sphhar,stars,nococonv,qpts,fmpi,results, resultsq, results1, enpara,hybdat, rho,vTot,grRho,grVtot,iQ,eig_id,q_eig_id,l_real,denIn1,eigenVecs,eigenVals)
 
         USE m_vgen
         USE m_make_stars
@@ -55,12 +55,12 @@ CONTAINS
         TYPE(t_potden), INTENT(IN) :: rho,vTot,grRho(3),grVtot(3)
         INTEGER,INTENT(IN)         :: iQ,eig_id,q_eig_id
         LOGICAL,INTENT(IN)         :: l_real
-        TYPE(t_potden), ALLOCATABLE,  INTENT(IN)     :: denIn1(:) , denIn1Im(:)
+        TYPE(t_potden), ALLOCATABLE,  INTENT(IN)     :: denIn1(:)
         COMPLEX, ALLOCATABLE, INTENT(INOUT) :: eigenVecs(:,:) ! Only allocated on irank 0
         REAL,ALLOCATABLE, INTENT(INOUT) :: eigenVals(:) ! Only allocated on irank 0
 
         
-        TYPE(t_potden) :: vTot1,vTot1Im,denIn1_loc, denIn1Im_loc, rho_loc
+        TYPE(t_potden) :: vTot1,denIn1_loc, rho_loc
 
 
         TYPE(t_stars) :: starsq
@@ -110,7 +110,6 @@ CONTAINS
         DO iDtype=1,fi%atoms%nat
             DO iDir=1,3
                 CALL denIn1_loc%copyPotDen(denIn1(iDir+3*(iDtype-1)))
-                CALL denIn1Im_loc%copyPotDen(denIn1Im(iDir+3*(iDtype-1)))
 
                 denIn1_loc%mt(:,0:,iDtype,:) = denIn1_loc%mt(:,0:,iDtype,:) - grRho(iDir)%mt(:,0:,iDtype,:)
                 
@@ -118,7 +117,6 @@ CONTAINS
                 starsq%ufft = stars%ufft
 
                 CALL vTot1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
-                CALL vTot1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
 
 
                 iPerturb = iDir+3*(iDtype-1)
@@ -127,7 +125,7 @@ CONTAINS
                 IF (fmpi%irank==0) WRITE(oUnit, *) "vEff1", iDir
                 CALL dfpt_vgen(sternheimerJob,hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                            fi%dfpt,fi%cell,fmpi,fi%noco,nococonv,rho_loc,vTot,&
-                           starsq,denIn1Im_loc,vTot1,.TRUE.,vTot1Im,denIn1_loc,iDtype,iDir,[1,1])
+                           starsq,vTot1,.TRUE.,denIn1_loc,iDtype,iDir,[1,1])
                     
                 CALL timestop("Generating Potential Perturbation")
 
@@ -137,7 +135,7 @@ CONTAINS
                 CALL timestart("Generate electron-phonon matrix element")
                 ! currenlty this call will lead to segfalse here! 
                 ! reactivate in the future. 
-                CALL matrix_element(sternheimerJob,fi,sphhar,results,fmpi,enpara,nococonv,starsq,vTot1,vTot1Im,vTot,rho_loc,bqpt,eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatCart,nuWindow) ! nbasfcnq_min
+                CALL matrix_element(sternheimerJob,fi,sphhar,results,fmpi,enpara,nococonv,starsq,vTot1,vTot,rho_loc,bqpt,eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatCart,nuWindow) ! nbasfcnq_min
                 CALL timestop("Generate electron-phonon matrix element")
 
                 IF (.NOT. ALLOCATED(gmat)) THEN
@@ -160,9 +158,7 @@ CONTAINS
                 
                 CALL starsq%reset_stars()
                 CALL denIn1_loc%reset_dfpt()
-                CALL denIn1Im_loc%reset_dfpt()
                 CALL vTot1%reset_dfpt()
-                CALL vTot1Im%reset_dfpt()
                 DEALLOCATE(gmatCart)
             END DO !iDir 
         END DO !iDtype 
@@ -191,7 +187,7 @@ CONTAINS
     END SUBROUTINE dfpt_elph_mat
 
 
-    SUBROUTINE matrix_element(sternheimerJob,fi,sphhar,results,fmpi,enpara,nococonv,starsq,v1real,v1imag,vTot,inden,bqpt,eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatBuffer,nuWindow)
+    SUBROUTINE matrix_element(sternheimerJob,fi,sphhar,results,fmpi,enpara,nococonv,starsq,v1,vTot,inden,bqpt,eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatBuffer,nuWindow)
         ! This routine is very similar to dfpt_eigen
         ! However, we do not need the gmat which is slightly different to z1
         ! Output needs to be different 
@@ -213,7 +209,7 @@ CONTAINS
         TYPE(t_enpara), INTENT(IN) :: enpara
         TYPE(t_nococonv), INTENT(IN) :: nococonv
         TYPE(t_stars),INTENT(IN) :: starsq
-        TYPE(t_potden), INTENT(IN) :: v1real,v1imag,vtot,inden
+        TYPE(t_potden), INTENT(IN) :: v1,vtot,inden
         REAL,  INTENT(IN) :: bqpt(3)
         INTEGER, INTENT(IN) :: eig_id, q_eig_id,iDir, iDtype ,killcont(6) 
         LOGICAL, INTENT(IN) :: l_real
@@ -250,7 +246,7 @@ CONTAINS
 
         ! Get the (lm) matrix elements for V1 and H0
         CALL ud%init(fi%atoms,fi%input%jspins)
-        CALL dfpt_tlmplm(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,enpara,fi%hub1inp,hub1data,vTot,fmpi,tdV1,v1real,v1imag,.FALSE.)
+        CALL dfpt_tlmplm(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,enpara,fi%hub1inp,hub1data,vTot,fmpi,tdV1,v1,.FALSE.)
         CALL local_ham(sphhar,fi%atoms,fi%sym,fi%noco,nococonv,enpara,fmpi,vTot,vx,inden,fi%input,fi%hub1inp,hub1data,td,ud,0.0,.TRUE.)
 
 #ifndef _OPENACC  
@@ -312,7 +308,7 @@ CONTAINS
 
                 ! Construct the perturbed Hamiltonian and Overlap matrix perturbations:
                 CALL timestart("Setup of matrix perturbations")
-                CALL dfpt_eigen_hssetup(sternheimerJob,jsp,fmpi,fi,enpara,nococonv,starsq,ud,td,tdV1,vTot,v1real,lapw,lapwq,iDir,iDtype,hmat,smat,nk,killcont)
+                CALL dfpt_eigen_hssetup(sternheimerJob,jsp,fmpi,fi,enpara,nococonv,starsq,ud,td,tdV1,vTot,v1,lapw,lapwq,iDir,iDtype,hmat,smat,nk,killcont)
                 CALL timestop("Setup of matrix perturbations")
     
                 IF (fmpi%n_size == 1) THEN

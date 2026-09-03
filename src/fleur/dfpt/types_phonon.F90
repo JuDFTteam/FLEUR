@@ -178,7 +178,7 @@ module m_types_phonon
 
 
     subroutine postprocessing_scf_phonon(this,sternheimerJob,fi,stars,starsq,sphhar,xcpot,nococonv,hybdat,fmpi,qpts,q_list,iQ,iDtype,iDir,eig_id,dfpt_eig_id, &
-                                          dfpt_eig_id2,enpara,results,results1,l_real,dfpt,rho,vTot,grRho3,grVext3,grVc3,den1,vTot1,den1Im,vTot1Im,vC1,vC1Im)
+                                          dfpt_eig_id2,enpara,results,results1,l_real,dfpt,rho,vTot,grRho3,grVext3,grVc3,den1,vTot1,vC1)
         
         
         use m_types
@@ -202,8 +202,8 @@ module m_types_phonon
         type(t_results),intent(inout)    :: results, results1
         logical,intent(in)               :: l_real
         type(t_dfpt),intent(in)        :: dfpt
-        type(t_potden),intent(in)        :: rho,vTot,grRho3(3),grVext3(3),grVC3(3),den1,vTot1,den1Im,vTot1Im
-        type(t_potden),intent(inout)     :: vC1,vC1Im
+        type(t_potden),intent(in)        :: rho,vTot,grRho3(3),grVext3(3),grVC3(3),den1,vTot1
+        type(t_potden),intent(inout)     :: vC1
 
         
         complex,allocatable :: E2ndOrdII(:,:)
@@ -217,7 +217,7 @@ module m_types_phonon
         call dfpt_dynmat_row(sternheimerJob, fi, stars, starsq, sphhar, xcpot, nococonv, hybdat, fmpi, qpts, q_list(iQ), iDtype, iDir, &
                                 eig_id, dfpt_eig_id, dfpt_eig_id2, enpara, results, results1, l_real, dfpt, &
                                 rho, vTot, grRho3, grVext3, grVC3, &
-                                den1, vTot1, den1Im, vTot1Im, vC1, vC1Im, dyn_mat(iQ,3 *(iDtype-1)+iDir,:), E2ndOrdII)
+                                den1, vTot1, vC1, dyn_mat(iQ,3 *(iDtype-1)+iDir,:), E2ndOrdII)
 
         call timestop("Dynmat row")
         

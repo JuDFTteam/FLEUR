@@ -109,7 +109,7 @@ CONTAINS
   END SUBROUTINE mixing_history_close
 
 
-  SUBROUTINE mixing_history(imix,maxiter,inden,outden,sm,fsm,it,nmzxyd,inDenIm,outDenIm)
+  SUBROUTINE mixing_history(imix,maxiter,inden,outden,sm,fsm,it,nmzxyd)
     USE m_types
     implicit none
     INTEGER,INTENT(in)::imix,maxiter
@@ -118,7 +118,6 @@ CONTAINS
     INTEGER,INTENT(out)::it
     INTEGER,INTENT(IN) :: nmzxyd
 
-    type(t_potden), OPTIONAL, INTENT(INOUT) :: inDenIm, outDenIm
 
     INTEGER:: n
 
@@ -131,12 +130,12 @@ CONTAINS
     allocate(sm(it),fsm(it))
     CALL sm(it)%alloc()
     CALL fsm(it)%alloc()
-    IF (.NOT.PRESENT(inDenIm)) THEN
+    IF (.NOT.ALLOCATED(inDen%mtIm)) THEN
       CALL sm(it)%from_density(inDen,nmzxyd)
       CALL fsm(it)%from_density(outDen,nmzxyd)
     ELSE
-      CALL sm(it)%from_density(inDen,nmzxyd,denIm=inDenIm)
-      CALL fsm(it)%from_density(outDen,nmzxyd,denIm=outDenIm)
+      CALL sm(it)%from_density(inDen,nmzxyd)
+      CALL fsm(it)%from_density(outDen,nmzxyd)
     END IF
     !store the difference fsm - sm in fsm
     fsm(it) = fsm(it) - sm(it)

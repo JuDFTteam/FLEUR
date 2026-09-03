@@ -15,12 +15,13 @@ MODULE m_dfpt_mt_perturbation
 
 CONTAINS
 
-    SUBROUTINE get_mt_local_perturbation(atoms,sphhar,sym,noco,den,den1,den1im)
+    SUBROUTINE get_mt_local_perturbation(atoms,sphhar,sym,noco,den,den1,theta1_mt,phi1_mt)
         TYPE(t_atoms),  INTENT(IN)    :: atoms
         TYPE(t_sphhar), INTENT(IN)    :: sphhar
         TYPE(t_sym),    INTENT(IN)    :: sym
         TYPE(t_noco),   INTENT(IN)    :: noco
-        TYPE(t_potden), INTENT(INOUT) :: den, den1, den1im
+        TYPE(t_potden), INTENT(INOUT) :: den, den1
+        COMPLEX, ALLOCATABLE, INTENT(OUT) :: theta1_mt(:,:), phi1_mt(:,:)
 
         TYPE(t_gradients)             :: grad
 
@@ -32,17 +33,16 @@ CONTAINS
         REAL, ALLOCATABLE             :: ch(:,:), chre(:,:), chim(:,:)
 
         nsp=atoms%nsp()
-        ALLOCATE(ch(nsp*atoms%jmtd,4), den1%theta_mt(nsp*atoms%jmtd,atoms%ntype), &
-                                       den1%phi_mt(nsp*atoms%jmtd,atoms%ntype))
+        ALLOCATE(ch(nsp*atoms%jmtd,4))
         ALLOCATE(chre(nsp*atoms%jmtd,4), chim(nsp*atoms%jmtd,4))
-        ALLOCATE(den1im%theta_mt(nsp*atoms%jmtd,atoms%ntype), den1im%phi_mt(nsp*atoms%jmtd,atoms%ntype))
+        ALLOCATE(theta1_mt(nsp*atoms%jmtd,atoms%ntype), phi1_mt(nsp*atoms%jmtd,atoms%ntype))
 
         CALL init_mt_grid(4,atoms,sphhar,.FALSE.,sym)
 
         DO n=1,atoms%ntype
             CALL mt_to_grid(.FALSE., 2, atoms, sym, sphhar, .FALSE., den%mt(:,0:,n,:), n, noco, grad, ch)
             CALL mt_to_grid(.FALSE., 4, atoms, sym, sphhar, .FALSE., den1%mt(:,0:,n,:), n, noco, grad, chre)
-            CALL mt_to_grid(.FALSE., 4, atoms, sym, sphhar, .FALSE., den1im%mt(:,0:,n,:), n, noco, grad, chim)
+            CALL mt_to_grid(.FALSE., 4, atoms, sym, sphhar, .FALSE., den1%mtIm(:,0:,n,:), n, noco, grad, chim)
 
             DO imesh = 1, nsp*atoms%jri(n)
                 rho_11   = ch(imesh,1)
@@ -82,18 +82,16 @@ CONTAINS
                 chre(imesh,2) =  REAL(rho1_down)
                 chim(imesh,1) = AIMAG(rho1_up  )
                 chim(imesh,2) = AIMAG(rho1_down)
-                den1%theta_mt(imesh,n)   =  REAL(t1)
-                den1%phi_mt(imesh,n)     =  REAL(p1)
-                den1im%theta_mt(imesh,n) = AIMAG(t1)
-                den1im%phi_mt(imesh,n)   = AIMAG(p1)
+                theta1_mt(imesh,n) = t1
+                phi1_mt(imesh,n)   = p1
             END DO
             den1%mt(:,0:,n,:)=0.0
-            den1im%mt(:,0:,n,:)=0.0
+            den1%mtIm(:,0:,n,:)=0.0
             CALL mt_from_grid(atoms,sym,sphhar,n,2,chre,den1%mt(:,0:,n,:))
-            CALL mt_from_grid(atoms,sym,sphhar,n,2,chim,den1im%mt(:,0:,n,:))
+            CALL mt_from_grid(atoms,sym,sphhar,n,2,chim,den1%mtIm(:,0:,n,:))
             DO i=1,atoms%jri(n)
                 den1%mt(i,:,n,:)=den1%mt(i,:,n,:)*atoms%rmsh(i,n)**2
-                den1im%mt(i,:,n,:)=den1im%mt(i,:,n,:)*atoms%rmsh(i,n)**2
+                den1%mtIm(i,:,n,:)=den1%mtIm(i,:,n,:)*atoms%rmsh(i,n)**2
             END DO
         END DO
 
@@ -101,14 +99,15 @@ CONTAINS
 
     END SUBROUTINE get_mt_local_perturbation
 
-    SUBROUTINE get_mt_global_perturbation(atoms,sphhar,sym,den,den1,den1im,noco,vtot,vtot1,vtot1im)
+    SUBROUTINE get_mt_global_perturbation(atoms,sphhar,sym,den,den1,theta1_mt,phi1_mt,noco,vtot,vtot1)
       TYPE(t_atoms),  INTENT(IN)    :: atoms
       TYPE(t_sphhar), INTENT(IN)    :: sphhar
       TYPE(t_sym),    INTENT(IN)    :: sym
-      TYPE(t_potden), INTENT(IN)    :: den, den1, den1im
+      TYPE(t_potden), INTENT(IN)    :: den, den1
+      COMPLEX, ALLOCATABLE, INTENT(IN) :: theta1_mt(:,:), phi1_mt(:,:)
       TYPE(t_noco),   INTENT(IN)    :: noco
       TYPE(t_potden), INTENT(IN)    :: vtot
-      TYPE(t_potden), INTENT(INOUT) :: vtot1,vtot1im
+      TYPE(t_potden), INTENT(INOUT) :: vtot1
 
       TYPE(t_gradients)             :: grad
       TYPE(t_potden)                :: vtot_loc
@@ -133,12 +132,12 @@ CONTAINS
          DO i=1,atoms%jri(n)
             vtot_loc%mt(i,:,n,:)=vtot%mt(i,:,n,:)*atoms%rmsh(i,n)**2
             vtot1%mt(i,:,n,:)=vtot1%mt(i,:,n,:)*atoms%rmsh(i,n)**2
-            vtot1im%mt(i,:,n,:)=vtot1im%mt(i,:,n,:)*atoms%rmsh(i,n)**2
+            vtot1%mtIm(i,:,n,:)=vtot1%mtIm(i,:,n,:)*atoms%rmsh(i,n)**2
          END DO
 
          CALL mt_to_grid(.FALSE.,4,atoms,sym,sphhar,.FALSE.,vtot_loc%mt(:,0:,n,:),n,noco,grad,chtmp(:,1:2))
          CALL mt_to_grid(.FALSE.,2,atoms,sym,sphhar,.FALSE.,vtot1%mt(:,0:,n,:),n,noco,grad,chretmp(:,1:2))
-         CALL mt_to_grid(.FALSE.,2,atoms,sym,sphhar,.FALSE.,vtot1im%mt(:,0:,n,:),n,noco,grad,chimtmp(:,1:2))
+         CALL mt_to_grid(.FALSE.,2,atoms,sym,sphhar,.FALSE.,vtot1%mtIm(:,0:,n,:),n,noco,grad,chimtmp(:,1:2))
 
          DO imesh = 1, nsp*atoms%jri(n)
              v11   = chtmp(imesh, 1)
@@ -160,8 +159,22 @@ CONTAINS
             v1mat21 =         b1eff * SIN(theta)*EXP( Imagunit*phi) !21
             v1mat12 =         b1eff * SIN(theta)*EXP(-Imagunit*phi) !12
 
-            t1 = den1%theta_mt(imesh,n) + ImagUnit * den1im%theta_mt(imesh,n)
-            p1 = den1%phi_mt(imesh,n) + ImagUnit * den1im%phi_mt(imesh,n)
+            t1 = theta1_mt(imesh,n)
+            p1 = phi1_mt(imesh,n)
+
+            ! TODO: Transverse (axis-rotation) response disabled on purpose for now.
+            !       t1/p1 drive the a11/a22/a21/a12 rotation generators below. The angle
+            !       convention is unresolved: t1 matches the standard variation
+            !       delta_theta, but p1 as built in get_mt_local_perturbation carries an
+            !       extra SIN(theta)**2 relative to
+            !       delta_phi = (-mx1*SIN(phi) + my1*COS(phi))/(m*SIN(theta)).
+            !       Zero both parts, not just the imaginary ones: truncating half of a
+            !       complex amplitude would make the result depend on the global phase
+            !       convention of the perturbation. What remains is the fixed-axis
+            !       rotation of the longitudinal response, which is well defined.
+            !       Re-enabling these two lines is the actual transverse deliverable.
+            t1 = CMPLX(0.0,0.0)
+            p1 = CMPLX(0.0,0.0)
 
             a11 =      -ImagUnit      * p1 / 2.0
             a22 =       ImagUnit      * p1 / 2.0
@@ -191,10 +204,10 @@ CONTAINS
          END DO
 
          vtot1%mt(:,0:,n,:)=0.0
-         vtot1im%mt(:,0:,n,:)=0.0
+         vtot1%mtIm(:,0:,n,:)=0.0
 
          CALL mt_from_grid(atoms,sym,sphhar,n,4,chretmp,vtot1%mt(:,0:,n,:))
-         CALL mt_from_grid(atoms,sym,sphhar,n,4,chimtmp,vtot1im%mt(:,0:,n,:))
+         CALL mt_from_grid(atoms,sym,sphhar,n,4,chimtmp,vtot1%mtIm(:,0:,n,:))
 
       END DO
 

@@ -58,7 +58,7 @@ contains
 
         ! For the gradient of the external Potential we need a higher cutoff in the expansion, in order to confine the multipole moments in the MTs
         ! This is crucial for the Film-Mode and will be visible in the z-Eigenmodes.  
-        call create_typesLocal(fi,fmpi,fi%sym,fi%cell,fi%input,sphhar, fi%vacuum , fi%noco ,starsLocal, grVext3(1),atomsLocal)
+        call create_typesLocal(fi,fmpi,fi%sym,fi%cell,fi%input,sphhar, fi%vacuum , fi%noco ,starsLocal, grVext3(1),atomsLocal,l_dfpt=.TRUE.)
         call grVext3(2)%copyPotDen(grVext3(1))
         call grVext3(3)%copyPotDen(grVext3(1))
 
@@ -72,16 +72,13 @@ contains
 
 
         do iDir = 1 , 3 
-            call grRho3(iDir)%copyPotDen(rho)
-            call grRho3(iDir)%resetpotden()
+            call grRho3(iDir)%init(stars,fi%atoms,sphhar,fi%vacuum,fi%noco,fi%input%jspins,rho%potdenType,l_dfpt=.TRUE.)
             do iDir2 = 1 , 3 
                 call grgrVext3x3(iDir2,iDir)%copyPotDen(grVext3(1))
                 call grgrVext3x3(iDir2,iDir)%resetpotden()
             end do 
-            call grVtot3(iDir)%copyPotDen(vTot)
-            call grVtot3(iDir)%resetpotden()
-            call grVc3(iDir)%copyPotDen(vTot)
-            call grVc3(iDir)%resetpotden() 
+            call grVtot3(iDir)%init(stars,fi%atoms,sphhar,fi%vacuum,fi%noco,fi%input%jspins,vTot%potdenType,l_dfpt=.TRUE.)
+            call grVc3(iDir)%init(stars,fi%atoms,sphhar,fi%vacuum,fi%noco,fi%input%jspins,vTot%potdenType,l_dfpt=.TRUE.)
         end do 
 
         ! compute numerical gradient of the density 
@@ -130,18 +127,17 @@ contains
         do iDir = 1 , 3 
             call vgen_coulomb(1, fmpi, fi%input, fi%field, fi%vacuum, fi%sym, starsLocal, fi%cell, &
                          & sphhar, atomsLocal, .FALSE., potdummyLocal, grVext3(iDir), sternheimerJob=sternheimerJob,dfpt=fi%dfpt, &
-                         & dfptdenimag=potdummyLocal, dfptvCoulimag=potdummyLocal,dfptden0=potdummyLocal,stars2=starsLocal,iDtype=0,iDir=iDir)
+                         & dfptden0=potdummyLocal,stars2=starsLocal,iDtype=0,iDir=iDir)
         end do 
 
         ! Coulomb/Effective potential gradients
         do iDir = 1, 3
-            call potdummy%resetPotDen()
             call dfpt_vgen(sternheimerJob,hybdat, fi%field, fi%input, xcpot, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, &
                             fi%dfpt, fi%cell, fmpi, fi%noco, nococonv, rho_tmp, vTot, &
-                            stars, potdummy, grVtot3(iDir), .TRUE., potdummy, grRho3(iDir), 0, iDir, [0,0])
+                            stars, grVtot3(iDir), .TRUE., grRho3(iDir), 0, iDir, [0,0])
             call dfpt_vgen(sternheimerJob,hybdat, fi%field, fi%input, xcpot, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, &
                             fi%dfpt, fi%cell, fmpi, fi%noco, nococonv, rho_tmp, vTot, &
-                            stars, potdummy, grVc3(iDir), .FALSE., potdummy, grRho3(iDir), 0, iDir, [0,0])
+                            stars, grVc3(iDir), .FALSE., grRho3(iDir), 0, iDir, [0,0])
         end do 
 
 
@@ -152,7 +148,7 @@ contains
                 call potdummyLocal%resetPotDen()
                 call vgen_coulomb(1, fmpi, fi%input, fi%field, fi%vacuum, fi%sym, starsLocal, fi%cell, &
                             & sphhar, atomsLocal, .TRUE., potdummyLocal, grgrVext3x3(iDir2,iDir), sternheimerJob=sternheimerJob,dfpt=fi%dfpt, &
-                            & dfptdenimag=potdummyLocal, dfptvCoulimag=potdummyLocal,dfptden0=potdummyLocal,stars2=starsLocal,iDtype=0,iDir=iDir,iDir2=iDir2)
+                            & dfptden0=potdummyLocal,stars2=starsLocal,iDtype=0,iDir=iDir,iDir2=iDir2)
             end do 
         end do 
 

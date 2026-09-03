@@ -18,7 +18,7 @@ contains
   SUBROUTINE mix_charge( field,   fmpi, l_writehistory,&
        stars, atoms, sphhar, vacuum, input, sym, cell, noco, nococonv,&
          archiveType, xcpot, iteration, inDen, outDen, results, coreDen, l_runhia, sliceplot,&
-         inDenIm, outDenIm, dfpt_tag)
+         dfpt_tag)
 
     use m_juDFT
     use m_constants
@@ -63,7 +63,6 @@ contains
     LOGICAL,           INTENT(IN)    :: l_writehistory
     LOGICAL,           INTENT(IN)    :: l_runhia
 
-    type(t_potden), OPTIONAL, INTENT(INOUT) :: inDenIm, outDenIm
     
     type(t_potden), OPTIONAL , intent(inout) :: coreDen
     CHARACTER(len=20), OPTIONAL, INTENT(IN) :: dfpt_tag
@@ -121,14 +120,14 @@ contains
       CALL mixing_history(input%imix,maxiter,inden,outden,sm,fsm,it,vacuum%nmzxyd)
     ELSE
       IF (iteration==1) CALL dfpt_mixing_history_reset()
-      CALL mixing_history(input%imix,maxiter,inden,outden,sm,fsm,it,vacuum%nmzxyd,inDenIm,outDenIm)
+      CALL mixing_history(input%imix,maxiter,inden,outden,sm,fsm,it,vacuum%nmzxyd)
     END IF
 
     IF (.NOT.l_dfpt) THEN
       CALL distance(fmpi%irank,cell%vol,input%jspins,vacuum%nmzxyd,fsm(it),inDen,outDen,results,fsm_Mag)
     ELSE
       ! TODO: For now dfpt_distance handles Re/Im separately. Maybe that is not all to necessary.
-      CALL dfpt_distance(fmpi%irank,cell%vol,input%jspins,vacuum%nmzxyd,fsm(it),inDen,outDen,inDenIm,outDenIm,results,fsm_Mag)
+      CALL dfpt_distance(fmpi%irank,cell%vol,input%jspins,vacuum%nmzxyd,fsm(it),inDen,outDen,results,fsm_Mag)
     END IF
     CALL timestop("Reading of distances")
 
@@ -194,14 +193,14 @@ contains
     CALL timestart("Postprocessing")
     !extracte mixed density
     inDen%pw=0.0;inDen%mt=0.0
-    IF (l_dfpt) inDenIm%mt=0.0
+    IF (l_dfpt) inDen%mtIm=0.0
     IF (ALLOCATED(inDen%vac)) inden%vac=0.0
     IF (ALLOCATED(inDen%mmpMat).AND.l_densitymatrix) inden%mmpMat(:,:,:atoms%n_u,:)=0.0
     IF (ALLOCATED(inDen%nIJ_llp_mmp).AND.l_densitymatrixV) inden%nIJ_llp_mmp(:,:,:,:)=CMPLX(0.0,0.0)
     IF (.NOT.l_dfpt) THEN
       CALL sm(it)%to_density(inDen,vacuum%nmzxyd)
     ELSE
-      CALL sm(it)%to_density(inDen,vacuum%nmzxyd,inDenIm)
+      CALL sm(it)%to_density(inDen,vacuum%nmzxyd)
     END IF
 
     IF (atoms%n_u>0.AND.l_firstItU) THEN
@@ -273,7 +272,7 @@ contains
           INQUIRE(file=trim(dfpt_tag)//".hdf", exist=l_exist)
           IF (l_exist) CALL system("mv "//trim(dfpt_tag)//".hdf "//trim(dfpt_tag)//"_old.hdf")
           CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,CDN_INPUT_DEN_const,&
-               1,results%last_distance,results%ef,results%last_mmpmatDistance,results%last_occDistance,.TRUE.,inDen,inFilename=dfpt_tag,denIm=inDenIm)
+               1,results%last_distance,results%ef,results%last_mmpmatDistance,results%last_occDistance,.TRUE.,inDen,inFilename=dfpt_tag)
           IF (l_exist) CALL system("rm "//trim(dfpt_tag)//"_old.hdf")
        END IF
     END IF

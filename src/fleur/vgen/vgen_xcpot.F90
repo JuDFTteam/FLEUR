@@ -14,7 +14,7 @@ CONTAINS
 
    SUBROUTINE vgen_xcpot(hybdat, input, xcpot,  atoms, sphhar, stars, vacuum, sym, &
                           cell, fmpi, noco, den, denRot, EnergyDen, vTot, vx, vxc, exc, results, &
-                          den1Rot, den1Rotimag, dfptvTotimag, starsq)
+                          den1Rot, starsq)
       !! FLAPW potential generator                           
       !! Calculates the density-potential integrals needed for the total energy
       !! TE_VCOUL:   charge density-coulomb potential integral
@@ -58,8 +58,7 @@ CONTAINS
       TYPE(t_potden),    INTENT(IN)              :: den, denRot, EnergyDen
       TYPE(t_potden),    INTENT(INOUT)           :: vTot, vx, vxc, exc
       TYPE(t_results),   INTENT(INOUT), OPTIONAL :: results
-      TYPE(t_potden),    INTENT(IN),    OPTIONAL :: den1Rot, den1Rotimag
-      TYPE(t_potden),    INTENT(INOUT), OPTIONAL :: dfptvTotimag
+      TYPE(t_potden),    INTENT(IN),    OPTIONAL :: den1Rot
       TYPE(t_stars),     INTENT(IN),    OPTIONAL :: starsq
 
       ! Local type instances
@@ -129,7 +128,7 @@ CONTAINS
           CALL vmt_xc(fmpi, sphhar, atoms, den, xcpot, input, sym, &
                       EnergyDen,kinED, noco,vTot, vx, exc, vxc)
       ELSE
-          CALL dfpt_vmt_xc(fmpi,sphhar,atoms,denRot,den1Rot,den1Rotimag,xcpot,input,sym,noco,vTot,dfptvTotimag)
+          CALL dfpt_vmt_xc(fmpi,sphhar,atoms,denRot,den1Rot,xcpot,input,sym,noco,vTot)
       END IF
 
       ! add MT EXX potential to vr

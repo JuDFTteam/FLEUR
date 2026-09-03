@@ -14,7 +14,7 @@ MODULE m_dfpt_int_perturbation
 CONTAINS
 
     SUBROUTINE get_int_local_perturbation(sym, stars, atoms, sphhar, &
-                                        & input, den, den1, den1im, starsq)
+                                        & input, den, den1, theta1_pw, phi1_pw, starsq)
 
         USE m_constants
 
@@ -24,7 +24,8 @@ CONTAINS
         TYPE(t_sphhar), INTENT(IN)    :: sphhar
         TYPE(t_atoms),  INTENT(IN)    :: atoms
         TYPE(t_potden), INTENT(IN)    :: den
-        TYPE(t_potden), INTENT(INOUT) :: den1, den1im
+        TYPE(t_potden), INTENT(INOUT) :: den1
+        COMPLEX, ALLOCATABLE, INTENT(OUT) :: theta1_pw(:), phi1_pw(:)
 
         INTEGER                       :: iden, jspin, ifft3
         INTEGER                       :: ityp, iri, imesh
@@ -41,8 +42,7 @@ CONTAINS
         ALLOCATE (ris(ifft3,2),fftwork(ifft3))
         ALLOCATE (ris_real(ifft3,4),ris_imag(ifft3,4))
 
-        ALLOCATE(den1%phi_pw(ifft3),den1%theta_pw(ifft3))
-        ALLOCATE(den1im%phi_pw(ifft3),den1im%theta_pw(ifft3))
+        ALLOCATE(theta1_pw(ifft3),phi1_pw(ifft3))
 
         DO iden = 1, 2
             CALL fft3d(ris(:,iden),      fftwork,          den%pw(:,iden),  stars,  +1)
@@ -92,10 +92,8 @@ CONTAINS
             ris_real(imesh,2) =  REAL(rho1_down)
             ris_imag(imesh,1) = AIMAG(rho1_up  )
             ris_imag(imesh,2) = AIMAG(rho1_down)
-            den1%theta_pw(imesh)   =  REAL(t1)
-            den1%phi_pw(imesh)     =  REAL(p1)
-            den1im%theta_pw(imesh) = AIMAG(t1)
-            den1im%phi_pw(imesh)   = AIMAG(p1)
+            theta1_pw(imesh) = t1
+            phi1_pw(imesh)   = p1
         END DO
 
         ! Fourier tranform the up- and down density perturbations back to reciprocal space:
@@ -104,12 +102,13 @@ CONTAINS
         END DO
     END SUBROUTINE get_int_local_perturbation
 
-    SUBROUTINE get_int_global_perturbation(stars,atoms,sym,input,den,den1,den1im,vTot,vTot1,starsq)
+    SUBROUTINE get_int_global_perturbation(stars,atoms,sym,input,den,den1,theta1_pw,phi1_pw,vTot,vTot1,starsq)
         TYPE(t_input), INTENT(IN)     :: input
         TYPE(t_sym),    INTENT(IN)    :: sym
         TYPE(t_stars),  INTENT(IN)    :: stars, starsq
         TYPE(t_atoms),  INTENT(IN)    :: atoms
-        TYPE(t_potden), INTENT(IN)    :: den, den1, den1im, vTot
+        TYPE(t_potden), INTENT(IN)    :: den, den1, vTot
+        COMPLEX, ALLOCATABLE, INTENT(IN) :: theta1_pw(:), phi1_pw(:)
         TYPE(t_potden), INTENT(INOUT) :: vTot1
 
         INTEGER                       :: imeshpt, ipot, jspin
@@ -146,8 +145,15 @@ CONTAINS
             v1up   = v1re(imeshpt,1) + ImagUnit * v1im(imeshpt,1)
             v1down = v1re(imeshpt,2) + ImagUnit * v1im(imeshpt,2)
 
-            t1 = den1%theta_pw(imeshpt) + ImagUnit * den1im%theta_pw(imeshpt)
-            p1 = den1%phi_pw(imeshpt) + ImagUnit * den1im%phi_pw(imeshpt)
+            t1 = theta1_pw(imeshpt)
+            p1 = phi1_pw(imeshpt)
+
+            ! TODO: Transverse (axis-rotation) response disabled on purpose for now.
+            !       Kept in step with the identical construction in
+            !       get_mt_global_perturbation - see the longer note there. Zeroing only
+            !       one of the two regions would leave them on different physical models.
+            t1 = CMPLX(0.0,0.0)
+            p1 = CMPLX(0.0,0.0)
 
             v1 = (v1up + v1down) / 2.0
             b1 = (v1up - v1down) / 2.0

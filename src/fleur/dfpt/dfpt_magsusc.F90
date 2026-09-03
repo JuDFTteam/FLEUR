@@ -21,20 +21,20 @@ module m_dfpt_magsusc
 
 contains
 
-    subroutine dfpt_magnetic_susc(fi,stars,starsq,sphhar,fmpi,denIn1,denIn1Im,magnetic_susc)
+    subroutine dfpt_magnetic_susc(fi,stars,starsq,sphhar,fmpi,denIn1,magnetic_susc)
 
 
         
         type(t_fleurinput), intent(in)     :: fi
         type(t_sphhar),    intent(in)      :: sphhar
         type(t_stars),     intent(in)      :: stars, starsq
-        type(t_potden), intent(in)         :: denIn1,denIn1Im
+        type(t_potden), intent(in)         :: denIn1
         type(t_mpi),        intent(in)     :: fmpi
         complex, intent(inout)             :: magnetic_susc
 
 
 
-        type(t_potden)                     :: vExt1, vExt1Im
+        type(t_potden)                     :: vExt1
         type(t_stars)                      :: starsq_vext
         complex, allocatable               :: pwwq2(:,:),tempval_pw,tempval_mt, denIn1_pw(:)
         real, allocatable                  :: denIn1_mt(:,:,:),denIn1_mt_Im(:,:,:) 
@@ -59,9 +59,8 @@ contains
             do iDir_col = 1, 1   
                 tempval_pw = CMPLX(0.0,0.0)
                 call vExt1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
-                call vExt1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
-                call dfpt_vbfield(fi%input,starsq,fi%noco,fi%atoms,vExt1,vExt1Im)
-                call checkDOPAll(fi%input, sphhar, starsq,fi%atoms, fi%sym, fi%vacuum, fi%cell,vExt1,iSpin,vExt1Im) 
+                call dfpt_vbfield(fi%input,starsq,fi%noco,fi%atoms,vExt1)
+                call checkDOPAll(fi%input, sphhar, starsq,fi%atoms, fi%sym, fi%vacuum, fi%cell,vExt1,iSpin) 
                 !interstitial
                 pwwq2 = CMPLX(0.0,0.0)
 
@@ -73,7 +72,7 @@ contains
                 !Muffin-tin 
                 do iType = 1, fi%atoms%nat
                     tempval_mt = CMPLX(0.0,0.0) 
-                    call dfpt_int_mt(fi%atoms, sphhar, fi%sym, iType, denIn1%mt(:,:,:,iSpin), denIn1Im%mt(:,:,:,iSpin), vExt1%mt(:,0:,:,iSpin), -vExt1Im%mt(:,0:,:,iSpin), tempval_mt)!denIn1_mt ! same minus sign for potential due to mixed use of energy and spin sign
+                    call dfpt_int_mt(fi%atoms, sphhar, fi%sym, iType, denIn1%mt(:,:,:,iSpin), denIn1%mtIm(:,:,:,iSpin), vExt1%mt(:,0:,:,iSpin), -vExt1%mtIm(:,0:,:,iSpin), tempval_mt)!denIn1_mt ! same minus sign for potential due to mixed use of energy and spin sign
                     magnetic_susc =  magnetic_susc+ tempval_mt
                 end do
             end do

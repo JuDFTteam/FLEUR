@@ -106,9 +106,8 @@ module m_VYukawaFilm
 
     ! MUFFIN-TIN POTENTIAL
 
-    call Vmts( input, fmpi, stars, sphhar, atoms, sym, cell, .FALSE., &
-               VYukawa%pw(:,1), den%mt(:,0:,:,1), VYukawa%potdenType, &
-               VYukawa%mt(:,0:,:,1), 1 )
+    call vmts( input, fmpi, stars, sphhar, atoms, sym, cell, .FALSE., &
+               VYukawa, den, 1 )
  
     ! MODIFICATION FOR CHARGE NEUTRALITY
 
@@ -1023,8 +1022,7 @@ module m_VYukawaFilm
     ! MUFFIN-TIN POTENTIAL
 
     call Vmts( input, fmpi, stars, sphhar, atoms, sym, cell, .FALSE., &
-               VYukawaModification%pw(:,1), den%mt(:,0:,:,1), VYukawaModification%potdenType, &
-               VYukawaModification%mt(:,0:,:,1), 1 )
+               VYukawaModification, den, 1 )
 
     ! APPLYING THE MODIFICATION TO THE YUKAWA POTENTIAL
 

@@ -106,7 +106,7 @@ subroutine init_child_BEC(this,fi,nqpts,dynMatNac)
     end subroutine q_indepent_properties_BEC
 
     subroutine postprocessing_scf_BEC(this,sternheimerJob,fi,stars,starsq,sphhar,xcpot,nococonv,hybdat,fmpi,qpts,q_list,iQ,iDtype,iDir,eig_id,dfpt_eig_id, &
-                                          dfpt_eig_id2,enpara,results,results1,l_real,dfpt,rho,vTot,grRho3,grVext3,grVc3,den1,vTot1,den1Im,vTot1Im,vC1,vC1Im)
+                                          dfpt_eig_id2,enpara,results,results1,l_real,dfpt,rho,vTot,grRho3,grVext3,grVc3,den1,vTot1,vC1)
         
         
         use m_types
@@ -130,8 +130,8 @@ subroutine init_child_BEC(this,fi,nqpts,dynMatNac)
         type(t_results),intent(inout)    :: results, results1
         logical,intent(in)               :: l_real
         type(t_dfpt),intent(in)        :: dfpt
-        type(t_potden),intent(in)        :: rho,vTot,grRho3(3),grVext3(3),grVC3(3),den1,vTot1,den1Im,vTot1Im
-        type(t_potden),intent(inout)     :: vC1,vC1Im
+        type(t_potden),intent(in)        :: rho,vTot,grRho3(3),grVext3(3),grVC3(3),den1,vTot1
+        type(t_potden),intent(inout)     :: vC1
 
         
         complex,allocatable :: borneffcharge(:,:,:),borneffcharge_ctrb(:,:,:,:)
@@ -142,7 +142,7 @@ subroutine init_child_BEC(this,fi,nqpts,dynMatNac)
 
 
         call timestart("BEC element")
-        CALL dfpt_born_eff_charge_element(fi,stars,starsq,sphhar,fmpi,rho,den1,den1Im,grRho3(iDir),borneffcharge(iDtype,iDir,iQ),&
+        CALL dfpt_born_eff_charge_element(fi,stars,starsq,sphhar,fmpi,rho,den1,grRho3(iDir),borneffcharge(iDtype,iDir,iQ),&
                                                           borneffcharge_ctrb(iDtype,iDir,iQ,:),iDir,iDtype,iQ,1)
         call timestop("BEC element")
         

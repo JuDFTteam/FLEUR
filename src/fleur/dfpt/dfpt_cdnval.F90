@@ -14,7 +14,7 @@ CONTAINS
 
 SUBROUTINE dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddosdummy,cell,atoms,enpara,stars,&
                   vacuum,sphhar,sym,vTot,cdnvalJob,den,dosdummy,vacdosdummy,&
-                  hub1inp, cdnvalJob1, resultsdummy, resultsdummy1, bqpt, iDtype, iDir, denIm, l_real,&
+                  hub1inp, cdnvalJob1, resultsdummy, resultsdummy1, bqpt, iDtype, iDir, l_real,&
                   qm_eid_id,dfpt_eigm_id,starsmq,resultsdummy1m,cdnvalJob1m)
 
    USE m_types
@@ -59,7 +59,7 @@ SUBROUTINE dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,
    TYPE(t_potden),        INTENT(IN)    :: vTot
    TYPE(t_cdnvalJob),     INTENT(IN)    :: cdnvalJob, cdnvalJob1
    TYPE(t_results),       INTENT(INOUT) :: resultsdummy, resultsdummy1
-   TYPE(t_potden),        INTENT(INOUT) :: den, denIm
+   TYPE(t_potden),        INTENT(INOUT) :: den
 
    ! Scalar Arguments
    INTEGER,               INTENT(IN)    :: eig_id, dfpt_eig_id, jspin, iDtype, iDir
@@ -315,7 +315,7 @@ SUBROUTINE dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,
          DO ispin = jsp_start, jsp_end
             DO ispinpr = ispin,ispin
                call denmatrix(ispin,ispinpr,itype)%to_full_density(ispin,ispinpr, itype, input, &
-                           sphhar, atoms, noco, sym, radfun(itype),  den%mt, rhoIm=denIm%mt)
+                           sphhar, atoms, noco, sym, radfun(itype),  den%mt, rhoIm=den%mtIm)
             ENDDO               
          enddo
       END DO      
@@ -324,7 +324,6 @@ SUBROUTINE dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,
 
 
    call den%distribute(fmpi%mpi_comm)
-   call denIm%distribute(fmpi%mpi_comm)
 
    CALL timestop("dfpt_cdnval")
 

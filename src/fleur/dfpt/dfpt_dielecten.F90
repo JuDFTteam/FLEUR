@@ -18,14 +18,14 @@ module m_dfpt_dielecten
 
 contains
 
-    subroutine dfpt_dielecten_HF_int(sternheimerJob,fi,stars,starsq,sphhar,fmpi,denIn1,denIn1Im,dieltensor_row,rho,iDir_den,q_sign)
+    subroutine dfpt_dielecten_HF_int(sternheimerJob,fi,stars,starsq,sphhar,fmpi,denIn1,dieltensor_row,rho,iDir_den,q_sign)
 
 
         type(t_sternheimerJob),intent(in)  :: sternheimerJob
         type(t_fleurinput), intent(in)     :: fi
         type(t_sphhar),    intent(in)      :: sphhar
         type(t_stars),     intent(in)      :: stars, starsq
-        type(t_potden), intent(in)         :: denIn1,denIn1Im
+        type(t_potden), intent(in)         :: denIn1
         type(t_mpi),        intent(in)     :: fmpi
         complex, intent(inout)             :: dieltensor_row(:)
         integer, intent(in)                :: q_sign
@@ -33,7 +33,7 @@ contains
 
 
 
-        type(t_potden)                     :: vExt1, vExt1Im
+        type(t_potden)                     :: vExt1
         type(t_stars)                      :: starsq_vext
         complex, allocatable               :: pwwq2(:),tempval_pw,tempval_mt, denIn1_pw(:), dieltensor_HF(:)
         real, allocatable                  :: denIn1_mt(:,:,:),denIn1_mt_Im(:,:,:) 
@@ -57,7 +57,7 @@ contains
         !remove spin dependence
         denIn1_pw  = (denIn1%pw(:,1)+denIn1%pw(:,fi%input%jspins))/(3.0-fi%input%jspins)
         denIn1_mt = (denIn1%mt(:,0:,:,1)+denIn1%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
-        denIn1_mt_Im = (denIn1Im%mt(:,0:,:,1)+denIn1Im%mt(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
+        denIn1_mt_Im = (denIn1%mtIm(:,0:,:,1)+denIn1%mtIm(:,0:,:,fi%input%jspins))/(3.0-fi%input%jspins)
 
         ! \rho(1)V_{ext}(1) integral (HF)
         diel_tensor_int_IR = CMPLX(0.0,0.0)
@@ -75,8 +75,7 @@ contains
             starsq_vext%ufft = starsq%ufft
 
             call vExt1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
-            call vExt1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
-            call dfpt_vefield(fi%dfpt,starsq,fi%atoms,fi%sym,sphhar,fi%cell,vExt1,vExt1Im,iDir_col,1)
+            call dfpt_vefield(fi%dfpt,starsq,fi%atoms,fi%sym,sphhar,fi%cell,vExt1,iDir_col,1)
 
 
             if (iDir_col .eq. iDir_den) then
@@ -96,7 +95,7 @@ contains
                 do iType = 1, fi%atoms%nat
                     tempval_mt = CMPLX(0.0,0.0) 
         
-                    call dfpt_int_mt(fi%atoms, sphhar, fi%sym, iType, denIn1_mt, denIn1_mt_Im, vExt1%mt(:,0:,:,1), vExt1Im%mt(:,0:,:,1), tempval_mt)!denIn1_mt
+                    call dfpt_int_mt(fi%atoms, sphhar, fi%sym, iType, denIn1_mt, denIn1_mt_Im, vExt1%mt(:,0:,:,1), vExt1%mtIm(:,0:,:,1), tempval_mt)!denIn1_mt
                     dieltensor_HF(iDir_col) = dieltensor_HF(iDir_col) + tempval_mt
                     diel_tensor_int_MT(iDir_col) =  diel_tensor_int_MT(iDir_col) + tempval_mt
                     diel_tensor_int_MT_atom(iDir_col,iType) = diel_tensor_int_MT_atom(iDir_col,iType) + tempval_mt

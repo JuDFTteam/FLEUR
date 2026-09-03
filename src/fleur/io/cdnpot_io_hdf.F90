@@ -1766,7 +1766,7 @@ MODULE m_cdnpot_io_hdf
 
    SUBROUTINE writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
                               starsIndex, latharmsIndex, structureIndex, stepfunctionIndex,&
-                              date,time,distance,fermiEnergy,mmpmatDistance,occDistance,l_qfix,iter,den,denIm,b_constr)
+                              date,time,distance,fermiEnergy,mmpmatDistance,occDistance,l_qfix,iter,den,b_constr)
       use m_types_input
       use m_types_potden
       TYPE(t_input),    INTENT(IN) :: input
@@ -1782,7 +1782,6 @@ MODULE m_cdnpot_io_hdf
       REAL,    INTENT (IN)         :: mmpmatDistance, occDistance
       LOGICAL, INTENT (IN)         :: l_qfix
 
-      TYPE(t_potden), OPTIONAL, INTENT(IN) :: denIm
       REAL,OPTIONAL,INTENT(IN)             :: b_constr(:,:)
       INTEGER                      :: i, iVac
       INTEGER                      :: ntype,jmtd,nmzd,nmzxyd,nlhd,ng3,ng2
@@ -1986,7 +1985,7 @@ MODULE m_cdnpot_io_hdf
                CALL io_write_complex1(cdomSetID,(/-1,1/),dimsInt(:2),"pw",den%pw(:,3))
                CALL h5dclose_f(cdomSetID, hdfError)
 
-               IF (PRESENT(denIm)) THEN
+               IF (ALLOCATED(den%mtIm)) THEN
                   dimsInt(:2)=(/2,ng3/)
                   CALL h5dopen_f(groupID, 'cdom12', cdom12SetID, hdfError)
                   CALL io_write_complex1(cdom12SetID,(/-1,1/),dimsInt(:2),"pw12",den%pw(:,4))
@@ -2040,13 +2039,13 @@ MODULE m_cdnpot_io_hdf
             CALL io_write_real4(frSetID,(/1,1,1,1/),dimsInt(:4),"mt",den%mt(:,:,:,:input%jspins))
             CALL h5dclose_f(frSetID, hdfError)
 
-            IF (PRESENT(denIm)) THEN
+            IF (ALLOCATED(den%mtIm)) THEN
                dims(:4)=(/jmtd,nlhd+1,ntype,input%jspins/)
                dimsInt = dims
                CALL h5screate_simple_f(4,dims(:4),frImSpaceID,hdfError)
                CALL h5dcreate_f(groupID, "frIm", H5T_NATIVE_DOUBLE, frImSpaceID, frImSetID, hdfError)
                CALL h5sclose_f(frImSpaceID,hdfError)
-               CALL io_write_real4(frImSetID,(/1,1,1,1/),dimsInt(:4),"mtIm",denIm%mt(:,:,:,:input%jspins))
+               CALL io_write_real4(frImSetID,(/1,1,1,1/),dimsInt(:4),"mtIm",den%mtIm(:,:,:,:input%jspins))
                CALL h5dclose_f(frImSetID, hdfError)
             END IF
 
@@ -2059,13 +2058,13 @@ MODULE m_cdnpot_io_hdf
                CALL h5sclose_f(frOffSpaceID,hdfError)
                CALL io_write_real4(frOffSetID,(/1,1,1,1/),dimsInt(:4),"mt",den%mt(:,:,:,3:4))
                CALL h5dclose_f(frOffSetID, hdfError)
-               IF (PRESENT(denIm)) THEN
+               IF (ALLOCATED(den%mtIm)) THEN
                   dims(:4)=(/jmtd,nlhd+1,ntype,2/)
                   dimsInt = dims
                   CALL h5screate_simple_f(4,dims(:4),frOffImSpaceID,hdfError)
                   CALL h5dcreate_f(groupID, "froffIm", H5T_NATIVE_DOUBLE, frOffImSpaceID, frOffImSetID, hdfError)
                   CALL h5sclose_f(frOffImSpaceID,hdfError)
-                  CALL io_write_real4(frOffImSetID,(/1,1,1,1/),dimsInt(:4),"mtIm",denIm%mt(:,:,:,3:4))
+                  CALL io_write_real4(frOffImSetID,(/1,1,1,1/),dimsInt(:4),"mtIm",den%mtIm(:,:,:,3:4))
                   CALL h5dclose_f(frOffImSetID, hdfError)
                END IF
             END IF
@@ -2101,7 +2100,7 @@ MODULE m_cdnpot_io_hdf
                CALL io_write_complex1(cdomSetID,(/-1,1/),dimsInt(:2),"pw",den%pw(:,3))
                CALL h5dclose_f(cdomSetID, hdfError)
 
-               IF (PRESENT(denIm)) THEN
+               IF (ALLOCATED(den%mtIm)) THEN
                   dims(:2)=(/2,ng3/)
                   dimsInt = dims
                   CALL h5screate_simple_f(2,dims(:2),cdom12SpaceID,hdfError)
@@ -2198,13 +2197,13 @@ MODULE m_cdnpot_io_hdf
          if (present(b_constr)) call io_write_var(groupID,"b_con",b_constr)
          
 
-         IF (PRESENT(denIm)) THEN
+         IF (ALLOCATED(den%mtIm)) THEN
             dims(:4)=(/jmtd,nlhd+1,ntype,input%jspins/)
             dimsInt = dims
             CALL h5screate_simple_f(4,dims(:4),frImSpaceID,hdfError)
             CALL h5dcreate_f(groupID, "frIm", H5T_NATIVE_DOUBLE, frImSpaceID, frImSetID, hdfError)
             CALL h5sclose_f(frImSpaceID,hdfError)
-            CALL io_write_real4(frImSetID,(/1,1,1,1/),dimsInt(:4),"mtIm",denIm%mt(:,0:,:,:input%jspins))
+            CALL io_write_real4(frImSetID,(/1,1,1,1/),dimsInt(:4),"mtIm",den%mtIm(:,0:,:,:input%jspins))
             CALL h5dclose_f(frImSetID, hdfError)
          END IF
 
@@ -2217,13 +2216,13 @@ MODULE m_cdnpot_io_hdf
             CALL h5sclose_f(frOffSpaceID,hdfError)
             CALL io_write_real4(frOffSetID,(/1,1,1,1/),dimsInt(:4),"mt",den%mt(:,0:,:,3:4))
             CALL h5dclose_f(frOffSetID, hdfError)
-            IF (PRESENT(denIm)) THEN
+            IF (ALLOCATED(den%mtIm)) THEN
                dims(:4)=(/jmtd,nlhd+1,ntype,2/)
                dimsInt = dims
                CALL h5screate_simple_f(4,dims(:4),frOffImSpaceID,hdfError)
                CALL h5dcreate_f(groupID, "froffIm", H5T_NATIVE_DOUBLE, frOffImSpaceID, frOffImSetID, hdfError)
                CALL h5sclose_f(frOffImSpaceID,hdfError)
-               CALL io_write_real4(frOffImSetID,(/1,1,1,1/),dimsInt(:4),"mtIm",denIm%mt(:,0:,:,3:4))
+               CALL io_write_real4(frOffImSetID,(/1,1,1,1/),dimsInt(:4),"mtIm",den%mtIm(:,0:,:,3:4))
                CALL h5dclose_f(frOffImSetID, hdfError)
             END IF
          END IF
@@ -2258,7 +2257,7 @@ MODULE m_cdnpot_io_hdf
             CALL io_write_complex1(cdomSetID,(/-1,1/),dimsInt(:2),"pw",den%pw(:,3))
             CALL h5dclose_f(cdomSetID, hdfError)
 
-            IF (PRESENT(denIm)) THEN
+            IF (ALLOCATED(den%mtIm)) THEN
                dims(:2)=(/2,ng3/)
                dimsInt = dims
                CALL h5screate_simple_f(2,dims(:2),cdom12SpaceID,hdfError)
@@ -2593,7 +2592,7 @@ MODULE m_cdnpot_io_hdf
    END SUBROUTINE writePotentialHDF
 
    SUBROUTINE readDensityHDF(fileID, input, stars, latharms, atoms, vacuum,  &
-                             archiveName, densityType,fermiEnergy,lastDistance,l_qfix,l_DimChange,den,denIm,b_constr)
+                             archiveName, densityType,fermiEnergy,lastDistance,l_qfix,l_DimChange,den,b_constr)
       use m_types_input
       use m_types_stars
       use m_types_sphhar
@@ -2618,7 +2617,6 @@ MODULE m_cdnpot_io_hdf
       REAL,    INTENT (INOUT)      :: lastDistance
       LOGICAL, INTENT (OUT)        :: l_qfix, l_DimChange
 
-      TYPE(t_potden), OPTIONAL, INTENT(INOUT) :: denIm
       REAL,optional,INTENT(INOUT) :: b_constr(:,:)
 
       INTEGER               :: starsIndex, latharmsIndex, structureIndex, stepfunctionIndex
@@ -3023,14 +3021,14 @@ MODULE m_cdnpot_io_hdf
       frTemp(1:jmtdOut,1:nlhdOut+1,1:ntypeOut,1:jspinsOut)
       DEALLOCATE(frTemp)
 
-      IF (PRESENT(denIm)) THEN
-         denIm%mt = 0.0
+      IF (ALLOCATED(den%mtIm)) THEN
+         den%mtIm = 0.0
          ALLOCATE(frTemp(jmtd,1:nlhd+1,ntype,1:jspins))
          dimsInt(:4)=(/jmtd,nlhd+1,ntype,jspins/)
          CALL h5dopen_f(groupID, 'frIm', frImSetID, hdfError)
          CALL io_read_real4(frImSetID,(/1,1,1,1/),dimsInt(:4),"frImTemp",frTemp(:,:,:,:))
          CALL h5dclose_f(frImSetID, hdfError)
-         denIm%mt(1:jmtdOut,0:nlhdOut,1:ntypeOut,1:jspinsOut) =&
+         den%mtIm(1:jmtdOut,0:nlhdOut,1:ntypeOut,1:jspinsOut) =&
          frTemp(1:jmtdOut,1:nlhdOut+1,1:ntypeOut,1:jspinsOut)
          DEALLOCATE(frTemp)
       END IF
@@ -3044,13 +3042,13 @@ MODULE m_cdnpot_io_hdf
             frTemp(1:jmtdOut,1:nlhdOut+1,1:ntypeOut,1:2)
          DEALLOCATE(frTemp)
          
-         IF (PRESENT(denIm)) THEN
+         IF (ALLOCATED(den%mtIm)) THEN
             ALLOCATE(frTemp(jmtd,1:nlhd+1,ntype,1:2))
             dimsInt(:4)=(/jmtd,nlhd+1,ntype,2/)
             CALL h5dopen_f(groupID, 'froffIm', frOffImSetID, hdfError)
             CALL io_read_real4(frOffImSetID,(/1,1,1,1/),dimsInt(:4),"frImTemp",frTemp(:,:,:,1:2))
             CALL h5dclose_f(frOffImSetID, hdfError)
-            denIm%mt(1:jmtdOut,0:nlhdOut,1:ntypeOut,3:4) =&
+            den%mtIm(1:jmtdOut,0:nlhdOut,1:ntypeOut,3:4) =&
                frTemp(1:jmtdOut,1:nlhdOut+1,1:ntypeOut,1:2)
             DEALLOCATE(frTemp)
          END IF
@@ -3090,7 +3088,7 @@ MODULE m_cdnpot_io_hdf
          den%pw(1:ng3Out,3) = cdomTemp(1:ng3Out)
          DEALLOCATE(cdomTemp)
 
-         IF (PRESENT(denIm)) THEN
+         IF (ALLOCATED(den%mtIm)) THEN
             den%pw(:,4) = CMPLX(0.0,0.0)
             ALLOCATE(cdomTemp(ng3))
             dimsInt(:2)=(/2,ng3/)

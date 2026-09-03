@@ -22,8 +22,8 @@ module m_mpmom
 
 contains
 
-  subroutine mpmom( input, fmpi, atoms, sphhar, stars, sym, cell, qpw, rho, potdenType, qlm, ispin, l_coreCharge,&
-                  & sternheimerJob, rhoimag, stars2, iDtype, iDir, rho0, iDir2 )
+  subroutine mpmom( input, fmpi, atoms, sphhar, stars, sym, cell, den, potdenType, qlm, ispin, l_coreCharge,&
+                  & sternheimerJob, stars2, iDtype, iDir, rho0, iDir2 )
 
     use m_types
     USE m_constants
@@ -38,15 +38,14 @@ contains
     type(t_cell),    intent(in)   :: cell
     type(t_sphhar),  intent(in)   :: sphhar
     type(t_atoms),   intent(in)   :: atoms
-    real,            intent(in)   :: rho(:,0:,:) !(atoms%jmtd,0:sphhar%nlhd,atoms%ntype)
-    complex,         intent(in)   :: qpw(:)      !(stars%ng3)
+    type(t_potden),  intent(in)   :: den !corresponds to either 0th (GS) or 1st (DFPT) order
     integer,         intent(in)   :: potdenType
     complex,         intent(out)  :: qlm(-atoms%lmaxd:atoms%lmaxd,0:atoms%lmaxd,atoms%ntype)
     integer,         intent(in)   :: ispin
     LOGICAL, OPTIONAL, INTENT(IN) :: l_coreCharge
 
     type(t_sternheimerJob),optional,intent(in) :: sternheimerJob
-    type(t_potden),optional,intent(in)  :: rhoimag, rho0
+    type(t_potden),optional,intent(in)  :: rho0 !GS density needed for DFPT pulay & surface correction
     INTEGER, OPTIONAL, INTENT(IN)       :: iDtype, iDir ! DFPT: Type and direction of displaced atom
     TYPE(t_stars), OPTIONAL, INTENT(IN) :: stars2
     INTEGER, OPTIONAL, INTENT(IN)       :: iDir2
@@ -65,20 +64,20 @@ contains
       qlmo = 0.0
 !      call mt_moments( input, atoms, sphhar, rho(:,:,:), potdenType, qlmo )
       IF (.NOT.l_dfptvgen) THEN
-          call mt_moments( input, atoms, sym, sphhar, rho(:,:,:), potdenType,qlmo,l_coreCharge)
+          call mt_moments( input, atoms, sym, sphhar, den%mt(:,0:,:,ispin), potdenType,qlmo,l_coreCharge)
       ELSE IF (.NOT.PRESENT(iDir2)) THEN
           ! qlmo for the real part of rho1:
-          call mt_moments( input, atoms, sym, sphhar, rho(:,:,:), potdenType,qlmo,l_coreCharge=.FALSE.)
+          call mt_moments( input, atoms, sym, sphhar, den%mt(:,0:,:,ispin), potdenType,qlmo,l_coreCharge=.FALSE.)
           ! qlmo for the imaginary part of rho1 and the perturbation of vExt in the displaced atom:
-          call mt_moments( input, atoms, sym, sphhar, rhoimag%mt(:,0:,:,ispin), potdenType,qlmo,l_coreCharge=.TRUE.,sternheimerJob=sternheimerJob,l_rhoimag=.TRUE.,iDtype=iDtype,iDir=iDir)
+          call mt_moments( input, atoms, sym, sphhar, den%mtIm(:,0:,:,ispin), potdenType,qlmo,l_coreCharge=.TRUE.,sternheimerJob=sternheimerJob,l_rhoimag=.TRUE.,iDtype=iDtype,iDir=iDir)
           IF (sternheimerJob%l_IBScorrection) CALL dfpt_mt_moments_SF(atoms, sym, sphhar, iDtype, iDir, rho0%mt(:,0:,:,ispin), qlmo)
       ELSE
-          call mt_moments( input, atoms, sym, sphhar, rho(:,:,:), potdenType,qlmo,l_coreCharge=.TRUE.,sternheimerJob=sternheimerJob,l_rhoimag=.FALSE.,iDtype=iDtype,iDir=iDir,iDir2=iDir2)
+          call mt_moments( input, atoms, sym, sphhar, den%mt(:,0:,:,ispin), potdenType,qlmo,l_coreCharge=.TRUE.,sternheimerJob=sternheimerJob,l_rhoimag=.FALSE.,iDtype=iDtype,iDir=iDir,iDir2=iDir2)
       END IF
     end if
 
     ! multipole moments of the interstitial charge density in the spheres
-    call pw_moments( input, fmpi, stars, atoms, cell, sym,   qpw(:), potdenType, qlmp , l_dfptvgen)
+    call pw_moments( input, fmpi, stars, atoms, cell, sym,   den%pw(:,ispin), potdenType, qlmp , l_dfptvgen)
 
     IF (l_dfptvgen.AND..NOT.PRESENT(iDir2)) THEN
       if (sternheimerJob%l_IBScorrection) then 

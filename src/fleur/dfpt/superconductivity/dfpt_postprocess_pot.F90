@@ -56,7 +56,7 @@ contains
         type(t_stars) :: starsq
         type(t_kpts)  :: kqpts , qpts
         type(t_sternheimerJob) :: sternheimerJob
-        type(t_potden) :: vTot1, vTot1Im, den1, den1Im, rho_local
+        type(t_potden) :: vTot1, den1, rho_local
         type(t_results) :: dummy_results
 
 
@@ -140,10 +140,8 @@ contains
                     starsq%ufft = stars%ufft
 
                     call den1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
-                    call den1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
 
                     call vTot1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
-                    call vTot1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
                     
                     ! allocate the pw_w part
                     allocate( vTot1%pw_w(size(vTot1%pw,1),size(vTot1%pw,2)))
@@ -157,7 +155,7 @@ contains
                         if (l_exist) call readDensity(starsq, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
                                                     fi%input, fi%sym, CDN_ARCHIVE_TYPE_CDN1_const, CDN_INPUT_DEN_const, 0, &
                                                     dummy_results%ef, dummy_results%last_distance, l_dummy, den1,  &
-                                                    inFilename=trim(filename),denIm=den1Im)
+                                                    inFilename=trim(filename))
                         call timestop("den1 IO")
                         
                         ! add the gradient to the density that we store
@@ -167,19 +165,18 @@ contains
 
 #ifdef CPP_MPI
                     call den1%distribute(fmpi%mpi_comm)
-                    call den1Im%distribute(fmpi%mpi_comm)
 #endif 
                     call timestart("Generating Potential Perturbation")
                     call dfpt_vgen(sternheimerJob,hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
                                     fi%dfpt,fi%cell,fmpi,fi%noco,nococonv,rho_local,vTot,&
-                                    starsq,den1Im,vTot1,.TRUE.,vTot1Im,den1,iDtype,iDir,[1,1])
+                                    starsq,vTot1,.TRUE.,den1,iDtype,iDir,[1,1])
                     call timestop("Generating Potential Perturbation")
                     ! The matrix element needs the gradient correction in the MT 
                     vTot1%mt(:,0:,iDtype,:) = vTot1%mt(:,0:,iDtype,:) + grVtot3(iDir)%mt(:,0:,iDtype,:)
 
                     ! construct the electron-phonon element in cartesian basis 
                     call timestart("elph element")
-                    CALL matrix_element(sternheimerJob,fi,sphhar,results,fmpi,enpara,nococonv,starsq,vTot1,vTot1Im,vTot,rho, qpts%bk(:, iQ),&
+                    CALL matrix_element(sternheimerJob,fi,sphhar,results,fmpi,enpara,nococonv,starsq,vTot1,vTot,rho, qpts%bk(:, iQ),&
                                         eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatCart,fi%dfpt%bandWindow) 
 
                     call timestop("elph element")
@@ -197,9 +194,7 @@ contains
                     ! reset some variables 
                     call starsq%reset_stars()
                     call vTot1%reset_dfpt()
-                    call vTot1Im%reset_dfpt()
                     call den1%reset_dfpt()
-                    call den1Im%reset_dfpt()
                     
                 call timestop("Dirloop")
                 end do ! iDir
