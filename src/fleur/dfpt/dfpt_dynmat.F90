@@ -113,10 +113,8 @@ CONTAINS
       ! This is crucial for the Film-Mode and will be visible in the z-Eigenmodes.  
       CALL create_typesLocal(fi,fmpi,fi%sym,fi%cell,fi%input,sphhar, fi%vacuum , fi%noco ,starsqLocal, potden1dummy,atomsLocal,qvec=qvec,iDir=iDir_row,iDtype=iDtype_row,l_dfpt=.TRUE.)
       CALL create_typesLocal(fi,fmpi,fi%sym,fi%cell,fi%input,sphhar, fi%vacuum , fi%noco ,starsLocal, potdendummy,atomsLocal)
-      CALL potden1dummyLocal%copyPotDen(potdendummy)
-      CALL potden1dummyLocal%resetPotDen()
-      IF (.NOT.ALLOCATED(potden1dummyLocal%mtIm)) ALLOCATE(potden1dummyLocal%mtIm,mold=potden1dummyLocal%mt)
-      potden1dummyLocal%mtIm = 0.0
+      CALL potden1dummyLocal%init(starsLocal, atomsLocal, sphhar, fi%vacuum, fi%noco, &
+                                & fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
 
       ALLOCATE(pww2Local(starsLocal%ng3),pwwq2Local(starsqLocal%ng3))
       ALLOCATE(denIn1Local_pw(starsqLocal%ng3),rhoLocal_pw(starsLocal%ng3))

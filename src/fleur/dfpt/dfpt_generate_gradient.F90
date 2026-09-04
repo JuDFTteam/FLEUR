@@ -46,7 +46,7 @@ contains
         type(t_potden) :: potdummy,potdummyLocal
         type(t_potden) :: rho_tmp ! a copy of the starting density. This is done to not mess with the starting density 
         type(t_atoms)  :: atomsLocal
-        integer :: iDir, iDir2, iSpin, xInd, yInd, zInd, iStar , iVac, zlim
+        integer :: iDir, iDir2, iSpin, xInd, yInd, iStar , iVac, zlim
 
         complex, allocatable :: grrhodummy(:, :, :, :, :) 
         real    :: dr_re(fi%vacuum%nmzd), dr_im(fi%vacuum%nmzd), drr_dummy(fi%vacuum%nmzd)
@@ -86,17 +86,7 @@ contains
         do iSpin = 1, size(rho%mt,4)
             call mt_gradient_new(fi%atoms, sphhar, fi%sym, rho%mt(:, :, :, iSpin), grrhodummy(:, :, :, iSpin, :))
         end do 
-        do  zInd = -stars%mx3, stars%mx3
-            do yInd = -stars%mx2, stars%mx2
-                do xInd = -stars%mx1, stars%mx1
-                    iStar = stars%ig(xInd, yInd, zInd)
-                    if (iStar.eq.0) cycle
-                    grRho3(1)%pw(iStar,:) = rho%pw(iStar,:) * cmplx(0.0,dot_product([1.0,0.0,0.0],matmul(real([xInd,yInd,zInd]),fi%cell%bmat)))
-                    grRho3(2)%pw(iStar,:) = rho%pw(iStar,:) * cmplx(0.0,dot_product([0.0,1.0,0.0],matmul(real([xInd,yInd,zInd]),fi%cell%bmat)))
-                    grRho3(3)%pw(iStar,:) = rho%pw(iStar,:) * cmplx(0.0,dot_product([0.0,0.0,1.0],matmul(real([xInd,yInd,zInd]),fi%cell%bmat)))
-                end do 
-            end do 
-        end do 
+        call pw_gradient(stars, fi%cell, fi%noco%l_noco, rho, grRho3)
 
         if (fi%input%film) then
             do yInd = -stars%mx2, stars%mx2

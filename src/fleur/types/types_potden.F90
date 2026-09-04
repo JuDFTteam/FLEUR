@@ -156,6 +156,8 @@ CONTAINS
     IF (PRESENT(that)) THEN
        IF (ALLOCATED(this%mtIm).NEQV.ALLOCATED(that%mtIm)) &
           CALL judft_bug("mtIm allocation mismatch between this and that",calledby="sum_both_spin")
+       IF (SIZE(this%pw,2).NE.SIZE(that%pw,2)) &
+          CALL judft_bug("pw channel count mismatch between this and that",calledby="sum_both_spin")
        IF (SIZE(this%pw,2)>1) THEN
           that%mt(:,0:,:,1)=this%mt(:,0:,:,1)+this%mt(:,0:,:,2)
           IF (ALLOCATED(this%mtIm)) that%mtIm(:,0:,:,1)=this%mtIm(:,0:,:,1)+this%mtIm(:,0:,:,2)
@@ -188,6 +190,8 @@ CONTAINS
 
     IF (ALLOCATED(this%mtIm).NEQV.ALLOCATED(that%mtIm)) &
        CALL judft_bug("mtIm allocation mismatch between this and that",calledby="copy_both_spin")
+    IF (SIZE(this%pw,2).NE.SIZE(that%pw,2)) &
+       CALL judft_bug("pw channel count mismatch between this and that",calledby="copy_both_spin")
 
     that%mt(:,0:,:,1)=this%mt(:,0:,:,1)
     IF (ALLOCATED(this%mtIm)) that%mtIm(:,0:,:,1)=this%mtIm(:,0:,:,1)
@@ -254,6 +258,9 @@ CONTAINS
     if (allocated(PotDen1%mtIm).neqv.allocated(PotDen2%mtIm)) &
        call judft_bug("mtIm allocation mismatch between operands",calledby="addPotDen")
 
+    if (size(PotDen1%pw,2).ne.size(PotDen2%pw,2)) &
+       call judft_bug("pw channel count mismatch between operands",calledby="addPotDen")
+
     if (allocated(PotDen1%mtIm) .and. allocated(PotDen2%mtIm)) then
       if(.not. allocated(PotDen3%mtIm)) allocate(PotDen3%mtIm, mold=PotDen1%mtIm)
       PotDen3%mtIm     = PotDen1%mtIm + PotDen2%mtIm
@@ -288,6 +295,9 @@ CONTAINS
 
     if (allocated(PotDen1%mtIm).neqv.allocated(PotDen2%mtIm)) &
        call judft_bug("mtIm allocation mismatch between operands",calledby="subPotDen")
+
+    if (size(PotDen1%pw,2).ne.size(PotDen2%pw,2)) &
+       call judft_bug("pw channel count mismatch between operands",calledby="subPotDen")
 
     if (allocated(PotDen1%mtIm) .and. allocated(PotDen2%mtIm)) then
       if(.not. allocated(PotDen3%mtIm)) allocate(PotDen3%mtIm, mold=PotDen1%mtIm)
