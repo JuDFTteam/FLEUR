@@ -25,7 +25,8 @@ MODULE m_types_dfpt
       LOGICAL :: l_postprocess = .FALSE. ! Postprocessing of charge density response 
       LOGICAL :: l_elph = .FALSE.    ! Calculate electron-phonon matrix elements
       LOGICAL :: l_sumrule_scf  = .FALSE. ! Apply sumrule for dynmats in scf calculation 
-      LOGICAL :: l_sumrule_intp  = .FALSE. ! Apply sumrule for dynmats in interpolation calculation 
+      LOGICAL :: l_sumrule_intp  = .FALSE. ! Apply sumrule for dynmats in interpolation calculation
+      LOGICAL :: l_bornhuang  = .FALSE. ! Project the force constants onto the invariance conditions
       LOGICAL :: l_rm_qhdf  = .TRUE. ! Remove q*hdf files, after convergence
       INTEGER :: startq = 1          ! Start the q-loop at a specific point
       INTEGER :: stopq  = 0          ! Stop  the q-loop at a specific point
@@ -88,6 +89,7 @@ CONTAINS
       CALL mpi_bc(this%l_elph, rank, mpi_comm)
       CALL mpi_bc(this%l_sumrule_scf, rank, mpi_comm)
       CALL mpi_bc(this%l_sumrule_intp, rank, mpi_comm)
+      CALL mpi_bc(this%l_bornhuang, rank, mpi_comm)
       CALL mpi_bc(this%l_rm_qhdf, rank, mpi_comm)
       CALL mpi_bc(this%startq, rank, mpi_comm)
       CALL mpi_bc(this%stopq, rank, mpi_comm)
@@ -343,6 +345,12 @@ CONTAINS
 
          IF (numberNodes == 1) THEN
            this%l_sumrule_intp  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/dfpt/interpolation/@l_sumrule'))
+         END IF
+
+         numberNodes = xml%GetNumberOfNodes('/fleurInput/output/dfpt/interpolation/@l_bornhuang')
+
+         IF (numberNodes == 1) THEN
+           this%l_bornhuang  = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/dfpt/interpolation/@l_bornhuang'))
          END IF
 
 

@@ -145,13 +145,15 @@ contains
 
             ! Fourier-interpolate the coarse dynamical matrices onto the fine q-mesh
             call interpolate_dynmat(fi_fullsym%atoms, fi_fullsym%sym, fi%cell, qpts, dyn_mat, &
-                                    fi%dfpt%l_WSinterpol, fi%dfpt%qpts_interpol%bk, dyn_mat_interp)
+                                    fi%dfpt%l_WSinterpol, fi%dfpt%qpts_interpol%bk, dyn_mat_interp, &
+                                    l_bornhuang=fi%dfpt%l_bornhuang)
 
             ! diagonalize the interpolated dynamical matrix at each fine q-point
             do iQ = 1, fi%dfpt%qpts_interpol%nkpt
                 call timestart("Dynmat diagonalization")
+                ! The projection already imposes the translational rule on the force constants.
                 call DiagonalizeDynMat(fi%atoms, fi%dfpt%qpts_interpol%bk(:,iQ), fi%dfpt%calcEigenVec, dyn_mat_interp(:,:,iQ), eigenVals, eigenVecs, iQ, .TRUE., &
-                                       TRIM(dynfiletag), fi%dfpt%l_sumrule_intp, l_writeOutput= (.not.fi%dfpt%l_dos))
+                                       TRIM(dynfiletag), fi%dfpt%l_sumrule_intp.AND..NOT.fi%dfpt%l_bornhuang, l_writeOutput= (.not.fi%dfpt%l_dos))
                 call timestop("Dynmat diagonalization")
 
                 call timestart("Frequency calculation")

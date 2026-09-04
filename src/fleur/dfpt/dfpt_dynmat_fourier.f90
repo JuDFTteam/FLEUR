@@ -283,7 +283,7 @@ CONTAINS
 
    END SUBROUTINE
 
-   SUBROUTINE interpolate_dynmat(atoms, sym, cell, qpts_coarse, dyn_mat_coarse,l_WSinterpol, q_target, dyn_mat_interp)
+   SUBROUTINE interpolate_dynmat(atoms, sym, cell, qpts_coarse, dyn_mat_coarse,l_WSinterpol, q_target, dyn_mat_interp, l_bornhuang)
       !! Fourier interpolation of the dynamical matrix from a coarse q-mesh onto an
       !! arbitrary set of target q-points. The coarse (IBZ, "raw") dynamical matrices
       !! are unfolded and transformed to the real-space (mass-normalized) FCM once via
@@ -291,6 +291,8 @@ CONTAINS
       !! The result is NOT diagonalized: it is returned in the convention that
       !! DiagonalizeDynMat(..., l_scalemass=.TRUE.) expects, so the caller does the
       !! diagonalization.
+      use m_dfpt_sumrules
+
       type(t_atoms), intent(in) :: atoms
       type(t_sym),   intent(in) :: sym
       type(t_cell),  intent(in) :: cell
@@ -299,6 +301,7 @@ CONTAINS
       logical,       intent(in) :: l_WSinterpol
       real,          intent(in) :: q_target(:,:)               ! (3,nTarget)
       complex, allocatable, intent(out) :: dyn_mat_interp(:,:,:) ! (3nat,3nat,nTarget), NOT diagonalized
+      logical, optional, intent(in) :: l_bornhuang
 
       type(t_cell) :: cellLocal
       integer :: dyn_dim, iq, iDir, iDir2, nx, ny, nz, iGrid, boxSize
@@ -310,10 +313,14 @@ CONTAINS
       integer, allocatable :: Rvecs(:,:), indStored(:,:)
       real,    allocatable :: weightNZ(:)
       complex, allocatable :: dyn_mat_r(:,:,:,:,:), dyn_mat_q_full(:,:,:), dyn_mat_q(:,:)
+      logical :: l_bh
 
       dyn_dim = 3*atoms%nat
-      
-      cellLocal = cell 
+
+      l_bh = .false.
+      if (present(l_bornhuang)) l_bh = l_bornhuang
+
+      cellLocal = cell
 
       ! Fourier box limits
       ft_lim(2,:) =  qpts_coarse%nkpt3(:)/2
@@ -367,6 +374,12 @@ CONTAINS
             end do
          end do
       end do
+
+      if (l_bh) then
+         call timestart("Born-Huang projection")
+         call dfpt_born_huang(atoms, cell, ft_lim, nNZ, Rvecs, indStored, weightNZ, dyn_mat_r)
+         call timestop("Born-Huang projection")
+      end if
 
       ! TODO: NAC / polar long-range term (currently inactive in dfpt_interpolation)
 

@@ -651,8 +651,9 @@ WRITE (fileNum, 242) fr(1.0)
          WRITE (fileNum, 443) dfpt%l_efield_scr, fr(dfpt%qlim)
 
 444      FORMAT('         <interpolation l_band="', l1, '" l_dos="', l1, '" l_sumrule="', l1, &
-                '" l_polar="', l1, '" qptsListName="', a, '"/>')
-         WRITE (fileNum, 444) dfpt%l_band, dfpt%l_dos, dfpt%l_sumrule_intp, dfpt%l_polar, TRIM(ADJUSTL(kptsSelection(1)))
+                '" l_bornhuang="', l1, '" l_polar="', l1, '" qptsListName="', a, '"/>')
+         WRITE (fileNum, 444) dfpt%l_band, dfpt%l_dos, dfpt%l_sumrule_intp, dfpt%l_bornhuang, dfpt%l_polar, &
+                              TRIM(ADJUSTL(kptsSelection(1)))
 
 445      FORMAT('         <postprocess l_elph="', l1,  &
                 '" l_write_epw="', l1, '" epw_prefix="', a, '"/>')

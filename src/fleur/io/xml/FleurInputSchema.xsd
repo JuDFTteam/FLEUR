@@ -3584,6 +3584,11 @@
                <xsd:documentation>Apply acoustic sum rule correction.</xsd:documentation>
             </xsd:annotation>
          </xsd:attribute>
+         <xsd:attribute name="l_bornhuang" type="FleurBool" use="optional">
+            <xsd:annotation>
+               <xsd:documentation>Project the force constants onto the translational, rotational and Born-Huang invariance conditions.</xsd:documentation>
+            </xsd:annotation>
+         </xsd:attribute>
          <xsd:attribute name="l_WSinterpol" type="FleurBool" use="optional">
          <xsd:annotation>
             <xsd:documentation>Wigner Seitz Construction for interpolation.</xsd:documentation>
