@@ -16,7 +16,7 @@ CONTAINS
 !     ..
 !     .. Arguments ..
       INTEGER, INTENT(IN) :: n
-      REAL, INTENT(OUT) :: w(n/2), x(n/2)
+      REAL, INTENT(OUT) :: w((n + 1)/2), x((n + 1)/2)
 !     ..
 !     .. Locals ..
       INTEGER :: i, it, k, m
