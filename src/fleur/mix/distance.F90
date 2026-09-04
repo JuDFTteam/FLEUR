@@ -159,8 +159,9 @@ contains
       DO js = 1,jspins
          CALL fsm%dfpt_multiply_dot_mask(fmMet,(/.TRUE.,.TRUE.,.TRUE./),js,dist(js,:))
       END DO
-      IF (l_noco) THEN 
-         CALL fsm%dfpt_multiply_dot_mask(fmMet,(/.TRUE.,.TRUE.,.TRUE./),3,dist(6,:),dist(7,:))
+      IF (l_noco) THEN
+         CALL fsm%dfpt_multiply_dot_mask(fmMet,(/.TRUE.,.TRUE.,.TRUE./),3,dist(6,:))
+         CALL fsm%dfpt_multiply_dot_mask(fmMet,(/.TRUE.,.TRUE.,.TRUE./),4,dist(7,:))
       END IF
       IF (jspins.EQ.2) THEN
          CALL fmMet%dfpt_multiply_dot_mask(fsm_mag,(/.TRUE.,.TRUE.,.TRUE./),1,dist(3,:))
