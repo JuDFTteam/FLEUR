@@ -228,27 +228,22 @@ CONTAINS
             IF (mt_start(js) > 0) THEN
                !This PE stores some(or all) MT data
                ii = mt_start(js) - 1
-               IF (.NOT.l_dfpt) THEN
-                  DO n = mt_rank + 1, atoms%ntype, mt_size
-                     if (js==1 .and. l_noco) then 
-                        !Construct charge
-                        DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
-                           vec%vec_mt(ii + 1:ii + atoms%jri(n)) = (den%mt(:atoms%jri(n), l, n, 1)+den%mt(:atoms%jri(n), l, n, 2))*0.5
-                           ii = ii + atoms%jri(n)
-                        ENDDO   
-                     elseif(js==2.and.l_noco) then  
-                        !Construct magnetiztaion
-                        DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
-                           vec%vec_mt(ii + 1:ii + atoms%jri(n)) = (den%mt(:atoms%jri(n), l, n, 1)-den%mt(:atoms%jri(n), l, n, 2))*0.5
-                           ii = ii + atoms%jri(n)
-                        ENDDO
-                     else   
-                        DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
-                           vec%vec_mt(ii + 1:ii + atoms%jri(n)) = den%mt(:atoms%jri(n), l, n, jspin)
-                           ii = ii + atoms%jri(n)
-                        ENDDO
-                     endif   
+               DO n = mt_rank + 1, atoms%ntype, mt_size
+                  DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
+                     IF (l_noco .AND. js == 1) THEN
+                        !charge response
+                        vec%vec_mt(ii + 1:ii + atoms%jri(n)) = 0.5*(den%mt(:atoms%jri(n), l, n, 1) + den%mt(:atoms%jri(n), l, n, 2))
+                     ELSE IF (l_noco .AND. js == 2) THEN
+                        !magnetization response 
+                        vec%vec_mt(ii + 1:ii + atoms%jri(n)) = 0.5*(den%mt(:atoms%jri(n), l, n, 1) - den%mt(:atoms%jri(n), l, n, 2))
+                     ELSE
+                        !off diagonal response
+                        vec%vec_mt(ii + 1:ii + atoms%jri(n)) = den%mt(:atoms%jri(n), l, n, jspin)
+                     END IF
+                     ii = ii + atoms%jri(n)
                   ENDDO
+               ENDDO
+               IF (.NOT.l_dfpt) THEN
                   IF (js == 3) THEN !Imaginary part
                      DO n = mt_rank + 1, atoms%ntype, mt_size
                         DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
@@ -257,18 +252,18 @@ CONTAINS
                         ENDDO
                      ENDDO
                   ENDIF
-           
-                  
-               ELSE ! DFPT mixing
+               ELSE
                   DO n = mt_rank + 1, atoms%ntype, mt_size
                      DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
-                        vec%vec_mt(ii + 1:ii + atoms%jri(n)) = den%mt(:atoms%jri(n), l, n, jspin)
-                        ii = ii + atoms%jri(n)
-                     END DO
-                  END DO
-                  DO n = mt_rank + 1, atoms%ntype, mt_size
-                     DO l = 0, sphhar%nlh(sym%ntypsy(atoms%firstAtom(n)))
-                        vec%vec_mt(ii + 1:ii + atoms%jri(n)) = den%mtIm(:atoms%jri(n), l, n, jspin)
+                        IF (l_noco .AND. js == 1) THEN
+                           !charge
+                           vec%vec_mt(ii + 1:ii + atoms%jri(n)) = 0.5*(den%mtIm(:atoms%jri(n), l, n, 1) + den%mtIm(:atoms%jri(n), l, n, 2))
+                        ELSE IF (l_noco .AND. js == 2) THEN
+                           !magnetization
+                           vec%vec_mt(ii + 1:ii + atoms%jri(n)) = 0.5*(den%mtIm(:atoms%jri(n), l, n, 1) - den%mtIm(:atoms%jri(n), l, n, 2))
+                        ELSE
+                           vec%vec_mt(ii + 1:ii + atoms%jri(n)) = den%mtIm(:atoms%jri(n), l, n, jspin)
+                        END IF
                         ii = ii + atoms%jri(n)
                      END DO
                   END DO
@@ -385,11 +380,7 @@ CONTAINS
          END IF
       ENDDO
 
-      IF (.NOT.l_dfpt) THEN
-         CALL den%collect(mix_mpi_comm)
-      ELSE
-         CALL den%collect(mix_mpi_comm)
-      END IF
+      CALL den%collect(mix_mpi_comm)
 
       !Restore up/down density
       if (l_noco) then 
@@ -408,6 +399,14 @@ CONTAINS
             den%mt(:, :, : , 2)=tmp-den%mt(:, :, : , 2)
          end block
       endif      
+      if (l_noco.and.l_dfpt) then
+         block
+            real,allocatable:: tmp(:,:,:)
+            tmp=den%mtIm(:, :, : , 1)
+            den%mtIm(:, :, : , 1)=den%mtIm(:, :, : , 1)+den%mtIm(:, :, : , 2)
+            den%mtIm(:, :, : , 2)=tmp-den%mtIm(:, :, : , 2)
+         end block
+      endif
       
       if (allocated(den%vac).and.l_noco) then 
          block
