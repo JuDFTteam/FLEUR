@@ -26,6 +26,7 @@ src/fleur/dfpt/dfpt_fermie.F90
 src/fleur/dfpt/desymmetrizer.f90
 src/fleur/dfpt/dfpt_eigen.F90
 src/fleur/dfpt/dfpt_dynmat_fourier.f90
+src/fleur/dfpt/dfpt_sumrules.F90
 src/fleur/dfpt/dfpt_generate_gradient.F90
 src/fleur/dfpt/dfpt_gradient.F90
 src/fleur/dfpt/dfpt_vefield.F90
