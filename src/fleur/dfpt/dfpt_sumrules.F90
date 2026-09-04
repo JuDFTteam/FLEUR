@@ -29,7 +29,7 @@ contains
       complex,       intent(inout) :: fcm(:,:,0:,0:,0:)
 
       integer, parameter :: maxiter = 200
-      real,    parameter :: tol     = 1e-12
+      real,    parameter :: tol     = 1e-8
       ! Voigt order of the second moments: xx, yy, zz, yz, xz, xy
       integer, parameter :: voigt(2,6) = reshape([1,1, 2,2, 3,3, 2,3, 1,3, 1,2],[2,6])
       ! Cartesian pairs of the rotational conditions: (y,z), (z,x), (x,y)
@@ -194,8 +194,6 @@ contains
          end if
       end do
 
-      if (.not.l_conv) call juDFT_warn("Born-Huang projection did not fully converge.", calledby="dfpt_sumrules.F90")
-
       phiOld = reshape(fcm, [dynDim,dynDim,nGrid])
       write (oUnit,'(a)')       ' Born-Huang projection of the force constants'
       write (oUnit,'(a,i0,a)')  '   iterations                   : ', min(iter,maxiter)
@@ -206,6 +204,8 @@ contains
       write (oUnit,'(a,es13.3)')  '   relative change of the FCM   : ', sqrt(sum(abs(phi-phiOld)**2)/sum(abs(phiOld)**2))
 
       fcm = reshape(phi, [dynDim,dynDim,nR(1),nR(2),nR(3)])
+
+      if (.not.l_conv) call juDFT_warn("Born-Huang projection did not fully converge.", calledby="dfpt_sumrules.F90")
 
    end subroutine dfpt_born_huang
 
