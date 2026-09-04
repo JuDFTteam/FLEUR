@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2026 Peter Gruenberg Institut, Forschungszentrum Juelich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -45,6 +45,11 @@ MODULE m_types_xas
       LOGICAL :: rixs_out_polarizations(3) = [.FALSE., .FALSE., .FALSE.]
       CHARACTER(LEN=64) :: rixs_output_prefix = "rixs"
       LOGICAL :: rixs_write_contributions = .FALSE.
+      ! Full experimental photon momentum transfer Q in reciprocal-lattice
+      ! units. The finite-Q driver reduces it only for k-point lookup; the
+      ! unreduced value must be retained for coherent absorber-site phases.
+      LOGICAL :: l_rixs_momentum_transfer = .FALSE.
+      REAL :: rixs_q_full_rlu(3) = 0.0
       LOGICAL :: rixs_write_state_character = .FALSE.
       INTEGER :: rixs_state_ligand_z = -1
       LOGICAL :: l_rixs_valence_band_min = .FALSE.
@@ -106,6 +111,8 @@ CONTAINS
       CALL mpi_bc(this%rixs_out_polarizations(3), rank, mpi_comm)
       CALL mpi_bc(rank, mpi_comm, this%rixs_output_prefix)
       CALL mpi_bc(this%rixs_write_contributions, rank, mpi_comm)
+      CALL mpi_bc(this%l_rixs_momentum_transfer, rank, mpi_comm)
+      CALL mpi_bc(rank, mpi_comm, this%rixs_q_full_rlu)
       CALL mpi_bc(this%rixs_write_state_character, rank, mpi_comm)
       CALL mpi_bc(this%rixs_state_ligand_z, rank, mpi_comm)
       CALL mpi_bc(this%l_rixs_valence_band_min, rank, mpi_comm)
@@ -218,6 +225,8 @@ CONTAINS
       this%rixs_out_polarizations = [.FALSE., .FALSE., .FALSE.]
       this%rixs_output_prefix = "rixs"
       this%rixs_write_contributions = .FALSE.
+      this%l_rixs_momentum_transfer = .FALSE.
+      this%rixs_q_full_rlu = 0.0
       this%rixs_write_state_character = .FALSE.
       this%rixs_state_ligand_z = -1
       this%l_rixs_valence_band_min = .FALSE.
@@ -326,6 +335,17 @@ CONTAINS
       IF (LEN_TRIM(this%rixs_output_prefix) == 0) CALL juDFT_error("RIXS outputPrefix must not be empty.", calledby="m_types_xas")
       IF (xml%GetNumberOfNodes('/fleurInput/output/rixs/@writeContributions') == 1) THEN
          this%rixs_write_contributions = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/rixs/@writeContributions'))
+      END IF
+      IF (xml%GetNumberOfNodes('/fleurInput/output/rixs/@momentumTransfer') == 1) THEN
+         value_string = TRIM(ADJUSTL(xml%GetAttributeValue('/fleurInput/output/rixs/@momentumTransfer')))
+         IF (xml%countStringTokens(value_string) /= 3) THEN
+            CALL juDFT_error("RIXS momentumTransfer requires exactly three reciprocal-lattice coordinates.", &
+                             calledby="m_types_xas")
+         END IF
+         this%rixs_q_full_rlu(1) = evaluateFirst(value_string)
+         this%rixs_q_full_rlu(2) = evaluateFirst(value_string)
+         this%rixs_q_full_rlu(3) = evaluateFirst(value_string)
+         this%l_rixs_momentum_transfer = .TRUE.
       END IF
       IF (xml%GetNumberOfNodes('/fleurInput/output/rixs/@writeStateCharacter') == 1) THEN
          this%rixs_write_state_character = &

@@ -4219,12 +4219,15 @@
    <xsd:complexType name="RIXSOutputType">
       <xsd:annotation>
          <xsd:documentation>
-            Guarded direct same-k independent-particle RIXS. Energies are given
+            Guarded independent-particle RIXS. Energies are given
             in Hartree. Supported spin treatments are scalar jspins=1 without
             noco/SOC and first-variation noco spinors with jspins=2, with or
             without first-variation SOC. RIXS requires an explicit full-k list
             and does not use symmetry-star reconstruction. Collinear
             spin-polarized scalar RIXS and second-variation SOC are unsupported.
+            The optional finite-Q path is restricted to first-variation noco
+            spinors with jspins=2; omitting momentumTransfer selects the legacy
+            same-k implementation and its existing spin support.
          </xsd:documentation>
       </xsd:annotation>
       <xsd:attribute default="T" name="l_rixs" type="FleurBool" use="optional"/>
@@ -4235,10 +4238,24 @@
       <xsd:attribute name="lossMin" type="FleurDouble" use="optional"/>
       <xsd:attribute name="lossMax" type="FleurDouble" use="optional"/>
       <xsd:attribute name="nLoss" type="xsd:positiveInteger" use="optional"/>
-      <xsd:attribute name="etaLoss" type="FleurDouble" use="optional"/>
+      <xsd:attribute name="etaLoss" type="FleurDouble" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Standard deviation (sigma), in Hartree, of the normalized Gaussian loss broadening.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
       <xsd:attribute default="x" name="incomingPolarizations" type="StringVecType" use="optional"/>
       <xsd:attribute default="x" name="outgoingPolarizations" type="StringVecType" use="optional"/>
       <xsd:attribute default="rixs" name="outputPrefix" type="xsd:string" use="optional"/>
+      <xsd:attribute name="momentumTransfer" type="FleurDouble3DVecType" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>
+               Full photon momentum transfer (H K L) in the reciprocal basis dual to the FLEUR direct-cell basis.
+               The full vector, including reciprocal-lattice components, enters coherent absorber-site phases;
+               only the electronic k-point mapping is reduced modulo reciprocal lattice vectors. If omitted, the
+               legacy direct same-k, incoherent-site RIXS path is used.
+            </xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
       <xsd:attribute name="valenceBandMin" type="xsd:positiveInteger" use="optional"/>
       <xsd:attribute name="valenceBandMax" type="xsd:positiveInteger" use="optional"/>
       <xsd:attribute name="intermediateBandMin" type="xsd:positiveInteger" use="optional"/>
@@ -4253,7 +4270,8 @@
             <xsd:documentation>
                Write rank-local HDF5 annotations of the local absorber-site d-spin character of bands in the
                configured RIXS valence and intermediate windows. These state weights characterize participating
-               bands; they are not an incoherent decomposition of RIXS intensity. First-variation spinor RIXS only.
+               bands; they are not an incoherent decomposition of RIXS intensity. This is currently available only
+               for legacy same-k first-variation spinor RIXS and cannot be combined with momentumTransfer.
             </xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>

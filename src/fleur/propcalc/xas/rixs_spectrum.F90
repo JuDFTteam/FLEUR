@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2026 Peter Gruenberg Institut, Forschungszentrum Juelich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -17,6 +17,8 @@ MODULE m_rixs_spectrum
    PUBLIC :: rixs_scalar_spin_trace_abs2
    PUBLIC :: rixs_accumulate_spinor_spectrum
    PUBLIC :: rixs_spinor_amplitude
+   PUBLIC :: rixs_add_finiteq_spinor_site_amplitudes
+   PUBLIC :: rixs_accumulate_finiteq_spinor_spectrum
 
 CONTAINS
 
@@ -139,6 +141,94 @@ CONTAINS
 
       amplitude = SUM(emit_by_mj*abs_by_mj)/denominator
    END FUNCTION rixs_spinor_amplitude
+
+   SUBROUTINE rixs_add_finiteq_spinor_site_amplitudes(eig_intermediate, core_energy, omega_in, gamma_core, &
+                                                       matrix_abs, matrix_emit, site_phase, valence_band_min, &
+                                                       valence_band_max, intermediate_band_min, intermediate_band_max, &
+                                                       amplitude_vn, site_partial_vn)
+      ! Add one absorber site's complex contribution. site_phase must contain
+      ! exp(+i 2*pi Q_full_rlu.tau_fractional), not a phase made from reduced q.
+      ! No absolute square is taken here: all basis sites/types must be summed
+      ! before the spectrum is accumulated.
+      REAL,    INTENT(IN)    :: eig_intermediate(:), core_energy, omega_in, gamma_core
+      COMPLEX, INTENT(IN)    :: matrix_abs(:, :), matrix_emit(:, :), site_phase
+      INTEGER, INTENT(IN)    :: valence_band_min, valence_band_max, intermediate_band_min, intermediate_band_max
+      COMPLEX, INTENT(INOUT) :: amplitude_vn(:, :)
+      COMPLEX, OPTIONAL, INTENT(OUT) :: site_partial_vn(:, :)
+
+      INTEGER :: band_v, band_n
+      COMPLEX :: denominator, partial
+
+      IF (gamma_core <= 0.0) CALL juDFT_error("gammaCore must be positive in finite-Q RIXS", calledby="m_rixs_spectrum")
+      IF (SIZE(matrix_abs, 1) < SIZE(eig_intermediate) .OR. &
+          SIZE(matrix_abs, 2) /= SIZE(matrix_emit, 2)) THEN
+         CALL juDFT_error("Finite-Q RIXS site matrix dimensions are inconsistent", calledby="m_rixs_spectrum")
+      END IF
+      IF (SIZE(amplitude_vn, 1) < SIZE(matrix_emit, 1) .OR. &
+          SIZE(amplitude_vn, 2) < SIZE(matrix_abs, 1)) THEN
+         CALL juDFT_error("Finite-Q RIXS amplitude array is too small", calledby="m_rixs_spectrum")
+      END IF
+      IF (PRESENT(site_partial_vn)) THEN
+         IF (ANY(SHAPE(site_partial_vn) /= SHAPE(amplitude_vn))) THEN
+            CALL juDFT_error("Finite-Q RIXS site-partial array shape differs from amplitude array", &
+                             calledby="m_rixs_spectrum")
+         END IF
+         site_partial_vn = CMPLX(0.0, 0.0)
+      END IF
+
+      DO band_n = intermediate_band_min, intermediate_band_max
+         denominator = CMPLX(omega_in - (eig_intermediate(band_n) - core_energy), gamma_core)
+         DO band_v = valence_band_min, valence_band_max
+            partial = site_phase*rixs_spinor_amplitude(matrix_emit(band_v, :), matrix_abs(band_n, :), denominator)
+            amplitude_vn(band_v, band_n) = amplitude_vn(band_v, band_n) + partial
+            IF (PRESENT(site_partial_vn)) site_partial_vn(band_v, band_n) = partial
+         END DO
+      END DO
+   END SUBROUTINE rixs_add_finiteq_spinor_site_amplitudes
+
+   SUBROUTINE rixs_accumulate_finiteq_spinor_spectrum(loss_grid, eig_valence, occ_valence, eig_intermediate, &
+                                                       occ_intermediate, wk, eta_loss, amplitude_vn, valence_band_min, &
+                                                       valence_band_max, intermediate_band_min, intermediate_band_max, &
+                                                       intensity)
+      REAL,    INTENT(IN)    :: loss_grid(:), eig_valence(:), occ_valence(:), eig_intermediate(:), occ_intermediate(:)
+      REAL,    INTENT(IN)    :: wk, eta_loss
+      COMPLEX, INTENT(IN)    :: amplitude_vn(:, :)
+      INTEGER, INTENT(IN)    :: valence_band_min, valence_band_max, intermediate_band_min, intermediate_band_max
+      REAL,    INTENT(INOUT) :: intensity(:)
+
+      INTEGER :: band_v, band_n, i_grid
+      REAL :: f_v, vacancy_n, strength, weight, loss_energy, gaussian
+
+      IF (eta_loss <= 0.0) CALL juDFT_error("etaLoss must be positive in finite-Q RIXS", calledby="m_rixs_spectrum")
+      IF (SIZE(loss_grid) /= SIZE(intensity)) THEN
+         CALL juDFT_error("Finite-Q RIXS loss grid and intensity sizes differ", calledby="m_rixs_spectrum")
+      END IF
+      IF (SIZE(eig_valence) /= SIZE(occ_valence) .OR. SIZE(eig_intermediate) /= SIZE(occ_intermediate)) THEN
+         CALL juDFT_error("Finite-Q RIXS eigenvalue and occupation sizes differ", calledby="m_rixs_spectrum")
+      END IF
+      IF (SIZE(amplitude_vn, 1) < SIZE(eig_valence) .OR. SIZE(amplitude_vn, 2) < SIZE(eig_intermediate)) THEN
+         CALL juDFT_error("Finite-Q RIXS amplitude dimensions are too small", calledby="m_rixs_spectrum")
+      END IF
+
+      DO band_v = valence_band_min, valence_band_max
+         f_v = occ_valence(band_v)
+         IF (f_v <= rixs_occupation_tolerance) CYCLE
+         DO band_n = intermediate_band_min, intermediate_band_max
+            vacancy_n = 1.0 - occ_intermediate(band_n)
+            IF (vacancy_n <= rixs_occupation_tolerance) CYCLE
+            strength = ABS(amplitude_vn(band_v, band_n))**2
+            IF (strength < TINY(strength)) CYCLE
+            weight = wk*f_v*vacancy_n
+            IF (weight <= 0.0) CYCLE
+            loss_energy = eig_intermediate(band_n) - eig_valence(band_v)
+            DO i_grid = 1, SIZE(loss_grid)
+               gaussian = xas_gaussian_broadening(loss_grid(i_grid) - loss_energy, eta_loss)
+               IF (gaussian == 0.0) CYCLE
+               intensity(i_grid) = intensity(i_grid) + weight*strength*gaussian
+            END DO
+         END DO
+      END DO
+   END SUBROUTINE rixs_accumulate_finiteq_spinor_spectrum
 
    SUBROUTINE rixs_check_spinor_inputs(loss_grid, eig_band, occ_band, matrix_abs, matrix_emit, gamma_core, eta_loss, &
                                        valence_band_min, valence_band_max, intermediate_band_min, intermediate_band_max, &

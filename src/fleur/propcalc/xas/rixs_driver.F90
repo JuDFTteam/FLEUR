@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2026 Peter Gruenberg Institut, Forschungszentrum Juelich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -14,6 +14,7 @@ MODULE m_rixs_driver
                         rixs_open_spinor_contribution_table, &
                         rixs_print_contribution_check, rixs_print_pair_summary, rixs_print_setup_summary, &
                         rixs_write_contribution_rows, rixs_write_spinor_contribution_rows, rixs_write_spectrum_text
+   USE m_rixs_finiteq_driver, ONLY: rixs_run_finiteq_spinor
    USE m_rixs_spectrum, ONLY: rixs_accumulate_scalar_spin_trace_spectrum, rixs_accumulate_spinor_spectrum, &
                               rixs_occupation_tolerance
    USE m_rixs_state_character, ONLY: t_rixs_state_character_context, rixs_characterize_site_bands, &
@@ -102,6 +103,10 @@ CONTAINS
       l_kpt_group_root = fmpi%n_rank == 0
       contribution_units = -1
       CALL rixs_check_supported_input(input, rixs, kpts, noco)
+      IF (rixs%l_rixs_momentum_transfer) THEN
+         CALL rixs_run_finiteq_spinor(eig_id, fmpi, input, rixs, kpts, atoms, sym, cell, noco, nococonv, enpara, vTot, results)
+         RETURN
+      END IF
       l_spinor_rixs = noco%l_noco
       IF (.NOT. ALLOCATED(results%w_iks)) THEN
          CALL juDFT_error("results%w_iks is not allocated in rixs_run_driver", calledby="m_rixs_driver")

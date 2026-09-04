@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2026 Peter Gruenberg Institut, Forschungszentrum Juelich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -8,6 +8,7 @@ MODULE m_xas_matrixelements
    USE m_juDFT, ONLY: juDFT_error
    USE m_types_abc, ONLY: t_abc
    USE m_types_radfun, ONLY: t_radfun
+   USE m_xas_amplitudes, ONLY: xas_emission_from_absorption
    USE m_xas_angular, ONLY: xas_dipole_angular_coeff, xas_sigma_down, xas_sigma_up
    USE m_xas_core, ONLY: t_xas_core_state
    IMPLICIT NONE
@@ -134,7 +135,7 @@ CONTAINS
       ELSE
          CALL xas_core_band_matrixelements(abc_spin, radfun, radial_xas, core_state, eps_sph, iAtom_l, lmax, matrix)
       END IF
-      matrix = CONJG(matrix)
+      matrix = xas_emission_from_absorption(matrix)
    END SUBROUTINE xas_band_core_emission_matrixelements
 
    SUBROUTINE xas_core_band_matrixelements_one_spin(abc, radfun, radial_xas_spin, core_state, eps_sph, iAtom_l, lmax, &
@@ -206,7 +207,7 @@ CONTAINS
          CALL xas_core_band_matrixelements_one_spin(abc, radfun, radial_xas_spin, core_state, eps_sph, iAtom_l, lmax, &
                                                    spin_index, matrix)
       END IF
-      matrix = CONJG(matrix)
+      matrix = xas_emission_from_absorption(matrix)
    END SUBROUTINE xas_band_core_emission_matrixelements_one_spin
 
    SUBROUTINE xas_print_largest_matrixelement_partials(abc_spin, radfun, radial_xas, core_state, eps_sph, iAtom_l, lmax, &

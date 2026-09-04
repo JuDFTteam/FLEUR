@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2026 Peter Gruenberg Institut, Forschungszentrum Juelich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -10,6 +10,7 @@ MODULE m_xas_amplitudes
    PRIVATE
 
    PUBLIC :: t_xas_transition_amplitudes
+   PUBLIC :: xas_emission_from_absorption
 
    TYPE t_xas_transition_amplitudes
       INTEGER :: n_mj = 0
@@ -24,6 +25,16 @@ MODULE m_xas_amplitudes
    END TYPE t_xas_transition_amplitudes
 
 CONTAINS
+
+   PURE FUNCTION xas_emission_from_absorption(absorption) RESULT(emission)
+      ! Central convention used by the band-to-core emission wrappers:
+      ! callers pass the physical outgoing polarization unchanged.  The
+      ! Hermitian conjugation of <band|D_epsilon|core> is performed here once.
+      COMPLEX, INTENT(IN) :: absorption(:, :)
+      COMPLEX :: emission(SIZE(absorption, 1), SIZE(absorption, 2))
+
+      emission = CONJG(absorption)
+   END FUNCTION xas_emission_from_absorption
 
    SUBROUTINE xas_transition_amplitudes_set_from_matrix_row(this, matrix, band, l_skip_tiny, twice_mj)
       CLASS(t_xas_transition_amplitudes), INTENT(INOUT) :: this
