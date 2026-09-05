@@ -10,6 +10,7 @@ ${CMAKE_SOURCE_DIR}/src/fleur/propcalc/local_d_spin_frame_transform.F90
 ${CMAKE_SOURCE_DIR}/src/fleur/propcalc/local_coordination_core.F90
 ${CMAKE_SOURCE_DIR}/src/fleur/propcalc/local_coordination.F90
 ${CMAKE_SOURCE_DIR}/src/fleur/propcalc/spin_orbital_multipoles.F90
+${CMAKE_SOURCE_DIR}/src/fleur/propcalc/local_d_spin_multipoles.F90
 )
 
 set(local_d_spin_projector_test_files
@@ -79,6 +80,7 @@ target_compile_options(local_coordination_test PRIVATE $<$<COMPILE_LANGUAGE:Fort
 
 set(spin_orbital_multipoles_test_files
 ${CMAKE_SOURCE_DIR}/src/fleur/propcalc/spin_orbital_multipoles.F90
+${CMAKE_SOURCE_DIR}/src/fleur/propcalc/local_d_spin_multipoles.F90
 ${CMAKE_SOURCE_DIR}/testing/small-testcodes/spin_orbital_multipoles_test.F90
 )
 
