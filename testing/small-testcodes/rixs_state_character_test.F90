@@ -1,4 +1,9 @@
 !--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
+!--------------------------------------------------------------------------------
 ! Standalone validation of RIXS state-character selection, identity caches, and
 ! the HDF5 sidecar schema. It does not invoke RIXS or any spectral calculation.
 !--------------------------------------------------------------------------------
@@ -41,9 +46,7 @@ PROGRAM rixs_state_character_test
    site%reference_frame = identity_3()
    site%native_mt_to_global(1,1) = CMPLX(1.0,0.0)
    site%native_mt_to_global(2,2) = CMPLX(1.0,0.0)
-   site%orbital_global_to_local = identity_complex(5)
-   site%spin_native_to_local = identity_complex(2)
-   site%combined_native_to_local = identity_complex(10)
+   CALL initialize_frame_transforms(site)
    site%ligand_atom_ids = [11,12,13,14,15,16]
    site%ligand_translations = RESHAPE([(row,row=1,18)],[3,6])
    site%ligand_displacements = 0.1*REAL(site%ligand_translations)
@@ -141,14 +144,36 @@ CONTAINS
       matrix(3,3) = 1.0
    END FUNCTION identity_3
 
-   PURE FUNCTION identity_complex(size_matrix) RESULT(matrix)
-      INTEGER, INTENT(IN) :: size_matrix
-      COMPLEX :: matrix(size_matrix,size_matrix)
-      INTEGER :: index
-      matrix = CMPLX(0.0,0.0)
-      DO index = 1, size_matrix
-         matrix(index,index) = CMPLX(1.0,0.0)
+   SUBROUTINE initialize_frame_transforms(site_record)
+      TYPE(t_rixs_state_site), INTENT(INOUT) :: site_record
+      REAL, PARAMETER :: orbital_angle = 0.37, spin_angle = -0.41
+      REAL :: axis(3), cosine_half, sine_half
+      INTEGER :: m, spin_local, spin_native, row, column
+
+      site_record%orbital_global_to_local = CMPLX(0.0,0.0)
+      DO m = -2, 2
+         site_record%orbital_global_to_local(m+3,m+3) = &
+            CMPLX(COS(orbital_angle*REAL(m)),SIN(orbital_angle*REAL(m)))
       END DO
-   END FUNCTION identity_complex
+      axis = [1.0,2.0,3.0]/SQRT(14.0)
+      cosine_half = COS(spin_angle/2.0)
+      sine_half = SIN(spin_angle/2.0)
+      site_record%spin_native_to_local(1,1) = CMPLX(cosine_half,-sine_half*axis(3))
+      site_record%spin_native_to_local(1,2) = CMPLX(-sine_half*axis(2),-sine_half*axis(1))
+      site_record%spin_native_to_local(2,1) = CMPLX(sine_half*axis(2),-sine_half*axis(1))
+      site_record%spin_native_to_local(2,2) = CMPLX(cosine_half,sine_half*axis(3))
+      site_record%combined_native_to_local = CMPLX(0.0,0.0)
+      DO m = -2, 2
+         DO spin_local = 1, 2
+            row = (m+2)*2+spin_local
+            DO spin_native = 1, 2
+               column = (m+2)*2+spin_native
+               site_record%combined_native_to_local(row,column) = &
+                  site_record%orbital_global_to_local(m+3,m+3)* &
+                  site_record%spin_native_to_local(spin_local,spin_native)
+            END DO
+         END DO
+      END DO
+   END SUBROUTINE initialize_frame_transforms
 
 END PROGRAM rixs_state_character_test
