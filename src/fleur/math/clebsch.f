@@ -31,8 +31,12 @@
          ENDDO
       ENDIF
 
-      i = am + bm - cm + .1e0
-      IF (( i < 0 ).OR.( i > 0 )) THEN
+!     Selection rule m1 + m2 = M, tested on the real difference. Assigning it to an
+!     INTEGER, as this did before, truncates towards zero and makes the test one-sided:
+!     a violation of -1 gives -1 + 0.1 = -0.9 -> 0 and passes, while +1 is rejected. What
+!     got through was then evaluated with factorials of a negative argument, so the
+!     coefficient came back finite and wrong rather than zero.
+      IF ( ABS(am + bm - cm) > 1.e-4 ) THEN
          clebsch = 0.e0
          RETURN
       ENDIF
