@@ -29,7 +29,7 @@ MODULE m_wannierlib_main
    USE m_wannierlib_w90_adapter
    USE m_melem_coarse, ONLY: t_melem_coarse
    USE m_melem_run, ONLY: melem_run
-   USE m_melem_spin_collinear, ONLY: melem_rspauli_collinear, melem_anglmom_collinear
+   USE m_melem_spin_collinear, ONLY: melem_rspauli_collinear, melem_anglmom_collinear, melem_soc_collinear
    USE m_types_melem_bmesh, ONLY: t_melem_bmesh
    USE m_constants, ONLY: oUnit
    USE m_types_atoms
@@ -247,6 +247,10 @@ CONTAINS
       ! Same reason for the orbital moment: block-diagonal, but one block per gauge.
       IF (melem%n_channels == 2 .AND. request%has_op_r('orbital')) &
          CALL melem_anglmom_collinear(this%num_wann, melem%l0, v_ch, cell, kpts, distk, fmpi)
+      ! And the spin-orbit coupling, which here is an operator on the basis rather than a
+      ! term in the eigenproblem that produced it.
+      IF (melem%n_channels == 2 .AND. request%has_op_r('spin_orbit')) &
+         CALL melem_soc_collinear(this%num_wann, melem%soc4, v_ch, cell, kpts, distk, fmpi)
       IF (ALLOCATED(v_ch)) DEALLOCATE (v_ch)
 
       !> Freed here and not per channel: the neighbour topology in it was set before the

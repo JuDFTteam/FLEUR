@@ -24,10 +24,11 @@ MODULE m_melem_spin_collinear
    USE m_types_kpts
    USE m_types_mpi
    USE m_melem_ft, ONLY: melem_ft_to_real_reduce
+   USE m_melem_io, ONLY: melem_write_realspace
    IMPLICIT NONE
    PRIVATE
 
-   PUBLIC :: melem_rspauli_collinear, melem_anglmom_collinear
+   PUBLIC :: melem_rspauli_collinear, melem_anglmom_collinear, melem_soc_collinear
 
 CONTAINS
 
@@ -191,5 +192,82 @@ CONTAINS
       IF (ALLOCATED(irvec)) DEALLOCATE (irvec, ndegen)
    END SUBROUTINE melem_anglmom_collinear
 
+   !> Spin-orbit coupling as an OPERATOR in the 2N collinear Wannier basis, written as
+   !> rssocmat.1. This is the piece that makes a collinear wannierisation usable for SOC
+   !> physics: the coupling never enters the eigenproblem, so the Wannier functions stay
+   !> spin-pure and every operator stays localised, and whoever consumes the files adds
+   !> H_SOC to H(R) themselves.
+   !>
+   !> Layout. Rows and columns already carry the spin (1..N is up, N+1..2N is down), so the
+   !> 2x2 index the file also has is redundant: an entry is non-zero only in the component
+   !> matching its own quadrant, which is how the reference files are shaped too. The
+   !> consumer sums the four components per (m,n) without looking at the indices, so what
+   !> the sum has to come out to is the single block value -- and it does, the other three
+   !> being zero.
+   SUBROUTINE melem_soc_collinear(num_wann, soc4, v_ch, cell, kpts, distk, fmpi)
+      INTEGER, INTENT(IN) :: num_wann
+      !> The four spin blocks of H_SOC on this rank's k-slice, in the Bloch basis:
+      !> (num_bands, num_bands, 4, nk_loc), ordered (1,1) (1,2) (2,1) (2,2).
+      COMPLEX, INTENT(IN) :: soc4(:, :, :, :)
+      COMPLEX, INTENT(IN) :: v_ch(:, :, :, :)
+      TYPE(t_cell), INTENT(IN) :: cell
+      TYPE(t_kpts), INTENT(IN) :: kpts
+      INTEGER, INTENT(IN) :: distk(:)
+      TYPE(t_mpi), INTENT(IN) :: fmpi
+
+      INTEGER :: nb, nw, n2, nkl, kl, gk, iu, irpt, i, j, kk, is, js, ib, jb, ic, nrpts
+      INTEGER, ALLOCATABLE :: gk_loc(:), irvec(:, :), ndegen(:)
+      COMPLEX, ALLOCATABLE :: tmp(:, :), blk(:, :)
+      COMPLEX, ALLOCATABLE :: soc_loc(:, :, :, :), s1(:, :, :), sr(:, :, :, :)
+
+      nb = SIZE(soc4, 1); nw = num_wann; n2 = 2*nw
+
+      IF (SIZE(v_ch, 1) /= nb .OR. SIZE(v_ch, 2) /= nw .OR. SIZE(v_ch, 4) /= 2) &
+         CALL juDFT_error("melem_soc_collinear: the gauges do not match the manifold", &
+                          calledby="melem_soc_collinear")
+      IF (SIZE(soc4, 3) /= 4) CALL juDFT_error( &
+         "melem_soc_collinear: the SOC operator did not keep its four spin blocks", &
+         calledby="melem_soc_collinear")
+
+      nkl = COUNT(distk == fmpi%irank); ALLOCATE (gk_loc(nkl)); j = 0
+      DO i = 1, SIZE(distk)
+         IF (distk(i) == fmpi%irank) THEN; j = j + 1; gk_loc(j) = i; END IF
+      END DO
+      IF (SIZE(soc4, 4) < nkl) CALL juDFT_error( &
+         "melem_soc_collinear: fewer SOC slices than k-points on this rank", &
+         calledby="melem_soc_collinear")
+
+      ALLOCATE (tmp(nb, nw), blk(nw, nw))
+      ALLOCATE (soc_loc(n2, n2, 4, MAX(1, nkl)), source=CMPLX(0.0, 0.0))
+
+      DO kl = 1, nkl
+         gk = gk_loc(kl)
+         DO is = 1, 2                    ! spin of the bra, i.e. of the row block
+            DO js = 1, 2                 ! spin of the ket
+               tmp = MATMUL(soc4(:, :, (is - 1)*2 + js, kl), v_ch(:, :, gk, js))
+               blk = MATMUL(CONJG(TRANSPOSE(v_ch(:, :, gk, is))), tmp)
+               ib = (is - 1)*nw; jb = (js - 1)*nw
+               !> The writer builds its component index as (ii-1)*2 + jj and prints the pair
+               !> as (jj, ii), so this is the component that comes out labelled (is, js).
+               ic = (js - 1)*2 + is
+               soc_loc(ib + 1:ib + nw, jb + 1:jb + nw, ic, kl) = blk
+            END DO
+         END DO
+      END DO
+      DEALLOCATE (tmp, blk)
+
+      DO kk = 1, 4
+         CALL melem_ft_to_real_reduce(cell, kpts, soc_loc(:, :, kk, :), gk_loc, fmpi%mpi_comm, s1, irvec, ndegen, nrpts)
+         IF (kk == 1) ALLOCATE (sr(n2, n2, nrpts, 4))
+         sr(:, :, :, kk) = s1; DEALLOCATE (s1)
+      END DO
+      IF (fmpi%irank == 0) THEN
+         CALL melem_write_realspace(sr, irvec, ndegen, nrpts, n2, 4, 'soc', 'rssocmat.1', fmpi%irank)
+         WRITE (oUnit, '(a,i0,a)') 'wannierlib: wrote rssocmat.1 (2N collinear spin-orbit, ', nrpts, ' R-vectors, distributed FT)'
+      END IF
+      DEALLOCATE (soc_loc, gk_loc)
+      IF (ALLOCATED(sr)) DEALLOCATE (sr)
+      IF (ALLOCATED(irvec)) DEALLOCATE (irvec, ndegen)
+   END SUBROUTINE melem_soc_collinear
 
 END MODULE m_melem_spin_collinear

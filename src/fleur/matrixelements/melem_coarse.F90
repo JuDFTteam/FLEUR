@@ -87,7 +87,7 @@ CONTAINS
       LOGICAL, INTENT(IN) :: l_spinors   !< noco%l_noco .OR. noco%l_soc
 
       INTEGER :: nkc_loc
-      LOGICAL :: l_ch_orb, l_ch_spin
+      LOGICAL :: l_ch_orb, l_ch_spin, l_ch_soc
 
       ! Operator Bloch matrices on the coarse mesh: the k-loop is DISTRIBUTED over ranks (each
       ! its distk slice, so the reads the factory does for it are parallel too) into per-rank
@@ -100,11 +100,22 @@ CONTAINS
       !> the interpolated spin operator does not exist here, see the guard below.
       l_ch_orb  = this%n_channels == 2 .AND. request%needs_op('orbital')
       l_ch_spin = this%n_channels == 2 .AND. request%has_op_r('spin')
+      !> Two channels do NOT mean no spin-orbit coupling. Keeping it out of the eigenproblem
+      !> and adding it afterwards as an operator in the Wannier basis is a construction of
+      !> its own, and the one that keeps the Wannier functions spin-pure: with SOC in the
+      !> first variation the states are spinors, nothing in the spread functional penalises
+      !> a spin character that varies with k, and the exported S(R) and L(R) stop being
+      !> localised. Like the spin, it needs both gauges, so it is a real-space export only.
+      l_ch_soc  = this%n_channels == 2 .AND. request%has_op_r('spin_orbit')
       nkc_loc = MAX(1, COUNT(distk == fmpi%irank))
 
       IF (this%l_active) THEN
          ALLOCATE (this%s0(window%num_bands, window%num_bands, 3, nkc_loc), source=cmplx(0.0, 0.0))
          ALLOCATE (this%soc0(window%num_bands, window%num_bands, 1, nkc_loc), source=cmplx(0.0, 0.0))
+      END IF
+      !> soc0 is the sum over the four blocks, which only means anything for a spinor; the
+      !> blocks themselves are what both paths export, so they are allocated for both.
+      IF (this%l_active .OR. l_ch_soc) THEN
          ALLOCATE (this%soc4(window%num_bands, window%num_bands, 4, nkc_loc), source=cmplx(0.0, 0.0))
       END IF
       !> Otherwise they are not allocated at all. A (1,1,1,1) stub is a VALID array of
@@ -142,8 +153,15 @@ CONTAINS
               "2N rspauli.1, which is the only form this operator has here", &
          calledby="melem_coarse_init")
 
+      IF (this%n_channels == 2 .AND. request%needs_op('spin_orbit', interp_only=.TRUE.)) CALL judft_error( &
+         "melem_coarse: the spin-orbit operator cannot be interpolated when the two spin "// &
+         "channels are wannierised separately", &
+         hint="ask for it in <operators_r>: there both channels are combined into the "// &
+              "2N rssocmat.1, which is the only form this operator has here", &
+         calledby="melem_coarse_init")
+
       IF (.NOT. this%l_active) THEN
-         IF (request%l_socop) CALL judft_error( &
+         IF (request%l_socop .AND. .NOT. l_ch_soc) CALL judft_error( &
             "melem_coarse: the spin-orbit operator was requested without spin-orbit coupling", &
             hint="remove the operator, or switch on l_soc", calledby="melem_coarse_init")
          IF (request%l_orbmom .AND. .NOT. l_ch_orb) CALL judft_error( &
@@ -191,7 +209,7 @@ CONTAINS
       TYPE(t_matelements_orbital), ALLOCATABLE :: orbop(:, :)   ! (nat, channel)
       TYPE(t_rsoc) :: rsoc
       INTEGER, ALLOCATABLE :: ev_list(:)
-      LOGICAL :: l_spinor_records, l_do_spin, l_do_orb
+      LOGICAL :: l_spinor_records, l_do_spin, l_do_orb, l_do_soc
       INTEGER :: ikpt, itype, il, na, iatom, ib, ch
 
       !> With two channels only the real-space list can be served, since the interpolated
@@ -200,17 +218,19 @@ CONTAINS
       IF (this%n_channels == 2) THEN
          l_do_spin = request%has_op_r('spin')
          l_do_orb  = request%has_op_r('orbital') .OR. request%has_op('orbital')
-         IF (.NOT. (l_do_spin .OR. l_do_orb)) RETURN
+         l_do_soc  = request%has_op_r('spin_orbit')
+         IF (.NOT. (l_do_spin .OR. l_do_orb .OR. l_do_soc)) RETURN
       ELSE
          IF (.NOT. this%l_active) RETURN   ! nothing requested, or no spinors -> slices are stubs
          l_do_spin = request%l_spin
          l_do_orb  = request%l_orbmom
+         l_do_soc  = request%l_socop
       END IF
 
       !> The relativistic radial SOC integrals and the L.S angular matrix depend on the
       !> potential and the quantisation axis, not on k, so they are built once here. The
       !> angular part is evaluated on the axis the calculation is quantised along.
-      IF (request%l_socop) THEN
+      IF (l_do_soc) THEN
          !> The SOC operator distributes its column band index over the eigenvector
          !> sub-communicator, while this pass gives every rank whole matrices for its own
          !> k-points. With n_size > 1 it would fill only part of each column block.
@@ -312,7 +332,7 @@ CONTAINS
             END DO
          END IF
 
-         IF (request%l_socop) THEN
+         IF (l_do_soc) THEN
             !> The operator keeps the four spin blocks. A spinor wavefunction has both
             !> components, so its expectation value of a spinor operator is the sum of all
             !> four; the blocks themselves are what the real-space export carries.
@@ -325,9 +345,11 @@ CONTAINS
             this%soc4(:, :, 2, il) = socop%mat(1, 2)%data_c
             this%soc4(:, :, 3, il) = socop%mat(2, 1)%data_c
             this%soc4(:, :, 4, il) = socop%mat(2, 2)%data_c
-            this%soc0(:, :, 1, il) = socop%mat(1, 1)%data_c + socop%mat(1, 2)%data_c &
+            !> Only for a spinor: the sum over the blocks is the expectation value of a
+            !> spinor operator, and with two channels there is no spinor to take it over.
+            IF (this%l_active) this%soc0(:, :, 1, il) = socop%mat(1, 1)%data_c + socop%mat(1, 2)%data_c &
                                    + socop%mat(2, 1)%data_c + socop%mat(2, 2)%data_c
-            IF (ikpt == 1) THEN
+            IF (ikpt == 1 .AND. this%l_active) THEN
                !> The sum over the four blocks is Hermitian even though two of them are not:
                !> 12 + 21 is, being a matrix plus its adjoint.
                CALL melem_check_matrix(this%soc0(:, :, 1:1, il), 'spin_orbit (assembled)', ikpt)

@@ -182,8 +182,10 @@ CONTAINS
                                           'anglmomrs.'//ACHAR(48+wf_channel))
         DEALLOCATE(o0l)
       CASE ('spin_orbit')
+        ! collinear: like spin and orbital, written once as one 2N matrix after both
+        ! wannierisations by melem_soc_collinear (main), not per channel here.
         IF (l_collinear) THEN
-          IF (irank == 0) WRITE(oUnit,'(a)') 'wannierlib operators_r: spin_orbit has no collinear (no-SOC) meaning -> skipped'
+          CONTINUE
         ELSE
           CALL melem_op_rs_distributed(this, cell, kpts, vloc, soc4_loc, gk_loc, 4, mpi_comm, irank, .TRUE., 'rssocmat.1')
         END IF
