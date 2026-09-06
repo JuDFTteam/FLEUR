@@ -72,7 +72,13 @@ CONTAINS
     tlmwft = CMPLX(0.0, 0.0)
 
     has_soc_proj = ALL(wannierlib%proj_j(1:wannierlib%num_wann) > 0.0)
-    IF (l_nocosoc .AND. has_soc_proj) THEN
+    !> l_spinors, not l_nocosoc: the states are spinors under noco OR soc, while
+    !> l_nocosoc is (noco .AND. .NOT. soc) and is false exactly when spin-orbit coupling
+    !> is on. Guarding with it left the j-resolved branch unreachable in the one case it
+    !> is written for, so a projection given as (l, j, m_j) was silently served by the
+    !> (l, m) table instead and the trial orbital carried no spin structure.
+    !> No regression: l_nocosoc implies l_spinors, and without spinors neither reaches here.
+    IF (l_spinors .AND. has_soc_proj) THEN
       CALL wannierlib_soc_tlmw(wannierlib%num_wann, wannierlib%proj_l, wannierlib%proj_j, wannierlib%proj_mj, jspin, tlmwf)
     ELSE
       CALL wannierlib_tlmw(wannierlib, wannierlib%num_wann, l_nocosoc, l_spinors, jspin, tlmwf)
