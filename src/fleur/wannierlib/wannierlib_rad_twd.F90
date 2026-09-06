@@ -160,15 +160,21 @@ CONTAINS
 
       IF (ikpt == 1) THEN
         DO l = 0, 3
+          !> Norm of the trial radial function: INT (f_large^2 + f_small^2) dr, with the
+          !> radial functions stored as f = r*u(r). A normalised trial orbital gives 1, so
+          !> this line says whether the projection is normalised at all. The expression
+          !> used before carried an extra r^2 and reported <r^2> instead, which on bcc Fe
+          !> reads 1.29 for d and 3.15-3.73 for s, p and f: it looks like a normalisation
+          !> that is off by a factor of three, and it is not.
           DO j = 1, atoms%jri(ntyp)
-            radf(j) = atoms%rmsh(j, ntyp) * atoms%rmsh(j, ntyp) * rads(nwf, l, j, 1) * rads(nwf, l, j, 1)
+            radf(j) = rads(nwf, l, j, 1)**2 + rads(nwf, l, j, 2)**2
           END DO
           CALL intgr3(radf, atoms%rmsh(1, ntyp), atoms%dx(ntyp), atoms%jri(ntyp), radi)
           WRITE (oUnit, *)
           WRITE (oUnit, *) 'Wannier Function N:', nwf
           WRITE (oUnit, *) 'angular momentum', l
           WRITE (oUnit, *) 'radial function at the MT boundary:', rads(nwf, l, atoms%jri(ntyp), 1)
-          WRITE (oUnit, *) 'norma =', radi
+          WRITE (oUnit, *) 'norm of the trial radial function:', radi
         END DO
       END IF
     END DO
