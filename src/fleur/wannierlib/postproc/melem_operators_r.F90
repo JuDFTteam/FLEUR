@@ -171,6 +171,9 @@ CONTAINS
           CALL melem_op_rs_distributed(this, cell, kpts, vloc, s0_loc, gk_loc, 3, mpi_comm, irank, .FALSE., 'rspauli.1')
         END IF
       CASE ('orbital')
+        ! collinear: like the spin, L is written once as one 2N block-diagonal matrix after
+        ! both wannierisations by melem_anglmom_collinear (main), not per channel here.
+        IF (l_collinear) CYCLE
         ! Site-summed L of this channel -> reduce -> anglmomrs.<channel>. The spinor case is
         ! the same thing with one channel, so there is nothing to tell apart here.
         ALLOCATE(o0l(nb, nb, 3, SIZE(l0_loc, 6)))

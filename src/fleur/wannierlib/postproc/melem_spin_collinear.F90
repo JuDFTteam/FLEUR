@@ -3,16 +3,20 @@
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
-!>  The combined 2N spin operator of a collinear jspins=2 calculation, in real space.
+!>  The 2N operators of a collinear jspins=2 calculation, in real space: the ones that
+!>  cannot be assembled until BOTH spin channels have been wannierised, because they need
+!>  both gauges at once. Everything separable per channel is written by melem_operators_r.
 !>
-!>  Its ingredient is the cross-spin overlap <up|dn> on the coarse mesh, which is a Bloch
-!>  quantity and is produced with the other coarse matrices. What is left here is the part
-!>  that cannot run until BOTH spin channels have been wannierised: rotating that overlap
-!>  with both gauges, assembling the 2N Pauli matrices, and exporting them.
+!>  For the spin, the ingredient is the cross-spin overlap <up|dn> on the coarse mesh, a
+!>  Bloch quantity produced with the other coarse matrices; what is left here is rotating
+!>  it with both gauges and assembling the 2N Pauli matrices. sigma_z is +/-1 on the
+!>  diagonal by the orthonormality of each channel, so it is written down rather than
+!>  computed, and the transverse components follow from the single rotated block.
 !>
-!>  sigma_z is +/-1 on the diagonal by the orthonormality of each channel, so it is written
-!>  down rather than computed, and the transverse components follow from the single rotated
-!>  block.
+!>  For the orbital moment there is nothing to rotate across channels: L acts on the
+!>  spatial part alone, so <up|L|dn> carries the spin overlap <up|dn> = 0 as a factor and
+!>  the cross block vanishes identically. The 2N matrix is block-diagonal, and the two
+!>  blocks are each channel's own L in its own gauge.
 MODULE m_melem_spin_collinear
    USE m_juDFT
    USE m_constants, ONLY: ImagUnit, oUnit
@@ -23,7 +27,7 @@ MODULE m_melem_spin_collinear
    IMPLICIT NONE
    PRIVATE
 
-   PUBLIC :: melem_rspauli_collinear
+   PUBLIC :: melem_rspauli_collinear, melem_anglmom_collinear
 
 CONTAINS
 
@@ -107,5 +111,85 @@ CONTAINS
       IF (ALLOCATED(sr)) DEALLOCATE (sr)
       IF (ALLOCATED(irvec)) DEALLOCATE (irvec, ndegen)
    END SUBROUTINE melem_rspauli_collinear
+
+   !> The site-summed orbital moment of both channels as one 2N block-diagonal matrix,
+   !> written as anglmomrs.1 -- the same single-file contract the 2N spin uses, so that a
+   !> reader of a collinear run does not have to know how many channels produced it.
+   SUBROUTINE melem_anglmom_collinear(num_wann, l0, v_ch, cell, kpts, distk, fmpi)
+      INTEGER, INTENT(IN) :: num_wann
+      !> Site-resolved L on this rank's k-slice, in the Bloch basis, for both channels:
+      !> (num_bands, num_bands, 3, natoms, 2, nk_loc). The sum over sites is taken here.
+      COMPLEX, INTENT(IN) :: l0(:, :, :, :, :, :)
+      !> The Wannier gauge V = u_opt.u_matrix of each channel: (num_bands, num_wann, nkptf, 2).
+      COMPLEX, INTENT(IN) :: v_ch(:, :, :, :)
+      TYPE(t_cell), INTENT(IN) :: cell
+      TYPE(t_kpts), INTENT(IN) :: kpts
+      INTEGER, INTENT(IN) :: distk(:)
+      TYPE(t_mpi), INTENT(IN) :: fmpi
+
+      INTEGER :: nb, nw, n2, nkl, kl, gk, iu, irpt, i, j, kk, ic, nrpts
+      INTEGER, ALLOCATABLE :: gk_loc(:), irvec(:, :), ndegen(:)
+      COMPLEX, ALLOCATABLE :: lb(:, :), tmp(:, :)
+      COMPLEX, ALLOCATABLE :: lop_loc(:, :, :, :), l1(:, :, :), lr(:, :, :, :)
+
+      nb = SIZE(l0, 1); nw = num_wann; n2 = 2*nw
+
+      IF (SIZE(v_ch, 1) /= nb .OR. SIZE(v_ch, 2) /= nw .OR. SIZE(v_ch, 4) /= 2) &
+         CALL juDFT_error("melem_anglmom_collinear: the gauges do not match the manifold", &
+                          calledby="melem_anglmom_collinear")
+      IF (SIZE(l0, 5) /= 2) CALL juDFT_error( &
+         "melem_anglmom_collinear: L was not stored for both spin channels", &
+         calledby="melem_anglmom_collinear")
+
+      nkl = COUNT(distk == fmpi%irank); ALLOCATE (gk_loc(nkl)); j = 0
+      DO i = 1, SIZE(distk)
+         IF (distk(i) == fmpi%irank) THEN; j = j + 1; gk_loc(j) = i; END IF
+      END DO
+      IF (SIZE(l0, 6) < nkl) CALL juDFT_error( &
+         "melem_anglmom_collinear: fewer L slices than k-points on this rank", &
+         calledby="melem_anglmom_collinear")
+
+      ALLOCATE (lb(nb, nb), tmp(nb, nw))
+      ALLOCATE (lop_loc(n2, n2, 3, MAX(1, nkl)), source=CMPLX(0.0, 0.0))
+
+      DO kl = 1, nkl
+         gk = gk_loc(kl)
+         DO kk = 1, 3
+            DO ic = 1, 2
+               lb = SUM(l0(:, :, kk, :, ic, kl), DIM=3)          ! sum over sites
+               tmp = MATMUL(lb, v_ch(:, :, gk, ic))
+               i = (ic - 1)*nw
+               lop_loc(i + 1:i + nw, i + 1:i + nw, kk, kl) = &
+                  MATMUL(CONJG(TRANSPOSE(v_ch(:, :, gk, ic))), tmp)
+            END DO
+         END DO
+      END DO
+      DEALLOCATE (lb, tmp)
+
+      DO kk = 1, 3
+         CALL melem_ft_to_real_reduce(cell, kpts, lop_loc(:, :, kk, :), gk_loc, fmpi%mpi_comm, l1, irvec, ndegen, nrpts)
+         IF (kk == 1) ALLOCATE (lr(n2, n2, nrpts, 3))
+         lr(:, :, :, kk) = l1; DEALLOCATE (l1)
+      END DO
+      IF (fmpi%irank == 0) THEN
+         OPEN (newunit=iu, file='anglmomrs.1', status='replace')
+         DO irpt = 1, nrpts
+            DO j = 1, n2
+               DO i = 1, n2
+                  DO kk = 1, 3
+                     WRITE (iu, '(i3,1x,i3,1x,i3,1x,i3,1x,i3,1x,i3,1x,f20.8,1x,f20.8)') &
+                        irvec(1, irpt), irvec(2, irpt), irvec(3, irpt), i, j, kk, REAL(lr(i, j, irpt, kk)), AIMAG(lr(i, j, irpt, kk))
+                  END DO
+               END DO
+            END DO
+         END DO
+         CLOSE (iu)
+         WRITE (oUnit, '(a,i0,a)') 'wannierlib: wrote anglmomrs.1 (combined 2N collinear orbital, ', nrpts, ' R-vectors, distributed FT)'
+      END IF
+      DEALLOCATE (lop_loc, gk_loc)
+      IF (ALLOCATED(lr)) DEALLOCATE (lr)
+      IF (ALLOCATED(irvec)) DEALLOCATE (irvec, ndegen)
+   END SUBROUTINE melem_anglmom_collinear
+
 
 END MODULE m_melem_spin_collinear
