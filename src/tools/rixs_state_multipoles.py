@@ -34,6 +34,7 @@ IDENTITY_COLUMNS = "ikpt band physical_atom atom_type iatom_l role_mask"
 SCALAR_COLUMNS = "k_weight energy_Ha occupation d_weight t2g_weight eg_weight t2g_check"
 L = 2
 T_OFFSET = 2 * L + 1
+Channel = tuple[int, int, int]
 
 
 def valid_components() -> tuple[tuple[int, int, int, int], ...]:
@@ -50,6 +51,31 @@ def valid_components() -> tuple[tuple[int, int, int, int], ...]:
 VALID_COMPONENTS = valid_components()
 if len(VALID_COMPONENTS) != 100:
     raise RuntimeError("internal l=2 multipole component enumeration is invalid")
+
+
+def valid_channels() -> tuple[Channel, ...]:
+    """Return the 18 valid l=2 channels in canonical (k,p,r) order."""
+    return tuple(dict.fromkeys(component[:3] for component in VALID_COMPONENTS))
+
+
+VALID_CHANNELS = valid_channels()
+if len(VALID_CHANNELS) != 18 or sum(2 * r + 1 for _, _, r in VALID_CHANNELS) != 100:
+    raise RuntimeError("internal l=2 multipole channel enumeration is invalid")
+
+_VALID_COMPONENT_SET = frozenset(VALID_COMPONENTS)
+_VALID_CHANNEL_SET = frozenset(VALID_CHANNELS)
+_CHANNEL_ORDER = {channel: index for index, channel in enumerate(VALID_CHANNELS)}
+
+
+@dataclass(frozen=True)
+class DominantChannel:
+    """Largest and next-largest finite character values in a candidate set."""
+
+    channel: Channel
+    value: float
+    second_channel: Channel | None
+    second_value: float | None
+    gap: float | None
 
 
 @dataclass(frozen=True)
@@ -141,20 +167,31 @@ class StateCharacterData:
         return density_to_multipoles(self.structural_density(record))
 
     def sum_structural_density(
-        self, records: Iterable[StateCharacter] | None = None
+        self,
+        records: Iterable[StateCharacter] | None = None,
+        *,
+        weights: Iterable[float] | None = None,
     ) -> np.ndarray:
-        """Sum explicitly selected structural densities without implicit weights."""
-        chosen = self.records if records is None else tuple(records)
+        """Sum selected structural densities with only explicit real weights.
+
+        Unit weights are used when ``weights`` is omitted.  Neither occupations
+        nor k-point weights stored in the records are applied implicitly.
+        """
+        chosen = tuple(self.records if records is None else records)
+        coefficients = _explicit_weights(weights, len(chosen))
         total = np.zeros((10, 10), dtype=np.complex128)
-        for record in chosen:
-            total += self.structural_density(record)
+        for coefficient, record in zip(coefficients, chosen, strict=True):
+            total += coefficient * self.structural_density(record)
         return total
 
     def sum_multipoles(
-        self, records: Iterable[StateCharacter] | None = None
+        self,
+        records: Iterable[StateCharacter] | None = None,
+        *,
+        weights: Iterable[float] | None = None,
     ) -> np.ndarray:
-        """Transform the unweighted sum of explicitly selected densities."""
-        return density_to_multipoles(self.sum_structural_density(records))
+        """Transform a density sum; this is not a sum of quadratic strengths."""
+        return density_to_multipoles(self.sum_structural_density(records, weights=weights))
 
 
 def read_state_character_shards(
@@ -280,9 +317,7 @@ def density_to_multipoles(rho_flat: np.ndarray) -> np.ndarray:
 
 def multipole_component(w: np.ndarray, k: int, p: int, r: int, t: int) -> complex:
     """Return one valid component from the dense t-offset representation."""
-    tensor = np.asarray(w)
-    if tensor.shape != (5, 2, 6, 11):
-        raise ValueError("dense l=2 multipole tensor must have shape (5,2,6,11)")
+    tensor = _dense_multipoles(w)
     if (k, p, r, t) not in _VALID_COMPONENT_SET:
         raise ValueError(f"invalid l=2 multipole component {(k, p, r, t)}")
     return complex(tensor[k, p, r, t + T_OFFSET])
@@ -293,7 +328,166 @@ def compact_multipoles(w: np.ndarray) -> dict[tuple[int, int, int, int], complex
     return {component: multipole_component(w, *component) for component in VALID_COMPONENTS}
 
 
-_VALID_COMPONENT_SET = frozenset(VALID_COMPONENTS)
+def channel_raw_strengths(w: np.ndarray) -> dict[Channel, float]:
+    """Return Nordstrom/Bultmark raw strengths without normalization.
+
+    For each channel this is ``sum_t abs(w_t)**2``.  Structurally invalid
+    entries in the dense tensor are ignored.  Raw strengths are rotationally
+    invariant within a channel but are not norm fractions across channels.
+    """
+    tensor = _dense_multipoles(w)
+    return {
+        (k, p, r): float(
+            np.sum(np.abs(tensor[k, p, r, T_OFFSET - r : T_OFFSET + r + 1]) ** 2)
+        )
+        for k, p, r in VALID_CHANNELS
+    }
+
+
+def channel_metric_factor(k: int, p: int, r: int) -> float:
+    """Return A_(kpr) converting raw strength to Hilbert-Schmidt weight."""
+    _validate_channel(k, p, r)
+    normalization = _orbital_normalization(k)
+    bracket = _generalized_three_bracket(k, p, r)
+    return float((2 * k + 1) * normalization**2 * (2 * r + 1) * abs(bracket) ** 2 / 2.0)
+
+
+def channel_hilbert_schmidt_weights(w: np.ndarray) -> dict[Channel, float]:
+    """Return the orthogonal Hilbert-Schmidt density weight of each channel."""
+    raw = channel_raw_strengths(w)
+    return {channel: channel_metric_factor(*channel) * value for channel, value in raw.items()}
+
+
+def channel_character(
+    w: np.ndarray, d_weight: float, *, min_weight: float | None = None
+) -> dict[Channel, float]:
+    """Return Q_(kpr)/d_weight**2, or NaN values when the weight is unavailable.
+
+    ``min_weight`` is an optional caller-selected scientific threshold.  With
+    no threshold, only nonpositive d weight is masked.  No density, occupation,
+    or k-point normalization is applied implicitly.
+    """
+    weights = channel_hilbert_schmidt_weights(w)
+    denominator = _normalization_denominator(d_weight, min_weight, "d_weight")
+    if denominator is None:
+        return _unavailable_channels()
+    return {channel: value / denominator**2 for channel, value in weights.items()}
+
+
+def channel_norm_fractions(
+    w: np.ndarray, rho_hs_norm: float, *, min_norm: float | None = None
+) -> dict[Channel, float]:
+    """Return Q_(kpr)/Tr(rho^dagger rho), or NaN values if unavailable."""
+    weights = channel_hilbert_schmidt_weights(w)
+    denominator = _normalization_denominator(rho_hs_norm, min_norm, "rho_hs_norm")
+    if denominator is None:
+        return _unavailable_channels()
+    return {channel: value / denominator for channel, value in weights.items()}
+
+
+def dominant_channel(
+    character: Mapping[Channel, float],
+    *,
+    channels: Iterable[Channel] | None = None,
+    exclude_scalar: bool = False,
+) -> DominantChannel | None:
+    """Rank C_orth or Q values using canonical-order tie breaking.
+
+    All 18 channels are candidates unless ``channels`` is supplied.  Setting
+    ``exclude_scalar`` removes only ``(0,0,0)``; no other channel is silently
+    excluded.  Raw strengths are not cross-channel comparable and therefore
+    are not valid input by contract.  Fully masked candidate sets return
+    ``None``.
+    """
+    candidates = _candidate_channels(channels, exclude_scalar)
+    missing = [channel for channel in candidates if channel not in character]
+    if missing:
+        raise ValueError(f"character mapping is missing channel {missing[0]}")
+    finite = [channel for channel in candidates if np.isfinite(float(character[channel]))]
+    if not finite:
+        return None
+    ranked = sorted(finite, key=lambda channel: (-float(character[channel]), _CHANNEL_ORDER[channel]))
+    first = ranked[0]
+    if len(ranked) == 1:
+        return DominantChannel(first, float(character[first]), None, None, None)
+    second = ranked[1]
+    first_value = float(character[first])
+    second_value = float(character[second])
+    return DominantChannel(first, first_value, second, second_value, first_value - second_value)
+
+
+def channel_family(k: int, p: int, r: int) -> str:
+    """Return the broad parity/spin family of a valid l=2 channel."""
+    _validate_channel(k, p, r)
+    if p == 0:
+        return "charge" if k % 2 == 0 else "current/orbital-current"
+    return "magnetization" if k % 2 == 0 else "spin-current/spin-orbital"
+
+
+def _dense_multipoles(w: np.ndarray) -> np.ndarray:
+    tensor = np.asarray(w)
+    if tensor.shape != (5, 2, 6, 11):
+        raise ValueError("dense l=2 multipole tensor must have shape (5,2,6,11)")
+    return tensor
+
+
+def _validate_channel(k: int, p: int, r: int) -> None:
+    if (k, p, r) not in _VALID_CHANNEL_SET:
+        raise ValueError(f"invalid l=2 multipole channel {(k, p, r)}")
+
+
+def _normalization_denominator(
+    value: float, minimum: float | None, name: str
+) -> float | None:
+    denominator = float(value)
+    if not np.isfinite(denominator):
+        raise ValueError(f"{name} must be finite")
+    threshold = 0.0 if minimum is None else float(minimum)
+    if not np.isfinite(threshold) or threshold < 0.0:
+        raise ValueError(f"minimum {name} must be finite and nonnegative")
+    return denominator if denominator > threshold else None
+
+
+def _unavailable_channels() -> dict[Channel, float]:
+    return {channel: float("nan") for channel in VALID_CHANNELS}
+
+
+def _candidate_channels(
+    channels: Iterable[Channel] | None, exclude_scalar: bool
+) -> tuple[Channel, ...]:
+    if channels is None:
+        requested = set(VALID_CHANNELS)
+    else:
+        requested = set()
+        for channel in channels:
+            if len(channel) != 3:
+                raise ValueError(f"invalid l=2 multipole channel {channel}")
+            canonical = (int(channel[0]), int(channel[1]), int(channel[2]))
+            _validate_channel(*canonical)
+            requested.add(canonical)
+    if exclude_scalar:
+        requested.discard((0, 0, 0))
+    candidates = tuple(channel for channel in VALID_CHANNELS if channel in requested)
+    if not candidates:
+        raise ValueError("dominant-channel candidate set is empty")
+    return candidates
+
+
+def _explicit_weights(weights: Iterable[float] | None, count: int) -> np.ndarray:
+    if weights is None:
+        return np.ones(count, dtype=np.float64)
+    supplied = np.asarray(tuple(weights))
+    if supplied.ndim != 1 or supplied.size != count:
+        raise ValueError(f"weights must contain exactly {count} values")
+    if np.iscomplexobj(supplied):
+        raise ValueError("density weights must be real")
+    try:
+        coefficients = supplied.astype(np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("density weights must be real numbers") from exc
+    if not np.all(np.isfinite(coefficients)):
+        raise ValueError("density weights must be finite")
+    return coefficients
 
 
 def _validate_root(handle: h5py.File, path: Path) -> None:
@@ -559,15 +753,25 @@ def _spherical_pauli_matrices() -> np.ndarray:
 
 __all__ = [
     "SCHEMA_VERSION",
+    "DominantChannel",
     "StateCharacter",
     "StateCharacterData",
     "SiteCharacter",
+    "VALID_CHANNELS",
     "VALID_COMPONENTS",
+    "channel_character",
+    "channel_family",
+    "channel_hilbert_schmidt_weights",
+    "channel_metric_factor",
+    "channel_norm_fractions",
+    "channel_raw_strengths",
     "compact_multipoles",
     "density_to_multipoles",
+    "dominant_channel",
     "flatten_density",
     "multipole_component",
     "read_state_character_shards",
     "unflatten_density",
+    "valid_channels",
     "valid_components",
 ]

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import replace
 import hashlib
 import importlib.util
 from pathlib import Path
@@ -100,6 +101,41 @@ def rotation_factors() -> tuple[np.ndarray, np.ndarray]:
     return orbital, spin
 
 
+def common_rotation_factors() -> tuple[np.ndarray, np.ndarray]:
+    """Return l=2 and spin-1/2 representations of one common SO(3) rotation."""
+    axis = np.asarray([1.0, 2.0, -0.7])
+    axis /= np.linalg.norm(axis)
+    angle = 0.731
+
+    m_values = np.arange(-2, 3, dtype=np.float64)
+    orbital_z = np.diag(m_values)
+    orbital_plus = np.zeros((5, 5), dtype=np.complex128)
+    for column, m_value in enumerate(m_values[:-1]):
+        orbital_plus[column + 1, column] = np.sqrt(6.0 - m_value * (m_value + 1.0))
+    orbital_x = 0.5 * (orbital_plus + orbital_plus.conj().T)
+    orbital_y = (orbital_plus - orbital_plus.conj().T) / (2.0j)
+
+    spin_x = 0.5 * np.asarray([[0.0, 1.0], [1.0, 0.0]], dtype=np.complex128)
+    spin_y = 0.5 * np.asarray([[0.0, -1j], [1j, 0.0]], dtype=np.complex128)
+    spin_z = 0.5 * np.asarray([[1.0, 0.0], [0.0, -1.0]], dtype=np.complex128)
+
+    def rotate(generator: np.ndarray) -> np.ndarray:
+        eigenvalues, eigenvectors = np.linalg.eigh(generator)
+        return (eigenvectors * np.exp(-1j * angle * eigenvalues)) @ eigenvectors.conj().T
+
+    orbital = rotate(axis[0] * orbital_x + axis[1] * orbital_y + axis[2] * orbital_z)
+    spin = rotate(axis[0] * spin_x + axis[1] * spin_y + axis[2] * spin_z)
+    return orbital, spin
+
+
+def deterministic_psd_density() -> np.ndarray:
+    """Return a fixed trace-one positive-semidefinite spin-orbital density."""
+    generator = np.random.default_rng(20260907)
+    matrix = generator.normal(size=(10, 5)) + 1j * generator.normal(size=(10, 5))
+    density = matrix @ matrix.conj().T
+    return density / np.trace(density).real
+
+
 def write_synthetic_shard(
     path: Path,
     identity: tuple[int, int, int, int, int, int],
@@ -137,6 +173,195 @@ def expect_value_error(action, text: str) -> None:
         assert text in str(error)
     else:
         raise AssertionError(f"expected ValueError containing {text!r}")
+
+
+def check_channel_table_and_factors() -> tuple[float, tuple[int, int, int]]:
+    expected = {
+        (0, 0, 0): 1 / 10,
+        (0, 1, 1): 1 / 10,
+        (1, 0, 1): 1 / 5,
+        (1, 1, 0): 1 / 15,
+        (1, 1, 1): 9 / 40,
+        (1, 1, 2): 2 / 15,
+        (2, 0, 2): 1 / 7,
+        (2, 1, 1): 2 / 35,
+        (2, 1, 2): 25 / 168,
+        (2, 1, 3): 3 / 35,
+        (3, 0, 3): 1 / 20,
+        (3, 1, 2): 3 / 140,
+        (3, 1, 3): 49 / 960,
+        (3, 1, 4): 1 / 35,
+        (4, 0, 4): 1 / 140,
+        (4, 1, 3): 1 / 315,
+        (4, 1, 4): 81 / 11200,
+        (4, 1, 5): 1 / 252,
+    }
+    assert tuple(expected) == ANALYZER.VALID_CHANNELS
+    assert len(ANALYZER.VALID_CHANNELS) == 18
+    assert sum(2 * r + 1 for _, _, r in ANALYZER.VALID_CHANNELS) == 100
+    errors = {
+        channel: abs(ANALYZER.channel_metric_factor(*channel) - value)
+        for channel, value in expected.items()
+    }
+    location = max(errors, key=errors.get)
+    maximum = errors[location]
+    assert maximum < 2.0e-15
+    expect_value_error(lambda: ANALYZER.channel_metric_factor(0, 0, 1), "invalid l=2")
+    assert ANALYZER.channel_family(0, 0, 0) == "charge"
+    assert ANALYZER.channel_family(0, 1, 1) == "magnetization"
+    assert ANALYZER.channel_family(1, 0, 1) == "current/orbital-current"
+    assert ANALYZER.channel_family(1, 1, 1) == "spin-current/spin-orbital"
+    return maximum, location
+
+
+def check_channel_strength_identities() -> dict[str, float]:
+    identity = np.eye(10, dtype=np.complex128) / 10.0
+    densities = (identity, golden_density(), deterministic_psd_density())
+    parseval_error = 0.0
+    baseline_error = 0.0
+    fraction_error = 0.0
+    purity_error = 0.0
+    for density in densities:
+        multipoles = ANALYZER.density_to_multipoles(density)
+        raw = ANALYZER.channel_raw_strengths(multipoles)
+        weights = ANALYZER.channel_hilbert_schmidt_weights(multipoles)
+        hs_norm = float(np.vdot(density, density).real)
+        d_weight = float(np.trace(density).real)
+        character = ANALYZER.channel_character(multipoles, d_weight)
+        fractions = ANALYZER.channel_norm_fractions(multipoles, hs_norm)
+        assert tuple(raw) == ANALYZER.VALID_CHANNELS
+        assert tuple(weights) == ANALYZER.VALID_CHANNELS
+        parseval_error = max(parseval_error, abs(sum(weights.values()) - hs_norm))
+        baseline_error = max(baseline_error, abs(character[(0, 0, 0)] - 0.1))
+        fraction_error = max(fraction_error, abs(sum(fractions.values()) - 1.0))
+        purity_error = max(
+            purity_error,
+            abs(sum(character.values()) - hs_norm / d_weight**2),
+        )
+    assert parseval_error < 2.0e-12
+    assert baseline_error < 2.0e-14
+    assert fraction_error < 2.0e-14
+    assert purity_error < 2.0e-14
+
+    scalar_w = ANALYZER.density_to_multipoles(identity)
+    scalar_raw = ANALYZER.channel_raw_strengths(scalar_w)
+    assert abs(scalar_raw[(0, 0, 0)] - 1.0) < 2.0e-14
+    assert max(value for channel, value in scalar_raw.items() if channel != (0, 0, 0)) < 2.0e-28
+    invalid_changed = scalar_w.copy()
+    invalid_changed[0, 0, 1, ANALYZER.T_OFFSET] = 1.0e20
+    assert ANALYZER.channel_raw_strengths(invalid_changed) == scalar_raw
+    return {
+        "parseval": parseval_error,
+        "baseline": baseline_error,
+        "fraction": fraction_error,
+        "purity": purity_error,
+    }
+
+
+def check_channel_rotation_and_scale() -> dict[str, float]:
+    density = deterministic_psd_density()
+    orbital, spin = common_rotation_factors()
+    transform = np.kron(orbital, spin)
+    rotated = transform @ density @ transform.conj().T
+    original_w = ANALYZER.density_to_multipoles(density)
+    rotated_w = ANALYZER.density_to_multipoles(rotated)
+    original_raw = ANALYZER.channel_raw_strengths(original_w)
+    rotated_raw = ANALYZER.channel_raw_strengths(rotated_w)
+    original_q = ANALYZER.channel_hilbert_schmidt_weights(original_w)
+    rotated_q = ANALYZER.channel_hilbert_schmidt_weights(rotated_w)
+
+    raw_absolute = max(abs(original_raw[c] - rotated_raw[c]) for c in ANALYZER.VALID_CHANNELS)
+    q_absolute = max(abs(original_q[c] - rotated_q[c]) for c in ANALYZER.VALID_CHANNELS)
+    raw_relative = max(
+        abs(original_raw[c] - rotated_raw[c]) / max(1.0, original_raw[c], rotated_raw[c])
+        for c in ANALYZER.VALID_CHANNELS
+    )
+    q_relative = max(
+        abs(original_q[c] - rotated_q[c]) / max(1.0, original_q[c], rotated_q[c])
+        for c in ANALYZER.VALID_CHANNELS
+    )
+    assert raw_relative < 2.0e-13
+    assert q_relative < 2.0e-13
+
+    scale = 0.37
+    scaled_density = scale * density
+    scaled_w = ANALYZER.density_to_multipoles(scaled_density)
+    scaled_q = ANALYZER.channel_hilbert_schmidt_weights(scaled_w)
+    q_scale_error = max(
+        abs(scaled_q[channel] - scale**2 * original_q[channel])
+        for channel in ANALYZER.VALID_CHANNELS
+    )
+    d_weight = float(np.trace(density).real)
+    scaled_d_weight = float(np.trace(scaled_density).real)
+    d_scale_error = abs(scaled_d_weight - scale * d_weight)
+    original_character = ANALYZER.channel_character(original_w, d_weight)
+    scaled_character = ANALYZER.channel_character(scaled_w, scaled_d_weight)
+    character_scale_error = max(
+        abs(original_character[channel] - scaled_character[channel])
+        for channel in ANALYZER.VALID_CHANNELS
+    )
+    original_norm = float(np.vdot(density, density).real)
+    scaled_norm = float(np.vdot(scaled_density, scaled_density).real)
+    original_fractions = ANALYZER.channel_norm_fractions(original_w, original_norm)
+    scaled_fractions = ANALYZER.channel_norm_fractions(scaled_w, scaled_norm)
+    fraction_scale_error = max(
+        abs(original_fractions[channel] - scaled_fractions[channel])
+        for channel in ANALYZER.VALID_CHANNELS
+    )
+    assert max(q_scale_error, d_scale_error, character_scale_error, fraction_scale_error) < 2.0e-13
+    return {
+        "raw_rotation_absolute": raw_absolute,
+        "raw_rotation_relative": raw_relative,
+        "q_rotation_absolute": q_absolute,
+        "q_rotation_relative": q_relative,
+        "q_scale": q_scale_error,
+        "d_scale": d_scale_error,
+        "character_scale": character_scale_error,
+        "fraction_scale": fraction_scale_error,
+    }
+
+
+def check_masking_and_dominance() -> None:
+    density = np.eye(10, dtype=np.complex128) / 10.0
+    multipoles = ANALYZER.density_to_multipoles(density)
+    assert all(np.isfinite(value) for value in ANALYZER.channel_character(multipoles, 1.0).values())
+    just_above = ANALYZER.channel_character(multipoles, 0.5000000000001, min_weight=0.5)
+    assert all(np.isfinite(value) for value in just_above.values())
+    below = ANALYZER.channel_character(multipoles, 0.49, min_weight=0.5)
+    zero = ANALYZER.channel_character(multipoles, 0.0)
+    zero_norm = ANALYZER.channel_norm_fractions(multipoles, 0.0)
+    assert all(np.isnan(value) for value in below.values())
+    assert all(np.isnan(value) for value in zero.values())
+    assert all(np.isnan(value) for value in zero_norm.values())
+    assert ANALYZER.dominant_channel(below) is None
+    expect_value_error(
+        lambda: ANALYZER.channel_character(multipoles, 1.0, min_weight=-1.0),
+        "nonnegative",
+    )
+
+    values = {channel: 0.0 for channel in ANALYZER.VALID_CHANNELS}
+    values[(0, 0, 0)] = 5.0
+    values[(0, 1, 1)] = 1.0
+    values[(1, 0, 1)] = 2.0
+    values[(1, 1, 0)] = 3.0
+    values[(4, 1, 5)] = 4.0
+    overall = ANALYZER.dominant_channel(values)
+    anisotropic = ANALYZER.dominant_channel(values, exclude_scalar=True)
+    restricted = ANALYZER.dominant_channel(
+        values,
+        channels=((0, 1, 1), (1, 0, 1), (1, 1, 0), (4, 1, 5)),
+    )
+    assert overall is not None and overall.channel == (0, 0, 0) and overall.second_channel == (4, 1, 5)
+    assert anisotropic is not None and anisotropic.channel == (4, 1, 5)
+    assert restricted is not None and restricted.channel == (4, 1, 5)
+
+    values[(0, 1, 1)] = 4.0
+    tied = ANALYZER.dominant_channel(
+        values,
+        channels=((4, 1, 5), (0, 1, 1)),
+    )
+    assert tied is not None and tied.channel == (0, 1, 1)
+    assert tied.second_channel == (4, 1, 5) and tied.gap == 0.0
 
 
 def check_complete_golden() -> tuple[float, tuple[int, int, int, int], float, float]:
@@ -179,7 +404,7 @@ def check_negative_conventions() -> dict[str, float]:
     return separations
 
 
-def check_frame_and_shards() -> tuple[float, float, float, float]:
+def check_frame_and_shards() -> dict[str, float]:
     rho_structural = golden_density()
     orbital, spin = rotation_factors()
     transform = np.kron(orbital, spin)
@@ -214,6 +439,41 @@ def check_frame_and_shards() -> tuple[float, float, float, float]:
         summed_separately = data.multipoles(data.records[0]) + data.multipoles(data.records[1])
         linearity_error = float(np.max(np.abs(summed_once - summed_separately)))
         assert linearity_error < 2.0e-12
+        total_q = ANALYZER.channel_hilbert_schmidt_weights(summed_once)
+        first_q = ANALYZER.channel_hilbert_schmidt_weights(data.multipoles(data.records[0]))
+        second_q = ANALYZER.channel_hilbert_schmidt_weights(data.multipoles(data.records[1]))
+        strength_nonadditivity = max(
+            abs(total_q[channel] - first_q[channel] - second_q[channel])
+            for channel in ANALYZER.VALID_CHANNELS
+        )
+        assert strength_nonadditivity > 1.0e-8
+
+        coefficients = (0.25, -0.4)
+        weighted_density = data.sum_structural_density(weights=coefficients)
+        expected_weighted_density = coefficients[0] * rho_structural + coefficients[1] * second_structural
+        weighted_density_error = float(np.max(np.abs(weighted_density - expected_weighted_density)))
+        assert weighted_density_error < 2.0e-12
+        weighted_multipoles = data.sum_multipoles(weights=coefficients)
+        expected_weighted_multipoles = (
+            coefficients[0] * data.multipoles(data.records[0])
+            + coefficients[1] * data.multipoles(data.records[1])
+        )
+        weighted_linearity_error = float(
+            np.max(np.abs(weighted_multipoles - expected_weighted_multipoles))
+        )
+        assert weighted_linearity_error < 2.0e-12
+        expect_value_error(lambda: data.sum_structural_density(weights=(1.0,)), "exactly 2")
+        expect_value_error(lambda: data.sum_structural_density(weights=(1.0, 1.0j)), "must be real")
+
+        changed_records = tuple(
+            replace(record, k_weight=17.0 + index, occupation=-4.0 - index)
+            for index, record in enumerate(data.records)
+        )
+        changed_metadata = ANALYZER.StateCharacterData(changed_records, data.sites)
+        metadata_weighting_error = float(
+            np.max(np.abs(changed_metadata.sum_structural_density() - data.sum_structural_density()))
+        )
+        assert metadata_weighting_error == 0.0
 
         duplicate = root / "duplicate_state_character_rank0002.hdf"
         write_synthetic_shard(duplicate, (3, 5, 4, 2, 2, 3), rho_native, orbital, spin)
@@ -233,7 +493,16 @@ def check_frame_and_shards() -> tuple[float, float, float, float]:
         write_synthetic_shard(unknown, (5, 7, 4, 2, 2, 1), rho_native, orbital, spin, schema_version=2)
         expect_value_error(lambda: ANALYZER.read_state_character_shards(unknown), "unsupported state-character schema")
 
-    return frame_error, frame_tensor_error, omitted_frame_separation, linearity_error
+    return {
+        "frame_density": frame_error,
+        "frame_tensor": frame_tensor_error,
+        "omitted_frame": omitted_frame_separation,
+        "linearity": linearity_error,
+        "strength_nonadditivity": strength_nonadditivity,
+        "weighted_density": weighted_density_error,
+        "weighted_linearity": weighted_linearity_error,
+        "metadata_weighting": metadata_weighting_error,
+    }
 
 
 def main() -> int:
@@ -303,16 +572,46 @@ def main() -> int:
                     assert rho4[m + 2, spin - 1, mp + 2, spinp - 1] == expected_rho[row, column]
     assert sha256(args.file) == before_hash
 
+    factor_error, factor_location = check_channel_table_and_factors()
+    strength_checks = check_channel_strength_identities()
+    rotation_scale_checks = check_channel_rotation_and_scale()
+    check_masking_and_dominance()
     golden_error, golden_location, trace_error, hermiticity_error = check_complete_golden()
-    frame_density_error, frame_tensor_error, omitted_frame_separation, linearity_error = check_frame_and_shards()
+    shard_checks = check_frame_and_shards()
     negative = check_negative_conventions()
+    print(f"Channel metric-factor error: {factor_error:.6e} at {factor_location}")
+    print(f"Channel Parseval error: {strength_checks['parseval']:.6e}")
+    print(f"Universal C_orth(000) error: {strength_checks['baseline']:.6e}")
+    print(f"Channel F normalization error: {strength_checks['fraction']:.6e}")
+    print(f"Channel C_orth purity error: {strength_checks['purity']:.6e}")
+    print(
+        "Raw-strength rotation error: "
+        f"abs={rotation_scale_checks['raw_rotation_absolute']:.6e} "
+        f"rel={rotation_scale_checks['raw_rotation_relative']:.6e}"
+    )
+    print(
+        "Hilbert-Schmidt rotation error: "
+        f"abs={rotation_scale_checks['q_rotation_absolute']:.6e} "
+        f"rel={rotation_scale_checks['q_rotation_relative']:.6e}"
+    )
+    print(
+        "Scale-invariance errors: "
+        f"D={rotation_scale_checks['d_scale']:.6e} "
+        f"Q={rotation_scale_checks['q_scale']:.6e} "
+        f"C_orth={rotation_scale_checks['character_scale']:.6e} "
+        f"F={rotation_scale_checks['fraction_scale']:.6e}"
+    )
     print(f"Complete 100-component golden error: {golden_error:.6e} at {golden_location}")
     print(f"Trace identity error: {trace_error:.6e}")
     print(f"Hermiticity relation error: {hermiticity_error:.6e}")
-    print(f"Structural frame-chain density error: {frame_density_error:.6e}")
-    print(f"Structural frame-chain tensor error: {frame_tensor_error:.6e}")
-    print(f"Omitted-frame separation: {omitted_frame_separation:.6e}")
-    print(f"Density-sum versus multipole-sum error: {linearity_error:.6e}")
+    print(f"Structural frame-chain density error: {shard_checks['frame_density']:.6e}")
+    print(f"Structural frame-chain tensor error: {shard_checks['frame_tensor']:.6e}")
+    print(f"Omitted-frame separation: {shard_checks['omitted_frame']:.6e}")
+    print(f"Density-sum versus multipole-sum error: {shard_checks['linearity']:.6e}")
+    print(f"Density-first strength nonadditivity: {shard_checks['strength_nonadditivity']:.6e}")
+    print(f"Explicitly weighted density error: {shard_checks['weighted_density']:.6e}")
+    print(f"Explicitly weighted multipole error: {shard_checks['weighted_linearity']:.6e}")
+    print(f"Implicit metadata-weighting error: {shard_checks['metadata_weighting']:.6e}")
     for name, value in negative.items():
         print(f"Negative-control separation {name}: {value:.6e}")
     print("RIXS STATE CHARACTER HDF TEST: PASS")
