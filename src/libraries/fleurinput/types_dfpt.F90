@@ -278,7 +278,7 @@ CONTAINS
            this%stopq  = evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/output/dfpt/phonon/@stopq'))
          END IF
 
-          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/dfpt/phonon/phonon/@l_symVacLevel')
+          numberNodes = xml%GetNumberOfNodes('/fleurInput/output/dfpt/phonon/@l_symVacLevel')
 
          IF (numberNodes == 1) THEN
           this%l_symVacLevel    = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/dfpt/phonon/@l_symVacLevel'))
@@ -442,10 +442,14 @@ CONTAINS
       REAL                               :: qvec_ext(3), qvec_int(3)
 
 
-      integer :: iq 
+      integer :: iq
       real :: tmp_vec(3)
 
-      if (this%l_efield .or. this%l_borneffcharge) then  
+      ! Set default value on gmaxzLocal if the user has not specified it 
+      ! Hardcoded fallback 
+      if (this%l_dfpt.and.input%film.and.abs(this%gmaxzLocal)<1e-8) this%gmaxzLocal = 3.0*input%gmax
+
+      if (this%l_efield .or. this%l_borneffcharge) then
         allocate(this%qvec_efield(3,3))
         do iDir = 1,3
           qvec_ext(:) = 0.0
