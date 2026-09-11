@@ -3525,7 +3525,7 @@
                <xsd:documentation>Local Gmax for z-direction (film calculations).</xsd:documentation>
             </xsd:annotation>
          </xsd:attribute>  
-         <xsd:attribute name="l_symVacLevel" type="FleurBool" use="optional" default="F">
+         <xsd:attribute name="l_symVacLevel" type="FleurBool" use="optional">
             <xsd:annotation>
                <xsd:documentation>Symmetrize vacuum level for film calculations.</xsd:documentation>
             </xsd:annotation>
