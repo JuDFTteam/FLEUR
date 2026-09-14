@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -9,7 +9,7 @@ MODULE m_fleur_init
 #endif
    IMPLICIT NONE
 CONTAINS
-   SUBROUTINE fleur_init(fmpi, fi, sphhar, stars, nococonv, forcetheo, enpara, xcpot, results, wann, hybdat, mpdata, filename_add)
+   SUBROUTINE fleur_init(fmpi, fi, sphhar, stars, nococonv, forcetheo, enpara, xcpot, results, wann, hybdat, mpdata, filename_add, l_skip_setupmpi)
       USE m_types
       USE m_test_performance
       use m_store_load_hybrid
@@ -62,6 +62,7 @@ CONTAINS
       type(t_mpdata), intent(out):: mpdata
 
       CHARACTER(len=100), OPTIONAL, INTENT(IN) :: filename_add
+      LOGICAL, OPTIONAL, INTENT(IN) :: l_skip_setupmpi
 
       TYPE(t_enparaXML)::enparaXML
       TYPE(t_forcetheo_data)::forcetheo_data
@@ -85,6 +86,7 @@ CONTAINS
       REAL                          :: a1(3), a2(3), a3(3)
       REAL                          :: dtild, phi_add
       LOGICAL                       :: l_found, l_kpts, l_exist, l_krla, l_timeReversalCheck
+      LOGICAL                       :: l_skip_setupmpi_loc
 
 #ifdef CPP_MPI
       INTEGER ierr(3)
@@ -93,6 +95,8 @@ CONTAINS
 #else
       fmpi%irank = 0; fmpi%isize = 1; fmpi%mpi_comm = 1
 #endif
+      l_skip_setupmpi_loc = .FALSE.
+      IF (PRESENT(l_skip_setupmpi)) l_skip_setupmpi_loc = l_skip_setupmpi
       CALL check_command_line(fmpi)
 #ifdef CPP_HDF
       CALL hdf_init()
@@ -145,16 +149,19 @@ CONTAINS
       IF (fmpi%irank .EQ. 0) THEN
          CALL fleurinput_read_xml(outxmlFileID, filename_add_loc, cell=fi%cell, sym=fi%sym, atoms=fi%atoms, input=fi%input, noco=fi%noco, vacuum=fi%vacuum, field=fi%field, &
                                   sliceplot=fi%sliceplot, banddos=fi%banddos, mpinp=fi%mpinp, hybinp=fi%hybinp, coreSpecInput=fi%coreSpecInput, &
+                                  wannierlib=fi%wannierlib, &
                                   wann=wann, xcpot=xcpot, forcetheo_data=forcetheo_data, kpts=fi%kpts, kptsSelection=kptsSelection, kptsArray=kptsArray, &
                                   enparaXML=enparaXML, gfinp=fi%gfinp, hub1inp=fi%hub1inp, dfpt=fi%dfpt)
          CALL fleurinput_postprocess(fi%cell, fi%sym, fi%atoms, fi%input, fi%noco, fi%vacuum, &
-                                     fi%banddos, fi%hybinp,  Xcpot, fi%kpts, fi%gfinp)
+                                     fi%banddos, fi%hybinp,  Xcpot, fi%kpts, fi%gfinp, fi%wannierlib)
       END IF
       !Distribute fi%input to all PE
       CALL fleurinput_mpi_bc(fi%cell, fi%sym, fi%atoms, fi%input, fi%noco, fi%vacuum, fi%field, &
                              fi%sliceplot, fi%banddos, fi%mpinp, fi%hybinp,   fi%coreSpecInput, Wann, &
-                             Xcpot, Forcetheo_data, fi%kpts, Enparaxml, fi%gfinp, fi%hub1inp, fmpi%Mpi_comm, fi%dfpt)
+                             Xcpot, Forcetheo_data, fi%kpts, Enparaxml, fi%gfinp, fi%hub1inp, fmpi%Mpi_comm, fi%dfpt, wannierlib=fi%wannierlib)
       !Remaining init is done using all PE
+      !Checks that emit a warning and continue must run here, not in fleurinput_postprocess above: see check_input_switches_all_pe.
+      CALL check_input_switches_all_pe(fi%input, fi%hybinp, fi%mpinp)
       call make_xcpot(fmpi, xcpot, fi%atoms, fi%input)
       if (fi%noco%l_noco.and..not.xcpot%vxc_is_LDA()) call judft_warn("Noco should be used only with LDA",hint="GGA calculations and l_noco=T can be very error prone due.")
       CALL nococonv%init(fi%noco)
@@ -167,9 +174,10 @@ CONTAINS
       CALL storeStructureIfNew(fi%input, stars, fi%atoms, fi%cell, fi%vacuum,  fi%sym, fmpi, sphhar, fi%noco)
       CALL make_stars(stars, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi)
       CALL make_forcetheo(forcetheo_data, fi%cell, fi%sym, fi%atoms, forcetheo)
-      CALL fi%dfpt%init(fi%cell,fi%input) ! This is needed for the dim of lapw basis 
+      CALL fi%dfpt%init(fi%cell,fi%input,fi%sym,fi%noco) ! This is needed for the dim of lapw basis
       CALL lapw_dim(fi%kpts, fi%cell, fi%input, fi%noco, nococonv,   forcetheo, fi%atoms, nbasfcn, fi%dfpt)
       CALL fi%input%init(fi%noco, fi%hybinp%l_hybrid,fi%sym%invs,fi%atoms%n_denmat,fi%atoms%n_hia,lapw_dim_nbasfcn)
+     
       CALL fi%hybinp%init(fi%atoms, fi%cell, fi%input,   fi%sym, xcpot)
       l_timeReversalCheck = .FALSE.
       IF(.NOT.fi%banddos%band.AND..NOT.fi%banddos%dos) THEN
@@ -200,7 +208,7 @@ CONTAINS
       END IF
 
       !Finalize the fmpi setup
-      CALL setupMPI(fi%kpts%nkpt, fi%input%neig, nbasfcn, fmpi, fi%input%l_real, fi%noco%l_noco)
+      IF (.NOT. l_skip_setupmpi_loc) CALL setupMPI(fi%kpts%nkpt, fi%input%neig, nbasfcn, fmpi, fi%input%l_real, fi%noco%l_noco)
 
       !Collect some usage info
       CALL add_usage_data("A-Types", fi%atoms%ntype)

@@ -52,9 +52,11 @@ CONTAINS
 #else
     INTEGER :: banddosFile_id
 #endif
-    l_dfpt = PRESENT(dfpt)
+   l_dfpt = .false.
+   if (present(dfpt)) l_dfpt = dfpt%l_dfpt
     CALL readPrevEFermi(eFermiPrev,l_error)
 
+    eFermi = 0.0 
     IF (.NOT.l_dfpt) eFermi = results%ef
 
     IF(banddos%band) THEN
@@ -117,7 +119,7 @@ CONTAINS
           print *,"Smooth:",n
           call eigdos(n)%p%smooth(banddos)
           print *,"WriteDos:",n
-          call eigdos(n)%p%write_dos(banddosFile_id)
+          call eigdos(n)%p%write_dos(banddosFile_id,l_dfpt)
        END DO
        IF (banddos%l_storeEVData) THEN
           DO n=1,size(eigdos)

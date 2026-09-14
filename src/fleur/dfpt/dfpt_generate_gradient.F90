@@ -87,7 +87,7 @@ contains
         ! compute numerical gradient of the density 
 
         do iSpin = 1, size(rho%mt,4)
-            call mt_gradient_new(fi%atoms, sphhar, fi%sym, rho%mt(:, :, :, iSpin), grrhodummy(:, :, :, iSpin, :))
+            call mt_gradient_lh(fi%atoms, sphhar, fi%sym, rho%mt(:, :, :, iSpin), grrhodummy(:, :, :, iSpin, :))
         end do 
         do  zInd = -stars%mx3, stars%mx3
             do yInd = -stars%mx2, stars%mx2

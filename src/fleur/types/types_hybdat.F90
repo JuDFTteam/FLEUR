@@ -14,12 +14,21 @@ MODULE m_types_hybdat
    use mpi
 #endif
    IMPLICIT NONE
-   private 
+   private
+   !> Index layout of the mixed product basis (MPB)
+   !>
+   !> The MPB functions of one k-point are numbered in consecutive blocks:
+   !>
+   !>    [ 1        .. n_mt        ]  MT  : radial products u_pl*u_p'l' times Y_LM
+   !>    [ n_mt+1   .. nbasm(ik)   ]  IR  : interstitial plane waves
+   !>
+   !> `n_mt` is k-independent, the IR block size is `mpdata%n_g(ik)`, and
+   !> `nbasm(ik) = n_mt + mpdata%n_g(ik)`.
    TYPE,public:: t_hybdat
       COMPLEX, ALLOCATABLE   :: stepfunc(:, :, :)
       INTEGER, ALLOCATABLE   :: lmaxc(:)
       INTEGER, ALLOCATABLE   :: nbands(:,:) ! nkptf, jsp
-      INTEGER, ALLOCATABLE   :: nbasm(:)
+      INTEGER, ALLOCATABLE   :: nbasm(:)    ! total MPB size per k-point
       INTEGER, ALLOCATABLE   :: nindxc(:, :)
       INTEGER, ALLOCATABLE   :: nindxp1(:, :)
       INTEGER, ALLOCATABLE   :: nobd(:, :)
@@ -29,7 +38,7 @@ MODULE m_types_hybdat
       INTEGER                :: lmaxcd, maxindxc
       INTEGER                :: maxfac
       INTEGER                :: maxlmindx = -1
-      INTEGER                :: nbasp = -1
+      INTEGER                :: n_mt = -1   ! size of the MT block, see layout above
       integer                :: max_q = -1
       LOGICAL                :: l_addhf = .false.
       LOGICAL                :: l_calhf = .false.

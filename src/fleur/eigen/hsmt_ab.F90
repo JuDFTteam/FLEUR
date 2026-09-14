@@ -12,6 +12,29 @@ MODULE m_hsmt_ab
 
 CONTAINS
 
+   !> Row count of one half of abCoeffs, i.e. ab_size *before* the final doubling.
+   !>
+   !> Exposed so that a caller can allocate and map abCoeffs itself
+   !> (abCoeffs(2*hsmt_ab_size(...), lapw%nv(igSpin))).  That matters for OpenACC:
+   !> if hsmt_ab does the `enter data` on its own dummy argument while the caller
+   !> does the matching `exit data delete`, the two name different descriptors, and
+   !> the one created here is never released -- it survives as a stale present-table
+   !> entry at a stack address that is later reused, so a subsequent `enter data` on
+   !> any aggregate overlapping it fails with "partially present".  Keeping both
+   !> halves in the caller's scope removes that asymmetry.
+   PURE INTEGER FUNCTION hsmt_ab_size(atoms, n, l_nonsph)
+      USE m_types_atoms
+      IMPLICIT NONE
+      TYPE(t_atoms), INTENT(IN) :: atoms
+      INTEGER, INTENT(IN)       :: n
+      LOGICAL, INTENT(IN)       :: l_nonsph
+
+      INTEGER :: lmax
+
+      lmax = MERGE(atoms%lnonsph(n), atoms%lmax(n), l_nonsph)
+      hsmt_ab_size = lmax*(lmax + 2) + 1
+   END FUNCTION hsmt_ab_size
+
    SUBROUTINE hsmt_ab(sym,atoms,noco,nococonv,ilSpin,igSpin,n,na,cell,lapw,fjgj,abCoeffs,ab_size,l_nonsph,abclo,alo1,blo1,clo1,l_store)
       !! Construct the matching coefficients of the form:
       !! \begin{aligned}
@@ -65,7 +88,9 @@ CONTAINS
       INTEGER,          INTENT(OUT)   :: ab_size
     !     ..
     !     .. Array Arguments ..
-      COMPLEX, ALLOCATABLE, INTENT(OUT) :: abCoeffs(:,:)
+      ! INTENT(INOUT), not (OUT): an INTENT(OUT) allocatable is deallocated on entry,
+      ! which would discard an array the caller allocated and already mapped.
+      COMPLEX, ALLOCATABLE, INTENT(INOUT) :: abCoeffs(:,:)
     !Optional arguments if abc coef for LOs are needed
       COMPLEX, INTENT(INOUT), OPTIONAL :: abclo(:, :, :, :)
       REAL,    INTENT(IN),    OPTIONAL :: alo1(:), blo1(:), clo1(:)
@@ -81,7 +106,7 @@ CONTAINS
       REAL    :: term, bmrot(3, 3)
       COMPLEX :: c_ph(MAXVAL(lapw%nv), MERGE(2, 1, noco%l_ss.OR.ANY(noco%l_unrestrictMT) &
                                                           & .OR.ANY(noco%l_spinoffd_ldau)))
-      LOGICAL :: l_apw, l_abclo, l_skip_calc, l_useStore
+      LOGICAL :: l_apw, l_abclo, l_skip_calc, l_useStore, l_caller_owns
 
       REAL,    ALLOCATABLE :: gkrot(:, :)
       COMPLEX, ALLOCATABLE :: ylm(:, :)
@@ -100,10 +125,19 @@ CONTAINS
       ! coefficients are returned -- and no LO coefficients are requested (abclo is
       ! not cached) -- the computation below can be skipped entirely.
       ! l_apw is .FALSE., so the array always needs 2*ab_size rows.
-      l_skip_calc = abcoeff_store_alloc(abCoeffs, 2*ab_size, lapw%nv(igSpin), lapw%nk, igSpin, ilSpin, na, &
-                                      & l_nonsph, l_useStore)
+      ! When the caller has already allocated (and mapped) abCoeffs it owns the whole
+      ! lifetime, including the `enter data`; do not touch either here.
+      l_caller_owns = ALLOCATED(abCoeffs)
+      IF (l_caller_owns) THEN
+         l_skip_calc = .FALSE.
+      ELSE
+         l_skip_calc = abcoeff_store_alloc(abCoeffs, 2*ab_size, lapw%nv(igSpin), lapw%nk, igSpin, ilSpin, na, &
+                                         & l_nonsph, l_useStore)
+      END IF
 
-      if (l_skip_calc.and..not.l_abclo) then
+      if (l_caller_owns) then
+         continue  ! mapping is the caller's
+      else if (l_skip_calc.and..not.l_abclo) then
          !$acc enter data copyin(abCoeffs)
          ! Same ab_size convention as on the regular exit at the end of the routine.
          IF (.NOT.l_apw) ab_size = ab_size*2

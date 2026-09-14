@@ -7,7 +7,7 @@ MODULE m_vac_tofrom_grid
       INTEGER,PARAMETER :: fixed_ndvgrd=6
 
 CONTAINS
-  subroutine vac_to_grid(dograds,ifftd2,jspins,vacuum,l_noco,cell,vacnew,stars,rho,grad,rhoim)
+  subroutine vac_to_grid(dograds,ifftd2,jspins,vacuum,l_noco,cell,vacnew,stars,rho,grad,rhoim,gradim)
 
 
     !-----------------------------------------------------------------------
@@ -19,14 +19,15 @@ CONTAINS
     !     ** r.pentcheva 08.05.96
     !-----------------------------------------------------------------------
 
+    USE m_juDFT
     USE m_types
     use m_constants
     USE m_grdrsvac
     USE m_grdchlh
     USE m_mkgz
     USE m_mkgxyz3
-    ! 
-    ! 
+    !
+    !
     USE m_fft2d
 
     IMPLICIT NONE
@@ -40,19 +41,27 @@ CONTAINS
     TYPE(t_gradients),INTENT(INOUT)::grad
     real,intent(OUT)             :: rho(:,:)
     real, optional, allocatable, intent(out) :: rhoim(:,:)
+    !Imaginary part of the derivatives; only for a complex (DFPT) field
+    TYPE(t_gradients), OPTIONAL, INTENT(INOUT) :: gradim
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: ifftd2
 
     !     ..
     !     .. Local Scalars ..
-    INTEGER :: js,nt,i,iq,irec2,nmz0,nmzdiff,ivac,ip,idx,idx1,idx_loc
-    REAL    :: rhti,zro,fgz,rhmnv,d_15,rd
+    INTEGER :: js,nt,i,iq,irec2,nmz0,nmzdiff,ivac,ip,idx,idx1,idx_loc,ipt
+    REAL    :: rhti,zro,fgz,rhmnv,d_15,rd,qsq
+    LOGICAL :: l_gradim
     !     ..
     !     .. Local Arrays ..
+    REAL    :: qvec(3)
     REAL, ALLOCATABLE :: bf2(:)
     REAL, ALLOCATABLE :: rhdx(:,:),rhdy(:,:),rhdz(:,:)
     REAL, ALLOCATABLE :: rhdxx(:,:),rhdyy(:,:),rhtdz(:,:),rhtdzz(:,:)
     REAL, ALLOCATABLE :: rhdzz(:,:),rhdyz(:,:),rhdzx(:,:),rhdxy(:,:)
+    REAL, ALLOCATABLE :: rhdxim(:,:),rhdyim(:,:),rhdzim(:,:)
+    REAL, ALLOCATABLE :: rhdxxim(:,:),rhdyyim(:,:),rhdzzim(:,:)
+    REAL, ALLOCATABLE :: rhdyzim(:,:),rhdzxim(:,:),rhdxyim(:,:)
+    REAL, ALLOCATABLE :: rhtdzim(:,:),rhtdzzim(:,:)
     REAL, ALLOCATABLE :: rxydzr(:),rxydzi(:)
     REAL, ALLOCATABLE :: rxydzzr(:),rxydzzi(:),rhtxyr(:),rhtxyi(:)
     REAL, ALLOCATABLE :: rhtxc(:,:)
@@ -76,17 +85,39 @@ CONTAINS
 
     rho = 0.0
 
+    !stars%center is zero except for the q-shifted stars used in DFPT; q is
+    !in-plane there, so only the x and y derivatives pick up a shift.
+    qvec = matmul(stars%center,cell%bmat)
+    qsq = dot_product(qvec(:2),qvec(:2))
+
+    l_gradim = PRESENT(gradim)
+    IF (l_gradim.AND.l_noco) CALL judft_error("vac_to_grid: complex gradients are not available for noco",calledby="vac_tofrom_grid.F90")
+    IF (l_gradim.AND..NOT.PRESENT(rhoim)) CALL judft_error("vac_to_grid: gradim needs rhoim",calledby="vac_tofrom_grid.F90")
+
     ALLOCATE ( bf2(ifftd2) )
     IF (PRESENT(rhoim)) THEN
       ALLOCATE(rhoim,mold=rho)
       rhoim=0.0
     ENDIF
+    IF (l_gradim) THEN
+      IF (ALLOCATED(gradim%gr)) DEALLOCATE(gradim%gr)
+      IF (ALLOCATED(gradim%laplace)) DEALLOCATE(gradim%laplace)
+      ALLOCATE(gradim%gr(3,SIZE(rho,1),jspins),gradim%laplace(SIZE(rho,1),jspins))
+      gradim%gr = 0.0
+      gradim%laplace = 0.0
+    ENDIF
+    !The grid is longer than the part the vacua actually fill, so the tail would
+    !otherwise reach the functionals uninitialised.
+    IF (ALLOCATED(grad%gr)) grad%gr = 0.0
+    IF (ALLOCATED(grad%laplace)) grad%laplace = 0.0
+    IF (ALLOCATED(grad%sigma)) grad%sigma = 0.0
     WRITE (oUnit,'(/'' ifftd2,vacuum%nmz='',2i7)') ifftd2,vacuum%nmz
     WRITE (oUnit,'('' 9990nmzxy='',2i5)') vacuum%nmzxy
 
     ALLOCATE ( rxydz(vacuum%nmzxy,stars%ng2,jspins),rxydzz(vacuum%nmzxyd,stars%ng2,jspins) )
     ALLOCATE ( rhtdz(vacuum%nmzd,jspins),rhtdzz(vacuum%nmzd,jspins) )
     ALLOCATE ( rdz(vacuum%nmzd,stars%ng2,jspins),rdzz(vacuum%nmzd,stars%ng2,jspins))
+    IF (l_gradim) ALLOCATE ( rhtdzim(vacuum%nmzd,jspins),rhtdzzim(vacuum%nmzd,jspins) )
     !ALLOCATE ( fgxy(stars%ng2-1) )
 	 rxydz = CMPLX(0.0,0.0)
 	 rxydzz= CMPLX(0.0,0.0)
@@ -154,6 +185,12 @@ CONTAINS
                   rhtdz(1:,js),rhtdzz(1:,js))
 				 rdz(:,1,js) = rhtdz(1:,js)
 				 rdzz(:,1,js) = rhtdzz(1:,js)
+             IF (l_gradim) THEN
+                CALL grdchlh(vacuum%delz,AIMAG(vacnew(1:vacuum%nmz,1,ivac,js)),&
+                     rhtdzim(1:,js),rhtdzzim(1:,js))
+                rdz(:,1,js) = CMPLX(rhtdz(1:,js),rhtdzim(1:,js))
+                rdzz(:,1,js) = CMPLX(rhtdzz(1:,js),rhtdzzim(1:,js))
+             END IF
              DO iq = 1, stars%ng2-1
                 !
                 ! calculate first (rxydz) & second (rxydzz) derivative of vacxy:
@@ -203,15 +240,22 @@ CONTAINS
        !$OMP PARALLEL DEFAULT(none) &
        !$OMP SHARED(vacuum,dograds,jspins,stars,ivac,zro,cell,magmom,vacnew) &
        !$OMP SHARED(rhtdz,rhtdzz,rdz,rdzz,rxydz,rxydzz,l_noco,dzmagmom,ddzmagmom,idx) &
-       !$OMP SHARED(ifftd2,rho,rhoim,grad) &
-       !$OMP PRIVATE(ip,js,iq,cqpw,bf2,rhti,rhdx,rhdy,rhdz,rhdxx,rhdyy,rhdzz) &
+       !$OMP SHARED(ifftd2,rho,rhoim,grad,gradim,l_gradim) &
+       !$OMP PRIVATE(ip,js,iq,cqpw,rhti,rhdx,rhdy,rhdz,rhdxx,rhdyy,rhdzz) &
        !$OMP PRIVATE(rhdxy,rhdzx,rhdyz,dxmagmom,dymagmom,ddxmagmom,ddymagmom) &
+       !$OMP PRIVATE(rhdxim,rhdyim,rhdzim,rhdxxim,rhdyyim,rhdzzim) &
+       !$OMP PRIVATE(rhdxyim,rhdzxim,rhdyzim) &
        !$OMP PRIVATE(chdens,idx_loc)
        ALLOCATE ( rhdx(0:ifftd2-1,jspins),rhdy(0:ifftd2-1,jspins) )
        ALLOCATE ( rhdz(0:ifftd2-1,jspins),rhdxx(0:ifftd2-1,jspins) )
        ALLOCATE ( rhdyy(0:ifftd2-1,jspins),rhdzz(0:ifftd2-1,jspins) )
        ALLOCATE ( rhdyz(0:ifftd2-1,jspins),rhdzx(0:ifftd2-1,jspins) )
        ALLOCATE ( rhdxy(0:ifftd2-1,jspins))
+       ALLOCATE ( rhdxim(0:ifftd2-1,jspins),rhdyim(0:ifftd2-1,jspins) )
+       ALLOCATE ( rhdzim(0:ifftd2-1,jspins),rhdxxim(0:ifftd2-1,jspins) )
+       ALLOCATE ( rhdyyim(0:ifftd2-1,jspins),rhdzzim(0:ifftd2-1,jspins) )
+       ALLOCATE ( rhdyzim(0:ifftd2-1,jspins),rhdzxim(0:ifftd2-1,jspins) )
+       ALLOCATE ( rhdxyim(0:ifftd2-1,jspins))
        ALLOCATE ( cqpw(stars%ng2))
        IF (l_noco) THEN
           ALLOCATE ( dxmagmom(0:ifftd2-1),dymagmom(0:ifftd2-1) )
@@ -228,23 +272,24 @@ CONTAINS
 
              DO js = 1,jspins
 
-                cqpw(1) = CMPLX(0.0,0.0)
-                cqpw(2:stars%ng2)=vacnew(ip,2:stars%ng2,ivac,js)
+                !The g||=0 star is kept: with the DFPT q-shift its in-plane
+                !derivative is i*q, and for stars%center=0 the factor vanishes anyway.
+                cqpw(1:stars%ng2)=vacnew(ip,1:stars%ng2,ivac,js)
 
-                CALL fft2d(stars, rhdx(0,js),bf2, cqpw, +1,firstderiv=[1.,0.,0.],cell=cell)
-                CALL fft2d(stars, rhdy(0,js),bf2, cqpw, +1,firstderiv=[0.,1.,0.],cell=cell) ! dn/dy =  FFT(0,i*gy*vacxy)&
-                CALL fft2d(stars, rhdz(0,js),bf2, rdz(ip,:,js), +1) ! dn/dz = FFT(rhtdz,rxydz)&
+                CALL fft2d(stars, rhdx(0,js),rhdxim(0,js), cqpw, +1,firstderiv=[1.,0.,0.],cell=cell)
+                CALL fft2d(stars, rhdy(0,js),rhdyim(0,js), cqpw, +1,firstderiv=[0.,1.,0.],cell=cell) ! dn/dy =  FFT(0,i*gy*vacxy)&
+                CALL fft2d(stars, rhdz(0,js),rhdzim(0,js), rdz(ip,:,js), +1) ! dn/dz = FFT(rhtdz,rxydz)&
 
-                CALL fft2d(stars, rhdxx(0,js),bf2, cqpw, +1,firstderiv=[1.0,0.,0.],secondderiv=[1.0,0.,0.],cell=cell) ! d2n/dx2 = FFT(0,-gx^2*vacxy)&
-                CALL fft2d(stars, rhdyy(0,js),bf2, cqpw, +1,firstderiv=[0.,1.0,0.],secondderiv=[0.,1.0,0.],cell=cell) ! d2n/dy2 = FFT(0,-gy^2*vacxy)&
-                CALL fft2d(stars, rhdzz(0,js),bf2, rdzz(ip,:,js), +1) ! d2n/dz2 = FFT(rhtdzz,rxydzz)&
-                CALL fft2d(stars, rhdxy(0,js),bf2, cqpw, +1,firstderiv=[0.,1.0,0.],secondderiv=[1.,0.0,0.],cell=cell) ! d2n/dxy = FFT(0,-gx*gy*vacxy)&
+                CALL fft2d(stars, rhdxx(0,js),rhdxxim(0,js), cqpw, +1,firstderiv=[1.0,0.,0.],secondderiv=[1.0,0.,0.],cell=cell) ! d2n/dx2 = FFT(0,-gx^2*vacxy)&
+                CALL fft2d(stars, rhdyy(0,js),rhdyyim(0,js), cqpw, +1,firstderiv=[0.,1.0,0.],secondderiv=[0.,1.0,0.],cell=cell) ! d2n/dy2 = FFT(0,-gy^2*vacxy)&
+                CALL fft2d(stars, rhdzz(0,js),rhdzzim(0,js), rdzz(ip,:,js), +1) ! d2n/dz2 = FFT(rhtdzz,rxydzz)&
+                CALL fft2d(stars, rhdxy(0,js),rhdxyim(0,js), cqpw, +1,firstderiv=[0.,1.0,0.],secondderiv=[1.,0.0,0.],cell=cell) ! d2n/dxy = FFT(0,-gx*gy*vacxy)&
 
 
-                cqpw(2:stars%ng2)=rxydz(ip,2:stars%ng2,js)
-                
-                CALL fft2d(stars, rhdyz(0,js),bf2, cqpw, +1,firstderiv=[0.,1.0,0.],cell=cell) ! d2n/dyz = FFT(0,i*gy*rxydz)&
-                CALL fft2d(stars, rhdzx(0,js),bf2, cqpw, +1,firstderiv=[1.,0.0,0.],cell=cell) ! d2n/dzx = FFT(0,i*gx*rxydz)&
+                cqpw(1:stars%ng2)=rdz(ip,1:stars%ng2,js)
+
+                CALL fft2d(stars, rhdyz(0,js),rhdyzim(0,js), cqpw, +1,firstderiv=[0.,1.0,0.],cell=cell) ! d2n/dyz = FFT(0,i*gy*rxydz)&
+                CALL fft2d(stars, rhdzx(0,js),rhdzxim(0,js), cqpw, +1,firstderiv=[1.,0.0,0.],cell=cell) ! d2n/dzx = FFT(0,i*gx*rxydz)&
 
 
              END DO ! js=1,jspins
@@ -301,7 +346,8 @@ CONTAINS
 !        
              idx_loc = idx + (ip-1)* ifftd2
              CALL mkgxyz3(rho(idx_loc:idx_loc+ifftd2-1,:),rhdx,rhdy, rhdz,rhdxx,rhdyy,rhdzz,rhdyz,rhdzx,rhdxy, idx_loc-1,grad)
-!        
+             IF (l_gradim) CALL mkgxyz3(0*rhdxim,rhdxim,rhdyim,rhdzim,rhdxxim,rhdyyim,rhdzzim,rhdyzim,rhdzxim,rhdxyim, idx_loc-1,gradim)
+!
           END IF ! vxc_is_gga
           !
           ! set minimal value of af2 to 1.0e-13
@@ -316,6 +362,8 @@ CONTAINS
        DEALLOCATE ( rhdyy,rhdzz )
        DEALLOCATE ( rhdyz,rhdzx )
        DEALLOCATE ( rhdxy,cqpw )
+       DEALLOCATE ( rhdxim,rhdyim,rhdzim,rhdxxim )
+       DEALLOCATE ( rhdyyim,rhdzzim,rhdyzim,rhdzxim,rhdxyim )
        IF (l_noco) THEN
           DEALLOCATE ( dxmagmom,dymagmom )
           DEALLOCATE ( ddxmagmom,ddymagmom )
@@ -375,6 +423,24 @@ CONTAINS
              CALL mkgz(nmzdiff,jspins, rho(nmz0:,1),rho(nmz0:,jspins),&
              rhtdz(nmz0:,1),rhtdz(nmz0:,jspins),rhtdzz(nmz0:,1),&
                   rhtdzz(nmz0:,jspins),idx-1,grad)
+
+             !mkgz only fills the contracted gradients, so gr and laplace are done
+             !here. Only the g||=0 coefficient survives beyond nmzxy, hence the
+             !in-plane derivatives reduce to the DFPT q-shift.
+             DO js = 1,jspins
+                DO i = 1,nmzdiff
+                   ipt = idx+i-1
+                   IF (ALLOCATED(grad%gr)) THEN
+                      grad%gr(:,ipt,js) = [0.0,0.0,rhtdz(nmz0+i-1,js)]
+                      IF (l_gradim) grad%gr(:2,ipt,js) = qvec(:2)*rhoim(ipt,js)
+                   END IF
+                   IF (ALLOCATED(grad%laplace)) grad%laplace(ipt,js) = rhtdzz(nmz0+i-1,js) - qsq*rho(ipt,js)
+                   IF (l_gradim) THEN
+                      gradim%gr(:,ipt,js) = [-qvec(1)*rho(ipt,js),-qvec(2)*rho(ipt,js),rhtdzim(nmz0+i-1,js)]
+                      gradim%laplace(ipt,js) = rhtdzzim(nmz0+i-1,js) - qsq*rhoim(ipt,js)
+                   END IF
+                END DO
+             END DO
 
        ENDIF
 
