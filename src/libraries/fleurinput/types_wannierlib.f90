@@ -200,22 +200,22 @@ CONTAINS
     ALLOCATE(new_proj_alpha(nnew), new_proj_beta(nnew), new_proj_gamma(nnew), new_proj_zona(nnew), new_proj_regio(nnew))
     ALLOCATE(new_proj_j(nnew), new_proj_mj(nnew), new_proj_weight(nnew), new_proj_shift(3, nnew))
 
-    !> El espin va en el bucle EXTERNO, no en el interno. Asi las funciones de Wannier
-    !> salen ordenadas EN BLOQUES -- primero todas las de un canal y luego las del otro --
-    !> y no intercaladas (up, dn, up, dn, ...) como antes. Con eso el indice de funcion de
-    !> Wannier usa el MISMO convenio que la ruta colineal 2N, donde la base la construye
-    !> FLEUR como [canal 1, canal 2]. Tener los dos convenios en el mismo codigo es una
-    !> trampa silenciosa: cortar el primer medio del indice como "canal 1" es correcto en
-    !> una ruta y revuelve los cuadrantes en la otra sin producir ningun error.
+    !> Spin is the OUTER loop, not the inner one. The Wannier functions therefore come
+    !> out ordered IN BLOCKS -- one channel first, then the other -- rather than interleaved
+    !> (up, dn, up, dn, ...) as before. That gives the Wannier index the SAME convention the
+    !> collinear 2N route uses, where FLEUR builds the basis as [channel 1, channel 2].
+    !> Carrying two conventions in one code is a silent trap: slicing the first half of the
+    !> index as "channel 1" is right in one route and scrambles the quadrants in the other,
+    !> and nothing reports it.
     !>
-    !> El CONJUNTO de proyecciones no cambia, solo su orden, y la permutacion se aplica por
-    !> igual a todos los operadores que se derivan de el: es una transformacion de
-    !> semejanza y ninguna magnitud fisica se mueve. Lo que si cambia byte a byte es el
-    !> contenido de los ficheros de salida de la ruta espinorial.
+    !> The SET of projections does not change, only its order, and that permutation reaches
+    !> every operator derived from it alike: it is a similarity transformation, so no
+    !> physical quantity moves. What does change byte for byte is the content of the output
+    !> files of the spinor route.
     !>
-    !> Ojo con lo que esto NO significa: con SOC el espin no es una propiedad de la funcion
-    !> de Wannier, asi que aqui el bloque ordena los ORBITALES DE PRUEBA, no el caracter de
-    !> las funciones que salen.
+    !> What this does NOT mean: with spin-orbit coupling spin is not a property of a Wannier
+    !> function at all, so the blocks here order the TRIAL ORBITALS, not the character of the
+    !> functions that come out.
     npass = MERGE(2, 1, expand_spin)
     j = 0
     DO ipass = 1, npass
@@ -234,8 +234,8 @@ CONTAINS
       IF (spin_mult == 2) THEN
         spin_here = MERGE(1, -1, ipass == 1)
       ELSE
-        !> Proyeccion con el espin fijado por el usuario: se emite UNA sola vez, en la
-        !> pasada de su propio espin, para que caiga en el bloque que le corresponde.
+        !> A projection whose spin the user fixed is emitted ONCE, on the pass of its
+        !> own spin, so that it lands in the block it belongs to.
         spin_here = this%proj_spin(i)
         IF (npass > 1) THEN
           IF ((ipass == 1) .AND. (spin_here < 0)) CYCLE
