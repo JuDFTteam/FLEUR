@@ -778,7 +778,7 @@ CONTAINS
 
       CALL local_ham(sphhar,fi%atoms,fi%sym,fi%noco,nococonv,enpara,fmpi,v,vx,inden,fi%input,fi%hub1inp,hub1datadummy,tdmod,uddummy,0.0,.true.)
 
-      DO jsp = MERGE(1,1,fi%noco%l_noco), MERGE(1,fi%input%jspins,fi%noco%l_noco)
+      DO jsp = MERGE(1,1,fi%noco%l_noco), MERGE(1,fi%input%jspins,fi%noco%l_noco) ! first merge redundant, seems to be on multiple lines
          k_loop:DO nk_i = 1,size(fmpi%k_list)
             nk = fmpi%k_list(nk_i)
             bkpt = fi%kpts%bk(:, nk)
@@ -1073,13 +1073,13 @@ CONTAINS
       IF (PRESENT(vmat2_final)) ALLOCATE (vmat2_final, mold=vmat2(1, 1))
 
       CALL timestart("Matrix redistribution")
-      CALL eigen_redist_matrix(fmpi, lapw,  fi%atoms, smat1, smat1_final)
-      CALL eigen_redist_matrix(fmpi, lapw,  fi%atoms, hmat1, hmat1_final, smat1_final)
+      CALL eigen_redist_matrix(fmpi, lapw,  fi%atoms, smat1, smat1_final,lapwq=lapw)
+      CALL eigen_redist_matrix(fmpi, lapw,  fi%atoms, hmat1, hmat1_final, smat1_final,lapwq=lapw)
       CALL eigen_redist_matrix(fmpi, lapw, fi%atoms, smat1q, smat1q_final,lapwq=lapwq)
-      CALL eigen_redist_matrix(fmpi, lapw, fi%atoms, hmat1q, hmat1q_final, smat1q_final)
-      CALL eigen_redist_matrix(fmpi, lapw,  fi%atoms, smat2, smat2_final)
-      CALL eigen_redist_matrix(fmpi, lapw,  fi%atoms, hmat2, hmat2_final, smat2_final)
-      IF (PRESENT(vmat2_final)) CALL eigen_redist_matrix(fmpi, lapw, fi%atoms, vmat2, vmat2_final)
+      CALL eigen_redist_matrix(fmpi, lapw, fi%atoms, hmat1q, hmat1q_final, smat1q_final,lapwq=lapwq)
+      CALL eigen_redist_matrix(fmpi, lapw,  fi%atoms, smat2, smat2_final,lapwq=lapw)
+      CALL eigen_redist_matrix(fmpi, lapw,  fi%atoms, hmat2, hmat2_final, smat2_final,lapwq=lapw)
+      IF (PRESENT(vmat2_final)) CALL eigen_redist_matrix(fmpi, lapw, fi%atoms, vmat2, vmat2_final,lapwq=lapwq)
       CALL timestop("Matrix redistribution")
    END SUBROUTINE
 END MODULE m_dfpt_dynmat

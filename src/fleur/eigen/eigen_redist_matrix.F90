@@ -27,6 +27,9 @@ CONTAINS
     CLASS(t_mat),INTENT(IN),OPTIONAL :: mat_final_templ
     TYPE(t_lapw),INTENT(IN),optional :: lapwq
     INTEGER:: m,mPr
+    LOGICAL:: l_dfpt
+
+    l_dfpt=PRESENT(lapwq)
 
     !determine final matrix size and allocate the final matrix
     m=lapw%nv(1)+atoms%nlotot
@@ -53,6 +56,16 @@ CONTAINS
 
     CALL mat_final%copy(mat(1,1),1,1)
     CALL mat(1,1)%free()
+
+    IF (l_dfpt) THEN
+       CALL mat_final%copy(mat(1,2),1,lapw%nv(1)+atoms%nlotot+1)
+       CALL mat_final%copy(mat(2,1),lapwq%nv(1)+atoms%nlotot+1,1)
+       CALL mat_final%copy(mat(2,2),lapwq%nv(1)+atoms%nlotot+1,lapw%nv(1)+atoms%nlotot+1)
+       CALL mat(1,2)%free()
+       CALL mat(2,1)%free()
+       CALL mat(2,2)%free()
+       RETURN
+    END IF
 
     !down-down component
     CALL mat_final%copy(mat(2,2),lapw%nv(1)+atoms%nlotot+1,lapw%nv(1)+atoms%nlotot+1)

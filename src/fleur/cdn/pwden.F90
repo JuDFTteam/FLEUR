@@ -297,8 +297,16 @@ CONTAINS
                rhomatGrid(4)%grid(ir) = rhomatGrid(4)%grid(ir) + wtf(nu) * (REAL(state%grid(ir))*AIMAG(stateB%grid(ir)) - AIMAG(state%grid(ir))*REAL(stateB%grid(ir)))
             END DO
             ELSE
-               !TODO: This looks ultra different for DFPT.
-               !TODO: Only touch this once the magic minus is fully consistent.
+               !DFPT NOCO
+               DO ir = 0, rhomatGrid(1)%gridLength - 1
+                  rhomatGrid(1)%grid(ir) = rhomatGrid(1)%grid(ir) + wtf(nu) * 2 * CONJG(state%grid(ir)) * stateq%grid(ir)
+                  rhomatGrid(2)%grid(ir) = rhomatGrid(2)%grid(ir) + wtf(nu) * 2 * CONJG(stateB%grid(ir)) * stateBq%grid(ir)
+                  !IF (norm2(q_dfpt)<1e-8) THEN
+                  !   rhomatGrid(1)%grid(ir) = rhomatGrid(1)%grid(ir) + wtf1(nu) * ABS(state%grid(ir))**2
+                  !   rhomatGrid(2)%grid(ir) = rhomatGrid(2)%grid(ir) + wtf1(nu) * ABS(stateB%grid(ir))**2
+                  !END IF
+                  !when time reversal symmetry is broken this requires the lminusq contribution and removing the 2* factor
+               END DO
             END IF
 
             ! In a non-collinear calculation the interstitial charge

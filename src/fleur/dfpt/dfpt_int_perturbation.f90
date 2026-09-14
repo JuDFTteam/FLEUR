@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2022 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -32,13 +32,13 @@ CONTAINS
         REAL                          :: rho_11, rho_22, m
         REAL                          :: rhotot, rho_up, rho_down, theta, phi
         COMPLEX                       :: m1, mx1, my1, mz1, n1, t1, p1, rho1_up, rho1_down
+        COMPLEX                       :: ch1, ch2, ch3, ch4
 
         REAL, ALLOCATABLE             :: ris(:,:), ris_real(:,:), ris_imag(:,:)
         REAL, ALLOCATABLE             :: fftwork(:)
 
         ifft3 = 27*stars%mx1*stars%mx2*stars%mx3
 
-        !TODO: Make sure the indices for rho1 are 1,2,3,4 == n1,mx1,my1,mz1
         ALLOCATE (ris(ifft3,2),fftwork(ifft3))
         ALLOCATE (ris_real(ifft3,4),ris_imag(ifft3,4))
 
@@ -61,10 +61,15 @@ CONTAINS
             m       = rho_11 - rho_22
 
             ! Calculate perturbed total and magnetization density
-            n1  = ris_real(imesh,1) + Imagunit * ris_imag(imesh,1)
-            mx1 = ris_real(imesh,2) + Imagunit * ris_imag(imesh,2)
-            my1 = ris_real(imesh,3) + Imagunit * ris_imag(imesh,3)
-            mz1 = ris_real(imesh,4) + Imagunit * ris_imag(imesh,4)
+            ch1 = ris_real(imesh,1) + Imagunit * ris_imag(imesh,1)
+            ch2 = ris_real(imesh,2) + Imagunit * ris_imag(imesh,2)
+            ch3 = ris_real(imesh,3) + Imagunit * ris_imag(imesh,3)
+            ch4 = ris_real(imesh,4) + Imagunit * ris_imag(imesh,4)
+
+            n1  = ch1 + ch2
+            mz1 = ch1 - ch2
+            mx1 = ch3 + ch4
+            my1 = Imagunit * (ch3 - ch4)
 
             theta = den%theta_pw(imesh)
             phi = den%phi_pw(imesh)
@@ -183,20 +188,20 @@ CONTAINS
             vis_re(imeshpt, 3) =  REAL(v1mat21)
             vis_re(imeshpt, 4) =  REAL(v1mat12)
 
-            vis2_re(imeshpt, 1) =  REAL(v1mat11 * stars%ufft(imeshpt-1) + v11 * starsq%ufft(imeshpt-1))
-            vis2_re(imeshpt, 2) =  REAL(v1mat22 * stars%ufft(imeshpt-1) + v22 * starsq%ufft(imeshpt-1))
-            vis2_re(imeshpt, 3) =  REAL(v1mat21 * stars%ufft(imeshpt-1) + v21 * starsq%ufft(imeshpt-1))
-            vis2_re(imeshpt, 4) =  REAL(v1mat12 * stars%ufft(imeshpt-1) + v12 * starsq%ufft(imeshpt-1))
+            vis2_re(imeshpt, 1) =  REAL(v1mat11 * stars%ufft(imeshpt-1) + v11 * starsq%ufft1(imeshpt-1))
+            vis2_re(imeshpt, 2) =  REAL(v1mat22 * stars%ufft(imeshpt-1) + v22 * starsq%ufft1(imeshpt-1))
+            vis2_re(imeshpt, 3) =  REAL(v1mat21 * stars%ufft(imeshpt-1) + v21 * starsq%ufft1(imeshpt-1))
+            vis2_re(imeshpt, 4) =  REAL(v1mat12 * stars%ufft(imeshpt-1) + v12 * starsq%ufft1(imeshpt-1))
 
             vis_im(imeshpt, 1) = AIMAG(v1mat11)
             vis_im(imeshpt, 2) = AIMAG(v1mat22)
             vis_im(imeshpt, 3) = AIMAG(v1mat21)
             vis_im(imeshpt, 4) = AIMAG(v1mat12)
 
-            vis2_im(imeshpt, 1) = AIMAG(v1mat11 * stars%ufft(imeshpt-1) + v11 * starsq%ufft(imeshpt-1))
-            vis2_im(imeshpt, 2) = AIMAG(v1mat22 * stars%ufft(imeshpt-1) + v22 * starsq%ufft(imeshpt-1))
-            vis2_im(imeshpt, 3) = AIMAG(v1mat21 * stars%ufft(imeshpt-1) + v21 * starsq%ufft(imeshpt-1))
-            vis2_im(imeshpt, 4) = AIMAG(v1mat12 * stars%ufft(imeshpt-1) + v12 * starsq%ufft(imeshpt-1))
+            vis2_im(imeshpt, 1) = AIMAG(v1mat11 * stars%ufft(imeshpt-1) + v11 * starsq%ufft1(imeshpt-1))
+            vis2_im(imeshpt, 2) = AIMAG(v1mat22 * stars%ufft(imeshpt-1) + v22 * starsq%ufft1(imeshpt-1))
+            vis2_im(imeshpt, 3) = AIMAG(v1mat21 * stars%ufft(imeshpt-1) + v21 * starsq%ufft1(imeshpt-1))
+            vis2_im(imeshpt, 4) = AIMAG(v1mat12 * stars%ufft(imeshpt-1) + v12 * starsq%ufft1(imeshpt-1))
 
         END DO
 

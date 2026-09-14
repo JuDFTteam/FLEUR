@@ -29,6 +29,7 @@ CONTAINS
         REAL                          :: rho_11, rho_22, m
         REAL                          :: rhotot, rho_up, rho_down, theta, phi
         COMPLEX                       :: n1, mx1, my1, mz1, m1, t1, p1, rho1_up, rho1_down
+        COMPLEX                       :: ch1, ch2, ch3, ch4
         REAL                          :: eps=1E-10
         REAL, ALLOCATABLE             :: ch(:,:), chre(:,:), chim(:,:)
 
@@ -51,10 +52,15 @@ CONTAINS
                 m = rho_11 - rho_22
 
                 ! Calculate perturbed total and magnetization density
-                n1  = chre(imesh,1) + ImagUnit * chim(imesh,1)
-                mx1 = chre(imesh,2) + ImagUnit * chim(imesh,2)
-                my1 = chre(imesh,3) + ImagUnit * chim(imesh,3)
-                mz1 = chre(imesh,4) + ImagUnit * chim(imesh,4)
+                ch1 = chre(imesh,1) + ImagUnit * chim(imesh,1)
+                ch2 = chre(imesh,2) + ImagUnit * chim(imesh,2)
+                ch3 = chre(imesh,3) + ImagUnit * chim(imesh,3)
+                ch4 = chre(imesh,4) + ImagUnit * chim(imesh,4)
+
+                n1  = ch1 + ch2
+                mz1 = ch1 - ch2
+                mx1 = ch3 + ch4
+                my1 = ImagUnit * (ch3 - ch4)
 
                 theta = den%theta_mt(imesh,n)
                 phi   = den%phi_mt(imesh,n)

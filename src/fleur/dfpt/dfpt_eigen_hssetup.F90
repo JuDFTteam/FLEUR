@@ -97,7 +97,7 @@ CONTAINS
 
       CALL timestart("Matrix redistribution")
       CALL eigen_redist_matrix(fmpi, lapw, fi%atoms, smat, smat_final,lapwq=lapwq)
-      CALL eigen_redist_matrix(fmpi, lapw, fi%atoms, hmat, hmat_final, smat_final)
+      CALL eigen_redist_matrix(fmpi, lapw, fi%atoms, hmat, hmat_final, smat_final,lapwq=lapwq)
       CALL timestop("Matrix redistribution")
 
    END SUBROUTINE dfpt_eigen_hssetup
