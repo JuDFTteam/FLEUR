@@ -140,7 +140,8 @@ CONTAINS
     TYPE(t_atoms), INTENT(IN) :: atoms
     TYPE(t_noco), INTENT(IN) :: noco
 
-    INTEGER :: i, j, nold, nnew, mcount, mval, mrepeat, spin_mult, ispin, itype, type_mult, nn, na
+    INTEGER :: i, j, nold, nnew, mcount, mval, mrepeat, spin_mult, itype, type_mult, nn, na
+    INTEGER :: ipass, npass, spin_here
     INTEGER, ALLOCATABLE :: new_proj_ntype(:), new_proj_atom(:), new_proj_l(:), new_proj_m(:), new_proj_spin(:), new_proj_rwf(:)
     CHARACTER(LEN=20), ALLOCATABLE :: new_proj_species(:)
     REAL, ALLOCATABLE :: new_proj_alpha(:), new_proj_beta(:), new_proj_gamma(:), new_proj_zona(:), new_proj_regio(:)
@@ -197,7 +198,25 @@ CONTAINS
     ALLOCATE(new_proj_alpha(nnew), new_proj_beta(nnew), new_proj_gamma(nnew), new_proj_zona(nnew), new_proj_regio(nnew))
     ALLOCATE(new_proj_j(nnew), new_proj_mj(nnew), new_proj_weight(nnew), new_proj_shift(3, nnew))
 
+    !> El espin va en el bucle EXTERNO, no en el interno. Asi las funciones de Wannier
+    !> salen ordenadas EN BLOQUES -- primero todas las de un canal y luego las del otro --
+    !> y no intercaladas (up, dn, up, dn, ...) como antes. Con eso el indice de funcion de
+    !> Wannier usa el MISMO convenio que la ruta colineal 2N, donde la base la construye
+    !> FLEUR como [canal 1, canal 2]. Tener los dos convenios en el mismo codigo es una
+    !> trampa silenciosa: cortar el primer medio del indice como "canal 1" es correcto en
+    !> una ruta y revuelve los cuadrantes en la otra sin producir ningun error.
+    !>
+    !> El CONJUNTO de proyecciones no cambia, solo su orden, y la permutacion se aplica por
+    !> igual a todos los operadores que se derivan de el: es una transformacion de
+    !> semejanza y ninguna magnitud fisica se mueve. Lo que si cambia byte a byte es el
+    !> contenido de los ficheros de salida de la ruta espinorial.
+    !>
+    !> Ojo con lo que esto NO significa: con SOC el espin no es una propiedad de la funcion
+    !> de Wannier, asi que aqui el bloque ordena los ORBITALES DE PRUEBA, no el caracter de
+    !> las funciones que salen.
+    npass = MERGE(2, 1, expand_spin)
     j = 0
+    DO ipass = 1, npass
     DO i = 1, nold
       mcount = projection_m_count(this%proj_l(i))
 
@@ -210,12 +229,23 @@ CONTAINS
       spin_mult = 1
       IF (expand_spin .AND. (this%proj_spin(i) == 0)) spin_mult = 2
 
+      IF (spin_mult == 2) THEN
+        spin_here = MERGE(1, -1, ipass == 1)
+      ELSE
+        !> Proyeccion con el espin fijado por el usuario: se emite UNA sola vez, en la
+        !> pasada de su propio espin, para que caiga en el bloque que le corresponde.
+        spin_here = this%proj_spin(i)
+        IF (npass > 1) THEN
+          IF ((ipass == 1) .AND. (spin_here < 0)) CYCLE
+          IF ((ipass == 2) .AND. (spin_here >= 0)) CYCLE
+        END IF
+      END IF
+
       DO itype = 1, atoms%ntype
         IF (TRIM(atoms%speciesName(itype)) /= TRIM(this%proj_species(i))) CYCLE
         DO nn = 1, atoms%neq(itype)
           na = atoms%firstAtom(itype) + nn - 1
           DO mval = 1, mrepeat
-          DO ispin = 1, spin_mult
             j = j + 1
             new_proj_ntype(j) = itype
             new_proj_atom(j) = nn
@@ -230,15 +260,7 @@ CONTAINS
             ELSE
               new_proj_m(j) = this%proj_m(i)
             END IF
-            IF (spin_mult == 2) THEN
-              IF (ispin == 1) THEN
-                new_proj_spin(j) = 1
-              ELSE
-                new_proj_spin(j) = -1
-              END IF
-            ELSE
-              new_proj_spin(j) = this%proj_spin(i)
-            END IF
+            new_proj_spin(j) = spin_here
             new_proj_rwf(j) = this%proj_rwf(i)
             new_proj_alpha(j) = this%proj_alpha(i)
             new_proj_beta(j) = this%proj_beta(i)
@@ -250,9 +272,9 @@ CONTAINS
             new_proj_weight(j) = this%proj_weight(i)
             new_proj_shift(:, j) = this%proj_shift(:, i) 
           END DO
-          END DO
         END DO
       END DO
+    END DO
     END DO
 
     CALL move_alloc(new_proj_ntype, this%proj_ntype)
@@ -544,6 +566,9 @@ CONTAINS
       END IF
     END DO
 
+    ! --- export: interstitial wave functions for irrep / WannierBerri. One format is
+    !     defined; the attribute is required so that adding a second one later cannot
+    !     silently change what an existing input file means. ---
     ! --- operators_r: real-space operator matrices O(R) (Fourier step 3, no interpolation).
     !     Groups <operator name=".."> children written to standalone-format files. ---
     xPathA = '/fleurInput/output/wannierlib/operators_r'
