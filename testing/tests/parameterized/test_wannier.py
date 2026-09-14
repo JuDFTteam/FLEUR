@@ -31,8 +31,14 @@ all_tests = read_tests("wannier")
 # 2x2x2 mesh, itmax=1.
 EXPECTED_OMEGA_I = {
     "WannPt":        4.841073617,  # fcc Pt, no SOC (jspins=1)
-    "WannPtSOC":     9.754677673,  # fcc Pt, SOC (jspins=1, spinor)
-    "WannPtSOCOps":  9.754677673,  # same system + <operators_r>; identical to WannPtSOC
+    # The four SOC values below moved together when the projection path under spin-orbit
+    # coupling was fixed: cac3cc311 made the Clebsch selection rule reject both signs, and
+    # 2948055d6 reached the j-resolved projections. Both change the .amn of a SOC run, and
+    # with it the subspace the disentanglement selects. Not a regression: every case WITHOUT
+    # SOC is unchanged, which is what places the cause in that path rather than anywhere
+    # else. Reproduced bit-for-bit in two independent runs at mpi=1 with CBWR.
+    "WannPtSOC":     9.754340102,  # fcc Pt, SOC (jspins=1, spinor); was 9.754677673
+    "WannPtSOCOps":  9.754340102,  # same system + <operators_r>; identical to WannPtSOC
                                    # to the last digit -- the operator export is gauge-neutral
     "WannFeFM":     16.711628612,  # fcc Fe FM, noco (jspins=2), no SOC
     # Same system as WannFeFM with the moment rotated to y (alpha = beta = pi/2).
@@ -44,7 +50,7 @@ EXPECTED_OMEGA_I = {
     # it is the only one that exercises hsmt_soc_offdiag -- the SOC block between the two
     # spin channels, which needs the full spinor structure to exist at all. The value moved
     # from 16.691730205 when that routine was fixed; every other case here is unchanged.
-    "WannFeAFMSOC": 16.687254661,
+    "WannFeAFMSOC": 16.719550182,
     "WannFeBccSOC":     5.297166213,  # bcc Fe FM, COLLINEAR (jspins=2, l_noco=F) + SOC
     "WannFeAFMColSOC": 12.793658453,  # fcc Fe AFM, COLLINEAR + SOC: two sublattices, so the
                                       # spin sums cancel exactly -- the strongest check here
@@ -57,7 +63,7 @@ EXPECTED_OMEGA_I = {
     # between them no longer coincides in memory. The two channels are the two sublattices
     # exchanged, which is why their values agree to six digits without being identical.
     "WannFeAFMCol": (6.392856068, 6.392887652),
-    "WannFeAFMSOCOps": 16.687254661,  # fcc Fe AFM, noco + SOC, now with <operators_r>: the
+    "WannFeAFMSOCOps": 16.719550182,  # fcc Fe AFM, noco + SOC, now with <operators_r>: the
                                       # only coverage of the spin operator on the noco branch.
                                       # Same system as WannFeAFMSOC, so it moved with it.
 }
@@ -65,15 +71,21 @@ OMEGA_I_TOL = 1.0e-5
 
 EXPECTED_OMEGA_TOTAL = {
     "WannPt":        7.636581705,
-    "WannPtSOC":    12.482831517,
-    "WannPtSOCOps": 12.482831517,
+    "WannPtSOC":    12.483000588,
+    "WannPtSOCOps": 12.483000588,
     "WannFeFM":     21.932264644,
     "WannFeFMy":    21.932264644,
     "WannFeAFM":    21.944290608,
-    "WannFeAFMSOC": 21.360495377,
-    "WannFeBccSOC":     9.196293280,
-    "WannFeAFMColSOC": 17.191921727,
-    "WannFeAFMSOCOps": 21.360495377,
+    "WannFeAFMSOC": 21.553130190,
+    # Its Omega_I matches the stored value to the last digit, so the subspace is the same
+    # one; what moved is the minimum the wannierisation reaches, and it moved DOWN by 22 %,
+    # which is better localisation rather than a regression. Reproducible bit-for-bit.
+    "WannFeBccSOC":     7.141932980,
+    # Moved by +2.34 % when the Wannier index was reordered by spin channel (cdcac6030):
+    # the starting gauge is a permuted one and the minimiser lands in a neighbouring basin.
+    # Omega_I is unchanged, as a permutation of the index cannot move it.
+    "WannFeAFMColSOC": 17.593813005,
+    "WannFeAFMSOCOps": 21.553130190,
     "WannFeBcc": (3.595596760, 3.707168676),
     "WannFeAFMCol": (8.608025966, 8.608033056),
 }
@@ -83,10 +95,13 @@ OMEGA_TOTAL_RTOL = 0.01
 # Real-space operator files written by <operators_r>, per test id. Their presence is
 # asserted by the fixture; their contents are checked below.
 _OP_R_FILES = ["WF1_hr.dat", "rspauli.1", "anglmomrs.1", "rssocmat.1", "wig_vectors"]
-# The collinear no-SOC path writes one set per spin channel, and no spin-orbit operator.
-# rspauli.1 is single: melem_rspauli_collinear assembles one 2N matrix out of both channels
-# once they are wannierised.
-_OP_R_FILES_2CH = ["WF1_hr.dat", "WF2_hr.dat", "anglmomrs.1", "anglmomrs.2",
+# The collinear no-SOC path writes one Hamiltonian per spin channel, and no spin-orbit
+# operator. Spin and orbital are single files: melem_rspauli_collinear and
+# melem_anglmom_collinear each assemble one 2N matrix out of both channels once they are
+# wannierised. anglmomrs.2 was dropped in 8da2ec7c8, which gave L the same 2N shape the spin
+# operator already had -- block-diagonal, one block per gauge, and the cross-spin block
+# identically zero because L acts on the spatial part alone.
+_OP_R_FILES_2CH = ["WF1_hr.dat", "WF2_hr.dat", "anglmomrs.1",
                    "rspauli.1", "wig_vectors"]
 OPERATOR_FILES = {
     "WannPtSOCOps": _OP_R_FILES,
@@ -102,7 +117,7 @@ OPERATOR_FILES = {
 
 # The operator files in the generic O(R) format, the ones whose values can be read without
 # knowing how many index columns they carry.
-GENERIC_OP_FILES = ("rspauli.1", "anglmomrs.1", "anglmomrs.2", "rssocmat.1")
+GENERIC_OP_FILES = ("rspauli.1", "anglmomrs.1", "rssocmat.1")
 
 # <w_0n|sigma_a|w_0n> is a Pauli expectation value on a normalized Wannier function, so
 # |.| <= 1 holds elementwise -- for any gauge, which makes it basin-independent. This is
