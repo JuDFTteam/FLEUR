@@ -165,6 +165,7 @@ Testset: Wannier
 | +   | Pt no-SOC, wannierlib total spread       | wannier/WannPt   | wannierlib,bulk  |         |         | 1   |
 | +   | Pt SOC, wannierlib total spread              | wannier/WannPtSOC | wannierlib,bulk,soc |         |         | 1   |
 | +   | fcc Fe FM noco, wannierlib total spread      | wannier/WannFeFM | wannierlib,bulk  |         |         | 1   |
+| +   | fcc Fe FM noco, moment along y (alpha!=0)    | wannier/WannFeFMy | wannierlib,bulk  |         |         | 1   |
 | +   | fcc Fe AFM noco, wannierlib total spread     | wannier/WannFeAFM | wannierlib,bulk  |         |         | 1   |
 | +   | fcc Fe AFM noco+SOC, wannierlib total spread | wannier/WannFeAFMSOC | wannierlib,bulk,soc |         |         | 1   |
 | +   | Pt SOC, wannierlib real-space operators O(R) | wannier/WannPtSOCOps | wannierlib,bulk,soc |         |         | 1   |

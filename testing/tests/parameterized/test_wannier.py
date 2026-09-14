@@ -1,4 +1,5 @@
 
+import re
 import pytest
 """
 Regression tests for the wannierlib feature (library-mode Wannier90 in FLEUR).
@@ -34,6 +35,10 @@ EXPECTED_OMEGA_I = {
     "WannPtSOCOps":  9.754677673,  # same system + <operators_r>; identical to WannPtSOC
                                    # to the last digit -- the operator export is gauge-neutral
     "WannFeFM":     16.711628612,  # fcc Fe FM, noco (jspins=2), no SOC
+    # Same system as WannFeFM with the moment rotated to y (alpha = beta = pi/2).
+    # Omega_I is identical to the last digit, as it must be: without SOC the physics is
+    # isotropic and turning the moment cannot change the optimal subspace.
+    "WannFeFMy":    16.711628612,
     "WannFeAFM":    16.718923683,  # fcc Fe AFM, noco (jspins=2), no SOC
     # fcc Fe AFM, noco (jspins=2) + SOC. This is the only case that is both noco and SOC, so
     # it is the only one that exercises hsmt_soc_offdiag -- the SOC block between the two
@@ -63,6 +68,7 @@ EXPECTED_OMEGA_TOTAL = {
     "WannPtSOC":    12.482831517,
     "WannPtSOCOps": 12.482831517,
     "WannFeFM":     21.932264644,
+    "WannFeFMy":    21.932264644,
     "WannFeAFM":    21.944290608,
     "WannFeAFMSOC": 21.360495377,
     "WannFeBccSOC":     9.196293280,
@@ -87,6 +93,9 @@ OPERATOR_FILES = {
     "WannFeBccSOC":     _OP_R_FILES,
     "WannFeAFMColSOC": _OP_R_FILES,
     "WannFeAFMSOCOps": _OP_R_FILES,
+    # Only <operator name="spin"/>: this case exists for the spin sum rule below, and
+    # asking for the rest would cost time without adding coverage.
+    "WannFeFMy": ["rspauli.1", "wig_vectors"],
     "WannFeBcc":        _OP_R_FILES_2CH,
     "WannFeAFMCol":     _OP_R_FILES_2CH,
 }
@@ -113,6 +122,32 @@ SPIN_SUM_TOL = 0.05
 # 0.993, so the cancellation to zero is not a small number made out of small numbers.
 # WannFeAFMSOCOps is deliberately absent: its 36 WFs come from disentangling 72 bands, and
 # that manifold does not respect the sublattice symmetry, so no exact rule applies.
+# Without spin-orbit coupling H commutes with sigma.n, so every Bloch state is a pure
+# spinor and |<s>| = 1 exactly, whatever the direction of the moment. That is physics, not a
+# measured value, so this needs no reference number and never goes stale. FLEUR already
+# prints the per-band expectation values; this only reads them.
+#
+# WannFeFMy is the one case with the moment off the xz-plane (alpha = pi/2). It is here
+# because the azimuthal rotation of the spin operator carried the wrong sign and no test
+# noticed: every other noco test has alpha = 0, where the broken term does not contribute.
+# With that sign wrong the same run reported |<s>| = 0.0313.
+PURE_SPINOR = ("WannFeFMy",)
+PURE_SPINOR_TOL = 1.0e-3
+
+
+def _spin_sumrule_values(path):
+    """The |<s>| column of every 'spin sum-rule check' block FLEUR prints."""
+    txt = open(path, errors="ignore").read()
+    out = []
+    for blk in re.findall(r"wannierlib spin sum-rule check, k = \d+\n.*?\n"
+                          r"((?:\s+\d+\s+[-\d.]+.*\n)+)", txt):
+        for line in blk.strip().split("\n"):
+            p = line.split()
+            if len(p) == 6:
+                out.append(float(p[5]))
+    return out
+
+
 NONMAGNETIC = ("WannPtSOCOps", "WannFeAFMColSOC", "WannFeAFMCol")
 
 # Collinear magnet quantised along z (theta=phi=0): the longitudinal sum is the manifold's
@@ -449,3 +484,14 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
             assert abs(total) < L_SUM_TOL, (
                 f"anglmomrs.1: transverse orbital moment (component {comp}) is {total}, "
                 f"but a collinear magnet along z must give 0 (tol {L_SUM_TOL})")
+
+    # Pure spinors: see PURE_SPINOR above. Reads what FLEUR already printed.
+    if test_id in PURE_SPINOR:
+        vals = _spin_sumrule_values(res["out"])
+        assert vals, ("no spin sum-rule block in the output -- this test needs "
+                      "<operators_r> with the spin operator")
+        worst = min(vals)
+        assert abs(worst - 1.0) < PURE_SPINOR_TOL, (
+            f"without SOC every Bloch state is a pure spinor, so |<s>| must be 1; the "
+            f"smallest of {len(vals)} values is {worst:.6f}. The azimuthal rotation of the "
+            f"spin operator is the usual cause -- it only shows up when alpha != 0.")

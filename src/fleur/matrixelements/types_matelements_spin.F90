@@ -145,9 +145,21 @@ CONTAINS
             DO ntyp = 1, this%atoms%ntype
                !> A site whose frame is already the global one needs no rotation, and
                !> going through the Pauli components and back would only cost precision.
+               !> Solo beta. La rotacion azimutal NO se aplica aqui porque las funciones
+               !> de base de un calculo noco ya llevan las fases exp(-i alpha/2) y
+               !> exp(+i alpha/2) en las dos componentes del espinor, de modo que el bloque
+               !> cruzado o_ud sale ya con la fase del azimut. Aplicar ademas R_z(alpha)
+               !> contaba la rotacion dos veces.
+               !>
+               !> Medido antes de quitarlo, con beta = pi/2 y barriendo alpha, el deficit de
+               !> norma del operador contra una construccion independiente crecia
+               !> monotonamente -- 0.00 % a alpha=0, 3.5 % a pi/8, 12.7 % a pi/4, 23.0 % a
+               !> 3pi/8, 27.6 % a pi/2 -- y se anulaba EXACTAMENTE en alpha=0. Por eso los
+               !> casos con la magnetizacion en z y en x (alpha=0 los dos) salian correctos y
+               !> solo fallaba el eje y, que es el unico con alpha no nulo.
                l_rot = ABS(this%nococonv%alph(ntyp)) > 1.0e-14 &
                   .OR. ABS(this%nococonv%beta(ntyp)) > 1.0e-14
-               ca = COS(this%nococonv%alph(ntyp)); sa = SIN(this%nococonv%alph(ntyp))
+               ca = COS(this%nococonv%alph(ntyp)); sa = -SIN(this%nococonv%alph(ntyp))
                cb = COS(this%nococonv%beta(ntyp)); sb = SIN(this%nococonv%beta(ntyp))
                DO iat = 1, this%atoms%neq(ntyp)
                   loc = CMPLX(0.0, 0.0)
@@ -179,6 +191,10 @@ CONTAINS
                      cx = loc(1,2) + loc(2,1)
                      cy = -ImagUnit * (loc(1,2) - loc(2,1))
                      cz = loc(1,1) - loc(2,2)
+                     ! R_y(beta) sola. Antes era R_z(alpha) R_y(beta):
+                     !   gx =  ca*cb*cx - sa*cy + ca*sb*cz
+                     !   gy =  sa*cb*cx + ca*cy + sa*sb*cz
+                     !   gz = -sb*cx           + cb*cz
                      gx =  ca*cb*cx - sa*cy + ca*sb*cz
                      gy =  sa*cb*cx + ca*cy + sa*sb*cz
                      gz = -sb*cx           + cb*cz
