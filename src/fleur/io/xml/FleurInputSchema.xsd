@@ -3636,6 +3636,20 @@
       <xsd:attribute default="F" name="useWsDistance" type="FleurBool" use="optional"/>
    </xsd:complexType>
 
+   <xsd:complexType name="WannierlibExportType">
+      <xsd:annotation>
+         <xsd:documentation>Write the interstitial part of the wave functions, for the symmetry analysis that irrep performs and the site-symmetric wannierisation WannierBerri builds on it: WF&lt;spin&gt;_basis.hdf, alongside the .amn/.mmn/.eig of the same run. The interstitial region is invariant under the space group, so the symmetry characters it gives are exact; the muffin-tin parts are not needed and are not written. Requires a full-zone k-mesh (inpgen -noKsym) and a build with HDF5. gauge=&quot;T&quot; additionally writes WF&lt;spin&gt;_gauge.hdf holding the two factors Wannier90 returned: u_opt, which subspace was selected, and u_mlwf, how it was rotated inside it. Every exported operator is the Bloch-basis operator sandwiched between them, and they are the only part of that sandwich which otherwise leaves no trace.</xsd:documentation>
+      </xsd:annotation>
+      <xsd:attribute name="format" use="required">
+         <xsd:simpleType>
+            <xsd:restriction base="xsd:string">
+               <xsd:enumeration value="wannierberri"/>
+            </xsd:restriction>
+         </xsd:simpleType>
+      </xsd:attribute>
+      <xsd:attribute default="F" name="gauge" type="FleurBool" use="optional"/>
+   </xsd:complexType>
+
    <xsd:complexType name="WannierlibOutputType">
       <xsd:annotation>
          <xsd:documentation>Wannier90 library-mode controls for in-memory wannierization.</xsd:documentation>
@@ -3645,6 +3659,7 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="disentanglement" type="WannierlibDisentanglementType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="wannierization" type="WannierlibWannierizationType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="operators_r" type="WannierlibOperatorsRType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="export" type="WannierlibExportType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="interpolation" type="WannierlibInterpolationType"/>
       </xsd:all>
       <xsd:attribute default="F" name="wannierize" type="FleurBool" use="optional"/>

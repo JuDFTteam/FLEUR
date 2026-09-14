@@ -26,6 +26,8 @@ MODULE m_types_wannierlib
     LOGICAL :: l_orbmom = .FALSE.          ! an <operator name="orbital"> is requested
     LOGICAL :: l_socop = .FALSE.           ! an <operator name="soc"> is requested
     LOGICAL :: l_operators_r = .FALSE.     ! an <operators_r> block (real-space O(R) export) is present
+    LOGICAL :: l_export_basis = .FALSE.    ! an <export format="wannierberri"/> is present
+    LOGICAL :: l_export_gauge = .FALSE.    ! <export ... gauge="T"/>: also write U(k)
     !> Opt-in: put the Wannier functions themselves on a real-space grid and write them
     !> as XSF. Off by default because it costs a second pass over the k-points, reading
     !> the states back once the gauge is known; nothing else in the run needs it.
@@ -391,6 +393,8 @@ CONTAINS
     CALL mpi_bc(this%op_comp, rank, mpi_comm)
     CALL mpi_bc(this%op_total, rank, mpi_comm)
     CALL mpi_bc(this%l_operators_r, rank, mpi_comm)
+    CALL mpi_bc(this%l_export_basis, rank, mpi_comm)
+    CALL mpi_bc(this%l_export_gauge, rank, mpi_comm)
     CALL mpi_bc(this%l_plot_wf, rank, mpi_comm)
     CALL mpi_bc(this%n_op_r, rank, mpi_comm)
     CALL mpi_bc(this%op_r_name, rank, mpi_comm)
@@ -569,6 +573,16 @@ CONTAINS
     ! --- export: interstitial wave functions for irrep / WannierBerri. One format is
     !     defined; the attribute is required so that adding a second one later cannot
     !     silently change what an existing input file means. ---
+    xPathA = '/fleurInput/output/wannierlib/export'
+    IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))) == 1) THEN
+      this%l_export_basis = TRIM(ADJUSTL(xml%getAttributeValue( &
+        TRIM(ADJUSTL(xPathA))//'/@format'))) == 'wannierberri'
+      !> Optional and off by default: the gauge interests only someone studying a
+      !> gauge-dependent quantity from outside, and it is a second file to write.
+      this%l_export_gauge = evaluateFirstBoolOnly(xml%getAttributeValue( &
+        TRIM(ADJUSTL(xPathA))//'/@gauge'))
+    END IF
+
     ! --- operators_r: real-space operator matrices O(R) (Fourier step 3, no interpolation).
     !     Groups <operator name=".."> children written to standalone-format files. ---
     xPathA = '/fleurInput/output/wannierlib/operators_r'

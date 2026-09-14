@@ -29,6 +29,8 @@ MODULE m_wannierlib_main
    USE m_wannierlib_w90_adapter
    USE m_melem_coarse, ONLY: t_melem_coarse
    USE m_melem_run, ONLY: melem_run
+   USE m_wannierlib_export_basis, ONLY: wannierlib_export_basis
+   USE m_wannierlib_export_gauge, ONLY: wannierlib_export_gauge
    USE m_melem_spin_collinear, ONLY: melem_rspauli_collinear, melem_anglmom_collinear, melem_soc_collinear
    USE m_types_melem_bmesh, ONLY: t_melem_bmesh
    USE m_constants, ONLY: oUnit
@@ -185,6 +187,16 @@ CONTAINS
          END IF
 
          call wannierlib_create_eig(this, results, kpts, MERGE(1, jspin, l_wannierlib_spinors), eig)
+
+         !> The interstitial wave functions, for irrep and through it the site-symmetric
+         !> wannierisation in WannierBerri. Written here so that it lands next to the
+         !> .amn/.mmn/.eig of the same channel and shares their k-point ORDER -- if the two
+         !> orders ever part company, every symmetry operation is applied at the wrong k and
+         !> the failure is silent: it converges, the centres come out symmetric, and the
+         !> bands are wrong.
+         IF (this%l_export_basis) &
+            CALL wannierlib_export_basis(this, manifold, atoms, cell, input, kpts, sym, &
+                                         noco, nococonv, enpara, vtot, fmpi, eig_id, jspin)
          ! collinear jspins=2 (no SOC/noco): the two spin channels wannierise separately;
          ! tag each channel's interpolation outputs so spin 2 does not overwrite spin 1.
          spin_sfx = ''
@@ -195,6 +207,12 @@ CONTAINS
 
          CALL wannierlib_keep_gauge(melem%n_channels, request%has_op_r('spin'), manifold, &
                                     kpts%nkptf, jspin, u_opt, u_matrix, v_ch)
+
+         !> Right here and not from v_ch: that one is only assembled on the collinear
+         !> two-channel path, while u_opt and u_matrix are in hand on both, so writing from
+         !> them covers the spinor route as well.
+         IF (this%l_export_gauge) &
+            CALL wannierlib_export_gauge(kpts, fmpi, jspin, u_opt, u_matrix)
 
          ! Draw the Wannier functions, if anybody asked. Here and not earlier because the
          ! gauge is what makes them: it costs a second pass over this rank's k-points to
