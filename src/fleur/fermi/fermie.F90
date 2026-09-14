@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_fermie
   USE m_juDFT
 #ifdef CPP_MPI 
@@ -58,7 +63,7 @@ CONTAINS
     !REAL,    INTENT (OUT):: w(:,:,:) !(input%neig,kpts%nkpt,dimension%jspd)
     !     ..
     !     .. Local Scalars ..
-    REAL del  ,spindg,ssc ,ws,zc,weight,efermi,seigv,bandgap
+    REAL del  ,spindg,ssc ,ws,zc,weight,efermi,seigv,bandgap,sigma
     INTEGER i,idummy,j,jsp,k,l,n,nbands,nstef,nv,nmat,nspins,ex,min_kpt
     INTEGER n_help,m_spins,mspin,sslice(2)
     LOGICAL :: l_output,l_output_stored
@@ -67,7 +72,7 @@ CONTAINS
     !
     INTEGER :: idxeig(SIZE(results%w_iks)),idxjsp(SIZE(results%w_iks)),idxkpt(SIZE(results%w_iks)),INDEX(SIZE(results%w_iks))
     REAL    :: energies(SIZE(results%w_iks)),we(SIZE(results%w_iks))
-    REAL    :: fixedMomentFermiEnergies(2) 
+    REAL    :: fixedMomentFermiEnergies(2) ,zelec
     real,allocatable :: w_iks(:,:,:),we_stored(:)
     real              :: seigv_stored,ef_stored(3), spinDepTS(2)
     CHARACTER(LEN=20)    :: attributes(5)
@@ -114,6 +119,9 @@ CONTAINS
     !
     !---> READ IN EIGENVALUES
     !
+
+    zelec=input%zelec
+    if (noco%l_soc .AND. (.NOT. noco%l_noco)) zelec = zelec*2.0
     spindg = 2.0/REAL(input%jspins)
     n = 0
     ssc = 0.0
@@ -214,7 +222,7 @@ CONTAINS
          !
          !---> DETERMINE EF BY SUMMING WEIGHTS
          !
-         weight = input%zelec/spindg
+         weight = zelec/spindg
          select case(ex)
          case(4)
             weight = weight+input%charge_excited/spindg
@@ -251,7 +259,7 @@ CONTAINS
             results%ef = energies(INDEX(l))
          END IF
          nstef = l
-         zc = input%zelec
+         zc = zelec
          IF(m_spins /= 1) THEN
             zc = zc/2.0-(mspin-1.5)*input%fixed_moment
             idxjsp = 1 !assume single spin in following calculations
@@ -274,20 +282,20 @@ CONTAINS
          results%w_iks(:,:,sslice(1):sslice(2)) = 0.0
          results%bandgap = 0.0
          IF(input%bz_integration==BZINT_METHOD_HIST) THEN
-            CALL ferhis(input,kpts,fmpi,index,idxeig,idxkpt,idxjsp,nspins, n,&
+            CALL ferhis(input%tkb,kpts,fmpi,index,idxeig,idxkpt,idxjsp,nspins, n,&
                   nstef,ws,spindg,weight,energies,results%neig(:,sslice(1):sslice(2)),&
                   we, noco,cell,results%ef,results%seigv,results%w_iks(:,:,sslice(1):sslice(2)),results,spinDepTS(sslice(1):sslice(2)),l_output)
             IF (mspin.EQ.2) THEN
                results%ts = spinDepTS(1) + spinDepTS(2)
             END IF
          ELSE IF (input%bz_integration==BZINT_METHOD_GAUSS) THEN
-            CALL fergwt(kpts,input,fmpi,results%neig(:,sslice(1):sslice(2)), results%eig(:,:,sslice(1):sslice(2)),&
+            CALL fergwt(kpts,input,zelec,fmpi,results%neig(:,sslice(1):sslice(2)), results%eig(:,:,sslice(1):sslice(2)),&
                         results%ef,results%w_iks(:,:,sslice(1):sslice(2)),results%seigv,l_output)
          ELSE IF (input%bz_integration==BZINT_METHOD_TRIA) THEN
             CALL fertri(input,noco,kpts,fmpi%irank, results%neig(:,sslice(1):sslice(2)),nspins,zc,results%eig(:,:,sslice(1):sslice(2)),spindg,&
                   results%ef,results%seigv,results%w_iks(:,:,sslice(1):sslice(2)),l_output)
          ELSE IF (input%bz_integration==BZINT_METHOD_TETRA) THEN
-            CALL fertetra(input,noco,kpts,fmpi,results%neig(:,sslice(1):sslice(2)), results%eig(:,:,sslice(1):sslice(2)),&
+            CALL fertetra(input,zelec,noco,kpts,fmpi,results%neig(:,sslice(1):sslice(2)), results%eig(:,:,sslice(1):sslice(2)),&
                            results%ef,results%w_iks(:,:,sslice(1):sslice(2)),results%seigv,l_output)
          ENDIF
 
@@ -352,6 +360,11 @@ CONTAINS
        END IF
     END IF
 
+    if (noco%l_soc .AND. (.NOT. noco%l_noco)) THEN
+       !In case of SOC, the eigenvalues are double counted, so we need to divide the sum of eigenvalues by 2
+      results%seigv = results%seigv / 2.0
+      results%ts = results%ts / 2.0
+    endif  
     !Code to calculate the direct bandgap
     DO j=1,nspins
       bandgap = 1E99
@@ -370,13 +383,33 @@ CONTAINS
             exit kloop
          endif
       ENDDO kloop
-      if (k==kpts%nkpt+1) then 
+      if (k==kpts%nkpt+1) then
          write(oUnit,*) "Direct bandgap for spin ",j,": ",bandgap," Htr"
          write(oUnit,*) "at k-point ",min_kpt," with k-vector ",kpts%bk(:,min_kpt)
       endif
-   enddo 
+   enddo
 
-   END IF   
+   !--->   density of states at the Fermi energy on the coarse k-mesh
+   !        Gaussian smearing with width input%tkb (consistent with the
+   !        double-delta binning used for the el-ph phonon linewidths).
+   !        results%dos_ef is the total DOS (both spins) in states/Htr.
+   sigma = input%tkb
+   results%dos_ef = 0.0
+   IF (sigma>0.0) THEN
+      DO jsp = 1,nspins
+         DO k = 1,kpts%nkpt
+            DO i = 1,results%neig(k,jsp)
+               results%dos_ef = results%dos_ef + kpts%wtkpt(k)*spindg &
+                  * EXP(-0.5*((results%eig(i,k,jsp)-results%ef)/sigma)**2) &
+                  / (SQRT(tpi_const)*sigma)
+            END DO
+         END DO
+      END DO
+   END IF
+   IF (l_output) WRITE (oUnit,'(/,10x,a,f20.10,a)') &
+      'density of states at E_F (Gauss, both spins): ',results%dos_ef,' states/Htr'
+
+   END IF
 
     RETURN
 8020 FORMAT (/,'FERMIE:',/,&

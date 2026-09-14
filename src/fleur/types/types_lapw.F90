@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -36,6 +36,7 @@ MODULE m_types_lapw
       INTEGER, ALLOCATABLE::nkvec(:, :)
       REAL   :: bkpt(3)
       REAL   :: qphon(3)
+      INTEGER :: nk = 0 !k-point index this basis was initialized for (0 if unset)
    CONTAINS
       procedure       :: lapw_init => t_lapw_init
       procedure       :: lapw_init_fi => t_lapw_init_fi
@@ -240,6 +241,7 @@ CONTAINS
       lapw%qphon = [0.0,0.0,0.0]
       IF (PRESENT(dfpt_q)) lapw%qphon = dfpt_q
       
+      lapw%nk = nk
       IF (nk > kpts%nkpt) THEN
          lapw%bkpt(:) = kpts%bkf(:, nk)
       ELSE
@@ -363,19 +365,36 @@ CONTAINS
          TYPE(t_noco), INTENT(IN)   :: noco
          TYPE(t_nococonv), INTENT(IN)   :: nococonv
 
-         INTEGER:: n, na, nn, np, lo, nkvec_sv, nkvec(atoms%nlod, 2), iindex
+         INTEGER:: n, na, na1, nn, np, lo, nkvec_sv, nkvec(atoms%nlod, 2), iindex
          IF (.NOT. ALLOCATED(lapw%kvec)) THEN
             ALLOCATE (lapw%kvec(2*(2*atoms%llod + 1), atoms%nlod, atoms%nat))
-            ALLOCATE (lapw%nkvec(atoms%nlod, atoms%nat));lapw%nkvec=0
+            ALLOCATE (lapw%nkvec(atoms%nlod, atoms%nat))
             ALLOCATE (lapw%index_lo(atoms%nlod, atoms%nat))
          ENDIF
+         lapw%kvec = 0
+         lapw%nkvec = 0
+         lapw%index_lo = 0
          iindex = 0
          na = 0
          nkvec_sv = 0
          DO n = 1, atoms%ntype
             DO nn = 1, atoms%neq(n)
                na = na + 1
-               if (sym%invsat(na) > 1) cycle
+               if (sym%invsat(na) > 1) then
+                  ! Copy LO setup from inversion partner (atom1).
+                  ! When the invsat shortcut is active, atom2 is skipped in
+                  ! calc_abc so this data is unused. When the shortcut is
+                  ! disabled (e.g. SOC), atom2 is computed directly and needs
+                  ! valid nkvec/index_lo/kvec pointing to the same z-vector
+                  ! positions as atom1 (the invsat LO block covers both atoms).
+                  na1 = sym%invsatnr(na)
+                  DO lo = 1, atoms%nlo(n)
+                     lapw%nkvec(lo, na)   = lapw%nkvec(lo, na1)
+                     lapw%index_lo(lo, na) = lapw%index_lo(lo, na1)
+                     lapw%kvec(:, lo, na)  = lapw%kvec(:, lo, na1)
+                  END DO
+                  cycle
+               end if
                np = sym%invtab(sym%ngopr(na))
                CALL priv_vec_for_lo(atoms, input, sym, na, n, np, noco, nococonv, lapw, cell)
                DO lo = 1, atoms%nlo(n)

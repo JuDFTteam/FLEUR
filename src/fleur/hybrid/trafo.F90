@@ -846,7 +846,7 @@ CONTAINS
          DO j = 1, psize
             cnt = (i-1) * psize + j
             vecin(:,1) = matin_r(:,cnt)
-            CALL desymmetrize(vecin(:hybdat%nbasp, 1), hybdat%nbasp, 1, &
+            CALL desymmetrize(vecin(:hybdat%n_mt, 1), hybdat%n_mt, 1, &
                               fi%atoms, fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, fi%sym)
 
             call bra_trafo_core(1, ikpt, 1, fi%sym, mpdata, &
@@ -1033,7 +1033,7 @@ CONTAINS
          igptm2 = igptm2_list(igptm)                 
 
          cdum = exp(ImagUnit*tpi_const*dot_product(kpts%bkf(:, ikpt) + g1, trans(:)))
-         vecout1(hybdat%nbasp + igptm, :) = cdum*vecin1(hybdat%nbasp + igptm2, :)
+         vecout1(hybdat%n_mt + igptm, :) = cdum*vecin1(hybdat%n_mt + igptm2, :)
       END DO
       !$OMP end parallel do
 !      call timestop("PW part")

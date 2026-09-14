@@ -40,6 +40,7 @@ CONTAINS
       USE m_gaunt, ONLY: gaunt1
       USE m_types
       USE m_constants
+      USE m_relLO_tmat, ONLY: relLO_sph_tmat
 
       IMPLICIT NONE
 
@@ -67,6 +68,9 @@ CONTAINS
       COMPLEX :: cil
       INTEGER :: i,l,lh,lm ,lmin,lmp,lo,lop,loplo,lp,lpmax,lpmax0,lpmin,lpmin0,lpp ,mem,mp,mpp,m,lmx,mlo,mlolo,s
       INTEGER :: loplo_new, mlolo_new
+      REAL :: t_uulo, t_dulo
+      REAL :: t_loloS
+      INTEGER :: mlo_eig, mlo_rel
 
       ! Local Arrays
       REAL :: x(atoms%jmtd),ulovulo(atoms%nlod*(atoms%nlod+1)/2,lh0:sphhar%nlhd)
@@ -221,38 +225,37 @@ CONTAINS
       IF (.NOT.input%secvar.AND.iSpinPr==iSpin.AND..NOT.l_V1) THEN
          DO lo = 1,atoms%nlo(ntyp)
             l = atoms%llo(lo,ntyp)
+            ! Spherical-Hamiltonian coupling of u and u-dot to this LO, symmetrized to be
+            ! Hermitian. Written generally as
+            !   <a|H_sph|LO> = <H_sph a|LO> + 0.5*W(a,LO), a in {u,u-dot},
+            ! where W is the kinetic-energy Wronskian surface term at the muffin-tin radius,
+            !   W(a,LO) = -0.5 * R_mt^2 * ( a(R)*LO'(R) - a'(R)*LO(R) ).
+            ! For an ORDINARY LO (an SRA eigenfunction at ello) the Wronskian identity
+            ! W(a,LO)=(ello-el)*<a|LO> makes this collapse to the usual 0.5*(el+ello)*<a|LO>
+            ! shortcut. For a relLO that identity fails, so the true
+            ! boundary Wronskian must be used explicitly.
+            IF (atoms%l_relLO(lo,ntyp)) THEN
+               ! spherical u/u-dot <-> relLO couplings, see m_relLO_tmat
+               CALL relLO_sph_tmat(atoms,usdus,enpara,ntyp,l,lo,iSpinPr, t_uulo,t_dulo)
+            ELSE
+               t_uulo = 0.5 * usdus%uulon(lo,ntyp,iSpinPr) &
+                    * ( enpara%el0(l,ntyp,iSpinPr)+enpara%ello0(lo,ntyp,iSpinPr) )
+               t_dulo = 0.5 * usdus%dulon(lo,ntyp,iSpinPr) &
+                    * ( enpara%el0(l,ntyp,iSpinPr)+enpara%ello0(lo,ntyp,iSpinPr) ) &
+                    + 0.5 * usdus%uulon(lo,ntyp,iSpinPr)
+            END IF
             DO m = -l,l
                lm = l* (l+1) + m
                !IF (.NOT.l_dfpt) THEN
                IF (.TRUE.) THEN
-                  tlmplm%tuulo(lm,m,lo+mlo,iSpinPr,iSpin) = tlmplm%tuulo(lm,m,lo+mlo,iSpinPr,iSpin) &
-                         + 0.5 * usdus%uulon(lo,ntyp,iSpinPr) &
-                        * ( enpara%el0(l,ntyp,iSpinPr)+enpara%ello0(lo,ntyp,iSpinPr) )
-                  tlmplm%h_LO(lm,m,lo+mlo,iSpinPr,iSpin)=tlmplm%h_LO(lm,m,lo+mlo,iSpinPr,iSpin)  &
-                        + 0.5 * usdus%uulon(lo,ntyp,iSpinPr) &
-                        * ( enpara%el0(l,ntyp,iSpinPr)+enpara%ello0(lo,ntyp,iSpinPr) )
-                  tlmplm%tdulo(lm,m,lo+mlo,iSpinPr,iSpin) = tlmplm%tdulo(lm,m,lo+mlo,iSpinPr,iSpin) &
-                      + 0.5 * usdus%dulon(lo,ntyp,iSpinPr) &
-                      * ( enpara%el0(l,ntyp,iSpinPr)+enpara%ello0(lo,ntyp,iSpinPr) ) &
-                      + 0.5 * usdus%uulon(lo,ntyp,iSpinPr)
-                  tlmplm%h_LO(lm+s,m,lo+mlo,iSpinPr,iSpin)=tlmplm%h_LO(lm+s,m,lo+mlo,iSpinPr,iSpin)  &
-                      + 0.5 * usdus%dulon(lo,ntyp,iSpinPr) &
-                      * ( enpara%el0(l,ntyp,iSpinPr)+enpara%ello0(lo,ntyp,iSpinPr) ) &
-                      + 0.5 * usdus%uulon(lo,ntyp,iSpinPr)
-                  tlmplm%tulou(lm,m,lo+mlo,iSpinPr,iSpin) = tlmplm%tulou(lm,m,lo+mlo,iSpinPr,iSpin) &
-                    & + 0.5 * usdus%uulon(lo,ntyp,iSpinPr) &
-                    & * ( enpara%el0(l,ntyp,iSpinPr)+enpara%ello0(lo,ntyp,iSpinPr) )
-                  tlmplm%h_LO2(lm,m,lo+mlo,iSpinPr,iSpin)=tlmplm%h_LO2(lm,m,lo+mlo,iSpinPr,iSpin)  &
-                      + 0.5 * usdus%uulon(lo,ntyp,iSpinPr) &
-                      * ( enpara%el0(l,ntyp,iSpinPr)+enpara%ello0(lo,ntyp,iSpinPr) )
-                  tlmplm%tulod(lm,m,lo+mlo,iSpinPr,iSpin) = tlmplm%tulod(lm,m,lo+mlo,iSpinPr,iSpin) &
-                    & + 0.5 * usdus%dulon(lo,ntyp,iSpinPr) &
-                    & * ( enpara%el0(l,ntyp,iSpinPr)+enpara%ello0(lo,ntyp,iSpinPr) ) &
-                    & + 0.5 * usdus%uulon(lo,ntyp,iSpinPr)
-                  tlmplm%h_LO2(lm+s,m,lo+mlo,iSpinPr,iSpin)=tlmplm%h_LO2(lm+s,m,lo+mlo,iSpinPr,iSpin)  &
-                      + 0.5 * usdus%dulon(lo,ntyp,iSpinPr) &
-                      * ( enpara%el0(l,ntyp,iSpinPr)+enpara%ello0(lo,ntyp,iSpinPr) ) &
-                      + 0.5 * usdus%uulon(lo,ntyp,iSpinPr)
+                  tlmplm%tuulo(lm,m,lo+mlo,iSpinPr,iSpin) = tlmplm%tuulo(lm,m,lo+mlo,iSpinPr,iSpin) + t_uulo
+                  tlmplm%h_LO(lm,m,lo+mlo,iSpinPr,iSpin)=tlmplm%h_LO(lm,m,lo+mlo,iSpinPr,iSpin)  + t_uulo
+                  tlmplm%tdulo(lm,m,lo+mlo,iSpinPr,iSpin) = tlmplm%tdulo(lm,m,lo+mlo,iSpinPr,iSpin) + t_dulo
+                  tlmplm%h_LO(lm+s,m,lo+mlo,iSpinPr,iSpin)=tlmplm%h_LO(lm+s,m,lo+mlo,iSpinPr,iSpin) + t_dulo
+                  tlmplm%tulou(lm,m,lo+mlo,iSpinPr,iSpin) = tlmplm%tulou(lm,m,lo+mlo,iSpinPr,iSpin) + t_uulo
+                  tlmplm%h_LO2(lm,m,lo+mlo,iSpinPr,iSpin)=tlmplm%h_LO2(lm,m,lo+mlo,iSpinPr,iSpin) + t_uulo
+                  tlmplm%tulod(lm,m,lo+mlo,iSpinPr,iSpin) = tlmplm%tulod(lm,m,lo+mlo,iSpinPr,iSpin) + t_dulo
+                  tlmplm%h_LO2(lm+s,m,lo+mlo,iSpinPr,iSpin)=tlmplm%h_LO2(lm+s,m,lo+mlo,iSpinPr,iSpin) + t_dulo
                   IF (atoms%ulo_der(lo,ntyp).GE.1) THEN
                      tlmplm%tuulo(lm,m,lo+mlo,iSpinPr,iSpin) = tlmplm%tuulo(lm,m,lo+mlo,iSpinPr,iSpin) + 0.5 * usdus%uuilon(lo,ntyp,iSpinPr)
                      tlmplm%tdulo(lm,m,lo+mlo,iSpinPr,iSpin) = tlmplm%tdulo(lm,m,lo+mlo,iSpinPr,iSpin) + 0.5 * usdus%duilon(lo,ntyp,iSpinPr)
@@ -325,27 +328,42 @@ CONTAINS
             DO lo = atoms%lo1l(lp,ntyp),lop
                loplo = ((lop-1)*lop)/2 + lo
                loplo_new = (lop-1) * atoms%nlo(ntyp) + lo
+               ! Spherical LO<->LO coupling <lo'|H_sph|lo> (m-independent). The eigenvalue
+               ! shortcut 0.5*(ello'+ello)*<lo'|lo> is exact only when BOTH radial functions
+               ! are SRA eigenfunctions. A relLO is a Dirac solution (not an SRA eigenfunction),
+               ! so for a same-l pair with exactly one relLO the shortcut is invalid: operate
+               ! H_sph onto the eigenfunction partner (giving ello_partner*<lo'|lo>) and add
+               ! the explicit boundary Wronskian, exactly as m_relLO_tmat does for the
+               ! u/u-dot<->relLO coupling.
+               IF (atoms%llo(lop,ntyp)==atoms%llo(lo,ntyp) .AND. &
+                   (atoms%l_relLO(lop,ntyp).NEQV.atoms%l_relLO(lo,ntyp))) THEN
+                  IF (atoms%l_relLO(lo,ntyp)) THEN
+                     mlo_eig = lop ; mlo_rel = lo    ! lop is the SRA-eigenfunction partner
+                  ELSE
+                     mlo_eig = lo  ; mlo_rel = lop
+                  END IF
+                  ! el*<lo'|lo> + 0.5*W , W = -0.5*R^2*(u_eig(R)*d0'(R) - u_eig'(R)*d0(R))
+                  t_loloS = enpara%ello0(mlo_eig,ntyp,iSpinPr) * usdus%uloulopn(lop,lo,ntyp,iSpinPr) &
+                          - 0.25 * atoms%rmt(ntyp)**2 &
+                            * ( usdus%ulos(mlo_eig,ntyp,iSpinPr)*usdus%dulos(mlo_rel,ntyp,iSpinPr) &
+                              - usdus%dulos(mlo_eig,ntyp,iSpinPr)*usdus%ulos(mlo_rel,ntyp,iSpinPr) ) &
+                          + 0.5 * (usdus%ulouilopn(lop,lo,ntyp,iSpinPr) + usdus%ulouilopn(lo,lop,ntyp,iSpinPr))
+               ELSE
+                  t_loloS = 0.5 * (enpara%ello0(lop,ntyp,iSpinPr) + enpara%ello0(lo,ntyp,iSpinPr)) &
+                          * usdus%uloulopn(lop,lo,ntyp,iSpinPr) &
+                          + 0.5 * (usdus%ulouilopn(lop,lo,ntyp,iSpinPr) + usdus%ulouilopn(lo,lop,ntyp,iSpinPr))
+               END IF
                DO m = -lp,lp
                   !IF (.NOT.l_dfpt) THEN
                   IF (.TRUE.) THEN
-                     tlmplm%tuloulo(m,m,loplo+mlolo,iSpinPr,iSpin) = tlmplm%tuloulo(m,m,loplo+mlolo,iSpinPr,iSpin) &
-                                                              & + 0.5 * (enpara%ello0(lop,ntyp,iSpinPr) &
-                                                              & +         enpara%ello0(lo,ntyp,iSpinPr)) &
-                                                              & * usdus%uloulopn(lop,lo,ntyp,iSpinPr) &
-                                                              & + 0.5 * (usdus%ulouilopn(lop,lo,ntyp,iSpinPr) &
-                                                              & +        usdus%ulouilopn(lo,lop,ntyp,iSpinPr))
+                     tlmplm%tuloulo(m,m,loplo+mlolo,iSpinPr,iSpin) = tlmplm%tuloulo(m,m,loplo+mlolo,iSpinPr,iSpin) + t_loloS
                      !tlmplm%tuloulo_new(m,m,mlolo_new+loplo_new,iSpinPr,iSpin) = tlmplm%tuloulo_new(m,m,mlolo_new+loplo_new,iSpinPr,iSpin) &
                      !                                         & + 0.5 * (enpara%ello0(lop,ntyp,iSpinPr) &
                      !                                         & +         enpara%ello0(lo,ntyp,iSpinPr)) &
                      !                                         & * usdus%uloulopn(lop,lo,ntyp,iSpinPr) &
                      !                                         & + 0.5 * (usdus%ulouilopn(lop,lo,ntyp,iSpinPr) &
                      !                                         & +        usdus%ulouilopn(lo,lop,ntyp,iSpinPr))
-                     tlmplm%tuloulo_newer(m,m,lop,lo,ntyp,iSpinPr,iSpin) = tlmplm%tuloulo_newer(m,m,lop,lo,ntyp,iSpinPr,iSpin) &
-                                                              & + 0.5 * (enpara%ello0(lop,ntyp,iSpinPr) &
-                                                              & +         enpara%ello0(lo,ntyp,iSpinPr)) &
-                                                              & * usdus%uloulopn(lop,lo,ntyp,iSpinPr) &
-                                                              & + 0.5 * (usdus%ulouilopn(lop,lo,ntyp,iSpinPr) &
-                                                              & +        usdus%ulouilopn(lo,lop,ntyp,iSpinPr))
+                     tlmplm%tuloulo_newer(m,m,lop,lo,ntyp,iSpinPr,iSpin) = tlmplm%tuloulo_newer(m,m,lop,lo,ntyp,iSpinPr,iSpin) + t_loloS
                      IF (.NOT.lop.EQ.lo) THEN
                         !loplo_new = (lo-1) * atoms%nlo(ntyp) + lop
                         !tlmplm%tuloulo_new(m,m,mlolo_new+loplo_new,iSpinPr,iSpin) = tlmplm%tuloulo_new(m,m,mlolo_new+loplo_new,iSpinPr,iSpin) &
@@ -354,12 +372,7 @@ CONTAINS
                         !                                         & * usdus%uloulopn(lop,lo,ntyp,iSpinPr) &
                         !                                         & + 0.5 * (usdus%ulouilopn(lo,lop,ntyp,iSpinPr) &
                         !                                         & +        usdus%ulouilopn(lop,lo,ntyp,iSpinPr))
-                        tlmplm%tuloulo_newer(m,m,lo,lop,ntyp,iSpinPr,iSpin) = tlmplm%tuloulo_newer(m,m,lo,lop,ntyp,iSpinPr,iSpin) &
-                                                                 & + 0.5 * (enpara%ello0(lo,ntyp,iSpinPr) &
-                                                                 & +         enpara%ello0(lop,ntyp,iSpinPr)) &
-                                                                 & * usdus%uloulopn(lop,lo,ntyp,iSpinPr) &
-                                                                 & + 0.5 * (usdus%ulouilopn(lo,lop,ntyp,iSpinPr) &
-                                                                 & +        usdus%ulouilopn(lop,lo,ntyp,iSpinPr))
+                        tlmplm%tuloulo_newer(m,m,lo,lop,ntyp,iSpinPr,iSpin) = tlmplm%tuloulo_newer(m,m,lo,lop,ntyp,iSpinPr,iSpin) + t_loloS
                      END IF
                   ELSE
                      !tlmplm%tuloulo(m,m,loplo+mlolo,iSpinPr,iSpin) = tlmplm%tuloulo(m,m,loplo+mlolo,iSpinPr,iSpin) &

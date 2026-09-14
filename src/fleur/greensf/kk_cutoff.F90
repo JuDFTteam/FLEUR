@@ -28,6 +28,7 @@ MODULE m_kk_cutoff
       REAL    :: lowerBound,upperBound,integral,n_states
       REAL    :: ec,del,eb,et
       REAL, ALLOCATABLE :: projDOS(:,:)
+      CHARACTER(len=300) :: message
 
       ne = SIZE(eMesh)
       del = eMesh(2)-eMesh(1)
@@ -75,10 +76,20 @@ MODULE m_kk_cutoff
                WRITE(*,9000) l,ispin,scalingFactor(ispin)
 9000           FORMAT("Scaling the DOS for l=",I1," and spin ",I1,"   factor: ",f14.8)
 #endif
-               IF(scalingFactor(ispin).GT.1.25) CALL juDFT_warn("scaling factor >1.25 -> increase elup(<1htr) or numbands",calledby="kk_cutoff")
+               IF(scalingFactor(ispin).GT.1.25) THEN
+                  WRITE(message,'(A,I0,A,I0,A,F10.6,A,F10.6,A,F10.6,A)') &
+                     "scaling factor >1.25 for l=", l, ", spin=", ispin, &
+                     ": factor=", scalingFactor(ispin), ", integral=", integral, &
+                     ", expected=", n_states, ". Increase elup(<1htr) or numbands."
+                  CALL juDFT_warn(TRIM(ADJUSTL(message)),calledby="kk_cutoff")
+               END IF
             ELSE IF(integral.LT.n_states-0.1) THEN
                ! If the integral is to small we terminate here to avoid problems
-               CALL juDFT_warn("Integral over DOS too small for f -> increase elup(<1htr) or numbands", calledby="kk_cutoff")
+               WRITE(message,'(A,I0,A,I0,A,F10.6,A,F10.6,A)') &
+                  "Integral over DOS too small for l=", l, ", spin=", ispin, &
+                  ": integral=", integral, ", expected=", n_states, &
+                  ". Increase elup(<1htr) or numbands."
+               CALL juDFT_warn(TRIM(ADJUSTL(message)), calledby="kk_cutoff")
             ENDIF
          ELSE
 

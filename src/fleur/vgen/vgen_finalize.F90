@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -10,9 +10,10 @@ MODULE m_vgen_finalize
    USE m_constants
    USE m_lattHarmsSphHarmsConv
 
+   implicit none
 CONTAINS
 
-   SUBROUTINE vgen_finalize(fmpi ,field,cell,atoms,stars,vacuum,sym,juphon,noco,nococonv,input,xcpot,sphhar,vTot,vCoul,denRot,sliceplot)
+   SUBROUTINE vgen_finalize(fmpi ,field,cell,atoms,stars,vacuum,sym,noco,nococonv,input,xcpot,sphhar,vTot,vCoul,denRot,sliceplot)
       !--------------------------------------------------------------------------
       ! FLAPW potential generator (finalization)
       !
@@ -41,7 +42,6 @@ CONTAINS
       TYPE(t_noco),     INTENT(IN)    :: noco
       TYPE(t_nococonv), INTENT(INOUT) :: nococonv
       TYPE(t_sym),      INTENT(IN)    :: sym
-      TYPE(t_juphon),   INTENT(IN)    :: juphon    
       TYPE(t_stars),    INTENT(IN)    :: stars
       TYPE(t_atoms),    INTENT(IN)    :: atoms
       TYPE(t_input),    INTENT(IN)    :: input
@@ -102,7 +102,7 @@ CONTAINS
          CALL timestop("Building B")
 
          CALL timestart("SF subroutine")
-         CALL sourcefree(fmpi,field,stars,atoms,sphhar,vacuum,input,sym,juphon,cell,bxc,vScal,vCorr)
+         CALL sourcefree(fmpi,field,stars,atoms,sphhar,vacuum,input,sym,cell,bxc,vScal,vCorr)
          CALL timestop("SF subroutine")
 
          CALL timestart("Correcting vTot")
@@ -141,8 +141,8 @@ CONTAINS
          CALL subPotDen(vxcForPlotting,vTot,vCoul)
          CALL makeplots(stars, atoms, sphhar, vacuum, input, fmpi , sym, cell, &
                         noco,nococonv, vxcForPlotting, PLOT_POT_VXC, sliceplot)
-         IF ((fmpi%irank.EQ.0).AND.(sliceplot%iplot.LT.32).AND.(MODULO(sliceplot%iplot,2).NE.1)) THEN
-            CALL juDFT_end("Stopped self consistency loop after plots have been generated.")
+         IF ((sliceplot%iplot.LT.32).AND.(MODULO(sliceplot%iplot,2).NE.1)) THEN
+            CALL juDFT_end("Stopped self consistency loop after plots have been generated.", fmpi%irank)
          END IF
       END IF
 
@@ -164,13 +164,7 @@ CONTAINS
       END DO
 
       ! Copy first vacuum into second vacuum if this was not calculated before:
-      IF (vacuum%nvac==1) THEN
-         IF (sym%invs) THEN
-            vTot%vac(:,:,2,:)  = CONJG(vTot%vac(:,:,1,:))
-         ELSE
-            vTot%vac(:,:,2,:)  = vTot%vac(:,:,1,:)
-         END IF
-      END IF
+      CALL stars%fill_2nd_vac(vacuum,vTot%vac)
 
    END SUBROUTINE vgen_finalize
 

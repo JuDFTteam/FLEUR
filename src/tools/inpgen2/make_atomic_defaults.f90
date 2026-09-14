@@ -165,6 +165,9 @@ CONTAINS
       ALLOCATE(atoms%llo(atoms%nlod,atoms%ntype));atoms%llo=-1
       ALLOCATE(atoms%ulo_der(atoms%nlod,atoms%ntype))
       atoms%ulo_der=0
+      ALLOCATE(atoms%l_relLO(atoms%nlod,atoms%ntype));atoms%l_relLO=.FALSE.
+      ALLOCATE(atoms%nqn_relLO(atoms%nlod,atoms%ntype));atoms%nqn_relLO=0
+      ALLOCATE(atoms%nRelLO(atoms%ntype));atoms%nRelLO=0
 
       CALL enpara%init(atoms%ntype,atoms%nlod,2,.TRUE.,atoms%nz)
       DO n=1,atoms%ntype

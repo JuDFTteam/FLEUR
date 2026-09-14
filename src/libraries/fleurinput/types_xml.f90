@@ -470,10 +470,12 @@ CONTAINS
    SUBROUTINE InitInterface()
 
       USE iso_c_binding
-
+      USE m_judft_sysinfo
       IMPLICIT NONE
 
       INTEGER :: errorStatus
+
+
 
       INTERFACE
          FUNCTION initializeXMLInterface() BIND(C, name="initializeXMLInterface")
@@ -482,12 +484,15 @@ CONTAINS
          END FUNCTION initializeXMLInterface
       END INTERFACE
 
+      call fp_error_check(.false.) 
+      !XML library init generates a FPE. We want to ignore this one and check for real errors after initialization.
+      !Error checking could be re-enabled after initialization. 
       errorStatus = 0
       errorStatus = initializeXMLInterface()
       IF (errorStatus .NE. 0) THEN
          CALL juDFT_error("Could not initialize XML interface.", calledby="xmlInitInterface")
       END IF
-
+      !call fp_error_check(.true.)
    END SUBROUTINE InitInterface
 
    SUBROUTINE ParseSchema(schemaFilename)

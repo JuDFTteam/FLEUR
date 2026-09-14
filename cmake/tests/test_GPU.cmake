@@ -58,9 +58,9 @@ if (CLI_FLEUR_USE_GPU)
    if ("$ENV{VERBOSE}")
       message("NVTOOLSEXT compile test: ${FLEUR_USE_NVTOOLSEXT}\n${compile_output}")
    endif()
-   if (FLEUR_USE_NVTOOLSEXT)
-      set(FLEUR_FORTRAN_FLAGS "${CMAKE_Fortran_FLAGS} -lnvToolsExt")
-   endif()
+   #FLEUR_USE_NVTOOLSEXT switches on JUDFT_USE_NVTX in test_juDFT.cmake. The
+   #library itself is linked by the juDFT target (see src/libraries/juDFT/CMakeLists.txt),
+   #which is where the NVTX calls in nvtx.F90 live.
 
 else()
    set(FLEUR_USE_GPU FALSE)

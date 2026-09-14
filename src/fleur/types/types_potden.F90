@@ -1,11 +1,12 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_types_potden
 
   !> Data type for the density or the potential
+   implicit none
    TYPE t_potden
      INTEGER             :: iter
      INTEGER             :: potdenType
@@ -63,45 +64,53 @@ CONTAINS
     integer :: fmpi_comm
 #ifdef CPP_MPI
     INTEGER:: ierr,irank
-    real,ALLOCATABLE::rtmp(:)
-    complex,ALLOCATABLE::ctmp(:)
     CALL MPI_COMM_RANK(fmpi_comm,irank,ierr)
+    ! Reduce every field in place: on the root MPI_IN_PLACE sums directly into the
+    ! target array, on the other ranks the receive buffer is ignored. This avoids
+    ! the temporary buffer + reshape that previously overflowed the stack for large
+    ! arrays (e.g. the film vacuum density).
     !pw
-    ALLOCATE(ctmp(size(this%pw)))
-    CALL MPI_REDUCE(this%pw,ctmp,size(this%pw),MPI_DOUBLE_COMPLEX,MPI_SUM,0,fmpi_comm,ierr)
-    if (irank==0) this%pw=reshape(ctmp,shape(this%pw))
-    deallocate(ctmp)
+    IF (irank==0) THEN
+       CALL MPI_REDUCE(MPI_IN_PLACE,this%pw,size(this%pw),MPI_DOUBLE_COMPLEX,MPI_SUM,0,fmpi_comm,ierr)
+    ELSE
+       CALL MPI_REDUCE(this%pw,this%pw,size(this%pw),MPI_DOUBLE_COMPLEX,MPI_SUM,0,fmpi_comm,ierr)
+    END IF
     !mt
-    ALLOCATE(rtmp(size(this%mt)))
-    CALL MPI_REDUCE(this%mt,rtmp,size(this%mt),MPI_DOUBLE_PRECISION,MPI_SUM,0,fmpi_comm,ierr)
-    if (irank==0) this%mt=reshape(rtmp,shape(this%mt))
-    deallocate(rtmp)
+    IF (irank==0) THEN
+       CALL MPI_REDUCE(MPI_IN_PLACE,this%mt,size(this%mt),MPI_DOUBLE_PRECISION,MPI_SUM,0,fmpi_comm,ierr)
+    ELSE
+       CALL MPI_REDUCE(this%mt,this%mt,size(this%mt),MPI_DOUBLE_PRECISION,MPI_SUM,0,fmpi_comm,ierr)
+    END IF
     IF (PRESENT(the_other)) THEN
        !mt
-       ALLOCATE(rtmp(size(the_other%mt)))
-       CALL MPI_REDUCE(the_other%mt,rtmp,size(the_other%mt),MPI_DOUBLE_PRECISION,MPI_SUM,0,fmpi_comm,ierr)
-       if (irank==0) the_other%mt=reshape(rtmp,shape(the_other%mt))
-       deallocate(rtmp)
+       IF (irank==0) THEN
+          CALL MPI_REDUCE(MPI_IN_PLACE,the_other%mt,size(the_other%mt),MPI_DOUBLE_PRECISION,MPI_SUM,0,fmpi_comm,ierr)
+       ELSE
+          CALL MPI_REDUCE(the_other%mt,the_other%mt,size(the_other%mt),MPI_DOUBLE_PRECISION,MPI_SUM,0,fmpi_comm,ierr)
+       END IF
     END IF
     !vac
     if (allocated(this%vac)) THEN
-       ALLOCATE(ctmp(size(this%vac)))
-       CALL MPI_REDUCE(this%vac,ctmp,size(this%vac),MPI_DOUBLE_COMPLEX,MPI_SUM,0,fmpi_comm,ierr)
-       if (irank==0) this%vac=reshape(ctmp,shape(this%vac))
-       deallocate(ctmp)
+       IF (irank==0) THEN
+          CALL MPI_REDUCE(MPI_IN_PLACE,this%vac,size(this%vac),MPI_DOUBLE_COMPLEX,MPI_SUM,0,fmpi_comm,ierr)
+       ELSE
+          CALL MPI_REDUCE(this%vac,this%vac,size(this%vac),MPI_DOUBLE_COMPLEX,MPI_SUM,0,fmpi_comm,ierr)
+       END IF
     endif
     !density matrix
     if (allocated(this%mmpMat)) then
-       ALLOCATE(ctmp(size(this%mmpMat)))
-       CALL MPI_REDUCE(this%mmpMat,ctmp,size(this%mmpMat),MPI_DOUBLE_COMPLEX,MPI_SUM,0,fmpi_comm,ierr)
-       if (irank==0) this%mmpMat=reshape(ctmp,shape(this%mmpMat))
-       deallocate(ctmp)
+       IF (irank==0) THEN
+          CALL MPI_REDUCE(MPI_IN_PLACE,this%mmpMat,size(this%mmpMat),MPI_DOUBLE_COMPLEX,MPI_SUM,0,fmpi_comm,ierr)
+       ELSE
+          CALL MPI_REDUCE(this%mmpMat,this%mmpMat,size(this%mmpMat),MPI_DOUBLE_COMPLEX,MPI_SUM,0,fmpi_comm,ierr)
+       END IF
     endif
     if (allocated(this%nIJ_llp_mmp)) then
-       ALLOCATE(ctmp(size(this%nIJ_llp_mmp)))
-       CALL MPI_REDUCE(this%nIJ_llp_mmp,ctmp,size(this%nIJ_llp_mmp),MPI_DOUBLE_COMPLEX,MPI_SUM,0,fmpi_comm,ierr)
-       if (irank==0) this%nIJ_llp_mmp=reshape(ctmp,shape(this%nIJ_llp_mmp))
-       deallocate(ctmp)
+       IF (irank==0) THEN
+          CALL MPI_REDUCE(MPI_IN_PLACE,this%nIJ_llp_mmp,size(this%nIJ_llp_mmp),MPI_DOUBLE_COMPLEX,MPI_SUM,0,fmpi_comm,ierr)
+       ELSE
+          CALL MPI_REDUCE(this%nIJ_llp_mmp,this%nIJ_llp_mmp,size(this%nIJ_llp_mmp),MPI_DOUBLE_COMPLEX,MPI_SUM,0,fmpi_comm,ierr)
+       END IF
     endif
 
 #endif

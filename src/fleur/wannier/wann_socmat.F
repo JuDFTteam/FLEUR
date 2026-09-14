@@ -5,6 +5,7 @@
 !--------------------------------------------------------------------------------
 
       module m_wann_socmat
+      use m_juDFT
       contains
       subroutine wann_socmat(
      >               fmpi,enpara,input,noco,nococonv,atoms,
@@ -23,8 +24,9 @@ c
 c     Frank Freimuth
 c***********************************************************************
       USE m_types
-      USE m_spnorb
-      USE m_hsoham
+c     Legacy second-variation SOC removed (m_spnorb/m_sorad/m_hsoham).
+c     USE m_spnorb
+c     USE m_hsoham
       implicit none
 
       TYPE(t_mpi),INTENT(IN)      :: fmpi
@@ -77,10 +79,15 @@ c***********************************************************************
       COMPLEX,ALLOCATABLE :: ahelp(:,:,:,:)
       complex,allocatable :: bhelp(:,:,:,:)
 
-      TYPE(t_rsoc)::rsoc
+c     TYPE(t_rsoc)::rsoc
       TYPE(t_usdus):: usdus
 
       call timestart("wann_socmat")
+
+      CALL juDFT_error(
+     +   "wann_socmat: legacy second-variation SOC was removed",
+     +   calledby="wann_socmat",
+     +   hint="Port this path to the radial SOC matrix t_rsoc%rso.")
 
       nwdd=1
       nw=1
@@ -131,15 +138,17 @@ c***********************************************************************
 !     +          ulos(nlod,ntypd,jspd),dulos(nlod,ntypd,jspd),
 !     +          uulon(nlod,ntypd,jspd),dulon(nlod,ntypd,jspd))
 
-      CALL spnorb(
-     >         atoms,noco,nococonv,input,fmpi, enpara,
-     >         vr,usdus,rsoc,.true.)
+c     CALL spnorb(
+c    >         atoms,noco,nococonv,input,fmpi, enpara,
+c    >         vr,usdus,rsoc,.true.)
+c
+c     rsoc%soangl= conjg(rsoc%soangl)
+c
+c     CALL hsoham(atoms,noco,input,nsz,neigd,chelp,rsoc,ahelp,
+c    >            bhelp,1,natd,fmpi%n_rank,fmpi%n_size,fmpi%SUB_COMM,
+c    <            hsomtx)
 
-      rsoc%soangl= conjg(rsoc%soangl)
-
-      CALL hsoham(atoms,noco,input,nsz,neigd,chelp,rsoc,ahelp,
-     >            bhelp,1,natd,fmpi%n_rank,fmpi%n_size,fmpi%SUB_COMM,
-     <            hsomtx)
+      hsomtx = cmplx(0.0,0.0)
 
       call timestop("wann_socmat")
       end subroutine wann_socmat

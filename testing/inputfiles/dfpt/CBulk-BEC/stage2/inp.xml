@@ -3,8 +3,8 @@
        Diamond
     </comment>
     <calculationSetup>
-       <cutoffs Kmax="3.0000000" Gmax="9.0000000" GmaxXC="9.0000000" numbands="all"/>
-       <scfLoop itmax="8" minDistance=".00001000" maxIterBroyd="15" imix="Anderson" alpha=".05000000" precondParam="0.0" spinf="2.00000000"/>
+       <cutoffs Kmax="2.3000000" Gmax="6.9000000" GmaxXC="6.9000000" numbands="all"/>
+       <scfLoop itmax="7" minDistance=".00001000" maxIterBroyd="15" imix="Anderson" alpha=".05000000" precondParam="0.0" spinf="2.00000000"/>
        <coreElectrons ctail="F" frcor="F" kcrel="0" coretail_lmax="0"/>
        <xcFunctional name="LibXC" relativisticCorrections="F">
           <LibXCName  exchange="lda_x" correlation="lda_c_vwn"/>
@@ -42,7 +42,7 @@
     <atomSpecies>
        <species name="Carbon (C)" element="C" atomicNumber="6">
           <mtSphere radius="1.00*1.42000000" gridPoints="471" logIncrement=".02200000"/>
-          <atomicCutoffs lmax="6" lnonsphr="4"/>
+          <atomicCutoffs lmax="4" lnonsphr="2"/>
           <electronConfig flipSpins="F">
              <coreConfig>(1s1/2)</coreConfig>
              <valenceConfig>(2s1/2) (2p1/2) (2p3/2)</valenceConfig>
@@ -70,11 +70,9 @@
        <plotting iplot="0" polar="F">
           <plot TwoD="T" vec1="  1.0  0.0  0.0" vec2="  0.0  1.0  0.0" vec3="  0.0  0.0  1.0" zero="  0.0  0.0  0.0" file="plot"/>
        </plotting>
-       <juPhon l_dfpt="T" l_efield="F" l_phonon="F" l_borneffcharge="T" qlim="1/100" startq="1">       
-          <qVectors>                          
-             <q> 0.0/16 0.0/16 0.0/16 </q>    
-          </qVectors>                         
-       </juPhon>                              
+       <dfpt l_dfpt="T" l_efield="F" l_phonon="F" l_borneffcharge="T">       
+         <efield qlim="1/100"/>                                                
+       </dfpt>                              
        <chargeDensitySlicing numkpt="0" minEigenval=".00000000" maxEigenval=".00000000" nnne="0" pallst="F"/>
        <specialOutput eonly="F"/>
        <magneticCircularDichroism mcd="F" energyLo="-10.00000000" energyUp=".00000000"/>

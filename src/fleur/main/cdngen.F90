@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -11,9 +11,10 @@ MODULE m_cdngen
 CONTAINS
 
 SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
-                  kpts,atoms,sphhar,stars,sym,juphon,gfinp,hub1inp,&
+                  kpts,atoms,sphhar,stars,sym,gfinp,hub1inp,&
                   enpara,cell,field,noco,nococonv,vTot,results ,coreSpecInput,&
-                  archiveType, xcpot,outDen,EnergyDen,core_den,greensFunction,hub1data,vxc,exc)
+                  archiveType, xcpot,outDen,EnergyDen,core_den,greensFunction,hub1data,vxc,exc,&
+                  moessbauerParams)
 
    !*****************************************************
    !    Charge density generator
@@ -50,7 +51,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    USE m_types_greensfContourData
    USE m_types_eigdos
    USE m_types_dos
-   USE m_types_hyperfine
+   USE m_types_moessbauerParams
 
    USE m_force_sf ! Klueppelberg (force level 3)
 
@@ -69,7 +70,6 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_noco),INTENT(IN)          :: noco
    TYPE(t_nococonv),INTENT(INOUT)   :: nococonv
    TYPE(t_sym),INTENT(IN)           :: sym
-   TYPE(t_juphon),INTENT(IN)        :: juphon
    TYPE(t_stars),INTENT(IN)         :: stars
    TYPE(t_cell),INTENT(IN)          :: cell
    TYPE(t_field),INTENT(IN)         :: field
@@ -86,6 +86,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_potden),INTENT(INOUT)     :: outDen, EnergyDen
    TYPE(t_potden),INTENT(OUT),optional       :: core_den
    TYPE(t_potden),INTENT(INOUT),OPTIONAL:: vxc, exc
+   TYPE(t_moessbauerParams), OPTIONAL, INTENT(INOUT) :: moessbauerParams
 
    !Scalar Arguments
    INTEGER, INTENT (IN)             :: eig_id, archiveType
@@ -103,7 +104,6 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_greensfImagPart) :: greensfImagPart
    TYPE(t_potden)          :: val_den
    TYPE(t_greensfContourData) :: contour(gfinp%numberContours)
-   TYPE(t_hyperfine)       :: hyperfine
 
 
    !Local Scalars
@@ -156,8 +156,6 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
       hub1data%cdn_atomic = 0.0
    ENDIF
 
-   CALL hyperfine%init(input, atoms)
-
    IF (fmpi%irank == 0) CALL openXMLElementNoAttributes('valenceDensity')
 
    !In a non-collinear calcuation where the off-diagonal part of the
@@ -169,7 +167,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
       CALL cdnvalJob%init(fmpi,input,kpts,noco,results,jspin)
       IF (sliceplot%slice) CALL cdnvalJob%select_slice(sliceplot,results,input,kpts,noco,jspin)
       CALL cdnval(eig_id,fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,enpara,stars,vacuum,&
-                  sphhar,sym,vTot ,cdnvalJob,outDen,dos,vacdos,results,moments,gfinp,&
+                  sphhar,sym,vTot ,cdnvalJob,outDen,dos,vacdos,results,moments,moessbauerParams,gfinp,&
                   hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,jDOS,greensfImagPart, &
                   l_kinEnergyDen=xcpot%is_MetaGGA(), &
                   kinEnergyDen=EnergyDen)
@@ -223,24 +221,22 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    !   CALL makeplots(stars, atoms, sphhar, vacuum, input, fmpi , sym, cell, noco,nococonv, outDen, PLOT_OUTDEN_Y_CORE, sliceplot)
    !END IF
 
-   CALL hyperfine%printValenceHyperfine(input, atoms, fmpi, moments)
-
    CALL timestart("cdngen: cdncore")
    if(xcpot%is_MetaGGA()) then
       ! Pass EnergyDen as kinEnergyDen: core KED is added directly.
       ! Do NOT also pass as EnergyDen (energy density) — we use the direct approach now.
       CALL cdncore(fmpi ,input,vacuum,noco,nococonv,sym,enpara,&
-                   stars,cell,sphhar,atoms,vTot,outDen,moments,results, kinEnergyDen=EnergyDen)
+                   stars,cell,sphhar,atoms,vTot,outDen,moments,results,moessbauerParams, kinEnergyDen=EnergyDen)
    else
       CALL cdncore(fmpi ,input,vacuum,noco,nococonv,sym,enpara,&
-                   stars,cell,sphhar,atoms,vTot,outDen,moments,results)
+                   stars,cell,sphhar,atoms,vTot,outDen,moments,results,moessbauerParams)
    endif
    call core_den%subPotDen(outDen, val_den)
    CALL timestop("cdngen: cdncore")
 
    CALL outDen%distribute(fmpi%mpi_comm)
 
-   IF(.FALSE.) CALL denMultipoleExp(input, fmpi, atoms, sphhar, stars, sym, juphon, cell,   outDen) ! There should be a switch in the inp file for this
+   IF(.FALSE.) CALL denMultipoleExp(input, fmpi, atoms, sphhar, stars, sym, cell,   outDen) ! There should be a switch in the inp file for this
    IF(fmpi%irank.EQ.0) THEN
       IF(input%lResMax>0) CALL resMoms(sym,input,atoms,sphhar,noco,nococonv,outDen,moments%rhoLRes) ! There should be a switch in the inp file for this
    END IF
@@ -264,12 +260,12 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
          if (any(noco%l_constrained).or.any(noco%l_fixedMoment)) call nococonv%update_b_cons(atoms,noco,vtot,outDen)
       END IF
 
-      if (sym%nop==1.and..not.input%film) call magMultipoles(fmpi,sym,juphon,stars, atoms,cell, sphhar, vacuum, input, noco,nococonv,outden)
+      if (sym%nop==1.and..not.input%film) call magMultipoles(fmpi,sym,stars, atoms,cell, sphhar, vacuum, input, noco,nococonv,outden)
       !Generate and save the new nocoinp file if the directions of the local
       !moments are relaxed or a constraint B-field is calculated.
    END IF
 
-   CALL hyperfine%calcPrintIsomerShifts(input,atoms,fmpi,outDen)
+   IF (PRESENT(moessbauerParams)) CALL moessbauerParams%calcIS(input,atoms,fmpi,outDen)
 
    Perform_metagga = Allocated(Energyden%Mt) .And. Xcpot%Is_MetaGGA()
    If(Perform_metagga) Then

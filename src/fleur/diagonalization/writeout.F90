@@ -1,6 +1,6 @@
 !--------------------------------------------------------------------------------
 ! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
-! This file is part of FLEUR and available as free software under the conditions 
+! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 module m_writeout
@@ -14,7 +14,7 @@ module m_writeout
 contains
    function get_solver_debugout() result(solver)
       class(t_solver), allocatable :: solver
-      allocate(t_solver_debugout :: solver)
+      allocate (t_solver_debugout :: solver)
       solver%name = "debugout"
       solver%available = .true.
       solver%parallel = .true.

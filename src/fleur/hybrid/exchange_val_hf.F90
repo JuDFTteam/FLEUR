@@ -55,6 +55,7 @@ MODULE m_exchange_valence_hf
    USE m_types
    USE m_util
    use m_matmul_dgemm
+
    LOGICAL, PARAMETER:: zero_order = .false., ibs_corr = .false.
 
 CONTAINS
@@ -584,34 +585,6 @@ CONTAINS
       END DO
       call timestop("calc_divergence")
    END SUBROUTINE calc_divergence
-
-   function calc_divergence2(cell, kpts) result(divergence)
-      USE m_types
-      USE m_constants
-      USE m_util, ONLY: cerf
-      implicit none
-      TYPE(t_cell), INTENT(IN)  :: cell
-      TYPE(t_kpts), INTENT(IN)  :: kpts
-      REAL                      :: divergence
-
-      INTEGER :: ikpt
-      REAL, PARAMETER :: expo = 5e-3
-      REAL    :: rrad, k(3), knorm2
-      COMPLEX :: cdum
-
-      rrad = sqrt(-log(5e-3)/expo)
-      cdum = sqrt(expo)*rrad
-      divergence = real(cell%omtil/(tpi_const**2)*sqrt(pi_const/expo)*cerf(cdum))
-      rrad = rrad**2
-
-      do ikpt = 1, kpts%nkptf
-         k = kpts%bkf(:, ikpt)
-         knorm2 = norm2(k)
-         IF (knorm2 < rrad) THEN
-            divergence = divergence - exp(-expo*knorm2)/knorm2/kpts%nkptf
-         END IF
-      enddo
-   end function calc_divergence2
 
    subroutine recombine_parts(in_part, ipart, psizes, out_total)
       use m_types

@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -92,7 +92,7 @@ contains
       
       call timestart("copy to cmt")
       DO itype=1,atoms%ntype 
-         call abc%init(input, atoms, mpdata%num_radfun_per_l(:, itype), my_psz, itype)
+         call abc%init(input, atoms, my_psz, itype)
          call abc%calc_abc(input, atoms, sym, cell, lapw_ikp, my_psz, hybdat%usdus, nocohyb, nococonv, jsp, itype, mat_ptr)
          call abc%rot_to_unrotated(hybinp, atoms, sym, itype)
          DO na=1,atoms%neq(itype)

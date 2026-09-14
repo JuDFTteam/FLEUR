@@ -30,10 +30,15 @@ MODULE m_types_cell
      !volume of interstitial
      REAL::volint= REAL_NOT_INITALIZED
      REAL::primCellZ = 0.0
+     !Wigner-Seitz Construction 
+     REAL,ALLOCATABLE::wsVectors(:,:)
+     REAL,ALLOCATABLE::wsLength(:)
    CONTAINS
      PROCEDURE :: init
      PROCEDURE :: read_xml=>read_xml_cell
      PROCEDURE :: mpi_bc=>mpi_bc_cell
+     PROCEDURE :: init_WScell
+     PROCEDURE :: calculate_WSweight
   END TYPE t_cell
   PUBLIC t_cell
 CONTAINS
@@ -174,5 +179,97 @@ CONTAINS
      ENDIF
 
    END SUBROUTINE read_xml_cell
+
+   SUBROUTINE init_WScell(this,scaleSupercell)
+    ! construct the Wigner Seitz cell
+    ! store the lattice vectors and the distance 
+    ! For DFPT: construct WS cell for supercell
+    class(t_cell),intent(inout)  :: this  
+    integer, optional,intent(in) :: scaleSupercell(3)
+    
+    integer :: bounds,nx,ny,nz, maxSize,numberVectors
+    real    :: vecR(3), scaledAmat(3,3)
+    real    :: wsLength
+    real,allocatable :: tmpNorm(:) , tmpVec(:,:)  
+
+
+    bounds = 2 
+
+    scaledAmat = this%amat
+    if (present(scaleSupercell)) then 
+      scaledAmat(:,1) = scaledAmat(:,1) * scaleSupercell(1)
+      scaledAmat(:,2) = scaledAmat(:,2) * scaleSupercell(2)
+      scaledAmat(:,3) = scaledAmat(:,3) * scaleSupercell(3)
+    end if 
+
+    maxSize = (2*bounds+1)
+
+    allocate(tmpNorm(maxSize**3))
+    allocate(tmpVec(3,maxSize**3))
+    tmpNorm = 0.0
+    tmpVec = 0.0 
+
+    numberVectors = 1 
+    do nz = -bounds,bounds
+      do ny = -bounds,bounds  
+        do nx = -bounds,bounds  
+          ! construct lattice vector in cartesian units 
+          vecR = matmul(scaledAmat,(/nx,ny,nz/))
+          wsLength = 0.5*norm2(vecR)**2
+          if (wsLength .gt. 1e-8) then 
+            tmpVec(:,numberVectors) = vecR
+            tmpNorm(numberVectors)  = wsLength            
+            numberVectors = numberVectors + 1
+          end if   
+        end do !nz
+      end do !ny 
+    end do !nz 
+
+
+    ! store the number of lattice vectors and the corresponding Wigner Seitz length 
+    if (allocated(this%wsLength)) deallocate(this%wsLength)
+    if (allocated(this%wsVectors)) deallocate(this%wsVectors)
+
+    allocate(this%wsLength(numberVectors-1))
+    allocate(this%wsVectors(3,numberVectors-1))
+
+    this%wsLength(:) = tmpNorm(:(numberVectors-1))
+    this%wsVectors(:,:) = tmpVec(:,:(numberVectors-1))
+
+   END SUBROUTINE init_WScell
+
+   SUBROUTINE calculate_WSweight(this,gridPoints,WSweight,scaleSupercell)
+    ! calculates the Wigner Seitz weight for a grid
+
+    class(t_cell),intent(inout)     :: this
+    integer,intent(in)           :: gridPoints(:,:)
+    real,intent(out)             :: WSweight(:)
+    integer, optional,intent(in) :: scaleSupercell(3)
+
+
+    real              :: vecRCart(3), weight, distance
+    integer :: iGrid, iMem, iVec 
+    ! init the Wigner Seitz cell
+    call this%init_WScell(scaleSupercell)
+
+    WSweight = 1.0
+
+    do iGrid = 1 , size(gridPoints,2)
+      iMem = 1 
+      weight = 1.0 
+      vecRCart(:) = matmul(this%amat,gridPoints(:,iGrid))
+      do iVec = 1 , size(this%wsLength)
+        distance = dot_product(vecRCart,this%wsVectors(:,iVec)) 
+        if ( (distance - this%wsLength(iVec)) .gt. 1e-8) then 
+          weight = 0.0 
+          exit
+        end if  
+        if ( abs(distance-this%wsLength(iVec)) .le. 1e-8) iMem = iMem + 1 
+      end do 
+      WSweight(iGrid) = weight / iMem 
+    end do !iGrid 
+
+   END SUBROUTINE calculate_WSweight
+
 
  END MODULE m_types_cell

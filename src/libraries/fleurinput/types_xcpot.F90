@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -72,7 +72,7 @@ MODULE m_types_xcpot
       PROCEDURE        :: get_exchange_weight => xcpot_get_exchange_weight
       PROCEDURE        :: get_vxc => xcpot_get_vxc
       PROCEDURE        :: get_exc => xcpot_get_exc
-      PROCEDURE        :: get_fxc => xcpot_get_fxc
+      PROCEDURE        :: get_fxc_lda => xcpot_get_fxc_lda
       PROCEDURE,NOPASS :: apply_cutoffs
 
       PROCEDURE, NOPASS :: alloc_gradients => xcpot_alloc_gradients
@@ -366,7 +366,7 @@ CONTAINS
       CALL juDFT_error("Can't use XC-parrent class")
    END SUBROUTINE xcpot_get_exc
 
-   SUBROUTINE xcpot_get_fxc(xcpot, jspins, rh, fxc)
+   SUBROUTINE xcpot_get_fxc_lda(xcpot, jspins, rh, fxc)
       USE m_judft
       IMPLICIT NONE
 
@@ -378,7 +378,7 @@ CONTAINS
       REAL, INTENT(OUT)       :: fxc(:, :)
       fxc = 0.0
       CALL juDFT_error("Can't use XC-parrent class")
-  END SUBROUTINE xcpot_get_fxc
+  END SUBROUTINE xcpot_get_fxc_lda
 
    SUBROUTINE xcpot_alloc_gradients(ngrid, jspins, grad)
       IMPLICIT NONE

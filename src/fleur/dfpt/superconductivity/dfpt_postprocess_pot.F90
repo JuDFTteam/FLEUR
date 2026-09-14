@@ -1,0 +1,297 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
+
+module m_dfpt_postprocess_pot
+
+#ifdef CPP_MPI
+    USE mpi
+#endif
+    USE m_juDFT
+
+
+    USE m_types 
+    USE m_constants
+    
+    implicit none
+
+
+contains 
+
+    subroutine dfpt_postprocess_elph(fmpi,fi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat, &
+                                  rho, vTot, vxc,results,eig_id,resultsq,q_eig_id,l_real)
+
+        use m_types 
+        use m_cdn_io
+        use m_make_stars
+        use m_dfpt_dynmat_eig
+        use m_eigen 
+        use m_dfpt_vgen
+        use m_dfpt_elph_mat
+        use m_fermie
+        use m_dfpt_generate_gradient
+        use m_dfpt_vgen
+        use m_dfpt_lambda
+
+        type(t_mpi), intent(in)       :: fmpi
+        type(t_fleurinput),intent(in) :: fi 
+        type(t_stars), intent(in)     :: stars
+        type(t_sphhar), intent(in)    :: sphhar
+        class(t_xcpot), intent(in)       :: xcpot
+        type(t_forcetheo),intent(inout) :: forcetheo 
+        type(t_enpara), intent(inout) :: enpara
+        type(t_nococonv), intent(in)  :: nococonv
+        type(t_hybdat), intent(inout) :: hybdat
+        type(t_potden), intent(in)    :: rho
+        type(t_potden), intent(in)    :: vTot
+        type(t_potden), intent(in)    :: vxc
+        type(t_results), intent(in)   :: results
+        type(t_results),intent(inout) :: resultsq
+
+        integer, intent(in) :: eig_id, q_eig_id
+        logical, intent(in) :: l_real
+
+        type(t_hub1data) :: hub1data
+        type(t_stars) :: starsq
+        type(t_kpts)  :: kqpts
+        type(t_sternheimerJob) :: sternheimerJob
+        type(t_potden) :: vTot1, vTot1Im, den1, den1Im, rho_local
+        type(t_results) :: dummy_results
+
+        ! Symmetry unfolding of the q axis (see dfpt_lambda.F90, README_symmetry.md)
+        type(t_sym)   :: sym_qpts
+        type(t_kpts)  :: qpts
+        logical :: l_fullsym
+        integer :: ispin
+        complex, allocatable :: lambda(:,:,:,:)
+        integer, allocatable :: mapped_kpt(:,:)
+        real,    allocatable :: eig_win(:,:)
+        complex, allocatable :: gmatCartBZ(:,:,:,:,:,:) ! (nu',nu,kpoints,jsp,iPerturb,iQfull)
+
+
+        type(t_potden) :: grRho3(3), grVtot3(3), grVext3(3), grVc3(3),grgrVext3x3(3,3)
+
+        integer :: ikpt, iQ ,iDir, iDtype, iPerturb ,iArray, iMode, killcont(6), bandWindowSize
+        integer :: bandWindow(2)
+        logical :: l_dummy , l_exist
+        complex :: pref 
+        complex, allocatable :: dynMats(:,:,:) 
+        complex, allocatable :: gmatCart(:,:,:,:,:,:) ! (nu',nu,kpoints,jsp,iPerturb,iQ)
+        integer, allocatable :: q_list(:)
+
+        character(len=20) :: dfpt_tag
+        character(len=100)  :: filename
+
+#ifdef CPP_MPI 
+        integer :: ierr
+#endif 
+
+        ! killcont can be used to blot out certain contricutions to the
+        ! perturbed matrices.
+        ! In this order: V1_pw_pw, T1_pw, S1_pw, V1_MT, ikGH0_MT, ikGS0_MT
+        killcont = [1,1,1,1,1,1]
+
+        call sternheimerJob%init(fi,l_phonon=.true.)
+        call dummy_results%init(fi%input, fi%atoms, fi%kpts, fi%noco)
+
+        call rho_local%copyPotDen(rho)
+        
+        allocate(q_list(fi%dfpt%qvec%nkpt))
+        q_list = (/(iArray, iArray=1,fi%dfpt%qvec%nkpt, 1)/)
+
+        ! Determine the band window for the electron-phonon matrix elements.
+        if (fi%wannierlib%l_wannierize) then
+           bandWindow = [fi%wannierlib%min_band, fi%wannierlib%max_band]
+        else
+           if (.not. allocated(fi%dfpt%bandWindow)) &
+              call juDFT_error("dfpt bandWindow is required when not wannierizing",calledby="construct_elph_mat")
+           bandWindow = fi%dfpt%bandWindow
+        end if
+
+        if (bandWindow(1) < 1 .or. bandWindow(2) < bandWindow(1)) &
+           call juDFT_error("Invalid band window in construct_elph_mat",calledby="construct_elph_mat")
+
+        bandWindowSize = bandWindow(2) - bandWindow(1) + 1
+
+        allocate(dynMats(3*fi%atoms%nat,3*fi%atoms%nat,size(q_list)))
+        !allocate(gmat(bandWindowSize,bandWindowSize,fi%kpts%nkpt,fi%input%jspins,3*fi%atoms%nat,size(q_list)))
+        allocate(gmatCart(bandWindowSize,bandWindowSize,fi%kpts%nkpt,fi%input%jspins,3*fi%atoms%nat,size(q_list)))
+        dynMats = cmplx(0.0,0.0)
+        !gmat = cmplx(0,0)
+        gmatCart= cmplx(0.0,0.0)
+
+        call timestart("Gradient generation")
+        call dfpt_generate_gradient(sternheimerJob,fi,fmpi,sphhar,hybdat,xcpot,nococonv,stars,rho,vTot,grRho3,grVtot3,grVc3,grVext3,grgrVext3x3)
+        call timestop("Gradient generation")
+
+        do iQ = 1 , size(q_list)
+            call timestart("q-point elph")
+            if (fmpi%irank==0) write(*,'(a,3f8.3)') "Computing electron phonon interaction for q:" , fi%dfpt%qvec%bk(:,iQ)
+            if (fmpi%irank == 0 ) then 
+                call timestart("dynMat IO")
+                ! Read in eigenvectors and eigenvalues for given q-point
+                ! Be careful only irank 0 has eigenVals and eigenVecs allocated 
+                call read_dynmats(fi%atoms%nat,iQ,dynMats(:,:,iQ))
+                call timestop("dynMat IO")
+            end if 
+
+            do iDtype = 1 , fi%atoms%nat
+                call timestart("Typeloop")
+                do iDir = 1 , 3
+                    call timestart("Dirloop")
+                    
+                    write(dfpt_tag,'(a1,i0,a2,i0,a2,i0)') 'q', q_list(iQ), '_b', iDtype, '_j', iDir
+                    
+                    iPerturb = iDir+3*(iDtype-1)
+
+
+                    call make_stars(starsq, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, fi%dfpt%qvec%bk(:,iQ), iDtype, iDir,sternheimerJob%l_efield)
+                    starsq%ufft = stars%ufft
+
+                    call den1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
+                    call den1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
+
+                    call vTot1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
+                    call vTot1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
+                    
+                    ! allocate the pw_w part
+                    allocate( vTot1%pw_w(size(vTot1%pw,1),size(vTot1%pw,2)))
+
+                    if (fmpi%irank==0) then 
+                        call timestart("den1 IO")
+                        ! We write out the density response in the sternheimer iteration 
+                        ! read in the densities
+                        filename = trim(dfpt_tag)
+                        inquire(file=trim(filename)//".hdf",EXIST=l_exist)
+                        if (l_exist) call readDensity(starsq, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
+                                                    fi%input, fi%sym, CDN_ARCHIVE_TYPE_CDN1_const, CDN_INPUT_DEN_const, 0, &
+                                                    dummy_results%ef, dummy_results%last_distance, l_dummy, den1,  &
+                                                    inFilename=trim(filename),denIm=den1Im)
+                        call timestop("den1 IO")
+                        
+                        ! add the gradient to the density that we store
+                        ! as we need den1 = z^(1) - grad as the input of dfpt_vgen
+                        den1%mt(:,0:,iDtype,:) = den1%mt(:,0:,iDtype,:) - grRho3(iDir)%mt(:,0:,iDtype,:)
+                    end if                     
+
+#ifdef CPP_MPI
+                    call den1%distribute(fmpi%mpi_comm)
+                    call den1Im%distribute(fmpi%mpi_comm)
+#endif 
+                    call timestart("Generating Potential Perturbation")
+                    call dfpt_vgen(sternheimerJob,hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
+                                    fi%dfpt,fi%cell,fmpi,fi%noco,nococonv,rho_local,vTot,&
+                                    starsq,den1Im,vTot1,.TRUE.,vTot1Im,den1,iDtype,iDir,[1,1])
+                    call timestop("Generating Potential Perturbation")
+                    ! The matrix element needs the gradient correction in the MT 
+                    vTot1%mt(:,0:,iDtype,:) = vTot1%mt(:,0:,iDtype,:) + grVtot3(iDir)%mt(:,0:,iDtype,:)
+
+                    ! construct the electron-phonon element in cartesian basis 
+                    call timestart("generate elph element")
+                    call construct_elph_element(sternheimerJob,fi,sphhar,results,fmpi,enpara,nococonv,starsq,vTot1,vTot1Im,vTot,rho, fi%dfpt%qvec%bk(:, iQ),&
+                                        eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatCart(:,:,:,:,iPerturb,iQ),bandWindow)
+
+                    call timestop("generate elph element")
+                    
+                    ! reset some variables 
+                    call starsq%reset_stars()
+                    call vTot1%reset_dfpt()
+                    call vTot1Im%reset_dfpt()
+                    call den1%reset_dfpt()
+                    call den1Im%reset_dfpt()
+                    
+                call timestop("Dirloop")
+                end do ! iDir
+                call timestop("Typeloop")
+            end do ! iDtype
+
+            call timestop("q-point elph")
+        end do !iQ
+
+#ifdef CPP_MPI
+    call mpi_bcast(dynMats, size(dynMats), mpi_double_complex, 0, fmpi%mpi_comm, ierr)
+#endif
+
+        ! Symmetry unfolding of the el-ph elements onto the full q Brillouin zone.
+        ! Without fullsym_inp.xml the input mesh and its group are used, where the
+        ! unfolding degenerates to a copy plus the time-reversal partners.
+        inquire(file="fullsym_inp.xml",EXIST=l_fullsym)
+
+        call timestart("elph symmetry unfolding")
+        if (l_fullsym) then
+            if (fmpi%irank==0) write(*,*) "fullsym_inp.xml found: unfolding el-ph elements onto the full q BZ"
+            call dfpt_read_fullsym(fmpi,fi,sym_qpts,qpts)
+        else
+            sym_qpts  = fi%sym
+            qpts = fi%dfpt%qvec
+        end if
+
+        allocate(gmatCartBZ(bandWindowSize,bandWindowSize,fi%kpts%nkpt,fi%input%jspins,3*fi%atoms%nat,qpts%nkptf))
+        gmatCartBZ = cmplx(0.0,0.0)
+
+        ! Construct the phases between rotation and what the solver at k' produced
+        do ispin = 1 , fi%input%jspins
+            call dfpt_build_lambda(fi,sym_qpts,fmpi,enpara,vTot,nococonv,stars,eig_id,ispin,bandWindow,lambda,mapped_kpt,eig_win)
+            if (fmpi%irank==0) call dfpt_check_lambda(fi,lambda,eig_win,1e-6)
+            call dfpt_unfold_gmat(fi,sym_qpts,qpts,ispin,lambda,mapped_kpt,gmatCart,gmatCartBZ)
+            deallocate(lambda,mapped_kpt,eig_win)
+        end do
+        call timestop("elph symmetry unfolding")
+
+        ! Perform Wannier interpolation
+        if (fi%wannierlib%l_wannierize) then
+            call timestart("Wannier Interpolation elph")
+            if (fmpi%irank==0) write(*,*) "Starting the interpolation of the matrix element"
+            call el_ph_wannier(fmpi,fi,results,dynMats,gmatCartBZ,qpts,sym_qpts)
+            call timestop("Wannier Interpolation elph")
+        end if
+
+    end subroutine dfpt_postprocess_elph
+
+
+    subroutine read_dynmats(natoms,iQ,dynMat)
+
+        integer, intent(in) :: natoms
+        integer, intent(in)  :: iQ
+        complex, intent(out) :: dynMat(:,:) 
+
+        integer :: iread 
+        character(len=100) :: trash 
+        real,allocatable    :: numbers(:,:)
+
+        allocate(numbers(3*natoms,6*natoms))
+        numbers = 0.0
+        if (iQ<=9) then
+            open( 3001, file="dynMatq=000"//int2str(iQ), status="old")
+        else if (iQ<=99) then  
+            open( 3001, file="dynMatq=00"//int2str(iQ), status="old")
+        else if (iQ<=999) then
+            open( 3001, file="dynMatq=0"//int2str(iQ), status="old")
+        else 
+            open( 3001, file="dynMatq="//int2str(iQ), status="old")
+        end if 
+
+        
+        do iread = 1, 3 + 3*natoms !Loop over dynmat rows
+            if (iread<4) then
+                read( 3001,*) trash
+            else
+                read( 3001,*) numbers(iread-3,:)
+                dynMat(iread-3,:) = cmplx(numbers(iread-3,::2),numbers(iread-3,2::2))
+            end if
+        end do ! iread
+        close(3001)
+
+
+
+    end subroutine read_dynmats
+
+
+
+
+
+
+
+end module m_dfpt_postprocess_pot

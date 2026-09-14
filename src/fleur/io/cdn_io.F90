@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -250,24 +250,14 @@ CONTAINS
           CALL openCDN_HDF(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&
                currentStepfunctionIndex,readDensityIndex,lastDensityIndex,inFilename)
 
-          IF (PRESENT(denIm)) THEN
-             CALL readDensityHDF(fileID, input, stars, sphhar, atoms, vacuum,   archiveName, densityType,&
-                 fermiEnergy,lastDistance,l_qfix,l_DimChange,den,denIm)
-          ELSE
-             CALL readDensityHDF(fileID, input, stars, sphhar, atoms, vacuum,   archiveName, densityType,&
-                 fermiEnergy,lastDistance,l_qfix,l_DimChange,den,b_constr=b_constr)
-          END IF
+         CALL readDensityHDF(fileID, input, stars, sphhar, atoms, vacuum,   archiveName, densityType,&
+               fermiEnergy,lastDistance,l_qfix,l_DimChange,den,denIm=denIm,b_constr=b_constr)
 
           CALL closeCDNPOT_HDF(fileID)
 
           IF(l_DimChange) THEN
-             IF (PRESENT(denIm)) THEN
                 CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,inOrOutCDN,&
                      1,-1.0,fermiEnergy,-1.0,-1.0,l_qfix,den,denIm=denIm)
-             ELSE
-                CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,inOrOutCDN,&
-                     1,-1.0,fermiEnergy,-1.0,-1.0,l_qfix,den)
-             END IF
           END IF
        ELSE
           INQUIRE(FILE=TRIM(ADJUSTL(filename)),EXIST=l_exist)
@@ -332,6 +322,8 @@ CONTAINS
        ! read in the density
        CALL loddop(stars,vacuum,atoms,sphhar,input,sym,&
             iUnit,den%iter,den%mt,den%pw,den%vac)
+
+       CALL stars%fill_2nd_vac(vacuum,den%vac)
 
        ! read in additional data if l_noco and data is present
        IF ((archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const).AND.l_rhomatFile) THEN
@@ -533,32 +525,19 @@ CONTAINS
           END IF
        END IF
 
-       IF(vacuum%nvac.EQ.1) THEN
-          IF (sym%invs) THEN
-             den%vac(:,:,2,:) = CONJG(den%vac(:,:,1,:))
-          ELSE
-             den%vac(:,:,2,:) = den%vac(:,:,1,:)
-          END IF
-       END IF
+       CALL stars%fill_2nd_vac(vacuum,den%vac)
 
-       IF (PRESENT(denIm)) THEN
-       CALL writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
+      if (any(noco%l_constrained).or.any(noco%l_fixedMoment)) THEN
+         CALL writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
             currentStarsIndex, currentLatharmsIndex, currentStructureIndex,&
             currentStepfunctionIndex,date,time,distance,fermiEnergy,mmpmatDistance,&
-            occDistance,l_qfix,den%iter+relCdnIndex,den,denIm)
-       ELSE
-          if (any(noco%l_constrained).or.any(noco%l_fixedMoment)) THEN
-            CALL writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
-               currentStarsIndex, currentLatharmsIndex, currentStructureIndex,&
-               currentStepfunctionIndex,date,time,distance,fermiEnergy,mmpmatDistance,&
-               occDistance,l_qfix,den%iter+relCdnIndex,den,b_constr=b_constr)
-          else
-            CALL writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
-               currentStarsIndex, currentLatharmsIndex, currentStructureIndex,&
-               currentStepfunctionIndex,date,time,distance,fermiEnergy,mmpmatDistance,&
-               occDistance,l_qfix,den%iter+relCdnIndex,den)
-          endif          
-       END IF
+            occDistance,l_qfix,den%iter+relCdnIndex,den,b_constr=b_constr)
+         else
+         CALL writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
+            currentStarsIndex, currentLatharmsIndex, currentStructureIndex,&
+            currentStepfunctionIndex,date,time,distance,fermiEnergy,mmpmatDistance,&
+            occDistance,l_qfix,den%iter+relCdnIndex,den,denIm=denIm)
+      endif          
 
        IF(l_storeIndices) THEN
           CALL writeCDNHeaderData(fileID,currentStarsIndex,currentLatharmsIndex,currentStructureIndex,&

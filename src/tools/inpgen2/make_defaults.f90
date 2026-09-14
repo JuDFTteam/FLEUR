@@ -52,6 +52,10 @@ CONTAINS
     !
     IF (input%jspins==1.AND.(noco%l_ss.OR.noco%l_noco)) CALL judft_error("You cannot run a non-collinear calculation with a single spin, set jspins=2")
     IF (noco%l_ss) noco%l_noco = .TRUE.
+    ! Coretails are supported for non-collinear calculations (see
+    ! cdnovlp_noco), but ctail=F is kept as the default here. It can be
+    ! switched on manually in inp.xml. For spin spirals the transverse part of
+    ! the core-tail magnetization is neglected, see nocoInputCheck.
     IF (noco%l_noco) input%ctail=.FALSE.
     !check for magnetism
     DO n = 1, atoms%ntype
@@ -85,6 +89,9 @@ CONTAINS
     ENDIF
 
     IF (noco%l_ss) input%ctail = .FALSE.
+    !the starting density may be non-collinear in the interstitial region; the
+    !default of the switch itself is F for inp.xml files that do not have it
+    input%sdNocoIR = .TRUE.
     input%zelec = DOT_PRODUCT(atoms%econf(:)%valence_electrons, atoms%neq(:))
 
     !
@@ -133,7 +140,7 @@ CONTAINS
              min_dtild=MAX(MAXVAL(ABS(atoms%pos(3,atoms%firstAtom(n):atoms%firstAtom(n)+atoms%neq(n)-1))+atoms%rmt(n)),min_dtild)
           ENDDO
           IF (ABS(vacuum%dvac)<=abs(cell%amat(3,3)))THEN
-             vacuum%dvac=2*min_dtild+0.2
+             vacuum%dvac=2*min_dtild+0.8
           ELSE
              vacuum%dvac=2*min_dtild-vacuum%dvac
           ENDIF

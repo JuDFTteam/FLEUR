@@ -11,11 +11,11 @@ module m_lapack
    private
    type, extends(t_solver)::t_solver_lapack
    contains
-   procedure        :: solve_std_dp => lapack_diag  !solver for standard eigenvalue problem
-   procedure        :: solve_std_sp => lapack_diag_sp  !solver for standard eigenvalue problem
-   procedure        :: solve_gev => lapack_gev  !solver for generalized eigenvalue problem
-   procedure        :: to_std => lapack_reduction     !transform the H of the generalized problem to a std problem
-   procedure        :: backtrans => lapack_recover  !transform the Eigenvalue back to the generalized problem
+      procedure        :: solve_std_dp => lapack_diag  !solver for standard eigenvalue problem
+      procedure        :: solve_std_sp => lapack_diag_sp  !solver for standard eigenvalue problem
+      procedure        :: solve_gev => lapack_gev  !solver for generalized eigenvalue problem
+      procedure        :: to_std => lapack_reduction     !transform the H of the generalized problem to a std problem
+      procedure        :: backtrans => lapack_recover  !transform the Eigenvalue back to the generalized problem
    end type
    public :: t_solver_lapack, get_solver_lapack
 
@@ -23,7 +23,7 @@ contains
 
    function get_solver_lapack() result(solver)
       class(t_solver), allocatable :: solver
-      allocate(t_solver_lapack :: solver)
+      allocate (t_solver_lapack :: solver)
       solver%name = "lapack"
       solver%available = .true.
       solver%parallel = .false.
@@ -67,7 +67,7 @@ contains
          lwork = dumrwork(1)
          allocate (rwork(lwork))
          if (info .ne. 0) THEN
-            WRITE(*,*) 'Error for k-point ', ikpt
+            WRITE (*, *) 'Error for k-point ', ikpt
             call judft_error("Diagonalization via LAPACK failed (Workspace)", no=info)
          END IF
          call dsygvx(1, 'V', 'I', 'U', hmat%matsize1, hmat%data_r, size(hmat%data_r, 1), smat%data_r, size(smat%data_r, 1), &
@@ -80,7 +80,7 @@ contains
          lwork = dumwork(1)
          allocate (work(lwork))
          if (info .ne. 0) THEN
-            WRITE(*,*) 'Error for k-point ', ikpt
+            WRITE (*, *) 'Error for k-point ', ikpt
             call judft_error("Diagonalization via LAPACK failed (Workspace)", no=info)
          END IF
          !Perform diagonalization
@@ -89,11 +89,11 @@ contains
       end if
       eig(:min(size(eig), size(eigTemp))) = eigTemp(:min(size(eig), size(eigTemp)))
       if (info .ne. 0) THEN
-         WRITE(*,*) 'Error for k-point ', ikpt
+         WRITE (*, *) 'Error for k-point ', ikpt
          call judft_error("Diagonalization via LAPACK failed(zhegvx/dsygvx)", no=info)
       END IF
       if (m .ne. ne) THEN
-         WRITE(*,*) 'Error for k-point ', ikpt
+         WRITE (*, *) 'Error for k-point ', ikpt
          call judft_error("Diagonalization via LAPACK failed failed without explicit errorcode.")
       END IF
       call timestop("LAPACK GEV")
@@ -127,13 +127,13 @@ contains
             real, allocatable     :: rwork(:)
             integer, allocatable  :: iwork(:)
             ! Workspace query
-            call dsyevr('V', 'I', 'U', n, hmat%data_r, size(hmat%data_r,1),&
-             0.0, 0.0, 1, ne, abstol, m, eigTemp, zmat%data_r, size(zmat%data_r,1), &
+            call dsyevr('V', 'I', 'U', n, hmat%data_r, size(hmat%data_r, 1), &
+                        0.0, 0.0, 1, ne, abstol, m, eigTemp, zmat%data_r, size(zmat%data_r, 1), &
                         isuppz, rwork_dum, -1, liwork, -1, info)
             lrwork = rwork_dum(1)
             allocate (rwork(lrwork), iwork(liwork(1)))
-            call dsyevr('V', 'I', 'U', n, hmat%data_r, size(hmat%data_r,1), &
-            0.0, 0.0, 1, ne, abstol, m, eigTemp, zmat%data_r, size(zmat%data_r,1), &
+            call dsyevr('V', 'I', 'U', n, hmat%data_r, size(hmat%data_r, 1), &
+                        0.0, 0.0, 1, ne, abstol, m, eigTemp, zmat%data_r, size(zmat%data_r, 1), &
                         isuppz, rwork, lrwork, iwork, liwork(1), info)
          end block
       else
@@ -145,14 +145,14 @@ contains
             real, allocatable     :: rwork(:)
             integer, allocatable  :: iwork(:)
             ! Workspace query
-            call zheevr('V', 'I', 'U', n, hmat%data_c, size(hmat%data_c,1), &
-            0.0, 0.0, 1, ne, abstol, m, eigTemp, zmat%data_c, size(zmat%data_c,1), isuppz, work_dum, &
+            call zheevr('V', 'I', 'U', n, hmat%data_c, size(hmat%data_c, 1), &
+                        0.0, 0.0, 1, ne, abstol, m, eigTemp, zmat%data_c, size(zmat%data_c, 1), isuppz, work_dum, &
                         -1, rwork_dum, -1, liwork, -1, info)
             lwork = work_dum(1)
             lrwork = rwork_dum(1)
             allocate (work(lwork), rwork(lrwork), iwork(liwork(1)))
-            call zheevr('V', 'I', 'U', n, hmat%data_c, size(hmat%data_c,1), &
-            0.0, 0.0, 1, ne, abstol, m, eigTemp, zmat%data_c, size(zmat%data_c,1), isuppz, work, &
+            call zheevr('V', 'I', 'U', n, hmat%data_c, size(hmat%data_c, 1), &
+                        0.0, 0.0, 1, ne, abstol, m, eigTemp, zmat%data_c, size(zmat%data_c, 1), isuppz, work, &
                         lwork, rwork, lrwork, iwork, liwork(1), info)
          end block
       end if
@@ -170,7 +170,7 @@ contains
       real, intent(OUT)           :: eig(:)
 
       integer, parameter:: sp = selected_real_kind(6)
-      integer          :: info, m, n ,lwork
+      integer          :: info, m, n, lwork
 
       call timestart("LAPACK STD-SP")
 
@@ -181,46 +181,46 @@ contains
 
       if (hmat%l_real) then
          BLOCK
-            REAL(kind=sp),allocatable:: h(:,:),z(:,:),eigval_sp(:),work(:)
-            integer,allocatable      :: iwork(:),ifail(:)
-            Allocate(h(size(hmat%data_r,1),size(hmat%data_r,2)))
-            Allocate(eigval_sp(size(hmat%data_r,1)),ifail(size(hmat%data_r,1)))
-            Allocate(z(size(hmat%data_r,1),ne))
-            h=hmat%data_r
-    
-            allocate(work(1),iwork(5*size(h,1)))
+            REAL(kind=sp), allocatable:: h(:, :), z(:, :), eigval_sp(:), work(:)
+            integer, allocatable      :: iwork(:), ifail(:)
+            Allocate (h(size(hmat%data_r, 1), size(hmat%data_r, 2)))
+            Allocate (eigval_sp(size(hmat%data_r, 1)), ifail(size(hmat%data_r, 1)))
+            Allocate (z(size(hmat%data_r, 1), ne))
+            h = hmat%data_r
+
+            allocate (work(1), iwork(5*size(h, 1)))
             call ssyevx('V','I','U',size(h,1),h,size(h,1),0.0,0.0,1,ne,1.0E-8_sp,m,eigval_sp,z,size(z,1),work,-1,iwork,ifail,info)
-            lwork=work(1)
-            deallocate(work)
-            allocate(work(lwork))
-    
-            call ssyevx('V','I','U',size(h,1),h,size(h,1),0.0,0.0,1,ne,1.0E-8_sp,m,eigval_sp,z,size(z,1),work,lwork,iwork,ifail,info)
-            
-            eig(:ne)=eigval_sp(:ne)
-            zmat%data_r=z(:,:ne)
-            deallocate(h,z,eigval_sp,work,iwork)
-           END BLOCK
+            lwork = work(1)
+            deallocate (work)
+            allocate (work(lwork))
+
+           call ssyevx('V','I','U',size(h,1),h,size(h,1),0.0,0.0,1,ne,1.0E-8_sp,m,eigval_sp,z,size(z,1),work,lwork,iwork,ifail,info)
+
+            eig(:ne) = eigval_sp(:ne)
+            zmat%data_r = z(:, :ne)
+            deallocate (h, z, eigval_sp, work, iwork)
+         END BLOCK
       else
          BLOCK
-            COMPLEX(kind=sp),allocatable:: h(:,:),z(:,:),work(:)
-            REAL(kind=sp),allocatable:: eigval_sp(:),rwork(:)
-            integer,allocatable      :: iwork(:),ifail(:)
-            Allocate(h(size(hmat%data_c,1),size(hmat%data_c,2)))
-            Allocate(eigval_sp(size(hmat%data_c,1)),ifail(size(hmat%data_c,1)))
-            Allocate(z(size(hmat%data_c,1),ne),rwork(7*size(hmat%data_c,1)))
-            h=hmat%data_c
-    
-            allocate(work(1),iwork(5*size(hmat%data_c,1)))
+            COMPLEX(kind=sp), allocatable:: h(:, :), z(:, :), work(:)
+            REAL(kind=sp), allocatable:: eigval_sp(:), rwork(:)
+            integer, allocatable      :: iwork(:), ifail(:)
+            Allocate (h(size(hmat%data_c, 1), size(hmat%data_c, 2)))
+            Allocate (eigval_sp(size(hmat%data_c, 1)), ifail(size(hmat%data_c, 1)))
+            Allocate (z(size(hmat%data_c, 1), ne), rwork(7*size(hmat%data_c, 1)))
+            h = hmat%data_c
+
+            allocate (work(1), iwork(5*size(hmat%data_c, 1)))
             call cheevx('V','I','U',size(h,1),h,size(h,1),0.0,0.0,1,ne,0.0,m,eigval_sp,z,size(z,1),work,-1,rwork,iwork,ifail,info)
-            lwork=work(1)
-            deallocate(work)
-            allocate(work(lwork))
-    
-            call cheevx('V','I','U',size(h,1),h,size(h,1),0.0,0.0,1,ne,0.0,m,eigval_sp,z,size(z,1),work,lwork,rwork,iwork,ifail,info)
-            eig(:ne)=eigval_sp(:ne)
-            zmat%data_c=z(:,:ne)
-            deallocate(h,z,eigval_sp,work,rwork,iwork)
-            END BLOCK   
+            lwork = work(1)
+            deallocate (work)
+            allocate (work(lwork))
+
+           call cheevx('V','I','U',size(h,1),h,size(h,1),0.0,0.0,1,ne,0.0,m,eigval_sp,z,size(z,1),work,lwork,rwork,iwork,ifail,info)
+            eig(:ne) = eigval_sp(:ne)
+            zmat%data_c = z(:, :ne)
+            deallocate (h, z, eigval_sp, work, rwork, iwork)
+         END BLOCK
       end if
       call timestop("LAPACK STD-SP")
    end subroutine lapack_diag_sp
@@ -240,20 +240,20 @@ contains
          call judft_error("Matices not square in lapack_reduction")
       if (smat%l_real) then
          ! Perform Cholesky decomposition of B to obtain L (B = L * L^T)
-         call dpotrf('U', n, smat%data_r, size(smat%data_r,1), info)
+         call dpotrf('U', n, smat%data_r, size(smat%data_r, 1), info)
          if (info /= 0) call juDFT_error("Error in Cholesky decomposition of B")
 
          ! Transform A to A' = L^-1 * A * L^-T using chegst
-         call dsygst(1, "U", n, hmat%data_r, size(hmat%data_r,1), smat%data_r, size(smat%data_r,1), info)
+         call dsygst(1, "U", n, hmat%data_r, size(hmat%data_r, 1), smat%data_r, size(smat%data_r, 1), info)
          if (info /= 0) call juDFT_error("Error in dsygst")
 
       else
          ! Perform Cholesky decomposition of B to obtain L (B = L * L^T)
-         call zpotrf('U', n, smat%data_c, size(smat%data_c,1), info)
+         call zpotrf('U', n, smat%data_c, size(smat%data_c, 1), info)
          if (info /= 0) call juDFT_error("Error in Cholesky decomposition of B")
 
          ! Transform A to A' = L^-1 * A * L^-T using chegst
-         call zhegst(1, "U", n, hmat%data_c, size(hmat%data_c,1), smat%data_c, size(smat%data_c,1), info)
+         call zhegst(1, "U", n, hmat%data_c, size(hmat%data_c, 1), smat%data_c, size(smat%data_c, 1), info)
          if (info /= 0) call juDFT_error("Error in zhegst")
       end if
 

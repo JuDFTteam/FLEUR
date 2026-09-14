@@ -9,7 +9,7 @@ MODULE m_fleurinput_read_xml
 CONTAINS
   SUBROUTINE fleurinput_read_xml(xmlOUTFileID,filename_add,cell,sym,atoms,input,noco,vacuum,field,&
        sliceplot,banddos,mpinp,hybinp ,coreSpecInput,wann,&
-       xcpot,forcetheo_data,kpts,kptsSelection,kptsArray,enparaXML,gfinp,hub1inp,juPhon,old_version)
+     xcpot,forcetheo_data,kpts,kptsSelection,kptsArray,enparaXML,gfinp,hub1inp,dfpt,old_version,wannierlib)
     USE m_types_xml
     integer,INTENT(IN)             :: xmlOUTFileID
     CHARACTER(len=*), INTENT(IN) :: filename_add
@@ -27,6 +27,7 @@ CONTAINS
 
     TYPE(t_coreSpecInput),INTENT(OUT),OPTIONAL::coreSpecInput
     TYPE(t_wann),INTENT(OUT),OPTIONAL::wann
+   TYPE(t_wannierlib_wannierize),INTENT(OUT),OPTIONAL::wannierlib
     CLASS(t_xcpot),INTENT(OUT),OPTIONAL::xcpot
     TYPE(t_forcetheo_data),INTENT(OUT),OPTIONAL::forcetheo_data
     TYPE(t_enparaXML),INTENT(OUT),OPTIONAL::enparaXML
@@ -34,7 +35,7 @@ CONTAINS
     TYPE(t_kpts),ALLOCATABLE,INTENT(INOUT),OPTIONAL::kptsArray(:)
     TYPE(t_gfinp),INTENT(OUT),OPTIONAL::gfinp
     TYPE(t_hub1inp),INTENT(OUT),OPTIONAL::hub1inp
-    TYPE(t_juPhon),INTENT(OUT),OPTIONAL::juPhon
+    TYPE(t_dfpt),INTENT(OUT),OPTIONAL::dfpt
     CHARACTER(LEN=40),INTENT(OUT),OPTIONAL::kptsSelection(3)
     LOGICAL,INTENT(INOUT),OPTIONAL :: old_version
 
@@ -62,13 +63,14 @@ CONTAINS
     if (present(hybinp)) call hybinp%read_xml(xml)
     if (present(coreSpecInput)) call coreSpecInput%read_xml(xml)
     if (present(wann)) call wann%read_xml(xml)
+   if (present(wannierlib)) call wannierlib%read_xml(xml)
     if (present(xcpot)) call xcpot%read_xml(xml)
     if (present(forcetheo_data)) call forcetheo_data%read_xml(xml)
     if (present(enparaXML)) call enparaXML%read_xml(xml)
     if (present(kpts)) CALL kpts%read_xml(xml)
     if (present(gfinp)) CALL gfinp%read_xml(xml)
     if (present(hub1inp)) CALL hub1inp%read_xml(xml)
-    if (present(juPhon)) CALL juPhon%read_xml(xml)
+    if (present(dfpt)) CALL dfpt%read_xml(xml)
     IF (present(kptsSelection).and.xml%GetNumberOfNodes('/fleurInput/cell/bzIntegration/kPointListSelection')>0) THEN
        kptsSelection(:) = ''
        kptsSelection(1) = TRIM(ADJUSTL(xml%GetAttributeValue('/fleurInput/cell/bzIntegration/kPointListSelection/@listName')))

@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -54,7 +54,12 @@
           !          WRITE (oUnit,FMT=8000) name
 8000      FORMAT (' wrtdop title:',10a8)
           WRITE (nu) iop,dop,it
-          DO jsp = 1,SIZE(fr,4)
+          !Only the input%jspins diagonal spin components can be stored in this
+          !file format, as loddop reads exactly that many blocks back. For noco
+          !calculations with l_mperp the arrays may carry additional off-diagonal
+          !components. These are dropped here. Writing them would misalign the
+          !file for loddop. Their storage requires the HDF5 charge density IO.
+          DO jsp = 1,MIN(SIZE(fr,4),input%jspins)
              WRITE (nu) jsp
              WRITE (nu) atoms%ntype
              DO n = 1,atoms%ntype

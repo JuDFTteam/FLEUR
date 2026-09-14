@@ -26,6 +26,11 @@ pytest_plugins = ("pytest_plugins.pytest_dependency",
 
 LOGGER = logging.getLogger(__name__)
 
+# Maximum time (in seconds) a single fleur/fleur_MPI execution may run before
+# execute_fleur() aborts it and fails the test, e.g. to catch a hang caused by a
+# test requiring an optional library (wannier, ...) that was not linked in.
+FLEUR_EXECUTION_TIMEOUT = 15 * 60
+
 # pytest logfile: --log-file=path
 # --log-file-level
 #TODO other optional aiida tests
@@ -904,7 +909,12 @@ def execute_fleur(fleur_binary, work_dir, mpi_command, pytestconfig, test_logger
                 print('FLEUR execution:')
                 print('arg_list:',arg_list)
                 #print('env:',run_env)
-                p1 = subprocess.run(arg_list, env=run_env, stdout=f_stdout, stderr=f_stderr, check=False)
+                try:
+                    p1 = subprocess.run(arg_list, env=run_env, stdout=f_stdout, stderr=f_stderr, check=False, timeout=FLEUR_EXECUTION_TIMEOUT)
+                except subprocess.TimeoutExpired:
+                    os.chdir(testdir)
+                    test_logger.error(f'Fleur execution timed out after {FLEUR_EXECUTION_TIMEOUT} seconds')
+                    pytest.fail(f'Fleur execution timed out after {FLEUR_EXECUTION_TIMEOUT} seconds')
 
         # Check per hand if successful:
         with open(f"{workdir}/stdout", "r") as f_stdout:

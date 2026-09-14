@@ -1,10 +1,11 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_hs_int_direct
+   implicit none
 CONTAINS
    SUBROUTINE hs_int_direct(fmpi, stars, bbmat, gvecPr, gvec, kvecPr, kvec, nvPr, nv, &
                           & iTkin, fact, l_smat, l_fullj, vpw, hmat, smat, theta_alt, vtau_pw)
@@ -49,18 +50,23 @@ CONTAINS
       ! Optional V_tau star coefficients for MetaGGA interstitial contribution
       COMPLEX, OPTIONAL, INTENT(IN) :: vtau_pw(:)
 
-      INTEGER :: ikGPr, ikG, ikG0, gPrG(3), gInd
+      INTEGER :: ikGPr, ikG, ikG0, gPrG(3), gInd, gShift(3), gBound(3)
       COMPLEX :: th, ts, phase
       REAL    :: bvecPr(3), bvec(3), r2
 
+      gShift = nint(kvecPr - kvec - stars%center)
+      gBound = [stars%mx1, stars%mx2, stars%mx3]
+
       !$OMP PARALLEL DO SCHEDULE(dynamic) DEFAULT(none) &
-      !$OMP SHARED(fmpi, stars, bbmat, gvecPr, gvec, kvecPr, kvec) &
+      !$OMP SHARED(fmpi, stars, bbmat, gvecPr, gvec, kvecPr, kvec, gShift, gBound) &
       !$OMP SHARED(nvPr, nv, iTkin, fact, l_smat, l_fullj, vpw, hmat, smat, theta_alt, vtau_pw) &
       !$OMP PRIVATE(ikGPr, ikG, ikG0, gPrG, gInd, th, ts, phase, bvecPr, bvec, r2)
       DO ikG = fmpi%n_rank + 1, nv, fmpi%n_size
          ikG0 = (ikG-1) / fmpi%n_size + 1
          DO  ikGPr = 1, MERGE(nvPr, MIN(ikG, nvPr), l_fullj)
-            gPrG = fact * (gvecPr(:, ikGPr) - gvec(:, ikG))
+            gPrG = fact * (gvecPr(:, ikGPr) - gvec(:, ikG) + gShift)
+
+            if (any(abs(gPrG) > gBound)) cycle
 
             gInd = stars%ig(gPrG(1), gPrG(2), gPrG(3))
 

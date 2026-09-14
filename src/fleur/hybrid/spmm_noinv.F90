@@ -62,7 +62,7 @@ contains
          call timestop("copyin gpu")
 
          !$acc kernels present(mat_in_line, mat_in)
-         mat_in_line = mat_in(hybdat%nbasp + 1, :)
+         mat_in_line = mat_in(hybdat%n_mt + 1, :)
          !$acc end kernels
          
          call timestart("reorder forw")
@@ -194,7 +194,7 @@ contains
                      END DO
                      indx3 = indx3 + fi%atoms%neq(itype1)*ishift1
                   END DO
-                  IF (indx3 /= hybdat%nbasp) call judft_error('spmvec: error counting index indx3')
+                  IF (indx3 /= hybdat%n_mt) call judft_error('spmvec: error counting index indx3')
 
                   n_size = mpdata%num_radbasfn(l, itype) - 1
                   !$acc kernels present(mat_out, mt2_tmp, mat_in_line) default(none)
@@ -299,7 +299,7 @@ contains
 
                   !$acc host_data use_device(mat_in, mt2_tmp, mat_out)
                   call CPP_zgemv("T", n_size, n_vec, cmplx_1, mat_in(indx1,1), sz_in, &
-                     mt2_tmp(1,0,max_l_cut + 1, iatom), 1, cmplx_1, mat_out(hybdat%nbasp + 1, 1), sz_out)
+                     mt2_tmp(1,0,max_l_cut + 1, iatom), 1, cmplx_1, mat_out(hybdat%n_mt + 1, 1), sz_out)
                   !$acc end host_data
                   indx0 = indx0 + ishift
                END DO

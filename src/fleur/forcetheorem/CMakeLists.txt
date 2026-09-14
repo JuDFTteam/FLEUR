@@ -8,5 +8,3 @@ src/fleur/forcetheorem/dmi_scf.F90
 src/fleur/forcetheorem/jij.F90
 src/fleur/forcetheorem/ssdisp.F90
 )
-set(inpgen_F90 ${inpgen_F90}
-)

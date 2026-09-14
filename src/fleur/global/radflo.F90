@@ -53,7 +53,7 @@ CONTAINS
     USE m_constants
     USE m_radsra
     USE m_radsrdn
-    USE m_differ
+    USE m_relLO_dirac, ONLY : relLO_dirac_radial
     USE m_types_usdus
     USE m_types_mpi
     USE m_types_atoms
@@ -75,13 +75,12 @@ CONTAINS
     REAL,    INTENT (OUT):: flo(atoms%jmtd,2,atoms%nlod)
     !     ..
     !     .. Local Scalars ..
-    INTEGER i,j,k,l,ilo,jlo,nodelo,noded ,ierr,msh
-    REAL    rn,t1,t2,d ,rr,fn,fl,fj,e,uds,duds,ddn,c,rmt
+    INTEGER i,j,k,l,ilo,jlo,nodelo,noded
+    REAL    e,uds,duds,ddn,c
     LOGICAL ofdiag, loutput
     !     ..
     !     .. Local Arrays ..
     REAL dulo(atoms%jmtd),ulo(atoms%jmtd),glo(atoms%jmtd,2),filo(atoms%jmtd,2,atoms%nlod)
-    REAL, ALLOCATABLE :: f_rel(:,:),vrd(:)
     REAL help(atoms%nlod+2,atoms%nlod+2)
     !     ..
     c = c_light(1.0)
@@ -99,12 +98,21 @@ CONTAINS
     !---> calculate the radial wavefunction with the appropriate
     !---> energy parameter (ello)
     DO ilo = 1,atoms%nlo(ntyp)
-       CALL radsra(ello(ilo,ntyp),atoms%llo(ilo,ntyp),vr(:),atoms%rmsh(1,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),c,&
-            usdus%ulos(ilo,ntyp,jsp),usdus%dulos(ilo,ntyp,jsp),nodelo,flo(:,1,ilo), flo(:,2,ilo))
-       !
-       !+apw+lo
-       IF (atoms%l_dulo(ilo,ntyp).OR.atoms%ulo_der(ilo,ntyp).GE.1) THEN
-          IF (atoms%ulo_der(ilo,ntyp).LE.8) THEN
+       IF (atoms%l_relLO(ilo,ntyp)) THEN
+          !--->    relativistic local orbital (relLO): the raw (only renormalized) Dirac
+          !--->    j=l-1/2 solution d0 (Kunes et al., PRB 64, 153102), shared with the SOC
+          !--->    radial integrals (see m_relLO_dirac), instead of the scalar-relativistic
+          !--->    radsra/radsrdn used for ordinary LOs.
+          e = ello(ilo,ntyp)
+          CALL relLO_dirac_radial(atoms,ntyp,atoms%llo(ilo,ntyp),atoms%nqn_relLO(ilo,ntyp),e,vr,&
+               flo(:,1,ilo),flo(:,2,ilo),usdus%ulos(ilo,ntyp,jsp),usdus%dulos(ilo,ntyp,jsp))
+          nodelo = 0
+       ELSE
+          CALL radsra(ello(ilo,ntyp),atoms%llo(ilo,ntyp),vr(:),atoms%rmsh(1,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),c,&
+               usdus%ulos(ilo,ntyp,jsp),usdus%dulos(ilo,ntyp,jsp),nodelo,flo(:,1,ilo), flo(:,2,ilo))
+          !
+          !+apw+lo
+          IF (atoms%l_dulo(ilo,ntyp).OR.atoms%ulo_der(ilo,ntyp).GE.1) THEN
              !--->    calculate orthogonal energy derivative at e
              i = atoms%ulo_der(ilo,ntyp)
              IF(atoms%l_dulo(ilo,ntyp)) i=1
@@ -120,56 +128,10 @@ CONTAINS
              flo (:,:,ilo)   = flo (:,:,ilo)/ddn ! Normalize ulo (flo) if APW+lo is not used
              filo(:,:,ilo)   = filo(:,:,ilo)/ddn ! and scale its integral (filo) accordingly
              usdus%dulos(ilo,ntyp,jsp) = duds/ddn          !   (setabc1lo and slomat assume <flo|flo>=1)
-             usdus%ulos (ilo,ntyp,jsp) =  uds/ddn          ! 
-          ELSE
-             !
-             !          test:
-             !
-             ! set up core-mesh
-             d = EXP(atoms%dx(ntyp))
-             rmt = atoms%rmsh(1,ntyp)
-             DO i = 1, atoms%jri(ntyp) - 1
-                rmt = rmt * d
-             ENDDO
-             rn = rmt
-             msh = atoms%jri(ntyp)
-             DO WHILE (rn < rmt + 20.0)
-                msh = msh + 1
-                rn = rn*d
-             ENDDO
-             rn = atoms%rmsh(1,ntyp)*( d**(msh-1) )
-             ALLOCATE ( f_rel(msh,2),vrd(msh) )
-
-             ! extend core potential (linear with slope t1 / a.u.)
-
-             DO j = 1, atoms%jri(ntyp)
-                vrd(j) = vr(j)
-             ENDDO
-             t1=0.125
-             t2 = vrd(atoms%jri(ntyp))/rmt - rmt*t1
-             rr = rmt
-             DO j = atoms%jri(ntyp) + 1, msh
-                rr = d*rr
-                vrd(j) = rr*( t2 + rr*t1 )
-             ENDDO
-             e = ello(ilo,ntyp)
-             fn = 6.0 ; fl = 1.0 ; fj = 0.5
-             CALL differ(fn,fl,fj,c,82.0,atoms%dx(ntyp),atoms%rmsh(1,ntyp),&
-                  rn,d,msh,vrd, e, f_rel(1,1),f_rel(1,2),ierr)
-
-             f_rel(:,1) = 2 * f_rel(:,1)
-             f_rel(:,2) = 2 * f_rel(:,2)
-             rn = atoms%rmsh(1,ntyp)
-             DO i = 1, atoms%jri(ntyp) 
-                rn = rn * d
-                WRITE(123,'(5f20.15)') rn,f_rel(i,1),f_rel(i,2), f(i,1,1),f(i,2,1)
-             ENDDO
-
-             STOP
+             usdus%ulos (ilo,ntyp,jsp) =  uds/ddn          !
           ENDIF
-
-       ENDIF
-       !-apw+lo
+          !-apw+lo
+       END IF
        !
        !--->    calculate the overlap between these fcn. and the radial functions
        !--->    of the flapw basis with the same l

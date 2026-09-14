@@ -1,11 +1,12 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_aline
   USE m_juDFT
+   implicit none
 CONTAINS
   SUBROUTINE aline(eig_id, nk,atoms,sym,&
        cell,input, jsp,el,usdus,lapw,tlmplm, noco, nococonv ,eig,ne,zMat,hmat,smat)
@@ -72,8 +73,6 @@ CONTAINS
 
     COMPLEX,   PARAMETER :: one_c=(1.0,0.0), zro_c=(0.0,0.0)
     COMPLEX, ALLOCATABLE :: help_c(:),h_c(:,:),s_c(:,:)
-    COMPLEX  zdotc
-    EXTERNAL zdotc
     REAL,    ALLOCATABLE :: rwork(:)
 
     LOGICAL:: l_real
@@ -186,7 +185,7 @@ CONTAINS
              !--->       for LAPACK call
              zMat%data_r(i,j) = ddot(ne,help_r,1,h_r(1,j),1)
           ELSE
-             zMat%data_c(i,j) = zdotc(ne,help_c,1,h_c(1,j),1)
+             zMat%data_c(i,j) = DOT_PRODUCT(help_c(:ne),h_c(:ne,j))
           ENDIF
        END DO
     END DO

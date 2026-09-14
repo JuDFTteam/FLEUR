@@ -6,6 +6,7 @@ src/fleur/eigen/eigen.F90
 src/fleur/eigen/hlomat.F90
 src/fleur/eigen/hs_int.F90
 src/fleur/eigen/hsmt_fjgj.F90
+src/fleur/eigen/abcoeff_store.F90
 src/fleur/eigen/hsmt_ab.F90
 src/fleur/eigen/hsmt_sph.F90
 src/fleur/eigen/hsmt_nonsph.F90

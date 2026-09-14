@@ -9,6 +9,7 @@ CONTAINS
    COMPLEX FUNCTION vintcz(stars,vacuum,cell,input,field,z,nrec2,psq,vnew,rhobar,sig1dh,vz1dh,alphm,vslope,l_dfptvgen)
       USE m_constants
       USE m_types
+      USE m_lagrange3
 
       IMPLICIT NONE
 
@@ -59,20 +60,16 @@ CONTAINS
          q = zf - im
          ! For q/=0 in DFPT, the is no G+q=0, so all stars are treated in the G/=0 way.
          IF (nrec2.EQ.1.AND.((.NOT.l_dfptvgen).OR.norm2(stars%center)<1e-8)) THEN
-            fit = 0.5* (q-1.)* (q-2.)*REAL(vnew(im,1,ivac)) -&
-               &            q* (q-2.)*REAL(vnew(im+1,1,ivac)) +&
-               &        0.5*q* (q-1.)*REAL(vnew(im+2,1,ivac))
+            fit = lagrange3(q,REAL(vnew(im,1,ivac)),REAL(vnew(im+1,1,ivac)),REAL(vnew(im+2,1,ivac)))
             vintcz = CMPLX(fit,0.0)
          ELSE IF (im+2.LE.vacuum%nmzxy) THEN
-            if (z<0) THEN 
-               call stars%map_2nd_vac(vacuum,nrec2,nrec2r,phas) ! TODO: AN TB; will this work?
+            if (z<0) THEN
+               call stars%map_2nd_vac(vacuum,nrec2,nrec2r,phas)
             else
-               nrec2r=nrec2 
+               nrec2r=nrec2
                phas=cmplx(1.0,0.0)
-            end if      
-            vintcz = phas*0.5* (q-1.)* (q-2.)*vnew(im,nrec2r,ivac) -&
-                                    q* (q-2.)*vnew(im+1,nrec2r,ivac) +&
-                                0.5*q* (q-1.)*vnew(im+2,nrec2r,ivac)
+            end if
+            vintcz = phas*lagrange3(q,vnew(im,nrec2r,ivac),vnew(im+1,nrec2r,ivac),vnew(im+2,nrec2r,ivac))
          END IF
          RETURN
       END IF

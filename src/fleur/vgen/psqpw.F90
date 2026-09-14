@@ -16,8 +16,8 @@ module m_psqpw
 
 contains
 
-  subroutine psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym, juphon,  &
-       &     den, ispin, l_xyav, potdenType, psq, rhoimag, stars2, iDtype, iDir, rho0, iDir2 )
+  subroutine psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym,  &
+       &     den, ispin, l_xyav, potdenType, psq, sternheimerJob, rhoimag, stars2, iDtype, iDir, rho0, iDir2 )
 
 #ifdef CPP_MPI
     use mpi
@@ -28,6 +28,7 @@ contains
     use m_sphbes
     use m_qsf
     USE m_mpi_reduce_tool
+    
      
      
     use m_types
@@ -43,7 +44,6 @@ contains
     type(t_cell),       intent(in)  :: cell
     type(t_input),      intent(in)  :: input
     type(t_sym),        intent(in)  :: sym
-    type(t_juphon),     intent(in)  :: juphon
     type(t_potden),     intent(in)  :: den
      
     logical,            intent(in)  :: l_xyav
@@ -54,6 +54,7 @@ contains
     complex,            intent(out) :: psq(stars%ng3)
     !complex,            intent(out) :: sigma_disc(2)
 
+    type(t_sternheimerJob),optional,intent(in) :: sternheimerJob
     type(t_potden),optional,intent(in) :: rhoimag, rho0
 
     TYPE(t_stars), OPTIONAL, INTENT(IN) :: stars2
@@ -92,7 +93,7 @@ contains
     call timestart("mpmom")
     ! DFPT case:
     ! Additional contributions to qlm due to surface corrections.
-    call mpmom( input, fmpi, atoms, sphhar, stars, sym, juphon, cell,   qpw, rho, potdenType, qlm, ispin, &
+    call mpmom( input, fmpi, atoms, sphhar, stars, sym, cell,   qpw, rho, potdenType, qlm, ispin, sternheimerJob=sternheimerJob, &
               & rhoimag=rhoimag, stars2=stars2, iDtype=iDtype, iDir=iDir, rho0=rho0, iDir2=iDir2 )
     call timestop("mpmom")
 

@@ -160,9 +160,9 @@ CONTAINS
             i3 = 0
             ind3 = stars%ig(i1,i2,i3)
             IF (ind3.EQ.0) CYCLE
-            phase = stars%rgphs(i1,i2,i3)
-            ind2 = stars%ig2(ind3)
             ind2 = stars%i2g(i1,i2)
+            phase = stars%r2gphs(i1,i2)
+            IF (fac<0.0) phase = CONJG(phase)
             IF (ind2.EQ.0) THEN
                WRITE (oUnit,FMT=8000) ik,jk
    8000         FORMAT (' **** error in map2 for 2-d stars',2i5)
@@ -291,8 +291,9 @@ CONTAINS
             i3 = 0
             ind3 = stars%ig(i1,i2,i3)
             IF (ind3.EQ.0) CYCLE
-            phase = stars%rgphs(i1,i2,i3)
             ind2 = stars%i2g(i1,i2)
+            phase = stars%r2gphs(i1,i2)
+            IF (fac<0.0) phase = CONJG(phase)
             IF (ind2.EQ.0) THEN
                WRITE (oUnit,FMT=8001) ik,jk
    8001         FORMAT (' **** error in map2 for 2-d stars',2i5)

@@ -53,9 +53,6 @@ MODULE m_types_cdnval
 
       REAL, ALLOCATABLE    :: rhoLRes(:,:,:,:,:)
 
-      ! Arrays for hyperfine field contributions
-      REAL, ALLOCATABLE    :: hypFineContribs(:,:,:,:)
-
       CONTAINS
          PROCEDURE,PASS :: init => moments_init
    END TYPE t_moments
@@ -158,10 +155,10 @@ SUBROUTINE eigVecCoeffs_init(thisEigVecCoeffs,input,atoms,jspin,noccbd,l_bothSpi
 
    IF (l_bothSpins) THEN
       ALLOCATE (thisEigVecCoeffs%ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat,input%jspins))
-      ALLOCATE (thisEigVecCoeffs%abcof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),n_r,atoms%nat,input%jspins))
+      ALLOCATE (thisEigVecCoeffs%abcof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),0:n_r-1,atoms%nat,input%jspins))
    ELSE
       ALLOCATE (thisEigVecCoeffs%ccof(-atoms%llod:atoms%llod,noccbd,atoms%nlod,atoms%nat,jspin:jspin))
-      ALLOCATE (thisEigVecCoeffs%abcof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),n_r,atoms%nat,jspin:jspin))
+      ALLOCATE (thisEigVecCoeffs%abcof(noccbd,0:atoms%lmaxd*(atoms%lmaxd+2),0:n_r-1,atoms%nat,jspin:jspin))
    END IF
 
    thisEigVecCoeffs%ccof = CMPLX(0.0,0.0)
@@ -263,9 +260,6 @@ SUBROUTINE moments_init(thisMoments,mpi,input,sphhar,atoms)
       ALLOCATE(thisMoments%rhoLRes(atoms%jmtd,0:sphhar%nlhd,0:(input%lResMax*(input%lResMax+1))/2+input%lResMax,atoms%ntype,4))
       thisMoments%rhoLRes = 0.0
    END IF
-
-   ALLOCATE(thisMoments%hypFineContribs(-1:3,atoms%ntype,input%jspins,3))  ! Contributions to the Hyperfine field. The last index is supposed to be for the term. At the moment only the contact term is implemented.
-   thisMoments%hypFineContribs = 0.0
 
 END SUBROUTINE moments_init
 

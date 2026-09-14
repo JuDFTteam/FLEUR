@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_vham
 
     !----------------------------------------------------------------------------------- !
@@ -18,6 +23,7 @@ MODULE m_vham
     !------------------------------------------------------------------------------------! 
 
 
+   implicit none
     CONTAINS
 
     SUBROUTINE v_ham(input,usdus,atoms,kpts,cell,lapw,sym,noco,fmpi,nococonv,fjgj,den,jspin,kptindx,hmat)
@@ -26,6 +32,7 @@ MODULE m_vham
         USE m_constants
         USE m_juDFT
         USE m_hsmt_ab
+        USE m_abcoeff_store
         USE m_hsmt_fjgj
         USE m_ylm
         USE m_radsrd
@@ -54,14 +61,11 @@ MODULE m_vham
             COMPLEX c_0, a1, b1, a2, b2, power_fac, exponent
             REAL norm1_W, norm2_W, V_inp
             COMPLEX, ALLOCATABLE :: abG1(:,:),abG2(:,:),temp_nIJ(:,:), c_pairs(:,:)
-            ALLOCATE(abG1(2*atoms%lmaxd*(atoms%lmaxd+2)+2,MAXVAL(lapw%nv)))
-            ALLOCATE(abG2(2*atoms%lmaxd*(atoms%lmaxd+2)+2,MAXVAL(lapw%nv)))
+            ! abG1/abG2 are allocated (and filled) inside hsmt_ab.
             ALLOCATE(temp_nIJ(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const))
             ALLOCATE(c_pairs(MAXVAL(lapw%nv),MAXVAL(lapw%nv)))
 
             !c_pairs=cmplx_0
-            abG1=cmplx_0
-            abG2=cmplx_0
             temp_nIJ=cmplx_0
             c_pairs=cmplx_0
 
@@ -74,7 +78,22 @@ MODULE m_vham
                 ll1atom1=latom1*(latom1+1)
                 norm1_W = usdus%ddn(latom1,atoms%itype(natom1),jspin)**0.5
                 CALL fjgj%calculate(input,atoms,cell,lapw,noco,usdus,atoms%itype(natom1),jspin)
-                CALL hsmt_ab(sym,atoms,noco,nococonv,jspin,1,atoms%itype(natom1),natom1,cell,lapw,fjgj,abG1,abSizeG1,.FALSE.)
+                ! Own the abG mapping in the caller's scope -- see types_abc.F90 for why
+                ! hsmt_ab must not do the `enter data` on its own dummy argument.
+                IF (.NOT.l_use_abcoeff_store) THEN
+                   abSizeG1 = hsmt_ab_size(atoms, atoms%itype(natom1), .FALSE.)
+                   IF (ALLOCATED(abG1)) THEN
+                      IF (SIZE(abG1,1)/=2*abSizeG1 .OR. SIZE(abG1,2)/=lapw%nv(1)) THEN
+                         !$acc exit data delete(abG1)
+                         DEALLOCATE(abG1)
+                      END IF
+                   END IF
+                   IF (.NOT.ALLOCATED(abG1)) THEN
+                      ALLOCATE(abG1(2*abSizeG1, lapw%nv(1)))
+                      !$acc enter data create(abG1)
+                   END IF
+                END IF
+                CALL hsmt_ab(sym,atoms,noco,nococonv,jspin,1,atoms%itype(natom1),natom1,cell,lapw,fjgj,abG1,abSizeG1,.FALSE.,l_store=.TRUE.)
                 Do atom2=1,atoms%lda_v(i_v)%numOtherAtoms
                     natom2=atoms%lda_v(i_v)%otherAtomIndices(atom2)
                     latom2=atoms%lda_v(i_v)%otherAtomL
@@ -82,7 +101,22 @@ MODULE m_vham
                     norm2_W = usdus%ddn(latom2,atoms%itype(natom2),jspin)**0.5
                     power_fac=(cmplx(0, -1)**latom1) *(cmplx(0, 1)**latom2) 
                     CALL fjgj%calculate(input,atoms,cell,lapw,noco,usdus,atoms%itype(natom2),jspin)
-                    CALL hsmt_ab(sym,atoms,noco,nococonv,jspin,1,atoms%itype(natom2),natom2,cell,lapw,fjgj,abG2,abSizeG2,.FALSE.)
+                    ! Own the abG mapping in the caller's scope -- see types_abc.F90 for why
+                    ! hsmt_ab must not do the `enter data` on its own dummy argument.
+                    IF (.NOT.l_use_abcoeff_store) THEN
+                       abSizeG2 = hsmt_ab_size(atoms, atoms%itype(natom2), .FALSE.)
+                       IF (ALLOCATED(abG2)) THEN
+                          IF (SIZE(abG2,1)/=2*abSizeG2 .OR. SIZE(abG2,2)/=lapw%nv(1)) THEN
+                             !$acc exit data delete(abG2)
+                             DEALLOCATE(abG2)
+                          END IF
+                       END IF
+                       IF (.NOT.ALLOCATED(abG2)) THEN
+                          ALLOCATE(abG2(2*abSizeG2, lapw%nv(1)))
+                          !$acc enter data create(abG2)
+                       END IF
+                    END IF
+                    CALL hsmt_ab(sym,atoms,noco,nococonv,jspin,1,atoms%itype(natom2),natom2,cell,lapw,fjgj,abG2,abSizeG2,.FALSE.,l_store=.TRUE.)
                     DO iG2=1,lapw%nv(jspin)
                         exponent=EXP(cmplx(0.0,tpi_const)*dot_product(atoms%lda_v(i_v)%atomShifts(:,atom2),(kpts%bk(:,kptindx)+lapw%gvec(:, iG2,jspin))))
                         temp_nIJ(-lmaxU_const:lmaxU_const,-lmaxU_const:lmaxU_const)=TRANSPOSE(conjg(den%nIJ_llp_mmp(:,:,i_pair,jspin)))
@@ -100,11 +134,17 @@ MODULE m_vham
                                                  (conjg(a1)*a2 + conjg(b1)*a2*norm1_W + conjg(a1)*b2*norm2_W + conjg(b1)*b2*norm2_W*norm1_W)
                                 ENDDO
                             ENDDO
-                            c_pairs(iG1,iG2)=c_0+c_pairs(iG1,iG2) 
+                            c_pairs(iG1,iG2)=c_0+c_pairs(iG1,iG2)
                         ENDDO
                     ENDDO
+                    !$acc exit data delete(abG2)
+                    ! cache abG2 for later reuse (no-op unless storage enabled)
+                    CALL abcoeff_store_save(abG2, lapw%nk, 1, jspin, natom2, .FALSE.)
                     i_pair=i_pair+1
                 ENDDO
+                !$acc exit data delete(abG1)
+                ! cache abG1 for later reuse (no-op unless storage enabled)
+                CALL abcoeff_store_save(abG1, lapw%nk, 1, jspin, natom1, .FALSE.)
             ENDDO
 
 

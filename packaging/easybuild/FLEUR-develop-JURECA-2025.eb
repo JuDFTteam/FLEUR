@@ -1,0 +1,61 @@
+easyblock = 'CMakeMake'
+
+name = 'FLEUR'
+version = 'develop'  
+homepage = 'https://iffgit.fz-juelich.de/fleur/fleur'
+description = """FLEUR is a density functional theory package implementing the all-electron
+full-potential linearized augmented-plane-wave method. It allows for the ab initio
+calculation of properties of crystals, thin films, and surfaces, with a special 
+focus on magnetism."""
+
+toolchain = {'name': 'GCCcore', 'version': '.13.3.0'}
+
+sources = []
+
+dependencies = [
+    ('Stages/2025', EXTERNAL_MODULE),
+    ('Intel/2024.2.0', EXTERNAL_MODULE),
+    ('imkl/2024.2.0', EXTERNAL_MODULE),
+    ('ParaStationMPI/5.10.0-1', EXTERNAL_MODULE),
+    ('lxml/5.3.0', EXTERNAL_MODULE),
+    ('HDF5/1.14.5', EXTERNAL_MODULE),
+    ('ELPA/2024.05.001', EXTERNAL_MODULE),
+    ('Wannier90/1.2', EXTERNAL_MODULE)
+]
+
+builddependencies = [
+    ('Stages/2025', EXTERNAL_MODULE),
+    ('Intel/2024.2.0', EXTERNAL_MODULE),
+    ('imkl/2024.2.0', EXTERNAL_MODULE),
+    ('ParaStationMPI/5.10.0-1', EXTERNAL_MODULE),
+    ('CMake/3.29.3', EXTERNAL_MODULE),
+    ('lxml/5.3.0', EXTERNAL_MODULE),
+    ('HDF5/1.14.5', EXTERNAL_MODULE),
+    ('ELPA/2024.05.001', EXTERNAL_MODULE),
+    ('Wannier90/1.2', EXTERNAL_MODULE)
+]
+
+preconfigopts = """
+mkdir -p %(builddir)s/%(version)s
+cd %(builddir)s/%(version)s
+git clone https://iffgit.fz-juelich.de/fleur/fleur.git
+"""
+
+configure_cmd = 'cd %(builddir)s/%(version)s && echo $PWD && FC=mpif90 CC=mpicc CXX=mpicxx ./fleur/configure.sh -libxc TRUE'
+build_cmd = 'cd %(builddir)s/%(version)s/build && echo $PWD && make -j16'
+
+skipsteps = ['install']
+buildopts = ' && mkdir -p %(installdir)s && cp -r * %(installdir)s/'
+separate_build_dir = True
+modextrapaths = {
+    'PATH': '',
+}
+
+sanity_check_paths = {
+    'files': ['fleur_MPI'],
+    'dirs': [],
+}
+
+moduleclass = 'chem'
+
+

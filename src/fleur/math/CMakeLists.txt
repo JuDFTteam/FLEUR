@@ -23,6 +23,7 @@ src/fleur/math/LattHarmsSphHarmsConv.f90
 src/fleur/math/ExpSave.f90
 src/fleur/math/intgr.F90
 src/fleur/math/trapz.f90
+src/fleur/math/lagrange3.f90
 src/fleur/math/ylm4.F90
 src/fleur/math/gradYlm.f90
 src/fleur/math/pol_angle.f90

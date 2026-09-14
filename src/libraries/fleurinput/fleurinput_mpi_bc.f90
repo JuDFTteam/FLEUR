@@ -1,10 +1,15 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_fleurinput_mpi_bc
   USE m_types_fleurinput
   IMPLICIT NONE
 CONTAINS
   SUBROUTINE fleurinput_mpi_bc(cell,sym,atoms,input,noco,vacuum,field,&
        sliceplot,banddos,mpinp,hybinp ,coreSpecInput,wann,&
-       xcpot,forcetheo_data,kpts,enparaXML,gfinp,hub1inp,mpi_comm,juPhon,rank)
+      xcpot,forcetheo_data,kpts,enparaXML,gfinp,hub1inp,mpi_comm,dfpt,rank,wannierlib)
     USE m_types_xml
 
 
@@ -22,13 +27,14 @@ CONTAINS
      
     TYPE(t_coreSpecInput),INTENT(INOUT)::coreSpecInput
     TYPE(t_wann),INTENT(INOUT)::wann
+    TYPE(t_wannierlib_wannierize),INTENT(INOUT),OPTIONAL::wannierlib
     CLASS(t_xcpot),ALLOCATABLE,INTENT(INOUT)::xcpot
     TYPE(t_forcetheo_data),INTENT(INOUT)::forcetheo_data
     TYPE(t_enparaXML),INTENT(INOUT)::enparaXML
     TYPE(t_kpts),INTENT(INOUT)::kpts
     TYPE(t_gfinp),INTENT(INOUT)::gfinp
     TYPE(t_hub1inp),INTENT(INOUT)::hub1inp
-    TYPE(t_juPhon),INTENT(INOUT)::juPhon
+    TYPE(t_dfpt),INTENT(INOUT)::dfpt
     INTEGER,INTENT(IN)::mpi_comm
     INTEGER,OPTIONAL,INTENT(IN)::rank
 
@@ -46,13 +52,14 @@ CONTAINS
     CALL mpinp%mpi_bc(mpi_comm, rank)
     CALL coreSpecInput%mpi_bc(mpi_comm,rank)
     CALL wann%mpi_bc(mpi_comm,rank)
+    IF (PRESENT(wannierlib)) CALL wannierlib%mpi_bc(mpi_comm,rank)
     CALL forcetheo_data%mpi_bc(mpi_comm,rank)
     CALL enparaXML%mpi_bc(mpi_comm,rank)
     CALL kpts%mpi_bc(mpi_comm,rank)
     CALL gfinp%mpi_bc(mpi_comm,rank)
     CALL hub1inp%mpi_bc(mpi_comm,rank)
     CALL xcpot%mpi_bc(mpi_comm,rank)
-    CALL juPhon%mpi_bc(mpi_comm,rank)
+    CALL dfpt%mpi_bc(mpi_comm,rank)
 
   END SUBROUTINE fleurinput_mpi_bc
 END MODULE m_fleurinput_mpi_bc

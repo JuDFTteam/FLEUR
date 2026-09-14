@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -14,6 +14,7 @@ CONTAINS
       USE m_hsmt_fjgj
       USE m_types
       USE m_hsmt_ab
+      USE m_abcoeff_store
 #ifdef _OPENACC
       USE cublas
 #define CPP_zgemm cublaszgemm
@@ -79,11 +80,8 @@ CONTAINS
       END IF
 
       ALLOCATE(ab_select(size_ab_select, 2 * atoms%lmaxd * (atoms%lmaxd + 2) + 2))
-      ALLOCATE(abCoeffs(2 * atoms%lmaxd * (atoms%lmaxd + 2) + 2, MAXVAL(lapw%nv)),&
-             & ab1(size_ab, 2 * atoms%lmaxd * (atoms%lmaxd + 2) + 2))
-      ! TODO: Check, whether this is necessary or shifting to
-      !       max(MAXVAL(lapwq%nv),MAXVAL(lapw%nv)) in abCoeffs is also enough.
-      ALLOCATE(abCoeffsPr(2 * atoms%lmaxd * (atoms%lmaxd + 2) + 2, MAXVAL(lapwPr%nv)))
+      ! abCoeffs and abCoeffsPr are allocated (and filled) inside hsmt_ab.
+      ALLOCATE(ab1(size_ab, 2 * atoms%lmaxd * (atoms%lmaxd + 2) + 2))
 
       IF (igSpinPr.NE.igSpin) THEN
          ALLOCATE(ab2(lapwPr%nv(igSpinPr), 2 * atoms%lmaxd * (atoms%lmaxd + 2) + 2))
@@ -120,7 +118,7 @@ CONTAINS
       h_loc = td%h_loc_nonsph(0:, 0:, n, ilSpinPr, ilSpin)
 
 #ifdef _OPENACC
-      !$acc enter data create(ab2,ab1,abCoeffs,abCoeffsPr,data_c,ab_select)copyin(h_loc)
+      !$acc enter data create(ab2,ab1,data_c,ab_select)copyin(h_loc)
       !$acc kernels present(data_c) default(none)
       data_c(:, :)=0.0
       !$acc end kernels
@@ -136,8 +134,23 @@ CONTAINS
             ! Denoted in comments as a
             ! [local spin primed -> '; global spin primed -> pr]
             CALL timestart("hsmt_ab_1")
+            ! Own the abCoeffs mapping in the caller's scope -- see types_abc.F90 for why
+            ! hsmt_ab must not do the `enter data` on its own dummy argument.
+            IF (.NOT.l_use_abcoeff_store) THEN
+               ab_size = hsmt_ab_size(atoms, n, .TRUE.)
+               IF (ALLOCATED(abCoeffs)) THEN
+                  IF (SIZE(abCoeffs,1)/=2*ab_size .OR. SIZE(abCoeffs,2)/=lapw%nv(igSpin)) THEN
+                     !$acc exit data delete(abCoeffs)
+                     DEALLOCATE(abCoeffs)
+                  END IF
+               END IF
+               IF (.NOT.ALLOCATED(abCoeffs)) THEN
+                  ALLOCATE(abCoeffs(2*ab_size, lapw%nv(igSpin)))
+                  !$acc enter data create(abCoeffs)
+               END IF
+            END IF
             CALL hsmt_ab(sym, atoms, noco, nococonv, ilSpin, igSpin, n, na, cell, &
-                       & lapw, fjgj, abCoeffs, ab_size, .TRUE.)
+                       & lapw, fjgj, abCoeffs, ab_size, .TRUE., l_store=.TRUE.)
             CALL timestop("hsmt_ab_1")
             CALL timestart("zgemm1")
             IF (l_samelapw.AND.(ilSpinPr==ilSpin)) THEN
@@ -221,6 +234,21 @@ CONTAINS
                      END IF
                   ELSE ! Case for additional q on left vector.
                      CALL timestart("hsmt_ab_2")
+                     ! Own the abCoeffs mapping in the caller's scope -- see types_abc.F90 for why
+                     ! hsmt_ab must not do the `enter data` on its own dummy argument.
+                     IF (.NOT.l_use_abcoeff_store) THEN
+                        ab_size = hsmt_ab_size(atoms, n, .TRUE.)
+                        IF (ALLOCATED(abCoeffsPr)) THEN
+                           IF (SIZE(abCoeffsPr,1)/=2*ab_size .OR. SIZE(abCoeffsPr,2)/=lapwPr%nv(igSpin)) THEN
+                              !$acc exit data delete(abCoeffsPr)
+                              DEALLOCATE(abCoeffsPr)
+                           END IF
+                        END IF
+                        IF (.NOT.ALLOCATED(abCoeffsPr)) THEN
+                           ALLOCATE(abCoeffsPr(2*ab_size, lapwPr%nv(igSpin)))
+                           !$acc enter data create(abCoeffsPr)
+                        END IF
+                     END IF
                      CALL hsmt_ab(sym, atoms, noco, nococonv, ilSpin, igSpin, n, na, cell, &
                                 & lapwPr, fjgjPr, abCoeffsPr, ab_size, .TRUE.)
                      !!$acc update device (abCoeffsPr)
@@ -248,6 +276,21 @@ CONTAINS
 
                   ! abCoeffs for \sigma_{\alpha}^{'} and \sigma_{g}
                   CALL timestart("hsmt_ab_3")
+                  ! Own the abCoeffs mapping in the caller's scope -- see types_abc.F90 for why
+                  ! hsmt_ab must not do the `enter data` on its own dummy argument.
+                  IF (.NOT.l_use_abcoeff_store) THEN
+                     ab_size = hsmt_ab_size(atoms, n, .TRUE.)
+                     IF (ALLOCATED(abCoeffsPr)) THEN
+                        IF (SIZE(abCoeffsPr,1)/=2*ab_size .OR. SIZE(abCoeffsPr,2)/=lapwPr%nv(igSpin)) THEN
+                           !$acc exit data delete(abCoeffsPr)
+                           DEALLOCATE(abCoeffsPr)
+                        END IF
+                     END IF
+                     IF (.NOT.ALLOCATED(abCoeffsPr)) THEN
+                        ALLOCATE(abCoeffsPr(2*ab_size, lapwPr%nv(igSpin)))
+                        !$acc enter data create(abCoeffsPr)
+                     END IF
+                  END IF
                   CALL hsmt_ab(sym, atoms, noco, nococonv, ilSpinPr, igSpin, n, na, cell, &
                              & lapwPr, fjgjPr, abCoeffsPr, ab_size, .TRUE.)
                   !!$acc update device(abCoeffsPr)
@@ -283,6 +326,21 @@ CONTAINS
                !Second set of abCoeffs is needed
                ! abCoeffs for \sigma_{\alpha}^{'} and \sigma_{g}^{'}
                CALL timestart("hsmt_ab_4")
+               ! Own the abCoeffs mapping in the caller's scope -- see types_abc.F90 for why
+               ! hsmt_ab must not do the `enter data` on its own dummy argument.
+               IF (.NOT.l_use_abcoeff_store) THEN
+                  ab_size = hsmt_ab_size(atoms, n, .TRUE.)
+                  IF (ALLOCATED(abCoeffsPr)) THEN
+                     IF (SIZE(abCoeffsPr,1)/=2*ab_size .OR. SIZE(abCoeffsPr,2)/=lapwPr%nv(igSpinPr)) THEN
+                        !$acc exit data delete(abCoeffsPr)
+                        DEALLOCATE(abCoeffsPr)
+                     END IF
+                  END IF
+                  IF (.NOT.ALLOCATED(abCoeffsPr)) THEN
+                     ALLOCATE(abCoeffsPr(2*ab_size, lapwPr%nv(igSpinPr)))
+                     !$acc enter data create(abCoeffsPr)
+                  END IF
+               END IF
                CALL hsmt_ab(sym, atoms, noco, nococonv, ilSpinPr, igSpinPr, n, na, cell, &
                           & lapwPr, fjgjPr, abCoeffsPr, ab_size, .TRUE.)
                CALL timestop("hsmt_ab_4")
@@ -353,6 +411,21 @@ CONTAINS
                   call timestop("zgemm6")
                END IF
             END IF
+            ! abCoeffs/abCoeffsPr are (re)allocated per call inside hsmt_ab;
+            ! release the device copies and host arrays before the next nn.
+            !$acc exit data delete(abCoeffs)
+            ! Hand the (unprimed) abCoeffs to the optional store for later reuse
+            ! (no-op unless storage is enabled).
+            CALL abcoeff_store_save(abCoeffs, lapw%nk, igSpin, ilSpin, na, .TRUE.)
+            IF (ALLOCATED(abCoeffs)) DEALLOCATE(abCoeffs)
+            IF (ALLOCATED(abCoeffsPr)) THEN
+               !$acc exit data delete(abCoeffsPr)
+               ! abCoeffsPr (primed lapwPr/fjgjPr) takes no part in the storage at
+               ! all: the hsmt_ab calls above are made without l_store, so it is
+               ! neither retrieved from nor saved to the slot it would share with
+               ! the unprimed abCoeffs.
+               DEALLOCATE(abCoeffsPr)
+            END IF
          END IF
       END DO
 
@@ -382,8 +455,8 @@ CONTAINS
          !$OMP END PARALLEL DO
       END IF
 #endif
-     !$acc exit data delete(ab2,ab1,abCoeffs,abCoeffsPr,data_c,ab_select,h_loc)
-      DEALLOCATE(ab_select,abCoeffs,abCoeffsPr,ab1,ab2,h_loc)
+     !$acc exit data delete(ab2,ab1,data_c,ab_select,h_loc)
+      DEALLOCATE(ab_select,ab1,ab2,h_loc)
       IF (ALLOCATED(data_c)) DEALLOCATE(data_c)
       !$acc end data
       CALL timestop("non-spherical setup")

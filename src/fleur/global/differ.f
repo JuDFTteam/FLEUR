@@ -30,7 +30,7 @@ C     .. Local Scalars ..
      +     qcoef,qqqq,r,ra,rb,rg,rj,s,w,wmin
       INTEGER k,ki,kj,n,nodes,nqnt,ntimes
       LOGICAL dbl
-      CHARACTER(LEN=150) hintString
+      CHARACTER(LEN=250) hintString
 
 C     .. Local Arrays ..
       REAL a0(5),b0(5)
@@ -162,7 +162,21 @@ c**** too few nodes
      +      " seems to be above the reasonable energy range."
       CALL juDFT_error("differ 2: problems with solving dirac equation"
      +     ,calledby ="differ", hint=TRIM(hintString))
-  140 WRITE (oUnit,FMT=8000)
+  140 IF (abs(de).GT.100.0e0*del) GO TO 145
+      hintString = "n="//int2str(NINT(fn))//" l="//int2str(NINT(fl))//
+     +      " j="//float2str(fj)//" state of atom with Z="//
+     +      int2str(NINT(z))//": achieved |de|="//float2str(abs(de))//
+     +      ", target="//float2str(del)//
+     +      ". A finer radial mesh (smaller logIncrement / more "//
+     +      "gridPoints) may help reach full convergence."
+      CALL juDFT_warn(
+     +     "core-state search did not converge within the "//
+     +     "iteration limit; Continue with best solution found?"
+     +     ,calledby ="differ", hint=TRIM(hintString))
+      GO TO 110
+c**** the achieved precision is too far off to accept; keep the
+c**** original hard-error behaviour with its full diagnostic dump
+  145 WRITE (oUnit,FMT=8000)
       WRITE (oUnit,FMT=8030) fn,fl,fj,emin,emax
       WRITE (oUnit,FMT=8030) e,de
       WRITE (oUnit,FMT=8030) ra,rb,w,a(ki),b(ki)

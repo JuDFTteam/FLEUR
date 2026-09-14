@@ -30,7 +30,7 @@
 !
 !     For the PW contribution we have to construct plane waves within the MT spheres with the help
 !     of spherical Bessel functions. The value lexp (LEXP in gwinp) is the corresponding cutoff.
-!
+
 MODULE m_coulombmatrix
 #ifdef CPP_MPI
    use mpi
@@ -133,8 +133,8 @@ CONTAINS
       allocate(structconst((2*fi%hybinp%lexp + 1)**2, fi%atoms%nat, fi%atoms%nat, fi%kpts%nkpt), stat=ierr)
       if(ierr /= 0) call judft_error("can't allocate structconst. error: " // int2str(ierr))
 
-      svol = SQRT(fi%cell%vol)
-      fcoulfac = fpi_const/fi%cell%vol
+      svol = SQRT(fi%cell%omtil)
+      fcoulfac = fpi_const/fi%cell%omtil
       maxfac = MAX(2*fi%atoms%lmaxd + maxval(fi%hybinp%lcutm1) + 1, 4*MAX(maxval(fi%hybinp%lcutm1), fi%hybinp%lexp) + 1)
 
       facA(0) = 1                    !
@@ -451,7 +451,7 @@ CONTAINS
 
          IF (fi%sym%invs) THEN
             !symmetrize makes the Coulomb matrix real symmetric     
-            CALL symmetrize_mpimat(fi, fmpi, coul(ikpt)%data_c, [1,1],[hybdat%nbasp, hybdat%nbasp], &
+            CALL symmetrize_mpimat(fi, fmpi, coul(ikpt)%data_c, [1,1],[hybdat%n_mt, hybdat%n_mt], &
                                    3, .FALSE., mpdata%num_radbasfn)
          ENDIF
          call timestop("MT-MT part")
@@ -491,7 +491,7 @@ CONTAINS
             DO igpt0 = 1, ngptm1(ikpt)
                igpt2 = pgptm1(igpt0, ikpt)
                igptp2 = mpdata%gptm_ptr(igpt2, ikpt)
-               ix = hybdat%nbasp + igpt2
+               ix = hybdat%n_mt + igpt2
                call glob_to_loc(fmpi, ix, pe_ix, ix_loc)
                if(fmpi%n_rank == pe_ix) then
                   q2 = MATMUL(fi%kpts%bk(:, ikpt) + mpdata%g(:, igptp2), fi%cell%bmat)
@@ -500,7 +500,7 @@ CONTAINS
 
                   DO igpt1 = 1, igpt2
                      igptp1 = mpdata%gptm_ptr(igpt1, ikpt)
-                     iy = hybdat%nbasp + igpt1
+                     iy = hybdat%n_mt + igpt1
                      q1 = MATMUL(fi%kpts%bk(:, ikpt) + mpdata%g(:, igptp1), fi%cell%bmat)
                      rdum1 = SUM(q1**2)
                      IF (abs(rdum1) > 1e-12) rdum1 = fpi_const/rdum1
@@ -508,14 +508,14 @@ CONTAINS
 
                      IF (ikpt == 1) THEN
                         IF (igpt1 /= 1) THEN
-                           coul(1)%data_c(iy,ix_loc) = -smat*rdum1/fi%cell%vol 
+                           coul(1)%data_c(iy,ix_loc) = -smat*rdum1/fi%cell%omtil 
                         END IF
                         IF (igpt2 /= 1) THEN
                            coul(1)%data_c(iy,ix_loc) &
-                              = coul(1)%data_c(iy,ix_loc) - smat*rdum2/fi%cell%vol
+                              = coul(1)%data_c(iy,ix_loc) - smat*rdum2/fi%cell%omtil
                         END IF
                      ELSE
-                        coul(ikpt)%data_c(iy,ix_loc) = -smat*(rdum1 + rdum2)/fi%cell%vol
+                        coul(ikpt)%data_c(iy,ix_loc) = -smat*(rdum1 + rdum2)/fi%cell%omtil
                      END IF
                   END DO
                   IF (ikpt /= 1 .OR. igpt2 /= 1) THEN
@@ -566,7 +566,7 @@ CONTAINS
             !$OMP do schedule(dynamic)
             DO igpt0 = 1, ngptm1(ikpt)
                igpt2 = pgptm1(igpt0, ikpt)
-               ix = hybdat%nbasp + igpt2
+               ix = hybdat%n_mt + igpt2
                call glob_to_loc(fmpi, ix, pe_ix, ix_loc)
                if(fmpi%n_rank == pe_ix) then
                   igptp2 = mpdata%gptm_ptr(igpt2, ikpt)
@@ -597,7 +597,7 @@ CONTAINS
 
 !                  call timestart("igpt1")
                   DO igpt1 = 1, igpt2
-                     iy = hybdat%nbasp + igpt1
+                     iy = hybdat%n_mt + igpt1
                      igptp1 = mpdata%gptm_ptr(igpt1, ikpt)
                      iqnrm1 = pqnrm(igpt1, ikpt)
                      csum = 0
@@ -609,7 +609,7 @@ CONTAINS
                            csum = csum + cdum*carr2(ic, lm)*CONJG(carr2a(lm, igpt1)) ! for coulomb
                         END DO
                      END DO
-                     coul(ikpt)%data_c(iy,ix_loc) = coul(ikpt)%data_c(iy,ix_loc) + csum/fi%cell%vol
+                     coul(ikpt)%data_c(iy,ix_loc) = coul(ikpt)%data_c(iy,ix_loc) + csum/fi%cell%omtil
                   END DO
 !                  call timestop("igpt1")
                endif ! pe_ix
@@ -630,15 +630,15 @@ CONTAINS
             call timestart("add corrections from higher orders")
             call gamma_double_gpt_loop(fi, fmpi, hybdat, mpdata, sphbesmoment, gmat,  ngptm1, pgptm1, pqnrm, coul(1)%data_c) 
 
-            rdum = (fpi_const)**(1.5)/fi%cell%vol**2*gmat(1, 1)
+            rdum = (fpi_const)**(1.5)/fi%cell%omtil**2*gmat(1, 1)
 
             ! (2) igpt1 = 1 , igpt2 > 1  (first G vector vanishes, second finite)
             call timestart("igpt1=1 loop")
-            iy = hybdat%nbasp + 1
+            iy = hybdat%n_mt + 1
             DO igpt0 = 1, ngptm1(1)
                igpt2 = pgptm1(igpt0, 1)
                IF (igpt2 /= 1) then
-                  ix = hybdat%nbasp + igpt2
+                  ix = hybdat%n_mt + igpt2
                   call glob_to_loc(fmpi, ix, pe_ix, ix_loc)
                   if(fmpi%n_rank == pe_ix) then
                      iqnrm2 = pqnrm(igpt2, 1)
@@ -667,8 +667,8 @@ CONTAINS
 
             ! (2) igpt1 = 1 , igpt2 = 1  (vanishing G vectors)
             call timestart("igpt1=igpt2=1 loop")
-            iy = hybdat%nbasp + 1
-            ix = hybdat%nbasp + 1
+            iy = hybdat%n_mt + 1
+            ix = hybdat%n_mt + 1
             call glob_to_loc(fmpi, ix, pe_ix, ix_loc)
             if(pe_ix == fmpi%n_rank) then
                DO itype1 = 1, fi%atoms%ntype
@@ -744,7 +744,7 @@ CONTAINS
             DO igpt0 = 1, ngptm1(ikpt)
                lsym = (1 <= igpt0) .AND. (ngptm1(ikpt) >= igpt0)
                igpt2 = pgptm1(igpt0, ikpt)
-               ix = hybdat%nbasp + igpt2
+               ix = hybdat%n_mt + igpt2
                call glob_to_loc(fmpi, ix, pe_ix, ix_loc)
                if(pe_ix == fmpi%n_rank) then 
                   carr2(:hybdat%nbasm(ikpt),2) = coul(ikpt)%data_c(:hybdat%nbasm(ikpt),ix_loc)
@@ -765,23 +765,23 @@ CONTAINS
                                     fi%sym, rrot(:, :, isym), invrrot(:, :, isym), mpdata, fi%hybinp, &
                                     fi%kpts, maxval(fi%hybinp%lcutm1), fi%atoms, fi%hybinp%lcutm1, &
                                     mpdata%num_radbasfn, maxval(mpdata%num_radbasfn), dwgn(:, :, :, isym), &
-                                    hybdat%nbasp, hybdat%nbasm, carr2(:, 1), igpt1)
+                                    hybdat%n_mt, hybdat%nbasm, carr2(:, 1), igpt1)
                   IF (iarr(igpt1) == 0) THEN
                      CALL bramat_trafo(carr2(:, 2), igpt2, ikpt, isym, .TRUE., POINTER(ikpt, :, :, :), &
                                        fi%sym, rrot(:, :, isym), invrrot(:, :, isym), mpdata, fi%hybinp, &
                                        fi%kpts, maxval(fi%hybinp%lcutm1), fi%atoms, fi%hybinp%lcutm1, &
                                        mpdata%num_radbasfn, maxval(mpdata%num_radbasfn), &
-                                       dwgn(:, :, :, isym), hybdat%nbasp, hybdat%nbasm, carr2(:, 1), igpt1)
-                     l = (hybdat%nbasp + igpt1 - 1)*(hybdat%nbasp + igpt1)/2
-                     ix = hybdat%nbasp + igpt1
+                                       dwgn(:, :, :, isym), hybdat%n_mt, hybdat%nbasm, carr2(:, 1), igpt1)
+                     l = (hybdat%n_mt + igpt1 - 1)*(hybdat%n_mt + igpt1)/2
+                     ix = hybdat%n_mt + igpt1
                      call glob_to_loc(fmpi, ix, pe_ix, ix_loc)
                      if(pe_ix == fmpi%n_rank) then
-                        coul(ikpt)%data_c(:hybdat%nbasp + igpt1,ix_loc) = carr2(:hybdat%nbasp + igpt1, 1)
+                        coul(ikpt)%data_c(:hybdat%n_mt + igpt1,ix_loc) = carr2(:hybdat%n_mt + igpt1, 1)
                      endif 
 
-                     do ix = 1,hybdat%nbasp + igpt1
+                     do ix = 1,hybdat%n_mt + igpt1
                         call glob_to_loc(fmpi, ix, pe_ix, ix_loc)
-                        if(pe_ix == fmpi%n_rank) coul(ikpt)%data_c(hybdat%nbasp + igpt1, ix_loc) = conjg(carr2(ix, 1))
+                        if(pe_ix == fmpi%n_rank) coul(ikpt)%data_c(hybdat%n_mt + igpt1, ix_loc) = conjg(carr2(ix, 1))
                      enddo
 
                      iarr(igpt1) = 1
@@ -827,10 +827,7 @@ CONTAINS
          call coul(ikpt)%l2u()
       enddo
 
-      !call plot_coulombmatrix() -> code was shifted to plot_coulombmatrix.F90
-      !
       ! rearrange coulomb matrix
-      !
       if(.not. allocated(hybdat%coul)) allocate(hybdat%coul(fi%kpts%nkpt))
 
       DO im = 1, size(fmpi%k_list)
@@ -898,18 +895,18 @@ CONTAINS
                         coeff(1,j) = SQRT(fpi_const) &
                                    *intgrf(atoms%rmsh(:, itype)*mpdata%radbasfn_mt(:, i, 0, itype), &
                                            atoms, itype, gridf) &
-                                   /SQRT(cell%vol)
+                                   /SQRT(cell%omtil)
 
                         claplace(1,j) = -SQRT(fpi_const) &
                                       *intgrf(atoms%rmsh(:, itype)**3*mpdata%radbasfn_mt(:, i, 0, itype), &
                                               atoms, itype, gridf) &
-                                      /SQRT(cell%vol)
+                                      /SQRT(cell%omtil)
 
                      ELSE IF (l == 1) THEN
                         cderiv(M,j) = -SQRT(fpi_const/3)*CMPLX(0.0, 1.0) &
                                        *intgrf(atoms%rmsh(:, itype)**2*mpdata%radbasfn_mt(:, i, 1, itype), &
                                                atoms, itype, gridf) &
-                                       /SQRT(cell%vol)
+                                       /SQRT(cell%omtil)
                      END IF
                   END DO
                END DO
@@ -917,9 +914,9 @@ CONTAINS
          END DO
       END DO
       IF (olap%l_real) THEN
-         coeff(1,hybdat%nbasp + 1:n) = olap%data_r(1, 1:n - hybdat%nbasp)
+         coeff(1,hybdat%n_mt + 1:n) = olap%data_r(1, 1:n - hybdat%n_mt)
       else
-         coeff(1,hybdat%nbasp + 1:n) = olap%data_c(1, 1:n - hybdat%nbasp)
+         coeff(1,hybdat%n_mt + 1:n) = olap%data_c(1, 1:n - hybdat%n_mt)
       END IF
       IF (sym%invs) THEN
          CALL symmetrize(coeff, 1, nbasm1(1), 2, &
@@ -1041,16 +1038,16 @@ CONTAINS
       integer, allocatable :: lm_arr(:), ic_arr(:)
 
 
-      call range_from_glob_to_loc(fmpi, hybdat%nbasp+1, loc_from)
-      coul%data_c(:hybdat%nbasp,loc_from:) = 0 
+      call range_from_glob_to_loc(fmpi, hybdat%n_mt + 1, loc_from)
+      coul%data_c(:hybdat%n_mt,loc_from:) = 0 
 
-      svol = SQRT(fi%cell%vol)
+      svol = SQRT(fi%cell%omtil)
       ! start to loop over interstitial plane waves
       !DO igpt0 = 1, ngptm1(ikpt)
       do igpt0 = 1, ngptm1(ikpt)
          igpt = pgptm1(igpt0, ikpt)
          igptp = mpdata%gptm_ptr(igpt, ikpt)
-         ix = hybdat%nbasp + igpt
+         ix = hybdat%n_mt + igpt
          call glob_to_loc(fmpi, ix, pe_ix, ix_loc)
          if(pe_ix == fmpi%n_rank) then 
             q = MATMUL(fi%kpts%bk(:, ikpt) + mpdata%g(:, igptp), fi%cell%bmat)
@@ -1105,7 +1102,7 @@ CONTAINS
                   ! add contribution of (2c) to csum and csumf coming from linear and quadratic orders of Y_lm*(G) / G * j_(l+1)(GS)
                   IF (ikpt == 1 .AND. l <= 2) THEN
                      cexp = EXP(CMPLX(0.0, 1.0)*tpi_const*dot_PRODUCT(mpdata%g(:, igptp), fi%atoms%taual(:, ic1))) &
-                              *gmat(lm, 1)*fpi_const/fi%cell%vol
+                              *gmat(lm, 1)*fpi_const/fi%cell%omtil
                      csumf(lm) = csumf(lm) - cexp*SQRT(fpi_const)* &
                                  CMPLX(0.0, 1.0)**l*sphbesmoment(0, itype1, iqnrm)/facC(l - 1)
                      IF (l == 0) THEN
@@ -1165,7 +1162,7 @@ CONTAINS
       END DO
 
       IF (fi%sym%invs) THEN
-         call symmetrize_mpimat(fi, fmpi, coul%data_c, [1,hybdat%nbasp+1], [hybdat%nbasp, hybdat%nbasp+mpdata%n_g(ikpt)],&
+         call symmetrize_mpimat(fi, fmpi, coul%data_c, [1,hybdat%n_mt + 1], [hybdat%n_mt, hybdat%n_mt + mpdata%n_g(ikpt)],&
                                 1, .false., mpdata%num_radbasfn)
       ENDIF
    endsubroutine loop_over_interst
@@ -1197,7 +1194,7 @@ CONTAINS
 
       DO igpt0 = 1, ngptm1(ikpt)
          igpt2 = pgptm1(igpt0, ikpt)
-         ix = hybdat%nbasp + igpt2
+         ix = hybdat%n_mt + igpt2
          call glob_to_loc(fmpi, ix, pe_ix, ix_loc)
          if(pe_ix == fmpi%n_rank) then
             igptp2 = mpdata%gptm_ptr(igpt2, ikpt)
@@ -1211,7 +1208,7 @@ CONTAINS
             !$OMP shared(igpt2, coulomb, hybdat, mpdata, ikpt, fi, carr2, pqnrm, igptp2)&
             !$OMP shared(qnrm, sphbes0, iqnrm2, nqnrm, y2, ix_loc)
             DO igpt1 = 1, igpt2
-               iy = hybdat%nbasp + igpt1
+               iy = hybdat%n_mt + igpt1
                igptp1 = mpdata%gptm_ptr(igpt1, ikpt)
                iqnrm1 = pqnrm(igpt1, ikpt)
                q1 = MATMUL(fi%kpts%bk(:, ikpt) + mpdata%g(:, igptp1), fi%cell%bmat)
@@ -1239,7 +1236,7 @@ CONTAINS
                      cdum = cdum + cdum1*y1(lm)*y2(lm)
                   ENDDO
                ENDDO
-               coulomb%data_c(iy,ix_loc) = coulomb%data_c(iy,ix_loc) + (fpi_const)**3*cdum/fi%cell%vol
+               coulomb%data_c(iy,ix_loc) = coulomb%data_c(iy,ix_loc) + (fpi_const)**3*cdum/fi%cell%omtil
             END DO
             !$OMP end parallel do
          endif !pe_ix

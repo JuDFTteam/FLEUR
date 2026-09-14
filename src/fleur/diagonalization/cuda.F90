@@ -30,7 +30,7 @@ contains
 
    function get_solver_cuda() result(solver)
       class(t_solver), allocatable :: solver
-      allocate(t_solver_cuda :: solver)
+      allocate (t_solver_cuda :: solver)
       solver%name = "cuda"
 #ifdef CPP_CUSOLVER
       solver%available = .true.
@@ -61,7 +61,6 @@ contains
       integer                 :: istat, ne_found, lwork_d, devinfo(1)
       real, allocatable        :: work_d(:), eig_tmp(:)
       complex, allocatable     :: work_c(:)
-
 
       logical :: firstcall = .true.
       call timestart("CUDA GEV")
