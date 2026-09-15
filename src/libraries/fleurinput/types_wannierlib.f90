@@ -95,6 +95,9 @@ MODULE m_types_wannierlib
     !> It needs a full-rank amn: with the spinor guard broken the matrix came out rank
     !> num_wann/2 and p ran up to 1.98, which W90 rejects outright. Fixed in 38b46f7e4.
     LOGICAL :: dis_froz_proj = .FALSE.
+    !> Keep the same number of states per spin channel at every k. Only meaningful when
+    !> spin is a good quantum number; the routine checks and refuses otherwise.
+    LOGICAL :: dis_spin_balanced = .FALSE.
     REAL :: dis_proj_min = 0.01
     REAL :: dis_proj_max = 0.95
     REAL :: dis_mix_ratio = 0.0
@@ -402,6 +405,7 @@ CONTAINS
     CALL mpi_bc(this%num_bands, rank, mpi_comm)
     CALL mpi_bc(this%min_band, rank, mpi_comm)
     CALL mpi_bc(this%max_band, rank, mpi_comm)
+    CALL mpi_bc(this%dis_spin_balanced, rank, mpi_comm)
     CALL mpi_bc(this%dis_win_min, rank, mpi_comm)
     CALL mpi_bc(this%dis_win_max, rank, mpi_comm)
     CALL mpi_bc(this%dis_froz_min, rank, mpi_comm)
@@ -482,6 +486,8 @@ CONTAINS
       this%dis_froz_min = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@disFrozMin'))
       this%dis_froz_max = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@disFrozMax'))
       this%dis_froz_proj = evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@disFrozProj'))
+      this%dis_spin_balanced = evaluateFirstBoolOnly( &
+        xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@spinBalanced'))
       this%dis_proj_min = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@disProjMin'))
       this%dis_proj_max = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@disProjMax'))
       this%dis_num_iter = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@numIter'))
