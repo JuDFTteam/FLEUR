@@ -1,4 +1,5 @@
 
+import os
 import re
 import pytest
 """
@@ -148,6 +149,34 @@ SPIN_SUM_TOL = 0.05
 # With that sign wrong the same run reported |<s>| = 0.0313.
 PURE_SPINOR = ("WannFeFMy",)
 PURE_SPINOR_TOL = 1.0e-3
+
+# The spin-balanced mode wannierises each spin channel on its own, so the Wannier functions
+# stay spin eigenstates: orthonormality within a channel pins the R=0 diagonal of the
+# LONGITUDINAL Pauli component at exactly +/-1, one per function. Physics again, not a
+# measured value.
+#
+# The case has to be one that DISCRIMINATES, and most do not: in fcc Fe the two channels sit
+# far enough apart in energy that mixing them costs spread, so the unconstrained minimisation
+# keeps the spin on its own and |<s>| comes out 1.000000 either way. WannFeBccYBal is a bcc
+# cell with the moment along y, where the free run leaves 0.979431 at worst against 1.000000
+# with the flag -- four orders of magnitude above the tolerance below.
+#
+# Its outer window is wider than the same system uses elsewhere. The suite runs itmax=1 from
+# an atomic density, and the window that fits a converged one leaves 17 bands at Gamma for 18
+# Wannier functions, which aborts with 'ndimwin 17 num_wann 18'.
+#
+# The axis is read off the operator rather than fixed: with the moment along y, sigma_z is
+# TRANSVERSE and is not expected to be anything in particular. Measuring it instead of the
+# longitudinal component is what produced three false readings in a row while this was
+# being debugged.
+#
+# numIter stays at 3000 even though that does NOT converge the minimisation (20000 is what
+# Omega_tot needs). That is deliberate: spin purity comes from the blocking, which is by
+# construction, and it was measured identical across six optimiser variants including one
+# whose channel diverged. A purity test does not need a converged minimisation, and asking
+# for one would make it seven times slower without covering anything more.
+SPIN_BALANCED = ("WannFeBccYBal",)
+SPIN_BALANCED_TOL = 1.0e-6
 
 
 def _spin_sumrule_values(path):
@@ -344,6 +373,24 @@ def _rspauli_r0_diagonal_max(path):
     return worst
 
 
+def _rspauli_r0_longitudinal(path):
+    """The R=0 diagonal of the Pauli component that carries the moment, one value per
+    Wannier function. The component is chosen as the one whose diagonal is largest, which is
+    the longitudinal one by definition and needs no input from outside the file."""
+    diag = {}
+    with open(path) as fh:
+        for line in fh:
+            f = line.split()
+            if len(f) < 8:
+                continue
+            if f[0] == f[1] == f[2] == "0" and f[3] == f[4]:
+                diag.setdefault(int(f[5]), {})[int(f[3])] = float(f[6])
+    if not diag:
+        return []
+    comp = max(diag, key=lambda c: sum(abs(v) for v in diag[c].values()))
+    return [diag[comp][i] for i in sorted(diag[comp])]
+
+
 def _as_tuple(v):
     """A reference is either one number or one per wannierised spin channel."""
     return v if isinstance(v, tuple) else (v,)
@@ -500,6 +547,17 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
                 f"anglmomrs.1: transverse orbital moment (component {comp}) is {total}, "
                 f"but a collinear magnet along z must give 0 (tol {L_SUM_TOL})")
 
+    # Spin-balanced: see SPIN_BALANCED above. Every Wannier function is a spin eigenstate,
+    # so the longitudinal Pauli diagonal at R=0 is +/-1 for each of them.
+    if test_id in SPIN_BALANCED:
+        vals = _rspauli_r0_longitudinal(res["rspauli.1"])
+        assert vals, "spin-balanced test found no R=0 diagonal in rspauli.1"
+        worst = min(abs(v) for v in vals)
+        assert abs(worst - 1.0) < SPIN_BALANCED_TOL, (
+            f"spin-balanced run left a Wannier function that is not a spin eigenstate: "
+            f"smallest |<sigma>| on the R=0 diagonal is {worst:.6f}, expected 1. "
+            f"Without the blocking this case gives 0.979431.")
+
     # Pure spinors: see PURE_SPINOR above. Reads what FLEUR already printed.
     if test_id in PURE_SPINOR:
         vals = _spin_sumrule_values(res["out"])
@@ -510,3 +568,59 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
             f"without SOC every Bloch state is a pure spinor, so |<s>| must be 1; the "
             f"smallest of {len(vals)} values is {worst:.6f}. The azimuthal rotation of the "
             f"spin operator is the usual cause -- it only shows up when alpha != 0.")
+
+
+# The refusal path. Everything above tests the mode doing its job; this tests it declining to,
+# which is the half that keeps it from being applied where its premise does not hold.
+#
+# Mn3Ir is the counter-example by construction: moments at 120 degrees and not coplanar, so no
+# global direction commutes with H and spin is not a good quantum number -- and the case runs
+# WITHOUT spin-orbit coupling on purpose, which isolates the texture from SOC as the cause.
+# Measured, the worst band polarisation is 0.0000 against 1.0000 in a ferromagnet, and the
+# axis the routine reports is arbitrary: the tensor sum_{n,k} <sigma><sigma>^T of three
+# sublattices at 120 degrees is nearly isotropic and its leading eigenvector is decided by
+# rounding.
+#
+# It is written as a plain function rather than a tests.md row because that registry has no
+# expected-failure column and this run must abort: FLEUR stops with juDFT_error and
+# execute_fleur turns that into pytest.fail. The test catches that and then checks WHY it
+# happened, which is what separates a correct refusal from any other crash.
+# What the run must report: most bands polarised, few of them collinear with the common axis.
+# Those two numbers are the whole diagnosis, and they are what an earlier version of this test
+# got wrong -- it asserted the output said "spin is not a good quantum number", which is false
+# here: 82.0 % of the bands ARE spin eigenstates. They point along the three <110> directions
+# of the sublattices, and only 30.9 % line up with any single axis.
+REFUSAL_MIN_POLARISED = 50.0    # %, and it measures 82.0
+REFUSAL_MAX_COLLINEAR = 90.0    # %, and it measures 30.9
+
+
+@pytest.mark.fleur
+@pytest.mark.wannierlib
+@pytest.mark.bulk
+def test_spin_balanced_refuses_noncollinear(execute_fleur, work_dir):
+    """spinBalanced must decline a genuinely non-collinear texture, and say why."""
+    with pytest.raises(pytest.fail.Exception):
+        execute_fleur(test_file_folder='./inputfiles/wannier/WannMn3IrNoco', mpi_procs=1)
+
+    out = os.path.join(work_dir, 'out')
+    assert os.path.exists(out), 'the run produced no out file at all'
+    txt = open(out, errors='ignore').read()
+
+    # It has to decline the spin-balanced mode, not crash for an unrelated reason.
+    assert 'does not apply to this case' in txt, (
+        'the run failed, but not by declining the spin-balanced mode; something else broke')
+
+    m = re.search(r'bands with a definite spin\s+([\d.]+) %, of those collinear with '
+                  r'that axis\s+([\d.]+) %', txt)
+    assert m, 'the refusal did not report the polarisation and collinearity it measured'
+    polarised, collinear = float(m.group(1)), float(m.group(2))
+
+    # The point of this case: the spin is fine, the common axis is what is missing. If the
+    # first number were low the refusal would be for a different reason and this case would
+    # have stopped testing what it was chosen to test.
+    assert polarised > REFUSAL_MIN_POLARISED, (
+        f'only {polarised:.1f} % of bands carry a definite spin, so this case no longer '
+        f'demonstrates a non-collinear TEXTURE -- it just has unpolarised bands')
+    assert collinear < REFUSAL_MAX_COLLINEAR, (
+        f'{collinear:.1f} % of the polarised bands are collinear with a single axis, so the '
+        f'texture is not non-collinear enough to exercise the refusal')
