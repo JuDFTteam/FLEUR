@@ -183,6 +183,12 @@ CONTAINS
 #endif
   END SUBROUTINE init_w90
 
+!> Guarded whole: unlike the routines around it, this one names lib_common_type in its
+!> SIGNATURE, and a dummy-argument declaration cannot be handled by the #ifndef-and-error
+!> pattern the rest of the file uses. Without the module API of Wannier90 -- the CI image
+!> still carries the 1.2 library, where w90_library.mod does not exist -- the type is not
+!> declared and the file does not compile. Only reached from the guarded branch of init_w90.
+#ifdef CPP_WANNLIB_API
   !> One Wannier90 instance for a single spin channel: num_wann/2 functions, and num_bands
   !> equal to it because the subspace was already chosen on this side. The option list is
   !> deliberately shorter than the main one -- there is no disentanglement here, so the energy
@@ -236,6 +242,7 @@ CONTAINS
     IF (ierr /= 0) CALL juDFT_error('w90_create_kmesh failed for a spin channel', &
                                     calledby='setup_channel')
   END SUBROUTINE setup_channel
+#endif
 
   !> Which Wannier columns belong to each spin channel. Recomputed from proj_spin rather than
   !> handed down from the disentanglement, so the places that need it cannot drift apart, and
