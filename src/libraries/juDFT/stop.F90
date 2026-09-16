@@ -251,7 +251,8 @@ CONTAINS
        IF (callstop.and.warn) WRITE(*,'(a)')"Warnings not ignored. To make the warning nonfatal create a file 'JUDFT_WARN_ONLY' in the working directory or start FLEUR with the -warn_only command line option."
        IF (callstop) THEN
           CALL writetimes()
-          CALL print_memory_info(output_unit,.TRUE.)
+          !Only the reporting PE is here, so no collective communication is possible
+          CALL print_memory_info(output_unit,.TRUE.,l_par=.FALSE.)
           IF (irank==0) THEN
              !Error on PE0 write info to out and out.xml
              WRITE(juDFT_outUnit,*) "***************ERROR***************"
@@ -358,7 +359,8 @@ CONTAINS
     call log%report(logmode_status)
     call log_stop()
     CALL writetimes()
-    CALL print_memory_info(output_unit,.true.)
+    !All PEs are here only if irank was given, see the comment above
+    CALL print_memory_info(output_unit,.true.,l_par=PRESENT(irank))
     CALL send_usage_data()
 #ifdef CPP_MPI
     IF (l_mpi) THEN

@@ -104,12 +104,14 @@ CONTAINS
     END IF
   END FUNCTION ssdisp_next_job
 
-  SUBROUTINE ssdisp_postprocess(this,fi,results)
+  SUBROUTINE ssdisp_postprocess(this,fi,results,fmpi)
     USE m_xmlOutput
+    USE m_types_mpi
     IMPLICIT NONE
     CLASS(t_forcetheo_ssdisp),INTENT(INOUT):: this
     TYPE(t_fleurinput),INTENT(IN)   :: fi
     TYPE(t_results),INTENT(IN)      :: results
+    TYPE(t_mpi),INTENT(IN)          :: fmpi
     !Locals
     INTEGER:: n,q
     CHARACTER(LEN=12):: attributes(4)
@@ -129,7 +131,7 @@ CONTAINS
        ENDDO
        CALL closeXMLElement('Forcetheorem_SSDISP')
     ENDIF
-    CALL judft_end("Forcetheorem:SpinSpiralDispersion")
+    CALL judft_end("Forcetheorem:SpinSpiralDispersion", fmpi%irank)
   END SUBROUTINE ssdisp_postprocess
 
   SUBROUTINE ssdisp_dist(this,fmpi)

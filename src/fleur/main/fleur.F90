@@ -635,7 +635,7 @@ CONTAINS
             CALL timestop('determination of total energy')
          END DO forcetheoloop
 
-         CALL forcetheo%postprocess(fi,results)
+         CALL forcetheo%postprocess(fi,results,fmpi)
 
          CALL enpara%mix(fmpi%mpi_comm, fi%atoms, fi%vacuum, fi%input, vTot)
          field2 = fi%field
