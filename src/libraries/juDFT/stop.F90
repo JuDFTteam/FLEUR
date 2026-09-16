@@ -43,6 +43,13 @@ MODULE m_juDFT_stop
   CHARACTER(len=5),PARAMETER:: name="FLEUR"
   !Length of the error messages exchanged between the PEs
   INTEGER,PARAMETER         :: MESSAGE_LENGTH=100
+  !Time (in seconds) spent waiting for the error messages of the other PEs.
+  !An error that is actually reported terminates the run, so it is worth
+  !waiting for the messages of the other PEs. An ignored warning is not: it
+  !does not terminate anything and may be issued many times in one run, so
+  !the wait would simply be added to the runtime over and over again.
+  REAL,PARAMETER            :: WAIT_ERROR=2.0
+  REAL,PARAMETER            :: WAIT_WARNING=0.2
 #ifdef CPP_MPI
   !One-sided (RMA) window used by collect_messages to gather the error messages
   !of all PEs. Since juDFT_error might be called by an arbitrary subset of the
@@ -257,7 +264,8 @@ CONTAINS
           ENDIF
        END IF
     ELSE
-       CALL priv_wait(2.0)
+       !Give the reporting PE time to write its message first
+       CALL priv_wait(MERGE(WAIT_ERROR,WAIT_WARNING,callstop))
     ENDIF
 
     call log%report(log_level)
@@ -447,7 +455,8 @@ CONTAINS
     !first_pe is true if this PE is the one with the lowest rank among all PEs
     !having an error message to report. l_callstop indicates that the caller
     !terminates the calculation; if it does not, the message is removed from the
-    !windows again so that it is not reported by a later call.
+    !windows again so that it is not reported by a later call, and the wait for
+    !the other PEs is shortened.
     IMPLICIT NONE
     CHARACTER(len=*),INTENT(IN)                           :: mymessage
     CHARACTER(len=MESSAGE_LENGTH),ALLOCATABLE,INTENT(OUT) :: message_list(:)
@@ -456,7 +465,7 @@ CONTAINS
     INTEGER                        :: irank,isize,ierr,i
     INTEGER(KIND=MPI_ADDRESS_KIND) :: disp
     LOGICAL                        :: l_flag
-    REAL                           :: t1,t2
+    REAL                           :: t1,t2,waittime
     CHARACTER(len=MESSAGE_LENGTH)  :: message
 
     CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,ierr)
@@ -481,12 +490,15 @@ CONTAINS
        CALL MPI_WIN_UNLOCK(i,errmsg_win,ierr)
     ENDDO
 
-    !Wait for 2 seconds to give the other PEs the chance to report as well.
+    !Wait to give the other PEs the chance to report as well. Only an error
+    !that is really reported is worth the full wait, see the comment at
+    !WAIT_ERROR/WAIT_WARNING above.
     !MPI_IPROBE is called in between to ensure progress of the one-sided
     !communication also with MPI libraries without asynchronous progress.
+    waittime=MERGE(WAIT_ERROR,WAIT_WARNING,l_callstop)
     CALL cpu_TIME(t1)
     t2=t1
-    DO WHILE(t2-t1<2.0)
+    DO WHILE(t2-t1<waittime)
        CALL MPI_IPROBE(MPI_ANY_SOURCE,MPI_ANY_TAG,MPI_COMM_WORLD,l_flag,MPI_STATUS_IGNORE,ierr)
        CALL cpu_TIME(t2)
     ENDDO
