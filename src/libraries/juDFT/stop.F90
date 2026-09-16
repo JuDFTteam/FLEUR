@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -41,8 +41,68 @@ MODULE m_juDFT_stop
   IMPLICIT NONE
   PRIVATE
   CHARACTER(len=5),PARAMETER:: name="FLEUR"
+  !Length of the error messages exchanged between the PEs
+  INTEGER,PARAMETER         :: MESSAGE_LENGTH=100
+#ifdef CPP_MPI
+  !One-sided (RMA) window used by collect_messages to gather the error messages
+  !of all PEs. Since juDFT_error might be called by an arbitrary subset of the
+  !PEs only, no matching communication call on the other PEs can be assumed.
+  !Therefore the window is created once, collectively, in
+  !juDFT_init_errormessages and afterwards only used with passive target
+  !synchronization.
+  INTEGER,SAVE                                         :: errmsg_win
+  LOGICAL,SAVE                                         :: l_errmsg_win=.FALSE.
+  CHARACTER(len=MESSAGE_LENGTH),ALLOCATABLE,SAVE,TARGET:: errmsg_buffer(:)
+#endif
   PUBLIC juDFT_error,juDFT_warn,juDFT_end,judft_file_readable, juDFT_BUG
+  PUBLIC juDFT_init_errormessages,juDFT_free_errormessages
 CONTAINS
+
+  SUBROUTINE juDFT_init_errormessages()
+    !Create the RMA window used by collect_messages to gather the error
+    !messages of all PEs.
+    !This routine is collective and has to be called by all PEs of
+    !MPI_COMM_WORLD. It is called from juDFT_init directly after MPI_INIT.
+    IMPLICIT NONE
+#ifdef CPP_MPI
+    INTEGER                        :: isize,ierr
+    LOGICAL                        :: l_mpi
+    INTEGER(KIND=MPI_ADDRESS_KIND) :: winsize
+
+    IF (l_errmsg_win) RETURN !already initialized
+    CALL MPI_INITIALIZED(l_mpi,ierr)
+    IF (.NOT.l_mpi) RETURN
+
+    CALL MPI_COMM_SIZE(MPI_COMM_WORLD,isize,ierr)
+    ALLOCATE(errmsg_buffer(0:isize-1))
+    errmsg_buffer=""
+    winsize=INT(isize,MPI_ADDRESS_KIND)*INT(MESSAGE_LENGTH,MPI_ADDRESS_KIND)
+    CALL MPI_WIN_CREATE(errmsg_buffer,winsize,1,MPI_INFO_NULL,MPI_COMM_WORLD,errmsg_win,ierr)
+    IF (ierr.NE.MPI_SUCCESS) THEN
+       !No window available. This is not fatal, collect_messages will then
+       !simply not report the messages of the other PEs.
+       DEALLOCATE(errmsg_buffer)
+       RETURN
+    ENDIF
+    !Never abort while reporting an error, failing RMA calls are simply skipped
+    CALL MPI_WIN_SET_ERRHANDLER(errmsg_win,MPI_ERRORS_RETURN,ierr)
+    l_errmsg_win=.TRUE.
+#endif
+  END SUBROUTINE juDFT_init_errormessages
+
+  SUBROUTINE juDFT_free_errormessages()
+    !Free the RMA window again. This is collective as well and has to be
+    !called by all PEs before MPI_FINALIZE.
+    IMPLICIT NONE
+#ifdef CPP_MPI
+    INTEGER :: ierr
+
+    IF (.NOT.l_errmsg_win) RETURN
+    l_errmsg_win=.FALSE.
+    CALL MPI_WIN_FREE(errmsg_win,ierr)
+    DEALLOCATE(errmsg_buffer)
+#endif
+  END SUBROUTINE juDFT_free_errormessages
 
   SUBROUTINE judfT_file_readable(filename,warning)
     IMPLICIT NONE
@@ -83,7 +143,7 @@ CONTAINS
     LOGICAL                       :: callstop,warn,first_pe
     LOGICAL                       :: l_mpi=.FALSE.
     INTEGER                       :: isize,irank,e,i
-    CHARACTER(len=100),ALLOCATABLE::message_list(:)
+    CHARACTER(len=MESSAGE_LENGTH),ALLOCATABLE::message_list(:)
     
 
    !For logging
@@ -120,7 +180,7 @@ CONTAINS
     ENDIF
 
 #ifdef CPP_MPI
-    if (l_mpi) CALL collect_messages(message,message_list,first_pe)
+    if (l_mpi) CALL collect_messages(message,message_list,first_pe,callstop)
 #endif
 
     IF (first_pe) THEN
@@ -296,6 +356,8 @@ CONTAINS
     IF (l_mpi) THEN
        IF(PRESENT(irank)) THEN
           CALL MPI_BARRIER(MPI_COMM_WORLD,ierr)
+          !All PEs are here, hence the collective free of the RMA window is safe
+          CALL juDFT_free_errormessages()
           CALL MPI_ERRHANDLER_SET(MPI_COMM_WORLD,MPI_ERRORS_RETURN,ierr)
           CALL MPI_FINALIZE(ierr)
        ELSE
@@ -372,44 +434,90 @@ CONTAINS
 
 
 #ifdef CPP_MPI
-  SUBROUTINE collect_messages(mymessage,message_list,first_pe)
-    !This routine collects all error messages from all PE into an array
-    !As not all PE might call this routine we use non-blocking communication
-    !The integer first_pe is true if this pe is the one with the lowest rank among
-    !all having error messages to report
+  SUBROUTINE collect_messages(mymessage,message_list,first_pe,l_callstop)
+    !This routine collects the error messages of all PEs into an array.
+    !As not all PEs might call this routine, neither collective communication
+    !nor matching point-to-point calls can be used. Instead every PE writes its
+    !message with one-sided communication (RMA) into the window of all PEs.
+    !In contrast to the non-blocking send/recv used before, all communication is
+    !guaranteed to be complete when MPI_WIN_UNLOCK returns. Hence no MPI
+    !operation can access the local buffers after this routine has returned
+    !(which corrupted the heap whenever juDFT_error did return, e.g. for
+    !warnings with JUDFT_WARN_ONLY).
+    !first_pe is true if this PE is the one with the lowest rank among all PEs
+    !having an error message to report. l_callstop indicates that the caller
+    !terminates the calculation; if it does not, the message is removed from the
+    !windows again so that it is not reported by a later call.
     IMPLICIT NONE
-    CHARACTER(len=*),INTENT(IN)                              :: mymessage
-    CHARACTER(len=100),ASYNCHRONOUS,ALLOCATABLE,INTENT(OUT)  :: message_list(:)
-    LOGICAL,INTENT(OUT)                                      :: first_pe
-    INTEGER:: irank,isize,ierr,i
-    LOGICAL:: completed
-    INTEGER,ALLOCATABLE::ihandle(:)
-    CHARACTER(len=100):: message
-    REAL :: t1,t2
-
-    message=mymessage
+    CHARACTER(len=*),INTENT(IN)                           :: mymessage
+    CHARACTER(len=MESSAGE_LENGTH),ALLOCATABLE,INTENT(OUT) :: message_list(:)
+    LOGICAL,INTENT(OUT)                                   :: first_pe
+    LOGICAL,INTENT(IN)                                    :: l_callstop
+    INTEGER                        :: irank,isize,ierr,i
+    INTEGER(KIND=MPI_ADDRESS_KIND) :: disp
+    LOGICAL                        :: l_flag
+    REAL                           :: t1,t2
+    CHARACTER(len=MESSAGE_LENGTH)  :: message
 
     CALL MPI_COMM_RANK(MPI_COMM_WORLD,irank,ierr)
     CALL MPI_COMM_SIZE(MPI_COMM_WORLD,isize,ierr)
     ALLOCATE(message_list(0:isize-1))
-    ALLOCATE(ihandle(0:isize-1))
     message_list=""
-    !Announce that I have a message to all PE
-    DO i=0,isize-1
-       CALL MPI_isend(message,100,MPI_CHARACTER,i,999,MPI_COMM_WORLD,ihandle(0),ierr)
-    ENDDO
-    !Collect all message
-    DO i=0,isize-1
-       CALL MPI_irecv(message_list(i),100,MPI_CHARACTER,i,999,MPI_COMM_WORLD,ihandle(i),ierr)
-    ENDDO
-    !Wait for 2 seconds
-    CALL priv_wait(2.0)
-    !Check if any PE with a lower rank also reports an error
     first_pe=.TRUE.
+    !Without a window we can only report our own message
+    IF (.NOT.l_errmsg_win) RETURN
+
+    message=mymessage
+    disp=INT(irank,MPI_ADDRESS_KIND)*INT(MESSAGE_LENGTH,MPI_ADDRESS_KIND)
+    !Announce my message by writing it into my slot in the window of all PEs.
+    !Only a single lock is held at a time, so this can not deadlock even if
+    !several PEs report an error simultaneously.
     DO i=0,isize-1
-       CALL MPI_TEST(ihandle(i),completed,MPI_STATUS_IGNORE,ierr)
-       IF (i<irank) first_pe=first_pe.AND..NOT.completed
+       CALL MPI_WIN_LOCK(MPI_LOCK_EXCLUSIVE,i,0,errmsg_win,ierr)
+       IF (ierr.NE.MPI_SUCCESS) CYCLE
+       CALL MPI_PUT(message,MESSAGE_LENGTH,MPI_CHARACTER,i,disp,MESSAGE_LENGTH,&
+                    MPI_CHARACTER,errmsg_win,ierr)
+       !After the unlock the put is complete, i.e. 'message' can be reused
+       CALL MPI_WIN_UNLOCK(i,errmsg_win,ierr)
     ENDDO
+
+    !Wait for 2 seconds to give the other PEs the chance to report as well.
+    !MPI_IPROBE is called in between to ensure progress of the one-sided
+    !communication also with MPI libraries without asynchronous progress.
+    CALL cpu_TIME(t1)
+    t2=t1
+    DO WHILE(t2-t1<2.0)
+       CALL MPI_IPROBE(MPI_ANY_SOURCE,MPI_ANY_TAG,MPI_COMM_WORLD,l_flag,MPI_STATUS_IGNORE,ierr)
+       CALL cpu_TIME(t2)
+    ENDDO
+
+    !Now look at the messages collected in my own window
+    CALL MPI_WIN_LOCK(MPI_LOCK_EXCLUSIVE,irank,0,errmsg_win,ierr)
+    IF (ierr==MPI_SUCCESS) THEN
+       message_list=errmsg_buffer
+       !Consume the messages so that a later call does not report them again
+       errmsg_buffer=""
+       CALL MPI_WIN_UNLOCK(irank,errmsg_win,ierr)
+    ENDIF
+
+    !Check if any PE with a lower rank also reports an error
+    DO i=0,irank-1
+       IF (LEN_TRIM(message_list(i))>0) first_pe=.FALSE.
+    ENDDO
+
+    !If we do not stop here (a warning in warn-only mode) the message has to be
+    !removed from the windows again. Otherwise it would show up as a stale
+    !message of "another PE" in a later error report.
+    IF (.NOT.l_callstop) THEN
+       message=""
+       DO i=0,isize-1
+          CALL MPI_WIN_LOCK(MPI_LOCK_EXCLUSIVE,i,0,errmsg_win,ierr)
+          IF (ierr.NE.MPI_SUCCESS) CYCLE
+          CALL MPI_PUT(message,MESSAGE_LENGTH,MPI_CHARACTER,i,disp,MESSAGE_LENGTH,&
+                       MPI_CHARACTER,errmsg_win,ierr)
+          CALL MPI_WIN_UNLOCK(i,errmsg_win,ierr)
+       ENDDO
+    ENDIF
   END SUBROUTINE collect_messages
 #endif
 
