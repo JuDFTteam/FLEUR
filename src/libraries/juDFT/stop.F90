@@ -72,8 +72,8 @@ CONTAINS
     !MPI_COMM_WORLD. It is called from juDFT_init directly after MPI_INIT.
     IMPLICIT NONE
 #ifdef CPP_MPI
-    INTEGER                        :: isize,ierr
-    LOGICAL                        :: l_mpi
+    INTEGER                        :: isize,ierr,old_errhandler
+    LOGICAL                        :: l_mpi,l_win
     INTEGER(KIND=MPI_ADDRESS_KIND) :: winsize
 
     IF (l_errmsg_win) RETURN !already initialized
@@ -84,8 +84,30 @@ CONTAINS
     ALLOCATE(errmsg_buffer(0:isize-1))
     errmsg_buffer=""
     winsize=INT(isize,MPI_ADDRESS_KIND)*INT(MESSAGE_LENGTH,MPI_ADDRESS_KIND)
+
+    !A window does not exist yet while it is being created, so MPI_WIN_CREATE
+    !reports a failure on the communicator instead. MPI_COMM_WORLD still carries
+    !the default MPI_ERRORS_ARE_FATAL at this point, i.e. MPI aborts the run
+    !inside MPI_WIN_CREATE and the fallback below is never reached. The handler
+    !is therefore switched to MPI_ERRORS_RETURN for the call and restored right
+    !afterwards, so that a missing window stays non-fatal as intended.
+    !This is not hypothetical: not every MPI offers a one-sided component for
+    !every transport, and OpenMPI fails here with MPI_ERR_WIN when none of its
+    !osc components matches the selected BTLs.
+    CALL MPI_COMM_GET_ERRHANDLER(MPI_COMM_WORLD,old_errhandler,ierr)
+    CALL MPI_COMM_SET_ERRHANDLER(MPI_COMM_WORLD,MPI_ERRORS_RETURN,ierr)
     CALL MPI_WIN_CREATE(errmsg_buffer,winsize,1,MPI_INFO_NULL,MPI_COMM_WORLD,errmsg_win,ierr)
-    IF (ierr.NE.MPI_SUCCESS) THEN
+    l_win=(ierr==MPI_SUCCESS)
+    CALL MPI_COMM_SET_ERRHANDLER(MPI_COMM_WORLD,old_errhandler,ierr)
+    CALL MPI_ERRHANDLER_FREE(old_errhandler,ierr)
+
+    !MPI_WIN_FREE in juDFT_free_errormessages is collective, so all PEs have to
+    !agree on whether there is a window. Should the creation fail on some PEs
+    !only, the window of the others is deliberately left unfreed: freeing it
+    !would be a collective call that the failed PEs never reach.
+    CALL MPI_ALLREDUCE(MPI_IN_PLACE,l_win,1,MPI_LOGICAL,MPI_LAND,MPI_COMM_WORLD,ierr)
+
+    IF (.NOT.l_win) THEN
        !No window available. This is not fatal, collect_messages will then
        !simply not report the messages of the other PEs.
        DEALLOCATE(errmsg_buffer)
