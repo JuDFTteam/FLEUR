@@ -123,6 +123,7 @@ Testset: Experimental
 | +   | Hubbard1 using SOC                             | extra/Gd_Hubbard1       | bulk,edsolver |                           |         | 2   |
 | +   | Hubbard1 without sym                           | extra/Gd_Hubbard1_noSYM | bulk,edsolver |                           |         | 2   |
 |     | diamond for one k-point with scan              | extra/Diamond_SCAN      | bulk,libxc    | SCAN has to be refactored |         | 2   |
+| +   | diamond, self-consistent SCAN (V_tau in H)     | extra/MetaGGA_SCAN      | bulk,libxc    | exercises the MetaGGA V_tau interstitial+MT Hamiltonian and the tau*V_tau double counting |         | 2   |
 | +   | 3D vector plots of the magnetization           | extra/PlotOnlyMT        | bulk,plot,hdf |                           |         | 2   |
 | +   | density and potential plots, vector plots      | extra/PlotDenandPot     | bulk,plot,hdf |                           |         | 2   |
 

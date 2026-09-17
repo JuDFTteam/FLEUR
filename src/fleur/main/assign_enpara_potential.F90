@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -90,12 +90,6 @@ CONTAINS
         DO n = 1, atoms%ntype
           enpara%vr(:, n, jsp) = enpara%vr(:, n, jsp) &
                                + (vxc_aux%mt(:, 0, n, jsp) - vxc%mt(:, 0, n, jsp))*atoms%rmsh(:,n)/sfp_const
-          write(77,*) n," vr"
-          write(77,*) enpara%vr(:20, n, jsp)                     
-          write(77,*) n," v_aux"
-          write(77,*) vxc_aux%mt(:20, 0, n, jsp)
-          write(77,*) n," v_xc"
-          write(77,*) vxc%mt(:20, 0, n, jsp)
         END DO
       END DO
 
@@ -103,11 +97,14 @@ CONTAINS
     END IF
 
     
+     ! Non-spin-polarized basis: both spin channels use the spin-averaged potential.
+     ! Average enpara%vr itself rather than re-reading v%mt, so that any MetaGGA
+     ! auxiliary-GGA correction applied above is preserved. For jspins=1 this is a no-op.
      DO n = 1, atoms%ntype
         IF (atoms%l_nonpolbas(n)) THEN
-          enpara%vr(:, n, 1) = (v%mt(:, 0, n, 1) + v%mt(:, 0, n, jsp)) / 2
-          enpara%vr(:, n, jsp) = v%mt(:, 0, n, 1)
-        ENDIF  
+          enpara%vr(:, n, 1) = (enpara%vr(:, n, 1) + enpara%vr(:, n, input%jspins)) / 2
+          enpara%vr(:, n, input%jspins) = enpara%vr(:, n, 1)
+        ENDIF
      END DO
     
   END SUBROUTINE assign_enpara_potential

@@ -181,6 +181,23 @@ CONTAINS
       IF (fmpi%irank==0) CALL readDensity(stars, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, &
                                               fi%input, fi%sym, archiveType, CDN_INPUT_DEN_const, 0, &
                                               results%ef, results%last_distance, l_qfix, inDen,b_constr=nococonv%b_con)
+      ! Reject the MetaGGA cases that are not implemented, before a long run rather than after.
+      ! pwden_kinEnergyDen reads only the first spinor block of zMat and the MT kinetic energy
+      ! density is built from denmatrix(jspin,jspin) only, so noco would give a wrong tau.
+      IF (xcpot%is_MetaGGA().AND.fi%noco%l_noco) &
+         CALL judft_error("MetaGGA is not implemented for non-collinear magnetism", calledby="fleur")
+      ! tlmplm_vtau has no counterpart to tlo: the parts of the local-orbital Hamiltonian that
+      ! multiply the LO radial function itself (h_LO, h_LO2, tuloulo_newer) get no V_tau.
+      IF (xcpot%needs_MetaGGA_ham().AND.fi%atoms%nlotot>0) &
+         CALL judft_error("MetaGGA: the V_tau contribution to local orbitals is not implemented", &
+                          calledby="fleur", hint="Remove local orbitals, or use a non-MetaGGA functional.")
+      ! tau is never computed in the vacuum: EnergyDen%vac is allocated and zeroed but never
+      ! written, vacden has no tau path, and vvac_xc takes no tau argument. The vacuum would
+      ! therefore silently get the auxiliary GGA (or abort inside eval_vxc without one).
+      IF (xcpot%is_MetaGGA().AND.fi%input%film) &
+         CALL judft_error("MetaGGA is not implemented for film geometries (no tau in the vacuum)", &
+                          calledby="fleur", hint="Use a bulk geometry, or a non-MetaGGA functional.")
+
                                               ! Load persisted kinetic energy density for MetaGGA (if available)
       IF (xcpot%is_MetaGGA()) THEN
          CALL EnergyDen%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_EnergyDen)
@@ -192,7 +209,7 @@ CONTAINS
                              fi%input, fi%sym, CDN_ARCHIVE_TYPE_CDN_const, CDN_INPUT_DEN_const, &
                              0, rdummy, rdummy, l_dummy, EnergyDen, inFilename='kinED')
             ELSE 
-               EnergyDen%pw(1,:)=-1E99 ! Set to a very negative value to indicate that it is not loaded. 
+               EnergyDen%pw(1,:)=kinEnergyDenMarker_const ! very negative value: not loaded
             ENDIF
          ENDIF   
          CALL EnergyDen%distribute(fmpi%mpi_comm)
@@ -304,8 +321,10 @@ CONTAINS
          END IF !fmpi%irank==0
 
          l_useAuxGGA = .FALSE.
-         IF (xcpot%is_MetaGGA()) THEN
-            IF (real(EnergyDen%pw(1,1)) < -1E98) l_useAuxGGA = .TRUE.
+         ! create_from_aux aborts without an <AuxGGA> element, so only take this path when one
+         ! is actually configured (l_bj makes is_MetaGGA() true without implying an aux GGA).
+         IF (xcpot%is_MetaGGA().AND.xcpot%has_aux_gga()) THEN
+            IF (real(EnergyDen%pw(1,1)) < kinEnergyDenUnset_const) l_useAuxGGA = .TRUE.
          ENDIF
          if (l_useAuxGGA) then
             ! In the first iteration, we do not have a valid kinetic energy density, so we use an auxiliary GGA potential for the XC part.
@@ -323,7 +342,9 @@ CONTAINS
                CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi, fi%sym, fi%cell, &
                               fi%noco, nococonv, inDen, PLOT_INPDEN, fi%sliceplot)
                IF (xcpot%is_MetaGGA()) THEN
-                  if (real(EnergyDen%pw(1,1)) < -1E98) &
+                  ! Only plot the kinetic energy density once it actually holds one; the test
+                  ! used to be inverted and plotted the "not set" sentinel instead.
+                  if (real(EnergyDen%pw(1,1)) > kinEnergyDenUnset_const) &
                      CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi, fi%sym, fi%cell, &
                                     fi%noco, nococonv, EnergyDen, PLOT_ENERGYDEN, fi%sliceplot)
                ENDIF
@@ -388,7 +409,11 @@ CONTAINS
 
          CALL timestart("generation of potential")
          CALL moessbauerParams%init(fi%input, fi%noco, fi%atoms)
-         CALL vgen(hybdat, fi%field, fi%input, xcpot, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, &
+         ! xcpot_iter, not xcpot: in the bootstrap iteration this is the auxiliary GGA, so the
+         ! XC potential is built from the same functional that eigen and totale then use,
+         ! instead of evaluating the MetaGGA against a kinetic energy density that does not
+         ! exist yet.
+         CALL vgen(hybdat, fi%field, fi%input, xcpot_iter, fi%atoms, sphhar, stars, fi%vacuum, fi%sym, &
                    fi%cell,   fi%sliceplot, fmpi, results, fi%noco, nococonv, EnergyDen, inDen, vTot, vx, vCoul, vxc, exc, vTau, &
                    moessbauerParams)
          CALL timestop("generation of potential")
@@ -741,9 +766,13 @@ CONTAINS
             CALL check_time_for_next_iteration(hub1data%overallIteration, l_cont)
          ELSE
             l_cont = l_cont .AND. (iter < fi%input%itmax)
-            ! MetaGGAs need a at least 2 iterations
+            ! MetaGGAs need at least 2 iterations: the first one runs on the auxiliary GGA
+            ! (or on no kinetic energy density at all), so stopping after it would mean never
+            ! evaluating the real functional. Must use the same predicate as the bootstrap
+            ! test above, or a potential-only MetaGGA takes the bootstrap without getting the
+            ! extra iteration.
             l_cont = l_cont .AND. ((fi%input%mindistance <= results%last_distance) .OR. fi%input%l_f &
-                                   .OR. (xcpot%exc_is_MetaGGA() .and. iter == 1))
+                                   .OR. (xcpot%is_MetaGGA() .and. iter == 1))
             CALL check_time_for_next_iteration(iter, l_cont)
          END IF
 

@@ -371,6 +371,7 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "fast: tests which take < 1 sec to execute")
     config.addinivalue_line("markers", "slow: tests which take < 1 min to execute")
     config.addinivalue_line("markers", "very_slow: tests which take > 1 min to execute")
+    config.addinivalue_line("markers", "metagga: MetaGGA (kinetic energy density) tests")
     config.addinivalue_line("markers", "xml: test with xml")
     config.addinivalue_line("markers", "noxml: test with no xml")
     config.addinivalue_line("markers", "gpu: this test will a GPU capbale fleur version")
@@ -1130,7 +1131,15 @@ def check_all_outxml(test_logger,check_outxml):
             ["forceTotal","F_x",-1,0.001,None],
             ["forceTotal","F_y",-1,0.001,None],
             ["forceTotal","F_z",-1,0.001,None],
-            ["frequencies",None,-1,0.001,"list"], 
+            # MetaGGA diagnostics. Only present in MetaGGA references, and skip_noref=True
+        # means they are silently skipped for every other test.
+        ["kineticEnergyDensity","total",-1,1e-6,None],
+        ["kineticEnergyDensity","interstitial",-1,1e-6,None],
+        ["kineticEnergyDensity","mtSpheres",-1,1e-6,None],
+        ["isoOrbitalIndicator","alphaMinMT",-1,1e-8,None],
+        ["isoOrbitalIndicator","alphaMinIR",-1,1e-8,None],
+        ["kinEnergyDenVTauIntegral","value",-1,1e-6,None],
+        ["frequencies",None,-1,0.001,"list"], 
             ["dieltensor",None,-1,0.001,"list"],
             ["borneffcharge",None,-1,0.001,"list"] 
             

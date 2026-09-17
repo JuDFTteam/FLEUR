@@ -118,6 +118,13 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
 #endif
    LOGICAL               :: l_error,Perform_metagga
 
+   ! MetaGGA: integrals of the kinetic energy density, reported per region
+   REAL                  :: tau_q(input%jspins), tau_qis(input%jspins)
+   REAL                  :: tau_qmt(atoms%ntype,input%jspins), tau_qvac(2,input%jspins)
+   REAL                  :: tau_qtot, tau_qistot
+   CHARACTER(LEN=20)     :: tau_names(4), tau_attrs(4)
+   INTEGER               :: tau_lengths(4,2)
+
    ! Initialization section
    CALL moments%init(fmpi,input,sphhar,atoms)
    !initalize data for DOS
@@ -270,6 +277,39 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    Perform_metagga = Allocated(Energyden%Mt) .And. Xcpot%Is_MetaGGA()
    If(Perform_metagga) Then
      IF(any(noco%l_alignMT)) CALL juDFT_error("Relaxation of SQA and metagga not implemented.", calledby = "cdngen" )
+
+     ! Integrate the kinetic energy density over the cell and report it per region.
+     ! EnergyDen uses exactly the conventions integrate_cdn expects (MT: l=0 only, r^2*f_00,
+     ! scaled by sfp_const; interstitial: plain star coefficients weighted with stars%nstr).
+     ! Skip while the "not loaded" sentinel still sits in the G=0 star, otherwise the
+     ! interstitial integral would simply report that marker.
+     IF (REAL(EnergyDen%pw(1,1)) > kinEnergyDenUnset_const) THEN
+        CALL integrate_cdn(stars,nococonv,atoms,sym,vacuum,input,cell, EnergyDen, &
+                           tau_q, tau_qis, tau_qmt, tau_qvac, tau_qtot, tau_qistot, fmpi)
+        IF (fmpi%irank == 0) THEN
+           DO jspin = 1, input%jspins
+              tau_names(1) = 'spin'        ; WRITE(tau_attrs(1),'(i0)')    jspin
+              tau_lengths(1,1) = 4         ; tau_lengths(1,2) = 1
+              tau_names(2) = 'total'       ; WRITE(tau_attrs(2),'(f14.7)') tau_q(jspin)
+              tau_lengths(2,1) = 5         ; tau_lengths(2,2) = 14
+              tau_names(3) = 'interstitial'; WRITE(tau_attrs(3),'(f14.7)') tau_qis(jspin)
+              tau_lengths(3,1) = 12        ; tau_lengths(3,2) = 14
+              tau_names(4) = 'mtSpheres'   ; WRITE(tau_attrs(4),'(f14.7)') &
+                                                SUM(atoms%neq(:)*tau_qmt(:,jspin))
+              tau_lengths(4,1) = 9         ; tau_lengths(4,2) = 14
+              CALL writeXMLElementForm('kineticEnergyDensity',tau_names(1:4),tau_attrs(1:4),tau_lengths(1:4,:))
+           END DO
+
+           ! Iso-orbital indicator extrema, computed during potential generation. Note these
+           ! refer to the *input* density of this iteration, while the tau integrals above
+           ! refer to the output density just constructed.
+           CALL writeXMLElementFormPoly('isoOrbitalIndicator', &
+                (/'alphaMinMT','alphaMaxMT','alphaMinIR','alphaMaxIR'/), &
+                (/results%alphaMinMT,results%alphaMaxMT,results%alphaMinIR,results%alphaMaxIR/), &
+                reshape((/10,10,10,10,20,20,20,20/),(/4,2/)))
+        END IF
+     END IF
+
      ! Persist kinetic energy density for restart
      CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
                            0,-1.0,0.0,-1.0,-1.0,.FALSE.,EnergyDen,inFilename='kinED')

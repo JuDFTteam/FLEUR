@@ -102,14 +102,8 @@ CONTAINS
                IF (PRESENT(vtau_pw)) THEN
                   th = th + phase * 0.5 * DOT_PRODUCT(MATMUL(bvecPr, bbmat), bvec) * vtau_pw(gInd)
                END IF
-            ELSE
-               ! Off-diagonal spin case: still add V_tau if present
-               ! (V_tau acts within each spin channel)
-               IF (PRESENT(vtau_pw)) THEN
-                  bvecPr = kvecPr + gvecPr(:, ikGPr)
-                  bvec = kvec + gvec(:, ikG)
-                  th = th + phase * 0.5 * DOT_PRODUCT(MATMUL(bvecPr, bbmat), bvec) * vtau_pw(gInd)
-               END IF
+               ! No V_tau in the spin off-diagonal case: hs_int only passes vtau_pw for
+               ! iSpinPr == iSpin, which always implies iTkin > 0.
             END IF
 
             IF (l_smat) THEN

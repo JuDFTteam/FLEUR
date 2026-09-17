@@ -185,6 +185,9 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="constrainingField" type="BConstraintType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="rdmft" type="RDMFTOutType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="moessbauerParams" type="MoessbauerParamsType"/>
+         <!-- MetaGGA diagnostics; emitted only for MetaGGA runs -->
+         <xsd:element maxOccurs="unbounded" minOccurs="0" name="kineticEnergyDensity" type="SpinDependentChargeType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="isoOrbitalIndicator" type="IsoOrbitalIndicatorType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="totalEnergy" type="TotalEnergyType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="totalForcesOnRepresentativeAtoms" type="OutTotalForcesType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="ldaUDensityMatrix" type="LDAUDensityMatrixType"/>
@@ -413,6 +416,15 @@
       <xsd:attribute name="mtSpheres" type="xsd:double" use="required"/>
       <xsd:attribute name="vacuum1" type="xsd:double" use="optional"/>
       <xsd:attribute name="vacuum2" type="xsd:double" use="optional"/>
+   </xsd:complexType>
+
+   <!-- MetaGGA: extrema of the iso-orbital indicator alpha=(tau-tau_W)/tau_unif,
+        reported separately for the muffin tins and the interstitial. -->
+   <xsd:complexType name="IsoOrbitalIndicatorType">
+      <xsd:attribute name="alphaMinMT" type="xsd:double" use="required"/>
+      <xsd:attribute name="alphaMaxMT" type="xsd:double" use="required"/>
+      <xsd:attribute name="alphaMinIR" type="xsd:double" use="required"/>
+      <xsd:attribute name="alphaMaxIR" type="xsd:double" use="required"/>
    </xsd:complexType>
 
    <xsd:complexType name="OutCoreStatesType">
@@ -760,6 +772,7 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="densityCoulombPotentialIntegral" type="SingleValueType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="densityEffectivePotentialIntegral" type="SingleValueType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="chargeDenXCDenIntegral" type="SingleValueType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="kinEnergyDenVTauIntegral" type="SingleValueType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="FockExchangeEnergyValence" type="SingleValueType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="FockExchangeEnergyCore" type="SingleValueType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="vdWEnergy" type="SingleValueType"/>

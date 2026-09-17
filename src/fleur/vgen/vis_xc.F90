@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -18,7 +18,7 @@ MODULE m_vis_xc
    !     ******************************************************
    implicit none
 CONTAINS
-   SUBROUTINE vis_xc(stars,sym,cell,den,xcpot,input,noco,EnergyDen,vTot,vx,exc,vxc,vTau)
+   SUBROUTINE vis_xc(stars,sym,cell,den,xcpot,input,noco,EnergyDen,vTot,vx,exc,vxc,vTau,alphaMin,alphaMax)
 
       !     ******************************************************
       !     instead of visxcor.f: the different exchange-correlation
@@ -33,8 +33,10 @@ CONTAINS
       !     ******************************************************************
       USE m_pw_tofrom_grid
       USE m_types
+      USE m_constants
       USE m_types_xcpot_libxc
       USE m_libxc_postprocess_gga
+      USE m_mgga_alpha
       IMPLICIT NONE
 
       CLASS(t_xcpot),INTENT(IN)     :: xcpot
@@ -46,6 +48,8 @@ CONTAINS
       TYPE(t_potden),INTENT(IN)  :: den, EnergyDen
       TYPE(t_potden),INTENT(INOUT)  :: vTot,vx,exc,vxc
       TYPE(t_potden),INTENT(INOUT),OPTIONAL :: vTau
+      !! MetaGGA diagnostic: running extrema of the iso-orbital indicator (interstitial)
+      REAL,INTENT(INOUT),OPTIONAL   :: alphaMin, alphaMax
 
       TYPE(t_gradients) :: grad, tmp_grad_ked
       REAL, ALLOCATABLE :: rho(:,:), ED_rs(:,:), vTot_rs(:,:)
@@ -58,6 +62,9 @@ CONTAINS
       l_libxc=.FALSE.
 
       perform_MetaGGA = ALLOCATED(EnergyDen%mt) .AND. xcpot%is_MetaGGA()
+      ! EnergyDen%mt is allocated even before a kinetic energy density exists, so also reject
+      ! the "not loaded" sentinel rather than feeding it to libxc as tau.
+      IF (perform_MetaGGA) perform_MetaGGA = REAL(EnergyDen%pw(1,1)) > kinEnergyDenUnset_const
 
       call timestart("init_pw_grid")
       CALL init_pw_grid(stars,sym,cell,xcpot)
@@ -77,6 +84,11 @@ CONTAINS
       call timestart("apply_cutoffs")
       CALL xcpot%apply_cutoffs(1.E-6,rho,grad)
       call timestop("apply_cutoffs")
+
+      ! rho, grad%sigma and ked_rs all live on the same FFT grid here, which makes this
+      ! the one place the interstitial alpha can be formed.
+      IF (perform_MetaGGA .AND. PRESENT(alphaMin) .AND. PRESENT(alphaMax)) &
+         CALL mgga_alpha_extrema(input%jspins, rho, grad%sigma, ked_rs, alphaMin, alphaMax)
 #ifdef CPP_LIBXC
       if(perform_MetaGGA) then
          IF (xcpot%vx_is_MetaGGA()) THEN
@@ -121,7 +133,9 @@ CONTAINS
       CALL  pw_from_grid(stars,v_x,vx%pw,vx%pw_w)
       ! Store V_tau star coefficients for MetaGGA Hamiltonian contribution
       IF (xcpot%vx_is_MetaGGA() .AND. ALLOCATED(v_tau)) THEN
-         CALL pw_from_grid(stars,v_tau,vTau%pw,vTau%pw_w)
+         IF (PRESENT(vTau)) THEN ! nested: vTau may be absent (e.g. the writeCFOutput path)
+            CALL pw_from_grid(stars,v_tau,vTau%pw,vTau%pw_w)
+         END IF
          DEALLOCATE(v_tau)
       ENDIF
       call timestop("pw_from_grid")

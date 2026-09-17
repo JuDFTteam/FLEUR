@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -30,14 +30,17 @@ MODULE m_vmt_xc
       !             U.Alekseeva, February 2017
       !     *********************************************************
 
+   implicit none
    CONTAINS
       SUBROUTINE vmt_xc(fmpi,sphhar,atoms,&
-                        den,xcpot,input,sym,EnergyDen,noco,vTot,vx,exc,vxc,vTau)
+                        den,xcpot,input,sym,EnergyDen,noco,vTot,vx,exc,vxc,vTau,alphaMin,alphaMax)
 
          use m_libxc_postprocess_gga
          USE m_mt_tofrom_grid
          USE m_types_xcpot_inbuild
          USE m_types
+         USE m_constants
+         USE m_mgga_alpha
          IMPLICIT NONE
 
          CLASS(t_xcpot),INTENT(IN)      :: xcpot
@@ -49,7 +52,9 @@ MODULE m_vmt_xc
          TYPE(t_potden),INTENT(IN)      :: den,EnergyDen
          TYPE(t_noco), INTENT(IN)       :: noco
          TYPE(t_potden),INTENT(INOUT)   :: vTot,vx,exc,vxc
-         TYPE(t_potden),INTENT(INOUT)   :: vTau
+         TYPE(t_potden),INTENT(INOUT),OPTIONAL :: vTau
+         !! MetaGGA diagnostic: running extrema of the iso-orbital indicator (muffin tins)
+         REAL,INTENT(INOUT),OPTIONAL    :: alphaMin, alphaMax
          !     ..
          !     .. Local Scalars ..
          TYPE(t_gradients)     :: grad, tmp_grad_ked
@@ -70,6 +75,9 @@ MODULE m_vmt_xc
          LOGICAL :: lda_atom(atoms%ntype),l_libxc, perform_MetaGGA
          !.....------------------------------------------------------------------
          perform_MetaGGA = ALLOCATED(EnergyDen%mt) .AND. xcpot%is_MetaGGA()
+         ! EnergyDen%mt is allocated even before a kinetic energy density exists, so also reject
+         ! the "not loaded" sentinel rather than feeding it to libxc as tau.
+         IF (perform_MetaGGA) perform_MetaGGA = REAL(EnergyDen%pw(1,1)) > kinEnergyDenUnset_const
          lda_atom=.FALSE.; l_libxc=.FALSE.
          SELECT TYPE(xcpot)
          TYPE IS(t_xcpot_inbuild)
@@ -120,6 +128,11 @@ MODULE m_vmt_xc
             END IF
 
             CALL mt_to_grid(xcpot%needs_grad(), input%jspins, atoms,sym,sphhar,.True.,den%mt(:,0:,n,:),n,noco,grad,ch)
+
+            ! mt_to_grid divides by r^2 (chlh=rho/r**2), so ch and ked_rs are true rho and
+            ! tau here and alpha can be formed without any further rescaling.
+            IF (perform_MetaGGA .AND. PRESENT(alphaMin) .AND. PRESENT(alphaMax)) &
+               CALL mgga_alpha_extrema(input%jspins, ch, grad%sigma, ked_rs, alphaMin, alphaMax)
 
             !
             !         calculate the ex.-cor. potential
@@ -177,7 +190,9 @@ MODULE m_vmt_xc
 
             ! Store V_tau for MetaGGA Hamiltonian contribution
             IF (xcpot%vx_is_MetaGGA() .AND. ALLOCATED(v_tau)) THEN
-               CALL mt_from_grid(atoms,sym,sphhar,n,input%jspins,v_tau,vTau%mt(:,0:,n,:))
+               IF (PRESENT(vTau)) THEN ! nested: vTau may be absent (e.g. the writeCFOutput path)
+                  CALL mt_from_grid(atoms,sym,sphhar,n,input%jspins,v_tau,vTau%mt(:,0:,n,:))
+               END IF
             ENDIF
 
             IF (ALLOCATED(exc%mt)) THEN
@@ -226,8 +241,17 @@ MODULE m_vmt_xc
          CALL MPI_ALLREDUCE(MPI_IN_PLACE,exc%mt,SIZE(exc%mt),MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)
          CALL MPI_ALLREDUCE(MPI_IN_PLACE,vxc%mt,SIZE(vxc%mt),MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)
          IF (xcpot%vx_is_MetaGGA()) THEN
-            CALL MPI_ALLREDUCE(MPI_IN_PLACE,vTau%mt,SIZE(vTau%mt),MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)
+            ! Collective: PRESENT(vTau) is uniform across ranks, so no rank can skip this.
+            IF (PRESENT(vTau)) THEN
+               CALL MPI_ALLREDUCE(MPI_IN_PLACE,vTau%mt,SIZE(vTau%mt),MPI_DOUBLE_PRECISION,MPI_SUM,fmpi%mpi_comm,ierr)
+            END IF
          ENDIF
+         ! The atom loop above is strided over ranks, so each rank has only seen its own
+         ! atoms. Collective: PRESENT() is uniform across ranks at the call site.
+         IF (PRESENT(alphaMin).AND.PRESENT(alphaMax)) THEN
+            CALL MPI_ALLREDUCE(MPI_IN_PLACE,alphaMin,1,MPI_DOUBLE_PRECISION,MPI_MIN,fmpi%mpi_comm,ierr)
+            CALL MPI_ALLREDUCE(MPI_IN_PLACE,alphaMax,1,MPI_DOUBLE_PRECISION,MPI_MAX,fmpi%mpi_comm,ierr)
+         END IF
 #endif
          !
          RETURN

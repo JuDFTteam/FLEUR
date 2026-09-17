@@ -67,6 +67,7 @@ CONTAINS
       REAL, ALLOCATABLE :: tec(:,:), qintc(:,:)
       ! Local Scalars
       INTEGER :: ifftd2, ispin, i, iType
+      REAL    :: alphaMinMT, alphaMaxMT, alphaMinIR, alphaMaxIR
       REAL    :: dpdot
       LOGICAL :: l_dfptvgen
 #ifdef CPP_MPI
@@ -74,6 +75,11 @@ CONTAINS
 #endif
 
       l_dfptvgen = PRESENT(starsq)
+
+      ! MetaGGA iso-orbital indicator: seeded so that MIN/MAX accumulate correctly, and
+      ! left at these sentinels if no MetaGGA grid point is ever visited.
+      alphaMinMT =  HUGE(1.0); alphaMaxMT = -HUGE(1.0)
+      alphaMinIR =  HUGE(1.0); alphaMaxIR = -HUGE(1.0)
 
       IF (PRESENT(results)) THEN
          CALL veff%init(stars, atoms, sphhar, vacuum, noco, input%jspins, 1)
@@ -104,7 +110,8 @@ CONTAINS
          ! interstitial region
          CALL timestart("Vxc in interstitial")
          IF (.NOT.l_dfptvgen) THEN
-             CALL vis_xc(stars, sym, cell, den, xcpot, input, noco, EnergyDen, vTot, vx, exc, vxc, vTau=vTau)
+             CALL vis_xc(stars, sym, cell, den, xcpot, input, noco, EnergyDen, vTot, vx, exc, vxc, vTau=vTau, &
+                         alphaMin=alphaMinIR, alphaMax=alphaMaxIR)
          ELSE
              ! TODO: This is different enough to warrant a separate subroutine, right?
              CALL dfpt_vis_xc(stars, starsq, sym, cell, denRot, den1Rot, xcpot, input, vTot)
@@ -122,7 +129,8 @@ CONTAINS
 
       IF (.NOT.l_dfptvgen) THEN
           CALL vmt_xc(fmpi, sphhar, atoms, den, xcpot, input, sym, &
-                      EnergyDen, noco,vTot, vx, exc, vxc, vTau=vTau)
+                      EnergyDen, noco,vTot, vx, exc, vxc, vTau=vTau, &
+                      alphaMin=alphaMinMT, alphaMax=alphaMaxMT)
       ELSE
           CALL dfpt_vmt_xc(fmpi,sphhar,atoms,denRot,den1Rot,den1Rotimag,xcpot,input,sym,noco,vTot,dfptvTotimag)
       END IF
@@ -203,6 +211,34 @@ CONTAINS
             WRITE (oUnit, FMT=8080) results%te_exc
 
 8080        FORMAT(/, 10x, 'total charge density-energy density integral :', t40, ES20.10)
+
+            ! MetaGGA: CALCULATE THE INTEGRAL OF tau*V_tau
+            ! V_tau enters the Hamiltonian, so <psi|V_tau|psi> sits inside the eigenvalue sum
+            ! and has to be removed again in totale, exactly like the n*Veff double counting.
+            ! This has to run before vgen rescales vTau%pw_w by stars%nstr, because int_nv
+            ! expects the nstr-weighted convention that pw_from_grid produces.
+            results%te_vtau = 0.0
+            IF (PRESENT(vTau).AND.xcpot%needs_MetaGGA_ham()) THEN
+               IF (ALLOCATED(EnergyDen%mt).AND.ALLOCATED(vTau%pw_w)) THEN
+                  IF (REAL(EnergyDen%pw(1,1)) > kinEnergyDenUnset_const) THEN
+                     DO ispin = 1, input%jspins
+                        CALL int_nv(ispin, stars, vacuum, atoms, sphhar, cell, sym, input, &
+                                    vTau, EnergyDen, results%te_vtau)
+                     END DO
+                     WRITE (oUnit, FMT=8090) results%te_vtau
+8090                 FORMAT(/, 10x, 'kinetic energy density-V_tau integral :', t40, ES20.10)
+                  END IF
+               END IF
+            END IF
+
+            ! Hand the iso-orbital indicator extrema to cdngen for output. Left at zero when
+            ! no MetaGGA grid point was visited, so the sentinels never reach out.xml.
+            IF (alphaMaxMT > -HUGE(1.0)) THEN
+               results%alphaMinMT = alphaMinMT; results%alphaMaxMT = alphaMaxMT
+            END IF
+            IF (alphaMaxIR > -HUGE(1.0)) THEN
+               results%alphaMinIR = alphaMinIR; results%alphaMaxIR = alphaMaxIR
+            END IF
          END IF
       END IF ! fmpi%irank == 0
 

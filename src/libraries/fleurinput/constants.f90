@@ -41,6 +41,12 @@ MODULE m_constants
   ! outputFileVersion_const is defined in juDFT/xmlOutput.f90
   ! For version number update also update version numbers in files io/xml/FleurInputSchema.xsd, io/xml/FleurOutputSchema.xsd, fleurInput/types_xml, and update the files
   ! io/xml/inputSchema.h.backup, io/xml/outputSchema.h.backup, dropInputSchema.c, dropOutputSchema.c, inputSchema_old.h, outputSchema_old.h.
+  ! MetaGGA: marker written into EnergyDen%pw(1,:) when no kinetic energy density has been
+  ! read from a kinED file yet. Anything below kinEnergyDenUnset_const counts as "not set";
+  ! tau must never be handed to libxc while it carries this value.
+  REAL,             PARAMETER :: kinEnergyDenUnset_const = -1E98
+  REAL,             PARAMETER :: kinEnergyDenMarker_const = -1E99
+
   REAL, PARAMETER             :: boltzmann_const = 3.1668114e-6 ! value is given in Hartree/Kelvin
   REAL, PARAMETER             :: r0_const = 0.0000236216 ! r_0 as in approximation of the nuclear radius R = r_0*A^(1/3), value in Bohr radii.
 

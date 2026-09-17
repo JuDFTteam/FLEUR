@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -36,6 +36,16 @@ CONTAINS
       !!
       !! This has the same selection rules as the regular tlmplm integrals
       !! (Gaunt coefficient constraints), and the result is ADDED to td%h_loc.
+      !!
+      !! TODO: local orbitals are not covered. local_hamiltonian derives td%h_loc_LO from
+      !! td%h_loc after this routine runs, so the a/b parts of the LO expansion already carry
+      !! V_tau; what is missing are the parts multiplying the LO radial function itself, i.e.
+      !! td%h_LO, td%h_LO2 and td%tuloulo_newer. Use tlo.f90 as the template: same loops and
+      !! Gaunt assembly, but with the integrand replaced by
+      !!   (D_a*D_b + angfac/r^2 * R_a*R_b) * vtau(r),   angfac as below,
+      !! skipping tlo's spherical-Hamiltonian block (its `l_V1` branch) and using
+      !! s = td%h_loc2_nonsph(n) for the offset. `flo` below is already computed for this.
+      !! Until then fleur.F90 rejects MetaGGA runs that use local orbitals.
 
       USE m_constants
       USE m_intgr, ONLY : intgr3

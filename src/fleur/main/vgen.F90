@@ -107,10 +107,18 @@ CONTAINS
       results%force=0.0
 
       CALL workDen%init(stars,atoms,sphhar,vacuum,noco,input%jspins,0)
-      if (xcpot%is_MetaGGA()) then 
-         ! In MetaGGA, vTau is needed for the XC potential, so we initialize it here. (and set it to zero).
-         CALL vtau%init(stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_POTTOT)
-      endif
+      IF (PRESENT(vTau)) THEN
+         ! In MetaGGA, vTau is needed for the XC potential, so we initialize it here (and set it to zero).
+         ! This is keyed on PRESENT(vTau) rather than on xcpot%is_MetaGGA(), because in the
+         ! bootstrap iteration xcpot is the auxiliary GGA and vTau must still be defined.
+         CALL vTau%init(stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_POTTOT)
+         ! init() does not allocate pw_w (and, being INTENT(OUT), would wipe it), so do it here.
+         ! Without this, pw_from_grid and hs_int silently see an absent optional argument and
+         ! the interstitial V_tau term is dropped. Must happen on all ranks: t_potden%distribute
+         ! tests ALLOCATED(pw_w) per rank, so a rank-0-only allocation would desynchronize.
+         ALLOCATE(vTau%pw_w(stars%ng3,input%jspins))
+         vTau%pw_w = CMPLX(0.0,0.0) ! pw_from_grid accumulates into pw_w
+      END IF
       ! a)
       ! Sum up both spins in den into workden:
       CALL den%sum_both_spin(workden)
@@ -135,6 +143,18 @@ CONTAINS
       CALL vgen_xcpot(hybdat,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
                       cell,fmpi,noco,den,denRot,EnergyDen,vTot,vx,vxc,exc,results=results,vTau=vTau)
 
+      ! Rescale vTau%pw_w with the number of stars, so that it is in the same convention as
+      ! stars%ustep when hs_int_direct consumes it. This mirrors what vgen_finalize does to
+      ! vTot%pw_w, and must stay in step with it. It has to happen *after* vgen_xcpot, which
+      ! consumes the nstr-weighted form via int_nv to build results%te_vtau.
+      IF (PRESENT(vTau)) THEN
+         IF (ALLOCATED(vTau%pw_w).AND.fmpi%irank==0) THEN
+            DO js = 1, SIZE(vTau%pw_w,2)
+               vTau%pw_w(:stars%ng3,js) = vTau%pw_w(:stars%ng3,js) / stars%nstr(:stars%ng3)
+            END DO
+         END IF
+      END IF
+
       if (any(noco%l_constrained)) call vgen_constraint(atoms,noco,nococonv,vtot)
 
       ! d)
@@ -147,7 +167,9 @@ CONTAINS
       CALL vx%distribute(fmpi%mpi_comm)
       CALL vxc%distribute(fmpi%mpi_comm)
       CALL exc%distribute(fmpi%mpi_comm)
-      IF (ALLOCATED(vTau%mt)) CALL vTau%distribute(fmpi%mpi_comm)
+      IF (PRESENT(vTau)) THEN ! must be nested: Fortran does not short-circuit .AND.
+         IF (ALLOCATED(vTau%mt)) CALL vTau%distribute(fmpi%mpi_comm)
+      END IF
     
 
       IF (PRESENT(moessbauerParams)) CALL moessbauerParams%calcEFG(atoms, sym, sphhar, fmpi, vCoul)

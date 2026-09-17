@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -28,6 +28,7 @@ USE m_eigen_redist_matrix
 USE m_add_vnonlocal
 USE m_hsmt_fjgj
 USE m_eig66_io, ONLY: open_eig, write_eig, read_eig
+USE m_juDFT
 IMPLICIT NONE
 INTEGER, INTENT(IN)           :: isp
 TYPE(t_mpi), INTENT(IN)       :: fmpi
@@ -81,6 +82,9 @@ CALL timestart("Interstitial part")
 ALLOCATE(vpw_wTemp(SIZE(v%pw_w,1),SIZE(v%pw_w,2)))
 vpw_wTemp = merge(v%pw_w - xcpot%get_exchange_weight() * vx%pw_w, v%pw_w, hybdat%l_subvxc)
 IF (xcpot%needs_MetaGGA_ham() .AND. PRESENT(vTau)) THEN
+   ! Nested, and an explicit error: an unallocated pw_w would be passed on as an *absent*
+   ! optional and hs_int would silently drop the V_tau term instead of failing.
+   IF (.NOT.ALLOCATED(vTau%pw_w)) CALL judft_error("MetaGGA: vTau%pw_w is not allocated", calledby="eigen_hssetup")
    CALL hs_int(fi%input, fi%noco, nococonv, stars, lapw, fmpi, fi%cell%bbmat, isp, vpw_wTemp, smat, hmat, vtau_pw_in=vTau%pw_w)
 ELSE
    CALL hs_int(fi%input, fi%noco, nococonv, stars, lapw, fmpi, fi%cell%bbmat, isp, vpw_wTemp, smat, hmat)
@@ -160,6 +164,7 @@ USE m_eigen_redist_matrix
 USE m_add_vnonlocal
 USE m_hsmt_fjgj
 USE m_eig66_io, ONLY: open_eig, write_eig, read_eig
+USE m_juDFT
 IMPLICIT NONE
 INTEGER, INTENT(IN)           :: isp
 TYPE(t_mpi), INTENT(IN)       :: fmpi
@@ -211,6 +216,7 @@ IF (fmpi%n_size == 1) THEN
    vpw_wTemp = merge(v%pw_w - xcpot%get_exchange_weight() * vx%pw_w, v%pw_w, hybdat%l_subvxc)
 
    IF (xcpot%needs_MetaGGA_ham() .AND. PRESENT(vTau)) THEN
+      IF (.NOT.ALLOCATED(vTau%pw_w)) CALL judft_error("MetaGGA: vTau%pw_w is not allocated", calledby="eigen_hssetup")
       CALL hs_int(fi%input, fi%noco, nococonv, stars, lapw, fmpi, fi%cell%bbmat, isp, vpw_wTemp, smat, hmat, vtau_pw_in=vTau%pw_w)
    ELSE
       CALL hs_int(fi%input, fi%noco, nococonv, stars, lapw, fmpi, fi%cell%bbmat, isp, vpw_wTemp, smat, hmat)
@@ -290,6 +296,7 @@ ELSE
    vpw_wTemp = merge(v%pw_w - xcpot%get_exchange_weight() * vx%pw_w, v%pw_w, hybdat%l_subvxc)
    
    IF (xcpot%needs_MetaGGA_ham() .AND. PRESENT(vTau)) THEN
+      IF (.NOT.ALLOCATED(vTau%pw_w)) CALL judft_error("MetaGGA: vTau%pw_w is not allocated", calledby="eigen_hssetup")
       CALL hs_int(fi%input, fi%noco, nococonv, stars, lapw, fmpi, fi%cell%bbmat, isp, vpw_wTemp, smat_mpi, hmat_mpi, vtau_pw_in=vTau%pw_w)
    ELSE
       CALL hs_int(fi%input, fi%noco, nococonv, stars, lapw, fmpi, fi%cell%bbmat, isp, vpw_wTemp, smat_mpi, hmat_mpi)

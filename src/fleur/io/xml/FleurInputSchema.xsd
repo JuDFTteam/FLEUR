@@ -823,7 +823,7 @@
          </xsd:element>
          <xsd:element maxOccurs="1" minOccurs="0" name="AuxGGA" type="AuxGGAType">
             <xsd:annotation>
-               <xsd:documentation>Auxiliary GGA functional for computing radial basis functions in MetaGGA calculations. Specify LibXC IDs for the GGA exchange and correlation. Recommended: RPBE (exchange=130 correlation=131) for SCAN.</xsd:documentation>
+               <xsd:documentation>Auxiliary GGA functional for computing radial basis functions in MetaGGA calculations. Specify LibXC IDs for the GGA exchange and correlation. Recommended for SCAN: RPBE exchange with PBE correlation, i.e. exchange=117 (XC_GGA_X_RPBE) correlation=130 (XC_GGA_C_PBE).</xsd:documentation>
             </xsd:annotation>
          </xsd:element>
       </xsd:sequence>
