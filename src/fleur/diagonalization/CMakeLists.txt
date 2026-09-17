@@ -28,11 +28,11 @@ src/fleur/io/iomatrix_hdf.F90
 add_executable(diag_test EXCLUDE_FROM_ALL ${diag_test_files}  )
 target_link_libraries(diag_test ${FLEUR_LIBRARIES})
 target_link_libraries(diag_test juDFT)
-if (FLEUR_USE_MPI)
-target_compile_definitions(diag_test PUBLIC ${FLEUR_MPI_DEFINITIONS})
-else()
-target_compile_definitions(diag_test PUBLIC ${FLEUR_DEFINITIONS})
-endif()
-set_target_properties(diag_test PROPERTIES Fortran_MODULE_DIRECTORY modules/diag_test COMPILE_OPTIONS -Imodules/diag_test RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tools")
+target_compile_definitions(diag_test PUBLIC ${FLEUR_DEFINITIONS} ${FLEUR_PARALLEL_DEFINITIONS})
+#Use target_compile_options, not set_target_properties(COMPILE_OPTIONS ...), which
+#would replace the whole property and drop the precision flag again.
+target_compile_options(diag_test PUBLIC $<$<COMPILE_LANGUAGE:Fortran>:${FLEUR_PRECISION_OPTION}>)
+target_compile_options(diag_test PRIVATE -Imodules/diag_test)
+set_target_properties(diag_test PROPERTIES Fortran_MODULE_DIRECTORY modules/diag_test RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tools")
 
 endif()

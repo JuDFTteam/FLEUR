@@ -8,7 +8,6 @@ endif()
 
 if (FLEUR_USE_SCHED)
    message("sched.h used")
-   set(FLEUR_MPI_DEFINITIONS ${FLEUR_MPI_DEFINITIONS} "CPP_SCHED")
    set(FLEUR_DEFINITIONS ${FLEUR_DEFINITIONS} "CPP_SCHED")
 else()
    message("sched.h NOT used")

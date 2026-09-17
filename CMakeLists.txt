@@ -33,7 +33,7 @@ add_dependencies("inpgen2" buildinfo)
 
 include("cmake/ReportConfig.txt")
 
-#install(TARGETS fleur inpgen DESTINATION bin)
-install(PROGRAMS ${CMAKE_BINARY_DIR}/fleur DESTINATION bin OPTIONAL)
-install(PROGRAMS ${CMAKE_BINARY_DIR}/fleur_MPI DESTINATION bin OPTIONAL)
-install(PROGRAMS ${CMAKE_BINARY_DIR}/inpgen DESTINATION bin)
+#Both targets are renamed on output ('fleur' -> 'fleur_MPI' for an MPI build,
+#'inpgen2' -> 'inpgen'); install(TARGETS) honours RUNTIME_OUTPUT_NAME.
+install(TARGETS fleur   RUNTIME DESTINATION bin)
+install(TARGETS inpgen2 RUNTIME DESTINATION bin)
