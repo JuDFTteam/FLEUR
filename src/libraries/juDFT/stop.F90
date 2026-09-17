@@ -99,7 +99,12 @@ CONTAINS
     CALL MPI_WIN_CREATE(errmsg_buffer,winsize,1,MPI_INFO_NULL,MPI_COMM_WORLD,errmsg_win,ierr)
     l_win=(ierr==MPI_SUCCESS)
     CALL MPI_COMM_SET_ERRHANDLER(MPI_COMM_WORLD,old_errhandler,ierr)
-    CALL MPI_ERRHANDLER_FREE(old_errhandler,ierr)
+    !The reference obtained above is deliberately not released again:
+    !MPI_COMM_GET_ERRHANDLER usually hands out one of the predefined handlers
+    !here, and MPI_ERRHANDLER_FREE rejects those in some MPI implementations.
+    !The resulting error would be raised on MPI_COMM_WORLD, which is fatal
+    !again at this point, i.e. exactly the abort this routine avoids. Holding
+    !one extra reference to a predefined handler costs nothing.
 
     !MPI_WIN_FREE in juDFT_free_errormessages is collective, so all PEs have to
     !agree on whether there is a window. Should the creation fail on some PEs
