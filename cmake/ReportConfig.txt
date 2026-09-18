@@ -111,7 +111,7 @@ if (NOT FLEUR_USE_LAPACK)
 endif()
 
 if (NOT (FLEUR_USE_SERIAL OR FLEUR_USE_MPI))
-    message(FATAL_ERROR "You should either compile a parallel or serial version (or both)")
+    message(FATAL_ERROR "You should compile either the parallel or the serial version")
 endif()
 
 if (FLEUR_WARN_MESSAGE)

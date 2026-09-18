@@ -13,7 +13,8 @@ if(FLEUR_USE_PROG_THREAD)
    set(c_filesFleur ${c_filesFleur} src/fleur/hybrid/progress_thread/progress_thread.c)
 endif()
 
-set(fleur_F90 src/fleur/main/fleur.F90)
+#fleur.F90 itself is added by src/fleur/main/CMakeLists.txt below
+set(fleur_F90 "")
 set(fleur_F77 "")
 include(src/fleur/eigen/CMakeLists.txt)
 include(src/fleur/force/CMakeLists.txt)
@@ -52,7 +53,6 @@ include(src/fleur/dfpt/CMakeLists.txt)
 include(src/fleur/mt_cdn/CMakeLists.txt)
 
 file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/modules/fleur")
-file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/modules/fleur_MPI")
 
 set(fleur_SRC ${fleur_F90} ${fleur_F77})
 
@@ -60,88 +60,62 @@ set_source_files_properties(${fleur_F90} PROPERTIES Fortran_FORMAT FREE)
 set_source_files_properties(${fleur_F77} PROPERTIES Fortran_FORMAT FIXED)
 
 include_directories("${CMAKE_CURRENT_BINARY_DIR}/fleurinput/modules/fleurinput")
-if (FLEUR_USE_SERIAL)
-   #Serial executables
-   add_executable(fleur ${fleur_SRC} ${c_filesFleur})
-   target_compile_definitions(fleur PUBLIC ${FLEUR_DEFINITIONS})
-   target_compile_options(fleur PUBLIC $<$<COMPILE_LANGUAGE:Fortran>:${FLEUR_PRECISION_OPTION}>)
-   target_link_libraries(fleur fleurinput juDFT)
-   if (FLEUR_COMPILE_EDSOLVER)
-      target_link_libraries(fleur EDsolver)
-   endif()
-   if (FLEUR_COMPILE_MAGMA)
-      target_link_libraries(fleur magma)
-   endif()   
-   if (FLEUR_USE_LIBXC AND FLEUR_LIBXC_TARGETS)
-      target_link_libraries(fleur ${FLEUR_LIBXC_TARGETS})
-   endif()
-   target_link_libraries(fleur ${FLEUR_LIBRARIES})
-   target_link_libraries(fleur ${FLEUR_LINK_LIBRARIES})
-   get_property(CO SOURCE main/fleur.F90 PROPERTY COMPILE_FLAGS)
-   message("1:${CO}")
-   target_compile_options(fleur PRIVATE $<$<COMPILE_LANGUAGE:Fortran>:${FLEUR_COMPILE_OPTIONS}>)
-   target_compile_options(fleur PRIVATE -I${CMAKE_BINARY_DIR}/modules/fleur)
-   set_target_properties(fleur PROPERTIES Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/modules/fleur)
+#The FLEUR executable. There is only ever one of it in a build tree: the MPI and
+#the serial version differ in the compile definitions and the linked solver
+#libraries, not in the target. The binary is named 'fleur_MPI' instead of
+#'fleur' for a parallel build (see RUNTIME_OUTPUT_NAME below), because the test
+#system and the packaging recipes identify the variant by that file name.
+add_executable(fleur ${fleur_SRC} ${c_filesFleur})
+target_compile_definitions(fleur PUBLIC ${FLEUR_DEFINITIONS} ${FLEUR_PARALLEL_DEFINITIONS})
+target_compile_options(fleur PUBLIC $<$<COMPILE_LANGUAGE:Fortran>:${FLEUR_PRECISION_OPTION}>)
+target_compile_options(fleur PRIVATE $<$<COMPILE_LANGUAGE:Fortran>:${FLEUR_COMPILE_OPTIONS}>)
+target_compile_options(fleur PRIVATE -I${CMAKE_BINARY_DIR}/modules/fleur)
+set_target_properties(fleur PROPERTIES Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/modules/fleur)
+target_link_libraries(fleur fleurinput juDFT)
+
+if (FLEUR_COMPILE_EDSOLVER)
+   target_link_libraries(fleur EDsolver)
 endif()
-#parallel executables
+if (FLEUR_COMPILE_MAGMA)
+   target_link_libraries(fleur magma)
+endif()
+
 if (FLEUR_USE_MPI)
-  #fleur_MPI
-  add_executable(fleur_MPI ${juDFT_HDF} ${juDFT_SRC_F90} ${fleur_SRC} ${c_filesFleur} ${fleur_SRC_MPI})
-  target_compile_definitions(fleur_MPI PUBLIC ${FLEUR_MPI_DEFINITIONS})
-  target_link_libraries(fleur_MPI fleurinput juDFT)
-  target_compile_options(fleur_MPI PUBLIC $<$<COMPILE_LANGUAGE:Fortran>:${FLEUR_PRECISION_OPTION}>)
-  target_compile_options(fleur_MPI PUBLIC $<$<COMPILE_LANGUAGE:Fortran>:${FLEUR_COMPILE_OPTIONS}>)
-   if (FLEUR_COMPILE_EDSOLVER)
-      target_link_libraries(fleur_MPI EDsolver)
-   endif()
-   if (FLEUR_COMPILE_MAGMA)
-      target_link_libraries(fleur_MPI magma)
-   endif()   
+   set_target_properties(fleur PROPERTIES RUNTIME_OUTPUT_NAME fleur_MPI)
+   #Parallel eigensolvers are only available in the MPI build
    if (FLEUR_COMPILE_CHASE)
-      target_link_libraries(fleur_MPI chase_f)
-      set_target_properties(fleur_MPI PROPERTIES LINKER_LANGUAGE Fortran)
+      target_link_libraries(fleur chase_f)
+      set_target_properties(fleur PROPERTIES LINKER_LANGUAGE Fortran)
    endif()
    if (FLEUR_COMPILE_ELSI)
-      target_link_libraries(fleur_MPI elsi)
-      set_target_properties(fleur_MPI PROPERTIES LINKER_LANGUAGE Fortran)
+      target_link_libraries(fleur elsi)
+      set_target_properties(fleur PROPERTIES LINKER_LANGUAGE Fortran)
    endif()
    if (FLEUR_USE_INTERNAL_ELPA)
-     add_dependencies(fleur_MPI elpa)
-     target_link_libraries(fleur_MPI elpa)
-     target_link_libraries(fleur_MPI "-lstdc++")
+     add_dependencies(fleur elpa)
+     target_link_libraries(fleur elpa)
+     target_link_libraries(fleur "-lstdc++")
      add_dependencies(elpa scalapack)
    endif()
    IF (FLEUR_COMPILE_SCALAPACK)
-      target_link_libraries(fleur_MPI scalapack)
+      target_link_libraries(fleur scalapack)
       if (FLEUR_COMPILE_ELSI)
       cmake_policy(SET CMP0079 NEW)
       target_link_libraries(elpa PRIVATE scalapack)
       target_link_libraries(chase PRIVATE scalapack)
       endif()
    endif()
-  if (FLEUR_USE_LIBXC AND FLEUR_LIBXC_TARGETS)
-     target_link_libraries(fleur_MPI ${FLEUR_LIBXC_TARGETS})
-  endif()
-  target_link_libraries(fleur_MPI ${FLEUR_LIBRARIES})
-  target_link_libraries(fleur_MPI ${FLEUR_LINK_LIBRARIES})
-   set_target_properties(fleur_MPI PROPERTIES Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/modules/fleur_MPI)
-   target_compile_options(fleur_MPI PUBLIC -I${CMAKE_BINARY_DIR}/modules/fleur_MPI)
-  
 endif ()
+
+if (FLEUR_USE_LIBXC AND FLEUR_LIBXC_TARGETS)
+   target_link_libraries(fleur ${FLEUR_LIBXC_TARGETS})
+endif()
+target_link_libraries(fleur ${FLEUR_LIBRARIES})
+target_link_libraries(fleur ${FLEUR_LINK_LIBRARIES})
 
 
 
 include(cmake/docker.txt)
 
-
-#if (FLEUR_USE_SERIAL)
-#install(TARGETS fleur inpgen
-#        CONFIGURATIONS Release
-#        DESTINATION bin)
-#endif()
-#if (FLEUR_USE_MPI)
-#install(TARGETS fleur_MPI
-#        CONFIGURATIONS Release
-#        DESTINATION bin)
-#endif()
+#The install rules live in the top-level CMakeLists.txt
 

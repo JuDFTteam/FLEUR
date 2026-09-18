@@ -6,6 +6,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 FLEUR is an all-electron DFT code implementing the full-potential linearized augmented plane-wave (FLAPW) method. It is a scientific HPC code written primarily in Fortran 90/95+, with Python tooling for testing. The primary executables are `fleur` (serial) and `fleur_MPI` (parallel), plus `inpgen` for input file generation.
 
+## General Rules (User generated)
+
+- do not state in commit messages that CLAUDE is a co-author
+- ask the user before doing a commit
+- commit messages should be <300 words
+- code comments should be short and not include references to previous code versions
+
 ## Building
 
 FLEUR uses CMake via a `configure.sh` wrapper:

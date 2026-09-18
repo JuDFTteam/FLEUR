@@ -5,7 +5,8 @@ __pycache__
 \#*
 build
 build.*
-.claude
+.claude/*
+!.claude/skills/
 *.o
 *.x
 *.swp
