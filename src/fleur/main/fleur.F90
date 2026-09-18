@@ -186,11 +186,6 @@ CONTAINS
       ! density is built from denmatrix(jspin,jspin) only, so noco would give a wrong tau.
       IF (xcpot%is_MetaGGA().AND.fi%noco%l_noco) &
          CALL judft_error("MetaGGA is not implemented for non-collinear magnetism", calledby="fleur")
-      ! tlmplm_vtau has no counterpart to tlo: the parts of the local-orbital Hamiltonian that
-      ! multiply the LO radial function itself (h_LO, h_LO2, tuloulo_newer) get no V_tau.
-      IF (xcpot%needs_MetaGGA_ham().AND.fi%atoms%nlotot>0) &
-         CALL judft_error("MetaGGA: the V_tau contribution to local orbitals is not implemented", &
-                          calledby="fleur", hint="Remove local orbitals, or use a non-MetaGGA functional.")
       ! tau is never computed in the vacuum: EnergyDen%vac is allocated and zeroed but never
       ! written, vacden has no tau path, and vvac_xc takes no tau argument. The vacuum would
       ! therefore silently get the auxiliary GGA (or abort inside eval_vxc without one).

@@ -37,15 +37,17 @@ CONTAINS
       !! This has the same selection rules as the regular tlmplm integrals
       !! (Gaunt coefficient constraints), and the result is ADDED to td%h_loc.
       !!
-      !! TODO: local orbitals are not covered. local_hamiltonian derives td%h_loc_LO from
-      !! td%h_loc after this routine runs, so the a/b parts of the LO expansion already carry
-      !! V_tau; what is missing are the parts multiplying the LO radial function itself, i.e.
-      !! td%h_LO, td%h_LO2 and td%tuloulo_newer. Use tlo.f90 as the template: same loops and
-      !! Gaunt assembly, but with the integrand replaced by
-      !!   (D_a*D_b + angfac/r^2 * R_a*R_b) * vtau(r),   angfac as below,
-      !! skipping tlo's spherical-Hamiltonian block (its `l_V1` branch) and using
-      !! s = td%h_loc2_nonsph(n) for the offset. `flo` below is already computed for this.
-      !! Until then fleur.F90 rejects MetaGGA runs that use local orbitals.
+      !! Local orbitals are covered in two parts:
+      !!  - The a/b parts of the LO expansion come for free: local_hamiltonian derives
+      !!    td%h_loc_LO from td%h_loc *after* this routine runs.
+      !!  - The parts multiplying the LO radial function itself are built here, in the
+      !!    second half of the routine, using tlo.f90 as the template: the same loops and
+      !!    Gaunt assembly, with the integrand replaced by
+      !!      (D_a*D_b + angfac/r^2 * R_a*R_b) * vtau(r)
+      !!    and the result added to td%h_LO, td%h_LO2 (APW-LO) and td%tuloulo_newer (LO-LO).
+      !!    tlo's spherical-Hamiltonian block (its `l_V1` branch) has no V_tau analogue and
+      !!    is deliberately absent: V_tau is never absorbed into the radial functions, so
+      !!    its lh=0 component is picked up by the lattice-harmonic loop like any other.
 
       USE m_constants
       USE m_intgr, ONLY : intgr3
@@ -75,14 +77,19 @@ CONTAINS
       REAL, ALLOCATABLE :: f(:,:,:,:), g(:,:,:,:), flo(:,:,:,:)
       REAL, ALLOCATABLE :: vtau_lh(:,:), x(:)
 
+      ! Local-orbital counterparts of uvu/uvd (APW-LO) and of the LO-LO block
+      REAL, ALLOCATABLE :: uvulo(:,:,:), dvulo(:,:,:), ulovulo(:,:)
+
       ! Derivative arrays: D_f = df/dr - f/r, D_g = dg/dr - g/r
       REAL, ALLOCATABLE :: Df(:,:,:,:), Dg(:,:,:,:)  ! (jri, 2-components, 0:lmaxd, 2-spins)
+      REAL, ALLOCATABLE :: Dflo(:,:,:,:)             ! (jri, 2-components, nlod, 2-spins)
       REAL, ALLOCATABLE :: dR_dr(:)  ! temporary for derivative computation
 
       COMPLEX :: cil
       REAL    :: temp, angfac, r_inv
       INTEGER :: i, l, l2, lamda, lh, lm, lmin, lmin0, lmp, lmx, lp, lh0
       INTEGER :: lp1, lpl, mem, mems, mp, mu, nh, na, m, nsym, s, lplmax, jri, comp
+      INTEGER :: lo, lop, loplo, mlo, s_lo, lpmin, lpmax, lpmin0, lpmax0
 
       jri = atoms%jri(n)
       lplmax = atoms%lmaxd*(atoms%lmaxd+3)/2
@@ -99,7 +106,13 @@ CONTAINS
       ! Derivative arrays
       ALLOCATE(Df(atoms%jmtd, 2, 0:atoms%lmaxd, 2)); Df = 0.0
       ALLOCATE(Dg(atoms%jmtd, 2, 0:atoms%lmaxd, 2)); Dg = 0.0
+      ALLOCATE(Dflo(atoms%jmtd, 2, MAX(atoms%nlod,1), 2)); Dflo = 0.0
       ALLOCATE(dR_dr(atoms%jmtd))
+
+      ! Local-orbital integrals (same layout as in tlo, but with lh0 = 0)
+      ALLOCATE(uvulo(MAX(atoms%nlod,1), 0:atoms%lmaxd, 0:sphhar%nlhd)); uvulo = 0.0
+      ALLOCATE(dvulo(MAX(atoms%nlod,1), 0:atoms%lmaxd, 0:sphhar%nlhd)); dvulo = 0.0
+      ALLOCATE(ulovulo(MAX(atoms%nlod*(atoms%nlod+1)/2,1), 0:sphhar%nlhd)); ulovulo = 0.0
 
       CALL timestart("tlmplm_vtau")
 
@@ -134,6 +147,16 @@ CONTAINS
                END DO
             END DO
          END DO
+
+         ! Same for the local-orbital radial functions
+         DO lo = 1, atoms%nlo(n)
+            DO comp = 1, 2
+               CALL Derivative(flo(1:jri, comp, lo, i), n, atoms, dR_dr(1:jri))
+               DO s = 1, jri
+                  Dflo(s, comp, lo, i) = dR_dr(s) - flo(s, comp, lo, i) / atoms%rmsh(s, n)
+               END DO
+            END DO
+         END DO
       END DO
       DEALLOCATE(dR_dr)
       CALL timestop("tlmplm_vtau: basis+derivatives")
@@ -156,7 +179,7 @@ CONTAINS
                lamda = sphhar%llh(lh, nsym)
                lmin = lp - l
                lmx = lp + l
-               IF ((MOD(lamda+lmx,2).EQ.1) .OR. (lamda.LT.lmin) .OR. (lamda.GT.lmx)) THEN
+               IF ((MOD(lamda+lmx,2)==1) .OR. (lamda<lmin) .OR. (lamda>lmx)) THEN
                   uvu(lpl,lh) = 0.0
                   uvd(lpl,lh) = 0.0
                   dvu(lpl,lh) = 0.0
@@ -228,7 +251,7 @@ CONTAINS
             DO lh = lh0, nh
                lamda = sphhar%llh(lh, nsym)
                lmin0 = ABS(lp - lamda)
-               IF (lmin0.GT.lp) CYCLE
+               IF (lmin0>lp) CYCLE
                ! Ensure l+l'+lamda even
                lmx = lp - MOD(lamda, 2)
                mems = sphhar%nmem(lh, nsym)
@@ -240,7 +263,7 @@ CONTAINS
                   lmin = lmin + MOD(l2, 2)
                   DO l = lmin, lmx, 2
                      lm = l*(l+1) + m
-                     IF (lm.GT.lmp) CYCLE
+                     IF (lm>lmp) CYCLE
                      lpl = lp1 + l
                      cil = ImagUnit**(l-lp) * sphhar%clnu(mem, lh, nsym) &
                          * gaunt1(lp, lamda, l, mp, mu, m, atoms%lmaxd)
@@ -251,7 +274,7 @@ CONTAINS
                      td%h_loc(lmp+s,lm,n,ilSpinPr,ilSpin)   = td%h_loc(lmp+s,lm,n,ilSpinPr,ilSpin)   + cil*dvu(lpl,lh)
                      td%h_loc(lmp+s,lm+s,n,ilSpinPr,ilSpin) = td%h_loc(lmp+s,lm+s,n,ilSpinPr,ilSpin) + cil*dvd(lpl,lh)
                      ! Hermitian conjugate for the upper triangle
-                     IF (lm.NE.lmp) THEN
+                     IF (lm/=lmp) THEN
                         td%h_loc(lm,lmp,n,ilSpinPr,ilSpin)     = td%h_loc(lm,lmp,n,ilSpinPr,ilSpin)     + CONJG(cil*uvu(lpl,lh))
                         td%h_loc(lm,lmp+s,n,ilSpinPr,ilSpin)   = td%h_loc(lm,lmp+s,n,ilSpinPr,ilSpin)   + CONJG(cil*dvu(lpl,lh))
                         td%h_loc(lm+s,lmp,n,ilSpinPr,ilSpin)   = td%h_loc(lm+s,lmp,n,ilSpinPr,ilSpin)   + CONJG(cil*uvd(lpl,lh))
@@ -264,6 +287,156 @@ CONTAINS
       END DO
 
       CALL timestop("tlmplm_vtau: assemble h_loc")
+
+      ! ================================================================
+      ! Local orbitals. Structure follows tlo.f90 exactly; only the
+      ! integrand differs (gradient-weighted, against V_tau instead of V).
+      ! ================================================================
+      IF (atoms%nlo(n) > 0) THEN
+         CALL timestart("tlmplm_vtau: LO radial integrals")
+
+         ! <nabla(u_{l'}) | V_tau | nabla(u_lo)>  and the same with udot
+         DO lo = 1, atoms%nlo(n)
+            l = atoms%llo(lo, n)
+            DO lp = 0, atoms%lmax(n)
+               lmin = ABS(lp - l)
+               lmx = lp + l
+               DO lh = lh0, nh
+                  lamda = sphhar%llh(lh, nsym)
+                  IF ((MOD(l+lp+lamda,2)==1) .OR. (lamda<lmin) .OR. (lamda>lmx)) THEN
+                     uvulo(lo,lp,lh) = 0.0
+                     dvulo(lo,lp,lh) = 0.0
+                  ELSE
+                     angfac = 0.5 * REAL(l*(l+1) + lp*(lp+1) - lamda*(lamda+1))
+
+                     DO i = 1, jri
+                        r_inv = 1.0 / atoms%rmsh(i, n)
+                        x(i) = ( (Df(i,1,lp,ilSpinPr)*Dflo(i,1,lo,ilSpin) + Df(i,2,lp,ilSpinPr)*Dflo(i,2,lo,ilSpin)) &
+                               + angfac * r_inv * r_inv * &
+                                 (f(i,1,lp,ilSpinPr)*flo(i,1,lo,ilSpin) + f(i,2,lp,ilSpinPr)*flo(i,2,lo,ilSpin)) &
+                               ) * vtau_lh(i, lh)
+                     END DO
+                     CALL intgr3(x, atoms%rmsh(1,n), atoms%dx(n), jri, temp)
+                     uvulo(lo,lp,lh) = 0.5 * temp
+
+                     DO i = 1, jri
+                        r_inv = 1.0 / atoms%rmsh(i, n)
+                        x(i) = ( (Dg(i,1,lp,ilSpinPr)*Dflo(i,1,lo,ilSpin) + Dg(i,2,lp,ilSpinPr)*Dflo(i,2,lo,ilSpin)) &
+                               + angfac * r_inv * r_inv * &
+                                 (g(i,1,lp,ilSpinPr)*flo(i,1,lo,ilSpin) + g(i,2,lp,ilSpinPr)*flo(i,2,lo,ilSpin)) &
+                               ) * vtau_lh(i, lh)
+                     END DO
+                     CALL intgr3(x, atoms%rmsh(1,n), atoms%dx(n), jri, temp)
+                     dvulo(lo,lp,lh) = 0.5 * temp
+                  END IF
+               END DO
+            END DO
+         END DO
+
+         ! <nabla(u_lo') | V_tau | nabla(u_lo)> for lo <= lo'
+         loplo = 0
+         DO lop = 1, atoms%nlo(n)
+            lp = atoms%llo(lop, n)
+            DO lo = 1, lop
+               l = atoms%llo(lo, n)
+               loplo = loplo + 1
+               IF (loplo > SIZE(ulovulo,1)) CALL juDFT_error("loplo too large!!!", calledby="tlmplm_vtau")
+               DO lh = lh0, nh
+                  lamda = sphhar%llh(lh, nsym)
+                  lmin = ABS(lp - l)
+                  lmx = lp + l
+                  IF ((MOD(l+lp+lamda,2)==1) .OR. (lamda<lmin) .OR. (lamda>lmx)) THEN
+                     ulovulo(loplo,lh) = 0.0
+                  ELSE
+                     angfac = 0.5 * REAL(l*(l+1) + lp*(lp+1) - lamda*(lamda+1))
+                     DO i = 1, jri
+                        r_inv = 1.0 / atoms%rmsh(i, n)
+                        x(i) = ( (Dflo(i,1,lop,ilSpinPr)*Dflo(i,1,lo,ilSpin) &
+                                + Dflo(i,2,lop,ilSpinPr)*Dflo(i,2,lo,ilSpin)) &
+                               + angfac * r_inv * r_inv * &
+                                 (flo(i,1,lop,ilSpinPr)*flo(i,1,lo,ilSpin) &
+                                + flo(i,2,lop,ilSpinPr)*flo(i,2,lo,ilSpin)) &
+                               ) * vtau_lh(i, lh)
+                     END DO
+                     CALL intgr3(x, atoms%rmsh(1,n), atoms%dx(n), jri, temp)
+                     ulovulo(loplo,lh) = 0.5 * temp
+                  END IF
+               END DO
+            END DO
+         END DO
+         CALL timestop("tlmplm_vtau: LO radial integrals")
+
+         CALL timestart("tlmplm_vtau: assemble LO")
+         mlo  = SUM(atoms%nlo(:n-1))
+         s_lo = td%h_loc2_nonsph(n) ! Offset for udot elements in the LO matrices
+
+         ! APW-LO blocks -> h_LO / h_LO2
+         DO lo = 1, atoms%nlo(n)
+            l = atoms%llo(lo, n)
+            DO m = -l, l
+               DO lh = lh0, nh
+                  lamda = sphhar%llh(lh, nsym)
+                  lpmin0 = ABS(l - lamda)
+                  lpmax0 = l + lamda
+                  ! Cap l' at the non-spherical expansion of this atom
+                  lpmax = MIN(lpmax0, atoms%lnonsph(n))
+                  ! Ensure l + lamda + l' even
+                  lpmax = lpmax - MOD(l+lamda+lpmax, 2)
+                  DO mem = 1, sphhar%nmem(lh, nsym)
+                     mu = sphhar%mlh(mem, lh, nsym)
+                     mp = m + mu
+                     lpmin = MAX(lpmin0, ABS(mp))
+                     lpmin = lpmin + MOD(ABS(lpmax-lpmin), 2)
+                     DO lp = lpmin, lpmax, 2
+                        lmp = lp*(lp+1) + mp
+                        cil = ImagUnit**(l-lp) * sphhar%clnu(mem, lh, nsym) &
+                            * gaunt1(lp, lamda, l, mp, mu, m, atoms%lmaxd)
+
+                        td%h_LO(lmp,m,lo+mlo,ilSpinPr,ilSpin) = &
+                           td%h_LO(lmp,m,lo+mlo,ilSpinPr,ilSpin) + cil*uvulo(lo,lp,lh)
+                        td%h_LO(lmp+s_lo,m,lo+mlo,ilSpinPr,ilSpin) = &
+                           td%h_LO(lmp+s_lo,m,lo+mlo,ilSpinPr,ilSpin) + cil*dvulo(lo,lp,lh)
+                        td%h_LO2(lmp,m,lo+mlo,ilSpinPr,ilSpin) = &
+                           td%h_LO2(lmp,m,lo+mlo,ilSpinPr,ilSpin) + CONJG(cil*uvulo(lo,lp,lh))
+                        td%h_LO2(lmp+s_lo,m,lo+mlo,ilSpinPr,ilSpin) = &
+                           td%h_LO2(lmp+s_lo,m,lo+mlo,ilSpinPr,ilSpin) + CONJG(cil*dvulo(lo,lp,lh))
+                     END DO
+                  END DO
+               END DO
+            END DO
+         END DO
+
+         ! LO-LO block -> tuloulo_newer
+         DO lop = 1, atoms%nlo(n)
+            lp = atoms%llo(lop, n)
+            DO mp = -lp, lp
+               DO lh = lh0, nh
+                  lamda = sphhar%llh(lh, nsym)
+                  DO mem = 1, sphhar%nmem(lh, nsym)
+                     mu = sphhar%mlh(mem, lh, nsym)
+                     m = mp - mu
+                     DO lo = 1, lop
+                        l = atoms%llo(lo, n)
+                        loplo = ((lop-1)*lop)/2 + lo
+                        IF ((ABS(l-lamda)<=lp) .AND. (lp<=(l+lamda)) .AND. &
+                            (MOD(l+lp+lamda,2)==0) .AND. (ABS(m)<=l)) THEN
+                           cil = ImagUnit**(l-lp) * sphhar%clnu(mem, lh, nsym) &
+                               * gaunt1(lp, lamda, l, mp, mu, m, atoms%lmaxd)
+                           td%tuloulo_newer(mp,m,lop,lo,n,ilSpinPr,ilSpin) = &
+                              td%tuloulo_newer(mp,m,lop,lo,n,ilSpinPr,ilSpin) + cil*ulovulo(loplo,lh)
+                           IF (lop/=lo) THEN
+                              td%tuloulo_newer(m,mp,lo,lop,n,ilSpinPr,ilSpin) = &
+                                 td%tuloulo_newer(m,mp,lo,lop,n,ilSpinPr,ilSpin) + CONJG(cil*ulovulo(loplo,lh))
+                           END IF
+                        END IF
+                     END DO
+                  END DO
+               END DO
+            END DO
+         END DO
+         CALL timestop("tlmplm_vtau: assemble LO")
+      END IF
+
       CALL timestop("tlmplm_vtau")
 
    END SUBROUTINE tlmplm_vtau
