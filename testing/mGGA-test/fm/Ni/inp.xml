@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<fleurInput fleurInputVersion="0.39">
+   <comment>
+      FM Ni - fcc, Fm-3m (#225)                                                                          
+   </comment>
+   <calculationSetup>
+      <cutoffs Kmax="3.5" Gmax="10.5" GmaxXC="10.5" numbands="0"/>
+      <scfLoop itmax="200" minDistance="0.00001" maxIterBroyd="15" imix="Anderson" alpha="0.05" precondParam="0.0" spinf="2.0" sdNocoIR="T"/>
+      <coreElectrons ctail="F" frcor="F" kcrel="0" coretail_lmax="0"/>
+      <xcFunctional name="LibXC" relativisticCorrections="F">
+          <LibXCName exchange="mgga_x_scan" correlation="mgga_c_scan"/>
+          <AuxGGA exchange="117" correlation="130"/>
+       </xcFunctional>
+      <magnetism jspins="2"/>
+      <soc l_soc="F" theta="0.0" phi="0.0" spav="F"/>
+      <expertModes spex="0" secvar="F"/>
+      <geometryOptimization l_f="F" forcealpha="1.0" forcemix="BFGS" epsdisp="0.00001" epsforce="0.00001"/>
+      <ldaU l_linMix="F" mixParam="0.05" spinf="1.0"/>
+   </calculationSetup>
+   <cell>
+      <bzIntegration valenceElectrons="16.0" mode="hist" fermiSmearingEnergy="0.001">
+         <kPointListSelection listName="mgga20"/>
+         <!-- k-points included here -->
+         <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="kpts.xml"> </xi:include>
+      </bzIntegration>
+      <!-- symmetry operations included here -->
+      <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="sym.xml"> </xi:include>
+      <bulkLattice scale="1.0">
+         <bravaisMatrix>
+            <row-1>    0.0000000000000000     3.3287523289189003     3.3287523289189003</row-1>
+            <row-2>    3.3287523289189003     0.0000000000000000     3.3287523289189003</row-2>
+            <row-3>    3.3287523289189003     3.3287523289189003     0.0000000000000000</row-3>
+         </bravaisMatrix>
+      </bulkLattice>
+   </cell>
+   <atomSpecies>
+      <species name="Nickel (Ni)" element="Ni" atomicNumber="28">
+         <mtSphere radius="2.29" gridPoints="757" logIncrement="0.016"/>
+         <atomicCutoffs lmax="8" lnonsphr="6"/>
+         <electronConfig flipSpins="F">
+            <coreConfig>(1s1/2) (2s1/2) (2p1/2) (2p3/2) (3s1/2)</coreConfig>
+            <valenceConfig>(3p1/2) (3p3/2) (4s1/2) (3d3/2) (3d5/2)</valenceConfig>
+            <stateOccupation state="(3d3/2)" spinUp="1.6" spinDown="1.6"/>
+            <stateOccupation state="(3d5/2)" spinUp="2.95" spinDown="1.85"/>
+         </electronConfig>
+         <energyParameters s="4" p="4" d="3" f="4"/>
+         <lo type="SCLO" l="1" n="3" eDeriv="0"/>
+      </species>
+   </atomSpecies>
+   <atomGroups>
+      <atomGroup species="Nickel (Ni)">
+         <relPos label="                   1">.0000000000 .0000000000 .0000000000</relPos>
+         <force calculate="T" relaxXYZ="TTT"/>
+      </atomGroup>
+   </atomGroups>
+   <output dos="F" band="F" slice="F">
+      <checks vchk="F" cdinf="F"/>
+      <bandDOS minEnergy="-.5*Htr" maxEnergy="0.5*Htr" sigma="0.015" storeEVData="T"/>
+      <vacuumDOS vacdos="F" integ="F" star="F" nstars="0" locx1="0.0" locy1="0.0" locx2="0.0" locy2="0.0" nstm="0" tworkf="0.0"/>
+      <unfoldingBand unfoldBand="F" supercellX="1" supercellY="1" supercellZ="1"/>
+      <plotting iplot="0" polar="F">
+         <plot TwoD="T" vec1="  1.0  0.0  0.0" vec2="  0.0  1.0  0.0" vec3="  0.0  0.0  1.0" zero="  0.0  0.0  0.0" file="plot"/>
+      </plotting>
+      <chargeDensitySlicing numkpt="0" minEigenval="0.0" maxEigenval="0.0" nnne="0" pallst="F"/>
+      <specialOutput eonly="F"/>
+      <moessbauerParams electricFieldGradient="T" isomerShift="T" coreHyperfine="T" valenceHyperfine="T"/>
+      <magneticCircularDichroism mcd="F" energyLo="-10.0" energyUp="0.0"/>
+   </output>
+  <!-- We include the file relax.xml here to enable relaxations (see documentation) -->
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="relax.xml"> <xi:fallback/> </xi:include>
+</fleurInput>
+
+<!--
+Command line when calling inpgen (only for documentation purposes):
+/Users/wortmann/fleur/fleur-scan/build/inpgen -f structure.inpgen -kpt mgga#grid=6,6,6 -overwrite
+
+Initial (original) inpgen input (only for documentation purposes):
+FM Ni - fcc, Fm-3m (#225)
+! lattice constants in Angstrom, converted to bohr via a0
+&lattice latsys='cF', a0=1.8897259886, a=3.523, b=3.523, c=3.523 /
+1
+28  0.0  0.0  0.0
+-->

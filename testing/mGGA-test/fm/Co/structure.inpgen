@@ -1,0 +1,6 @@
+FM Co - hcp, P6_3/mmc (#194)
+! lattice constants in Angstrom, converted to bohr via a0
+&lattice latsys='hP', a0=1.8897259886, a=2.507, b=2.507, c=4.07 /
+2
+27  0.333333  0.666667  0.25
+27  0.666667  0.333333  0.75

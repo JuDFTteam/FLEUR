@@ -1,0 +1,5 @@
+FM Ni - fcc, Fm-3m (#225)
+! lattice constants in Angstrom, converted to bohr via a0
+&lattice latsys='cF', a0=1.8897259886, a=3.523, b=3.523, c=3.523 /
+1
+28  0.0  0.0  0.0

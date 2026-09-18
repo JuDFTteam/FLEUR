@@ -1,0 +1,6 @@
+FM FeCo - B2 (CsCl-type), Pm-3m (#221)
+! lattice constants in Angstrom, converted to bohr via a0
+&lattice latsys='cP', a0=1.8897259886, a=2.857, b=2.857, c=2.857 /
+2
+26  0.0  0.0  0.0
+27  0.5  0.5  0.5

@@ -1,0 +1,24 @@
+# Post-inpgen checklist for Ni3Al
+
+1. Run `inpgen -f structure.inpgen` (or the equivalent aiida-fleur /
+   inpgen2 step) to produce `inp.xml`.
+2. Set `jspins="2"` in the `<magnetism>`/`<calculationSetup>` section if
+   not already set by inpgen (bulk metals default to non-spin-polarized).
+3. **TODO-VERIFY**: switch the XC functional to SCAN. Best guess, not
+   confirmed against the `metaGGA` branch source:
+
+   ```xml
+   <xcFunctional name="LibXC" relativisticCorrections="F">
+      <LibXCName exchange="mgga_x_scan" correlation="mgga_c_scan"/>
+   </xcFunctional>
+   ```
+
+   Check the branch for whether it needs an additional switch to enable
+   kinetic-energy-density (tau) evaluation, or a dedicated
+   `name="SCAN"` shortcut instead of the generic LibXC route.
+4. Use a converged k-mesh (paper does not state the exact mesh; start
+   dense, e.g. 20x20x20 or denser reduced by symmetry, and check moment
+   convergence vs. k-mesh before treating a mismatch with the target
+   value as a bug).
+5. Compare the converged **total/interstitial+MT spin moment**
+   (0.95 muB/f.u. target) against the SCAN value above.

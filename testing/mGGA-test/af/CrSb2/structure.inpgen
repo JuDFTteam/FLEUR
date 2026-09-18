@@ -1,0 +1,12 @@
+AF CrSb2 - marcasite-type, collinear AFM
+&lattice latsys='oP', a0=1.8897259886, a=6.028, b=6.874, c=3.272 /
+! Cr 2a Wyckoff (0,0,0)+(1/2,1/2,1/2); Sb 4g +-(x,y,z),+-(1/2+x,1/2-y,1/2+z)
+! (Pnnm origin/setting-dependent - verify against a crystallographic
+! database such as the ICSD/COD entry for CrSb2 before trusting this.)
+6
+24  0.0  0.0  0.0   ! Cr spin UP
+24  0.5  0.5  0.5   ! Cr spin DOWN
+51  0.1835  0.3165  0.32   ! Sb
+51  0.8165  0.6835  0.6799999999999999   ! Sb
+51  0.6835  0.1835  0.8200000000000001   ! Sb
+51  0.3165  0.8165  0.18   ! Sb
