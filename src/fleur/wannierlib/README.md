@@ -37,6 +37,7 @@ once per channel.
     <operator name="hamiltonian"/>
     <operator name="velocity"/>
   </interpolation>
+  <export wannier90="T"/>
 </wannierlib>
 ```
 
@@ -44,11 +45,17 @@ once per channel.
 guesses are `<wannierproj l=".." m=".." spin=".."/>` children of a `<species>`; their total
 count over all atoms is `num_wann`.
 
-The two operator blocks are independent and spell some names differently:
-`<operators_r>` writes `O(R)` to disk and does no interpolation; `<interpolation>` projects
-onto the interpolated bands. The accepted names of each live in
+The two operator blocks are independent: `<operators_r>` writes `O(R)` to disk and does no
+interpolation, while `<interpolation>` projects onto the interpolated bands. They accept
+different *sets* of names, because not everything with an `O(R)` has an interpolation driver
+and the other way round, but **a name never means two different things in the two blocks** --
+the spin-orbit operator is `spin_orbit` in both. The accepted names of each live in
 `fleurinput/types_melem_optable.f90`, and a name the tables do not have stops the run with
 the accepted list in the message.
+
+`<export>` is a third, separate thing: it hands out matrices the run already holds, one
+boolean per artefact (`wannier90`, `wannierberri`, `gauge`, `blochOperators`), all off by
+default and none of them exclusive. It computes nothing.
 
 ## Output domains
 
@@ -91,7 +98,7 @@ Real space, from `<operators_r>`:
 | `anglmomrs.<n>` | orbital moment, 3 components |
 | `rssocmat.1` | spin-orbit, the 2×2 spinor blocks |
 | `wig_vectors` | the Wigner-Seitz `R` mesh |
-| `WF<n>.amn`, `WF<n>.mmn` | the projections and overlaps, **written on one rank only** |
+| `WF<n>.amn`, `WF<n>.mmn`, `WF<n>.eig` | from `<export wannier90="T"/>`; also written unasked on a serial run, as a path for inspection |
 
 Interpolated, from `<interpolation>`: `bands_wann_<what>[_domain][_spinN].dat`, one row per
 k-point, `kdist` first and then the bands. `<n>` and `_spinN` are the collinear spin
