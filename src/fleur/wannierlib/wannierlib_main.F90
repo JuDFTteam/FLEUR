@@ -164,7 +164,12 @@ CONTAINS
       CALL melem%calc(request, manifold, atoms, input, sym, cell, noco, nococonv, kpts, &
                       stars, enpara, fmpi, vtot, eig_id, distk)
 
-      CALL init_w90(this, atoms, cell, kpts, fmpi, l_wannierlib_spinors, nntot_w90, nnkp, gkpb, distk)
+      !> wl, not this: wannierlib_main takes the input object as INTENT(IN), so the windows
+      !> the derivation fills in live only in the copy. Handing w90 the original passes it
+      !> whatever the input stated and zeros for the rest, which is a window of [0,0] and a
+      !> disentanglement over an empty subspace. manifold%init and run_w90 already take wl;
+      !> this call was the one left behind.
+      CALL init_w90(wl, atoms, cell, kpts, fmpi, l_wannierlib_spinors, nntot_w90, nnkp, gkpb, distk)
       CALL wannierlib_kdiff(kpts%nkptf, nntot_w90, kpts%bkf, nnkp, gkpb, kdiff)
       !> The neighbour topology is settled here, before anything is wannierised, and it is
       !> the same for both spin channels. The shell weights are added later, per channel.
@@ -578,6 +583,11 @@ CONTAINS
       INTEGER :: ikpt, jsp, nsp
       REAL :: emin, emax
 
+      !> With as many bands as Wannier functions there is no subspace to choose, so there is
+      !> no window either: w90 runs no disentanglement and the options are never read. Filling
+      !> them in anyway hands it bounds for a step it does not take, and it refuses the run.
+      IF (this%num_bands <= this%num_wann) RETURN
+
       !> Each bound is handled on its own: a window left at its 0.0 default was not given.
       !> Testing the pair instead would break a half-stated window -- give only disWinMin
       !> and disWinMax would stay at zero.
@@ -598,10 +608,30 @@ CONTAINS
       !> "energy window contains fewer states than target WFs" at some k, or worse,
       !> disentangles an empty subspace. Refusing here turns a silent wrong window into
       !> a message that names the remedy.
-      IF (.NOT. (emax > emin)) CALL juDFT_error( &
-         'wannierlib: the outer energy window cannot be derived from the bands', &
-         hint='state disWinMin and disWinMax explicitly in <disentanglement>', &
-         calledby='wannierlib_default_windows')
+      IF (.NOT. (emax > emin)) THEN
+         !> Say what was scanned before giving up. An empty range means either a band pair
+         !> that selects nothing or eigenvalues that are not here yet, and the two need
+         !> opposite fixes, so the numbers go out rather than being left to be guessed.
+         WRITE (oUnit, '(a)') 'wannierlib: the outer energy window could not be derived'
+         WRITE (oUnit, '(a,2i8)')  '   bands scanned (min, max)  :', this%min_band, this%max_band
+         WRITE (oUnit, '(a,i8)')   '   k-points on the full mesh :', kpts%nkptf
+         WRITE (oUnit, '(a,2es16.6)') '   range over those bands   :', emin, emax
+         !> The whole array, not just the slice above: if it holds real eigenvalues while the
+         !> slice came out flat, the band range is at fault; if the array itself is flat or
+         !> absent, the eigenvalues are not here yet. One line separates the two.
+         IF (ALLOCATED(results%eig)) THEN
+            WRITE (oUnit, '(a,3i8)')     '   shape of results%eig      :', SHAPE(results%eig)
+            WRITE (oUnit, '(a,2es16.6)') '   min/max of the whole array:', &
+               MINVAL(results%eig), MAXVAL(results%eig)
+         ELSE
+            WRITE (oUnit, '(a)')         '   results%eig is NOT allocated'
+         END IF
+         CALL juDFT_error( &
+            'wannierlib: the outer energy window cannot be derived from the bands', &
+            hint='state disWinMin and disWinMax explicitly in <disentanglement>; '// &
+                 'the numbers behind this are in the out file', &
+            calledby='wannierlib_default_windows')
+      END IF
 
       IF (this%dis_win_min == 0.0) this%dis_win_min = emin - margin
       IF (this%dis_win_max == 0.0) this%dis_win_max = emax + margin
