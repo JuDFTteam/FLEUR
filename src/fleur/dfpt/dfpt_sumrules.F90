@@ -35,10 +35,11 @@ contains
       ! Cartesian pairs of the rotational conditions: (y,z), (z,x), (x,y)
       integer, parameter :: rpair(2,3) = reshape([2,3, 3,1, 1,2],[2,3])
 
-      integer :: dynDim, nGrid, nR(3), nBH
+      integer :: dynDim, nGrid, nR(3), nBH, iGrid0
       integer :: iter, iBond, iRot, iBH, jBH, iGrid, iAtom, jAtom, iRow, iVoigt, jVoigt, iC, jC, ix, iy, iz
       integer :: alpha, beta, gamma
-      real    :: rCart(3), bondVec(3), maxBondPairLength, fcScale, violationAfter(3), violationBefore(3)
+      real    :: rCart(3), bondVec(3), maxBondPairLength, fcScale, violationAfter(3), violationBefore(3), violationOnsite(3)
+      complex :: asrSum
       logical :: l_conv
 
       real,    allocatable :: atomPos(:,:)
@@ -117,6 +118,25 @@ contains
       call check_conditions(dynDim, atoms%nat, nGrid, nBH, bhPairs, voigt, rpair, mom0, mom1, mom2, phi, violationBefore)
       violationBefore = violationBefore/[fcScale, fcScale*maxBondPairLength, fcScale*maxBondPairLength**2]
 
+      ! Fix onside sumrule at first to kick the solution close to where we 
+      ! want it to be.
+      iGrid0 = -ft_lim(1,1) + nR(1)*(-ft_lim(1,2) + nR(2)*(-ft_lim(1,3)))
+      do iAtom = 1, atoms%nat
+         do alpha = 1, 3
+            do beta = 1, 3
+               asrSum = cmplx(0.0,0.0)
+               do jAtom = 1, atoms%nat
+                  asrSum = asrSum + sum(phi(3*(iAtom-1)+alpha,3*(jAtom-1)+beta,:)*mom0(:,jAtom,iAtom))
+               end do
+               phi(3*(iAtom-1)+alpha,3*(iAtom-1)+beta,iGrid0) = phi(3*(iAtom-1)+alpha,3*(iAtom-1)+beta,iGrid0) - asrSum/mom0(iGrid0,iAtom,iAtom)
+            end do
+         end do
+      end do
+      phi(:,:,iGrid0) = 0.5*(phi(:,:,iGrid0) + conjg(transpose(phi(:,:,iGrid0))))
+
+      call check_conditions(dynDim, atoms%nat, nGrid, nBH, bhPairs, voigt, rpair, mom0, mom1, mom2, phi, violationOnsite)
+      violationOnsite = violationOnsite/[fcScale, fcScale*maxBondPairLength, fcScale*maxBondPairLength**2]
+
       allocate(consTR(dynDim,0:nGrid-1,6), gramMat(max(6,nBH),max(6,nBH)), consPhiOverlap(max(6,nBH)), lambda(max(6,nBH)))
       allocate(consBH(dynDim,dynDim,0:nGrid-1), consBH2(dynDim,dynDim,0:nGrid-1))
 
@@ -156,7 +176,7 @@ contains
                do iC = 1, 6
                   consPhiOverlap(iC) = sum(consTR(:,:,iC)*phi(iRow,:,:))
                end do
-               call lsq_solve(6, gramMat, consPhiOverlap, lambda)
+               call solve_lagrange_multipliers(6, gramMat, consPhiOverlap, lambda)
                do iC = 1, 6
                   phi(iRow,:,:) = phi(iRow,:,:) - lambda(iC)*consTR(:,:,iC)
                end do
@@ -174,7 +194,7 @@ contains
                gramMat(jBH,iBH) = gramMat(iBH,jBH)
             end do
          end do
-         call lsq_solve(nBH, gramMat, consPhiOverlap, lambda)
+         call solve_lagrange_multipliers(nBH, gramMat, consPhiOverlap, lambda)
          do iBH = 1, nBH
             call build_bh_constraint(dynDim, atoms%nat, nGrid, bhPairs(:,iBH), voigt, mom2, consBH)
             phi = phi - lambda(iBH)*consBH
@@ -197,10 +217,11 @@ contains
       phiOld = reshape(fcm, [dynDim,dynDim,nGrid])
       write (oUnit,'(a)')       ' Born-Huang projection of the force constants'
       write (oUnit,'(a,i0,a)')  '   iterations                   : ', min(iter,maxiter)
-      write (oUnit,'(a)')       '                                   before        after'
-      write (oUnit,'(a,2es13.3)') '   translational violation      : ', violationBefore(1), violationAfter(1)
-      write (oUnit,'(a,2es13.3)') '   rotational violation         : ', violationBefore(2), violationAfter(2)
-      write (oUnit,'(a,2es13.3)') '   Born-Huang violation         : ', violationBefore(3), violationAfter(3)
+      write (oUnit,'(a)')       '                                   before      on-site        after'
+      write (oUnit,'(a,3es13.3)') '   translational violation      : ', violationBefore(1), violationOnsite(1), violationAfter(1)
+      write (oUnit,'(a,3es13.3)') '   rotational violation         : ', violationBefore(2), violationOnsite(2), violationAfter(2)
+      write (oUnit,'(a,3es13.3)') '   Born-Huang violation         : ', violationBefore(3), violationOnsite(3), violationAfter(3)
+      write (oUnit,'(a)')       '   violations are scaled by the largest bond length in the R box'
       write (oUnit,'(a,es13.3)')  '   relative change of the FCM   : ', sqrt(sum(abs(phi-phiOld)**2)/sum(abs(phiOld)**2))
 
       fcm = reshape(phi, [dynDim,dynDim,nR(1),nR(2),nR(3)])
@@ -282,7 +303,7 @@ contains
       end do
    end subroutine check_conditions
 
-   subroutine lsq_solve(nCon, gramMat, rhs, lambda)
+   subroutine solve_lagrange_multipliers(nCon, gramMat, rhs, lambda)
       !! Least-norm solution of gramMat*lambda = rhs via a pseudo-inverse; the constraint
       !! set is linearly dependent whenever the geometry degenerates, e.g. for films.
       integer, intent(in)  :: nCon
@@ -316,6 +337,6 @@ contains
       do iC = 1, nCon
          lambda(iC) = sum(evec(iC,:)*coef)
       end do
-   end subroutine lsq_solve
+   end subroutine solve_lagrange_multipliers
 
 end module m_dfpt_sumrules
