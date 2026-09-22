@@ -133,11 +133,12 @@ the whole mesh enters the window, which is what excludes the semicore.
 
 All energies are in **Hartree**, like the rest of `inp.xml`.
 
-> **State `disWinMin` and `disWinMax` explicitly for now.** They are optional in the schema
-> and are meant to be derived from the band range on the wannierisation mesh, but that
-> derivation currently cannot see the eigenvalues and the run stops with
-> `the outer energy window cannot be derived from the bands`, printing what it did see into
-> the `out` file. Giving them is the supported path.
+> **Leaving the outer window out is supported.** `disWinMin`, `disWinMax` and `disFrozMin`
+> are derived from the range the selected bands span on the wannierisation mesh, which is
+> what Wannier90 itself falls back to and the only definition that cannot cut the manifold.
+> Nothing is derived when `numBands` equals the number of Wannier functions: there is no
+> subspace to choose and no window to state. If the range does come out empty the run stops
+> and writes what it scanned into the `out` file.
 
 Measure the outer window **on the wannierisation mesh**, not on the SCF one. The SCF mesh
 need not contain Gamma, so its minimum comes out above the true one; states then fall
