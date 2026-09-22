@@ -40,12 +40,6 @@ CONTAINS
         ! Initialize the second variation matrix
         CALL secvar%initialize(.TRUE., ikpt, eig_id, input, fmpi, lapw, atoms, l_both_spinors)
 
-        write(oUnit,*) "Non-SOC eigenvalues for k-point ", ikpt
-        write(oUnit,*) secvar%eig(1:secvar%ne_first, 1)
-        if (input%jspins == 2) then
-           write(oUnit,*) secvar%eig(1:secvar%ne_first, 2)
-        end if
-
         ! Initialize the SOC matrix element evaluator and compute matrix elements.
         ! The factory reads the eigenvectors, provides the abc coefficients and
         ! radial functions (cached for reuse with other matrix elements) and
@@ -68,9 +62,6 @@ CONTAINS
             ncopy = MIN(secvar%ne_second, SIZE(eigval_out), SIZE(secvar%eigval))
             eigval_out(:ncopy) = secvar%eigval(:ncopy)
         END IF
-        write(oUnit,*) "SOC eigenvalues for k-point ", ikpt
-        write(oUnit,*) secvar%eigval(1:secvar%ne_second)
-
         ! Back-transform eigenvectors and write them to file
         CALL secvar%store_eigvec()
 
