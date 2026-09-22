@@ -49,7 +49,7 @@ CONTAINS
    SUBROUTINE wannierlib_build_amn_mmn(this, manifold, bmesh, atoms, cell, input, kpts, sym, &
                                        noco, nococonv, stars, enpara, fmpi, vtot, eig_id, &
                                        radfun, usdus, distk, kdiff, nntot_w90, jspin, &
-                                       l_wannierlib_spinors, l_nocosoc, amn, mmn, vacuum)
+                                       l_wannierlib_spinors, amn, mmn, vacuum)
       TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
       TYPE(t_melem_manifold), INTENT(IN) :: manifold
       TYPE(t_melem_bmesh),    INTENT(IN) :: bmesh
@@ -72,7 +72,7 @@ CONTAINS
       REAL,    INTENT(IN) :: kdiff(:, :)
       INTEGER, INTENT(IN) :: nntot_w90
       INTEGER, INTENT(IN) :: jspin             !> the channel being wannierised
-      LOGICAL, INTENT(IN) :: l_wannierlib_spinors, l_nocosoc
+      LOGICAL, INTENT(IN) :: l_wannierlib_spinors
       COMPLEX, ALLOCATABLE, INTENT(OUT) :: amn(:, :, :)     !> (num_bands, num_wann, nkptf)
       COMPLEX, ALLOCATABLE, INTENT(OUT) :: mmn(:, :, :, :)  !> (nb, nb, nntot, nk_loc)
 
@@ -122,7 +122,7 @@ CONTAINS
             !> its own and the spin block is reached by row offset further down.
             irec = MERGE(1, jspin_comp, noco%l_noco)
 
-            CALL wannierlib_amn(this, atoms, kpts, ikpt, usdus, radfun, abc_p(jspin_comp, :), l_nocosoc, l_wannierlib_spinors, jspin_comp, jspin_rad, amn(:, :, ikpt))
+            CALL wannierlib_amn(this, atoms, kpts, ikpt, usdus, radfun, abc_p(jspin_comp, :), l_wannierlib_spinors, jspin_comp, jspin_rad, amn(:, :, ikpt))
 
             ik_local = ik_local + 1
             CALL wannierlib_mmnkb(manifold, bmesh, ikpt, kpts, &

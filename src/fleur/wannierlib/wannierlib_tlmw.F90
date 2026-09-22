@@ -24,14 +24,19 @@ MODULE m_wannierlib_tlmw
   PUBLIC :: wannierlib_tlmw
 CONTAINS
 
-  SUBROUTINE wannierlib_tlmw(wannierlib, nwfs, l_nocosoc, l_spinors, jspin, tlmwf)
+  SUBROUTINE wannierlib_tlmw(wannierlib, nwfs, l_spinors, jspin, tlmwf)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: wannierlib
     INTEGER, INTENT(IN) :: nwfs
-    LOGICAL, INTENT(IN) :: l_nocosoc
-    !> True whenever the run carries spinors (noco OR soc). The column guard below
-    !> needs THIS, not l_nocosoc: l_nocosoc is noco AND NOT soc, so under SOC it is
-    !> false and the guard went inert -- both spinor components then filled all
-    !> num_wann columns and the projection matrix came out rank num_wann/2.
+    !> True whenever the run carries spinors (noco OR soc): the column guard below
+    !> keeps each spinor component to the projections of its own channel, and without
+    !> it both components fill all num_wann columns and amn comes out rank num_wann/2.
+    !>
+    !> Careful with the name l_nocosoc, which this routine deliberately does NOT take.
+    !> It means opposite things in the two halves of the tree: (noco AND NOT soc) in
+    !> wannierlib_main, but (noco OR soc) in wann_optional/wann_postproc -- and the
+    !> latter is what FLEUR v26 calls l_nocosoc in wann_tlmw, the routine this one
+    !> mirrors. So l_spinors here is the SAME condition as v26's guard, not a
+    !> departure from it.
     LOGICAL, INTENT(IN) :: l_spinors
     INTEGER, INTENT(IN) :: jspin
     COMPLEX, INTENT(OUT) :: tlmwf(0:3, -3:3, nwfs)
