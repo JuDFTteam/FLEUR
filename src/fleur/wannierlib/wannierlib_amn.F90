@@ -60,7 +60,10 @@ CONTAINS
     LOGICAL :: has_soc_proj
 
     IF (wannierlib%num_wann <= 0) THEN
-      CALL juDFT_error('wannierlib_amn: no projections configured', calledby='wannierlib_amn')
+      CALL juDFT_error('wannierlib: no projections configured', &
+                       hint='add <wannierproj l=".." m="0" spin=""/> children to a <species>; '// &
+                            'their total count over all atoms is num_wann', &
+                       calledby='wannierlib_amn')
     END IF
     
     CALL timestart('wannierlib_amn')
