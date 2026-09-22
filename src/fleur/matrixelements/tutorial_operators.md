@@ -146,7 +146,7 @@ The coarse matrix already exists and you want another quantity derived from it. 
 no new slice: one row pointing at the existing catalogue entry.
 
 ```fortran
-t_melem_exposed('soc', 'spin_orbit', 1, 'bands_wann_soc', '', .FALSE.)
+t_melem_exposed('spin_orbit', 'spin_orbit', 1, 'bands_wann_spin_orbit', '', .FALSE.)
 ```
 
 That row says three things at once: the name is accepted in `<interpolation>`, serving it

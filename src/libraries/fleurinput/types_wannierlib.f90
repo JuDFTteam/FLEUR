@@ -24,7 +24,7 @@ MODULE m_types_wannierlib
     LOGICAL :: l_interpolation = .FALSE.   ! an <operator name="hamiltonian"> is requested
     LOGICAL :: l_spin = .FALSE.            ! an <operator name="spin"> is requested
     LOGICAL :: l_orbmom = .FALSE.          ! an <operator name="orbital"> is requested
-    LOGICAL :: l_socop = .FALSE.           ! an <operator name="soc"> is requested
+    LOGICAL :: l_socop = .FALSE.           ! an <operator name="spin_orbit"> is requested
     LOGICAL :: l_operators_r = .FALSE.     ! an <operators_r> block (real-space O(R) export) is present
     !> The <export> block: one boolean per artefact, all off by default. They are grouped
     !> under one element because they answer the same question -- hand the run's own

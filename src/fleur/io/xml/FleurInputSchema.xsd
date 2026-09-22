@@ -3589,7 +3589,7 @@
                <xsd:enumeration value="hamiltonian"/>
                <xsd:enumeration value="spin"/>
                <xsd:enumeration value="orbital"/>
-               <xsd:enumeration value="soc"/>
+               <xsd:enumeration value="spin_orbit"/>
                <xsd:enumeration value="velocity"/>
                <xsd:enumeration value="eigenstates"/>
             </xsd:restriction>

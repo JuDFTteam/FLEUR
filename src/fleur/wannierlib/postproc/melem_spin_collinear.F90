@@ -262,7 +262,7 @@ CONTAINS
          sr(:, :, :, kk) = s1; DEALLOCATE (s1)
       END DO
       IF (fmpi%irank == 0) THEN
-         CALL melem_write_realspace(sr, irvec, ndegen, nrpts, n2, 4, 'soc', 'rssocmat.1', fmpi%irank)
+         CALL melem_write_realspace(sr, irvec, ndegen, nrpts, n2, 4, 'spinor2x2', 'rssocmat.1', fmpi%irank)
          WRITE (oUnit, '(a,i0,a)') 'wannierlib: wrote rssocmat.1 (2N collinear spin-orbit, ', nrpts, ' R-vectors, distributed FT)'
       END IF
       DEALLOCATE (soc_loc, gk_loc)

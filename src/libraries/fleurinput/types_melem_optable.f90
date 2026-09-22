@@ -53,7 +53,7 @@ MODULE m_types_melem_optable
       CHARACTER(LEN=24) :: out1 = ''
       CHARACTER(LEN=24) :: out2 = ''
       !> Honours the total="T" attribute, i.e. it has a site-summed projection to choose.
-      !> Only the two site-resolved ones do; soc and the currents have nothing to sum over.
+      !> Only the two site-resolved ones do; spin_orbit and the currents have nothing to sum over.
       LOGICAL :: honours_total = .FALSE.
    END TYPE t_melem_exposed
 
@@ -63,7 +63,7 @@ MODULE m_types_melem_optable
                       'bands_wann_interpol_ev', .FALSE.), &
       t_melem_exposed('spin',           'spin',       3, 'bands_wann_spin',         '', .TRUE.), &
       t_melem_exposed('orbital',        'orbital',    3, 'bands_wann_orbmom',       '', .TRUE.), &
-      t_melem_exposed('soc',            'spin_orbit', 1, 'bands_wann_soc',          '', .FALSE.), &
+      t_melem_exposed('spin_orbit',     'spin_orbit', 1, 'bands_wann_spin_orbit',   '', .FALSE.), &
       t_melem_exposed('velocity',       '',           0, 'bands_wann_velocity',     &
                       'bands_wann_berrycurv', .FALSE.), &
       t_melem_exposed('eigenstates',    '',           0, 'bands_wann_eigenstates',  '', .FALSE.)]

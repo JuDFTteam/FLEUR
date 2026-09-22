@@ -14,7 +14,7 @@
 !>    'hr'      Wannier90 seedname_hr.dat : header + ndegen block + H(R) in eV
 !>    'r'       Wannier90 seedname_r.dat  : header + A(R) in Angstrom, 3 components
 !>    'bmn'     Wannier90-like            : header + B(R)=<0n|H (r-R)|Rm> in eV*Ang, 3 comps
-!>    'soc'     R1 R2 R3  i j jj ii  Re Im   (2x2 spinor blocks -> rssocmat.1)
+!>    'spinor2x2' R1 R2 R3  i j jj ii  Re Im (2x2 spinor blocks -> rssocmat.1)
 !>    'generic' R1 R2 R3  i j comp   Re Im   (spin -> rspauli.1, orbital -> anglmomrs.*)
 !>    'cart2'   R1 R2 R3  i j        then nine (alpha,beta) components on the line
 !>    'cart2e'  as cart2, with the energy converted to eV
@@ -73,7 +73,7 @@ CONTAINS
                (hartree_to_ev_const*REAL(o_r(i,j,irpt,kk)), &
                 hartree_to_ev_const*AIMAG(o_r(i,j,irpt,kk)), kk=1,3)
          END DO; END DO; END DO
-      CASE ('soc')
+      CASE ('spinor2x2')
          DO irpt = 1, nrpts; DO i = 1, nw; DO j = 1, nw; DO ii = 1, 2; DO jj = 1, 2
             c = (ii - 1)*2 + jj
             WRITE(iu, '(i3,1x,i3,1x,i3,1x,i3,1x,i3,1x,i3,1x,i3,1x,f20.8,1x,f20.8)') &

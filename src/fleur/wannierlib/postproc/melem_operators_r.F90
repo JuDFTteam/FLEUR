@@ -233,7 +233,7 @@ CONTAINS
     DEALLOCATE(ow_loc)
     IF (irank == 0) THEN
       CALL melem_write_realspace(or_, irvec, ndegen, nrpts, nw, ncomp, &
-                                 MERGE('soc    ', 'generic', is_soc), TRIM(fname), irank)
+                                 MERGE('spinor2x2', 'generic  ', is_soc), TRIM(fname), irank)
       WRITE(oUnit, '(a,i0,a)') 'wannierlib: wrote '//TRIM(fname)//' (', nrpts, ' R-vectors, distributed FT)'
     END IF
     IF (ALLOCATED(or_)) DEALLOCATE(or_)

@@ -169,7 +169,7 @@ CONTAINS
                   CALL melem_interpolate_operator(manifold, cell, kpts, eig, u_matrix, u_opt, &
                                                   SUM(coarse%l0(:, :, :, :, wf_ch, :), DIM=4), gk_loc, 3, kfrac, &
                                                   outname(iop, 1), irank, mpi_comm)
-            CASE ('soc')
+            CASE ('spin_orbit')
                CALL melem_interpolate_operator(manifold, cell, kpts, eig, u_matrix, u_opt, &
                                                coarse%soc0, gk_loc, 1, kfrac, outname(iop, 1), irank, mpi_comm)
             CASE ('velocity')
