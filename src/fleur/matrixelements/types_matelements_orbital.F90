@@ -148,9 +148,16 @@ CONTAINS
             !> atom, so each element gets exactly one contribution. Adding onto a
             !> cleared matrix would also turn a -0.0 result into +0.0, and the sign of
             !> zero is visible in the exported file.
-            this%comp(i, j, 1) = 0.5 * (cp + cm)               ! L_x = (L+ + L-)/2
-            this%comp(i, j, 2) = -0.5 * ImagUnit * (cp - cm)   ! L_y = (L+ - L-)/(2i)
-            this%comp(i, j, 3) = cz                            ! L_z
+            !> The raw products are c_i * conj(c_j), the conjugate of the <i|L|j> this
+            !> type promises, so each raw component is conjugated BEFORE the Cartesian
+            !> combination and not after it: L+ and L- are not Hermitian and conjugation
+            !> exchanges them, so conjugating L_x, L_y, L_z instead leaves L_y with the
+            !> wrong sign -- which no localisation measure can see, a global sign being
+            !> harmless to the decay. On fcc Pt, L(R) keeps 2 % of its weight at R = 0
+            !> without the conjugation and 99 % with it.
+            this%comp(i, j, 1) = 0.5 * CONJG(cp + cm)               ! L_x = (L+ + L-)/2
+            this%comp(i, j, 2) = -0.5 * ImagUnit * CONJG(cp - cm)   ! L_y = (L+ - L-)/(2i)
+            this%comp(i, j, 3) = CONJG(cz)                          ! L_z
          END DO
       END DO
    END SUBROUTINE calc_matrix_elements

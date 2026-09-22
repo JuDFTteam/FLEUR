@@ -214,6 +214,31 @@ CONTAINS
             END DO
          END DO
       END DO
+
+      !> The muffin-tin loop and the interstitial overlap both form c_i * conj(c_j), the
+      !> conjugate of the matrix element <i|O|j> this type promises. They agree with each
+      !> other, so one conjugation of the assembled blocks restores the promised
+      !> convention for every consumer at once.
+      !>
+      !> The azimuthal rotation takes R_z(-alpha), not R_z(+alpha), and the two signs
+      !> belong together: conjugation flips the y component, and flipping y turns a
+      !> rotation about z into its inverse, so
+      !>     conj( R_z(-alpha) [ conj(B) ] ) = R_z(+alpha) [ B ] ,
+      !> the canonical rotation. Changing either sign alone breaks it. No test covers
+      !> this: the cases that carry a non-zero azimuth are checked on Omega, which is
+      !> invariant under the direction of the moment.
+      !>
+      !> The convention cannot be caught from the result: the conjugate of a Hermitian
+      !> matrix is Hermitian, obeys the same algebra and has the same eigenvalues, so
+      !> every check in melem_check passes either way. What it breaks is any use that
+      !> pairs the operator with a gauge built from the same states -- the two then sit
+      !> in different bases and the real-space operator stops decaying. On fcc Pt, S(R)
+      !> keeps 13 % of its weight at R = 0 without this and 99.98 % with it.
+      DO j1 = 1, 2
+         DO i1 = 1, 2
+            this%mat(i1,j1)%data_c = CONJG(this%mat(i1,j1)%data_c)
+         END DO
+      END DO
    END SUBROUTINE calc_matrix_elements
 
 END MODULE m_types_matelements_spin
