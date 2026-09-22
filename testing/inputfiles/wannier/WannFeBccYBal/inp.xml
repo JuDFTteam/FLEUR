@@ -69,7 +69,7 @@
           <operator name="spin"/>
           <operator name="orbital"/>
         </operators_r>
-        <export format="wannierberri" gauge="T"/>
+        <export wannierberri="T" gauge="T"/>
       </wannierlib>
       <bandDOS minEnergy="-.5*Htr" maxEnergy="0.5*Htr" sigma="0.015" storeEVData="T"/>
       <vacuumDOS vacdos="F" integ="F" star="F" nstars="0" locx1="0.0" locy1="0.0" locx2="0.0" locy2="0.0" nstm="0" tworkf="0.0"/>

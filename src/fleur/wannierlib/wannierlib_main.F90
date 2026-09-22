@@ -33,7 +33,7 @@ MODULE m_wannierlib_main
    USE m_wannierlib_export_gauge, ONLY: wannierlib_export_gauge
    USE m_melem_spin_collinear, ONLY: melem_rspauli_collinear, melem_anglmom_collinear, melem_soc_collinear
    USE m_types_melem_bmesh, ONLY: t_melem_bmesh
-   USE m_constants, ONLY: oUnit
+   USE m_constants, ONLY: oUnit, hartree_to_ev_const
    USE m_types_atoms
    USE m_types_cell
    USE m_types_vacuum
@@ -78,6 +78,11 @@ CONTAINS
       INTEGER :: nntot_w90, jspin
       COMPLEX, ALLOCATABLE :: amn(:, :, :)
       COMPLEX, ALLOCATABLE :: mmn(:, :, :, :)
+      COMPLEX, ALLOCATABLE :: mmn_full(:, :, :, :)
+      !> A copy of the settings, because the energy windows may be left out of the input and
+      !> are filled in from the bands here. It cannot be done in place: this comes from the
+      !> fleurinput container, which reaches the caller as INTENT(IN).
+      TYPE(t_wannierlib_wannierize) :: wl
       REAL, ALLOCATABLE :: kdiff(:, :)
       INTEGER, ALLOCATABLE :: nnkp(:, :), gkpb(:, :, :)
       INTEGER, ALLOCATABLE :: distk(:)
@@ -98,7 +103,6 @@ CONTAINS
       TYPE(t_melem_request) :: request
       TYPE(t_melem_manifold) :: manifold
       TYPE(t_melem_domains) :: domains
-      LOGICAL :: l_nocosoc
       CHARACTER(LEN=7) :: amn_file
       CHARACTER(LEN=3) :: spin12(2)
       CHARACTER(LEN=6) :: spin_sfx
@@ -107,7 +111,6 @@ CONTAINS
 
 
       l_wannierlib_spinors = noco%l_noco .OR. noco%l_soc
-      l_nocosoc = noco%l_noco .AND. (.NOT. noco%l_soc)
       ! A.1: input%l_real stays TRUE with inversion even under SOC (n_denmat=0), and
       ! reading a complex spinor into a real buffer kills the imaginary part of the MMN.
       spin12 = (/'WF1', 'WF2'/)
@@ -150,8 +153,11 @@ CONTAINS
             calledby='wannierlib_main')
       END IF
 
-      CALL manifold%init(this%num_bands, this%num_wann, this%dis_win_min, this%dis_win_max, &
-                         this%min_band, this%max_band)
+      wl = this
+      CALL wannierlib_default_windows(wl, results, kpts, input, l_wannierlib_spinors)
+
+      CALL manifold%init(wl%num_bands, wl%num_wann, wl%dis_win_min, wl%dis_win_max, &
+                         wl%min_band, wl%max_band)
       CALL domains%init(this%n_domains, this%dom_kset, this%dom_suffix)
 
       CALL melem%init(request, manifold, atoms, input, kpts, fmpi, distk, l_wannierlib_spinors)
@@ -169,24 +175,36 @@ CONTAINS
          CALL wannierlib_build_amn_mmn(this, manifold, bmesh, atoms, cell, input, kpts, sym, &
                                        noco, nococonv, stars, enpara, fmpi, vtot, eig_id, &
                                        radfun, usdus, distk, kdiff, nntot_w90, jspin, &
-                                       l_wannierlib_spinors, l_nocosoc, amn, mmn, vacuum)
+                                       l_wannierlib_spinors, amn, mmn, vacuum)
 
          ! amn was filled only on each rank's distk slice (zeros elsewhere) -> sum to the full set
          CALL wannierlib_reduce_amn(fmpi, amn)
 
          mmn = conjg(mmn)
 
-         IF (fmpi%isize == 1) THEN
-            amn_file = spin12(jspin)//'.amn'
-            call wann_write_amn(fmpi%mpi_comm, .true., amn_file, "Testing amn", &
-                                this%num_bands, kpts%nkptf, this%num_wann, &
-                                0, 1, .false., .false., &
-                                amn, .false.)
-
-            CALL wannierlib_write_mmn(this, mmn, kpts, nnkp, gkpb, jspin)
-         END IF
-
          call wannierlib_create_eig(this, results, kpts, MERGE(1, jspin, l_wannierlib_spinors), eig)
+
+         !> The three files Wannier90 was handed, so a standalone wannier90.x can repeat the
+         !> run: .amn, .mmn and .eig. They are written together and after create_eig because
+         !> without the eigenvalues the other two cannot be used -- w90 stops at
+         !> "No .eig file found. Needed for disentanglement".
+         !> amn is complete on every rank after the reduce above; mmn is one k-slice per rank
+         !> and has to be gathered first. Only rank 0 writes, and wann_write_amn is told
+         !> isize=1 so it does not try to collect a distribution it does not have.
+         IF (this%l_export_w90 .OR. fmpi%isize == 1) THEN
+            CALL wannierlib_gather_mmn(fmpi, distk, kpts%nkptf, mmn, mmn_full)
+            IF (fmpi%irank == 0) THEN
+               amn_file = spin12(jspin)//'.amn'
+               call wann_write_amn(fmpi%mpi_comm, .true., amn_file, "Testing amn", &
+                                   this%num_bands, kpts%nkptf, this%num_wann, &
+                                   0, 1, .false., .false., &
+                                   amn, .false.)
+
+               CALL wannierlib_write_mmn(this, mmn_full, kpts, nnkp, gkpb, jspin)
+               CALL wannierlib_write_eig(eig, spin12(jspin)//'.eig')
+            END IF
+            DEALLOCATE (mmn_full)
+         END IF
 
          !> The interstitial wave functions, for irrep and through it the site-symmetric
          !> wannierisation in WannierBerri. Written here so that it lands next to the
@@ -208,11 +226,16 @@ CONTAINS
          !> the band labelling refuse every case instead of falling back to the orbital
          !> criterion, which is the right answer when there is no spin operator to use.
          IF (request%has_op_r('spin') .AND. ALLOCATED(melem%s0)) THEN
-            CALL run_w90(this, cell, kpts, mmn, amn, eig, fmpi%irank, u_matrix, u_opt, &
+            !> Published before run_w90 so it is the operator as built, with no gauge on it.
+            IF (this%l_export_bloch) &
+               CALL wannierlib_write_s0(fmpi, distk, kpts%nkptf, melem%s0, &
+                                        spin12(jspin)//'_s0.dat')
+            CALL run_w90(wl, cell, kpts, mmn, amn, eig, fmpi%irank, u_matrix, u_opt, &
                          s0=melem%s0)
          ELSE
-            CALL run_w90(this, cell, kpts, mmn, amn, eig, fmpi%irank, u_matrix, u_opt)
+            CALL run_w90(wl, cell, kpts, mmn, amn, eig, fmpi%irank, u_matrix, u_opt)
          END IF
+
 
          CALL wannierlib_keep_gauge(melem%n_channels, request%has_op_r('spin'), manifold, &
                                     kpts%nkptf, jspin, u_opt, u_matrix, v_ch)
@@ -411,6 +434,181 @@ CONTAINS
          CALL MPI_ALLREDUCE(MPI_IN_PLACE, amn, SIZE(amn), MPI_DOUBLE_COMPLEX, MPI_SUM, fmpi%mpi_comm, ierr)
 #endif
    END SUBROUTINE wannierlib_reduce_amn
+
+   ! Reassemble the full-mesh mmn so it can be written as one file. amn is allocated over
+   ! every k and left at zero outside each rank's slice, so summing completes it; mmn is
+   ! stored compactly as (nb, nb, nntot, nk_local) indexed by POSITION within the slice, so
+   ! the slices have to be placed at their global k before being summed. The local order is
+   ! ascending global k (wannierlib_build_amn_mmn fills it in that order), and every k is
+   ! owned by exactly one rank, so the sum is a copy. This is the one full-mesh buffer the
+   ! distributed post-processing otherwise avoids, so it is allocated only when asked for.
+   SUBROUTINE wannierlib_gather_mmn(fmpi, distk, nkptf, mmn_loc, mmn_full)
+#ifdef CPP_MPI
+      use mpi
+#endif
+      TYPE(t_mpi), INTENT(IN) :: fmpi
+      INTEGER, INTENT(IN) :: distk(:)             ! (nkptf) owning rank of each k
+      INTEGER, INTENT(IN) :: nkptf
+      COMPLEX, INTENT(IN) :: mmn_loc(:, :, :, :)  ! (nb, nb, nntot, nk_local)
+      COMPLEX, ALLOCATABLE, INTENT(OUT) :: mmn_full(:, :, :, :)
+      INTEGER :: ikpt, ik_local, ierr
+#ifdef CPP_MPI
+      INTEGER :: mpi_err
+#endif
+      ALLOCATE (mmn_full(SIZE(mmn_loc, 1), SIZE(mmn_loc, 2), SIZE(mmn_loc, 3), nkptf), &
+                stat=ierr, source=CMPLX(0.0, 0.0))
+      IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating the full mmn buffer', &
+                                      calledby='wannierlib_gather_mmn')
+      ik_local = 0
+      DO ikpt = 1, nkptf
+         IF (distk(ikpt) /= fmpi%irank) CYCLE
+         ik_local = ik_local + 1
+         mmn_full(:, :, :, ikpt) = mmn_loc(:, :, :, ik_local)
+      END DO
+#ifdef CPP_MPI
+      IF (fmpi%isize > 1) &
+         CALL MPI_ALLREDUCE(MPI_IN_PLACE, mmn_full, SIZE(mmn_full), MPI_DOUBLE_COMPLEX, &
+                            MPI_SUM, fmpi%mpi_comm, mpi_err)
+#endif
+   END SUBROUTINE wannierlib_gather_mmn
+
+   ! Write the eigenvalues in the Wannier90 file format: one line per (band, k), in eV.
+   ! The library hands w90 the same numbers through the API and never puts them on disk, so
+   ! the .amn and .mmn alone cannot be replayed -- a standalone run stops at "No .eig file
+   ! found. Needed for disentanglement". FLEUR keeps eigenvalues in Hartree; the file is in
+   ! eV, the unit the energy windows are also written in.
+   SUBROUTINE wannierlib_write_eig(eig, filename)
+      REAL, INTENT(IN) :: eig(:, :)            ! (num_bands, nkptf), Hartree
+      CHARACTER(LEN=*), INTENT(IN) :: filename
+      INTEGER :: iunit, iband, ikpt
+      OPEN (NEWUNIT=iunit, FILE=filename, FORM='formatted', STATUS='replace')
+      DO ikpt = 1, SIZE(eig, 2)
+         DO iband = 1, SIZE(eig, 1)
+            WRITE (iunit, '(2i12,f18.13)') iband, ikpt, hartree_to_ev_const*eig(iband, ikpt)
+         END DO
+      END DO
+      CLOSE (iunit)
+   END SUBROUTINE wannierlib_write_eig
+
+   ! Write the spin operator in the BLOCH basis, before any gauge is applied to it.
+   ! It is the one ingredient of S(R) that no file carries: the .amn and .mmn fix the
+   ! gauge and the .eig the energies, but the operator itself only ever exists in memory,
+   ! so a disagreement between it and the basis the gauge was built for cannot be seen
+   ! from outside. The classic route publishes the same quantity as WF1.mmn0 (diagonal
+   ! spin blocks) and updown.mmn0 (cross block), which is what this can be compared with.
+   ! ONE file, gathered, like every other export: the rank's own k-slice is completed by
+   ! the same reduce the overlaps use and rank 0 writes. A file per rank would have been
+   ! cheaper here, but then the number of output files would depend on how the run was
+   ! parallelised, which is not something a reader should have to know.
+   SUBROUTINE wannierlib_write_s0(fmpi, distk, nkptf, s0_loc, filename)
+#ifdef CPP_MPI
+      use mpi
+#endif
+      TYPE(t_mpi), INTENT(IN) :: fmpi
+      INTEGER, INTENT(IN) :: distk(:)             ! (nkptf) owning rank of each k
+      INTEGER, INTENT(IN) :: nkptf
+      COMPLEX, INTENT(IN) :: s0_loc(:, :, :, :)   ! (nb, nb, 3, nk_local), ascending global k
+      CHARACTER(LEN=*), INTENT(IN) :: filename
+      COMPLEX, ALLOCATABLE :: s0_full(:, :, :, :)
+      INTEGER :: iunit, ikpt, ik_local, ib, jb, ic, ierr
+#ifdef CPP_MPI
+      INTEGER :: mpi_err
+#endif
+
+      ALLOCATE (s0_full(SIZE(s0_loc, 1), SIZE(s0_loc, 2), SIZE(s0_loc, 3), nkptf), &
+                stat=ierr, source=CMPLX(0.0, 0.0))
+      IF (ierr /= 0) CALL juDFT_error('wannierlib_write_s0: allocation failed', &
+                                      calledby='wannierlib_write_s0')
+      !> Indexed by GLOBAL k and zero everywhere else, so the sum below completes it.
+      !> The local array is indexed by position in this rank's slice, which is why it
+      !> cannot be reduced as it stands: the same slot means a different k on each rank.
+      ik_local = 0
+      DO ikpt = 1, nkptf
+         IF (distk(ikpt) /= fmpi%irank) CYCLE
+         ik_local = ik_local + 1
+         IF (ik_local > SIZE(s0_loc, 4)) EXIT
+         s0_full(:, :, :, ikpt) = s0_loc(:, :, :, ik_local)
+      END DO
+#ifdef CPP_MPI
+      CALL MPI_ALLREDUCE(MPI_IN_PLACE, s0_full, SIZE(s0_full), MPI_DOUBLE_COMPLEX, &
+                         MPI_SUM, fmpi%mpi_comm, mpi_err)
+#endif
+      IF (fmpi%irank == 0) THEN
+         OPEN (NEWUNIT=iunit, FILE=filename, FORM='formatted', STATUS='replace')
+         WRITE (iunit, '(a)') '# spin operator in the Bloch basis, before the gauge'
+         WRITE (iunit, '(a)') '# ikpt  iband  jband  comp(1=x,2=y,3=z)  Re  Im'
+         DO ikpt = 1, nkptf
+            DO ic = 1, SIZE(s0_full, 3)
+               DO jb = 1, SIZE(s0_full, 2)
+                  DO ib = 1, SIZE(s0_full, 1)
+                     WRITE (iunit, '(4i7,2es24.15)') ikpt, ib, jb, ic, &
+                        REAL(s0_full(ib, jb, ic, ikpt)), AIMAG(s0_full(ib, jb, ic, ikpt))
+                  END DO
+               END DO
+            END DO
+         END DO
+         CLOSE (iunit)
+      END IF
+      DEALLOCATE (s0_full)
+   END SUBROUTINE wannierlib_write_s0
+
+   ! Fill in the energy windows the input did not state, from the range the selected bands
+   ! actually span ON THE WANNIERIZATION MESH. That is what Wannier90 falls back to when the
+   ! classic route leaves dis_win_min/max out of the .win, and it is the only definition that
+   ! cannot cut the manifold.
+   !
+   ! Measuring the range anywhere else is a silent trap: taken from the SCF mesh, which need
+   ! not contain Gamma, the minimum comes out ABOVE the true one, states fall outside the
+   ! window at some k, and Wannier90 drops them without a word -- in Pt that cost 7 of 512
+   ! k-points two of their 36 states.
+   !
+   ! A margin of one microhartree is added on each side so that a band sitting exactly on the
+   ! edge is not dropped by rounding.
+   !
+   ! Both spin channels are scanned when there are two, so a single window holds every band
+   ! that will be wannierized in either.
+   SUBROUTINE wannierlib_default_windows(this, results, kpts, input, l_spinors)
+      TYPE(t_wannierlib_wannierize), INTENT(INOUT) :: this
+      TYPE(t_results), INTENT(IN) :: results
+      TYPE(t_kpts), INTENT(IN) :: kpts
+      TYPE(t_input), INTENT(IN) :: input
+      LOGICAL, INTENT(IN) :: l_spinors
+
+      REAL, PARAMETER :: margin = 1.0e-6      ! Hartree
+      INTEGER :: ikpt, jsp, nsp
+      REAL :: emin, emax
+
+      !> Each bound is handled on its own: a window left at its 0.0 default was not given.
+      !> Testing the pair instead would break a half-stated window -- give only disWinMin
+      !> and disWinMax would stay at zero.
+      IF (this%dis_win_min /= 0.0 .AND. this%dis_win_max /= 0.0 .AND. this%dis_froz_min /= 0.0) RETURN
+
+      nsp = MERGE(1, input%jspins, l_spinors)
+      emin = HUGE(emin)
+      emax = -HUGE(emax)
+      DO jsp = 1, nsp
+         DO ikpt = 1, kpts%nkptf
+            emin = MIN(emin, results%eig(this%min_band, kpts%bkp(ikpt), jsp))
+            emax = MAX(emax, results%eig(this%max_band, kpts%bkp(ikpt), jsp))
+         END DO
+      END DO
+
+      !> An empty or degenerate range means the eigenvalues are not in results%eig at the
+      !> point this runs, and the window would come out [0,0]: Wannier90 then reports
+      !> "energy window contains fewer states than target WFs" at some k, or worse,
+      !> disentangles an empty subspace. Refusing here turns a silent wrong window into
+      !> a message that names the remedy.
+      IF (.NOT. (emax > emin)) CALL juDFT_error( &
+         'wannierlib: the outer energy window cannot be derived from the bands', &
+         hint='state disWinMin and disWinMax explicitly in <disentanglement>', &
+         calledby='wannierlib_default_windows')
+
+      IF (this%dis_win_min == 0.0) this%dis_win_min = emin - margin
+      IF (this%dis_win_max == 0.0) this%dis_win_max = emax + margin
+      !> The frozen window starts where the outer one does unless the input says
+      !> otherwise, which is what the established recipes write by hand.
+      IF (this%dis_froz_min == 0.0) this%dis_froz_min = this%dis_win_min
+   END SUBROUTINE wannierlib_default_windows
 
    subroutine wannierlib_write_mmn(this, mmnk, kpts, nnkp, gkpb, jspin, fending)
       TYPE(t_wannierlib_wannierize), INTENT(IN) :: this

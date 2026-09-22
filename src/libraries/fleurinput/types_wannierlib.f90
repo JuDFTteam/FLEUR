@@ -26,8 +26,15 @@ MODULE m_types_wannierlib
     LOGICAL :: l_orbmom = .FALSE.          ! an <operator name="orbital"> is requested
     LOGICAL :: l_socop = .FALSE.           ! an <operator name="soc"> is requested
     LOGICAL :: l_operators_r = .FALSE.     ! an <operators_r> block (real-space O(R) export) is present
-    LOGICAL :: l_export_basis = .FALSE.    ! an <export format="wannierberri"/> is present
-    LOGICAL :: l_export_gauge = .FALSE.    ! <export ... gauge="T"/>: also write U(k)
+    !> The <export> block: one boolean per artefact, all off by default. They are grouped
+    !> under one element because they answer the same question -- hand the run's own
+    !> matrices to someone outside -- and differ only in who reads them. What <operators_r>
+    !> and <interpolation> write is NOT here: those compute something first and writing it
+    !> is the last step, while these copy out what the run already holds.
+    LOGICAL :: l_export_w90 = .FALSE.      ! <export wannier90="T"/>: .amn/.mmn/.eig
+    LOGICAL :: l_export_basis = .FALSE.    ! <export wannierberri="T"/>: WF<n>_basis.hdf
+    LOGICAL :: l_export_gauge = .FALSE.    ! <export gauge="T"/>: WF<n>_gauge.hdf, u_opt and u_mlwf
+    LOGICAL :: l_export_bloch = .FALSE.    ! <export blochOperators="T"/>: WF<n>_s0.dat
     !> Opt-in: put the Wannier functions themselves on a real-space grid and write them
     !> as XSF. Off by default because it costs a second pass over the k-points, reading
     !> the states back once the gauge is known; nothing else in the run needs it.
@@ -76,6 +83,9 @@ MODULE m_types_wannierlib
     INTEGER :: min_band = -1
     INTEGER :: max_band = -1
 
+    !> The energy windows, in Hartree and absolute. Each may be left out of the input, in
+    !> which case it is filled in from the bands themselves once they are known -- see
+    !> wannierlib_default_windows.
     REAL :: dis_win_min = 0.0
     REAL :: dis_win_max = 0.0
     REAL :: dis_froz_min = 0.0
@@ -113,7 +123,6 @@ MODULE m_types_wannierlib
     !> It is exposed because the option exists and someone will want it, not because it
     !> fixed anything here.
     LOGICAL :: precond = .FALSE.
-
     INTEGER, ALLOCATABLE :: proj_ntype(:)
     INTEGER, ALLOCATABLE :: proj_atom(:)
     CHARACTER(LEN=20), ALLOCATABLE :: proj_species(:)
@@ -396,8 +405,10 @@ CONTAINS
     CALL mpi_bc(this%op_comp, rank, mpi_comm)
     CALL mpi_bc(this%op_total, rank, mpi_comm)
     CALL mpi_bc(this%l_operators_r, rank, mpi_comm)
+    CALL mpi_bc(this%l_export_w90, rank, mpi_comm)
     CALL mpi_bc(this%l_export_basis, rank, mpi_comm)
     CALL mpi_bc(this%l_export_gauge, rank, mpi_comm)
+    CALL mpi_bc(this%l_export_bloch, rank, mpi_comm)
     CALL mpi_bc(this%l_plot_wf, rank, mpi_comm)
     CALL mpi_bc(this%n_op_r, rank, mpi_comm)
     CALL mpi_bc(this%op_r_name, rank, mpi_comm)
@@ -481,9 +492,17 @@ CONTAINS
       
     xPathA = '/fleurInput/output/wannierlib/disentanglement'
     IF (xml%getNumberOfNodes(xPathA) == 1) THEN
-      this%dis_win_min = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@disWinMin'))
-      this%dis_win_max = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@disWinMax'))
-      this%dis_froz_min = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@disFrozMin'))
+      !> Each window is optional. "Not given" is carried by the value itself rather than by
+      !> a flag: an absent window keeps its 0.0 default, and dis_win_min == dis_win_max is
+      !> what the adapter already reads as "no window". Adding fields to this type is not
+      !> free -- it forces most of the tree to recompile, and ifx 2025 hits an internal
+      !> compiler error in dfpt_interpolation when it does.
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@disWinMin') == 1) &
+        this%dis_win_min = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@disWinMin'))
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@disWinMax') == 1) &
+        this%dis_win_max = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@disWinMax'))
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@disFrozMin') == 1) &
+        this%dis_froz_min = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@disFrozMin'))
       this%dis_froz_max = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@disFrozMax'))
       this%dis_froz_proj = evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@disFrozProj'))
       this%dis_spin_balanced = evaluateFirstBoolOnly( &
@@ -576,17 +595,20 @@ CONTAINS
       END IF
     END DO
 
-    ! --- export: interstitial wave functions for irrep / WannierBerri. One format is
-    !     defined; the attribute is required so that adding a second one later cannot
-    !     silently change what an existing input file means. ---
+    ! --- export: hand the run's own matrices to a reader outside. One boolean per
+    !     artefact rather than one format enumeration, because they are not alternatives:
+    !     a run can want the .amn/.mmn to be replayed by wannier90.x AND the interstitial
+    !     for irrep AND the gauge, and asking for one must not turn the others off. ---
     xPathA = '/fleurInput/output/wannierlib/export'
     IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))) == 1) THEN
-      this%l_export_basis = TRIM(ADJUSTL(xml%getAttributeValue( &
-        TRIM(ADJUSTL(xPathA))//'/@format'))) == 'wannierberri'
-      !> Optional and off by default: the gauge interests only someone studying a
-      !> gauge-dependent quantity from outside, and it is a second file to write.
+      this%l_export_w90 = evaluateFirstBoolOnly(xml%getAttributeValue( &
+        TRIM(ADJUSTL(xPathA))//'/@wannier90'))
+      this%l_export_basis = evaluateFirstBoolOnly(xml%getAttributeValue( &
+        TRIM(ADJUSTL(xPathA))//'/@wannierberri'))
       this%l_export_gauge = evaluateFirstBoolOnly(xml%getAttributeValue( &
         TRIM(ADJUSTL(xPathA))//'/@gauge'))
+      this%l_export_bloch = evaluateFirstBoolOnly(xml%getAttributeValue( &
+        TRIM(ADJUSTL(xPathA))//'/@blochOperators'))
     END IF
 
     ! --- operators_r: real-space operator matrices O(R) (Fourier step 3, no interpolation).
@@ -640,6 +662,26 @@ CONTAINS
           this%proj_species(ip) = species_name
           this%proj_l(ip) = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@l'))
           this%proj_m(ip) = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@m'))
+          !> The spin a projection belongs to. It was declared in the schema, allocated and
+          !> broadcast, but never read: proj_spin reached the expansion uninitialised and a
+          !> projection could not be pinned to one channel. That left the (l, j, m_j) branch
+          !> unreachable from an input file -- with spinors every projection is doubled, both
+          !> copies carry the same (l, j, m_j), and the j-resolved builder ignores the spin
+          !> index, so the pair came out as two identical columns and A(k) lost rank.
+          !> 0 means "either", which is what makes the expansion split it in two.
+          this%proj_spin(ip) = 0
+          IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@spin') == 1) THEN
+            sbuf = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@spin'))
+            SELECT CASE (TRIM(sbuf))
+            CASE (''); this%proj_spin(ip) = 0
+            CASE ('up', '1', '+1'); this%proj_spin(ip) = 1
+            CASE ('down', '-1'); this%proj_spin(ip) = -1
+            CASE DEFAULT
+              CALL juDFT_error('wannierlib: <wannierproj> spin="'//TRIM(sbuf)// &
+                               '" is not one of up/down (or empty for both)', &
+                               calledby='read_xml_wannierlib')
+            END SELECT
+          END IF
           this%proj_rwf(ip) = 0
           this%proj_alpha(ip) = 0.0
           this%proj_beta(ip) = 0.0

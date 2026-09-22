@@ -3545,9 +3545,21 @@
       <xsd:annotation>
          <xsd:documentation>Disentanglement controls for wannierlib library-mode workflow.</xsd:documentation>
       </xsd:annotation>
-      <xsd:attribute name="disWinMin" type="FleurDouble" use="required"/>
-      <xsd:attribute name="disWinMax" type="FleurDouble" use="required"/>
-      <xsd:attribute name="disFrozMin" type="FleurDouble" use="required"/>
+      <xsd:attribute name="disWinMin" type="FleurDouble" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Bottom of the outer energy window, in Hartree and absolute. Optional: left out, it is the lowest value the selected bands reach on the wannierization mesh, which is what Wannier90 defaults to when the classic route leaves it out of the .win. Setting it by hand is how states get silently dropped -- a window measured on the SCF mesh, which need not contain Gamma, sits above the true minimum and leaves bands outside it at some k.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="disWinMax" type="FleurDouble" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Top of the outer energy window, in Hartree and absolute. Optional: left out, it is the highest value the selected bands reach on the wannierization mesh.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="disFrozMin" type="FleurDouble" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Bottom of the frozen window, in Hartree and absolute. Optional: left out, it follows disWinMin, so everything from the bottom of the manifold up to disFrozMax is frozen.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
       <xsd:attribute name="disFrozMax" type="FleurDouble" use="required"/>
       <xsd:attribute name="numIter" type="xsd:positiveInteger" use="required"/>
       <xsd:attribute name="convTol" type="FleurDouble" use="required"/>
@@ -3560,9 +3572,9 @@
 
    <xsd:complexType name="WannierlibWannierizationType">
       <xsd:annotation>
-         <xsd:documentation>MLWF (wannierise) iteration controls for wannierlib library-mode workflow.</xsd:documentation>
+         <xsd:documentation>MLWF (wannierise) iteration controls for wannierlib library-mode workflow. numIter="0" skips the spread minimisation and keeps the projection gauge: the Wannier functions are then the trial orbitals themselves, orthonormalised. That is a real choice and not a degenerate case - the minimisation converges to maximally localised functions whatever it starts from, so the initial projections only decide the gauge when it is switched off.</xsd:documentation>
       </xsd:annotation>
-      <xsd:attribute name="numIter" type="xsd:positiveInteger" use="required"/>
+      <xsd:attribute name="numIter" type="xsd:nonNegativeInteger" use="required"/>
       <xsd:attribute name="convTol" type="FleurDouble" use="required"/>
       <xsd:attribute default="F" name="precond" type="FleurBool" use="optional"/>
    </xsd:complexType>
@@ -3639,16 +3651,12 @@
 
    <xsd:complexType name="WannierlibExportType">
       <xsd:annotation>
-         <xsd:documentation>Write the interstitial part of the wave functions, for the symmetry analysis that irrep performs and the site-symmetric wannierisation WannierBerri builds on it: WF&lt;spin&gt;_basis.hdf, alongside the .amn/.mmn/.eig of the same run. The interstitial region is invariant under the space group, so the symmetry characters it gives are exact; the muffin-tin parts are not needed and are not written. Requires a full-zone k-mesh (inpgen -noKsym) and a build with HDF5. gauge=&quot;T&quot; additionally writes WF&lt;spin&gt;_gauge.hdf holding the two factors Wannier90 returned: u_opt, which subspace was selected, and u_mlwf, how it was rotated inside it. Every exported operator is the Bloch-basis operator sandwiched between them, and they are the only part of that sandwich which otherwise leaves no trace.</xsd:documentation>
+         <xsd:documentation>Hand the matrices the run already holds to a reader outside it. One boolean per artefact, all off by default and independent: they are not alternatives, and asking for one must not turn the others off. What &lt;operators_r&gt; and &lt;interpolation&gt; write is deliberately NOT here - those compute something first and writing it is the last step, while these only copy out. wannier90="T" writes WF&lt;spin&gt;.amn, .mmn and .eig, the three files a standalone wannier90.x needs to repeat the same wannierization; the .mmn of a 512-point mesh with 36 bands is a few hundred megabytes of text, which is why it is opt-in. wannierberri="T" writes WF&lt;spin&gt;_basis.hdf, the plane-wave index list and the eigenvector coefficients over the interstitial, for the symmetry analysis irrep performs and the site-symmetric wannierization WannierBerri builds on it; the interstitial is invariant under the space group, so its characters are exact, and the muffin-tin parts are not needed. Requires a full-zone k-mesh (inpgen -noKsym) and a build with HDF5. gauge="T" writes WF&lt;spin&gt;_gauge.hdf with the two factors Wannier90 returned, u_opt and u_mlwf: every exported operator is the Bloch-basis operator sandwiched between them, and they are the only part of that sandwich which otherwise leaves no trace. blochOperators="T" writes WF&lt;spin&gt;_s0.dat, the spin operator in the Bloch basis BEFORE any gauge is applied - the one ingredient of S(R) that no other file carries, so a disagreement between the operator and the basis its gauge was built for can be seen from outside.</xsd:documentation>
       </xsd:annotation>
-      <xsd:attribute name="format" use="required">
-         <xsd:simpleType>
-            <xsd:restriction base="xsd:string">
-               <xsd:enumeration value="wannierberri"/>
-            </xsd:restriction>
-         </xsd:simpleType>
-      </xsd:attribute>
+      <xsd:attribute default="F" name="wannier90" type="FleurBool" use="optional"/>
+      <xsd:attribute default="F" name="wannierberri" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="gauge" type="FleurBool" use="optional"/>
+      <xsd:attribute default="F" name="blochOperators" type="FleurBool" use="optional"/>
    </xsd:complexType>
 
    <xsd:complexType name="WannierlibOutputType">
