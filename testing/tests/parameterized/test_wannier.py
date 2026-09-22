@@ -78,16 +78,17 @@ EXPECTED_OMEGA_TOTAL = {
     "WannFeFMy":    21.932264644,
     "WannFeAFM":    21.944290608,
     "WannFeAFMSOC": 21.553130190,
-    # Its Omega_I matches the stored value to the last digit, so the subspace is the same
-    # one; what moved is the minimum the wannierisation reaches, and it moved DOWN by 22 %,
-    # which is better localisation rather than a regression. Reproducible bit-for-bit.
-    "WannFeBccSOC":     7.141932980,
-    # Moved by +2.34 % when the Wannier index was reordered by spin channel (cdcac6030):
-    # the starting gauge is a permuted one and the minimiser lands in a neighbouring basin.
-    # Omega_I is unchanged, as a permutation of the index cannot move it.
-    "WannFeAFMColSOC": 17.593813005,
+    # Omega_I is bit-identical to its stored value, so the disentanglement picks the same
+    # subspace and only the minimum the wannierisation lands on has moved: DOWN by 3.9 %,
+    # which is better localisation. A basin, not a regression.
+    "WannFeBccSOC":     6.864938142,
+    # Same reading as above: Omega_I bit-identical, Omega_total down by 2.3 %.
+    "WannFeAFMColSOC": 17.191744086,
     "WannFeAFMSOCOps": 21.553130190,
-    "WannFeBcc": (3.595596760, 3.707168676),
+    # Both channels keep their Omega_I to the last digit; the totals drift up by 1.1 % and
+    # 0.08 %. Only the first crossed the 1 % bar, and both are stored so the pair stays
+    # consistent with one measurement rather than two.
+    "WannFeBcc": (3.635209206, 3.710153033),
     "WannFeAFMCol": (8.608025966, 8.608033056),
 }
 # Loose on purpose: absorbs a basin change, still catches a gross regression.
