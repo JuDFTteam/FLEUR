@@ -4,7 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What FLEUR Is
 
-FLEUR is an all-electron DFT code implementing the full-potential linearized augmented plane-wave (FLAPW) method. It is a scientific HPC code written primarily in Fortran 90/95+, with Python tooling for input generation and testing. The primary executables are `fleur` (serial) and `fleur_MPI` (parallel), plus `inpgen`/`inpgen3` for input file generation.
+FLEUR is an all-electron DFT code implementing the full-potential linearized augmented plane-wave (FLAPW) method. It is a scientific HPC code written primarily in Fortran 90/95+, with Python tooling for testing. The primary executables are `fleur` (serial) and `fleur_MPI` (parallel), plus `inpgen` for input file generation.
+
+## General Rules (User generated)
+
+- do not state in commit messages that CLAUDE is a co-author
+- ask the user before doing a commit
+- commit messages should be <300 words
+- code comments should be short and not include references to previous code versions
 
 ## Building
 
@@ -114,9 +121,7 @@ src/
     juDFT/         # Error handling, timing, MPI wrappers
     fleurinput/    # XML input parsing
   tools/
-    inpgen2/       # Legacy input generator
-    inpgen3/       # Current input generator (Fortran + Python)
-    inpgen3/fleuriste/  # TUI/CLI parallelization helper (Python)
+    inpgen2/       # Input generator (builds the `inpgen` binary)
 testing/
   tests/           # pytest test files (feature_reg/, inpgen/, masci_tools/, libxc/)
   inputfiles/      # Input files for tests
@@ -185,13 +190,13 @@ All input types extend `t_fleurinput_base` and expose an `mpi_bc` method for bro
 - **String utilities:** `string.f90` — `int2str` and other helpers
 - **Argument parsing:** `args.F90`, `check_arguments.F90` — CLI flag extraction
 
-### inpgen3
+### inpgen
 
-`src/tools/inpgen3/` operates in two modes:
+`src/tools/inpgen2/` builds the `inpgen` binary (the CMake target is named `inpgen2` but its output is renamed to `inpgen`). It operates in two modes:
 1. Generate `inp.xml` from a simple input file: `inpgen -f <input>`
 2. Add a k-point set to an existing `inp.xml`: `inpgen -kpt ...`
 
-`FleurInpgen.py` provides a ctypes interface to the inpgen Fortran library; it searches standard paths and respects the `FLEUR_BUILDDIR` environment variable for library discovery. The `fleuriste/` subdirectory is a TUI/CLI tool for setting up parallelized FLEUR runs.
+Note that `src/libraries/fleurinput/CMakeLists.txt` compiles four k-point sources (`tetcon.f90`, `triang.f`, `bravais.f90`, `brzone2.f90`) directly out of `src/tools/inpgen2/kpoints/`, so the core `fleurinput` library has a source-level dependency on this tool's tree.
 
 ## Environment Variables
 
@@ -199,7 +204,6 @@ All input types extend `t_fleurinput_base` and expose an `mpi_bc` method for bro
 - `juDFT_NPROCS` — Override number of MPI processes for tests
 - `juDFT_PYTHON` — Override the Python interpreter used by `run_tests.sh`
 - `juDFT_ARGS` — Extra command-line arguments passed to FLEUR
-- `FLEUR_BUILDDIR` — Build directory for `FleurInpgen.py` ctypes library discovery
 
 ## Writing Tests
 

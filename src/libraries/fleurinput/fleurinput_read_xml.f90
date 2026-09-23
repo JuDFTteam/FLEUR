@@ -9,7 +9,7 @@ MODULE m_fleurinput_read_xml
 CONTAINS
   SUBROUTINE fleurinput_read_xml(xmlOUTFileID,filename_add,cell,sym,atoms,input,noco,vacuum,field,&
        sliceplot,banddos,mpinp,hybinp ,coreSpecInput,wann,&
-       xcpot,forcetheo_data,kpts,kptsSelection,kptsArray,enparaXML,gfinp,hub1inp,dfpt,old_version,wannierlib)
+     xcpot,forcetheo_data,kpts,kptsSelection,kptsArray,enparaXML,gfinp,hub1inp,dfpt,old_version,wannierlib)
     USE m_types_xml
     integer,INTENT(IN)             :: xmlOUTFileID
     CHARACTER(len=*), INTENT(IN) :: filename_add

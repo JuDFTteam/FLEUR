@@ -20,7 +20,7 @@ module m_dfpt_postprocess_pot
 
 contains 
 
-    subroutine construct_elph_mat(fmpi,fi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat, &
+    subroutine dfpt_postprocess_elph(fmpi,fi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat, &
                                   rho, vTot, vxc,results,eig_id,resultsq,q_eig_id,l_real)
 
         use m_types 
@@ -33,6 +33,7 @@ contains
         use m_fermie
         use m_dfpt_generate_gradient
         use m_dfpt_vgen
+        use m_dfpt_lambda
 
         type(t_mpi), intent(in)       :: fmpi
         type(t_fleurinput),intent(in) :: fi 
@@ -54,21 +55,30 @@ contains
 
         type(t_hub1data) :: hub1data
         type(t_stars) :: starsq
-        type(t_kpts)  :: kqpts , qpts
+        type(t_kpts)  :: kqpts
         type(t_sternheimerJob) :: sternheimerJob
         type(t_potden) :: vTot1, vTot1Im, den1, den1Im, rho_local
         type(t_results) :: dummy_results
+
+        ! Symmetry unfolding of the q axis (see dfpt_lambda.F90, README_symmetry.md)
+        type(t_sym)   :: sym_qpts
+        type(t_kpts)  :: qpts
+        logical :: l_fullsym
+        integer :: ispin
+        complex, allocatable :: lambda(:,:,:,:)
+        integer, allocatable :: mapped_kpt(:,:)
+        real,    allocatable :: eig_win(:,:)
+        complex, allocatable :: gmatCartBZ(:,:,:,:,:,:) ! (nu',nu,kpoints,jsp,iPerturb,iQfull)
 
 
         type(t_potden) :: grRho3(3), grVtot3(3), grVext3(3), grVc3(3),grgrVext3x3(3,3)
 
         integer :: ikpt, iQ ,iDir, iDtype, iPerturb ,iArray, iMode, killcont(6), bandWindowSize
+        integer :: bandWindow(2)
         logical :: l_dummy , l_exist
         complex :: pref 
-        complex, allocatable :: dynMat(:,:) , eigenVecs(:,:)
-        real, allocatable :: eigenVals(:)
-        complex, allocatable :: gmatCart(:,:,:,:) ! (nu',nu,kpoints,jsp)
-        complex, allocatable :: gmat(:,:,:,:,:,:) ! (nu',nu,kpoints,jsp,iMode,iQ)
+        complex, allocatable :: dynMats(:,:,:) 
+        complex, allocatable :: gmatCart(:,:,:,:,:,:) ! (nu',nu,kpoints,jsp,iPerturb,iQ)
         integer, allocatable :: q_list(:)
 
         character(len=20) :: dfpt_tag
@@ -77,9 +87,7 @@ contains
 #ifdef CPP_MPI 
         integer :: ierr
 #endif 
-        real    :: atomic_mass_array(118)
 
-        atomic_mass_array = atomicMasses_const * massInElectronMasses
         ! killcont can be used to blot out certain contricutions to the
         ! perturbed matrices.
         ! In this order: V1_pw_pw, T1_pw, S1_pw, V1_MT, ikGH0_MT, ikGS0_MT
@@ -90,21 +98,28 @@ contains
 
         call rho_local%copyPotDen(rho)
         
-         ! create a kpts type that contains the necessary q-vectors 
-        qpts = fi%kpts
-        deallocate(qpts%bk)
-        allocate(qpts%bk,mold=fi%dfpt%qvec) ! this is not nice. Maybe change the expected type in dfpt_sternheimer/make_stars
-        qpts%bk(:, :size(fi%dfpt%qvec,2)) = fi%dfpt%qvec
-        allocate(q_list(size(fi%dfpt%qvec,2)))  
-        q_list = (/(iArray, iArray=1,SIZE(fi%dfpt%qvec,2), 1)/)
+        allocate(q_list(fi%dfpt%qvec%nkpt))
+        q_list = (/(iArray, iArray=1,fi%dfpt%qvec%nkpt, 1)/)
 
-        bandWindowSize = fi%dfpt%bandWindow(2) - fi%dfpt%bandWindow(1) + 1 
+        ! Determine the band window for the electron-phonon matrix elements.
+        if (fi%wannierlib%l_wannierize) then
+           bandWindow = [fi%wannierlib%min_band, fi%wannierlib%max_band]
+        else
+           if (.not. allocated(fi%dfpt%bandWindow)) &
+              call juDFT_error("dfpt bandWindow is required when not wannierizing",calledby="construct_elph_mat")
+           bandWindow = fi%dfpt%bandWindow
+        end if
 
-        allocate(dynMat(3*fi%atoms%nat,3*fi%atoms%nat))
-        allocate(gmat(bandWindowSize,bandWindowSize,fi%kpts%nkpt,fi%input%jspins,3*fi%atoms%nat,size(q_list)))        
-        allocate(gmatCart(bandWindowSize,bandWindowSize,fi%kpts%nkpt,fi%input%jspins))
-        dynMat = cmplx(0,0)
-        gmat = cmplx(0,0)
+        if (bandWindow(1) < 1 .or. bandWindow(2) < bandWindow(1)) &
+           call juDFT_error("Invalid band window in construct_elph_mat",calledby="construct_elph_mat")
+
+        bandWindowSize = bandWindow(2) - bandWindow(1) + 1
+
+        allocate(dynMats(3*fi%atoms%nat,3*fi%atoms%nat,size(q_list)))
+        !allocate(gmat(bandWindowSize,bandWindowSize,fi%kpts%nkpt,fi%input%jspins,3*fi%atoms%nat,size(q_list)))
+        allocate(gmatCart(bandWindowSize,bandWindowSize,fi%kpts%nkpt,fi%input%jspins,3*fi%atoms%nat,size(q_list)))
+        dynMats = cmplx(0.0,0.0)
+        !gmat = cmplx(0,0)
         gmatCart= cmplx(0.0,0.0)
 
         call timestart("Gradient generation")
@@ -113,30 +128,26 @@ contains
 
         do iQ = 1 , size(q_list)
             call timestart("q-point elph")
-
+            if (fmpi%irank==0) write(*,'(a,3f8.3)') "Computing electron phonon interaction for q:" , fi%dfpt%qvec%bk(:,iQ)
             if (fmpi%irank == 0 ) then 
                 call timestart("dynMat IO")
                 ! Read in eigenvectors and eigenvalues for given q-point
                 ! Be careful only irank 0 has eigenVals and eigenVecs allocated 
-                call read_dynmats(fi%atoms%nat,iQ,dynMat)
-                CALL DiagonalizeDynMat(fi%atoms, qpts%bk(:,q_list(iQ)), fi%dfpt%calcEigenVec, dynMat(:,:), eigenVals, eigenVecs, q_list(iQ),.false.,"raw",.false.,l_writeOutput=.false.)
+                call read_dynmats(fi%atoms%nat,iQ,dynMats(:,:,iQ))
                 call timestop("dynMat IO")
             end if 
 
-#ifdef CPP_MPI
-            call MPI_BARRIER(fmpi%mpi_comm, ierr)
-#endif
             do iDtype = 1 , fi%atoms%nat
                 call timestart("Typeloop")
                 do iDir = 1 , 3
                     call timestart("Dirloop")
                     
                     write(dfpt_tag,'(a1,i0,a2,i0,a2,i0)') 'q', q_list(iQ), '_b', iDtype, '_j', iDir
-
+                    
                     iPerturb = iDir+3*(iDtype-1)
 
 
-                    call make_stars(starsq, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, qpts%bk(:,iQ), iDtype, iDir,sternheimerJob%l_efield)
+                    call make_stars(starsq, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, fi%dfpt%qvec%bk(:,iQ), iDtype, iDir,sternheimerJob%l_efield)
                     starsq%ufft = stars%ufft
 
                     call den1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
@@ -178,21 +189,11 @@ contains
                     vTot1%mt(:,0:,iDtype,:) = vTot1%mt(:,0:,iDtype,:) + grVtot3(iDir)%mt(:,0:,iDtype,:)
 
                     ! construct the electron-phonon element in cartesian basis 
-                    call timestart("elph element")
-                    CALL matrix_element(sternheimerJob,fi,sphhar,results,fmpi,enpara,nococonv,starsq,vTot1,vTot1Im,vTot,rho, qpts%bk(:, iQ),&
-                                        eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatCart,fi%dfpt%bandWindow) 
+                    call timestart("generate elph element")
+                    call construct_elph_element(sternheimerJob,fi,sphhar,results,fmpi,enpara,nococonv,starsq,vTot1,vTot1Im,vTot,rho, fi%dfpt%qvec%bk(:, iQ),&
+                                        eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatCart(:,:,:,:,iPerturb,iQ),bandWindow)
 
-                    call timestop("elph element")
-
-                    ! construct the electron-phonon element in the normal basis  
-                    if (fmpi%irank == 0 ) then 
-                        do iMode = 1 , 3*fi%atoms%nat    
-                            pref = 1.0 
-                            if (eigenVals(iMode) .lt. 0.0) pref = -1*ImagUnit
-                            gmat(:,:,:,:,iMode,iQ) =  gmat(:,:,:,:,iMode,iQ) + eigenVecs(iPerturb,iMode) * & 
-                                                pref / sqrt(2* atomic_mass_array(fi%atoms%nz(ceiling(iPerturb/3.0))) * sqrt(abs(eigenVals(iMode))) ) * gmatCart(:,:,:,:)     
-                        end do 
-                    end if 
+                    call timestop("generate elph element")
                     
                     ! reset some variables 
                     call starsq%reset_stars()
@@ -207,19 +208,47 @@ contains
             end do ! iDtype
 
             call timestop("q-point elph")
-  
-            ! Now do IO with el-ph matrix element 
-  
         end do !iQ
 
+#ifdef CPP_MPI
+    call mpi_bcast(dynMats, size(dynMats), mpi_double_complex, 0, fmpi%mpi_comm, ierr)
+#endif
 
+        ! Symmetry unfolding of the el-ph elements onto the full q Brillouin zone.
+        ! Without fullsym_inp.xml the input mesh and its group are used, where the
+        ! unfolding degenerates to a copy plus the time-reversal partners.
+        inquire(file="fullsym_inp.xml",EXIST=l_fullsym)
 
-    end subroutine construct_elph_mat
+        call timestart("elph symmetry unfolding")
+        if (l_fullsym) then
+            if (fmpi%irank==0) write(*,*) "fullsym_inp.xml found: unfolding el-ph elements onto the full q BZ"
+            call dfpt_read_fullsym(fmpi,fi,sym_qpts,qpts)
+        else
+            sym_qpts  = fi%sym
+            qpts = fi%dfpt%qvec
+        end if
 
+        allocate(gmatCartBZ(bandWindowSize,bandWindowSize,fi%kpts%nkpt,fi%input%jspins,3*fi%atoms%nat,qpts%nkptf))
+        gmatCartBZ = cmplx(0.0,0.0)
 
+        ! Construct the phases between rotation and what the solver at k' produced
+        do ispin = 1 , fi%input%jspins
+            call dfpt_build_lambda(fi,sym_qpts,fmpi,enpara,vTot,nococonv,stars,eig_id,ispin,bandWindow,lambda,mapped_kpt,eig_win)
+            if (fmpi%irank==0) call dfpt_check_lambda(fi,lambda,eig_win,1e-6)
+            call dfpt_unfold_gmat(fi,sym_qpts,qpts,ispin,lambda,mapped_kpt,gmatCart,gmatCartBZ)
+            deallocate(lambda,mapped_kpt,eig_win)
+        end do
+        call timestop("elph symmetry unfolding")
 
+        ! Perform Wannier interpolation
+        if (fi%wannierlib%l_wannierize) then
+            call timestart("Wannier Interpolation elph")
+            if (fmpi%irank==0) write(*,*) "Starting the interpolation of the matrix element"
+            call el_ph_wannier(fmpi,fi,results,dynMats,gmatCartBZ,qpts,sym_qpts)
+            call timestop("Wannier Interpolation elph")
+        end if
 
-
+    end subroutine dfpt_postprocess_elph
 
 
     subroutine read_dynmats(natoms,iQ,dynMat)
@@ -248,10 +277,8 @@ contains
         do iread = 1, 3 + 3*natoms !Loop over dynmat rows
             if (iread<4) then
                 read( 3001,*) trash
-                write(*,*) iread, trash
             else
                 read( 3001,*) numbers(iread-3,:)
-                write(*,*) iread, numbers(iread-3,:)
                 dynMat(iread-3,:) = cmplx(numbers(iread-3,::2),numbers(iread-3,2::2))
             end if
         end do ! iread

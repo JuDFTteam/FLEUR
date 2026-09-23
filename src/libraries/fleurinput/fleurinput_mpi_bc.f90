@@ -9,7 +9,7 @@ MODULE m_fleurinput_mpi_bc
 CONTAINS
   SUBROUTINE fleurinput_mpi_bc(cell,sym,atoms,input,noco,vacuum,field,&
        sliceplot,banddos,mpinp,hybinp ,coreSpecInput,wann,&
-       xcpot,forcetheo_data,kpts,enparaXML,gfinp,hub1inp,mpi_comm,dfpt,rank,wannierlib)
+      xcpot,forcetheo_data,kpts,enparaXML,gfinp,hub1inp,mpi_comm,dfpt,rank,wannierlib)
     USE m_types_xml
 
 

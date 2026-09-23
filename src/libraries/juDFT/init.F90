@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -24,6 +24,8 @@ MODULE m_juDFT_init
          LOGICAL, INTENT(IN) :: l_checkStack
 
          juDFT_outUnit = outUnit
+         !Collective: has to be called by all PEs after MPI has been initialized
+         CALL juDFT_init_errormessages()
          IF (.NOT.judft_was_argument("-debugtime")) CALL install_signal_handler()
          IF (l_checkStack) CALL checkstack()
 #if defined(CPP_PATCH_INTEL)&&defined(__INTEL_COMPILER)

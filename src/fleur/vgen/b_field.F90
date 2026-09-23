@@ -25,16 +25,20 @@ CONTAINS
     INTEGER :: iType
     COMPLEX :: bOffdiag
     REAL :: bExternal(4)
+    LOGICAL :: l_afm
 
+    l_afm = .FALSE.
 
     IF (.NOT.field%l_b_field.and..not.any(noco%l_fixedMoment)) RETURN !no B-field specified
 
     IF (input%jspins.NE.2) CALL judft_error("B-fields can only be used in spin-polarized calculations")
     !IF (noco%l_noco) CALL judft_error("B-fields not implemented in noco case")
     
-    !Interstitial
-    vTot%pw_w(:,1)=vTot%pw_w(:,1)-(field%b_field/2.0)*stars%ustep(:)
-    vTot%pw_w(:,2)=vTot%pw_w(:,2)+(field%b_field/2.0)*stars%ustep(:)
+    !Interstitial: only for FM case
+    IF (.NOT. l_afm) THEN
+       vTot%pw_w(:,1)=vTot%pw_w(:,1)-(field%b_field/2.0)*stars%ustep(:)
+       vTot%pw_w(:,2)=vTot%pw_w(:,2)+(field%b_field/2.0)*stars%ustep(:)
+    END IF
 
     !MT-spheres
     DO iType = 1, atoms%ntype
@@ -57,7 +61,14 @@ CONTAINS
           vTot%mt(:atoms%jri(iType),0,iType,4) = vTot%mt(:atoms%jri(iType),0,iType,4) + sfp_const * bExternal(4)
        END IF
     ENDDO
-
+    IF (l_afm) THEN
+       block
+          real :: tmp(atoms%jri(1))
+          tmp = vTot%mt(:atoms%jri(1),0,1,1)
+          vTot%mt(:atoms%jri(1),0,1,1) = vTot%mt(:atoms%jri(1),0,1,2)
+          vTot%mt(:atoms%jri(1),0,1,2) = tmp
+       end block
+    END IF
     !Vacuum
     IF (input%film) THEN
        vTot%vac(:,1,:,1)=vTot%vac(:,1,:,1)-field%b_field/2.0

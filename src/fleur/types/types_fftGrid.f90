@@ -172,8 +172,10 @@ function map_g_to_fft_grid(grid, g_in) result(g_idx)
                   IF (.NOT.l_insph) CYCLE
                   endif   
                if (present(firstderiv)) THEN
-                  fct=fct*cmplx(0.0,-1*dot_product(firstderiv,matmul(real([x,y,z]),cell%bmat)))
-                  if (present(secondderiv)) fct=fct*cmplx(0.0,-1*dot_product(secondderiv,matmul(real([x,y,z]),cell%bmat)))
+                  !stars%center is zero except for the q-shifted stars used in DFPT
+                  gvec = matmul(real([x,y,z])+stars%center,cell%bmat)
+                  fct=fct*cmplx(0.0,-1*dot_product(firstderiv,gvec))
+                  if (present(secondderiv)) fct=fct*cmplx(0.0,-1*dot_product(secondderiv,gvec))
                endif
                xGrid = MODULO(x, this%dimensions(1))
                this%grid(xGrid + this%dimensions(1)*yGrid + layerDim*zGrid) = field(iStar)*fct

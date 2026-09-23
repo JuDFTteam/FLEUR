@@ -106,7 +106,7 @@ CONTAINS
             !Zeeman field
             call timestart("dfpt bfield")
             allocate(t_bfield :: bfield_obj)
-            call bfield_obj%init(fi,fi%dfpt%qvec)
+            call bfield_obj%init(fi,fi%dfpt%qvec%bk)
             call sternheimerJob%init(fi,l_bfield=.true.)
             call bfield_obj%perform_scf(sternheimerJob,fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,fi%dfpt,rho,vTot,vxc,results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id, &
                                      dfpt_eig_id2,l_minusq,qm_results,results1m,qm_eig_id,dfpt_eigm_id,dfpt_eigm_id2)
@@ -139,7 +139,7 @@ CONTAINS
             allocate(t_phonon :: phonon_obj)
             call timestart("dfpt phonons")
             ! Do a scf calculation with atom displacements as the perturbation
-            call phonon_obj%init(fi,fi%dfpt%qvec)
+            call phonon_obj%init(fi,fi%dfpt%qvec%bk)
             call sternheimerJob%init(fi,l_phonon=.true.)
             call phonon_obj%perform_scf(sternheimerJob,fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,fi%dfpt,rho,vTot,vxc,results,q_results,results1,eig_id,q_eig_id,dfpt_eig_id, &
                                       dfpt_eig_id2,l_minusq,qm_results,results1m,qm_eig_id,dfpt_eigm_id,dfpt_eigm_id2)
@@ -163,7 +163,7 @@ CONTAINS
          ! Construct the matrix element from converged potentials
          if (fi%dfpt%l_elph) then 
             call timestart("construction of el-ph matrix elements")
-            call construct_elph_mat(fmpi,fi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,rho,vTot,vxc,results,eig_id,q_results,q_eig_id,l_real)
+            call dfpt_postprocess_elph(fmpi,fi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,rho,vTot,vxc,results,eig_id,q_results,q_eig_id,l_real)
             call timestop("construction of el-ph matrix elements")
          end if 
       end if 

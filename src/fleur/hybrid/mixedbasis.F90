@@ -95,12 +95,11 @@ CONTAINS
 
       IF (xcpot%is_name("exx")) CALL judft_error("EXX is not implemented in this version", calledby='mixedbasis')
 
-      ! Deallocate arrays which might have been allocated in a previous run of this subroutine
       IF (ALLOCATED(mpdata%n_g)) deallocate(mpdata%n_g)
-      IF (ALLOCATED(mpdata%num_radbasfn)) deallocate(mpdata%num_radbasfn)
+      IF (iterHF <= 1 .AND. ALLOCATED(mpdata%num_radbasfn)) deallocate(mpdata%num_radbasfn)
       IF (ALLOCATED(mpdata%gptm_ptr)) deallocate(mpdata%gptm_ptr)
       IF (ALLOCATED(mpdata%g)) deallocate(mpdata%g)
-      IF (ALLOCATED(mpdata%radbasfn_mt)) deallocate(mpdata%radbasfn_mt)
+      IF (iterHF <= 1 .AND. ALLOCATED(mpdata%radbasfn_mt)) deallocate(mpdata%radbasfn_mt)
 
       CALL usdus%init(atoms, input%jspins)
 
@@ -113,15 +112,17 @@ CONTAINS
       ! initialize gridf for radial integration
       CALL intgrf_init(atoms%ntype, atoms%jmtd, atoms%jri, atoms%dx, atoms%rmsh, gridf)
 
-      allocate(vr0(atoms%jmtd, atoms%ntype, input%jspins), source=0.0)
+      IF (iterHF <= 1) THEN
+         allocate(vr0(atoms%jmtd, atoms%ntype, input%jspins), source=0.0)
 
-      vr0(:,:,:) = v%mt(:,0, :,:)
+         vr0(:,:,:) = v%mt(:,0, :,:)
 
-      ! calculate radial basisfunctions u and u' with
-      ! the spherical part of the potential vr0 and store them in
-      ! bas1 = large component ,bas2 = small component
+         ! calculate radial basisfunctions u and u' with
+         ! the spherical part of the potential vr0 and store them in
+         ! bas1 = large component ,bas2 = small component
 
-      call gen_bas_fun(atoms, enpara, gridf, input, mpdata, fmpi, vr0, usdus, bas1, bas2)
+         call gen_bas_fun(atoms, enpara, gridf, input, mpdata, fmpi, vr0, usdus, bas1, bas2)
+      END IF
 
       ! - - - - - - SETUP OF THE MIXED BASIS IN THE IR - - - - - - -
 
@@ -129,6 +130,7 @@ CONTAINS
       call mpdata%gen_gvec(mpinp, cell, kpts, fmpi)
 
       ! - - - - - - - - Set up MT product basis for the non-local exchange potential  - - - - - - - - - -
+      IF (iterHF <= 1) THEN
 
       IF (fmpi%irank == 0) THEN
          WRITE (oUnit, '(A)') 'MT product basis for non-local exchange potential:'
@@ -364,6 +366,8 @@ CONTAINS
       END DO
 
       call mpdata%check_radbasfn(atoms, hybinp)
+
+      END IF ! iterHF <= 1 -- end of the frozen MT product basis construction
 
       !count basis functions
       hybdat%n_mt = 0

@@ -63,8 +63,11 @@ Testset: DFPT
 |     | Description   | directory name              | marks | Remarks      | CmdLine | MPI |
 | --- | ----------------------- | ----------------- | ----- | ------------ | ------- | --- |
 | +   | Cu bulk fcc, Gamma only | dfpt/CuBulkGamma  | libxc | partly ready |         |   1 |
+| +   | Cu bulk, PBE,           | dfpt/CuPBE        | libxc |              |         |   1 |
+| +   | Cu bulk, PBE spin polarized| dfpt/CuPBESpin        | libxc |              |         |   1 |
 | +   | SiC bulk fcc, Gamma only BEC| dfpt/SiCBulk-BEC  | libxc |          |         |   1 |
 | +   | Cu bulk fcc, K-mesh     | dfpt/CuBulkKmesh  | libxc |              |         |   1 |
+| +   | Cu bulk fcc, K-mesh, bfield | dfpt/CuBulk-bfield | libxc |              |         |   1 |
 | +   | C bulk fcc              | dfpt/CBulk        | libxc | partly ready |         |   1 |
 | +   | C bulk fcc BEC             | dfpt/CBulk-BEC        | libxc | partly ready |         |   1 |
 | +   | Graphene Film           | dfpt/GrapheneFilm | libxc |              |         |   1 |

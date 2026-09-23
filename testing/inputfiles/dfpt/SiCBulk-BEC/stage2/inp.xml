@@ -4,7 +4,7 @@
       SiC                                                                                              
    </comment>
    <calculationSetup>
-      <cutoffs Kmax="3.0" Gmax="9.0" GmaxXC="9.0" numbands="all"/>
+      <cutoffs Kmax="1.5" Gmax="4.5" GmaxXC="4.5" numbands="all"/>
       <scfLoop itmax="3" minDistance="0.00001" maxIterBroyd="15" imix="Anderson" alpha="0.05" precondParam="0.0" spinf="2.0"/>
       <coreElectrons ctail="F" frcor="F" kcrel="0" coretail_lmax="0"/>
       <xcFunctional name="LibXC" relativisticCorrections="F">
@@ -43,7 +43,7 @@
    <atomSpecies>
       <species name="Silicon (Si)" element="Si" atomicNumber="14">
          <mtSphere radius="0.95*1.86" gridPoints="615" logIncrement="0.018"/>
-         <atomicCutoffs lmax="8" lnonsphr="6"/>
+         <atomicCutoffs lmax="3" lnonsphr="1"/>
          <electronConfig flipSpins="F">
             <coreConfig>(1s1/2) (2s1/2) (2p1/2) (2p3/2)</coreConfig>
             <valenceConfig>(3s1/2) (3p1/2) (3p3/2)</valenceConfig>
@@ -54,7 +54,7 @@
       </species>
       <species name="Carbon (C)" element="C" atomicNumber="6">
          <mtSphere radius="0.95*1.61" gridPoints="533" logIncrement="0.019"/>
-         <atomicCutoffs lmax="6" lnonsphr="4"/>
+         <atomicCutoffs lmax="3" lnonsphr="1"/>
          <electronConfig flipSpins="F">
             <coreConfig>(1s1/2)</coreConfig>
             <valenceConfig>(2s1/2) (2p1/2) (2p3/2)</valenceConfig>

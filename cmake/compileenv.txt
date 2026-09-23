@@ -26,6 +26,6 @@ ADD_CUSTOM_COMMAND(
         COMMENT "Generating buildinfo.h")
 
 # Expose buildinfo.h generation as a named target so that other targets
-# (inpgen2, inpgen3, fleurinpgen) can depend on it directly instead of
+# (inpgen2) can depend on it directly instead of
 # going through the fleur/fleur_MPI executables.
 add_custom_target(buildinfo DEPENDS ${CMAKE_BINARY_DIR}/include/buildinfo.h)

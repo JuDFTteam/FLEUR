@@ -27,27 +27,3 @@ src/fleur/xc-pot/xcwgn.f90
 src/fleur/xc-pot/xcxal.f90
 src/fleur/xc-pot/xch91.f90
 )
-
-set(inpgen_F90 ${inpgen_F90}
-src/fleur/xc-pot/easypbe.f90
-src/fleur/xc-pot/corg91.f90
-src/fleur/xc-pot/corl91.f90
-src/fleur/xc-pot/corpbe.f90
-src/fleur/xc-pot/excepbe.f90
-src/fleur/xc-pot/exchpbe.f90
-src/fleur/xc-pot/vxcepbe.f90
-src/fleur/xc-pot/excl91.f90
-src/fleur/xc-pot/excpw91.f90
-src/fleur/xc-pot/excwb91.f90
-src/fleur/xc-pot/pbecor2.f90
-src/fleur/xc-pot/relcor.f90
-src/fleur/xc-pot/vxcl91.f90
-src/fleur/xc-pot/vxcpw91.f90
-src/fleur/xc-pot/vxcwb91.f90
-src/fleur/xc-pot/xcbh.f90
-src/fleur/xc-pot/xcpz.f90
-src/fleur/xc-pot/xcvwn.f90
-src/fleur/xc-pot/xcwgn.f90
-src/fleur/xc-pot/xcxal.f90
-src/fleur/xc-pot/xch91.f90
-)

@@ -228,7 +228,7 @@ PROGRAM inpgen
          l_oldinpXML=.true.
          call Fleurinput_read_xml(0,filename_add,cell,sym,atoms,input,noco,vacuum,sliceplot=Sliceplot,banddos=Banddos,&
                                   hybinp=hybinp, xcpot=Xcpot,kptsSelection=kptsSelection,&
-                                  kptsArray=kpts,enparaXML=enparaXML,old_version=l_oldinpXML)
+                                  kptsArray=kpts,enparaXML=enparaXML,dfpt=dfpt,old_version=l_oldinpXML)
          Call Cell%Init(Dot_product(Atoms%Volmts(:),Atoms%Neq(:)))
          call atoms%init(cell)
          Call Sym%Init(Cell,Input%Film)

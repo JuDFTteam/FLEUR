@@ -169,12 +169,14 @@ CONTAINS
     END IF
   END FUNCTION jij_next_job
 
-  SUBROUTINE jij_postprocess(this,fi,results)
+  SUBROUTINE jij_postprocess(this,fi,results,fmpi)
     USE m_xmlOutput
+    USE m_types_mpi
     IMPLICIT NONE
     CLASS(t_forcetheo_jij),INTENT(INOUT):: this
     TYPE(t_fleurinput), INTENT(IN)      :: fi
     Type(t_results),INTENT(IN)          :: results
+    TYPE(t_mpi),INTENT(IN)          :: fmpi
     !Locals
     INTEGER:: n,i,j
     CHARACTER(LEN=18):: attributes(6)
@@ -228,7 +230,7 @@ CONTAINS
     ENDDO
         
     CALL closeXMLElement('Forcetheorem_JIJ')
-    CALL judft_end("Forcetheorem: Jij")
+    CALL judft_end("Forcetheorem: Jij", fmpi%irank)
 
   END SUBROUTINE jij_postprocess
 

@@ -35,7 +35,7 @@ contains
       this%n_r(0:)=atoms%num_radial_functions_per_l(itype)
    end subroutine
 
-   subroutine generate_radial_functions(this, atoms, input, enpara, fmpi, vtot, iType, hub1data, usdus_out)
+   subroutine generate_radial_functions(this, atoms, input, enpara, fmpi, vtot, iType, hub1data,usdus_out)
       use m_genMTBasis
       use m_types_atoms
       use m_types_input
@@ -59,7 +59,7 @@ contains
       type(t_usdus), intent(INOUT),optional  :: usdus_out
 
       !temp variables not really used but required by genMTBasis
-      type(t_usdus) :: usdus_tmp
+      type(t_usdus) :: usdus
       !radial functions to copy into type
       real            :: f(atoms%jmtd, 2, 0:atoms%lmaxd)
       real            :: g(atoms%jmtd, 2, 0:atoms%lmaxd)
@@ -72,9 +72,8 @@ contains
       if (present(usdus_out)) then
          if (.not.allocated(usdus_out%us)) call usdus_out%init(atoms, input%jspins)
       else
-         call usdus_tmp%init(atoms,input%jspins)
+         call usdus%init(atoms,input%jspins)
       end if
-
 
       !check if data is already available
       if (this%itype /= itype .or. .not.allocated(this%r)) THEN
@@ -90,7 +89,7 @@ contains
             if (present(usdus_out)) then
                call genMTBasis(atoms, enpara, vTot, fmpi, iType, ispin, usdus_out, f, g, flo, hub1data, l_writeArg=.false.)
             else
-               call genMTBasis(atoms, enpara, vTot, fmpi, iType, ispin, usdus_tmp, f, g, flo, hub1data, l_writeArg=.false.)
+               call genMTBasis(atoms, enpara, vTot, fmpi, iType, ispin, usdus, f, g, flo, hub1data, l_writeArg=.false.)
             end if
             do l = 0, atoms%lmax(itype)
                this%R( 1:atoms%jri(itype), 1:2, 1,l, ispin) = f(1:atoms%jri(itype), 1:2, l)

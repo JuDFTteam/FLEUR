@@ -490,7 +490,7 @@ CONTAINS
                CALL wannierlib_main(fi%wannierlib, fi%atoms, fi%cell, input_soc, fi%kpts, fi%sym, fi%noco, nococonv, stars, enpara, fmpi, &
                                     vTot, results, eig_id, fi%vacuum)
                CALL timestop("wannierlib")
-               CALL juDFT_end("Wannierization done. Fleur ends.", fmpi%irank)
+               IF (.NOT. fi%dfpt%l_dfpt) CALL juDFT_end("Wannierization done. Fleur ends.", fmpi%irank)
             END IF
 
             ! TODO: What is commented out here and should it perhaps be removed?
@@ -636,7 +636,7 @@ CONTAINS
             CALL timestop('determination of total energy')
          END DO forcetheoloop
 
-         CALL forcetheo%postprocess(fi,results)
+         CALL forcetheo%postprocess(fi,results,fmpi)
 
          CALL enpara%mix(fmpi%mpi_comm, fi%atoms, fi%vacuum, fi%input, vTot)
          field2 = fi%field

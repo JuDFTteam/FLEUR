@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -24,6 +24,7 @@ CONTAINS
     INTEGER :: omp=-1,i,isize,localrank,gpus,ii, me, nk,ierr
     REAL    :: matricesSize
     logical :: finished, l_real, l_noco
+    CHARACTER(len=30) :: solver_name
 
     TYPE(t_log_message) :: log
     
@@ -102,7 +103,14 @@ CONTAINS
          endif
        endif
 #endif
-       if (fmpi%irank==0) write(*,'(a,a12)') " Eigenvalue solver        : ", TRIM(print_solver(fmpi%n_size>1))
+       !print_solver() must not be evaluated inside the output list of the write
+       !below: it can fail with juDFT_error, which writes to the same unit, and
+       !such recursive I/O deadlocks on the unit lock instead of reporting the
+       !error. Determine the name first, print it afterwards.
+       if (fmpi%irank==0) THEN
+          solver_name = print_solver(fmpi%n_size>1)
+          write(*,'(a,a12)') " Eigenvalue solver        : ", TRIM(solver_name)
+       END IF
 
        ALLOCATE(fmpi%k_list(SIZE([(i, i=INT(fmpi%irank/fmpi%n_size)+1,nkpt,fmpi%isize/fmpi%n_size )])))
        ! this corresponds to the compact = .true. switch in priv_create_comm

@@ -9,7 +9,7 @@ MODULE m_fleur_init
 #endif
    IMPLICIT NONE
 CONTAINS
-   SUBROUTINE fleur_init(fmpi, fi, sphhar, stars, nococonv, forcetheo, enpara, xcpot, results, wann, hybdat, mpdata, filename_add)
+   SUBROUTINE fleur_init(fmpi, fi, sphhar, stars, nococonv, forcetheo, enpara, xcpot, results, wann, hybdat, mpdata, filename_add, l_skip_setupmpi)
       USE m_types
       USE m_test_performance
       use m_store_load_hybrid
@@ -62,6 +62,7 @@ CONTAINS
       type(t_mpdata), intent(out):: mpdata
 
       CHARACTER(len=100), OPTIONAL, INTENT(IN) :: filename_add
+      LOGICAL, OPTIONAL, INTENT(IN) :: l_skip_setupmpi
 
       TYPE(t_enparaXML)::enparaXML
       TYPE(t_forcetheo_data)::forcetheo_data
@@ -85,6 +86,7 @@ CONTAINS
       REAL                          :: a1(3), a2(3), a3(3)
       REAL                          :: dtild, phi_add
       LOGICAL                       :: l_found, l_kpts, l_exist, l_krla, l_timeReversalCheck
+      LOGICAL                       :: l_skip_setupmpi_loc
 
 #ifdef CPP_MPI
       INTEGER ierr(3)
@@ -93,6 +95,8 @@ CONTAINS
 #else
       fmpi%irank = 0; fmpi%isize = 1; fmpi%mpi_comm = 1
 #endif
+      l_skip_setupmpi_loc = .FALSE.
+      IF (PRESENT(l_skip_setupmpi)) l_skip_setupmpi_loc = l_skip_setupmpi
       CALL check_command_line(fmpi)
 #ifdef CPP_HDF
       CALL hdf_init()
@@ -170,7 +174,7 @@ CONTAINS
       CALL storeStructureIfNew(fi%input, stars, fi%atoms, fi%cell, fi%vacuum,  fi%sym, fmpi, sphhar, fi%noco)
       CALL make_stars(stars, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi)
       CALL make_forcetheo(forcetheo_data, fi%cell, fi%sym, fi%atoms, forcetheo)
-      CALL fi%dfpt%init(fi%cell,fi%input) ! This is needed for the dim of lapw basis 
+      CALL fi%dfpt%init(fi%cell,fi%input,fi%sym,fi%noco) ! This is needed for the dim of lapw basis
       CALL lapw_dim(fi%kpts, fi%cell, fi%input, fi%noco, nococonv,   forcetheo, fi%atoms, nbasfcn, fi%dfpt)
       CALL fi%input%init(fi%noco, fi%hybinp%l_hybrid,fi%sym%invs,fi%atoms%n_denmat,fi%atoms%n_hia,lapw_dim_nbasfcn)
      
@@ -204,7 +208,7 @@ CONTAINS
       END IF
 
       !Finalize the fmpi setup
-      CALL setupMPI(fi%kpts%nkpt, fi%input%neig, nbasfcn, fmpi, fi%input%l_real, fi%noco%l_noco)
+      IF (.NOT. l_skip_setupmpi_loc) CALL setupMPI(fi%kpts%nkpt, fi%input%neig, nbasfcn, fmpi, fi%input%l_real, fi%noco%l_noco)
 
       !Collect some usage info
       CALL add_usage_data("A-Types", fi%atoms%ntype)

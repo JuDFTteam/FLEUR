@@ -3541,6 +3541,8 @@
       <xsd:attribute name="maxBand" type="xsd:integer" use="optional" default="0"/>
    </xsd:complexType>
 
+
+
    <xsd:complexType name="WannierlibDisentanglementType">
       <xsd:annotation>
          <xsd:documentation>Disentanglement controls for wannierlib library-mode workflow.</xsd:documentation>
@@ -3647,6 +3649,16 @@
          <xsd:element maxOccurs="unbounded" minOccurs="0" name="operator" type="WannierlibOperatorType"/>
       </xsd:sequence>
       <xsd:attribute default="F" name="useWsDistance" type="FleurBool" use="optional"/>
+      <!-- Electron-phonon interpolation (dfpt): which q-list to interpolate onto. Same
+           element, so the two uses share one type rather than colliding on the name.
+           l_intp carries a default because the reader takes it unconditionally once the
+           element is there, so an absent attribute has to arrive as a value. -->
+      <xsd:attribute default="F" name="l_intp" type="FleurBool" use="optional"/>
+      <xsd:attribute name="kptsPath" type="xsd:string" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Name of the q-point list to use.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
    </xsd:complexType>
 
    <xsd:complexType name="WannierlibExportType">
@@ -4129,7 +4141,7 @@
                <xsd:documentation>Local Gmax for z-direction (film calculations).</xsd:documentation>
             </xsd:annotation>
          </xsd:attribute>  
-         <xsd:attribute name="l_symVacLevel" type="FleurBool" use="optional" default="F">
+         <xsd:attribute name="l_symVacLevel" type="FleurBool" use="optional">
             <xsd:annotation>
                <xsd:documentation>Symmetrize vacuum level for film calculations.</xsd:documentation>
             </xsd:annotation>
@@ -4188,6 +4200,11 @@
                <xsd:documentation>Apply acoustic sum rule correction.</xsd:documentation>
             </xsd:annotation>
          </xsd:attribute>
+         <xsd:attribute name="l_bornhuang" type="FleurBool" use="optional">
+            <xsd:annotation>
+               <xsd:documentation>Project the force constants onto the translational, rotational and Born-Huang invariance conditions.</xsd:documentation>
+            </xsd:annotation>
+         </xsd:attribute>
          <xsd:attribute name="l_WSinterpol" type="FleurBool" use="optional">
          <xsd:annotation>
             <xsd:documentation>Wigner Seitz Construction for interpolation.</xsd:documentation>
@@ -4226,6 +4243,26 @@
             <xsd:documentation>Gaussian smearing width for integration.</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
+       <xsd:attribute name="kMeshName" type="xsd:string" use="optional">
+               <xsd:annotation>
+                  <xsd:documentation>Name of the k-mesh to interpolate on</xsd:documentation>
+               </xsd:annotation>
+         </xsd:attribute>
+          <xsd:attribute name="qMeshName" type="xsd:string" use="optional">
+               <xsd:annotation>
+                  <xsd:documentation>Name of the q-points to interpolate on.</xsd:documentation>
+               </xsd:annotation>
+         </xsd:attribute>
+         <xsd:attribute name="l_write_epw" type="FleurBool" use="optional">
+            <xsd:annotation>
+               <xsd:documentation>Write the real-space electron-phonon quantities as EPW (epwread) restart files.</xsd:documentation>
+            </xsd:annotation>
+         </xsd:attribute>
+         <xsd:attribute name="epw_prefix" type="xsd:string" use="optional">
+            <xsd:annotation>
+               <xsd:documentation>QE/EPW prefix used for the EPW restart files (e.g. the &lt;prefix&gt;.epmatwp binary).</xsd:documentation>
+            </xsd:annotation>
+         </xsd:attribute>
    </xsd:complexType>
 
    <xsd:simpleType name="BandWindowType">
