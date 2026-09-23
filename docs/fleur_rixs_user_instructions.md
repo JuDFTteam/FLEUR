@@ -491,11 +491,10 @@ speedup, because transition-pair parallelization has not been implemented.
 
 ## MPI validation and degenerate manifolds
 
-The tracked validation package is in
-`testing/validation/rixs_mpi`. It exercises 1-, 2-, and 4-rank pure k-point
-layouts and the shared-k-point subgroup-root path. The validation requires
-MPI-invariant spectra, complete transition coverage, contribution-spectrum
-reconstruction, and correct row arithmetic.
+An MPI validation package exercised 1-, 2-, and 4-rank pure k-point layouts
+and the shared-k-point subgroup-root path; it is not part of the merged tree.
+The validation required MPI-invariant spectra, complete transition coverage,
+contribution-spectrum reconstruction, and correct row arithmetic.
 
 Individual band-labelled contribution rows are not physical invariants when
 an eigensolver chooses different bases inside degenerate valence or
