@@ -67,7 +67,8 @@ Tests use pytest and require a built FLEUR. The easiest way from the build direc
 ./run_tests.sh -k <substring>         # tests matching name substring
 ./run_tests.sh -m <marker>            # tests with a specific marker
 ./run_tests.sh -x                     # stop at first failure
-./run_tests.sh testing/tests/feature_reg/test_CuBulk.py  # single file
+./run_tests.sh testing/tests/parameterized/test_basic.py # single file
+./run_tests.sh -k CuBulk               # one case from tests.md
 ```
 
 Alternatively, from `testing/` with a non-default build dir:
@@ -75,7 +76,7 @@ Alternatively, from `testing/` with a non-default build dir:
 ```bash
 cd testing
 pytest --build_dir=../build.123
-pytest tests/feature_reg/test_CuBulk.py --build_dir=../build
+pytest tests/parameterized/test_basic.py --build_dir=../build
 ```
 
 Common test markers: `bulk`, `film`, `collinear`, `non_collinear`, `soc`, `noco`, `forces`, `hybrid`, `dfpt`, `greensfunction`, `fast`, `slow`, `very_slow`, `spinspiral`, `lo`, `ldau`, `xml`, `mpi`, `serial`.
@@ -88,48 +89,6 @@ Additional pytest options:
 The build step generates `pytest_incl.py` in the build dir with marker exclusions based on which libraries were linked (e.g., libxc/ELPA tests auto-skipped if those weren't built). Failed test directories are preserved in `build/Testing/failed_test_results/`.
 
 Set `juDFT_PYTHON` to override the Python interpreter used by `run_tests.sh`.
-
-## Source Layout
-
-```
-src/
-  fleur/           # Core DFT engine (Fortran)
-    cdn/           # Charge density in interstitial region
-    cdn_mt/        # Charge density in muffin-tin spheres
-    core/          # Core electron calculations
-    dfpt/          # Density functional perturbation theory (phonons)
-    diagonalization/ # Eigenvalue solvers
-    eigen/         # Hamiltonian/overlap matrix construction
-    soc/           # Spin-orbit coupling (angular/radial SOC matrix elements)
-    secvar/        # Second-variation eigenvalue problem (SOC)
-    matrixelements/ # Matrix elements of physical operators (spin, orbital, SOC, position, ...)
-    fft/           # Fast Fourier transforms
-    force/         # Hellmann-Feynman forces
-    greensf/       # Green's functions
-    hybrid/        # Hybrid functionals
-    init/          # Initialization routines
-    io/            # XML and HDF5 I/O
-    main/          # Top-level SCF loop
-    mix/           # SCF density mixing
-    mpi/           # MPI parallelization
-    types/         # Derived type definitions
-    vgen/          # Potential generation
-    wannier/       # Wannier function interface
-    global/        # Global variables/parameters
-    math/          # Mathematical utilities
-  libraries/
-    juDFT/         # Error handling, timing, MPI wrappers
-    fleurinput/    # XML input parsing
-  tools/
-    inpgen2/       # Input generator (builds the `inpgen` binary)
-testing/
-  tests/           # pytest test files (feature_reg/, inpgen/, masci_tools/, libxc/)
-  inputfiles/      # Input files for tests
-  helpers/         # Shared Python test utilities
-  conftest.py      # Pytest fixtures and configuration
-cmake/             # CMake modules and build configuration
-external/          # Git submodules (libxc, HDF5, ELSI, ELPA, SCALAPACK, etc.)
-```
 
 ## Coding Conventions (Fortran)
 

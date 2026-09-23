@@ -14,9 +14,11 @@
       REAL, INTENT (IN) :: aj,bj,am,bm,cj,cm
 
       INTEGER n,k,i,i1,i2,i3,i4,i5,i6,i7,i8,i9,i10
+      INTEGER iam2,ibm2,icm2
       REAL    x,s,c,e
       REAL    f(100)
-      INTRINSIC sqrt,exp,min0,max0
+      REAL, PARAMETER :: tol = 1.e-5
+      INTRINSIC sqrt,exp,min0,max0,nint,abs
 
       n = 100
       k =   0
@@ -31,12 +33,25 @@
          ENDDO
       ENDIF
 
-!     Selection rule m1 + m2 = M, tested on the real difference. Assigning it to an
-!     INTEGER, as this did before, truncates towards zero and makes the test one-sided:
-!     a violation of -1 gives -1 + 0.1 = -0.9 -> 0 and passes, while +1 is rejected. What
-!     got through was then evaluated with factorials of a negative argument, so the
-!     coefficient came back finite and wrong rather than zero.
-      IF ( ABS(am + bm - cm) > 1.e-4 ) THEN
+!     Selection rule am+bm=cm. Compare doubled projections as integers:
+!     a truncating test on the real difference lets a mismatch of -1 pass,
+!     because INT(-1+0.1) is 0, and then returns a non-zero coefficient.
+      iam2 = NINT(2.e0*am)
+      ibm2 = NINT(2.e0*bm)
+      icm2 = NINT(2.e0*cm)
+      IF (ABS(2.e0*am-REAL(iam2)) > tol) THEN
+         clebsch = 0.e0
+         RETURN
+      ENDIF
+      IF (ABS(2.e0*bm-REAL(ibm2)) > tol) THEN
+         clebsch = 0.e0
+         RETURN
+      ENDIF
+      IF (ABS(2.e0*cm-REAL(icm2)) > tol) THEN
+         clebsch = 0.e0
+         RETURN
+      ENDIF
+      IF ( iam2+ibm2 /= icm2 ) THEN
          clebsch = 0.e0
          RETURN
       ENDIF
