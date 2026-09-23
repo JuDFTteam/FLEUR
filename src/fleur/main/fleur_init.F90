@@ -148,7 +148,7 @@ CONTAINS
       !Only PE==0 reads the fi%input and does basic postprocessing
       IF (fmpi%irank .EQ. 0) THEN
          CALL fleurinput_read_xml(outxmlFileID, filename_add_loc, cell=fi%cell, sym=fi%sym, atoms=fi%atoms, input=fi%input, noco=fi%noco, vacuum=fi%vacuum, field=fi%field, &
-                                  sliceplot=fi%sliceplot, banddos=fi%banddos, mpinp=fi%mpinp, hybinp=fi%hybinp, coreSpecInput=fi%coreSpecInput, &
+                                  sliceplot=fi%sliceplot, banddos=fi%banddos, xas=fi%xas, mpinp=fi%mpinp, hybinp=fi%hybinp, coreSpecInput=fi%coreSpecInput, &
                                   wannierlib=fi%wannierlib, &
                                   wann=wann, xcpot=xcpot, forcetheo_data=forcetheo_data, kpts=fi%kpts, kptsSelection=kptsSelection, kptsArray=kptsArray, &
                                   enparaXML=enparaXML, gfinp=fi%gfinp, hub1inp=fi%hub1inp, dfpt=fi%dfpt)
@@ -157,7 +157,7 @@ CONTAINS
       END IF
       !Distribute fi%input to all PE
       CALL fleurinput_mpi_bc(fi%cell, fi%sym, fi%atoms, fi%input, fi%noco, fi%vacuum, fi%field, &
-                             fi%sliceplot, fi%banddos, fi%mpinp, fi%hybinp,   fi%coreSpecInput, Wann, &
+                             fi%sliceplot, fi%banddos, fi%xas, fi%mpinp, fi%hybinp,   fi%coreSpecInput, Wann, &
                              Xcpot, Forcetheo_data, fi%kpts, Enparaxml, fi%gfinp, fi%hub1inp, fmpi%Mpi_comm, fi%dfpt, wannierlib=fi%wannierlib)
       !Remaining init is done using all PE
       !Checks that emit a warning and continue must run here, not in fleurinput_postprocess above: see check_input_switches_all_pe.

@@ -80,7 +80,10 @@ def pytest_html_results_table_header(cells):
     cells.pop()
 
 def pytest_html_results_table_row(report, cells):
-    cells.insert(1, html.td(report.description))
+    # A CollectReport (e.g. a module that failed to import) has no
+    # description; without this guard rendering it crashes the hook itself
+    # and turns a plain collection error into an INTERNALERROR.
+    cells.insert(1, html.td(getattr(report, "description", "")))
     cells.pop()
 
    
