@@ -1,6 +1,7 @@
 
 import os
 import re
+import subprocess
 import pytest
 """
 Regression tests for the wannierlib feature (library-mode Wannier90 in FLEUR).
@@ -16,6 +17,27 @@ WannFeBccInterp covers the interpolation drivers, on three output domains.
 """
 from read_tests import read_tests
 all_tests = read_tests("wannier")
+
+
+# ---------------------------------------------------------------- optional feature
+# Wannier90 is optional. A FLEUR configured without it carries no w90_library, and every
+# case here would stop with "wannierlib requires Wannier90 module API" -- a feature that
+# was not asked for, not a regression, so the suite skips rather than failing. That is
+# what the CI builds, and what anyone who left -wannier out of configure.sh builds.
+#
+# The symbol is the only witness available: the build publishes no feature list, and the
+# configure decides CPP_WANNLIB_API from a compile test it does not record. If nm cannot
+# be run the tests go ahead, because a loud failure is better than a silent skip.
+@pytest.fixture(autouse=True, scope="module")
+def _skip_without_wannier90(fleur_binary):
+    binary = fleur_binary[0]
+    try:
+        probe = subprocess.run(["nm", binary], capture_output=True, text=True, timeout=300)
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return
+    if probe.returncode == 0 and "w90_disentangle" not in probe.stdout:
+        pytest.skip("FLEUR was built without the Wannier90 module API; "
+                    "configure with -wannier TRUE to run these")
 
 # Omega = Omega_I + Omega_D + Omega_OD.
 #
