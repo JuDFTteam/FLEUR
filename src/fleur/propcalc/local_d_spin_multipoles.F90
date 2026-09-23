@@ -15,6 +15,7 @@
 ! coordinate frame.  A DFT+U mmpMat is not valid direct input to this routine.
 !--------------------------------------------------------------------------------
 MODULE m_local_d_spin_multipoles
+   USE m_juDFT
    USE m_spin_orbital_multipoles, ONLY: spin_orbital_density_to_multipoles
    IMPLICIT NONE
    PRIVATE
@@ -25,15 +26,17 @@ MODULE m_local_d_spin_multipoles
 
 CONTAINS
 
-   PURE SUBROUTINE local_d_spin_density_to_multipoles(rho_physical, w)
+   SUBROUTINE local_d_spin_density_to_multipoles(rho_physical, w)
       COMPLEX, INTENT(IN) :: rho_physical(-d_l:, 1:, -d_l:, 1:)
       COMPLEX, INTENT(OUT) :: w(0:, 0:, 0:, -(2*d_l+1):)
 
       IF (ANY(SHAPE(rho_physical) /= [5, 2, 5, 2])) THEN
-         ERROR STOP "local_d_spin_density_to_multipoles: rho must have shape (5,2,5,2)"
+         CALL juDFT_error("rho must have shape (5,2,5,2)", &
+                          calledby="local_d_spin_density_to_multipoles")
       END IF
       IF (ANY(SHAPE(w) /= [5, 2, 6, 11])) THEN
-         ERROR STOP "local_d_spin_density_to_multipoles: w must have shape (5,2,6,11)"
+         CALL juDFT_error("w must have shape (5,2,6,11)", &
+                          calledby="local_d_spin_density_to_multipoles")
       END IF
 
       CALL spin_orbital_density_to_multipoles(d_l, rho_physical, w)

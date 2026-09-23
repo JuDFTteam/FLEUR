@@ -20,6 +20,7 @@
 ! convention of Nordstrom (2020), Eqs. (45), (48)-(52), and (59)-(62).
 !--------------------------------------------------------------------------------
 MODULE m_spin_orbital_multipoles
+   USE m_juDFT
    IMPLICIT NONE
    PRIVATE
 
@@ -34,7 +35,7 @@ MODULE m_spin_orbital_multipoles
 
 CONTAINS
 
-   PURE SUBROUTINE spin_orbital_density_to_multipoles(l, rho, w)
+   SUBROUTINE spin_orbital_density_to_multipoles(l, rho, w)
       INTEGER, INTENT(IN) :: l
       COMPLEX, INTENT(IN) :: rho(-l:, 1:, -l:, 1:)
       COMPLEX, INTENT(OUT) :: w(0:, 0:, 0:, -(2*l+1):)
@@ -47,10 +48,12 @@ CONTAINS
 
       CALL validate_l(l)
       IF (ANY(SHAPE(rho) /= [2*l+1, 2, 2*l+1, 2])) THEN
-         ERROR STOP "spin_orbital_density_to_multipoles: rho must have shape (2*l+1,2,2*l+1,2)"
+         CALL juDFT_error("rho must have shape (2*l+1,2,2*l+1,2)", &
+                          calledby="spin_orbital_density_to_multipoles")
       END IF
       IF (ANY(SHAPE(w) /= [2*l+1, 2, 2*l+2, 4*l+3])) THEN
-         ERROR STOP "spin_orbital_density_to_multipoles: w must have shape (2*l+1,2,2*l+2,4*l+3)"
+         CALL juDFT_error("w must have shape (2*l+1,2,2*l+2,4*l+3)", &
+                          calledby="spin_orbital_density_to_multipoles")
       END IF
 
       CALL spherical_pauli_matrices(chi)
@@ -100,7 +103,7 @@ CONTAINS
       END DO
    END SUBROUTINE spin_orbital_density_to_multipoles
 
-   PURE SUBROUTINE spin_orbital_multipoles_to_density(l, w, rho)
+   SUBROUTINE spin_orbital_multipoles_to_density(l, w, rho)
       INTEGER, INTENT(IN) :: l
       COMPLEX, INTENT(IN) :: w(0:, 0:, 0:, -(2*l+1):)
       COMPLEX, INTENT(OUT) :: rho(-l:, 1:, -l:, 1:)
@@ -113,10 +116,12 @@ CONTAINS
 
       CALL validate_l(l)
       IF (ANY(SHAPE(w) /= [2*l+1, 2, 2*l+2, 4*l+3])) THEN
-         ERROR STOP "spin_orbital_multipoles_to_density: w must have shape (2*l+1,2,2*l+2,4*l+3)"
+         CALL juDFT_error("w must have shape (2*l+1,2,2*l+2,4*l+3)", &
+                          calledby="spin_orbital_multipoles_to_density")
       END IF
       IF (ANY(SHAPE(rho) /= [2*l+1, 2, 2*l+1, 2])) THEN
-         ERROR STOP "spin_orbital_multipoles_to_density: rho must have shape (2*l+1,2,2*l+1,2)"
+         CALL juDFT_error("rho must have shape (2*l+1,2,2*l+1,2)", &
+                          calledby="spin_orbital_multipoles_to_density")
       END IF
 
       wxy = CMPLX(0.0, 0.0)
@@ -168,11 +173,12 @@ CONTAINS
       END DO
    END SUBROUTINE spin_orbital_multipoles_to_density
 
-   PURE SUBROUTINE validate_l(l)
+   SUBROUTINE validate_l(l)
       INTEGER, INTENT(IN) :: l
 
       IF (l < 0 .OR. l > supported_l_max) THEN
-         ERROR STOP "spin_orbital_multipoles: this API version supports only l=0,...,3"
+         CALL juDFT_error("this API version supports only l=0,...,3", &
+                          calledby="spin_orbital_multipoles")
       END IF
    END SUBROUTINE validate_l
 
