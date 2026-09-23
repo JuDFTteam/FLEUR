@@ -78,6 +78,7 @@ CONTAINS
       USE m_dfpt_vefield
       USE m_checkdopall
       USE m_store_load_hybrid
+      USE m_wannierlib_main
       USE m_types_moessbauerParams
 
 !$    USE omp_lib
@@ -405,6 +406,8 @@ CONTAINS
             CALL enpara%update(fmpi, fi%atoms, fi%vacuum, fi%input, vToT, hub1data)
             CALL timestop("Updating energy parameters")
 
+            IF (fi%hybinp%l_hybrid) hybdat%results%te_hfex%valence = 0.0
+
             IF (.NOT. fi%input%eig66(1)) THEN
                CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv,  &
                           hybdat, iter, eig_id, results, inDen, vToT, vx, hub1data)
@@ -419,7 +422,7 @@ CONTAINS
                IF(hybdat%l_calhf) hybdat%results%te_hfex%core = 2*hybdat%results%te_hfex%core
             END IF
             ! Send all result of local total energies to the r ! TODO: Is half the comment missing?
-            IF (fi%hybinp%l_hybrid .AND. hybdat%l_calhf) THEN
+            IF (fi%hybinp%l_hybrid) THEN
                results%te_hfex=hybdat%results%te_hfex
 #ifdef CPP_MPI
                CALL fmpi%set_root_comm()
@@ -460,6 +463,7 @@ CONTAINS
                END IF
             END IF
 
+
             CALL timestart("determination of fermi energy")
 
             CALL fermie(eig_id, fmpi, fi%kpts, input_soc, fi%noco, enpara%epara_min, fi%cell, results)
@@ -479,6 +483,14 @@ CONTAINS
             endif   
 #endif            
             CALL timestop("determination of fermi energy")
+
+            IF (fi%wannierlib%l_wannierize) THEN
+               CALL timestart("wannierlib")
+               CALL wannierlib_main(fi%wannierlib, fi%atoms, fi%cell, input_soc, fi%kpts, fi%sym, fi%noco, nococonv, stars, enpara, fmpi, &
+                                    vTot, results, eig_id)
+               CALL timestop("wannierlib")
+               IF (.NOT. fi%dfpt%l_dfpt) CALL juDFT_end("Wannierization done. Fleur ends.", fmpi%irank)
+            END IF
 
             ! TODO: What is commented out here and should it perhaps be removed?
 ! !$          !+Wannier
@@ -623,7 +635,7 @@ CONTAINS
             CALL timestop('determination of total energy')
          END DO forcetheoloop
 
-         CALL forcetheo%postprocess(fi,results)
+         CALL forcetheo%postprocess(fi,results,fmpi)
 
          CALL enpara%mix(fmpi%mpi_comm, fi%atoms, fi%vacuum, fi%input, vTot)
          field2 = fi%field
@@ -675,9 +687,6 @@ CONTAINS
                l_cont = l_cont .AND. (iter < 100) ! Security stop for non-converging nested PBE calculations
             END IF
 
-            IF (hybdat%l_subvxc) THEN
-               results%te_hfex%valence = 0
-            END IF
          ELSE IF (fi%atoms%n_hia > 0) THEN
             l_cont = l_cont .AND. (iter < fi%input%itmax) !The SCF cycle reached the maximum iteration
             l_cont = l_cont .AND. ((fi%input%mindistance <= results%last_distance) .OR. fi%input%l_f)

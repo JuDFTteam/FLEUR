@@ -57,7 +57,7 @@ CONTAINS
     REAL    trVecs(3,SIZE(atomid))
 
     LOGICAL lnew,lclose, foundOne, boundary(3)
-    LOGICAL l_exist, l_invSym, l_zReflect
+    LOGICAL l_exist
 
     INTEGER, ALLOCATABLE :: mtable(:,:), binSizes(:,:,:)
     INTEGER, ALLOCATABLE :: atomIndexBins(:,:,:,:)
@@ -511,40 +511,9 @@ CONTAINS
     ENDIF ! sym%symor
     WHERE ( ABS( sym%tau ) < eps7 ) sym%tau = 0.00
 
-    IF (film) THEN ! Filter out symmetries with 3,3 element being -1 if there is no inversion or z-reflection in the system.
-       ! The Symmetries to be filtered out made problems -> incorrect calculation results.
-       ! 1. Check whether there is inversion or z-reflection in the system.
-       l_invSym = .FALSE.
-       l_zReflect = .FALSE.
-       DO i = 1, nops
-          IF ((sym%mrot(1,2,i).NE.0).OR.(sym%mrot(1,3,i).NE.0).OR.(sym%mrot(2,1,i).NE.0).OR. &
-              (sym%mrot(2,3,i).NE.0).OR.(sym%mrot(3,1,i).NE.0).OR.(sym%mrot(3,2,i).NE.0)) CYCLE
-          IF (sym%mrot(3,3,i).NE.-1) CYCLE
-          IF ((sym%mrot(1,1,i).EQ.-1).AND.(sym%mrot(2,2,i).EQ.-1)) l_invSym = .TRUE.
-          IF ((sym%mrot(1,1,i).EQ.1).AND.(sym%mrot(2,2,i).EQ.1)) l_zReflect = .TRUE.
-       END DO
-       ! 2. Filter out unwanted symmetries.
-       IF(.NOT.(l_invSym.OR.l_zReflect)) THEN
-          mmrot = 0
-          ttau = 0.0
-          j = 0
-          DO i = 1, nops
-             IF (sym%mrot(3,3,i).EQ.1) THEN
-                j = j + 1
-                mmrot(:,:,j) = sym%mrot(:,:,i)
-                ttau(:,j) = sym%tau(:,i)
-             END IF
-          END DO
-          DEALLOCATE (sym%mrot,sym%tau)
-          nops = j
-          sym%nop = nops
-          ALLOCATE(sym%mrot(3,3,nops),sym%tau(3,nops))
-          sym%mrot=mmrot(:,:,:nops)
-          sym%tau=ttau(:,:nops)
-       END IF
-    END IF
 
-    ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  ! ===========================================================================
+
 
   CONTAINS ! INTERNAL SUBROUTINES
 

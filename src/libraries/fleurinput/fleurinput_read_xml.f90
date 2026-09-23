@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -9,7 +9,7 @@ MODULE m_fleurinput_read_xml
 CONTAINS
   SUBROUTINE fleurinput_read_xml(xmlOUTFileID,filename_add,cell,sym,atoms,input,noco,vacuum,field,&
        sliceplot,banddos,xas,mpinp,hybinp ,coreSpecInput,wann,&
-       xcpot,forcetheo_data,kpts,kptsSelection,kptsArray,enparaXML,gfinp,hub1inp,dfpt,old_version)
+       xcpot,forcetheo_data,kpts,kptsSelection,kptsArray,enparaXML,gfinp,hub1inp,dfpt,old_version,wannierlib)
     USE m_types_xml
     integer,INTENT(IN)             :: xmlOUTFileID
     CHARACTER(len=*), INTENT(IN) :: filename_add
@@ -28,6 +28,7 @@ CONTAINS
 
     TYPE(t_coreSpecInput),INTENT(OUT),OPTIONAL::coreSpecInput
     TYPE(t_wann),INTENT(OUT),OPTIONAL::wann
+   TYPE(t_wannierlib_wannierize),INTENT(OUT),OPTIONAL::wannierlib
     CLASS(t_xcpot),INTENT(OUT),OPTIONAL::xcpot
     TYPE(t_forcetheo_data),INTENT(OUT),OPTIONAL::forcetheo_data
     TYPE(t_enparaXML),INTENT(OUT),OPTIONAL::enparaXML
@@ -64,6 +65,7 @@ CONTAINS
     if (present(hybinp)) call hybinp%read_xml(xml)
     if (present(coreSpecInput)) call coreSpecInput%read_xml(xml)
     if (present(wann)) call wann%read_xml(xml)
+   if (present(wannierlib)) call wannierlib%read_xml(xml)
     if (present(xcpot)) call xcpot%read_xml(xml)
     if (present(forcetheo_data)) call forcetheo_data%read_xml(xml)
     if (present(enparaXML)) call enparaXML%read_xml(xml)

@@ -156,7 +156,7 @@ MODULE m_types_moessbauerParams
             this%l_isomerShiftValid(iType) = .FALSE.
             WRITE(warnMsg,'(a,i0,a)') 'Nuclear radius smaller than smallest radial mesh point for atom type ', &
                                        iType, ' -- skipping its isomer shift'
-            CALL juDFT_warn(TRIM(warnMsg), calledby='types_moessbauerParams')
+            WRITE(*,'(a)') TRIM(warnMsg)
             CYCLE
          END IF
 

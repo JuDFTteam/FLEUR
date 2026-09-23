@@ -24,12 +24,12 @@ contains
       complex         :: cdum
 
       call timestart("solve olap linear eq. sys")
-      nbasm = hybdat%nbasp + mpdata%n_g(ikpt)
+      nbasm = hybdat%n_mt + mpdata%n_g(ikpt)
       CALL olap%alloc(.false., mpdata%n_g(ikpt), mpdata%n_g(ikpt), 0.0)
       !calculate IR overlap-matrix
       CALL olap_pw(olap, mpdata%g(:, mpdata%gptm_ptr(:mpdata%n_g(ikpt), ikpt)), mpdata%n_g(ikpt), atoms, cell, fmpi)
 
-      ! perform O^-1 * coulhlp%data_r(hybdat%nbasp + 1:, :) = x
+      ! perform O^-1 * coulhlp%data_r(hybdat%n_mt + 1:, :) = x
       ! rewritten as O * x = C
 
       loc_size = 0
@@ -41,20 +41,20 @@ contains
       call timestart("copy in 1")
       allocate(t_mat::coul_submtx)
       call coul_submtx%alloc(.false., mpdata%n_g(ikpt), loc_size)
-      coul_submtx%data_c(:, :) = coulomb%data_c(hybdat%nbasp + 1:, :)
+      coul_submtx%data_c(:, :) = coulomb%data_c(hybdat%n_mt + 1:, :)
       call timestop("copy in 1")
 
       !$acc data copyin(olap, olap%data_r, olap%data_c, coul_submtx) copy(coul_submtx%data_r, coul_submtx%data_c)
          call olap%linear_problem(coul_submtx)
       !$acc end data
       call timestart("copy out 1")
-      coulomb%data_c(hybdat%nbasp + 1:, :) = coul_submtx%data_c
+      coulomb%data_c(hybdat%n_mt + 1:, :) = coul_submtx%data_c
       call coul_submtx%free()
       deallocate(coul_submtx)
       call timestop("copy out 1")
 
 
-      ! perform  coulomb%data_r(hybdat%nbasp + 1:, :) * O^-1  = X
+      ! perform  coulomb%data_r(hybdat%n_mt + 1:, :) * O^-1  = X
       ! rewritten as O^T * x^T = C^T
       call copy_in_2(fmpi, sym, mpdata, hybdat, coulomb, ikpt, coul_submtx)
 
@@ -102,7 +102,7 @@ contains
          call coul_submtx%alloc(.false., mpdata%n_g(ikpt), mpdata%n_g(ikpt))
          do j = 1, mpdata%n_g(ikpt)
             do i = 1, mpdata%n_g(ikpt)
-               coul_submtx%data_c(j, i) = conjg(coulomb%data_c(hybdat%nbasp+i, hybdat%nbasp + j))
+               coul_submtx%data_c(j, i) = conjg(coulomb%data_c(hybdat%n_mt+i, hybdat%n_mt + j))
             enddo 
          enddo
       class is (t_mpimat)
@@ -113,7 +113,7 @@ contains
          class is (t_mpimat)
             ! copy bottom right corner of coulomb to coul_submtx
             !call pzgemr2d(m,              n,               a,                ia,           ja,             desca, 
-            call pzgemr2d(mpdata%n_g(ikpt),mpdata%n_g(ikpt),coulomb%data_c, hybdat%nbasp+1, hybdat%nbasp+1, coulomb%blacsdata%blacs_desc,&
+            call pzgemr2d(mpdata%n_g(ikpt),mpdata%n_g(ikpt),coulomb%data_c, hybdat%n_mt + 1, hybdat%n_mt + 1, coulomb%blacsdata%blacs_desc,&
             !             b, ib, jb,             descb, ictxt)
                         coul_submtx%data_c, 1, 1, coul_submtx%blacsdata%blacs_desc, coulomb%blacsdata%blacs_desc(2))
             call coul_submtx%transpose()
@@ -144,7 +144,7 @@ contains
       CLASS is (t_mat)
          do j = 1, mpdata%n_g(ikpt)
             do i = 1, mpdata%n_g(ikpt)
-               coulomb%data_c(hybdat%nbasp+i, hybdat%nbasp + j) = conjg(coul_submtx%data_c(j, i))
+               coulomb%data_c(hybdat%n_mt+i, hybdat%n_mt + j) = conjg(coul_submtx%data_c(j, i))
             enddo 
          enddo
       class is (t_mpimat)
@@ -156,7 +156,7 @@ contains
             !call pzgemr2d(m,              n,               a,                  ia, ja,             desca, 
             call pzgemr2d(mpdata%n_g(ikpt),mpdata%n_g(ikpt),coul_submtx%data_c, 1, 1, coul_submtx%blacsdata%blacs_desc,&
             !             b,             ib,            jb,             descb, ictxt)
-                        coulomb%data_c, hybdat%nbasp+1, hybdat%nbasp+1, coulomb%blacsdata%blacs_desc, coulomb%blacsdata%blacs_desc(2))
+                        coulomb%data_c, hybdat%n_mt + 1, hybdat%n_mt + 1, coulomb%blacsdata%blacs_desc, coulomb%blacsdata%blacs_desc(2))
          class default
             call judft_error("coul_submtx should also be mpimat")
          end select

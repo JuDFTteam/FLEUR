@@ -72,6 +72,8 @@ CONTAINS
         ! Back-transform eigenvectors and write them to file
         CALL secvar%store_eigvec()
 
+        CALL secvar%free()
+
     END SUBROUTINE secvar_soc_kpts
 
 

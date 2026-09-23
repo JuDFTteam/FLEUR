@@ -54,6 +54,7 @@ CONTAINS
     DO  io = 1,2
        CALL loddop(stars,vacuum,atoms,sphhar, input,sym,&
             9, iter,rhsp(:,0:,:,:,io),rhpw(:,:,io), rhv2(:,:,:,:,io))
+       CALL stars%fill_2nd_vac(vacuum,rhv2(:,:,:,:,io))
     ENDDO
     CLOSE (9)
     IF (input%jspins.EQ.1) THEN

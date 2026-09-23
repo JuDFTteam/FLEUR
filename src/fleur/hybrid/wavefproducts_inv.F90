@@ -48,7 +48,7 @@ CONTAINS
       allocate (c_phase_kqpt(hybdat%nbands(fi%kpts%bkp(ikqpt),jsp)))
       IF (.not. fi%kpts%is_kpt(kqpt)) call juDFT_error('wavefproducts_inv5: k-point not found')
 
-      !$acc data copyin(hybdat, hybdat%nbasp)
+      !$acc data copyin(hybdat, hybdat%n_mt)
          !$acc data copyin(cprod) create(cprod%data_c) copyout(cprod%data_r)
             !$acc kernels present(cprod, cprod%data_r)
             cprod%data_r(:,:) = 0.0
@@ -58,7 +58,7 @@ CONTAINS
          !$acc end data ! cprod
 
          
-         allocate(tmp(hybdat%nbasp, cprod%matsize2))
+         allocate(tmp(hybdat%n_mt, cprod%matsize2))
          !$acc data copyout(tmp)
             !$acc kernels present(tmp)
             tmp = cmplx_0
@@ -71,7 +71,7 @@ CONTAINS
          call timestart("cpu cmplx2real copy")
          !$omp parallel do default(none) collapse(2) private(i,j) shared(cprod, hybdat, tmp)
          do i = 1,cprod%matsize2
-            do j = 1,hybdat%nbasp
+            do j = 1,hybdat%n_mt
                cprod%data_r(j,i) = real(tmp(j,i))
             enddo 
          enddo

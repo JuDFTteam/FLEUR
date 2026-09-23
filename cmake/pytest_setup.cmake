@@ -91,13 +91,13 @@ if [[ ! -z \"\${juDFT_PYTHON}\" ]]; then
 fi
 mkdir -p Testing
 
-if [ -r Testing/env ]
+if [ -x Testing/env/bin/python ]
 then 
    source Testing/env/bin/activate
 else
-   $PYTHON_EXECUTABLE -m venv create Testing/env
+   \"$PYTHON_EXECUTABLE\" -m venv Testing/env
    source Testing/env/bin/activate
-   pip install pytest_html pytest py
+   python -m pip install pytest_html pytest py
 fi   
 
 if [ \"$1\" = \"-perf\" ]
@@ -118,5 +118,3 @@ add_custom_target(test
                   COMMAND sh run_tests.sh
                   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
                   COMMENT "Making 'make test' run the python script executable")
-
-

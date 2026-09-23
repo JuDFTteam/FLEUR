@@ -2,6 +2,12 @@ module m_mtir_size
    implicit none
 contains
 
+   !> Size of the *reduced* MT+IR layout used by t_coul%mtir.
+   !>
+   !> Not the same as hybdat%nbasm: this counts (2l+1) per atom and l without the
+   !> radial multiplicity num_radbasfn, because the MT block has already been
+   !> contracted at that point.  Do not mix the two layouts or the accessors in
+   !> t_hybdat (which describe the full mixed product basis) with each other.
    function mtir_size(fi, n_g, ikpt) result(isize)
       use m_types_fleurinput
       implicit none

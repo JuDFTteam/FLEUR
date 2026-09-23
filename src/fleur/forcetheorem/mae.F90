@@ -132,12 +132,14 @@ CONTAINS
     skip=.TRUE.
   END FUNCTION  mae_eval
 
-  SUBROUTINE mae_postprocess(this,fi,results)
+  SUBROUTINE mae_postprocess(this,fi,results,fmpi)
     USE m_xmlOutput
+    USE m_types_mpi
     IMPLICIT NONE
     CLASS(t_forcetheo_mae),INTENT(INOUT):: this
     TYPE(t_fleurinput),INTENT(IN)   :: fi
     TYPE(t_results),INTENT(IN)      :: results
+    TYPE(t_mpi),INTENT(IN)          :: fmpi
     !Locals
     INTEGER:: n
     CHARACTER(LEN=16):: attributes(3)
@@ -162,7 +164,7 @@ CONTAINS
        END DO
        CALL closeXMLElement('Forcetheorem_MAE')
     ENDIF
-    CALL judft_end("Forcetheorem MAE")
+    CALL judft_end("Forcetheorem MAE", fmpi%irank)
   END SUBROUTINE mae_postprocess
 
   SUBROUTINE mae_dist(this,fmpi)

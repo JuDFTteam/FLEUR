@@ -10,6 +10,7 @@ src/fleur/dfpt/dfpt_vgen.F90
 src/fleur/dfpt/get_int_perturbation.f90
 src/fleur/dfpt/get_mt_perturbation.f90
 src/fleur/dfpt/dfpt_vgen_finalize.F90
+src/fleur/dfpt/dfpt_gga_kernel.F90
 src/fleur/dfpt/dfpt_vmt_xc.F90
 src/fleur/dfpt/dfpt_vis_xc.F90
 src/fleur/dfpt/dfpt_vvac_xc.F90
@@ -24,7 +25,8 @@ src/fleur/dfpt/dfpt_cdngen.F90
 src/fleur/dfpt/dfpt_fermie.F90
 src/fleur/dfpt/desymmetrizer.f90
 src/fleur/dfpt/dfpt_eigen.F90
-src/fleur/dfpt/dfpt_dynmat_sym.f90
+src/fleur/dfpt/dfpt_dynmat_fourier.f90
+src/fleur/dfpt/dfpt_sumrules.F90
 src/fleur/dfpt/dfpt_generate_gradient.F90
 src/fleur/dfpt/dfpt_gradient.F90
 src/fleur/dfpt/dfpt_vefield.F90
@@ -40,6 +42,9 @@ src/fleur/dfpt/types_phonon.F90
 src/fleur/dfpt/types_efield.F90
 src/fleur/dfpt/types_BEC.F90
 src/fleur/dfpt/types_bfield.F90
+src/fleur/dfpt/matrix_interpolation.F90
+src/fleur/dfpt/superconductivity/dfpt_write_epw.F90
+src/fleur/dfpt/superconductivity/dfpt_lambda.F90
 src/fleur/dfpt/superconductivity/dfpt_elph_mat.F90
 src/fleur/dfpt/superconductivity/dfpt_tetra_double.F90
 src/fleur/dfpt/superconductivity/dfpt_tetra_single.F90

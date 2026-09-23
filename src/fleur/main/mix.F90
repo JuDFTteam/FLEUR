@@ -253,13 +253,7 @@ contains
     IF (fmpi%irank==0.AND..NOT.l_dfpt) CALL qfix(fmpi,stars,nococonv,atoms,sym,vacuum, sphhar,input,cell,field,inDen,noco%l_noco,.FALSE.,.FALSE.,.FALSE., fix)
     call timestop("qfix")
 
-    IF(vacuum%nvac.EQ.1) THEN
-       IF (sym%invs) THEN
-          inDen%vac(:,:,2,:) = CONJG(inDen%vac(:,:,1,:))
-       ELSE
-          inDen%vac(:,:,2,:) = inDen%vac(:,:,1,:)
-       END IF
-    END IF
+    CALL stars%fill_2nd_vac(vacuum,inDen%vac)
 
     call timestart("Density output")
     !write out mixed density (but not for a plotting run)

@@ -207,7 +207,22 @@ INTEGER,OPTIONAL,INTENT(IN):: nat_start,nat_stop
              ! Calculation of a, b coefficients for LAPW basis functions
              CALL timestart("hsmt_ab")
              !!$acc data copyin(fjgj,fjgj%fj,fjgj%gj) copyout(abcoeffs)
-             CALL hsmt_ab(sym,atoms,noco,nococonv,jspin,iintsp,iType,iAtom,cell,lapw,fjgj,abCoeffs,abSize,.FALSE.)
+             ! Own the abCoeffs mapping in the caller's scope -- see types_abc.F90 for why
+             ! hsmt_ab must not do the `enter data` on its own dummy argument.
+             IF (.NOT.l_use_abcoeff_store) THEN
+                abSize = hsmt_ab_size(atoms, iType, .FALSE.)
+                IF (ALLOCATED(abCoeffs)) THEN
+                   IF (SIZE(abCoeffs,1)/=2*abSize .OR. SIZE(abCoeffs,2)/=lapw%nv(iintsp)) THEN
+                      !$acc exit data delete(abCoeffs)
+                      DEALLOCATE(abCoeffs)
+                   END IF
+                END IF
+                IF (.NOT.ALLOCATED(abCoeffs)) THEN
+                   ALLOCATE(abCoeffs(2*abSize, lapw%nv(iintsp)))
+                   !$acc enter data create(abCoeffs)
+                END IF
+             END IF
+             CALL hsmt_ab(sym,atoms,noco,nococonv,jspin,iintsp,iType,iAtom,cell,lapw,fjgj,abCoeffs,abSize,.FALSE.,l_store=.TRUE.)
              !!$acc end data
              abSize = abSize / 2
              CALL timestop("hsmt_ab")
@@ -344,7 +359,7 @@ INTEGER,OPTIONAL,INTENT(IN):: nat_start,nat_stop
              ! device copy it created and the host array before the next call.
              !$acc exit data delete(abCoeffs)
              ! Hand abCoeffs to the optional store for later reuse (no-op unless on).
-             CALL abcoeff_store_save(abCoeffs, lapw%nk, iintsp, jspin, iAtom)
+             CALL abcoeff_store_save(abCoeffs, lapw%nk, iintsp, jspin, iAtom, .FALSE.)
              IF (ALLOCATED(abCoeffs)) DEALLOCATE(abCoeffs)
        END DO ! loop over interstitial spin
     END DO ! loop over atoms

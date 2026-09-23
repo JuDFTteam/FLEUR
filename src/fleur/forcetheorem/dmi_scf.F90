@@ -100,8 +100,9 @@ CONTAINS
     END IF
   END FUNCTION dmi_next_job
 
-  SUBROUTINE dmi_postprocess(this,fi,results)
+  SUBROUTINE dmi_postprocess(this,fi,results,fmpi)
     USE m_xmlOutput
+    USE m_types_mpi
 #ifdef CPP_MPI
     USE mpi
 #endif
@@ -109,6 +110,7 @@ CONTAINS
     CLASS(t_forcetheo_dmi_scf),INTENT(INOUT):: this
     TYPE(t_fleurinput),INTENT(IN)   :: fi
     TYPE(t_results),INTENT(IN)      :: results
+    TYPE(t_mpi),INTENT(IN)          :: fmpi
     !Locals
     INTEGER:: n,i,nef,ierr
     CHARACTER(LEN=20):: attributes(6)
@@ -147,7 +149,7 @@ CONTAINS
     CALL MPI_BARRIER(MPI_COMM_WORLD,ierr) ! This barrier is placed to ensure that the output above this line is actually written out.
 #endif
 
-    CALL judft_end("Forcetheorem DMI")
+    CALL judft_end("Forcetheorem DMI", fmpi%irank)
   END SUBROUTINE dmi_postprocess
 
   SUBROUTINE dmi_dist(this,fmpi)

@@ -314,6 +314,8 @@ CONTAINS
        CALL loddop(stars,vacuum,atoms,sphhar,input,sym,&
             iUnit,den%iter,den%mt,den%pw,den%vac)
 
+       CALL stars%fill_2nd_vac(vacuum,den%vac)
+
        ! read in additional data if l_noco and data is present
        IF ((archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const).AND.l_rhomatFile) THEN
           READ (iUnit,iostat=datend) (den%pw(k,3),k=1,stars%ng3)
@@ -506,13 +508,7 @@ CONTAINS
           END IF
        END IF
 
-       IF(vacuum%nvac.EQ.1) THEN
-          IF (sym%invs) THEN
-             den%vac(:,:,2,:) = CONJG(den%vac(:,:,1,:))
-          ELSE
-             den%vac(:,:,2,:) = den%vac(:,:,1,:)
-          END IF
-       END IF
+       CALL stars%fill_2nd_vac(vacuum,den%vac)
 
       if (any(noco%l_constrained).or.any(noco%l_fixedMoment)) THEN
          CALL writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&

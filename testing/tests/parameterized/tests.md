@@ -44,6 +44,9 @@ Testset: Films
 | +   | Si Film, plotting              | film/SiFilmPlot      |       |                                     |         | 2   |
 | +   | Si Film, plotting,slicing      | film/SiFilmSlicePlot |       |                                     |         | 2   |
 | +   | Pt 3 layers,soc,inversion      | film/Pt-3            | soc   |                                     |         | 2   |
+| +   | Film, nonsymmorphic z-glide+inversion | film/FilmGlideInvs |    | Nonsymmorphic 2D group; 2D/3D star phases; vacuum-2 by inversion |     | 1   |
+| +   | Film, nonsymmorphic z-glide+in-plane mirror | film/FilmGlideSort |    | No symmorphic inversion/z-mirror: in-plane ops must be sorted first |     | 1   |
+| +   | Film, hexagonal, in-plane 2-fold axis | film/FilmHex2fold |    | Operation removed by 7c06dc2d9; vacuum-2 by in-plane mirror |     | 1   |
 
 
 Testset: Forces
@@ -60,8 +63,11 @@ Testset: DFPT
 |     | Description   | directory name              | marks | Remarks      | CmdLine | MPI |
 | --- | ----------------------- | ----------------- | ----- | ------------ | ------- | --- |
 | +   | Cu bulk fcc, Gamma only | dfpt/CuBulkGamma  | libxc | partly ready |         |   1 |
+| +   | Cu bulk, PBE,           | dfpt/CuPBE        | libxc |              |         |   1 |
+| +   | Cu bulk, PBE spin polarized| dfpt/CuPBESpin        | libxc |              |         |   1 |
 | +   | SiC bulk fcc, Gamma only BEC| dfpt/SiCBulk-BEC  | libxc |          |         |   1 |
 | +   | Cu bulk fcc, K-mesh     | dfpt/CuBulkKmesh  | libxc |              |         |   1 |
+| +   | Cu bulk fcc, K-mesh, bfield | dfpt/CuBulk-bfield | libxc |              |         |   1 |
 | +   | C bulk fcc              | dfpt/CBulk        | libxc | partly ready |         |   1 |
 | +   | C bulk fcc BEC             | dfpt/CBulk-BEC        | libxc | partly ready |         |   1 |
 | +   | Graphene Film           | dfpt/GrapheneFilm | libxc |              |         |   1 |
@@ -100,6 +106,8 @@ Testset: Noco
 |     | Fe bcc, Flipcdn and noco in MT,x-dir          | noco/Fe_bcc_FlipcdnXLDA | bulk                         | produces warnings |         | 2   |
 |     | Fe bcc, Flipcdn and noco in MT,y-dir          | noco/Fe_bcc_FlipcdnYLDA | bulk                         | produces warnings |         | 2   |
 | +   | relaxation feature of FFN in the MT           | noco/RelaxMT            | bulk,hdf                     |                   |         | 2   |
+| +   | FFN noco, spin off-diagonal LDA+U             | noco/FFNUCross          | bulk,ldau,soc,hdf            |                   |         | 2   |
+| +   | FFN noco, transverse constraint               | noco/FFNConstraint      | bulk,hdf                     |                   |         | 2   |
 
 Testset: Experimental
 ----------

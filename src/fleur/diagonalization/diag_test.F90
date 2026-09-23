@@ -30,12 +30,11 @@ program diag_test
       allocate (t_mpimat::smat)
       select type (hmat)
       type is (t_mpimat)
-         allocate (hmat%blacsdata)
-         hmat%blacsdata%mpi_com = MPI_COMM_WORLD
-         select type (smat)
-         type is (t_mpimat)
-            smat%blacsdata => hmat%blacsdata
-         end select
+         call hmat%set_mpi_com(MPI_COMM_WORLD)
+      end select
+      select type (smat)
+      type is (t_mpimat)
+         call smat%set_mpi_com(MPI_COMM_WORLD)
       end select
    end if
 #endif
@@ -59,7 +58,7 @@ program diag_test
    type is (t_mpimat)
       select type (smat)
       type is (t_mpimat)
-         smat%blacsdata => hmat%blacsdata!make sure we use same blacs-grids
+         call smat%share_blacsgrid(hmat)!make sure we use same blacs-grids
       end select
       ne = 0.15*hmat%global_size1
       allocate (eig(hmat%global_size1))

@@ -7,6 +7,9 @@
 
 if (CMAKE_Fortran_COMPILER_ID MATCHES "GNU")
    set_source_files_properties(${CMAKE_SOURCE_DIR}/src/fleur/vgen/vgen_coulomb.F90 PROPERTIES COMPILE_FLAGS -O0)
+   #gfortran 15.2 on arm64 miscompiles the matching coefficients when the loop
+   #vectorizer is active, which corrupts the LO parts of the H and S matrices
+   set_source_files_properties(${CMAKE_SOURCE_DIR}/src/fleur/eigen/hsmt_ab.F90 PROPERTIES COMPILE_FLAGS -fno-tree-vectorize)
 endif()
 
 if (CMAKE_Fortran_COMPILER_ID MATCHES "Intel")

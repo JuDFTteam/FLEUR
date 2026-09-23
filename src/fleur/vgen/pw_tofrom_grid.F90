@@ -58,7 +58,7 @@ CONTAINS
 
   END SUBROUTINE init_pw_grid
 
-  SUBROUTINE pw_to_grid(dograds,jspins,l_noco,stars,cell,den_pw,grad,xcpot,rho,rhoim)
+  SUBROUTINE pw_to_grid(dograds,jspins,l_noco,stars,cell,den_pw,grad,xcpot,rho,rhoim,gradim)
     !.....------------------------------------------------------------------
     !------->          abbreviations
     !
@@ -104,6 +104,8 @@ CONTAINS
     TYPE(t_gradients),INTENT(OUT)         :: grad
     CLASS(t_xcpot), INTENT(IN),OPTIONAL   :: xcpot
     REAL,ALLOCATABLE,INTENT(OUT),OPTIONAL :: rho(:,:),rhoim(:,:)
+    !Imaginary part of the derivatives; only for a complex (DFPT) field
+    TYPE(t_gradients),INTENT(INOUT),OPTIONAL :: gradim
 
 
     INTEGER      :: js,i,idm,ig,ndm,jdm,j
@@ -113,6 +115,7 @@ CONTAINS
     COMPLEX, ALLOCATABLE :: cqpw(:,:),ph_wrk(:)
     REAL,    ALLOCATABLE :: bf3(:)
     REAL,    ALLOCATABLE :: rhd1(:,:,:),rhd2(:,:,:)
+    REAL,    ALLOCATABLE :: rhd1im(:,:,:),rhd2im(:,:,:)
     REAL,    ALLOCATABLE :: mx(:),my(:)
     REAL,    ALLOCATABLE :: magmom(:),dmagmom(:,:),ddmagmom(:,:,:)
     REAL,    ALLOCATABLE :: rhodiag(:,:),der(:,:,:),dder(:,:,:,:)
@@ -128,6 +131,7 @@ CONTAINS
        IF (PRESENT(rhoim)) ALLOCATE(rhoim(0:griddim-1,jspins))
        ALLOCATE( ph_wrk(0:griddim-1),rhd1(0:griddim-1,jspins,3))
        ALLOCATE( rhd2(0:griddim-1,jspins,6) )
+       IF (PRESENT(gradim)) ALLOCATE( rhd1im(0:griddim-1,jspins,3),rhd2im(0:griddim-1,jspins,6) )
      ELSE
         IF (PRESENT(rho)) ALLOCATE(rho(0:griddim-1,jspins))
         IF (PRESENT(rhoim)) ALLOCATE(rhoim(0:griddim-1,jspins))
@@ -213,9 +217,10 @@ CONTAINS
                call fftgrid%putFieldOnGrid(stars,den_pw(:,js),cell,gmax,firstderiv=fd)
             end if
             call fftgrid%perform_fft(forward=.false.)
-            rhd1(0:,js,idm)=fftgrid%grid
+            rhd1(0:,js,idm)=REAL(fftgrid%grid)
+            IF (PRESENT(gradim)) rhd1im(0:,js,idm)=AIMAG(fftgrid%grid)
          END DO
-         IF (allocated(grad%laplace).or.allocated(grad%agrt)) THEN
+         IF (allocated(grad%laplace).or.allocated(grad%agrt).or.PRESENT(gradim)) THEN
            !Higher derivatives needed
            DO jdm = 1,idm
              sd=0;sd(jdm)=1
@@ -227,7 +232,8 @@ CONTAINS
                    call fftgrid%putFieldOnGrid(stars,den_pw(:,js),cell,gmax,firstderiv=fd,secondderiv=sd)
                 end if
                 call fftgrid%perform_fft(forward=.false.)
-                rhd2(0:,js,ndm)=fftgrid%grid
+                rhd2(0:,js,ndm)=REAL(fftgrid%grid)
+                IF (PRESENT(gradim)) rhd2im(0:,js,ndm)=AIMAG(fftgrid%grid)
              END DO
            END DO ! jdm
          ENDIF
@@ -335,6 +341,15 @@ CONTAINS
 
           CALL mkgxyz3 (0*rhd1(0:,:,1),rhd1(0:,:,1),rhd1(0:,:,2),rhd1(0:,:,3),&
                rhd2(0:,:,1),rhd2(0:,:,3),rhd2(0:,:,6), rhd2(0:,:,5),rhd2(0:,:,4),rhd2(0:,:,2),0,grad)
+       END IF
+
+       IF (PRESENT(gradim)) THEN
+          !Only gr and laplace; sigma is a ground state quantity and stays in grad.
+          IF (ALLOCATED(gradim%gr)) DEALLOCATE(gradim%gr)
+          IF (ALLOCATED(gradim%laplace)) DEALLOCATE(gradim%laplace)
+          ALLOCATE(gradim%gr(3,griddim,jspins),gradim%laplace(griddim,jspins))
+          CALL mkgxyz3 (0*rhd1im(0:,:,1),rhd1im(0:,:,1),rhd1im(0:,:,2),rhd1im(0:,:,3),&
+               rhd2im(0:,:,1),rhd2im(0:,:,3),rhd2im(0:,:,6), rhd2im(0:,:,5),rhd2im(0:,:,4),rhd2im(0:,:,2),0,gradim)
        END IF
 
     ENDIF

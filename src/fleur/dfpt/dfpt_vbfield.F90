@@ -20,28 +20,36 @@ CONTAINS
     TYPE(t_potden),INTENT(INOUT)::vTot,vTotIm
 
     INTEGER :: iType
- 
-    real:: bohr
+    REAL    :: bsign
+    LOGICAL :: l_afm
+
+    l_afm = .FALSE.
 
     IF (input%jspins.NE.2) CALL judft_error("B-fields can only be used in spin-polarized calculations")
     !IF (noco%l_noco) CALL judft_error("B-fields not implemented in noco case")
-    
-    !Interstitial
-    !vTot%pw_w(:,1)=vTot%pw_w(:,1)-(1/2)*stars%ustep(:)
-    !vTot%pw_w(:,2)=vTot%pw_w(:,2)+(1/2)*stars%ustep(:)
-    vTot%pw(:,:)=0.0
-    vTot%pw(1,1)=-1/2. 
-    vTot%pw(1,2)=+1/2. 
 
-    !MT-spheres
-    DO iType = 1, atoms%ntype
-       vTot%mt(:atoms%jri(iType),0,iType,1) = vTot%mt(:atoms%jri(iType),0,iType,1) - sfp_const/2.0
-       vTot%mt(:atoms%jri(iType),0,iType,2) = vTot%mt(:atoms%jri(iType),0,iType,2) + sfp_const/2.0 
+    vTot%pw(:,:)     = 0.0
+    vTot%mt(:,:,:,:) = 0.0
+    vTotIm%mt(:,:,:,:) = 0.0
 
-    END DO
+    IF (l_afm) THEN
+       !No IR contribution; alternate sign between sublattices in MT
+       DO iType = 1, atoms%ntype
+          bsign = MERGE(-1.0, 1.0, MOD(iType,2) == 1)
+          vTot%mt(:atoms%jri(iType),0,iType,1) = -bsign * sfp_const/2.0
+          vTot%mt(:atoms%jri(iType),0,iType,2) =  bsign * sfp_const/2.0
+       END DO
+    ELSE
+       !Uniform field in IR and all MT
+       vTot%pw(1,1) = -1/2.
+       vTot%pw(1,2) = +1/2.
+       DO iType = 1, atoms%ntype
+          vTot%mt(:atoms%jri(iType),0,iType,1) = -sfp_const/2.0
+          vTot%mt(:atoms%jri(iType),0,iType,2) = +sfp_const/2.0
+       END DO
+    END IF
 
-    !Set MT imag to zero
-    vTotIm%mt(:,:,:,:)=0.0
+
 
   END SUBROUTINE dfpt_vbfield
 END MODULE m_dfpt_vbfield

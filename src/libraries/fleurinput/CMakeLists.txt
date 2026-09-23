@@ -10,6 +10,7 @@ types_fleurinput_base.F90  types_input.f90
 types_coreSpecInput.f90    types_hybinp.f90     types_noco.f90
 types_vacuum.f90           types_banddos.f90    types_xas.f90
 types_wannier.f90
+types_wannierlib.f90
 types_cell.f90             types_kpts.F90       types_fleurinput.f90
 types_sliceplot.f90        types_sym.f90        types_atoms.F90
 types_econfig.F90          types_field.F90      types_xcpot.F90

@@ -69,9 +69,15 @@ function uname()
 end function   
   
   !Print memory info to unit io. With maxmem=.TRUE. additionally report the
-  !peak resident set size aggregated across all MPI ranks (max and sum), so the
-  !worst-case rank (drives OOM) and the total job footprint are both visible.
-  SUBROUTINE print_memory_info(io,maxmem)
+  !peak resident set size (high-water mark) of this process.
+  !If l_par=.TRUE., the peak is in addition aggregated over all MPI ranks (max
+  !and sum), so that the worst-case rank (drives OOM) and the total job
+  !footprint are both visible.
+  !Be carefull not to set l_par=.TRUE. if you are calling only from one MPI
+  !rank: the reduction would then never be matched and would block forever.
+  !That is why it defaults to .FALSE. - a caller that forgets it loses a line
+  !of output, it does not hang.
+  SUBROUTINE print_memory_info(io,maxmem,l_par)
 #ifdef CPP_MPI
     USE mpi
 #endif
@@ -79,8 +85,9 @@ end function
     IMPLICIT NONE
     INTEGER,INTENT(in)          :: io
     LOGICAL,INTENT(IN),OPTIONAL :: maxmem
+    LOGICAL,INTENT(IN),OPTIONAL :: l_par
     INTEGER            :: err,irank,isize
-    LOGICAL            :: l_mpi
+    LOGICAL            :: l_mpi,l_par_local
     REAL(c_double)     :: loc_peak,max_peak,sum_peak
     REAL(c_double),PARAMETER :: gb=1024._c_double**3
     CHARACTER(len=40)  :: l1,l2
@@ -95,6 +102,8 @@ end function
     irank=0
     isize=1
     l_mpi=.FALSE.
+    l_par_local=.FALSE.
+    IF (PRESENT(l_par)) l_par_local=l_par
 #ifdef CPP_MPI
     CALL mpi_initialized(l_mpi,err)
     IF (l_mpi) THEN
@@ -107,16 +116,19 @@ end function
     max_peak=loc_peak
     sum_peak=loc_peak
 #ifdef CPP_MPI
-    IF (l_mpi) THEN
+    IF (l_mpi.AND.l_par_local) THEN
        CALL MPI_REDUCE(loc_peak,max_peak,1,MPI_DOUBLE_PRECISION,MPI_MAX,0,MPI_COMM_WORLD,err)
        CALL MPI_REDUCE(loc_peak,sum_peak,1,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,err)
     ENDIF
 #endif
 
-    IF (irank==0) THEN
-       WRITE(io,"(a,a)") "Memory (rank 0): ",TRIM(memory_usage_string(maxmem))
+    !With l_par all PEs are here and rank 0 reports for the whole job. Without
+    !it every PE that gets here reports its own numbers: on the error path the
+    !reporting PE is the first one with an error message, not necessarily rank 0.
+    IF (irank==0.OR..NOT.l_par_local) THEN
+       WRITE(io,"(a,i0,2a)") "Memory (rank ",irank,"): ",TRIM(memory_usage_string(maxmem))
        IF (PRESENT(maxmem)) THEN
-          IF (maxmem.AND.max_peak>0._c_double) THEN
+          IF (maxmem.AND.l_par_local.AND.max_peak>0._c_double) THEN
              WRITE(l1,"(f12.3)") max_peak/gb
              WRITE(l2,"(f12.3)") sum_peak/gb
              WRITE(io,"(a,i0,a,a,a,a,a)") "Peak resident set over ",isize, &

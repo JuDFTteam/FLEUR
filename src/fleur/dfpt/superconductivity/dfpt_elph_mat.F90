@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2024 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -25,173 +25,7 @@ MODULE m_dfpt_elph_mat
     IMPLICIT NONE
 
 CONTAINS
-    SUBROUTINE dfpt_elph_mat(fi,xcpot,sphhar,stars,nococonv,qpts,fmpi,results, resultsq, results1, enpara,hybdat, rho,vTot,grRho,grVtot,iQ,eig_id,q_eig_id,l_real,denIn1,denIn1Im,eigenVecs,eigenVals)
-
-        USE m_vgen
-        USE m_make_stars
-        USE m_dfpt_vgen
-        USE m_eig66_io, ONLY : write_eig, read_eig
-        USE m_dosbin
-        USE m_smooth
-        USE m_dfpt_fermie, ONLY : sfermi
-        USE m_dfpt_elph_linewidth
-        
-
-
-
-        IMPLICIT NONE 
-
-
-        TYPE(t_fleurinput), INTENT(IN) :: fi
-        CLASS(t_xcpot),     INTENT(IN)    :: xcpot
-        TYPE(t_stars),INTENT(IN) :: stars
-        TYPE(t_nococonv), INTENT(IN) :: nococonv
-        TYPE(t_mpi), INTENT(IN) :: fmpi
-        TYPE(t_results), INTENT(IN) :: results,resultsq,results1
-        TYPE(t_enpara), INTENT(IN) :: enpara
-        TYPE(t_sphhar), INTENT(IN)  :: sphhar
-        TYPE(t_kpts), INTENT(IN) :: qpts 
-        TYPE(t_hybdat),     INTENT(INOUT) :: hybdat
-        TYPE(t_potden), INTENT(IN) :: rho,vTot,grRho(3),grVtot(3)
-        INTEGER,INTENT(IN)         :: iQ,eig_id,q_eig_id
-        LOGICAL,INTENT(IN)         :: l_real
-        TYPE(t_potden), ALLOCATABLE,  INTENT(IN)     :: denIn1(:) , denIn1Im(:)
-        COMPLEX, ALLOCATABLE, INTENT(INOUT) :: eigenVecs(:,:) ! Only allocated on irank 0
-        REAL,ALLOCATABLE, INTENT(INOUT) :: eigenVals(:) ! Only allocated on irank 0
-
-        
-        TYPE(t_potden) :: vTot1,vTot1Im,denIn1_loc, denIn1Im_loc, rho_loc
-
-
-        TYPE(t_stars) :: starsq
-        type(t_sternheimerJob) :: sternheimerJob
-        INTEGER :: iDtype, iDir, killcont(6) ,iMode , iPerturb
-        REAL :: bqpt(3)
-        COMPLEX,ALLOCATABLE:: gmatCart(:,:,:,:) !(nu',nu,kpoints,jsp)
-        COMPLEX,ALLOCATABLE:: gmat(:,:,:,:,:) !(nu',nu,kpoints,jsp,normal_mode)
-        REAL, ALLOCATABLE :: ph_linewidth(:) !(normal_mode)
-        INTEGER ::  nuWindow(2,2)  ! ,nbasfcnq_min
-
-
-#ifdef CPP_MPI
-        INTEGER :: ierr
-#endif 
-
-        REAL                                      :: atomic_mass_array(118)
-
-        atomic_mass_array = atomicMasses_const * massInElectronMasses
-        ! killcont can be used to blot out certain contricutions to the
-        ! perturbed matrices.
-        ! In this order: V1_pw_pw, T1_pw, S1_pw, V1_MT, ikGH0_MT, ikGS0_MT
-        killcont = [1,1,1,1,1,1]
-        
-
-        call sternheimerJob%init(fi,l_phonon=.true.)
-
-        !Up to now only irank == 0 knows the eigenvecs plus eigenvals 
-        IF (.NOT. ALLOCATED(eigenVecs)) ALLOCATE(eigenVecs(3*fi%atoms%nat,3*fi%atoms%nat))
-        IF (.NOT. ALLOCATED(eigenVals)) ALLOCATE(eigenVals(3*fi%atoms%nat))
-
-#ifdef CPP_MPI
-        CALL MPI_BCAST(eigenVecs, size(eigenVecs), MPI_DOUBLE_COMPLEX, 0, fmpi%mpi_comm, ierr)
-        CALL MPI_BCAST(eigenVals, size(eigenVals), MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
-#endif 
-
-        CALL rho_loc%copyPotDen(rho)
-        IF (fmpi%irank==0) WRITE(*,*) 'Generating Potentials for Electron-Phonon Matrix Elements'
-        
-        ! Introduce Energy Window for states
-        ! Reduce memory and computational effort
-        bqpt = qpts%bk(:, iQ)
-        ! CALL timestart("Generating the energy window")
-        ! CALL energy_window(fi,fmpi,results,resultsq,nococonv,bqpt,eigenVals,nuWindow)
-        ! CALL timestop("Generating the energy window")
-        
-        DO iDtype=1,fi%atoms%nat
-            DO iDir=1,3
-                CALL denIn1_loc%copyPotDen(denIn1(iDir+3*(iDtype-1)))
-                CALL denIn1Im_loc%copyPotDen(denIn1Im(iDir+3*(iDtype-1)))
-
-                denIn1_loc%mt(:,0:,iDtype,:) = denIn1_loc%mt(:,0:,iDtype,:) - grRho(iDir)%mt(:,0:,iDtype,:)
-                
-                CALL make_stars(starsq, fi%sym, fi%atoms, fi%vacuum, sphhar, fi%input, fi%cell, fi%noco, fmpi, qpts%bk(:,iQ), iDtype, iDir)
-                starsq%ufft = stars%ufft
-
-                CALL vTot1%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
-                CALL vTot1Im%init(starsq, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.FALSE.)
-
-
-                iPerturb = iDir+3*(iDtype-1)
-                
-                CALL timestart("Generating Potential Perturbation")
-                IF (fmpi%irank==0) WRITE(oUnit, *) "vEff1", iDir
-                CALL dfpt_vgen(sternheimerJob,hybdat,fi%field,fi%input,xcpot,fi%atoms,sphhar,stars,fi%vacuum,fi%sym,&
-                           fi%dfpt,fi%cell,fmpi,fi%noco,nococonv,rho_loc,vTot,&
-                           starsq,denIn1Im_loc,vTot1,.TRUE.,vTot1Im,denIn1_loc,iDtype,iDir,[1,1])
-                    
-                CALL timestop("Generating Potential Perturbation")
-
-                ! Add the gradient to potential 
-                vTot1%mt(:,0:,iDtype,:) = vTot1%mt(:,0:,iDtype,:) + grVtot(iDir)%mt(:,0:,iDtype,:)
-
-                CALL timestart("Generate electron-phonon matrix element")
-                ! currenlty this call will lead to segfalse here! 
-                ! reactivate in the future. 
-                CALL matrix_element(sternheimerJob,fi,sphhar,results,fmpi,enpara,nococonv,starsq,vTot1,vTot1Im,vTot,rho_loc,bqpt,eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatCart,nuWindow) ! nbasfcnq_min
-                CALL timestop("Generate electron-phonon matrix element")
-
-                IF (.NOT. ALLOCATED(gmat)) THEN
-                    ALLOCATE(gmat(size(gmatCart,1),size(gmatCart,2),size(gmatCart,3),size(gmatCart,4),3*fi%atoms%nat))
-                    gmat=CMPLX(0.0,0.0)
-                END IF 
-                !TODO Read in the eigenvecotrs from Dynmats, here we can take them from memory
-                !IF (fmpi%irank==0) THEN 
-                    ! Numerics saves the day 
-                    ! Think about Gamma if Frequencies are approximately zero
-                    DO iMode = 1 , 3*fi%atoms%nat
-                        IF (eigenVals(iMode) .LT. 0.0 ) THEN 
-                            gmat(:,:,:,:,iMode) = gmat(:,:,:,:,iMode) + eigenVecs(iPerturb,iMode) * &
-                            &                   ( (-1*ImagUnit) / SQRT(2* atomic_mass_array(fi%atoms%nz(CEILING(iPerturb/3.0))) * SQRT(ABS(eigenVals(iMode)))) ) * gmatCart(:,:,:,:) 
-                        ELSE
-                            gmat(:,:,:,:,iMode) = gmat(:,:,:,:,iMode) + eigenVecs(iPerturb,iMode) / SQRT(2* atomic_mass_array(fi%atoms%nz(CEILING(iPerturb/3.0))) * SQRT(eigenVals(iMode))) * gmatCart(:,:,:,:) 
-                        END IF 
-                    END DO  
-                !END IF 
-                
-                CALL starsq%reset_stars()
-                CALL denIn1_loc%reset_dfpt()
-                CALL denIn1Im_loc%reset_dfpt()
-                CALL vTot1%reset_dfpt()
-                CALL vTot1Im%reset_dfpt()
-                DEALLOCATE(gmatCart)
-            END DO !iDir 
-        END DO !iDtype 
-
-
-        ! Construct the Superconduction temperature 
-#ifdef CPP_MPI
-        CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
-#endif
-        CALL timestart("Linewidth elph")
-        !Set this code block behind a logical in the future 
-        CALL dfpt_ph_linewidth(fi,fmpi,qpts,results,resultsq,results1,eigenVals,gmat,iQ,nuWindow, ph_linewidth) !nbasfcnq_min 
-        CALL timestop("Linewidth elph")
-
-#ifdef CPP_MPI
-        CALL MPI_BARRIER(fmpi%MPI_COMM,ierr)
-#endif
-
-        DEALLOCATE(ph_linewidth)
-        DEALLOCATE(gmat)
-        IF (.NOT. fmpi%irank==0) THEN 
-            DEALLOCATE(eigenVals)
-            DEALLOCATE(eigenVecs)
-        END IF 
-
-    END SUBROUTINE dfpt_elph_mat
-
-
-    SUBROUTINE matrix_element(sternheimerJob,fi,sphhar,results,fmpi,enpara,nococonv,starsq,v1real,v1imag,vTot,inden,bqpt,eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatBuffer,nuWindow)
+    SUBROUTINE construct_elph_element(sternheimerJob,fi,sphhar,results,fmpi,enpara,nococonv,starsq,v1real,v1imag,vTot,inden,bqpt,eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatBuffer,nuWindow)
         ! This routine is very similar to dfpt_eigen
         ! However, we do not need the gmat which is slightly different to z1
         ! Output needs to be different 
@@ -217,7 +51,7 @@ CONTAINS
         REAL,  INTENT(IN) :: bqpt(3)
         INTEGER, INTENT(IN) :: eig_id, q_eig_id,iDir, iDtype ,killcont(6) 
         LOGICAL, INTENT(IN) :: l_real
-        COMPLEX,ALLOCATABLE,INTENT(INOUT) :: gmatBuffer(:,:,:,:) !(nu',nu,kpoints,jsp)
+        COMPLEX,INTENT(INOUT) :: gmatBuffer(:,:,:,:) !(nu',nu,kpoints,jsp)
         INTEGER, INTENT(IN) :: nuWindow(2) ! Eigenstate value that we want to consider 
 
 
@@ -419,6 +253,542 @@ CONTAINS
 #endif
 
 
-    END SUBROUTINE matrix_element
+    END SUBROUTINE construct_elph_element
+
+    subroutine el_ph_wannier(fmpi,fi,results,dynMats,gmatCart,qpts_q,sym_q)
+        ! Builds the real-space (Wannier-gauge, q-independent) el-ph matrix element
+        ! and either exports it as EPW restart files or interpolates the isotropic
+        ! el-ph coupling and phonon linewidths onto the fine k/q mesh.
+        !
+        ! gmatCart lives on the full zone of qpts_q (nkptf/bkf), dynMats on its
+        ! irreducible wedge (nkpt/bk); sym_q connects the two.
+
+        use m_matrix_interpolation
+        use m_dfpt_write_epw, only : write_epw_restart_files
+
+        type(t_mpi), intent(in)         :: fmpi
+        type(t_fleurinput) , intent(in) :: fi
+        type(t_results),     intent(in) :: results
+        complex,intent(in)              :: dynMats(:,:,:) !(3*nat,3*nat,nqcoarse)
+        complex,intent(in)              :: gmatCart(:,:,:,:,:,:) !(nu,nu',kpoints,spin,iPerturb,iQfull)
+        type(t_kpts), intent(in)        :: qpts_q
+        type(t_sym),  intent(in)        :: sym_q
+
+        complex, allocatable :: U_full(:,:,:,:) !(num_bands,num_wann,ikpt,jspin)
+        type(t_wann_ft), allocatable :: gmatRealspace(:,:) !(3*nat, jspins) q-independent forward transforms
+        integer :: num_bands, num_wann, ispin, ikpt, iMode
+
+        if (qpts_q%nkptf /= size(gmatCart,6)) call juDFT_error("gmatCart q dimension does not match its q mesh",calledby="el_ph_wannier_interpolate")
+
+        ! Full Wannier gauge matrix: disentanglement (U_dis) composed with Wannierization (U_mat).
+        num_bands = fi%wannierlib%max_band - fi%wannierlib%min_band + 1
+        num_wann  = fi%wannierlib%num_wann
+        call timestart("Load Wannier U matrices")
+        allocate(U_full(num_bands,num_wann,fi%kpts%nkptf,fi%input%jspins))
+        if (num_bands > num_wann) then
+            do ispin = 1 , fi%input%jspins
+                do ikpt = 1 , fi%kpts%nkptf
+                    U_full(:,:,ikpt,ispin) = matmul(results%U_dis(:,:,ikpt,ispin),results%U_mat(:,:,ikpt,ispin))
+                end do
+            end do
+        else
+            U_full(:,:,:,:) = results%U_mat(:,:,:,:)
+        end if
+        call timestop("Load Wannier U matrices")
+
+        ! Construct the realspace representation 
+        call timestart("Forward FT elph-element")
+        allocate(gmatRealspace(3*fi%atoms%nat, fi%input%jspins))
+        do iMode = 1 , 3*fi%atoms%nat
+            do ispin = 1 , fi%input%jspins
+                call wannier_matrixq_forward(fi,gmatCart(:,:,:,ispin,iMode,:),U_full(:,:,:,ispin),fi%kpts,qpts_q,gmatRealspace(iMode,ispin))
+            end do !ispin
+        end do !iMode
+        call timestop("Forward FT elph-element")
+
+        if (fi%dfpt%l_write_epw) then
+            if (fmpi%irank==0) then
+                call timestart("Write EPW restart files")
+                call write_epw_restart_files(fi, results, dynMats, U_full, gmatRealspace, qpts_q, sym_q)
+                call timestop("Write EPW restart files")
+            end if
+            return
+        end if
+
+        call elph_fine_mesh_linewidth(fmpi, fi, results, dynMats, gmatRealspace, qpts_q, sym_q)
+
+    end subroutine el_ph_wannier
+
+    subroutine elph_fine_mesh_linewidth(fmpi, fi, results, dynMats, gmatRealspace, qpts_q, sym_q)
+        ! Interpolates el-ph matrix elements and phonon frequencies onto the fine
+        ! k/q mesh, restricted to the Fermi window, and writes the isotropic
+        ! el-ph coupling constant and per-mode phonon linewidths.
+        !
+        ! dynMats lives on the irreducible wedge of qpts_q; sym_q unfolds it.
+
+        use m_eig66_io, only : open_eig,close_eig,read_eig
+        use m_wannier_interpolate
+        use m_matrix_interpolation
+        use m_dfpt_dynmat_fourier
+        use m_dfpt_dynmat_eig
+        use m_dfpt_elph_linewidth
+
+        type(t_mpi),         intent(in) :: fmpi
+        type(t_fleurinput),  intent(in) :: fi
+        type(t_results),     intent(in) :: results
+        complex,             intent(in) :: dynMats(:,:,:)     !(3*nat,3*nat,nqcoarse)
+        type(t_wann_ft),     intent(in) :: gmatRealspace(:,:) !(3*nat, jspins)
+        type(t_kpts),        intent(in) :: qpts_q
+        type(t_sym),         intent(in) :: sym_q
+
+        integer :: eig_id_interpol,q_eig_id_interpol, num_wann , ikpt, iMode, ispin, iPerturb
+        integer :: iQ, nKept, nSurv, iKept, ne, iWann, i, nLocKpts, nInterpol
+        real    :: qvec(3), pref
+        real,allocatable :: kqpts_interpol(:,:)
+        integer, allocatable :: myIdx(:)       ! this rank's global fine-k indices
+        real,    allocatable :: myKpts(:,:)    ! (3, nLocKpts) this rank's slice of the fine k-mesh
+        integer, allocatable :: fermiKidx(:)   ! local fine-mesh k-point indices near E_F
+        real,    allocatable :: fermiKpts(:,:) ! (3, nKept) coords of those k-points
+        integer, allocatable :: kqKeptIdx(:)   ! indices (into fermiK*) where k+q also near E_F
+        real,    allocatable :: kqKeptKpts(:,:), survKpts(:,:), qsingle(:,:)
+        class(t_mat), allocatable :: zMatk, zMatkq ! interpolated eigenvectors (num_wann x num_wann)
+        real,    allocatable :: eigBuff(:), eigBuffq(:)
+        integer, allocatable :: wann_list(:)
+        real,    allocatable :: eigk(:,:,:), eigkq(:,:,:)
+
+        real,    allocatable :: wtkpt_line(:), ph_linewidth(:)
+        real,    allocatable :: eigenValsQ(:)
+        complex, allocatable :: eigenVecs(:,:)
+        integer              :: lw_unit, cs_unit
+        real                 :: lambda_iso, lambda_q
+        real                  :: sqrtOmegaMax
+        real                  :: ef_interp, dos_ef_interp   ! Fermi energy and DOS(E_F) on the fine mesh
+
+#ifdef CPP_MPI
+        integer :: ierr
+#endif
+        complex, allocatable :: gmatInterpol_q(:,:,:,:,:,:) !(nwann,nwann,nSurv,1,jspin,mode)
+        complex, allocatable :: gmatEig(:,:,:,:,:) !(num_wann,num_wann,nSurv,jspin,mode) eigenbasis
+        complex, allocatable :: dynMat_interpol(:,:,:)
+        real    :: atomic_mass_array(118)
+
+        if ( (.not. allocated(fi%dfpt%qpts_interpol%bk)) .or. (.not. allocated(fi%dfpt%kpts_interpol%bk))) call juDFT_error("No meshes to interpoalte on.",calledby="dfpt_elph_mat.F90")
+
+        num_wann = fi%wannierlib%num_wann
+        atomic_mass_array = atomicMasses_const * massInElectronMasses
+
+        ! distribute the interpolated k-mesh across ranks (round-robin / strided)
+        nInterpol = fi%dfpt%kpts_interpol%nkpt
+        myIdx = (/(i, i = fmpi%irank+1, nInterpol, fmpi%isize)/)
+        nLocKpts  = size(myIdx)
+        allocate(myKpts(3, nLocKpts))
+        do ikpt = 1, nLocKpts
+            myKpts(:, ikpt) = fi%dfpt%kpts_interpol%bk(:, myIdx(ikpt))
+        end do
+
+        sqrtOmegaMax = global_phonon_energy_bound(fi, dynMats, qpts_q)
+
+        eig_id_interpol = -1   ! only opened/used on ranks with nLocKpts > 0
+
+        if (nLocKpts > 0) then
+            ! Size of the interpolated hamiltonian is only num_wann x num_wann.
+            ! MPI_COMM_SELF: each rank keeps a private (in-memory) eig store for its own k-slice.
+#ifdef CPP_MPI
+            eig_id_interpol = open_eig(MPI_COMM_SELF, num_wann, num_wann, nLocKpts, fi%input%jspins, fi%noco%l_noco, &
+                                    .true., .false., fi%noco%l_soc, .false., .FALSE., 1)
+#else
+            eig_id_interpol = open_eig(fmpi%mpi_comm, num_wann, num_wann, nLocKpts, fi%input%jspins, fi%noco%l_noco, &
+                                    .true., .false., fi%noco%l_soc, .false., .FALSE., 1)
+#endif
+            call timestart("Bandstructure interpolation (k-mesh)")
+            call interpolate_bandstructure(fi,results,myKpts,eig_id_interpol,.false.)
+            call timestop("Bandstructure interpolation (k-mesh)")
+        end if
+
+        ! Fermi energy and DOS(E_F) on the full interpolated fine mesh (collective over all ranks).
+        call timestart("Interpolated Fermi energy + DOS")
+        call interpolate_fermi_dos(fmpi, fi, results%ef, eig_id_interpol, nLocKpts, ef_interp, dos_ef_interp)
+        call timestop("Interpolated Fermi energy + DOS")
+
+        if (nLocKpts > 0) then
+            ! only keep k points where the eigenvalues are close to the fermi energy
+            call timestart("Fermi k-point selection")
+            call select_fermi_kpoints(fi, results, eig_id_interpol, nLocKpts, myKpts, fermiKidx, fermiKpts, &
+                                      ef_in=ef_interp, omegaMax=sqrtOmegaMax)
+            call timestop("Fermi k-point selection")
+        else
+            allocate(fermiKidx(0), fermiKpts(3,0))
+        end if
+        nKept = size(fermiKidx)
+
+        ! per-rank scratch for the k+q interpolation over the surviving k-points
+        if (nKept > 0) then
+#ifdef CPP_MPI
+            q_eig_id_interpol = open_eig(MPI_COMM_SELF, num_wann, num_wann, nKept, fi%input%jspins, fi%noco%l_noco, &
+                                    .true., .false., fi%noco%l_soc, .false., .FALSE., 1)
+#else
+            q_eig_id_interpol = open_eig(fmpi%mpi_comm, num_wann, num_wann, nKept, fi%input%jspins, fi%noco%l_noco, &
+                                    .true., .false., fi%noco%l_soc, .false., .FALSE., 1)
+#endif
+            allocate(kqpts_interpol(3, nKept))
+            allocate(eigBuff(num_wann))
+            allocate(eigBuffq(num_wann))
+            allocate(wann_list(num_wann))
+            wann_list = (/(iWann, iWann=1, num_wann)/)
+            allocate(t_mat::zMatk)
+            allocate(t_mat::zMatkq)
+            call zMatk%init(.false., num_wann, num_wann)
+            call zMatkq%init(.false., num_wann, num_wann)
+        end if
+
+        allocate(qsingle(3, 1))
+        allocate(ph_linewidth(3*fi%atoms%nat))
+
+        lambda_iso = 0.0
+
+        if (fmpi%irank==0) then
+            open(newunit=lw_unit, file="linewidth", status='replace', action='write', form='formatted')
+            open(newunit=cs_unit, file="coupling_strength", status='replace', action='write', form='formatted')
+            write(cs_unit,*) "# isotropic el-ph coupling: N(E_F), mode frequencies omega_qnu, lambda_q per q"
+            write(cs_unit,*) "# N(E_F) [states/Htr, both spins, interpolated fine mesh]:", dos_ef_interp
+            write(cs_unit,*) "# omega_qnu = sqrt(|eigenValsQ|) [internal units], negative = imaginary mode"
+        end if
+
+
+        do iQ = 1 , fi%dfpt%qpts_interpol%nkpt
+            call timestart("q-point (el-ph interpolation)")
+            ! do one q-point at a time
+            qvec = fi%dfpt%qpts_interpol%bk(:, iQ)
+            qsingle(:, 1) = qvec
+            ph_linewidth = 0.0
+
+            if (fmpi%irank==0) write(*,'(a,3f8.3)') "Interpolating on qvec:" , qvec  
+            ! interpolate the dynMat and find the eigenvalue for this q
+            call timestart("Dynmat Interpolation")
+            call interpolate_dynmat(fi%atoms,sym_q,fi%cell,qpts_q,dynMats,fi%dfpt%l_WSinterpol,qsingle,dynMat_interpol)
+            call timestop("Dynmat Interpolation")
+            call timestart("Dynmat diagonalization")
+            call DiagonalizeDynMat(fi%atoms, qvec, fi%dfpt%calcEigenVec, dynMat_interpol(:,:,1), eigenValsQ, eigenVecs, iQ, .true., &
+                                   'band', .false., l_writeOutput=.false.)
+            call timestop("Dynmat diagonalization")
+
+            nSurv = 0
+            if (nKept > 0) then
+                do ikpt = 1, nKept
+                    kqpts_interpol(:, ikpt) = fermiKpts(:, ikpt) + qvec
+                end do
+                ! interpolate the bands at k+q and keep those also near E_F
+                call timestart("k+q bandstructure + Fermi selection")
+                call interpolate_bandstructure(fi,results,kqpts_interpol,q_eig_id_interpol,.false.)
+                call select_fermi_kpoints(fi, results, q_eig_id_interpol, nKept, kqpts_interpol, kqKeptIdx, kqKeptKpts, &
+                                          ef_in=ef_interp, omegaMax=maxval(sqrt(abs(eigenValsQ))))
+                call timestop("k+q bandstructure + Fermi selection")
+                nSurv = size(kqKeptIdx)
+            end if
+
+            if (nSurv > 0) then
+                ! surviving k-points: k and k+q at E_F
+                allocate(survKpts(3, nSurv))
+                do ikpt = 1, nSurv
+                    survKpts(:, ikpt) = fermiKpts(:, kqKeptIdx(ikpt))
+                end do
+
+                ! interpolate the matrix element only for the surviving k-points, single q
+                call timestart("Matrix element interpolation")
+                allocate(gmatInterpol_q(num_wann, num_wann, nSurv, 1, fi%input%jspins, 3*fi%atoms%nat))
+                gmatInterpol_q = cmplx(0.0, 0.0)
+                do iMode = 1 , 3*fi%atoms%nat
+                    do ispin = 1 , fi%input%jspins
+                        call wannier_matrixq_backward(gmatRealspace(iMode,ispin),survKpts,qsingle,gmatInterpol_q(:,:,:,:,ispin,iMode))
+                    end do !ispin
+                end do !iMode
+                call timestop("Matrix element interpolation")
+
+                ! rotate the Wannier-gauge matrix element into the eigenbasis:
+                !   g_eig(k+q,k) = zmat^dagger(k+q) . g_wann(k+q,k) . zmat(k)
+                call timestart("Eigenbasis rotation")
+                allocate(gmatEig(num_wann, num_wann, nSurv, fi%input%jspins, 3*fi%atoms%nat))
+                allocate(eigk(num_wann, nSurv, fi%input%jspins))
+                allocate(eigkq(num_wann, nSurv, fi%input%jspins))
+                gmatEig = cmplx(0.0, 0.0)
+                do ispin = 1, fi%input%jspins
+                    do ikpt = 1, nSurv
+                        iKept = kqKeptIdx(ikpt)
+                        call read_eig(eig_id_interpol,  fermiKidx(iKept), ispin, list=wann_list,neig=ne, eig=eigBuff, zmat=zMatk)
+                        call read_eig(q_eig_id_interpol, iKept, ispin, list=wann_list, neig=ne, eig=eigBuffq, zmat=zMatkq)
+                        eigk(:,ikpt,ispin)  = eigBuff
+                        eigkq(:,ikpt,ispin) = eigBuffq
+                        do iMode = 1, 3*fi%atoms%nat
+                            pref = 1.0
+                            if (eigenValsQ(iMode) .lt. 0.0) pref = -1*ImagUnit
+                            do iPerturb = 1, 3*fi%atoms%nat
+                                gmatEig(:,:,ikpt,ispin,iMode) =  gmatEig(:,:,ikpt,ispin,iMode)  +  eigenVecs(iPerturb,iMode) * &
+                                                                pref / sqrt(2* atomic_mass_array(fi%atoms%nz(fi%atoms%itype(ceiling(iPerturb/3.0)))) * sqrt(abs(eigenValsQ(iMode))) ) *&
+                                                                matmul(conjg(transpose(zMatkq%data_c)),matmul( gmatInterpol_q(:,:,ikpt,1,ispin,iPerturb),zMatk%data_c ))
+                            end do ! iPerturb
+                        end do !iMode
+                    end do !ikpt
+                end do !ispin
+                deallocate(gmatInterpol_q)
+                call timestop("Eigenbasis rotation")
+
+                allocate(wtkpt_line(nSurv))
+                wtkpt_line = 1.0 / real(nInterpol)  
+
+                call timestart("Phonon linewidth construction")
+                call dfpt_ph_linewidth(fi, wtkpt_line, eigk, eigkq, gmatEig, eigenValsQ, ef_interp, ph_linewidth)
+                call timestop("Phonon linewidth construction")
+
+                deallocate(wtkpt_line)
+                deallocate(gmatEig, eigk, eigkq, survKpts)
+            end if
+            if (allocated(kqKeptIdx))  deallocate(kqKeptIdx)
+            if (allocated(kqKeptKpts)) deallocate(kqKeptKpts)
+
+            ! sum the per-rank partial linewidths into the full linewidth for this q
+#ifdef CPP_MPI
+            CALL mpi_allreduce(mpi_in_place, ph_linewidth, size(ph_linewidth), mpi_double_precision, mpi_sum, fmpi%mpi_comm, ierr)
+#endif
+            if (fmpi%irank==0) then
+                write(lw_unit,*) "q-Point", qvec
+                write(lw_unit,*) ph_linewidth(:)
+                ! isotropic el-ph coupling: lambda_q = sum_nu gamma_qnu / (pi N(E_F) omega_qnu^2)
+                ! accumulated with a uniform q-weight (1/nqpt).
+                lambda_q = 0.0
+                if (dos_ef_interp > 0.0) then
+                    do iMode = 1, 3*fi%atoms%nat
+                        if (eigenValsQ(iMode) <= 0.0) cycle   ! skip imaginary modes
+                        lambda_q = lambda_q + ph_linewidth(iMode) / (pi_const*dos_ef_interp*eigenValsQ(iMode))
+                    end do
+                    lambda_iso = lambda_iso + lambda_q / real(fi%dfpt%qpts_interpol%nkpt)
+                end if
+
+                ! per-q intermediates for checkpointing / offline alpha^2F(omega)
+                write(cs_unit,*) "q-Point", qvec
+                write(cs_unit,*) "omega_qnu:", sign(sqrt(abs(eigenValsQ)), eigenValsQ)    ! signed frequency; <0 = imaginary mode
+                write(cs_unit,*) "lambda_q:", lambda_q
+            end if
+            call timestop("q-point (el-ph interpolation)")
+        end do !iQ
+
+        if (fmpi%irank==0) then
+            if (dos_ef_interp > 0.0) then
+                write(lw_unit,*) "N(E_F) [states/Htr, both spins, interpolated fine mesh]:", dos_ef_interp
+                write(lw_unit,*) "Isotropic el-ph coupling constant lambda:", lambda_iso
+            else
+                write(lw_unit,*) "N(E_F) not available (dos_ef_interp<=0); lambda not computed."
+            end if
+            close(lw_unit)
+            close(cs_unit)
+        end if
+
+        if (nKept > 0) then
+            call zMatk%free()
+            deallocate(zMatk)
+            call zMatkq%free() 
+            deallocate(zMatkq)
+            deallocate(eigBuff, eigBuffq, wann_list, kqpts_interpol)
+            call close_eig(q_eig_id_interpol)
+        end if
+        if (nLocKpts > 0) call close_eig(eig_id_interpol)
+        deallocate(ph_linewidth, qsingle)
+
+#ifdef CPP_MPI
+        CALL MPI_BARRIER(fmpi%mpi_comm, ierr)
+#endif
+
+    end subroutine elph_fine_mesh_linewidth
+
+    function global_phonon_energy_bound(fi, dynMats, qpts_q) result(omegaMax)
+        ! compute maxvalue of the eigenValues of dynMat
+        use m_dfpt_dynmat_eig, only : DiagonalizeDynMat
+
+        type(t_fleurinput), intent(in) :: fi
+        complex,             intent(in) :: dynMats(:,:,:) !(3*nat,3*nat,nqcoarse)
+        type(t_kpts),        intent(in) :: qpts_q
+        real :: omegaMax
+
+        integer :: iQc
+        real,    allocatable :: wTmp(:)
+        complex, allocatable :: aTmp(:,:)
+
+        omegaMax = 0.0
+        if (fi%dfpt%i_integration /= 1) return
+
+        do iQc = 1, qpts_q%nkpt
+            call DiagonalizeDynMat(fi%atoms, qpts_q%bk(:,iQc), .false., dynMats(:,:,iQc), &
+                                   wTmp, aTmp, iQc, .true., "prescan", .false., .false.)
+            omegaMax = max(omegaMax, maxval(sqrt(abs(wTmp))))
+            deallocate(wTmp, aTmp)
+        end do
+
+    end function global_phonon_energy_bound
+
+    subroutine interpolate_fermi_dos(fmpi, fi, ef_guess, eig_id_interpol, nLocKpts, ef_interp, dos_ef_interp)
+        ! Fermi energy and DOS(E_F) on the *interpolated* fine k-mesh.
+        use m_eig66_io, only : read_eig
+        use m_fermie,   only : fermie
+
+        type(t_mpi),        intent(in)  :: fmpi
+        type(t_fleurinput), intent(in)  :: fi
+        real,               intent(in)  :: ef_guess          
+        integer,            intent(in)  :: eig_id_interpol 
+        integer,            intent(in)  :: nLocKpts
+        real,               intent(out) :: ef_interp, dos_ef_interp
+
+        integer :: num_wann, nInterpol, jspins, jspin, ik, ne
+        type(t_kpts)    :: kpts_interp
+        type(t_input)   :: input_interp
+        type(t_results) :: results_interp
+        real, allocatable :: eig_loc(:,:,:)   ! (num_wann, nLocKpts, jspins)
+        real, allocatable :: eig_glob(:,:,:)  ! (num_wann, nInterpol, jspins)
+        real, allocatable :: sendbuf(:), recvbuf(:)
+#ifdef CPP_MPI
+        integer :: irk, ierr
+        integer, allocatable :: nLocAll(:), recvcounts(:), displs(:)
+#endif
+
+        num_wann  = fi%wannierlib%num_wann
+        nInterpol = fi%dfpt%kpts_interpol%nkpt
+        jspins    = fi%input%jspins
+
+        ! read this rank's interpolated eigenvalues
+        allocate(eig_loc(num_wann, max(nLocKpts,1), jspins))
+        eig_loc = 0.0
+        do jspin = 1, jspins
+            do ik = 1, nLocKpts
+                call read_eig(eig_id_interpol, ik, jspin, neig=ne, eig=eig_loc(:,ik,jspin))
+            end do
+        end do
+
+        ! collect all eigenvalues onto every rank (per spin)
+        allocate(eig_glob(num_wann, nInterpol, jspins))
+        eig_glob = 0.0
+#ifdef CPP_MPI
+        allocate(nLocAll(fmpi%isize), recvcounts(fmpi%isize), displs(fmpi%isize))
+        call MPI_ALLGATHER(nLocKpts, 1, MPI_INTEGER, nLocAll, 1, MPI_INTEGER, fmpi%mpi_comm, ierr)
+        recvcounts = nLocAll * num_wann
+        displs(1) = 0
+        do irk = 2, fmpi%isize
+            displs(irk) = displs(irk-1) + recvcounts(irk-1)
+        end do
+        allocate(recvbuf(num_wann*nInterpol))
+        do jspin = 1, jspins
+            ! spin loop for continous blocks that we write into eig_global
+            allocate(sendbuf(num_wann*max(nLocKpts,1)))
+            if (nLocKpts > 0) sendbuf(1:num_wann*nLocKpts) = reshape(eig_loc(:,1:nLocKpts,jspin), [num_wann*nLocKpts])
+            call MPI_ALLGATHERV(sendbuf, num_wann*nLocKpts, MPI_DOUBLE_PRECISION, recvbuf, recvcounts, displs, MPI_DOUBLE_PRECISION, fmpi%mpi_comm, ierr)
+            eig_glob(:,:,jspin) = reshape(recvbuf, [num_wann, nInterpol])
+            deallocate(sendbuf)
+        end do
+        deallocate(recvbuf, nLocAll, recvcounts, displs)
+#else
+        eig_glob(:,1:nLocKpts,:) = eig_loc(:,1:nLocKpts,:)
+#endif
+        deallocate(eig_loc)
+
+        ! synthetic full-mesh k-points with uniform weights
+        kpts_interp = fi%dfpt%kpts_interpol
+        kpts_interp%nkpt = nInterpol
+        if (allocated(kpts_interp%wtkpt)) deallocate(kpts_interp%wtkpt)
+        allocate(kpts_interp%wtkpt(nInterpol))
+        kpts_interp%wtkpt = 1.0 / real(nInterpol)
+
+        ! input copy: electrons in the Wannier window, Gaussian smearing, no store read-back
+        input_interp = fi%input
+        input_interp%zelec            = fi%input%zelec - (2.0/real(jspins))*real(fi%wannierlib%min_band - 1)
+        input_interp%eig66(1)         = .false.
+        input_interp%isFixedMomentCalc= .false.
+        input_interp%charge_excited   = 0.0
+        input_interp%charge_shift     = 0.0
+        input_interp%bz_integration   = BZINT_METHOD_GAUSS
+
+        if (fmpi%irank==0) write(12,*) "Number of electrons" , input_interp%zelec
+
+        ! results holding the gathered eigenvalues
+        allocate(results_interp%eig(num_wann, nInterpol, jspins))
+        allocate(results_interp%neig(nInterpol, jspins))
+        allocate(results_interp%w_iks(num_wann, nInterpol, jspins))
+        results_interp%eig   = eig_glob
+        results_interp%neig  = num_wann
+        results_interp%w_iks = 0.0
+        results_interp%ef      = ef_guess
+        results_interp%seigv   = 0.0
+        results_interp%ts      = 0.0
+        results_interp%bandgap = 0.0
+        results_interp%dos_ef  = 0.0
+
+    
+        ef_interp     = 0.0
+        dos_ef_interp = 0.0
+        call fermie(eig_id_interpol, fmpi, kpts_interp, input_interp, fi%noco, &
+                    minval(eig_glob), fi%cell, results_interp, .false.)
+        if (fmpi%irank == 0) then
+            ef_interp     = results_interp%ef
+            dos_ef_interp = results_interp%dos_ef
+        end if
+#ifdef CPP_MPI
+        call MPI_BCAST(ef_interp,     1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
+        call MPI_BCAST(dos_ef_interp, 1, MPI_DOUBLE_PRECISION, 0, fmpi%mpi_comm, ierr)
+#endif
+
+        deallocate(eig_glob)
+
+    end subroutine interpolate_fermi_dos
+
+    subroutine select_fermi_kpoints(fi, results, eig_id, npoints, coords, keptIdx, keptKpts, ef_in, omegaMax)
+        ! Read the interpolated eigenvalues stored in eig_id for the point set given by
+        ! coords(:,1:npoints) and keep only those points that have at least one eigenvalue
+        ! within window of the Fermi energy.
+        use m_eig66_io, only : read_eig
+
+        type(t_fleurinput), intent(in)  :: fi
+        type(t_results),    intent(in)  :: results
+        integer,            intent(in)  :: eig_id, npoints
+        real,               intent(in)  :: coords(:,:)      ! (3, npoints) coords in eig_id order
+        integer, allocatable, intent(out) :: keptIdx(:)     ! indices into 1..npoints near E_F
+        real,    allocatable, intent(out) :: keptKpts(:,:)  ! (3, nKept) packed coords
+        real,    optional,    intent(in)  :: ef_in           ! Fermi energy override (interpolated E_F)
+        real,    optional,    intent(in)  :: omegaMax        ! phonon energy scale (Hartree), i_integration=1 only
+
+        integer :: num_wann, jspin, ik, ne, nKept
+        real    :: window, efUse
+        real,    allocatable :: eigvals(:)
+        logical, allocatable :: mask(:)
+
+        num_wann = fi%wannierlib%num_wann
+        window   = 6.0 * fi%input%tkb
+        if (fi%dfpt%i_integration == 1 .and. present(omegaMax)) window = 8.0 * max(fi%input%tkb, omegaMax)
+
+        efUse = results%ef
+        if (present(ef_in)) efUse = ef_in
+
+        allocate(eigvals(num_wann))
+        allocate(mask(npoints))
+        mask = .false.
+
+        ! A point is kept if any band at any spin lies within the window of E_F.
+        do jspin = 1, fi%input%jspins
+            do ik = 1, npoints
+                call read_eig(eig_id, ik, jspin, neig=ne, eig=eigvals)
+                if (any(abs(eigvals(:ne) - efUse) < window)) mask(ik) = .true.
+            end do
+        end do
+
+        nKept = count(mask)
+        allocate(keptIdx(nKept))
+        allocate(keptKpts(3, nKept))
+        nKept = 0
+        do ik = 1, npoints
+            if (mask(ik)) then
+                nKept = nKept + 1
+                keptIdx(nKept)    = ik
+                keptKpts(:,nKept) = coords(:, ik)
+            end if
+        end do
+
+        deallocate(eigvals, mask)
+
+    end subroutine select_fermi_kpoints
 
 END MODULE  m_dfpt_elph_mat

@@ -77,7 +77,9 @@ contains
     !complex                                      :: sigma_loc(2), sigma_loc2(2)
     complex, allocatable                         :: alphm(:,:), psq(:)
     real,    allocatable                         :: af1(:), bf1(:)
-    real                                         :: gaussian, sigma ! smoothing function in case of DFPT + Film 
+    real                                         :: gaussian, sigma ! smoothing function in case of DFPT + Film
+    real                                         :: wgtEdge, zMir ! blend across the +-dTilda/2 cell edge
+    complex                                      :: vintczMir
     LOGICAL :: l_dfptvgen ! If this is true, we handle things differently!
     LOGICAL :: l_2ndord, l_corr , l_gradientEfield
 
@@ -145,6 +147,14 @@ contains
         ! create v(z) for each 2-d reciprocal vector
         ivfft = 3 * stars%mx3
         ani = 1.0 / real( ivfft )
+        ! The edge blend below evaluates vintcz up to a distance dTilda-2*z1 into a
+        ! vacuum, twice as far as the plain z-loop needs. Guard the vz interpolation,
+        ! which reads vnew(im:im+2,...) without a bound check for the G_||=0 star.
+        if ( .not. l_dfptvgen ) then
+          if ( ( cell%amat(3,3) - 2 * cell%z1 ) / vacuum%delz + 3 > vacuum%nmz ) &
+            call juDFT_error( "Vacuum mesh too short for the film potential edge blend", &
+                              hint="Increase nmz or reduce dTilda-dVac", calledby="vgen_coulomb" )
+        end if
         do irec2 = 1, stars%ng2
           ! If we do DFPT, we want to fix the second vacuum at infinity to 0. This is WIP,
           ! as to how we want to do it eventually. Here, we calculate the necessary offset.
@@ -160,7 +170,29 @@ contains
             vintcza = vintcz( stars, vacuum, cell,  input, field, z, irec2, psq, &
                               vCoul%vac(:,:,:,ispin), &
                                 rhobar, sig1dh, vz1dh, alphm, vslope, l_dfptvgen )
-            if (l_dfptvgen) THEN 
+            ! vintcz returns the vacuum-1 solution for z >= z1 and the vacuum-2 solution
+            ! for z <= -z1. The two differ, so the periodic continuation that this FFT
+            ! represents jumps at the cell edge z = +-amat(3,3)/2. Blend the two sides of
+            ! that edge with an error-function weight to remove the jump. Without it the
+            ! expansion carries a Gibbs error that reaches back into the physical
+            ! interstitial (~1e-3 htr), and for even ivfft one sample lands exactly on the
+            ! edge and picks up the vacuum-1 value alone, which additionally makes the
+            ! coefficients spuriously z-asymmetric.
+            ! The weight is exactly 1 for |z| <= z1, so the potential inside the physical
+            ! interstitial is never blended, and exactly 1/2 on the edge itself. sigma
+            ! scales with the filler width, so the erf argument at |z| = z1 is 4/sqrt(2)
+            ! for every cell; widening the blend beyond this turns the |z| = z1 clamp into
+            ! a new discontinuity and makes things worse again.
+            if ( .not. l_dfptvgen .and. abs( z ) > cell%z1 ) then
+              wgtEdge = 0.5 * ( 1.0 + erf( ( cell%amat(3,3) / 2.0 - abs( z ) ) &
+                                         / ( sqrt( 2.0 ) * sigma ) ) )
+              zMir = z - sign( cell%amat(3,3), z )   ! same distance into the other vacuum
+              vintczMir = vintcz( stars, vacuum, cell,  input, field, zMir, irec2, psq, &
+                                  vCoul%vac(:,:,:,ispin), &
+                                    rhobar, sig1dh, vz1dh, alphm, vslope, l_dfptvgen )
+              vintcza = wgtEdge * vintcza + ( 1.0 - wgtEdge ) * vintczMir
+            end if
+            if (l_dfptvgen) THEN
               if (dfpt%l_symVacLevel .AND. (irec2 == 1) ) vintcza = vintcza + constantShift
               vintcza = vintcza * gaussian
             end if 
@@ -191,7 +223,7 @@ contains
               !                 ENDIF
               !       ----> only stars within g_max sphere (shz oct.97)
               if ( irec3 /= 0 ) then
-                xint = cmplx( af1(i), bf1(i) ) * ani
+                xint = cmplx( af1(i), bf1(i) ) * ani * conjg( stars%rgphs(stars%kv2(1,irec2),stars%kv2(2,irec2),k3) )
                 nzst1 = stars%nstr(irec3) / stars%nstr2(irec2)
                 vCoul%pw(irec3,1) = vCoul%pw(irec3,1) + xint / nzst1
               end if

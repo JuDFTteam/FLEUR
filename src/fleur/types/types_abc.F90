@@ -289,7 +289,20 @@ CONTAINS
 ! Calculation of a, b coefficients for LAPW basis functions
             CALL timestart("hsmt_ab")
 !!$acc data copyin(fjgj,fjgj%fj,fjgj%gj) copyout(abcoeffs)
-            CALL hsmt_ab(sym, atoms, noco, nococonv, jspin, iintsp, iType, iAtom, cell, lapw, fjgj, abCoeffs, abSize, .FALSE.)
+            ! Own the abCoeffs device mapping here instead of letting hsmt_ab do it.
+            ! hsmt_ab's `enter data` names its own dummy argument, whose descriptor is
+            ! never released by the `exit data delete(abCoeffs)` below -- that names
+            ! the caller's descriptor, a different address.  The orphaned entry then
+            ! sits in the present table over stack that gets reused, and a later
+            ! `enter data` on anything overlapping it (fjgj, above) aborts with
+            ! "variable in data clause is partially present on the device".
+            ! Skipped when the abCoeffs cache is active: it owns the allocation.
+            IF (.NOT.l_use_abcoeff_store) THEN
+               abSize = hsmt_ab_size(atoms, iType, .FALSE.)
+               ALLOCATE(abCoeffs(2*abSize, lapw%nv(iintsp)))
+               !$acc enter data create(abCoeffs)
+            END IF
+            CALL hsmt_ab(sym, atoms, noco, nococonv, jspin, iintsp, iType, iAtom, cell, lapw, fjgj, abCoeffs, abSize, .FALSE., l_store=.TRUE.)
 !!$acc end data
             abSize = abSize/2
             CALL timestop("hsmt_ab")
@@ -318,7 +331,7 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
             ! device copy it created and the host array before the next call.
             !$acc exit data delete(abCoeffs)
             ! Hand abCoeffs to the optional store for later reuse (no-op unless on).
-            CALL abcoeff_store_save(abCoeffs, lapw%nk, iintsp, jspin, iAtom)
+            CALL abcoeff_store_save(abCoeffs, lapw%nk, iintsp, jspin, iAtom, .FALSE.)
             IF (ALLOCATED(abCoeffs)) DEALLOCATE(abCoeffs)
 
             CALL timestart("local orbitals")
@@ -571,7 +584,20 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
 ! Calculation of a, b coefficients for LAPW basis functions
             CALL timestart("hsmt_ab")
 !!$acc data copyin(fjgj,fjgj%fj,fjgj%gj) copyout(abcoeffs)
-            CALL hsmt_ab(sym, atoms, noco, nococonv, jspin, iintsp, iType, iAtom, cell, lapw, fjgj, abCoeffs, abSize, .FALSE.)
+            ! Own the abCoeffs device mapping here instead of letting hsmt_ab do it.
+            ! hsmt_ab's `enter data` names its own dummy argument, whose descriptor is
+            ! never released by the `exit data delete(abCoeffs)` below -- that names
+            ! the caller's descriptor, a different address.  The orphaned entry then
+            ! sits in the present table over stack that gets reused, and a later
+            ! `enter data` on anything overlapping it (fjgj, above) aborts with
+            ! "variable in data clause is partially present on the device".
+            ! Skipped when the abCoeffs cache is active: it owns the allocation.
+            IF (.NOT.l_use_abcoeff_store) THEN
+               abSize = hsmt_ab_size(atoms, iType, .FALSE.)
+               ALLOCATE(abCoeffs(2*abSize, lapw%nv(iintsp)))
+               !$acc enter data create(abCoeffs)
+            END IF
+            CALL hsmt_ab(sym, atoms, noco, nococonv, jspin, iintsp, iType, iAtom, cell, lapw, fjgj, abCoeffs, abSize, .FALSE., l_store=.TRUE.)
 !!$acc end data
             abSize = abSize/2
             CALL timestop("hsmt_ab")
@@ -613,7 +639,7 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
             ! device copy it created and the host array before the next call.
             !$acc exit data delete(abCoeffs)
             ! Hand abCoeffs to the optional store for later reuse (no-op unless on).
-            CALL abcoeff_store_save(abCoeffs, lapw%nk, iintsp, jspin, iAtom)
+            CALL abcoeff_store_save(abCoeffs, lapw%nk, iintsp, jspin, iAtom, .FALSE.)
             IF (ALLOCATED(abCoeffs)) DEALLOCATE(abCoeffs)
 
 

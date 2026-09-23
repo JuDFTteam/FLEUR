@@ -69,17 +69,33 @@ SUBROUTINE vacuum_init(this,sym)
  USE m_types_sym
  CLASS(t_vacuum),INTENT(INOUT)::this
  TYPE(t_sym),INTENT(IN)::sym
- 
- allocate(this%mrot2(2,2),this%tau2(2))  
- if (sym%nop>sym%nop2) THEN
+
+ INTEGER :: iop,iop_z
+
+ allocate(this%mrot2(2,2),this%tau2(2))
+
+ ! Find an operation that maps z -> -z, i.e. one that relates the two vacua.
+ ! Searching explicitly rather than assuming operation sym%nop2+1 keeps this
+ ! independent of whether t_sym%init was able to sort the 2D operations first.
+ iop_z = 0
+ DO iop = 1, sym%nop
+    IF (sym%mrot(3,3,iop) == -1) THEN
+       iop_z = iop
+       EXIT
+    END IF
+ END DO
+
+ if (sym%nop>sym%nop2 .AND. iop_z>0) THEN
    this%nvac=1
-   this%mrot2(1:2,1:2) = sym%mrot(1:2,1:2,sym%nop2+1)
-   this%tau2(1:2) = sym%tau(1:2,sym%invtab(sym%nop2+1))
+   ! mrot2 and tau2 have to belong to the *same* operation - see map_2nd_vac.
+   this%mrot2(1:2,1:2) = sym%mrot(1:2,1:2,iop_z)
+   this%tau2(1:2) = sym%tau(1:2,iop_z)
  else
+   this%nvac=2
    this%mrot2(1:2,1:2) = sym%mrot(1:2,1:2,1)
    this%tau2(1:2) = sym%tau(1:2,1)
- endif   
-   
+ endif
+
 END SUBROUTINE vacuum_init
 
 
