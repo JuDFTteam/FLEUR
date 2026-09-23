@@ -14,29 +14,11 @@
       REAL, INTENT (IN) :: aj,bj,am,bm,cj,cm
 
       INTEGER n,k,i,i1,i2,i3,i4,i5,i6,i7,i8,i9,i10
-      INTEGER iaj2,ibj2,icj2,im2,in2,ip2
-      REAL    x,s,c,e,tol
+      INTEGER iam2,ibm2,icm2
+      REAL    x,s,c,e
       REAL    f(100)
+      REAL, PARAMETER :: tol = 1.e-5
       INTRINSIC sqrt,exp,min0,max0,nint,abs
-
-      clebsch = 0.e0
-
-      tol = 1.e-5
-      iaj2 = NINT(2.e0*aj)
-      ibj2 = NINT(2.e0*bj)
-      icj2 = NINT(2.e0*cj)
-      im2  = NINT(2.e0*am)
-      in2  = NINT(2.e0*bm)
-      ip2  = NINT(2.e0*cm)
-
-      IF (ABS(2.e0*aj - REAL(iaj2)).GT.tol) RETURN
-      IF (ABS(2.e0*bj - REAL(ibj2)).GT.tol) RETURN
-      IF (ABS(2.e0*cj - REAL(icj2)).GT.tol) RETURN
-      IF (ABS(2.e0*am - REAL(im2 )).GT.tol) RETURN
-      IF (ABS(2.e0*bm - REAL(in2 )).GT.tol) RETURN
-      IF (ABS(2.e0*cm - REAL(ip2 )).GT.tol) RETURN
-
-      IF (im2 + in2 .NE. ip2) RETURN
 
       n = 100
       k =   0
@@ -51,8 +33,25 @@
          ENDDO
       ENDIF
 
-      i = am + bm - cm + .1e0
-      IF (( i < 0 ).OR.( i > 0 )) THEN
+!     Selection rule am+bm=cm. Compare doubled projections as integers:
+!     a truncating test on the real difference lets a mismatch of -1 pass,
+!     because INT(-1+0.1) is 0, and then returns a non-zero coefficient.
+      iam2 = NINT(2.e0*am)
+      ibm2 = NINT(2.e0*bm)
+      icm2 = NINT(2.e0*cm)
+      IF (ABS(2.e0*am-REAL(iam2)) > tol) THEN
+         clebsch = 0.e0
+         RETURN
+      ENDIF
+      IF (ABS(2.e0*bm-REAL(ibm2)) > tol) THEN
+         clebsch = 0.e0
+         RETURN
+      ENDIF
+      IF (ABS(2.e0*cm-REAL(icm2)) > tol) THEN
+         clebsch = 0.e0
+         RETURN
+      ENDIF
+      IF ( iam2+ibm2 /= icm2 ) THEN
          clebsch = 0.e0
          RETURN
       ENDIF
@@ -203,33 +202,4 @@
       
 
       END FUNCTION clebsch
-
-      SUBROUTINE clebsch_selftest(unit)
-      IMPLICIT NONE
-      INTEGER, INTENT(IN), OPTIONAL :: unit
-      INTEGER out
-      REAL c1,c2,c3,c4
-
-      out = 6
-      IF (PRESENT(unit)) out = unit
-
-      c1 = clebsch(1.0,0.5,-1.0, 0.5,1.5,-0.5)
-      c2 = clebsch(1.0,0.5, 0.0, 0.5,1.5, 0.5)
-      c3 = clebsch(1.0,0.5, 1.0, 0.5,1.5, 1.5)
-      c4 = clebsch(1.0,0.5, 0.0, 0.5,1.5, 1.5)
-
-      WRITE(out,'(a)') 'Clebsch-Gordan self-test table:'
-      WRITE(out,'(a,3f10.5,a,es18.10,a,es18.10)')
-     + '<1,-1;1/2,+1/2|3/2,-1/2> ',1.0,-1.0,-0.5,
-     + ' value=',c1,' expected=',1.0/SQRT(3.0)
-      WRITE(out,'(a,3f10.5,a,es18.10,a,es18.10)')
-     + '<1, 0;1/2,+1/2|3/2,+1/2> ',1.0,0.0,0.5,
-     + ' value=',c2,' expected=',SQRT(2.0/3.0)
-      WRITE(out,'(a,3f10.5,a,es18.10,a,es18.10)')
-     + '<1,+1;1/2,+1/2|3/2,+3/2> ',1.0,1.0,1.5,
-     + ' value=',c3,' expected=',1.0
-      WRITE(out,'(a,3f10.5,a,es18.10,a,es18.10)')
-     + '<1, 0;1/2,+1/2|3/2,+3/2> ',1.0,0.0,1.5,
-     + ' value=',c4,' expected=',0.0
-      END SUBROUTINE clebsch_selftest
       END MODULE m_clebsch

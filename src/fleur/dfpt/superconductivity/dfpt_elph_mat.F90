@@ -343,7 +343,8 @@ CONTAINS
 
         integer :: eig_id_interpol,q_eig_id_interpol, num_wann , ikpt, iMode, ispin, iPerturb
         integer :: iQ, nKept, nSurv, iKept, ne, iWann, i, nLocKpts, nInterpol
-        real    :: qvec(3), pref
+        real    :: qvec(3)
+        complex :: pref
         real,allocatable :: kqpts_interpol(:,:)
         integer, allocatable :: myIdx(:)       ! this rank's global fine-k indices
         real,    allocatable :: myKpts(:,:)    ! (3, nLocKpts) this rank's slice of the fine k-mesh

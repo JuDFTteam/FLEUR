@@ -40,7 +40,7 @@ module m_dfpt_write_epw
    use m_types
    use m_constants
    use m_matrix_interpolation,  only: t_wann_ft
-   use m_dfpt_dynmat_fourier,   only: ft_dyn, ft_dyn_direct, unfold_grid, build_ws_ft
+   use m_dfpt_dynmat_fourier,   only: ft_dyn, ft_dyn_direct, build_ws_ft
 
    implicit none
    private
@@ -73,7 +73,7 @@ contains
       integer :: ft_lim_k(2,3)
       complex, allocatable :: chw(:,:,:)          ! (nbndsub,nbndsub,nrr_k)   electron H, real space [Ry]
       complex, allocatable :: rdw(:,:,:)          ! (nmodes,nmodes,nrr_q)     dyn-matrix, real space
-      complex, allocatable :: chw_cube(:,:,:,:,:) ! dense electron-H cube on the k-mesh box
+      complex, allocatable :: chw_cube(:,:,:) ! dense electron-H grid on the k-mesh box
       integer, allocatable :: irvec_q(:,:)        ! (3,nrr_q) phonon WS vectors (own q-mesh)
       real,    allocatable :: weight_q(:)         ! (nrr_q)   phonon WS weights (= 1/ndegen)
       character(len=:), allocatable :: prefix
@@ -100,7 +100,7 @@ contains
 
       ! --- electron Hamiltonian real space (R_e) ---
       call build_chw_cube(fi, results, U_full, ispin, ft_lim_k, nbndsub, chw_cube)
-      call unpack_cube(chw_cube, ftRealspace(1,ispin)%ws_k_indStored, nrr_k, htr2ry, chw)
+      call unpack_cube(chw_cube, ftRealspace(1,ispin)%ws_k_indFlat, nrr_k, htr2ry, chw)
 
       ! --- dynamical matrix real space (R_q) on the coarse phonon q-mesh ---
       call build_rdw(fi, dynMats, nmodes, rdw, irvec_q, weight_q, nrr_q, qpts_dyn, sym_dyn)
@@ -123,11 +123,11 @@ contains
 
    !---------------------------------------------------------------------------
 
-   subroutine unpack_cube(cube, indStored, nNZ, scal, list)
-      !! Copy the dense real-space cube values at the WS folded indices into a
+   subroutine unpack_cube(cube, indFlat, nNZ, scal, list)
+      !! Copy the dense real-space grid values at the WS folded indices into a
       !! flat (m,n,ir) list, scaled by `scal`.
-      complex,              intent(in)  :: cube(:,:,0:,0:,0:)
-      integer,              intent(in)  :: indStored(:,:)   ! (3,nNZ) 0-based folded indices
+      complex,              intent(in)  :: cube(:,:,0:)
+      integer,              intent(in)  :: indFlat(:)       ! (nNZ) 0-based folded indices
       integer,              intent(in)  :: nNZ
       real,                 intent(in)  :: scal
       complex, allocatable, intent(out) :: list(:,:,:)
@@ -137,7 +137,7 @@ contains
       m = size(cube,1); n = size(cube,2)
       allocate(list(m,n,nNZ))
       do ir = 1, nNZ
-         list(:,:,ir) = scal * cube(:,:, indStored(1,ir), indStored(2,ir), indStored(3,ir))
+         list(:,:,ir) = scal * cube(:,:, indFlat(ir))
       end do
    end subroutine unpack_cube
 
@@ -148,22 +148,21 @@ contains
       type(t_results),    intent(in)  :: results
       complex,            intent(in)  :: U_full(:,:,:,:)
       integer,            intent(in)  :: ispin, ft_lim(2,3), nwann
-      complex, allocatable, intent(out) :: cube(:,:,:,:,:)
+      complex, allocatable, intent(out) :: cube(:,:,:)
 
       integer :: num_bands, ikpt, ib, nk1, nk2, nk3, ngrid
-      complex, allocatable :: H_bloch(:,:), matRot(:,:), fft_grid(:,:,:)
+      complex, allocatable :: H_bloch(:,:), matRot(:,:)
 
       num_bands = fi%wannierlib%max_band - fi%wannierlib%min_band + 1
-      ! size the box from ft_lim so the folding matches the WS indStored exactly
+      ! size the box from ft_lim so the folding matches the WS indFlat exactly
       nk1 = ft_lim(2,1) - ft_lim(1,1) + 1
       nk2 = ft_lim(2,2) - ft_lim(1,2) + 1
       nk3 = ft_lim(2,3) - ft_lim(1,3) + 1
       ngrid = nk1*nk2*nk3
 
       allocate(H_bloch(num_bands,num_bands), matRot(nwann,nwann))
-      allocate(fft_grid(nwann,nwann,ngrid))
-      allocate(cube(nwann,nwann,0:nk1-1,0:nk2-1,0:nk3-1))
-      fft_grid = cmplx(0.0,0.0)
+      allocate(cube(nwann,nwann,0:ngrid-1))
+      cube = cmplx(0.0,0.0)
 
       do ikpt = 1, fi%kpts%nkpt
          H_bloch = cmplx(0.0,0.0)
@@ -172,10 +171,9 @@ contains
          end do
          ! Wannier gauge: U^dagger H U
          matRot = matmul(conjg(transpose(U_full(:,:,ikpt,ispin))), matmul(H_bloch, U_full(:,:,ikpt,ispin)))
-         call ft_dyn_direct(ft_lim, 1, fi%kpts%bk(:,ikpt), matRot, fft_grid)
+         call ft_dyn_direct(ft_lim, 1, fi%kpts%bk(:,ikpt), matRot, cube)
       end do
-      fft_grid = fft_grid / fi%kpts%nkpt
-      call unfold_grid(ft_lim, fft_grid, cube)
+      cube = cube / fi%kpts%nkpt
    end subroutine build_chw_cube
 
    subroutine build_rdw(fi, dynMats, nmodes, rdw, Rvecs_q, weightNZ_q, nrr_q, qpts_dyn, sym_dyn)
@@ -200,9 +198,9 @@ contains
 
       integer :: nq(3), ft_lim(2,3), bigBox(2,3), boxSize, ix, iy, iz, iGrid, ia, ja, i0, j0
       real    :: fac
-      integer, allocatable :: supercellR(:,:), indStored_q(:,:)
+      integer, allocatable :: supercellR(:,:), indFlat_q(:)
       real,    allocatable :: FTweight(:)
-      complex, allocatable :: cube(:,:,:,:,:), dyn_mat_q_full(:,:,:)
+      complex, allocatable :: cube(:,:,:), dyn_mat_q_full(:,:,:)
       type(t_cell) :: cellLocal
 
       if (size(dynMats, 3) < qpts_dyn%nkpt) then
@@ -231,10 +229,10 @@ contains
       end do
       cellLocal = fi%cell
       call cellLocal%calculate_WSweight(supercellR, FTweight, scaleSupercell=nq)
-      call build_ws_ft(ft_lim, bigBox, FTweight, nrr_q, Rvecs_q, indStored_q, weightNZ_q)
+      call build_ws_ft(ft_lim, bigBox, FTweight, nrr_q, Rvecs_q, indFlat_q, weightNZ_q)
 
       ! D_norm(R) = (1/Nq) sum_q e^{+i q.R} D(q)   (symmetry-unfolded to the full BZ)
-      allocate(cube(nmodes,nmodes,0:nq(1)-1,0:nq(2)-1,0:nq(3)-1))
+      allocate(cube(nmodes,nmodes,0:nq(1)*nq(2)*nq(3)-1))
       call ft_dyn(fi%atoms, qpts_dyn, sym_dyn, ft_lim, fi%cell%amat, dynMats, cube, dyn_mat_q_full)
 
       ! per-(atom,atom) block mass/energy scaling (see module header)
@@ -243,11 +241,11 @@ contains
          do ja = 1, fi%atoms%nat
             j0 = 3*(ja-1)
             fac = htr2ry**2 * amu_ry * sqrt(atomicMasses_const(fi%atoms%nz(ia)) * atomicMasses_const(fi%atoms%nz(ja)))
-            cube(i0+1:i0+3, j0+1:j0+3, :,:,:) = fac * cube(i0+1:i0+3, j0+1:j0+3, :,:,:)
+            cube(i0+1:i0+3, j0+1:j0+3, :) = fac * cube(i0+1:i0+3, j0+1:j0+3, :)
          end do
       end do
 
-      call unpack_cube(cube, indStored_q, nrr_q, 1.0, rdw)
+      call unpack_cube(cube, indFlat_q, nrr_q, 1.0, rdw)
    end subroutine build_rdw
 
    !---------------------------------------------------------------------------
@@ -444,7 +442,7 @@ contains
       character(len=*),   intent(in) :: prefix
 
       integer :: iu, irg, imode, irk, lrepmatw, direct_io_factor, unf_recl
-      integer :: ke(3), kg(3)
+      integer :: ke, kg
       real    :: dummy
       complex, allocatable :: rec4d(:,:,:,:)
 
@@ -456,12 +454,11 @@ contains
       open(newunit=iu, file=trim(prefix)//".epmatwp", status='replace', action='write', &
            form='unformatted', access='direct', recl=unf_recl)
       do irg = 1, nrr_g
-         kg = ft_spin(1)%ws_q_indStored(:,irg)
+         kg = ft_spin(1)%ws_q_indFlat(irg)
          do imode = 1, nmodes
             do irk = 1, nrr_k
-               ke = ft_spin(1)%ws_k_indStored(:,irk)
-               rec4d(:,:,irk,imode) = htr2ry * &
-                  ft_spin(imode)%matWannier(:,:, ke(1),ke(2),ke(3), kg(1),kg(2),kg(3))
+               ke = ft_spin(1)%ws_k_indFlat(irk)
+               rec4d(:,:,irk,imode) = htr2ry * ft_spin(imode)%matWannier(:,:, ke, kg)
             end do
          end do
          write(iu, rec=irg) rec4d

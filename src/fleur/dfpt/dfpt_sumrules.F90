@@ -16,7 +16,7 @@ module m_dfpt_sumrules
 
 contains
 
-   subroutine dfpt_born_huang(atoms, cell, ft_lim, nNZ, Rvecs, indStored, weightNZ, fcm)
+   subroutine dfpt_born_huang(atoms, cell, ft_lim, nNZ, Rvecs, indFlat, weightNZ, fcm)
       !! Projects the real-space force constants onto the translational, rotational
       !! and Born-Huang invariance conditions. fcm holds the de-normalized force
       !! constants on the coarse supercell grid and is overwritten in place.
@@ -24,9 +24,9 @@ contains
       type(t_cell),  intent(in)    :: cell
       integer,       intent(in)    :: ft_lim(2,3)
       integer,       intent(in)    :: nNZ
-      integer,       intent(in)    :: Rvecs(:,:), indStored(:,:)
+      integer,       intent(in)    :: Rvecs(:,:), indFlat(:)
       real,          intent(in)    :: weightNZ(:)
-      complex,       intent(inout) :: fcm(:,:,0:,0:,0:)
+      complex,       intent(inout) :: fcm(:,:,0:)
 
       integer, parameter :: maxiter = 200
       real,    parameter :: tol     = 1e-8
@@ -49,7 +49,7 @@ contains
       integer, allocatable :: negRIdx(:), bhPairs(:,:)
 
       dynDim = size(fcm,1)
-      nR     = [size(fcm,3), size(fcm,4), size(fcm,5)]
+      nR     = ft_lim(2,:) - ft_lim(1,:) + 1
       nGrid  = nR(1)*nR(2)*nR(3)
       nBH    = 15 ! number of Born-Huang conditions
 
@@ -70,7 +70,7 @@ contains
       ! d and -d give the same conditions, but R and the offset have to carry the
       ! same sign: mixing them pairs a force constant with the wrong bond.
       do iBond = 1, nNZ
-         iGrid = indStored(1,iBond) + nR(1)*(indStored(2,iBond) + nR(2)*indStored(3,iBond))
+         iGrid = indFlat(iBond)
          rCart = matmul(cell%amat, real(Rvecs(:,iBond)))
          do iAtom = 1, atoms%nat
             do jAtom = 1, atoms%nat
@@ -111,7 +111,7 @@ contains
       end do
 
       allocate(phi(dynDim,dynDim,0:nGrid-1), phiOld(dynDim,dynDim,0:nGrid-1))
-      phi = reshape(fcm, [dynDim,dynDim,nGrid])
+      phi = fcm
       phiOld = phi
       fcScale = max(maxval(abs(phi)), 1e-30)
 
@@ -214,7 +214,7 @@ contains
          end if
       end do
 
-      phiOld = reshape(fcm, [dynDim,dynDim,nGrid])
+      phiOld = fcm
       write (oUnit,'(a)')       ' Born-Huang projection of the force constants'
       write (oUnit,'(a,i0,a)')  '   iterations                   : ', min(iter,maxiter)
       write (oUnit,'(a)')       '                                   before      on-site        after'
@@ -224,7 +224,7 @@ contains
       write (oUnit,'(a)')       '   violations are scaled by the largest bond length in the R box'
       write (oUnit,'(a,es13.3)')  '   relative change of the FCM   : ', sqrt(sum(abs(phi-phiOld)**2)/sum(abs(phiOld)**2))
 
-      fcm = reshape(phi, [dynDim,dynDim,nR(1),nR(2),nR(3)])
+      fcm = phi
 
       if (.not.l_conv) call juDFT_warn("Born-Huang projection did not fully converge.", calledby="dfpt_sumrules.F90")
 
