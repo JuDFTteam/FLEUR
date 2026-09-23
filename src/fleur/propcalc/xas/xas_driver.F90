@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2026 Peter Gruenberg Institut, Forschungszentrum Juelich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -714,7 +714,7 @@ CONTAINS
       CALL mpi_sum_reduce(underflow_local, underflow_reduced, fmpi%mpi_comm)
       lchan_reconstruction_error_reduced = lchan_reconstruction_error_local
 #ifdef CPP_MPI
-      CALL MPI_Allreduce(lchan_reconstruction_error_local, lchan_reconstruction_error_reduced, 1, MPI_REAL, MPI_MAX, &
+      CALL MPI_Allreduce(lchan_reconstruction_error_local, lchan_reconstruction_error_reduced, 1, MPI_DOUBLE_PRECISION, MPI_MAX, &
                          fmpi%mpi_comm, mpi_ierr)
       IF (mpi_ierr /= 0) CALL juDFT_error("MPI_Allreduce failed for XAS l-channel reconstruction check", calledby="m_xas_driver")
 #endif
