@@ -1,11 +1,12 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_vgen
    USE m_juDFT
 
+   implicit none
 CONTAINS
 
    SUBROUTINE vgen(hybdat,field,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
@@ -130,11 +131,17 @@ CONTAINS
       CALL vgen_xcpot(hybdat,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
                       cell,fmpi,noco,den,denRot,EnergyDen,vTot,vx,vxc,exc,results=results)
 
-      if (any(noco%l_constrained)) call vgen_constraint(atoms,noco,nococonv,vtot)
-
       ! d)
       ! TODO: Check if this is needed for more potentials as well!
       CALL vgen_finalize(fmpi ,field,cell,atoms,stars,vacuum,sym,noco,nococonv,input,xcpot,sphhar,vTot,vCoul,denRot,sliceplot)
+
+      ! The transverse constraining field has to be added AFTER vgen_finalize.
+      ! For l_mtNocoPot=T the latter calls rotate_mt_den_from_local, which zeroes
+      ! vTot%mt and rebuilds all four spin components from the local-frame diagonal
+      ! pair plus theta_mt/phi_mt. Anything written into components 3/4 before that
+      ! point is therefore discarded. This mirrors the placement of bfield(), which
+      ! carries the longitudinal b_con(3) of the fixed-moment constraint.
+      if (any(noco%l_constrained)) call vgen_constraint(atoms,noco,nococonv,vtot)
       !DEALLOCATE(vcoul%pw_w)
 
       CALL vTot%distribute(fmpi%mpi_comm)

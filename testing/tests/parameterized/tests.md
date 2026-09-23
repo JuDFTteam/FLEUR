@@ -107,6 +107,7 @@ Testset: Noco
 |     | Fe bcc, Flipcdn and noco in MT,y-dir          | noco/Fe_bcc_FlipcdnYLDA | bulk                         | produces warnings |         | 2   |
 | +   | relaxation feature of FFN in the MT           | noco/RelaxMT            | bulk,hdf                     |                   |         | 2   |
 | +   | FFN noco, spin off-diagonal LDA+U             | noco/FFNUCross          | bulk,ldau,soc,hdf            |                   |         | 2   |
+| +   | FFN noco, transverse constraint               | noco/FFNConstraint      | bulk,hdf                     |                   |         | 2   |
 
 Testset: Experimental
 ----------
