@@ -68,7 +68,7 @@ CONTAINS
 
       IF (SIZE(o, 2) /= nb) CALL judft_bug("melem_check_matrix: the matrix is not square")
 
-      WRITE(oUnit, '(a,i0,a)') 'wannierlib invariants ['//TRIM(name)//'], k = ', ik, ':'
+      WRITE(oUnit, '(a,i0,a)') 'melem invariants ['//TRIM(name)//'], k = ', ik, ':'
 
       !> Written as "not (|x| <= HUGE)" and not as "|x| > HUGE" on purpose: every
       !> comparison with a NaN is false, so the negated form is the one that catches it.
@@ -150,7 +150,7 @@ CONTAINS
       END IF
 
       IF (.NOT. ALLOCATED(op%mat)) THEN
-         WRITE(oUnit, '(a)') 'wannierlib provider check ['//TRIM(name)// &
+         WRITE(oUnit, '(a)') 'melem provider check ['//TRIM(name)// &
                              ']: nothing computed yet -- skipped'
          IF (PRESENT(l_ok)) l_ok = .TRUE.
          RETURN
@@ -161,7 +161,7 @@ CONTAINS
       !> would be meaningless, so it is refused rather than reported.
       SELECT TYPE (blk => op%mat(1, 1))
       TYPE IS (t_mpimat)
-         WRITE(oUnit, '(a)') 'wannierlib provider check ['//TRIM(name)// &
+         WRITE(oUnit, '(a)') 'melem provider check ['//TRIM(name)// &
                              ']: the blocks are distributed -- skipped (these checks are local)'
          IF (PRESENT(l_ok)) l_ok = .TRUE.
          RETURN

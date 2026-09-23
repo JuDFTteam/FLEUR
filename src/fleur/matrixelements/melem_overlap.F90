@@ -217,10 +217,10 @@ CONTAINS
       END DO
 
       IF (dmax > t .OR. omax > t) THEN
-         WRITE (oUnit, '(a,i0,a,2(a,es12.4))') 'wannierlib overlap check [k=', ik, ', '// &
+         WRITE (oUnit, '(a,i0,a,2(a,es12.4))') 'melem overlap check [k=', ik, ', '// &
             TRIM(reg)//']: M(k,k) is not the identity', '  diagonal ', dmax, '  off-diagonal ', omax
       ELSE
-         WRITE (oUnit, '(a,i0,a,2(a,es12.4))') 'wannierlib overlap check [k=', ik, ', '// &
+         WRITE (oUnit, '(a,i0,a,2(a,es12.4))') 'melem overlap check [k=', ik, ', '// &
             TRIM(reg)//']: M(k,k) = 1 ok', '  diagonal ', dmax, '  off-diagonal ', omax
       END IF
       IF (PRESENT(l_ok)) l_ok = (dmax <= t .AND. omax <= t)

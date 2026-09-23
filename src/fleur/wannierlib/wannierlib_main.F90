@@ -159,6 +159,28 @@ CONTAINS
                          wl%min_band, wl%max_band)
       CALL domains%init(this%n_domains, this%dom_kset, this%dom_suffix)
 
+      !> Two channels are two eigenproblems, wannierised one after the other, so there is no
+      !> single spin matrix over them to interpolate: within a channel sigma_z is +/-1 by
+      !> orthonormality, and the transverse part lives in the cross-spin block, which needs
+      !> BOTH gauges and therefore both wannierizations. It exists only as the combined 2N
+      !> operator in real space. Caught here rather than in the coarse pass, which would
+      !> otherwise leave a stub-sized slice to reach the interpolation driver: the summary
+      !> flags are set by the real-space list too, so they cannot tell the two lists apart.
+      IF (input%jspins == 2 .AND. .NOT.l_wannierlib_spinors) THEN
+         IF (request%needs_op('spin', interp_only=.TRUE.)) CALL judft_error( &
+            "the spin operator cannot be interpolated when the two spin channels are "// &
+            "wannierised separately", &
+            hint="ask for it in <operators_r>: there both channels are combined into the "// &
+                 "2N rspauli.1, which is the only form this operator has here", &
+            calledby="wannierlib_main")
+         IF (request%needs_op('spin_orbit', interp_only=.TRUE.)) CALL judft_error( &
+            "the spin-orbit operator cannot be interpolated when the two spin channels are "// &
+            "wannierised separately", &
+            hint="ask for it in <operators_r>: there both channels are combined into the "// &
+                 "2N rssocmat.1, which is the only form this operator has here", &
+            calledby="wannierlib_main")
+      END IF
+
       CALL melem%init(request, manifold, atoms, input, kpts, fmpi, distk, l_wannierlib_spinors)
       CALL melem%calc(request, manifold, atoms, input, sym, cell, noco, nococonv, kpts, &
                       stars, enpara, fmpi, vtot, eig_id, distk)

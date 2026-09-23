@@ -7,6 +7,10 @@ makes it a layer other code can use -- secvar_soc already does -- rather than a 
 of the wannierisation. It holds today by accident of how the code was written; this makes it
 hold on purpose, so that a USE added in the wrong direction fails here instead of quietly
 turning the two directories into one.
+
+The second is that postproc/ does not depend on the driver above it. It takes a gauge and
+writes files, and it says so by importing nothing from wannierlib/ itself -- which keeps the
+stack three layers deep rather than two directories that happen to sit apart.
 """
 import os
 import re
@@ -15,7 +19,8 @@ SRC = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", 
 
 ZONES = {
     "matrixelements": ["matrixelements"],
-    "wannierlib": ["wannierlib", os.path.join("wannierlib", "postproc")],
+    "postproc": [os.path.join("wannierlib", "postproc")],
+    "wannierlib": ["wannierlib"],
 }
 
 MODULE_RE = re.compile(r"^\s*MODULE\s+([A-Za-z_]\w*)\s*$", re.IGNORECASE)
@@ -46,23 +51,30 @@ def _module_owner():
     return owner
 
 
-def test_matrixelements_does_not_use_wannierlib():
-    """No module under matrixelements/ may USE one that lives under wannierlib/."""
+def _imports_from(zone, forbidden):
+    """Every USE in `zone` of a module owned by one of `forbidden`, as printable lines."""
     owner = _module_owner()
     assert owner, f"no Fortran modules found under {SRC} -- the paths in this test are stale"
 
     offenders = []
-    for path, fn in _sources("matrixelements"):
+    for path, fn in _sources(zone):
         with open(path, errors="ignore") as fh:
             for lineno, line in enumerate(fh, 1):
                 m = USE_RE.match(line)
                 if not m:
                     continue
                 used = m.group(1).lower()
-                if owner.get(used, ("", ""))[0] == "wannierlib":
+                where = owner.get(used, ("", ""))
+                if where[0] in forbidden:
                     offenders.append(
-                        f"  matrixelements/{fn}:{lineno} USE {m.group(1)}"
-                        f"  (lives in wannierlib/{owner[used][1]})")
+                        f"  {zone}/{fn}:{lineno} USE {m.group(1)}"
+                        f"  (lives in {where[0]}/{where[1]})")
+    return offenders
+
+
+def test_matrixelements_does_not_use_wannierlib():
+    """No module under matrixelements/ may USE one from wannierlib/ or its postproc/."""
+    offenders = _imports_from("matrixelements", {"wannierlib", "postproc"})
 
     assert not offenders, (
         "matrixelements/ must not depend on wannierlib/: it is a layer other code uses "
@@ -70,3 +82,15 @@ def test_matrixelements_does_not_use_wannierlib():
         + "\n".join(offenders)
         + "\n\nMove what is shared to a place both can see, or keep the wannier-specific "
           "part on the wannierlib side.")
+
+
+def test_postproc_does_not_use_the_driver():
+    """No module under wannierlib/postproc/ may USE one from wannierlib/ itself."""
+    offenders = _imports_from("postproc", {"wannierlib"})
+
+    assert not offenders, (
+        "wannierlib/postproc/ must not depend on the driver above it: it takes the gauge "
+        "and writes the files, and everything it needs is passed in. Offending imports:\n"
+        + "\n".join(offenders)
+        + "\n\nPass what is missing as an argument, or move the shared part down into "
+          "matrixelements/.")

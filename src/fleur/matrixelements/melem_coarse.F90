@@ -58,9 +58,10 @@ MODULE m_melem_coarse
       !> is built here with the other coarse matrices even though the operator itself cannot
       !> be assembled until both channels are wannierised.
       COMPLEX, ALLOCATABLE :: x0(:, :, :)         !< (nb,nb,nk_loc)
-      !> How many spin channels wannierise separately: two when jspins=2 without spinors,
-      !> one otherwise. It is a fact about the calculation, where the flags it replaces were
-      !> a copy of what the request already said, kept next to it and able to disagree.
+      !> How many independent eigenproblems the states come from: two when jspins=2 without
+      !> spinors, one otherwise. It is a fact about the calculation, where the flags it
+      !> replaces were a copy of what the request already said, kept next to it and able to
+      !> disagree.
       INTEGER :: n_channels = 1
       !> .TRUE. only when the spinor coarse slices were really allocated (an operator is requested
       !> AND we have spinor wavefunctions). Gates %calc, so it can never write into the stubs.
@@ -136,30 +137,6 @@ CONTAINS
       ! than one matrix over a spinor, and for the combined 2N spin operator (rspauli.1) only
       ! the cross-spin overlap, since that operator cannot be assembled until both channels
       ! have wannierised and both gauges exist.
-      !> An operator nobody will build must not reach the export: the slices stay at their
-      !> stub size, the export reads them anyway, and what comes out is small enough to pass
-      !> for numerical noise instead of for the absence of a calculation.
-      !> Two channels are two eigenproblems, wannierised one after the other, so there is
-      !> no single spin matrix over them to interpolate: within a channel sigma_z is +/-1
-      !> by orthonormality, and the transverse part lives in the cross-spin block, which
-      !> needs BOTH gauges and therefore both wannierizations. It exists only as the
-      !> combined 2N operator in real space. Said here because the summary flag is set by
-      !> the real-space list too: without this the request passed and the stub-sized slice
-      !> reached the interpolation driver, where the shapes do not conform.
-      IF (this%n_channels == 2 .AND. request%needs_op('spin', interp_only=.TRUE.)) CALL judft_error( &
-         "melem_coarse: the spin operator cannot be interpolated when the two spin "// &
-         "channels are wannierised separately", &
-         hint="ask for it in <operators_r>: there both channels are combined into the "// &
-              "2N rspauli.1, which is the only form this operator has here", &
-         calledby="melem_coarse_init")
-
-      IF (this%n_channels == 2 .AND. request%needs_op('spin_orbit', interp_only=.TRUE.)) CALL judft_error( &
-         "melem_coarse: the spin-orbit operator cannot be interpolated when the two spin "// &
-         "channels are wannierised separately", &
-         hint="ask for it in <operators_r>: there both channels are combined into the "// &
-              "2N rssocmat.1, which is the only form this operator has here", &
-         calledby="melem_coarse_init")
-
       IF (.NOT. this%l_active) THEN
          IF (request%l_socop .AND. .NOT. l_ch_soc) CALL judft_error( &
             "melem_coarse: the spin-orbit operator was requested without spin-orbit coupling", &
