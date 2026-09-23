@@ -87,8 +87,8 @@ CONTAINS
         CALL dfpt_tlmplm(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,enpara,fi%hub1inp,hub1data,vTot,fmpi,tdV1,v1real,v1imag,.FALSE.)
         CALL local_ham(sphhar,fi%atoms,fi%sym,fi%noco,nococonv,enpara,fmpi,vTot,vx,inden,fi%input,fi%hub1inp,hub1data,td,ud,0.0,.TRUE.)
 
-#ifndef _OPENACC  
-!newer nvhpc versions fail here with ICE        
+#if !defined(_OPENACC) && !defined(__NVCOMPILER)
+!nvhpc fails here with ICE
 
         DO jsp = 1, merge(1,fi%input%jspins,fi%noco%l_noco)
             DO nk_i = 1, size(fmpi%k_list)
@@ -246,7 +246,9 @@ CONTAINS
 
             END DO !nk_i
         END DO !jsp
-#endif 
+#else
+        CALL juDFT_error("DFPT is not available in builds with the NVIDIA compiler", calledby="dfpt_elph_mat.F90")
+#endif
 
 #ifdef CPP_MPI
        CALL MPI_ALLREDUCE(MPI_IN_PLACE,gmatBuffer,size(gmatBuffer),MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
