@@ -20,6 +20,8 @@ MODULE m_wannierlib_main
    USE m_matrix_element_factory, ONLY: matrix_element_factory_reset, &
                                        matrix_element_release_anchor, matrix_element_radial
    USE m_types_melem_request, ONLY: t_melem_request
+   USE m_types_melem_optable, ONLY: WANNIERLIB_INTERP, WANNIERLIB_OPR, &
+                                    melem_exposed_find, melem_exposed_names
    USE m_types_melem_manifold, ONLY: t_melem_manifold
    USE m_types_melem_domains, ONLY: t_melem_domains
    USE m_wannierlib_build_amn_mmn, ONLY: wannierlib_build_amn_mmn
@@ -100,6 +102,9 @@ CONTAINS
       COMPLEX, ALLOCATABLE :: c0_loc(:, :, :, :, :)  ! (nw,nw,3,3,nk_loc) the same one with H inside
       LOGICAL :: l_wannierlib_spinors
       TYPE(t_melem_request) :: request
+      !> The catalogue entry each requested name needs built, one per name.
+      CHARACTER(LEN=20), ALLOCATABLE :: op_needs(:), op_r_needs(:)
+      INTEGER :: iop, krow
       TYPE(t_melem_manifold) :: manifold
       TYPE(t_melem_domains) :: domains
       CHARACTER(LEN=7) :: amn_file
@@ -126,8 +131,30 @@ CONTAINS
       ! eigenstates (no gauge), so it runs before the wannierization. All of it is a no-op when
       ! no operator is requested.
       ! what the matrix-element layer is being asked for, and on which bands
+      !> The two lists are resolved against the exposure tables HERE, because those tables
+      !> say how the wannierization spells things and that is not a fact about the layer
+      !> being asked. What it receives is the catalogue entry each name needs built. A name
+      !> no table carries stops the run with the accepted names, rather than leaving an
+      !> operator silently absent from the output.
+      ALLOCATE (op_needs(SIZE(this%op_name)), op_r_needs(SIZE(this%op_r_name)))
+      DO iop = 1, SIZE(this%op_name)
+         krow = melem_exposed_find(this%op_name(iop), WANNIERLIB_INTERP)
+         IF (krow == 0) CALL juDFT_error('wannierlib: "'//TRIM(this%op_name(iop))// &
+            '" is not an operator that can be interpolated', &
+            hint=melem_exposed_names(WANNIERLIB_INTERP), calledby='wannierlib_main')
+         op_needs(iop) = WANNIERLIB_INTERP(krow)%operator
+      END DO
+      DO iop = 1, SIZE(this%op_r_name)
+         krow = melem_exposed_find(this%op_r_name(iop), WANNIERLIB_OPR)
+         IF (krow == 0) CALL juDFT_error('wannierlib: "'//TRIM(this%op_r_name(iop))// &
+            '" has no real-space export', &
+            hint=melem_exposed_names(WANNIERLIB_OPR), calledby='wannierlib_main')
+         op_r_needs(iop) = WANNIERLIB_OPR(krow)%operator
+      END DO
+
       CALL request%init(this%l_spin, this%l_orbmom, this%l_socop, this%l_operators_r, &
-                        this%op_r_name, this%op_name, this%op_total, this%l_ws_distance)
+                        this%op_r_name, this%op_name, this%op_total, &
+                        op_r_needs, op_needs, this%l_ws_distance)
       !> On a film, refuse by name rather than as a whole. The pair overlap has its vacuum
       !> half now, so the wannierization itself works and with it everything built from mmn:
       !> hamiltonian, eigenstates, position, velocity, bmn. Three quantities still stop at

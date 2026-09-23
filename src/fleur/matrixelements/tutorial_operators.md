@@ -41,11 +41,11 @@ only route with no provider to copy.
 ## 2. The map: how a name travels
 
 ```
-  inp.xml                types_wannierlib     t_melem_request      melem_coarse
-  <operator name=".."/>  ---> reader ------->  validates ------->  builds O(k)
-                                    ^               ^                   |
-                                    |               |                   v
-                          types_melem_optable ------+            postproc/melem_run
+  inp.xml                types_wannierlib    wannierlib_main      melem_coarse
+  <operator name=".."/>  ---> reader ------>  resolves -------->  builds O(k)
+                                    ^              ^                    |
+                                    |              |                    v
+                          types_melem_optable -----+            postproc/melem_run
                           (both tables)                                 |
                                     |                        +----------+----------+
                                     +----------------------> |                     |
@@ -53,9 +53,13 @@ only route with no provider to copy.
                                               bands_wann_*.dat                 O(R)
 ```
 
-Three consumers — the reader, the coarse pass and the dispatch — ask the same question of
-the same two tables. The `operator` column is the pointer between them: it names the
-catalogue entry needed to serve an exposed name, and is empty when none is.
+Three consumers — the reader, the driver and the dispatch — ask the same question of the
+same two tables. The `operator` column is the pointer between them: it names the catalogue
+entry needed to serve an exposed name, and is empty when none is.
+
+`t_melem_request` carries that answer rather than asking for it: what crosses into
+`matrixelements` is the catalogue entry, never the spelling the input used. Which is why
+nothing under `matrixelements/` imports the exposure tables, and a test says so.
 
 Never copy an array size into prose: it is wrong on the next commit that adds a row, and
 this document has been wrong that way twice. One line measures it:

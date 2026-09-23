@@ -84,6 +84,24 @@ def test_matrixelements_does_not_use_wannierlib():
           "part on the wannierlib side.")
 
 
+def test_matrixelements_does_not_name_the_exposure_tables():
+    """The exposure tables say how the wannierisation spells things, so matrixelements/
+    must not read them. They live in fleurinput/, out of reach of the zone check above,
+    which is why this is asserted by name."""
+    offenders = []
+    for path, fn in _sources("matrixelements"):
+        with open(path, errors="ignore") as fh:
+            for lineno, line in enumerate(fh, 1):
+                for table in ("WANNIERLIB_INTERP", "WANNIERLIB_OPR"):
+                    if table in line:
+                        offenders.append(f"  matrixelements/{fn}:{lineno} names {table}")
+
+    assert not offenders, (
+        "matrixelements/ must not read the wannierisation's exposure tables: what reaches "
+        "it is the catalogue entry a name needs built, resolved by whoever owns the "
+        "vocabulary. Offending lines:\n" + "\n".join(offenders))
+
+
 def test_postproc_does_not_use_the_driver():
     """No module under wannierlib/postproc/ may USE one from wannierlib/ itself."""
     offenders = _imports_from("postproc", {"wannierlib"})

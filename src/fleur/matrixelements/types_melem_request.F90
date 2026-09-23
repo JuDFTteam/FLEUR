@@ -14,8 +14,6 @@ MODULE m_types_melem_request
    !> Bloch matrix before either list can be served and does not care which one asked.
 
    USE m_judft
-   USE m_types_melem_optable, ONLY: WANNIERLIB_INTERP, WANNIERLIB_OPR, &
-                                    melem_exposed_find, melem_exposed_names
 
    IMPLICIT NONE
    PRIVATE
@@ -33,6 +31,12 @@ MODULE m_types_melem_request
       INTEGER :: n_ops = 0
       CHARACTER(LEN=20), ALLOCATABLE :: op_name(:)
       INTEGER,           ALLOCATABLE :: op_total(:)
+      !> Which CATALOGUE entry each name above needs built, '' when none does. The caller
+      !> resolves it, because the tables that spell the names belong to whoever offers
+      !> them: two callers can expose the same matrix under different names, and neither
+      !> vocabulary is a fact about this layer.
+      CHARACTER(LEN=20), ALLOCATABLE :: op_r_needs(:)
+      CHARACTER(LEN=20), ALLOCATABLE :: op_needs(:)
       !> HOW to interpolate rather than what: minimum-distance replica selection (MDRS,
       !> Wannier90's use_ws_distance). It rides with the interpolation list because it is a
       !> property of that pass alone -- the coarse Bloch matrices and the O(R) export are
@@ -49,16 +53,17 @@ MODULE m_types_melem_request
 
 CONTAINS
 
-   SUBROUTINE melem_request_init(this, l_spin, l_orbmom, l_socop, &
-                                 l_operators_r, op_r_name, op_name, op_total, l_ws_distance)
+   SUBROUTINE melem_request_init(this, l_spin, l_orbmom, l_socop, l_operators_r, &
+                                 op_r_name, op_name, op_total, op_r_needs, op_needs, &
+                                 l_ws_distance)
       CLASS(t_melem_request), INTENT(OUT) :: this
       LOGICAL,          INTENT(IN) :: l_spin, l_orbmom, l_socop, l_operators_r
       CHARACTER(LEN=*), INTENT(IN) :: op_r_name(:)   !> the O(R) list, possibly empty
       CHARACTER(LEN=*), INTENT(IN) :: op_name(:)     !> the interpolation list, possibly empty
       INTEGER,          INTENT(IN) :: op_total(:)
+      CHARACTER(LEN=*), INTENT(IN) :: op_r_needs(:)  !> catalogue entry per O(R) name
+      CHARACTER(LEN=*), INTENT(IN) :: op_needs(:)    !> catalogue entry per interpolated name
       LOGICAL,          INTENT(IN) :: l_ws_distance
-
-      INTEGER :: iop
 
       this%l_spin   = l_spin
       this%l_orbmom = l_orbmom
@@ -72,27 +77,16 @@ CONTAINS
       this%n_ops         = SIZE(op_name)
       this%op_name       = op_name
       this%op_total      = op_total
+      this%op_r_needs    = op_r_needs
+      this%op_needs      = op_needs
       this%l_ws_distance = l_ws_distance
 
       IF (SIZE(op_total) /= SIZE(op_name)) &
          CALL judft_error("t_melem_request: every interpolated operator needs its own total flag", &
                           calledby="melem_request_init")
-
-      !> A name the exposure tables do not carry stops the run here, with the accepted
-      !> names in the message, rather than leaving an operator silently absent from the
-      !> output.
-      DO iop = 1, this%n_ops
-         IF (melem_exposed_find(this%op_name(iop), WANNIERLIB_INTERP) == 0) &
-            CALL judft_error('t_melem_request: "'//TRIM(this%op_name(iop))// &
-                             '" is not an operator this layer can interpolate', &
-                             hint=melem_exposed_names(WANNIERLIB_INTERP), calledby="melem_request_init")
-      END DO
-      DO iop = 1, this%n_op_r
-         IF (melem_exposed_find(this%op_r_name(iop), WANNIERLIB_OPR) == 0) &
-            CALL judft_error('t_melem_request: "'//TRIM(this%op_r_name(iop))// &
-                             '" is not an operator this layer can export in real space', &
-                             hint=melem_exposed_names(WANNIERLIB_OPR), calledby="melem_request_init")
-      END DO
+      IF (SIZE(op_needs) /= SIZE(op_name) .OR. SIZE(op_r_needs) /= SIZE(op_r_name)) &
+         CALL judft_error("t_melem_request: every name needs its resolved catalogue entry", &
+                          calledby="melem_request_init")
    END SUBROUTINE melem_request_init
 
    !> Whether the real-space list asked for this operator. The list is the only record of
@@ -126,34 +120,14 @@ CONTAINS
       CLASS(t_melem_request), INTENT(IN) :: this
       CHARACTER(LEN=*),       INTENT(IN) :: opname
       LOGICAL, OPTIONAL,      INTENT(IN) :: interp_only
-      INTEGER :: i, k
       LOGICAL :: l_interp_only
       l_needed = .FALSE.
       l_interp_only = .FALSE.
       IF (PRESENT(interp_only)) l_interp_only = interp_only
-      IF (ALLOCATED(this%op_name)) THEN
-         DO i = 1, this%n_ops
-            k = melem_exposed_find(this%op_name(i), WANNIERLIB_INTERP)
-            IF (k > 0) THEN
-               IF (TRIM(WANNIERLIB_INTERP(k)%operator) == TRIM(opname)) THEN
-                  l_needed = .TRUE.
-                  RETURN
-               END IF
-            END IF
-         END DO
-      END IF
-      IF (l_interp_only) RETURN
-      IF (this%l_operators_r .AND. ALLOCATED(this%op_r_name)) THEN
-         DO i = 1, this%n_op_r
-            k = melem_exposed_find(this%op_r_name(i), WANNIERLIB_OPR)
-            IF (k > 0) THEN
-               IF (TRIM(WANNIERLIB_OPR(k)%operator) == TRIM(opname)) THEN
-                  l_needed = .TRUE.
-                  RETURN
-               END IF
-            END IF
-         END DO
-      END IF
+      IF (ALLOCATED(this%op_needs)) l_needed = melem_op_known(opname, this%op_needs)
+      IF (l_needed .OR. l_interp_only) RETURN
+      IF (this%l_operators_r .AND. ALLOCATED(this%op_r_needs)) &
+         l_needed = melem_op_known(opname, this%op_r_needs)
    END FUNCTION melem_request_needs_op
 
    !> Whether a name appears in one of the lists above.
