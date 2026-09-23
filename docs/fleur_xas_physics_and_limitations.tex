@@ -1,0 +1,489 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{physics}
+\usepackage{siunitx}
+\usepackage{hyperref}
+\usepackage{enumitem}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue,
+  citecolor=blue,
+  urlcolor=blue
+}
+
+\newcommand{\ii}{\mathrm{i}}
+\newcommand{\dd}{\mathrm{d}}
+\newcommand{\kvec}{\mathbf{k}}
+\newcommand{\qvec}{\mathbf{q}}
+\newcommand{\rvec}{\mathbf{r}}
+\newcommand{\Rvec}{\mathbf{R}}
+\newcommand{\epsvec}{\boldsymbol{\epsilon}}
+\newcommand{\Ylm}{Y_{lm}}
+\newcommand{\mt}{\mathrm{MT}}
+\newcommand{\Ha}{\mathrm{Ha}}
+\newcommand{\eV}{\mathrm{eV}}
+\newcommand{\absr}{a}
+\newcommand{\sig}{\sigma}
+\newcommand{\tausp}{\tau}
+
+\title{Independent-Particle X-ray Absorption Spectroscopy in FLEUR:\\
+Implemented Formalism, Notation, and Limitations}
+\author{Implementation notes for the FLEUR XAS prototype}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+These notes summarize the independent-particle X-ray absorption spectroscopy
+(XAS) formalism implemented in the FLEUR prototype. The implementation evaluates
+electric-dipole transitions from relativistic atomic core states localized on a
+chosen absorber atom into unoccupied Kohn--Sham or generalized Kohn--Sham band
+states. The current implementation supports the separate \(K\), \(L_2\), and
+\(L_3\) edges, linear polarizations \(x,y,z\), scalar calculations, and the
+validated first-variation noncollinear spin-orbit-coupled path. The purpose of
+this document is twofold: first, to define the implemented equations and all
+indices explicitly; second, to state clearly what physical effects are and are
+not included in the present independent-particle approximation.
+\end{abstract}
+
+\section{Physical quantity}
+
+X-ray absorption spectroscopy measures the probability that an incoming photon
+promotes a deep core electron into an available unoccupied state. In the present
+implementation, the photon momentum is neglected in the transition operator
+and the electric-dipole approximation is used. The photon is therefore described
+only by its polarization vector
+\begin{equation}
+  \epsvec = (\epsilon_x,\epsilon_y,\epsilon_z),
+\end{equation}
+and the dipole operator is
+\begin{equation}
+  \hat{D}_{\epsvec} = \epsvec \cdot \rvec .
+\end{equation}
+
+The implemented spectrum for a polarization \(\epsvec\) is
+\begin{equation}
+\label{eq:xas-spectrum}
+  I_{\epsvec}(\omega)
+  =
+  \sum_{\absr\in A_Z}
+  \sum_{c\in E}
+  \sum_{m_j=-j_c}^{j_c}
+  \sum_{n,\kvec}
+  w_{\kvec}\,
+  \bigl[1-f_{n\kvec}\bigr]\,
+  \left|
+     M^{\absr}_{n\kvec,c m_j}(\epsvec)
+  \right|^2
+  g_{\eta}\!\left[
+     \omega -
+     \left(\varepsilon_{n\kvec}-\varepsilon^{\absr}_{c}\right)
+  \right].
+\end{equation}
+All indices in Eq.~\eqref{eq:xas-spectrum} are as follows.
+\begin{description}[leftmargin=2.7cm,style=nextline]
+  \item[\(\absr\)] absorber atom. The implementation selects all atoms with
+  the requested nuclear charge \(Z\), denoted collectively by \(A_Z\).
+  \item[\(A_Z\)] set of absorber atoms with nuclear charge \(Z\). For example,
+  for \texttt{absorberZ="26"}, \(A_Z\) is the set of Fe atoms.
+  \item[\(E\)] selected absorption edge. The currently implemented separate
+  edges are \(K\), \(L_2\), and \(L_3\).
+  \item[\(c\)] core level associated with the selected edge. For a fixed edge,
+  \(c\) specifies the principal quantum number \(n_c\), orbital angular momentum
+  \(l_c\), total angular momentum \(j_c\), and relativistic quantum number
+  \(\kappa_c\).
+  \item[\(m_j\)] magnetic quantum number of the core state, with
+  \(m_j=-j_c,-j_c+1,\ldots,j_c\).
+  \item[\(n\)] band index of the final Kohn--Sham or generalized Kohn--Sham
+  state.
+  \item[\(\kvec\)] Bloch wave vector in the Brillouin zone.
+  \item[\(w_{\kvec}\)] integration weight of the \(k\)-point.
+  \item[\(f_{n\kvec}\)] occupation of band \(n\) at \(k\)-point \(\kvec\).
+  The factor \(1-f_{n\kvec}\) restricts the spectrum to available final states.
+  \item[\(\varepsilon_{n\kvec}\)] band eigenvalue of the final state.
+  \item[\(\varepsilon^{\absr}_{c}\)] core eigenvalue for core level \(c\) on
+  absorber atom \(\absr\).
+  \item[\(M^{\absr}_{n\kvec,c m_j}(\epsvec)\)] dipole transition matrix element.
+  \item[\(g_{\eta}\)] normalized broadening function with width parameter
+  \(\eta\). In the current code this is the numerical broadening used to turn
+  the discrete transition list into a smooth spectrum.
+  \item[\(\omega\)] spectrum energy variable. In the code output this is the
+  transition energy on the chosen energy grid.
+\end{description}
+
+Equation~\eqref{eq:xas-spectrum} is an independent-particle form of Fermi's
+golden rule. It uses the electronic structure from the ground-state calculation
+(or from whatever self-consistent state the user has supplied), and it does not
+solve a new interacting core-excited many-body problem.
+
+\section{Supported edges and core quantum numbers}
+
+The current implementation treats \(K\), \(L_2\), and \(L_3\) as separate
+edges. A combined \(L_{23}\) mode is deliberately not implemented yet; users
+should run \(L_2\) and \(L_3\) separately.
+
+The supported edge mappings are
+\begin{center}
+\begin{tabular}{c c c c c c}
+\hline
+Edge & Core shell & \(n_c\) & \(l_c\) & \(j_c\) & \(\kappa_c\) \\
+\hline
+\(K\)   & \(1s_{1/2}\) & 1 & 0 & \(1/2\) & \(-1\) \\
+\(L_2\) & \(2p_{1/2}\) & 2 & 1 & \(1/2\) & \(+1\) \\
+\(L_3\) & \(2p_{3/2}\) & 2 & 1 & \(3/2\) & \(-2\) \\
+\hline
+\end{tabular}
+\end{center}
+The relativistic quantum number is defined by the usual Dirac convention:
+\begin{equation}
+  \kappa =
+  \begin{cases}
+    -(l+1), & j=l+\frac12,\\[3pt]
+    +l, & j=l-\frac12 .
+  \end{cases}
+\end{equation}
+
+\section{Dipole matrix element}
+
+The absorber-resolved dipole matrix element in Eq.~\eqref{eq:xas-spectrum} is
+\begin{equation}
+\label{eq:matrix-element}
+  M^{\absr}_{n\kvec,c m_j}(\epsvec)
+  =
+  \left\langle
+     \Psi_{n\kvec}
+  \middle|
+     \epsvec\cdot\rvec
+  \middle|
+     \Phi^{\absr}_{c m_j}
+  \right\rangle_{\mt_{\absr}} .
+\end{equation}
+The integral is evaluated inside the muffin-tin sphere \(\mt_{\absr}\) around
+absorber atom \(\absr\). The symbols are:
+\begin{description}[leftmargin=2.7cm,style=nextline]
+  \item[\(\Psi_{n\kvec}\)] final band state.
+  \item[\(\Phi^{\absr}_{c m_j}\)] core state localized on absorber atom \(\absr\).
+  \item[\(\mt_{\absr}\)] muffin-tin sphere of absorber atom \(\absr\).
+\end{description}
+
+In the muffin-tin basis the final state is expanded in angular and radial basis
+functions. In a spinor calculation we write schematically
+\begin{equation}
+\label{eq:mt-expansion}
+  \Psi_{n\kvec}(\rvec)
+  =
+  \sum_{\sig}
+  \sum_{l m}
+  \sum_{\nu}
+  A^{\absr,\sig}_{n\kvec,lm\nu}\,
+  u^{\absr,\sig}_{l\nu}(r)\,
+  Y_{lm}(\hat{\rvec})\,
+  \chi_{\sig}.
+\end{equation}
+Here:
+\begin{description}[leftmargin=2.7cm,style=nextline]
+  \item[\(\sig\)] spin component. In first-variation noncollinear calculations
+  this is a local spin-frame component on the atom.
+  \item[\(l,m\)] orbital angular momentum and magnetic quantum number of the
+  final-state muffin-tin expansion.
+  \item[\(\nu\)] radial basis-function index. It labels the LAPW radial
+  solution \(u_l\), its energy derivative \(\dot{u}_l\), and local orbitals.
+  \item[\(A^{\absr,\sig}_{n\kvec,lm\nu}\)] muffin-tin expansion coefficient.
+  In the FLEUR code these are the corresponding \texttt{abc} coefficients.
+  \item[\(u^{\absr,\sig}_{l\nu}(r)\)] radial basis function for angular momentum
+  \(l\), radial order \(\nu\), and spin channel \(\sig\).
+  \item[\(Y_{lm}\)] complex spherical harmonic.
+  \item[\(\chi_{\sig}\)] spin basis function.
+\end{description}
+
+The relativistic core state is written as a spin-angular coupled state,
+\begin{equation}
+\label{eq:core-state}
+  \Phi^{\absr}_{c m_j}(\rvec)
+  =
+  P^{\absr}_{c}(r)
+  \sum_{m_c,\sig_c}
+  \left\langle
+    l_c m_c,\frac12 \sig_c
+  \middle|
+    j_c m_j
+  \right\rangle
+  Y_{l_c m_c}(\hat{\rvec})\,\chi_{\sig_c}.
+\end{equation}
+Here:
+\begin{description}[leftmargin=2.7cm,style=nextline]
+  \item[\(P^{\absr}_{c}(r)\)] reduced radial core function for core level \(c\).
+  \item[\(l_c,m_c\)] core orbital angular momentum and its magnetic quantum
+  number.
+  \item[\(\sig_c=\pm 1/2\)] core spin projection.
+  \item[\(\langle l_c m_c,\frac12\sig_c|j_c m_j\rangle\)] Clebsch--Gordan
+  coefficient coupling orbital and spin angular momenta to total angular
+  momentum \(j_c,m_j\).
+\end{description}
+
+Using Eqs.~\eqref{eq:mt-expansion} and \eqref{eq:core-state}, the matrix element
+can be written as
+\begin{equation}
+\label{eq:M-expanded}
+  M^{\absr}_{n\kvec,c m_j}(\epsvec)
+  =
+  \sum_{\sig}
+  \sum_{l m}
+  \sum_{\nu}
+  \left(A^{\absr,\sig}_{n\kvec,lm\nu}\right)^{*}
+  R^{\absr,\sig}_{l\nu,c}
+  C^{\sig}_{lm,c m_j}(\epsvec),
+\end{equation}
+where the three factors are:
+\begin{enumerate}[label=(\roman*)]
+  \item the complex conjugated band-dependent muffin-tin coefficient
+  \(\left(A^{\absr,\sig}_{n\kvec,lm\nu}\right)^{*}\);
+  \item the radial integral \(R^{\absr,\sig}_{l\nu,c}\);
+  \item the angular dipole coefficient \(C^{\sig}_{lm,c m_j}(\epsvec)\).
+\end{enumerate}
+
+\section{Radial integrals}
+
+The radial factor in Eq.~\eqref{eq:M-expanded} is
+\begin{equation}
+\label{eq:radial-integral}
+  R^{\absr,\sig}_{l\nu,c}
+  =
+  \int_0^{R_{\mt}^{\absr}}
+  \dd r\,
+  r\,
+  U^{\absr,\sig}_{l\nu}(r)\,
+  P^{\absr}_{c}(r),
+\end{equation}
+where
+\begin{description}[leftmargin=2.7cm,style=nextline]
+  \item[\(R_{\mt}^{\absr}\)] muffin-tin radius of absorber atom \(\absr\).
+  \item[\(U^{\absr,\sig}_{l\nu}(r)\)] reduced radial final-state basis function.
+  \item[\(P^{\absr}_{c}(r)\)] reduced radial core function.
+\end{description}
+The use of reduced radial functions is important. With the FLEUR reduced radial
+functions, the dipole radial factor is of the form shown in
+Eq.~\eqref{eq:radial-integral}.
+
+\section{Angular dipole coefficient}
+
+The Cartesian polarization is converted to spherical components according to
+\begin{align}
+  \epsilon_{+1} &= -\frac{\epsilon_x+\ii\epsilon_y}{\sqrt{2}},\\
+  \epsilon_{0}  &= \epsilon_z,\\
+  \epsilon_{-1}&= \frac{\epsilon_x-\ii\epsilon_y}{\sqrt{2}} .
+\end{align}
+The angular coefficient in Eq.~\eqref{eq:M-expanded} is
+\begin{equation}
+\label{eq:angular-coefficient}
+  C^{\sig}_{lm,c m_j}(\epsvec)
+  =
+  \sum_{q=-1}^{1}
+  \sum_{m_c=-l_c}^{l_c}
+  \epsilon_q\,
+  G(lm,1q,l_c m_c)\,
+  \left\langle
+    l_c m_c,\frac12 \sig
+  \middle|
+    j_c m_j
+  \right\rangle .
+\end{equation}
+Here:
+\begin{description}[leftmargin=2.7cm,style=nextline]
+  \item[\(q=-1,0,+1\)] spherical component of the dipole operator.
+  \item[\(\epsilon_q\)] spherical polarization component.
+  \item[\(G(lm,1q,l_c m_c)\)] Gaunt integral,
+  \begin{equation}
+    G(lm,1q,l_c m_c)
+    =
+    \int \dd\Omega\,
+    Y^*_{lm}(\hat{\rvec})\,
+    Y_{1q}(\hat{\rvec})\,
+    Y_{l_c m_c}(\hat{\rvec}) .
+  \end{equation}
+\end{description}
+The angular factor enforces the electric-dipole selection rule
+\begin{equation}
+  \Delta l = l-l_c = \pm 1 .
+\end{equation}
+Therefore:
+\begin{align}
+  K\ \mathrm{edge}:  \quad & l_c=0 \rightarrow l=1,\\
+  L_2,L_3\ \mathrm{edges}: \quad & l_c=1 \rightarrow l=0,2 .
+\end{align}
+
+\section{Noncollinear magnetism and spin-orbit coupling}
+
+In first-variation noncollinear spin-orbit calculations, the band states are
+spinors and each atom type can have its own local spin frame. Let
+\(U_{\absr}\) be the \(2\times 2\) unitary matrix that maps local spin
+components on atom \(\absr\) to global spin components. The FLEUR
+\texttt{abc} coefficients in a noncollinear calculation are in the local spin
+frame:
+\begin{equation}
+\label{eq:local-spin}
+  \mathbf{A}^{\mathrm{local}}_{\absr}
+  =
+  U_{\absr}^{\dagger}
+  \mathbf{A}^{\mathrm{global}}_{\absr}.
+\end{equation}
+Here \(\mathbf{A}\) is a two-component spinor of muffin-tin expansion
+coefficients for fixed \(n,\kvec,l,m,\nu\). The angular core coefficient must be
+expressed in the same local spin frame before being contracted with
+\(\mathbf{A}^{\mathrm{local}}_{\absr}\). This local-frame consistency is
+essential; otherwise the spectrum can acquire a spurious dependence on the
+chosen spin quantization axis.
+
+For symmetry-reduced calculations, FLEUR uses symmetry-generated star members
+to reconstruct the full Brillouin-zone contribution. For spinors the
+star reconstruction must transform both the orbital part and the spinor part.
+For a unitary spatial operation \(R\), let \(S_R\) be the corresponding
+spin-\(\frac12\) SU(2) matrix in the global spin frame. The validated
+coefficient-space spinor transform is
+\begin{equation}
+\label{eq:spinor-star}
+  \mathbf{A}^{\mathrm{local}}_{\mathrm{star}}
+  =
+  U_{\mathrm{mapped}}^{\dagger}\,
+  S_R^{\dagger}\,
+  U_{\mathrm{parent}}\,
+  \mathbf{A}^{\mathrm{local}}_{\mathrm{parent}} .
+\end{equation}
+The indices are:
+\begin{description}[leftmargin=2.7cm,style=nextline]
+  \item[\(\mathbf{A}^{\mathrm{local}}_{\mathrm{parent}}\)] local spinor
+  coefficient at the irreducible parent \(k\)-point.
+  \item[\(\mathbf{A}^{\mathrm{local}}_{\mathrm{star}}\)] local spinor
+  coefficient reconstructed for the symmetry-generated full-zone star member.
+  \item[\(U_{\mathrm{parent}}\)] local-to-global spin-frame matrix for the
+  parent absorber atom.
+  \item[\(U_{\mathrm{mapped}}\)] local-to-global spin-frame matrix for the
+  absorber atom after symmetry mapping.
+  \item[\(S_R\)] SU(2) matrix corresponding to the spatial rotation \(R\).
+\end{description}
+The adjoint \(S_R^\dagger\), rather than \(S_R\), appears because the code
+transforms expansion coefficients. Coefficients transform contragrediently to
+basis functions. This convention was validated by comparing symmetry-reduced
+spectra with explicit full-\(k\) calculations.
+
+\section{Broadening and energy window}
+
+The discrete transition strengths are broadened on an energy grid. If the user
+provides an explicit energy window, the grid is constructed from the user
+values \(E_{\min}\) and \(E_{\max}\). If no explicit window is provided, the code
+determines an automatic transition-energy range from the calculated transitions.
+The output reports the actual resolved grid:
+\begin{equation}
+  \omega_i = E_{\min} + (i-1)\Delta E,\qquad
+  i=1,\ldots,N_E,
+\end{equation}
+with
+\begin{equation}
+  \Delta E =
+  \frac{E_{\max}-E_{\min}}{N_E-1}.
+\end{equation}
+Here \(N_E\) is the number of energy points requested by the user.
+
+\section{Validation status}
+
+The following implementation checks have been performed:
+\begin{itemize}
+  \item scalar Fe \(L_3\), \(L_2\), and \(K\) edges give isotropic
+  \(x,y,z\) spectra in cubic tests;
+  \item two-atom absorber summation was validated for scalar Fe \(L_3\);
+  \item first-variation noncollinear SOC full-\(k\) calculations were validated
+  for different spin quantization axes;
+  \item first-variation noncollinear SOC symmetry-reduced calculations were
+  validated against explicit full-\(k\) references for \(L_3\);
+  \item a small MPI test reproduced the serial result for the validated
+  first-variation noncollinear SOC \(L_3\) case.
+\end{itemize}
+
+\section{Relation to DFT+\(U\)}
+
+The XAS matrix-element machinery should also work with DFT+\(U\) in principle.
+The reason is that the XAS module uses the eigenvalues, occupations, and
+wavefunctions produced by the electronic-structure calculation. DFT+\(U\)
+changes the Hamiltonian, and therefore changes \(\varepsilon_{n\kvec}\),
+\(f_{n\kvec}\), and the coefficients \(A^{\absr,\sig}_{n\kvec,lm\nu}\), but it
+does not require a different dipole matrix-element formula. This point should
+still be explicitly validated for representative DFT+\(U\) systems before the
+feature is advertised as fully tested.
+
+\section{Physical limitations of the independent-particle approximation}
+
+The present implementation is useful for analyzing orbital character,
+polarization dependence, absorber specificity, and trends between calculations.
+It is not a complete many-body theory of core-level spectroscopy. The main
+limitations are:
+\begin{enumerate}
+  \item \textbf{No automatic explicit core hole.}
+  The formula in Eq.~\eqref{eq:xas-spectrum} uses the electronic structure
+  supplied by the calculation. Unless the user performs a separate core-hole
+  calculation, the attraction between the excited electron and the core hole is
+  not included explicitly.
+
+  \item \textbf{No bound core exciton in the default formula.}
+  The excited electron and core hole are not solved as a correlated two-particle
+  state.
+
+  \item \textbf{No atomic multiplet physics.}
+  Many transition-metal \(L\)-edge spectra contain strong multiplet effects
+  arising from local Coulomb interactions between the core hole and valence
+  electrons. These are outside the present independent-particle treatment.
+
+  \item \textbf{Broadening is phenomenological.}
+  Lifetime and instrumental broadening are represented by the user-selected
+  broadening parameter \(\eta\), rather than being computed from first
+  principles.
+
+  \item \textbf{Absolute edge energies require alignment.}
+  Kohn--Sham eigenvalue differences are not generally quantitative absolute
+  excitation energies. Comparison with experiment usually requires an energy
+  shift or alignment to a reference.
+
+  \item \textbf{Strong final-state correlations are not included.}
+  If the final state is dominated by strong electron-hole attraction, multiplet
+  splitting, or other many-body effects, methods beyond this approximation are
+  required.
+\end{enumerate}
+
+\section{How to read the calculated spectra}
+
+A useful way for students to interpret the calculated spectrum is to ask:
+\emph{which unoccupied states are visible from a given core state and photon
+polarization?} At the \(K\) edge, a \(1s\) core electron is promoted mainly into
+\(p\)-like final states. At the \(L_2\) and \(L_3\) edges, a \(2p\) core electron
+is promoted mainly into \(s\)- and \(d\)-like final states. Differences between
+the \(x\), \(y\), and \(z\) spectra reveal anisotropy of the unoccupied states
+projected onto the absorber atom. In magnetic systems with spin-orbit coupling,
+the polarization dependence can also reflect the coupling between orbital
+character, spinor structure, and the local magnetic geometry.
+
+The method should therefore be viewed as a transparent independent-particle
+probe of orbital character and anisotropy. It is not, by itself, a complete
+prediction of experimental core-level line shapes when core-hole attraction,
+multiplets, or strong final-state correlations dominate.
+
+\section{Current implementation limitations}
+
+The current prototype has the following deliberate limitations:
+\begin{itemize}
+  \item only \(K\), \(L_2\), and \(L_3\) are exposed as separate edges;
+  \item combined \(L_{23}\) is rejected and should be handled later as a
+  separate design step;
+  \item the XML interface currently exposes only linear \(x,y,z\) polarizations;
+  \item second-variation SOC is guarded and is not part of the validated path;
+  \item time-reversal-generated star members for SOC/noncollinear XAS remain
+  guarded;
+  \item the \texttt{inpgen} noncollinear-SOC \(\theta,\phi\) workflow has a
+  known consistency issue: angles used for symmetry generation can be written
+  as runtime SOC angles, which FLEUR rejects for noncollinear calculations.
+\end{itemize}
+
+\end{document}

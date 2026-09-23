@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -10,7 +10,7 @@ MODULE m_cdngen
    implicit none
 CONTAINS
 
-SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
+SUBROUTINE cdngen(eig_id,fmpi,input,xas,banddos,sliceplot,vacuum,&
                   kpts,atoms,sphhar,stars,sym,gfinp,hub1inp,&
                   enpara,cell,field,noco,nococonv,vTot,results ,coreSpecInput,&
                   archiveType, xcpot,outDen,EnergyDen,core_den,greensFunction,hub1data,vxc,exc,&
@@ -52,6 +52,8 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    USE m_types_greensfContourData
    USE m_types_eigdos
    USE m_types_dos
+   USE m_rixs_driver, ONLY: rixs_run_driver
+   USE m_xas_driver, ONLY: xas_run_driver
    USE m_types_moessbauerParams
 
    USE m_force_sf ! Klueppelberg (force level 3)
@@ -65,6 +67,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
     
    TYPE(t_enpara),INTENT(INOUT)     :: enpara
    TYPE(t_banddos),INTENT(IN)       :: banddos
+   TYPE(t_xas),INTENT(IN)           :: xas
    TYPE(t_sliceplot),INTENT(IN)     :: sliceplot
    TYPE(t_input),INTENT(IN)         :: input
    TYPE(t_vacuum),INTENT(IN)        :: vacuum
@@ -117,7 +120,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
 #ifdef CPP_HDF
    INTEGER(HID_T)        :: banddosFile_id
 #endif
-   LOGICAL               :: l_error,Perform_metagga
+   LOGICAL               :: l_error, Perform_metagga
 
    ! Initialization section
    CALL moments%init(fmpi,input,sphhar,atoms)
@@ -171,6 +174,12 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
                   sphhar,sym,vTot ,cdnvalJob,outDen,dos,vacdos,results,moments,moessbauerParams,gfinp,&
                   hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,jDOS,greensfImagPart)
    END DO
+   ! XAS is a postprocessing calculation under output/xas, like DOS/band output:
+   ! it reuses the converged potential, eigenvalues, occupations, and MT basis.
+   IF (xas%l_xas) CALL xas_run_driver(eig_id, fmpi, input, xas, kpts, atoms, sym, cell, noco, nococonv, &
+                                      enpara, vTot, results)
+   IF (xas%l_rixs) CALL rixs_run_driver(eig_id, fmpi, input, xas, kpts, atoms, sym, cell, noco, nococonv, &
+                                        enpara, vTot, results)
    CALL timestop("cdngen: cdnval")
 
    call val_den%copyPotDen(outDen)
@@ -207,7 +216,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
       ENDIF
    ENDIF
 
-   IF (banddos%vacdos.or.banddos%dos.or.banddos%band.or.input%cdinf) THEN
+   IF (banddos%vacdos.or.banddos%dos.or.banddos%band.or.input%cdinf.or.xas%l_xas.or.xas%l_rixs) THEN
       CALL juDFT_end("Charge density postprocessing done.",fmpi%irank)
    END IF
 
