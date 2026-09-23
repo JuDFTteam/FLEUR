@@ -14,9 +14,11 @@
       REAL, INTENT (IN) :: aj,bj,am,bm,cj,cm
 
       INTEGER n,k,i,i1,i2,i3,i4,i5,i6,i7,i8,i9,i10
+      INTEGER iam2,ibm2,icm2
       REAL    x,s,c,e
       REAL    f(100)
-      INTRINSIC sqrt,exp,min0,max0
+      REAL, PARAMETER :: tol = 1.e-5
+      INTRINSIC sqrt,exp,min0,max0,nint,abs
 
       n = 100
       k =   0
@@ -31,8 +33,25 @@
          ENDDO
       ENDIF
 
-      i = am + bm - cm + .1e0
-      IF (( i < 0 ).OR.( i > 0 )) THEN
+!     Selection rule am+bm=cm. Compare doubled projections as integers:
+!     a truncating test on the real difference lets a mismatch of -1 pass,
+!     because INT(-1+0.1) is 0, and then returns a non-zero coefficient.
+      iam2 = NINT(2.e0*am)
+      ibm2 = NINT(2.e0*bm)
+      icm2 = NINT(2.e0*cm)
+      IF (ABS(2.e0*am-REAL(iam2)) > tol) THEN
+         clebsch = 0.e0
+         RETURN
+      ENDIF
+      IF (ABS(2.e0*bm-REAL(ibm2)) > tol) THEN
+         clebsch = 0.e0
+         RETURN
+      ENDIF
+      IF (ABS(2.e0*cm-REAL(icm2)) > tol) THEN
+         clebsch = 0.e0
+         RETURN
+      ENDIF
+      IF ( iam2+ibm2 /= icm2 ) THEN
          clebsch = 0.e0
          RETURN
       ENDIF
