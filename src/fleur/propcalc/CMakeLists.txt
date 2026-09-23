@@ -9,8 +9,6 @@ ${CMAKE_SOURCE_DIR}/src/fleur/propcalc/local_structural_frame.F90
 ${CMAKE_SOURCE_DIR}/src/fleur/propcalc/local_d_spin_frame_transform.F90
 ${CMAKE_SOURCE_DIR}/src/fleur/propcalc/local_coordination_core.F90
 ${CMAKE_SOURCE_DIR}/src/fleur/propcalc/local_coordination.F90
-${CMAKE_SOURCE_DIR}/src/fleur/propcalc/spin_orbital_multipoles.F90
-${CMAKE_SOURCE_DIR}/src/fleur/propcalc/local_d_spin_multipoles.F90
 )
 
 set(local_d_spin_projector_test_files
