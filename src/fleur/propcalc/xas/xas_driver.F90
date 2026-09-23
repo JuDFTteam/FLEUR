@@ -39,9 +39,9 @@ MODULE m_xas_driver
    USE m_xas_matrixelements, ONLY: xas_core_band_matrixelements
    USE m_xas_radial, ONLY: xas_radial_dipole_integrals
    USE m_xas_spectrum, ONLY: xas_accumulate_matrix_spectrum
-	   USE m_xas_symmetry, ONLY: xas_count_star_members, xas_star_member_weight, xas_rotate_abc_star_member, &
-	                             xas_rotate_abc_star_member_spinor, xas_su2_from_sym, xas_local_spin_transform, &
-	                             xas_cart_rotation_from_sym, xas_star_operation, xas_print_symmetry_rotation_diagnostics
+   USE m_xas_symmetry, ONLY: xas_count_star_members, xas_star_member_weight, xas_rotate_abc_star_member, &
+                             xas_rotate_abc_star_member_spinor, xas_su2_from_sym, xas_local_spin_transform, &
+                             xas_cart_rotation_from_sym, xas_star_operation, xas_print_symmetry_rotation_diagnostics
    IMPLICIT NONE
    PRIVATE
 
@@ -72,13 +72,13 @@ MODULE m_xas_driver
    ! Developer symmetry-basis diagnostic. Enable manually to print the raw
    ! lattice/fractional operations and the Cartesian/proper rotations used by
    ! XAS Wigner-D and SU(2) star reconstruction.
-	   LOGICAL, PARAMETER :: xas_debug_symmetry_rotations = .FALSE.
+   LOGICAL, PARAMETER :: xas_debug_symmetry_rotations = .FALSE.
    ! Developer abc fingerprint diagnostic for spinor spatial-star validation.
    ! Explicit full-k runs write DIRECT records; symmetry-reduced runs write
    ! STAR records keyed by the same full-zone k coordinates for comparison.
    LOGICAL, PARAMETER :: xas_debug_abc_star_compare = .FALSE.
    INTEGER, PARAMETER :: xas_debug_abc_star_max_records = 20
-	   CHARACTER(LEN=1), PARAMETER :: xas_debug_pol_label(xas_debug_n_pol) = [CHARACTER(LEN=1) :: "x", "y", "z"]
+   CHARACTER(LEN=1), PARAMETER :: xas_debug_pol_label(xas_debug_n_pol) = [CHARACTER(LEN=1) :: "x", "y", "z"]
 
    PUBLIC :: xas_run_driver
 
@@ -153,10 +153,10 @@ CONTAINS
       CHARACTER(LEN=200) :: error_message
       INTEGER :: ikpt_i, ikpt, ikptf, bksym, jsp_loop, jsp, ispin, nbands, nbands_read, itype
       INTEGER :: n_spin_channels, n_local_spins, max_order, nbasfcn, lmax_xas, i_band
-	      INTEGER :: n_underflow_spectrum, i_char, i_pol, iatom_l, n_absorber_types, n_absorber_atoms, nstar
+      INTEGER :: n_underflow_spectrum, i_char, i_pol, iatom_l, n_absorber_types, n_absorber_atoms, nstar
       INTEGER :: n_final_l_channels, final_l_channels(xas_max_final_l_channels), i_lchan
-	      INTEGER :: n_abc_debug_direct_records, n_abc_debug_star_records
-	      INTEGER :: xas_debug_unit, xas_abc_debug_unit
+      INTEGER :: n_abc_debug_direct_records, n_abc_debug_star_records
+      INTEGER :: xas_debug_unit, xas_abc_debug_unit
       INTEGER :: transition_units(xas_debug_n_pol), star_index
       REAL    :: xas_debug_strength_lchan(xas_max_final_l_channels, xas_debug_n_pol)
       REAL    :: xas_debug_strength_total(xas_debug_n_pol)
@@ -184,13 +184,13 @@ CONTAINS
       n_final_l_channels = 0
       n_absorber_types = 0
       n_absorber_atoms = 0
-	      weight_sum_parent = 0.0
-	      weight_sum_star = 0.0
-	      xas_debug_unit = -1
-	      xas_abc_debug_unit = -1
-	      n_abc_debug_direct_records = 0
-	      n_abc_debug_star_records = 0
-	      l_xas_angular_sumrule_printed = .FALSE.
+      weight_sum_parent = 0.0
+      weight_sum_star = 0.0
+      xas_debug_unit = -1
+      xas_abc_debug_unit = -1
+      n_abc_debug_direct_records = 0
+      n_abc_debug_star_records = 0
+      l_xas_angular_sumrule_printed = .FALSE.
       lchan_reconstruction_error_local = 0.0
       lchan_reconstruction_error_reduced = 0.0
       transition_units = -1
@@ -200,13 +200,13 @@ CONTAINS
          CALL juDFT_error("results%w_iks is not allocated in xas_run_driver", calledby="m_xas_driver")
       END IF
 
-	      xas_debug_filename = ""
-	      IF (l_root) CALL xas_debug_open_log(kpts, xas_use_spatial_star, xas_debug_unit, xas_debug_filename)
+      xas_debug_filename = ""
+      IF (l_root) CALL xas_debug_open_log(kpts, xas_use_spatial_star, xas_debug_unit, xas_debug_filename)
       IF (l_root) CALL xas_print_setup_summary(xas, xas_debug_unit)
-	      IF (l_root .AND. xas_debug_abc_star_compare) THEN
-	         OPEN(NEWUNIT=xas_abc_debug_unit, FILE="xas_abc_star_compare.dat", STATUS="REPLACE", ACTION="WRITE")
-	         CALL xas_debug_write_abc_header(xas_abc_debug_unit)
-	      END IF
+      IF (l_root .AND. xas_debug_abc_star_compare) THEN
+         OPEN(NEWUNIT=xas_abc_debug_unit, FILE="xas_abc_star_compare.dat", STATUS="REPLACE", ACTION="WRITE")
+         CALL xas_debug_write_abc_header(xas_abc_debug_unit)
+      END IF
 
       IF (l_root .AND. xas_debug_verbosity >= 3) THEN
          WRITE(*, '(a,i0)') "XAS DEBUG atom types: ntype=", atoms%ntype
@@ -427,21 +427,21 @@ CONTAINS
                ELSE IF (input%jspins == 2) THEN
                   CALL abc_spin(jsp_loop)%calc_abc(input, atoms, sym, cell, lapw, nbands, usdus, noco, nococonv, &
                                                    jsp_loop, itype, zMat)
-	               ELSE
-	                  CALL abc_spin(1)%calc_abc(input, atoms, sym, cell, lapw, nbands, usdus, noco, nococonv, &
-	                                            1, itype, zMat)
-	               END IF
+               ELSE
+                  CALL abc_spin(1)%calc_abc(input, atoms, sym, cell, lapw, nbands, usdus, noco, nococonv, &
+                                            1, itype, zMat)
+               END IF
                IF (l_root .AND. xas_debug_abc_star_compare .AND. l_spinor_abc .AND. &
                    xas_debug_is_direct_target_k(kpts%bk(:, ikpt)) .AND. &
                    n_abc_debug_direct_records < xas_debug_abc_star_max_records) THEN
-	                  DO iatom_l = 1, atoms%neq(itype)
-	                     IF (n_abc_debug_direct_records >= xas_debug_abc_star_max_records) EXIT
-	                     CALL xas_debug_dump_abc_fingerprint(xas_abc_debug_unit, "DIRECT", abc_spin, atoms, sym, cell, &
-	                                                         nococonv, itype, iatom_l, ikpt, ikpt, 1, kpts%bk(:, ikpt), &
-	                                                         lmax_xas, eig_band)
-	                     n_abc_debug_direct_records = n_abc_debug_direct_records + 1
-	                  END DO
-	               END IF
+                  DO iatom_l = 1, atoms%neq(itype)
+                     IF (n_abc_debug_direct_records >= xas_debug_abc_star_max_records) EXIT
+                     CALL xas_debug_dump_abc_fingerprint(xas_abc_debug_unit, "DIRECT", abc_spin, atoms, sym, cell, &
+                                                         nococonv, itype, iatom_l, ikpt, ikpt, 1, kpts%bk(:, ikpt), &
+                                                         lmax_xas, eig_band)
+                     n_abc_debug_direct_records = n_abc_debug_direct_records + 1
+                  END DO
+               END IF
 
                ALLOCATE(matrix(nbands, SIZE(core_states(1)%twice_mj)))
                IF (l_need_lchan_matrix) THEN
@@ -462,23 +462,23 @@ CONTAINS
                      wk_current = wk_star
 
                      ALLOCATE(abc_star_spin(n_local_spins))
-	                     IF (l_spinor_abc) THEN
-	                        CALL xas_rotate_abc_star_member_spinor(abc_spin, atoms, sym, cell, nococonv, itype, bksym, &
-	                                                               lmax_xas, abc_star_spin)
-	                        IF (l_root .AND. xas_debug_abc_star_compare .AND. kpts%nkpt /= kpts%nkptf .AND. &
-	                            bksym /= 1 .AND. n_abc_debug_star_records < xas_debug_abc_star_max_records) THEN
-	                           DO iatom_l = 1, atoms%neq(itype)
-	                              IF (n_abc_debug_star_records >= xas_debug_abc_star_max_records) EXIT
-	                              CALL xas_debug_dump_abc_fingerprint(xas_abc_debug_unit, "STAR", abc_star_spin, atoms, sym, cell, &
-	                                                                  nococonv, itype, iatom_l, ikpt, ikptf, bksym, &
-	                                                                  kpts%bkf(:, ikptf), lmax_xas, eig_band)
-	                              n_abc_debug_star_records = n_abc_debug_star_records + 1
-	                           END DO
-	                        END IF
-	                     ELSE IF (noco%l_soc) THEN
+                     IF (l_spinor_abc) THEN
+                        CALL xas_rotate_abc_star_member_spinor(abc_spin, atoms, sym, cell, nococonv, itype, bksym, &
+                                                               lmax_xas, abc_star_spin)
+                        IF (l_root .AND. xas_debug_abc_star_compare .AND. kpts%nkpt /= kpts%nkptf .AND. &
+                            bksym /= 1 .AND. n_abc_debug_star_records < xas_debug_abc_star_max_records) THEN
+                           DO iatom_l = 1, atoms%neq(itype)
+                              IF (n_abc_debug_star_records >= xas_debug_abc_star_max_records) EXIT
+                              CALL xas_debug_dump_abc_fingerprint(xas_abc_debug_unit, "STAR", abc_star_spin, atoms, sym, cell, &
+                                                                  nococonv, itype, iatom_l, ikpt, ikptf, bksym, &
+                                                                  kpts%bkf(:, ikptf), lmax_xas, eig_band)
+                              n_abc_debug_star_records = n_abc_debug_star_records + 1
+                           END DO
+                        END IF
+                     ELSE IF (noco%l_soc) THEN
                         ! Second-variation SOC does not provide the two local
                         ! spinor abc components required by the validated XAS path.
-	                        CALL xas_abort_missing_spinor_abc(input, noco, n_local_spins)
+                        CALL xas_abort_missing_spinor_abc(input, noco, n_local_spins)
                      ELSE
                         DO ispin = 1, n_local_spins
                            CALL xas_rotate_abc_star_member(abc_spin(ispin), atoms, sym, cell, itype, bksym, lmax_xas, &
@@ -819,11 +819,11 @@ CONTAINS
             WRITE(xas_debug_unit, '(a,i0,a)') "XAS DEBUG SUMMARY: underflow occurred in xas_accumulate_matrix_spectrum ", &
                                              underflow_reduced(1), &
                                              " time(s); cleared as harmless Gaussian-tail/tiny-product underflow."
-	         END IF
-	         CLOSE(xas_debug_unit)
-	         IF (xas_abc_debug_unit /= -1) CLOSE(xas_abc_debug_unit)
-	      END IF
-	   END SUBROUTINE xas_run_driver
+         END IF
+         CLOSE(xas_debug_unit)
+         IF (xas_abc_debug_unit /= -1) CLOSE(xas_abc_debug_unit)
+      END IF
+   END SUBROUTINE xas_run_driver
 
    SUBROUTINE xas_print_setup_summary(xas, log_unit)
       TYPE(t_xas), INTENT(IN) :: xas
@@ -952,8 +952,8 @@ CONTAINS
          input%jspins, ", noco%l_soc=", noco%l_soc, ", noco%l_noco=", noco%l_noco, &
          ", constructed local components=", n_local_spins, &
          ". The connected XAS spinor-star path is currently implemented for noco%l_noco; SOC without noco needs a separate abc construction."
-	      CALL juDFT_error(TRIM(error_message), calledby="m_xas_driver")
-	   END SUBROUTINE xas_abort_missing_spinor_abc
+      CALL juDFT_error(TRIM(error_message), calledby="m_xas_driver")
+   END SUBROUTINE xas_abort_missing_spinor_abc
 
    SUBROUTINE xas_debug_write_abc_header(unit)
       INTEGER, INTENT(IN) :: unit
