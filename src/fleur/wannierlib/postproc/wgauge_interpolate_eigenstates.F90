@@ -14,25 +14,25 @@
 !>  tight-binding exports). It lets any operator be reconstructed in the band basis
 !>  in post-processing (e.g. <O>_n = [C^dagger O(k') C]_nn) without re-diagonalizing.
 !>
-!>  Builds H_W(k) exactly as the band driver (m_melem_interpolate_ham),
+!>  Builds H_W(k) exactly as the band driver (m_wgauge_interpolate_ham),
 !>  Fourier-interpolates to H(k') via the shared core, diagonalizes WITH eigenvectors,
 !>  and writes C(k'). Master rank only.
-MODULE m_melem_interpolate_eigenstates
+MODULE m_wgauge_interpolate_eigenstates
   USE m_juDFT
   USE m_constants, ONLY : oUnit
   USE m_types_cell
   USE m_types_kpts
-  USE m_types_melem_manifold, ONLY: t_melem_manifold
-  USE m_melem_hamk, ONLY : melem_build_hamk
-  USE m_melem_ft, ONLY : melem_ft_interpolate
-  USE m_melem_interp_util, ONLY : melem_kpath, melem_zheev_workspace
+  USE m_types_wgauge_manifold, ONLY: t_wgauge_manifold
+  USE m_wgauge_hamk, ONLY : wgauge_build_hamk
+  USE m_wgauge_ft, ONLY : wgauge_ft_interpolate
+  USE m_wgauge_interp_util, ONLY : wgauge_kpath, wgauge_zheev_workspace
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: melem_interpolate_eigenstates
+  PUBLIC :: wgauge_interpolate_eigenstates
 CONTAINS
 
-  SUBROUTINE melem_interpolate_eigenstates(this, cell, kpts, eig, u_matrix, u_opt, kfrac, out1, irank)
-    TYPE(t_melem_manifold), INTENT(IN) :: this
+  SUBROUTINE wgauge_interpolate_eigenstates(this, cell, kpts, eig, u_matrix, u_opt, kfrac, out1, irank)
+    TYPE(t_wgauge_manifold), INTENT(IN) :: this
     TYPE(t_cell), INTENT(IN) :: cell
     TYPE(t_kpts), INTENT(IN) :: kpts
     REAL,    INTENT(IN) :: eig(:, :)          ! (num_bands, nk)
@@ -52,22 +52,22 @@ CONTAINS
     IF (irank /= 0) RETURN                      ! only the master holds the full U(k)
 
     num_wann  = this%num_wann
-    CALL timestart('melem_interpolate_eigenstates')
+    CALL timestart('wgauge_interpolate_eigenstates')
 
     ! ---- the domain's k-set, already resolved by the caller ----
     np = SIZE(kfrac, 2)   ! the caller resolved the domain; there is nothing to skip
 
-    CALL melem_kpath(cell, kfrac, kdist)   ! abscissa of the output, from the mesh just read
+    CALL wgauge_kpath(cell, kfrac, kdist)   ! abscissa of the output, from the mesh just read
 
     ! ---- H_W(k) via eigval2 (identical construction to the band driver) ----
-    CALL melem_build_hamk(this, eig, u_matrix, u_opt, ham_k)
+    CALL wgauge_build_hamk(this, eig, u_matrix, u_opt, ham_k)
 
     ! ---- Fourier-interpolate H_W(k) to the fine mesh (shared core) ----
-    CALL melem_ft_interpolate(cell, ham_k, kpts, kfrac, H_interp)
+    CALL wgauge_ft_interpolate(cell, ham_k, kpts, kfrac, H_interp)
 
     ! ---- diagonalize H(k') WITH eigenvectors; write C(k') ----
     ALLOCATE(evals(num_wann), cvec(num_wann, num_wann))
-    CALL melem_zheev_workspace('V', num_wann, work, rwork, lwork)
+    CALL wgauge_zheev_workspace('V', num_wann, work, rwork, lwork)
 
     OPEN(newunit=iu, file=TRIM(out1)//'.dat', status='replace')
     WRITE(iu,'(a)') '# Wannier-Hamiltonian eigenstates C(k): H(k) C = C E, columns of C = band'
@@ -77,7 +77,7 @@ CONTAINS
     DO ip = 1, np
       cvec = H_interp(:, :, ip)
       CALL zheev('V', 'U', num_wann, cvec, num_wann, evals, work, lwork, rwork, info)
-      IF (info /= 0) CALL juDFT_error('zheev failed', calledby='melem_interpolate_eigenstates')
+      IF (info /= 0) CALL juDFT_error('zheev failed', calledby='wgauge_interpolate_eigenstates')
       WRITE(iu,'(a,i0,4(1x,f12.8))') 'k ', ip, kfrac(:, ip), kdist(ip)
       DO j = 1, num_wann          ! column j = eigenstate j
         DO i = 1, num_wann        ! row i = Wannier index
@@ -87,7 +87,7 @@ CONTAINS
     END DO
     CLOSE(iu)
     WRITE(oUnit,'(a,i0,a)') 'wannierlib eigenstates: wrote '//TRIM(out1)//'.dat (', np, ' k-points)'
-    CALL timestop('melem_interpolate_eigenstates')
-  END SUBROUTINE melem_interpolate_eigenstates
+    CALL timestop('wgauge_interpolate_eigenstates')
+  END SUBROUTINE wgauge_interpolate_eigenstates
 
-END MODULE m_melem_interpolate_eigenstates
+END MODULE m_wgauge_interpolate_eigenstates

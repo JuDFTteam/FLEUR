@@ -12,8 +12,8 @@
 !>            matrix_element_factory, which reads the states and their coefficients and
 !>            keeps them, so one k is read once however many operators ask for it
 !>
-!>  Everything that needs the gauge lives in m_melem_run; the collinear combined spin
-!>  operator, which needs both channels wannierised, in m_melem_spin_collinear.
+!>  Everything that needs the gauge lives in m_wgauge_run; the collinear combined spin
+!>  operator, which needs both channels wannierised, in m_wgauge_spin_collinear.
 MODULE m_melem_coarse
    USE m_juDFT
    USE m_constants, ONLY: oUnit

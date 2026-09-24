@@ -6,34 +6,34 @@
 !>  Wannier-gauge band-structure interpolation for the library-mode wannierization.
 !>
 !>  This is the Hamiltonian-specific driver on top of the operator-agnostic
-!>  Fourier core m_melem_ft. It reproduces Wannier90's get_hr to build the
+!>  Fourier core m_wgauge_ft. It reproduces Wannier90's get_hr to build the
 !>  Wannier-gauge Hamiltonian H_W(k) (num_wann x num_wann):
 !>    1) slim eig to the outer window (lwindow from dis_win_min/max),
 !>    2) eigval2(m,k) = sum_win eigval_opt * |u_opt(:,m)|^2,
 !>    3) H_W(i,j,k) = sum_m eigval2(m,k) conjg(u(m,i)) u(m,j),
 !>  delegates the Fourier interpolation H_W(k) -> H(R) -> H(k') to
-!>  melem_ft_interpolate, diagonalizes H(k') and writes the bands.
+!>  wgauge_ft_interpolate, diagonalizes H(k') and writes the bands.
 !>
 !>  To interpolate a different operator, write an analogous driver that builds
-!>  its own operator matrix O_W(k) and reuses melem_ft_interpolate unchanged.
+!>  its own operator matrix O_W(k) and reuses wgauge_ft_interpolate unchanged.
 !>
 !>  Runs only on the master rank (irank==0), where the W90 U matrices are complete.
-MODULE m_melem_interpolate_ham
+MODULE m_wgauge_interpolate_ham
   USE m_juDFT
   USE m_constants, ONLY : oUnit, hartree_to_ev_const
   USE m_types_cell
   USE m_types_kpts
-  USE m_types_melem_manifold, ONLY: t_melem_manifold
-  USE m_melem_hamk, ONLY : melem_build_hamk
-  USE m_melem_ft, ONLY : melem_ft_interpolate
-  USE m_melem_interp_util, ONLY : melem_kpath, melem_zheev_workspace
+  USE m_types_wgauge_manifold, ONLY: t_wgauge_manifold
+  USE m_wgauge_hamk, ONLY : wgauge_build_hamk
+  USE m_wgauge_ft, ONLY : wgauge_ft_interpolate
+  USE m_wgauge_interp_util, ONLY : wgauge_kpath, wgauge_zheev_workspace
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: melem_interpolate_ham
+  PUBLIC :: wgauge_interpolate_ham
 CONTAINS
 
-  SUBROUTINE melem_interpolate_ham(this, cell, kpts, eig, u_matrix, u_opt, kfrac, out1, out2, irank)
-    TYPE(t_melem_manifold), INTENT(IN) :: this
+  SUBROUTINE wgauge_interpolate_ham(this, cell, kpts, eig, u_matrix, u_opt, kfrac, out1, out2, irank)
+    TYPE(t_wgauge_manifold), INTENT(IN) :: this
     TYPE(t_cell), INTENT(IN) :: cell
     TYPE(t_kpts), INTENT(IN) :: kpts
     REAL,    INTENT(IN) :: eig(:, :)          ! (num_bands, nk)
@@ -54,22 +54,22 @@ CONTAINS
     IF (irank /= 0) RETURN                      ! only the master holds the full U(k)
 
     num_wann  = this%num_wann
-    CALL timestart('melem_interpolate_ham')
+    CALL timestart('wgauge_interpolate_ham')
 
     ! ---- the domain's k-set, already resolved by the caller ----
     np = SIZE(kfrac, 2)   ! the caller resolved the domain; there is nothing to skip
 
-    CALL melem_kpath(cell, kfrac, kdist)   ! abscissa of the output, from the mesh just read
+    CALL wgauge_kpath(cell, kfrac, kdist)   ! abscissa of the output, from the mesh just read
 
     ! ---- steps 1+2: eigval2 in the optimal (num_wann) subspace ----
-    CALL melem_build_hamk(this, eig, u_matrix, u_opt, ham_k)
+    CALL wgauge_build_hamk(this, eig, u_matrix, u_opt, ham_k)
 
     ! ---- generic core: Fourier-interpolate H_W(k) to the fine path ----
-    CALL melem_ft_interpolate(cell, ham_k, kpts, kfrac, H_interp)
+    CALL wgauge_ft_interpolate(cell, ham_k, kpts, kfrac, H_interp)
 
     ! ---- diagonalize interpolated H(k') (complex Hermitian) ----
     ALLOCATE(evals(num_wann), hk(num_wann, num_wann))
-    CALL melem_zheev_workspace('N', num_wann, work, rwork, lwork)
+    CALL wgauge_zheev_workspace('N', num_wann, work, rwork, lwork)
 
     OPEN(newunit=iu,   file=TRIM(out1)//'.dat', status='replace')
     OPEN(newunit=iuev, file=TRIM(out2)//'.dat', status='replace')
@@ -78,13 +78,13 @@ CONTAINS
     DO ip = 1, np
       hk = H_interp(:, :, ip)
       CALL zheev('N', 'U', num_wann, hk, num_wann, evals, work, lwork, rwork, info)
-      IF (info /= 0) CALL juDFT_error('zheev failed', calledby='melem_interpolate_ham')
+      IF (info /= 0) CALL juDFT_error('zheev failed', calledby='wgauge_interpolate_ham')
       WRITE(iu,  '(f12.6,*(2x,f14.8))') kdist(ip), evals(:)
       WRITE(iuev,'(f12.6,*(2x,f14.8))') kdist(ip), hartree_to_ev_const * evals(:)
     END DO
     CLOSE(iu); CLOSE(iuev)
     WRITE(oUnit,'(a,i0,a)') 'wannierlib interpolation: wrote '//TRIM(out1)//'.dat (', np, ' k-points)'
-    CALL timestop('melem_interpolate_ham')
-  END SUBROUTINE melem_interpolate_ham
+    CALL timestop('wgauge_interpolate_ham')
+  END SUBROUTINE wgauge_interpolate_ham
 
-END MODULE m_melem_interpolate_ham
+END MODULE m_wgauge_interpolate_ham

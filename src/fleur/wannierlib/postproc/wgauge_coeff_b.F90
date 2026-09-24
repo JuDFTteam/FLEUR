@@ -8,16 +8,16 @@
 !>
 !>  The Hamiltonian enters only through the ab-initio eigenvalues, so B comes out of the
 !>  same neighbour overlaps the wannierisation was given and needs no uHu.
-MODULE m_melem_coeff_b
+MODULE m_wgauge_coeff_b
   USE m_juDFT
   USE m_constants, ONLY : oUnit, tpi_const
   USE m_types_kpts
-  USE m_types_melem_manifold, ONLY : t_melem_manifold
-  USE m_types_melem_bmesh
-  USE m_melem_io, ONLY : melem_write_realspace
+  USE m_types_wgauge_manifold, ONLY : t_wgauge_manifold
+  USE m_types_wgauge_bmesh
+  USE m_wgauge_io, ONLY : wgauge_write_realspace
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: melem_write_bmn
+  PUBLIC :: wgauge_write_bmn
 CONTAINS
 
   ! ---------------------------------------------------------------------------
@@ -35,19 +35,19 @@ CONTAINS
   ! part, so the sum takes no centring term and needs no Wannier centres.
   !
   ! Checked on the fly against B^W = H^W A^W, which is exact where V is square.
-  SUBROUTINE melem_write_bmn(this, kpts, eig, u_matrix, u_opt, mmn_loc, gk_loc, &
+  SUBROUTINE wgauge_write_bmn(this, kpts, eig, u_matrix, u_opt, mmn_loc, gk_loc, &
                              bmesh, irvec, nrpts, mpicm, irank, wfpref)
 #ifdef CPP_MPI
     use mpi
 #endif
-    TYPE(t_melem_manifold), INTENT(IN) :: this
+    TYPE(t_wgauge_manifold), INTENT(IN) :: this
     TYPE(t_kpts), INTENT(IN) :: kpts
     REAL,    INTENT(IN) :: eig(:, :)                 ! (nb,nk) ab-initio, Hartree
     COMPLEX, INTENT(IN) :: u_matrix(:, :, :)         ! (nw,nw,nk)
     COMPLEX, INTENT(IN) :: u_opt(:, :, :)            ! (nb,nw,nk)
     COMPLEX, INTENT(IN) :: mmn_loc(:, :, :, :)       ! (nb,nb,nntot,nk_loc) this rank's slice
     INTEGER, INTENT(IN) :: gk_loc(:)                 ! (nk_loc) global k of each slice entry
-    TYPE(t_melem_bmesh), INTENT(IN) :: bmesh
+    TYPE(t_wgauge_bmesh), INTENT(IN) :: bmesh
     INTEGER, INTENT(IN) :: irvec(:, :), nrpts, mpicm, irank
     CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: wfpref
 
@@ -83,7 +83,7 @@ CONTAINS
     END DO
     DEALLOCATE(Vk, Vkb, tmp)
     IF (irank == 0 .AND. nkl > 0) &
-      CALL melem_check_bmn_identity(nb, nw, nnt, gk_loc(1), eig, u_matrix, u_opt, &
+      CALL wgauge_check_bmn_identity(nb, nw, nnt, gk_loc(1), eig, u_matrix, u_opt, &
                                     mmn_loc(:, :, :, 1), bmesh)
 
     ! ---- the R sum ----
@@ -121,14 +121,14 @@ CONTAINS
             b4(:, :, irpt, a) = br(a, :, :, irpt)
           END DO
         END DO
-        CALL melem_write_realspace(b4, irvec, [(0, i = 1, nrpts)], nrpts, nw, 3, 'bmn', &
+        CALL wgauge_write_realspace(b4, irvec, [(0, i = 1, nrpts)], nrpts, nw, 3, 'bmn', &
                                    TRIM(fn)//'.dat', 0)
         DEALLOCATE(b4)
       END BLOCK
       WRITE(oUnit,'(a)') 'wannierlib: wrote '//TRIM(fn)//'.dat (B(R)=<0n|H (r-R)|Rm>, eV*Ang)'
     END IF
     DEALLOCATE(br)
-  END SUBROUTINE melem_write_bmn
+  END SUBROUTINE wgauge_write_bmn
 
   ! B^W_alpha(k) = H^W(k) . A^W_alpha(k), with H^W = V^dag diag(eig) V.
   !
@@ -141,12 +141,12 @@ CONTAINS
   ! One k-point carries the whole statement, since the identity holds per k. Warns and
   ! never aborts: a broken identity is a reason to look, not a reason to stop a run that
   ! may still be wanted for something else.
-  SUBROUTINE melem_check_bmn_identity(nb, nw, nnt, k, eig, u_matrix, u_opt, mmn_k, bmesh)
+  SUBROUTINE wgauge_check_bmn_identity(nb, nw, nnt, k, eig, u_matrix, u_opt, mmn_k, bmesh)
     INTEGER, INTENT(IN) :: nb, nw, nnt, k
     REAL,    INTENT(IN) :: eig(:, :)
     COMPLEX, INTENT(IN) :: u_matrix(:, :, :), u_opt(:, :, :)
     COMPLEX, INTENT(IN) :: mmn_k(:, :, :)          ! (nb,nb,nntot) at this k
-    TYPE(t_melem_bmesh), INTENT(IN) :: bmesh
+    TYPE(t_wgauge_bmesh), INTENT(IN) :: bmesh
 
     REAL, PARAMETER :: tol = 1.0e-8                ! measured residual is ~3e-13 relative
     COMPLEX, ALLOCATABLE :: Vp(:, :), Ve(:, :), Vb(:, :), hw(:, :), tw(:, :)
@@ -198,6 +198,6 @@ CONTAINS
     END IF
 
     DEALLOCATE(Vp, Ve, Vb, hw, tw, aw, bw)
-  END SUBROUTINE melem_check_bmn_identity
+  END SUBROUTINE wgauge_check_bmn_identity
 
-END MODULE m_melem_coeff_b
+END MODULE m_wgauge_coeff_b

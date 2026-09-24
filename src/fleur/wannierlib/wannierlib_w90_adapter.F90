@@ -12,7 +12,7 @@ MODULE m_wannierlib_w90_adapter
   USE m_types_kpts
   USE m_types_mpi
   USE m_types_wannierlib
-  USE m_types_melem_bmesh
+  USE m_types_wgauge_bmesh
   USE m_wannierlib_disentangle_spin, ONLY: wannierlib_disentangle_spin
 #ifdef CPP_WANNLIB_API
   USE w90_library, ONLY : lib_common_type, w90_set_comm, w90_set_option, w90_input_setopt, &
@@ -463,7 +463,7 @@ CONTAINS
   END SUBROUTINE run_w90
 
   !> Export the coarse-mesh b-shell / neighbour information that the Wannier90 kmesh setup
-  !> produced, as a plain t_melem_bmesh. This is the ONE piece of Wannier90 state the
+  !> produced, as a plain t_wgauge_bmesh. This is the ONE piece of Wannier90 state the
   !> matrix-element layer needs (for the position / Berry-connection operator), and handing it
   !> over like this keeps wannierlib_w90main private to this module and keeps m_melem_* free of
   !> the Wannier90 library. Call after run_w90 (the centres are only meaningful once wannierised).
@@ -473,7 +473,7 @@ CONTAINS
     !> INOUT and not OUT: the topology is already in here, put there before the
     !> wannierisation ran, and OUT would default-initialise it away. What this adds is the
     !> part only Wannier90 knows -- the shell weights and the b vectors it chose.
-    TYPE(t_melem_bmesh), INTENT(INOUT) :: bmesh
+    TYPE(t_wgauge_bmesh), INTENT(INOUT) :: bmesh
 #ifdef CPP_WANNLIB_API
     IF (ALLOCATED(bmesh%wb)) DEALLOCATE(bmesh%wb)
     IF (ALLOCATED(bmesh%bk)) DEALLOCATE(bmesh%bk)

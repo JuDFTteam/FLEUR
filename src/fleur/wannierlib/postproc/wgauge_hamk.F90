@@ -17,17 +17,17 @@
 !>  H_W is a unitary rotation of it and its eigenvalues ARE the ab-initio ones. That is
 !>  what makes the interpolation exact on the mesh it was built from, which is what the
 !>  WannFeBccInterp test asserts.
-MODULE m_melem_hamk
-   USE m_types_melem_manifold, ONLY: t_melem_manifold
+MODULE m_wgauge_hamk
+   USE m_types_wgauge_manifold, ONLY: t_wgauge_manifold
    IMPLICIT NONE
    PRIVATE
 
-   PUBLIC :: melem_build_hamk
+   PUBLIC :: wgauge_build_hamk
 
 CONTAINS
 
-   SUBROUTINE melem_build_hamk(this, eig, u_matrix, u_opt, ham_k)
-      TYPE(t_melem_manifold), INTENT(IN) :: this
+   SUBROUTINE wgauge_build_hamk(this, eig, u_matrix, u_opt, ham_k)
+      TYPE(t_wgauge_manifold), INTENT(IN) :: this
       REAL,    INTENT(IN) :: eig(:, :)                       !< (num_bands, nk)
       COMPLEX, INTENT(IN) :: u_matrix(:, :, :)               !< (nw,nw,nk)  MLWF gauge
       COMPLEX, INTENT(IN) :: u_opt(:, :, :)                  !< (nb,nw,nk)  disentangled
@@ -70,6 +70,6 @@ CONTAINS
          END DO
       END DO
       DEALLOCATE (eigval2)
-   END SUBROUTINE melem_build_hamk
+   END SUBROUTINE wgauge_build_hamk
 
-END MODULE m_melem_hamk
+END MODULE m_wgauge_hamk

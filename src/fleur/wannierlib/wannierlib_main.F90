@@ -22,20 +22,20 @@ MODULE m_wannierlib_main
    USE m_types_melem_request, ONLY: t_melem_request
    USE m_types_melem_optable, ONLY: WANNIERLIB_INTERP, WANNIERLIB_OPR, &
                                     melem_exposed_find, melem_exposed_names
-   USE m_types_melem_manifold, ONLY: t_melem_manifold
-   USE m_types_melem_domains, ONLY: t_melem_domains
+   USE m_types_wgauge_manifold, ONLY: t_wgauge_manifold
+   USE m_types_wgauge_domains, ONLY: t_wgauge_domains
    USE m_wannierlib_build_amn_mmn, ONLY: wannierlib_build_amn_mmn
    USE m_wannierlib_plot, ONLY: wannierlib_plot_wf
   USE m_wannierlib_uiu, ONLY: wannierlib_uiu
   USE m_wannierlib_uhu, ONLY: wannierlib_uhu
    USE m_wannierlib_w90_adapter
    USE m_melem_coarse, ONLY: t_melem_coarse
-   USE m_melem_run, ONLY: melem_run
+   USE m_wgauge_run, ONLY: wgauge_run
    USE m_wannierlib_export_basis, ONLY: wannierlib_export_basis
    USE m_wannierlib_export_gauge, ONLY: wannierlib_export_gauge
    USE m_wannierlib_export_bloch, ONLY: wannierlib_write_eig, wannierlib_write_s0
-   USE m_melem_spin_collinear, ONLY: melem_rspauli_collinear, melem_anglmom_collinear, melem_soc_collinear
-   USE m_types_melem_bmesh, ONLY: t_melem_bmesh
+   USE m_wgauge_spin_collinear, ONLY: wgauge_rspauli_collinear, wgauge_anglmom_collinear, wgauge_soc_collinear
+   USE m_types_wgauge_bmesh, ONLY: t_wgauge_bmesh
    USE m_constants, ONLY: oUnit, hartree_to_ev_const
    USE m_types_atoms
    USE m_types_cell
@@ -96,7 +96,7 @@ CONTAINS
       !> matrices from before any gauge exists.
       COMPLEX, ALLOCATABLE :: v_ch(:, :, :, :)   ! (num_bands, num_wann, nkptf, 2)
       TYPE(t_melem_coarse) :: melem   ! the operator (matrix-element) side
-      TYPE(t_melem_bmesh) :: bmesh    ! b-shell weights handed to the operator side
+      TYPE(t_wgauge_bmesh) :: bmesh    ! b-shell weights handed to the operator side
       TYPE(t_usdus), POINTER :: usdus       ! into the factory cache
       TYPE(t_radfun), POINTER :: radfun(:)  ! likewise; the factory owns them
       COMPLEX, ALLOCATABLE :: f0_loc(:, :, :, :, :)  ! (nw,nw,3,3,nk_loc) geometric tensor
@@ -106,8 +106,8 @@ CONTAINS
       !> The catalogue entry each requested name needs built, one per name.
       CHARACTER(LEN=20), ALLOCATABLE :: op_needs(:), op_r_needs(:)
       INTEGER :: iop, krow
-      TYPE(t_melem_manifold) :: manifold
-      TYPE(t_melem_domains) :: domains
+      TYPE(t_wgauge_manifold) :: manifold
+      TYPE(t_wgauge_domains) :: domains
       CHARACTER(LEN=7) :: amn_file
       CHARACTER(LEN=3) :: spin12(2)
       CHARACTER(LEN=6) :: spin_sfx
@@ -339,7 +339,7 @@ CONTAINS
             CALL wannierlib_uhu(manifold, bmesh, kpts, atoms, cell, input, sym, noco, nococonv, &
                                 radfun, jspin, l_wannierlib_spinors, eig_id, stars, enpara, &
                                 vtot, fmpi, distk, u_matrix, u_opt, c0_loc)
-         CALL melem_run(request, manifold, domains, cell, kpts, eig, u_matrix, u_opt, melem, f0_loc, c0_loc, &
+         CALL wgauge_run(request, manifold, domains, cell, kpts, eig, u_matrix, u_opt, melem, f0_loc, c0_loc, &
                         mmn, bmesh, distk, fmpi, &
                         wf_channel=jspin, spin_suffix=TRIM(spin_sfx))
 
@@ -358,14 +358,14 @@ CONTAINS
       ! collinear combined 2N spin operator rspauli.1: only assemblable once BOTH channels have
       ! been wannierised, since it rotates the cross-spin overlap with both gauges.
       IF (melem%n_channels == 2 .AND. request%has_op_r('spin')) &
-         CALL melem_rspauli_collinear(this%num_wann, melem%x0, v_ch, cell, kpts, distk, fmpi)
+         CALL wgauge_rspauli_collinear(this%num_wann, melem%x0, v_ch, cell, kpts, distk, fmpi)
       ! Same reason for the orbital moment: block-diagonal, but one block per gauge.
       IF (melem%n_channels == 2 .AND. request%has_op_r('orbital')) &
-         CALL melem_anglmom_collinear(this%num_wann, melem%l0, v_ch, cell, kpts, distk, fmpi)
+         CALL wgauge_anglmom_collinear(this%num_wann, melem%l0, v_ch, cell, kpts, distk, fmpi)
       ! And the spin-orbit coupling, which here is an operator on the basis rather than a
       ! term in the eigenproblem that produced it.
       IF (melem%n_channels == 2 .AND. request%has_op_r('spin_orbit')) &
-         CALL melem_soc_collinear(this%num_wann, melem%soc4, v_ch, cell, kpts, distk, fmpi)
+         CALL wgauge_soc_collinear(this%num_wann, melem%soc4, v_ch, cell, kpts, distk, fmpi)
       IF (ALLOCATED(v_ch)) DEALLOCATE (v_ch)
 
       !> Freed here and not per channel: the neighbour topology in it was set before the
@@ -422,7 +422,7 @@ CONTAINS
                                     u_opt, u_matrix, v_ch)
       INTEGER, INTENT(IN) :: n_channels
       LOGICAL, INTENT(IN) :: l_want_spin
-      TYPE(t_melem_manifold), INTENT(IN) :: manifold
+      TYPE(t_wgauge_manifold), INTENT(IN) :: manifold
       INTEGER, INTENT(IN) :: nkptf, jspin
       COMPLEX, INTENT(IN) :: u_opt(:, :, :), u_matrix(:, :, :)
       COMPLEX, ALLOCATABLE, INTENT(INOUT) :: v_ch(:, :, :, :)   !> (nb, nw, nkptf, 2)

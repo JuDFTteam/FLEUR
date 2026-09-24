@@ -20,8 +20,8 @@ MODULE m_wannierlib_mmnkb
   USE m_types_noco
   USE m_types_nococonv
   USE m_types_sym
-  USE m_types_melem_manifold, ONLY: t_melem_manifold
-  USE m_types_melem_bmesh, ONLY: t_melem_bmesh
+  USE m_types_wgauge_manifold, ONLY: t_wgauge_manifold
+  USE m_types_wgauge_bmesh, ONLY: t_wgauge_bmesh
   USE m_types_enpara
   USE m_types_potden
   USE m_types_mpi
@@ -33,8 +33,8 @@ CONTAINS
   SUBROUTINE wannierlib_mmnkb(manifold, bmesh, nk, kpts, ujug, atoms, cell, input, sym, noco, nococonv, &
                               abc, jspin, jspin_rad, eig_id, stars, lapw, zMat, mmn, nk_local, &
                               enpara, vtot, fmpi, vacuum, radfun)
-    TYPE(t_melem_manifold), INTENT(IN) :: manifold   !> the band window, and how wide it is
-    TYPE(t_melem_bmesh), INTENT(IN) :: bmesh   !> which k is the b-th neighbour, and by which G
+    TYPE(t_wgauge_manifold), INTENT(IN) :: manifold   !> the band window, and how wide it is
+    TYPE(t_wgauge_bmesh), INTENT(IN) :: bmesh   !> which k is the b-th neighbour, and by which G
     INTEGER, INTENT(IN) :: nk
     TYPE(t_kpts), INTENT(IN) :: kpts
     COMPLEX, INTENT(IN) :: ujug(:, :, :, :, :, :)

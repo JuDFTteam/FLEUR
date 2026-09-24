@@ -25,21 +25,21 @@
 !>  What backs F are two internal identities, the pair overlap at b1 = b2 and the hermiticity
 !>  F_ab = F_ba^dagger; what backs the C(k) reaching here is the identity it is assembled
 !>  from. The layout itself, and the convention its consumer reads it with, are unverified.
-MODULE m_melem_coeff_tensor
+MODULE m_wgauge_coeff_tensor
   USE m_juDFT
   USE m_constants, ONLY : oUnit, tpi_const
   USE m_types_kpts
-  USE m_types_melem_manifold, ONLY : t_melem_manifold
-  USE m_melem_io, ONLY : melem_write_realspace
+  USE m_types_wgauge_manifold, ONLY : t_wgauge_manifold
+  USE m_wgauge_io, ONLY : wgauge_write_realspace
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: melem_write_fmn, melem_write_cmn
+  PUBLIC :: wgauge_write_fmn, wgauge_write_cmn
 CONTAINS
 
   !> F(R), in Angstrom squared. No conversion: the shell weights carry Angstrom squared and
   !> the b vectors its inverse, so what arrives is already in those units.
-  SUBROUTINE melem_write_fmn(this, kpts, f0_loc, gk_loc, irvec, nrpts, mpicm, irank, wfpref)
-    TYPE(t_melem_manifold), INTENT(IN) :: this
+  SUBROUTINE wgauge_write_fmn(this, kpts, f0_loc, gk_loc, irvec, nrpts, mpicm, irank, wfpref)
+    TYPE(t_wgauge_manifold), INTENT(IN) :: this
     TYPE(t_kpts), INTENT(IN) :: kpts
     COMPLEX, INTENT(IN) :: f0_loc(:, :, :, :, :)   ! (nw,nw,3,3,nk_loc) gauged, per rank
     INTEGER, INTENT(IN) :: gk_loc(:)               ! (nk_loc) global k of each slice entry
@@ -48,13 +48,13 @@ CONTAINS
 
     CALL write_tensor_r(this, kpts, f0_loc, gk_loc, irvec, nrpts, mpicm, irank, &
                         'cart2', '_fmn', 'F(R)=<0n|r_a r_b|Rm>, Ang^2', wfpref)
-  END SUBROUTINE melem_write_fmn
+  END SUBROUTINE wgauge_write_fmn
 
   !> C(R), in eV*Angstrom squared. This is where C parts company with F: the Hamiltonian in
   !> the middle carries energy, so what arrives is Hartree times Angstrom squared and the
   !> 'cart2e' layout converts it.
-  SUBROUTINE melem_write_cmn(this, kpts, c0_loc, gk_loc, irvec, nrpts, mpicm, irank, wfpref)
-    TYPE(t_melem_manifold), INTENT(IN) :: this
+  SUBROUTINE wgauge_write_cmn(this, kpts, c0_loc, gk_loc, irvec, nrpts, mpicm, irank, wfpref)
+    TYPE(t_wgauge_manifold), INTENT(IN) :: this
     TYPE(t_kpts), INTENT(IN) :: kpts
     COMPLEX, INTENT(IN) :: c0_loc(:, :, :, :, :)   ! (nw,nw,3,3,nk_loc) gauged, per rank
     INTEGER, INTENT(IN) :: gk_loc(:)               ! (nk_loc) global k of each slice entry
@@ -63,7 +63,7 @@ CONTAINS
 
     CALL write_tensor_r(this, kpts, c0_loc, gk_loc, irvec, nrpts, mpicm, irank, &
                         'cart2e', '_cmn', 'C(R)=<0n|r_a H r_b|Rm>, eV*Ang^2', wfpref)
-  END SUBROUTINE melem_write_cmn
+  END SUBROUTINE wgauge_write_cmn
 
   !> O(R)_{ab,nm} = (1/N^3) sum_k e^{-ik.R} O_ab,nm(k), for either of the two.
   !>
@@ -81,7 +81,7 @@ CONTAINS
 #ifdef CPP_MPI
     use mpi
 #endif
-    TYPE(t_melem_manifold), INTENT(IN) :: this
+    TYPE(t_wgauge_manifold), INTENT(IN) :: this
     TYPE(t_kpts), INTENT(IN) :: kpts
     COMPLEX, INTENT(IN) :: o0_loc(:, :, :, :, :)
     INTEGER, INTENT(IN) :: gk_loc(:)
@@ -91,7 +91,7 @@ CONTAINS
     CHARACTER(LEN=*), INTENT(IN) :: what     !> for the line written to the output file
     CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: wfpref
 
-    !> The cart2 family writes no degeneracy block, so melem_write_realspace ignores this
+    !> The cart2 family writes no degeneracy block, so wgauge_write_realspace ignores this
     !> argument for these two layouts. Named rather than spelled out at the call site, so
     !> that a reader does not have to check the writer to see that the zeros mean nothing.
     INTEGER, ALLOCATABLE :: ndegen_unused(:)
@@ -126,7 +126,7 @@ CONTAINS
       ALLOCATE(ndegen_unused(nrpts), source=0)
       fn = 'WF1'//suffix
       IF (PRESENT(wfpref)) fn = TRIM(wfpref)//suffix
-      CALL melem_write_realspace(o_r, irvec, ndegen_unused, nrpts, nw, 9, fmt, &
+      CALL wgauge_write_realspace(o_r, irvec, ndegen_unused, nrpts, nw, 9, fmt, &
                                  TRIM(fn)//'.dat', 0)
       WRITE(oUnit,'(a)') 'wannierlib: wrote '//TRIM(fn)//'.dat ('//what//')'
       DEALLOCATE(ndegen_unused)
@@ -134,4 +134,4 @@ CONTAINS
     DEALLOCATE(o_r)
   END SUBROUTINE write_tensor_r
 
-END MODULE m_melem_coeff_tensor
+END MODULE m_wgauge_coeff_tensor

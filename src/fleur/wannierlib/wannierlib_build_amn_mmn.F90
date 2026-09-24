@@ -34,8 +34,8 @@ MODULE m_wannierlib_build_amn_mmn
    USE m_types_radfun
    USE m_types_abc
    USE m_types_wannierlib
-   USE m_types_melem_manifold, ONLY: t_melem_manifold
-   USE m_types_melem_bmesh, ONLY: t_melem_bmesh
+   USE m_types_wgauge_manifold, ONLY: t_wgauge_manifold
+   USE m_types_wgauge_bmesh, ONLY: t_wgauge_bmesh
    USE m_types_spinor_layout, ONLY: radial_slot
    USE m_matrix_element_factory, ONLY: matrix_element_states
    USE m_melem_ujugaunt
@@ -51,8 +51,8 @@ CONTAINS
                                        radfun, usdus, distk, kdiff, nntot_w90, jspin, &
                                        l_wannierlib_spinors, amn, mmn, vacuum)
       TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
-      TYPE(t_melem_manifold), INTENT(IN) :: manifold
-      TYPE(t_melem_bmesh),    INTENT(IN) :: bmesh
+      TYPE(t_wgauge_manifold), INTENT(IN) :: manifold
+      TYPE(t_wgauge_bmesh),    INTENT(IN) :: bmesh
       TYPE(t_atoms),    INTENT(IN) :: atoms
       TYPE(t_cell),     INTENT(IN) :: cell
       TYPE(t_vacuum),   INTENT(IN) :: vacuum

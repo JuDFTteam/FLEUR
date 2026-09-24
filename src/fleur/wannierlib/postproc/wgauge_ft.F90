@@ -18,15 +18,15 @@
 !>  it a spin / orbital-moment / position operator interpolates that operator.
 !>  A new operator interpolator only has to build its own mat_k(k) and reuse
 !>  this core unchanged.
-MODULE m_melem_ft
+MODULE m_wgauge_ft
   USE m_juDFT
   USE m_constants, ONLY : tpi_const, oUnit, bohr_to_angstrom_const
   USE m_types_cell
   USE m_types_kpts
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: melem_ft_interpolate, melem_ft_rtok_velocity, melem_ft_to_real, melem_ws_vectors, melem_ft_to_real_reduce, melem_ft_rtok, melem_ws_distance
-  PUBLIC :: melem_mdrs_set, melem_mdrs_clear
+  PUBLIC :: wgauge_ft_interpolate, wgauge_ft_rtok_velocity, wgauge_ft_to_real, wgauge_ws_vectors, wgauge_ft_to_real_reduce, wgauge_ft_rtok, wgauge_ws_distance
+  PUBLIC :: wgauge_mdrs_set, wgauge_mdrs_clear
   ! Wigner-Seitz R-vectors depend only on the mesh (operator-independent) -> compute once, cache, reuse.
   INTEGER, ALLOCATABLE :: ws_irvec_c(:, :), ws_ndegen_c(:)
   INTEGER :: ws_nrpts_c = 0, ws_mp_c(3) = 0
@@ -35,7 +35,7 @@ MODULE m_melem_ft
   !> so it is cached here rather than threaded through five call chains -- and, more to the
   !> point, every interpolation of one run has to share it: MDRS on the Hamiltonian and off
   !> on an operator would evaluate the two in different gauges, and their product would be
-  !> meaningless. Set by melem_mdrs_set, which the interpolation driver calls once.
+  !> meaningless. Set by wgauge_mdrs_set, which the interpolation driver calls once.
   LOGICAL :: mdrs_on = .FALSE.
   INTEGER, ALLOCATABLE :: mdrs_ndeg(:, :, :), mdrs_irdist(:, :, :, :, :)
   INTEGER :: mdrs_nw = 0, mdrs_nrpts = 0
@@ -44,7 +44,7 @@ CONTAINS
   !> Coarse-mesh Wannier-gauge matrix -> real space: mat_r(R) = (1/Nk) sum_k e^{-i2pi k.R} mat_k(k),
   !> over the Wigner-Seitz R-mesh (same irvec/ndegen as the interpolation). Used to export the
   !> tight-binding operators H(R), A(R) in Wannier90 _hr.dat / _r.dat format for external post-proc.
-  SUBROUTINE melem_ft_to_real(cell, mat_k, kpts, mat_r, irvec, ndegen, nrpts)
+  SUBROUTINE wgauge_ft_to_real(cell, mat_k, kpts, mat_r, irvec, ndegen, nrpts)
     TYPE(t_cell), INTENT(IN) :: cell
     COMPLEX, INTENT(IN) :: mat_k(:, :, :)     ! (nw, nw, nk)  Wannier-gauge matrix on coarse mesh
     TYPE(t_kpts), INTENT(IN) :: kpts
@@ -62,7 +62,7 @@ CONTAINS
         mat_r(:, :, irpt) = mat_r(:, :, irpt) + (EXP(CMPLX(0.0, -rdotk)) / REAL(nk)) * mat_k(:, :, k)
       END DO
     END DO
-  END SUBROUTINE melem_ft_to_real
+  END SUBROUTINE wgauge_ft_to_real
 
   !> Velocity from an ALREADY transformed Wannier-gauge Hamiltonian:
   !>    v_alpha(k') = sum_R  i R_cart(alpha) e^{+i2pi k'.R} / ndegen(R) * mat_r(R)
@@ -71,7 +71,7 @@ CONTAINS
   !>
   !> Projected on the band eigenvectors the DIAGONAL <n|v|n> = dE_n/dk is exact; off-diagonal
   !> elements omit the Berry-connection term.
-  SUBROUTINE melem_ft_rtok_velocity(cell, mat_r, irvec, ndegen, nrpts, kfrac, vel_interp)
+  SUBROUTINE wgauge_ft_rtok_velocity(cell, mat_r, irvec, ndegen, nrpts, kfrac, vel_interp)
     TYPE(t_cell), INTENT(IN) :: cell
     COMPLEX, INTENT(IN) :: mat_r(:, :, :)     ! (nw, nw, nrpts) Wannier-gauge H in real space
     INTEGER, INTENT(IN) :: irvec(:, :), ndegen(:), nrpts
@@ -83,12 +83,12 @@ CONTAINS
     COMPLEX :: base, facv(3)
 
     nw = SIZE(mat_r, 1); nfine = SIZE(kfrac, 2)
-    CALL mdrs_assert(nw, nrpts, 'melem_ft_rtok_velocity')
+    CALL mdrs_assert(nw, nrpts, 'wgauge_ft_rtok_velocity')
     ALLOCATE(vel_interp(nw, nw, 3, nfine), source=CMPLX(0.0, 0.0))
     DO ip = 1, nfine
       DO irpt = 1, nrpts
         IF (mdrs_on) THEN
-          !> The same replica average melem_ft_rtok does, with the derivative taken INSIDE
+          !> The same replica average wgauge_ft_rtok does, with the derivative taken INSIDE
           !> it: the factor i R_cart belongs to the replica that carries the phase and not
           !> to the nominal R. Pulling it out would interpolate v in a different gauge from
           !> H, and the identity <n|v|n> = dE_n/dk would stop holding.
@@ -119,10 +119,10 @@ CONTAINS
         END IF
       END DO
     END DO
-  END SUBROUTINE melem_ft_rtok_velocity
+  END SUBROUTINE wgauge_ft_rtok_velocity
 
   !> Fourier-interpolate a coarse-mesh k-space matrix onto a fine k-path.
-  SUBROUTINE melem_ft_interpolate(cell, mat_k, kpts, kfrac, mat_interp)
+  SUBROUTINE wgauge_ft_interpolate(cell, mat_k, kpts, kfrac, mat_interp)
     TYPE(t_cell), INTENT(IN) :: cell
     COMPLEX, INTENT(IN) :: mat_k(:, :, :)     ! (nw, nw, nk)  Wannier-gauge matrix on coarse mesh
     TYPE(t_kpts), INTENT(IN) :: kpts
@@ -135,10 +135,10 @@ CONTAINS
 
     !> The two halves, in the order they have to happen. Kept as one entry point because most
     !> callers want exactly this; a caller that also needs the derivative uses the halves.
-    CALL melem_ft_to_real(cell, mat_k, kpts, mat_r, irvec, ndegen, nrpts)
-    CALL melem_ft_rtok(mat_r, irvec, ndegen, nrpts, kfrac, mat_interp)
+    CALL wgauge_ft_to_real(cell, mat_k, kpts, mat_r, irvec, ndegen, nrpts)
+    CALL wgauge_ft_rtok(mat_r, irvec, ndegen, nrpts, kfrac, mat_interp)
     DEALLOCATE(mat_r, irvec, ndegen)
-  END SUBROUTINE melem_ft_interpolate
+  END SUBROUTINE wgauge_ft_interpolate
 
   !> Wigner-Seitz supercell R vectors + degeneracies (replicates W90
   !> hamiltonian_wigner_seitz). Kept local to preserve W90's exact ndegen
@@ -214,7 +214,7 @@ CONTAINS
   !>
   !> Modelled on Wannier90's ws_distance.F90 (Paulatto, Gibertini, Gresch, Pizzi), reimplemented
   !> rather than called: that module is W90-internal and our interpolation never enters W90.
-  SUBROUTINE melem_ws_distance(cell, mp_grid, irvec, nrpts, cfrac, ndeg, irdist)
+  SUBROUTINE wgauge_ws_distance(cell, mp_grid, irvec, nrpts, cfrac, ndeg, irdist)
     TYPE(t_cell), INTENT(IN) :: cell
     INTEGER, INTENT(IN) :: mp_grid(3), irvec(:, :), nrpts
     REAL,    INTENT(IN) :: cfrac(:, :)        !> (3, nw) Wannier centres, FRACTIONAL
@@ -270,9 +270,9 @@ CONTAINS
             IF (ABS(SQRT(dcand(i)) - SQRT(dmin)) < tol) THEN
               nd = nd + 1
               IF (nd > ndegmax) CALL juDFT_error( &
-                'melem_ws_distance: more than 8 minimum-distance replicas, which no point can have', &
+                'wgauge_ws_distance: more than 8 minimum-distance replicas, which no point can have', &
                 hint='the Wannier centres or the Bravais matrix are not what they should be', &
-                calledby='melem_ws_distance')
+                calledby='wgauge_ws_distance')
               irdist(:, nd, m, n, irpt) = irvec(:, irpt) + cand(:, i)
             END IF
           END DO
@@ -281,7 +281,7 @@ CONTAINS
         END DO
       END DO
     END DO
-  END SUBROUTINE melem_ws_distance
+  END SUBROUTINE wgauge_ws_distance
 
   !> Switch MDRS on for every interpolation that follows, from the Wannier centres Wannier90
   !> reported. Idempotent: it rebuilds the table, so a second wannierization (the second spin
@@ -294,7 +294,7 @@ CONTAINS
   !> symptom, so it solves amat.x = r outright instead of trusting a stored inverse, checks
   !> itself by mapping back, and prints what it got: the centres it echoes are in Angstrom
   !> and must reproduce the ones Wannier90 printed.
-  SUBROUTINE melem_mdrs_set(cell, mp_grid, centres_ang, irank)
+  SUBROUTINE wgauge_mdrs_set(cell, mp_grid, centres_ang, irank)
     TYPE(t_cell), INTENT(IN) :: cell
     INTEGER, INTENT(IN) :: mp_grid(3)
     REAL,    INTENT(IN) :: centres_ang(:, :)   !> (3, nw) cartesian, Angstrom
@@ -304,11 +304,11 @@ CONTAINS
     REAL,    ALLOCATABLE :: cfrac(:, :)
     REAL :: rc(3), back(3), err, scal
 
-    CALL melem_mdrs_clear()
+    CALL wgauge_mdrs_clear()
     nw = SIZE(centres_ang, 2)
     scal = MAXVAL(ABS(cell%amat))
     IF (ABS(det3(cell%amat)) < 1.0e-10 * scal**3) CALL juDFT_error( &
-      'melem_mdrs_set: the Bravais matrix is singular', calledby='melem_mdrs_set')
+      'wgauge_mdrs_set: the Bravais matrix is singular', calledby='wgauge_mdrs_set')
 
     ALLOCATE(cfrac(3, nw))
     err = 0.0
@@ -319,12 +319,12 @@ CONTAINS
       err = MAX(err, MAXVAL(ABS(back - rc)))
     END DO
     IF (err > 1.0e-8 * scal) CALL juDFT_error( &
-      'melem_mdrs_set: cartesian -> fractional does not invert', &
+      'wgauge_mdrs_set: cartesian -> fractional does not invert', &
       hint='the Bravais matrix is near-singular or amat is not the column convention', &
-      calledby='melem_mdrs_set')
+      calledby='wgauge_mdrs_set')
 
     CALL ws_get(cell, mp_grid, irvec, ndegen, nrpts)
-    CALL melem_ws_distance(cell, mp_grid, irvec, nrpts, cfrac, mdrs_ndeg, mdrs_irdist)
+    CALL wgauge_ws_distance(cell, mp_grid, irvec, nrpts, cfrac, mdrs_ndeg, mdrs_irdist)
     mdrs_nw = nw; mdrs_nrpts = nrpts; mdrs_on = .TRUE.
 
     IF (irank == 0) THEN
@@ -337,15 +337,15 @@ CONTAINS
       END DO
     END IF
     DEALLOCATE(cfrac, irvec, ndegen)
-  END SUBROUTINE melem_mdrs_set
+  END SUBROUTINE wgauge_mdrs_set
 
   !> Back to the plain transform. Called at the end of the interpolation pass so the state
   !> cannot outlive the wannierization it describes.
-  SUBROUTINE melem_mdrs_clear()
+  SUBROUTINE wgauge_mdrs_clear()
     IF (ALLOCATED(mdrs_ndeg)) DEALLOCATE(mdrs_ndeg)
     IF (ALLOCATED(mdrs_irdist)) DEALLOCATE(mdrs_irdist)
     mdrs_on = .FALSE.; mdrs_nw = 0; mdrs_nrpts = 0
-  END SUBROUTINE melem_mdrs_clear
+  END SUBROUTINE wgauge_mdrs_clear
 
   !> What every consumer of the MDRS state assumes about it. Cached state that outlives one
   !> call is worth exactly the check that it still describes the caller.
@@ -398,8 +398,8 @@ CONTAINS
 
   !> Distributed coarse-mesh -> real space: each rank sums its OWN k-slice (mat_loc, global
   !> indices gk_loc), then MPI_ALLREDUCE the small mat_r(nw,nw,nrpts). Same result as the
-  !> serial melem_ft_to_real but never materializes the full-mesh coarse matrix.
-  SUBROUTINE melem_ft_to_real_reduce(cell, kpts, mat_loc, gk_loc, commw, mat_r, irvec, ndegen, nrpts)
+  !> serial wgauge_ft_to_real but never materializes the full-mesh coarse matrix.
+  SUBROUTINE wgauge_ft_to_real_reduce(cell, kpts, mat_loc, gk_loc, commw, mat_r, irvec, ndegen, nrpts)
 #ifdef CPP_MPI
     use mpi
 #endif
@@ -429,17 +429,17 @@ CONTAINS
 #ifdef CPP_MPI
     CALL MPI_ALLREDUCE(MPI_IN_PLACE, mat_r, SIZE(mat_r), MPI_DOUBLE_COMPLEX, MPI_SUM, commw, ierr)
 #endif
-  END SUBROUTINE melem_ft_to_real_reduce
+  END SUBROUTINE wgauge_ft_to_real_reduce
 
   !> R -> fine path only: mat(k') = sum_R e^{+i2pi k'.R} / ndegen(R) * mat_r(R).
-  !> Second half of melem_ft_interpolate, split out so a coarse->R matrix already
-  !> assembled by the distributed reduce (melem_ft_to_real_reduce) can be interpolated
+  !> Second half of wgauge_ft_interpolate, split out so a coarse->R matrix already
+  !> assembled by the distributed reduce (wgauge_ft_to_real_reduce) can be interpolated
   !> onto the fine path on rank 0 without rebuilding it from the full coarse mesh.
-  !> MDRS is off unless melem_mdrs_set switched it on, in which case the phase stops being
+  !> MDRS is off unless wgauge_mdrs_set switched it on, in which case the phase stops being
   !> one scalar per R and becomes a MATRIX per R, because the minimum-distance replica depends
-  !> on WHICH pair of Wannier centres the hopping connects. See melem_ws_distance for why.
+  !> on WHICH pair of Wannier centres the hopping connects. See wgauge_ws_distance for why.
   !> With it off this is byte for byte the transform this routine has always done.
-  SUBROUTINE melem_ft_rtok(mat_r, irvec, ndegen, nrpts, kfrac, mat_interp)
+  SUBROUTINE wgauge_ft_rtok(mat_r, irvec, ndegen, nrpts, kfrac, mat_interp)
     COMPLEX, INTENT(IN) :: mat_r(:, :, :)     ! (nw, nw, nrpts)  real-space matrix
     INTEGER, INTENT(IN) :: irvec(:, :), ndegen(:), nrpts
     REAL,    INTENT(IN) :: kfrac(:, :)        ! (3, nfine)    fractional coords of the fine path
@@ -448,7 +448,7 @@ CONTAINS
     REAL :: rdotk
     COMPLEX :: fac
     nw = SIZE(mat_r, 1); nfine = SIZE(kfrac, 2)
-    CALL mdrs_assert(nw, nrpts, 'melem_ft_rtok')
+    CALL mdrs_assert(nw, nrpts, 'wgauge_ft_rtok')
     ALLOCATE(mat_interp(nw, nw, nfine), source=CMPLX(0.0, 0.0))
     DO ip = 1, nfine
       DO irpt = 1, nrpts
@@ -471,16 +471,16 @@ CONTAINS
         END IF
       END DO
     END DO
-  END SUBROUTINE melem_ft_rtok
+  END SUBROUTINE wgauge_ft_rtok
 
   !> Public wrapper exposing the Wigner-Seitz R-vectors + degeneracies (W90 convention)
   !> so the real-space operator export (operators_r) can write wig_vectors.
-  SUBROUTINE melem_ws_vectors(cell, mp_grid, irvec, ndegen, nrpts)
+  SUBROUTINE wgauge_ws_vectors(cell, mp_grid, irvec, ndegen, nrpts)
     TYPE(t_cell), INTENT(IN) :: cell
     INTEGER, INTENT(IN)  :: mp_grid(3)
     INTEGER, ALLOCATABLE, INTENT(OUT) :: irvec(:, :), ndegen(:)
     INTEGER, INTENT(OUT) :: nrpts
     CALL ws_get(cell, mp_grid, irvec, ndegen, nrpts)
-  END SUBROUTINE melem_ws_vectors
+  END SUBROUTINE wgauge_ws_vectors
 
-END MODULE m_melem_ft
+END MODULE m_wgauge_ft

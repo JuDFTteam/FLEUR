@@ -8,18 +8,18 @@
 !>  Off the diagonal this is Eq. (44) of Wang, Yates, Souza and Vanderbilt, PRB 74,
 !>  195118 (2006); on it, Eqs. (27,29,32) of Marzari and Vanderbilt, PRB 56, 12847
 !>  (1997). The R=0 diagonal is the Wannier centre, which is what the check asserts.
-MODULE m_melem_coeff_a
+MODULE m_wgauge_coeff_a
   USE m_juDFT
   USE m_constants, ONLY : oUnit
   USE m_types_cell
   USE m_types_kpts
-  USE m_types_melem_manifold, ONLY : t_melem_manifold
-  USE m_types_melem_bmesh
-  USE m_melem_ft, ONLY : melem_ft_to_real_reduce
-  USE m_melem_io, ONLY : melem_write_realspace
+  USE m_types_wgauge_manifold, ONLY : t_wgauge_manifold
+  USE m_types_wgauge_bmesh
+  USE m_wgauge_ft, ONLY : wgauge_ft_to_real_reduce
+  USE m_wgauge_io, ONLY : wgauge_write_realspace
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: melem_build_berry_aw_r, melem_check_berry_centres, melem_write_ar
+  PUBLIC :: wgauge_build_berry_aw_r, wgauge_check_berry_centres, wgauge_write_ar
 CONTAINS
 
   ! Build the Wannier-gauge Berry connection in real space A^(W)_alpha(R), distributed:
@@ -29,18 +29,18 @@ CONTAINS
   ! local overlaps mmn_loc (global k = gk_loc), then reduces coarse -> R with the distributed
   ! FT-reduce (collective). The full-mesh overlaps are never gathered. A^(W)(R) is exactly the
   ! position operator A(R) = <0n|r|Rm> and the R->k' interpolant used by the velocity/Berry curvature.
-  ! kmesh (wb/bk/nnlist) arrives as a plain t_melem_bmesh -> no Wannier90 coupling here.
+  ! kmesh (wb/bk/nnlist) arrives as a plain t_wgauge_bmesh -> no Wannier90 coupling here.
   ! Collective over mpi_comm; result valid on all ranks.
-  SUBROUTINE melem_build_berry_aw_r(this, cell, kpts, mmn_loc, gk_loc, u_opt, u_matrix, bmesh, mpi_comm, &
+  SUBROUTINE wgauge_build_berry_aw_r(this, cell, kpts, mmn_loc, gk_loc, u_opt, u_matrix, bmesh, mpi_comm, &
                                          aw_r, irvec, ndegen, nrpts, l_pw90)
-    TYPE(t_melem_manifold), INTENT(IN) :: this
+    TYPE(t_wgauge_manifold), INTENT(IN) :: this
     TYPE(t_cell), INTENT(IN) :: cell
     TYPE(t_kpts), INTENT(IN) :: kpts
     COMPLEX, INTENT(IN) :: mmn_loc(:, :, :, :)    ! (nb,nb,nntot,nk_loc) this rank's overlap slice
     INTEGER, INTENT(IN) :: gk_loc(:)              ! (nk_loc) global k index of each slice entry
     COMPLEX, INTENT(IN) :: u_opt(:, :, :)         ! (nb,nw,nk) full mesh
     COMPLEX, INTENT(IN) :: u_matrix(:, :, :)      ! (nw,nw,nk) full mesh
-    TYPE(t_melem_bmesh), INTENT(IN) :: bmesh      ! b-shell weights / neighbour list of the coarse mesh
+    TYPE(t_wgauge_bmesh), INTENT(IN) :: bmesh      ! b-shell weights / neighbour list of the coarse mesh
     INTEGER, INTENT(IN) :: mpi_comm
     COMPLEX, ALLOCATABLE, INTENT(OUT) :: aw_r(:, :, :, :)   ! (nw,nw,nrpts,3) reduced Berry connection / A(R)
     INTEGER, ALLOCATABLE, INTENT(OUT) :: irvec(:, :), ndegen(:)
@@ -79,7 +79,7 @@ CONTAINS
       DO nn = 1, nnt
         kb = bmesh%nnlist(k, nn)                       ! shape: nnlist(num_kpts, nntot)
         IF (kb < 1 .OR. kb > nk) CALL juDFT_error('wannierlib: nnlist neighbour index out of range', &
-                                                  calledby='melem_build_berry_aw_r')
+                                                  calledby='wgauge_build_berry_aw_r')
         wb = bmesh%wb(nn)
         b  = bmesh%bk(:, nn, k)
         Vkb = MATMUL(u_opt(:, :, kb), u_matrix(:, :, kb))
@@ -110,12 +110,12 @@ CONTAINS
     END DO
     DEALLOCATE(Vk, Vkb, Mw, Mb, tmp)
     DO a = 1, 3
-      CALL melem_ft_to_real_reduce(cell, kpts, aw_loc(:, :, a, :), gk_loc, mpi_comm, a1, irvec, ndegen, nrpts)
+      CALL wgauge_ft_to_real_reduce(cell, kpts, aw_loc(:, :, a, :), gk_loc, mpi_comm, a1, irvec, ndegen, nrpts)
       IF (a == 1) ALLOCATE(aw_r(nw, nw, nrpts, 3))
       aw_r(:, :, :, a) = a1; DEALLOCATE(a1)
     END DO
     DEALLOCATE(aw_loc)
-  END SUBROUTINE melem_build_berry_aw_r
+  END SUBROUTINE wgauge_build_berry_aw_r
 
   ! Validation: the diagonal of A^(W)_alpha at R=0 is the Wannier centre <r_alpha>_n
   ! (Marzari-Vanderbilt). Since A^(W)_alpha(R=0) = (1/Nk) sum_k A^(W)_alpha(k), it is exactly
@@ -123,11 +123,11 @@ CONTAINS
   ! b-mesh bundle (filled from w90_get_centres on the wannierization side) to calibrate the
   ! conj/sign convention of the overlaps. Writes berry_centre_check.dat (rank 0).
   ! No reference centres available -> the check is silently skipped.
-  SUBROUTINE melem_check_berry_centres(this, aw_r, irvec, nrpts, bmesh)
-    TYPE(t_melem_manifold), INTENT(IN) :: this
+  SUBROUTINE wgauge_check_berry_centres(this, aw_r, irvec, nrpts, bmesh)
+    TYPE(t_wgauge_manifold), INTENT(IN) :: this
     COMPLEX, INTENT(IN) :: aw_r(:, :, :, :)     ! (nw,nw,nrpts,3)
     INTEGER, INTENT(IN) :: irvec(:, :), nrpts
-    TYPE(t_melem_bmesh), INTENT(IN) :: bmesh
+    TYPE(t_wgauge_bmesh), INTENT(IN) :: bmesh
     INTEGER :: nw, a, n, iu, irpt, irpt0
     COMPLEX :: aR0
 
@@ -148,12 +148,12 @@ CONTAINS
     END DO
     CLOSE(iu)
     WRITE(oUnit,'(a)') 'wannierlib: wrote berry_centre_check.dat (A^(W) R=0 diag vs w90 centres)'
-  END SUBROUTINE melem_check_berry_centres
+  END SUBROUTINE wgauge_check_berry_centres
 
   ! Write A(R) = <0n|r_alpha|Rm> in Wannier90 seedname_r.dat format (positions in Angstrom). Rank-0.
   ! aw_r is the already-reduced Berry connection A^(W)(R) (= A(R)), so no Fourier transform here.
-  SUBROUTINE melem_write_ar(this, aw_r, irvec, nrpts, wfpref, suffix)
-    TYPE(t_melem_manifold), INTENT(IN) :: this
+  SUBROUTINE wgauge_write_ar(this, aw_r, irvec, nrpts, wfpref, suffix)
+    TYPE(t_wgauge_manifold), INTENT(IN) :: this
     COMPLEX, INTENT(IN) :: aw_r(:, :, :, :)          ! (nw,nw,nrpts,3) reduced A(R)
     INTEGER, INTENT(IN) :: irvec(:, :), nrpts
     CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: wfpref   ! seedname prefix 'WF1'/'WF2' (collinear jspins=2 channel); default 'WF1'
@@ -168,8 +168,8 @@ CONTAINS
       fn = 'WF1'//TRIM(suffix)
       IF (PRESENT(wfpref)) fn = TRIM(wfpref)//TRIM(suffix)
     END IF
-    CALL melem_write_realspace(aw_r, irvec, [(0, i = 1, nrpts)], nrpts, nw, 3, 'r', TRIM(fn)//'.dat', 0)
+    CALL wgauge_write_realspace(aw_r, irvec, [(0, i = 1, nrpts)], nrpts, nw, 3, 'r', TRIM(fn)//'.dat', 0)
     WRITE(oUnit,'(a)') 'wannierlib: wrote '//TRIM(fn)//'.dat (A(R), Ang)'
-  END SUBROUTINE melem_write_ar
+  END SUBROUTINE wgauge_write_ar
 
-END MODULE m_melem_coeff_a
+END MODULE m_wgauge_coeff_a

@@ -17,7 +17,7 @@ formats — lives in `../wannierlib/postproc/`.
 
 The seam between the two is two types, `t_melem_window` (which bands were selected)
 and `t_melem_request` (which operators were asked for), both of which stay here.
-`t_melem_manifold` extends the window with `num_wann` and the disentanglement edges
+`t_wgauge_manifold` extends the window with `num_wann` and the disentanglement edges
 and lives in `postproc`, so nothing here knows what the bands were selected for.
 `postproc` depends on this directory; this directory depends on nothing of it, and
 `testing/tests/structure/test_layering.py` fails if that ever changes.
@@ -44,14 +44,14 @@ the one to read before writing a line of it.
 | 2 | `matrixelements/CMakeLists.txt` | one line, **with** the path prefix |
 | 3 | `fleurinput/types_melem_optable.f90` | a row in `MELEM_OPERATORS` |
 | 4 | `melem_coarse.F90` | three places: the slice, the `ALLOCATE` behind `request%needs_op`, the fill inside the k loop |
-| 5 | `../wannierlib/postproc/melem_run.F90` and/or `melem_operators_r.F90` | a `CASE` branch |
+| 5 | `../wannierlib/postproc/wgauge_run.F90` and/or `wgauge_operators_r.F90` | a `CASE` branch |
 | 6 | `types_melem_optable.f90` | a row in `WANNIERLIB_INTERP` and/or `WANNIERLIB_OPR` |
 | 7 | `fleur/io/xml/FleurInputSchema.xsd` | one `<xsd:enumeration>` |
 
 Route B is 5, 6 and 7. Route C is 5, 6 and 7 plus the driver itself — and, only if it
 needs the wavefunctions after the gauge is known, one `IF` in `wannierlib_main.F90`.
 
-New on-disk format? Add a `CASE` in `../wannierlib/postproc/melem_io.F90` — the only
+New on-disk format? Add a `CASE` in `../wannierlib/postproc/wgauge_io.F90` — the only
 file that knows the layout. Do not open a file anywhere else.
 
 ## Before you debug
