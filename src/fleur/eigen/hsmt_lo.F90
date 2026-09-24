@@ -51,7 +51,7 @@ CONTAINS
     !     ..
     !     .. Local Scalars ..
     INTEGER na,nn,usp
-    INTEGER l,nkvec,kp
+    INTEGER l,nkvec,kp,nvPr
     !     ..
     !     .. Local Arrays ..
     REAL alo1(atoms%nlod,input%jspins),blo1(atoms%nlod,input%jspins),clo1(atoms%nlod,input%jspins)
@@ -65,8 +65,14 @@ CONTAINS
           l = hmat%matsize2
        END SELECT
 
+       IF (PRESENT(lapwq)) THEN
+          nvPr = lapwq%nv(igSpinPr)
+       ELSE
+          nvPr = lapw%nv(igSpinPr)
+       END IF
+
        !CPP_OMP PARALLEL DEFAULT(none) &
-       !CPP_OMP SHARED(fmpi,l,lapw,hmat,smat,igSpin) &
+       !CPP_OMP SHARED(fmpi,l,lapw,hmat,smat,igSpin,l_fullj,nvPr) &
        !CPP_OMP PRIVATE(nkvec,kp)
        !CPP_OMP DO
        !CPP_ACC kernels present(hmat,hmat%data_r,hmat%data_c)copyin(fmpi,lapw,lapw%nv)
@@ -77,6 +83,13 @@ CONTAINS
                 hmat%data_r(:,kp) = 0.0
              ELSE
                 hmat%data_c(:,kp) = CMPLX(0.0,0.0)
+             ENDIF
+          ELSE IF (l_fullj) THEN
+             kp=(nkvec-1)/fmpi%n_size+1
+             IF (hmat%l_real) THEN
+                hmat%data_r(nvPr+1:,kp) = 0.0
+             ELSE
+                hmat%data_c(nvPr+1:,kp) = CMPLX(0.0,0.0)
              ENDIF
           ENDIF
        ENDDO
@@ -92,6 +105,13 @@ CONTAINS
                    smat%data_r(:,kp) = 0.0
                 ELSE
                    smat%data_c(:,kp) = CMPLX(0.0,0.0)
+                ENDIF
+             ELSE IF (l_fullj) THEN
+                kp=(nkvec-1)/fmpi%n_size+1
+                IF (smat%l_real) THEN
+                   smat%data_r(nvPr+1:,kp) = 0.0
+                ELSE
+                   smat%data_c(nvPr+1:,kp) = CMPLX(0.0,0.0)
                 ENDIF
              ENDIF
           ENDDO
