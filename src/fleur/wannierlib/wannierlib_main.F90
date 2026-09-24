@@ -27,8 +27,7 @@ MODULE m_wannierlib_main
    USE m_wannierlib_build_amn_mmn, ONLY: wannierlib_build_amn_mmn, wannierlib_reduce_amn, &
                                       wannierlib_gather_mmn
    USE m_wannierlib_plot, ONLY: wannierlib_plot_wf
-  USE m_wannierlib_uiu, ONLY: wannierlib_uiu
-  USE m_wannierlib_uhu, ONLY: wannierlib_uhu
+  USE m_wannierlib_cf, ONLY: wannierlib_uiu, wannierlib_uhu
    USE m_wannierlib_w90_adapter
    USE m_melem_coarse, ONLY: t_melem_coarse
    USE m_wgauge_run, ONLY: wgauge_run
