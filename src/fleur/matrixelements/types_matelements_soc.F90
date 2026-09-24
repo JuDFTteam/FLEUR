@@ -143,5 +143,13 @@ CONTAINS
          ENDDO !!j1 spin
       enddo !n atom types
 
+      !> The accumulation forms c_i * conj(c_j), the conjugate of the <i|H_so|j> this type
+      !> promises; conjugating the assembled blocks restores the promised convention.
+      DO j1 = 1, 2
+         DO i1 = 1, 2
+            this%mat(i1,j1)%data_c = CONJG(this%mat(i1,j1)%data_c)
+         END DO
+      END DO
+
     END SUBROUTINE calc_matrix_elements
 END MODULE m_types_matelements_soc  
