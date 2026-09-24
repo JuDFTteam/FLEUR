@@ -55,7 +55,7 @@ CONTAINS
       COMPLEX :: one
 
       CALL timestart("local_hamiltonian")
-      CALL td%init(atoms,input%jspins,(noco%l_noco.AND.noco%l_soc.AND..NOT.noco%l_ss).OR.any(noco%l_constrained).or.any(noco%l_constrained))
+      CALL td%init(atoms,input%jspins)
 
       DO jsp=1,MERGE(4,input%jspins,any(noco%l_unrestrictMT).OR.any(noco%l_spinoffd_ldau).or.any(noco%l_constrained))
 
@@ -209,8 +209,7 @@ CONTAINS
       TYPE(t_hub1data), INTENT(INOUT) :: hub1data
       TYPE(t_tlmplm),   INTENT(INOUT) :: td
 
-      INTEGER :: n,l,m,jsp,lo,i_hia
-      INTEGER :: lo_slot(atoms%nlod),lo_cnt(0:atoms%lmaxd)
+      INTEGER :: n,l,m,jsp,lo,i_hia,slot
 
       ! Fill the unified radial SOC matrix rsoc%rso used by hsmt_soc_offdiag.
       ! (This replaces the former spnorb call; the angular matrix elements are
@@ -237,22 +236,14 @@ CONTAINS
       !     <relLO|H_sph|relLO> = epsilon + (l+1)*I_so,   I_so = rsoc%rso(slot,slot,n,l),
       ! with H_sph = H_Dirac - H_SO
       DO n = 1, atoms%ntype
-         ! Map each LO to its radial-function slot in rsoc%rso: slot 1=u, 2=udot,
-         ! 3.. = LOs of the same l in the order they appear in atoms%llo (same
-         ! ordering as in types_radfun%generate_radial_functions).
-         lo_cnt = 0
-         DO lo = 1, atoms%nlo(n)
-            l = atoms%llo(lo,n)
-            lo_cnt(l) = lo_cnt(l) + 1
-            lo_slot(lo) = 2 + lo_cnt(l)
-         END DO
          DO lo = 1, atoms%nlo(n)
             IF (.NOT.atoms%l_relLO(lo,n)) CYCLE
             l = atoms%llo(lo,n)
+            slot = atoms%slot_of_lo(lo,n)
             DO jsp = 1, input%jspins
                DO m = -l, l
                   td%tuloulo_newer(m,m,lo,lo,n,jsp,jsp) = td%tuloulo_newer(m,m,lo,lo,n,jsp,jsp) &
-                       + REAL(l+1) * td%rsoc%rso(lo_slot(lo),lo_slot(lo),n,l,jsp,jsp)
+                       + REAL(l+1) * td%rsoc%rso(slot,slot,n,l,jsp,jsp)
                END DO
             END DO
          END DO

@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -32,7 +32,6 @@ CONTAINS
     USE m_hsmt_spinor
     USE m_hsmt_soc_offdiag
     USE m_hsmt_mtNocoPot_offdiag
-    USE m_hsmt_offdiag
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)        :: fmpi
     TYPE(t_input),INTENT(IN)      :: input

@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -15,14 +15,14 @@ MODULE m_eigen
 CONTAINS
    !>The eigenvalue problem is constructed and solved in this routine. The following steps are performed:
    !> 1. Preparation: generate energy parameters, open eig-file
-   !> 2. CALL to mt_setup() : this constructs the local Hamiltonian (i.e. the Hamiltonian in the \f$ u,\dot u, u_{lo} \f$ basis) LDA+U is also added here
+   !> 2. CALL to local_ham() : this constructs the local Hamiltonian (i.e. the Hamiltonian in the \f$ u,\dot u, u_{lo} \f$ basis) LDA+U is also added here
    !> 3. within the (collinear)spin and k-point loop: CALL to eigen_hssetup() to generate the matrices, CALL to eigen_diag() to perform diagonalization
    !> 4. writing (saving) of eigenvectors
    !>
    !>@author D. Wortmann
    !
    ! Modifications done to use this with DFPT phonons:
-   ! a) We need additional MT-integrals from mt_setup that cover the potential variation V1.
+   ! a) We need additional MT-integrals from dfpt_tlmplm that cover the potential variation V1.
    ! b) The eigenvalues are to be evaluated for k+q, not k.
    ! c) Additionally, load in the occupied states for k without q.
    ! d) The work isn't done once the eigenvectors and eigenvalues are found. There is post-

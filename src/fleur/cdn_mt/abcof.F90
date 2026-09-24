@@ -487,7 +487,7 @@ COMPLEX       :: ccof(-atoms%llod:atoms%llod,size(eigveccoefs%abcof,1),atoms%nlo
 REAL, OPTIONAL, INTENT(IN) :: eig(:)!(input%neig)
 INTEGER,OPTIONAL,INTENT(IN):: nat_start,nat_stop
 
-integer:: itype,lo,l,na,m,lm,n_l(0:atoms%lmaxd)
+integer:: itype,lo,l,na,m,lm
 
 call abcof(input,atoms,sym,cell,lapw,ne,usdus,noco,nococonv,ispin,&
 eigVecCoefs%abcof(:,0:,0,:,ispin),eigVecCoefs%abcof(:,0:,1,:,ispin),&
@@ -499,14 +499,12 @@ eigVecCoefs%ccof(:,:,:,:,ispin) = ccof
 
 !Now put the c-coef into the correct abcof
 DO itype=1,atoms%ntype
-   n_l=1
    DO lo=1,atoms%nlo(itype)
       l=atoms%llo(lo,itype)
-      n_l(l)=n_l(l)+1
       do m=-l,l
          lm=l*(l+1)+m
          DO na=atoms%firstatom(itype),atoms%firstatom(itype)+atoms%neq(itype)-1
-            eigveccoefs%abcof(:,lm,n_l(l),na,ispin)=ccof(m,:,lo,na)
+            eigveccoefs%abcof(:,lm,atoms%slot_of_lo(lo,itype)-1,na,ispin)=ccof(m,:,lo,na)
          enddo
       enddo
    enddo

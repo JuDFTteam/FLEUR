@@ -237,7 +237,7 @@ CONTAINS
 
     INTEGER :: band1,band2,bandf, n ,na, l,m1,m2,lm1,lm2,&
          jsloc1,jsloc2, js1,js2,jsnumber,ilo,ilop,nat
-    INTEGER :: lo_slot(atoms%nlod),lo_cnt(0:atoms%lmaxd)
+    INTEGER :: lo_slot(atoms%nlod)
     COMPLEX, ALLOCATABLE :: sa(:,:),sb(:,:),sc(:,:,:),ral(:,:,:)
     COMPLEX, ALLOCATABLE :: ra(:,:),rb(:,:),rc(:,:,:),rbl(:,:,:)
 
@@ -268,11 +268,8 @@ CONTAINS
        DO n= 1,atoms%ntype
           ! Map each LO of this atom type to its radial-function slot in rso:
           ! slot 1=u, 2=udot, 3.. = LOs of the same l in atoms%llo order.
-          lo_cnt= 0
           DO ilo= 1,atoms%nlo(n)
-             l= atoms%llo(ilo,n)
-             lo_cnt(l)= lo_cnt(l)+1
-             lo_slot(ilo)= 2+lo_cnt(l)
+             lo_slot(ilo)= atoms%slot_of_lo(ilo,n)
           ENDDO
           DO nat= 1,atoms%neq(n)
              na= na+1

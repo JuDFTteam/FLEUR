@@ -323,7 +323,7 @@ CONTAINS
     REAL, ALLOCATABLE :: plegend(:,:),dplegend(:,:)
     COMPLEX, ALLOCATABLE :: cph(:)
     REAL                 :: alo1(atoms%nlod,2),blo1(atoms%nlod,2),clo1(atoms%nlod,2)
-    INTEGER              :: lo_slot(atoms%nlod),lo_cnt(0:atoms%lmaxd)
+    INTEGER              :: lo_slot(atoms%nlod)
     CALL timestart("offdiagonal soc-setup LO")
 
     DO l = 0,atoms%lmaxd
@@ -350,11 +350,8 @@ CONTAINS
     !Map each LO to its radial-function slot in rsoc%rso: slot 1=u, 2=udot,
     !3.. = LOs of the same l in the order they appear in atoms%llo (same ordering
     !as in types_radfun%generate_radial_functions).
-    lo_cnt = 0
     DO lo = 1,atoms%nlo(n)
-       l = atoms%llo(lo,n)
-       lo_cnt(l) = lo_cnt(l) + 1
-       lo_slot(lo) = 2 + lo_cnt(l)
+       lo_slot(lo) = atoms%slot_of_lo(lo,n)
     ENDDO
 
     associate(h11=>hmat(1,1)%data_c,h12=>hmat(1,2)%data_c,h21=>hmat(2,1)%data_c,h22=>hmat(2,2)%data_c)
