@@ -43,6 +43,15 @@ MODULE m_types_wannierlib
     CHARACTER(LEN=20) :: species = ''
   END TYPE t_wannierlib_proj
 
+  !> One <operator> of <interpolation>: which operator, which components of it, and
+  !> whether the site-summed projection is wanted.
+  TYPE t_wannierlib_op
+    SEQUENCE
+    CHARACTER(LEN=20) :: name = ''   ! hamiltonian/spin/orbital/spin_orbit/velocity/...
+    CHARACTER(LEN=32) :: comp = ''   ! requested components; '' = all of the operator rank
+    INTEGER :: total = 1             ! 1 = write the summed-over-atoms projection
+  END TYPE t_wannierlib_op
+
   TYPE, EXTENDS(t_fleurinput_base) :: t_wannierlib_wannierize
     LOGICAL :: l_wannierize = .FALSE.
     ! Convenience flags DERIVED from the operator list ops(:) below (set in read_xml).
@@ -95,14 +104,14 @@ MODULE m_types_wannierlib
     LOGICAL :: l_ws_distance = .FALSE.
 
     ! --- operator table: one entry per <operator name=".."> child of <interpolation> ---
-    INTEGER :: n_ops = 0
-    CHARACTER(LEN=20), ALLOCATABLE :: op_name(:)    ! operator identifier (hamiltonian/spin/orbital/soc/...)
-    CHARACTER(LEN=32), ALLOCATABLE :: op_comp(:)    ! requested components (Phase 2); '' = all of the operator rank
-    INTEGER, ALLOCATABLE :: op_total(:)             ! 1 = write summed-over-atoms projection (default)
+    !> Always allocated, possibly to size zero, so SIZE() is the count and the two cannot
+    !> come apart. One entry per <operator> of <interpolation>.
+    TYPE(t_wannierlib_op), ALLOCATABLE :: ops(:)
 
     ! --- operators_r table: one entry per <operators_r>/<operator name=".."> child ---
-    INTEGER :: n_op_r = 0
-    CHARACTER(LEN=20), ALLOCATABLE :: op_r_name(:)  ! hamiltonian/position/spin/orbital(/spin_orbit)
+    !> One name per <operator> of <operators_r>. A list of names is all this is, so it
+    !> stays a list of names rather than a record with one field in it.
+    CHARACTER(LEN=20), ALLOCATABLE :: op_r_name(:)
 
     INTEGER :: num_wann = 0
     INTEGER :: num_bands = 0
@@ -355,10 +364,17 @@ CONTAINS
     CLASS(t_wannierlib_wannierize), INTENT(INOUT) :: this
     INTEGER, INTENT(IN) :: mpi_comm
     INTEGER, INTENT(IN), OPTIONAL :: irank
-    INTEGER :: rank, myrank, ierr, iproj, nproj
+    INTEGER :: rank, myrank, ierr, iproj, nproj, iop, nops
 
     rank = 0
     IF (PRESENT(irank)) rank = irank
+    !> Needed by every block below that reallocates an array of records on the receivers.
+    !> It is read in more than one place, so it is set once here and not next to the first
+    !> use -- which is how it ended up undefined in the second.
+    myrank = rank
+#ifdef CPP_MPI
+    CALL MPI_COMM_RANK(mpi_comm, myrank, ierr)
+#endif
 
     CALL mpi_bc(this%l_wannierize, rank, mpi_comm)
     CALL mpi_bc(this%l_interpolation, rank, mpi_comm)
@@ -375,17 +391,26 @@ CONTAINS
     !> and the output name is built inside the domain loop, which every rank turns. Leaving
     !> them on rank 0 segfaulted rank 7 -- and not rank 1, so a two-rank suite passed.
     CALL mpi_bc(this%dom_suffix, rank, mpi_comm)
-    CALL mpi_bc(this%n_ops, rank, mpi_comm)
-    CALL mpi_bc(this%op_name, rank, mpi_comm)
-    CALL mpi_bc(this%op_comp, rank, mpi_comm)
-    CALL mpi_bc(this%op_total, rank, mpi_comm)
+    nops = 0
+    IF (ALLOCATED(this%ops)) nops = SIZE(this%ops)
+    CALL mpi_bc(nops, rank, mpi_comm)
+#ifdef CPP_MPI
+    IF (myrank /= rank) THEN
+      IF (ALLOCATED(this%ops)) DEALLOCATE(this%ops)
+      ALLOCATE(this%ops(nops))
+    END IF
+#endif
+    DO iop = 1, nops
+      CALL mpi_bc(rank, mpi_comm, this%ops(iop)%name)
+      CALL mpi_bc(rank, mpi_comm, this%ops(iop)%comp)
+      CALL mpi_bc(this%ops(iop)%total, rank, mpi_comm)
+    END DO
     CALL mpi_bc(this%l_operators_r, rank, mpi_comm)
     CALL mpi_bc(this%l_export_w90, rank, mpi_comm)
     CALL mpi_bc(this%l_export_basis, rank, mpi_comm)
     CALL mpi_bc(this%l_export_gauge, rank, mpi_comm)
     CALL mpi_bc(this%l_export_bloch, rank, mpi_comm)
     CALL mpi_bc(this%l_plot_wf, rank, mpi_comm)
-    CALL mpi_bc(this%n_op_r, rank, mpi_comm)
     CALL mpi_bc(this%op_r_name, rank, mpi_comm)
     CALL mpi_bc(this%num_wann, rank, mpi_comm)
     CALL mpi_bc(this%num_bands, rank, mpi_comm)
@@ -412,7 +437,6 @@ CONTAINS
     IF (ALLOCATED(this%proj)) nproj = SIZE(this%proj)
     CALL mpi_bc(nproj, rank, mpi_comm)
 #ifdef CPP_MPI
-    CALL MPI_COMM_RANK(mpi_comm, myrank, ierr)
     IF (myrank /= rank) THEN
       IF (ALLOCATED(this%proj)) DEALLOCATE(this%proj)
       IF (nproj > 0) ALLOCATE(this%proj(nproj))
@@ -458,6 +482,7 @@ CONTAINS
     CHARACTER(LEN=255) :: sbuf
     INTEGER :: numberNodes, ios
     INTEGER :: nSpecies, iType, nProjType, iProj, ip, nProjTotal, iRow
+    INTEGER :: nOpsRead = 0, nOprRead = 0
     LOGICAL :: has_wannierize
     CHARACTER(LEN=20) :: species_name
     TYPE(t_kpts) :: kpts_temp
@@ -582,19 +607,19 @@ CONTAINS
 
       this%l_ws_distance = evaluateFirstBoolOnly( &
         xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@useWsDistance'))
-      this%n_ops = xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/operator')
+      nOpsRead = xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/operator')
     END IF
 
-    ALLOCATE(this%op_name(this%n_ops), this%op_comp(this%n_ops), this%op_total(this%n_ops))
-    DO iProj = 1, this%n_ops
+    ALLOCATE(this%ops(nOpsRead))
+    DO iProj = 1, nOpsRead
       WRITE(xPathP, '(A,I0,A)') '/fleurInput/output/wannierlib/interpolation/operator[', iProj, ']'
-      this%op_name(iProj) = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@name'))
-      this%op_comp(iProj) = ''
+      this%ops(iProj)%name = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@name'))
+      this%ops(iProj)%comp = ''
       IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@comp') == 1) &
-         this%op_comp(iProj) = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@comp'))
-      this%op_total(iProj) = 1
+         this%ops(iProj)%comp = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@comp'))
+      this%ops(iProj)%total = 1
       IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@total') == 1) THEN
-        IF (.NOT. evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@total'))) this%op_total(iProj) = 0
+        IF (.NOT. evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@total'))) this%ops(iProj)%total = 0
       END IF
 
       ! derive convenience flags that gate the coarse-mesh provider calls.
@@ -604,7 +629,7 @@ CONTAINS
       !> so a name added there is picked up here without being remembered twice. What is
       !> left below maps the three CATALOGUE entries onto the three flags, and that mapping
       !> only grows if the catalogue itself does.
-      iRow = melem_exposed_find(this%op_name(iProj), WANNIERLIB_INTERP)
+      iRow = melem_exposed_find(this%ops(iProj)%name, WANNIERLIB_INTERP)
       IF (iRow > 0) THEN
         IF (TRIM(WANNIERLIB_INTERP(iRow)%name) == 'hamiltonian') this%l_interpolation = .TRUE.
         SELECT CASE (TRIM(WANNIERLIB_INTERP(iRow)%operator))
@@ -636,10 +661,10 @@ CONTAINS
     xPathA = '/fleurInput/output/wannierlib/operators_r'
     IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))) == 1) THEN
       this%l_operators_r = .TRUE.
-      this%n_op_r = xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/operator')
+      nOprRead = xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/operator')
     END IF
-    ALLOCATE(this%op_r_name(this%n_op_r))
-    DO iProj = 1, this%n_op_r
+    ALLOCATE(this%op_r_name(nOprRead))
+    DO iProj = 1, nOprRead
       WRITE(xPathP, '(A,I0,A)') '/fleurInput/output/wannierlib/operators_r/operator[', iProj, ']'
       this%op_r_name(iProj) = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@name'))
       iRow = melem_exposed_find(this%op_r_name(iProj), WANNIERLIB_OPR)

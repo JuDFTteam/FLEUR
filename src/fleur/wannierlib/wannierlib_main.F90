@@ -144,10 +144,10 @@ CONTAINS
       !> being asked. What it receives is the catalogue entry each name needs built. A name
       !> no table carries stops the run with the accepted names, rather than leaving an
       !> operator silently absent from the output.
-      ALLOCATE (op_needs(SIZE(this%op_name)), op_r_needs(SIZE(this%op_r_name)))
-      DO iop = 1, SIZE(this%op_name)
-         krow = melem_exposed_find(this%op_name(iop), WANNIERLIB_INTERP)
-         IF (krow == 0) CALL juDFT_error('wannierlib: "'//TRIM(this%op_name(iop))// &
+      ALLOCATE (op_needs(SIZE(this%ops)), op_r_needs(SIZE(this%op_r_name)))
+      DO iop = 1, SIZE(this%ops)
+         krow = melem_exposed_find(this%ops(iop)%name, WANNIERLIB_INTERP)
+         IF (krow == 0) CALL juDFT_error('wannierlib: "'//TRIM(this%ops(iop)%name)// &
             '" is not an operator that can be interpolated', &
             hint=melem_exposed_names(WANNIERLIB_INTERP), calledby='wannierlib_main')
          op_needs(iop) = WANNIERLIB_INTERP(krow)%operator
@@ -161,7 +161,7 @@ CONTAINS
       END DO
 
       CALL request%init(this%l_spin, this%l_orbmom, this%l_socop, this%l_operators_r, &
-                        this%op_r_name, this%op_name, this%op_total, &
+                        this%op_r_name, this%ops%name, this%ops%total, &
                         op_r_needs, op_needs, this%l_ws_distance)
       !> On a film, refuse by name rather than as a whole. The pair overlap has its vacuum
       !> half now, so the wannierization itself works and with it everything built from mmn:
