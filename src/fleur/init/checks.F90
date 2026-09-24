@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Gruenberg Institut, Forschungszentrum Juelich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -147,6 +147,14 @@ MODULE m_checks
 
 #ifndef CPP_HDF
      if (hybinp%l_hybrid) call juDFT_warn("Hybrid calculations should always use HDF5")
+     if (noco%l_noco.and.noco%l_mperp) call juDFT_error("l_mperp=T requires HDF5 for the charge density IO", &
+                  hint="The direct access density files cannot store the off-diagonal MT magnetization. Recompile with HDF5.", &
+                  calledby="check_input_switches")
+#else
+     if (noco%l_noco.and.noco%l_mperp.and.juDFT_was_argument("-no_cdn_hdf")) &
+        call juDFT_error("l_mperp=T cannot be used with -no_cdn_hdf", &
+                  hint="The direct access density files cannot store the off-diagonal MT magnetization.", &
+                  calledby="check_input_switches")
 #endif
 
    END SUBROUTINE check_input_switches
