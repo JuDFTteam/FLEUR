@@ -27,7 +27,8 @@ MODULE m_wannierlib_mmnkb
   USE m_types_mpi
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: wannierlib_mmnkb
+  PUBLIC :: wannierlib_mmnkb, &
+             wannierlib_kdiff
 CONTAINS
 
   SUBROUTINE wannierlib_mmnkb(manifold, bmesh, nk, kpts, ujug, atoms, cell, input, sym, noco, nococonv, &
@@ -120,4 +121,35 @@ CONTAINS
 
   
 
+
+   SUBROUTINE wannierlib_kdiff(num_kpts, nntot, bk, nnkp, gkpb, kdiff)
+      INTEGER, INTENT(IN) :: num_kpts
+      INTEGER, INTENT(IN) :: nntot
+      REAL, INTENT(IN) :: bk(:, :)
+      INTEGER, INTENT(IN) :: nnkp(:, :)
+      INTEGER, INTENT(IN) :: gkpb(:, :, :)
+      REAL, ALLOCATABLE, INTENT(OUT) :: kdiff(:, :)
+
+      INTEGER :: k, kk, ikpt, kd
+      REAL :: kdiffvec(3)
+
+      ALLOCATE (kdiff(3, nntot))
+      kdiff = 0.0
+
+      kd = 1
+      DO k = 1, num_kpts
+         k_loop: DO kk = 1, nntot
+            kdiffvec = bk(:, nnkp(k, kk)) + REAL(gkpb(:, k, kk)) - bk(:, k)
+            DO ikpt = 1, kd - 1
+               IF (ALL(ABS(kdiff(:, ikpt) - kdiffvec) <= 1.0e-4)) CYCLE k_loop
+            END DO
+
+            IF (kd > nntot) THEN
+               CALL juDFT_error("problem in wannierlib_kdiff", calledby="wannierlib_kdiff")
+            end if
+            kdiff(:, kd) = kdiffvec
+            kd = kd + 1
+         END DO k_loop
+      END DO
+   END SUBROUTINE wannierlib_kdiff
 END MODULE m_wannierlib_mmnkb

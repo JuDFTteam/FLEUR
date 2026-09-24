@@ -43,7 +43,8 @@ MODULE m_wannierlib_build_amn_mmn
    USE m_wannierlib_mmnkb
    IMPLICIT NONE
    PRIVATE
-   PUBLIC :: wannierlib_build_amn_mmn
+   PUBLIC :: wannierlib_build_amn_mmn, &
+             wannierlib_reduce_amn, wannierlib_gather_mmn
 CONTAINS
 
    SUBROUTINE wannierlib_build_amn_mmn(this, manifold, bmesh, atoms, cell, input, kpts, sym, &
@@ -135,4 +136,56 @@ CONTAINS
       IF (ALLOCATED(ujug)) DEALLOCATE (ujug)
    END SUBROUTINE wannierlib_build_amn_mmn
 
+
+   ! Complete the distributed amn: each rank filled only its distk k-slice (zeros elsewhere),
+   ! so an MPI_ALLREDUCE(SUM) reassembles the full amn on every rank (needed by w90_set_u_opt).
+   SUBROUTINE wannierlib_reduce_amn(fmpi, amn)
+#ifdef CPP_MPI
+      use mpi
+#endif
+      TYPE(t_mpi), INTENT(IN) :: fmpi
+      COMPLEX, INTENT(INOUT) :: amn(:, :, :)
+#ifdef CPP_MPI
+      INTEGER :: ierr
+      IF (fmpi%isize > 1) &
+         CALL MPI_ALLREDUCE(MPI_IN_PLACE, amn, SIZE(amn), MPI_DOUBLE_COMPLEX, MPI_SUM, fmpi%mpi_comm, ierr)
+#endif
+   END SUBROUTINE wannierlib_reduce_amn
+
+   ! Reassemble the full-mesh mmn so it can be written as one file. amn is allocated over
+   ! every k and left at zero outside each rank's slice, so summing completes it; mmn is
+   ! stored compactly as (nb, nb, nntot, nk_local) indexed by POSITION within the slice, so
+   ! the slices have to be placed at their global k before being summed. The local order is
+   ! ascending global k (wannierlib_build_amn_mmn fills it in that order), and every k is
+   ! owned by exactly one rank, so the sum is a copy. This is the one full-mesh buffer the
+   ! distributed post-processing otherwise avoids, so it is allocated only when asked for.
+   SUBROUTINE wannierlib_gather_mmn(fmpi, distk, nkptf, mmn_loc, mmn_full)
+#ifdef CPP_MPI
+      use mpi
+#endif
+      TYPE(t_mpi), INTENT(IN) :: fmpi
+      INTEGER, INTENT(IN) :: distk(:)             ! (nkptf) owning rank of each k
+      INTEGER, INTENT(IN) :: nkptf
+      COMPLEX, INTENT(IN) :: mmn_loc(:, :, :, :)  ! (nb, nb, nntot, nk_local)
+      COMPLEX, ALLOCATABLE, INTENT(OUT) :: mmn_full(:, :, :, :)
+      INTEGER :: ikpt, ik_local, ierr
+#ifdef CPP_MPI
+      INTEGER :: mpi_err
+#endif
+      ALLOCATE (mmn_full(SIZE(mmn_loc, 1), SIZE(mmn_loc, 2), SIZE(mmn_loc, 3), nkptf), &
+                stat=ierr, source=CMPLX(0.0, 0.0))
+      IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating the full mmn buffer', &
+                                      calledby='wannierlib_gather_mmn')
+      ik_local = 0
+      DO ikpt = 1, nkptf
+         IF (distk(ikpt) /= fmpi%irank) CYCLE
+         ik_local = ik_local + 1
+         mmn_full(:, :, :, ikpt) = mmn_loc(:, :, :, ik_local)
+      END DO
+#ifdef CPP_MPI
+      IF (fmpi%isize > 1) &
+         CALL MPI_ALLREDUCE(MPI_IN_PLACE, mmn_full, SIZE(mmn_full), MPI_DOUBLE_COMPLEX, &
+                            MPI_SUM, fmpi%mpi_comm, mpi_err)
+#endif
+   END SUBROUTINE wannierlib_gather_mmn
 END MODULE m_wannierlib_build_amn_mmn
