@@ -63,7 +63,7 @@ CONTAINS
       TYPE(t_potden):: potden1dummy,potdendummy,potden1dummyLocal
       TYPE(t_atoms) :: atomsLocal
 
-      INTEGER :: col_index, row_index, iDtype_col, iDir_col, iType, iDir, iSpin
+      INTEGER :: col_index, row_index, iDtype_col, iDir_col, iType, iDir, iSpin, iStar, iStarM
       COMPLEX :: tempval
       LOGICAL :: bare_mode
 
@@ -75,6 +75,7 @@ CONTAINS
       COMPLEX, ALLOCATABLE :: theta1_pw(:, :, :), theta1_pw0(:, :, :)!,theta2_pw(:, :, :)
       COMPLEX, ALLOCATABLE :: pww(:), pwwq(:), pww2(:), pwwq2(:)
       COMPLEX, ALLOCATABLE :: rho_pw(:), denIn1_pw(:), rho_vac(:,:,:), denIn1_vac(:,:,:)
+      COMPLEX, ALLOCATABLE :: vpw12(:)
       REAL,    ALLOCATABLE :: rho_mt(:,:,:), grRho_mt(:,:,:), denIn1_mt(:,:,:), denIn1_mt_Im(:,:,:)
 
       !  local arrays for the external potential
@@ -96,6 +97,14 @@ CONTAINS
 
       ALLOCATE(denIn1_mt(fi%atoms%jmtd,0:sphhar%nlhd,fi%atoms%ntype),denIn1_mt_Im(fi%atoms%jmtd,0:sphhar%nlhd,fi%atoms%ntype))
       ALLOCATE(denIn1_pw(starsq%ng3),rho_pw(stars%ng3))
+      IF (fi%noco%l_noco) THEN
+         ALLOCATE(vpw12(stars%ng3)) !WIP
+         DO iStar = 1, stars%ng3
+            iStarM = stars%ig(-stars%kv3(1,iStar),-stars%kv3(2,iStar),-stars%kv3(3,iStar))
+            IF (iStarM.EQ.0) CALL juDFT_error("star set not closed under inversion",calledby="dfpt_dynmat_row")
+            vpw12(iStar) = CONJG(vTot%pw(iStarM,3))
+         END DO
+      END IF
       ALLOCATE(rho_mt(fi%atoms%jmtd,0:sphhar%nlhd,fi%atoms%ntype),grRho_mt(fi%atoms%jmtd,0:sphhar%nlhd,fi%atoms%ntype))
       IF (fi%input%film) THEN
          ALLOCATE(denIn1_vac(fi%vacuum%nmzd,starsq%ng2,2))
@@ -341,7 +350,6 @@ CONTAINS
 
             DO iSpin = 1, fi%input%jspins
                IF (fmpi%irank==0) write(9989,*) "Loop spin:", iSpin
-               ! TODO: Ensure, that vTot/denIn1 is diagonal here, not 2x2.
                pwwq2 = CMPLX(0.0,0.0)
                CALL dfpt_convol_big(2, stars, starsq, vTot%pw(:, iSpin), theta1full(0:, iDtype_col, iDir_col), pwwq2)
                CALL dfpt_int_pw(starsq, fi%cell, denIn1%pw(:,iSpin), pwwq2, tempval)
@@ -350,6 +358,22 @@ CONTAINS
                tempval = CMPLX(0.0,0.0)
             END DO
             IF (fmpi%irank==0) write(9989,*) "End spin loop"
+
+            IF (fi%noco%l_noco) THEN
+               pwwq2 = CMPLX(0.0,0.0)
+               CALL dfpt_convol_big(2, stars, starsq, vpw12, theta1full(0:, iDtype_col, iDir_col), pwwq2)
+               CALL dfpt_int_pw(starsq, fi%cell, denIn1%pw(:,3), pwwq2, tempval)
+               dyn_row_int(col_index) = dyn_row_int(col_index) + tempval
+               IF (fmpi%irank==0) write(9989,FMT=8000) "    IR rho1 vTot Theta1 od12      ", tempval
+               tempval = CMPLX(0.0,0.0)
+
+               pwwq2 = CMPLX(0.0,0.0)
+               CALL dfpt_convol_big(2, stars, starsq, vTot%pw(:,3), theta1full(0:, iDtype_col, iDir_col), pwwq2)
+               CALL dfpt_int_pw(starsq, fi%cell, denIn1%pw(:,4), pwwq2, tempval)
+               dyn_row_int(col_index) = dyn_row_int(col_index) + tempval
+               IF (fmpi%irank==0) write(9989,FMT=8000) "    IR rho1 vTot Theta1 od21      ", tempval
+               tempval = CMPLX(0.0,0.0)
+            END IF
 
             IF (iDtype_row==iDtype_col) THEN
                CALL vExt1%init(starsLocal, atomsLocal, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_POTTOT, l_dfpt=.TRUE.)
@@ -419,7 +443,6 @@ CONTAINS
 
                DO iSpin = 1, fi%input%jspins
                   IF (fmpi%irank==0) write(9989,*) "Loop spin:", iSpin
-                  ! TODO: Ensure, that vTot/gradrho is diagonal here, not 2x2 [NOCO].
                   pww2 = CMPLX(0.0,0.0)
                   CALL dfpt_convol_big(1, stars, stars, vTot%pw(:,iSpin), theta1full0(0:,iDtype_col,iDir_col), pww2)
                   CALL dfpt_int_pw(stars, fi%cell, grRho3(iDir_row)%pw(:,iSpin), pww2, tempval)
@@ -428,6 +451,22 @@ CONTAINS
                   tempval = CMPLX(0.0,0.0)
                END DO
                IF (fmpi%irank==0) write(9989,*) "End spin loop"
+
+               IF (fi%noco%l_noco) THEN
+                  pww2 = CMPLX(0.0,0.0)
+                  CALL dfpt_convol_big(1, stars, stars, vpw12, theta1full0(0:,iDtype_col,iDir_col), pww2)
+                  CALL dfpt_int_pw(stars, fi%cell, grRho3(iDir_row)%pw(:,3), pww2, tempval)
+                  dyn_row_int(col_index) = dyn_row_int(col_index) + tempval
+                  IF (fmpi%irank==0) write(9989,FMT=8000) "    IR grRho vTot Theta1 od12     ", tempval
+                  tempval = CMPLX(0.0,0.0)
+
+                  pww2 = CMPLX(0.0,0.0)
+                  CALL dfpt_convol_big(1, stars, stars, vTot%pw(:,3), theta1full0(0:,iDtype_col,iDir_col), pww2)
+                  CALL dfpt_int_pw(stars, fi%cell, grRho3(iDir_row)%pw(:,4), pww2, tempval)
+                  dyn_row_int(col_index) = dyn_row_int(col_index) + tempval
+                  IF (fmpi%irank==0) write(9989,FMT=8000) "    IR grRho vTot Theta1 od21     ", tempval
+                  tempval = CMPLX(0.0,0.0)
+               END IF
 
                IF (fi%input%film .AND. iDir_row == 3  ) THEN 
                   rhoLocal_vac = CMPLX(0.0,0.0)

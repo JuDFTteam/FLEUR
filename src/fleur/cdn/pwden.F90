@@ -299,13 +299,17 @@ CONTAINS
             ELSE
                !DFPT NOCO
                DO ir = 0, rhomatGrid(1)%gridLength - 1
+                  !In this order: rho^1_11, rho^1_22, m^1_x/2, m^1_y/2
                   rhomatGrid(1)%grid(ir) = rhomatGrid(1)%grid(ir) + wtf(nu) * 2 * CONJG(state%grid(ir)) * stateq%grid(ir)
                   rhomatGrid(2)%grid(ir) = rhomatGrid(2)%grid(ir) + wtf(nu) * 2 * CONJG(stateB%grid(ir)) * stateBq%grid(ir)
-                  !IF (norm2(q_dfpt)<1e-8) THEN
-                  !   rhomatGrid(1)%grid(ir) = rhomatGrid(1)%grid(ir) + wtf1(nu) * ABS(state%grid(ir))**2
-                  !   rhomatGrid(2)%grid(ir) = rhomatGrid(2)%grid(ir) + wtf1(nu) * ABS(stateB%grid(ir))**2
-                  !END IF
-                  !when time reversal symmetry is broken this requires the lminusq contribution and removing the 2* factor
+                  rhomatGrid(3)%grid(ir) = rhomatGrid(3)%grid(ir) + wtf(nu) * (CONJG(state%grid(ir))*stateBq%grid(ir) + CONJG(stateB%grid(ir))*stateq%grid(ir))
+                  !rhomatGrid(4)corresponding to my^1 becomes relevant for -q solve
+                  IF (norm2(q_dfpt)<1e-8) THEN
+                     rhomatGrid(1)%grid(ir) = rhomatGrid(1)%grid(ir) + wtf1(nu) * ABS(state%grid(ir))**2
+                     rhomatGrid(2)%grid(ir) = rhomatGrid(2)%grid(ir) + wtf1(nu) * ABS(stateB%grid(ir))**2
+                     rhomatGrid(3)%grid(ir) = rhomatGrid(3)%grid(ir) + wtf1(nu) * (REAL(state%grid(ir))*REAL(stateB%grid(ir)) + AIMAG(state%grid(ir))*AIMAG(stateB%grid(ir)))
+                     !rhomatGrid(4)%grid(ir) = rhomatGrid(4)%grid(ir) + wtf1(nu) * (REAL(state%grid(ir))*AIMAG(stateB%grid(ir)) - AIMAG(state%grid(ir))*REAL(stateB%grid(ir)))
+                  END IF
                END DO
             END IF
 
@@ -513,7 +517,6 @@ CONTAINS
             ! add to spin-up or -down density (collinear & non-collinear)
             ispin = jspin
             IF (noco%l_noco) ispin = idens
-            ! TODO: Shouldn't there be a starsq here for DFPT?
             DO istr = 1, stars%ng3_fft
                den%pw(istr, ispin) = den%pw(istr, ispin) + cwk(istr)
             ENDDO
@@ -532,10 +535,8 @@ CONTAINS
             ! add to off-diag. part of density matrix (only non-collinear)
             DO istr = 1, stars%ng3_fft
                den%pw(istr, 3) = den%pw(istr, 3) - ImagUnit*cwk(istr)
-               ! TODO: This is a magic minus. It should be + ImagUnit*cwk(istr)
             ENDDO
             IF (l_dfpt) THEN
-               ! TODO: Only touch this once the magic minus is fully consistent.
                DO istr = 1, stars%ng3_fft
                   den%pw(istr, 4) = den%pw(istr, 4) + ImagUnit*cwk(istr)
                ENDDO

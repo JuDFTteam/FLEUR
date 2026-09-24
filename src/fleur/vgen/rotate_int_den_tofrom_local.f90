@@ -106,7 +106,7 @@ CONTAINS
          rho_21r  = ris(imesh,3)
          rho_21i  = ris(imesh,4)
          mx       =  2*rho_21r
-         my       = -2*rho_21i ! TODO: This is a magic minus.
+         my       = -2*rho_21i 
          mz       = rho_11 - rho_22
          magmom   = SQRT(mx**2 + my**2 + mz**2)
          rhotot   = rho_11 + rho_22
