@@ -1,0 +1,19 @@
+set(fleur_F90 ${fleur_F90}
+src/fleur/wannierlib/postproc/types_melem_manifold.F90
+src/fleur/wannierlib/postproc/types_melem_domains.F90
+src/fleur/wannierlib/postproc/types_melem_bmesh.F90
+src/fleur/wannierlib/postproc/melem_ft.F90
+src/fleur/wannierlib/postproc/melem_io.F90
+src/fleur/wannierlib/postproc/melem_hamk.F90
+src/fleur/wannierlib/postproc/melem_coeff_a.F90
+src/fleur/wannierlib/postproc/melem_coeff_tensor.F90
+src/fleur/wannierlib/postproc/melem_coeff_b.F90
+src/fleur/wannierlib/postproc/melem_operators_r.F90
+src/fleur/wannierlib/postproc/melem_spin_collinear.F90
+src/fleur/wannierlib/postproc/melem_interp_util.F90
+src/fleur/wannierlib/postproc/melem_interpolate_ham.F90
+src/fleur/wannierlib/postproc/melem_interpolate_op.F90
+src/fleur/wannierlib/postproc/melem_interpolate_velocity.F90
+src/fleur/wannierlib/postproc/melem_interpolate_eigenstates.F90
+src/fleur/wannierlib/postproc/melem_run.F90
+)

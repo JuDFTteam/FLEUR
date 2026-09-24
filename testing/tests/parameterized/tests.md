@@ -161,3 +161,23 @@ Testset: Greenfunctions
 |     | Greens Function intersite multiple shells            | greens/GreensFunction_IntersiteMultipleShells        | bulk  |                 |         | 2   |
 |     | Greens Function intersite shell construction         | greens/GreensFunction_IntersiteShellConstruction     | bulk  | takes too long! |         | 2   |
 |     | Greens Function intersite shell construction         | greens/GreensFunction_IntersiteShellConstructionFilm | bulk  |                 |         | 2   | 
+
+Testset: Wannier
+------
+
+|     | Description                              | directory name   | marks         | Remarks | CmdLine | MPI |
+| --- | ---------------------------------------- | ---------------- | ------------- | ------- | ------- | --- |
+| +   | Pt no-SOC, wannierlib total spread       | wannier/WannPt   | wannierlib,bulk  |         |         | 1   |
+| +   | Pt SOC, wannierlib total spread              | wannier/WannPtSOC | wannierlib,bulk,soc |         |         | 1   |
+| +   | fcc Fe FM noco, wannierlib total spread      | wannier/WannFeFM | wannierlib,bulk  |         |         | 1   |
+| +   | fcc Fe FM noco, moment along y (alpha!=0)    | wannier/WannFeFMy | wannierlib,bulk  |         |         | 1   |
+| +   | bcc Fe noco, moment along y, spin-balanced   | wannier/WannFeBccYBal | wannierlib,bulk  |         |         | 1   |
+| +   | fcc Fe AFM noco, wannierlib total spread     | wannier/WannFeAFM | wannierlib,bulk  |         |         | 1   |
+| +   | fcc Fe AFM noco+SOC, wannierlib total spread | wannier/WannFeAFMSOC | wannierlib,bulk,soc |         |         | 1   |
+| +   | Pt SOC, wannierlib real-space operators O(R) | wannier/WannPtSOCOps | wannierlib,bulk,soc |         |         | 1   |
+| +   | bcc Fe FM collinear+SOC, wannierlib O(R)     | wannier/WannFeBccSOC | wannierlib,bulk,soc |         |         | 1   |
+| +   | fcc Fe AFM collinear+SOC, wannierlib O(R)    | wannier/WannFeAFMColSOC | wannierlib,bulk,soc |         |         | 1   |
+| +   | bcc Fe FM collinear no-SOC, wannierlib O(R)  | wannier/WannFeBcc | wannierlib,bulk |         |         | 1   |
+| +   | fcc Fe AFM noco+SOC, wannierlib O(R)         | wannier/WannFeAFMSOCOps | wannierlib,bulk,soc |         |         | 1   |
+| +   | fcc Fe AFM collinear no-SOC, wannierlib O(R) | wannier/WannFeAFMCol | wannierlib,bulk |         |         | 1   |
+| +   | bcc Fe FM collinear, Wannier interpolation   | wannier/WannFeBccInterp | wannierlib,bulk,band |         |         | 1   |

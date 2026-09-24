@@ -118,6 +118,9 @@ CONTAINS
        READ(str,*) grid
        PRINT *,"Generating a k-point grid:",grid
        CALL init_by_grid(kpts,grid,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma,l_OnlyIdentitySym)
+    ELSEIF(INDEX(str,'plane=')==1) THEN
+       str=str(7:)
+       CALL init_by_plane(kpts,str)
     ELSEIF(INDEX(str,'file')==1) THEN
        CALL init_by_kptsfile(kpts,film)
        PRINT *,"Reading old kpts file"
@@ -758,4 +761,45 @@ CONTAINS
     END IF
     CALL timestop('add_special_kpoints_default')
   END SUBROUTINE add_special_points_default
+  SUBROUTINE init_by_plane(kpts,str)
+    !----------------------------------------------------------------------+
+    ! Generate an explicit 2D k-point set (plane) in fractional reciprocal |
+    ! coordinates, stored as a named kPointList (no symmetry reduction):   |
+    !   k(i,j) = origin + i/(n1-1) v1 + j/(n2-1) v2                         |
+    ! Argument string (slashes group the vectors/counts):                  |
+    !   ox,oy,oz/v1x,v1y,v1z/v2x,v2y,v2z/n1/n2                              |
+    !----------------------------------------------------------------------+
+    IMPLICIT NONE
+    CLASS(t_kpts),INTENT(out)      :: kpts
+    CHARACTER(len=*),INTENT(in)    :: str
+
+    REAL    :: origin(3), v1(3), v2(3), t1, t2
+    INTEGER :: n1, n2, i, j, ik, p
+    CHARACTER(len=500) :: s
+
+    ! list-directed READ treats '/' as a terminator -> replace by blanks first
+    s = str
+    DO p = 1, LEN_TRIM(s)
+       IF (s(p:p)=='/') s(p:p)=' '
+    END DO
+    READ(s,*) origin, v1, v2, n1, n2
+    IF (n1<2 .OR. n2<2) CALL juDFT_error("init_by_plane: n1,n2 must be >=2", &
+                                         calledby="init_by_plane")
+
+    kpts%nkpt = n1*n2
+    ALLOCATE(kpts%bk(3,kpts%nkpt), kpts%wtkpt(kpts%nkpt))
+    ik = 0
+    DO i = 0, n1-1
+       t1 = REAL(i)/REAL(n1-1)
+       DO j = 0, n2-1
+          t2 = REAL(j)/REAL(n2-1)
+          ik = ik+1
+          kpts%bk(:,ik) = origin + t1*v1 + t2*v2
+       END DO
+    END DO
+    kpts%wtkpt    = 1.0/REAL(kpts%nkpt)
+    kpts%kptsKind = KPTS_KIND_PLANE
+    PRINT *,"Generating a k-point plane: n1,n2 =",n1,n2," -> ",kpts%nkpt," k-points"
+  END SUBROUTINE init_by_plane
+
 END MODULE m_make_kpoints

@@ -3,19 +3,41 @@
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
-!--------------------------------------------------------------------------------
-! Copyright (c) 2026 Peter Gruenberg Institut, Forschungszentrum Juelich, Germany
-!--------------------------------------------------------------------------------
+!>  The angular half of a projection: the trial orbital the user asked for, written in the
+!>  basis of complex spherical harmonics the wavefunction is expanded in.
+!>
+!>  tlm holds the real harmonics of Wannier90's convention -- p_x = (Y_1,-1 - Y_1,1)/sqrt(2),
+!>  p_y = i(Y_1,-1 + Y_1,1)/sqrt(2), and so on -- and tlmwf then picks, per Wannier function,
+!>  the combination its (l, mr) names.
+!>
+!>  A NEGATIVE l is a hybrid, and that is where the coefficients stop being one row of tlm:
+!>  sp3 mixes l=0 and l=1 with 1/sqrt(3) and 1/sqrt(6), sp3d2 reaches l=2 as well. Those are
+!>  the guesses that localise on a bond rather than on an atom.
+!>
+!>  m_wannierlib_rad_twd carries the same table for the spin-orbit case, where the orbital is
+!>  named by (j, m_j) and the coefficients are Clebsch-Gordan instead.
 MODULE m_wannierlib_tlmw
   USE m_juDFT
   USE m_types_wannierlib
   IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: wannierlib_tlmw
 CONTAINS
 
-  SUBROUTINE wannierlib_tlmw(wannierlib, nwfs, l_nocosoc, jspin, tlmwf)
+  SUBROUTINE wannierlib_tlmw(wannierlib, nwfs, l_spinors, jspin, tlmwf)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: wannierlib
     INTEGER, INTENT(IN) :: nwfs
-    LOGICAL, INTENT(IN) :: l_nocosoc
+    !> True whenever the run carries spinors (noco OR soc): the column guard below
+    !> keeps each spinor component to the projections of its own channel, and without
+    !> it both components fill all num_wann columns and amn comes out rank num_wann/2.
+    !>
+    !> Careful with the name l_nocosoc, which this routine deliberately does NOT take.
+    !> It means opposite things in the two halves of the tree: (noco AND NOT soc) in
+    !> wannierlib_main, but (noco OR soc) in wann_optional/wann_postproc -- and the
+    !> latter is what FLEUR v26 calls l_nocosoc in wann_tlmw, the routine this one
+    !> mirrors. So l_spinors here is the SAME condition as v26's guard, not a
+    !> departure from it.
+    LOGICAL, INTENT(IN) :: l_spinors
     INTEGER, INTENT(IN) :: jspin
     COMPLEX, INTENT(OUT) :: tlmwf(0:3, -3:3, nwfs)
 
@@ -66,7 +88,7 @@ CONTAINS
     tlmwf = CMPLX(0.0, 0.0)
 
     DO nwf = 1, nwfs
-      IF (l_nocosoc .AND. ((3 - 2 * jspin) /= wannierlib%proj_spin(nwf))) CYCLE
+      IF (l_spinors .AND. ((3 - 2 * jspin) /= wannierlib%proj_spin(nwf))) CYCLE
 
       lr = wannierlib%proj_l(nwf)
       mr = wannierlib%proj_m(nwf)

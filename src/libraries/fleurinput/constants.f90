@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -59,9 +59,10 @@ MODULE m_constants
   INTEGER, PARAMETER :: KPTS_KIND_TRIA_BULK   = 3
   INTEGER, PARAMETER :: KPTS_KIND_TRIA        = 4
   INTEGER, PARAMETER :: KPTS_KIND_SPEX_MESH   = 5
+  INTEGER, PARAMETER :: KPTS_KIND_PLANE       = 6
 
-  CHARACTER(LEN=11),DIMENSION(0:5),PARAMETER :: kptsKindString_consts = &
-     (/'unspecified','mesh       ','path       ','tria-bulk  ','tria       ','SPEX mesh  ' /)
+  CHARACTER(LEN=11),DIMENSION(0:6),PARAMETER :: kptsKindString_consts = &
+     (/'unspecified','mesh       ','path       ','tria-bulk  ','tria       ','SPEX mesh  ','plane      ' /)
 
   INTEGER, PARAMETER :: BZINT_METHOD_HIST  = 0
   INTEGER, PARAMETER :: BZINT_METHOD_GAUSS = 1

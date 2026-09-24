@@ -1,74 +1,252 @@
 # wannierlib in FLEUR
 
-This page documents the new `wannierlib` input path in FLEUR and summarizes
-how projection descriptors are interpreted.
+`wannierlib` runs Wannier90 as a **library** inside FLEUR. There is no `seedname.win` and no
+separate `wannier90.x` call: FLEUR builds the overlaps and projections, hands them to
+Wannier90 through its module API, and post-processes the resulting gauge in the same
+execution. Everything is driven from `inp.xml`.
 
-The behavior described here is based on:
-- `src/libraries/fleurinput/types_wannierlib.f90`
-- `src/fleur/io/xml/FleurInputSchema.xsd`
-- Wannier90 projection definitions:
-  https://wannier90.readthedocs.io/en/latest/user_guide/wannier90/projections/#angular-functions
+Companion documents:
+- `src/fleur/wannierlib/README.md` — how the pipeline is put together.
+- `src/fleur/matrixelements/README.md` — how to add an operator.
+
+## 0. Before you start
+
+**Wannier90 3.x, built as a library.** Library mode needs the module API, which arrived in
+Wannier90 3.x. Against 1.2 FLEUR still compiles, but the interface is simply absent and
+nothing here works.
+
+```bash
+cd wannier90-3.1.0
+cp config/make.inc.ifort make.inc      # then set F90 = mpiifort, COMMS = mpi
+make default lib                       # -> libwannier.a
+
+./configure.sh -libxc -wannier -hdf5 \
+     -libdir <wannier90 dir> -includedir <hdf5 dir>/include -l wannlib
+cd build.wannlib && make -j16
+```
+
+The classic route (`<wannier>`, `CPP_WANN`) and library mode (`<wannierlib>`,
+`CPP_WANNLIB_API`) use different Wannier90 interfaces, so one binary serves one route. Keep
+a build directory per route; `configure.sh -l <name>` writes `build.<name>`.
+
+**The wannierisation mesh must cover the full zone**, gamma-centred and with symmetry off,
+because the neighbour shell **b** is otherwise incomplete:
+
+```bash
+inpgen -inp.xml -kpt "wann8#gamma@grid=8,8,8" -noKsym
+```
+
+Then point `<kPointListSelection listName="wann8"/>` at that list. The SCF itself may keep
+using the symmetry-reduced mesh.
+
+**The number of k-points must divide the number of MPI ranks exactly.** If it does not,
+FLEUR does *not* abort — it **hangs** on one k-point.
+
+**Numbers in `inp.xml` are plain decimals.** FLEUR's expression parser reads digits, one
+decimal point and a leading sign, and stops at anything else, so `1.0e-10` fails with
+`Error in expression: Unknown character string found`. Write `0.0000000001`. (`10^-10` fails
+too: the parser rejects an operator following an operator.)
+
+**Working examples** live in `testing/inputfiles/wannier/` — fifteen cases covering
+collinear, non-collinear, SOC, interpolation and the operator exports. Starting from one of
+those and changing the structure is the shortest path in.
 
 ## 1. Where to put input in `inp.xml`
 
 `wannierlib` is configured in two places:
 
-1. Global workflow controls in:
-   `/fleurInput/output/wannierlib`
-2. Projection descriptors per species in:
-   `/fleurInput/atomSpecies/species/wannierproj`
+1. Global workflow controls in `/fleurInput/output/wannierlib`
+2. Projection descriptors per species in `/fleurInput/atomSpecies/species/wannierproj`
 
-## 2. Global `wannierlib` block
+## 2. The `<wannierlib>` block
 
 ### 2.1 Structure
+
+Only `<bands>` is required; every other sub-block is optional and independent.
 
 ```xml
 <output>
   <wannierlib wannierize="T">
-    <bands numBands="20" minBand="21" maxBand="40"/>
-    <disentanglement
-      disWinMin="-8.0" disWinMax="12.0"
-      disFrozMin="-6.0" disFrozMax="4.0"
-      numIter="200"
-      mixRatio="0.5"
-      convTol="1.0e-10"/>
+    <bands numBands="36" minBand="7" maxBand="42"/>
+
+    <disentanglement disWinMin="0.097" disWinMax="2.670"
+                     disFrozMin="0.097" disFrozMax="0.661"
+                     numIter="3000" convTol="0.00001" mixRatio="0.5"/>
+
+    <wannierization numIter="3000" convTol="0.00001"/>
+
+    <operators_r>
+      <operator name="hamiltonian"/>
+      <operator name="spin"/>
+    </operators_r>
+
+    <interpolation useWsDistance="F">
+      <domain listName="path-2"/>
+      <operator name="hamiltonian"/>
+    </interpolation>
+
+    <export wannier90="T"/>
   </wannierlib>
 </output>
 ```
 
-### 2.2 Attributes and meaning
+### 2.2 `<wannierlib>` itself
 
-#### `/fleurInput/output/wannierlib/@wannierize`
-- Type: boolean (`F`/`T`)
-- Schema default: `F`
-- Effect in parser: if the node exists, internal flag is set true and then possibly
-  overwritten by this attribute if present.
+| attribute | default | meaning |
+|---|---|---|
+| `wannierize` | `F` | run the wannierisation |
+| `plotWF` | `F` | write the Wannier functions as XSF files, one per function, on a 40x40x40 grid over one unit cell. Costs a second pass over the k-points. Not available for spinor Wannier functions (noco or SOC). |
 
-#### `/fleurInput/output/wannierlib/bands`
-- `numBands` (positive integer, schema default `0`)
-- `minBand` (positive integer, schema default `0`)
-- `maxBand` (positive integer, schema default `0`)
+### 2.3 `<bands>` — which states enter
 
-Runtime consistency logic in `init_wannierlib`:
-- If `minBand == 0`, it is auto-set to:
-  - `atoms%nlotot + 1` (collinear), or
-  - `2 * atoms%nlotot + 1` (noncollinear or SOC)
-- If `maxBand == 0` and `numBands > 0`, then `maxBand = minBand + numBands - 1`
-- If `numBands == 0` and both `minBand` and `maxBand` are set, then
-  `numBands = maxBand - minBand + 1`
-- If all three are set and inconsistent, FLEUR aborts with an error.
+| attribute | default | |
+|---|---|---|
+| `numBands` | `0` | how many states are wannierised |
+| `minBand` | `0` | first state |
+| `maxBand` | `0` | last state |
 
-#### `/fleurInput/output/wannierlib/disentanglement`
-All attributes are required by schema:
-- `disWinMin`
-- `disWinMax`
-- `disFrozMin`
-- `disFrozMax`
-- `numIter`
-- `mixRatio`
-- `convTol`
+Resolved in `init_wannierlib`:
 
-These are passed to Wannier90 library-mode options as disentanglement controls.
+- `minBand == 0` becomes `atoms%nlotot + 1` (collinear) or `2*atoms%nlotot + 1` (noco or SOC).
+- `maxBand == 0` with `numBands > 0` gives `maxBand = minBand + numBands - 1`.
+- `numBands == 0` with both bounds set gives `numBands = maxBand - minBand + 1`.
+- All three set and inconsistent: FLEUR aborts.
+
+`minBand` is worth measuring rather than guessing: it is the first band whose maximum over
+the whole mesh enters the window, which is what excludes the semicore.
+
+### 2.4 `<disentanglement>` — only when `numBands > num_wann`
+
+| attribute | required | default | |
+|---|---|---|---|
+| `disFrozMax` | **yes** | | top of the frozen window |
+| `numIter` | **yes** | | disentanglement iterations |
+| `convTol` | **yes** | | convergence threshold |
+| `mixRatio` | **yes** | | mixing |
+| `disWinMin` | no | derived | bottom of the outer window |
+| `disWinMax` | no | derived | top of the outer window |
+| `disFrozMin` | no | `disWinMin` | bottom of the frozen window |
+| `disFrozProj` | no | `F` | freeze by projectability instead of by energy |
+| `disProjMin` | no | `0.01` | |
+| `disProjMax` | no | `0.95` | |
+| `spinBalanced` | no | `F` | |
+
+All energies are in **Hartree**, like the rest of `inp.xml`.
+
+> **Leaving the outer window out is supported.** `disWinMin`, `disWinMax` and `disFrozMin`
+> are derived from the range the selected bands span on the wannierisation mesh, which is
+> what Wannier90 itself falls back to and the only definition that cannot cut the manifold.
+> Nothing is derived when `numBands` equals the number of Wannier functions: there is no
+> subspace to choose and no window to state. If the range does come out empty the run stops
+> and writes what it scanned into the `out` file.
+
+Measure the outer window **on the wannierisation mesh**, not on the SCF one. The SCF mesh
+need not contain Gamma, so its minimum comes out above the true one; states then fall
+outside the window at some k and Wannier90 drops them without a word.
+
+### 2.5 `<wannierization>` — the spread minimisation
+
+| attribute | required | |
+|---|---|---|
+| `numIter` | **yes** | MLWF iterations |
+| `convTol` | **yes** | convergence threshold |
+
+`numIter="0"` skips the minimisation and keeps the projection gauge: the Wannier functions
+are then the trial orbitals themselves, orthonormalised. That is a real choice, not a
+degenerate case — the minimisation converges to maximally localised functions whatever it
+starts from, so the initial projections only decide the gauge when it is switched off.
+
+### 2.6 `<operators_r>` — O(R) for external post-processing
+
+Writes the real-space operator matrices in the Wannier90/FLEUR standalone format. No band
+interpolation: these are the files an external transport code reads.
+
+```xml
+<operators_r>
+  <operator name="hamiltonian"/>   <!-- WF<n>_hr.dat   -->
+  <operator name="position"/>      <!-- WF<n>_r.dat    -->
+  <operator name="spin"/>          <!-- rspauli.1      -->
+  <operator name="orbital"/>       <!-- anglmomrs.1    -->
+  <operator name="spin_orbit"/>    <!-- rssocmat.1     -->
+</operators_r>
+```
+
+Accepted names:
+
+| name | what it is |
+|---|---|
+| `hamiltonian` | H(R) |
+| `position` | A(R) = `<0n|r|Rm>` |
+| `position_pw90` | the same in the postw90 convention (Eq. 44 of WYSV06 on the diagonal as well, hermitised). Both are needed at once: `position` carries the Wannier centres, while `berry.F90` refuses that form for the orbital magnetisation. Writes `WF<n>_rpw.dat`. |
+| `bmn` | B(R) = `<0n|H(r-R)|Rm>` |
+| `fmn` | F(R) = `<0n|r_a r_b|Rm>` — needs the pair overlap (uIu) |
+| `cmn` | C(R) = `<0n|r_a H r_b|Rm>` — needs uHu |
+| `spin` | S(R) |
+| `orbital` | L(R) |
+| `spin_orbit` | the spin-orbit operator |
+
+`fmn` and `cmn` are refused on a film: they need the vacuum halves of the pair overlap and
+of the momentum, which this layer does not reach. `spin` is refused on a film for the same
+kind of reason — it sums muffin tins and interstitial, and a film has a third region
+carrying spin density.
+
+### 2.7 `<interpolation>` — bands and operators on any k-list
+
+```xml
+<interpolation useWsDistance="F">
+  <domain listName="path-2"/>
+  <domain listName="path-2" suffix="dense" npts="10"/>
+  <operator name="hamiltonian"/>
+</interpolation>
+```
+
+`<domain>` — one per set of output k-points, repeatable:
+
+| attribute | required | |
+|---|---|---|
+| `listName` | **yes** | an existing kPointList, in `kpts.xml` or any included file |
+| `suffix` | no | distinguishes this domain's `bands_wann_*.dat`; may be left off for at most one domain |
+| `npts` | no | subdivides each segment of an ordered list into `npts` pieces (`npts<=1` = list as-is) |
+
+Whether a list is a line, a plane or a mesh is a property of the list, not of FLEUR.
+
+`useWsDistance` (default `F`) picks the minimum-distance replica of each R vector. It
+matters when the Wannier centres sit far from the origin. **Wannier90's own default is
+`T`**; the default here is deliberately the other one.
+
+`<operator>` — what to interpolate, repeatable:
+
+| name | output |
+|---|---|
+| `hamiltonian` | `bands_wann_interpol.dat`, `bands_wann_interpol_ev.dat` |
+| `spin` | `bands_wann_spin.dat` |
+| `orbital` | `bands_wann_orbmom.dat` |
+| `spin_orbit` | `bands_wann_spin_orbit.dat` |
+| `velocity` | `bands_wann_velocity.dat`, `bands_wann_berrycurv.dat` |
+| `eigenstates` | `bands_wann_eigenstates.dat` |
+
+`total="T"` (the default) asks for the site-summed projection; only `spin` and `orbital`
+have anything to sum over. `comp` selects Cartesian components.
+
+> The operator names are the **same** in `<operators_r>` and `<interpolation>` — in
+> particular it is `spin_orbit` in both. The two blocks do not accept the same *set* of
+> names, because not everything that has an O(R) has an interpolation driver and the other
+> way round, but a name never means two different things.
+
+### 2.8 `<export>` — hand out matrices the run already holds
+
+One boolean per artefact, all `F` by default, all independent: they are not alternatives,
+and asking for one does not turn the others off.
+
+| attribute | writes |
+|---|---|
+| `wannier90` | `WF<n>.amn`, `.mmn`, `.eig` — what a standalone `wannier90.x` needs to repeat the same wannierisation. The `.mmn` of a 512-point mesh with 36 bands is a few hundred megabytes of text, which is why it is opt-in. |
+| `wannierberri` | `WF<n>_basis.hdf` — the plane-wave index list and the interstitial eigenvector coefficients, for symmetry analysis. Needs a full-zone mesh and a build with HDF5. |
+| `gauge` | `WF<n>_gauge.hdf` — `u_opt` and `u_mlwf`, the two factors Wannier90 returned. |
+| `blochOperators` | `WF<n>_s0.dat` — the spin operator in the Bloch basis, before any gauge. |
+
+What `<operators_r>` and `<interpolation>` write is deliberately not here: those compute
+something first and writing it is the last step, while `<export>` only copies out.
 
 ## 3. Species projections: `<wannierproj .../>`
 
@@ -198,28 +376,60 @@ https://wannier90.readthedocs.io/en/latest/user_guide/wannier90/projections/#ang
   <atomSpecies>
     <species name="Fe-1" element="Fe" atomicNumber="26">
       ...
-      <!-- all d channels on all Fe-1 atoms, spin auto-expands in SOC/NOCO -->
-      <wannierproj l="2" m="0" spin="" rwf="1" zona="1.2"/>
-      <!-- one specific p channel with explicit spin -->
-      <wannierproj l="1" m="3" spin="u" theta="0.0" phi="0.0"/>
+      <!-- m="0" expands every m, so s+p+d is 1+3+5 = 9;
+           with spinors these double on their own, 9 -> 18 -->
+      <wannierproj l="0" m="0" spin=""/>
+      <wannierproj l="1" m="0" spin=""/>
+      <wannierproj l="2" m="0" spin=""/>
     </species>
   </atomSpecies>
 
   <output>
     <wannierlib wannierize="T">
-      <bands numBands="20" minBand="21" maxBand="40"/>
+      <bands numBands="36" minBand="9" maxBand="44"/>
       <disentanglement
-        disWinMin="-8.0" disWinMax="12.0"
-        disFrozMin="-6.0" disFrozMax="4.0"
-        numIter="200" mixRatio="0.5" convTol="1.0e-10"/>
+        disWinMin="0.020" disWinMax="3.000"
+        disFrozMin="0.020" disFrozMax="0.562"
+        numIter="3000" convTol="0.00001" mixRatio="0.5"/>
+      <wannierization numIter="3000" convTol="0.00001"/>
+      <operators_r>
+        <operator name="hamiltonian"/>
+        <operator name="spin"/>
+      </operators_r>
     </wannierlib>
   </output>
   ...
 </fleurInput>
 ```
 
+Energies in Hartree; `convTol` as a plain decimal, never `1.0e-5`.
+
 ## 8. Practical notes
 
-- If you use `m=0`, verify your `l` is one of the supported values above.
-- Keep `numBands`, `minBand`, `maxBand` consistent if all are set explicitly.
-- currently in `disentanglement` all values are mandatory by schema for the `wannierlib` block.
+- **Give `disWinMin` and `disWinMax`**, and measure them on the wannierisation mesh. See 2.4.
+- **Plain decimals only.** `1.0e-10` is not a number to FLEUR's parser.
+- **`n_k` must divide the MPI ranks exactly**, or the run hangs instead of failing.
+- **The wannierisation mesh is full-zone and gamma-centred** (`inpgen ... -noKsym`).
+- With `jspins=2` and no SOC the two spin channels wannierise **separately**, and the whole
+  pipeline runs once per channel; with noco or SOC the states are spinors and there is one
+  pass over a basis of twice the size.
+- If you use `m=0`, check that `l` is one of the values in section 5.
+- Keep `numBands`, `minBand` and `maxBand` consistent if you set all three.
+- `Omega_I` is not a quality measure. It says how localised the subspace is, not how
+  faithful: a narrower frozen window can give a better `Omega_I` and worse bands.
+- The Fermi level of the Wannier Hamiltonian is **not** the Fermi level of the SCF — up to
+  1 eV apart in Cu and Pt, with no warning. Shift the axis when reading the output; do not
+  re-run.
+
+## 9. Where to start
+
+| you want | copy |
+|---|---|
+| collinear, no SOC | `testing/inputfiles/wannier/WannFeFM` |
+| collinear, two channels, SOC as an operator | `WannFeAFMColSOC` |
+| spinors with SOC | `WannPtSOC` |
+| band interpolation | `WannFeBccInterp` |
+| the operator exports | `WannPtSOCOps`, `WannFeAFMSOCOps` |
+| non-collinear, several sites | `WannMn3IrNoco` |
+
+Each directory holds a complete `inp.xml` with its `kpts.xml` and `sym.xml`.

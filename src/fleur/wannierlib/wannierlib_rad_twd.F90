@@ -3,9 +3,16 @@
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
-!--------------------------------------------------------------------------------
-! Copyright (c) 2026 Peter Gruenberg Institut, Forschungszentrum Juelich, Germany
-!--------------------------------------------------------------------------------
+!>  The radial half of a projection, and the angular one for spin-orbit.
+!>
+!>  wannierlib_rad_twd evaluates each trial orbital's radial function on the muffin-tin mesh
+!>  of its atom, matched to the LAPW basis there. Projections outside a muffin tin are
+!>  refused rather than approximated: the trial orbital has to live where the radial
+!>  functions do.
+!>
+!>  wannierlib_soc_tlmw is the spin-orbit counterpart of m_wannierlib_tlmw: with SOC the
+!>  trial orbital is named by (j, m_j) instead of (l, m), so its expansion in the complex
+!>  harmonics is a Clebsch-Gordan coefficient rather than a table lookup.
 MODULE m_wannierlib_rad_twd
   USE m_juDFT
   USE m_constants
@@ -16,6 +23,8 @@ MODULE m_wannierlib_rad_twd
   USE m_clebsch
   USE m_types_wannierlib
   IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: wannierlib_rad_twd, wannierlib_soc_tlmw
 CONTAINS
 
   SUBROUTINE wannierlib_rad_twd(wannierlib, atoms, nwfs, ikpt, usdus, radfun,  jspin, rads)
@@ -151,15 +160,21 @@ CONTAINS
 
       IF (ikpt == 1) THEN
         DO l = 0, 3
+          !> Norm of the trial radial function: INT (f_large^2 + f_small^2) dr, with the
+          !> radial functions stored as f = r*u(r). A normalised trial orbital gives 1, so
+          !> this line says whether the projection is normalised at all. The expression
+          !> used before carried an extra r^2 and reported <r^2> instead, which on bcc Fe
+          !> reads 1.29 for d and 3.15-3.73 for s, p and f: it looks like a normalisation
+          !> that is off by a factor of three, and it is not.
           DO j = 1, atoms%jri(ntyp)
-            radf(j) = atoms%rmsh(j, ntyp) * atoms%rmsh(j, ntyp) * rads(nwf, l, j, 1) * rads(nwf, l, j, 1)
+            radf(j) = rads(nwf, l, j, 1)**2 + rads(nwf, l, j, 2)**2
           END DO
           CALL intgr3(radf, atoms%rmsh(1, ntyp), atoms%dx(ntyp), atoms%jri(ntyp), radi)
           WRITE (oUnit, *)
           WRITE (oUnit, *) 'Wannier Function N:', nwf
           WRITE (oUnit, *) 'angular momentum', l
           WRITE (oUnit, *) 'radial function at the MT boundary:', rads(nwf, l, atoms%jri(ntyp), 1)
-          WRITE (oUnit, *) 'norma =', radi
+          WRITE (oUnit, *) 'norm of the trial radial function:', radi
         END DO
       END IF
     END DO
@@ -180,12 +195,22 @@ CONTAINS
     CALL timestart('wannierlib_soc_tlmw')
     DO nwf = 1, nwfs
       l = lwf(nwf)
-      IF (l < 0) CALL juDFT_error('not yet implemented', calledby='wannierlib_soc_tlmw')
+      !> A negative l is a hybrid, and a hybrid has no single l to couple to a spin: the
+      !> |j, m_j> guess built here is defined per l, while sp3 mixes l=0 and l=1. The same
+      !> orbital works as an (l, m) projection, which m_wannierlib_tlmw does handle.
+      IF (l < 0) CALL juDFT_error('wannierlib: a hybrid orbital has no j-resolved projection', &
+                                  hint='ask for this Wannier function with (l, m) instead', &
+                                  calledby='wannierlib_soc_tlmw')
       j = jwf(nwf)
       jm = jmwf(nwf)
-      IF (j < 0) CALL juDFT_error('jwf', calledby='wannierlib_soc_tlmw')
-      IF (ABS(jm) - j > 1e-10) CALL juDFT_error('jmwf', calledby='wannierlib_soc_tlmw')
-      IF (ABS(l + 0.5 - j) > 1e-10 .AND. ABS(l - 0.5 - j) > 1e-10) CALL juDFT_error('regula trianguli violata', calledby='wannierlib_soc_tlmw')
+      IF (j < 0) CALL juDFT_error('wannierlib: a projection was given a negative j', &
+                                  calledby='wannierlib_soc_tlmw')
+      IF (ABS(jm) - j > 1e-10) CALL juDFT_error('wannierlib: a projection has |m_j| > j', &
+                                  calledby='wannierlib_soc_tlmw')
+      !> j = l +/- 1/2 is the only coupling one l allows.
+      IF (ABS(l + 0.5 - j) > 1e-10 .AND. ABS(l - 0.5 - j) > 1e-10) &
+        CALL juDFT_error('wannierlib: j is neither l+1/2 nor l-1/2 for this projection', &
+                         calledby='wannierlib_soc_tlmw')
       tlmwf(0:3, -3:3, nwf) = CMPLX(0.0, 0.0)
       DO m = -l, l
         tlmwf(l, m, nwf) = clebsch(REAL(l), 0.5, REAL(m), 1.5 - jspin, j, jm)

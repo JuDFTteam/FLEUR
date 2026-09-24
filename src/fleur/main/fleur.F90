@@ -224,7 +224,8 @@ CONTAINS
 
       ! Open/allocate eigenvector storage
       CALL timestart("Open/allocate eigenvector storage")
-      IF (fi%noco%l_soc .AND. fi%input%l_wann) THEN
+      IF (fi%noco%l_soc .AND. .NOT.fi%noco%l_noco .AND. &
+          (fi%input%l_wann .OR. fi%wannierlib%l_wannierize)) THEN
          ! Weed up and down spinor components for SOC MLWFs.
          ! When jspins=1 Fleur usually writes only the up-spinor into the eig-file.
          ! Make sure we always get up and down spinors when SOC=true.
@@ -487,7 +488,7 @@ CONTAINS
             IF (fi%wannierlib%l_wannierize) THEN
                CALL timestart("wannierlib")
                CALL wannierlib_main(fi%wannierlib, fi%atoms, fi%cell, input_soc, fi%kpts, fi%sym, fi%noco, nococonv, stars, enpara, fmpi, &
-                                    vTot, results, eig_id)
+                                    vTot, results, eig_id, fi%vacuum)
                CALL timestop("wannierlib")
                IF (.NOT. fi%dfpt%l_dfpt) CALL juDFT_end("Wannierization done. Fleur ends.", fmpi%irank)
             END IF

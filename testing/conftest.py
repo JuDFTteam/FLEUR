@@ -372,6 +372,7 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "serial: test running fleur serial")
     config.addinivalue_line("markers", "mpi: test running fleur in parallel")
     config.addinivalue_line("markers", "fast: tests which take < 1 sec to execute")
+    config.addinivalue_line("markers", "wannierlib: test needs the wannierlib (library-mode Wannier90) API")
     config.addinivalue_line("markers", "slow: tests which take < 1 min to execute")
     config.addinivalue_line("markers", "very_slow: tests which take > 1 min to execute")
     config.addinivalue_line("markers", "xml: test with xml")
@@ -1490,7 +1491,7 @@ def collect_all_judft_messages():
     # source code is top dir, to much other stuff in there, thats why hardcode source dirs for speed
     # and to avoid problems with binaries and so on.
     src_folders = ['cdn', 'cdn_mt', 'core', 'diagonalization', 'propcalc/dos', 'propcalc/eels', 'eigen',
-     'eigen_soc', 'fermi', 'fft', '../tools/fleurinput', 'force',
+     'soc', 'secvar', 'matrixelements', 'fermi', 'fft', '../tools/fleurinput', 'force',
     'forcetheorem', 'global', 'greensf', 'hybrid',  'init', '../tools/inpgen2',
     'io', 'juDFT', '../tools/inpgen2/kpoints',  'ldaX', 'main', 'math', 'mix', 'mpi', 'startden', 'propcalc/orbdep',
     'rdmft', 'tetra', 'types', 'vgen', 'wannier', 'xc-pot'

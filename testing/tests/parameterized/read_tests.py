@@ -18,6 +18,7 @@ def read_tests(testset):
         "forcetheorem":pytest.mark.forcetheorem,
         "plot":pytest.mark.plot,
         "wannier":pytest.mark.wannier,
+        "wannierlib":pytest.mark.wannierlib,
         "eels":pytest.mark.eels,
         "dos":pytest.mark.dos,
         "edsolver":pytest.mark.edsolver,
