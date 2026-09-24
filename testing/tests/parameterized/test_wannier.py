@@ -280,7 +280,11 @@ INTERP_FILES = {
          # something. What would pin it down is that B is linear in the eigenvalues,
          # so shifting the spectrum by a constant must move B by that constant times
          # A(R) -- and A is anchored. Until that test exists, this is presence only.
-         "WF1_bmn.dat", "WF2_bmn.dat"],
+         "WF1_bmn.dat", "WF2_bmn.dat",
+         # C(R) and F(R) of the modern theory. Presence and non-zero only, for the
+         # same reason as B: no reference exists. What this does buy is that the
+         # code paths behind them run at all -- until now nothing executed them.
+         "WF1_cmn.dat", "WF2_cmn.dat", "WF1_fmn.dat", "WF2_fmn.dat"],
 }
 
 # The velocity must be checked on the FINE path and nowhere else: every point of w222 is a
