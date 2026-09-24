@@ -30,7 +30,6 @@ CONTAINS
       USE m_types
       USE m_constants
       USE m_eig66_io
-      USE m_genMTBasis
       USE m_mcdinit
       USE m_sympsi
       USE m_nmat        ! calculate density matrix for LDA + U
@@ -205,25 +204,14 @@ CONTAINS
          CALL openXMLElementPoly('mtCharges', (/'spin'/), (/jspin/))
       END IF
 8000  FORMAT(/, /, 10x, 'valence density: spin=', i2)
-      BLOCK !TODO This block should be put into subroutine?
-         REAL, ALLOCATABLE  :: f(:, :, :, :), g(:, :, :, :), flo(:, :, :, :) ! radial functions
-         ALLOCATE (f(atoms%jmtd, 2, 0:atoms%lmaxd, input%jspins))
-         ALLOCATE (g(atoms%jmtd, 2, 0:atoms%lmaxd, input%jspins))
-         ALLOCATE (flo(atoms%jmtd, 2, atoms%nlod, input%jspins))
-         DO iType = 1, atoms%ntype
-
-            DO ispin = 1, input%jspins
-               CALL genMTBasis(atoms, enpara, vTot, fmpi, iType, ispin, usdus, f(:, :, 0:, ispin), g(:, :, 0:, ispin), &
-                               flo(:, :, :, ispin), hub1data=hub1data)
-
-            END DO
+      DO iType = 1, atoms%ntype
+         CALL radfun(iType)%generate_radial_functions(atoms, input, enpara, fmpi, vTot, iType, usdus_out=usdus)
+         ASSOCIATE (f => radfun(iType)%r(:, :, 1, :, :), g => radfun(iType)%r(:, :, 2, :, :))
             IF (banddos%l_mcd) CALL mcd_init(atoms, banddos, input, vTot%mt(:, 0, :, :), g, f, mcd, iType, jspin)
             IF (l_coreSpec) CALL corespec_rme(atoms, input, iType, 29, input%jspins, jspin, results%ef, &
                                               atoms%msh, vTot%mt(:, 0, :, :), f, g)
-
-         END DO
-         DEALLOCATE (f, g, flo)
-      end block
+         END ASSOCIATE
+      END DO
 
       skip_tt = dot_product(enpara%skiplo(:atoms%ntype, jspin), atoms%neq(:atoms%ntype))
       IF (noco%l_soc .OR. noco%l_noco) skip_tt = 2*skip_tt
@@ -282,7 +270,6 @@ CONTAINS
          !orb probably should be private
          DO itype = 1, atoms%ntype
             abc_itype=min(itype,size(abc,2)) !abc might be only needed for a single itype
-            call radfun(itype)%generate_radial_functions(atoms, input, enpara, fmpi, vtot, iType)
             DO ispin = jsp_start, jsp_end
                IF (input%l_f) CALL force%init2(noccbd, input, atoms)
                call abc(ispin, abc_itype)%init(input, atoms, noccbd, itype)
