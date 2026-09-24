@@ -145,19 +145,12 @@ CONTAINS
             DO ntyp = 1, this%atoms%ntype
                !> A site whose frame is already the global one needs no rotation, and
                !> going through the Pauli components and back would only cost precision.
-               !> The azimuth enters with a MINUS sign. A non-collinear basis already
-               !> carries it in the exp(-i alpha/2), exp(+i alpha/2) phases of its two spinor
-               !> components, so the cross-spin block o_ud arrives with the azimuthal phase
-               !> in it; applying R_z(+alpha) on top counted that rotation twice instead of
-               !> removing it. Only this term was wrong -- the polar rotation was right.
                !>
-               !> Measured by sweeping alpha at beta = pi/2 and comparing the norm of the
-               !> operator against an independent construction from the interstitial
-               !> coefficients: the deficit grew monotonically -- 0.00 % at alpha = 0, 3.5 %
-               !> at pi/8, 12.7 % at pi/4, 23.0 % at 3pi/8, 27.6 % at pi/2 -- and vanished
-               !> EXACTLY at alpha = 0. That is why the cases with the moment along z and
-               !> along x (alpha = 0 in both) came out right and only the y axis failed: it
-               !> is the only one with a non-zero azimuth.
+               !> The azimuth enters with a MINUS sign. A non-collinear basis already
+               !> carries it in the exp(-i alpha/2), exp(+i alpha/2) phases of its two
+               !> spinor components, so the cross-spin block o_ud arrives with the
+               !> azimuthal phase already in it, and R_z(+alpha) on top would count that
+               !> rotation twice instead of removing it. The polar rotation is unaffected.
                l_rot = ABS(this%nococonv%alph(ntyp)) > 1.0e-14 &
                   .OR. ABS(this%nococonv%beta(ntyp)) > 1.0e-14
                ca = COS(this%nococonv%alph(ntyp)); sa = -SIN(this%nococonv%alph(ntyp))
@@ -215,25 +208,15 @@ CONTAINS
          END DO
       END DO
 
-      !> The muffin-tin loop and the interstitial overlap both form c_i * conj(c_j), the
-      !> conjugate of the matrix element <i|O|j> this type promises. They agree with each
-      !> other, so one conjugation of the assembled blocks restores the promised
-      !> convention for every consumer at once.
+      !> Both halves above form c_i * conj(c_j), the conjugate of the matrix element
+      !> <i|O|j> this type promises, and they agree with each other, so one conjugation of
+      !> the assembled blocks restores the promised convention.
       !>
-      !> The azimuthal rotation takes R_z(-alpha), not R_z(+alpha), and the two signs
-      !> belong together: conjugation flips the y component, and flipping y turns a
-      !> rotation about z into its inverse, so
+      !> This conjugation and the sign of the azimuthal rotation belong together:
+      !> conjugation flips the y component, and flipping y turns a rotation about z into
+      !> its inverse, so
       !>     conj( R_z(-alpha) [ conj(B) ] ) = R_z(+alpha) [ B ] ,
-      !> the canonical rotation. Changing either sign alone breaks it. No test covers
-      !> this: the cases that carry a non-zero azimuth are checked on Omega, which is
-      !> invariant under the direction of the moment.
-      !>
-      !> The convention cannot be caught from the result: the conjugate of a Hermitian
-      !> matrix is Hermitian, obeys the same algebra and has the same eigenvalues, so
-      !> every check in melem_check passes either way. What it breaks is any use that
-      !> pairs the operator with a gauge built from the same states -- the two then sit
-      !> in different bases and the real-space operator stops decaying. On fcc Pt, S(R)
-      !> keeps 13 % of its weight at R = 0 without this and 99.98 % with it.
+      !> the canonical rotation. Changing either sign alone breaks it.
       DO j1 = 1, 2
          DO i1 = 1, 2
             this%mat(i1,j1)%data_c = CONJG(this%mat(i1,j1)%data_c)
