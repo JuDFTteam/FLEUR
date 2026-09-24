@@ -17,6 +17,32 @@ MODULE m_types_wannierlib
   IMPLICIT NONE
   PRIVATE
 
+  !> One initial guess: the site it sits on, the orbital it is, and how it is oriented.
+  !>
+  !> SEQUENCE with fixed-size members only, like t_utype in t_atoms, because the list is
+  !> broadcast field by field and an array of a type with allocatable components cannot be.
+  !> The win is at the other end: init expands one entry per species into one per atom, and
+  !> with a record that copies whole, a field added here cannot be silently dropped there.
+  TYPE t_wannierlib_proj
+    SEQUENCE
+    INTEGER :: ntype = 0
+    INTEGER :: atom = 1
+    INTEGER :: l = 0
+    INTEGER :: m = 0
+    INTEGER :: spin = 0
+    INTEGER :: rwf = 0
+    REAL :: alpha = 0.0
+    REAL :: beta = 0.0
+    REAL :: gamma = 0.0
+    REAL :: zona = 0.0
+    REAL :: regio = 1.0
+    REAL :: j = -1.0
+    REAL :: mj = 0.0
+    REAL :: weight = 1.0
+    REAL :: shift(3) = 0.0
+    CHARACTER(LEN=20) :: species = ''
+  END TYPE t_wannierlib_proj
+
   TYPE, EXTENDS(t_fleurinput_base) :: t_wannierlib_wannierize
     LOGICAL :: l_wannierize = .FALSE.
     ! Convenience flags DERIVED from the operator list ops(:) below (set in read_xml).
@@ -127,22 +153,9 @@ MODULE m_types_wannierlib
     LOGICAL :: l_intp = .FALSE.         ! Do interpolation
     REAL, ALLOCATABLE :: kpts_fine(:,:) ! kPoints to interpolate on 
 
-    INTEGER, ALLOCATABLE :: proj_ntype(:)
-    INTEGER, ALLOCATABLE :: proj_atom(:)
-    CHARACTER(LEN=20), ALLOCATABLE :: proj_species(:)
-    INTEGER, ALLOCATABLE :: proj_l(:)
-    INTEGER, ALLOCATABLE :: proj_m(:)
-    INTEGER, ALLOCATABLE :: proj_spin(:)
-    INTEGER, ALLOCATABLE :: proj_rwf(:)
-    REAL, ALLOCATABLE :: proj_alpha(:)
-    REAL, ALLOCATABLE :: proj_beta(:)
-    REAL, ALLOCATABLE :: proj_gamma(:)
-    REAL, ALLOCATABLE :: proj_zona(:)
-    REAL, ALLOCATABLE :: proj_regio(:)
-    REAL, ALLOCATABLE :: proj_j(:)
-    REAL, ALLOCATABLE :: proj_mj(:)
-    REAL, ALLOCATABLE :: proj_weight(:)
-    REAL, ALLOCATABLE :: proj_shift(:, :)
+    !> One entry per <wannierproj> as read, and one per Wannier function after init has
+    !> expanded them over the atoms of each species.
+    TYPE(t_wannierlib_proj), ALLOCATABLE :: proj(:)
   CONTAINS
     PROCEDURE :: init => init_wannierlib
     PROCEDURE :: read_xml => read_xml_wannierlib
@@ -160,50 +173,38 @@ CONTAINS
 
     INTEGER :: i, j, nold, nnew, mcount, mval, mrepeat, spin_mult, itype, type_mult, nn, na
     INTEGER :: ipass, npass, spin_here
-    INTEGER, ALLOCATABLE :: new_proj_ntype(:), new_proj_atom(:), new_proj_l(:), new_proj_m(:), new_proj_spin(:), new_proj_rwf(:)
-    CHARACTER(LEN=20), ALLOCATABLE :: new_proj_species(:)
-    REAL, ALLOCATABLE :: new_proj_alpha(:), new_proj_beta(:), new_proj_gamma(:), new_proj_zona(:), new_proj_regio(:)
-    REAL, ALLOCATABLE :: new_proj_j(:), new_proj_mj(:), new_proj_weight(:), new_proj_shift(:, :)
+    TYPE(t_wannierlib_proj), ALLOCATABLE :: new_proj(:)
     LOGICAL :: expand_spin
 
-    IF (.NOT.ALLOCATED(this%proj_l)) RETURN !No Wannier projections configured, nothing to do
+    IF (.NOT.ALLOCATED(this%proj)) RETURN !No Wannier projections configured, nothing to do
     IF (.NOT.ALLOCATED(atoms%speciesName)) CALL juDFT_error('wannierlib: atoms%speciesName not allocated in init', calledby='init_wannierlib')
     
-    nold = SIZE(this%proj_l)
-
-    IF (.NOT.ALLOCATED(this%proj_ntype)) THEN
-      ALLOCATE(this%proj_ntype(nold))
-      this%proj_ntype = 0
-    END IF
-    IF (.NOT.ALLOCATED(this%proj_atom)) THEN
-      ALLOCATE(this%proj_atom(nold))
-      this%proj_atom = 1
-    END IF
+    nold = SIZE(this%proj)
 
     expand_spin = noco%l_noco .OR. noco%l_soc
 
     nnew = 0
     DO i = 1, nold
-      mcount = projection_m_count(this%proj_l(i))
+      mcount = projection_m_count(this%proj(i)%l)
 
-      IF (this%proj_m(i) == 0) THEN
+      IF (this%proj(i)%m == 0) THEN
         IF (mcount <= 0) THEN
           CALL juDFT_error('wannierlib: unsupported projection l for m expansion', calledby='init_wannierlib')
         END IF
         mrepeat = mcount
       ELSE
-        IF ((mcount > 0) .AND. ((this%proj_m(i) < 1) .OR. (this%proj_m(i) > mcount))) THEN
+        IF ((mcount > 0) .AND. ((this%proj(i)%m < 1) .OR. (this%proj(i)%m > mcount))) THEN
           CALL juDFT_error('wannierlib: projection m out of range for l', calledby='init_wannierlib')
         END IF
         mrepeat = 1
       END IF
 
       spin_mult = 1
-      IF (expand_spin .AND. (this%proj_spin(i) == 0)) spin_mult = 2
+      IF (expand_spin .AND. (this%proj(i)%spin == 0)) spin_mult = 2
 
       type_mult = 0
       DO itype = 1, atoms%ntype
-        IF (TRIM(atoms%speciesName(itype)) == TRIM(this%proj_species(i))) type_mult = type_mult + atoms%neq(itype)
+        IF (TRIM(atoms%speciesName(itype)) == TRIM(this%proj(i)%species)) type_mult = type_mult + atoms%neq(itype)
       END DO
       IF (type_mult <= 0) THEN
         CALL juDFT_error('wannierlib: no matching atom type for projection species name', calledby='init_wannierlib')
@@ -212,9 +213,7 @@ CONTAINS
       nnew = nnew + mrepeat * spin_mult * type_mult
     END DO
 
-    ALLOCATE(new_proj_ntype(nnew), new_proj_atom(nnew), new_proj_species(nnew), new_proj_l(nnew), new_proj_m(nnew), new_proj_spin(nnew), new_proj_rwf(nnew))
-    ALLOCATE(new_proj_alpha(nnew), new_proj_beta(nnew), new_proj_gamma(nnew), new_proj_zona(nnew), new_proj_regio(nnew))
-    ALLOCATE(new_proj_j(nnew), new_proj_mj(nnew), new_proj_weight(nnew), new_proj_shift(3, nnew))
+    ALLOCATE(new_proj(nnew))
 
     !> Spin is the OUTER loop, not the inner one. The Wannier functions therefore come
     !> out ordered IN BLOCKS -- one channel first, then the other -- rather than interleaved
@@ -236,23 +235,23 @@ CONTAINS
     j = 0
     DO ipass = 1, npass
     DO i = 1, nold
-      mcount = projection_m_count(this%proj_l(i))
+      mcount = projection_m_count(this%proj(i)%l)
 
-      IF ((this%proj_m(i) == 0) .AND. (mcount > 0)) THEN
+      IF ((this%proj(i)%m == 0) .AND. (mcount > 0)) THEN
         mrepeat = mcount
       ELSE
         mrepeat = 1
       END IF
 
       spin_mult = 1
-      IF (expand_spin .AND. (this%proj_spin(i) == 0)) spin_mult = 2
+      IF (expand_spin .AND. (this%proj(i)%spin == 0)) spin_mult = 2
 
       IF (spin_mult == 2) THEN
         spin_here = MERGE(1, -1, ipass == 1)
       ELSE
         !> A projection whose spin the user fixed is emitted ONCE, on the pass of its
         !> own spin, so that it lands in the block it belongs to.
-        spin_here = this%proj_spin(i)
+        spin_here = this%proj(i)%spin
         IF (npass > 1) THEN
           IF ((ipass == 1) .AND. (spin_here < 0)) CYCLE
           IF ((ipass == 2) .AND. (spin_here >= 0)) CYCLE
@@ -260,57 +259,29 @@ CONTAINS
       END IF
 
       DO itype = 1, atoms%ntype
-        IF (TRIM(atoms%speciesName(itype)) /= TRIM(this%proj_species(i))) CYCLE
+        IF (TRIM(atoms%speciesName(itype)) /= TRIM(this%proj(i)%species)) CYCLE
         DO nn = 1, atoms%neq(itype)
           na = atoms%firstAtom(itype) + nn - 1
           DO mval = 1, mrepeat
             j = j + 1
-            new_proj_ntype(j) = itype
-            new_proj_atom(j) = nn
-            new_proj_species(j) = this%proj_species(i)
-            new_proj_l(j) = this%proj_l(i)
+            !> The whole record first, then only what the expansion changes. Copying field
+            !> by field is how a field added to the type gets forgotten here.
+            new_proj(j) = this%proj(i)
+            new_proj(j)%ntype = itype
+            new_proj(j)%atom = nn
+            new_proj(j)%spin = spin_here
             ! BUGFIX: when the user requested m=0 ("expand all m"), the auto-generated
             ! harmonic index must be the 1-based mval -- even when only one m exists
             ! (l=0/s: mrepeat=1). The old test (mrepeat>1) left s with the literal
-            ! proj_m=0, which is out of range for tlm(:,:,1:7) -> uninitialised read.
-            IF (this%proj_m(i) == 0) THEN
-              new_proj_m(j) = mval
-            ELSE
-              new_proj_m(j) = this%proj_m(i)
-            END IF
-            new_proj_spin(j) = spin_here
-            new_proj_rwf(j) = this%proj_rwf(i)
-            new_proj_alpha(j) = this%proj_alpha(i)
-            new_proj_beta(j) = this%proj_beta(i)
-            new_proj_gamma(j) = this%proj_gamma(i)
-            new_proj_zona(j) = this%proj_zona(i)
-            new_proj_regio(j) = this%proj_regio(i)
-            new_proj_j(j) = this%proj_j(i)
-            new_proj_mj(j) = this%proj_mj(i)
-            new_proj_weight(j) = this%proj_weight(i)
-            new_proj_shift(:, j) = this%proj_shift(:, i) 
+            ! m=0, which is out of range for tlm(:,:,1:7) -> uninitialised read.
+            IF (this%proj(i)%m == 0) new_proj(j)%m = mval
           END DO
         END DO
       END DO
     END DO
     END DO
 
-    CALL move_alloc(new_proj_ntype, this%proj_ntype)
-    CALL move_alloc(new_proj_atom, this%proj_atom)
-    CALL move_alloc(new_proj_species, this%proj_species)
-    CALL move_alloc(new_proj_l, this%proj_l)
-    CALL move_alloc(new_proj_m, this%proj_m)
-    CALL move_alloc(new_proj_spin, this%proj_spin)
-    CALL move_alloc(new_proj_rwf, this%proj_rwf)
-    CALL move_alloc(new_proj_alpha, this%proj_alpha)
-    CALL move_alloc(new_proj_beta, this%proj_beta)
-    CALL move_alloc(new_proj_gamma, this%proj_gamma)
-    CALL move_alloc(new_proj_zona, this%proj_zona)
-    CALL move_alloc(new_proj_regio, this%proj_regio)
-    CALL move_alloc(new_proj_j, this%proj_j)
-    CALL move_alloc(new_proj_mj, this%proj_mj)
-    CALL move_alloc(new_proj_weight, this%proj_weight)
-    CALL move_alloc(new_proj_shift, this%proj_shift)
+    CALL move_alloc(new_proj, this%proj)
 
     this%num_wann = nnew
 
@@ -345,9 +316,9 @@ CONTAINS
       WRITE(oUnit, '(I4,1X,A20,1X,I4,1X,I4,1X,I3,1X,I3,1X,I4,1X,I3,1X,&
      &             F10.5,1X,F10.5,1X,F10.5,1X,F10.5,1X,F10.5,1X,F10.5,1X,&
      &             F10.5,1X,F10.5,1X,F10.5,1X,F10.5,1X,F10.5)') &
-           i, TRIM(this%proj_species(i)), this%proj_ntype(i), this%proj_atom(i), this%proj_l(i), this%proj_m(i), this%proj_spin(i), this%proj_rwf(i), &
-           this%proj_alpha(i), this%proj_beta(i), this%proj_gamma(i), this%proj_zona(i), this%proj_regio(i), this%proj_j(i), this%proj_mj(i), this%proj_weight(i), &
-           this%proj_shift(1, i), this%proj_shift(2, i), this%proj_shift(3, i)
+           i, TRIM(this%proj(i)%species), this%proj(i)%ntype, this%proj(i)%atom, this%proj(i)%l, this%proj(i)%m, this%proj(i)%spin, this%proj(i)%rwf, &
+           this%proj(i)%alpha, this%proj(i)%beta, this%proj(i)%gamma, this%proj(i)%zona, this%proj(i)%regio, this%proj(i)%j, this%proj(i)%mj, this%proj(i)%weight, &
+           this%proj(i)%shift(1), this%proj(i)%shift(2), this%proj(i)%shift(3)
     END DO
     WRITE(oUnit, '(A)') '--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------'
   END SUBROUTINE init_wannierlib
@@ -384,7 +355,7 @@ CONTAINS
     CLASS(t_wannierlib_wannierize), INTENT(INOUT) :: this
     INTEGER, INTENT(IN) :: mpi_comm
     INTEGER, INTENT(IN), OPTIONAL :: irank
-    INTEGER :: rank
+    INTEGER :: rank, myrank, ierr, iproj, nproj
 
     rank = 0
     IF (PRESENT(irank)) rank = irank
@@ -434,22 +405,39 @@ CONTAINS
     CALL mpi_bc(this%dis_conv_tol, rank, mpi_comm)
     CALL mpi_bc(this%conv_tol, rank, mpi_comm)
     CALL mpi_bc(this%precond, rank, mpi_comm)
-    CALL mpi_bc(this%proj_ntype, rank, mpi_comm)
-    CALL mpi_bc(this%proj_atom, rank, mpi_comm)
-    CALL mpi_bc(this%proj_species, rank, mpi_comm)
-    CALL mpi_bc(this%proj_l, rank, mpi_comm)
-    CALL mpi_bc(this%proj_m, rank, mpi_comm)
-    CALL mpi_bc(this%proj_spin, rank, mpi_comm)
-    CALL mpi_bc(this%proj_rwf, rank, mpi_comm)
-    CALL mpi_bc(this%proj_alpha, rank, mpi_comm)
-    CALL mpi_bc(this%proj_beta, rank, mpi_comm)
-    CALL mpi_bc(this%proj_gamma, rank, mpi_comm)
-    CALL mpi_bc(this%proj_zona, rank, mpi_comm)
-    CALL mpi_bc(this%proj_regio, rank, mpi_comm)
-    CALL mpi_bc(this%proj_j, rank, mpi_comm)
-    CALL mpi_bc(this%proj_mj, rank, mpi_comm)
-    CALL mpi_bc(this%proj_weight, rank, mpi_comm)
-    CALL mpi_bc(this%proj_shift, rank, mpi_comm)
+    !> An array of a derived type does not go through the generic mpi_bc, which sizes the
+    !> receivers from the message itself. The count travels first, then each record field by
+    !> field -- the shape t_atoms uses for lda_u.
+    nproj = 0
+    IF (ALLOCATED(this%proj)) nproj = SIZE(this%proj)
+    CALL mpi_bc(nproj, rank, mpi_comm)
+#ifdef CPP_MPI
+    CALL MPI_COMM_RANK(mpi_comm, myrank, ierr)
+    IF (myrank /= rank) THEN
+      IF (ALLOCATED(this%proj)) DEALLOCATE(this%proj)
+      IF (nproj > 0) ALLOCATE(this%proj(nproj))
+    END IF
+#endif
+    DO iproj = 1, nproj
+      CALL mpi_bc(this%proj(iproj)%ntype, rank, mpi_comm)
+      CALL mpi_bc(this%proj(iproj)%atom, rank, mpi_comm)
+      !> Fixed-size members take the other argument order of the generic: the
+      !> allocatable forms are mpi_bc(x, rank, comm), these are mpi_bc(rank, comm, x).
+      CALL mpi_bc(rank, mpi_comm, this%proj(iproj)%species)
+      CALL mpi_bc(this%proj(iproj)%l, rank, mpi_comm)
+      CALL mpi_bc(this%proj(iproj)%m, rank, mpi_comm)
+      CALL mpi_bc(this%proj(iproj)%spin, rank, mpi_comm)
+      CALL mpi_bc(this%proj(iproj)%rwf, rank, mpi_comm)
+      CALL mpi_bc(this%proj(iproj)%alpha, rank, mpi_comm)
+      CALL mpi_bc(this%proj(iproj)%beta, rank, mpi_comm)
+      CALL mpi_bc(this%proj(iproj)%gamma, rank, mpi_comm)
+      CALL mpi_bc(this%proj(iproj)%zona, rank, mpi_comm)
+      CALL mpi_bc(this%proj(iproj)%regio, rank, mpi_comm)
+      CALL mpi_bc(this%proj(iproj)%j, rank, mpi_comm)
+      CALL mpi_bc(this%proj(iproj)%mj, rank, mpi_comm)
+      CALL mpi_bc(this%proj(iproj)%weight, rank, mpi_comm)
+      CALL mpi_bc(rank, mpi_comm, this%proj(iproj)%shift)
+    END DO
     CALL mpi_bc(this%kpts_fine, rank, mpi_comm)
     CALL mpi_bc(this%l_intp, rank, mpi_comm)
 
@@ -672,10 +660,9 @@ CONTAINS
     END DO
 
     IF (nProjTotal > 0) THEN
-      ALLOCATE(this%proj_ntype(nProjTotal), this%proj_atom(nProjTotal), this%proj_species(nProjTotal), this%proj_l(nProjTotal), this%proj_m(nProjTotal), this%proj_spin(nProjTotal))
-      ALLOCATE(this%proj_rwf(nProjTotal), this%proj_alpha(nProjTotal), this%proj_beta(nProjTotal), this%proj_gamma(nProjTotal))
-      ALLOCATE(this%proj_zona(nProjTotal), this%proj_regio(nProjTotal), this%proj_j(nProjTotal), this%proj_mj(nProjTotal))
-      ALLOCATE(this%proj_weight(nProjTotal), this%proj_shift(3, nProjTotal))
+      !> The defaults live in t_wannierlib_proj, so an entry the input leaves out is
+      !> already what it should be and does not need setting here.
+      ALLOCATE(this%proj(nProjTotal))
       ip = 0
       DO iType = 1, nSpecies
         WRITE(xPathA, '(A,I0,A)') '/fleurInput/atomSpecies/species[', iType, ']/@name'
@@ -691,9 +678,9 @@ CONTAINS
           ip = ip + 1
           WRITE(xPathP, '(A,I0,A,I0,A)') '/fleurInput/atomSpecies/species[', iType, ']/wannierproj[', iProj, ']'
        
-          this%proj_species(ip) = species_name
-          this%proj_l(ip) = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@l'))
-          this%proj_m(ip) = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@m'))
+          this%proj(ip)%species = species_name
+          this%proj(ip)%l = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@l'))
+          this%proj(ip)%m = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@m'))
           !> The spin a projection belongs to. It was declared in the schema, allocated and
           !> broadcast, but never read: proj_spin reached the expansion uninitialised and a
           !> projection could not be pinned to one channel. That left the (l, j, m_j) branch
@@ -701,83 +688,83 @@ CONTAINS
           !> copies carry the same (l, j, m_j), and the j-resolved builder ignores the spin
           !> index, so the pair came out as two identical columns and A(k) lost rank.
           !> 0 means "either", which is what makes the expansion split it in two.
-          this%proj_spin(ip) = 0
+          this%proj(ip)%spin = 0
           IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@spin') == 1) THEN
             sbuf = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@spin'))
             SELECT CASE (TRIM(sbuf))
-            CASE (''); this%proj_spin(ip) = 0
-            CASE ('up', '1', '+1'); this%proj_spin(ip) = 1
-            CASE ('down', '-1'); this%proj_spin(ip) = -1
+            CASE (''); this%proj(ip)%spin = 0
+            CASE ('up', '1', '+1'); this%proj(ip)%spin = 1
+            CASE ('down', '-1'); this%proj(ip)%spin = -1
             CASE DEFAULT
               CALL juDFT_error('wannierlib: <wannierproj> spin="'//TRIM(sbuf)// &
                                '" is not one of up/down (or empty for both)', &
                                calledby='read_xml_wannierlib')
             END SELECT
           END IF
-          this%proj_rwf(ip) = 0
-          this%proj_alpha(ip) = 0.0
-          this%proj_beta(ip) = 0.0
-          this%proj_gamma(ip) = 0.0
-          this%proj_zona(ip) = 0.0
-          this%proj_regio(ip) = 1.0
-          this%proj_j(ip) = -1.0
-          this%proj_mj(ip) = 0.0
-          this%proj_weight(ip) = 1.0
-          this%proj_shift(:, ip) = 0.0
+          this%proj(ip)%rwf = 0
+          this%proj(ip)%alpha = 0.0
+          this%proj(ip)%beta = 0.0
+          this%proj(ip)%gamma = 0.0
+          this%proj(ip)%zona = 0.0
+          this%proj(ip)%regio = 1.0
+          this%proj(ip)%j = -1.0
+          this%proj(ip)%mj = 0.0
+          this%proj(ip)%weight = 1.0
+          this%proj(ip)%shift(:) = 0.0
 
           IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@rwf') == 1) THEN
-            this%proj_rwf(ip) = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@rwf'))
+            this%proj(ip)%rwf = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@rwf'))
           END IF
           IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@zona') == 1) THEN
-            this%proj_zona(ip) = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@zona'))
+            this%proj(ip)%zona = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@zona'))
           END IF
           IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@regio') == 1) THEN
-            this%proj_regio(ip) = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@regio'))
+            this%proj(ip)%regio = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@regio'))
           END IF
 
           IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@alpha') == 1) THEN
-            this%proj_alpha(ip) = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@alpha'))
+            this%proj(ip)%alpha = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@alpha'))
           ELSE IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@phi') == 1) THEN
-            this%proj_alpha(ip) = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@phi'))
+            this%proj(ip)%alpha = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@phi'))
           END IF
 
           IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@beta') == 1) THEN
-            this%proj_beta(ip) = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@beta'))
+            this%proj(ip)%beta = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@beta'))
           ELSE IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@theta') == 1) THEN
-            this%proj_beta(ip) = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@theta'))
+            this%proj(ip)%beta = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@theta'))
           END IF
 
           IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@gamma') == 1) THEN
-            this%proj_gamma(ip) = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@gamma'))
+            this%proj(ip)%gamma = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@gamma'))
           END IF
 
           IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@j') == 1) THEN
-            this%proj_j(ip) = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@j'))
+            this%proj(ip)%j = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@j'))
           END IF
           IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@mj') == 1) THEN
-            this%proj_mj(ip) = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@mj'))
+            this%proj(ip)%mj = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@mj'))
           END IF
           IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@weight') == 1) THEN
-            this%proj_weight(ip) = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@weight'))
+            this%proj(ip)%weight = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@weight'))
           END IF
           IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@shiftX') == 1) THEN
-            this%proj_shift(1, ip) = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@shiftX'))
+            this%proj(ip)%shift(1) = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@shiftX'))
           END IF
           IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@shiftY') == 1) THEN
-            this%proj_shift(2, ip) = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@shiftY'))
+            this%proj(ip)%shift(2) = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@shiftY'))
           END IF
           IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathP))//'/@shiftZ') == 1) THEN
-            this%proj_shift(3, ip) = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@shiftZ'))
+            this%proj(ip)%shift(3) = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@shiftZ'))
           END IF
 
           spin_label = ADJUSTL(xml%getAttributeValue(TRIM(ADJUSTL(xPathP))//'/@spin'))
           SELECT CASE (spin_label(1:1))
           CASE ('u', 'U')
-            this%proj_spin(ip) = 1
+            this%proj(ip)%spin = 1
           CASE ('d', 'D')
-            this%proj_spin(ip) = -1
+            this%proj(ip)%spin = -1
           CASE DEFAULT
-            this%proj_spin(ip) = 0
+            this%proj(ip)%spin = 0
           END SELECT
         END DO
       END DO

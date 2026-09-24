@@ -254,7 +254,7 @@ CONTAINS
     INTEGER :: iw, ich, n(2)
     n = 0
     DO iw = 1, this%num_wann
-      ich = MERGE(1, 2, this%proj_spin(iw) > 0)
+      ich = MERGE(1, 2, this%proj(iw)%spin > 0)
       n(ich) = n(ich) + 1
       IF (n(ich) > SIZE(idx, 1)) CALL juDFT_error( &
         'wannierlib: more projections in one spin channel than half the Wannier functions', &
@@ -336,7 +336,7 @@ CONTAINS
         hartree_to_ev_const*this%dis_win_min, hartree_to_ev_const*this%dis_win_max, &
         hartree_to_ev_const*this%dis_froz_min, hartree_to_ev_const*this%dis_froz_max, &
         wannierlib_w90main%kmesh_info%nntot, wannierlib_w90main%kmesh_info%nnlist, &
-        wannierlib_w90main%kmesh_info%wb, eig_ev, mmn_local, amn, this%proj_spin, &
+        wannierlib_w90main%kmesh_info%wb, eig_ev, mmn_local, amn, this%proj%spin, &
         u_opt, l_balanced, s0)
       IF (.NOT. l_balanced) CALL juDFT_error( &
          "wannierlib: the spin-balanced disentanglement does not apply to this case", &

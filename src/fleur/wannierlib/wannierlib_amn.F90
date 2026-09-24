@@ -73,7 +73,7 @@ CONTAINS
     tlmwf = CMPLX(0.0, 0.0)
     tlmwft = CMPLX(0.0, 0.0)
 
-    has_soc_proj = ALL(wannierlib%proj_j(1:wannierlib%num_wann) > 0.0)
+    has_soc_proj = ALL(wannierlib%proj(1:wannierlib%num_wann)%j > 0.0)
     !> The branch is guarded by l_spinors (noco OR soc), which is what makes the states
     !> spinors. Guarding it with wannierlib_main's l_nocosoc -- (noco AND NOT soc) there,
     !> the opposite of the l_nocosoc that wann_optional and FLEUR v26 define -- left the
@@ -81,12 +81,12 @@ CONTAINS
     !> given as (l, j, m_j) was silently served by the (l, m) table instead and the trial
     !> orbital carried no spin structure.
     IF (l_spinors .AND. has_soc_proj) THEN
-      CALL wannierlib_soc_tlmw(wannierlib%num_wann, wannierlib%proj_l, wannierlib%proj_j, wannierlib%proj_mj, jspin, tlmwf)
+      CALL wannierlib_soc_tlmw(wannierlib%num_wann, wannierlib%proj%l, wannierlib%proj%j, wannierlib%proj%mj, jspin, tlmwf)
     ELSE
       CALL wannierlib_tlmw(wannierlib, wannierlib%num_wann, l_spinors, jspin, tlmwf)
     END IF
 
-    CALL eulerrot(wannierlib%num_wann, wannierlib%proj_alpha, wannierlib%proj_beta, wannierlib%proj_gamma, amx)
+    CALL eulerrot(wannierlib%num_wann, wannierlib%proj%alpha, wannierlib%proj%beta, wannierlib%proj%gamma, amx)
     imx(:, :) = 0.0
     imx(1, 1) = 1.0
     imx(2, 2) = 1.0
@@ -105,15 +105,15 @@ CONTAINS
     END DO
     
     DO nwf = 1, wannierlib%num_wann
-      arg = -kpts%bkf(1, ikpt) * wannierlib%proj_shift(1, nwf)
-      arg = arg - kpts%bkf(2, ikpt) * wannierlib%proj_shift(2, nwf)
-      arg = arg - kpts%bkf(3, ikpt) * wannierlib%proj_shift(3, nwf)
+      arg = -kpts%bkf(1, ikpt) * wannierlib%proj(nwf)%shift(1)
+      arg = arg - kpts%bkf(2, ikpt) * wannierlib%proj(nwf)%shift(2)
+      arg = arg - kpts%bkf(3, ikpt) * wannierlib%proj(nwf)%shift(3)
       arg = tpi_const * arg
-      factor = CMPLX(COS(arg), SIN(arg)) * wannierlib%proj_weight(nwf)
+      factor = CMPLX(COS(arg), SIN(arg)) * wannierlib%proj(nwf)%weight
     
 
-      ntyp = wannierlib%proj_ntype(nwf)
-      nat_local = wannierlib%proj_atom(nwf)
+      ntyp = wannierlib%proj(nwf)%ntype
+      nat_local = wannierlib%proj(nwf)%atom
       DO ne = 1, size(amn,1)
         DO l = 0, MIN(atoms%lmax(ntyp), 3)
           proj_int(:) = 0.0
@@ -121,7 +121,7 @@ CONTAINS
             DO ir = 1, atoms%jri(ntyp)
               vlpr(ir) = radfun(ntyp)%r(ir, 1, j, l, jspin_rad) * rads(nwf, l, ir, 1) + &
                          radfun(ntyp)%r(ir, 2, j, l, jspin_rad) * rads(nwf, l, ir, 2)
-              IF (wannierlib%proj_rwf(nwf) > 0) THEN
+              IF (wannierlib%proj(nwf)%rwf > 0) THEN
                 vlpr(ir) = vlpr(ir) * atoms%rmsh(ir, ntyp)
               END IF
             END DO
