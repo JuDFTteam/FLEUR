@@ -10,7 +10,7 @@
       <xcFunctional name="vwn" relativisticCorrections="F"/>
       <magnetism jspins="2" l_noco="t" swsp="F" lflip="f">
          <qss>.0000000000 .0000000000 .0000000000</qss>
-         <mtNocoParams l_mperp="t" l_mtNocoPot="t" l_relaxSQA="f" mag_mixing_scheme="0" mix_RelaxWeightOffD="3.0" l_constrained="T" mix_constr="1.0"/>
+         <mtNocoParams l_mperp="t" l_mtNocoPot="t" l_relaxSQA="f" mag_mixing_scheme="0" mix_RelaxWeightOffD="3.0" l_constrained="T" mix_constr="0.3"/>
       </magnetism>
       <soc theta=".00000000" phi=".00000000" l_soc="f" spav="t"/>
       <expertModes gw="0" secvar="F"/>
