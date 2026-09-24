@@ -16,6 +16,7 @@ module m_types_radfun
    contains
       procedure, pass :: init
       procedure, pass :: generate_radial_functions
+      procedure, pass :: reset
    end type
    public:: t_radfun
 contains
@@ -28,7 +29,6 @@ contains
       type(t_input), intent(in)     :: input
       integer, intent(in)           :: itype
 
-      integer:: l, lo
       this%itype = itype
       if (allocated(this%n_r)) deallocate(this%n_r)
       allocate(this%n_r(0:atoms%lmaxd))
@@ -65,7 +65,7 @@ contains
       real            :: g(atoms%jmtd, 2, 0:atoms%lmaxd)
       real            :: flo(atoms%jmtd, 2, atoms%nlod)
 
-      integer:: ispin, jspin, i,j, l, n, lo
+      integer:: ispin, jspin, i,j, l, lo
       real,allocatable:: rf(:)
       real :: ovlp
       call timestart("generate radial functions")
@@ -75,7 +75,7 @@ contains
          call usdus%init(atoms,input%jspins)
       end if
 
-      !check if data is already available
+      !data is cached per itype only; call reset when the potential or energy parameters change
       if (this%itype /= itype .or. .not.allocated(this%r)) THEN
          !init type
          call this%init(atoms, input, itype)
@@ -91,16 +91,13 @@ contains
             else
                call genMTBasis(atoms, enpara, vTot, fmpi, iType, ispin, usdus, f, g, flo, hub1data, l_writeArg=.false.)
             end if
+            if (input%l_useapw) call judft_bug("APW not implemented")
             do l = 0, atoms%lmax(itype)
                this%R( 1:atoms%jri(itype), 1:2, 1,l, ispin) = f(1:atoms%jri(itype), 1:2, l)
                this%R( 1:atoms%jri(itype), 1:2, 2,l, ispin) = g(1:atoms%jri(itype), 1:2, l)
-               n = 2
-               if (input%l_useapw) call judft_bug("APW not implemented")
-               do lo = 1, atoms%nlo(itype)
-                  if (l /= atoms%llo(lo, itype)) cycle !no LO for this l
-                  n = n + 1
-                  this%R( 1:atoms%jri(itype), 1:2, n,l, ispin) = flo(1:atoms%jri(itype), 1:2, lo)
-               end do
+            end do
+            do lo = 1, atoms%nlo(itype)
+               this%R( 1:atoms%jri(itype), 1:2, atoms%slot_of_lo(lo,itype),atoms%llo(lo,itype), ispin) = flo(1:atoms%jri(itype), 1:2, lo)
             end do
          end do
 
@@ -126,6 +123,12 @@ contains
 
    end subroutine
 
-   
+   subroutine reset(this)
+      !! invalidate cached radial functions
+      class(t_radfun), intent(inout):: this
+      this%itype = 0
+      if (allocated(this%r)) deallocate(this%r)
+      if (allocated(this%integral)) deallocate(this%integral)
+   end subroutine
 
 end module m_types_radfun

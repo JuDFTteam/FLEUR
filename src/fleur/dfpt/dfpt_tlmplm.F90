@@ -1,11 +1,12 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2022 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_dfpt_tlmplm
 
+   implicit none
 CONTAINS
    SUBROUTINE dfpt_tlmplm(atoms,sym,sphhar,input,noco,enpara,hub1inp,hub1data,vTot,fmpi,tdV1,v1real,v1imag,conj_V,iDtype_col)
       !! Get the (lm) matrix elements for the perturbed potential, which differs slightly from the base
@@ -46,7 +47,7 @@ CONTAINS
 
         call uddummy%init(atoms,input%jspins)
         CALL timestart("tlmplm")
-        CALL tdV1%init(atoms,input%jspins,.FALSE.)
+        CALL tdV1%init(atoms,input%jspins)
 
         nlims(1) = 1
         nlims(2) = atoms%ntype

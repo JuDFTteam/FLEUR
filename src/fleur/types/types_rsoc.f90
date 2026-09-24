@@ -57,7 +57,7 @@ module m_types_rsoc
   
     !     ..
     !     .. Local Scalars ..
-    INTEGER:: n,i,j,l,itype,ispin,jspin,ispin1,jspin1,ilo,nr
+    INTEGER:: n,i,j,l,itype,ispin,jspin,ispin1,jspin1,ilo
     LOGICAL, SAVE :: first_k = .TRUE.
     TYPE(t_radfun) :: radfun
     REAL,ALLOCATABLE:: v0(:)
@@ -93,11 +93,9 @@ module m_types_rsoc
          !
          efun(1) = (enpara%el0(l,itype,1)+enpara%el0(l,itype,min(2,input%jspins)))/2.
          efun(2) = efun(1)
-         nr = 2
          DO ilo = 1, atoms%nlo(itype)
             IF (atoms%llo(ilo,itype).NE.l) CYCLE
-            nr = nr + 1
-            efun(nr) = (enpara%ello0(ilo,itype,1)+enpara%ello0(ilo,itype,min(2,input%jspins)))/2.
+            efun(atoms%slot_of_lo(ilo,itype)) = (enpara%ello0(ilo,itype,1)+enpara%ello0(ilo,itype,min(2,input%jspins)))/2.
          END DO
 
          !                        s       s'            .s       s'

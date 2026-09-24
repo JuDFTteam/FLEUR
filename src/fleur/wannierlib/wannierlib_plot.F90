@@ -288,7 +288,7 @@ CONTAINS
       REAL,    ALLOCATABLE, INTENT(INOUT) :: ff(:, :, :, :), gg(:, :, :, :), flo(:, :, :, :)
       COMPLEX, ALLOCATABLE, INTENT(INOUT) :: acof(:, :, :), bcof(:, :, :), ccof(:, :, :, :)
 
-      INTEGER :: lmd, nlod, llod, ntyp, na, nat_local, l, m, lm, ilo, ir, nseen
+      INTEGER :: lmd, nlod, llod, ntyp, na, nat_local, l, m, lm, ilo, ir
 
       lmd  = atoms%lmaxd*(atoms%lmaxd + 2)
       nlod = MAX(1, atoms%nlod)
@@ -312,12 +312,10 @@ CONTAINS
                IF (abc(ntyp)%n_r(l) >= 2) gg(ntyp, ir, 1:2, l) = radfun(ntyp)%r(ir, 1:2, 2, l, jspin_rad)
             END DO
          END DO
-         !> A global `ilo` is the nseen-th local orbital of its own l, so its slot is 2+nseen.
          DO ilo = 1, atoms%nlo(ntyp)
             l = atoms%llo(ilo, ntyp)
-            nseen = COUNT(atoms%llo(1:ilo, ntyp) == l)
             DO ir = 1, atoms%jri(ntyp)
-               flo(ntyp, ir, 1:2, ilo) = radfun(ntyp)%r(ir, 1:2, 2 + nseen, l, jspin_rad)
+               flo(ntyp, ir, 1:2, ilo) = radfun(ntyp)%r(ir, 1:2, atoms%slot_of_lo(ilo, ntyp), l, jspin_rad)
             END DO
          END DO
       END DO
@@ -336,10 +334,9 @@ CONTAINS
             END DO
             DO ilo = 1, atoms%nlo(ntyp)
                l = atoms%llo(ilo, ntyp)
-               nseen = COUNT(atoms%llo(1:ilo, ntyp) == l)
-               DO m = -l, l
+                  DO m = -l, l
                   lm = l*(l + 1) + m
-                  ccof(m, :, ilo, na) = abc(ntyp)%cof(1:nbands, lm, 2 + nseen, nat_local)
+                  ccof(m, :, ilo, na) = abc(ntyp)%cof(1:nbands, lm, atoms%slot_of_lo(ilo, ntyp), nat_local)
                END DO
             END DO
          END DO

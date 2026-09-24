@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2022 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -42,7 +42,6 @@ CONTAINS
       USE m_hsmt_distspins
       USE m_hsmt_fjgj
       USE m_hsmt_spinor
-      USE m_hsmt_offdiag
       USE m_matrix_pref
       
 

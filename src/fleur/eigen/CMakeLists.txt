@@ -12,7 +12,6 @@ src/fleur/eigen/hsmt_sph.F90
 src/fleur/eigen/hsmt_nonsph.F90
 src/fleur/eigen/hsmt_spinor.F90
 src/fleur/eigen/hsmt_distspin.F90
-src/fleur/eigen/hsmt_offdiag.F90
 src/fleur/eigen/hsmt_soc_offdiag.F90
 src/fleur/eigen/hsmt_lo.F90
 src/fleur/eigen/local_hamiltonian.F90
