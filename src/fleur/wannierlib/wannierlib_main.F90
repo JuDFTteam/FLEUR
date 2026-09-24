@@ -252,7 +252,7 @@ CONTAINS
          !> amn is complete on every rank after the reduce above; mmn is one k-slice per rank
          !> and has to be gathered first. Only rank 0 writes, and wann_write_amn is told
          !> isize=1 so it does not try to collect a distribution it does not have.
-         IF (this%l_export_w90 .OR. fmpi%isize == 1) THEN
+         IF (this%export%w90 .OR. fmpi%isize == 1) THEN
             CALL wannierlib_gather_mmn(fmpi, distk, kpts%nkptf, mmn, mmn_full)
             IF (fmpi%irank == 0) THEN
                amn_file = spin12(jspin)//'.amn'
@@ -273,7 +273,7 @@ CONTAINS
          !> orders ever part company, every symmetry operation is applied at the wrong k and
          !> the failure is silent: it converges, the centres come out symmetric, and the
          !> bands are wrong.
-         IF (this%l_export_basis) &
+         IF (this%export%basis) &
             CALL wannierlib_export_basis(this, manifold, atoms, cell, input, kpts, sym, &
                                          noco, nococonv, enpara, vtot, fmpi, eig_id, jspin)
          ! collinear jspins=2 (no SOC/noco): the two spin channels wannierise separately;
@@ -288,7 +288,7 @@ CONTAINS
          !> criterion, which is the right answer when there is no spin operator to use.
          IF (request%has_op_r('spin') .AND. ALLOCATED(melem%s0)) THEN
             !> Published before run_w90 so it is the operator as built, with no gauge on it.
-            IF (this%l_export_bloch) &
+            IF (this%export%bloch) &
                CALL wannierlib_write_s0(fmpi, distk, kpts%nkptf, melem%s0, &
                                         spin12(jspin)//'_s0.dat')
             CALL run_w90(wl, cell, kpts, mmn, amn, eig, fmpi%irank, u_matrix, u_opt, &
@@ -308,7 +308,7 @@ CONTAINS
          !> Right here and not from v_ch: that one is only assembled on the collinear
          !> two-channel path, while u_opt and u_matrix are in hand on both, so writing from
          !> them covers the spinor route as well.
-         IF (this%l_export_gauge) &
+         IF (this%export%gauge) &
             CALL wannierlib_export_gauge(kpts, fmpi, jspin, u_opt, u_matrix)
 
          ! Draw the Wannier functions, if anybody asked. Here and not earlier because the

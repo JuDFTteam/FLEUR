@@ -52,6 +52,21 @@ MODULE m_types_wannierlib
     INTEGER :: total = 1             ! 1 = write the summed-over-atoms projection
   END TYPE t_wannierlib_op
 
+  !> The <export> block: copy out matrices the run already holds, for someone outside.
+  !>
+  !> PROVISIONAL. Nothing inside FLEUR reads any of these back. They exist so a run can be
+  !> cross-checked against a standalone wannier90.x, and so tools that consume Wannier data
+  !> -- WannierBerri, irrep -- can be fed without recomputing. Grouped rather than left as
+  !> four loose flags precisely because it is provisional: one object is one seam, whether
+  !> the block is later promoted or dropped.
+  TYPE t_wannierlib_export
+    SEQUENCE
+    LOGICAL :: w90 = .FALSE.     ! <export wannier90="T"/>:      .amn/.mmn/.eig
+    LOGICAL :: basis = .FALSE.   ! <export wannierberri="T"/>:   WF<n>_basis.hdf
+    LOGICAL :: gauge = .FALSE.   ! <export gauge="T"/>:          WF<n>_gauge.hdf, u_opt and u_mlwf
+    LOGICAL :: bloch = .FALSE.   ! <export blochOperators="T"/>: WF<n>_s0.dat
+  END TYPE t_wannierlib_export
+
   TYPE, EXTENDS(t_fleurinput_base) :: t_wannierlib_wannierize
     LOGICAL :: l_wannierize = .FALSE.
     ! Convenience flags DERIVED from the operator list ops(:) below (set in read_xml).
@@ -66,10 +81,7 @@ MODULE m_types_wannierlib
     !> matrices to someone outside -- and differ only in who reads them. What <operators_r>
     !> and <interpolation> write is NOT here: those compute something first and writing it
     !> is the last step, while these copy out what the run already holds.
-    LOGICAL :: l_export_w90 = .FALSE.      ! <export wannier90="T"/>: .amn/.mmn/.eig
-    LOGICAL :: l_export_basis = .FALSE.    ! <export wannierberri="T"/>: WF<n>_basis.hdf
-    LOGICAL :: l_export_gauge = .FALSE.    ! <export gauge="T"/>: WF<n>_gauge.hdf, u_opt and u_mlwf
-    LOGICAL :: l_export_bloch = .FALSE.    ! <export blochOperators="T"/>: WF<n>_s0.dat
+    TYPE(t_wannierlib_export) :: export
     !> Opt-in: put the Wannier functions themselves on a real-space grid and write them
     !> as XSF. Off by default because it costs a second pass over the k-points, reading
     !> the states back once the gauge is known; nothing else in the run needs it.
@@ -382,10 +394,10 @@ CONTAINS
     CALL mpi_bc(this%l_spin, rank, mpi_comm)
     CALL mpi_bc(this%l_orbmom, rank, mpi_comm)
     CALL mpi_bc(this%l_socop, rank, mpi_comm)
-    ! Only the domain COUNT is broadcast: it sets the loop bound on every rank. The k-sets
-    ! and suffixes stay on rank 0, which is the only one that writes the k-set file and
-    ! renames the outputs -- so on any other rank dom_kset is unallocated, and reading or
-    ! validating it there is a bug, not a missing broadcast.
+    ! The domain COUNT is broadcast: it sets the loop bound on every rank. The k-SETS are
+    ! not, because only rank 0 reaches the writers -- so on any other rank dom_kset is
+    ! unallocated, and reading or validating it there is a bug, not a missing broadcast.
+    ! The suffixes ARE broadcast; see below.
     CALL mpi_bc(this%n_domains, rank, mpi_comm)
     !> The suffixes ARE broadcast, unlike the k-sets: they are a handful of short strings,
     !> and the output name is built inside the domain loop, which every rank turns. Leaving
@@ -406,10 +418,10 @@ CONTAINS
       CALL mpi_bc(this%ops(iop)%total, rank, mpi_comm)
     END DO
     CALL mpi_bc(this%l_operators_r, rank, mpi_comm)
-    CALL mpi_bc(this%l_export_w90, rank, mpi_comm)
-    CALL mpi_bc(this%l_export_basis, rank, mpi_comm)
-    CALL mpi_bc(this%l_export_gauge, rank, mpi_comm)
-    CALL mpi_bc(this%l_export_bloch, rank, mpi_comm)
+    CALL mpi_bc(this%export%w90, rank, mpi_comm)
+    CALL mpi_bc(this%export%basis, rank, mpi_comm)
+    CALL mpi_bc(this%export%gauge, rank, mpi_comm)
+    CALL mpi_bc(this%export%bloch, rank, mpi_comm)
     CALL mpi_bc(this%l_plot_wf, rank, mpi_comm)
     CALL mpi_bc(this%op_r_name, rank, mpi_comm)
     CALL mpi_bc(this%num_wann, rank, mpi_comm)
@@ -646,13 +658,13 @@ CONTAINS
     !     for irrep AND the gauge, and asking for one must not turn the others off. ---
     xPathA = '/fleurInput/output/wannierlib/export'
     IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))) == 1) THEN
-      this%l_export_w90 = evaluateFirstBoolOnly(xml%getAttributeValue( &
+      this%export%w90 = evaluateFirstBoolOnly(xml%getAttributeValue( &
         TRIM(ADJUSTL(xPathA))//'/@wannier90'))
-      this%l_export_basis = evaluateFirstBoolOnly(xml%getAttributeValue( &
+      this%export%basis = evaluateFirstBoolOnly(xml%getAttributeValue( &
         TRIM(ADJUSTL(xPathA))//'/@wannierberri'))
-      this%l_export_gauge = evaluateFirstBoolOnly(xml%getAttributeValue( &
+      this%export%gauge = evaluateFirstBoolOnly(xml%getAttributeValue( &
         TRIM(ADJUSTL(xPathA))//'/@gauge'))
-      this%l_export_bloch = evaluateFirstBoolOnly(xml%getAttributeValue( &
+      this%export%bloch = evaluateFirstBoolOnly(xml%getAttributeValue( &
         TRIM(ADJUSTL(xPathA))//'/@blochOperators'))
     END IF
 
