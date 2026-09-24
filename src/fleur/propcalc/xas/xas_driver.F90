@@ -11,7 +11,6 @@ MODULE m_xas_driver
 #endif
    USE m_constants, ONLY: hartree_to_ev_const
    USE m_eig66_io, ONLY: read_eig
-   USE m_genMTBasis, ONLY: genMTBasis
    USE m_juDFT, ONLY: juDFT_error
    USE m_mpi_reduce_tool, ONLY: mpi_sum_reduce
    USE m_types_abc, ONLY: t_abc
@@ -137,7 +136,6 @@ CONTAINS
       COMPLEX, ALLOCATABLE :: matrix(:, :), matrix_debug(:, :), matrix_lchan(:, :, :)
       REAL, ALLOCATABLE :: energy_grid(:), intensity(:, :), radial_xas(:, :, :)
       REAL, ALLOCATABLE :: intensity_reduced(:, :)
-      REAL, ALLOCATABLE :: f(:, :, :, :), g(:, :, :, :), flo(:, :, :, :)
       REAL, ALLOCATABLE :: eig_band(:), occ_band(:)
       REAL, ALLOCATABLE :: xas_debug_strength_kpt(:, :)
       REAL, ALLOCATABLE :: xas_debug_strength_kpt_reduced(:, :)
@@ -236,9 +234,6 @@ CONTAINS
       END IF
 
       CALL usdus%init(atoms, input%jspins)
-      ALLOCATE(f(atoms%jmtd, 2, 0:atoms%lmaxd, input%jspins))
-      ALLOCATE(g(atoms%jmtd, 2, 0:atoms%lmaxd, input%jspins))
-      ALLOCATE(flo(atoms%jmtd, 2, atoms%nlod, input%jspins))
       IF (l_xas_debug_kpt_strength) THEN
          ALLOCATE(xas_debug_strength_kpt(xas_debug_n_pol, kpts%nkpt), SOURCE=0.0)
       END IF
@@ -344,10 +339,7 @@ CONTAINS
 
       DO itype = 1, atoms%ntype
          IF (atoms%nz(itype) /= xas%absorber_z) CYCLE
-         DO ispin = 1, input%jspins
-            CALL genMTBasis(atoms, enpara, vTot, fmpi, itype, ispin, usdus, &
-                            f(:, :, 0:, ispin), g(:, :, 0:, ispin), flo(:, :, :, ispin), l_writeArg=.FALSE.)
-         END DO
+         CALL radfun%generate_radial_functions(atoms, input, enpara, fmpi, vTot, itype, usdus_out=usdus)
 
          CALL xas_debug_clear_underflow(l_xas_debug_fp)
          CALL xas_extract_core_states(atoms, itype, xas%edge, vTot%mt(1:atoms%jri(itype), 0, itype, 1), core_states)
@@ -364,7 +356,6 @@ CONTAINS
             l_xas_angular_sumrule_printed = .TRUE.
          END IF
 
-         CALL radfun%generate_radial_functions(atoms, input, enpara, fmpi, vTot, itype)
          max_order = MAXVAL(radfun%n_r(0:atoms%lmax(itype)))
          ALLOCATE(radial_xas(max_order, 0:atoms%lmaxd, input%jspins), SOURCE=0.0)
          CALL xas_debug_clear_underflow(l_xas_debug_fp)
