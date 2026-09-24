@@ -5,7 +5,7 @@
 !--------------------------------------------------------------------------------
 !>  The 2N operators of a collinear jspins=2 calculation, in real space: the ones that
 !>  cannot be assembled until BOTH spin channels have been wannierised, because they need
-!>  both gauges at once. Everything separable per channel is written by melem_operators_r.
+!>  both gauges at once. Everything separable per channel is written by wgauge_operators_r.
 !>
 !>  For the spin, the ingredient is the cross-spin overlap <up|dn> on the coarse mesh, a
 !>  Bloch quantity produced with the other coarse matrices; what is left here is rotating
@@ -17,22 +17,22 @@
 !>  spatial part alone, so <up|L|dn> carries the spin overlap <up|dn> = 0 as a factor and
 !>  the cross block vanishes identically. The 2N matrix is block-diagonal, and the two
 !>  blocks are each channel's own L in its own gauge.
-MODULE m_melem_spin_collinear
+MODULE m_wgauge_spin_collinear
    USE m_juDFT
    USE m_constants, ONLY: ImagUnit, oUnit
    USE m_types_cell
    USE m_types_kpts
    USE m_types_mpi
-   USE m_melem_ft, ONLY: melem_ft_to_real_reduce
-   USE m_melem_io, ONLY: melem_write_realspace
+   USE m_wgauge_ft, ONLY: wgauge_ft_to_real_reduce
+   USE m_wgauge_io, ONLY: wgauge_write_realspace
    IMPLICIT NONE
    PRIVATE
 
-   PUBLIC :: melem_rspauli_collinear, melem_anglmom_collinear, melem_soc_collinear
+   PUBLIC :: wgauge_rspauli_collinear, wgauge_anglmom_collinear, wgauge_soc_collinear
 
 CONTAINS
 
-   SUBROUTINE melem_rspauli_collinear(num_wann, x0, v_ch, cell, kpts, distk, fmpi)
+   SUBROUTINE wgauge_rspauli_collinear(num_wann, x0, v_ch, cell, kpts, distk, fmpi)
       INTEGER, INTENT(IN) :: num_wann
       !> The cross-spin overlap <up|dn> on this rank's k-slice, in the Bloch basis:
       !> (num_bands, num_bands, nk_loc), in ascending global-k order.
@@ -56,16 +56,16 @@ CONTAINS
       !> The gauges index the same manifolds the overlap does, and a mismatch would be a
       !> silently wrong rotation rather than a failure.
       IF (SIZE(v_ch, 1) /= nb .OR. SIZE(v_ch, 2) /= nw .OR. SIZE(v_ch, 4) /= 2) &
-         CALL juDFT_error("melem_rspauli_collinear: the gauges do not match the manifold", &
-                          calledby="melem_rspauli_collinear")
+         CALL juDFT_error("wgauge_rspauli_collinear: the gauges do not match the manifold", &
+                          calledby="wgauge_rspauli_collinear")
 
       nkl = COUNT(distk == fmpi%irank); ALLOCATE (gk_loc(nkl)); j = 0
       DO i = 1, SIZE(distk)
          IF (distk(i) == fmpi%irank) THEN; j = j + 1; gk_loc(j) = i; END IF
       END DO
       IF (SIZE(x0, 3) < nkl) CALL juDFT_error( &
-         "melem_rspauli_collinear: fewer overlap slices than k-points on this rank", &
-         calledby="melem_rspauli_collinear")
+         "wgauge_rspauli_collinear: fewer overlap slices than k-points on this rank", &
+         calledby="wgauge_rspauli_collinear")
 
       ALLOCATE (Xk(nw, nw), tmp(nb, nw))
       ALLOCATE (sig_loc(n2, n2, 3, MAX(1, nkl)), source=CMPLX(0.0, 0.0))
@@ -89,7 +89,7 @@ CONTAINS
 
       ! FT-reduce each of the 3 components (collective), rank 0 writes rspauli.1
       DO kk = 1, 3
-         CALL melem_ft_to_real_reduce(cell, kpts, sig_loc(:, :, kk, :), gk_loc, fmpi%mpi_comm, s1, irvec, ndegen, nrpts)
+         CALL wgauge_ft_to_real_reduce(cell, kpts, sig_loc(:, :, kk, :), gk_loc, fmpi%mpi_comm, s1, irvec, ndegen, nrpts)
          IF (kk == 1) ALLOCATE (sr(n2, n2, nrpts, 3))
          sr(:, :, :, kk) = s1; DEALLOCATE (s1)
       END DO
@@ -111,12 +111,12 @@ CONTAINS
       DEALLOCATE (sig_loc, gk_loc)
       IF (ALLOCATED(sr)) DEALLOCATE (sr)
       IF (ALLOCATED(irvec)) DEALLOCATE (irvec, ndegen)
-   END SUBROUTINE melem_rspauli_collinear
+   END SUBROUTINE wgauge_rspauli_collinear
 
    !> The site-summed orbital moment of both channels as one 2N block-diagonal matrix,
    !> written as anglmomrs.1 -- the same single-file contract the 2N spin uses, so that a
    !> reader of a collinear run does not have to know how many channels produced it.
-   SUBROUTINE melem_anglmom_collinear(num_wann, l0, v_ch, cell, kpts, distk, fmpi)
+   SUBROUTINE wgauge_anglmom_collinear(num_wann, l0, v_ch, cell, kpts, distk, fmpi)
       INTEGER, INTENT(IN) :: num_wann
       !> Site-resolved L on this rank's k-slice, in the Bloch basis, for both channels:
       !> (num_bands, num_bands, 3, natoms, 2, nk_loc). The sum over sites is taken here.
@@ -136,19 +136,19 @@ CONTAINS
       nb = SIZE(l0, 1); nw = num_wann; n2 = 2*nw
 
       IF (SIZE(v_ch, 1) /= nb .OR. SIZE(v_ch, 2) /= nw .OR. SIZE(v_ch, 4) /= 2) &
-         CALL juDFT_error("melem_anglmom_collinear: the gauges do not match the manifold", &
-                          calledby="melem_anglmom_collinear")
+         CALL juDFT_error("wgauge_anglmom_collinear: the gauges do not match the manifold", &
+                          calledby="wgauge_anglmom_collinear")
       IF (SIZE(l0, 5) /= 2) CALL juDFT_error( &
-         "melem_anglmom_collinear: L was not stored for both spin channels", &
-         calledby="melem_anglmom_collinear")
+         "wgauge_anglmom_collinear: L was not stored for both spin channels", &
+         calledby="wgauge_anglmom_collinear")
 
       nkl = COUNT(distk == fmpi%irank); ALLOCATE (gk_loc(nkl)); j = 0
       DO i = 1, SIZE(distk)
          IF (distk(i) == fmpi%irank) THEN; j = j + 1; gk_loc(j) = i; END IF
       END DO
       IF (SIZE(l0, 6) < nkl) CALL juDFT_error( &
-         "melem_anglmom_collinear: fewer L slices than k-points on this rank", &
-         calledby="melem_anglmom_collinear")
+         "wgauge_anglmom_collinear: fewer L slices than k-points on this rank", &
+         calledby="wgauge_anglmom_collinear")
 
       ALLOCATE (lb(nb, nb), tmp(nb, nw))
       ALLOCATE (lop_loc(n2, n2, 3, MAX(1, nkl)), source=CMPLX(0.0, 0.0))
@@ -168,7 +168,7 @@ CONTAINS
       DEALLOCATE (lb, tmp)
 
       DO kk = 1, 3
-         CALL melem_ft_to_real_reduce(cell, kpts, lop_loc(:, :, kk, :), gk_loc, fmpi%mpi_comm, l1, irvec, ndegen, nrpts)
+         CALL wgauge_ft_to_real_reduce(cell, kpts, lop_loc(:, :, kk, :), gk_loc, fmpi%mpi_comm, l1, irvec, ndegen, nrpts)
          IF (kk == 1) ALLOCATE (lr(n2, n2, nrpts, 3))
          lr(:, :, :, kk) = l1; DEALLOCATE (l1)
       END DO
@@ -190,7 +190,7 @@ CONTAINS
       DEALLOCATE (lop_loc, gk_loc)
       IF (ALLOCATED(lr)) DEALLOCATE (lr)
       IF (ALLOCATED(irvec)) DEALLOCATE (irvec, ndegen)
-   END SUBROUTINE melem_anglmom_collinear
+   END SUBROUTINE wgauge_anglmom_collinear
 
    !> Spin-orbit coupling as an OPERATOR in the 2N collinear Wannier basis, written as
    !> rssocmat.1. This is the piece that makes a collinear wannierisation usable for SOC
@@ -204,7 +204,7 @@ CONTAINS
    !> consumer sums the four components per (m,n) without looking at the indices, so what
    !> the sum has to come out to is the single block value -- and it does, the other three
    !> being zero.
-   SUBROUTINE melem_soc_collinear(num_wann, soc4, v_ch, cell, kpts, distk, fmpi)
+   SUBROUTINE wgauge_soc_collinear(num_wann, soc4, v_ch, cell, kpts, distk, fmpi)
       INTEGER, INTENT(IN) :: num_wann
       !> The four spin blocks of H_SOC on this rank's k-slice, in the Bloch basis:
       !> (num_bands, num_bands, 4, nk_loc), ordered (1,1) (1,2) (2,1) (2,2).
@@ -223,19 +223,19 @@ CONTAINS
       nb = SIZE(soc4, 1); nw = num_wann; n2 = 2*nw
 
       IF (SIZE(v_ch, 1) /= nb .OR. SIZE(v_ch, 2) /= nw .OR. SIZE(v_ch, 4) /= 2) &
-         CALL juDFT_error("melem_soc_collinear: the gauges do not match the manifold", &
-                          calledby="melem_soc_collinear")
+         CALL juDFT_error("wgauge_soc_collinear: the gauges do not match the manifold", &
+                          calledby="wgauge_soc_collinear")
       IF (SIZE(soc4, 3) /= 4) CALL juDFT_error( &
-         "melem_soc_collinear: the SOC operator did not keep its four spin blocks", &
-         calledby="melem_soc_collinear")
+         "wgauge_soc_collinear: the SOC operator did not keep its four spin blocks", &
+         calledby="wgauge_soc_collinear")
 
       nkl = COUNT(distk == fmpi%irank); ALLOCATE (gk_loc(nkl)); j = 0
       DO i = 1, SIZE(distk)
          IF (distk(i) == fmpi%irank) THEN; j = j + 1; gk_loc(j) = i; END IF
       END DO
       IF (SIZE(soc4, 4) < nkl) CALL juDFT_error( &
-         "melem_soc_collinear: fewer SOC slices than k-points on this rank", &
-         calledby="melem_soc_collinear")
+         "wgauge_soc_collinear: fewer SOC slices than k-points on this rank", &
+         calledby="wgauge_soc_collinear")
 
       ALLOCATE (tmp(nb, nw), blk(nw, nw))
       ALLOCATE (soc_loc(n2, n2, 4, MAX(1, nkl)), source=CMPLX(0.0, 0.0))
@@ -257,17 +257,17 @@ CONTAINS
       DEALLOCATE (tmp, blk)
 
       DO kk = 1, 4
-         CALL melem_ft_to_real_reduce(cell, kpts, soc_loc(:, :, kk, :), gk_loc, fmpi%mpi_comm, s1, irvec, ndegen, nrpts)
+         CALL wgauge_ft_to_real_reduce(cell, kpts, soc_loc(:, :, kk, :), gk_loc, fmpi%mpi_comm, s1, irvec, ndegen, nrpts)
          IF (kk == 1) ALLOCATE (sr(n2, n2, nrpts, 4))
          sr(:, :, :, kk) = s1; DEALLOCATE (s1)
       END DO
       IF (fmpi%irank == 0) THEN
-         CALL melem_write_realspace(sr, irvec, ndegen, nrpts, n2, 4, 'spinor2x2', 'rssocmat.1', fmpi%irank)
+         CALL wgauge_write_realspace(sr, irvec, ndegen, nrpts, n2, 4, 'spinor2x2', 'rssocmat.1', fmpi%irank)
          WRITE (oUnit, '(a,i0,a)') 'wannierlib: wrote rssocmat.1 (2N collinear spin-orbit, ', nrpts, ' R-vectors, distributed FT)'
       END IF
       DEALLOCATE (soc_loc, gk_loc)
       IF (ALLOCATED(sr)) DEALLOCATE (sr)
       IF (ALLOCATED(irvec)) DEALLOCATE (irvec, ndegen)
-   END SUBROUTINE melem_soc_collinear
+   END SUBROUTINE wgauge_soc_collinear
 
-END MODULE m_melem_spin_collinear
+END MODULE m_wgauge_spin_collinear

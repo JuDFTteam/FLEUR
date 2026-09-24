@@ -13,7 +13,7 @@ Companion file: `../matrixelements/README.md` — how to add an operator.
 | 1. overlaps and projections | `wannierlib_mmnkb`, `wannierlib_amn` | `M_mn(k,b)`, `A_mn(k)` |
 | 2. operator matrices on the coarse mesh | `../matrixelements/melem_coarse` | `O(k)` on the ab-initio states |
 | 3. wannierisation | `wannierlib_w90_adapter` → Wannier90 | the gauge `u_opt`, `u_matrix` |
-| 4. post-processing | `postproc/melem_run` | `O(R)` files and interpolated bands |
+| 4. post-processing | `postproc/wgauge_run` | `O(R)` files and interpolated bands |
 
 Stage 2 needs no gauge and runs before the wannierisation; stages 3 and 4 do. With
 `jspins=2` and no SOC the two spin channels wannierise **separately**, so stages 1–4 run
@@ -125,16 +125,16 @@ quantity out of it:
 
 1. a row in `WANNIERLIB_INTERP` (`fleurinput/types_melem_optable.f90`), naming which
    catalogue entry it needs and its output basename;
-2. a `CASE` branch in `postproc/melem_run.F90`;
+2. a `CASE` branch in `postproc/wgauge_run.F90`;
 3. an `<xsd:enumeration>` in `FleurInputSchema.xsd`.
 
-If the quantity is one number per band per k, `postproc/melem_interpolate_op.F90` already
+If the quantity is one number per band per k, `postproc/wgauge_interpolate_op.F90` already
 does the whole pipeline — rotate to the Wannier gauge, transform to `R`, transform back on
 the output domain, diagonalise and project. It only needs the component count and a file
 name. A quantity that is not of that shape gets its own driver, as the velocity and the
 currents do.
 
-**A new on-disk format** — one `CASE` in `postproc/melem_io.F90`, which is the only file
+**A new on-disk format** — one `CASE` in `postproc/wgauge_io.F90`, which is the only file
 that knows any layout.
 
 ## Layout

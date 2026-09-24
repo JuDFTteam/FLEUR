@@ -11,10 +11,10 @@ from the code drifts, and this document has drifted before:
 | the provider contract, and a kernel whose answer you know in advance | `types_matelements_template.F90` |
 | the same shape with a real operator in it | `types_matelements_orbital.F90` |
 | what the two tables are for and who owns them | `fleurinput/types_melem_optable.f90` |
-| the Fourier core, and why it is operator-agnostic | `postproc/melem_ft.F90` |
-| `H_W(k)`, and why every driver shares one | `postproc/melem_hamk.F90` |
+| the Fourier core, and why it is operator-agnostic | `postproc/wgauge_ft.F90` |
+| `H_W(k)`, and why every driver shares one | `postproc/wgauge_hamk.F90` |
 | `A(R)`, `B(R)`, `F(R)`, `C(R)` and their references | `postproc/melem_coeff_{a,b,tensor}.F90` |
-| every on-disk layout | `postproc/melem_io.F90` |
+| every on-disk layout | `postproc/wgauge_io.F90` |
 | the generic invariants, and why they warn instead of aborting | `melem_check.F90` |
 
 ---
@@ -45,11 +45,11 @@ only route with no provider to copy.
   <operator name=".."/>  ---> reader ------>  resolves -------->  builds O(k)
                                     ^              ^                    |
                                     |              |                    v
-                          types_melem_optable -----+            postproc/melem_run
+                          types_melem_optable -----+            postproc/wgauge_run
                           (both tables)                                 |
                                     |                        +----------+----------+
                                     +----------------------> |                     |
-                                              melem_interpolate_op        melem_operators_r
+                                              wgauge_interpolate_op        wgauge_operators_r
                                               bands_wann_*.dat                 O(R)
 ```
 
@@ -174,12 +174,12 @@ is where your driver gets its input.
 
 | Source | What it gives you | Built by | Serves |
 |---|---|---|---|
-| the eigenvalues and the gauge | `H_W(k)` | `melem_hamk.F90` | `hamiltonian`, `eigenstates`, `velocity` |
-| the neighbour overlaps and the b-shell weights | `A^(W)(R)` | `melem_coeff_a.F90` | `position`, `position_pw90`, `velocity`, `bmn` |
+| the eigenvalues and the gauge | `H_W(k)` | `wgauge_hamk.F90` | `hamiltonian`, `eigenstates`, `velocity` |
+| the neighbour overlaps and the b-shell weights | `A^(W)(R)` | `wgauge_coeff_a.F90` | `position`, `position_pw90`, `velocity`, `bmn` |
 | the wavefunctions at **two** neighbours at once | `F(k)` / `C(k)` | `wannierlib_uiu` / `_uhu` | `fmn`, `cmn` |
 
-The Fourier transforms are not yours to write: `melem_ft.F90` interpolates any `mat_k` on
-the coarse mesh, and `melem_interp_util.F90` has the abscissa and the LAPACK query. Copy the
+The Fourier transforms are not yours to write: `wgauge_ft.F90` interpolates any `mat_k` on
+the coarse mesh, and `wgauge_interp_util.F90` has the abscissa and the LAPACK query. Copy the
 signature of any `melem_interpolate_*.F90`; the four are deliberately the same.
 
 **The one rule that decides everything else** follows from the table above:
@@ -192,7 +192,7 @@ signature of any `melem_interpolate_*.F90`; the four are deliberately the same.
 
 **And one exception.** `fmn` and `cmn` need the gauge at two neighbouring k-points at once,
 which the coarse pass cannot do (no gauge yet) and `postproc` cannot do (no wavefunctions).
-Those two are built in `wannierlib_main.F90`, between the wannierisation and `melem_run`,
+Those two are built in `wannierlib_main.F90`, between the wannierisation and `wgauge_run`,
 behind `IF (request%has_op_r(...))`. If your quantity needs the wavefunctions after the
 gauge is known, you are in this case; if it does not, stay out of that file.
 
@@ -207,11 +207,11 @@ the generic driver (A and B) or yours (C).
 
 ### For interpolation — `<interpolation><operator name=".."/>`
 
-A row in `WANNIERLIB_INTERP` and a branch in the `SELECT CASE` of `postproc/melem_run.F90`:
+A row in `WANNIERLIB_INTERP` and a branch in the `SELECT CASE` of `postproc/wgauge_run.F90`:
 
 ```fortran
 CASE ('my_operator')
-   CALL melem_interpolate_operator(manifold, cell, kpts, eig, u_matrix, u_opt, &
+   CALL wgauge_interpolate_operator(manifold, cell, kpts, eig, u_matrix, u_opt, &
                                    coarse%myo0, gk_loc, 3, kfrac, outname(iop, 1), &
                                    irank, mpicm)
 ```
@@ -224,17 +224,17 @@ and the projection, **for any operator**. A route-C name calls its own driver he
 
 ### For the real-space export — `<operators_r><operator name=".."/>`
 
-A row in `WANNIERLIB_OPR` and a branch in `postproc/melem_operators_r.F90`:
+A row in `WANNIERLIB_OPR` and a branch in `postproc/wgauge_operators_r.F90`:
 
 ```fortran
 CASE ('my_operator')
-   CALL melem_op_rs_distributed(this, cell, kpts, vloc, coarse%myo0, gk_loc, 3, &
+   CALL wgauge_op_rs_distributed(this, cell, kpts, vloc, coarse%myo0, gk_loc, 3, &
                                 mpicm, irank, .FALSE., 'myfile.1')
 ```
 
 `WANNIERLIB_OPR` has no output columns: these files carry a channel or a spin-block index,
-so the writer builds the name — and `melem_write_realspace` does not append `.dat`. A new
-on-disk layout is a `CASE` in `melem_io.F90`, the only file that knows any. Do not open a
+so the writer builds the name — and `wgauge_write_realspace` does not append `.dat`. A new
+on-disk layout is a `CASE` in `wgauge_io.F90`, the only file that knows any. Do not open a
 file anywhere else.
 
 ### The schema

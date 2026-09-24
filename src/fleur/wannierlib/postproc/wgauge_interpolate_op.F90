@@ -8,30 +8,30 @@
 !>  Given the Bloch-basis operator matrices O0_alpha(k) (nb x nb, alpha=1..ncomp),
 !>  it does the shared pipeline for ANY operator:
 !>    O_W,alpha(k) = V^dagger O0_alpha(k) V ,   V = U_dis U
-!>    O_alpha(k')  = FT[ O_W,alpha ]            (shared core m_melem_ft)
+!>    O_alpha(k')  = FT[ O_W,alpha ]            (shared core m_wgauge_ft)
 !>    H(k')        = FT[ H_W ] -> diag -> E_n(k'), C(k')
 !>    <O_alpha>_n(k') = [ C^dagger O_alpha(k') C ]_nn
 !>  and writes <outfile>.dat: kdist, [ E_n(eV), <O_1>_n, ..., <O_ncomp>_n ] per band.
 !>
 !>  A new operator only supplies its O0(k) (a provider) and calls this with the
 !>  right ncomp/outfile -- steps above are never rewritten. Master rank only.
-MODULE m_melem_interpolate_op
+MODULE m_wgauge_interpolate_op
   USE m_juDFT
   USE m_constants, ONLY : oUnit, hartree_to_ev_const
   USE m_types_cell
   USE m_types_kpts
-  USE m_types_melem_manifold, ONLY: t_melem_manifold
-  USE m_melem_hamk, ONLY : melem_build_hamk
-  USE m_melem_ft, ONLY : melem_ft_interpolate, melem_ft_to_real_reduce, melem_ft_rtok
-  USE m_melem_interp_util, ONLY : melem_kpath, melem_zheev_workspace
+  USE m_types_wgauge_manifold, ONLY: t_wgauge_manifold
+  USE m_wgauge_hamk, ONLY : wgauge_build_hamk
+  USE m_wgauge_ft, ONLY : wgauge_ft_interpolate, wgauge_ft_to_real_reduce, wgauge_ft_rtok
+  USE m_wgauge_interp_util, ONLY : wgauge_kpath, wgauge_zheev_workspace
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: melem_interpolate_operator
+  PUBLIC :: wgauge_interpolate_operator
 CONTAINS
 
-  SUBROUTINE melem_interpolate_operator(this, cell, kpts, eig, u_matrix, u_opt, o0_loc, gk_loc, &
+  SUBROUTINE wgauge_interpolate_operator(this, cell, kpts, eig, u_matrix, u_opt, o0_loc, gk_loc, &
                                         ncomp, kfrac, outfile, irank, mpicm, bound)
-    TYPE(t_melem_manifold), INTENT(IN) :: this
+    TYPE(t_wgauge_manifold), INTENT(IN) :: this
     TYPE(t_cell), INTENT(IN) :: cell
     TYPE(t_kpts), INTENT(IN) :: kpts
     REAL,    INTENT(IN) :: eig(:, :)              ! (num_bands, nk)
@@ -80,7 +80,7 @@ CONTAINS
 
     num_wann  = this%num_wann
     num_bands = this%num_bands
-    CALL timestart('melem_interpolate_operator')
+    CALL timestart('wgauge_interpolate_operator')
 
     ! ---- PHASE A (ALL ranks): O_W,alpha(k) = V(gk)^dagger O0_alpha V(gk) on this rank's k-slice,
     !      then coarse -> real space O_alpha(R) via the distributed FT-reduce (collective). ----
@@ -99,7 +99,7 @@ CONTAINS
     END DO
     DEALLOCATE(tmp, vloc)
     DO a = 1, ncomp
-      CALL melem_ft_to_real_reduce(cell, kpts, ow_loc(:, :, a, :), gk_loc, mpicm, o1, irvec, ndegen, nrpts)
+      CALL wgauge_ft_to_real_reduce(cell, kpts, ow_loc(:, :, a, :), gk_loc, mpicm, o1, irvec, ndegen, nrpts)
       IF (a == 1) ALLOCATE(o_r(num_wann, num_wann, nrpts, ncomp))
       o_r(:, :, :, a) = o1; DEALLOCATE(o1)
     END DO
@@ -109,24 +109,24 @@ CONTAINS
     IF (irank /= 0) THEN
       IF (ALLOCATED(o_r)) DEALLOCATE(o_r)
       IF (ALLOCATED(irvec)) DEALLOCATE(irvec, ndegen)
-      CALL timestop('melem_interpolate_operator'); RETURN
+      CALL timestop('wgauge_interpolate_operator'); RETURN
     END IF
 
     np = SIZE(kfrac, 2)   ! the caller resolved the domain; there is nothing to skip
 
-    CALL melem_kpath(cell, kfrac, kdist)   ! abscissa of the output, from the mesh just read
+    CALL wgauge_kpath(cell, kfrac, kdist)   ! abscissa of the output, from the mesh just read
 
     ! ---- H_W(k) via eigval2 (same construction as the validated band driver), full mesh on rank 0 ----
-    CALL melem_build_hamk(this, eig, u_matrix, u_opt, ham_k)
+    CALL wgauge_build_hamk(this, eig, u_matrix, u_opt, ham_k)
 
     ! ---- interpolate H (full mesh -> R -> k', shared core) and the operator (R -> k' only:
     !      O_alpha(R) is already assembled by the distributed reduce above) ----
-    CALL melem_ft_interpolate(cell, ham_k, kpts, kfrac, H_interp)
+    CALL wgauge_ft_interpolate(cell, ham_k, kpts, kfrac, H_interp)
     ALLOCATE(o_interp(num_wann, num_wann, ncomp, np))
     BLOCK
       COMPLEX, ALLOCATABLE :: o_one(:, :, :)
       DO a = 1, ncomp
-        CALL melem_ft_rtok(o_r(:, :, :, a), irvec, ndegen, nrpts, kfrac, o_one)
+        CALL wgauge_ft_rtok(o_r(:, :, :, a), irvec, ndegen, nrpts, kfrac, o_one)
         o_interp(:, :, a, :) = o_one
       END DO
     END BLOCK
@@ -135,7 +135,7 @@ CONTAINS
     ! ---- diagonalize H(k') with eigenvectors, project operator, write ----
     ALLOCATE(evals(num_wann), hk(num_wann, num_wann), cvec(num_wann, num_wann), &
              oc(num_wann, num_wann, ncomp), oexp(ncomp))
-    CALL melem_zheev_workspace('V', num_wann, work, rwork, lwork)
+    CALL wgauge_zheev_workspace('V', num_wann, work, rwork, lwork)
 
     omax = 0.0
     OPEN(newunit=iu, file=TRIM(outfile)//'.dat', status='replace')
@@ -143,7 +143,7 @@ CONTAINS
     DO ip = 1, np
       hk = H_interp(:, :, ip)
       CALL zheev('V', 'U', num_wann, hk, num_wann, evals, work, lwork, rwork, info)
-      IF (info /= 0) CALL juDFT_error('zheev failed', calledby='melem_interpolate_operator')
+      IF (info /= 0) CALL juDFT_error('zheev failed', calledby='wgauge_interpolate_operator')
       cvec = hk
       DO a = 1, ncomp
         oc(:, :, a) = MATMUL(o_interp(:, :, a, ip), cvec)
@@ -174,7 +174,7 @@ CONTAINS
       END IF
     END IF
     WRITE(oUnit,'(a,i0,a)') 'wannierlib operator interpolation: wrote '//TRIM(outfile)//'.dat (', np, ' k-points)'
-    CALL timestop('melem_interpolate_operator')
-  END SUBROUTINE melem_interpolate_operator
+    CALL timestop('wgauge_interpolate_operator')
+  END SUBROUTINE wgauge_interpolate_operator
 
-END MODULE m_melem_interpolate_op
+END MODULE m_wgauge_interpolate_op

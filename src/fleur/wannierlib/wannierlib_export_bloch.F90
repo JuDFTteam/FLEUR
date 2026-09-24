@@ -7,7 +7,7 @@
 !> The files written from the BLOCH basis, before any gauge exists: the eigenvalues in
 !> Wannier90's .eig format, and the coarse spin operator.
 !>
-!> They are here and not in postproc/melem_io because that file is the layout of the
+!> They are here and not in postproc/wgauge_io because that file is the layout of the
 !> real-space operators O(R), which only exist once the gauge does. Keeping the two apart
 !> is what lets either be described in one sentence: before the gauge, and after it.
 MODULE m_wannierlib_export_bloch

@@ -35,8 +35,8 @@ MODULE m_wannierlib_uiu
   USE m_types_noco
   USE m_types_nococonv
   USE m_types_sym
-  USE m_types_melem_manifold, ONLY: t_melem_manifold
-  USE m_types_melem_bmesh, ONLY: t_melem_bmesh
+  USE m_types_wgauge_manifold, ONLY: t_wgauge_manifold
+  USE m_types_wgauge_bmesh, ONLY: t_wgauge_bmesh
   USE m_types_enpara
   USE m_types_potden
   USE m_types_mpi
@@ -54,8 +54,8 @@ CONTAINS
   SUBROUTINE wannierlib_uiu(manifold, bmesh, kpts, atoms, cell, input, sym, noco, nococonv, &
                             radfun, jspin, l_spinors, eig_id, stars, enpara, vtot, fmpi, &
                             distk, u_matrix, u_opt, f0)
-    TYPE(t_melem_manifold), INTENT(IN) :: manifold
-    TYPE(t_melem_bmesh), INTENT(IN) :: bmesh
+    TYPE(t_wgauge_manifold), INTENT(IN) :: manifold
+    TYPE(t_wgauge_bmesh), INTENT(IN) :: bmesh
     TYPE(t_kpts), INTENT(IN) :: kpts
     TYPE(t_atoms), INTENT(IN) :: atoms
     TYPE(t_cell), INTENT(IN) :: cell
@@ -133,8 +133,8 @@ CONTAINS
   SUBROUTINE uiu_one_k(manifold, bmesh, nk, nk_local, kpts, ujug_pair, kdiff_pair, npair, &
                        atoms, cell, input, sym, noco, nococonv, jspin, jspin_rad, &
                        eig_id, stars, enpara, vtot, fmpi, vgauge, f0)
-    TYPE(t_melem_manifold), INTENT(IN) :: manifold
-    TYPE(t_melem_bmesh), INTENT(IN) :: bmesh
+    TYPE(t_wgauge_manifold), INTENT(IN) :: manifold
+    TYPE(t_wgauge_bmesh), INTENT(IN) :: bmesh
     INTEGER, INTENT(IN) :: nk, nk_local
     TYPE(t_kpts), INTENT(IN) :: kpts
     COMPLEX, INTENT(IN) :: ujug_pair(:, :, :, :, :, :)

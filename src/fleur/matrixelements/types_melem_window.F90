@@ -15,7 +15,7 @@ MODULE m_types_melem_window
    !> This is the whole of what the operator layer needs to know about the selection. What
    !> the bands are selected FOR -- how many Wannier functions come out of them, which
    !> energy window picked them -- is a fact about the wannierisation and lives with it, in
-   !> t_melem_manifold, which extends this type.
+   !> t_wgauge_manifold, which extends this type.
 
    USE m_judft
    IMPLICIT NONE

@@ -5,7 +5,7 @@
 !--------------------------------------------------------------------------------
 !>  The single place that knows the on-disk layout of the real-space Wannier
 !>  operators O(R) consumed by external transport post-processing. The gauge
-!>  rotation and the Fourier transform are operator-independent (melem_ft); what
+!>  rotation and the Fourier transform are operator-independent (wgauge_ft); what
 !>  differs per operator is only the format, selected here by `fmt`:
 !>
 !>  Energies are converted and lengths are not, because they reach this point from
@@ -18,18 +18,18 @@
 !>    'generic' R1 R2 R3  i j comp   Re Im   (spin -> rspauli.1, orbital -> anglmomrs.*)
 !>    'cart2'   R1 R2 R3  i j        then nine (alpha,beta) components on the line
 !>    'cart2e'  as cart2, with the energy converted to eV
-MODULE m_melem_io
+MODULE m_wgauge_io
    USE m_juDFT
    USE m_constants, ONLY: hartree_to_ev_const
    IMPLICIT NONE
    PRIVATE
-   PUBLIC :: melem_write_realspace
+   PUBLIC :: wgauge_write_realspace
 
 CONTAINS
 
    !> Write O(R) in the requested layout. Rank 0 only (early return elsewhere, so it
    !> is safe to call from all ranks). ndegen is used by the 'hr' layout only.
-   SUBROUTINE melem_write_realspace(o_r, irvec, ndegen, nrpts, nw, ncomp, fmt, fname, irank)
+   SUBROUTINE wgauge_write_realspace(o_r, irvec, ndegen, nrpts, nw, ncomp, fmt, fname, irank)
       COMPLEX,          INTENT(IN) :: o_r(:, :, :, :)   ! (nw, nw, nrpts, ncomp)
       INTEGER,          INTENT(IN) :: irvec(:, :)       ! (3, nrpts)
       INTEGER,          INTENT(IN) :: ndegen(:)         ! (nrpts) -- 'hr' only
@@ -91,9 +91,9 @@ CONTAINS
          !> R, band pair, then the nine (alpha,beta) components in row-major order. ncomp must
          !> be nine; a single-index operator uses 'generic' instead.
          IF (ncomp /= 9) CALL juDFT_error( &
-            'melem_write_realspace: the cart2 format carries nine Cartesian components', &
+            'wgauge_write_realspace: the cart2 format carries nine Cartesian components', &
             hint='use the generic format for an operator with one Cartesian index', &
-            calledby='melem_write_realspace')
+            calledby='wgauge_write_realspace')
          DO irpt = 1, nrpts; DO j = 1, nw; DO i = 1, nw
             WRITE(iu, '(i3,1x,i3,1x,i3,1x,i3,1x,i3,18(1x,f20.8))') &
                irvec(1,irpt), irvec(2,irpt), irvec(3,irpt), i, j, &
@@ -104,9 +104,9 @@ CONTAINS
          !> is the only difference, and it happens here rather than in the caller because
          !> this is where the unit contract lives.
          IF (ncomp /= 9) CALL juDFT_error( &
-            'melem_write_realspace: the cart2e format carries nine Cartesian components', &
+            'wgauge_write_realspace: the cart2e format carries nine Cartesian components', &
             hint='use the generic format for an operator with one Cartesian index', &
-            calledby='melem_write_realspace')
+            calledby='wgauge_write_realspace')
          DO irpt = 1, nrpts; DO j = 1, nw; DO i = 1, nw
             WRITE(iu, '(i3,1x,i3,1x,i3,1x,i3,1x,i3,18(1x,f20.8))') &
                irvec(1,irpt), irvec(2,irpt), irvec(3,irpt), i, j, &
@@ -114,10 +114,10 @@ CONTAINS
                 hartree_to_ev_const*AIMAG(o_r(i,j,irpt,kk)), kk = 1, 9)
          END DO; END DO; END DO
       CASE DEFAULT
-         CALL juDFT_error('melem_write_realspace: unknown format "'//TRIM(fmt)//'"', &
-                          calledby='melem_write_realspace')
+         CALL juDFT_error('wgauge_write_realspace: unknown format "'//TRIM(fmt)//'"', &
+                          calledby='wgauge_write_realspace')
       END SELECT
       CLOSE(iu)
-   END SUBROUTINE melem_write_realspace
+   END SUBROUTINE wgauge_write_realspace
 
-END MODULE m_melem_io
+END MODULE m_wgauge_io

@@ -38,7 +38,7 @@ CONTAINS
    SUBROUTINE wannierlib_export_basis(this, manifold, atoms, cell, input, kpts, sym, noco, &
                                       nococonv, enpara, vtot, fmpi, eig_id, jspin)
       USE m_types_wannierlib
-      USE m_types_melem_manifold, ONLY: t_melem_manifold
+      USE m_types_wgauge_manifold, ONLY: t_wgauge_manifold
       USE m_types_atoms; USE m_types_cell; USE m_types_input; USE m_types_kpts
       USE m_types_sym; USE m_types_noco; USE m_types_nococonv; USE m_types_enpara
       USE m_types_potden; USE m_types_mpi; USE m_types_lapw; USE m_types_mat
@@ -50,7 +50,7 @@ CONTAINS
       USE m_hdf_tools
 #endif
       TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
-      TYPE(t_melem_manifold), INTENT(IN) :: manifold
+      TYPE(t_wgauge_manifold), INTENT(IN) :: manifold
       TYPE(t_atoms), INTENT(IN) :: atoms
       TYPE(t_cell), INTENT(IN) :: cell
       TYPE(t_input), INTENT(IN) :: input

@@ -8,29 +8,29 @@
 !>
 !>  Pipeline:
 !>    H_W(k)      : same Wannier-gauge Hamiltonian as the band/operator drivers
-!>    v_W,alpha(k') = FT[ i R_cart(alpha) H_W ]     (m_melem_ft: velocity variant)
+!>    v_W,alpha(k') = FT[ i R_cart(alpha) H_W ]     (m_wgauge_ft: velocity variant)
 !>    H(k')       = FT[ H_W ] -> diag -> E_n(k'), C(k')
 !>    <v_alpha>_n = [ C^dagger v_W,alpha(k') C ]_nn   (diagonal band velocity, exact)
 !>
 !>  The diagonal <n|v|n> = dE_n/dk needs no gauge (Berry-connection) correction, so
 !>  it is exact here. Output bands_wann_velocity.dat: kdist, [ E_n(eV), vx, vy, vz ]
 !>  per band, with v in eV*bohr (dE/dk). Master rank only.
-MODULE m_melem_interpolate_velocity
+MODULE m_wgauge_interpolate_velocity
   USE m_juDFT
   USE m_constants, ONLY : oUnit, hartree_to_ev_const
   USE m_types_cell
   USE m_types_kpts
-  USE m_types_melem_manifold, ONLY: t_melem_manifold
-  USE m_melem_hamk, ONLY : melem_build_hamk
-  USE m_melem_ft, ONLY : melem_ft_to_real, melem_ft_rtok_velocity, melem_ft_rtok
-  USE m_melem_interp_util, ONLY : melem_kpath, melem_zheev_workspace
+  USE m_types_wgauge_manifold, ONLY: t_wgauge_manifold
+  USE m_wgauge_hamk, ONLY : wgauge_build_hamk
+  USE m_wgauge_ft, ONLY : wgauge_ft_to_real, wgauge_ft_rtok_velocity, wgauge_ft_rtok
+  USE m_wgauge_interp_util, ONLY : wgauge_kpath, wgauge_zheev_workspace
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: melem_interpolate_velocity
+  PUBLIC :: wgauge_interpolate_velocity
 CONTAINS
 
-  SUBROUTINE melem_interpolate_velocity(this, cell, kpts, eig, u_matrix, u_opt, aw_r, irvec, ndegen, nrpts, kfrac, out1, out2, irank)
-    TYPE(t_melem_manifold), INTENT(IN) :: this
+  SUBROUTINE wgauge_interpolate_velocity(this, cell, kpts, eig, u_matrix, u_opt, aw_r, irvec, ndegen, nrpts, kfrac, out1, out2, irank)
+    TYPE(t_wgauge_manifold), INTENT(IN) :: this
     TYPE(t_cell), INTENT(IN) :: cell
     TYPE(t_kpts), INTENT(IN) :: kpts
     REAL,    INTENT(IN) :: eig(:, :)              ! (num_bands, nk)
@@ -60,21 +60,21 @@ CONTAINS
 
     IF (irank /= 0) RETURN
     num_wann  = this%num_wann
-    CALL timestart('melem_interpolate_velocity')
+    CALL timestart('wgauge_interpolate_velocity')
 
     np = SIZE(kfrac, 2)   ! the caller resolved the domain; there is nothing to skip
 
-    CALL melem_kpath(cell, kfrac, kdist)   ! abscissa of the output, from the mesh just read
+    CALL wgauge_kpath(cell, kfrac, kdist)   ! abscissa of the output, from the mesh just read
 
     ! ---- H_W(k) via eigval2 (same construction as the validated band driver) ----
-    CALL melem_build_hamk(this, eig, u_matrix, u_opt, ham_k)
+    CALL wgauge_build_hamk(this, eig, u_matrix, u_opt, ham_k)
 
     ! ---- interpolate H (for eigenvectors) and v = dH/dk (velocity variant of the core) ----
     !> One transform of H_W to real space, then both the interpolant and its derivative
     !> off the same H(R).
-    CALL melem_ft_to_real(cell, ham_k, kpts, ham_r, h_irvec, h_ndegen, h_nrpts)
-    CALL melem_ft_rtok(ham_r, h_irvec, h_ndegen, h_nrpts, kfrac, H_interp)
-    CALL melem_ft_rtok_velocity(cell, ham_r, h_irvec, h_ndegen, h_nrpts, kfrac, v_interp)
+    CALL wgauge_ft_to_real(cell, ham_k, kpts, ham_r, h_irvec, h_ndegen, h_nrpts)
+    CALL wgauge_ft_rtok(ham_r, h_irvec, h_ndegen, h_nrpts, kfrac, H_interp)
+    CALL wgauge_ft_rtok_velocity(cell, ham_r, h_irvec, h_ndegen, h_nrpts, kfrac, v_interp)
     DEALLOCATE(ham_r, h_irvec, h_ndegen)
 
     ! ---- interband part: R -> k' of the reduced Wannier Berry connection A^(W)_a(R) -> A^(W)_a(k') ----
@@ -84,7 +84,7 @@ CONTAINS
       BLOCK
         COMPLEX, ALLOCATABLE :: a_one(:, :, :)
         DO a = 1, 3
-          CALL melem_ft_rtok(aw_r(:, :, :, a), irvec, ndegen, nrpts, kfrac, a_one)
+          CALL wgauge_ft_rtok(aw_r(:, :, :, a), irvec, ndegen, nrpts, kfrac, a_one)
           A_interp(:, :, a, :) = a_one
         END DO
       END BLOCK
@@ -97,7 +97,7 @@ CONTAINS
                           vfull(num_wann, num_wann, 3), omega(3, num_wann))
     ax = (/ 2, 3, 1 /)   ! Omega_gamma = eps_{gamma,alpha,beta}: (Ox<-yz, Oy<-zx, Oz<-xy)
     ay = (/ 3, 1, 2 /)
-    CALL melem_zheev_workspace('V', num_wann, work, rwork, lwork)
+    CALL wgauge_zheev_workspace('V', num_wann, work, rwork, lwork)
 
     OPEN(newunit=iu, file=TRIM(out1)//'.dat', status='replace')
     WRITE(iu,'(a)') '# kdist   [ E_n(eV)  vx vy vz (eV*bohr, dE/dk) ] for n=1..num_wann'
@@ -108,7 +108,7 @@ CONTAINS
     DO ip = 1, np
       hk = H_interp(:, :, ip)
       CALL zheev('V', 'U', num_wann, hk, num_wann, evals, work, lwork, rwork, info)
-      IF (info /= 0) CALL juDFT_error('zheev failed', calledby='melem_interpolate_velocity')
+      IF (info /= 0) CALL juDFT_error('zheev failed', calledby='wgauge_interpolate_velocity')
       cvec = hk
       DO a = 1, 3
         vc(:, :, a) = MATMUL(v_interp(:, :, a, ip), cvec)         ! v_interp_a . C
@@ -168,7 +168,7 @@ CONTAINS
     CLOSE(iu)
     IF (l_berry) CLOSE(iuc)
     WRITE(oUnit,'(a,i0,a)') 'wannierlib velocity interpolation: wrote '//TRIM(out1)//'.dat (', np, ' k-points)'
-    CALL timestop('melem_interpolate_velocity')
-  END SUBROUTINE melem_interpolate_velocity
+    CALL timestop('wgauge_interpolate_velocity')
+  END SUBROUTINE wgauge_interpolate_velocity
 
-END MODULE m_melem_interpolate_velocity
+END MODULE m_wgauge_interpolate_velocity

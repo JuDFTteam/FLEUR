@@ -13,7 +13,7 @@
 !>  wavefunctions (no updown.mmn0 on disk). It is the Bloch-basis input O^(0)
 !>  of the operator-interpolation pipeline: the driver rotates it to the Wannier
 !>  gauge (V^dagger S0 V) and hands each Cartesian component to the generic core
-!>  m_melem_ft.
+!>  m_wgauge_ft.
 !>
 !>  The four spin-block overlaps  o_ab(m,n) = <phi^a_m|phi^b_n>  (a,b = global
 !>  spin up=1/dn=2) are assembled by the spin operator itself, which contracts
