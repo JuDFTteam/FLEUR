@@ -657,16 +657,15 @@ CONTAINS
          numOutFiles     = 1
       END IF
 
-      polar = sliceplot%polar
       xsf=sliceplot%format==PLOT_XSF_FORMAT
 
-      IF((polar).AND.(.NOT.noco%l_noco)) THEN
+      IF((sliceplot%polar).AND.(.NOT.noco%l_noco)) THEN
          CALL juDFT_warn("l_noco=F and making polar plots is not compatible.",calledby="plot.f90")
       END IF
 
-      IF (polar.AND.(numOutFiles==4)) THEN
-         numOutFiles = 7
-      END IF
+      ! Polar angles only for 4-component (density + magnetization) plots
+      polar = sliceplot%polar.AND.(numOutFiles==4)
+      IF (polar) numOutFiles = 7
 
       ALLOCATE(outFilenames(numOutFiles))
       ALLOCATE(xdnout(numOutFiles))

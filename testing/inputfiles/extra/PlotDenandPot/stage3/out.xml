@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<fleurOutput fleurOutputVersion="0.36">
+   <programVersion version="fleur 36">
+      <compilationInfo date="2023-03-15T16:24:05" user="wortmann" host="iff255" flag="-qopenmp -r8 -mkl  -assume byterecl -no-wrap-margin" link="/usr/lib64/libxml2.so"/>
+      <gitInfo version="MaX-R6.1-364-g4f7e7e426-dirty" branch="Noco-tests" lastCommitHash="4f7e7e426e778ac2c62acd0d856c9747c2621756"/>
+      <targetComputerArchitectures>GEN</targetComputerArchitectures>
+      <precision type="DOUBLE"/>
+      <targetStructureClass> </targetStructureClass>
+      <additionalCompilerFlags>CPP_HDF</additionalCompilerFlags>
+   </programVersion>
+   <parallelSetup>
+      <openMP ompThreads="1"/>
+      <mem memoryPerNode="7892704 kB"/>
+   </parallelSetup>
+   <startDateAndTime date="2023/03/15" time="16:52:05" zone="+0100"/>
+   <!-- Now follows a dump of the inp.xml file after evaluating the Schema -->
+  <fleurInput fleurInputVersion="0.34">
+     <comment>
+        bcc Fe
+     </comment>
+     <calculationSetup>
+        <cutoffs Kmax="2.50000000" Gmax="10.50000000" GmaxXC="10.50000000" numbands="0"/>
+        <scfLoop itmax="1" minDistance=".00001000" maxIterBroyd="99" imix="Anderson" alpha=".05000000" precondParam="0.0" spinf="2.00000000"/>
+        <coreElectrons ctail="f" frcor="F" kcrel="0" coretail_lmax="0" l_core_confpot="T"/>
+        <xcFunctional name="vwn" relativisticCorrections="F"/>
+        <magnetism jspins="2" l_noco="t" swsp="F" lflip="f" l_ss="F" l_J="F" l_onlyMtStDen="F" fixed_moment="0.0">
+           <mtNocoParams l_mperp="t" l_mtNocoPot="t" l_constrained="F" l_relaxSQA="F" mag_mixing_scheme="0" mix_RelaxWeightOffD="1.0" mix_constr="1.0"/>
+        </magnetism>
+        <soc theta=".00000000" phi=".00000000" l_soc="F" spav="F" off="F" soc66="T"/>
+        <expertModes gw="0" secvar="F" pot8="F" eig66="F" lpr="0" isec1="99" warp_factor="1.0"/>
+        <geometryOptimization l_f="F" forcealpha="1.00000000" forcemix="BFGS" epsdisp=".00001000" epsforce=".00001000" f_level="0" qfix="0" force_converged="0.00001"/>
+        <ldaU l_linMix="F" mixParam=".050000" spinf="1.000000" l_adjEnpara="F"/>
+     </calculationSetup>
+     <cell>
+        <bzIntegration valenceElectrons="32.00000000" mode="hist" fermiSmearingEnergy=".00100000" l_bloechl="F">
+           <kPointListSelection listName="default"/>
+           <kPointLists>
+           <kPointList name="default" count="34" type="unspecified">
+              <kPoint weight="     8.0000000000000" label=""> 0.4500000000000  0.4500000000000  0.4500000000000</kPoint>
+              <kPoint weight="    24.0000000000000" label=""> 0.4500000000000  0.4500000000000  0.3500000000000</kPoint>
+              <kPoint weight="    24.0000000000000" label=""> 0.4500000000000  0.4500000000000  0.2500000000000</kPoint>
+              <kPoint weight="    24.0000000000000" label=""> 0.4500000000000  0.4500000000000  0.1500000000000</kPoint>
+              <kPoint weight="    24.0000000000000" label=""> 0.4500000000000  0.4500000000000  0.0500000000000</kPoint>
+              <kPoint weight="    24.0000000000000" label=""> 0.4500000000000  0.3500000000000  0.3500000000000</kPoint>
+              <kPoint weight="    48.0000000000000" label=""> 0.4500000000000  0.3500000000000  0.2500000000000</kPoint>
+              <kPoint weight="    48.0000000000000" label=""> 0.4500000000000  0.3500000000000  0.1500000000000</kPoint>
+              <kPoint weight="    48.0000000000000" label=""> 0.4500000000000  0.3500000000000  0.0500000000000</kPoint>
+              <kPoint weight="    24.0000000000000" label=""> 0.4500000000000  0.2500000000000  0.2500000000000</kPoint>
+              <kPoint weight="    48.0000000000000" label=""> 0.4500000000000  0.2500000000000  0.1500000000000</kPoint>
+              <kPoint weight="    48.0000000000000" label=""> 0.4500000000000  0.2500000000000  0.0500000000000</kPoint>
+              <kPoint weight="    24.0000000000000" label=""> 0.4500000000000  0.1500000000000  0.1500000000000</kPoint>
+              <kPoint weight="    48.0000000000000" label=""> 0.4500000000000  0.1500000000000  0.0500000000000</kPoint>
+              <kPoint weight="    24.0000000000000" label=""> 0.4500000000000  0.0500000000000  0.0500000000000</kPoint>
+              <kPoint weight="     8.0000000000000" label=""> 0.3500000000000  0.3500000000000  0.3500000000000</kPoint>
+              <kPoint weight="    24.0000000000000" label=""> 0.3500000000000  0.3500000000000  0.2500000000000</kPoint>
+              <kPoint weight="    24.0000000000000" label=""> 0.3500000000000  0.3500000000000  0.1500000000000</kPoint>
+              <kPoint weight="    24.0000000000000" label=""> 0.3500000000000  0.3500000000000  0.0500000000000</kPoint>
+              <kPoint weight="    24.0000000000000" label=""> 0.3500000000000  0.2500000000000  0.2500000000000</kPoint>
+              <kPoint weight="    48.0000000000000" label=""> 0.3500000000000  0.2500000000000  0.1500000000000</kPoint>
+              <kPoint weight="    48.0000000000000" label=""> 0.3500000000000  0.2500000000000  0.0500000000000</kPoint>
+              <kPoint weight="    24.0000000000000" label=""> 0.3500000000000  0.1500000000000  0.1500000000000</kPoint>
+              <kPoint weight="    48.0000000000000" label=""> 0.3500000000000  0.1500000000000  0.0500000000000</kPoint>
+              <kPoint weight="    24.0000000000000" label=""> 0.3500000000000  0.0500000000000  0.0500000000000</kPoint>
+              <kPoint weight="     8.0000000000000" label=""> 0.2500000000000  0.2500000000000  0.2500000000000</kPoint>
+              <kPoint weight="    24.0000000000000" label=""> 0.2500000000000  0.2500000000000  0.1500000000000</kPoint>
+              <kPoint weight="    24.0000000000000" label=""> 0.2500000000000  0.2500000000000  0.0500000000000</kPoint>
+              <kPoint weight="    24.0000000000000" label=""> 0.2500000000000  0.1500000000000  0.1500000000000</kPoint>
+              <kPoint weight="    48.0000000000000" label=""> 0.2500000000000  0.1500000000000  0.0500000000000</kPoint>
+              <kPoint weight="    24.0000000000000" label=""> 0.2500000000000  0.0500000000000  0.0500000000000</kPoint>
+              <kPoint weight="     8.0000000000000" label=""> 0.1500000000000  0.1500000000000  0.1500000000000</kPoint>
+              <kPoint weight="    24.0000000000000" label=""> 0.1500000000000  0.1500000000000  0.0500000000000</kPoint>
+              <kPoint weight="    24.0000000000000" label=""> 0.1500000000000  0.0500000000000  0.0500000000000</kPoint>
+           </kPointList>
+           </kPointLists>
+        </bzIntegration>
+        <symmetryOperations>
+           <symOp>
+              <row-1>1 0 0 .0000000000</row-1>
+              <row-2>0 1 0 .0000000000</row-2>
+              <row-3>0 0 1 .0000000000</row-3>
+           </symOp>
+        </symmetryOperations>
+        <bulkLattice scale="1.0000000000">
+           <bravaisMatrix>
+              <row-1>    5.4159572954     0.0000000000     0.0000000000</row-1>
+              <row-2>    0.0000000000     5.4159572954     0.0000000000</row-2>
+              <row-3>    0.0000000000     0.0000000000     5.4159572954</row-3>
+           </bravaisMatrix>
+        </bulkLattice>
+     </cell>
+     <atomSpecies>
+        <species name="Fe-1" element="Fe" atomicNumber="26">
+           <mtSphere radius="2.29000000" gridPoints="757" logIncrement=".01600000"/>
+           <atomicCutoffs lmax="8" lnonsphr="6"/>
+           <electronConfig flipSpins="F">
+              <coreConfig>(1s1/2) (2s1/2) (2p1/2) (2p3/2)</coreConfig>
+              <valenceConfig>(3s1/2) (3p1/2) (3p3/2) (4s1/2) (3d3/2) (3d5/2)</valenceConfig>
+              <stateOccupation state="(3d3/2)" spinUp="1.20000000" spinDown="1.20000000"/>
+              <stateOccupation state="(3d5/2)" spinUp="2.90000000" spinDown=".70000000"/>
+           </electronConfig>
+           <energyParameters s="4" p="4" d="3" f="4"/>
+           <modInitDen flipSpinPhi=".00000000" flipSpinTheta=".00000000" flipSpinScale="F" magMom="0.0"/>
+           <lo type="SCLO" l="0" n="3" eDeriv="0"/>
+           <lo type="SCLO" l="1" n="3" eDeriv="0"/>
+        </species>
+       <species name="Fe-2" element="Fe" atomicNumber="26">
+           <mtSphere radius="2.29000000" gridPoints="757" logIncrement=".01600000"/>
+           <atomicCutoffs lmax="8" lnonsphr="6"/>
+           <electronConfig flipSpins="F">
+              <coreConfig>(1s1/2) (2s1/2) (2p1/2) (2p3/2)</coreConfig>
+              <valenceConfig>(3s1/2) (3p1/2) (3p3/2) (4s1/2) (3d3/2) (3d5/2)</valenceConfig>
+              <stateOccupation state="(3d3/2)" spinUp="1.20000000" spinDown="1.20000000"/>
+              <stateOccupation state="(3d5/2)" spinUp="2.90000000" spinDown=".70000000"/>
+           </electronConfig>
+           <energyParameters s="4" p="4" d="3" f="4"/>
+           <lo type="SCLO" l="0" n="3" eDeriv="0"/>
+           <lo type="SCLO" l="1" n="3" eDeriv="0"/>
+        </species>
+     </atomSpecies>
+     <atomGroups>
+        <atomGroup species="Fe-1">
+           <relPos label="                   1" wannier="F">.0000000000 .0000000000 .0000000000</relPos>
+           <force calculate="T" relaxXYZ="TTT"/>
+           <nocoParams alpha=".00000000" beta=".00000000" l_magn="F" M="0.0"/>
+        </atomGroup>
+        <atomGroup species="Fe-2">
+           <relPos label="                   2" wannier="F">1.000/2.000 1.000/2.000 1.000/2.000</relPos>
+           <force calculate="T" relaxXYZ="TTT"/>
+           <nocoParams alpha="Pi*.500000000" beta="Pi*.500000000" l_magn="F" M="0.0"/>
+        </atomGroup>
+     </atomGroups>
+     <output dos="F" band="F" slice="F" coreSpec="F" wannier="F" eig66="F">
+        <checks vchk="F" cdinf="F" disp="F"/>
+        <unfoldingBand unfoldBand="F" supercellX="1" supercellY="1" supercellZ="1"/>
+        <plotting iplot="6" polar="F" format="1">
+           <plot cartesian="f" TwoD="F" grid="10 10 10" vec1="1.0 0.0 0.0" vec2="0.0 1.0 0.0" vec3="0.0 0.0 1.0" zero="0.0 0.0 0.0" file="plot" vecField="T" onlyMT="F" typeMT="0"/>
+        </plotting>
+        <chargeDensitySlicing numkpt="0" minEigenval=".00000000" maxEigenval=".00000000" nnne="0" pallst="F"/>
+        <specialOutput eonly="F" bmt="F" form66="F"/>
+     </output>
+    <!-- We include the file relax.inp here to enable relaxations (see documentation) -->
+  
+  </fleurInput>
+   <!-- END of dump of the inp.xml file -->
+   <numericalParameters>
+      <atomsInCell nat="2" ntype="2" jmtd="757" n_u="0" n_hia="0" n_opc="0"/>
+      <basis nvd="44" lmaxd="8" nlotot="8"/>
+      <density ng3="3071" ng2="0"/>
+      <bands numbands="50"/>
+      <volumes unitCell="158.864073" interstitial="58.2578023">
+         <mtVolume atomType="1" mtRadius="2.29000000" mtVolume="50.30313549"/>
+         <mtVolume atomType="2" mtRadius="2.29000000" mtVolume="50.30313549"/>
+      </volumes>
+      <kPointList weightScale="1.00000000" count="        34">
+         <kPoint weight="0.008065">0.450000            0.450000            0.450000</kPoint>
+         <kPoint weight="0.024194">0.450000            0.450000            0.350000</kPoint>
+         <kPoint weight="0.024194">0.450000            0.450000            0.250000</kPoint>
+         <kPoint weight="0.024194">0.450000            0.450000            0.150000</kPoint>
+         <kPoint weight="0.024194">0.450000            0.450000            0.050000</kPoint>
+         <kPoint weight="0.024194">0.450000            0.350000            0.350000</kPoint>
+         <kPoint weight="0.048387">0.450000            0.350000            0.250000</kPoint>
+         <kPoint weight="0.048387">0.450000            0.350000            0.150000</kPoint>
+         <kPoint weight="0.048387">0.450000            0.350000            0.050000</kPoint>
+         <kPoint weight="0.024194">0.450000            0.250000            0.250000</kPoint>
+         <kPoint weight="0.048387">0.450000            0.250000            0.150000</kPoint>
+         <kPoint weight="0.048387">0.450000            0.250000            0.050000</kPoint>
+         <kPoint weight="0.024194">0.450000            0.150000            0.150000</kPoint>
+         <kPoint weight="0.048387">0.450000            0.150000            0.050000</kPoint>
+         <kPoint weight="0.024194">0.450000            0.050000            0.050000</kPoint>
+         <kPoint weight="0.008065">0.350000            0.350000            0.350000</kPoint>
+         <kPoint weight="0.024194">0.350000            0.350000            0.250000</kPoint>
+         <kPoint weight="0.024194">0.350000            0.350000            0.150000</kPoint>
+         <kPoint weight="0.024194">0.350000            0.350000            0.050000</kPoint>
+         <kPoint weight="0.024194">0.350000            0.250000            0.250000</kPoint>
+         <kPoint weight="0.048387">0.350000            0.250000            0.150000</kPoint>
+         <kPoint weight="0.048387">0.350000            0.250000            0.050000</kPoint>
+         <kPoint weight="0.024194">0.350000            0.150000            0.150000</kPoint>
+         <kPoint weight="0.048387">0.350000            0.150000            0.050000</kPoint>
+         <kPoint weight="0.024194">0.350000            0.050000            0.050000</kPoint>
+         <kPoint weight="0.008065">0.250000            0.250000            0.250000</kPoint>
+         <kPoint weight="0.024194">0.250000            0.250000            0.150000</kPoint>
+         <kPoint weight="0.024194">0.250000            0.250000            0.050000</kPoint>
+         <kPoint weight="0.024194">0.250000            0.150000            0.150000</kPoint>
+         <kPoint weight="0.048387">0.250000            0.150000            0.050000</kPoint>
+         <kPoint weight="0.024194">0.250000            0.050000            0.050000</kPoint>
+         <kPoint weight="0.008065">0.150000            0.150000            0.150000</kPoint>
+         <kPoint weight="0.024194">0.150000            0.150000            0.050000</kPoint>
+         <kPoint weight="0.024194">0.150000            0.050000            0.050000</kPoint>
+      </kPointList>
+   </numericalParameters>
+   <scfLoop>
+      <iteration numberForCurrentRun="    1" overallNumber="    2">
+      </iteration>
+   </scfLoop>
+   <endDateAndTime date="2023/03/15" time="16:52:06" zone="+0100"/>
+</fleurOutput>
