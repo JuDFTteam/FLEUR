@@ -20,7 +20,6 @@ MODULE m_types_fleurinput
   USE m_types_hybinp
    
   USE m_types_coreSpecInput
-  USE m_types_wannier
   USE m_types_wannierlib
   USE m_types_xcpot
   USE m_types_forcetheo_data

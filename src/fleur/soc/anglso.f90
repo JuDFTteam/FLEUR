@@ -6,7 +6,7 @@
 MODULE m_anglso
    implicit none
 contains
-  COMPLEX FUNCTION anglso(theta,phi,l1,m1,is1,l2,m2,is2,compo)
+  COMPLEX FUNCTION anglso(theta,phi,l1,m1,is1,l2,m2,is2)
     USE m_juDFT
     USE m_constants
     !
@@ -16,7 +16,6 @@ contains
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT(IN) :: is1,is2,l1,l2,m1,m2
-    INTEGER, INTENT(IN),OPTIONAL :: compo
     REAL,    INTENT(IN) :: theta,phi             
     !     ..
     !     .. Local Scalars ..
@@ -64,26 +63,6 @@ contains
        xlz  = m2
     END IF
     
-    IF(PRESENT(compo))THEN
-!      Used for the wannier-interpolation of SOC:
-!      wann_socmat_vec allow us to
-!      add SOC during the wannier-interpolation.
-!      Therefore, theta and phi are specified during the
-!      Wannier-interpolation step and not here.
-!      Therefore, write out only xlz, xlpl, and xlmn and RETURN
-!      afterwards, without using theta and phi.
-!      xlz, xlpl and xlmn are needed in subroutine wann_socmat_vec.F
-       if(compo.eq.1)then
-          anglso = CMPLX(xlz,0.0) 
-       elseif(compo.eq.2)then
-          anglso = CMPLX(xlmn,0.0)
-       elseif(compo.eq.3)then
-          anglso = CMPLX(xlpl,0.0)
-       else
-         CALL juDFT_error("maucompo",calledby ="anglso")
-       endif   
-       RETURN
-    END IF   
     
     
     !

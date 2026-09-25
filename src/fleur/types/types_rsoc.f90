@@ -199,7 +199,7 @@ module m_types_rsoc
 
 
 
-  subroutine angles(this,atoms,fmpi,theta,phi,compo)
+  subroutine angles(this,atoms,fmpi,theta,phi)
     USE m_constants
     USE m_anglso
     USE m_sgml
@@ -211,7 +211,6 @@ module m_types_rsoc
     TYPE(t_atoms),INTENT(IN)    :: atoms
     TYPE(t_mpi),INTENT(IN)      :: fmpi
     REAL,INTENT(IN)             :: theta,phi
-    INTEGER, INTENT(IN),OPTIONAL :: compo
     !     ..
     !     ..
     !     .. Local Scalars ..
@@ -221,8 +220,7 @@ module m_types_rsoc
     INTEGER,PARAMETER:: ispjsp(2) = [1,-1]
     
 
-    IF ((ABS(theta).LT.0.00001).AND.(ABS(phi).LT.0.00001)&
-                       .AND..NOT.PRESENT(compo)) THEN
+    IF ((ABS(theta).LT.0.00001).AND.(ABS(phi).LT.0.00001)) THEN
        !
        !       TEST for real function sgml(l1,m1,is1,l2,m2,is2)
        !
@@ -257,7 +255,7 @@ module m_types_rsoc
                    DO m1 = -l1,l1,1
                       DO m2 = -l2,l2,1
                          this%soangl(l1,m1,jspin1,l2,m2,jspin2) =&
-                           anglso(theta,phi,l1,m1,is1,l2,m2,is2,compo)
+                           anglso(theta,phi,l1,m1,is1,l2,m2,is2)
                       ENDDO
                    ENDDO
                    !

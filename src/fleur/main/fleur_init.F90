@@ -9,7 +9,7 @@ MODULE m_fleur_init
 #endif
    IMPLICIT NONE
 CONTAINS
-   SUBROUTINE fleur_init(fmpi, fi, sphhar, stars, nococonv, forcetheo, enpara, xcpot, results, wann, hybdat, mpdata, filename_add, l_skip_setupmpi)
+   SUBROUTINE fleur_init(fmpi, fi, sphhar, stars, nococonv, forcetheo, enpara, xcpot, results, hybdat, mpdata, filename_add, l_skip_setupmpi)
       USE m_types
       USE m_test_performance
       use m_store_load_hybrid
@@ -18,7 +18,6 @@ CONTAINS
       USE m_types_mpinp
       USE m_judft
       USE m_juDFT_init
-      USE m_init_wannier_defaults
       USE m_dwigner
       USE m_ylm
       !USE m_InitParallelProcesses
@@ -55,7 +54,6 @@ CONTAINS
       TYPE(t_enpara), INTENT(OUT):: enpara
       CLASS(t_xcpot), ALLOCATABLE, INTENT(OUT):: xcpot
       TYPE(t_results), INTENT(OUT):: results
-      TYPE(t_wann), INTENT(OUT):: wann
       CLASS(t_forcetheo), ALLOCATABLE, INTENT(OUT)::forcetheo
       TYPE(t_nococonv), INTENT(OUT) :: nococonv
       type(t_hybdat), intent(out) :: hybdat
@@ -74,7 +72,7 @@ CONTAINS
       REAL, ALLOCATABLE             :: xmlCoreOccs(:, :, :)
       LOGICAL, ALLOCATABLE          :: xmlPrintCoreStates(:, :)
       !     .. Local Scalars ..
-      INTEGER    :: i, n, l, m1, m2, isym, iisym, numSpecies, pc, iAtom, iType, minneigd, outxmlFileID
+      INTEGER    :: i, n, l, m1, m2, isym, iisym, numSpecies, minneigd, outxmlFileID
       INTEGER    :: nbasfcn
       COMPLEX    :: cdum
       CHARACTER(len=4)              :: namex
@@ -84,7 +82,7 @@ CONTAINS
       CHARACTER(LEN=40)             :: kptsSelection(3)
       CHARACTER(LEN=300)            :: line
       REAL                          :: a1(3), a2(3), a3(3)
-      REAL                          :: dtild, phi_add
+      REAL                          :: dtild
       LOGICAL                       :: l_found, l_kpts, l_exist, l_krla, l_timeReversalCheck
       LOGICAL                       :: l_skip_setupmpi_loc
 
@@ -150,14 +148,14 @@ CONTAINS
          CALL fleurinput_read_xml(outxmlFileID, filename_add_loc, cell=fi%cell, sym=fi%sym, atoms=fi%atoms, input=fi%input, noco=fi%noco, vacuum=fi%vacuum, field=fi%field, &
                                   sliceplot=fi%sliceplot, banddos=fi%banddos, xas=fi%xas, mpinp=fi%mpinp, hybinp=fi%hybinp, coreSpecInput=fi%coreSpecInput, &
                                   wannierlib=fi%wannierlib, &
-                                  wann=wann, xcpot=xcpot, forcetheo_data=forcetheo_data, kpts=fi%kpts, kptsSelection=kptsSelection, kptsArray=kptsArray, &
+                                  xcpot=xcpot, forcetheo_data=forcetheo_data, kpts=fi%kpts, kptsSelection=kptsSelection, kptsArray=kptsArray, &
                                   enparaXML=enparaXML, gfinp=fi%gfinp, hub1inp=fi%hub1inp, dfpt=fi%dfpt)
          CALL fleurinput_postprocess(fi%cell, fi%sym, fi%atoms, fi%input, fi%noco, fi%vacuum, &
                                      fi%banddos, fi%hybinp,  Xcpot, fi%kpts, fi%gfinp, fi%wannierlib)
       END IF
       !Distribute fi%input to all PE
       CALL fleurinput_mpi_bc(fi%cell, fi%sym, fi%atoms, fi%input, fi%noco, fi%vacuum, fi%field, &
-                             fi%sliceplot, fi%banddos, fi%xas, fi%mpinp, fi%hybinp,   fi%coreSpecInput, Wann, &
+                             fi%sliceplot, fi%banddos, fi%xas, fi%mpinp, fi%hybinp,   fi%coreSpecInput, &
                              Xcpot, Forcetheo_data, fi%kpts, Enparaxml, fi%gfinp, fi%hub1inp, fmpi%Mpi_comm, fi%dfpt, wannierlib=fi%wannierlib)
       !Remaining init is done using all PE
       !Checks that emit a warning and continue must run here, not in fleurinput_postprocess above: see check_input_switches_all_pe.
@@ -254,90 +252,5 @@ CONTAINS
 #ifdef CPP_MPI
       CALL MPI_BARRIER(fmpi%mpi_comm, ierr(1))
 #endif
-   CONTAINS
-      SUBROUTINE init_wannier()
-         ! Initializations for Wannier functions (start)
-         IF (fmpi%irank .EQ. 0) THEN
-            wann%l_gwf = wann%l_ms .OR. wann%l_sgwf .OR. wann%l_socgwf
-
-            IF (wann%l_gwf) THEN
-               WRITE (*, *) 'running HDWF-extension of FLEUR code'
-               WRITE (*, *) 'with l_sgwf =', wann%l_sgwf, ' and l_socgwf =', wann%l_socgwf
-
-               IF (wann%l_socgwf .AND. .NOT. fi%noco%l_soc) THEN
-                  CALL juDFT_error("set l_soc=T if l_socgwf=T", calledby="fleur_init")
-               END IF
-
-               IF ((wann%l_ms .OR. wann%l_sgwf) .AND. .NOT. (fi%noco%l_noco .AND. fi%noco%l_ss)) THEN
-                  CALL juDFT_error("set l_noco=l_ss=T for l_sgwf.or.l_ms", calledby="fleur_init")
-               END IF
-
-               IF ((wann%l_ms .OR. wann%l_sgwf) .AND. wann%l_socgwf) THEN
-                  CALL juDFT_error("(l_ms.or.l_sgwf).and.l_socgwf", calledby="fleur_init")
-               END IF
-
-               INQUIRE (FILE=wann%param_file, EXIST=l_exist)
-               IF (.NOT. l_exist) THEN
-                  CALL juDFT_error("where is param_file"//TRIM(wann%param_file)//"?", calledby="fleur_init")
-               END IF
-               OPEN (113, file=wann%param_file, status='old')
-               READ (113, *) wann%nparampts, wann%scale_param
-               CLOSE (113)
-            ELSE
-               wann%nparampts = 1
-               wann%scale_param = 1.0
-            END IF
-         END IF
-
-         ALLOCATE (wann%param_vec(3, wann%nparampts))
-         ALLOCATE (wann%param_alpha(fi%atoms%ntype, wann%nparampts))
-
-         IF (fmpi%irank .EQ. 0) THEN
-            IF (wann%l_gwf) THEN
-               OPEN (113, file=wann%param_file, status='old')
-               READ (113, *)!header
-               WRITE (oUnit, *) 'parameter points for HDWFs generation:'
-               IF (wann%l_sgwf .OR. wann%l_ms) THEN
-                  WRITE (oUnit, *) '      q1       ', '      q2       ', '      q3'
-               ELSE IF (wann%l_socgwf) THEN
-                  WRITE (oUnit, *) '      --       ', '     phi       ', '    theta'
-               END IF
-
-               DO pc = 1, wann%nparampts
-                  READ (113, '(3(f14.10,1x))') wann%param_vec(1, pc), wann%param_vec(2, pc), wann%param_vec(3, pc)
-                  wann%param_vec(:, pc) = wann%param_vec(:, pc)/wann%scale_param
-                  WRITE (oUnit, '(3(f14.10,1x))') wann%param_vec(1, pc), wann%param_vec(2, pc), wann%param_vec(3, pc)
-                  IF (wann%l_sgwf .OR. wann%l_ms) THEN
-                     iAtom = 1
-                     DO iType = 1, fi%atoms%ntype
-                        phi_add = tpi_const*(wann%param_vec(1, pc)*fi%atoms%taual(1, iAtom) + &
-                                             wann%param_vec(2, pc)*fi%atoms%taual(2, iAtom) + &
-                                             wann%param_vec(3, pc)*fi%atoms%taual(3, iAtom))
-                        wann%param_alpha(iType, pc) = nococonv%alph(iType) + phi_add
-                        iAtom = iAtom + fi%atoms%neq(iType)
-                     END DO
-                  END IF
-               END DO
-
-               IF (ANY(wann%param_vec(1, :) .NE. wann%param_vec(1, 1))) wann%l_dim(1) = .TRUE.
-               IF (ANY(wann%param_vec(2, :) .NE. wann%param_vec(2, 1))) wann%l_dim(2) = .TRUE.
-               IF (ANY(wann%param_vec(3, :) .NE. wann%param_vec(3, 1))) wann%l_dim(3) = .TRUE.
-
-               CLOSE (113)
-
-               IF (wann%l_dim(1) .AND. wann%l_socgwf) THEN
-                  CALL juDFT_error("do not specify 1st component if l_socgwf", calledby="fleur_init")
-               END IF
-            END IF!(wann%l_gwf)
-         END IF!(fmpi%irank.EQ.0)
-
-#ifdef CPP_MPI
-         CALL MPI_BCAST(wann%param_vec, 3*wann%nparampts, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr(1))
-         CALL MPI_BCAST(wann%param_alpha, fi%atoms%ntype*wann%nparampts, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr(1))
-         CALL MPI_BCAST(wann%l_dim, 3, MPI_LOGICAL, 0, MPI_COMM_WORLD, ierr(1))
-#endif
-
-         ! Initializations for Wannier functions (end)
-      END SUBROUTINE init_wannier
    END SUBROUTINE fleur_init
 END MODULE m_fleur_init

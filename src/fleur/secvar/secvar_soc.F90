@@ -100,7 +100,7 @@ CONTAINS
         ! record; fleur.F90 already opens the eig file with 2 spin records under exactly this
         ! condition, so ask for the second (spin-down) record to be filled as well.
         ! (This is the l_wann_store behaviour of the removed alineso/eigenso.)
-        l_both_spinors = fi%input%l_wann .OR. fi%wannierlib%l_wannierize
+        l_both_spinors = fi%wannierlib%l_wannierize
 
         ! The SOC angular matrix elements (soangl) are set up in the global frame.
         ! Hence the basis matching coefficients must not be rotated into the local

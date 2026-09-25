@@ -8,7 +8,7 @@ MODULE m_fleurinput_mpi_bc
   IMPLICIT NONE
 CONTAINS
   SUBROUTINE fleurinput_mpi_bc(cell,sym,atoms,input,noco,vacuum,field,&
-       sliceplot,banddos,xas,mpinp,hybinp ,coreSpecInput,wann,&
+       sliceplot,banddos,xas,mpinp,hybinp ,coreSpecInput,&
        xcpot,forcetheo_data,kpts,enparaXML,gfinp,hub1inp,mpi_comm,dfpt,rank,wannierlib)
     USE m_types_xml
 
@@ -27,7 +27,6 @@ CONTAINS
     TYPE(t_hybinp),INTENT(INOUT)::hybinp
      
     TYPE(t_coreSpecInput),INTENT(INOUT)::coreSpecInput
-    TYPE(t_wann),INTENT(INOUT)::wann
     TYPE(t_wannierlib_wannierize),INTENT(INOUT),OPTIONAL::wannierlib
     CLASS(t_xcpot),ALLOCATABLE,INTENT(INOUT)::xcpot
     TYPE(t_forcetheo_data),INTENT(INOUT)::forcetheo_data
@@ -53,7 +52,6 @@ CONTAINS
     CALL hybinp%mpi_bc(mpi_comm,rank)
     CALL mpinp%mpi_bc(mpi_comm, rank)
     CALL coreSpecInput%mpi_bc(mpi_comm,rank)
-    CALL wann%mpi_bc(mpi_comm,rank)
     IF (PRESENT(wannierlib)) CALL wannierlib%mpi_bc(mpi_comm,rank)
     CALL forcetheo_data%mpi_bc(mpi_comm,rank)
     CALL enparaXML%mpi_bc(mpi_comm,rank)

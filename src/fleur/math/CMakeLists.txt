@@ -9,7 +9,6 @@ src/fleur/math/points.f
 src/fleur/math/qsf.f
 src/fleur/math/sphbes.f
 src/fleur/math/sphpts.f
-src/fleur/math/difcub.f
 src/fleur/math/rcerf.f
 src/fleur/math/diflgr.f
 )

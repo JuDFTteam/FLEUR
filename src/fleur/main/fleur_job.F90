@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -39,9 +39,7 @@ CONTAINS
         IF (l_file) THEN
             OPEN(99,FILE=file,STATUS="old")
         ELSE
-            WRITE(*,*) "job input file not found"
-            WRITE(*,*) "You specified an invalid filename:",file
-            STOP "JOB FILE MISSING"
+            CALL judft_error("Job file missing", hint="You specified an invalid filename: "//TRIM(file))
         ENDIF
         !Count the number of lines in job-file
         njobs=0
@@ -88,9 +86,7 @@ CONTAINS
                     jobs(no_jobs)%directory=str(index(str,":")+1:)
                     no_jobs=no_jobs+1
                 ELSE
-                    PRINT *,"Illegal job-description"
-                    PRINT *,"You specified:",str
-                    STOP "ILLEGAL DESCRIPTION"
+                    CALL judft_error("Illegal job-description", hint="You specified: "//TRIM(str))
                 ENDIF
             ENDIF
         ENDDO
@@ -206,7 +202,6 @@ CONTAINS
         TYPE(t_enpara)   :: enpara
         TYPE(t_results)  :: results
         TYPE(t_nococonv) :: nococonv
-        type(t_wann)     :: wann
         TYPE(t_hybdat)   :: hybdat
         type(t_mpdata)   :: mpdata
         CLASS(t_forcetheo),ALLOCATABLE::forcetheo
@@ -244,11 +239,11 @@ CONTAINS
         CALL timestart("Initialization")
         filename_add = ""
         IF (judft_was_argument("-add_name")) filename_add = TRIM(judft_string_for_argument("-add_name"))//"_"//""
-        call fleur_init(fmpi,fi,sphhar,stars,nococonv,forcetheo,enpara,xcpot,results,wann, hybdat, mpdata, filename_add)
+        call fleur_init(fmpi,fi,sphhar,stars,nococonv,forcetheo,enpara,xcpot,results, hybdat, mpdata, filename_add)
         CALL timestop("Initialization")
 
         CALL fleur_execute(fmpi,fi,sphhar,stars,nococonv,forcetheo,enpara,results,&
-                           xcpot, wann, hybdat, mpdata)
+                           xcpot, hybdat, mpdata)
 
     END SUBROUTINE
 
@@ -270,16 +265,14 @@ CONTAINS
             i=free_pe/i
 
             IF (i<1) THEN
-                if (irank==0) PRINT *,"Not enough PE after automatic assignment of jobs"
-                STOP "NOT enough PE"
+                CALL judft_error("Not enough PE after automatic assignment of jobs")
             ELSE
                 WHERE (jobs%pe_requested==0) jobs%pe_requested=i
             ENDIF
         ENDIF
         free_pe=isize-sum(jobs%pe_requested)
         IF (free_pe<0) THEN
-            if (irank==0) PRINT *,"Not enough PE for assignment of jobs"
-            STOP "NOT enough PE"
+            CALL judft_error("Not enough PE for assignment of jobs")
         ENDIF
         IF (free_pe>0.and.irank==0)    PRINT *,"WARNING, there are unused PE"
 
@@ -297,12 +290,10 @@ CONTAINS
 
 #else
         IF (size(jobs)>1) THEN
-            PRINT*, "Cannot run multiple jobs without MPI"
-            STOP "NO MPI"
+            CALL judft_error("Cannot run multiple jobs without MPI")
         ENDIF
         IF (sum(jobs%pe_requested)>1) THEN
-            PRINT*, "You cannot request a multiple PE job without MPI"
-            STOP "NO MPI"
+            CALL judft_error("You cannot request a multiple PE job without MPI")
         ENDIF
         jobs(1)%mpi_comm=1
 #endif

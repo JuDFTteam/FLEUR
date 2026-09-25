@@ -48,7 +48,6 @@ contains
       type(t_nococonv)   :: nococonv_fullsym
       type(t_enpara)     :: enpara_fullsym
       type(t_results)    :: results_fullsym
-      type(t_wann)       :: wann_fullsym
       type(t_hybdat)     :: hybdat_fullsym
       type(t_mpdata)     :: mpdata_fullsym
 
@@ -68,7 +67,7 @@ contains
 
       ! Skip setupMPI: the parallel-solver setup can fail if the fullsym q-mesh
       call fleur_init(fmpi_fullsym, fi_fullsym, sphhar_fullsym, stars_fullsym, nococonv_fullsym, forcetheo_fullsym, &
-                      enpara_fullsym, xcpot_fullsym, results_fullsym, wann_fullsym, hybdat_fullsym, mpdata_fullsym, inp_pref, l_skip_setupmpi=.true.)
+                      enpara_fullsym, xcpot_fullsym, results_fullsym, hybdat_fullsym, mpdata_fullsym, inp_pref, l_skip_setupmpi=.true.)
 
       sym_full  = fi_fullsym%sym
       qvec_full = fi_fullsym%kpts

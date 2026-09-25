@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -66,7 +66,6 @@ MODULE m_types_input
   LOGICAL:: integ=.FALSE.
   LOGICAL:: pallst=.FALSE.
   LOGICAL:: l_coreSpec=.FALSE.
-  LOGICAL:: l_wann=.FALSE.
   LOGICAL:: l_sympsi=.FALSE.
   LOGICAL:: l_kpts_fullbz=.FALSE.
   LOGICAL:: secvar=.FALSE.
@@ -161,7 +160,6 @@ SUBROUTINE mpi_bc_input(this,mpi_comm,irank)
    CALL mpi_bc(this%integ,rank,mpi_comm)
    CALL mpi_bc(this%pallst,rank,mpi_comm)
    CALL mpi_bc(this%l_coreSpec,rank,mpi_comm)
-   CALL mpi_bc(this%l_wann,rank,mpi_comm)
    CALL mpi_bc(this%secvar,rank,mpi_comm)
    CALL mpi_bc(this%evonly,rank,mpi_comm)
    CALL mpi_bc(this%l_onlyMtStDen,rank,mpi_comm)
@@ -428,7 +426,6 @@ SUBROUTINE read_xml_input(this,xml)
    IF (numberNodes.EQ.1) THEN
       ! Read in general output switches
       this%l_coreSpec = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@coreSpec'))
-      this%l_wann = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@wannier'))
       IF (xml%versionNumber > 31)this%eig66(1) = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eig66'))
       ! Read in optional switches for checks
       xPathA = '/fleurInput/output/checks'

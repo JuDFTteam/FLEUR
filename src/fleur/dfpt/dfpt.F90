@@ -183,7 +183,7 @@ CONTAINS
 
    END SUBROUTINE dfpt
 
-   SUBROUTINE dfpt_desym(fmpi_nosym,fi_nosym,sphhar_nosym,stars_nosym,nococonv_nosym,enpara_nosym,results_nosym,wann_nosym,hybdat_nosym,mpdata_nosym,xcpot_nosym,forcetheo_nosym,rho_nosym,vTot_nosym,grid,inp_pref,&
+   SUBROUTINE dfpt_desym(fmpi_nosym,fi_nosym,sphhar_nosym,stars_nosym,nococonv_nosym,enpara_nosym,results_nosym,hybdat_nosym,mpdata_nosym,xcpot_nosym,forcetheo_nosym,rho_nosym,vTot_nosym,grid,inp_pref,&
                          fi,sphhar,stars,nococonv,enpara,results,rho,vTot)
       USE m_desymmetrizer
       USE m_outcdn
@@ -197,7 +197,6 @@ CONTAINS
       TYPE(t_nococonv),   INTENT(INOUT) :: nococonv_nosym
       TYPE(t_enpara),     INTENT(INOUT) :: enpara_nosym
       TYPE(t_results),    INTENT(INOUT) :: results_nosym
-      TYPE(t_wann),       INTENT(INOUT) :: wann_nosym
       TYPE(t_hybdat),     INTENT(INOUT) :: hybdat_nosym
       TYPE(t_mpdata),     INTENT(INOUT) :: mpdata_nosym
 
@@ -222,7 +221,7 @@ CONTAINS
       REAL    :: old_point(3), new_point(3), pt_old(3), pt_new(3), xdnout_old, xdnout_new!, atom_shift(3)
       LOGICAL :: test_desym
       CALL fleur_init(fmpi_nosym, fi_nosym, sphhar_nosym, stars_nosym, nococonv_nosym, forcetheo_nosym, &
-                        enpara_nosym, xcpot_nosym, results_nosym, wann_nosym, hybdat_nosym, mpdata_nosym, &
+                        enpara_nosym, xcpot_nosym, results_nosym, hybdat_nosym, mpdata_nosym, &
                         inp_pref)
 
       CALL rho_nosym%init(stars_nosym,fi_nosym%atoms,sphhar_nosym,fi_nosym%vacuum,fi_nosym%noco,fi%input%jspins,POTDEN_TYPE_DEN)
