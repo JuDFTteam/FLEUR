@@ -11,23 +11,15 @@ Companion documents:
 
 ## 0. Before you start
 
-**Wannier90 3.x, built as a library.** Library mode needs the module API, which arrived in
-Wannier90 3.x. Against 1.2 FLEUR still compiles, but the interface is simply absent and
-nothing here works.
+**Wannier90 with the module API.** Library mode needs the `w90_library` module API
+(`CPP_WANNLIB_API`). Without it FLEUR still compiles, but `<wannierlib>` is unavailable.
+If no suitable Wannier90 is found, `-wannier TRUE` builds the `external/wannier90`
+submodule along with FLEUR:
 
 ```bash
-cd wannier90-3.1.0
-cp config/make.inc.ifort make.inc      # then set F90 = mpiifort, COMMS = mpi
-make default lib                       # -> libwannier.a
-
-./configure.sh -libxc -wannier -hdf5 \
-     -libdir <wannier90 dir> -includedir <hdf5 dir>/include -l wannlib
+./configure.sh -libxc -wannier TRUE -hdf5 -l wannlib
 cd build.wannlib && make -j16
 ```
-
-The classic route (`<wannier>`, `CPP_WANN`) and library mode (`<wannierlib>`,
-`CPP_WANNLIB_API`) use different Wannier90 interfaces, so one binary serves one route. Keep
-a build directory per route; `configure.sh -l <name>` writes `build.<name>`.
 
 **The wannierisation mesh must cover the full zone**, gamma-centred and with symmetry off,
 because the neighbour shell **b** is otherwise incomplete:

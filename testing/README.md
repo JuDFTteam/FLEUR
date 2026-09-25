@@ -104,7 +104,7 @@ A example (shorted) log from a test session run with line numbers may look like 
 10 Default MPI command: mpirun -n {mpi_procs} --allow-run-as-root --mca btl vader,self
 11 Now cleaning work, failed and parser_test directories...
 12 rootdir: /builds/fleur/tests/new_pytest_system, configfile: setup.cfg
-13 Excluding tests with the following markers in 'pytest_incl.py':  ['chase', 'cusolver', 'edsolver', 'elpa', 'elpaonenode', 'fftmkl', 'gpu', 'magma', 'noci', 'progthread', 'spfft', 'wannier4', 'wannier5']
+13 Excluding tests with the following markers in 'pytest_incl.py':  ['chase', 'cusolver', 'edsolver', 'elpa', 'elpaonenode', 'fftmkl', 'gpu', 'magma', 'noci', 'progthread', 'spfft']
 14 Running every 1st test with offset 0, others will be skipped.
 15 collected 210 items / 4 deselected / 206 selected
 16 ../tests/feature_reg/test_AlLibxcPbe.py .         [  0%]

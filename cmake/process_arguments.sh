@@ -99,7 +99,7 @@ Diagonalization libraries:
 Additional features:
   -libxc    [TRUE|FALSE] : use libxc library
   -libxml2   true        : try to download libxml2 and compile it (experimental). No 'false' option exists here as the libxml2 is required.
-  -wannier  [TRUE|FALSE] : use Wannier90 library
+  -wannier  [TRUE|FALSE] : use Wannier90 module API (wannierlib)
   
 
 Command line options to switch on/off features. These options overwrite the results of

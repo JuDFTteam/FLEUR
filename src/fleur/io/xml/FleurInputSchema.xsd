@@ -1304,11 +1304,6 @@
                   <xsd:documentation>Custom label for this atom (for identification in output). Default is blank space.</xsd:documentation>
                </xsd:annotation>
             </xsd:attribute>
-            <xsd:attribute default="F" name="wannier" type="FleurBool" use="optional">
-               <xsd:annotation>
-                  <xsd:documentation>Include this atom in Wannier function generation (if Wannier calculations are enabled).</xsd:documentation>
-               </xsd:annotation>
-            </xsd:attribute>
             <xsd:attribute name="banddos" type="FleurBool" use="optional">
                <xsd:annotation>
                   <xsd:documentation>Compute density of states weights (DOS) projected onto this atom.</xsd:documentation>
@@ -3463,75 +3458,6 @@
       </xsd:attribute>
    </xsd:complexType>
 
-   <xsd:complexType name="WannierBandSelectionType">
-      <xsd:annotation>
-         <xsd:documentation>Band range selection for Wannier function construction.</xsd:documentation>
-      </xsd:annotation>
-      <xsd:attribute name="minSpinUp" type="xsd:positiveInteger" use="required">
-         <xsd:annotation>
-            <xsd:documentation>Minimum band index for spin-up channel.</xsd:documentation>
-         </xsd:annotation>
-      </xsd:attribute>
-      <xsd:attribute name="maxSpinUp" type="xsd:positiveInteger" use="required">
-         <xsd:annotation>
-            <xsd:documentation>Maximum band index for spin-up channel.</xsd:documentation>
-         </xsd:annotation>
-      </xsd:attribute>
-      <xsd:attribute name="minSpinDown" type="xsd:positiveInteger" use="optional">
-         <xsd:annotation>
-            <xsd:documentation>Minimum band index for spin-down channel (spin-polarized only).</xsd:documentation>
-         </xsd:annotation>
-      </xsd:attribute>
-      <xsd:attribute name="maxSpinDown" type="xsd:positiveInteger" use="optional">
-         <xsd:annotation>
-            <xsd:documentation>Maximum band index for spin-down channel (spin-polarized only).</xsd:documentation>
-         </xsd:annotation>
-      </xsd:attribute>
-   </xsd:complexType>
-
-   <xsd:complexType name="WannierOutputType">
-      <xsd:annotation>
-         <xsd:documentation>Wannier function output settings for Wannier90 interface.</xsd:documentation>
-      </xsd:annotation>
-      <xsd:all>
-         <xsd:element maxOccurs="1" minOccurs="0" name="bandSelection" type="WannierBandSelectionType">
-            <xsd:annotation>
-               <xsd:documentation>Specify band range for Wannier function construction.</xsd:documentation>
-            </xsd:annotation>
-         </xsd:element>
-         <xsd:element maxOccurs="1" minOccurs="0" name="jobList" type="StringVecType">
-            <xsd:annotation>
-               <xsd:documentation>List of Wannier job identifiers.</xsd:documentation>
-            </xsd:annotation>
-         </xsd:element>
-      </xsd:all>
-      <xsd:attribute default="F" name="ms" type="FleurBool" use="optional">
-         <xsd:annotation>
-            <xsd:documentation>Enable matrix element output.</xsd:documentation>
-         </xsd:annotation>
-      </xsd:attribute>
-      <xsd:attribute default="F" name="sgwf" type="FleurBool" use="optional">
-         <xsd:annotation>
-            <xsd:documentation>Enable sigma GWF output.</xsd:documentation>
-         </xsd:annotation>
-      </xsd:attribute>
-      <xsd:attribute default="F" name="socgwf" type="FleurBool" use="optional">
-         <xsd:annotation>
-            <xsd:documentation>Enable SOC Wannier function output.</xsd:documentation>
-         </xsd:annotation>
-      </xsd:attribute>
-      <xsd:attribute default="F" name="bsComf" type="FleurBool" use="optional">
-         <xsd:annotation>
-            <xsd:documentation>Enable band structure comfort output.</xsd:documentation>
-         </xsd:annotation>
-      </xsd:attribute>
-      <xsd:attribute default="F" name="atomList" type="FleurBool" use="optional">
-         <xsd:annotation>
-            <xsd:documentation>Output atom list for Wannier projection.</xsd:documentation>
-         </xsd:annotation>
-      </xsd:attribute>
-   </xsd:complexType>
-
    <xsd:complexType name="WannierlibBandsType">
       <xsd:annotation>
          <xsd:documentation>Band window controls for wannierlib library-mode workflow.</xsd:documentation>
@@ -4335,11 +4261,6 @@
                <xsd:documentation>Parameters for guarded independent-particle RIXS postprocessing.</xsd:documentation>
             </xsd:annotation>
          </xsd:element>
-         <xsd:element maxOccurs="1" minOccurs="0" name="wannier" type="WannierOutputType">
-            <xsd:annotation>
-               <xsd:documentation>Parameters for Wannier function generation.</xsd:documentation>
-            </xsd:annotation>
-         </xsd:element>
          <xsd:element maxOccurs="1" minOccurs="0" name="wannierlib" type="WannierlibOutputType">
             <xsd:annotation>
                <xsd:documentation>Parameters for Wannier90 library-mode workflow (no file I/O).</xsd:documentation>
@@ -4388,7 +4309,6 @@
          </xsd:annotation>
       </xsd:attribute>
       <xsd:attribute default="F" name="coreSpec" type="FleurBool" use="optional"/>
-      <xsd:attribute default="F" name="wannier" type="FleurBool" use="optional"/>
       <xsd:attribute default="F" name="eig66" type="FleurBool" use="optional"/>
    </xsd:complexType>
 
