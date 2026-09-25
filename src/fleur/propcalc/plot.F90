@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -359,8 +359,8 @@ CONTAINS
                   mz      = (rho_11-rho_22)
 
                   rvacxy(imesh,imz,ivac,1) = rhotot
-                  rvacxy(imesh,imz,ivac,2) = -mx
-                  rvacxy(imesh,imz,ivac,3) = -my
+                  rvacxy(imesh,imz,ivac,2) = mx
+                  rvacxy(imesh,imz,ivac,3) = my
                   rvacxy(imesh,imz,ivac,4) = mz
                END DO
                !$OMP END PARALLEL DO
@@ -380,8 +380,8 @@ CONTAINS
                mz      = (rho_11-rho_22)
 
                rht(imz,ivac,1) = rhotot
-               rht(imz,ivac,2) = -mx
-               rht(imz,ivac,3) = -my
+               rht(imz,ivac,2) = mx
+               rht(imz,ivac,3) = my
                rht(imz,ivac,4) = mz
             END DO
             !$OMP END PARALLEL DO
