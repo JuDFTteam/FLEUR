@@ -70,24 +70,13 @@ def _skip_without_wannier90(fleur_binary):
 #
 # Omega_I is fixed by the disentanglement (the optimal subspace) and is invariant
 # under the MLWF gauge; Omega_D + Omega_OD depend on which minimum the wannierise
-# iteration falls into, and that basin is decided by last-bit rounding (it moves
-# with the MPI rank count, the MKL code path and the node's vector width). Asserting
-# the total to 1e-5 therefore asserts on the unstable part: the previously stored
-# totals could not be reproduced by any commit in their own history -- they were
-# recorded in a different environment, not invalidated by a code change.
-#
-# So: Omega_I is the regression criterion, the total is kept only as a loose
-# sanity bound. Values measured at mpi=1 with MKL_CBWR=AVX2 / I_MPI_CBWR=1,
-# 2x2x2 mesh, itmax=1.
+# iteration falls into, and that basin is decided by last-bit rounding -- it moves with
+# the MPI rank count, the MKL code path and the node's vector width. So the invariant
+# part is what is asserted here and the total is not. Values measured at mpi=1 with
+# MKL_CBWR=AVX2 / I_MPI_CBWR=1, 2x2x2 mesh, itmax=1.
 EXPECTED_OMEGA_I = {
     "WannPt":        4.841073617,  # fcc Pt, no SOC (jspins=1)
-    # The four SOC values below moved together when the projection path under spin-orbit
-    # coupling was fixed: cac3cc311 made the Clebsch selection rule reject both signs, and
-    # 2948055d6 reached the j-resolved projections. Both change the .amn of a SOC run, and
-    # with it the subspace the disentanglement selects. Not a regression: every case WITHOUT
-    # SOC is unchanged, which is what places the cause in that path rather than anywhere
-    # else. Reproduced bit-for-bit in two independent runs at mpi=1 with CBWR.
-    "WannPtSOC":     9.754340102,  # fcc Pt, SOC (jspins=1, spinor); was 9.754677673
+    "WannPtSOC":     9.754340102,  # fcc Pt, SOC (jspins=1, spinor)
     "WannPtSOCOps":  9.754340102,  # same system + <operators_r>; identical to WannPtSOC
                                    # to the last digit -- the operator export is gauge-neutral
     "WannFeFM":     16.711628612,  # fcc Fe FM, noco (jspins=2), no SOC
@@ -126,9 +115,9 @@ _OP_R_FILES = ["WF1_hr.dat", "rspauli.1", "anglmomrs.1", "rssocmat.1", "wig_vect
 # The collinear no-SOC path writes one Hamiltonian per spin channel, and no spin-orbit
 # operator. Spin and orbital are single files: melem_rspauli_collinear and
 # melem_anglmom_collinear each assemble one 2N matrix out of both channels once they are
-# wannierised. anglmomrs.2 was dropped in 8da2ec7c8, which gave L the same 2N shape the spin
-# operator already had -- block-diagonal, one block per gauge, and the cross-spin block
-# identically zero because L acts on the spatial part alone.
+# wannierised. L has the same 2N shape as the spin operator -- block-diagonal, one block
+# per gauge, and the cross-spin block identically zero because L acts on the spatial part
+# alone.
 _OP_R_FILES_2CH = ["WF1_hr.dat", "WF2_hr.dat", "anglmomrs.1",
                    "rspauli.1", "wig_vectors"]
 OPERATOR_FILES = {
@@ -195,10 +184,6 @@ COLLINEAR_Z = ("WannFeBccSOC", "WannFeBcc")
 # overlap would fail. Only sigma_z: the transverse components live entirely in the
 # off-diagonal blocks, so their diagonal is zero by construction.
 # --- Wannier interpolation ----------------------------------------------------------
-#
-# Until this case there was no test of the interpolation at all: five drivers, and the
-# byte-identity references would have stayed identical with the velocity entirely broken,
-# because nothing any of them writes was ever compared.
 #
 # The assertion that carries it is reference-free and basin-independent: Wannier
 # interpolation is EXACT on the mesh it was built from. H_W(k) = V^dagger diag(eig) V is a
