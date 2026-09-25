@@ -18,6 +18,22 @@ WannFeBccInterp covers the interpolation drivers, on three output domains.
 from read_tests import read_tests
 all_tests = read_tests("wannier")
 
+_REFERENCE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..",
+                              "inputfiles")
+
+#: How far a Wannier spread may sit from the one the reference records. The run reproduces
+#: the reference exactly on the toolchain the reference was made with, so this is headroom
+#: for another compiler rather than a measured spread -- and still four orders below the
+#: 0.97 Ang^2 by which the stored report had drifted before it was refreshed.
+SPREAD_TOL = 1.0e-4
+
+
+def _reference_wannier_functions(dir):
+    """How many Wannier functions the stored reference reports, over all of its
+    <wannierlibReport> blocks -- a collinear case writes one per spin channel."""
+    with open(os.path.join(_REFERENCE_DIR, dir, "out.xml")) as fh:
+        return fh.read().count("<wannierFunction ")
+
 
 # ---------------------------------------------------------------- optional feature
 # Wannier90 is optional. A FLEUR configured without it carries no w90_library, and every
@@ -92,39 +108,6 @@ EXPECTED_OMEGA_I = {
 }
 OMEGA_I_TOL = 1.0e-5
 
-EXPECTED_OMEGA_TOTAL = {
-    "WannPt":        7.636581705,
-    "WannPtSOC":    12.483000588,
-    "WannPtSOCOps": 12.483000588,
-    "WannFeFM":     21.932264644,
-    "WannFeFMy":    21.932264644,
-    "WannFeAFM":    21.944290608,
-    "WannFeAFMSOC": 21.553130190,
-    # Omega_I is bit-identical to its stored value, so the disentanglement picks the same
-    # subspace and only the minimum the wannierisation lands on has moved: DOWN by 3.9 %,
-    # which is better localisation. A basin, not a regression.
-    "WannFeBccSOC":     6.864938142,
-    # Same reading as above: Omega_I bit-identical, Omega_total down by 2.3 %.
-    "WannFeAFMColSOC": 17.191744086,
-    "WannFeAFMSOCOps": 21.553130190,
-    # Both channels keep their Omega_I to the last digit; the totals drift by about 1 %.
-    # Both are stored so the pair stays consistent with one measurement rather than two.
-    "WannFeBcc": (3.635209206, 3.710153033),
-    "WannFeAFMCol": (8.608025966, 8.608033056),
-}
-# The totals above are the best minimum measured so far, and they are compared as a CEILING
-# rather than as a value to reproduce. Omega_total is a property of the basin the minimisation
-# lands in, and the basin is decided by rounding: it moves with the compiler (ifx 2025 and
-# 2026.1 differ by 2-3 % on WannFeBcc and WannFeAFMColSOC with bit-identical Omega_I), and it
-# would move again with the MPI rank count, the MKL kernel or the CPU. Asserting equality
-# asserts something that is not a property of the code -- which is why the entries above have
-# been rewritten after every such move.
-#
-# What IS a property of the code is caught by the two bounds actually made: Omega_I, which is
-# gauge-invariant and held to 1e-5, and Omega = Omega_I + Omega_OD with Omega_OD >= 0, which
-# puts an exact floor under the total. A minimisation that finds a lower minimum passes; one
-# that lands far above, or does not converge, does not.
-OMEGA_TOTAL_MAX_EXCESS = 0.05
 
 # Real-space operator files written by <operators_r>, per test id. Their presence is
 # asserted by the fixture; their contents are checked below.
@@ -421,7 +404,9 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
     test_id = dir.split("/")[-1]
     want_files = list(OPERATOR_FILES.get(test_id, ()))
     want_files += INTERP_FILES.get(test_id, [])
-    res = default_fleur_test(dir, files=want_files or None,
+    spreads = [["wannierFunction", "spread", i, SPREAD_TOL, None]
+               for i in range(_reference_wannier_functions(dir))]
+    res = default_fleur_test(dir, files=want_files or None, checks=spreads,
                              cmdline_args=cmdline, mpi_procs=mpi_procs)
 
     omega_i_got = ()
@@ -436,18 +421,12 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
                 f"gauge-invariant spread Omega_I {omega_i} of channel {ch} deviates from "
                 f"reference {ref} (tol {OMEGA_I_TOL})")
 
-    if test_id in EXPECTED_OMEGA_TOTAL:
-        refs = _as_tuple(EXPECTED_OMEGA_TOTAL[test_id])
+    # Omega = Omega_I + Omega_OD with Omega_OD >= 0. An identity, so it holds whatever
+    # basin the run found -- and it is what stops a run that computed nothing from passing
+    # a comparison against spreads it produced itself.
+    if omega_i_got:
         got = _last_n(grep_number(res["out"], "Omega Total", split="=", res_index=None),
-                      len(refs))
-        for ch, (ref, omega) in enumerate(zip(refs, got), start=1):
-            assert omega <= ref * (1.0 + OMEGA_TOTAL_MAX_EXCESS), (
-                f"total spread Omega {omega} of channel {ch} is more than "
-                f"{100 * OMEGA_TOTAL_MAX_EXCESS}% above the best measured minimum {ref} -- "
-                f"the minimisation landed in a much worse basin, or did not converge")
-        # Omega = Omega_I + Omega_OD with Omega_OD >= 0. Unlike the ceiling above this is an
-        # identity, so it holds whatever basin the run found -- and it is what stops a run
-        # that computed nothing from passing a test that only bounds the total from above.
+                      len(omega_i_got))
         for ch, (omega_i, omega) in enumerate(zip(omega_i_got, got), start=1):
             assert omega >= omega_i - OMEGA_I_TOL, (
                 f"total spread Omega {omega} of channel {ch} is below its own invariant part "
