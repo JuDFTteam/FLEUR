@@ -65,15 +65,7 @@ CONTAINS
     INTEGER, ALLOCATABLE, INTENT(OUT) :: gkpb(:, :, :)
     INTEGER, INTENT(IN) :: distk(:)
 
-    INTEGER :: nn
     INTEGER :: ich
-    INTEGER :: na, itype
-    INTEGER :: ierr
-    INTEGER :: mp_grid(3)
-    LOGICAL :: gamma_only
-    CHARACTER(LEN=2) :: atom_symbol
-    CHARACTER(LEN=32) :: seedname
-    CHARACTER(LEN=128), ALLOCATABLE :: atoms_frac(:)
 
     IF (.NOT.this%l_wannierize) RETURN
 
@@ -83,6 +75,44 @@ CONTAINS
 #else
     
     call timestart('init_w90')
+    CALL set_w90_options(this, atoms, cell, kpts, fmpi, spinors, distk)
+    CALL get_w90_topology(kpts, nntot_w90, nnkp, gkpb)
+
+
+    !> The per-channel instances are built here, where the cell, the mesh and the atoms are
+    !> in scope, and used in run_w90. Only when the mode is on: an unused instance would
+    !> still print its banner and build its own k-mesh.
+    IF (this%dis_spin_balanced) THEN
+      DO ich = 1, 2
+        CALL setup_channel(wannierlib_w90chan(ich), this, atoms, cell, kpts, fmpi, spinors, &
+                           distk, ich)
+      END DO
+    END IF
+    call timestop('init_w90')
+#endif
+  END SUBROUTINE init_w90
+
+
+#ifdef CPP_WANNLIB_API
+  !> Hand Wannier90 everything the input states, and commit it. Nothing is decided here:
+  !> what is set is what <wannierlib> carries, converted where the two differ on units --
+  !> Hartree here and electronvolt there, Bohr here and Angstrom there.
+  SUBROUTINE set_w90_options(this, atoms, cell, kpts, fmpi, spinors, distk)
+    TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
+    TYPE(t_atoms), INTENT(IN) :: atoms
+    TYPE(t_cell), INTENT(IN) :: cell
+    TYPE(t_kpts), INTENT(IN) :: kpts
+    TYPE(t_mpi), INTENT(IN) :: fmpi
+    LOGICAL, INTENT(IN) :: spinors
+    INTEGER, INTENT(IN) :: distk(:)
+
+    INTEGER :: na, itype, ierr
+    INTEGER :: mp_grid(3)
+    LOGICAL :: gamma_only
+    CHARACTER(LEN=2) :: atom_symbol
+    CHARACTER(LEN=32) :: seedname
+    CHARACTER(LEN=128), ALLOCATABLE :: atoms_frac(:)
+
     CALL w90_set_comm(wannierlib_w90main, fmpi%mpi_comm)
 
     mp_grid = kpts%nkpt3  !TODO: is this correct????
@@ -108,7 +138,7 @@ CONTAINS
     CALL w90_set_option(wannierlib_w90main, 'distk', distk)
 
     ALLOCATE(atoms_frac(atoms%nat), stat=ierr)
-    IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating atoms_frac buffer', calledby='init_w90')
+    IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating atoms_frac buffer', calledby='set_w90_options')
     DO na = 1, atoms%nat
       itype = atoms%itype(na)
       atom_symbol = ADJUSTL(namat_const(atoms%nz(itype)))
@@ -153,35 +183,35 @@ CONTAINS
 
     seedname = 'fleur_wlib_internal'
     CALL w90_input_setopt(wannierlib_w90main, seedname, oUnit, oUnit, ierr)
-    IF (ierr /= 0) CALL juDFT_error('w90_input_setopt failed in wannierlib adapter', calledby='init_w90')
+    IF (ierr /= 0) CALL juDFT_error('w90_input_setopt failed in wannierlib adapter', calledby='set_w90_options')
+  END SUBROUTINE set_w90_options
+
+  !> The neighbour topology Wannier90 chose, read back out. It is available only once the
+  !> options are committed, because that is when the k-mesh exists.
+  SUBROUTINE get_w90_topology(kpts, nntot_w90, nnkp, gkpb)
+    TYPE(t_kpts), INTENT(IN) :: kpts
+    INTEGER, INTENT(OUT) :: nntot_w90
+    INTEGER, ALLOCATABLE, INTENT(OUT) :: nnkp(:, :)
+    INTEGER, ALLOCATABLE, INTENT(OUT) :: gkpb(:, :, :)
+
+    INTEGER :: nn, ierr
 
     CALL w90_get_nn(wannierlib_w90main, nn, oUnit, oUnit, ierr)
-    IF (ierr /= 0) CALL juDFT_error('w90_get_nn failed in wannierlib adapter', calledby='init_w90')
+    IF (ierr /= 0) CALL juDFT_error('w90_get_nn failed in wannierlib adapter', calledby='get_w90_topology')
     nntot_w90 = nn
-    IF (nntot_w90 <= 0) CALL juDFT_error('wannierlib invalid nntot from w90_get_nn', calledby='init_w90')
+    IF (nntot_w90 <= 0) CALL juDFT_error('wannierlib invalid nntot from w90_get_nn', calledby='get_w90_topology')
 
     ALLOCATE(nnkp(kpts%nkptf, nntot_w90), stat=ierr)
-    IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating nnkp', calledby='init_w90')
+    IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating nnkp', calledby='get_w90_topology')
     CALL w90_get_nnkp(wannierlib_w90main, nnkp, oUnit, oUnit, ierr)
-    IF (ierr /= 0) CALL juDFT_error('w90_get_nnkp failed in wannierlib adapter', calledby='init_w90')
+    IF (ierr /= 0) CALL juDFT_error('w90_get_nnkp failed in wannierlib adapter', calledby='get_w90_topology')
 
     ALLOCATE(gkpb(3, kpts%nkptf, nntot_w90), stat=ierr)
-    IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating gkpb', calledby='init_w90')
+    IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating gkpb', calledby='get_w90_topology')
     CALL w90_get_gkpb(wannierlib_w90main, gkpb, oUnit, oUnit, ierr)
-    IF (ierr /= 0) CALL juDFT_error('w90_get_gkpb failed in wannierlib adapter', calledby='init_w90')
-
-    !> The per-channel instances are built here, where the cell, the mesh and the atoms are
-    !> in scope, and used in run_w90. Only when the mode is on: an unused instance would
-    !> still print its banner and build its own k-mesh.
-    IF (this%dis_spin_balanced) THEN
-      DO ich = 1, 2
-        CALL setup_channel(wannierlib_w90chan(ich), this, atoms, cell, kpts, fmpi, spinors, &
-                           distk, ich)
-      END DO
-    END IF
-    call timestop('init_w90')
+    IF (ierr /= 0) CALL juDFT_error('w90_get_gkpb failed in wannierlib adapter', calledby='get_w90_topology')
+  END SUBROUTINE get_w90_topology
 #endif
-  END SUBROUTINE init_w90
 
 !> Guarded whole: unlike the routines around it, this one names lib_common_type in its
 !> SIGNATURE, and a dummy-argument declaration cannot be handled by the #ifndef-and-error
@@ -292,14 +322,10 @@ CONTAINS
     REAL, ALLOCATABLE, TARGET :: eig_ev(:, :)         ! eigenvalues in eV for the w90 library (banner honesty)
     LOGICAL :: l_balanced
     INTEGER :: nw, nnt, ik, nn, jk, iw
-    INTEGER :: nper, ich, i, j
-    INTEGER, ALLOCATABLE :: idx(:, :)
     COMPLEX, ALLOCATABLE, TARGET :: mred(:, :, :, :), ared(:, :, :)
     REAL, ALLOCATABLE, TARGET :: ered(:, :)
     !> TARGET, and kept alive until the wannierisation of their channel has returned:
     !> w90_set_* stores pointers to these, it does not copy them.
-    COMPLEX, ALLOCATABLE, TARGET :: mch(:, :, :, :), ach(:, :, :), uch(:, :, :)
-    REAL, ALLOCATABLE, TARGET :: ech(:, :)
 
     ! allocate the INTENT(OUT) results before any early return, so a caller can never pass
     ! unallocated arrays on to the matrix-element layer
@@ -403,53 +429,7 @@ CONTAINS
       !> there. An earlier estimate of +0.717 came from projecting a mixed solution onto the
       !> blocks, which is not the same thing as minimising within them and is only an upper
       !> bound.
-      nper = this%num_wann/2
-      ALLOCATE(idx(nper, 2))
-      CALL channel_columns(this, idx)
-      ALLOCATE(mch(nper, nper, nnt, num_kpts), ach(nper, nper, num_kpts), &
-               ech(nper, num_kpts), uch(nper, nper, num_kpts))
-      DO ich = 1, 2
-        DO ik = 1, num_kpts
-          DO nn = 1, nnt
-            DO j = 1, nper
-              DO i = 1, nper
-                mch(i, j, nn, ik) = mred(idx(i, ich), idx(j, ich), nn, ik)
-              END DO
-            END DO
-          END DO
-          DO j = 1, nper
-            DO i = 1, nper
-              ach(i, j, ik) = ared(idx(i, ich), idx(j, ich), ik)
-            END DO
-          END DO
-          DO i = 1, nper
-            ech(i, ik) = ered(idx(i, ich), ik)
-          END DO
-        END DO
-        uch = CMPLX(0.0, 0.0)
-        CALL w90_set_eigval(wannierlib_w90chan(ich), ech)
-        CALL w90_set_m_local(wannierlib_w90chan(ich), mch)
-        CALL w90_set_u_opt(wannierlib_w90chan(ich), ach)
-        CALL w90_set_u_matrix(wannierlib_w90chan(ich), uch)
-        CALL w90_project_overlap(wannierlib_w90chan(ich), oUnit, oUnit, ierr)
-        IF (ierr /= 0) CALL juDFT_error('w90_project_overlap failed for a spin channel', &
-                                        calledby='run_w90')
-        CALL w90_wannierise(wannierlib_w90chan(ich), oUnit, oUnit, ierr)
-        IF (ierr /= 0) CALL juDFT_error('w90_wannierise failed for a spin channel', &
-                                        calledby='run_w90')
-        !> Straight back into the block it came from. What stays outside the two blocks is
-        !> the zero u_matrix was allocated with, and that is not a convention: there is
-        !> nothing to put there, the channels do not talk to each other.
-        DO ik = 1, num_kpts
-          DO j = 1, nper
-            DO i = 1, nper
-              u_matrix(idx(i, ich), idx(j, ich), ik) = uch(i, j, ik)
-            END DO
-          END DO
-        END DO
-      END DO
-      WRITE (oUnit, '(a,i0,a)') 'wannierlib: wannierised each spin channel on its own, ', &
-        nper, ' Wannier functions in each'
+      CALL wannierise_channels(this, mred, ared, ered, num_kpts, nnt, u_matrix)
     ELSE
       CALL w90_project_overlap(wannierlib_w90main, oUnit, oUnit, ierr)
       IF (ierr /= 0) CALL juDFT_error('w90_project_overlap failed in wannierlib adapter', calledby='run_w90')
@@ -461,6 +441,84 @@ CONTAINS
     call timestop('run_w90')
 #endif
   END SUBROUTINE run_w90
+
+#ifdef CPP_WANNLIB_API
+  !> One wannierisation per spin channel, each in its own Wannier90 instance.
+  !>
+  !> Restricting the minimisation itself is not an option -- Wannier90 is read, never
+  !> patched -- and it does not need to be: M_red is block diagonal to machine precision, so
+  !> the two channels are two independent problems of num_wann/2 functions and the mixing
+  !> has nowhere to happen. u_opt, A_red and M_red all come out blocked by construction, so
+  !> the ordinary minimisation starts inside the block manifold and in exact arithmetic the
+  !> gradient cannot take it out; Wannier90 leaves it anyway whenever the moment is not
+  !> along z, and the functions then stop being spin eigenstates.
+  !>
+  !> What comes back goes straight into the block it came from. Everything outside the two
+  !> blocks is the zero u_matrix arrived with, and that is not a convention: there is
+  !> nothing to put there, the channels do not talk to each other.
+  SUBROUTINE wannierise_channels(this, mred, ared, ered, num_kpts, nnt, u_matrix)
+    TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
+    COMPLEX, INTENT(IN) :: mred(:, :, :, :)
+    COMPLEX, INTENT(IN) :: ared(:, :, :)
+    REAL, INTENT(IN) :: ered(:, :)
+    INTEGER, INTENT(IN) :: num_kpts, nnt
+    COMPLEX, INTENT(INOUT) :: u_matrix(:, :, :)
+
+    INTEGER :: nper, ich, ik, nn, i, j, ierr
+    INTEGER, ALLOCATABLE :: idx(:, :)
+    COMPLEX, ALLOCATABLE, TARGET :: mch(:, :, :, :), ach(:, :, :), uch(:, :, :)
+    REAL, ALLOCATABLE, TARGET :: ech(:, :)
+
+    nper = this%num_wann/2
+    ALLOCATE(idx(nper, 2))
+    CALL channel_columns(this, idx)
+    ALLOCATE(mch(nper, nper, nnt, num_kpts), ach(nper, nper, num_kpts), &
+             ech(nper, num_kpts), uch(nper, nper, num_kpts))
+    DO ich = 1, 2
+      DO ik = 1, num_kpts
+        DO nn = 1, nnt
+          DO j = 1, nper
+            DO i = 1, nper
+              mch(i, j, nn, ik) = mred(idx(i, ich), idx(j, ich), nn, ik)
+            END DO
+          END DO
+        END DO
+        DO j = 1, nper
+          DO i = 1, nper
+            ach(i, j, ik) = ared(idx(i, ich), idx(j, ich), ik)
+          END DO
+        END DO
+        DO i = 1, nper
+          ech(i, ik) = ered(idx(i, ich), ik)
+        END DO
+      END DO
+      uch = CMPLX(0.0, 0.0)
+      CALL w90_set_eigval(wannierlib_w90chan(ich), ech)
+      CALL w90_set_m_local(wannierlib_w90chan(ich), mch)
+      CALL w90_set_u_opt(wannierlib_w90chan(ich), ach)
+      CALL w90_set_u_matrix(wannierlib_w90chan(ich), uch)
+      CALL w90_project_overlap(wannierlib_w90chan(ich), oUnit, oUnit, ierr)
+      IF (ierr /= 0) CALL juDFT_error('w90_project_overlap failed for a spin channel', &
+                                      calledby='wannierise_channels')
+      CALL w90_wannierise(wannierlib_w90chan(ich), oUnit, oUnit, ierr)
+      IF (ierr /= 0) CALL juDFT_error('w90_wannierise failed for a spin channel', &
+                                      calledby='wannierise_channels')
+      !> Straight back into the block it came from. What stays outside the two blocks is
+      !> the zero u_matrix was allocated with, and that is not a convention: there is
+      !> nothing to put there, the channels do not talk to each other.
+      DO ik = 1, num_kpts
+        DO j = 1, nper
+          DO i = 1, nper
+            u_matrix(idx(i, ich), idx(j, ich), ik) = uch(i, j, ik)
+          END DO
+        END DO
+      END DO
+    END DO
+    WRITE (oUnit, '(a,i0,a)') 'wannierlib: wannierised each spin channel on its own, ', &
+      nper, ' Wannier functions in each'
+  END SUBROUTINE wannierise_channels
+#endif
+
 
   !> Export the coarse-mesh b-shell / neighbour information that the Wannier90 kmesh setup
   !> produced, as a plain t_wgauge_bmesh. This is the ONE piece of Wannier90 state the
