@@ -16,6 +16,17 @@ between spin and atom type from a layout that happens to coincide in memory.
 WannFeBccInterp covers the interpolation drivers, on three output domains.
 """
 from read_tests import read_tests
+from wannier_files import (anglmom_r0,
+                            anglmom_r0_hermiticity,
+                            anglmom_r0_traces,
+                            as_tuple,
+                            dat_rows,
+                            last_n,
+                            nonzero_entries,
+                            outxml_eigenvalues,
+                            rspauli_r0_diagonal_max,
+                            rspauli_r0_diagonal_sums,
+                            spin_sumrule_values)
 all_tests = read_tests("wannier")
 
 _REFERENCE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..",
@@ -166,18 +177,6 @@ SPIN_SUM_TOL = 0.05
 PURE_SPINOR = ("WannFeFMy",)
 PURE_SPINOR_TOL = 1.0e-3
 
-def _spin_sumrule_values(path):
-    """The |<s>| column of every 'spin sum-rule check' block FLEUR prints."""
-    txt = open(path, errors="ignore").read()
-    out = []
-    for blk in re.findall(r"wannierlib spin sum-rule check, k = \d+\n.*?\n"
-                          r"((?:\s+\d+\s+[-\d.]+.*\n)+)", txt):
-        for line in blk.strip().split("\n"):
-            p = line.split()
-            if len(p) == 6:
-                out.append(float(p[5]))
-    return out
-
 
 NONMAGNETIC = ("WannPtSOCOps", "WannFeAFMColSOC", "WannFeAFMCol")
 
@@ -250,41 +249,6 @@ SIGMA_Z_UNIT = ("WannFeBcc", "WannFeAFMCol")
 SIGMA_Z_TOL = 1.0e-8
 
 
-def _outxml_eigenvalues(path):
-    """{(spin, ikpt): [eigenvalues, Htr]} from the <eigenvaluesAt> blocks of out.xml."""
-    import re
-    out = {}
-    for m in re.finditer(
-            r'<eigenvaluesAt spin="(\d+)" ikpt="(\d+)"[^>]*>(.*?)</eigenvaluesAt>',
-            open(path).read(), re.S):
-        out[(int(m.group(1)), int(m.group(2)))] = [float(x) for x in m.group(3).split()]
-    return out
-
-
-def _dat_rows(path):
-    """Numeric rows of a bands_wann_*.dat: kdist first, then the per-band payload."""
-    rows = []
-    for line in open(path):
-        if line.lstrip().startswith("#"):
-            continue
-        f = line.split()
-        if len(f) > 1:
-            rows.append([float(x) for x in f])
-    return rows
-
-def _rspauli_r0_diagonal_sums(path):
-    """Per-component sum of Re O_nn over the R=0 diagonal of a 'generic'-format O(R) file."""
-    tot = {}
-    with open(path) as fh:
-        for line in fh:
-            f = line.split()
-            if len(f) < 8:
-                continue
-            if f[0] == f[1] == f[2] == "0" and f[3] == f[4]:
-                tot[f[5]] = tot.get(f[5], 0.0) + float(f[6])
-    return tot
-
-
 # anglmomrs.1 holds L(R). Two things are checked, both reference-free.
 #
 # L(R=0) is a matrix of <w_0i|L|w_0j> and must be hermitian, whatever the gauge.
@@ -320,80 +284,6 @@ L_SUM_ZERO = ("WannFeAFMColSOC", "WannFeBcc", "WannFeAFMCol")
 # cancelling.
 
 
-def _anglmom_r0(path):
-    """R=0 block of a 'generic'-format O(R) file as {comp: {(i,j): complex}}."""
-    blocks = {}
-    with open(path) as fh:
-        for line in fh:
-            f = line.split()
-            if len(f) < 8 or not (f[0] == f[1] == f[2] == "0"):
-                continue
-            blocks.setdefault(f[5], {})[(int(f[3]), int(f[4]))] = complex(
-                float(f[6]), float(f[7]))
-    return blocks
-
-
-def _anglmom_r0_traces(path):
-    """Per-component trace of the R=0 block: sum_n <w_0n|L|w_0n>."""
-    return {c: sum(v.real for (i, j), v in b.items() if i == j)
-            for c, b in _anglmom_r0(path).items()}
-
-
-def _anglmom_r0_hermiticity(path):
-    """Largest |L_ij - conj(L_ji)| over the R=0 block, worst component."""
-    worst = 0.0
-    for b in _anglmom_r0(path).values():
-        for (i, j), v in b.items():
-            w = b.get((j, i))
-            if w is not None:
-                worst = max(worst, abs(v - w.conjugate()))
-    return worst
-
-
-def _rspauli_r0_diagonal_max(path):
-    """Largest |Re O_nn| over the R=0 diagonal of a 'generic'-format O(R) file.
-    Layout (see m_matrixelement_io): R1 R2 R3  i j comp  Re Im."""
-    worst = 0.0
-    with open(path) as fh:
-        for line in fh:
-            f = line.split()
-            if len(f) < 8:
-                continue
-            if f[0] == f[1] == f[2] == "0" and f[3] == f[4]:
-                worst = max(worst, abs(float(f[6])))
-    return worst
-
-
-def _as_tuple(v):
-    """A reference is either one number or one per wannierised spin channel."""
-    return v if isinstance(v, tuple) else (v,)
-
-
-def _last_n(values, n):
-    """The last n matches, so a per-iteration echo of the same label cannot shift them."""
-    vals = values if isinstance(values, list) else [values]
-    assert len(vals) >= n, f"expected {n} values in the output, found {len(vals)}"
-    return vals[-n:]
-
-
-def _nonzero_entries(path):
-    """Number of entries of an O(R) file that are not exactly zero.
-
-    Reads the real and imaginary parts as the last two fields rather than at a fixed
-    column: the number of index columns before them is not the same in every file, since
-    a spinor operator is indexed by two spin labels where a vector operator carries one
-    component label."""
-    n = 0
-    with open(path) as fh:
-        for line in fh:
-            f = line.split()
-            if len(f) < 8:
-                continue
-            if float(f[-2]) != 0.0 or float(f[-1]) != 0.0:
-                n += 1
-    return n
-
-
 @pytest.mark.fleur
 @pytest.mark.wannierlib
 @pytest.mark.parametrize(("dir", "desc", "cmdline", "mpi_procs"), all_tests)
@@ -413,8 +303,8 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
     if test_id in EXPECTED_OMEGA_I:
         # A tuple means the run wannierises more than once -- one collinear spin channel
         # after the other -- so every value is checked, in the order they are written.
-        refs = _as_tuple(EXPECTED_OMEGA_I[test_id])
-        omega_i_got = _last_n(grep_number(res["out"], "Omega I", split="=", res_index=None),
+        refs = as_tuple(EXPECTED_OMEGA_I[test_id])
+        omega_i_got = last_n(grep_number(res["out"], "Omega I", split="=", res_index=None),
                               len(refs))
         for ch, (ref, omega_i) in enumerate(zip(refs, omega_i_got), start=1):
             assert abs(omega_i - ref) < OMEGA_I_TOL, (
@@ -425,7 +315,7 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
     # basin the run found -- and it is what stops a run that computed nothing from passing
     # a comparison against spreads it produced itself.
     if omega_i_got:
-        got = _last_n(grep_number(res["out"], "Omega Total", split="=", res_index=None),
+        got = last_n(grep_number(res["out"], "Omega Total", split="=", res_index=None),
                       len(omega_i_got))
         for ch, (omega_i, omega) in enumerate(zip(omega_i_got, got), start=1):
             assert omega >= omega_i - OMEGA_I_TOL, (
@@ -437,25 +327,25 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
         # sums, the vanishing orbital traces -- and a file of zeros satisfies all of them,
         # so an operator that computes nothing passes every check made on its output.
         for name in [f for f in OPERATOR_FILES[test_id] if f in GENERIC_OP_FILES]:
-            assert _nonzero_entries(res[name]) > 0, (
+            assert nonzero_entries(res[name]) > 0, (
                 f"{name}: every entry is zero, so the operator wrote a correctly shaped "
                 "file with nothing in it")
 
     if "rspauli.1" in OPERATOR_FILES.get(test_id, ()):
-        worst = _rspauli_r0_diagonal_max(res["rspauli.1"])
+        worst = rspauli_r0_diagonal_max(res["rspauli.1"])
         assert worst < PAULI_BOUND, (
             f"rspauli.1: max |<w_0n|sigma|w_0n>| = {worst} exceeds the Pauli bound 1; "
             "the coarse operator pass is using an inconsistent (zMat, jspin) pairing")
 
     if test_id in NONMAGNETIC:
-        sums = _rspauli_r0_diagonal_sums(res["rspauli.1"])
+        sums = rspauli_r0_diagonal_sums(res["rspauli.1"])
         for comp, total in sorted(sums.items()):
             assert abs(total) < SPIN_SUM_TOL, (
                 f"rspauli.1: sum over the R=0 diagonal of component {comp} is {total}, "
                 f"but a non-magnetic system must give 0 (tol {SPIN_SUM_TOL})")
 
     if test_id in COLLINEAR_Z:
-        sums = _rspauli_r0_diagonal_sums(res["rspauli.1"])
+        sums = rspauli_r0_diagonal_sums(res["rspauli.1"])
         for comp in ("1", "2"):
             total = sums.get(comp, 0.0)
             assert abs(total) < SPIN_SUM_TOL, (
@@ -463,7 +353,7 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
                 f"collinear magnet along z must give 0 (tol {SPIN_SUM_TOL})")
 
     if test_id in SIGMA_Z_UNIT:
-        diag = [v for (i, j), v in _anglmom_r0(res["rspauli.1"]).get("3", {}).items() if i == j]
+        diag = [v for (i, j), v in anglmom_r0(res["rspauli.1"]).get("3", {}).items() if i == j]
         assert diag, "rspauli.1: no sigma_z entries on the R=0 diagonal"
         worst = max(abs(abs(v.real) - 1.0) for v in diag)
         assert worst < SIGMA_Z_TOL, (
@@ -471,14 +361,14 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
             f"function lies wholly in one spin channel (tol {SIGMA_Z_TOL})")
 
     for name in [f for f in OPERATOR_FILES.get(test_id, ()) if f.startswith("anglmomrs")]:
-        worst = _anglmom_r0_hermiticity(res[name])
+        worst = anglmom_r0_hermiticity(res[name])
         assert worst < L_HERM_TOL, (
             f"{name}: L(R=0) is off hermitian by {worst}; <w_0i|L|w_0j> and "
             f"<w_0j|L|w_0i>* must agree (tol {L_HERM_TOL})")
 
     if test_id in L_SUM_ZERO:
         for name in [f for f in OPERATOR_FILES[test_id] if f.startswith("anglmomrs")]:
-            for comp, total in sorted(_anglmom_r0_traces(res[name]).items()):
+            for comp, total in sorted(anglmom_r0_traces(res[name]).items()):
                 assert abs(total) < L_SUM_TOL, (
                     f"{name}: trace of component {comp} is {total}, but this manifold "
                     f"carries no net orbital moment (tol {L_SUM_TOL})")
@@ -486,10 +376,10 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
     if test_id in INTERP_EXACT:
         # The eigenvalues the same run wrote, as the reference for its own interpolation.
         lo, hi = INTERP_EXACT[test_id]
-        ref = _outxml_eigenvalues(res["out.xml"])
+        ref = outxml_eigenvalues(res["out.xml"])
         assert ref, "out.xml carries no <eigenvaluesAt> blocks to check the interpolation against"
         for ch in (1, 2):
-            rows = _dat_rows(res["bands_wann_interpol_spin%d.dat" % ch])
+            rows = dat_rows(res["bands_wann_interpol_spin%d.dat" % ch])
             assert rows, "bands_wann_interpol_spin%d.dat has no data rows" % ch
             for ik, row in enumerate(rows, start=1):
                 want = sorted(ref[(ch, ik)][lo - 1:hi])
@@ -507,7 +397,7 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
         # Shape, and that it is not a file of zeros. dE/dk is only forced to vanish on the
         # high-symmetry mesh, so on the fine path an all-zero velocity means the driver
         # produced nothing -- which every other check here would accept.
-        rows = _dat_rows(res[VELOCITY_FINE[test_id]])
+        rows = dat_rows(res[VELOCITY_FINE[test_id]])
         assert rows, "the velocity file on the fine path has no data rows"
         nw = (len(rows[0]) - 1) // 4          # per band: E, vx, vy, vz
         assert nw >= 1 and len(rows[0]) == 1 + 4 * nw, (
@@ -519,7 +409,7 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
             "wrote a correctly shaped file with nothing in it")
 
     if test_id in L_TRANSVERSE_ZERO:
-        traces = _anglmom_r0_traces(res["anglmomrs.1"])
+        traces = anglmom_r0_traces(res["anglmomrs.1"])
         for comp in ("1", "2"):
             total = traces.get(comp, 0.0)
             assert abs(total) < L_SUM_TOL, (
@@ -528,7 +418,7 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
 
     # Pure spinors: see PURE_SPINOR above. Reads what FLEUR already printed.
     if test_id in PURE_SPINOR:
-        vals = _spin_sumrule_values(res["out"])
+        vals = spin_sumrule_values(res["out"])
         assert vals, ("no spin sum-rule block in the output -- this test needs "
                       "<operators_r> with the spin operator")
         worst = min(vals)
