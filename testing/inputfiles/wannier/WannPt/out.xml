@@ -1388,15 +1388,15 @@
          <sumValenceSingleParticleEnergies value="-4.3089910278" units="Htr"/>
          <FermiEnergy value="0.5410478725" units="Htr"/>
          <wannierlibReport>
-            <wannierFunction index="1" x="-0.000000091837" y="0.000000072555" z="-0.000000008665" spread="0.644050080119"/>
-            <wannierFunction index="2" x="-0.000000501869" y="-0.000000197618" z="0.000000407239" spread="0.644048637957"/>
-            <wannierFunction index="3" x="-0.000000238825" y="-0.000000419977" z="0.000000311779" spread="0.644051737756"/>
-            <wannierFunction index="4" x="-0.481157781079" y="0.237052627011" z="-0.479262263617" spread="0.717604593926"/>
-            <wannierFunction index="5" x="0.481157417516" y="-0.237052824904" z="0.479262265480" spread="0.717604551224"/>
-            <wannierFunction index="6" x="-0.479336804880" y="-0.481116314898" z="0.236963593721" spread="0.717607134602"/>
-            <wannierFunction index="7" x="0.479338294640" y="0.481117878600" z="-0.236963914512" spread="0.717607750877"/>
-            <wannierFunction index="8" x="-0.236881966681" y="0.479292726135" z="0.481192269747" spread="0.717610314008"/>
-            <wannierFunction index="9" x="0.236881798490" y="-0.479293445170" z="-0.481192689014" spread="0.717610508767"/>
+            <wannierFunction index="1" x="0.000000000000" y="0.000000000000" z="0.000000000000" spread="0.631563515460"/>
+            <wannierFunction index="2" x="0.000000000000" y="-0.000000000000" z="-0.000000000000" spread="0.631563515460"/>
+            <wannierFunction index="3" x="0.000000000000" y="0.000000000000" z="0.000000000000" spread="0.631563515460"/>
+            <wannierFunction index="4" x="0.086561352075" y="-0.000000000000" z="-0.000000000000" spread="0.956981859720"/>
+            <wannierFunction index="5" x="-0.086561352075" y="-0.000000000000" z="-0.000000000000" spread="0.956981859720"/>
+            <wannierFunction index="6" x="-0.000000000000" y="0.086561352075" z="0.000000000000" spread="0.956981859719"/>
+            <wannierFunction index="7" x="0.000000000000" y="-0.086561352075" z="-0.000000000000" spread="0.956981859720"/>
+            <wannierFunction index="8" x="0.000000000000" y="0.000000000000" z="0.086561352075" spread="0.956981859719"/>
+            <wannierFunction index="9" x="0.000000000000" y="0.000000000000" z="-0.086561352075" spread="0.956981859720"/>
          </wannierlibReport>
       </iteration>
    </scfLoop>
