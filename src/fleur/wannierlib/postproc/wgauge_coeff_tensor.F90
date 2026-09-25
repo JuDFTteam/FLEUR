@@ -12,7 +12,7 @@
 !>     C(R) = <0n|r_a H r_b|Rm>      the same one with the Hamiltonian in the middle
 !>
 !>  They are two different physical objects and keep two entry points, but the Fourier sum
-!>  is the same and used to be written twice. What separates them is one line: the length
+!>  is the same. What separates them is one line: the length
 !>  units are already Angstrom squared in both, and the Hamiltonian in C adds an energy that
 !>  the 'cart2e' layout converts to eV, so that C sits next to an H(R) and a B(R) that are
 !>  in eV. F needs no conversion and goes out through 'cart2'.

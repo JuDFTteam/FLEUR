@@ -113,7 +113,7 @@ CONTAINS
       DO a = 1, 3
         vc(:, :, a) = MATMUL(v_interp(:, :, a, ip), cvec)         ! v_interp_a . C
       END DO
-      ! ---- diagonal band velocity <n|v|n> = dE_n/dk (unchanged, byte-identical) ----
+      ! ---- diagonal band velocity <n|v|n> = dE_n/dk ----
       WRITE(iu,'(f12.6)', advance='no') kdist(ip)
       DO m = 1, num_wann
         DO a = 1, 3

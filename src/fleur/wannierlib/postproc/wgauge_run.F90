@@ -98,10 +98,6 @@ CONTAINS
       !> Only a contradiction is an error: operators to interpolate but nowhere to do it.
       !> This pass runs on every wannierisation, so most calculations arrive here with
       !> neither, and that is not a request that failed -- it is no request at all.
-      !>
-      !> Asking for operators without saying where used to fall through to a hand-written
-      !> k-point file, and without one every driver reported "skipped": the run produced
-      !> nothing and said so only in the output file.
       IF (request%n_ops > 0 .AND. ndom == 0) CALL juDFT_error( &
          'wannierlib: <interpolation> asks for operators but declares no output domain', &
          hint='add a <domain> with a listName naming a kPointList', &

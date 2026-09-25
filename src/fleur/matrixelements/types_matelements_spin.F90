@@ -185,8 +185,7 @@ CONTAINS
                      cx = loc(1,2) + loc(2,1)
                      cy = -ImagUnit * (loc(1,2) - loc(2,1))
                      cz = loc(1,1) - loc(2,2)
-                     ! R_z(-alpha) R_y(beta). It read R_z(+alpha) R_y(beta) before,
-                     ! which is the same expression with the sign of sa flipped.
+                     ! R_z(-alpha) R_y(beta).
                      gx =  ca*cb*cx - sa*cy + ca*sb*cz
                      gy =  sa*cb*cx + ca*cy + sa*sb*cz
                      gz = -sb*cx           + cb*cz

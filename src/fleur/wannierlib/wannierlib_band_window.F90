@@ -25,8 +25,7 @@ CONTAINS
    !
    ! Measuring the range anywhere else is a silent trap: taken from the SCF mesh, which need
    ! not contain Gamma, the minimum comes out ABOVE the true one, states fall outside the
-   ! window at some k, and Wannier90 drops them without a word -- in Pt that cost 7 of 512
-   ! k-points two of their 36 states.
+   ! window at some k, and Wannier90 drops them without a word.
    !
    ! A margin of one microhartree is added on each side so that a band sitting exactly on the
    ! edge is not dropped by rounding.

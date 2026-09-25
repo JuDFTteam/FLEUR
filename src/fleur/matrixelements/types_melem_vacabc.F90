@@ -12,9 +12,8 @@
 !>      psi_n = sum_Gpar e^{i (k_par + G_par).r_par} [ ac(Gpar,n) u(z) + bc(Gpar,n) ue(z) ]
 !>
 !>  and ac/bc are what every vacuum matrix element contracts. The pair overlap and the
-!>  momentum both need them, which is why they are built once here rather than inside each
-!>  consumer: the classic tree builds them twice, inline in wann_mmkb_vac and again in
-!>  wann_2dvacabcof for the plots.
+!>  momentum both need them, which is why they are built once here rather than inside
+!>  each consumer.
 !>
 !>  SLOTS, NOT VACUA. A film has two sides, but under mirror symmetry FLEUR stores only one
 !>  of them (vacuum%nvac == 1) and the other follows from z -> -z. Rather than teach every

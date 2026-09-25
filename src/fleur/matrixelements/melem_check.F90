@@ -7,7 +7,7 @@
 !>  at one k-point. They know nothing about which operator it is, which is what makes
 !>  them worth having: a new provider gets them for free.
 !>
-!>  Three checks, and each one catches a mistake we have actually made or nearly made:
+!>  Three checks, and each one catches a mistake that has actually occurred here:
 !>
 !>    finite    NaN or Inf in the result. Reading eigenvector storage that was never
 !>              written gives harmless zeros in serial but stale window memory under
