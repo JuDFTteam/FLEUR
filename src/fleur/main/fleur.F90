@@ -121,7 +121,8 @@ CONTAINS
       INTEGER :: iter, iterHF, i, n, i_gf
       INTEGER :: wannierspin
       LOGICAL :: l_opti, l_cont, l_qfix, l_real, l_olap, l_error, l_dummy
-      LOGICAL :: l_forceTheorem, l_lastIter, l_exist
+      LOGICAL :: l_forceTheorem, l_lastIter, l_exist, l_maxiter
+      CHARACTER(len=:), ALLOCATABLE :: scf_status
       REAL    :: fix, sfscale, rdummy, tempDistance
       REAL    :: mmpmatDistancePrev, occDistancePrev
       REAL    :: iterRuntime
@@ -660,7 +661,7 @@ CONTAINS
          IF (fmpi%irank==0) THEN
             WRITE (oUnit, FMT=8130) iter
 8130        FORMAT(/, 5x, '******* it=', i3, '  is completed********', /,/)
-            call log%add("Interation",int2str(iter))
+            call log%add("Iteration",int2str(iter))
             IF (fi%hybinp%l_hybrid) THEN
                WRITE (*, *) "Iteration:", iter, " Distance:", results%last_distance, " hyb distance:", hybdat%results%last_distance
                call log%add("Hybrid-distance",float2str(hybdat%results%last_distance))
@@ -711,6 +712,22 @@ CONTAINS
             CALL check_time_for_next_iteration(iter, l_cont)
          END IF
 
+         ! Reason for stopping the SCF loop, reported in runlog.json
+         IF (.NOT. l_cont) THEN
+            IF (fi%hybinp%l_hybrid) THEN
+               l_maxiter = (iterHF >= fi%input%itmax) .OR. (iter >= 100)
+            ELSE
+               l_maxiter = (iter >= fi%input%itmax)
+            END IF
+            IF (results%last_distance >= 0.0 .AND. results%last_distance < fi%input%mindistance) THEN
+               scf_status = "converged"
+            ELSE IF (l_maxiter) THEN
+               scf_status = "max_iterations"
+            ELSE
+               scf_status = "walltime"
+            END IF
+         END IF
+
          ! Add extra iteration for force theorem if necessary
          l_forceTheorem = .FALSE.
          SELECT TYPE(forcetheo)
@@ -737,7 +754,10 @@ CONTAINS
          IF(fmpi%irank.EQ.0) THEN
             l_exist = .FALSE.
             INQUIRE (file='JUDFT_NO_MORE_ITERATIONS', exist=l_exist)
-            IF (l_exist) l_cont = .FALSE.
+            IF (l_exist) THEN
+               l_cont = .FALSE.
+               scf_status = "stop_file"
+            END IF
          END IF
 #ifdef CPP_MPI
          CALL MPI_BCAST(l_cont,1,MPI_LOGICAL,0,fmpi%mpi_comm,ierr)
@@ -769,6 +789,14 @@ CONTAINS
          END IF
 
       END DO scfloop ! DO WHILE (l_cont)
+
+      IF (fmpi%irank == 0) THEN
+         IF (.NOT. ALLOCATED(scf_status)) scf_status = "none"
+         call log%add("SCF-status", scf_status)
+         call log%add("Iterations", int2str(iter))
+         call log%add("Distance", float2str(results%last_distance))
+         call log%report(logmode_status)
+      END IF
 
       CALL add_usage_data("Iterations", iter)
 
