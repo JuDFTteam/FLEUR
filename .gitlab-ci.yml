@@ -8,6 +8,7 @@ stages:
    - perf
    - html
    - deploy
+   - review
 
 include:
    - "packaging/CI/test-template.yml"
