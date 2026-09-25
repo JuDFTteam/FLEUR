@@ -3567,11 +3567,6 @@
       <xsd:attribute name="convTol" type="FleurDouble" use="required"/>
       <xsd:attribute name="mixRatio" type="FleurDouble" use="required"/>
       <xsd:attribute default="F" name="disFrozProj" type="FleurBool" use="optional"/>
-      <xsd:attribute default="F" name="spinBalanced" type="FleurBool" use="optional">
-         <xsd:annotation>
-            <xsd:documentation>Wannierise each spin channel in its own Wannier90 instance, so the gauge cannot mix them. Without spin-orbit coupling the ordinary gauge does mix them whenever the moment is not along z, because mixing lowers the spread, and the functions stop being spin eigenstates. Measured on five systems this leaves the cross-spin weight at 0.000000 per cent and the on-site spin at 100 per cent. It needs every k-point on one rank, refuses where spin is not a good quantum number, and has not been run with spin-orbit coupling. The total spread falls below the ordinary run only past some 20000 wannierisation steps.</xsd:documentation>
-         </xsd:annotation>
-      </xsd:attribute>
       <xsd:attribute default="0.01" name="disProjMin" type="FleurDouble" use="optional"/>
       <xsd:attribute default="0.95" name="disProjMax" type="FleurDouble" use="optional"/>
    </xsd:complexType>

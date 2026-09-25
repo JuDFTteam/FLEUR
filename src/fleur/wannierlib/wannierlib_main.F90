@@ -212,20 +212,11 @@ CONTAINS
          IF (input%jspins == 2 .AND. .NOT. l_wannierlib_spinors) WRITE(spin_sfx, '(a,i0)') '_spin', jspin
 
          ! wannierise this channel -> the gauge factors u_matrix (MLWF) and u_opt (disentangled)
-         !> The spin operator goes down only when it was actually asked for: it is allocated
-         !> whenever melem is active but filled only on request, and a zero array would make
-         !> the band labelling refuse every case instead of falling back to the orbital
-         !> criterion, which is the right answer when there is no spin operator to use.
-         IF (request%has_op_r('spin') .AND. ALLOCATED(melem%s0)) THEN
-            !> Published before run_w90 so it is the operator as built, with no gauge on it.
-            IF (this%export%bloch) &
-               CALL wannierlib_write_s0(fmpi, distk, kpts%nkptf, melem%s0, &
-                                        spin12(jspin)//'_s0.dat')
-            CALL run_w90(wl, cell, kpts, mmn, amn, eig, fmpi%irank, u_matrix, u_opt, &
-                         s0=melem%s0)
-         ELSE
-            CALL run_w90(wl, cell, kpts, mmn, amn, eig, fmpi%irank, u_matrix, u_opt)
-         END IF
+         !> Published before run_w90 so it is the operator as built, with no gauge on it.
+         IF (request%has_op_r('spin') .AND. ALLOCATED(melem%s0) .AND. this%export%bloch) &
+            CALL wannierlib_write_s0(fmpi, distk, kpts%nkptf, melem%s0, &
+                                     spin12(jspin)//'_s0.dat')
+         CALL run_w90(wl, cell, kpts, mmn, amn, eig, fmpi%irank, u_matrix, u_opt)
 
          !> The gauge goes to results before anything else touches it, so whoever
          !> interpolates with it downstream gets the factors this run produced.

@@ -6,7 +6,6 @@ src/fleur/wannierlib/wannierlib_hdf_util.F90
 src/fleur/wannierlib/wannierlib_export_basis.F90
 src/fleur/wannierlib/wannierlib_export_gauge.F90
 src/fleur/wannierlib/wannierlib_export_bloch.F90
-src/fleur/wannierlib/wannierlib_disentangle_spin.F90
 src/fleur/wannierlib/wannierlib_band_window.F90
 src/fleur/wannierlib/wannierlib_cf.F90
 src/fleur/wannierlib/wannierlib_request.F90

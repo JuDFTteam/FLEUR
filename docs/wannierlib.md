@@ -129,19 +129,8 @@ the whole mesh enters the window, which is what excludes the semicore.
 | `disFrozProj` | no | `F` | freeze by projectability instead of by energy |
 | `disProjMin` | no | `0.01` | |
 | `disProjMax` | no | `0.95` | |
-| `spinBalanced` | no | `F` | wannierise each spin channel separately, so the gauge cannot mix them |
 
 All energies are in **Hartree**, like the rest of `inp.xml`.
-
-> **What `spinBalanced` is for.** Without spin-orbit coupling the gauge mixes the two spin
-> channels whenever the moment is not along z, because mixing lowers the spread, and the
-> Wannier functions stop being spin eigenstates. With this on, each channel is wannierised
-> in its own Wannier90 instance and the mixing cannot happen: measured on five systems the
-> cross-spin weight is 0.000000 %, the per-function spin is 1.0000 and the on-site spin is
-> 100 %. It needs every k-point on one rank, it refuses where spin is not a good quantum
-> number, and it has not been run with spin-orbit coupling. The total spread only falls
-> below the ordinary run past some 20000 wannierisation steps; the 3000 in common use are
-> not converged, for this mode or the ordinary one.
 
 > **Leaving the outer window out is supported.** `disWinMin`, `disWinMax` and `disFrozMin`
 > are derived from the range the selected bands span on the wannierisation mesh, which is
@@ -440,6 +429,5 @@ Energies in Hartree; `convTol` as a plain decimal, never `1.0e-5`.
 | spinors with SOC | `WannPtSOC` |
 | band interpolation | `WannFeBccInterp` |
 | the operator exports | `WannPtSOCOps`, `WannFeAFMSOCOps` |
-| non-collinear, several sites | `WannMn3IrNoco` |
 
 Each directory holds a complete `inp.xml` with its `kpts.xml` and `sym.xml`.
