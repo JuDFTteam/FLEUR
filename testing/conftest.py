@@ -1163,7 +1163,7 @@ def check_hdf(test_logger):
     return _check_hdf
 
 @pytest.fixture
-def default_fleur_test(test_logger,check_all_outxml,execute_fleur,validate_out_xml_file,check_hdf):
+def default_fleur_test(test_logger,check_all_outxml,check_outxml,execute_fleur,validate_out_xml_file,check_hdf):
     """returns the default_fleur_test function
     """
     def _default_fleur_test(testname,files=None,checks=None,hdf_checks=[],clean=False,cmdline_args=None,mpi_procs=None):
@@ -1196,7 +1196,7 @@ def default_fleur_test(test_logger,check_all_outxml,execute_fleur,validate_out_x
         
             if not validate_out_xml_file(res_files['out.xml']): pytest.fail("validating out_xml_failed")
             if not check_all_outxml(res_files['out.xml'],ref_out_xml): pytest.fail("checking out_xml_failed in basic test")
-            if checks and not check_outxml(res_files['out.xml'],ref_out_xml): pytest.fail("checking out.xml failed in advanced test")
+            if checks and not check_outxml(res_files['out.xml'],ref_out_xml,checks): pytest.fail("checking out.xml failed in advanced test")
             #compare cdn files 
             if not ("banddos.hdf" in hdf_checks) and os.path.isfile(f"{test_file_folder}/banddos.hdf"): hdf_checks.append("banddos.hdf")
             if hdf_checks:
