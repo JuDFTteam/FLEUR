@@ -318,14 +318,16 @@ CONTAINS
                                         nococonv, enpara, lapw, vtot, fmpi, ev_list=ev_list, &
                                         l_both_spinors=l_spinor_records, kpts=kpts)
             IF (ikpt == 1) CALL melem_check_provider(socop, 'spin_orbit', ikpt)
-            this%soc4(:, :, 1, il) = socop%mat(1, 1)%data_c
-            this%soc4(:, :, 2, il) = socop%mat(1, 2)%data_c
-            this%soc4(:, :, 3, il) = socop%mat(2, 1)%data_c
-            this%soc4(:, :, 4, il) = socop%mat(2, 2)%data_c
+            !> The blocks arrive as conj(<i|H_so|j>) and are restored to the convention
+            !> the type documents here, where the real-space export consumes them.
+            this%soc4(:, :, 1, il) = CONJG(socop%mat(1, 1)%data_c)
+            this%soc4(:, :, 2, il) = CONJG(socop%mat(1, 2)%data_c)
+            this%soc4(:, :, 3, il) = CONJG(socop%mat(2, 1)%data_c)
+            this%soc4(:, :, 4, il) = CONJG(socop%mat(2, 2)%data_c)
             !> Only for a spinor: the sum over the blocks is the expectation value of a
             !> spinor operator, and with two channels there is no spinor to take it over.
-            IF (this%l_active) this%soc0(:, :, 1, il) = socop%mat(1, 1)%data_c + socop%mat(1, 2)%data_c &
-                                   + socop%mat(2, 1)%data_c + socop%mat(2, 2)%data_c
+            IF (this%l_active) this%soc0(:, :, 1, il) = CONJG(socop%mat(1, 1)%data_c + socop%mat(1, 2)%data_c &
+                                   + socop%mat(2, 1)%data_c + socop%mat(2, 2)%data_c)
             IF (ikpt == 1 .AND. this%l_active) THEN
                !> The sum over the four blocks is Hermitian even though two of them are not:
                !> 12 + 21 is, being a matrix plus its adjoint.
