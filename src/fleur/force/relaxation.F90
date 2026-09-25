@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -91,7 +91,7 @@ CONTAINS
             !alpha = (250.0/(MAXVAL(atoms%zatom)*input%xa))*((330./input%thetad)**2)
             CALL simple_step(input%forcealpha,0.25,force,displace)
          ELSE IF (input%forcemix==1) THEN
-            CALL simple_cg(pos,force,displace)
+            CALL simple_cg(input%forcealpha,pos,force,displace)
          ELSE IF (input%forcemix==2) THEN
             CALL simple_bfgs(pos,force,displace)
          ELSE
@@ -267,31 +267,34 @@ CONTAINS
       shift = RESHAPE(MATMUL(y,h),SHAPE(shift))
    END SUBROUTINE simple_bfgs
 
-   SUBROUTINE simple_cg(pos,force,shift)
+   SUBROUTINE simple_cg(alpha,pos,force,shift)
+      !--------------------------------------------------------------------------
+      !  Secant step for each force component from the last two iterations.
+      !  Falls back to a simple step if the component did not move or if the
+      !  force did not decrease along the step.
+      !--------------------------------------------------------------------------
 
+      REAL, INTENT(IN)  :: alpha
       REAL, INTENT(IN)  :: pos(:,:,:),force(:,:,:)
       REAL, INTENT(OUT) :: shift(:,:)
 
-      REAL               :: f1(3,SIZE(pos,2)),f2(3,SIZE(pos,2))
-      REAL               :: dist(3,SIZE(pos,2))
-      REAL               :: eps
-      INTEGER            :: n_old, i, j
+      REAL               :: dx, df
+      REAL, PARAMETER    :: eps = 1.0e-9
+      INTEGER            :: n, i, j
 
-      eps = 1.0e-9
-
-      n_old = SIZE(pos,3)-1
-
-      dist(:,:) = pos(:,:,n_old+1)-pos(:,:,n_old)
+      n = SIZE(pos,3)
 
       DO i = 1, SIZE(pos,2)
          DO j = 1, 3
-            IF(ABS(dist(j,i)).LT.eps) dist(j,i) = eps ! To avoid calculation of 0.0/0.0 below.
+            dx = pos(j,i,n)-pos(j,i,n-1)
+            df = force(j,i,n)-force(j,i,n-1)
+            IF (ABS(dx)>eps .AND. dx*df<0.0) THEN
+               shift(j,i) = -force(j,i,n)*dx/df
+            ELSE
+               shift(j,i) = alpha*force(j,i,n)
+            END IF
          END DO
       END DO
-
-      f1 = (force(:,:,n_old+1)-force(:,:,n_old))/dist
-      f2 = force(:,:,n_old+1)-f1*pos(:,:,n_old+1)
-      shift = -1.*f2/f1-force(:,:,n_old+1)
    END SUBROUTINE simple_cg
 
 END MODULE m_relaxation
