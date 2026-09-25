@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -31,9 +31,9 @@ CONTAINS
 
   end subroutine
 
-  SUBROUTINE hsmt_fjgj_cpu(fjgj,input,atoms,cell,lapw,noco,usdus,n,ispin)
+  SUBROUTINE hsmt_fjgj_cpu(fjgj,input,atoms,cell,lapw,noco,rf,n,ispin)
     !Calculate the fj&gj array which contain the part of the A,B matching coeff. depending on the
-    !radial functions at the MT boundary as contained in usdus
+    !radial functions at the MT boundary (rf%bnd)
     USE m_constants, ONLY : fpi_const
     USE m_sphbes
     USE m_dsphbs
@@ -42,7 +42,7 @@ CONTAINS
     USE m_types_noco
     USE m_types_atoms
     USE m_types_lapw
-    USE m_types_usdus
+    USE m_types_radfun
     
     
     
@@ -53,7 +53,7 @@ CONTAINS
     TYPE(t_noco),INTENT(IN)     :: noco
     TYPE(t_atoms),INTENT(IN)    :: atoms
     TYPE(t_lapw),INTENT(IN)     :: lapw
-    TYPE(t_usdus),INTENT(IN)    :: usdus
+    TYPE(t_radfun),INTENT(IN)   :: rf
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: ispin,n
@@ -90,7 +90,7 @@ CONTAINS
 !#ifndef _OPENACC
        !$OMP PARALLEL DO DEFAULT(NONE) &
        !$OMP PRIVATE(l,gs,fb,gb,ws,ff,gg,jspin)&
-       !$OMP SHARED(lapw,atoms,con1,usdus,l_socfirst,noco,input)&
+       !$OMP SHARED(lapw,atoms,con1,rf,l_socfirst,noco,input)&
        !$OMP SHARED(fjgj,intspin,n,ispin,apw,jspinStart,jspinEnd)
 !#else
        !!$acc parallel loop present(fjgj,fjgj%fj,fjgj%gj) private(l,gs,fb,gb,ws,ff,gg,jspin)
@@ -104,18 +104,18 @@ CONTAINS
           DO l = 0,atoms%lmax(n)
              !---> set up wronskians for the matching conditions for each ntype
              DO jspin = jspinStart, jspinEnd
-                ws(jspin) = con1/(usdus%uds(l,n,jspin)*usdus%dus(l,n,jspin)&
-                            - usdus%us(l,n,jspin)*usdus%duds(l,n,jspin))
+                ws(jspin) = con1/(rf%bnd(1,2,l,jspin)*rf%bnd(2,1,l,jspin)&
+                            - rf%bnd(1,1,l,jspin)*rf%bnd(2,2,l,jspin))
              END DO
              ff = fb(l)
              gg = lapw%rk(k,intspin)*gb(l)
              DO jspin = jspinStart, jspinEnd
                 IF ( apw(l) ) THEN
-                   fjgj%fj(k,l,jspin,intspin) = 1.0*con1 * ff / usdus%us(l,n,jspin)
+                   fjgj%fj(k,l,jspin,intspin) = 1.0*con1 * ff / rf%bnd(1,1,l,jspin)
                    fjgj%gj(k,l,jspin,intspin) = 0.0
                 ELSE
-                   fjgj%fj(k,l,jspin,intspin) = ws(jspin) * ( usdus%uds(l,n,jspin)*gg - usdus%duds(l,n,jspin)*ff )
-                   fjgj%gj(k,l,jspin,intspin) = ws(jspin) * ( usdus%dus(l,n,jspin)*ff - usdus%us(l,n,jspin)*gg )
+                   fjgj%fj(k,l,jspin,intspin) = ws(jspin) * ( rf%bnd(1,2,l,jspin)*gg - rf%bnd(2,2,l,jspin)*ff )
+                   fjgj%gj(k,l,jspin,intspin) = ws(jspin) * ( rf%bnd(2,1,l,jspin)*ff - rf%bnd(1,1,l,jspin)*gg )
                 ENDIF
              END DO
           ENDDO

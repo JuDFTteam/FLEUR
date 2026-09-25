@@ -29,7 +29,6 @@ MODULE m_wannierlib_build_amn_mmn
    USE m_types_enpara
    USE m_types_mpi
    USE m_types_potden
-   USE m_types_usdus
    USE m_types_mat
    USE m_types_radfun
    USE m_types_abc
@@ -48,7 +47,7 @@ CONTAINS
 
    SUBROUTINE wannierlib_build_amn_mmn(this, manifold, bmesh, atoms, cell, input, kpts, sym, &
                                        noco, nococonv, stars, enpara, fmpi, vtot, eig_id, &
-                                       radfun, usdus, distk, kdiff, nntot_w90, jspin, &
+                                       radfun, distk, kdiff, nntot_w90, jspin, &
                                        l_wannierlib_spinors, amn, mmn, vacuum)
       TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
       TYPE(t_melem_manifold), INTENT(IN) :: manifold
@@ -67,7 +66,6 @@ CONTAINS
       TYPE(t_potden),   INTENT(IN) :: vtot
       INTEGER,          INTENT(IN) :: eig_id
       TYPE(t_radfun),   INTENT(IN) :: radfun(:)
-      TYPE(t_usdus),    INTENT(IN) :: usdus
       INTEGER, INTENT(IN) :: distk(:)          !> (nkptf) owning rank of each k
       REAL,    INTENT(IN) :: kdiff(:, :)
       INTEGER, INTENT(IN) :: nntot_w90
@@ -122,7 +120,7 @@ CONTAINS
             !> its own and the spin block is reached by row offset further down.
             irec = MERGE(1, jspin_comp, noco%l_noco)
 
-            CALL wannierlib_amn(this, atoms, kpts, ikpt, usdus, radfun, abc_p(jspin_comp, :), l_wannierlib_spinors, jspin_comp, jspin_rad, amn(:, :, ikpt))
+            CALL wannierlib_amn(this, atoms, kpts, ikpt, radfun, abc_p(jspin_comp, :), l_wannierlib_spinors, jspin_comp, jspin_rad, amn(:, :, ikpt))
 
             ik_local = ik_local + 1
             CALL wannierlib_mmnkb(manifold, bmesh, ikpt, kpts, &

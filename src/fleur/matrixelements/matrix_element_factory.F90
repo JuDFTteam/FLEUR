@@ -15,7 +15,6 @@ MODULE m_matrix_element_factory
     USE m_types_radfun
     USE m_types_spinor_layout, ONLY: t_spinor_layout, radial_slot, melem_stack_spinor, &
                                      LAYOUT_SCALAR
-    USE m_types_usdus
     USE m_judft, ONLY: judft_error, judft_bug
     IMPLICIT NONE
     PRIVATE
@@ -23,7 +22,6 @@ MODULE m_matrix_element_factory
     !Cached data that depends only on the potential (not on the k-point).
     !Invalidated by matrix_element_factory_reset only, i.e. once per SCF iteration.
     TYPE(t_radfun), ALLOCATABLE, TARGET :: radfun_store(:)  !(ntype)
-    TYPE(t_usdus),  TARGET              :: usdus_store      !all types and spins
     LOGICAL                     :: radfun_valid = .FALSE.
 
     !Everything one k-point contributes, keyed on (eig_id, ikpt, nrec, band selection).
@@ -63,7 +61,6 @@ CONTAINS
         !> Invalidate all cached data. Must be called whenever the eig-file
         !> content or the potential changes, i.e. once per SCF iteration.
         IF (ALLOCATED(radfun_store)) DEALLOCATE(radfun_store)
-        CALL usdus_store%free()
         radfun_valid = .FALSE.
         CALL reset_k_cache()
     END SUBROUTINE matrix_element_factory_reset
@@ -178,7 +175,7 @@ CONTAINS
         ALLOCATE(radfun_store(atoms%ntype))
         DO n = 1, atoms%ntype
             CALL radfun_store(n)%generate_radial_functions(atoms, input, enpara, fmpi, &
-                                                           vtot, n, usdus_out=usdus_store)
+                                                           vtot, n)
         END DO
         radfun_valid = .TRUE.
     END SUBROUTINE ensure_radial
@@ -188,7 +185,7 @@ CONTAINS
     !> spin component reads.
     !>
     !> What comes back points into the cache and lives until matrix_element_factory_reset.
-    SUBROUTINE matrix_element_radial(atoms, input, enpara, fmpi, vtot, radfun, usdus)
+    SUBROUTINE matrix_element_radial(atoms, input, enpara, fmpi, vtot, radfun)
         USE m_types_input
         USE m_types_atoms
         USE m_types_enpara
@@ -201,11 +198,9 @@ CONTAINS
         TYPE(t_mpi),    INTENT(IN) :: fmpi
         TYPE(t_potden), INTENT(IN) :: vtot
         TYPE(t_radfun), POINTER, INTENT(OUT) :: radfun(:)   !> (ntype)
-        TYPE(t_usdus),  POINTER, INTENT(OUT) :: usdus
 
         CALL ensure_radial(atoms, input, enpara, fmpi, vtot)
         radfun => radfun_store
-        usdus  => usdus_store
     END SUBROUTINE matrix_element_radial
 
     !> Make sure the states of one k-point, their matching coefficients and the radial
@@ -342,7 +337,7 @@ CONTAINS
                     !record for both when it holds the whole spinor, where the spin index
                     !is what selects the block.
                     CALL kslot(is)%abc(jsp,n)%calc_abc(input, atoms, sym, cell, lapw, num_bands, &
-                                                   usdus_store, noco, nococonv, jsp_rad, n, &
+                                                   radfun_store(n), noco, nococonv, jsp_rad, n, &
                                                    kslot(is)%zmat(MIN(jsp, nrec)))
                 END DO
                 !A state with no spin structure is its own second channel. Two real
@@ -425,10 +420,10 @@ CONTAINS
         !contracted with its own component.
         IF (ALLOCATED(kslot(is)%zmat_spinor)) THEN
             CALL matel%calc_matrix_elements(kslot(is)%zmat_spinor, kslot(is)%abc, &
-                                            radfun_store, usdus_store)
+                                            radfun_store)
         ELSE
             CALL matel%calc_matrix_elements(kslot(is)%zmat, kslot(is)%abc, &
-                                            radfun_store, usdus_store)
+                                            radfun_store)
         END IF
 
     END SUBROUTINE matrix_element_factory

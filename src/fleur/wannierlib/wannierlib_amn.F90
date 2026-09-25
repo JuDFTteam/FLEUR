@@ -25,7 +25,6 @@ MODULE m_wannierlib_amn
   USE m_types_atoms
   USE m_types_kpts
   USE m_types_abc
-  USE m_types_usdus
   USE m_types_radfun
   USE m_types_wannierlib
   USE m_wannierlib_tlmw
@@ -35,12 +34,11 @@ MODULE m_wannierlib_amn
   PUBLIC :: wannierlib_amn
 CONTAINS
 
-  SUBROUTINE wannierlib_amn(wannierlib, atoms, kpts, ikpt, usdus, radfun, abc, l_spinors, jspin, jspin_rad, amn)
+  SUBROUTINE wannierlib_amn(wannierlib, atoms, kpts, ikpt, radfun, abc, l_spinors, jspin, jspin_rad, amn)
     TYPE(t_wannierlib_wannierize), INTENT(IN) :: wannierlib
     TYPE(t_atoms), INTENT(IN) :: atoms
     TYPE(t_kpts), INTENT(IN) :: kpts
     INTEGER, INTENT(IN) :: ikpt
-    TYPE(t_usdus), INTENT(IN) :: usdus
     TYPE(t_radfun), INTENT(IN) :: radfun(atoms%ntype)
     TYPE(t_abc), INTENT(IN) :: abc(atoms%ntype)
     LOGICAL, INTENT(IN) :: l_spinors
@@ -68,7 +66,7 @@ CONTAINS
     
     CALL timestart('wannierlib_amn')
 
-    CALL wannierlib_rad_twd(wannierlib, atoms, wannierlib%num_wann, ikpt, usdus, radfun, jspin_rad, rads)
+    CALL wannierlib_rad_twd(wannierlib, atoms, wannierlib%num_wann, ikpt, radfun, jspin_rad, rads)
 
     tlmwf = CMPLX(0.0, 0.0)
     tlmwft = CMPLX(0.0, 0.0)

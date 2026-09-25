@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -15,9 +15,10 @@ MODULE m_nIJmat
    !                                                                               !
    !------------------------------------------------------------------------------ !
 
+   implicit none
 CONTAINS
 
-   SUBROUTINE nIJ_mat(firstspin, input, atoms, ne, usdus, we, abc, cell, kpts, kptindx, nIJ_llp_mmp, enpara, v)
+   SUBROUTINE nIJ_mat(firstspin, input, atoms, ne, rf, we, abc, cell, kpts, kptindx, nIJ_llp_mmp, enpara, v)
 
       USE m_types
       USE m_constants
@@ -29,7 +30,7 @@ CONTAINS
 
       IMPLICIT NONE
       INTEGER, INTENT(IN)          :: firstspin
-      TYPE(t_usdus), INTENT(IN)    :: usdus
+      TYPE(t_radfun), INTENT(IN)   :: rf(:)
       TYPE(t_input), INTENT(IN)    :: input
       TYPE(t_atoms), INTENT(IN)    :: atoms
       TYPE(t_abc), INTENT(IN)      :: abc(firstspin:,:)
@@ -40,7 +41,6 @@ CONTAINS
       COMPLEX, INTENT(INOUT)       :: nIJ_llp_mmp(-lmaxU_const:, -lmaxU_const:, :, :)
       TYPE(t_enpara), INTENT(IN)   :: enpara
       TYPE(t_potden), INTENT(IN)   :: v
-      TYPE(t_usdus)                :: usdustemp
 
       INTEGER i,i_v,i_pair,natom1,latom1,ll1atom1,atom2,natom2,latom2,ll1atom2,matom1,matom2,lm1atom1,lm1atom2,counter,itype1,itype2,jspin
       COMPLEX c_0, A1, B1, A2, B2, power_factor, exponent
@@ -52,7 +52,6 @@ CONTAINS
          END DO
       END DO
 
-      CALL usdustemp%init(atoms, input%jspins)
       CALL timestart("nIJ_mat")
 
       DO jspin = lbound(abc, 1), ubound(abc, 1)
@@ -63,14 +62,14 @@ CONTAINS
             natom1 = natom1 - atoms%firstatom(itype1) + 1
             latom1 = atoms%lda_v(i_v)%thisAtomL
             ll1atom1 = latom1*(latom1 + 1)
-            norm1_W = usdus%ddn(latom1, atoms%itype(natom1), jspin)**0.5
+            norm1_W = rf(atoms%itype(natom1))%integral(2, 2, latom1, jspin, jspin)**0.5
             Do atom2 = 1, atoms%lda_v(i_v)%numOtherAtoms
                natom2 = atoms%lda_v(i_v)%otherAtomIndices(atom2)
                itype2 = atoms%itype(natom2)
                natom2 = natom2 - atoms%firstatom(itype2) + 1
                latom2 = atoms%lda_v(i_v)%otherAtomL
                ll1atom2 = latom2*(latom2 + 1)
-               norm2_W = usdus%ddn(latom2, atoms%itype(natom2), jspin)**0.5
+               norm2_W = rf(atoms%itype(natom2))%integral(2, 2, latom2, jspin, jspin)**0.5
                power_factor = (cmplx(0, 1)**latom1)*(cmplx(0, -1)**latom2)
                 !! power_factor is not included in the representation of matching coefficients in hsmt_ab.f90 routine.
                 !! Note that the $e^{ik.r_{atom I/J}}$ is included in c_ph(k,igSpin) only the shift exponent is needed.

@@ -34,7 +34,6 @@ MODULE m_types_matelements_template
    USE m_types_abc
    USE m_types_radfun
    USE m_types_spinor_layout, ONLY: radial_slot
-   USE m_types_usdus
    USE m_types_atoms
    USE m_judft
    IMPLICIT NONE
@@ -102,7 +101,7 @@ CONTAINS
       this%iat   = iat
    END SUBROUTINE melem_template_init
 
-   SUBROUTINE melem_template_calc(this, zmat, abc, radfun, usdus)
+   SUBROUTINE melem_template_calc(this, zmat, abc, radfun)
       CLASS(t_matelements_template), INTENT(INOUT) :: this
       !> The state at this k-point in as few matrices as it takes: ONE when it is a whole
       !> spinor, TWO when the records are independent spin channels. SIZE(zmat) is
@@ -111,7 +110,6 @@ CONTAINS
       TYPE(t_mat),    INTENT(IN) :: zmat(:)
       TYPE(t_abc),    INTENT(IN) :: abc(:, :) !> (2 spin, ntype) local-frame coefficients
       TYPE(t_radfun), INTENT(IN) :: radfun(:) !> (ntype)
-      TYPE(t_usdus),  INTENT(IN) :: usdus     !> unused: the radial integrals are in radfun
 
       INTEGER :: nb, i, j, l, ll1, mm, lm, n_r, n_r2, s, s_lo, s_hi, slot(2)
       REAL    :: w

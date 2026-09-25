@@ -96,7 +96,7 @@ CONTAINS
 
    END SUBROUTINE abc_init
 
-   subroutine calc_abc(this, input, atoms, sym, cell, lapw, ne, usdus, &
+   subroutine calc_abc(this, input, atoms, sym, cell, lapw, ne, rf, &
                        noco, nococonv, jspin, itype, zMat)
       USE m_juDFT
       USE m_types_atoms
@@ -104,7 +104,7 @@ CONTAINS
       USE m_types_sym
       USE m_types_cell
       USE m_types_lapw
-      USE m_types_usdus
+      USE m_types_radfun
       USE m_types_noco
       USE m_types_nococonv
       USE m_types_enpara
@@ -119,7 +119,7 @@ CONTAINS
       IMPLICIT NONE
       CLASS(t_abc), INTENT(INOUT) :: this
       TYPE(t_input), INTENT(IN)             :: input
-      TYPE(t_usdus), INTENT(IN)             :: usdus
+      TYPE(t_radfun), INTENT(IN)            :: rf !radial basis of iType
       TYPE(t_lapw), INTENT(IN)              :: lapw
 
       TYPE(t_noco), INTENT(IN)              :: noco
@@ -213,11 +213,11 @@ CONTAINS
       l_useinversionsym = any(sym%invsat == 2) .and. (.not.noco%l_soc)
 
       CALL timestart("fjgj coefficients")
-      CALL fjgj%calculate(input, atoms, cell, lapw, noco, usdus, iType, jspin)
+      CALL fjgj%calculate(input, atoms, cell, lapw, noco, rf, iType, jspin)
 !$acc update device (fjgj%fj,fjgj%gj)
       CALL timestop("fjgj coefficients")
 
-      CALL setabc1lo(atoms, iType, usdus, jspin, alo1, blo1, clo1)
+      CALL setabc1lo(atoms, iType, rf, jspin, alo1, blo1, clo1)
 
 ! generate the spinors (chi)
       IF (noco%l_noco) ccchi = conjg(nococonv%umat(itype))
@@ -427,7 +427,7 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
 
    end subroutine calc_abc
 
-   subroutine calc_force_abc(this, input, atoms, sym, cell, lapw, ne, usdus, &
+   subroutine calc_force_abc(this, input, atoms, sym, cell, lapw, ne, rf, &
                              noco, nococonv, jspin, itype, zMat,eig,force)
       USE m_juDFT
       USE m_types_atoms
@@ -436,7 +436,7 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
       USE m_types_sym
       USE m_types_cell
       USE m_types_lapw
-      USE m_types_usdus
+      USE m_types_radfun
       USE m_types_noco
       USE m_types_nococonv
       USE m_types_enpara
@@ -451,7 +451,7 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
       IMPLICIT NONE
       CLASS(t_abc), INTENT(INOUT) :: this
       TYPE(t_input), INTENT(IN)             :: input
-      TYPE(t_usdus), INTENT(IN)             :: usdus
+      TYPE(t_radfun), INTENT(IN)            :: rf !radial basis of iType
       TYPE(t_lapw), INTENT(IN)              :: lapw
 
       TYPE(t_noco), INTENT(IN)              :: noco
@@ -555,11 +555,11 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
       l_useinversionsym = any(sym%invsat == 2) .and. (.not.noco%l_soc)
 
       CALL timestart("fjgj coefficients")
-      CALL fjgj%calculate(input, atoms, cell, lapw, noco, usdus, iType, jspin)
+      CALL fjgj%calculate(input, atoms, cell, lapw, noco, rf, iType, jspin)
 !$acc update device (fjgj%fj,fjgj%gj)
       CALL timestop("fjgj coefficients")
 
-      CALL setabc1lo(atoms, iType, usdus, jspin, alo1, blo1, clo1)
+      CALL setabc1lo(atoms, iType, rf, jspin, alo1, blo1, clo1)
 
       ! generate the spinors (chi)
       IF (noco%l_noco) ccchi = conjg(nococonv%umat(itype))

@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -16,7 +16,7 @@ MODULE m_hsmt_lo
   PRIVATE
   PUBLIC hsmt_lo
 CONTAINS
-  SUBROUTINE hsmt_lo(Input,Atoms,Sym,Cell,fmpi,Noco,nococonv,Lapw,Ud,Tlmplm,FjGj,N,Chi,ilSpinPr,ilSpin,igSpinPr,igSpin,Hmat,set0,l_fullj,l_ham,Smat,lapwq,fjgjq)
+  SUBROUTINE hsmt_lo(Input,Atoms,Sym,Cell,fmpi,Noco,nococonv,Lapw,Tlmplm,FjGj,N,Chi,ilSpinPr,ilSpin,igSpinPr,igSpin,Hmat,set0,l_fullj,l_ham,Smat,lapwq,fjgjq)
     USE m_hlomat
     USE m_slomat
     USE m_setabc1lo
@@ -32,7 +32,6 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)     :: cell
     TYPE(t_atoms),INTENT(IN)    :: atoms
     TYPE(t_lapw),INTENT(IN)     :: lapw
-    TYPE(t_usdus),INTENT(IN)    :: ud
     TYPE(t_tlmplm),INTENT(IN)   :: tlmplm
     TYPE(t_fjgj),INTENT(IN)     :: fjgj
     LOGICAL,INTENT(IN)          :: l_fullj, l_ham, set0  !if true, initialize the LO-part of the matrices with zeros
@@ -115,7 +114,7 @@ CONTAINS
              !--->          for the local orbitals, if necessary.
              !--->          actually, these are the fj,gj equivalents
              DO usp=min(ilSpinPr,ilSpin),max(ilSpinPr,ilSpin)
-               CALL setabc1lo(atoms,n,ud,usp,alo1,blo1,clo1)
+               CALL setabc1lo(atoms,n,tlmplm%radfun(n),usp,alo1,blo1,clo1)
              enddo
 
              !--->       add the local orbital contribution to the overlap and
@@ -127,11 +126,11 @@ CONTAINS
                   ELSE
                      IF (PRESENT(lapwq)) THEN
                         CALL slomat(input,atoms,sym,fmpi,lapw,cell,nococonv,n,na,&
-                           ilSpinPr,ud, alo1(:,ilSpinPr),blo1(:,ilSpinPr),clo1(:,ilSpinPr),fjgj,&
+                           ilSpinPr,tlmplm%radfun(n), alo1(:,ilSpinPr),blo1(:,ilSpinPr),clo1(:,ilSpinPr),fjgj,&
                            igSpinPr,igSpin,chi,smat,l_fullj,lapwq,fjgjq)
                      ELSE
                         CALL slomat(input,atoms,sym,fmpi,lapw,cell,nococonv,n,na,&
-                           ilSpinPr,ud, alo1(:,ilSpinPr),blo1(:,ilSpinPr),clo1(:,ilSpinPr),fjgj,&
+                           ilSpinPr,tlmplm%radfun(n), alo1(:,ilSpinPr),blo1(:,ilSpinPr),clo1(:,ilSpinPr),fjgj,&
                            igSpinPr,igSpin,chi,smat,l_fullj)
                      END IF
                   END IF
@@ -139,10 +138,10 @@ CONTAINS
                call timestop("slomat")
                CALL timestart("hlomat")
                IF (PRESENT(lapwq)) THEN
-                  CALL hlomat(input,atoms,fmpi,lapw,ud,tlmplm,sym,cell,noco,nococonv,ilSpinPr,ilSpin,&
+                  CALL hlomat(input,atoms,fmpi,lapw,tlmplm,sym,cell,noco,nococonv,ilSpinPr,ilSpin,&
                      n,na,fjgj,alo1,blo1,clo1,igSpinPr,igSpin,chi,hmat,l_fullj,l_ham,lapwq,fjgjq)
                ELSE
-                  CALL hlomat(input,atoms,fmpi,lapw,ud,tlmplm,sym,cell,noco,nococonv,ilSpinPr,ilSpin,&
+                  CALL hlomat(input,atoms,fmpi,lapw,tlmplm,sym,cell,noco,nococonv,ilSpinPr,ilSpin,&
                      n,na,fjgj,alo1,blo1,clo1,igSpinPr,igSpin,chi,hmat,l_fullj,l_ham)
                END IF
                CALL timestop("hlomat")

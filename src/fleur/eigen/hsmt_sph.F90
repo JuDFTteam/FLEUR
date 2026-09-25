@@ -1,5 +1,5 @@
-! -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -18,7 +18,7 @@ MODULE m_hsmt_sph
 
 CONTAINS
 
-   SUBROUTINE hsmt_sph_acc(n,atoms,fmpi,isp,input,nococonv,igSpinPr,igSpin,chi,lapw,el,e_shift,usdus,fjgj,smat,hmat,set0,l_fullj,lapwq,fjgjq)
+   SUBROUTINE hsmt_sph_acc(n,atoms,fmpi,isp,input,nococonv,igSpinPr,igSpin,chi,lapw,el,e_shift,rf,fjgj,smat,hmat,set0,l_fullj,lapwq,fjgjq)
       USE m_constants, ONLY : fpi_const, tpi_const
       USE m_types
       USE m_hsmt_fjgj
@@ -29,7 +29,7 @@ CONTAINS
       TYPE(t_nococonv), INTENT(IN)    :: nococonv
       TYPE(t_atoms),    INTENT(IN)    :: atoms
       TYPE(t_lapw),     INTENT(IN)    :: lapw
-      TYPE(t_usdus),    INTENT(IN)    :: usdus
+      TYPE(t_radfun),   INTENT(IN)    :: rf
       TYPE(t_fjgj),     INTENT(IN)    :: fjgj
       CLASS(t_mat),     INTENT(INOUT) :: smat, hmat
       LOGICAL,          INTENT(IN)    :: l_fullj, set0  !if true, initialize the smat matrix with zeros
@@ -48,6 +48,7 @@ CONTAINS
       ! Local Scalars
       REAL :: tnn(3), elall, fjkiln, gjkiln, ddnln, ski(3)
       REAL :: apw_lo1, apw_lo2, w1
+      REAL :: ddn(0:atoms%lmaxd), bs(2,2,0:atoms%lmaxd) ! <udot|udot> and boundary values of u, udot
 
       INTEGER :: ikG0, ikG, ikGPr, l, nn, l3, jv, kj_off, kj_vec
 
@@ -83,14 +84,16 @@ CONTAINS
 
       qssAdd   = MERGE(-nococonv%qss/2, +nococonv%qss/2,   igSpin.EQ.1)
       qssAddPr = MERGE(-nococonv%qss/2, +nococonv%qss/2, igSpinPr.EQ.1)
+      ddn = rf%integral(2,2,:,isp,isp)
+      bs  = rf%bnd(:,1:2,:,isp)
       !$acc  data &
       !$acc&   copyin(igSpin,igSpinPr,n,fleg1,fleg2,isp,fl2p1,el,e_shift,chi,qssAdd,qssAddPr,l_fullj)&
-      !$acc&   copyin(lapw,lapwPr,atoms,fmpi,input,usdus)&
+      !$acc&   copyin(lapw,lapwPr,atoms,fmpi,input)&
       !$acc&   copyin(lapw%nv,lapw%gvec,lapw%gk,lapwPr%nv,lapwPr%gvec,lapwPr%gk,lapw%bkpt,lapwPr%bkpt)&
       !$acc&   copyin(atoms%lmax,atoms%rmt,atoms%lnonsph,atoms%firstAtom,atoms%neq,atoms%taual)&
       !$acc&   copyin(fmpi%n_size,fmpi%n_rank)&
       !$acc&   copyin(input%l_useapw)&
-      !$acc&   copyin(usdus%dus,usdus%uds,usdus%us,usdus%ddn,usdus%duds)&
+      !$acc&   copyin(ddn,bs)&
       !$acc&   present(fjgj)&
       !$acc&   present(hmat,smat,hmat%data_c,hmat%data_r,smat%data_r,smat%data_c)
 
@@ -115,11 +118,11 @@ CONTAINS
                fjkiln = fjgj%fj(ikG,l,isp,igSpin)
                gjkiln = fjgj%gj(ikG,l,isp,igSpin)
                IF (input%l_useapw) THEN
-                  w1 = 0.5 * ( usdus%uds(l,n,isp)*usdus%dus(l,n,isp) + usdus%us(l,n,isp)*usdus%duds(l,n,isp) )
-                  apw_lo1 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( gjkiln * w1 + fjkiln * usdus%us(l,n,isp)  * usdus%dus(l,n,isp) )
-                  apw_lo2 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( fjkiln * w1 + gjkiln * usdus%uds(l,n,isp) * usdus%duds(l,n,isp) )
+                  w1 = 0.5 * ( bs(1,2,l)*bs(2,1,l) + bs(1,1,l)*bs(2,2,l) )
+                  apw_lo1 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( gjkiln * w1 + fjkiln * bs(1,1,l)  * bs(2,1,l) )
+                  apw_lo2 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( fjkiln * w1 + gjkiln * bs(1,2,l) * bs(2,2,l) )
                END IF ! useapw
-               ddnln = usdus%ddn(l,n,isp)
+               ddnln = ddn(l)
                elall = el(l,n,isp)
 
                IF (l<=atoms%lnonsph(n).AND..NOT.l_fullj) elall=elall-e_shift!(isp)
@@ -207,7 +210,7 @@ CONTAINS
       RETURN
    END SUBROUTINE hsmt_sph_acc
 
-   SUBROUTINE hsmt_sph_cpu(n,atoms,fmpi,isp,input,nococonv,igSpinPr,igSpin,chi,lapw,el,e_shift,usdus,fjgj,smat,hmat,set0,l_fullj,lapwq, fjgjq)
+   SUBROUTINE hsmt_sph_cpu(n,atoms,fmpi,isp,input,nococonv,igSpinPr,igSpin,chi,lapw,el,e_shift,rf,fjgj,smat,hmat,set0,l_fullj,lapwq, fjgjq)
       USE m_constants, ONLY : fpi_const, tpi_const
       USE m_types
       USE m_hsmt_fjgj
@@ -218,7 +221,7 @@ CONTAINS
       TYPE(t_nococonv), INTENT(IN)    :: nococonv
       TYPE(t_atoms),    INTENT(IN)    :: atoms
       TYPE(t_lapw),     INTENT(IN)    :: lapw
-      TYPE(t_usdus),    INTENT(IN)    :: usdus
+      TYPE(t_radfun),   INTENT(IN)    :: rf
       TYPE(t_fjgj),     INTENT(IN)    :: fjgj
       CLASS(t_mat),     INTENT(INOUT) :: smat, hmat
       LOGICAL,          INTENT(IN)    :: l_fullj, set0  !if true, initialize the smat matrix with zeros
@@ -237,6 +240,7 @@ CONTAINS
       ! Local Scalars
       REAL :: tnn(3), elall, fjkiln, gjkiln, ddnln, ski(3)
       REAL :: apw_lo1, apw_lo2, w1
+      REAL :: ddn(0:atoms%lmaxd), bs(2,2,0:atoms%lmaxd) ! <udot|udot> and boundary values of u, udot
 
       INTEGER :: ikG0, ikG, ikGPr, l, nn, kj_end, l3, jv, kj_off, kj_vec
 
@@ -278,8 +282,10 @@ CONTAINS
          fl2p1(l) = REAL(l+l+1)/fpi_const
       END DO ! l
 
+      ddn = rf%integral(2,2,:,isp,isp)
+      bs  = rf%bnd(:,1:2,:,isp)
       !$OMP     PARALLEL DEFAULT(NONE)&
-      !$OMP     SHARED(lapw,lapwPr,atoms,nococonv,fmpi,input,usdus,smat,hmat)&
+      !$OMP     SHARED(lapw,lapwPr,atoms,nococonv,fmpi,input,ddn,bs,smat,hmat)&
       !$OMP     SHARED(igSpin,igSpinPr,n,fleg1,fleg2,fjgj,fjgjPr,isp,fl2p1,el,e_shift,chi,set0,l_fullj)&
       !$OMP     PRIVATE(ikG0,ikG,ski,ikGPr,kj_off,kj_vec,plegend,xlegend,l,l3,kj_end,qssAdd,qssAddPr,fct2)&
       !$OMP     PRIVATE(cph_re,cph_im,cfac,dot,nn,tnn,fjkiln,gjkiln)&
@@ -320,22 +326,22 @@ CONTAINS
                gjkiln = fjgj%gj(ikG,l,isp,igSpin)
 
                IF (input%l_useapw) THEN
-                  w1 = 0.5 * ( usdus%uds(l,n,isp)*usdus%dus(l,n,isp) + usdus%us(l,n,isp)*usdus%duds(l,n,isp) )
-                  apw_lo1 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( gjkiln * w1 + fjkiln * usdus%us(l,n,isp)  * usdus%dus(l,n,isp) )
-                  apw_lo2 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( fjkiln * w1 + gjkiln * usdus%uds(l,n,isp) * usdus%duds(l,n,isp) )
+                  w1 = 0.5 * ( bs(1,2,l)*bs(2,1,l) + bs(1,1,l)*bs(2,2,l) )
+                  apw_lo1 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( gjkiln * w1 + fjkiln * bs(1,1,l)  * bs(2,1,l) )
+                  apw_lo2 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( fjkiln * w1 + gjkiln * bs(1,2,l) * bs(2,2,l) )
                END IF ! useapw
 
                !IF (l_fullj) THEN
-               !   !apw_lo1 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( usdus%us(l,n,isp)  * usdus%duds(l,n,isp) * gjkiln &
-               !   !                                           & + usdus%us(l,n,isp)  * usdus%dus(l,n,isp)  * fjkiln )
-               !   !apw_lo2 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( usdus%uds(l,n,isp) * usdus%dus(l,n,isp)  * fjkiln &
-               !   !                                           & + usdus%uds(l,n,isp) * usdus%duds(l,n,isp) * gjkiln)
-               !   w1 = 0.5 * ( usdus%uds(l,n,isp)*usdus%dus(l,n,isp) + usdus%us(l,n,isp)*usdus%duds(l,n,isp) )
-               !   apw_lo1 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( gjkiln * w1 + fjkiln * usdus%us(l,n,isp)  * usdus%dus(l,n,isp) )
-               !   apw_lo2 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( fjkiln * w1 + gjkiln * usdus%uds(l,n,isp) * usdus%duds(l,n,isp) )
+               !   !apw_lo1 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( bs(1,1,l)  * bs(2,2,l) * gjkiln &
+               !   !                                           & + bs(1,1,l)  * bs(2,1,l)  * fjkiln )
+               !   !apw_lo2 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( bs(1,2,l) * bs(2,1,l)  * fjkiln &
+               !   !                                           & + bs(1,2,l) * bs(2,2,l) * gjkiln)
+               !   w1 = 0.5 * ( bs(1,2,l)*bs(2,1,l) + bs(1,1,l)*bs(2,2,l) )
+               !   apw_lo1 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( gjkiln * w1 + fjkiln * bs(1,1,l)  * bs(2,1,l) )
+               !   apw_lo2 = fl2p1(l) * 0.5 * atoms%rmt(n)**2 * ( fjkiln * w1 + gjkiln * bs(1,2,l) * bs(2,2,l) )
                !END IF
 
-               ddnln = usdus%ddn(l,n,isp)
+               ddnln = ddn(l)
                elall = el(l,n,isp)
 
                IF (l<=atoms%lnonsph(n).AND..NOT.l_fullj) elall=elall-e_shift!(isp)

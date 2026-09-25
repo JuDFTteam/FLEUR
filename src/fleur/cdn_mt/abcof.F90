@@ -60,6 +60,7 @@ INTEGER,OPTIONAL,INTENT(IN):: nat_start,nat_stop
 
     ! Local objects
     TYPE(t_fjgj) :: fjgj
+    TYPE(t_radfun) :: rf
 
     ! Local scalars
     INTEGER :: i,iLAPW,l,ll1,lm,nap,jAtom,lmp,m,nkvec,iAtom,iType,acof_size,iAtom_l,jatom_l
@@ -134,11 +135,12 @@ INTEGER,OPTIONAL,INTENT(IN):: nat_start,nat_stop
        iType = atoms%itype(iAtom)
 
        CALL timestart("fjgj coefficients")
-       CALL fjgj%calculate(input,atoms,cell,lapw,noco,usdus,iType,jspin)
+       CALL rf%from_usdus(atoms,usdus,iType)
+       CALL fjgj%calculate(input,atoms,cell,lapw,noco,rf,iType,jspin)
        !$acc update device (fjgj%fj,fjgj%gj)
        CALL timestop("fjgj coefficients")
 
-       CALL setabc1lo(atoms,iType,usdus,jspin,alo1,blo1,clo1)
+       CALL setabc1lo(atoms,iType,rf,jspin,alo1,blo1,clo1)
 
           ! generate the spinors (chi)
        IF(noco%l_noco) ccchi=conjg(nococonv%umat(itype))

@@ -35,7 +35,6 @@ MODULE m_rixs_driver
    USE m_types_potden, ONLY: t_potden
    USE m_types_radfun, ONLY: t_radfun
    USE m_types_sym, ONLY: t_sym
-   USE m_types_usdus, ONLY: t_usdus
    USE m_types_xas, ONLY: t_xas
    USE m_xas_angular, ONLY: xas_cartesian_to_spherical
    USE m_xas_core, ONLY: t_xas_core_state, xas_extract_core_states
@@ -67,7 +66,6 @@ CONTAINS
       TYPE(t_potden),      INTENT(IN) :: vTot
       TYPE(t_results),     INTENT(IN) :: results
 
-      TYPE(t_usdus) :: usdus
       TYPE(t_radfun) :: radfun
       TYPE(t_lapw) :: lapw
       TYPE(t_mat) :: zMat
@@ -164,13 +162,12 @@ CONTAINS
          CALL rixs_prepare_state_character_context(state_character_context,rixs%rixs_state_ligand_z, &
             rixs%rixs_output_prefix,rixs%rixs_edge,fmpi%irank,rixs%rixs_absorber_z,atoms,cell,input%film,nococonv)
       END IF
-      CALL usdus%init(atoms, input%jspins)
 
       jsp = 1
       l_real = sym%invs .AND. (.NOT. noco%l_soc) .AND. (.NOT. noco%l_noco) .AND. atoms%n_hia == 0
       DO itype = 1, atoms%ntype
          IF (atoms%nz(itype) /= rixs%rixs_absorber_z) CYCLE
-         CALL radfun%generate_radial_functions(atoms, input, enpara, fmpi, vTot, itype, usdus_out=usdus)
+         CALL radfun%generate_radial_functions(atoms, input, enpara, fmpi, vTot, itype)
          CALL xas_extract_core_states(atoms, itype, rixs%rixs_edge, vTot%mt(1:atoms%jri(itype), 0, itype, 1), core_states)
          IF (SIZE(core_states) < 1) THEN
             WRITE(error_message, '(a,a,a,i0,a,i0)') "No core state found for requested RIXS edge ", TRIM(rixs%rixs_edge), &
@@ -225,7 +222,7 @@ CONTAINS
                ALLOCATE(abc_spin(2))
                DO ispin = 1, 2
                   CALL abc_spin(ispin)%init(input, atoms, nbands, itype)
-                  CALL abc_spin(ispin)%calc_abc(input, atoms, sym, cell, lapw, nbands, usdus, noco, nococonv, &
+                  CALL abc_spin(ispin)%calc_abc(input, atoms, sym, cell, lapw, nbands, radfun, noco, nococonv, &
                                                 ispin, itype, zMat)
                END DO
                ALLOCATE(matrix_abs(nbands, SIZE(core_states(1)%twice_mj)))
@@ -233,7 +230,7 @@ CONTAINS
             ELSE
                ALLOCATE(abc_spin(1))
                CALL abc_spin(1)%init(input, atoms, nbands, itype)
-               CALL abc_spin(1)%calc_abc(input, atoms, sym, cell, lapw, nbands, usdus, noco, nococonv, jsp, itype, zMat)
+               CALL abc_spin(1)%calc_abc(input, atoms, sym, cell, lapw, nbands, radfun, noco, nococonv, jsp, itype, zMat)
                ALLOCATE(matrix_abs_spin(nbands, SIZE(core_states(1)%twice_mj), 2))
                ALLOCATE(matrix_emit_spin(nbands, SIZE(core_states(1)%twice_mj), 2))
             END IF

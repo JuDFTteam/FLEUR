@@ -17,7 +17,7 @@ MODULE m_hlomat
   ! p.kurz sept. 1996
   !***********************************************************************
 CONTAINS
-  SUBROUTINE hlomat(input,atoms,fmpi,lapw,ud,tlmplm,sym,cell,noco,nococonv,ilSpinPr,ilSpin,&
+  SUBROUTINE hlomat(input,atoms,fmpi,lapw,tlmplm,sym,cell,noco,nococonv,ilSpinPr,ilSpin,&
        ntyp,na,fjgj,alo1,blo1,clo1, igSpinPr,igSpin,chi,hmat,l_fullj,l_ham,lapwq,fjgjq)
 
     USE m_hsmt_ab
@@ -30,7 +30,6 @@ CONTAINS
     TYPE(t_atoms),INTENT(IN)  :: atoms
     TYPE(t_lapw),INTENT(IN),TARGET   :: lapw
     TYPE(t_mpi),INTENT(IN)    :: fmpi
-    TYPE(t_usdus),INTENT(IN)  :: ud
     TYPE(t_tlmplm),INTENT(IN) :: tlmplm
     TYPE(t_sym),INTENT(IN)    :: sym
     TYPE(t_cell),INTENT(IN)   :: cell
@@ -42,7 +41,7 @@ CONTAINS
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: na,ntyp
-    INTEGER, INTENT (IN) :: ilSpinPr,ilSpin !spin for usdus and tlmplm
+    INTEGER, INTENT (IN) :: ilSpinPr,ilSpin !spins of the local Hamiltonian
     INTEGER, INTENT (IN) :: igSpin,igSpinPr
     COMPLEX, INTENT (IN) :: chi
     !     ..

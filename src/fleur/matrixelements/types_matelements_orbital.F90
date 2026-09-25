@@ -31,7 +31,6 @@ MODULE m_types_matelements_orbital
    USE m_types_abc
    USE m_types_radfun
    USE m_types_spinor_layout, ONLY: radial_slot
-   USE m_types_usdus
    USE m_types_atoms
    USE m_constants, ONLY: ImagUnit
    USE m_judft
@@ -85,12 +84,11 @@ CONTAINS
       this%iat   = iat
    END SUBROUTINE init
 
-   SUBROUTINE calc_matrix_elements(this, zmat, abc, radfun, usdus)
+   SUBROUTINE calc_matrix_elements(this, zmat, abc, radfun)
       CLASS(t_matelements_orbital), INTENT(INOUT) :: this
       TYPE(t_mat),    INTENT(IN) :: zmat(:)   !> unused, L works on the abc coefficients only
       TYPE(t_abc),    INTENT(IN) :: abc(:, :) !> (2 spin, ntype) local-frame coefficients
       TYPE(t_radfun), INTENT(IN) :: radfun(:) !> (ntype)
-      TYPE(t_usdus),  INTENT(IN) :: usdus     !> unused, the radial integrals are in radfun
 
       INTEGER :: nb, i, j, l, ll1, mm, lm, n_r, n_r2, s, s_lo, s_hi, slot(2)
       REAL    :: lplus, lminus, w
