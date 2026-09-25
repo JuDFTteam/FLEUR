@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -132,8 +132,8 @@ CONTAINS
          END DO
          if (n_dos > size(banddos%dos_atomlist)) cycle ! no n_dos for this atom found
          IF (ANY((/banddos%alpha(mt), banddos%beta(mt), banddos%gamma(mt)/) .NE. 0.0)) THEN !check if atom should be rotated....
-            abc_rot=abc%rotate(banddos%alpha(mt), banddos%beta(mt), banddos%gamma(mt),3)
-            abc1_rot=abc1%rotate(banddos%alpha(mt), banddos%beta(mt), banddos%gamma(mt),3)
+            abc_rot=abc_in%rotate(banddos%alpha(mt), banddos%beta(mt), banddos%gamma(mt),3)
+            abc1_rot=abc1_in%rotate(banddos%alpha(mt), banddos%beta(mt), banddos%gamma(mt),3)
             abc => abc_rot
             abc1 => abc1_rot
           

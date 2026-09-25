@@ -1,10 +1,11 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_mt_tofrom_grid
    USE m_types
+   implicit none
    PRIVATE
    REAL, PARAMETER    :: d_15 = 1.e-15
    REAL, ALLOCATABLE :: ylh(:, :, :), ylht(:, :, :), ylhtt(:, :, :)
@@ -77,17 +78,14 @@ CONTAINS
       REAL, ALLOCATABLE :: chdr(:, :), chdt(:, :), chdf(:, :), ch_tmp(:, :),ch_calc(:,:)
       REAL, ALLOCATABLE :: chdrr(:, :), chdtt(:, :), chdff(:, :), chdtf(:, :)
       REAL, ALLOCATABLE :: chdrt(:, :), chdrf(:, :)
-      REAL, ALLOCATABLE :: drm(:,:), drrm(:,:), mm(:,:)
-      REAL, ALLOCATABLE :: chlhtot(:),chlhdrtot(:),chlhdrrtot(:)
+      REAL, ALLOCATABLE :: ch_ud(:, :)
       INTEGER:: nd, lh, js, jr, kt, k, nsp,j,i,jspV
+      LOGICAL :: l_nocoden
 
       call timestart("mt_to_grid")
-      !This snippet is crucial to determine over which spins (Only diagonals in colinear case or also off diags in non colin case.)
-      IF (any(noco%l_unrestrictMT)) THEN
-         jspV=4
-      ELSE
-         jspV=jspins
-      END IF
+      !Full 2x2 density matrix only if the field carries all four components
+      l_nocoden = any(noco%l_unrestrictMT) .AND. SIZE(den_mt,3)>=4
+      jspV = MERGE(4, jspins, l_nocoden)
 
       nd = sym%ntypsy(atoms%firstAtom(n))
       nsp = atoms%nsp()
@@ -103,23 +101,8 @@ CONTAINS
                    chdrf(nsp, jspV))
          ALLOCATE (chlhdr(atoms%jmtd, 0:sphhar%nlhd, jspV))
          ALLOCATE (chlhdrr(atoms%jmtd, 0:sphhar%nlhd, jspV))
-      ENDIF
-
-      !Allocations in mtNoco case
-      IF (any(noco%l_unrestrictMT)) THEN
-         !General Noco Allocations
-         ALLOCATE(mm(atoms%jmtd, 0:sphhar%nlhd))
-
-         !Allocations in case one uses e.g. GGA with mtNoco
-         IF (dograds) THEN
-            ALLOCATE(drm(atoms%jmtd,0:sphhar%nlhd),drrm(atoms%jmtd, 0:sphhar%nlhd))
-            ALLOCATE(chlhtot(0:sphhar%nlhd),chlhdrtot(0:sphhar%nlhd),chlhdrrtot(0:sphhar%nlhd))
-         END IF
+         IF (l_nocoden) ALLOCATE (ch_ud(nsp, 2))
       END IF
-
-      !Calc magnetization (This is necessary only in mtNoco case)
-      IF(any(noco%l_unrestrictMT)) mm(:,:)=SQRT((0.5*(den_mt(:,:,1)-den_mt(:,:,2)))**2+4*den_mt(:,:,3)**2+4*den_mt(:,:,4)**2)
-
 
       !Loop to calculate chlh and necessary gradients (if needed)
       DO lh = 0, sphhar%nlh(nd)
@@ -127,9 +110,6 @@ CONTAINS
          !         rho*ylh/r**2 is charge density. chlh=rho/r**2.
          !         charge density=sum(chlh*ylh).
          !         chlhdr=d(chlh)/dr, chlhdrr=dd(chlh)/drr.
-
-         !Scaling of the magnetic moments in the same way the charge density is scaled in chlh.
-         IF(any(noco%l_unrestrictMT)) mm(:,lh)=0.5*mm(:,lh)/(atoms%rmsh(:, n)*atoms%rmsh(:, n))
 
          DO js = 1, jspV
             chlh(1:atoms%jri(n), lh, js) = den_mt(1:atoms%jri(n), lh, js) / &
@@ -139,20 +119,15 @@ CONTAINS
             IF (dograds) THEN
                !Colinear case only needs radial derivatives of chlh
                CALL grdchlh(atoms%dx(n), chlh(1:atoms%jri(n), lh, js),  chlhdr(1:, lh, js), chlhdrr(1:, lh,js),atoms%rmsh(:,n))
-               IF (any(noco%l_unrestrictMT)) THEN
-               !Noco case also needs radial derivatives of mm
-                  CALL grdchlh(atoms%dx(n), mm(:atoms%jri(n),lh),  drm(:,lh), drrm(:,lh), atoms%rmsh(:, n))
-               END IF
             END IF
          END DO ! js
       END DO   ! lh
 
       !The following Loop maps chlh on the k-Grid using the lattice harmonics ylh
       !$OMP parallel do default( NONE ) &
-      !$OMP SHARED(atoms,sphhar,noco,n,nsp,jspV,nd,ylh,chlh,dograds,chlhdr,chlhdrr,mm,drm,drrm)&
+      !$OMP SHARED(atoms,sphhar,noco,n,nsp,jspV,nd,ylh,chlh,dograds,chlhdr,chlhdrr,l_nocoden)&
       !$OMP SHARED(ylht,ylhf,ylhtt,ylhff,ylhtf,jspins,thet,grad,ch,ch_calc) &
-      !$OMP private(kt,ch_tmp,js,lh,k,chdr,chdt,chdf,chdrr,chdtt,chdff,chdtf,chdrt,chdrf) &
-      !$OMP private(chlhtot,chlhdrtot,chlhdrrtot)
+      !$OMP private(kt,ch_tmp,js,lh,k,chdr,chdt,chdf,chdrr,chdtt,chdff,chdtf,chdrt,chdrf,ch_ud)
       DO jr = 1, atoms%jri(n)
          kt = (jr-1)*nsp
          ! charge density (on extended grid for all jr)
@@ -163,9 +138,9 @@ CONTAINS
             DO lh = 0, sphhar%nlh(nd)
                DO k = 1, nsp
                      ch_tmp(k, js) = ch_tmp(k, js) + ylh(k, lh, nd)*chlh(jr, lh, js)
-               ENDDO
-            ENDDO
-         ENDDO
+               END DO
+            END DO
+         END DO
 
          !Initialize derivatives of ch on grid if needed.
          IF (dograds) THEN
@@ -182,32 +157,11 @@ CONTAINS
             DO js = 1, jspV
                DO lh = 0, sphhar%nlh(nd)
 
-                  !The following snippet maps chlh and its radial derivatives on a colinear system
-                  !using mm and its radial derivatives.
-                  IF (any(noco%l_unrestrictMT)) THEN
-                      IF (js.EQ.1) THEN
-                         chlhtot(lh)=0.5*(chlh(jr, lh, 1)+chlh(jr, lh, 2))
-                         chlhdrtot(lh)=0.5*(chlhdr(jr, lh, 1)+chlhdr(jr, lh, 2))
-                         chlhdrrtot(lh)=0.5*(chlhdrr(jr, lh, 1)+chlhdrr(jr, lh, 2))
-                         chlh(jr,lh,js)=chlhtot(lh)+mm(jr,lh)
-                         chlhdr(jr, lh, js)=chlhdrtot(lh)+drm(jr,lh)
-                         chlhdrr(jr, lh, js)=chlhdrrtot(lh)+drrm(jr,lh)
-                      ELSE IF (js.EQ.2) THEN
-                         chlh(jr,lh,js)=chlhtot(lh)-mm(jr,lh)
-                         chlhdr(jr, lh, js)=chlhdrtot(lh)-drm(jr,lh)
-                         chlhdrr(jr, lh, js)=chlhdrrtot(lh)-drrm(jr,lh)
-                      ELSE
-                         chlh(jr,lh,js)=0
-                         chlhdr(jr, lh, js)=0
-                         chlhdrr(jr, lh, js)=0
-                     END IF
-                  END IF
-
                   !The following loop brings chlhdr and chlhdrr on the k-grid.
                   DO k = 1, nsp
                      chdr(k, js) = chdr(k, js) + ylh(k, lh, nd)*chlhdr(jr, lh, js)
                      chdrr(k, js) = chdrr(k, js) + ylh(k, lh, nd)*chlhdrr(jr, lh, js)
-                  ENDDO
+                  END DO
 
                   !This loop calculates the other derviatives of ch (Angular terms) on the k-grid
                   !by using the lattice harmonics derivatives and chlh with its derivatives.
@@ -219,29 +173,36 @@ CONTAINS
                      chdtt(k, js) = chdtt(k, js) + ylhtt(k, lh, nd)*chlh(jr, lh, js)
                      chdff(k, js) = chdff(k, js) + ylhff(k, lh, nd)*chlh(jr, lh, js)
                      chdtf(k, js) = chdtf(k, js) + ylhtf(k, lh, nd)*chlh(jr, lh, js)
-                  ENDDO
-               ENDDO ! lh
-            ENDDO   ! js
+                  END DO
+               END DO ! lh
+            END DO   ! js
          !Rotation to local if needed (Indicated by rotch)
             !Makegradients
             !IF(jspins>2) CALL mkgylm(2, atoms%rmsh(jr, n), thet, nsp, &
             !            ch_tmp, chdr, chdt, chdf, chdrr, chdtt, chdff, chdtf, chdrt, chdrf, grad, kt)
             !IF(jspins.LE.2)
-            CALL mkgylm(jspins, atoms%rmsh(jr, n), thet, nsp, &
-                        ch_tmp, chdr, chdt, chdf, chdrr, chdtt, chdff, chdtf, chdrt, chdrf, grad, kt)
+            IF (l_nocoden) THEN
+               !Gradients of rho_up/down=(rho+-|m|)/2 in the local frame
+               CALL noco_to_updown(ch_tmp, chdr, chdt, chdf, chdrr, chdtt, chdff, chdtf, chdrt, chdrf, ch_ud)
+               CALL mkgylm(2, atoms%rmsh(jr, n), thet, nsp, &
+                           ch_ud, chdr, chdt, chdf, chdrr, chdtt, chdff, chdtf, chdrt, chdrf, grad, kt)
+            ELSE
+               CALL mkgylm(jspins, atoms%rmsh(jr, n), thet, nsp, &
+                           ch_tmp, chdr, chdt, chdf, chdrr, chdtt, chdff, chdtf, chdrt, chdrf, grad, kt)
+            END IF
          END IF
          !Set charge to minimum value
          IF (PRESENT(ch)) THEN
             WHERE (ABS(ch_tmp(:nsp,:)) < d_15) ch_tmp(:nsp,:) = d_15
             ch_calc(kt + 1:kt + nsp, :) = ch_tmp(:nsp, :)
-         ENDIF
+         END IF
       END DO
       !$OMP END PARALLEL DO
 
 
       IF (PRESENT(ch)) THEN
       !Rotation to local if needed (Indicated by rotch)
-         IF (rotch.AND.any(noco%l_unrestrictMT)) THEN
+         IF (rotch.AND.l_nocoden) THEN
             DO jr = 1,nsp*atoms%jri(n)
                rho_11  = ch_calc(jr,1)
                rho_22  = ch_calc(jr,2)
@@ -297,15 +258,70 @@ CONTAINS
                !
                vlh = dot_PRODUCT(vpot(:), ylh(:nsp, lh, nd))
                vr(jr, lh, js) = vr(jr, lh, js) + vlh
-            ENDDO ! lh
-         ENDDO   ! jr
+            END DO ! lh
+         END DO   ! jr
          !$OMP END PARALLEL DO
-      ENDDO
+      END DO
       call timestop("mt_from_grid")
    END SUBROUTINE mt_from_grid
 
+   SUBROUTINE noco_to_updown(ch, chdr, chdt, chdf, chdrr, chdtt, chdff, chdtf, chdrt, chdrf, ch_ud)
+      !Converts the 2x2 density matrix (11,22,Re21,Im21) and its derivatives on the grid
+      !into rho_up/down=(rho+-|m|)/2. The derivatives are overwritten in columns 1:2.
+      IMPLICIT NONE
+      REAL, INTENT(IN)    :: ch(:, :)
+      REAL, INTENT(INOUT) :: chdr(:, :), chdt(:, :), chdf(:, :)
+      REAL, INTENT(INOUT) :: chdrr(:, :), chdtt(:, :), chdff(:, :), chdtf(:, :), chdrt(:, :), chdrf(:, :)
+      REAL, INTENT(OUT)   :: ch_ud(:, :)
+
+      REAL, PARAMETER    :: eps = 1.e-10
+      !second derivatives rr,tt,ff,tf,rt,rf as pairs of first derivatives r,t,f
+      INTEGER, PARAMETER :: ia(6) = [1, 2, 3, 2, 1, 1], ib(6) = [1, 2, 3, 3, 2, 3]
+      REAL    :: m(3), d1(3, 3), d2(3, 6), am, dam(3), ddam(6)
+      INTEGER :: k, i
+
+      DO k = 1, SIZE(ch, 1)
+         m = mvec(ch(k, :))
+         d1(:, 1) = mvec(chdr(k, :)); d1(:, 2) = mvec(chdt(k, :)); d1(:, 3) = mvec(chdf(k, :))
+         d2(:, 1) = mvec(chdrr(k, :)); d2(:, 2) = mvec(chdtt(k, :)); d2(:, 3) = mvec(chdff(k, :))
+         d2(:, 4) = mvec(chdtf(k, :)); d2(:, 5) = mvec(chdrt(k, :)); d2(:, 6) = mvec(chdrf(k, :))
+         am = NORM2(m)
+         IF (am > eps) THEN
+            DO i = 1, 3
+               dam(i) = DOT_PRODUCT(m, d1(:, i))/am
+            END DO
+            DO i = 1, 6
+               ddam(i) = (DOT_PRODUCT(d1(:, ia(i)), d1(:, ib(i))) + DOT_PRODUCT(m, d2(:, i)))/am &
+                         - dam(ia(i))*dam(ib(i))/am
+            END DO
+         ELSE
+            dam = 0.0; ddam = 0.0
+         END IF
+         ch_ud(k, 1) = 0.5*(ch(k, 1) + ch(k, 2) + am)
+         ch_ud(k, 2) = 0.5*(ch(k, 1) + ch(k, 2) - am)
+         CALL updown(chdr(k, :), dam(1));   CALL updown(chdt(k, :), dam(2));   CALL updown(chdf(k, :), dam(3))
+         CALL updown(chdrr(k, :), ddam(1)); CALL updown(chdtt(k, :), ddam(2)); CALL updown(chdff(k, :), ddam(3))
+         CALL updown(chdtf(k, :), ddam(4)); CALL updown(chdrt(k, :), ddam(5)); CALL updown(chdrf(k, :), ddam(6))
+      END DO
+   CONTAINS
+      PURE FUNCTION mvec(c)
+         REAL, INTENT(IN) :: c(:)
+         REAL             :: mvec(3)
+         mvec = [2*c(3), -2*c(4), c(1) - c(2)]
+      END FUNCTION mvec
+
+      PURE SUBROUTINE updown(c, dm)
+         REAL, INTENT(INOUT) :: c(:)
+         REAL, INTENT(IN)    :: dm
+         REAL                :: drho
+         drho = c(1) + c(2)
+         c(1) = 0.5*(drho + dm)
+         c(2) = 0.5*(drho - dm)
+      END SUBROUTINE updown
+   END SUBROUTINE noco_to_updown
+
    SUBROUTINE finish_mt_grid()
-      implicit NONE 
+      implicit NONE
       call timestart("finish_mt_grid")
       DEALLOCATE (ylh, wt, rx, thet, phi)
       IF (ALLOCATED(ylht)) DEALLOCATE (ylht, ylhtt, ylhf, ylhff, ylhtf)
