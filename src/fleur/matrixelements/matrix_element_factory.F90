@@ -281,7 +281,7 @@ CONTAINS
             ! Only as many states as are actually stored for this k-point are
             ! available; requesting more would read uninitialized eig storage
             ! (harmless zeros in serial mem/DA, but stale window memory under
-            ! MPI-RMA). Clamp to the stored count, as the old alineso did.
+            ! MPI-RMA). Clamp to the stored count.
             ikpt_stored = ikpt
             IF (PRESENT(kpts)) THEN
                 IF (ikpt > kpts%nkpt) ikpt_stored = kpts%bkp(ikpt)

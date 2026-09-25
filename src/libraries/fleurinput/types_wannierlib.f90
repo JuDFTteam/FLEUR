@@ -140,9 +140,9 @@ MODULE m_types_wannierlib
     INTEGER :: dis_num_iter = 0
     INTEGER :: num_iter = 0      ! MLWF/wannierise iterations (W90 num_iter); XML @wannNumIter
     !> Projectability disentanglement (W90 dis_froz_proj / dis_proj_min / dis_proj_max).
-    !> Off by default, which is also Wannier90's default -- and W90 says why in its own
-    !> source: "upon reading AMN we do not know where it comes from". We do: ours are the
-    !> atomic projections this code builds, so the criterion is meaningful here.
+    !> Off by default, as in Wannier90. The criterion is meaningful here because the
+    !> projections are the atomic ones this code builds, which a reader of an arbitrary
+    !> AMN file cannot assume.
     !>
     !> It replaces the ENERGY frozen window by one on p_i(k) = sum_j |A_ij(k)|^2, the share
     !> of a Bloch state that lies in the span of the trial orbitals. Below proj_min a state
@@ -161,11 +161,7 @@ MODULE m_types_wannierlib
     !> Off by default, which is also Wannier90's default.
     !>
     !> It changes the descent inside a valley, not the functional, so it cannot move the
-    !> minimum -- and measurement confirms it does not: on bcc Fe with the quantisation
-    !> axis along x, y and z it leaves Omega_I identical to every digit and Omega_total
-    !> within 0.02%, and the axis whose localisation was broken came out slightly worse.
-    !> It is exposed because the option exists and someone will want it, not because it
-    !> fixed anything here.
+    !> minimum.
     LOGICAL :: precond = .FALSE.
 
     LOGICAL :: l_intp = .FALSE.         ! Do interpolation
@@ -288,10 +284,9 @@ CONTAINS
             new_proj(j)%ntype = itype
             new_proj(j)%atom = nn
             new_proj(j)%spin = spin_here
-            ! BUGFIX: when the user requested m=0 ("expand all m"), the auto-generated
-            ! harmonic index must be the 1-based mval -- even when only one m exists
-            ! (l=0/s: mrepeat=1). The old test (mrepeat>1) left s with the literal
-            ! m=0, which is out of range for tlm(:,:,1:7) -> uninitialised read.
+            ! With m=0 ("expand all m") the harmonic index is the 1-based mval, also when
+            ! only one m exists (l=0/s: mrepeat=1): the literal m=0 is out of range for
+            ! tlm(:,:,1:7) and would be read uninitialised.
             IF (this%proj(i)%m == 0) new_proj(j)%m = mval
           END DO
         END DO

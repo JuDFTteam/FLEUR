@@ -7,9 +7,8 @@
 !> The files written from the BLOCH basis, before any gauge exists: the eigenvalues in
 !> Wannier90's .eig format, and the coarse spin operator.
 !>
-!> They are here and not in postproc/wgauge_io because that file is the layout of the
-!> real-space operators O(R), which only exist once the gauge does. Keeping the two apart
-!> is what lets either be described in one sentence: before the gauge, and after it.
+!> Everything here is written before any gauge exists; the real-space operators O(R),
+!> which need one, are laid out elsewhere.
 MODULE m_wannierlib_export_bloch
    USE m_juDFT
    USE m_constants, ONLY: hartree_to_ev_const

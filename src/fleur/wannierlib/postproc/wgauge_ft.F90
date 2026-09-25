@@ -212,8 +212,8 @@ CONTAINS
   !> It matters when the centres sit far from the cell origin -- bond-centred, or pushed into the
   !> vacuum of a film -- and when the cell is anisotropic. Both hold here.
   !>
-  !> Modelled on Wannier90's ws_distance.F90 (Paulatto, Gibertini, Gresch, Pizzi), reimplemented
-  !> rather than called: that module is W90-internal and our interpolation never enters W90.
+  !> Modelled on Wannier90's ws_distance.F90 (Paulatto, Gibertini, Gresch, Pizzi), and
+  !> reimplemented because that module is internal to Wannier90.
   SUBROUTINE wgauge_ws_distance(cell, mp_grid, irvec, nrpts, cfrac, ndeg, irdist)
     TYPE(t_cell), INTENT(IN) :: cell
     INTEGER, INTENT(IN) :: mp_grid(3), irvec(:, :), nrpts
