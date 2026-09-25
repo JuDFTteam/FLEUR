@@ -28,6 +28,7 @@ module m_types_radfun
       procedure, pass :: reset
       procedure, pass :: hsph
       procedure, pass :: to_usdus
+      procedure, pass :: from_usdus
    end type
    public:: t_radfun
 contains
@@ -83,11 +84,10 @@ contains
       if (this%itype /= itype .or. .not.allocated(this%r)) THEN
          if (input%l_useapw) call judft_bug("APW not implemented")
          if (any(atoms%l_dulo(:atoms%nlo(itype),itype))) call judft_bug("l_dulo not implemented in t_radfun")
+         call this%reset()
          call this%init(atoms, input, itype)
          call usdus%init(atoms,input%jspins)
          nd = maxval(this%n_r)
-
-         if (allocated(this%r)) deallocate (this%r, this%integral, this%bnd, this%e, this%ipred, this%l_sra)
          allocate (this%r( atoms%jmtd, 2,nd,0:atoms%lmaxd, input%jspins),source=0.0)
          allocate (this%integral(nd, nd,0:atoms%lmaxd, input%jspins,input%jspins),source=0.0)
          allocate (this%bnd(2,nd,0:atoms%lmaxd,input%jspins),source=0.0)
@@ -217,11 +217,63 @@ contains
       end do
    end subroutine
 
+   subroutine from_usdus(this, atoms, usdus, itype)
+      !! boundary values and spin-diagonal overlaps of itype from a legacy t_usdus;
+      !! no radial functions, energies or cross-spin overlaps (bridge for code still filling t_usdus)
+      use m_types_atoms
+      use m_types_usdus
+      class(t_radfun), intent(inout) :: this
+      type(t_atoms), intent(in)      :: atoms
+      type(t_usdus), intent(in)      :: usdus
+      integer, intent(in)            :: itype
+
+      integer :: ispin, l, lo, jlo, i, nd, ns
+
+      call this%reset()
+      this%itype = itype
+      this%rmt = atoms%rmt(itype)
+      if (allocated(this%n_r)) deallocate(this%n_r)
+      allocate(this%n_r(0:atoms%lmaxd))
+      this%n_r(0:) = atoms%num_radial_functions_per_l(itype)
+      nd = maxval(this%n_r); ns = size(usdus%us,3)
+      allocate(this%integral(nd,nd,0:atoms%lmaxd,ns,ns), this%bnd(2,nd,0:atoms%lmaxd,ns), this%e(nd,0:atoms%lmaxd,ns), &
+               this%ipred(nd,nd,0:atoms%lmaxd,ns), source=0.0)
+      allocate(this%l_sra(nd,0:atoms%lmaxd), source=.true.)
+      do ispin = 1, ns
+         do l = 0, atoms%lmax(itype)
+            this%bnd(:,1,l,ispin) = [usdus%us(l,itype,ispin), usdus%dus(l,itype,ispin)]
+            this%bnd(:,2,l,ispin) = [usdus%uds(l,itype,ispin), usdus%duds(l,itype,ispin)]
+            this%integral(1,1,l,ispin,ispin) = 1.0
+            this%integral(2,2,l,ispin,ispin) = usdus%ddn(l,itype,ispin)
+         end do
+         do lo = 1, atoms%nlo(itype)
+            l = atoms%llo(lo,itype)
+            i = atoms%slot_of_lo(lo,itype)
+            this%bnd(:,i,l,ispin) = [usdus%ulos(lo,itype,ispin), usdus%dulos(lo,itype,ispin)]
+            this%l_sra(i,l) = .not.atoms%l_relLO(lo,itype)
+            this%integral(1,i,l,ispin,ispin) = usdus%uulon(lo,itype,ispin)
+            this%integral(2,i,l,ispin,ispin) = usdus%dulon(lo,itype,ispin)
+            this%integral(i,1:2,l,ispin,ispin) = this%integral(1:2,i,l,ispin,ispin)
+            this%ipred(1,i,l,ispin) = usdus%uuilon(lo,itype,ispin)
+            this%ipred(2,i,l,ispin) = usdus%duilon(lo,itype,ispin)
+            do jlo = 1, atoms%nlo(itype)
+               if (atoms%llo(jlo,itype) /= l) cycle
+               this%integral(atoms%slot_of_lo(jlo,itype),i,l,ispin,ispin) = usdus%uloulopn(jlo,lo,itype,ispin)
+               this%ipred(atoms%slot_of_lo(jlo,itype),i,l,ispin) = usdus%ulouilopn(jlo,lo,itype,ispin)
+            end do
+         end do
+         do l = 0, atoms%lmax(itype)
+            this%ipred(:this%n_r(l),2,l,ispin) = this%integral(:this%n_r(l),1,l,ispin,ispin)
+         end do
+      end do
+   end subroutine
+
    subroutine reset(this)
       !! invalidate cached radial functions
       class(t_radfun), intent(inout):: this
       this%itype = 0
-      if (allocated(this%r)) deallocate(this%r, this%integral, this%bnd, this%e, this%ipred, this%l_sra)
+      if (allocated(this%r)) deallocate(this%r)
+      if (allocated(this%integral)) deallocate(this%integral, this%bnd, this%e, this%ipred, this%l_sra)
    end subroutine
 
 end module m_types_radfun

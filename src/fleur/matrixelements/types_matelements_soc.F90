@@ -13,7 +13,6 @@ MODULE m_types_matelements_soc
     USE m_types_enpara
     USE m_types_lapw
     USE m_types_cell
-    USE m_types_usdus
     USE m_types_noco
     USE m_types_nococonv
     USE m_types_sym
@@ -77,7 +76,7 @@ CONTAINS
         this%nococonv => nococonv
     end subroutine init
 
-    subroutine calc_matrix_elements(this, zmat, abc, radfun, usdus)
+    subroutine calc_matrix_elements(this, zmat, abc, radfun)
         use m_types_abc
         use m_types_radfun
         use m_types_nococonv
@@ -86,7 +85,6 @@ CONTAINS
         TYPE(t_mat),    INTENT(IN) :: zMat(:)   !unused, SOC works on the abc coefficients only
         TYPE(t_abc),    INTENT(IN) :: abc(:,:)  !(2,ntype)
         TYPE(t_radfun), INTENT(IN) :: radfun(:) !unused, the radial integrals are precomputed in rsoc
-        TYPE(t_usdus),  INTENT(IN) :: usdus     !unused
 
         INTEGER :: num_bands
         integer :: n, l, m, lm, ll1, jcof, icof

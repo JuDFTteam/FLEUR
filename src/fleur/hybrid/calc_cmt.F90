@@ -5,6 +5,7 @@
 !--------------------------------------------------------------------------------
 module m_calc_cmt
 
+   implicit none
 contains
    subroutine calc_cmt(atoms, cell, input, noco, nococonv, hybinp, hybdat, mpdata, kpts, &
                        sym,   zmat_ikp, jsp, ik, c_phase, cmt_out, submpi)
@@ -36,6 +37,7 @@ contains
       complex, intent(inout)       :: cmt_out(:,:,:)
       type(t_hybmpi), intent(in), optional :: submpi
       Type(t_abc):: abc
+      type(t_radfun) :: rf
       complex, allocatable :: cmt(:,:,:)
       type(t_noco)         :: nocoHyb
 
@@ -93,7 +95,8 @@ contains
       call timestart("copy to cmt")
       DO itype=1,atoms%ntype 
          call abc%init(input, atoms, my_psz, itype)
-         call abc%calc_abc(input, atoms, sym, cell, lapw_ikp, my_psz, hybdat%usdus, nocohyb, nococonv, jsp, itype, mat_ptr)
+         call rf%from_usdus(atoms, hybdat%usdus, itype)
+         call abc%calc_abc(input, atoms, sym, cell, lapw_ikp, my_psz, rf, nocohyb, nococonv, jsp, itype, mat_ptr)
          call abc%rot_to_unrotated(hybinp, atoms, sym, itype)
          DO na=1,atoms%neq(itype)
             iatom=atoms%firstAtom(itype)+na-1

@@ -93,7 +93,6 @@ CONTAINS
       REAL,    ALLOCATABLE :: eig(:), eigBuffer(:,:,:)
 
       TYPE(t_tlmplm)            :: td
-      TYPE(t_usdus)             :: ud
       TYPE(t_lapw)              :: lapw
       CLASS(t_mat), ALLOCATABLE :: zMat
       CLASS(t_mat), ALLOCATABLE :: hmat,smat
@@ -139,7 +138,6 @@ CONTAINS
           END DO
       END IF
 
-      call ud%init(fi%atoms,fi%input%jspins)
 
       ALLOCATE(eig(fi%input%neig))
       ALLOCATE(eigBuffer(fi%input%neig,fi%kpts%nkpt,fi%input%jspins))
@@ -153,7 +151,7 @@ CONTAINS
       !     set up k-point independent t(l'm',lm) matrices
 
       alpha_hybrid = MERGE(xcpot%get_exchange_weight(),0.0,hybdat%l_subvxc)
-      CALL local_ham(sphhar,fi%atoms,fi%sym,fi%noco,nococonv,enpara,fmpi,pot,potx,inden,fi%input,fi%hub1inp,hub1data,td,ud,alpha_hybrid)
+      CALL local_ham(sphhar,fi%atoms,fi%sym,fi%noco,nococonv,enpara,fmpi,pot,potx,inden,fi%input,fi%hub1inp,hub1data,td,alpha_hybrid=alpha_hybrid)
       neigBuffer = 0
       results%neig = 0
       results%eig = 1.0e300
@@ -172,7 +170,7 @@ CONTAINS
             CALL lapw%init(fi%input,fi%noco,nococonv, kpts_mod, fi%atoms, fi%sym, nk, fi%cell, fmpi, bqpt)
 
             call timestart("Setup of H&S matrices")
-            CALL eigen_hssetup(jsp,fmpi,fi,results,inDen,potx,xcpot,enpara,nococonv,stars,sphhar,hybdat,ud,td,pot,lapw,nk,smat,hmat)
+            CALL eigen_hssetup(jsp,fmpi,fi,results,inDen,potx,xcpot,enpara,nococonv,stars,sphhar,hybdat,td,pot,lapw,nk,smat,hmat)
             CALL timestop("Setup of H&S matrices")
 
             IF (PRESENT(hmat_out)) THEN

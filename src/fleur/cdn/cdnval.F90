@@ -273,7 +273,7 @@ CONTAINS
             DO ispin = jsp_start, jsp_end
                IF (input%l_f) CALL force%init2(noccbd, input, atoms)
                call abc(ispin, abc_itype)%init(input, atoms, noccbd, itype)
-               call abc(ispin, abc_itype)%calc_abc(input, atoms, sym, cell, lapw, noccbd, usdus, noco, nococonv, ispin, itype, zMat)
+               call abc(ispin, abc_itype)%calc_abc(input, atoms, sym, cell, lapw, noccbd, radfun(itype), noco, nococonv, ispin, itype, zMat)
                DO ispinpr = jsp_start, ispin
                   ispin123 = merge(ispin, 3, ispin == ispinpr) !sometimes the "3rd" spin is the off-diagonal part
                   !Calculate the density matrix for LDA+U and related methods
@@ -312,12 +312,12 @@ CONTAINS
                IF (input%l_f) THEN
                   !Calculate force contributions
                   call abc(ispin, abc_itype)%calc_force_abc(input, atoms, sym, cell, lapw, &
-                                                        noccbd, usdus, noco, nococonv, ispin, itype, zmat, eig, force)
+                                                        noccbd, radfun(itype), noco, nococonv, ispin, itype, zmat, eig, force)
 
                   call local_ham(sphhar, atoms, sym, noco, nococonv, enpara, fmpi, vtot, &
-                                 vtot, den, input, hub1inp, hub1data, tlmplm, usdus, 0.0, l_forces=.TRUE.)
+                                 vtot, den, input, hub1inp, hub1data, tlmplm, alpha_hybrid=0.0, l_forces=.TRUE.)
                   CALL addContribsA21A12(force, input, atoms, sym, cell, enpara, &
-                        usdus, tlmplm, vtot, abc(ispin,abc_itype), noccbd, ispin, eig, we, results, jsp_start, jspin, nbasfcn, zMat, lapw, &
+                        radfun(itype), tlmplm, vtot, abc(ispin,abc_itype), noccbd, ispin, eig, we, results, jsp_start, jspin, nbasfcn, zMat, lapw, &
                                          sphhar, lapw%gvec(1, :, :), lapw%gvec(2, :, :), lapw%gvec(3, :, :), bkpt, itype)
                END IF
 
@@ -326,7 +326,7 @@ CONTAINS
          !!$OMP END PARALLEL DO
          call timestop("Atoms loop")
          call timestart("valence density in the interstitial and vacuum region")
-         IF (atoms%n_v.GT.0) CALL nIJ_mat(lbound(abc,1),input,atoms,noccbd,usdus,we,abc,cell,kpts,ikpt,den%nIJ_llp_mmp,enpara,vTot) 
+         IF (atoms%n_v.GT.0) CALL nIJ_mat(lbound(abc,1),input,atoms,noccbd,radfun,we,abc,cell,kpts,ikpt,den%nIJ_llp_mmp,enpara,vTot) 
 
          ! valence density in the interstitial and vacuum region has to be called only once (if jspin=1) in the non-collinear case
          IF (.NOT. ((jspin .EQ. 2) .AND. noco%l_noco)) THEN

@@ -1,12 +1,12 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_forcea12
    implicit none
 CONTAINS
-   SUBROUTINE force_a12(atoms, nobd, sym, cell, we, jsp, ne, usdus, abc, &
+   SUBROUTINE force_a12(atoms, nobd, sym, cell, we, jsp, ne, rf, abc, &
                         acoflo, bcoflo, e1cof, e2cof, f_a12, results, itype)
       !--------------------------------------------------------------------------
       ! Pulay 1st term force contribution à la Rici et al.
@@ -15,7 +15,7 @@ CONTAINS
       !--------------------------------------------------------------------------
       USE m_types_setup
       USE m_types_misc
-      USE m_types_usdus
+      USE m_types_radfun
       USE m_types_abc
       USE m_constants
       USE m_juDFT
@@ -26,7 +26,7 @@ CONTAINS
       TYPE(t_sym), INTENT(IN)    :: sym
       TYPE(t_cell), INTENT(IN)    :: cell
 
-      TYPE(t_usdus), INTENT(IN)    :: usdus
+      TYPE(t_radfun), INTENT(IN)   :: rf
       TYPE(t_abc), INTENT(IN)    :: abc
       TYPE(t_results), INTENT(INOUT) :: results
       INTEGER, INTENT(IN)    :: itype
@@ -109,8 +109,8 @@ CONTAINS
                         DO ie = 1, ne
 
                            a12 = a12 + CONJG(cil1* &
-                                     (acof_flapw(ie, lm1)*usdus%us(l1, n, jsp) + bcof_flapw(ie, lm1)*usdus%uds(l1, n, jsp)))*cil2* &
-                                 (e1cof(ie, lm2, natrun)*usdus%us(l2, n, jsp) + e2cof(ie, lm2, natrun)*usdus%uds(l2, n, jsp))*we(ie)
+                                     (acof_flapw(ie, lm1)*rf%bnd(1, 1, l1, jsp) + bcof_flapw(ie, lm1)*rf%bnd(1, 2, l1, jsp)))*cil2* &
+                                 (e1cof(ie, lm2, natrun)*rf%bnd(1, 1, l2, jsp) + e2cof(ie, lm2, natrun)*rf%bnd(1, 2, l2, jsp))*we(ie)
 
                         END DO
 

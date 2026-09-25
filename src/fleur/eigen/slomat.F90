@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -10,9 +10,10 @@ MODULE m_slomat
   ! orbitals.
   !                                                p.kurz sept. 1996
   !***********************************************************************
+   implicit none
 CONTAINS
    SUBROUTINE slomat(input,atoms,sym,fmpi,lapw,cell,nococonv,ntyp,na,&
-                     isp,ud, alo1,blo1,clo1,fjgj,&
+                     isp,rf, alo1,blo1,clo1,fjgj,&
                      igSpinPr,igSpin,chi,smat,l_fullj,lapwq,fjgjq)
     !***********************************************************************
     ! locol stores the number of columns already processed; on parallel
@@ -46,7 +47,7 @@ CONTAINS
 
       ! Array Arguments
       REAL,   INTENT (IN)       :: alo1(atoms%nlod),blo1(atoms%nlod),clo1(atoms%nlod)
-      TYPE(t_usdus),INTENT(IN)  :: ud
+      TYPE(t_radfun),INTENT(IN) :: rf
       CLASS(t_mat),INTENT(INOUT) :: smat
       LOGICAL, INTENT(IN) :: l_fullj
 
@@ -56,6 +57,8 @@ CONTAINS
       ! Local Scalars
       REAL    :: con,dotp,fact1,fact2,fact3,fl2p1
       INTEGER :: invsfct,k ,l,lo,lop,lp,nkvec,nkvecp,kp,i
+      ! LO radial function as coefficient vector v over the radial slots, and its overlaps
+      REAL, ALLOCATABLE :: v(:,:),ov_ud(:,:),ov_lolo(:,:)
       INTEGER :: locol,lorow
       LOGICAL :: l_samelapw
 
@@ -99,22 +102,30 @@ CONTAINS
 
          con = fpi_const/SQRT(cell%omtil)* ((atoms%rmt(ntyp))**2)/2.0
 
+         ! ov_ud(:,lo) = (O v_lo)(u,udot), ov_lolo(lop,lo) = v_lop^T O v_lo (same l only)
+         ALLOCATE(v(SIZE(rf%integral,1),atoms%nlo(ntyp)),ov_ud(2,atoms%nlo(ntyp)),ov_lolo(atoms%nlo(ntyp),atoms%nlo(ntyp)),source=0.0)
+         DO lo = 1,atoms%nlo(ntyp)
+            v(1,lo) = alo1(lo); v(2,lo) = blo1(lo); v(atoms%slot_of_lo(lo,ntyp),lo) = clo1(lo)
+         END DO
+         DO lo = 1,atoms%nlo(ntyp)
+            l = atoms%llo(lo,ntyp)
+            ov_ud(:,lo) = MATMUL(rf%integral(1:2,:,l,isp,isp),v(:,lo))
+            DO lop = 1,atoms%nlo(ntyp)
+               IF (atoms%llo(lop,ntyp)==l) ov_lolo(lop,lo) = DOT_PRODUCT(v(:,lop),MATMUL(rf%integral(:,:,l,isp,isp),v(:,lo)))
+            END DO
+         END DO
+
          !$acc kernels present(smat,smat%data_c,smat%data_r)&
-         !$acc & copyin(fjgj,fjgj%fj,fjgj%gj,fjgjPr,fjgjPr%fj,fjgjPr%gj,l,lapw,lapw%kvec(:,:,na),lapwPr,lapwPr%kvec(:,:,na),ud,clo1(:),dotp,cph(:),cphPr(:),atoms,lapw%index_lo(:,na),lapw%gk(:,:,:)) &
-         !$acc & copyin(lapwPr%index_lo(:,na),lapwPr%gk(:,:,:),ud%dulon(:,ntyp,isp),ud%ddn(:,ntyp,isp),ud%uulon(:,ntyp,isp),ud%uloulopn(:,:,ntyp,isp),blo1(:)) &
-         !$acc & copyin(atoms,atoms%nlo(ntyp),lapw%nv(:),lapwPr%nv(:),atoms%llo(:,ntyp),alo1(:), fmpi, fmpi%n_size, fmpi%n_rank)&
+         !$acc & copyin(fjgj,fjgj%fj,fjgj%gj,fjgjPr,fjgjPr%fj,fjgjPr%gj,l,lapw,lapw%kvec(:,:,na),lapwPr,lapwPr%kvec(:,:,na),dotp,cph(:),cphPr(:),atoms,lapw%index_lo(:,na),lapw%gk(:,:,:)) &
+         !$acc & copyin(lapwPr%index_lo(:,na),lapwPr%gk(:,:,:),ov_ud,ov_lolo) &
+         !$acc & copyin(atoms,atoms%nlo(ntyp),lapw%nv(:),lapwPr%nv(:),atoms%llo(:,ntyp), fmpi, fmpi%n_size, fmpi%n_rank)&
          !$acc & default(none)
          
          !$acc loop gang private(fact1,fl2p1,l) independent
          DO lo = 1,atoms%nlo(ntyp) !loop over all LOs for this atom
             l = atoms%llo(lo,ntyp)
             fl2p1 = (2*l+1)/fpi_const
-            fact1 = (con**2) * fl2p1 * ( &
-                  & alo1(lo)*(alo1(lo) &
-                        & + 2*clo1(lo)*ud%uulon(lo,ntyp,isp)) + &
-                  & blo1(lo)*(blo1(lo)*ud%ddn(l,ntyp,isp) &
-                        & + 2*clo1(lo)*ud%dulon(lo,ntyp,isp)) + &
-                  & clo1(lo)*clo1(lo) )
+            fact1 = (con**2) * fl2p1 * ov_lolo(lo,lo)
             
             DO nkvec = 1,invsfct* (2*l+1) !Each LO can have several functions
                ! lop-kG part (l_fullj). |====|
@@ -123,11 +134,7 @@ CONTAINS
                   kp = lapwPr%kvec(nkvec,lo,na)
                   !$acc loop vector private(fact2,dotp) independent
                   DO k = fmpi%n_rank + 1, lapw%nv(igSpin), fmpi%n_size
-                     fact2 = con * fl2p1 * ( &
-                           & fjgj%fj(k,l,isp,igSpin)*(alo1(lo) &
-                                                  & + clo1(lo)*ud%uulon(lo,ntyp,isp)) + &
-                           & fjgj%gj(k,l,isp,igSpin)*(blo1(lo)*ud%ddn(l,ntyp,isp) &
-                                                  & + clo1(lo)*ud%dulon(lo,ntyp,isp)) )
+                     fact2 = con * fl2p1 * ( fjgj%fj(k,l,isp,igSpin)*ov_ud(1,lo) + fjgj%gj(k,l,isp,igSpin)*ov_ud(2,lo) )
                      dotp = dot_PRODUCT(lapw%gk(:,k,igSpin),lapwPr%gk(:,kp,igSpinPr))
 
                      IF (smat%l_real) THEN
@@ -150,11 +157,7 @@ CONTAINS
                   ! basis functions
                   !$acc loop vector private(fact2,dotp,kp) independent
                   DO kp = 1,lapwPr%nv(igSpinPr)
-                     fact2 = con * fl2p1 * ( &
-                           & fjgjPr%fj(kp,l,isp,igSpinPr)*(alo1(lo) &
-                                                     & + clo1(lo)*ud%uulon(lo,ntyp,isp)) + &
-                           & fjgjPr%gj(kp,l,isp,igSpinPr)*(blo1(lo)*ud%ddn(l,ntyp,isp) &
-                                                     & + clo1(lo)*ud%dulon(lo,ntyp,isp)) )
+                     fact2 = con * fl2p1 * ( fjgjPr%fj(kp,l,isp,igSpinPr)*ov_ud(1,lo) + fjgjPr%gj(kp,l,isp,igSpinPr)*ov_ud(2,lo) )
                      dotp = dot_PRODUCT(lapw%gk(:,k,igSpin),lapwPr%gk(:,kp,igSpinPr))
 
                      IF (smat%l_real) THEN
@@ -175,14 +178,7 @@ CONTAINS
                      IF (lop==lo) CYCLE !Do later
                      lp = atoms%llo(lop,ntyp)
                      IF (l == lp) THEN
-                        fact3 = con**2 * fl2p1 * ( &
-                              & alo1(lop)*(alo1(lo) &
-                                       & + clo1(lo)*ud%uulon(lo,ntyp,isp)) + &
-                              & blo1(lop)*(blo1(lo)*ud%ddn(l,ntyp,isp) &
-                                       & + clo1(lo)*ud%dulon(lo,ntyp,isp)) + &
-                              & clo1(lop)*(alo1(lo)*ud%uulon(lop,ntyp,isp) &
-                                       & + blo1(lo)*ud%dulon(lop,ntyp,isp) &
-                                       & + clo1(lo)*ud%uloulopn(lop,lo,ntyp,isp)) )
+                        fact3 = con**2 * fl2p1 * ov_lolo(lop,lo)
                         DO nkvecp = 1,invsfct* (2*lp+1)
                            kp = lapwPr%kvec(nkvecp,lop,na)
                            lorow=lapwPr%nv(igSpinPr)+lapwPr%index_lo(lop,na)+nkvecp

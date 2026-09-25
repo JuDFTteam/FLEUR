@@ -19,7 +19,7 @@ MODULE m_hsmt_soc_offdiag
 
 CONTAINS
 #ifdef _OPENACC
-  SUBROUTINE hsmt_soc_offdiag(n,atoms,cell,fmpi,nococonv,lapw,sym,usdus,td,fjgj,hmat)
+  SUBROUTINE hsmt_soc_offdiag(n,atoms,cell,fmpi,nococonv,lapw,sym,td,fjgj,hmat)
     USE m_constants, ONLY : fpi_const,tpi_const
     USE m_types
     USE m_hsmt_spinor
@@ -31,7 +31,6 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)       :: cell
     TYPE(t_lapw),INTENT(IN)       :: lapw
     TYPE(t_sym  ),INTENT(IN)      :: sym
-    TYPE(t_usdus),INTENT(IN)      :: usdus
     TYPE(t_tlmplm),INTENT(IN)     :: td
     TYPE(t_fjgj),INTENT(IN)       :: fjgj
     CLASS(t_mat),INTENT(INOUT)    :: hmat(:,:)!(2,2)
@@ -125,12 +124,12 @@ CONTAINS
     CALL timestop("offdiagonal soc-setup")
 
     if (atoms%nlo(n)>0) THEN
-      call hsmt_soc_offdiag_LO(n,atoms,cell,fmpi,nococonv,lapw,sym,td,usdus,fjgj,hmat)
+      call hsmt_soc_offdiag_LO(n,atoms,cell,fmpi,nococonv,lapw,sym,td,fjgj,hmat)
     endif  
     RETURN
   END SUBROUTINE hsmt_soc_offdiag
 #else
-  SUBROUTINE hsmt_soc_offdiag(n,atoms,cell,fmpi,nococonv,lapw,sym,usdus,td,fjgj,hmat)
+  SUBROUTINE hsmt_soc_offdiag(n,atoms,cell,fmpi,nococonv,lapw,sym,td,fjgj,hmat)
     USE m_constants, ONLY : fpi_const,tpi_const
     USE m_types
     USE m_hsmt_spinor
@@ -142,7 +141,6 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)       :: cell
     TYPE(t_lapw),INTENT(IN)       :: lapw
     TYPE(t_sym  ),INTENT(IN)      :: sym
-    TYPE(t_usdus),INTENT(IN)      :: usdus
     TYPE(t_tlmplm),INTENT(IN)     :: td
     TYPE(t_fjgj),INTENT(IN)       :: fjgj
     CLASS(t_mat),INTENT(INOUT)    :: hmat(:,:)!(2,2)
@@ -283,14 +281,14 @@ CONTAINS
     !!$acc end data
     CALL timestop("offdiagonal soc-setup")
 
-    if (atoms%nlo(n)>0) call hsmt_soc_offdiag_LO(n,atoms,cell,fmpi,nococonv,lapw,sym,td,usdus,fjgj,hmat)
+    if (atoms%nlo(n)>0) call hsmt_soc_offdiag_LO(n,atoms,cell,fmpi,nococonv,lapw,sym,td,fjgj,hmat)
     !$acc update device(hmat(1,1)%data_c,hmat(2,1)%data_c,hmat(1,2)%data_c,hmat(2,2)%data_c)
     RETURN
   END SUBROUTINE hsmt_soc_offdiag
 
 
 #endif  
-  SUBROUTINE hsmt_soc_offdiag_LO(n,atoms,cell,fmpi,nococonv,lapw,sym,td,ud,fjgj,hmat)
+  SUBROUTINE hsmt_soc_offdiag_LO(n,atoms,cell,fmpi,nococonv,lapw,sym,td,fjgj,hmat)
     USE m_constants, ONLY : fpi_const,tpi_const
     USE m_types
     USE m_hsmt_spinor
@@ -304,7 +302,6 @@ CONTAINS
     TYPE(t_lapw),INTENT(IN)       :: lapw
     TYPE(t_sym),INTENT(IN)        :: sym
     TYPE(t_tlmplm),INTENT(IN)     :: td
-    TYPE(t_usdus),INTENT(IN)      :: ud
     TYPE(t_fjgj),INTENT(IN)       :: fjgj
     CLASS(t_mat),INTENT(INOUT)    :: hmat(:,:)!(2,2)
     !     ..
@@ -340,7 +337,7 @@ CONTAINS
     dplegend(:,1)=1.e0
 
     DO j1=1,2
-      call setabc1lo(atoms,n,ud,j1, alo1,blo1,clo1)
+      call setabc1lo(atoms,n,td%radfun(n),j1, alo1,blo1,clo1)
     ENDDO
     !Normalization taken from hsmt_ab
     alo1=alo1*fpi_const/SQRT(cell%omtil)* ((atoms%rmt(n)**2)/2)

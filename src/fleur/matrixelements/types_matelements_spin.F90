@@ -20,7 +20,6 @@ MODULE m_types_matelements_spin
    USE m_types_spinor_layout, ONLY: t_spinor_layout, radial_slot, LAYOUT_SPINOR, LAYOUT_CHANNELS
    USE m_types_input
    USE m_types_noco
-   USE m_types_usdus
    USE m_types_atoms
    USE m_types_stars
    USE m_types_lapw
@@ -71,7 +70,7 @@ CONTAINS
                             l_both_spinors=(noco%l_soc .AND. .NOT.noco%l_noco))
    END SUBROUTINE init
 
-   SUBROUTINE calc_matrix_elements(this, zmat, abc, radfun, usdus)
+   SUBROUTINE calc_matrix_elements(this, zmat, abc, radfun)
       CLASS(t_matelements_spin), INTENT(INOUT) :: this
       !> The state at this k, either as one 2N matrix holding the whole spinor or as the
       !> two channels of a collinear calculation, one matrix each. Which of the two is read
@@ -80,7 +79,6 @@ CONTAINS
       TYPE(t_mat),    INTENT(IN) :: zmat(:)
       TYPE(t_abc),    INTENT(IN) :: abc(:,:)  !> (2,ntype)
       TYPE(t_radfun), INTENT(IN) :: radfun(:) !> (ntype)
-      TYPE(t_usdus),  INTENT(IN) :: usdus     !> unused, the radial integrals are in radfun
 
       COMPLEX, ALLOCATABLE :: oi(:,:,:,:)     ! (nb,nb,2,2) interstitial spin blocks
       COMPLEX :: loc(2,2), glo(2,2), cx, cy, cz, gx, gy, gz, trc

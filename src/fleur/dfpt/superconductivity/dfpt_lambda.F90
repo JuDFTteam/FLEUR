@@ -656,6 +656,7 @@ contains
       complex,            intent(out) :: cmt(:, :, :)
 
       type(t_abc) :: abc
+      type(t_radfun) :: rf
       integer     :: itype, na, iatom, indx, l, ll, m, lm, i
       complex     :: cdum
 
@@ -663,7 +664,8 @@ contains
 
       do itype = 1, fi%atoms%ntype
          call abc%init(fi%input, fi%atoms, nbands, itype)
-         call abc%calc_abc(fi%input, fi%atoms, fi%sym, fi%cell, lapw, nbands, usdus, fi%noco, nococonv, jsp, itype, zMat)
+         call rf%from_usdus(fi%atoms, usdus, itype)
+         call abc%calc_abc(fi%input, fi%atoms, fi%sym, fi%cell, lapw, nbands, rf, fi%noco, nococonv, jsp, itype, zMat)
 
          do na = 1, fi%atoms%neq(itype)
             iatom = fi%atoms%firstAtom(itype) + na - 1

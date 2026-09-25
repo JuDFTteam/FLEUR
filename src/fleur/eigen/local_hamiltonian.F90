@@ -17,7 +17,7 @@ MODULE m_local_Hamiltonian
   !*********************************************************************
 CONTAINS
    SUBROUTINE local_ham(sphhar,atoms,sym,noco,nococonv,enpara,&
-       fmpi,v,vx,inden,input,hub1inp,hub1data,td,ud,alpha_hybrid,l_dfptmod,l_forces)
+       fmpi,v,vx,inden,input,hub1inp,hub1data,td,alpha_hybrid,l_dfptmod,l_forces)
       !! l_dfptmod: no Cholesky decomposition
       !! l_forces:  LAPW part up to lmax and without DFT+U (forces add it separately)
       USE m_constants
@@ -35,7 +35,6 @@ CONTAINS
       TYPE(t_hub1data), INTENT(INOUT) :: hub1data
       TYPE(t_potden),   INTENT(IN)    :: v,vx,inden
       TYPE(t_tlmplm),   INTENT(INOUT) :: td
-      TYPE(t_usdus),    INTENT(INOUT) :: ud
       REAL,             INTENT(IN)    :: alpha_hybrid
       LOGICAL, INTENT(IN),OPTIONAL    :: l_dfptmod, l_forces
 
@@ -46,11 +45,10 @@ CONTAINS
       CALL timestart("local_hamiltonian")
       IF (input%secvar) CALL judft_error("Second variation is not supported",calledby="local_ham")
       CALL td%init(atoms,input%jspins,PRESENT(l_forces))
-      CALL ud%init(atoms,input%jspins)
 
-      !$OMP PARALLEL DO DEFAULT(NONE) SHARED(atoms,input,enpara,fmpi,v,hub1data,td,ud)
+      !$OMP PARALLEL DO DEFAULT(NONE) SHARED(atoms,input,enpara,fmpi,v,hub1data,td)
       DO n = 1,atoms%ntype
-         CALL td%radfun(n)%generate_radial_functions(atoms,input,enpara,fmpi,v,n,hub1data,usdus_out=ud)
+         CALL td%radfun(n)%generate_radial_functions(atoms,input,enpara,fmpi,v,n,hub1data)
       END DO
       !$OMP END PARALLEL DO
 

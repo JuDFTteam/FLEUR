@@ -28,7 +28,6 @@ MODULE m_xas_driver
    USE m_types_potden, ONLY: t_potden
    USE m_types_radfun, ONLY: t_radfun
    USE m_types_sym, ONLY: t_sym
-   USE m_types_usdus, ONLY: t_usdus
    USE m_types_xas, ONLY: t_xas
    USE m_xas_angular, ONLY: xas_cartesian_to_spherical, xas_print_angular_sumrule
    USE m_xas_amplitudes, ONLY: t_xas_transition_amplitudes
@@ -123,7 +122,6 @@ CONTAINS
       TYPE(t_potden),      INTENT(IN) :: vTot
       TYPE(t_results),     INTENT(IN) :: results
 
-      TYPE(t_usdus) :: usdus
       TYPE(t_radfun) :: radfun
       TYPE(t_xas_core_state), ALLOCATABLE :: core_states(:)
       TYPE(t_lapw) :: lapw
@@ -233,7 +231,6 @@ CONTAINS
          CALL xas_print_symmetry_rotation_diagnostics(sym, cell, xas_debug_unit)
       END IF
 
-      CALL usdus%init(atoms, input%jspins)
       IF (l_xas_debug_kpt_strength) THEN
          ALLOCATE(xas_debug_strength_kpt(xas_debug_n_pol, kpts%nkpt), SOURCE=0.0)
       END IF
@@ -339,7 +336,7 @@ CONTAINS
 
       DO itype = 1, atoms%ntype
          IF (atoms%nz(itype) /= xas%absorber_z) CYCLE
-         CALL radfun%generate_radial_functions(atoms, input, enpara, fmpi, vTot, itype, usdus_out=usdus)
+         CALL radfun%generate_radial_functions(atoms, input, enpara, fmpi, vTot, itype)
 
          CALL xas_debug_clear_underflow(l_xas_debug_fp)
          CALL xas_extract_core_states(atoms, itype, xas%edge, vTot%mt(1:atoms%jri(itype), 0, itype, 1), core_states)
@@ -412,14 +409,14 @@ CONTAINS
                END DO
                IF (l_spinor_abc) THEN
                   DO ispin = 1, n_local_spins
-                     CALL abc_spin(ispin)%calc_abc(input, atoms, sym, cell, lapw, nbands, usdus, noco, nococonv, &
+                     CALL abc_spin(ispin)%calc_abc(input, atoms, sym, cell, lapw, nbands, radfun, noco, nococonv, &
                                                    ispin, itype, zMat)
                   END DO
                ELSE IF (input%jspins == 2) THEN
-                  CALL abc_spin(jsp_loop)%calc_abc(input, atoms, sym, cell, lapw, nbands, usdus, noco, nococonv, &
+                  CALL abc_spin(jsp_loop)%calc_abc(input, atoms, sym, cell, lapw, nbands, radfun, noco, nococonv, &
                                                    jsp_loop, itype, zMat)
                ELSE
-                  CALL abc_spin(1)%calc_abc(input, atoms, sym, cell, lapw, nbands, usdus, noco, nococonv, &
+                  CALL abc_spin(1)%calc_abc(input, atoms, sym, cell, lapw, nbands, radfun, noco, nococonv, &
                                             1, itype, zMat)
                END IF
                IF (l_root .AND. xas_debug_abc_star_compare .AND. l_spinor_abc .AND. &

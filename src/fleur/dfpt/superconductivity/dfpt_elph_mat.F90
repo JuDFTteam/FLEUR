@@ -57,7 +57,6 @@ CONTAINS
 
         TYPE(t_tlmplm)  :: td, tdV1
         TYPE(t_potden) :: vx
-        TYPE(t_usdus)  :: ud
         TYPE(t_lapw)   :: lapw,lapwq
         CLASS(t_mat), ALLOCATABLE :: zMatk, zMatq, gmat ! this we propably rename to something better
         CLASS(t_mat), ALLOCATABLE :: hmat,smat
@@ -83,9 +82,8 @@ CONTAINS
         gmatBuffer=0.0 
 
         ! Get the (lm) matrix elements for V1 and H0
-        CALL ud%init(fi%atoms,fi%input%jspins)
         CALL dfpt_tlmplm(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,enpara,fi%hub1inp,hub1data,vTot,fmpi,tdV1,v1real,v1imag,.FALSE.)
-        CALL local_ham(sphhar,fi%atoms,fi%sym,fi%noco,nococonv,enpara,fmpi,vTot,vx,inden,fi%input,fi%hub1inp,hub1data,td,ud,0.0,.TRUE.)
+        CALL local_ham(sphhar,fi%atoms,fi%sym,fi%noco,nococonv,enpara,fmpi,vTot,vx,inden,fi%input,fi%hub1inp,hub1data,td,alpha_hybrid=0.0,l_dfptmod=.TRUE.)
 
 #if !defined(_OPENACC) && !defined(__NVCOMPILER)
 !nvhpc fails here with ICE
@@ -146,7 +144,7 @@ CONTAINS
 
                 ! Construct the perturbed Hamiltonian and Overlap matrix perturbations:
                 CALL timestart("Setup of matrix perturbations")
-                CALL dfpt_eigen_hssetup(sternheimerJob,jsp,fmpi,fi,enpara,nococonv,starsq,ud,td,tdV1,vTot,v1real,lapw,lapwq,iDir,iDtype,hmat,smat,nk,killcont)
+                CALL dfpt_eigen_hssetup(sternheimerJob,jsp,fmpi,fi,enpara,nococonv,starsq,td,tdV1,vTot,v1real,lapw,lapwq,iDir,iDtype,hmat,smat,nk,killcont)
                 CALL timestop("Setup of matrix perturbations")
     
                 IF (fmpi%n_size == 1) THEN
