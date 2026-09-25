@@ -2,6 +2,7 @@ set(fleur_F90 ${fleur_F90}
 src/fleur/wannierlib/wannierlib_mmnkb.F90
 src/fleur/wannierlib/wannierlib_w90_adapter.F90
 src/fleur/wannierlib/wannierlib_build_amn_mmn.F90
+src/fleur/wannierlib/wannierlib_hdf_util.F90
 src/fleur/wannierlib/wannierlib_export_basis.F90
 src/fleur/wannierlib/wannierlib_export_gauge.F90
 src/fleur/wannierlib/wannierlib_export_bloch.F90

@@ -48,6 +48,7 @@ CONTAINS
 #ifdef CPP_HDF
       USE hdf5
       USE m_hdf_tools
+      USE m_wannierlib_hdf_util, ONLY: wr_r4, wr_i3
 #endif
       TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
       TYPE(t_wgauge_manifold), INTENT(IN) :: manifold
@@ -153,40 +154,5 @@ CONTAINS
                        calledby="wannierlib_export_basis")
 #endif
    END SUBROUTINE wannierlib_export_basis
-
-#ifdef CPP_HDF
-   !> Dataspace, dataset, write, close -- the same four steps every time, collected so they
-   !> are not repeated at each call site.
-   SUBROUTINE wr_r4(gid, name, n, dat)
-      USE hdf5
-      USE m_hdf_tools
-      INTEGER(HID_T), INTENT(IN) :: gid
-      CHARACTER(LEN=*), INTENT(IN) :: name
-      INTEGER, INTENT(IN) :: n(:)
-      REAL, INTENT(IN) :: dat(:, :, :, :)
-      INTEGER(HID_T) :: sid, did
-      INTEGER :: e
-      CALL h5screate_simple_f(4, INT(n(:4), HSIZE_T), sid, e)
-      CALL h5dcreate_f(gid, name, H5T_NATIVE_DOUBLE, sid, did, e)
-      CALL h5sclose_f(sid, e)
-      CALL io_write_real4(did, (/1, 1, 1, 1/), n(:4), name, dat)
-      CALL h5dclose_f(did, e)
-   END SUBROUTINE wr_r4
-
-   SUBROUTINE wr_i3(gid, name, n, dat)
-      USE hdf5
-      USE m_hdf_tools
-      INTEGER(HID_T), INTENT(IN) :: gid
-      CHARACTER(LEN=*), INTENT(IN) :: name
-      INTEGER, INTENT(IN) :: n(:), dat(:, :, :)
-      INTEGER(HID_T) :: sid, did
-      INTEGER :: e
-      CALL h5screate_simple_f(3, INT(n(:3), HSIZE_T), sid, e)
-      CALL h5dcreate_f(gid, name, H5T_NATIVE_INTEGER, sid, did, e)
-      CALL h5sclose_f(sid, e)
-      CALL io_write_integer3(did, (/1, 1, 1/), n(:3), name, dat)
-      CALL h5dclose_f(did, e)
-   END SUBROUTINE wr_i3
-#endif
 
 END MODULE m_wannierlib_export_basis
