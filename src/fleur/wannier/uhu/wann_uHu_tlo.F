@@ -25,7 +25,6 @@ c****************************************c
       USE m_intgr, ONLY : intgr3
       USE m_radflo
       USE m_radfun
-      USE m_tlo
       USE m_sphbes
       USE m_ylm
       USE m_gaunt, ONLY: gaunt1

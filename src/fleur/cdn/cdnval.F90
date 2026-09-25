@@ -315,7 +315,7 @@ CONTAINS
                                                         noccbd, usdus, noco, nococonv, ispin, itype, zmat, eig, force)
 
                   call local_ham(sphhar, atoms, sym, noco, nococonv, enpara, fmpi, vtot, &
-                                 vtot, den, input, hub1inp, hub1data, tlmplm, usdus, 0.0)
+                                 vtot, den, input, hub1inp, hub1data, tlmplm, usdus, 0.0, l_forces=.TRUE.)
                   CALL addContribsA21A12(force, input, atoms, sym, cell, enpara, &
                         usdus, tlmplm, vtot, abc(ispin,abc_itype), noccbd, ispin, eig, we, results, jsp_start, jspin, nbasfcn, zMat, lapw, &
                                          sphhar, lapw%gvec(1, :, :), lapw%gvec(2, :, :), lapw%gvec(3, :, :), bkpt, itype)

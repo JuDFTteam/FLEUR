@@ -21,12 +21,9 @@ src/fleur/eigen/int_21.f90
 src/fleur/eigen/int_21lo.f90
 src/fleur/eigen/hsvac.F90
 src/fleur/eigen/orthoglo.F90
-src/fleur/eigen/rad_ovlp.f90
 src/fleur/eigen/setabc1lo.f90
 src/fleur/eigen/slomat.F90
-src/fleur/eigen/tlmplm.F90
 #src/fleur/eigen/tlmplm_store.F90
-src/fleur/eigen/tlo.f90
 src/fleur/eigen/vacfun.F90
 src/fleur/eigen/eigen_redist_matrix.F90
 src/fleur/eigen/hs_int_direct.F90

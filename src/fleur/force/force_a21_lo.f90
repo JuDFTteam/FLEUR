@@ -1,10 +1,11 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_forcea21lo
+   implicit none
 CONTAINS
    SUBROUTINE force_a21_lo(atoms, isp, itype, we, eig, ne, abc, &
                            aveccof, bveccof, cveccof, tlmplm, usdus, a21)
@@ -37,7 +38,7 @@ CONTAINS
       COMPLEX, INTENT(IN)    :: cveccof(3, -atoms%llod:atoms%llod, ne, atoms%nlod, atoms%nat)
 
       COMPLEX tuulo, tdulo, tuloulo
-      INTEGER lo, lop, l, lp, mp, lm, lmp, iatom, ie, i, lolop, loplo, m, lo1, s, n_lo, n_lop, iatom_l
+      INTEGER lo, lop, l, lp, mp, lm, lmp, iatom, ie, i, m, n_lo, n_lop, iatom_l
 
       !--- ABBREVIATIONS --------------------------------------------------------
       ! ccof       : coefficient of the local orbital function (u_lo*Y_lm)
@@ -49,21 +50,19 @@ CONTAINS
       !--------------------------------------------------------------------------
 
       DO lo = 1, atoms%nlo(itype)
-         lo1 = SUM(atoms%nlo(:itype - 1)) + lo
          l = atoms%llo(lo, itype)
-         n_lo = 2 + count(atoms%llo(:lo, itype) == l)
+         n_lo = atoms%slot_of_lo(lo, itype)
          DO m = -l, l
             lm = l*(l + 1) + m
             DO lp = 0, atoms%lnonsph(itype)
-               s = tlmplm%h_loc2_nonsph(itype)
                DO mp = -lp, lp
                   lmp = lp*(lp + 1) + mp
                   DO iatom_l = 1, atoms%neq(itype)
                      ! Check whether the t-matrixelement is 0
                      ! (indmat.EQ.-9999)
                      iatom = iatom_l + atoms%firstAtom(itype) - 1
-                     tuulo = tlmplm%h_LO(lmp, m, lo1, isp, isp)
-                     tdulo = tlmplm%h_LO(lmp + s, m, lo1, isp, isp)
+                     tuulo = tlmplm%h(tlmplm%ind(1, lmp, itype), tlmplm%ind(n_lo, lm, itype), itype, isp, isp)
+                     tdulo = tlmplm%h(tlmplm%ind(2, lmp, itype), tlmplm%ind(n_lo, lm, itype), itype, isp, isp)
 
                      DO ie = 1, ne
                         DO i = 1, 3
@@ -85,12 +84,12 @@ CONTAINS
 
             DO lop = 1, atoms%nlo(itype)
                lp = atoms%llo(lop, itype)
-               n_lop = 2 + count(atoms%llo(:lop, itype) == lp)
+               n_lop = atoms%slot_of_lo(lop, itype)
                DO mp = -lp, lp
                   lmp = lp*(lp + 1) + mp
                   DO iatom = atoms%firstAtom(itype), atoms%firstAtom(itype) + atoms%neq(itype) - 1
                      iatom_l = iatom - atoms%firstAtom(itype) + 1
-                     tuloulo = tlmplm%tuloulo_newer(m, mp, lo, lop, itype, isp, isp)
+                     tuloulo = tlmplm%h(tlmplm%ind(n_lo, lm, itype), tlmplm%ind(n_lop, lmp, itype), itype, isp, isp)
                      DO ie = 1, ne
                         DO i = 1, 3
                            a21(i, iatom) = a21(i, iatom) + 2.0*AIMAG( &

@@ -210,9 +210,7 @@ CONTAINS
 ! some basic arrays allocated in eigen()
 !
 
-      mem = ((atoms%lmaxd*(atoms%lmaxd+2)* (atoms%lmaxd*(atoms%lmaxd+2)+3))/2+1)*atoms%ntype*4                       ! tlmplm%h_loc
-      mem = mem + (atoms%lmaxd*(atoms%lmaxd+2)+1)*(2*atoms%llod+1)*max(mlotot,1)*2 ! tlmplm%h_LO, tlmplm%h_LO2
-      mem = mem + (2*atoms%llod+1)**2 * max(mlolotot,1)    ! tlmplm%tuloulo_newer
+      mem = (2*(atoms%lmaxd*(atoms%lmaxd+2)+1)+(2*atoms%llod+1)*atoms%nlod)**2*atoms%ntype*2 ! tlmplm%h
       IF (noco%l_noco) mem = mem * 2                      ! both spins
       mem = mem + 49*(atoms%n_u+atoms%n_hia)*input%jspins*2                      ! lda+U, *2 for complex
 

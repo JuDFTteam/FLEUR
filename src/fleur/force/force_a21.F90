@@ -1,9 +1,10 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2020 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_forcea21
+   implicit none
 CONTAINS
    SUBROUTINE force_a21(input,atoms,sym ,cell,we,jsp,epar,ne,eig,usdus,tlmplm,&
                         vtot,abc,aveccof,bveccof,cveccof,f_a21,f_b4,results,itype)
@@ -102,10 +103,10 @@ CONTAINS
                         DO m2 = -l2,l2
                            lm2 = ll2 + m2
                            DO natrun = natom,natom + atoms%neq(n) - 1
-                              utu = CONJG(tlmplm%h_loc(lm2,lm1,n,jsp,jsp))
-                              dtd = CONJG(tlmplm%h_loc(lm2+tlmplm%h_loc2(n),lm1+tlmplm%h_loc2(n),n,jsp,jsp))
-                              utd = CONJG(tlmplm%h_loc(lm2+tlmplm%h_loc2(n),lm1,n,jsp,jsp))
-                              dtu = CONJG(tlmplm%h_loc(lm2,lm1+tlmplm%h_loc2(n),n,jsp,jsp))
+                              utu = CONJG(tlmplm%h(tlmplm%ind(1,lm2,n),tlmplm%ind(1,lm1,n),n,jsp,jsp))
+                              dtd = CONJG(tlmplm%h(tlmplm%ind(2,lm2,n),tlmplm%ind(2,lm1,n),n,jsp,jsp))
+                              utd = CONJG(tlmplm%h(tlmplm%ind(2,lm2,n),tlmplm%ind(1,lm1,n),n,jsp,jsp))
+                              dtu = CONJG(tlmplm%h(tlmplm%ind(1,lm2,n),tlmplm%ind(2,lm1,n),n,jsp,jsp))
                               DO i = 1,3
                                  a21(i,natrun) = a21(i,natrun) + 2.0*&
                                     AIMAG( CONJG(abc%cof(ie,lm1,1,natrun-natom+1)) *utu*aveccof(i,ie,lm2,natrun)&
