@@ -26,6 +26,26 @@
 !>  components -- is the most common one. The live example of the same shape with a
 !>  real operator in it is m_types_matelements_orbital; read that one next.
 !>
+!>  THE ONE THING THAT WILL CATCH YOU. The accumulation below forms
+!>
+!>      c_i * conj(c_j)
+!>
+!>  which is the CONJUGATE of the <i|O|j> this type documents. Somebody has to undo
+!>  it, and no check will tell you that nobody did: the conjugate of a Hermitian
+!>  matrix is Hermitian, has the same eigenvalues and passes the same sum rules. What
+!>  it breaks is the pairing with the Wannier gauge, which is built in the documented
+!>  convention, and the symptom appears far away -- the real-space operator stops
+!>  decaying. On fcc Pt the spin-orbit operator keeps 13 % of its weight at R = 0 in
+!>  the wrong convention and 90 % in the right one.
+!>
+!>  Where to undo it is not free either. The spin and orbital providers conjugate each
+!>  raw component BEFORE combining them into Cartesian ones, because L+ and L- are not
+!>  Hermitian and conjugating after the combination transposes them instead, which
+!>  flips the sign of the y component. The spin-orbit provider does not conjugate at
+!>  all: it is shared with the second variation, which wants the blocks as they come,
+!>  so its one Wannier consumer undoes it on the way out. Decide which of the two your
+!>  operator is before you write the loop.
+!>
 !>  See also, in this directory: README.md for the other six files to touch, and
 !>  tutorial_operators.md for the reasoning behind each of them.
 MODULE m_types_matelements_template
@@ -155,6 +175,8 @@ CONTAINS
                      DO n_r = 1, abc(s, this%ntyp)%n_r(l)
                         DO n_r2 = 1, abc(s, this%ntyp)%n_r(l)
                            w = radfun(this%ntyp)%integral(n_r, n_r2, l, slot(s), slot(s))
+                           !> c_i * conj(c_j): the conjugate of the <i|O|j> the type
+                           !> documents, and the header says who has to undo it.
                            ovl = abc(s, this%ntyp)%cof(i, lm,  n_r,  this%iat) &
                                  * CONJG(abc(s, this%ntyp)%cof(j, lm, n_r2, this%iat)) * w
 
