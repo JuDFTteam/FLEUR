@@ -140,10 +140,15 @@ that knows any layout.
 ## Layout
 
 ```
-wannierlib/           overlaps, projections, the Wannier90 adapter, the driver
+wannierlib/           the path to U: overlaps, projections, the Wannier90 adapter,
+                      the driver that runs them in order
+wannierlib/export/    what is done with U once it exists: the basis, the gauge, the
+                      Bloch coefficients, the plots, the C and F tensors
 wannierlib/postproc/  everything that needs the gauge: transform to R,
                       interpolation, O(R) export, output domains, file formats
 ../matrixelements/    the operator matrices themselves; knows nothing of Wannier
 ```
 
-The dependency runs one way: `postproc` uses `matrixelements`, never the reverse.
+The dependency runs one way: `postproc` uses `matrixelements`, never the reverse. And of
+everything in `wannierlib/`, only the driver names `export/` -- the rest is the path to U and
+reads as that. Both are asserted in `testing/tests/structure/test_layering.py`.
