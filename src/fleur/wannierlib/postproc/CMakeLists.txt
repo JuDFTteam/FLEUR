@@ -4,6 +4,7 @@ src/fleur/wannierlib/postproc/types_wgauge_domains.F90
 src/fleur/wannierlib/postproc/types_wgauge_bmesh.F90
 src/fleur/wannierlib/postproc/wgauge_ft.F90
 src/fleur/wannierlib/postproc/wgauge_io.F90
+src/fleur/wannierlib/postproc/wgauge_bands_io.F90
 src/fleur/wannierlib/postproc/wgauge_hamk.F90
 src/fleur/wannierlib/postproc/wgauge_coeff_a.F90
 src/fleur/wannierlib/postproc/wgauge_coeff_tensor.F90

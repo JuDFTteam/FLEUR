@@ -20,6 +20,7 @@
 !>  Runs only on the master rank (irank==0), where the W90 U matrices are complete.
 MODULE m_wgauge_interpolate_ham
   USE m_juDFT
+  USE m_wgauge_bands_io, ONLY: wgauge_bands_open, wgauge_bands_row
   USE m_constants, ONLY : oUnit, hartree_to_ev_const
   USE m_types_cell
   USE m_types_kpts
@@ -71,16 +72,14 @@ CONTAINS
     ALLOCATE(evals(num_wann), hk(num_wann, num_wann))
     CALL wgauge_zheev_workspace('N', num_wann, work, rwork, lwork)
 
-    OPEN(newunit=iu,   file=TRIM(out1)//'.dat', status='replace')
-    OPEN(newunit=iuev, file=TRIM(out2)//'.dat', status='replace')
-    WRITE(iu,  '(a)') '# kdist   E_1..E_numwann  (Htr)'
-    WRITE(iuev,'(a)') '# kdist   E_1..E_numwann  (eV, absolute)'
+    CALL wgauge_bands_open(iu,   out1, '# kdist   E_1..E_numwann  (Htr)')
+    CALL wgauge_bands_open(iuev, out2, '# kdist   E_1..E_numwann  (eV, absolute)')
     DO ip = 1, np
       hk = H_interp(:, :, ip)
       CALL zheev('N', 'U', num_wann, hk, num_wann, evals, work, lwork, rwork, info)
       IF (info /= 0) CALL juDFT_error('zheev failed', calledby='wgauge_interpolate_ham')
-      WRITE(iu,  '(f12.6,*(2x,f14.8))') kdist(ip), evals(:)
-      WRITE(iuev,'(f12.6,*(2x,f14.8))') kdist(ip), hartree_to_ev_const * evals(:)
+      CALL wgauge_bands_row(iu,   kdist(ip), evals(:))
+      CALL wgauge_bands_row(iuev, kdist(ip), hartree_to_ev_const * evals(:))
     END DO
     CLOSE(iu); CLOSE(iuev)
     WRITE(oUnit,'(a,i0,a)') 'wannierlib interpolation: wrote '//TRIM(out1)//'.dat (', np, ' k-points)'

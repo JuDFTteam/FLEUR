@@ -17,6 +17,7 @@
 !>  right ncomp/outfile -- steps above are never rewritten. Master rank only.
 MODULE m_wgauge_interpolate_op
   USE m_juDFT
+  USE m_wgauge_bands_io, ONLY: wgauge_bands_open, wgauge_bands_row
   USE m_constants, ONLY : oUnit, hartree_to_ev_const
   USE m_types_cell
   USE m_types_kpts
@@ -72,7 +73,8 @@ CONTAINS
     INTEGER :: num_wann, num_bands, m, ip, np, iu, info, lwork, a
     INTEGER :: nkl, kl, nrpts
     REAL    :: omax
-    REAL,    ALLOCATABLE :: kdist(:), evals(:), rwork(:), oexp(:)
+    REAL,    ALLOCATABLE :: kdist(:), evals(:), rwork(:), oexp(:), orow(:, :)
+    CHARACTER(LEN=120) :: hdr
     COMPLEX, ALLOCATABLE :: ham_k(:, :, :), H_interp(:, :, :), o_interp(:, :, :, :)
     COMPLEX, ALLOCATABLE :: hk(:, :), work(:), vloc(:, :, :), tmp(:, :), cvec(:, :), oc(:, :, :)
     COMPLEX, ALLOCATABLE :: ow_loc(:, :, :, :), o_r(:, :, :, :), o1(:, :, :)
@@ -134,12 +136,12 @@ CONTAINS
 
     ! ---- diagonalize H(k') with eigenvectors, project operator, write ----
     ALLOCATE(evals(num_wann), hk(num_wann, num_wann), cvec(num_wann, num_wann), &
-             oc(num_wann, num_wann, ncomp), oexp(ncomp))
+             oc(num_wann, num_wann, ncomp), oexp(ncomp), orow(ncomp, num_wann))
     CALL wgauge_zheev_workspace('V', num_wann, work, rwork, lwork)
 
     omax = 0.0
-    OPEN(newunit=iu, file=TRIM(outfile)//'.dat', status='replace')
-    WRITE(iu,'(a,i0,a)') '# kdist   [ E_n(eV)  <O_1>_n .. <O_', ncomp, '>_n ] for n=1..num_wann'
+    WRITE(hdr,'(a,i0,a)') '# kdist   [ E_n(eV)  <O_1>_n .. <O_', ncomp, '>_n ] for n=1..num_wann'
+    CALL wgauge_bands_open(iu, outfile, hdr)
     DO ip = 1, np
       hk = H_interp(:, :, ip)
       CALL zheev('V', 'U', num_wann, hk, num_wann, evals, work, lwork, rwork, info)
@@ -148,18 +150,14 @@ CONTAINS
       DO a = 1, ncomp
         oc(:, :, a) = MATMUL(o_interp(:, :, a, ip), cvec)
       END DO
-      WRITE(iu,'(f12.6)', advance='no') kdist(ip)
       DO m = 1, num_wann
         DO a = 1, ncomp
           oexp(a) = REAL(DOT_PRODUCT(cvec(:, m), oc(:, m, a)))
         END DO
         omax = MAX(omax, SQRT(SUM(oexp(:)**2)))
-        WRITE(iu,'(2x,f14.8)', advance='no') hartree_to_ev_const*evals(m)
-        DO a = 1, ncomp
-          WRITE(iu,'(2x,f14.9)', advance='no') oexp(a)
-        END DO
+        orow(:, m) = oexp(:)
       END DO
-      WRITE(iu,'(a)') ''
+      CALL wgauge_bands_row(iu, kdist(ip), hartree_to_ev_const*evals(:), orow, '2x,f14.9')
     END DO
     CLOSE(iu)
     WRITE(oUnit,'(a,es12.5)') 'wannierlib operator interpolation: max |<O>| over the domain = ', omax

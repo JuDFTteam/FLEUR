@@ -17,6 +17,7 @@
 !>  per band, with v in eV*bohr (dE/dk). Master rank only.
 MODULE m_wgauge_interpolate_velocity
   USE m_juDFT
+  USE m_wgauge_bands_io, ONLY: wgauge_bands_open, wgauge_bands_row
   USE m_constants, ONLY : oUnit, hartree_to_ev_const
   USE m_types_cell
   USE m_types_kpts
@@ -50,7 +51,7 @@ CONTAINS
     INTEGER :: ax(3), ay(3)
     LOGICAL :: l_berry
     REAL    :: de
-    REAL,    ALLOCATABLE :: kdist(:), evals(:), rwork(:), vexp(:), omega(:, :)
+    REAL,    ALLOCATABLE :: kdist(:), evals(:), rwork(:), vrow(:, :), omega(:, :)
     COMPLEX, ALLOCATABLE :: ham_k(:, :, :), H_interp(:, :, :), v_interp(:, :, :, :), A_interp(:, :, :, :)
     COMPLEX, ALLOCATABLE :: hk(:, :), work(:), cvec(:, :), vc(:, :, :), Hbar(:, :, :), Abar(:, :, :), vfull(:, :, :)
     COMPLEX, ALLOCATABLE :: ham_r(:, :, :)
@@ -92,19 +93,17 @@ CONTAINS
 
     ! ---- diagonalize H(k'), project the diagonal band velocity, write ----
     ALLOCATE(evals(num_wann), hk(num_wann, num_wann), cvec(num_wann, num_wann), &
-             vc(num_wann, num_wann, 3), vexp(3))
+             vc(num_wann, num_wann, 3), vrow(3, num_wann))
     IF (l_berry) ALLOCATE(Hbar(num_wann, num_wann, 3), Abar(num_wann, num_wann, 3), &
                           vfull(num_wann, num_wann, 3), omega(3, num_wann))
     ax = (/ 2, 3, 1 /)   ! Omega_gamma = eps_{gamma,alpha,beta}: (Ox<-yz, Oy<-zx, Oz<-xy)
     ay = (/ 3, 1, 2 /)
     CALL wgauge_zheev_workspace('V', num_wann, work, rwork, lwork)
 
-    OPEN(newunit=iu, file=TRIM(out1)//'.dat', status='replace')
-    WRITE(iu,'(a)') '# kdist   [ E_n(eV)  vx vy vz (eV*bohr, dE/dk) ] for n=1..num_wann'
-    IF (l_berry) THEN
-      OPEN(newunit=iuc, file=TRIM(out2)//'.dat', status='replace')
-      WRITE(iuc,'(a)') '# kdist   [ E_n(eV)  Omega_x Omega_y Omega_z (bohr^2) ] for n=1..num_wann'
-    END IF
+    CALL wgauge_bands_open(iu, out1, &
+      '# kdist   [ E_n(eV)  vx vy vz (eV*bohr, dE/dk) ] for n=1..num_wann')
+    IF (l_berry) CALL wgauge_bands_open(iuc, out2, &
+      '# kdist   [ E_n(eV)  Omega_x Omega_y Omega_z (bohr^2) ] for n=1..num_wann')
     DO ip = 1, np
       hk = H_interp(:, :, ip)
       CALL zheev('V', 'U', num_wann, hk, num_wann, evals, work, lwork, rwork, info)
@@ -114,17 +113,12 @@ CONTAINS
         vc(:, :, a) = MATMUL(v_interp(:, :, a, ip), cvec)         ! v_interp_a . C
       END DO
       ! ---- diagonal band velocity <n|v|n> = dE_n/dk ----
-      WRITE(iu,'(f12.6)', advance='no') kdist(ip)
       DO m = 1, num_wann
         DO a = 1, 3
-          vexp(a) = hartree_to_ev_const * REAL(DOT_PRODUCT(cvec(:, m), vc(:, m, a)))
-        END DO
-        WRITE(iu,'(2x,f14.8)', advance='no') hartree_to_ev_const*evals(m)
-        DO a = 1, 3
-          WRITE(iu,'(2x,f12.6)', advance='no') vexp(a)
+          vrow(a, m) = hartree_to_ev_const * REAL(DOT_PRODUCT(cvec(:, m), vc(:, m, a)))
         END DO
       END DO
-      WRITE(iu,'(a)') ''
+      CALL wgauge_bands_row(iu, kdist(ip), hartree_to_ev_const*evals(:), vrow, '2x,f12.6')
 
       ! ---- interband velocity matrix + Berry curvature (a.u.: v in Ha*bohr, Omega in bohr^2) ----
       IF (l_berry) THEN
@@ -155,14 +149,7 @@ CONTAINS
             omega(a, n) = -2.0 * AIMAG(acc)
           END DO
         END DO
-        WRITE(iuc,'(f12.6)', advance='no') kdist(ip)
-        DO m = 1, num_wann
-          WRITE(iuc,'(2x,f14.8)', advance='no') hartree_to_ev_const*evals(m)
-          DO a = 1, 3
-            WRITE(iuc,'(2x,es14.6)', advance='no') omega(a, m)
-          END DO
-        END DO
-        WRITE(iuc,'(a)') ''
+        CALL wgauge_bands_row(iuc, kdist(ip), hartree_to_ev_const*evals(:), omega, '2x,es14.6')
       END IF
     END DO
     CLOSE(iu)
