@@ -17,6 +17,7 @@ WannFeBccInterp covers the interpolation drivers, on three output domains.
 """
 from read_tests import read_tests
 from wannier_files import (anglmom_r0,
+                            onsite_weight,
                             anglmom_r0_hermiticity,
                             anglmom_r0_traces,
                             as_tuple,
@@ -135,6 +136,16 @@ OPERATOR_FILES = {
 # The operator files in the generic O(R) format, the ones whose values can be read without
 # knowing how many index columns they carry.
 GENERIC_OP_FILES = ("rspauli.1", "anglmomrs.1", "rssocmat.1")
+
+# An operator that is conjugated with respect to the gauge it is paired with is invisible to
+# every other check here: conj(O) is Hermitian when O is, keeps its eigenvalues, obeys the
+# same sum rules and respects the same bounds. What it does break is the decay in real
+# space, because the Wannier gauge is built in one convention and the operator arrives in
+# the other. Measured over the thirteen cases, the on-site share runs 73-100 % for the spin,
+# 86-99 % for the orbital and 73-91 % for the spin-orbit operator; the two conjugation bugs
+# this guards against left 13 % and 2 %. Fifty is the gap between the two populations, not a
+# tolerance on any one of them.
+ONSITE_MIN = 50.0
 
 # <w_0n|sigma_a|w_0n> is a Pauli expectation value on a normalized Wannier function, so
 # |.| <= 1 holds elementwise -- for any gauge, which makes it basin-independent. This is
@@ -312,6 +323,11 @@ def test_wannier(dir, desc, cmdline, mpi_procs, default_fleur_test, grep_number)
         # sums, the vanishing orbital traces -- and a file of zeros satisfies all of them,
         # so an operator that computes nothing passes every check made on its output.
         for name in [f for f in OPERATOR_FILES[test_id] if f in GENERIC_OP_FILES]:
+            assert onsite_weight(res[name]) > ONSITE_MIN, (
+                f"{name}: only {onsite_weight(res[name]):.2f} % of |O(R)|^2 sits at R = 0 "
+                f"(expected above {ONSITE_MIN}). The operator no longer decays in real "
+                f"space, which is what a conjugation convention that disagrees with the "
+                f"gauge looks like -- and nothing else in this file would see it.")
             assert nonzero_entries(res[name]) > 0, (
                 f"{name}: every entry is zero, so the operator wrote a correctly shaped "
                 "file with nothing in it")

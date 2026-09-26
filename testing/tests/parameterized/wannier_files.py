@@ -112,6 +112,24 @@ def last_n(values, n):
     return vals[-n:]
 
 
+def onsite_weight(path):
+    """Share of |O(R)|^2 that sits at R = 0, in per cent.
+
+    The export has one row per (R, i, j, component) ending in Re and Im, so the weight is
+    read off the file without knowing which operator wrote it."""
+    total = onsite = 0.0
+    with open(path) as fh:
+        for line in fh:
+            f = line.split()
+            if len(f) < 7:
+                continue
+            a = float(f[-2])**2 + float(f[-1])**2
+            total += a
+            if f[0] == f[1] == f[2] == "0":
+                onsite += a
+    return 100.0 * onsite / total if total > 0.0 else 0.0
+
+
 def nonzero_entries(path):
     """Number of entries of an O(R) file that are not exactly zero.
 
