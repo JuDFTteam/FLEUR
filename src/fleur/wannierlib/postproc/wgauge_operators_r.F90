@@ -39,7 +39,7 @@ MODULE m_wgauge_operators_r
   USE m_wgauge_coeff_tensor, ONLY : wgauge_write_fmn, wgauge_write_cmn
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: wgauge_write_operators_r, wgauge_op_rs_distributed
+  PUBLIC :: wgauge_write_operators_r
 CONTAINS
 
   ! Write H(R) in Wannier90 seedname_hr.dat format (energies in eV). Rank-0 only.
