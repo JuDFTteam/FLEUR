@@ -25,8 +25,9 @@ MODULE m_wgauge_ft
   USE m_types_kpts
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: wgauge_ft_interpolate, wgauge_ft_rtok_velocity, wgauge_ft_to_real, wgauge_ws_vectors, wgauge_ft_to_real_reduce, wgauge_ft_rtok, wgauge_ws_distance
-  PUBLIC :: wgauge_mdrs_set, wgauge_mdrs_clear
+  PUBLIC :: wgauge_ft_to_real, wgauge_ft_to_real_reduce, wgauge_ft_rtok, &
+            wgauge_ft_rtok_velocity, wgauge_ft_interpolate
+  PUBLIC :: wgauge_ws_vectors, wgauge_mdrs_set, wgauge_mdrs_clear
   ! Wigner-Seitz R-vectors depend only on the mesh (operator-independent) -> compute once, cache, reuse.
   INTEGER, ALLOCATABLE :: ws_irvec_c(:, :), ws_ndegen_c(:)
   INTEGER :: ws_nrpts_c = 0, ws_mp_c(3) = 0
