@@ -37,7 +37,10 @@ CONTAINS
     ALLOCATE(kdist(MAX(1, np)))
     kdist = 0.0
     DO ip = 2, np
-      dkc = MATMUL(cell%bmat, kfrac(:, ip) - kfrac(:, ip-1))
+      !> (dk, bmat) and not (bmat, dk): bmat holds the reciprocal vectors as ROWS, which
+      !> is the order the rest of FLEUR contracts them in. The two agree whenever amat is
+      !> symmetric, which every cubic cell is -- so a film is the first case that can tell.
+      dkc = MATMUL(kfrac(:, ip) - kfrac(:, ip-1), cell%bmat)
       kdist(ip) = kdist(ip-1) + SQRT(DOT_PRODUCT(dkc, dkc))
     END DO
   END SUBROUTINE wgauge_kpath
