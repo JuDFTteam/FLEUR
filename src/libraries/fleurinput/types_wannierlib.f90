@@ -815,11 +815,14 @@ CONTAINS
     INTEGER, INTENT(IN) :: npts
 
     TYPE(t_kpts) :: raw_kset
-    INTEGER :: nraw, iseg, isub, np, fac
+    INTEGER :: nraw, iseg, isub, np, fac, isp
     REAL, ALLOCATABLE :: raw(:, :)
     REAL :: t
 
-    IF (.NOT. raw_kset%read_kpts_by_name(TRIM(xml%filename_add_xml)//"inp.xml", TRIM(listname))) &
+    !> l_labels: the interpolated band files carry the high-symmetry points, so whoever
+    !> plots them does not have to work them out from kpts.xml a second time.
+    IF (.NOT. raw_kset%read_kpts_by_name(TRIM(xml%filename_add_xml)//"inp.xml", &
+                                         TRIM(listname), l_labels=.TRUE.)) &
       CALL juDFT_error('wannierlib: <domain>/@listName "'//TRIM(listname)// &
                        '" not found in kPointLists', calledby='read_domain_kset_wannierlib')
     nraw = raw_kset%nkpt
@@ -851,6 +854,23 @@ CONTAINS
       kset%bk(:, np) = raw(:, nraw)
     END IF
     kset%nkpt = np
+
+    !> The high-symmetry labels the list carries, kept across the subdivision: a special
+    !> point at raw index i lands at (i-1)*fac + 1, and the last one at np. Dropping them
+    !> here is what forced every reader of the interpolated bands to open kpts.xml again
+    !> and work the labels out from the k-points a second time.
+    kset%numSpecialPoints = raw_kset%numSpecialPoints
+    IF (raw_kset%numSpecialPoints > 0) THEN
+      ALLOCATE(kset%specialPointIndices(raw_kset%numSpecialPoints))
+      ALLOCATE(kset%specialPointNames(raw_kset%numSpecialPoints))
+      ALLOCATE(kset%specialPoints(3, raw_kset%numSpecialPoints))
+      kset%specialPointNames = raw_kset%specialPointNames
+      kset%specialPoints     = raw_kset%specialPoints
+      DO isp = 1, raw_kset%numSpecialPoints
+        kset%specialPointIndices(isp) = (raw_kset%specialPointIndices(isp) - 1) * fac + 1
+      END DO
+    END IF
+
     DEALLOCATE(raw)
   END SUBROUTINE read_domain_kset_wannierlib
 

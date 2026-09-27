@@ -26,6 +26,7 @@ MODULE m_wgauge_run
    USE m_wgauge_operators_r, ONLY: wgauge_write_operators_r
    USE m_wgauge_coeff_a, ONLY: wgauge_build_berry_aw_r, wgauge_check_berry_centres
    USE m_wgauge_hamk, ONLY: t_wgauge_hgauge, wgauge_build_hamk, wgauge_hgauge_domain
+   USE m_wgauge_bands_io, ONLY: wgauge_bands_labels
    USE m_wgauge_interpolate_ham, ONLY: wgauge_interpolate_ham
    USE m_wgauge_interpolate_op, ONLY: wgauge_interpolate_operator
    USE m_wgauge_interpolate_velocity, ONLY: wgauge_interpolate_velocity
@@ -163,6 +164,11 @@ CONTAINS
 
          dsfx = TRIM(domains%suffix(idom))//TRIM(ssfx)
          IF (.NOT. ALLOCATED(outname)) ALLOCATE(outname(MAX(1, request%n_ops), 2))
+         !> Where this domain's high-symmetry points sit along its own abscissa, so that
+         !> whoever plots the bands does not have to derive it from kpts.xml.
+         IF (irank == 0) CALL wgauge_bands_labels(domains%kset(idom), hg%kdist, &
+                                                  'bands_wann_labels'//TRIM(dsfx))
+
          DO iop = 1, request%n_ops
             iRow = melem_exposed_find(request%op_name(iop), WANNIERLIB_INTERP)
             IF (iRow == 0) CALL judft_bug('wgauge_run: "'//TRIM(request%op_name(iop))// &

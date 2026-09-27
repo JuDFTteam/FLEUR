@@ -16,9 +16,10 @@
 !>  which is the plain band structure, is the same row with ncomp = 0.
 MODULE m_wgauge_bands_io
    USE m_juDFT
+   USE m_types_kpts
    IMPLICIT NONE
    PRIVATE
-   PUBLIC :: wgauge_bands_open, wgauge_bands_row
+   PUBLIC :: wgauge_bands_open, wgauge_bands_row, wgauge_bands_labels
 
 CONTAINS
 
@@ -60,5 +61,29 @@ CONTAINS
       END DO
       WRITE(iu, '(a)') ''
    END SUBROUTINE wgauge_bands_row
+
+   !> The high-symmetry points of an output domain, at the abscissa the band files use.
+   !>
+   !> A reader that wants to put X, K or Gamma under the right tick has the labels in
+   !> kpts.xml, but only against the k-points -- turning those into positions along the
+   !> path means redoing the metric the interpolation already applied. This writes the
+   !> answer instead. A domain with no labelled points writes nothing, which is what a
+   !> plane or a mesh should do.
+   SUBROUTINE wgauge_bands_labels(kset, kdist, fname)
+      TYPE(t_kpts), INTENT(IN) :: kset
+      REAL, INTENT(IN) :: kdist(:)
+      CHARACTER(LEN=*), INTENT(IN) :: fname
+      INTEGER :: iu, isp, ip
+
+      IF (kset%numSpecialPoints < 1) RETURN
+      CALL wgauge_bands_open(iu, fname, '# label   kdist   (high-symmetry points of this domain)')
+      DO isp = 1, kset%numSpecialPoints
+         ip = kset%specialPointIndices(isp)
+         IF (ip < 1 .OR. ip > SIZE(kdist)) CALL juDFT_error( &
+            'a special point falls outside the domain it labels', calledby='wgauge_bands_labels')
+         WRITE(iu, '(a8,2x,f14.8)') TRIM(kset%specialPointNames(isp)), kdist(ip)
+      END DO
+      CLOSE(iu)
+   END SUBROUTINE wgauge_bands_labels
 
 END MODULE m_wgauge_bands_io
