@@ -48,7 +48,7 @@ CONTAINS
 #ifdef CPP_HDF
       USE hdf5
       USE m_hdf_tools
-      USE m_wannierlib_hdf_util, ONLY: wr_r4, wr_i3
+      USE m_wannierlib_hdf_util, ONLY: wr_r4, wr_i3, wl_hdf_create, wl_hdf_root
 #endif
       TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
       TYPE(t_wgauge_manifold), INTENT(IN) :: manifold
@@ -70,7 +70,6 @@ CONTAINS
       TYPE(t_mat), POINTER :: zmat(:)
       TYPE(t_abc), POINTER :: abc(:, :)
       CHARACTER(LEN=32) :: filename, kptname
-      LOGICAL :: l_ex
       INTEGER :: ik, ib, ig, ir, nb, nrow, ng
       INTEGER, ALLOCATABLE :: ev_list(:)
       REAL, ALLOCATABLE :: buf(:, :, :, :)
@@ -91,10 +90,7 @@ CONTAINS
 
       nb = manifold%num_bands
       ev_list = [(ib, ib=manifold%min_band, manifold%max_band)]
-      WRITE (filename, '(a,i0,a)') 'WF', jspin, '_basis.hdf'
-      INQUIRE (FILE=TRIM(filename), EXIST=l_ex)
-      IF (l_ex) CALL system('rm '//TRIM(filename))
-      CALL h5fcreate_f(TRIM(filename), H5F_ACC_TRUNC_F, fid, err, H5P_DEFAULT_F, H5P_DEFAULT_F)
+      CALL wl_hdf_create('basis', jspin, fid, filename)
 
       DO ik = 1, kpts%nkptf
          CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ik, cell)
@@ -142,9 +138,7 @@ CONTAINS
          DEALLOCATE (buf)
          CALL h5gclose_f(gid, err)
       END DO
-      CALL h5gopen_f(fid, '/', gid, err)
-      CALL io_write_attint0(gid, 'version', 3)
-      CALL io_write_attint0(gid, 'nkpt', kpts%nkptf)
+      CALL wl_hdf_root(fid, 3, kpts%nkptf, gid)
       CALL h5gclose_f(gid, err)
       CALL h5fclose_f(fid, err)
       WRITE (oUnit, '(a,i0,a)') 'wannierlib: wrote '//TRIM(filename)//' (', kpts%nkptf, &

@@ -44,7 +44,7 @@ CONTAINS
 #ifdef CPP_HDF
       USE hdf5
       USE m_hdf_tools
-      USE m_wannierlib_hdf_util, ONLY: wr_r4
+      USE m_wannierlib_hdf_util, ONLY: wr_r4, wl_hdf_create, wl_hdf_root
 #endif
       TYPE(t_kpts), INTENT(IN) :: kpts
       TYPE(t_mpi), INTENT(IN) :: fmpi
@@ -56,7 +56,6 @@ CONTAINS
       INTEGER :: err, nb, nw, ik, i, j, n(4)
       REAL, ALLOCATABLE :: buf(:, :, :, :)
       CHARACTER(LEN=64) :: filename
-      LOGICAL :: l_ex
 
       !> Rank 0 only: w90 runs in library mode on the master, where both factors are whole.
       !> Writing from every rank would have each of them truncate the same file.
@@ -67,14 +66,8 @@ CONTAINS
          CALL juDFT_error("wannierlib: the gauge does not cover the full k-set", &
                           calledby="wannierlib_export_gauge")
 
-      WRITE (filename, '(a,i0,a)') 'WF', jspin, '_gauge.hdf'
-      INQUIRE (file=TRIM(filename), exist=l_ex)
-      IF (l_ex) CALL system('rm '//TRIM(filename))
-      CALL h5fcreate_f(TRIM(filename), H5F_ACC_TRUNC_F, fid, err, H5P_DEFAULT_F, H5P_DEFAULT_F)
-      CALL h5gopen_f(fid, '/', gid, err)
-
-      CALL io_write_attint0(gid, 'version', 1)
-      CALL io_write_attint0(gid, 'nkpt', kpts%nkptf)
+      CALL wl_hdf_create('gauge', jspin, fid, filename)
+      CALL wl_hdf_root(fid, 1, kpts%nkptf, gid)
       CALL io_write_attint0(gid, 'num_bands', nb)
       CALL io_write_attint0(gid, 'num_wann', nw)
       CALL io_write_attint0(gid, 'spin', jspin)
