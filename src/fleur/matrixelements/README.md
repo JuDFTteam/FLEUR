@@ -22,6 +22,21 @@ and lives in `postproc`, so nothing here knows what the bands were selected for.
 `postproc` depends on this directory; this directory depends on nothing of it, and
 `testing/tests/structure/test_layering.py` fails if that ever changes.
 
+### Why `melem_coarse.F90` is here
+
+It is the one file that reads as if it belonged next door, and every few months somebody
+proposes moving it. What it holds -- `s0`, `l0`, `soc4`, `soc0`, the Bloch-basis operators
+on the coarse mesh -- is filled by the wannierization driver and read by `wgauge_run` in
+`postproc`. Both sides have to see it, and `postproc` may not import from `wannierlib/`,
+so this directory is the only layer the two of them share.
+
+Move it up into `wannierlib/` and `postproc` can no longer reach it -- which
+`test_layering.py` catches, though its message will talk about imports rather than about
+this file. Move it down into `postproc/` and nothing breaks structurally, but the pass
+that produces `O(k)` before any gauge exists would then live in the directory defined as
+everything that needs the gauge. It is here because that is the only place it fits, not
+because that is where it landed.
+
 ## First: which of the three are you adding?
 
 - **A real operator** — a contraction over the states, `O_mn(k) = <psi_m|O|psi_n>`
