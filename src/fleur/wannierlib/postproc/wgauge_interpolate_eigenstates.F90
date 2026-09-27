@@ -14,60 +14,32 @@
 !>  tight-binding exports). It lets any operator be reconstructed in the band basis
 !>  in post-processing (e.g. <O>_n = [C^dagger O(k') C]_nn) without re-diagonalizing.
 !>
-!>  Builds H_W(k) exactly as the band driver (m_wgauge_interpolate_ham),
-!>  Fourier-interpolates to H(k') via the shared core, diagonalizes WITH eigenvectors,
-!>  and writes C(k'). Master rank only.
+!>  Takes the eigenvectors the shared H-gauge step (m_wgauge_hamk) already produced for
+!>  this domain and writes them. Master rank only.
 MODULE m_wgauge_interpolate_eigenstates
   USE m_juDFT
   USE m_constants, ONLY : oUnit
-  USE m_types_cell
-  USE m_types_kpts
-  USE m_types_wgauge_manifold, ONLY: t_wgauge_manifold
-  USE m_wgauge_hamk, ONLY : wgauge_build_hamk
-  USE m_wgauge_ft, ONLY : wgauge_ft_interpolate
-  USE m_wgauge_interp_util, ONLY : wgauge_kpath, wgauge_zheev_workspace
+  USE m_wgauge_hamk, ONLY : t_wgauge_hgauge
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: wgauge_interpolate_eigenstates
 CONTAINS
 
-  SUBROUTINE wgauge_interpolate_eigenstates(this, cell, kpts, eig, u_matrix, u_opt, kfrac, out1, irank)
-    TYPE(t_wgauge_manifold), INTENT(IN) :: this
-    TYPE(t_cell), INTENT(IN) :: cell
-    TYPE(t_kpts), INTENT(IN) :: kpts
-    REAL,    INTENT(IN) :: eig(:, :)          ! (num_bands, nk)
-    COMPLEX, INTENT(IN) :: u_matrix(:, :, :)  ! (num_wann, num_wann, nk)   MLWF gauge
-    COMPLEX, INTENT(IN) :: u_opt(:, :, :)     ! (num_bands, num_wann, nk)  disentangled
-    !> The domain's k-set and the names its files take, both decided by the caller: the
-    !> k-points come from a named kPointList and the names from the exposure table plus the
+  SUBROUTINE wgauge_interpolate_eigenstates(hg, kfrac, out1, irank)
+    TYPE(t_wgauge_hgauge), INTENT(IN) :: hg   !> the domain's C(k'), already diagonalized
+    !> The domain's k-set and the name its file takes, both decided by the caller: the
+    !> k-points come from a named kPointList and the name from the exposure table plus the
     !> domain suffix. Unallocated off rank 0, which never reaches them.
     REAL, ALLOCATABLE, INTENT(IN) :: kfrac(:, :)          !> (3, np) fractional mesh
     CHARACTER(LEN=*), INTENT(IN) :: out1
     INTEGER, INTENT(IN) :: irank
 
-    INTEGER :: num_wann, i, j, ip, np, iu, info, lwork
-    REAL,    ALLOCATABLE :: kdist(:), evals(:), rwork(:)
-    COMPLEX, ALLOCATABLE :: ham_k(:, :, :), H_interp(:, :, :), cvec(:, :), work(:)
+    INTEGER :: num_wann, i, j, ip, np, iu
 
     IF (irank /= 0) RETURN                      ! only the master holds the full U(k)
-
-    num_wann  = this%num_wann
     CALL timestart('wgauge_interpolate_eigenstates')
-
-    ! ---- the domain's k-set, already resolved by the caller ----
-    np = SIZE(kfrac, 2)   ! the caller resolved the domain; there is nothing to skip
-
-    CALL wgauge_kpath(cell, kfrac, kdist)   ! abscissa of the output, from the mesh just read
-
-    ! ---- H_W(k) via eigval2 (identical construction to the band driver) ----
-    CALL wgauge_build_hamk(this, eig, u_matrix, u_opt, ham_k)
-
-    ! ---- Fourier-interpolate H_W(k) to the fine mesh (shared core) ----
-    CALL wgauge_ft_interpolate(cell, ham_k, kpts, kfrac, H_interp)
-
-    ! ---- diagonalize H(k') WITH eigenvectors; write C(k') ----
-    ALLOCATE(evals(num_wann), cvec(num_wann, num_wann))
-    CALL wgauge_zheev_workspace('V', num_wann, work, rwork, lwork)
+    num_wann = SIZE(hg%evals, 1)
+    np = SIZE(hg%kdist)
 
     OPEN(newunit=iu, file=TRIM(out1)//'.dat', status='replace')
     WRITE(iu,'(a)') '# Wannier-Hamiltonian eigenstates C(k): H(k) C = C E, columns of C = band'
@@ -75,13 +47,10 @@ CONTAINS
     WRITE(iu,'(a,i0,a,i0)') '# num_wann = ', num_wann, ' ,  n_kpts = ', np
     WRITE(iu,'(a)') '# per k: "k <ip> <kx> <ky> <kz> <kdist>", then num_wann^2 lines "i j Re(C_ij) Im(C_ij)"'
     DO ip = 1, np
-      cvec = H_interp(:, :, ip)
-      CALL zheev('V', 'U', num_wann, cvec, num_wann, evals, work, lwork, rwork, info)
-      IF (info /= 0) CALL juDFT_error('zheev failed', calledby='wgauge_interpolate_eigenstates')
-      WRITE(iu,'(a,i0,4(1x,f12.8))') 'k ', ip, kfrac(:, ip), kdist(ip)
+      WRITE(iu,'(a,i0,4(1x,f12.8))') 'k ', ip, kfrac(:, ip), hg%kdist(ip)
       DO j = 1, num_wann          ! column j = eigenstate j
         DO i = 1, num_wann        ! row i = Wannier index
-          WRITE(iu,'(2i5,2(2x,es18.10))') i, j, REAL(cvec(i, j)), AIMAG(cvec(i, j))
+          WRITE(iu,'(2i5,2(2x,es18.10))') i, j, REAL(hg%cvec(i, j, ip)), AIMAG(hg%cvec(i, j, ip))
         END DO
       END DO
     END DO

@@ -9,8 +9,11 @@
 !>  it does the shared pipeline for ANY operator:
 !>    O_W,alpha(k) = V^dagger O0_alpha(k) V ,   V = U_dis U
 !>    O_alpha(k')  = FT[ O_W,alpha ]            (shared core m_wgauge_ft)
-!>    H(k')        = FT[ H_W ] -> diag -> E_n(k'), C(k')
 !>    <O_alpha>_n(k') = [ C^dagger O_alpha(k') C ]_nn
+!>
+!>  E_n(k') and C(k') arrive already built: the Hamiltonian side of the domain is assembled
+!>  once in m_wgauge_hamk for every driver that needs it, so the expectation values here are
+!>  projected on the same eigenvectors the band file was written from.
 !>  and writes <outfile>.dat: kdist, [ E_n(eV), <O_1>_n, ..., <O_ncomp>_n ] per band.
 !>
 !>  A new operator only supplies its O0(k) (a provider) and calls this with the
@@ -22,25 +25,24 @@ MODULE m_wgauge_interpolate_op
   USE m_types_cell
   USE m_types_kpts
   USE m_types_wgauge_manifold, ONLY: t_wgauge_manifold
-  USE m_wgauge_hamk, ONLY : wgauge_build_hamk
-  USE m_wgauge_ft, ONLY : wgauge_ft_interpolate, wgauge_ft_to_real_reduce, wgauge_ft_rtok
-  USE m_wgauge_interp_util, ONLY : wgauge_kpath, wgauge_zheev_workspace
+  USE m_wgauge_hamk, ONLY : t_wgauge_hgauge
+  USE m_wgauge_ft, ONLY : wgauge_ft_to_real_reduce, wgauge_ft_rtok
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: wgauge_interpolate_operator
 CONTAINS
 
-  SUBROUTINE wgauge_interpolate_operator(this, cell, kpts, eig, u_matrix, u_opt, o0_loc, gk_loc, &
-                                        ncomp, kfrac, outfile, irank, mpicm, bound)
+  SUBROUTINE wgauge_interpolate_operator(this, cell, kpts, u_matrix, u_opt, o0_loc, gk_loc, &
+                                        ncomp, kfrac, hg, outfile, irank, mpicm, bound)
     TYPE(t_wgauge_manifold), INTENT(IN) :: this
     TYPE(t_cell), INTENT(IN) :: cell
     TYPE(t_kpts), INTENT(IN) :: kpts
-    REAL,    INTENT(IN) :: eig(:, :)              ! (num_bands, nk)
     COMPLEX, INTENT(IN) :: u_matrix(:, :, :)      ! (num_wann, num_wann, nk)  MLWF gauge (full mesh)
     COMPLEX, INTENT(IN) :: u_opt(:, :, :)         ! (num_bands, num_wann, nk) disentangled (full mesh)
     COMPLEX, INTENT(IN) :: o0_loc(:, :, :, :)     ! (num_bands, num_bands, ncomp, nk_loc) this rank's Bloch slice
     INTEGER, INTENT(IN) :: gk_loc(:)              ! (nk_loc) global k index of each slice entry
     INTEGER, INTENT(IN) :: ncomp
+    TYPE(t_wgauge_hgauge), INTENT(IN) :: hg   !> the domain's bands, already diagonalized
     CHARACTER(LEN=*), INTENT(IN) :: outfile
     !> The domain's k-set and the names its files take, both decided by the caller: the
     !> k-points come from a named kPointList and the names from the exposure table plus the
@@ -70,13 +72,13 @@ CONTAINS
     !> at 2.252 against 2.254 on the converged coarse mesh); pointwise values do not.
     REAL, INTENT(IN), OPTIONAL :: bound
 
-    INTEGER :: num_wann, num_bands, m, ip, np, iu, info, lwork, a
+    INTEGER :: num_wann, num_bands, m, ip, np, iu, a
     INTEGER :: nkl, kl, nrpts
     REAL    :: omax
-    REAL,    ALLOCATABLE :: kdist(:), evals(:), rwork(:), oexp(:), orow(:, :)
+    REAL,    ALLOCATABLE :: oexp(:), orow(:, :)
     CHARACTER(LEN=120) :: hdr
-    COMPLEX, ALLOCATABLE :: ham_k(:, :, :), H_interp(:, :, :), o_interp(:, :, :, :)
-    COMPLEX, ALLOCATABLE :: hk(:, :), work(:), vloc(:, :, :), tmp(:, :), cvec(:, :), oc(:, :, :)
+    COMPLEX, ALLOCATABLE :: o_interp(:, :, :, :)
+    COMPLEX, ALLOCATABLE :: vloc(:, :, :), tmp(:, :), oc(:, :, :)
     COMPLEX, ALLOCATABLE :: ow_loc(:, :, :, :), o_r(:, :, :, :), o1(:, :, :)
     INTEGER, ALLOCATABLE :: irvec(:, :), ndegen(:)
 
@@ -116,14 +118,7 @@ CONTAINS
 
     np = SIZE(kfrac, 2)   ! the caller resolved the domain; there is nothing to skip
 
-    CALL wgauge_kpath(cell, kfrac, kdist)   ! abscissa of the output, from the mesh just read
-
-    ! ---- H_W(k) via eigval2 (same construction as the validated band driver), full mesh on rank 0 ----
-    CALL wgauge_build_hamk(this, eig, u_matrix, u_opt, ham_k)
-
-    ! ---- interpolate H (full mesh -> R -> k', shared core) and the operator (R -> k' only:
-    !      O_alpha(R) is already assembled by the distributed reduce above) ----
-    CALL wgauge_ft_interpolate(cell, ham_k, kpts, kfrac, H_interp)
+    ! ---- the operator R -> k' (O_alpha(R) is already assembled by the distributed reduce above) ----
     ALLOCATE(o_interp(num_wann, num_wann, ncomp, np))
     BLOCK
       COMPLEX, ALLOCATABLE :: o_one(:, :, :)
@@ -134,30 +129,24 @@ CONTAINS
     END BLOCK
     DEALLOCATE(o_r, irvec, ndegen)
 
-    ! ---- diagonalize H(k') with eigenvectors, project operator, write ----
-    ALLOCATE(evals(num_wann), hk(num_wann, num_wann), cvec(num_wann, num_wann), &
-             oc(num_wann, num_wann, ncomp), oexp(ncomp), orow(ncomp, num_wann))
-    CALL wgauge_zheev_workspace('V', num_wann, work, rwork, lwork)
+    ! ---- project the operator on the bands of this domain, write ----
+    ALLOCATE(oc(num_wann, num_wann, ncomp), oexp(ncomp), orow(ncomp, num_wann))
 
     omax = 0.0
     WRITE(hdr,'(a,i0,a)') '# kdist   [ E_n(eV)  <O_1>_n .. <O_', ncomp, '>_n ] for n=1..num_wann'
     CALL wgauge_bands_open(iu, outfile, hdr)
     DO ip = 1, np
-      hk = H_interp(:, :, ip)
-      CALL zheev('V', 'U', num_wann, hk, num_wann, evals, work, lwork, rwork, info)
-      IF (info /= 0) CALL juDFT_error('zheev failed', calledby='wgauge_interpolate_operator')
-      cvec = hk
       DO a = 1, ncomp
-        oc(:, :, a) = MATMUL(o_interp(:, :, a, ip), cvec)
+        oc(:, :, a) = MATMUL(o_interp(:, :, a, ip), hg%cvec(:, :, ip))
       END DO
       DO m = 1, num_wann
         DO a = 1, ncomp
-          oexp(a) = REAL(DOT_PRODUCT(cvec(:, m), oc(:, m, a)))
+          oexp(a) = REAL(DOT_PRODUCT(hg%cvec(:, m, ip), oc(:, m, a)))
         END DO
         omax = MAX(omax, SQRT(SUM(oexp(:)**2)))
         orow(:, m) = oexp(:)
       END DO
-      CALL wgauge_bands_row(iu, kdist(ip), hartree_to_ev_const*evals(:), orow, '2x,f14.9')
+      CALL wgauge_bands_row(iu, hg%kdist(ip), hartree_to_ev_const*hg%evals(:, ip), orow, '2x,f14.9')
     END DO
     CLOSE(iu)
     WRITE(oUnit,'(a,es12.5)') 'wannierlib operator interpolation: max |<O>| over the domain = ', omax

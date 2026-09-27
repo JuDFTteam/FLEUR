@@ -17,12 +17,29 @@
 !>  H_W is a unitary rotation of it and its eigenvalues ARE the ab-initio ones. That is
 !>  what makes the interpolation exact on the mesh it was built from, which is what the
 !>  WannFeBccInterp test asserts.
+!>
+!>  The second half of the module carries it to one output domain: H(R) -> H(k') ->
+!>  eigenvalues and eigenvectors. Every driver downstream needs that much of H before it can
+!>  write anything of its own -- the band driver writes the eigenvalues, the eigenstate
+!>  driver the eigenvectors, and the operator and velocity drivers project onto them -- so it
+!>  happens once per domain rather than once per driver, and they all see the same C(k').
 MODULE m_wgauge_hamk
+   USE m_juDFT
+   USE m_types_cell
    USE m_types_wgauge_manifold, ONLY: t_wgauge_manifold
+   USE m_wgauge_ft, ONLY: wgauge_ft_rtok
+   USE m_wgauge_interp_util, ONLY: wgauge_kpath, wgauge_zheev_workspace
    IMPLICIT NONE
    PRIVATE
 
-   PUBLIC :: wgauge_build_hamk
+   !> The Hamiltonian gauge along one output domain.
+   TYPE t_wgauge_hgauge
+      REAL,    ALLOCATABLE :: kdist(:)        !> (np)         abscissa along the domain
+      REAL,    ALLOCATABLE :: evals(:, :)     !> (nw, np)     band energies, Hartree
+      COMPLEX, ALLOCATABLE :: cvec(:, :, :)   !> (nw, nw, np) H(k') C = C E, columns of C
+   END TYPE t_wgauge_hgauge
+
+   PUBLIC :: wgauge_build_hamk, wgauge_hgauge_domain, t_wgauge_hgauge
 
 CONTAINS
 
@@ -71,5 +88,35 @@ CONTAINS
       END DO
       DEALLOCATE (eigval2)
    END SUBROUTINE wgauge_build_hamk
+
+   !> H(R) -> H(k') over one output domain, diagonalized.
+   !>
+   !> Takes the real-space Hamiltonian rather than the coarse one so that the transform of
+   !> H_W happens once per run: the velocity driver needs the same H(R) for the derivative,
+   !> and the R-mesh travels with it. The eigenvectors are returned in place of H(k'), which
+   !> is what zheev overwrites anyway, so nothing is held twice.
+   SUBROUTINE wgauge_hgauge_domain(cell, kfrac, ham_r, irvec, ndegen, nrpts, hg)
+      TYPE(t_cell), INTENT(IN) :: cell
+      REAL,    INTENT(IN) :: kfrac(:, :)                  !> (3, np) fractional mesh
+      COMPLEX, INTENT(IN) :: ham_r(:, :, :)               !> (nw, nw, nrpts)
+      INTEGER, INTENT(IN) :: irvec(:, :), ndegen(:), nrpts
+      TYPE(t_wgauge_hgauge), INTENT(OUT) :: hg
+
+      INTEGER :: nw, np, ip, info, lwork
+      REAL,    ALLOCATABLE :: rwork(:)
+      COMPLEX, ALLOCATABLE :: work(:)
+
+      nw = SIZE(ham_r, 1); np = SIZE(kfrac, 2)
+      CALL timestart('wgauge_hgauge_domain')
+      CALL wgauge_kpath(cell, kfrac, hg%kdist)
+      CALL wgauge_ft_rtok(ham_r, irvec, ndegen, nrpts, kfrac, hg%cvec)
+      ALLOCATE (hg%evals(nw, np))
+      CALL wgauge_zheev_workspace('V', nw, work, rwork, lwork)
+      DO ip = 1, np
+         CALL zheev('V', 'U', nw, hg%cvec(:, :, ip), nw, hg%evals(:, ip), work, lwork, rwork, info)
+         IF (info /= 0) CALL juDFT_error('zheev failed', calledby='wgauge_hgauge_domain')
+      END DO
+      CALL timestop('wgauge_hgauge_domain')
+   END SUBROUTINE wgauge_hgauge_domain
 
 END MODULE m_wgauge_hamk
