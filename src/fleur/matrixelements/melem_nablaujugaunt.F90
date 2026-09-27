@@ -37,6 +37,7 @@ MODULE m_melem_nablaujugaunt
    USE m_gaunt, ONLY: gaunt1
    USE m_types_enpara
    USE m_constants, ONLY: c_light
+   USE m_melem_bgeom, ONLY: melem_blen, melem_bcart
    IMPLICIT NONE
    PRIVATE
    PUBLIC :: melem_nablaujugaunt
@@ -96,7 +97,7 @@ CONTAINS
       nmod = 0
       DO ikpt_b = 1, nntot
          bpt(:) = kdiff(:, ikpt_b)
-         rk = SQRT(DOT_PRODUCT(bpt, MATMUL(cell%bbmat, bpt)))
+         rk = melem_blen(cell, bpt)
          imod(ikpt_b) = 0
          DO q = 1, nmod
             IF (rk == rk_uni(q)) THEN
@@ -220,7 +221,7 @@ CONTAINS
          !> harmonic the coefficients belong to.
          DO ikpt_b = 1, nntot
             bpt(:) = kdiff(:, ikpt_b)
-            bkrot = MATMUL(bpt, cell%bmat)
+            bkrot = melem_bcart(cell, bpt)
             CALL ylm4(lwn, bkrot, ylmpp)
 
             DO l = 0, lwn
