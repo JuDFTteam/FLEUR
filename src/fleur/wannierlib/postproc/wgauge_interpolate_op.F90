@@ -11,9 +11,9 @@
 !>    O_alpha(k')  = FT[ O_W,alpha ]            (shared core m_wgauge_ft)
 !>    <O_alpha>_n(k') = [ C^dagger O_alpha(k') C ]_nn
 !>
-!>  E_n(k') and C(k') arrive already built: the Hamiltonian side of the domain is assembled
-!>  once in m_wgauge_hamk for every driver that needs it, so the expectation values here are
-!>  projected on the same eigenvectors the band file was written from.
+!>  E_n(k') and C(k') arrive already built, shared with every other driver of the same
+!>  domain: the expectation values written here are projected on the same eigenvectors the
+!>  band file carries, and cannot disagree with it.
 !>  and writes <outfile>.dat: kdist, [ E_n(eV), <O_1>_n, ..., <O_ncomp>_n ] per band.
 !>
 !>  A new operator only supplies its O0(k) (a provider) and calls this with the

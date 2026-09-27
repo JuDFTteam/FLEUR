@@ -64,10 +64,9 @@ CONTAINS
 
    !> The high-symmetry points of an output domain, at the abscissa the band files use.
    !>
-   !> A reader that wants to put X, K or Gamma under the right tick has the labels in
-   !> kpts.xml, but only against the k-points -- turning those into positions along the
-   !> path means redoing the metric the interpolation already applied. This writes the
-   !> answer instead. A domain with no labelled points writes nothing, which is what a
+   !> The names come from the k-point list; the positions are the same abscissa the band
+   !> files use, so a label and a band can be drawn against one another without measuring
+   !> the path again. A domain with no labelled points writes nothing, which is what a
    !> plane or a mesh should do.
    SUBROUTINE wgauge_bands_labels(kset, kdist, fname)
       TYPE(t_kpts), INTENT(IN) :: kset

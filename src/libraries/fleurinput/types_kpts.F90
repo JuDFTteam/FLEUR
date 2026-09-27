@@ -141,11 +141,10 @@ CONTAINS
       CALL mpi_bc(this%sc_list, rank, mpi_comm)
    END SUBROUTINE mpi_bc_kpts
 
-   !> l_labels asks for the high-symmetry names as well. It is optional and off by
-   !> default because this reader has never filled them, and four reference banddos.hdf
-   !> outside this directory were written without them: turning it on for everybody
-   !> changes their kptSPLabels. When those references are refreshed the flag can go and
-   !> the labels can be read unconditionally, which is what read_xml_kpts already does.
+   !> l_labels asks for the high-symmetry names as well, and defaults to off: this reader
+   !> does not fill them otherwise, and reference banddos.hdf files elsewhere in the tree
+   !> record that absence in their kptSPLabels. Reading them unconditionally -- which is
+   !> what read_xml_kpts does -- means refreshing those references in the same commit.
    recursive logical function read_kpts_by_name(this,filename,name,l_labels)
       USE m_calculator
       CLASS(t_kpts), INTENT(inout):: this

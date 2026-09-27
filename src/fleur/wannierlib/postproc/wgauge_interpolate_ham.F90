@@ -5,10 +5,9 @@
 !--------------------------------------------------------------------------------
 !>  The interpolated band structure, written out.
 !>
-!>  The Hamiltonian itself is no longer assembled here: H_W(k), its transform to real space
-!>  and the diagonalization along the domain all happen once in m_wgauge_hamk, because the
-!>  eigenstate, operator and velocity drivers need exactly the same three steps. What is left
-!>  is this driver's own business -- the two units the bands are written in.
+!>  It takes a domain whose bands are already built -- H_W(k), the transform to real space
+!>  and the diagonalization all belong to m_wgauge_hamk, which every interpolation driver
+!>  shares -- so what is decided here is only the two units the bands are written in.
 MODULE m_wgauge_interpolate_ham
   USE m_juDFT
   USE m_wgauge_bands_io, ONLY: wgauge_bands_open, wgauge_bands_row

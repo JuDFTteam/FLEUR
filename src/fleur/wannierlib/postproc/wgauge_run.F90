@@ -135,9 +135,8 @@ CONTAINS
       !> built once: the convention the Hamiltonian is assembled in then has a single place
       !> to reach, and the four drivers cannot drift apart.
       !>
-      !> After the MDRS switch and not before: wgauge_ft_to_real does not consult it -- only
-      !> the transforms back to k do -- but keeping the order visible is what stops H and the
-      !> operators ending up in different gauges.
+      !> After the MDRS switch, never before it: every transform back to k reads those
+      !> tables, so anything interpolated ahead of the switch would be in the other gauge.
       !>
       !> Rank 0 only, which is where the full U(k) lives and where every driver interpolates.
       IF (irank == 0 .AND. request%n_ops > 0) THEN

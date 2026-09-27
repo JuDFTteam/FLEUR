@@ -856,9 +856,7 @@ CONTAINS
     kset%nkpt = np
 
     !> The high-symmetry labels the list carries, kept across the subdivision: a special
-    !> point at raw index i lands at (i-1)*fac + 1, and the last one at np. Dropping them
-    !> here is what forced every reader of the interpolated bands to open kpts.xml again
-    !> and work the labels out from the k-points a second time.
+    !> point at raw index i lands at (i-1)*fac + 1, and the last one at np.
     kset%numSpecialPoints = raw_kset%numSpecialPoints
     IF (raw_kset%numSpecialPoints > 0) THEN
       ALLOCATE(kset%specialPointIndices(raw_kset%numSpecialPoints))

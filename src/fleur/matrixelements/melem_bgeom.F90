@@ -14,10 +14,8 @@
 !>      Cartesian  -> fractional    MATMUL(bmat, r)/2pi    contracts the row index
 !>
 !>  and both orders are correct, for opposite directions. They are also interchangeable
-!>  whenever `amat` is symmetric, which every cubic cell is -- so a bulk metal cannot tell
-!>  a mistake here from a right answer. The same slip reached the interpolation k-path and
-!>  survived the whole testset until a hexagonal film ran; that is why the conversion has
-!>  one place rather than a copy in each table.
+!>  whenever `amat` is symmetric, which every cubic cell is, so a cubic case cannot tell a
+!>  mistake here from a right answer. That is what the single place is for.
 MODULE m_melem_bgeom
    USE m_types_cell
    IMPLICIT NONE
