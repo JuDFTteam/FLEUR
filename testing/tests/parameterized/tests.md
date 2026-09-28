@@ -120,7 +120,6 @@ Testset: Experimental
 |     | Test of GW interface 1                         | extra/gw1Interface      | bulk          | inp.xml files too old     |         | 2   |
 |     | Test of GW interface 2                         | extra/gw2Interface      | bulk          | inp.xml files too old     |         | 2   |
 |     | Sm jDOS decomposition                          | extra/SmAtomjDOS        | bulk,dos      |                           |         | 2   |
-| +   | C: simple test for the Wannier code            | extra/Cwann             | bulk,wannier  |                           |         | 2   |
 |     | TiO2 EELS spectrum                             | extra/TiO2eels          | bulk,eels     | inp.xml too old           |         | 2   |
 | +   | Hubbard1 using SOC                             | extra/Gd_Hubbard1       | bulk,edsolver |                           |         | 2   |
 | +   | Hubbard1 without sym                           | extra/Gd_Hubbard1_noSYM | bulk,edsolver |                           |         | 2   |

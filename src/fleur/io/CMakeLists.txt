@@ -1,5 +1,4 @@
 set(fleur_F77 ${fleur_F77}
-src/fleur/io/cdn_read.F
 )
 set(fleur_F90 ${fleur_F90}
 src/fleur/io/io_matrix.F90

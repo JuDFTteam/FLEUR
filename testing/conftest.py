@@ -416,9 +416,6 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "hdf: tests needing hdf")
     config.addinivalue_line("markers", "mpi: tests needing mpi")
     config.addinivalue_line("markers", "libxc: test for fleur using libxc")
-    config.addinivalue_line("markers", "wannier: test for fleur using wannier") # TODO account for differnet wannier versions?
-    config.addinivalue_line("markers", "wannier4: test for fleur using wannier 4D calculations")
-    config.addinivalue_line("markers", "wannier5: test for fleur using wannier 5D calculations")
     config.addinivalue_line("markers", "masci_tools: tests which use functions from masci-tools repo")
     config.addinivalue_line("markers", "fleur_parser: tests testing fleur parsers or generate files for them")
     config.addinivalue_line("markers", "outxml_parser_xfail: tests for which the outxml_parser is expected to output some error message")
@@ -1494,7 +1491,7 @@ def collect_all_judft_messages():
      'soc', 'secvar', 'matrixelements', 'fermi', 'fft', '../tools/fleurinput', 'force',
     'forcetheorem', 'global', 'greensf', 'hybrid',  'init', '../tools/inpgen2',
     'io', 'juDFT', '../tools/inpgen2/kpoints',  'ldaX', 'main', 'math', 'mix', 'mpi', 'startden', 'propcalc/orbdep',
-    'rdmft', 'tetra', 'types', 'vgen', 'wannier', 'xc-pot'
+    'rdmft', 'tetra', 'types', 'vgen', 'wannierlib', 'xc-pot'
      ]
 
     grep_results = []

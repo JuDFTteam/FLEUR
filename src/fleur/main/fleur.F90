@@ -32,7 +32,7 @@ MODULE m_fleur
 
 CONTAINS
    SUBROUTINE fleur_execute(fmpi, fi, sphhar, stars, nococonv, forcetheo, enpara, results, &
-                            xcpot, wann, hybdat, mpdata)
+                            xcpot, hybdat, mpdata)
       !! This routine is the main program of the FLEUR code.
 
       USE m_types
@@ -57,9 +57,6 @@ CONTAINS
       USE m_calc_hybrid
       USE m_rdmft
       USE m_io_hybrid
-      USE m_wann_optional
-      USE m_wannier
-      USE m_bs_comfort
       USE m_dwigner
       USE m_ylm
       USE m_metagga
@@ -90,7 +87,6 @@ CONTAINS
       TYPE(t_stars),      INTENT(IN)    :: stars
       TYPE(t_nococonv),   INTENT(INOUT) :: nococonv
       TYPE(t_results),    INTENT(INOUT) :: results
-      TYPE(t_wann),       INTENT(INOUT) :: wann
 
       CLASS(t_forcetheo), INTENT(INOUT) :: forcetheo
       TYPE(t_enpara),     INTENT(INOUT) :: enpara
@@ -136,13 +132,6 @@ CONTAINS
       ! generate a starting density.
       CALL optional(fmpi, fi%atoms, sphhar, fi%vacuum, stars, fi%input, &
                     fi%sym, fi%cell, fi%field, fi%sliceplot, xcpot, fi%noco)
-
-      IF (fi%input%l_wann .AND. (.NOT. wann%l_bs_comf)) THEN
-         ! TODO: If this warning is commented out, can it be erased?
-         !IF(fmpi%isize.NE.1) CALL juDFT_error('No Wannier+MPI at the moment',calledby = 'fleur')
-         if (fmpi%irank==0) CALL wann_optional(fmpi, fi%input, fi%kpts, fi%atoms, fi%sym, fi%cell,   fi%noco, wann)
-         if (wann%l_stopopt) CALL juDFT_end("wann_optional done",fmpi%irank) 
-      END IF
 
       iter = 0
       iterHF = 0
@@ -226,7 +215,7 @@ CONTAINS
       ! Open/allocate eigenvector storage
       CALL timestart("Open/allocate eigenvector storage")
       IF (fi%noco%l_soc .AND. .NOT.fi%noco%l_noco .AND. &
-          (fi%input%l_wann .OR. fi%wannierlib%l_wannierize)) THEN
+          fi%wannierlib%l_wannierize) THEN
          ! Weed up and down spinor components for SOC MLWFs.
          ! When jspins=1 Fleur usually writes only the up-spinor into the eig-file.
          ! Make sure we always get up and down spinors when SOC=true.
@@ -331,19 +320,6 @@ CONTAINS
                iter = 0
             END IF
          END IF
-
-         ! TODO: What is commented out here and should it perhaps be removed?
-
-! !$             DO pc = 1, wann%nparampts
-! !$                !---> gwf
-! !$                IF (wann%l_sgwf.OR.wann%l_ms) THEN
-! !$                   fi%noco%qss(:) = wann%param_vec(:,pc)
-! !$                   fi%noco%alph(:) = wann%param_alpha(:,pc)
-! !$                ELSE IF (wann%l_socgwf) THEN
-! !$                   IF(wann%l_dim(2)) fi%noco%phi   = tpi_const * wann%param_vec(2,pc)
-! !$                   IF(wann%l_dim(3)) fi%noco%theta = tpi_const * wann%param_vec(3,pc)
-! !$                END IF
-         !---< gwf
 
          ! Optionally scale up the magnetization density before the potential calculation.
          IF (ANY(fi%noco%l_unrestrictMT).AND.fi%noco%l_scaleMag) THEN
@@ -494,41 +470,12 @@ CONTAINS
                IF (.NOT. fi%dfpt%l_dfpt) CALL juDFT_end("Wannierization done. Fleur ends.", fmpi%irank)
             END IF
 
-            ! TODO: What is commented out here and should it perhaps be removed?
-! !$          !+Wannier
-! !$          IF(wann%l_bs_comf)THEN
-! !$             IF(pc.EQ.1) THEN
-! !$                OPEN(777,file='out_eig.1')
-! !$                OPEN(778,file='out_eig.2')
-! !$                OPEN(779,file='out_eig.1_diag')
-! !$                OPEN(780,file='out_eig.2_diag')
-! !$             END IF
-! !$
-! !$             CALL bs_comfort(eig_id,fi%input,fi%noco,fi%kpts%nkpt,pc)
-! !$
-! !$             IF(pc.EQ.wann%nparampts)THEN
-! !$                CLOSE(777)
-! !$                CLOSE(778)
-! !$                CLOSE(779)
-! !$                CLOSE(780)
-! !$             END IF
-! !$          END IF
-! !$          !-Wannier
-
             !ENDIF
 
 
             IF (forcetheo%eval(eig_id, fi%atoms, fi%kpts, fi%sym, fi%cell, fi%noco, nococonv, input_soc, fmpi,   enpara, vToT, results)) THEN
                CYCLE forcetheoloop
             END IF
-
-            CALL timestart("Wannier")
-            IF ((fi%input%l_wann) .AND. (.NOT. wann%l_bs_comf)) THEN
-               CALL wannier(fmpi, input_soc, fi%kpts, fi%sym, fi%atoms, stars, fi%vacuum, sphhar,   &
-                            wann, fi%noco, nococonv, fi%cell, enpara, fi%banddos, fi%sliceplot, vTot, results, &
-                            (/eig_id/), (fi%sym%invs) .AND. (.NOT. fi%noco%l_soc) .AND. (.NOT. fi%noco%l_noco), fi%kpts%nkpt)
-            END IF
-            CALL timestop("Wannier")
 
             ! Check if the greensFunction have to be calculated
             IF (fi%gfinp%n > 0) THEN
