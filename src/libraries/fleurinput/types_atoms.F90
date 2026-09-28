@@ -159,6 +159,8 @@ CONTAINS
   procedure :: num_radial_functions_per_l
   procedure :: slot_of_lo
   procedure :: l_apw
+  procedure :: udot_rows
+  procedure :: num_ab_rows
 END TYPE t_atoms
 
 PUBLIC :: t_atoms,t_utype, readAtomAttribute
@@ -198,6 +200,34 @@ pure logical function l_apw(this,l,itype)
   l_apw = any(this%l_dulo(:this%nlo(itype),itype).and.this%llo(:this%nlo(itype),itype)==l)
   if (this%lapw_l(itype)>=0) l_apw = l_apw.or.l>this%lapw_l(itype)
 end function l_apw
+
+pure function udot_rows(this,lcut,itype) result(boff)
+  !! layout of the matching coefficients up to lcut: rows 0..s-1 hold u(lm), followed by udot(lm)
+  !! of the LAPW channels only. boff(l)+l+m is the 0-based udot row of (l,m), boff(l)=-1 for APW.
+  class(t_atoms), intent(in):: this
+  integer, intent(in):: lcut,itype
+  integer :: boff(0:lcut),l,nrow
+  nrow = lcut*(lcut+2)+1
+  do l = 0,lcut
+     if (this%l_apw(l,itype)) then
+        boff(l) = -1
+     else
+        boff(l) = nrow
+        nrow = nrow+2*l+1
+     end if
+  end do
+end function udot_rows
+
+pure integer function num_ab_rows(this,lcut,itype)
+  !! number of matching coefficients (u for all l, udot for LAPW l) up to lcut
+  class(t_atoms), intent(in):: this
+  integer, intent(in):: lcut,itype
+  integer :: l
+  num_ab_rows = lcut*(lcut+2)+1
+  do l = 0,lcut
+     if (.not.this%l_apw(l,itype)) num_ab_rows = num_ab_rows+2*l+1
+  end do
+end function num_ab_rows
 SUBROUTINE mpi_bc_atoms(this,mpi_comm,irank)
  CLASS(t_atoms),INTENT(INOUT)::this
  INTEGER,INTENT(IN):: mpi_comm

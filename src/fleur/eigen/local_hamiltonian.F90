@@ -223,7 +223,7 @@ CONTAINS
    END FUNCTION
 
    SUBROUTINE extract_nonsph(td,atoms,n,j1,j2)
-      !! copy the u/udot block with l<=lnonsph of td%h into td%h_loc_nonsph
+      !! copy the block of u and LAPW udot with l<=lnonsph of td%h into td%h_loc_nonsph
       TYPE(t_tlmplm), INTENT(INOUT) :: td
       TYPE(t_atoms),  INTENT(IN)    :: atoms
       INTEGER,        INTENT(IN)    :: n,j1,j2
@@ -234,22 +234,43 @@ CONTAINS
    END SUBROUTINE
 
    FUNCTION nonsph_ind(td,atoms,n) RESULT(idx)
-      !! positions in td%h of the u and udot functions with l<=lnonsph
+      !! positions in td%h of the u and the LAPW udot functions with l<=lnonsph,
+      !! in the order of the matching coefficients of hsmt_ab
       TYPE(t_tlmplm), INTENT(IN) :: td
       TYPE(t_atoms),  INTENT(IN) :: atoms
       INTEGER,        INTENT(IN) :: n
       INTEGER, ALLOCATABLE :: idx(:)
-      idx = [td%ind(1,:nonsph_size(atoms,n)-1,n),td%ind(2,:nonsph_size(atoms,n)-1,n)]
+      INTEGER :: l
+      idx = td%ind(1,:nonsph_size(atoms,n)-1,n)
+      DO l = 0,atoms%lnonsph(n)
+         IF (.NOT.atoms%l_apw(l,n)) idx = [idx,td%ind(2,l*l:l*l+2*l,n)]
+      END DO
    END FUNCTION
 
    FUNCTION nonsph_lm_ind(atoms,n,l) RESULT(idx)
-      !! positions in h_loc_nonsph of u (1,:) and udot (2,:) for all m of l
+      !! positions in h_loc_nonsph of u (1,:) and, for LAPW channels, udot (2,:) for all m of l
       TYPE(t_atoms), INTENT(IN) :: atoms
       INTEGER,       INTENT(IN) :: n,l
-      INTEGER :: idx(2,-l:l),m
+      INTEGER, ALLOCATABLE :: idx(:,:)
+      INTEGER :: boff(0:atoms%lnonsph(n))
+      INTEGER :: m
+      boff(0:atoms%lnonsph(n)) = atoms%udot_rows(atoms%lnonsph(n),n)
+      ALLOCATE(idx(MERGE(1,2,boff(l)<0),-l:l))
       idx(1,:) = [(l*(l+1)+m,m=-l,l)]
-      idx(2,:) = idx(1,:)+nonsph_size(atoms,n)
+      IF (boff(l)>=0) idx(2,:) = [(boff(l)+l+m,m=-l,l)]
    END FUNCTION
+
+   SUBROUTINE add_nonsph_lm_block(mat,atoms,n,l,mm,r)
+      !! h_loc_nonsph-shaped mat += mm(m,mp)*r(i,j) for the u (and LAPW udot) functions of l
+      COMPLEX,       INTENT(INOUT) :: mat(0:,0:)
+      TYPE(t_atoms), INTENT(IN)    :: atoms
+      INTEGER,       INTENT(IN)    :: n,l
+      COMPLEX,       INTENT(IN)    :: mm(:,:)
+      REAL,          INTENT(IN)    :: r(:,:)
+      INTEGER, ALLOCATABLE :: idx(:,:)
+      idx = nonsph_lm_ind(atoms,n,l)
+      CALL add_lm_block(mat,idx,mm,r(:SIZE(idx,1),:SIZE(idx,1)))
+   END SUBROUTINE add_nonsph_lm_block
 
    SUBROUTINE add_lm_block(mat,idx,mm,r)
       !! mat(idx(i,m),idx(j,mp)) += mm(m,mp)*r(i,j)
@@ -289,7 +310,7 @@ CONTAINS
          ELSE
             mm = CONJG(TRANSPOSE(v%mmpMat(-l:l,-l:l,i_u,3)))
          END IF
-         CALL add_lm_block(td%h_loc_nonsph(:,:,n,j1,j2),nonsph_lm_ind(atoms,n,l),mm,td%radfun(n)%integral(1:2,1:2,l,j1,j2))
+         CALL add_nonsph_lm_block(td%h_loc_nonsph(:,:,n,j1,j2),atoms,n,l,mm,td%radfun(n)%integral(1:2,1:2,l,j1,j2))
          IF (atoms%lda_u(i_u)%use_lo.AND..NOT.l_forces) &
             CALL add_lm_block(td%h(:,:,n,j1,j2),td%ind(1:2,l*l:l*l+2*l,n),mm,td%radfun(n)%integral(1:2,1:2,l,j1,j2))
       END DO
@@ -304,7 +325,7 @@ CONTAINS
          DO m = -l,l
             mm(m+l+1,m+l+1) = opc_corrections(i_opc)*m
          END DO
-         CALL add_lm_block(td%h_loc_nonsph(:,:,n,j1,j2),nonsph_lm_ind(atoms,n,l),mm,td%radfun(n)%integral(1:2,1:2,l,j1,j2))
+         CALL add_nonsph_lm_block(td%h_loc_nonsph(:,:,n,j1,j2),atoms,n,l,mm,td%radfun(n)%integral(1:2,1:2,l,j1,j2))
          IF (.NOT.l_forces) &
             CALL add_lm_block(td%h(:,:,n,j1,j2),td%ind(1:2,l*l:l*l+2*l,n),mm,td%radfun(n)%integral(1:2,1:2,l,j1,j2))
       END DO
@@ -372,20 +393,20 @@ CONTAINS
 
       td%e_shift(:,jsp) = e_shift_min
       DO n = 1,atoms%ntype
-         s = nonsph_size(atoms,n)
+         s = atoms%num_ab_rows(atoms%lnonsph(n),n)
          info = 1
          DO WHILE(info.NE.0)
-            mat = td%h_loc_nonsph(:2*s-1,:2*s-1,n,jsp,jsp)
+            mat = td%h_loc_nonsph(:s-1,:s-1,n,jsp,jsp)
             DO l = 0,atoms%lnonsph(n)
                ALLOCATE(shift(2*l+1,2*l+1),source=CMPLX(0.0,0.0))
                DO m = 1,2*l+1
                   shift(m,m) = td%e_shift(n,jsp)
                END DO
-               CALL add_lm_block(mat,nonsph_lm_ind(atoms,n,l),shift,td%radfun(n)%integral(1:2,1:2,l,jsp,jsp))
+               CALL add_nonsph_lm_block(mat,atoms,n,l,shift,td%radfun(n)%integral(1:2,1:2,l,jsp,jsp))
                DEALLOCATE(shift)
             END DO
-            CALL zpotrf("L",2*s,mat,SIZE(mat,1),info)
-            DO i = 1,2*s
+            CALL zpotrf("L",s,mat,SIZE(mat,1),info)
+            DO i = 1,s
                mat(:i-1,i) = 0.0
             END DO
             IF (info.NE.0) THEN
@@ -393,7 +414,7 @@ CONTAINS
                IF (td%e_shift(n,jsp)>e_shift_max) CALL judft_error("Potential shift at maximum")
             END IF
          END DO
-         td%h_loc_nonsph(:2*s-1,:2*s-1,n,jsp,jsp) = mat
+         td%h_loc_nonsph(:s-1,:s-1,n,jsp,jsp) = mat
       END DO
    END SUBROUTINE
 

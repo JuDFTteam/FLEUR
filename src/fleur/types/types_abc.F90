@@ -139,6 +139,7 @@ CONTAINS
 ! Local scalars
       INTEGER :: i, iLAPW, l, lm, nap, jAtom, lmp, m, nkvec, iAtom, acof_size, iAtom_l, jatom_l
       INTEGER :: inv_f, ie, ilo, kspin, iintsp, nintsp, nvmax, lo, inap, abSize, nbasf, islot
+      INTEGER :: boff(0:atoms%lmaxd)
       REAL    :: tmk, qss(3), s2h
       COMPLEX :: phase, c_1, c_2, term1, ctmp
       LOGICAL ::  l_useinversionsym
@@ -298,12 +299,11 @@ CONTAINS
             ! Skipped when the abCoeffs cache is active: it owns the allocation.
             IF (.NOT.l_use_abcoeff_store) THEN
                abSize = hsmt_ab_size(atoms, iType, .FALSE.)
-               ALLOCATE(abCoeffs(2*abSize, lapw%nv(iintsp)))
+               ALLOCATE(abCoeffs(abSize, lapw%nv(iintsp)))
                !$acc enter data create(abCoeffs)
             END IF
             CALL hsmt_ab(sym, atoms, noco, nococonv, jspin, iintsp, iType, iAtom, cell, lapw, fjgj, abCoeffs, abSize, .FALSE., l_store=.TRUE.)
 !!$acc end data
-            abSize = abSize/2
             CALL timestop("hsmt_ab")
 
 ! Obtaining A, B coefficients for eigenfunctions
@@ -312,15 +312,20 @@ CONTAINS
 ! variant with zgemm
 
 !$acc host_data use_device(work_c,abCoeffs,abTemp)
-CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),abCoeffs,SIZE(abCoeffs,1),CMPLX(0.0,0.0),abTemp,acof_size)
+CALL zgemm_acc("T","T",ne,abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),abCoeffs,SIZE(abCoeffs,1),CMPLX(0.0,0.0),abTemp,acof_size)
 !$acc end host_data
 !$acc update self(abTemp)
 !stop "DEBUG"
-!$OMP PARALLEL DO default(shared) private(i,lm) collapse(2)
-            DO lm = 0, absize - 1
+            ! A for all lm, B only for LAPW channels (none for APW)
+            boff(0:atoms%lmax(iType)) = atoms%udot_rows(atoms%lmax(iType), iType)
+!$OMP PARALLEL DO default(shared) private(i,l,m,lm)
+            DO l = 0, atoms%lmax(iType)
+            DO m = -l, l
+            lm = l*(l+1) + m
             DO i = 1, ne
                this%cof(i, lm, 1, iAtom_l) = this%cof(i, lm, 1, iAtom_l) + abTemp(i, lm)
-               this%cof(i, lm, 2, iAtom_l) = this%cof(i, lm, 2, iAtom_l) + abTemp(i, absize + lm)
+               IF (boff(l)>=0) this%cof(i, lm, 2, iAtom_l) = this%cof(i, lm, 2, iAtom_l) + abTemp(i, boff(l) + l + m)
+            END DO
             END DO
             END DO
 !$OMP END PARALLEL DO
@@ -573,11 +578,15 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
             ! Skipped when the abCoeffs cache is active: it owns the allocation.
             IF (.NOT.l_use_abcoeff_store) THEN
                abSize = hsmt_ab_size(atoms, iType, .FALSE.)
-               ALLOCATE(abCoeffs(2*abSize, lapw%nv(iintsp)))
+               ALLOCATE(abCoeffs(abSize, lapw%nv(iintsp)))
                !$acc enter data create(abCoeffs)
             END IF
             CALL hsmt_ab(sym, atoms, noco, nococonv, jspin, iintsp, iType, iAtom, cell, lapw, fjgj, abCoeffs, abSize, .FALSE., l_store=.TRUE.)
 !!$acc end data
+            ! the force coefficients need A and B for all lm, i.e. no APW channels
+            IF (abSize /= 2*(atoms%lmax(iType)*(atoms%lmax(iType)+2)+1)) THEN
+               CALL judft_bug("APW channels in calc_force_abc", calledby="types_abc")
+            END IF
             abSize = abSize/2
             CALL timestop("hsmt_ab")
 ! Force contributions

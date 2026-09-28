@@ -149,13 +149,13 @@ CONTAINS
             IF (.NOT.l_use_abcoeff_store) THEN
                ab_size = hsmt_ab_size(atoms, n, .TRUE.)
                IF (ALLOCATED(abCoeffs)) THEN
-                  IF (SIZE(abCoeffs,1)/=2*ab_size .OR. SIZE(abCoeffs,2)/=lapw%nv(igSpin)) THEN
+                  IF (SIZE(abCoeffs,1)/=ab_size .OR. SIZE(abCoeffs,2)/=lapw%nv(igSpin)) THEN
                      !$acc exit data delete(abCoeffs)
                      DEALLOCATE(abCoeffs)
                   END IF
                END IF
                IF (.NOT.ALLOCATED(abCoeffs)) THEN
-                  ALLOCATE(abCoeffs(2*ab_size, lapw%nv(igSpin)))
+                  ALLOCATE(abCoeffs(ab_size, lapw%nv(igSpin)))
                   !$acc enter data create(abCoeffs)
                END IF
             END IF
@@ -249,13 +249,13 @@ CONTAINS
                      IF (.NOT.l_use_abcoeff_store) THEN
                         ab_size = hsmt_ab_size(atoms, n, .TRUE.)
                         IF (ALLOCATED(abCoeffsPr)) THEN
-                           IF (SIZE(abCoeffsPr,1)/=2*ab_size .OR. SIZE(abCoeffsPr,2)/=lapwPr%nv(igSpin)) THEN
+                           IF (SIZE(abCoeffsPr,1)/=ab_size .OR. SIZE(abCoeffsPr,2)/=lapwPr%nv(igSpin)) THEN
                               !$acc exit data delete(abCoeffsPr)
                               DEALLOCATE(abCoeffsPr)
                            END IF
                         END IF
                         IF (.NOT.ALLOCATED(abCoeffsPr)) THEN
-                           ALLOCATE(abCoeffsPr(2*ab_size, lapwPr%nv(igSpin)))
+                           ALLOCATE(abCoeffsPr(ab_size, lapwPr%nv(igSpin)))
                            !$acc enter data create(abCoeffsPr)
                         END IF
                      END IF
@@ -291,13 +291,13 @@ CONTAINS
                   IF (.NOT.l_use_abcoeff_store) THEN
                      ab_size = hsmt_ab_size(atoms, n, .TRUE.)
                      IF (ALLOCATED(abCoeffsPr)) THEN
-                        IF (SIZE(abCoeffsPr,1)/=2*ab_size .OR. SIZE(abCoeffsPr,2)/=lapwPr%nv(igSpin)) THEN
+                        IF (SIZE(abCoeffsPr,1)/=ab_size .OR. SIZE(abCoeffsPr,2)/=lapwPr%nv(igSpin)) THEN
                            !$acc exit data delete(abCoeffsPr)
                            DEALLOCATE(abCoeffsPr)
                         END IF
                      END IF
                      IF (.NOT.ALLOCATED(abCoeffsPr)) THEN
-                        ALLOCATE(abCoeffsPr(2*ab_size, lapwPr%nv(igSpin)))
+                        ALLOCATE(abCoeffsPr(ab_size, lapwPr%nv(igSpin)))
                         !$acc enter data create(abCoeffsPr)
                      END IF
                   END IF
@@ -341,13 +341,13 @@ CONTAINS
                IF (.NOT.l_use_abcoeff_store) THEN
                   ab_size = hsmt_ab_size(atoms, n, .TRUE.)
                   IF (ALLOCATED(abCoeffsPr)) THEN
-                     IF (SIZE(abCoeffsPr,1)/=2*ab_size .OR. SIZE(abCoeffsPr,2)/=lapwPr%nv(igSpinPr)) THEN
+                     IF (SIZE(abCoeffsPr,1)/=ab_size .OR. SIZE(abCoeffsPr,2)/=lapwPr%nv(igSpinPr)) THEN
                         !$acc exit data delete(abCoeffsPr)
                         DEALLOCATE(abCoeffsPr)
                      END IF
                   END IF
                   IF (.NOT.ALLOCATED(abCoeffsPr)) THEN
-                     ALLOCATE(abCoeffsPr(2*ab_size, lapwPr%nv(igSpinPr)))
+                     ALLOCATE(abCoeffsPr(ab_size, lapwPr%nv(igSpinPr)))
                      !$acc enter data create(abCoeffsPr)
                   END IF
                END IF
