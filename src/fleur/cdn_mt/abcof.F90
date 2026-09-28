@@ -64,7 +64,8 @@ INTEGER,OPTIONAL,INTENT(IN):: nat_start,nat_stop
 
     ! Local scalars
     INTEGER :: i,iLAPW,l,ll1,lm,nap,jAtom,lmp,m,nkvec,iAtom,iType,acof_size,iAtom_l,jatom_l
-    INTEGER :: inv_f,ie,ilo,kspin,iintsp,nintsp,nvmax,lo,inap,abSize
+    INTEGER :: inv_f,ie,ilo,kspin,iintsp,nintsp,nvmax,lo,inap,abSize,nab
+    INTEGER :: boff(0:atoms%lmaxd)
     REAL    :: tmk, qss(3), s2h
     COMPLEX :: phase, c_1, c_2
     LOGICAL :: l_force,l_useinversionsym
@@ -214,19 +215,20 @@ INTEGER,OPTIONAL,INTENT(IN):: nat_start,nat_stop
              IF (.NOT.l_use_abcoeff_store) THEN
                 abSize = hsmt_ab_size(atoms, iType, .FALSE.)
                 IF (ALLOCATED(abCoeffs)) THEN
-                   IF (SIZE(abCoeffs,1)/=2*abSize .OR. SIZE(abCoeffs,2)/=lapw%nv(iintsp)) THEN
+                   IF (SIZE(abCoeffs,1)/=abSize .OR. SIZE(abCoeffs,2)/=lapw%nv(iintsp)) THEN
                       !$acc exit data delete(abCoeffs)
                       DEALLOCATE(abCoeffs)
                    END IF
                 END IF
                 IF (.NOT.ALLOCATED(abCoeffs)) THEN
-                   ALLOCATE(abCoeffs(2*abSize, lapw%nv(iintsp)))
+                   ALLOCATE(abCoeffs(abSize, lapw%nv(iintsp)))
                    !$acc enter data create(abCoeffs)
                 END IF
              END IF
              CALL hsmt_ab(sym,atoms,noco,nococonv,jspin,iintsp,iType,iAtom,cell,lapw,fjgj,abCoeffs,abSize,.FALSE.,l_store=.TRUE.)
              !!$acc end data
-             abSize = abSize / 2
+             nab = abSize
+             abSize = atoms%lmax(iType)*(atoms%lmax(iType)+2)+1
              CALL timestop("hsmt_ab")
 
              ! Obtaining A, B coefficients for eigenfunctions
@@ -236,15 +238,20 @@ INTEGER,OPTIONAL,INTENT(IN):: nat_start,nat_stop
 
 
              !$acc host_data use_device(work_c,abCoeffs,abTemp)
-             CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),abCoeffs,SIZE(abCoeffs,1),CMPLX(0.0,0.0),abTemp,acof_size)
+             CALL zgemm_acc("T","T",ne,nab,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),abCoeffs,SIZE(abCoeffs,1),CMPLX(0.0,0.0),abTemp,acof_size)
              !$acc end host_data
              !$acc update self(abTemp)
              !stop "DEBUG"
-             !$OMP PARALLEL DO default(shared) private(i,lm) collapse(2)
-             DO lm = 0, absize-1
-                DO i = 1, ne
-                   acof(i,lm,iAtom_l) = acof(i,lm,iAtom_l) + abTemp(i,lm)
-                   bcof(i,lm,iAtom_l) = bcof(i,lm,iAtom_l) + abTemp(i,absize+lm)
+             ! A for all lm, B only for LAPW channels (none for APW)
+             boff(0:atoms%lmax(iType)) = atoms%udot_rows(atoms%lmax(iType), iType)
+             !$OMP PARALLEL DO default(shared) private(i,l,m,lm)
+             DO l = 0, atoms%lmax(iType)
+                DO m = -l, l
+                   lm = l*(l+1) + m
+                   DO i = 1, ne
+                      acof(i,lm,iAtom_l) = acof(i,lm,iAtom_l) + abTemp(i,lm)
+                      IF (boff(l)>=0) bcof(i,lm,iAtom_l) = bcof(i,lm,iAtom_l) + abTemp(i,boff(l)+l+m)
+                   END DO
                 END DO
              END DO
              !$OMP END PARALLEL DO
@@ -283,6 +290,8 @@ INTEGER,OPTIONAL,INTENT(IN):: nat_start,nat_stop
             
              ! Force contributions
              IF (atoms%l_geo(iType).AND.l_force) THEN
+               ! the force coefficients need A and B for all lm, i.e. no APW channels
+               IF (nab /= 2*abSize) CALL judft_bug("APW channels in the force part of abcof", calledby="abcof")
                !$acc  update self(abcoeffs,work_c)
                CALL timestart("transpose work array")
                ! For transposing the work array an OpenMP parallelization with explicit loops is used.

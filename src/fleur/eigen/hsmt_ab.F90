@@ -12,10 +12,11 @@ MODULE m_hsmt_ab
 
 CONTAINS
 
-   !> Row count of one half of abCoeffs, i.e. ab_size *before* the final doubling.
+   !> Row count of abCoeffs: A coefficients for all lm, followed by the B coefficients
+   !> of the LAPW channels only (atoms%udot_rows gives their position; APW channels have none).
    !>
    !> Exposed so that a caller can allocate and map abCoeffs itself
-   !> (abCoeffs(2*hsmt_ab_size(...), lapw%nv(igSpin))).  That matters for OpenACC:
+   !> (abCoeffs(hsmt_ab_size(...), lapw%nv(igSpin))).  That matters for OpenACC:
    !> if hsmt_ab does the `enter data` on its own dummy argument while the caller
    !> does the matching `exit data delete`, the two name different descriptors, and
    !> the one created here is never released -- it survives as a stale present-table
@@ -32,7 +33,7 @@ CONTAINS
       INTEGER :: lmax
 
       lmax = MERGE(atoms%lnonsph(n), atoms%lmax(n), l_nonsph)
-      hsmt_ab_size = lmax*(lmax + 2) + 1
+      hsmt_ab_size = atoms%num_ab_rows(lmax, n)
    END FUNCTION hsmt_ab_size
 
    SUBROUTINE hsmt_ab(sym,atoms,noco,nococonv,ilSpin,igSpin,n,na,cell,lapw,fjgj,abCoeffs,ab_size,l_nonsph,abclo,alo1,blo1,clo1,l_store)
@@ -106,8 +107,9 @@ CONTAINS
       REAL    :: term, bmrot(3, 3)
       COMPLEX :: c_ph(MAXVAL(lapw%nv), MERGE(2, 1, noco%l_ss.OR.ANY(noco%l_unrestrictMT) &
                                                           & .OR.ANY(noco%l_spinoffd_ldau)))
-      LOGICAL :: l_apw, l_abclo, l_skip_calc, l_useStore, l_caller_owns
+      LOGICAL :: l_abclo, l_skip_calc, l_useStore, l_caller_owns
 
+      INTEGER :: boff(0:atoms%lmaxd)
       REAL,    ALLOCATABLE :: gkrot(:, :)
       COMPLEX, ALLOCATABLE :: ylm(:, :)
 
@@ -115,23 +117,20 @@ CONTAINS
       l_useStore = .FALSE.
       IF (PRESENT(l_store)) l_useStore = l_store
       lmax = MERGE(atoms%lnonsph(n), atoms%lmax(n), l_nonsph)
-      ab_size = lmax*(lmax+2) + 1
-      ! TODO: replace APW+lo check (may actually be a broken trick) by something simpler
-      ! l_apw=ALL(fjgj%gj==0.0)
-      l_apw = .FALSE.
+      ab_size = hsmt_ab_size(atoms, n, l_nonsph)
+      boff(0:lmax) = atoms%udot_rows(lmax, n)
 
       ! Allocate the output matching coefficients to their exact size, or retrieve
       ! them from the optional storage (m_abcoeff_store). If valid stored
       ! coefficients are returned -- and no LO coefficients are requested (abclo is
       ! not cached) -- the computation below can be skipped entirely.
-      ! l_apw is .FALSE., so the array always needs 2*ab_size rows.
       ! When the caller has already allocated (and mapped) abCoeffs it owns the whole
       ! lifetime, including the `enter data`; do not touch either here.
       l_caller_owns = ALLOCATED(abCoeffs)
       IF (l_caller_owns) THEN
          l_skip_calc = .FALSE.
       ELSE
-         l_skip_calc = abcoeff_store_alloc(abCoeffs, 2*ab_size, lapw%nv(igSpin), lapw%nk, igSpin, ilSpin, na, &
+         l_skip_calc = abcoeff_store_alloc(abCoeffs, ab_size, lapw%nv(igSpin), lapw%nk, igSpin, ilSpin, na, &
                                          & l_nonsph, l_useStore)
       END IF
 
@@ -139,8 +138,6 @@ CONTAINS
          continue  ! mapping is the caller's
       else if (l_skip_calc.and..not.l_abclo) then
          !$acc enter data copyin(abCoeffs)
-         ! Same ab_size convention as on the regular exit at the end of the routine.
-         IF (.NOT.l_apw) ab_size = ab_size*2
          return !nothing to do, coefficients are already stored and copied to device
       else if (l_skip_calc) then
          ! Reused coefficients, but the LO coefficients (abclo) are not cached and
@@ -175,7 +172,7 @@ CONTAINS
 #ifndef _OPENACC
       !$OMP PARALLEL DO DEFAULT(none) &
       !$OMP& SHARED(lapw,lmax,c_ph,igSpin,abCoeffs,fjgj,abclo,cell,atoms,sym) &
-      !$OMP& SHARED(l_abclo,alo1,blo1,clo1,ab_size,na,n,ilSpin,bmrot, ylm,l_skip_calc) &
+      !$OMP& SHARED(l_abclo,alo1,blo1,clo1,boff,na,n,ilSpin,bmrot, ylm,l_skip_calc) &
       !$OMP& PRIVATE(k,l,ll1,m,lm,term,invsfct,lo,nkvec) &
       !$OMP& PRIVATE(lmMin,lmMax)
 #else
@@ -186,7 +183,7 @@ CONTAINS
       
       !$acc data copyin(atoms,atoms%llo,atoms%llod,atoms%nlo,cell,cell%omtil,atoms%rmt) if (l_abclo)
       !$acc parallel loop present(fjgj,fjgj%fj,fjgj%gj,abCoeffs) vector_length(32)&
-      !$acc copyin(lmax,lapw,lapw%nv,lapw%vk,lapw%kvec,bmrot,c_ph, sym, sym%invsat,l_abclo, ylm) &
+      !$acc copyin(lmax,lapw,lapw%nv,lapw%vk,lapw%kvec,bmrot,c_ph, sym, sym%invsat,l_abclo, ylm, boff) &
       !$acc present(abclo,alo1,blo1,clo1)&
       !$acc private(k,l,lm,invsfct,lo,term,lmMin,lmMax)  default(none)
       DO k = 1,lapw%nv(igSpin)
@@ -196,8 +193,8 @@ CONTAINS
          DO l = 0,lmax
             lmMin = l*(l+1) + 1 - l
             lmMax = l*(l+1) + 1 + l
-            abCoeffs(lmMin:lmMax, k)                = fjgj%fj(k,l,ilSpin,igSpin)*c_ph(k,igSpin) * CONJG(ylm(lmMin:lmMax, k))
-            abCoeffs(ab_size+lmMin:ab_size+lmMax,k) = fjgj%gj(k,l,ilSpin,igSpin)*c_ph(k,igSpin) * CONJG(ylm(lmMin:lmMax, k))
+            abCoeffs(lmMin:lmMax, k) = fjgj%fj(k,l,ilSpin,igSpin)*c_ph(k,igSpin) * CONJG(ylm(lmMin:lmMax, k))
+            IF (boff(l)>=0) abCoeffs(boff(l)+1:boff(l)+2*l+1,k) = fjgj%gj(k,l,ilSpin,igSpin)*c_ph(k,igSpin) * CONJG(ylm(lmMin:lmMax, k))
          END DO
          !$acc end loop
          endif
@@ -229,8 +226,5 @@ CONTAINS
       !$OMP END PARALLEL DO
 #endif
       call timestop("loop")
-   
-
-      IF (.NOT.l_apw) ab_size=ab_size*2
    END SUBROUTINE hsmt_ab
 END MODULE m_hsmt_ab
