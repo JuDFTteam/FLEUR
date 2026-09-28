@@ -11,6 +11,12 @@ turning the two directories into one.
 The second is that postproc/ does not depend on the driver above it. It takes a gauge and
 writes files, and it says so by importing nothing from wannierlib/ itself -- which keeps the
 stack three layers deep rather than two directories that happen to sit apart.
+
+The third is that only the driver reaches the consumers in export/. What wannierlib/ is for is
+producing U: the overlaps, the projections and the run of Wannier90. Writing the basis, the
+gauge, the Bloch coefficients, the plots and the C/F tensors is what somebody does with U
+afterwards, and a routine on the way to U that starts importing one of those has turned the
+directory back into a bag of everything.
 """
 import os
 import re
@@ -20,8 +26,13 @@ SRC = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", 
 ZONES = {
     "matrixelements": ["matrixelements"],
     "postproc": [os.path.join("wannierlib", "postproc")],
+    "export": [os.path.join("wannierlib", "export")],
     "wannierlib": ["wannierlib"],
 }
+
+# The one file in wannierlib/ that is allowed to name a consumer: it is the driver, and
+# calling them in order is what it does.
+DRIVER = "wannierlib_main.F90"
 
 MODULE_RE = re.compile(r"^\s*MODULE\s+([A-Za-z_]\w*)\s*$", re.IGNORECASE)
 USE_RE = re.compile(r"^\s*USE\s+([A-Za-z_]\w*)", re.IGNORECASE)
@@ -103,8 +114,8 @@ def test_matrixelements_does_not_name_the_exposure_tables():
 
 
 def test_postproc_does_not_use_the_driver():
-    """No module under wannierlib/postproc/ may USE one from wannierlib/ itself."""
-    offenders = _imports_from("postproc", {"wannierlib"})
+    """No module under wannierlib/postproc/ may USE one from wannierlib/ or its export/."""
+    offenders = _imports_from("postproc", {"wannierlib", "export"})
 
     assert not offenders, (
         "wannierlib/postproc/ must not depend on the driver above it: it takes the gauge "
@@ -112,3 +123,17 @@ def test_postproc_does_not_use_the_driver():
         + "\n".join(offenders)
         + "\n\nPass what is missing as an argument, or move the shared part down into "
           "matrixelements/.")
+
+
+def test_only_the_driver_uses_the_consumers():
+    """Of everything in wannierlib/, only wannierlib_main.F90 may USE a module from export/.
+
+    The rest of the directory exists to produce U, and it has to be readable as that."""
+    offenders = [o for o in _imports_from("wannierlib", {"export"}) if DRIVER + ":" not in o]
+
+    assert not offenders, (
+        "only the driver may import from wannierlib/export/: the rest of the directory is "
+        "the path to U, and a consumer imported halfway along it is a dependency that runs "
+        "backwards. Offending imports:\n" + "\n".join(offenders)
+        + "\n\nCall it from " + DRIVER + " with what it needs, or move the shared part down "
+          "into postproc/.")

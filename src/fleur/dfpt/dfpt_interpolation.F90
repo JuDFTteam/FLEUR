@@ -39,7 +39,6 @@ contains
         type(t_nococonv)   :: nococonv_fullsym
         type(t_enpara)     :: enpara_fullsym
         type(t_results)    :: results_fullsym
-        type(t_wann)       :: wann_fullsym
         type(t_hybdat)     :: hybdat_fullsym
         type(t_mpdata)     :: mpdata_fullsym
 
@@ -95,7 +94,7 @@ contains
         ! parallel-solver setup it would otherwise do is never used here and fails
         ! when the fullsym q-mesh does not factor evenly onto the MPI ranks.
         call fleur_init(fmpi_fullsym, fi_fullsym, sphhar_fullsym, stars_fullsym, nococonv_fullsym, forcetheo_fullsym, &
-                        enpara_fullsym, xcpot_fullsym, results_fullsym, wann_fullsym, hybdat_fullsym, mpdata_fullsym, &
+                        enpara_fullsym, xcpot_fullsym, results_fullsym, hybdat_fullsym, mpdata_fullsym, &
                         inp_pref, l_skip_setupmpi=.true.)
         qpts = fi_fullsym%kpts
 

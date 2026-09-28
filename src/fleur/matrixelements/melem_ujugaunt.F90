@@ -22,6 +22,7 @@ MODULE m_melem_ujugaunt
    USE m_ylm
    USE m_intgr, ONLY: intgr3
    USE m_gaunt, ONLY: gaunt1
+   USE m_melem_bgeom, ONLY: melem_blen, melem_bcart
    IMPLICIT NONE
    PRIVATE
    PUBLIC :: melem_ujugaunt
@@ -70,7 +71,7 @@ CONTAINS
       nmod = 0
       DO ikpt_b = 1, nntot
          bpt(:) = kdiff(:, ikpt_b)
-         rk = SQRT(DOT_PRODUCT(bpt, MATMUL(cell%bbmat, bpt)))
+         rk = melem_blen(cell, bpt)
          imod(ikpt_b) = 0
          DO q = 1, nmod
             IF (rk == rk_uni(q)) THEN
@@ -125,7 +126,7 @@ CONTAINS
          !> The angular half: once per vector of kdiff.
          DO ikpt_b = 1, nntot
             bpt(:) = kdiff(:, ikpt_b)
-            bkrot = MATMUL(bpt, cell%bmat)
+            bkrot = melem_bcart(cell, bpt)
             CALL ylm4(lwn, bkrot, ylmpp)
 
             DO l = 0, lwn

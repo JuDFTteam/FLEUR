@@ -43,7 +43,7 @@ MODULE m_types_matelements_soc
 
 CONTAINS
 
-    subroutine init(this, atoms, noco, input, sym, cell, enpara, lapw, vtot, rsoc,  fmpi, nococonv)
+    SUBROUTINE init(this, atoms, noco, input, sym, cell, enpara, lapw, vtot, rsoc,  fmpi, nococonv)
         CLASS(t_matelements_soc), INTENT(INOUT) :: this
         TYPE(t_atoms),  TARGET, INTENT(IN) :: atoms
         TYPE(t_noco),   TARGET, INTENT(IN) :: noco
@@ -74,12 +74,12 @@ CONTAINS
         this%rsoc   => rsoc
         this%fmpi   => fmpi
         this%nococonv => nococonv
-    end subroutine init
+    END SUBROUTINE init
 
-    subroutine calc_matrix_elements(this, zmat, abc, radfun)
-        use m_types_abc
-        use m_types_radfun
-        use m_types_nococonv
+    SUBROUTINE calc_matrix_elements(this, zmat, abc, radfun)
+        USE m_types_abc
+        USE m_types_radfun
+        USE m_types_nococonv
 
         CLASS(t_matelements_soc), INTENT(INOUT) :: this
         TYPE(t_mat),    INTENT(IN) :: zMat(:)   !unused, SOC works on the abc coefficients only
@@ -87,25 +87,25 @@ CONTAINS
         TYPE(t_radfun), INTENT(IN) :: radfun(:) !unused, the radial integrals are precomputed in rsoc
 
         INTEGER :: num_bands
-        integer :: n, l, m, lm, ll1, jcof, icof
-        integer :: i, j, j0, i1, j1, na, lm1, m1
-        complex :: cof_lm
+        INTEGER :: n, l, m, lm, ll1, jcof, icof
+        INTEGER :: i, j, j0, i1, j1, na, lm1, m1
+        COMPLEX :: cof_lm
 
-        if (.not.allocated(this%mat)) then
-            call judft_bug("calc_matrix_elements: The result matrix is not allocated.")
-        end if
-        if (size(this%mat,1) /= 2 .or. size(this%mat,2) /= 2 ) then
-            call judft_bug("calc_matrix_elements: The matrix must be a 2x2 spinor matrix.")
-        end if
-        if (size(abc,1) /= 2 .or. size(abc,2) /= this%atoms%ntype) then
-            call judft_bug("calc_matrix_elements: The abc coefficients must have shape (2,ntype).")
-        end if
-        num_bands = size(abc(1,1)%cof,1)
+        IF (.NOT.ALLOCATED(this%mat)) THEN
+            CALL judft_bug("calc_matrix_elements: The result matrix is not allocated.")
+        END IF
+        IF (SIZE(this%mat,1) /= 2 .OR. SIZE(this%mat,2) /= 2 ) THEN
+            CALL judft_bug("calc_matrix_elements: The matrix must be a 2x2 spinor matrix.")
+        END IF
+        IF (SIZE(abc,1) /= 2 .OR. SIZE(abc,2) /= this%atoms%ntype) THEN
+            CALL judft_bug("calc_matrix_elements: The abc coefficients must have shape (2,ntype).")
+        END IF
+        num_bands = SIZE(abc(1,1)%cof,1)
         !matsize1 equals the global number of bands also for the row-cyclic
         !distributed t_mpimat blocks (full rows are local there)
-        if (this%mat(1,1)%matsize1 /= num_bands) then
-            call judft_bug("calc_matrix_elements: The matrix size does not match the abc coefficients.")
-        end if
+        IF (this%mat(1,1)%matsize1 /= num_bands) THEN
+            CALL judft_bug("calc_matrix_elements: The matrix size does not match the abc coefficients.")
+        END IF
 
         DO n = 1,this%atoms%ntype
          DO j1=1,2
@@ -139,7 +139,10 @@ CONTAINS
                ENDDO     ! j-states
             ENDDO   !i1 spin
          ENDDO !!j1 spin
-      enddo !n atom types
+      ENDDO !n atom types
+
+      !> The accumulation forms c_i * conj(c_j), the conjugate of the <i|H_so|j> the type
+      !> documents. A consumer that needs the documented convention undoes it.
 
     END SUBROUTINE calc_matrix_elements
 END MODULE m_types_matelements_soc  

@@ -24,7 +24,7 @@ def test_clebsch_selection_rule(build_dir):
     Two of the cases in the driver returned 1/sqrt(3) and sqrt(2) instead of
     zero -- the latter is impossible for a Clebsch-Gordan coefficient.
 
-    Reachable in production from the Wannier SOC projections in wann_amn and
+    Reachable in production from the Wannier SOC projections in
     wannierlib_rad_twd, which sweep m over a shell at fixed jm.
     """
     if shutil.which("make") is None:

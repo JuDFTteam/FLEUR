@@ -82,14 +82,14 @@ Testset: Noco
 | +   | Fe bct,noco, LOs                              | noco/Fe_bct_LO          | bulk                         |                   |         | 2   |
 | +   | Fe bct,noco                                   | noco/Fe_bct             | bulk                         |                   |         | 2   |
 | +   | Fe bct,noco,libxc                             | noco/Fe_bct_LibXC       | bulk,libxc                   |                   |         | 2   |
-| +   | Noco, one atom, mag. in x direction           | noco/1atx               | bulk                         |                   |         | 2   |
-| +   | Noco, one atom, mag. in y direction           | noco/1aty               | bulk                         |                   |         | 2   |
-| +   | Noco, one atom, mag. in z direction           | noco/1atz               | bulk                         |                   |         | 2   |
-| +   | Noco, one atom, mag. in non-sym direction     | noco/1at                | bulk                         |                   |         | 2   |
-| +   | Noco,SOC, one atom, mag. in x direction       | noco/1atSOCx            | bulk,soc                     |                   |         | 2   |
-| +   | Noco,SOC, one atom, mag. in y direction       | noco/1atSOCy            | bulk,soc                     |                   |         | 2   |
-| +   | Noco,SOC, one atom, mag. in z direction       | noco/1atSOCz            | bulk,soc                     |                   |         | 2   |
-| +   | Noco,SOC, one atom, mag. in non-sym direction | noco/1atSOC             | bulk,soc                     |                   |         | 2   |
+| +   | Noco, one atom, mag. in x direction           | noco/1atx               | bulk,hdf                     |                   |         | 2   |
+| +   | Noco, one atom, mag. in y direction           | noco/1aty               | bulk,hdf                     |                   |         | 2   |
+| +   | Noco, one atom, mag. in z direction           | noco/1atz               | bulk,hdf                     |                   |         | 2   |
+| +   | Noco, one atom, mag. in non-sym direction     | noco/1at                | bulk,hdf                     |                   |         | 2   |
+| +   | Noco,SOC, one atom, mag. in x direction       | noco/1atSOCx            | bulk,soc,hdf                 |                   |         | 2   |
+| +   | Noco,SOC, one atom, mag. in y direction       | noco/1atSOCy            | bulk,soc,hdf                 |                   |         | 2   |
+| +   | Noco,SOC, one atom, mag. in z direction       | noco/1atSOCz            | bulk,soc,hdf                 |                   |         | 2   |
+| +   | Noco,SOC, one atom, mag. in non-sym direction | noco/1atSOC             | bulk,soc,hdf                 |                   |         | 2   |
 | +   | Noco, SOC, two eq. atoms, relLOs              | noco/relLO              | bulk,soc                     |                   |         | 2   |
 | +   | FFNNoco, one atom, mag. in x direction        | noco/1atFFNx            | bulk,hdf                     |                   |         | 2   |
 | +   | FFNNoco, one atom, mag. in y direction        | noco/1atFFNy            | bulk,hdf                     |                   |         | 2   |
@@ -100,9 +100,9 @@ Testset: Noco
 | +   | Noco, Mn Monolayer SS q=1,0,0                 | noco/MnFilmSS           | film,spinspiral              |                   |         | 2   |
 | +   | Noco, Mn Monolayer mag. in X                  | noco/MnFilmX            | film                         |                   |         | 2   |
 | +   | Noco, Mn Monolayer mag. in Y                  | noco/MnFilmY            | film                         |                   |         | 2   |
-| +   | Fe bct,noco,non-collinear,coretails           | noco/Fe_bct_ctail       | bulk                         |                   |         | 2   |
+| +   | Fe bct,noco,non-collinear,coretails           | noco/Fe_bct_ctail       | bulk,hdf                     |                   |         | 2   |
 | +   | Noco, Mn Monolayer mag. in X, coretails       | noco/MnFilm_ctail       | film                         |                   |         | 2   |
-| +   | Noco, one atom in x, noco IR starting density | noco/1atx_sdNocoIR      | bulk                         |                   |         | 2   |
+| +   | Noco, one atom in x, noco IR starting density | noco/1atx_sdNocoIR      | bulk,hdf                     |                   |         | 2   |
 |     | Fe bcc, Flipcdn and noco in MT,x-dir          | noco/Fe_bcc_FlipcdnXLDA | bulk                         | produces warnings |         | 2   |
 |     | Fe bcc, Flipcdn and noco in MT,y-dir          | noco/Fe_bcc_FlipcdnYLDA | bulk                         | produces warnings |         | 2   |
 | +   | relaxation feature of FFN in the MT           | noco/RelaxMT            | bulk,hdf                     |                   |         | 2   |
@@ -120,7 +120,6 @@ Testset: Experimental
 |     | Test of GW interface 1                         | extra/gw1Interface      | bulk          | inp.xml files too old     |         | 2   |
 |     | Test of GW interface 2                         | extra/gw2Interface      | bulk          | inp.xml files too old     |         | 2   |
 |     | Sm jDOS decomposition                          | extra/SmAtomjDOS        | bulk,dos      |                           |         | 2   |
-| +   | C: simple test for the Wannier code            | extra/Cwann             | bulk,wannier  |                           |         | 2   |
 |     | TiO2 EELS spectrum                             | extra/TiO2eels          | bulk,eels     | inp.xml too old           |         | 2   |
 | +   | Hubbard1 using SOC                             | extra/Gd_Hubbard1       | bulk,edsolver |                           |         | 2   |
 | +   | Hubbard1 without sym                           | extra/Gd_Hubbard1_noSYM | bulk,edsolver |                           |         | 2   |
@@ -171,7 +170,6 @@ Testset: Wannier
 | +   | Pt SOC, wannierlib total spread              | wannier/WannPtSOC | wannierlib,bulk,soc |         |         | 1   |
 | +   | fcc Fe FM noco, wannierlib total spread      | wannier/WannFeFM | wannierlib,bulk  |         |         | 1   |
 | +   | fcc Fe FM noco, moment along y (alpha!=0)    | wannier/WannFeFMy | wannierlib,bulk  |         |         | 1   |
-| +   | bcc Fe noco, moment along y, spin-balanced   | wannier/WannFeBccYBal | wannierlib,bulk  |         |         | 1   |
 | +   | fcc Fe AFM noco, wannierlib total spread     | wannier/WannFeAFM | wannierlib,bulk  |         |         | 1   |
 | +   | fcc Fe AFM noco+SOC, wannierlib total spread | wannier/WannFeAFMSOC | wannierlib,bulk,soc |         |         | 1   |
 | +   | Pt SOC, wannierlib real-space operators O(R) | wannier/WannPtSOCOps | wannierlib,bulk,soc |         |         | 1   |

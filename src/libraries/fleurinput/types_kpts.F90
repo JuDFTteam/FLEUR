@@ -141,13 +141,24 @@ CONTAINS
       CALL mpi_bc(this%sc_list, rank, mpi_comm)
    END SUBROUTINE mpi_bc_kpts
 
-   recursive logical function read_kpts_by_name(this,filename,name)
+   !> l_labels asks for the high-symmetry names as well, and defaults to off: this reader
+   !> does not fill them otherwise, and reference banddos.hdf files elsewhere in the tree
+   !> record that absence in their kptSPLabels. Reading them unconditionally -- which is
+   !> what read_xml_kpts does -- means refreshing those references in the same commit.
+   recursive logical function read_kpts_by_name(this,filename,name,l_labels)
       USE m_calculator
       CLASS(t_kpts), INTENT(inout):: this
       character(len=*),INTENT(IN) :: filename,name
+      logical,INTENT(IN),OPTIONAL :: l_labels
 
-      character(len=150):: line
-      integer           :: error,n,fid,nlines
+      character(len=150):: line,raw
+      integer           :: error,n,fid,nlines,nlab,i
+      logical           :: l_lab
+      character(len=50),allocatable :: lname(:)
+      integer,allocatable           :: lidx(:)
+
+      l_lab=.false.
+      IF (present(l_labels)) l_lab=l_labels
 
       OPEN(newunit=fid,file=filename,action='READ')
       read_kpts_by_name=.false.
@@ -179,10 +190,13 @@ CONTAINS
                   backspace(fid)
                ENDDO
                n=0
+               nlab=0
+               IF (l_lab) ALLOCATE(lname(this%nkpt),lidx(this%nkpt))
                DO while (n<this%nkpt)
                   read(fid,"(a)") line
                   IF (index(line,"<kPoint")==0) cycle
                   n=n+1
+                  raw=line
                   line=line(index(line,"weight"):)
                   line=line(index(line,'"')+1:)
                   this%wtkpt(n)=evaluateFirstOnly(line(:index(line,'"')-1))
@@ -190,14 +204,38 @@ CONTAINS
                   this%bk(1, n) = evaluatefirst(line)
                   this%bk(2, n) = evaluatefirst(line)
                   this%bk(3, n) = evaluatefirst(line)
+                  IF (l_lab) THEN
+                     IF (index(raw,'label="')>0) THEN
+                        raw=raw(index(raw,'label="')+7:)
+                        IF (index(raw,'"')>1) THEN
+                           nlab=nlab+1
+                           lname(nlab)=raw(:index(raw,'"')-1)
+                           lidx(nlab)=n
+                        ENDIF
+                     ENDIF
+                  ENDIF
                ENDDO
+               IF (l_lab.AND.nlab>0) THEN
+                  IF (allocated(this%specialPointIndices)) deallocate(this%specialPointIndices)
+                  IF (allocated(this%specialPointNames)) deallocate(this%specialPointNames)
+                  IF (allocated(this%specialPoints)) deallocate(this%specialPoints)
+                  this%numSpecialPoints=nlab
+                  ALLOCATE(this%specialPointIndices(nlab),this%specialPointNames(nlab))
+                  ALLOCATE(this%specialPoints(3,nlab))
+                  DO i=1,nlab
+                     this%specialPointIndices(i)=lidx(i)
+                     this%specialPointNames(i)=lname(i)
+                     this%specialPoints(:,i)=this%bk(:,lidx(i))
+                  ENDDO
+               ENDIF
+               IF (allocated(lname)) deallocate(lname,lidx)
                read_kpts_by_name=.true.
             endif
          ENDIF
          if (index(line,'<xi:include xmlns:xi="http://www.w3.org/2001/XInclude"')>0) THEN
             line=line(index(line,'href="')+6:)
             line=line(:index(line,'"')-1)
-            read_kpts_by_name=this%read_kpts_by_name(line,name)
+            read_kpts_by_name=this%read_kpts_by_name(line,name,l_lab)
          endif
       enddo
       close(fid)
