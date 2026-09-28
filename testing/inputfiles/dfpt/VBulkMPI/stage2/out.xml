@@ -1,20 +1,20 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <fleurOutput fleurOutputVersion="0.38">
    <programVersion version="fleur 42">
-      <compilationInfo date="2026-07-29T14:42:04" user="bornhake" host="iff1146" flag="-fiopenmp -qmkl  -assume byterecl -no-wrap-margin -fPIC -I/Data/ias-1/bornhake/clean_code/build/external/libxc" link="lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64;/usr/lib64/libxml2.so"/>
-      <gitInfo version="MaX-R8.1-194-g7b3b66a4c-dirty" branch="dfpt_elph" lastCommitHash="7b3b66a4c63d507b9fe6b527692a0d71b9a72b39"/>
+      <compilationInfo date="2026-09-25T12:01:54" user="" host="runner-dh1iikibu-project-19-concurrent-5" flag="I/usr/include -I/opt/include -fopenmp -ffree-line-length-none -Wno-missing-include-dirs -fno-sign-zero -fPIC" link="lwannier;-L/opt/lib;-ldl;-L/usr/lib;-L/usr/lib/x86_64-linux-gnu;-lscalapack-openmpi;-lfftw3;/usr/lib/x86_64-li"/>
+      <gitInfo version="MaX-R8.1-624-g6a1ab2162" branch="HEAD" lastCommitHash="6a1ab2162371681c88cb84e03c4c33cf9a55f48c"/>
       <targetComputerArchitectures>GEN</targetComputerArchitectures>
       <precision type="DOUBLE"/>
       <targetStructureClass> </targetStructureClass>
-      <additionalCompilerFlags>CPP_MPI             CPP_HDF</additionalCompilerFlags>
-      <programExecution commandLine="/Data/ias-1/bornhake/clean_code/build/fleur_MPI -warn_only"/>
+      <additionalCompilerFlags>CPP_MPI             CPP_HDF            CPP_WANN</additionalCompilerFlags>
+      <programExecution commandLine="/builds/fleur/build/fleur_MPI -warn_only"/>
    </programVersion>
    <parallelSetup>
-      <openMP ompThreads="1"/>
+      <openMP ompThreads="2"/>
       <mpi mpiProcesses="2"/>
-      <mem memoryPerNode="32333356 kB"/>
+      <mem memoryPerNode="527463096 kB"/>
    </parallelSetup>
-   <startDateAndTime date="2026/07/29" time="16:27:31" zone="+0200"/>
+   <startDateAndTime date="2026/09/25" time="14:11:05" zone="+0000"/>
    <!-- Now follows a dump of the inp.xml file after evaluating the Schema -->
   <fleurInput fleurInputVersion="0.39">
      <comment>
@@ -22,7 +22,7 @@
      </comment>
      <calculationSetup>
         <cutoffs Kmax="2.0" Gmax="6.0" GmaxXC="6.0" numbands="all" Gmaxz="0.0"/>
-        <scfLoop itmax="1" minDistance="0.00001" maxIterBroyd="15" imix="Anderson" alpha="0.05" precondParam="0.0" spinf="2.0"/>
+        <scfLoop itmax="1" minDistance="0.00001" maxIterBroyd="15" imix="Anderson" alpha="0.05" precondParam="0.0" spinf="2.0" sdNocoIR="F"/>
         <coreElectrons ctail="F" frcor="F" kcrel="0" coretail_lmax="0" l_core_confpot="T"/>
         <xcFunctional name="LibXC" relativisticCorrections="F">
            <LibXCName exchange="lda_x" correlation="lda_c_vwn"/>
@@ -81,7 +81,7 @@
      </atomSpecies>
      <atomGroups>
         <atomGroup species="V-1">
-           <relPos label="                   1" wannier="F">.0000000000 .0000000000 .0000000000</relPos>
+           <relPos label="                   1" wannier="F" alignToSpin="F">.0000000000 .0000000000 .0000000000</relPos>
            <force calculate="T" relaxXYZ="TTT"/>
         </atomGroup>
      </atomGroups>
@@ -94,7 +94,7 @@
            <plot TwoD="T" vec1="  1.0  0.0  0.0" vec2="  0.0  1.0  0.0" vec3="  0.0  0.0  1.0" zero="  0.0  0.0  0.0" file="plot" cartesian="F" grid="30 30 30" onlyMT="F" typeMT="0" vecField="F" edgesAllSides="T"/>
         </plotting>
         <dfpt l_dfpt="T" l_phonon="T" l_rm_qhdf="T">
-           <phonon l_symVacLevel="F">
+           <phonon>
               <qVectors>
                  <q> 0.0/4 0.0/4 0.0/16 </q>
               </qVectors>
@@ -250,10 +250,10 @@
          <FermiEnergy value="0.3799518756" units="Htr"/>
          <phonon>
             <dynMat>
-               <frequencies iqpt="1" q_x=".00000000" q_y=".00000000" q_z=".00000000" unit="1/cm">20.4113492421       20.4130443045       20.4134070279</frequencies>
+               <frequencies iqpt="1" q_x=".00000000" q_y=".00000000" q_z=".00000000" unit="1/cm">20.6250366575       20.6266251281       20.6269767403</frequencies>
             </dynMat>
          </phonon>
       </iteration>
    </scfLoop>
-   <endDateAndTime date="2026/07/29" time="16:27:36" zone="+0200"/>
+   <endDateAndTime date="2026/09/25" time="14:13:11" zone="+0000"/>
 </fleurOutput>

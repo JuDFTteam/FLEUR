@@ -96,7 +96,7 @@ CONTAINS
 
    END SUBROUTINE abc_init
 
-   subroutine calc_abc(this, input, atoms, sym, cell, lapw, ne, usdus, &
+   subroutine calc_abc(this, input, atoms, sym, cell, lapw, ne, rf, &
                        noco, nococonv, jspin, itype, zMat)
       USE m_juDFT
       USE m_types_atoms
@@ -104,7 +104,7 @@ CONTAINS
       USE m_types_sym
       USE m_types_cell
       USE m_types_lapw
-      USE m_types_usdus
+      USE m_types_radfun
       USE m_types_noco
       USE m_types_nococonv
       USE m_types_enpara
@@ -119,7 +119,7 @@ CONTAINS
       IMPLICIT NONE
       CLASS(t_abc), INTENT(INOUT) :: this
       TYPE(t_input), INTENT(IN)             :: input
-      TYPE(t_usdus), INTENT(IN)             :: usdus
+      TYPE(t_radfun), INTENT(IN)            :: rf !radial basis of iType
       TYPE(t_lapw), INTENT(IN)              :: lapw
 
       TYPE(t_noco), INTENT(IN)              :: noco
@@ -138,7 +138,7 @@ CONTAINS
 
 ! Local scalars
       INTEGER :: i, iLAPW, l, lm, nap, jAtom, lmp, m, nkvec, iAtom, acof_size, iAtom_l, jatom_l
-      INTEGER :: inv_f, ie, ilo, kspin, iintsp, nintsp, nvmax, lo, inap, abSize, n_l(0:atoms%lmaxd), nbasf
+      INTEGER :: inv_f, ie, ilo, kspin, iintsp, nintsp, nvmax, lo, inap, abSize, nbasf, islot
       REAL    :: tmk, qss(3), s2h
       COMPLEX :: phase, c_1, c_2, term1, ctmp
       LOGICAL ::  l_useinversionsym
@@ -213,15 +213,14 @@ CONTAINS
       l_useinversionsym = any(sym%invsat == 2) .and. (.not.noco%l_soc)
 
       CALL timestart("fjgj coefficients")
-      CALL fjgj%calculate(input, atoms, cell, lapw, noco, usdus, iType, jspin)
+      CALL fjgj%calculate(input, atoms, cell, lapw, noco, rf, iType, jspin)
 !$acc update device (fjgj%fj,fjgj%gj)
       CALL timestop("fjgj coefficients")
 
-      CALL setabc1lo(atoms, iType, usdus, jspin, alo1, blo1, clo1)
+      CALL setabc1lo(atoms, iType, rf, jspin, alo1, blo1, clo1)
 
 ! generate the spinors (chi)
       IF (noco%l_noco) ccchi = conjg(nococonv%umat(itype))
-      n_l = 2
 
 ! loop over atoms
       DO iAtom_l = 1, atoms%neq(itype)
@@ -337,10 +336,9 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
             CALL timestart("local orbitals")
 ! Treatment of local orbitals
 !!$acc data copyin(alo1,blo1,clo1,ccchi)create(ylm)
-            n_l = 2
             DO lo = 1, atoms%nlo(iType)
                l = atoms%llo(lo, itype)
-               n_l(l) = n_l(l) + 1
+               islot = atoms%slot_of_lo(lo, itype)
                DO nkvec = 1, lapw%nkvec(lo, iAtom)
                   iLAPW = lapw%kvec(nkvec, lo, iAtom)
                   fg(:) = MERGE(lapw%gvec(:, iLAPW, iintsp), lapw%gvec(:, iLAPW, jspin), noco%l_ss) + qss + lapw%qPhon
@@ -389,7 +387,7 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
                         ctmp = term1*conjg(ylm(lm + 1))*work_lo(i)
                         this%cof(i, lm, 1, iatom_l) = this%cof(i, lm, 1, iatom_l) + ctmp*alo1(lo, jspin)
                         this%cof(i, lm, 2, iatom_l) = this%cof(i, lm, 2, iatom_l) + ctmp*blo1(lo, jspin)
-                        this%cof(i, lm, n_l(l), iatom_l) = this%cof(i, lm, n_l(l), iatom_l) + ctmp*clo1(lo, jspin)
+                        this%cof(i, lm, islot, iatom_l) = this%cof(i, lm, islot, iatom_l) + ctmp*clo1(lo, jspin)
                      END DO
           !!$acc end loop
                   END DO
@@ -429,7 +427,7 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
 
    end subroutine calc_abc
 
-   subroutine calc_force_abc(this, input, atoms, sym, cell, lapw, ne, usdus, &
+   subroutine calc_force_abc(this, input, atoms, sym, cell, lapw, ne, rf, &
                              noco, nococonv, jspin, itype, zMat,eig,force)
       USE m_juDFT
       USE m_types_atoms
@@ -438,7 +436,7 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
       USE m_types_sym
       USE m_types_cell
       USE m_types_lapw
-      USE m_types_usdus
+      USE m_types_radfun
       USE m_types_noco
       USE m_types_nococonv
       USE m_types_enpara
@@ -453,7 +451,7 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
       IMPLICIT NONE
       CLASS(t_abc), INTENT(INOUT) :: this
       TYPE(t_input), INTENT(IN)             :: input
-      TYPE(t_usdus), INTENT(IN)             :: usdus
+      TYPE(t_radfun), INTENT(IN)            :: rf !radial basis of iType
       TYPE(t_lapw), INTENT(IN)              :: lapw
 
       TYPE(t_noco), INTENT(IN)              :: noco
@@ -474,7 +472,7 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
 
 ! Local scalars
       INTEGER :: i, iLAPW, l, lm, nap, jAtom, lmp, m, nkvec, iAtom, acof_size, iAtom_l, jatom_l,j
-      INTEGER :: inv_f, ie, ilo, kspin, iintsp, nintsp, nvmax, lo, inap, abSize, n_l(0:atoms%lmaxd), nbasf
+      INTEGER :: inv_f, ie, ilo, kspin, iintsp, nintsp, nvmax, lo, inap, abSize, nbasf
       REAL    :: tmk, qss(3), s2h
       COMPLEX :: phase, c_1, c_2, term1, ctmp
       LOGICAL ::  l_useinversionsym
@@ -557,15 +555,14 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
       l_useinversionsym = any(sym%invsat == 2) .and. (.not.noco%l_soc)
 
       CALL timestart("fjgj coefficients")
-      CALL fjgj%calculate(input, atoms, cell, lapw, noco, usdus, iType, jspin)
+      CALL fjgj%calculate(input, atoms, cell, lapw, noco, rf, iType, jspin)
 !$acc update device (fjgj%fj,fjgj%gj)
       CALL timestop("fjgj coefficients")
 
-      CALL setabc1lo(atoms, iType, usdus, jspin, alo1, blo1, clo1)
+      CALL setabc1lo(atoms, iType, rf, jspin, alo1, blo1, clo1)
 
       ! generate the spinors (chi)
       IF (noco%l_noco) ccchi = conjg(nococonv%umat(itype))
-      n_l = 2
 
 ! loop over atoms
       DO iAtom_l = 1, atoms%neq(itype)
@@ -646,10 +643,8 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
             CALL timestart("local orbitals")
 ! Treatment of local orbitals
 !!$acc data copyin(alo1,blo1,clo1,ccchi)create(ylm)
-            n_l = 2
             DO lo = 1, atoms%nlo(iType)
                l = atoms%llo(lo, itype)
-               n_l(l) = n_l(l) + 1
                DO nkvec = 1, lapw%nkvec(lo, iAtom)
                   iLAPW = lapw%kvec(nkvec, lo, iAtom)
                   fg(:) = MERGE(lapw%gvec(:, iLAPW, iintsp), lapw%gvec(:, iLAPW, jspin), noco%l_ss) + qss + lapw%qPhon

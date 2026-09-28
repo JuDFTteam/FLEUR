@@ -71,7 +71,7 @@ Testset: DFPT
 | +   | C bulk fcc              | dfpt/CBulk        | libxc | partly ready |         |   1 |
 | +   | C bulk fcc BEC             | dfpt/CBulk-BEC        | libxc | partly ready |         |   1 |
 | +   | Graphene Film           | dfpt/GrapheneFilm | libxc |              |         |   1 |
-| +   | V bulk bcc, mpi         | dfpt/VBulkMPI     | libxc |              |         |   2 |
+|     | V bulk bcc, mpi         | dfpt/VBulkMPI     | libxc |              |         |   2 |
 
 
 Testset: Noco

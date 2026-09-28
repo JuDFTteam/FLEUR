@@ -22,7 +22,6 @@ src/fleur/global/convn.f90
 src/fleur/global/phasy1.f90
 src/fleur/global/qfix.f90
 src/fleur/global/radflo.F90
-src/fleur/global/relLO_tmat.f90
 src/fleur/global/relLO_dirac.f90
 src/fleur/global/starf.f90
 src/fleur/global/utility.F90
