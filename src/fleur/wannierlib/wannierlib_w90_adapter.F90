@@ -135,6 +135,14 @@ CONTAINS
     IF (this%dis_mix_ratio > 0.0) CALL w90_set_option(wannierlib_w90main, 'dis_mix_ratio', this%dis_mix_ratio)
     IF (this%dis_conv_tol > 0.0) CALL w90_set_option(wannierlib_w90main, 'dis_conv_tol', this%dis_conv_tol)  ! disentanglement (XML disConvTol)
     IF (this%conv_tol > 0.0)     CALL w90_set_option(wannierlib_w90main, 'conv_tol', this%conv_tol)          ! MLWF/wannierise (XML wannConvTol)
+    !> Without a window the MLWF iteration never tests the tolerance it was just given: the
+    !> Wannier90 reader forces conv_window to -1 and the check in wannierise.F90 asks for
+    !> above one, so conv_tol alone buys nothing there and the run costs its whole num_iter.
+    !> The disentanglement is not in that position -- its window defaults to 3 and a negative
+    !> one is an input error. Both are said only when asked, so silence keeps the behaviour
+    !> every stored reference was made with.
+    IF (this%dis_conv_window > 0) CALL w90_set_option(wannierlib_w90main, 'dis_conv_window', this%dis_conv_window)
+    IF (this%conv_window > 0)     CALL w90_set_option(wannierlib_w90main, 'conv_window', this%conv_window)
     !> Projectability disentanglement: set only when asked, so silence leaves Wannier90 on
     !> its own energy-window default. The two thresholds go with it -- W90 validates both
     !> to [0,1] and aborts on anything else.

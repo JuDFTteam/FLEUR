@@ -157,6 +157,14 @@ MODULE m_types_wannierlib
     REAL :: dis_mix_ratio = 0.0
     REAL :: dis_conv_tol = 0.0
     REAL :: conv_tol = 0.0       ! MLWF/wannierise convergence (W90 conv_tol); XML @wannConvTol
+    !> Wannier90 only tests convergence when its window is above one, and ITS TWO WINDOWS
+    !> DO NOT START FROM THE SAME PLACE. For the MLWF iteration the reader forces -1 before
+    !> reading the keyword (wannier90_readwrite.F90), so silence there means it never tests
+    !> and runs the whole iteration count out. The disentanglement is not in that position:
+    !> its own default is 3 and its reader rejects a negative one, so it does test.
+    !> Zero here means we say nothing and leave each of them where it already was.
+    INTEGER :: dis_conv_window = 0   ! disentanglement (W90 dis_conv_window); XML @convWindow
+    INTEGER :: conv_window = 0       ! MLWF/wannierise (W90 conv_window);     XML @convWindow
     !> Preconditioned gradient in the spread minimisation (W90 precond); XML @precond.
     !> Off by default, which is also Wannier90's default.
     !>
@@ -432,6 +440,8 @@ CONTAINS
     CALL mpi_bc(this%dis_mix_ratio, rank, mpi_comm)
     CALL mpi_bc(this%dis_conv_tol, rank, mpi_comm)
     CALL mpi_bc(this%conv_tol, rank, mpi_comm)
+    CALL mpi_bc(this%dis_conv_window, rank, mpi_comm)
+    CALL mpi_bc(this%conv_window, rank, mpi_comm)
     CALL mpi_bc(this%precond, rank, mpi_comm)
     !> An array of a derived type does not go through the generic mpi_bc, which sizes the
     !> receivers from the message itself. The count travels first, then each record field by
@@ -558,15 +568,20 @@ CONTAINS
       this%dis_num_iter = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@numIter'))
       this%dis_mix_ratio = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@mixRatio'))
       this%dis_conv_tol = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@convTol'))
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@convWindow') == 1) &
+        this%dis_conv_window = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@convWindow'))
     END IF
 
     ! --- wannierization (MLWF iteration controls); defaults to the disentanglement values ---
     this%num_iter = this%dis_num_iter
     this%conv_tol = this%dis_conv_tol
+    this%conv_window = this%dis_conv_window
     xPathA = '/fleurInput/output/wannierlib/wannierization'
     IF (xml%getNumberOfNodes(xPathA) == 1) THEN
       this%num_iter = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@numIter'))
       this%conv_tol = evaluateFirstOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@convTol'))
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@convWindow') == 1) &
+        this%conv_window = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@convWindow'))
       this%precond = evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@precond'))
     END IF
 
