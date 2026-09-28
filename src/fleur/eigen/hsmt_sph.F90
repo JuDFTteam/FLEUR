@@ -162,7 +162,7 @@ CONTAINS
 
                IF (input%l_useapw) THEN
                   VecHelpH = VecHelpH + plegend(l3) * ( apw_lo1*fjgj%fj(ikGPr,l,isp,igSpinPr) &
-                                                    & + apw_lo2*fjgj%gj(l,ikGPr,isp,igSpinPr) )
+                                                    & + apw_lo2*fjgj%gj(ikGPr,l,isp,igSpinPr) )
                END IF ! useapw
             END DO ! l
             !$end acc

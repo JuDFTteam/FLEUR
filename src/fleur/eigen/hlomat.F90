@@ -259,7 +259,8 @@ CONTAINS
                lm = l*(l+1)+m
                c(tlmplm%ind(1,lm,ntyp)+1,col) = abclo(1,m,nkvec,lo)
                c(tlmplm%ind(2,lm,ntyp)+1,col) = abclo(2,m,nkvec,lo)
-               c(tlmplm%ind(atoms%slot_of_lo(lo,ntyp),lm,ntyp)+1,col) = abclo(3,m,nkvec,lo)
+               c(tlmplm%ind(atoms%slot_of_lo(lo,ntyp),lm,ntyp)+1,col) = &
+                  c(tlmplm%ind(atoms%slot_of_lo(lo,ntyp),lm,ntyp)+1,col) + abclo(3,m,nkvec,lo)
             END DO
          END DO
       END DO

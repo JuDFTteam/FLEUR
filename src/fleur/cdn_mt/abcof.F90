@@ -503,14 +503,15 @@ ccof(-atoms%llod:,:,:,:),zMat,eig,force)
 ! eigVecCoeffs%ccof directly, such as the Green's-function path.
 eigVecCoefs%ccof(:,:,:,:,ispin) = ccof
 
-!Now put the c-coef into the correct abcof
+!Now put the c-coef into the correct abcof (added: an APW LO shares the udot slot with bcof)
 DO itype=1,atoms%ntype
    DO lo=1,atoms%nlo(itype)
       l=atoms%llo(lo,itype)
       do m=-l,l
          lm=l*(l+1)+m
          DO na=atoms%firstatom(itype),atoms%firstatom(itype)+atoms%neq(itype)-1
-            eigveccoefs%abcof(:,lm,atoms%slot_of_lo(lo,itype)-1,na,ispin)=ccof(m,:,lo,na)
+            eigveccoefs%abcof(:,lm,atoms%slot_of_lo(lo,itype)-1,na,ispin)= &
+               eigveccoefs%abcof(:,lm,atoms%slot_of_lo(lo,itype)-1,na,ispin)+ccof(m,:,lo,na)
          enddo
       enddo
    enddo

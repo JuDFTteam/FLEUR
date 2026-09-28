@@ -80,7 +80,7 @@ CONTAINS
                   CALL add_nonsph(td,n,atoms,sym,sphhar,input,hub1inp,vr,lh0,j1,j2,one)
                END IF
                CALL extract_nonsph(td,atoms,n,j1,j2)
-               IF (jsp<3) CALL add_sph(td,n,jsp)
+               IF (jsp<3) CALL add_sph(td,n,jsp,input%l_useapw)
             ENDDO
             !$OMP end parallel do
             CALL add_ldaU(fmpi,inden,jsp,atoms,v,input,td,j1,j2,PRESENT(l_forces))
@@ -197,14 +197,17 @@ CONTAINS
       END DO
    END FUNCTION
 
-   SUBROUTINE add_sph(td,n,jsp)
-      !! spherical Hamiltonian, diagonal in lm
+   SUBROUTINE add_sph(td,n,jsp,l_useapw)
+      !! spherical Hamiltonian, diagonal in lm; with APW including the kinetic surface
+      !! term, which hsmt_sph adds itself for the LAPW part (h_loc_nonsph is extracted before)
       TYPE(t_tlmplm), INTENT(INOUT) :: td
       INTEGER,        INTENT(IN)    :: n,jsp
+      LOGICAL,        INTENT(IN)    :: l_useapw
       INTEGER :: l,m,nr
       REAL, ALLOCATABLE :: hs(:,:)
       DO l = 0,td%lrange(n)
          hs = td%radfun(n)%hsph(l,jsp)
+         IF (l_useapw) hs = hs + td%radfun(n)%hsurf(l,jsp)
          nr = td%radfun(n)%n_r(l)
          DO m = -l,l
             td%h(td%ind(:nr,l*(l+1)+m,n),td%ind(:nr,l*(l+1)+m,n),n,jsp,jsp) = &

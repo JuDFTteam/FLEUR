@@ -439,7 +439,12 @@ WRITE (fileNum, 242) fr(1.0)
 
 !         <atomicCutoffs lmax="8" lnonsphr="6"/>
 320      FORMAT('         <atomicCutoffs lmax="', i0, '" lnonsphr="', i0, '"/>')
-         WRITE (fileNum, 320) atoms%lmax(iAtomType), atoms%lnonsph(iAtomType)
+329      FORMAT('         <atomicCutoffs lmax="', i0, '" lnonsphr="', i0, '" lmaxAPW="', i0, '"/>')
+         IF (atoms%lapw_l(iAtomType)>=0) THEN
+            WRITE (fileNum, 329) atoms%lmax(iAtomType), atoms%lnonsph(iAtomType), atoms%lapw_l(iAtomType)
+         ELSE
+            WRITE (fileNum, 320) atoms%lmax(iAtomType), atoms%lnonsph(iAtomType)
+         END IF
 
          WRITE (fileNum, '(a)') '         <electronConfig flipSpins="F">'
 !         <coreConfig>[He] (2s1/2) (2p1/2) (2p3/2)</coreConfig>
@@ -503,6 +508,9 @@ WRITE (fileNum, 242) fr(1.0)
             END IF
             IF (atoms%l_relLO(ilo, iAtomType)) THEN
                loType = 'relLO'
+            END IF
+            IF (atoms%l_dulo(ilo, iAtomType)) THEN
+               loType = 'APW'
             END IF
             n = ABS(n)
 324         FORMAT('         <lo type="', a, '" l="', i0, '" n="', i0, '" eDeriv="', i0, '"/>')
