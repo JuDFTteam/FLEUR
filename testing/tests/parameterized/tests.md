@@ -27,6 +27,7 @@ Testset: Basic
 | +   | Bulk Fe, Kerker preconditioner               | basic/Fe_Kerker          | bulk                  |                    |                 | 2   |
 | +   | Bulk Fe fcc with relativistic core solver    | basic/Fe_fcc_kcrel       |                       |                    |                 | 2   |
 | +   | Si with LOs                                  | basic/SiLO               | bulk                  |                    |                 | 2   |
+| +   | Cu with APW+lo, LAPW and APW channels        | basic/CuAPWlo            | bulk                  |                    |                 | 2   |
 | +   | Bulk PTO                                     | basic/PTO                | bulk                  |                    |                 | 2   |
 | +   | Bulk PTO, SOC                                | basic/PTO-SOC            | bulk,soc              |                    |                 | 2   |
 | +   | Bulk Fe, Tetrahedon method                   | basic/Fe_Tetra_noSYM     | bulk                  |                    |                 | 2   |

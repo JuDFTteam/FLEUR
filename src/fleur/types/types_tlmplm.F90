@@ -54,6 +54,7 @@ CONTAINS
        END DO
        nb = 2*s
        DO lo = 1,atoms%nlo(n)
+          IF (atoms%l_dulo(lo,n)) CYCLE ! APW LO lives on the udot slot
           l = atoms%llo(lo,n)
           DO m = -l,l
              td%ind(atoms%slot_of_lo(lo,n),l*(l+1)+m,n) = nb+l+m

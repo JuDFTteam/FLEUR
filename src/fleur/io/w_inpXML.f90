@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -15,6 +15,7 @@ MODULE m_winpXML
 !!!                                         GM'16
 !!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   implicit none
 CONTAINS
    SUBROUTINE w_inpXML( &
       atoms, vacuum, input, stars, sliceplot, forcetheo, banddos, dfpt, &
@@ -436,7 +437,12 @@ WRITE (fileNum, 242) fr(1.0)
 
 !         <atomicCutoffs lmax="8" lnonsphr="6"/>
 320      FORMAT('         <atomicCutoffs lmax="', i0, '" lnonsphr="', i0, '"/>')
-         WRITE (fileNum, 320) atoms%lmax(iAtomType), atoms%lnonsph(iAtomType)
+329      FORMAT('         <atomicCutoffs lmax="', i0, '" lnonsphr="', i0, '" lmaxAPW="', i0, '"/>')
+         IF (atoms%lapw_l(iAtomType)>=0) THEN
+            WRITE (fileNum, 329) atoms%lmax(iAtomType), atoms%lnonsph(iAtomType), atoms%lapw_l(iAtomType)
+         ELSE
+            WRITE (fileNum, 320) atoms%lmax(iAtomType), atoms%lnonsph(iAtomType)
+         END IF
 
          WRITE (fileNum, '(a)') '         <electronConfig flipSpins="F">'
 !         <coreConfig>[He] (2s1/2) (2p1/2) (2p3/2)</coreConfig>
@@ -500,6 +506,9 @@ WRITE (fileNum, 242) fr(1.0)
             END IF
             IF (atoms%l_relLO(ilo, iAtomType)) THEN
                loType = 'relLO'
+            END IF
+            IF (atoms%l_dulo(ilo, iAtomType)) THEN
+               loType = 'APW'
             END IF
             n = ABS(n)
 324         FORMAT('         <lo type="', a, '" l="', i0, '" n="', i0, '" eDeriv="', i0, '"/>')

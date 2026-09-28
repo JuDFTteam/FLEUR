@@ -1,11 +1,12 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_radflo
   USE m_juDFT
+   implicit none
 CONTAINS
   SUBROUTINE radflo(atoms, ntyp,jsp,ello,vr, f,g,fmpi, usdus,&
        uuilon,duilon,ulouilopn,flo,lout_all)
@@ -141,7 +142,6 @@ CONTAINS
        END DO
        CALL intgr0(ulo, atoms%rmsh(1,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),usdus%uulon(ilo,ntyp,jsp))
        CALL intgr0(dulo,atoms%rmsh(1,ntyp),atoms%dx(ntyp),atoms%jri(ntyp),usdus%dulon(ilo,ntyp,jsp))
-       IF (atoms%l_dulo(ilo,ntyp)) usdus%dulon(ilo,ntyp,jsp) = 0.0
        IF (loutput) THEN
           WRITE (oUnit,FMT=8010) ilo,atoms%llo(ilo,ntyp),ello(ilo,ntyp),&
                usdus%ulos(ilo,ntyp,jsp),usdus%dulos(ilo,ntyp,jsp),nodelo,usdus%uulon(ilo,ntyp,jsp),&

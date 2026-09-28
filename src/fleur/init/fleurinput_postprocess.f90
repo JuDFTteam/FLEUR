@@ -84,6 +84,13 @@ CONTAINS
        END DO
     END IF
 
+    input%l_useapw = .FALSE.
+    DO i = 1, atoms%ntype
+       DO l = 0, atoms%lmax(i)
+          input%l_useapw = input%l_useapw .OR. atoms%l_apw(l,i)
+       END DO
+    END DO
+
     call check_input_switches(banddos,vacuum,noco,atoms,input,sym,kpts,hybinp,cell)
     ! Check muffin tin radii, only checking, dont use new parameters
     CALL chkmt(atoms,input,vacuum,cell ,.TRUE.)

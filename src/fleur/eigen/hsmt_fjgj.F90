@@ -62,7 +62,7 @@ CONTAINS
     !     .. Local Scalars ..
     REAL con1,ff,gg,gs
 
-    INTEGER k,l,lo,intspin,jspin, jspinStart, jSpinEnd
+    INTEGER k,l,intspin,jspin, jspinStart, jSpinEnd
     LOGICAL l_socfirst
     !     .. Local Arrays ..
     REAL ws(input%jspins)
@@ -72,11 +72,7 @@ CONTAINS
     l_socfirst = noco%l_soc .AND. noco%l_noco .AND. (.NOT. noco%l_ss)
     con1 = fpi_const/SQRT(cell%omtil)
     DO l = 0,atoms%lmax(n)
-       apw(l)=ANY(atoms%l_dulo(:atoms%nlo(n),n))
-       IF ((input%l_useapw).AND.(atoms%lapw_l(n).GE.l)) apw(l) = .FALSE.
-    ENDDO
-    DO lo = 1,atoms%nlo(n)
-       IF (atoms%l_dulo(lo,n)) apw(atoms%llo(lo,n)) = .TRUE.
+       apw(l) = atoms%l_apw(l,n)
     ENDDO
 
     jspinStart = ispin

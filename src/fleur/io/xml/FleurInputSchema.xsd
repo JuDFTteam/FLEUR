@@ -1492,7 +1492,7 @@
       </xsd:attribute>
       <xsd:attribute name="lmaxAPW" type="xsd:nonNegativeInteger" use="optional">
          <xsd:annotation>
-            <xsd:documentation>If present, enables APW+lo approach. Cutoff defining lmax up to which LAPWs are used if no APW+lo LO is defined.</xsd:documentation>
+            <xsd:documentation>If present, all l above lmaxAPW use APW basis functions (matched in value only). Up to lmaxAPW LAPWs are used, except for l with an APW local orbital.</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
    </xsd:complexType>
@@ -1933,7 +1933,7 @@
       </xsd:annotation>
       <xsd:attribute name="type" type="EParamSelectionEnum" use="required">
          <xsd:annotation>
-            <xsd:documentation>Type of local orbital: SCLO for semicore, HELO for high-energy, relLO for a relativistic local orbital (j=l-1/2 branch, requires l=1,2 or 3 and eDeriv=0).</xsd:documentation>
+            <xsd:documentation>Type of local orbital: SCLO for semicore, HELO for high-energy, relLO for a relativistic local orbital (j=l-1/2 branch, requires l=1,2 or 3 and eDeriv=0), APW for the local orbital of APW+lo (a*u+b*udot at the energy parameter of l, zero at the sphere boundary; switches this l to APW, requires eDeriv=0, at most one per l).</xsd:documentation>
          </xsd:annotation>
       </xsd:attribute>
       <xsd:attribute name="l" type="AngularMomentumNumberType" use="required">
@@ -1970,6 +1970,7 @@
          <xsd:enumeration value="SCLO"/>
          <xsd:enumeration value="HELO"/>
          <xsd:enumeration value="relLO"/>
+         <xsd:enumeration value="APW"/>
       </xsd:restriction>
    </xsd:simpleType>
 
