@@ -17,10 +17,25 @@ formats — lives in `../wannierlib/postproc/`.
 
 The seam between the two is two types, `t_melem_window` (which bands were selected)
 and `t_melem_request` (which operators were asked for), both of which stay here.
-`t_melem_manifold` extends the window with `num_wann` and the disentanglement edges
+`t_wgauge_manifold` extends the window with `num_wann` and the disentanglement edges
 and lives in `postproc`, so nothing here knows what the bands were selected for.
 `postproc` depends on this directory; this directory depends on nothing of it, and
 `testing/tests/structure/test_layering.py` fails if that ever changes.
+
+### Why `melem_coarse.F90` is here
+
+It is the one file that reads as if it belonged next door, and every few months somebody
+proposes moving it. What it holds -- `s0`, `l0`, `soc4`, `soc0`, the Bloch-basis operators
+on the coarse mesh -- is filled by the wannierization driver and read by `wgauge_run` in
+`postproc`. Both sides have to see it, and `postproc` may not import from `wannierlib/`,
+so this directory is the only layer the two of them share.
+
+Move it up into `wannierlib/` and `postproc` can no longer reach it -- which
+`test_layering.py` catches, though its message will talk about imports rather than about
+this file. Move it down into `postproc/` and nothing breaks structurally, but the pass
+that produces `O(k)` before any gauge exists would then live in the directory defined as
+everything that needs the gauge. It is here because that is the only place it fits, not
+because that is where it landed.
 
 ## First: which of the three are you adding?
 
@@ -44,14 +59,14 @@ the one to read before writing a line of it.
 | 2 | `matrixelements/CMakeLists.txt` | one line, **with** the path prefix |
 | 3 | `fleurinput/types_melem_optable.f90` | a row in `MELEM_OPERATORS` |
 | 4 | `melem_coarse.F90` | three places: the slice, the `ALLOCATE` behind `request%needs_op`, the fill inside the k loop |
-| 5 | `../wannierlib/postproc/melem_run.F90` and/or `melem_operators_r.F90` | a `CASE` branch |
+| 5 | `../wannierlib/postproc/wgauge_run.F90` and/or `wgauge_operators_r.F90` | a `CASE` branch |
 | 6 | `types_melem_optable.f90` | a row in `WANNIERLIB_INTERP` and/or `WANNIERLIB_OPR` |
 | 7 | `fleur/io/xml/FleurInputSchema.xsd` | one `<xsd:enumeration>` |
 
 Route B is 5, 6 and 7. Route C is 5, 6 and 7 plus the driver itself — and, only if it
 needs the wavefunctions after the gauge is known, one `IF` in `wannierlib_main.F90`.
 
-New on-disk format? Add a `CASE` in `../wannierlib/postproc/melem_io.F90` — the only
+New on-disk format? Add a `CASE` in `../wannierlib/postproc/wgauge_io.F90` — the only
 file that knows the layout. Do not open a file anywhere else.
 
 ## Before you debug

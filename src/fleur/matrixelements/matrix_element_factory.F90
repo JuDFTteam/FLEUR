@@ -16,6 +16,17 @@ MODULE m_matrix_element_factory
     USE m_types_spinor_layout, ONLY: t_spinor_layout, radial_slot, melem_stack_spinor, &
                                      LAYOUT_SCALAR
     USE m_types_usdus
+    USE m_types_input
+    USE m_types_atoms
+    USE m_types_sym
+    USE m_types_cell
+    USE m_types_noco
+    USE m_types_nococonv
+    USE m_types_enpara
+    USE m_types_lapw
+    USE m_types_kpts
+    USE m_types_potden
+    USE m_types_mpi
     USE m_judft, ONLY: judft_error, judft_bug
     IMPLICIT NONE
     PRIVATE
@@ -160,11 +171,6 @@ CONTAINS
     !> on the k-point, so they are generated once and kept until the next factory reset --
     !> i.e. once per SCF iteration.
     SUBROUTINE ensure_radial(atoms, input, enpara, fmpi, vtot)
-        USE m_types_input
-        USE m_types_atoms
-        USE m_types_enpara
-        USE m_types_potden
-        USE m_types_mpi
 
         TYPE(t_atoms),  INTENT(IN) :: atoms
         TYPE(t_input),  INTENT(IN) :: input
@@ -189,11 +195,6 @@ CONTAINS
     !>
     !> What comes back points into the cache and lives until matrix_element_factory_reset.
     SUBROUTINE matrix_element_radial(atoms, input, enpara, fmpi, vtot, radfun, usdus)
-        USE m_types_input
-        USE m_types_atoms
-        USE m_types_enpara
-        USE m_types_potden
-        USE m_types_mpi
 
         TYPE(t_atoms),  INTENT(IN) :: atoms
         TYPE(t_input),  INTENT(IN) :: input
@@ -214,17 +215,7 @@ CONTAINS
     SUBROUTINE ensure_slot(eig_id, ikpt, input, atoms, sym, cell, &
                            noco, nococonv, enpara, lapw, vtot, fmpi, is, num_bands, ev_list, &
                            l_both_spinors, kpts)
-        USE m_types_input
-        USE m_types_atoms
-        USE m_types_sym
-        USE m_types_cell
-        USE m_types_noco
-        USE m_types_nococonv
-        USE m_types_enpara
-        USE m_types_lapw
-        USE m_types_kpts
-        USE m_types_potden
-        USE m_types_mpi
+
         USE m_eig66_io, ONLY: read_eig
 
         INTEGER,           INTENT(IN) :: eig_id, ikpt
@@ -281,7 +272,7 @@ CONTAINS
             ! Only as many states as are actually stored for this k-point are
             ! available; requesting more would read uninitialized eig storage
             ! (harmless zeros in serial mem/DA, but stale window memory under
-            ! MPI-RMA). Clamp to the stored count, as the old alineso did.
+            ! MPI-RMA). Clamp to the stored count.
             ikpt_stored = ikpt
             IF (PRESENT(kpts)) THEN
                 IF (ikpt > kpts%nkpt) ikpt_stored = kpts%bkp(ikpt)
@@ -364,17 +355,6 @@ CONTAINS
                                       noco, nococonv, enpara, lapw, vtot, fmpi, ev_list, &
                                       l_both_spinors, kpts)
         USE m_types_matelements
-        USE m_types_input
-        USE m_types_atoms
-        USE m_types_sym
-        USE m_types_cell
-        USE m_types_noco
-        USE m_types_nococonv
-        USE m_types_enpara
-        USE m_types_lapw
-        USE m_types_kpts
-        USE m_types_potden
-        USE m_types_mpi
 
         CLASS(t_matelements), INTENT(INOUT) :: matel
         INTEGER,           INTENT(IN) :: eig_id, ikpt
@@ -442,17 +422,6 @@ CONTAINS
     SUBROUTINE matrix_element_states(eig_id, ikpt, input, atoms, sym, cell, &
                                      noco, nococonv, enpara, lapw, vtot, fmpi, &
                                      zmat, abc, ev_list, l_both_spinors, kpts, l_anchor)
-        USE m_types_input
-        USE m_types_atoms
-        USE m_types_sym
-        USE m_types_cell
-        USE m_types_noco
-        USE m_types_nococonv
-        USE m_types_enpara
-        USE m_types_lapw
-        USE m_types_kpts
-        USE m_types_potden
-        USE m_types_mpi
 
         INTEGER,           INTENT(IN) :: eig_id, ikpt
         TYPE(t_input),     INTENT(IN) :: input

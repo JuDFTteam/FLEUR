@@ -16,12 +16,12 @@
 !>  directly would make the whole matrixelements layer depend on the Wannier90 library,
 !>  so the wannierization side fills this plain bundle instead and passes
 !>  it in. Any other source of a b-mesh can be plugged in the same way.
-MODULE m_types_melem_bmesh
+MODULE m_types_wgauge_bmesh
    USE m_judft, ONLY: juDFT_error
    IMPLICIT NONE
    PRIVATE
 
-   TYPE :: t_melem_bmesh
+   TYPE :: t_wgauge_bmesh
       !> Topology: known as soon as the mesh is, which is before anything is wannierised.
       INTEGER :: nntot = 0                   !< number of b-vectors per k-point
       INTEGER, ALLOCATABLE :: nnlist(:, :)   !< (nk, nntot) global k index of neighbour b of k
@@ -42,18 +42,18 @@ MODULE m_types_melem_bmesh
       !> Left unallocated when no reference is available -> the check is skipped.
       REAL,    ALLOCATABLE :: centres(:, :)  !< (3, num_wann)
    CONTAINS
-      PROCEDURE :: free           => melem_bmesh_free
-      PROCEDURE :: set_neighbours => melem_bmesh_set_neighbours
-      PROCEDURE :: shell_vector   => melem_bmesh_shell_vector
-      PROCEDURE :: pair_diffs     => melem_bmesh_pair_diffs
-   END TYPE t_melem_bmesh
+      PROCEDURE :: free           => wgauge_bmesh_free
+      PROCEDURE :: set_neighbours => wgauge_bmesh_set_neighbours
+      PROCEDURE :: shell_vector   => wgauge_bmesh_shell_vector
+      PROCEDURE :: pair_diffs     => wgauge_bmesh_pair_diffs
+   END TYPE t_wgauge_bmesh
 
-   PUBLIC :: t_melem_bmesh
+   PUBLIC :: t_wgauge_bmesh
 
 CONTAINS
 
-   SUBROUTINE melem_bmesh_free(this)
-      CLASS(t_melem_bmesh), INTENT(INOUT) :: this
+   SUBROUTINE wgauge_bmesh_free(this)
+      CLASS(t_wgauge_bmesh), INTENT(INOUT) :: this
 
       IF (ALLOCATED(this%nnlist)) DEALLOCATE (this%nnlist)
       IF (ALLOCATED(this%gkpb)) DEALLOCATE (this%gkpb)
@@ -62,13 +62,13 @@ CONTAINS
       IF (ALLOCATED(this%bk)) DEALLOCATE (this%bk)
       IF (ALLOCATED(this%centres)) DEALLOCATE (this%centres)
       this%nntot = 0
-   END SUBROUTINE melem_bmesh_free
+   END SUBROUTINE wgauge_bmesh_free
 
    !> The neighbour topology, from whoever knows the mesh. Separate from the weights because
    !> it is available earlier: the overlaps between neighbours are what the wannierisation is
    !> given, so their topology cannot wait for its output.
-   SUBROUTINE melem_bmesh_set_neighbours(this, nntot, nnlist, gkpb, kdiff)
-      CLASS(t_melem_bmesh), INTENT(INOUT) :: this
+   SUBROUTINE wgauge_bmesh_set_neighbours(this, nntot, nnlist, gkpb, kdiff)
+      CLASS(t_wgauge_bmesh), INTENT(INOUT) :: this
       INTEGER, INTENT(IN) :: nntot
       INTEGER, INTENT(IN) :: nnlist(:, :)   !> (nk, nntot)
       INTEGER, INTENT(IN) :: gkpb(:, :, :)  !> (3, nk, nntot)
@@ -78,7 +78,7 @@ CONTAINS
       this%nnlist = nnlist
       this%gkpb   = gkpb
       this%kdiff  = kdiff
-   END SUBROUTINE melem_bmesh_set_neighbours
+   END SUBROUTINE wgauge_bmesh_set_neighbours
 
    !> The b vector of one neighbour slot, in the internal coordinates kdiff is written in:
    !>
@@ -87,14 +87,14 @@ CONTAINS
    !> Needs the topology and nothing else, so it answers from the moment the mesh is known
    !> and long before the shell weights and their cartesian bk exist. Takes the mesh points
    !> as a plain array to keep this bundle free of any type.
-   PURE FUNCTION melem_bmesh_shell_vector(this, bkf, k, nn) RESULT(b)
-      CLASS(t_melem_bmesh), INTENT(IN) :: this
+   PURE FUNCTION wgauge_bmesh_shell_vector(this, bkf, k, nn) RESULT(b)
+      CLASS(t_wgauge_bmesh), INTENT(IN) :: this
       REAL,    INTENT(IN) :: bkf(:, :)   !> (3, nk) the mesh points
       INTEGER, INTENT(IN) :: k, nn
       REAL :: b(3)
 
       b = bkf(:, this%nnlist(k, nn)) + this%gkpb(:, k, nn) - bkf(:, k)
-   END FUNCTION melem_bmesh_shell_vector
+   END FUNCTION wgauge_bmesh_shell_vector
 
    !> The distinct b2 - b1 vectors, which are the ones the muffin-tin half of a pair overlap
    !> needs a radial table for. Deduplicated by value and in internal coordinates, so the
@@ -108,8 +108,8 @@ CONTAINS
    !> Lives on the mesh because that is all it needs. uHu and uIu each carried an identical
    !> private copy, and which difference vectors exist is a property of the topology rather
    !> than of either consumer.
-   SUBROUTINE melem_bmesh_pair_diffs(this, bkf, kdiff_pair, npair)
-      CLASS(t_melem_bmesh), INTENT(IN) :: this
+   SUBROUTINE wgauge_bmesh_pair_diffs(this, bkf, kdiff_pair, npair)
+      CLASS(t_wgauge_bmesh), INTENT(IN) :: this
       REAL, INTENT(IN) :: bkf(:, :)                    !> (3, nk) the mesh points
       REAL, ALLOCATABLE, INTENT(OUT) :: kdiff_pair(:, :)
       INTEGER, INTENT(OUT) :: npair
@@ -136,12 +136,12 @@ CONTAINS
                IF (seen) CYCLE
                IF (npair == SIZE(kdiff_pair, 2)) CALL juDFT_error( &
                   'wannierlib: more distinct b2-b1 vectors than pairs of neighbours', &
-                  calledby='melem_bmesh_pair_diffs')
+                  calledby='wgauge_bmesh_pair_diffs')
                npair = npair + 1
                kdiff_pair(:, npair) = d
             END DO
          END DO
       END DO
-   END SUBROUTINE melem_bmesh_pair_diffs
+   END SUBROUTINE wgauge_bmesh_pair_diffs
 
-END MODULE m_types_melem_bmesh
+END MODULE m_types_wgauge_bmesh

@@ -38,7 +38,7 @@ CONTAINS
    SUBROUTINE wannierlib_export_basis(this, manifold, atoms, cell, input, kpts, sym, noco, &
                                       nococonv, enpara, vtot, fmpi, eig_id, jspin)
       USE m_types_wannierlib
-      USE m_types_melem_manifold, ONLY: t_melem_manifold
+      USE m_types_wgauge_manifold, ONLY: t_wgauge_manifold
       USE m_types_atoms; USE m_types_cell; USE m_types_input; USE m_types_kpts
       USE m_types_sym; USE m_types_noco; USE m_types_nococonv; USE m_types_enpara
       USE m_types_potden; USE m_types_mpi; USE m_types_lapw; USE m_types_mat
@@ -48,9 +48,10 @@ CONTAINS
 #ifdef CPP_HDF
       USE hdf5
       USE m_hdf_tools
+      USE m_wannierlib_hdf_util, ONLY: wr_r4, wr_i3, wl_hdf_create, wl_hdf_root
 #endif
       TYPE(t_wannierlib_wannierize), INTENT(IN) :: this
-      TYPE(t_melem_manifold), INTENT(IN) :: manifold
+      TYPE(t_wgauge_manifold), INTENT(IN) :: manifold
       TYPE(t_atoms), INTENT(IN) :: atoms
       TYPE(t_cell), INTENT(IN) :: cell
       TYPE(t_input), INTENT(IN) :: input
@@ -69,7 +70,6 @@ CONTAINS
       TYPE(t_mat), POINTER :: zmat(:)
       TYPE(t_abc), POINTER :: abc(:, :)
       CHARACTER(LEN=32) :: filename, kptname
-      LOGICAL :: l_ex
       INTEGER :: ik, ib, ig, ir, nb, nrow, ng
       INTEGER, ALLOCATABLE :: ev_list(:)
       REAL, ALLOCATABLE :: buf(:, :, :, :)
@@ -90,10 +90,7 @@ CONTAINS
 
       nb = manifold%num_bands
       ev_list = [(ib, ib=manifold%min_band, manifold%max_band)]
-      WRITE (filename, '(a,i0,a)') 'WF', jspin, '_basis.hdf'
-      INQUIRE (FILE=TRIM(filename), EXIST=l_ex)
-      IF (l_ex) CALL system('rm '//TRIM(filename))
-      CALL h5fcreate_f(TRIM(filename), H5F_ACC_TRUNC_F, fid, err, H5P_DEFAULT_F, H5P_DEFAULT_F)
+      CALL wl_hdf_create('basis', jspin, fid, filename)
 
       DO ik = 1, kpts%nkptf
          CALL lapw%init(input, noco, nococonv, kpts, atoms, sym, ik, cell)
@@ -141,9 +138,7 @@ CONTAINS
          DEALLOCATE (buf)
          CALL h5gclose_f(gid, err)
       END DO
-      CALL h5gopen_f(fid, '/', gid, err)
-      CALL io_write_attint0(gid, 'version', 3)
-      CALL io_write_attint0(gid, 'nkpt', kpts%nkptf)
+      CALL wl_hdf_root(fid, 3, kpts%nkptf, gid)
       CALL h5gclose_f(gid, err)
       CALL h5fclose_f(fid, err)
       WRITE (oUnit, '(a,i0,a)') 'wannierlib: wrote '//TRIM(filename)//' (', kpts%nkptf, &
@@ -153,40 +148,5 @@ CONTAINS
                        calledby="wannierlib_export_basis")
 #endif
    END SUBROUTINE wannierlib_export_basis
-
-#ifdef CPP_HDF
-   !> Dataspace, dataset, write, close -- the same four steps every time, collected so they
-   !> are not repeated at each call site.
-   SUBROUTINE wr_r4(gid, name, n, dat)
-      USE hdf5
-      USE m_hdf_tools
-      INTEGER(HID_T), INTENT(IN) :: gid
-      CHARACTER(LEN=*), INTENT(IN) :: name
-      INTEGER, INTENT(IN) :: n(:)
-      REAL, INTENT(IN) :: dat(:, :, :, :)
-      INTEGER(HID_T) :: sid, did
-      INTEGER :: e
-      CALL h5screate_simple_f(4, INT(n(:4), HSIZE_T), sid, e)
-      CALL h5dcreate_f(gid, name, H5T_NATIVE_DOUBLE, sid, did, e)
-      CALL h5sclose_f(sid, e)
-      CALL io_write_real4(did, (/1, 1, 1, 1/), n(:4), name, dat)
-      CALL h5dclose_f(did, e)
-   END SUBROUTINE wr_r4
-
-   SUBROUTINE wr_i3(gid, name, n, dat)
-      USE hdf5
-      USE m_hdf_tools
-      INTEGER(HID_T), INTENT(IN) :: gid
-      CHARACTER(LEN=*), INTENT(IN) :: name
-      INTEGER, INTENT(IN) :: n(:), dat(:, :, :)
-      INTEGER(HID_T) :: sid, did
-      INTEGER :: e
-      CALL h5screate_simple_f(3, INT(n(:3), HSIZE_T), sid, e)
-      CALL h5dcreate_f(gid, name, H5T_NATIVE_INTEGER, sid, did, e)
-      CALL h5sclose_f(sid, e)
-      CALL io_write_integer3(did, (/1, 1, 1/), n(:3), name, dat)
-      CALL h5dclose_f(did, e)
-   END SUBROUTINE wr_i3
-#endif
 
 END MODULE m_wannierlib_export_basis

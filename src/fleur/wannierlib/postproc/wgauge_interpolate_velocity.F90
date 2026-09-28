@@ -8,74 +8,62 @@
 !>
 !>  Pipeline:
 !>    H_W(k)      : same Wannier-gauge Hamiltonian as the band/operator drivers
-!>    v_W,alpha(k') = FT[ i R_cart(alpha) H_W ]     (m_melem_ft: velocity variant)
+!>    v_W,alpha(k') = FT[ i R_cart(alpha) H_W ]     (m_wgauge_ft: velocity variant)
 !>    H(k')       = FT[ H_W ] -> diag -> E_n(k'), C(k')
 !>    <v_alpha>_n = [ C^dagger v_W,alpha(k') C ]_nn   (diagonal band velocity, exact)
 !>
 !>  The diagonal <n|v|n> = dE_n/dk needs no gauge (Berry-connection) correction, so
 !>  it is exact here. Output bands_wann_velocity.dat: kdist, [ E_n(eV), vx, vy, vz ]
 !>  per band, with v in eV*bohr (dE/dk). Master rank only.
-MODULE m_melem_interpolate_velocity
+MODULE m_wgauge_interpolate_velocity
   USE m_juDFT
+  USE m_wgauge_bands_io, ONLY: wgauge_bands_open, wgauge_bands_row
   USE m_constants, ONLY : oUnit, hartree_to_ev_const
   USE m_types_cell
-  USE m_types_kpts
-  USE m_types_melem_manifold, ONLY: t_melem_manifold
-  USE m_melem_hamk, ONLY : melem_build_hamk
-  USE m_melem_ft, ONLY : melem_ft_to_real, melem_ft_rtok_velocity, melem_ft_rtok
-  USE m_melem_interp_util, ONLY : melem_kpath, melem_zheev_workspace
+  USE m_wgauge_hamk, ONLY : t_wgauge_hgauge
+  USE m_wgauge_ft, ONLY : wgauge_ft_rtok_velocity, wgauge_ft_rtok
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: melem_interpolate_velocity
+  PUBLIC :: wgauge_interpolate_velocity
 CONTAINS
 
-  SUBROUTINE melem_interpolate_velocity(this, cell, kpts, eig, u_matrix, u_opt, aw_r, irvec, ndegen, nrpts, kfrac, out1, out2, irank)
-    TYPE(t_melem_manifold), INTENT(IN) :: this
+  SUBROUTINE wgauge_interpolate_velocity(cell, ham_r, h_irvec, h_ndegen, h_nrpts, &
+                                        aw_r, irvec, ndegen, nrpts, kfrac, hg, out1, out2, irank)
     TYPE(t_cell), INTENT(IN) :: cell
-    TYPE(t_kpts), INTENT(IN) :: kpts
-    REAL,    INTENT(IN) :: eig(:, :)              ! (num_bands, nk)
-    COMPLEX, INTENT(IN) :: u_matrix(:, :, :)      ! (num_wann, num_wann, nk)  MLWF gauge
-    COMPLEX, INTENT(IN) :: u_opt(:, :, :)         ! (num_bands, num_wann, nk) disentangled
+    !> H(R) and its Wigner-Seitz mesh, transformed once by the caller: the derivative is
+    !> taken off the same real-space Hamiltonian the bands were interpolated from, so the
+    !> velocity and the energies it is written next to cannot drift apart.
+    COMPLEX, ALLOCATABLE, INTENT(IN) :: ham_r(:, :, :)     ! (num_wann,num_wann,h_nrpts)
+    INTEGER, ALLOCATABLE, INTENT(IN) :: h_irvec(:, :), h_ndegen(:)
+    INTEGER, INTENT(IN) :: h_nrpts
     COMPLEX, INTENT(IN) :: aw_r(:, :, :, :)       ! (num_wann,num_wann,nrpts,3) Berry connection A^(W)_a(R), reduced
     INTEGER, INTENT(IN) :: irvec(:, :), ndegen(:), nrpts   ! Wigner-Seitz R-mesh from the reduce (rank 0 only used)
     !> The domain's k-set and the names its files take, both decided by the caller: the
     !> k-points come from a named kPointList and the names from the exposure table plus the
     !> domain suffix. Unallocated off rank 0, which never reaches them.
     REAL, ALLOCATABLE, INTENT(IN) :: kfrac(:, :)          !> (3, np) fractional mesh
+    TYPE(t_wgauge_hgauge), INTENT(IN) :: hg   !> the domain's bands, already diagonalized
     CHARACTER(LEN=*), INTENT(IN) :: out1
     CHARACTER(LEN=*), INTENT(IN) :: out2
     INTEGER, INTENT(IN) :: irank
 
-    INTEGER :: num_wann, m, n, ip, np, iu, iuc, info, lwork, a
+    INTEGER :: num_wann, m, n, ip, np, iu, iuc, a
     INTEGER :: ax(3), ay(3)
     LOGICAL :: l_berry
     REAL    :: de
-    REAL,    ALLOCATABLE :: kdist(:), evals(:), rwork(:), vexp(:), omega(:, :)
-    COMPLEX, ALLOCATABLE :: ham_k(:, :, :), H_interp(:, :, :), v_interp(:, :, :, :), A_interp(:, :, :, :)
-    COMPLEX, ALLOCATABLE :: hk(:, :), work(:), cvec(:, :), vc(:, :, :), Hbar(:, :, :), Abar(:, :, :), vfull(:, :, :)
-    COMPLEX, ALLOCATABLE :: ham_r(:, :, :)
-    INTEGER, ALLOCATABLE :: h_irvec(:, :), h_ndegen(:)
-    INTEGER :: h_nrpts
+    REAL,    ALLOCATABLE :: vrow(:, :), omega(:, :)
+    COMPLEX, ALLOCATABLE :: v_interp(:, :, :, :), A_interp(:, :, :, :)
+    COMPLEX, ALLOCATABLE :: cvec(:, :), vc(:, :, :), Hbar(:, :, :), Abar(:, :, :), vfull(:, :, :)
     COMPLEX :: acc
 
     IF (irank /= 0) RETURN
-    num_wann  = this%num_wann
-    CALL timestart('melem_interpolate_velocity')
+    num_wann = SIZE(hg%evals, 1)
+    CALL timestart('wgauge_interpolate_velocity')
 
     np = SIZE(kfrac, 2)   ! the caller resolved the domain; there is nothing to skip
 
-    CALL melem_kpath(cell, kfrac, kdist)   ! abscissa of the output, from the mesh just read
-
-    ! ---- H_W(k) via eigval2 (same construction as the validated band driver) ----
-    CALL melem_build_hamk(this, eig, u_matrix, u_opt, ham_k)
-
-    ! ---- interpolate H (for eigenvectors) and v = dH/dk (velocity variant of the core) ----
-    !> One transform of H_W to real space, then both the interpolant and its derivative
-    !> off the same H(R).
-    CALL melem_ft_to_real(cell, ham_k, kpts, ham_r, h_irvec, h_ndegen, h_nrpts)
-    CALL melem_ft_rtok(ham_r, h_irvec, h_ndegen, h_nrpts, kfrac, H_interp)
-    CALL melem_ft_rtok_velocity(cell, ham_r, h_irvec, h_ndegen, h_nrpts, kfrac, v_interp)
-    DEALLOCATE(ham_r, h_irvec, h_ndegen)
+    ! ---- v = dH/dk off the H(R) the caller already transformed ----
+    CALL wgauge_ft_rtok_velocity(cell, ham_r, h_irvec, h_ndegen, h_nrpts, kfrac, v_interp)
 
     ! ---- interband part: R -> k' of the reduced Wannier Berry connection A^(W)_a(R) -> A^(W)_a(k') ----
     l_berry = (nrpts > 0 .AND. SIZE(aw_r, 1) == num_wann .AND. SIZE(aw_r, 4) == 3)
@@ -84,47 +72,34 @@ CONTAINS
       BLOCK
         COMPLEX, ALLOCATABLE :: a_one(:, :, :)
         DO a = 1, 3
-          CALL melem_ft_rtok(aw_r(:, :, :, a), irvec, ndegen, nrpts, kfrac, a_one)
+          CALL wgauge_ft_rtok(aw_r(:, :, :, a), irvec, ndegen, nrpts, kfrac, a_one)
           A_interp(:, :, a, :) = a_one
         END DO
       END BLOCK
     END IF
 
-    ! ---- diagonalize H(k'), project the diagonal band velocity, write ----
-    ALLOCATE(evals(num_wann), hk(num_wann, num_wann), cvec(num_wann, num_wann), &
-             vc(num_wann, num_wann, 3), vexp(3))
+    ! ---- project the diagonal band velocity on the bands of this domain, write ----
+    ALLOCATE(cvec(num_wann, num_wann), vc(num_wann, num_wann, 3), vrow(3, num_wann))
     IF (l_berry) ALLOCATE(Hbar(num_wann, num_wann, 3), Abar(num_wann, num_wann, 3), &
                           vfull(num_wann, num_wann, 3), omega(3, num_wann))
     ax = (/ 2, 3, 1 /)   ! Omega_gamma = eps_{gamma,alpha,beta}: (Ox<-yz, Oy<-zx, Oz<-xy)
     ay = (/ 3, 1, 2 /)
-    CALL melem_zheev_workspace('V', num_wann, work, rwork, lwork)
-
-    OPEN(newunit=iu, file=TRIM(out1)//'.dat', status='replace')
-    WRITE(iu,'(a)') '# kdist   [ E_n(eV)  vx vy vz (eV*bohr, dE/dk) ] for n=1..num_wann'
-    IF (l_berry) THEN
-      OPEN(newunit=iuc, file=TRIM(out2)//'.dat', status='replace')
-      WRITE(iuc,'(a)') '# kdist   [ E_n(eV)  Omega_x Omega_y Omega_z (bohr^2) ] for n=1..num_wann'
-    END IF
+    CALL wgauge_bands_open(iu, out1, &
+      '# kdist   [ E_n(eV)  vx vy vz (eV*bohr, dE/dk) ] for n=1..num_wann')
+    IF (l_berry) CALL wgauge_bands_open(iuc, out2, &
+      '# kdist   [ E_n(eV)  Omega_x Omega_y Omega_z (bohr^2) ] for n=1..num_wann')
     DO ip = 1, np
-      hk = H_interp(:, :, ip)
-      CALL zheev('V', 'U', num_wann, hk, num_wann, evals, work, lwork, rwork, info)
-      IF (info /= 0) CALL juDFT_error('zheev failed', calledby='melem_interpolate_velocity')
-      cvec = hk
+      cvec = hg%cvec(:, :, ip)
       DO a = 1, 3
         vc(:, :, a) = MATMUL(v_interp(:, :, a, ip), cvec)         ! v_interp_a . C
       END DO
-      ! ---- diagonal band velocity <n|v|n> = dE_n/dk (unchanged, byte-identical) ----
-      WRITE(iu,'(f12.6)', advance='no') kdist(ip)
+      ! ---- diagonal band velocity <n|v|n> = dE_n/dk ----
       DO m = 1, num_wann
         DO a = 1, 3
-          vexp(a) = hartree_to_ev_const * REAL(DOT_PRODUCT(cvec(:, m), vc(:, m, a)))
-        END DO
-        WRITE(iu,'(2x,f14.8)', advance='no') hartree_to_ev_const*evals(m)
-        DO a = 1, 3
-          WRITE(iu,'(2x,f12.6)', advance='no') vexp(a)
+          vrow(a, m) = hartree_to_ev_const * REAL(DOT_PRODUCT(cvec(:, m), vc(:, m, a)))
         END DO
       END DO
-      WRITE(iu,'(a)') ''
+      CALL wgauge_bands_row(iu, hg%kdist(ip), hartree_to_ev_const*hg%evals(:, ip), vrow, '2x,f12.6')
 
       ! ---- interband velocity matrix + Berry curvature (a.u.: v in Ha*bohr, Omega in bohr^2) ----
       IF (l_berry) THEN
@@ -138,7 +113,7 @@ CONTAINS
               IF (n == m) THEN
                 vfull(n, m, a) = Hbar(n, m, a)
               ELSE
-                vfull(n, m, a) = Hbar(n, m, a) + CMPLX(0.0, evals(n) - evals(m)) * Abar(n, m, a)
+                vfull(n, m, a) = Hbar(n, m, a) + CMPLX(0.0, hg%evals(n, ip) - hg%evals(m, ip)) * Abar(n, m, a)
               END IF
             END DO
           END DO
@@ -148,27 +123,20 @@ CONTAINS
             acc = CMPLX(0.0, 0.0)
             DO m = 1, num_wann
               IF (m == n) CYCLE
-              de = evals(n) - evals(m)
+              de = hg%evals(n, ip) - hg%evals(m, ip)
               IF (ABS(de) < 1.0e-8) CYCLE
               acc = acc + vfull(n, m, ax(a)) * vfull(m, n, ay(a)) / CMPLX(de*de, 0.0)
             END DO
             omega(a, n) = -2.0 * AIMAG(acc)
           END DO
         END DO
-        WRITE(iuc,'(f12.6)', advance='no') kdist(ip)
-        DO m = 1, num_wann
-          WRITE(iuc,'(2x,f14.8)', advance='no') hartree_to_ev_const*evals(m)
-          DO a = 1, 3
-            WRITE(iuc,'(2x,es14.6)', advance='no') omega(a, m)
-          END DO
-        END DO
-        WRITE(iuc,'(a)') ''
+        CALL wgauge_bands_row(iuc, hg%kdist(ip), hartree_to_ev_const*hg%evals(:, ip), omega, '2x,es14.6')
       END IF
     END DO
     CLOSE(iu)
     IF (l_berry) CLOSE(iuc)
     WRITE(oUnit,'(a,i0,a)') 'wannierlib velocity interpolation: wrote '//TRIM(out1)//'.dat (', np, ' k-points)'
-    CALL timestop('melem_interpolate_velocity')
-  END SUBROUTINE melem_interpolate_velocity
+    CALL timestop('wgauge_interpolate_velocity')
+  END SUBROUTINE wgauge_interpolate_velocity
 
-END MODULE m_melem_interpolate_velocity
+END MODULE m_wgauge_interpolate_velocity

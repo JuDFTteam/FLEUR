@@ -4,7 +4,7 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
-MODULE m_types_melem_manifold
+MODULE m_types_wgauge_manifold
    !> The band window plus what the wannierisation makes of it: how many Wannier functions
    !> come out of those bands, and the energy window that selected them.
    !>
@@ -19,21 +19,21 @@ MODULE m_types_melem_manifold
    IMPLICIT NONE
    PRIVATE
 
-   TYPE, EXTENDS(t_melem_window) :: t_melem_manifold
+   TYPE, EXTENDS(t_melem_window) :: t_wgauge_manifold
       INTEGER :: num_wann    = -1      !> Wannier functions coming out
       REAL    :: dis_win_min = 0.0     !> lower edge of the energy window
       REAL    :: dis_win_max = 0.0     !> upper edge
    CONTAINS
-      PROCEDURE :: init => melem_manifold_init
-   END TYPE t_melem_manifold
+      PROCEDURE :: init => wgauge_manifold_init
+   END TYPE t_wgauge_manifold
 
-   PUBLIC :: t_melem_manifold
+   PUBLIC :: t_wgauge_manifold
 
 CONTAINS
 
-   SUBROUTINE melem_manifold_init(this, num_bands, num_wann, dis_win_min, dis_win_max, &
+   SUBROUTINE wgauge_manifold_init(this, num_bands, num_wann, dis_win_min, dis_win_max, &
                                   min_band, max_band)
-      CLASS(t_melem_manifold), INTENT(OUT) :: this
+      CLASS(t_wgauge_manifold), INTENT(OUT) :: this
       INTEGER,                 INTENT(IN)  :: num_bands, num_wann
       REAL,                    INTENT(IN)  :: dis_win_min, dis_win_max
       INTEGER,                 INTENT(IN)  :: min_band, max_band
@@ -47,11 +47,11 @@ CONTAINS
       !> A window given the wrong way round selects no band at all, and the interpolation
       !> would return zeros rather than fail.
       IF (num_wann < 1 .OR. num_bands < num_wann) &
-         CALL judft_error("t_melem_manifold: there must be at least one Wannier function and &
-                          &no more of them than bands", calledby="melem_manifold_init")
+         CALL judft_error("t_wgauge_manifold: there must be at least one Wannier function and &
+                          &no more of them than bands", calledby="wgauge_manifold_init")
       IF (dis_win_max < dis_win_min) &
-         CALL judft_error("t_melem_manifold: the energy window is inverted", &
-                          calledby="melem_manifold_init")
-   END SUBROUTINE melem_manifold_init
+         CALL judft_error("t_wgauge_manifold: the energy window is inverted", &
+                          calledby="wgauge_manifold_init")
+   END SUBROUTINE wgauge_manifold_init
 
-END MODULE m_types_melem_manifold
+END MODULE m_types_wgauge_manifold

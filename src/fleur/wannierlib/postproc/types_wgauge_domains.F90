@@ -4,7 +4,7 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
-MODULE m_types_melem_domains
+MODULE m_types_wgauge_domains
    !> Where an interpolation is to be evaluated: one entry per <domain>, each a k-set and
    !> the suffix its output files carry.
    !>
@@ -24,23 +24,23 @@ MODULE m_types_melem_domains
    IMPLICIT NONE
    PRIVATE
 
-   TYPE t_melem_domains
+   TYPE t_wgauge_domains
       INTEGER :: n = 0                              !> number of domains (broadcast)
       TYPE(t_kpts),      ALLOCATABLE :: kset(:)     !> (n) rank 0 only
       CHARACTER(LEN=64), ALLOCATABLE :: suffix(:)   !> (n) rank 0 only
    CONTAINS
-      PROCEDURE :: init => melem_domains_init
-   END TYPE t_melem_domains
+      PROCEDURE :: init => wgauge_domains_init
+   END TYPE t_wgauge_domains
 
-   PUBLIC :: t_melem_domains
+   PUBLIC :: t_wgauge_domains
 
 CONTAINS
 
    !> kset and suffix are the input type's arrays, which only rank 0 has. They are copied
    !> when present and left alone otherwise, so this runs on every rank without asking who
    !> it is: n alone decides how many times the domain loop turns.
-   SUBROUTINE melem_domains_init(this, n, kset, suffix)
-      CLASS(t_melem_domains), INTENT(OUT) :: this
+   SUBROUTINE wgauge_domains_init(this, n, kset, suffix)
+      CLASS(t_wgauge_domains), INTENT(OUT) :: this
       INTEGER,                INTENT(IN)  :: n
       TYPE(t_kpts),      ALLOCATABLE, INTENT(IN) :: kset(:)
       CHARACTER(LEN=64), ALLOCATABLE, INTENT(IN) :: suffix(:)
@@ -48,6 +48,6 @@ CONTAINS
       this%n = n
       IF (ALLOCATED(kset))   this%kset   = kset
       IF (ALLOCATED(suffix)) this%suffix = suffix
-   END SUBROUTINE melem_domains_init
+   END SUBROUTINE wgauge_domains_init
 
-END MODULE m_types_melem_domains
+END MODULE m_types_wgauge_domains
