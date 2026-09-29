@@ -134,27 +134,46 @@ CONTAINS
 #ifdef CPP_SCALAPACK
       TYPE(t_mpimat)::m, r
       character(len=1)  :: transA_i, transB_i
+      integer           :: nrow, ncol, ninner
 
       transA_i = "N"
       if (present(transA)) transA_i = transA
       transB_i = "N"
       if (present(transB)) transB_i = transB
 
+      if (transA_i == "N") then
+         nrow = mat1%global_size1
+         ninner = mat1%global_size2
+      else
+         nrow = mat1%global_size2
+         ninner = mat1%global_size1
+      endif
+
       IF (.NOT. PRESENT(res)) CALL judft_error("BUG: in mpicase the multiply requires the optional result argument")
       SELECT TYPE (mat2)
       TYPE IS (t_mpimat)
+         if (transB_i == "N") then
+            if (ninner /= mat2%global_size1) call judft_error("BUG in mpimat%multiply: dimensions don't agree for matmul")
+            ncol = mat2%global_size2
+         else
+            if (ninner /= mat2%global_size2) call judft_error("BUG in mpimat%multiply: dimensions don't agree for matmul")
+            ncol = mat2%global_size1
+         endif
          SELECT TYPE (res)
          TYPE is (t_mpimat)
+            if (res%global_size1 /= nrow .or. res%global_size2 /= ncol) &
+               call judft_error("BUG in mpimat%multiply: res must be of the correct size")
+            !mat2 and res may live on a different BLACS grid than mat1, so work on copies sharing mat1's grid
             CALL m%init(mat1, mat2%global_size1, mat2%global_size2)
             CALL m%copy(mat2, 1, 1)
             CALL r%init(mat1, res%global_size1, res%global_size2)
             IF (mat1%l_real) THEN
-               CALL pdgemm(transA_i, transB_i, mat1%global_size1, m%global_size2, mat1%global_size2, 1.0, &
+               CALL pdgemm(transA_i, transB_i, nrow, ncol, ninner, 1.0, &
                            mat1%data_r, 1, 1, mat1%blacsdata%blacs_desc, &
                            m%data_r, 1, 1, m%blacsdata%blacs_desc, 0.0, &
                            r%data_r, 1, 1, r%blacsdata%blacs_desc)
             ELSE
-               CALL pzgemm(transA_i, transB_i, mat1%global_size1, m%global_size2, mat1%global_size2, cmplx_1, &
+               CALL pzgemm(transA_i, transB_i, nrow, ncol, ninner, cmplx_1, &
                            mat1%data_c, 1, 1, mat1%blacsdata%blacs_desc, &
                            m%data_c, 1, 1, m%blacsdata%blacs_desc, cmplx_0, &
                            r%data_c, 1, 1, r%blacsdata%blacs_desc)
