@@ -1,11 +1,12 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2020 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_forcea21U
+   implicit none
 CONTAINS
-   SUBROUTINE force_a21_U(atoms,itype,isp,we,ne,usdus,v_mmp,abc,aveccof,bveccof,cveccof,a21)
+   SUBROUTINE force_a21_U(atoms,itype,isp,we,ne,rf,v_mmp,abc,aveccof,bveccof,cveccof,a21)
       !--------------------------------------------------------------------------
       ! This subroutine calculates the lda+U contribution to the HF forces,
       ! similar to the A21 term, according to eqn. (22) of F. Tran et al.
@@ -14,13 +15,13 @@ CONTAINS
 
       USE m_constants
       USE m_types_setup
-      USE m_types_usdus
+      USE m_types_radfun
       USE m_types_cdnval
       USE m_types_abc
 
       IMPLICIT NONE
 
-      TYPE(t_usdus),        INTENT(IN) :: usdus
+      TYPE(t_radfun),       INTENT(IN) :: rf
       TYPE(t_atoms),        INTENT(IN) :: atoms
       TYPE(t_abc), INTENT(IN) :: abc
 
@@ -57,7 +58,7 @@ CONTAINS
             DO mp = -l,l
                lmp = l* (l+1) + mp
                v_a = v_mmp(m,mp,i_u)
-               v_b = v_mmp(m,mp,i_u) * usdus%ddn(l,itype,isp)
+               v_b = v_mmp(m,mp,i_u) * rf%integral(2,2,l,isp,isp)
                DO iatom = atoms%firstAtom(itype), atoms%firstAtom(itype) + atoms%neq(itype) - 1
                   DO ie = 1,ne
                      DO i = 1,3
@@ -75,14 +76,14 @@ CONTAINS
 
           DO lo = 1,atoms%nlo(itype)
             IF (l == atoms%llo(lo,itype)) THEN
-               n_lo=2+count(atoms%llo(:lo,itype)==l)
+               n_lo=atoms%slot_of_lo(lo,itype)
                DO m = -l,l
                   lm = l* (l+1) + m
                   DO mp = -l,l
                      lmp = l* (l+1) + mp
                      v_a = v_mmp(m,mp,i_u)
-                     v_b = v_mmp(m,mp,i_u) * usdus%uulon(lo,itype,isp)
-                     v_c = v_mmp(m,mp,i_u) * usdus%dulon(lo,itype,isp)
+                     v_b = v_mmp(m,mp,i_u) * rf%integral(1,n_lo,l,isp,isp)
+                     v_c = v_mmp(m,mp,i_u) * rf%integral(2,n_lo,l,isp,isp)
                      DO iatom =  atoms%firstAtom(itype), atoms%firstAtom(itype) + atoms%neq(itype) - 1
                         DO ie = 1,ne
                            DO i = 1,3

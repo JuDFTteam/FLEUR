@@ -26,7 +26,7 @@ MODULE m_vham
    implicit none
     CONTAINS
 
-    SUBROUTINE v_ham(input,usdus,atoms,kpts,cell,lapw,sym,noco,fmpi,nococonv,fjgj,den,jspin,kptindx,hmat)
+    SUBROUTINE v_ham(input,rf,atoms,kpts,cell,lapw,sym,noco,fmpi,nococonv,fjgj,den,jspin,kptindx,hmat)
 
         USE m_types
         USE m_constants
@@ -40,7 +40,7 @@ MODULE m_vham
         IMPLICIT NONE
 
         TYPE(t_input),       INTENT(IN)     :: input
-        TYPE(t_usdus),       INTENT(IN)     :: usdus
+        TYPE(t_radfun),      INTENT(IN)     :: rf(:)
         TYPE(t_atoms),       INTENT(IN)     :: atoms
         TYPE(t_kpts),        INTENT(IN)     :: kpts
         TYPE(t_cell),        INTENT(IN)     :: cell
@@ -76,8 +76,8 @@ MODULE m_vham
                 natom1=atoms%lda_v(i_v)%atomIndex
                 latom1=atoms%lda_v(i_v)%thisAtomL
                 ll1atom1=latom1*(latom1+1)
-                norm1_W = usdus%ddn(latom1,atoms%itype(natom1),jspin)**0.5
-                CALL fjgj%calculate(input,atoms,cell,lapw,noco,usdus,atoms%itype(natom1),jspin)
+                norm1_W = rf(atoms%itype(natom1))%integral(2,2,latom1,jspin,jspin)**0.5
+                CALL fjgj%calculate(input,atoms,cell,lapw,noco,rf(atoms%itype(natom1)),atoms%itype(natom1),jspin)
                 ! Own the abG mapping in the caller's scope -- see types_abc.F90 for why
                 ! hsmt_ab must not do the `enter data` on its own dummy argument.
                 IF (.NOT.l_use_abcoeff_store) THEN
@@ -98,9 +98,9 @@ MODULE m_vham
                     natom2=atoms%lda_v(i_v)%otherAtomIndices(atom2)
                     latom2=atoms%lda_v(i_v)%otherAtomL
                     ll1atom2=latom2*(latom2+1)
-                    norm2_W = usdus%ddn(latom2,atoms%itype(natom2),jspin)**0.5
+                    norm2_W = rf(atoms%itype(natom2))%integral(2,2,latom2,jspin,jspin)**0.5
                     power_fac=(cmplx(0, -1)**latom1) *(cmplx(0, 1)**latom2) 
-                    CALL fjgj%calculate(input,atoms,cell,lapw,noco,usdus,atoms%itype(natom2),jspin)
+                    CALL fjgj%calculate(input,atoms,cell,lapw,noco,rf(atoms%itype(natom2)),atoms%itype(natom2),jspin)
                     ! Own the abG mapping in the caller's scope -- see types_abc.F90 for why
                     ! hsmt_ab must not do the `enter data` on its own dummy argument.
                     IF (.NOT.l_use_abcoeff_store) THEN

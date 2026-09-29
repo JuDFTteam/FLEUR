@@ -31,7 +31,6 @@ MODULE m_types_matelements_orbital
    USE m_types_abc
    USE m_types_radfun
    USE m_types_spinor_layout, ONLY: radial_slot
-   USE m_types_usdus
    USE m_types_atoms
    USE m_constants, ONLY: ImagUnit
    USE m_judft
@@ -85,12 +84,11 @@ CONTAINS
       this%iat   = iat
    END SUBROUTINE init
 
-   SUBROUTINE calc_matrix_elements(this, zmat, abc, radfun, usdus)
+   SUBROUTINE calc_matrix_elements(this, zmat, abc, radfun)
       CLASS(t_matelements_orbital), INTENT(INOUT) :: this
       TYPE(t_mat),    INTENT(IN) :: zmat(:)   !> unused, L works on the abc coefficients only
       TYPE(t_abc),    INTENT(IN) :: abc(:, :) !> (2 spin, ntype) local-frame coefficients
       TYPE(t_radfun), INTENT(IN) :: radfun(:) !> (ntype)
-      TYPE(t_usdus),  INTENT(IN) :: usdus     !> unused, the radial integrals are in radfun
 
       INTEGER :: nb, i, j, l, ll1, mm, lm, n_r, n_r2, s, s_lo, s_hi, slot(2)
       REAL    :: lplus, lminus, w
@@ -153,8 +151,7 @@ CONTAINS
             !> combination and not after it: L+ and L- are not Hermitian and conjugation
             !> exchanges them, so conjugating L_x, L_y, L_z instead leaves L_y with the
             !> wrong sign -- which no localisation measure can see, a global sign being
-            !> harmless to the decay. On fcc Pt, L(R) keeps 2 % of its weight at R = 0
-            !> without the conjugation and 99 % with it.
+            !> harmless to the decay.
             this%comp(i, j, 1) = 0.5 * CONJG(cp + cm)               ! L_x = (L+ + L-)/2
             this%comp(i, j, 2) = -0.5 * ImagUnit * CONJG(cp - cm)   ! L_y = (L+ - L-)/(2i)
             this%comp(i, j, 3) = CONJG(cz)                          ! L_z

@@ -153,6 +153,7 @@ CONTAINS
   PROCEDURE :: read_xml => read_xml_atoms
   PROCEDURE :: mpi_bc=>mpi_bc_atoms
   procedure :: num_radial_functions_per_l
+  procedure :: slot_of_lo
 END TYPE t_atoms
 
 PUBLIC :: t_atoms,t_utype, readAtomAttribute
@@ -170,6 +171,13 @@ pure  function num_radial_functions_per_l(this,itype)result(nrfpl)
      nrfpl(this%llo(lo,itype))=nrfpl(this%llo(lo,itype))+1
   end do
 end function num_radial_functions_per_l
+
+pure integer function slot_of_lo(this,lo,itype)
+  !! radial-function slot of LO lo within its l channel: 1=u, 2=udot, 3.. = LOs of that l in llo order
+  class(t_atoms), intent(in):: this
+  integer, intent(in):: lo,itype
+  slot_of_lo = 2 + count(this%llo(1:lo,itype)==this%llo(lo,itype))
+end function slot_of_lo
 SUBROUTINE mpi_bc_atoms(this,mpi_comm,irank)
  USE m_mpi_bc_tool
  CLASS(t_atoms),INTENT(INOUT)::this

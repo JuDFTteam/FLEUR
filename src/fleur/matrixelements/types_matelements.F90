@@ -8,7 +8,6 @@ MODULE m_types_matelements
     USE m_types_mpimat
     USE m_types_abc
     USE m_types_radfun
-    USE m_types_usdus
     USE m_judft
     IMPLICIT NONE
     PRIVATE
@@ -36,8 +35,8 @@ MODULE m_types_matelements
     END TYPE t_matelements
 
     ABSTRACT INTERFACE
-        SUBROUTINE calc_matrix_elements_iface(this, zmat, abc, radfun, usdus)
-            IMPORT :: t_matelements, t_mat, t_abc, t_radfun, t_usdus
+        SUBROUTINE calc_matrix_elements_iface(this, zmat, abc, radfun)
+            IMPORT :: t_matelements, t_mat, t_abc, t_radfun
             CLASS(t_matelements), INTENT(INOUT) :: this
             !> The state at this k-point in as few matrices as it takes: ONE when it is a
             !> whole spinor -- natively so, or stacked by the producer -- and TWO when the
@@ -46,7 +45,6 @@ MODULE m_types_matelements
             TYPE(t_mat),    INTENT(IN) :: zmat(:)
             TYPE(t_abc),    INTENT(IN) :: abc(:,:)  !> (2,ntype) matching coefficients
             TYPE(t_radfun), INTENT(IN) :: radfun(:) !> (ntype) radial functions and their MT integrals
-            TYPE(t_usdus),  INTENT(IN) :: usdus     !> values/derivatives at the MT boundary, all types and spins
         END SUBROUTINE calc_matrix_elements_iface
     END INTERFACE
 

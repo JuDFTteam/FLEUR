@@ -67,6 +67,8 @@
           <operator name="orbital"/>
           <operator name="position"/>
           <operator name="bmn"/>
+          <operator name="cmn"/>
+          <operator name="fmn"/>
         </operators_r>
         <interpolation>
           <domain listName="path-2" suffix="_plane"/>

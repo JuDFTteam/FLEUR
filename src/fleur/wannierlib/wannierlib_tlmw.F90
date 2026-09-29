@@ -45,7 +45,7 @@ CONTAINS
     COMPLEX :: tlm(0:3, -3:3, 1:7)
     COMPLEX :: ic
 
-    IF (nwfs > SIZE(wannierlib%proj_l)) THEN
+    IF (nwfs > SIZE(wannierlib%proj)) THEN
       CALL juDFT_error('wannierlib_tlmw: nwfs exceeds configured projections', calledby='wannierlib_tlmw')
     END IF
 
@@ -88,10 +88,10 @@ CONTAINS
     tlmwf = CMPLX(0.0, 0.0)
 
     DO nwf = 1, nwfs
-      IF (l_spinors .AND. ((3 - 2 * jspin) /= wannierlib%proj_spin(nwf))) CYCLE
+      IF (l_spinors .AND. ((3 - 2 * jspin) /= wannierlib%proj(nwf)%spin)) CYCLE
 
-      lr = wannierlib%proj_l(nwf)
-      mr = wannierlib%proj_m(nwf)
+      lr = wannierlib%proj(nwf)%l
+      mr = wannierlib%proj(nwf)%m
 
       IF (lr >= 0) THEN
         tlmwf(lr, :, nwf) = tlm(lr, :, mr)

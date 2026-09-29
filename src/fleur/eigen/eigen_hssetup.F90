@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -17,7 +17,7 @@ MODULE m_eigen_hssetup
      !! 4. The vacuum part is added (in hsvac())
      !! 5. The matrices are copied to the final matrix, in the fi%noco-case the full matrix is constructed from the 4-parts.
 SUBROUTINE eigen_hssetup(isp, fmpi, fi, results, den, vx, xcpot, enpara, nococonv, stars, sphhar, hybdat, &
-   ud, td, v, lapw, nk, smat_final, hmat_final)
+   td, v, lapw, nk, smat_final, hmat_final)
 USE m_types
 USE m_types_mpimat
 USE m_hs_int
@@ -39,7 +39,6 @@ TYPE(t_enpara), INTENT(IN)    :: enpara
 TYPE(t_nococonv), INTENT(IN)  :: nococonv
 TYPE(t_sphhar), INTENT(IN)    :: sphhar
 type(t_hybdat), intent(inout):: hybdat
-TYPE(t_usdus), INTENT(INout)  :: ud
 TYPE(t_tlmplm), INTENT(IN)    :: td
 TYPE(t_lapw), INTENT(IN)      :: lapw
 TYPE(t_potden), INTENT(IN)    :: den, v, vx
@@ -88,7 +87,7 @@ DO i = 1, nspins; DO j = 1, nspins
 !$acc enter data copyin(hmat(i,j),smat(i,j))
 !$acc enter data copyin(hmat(i,j)%data_r,smat(i,j)%data_r,hmat(i,j)%data_c,smat(i,j)%data_c)
 END DO; END DO
-CALL hsmt(fi%atoms, fi%sym, enpara, isp, fi%input, fmpi, fi%noco, nococonv, fi%cell, lapw, ud, td, smat, hmat)
+CALL hsmt(fi%atoms, fi%sym, enpara, isp, fi%input, fmpi, fi%noco, nococonv, fi%cell, lapw, td, smat, hmat)
 DO i = 1, nspins; DO j = 1, nspins; if (hmat(1, 1)%l_real) THEN
 !$acc exit data copyout(hmat(i,j)%data_r,smat(i,j)%data_r) delete(hmat(i,j)%data_c,smat(i,j)%data_c)
 !$acc exit data delete(hmat(i,j),smat(i,j))
@@ -100,7 +99,7 @@ CALL timestop("MT part")
 
    IF (fi%atoms%n_v.GT.0) THEN
       DO i = 1, nspins
-         CALL v_ham(fi%input,ud,fi%atoms,fi%kpts,fi%cell,lapw,fi%sym,fi%noco,fmpi,nococonv,fjgj,den,isp,nk,hmat(i,i))
+         CALL v_ham(fi%input,td%radfun,fi%atoms,fi%kpts,fi%cell,lapw,fi%sym,fi%noco,fmpi,nococonv,fjgj,den,isp,nk,hmat(i,i))
       END DO
    END IF
 
@@ -142,7 +141,7 @@ CALL timestop("Matrix redistribution")
 END SUBROUTINE eigen_hssetup
 #else
    SUBROUTINE eigen_hssetup(isp, fmpi, fi,  results, den, vx, xcpot, enpara, nococonv, stars, sphhar, hybdat, &
-      ud, td, v, lapw, nk, smat_final, hmat_final)
+      td, v, lapw, nk, smat_final, hmat_final)
 USE m_types
 USE m_types_mpimat
 USE m_hs_int
@@ -164,7 +163,6 @@ TYPE(t_enpara), INTENT(IN)    :: enpara
 TYPE(t_nococonv), INTENT(IN)  :: nococonv
 TYPE(t_sphhar), INTENT(IN)    :: sphhar
 type(t_hybdat), intent(inout):: hybdat
-TYPE(t_usdus), INTENT(INout)  :: ud
 TYPE(t_tlmplm), INTENT(IN)    :: td
 TYPE(t_lapw), INTENT(IN)      :: lapw
 TYPE(t_potden), INTENT(IN)    :: den, v, vx
@@ -210,7 +208,7 @@ IF (fmpi%n_size == 1) THEN
    !$acc enter data copyin(hmat(i,j),smat(i,j))
    !$acc enter data copyin(hmat(i,j)%data_r,smat(i,j)%data_r,hmat(i,j)%data_c,smat(i,j)%data_c)
    END DO; END DO
-   CALL hsmt(fi%atoms, fi%sym, enpara, isp, fi%input, fmpi, fi%noco, nococonv, fi%cell, lapw, ud, td, smat, hmat)
+   CALL hsmt(fi%atoms, fi%sym, enpara, isp, fi%input, fmpi, fi%noco, nococonv, fi%cell, lapw, td, smat, hmat)
    DO i = 1, nspins; DO j = 1, nspins; if (hmat(1, 1)%l_real) THEN
    !$acc exit data copyout(hmat(i,j)%data_r,smat(i,j)%data_r) delete(hmat(i,j)%data_c,smat(i,j)%data_c)
    !$acc exit data delete(hmat(i,j),smat(i,j))
@@ -222,7 +220,7 @@ IF (fmpi%n_size == 1) THEN
 
    IF (fi%atoms%n_v.GT.0) THEN
       DO i = 1, nspins
-         CALL v_ham(fi%input,ud,fi%atoms,fi%kpts,fi%cell,lapw,fi%sym,fi%noco,fmpi,nococonv,fjgj,den,isp,nk,hmat(i,i))
+         CALL v_ham(fi%input,td%radfun,fi%atoms,fi%kpts,fi%cell,lapw,fi%sym,fi%noco,fmpi,nococonv,fjgj,den,isp,nk,hmat(i,i))
       END DO
    END IF
 
@@ -283,7 +281,7 @@ ELSE
    !$acc enter data copyin(hmat_mpi(i,j),smat_mpi(i,j))
    !$acc enter data copyin(hmat_mpi(i,j)%data_r,smat_mpi(i,j)%data_r,hmat_mpi(i,j)%data_c,smat_mpi(i,j)%data_c)
    END DO; END DO
-   CALL hsmt(fi%atoms, fi%sym, enpara, isp, fi%input, fmpi, fi%noco, nococonv, fi%cell, lapw, ud, td, smat_mpi, hmat_mpi)
+   CALL hsmt(fi%atoms, fi%sym, enpara, isp, fi%input, fmpi, fi%noco, nococonv, fi%cell, lapw, td, smat_mpi, hmat_mpi)
    DO i = 1, nspins; DO j = 1, nspins; if (hmat_mpi(1, 1)%l_real) THEN
    !$acc exit data copyout(hmat_mpi(i,j)%data_r,smat_mpi(i,j)%data_r) delete(hmat_mpi(i,j)%data_c,smat_mpi(i,j)%data_c)
    !$acc exit data delete(hmat_mpi(i,j),smat_mpi(i,j))

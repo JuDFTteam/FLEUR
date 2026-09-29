@@ -121,7 +121,6 @@ the whole mesh enters the window, which is what excludes the semicore.
 | `disFrozProj` | no | `F` | freeze by projectability instead of by energy |
 | `disProjMin` | no | `0.01` | |
 | `disProjMax` | no | `0.95` | |
-| `spinBalanced` | no | `F` | |
 
 All energies are in **Hartree**, like the rest of `inp.xml`.
 
@@ -422,6 +421,5 @@ Energies in Hartree; `convTol` as a plain decimal, never `1.0e-5`.
 | spinors with SOC | `WannPtSOC` |
 | band interpolation | `WannFeBccInterp` |
 | the operator exports | `WannPtSOCOps`, `WannFeAFMSOCOps` |
-| non-collinear, several sites | `WannMn3IrNoco` |
 
 Each directory holds a complete `inp.xml` with its `kpts.xml` and `sym.xml`.

@@ -34,7 +34,6 @@ SUBROUTINE dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,
 #endif
    
    !USE m_rhonmt
-   USE m_genMTBasis
    USE m_npy
 
    IMPLICIT NONE
@@ -82,14 +81,12 @@ SUBROUTINE dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,
    COMPLEX ::  f_b8_dummy(3, atoms%ntype)
    REAL,ALLOCATABLE :: we(:),eig(:),we1(:),eig1(:),we1m(:),eig1m(:)
    INTEGER,ALLOCATABLE :: ev_list(:)
-   REAL,    ALLOCATABLE :: f(:,:,:,:),g(:,:,:,:),flo(:,:,:,:) ! radial functions
 
    TYPE (t_lapw)              :: lapw, lapwq, lapwmq
    
    type(t_radfun)       :: radfun(atoms%ntype)
    TYPE (t_denmatrix),allocatable  :: denmatrix(:,:,:)
    TYPE (t_abc),allocatable        :: abc(:),abc1(:),abcpref(:),abc1m(:)
-   TYPE (t_usdus)             :: usdus
    TYPE (t_mat)               :: zMat, zMat1, zMatPref, zMat1m
    TYPE(t_kpts)               :: kpts_mod
 
@@ -112,12 +109,7 @@ SUBROUTINE dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,
       jsp_end   = jspin
    END IF
 
-   ALLOCATE (f(atoms%jmtd,2,0:atoms%lmaxd,input%jspins)) ! Deallocation before mpi_col_den
-   ALLOCATE (g(atoms%jmtd,2,0:atoms%lmaxd,input%jspins))
-   ALLOCATE (flo(atoms%jmtd,2,atoms%nlod,input%jspins))
-
    ! Initializations
-   CALL usdus%init(atoms,input%jspins)
    allocate (denmatrix(jsp_start:jsp_end, jsp_start:jsp_end, atoms%ntype))
    DO ispin = jsp_start, jsp_end
       DO jsp = jsp_start, jsp_end
@@ -133,11 +125,8 @@ SUBROUTINE dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,
    
       
    DO itype = 1, atoms%ntype
-      DO ispin = 1, input%jspins
-         CALL genMTBasis(atoms,enpara,vTot,fmpi,itype,ispin,usdus,f(:,:,0:,ispin),g(:,:,0:,ispin),flo(:,:,:,ispin))
-      END DO
+      call radfun(itype)%generate_radial_functions(atoms, input, enpara, fmpi, vtot, itype)
    END DO
-   DEALLOCATE (f,g,flo)
 
    skip_tt = dot_product(enpara%skiplo(:atoms%ntype,jspin),atoms%neq(:atoms%ntype))
    IF (noco%l_soc.OR.noco%l_noco) skip_tt = 2 * skip_tt
@@ -245,23 +234,22 @@ SUBROUTINE dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,
       IF (noccbd.LE.0) CYCLE ! Note: This jump has to be after the MPI_BARRIER is called
 
       DO itype = 1, atoms%ntype
-         call radfun(itype)%generate_radial_functions(atoms, input, enpara, fmpi, vtot, itype)
          DO ispin = jsp_start, jsp_end
             call abc(ispin)%init(input, atoms, noccbd, itype)
-            call abc(ispin)%calc_abc(input, atoms, sym, cell, lapw, noccbd, usdus, noco, nococonv, ispin, itype, zMat)
+            call abc(ispin)%calc_abc(input, atoms, sym, cell, lapw, noccbd, radfun(itype), noco, nococonv, ispin, itype, zMat)
             call abc1(ispin)%init(input, atoms, noccbd, itype)
-            call abc1(ispin)%calc_abc(input, atoms, sym, cell, lapwq, noccbd, usdus, noco, nococonv, ispin, itype, zMat1)
+            call abc1(ispin)%calc_abc(input, atoms, sym, cell, lapwq, noccbd, radfun(itype), noco, nococonv, ispin, itype, zMat1)
             DO ispinpr = ispin,ispin !TODO no real noco here
                                        !In future this could perhaps be generalized according to code in cdnval. The two following if statements have to be understood in this context then.
                
                IF (sternheimerJob%l_IBScorrection.and.idtype==itype) THEN
                   call abcpref(ispin)%init(input, atoms, noccbd, itype)
-                  call abcpref(ispin)%calc_abc(input, atoms, sym, cell, lapw, noccbd, usdus, noco, nococonv, ispin, itype, zMatPref)
+                  call abcpref(ispin)%calc_abc(input, atoms, sym, cell, lapw, noccbd, radfun(itype), noco, nococonv, ispin, itype, zMatPref)
                   abc1(ispin)%cof=abc1(ispin)%cof+abcpref(ispin)%cof
                END IF
                IF (l_minusq) THEN
                   call abc1m(ispin)%init(input, atoms, noccbd, itype)
-                  call abc1m(ispin)%calc_abc(input, atoms, sym, cell, lapwmq, noccbd, usdus, noco, nococonv, ispin, itype, zMat1m)
+                  call abc1m(ispin)%calc_abc(input, atoms, sym, cell, lapwmq, noccbd, radfun(itype), noco, nococonv, ispin, itype, zMat1m)
                   if (sternheimerJob%l_IBScorrection.and.idtype==itype) then
                      abc1m(ispin)%cof=abc1m(ispin)%cof+abcpref(ispin)%cof
                   end if

@@ -22,6 +22,7 @@ Testset: Basic
 | +   | Bulk Cu one iteration                        | basic/CuBulk             | fast,bulk             |                    |                 | 2   |
 | +   | Bulk Cu one iteration,DOS                    | basic/CuDOS              | fast,bulk,dos         |                    |                 | 2   |
 | +   | Bulk Cu one iteration,DOS,Orbital decomp.    | basic/CuOrb              | fast,bulk,dos,orbcomp |                    |                 | 2   |
+| +   | Bulk Cu spin-polarized, joint DOS            | basic/CuJointDOS         | fast,bulk,dos         |                    |                 | 2   |
 |     | Bulk Co, DOS,MCD                             | basic/CoMCD              | bulk,dos,mcd          | MCD disabled       |                 | 2   |
 | +   | Bulk Co, bandstructure, unfolding            | basic/CoUnfold           | band,bulk             |                    |                 | 2   |
 | +   | Bulk Fe, Kerker preconditioner               | basic/Fe_Kerker          | bulk                  |                    |                 | 2   |
@@ -71,7 +72,7 @@ Testset: DFPT
 | +   | C bulk fcc              | dfpt/CBulk        | libxc | partly ready |         |   1 |
 | +   | C bulk fcc BEC             | dfpt/CBulk-BEC        | libxc | partly ready |         |   1 |
 | +   | Graphene Film           | dfpt/GrapheneFilm | libxc |              |         |   1 |
-| +   | V bulk bcc, mpi         | dfpt/VBulkMPI     | libxc |              |         |   2 |
+|     | V bulk bcc, mpi         | dfpt/VBulkMPI     | libxc |              |         |   2 |
 
 
 Testset: Noco
@@ -108,6 +109,7 @@ Testset: Noco
 | +   | relaxation feature of FFN in the MT           | noco/RelaxMT            | bulk,hdf                     |                   |         | 2   |
 | +   | FFN noco, spin off-diagonal LDA+U             | noco/FFNUCross          | bulk,ldau,soc,hdf            |                   |         | 2   |
 | +   | FFN noco, transverse constraint               | noco/FFNConstraint      | bulk,hdf                     |                   |         | 2   |
+| +   | Fe bcc noco l_mperp, DOS, jDOS and joint DOS   | noco/FeBccNocoDOS       | bulk,dos,hdf                 |                   |         | 2   |
 
 Testset: Experimental
 ----------
@@ -170,7 +172,6 @@ Testset: Wannier
 | +   | Pt SOC, wannierlib total spread              | wannier/WannPtSOC | wannierlib,bulk,soc |         |         | 1   |
 | +   | fcc Fe FM noco, wannierlib total spread      | wannier/WannFeFM | wannierlib,bulk  |         |         | 1   |
 | +   | fcc Fe FM noco, moment along y (alpha!=0)    | wannier/WannFeFMy | wannierlib,bulk  |         |         | 1   |
-| +   | bcc Fe noco, moment along y, spin-balanced   | wannier/WannFeBccYBal | wannierlib,bulk  |         |         | 1   |
 | +   | fcc Fe AFM noco, wannierlib total spread     | wannier/WannFeAFM | wannierlib,bulk  |         |         | 1   |
 | +   | fcc Fe AFM noco+SOC, wannierlib total spread | wannier/WannFeAFMSOC | wannierlib,bulk,soc |         |         | 1   |
 | +   | Pt SOC, wannierlib real-space operators O(R) | wannier/WannPtSOCOps | wannierlib,bulk,soc |         |         | 1   |

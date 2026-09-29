@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -198,7 +198,6 @@ subroutine write_dos(eigdos,hdf_id,l_dfpt)
 
 #ifdef CPP_HDF
     DO n=1,eigdos%get_num_weights()
-      print *, "writedos:",n,eigdos%get_num_weights()
       call writedosData(hdf_ID,eigdos%name_of_dos,eigdos%get_dos_grid(),eigdos%get_weight_name(n),conversion*prefactor*eigdos%dos(:,:,n))
     enddo
     IF(eigdos%get_num_weights().GT.40) THEN
@@ -338,7 +337,6 @@ subroutine write_dos(eigdos,hdf_id,l_dfpt)
     ENDDO
 
     DO n=1,eigdos%get_num_weights()
-      print *,eigdos%name_of_dos,n,eigdos%get_num_weights()
       SELECT CASE(input%bz_integration)
 
       CASE(BZINT_METHOD_HIST, BZINT_METHOD_GAUSS)

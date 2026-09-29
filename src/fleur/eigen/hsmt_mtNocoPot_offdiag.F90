@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -7,7 +7,7 @@ MODULE m_hsmt_mtNocoPot_offdiag
   USE m_juDFT
   IMPLICIT NONE
 CONTAINS
-  SUBROUTINE hsmt_mtNocoPot_offdiag(n,input,fmpi,sym,atoms,noco,nococonv,cell,lapw,ud,td,fjgj,igSpinPr,igSpin,hmat_tmp,hmat)
+  SUBROUTINE hsmt_mtNocoPot_offdiag(n,input,fmpi,sym,atoms,noco,nococonv,cell,lapw,td,fjgj,igSpinPr,igSpin,hmat_tmp,hmat)
     !!Calculate the contribution from the local-spin-offdiagonal potential
     !!The following idea is used:
     !!Calculate the matrix by using non-spherical algorithm. This is done only once, since
@@ -30,7 +30,6 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)       :: cell
     TYPE(t_atoms),INTENT(IN)      :: atoms
     TYPE(t_lapw),INTENT(IN)       :: lapw
-    TYPE(t_usdus),INTENT(IN)      :: ud
     TYPE(t_tlmplm),INTENT(IN)     :: td
     TYPE(t_fjgj),INTENT(IN)       :: fjgj
     INTEGER,INTENT(IN)            :: igSpinPr,igSpin
@@ -43,7 +42,7 @@ CONTAINS
     chi_one=1.0
     !The spin2,1 matrix is calculated(real part of potential)
     CALL hsmt_nonsph(n,fmpi,sym,atoms,2,1,igSpinPr,igSpin,chi_one,noco,nococonv,cell,lapw,td,fjgj,hmat_tmp,.TRUE.)
-    CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,ud,td,fjgj,n,chi_one,2,1,igSpinPr,igSpin,hmat_tmp,.TRUE.,.FALSE.,.FALSE.)
+    CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,td,fjgj,n,chi_one,2,1,igSpinPr,igSpin,hmat_tmp,.TRUE.,.FALSE.,.FALSE.)
     !call hmat_tmp%u2l()
     CALL hsmt_spinor(4,n,nococonv,chi) !spinor for off-diagonal part
     CALL hsmt_distspins(chi,hmat_tmp,hmat)
@@ -52,7 +51,7 @@ CONTAINS
     !The spin1,2 matrix is calculated(imag part of potential)
     !chi_one=CMPLX(0.,1.)
     CALL hsmt_nonsph(n,fmpi,sym,atoms,1,2,igSpinPr,igSpin,chi_one,noco,nococonv,cell,lapw,td,fjgj,hmat_tmp,.TRUE.)
-    CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,ud,td,fjgj,n,chi_one,1,2,igSpinPr,igSpin,hmat_tmp,.TRUE.,.FALSE.,.FALSE.)
+    CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,td,fjgj,n,chi_one,1,2,igSpinPr,igSpin,hmat_tmp,.TRUE.,.FALSE.,.FALSE.)
     !call hmat_tmp%u2l()
 
     CALL hsmt_spinor(3,n,nococonv,chi)

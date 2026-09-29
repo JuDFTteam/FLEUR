@@ -17,6 +17,8 @@ string(STRIP "${CMAKE_Fortran_FLAGS} ${CMAKE_Fortran_FLAGS_backup}" CMAKE_Fortra
 
 include("cmake/CompilerConfig.txt")
 
+include("cmake/rpath.cmake")
+
 include("cmake/Generate_Schema.cmake")
 
 include("cmake/Files_and_Targets.txt")

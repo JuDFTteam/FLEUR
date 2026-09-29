@@ -523,7 +523,6 @@ contains
       integer,              intent(out) :: maxlmindx, maxn_r
 
       integer :: itype, l, m1, m2, isym, iisym, ilo, jlo, iOrd, jOrd, lmaxd
-      integer :: n_l(0:fi%atoms%lmaxd), lo_ord(fi%atoms%nlod)
 
       lmaxd = fi%atoms%lmaxd
 
@@ -569,18 +568,9 @@ contains
             olapmt(2, 2, l, itype) = cmplx(usdus%ddn(l, itype, jsp), 0.0)
          end do
 
-         ! set number of radfuns 
-         n_l    = 2 ! u, dot(u)
-         lo_ord = 0
-         do ilo = 1, fi%atoms%nlo(itype)
-            l           = fi%atoms%llo(ilo, itype)
-            n_l(l)      = n_l(l) + 1
-            lo_ord(ilo) = n_l(l)
-         end do
-
          do ilo = 1, fi%atoms%nlo(itype)
             l    = fi%atoms%llo(ilo, itype)
-            iOrd = lo_ord(ilo)
+            iOrd = fi%atoms%slot_of_lo(ilo, itype)
 
             olapmt(1, iOrd, l, itype) = cmplx(usdus%uulon(ilo, itype, jsp), 0.0)
             olapmt(iOrd, 1, l, itype) = olapmt(1, iOrd, l, itype)
@@ -589,7 +579,7 @@ contains
 
             do jlo = 1, fi%atoms%nlo(itype)
                if (fi%atoms%llo(jlo, itype) /= l) cycle
-               jOrd = lo_ord(jlo)
+               jOrd = fi%atoms%slot_of_lo(jlo, itype)
                olapmt(iOrd, jOrd, l, itype) = cmplx(usdus%uloulopn(ilo, jlo, itype, jsp), 0.0)
             end do
          end do
@@ -665,6 +655,7 @@ contains
       complex,            intent(out) :: cmt(:, :, :)
 
       type(t_abc) :: abc
+      type(t_radfun) :: rf
       integer     :: itype, na, iatom, indx, l, ll, m, lm, i
       complex     :: cdum
 
@@ -672,7 +663,8 @@ contains
 
       do itype = 1, fi%atoms%ntype
          call abc%init(fi%input, fi%atoms, nbands, itype)
-         call abc%calc_abc(fi%input, fi%atoms, fi%sym, fi%cell, lapw, nbands, usdus, fi%noco, nococonv, jsp, itype, zMat)
+         call rf%from_usdus(fi%atoms, usdus, itype)
+         call abc%calc_abc(fi%input, fi%atoms, fi%sym, fi%cell, lapw, nbands, rf, fi%noco, nococonv, jsp, itype, zMat)
 
          do na = 1, fi%atoms%neq(itype)
             iatom = fi%atoms%firstAtom(itype) + na - 1

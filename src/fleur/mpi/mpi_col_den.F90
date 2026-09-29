@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -116,6 +116,21 @@ CONTAINS
       CALL MPI_REDUCE(dos%qal(0:,:,:,:,jspin),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,0, MPI_COMM_WORLD,ierr)
       IF (fmpi%irank.EQ.0) CALL dcopy(n, r_b, 1, dos%qal(0:,:,:,:,jspin), 1)
       DEALLOCATE (r_b)
+
+      ! Spin off-diagonal slots 3,4 are not tied to a single jspin: collect them once
+      IF (jspin==1 .AND. SIZE(dos%qTot,3)>2) THEN
+         n = SIZE(dos%qTot(:,:,3:4))
+         ALLOCATE(r_b(n))
+         CALL MPI_REDUCE(dos%qTot(:,:,3:4),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+         IF (fmpi%irank==0) CALL dcopy(n, r_b, 1, dos%qTot(:,:,3:4), 1)
+         DEALLOCATE (r_b)
+
+         n = SIZE(dos%qal(0:,:,:,:,3:4))
+         ALLOCATE(r_b(n))
+         CALL MPI_REDUCE(dos%qal(0:,:,:,:,3:4),r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+         IF (fmpi%irank==0) CALL dcopy(n, r_b, 1, dos%qal(0:,:,:,:,3:4), 1)
+         DEALLOCATE (r_b)
+      END IF
     END IF
     if (vacdos%l_initialized) then
       
@@ -202,6 +217,30 @@ CONTAINS
         ALLOCATE(r_b(n))
         CALL MPI_REDUCE(jDOS%occ,r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
         IF(fmpi%irank.EQ.0) CALL dcopy(n,r_b,1,jDOS%occ,1)
+        DEALLOCATE(r_b)
+
+        n = SIZE(jDOS%comp_jeff_d)
+        ALLOCATE(r_b(n))
+        CALL MPI_REDUCE(jDOS%comp_jeff_d,r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+        IF(fmpi%irank==0) CALL dcopy(n,r_b,1,jDOS%comp_jeff_d,1)
+        DEALLOCATE(r_b)
+
+        n = SIZE(jDOS%comp_jeff_d_mj)
+        ALLOCATE(r_b(n))
+        CALL MPI_REDUCE(jDOS%comp_jeff_d_mj,r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+        IF(fmpi%irank==0) CALL dcopy(n,r_b,1,jDOS%comp_jeff_d_mj,1)
+        DEALLOCATE(r_b)
+
+        n = SIZE(jDOS%occ_jeff_d)
+        ALLOCATE(r_b(n))
+        CALL MPI_REDUCE(jDOS%occ_jeff_d,r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+        IF(fmpi%irank==0) CALL dcopy(n,r_b,1,jDOS%occ_jeff_d,1)
+        DEALLOCATE(r_b)
+
+        n = SIZE(jDOS%occ_jeff_d_mj)
+        ALLOCATE(r_b(n))
+        CALL MPI_REDUCE(jDOS%occ_jeff_d_mj,r_b,n,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+        IF(fmpi%irank==0) CALL dcopy(n,r_b,1,jDOS%occ_jeff_d_mj,1)
         DEALLOCATE(r_b)
 
       ENDIF

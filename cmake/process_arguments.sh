@@ -29,6 +29,7 @@ do
     -libxc) shift; CLI_USE_LIBXC=$1;;
 	  -link) shift; CLI_LIBRARIES=$1;;
     -libdir) shift; CLI_LIBDIR="$CLI_LIBDIR $1";;
+    -rpath) shift; CLI_USE_RPATH=$1;;
     -flags) shift; CLI_FLAGS=$1;;
     -includedir) shift; CLI_INCLUDEDIR="$CLI_INCLUDEDIR $1";;
     -elpa) shift;CLI_ELPA=$1;;
@@ -114,6 +115,10 @@ given below.
   -libdir #     : Directory to find libraries in (can be specified multiple times)
   -flags #      : String to add while compiling (e.g. '-g')
   -includedir # : Directory to find include files (can be specified multiple times)
+  -rpath true   : add the library directories to the RPATH of the executables, i.e.
+                  the -L directories and the directories of all linked shared libraries
+                  (given by full path or as -lfoo, searched in the -L directories and
+                  LIBRARY_PATH). Default is false, which keeps the cmake defaults
 
 Special options:
   -gpu # : Compile for GPU. Currently you should specify something like acc:cc80 to use OpenACC

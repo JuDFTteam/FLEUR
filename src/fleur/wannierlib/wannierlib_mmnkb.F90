@@ -20,21 +20,22 @@ MODULE m_wannierlib_mmnkb
   USE m_types_noco
   USE m_types_nococonv
   USE m_types_sym
-  USE m_types_melem_manifold, ONLY: t_melem_manifold
-  USE m_types_melem_bmesh, ONLY: t_melem_bmesh
+  USE m_types_wgauge_manifold, ONLY: t_wgauge_manifold
+  USE m_types_wgauge_bmesh, ONLY: t_wgauge_bmesh
   USE m_types_enpara
   USE m_types_potden
   USE m_types_mpi
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: wannierlib_mmnkb
+  PUBLIC :: wannierlib_mmnkb, &
+             wannierlib_kdiff
 CONTAINS
 
   SUBROUTINE wannierlib_mmnkb(manifold, bmesh, nk, kpts, ujug, atoms, cell, input, sym, noco, nococonv, &
                               abc, jspin, jspin_rad, eig_id, stars, lapw, zMat, mmn, nk_local, &
                               enpara, vtot, fmpi, vacuum, radfun)
-    TYPE(t_melem_manifold), INTENT(IN) :: manifold   !> the band window, and how wide it is
-    TYPE(t_melem_bmesh), INTENT(IN) :: bmesh   !> which k is the b-th neighbour, and by which G
+    TYPE(t_wgauge_manifold), INTENT(IN) :: manifold   !> the band window, and how wide it is
+    TYPE(t_wgauge_bmesh), INTENT(IN) :: bmesh   !> which k is the b-th neighbour, and by which G
     INTEGER, INTENT(IN) :: nk
     TYPE(t_kpts), INTENT(IN) :: kpts
     COMPLEX, INTENT(IN) :: ujug(:, :, :, :, :, :)
@@ -120,4 +121,35 @@ CONTAINS
 
   
 
+
+   SUBROUTINE wannierlib_kdiff(num_kpts, nntot, bk, nnkp, gkpb, kdiff)
+      INTEGER, INTENT(IN) :: num_kpts
+      INTEGER, INTENT(IN) :: nntot
+      REAL, INTENT(IN) :: bk(:, :)
+      INTEGER, INTENT(IN) :: nnkp(:, :)
+      INTEGER, INTENT(IN) :: gkpb(:, :, :)
+      REAL, ALLOCATABLE, INTENT(OUT) :: kdiff(:, :)
+
+      INTEGER :: k, kk, ikpt, kd
+      REAL :: kdiffvec(3)
+
+      ALLOCATE (kdiff(3, nntot))
+      kdiff = 0.0
+
+      kd = 1
+      DO k = 1, num_kpts
+         k_loop: DO kk = 1, nntot
+            kdiffvec = bk(:, nnkp(k, kk)) + REAL(gkpb(:, k, kk)) - bk(:, k)
+            DO ikpt = 1, kd - 1
+               IF (ALL(ABS(kdiff(:, ikpt) - kdiffvec) <= 1.0e-4)) CYCLE k_loop
+            END DO
+
+            IF (kd > nntot) THEN
+               CALL juDFT_error("problem in wannierlib_kdiff", calledby="wannierlib_kdiff")
+            end if
+            kdiff(:, kd) = kdiffvec
+            kd = kd + 1
+         END DO k_loop
+      END DO
+   END SUBROUTINE wannierlib_kdiff
 END MODULE m_wannierlib_mmnkb

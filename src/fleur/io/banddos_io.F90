@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2018 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -303,7 +303,6 @@ MODULE m_banddos_io
         CALL h5gcreate_f(GroupID, "DOS", DOSGroupID, hdfError)
       endif
       if (.not.io_dataexists(DOSGroupID,"energyGrid")) call io_write_var(DOSGroupID,"energyGrid",e_grid)
-      print *,name_of_dos,weight_name
       call io_write_var(DOSGroupID,weight_name,dos(:,:))
       CALL h5gclose_f(DOSGroupID, hdfError)
       CALL h5gclose_f(GroupID, hdfError)

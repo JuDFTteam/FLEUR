@@ -738,7 +738,6 @@ CONTAINS
       REAL,    ALLOCATABLE :: eig(:), eig1(:), we(:), we1(:)
 
       TYPE(t_tlmplm)            :: tdV1, tdmod, td
-      TYPE(t_usdus)             :: ud, uddummy
       TYPE(t_lapw)              :: lapw, lapwq
       TYPE(t_hub1data)          :: hub1datadummy
       CLASS (t_mat), ALLOCATABLE :: zMat, zMat1, zMatq, zMat2
@@ -768,17 +767,15 @@ CONTAINS
       ! Modify this from kpts only in DFPT case.
       ALLOCATE(bkpt(3))
 
-      call ud%init(fi%atoms,fi%input%jspins)
-      call uddummy%init(fi%atoms,fi%input%jspins)
       ALLOCATE(eig(fi%input%neig))
     
-      CALL local_ham(sphhar,fi%atoms,fi%sym,fi%noco,nococonv,enpara,fmpi,v,vx,inden,fi%input,fi%hub1inp,hub1data,td,ud,0.0)
+      CALL local_ham(sphhar,fi%atoms,fi%sym,fi%noco,nococonv,enpara,fmpi,v,vx,inden,fi%input,fi%hub1inp,hub1data,td,alpha_hybrid=0.0)
       ! Get matrix elements of perturbed potential and modified H/S in DFPT case.
       hub1datadummy = hub1data
 
       CALL dfpt_tlmplm(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,enpara,fi%hub1inp,hub1data,v,fmpi,tdV1,v1real,v1imag,.FALSE.,iDtype_col)
 
-      CALL local_ham(sphhar,fi%atoms,fi%sym,fi%noco,nococonv,enpara,fmpi,v,vx,inden,fi%input,fi%hub1inp,hub1datadummy,tdmod,uddummy,0.0,.true.)
+      CALL local_ham(sphhar,fi%atoms,fi%sym,fi%noco,nococonv,enpara,fmpi,v,vx,inden,fi%input,fi%hub1inp,hub1datadummy,tdmod,alpha_hybrid=0.0,l_dfptmod=.true.)
 
       DO jsp = MERGE(1,1,fi%noco%l_noco), MERGE(1,fi%input%jspins,fi%noco%l_noco)
          k_loop:DO nk_i = 1,size(fmpi%k_list)
@@ -856,11 +853,11 @@ CONTAINS
             CALL timestart("Setup of H&S matrices")
             IF (.NOT.PRESENT(q_eig_id)) THEN
                CALL dfpt_dynmat_hssetup(jsp, fmpi, fi, enpara, nococonv, starsq, stars, &
-                                        ud, tdmod, tdV1, lapw, lapwq, iDir_row, iDtype_row, iDir_col, iDtype_col, theta1_pw0, theta1_pw, &
+                                        tdmod, tdV1, lapw, lapwq, iDir_row, iDtype_row, iDir_col, iDtype_col, theta1_pw0, theta1_pw, &
                                         smat1, hmat1, smat1q, hmat1q, smat2, hmat2, nk, killcont)
             ELSE
                CALL dfpt_dynmat_hssetup(jsp, fmpi, fi, enpara, nococonv, starsq, stars, &
-                                        ud, tdmod, tdV1, lapw, lapwq, iDir_row, iDtype_row, iDir_col, iDtype_col, theta1_pw0, theta1_pw, &
+                                        tdmod, tdV1, lapw, lapwq, iDir_row, iDtype_row, iDir_col, iDtype_col, theta1_pw0, theta1_pw, &
                                         smat1, hmat1, smat1q, hmat1q, smat2, hmat2, nk, killcont, vmat2)
             END IF
             CALL timestop("Setup of H&S matrices")
@@ -976,7 +973,7 @@ CONTAINS
    END SUBROUTINE
 
    SUBROUTINE dfpt_dynmat_hssetup(isp, fmpi, fi, enpara, nococonv, starsq, stars, &
-                            ud, td, tdV1, lapw, lapwq, iDir_row, iDtype_row, iDir_col, iDtype_col, theta1_pw0, theta1_pw, &
+                            td, tdV1, lapw, lapwq, iDir_row, iDtype_row, iDir_col, iDtype_col, theta1_pw0, theta1_pw, &
                             smat1_final, hmat1_final, smat1q_final, hmat1q_final, smat2_final, hmat2_final, nk, killcont, vmat2_final)
       USE m_types
       USE m_types_mpimat
@@ -992,7 +989,6 @@ CONTAINS
       TYPE(t_stars),      INTENT(IN)     :: starsq, stars
       TYPE(t_enpara),     INTENT(IN)     :: enpara
       TYPE(t_nococonv),   INTENT(IN)     :: nococonv
-      TYPE(t_usdus),      INTENT(IN)     :: ud
       TYPE(t_tlmplm),     INTENT(IN)     :: td, tdV1
       TYPE(t_lapw),       INTENT(IN)     :: lapw, lapwq
       INTEGER,            INTENT(IN)     :: iDir_row, iDtype_row, iDir_col, iDtype_col
@@ -1048,10 +1044,10 @@ CONTAINS
       END DO; END DO
       IF (.NOT.PRESENT(vmat2_final)) THEN
          CALL dfpt_dynmat_hsmt(fi%atoms, fi%sym, enpara, isp, iDir_row, iDtype_row, iDir_col, iDtype_col, fi%input, fmpi, fi%noco, nococonv, fi%cell, &
-                               lapw, lapwq, ud, td, tdV1, hmat1, smat1, hmat1q, smat1q, hmat2, smat2, nk, killcont(5:11))
+                               lapw, lapwq, td, tdV1, hmat1, smat1, hmat1q, smat1q, hmat2, smat2, nk, killcont(5:11))
       ELSE
          CALL dfpt_dynmat_hsmt(fi%atoms, fi%sym, enpara, isp, iDir_row, iDtype_row, iDir_col, iDtype_col, fi%input, fmpi, fi%noco, nococonv, fi%cell, &
-                               lapw, lapwq, ud, td, tdV1, hmat1, smat1, hmat1q, smat1q, hmat2, smat2, nk, killcont(5:11), vmat2)
+                               lapw, lapwq, td, tdV1, hmat1, smat1, hmat1q, smat1q, hmat2, smat2, nk, killcont(5:11), vmat2)
       END IF
       DO i = 1, nspins; DO j = 1, nspins; if (hmat1(1, 1)%l_real) THEN
             !!$acc exit data copyout(hmat(i,j)%data_r,smat(i,j)%data_r) delete(hmat(i,j)%data_c,smat(i,j)%data_c)
