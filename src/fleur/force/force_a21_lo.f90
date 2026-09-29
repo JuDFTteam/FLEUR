@@ -93,7 +93,7 @@ CONTAINS
                      DO ie = 1, ne
                         DO i = 1, 3
                            a21(i, iatom) = a21(i, iatom) + 2.0*AIMAG( &
-                                           +CONJG(abc%cof(ie, lm, n_lop, iatom_l)) &
+                                           +CONJG(abc%cof(ie, lm, n_lo, iatom_l)) &
                                            *tuloulo*cveccof(i, mp, ie, lop, iatom) &
                                            )*we(ie)/atoms%neq(itype)
                         END DO
