@@ -27,6 +27,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,xas,banddos,sliceplot,vacuum,&
    use m_types_orbcomp
    use m_types_jdos
    use m_types_jointdos
+   use m_types_dmdos
    USE m_types
    USE m_constants
    USE m_juDFT
@@ -104,6 +105,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,xas,banddos,sliceplot,vacuum,&
    TYPE(t_orbcomp),TARGET         :: orbcomp
    TYPE(t_jDOS),TARGET            :: jDOS
    TYPE(t_jointDOS),TARGET       :: jointDOS
+   TYPE(t_dmdos),TARGET          :: dmdos
    TYPE(t_cdnvalJob)       :: cdnvalJob
    TYPE(t_greensfImagPart) :: greensfImagPart
    TYPE(t_potden)          :: val_den
@@ -128,8 +130,8 @@ SUBROUTINE cdngen(eig_id,fmpi,input,xas,banddos,sliceplot,vacuum,&
    if (noco%l_noco) results%eig(:,:,2)=results%eig(:,:,1)
    
    if (banddos%dos.or.banddos%band.or.input%cdinf) then
-     CALL initialize_eigdos_types(eigdos, dos, jointDOS, vacdos, mcd, slab, orbcomp, jDOS, &
-                                   input, atoms, kpts, banddos, noco, results, cell)
+     CALL initialize_eigdos_types(eigdos, dos, jointDOS, vacdos, mcd, slab, orbcomp, jDOS, dmdos, &
+                                   input, atoms, kpts, banddos, noco, results, cell, sym)
    endif
 
 
@@ -167,12 +169,12 @@ SUBROUTINE cdngen(eig_id,fmpi,input,xas,banddos,sliceplot,vacuum,&
    !b-coef. for both spins are needed at once. Thus, cdnval is only
    !called once and both spin directions are calculated in a single run.
    CALL timestart("cdngen: cdnval")
-   DO jspin = 1,merge(1,input%jspins,noco%l_mperp.OR.banddos%l_jDOS)
+   DO jspin = 1,merge(1,input%jspins,noco%l_mperp.OR.banddos%l_jDOS.OR.(dmdos%l_initialized.AND.noco%l_noco))
       CALL cdnvalJob%init(fmpi,input,kpts,noco,results,jspin)
       IF (sliceplot%slice) CALL cdnvalJob%select_slice(sliceplot,results,input,kpts,noco,jspin)
       CALL cdnval(eig_id,fmpi,kpts,jspin,noco,nococonv,input,banddos,cell,atoms,enpara,stars,vacuum,&
                   sphhar,sym,vTot ,cdnvalJob,outDen,dos,vacdos,results,moments,moessbauerParams,gfinp,&
-                  hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,jDOS,greensfImagPart)
+                  hub1inp,hub1data,coreSpecInput,mcd,slab,orbcomp,jDOS,greensfImagPart,dmdos=dmdos)
    END DO
    ! XAS is a postprocessing calculation under output/xas, like DOS/band output:
    ! it reuses the converged potential, eigenvalues, occupations, and MT basis.
@@ -377,8 +379,8 @@ SUBROUTINE write_output_struct_xsf(atoms,nococonv,outDen)
 
 END SUBROUTINE write_output_struct_xsf
 
-SUBROUTINE initialize_eigdos_types(eigdos, dos, jointDOS, vacdos, mcd, slab, orbcomp, jDOS, &
-                                    input, atoms, kpts, banddos, noco, results, cell)
+SUBROUTINE initialize_eigdos_types(eigdos, dos, jointDOS, vacdos, mcd, slab, orbcomp, jDOS, dmdos, &
+                                    input, atoms, kpts, banddos, noco, results, cell, sym)
    !*****************************************************
    ! Initialize all eigenvalue/DOS types and populate
    ! the eigdos pointer array
@@ -391,6 +393,7 @@ SUBROUTINE initialize_eigdos_types(eigdos, dos, jointDOS, vacdos, mcd, slab, orb
    USE m_types_slab
    USE m_types_orbcomp
    USE m_types_jdos
+   USE m_types_dmdos
    use m_types
    
    IMPLICIT NONE
@@ -404,6 +407,7 @@ SUBROUTINE initialize_eigdos_types(eigdos, dos, jointDOS, vacdos, mcd, slab, orb
    TYPE(t_slab), TARGET, INTENT(INOUT)             :: slab
    TYPE(t_orbcomp), TARGET, INTENT(INOUT)          :: orbcomp
    TYPE(t_jDOS), TARGET, INTENT(INOUT)             :: jDOS
+   TYPE(t_dmdos), TARGET, INTENT(INOUT)            :: dmdos
    TYPE(t_input), INTENT(IN)                       :: input
    TYPE(t_atoms), INTENT(IN)                       :: atoms
    TYPE(t_kpts), INTENT(IN)                        :: kpts
@@ -411,10 +415,11 @@ SUBROUTINE initialize_eigdos_types(eigdos, dos, jointDOS, vacdos, mcd, slab, orb
    TYPE(t_noco), INTENT(IN)                        :: noco
    TYPE(t_results), INTENT(IN)                     :: results
    TYPE(t_cell), INTENT(IN)                        :: cell
+   TYPE(t_sym), INTENT(IN)                         :: sym
    
    ! Local variables
    INTEGER :: n, num_types
-   LOGICAL :: type_flags(7)
+   LOGICAL :: type_flags(8)
    
    ! Determine which types need to be initialized
    type_flags(1) = banddos%dos .OR. banddos%band .OR. input%cdinf
@@ -424,6 +429,7 @@ SUBROUTINE initialize_eigdos_types(eigdos, dos, jointDOS, vacdos, mcd, slab, orb
    type_flags(5) = banddos%l_slab
    type_flags(6) = banddos%l_orb
    type_flags(7) = banddos%l_jDOS
+   type_flags(8) = banddos%l_dm .AND. (banddos%dos .OR. banddos%band)
    
    ! Count number of types to allocate
    num_types = COUNT(type_flags)
@@ -471,6 +477,12 @@ SUBROUTINE initialize_eigdos_types(eigdos, dos, jointDOS, vacdos, mcd, slab, orb
    IF (banddos%l_jdos) THEN
       CALL jDOS%init(input, banddos, atoms, kpts, results%eig)
       eigdos(n)%p => jDOS
+      n = n + 1
+   END IF
+
+   IF (type_flags(8)) THEN
+      CALL dmdos%init(input, atoms, kpts, banddos, noco, sym, cell, results%eig)
+      eigdos(n)%p => dmdos
    END IF
    
 END SUBROUTINE initialize_eigdos_types

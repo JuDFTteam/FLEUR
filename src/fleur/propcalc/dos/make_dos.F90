@@ -129,6 +129,11 @@ CONTAINS
        WRITE(*,*) "      A convenient way of extracting and plotting the data from that file is by making use of the"
        WRITE(*,*) "      masci-tools (https://pypi.org/project/masci-tools/)."
     END IF
+    IF (banddos%band.OR.banddos%dos) THEN
+       DO n=1,size(eigdos)
+          call eigdos(n)%p%write_extra(banddosFile_id)
+       END DO
+    END IF
 #ifdef CPP_HDF
       CALL closeBandDOSFile(banddosFile_id)
 #endif

@@ -336,6 +336,58 @@ MODULE m_banddos_io
       CALL h5gclose_f(GroupID, hdfError)
    END SUBROUTINE
 
+   SUBROUTINE writeDensityMatrixData(fileID,name_of_dos,lpairs,elem_atom,elem_type,l_sym,l_global_frame,elem_euler,rho,eig)
+      !! Writes the band-resolved density matrices to <name_of_dos>/matrix.
+      !! Each block (l,l') of an element is stored as real(2,2l+1,2l'+1,nsb,neig,nkpt) (re/im first).
+      INTEGER(HID_T),  INTENT(IN) :: fileID
+      character(len=*),intent(in) :: name_of_dos
+      integer,intent(in)          :: lpairs(:,:),elem_atom(:),elem_type(:)
+      logical,intent(in)          :: l_sym,l_global_frame
+      real,intent(in)             :: elem_euler(:,:)
+      complex,intent(in)          :: rho(-3:,-3:,:,:,:,:,:)
+      real,intent(in)             :: eig(:,:,:)
+
+      character,parameter :: spdf(0:3)=["s","p","d","f"]
+      INTEGER(HID_T)    :: groupID,matrixGroupID,elemGroupID,varID
+      INTEGER           :: hdfError,n,p,l,lp
+      character(len=20) :: name
+      real,allocatable  :: buf(:,:,:,:,:,:)
+
+      if (io_groupexists(fileID,name_of_dos)) THEN
+        call io_gopen(fileID,name_of_dos,groupID)
+      ELSE
+        call h5gcreate_f(fileID, name_of_dos, GroupID, hdfError)
+      end if
+      CALL h5gcreate_f(groupID, "matrix", matrixGroupID, hdfError)
+      !spin blocks: 1 -> 11, 2 -> 11,22, 4 -> 11,22,21,12; see docs/densityMatrixDOS.md
+      CALL io_write_attlog0(matrixGroupID,"symmetrized",l_sym)
+      CALL io_write_attlog0(matrixGroupID,"globalSpinFrame",l_global_frame)
+      CALL io_write_attint0(matrixGroupID,"nSpinBlocks",size(rho,3))
+      call io_write_var(matrixGroupID,"eigenvalues",eig)
+
+      DO n = 1, size(elem_atom)
+         write(name,"(a,i0)") "elem_",n
+         CALL h5gcreate_f(matrixGroupID, trim(name), elemGroupID, hdfError)
+         CALL io_write_attint0(elemGroupID,"atom",elem_atom(n))
+         CALL io_write_attint0(elemGroupID,"atomType",elem_type(n))
+         CALL io_write_attreal1(elemGroupID,"eulerAngles",elem_euler(:,n))
+         DO p = 1, size(lpairs,2)
+            l = lpairs(1,p); lp = lpairs(2,p)
+            allocate(buf(2,2*l+1,2*lp+1,size(rho,3),size(rho,4),size(rho,5)))
+            buf(1,:,:,:,:,:) = real(rho(-l:l,-lp:lp,:,:,:,p,n))
+            buf(2,:,:,:,:,:) = aimag(rho(-l:l,-lp:lp,:,:,:,p,n))
+            name = "pair_"//spdf(l)//spdf(lp)
+            CALL io_createvar(elemGroupID, trim(name), H5T_NATIVE_DOUBLE, SHAPE(buf), varID)
+            CALL io_write(varID, [1,1,1,1,1,1], SHAPE(buf), trim(name), buf)
+            CALL h5dclose_f(varID, hdfError)
+            deallocate(buf)
+         END DO
+         CALL h5gclose_f(elemGroupID, hdfError)
+      END DO
+      CALL h5gclose_f(matrixGroupID, hdfError)
+      CALL h5gclose_f(groupID, hdfError)
+   END SUBROUTINE writeDensityMatrixData
+
    SUBROUTINE io_write_string1(datasetID,dims,stringLength,dataArray)
 
       USE hdf5
