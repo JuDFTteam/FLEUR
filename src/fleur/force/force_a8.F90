@@ -258,7 +258,7 @@ CONTAINS
          END IF
       END DO
 
-      ! Write out the result of a12, a21, b4 and b8
+      ! Write out the result of a12 (LAPW) or b8 (APW+lo)
       ! here as well.
 
       IF (.NOT.input%l_useapw) THEN
@@ -278,17 +278,6 @@ CONTAINS
             WRITE (oUnit,*) "If this was a serial calculation, the A12 force component would be written out here. In parallel it holds no meaning."
          END IF
       ELSE
-
-         WRITE  (oUnit,*)
-
-         DO n=1, atoms%ntype
-            IF (atoms%l_geo(n)) THEN
-               WRITE  (oUnit,FMT=8070) n
-               WRITE  (oUnit,FMT=8080) (force%f_b4(i,n),i=1,3)
-            END IF
-8070        FORMAT (' FORCES: EQUATION B4 FOR ATOM TYPE',i4)
-8080        FORMAT (' FX_B4=',2f10.6,' FY_B4=',2f10.6,' FZ_B4=',2f10.6)
-         END DO
 
          WRITE  (oUnit,*)
 

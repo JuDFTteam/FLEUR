@@ -459,7 +459,8 @@ CALL zgemm_acc("T","T",ne,abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),abC
 
 ! Local scalars
       INTEGER :: i, iLAPW, l, lm, nap, jAtom, lmp, m, nkvec, iAtom, acof_size, iAtom_l, jatom_l,j
-      INTEGER :: inv_f, ie, ilo, kspin, iintsp, nintsp, nvmax, lo, inap, abSize, nbasf
+      INTEGER :: inv_f, ie, ilo, kspin, iintsp, nintsp, nvmax, lo, inap, abSize, nbasf, nA, nB
+      INTEGER :: boff(0:atoms%lmaxd)
       REAL    :: tmk, qss(3), s2h
       COMPLEX :: phase, c_1, c_2, term1, ctmp
       LOGICAL ::  l_useinversionsym
@@ -583,11 +584,10 @@ CALL zgemm_acc("T","T",ne,abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),abC
             END IF
             CALL hsmt_ab(sym, atoms, noco, nococonv, jspin, iintsp, iType, iAtom, cell, lapw, fjgj, abCoeffs, abSize, .FALSE., l_store=.TRUE.)
 !!$acc end data
-            ! the force coefficients need A and B for all lm, i.e. no APW channels
-            IF (abSize /= 2*(atoms%lmax(iType)*(atoms%lmax(iType)+2)+1)) THEN
-               CALL judft_bug("APW channels in calc_force_abc", calledby="types_abc")
-            END IF
-            abSize = abSize/2
+            ! rows 1..nA: A for all lm; rows nA+1..abSize: B of the LAPW channels (boff)
+            nA = atoms%lmax(iType)*(atoms%lmax(iType)+2)+1
+            nB = abSize - nA
+            boff(0:atoms%lmax(iType)) = atoms%udot_rows(atoms%lmax(iType), iType)
             CALL timestop("hsmt_ab")
 ! Force contributions
 
@@ -606,21 +606,26 @@ CALL zgemm_acc("T","T",ne,abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),abC
             workTrans_cf = CMPLX(0.0, 0.0)
             helpMat_force = CMPLX(0.0, 0.0)
       
-            CALL zgemm("N", "T", ne, abSize, nvmax, CMPLX(1.0, 0.0), s2h_e, ne, abCoeffs, size(abcoeffs, 1), &
+            CALL zgemm("N", "T", ne, nA, nvmax, CMPLX(1.0, 0.0), s2h_e, ne, abCoeffs, size(abcoeffs, 1), &
                        CMPLX(1.0, 0.0), force%e1cof(:, :, iAtom), ne)
-            CALL zgemm("N", "T", ne, abSize, nvmax, CMPLX(1.0, 0.0), s2h_e, ne, abCoeffs(1 + abSize, 1), &
-                       size(abcoeffs, 1), CMPLX(1.0, 0.0), force%e2cof(:, :, iAtom), ne)
+            IF (nB > 0) THEN
+               CALL zgemm("N", "T", ne, nB, nvmax, CMPLX(1.0, 0.0), s2h_e, ne, abCoeffs(1 + nA, 1), &
+                          size(abcoeffs, 1), CMPLX(0.0, 0.0), helpMat_force, ne)
+               CALL add_udot_rows(force%e2cof(:, :, iAtom), helpMat_force, boff(0:atoms%lmax(iType)), nA)
+            END IF
             DO i = 1, 3
                DO iLAPW = 1, nvmax
                   workTrans_cf(:, iLAPW) = work_c(iLAPW, :)*fgpl(i, iLAPW)
                END DO
-      
-               CALL zgemm("N", "T", ne, abSize, nvmax, CMPLX(1.0, 0.0), workTrans_cf, ne, &
+
+               CALL zgemm("N", "T", ne, nA, nvmax, CMPLX(1.0, 0.0), workTrans_cf, ne, &
                           abCoeffs, size(abCoeffs, 1), CMPLX(0.0, 0.0), helpMat_force, ne)
-               force%aveccof(i, :, :, iAtom) = force%aveccof(i, :, :, iAtom) + helpMat_force(:, :)
-               CALL zgemm("N", "T", ne, abSize, nvmax, CMPLX(1.0, 0.0), workTrans_cf, ne, &
-                          abCoeffs(1 + abSize, 1), size(abcoeffs, 1), CMPLX(0.0, 0.0), helpMat_force, ne)
-               force%bveccof(i, :, :, iAtom) = force%bveccof(i, :, :, iAtom) + helpMat_force(:, :)
+               force%aveccof(i, :, 0:nA-1, iAtom) = force%aveccof(i, :, 0:nA-1, iAtom) + helpMat_force(:, :nA)
+               IF (nB > 0) THEN
+                  CALL zgemm("N", "T", ne, nB, nvmax, CMPLX(1.0, 0.0), workTrans_cf, ne, &
+                             abCoeffs(1 + nA, 1), size(abcoeffs, 1), CMPLX(0.0, 0.0), helpMat_force, ne)
+                  CALL add_udot_rows(force%bveccof(i, :, :, iAtom), helpMat_force, boff(0:atoms%lmax(iType)), nA)
+               END IF
             END DO
             CALL timestop("force contributions")
             ! abCoeffs is (re)allocated per call inside hsmt_ab; release the
@@ -687,7 +692,12 @@ CALL zgemm_acc("T","T",ne,abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),abC
                          DO j = 1,3
                           force%aveccof(j,i,lm,iatom)   = force%aveccof(j,i,lm,iatom)   + fgp(j)*ctmp*alo1(lo,jspin)
                           force%bveccof(j,i,lm,iatom)   = force%bveccof(j,i,lm,iatom)   + fgp(j)*ctmp*blo1(lo,jspin)
-                          force%cveccof(j,m,i,lo,iatom) = force%cveccof(j,m,i,lo,iatom) + fgp(j)*ctmp*clo1(lo,jspin)
+                          IF (atoms%l_dulo(lo,itype)) THEN
+                             ! APW LO: its udot part belongs to the slot-2 vector, like cof(:,:,2)
+                             force%bveccof(j,i,lm,iatom) = force%bveccof(j,i,lm,iatom) + fgp(j)*ctmp*clo1(lo,jspin)
+                          ELSE
+                             force%cveccof(j,m,i,lo,iatom) = force%cveccof(j,m,i,lo,iatom) + fgp(j)*ctmp*clo1(lo,jspin)
+                          END IF
                         END DO
                        END DO
                      END DO
@@ -881,5 +891,21 @@ CALL zgemm_acc("T","T",ne,abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),abC
 
       CALL timestop("fill work array")
    end subroutine fill_work_array
+
+   SUBROUTINE add_udot_rows(cof, bcol, boff, nA)
+      !! cof(:,lm) += bcol(:,j) for the udot coefficients of the LAPW channels,
+      !! j = boff(l)+l+m+1-nA the column of (l,m) after the nA A-coefficients
+      COMPLEX, INTENT(INOUT) :: cof(:,0:)
+      COMPLEX, INTENT(IN)    :: bcol(:,:)
+      INTEGER, INTENT(IN)    :: boff(0:), nA
+      INTEGER :: l, m, n
+      n = SIZE(bcol,1)
+      DO l = 0, UBOUND(boff,1)
+         IF (boff(l) < 0) CYCLE
+         DO m = -l, l
+            cof(:n, l*(l+1)+m) = cof(:n, l*(l+1)+m) + bcol(:, boff(l)+l+m+1-nA)
+         END DO
+      END DO
+   END SUBROUTINE add_udot_rows
 
 END MODULE m_types_abc

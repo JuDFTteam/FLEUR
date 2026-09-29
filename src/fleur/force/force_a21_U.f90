@@ -77,6 +77,8 @@ CONTAINS
          ! the one of LDA+U, add another few terms
 
           DO lo = 1,atoms%nlo(itype)
+            ! an APW LO is part of the udot slot, covered by the terms above
+            IF (atoms%l_dulo(lo,itype)) CYCLE
             IF (l == atoms%llo(lo,itype)) THEN
                n_lo=atoms%slot_of_lo(lo,itype)
                DO m = -l,l

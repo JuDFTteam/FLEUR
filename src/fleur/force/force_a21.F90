@@ -22,7 +22,7 @@ MODULE m_forcea21
    PUBLIC :: force_a21
 CONTAINS
    SUBROUTINE force_a21(input,atoms,sym ,cell,we,jsp,epar,ne,eig,rf,tlmplm,&
-                        vtot,abc,aveccof,bveccof,cveccof,f_a21,f_b4,results,itype)
+                        vtot,abc,aveccof,bveccof,cveccof,f_a21,results,itype)
       !--------------------------------------------------------------------------
       ! Pulay 2nd and 3rd term force contributions à la Rici et al.
       !
@@ -39,9 +39,8 @@ CONTAINS
       ! 22/june/97: Probably found symmetrization error replacing S^-1 by S
       ! (IS instead of isinv)
       !
-      ! Force contribution B4 added following
-      ! Madsen, Blaha, Schwarz, Sjostedt, Nordstrom
-      ! GMadsen FZJ 20/3-01
+      ! With APW+lo the MT surface term of the kinetic energy (B4 of Madsen et al.)
+      ! is part of tlmplm%h (radfun%hsurf), so A21 contains it.
       !--------------------------------------------------------------------------
 
 
@@ -67,35 +66,31 @@ CONTAINS
       COMPLEX, INTENT(IN)    :: bveccof(3,ne,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
       COMPLEX, INTENT(IN)    :: cveccof(3,-atoms%llod:atoms%llod,ne,atoms%nlod,atoms%nat)
       COMPLEX, INTENT(INOUT) :: f_a21(3,atoms%ntype)
-      COMPLEX, INTENT(INOUT) :: f_b4(3,atoms%ntype)
 
       REAL,    PARAMETER :: zero=0.0
       COMPLEX, PARAMETER :: czero=CMPLX(0.,0.)
       COMPLEX dtd, dtu, utd, utu
-      INTEGER lo,n_lo
       INTEGER i, ie, im, l1, l2, ll1, ll2, lm1, lm2, m1, m2, n, natom, m
       INTEGER natrun, is, isinv, j, irinv, it, lmplmd
 
-      REAL, ALLOCATABLE :: a21(:,:), b4(:,:)
-      COMPLEX forc_a21(3), forc_b4(3)
-      REAL starsum(3), starsum2(3), gvint(3), gvint2(3)
-      REAL vec(3), vec2(3), vecsum(3), vecsum2(3)
+      REAL, ALLOCATABLE :: a21(:,:)
+      COMPLEX forc_a21(3)
+      REAL starsum(3), gvint(3)
+      REAL vec(3), vecsum(3)
 
       CALL timestart("force_a21")
 
       lmplmd = (atoms%lmaxd*(atoms%lmaxd+2)* (atoms%lmaxd*(atoms%lmaxd+2)+3))/2
 
-      ALLOCATE(a21(3,atoms%nat),b4(3,atoms%nat) )
+      ALLOCATE(a21(3,atoms%nat))
 
       n = itype
          natom = atoms%firstAtom(n)
          IF (atoms%l_geo(n)) THEN
             forc_a21(:) = czero
-            forc_b4(:) = czero
 
             DO natrun = natom,natom + atoms%neq(n) - 1
                a21(:,natrun) = zero
-               b4(:,natrun) = zero
             END DO
 
             DO ie = 1,ne
@@ -150,61 +145,6 @@ CONTAINS
                CALL force_a21_U(atoms,n,jsp,we,ne,rf,vTot%mmpMat(:,:,:,jsp),abc,aveccof,bveccof,cveccof,a21)
             END IF
 
-            IF (input%l_useapw) THEN
-               
-               ! B4 force
-               DO ie = 1,ne
-                  DO l1 = 0,atoms%lmax(n)
-                     ll1 = l1* (l1+1)
-                     DO m1 = -l1,l1
-                        lm1 = ll1 + m1
-                        DO i = 1,3
-                           DO natrun = natom,natom + atoms%neq(n) - 1
-                              b4(i,natrun) = b4(i,natrun) + 0.5 *&
-                                 we(ie)/atoms%neq(n)*atoms%rmt(n)**2*AIMAG(&
-                                 CONJG(abc%cof(ie,lm1,1,natrun-natom+1)*rf%bnd(1,1,l1,jsp)&
-                                 +abc%cof(ie,lm1,2,natrun-natom+1)*rf%bnd(1,2,l1,jsp))*&
-                                 (aveccof(i,ie,lm1,natrun)*rf%bnd(2,1,l1,jsp)&
-                                 +bveccof(i,ie,lm1,natrun)*rf%bnd(2,2,l1,jsp) )&
-                                 -CONJG(aveccof(i,ie,lm1,natrun)*rf%bnd(1,1,l1,jsp)&
-                                 +bveccof(i,ie,lm1,natrun)*rf%bnd(1,2,l1,jsp) )*&
-                                 (abc%cof(ie,lm1,1,natrun-natom+1)*rf%bnd(2,1,l1,jsp)&
-                                 +abc%cof(ie,lm1,2,natrun-natom+1)*rf%bnd(2,2,l1,jsp)) )
-                           END DO
-                        END DO
-                     END DO
-                  END DO
-
-                  DO lo = 1,atoms%nlo(n)
-                     l1 = atoms%llo(lo,n)
-                     n_lo=atoms%slot_of_lo(lo,n)
-                     DO m = -l1,l1
-                        lm1 = l1* (l1+1) + m
-                        DO i=1,3
-                           DO natrun = natom,natom + atoms%neq(n) - 1
-                              b4(i,natrun) = b4(i,natrun) + 0.5 *&
-                                 we(ie)/atoms%neq(n)*atoms%rmt(n)**2*AIMAG(&
-                                 CONJG( abc%cof(ie,lm1,1,natrun-natom+1)* rf%bnd(1,1,l1,jsp)&
-                                 + abc%cof(ie,lm1,2,natrun-natom+1)* rf%bnd(1,2,l1,jsp) ) *&
-                                 cveccof(i,m,ie,lo,natrun)*rf%bnd(2,n_lo,l1,jsp)&
-                                 + CONJG(abc%cof(ie,lm1,n_lo,natrun-natom+1)*rf%bnd(1,n_lo,l1,jsp)) *&
-                                 ( aveccof(i,ie,lm1,natrun)* rf%bnd(2,1,l1,jsp)&
-                                 + bveccof(i,ie,lm1,natrun)* rf%bnd(2,2,l1,jsp)&
-                                 + cveccof(i,m,ie,lo,natrun)*rf%bnd(2,n_lo,l1,jsp) )  &
-                                 - (CONJG( aveccof(i,ie,lm1,natrun) *rf%bnd(1,1,l1,jsp)&
-                                 + bveccof(i,ie,lm1,natrun) *rf%bnd(1,2,l1,jsp) ) *&
-                                 abc%cof(ie,lm1,n_lo,natrun-natom+1)  *rf%bnd(2,n_lo,l1,jsp)&
-                                 + CONJG(cveccof(i,m,ie,lo,natrun)*rf%bnd(1,n_lo,l1,jsp)) *&
-                                 ( abc%cof(ie,lm1,1,natrun-natom+1)*rf%bnd(2,1,l1,jsp)&
-                                 + abc%cof(ie,lm1,2,natrun-natom+1)*rf%bnd(2,2,l1,jsp)&
-                                 + abc%cof(ie,lm1,n_lo,natrun-natom+1)*rf%bnd(2,n_lo,l1,jsp) ) ) )
-                           END DO
-                        END DO
-                     END DO
-                  END DO
-               END DO
-            END IF
-
             DO natrun = natom,natom + atoms%neq(n) - 1
                !  to complete summation over stars of k now sum
                !  over all operations which leave (k+G)*R(natrun)*taual(natrun)
@@ -227,12 +167,9 @@ CONTAINS
                !  transform recip vector g-g' into internal coordinates
 
                vec(:) = a21(:,natrun)
-               vec2(:) = b4(:,natrun)
 
                gvint=MATMUL(cell%bmat,vec)/tpi_const
-               gvint2=MATMUL(cell%bmat,vec2)/tpi_const
                vecsum(:) = zero
-               vecsum2(:) = zero
 
                !-gb2002
                !            irinv = invtab(ngopr(natrun))
@@ -255,26 +192,21 @@ CONTAINS
                      !  mrot acts on internal ones
                      DO i = 1,3
                         vec(i) = zero
-                        vec2(i) = zero
                         DO j = 1,3
                            
                               vec(i) = vec(i) + sym%mrot(i,j,isinv)*gvint(j)
-                              vec2(i) = vec2(i) + sym%mrot(i,j,isinv)*gvint2(j)
                            
                      END DO
                   END DO
                   DO i = 1,3
                      vecsum(i) = vecsum(i) + vec(i)
-                     vecsum2(i) = vecsum2(i) + vec2(i)
                   END DO
                END DO ! end operator loop
 
                ! Transform from internal to cart. coordinates
                starsum=MATMUL(cell%amat,vecsum)
-               starsum2=MATMUL(cell%amat,vecsum2)
                DO i = 1,3
                   forc_a21(i) = forc_a21(i) + starsum(i)/sym%invarind(natrun)
-                  forc_b4(i) = forc_b4(i) + starsum2(i)/sym%invarind(natrun)
                END DO
             END DO ! natrun
 
@@ -292,9 +224,8 @@ CONTAINS
             ! if PSI is one.
 
             DO i = 1, 3
-               results%force(i,n,jsp) = results%force(i,n,jsp) + REAL(forc_a21(i) + forc_b4(i))
+               results%force(i,n,jsp) = results%force(i,n,jsp) + REAL(forc_a21(i))
                f_a21(i,n)     = f_a21(i,n)     + forc_a21(i)
-               f_b4(i,n)      = f_b4(i,n)      + forc_b4(i)
             END DO
 
          END IF ! l_geo(n)
