@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -272,6 +272,7 @@ CONTAINS
             j_ind = 0
             DO l = 0, 3
             DO jj = 1, 2
+               IF (l == 0 .AND. jj == 2) CYCLE !s is not split by j
                IF (l /= 0) j_ind = j_ind + 1
                jDOS%comp(ev_list(iBand), l, jj, n_dos, ikpt) = c(j_ind)*cf
                jDOS%qmtp(ev_list(iBand), n_dos, ikpt) = 100.0*summed

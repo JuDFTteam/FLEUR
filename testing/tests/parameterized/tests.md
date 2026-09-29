@@ -22,6 +22,7 @@ Testset: Basic
 | +   | Bulk Cu one iteration                        | basic/CuBulk             | fast,bulk             |                    |                 | 2   |
 | +   | Bulk Cu one iteration,DOS                    | basic/CuDOS              | fast,bulk,dos         |                    |                 | 2   |
 | +   | Bulk Cu one iteration,DOS,Orbital decomp.    | basic/CuOrb              | fast,bulk,dos,orbcomp |                    |                 | 2   |
+| +   | Bulk Cu spin-polarized, joint DOS            | basic/CuJointDOS         | fast,bulk,dos         |                    |                 | 2   |
 |     | Bulk Co, DOS,MCD                             | basic/CoMCD              | bulk,dos,mcd          | MCD disabled       |                 | 2   |
 | +   | Bulk Co, bandstructure, unfolding            | basic/CoUnfold           | band,bulk             |                    |                 | 2   |
 | +   | Bulk Fe, Kerker preconditioner               | basic/Fe_Kerker          | bulk                  |                    |                 | 2   |
@@ -108,6 +109,7 @@ Testset: Noco
 | +   | relaxation feature of FFN in the MT           | noco/RelaxMT            | bulk,hdf                     |                   |         | 2   |
 | +   | FFN noco, spin off-diagonal LDA+U             | noco/FFNUCross          | bulk,ldau,soc,hdf            |                   |         | 2   |
 | +   | FFN noco, transverse constraint               | noco/FFNConstraint      | bulk,hdf                     |                   |         | 2   |
+| +   | Fe bcc noco l_mperp, DOS, jDOS and joint DOS   | noco/FeBccNocoDOS       | bulk,dos,hdf                 |                   |         | 2   |
 
 Testset: Experimental
 ----------

@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -10,6 +10,7 @@ MODULE m_make_dos
   !-- now write cdninf for all kpts if on T3E
   !-- now read data from tmp_dos and write to vacdos&dosinp .. dw
   !
+   implicit none
 CONTAINS
   SUBROUTINE make_dos(kpts,atoms,vacuum,input,banddos,&
                       sliceplot,noco,nococonv,sym,cell,results,eigdos,dfpt )
@@ -114,11 +115,8 @@ CONTAINS
 
     IF (banddos%dos) THEN
        DO n=1,size(eigdos)
-          print *,"Makedos:",n
           call eigdos(n)%p%make_dos(kpts,input,banddos,eFermi)
-          print *,"Smooth:",n
           call eigdos(n)%p%smooth(banddos)
-          print *,"WriteDos:",n
           call eigdos(n)%p%write_dos(banddosFile_id,l_dfpt)
        END DO
        IF (banddos%l_storeEVData) THEN
