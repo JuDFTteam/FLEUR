@@ -73,12 +73,11 @@ CONTAINS
             ELSE
                vpw_temp = vpw(:, iSpin)
                l_smat   = .TRUE.
+               iQss = 1 ! spin-spiral q/2 shifts in the kinetic energy
                IF (input%l_useapw) THEN
                   iTkin = 1 ! Dirac form.
-                  iQss  = 0 ! No q-vector in kinetic energy.
                ELSE
                   iTkin = 2 ! Symmetrized Laplace form.
-                  iQss  = 1 ! Additional q-vectors in kinetic energy.
                END IF
                fact     = 1
             END IF
