@@ -168,7 +168,8 @@ MODULE m_checks
 
       IF (.NOT.input%l_useapw) RETURN
       IF (noco%l_ss.AND.ANY(noco%l_unrestrictMT)) CALL apw_error("spin spirals with l_mtNocoPot")
-      IF (input%l_f)             CALL apw_error("forces")
+      IF (input%l_f.AND.input%f_level>=2) CALL apw_error("forces with f_level>=2")
+      IF (input%gw>0)            CALL apw_error("SPEX/GW output")
       IF (dfpt%l_dfpt)           CALL apw_error("DFPT")
       IF (hybinp%l_hybrid)       CALL apw_error("hybrid functionals")
       IF (wannierlib%l_wannierize) CALL apw_error("Wannier functions")

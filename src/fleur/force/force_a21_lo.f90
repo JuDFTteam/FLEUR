@@ -49,7 +49,10 @@ CONTAINS
       ! comments in setlomap.
       !--------------------------------------------------------------------------
 
+      ! An APW LO (l_dulo) lives on the udot slot; its contributions are part of
+      ! cof(:,:,2) and bveccof and thus of the u/udot terms in force_a21.
       DO lo = 1, atoms%nlo(itype)
+         IF (atoms%l_dulo(lo, itype)) CYCLE
          l = atoms%llo(lo, itype)
          n_lo = atoms%slot_of_lo(lo, itype)
          DO m = -l, l
@@ -83,6 +86,7 @@ CONTAINS
             END DO
 
             DO lop = 1, atoms%nlo(itype)
+               IF (atoms%l_dulo(lop, itype)) CYCLE
                lp = atoms%llo(lop, itype)
                n_lop = atoms%slot_of_lo(lop, itype)
                DO mp = -lp, lp
@@ -117,7 +121,8 @@ CONTAINS
             END DO
 
             ! Consider only the lop with l_lop = l_lo
-            DO lop = atoms%lo1l(l, itype), (atoms%lo1l(l, itype) + atoms%nlol(l, itype) - 1)
+            DO lop = 1, atoms%nlo(itype)
+               IF (atoms%llo(lop, itype) /= l .OR. atoms%l_dulo(lop, itype)) CYCLE
                DO iatom = atoms%firstAtom(itype), atoms%firstAtom(itype) + atoms%neq(itype) - 1
                   iatom_l = iatom - atoms%firstAtom(itype) + 1
                   DO ie = 1, ne

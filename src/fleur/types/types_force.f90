@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -13,7 +13,6 @@ MODULE m_types_force
    TYPE t_force
      COMPLEX, ALLOCATABLE :: f_a12(:,:)
      COMPLEX, ALLOCATABLE :: f_a21(:,:)
-     COMPLEX, ALLOCATABLE :: f_b4(:,:)
      COMPLEX, ALLOCATABLE :: f_b8(:,:)
 
      COMPLEX, ALLOCATABLE :: e1cof(:,:,:)
@@ -47,18 +46,15 @@ CONTAINS
     IF (input%l_f) THEN
        ALLOCATE (thisForce%f_a12(3,atoms%ntype))
        ALLOCATE (thisForce%f_a21(3,atoms%ntype))
-       ALLOCATE (thisForce%f_b4(3,atoms%ntype))
        ALLOCATE (thisForce%f_b8(3,atoms%ntype))
     ELSE
        ALLOCATE (thisForce%f_a12(1,1))
        ALLOCATE (thisForce%f_a21(1,1))
-       ALLOCATE (thisForce%f_b4(1,1))
        ALLOCATE (thisForce%f_b8(1,1))
     END IF
 
     thisForce%f_a12 = CMPLX(0.0,0.0)
     thisForce%f_a21 = CMPLX(0.0,0.0)
-    thisForce%f_b4 = CMPLX(0.0,0.0)
     thisForce%f_b8 = CMPLX(0.0,0.0)
 
   END SUBROUTINE force_init1

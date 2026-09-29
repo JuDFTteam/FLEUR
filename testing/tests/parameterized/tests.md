@@ -58,6 +58,7 @@ Testset: Forces
 | --- | -------------------------------------------- | ----------------------- | --------- | ------- | ------- | --- |
 | +   | Bulk GaAs, Relaxation, LDA+U                 | forces/GaAsMultiUForce  | bulk,ldau |         |         | 2   |
 | +   | Bulk VO2, Relaxation                         | forces/VO2_forces       | bulk      |         |         | 2   |
+| +   | Si displaced, APW+lo forces                  | forces/SiAPWlo_force    | bulk      |         |         | 2   |
 | +   | Bulk VO2, Relaxation, different force levels | forces/VO2_force_levels | bulk      |         |         | 2   |
 | +   | Bulk H2O, Relaxtion using BFGS               | forces/H2ORelaxBFGS     | bulk      |         |         | 2   |
 
