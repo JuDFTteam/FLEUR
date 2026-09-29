@@ -167,9 +167,7 @@ MODULE m_checks
       TYPE(t_wannierlib_wannierize),INTENT(IN) :: wannierlib
 
       IF (.NOT.input%l_useapw) RETURN
-      IF (noco%l_ss)             CALL apw_error("spin spirals")
-      IF (noco%l_noco)           CALL apw_error("non-collinear magnetism")
-      IF (noco%l_soc)            CALL apw_error("spin-orbit coupling")
+      IF (noco%l_ss.AND.ANY(noco%l_unrestrictMT)) CALL apw_error("spin spirals with l_mtNocoPot")
       IF (input%l_f)             CALL apw_error("forces")
       IF (dfpt%l_dfpt)           CALL apw_error("DFPT")
       IF (hybinp%l_hybrid)       CALL apw_error("hybrid functionals")
