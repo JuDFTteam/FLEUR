@@ -29,6 +29,7 @@ Testset: Basic
 | +   | Bulk Fe fcc with relativistic core solver    | basic/Fe_fcc_kcrel       |                       |                    |                 | 2   |
 | +   | Si with LOs                                  | basic/SiLO               | bulk                  |                    |                 | 2   |
 | +   | Cu with APW+lo, LAPW and APW channels        | basic/CuAPWlo            | bulk                  |                    |                 | 2   |
+| +   | Cu with APW+lo and DFT+U on the APW+lo d     | basic/CuAPWlo_U          | bulk,ldau             |                    |                 | 2   |
 | +   | Fe with APW+lo, SOC 2nd variation            | basic/FeAPWlo_SOC2       | bulk,soc              |                    |                 | 2   |
 | +   | Bulk PTO                                     | basic/PTO                | bulk                  |                    |                 | 2   |
 | +   | Bulk PTO, SOC                                | basic/PTO-SOC            | bulk,soc              |                    |                 | 2   |

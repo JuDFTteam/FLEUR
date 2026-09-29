@@ -297,6 +297,7 @@ CONTAINS
       LOGICAL,          INTENT(IN)    :: l_forces
 
       INTEGER  :: i_u,i_opc,n,l,m
+      LOGICAL  :: l_apwlo
       COMPLEX, ALLOCATABLE :: mm(:,:)
       REAL, ALLOCATABLE :: opc_corrections(:)
 
@@ -311,7 +312,10 @@ CONTAINS
             mm = CONJG(TRANSPOSE(v%mmpMat(-l:l,-l:l,i_u,3)))
          END IF
          CALL add_nonsph_lm_block(td%h_loc_nonsph(:,:,n,j1,j2),atoms,n,l,mm,td%radfun(n)%integral(1:2,1:2,l,j1,j2))
-         IF (atoms%lda_u(i_u)%use_lo.AND..NOT.l_forces) &
+         ! An APW LO carries most of the weight of its channel and gets U through td%h;
+         ! spin off-diagonal blocks only in their last pass (jsp=4), after extract_nonsph
+         l_apwlo = ANY(atoms%l_dulo(:atoms%nlo(n),n).AND.atoms%llo(:atoms%nlo(n),n)==l)
+         IF ((atoms%lda_u(i_u)%use_lo.OR.(l_apwlo.AND.(j1==j2.OR.jsp==4))).AND..NOT.l_forces) &
             CALL add_lm_block(td%h(:,:,n,j1,j2),td%ind(1:2,l*l:l*l+2*l,n),mm,td%radfun(n)%integral(1:2,1:2,l,j1,j2))
       END DO
 
