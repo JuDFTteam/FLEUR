@@ -13,7 +13,7 @@ MODULE m_vvac_xc
   !     for the gradient contribution.   t.a. 1996
   !-----------------------------------------------------------------------
 CONTAINS
-  SUBROUTINE vvac_xc(ifftd2,stars,vacuum,noco ,cell,xcpot,input,den, vxc,exc)
+  SUBROUTINE vvac_xc(ifftd2,stars,vacuum,noco ,cell,xcpot,input,den, vxc,exc,vx)
 
     !-----------------------------------------------------------------------
     !     instead of vvacxcor.f: the different exchange-correlation
@@ -48,6 +48,7 @@ CONTAINS
     TYPE(t_potden),INTENT(IN)    :: den
     TYPE(t_potden),INTENT(INOUT) :: vxc
     TYPE(t_potden),INTENT(INOUT) :: exc
+    TYPE(t_potden),INTENT(INOUT),OPTIONAL :: vx
     !     ..
     !     .. Scalar Arguments ..
     INTEGER, INTENT (IN) :: ifftd2
@@ -89,6 +90,15 @@ CONTAINS
     END SELECT
 
     call vac_from_grid(stars,vacuum,v_xc,ifftd2,vxc%vac)
+
+    ! exchange-only part, mirrored to the second vacuum; needed for hybrid functionals
+    IF (PRESENT(vx)) THEN
+       IF (ALLOCATED(vx%vac)) THEN
+          vx%vac = CMPLX(0.0,0.0)
+          call vac_from_grid(stars,vacuum,v_x,ifftd2,vx%vac)
+          CALL stars%fill_2nd_vac(vacuum,vx%vac)
+       END IF
+    END IF
 
     IF (ALLOCATED(exc%vac)) THEN
       ALLOCATE ( e_xc(ngrid,1) ); e_xc=0.0

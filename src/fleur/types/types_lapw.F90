@@ -52,16 +52,17 @@ MODULE m_types_lapw
    PUBLIC :: t_lapw, lapw_dim_nbasfcn, lapw_dim_nvd, lapw_dim_nv2d
 
 CONTAINS
-   function hyb_num_bas_fun(lapw, fi) result(nbasfcn)
+   function hyb_num_bas_fun(lapw, fi, jsp) result(nbasfcn)
       implicit NONE
       class(t_lapw), intent(in)         :: lapw
       type(t_fleurinput), intent(in)    :: fi
+      integer, intent(in)               :: jsp
 
       integer :: nbasfcn
       if (fi%noco%l_noco) then
          nbasfcn = lapw%nv(1) + lapw%nv(2) + 2*fi%atoms%nlotot
       else
-         nbasfcn = lapw%nv(1) + fi%atoms%nlotot
+         nbasfcn = lapw%nv(jsp) + fi%atoms%nlotot
       endif
    end function hyb_num_bas_fun
 

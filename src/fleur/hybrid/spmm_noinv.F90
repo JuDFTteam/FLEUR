@@ -1,6 +1,7 @@
 module m_spmm_noinv
    use iso_c_binding
    use m_spmm
+   use m_spmm_vac, only: spmm_vac_c, apply_mtir_vac_c
 #ifdef _OPENACC
    USE cublas
 #define CPP_zgemm cublaszgemm
@@ -252,6 +253,10 @@ contains
 #endif
          !$acc wait
          call timestop("ibasm+1->nbasm: zgemm")
+
+         ! films: vacuum part, outside the MT+IR corner of mtir
+         call spmm_vac_c(fi, mpdata, hybdat, hybdat%coul(ikpt), ikpt, conjg_mtir, mat_in, mat_out)
+         call apply_mtir_vac_c(fi, mpdata, hybdat, hybdat%coul(ikpt), ikpt, ibasm, indx1, conjg_mtir, mat_in, mat_out)
 
          call timestart("dot prod")
          !$acc kernels present(mt2_tmp)

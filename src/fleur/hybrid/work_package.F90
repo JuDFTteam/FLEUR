@@ -157,7 +157,7 @@ contains
       q_pack%ptr    = ptr
 
       ikqpt = fi%kpts%get_nk(fi%kpts%to_first_bz(fi%kpts%bkf(:,nk) + fi%kpts%bkf(:,ptr)))
-      n_parts = calc_n_parts(fi, hybdat, mpdata%n_g, q_pack, ikqpt, jsp)
+      n_parts = calc_n_parts(fi, hybdat, mpdata, q_pack, ikqpt, jsp)
       
       allocate(start_idx(n_parts), psize(n_parts))
       allocate(q_pack%band_packs(n_parts))
@@ -266,11 +266,12 @@ contains
       enddo
    end function t_work_package_has_nk
 
-   function calc_n_parts(fi, hybdat, n_g, q_pack, ikqpt, jsp) result(n_parts)
+   function calc_n_parts(fi, hybdat, mpdata, q_pack, ikqpt, jsp) result(n_parts)
       implicit none 
       type(t_fleurinput), intent(in) :: fi
       type(t_hybdat), intent(in)     :: hybdat
-      integer, intent(in)            :: n_g(:), ikqpt, jsp
+      type(t_mpdata), intent(in)     :: mpdata
+      integer, intent(in)            :: ikqpt, jsp
       class(t_q_package), intent(in) :: q_pack 
       
       integer :: n_parts, me, ierr, ikpt
@@ -287,7 +288,12 @@ contains
       target_size = target_memsize(fi, hybdat)
       coulomb_size = 0.0
       do ikpt = 1,fi%kpts%nkpt
-         coulomb_size = max(int(mtir_size(fi, n_g, ikpt),kind=8)**2, coulomb_size)
+         if (fi%input%film) then
+            ! films: mtir includes the vacuum carriers
+            coulomb_size = max(int(mtir_size(fi, mpdata%n_g, ikpt, mpdata%n_g_vac),kind=8)**2, coulomb_size)
+         else
+            coulomb_size = max(int(mtir_size(fi, mpdata%n_g, ikpt),kind=8)**2, coulomb_size)
+         endif
       enddo
       ! size in byte
       coulomb_size = rc_factor * coulomb_size

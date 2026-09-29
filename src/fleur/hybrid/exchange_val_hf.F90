@@ -55,6 +55,7 @@ MODULE m_exchange_valence_hf
    USE m_types
    USE m_util
    use m_matmul_dgemm
+   use m_gamma_2d, only: divergence_2d
 
    LOGICAL, PARAMETER:: zero_order = .false., ibs_corr = .false.
 
@@ -146,7 +147,12 @@ CONTAINS
       ik = k_pack%nk
 
       IF (initialize) THEN !it .eq. 1 .and. ik .eq. 1) THEN
+         if (fi%input%film) then
+            ! films: head 2 pi/(A q) instead of 4 pi/(Omega q^2)
+            call divergence_2d(fi%cell, fi%kpts, divergence)
+         else
          call calc_divergence(fi%cell, fi%kpts, divergence)
+         endif
          if(fmpi%irank == 0) write (*,*) "Divergence:", divergence
          initialize = .false.
       END IF
@@ -482,7 +488,13 @@ CONTAINS
                !multiply divergent contribution with occupation number;
                !this only affects metals
                IF (n1 == nn2) THEN
+                  if (fi%input%film) then
+                     ! film prefactor 2 pi/A
+                     cdum2 = tpi_const/(fi%cell%omtil/fi%cell%amat(3, 3)) &
+                             *divergence*wl_iks(n1, ik)*fi%kpts%nkptf
+                  else
                   cdum2 = fpi_const/fi%cell%omtil*divergence*wl_iks(n1, ik)*fi%kpts%nkptf
+                  endif
                END IF
 
                ! due to the symmetrization afterwards the factor 1/n_q(1) must be added

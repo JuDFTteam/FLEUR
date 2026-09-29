@@ -12,6 +12,7 @@ MODULE m_types_hybinp
 
    TYPE, EXTENDS(t_fleurinput_base):: t_hybinp
       LOGICAL                ::  l_hybrid = .false.
+      LOGICAL                ::  l_hse = .false.
       INTEGER                ::  ewaldlambda = 3
       INTEGER                ::  lexp = 16
       INTEGER                ::  bands1 = -1 !Only read in
@@ -34,19 +35,6 @@ MODULE m_types_hybinp
 
 CONTAINS
 
-   !> Refuse film (2D) setups for the hybrid-functional
-   SUBROUTINE check_film_hybrid(input)
-      USE m_types_input
-      IMPLICIT NONE
-      TYPE(t_input), INTENT(IN) :: input
-
-      IF (input%film) THEN
-         CALL juDFT_error("2D film and 1D calculations not implemented for HF/EXX/PBE0/HSE", &
-                          calledby="types_hybinp", &
-                          hint="Use a 3D supercell with enough vacuum, or a semi-local functional")
-      END IF
-   END SUBROUTINE check_film_hybrid
-
    SUBROUTINE mpi_bc_hybinp(this, mpi_comm, irank)
       USE m_mpi_bc_tool
       CLASS(t_hybinp), INTENT(INOUT)::this
@@ -58,6 +46,7 @@ CONTAINS
       ELSE
          rank = 0
       END IF
+      call mpi_bc(this%l_hse, rank, mpi_comm)
       CALL mpi_bc(this%l_hybrid, rank, mpi_comm)
       CALL mpi_bc(this%ewaldlambda, rank, mpi_comm)
       CALL mpi_bc(this%lexp, rank, mpi_comm)
@@ -121,6 +110,7 @@ CONTAINS
       else
          this%l_hybrid = .False.
       endif
+      this%l_hse = (trim(xc_name) == "hse")
    END SUBROUTINE read_xml_hybinp
 
    SUBROUTINE init_hybinp(self, atoms, cell, input,   sym, xcpot)
@@ -144,8 +134,6 @@ CONTAINS
       integer :: isym, iisym, l, m2, m1
 
       IF (xcpot%is_hybrid() .OR. input%l_rdmft) THEN
-         CALL check_film_hybrid(input)
-
          !             IF( ANY( atoms%l_geo  ) )&
          !                  &     CALL juDFT_error("Forces not implemented for HF/PBE0/HSE ",&
          !                  &                    calledby ="fleur")

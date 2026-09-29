@@ -1,4 +1,5 @@
 module m_wavefproducts_inv
+   USE m_vac_rows, ONLY: NVAC_MPB
    USE m_types_hybdat
    use m_wavefproducts_noinv
    USE m_constants
@@ -34,6 +35,8 @@ CONTAINS
       REAL                    ::    kqpt(3), kqpthlp(3)
 
       type(t_mat) ::  z_kqpt_p
+      type(t_mat)  :: z_kq
+      type(t_lapw) :: lapw_kq
       complex, allocatable :: c_phase_kqpt(:), tmp(:,:)
 
       CALL timestart("wavefproducts_inv")
@@ -53,9 +56,28 @@ CONTAINS
             !$acc kernels present(cprod, cprod%data_r)
             cprod%data_r(:,:) = 0.0
             !$acc end kernels
-            call wavefproducts_IS_FFT(fi, ik, iq, g_t, jsp, bandoi, bandof, mpdata, hybdat, lapw, stars, nococonv, &
-                                       ikqpt, z_k, z_kqpt_p, c_phase_kqpt, cprod)
+            if (fi%input%film) then
+               call wavefproducts_IS_FFT(fi, ik, iq, g_t, jsp, bandoi, bandof, mpdata, hybdat, lapw, stars, nococonv, &
+                                          ikqpt, z_k, z_kqpt_p, c_phase_kqpt, cprod, &
+                                          lapw_kq_out=lapw_kq, z_kq_out=z_kq)
+            else
+               call wavefproducts_IS_FFT(fi, ik, iq, g_t, jsp, bandoi, bandof, mpdata, hybdat, lapw, stars, nococonv, &
+                                          ikqpt, z_k, z_kqpt_p, c_phase_kqpt, cprod)
+            endif
          !$acc end data ! cprod
+
+         if (fi%input%film) then
+            block
+               use m_wavefproducts_vac, only: wavefproducts_vac
+               complex, allocatable :: tmp_vac(:,:)
+               ! films: vacuum rows, computed complex and rotated to the real basis
+               allocate(tmp_vac(cprod%matsize1, cprod%matsize2), source=cmplx_0)
+               call wavefproducts_vac(fi, ik, iq, ikqpt, g_t, jsp, bandoi, bandof, mpdata, &
+                                      hybdat, lapw, lapw_kq, z_k, z_kq, tmp_vac)
+               call vac_to_realbasis(fi, mpdata, hybdat, iq, tmp_vac, cprod)
+               deallocate(tmp_vac)
+            end block
+         endif
 
          
          allocate(tmp(hybdat%n_mt, cprod%matsize2))
@@ -83,6 +105,42 @@ CONTAINS
       CALL timestop("wavefproducts_inv")
    END SUBROUTINE wavefproducts_inv
 
+   !>Vacuum rows of cprod in the real pair (M_1 +- M_2)/sqrt(2); with inversion symmetry
+   !>vac_abcof gives conjugate coefficients in the two vacua, so both combinations are real.
+   subroutine vac_to_realbasis(fi, mpdata, hybdat, iq, cprod_c, cprod)
+      use m_vac_rows, only: row_offset, basfn_offset
+      use m_constants, only: sqrt_2
+      implicit none
+      type(t_fleurinput), intent(in) :: fi
+      type(t_mpdata), intent(in)     :: mpdata
+      type(t_hybdat), intent(in)     :: hybdat
+      integer, intent(in)            :: iq
+      complex, intent(in)            :: cprod_c(:,:)
+      type(t_mat), intent(inout)     :: cprod
+
+      integer :: igm, ilen, nn, b1, b2, i, j
+
+      if (NVAC_MPB /= 2) call juDFT_error( &
+         "invs film: the real vacuum basis needs both vacua (nvac = 2)", &
+         calledby="wavefproducts_inv", hint="nvac = 1 is not covered yet")
+
+      do igm = 1, mpdata%n_g_vac(iq)
+         ilen = mpdata%glen_ptr_vac(igm, iq)
+         nn = mpdata%num_zbasfn_vac(ilen, 1)
+         if (nn == 0) cycle
+         b1 = row_offset(mpdata, hybdat, iq, 1) + basfn_offset(mpdata, iq, 1, igm)
+         b2 = row_offset(mpdata, hybdat, iq, 2) + basfn_offset(mpdata, iq, 2, igm)
+         !$omp parallel do default(none) collapse(2) private(i,j) &
+         !$omp shared(cprod, cprod_c, b1, b2, nn)
+         do i = 1, cprod%matsize2
+            do j = 1, nn
+               cprod%data_r(b1 + j, i) = sqrt_2*real(cprod_c(b1 + j, i))
+               cprod%data_r(b2 + j, i) = sqrt_2*aimag(cprod_c(b1 + j, i))
+            enddo
+         enddo
+         !$omp end parallel do
+      enddo
+   end subroutine vac_to_realbasis
    subroutine transform_to_realsph(fi, mpdata, cprod)
       use m_constants
       implicit none 

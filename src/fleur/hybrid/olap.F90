@@ -5,13 +5,64 @@ MODULE m_olap
    use mpi
 #endif
    private olap_pw_real, olap_pw_cmplx
-   public olap_pw, olap_pwp,  wfolap_inv, wfolap_noinv
+   public olap_pw, olap_pwp,  wfolap_inv, wfolap_noinv, slab_region_coeff
 
 CONTAINS
 
 !     Calculates plane-wave overlap matrix olap defined by GPT(1:3,1:NGPT).
 !     (Muffin-tin spheres are cut out.)
 !     olap_pw calculates full overlap matrix
+
+
+   !>Fourier coefficient of the slab |z| < z1 (films), as in stepf.
+   PURE REAL FUNCTION slab_region_coeff(cell, dg)
+      USE m_types_cell
+      IMPLICIT NONE
+      TYPE(t_cell), INTENT(IN) :: cell
+      INTEGER, INTENT(IN)      :: dg(3)
+
+      REAL :: th
+
+      IF (dg(1) /= 0 .OR. dg(2) /= 0) THEN
+         slab_region_coeff = 0.0
+      ELSE IF (dg(3) == 0) THEN
+         slab_region_coeff = cell%vol/cell%omtil
+      ELSE
+         th = cell%bmat(3, 3)*dg(3)*cell%z1
+         slab_region_coeff = cell%vol*SIN(th)/th/cell%omtil
+      END IF
+   END FUNCTION slab_region_coeff
+
+   !>Films: interstitial plane waves are cut at +-z1; replaces the bulk delta_{G,G'}.
+   SUBROUTINE olap_pw_film_corr(olap, gpt, ngpt, cell, fmpi)
+      USE m_types_cell
+      USE m_types_mpi
+      USE m_types_mat
+      IMPLICIT NONE
+      TYPE(t_mat), INTENT(INOUT) :: olap
+      INTEGER, INTENT(IN)        :: gpt(:, :), ngpt
+      TYPE(t_cell), INTENT(IN)   :: cell
+      TYPE(t_mpi), INTENT(IN)    :: fmpi
+
+      INTEGER :: i, j, dg(3)
+      REAL    :: corr
+
+      DO j = 1, ngpt
+         DO i = 1, j
+            dg = gpt(:, j) - gpt(:, i)
+            IF (dg(1) /= 0 .OR. dg(2) /= 0) CYCLE
+            corr = slab_region_coeff(cell, dg)
+            IF (ALL(dg == 0)) corr = corr - 1.0
+            IF (olap%l_real) THEN
+               olap%data_r(i, j) = olap%data_r(i, j) + corr
+               olap%data_r(j, i) = olap%data_r(i, j)
+            ELSE
+               olap%data_c(i, j) = olap%data_c(i, j) + corr
+               olap%data_c(j, i) = CONJG(olap%data_c(i, j))
+            END IF
+         END DO
+      END DO
+   END SUBROUTINE olap_pw_film_corr
 
    SUBROUTINE olap_pw(olap, gpt, ngpt, atoms, cell, fmpi)
       use m_juDFT
@@ -36,6 +87,7 @@ CONTAINS
       else
          call olap_pw_cmplx(olap, gpt, ngpt, atoms, cell)
       endif
+      if (cell%z1 > 0.0) call olap_pw_film_corr(olap, gpt, ngpt, cell, fmpi)
    END SUBROUTINE olap_pw
 
    subroutine olap_pw_real(olap, gpt, ngpt, atoms, cell, fmpi)

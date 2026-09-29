@@ -25,7 +25,7 @@ contains
       if (ik <= fi%kpts%nkpt) call eigvec_create_comm(eigvec, fi, eig_id, ik, jsp, nbands)
 
       if (eigvec%l_recv) then
-         nbasfcn = lapw%hyb_num_bas_fun(fi)
+         nbasfcn = lapw%hyb_num_bas_fun(fi, jsp)
          call eigvec%mat%alloc(fi%sym%invs, nbasfcn, nbands)
       endif
    end subroutine eigvec_setup
@@ -82,7 +82,7 @@ contains
 
                   CALL lapw%init(fi%input, fi%noco, nococonv, fi%kpts, fi%atoms, fi%sym, ik, fi%cell)
                   !allocate tmp array
-                  nbasfcn = lapw%hyb_num_bas_fun(fi)
+                  nbasfcn = lapw%hyb_num_bas_fun(fi, jsp)
                   call tmp%alloc(fi%sym%invs, nbasfcn, 1)
                   do ieig = 1, hybdat%nbands(ik,jsp)
                      root = hybdat%zmat(ik, jsp)%root_pe(ieig)

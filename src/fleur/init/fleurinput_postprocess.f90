@@ -43,6 +43,36 @@ CONTAINS
     CALL sym%init(cell,input%film)
     call vacuum%init(sym)
 
+    ! features not available with hybrid functionals
+    IF (hybinp%l_hybrid .OR. input%l_rdmft) THEN
+       IF (noco%l_noco) CALL juDFT_error( &
+          "Non-collinear magnetism is not implemented for HF/PBE0/HSE", &
+          calledby="fleurinput_postprocess", &
+          hint="run collinear, or use a semi-local functional")
+
+       IF (atoms%n_u + atoms%n_hia > 0) CALL juDFT_error( &
+          "LDA+U is not implemented for HF/PBE0/HSE", &
+          calledby="fleurinput_postprocess", &
+          hint="remove the U/J parameters, or use a semi-local functional")
+
+       IF (input%film .AND. hybinp%l_hse) CALL juDFT_error( &
+          "HSE is not implemented for films", &
+          calledby="fleurinput_postprocess", &
+          hint="use PBE0 or HF for films; hsefunctional.F90 assumes the 3D kernel")
+
+       IF (input%film) CALL juDFT_warn( &
+          "Hybrid functionals for films are still under development and experimental", &
+          calledby="fleurinput_postprocess", &
+          hint="check the results carefully, e.g. their convergence with dVac")
+
+       IF (ALLOCATED(atoms%l_geo)) THEN
+          IF (input%l_f .AND. ANY(atoms%l_geo)) CALL juDFT_warn( &
+             "Forces are not validated for HF/PBE0/HSE", &
+             calledby="fleurinput_postprocess", &
+             hint="the combination runs, but no force test covers it")
+       END IF
+    END IF
+
     CALL make_sym(sym,cell,atoms,noco ,input,gfinp)
     !call make_xcpot(xcpot,atoms,input)
     CALL noco%init(atoms,input%ldauSpinoffd)

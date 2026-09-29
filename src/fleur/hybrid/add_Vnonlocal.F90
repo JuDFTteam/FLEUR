@@ -122,8 +122,10 @@ CONTAINS
       exch = 0
       select type(vx =>hybdat%v_x(nk, jsp))
       class is (t_mat)
+         if(nbasfcn /= vx%matsize1) call juDFT_error("these dimension should match. is this a spin issue?")
          if(nbasfcn /= vx%matsize2) call juDFT_error("these dimension should match. is this a spin issue?")
       class is (t_mpimat)
+         if(nbasfcn /= vx%global_size1) call juDFT_error("these dimension should match. is this a spin issue?")
          if(nbasfcn /= vx%global_size2) call juDFT_error("these dimension should match. is this a spin issue?")
       end select
       !z%matsize1 = MIN(z%matsize1, hybdat%v_x(nk, jsp)%matsize2)

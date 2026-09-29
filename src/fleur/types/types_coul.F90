@@ -13,6 +13,11 @@ module m_types_coul
       REAL, ALLOCATABLE      :: mt2_r(:, :, :, :), mt3_r(:, :, :)
       COMPLEX, ALLOCATABLE   :: mt1_c(:, :, :, :)
       COMPLEX, ALLOCATABLE   :: mt2_c(:, :, :, :), mt3_c(:, :, :)
+      ! films: moment-free vacuum functions, (i,i',ilen,ivac) and their coupling to the carrier
+      REAL, ALLOCATABLE      :: vac1_r(:, :, :, :)
+      COMPLEX, ALLOCATABLE   :: vac1_c(:, :, :, :)
+      REAL, ALLOCATABLE      :: vac2_r(:, :, :)
+      COMPLEX, ALLOCATABLE   :: vac2_c(:, :, :)
       type(t_mat)            :: mtir
 #ifdef CPP_MPI
       integer                :: comm = MPI_COMM_NULL ! communicator for this coulomb matrix
@@ -54,6 +59,14 @@ contains
       endif
       call timestop("Bcast small stuff")
 
+      if (allocated(coul%vac1_r)) &
+         call MPI_Bcast(coul%vac1_r, size(coul%vac1_r), MPI_DOUBLE_PRECISION, root, communicator, ierr)
+      if (allocated(coul%vac1_c)) &
+         call MPI_Bcast(coul%vac1_c, size(coul%vac1_c), MPI_DOUBLE_COMPLEX, root, communicator, ierr)
+      if (allocated(coul%vac2_r)) &
+         call MPI_Bcast(coul%vac2_r, size(coul%vac2_r), MPI_DOUBLE_PRECISION, root, communicator, ierr)
+      if (allocated(coul%vac2_c)) &
+         call MPI_Bcast(coul%vac2_c, size(coul%vac2_c), MPI_DOUBLE_COMPLEX, root, communicator, ierr)
       call coul%mtir%bcast(root, communicator)
       call timestop("Bcast coulomb_mtx")
 #endif
@@ -70,6 +83,10 @@ contains
       if (allocated(coul%mt3_r)) deallocate (coul%mt3_r)
       if (allocated(coul%mt2_c)) deallocate (coul%mt2_c)
       if (allocated(coul%mt3_c)) deallocate (coul%mt3_c)
+      if (allocated(coul%vac1_r)) deallocate (coul%vac1_r)
+      if (allocated(coul%vac1_c)) deallocate (coul%vac1_c)
+      if (allocated(coul%vac2_r)) deallocate (coul%vac2_r)
+      if (allocated(coul%vac2_c)) deallocate (coul%vac2_c)
       call coul%mtir%free()
 
 #ifdef CPP_MPI
@@ -77,15 +94,47 @@ contains
 #endif
    end subroutine t_coul_free
 
-   subroutine t_coul_alloc(coul, fi, num_radbasfn, n_g, ikpt, l_print)
+   subroutine t_coul_alloc(coul, fi, num_radbasfn, n_g, ikpt, l_print, n_g_vac, num_zbasfn_vac)
       implicit NONE
       class(t_coul), intent(inout) :: coul
       type(t_fleurinput), intent(in)    :: fi
       integer, intent(in) :: num_radbasfn(:, :), n_g(:), ikpt
       logical, intent(in), optional :: l_print
-      integer :: info, isize
+      integer, intent(in), optional :: n_g_vac(:), num_zbasfn_vac(:, :)
+      integer :: info, isize, nz_max
 
+      if (present(n_g_vac)) then
+         isize = mtir_size(fi, n_g, ikpt, n_g_vac)
+      else
       isize = mtir_size(fi, n_g, ikpt)
+      endif
+
+      if (present(num_zbasfn_vac) .and. fi%input%film) then
+         nz_max = max(maxval(num_zbasfn_vac) - 1, 1)
+         if (fi%sym%invs) then
+            if (.not. allocated(coul%vac1_r)) then
+               allocate (coul%vac1_r(nz_max, nz_max, size(num_zbasfn_vac, 1), &
+                                     2), stat=info, source=0.0)
+               if (info /= 0) call judft_error("Can't allocate coul%vac1_r")
+            endif
+            if (.not. allocated(coul%vac2_r)) then
+               allocate (coul%vac2_r(nz_max, size(num_zbasfn_vac, 1), &
+                                     2), stat=info, source=0.0)
+               if (info /= 0) call judft_error("Can't allocate coul%vac2_r")
+            endif
+         else
+            if (.not. allocated(coul%vac1_c)) then
+               allocate (coul%vac1_c(nz_max, nz_max, size(num_zbasfn_vac, 1), &
+                                     2), stat=info, source=cmplx(0.0, 0.0))
+               if (info /= 0) call judft_error("Can't allocate coul%vac1_c")
+            endif
+            if (.not. allocated(coul%vac2_c)) then
+               allocate (coul%vac2_c(nz_max, size(num_zbasfn_vac, 1), &
+                                     2), stat=info, source=cmplx(0.0, 0.0))
+               if (info /= 0) call judft_error("Can't allocate coul%vac2_c")
+            endif
+         endif
+      endif
 
       if (present(l_print)) then
          if (l_print) then

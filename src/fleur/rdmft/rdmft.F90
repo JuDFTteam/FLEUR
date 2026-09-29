@@ -380,7 +380,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
    iterHF = 0
    hybdat%l_calhf = .TRUE.
 
-   CALL mixedbasis(fi%atoms,fi%kpts,fi%input,fi%cell,xcpot,fi%mpinp,mpdata,fi%hybinp, hybdat,enpara,fmpi,vTot, iterHF)
+   CALL mixedbasis(fi%atoms,fi%kpts,fi%input,fi%cell,fi%vacuum,xcpot,fi%mpinp,mpdata,fi%hybinp, hybdat,enpara,fmpi,vTot, iterHF)
 
    !allocate coulomb matrix
    IF (.NOT.ALLOCATED(hybdat%coul)) ALLOCATE(hybdat%coul(fi%kpts%nkpt))

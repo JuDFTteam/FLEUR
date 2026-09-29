@@ -14,8 +14,19 @@ module m_types_mpdata
       integer, allocatable   :: l2(:, :, :) !(n, l, itype)
       integer, allocatable   :: n1(:, :, :) !(n, l, itype)
       integer, allocatable   :: n2(:, :, :) !(n, l, itype)
+
+      ! films: in-plane vectors and length groups of the VAC block, and its z-functions
+      integer, allocatable   :: g_vac(:, :)
+      integer, allocatable   :: n_g_vac(:)
+      integer, allocatable   :: gptm_ptr_vac(:, :)
+      integer, allocatable   :: glen_ptr_vac(:, :)
+      real, allocatable      :: glen_vac(:)
+      integer, allocatable   :: num_zbasfn_vac(:, :)
+      real, allocatable      :: zbasfn_vac(:, :, :, :)
+      integer                :: nmz_vac = 0
    CONTAINS
       procedure :: num_gpts => mpdata_num_gpts
+      procedure :: n_vac_fun => mpdata_n_vac_fun
       procedure :: gen_gvec => mpdata_gen_gvec
       procedure :: check_orthonormality => mpdata_check_orthonormality
       procedure :: check_radbasfn => mpdata_check_radbasfn
@@ -33,6 +44,22 @@ module m_types_mpdata
       !generic   :: write(unformatted) => write_mpdata
    end type t_mpdata
 contains
+   function mpdata_n_vac_fun(mpdata, ik, nvac) result(n)
+      implicit none
+      class(t_mpdata), intent(in) :: mpdata
+      integer, intent(in)         :: ik, nvac
+
+      integer :: n, i, ivac
+
+      n = 0
+      if (.not. allocated(mpdata%num_zbasfn_vac)) return
+      do ivac = 1, nvac
+         do i = 1, mpdata%n_g_vac(ik)
+            n = n + mpdata%num_zbasfn_vac(mpdata%glen_ptr_vac(i, ik), ivac)
+         end do
+      end do
+   end function mpdata_n_vac_fun
+
    function mpdata_num_gpts(mpdata)
       implicit NONE
       class(t_mpdata), intent(in) :: mpdata

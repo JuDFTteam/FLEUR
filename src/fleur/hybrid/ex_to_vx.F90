@@ -22,7 +22,7 @@ contains
       type(t_mat) :: trafo, tmp, olap
 
       CALL timestart("T^-1*mat_ex*T^-1*")
-      nbasfcn = lapw%hyb_num_bas_fun(fi)
+      nbasfcn = lapw%hyb_num_bas_fun(fi, jsp)
 
       !calculate trafo from wavefunctions to APW basis
       IF (fi%input%neig < hybdat%nbands(nk,jsp)) call judft_error(' mhsfock: neigd  < nbands(nk) ;trafo from wavefunctions to APW requires at least nbands(nk)')
