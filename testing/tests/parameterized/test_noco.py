@@ -36,6 +36,7 @@ def test_Fe_sc_GGA_mtNocoPot(default_fleur_test):
 @pytest.mark.noco
 @pytest.mark.bulk
 @pytest.mark.dos
+@pytest.mark.hdf
 def test_FeBccNocoDM(default_fleur_test, grep_number):
     """
     Band-resolved density matrix with all four spin blocks (unsymmetrized, l_mperp):
