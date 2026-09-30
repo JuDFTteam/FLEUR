@@ -1,10 +1,11 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_pwden
+   implicit none
 CONTAINS
    SUBROUTINE pwden(stars, kpts, banddos,   input, fmpi, noco, nococonv, cell, atoms, sym, &
                     ikpt, jspin, lapw, ne, ev_list, we, eig, den, results, f_b8, zMat, dos, q_dfpt, lapwq, we1, zMat1, iDir, &
@@ -248,10 +249,6 @@ CONTAINS
             ENDIF
             q0 = q0/cell%omtil
          ENDIF
-
-         IF ((noco%l_noco).AND.(ikpt.LE.fmpi%isize)) THEN
-            if (dos%l_initialized) dos%qis = 0.0
-         END IF
       END IF
 
       wtf(:ne) = we(:ne)/cell%omtil
