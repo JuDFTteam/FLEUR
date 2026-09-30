@@ -129,16 +129,20 @@ CONTAINS
                   lm = ll1 + mm
                   lplus  = SQRT(REAL((l - mm)*(l + mm + 1)))   ! <m+1|L+|m>
                   lminus = SQRT(REAL((l + mm)*(l - mm + 1)))   ! <m-1|L-|m>
+                  !> The raw product is c_i * conj(c_j), so the m that the ladder shifts
+                  !> belongs to the BRA: c_i(m+1) conj(c_j(m)) conjugates into <i|L_+|j>.
+                  !> Shifting the ket instead accumulates L_- into cp and L_+ into cm, a
+                  !> swap L_x is blind to, being their sum, and that leaves L_y negated.
                   DO s = s_lo, s_hi    ! L is spin-diagonal: a spinor sums, a channel stands alone
                      DO n_r = 1, abc(s, this%ntyp)%n_r(l)
                         DO n_r2 = 1, abc(s, this%ntyp)%n_r(l)
                            w = radfun(this%ntyp)%integral(n_r, n_r2, l, slot(s), slot(s))
                            cz = cz + abc(s, this%ntyp)%cof(i, lm, n_r, this%iat) &
                                    * CONJG(abc(s, this%ntyp)%cof(j, lm, n_r2, this%iat))*REAL(mm)*w
-                           IF (mm < l) cp = cp + abc(s, this%ntyp)%cof(i, lm, n_r, this%iat) &
-                                   * CONJG(abc(s, this%ntyp)%cof(j, lm + 1, n_r2, this%iat))*lplus*w
-                           IF (mm > -l) cm = cm + abc(s, this%ntyp)%cof(i, lm, n_r, this%iat) &
-                                   * CONJG(abc(s, this%ntyp)%cof(j, lm - 1, n_r2, this%iat))*lminus*w
+                           IF (mm < l) cp = cp + abc(s, this%ntyp)%cof(i, lm + 1, n_r, this%iat) &
+                                   * CONJG(abc(s, this%ntyp)%cof(j, lm, n_r2, this%iat))*lplus*w
+                           IF (mm > -l) cm = cm + abc(s, this%ntyp)%cof(i, lm - 1, n_r, this%iat) &
+                                   * CONJG(abc(s, this%ntyp)%cof(j, lm, n_r2, this%iat))*lminus*w
                         END DO
                      END DO
                   END DO
