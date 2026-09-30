@@ -80,7 +80,7 @@ CONTAINS
 
       call timestart("exchange_vccv1")
       ! read in mt wavefunction coefficients from file cmt
-      nbasfcn = calc_number_of_basis_functions(lapw, fi%atoms, fi%noco)
+      nbasfcn = calc_number_of_basis_functions(lapw, fi%atoms, fi%noco, jsp)
       
       call exchange%alloc(mat_ex%l_real, hybdat%nbands(nk,jsp), hybdat%nbands(nk,jsp))
       allocate(fprod(fi%atoms%jmtd, 5), stat=ierr)

@@ -14,7 +14,7 @@ CONTAINS
        fmpi,vacuum,stars,input,nococonv,jspin1,jspin2,&
        cell,ivac,evac,bkpt, vxy,vz,kvac,nv2,&
        tuuv,tddv,tudv,tduv,uz,duz,udz,dudz,ddnv,wronk,&
-       bkptq,v1,kvacq,nv2q,uzq,duzq,udzq,dudzq)
+       bkptq,v1,kvacq,nv2q,uzq,duzq,udzq,dudzq,dvz)
     !*********************************************************************
     !     determines the necessary values and derivatives on the vacuum
     !     boundary (ivac=1 upper vacuum; ivac=2, lower) for energy
@@ -60,17 +60,20 @@ CONTAINS
     INTEGER, OPTIONAL, INTENT (IN) :: kvacq(:,:,:)!(2,lapw%dim_nv2d(),input%jspins)
     INTEGER, OPTIONAL, INTENT (IN) :: nv2q(:)!(input%jspins)
     COMPLEX, OPTIONAL, INTENT (IN) :: v1(:,:,:,:) !(vacuum%nmzxyd,stars%ng2-1,nvac,:)
+    ! planar potential added as matrix elements, not to the potential of the basis functions
+    COMPLEX, OPTIONAL, INTENT (IN) :: dvz(:,:,:)
     !     ..
     !     .. Local Scalars ..
     REAL ev,scale,xv,yv,vzero,fac
     COMPLEX phase
     INTEGER i,i1,i2,i3,ik,ind2,ind3,jk,np1,jspin,ipot,nbuf,ierr,loclen
     INTEGER mat_start,mat_end
-    LOGICAL tail, l_dfpt
+    LOGICAL tail, l_dfpt, l_dvz
     !     ..
     !     .. Local Arrays ..
     REAL u(vacuum%nmzd,size(duz,1),input%jspins),ud(vacuum%nmzd,size(duz,1),input%jspins)
     REAL v(3),x(vacuum%nmzd), qssbti(2,2)
+    REAL, ALLOCATABLE :: dvz_loc(:,:)
     COMPLEX, ALLOCATABLE :: tddv_loc(:,:), tduv_loc(:,:), tudv_loc(:,:), tuuv_loc(:,:)
     COMPLEX, ALLOCATABLE :: tv_gather_buf(:)
     REAL :: ddnvq(SIZE(ddnv,1),input%jspins)
@@ -79,6 +82,15 @@ CONTAINS
     !     ..
     l_dfpt = .FALSE.
     IF (PRESENT(bkptq)) l_dfpt = .TRUE.
+    l_dvz = PRESENT(dvz)
+    IF (l_dvz) THEN
+       IF (l_dfpt .OR. jspin1/=jspin2) CALL juDFT_error("dvz is only implemented for the collinear, non-DFPT case", &
+                                                        calledby="vacfun")
+       ALLOCATE(dvz_loc(vacuum%nmzd,SIZE(dvz,3)))
+       dvz_loc = REAL(dvz(:vacuum%nmzd,ivac,:))
+    ELSE
+       ALLOCATE(dvz_loc(1,1))
+    END IF
     fac=MERGE(1.0,-1.0,jspin1>=jspin2)
     ipot=MERGE(jspin1,3,jspin1==jspin2)
 
@@ -150,7 +162,7 @@ CONTAINS
        IF (.NOT.l_dfpt) THEN
        !$OMP PARALLEL DO DEFAULT(none) &
        !$OMP& SHARED(tuuv_loc,tddv_loc,tudv_loc,tduv_loc,ddnv,vz,jk) &
-       !$OMP& SHARED(stars,jspin1,jspin2,evac,nv2,kvac,vacuum,u,vxy,tail,fac,np1,ivac,ipot,ud) &
+       !$OMP& SHARED(stars,jspin1,jspin2,evac,nv2,kvac,vacuum,u,vxy,tail,fac,np1,ivac,ipot,ud,l_dvz,dvz_loc) &
        !$OMP& PRIVATE(i1,i2,i3,ind3,phase,ind2,x,xv,yv)
          DO  ik = 1,nv2(jspin1)
 
@@ -229,6 +241,24 @@ CONTAINS
                   tddv_loc(ik,ik) = cmplx(evac(ivac,jspin1)*ddnv(ik,jspin1),0.0)
                   tudv_loc(ik,ik) = cmplx(0.5,0.0)
                   tduv_loc(ik,ik) = cmplx(0.5,0.0)
+                  IF (l_dvz) THEN
+                     DO i = 1,vacuum%nmz
+                        x(vacuum%nmz+1-i) = u(i,ik,jspin1)*u(i,ik,jspin1)*dvz_loc(i,jspin1)
+                     ENDDO
+                     CALL intgz0(x,vacuum%delz,vacuum%nmz,xv,tail)
+                     tuuv_loc(ik,ik) = tuuv_loc(ik,ik) + xv
+                     DO i = 1,vacuum%nmz
+                        x(vacuum%nmz+1-i) = ud(i,ik,jspin1)*ud(i,ik,jspin1)*dvz_loc(i,jspin1)
+                     ENDDO
+                     CALL intgz0(x,vacuum%delz,vacuum%nmz,xv,tail)
+                     tddv_loc(ik,ik) = tddv_loc(ik,ik) + xv
+                     DO i = 1,vacuum%nmz
+                        x(vacuum%nmz+1-i) = u(i,ik,jspin1)*ud(i,ik,jspin1)*dvz_loc(i,jspin1)
+                     ENDDO
+                     CALL intgz0(x,vacuum%delz,vacuum%nmz,xv,tail)
+                     tudv_loc(ik,ik) = tudv_loc(ik,ik) + xv
+                     tduv_loc(ik,ik) = tduv_loc(ik,ik) + xv
+                  END IF
                ELSE
 
                   !--->          tuuv

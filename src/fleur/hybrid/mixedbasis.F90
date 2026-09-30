@@ -38,7 +38,7 @@ MODULE m_mixedbasis
 
 CONTAINS
 
-   SUBROUTINE mixedbasis(atoms, kpts, input, cell, xcpot, mpinp, mpdata, hybinp, hybdat,&
+   SUBROUTINE mixedbasis(atoms, kpts, input, cell, vacuum, xcpot, mpinp, mpdata, hybinp, hybdat,&
                          enpara, fmpi, v, iterHF)
 
       USE m_judft
@@ -49,6 +49,8 @@ CONTAINS
       USE m_hybrid_core
       USE m_wrapper
       USE m_eig66_io
+      USE m_mixedbasis_vac, ONLY: gen_vac_basis
+      USE m_vac_rows, ONLY: NVAC_MPB, vac_src
 
       IMPLICIT NONE
 
@@ -62,6 +64,7 @@ CONTAINS
       TYPE(t_input), INTENT(IN)    :: input
       TYPE(t_cell), INTENT(IN)    :: cell
       TYPE(t_kpts), INTENT(IN)    :: kpts
+      TYPE(t_vacuum), INTENT(IN)  :: vacuum
       TYPE(t_atoms), INTENT(IN)    :: atoms
       TYPE(t_potden), INTENT(IN)    :: v
 
@@ -72,6 +75,7 @@ CONTAINS
 
       ! local scalars
       INTEGER                         ::  jspin, itype, l1, l2, l, n_radbasfn, full_n_radbasfn, n1, n2
+      INTEGER :: ivac_mpb
       INTEGER                         ::  i_basfn, i, n_grid_pt,j
       REAL                            ::  rdum, rdum1, max_momentum, momentum
 
@@ -100,6 +104,13 @@ CONTAINS
       IF (ALLOCATED(mpdata%gptm_ptr)) deallocate(mpdata%gptm_ptr)
       IF (ALLOCATED(mpdata%g)) deallocate(mpdata%g)
       IF (iterHF <= 1 .AND. ALLOCATED(mpdata%radbasfn_mt)) deallocate(mpdata%radbasfn_mt)
+      IF (ALLOCATED(mpdata%g_vac)) deallocate(mpdata%g_vac)
+      IF (ALLOCATED(mpdata%n_g_vac)) deallocate(mpdata%n_g_vac)
+      IF (ALLOCATED(mpdata%gptm_ptr_vac)) deallocate(mpdata%gptm_ptr_vac)
+      IF (ALLOCATED(mpdata%glen_ptr_vac)) deallocate(mpdata%glen_ptr_vac)
+      IF (ALLOCATED(mpdata%glen_vac)) deallocate(mpdata%glen_vac)
+      IF (ALLOCATED(mpdata%num_zbasfn_vac)) deallocate(mpdata%num_zbasfn_vac)
+      IF (ALLOCATED(mpdata%zbasfn_vac)) deallocate(mpdata%zbasfn_vac)
 
       CALL usdus%init(atoms, input%jspins)
 
@@ -379,6 +390,26 @@ CONTAINS
          END DO
       END DO
       hybdat%nbasm = hybdat%n_mt + mpdata%n_g
+
+      IF (input%film) THEN
+         ! films: VAC block, appended after IR; vz_vac/evac_vac regenerate the vacuum functions
+         ! of the eigenvectors in wavefproducts_vac
+         IF (ALLOCATED(hybdat%vz_vac)) DEALLOCATE (hybdat%vz_vac)
+         IF (ALLOCATED(hybdat%evac_vac)) DEALLOCATE (hybdat%evac_vac)
+         ALLOCATE (hybdat%vz_vac(vacuum%nmz, NVAC_MPB, input%jspins))
+         ALLOCATE (hybdat%evac_vac(NVAC_MPB, input%jspins))
+         DO ivac_mpb = 1, NVAC_MPB
+            hybdat%vz_vac(:, ivac_mpb, :) = &
+               v%vac(:vacuum%nmz, 1, vac_src(vacuum%nvac, ivac_mpb), :input%jspins)
+            hybdat%evac_vac(ivac_mpb, :) = &
+               enpara%evac(vac_src(vacuum%nvac, ivac_mpb), :input%jspins)
+         END DO
+
+         CALL gen_vac_basis(vacuum, cell, kpts, input, mpinp, mpdata, enpara, v, fmpi)
+         DO i = 1, kpts%nkptf
+            hybdat%nbasm(i) = hybdat%nbasm(i) + mpdata%n_vac_fun(i, NVAC_MPB)
+         END DO
+      END IF
 
       hybdat%maxlmindx = 0
       do itype = 1,atoms%ntype

@@ -12,5 +12,6 @@ src/fleur/cdn/q_mt_sl.f90
 src/fleur/cdn/qpw_to_nmt.f90
 src/fleur/cdn/slab_dim.f90
 src/fleur/cdn/slabgeom.f90
+src/fleur/cdn/vac_abcof.F90
 src/fleur/cdn/vacden.F90
 )

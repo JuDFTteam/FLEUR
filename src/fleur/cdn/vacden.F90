@@ -63,6 +63,7 @@ MODULE m_vacden
 CONTAINS
    SUBROUTINE vacden(vacuum,stars,input,cell,atoms,noco,nococonv,banddos,&
                      we,ikpt,jspin,vz,ne,ev_list,lapw,evac,den,zMat,vacdos,dos,lapwq,we1,zMat1)
+      USE m_vac_abcof
       !! Calculates the vacuum part of the density and puts it into den%vac. The variable has
       !! four dimensions: The z, star, vacuum and spin index. Recent refactoring combined the
       !! real variable vacz and the complex star expansion vacxy into one. vacz is identical
@@ -177,21 +178,8 @@ CONTAINS
       END IF
 
       DO ispin = jsp_start, jsp_end
-         n2 = 0
-         k_loop2: DO k = 1, lapw%nv(ispin)
-            DO j = 1, n2
-               IF (lapw%gvec(1,k,ispin).EQ.kvac1(j,ispin).AND.lapw%gvec(2,k,ispin).EQ.kvac2(j,ispin)) THEN
-                  map2(k,ispin) = j
-                  CYCLE k_loop2
-               END IF
-            END DO
-            n2 = n2 + 1
-            IF (n2>lapw%dim_nv2d()) CALL juDFT_error("vacden0","vacden")
-            kvac1(n2,ispin) = lapw%gvec(1,k,ispin)
-            kvac2(n2,ispin) = lapw%gvec(2,k,ispin)
-            map2(k,ispin) = n2
-         END DO k_loop2
-         nv2(ispin) = n2
+         CALL vac_map2(lapw, ispin, lapw%dim_nv2d(), kvac1(:,ispin), kvac2(:,ispin), &
+                       map2(:,ispin), nv2(ispin))
       END DO
       IF (l_dfpt) THEN
          DO ispin = jsp_start, jsp_end
@@ -266,47 +254,16 @@ CONTAINS
             DO ispin = 1,input%jspins
                !     -----> set up vacuum wave functions
                evacp = evac(ivac,ispin)
-               DO ik = 1,nv2(ispin)
-                  v(1) = lapw%bkpt(1) + kvac1(ik,ispin) + qssbti(1,ispin)
-                  v(2) = lapw%bkpt(2) + kvac2(ik,ispin) + qssbti(2,ispin)
-                  v(3) = 0.
-                  
-                  ev = evacp - 0.5*DOT_PRODUCT(v,MATMUL(v,cell%bbmat))
-
-                  CALL vacuz(ev,vz(:,ivac,ispin),vz(vacuum%nmz,ivac,ispin),vacuum%nmz,vacuum%delz,t(ik),&
-                             dt(ik),u(1,ik,ispin))
-                  CALL vacudz(ev,vz(:,ivac,ispin),vz(vacuum%nmz,ivac,ispin),vacuum%nmz,vacuum%delz,te(ik),&
-                              dte(ik),tei(ik,ispin),ue(1,ik,ispin),dt(ik),&
-                              u(1,ik,ispin))
-                  
-                  scale = wronk/ (te(ik)*dt(ik)-dte(ik)*t(ik))
-                  te(ik) = scale*te(ik)
-                  dte(ik) = scale*dte(ik)
-                  tei(ik,ispin) = scale*tei(ik,ispin)
-                  DO j = 1,vacuum%nmz
-                     ue(j,ik,ispin) = scale*ue(j,ik,ispin)
-                  END DO
-               END DO
+               CALL vac_uz(vacuum, cell, evacp, vz(:,ivac,ispin), &
+                           lapw%bkpt(1:2) + qssbti(1:2,ispin), &
+                           kvac1(:,ispin), kvac2(:,ispin), nv2(ispin), &
+                           u(:,:,ispin), ue(:,:,ispin), t, dt, te, dte, tei(:,ispin))
                 !     -----> construct a and b coefficients
-               DO k = 1,lapw%nv(ispin)
-                  !--->          the coefficients of the spin-down basis functions are
-                  !--->          stored in the second half of the eigenvector
-                  kspin = (lapw%nv(1)+atoms%nlotot)*(ispin-1) + k
-                  ikG = map2(k,ispin)
-                  zks = lapw%k3(k,ispin)*cell%bmat(3,3)*sign
-                  arg = zks*cell%z1
-                  c_1 = CMPLX(COS(arg),SIN(arg)) * const
-                  av = -c_1 * CMPLX( dte(ikG),zks*te(ikG) )
-                  bv =  c_1 * CMPLX(  dt(ikG),zks* t(ikG) )
-                  !     -----> loop over basis functions
-                  IF (zmat%l_real) THEN
-                     ac(ikG,:ne,ispin) = ac(ikG,:ne,ispin) + zMat%data_r(kspin,:ne)*av
-                     bc(ikG,:ne,ispin) = bc(ikG,:ne,ispin) + zMat%data_r(kspin,:ne)*bv
-                  ELSE
-                     ac(ikG,:ne,ispin) = ac(ikG,:ne,ispin) + zMat%data_c(kspin,:ne)*av
-                     bc(ikG,:ne,ispin) = bc(ikG,:ne,ispin) + zMat%data_c(kspin,:ne)*bv
-                  END IF
-               END DO
+               ! spin-down coefficients are stored in the second half of the eigenvector
+               CALL vac_abcof(cell, lapw, ispin, ivac, lapw%dim_nv2d(), ne, &
+                              (lapw%nv(1)+atoms%nlotot)*(ispin-1), 1.0, &
+                              map2(:,ispin), t, dt, te, dte, zMat, &
+                              ac(:,:,ispin), bc(:,:,ispin))
                !--->       end of spin loop
             END DO
             !--->       output for testing
@@ -323,75 +280,23 @@ CONTAINS
          ELSE
             !     -----> set up vacuum wave functions
             evacp = evac(ivac,jspin)
-            DO ik = 1,nv2(jspin)
-               v(1) = lapw%bkpt(1) + kvac1(ik,jspin)
-               v(2) = lapw%bkpt(2) + kvac2(ik,jspin)
-               v(3) = 0.
-
-               ev = evacp - 0.5*DOT_PRODUCT(v,MATMUL(v,cell%bbmat))
-               
-               CALL vacuz(ev,vz(:,ivac,jspin),vz(vacuum%nmz,ivac,jspin),vacuum%nmz,vacuum%delz,t(ik),dt(ik),u(1,ik,jspin))
-               CALL vacudz(ev,vz(:,ivac,jspin),vz(vacuum%nmz,ivac,jspin),vacuum%nmz,vacuum%delz,te(ik),&
-                           dte(ik),tei(ik,jspin),ue(1,ik,jspin),dt(ik),u(1,ik,jspin))
-
-               scale = wronk/ (te(ik)*dt(ik)-dte(ik)*t(ik))
-               te(ik) = scale*te(ik)
-               dte(ik) = scale*dte(ik)
-               tei(ik,jspin) = scale*tei(ik,jspin)
-               DO j = 1,vacuum%nmz
-                  ue(j,ik,jspin) = scale*ue(j,ik,jspin)
-               END DO
-            END DO
+            CALL vac_uz(vacuum, cell, evacp, vz(:,ivac,jspin), lapw%bkpt(1:2), &
+                        kvac1(:,jspin), kvac2(:,jspin), nv2(jspin), &
+                        u(:,:,jspin), ue(:,:,jspin), t, dt, te, dte, tei(:,jspin))
             IF (l_dfpt) THEN
-               DO ik = 1,nv2q(jspin)
-                  v(1) = lapwq%bkpt(1) + kvac1q(ik,jspin) + lapwq%qphon(1)
-                  v(2) = lapwq%bkpt(2) + kvac2q(ik,jspin) + lapwq%qphon(2)
-                  v(3) = 0.
-
-                  ev = evacp - 0.5*DOT_PRODUCT(v,MATMUL(v,cell%bbmat))
-                  
-                  CALL vacuz(ev,vz(:,ivac,jspin),vz(vacuum%nmz,ivac,jspin),vacuum%nmz,vacuum%delz,tq(ik),dtq(ik),uq(1,ik,jspin))
-                  CALL vacudz(ev,vz(:,ivac,jspin),vz(vacuum%nmz,ivac,jspin),vacuum%nmz,vacuum%delz,teq(ik),&
-                              dteq(ik),teiq(ik,jspin),ueq(1,ik,jspin),dtq(ik),uq(1,ik,jspin))
-
-                  scale = wronk/ (teq(ik)*dtq(ik)-dteq(ik)*tq(ik))
-                  teq(ik) = scale*teq(ik)
-                  dteq(ik) = scale*dteq(ik)
-                  teiq(ik,jspin) = scale*teiq(ik,jspin)
-                  DO j = 1,vacuum%nmz
-                     ueq(j,ik,jspin) = scale*ueq(j,ik,jspin)
-                  END DO
-               END DO
+               CALL vac_uz(vacuum, cell, evacp, vz(:,ivac,jspin), &
+                           lapwq%bkpt(1:2) + lapwq%qphon(1:2), &
+                           kvac1q(:,jspin), kvac2q(:,jspin), nv2q(jspin), &
+                           uq(:,:,jspin), ueq(:,:,jspin), tq, dtq, teq, dteq, teiq(:,jspin))
             END IF
             !     -----> construct a and b coefficients
-            DO k = 1,lapw%nv(jspin)
-               ikG = map2(k,jspin)
-               zks = lapw%k3(k,jspin)*cell%bmat(3,3)*sign
-               arg = zks*cell%z1
-               c_1 = CMPLX(COS(arg),SIN(arg)) * const
-               av = -c_1 * CMPLX( dte(ikG),zks*te(ikG) )
-               bv =  c_1 * CMPLX(  dt(ikG),zks* t(ikG) )
-               !     -----> loop over basis functions
-               IF (zmat%l_real) THEN
-                  ac(ikG,:ne,jspin) = ac(ikG,:ne,jspin) + zMat%data_r(k,:ne)*av
-                  bc(ikG,:ne,jspin) = bc(ikG,:ne,jspin) + zMat%data_r(k,:ne)*bv
-               ELSE
-                  ac(ikG,:ne,jspin) = ac(ikG,:ne,jspin) + zMat%data_c(k,:ne)*av
-                  bc(ikG,:ne,jspin) = bc(ikG,:ne,jspin) + zMat%data_c(k,:ne)*bv
-               END IF
-            END DO
+            CALL vac_abcof(cell, lapw, jspin, ivac, lapw%dim_nv2d(), ne, 0, 1.0, &
+                           map2(:,jspin), t, dt, te, dte, zMat, &
+                           ac(:,:,jspin), bc(:,:,jspin))
             IF (l_dfpt) THEN
-               DO k = 1,lapwq%nv(jspin)
-                  ikG = map2q(k,jspin)
-                  zks = lapwq%k3(k,jspin)*cell%bmat(3,3)*sign
-                  arg = zks*cell%z1
-                  c_1 = CMPLX(COS(arg),SIN(arg)) * const
-                  av = -c_1 * CMPLX( dteq(ikG),zks*teq(ikG) )
-                  bv =  c_1 * CMPLX(  dtq(ikG),zks* tq(ikG) )
-                  !     -----> loop over basis functions
-                  ac1(ikG,:ne,jspin) = ac1(ikG,:ne,jspin) + 2*zMat1%data_c(k,:ne)*av
-                  bc1(ikG,:ne,jspin) = bc1(ikG,:ne,jspin) + 2*zMat1%data_c(k,:ne)*bv
-               END DO
+               CALL vac_abcof(cell, lapwq, jspin, ivac, lapw%dim_nv2d(), ne, 0, 2.0, &
+                              map2q(:,jspin), tq, dtq, teq, dteq, zMat1, &
+                              ac1(:,:,jspin), bc1(:,:,jspin))
             END IF
          END IF
        !

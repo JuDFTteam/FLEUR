@@ -106,8 +106,8 @@ CALL timestop("MT part")
 !Vacuum contributions
 IF (fi%input%film) THEN
 CALL timestart("Vacuum part")
-CALL hsvac(fi%vacuum, stars, fmpi, isp, fi%input, v, enpara%evac, fi%cell, &
-lapw,  fi%noco, nococonv, hmat, smat)
+CALL hsvac_hyb(fi, stars, fmpi, isp, v, vx, xcpot, hybdat, enpara, lapw, nococonv, &
+hmat, smat)
 CALL timestop("Vacuum part")
 END IF
 
@@ -227,8 +227,8 @@ IF (fmpi%n_size == 1) THEN
    !Vacuum contributions
    IF (fi%input%film) THEN
    CALL timestart("Vacuum part")
-   CALL hsvac(fi%vacuum, stars, fmpi, isp, fi%input, v, enpara%evac, fi%cell, &
-   lapw,  fi%noco, nococonv, hmat, smat)
+   CALL hsvac_hyb(fi, stars, fmpi, isp, v, vx, xcpot, hybdat, enpara, lapw, nococonv, &
+   hmat, smat)
    CALL timestop("Vacuum part")
    END IF
 
@@ -298,8 +298,8 @@ ELSE
    !Vacuum contributions
    IF (fi%input%film) THEN
    CALL timestart("Vacuum part")
-   CALL hsvac(fi%vacuum, stars, fmpi, isp, fi%input, v, enpara%evac, fi%cell, &
-   lapw,  fi%noco, nococonv, hmat_mpi, smat_mpi)
+   CALL hsvac_hyb(fi, stars, fmpi, isp, v, vx, xcpot, hybdat, enpara, lapw, nococonv, &
+   hmat_mpi, smat_mpi)
    CALL timestop("Vacuum part")
    END IF
 
@@ -333,4 +333,32 @@ ELSE
 ENDIF
 END SUBROUTINE eigen_hssetup
 #endif
+   !>Vacuum part; for hybrids -a*v_x enters as matrix elements, as in the muffin-tins.
+   SUBROUTINE hsvac_hyb(fi, stars, fmpi, isp, v, vx, xcpot, hybdat, enpara, lapw, nococonv, hmat, smat)
+      USE m_juDFT
+      USE m_types
+      USE m_hsvac
+      IMPLICIT NONE
+      TYPE(t_fleurinput), INTENT(IN) :: fi
+      TYPE(t_stars), INTENT(IN)      :: stars
+      TYPE(t_mpi), INTENT(IN)        :: fmpi
+      INTEGER, INTENT(IN)            :: isp
+      TYPE(t_potden), INTENT(IN)     :: v, vx
+      CLASS(t_xcpot), INTENT(IN)     :: xcpot
+      TYPE(t_hybdat), INTENT(IN)     :: hybdat
+      TYPE(t_enpara), INTENT(IN)     :: enpara
+      TYPE(t_lapw), INTENT(IN)       :: lapw
+      TYPE(t_nococonv), INTENT(IN)   :: nococonv
+      CLASS(t_mat), INTENT(INOUT)    :: hmat(:, :), smat(:, :)
+
+      IF (hybdat%l_subvxc) THEN
+         IF (.NOT. ALLOCATED(vx%vac)) CALL juDFT_error("no vacuum exchange potential", calledby="hsvac_hyb")
+         CALL hsvac(fi%vacuum, stars, fmpi, isp, fi%input, v, enpara%evac, fi%cell, &
+                    lapw, fi%noco, nococonv, hmat, smat, dv=-xcpot%get_exchange_weight()*vx%vac)
+      ELSE
+         CALL hsvac(fi%vacuum, stars, fmpi, isp, fi%input, v, enpara%evac, fi%cell, &
+                    lapw, fi%noco, nococonv, hmat, smat)
+      END IF
+   END SUBROUTINE hsvac_hyb
+
 END MODULE m_eigen_hssetup

@@ -67,6 +67,15 @@ CONTAINS
 
       CALL timestart("hybrid code")
 
+      IF (fmpi%irank == 0 .AND. fi%kpts%nkpt >= 1) THEN
+         ! the Gamma branches of coulombmatrix are selected by ikpt == 1
+         IF (NORM2(fi%kpts%bk(:, 1)) > 1e-10) CALL juDFT_error( &
+            "hybrid functionals require the Gamma point to be the first k-point", &
+            calledby="calc_hybrid", &
+            hint="reorder the kPointList so that (0,0,0) comes first, or regenerate it &
+                 &with inpgen, which already orders it that way")
+      END IF
+
 #ifdef CPP_MPI
 #ifdef CPP_PROG_THREAD
       if(fmpi%l_mpi_multithreaded) call start_prog_thread(threadId)
@@ -114,7 +123,7 @@ CONTAINS
          !construct the mixed-basis
          CALL timestart("generation of mixed basis")
          if(glob_mpi%rank == 0) write (*,*) "iterHF =    " // int2str(iterHF)
-         CALL mixedbasis(fi%atoms, fi%kpts,  fi%input, fi%cell, xcpot, fi%mpinp, mpdata, fi%hybinp, hybdat,&
+         CALL mixedbasis(fi%atoms, fi%kpts,  fi%input, fi%cell, fi%vacuum, xcpot, fi%mpinp, mpdata, fi%hybinp, hybdat,&
                         enpara, fmpi, v, iterHF)
          CALL timestop("generation of mixed basis")
 
@@ -152,7 +161,12 @@ CONTAINS
 
          do i =1,fi%kpts%nkpt
             if(hybdat%coul(i)%l_participate) then 
+               if (fi%input%film) then
+                  call hybdat%coul(i)%alloc(fi, mpdata%num_radbasfn, mpdata%n_g, i, .false., &
+                                            n_g_vac=mpdata%n_g_vac, num_zbasfn_vac=mpdata%num_zbasfn_vac)
+               else
                call hybdat%coul(i)%alloc(fi, mpdata%num_radbasfn, mpdata%n_g, i, .false.)
+               endif
             else 
                call hybdat%coul(i)%mini_alloc(fi)
             endif 

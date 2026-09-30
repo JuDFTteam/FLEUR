@@ -1,6 +1,7 @@
 module m_spmm_inv
    use iso_c_binding
    use m_spmm
+   use m_spmm_vac, only: spmm_vac_r, apply_mtir_vac_r
 #ifdef _OPENACC
       USE cublas
 #define CPP_zgemm cublaszgemm
@@ -213,6 +214,10 @@ contains
             deallocate(mtir_tmp)
 #endif
             call timestop("ibasm+1 -> dgemm")
+
+            ! films: vacuum part, outside the MT+IR corner of mtir
+            call spmm_vac_r(fi, mpdata, hybdat, hybdat%coul(ikpt), ikpt, mat_in, mat_out)
+            call apply_mtir_vac_r(fi, mpdata, hybdat, hybdat%coul(ikpt), ikpt, ibasm, indx1, mat_in, mat_out)
 
             call timestart("dot prod")
             iatom = 0

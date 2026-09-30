@@ -97,7 +97,7 @@ CONTAINS
             ifftd2 = 9*stars%mx1*stars%mx2
 
             IF (.NOT. l_dfptvgen) THEN
-               CALL vvac_xc(ifftd2, stars, vacuum, noco,   cell, xcpot, input,  Den, vTot, exc)
+               CALL vvac_xc(ifftd2, stars, vacuum, noco,   cell, xcpot, input,  Den, vTot, exc, vx)
             ELSE
                CALL dfpt_vvac_xc(ifftd2,  stars,  starsq,  vacuum,  noco,  cell,denRot, den1Rot, xcpot,  input, vTot)
             END IF  
@@ -154,6 +154,8 @@ CONTAINS
                veff%pw = vTot%pw - xcpot%get_exchange_weight()*vx%pw
                veff%pw_w = vTot%pw_w - xcpot%get_exchange_weight()*vx%pw_w
                veff%mt = vTot%mt - xcpot%get_exchange_weight()*vx%mt
+               ! as hsvac_hyb for the Hamiltonian
+               IF (input%film) veff%vac = vTot%vac - xcpot%get_exchange_weight()*vx%vac
             END IF
 
             DO ispin = 1, input%jspins

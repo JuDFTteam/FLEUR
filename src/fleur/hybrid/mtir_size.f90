@@ -1,4 +1,5 @@
 module m_mtir_size
+   USE m_vac_const, ONLY: NVAC_MPB
    implicit none
 contains
 
@@ -8,11 +9,12 @@ contains
    !> radial multiplicity num_radbasfn, because the MT block has already been
    !> contracted at that point.  Do not mix the two layouts or the accessors in
    !> t_hybdat (which describe the full mixed product basis) with each other.
-   function mtir_size(fi, n_g, ikpt) result(isize)
+   function mtir_size(fi, n_g, ikpt, n_g_vac) result(isize)
       use m_types_fleurinput
       implicit none
       type(t_fleurinput), intent(in) :: fi
       integer, intent(in)            :: n_g(:), ikpt
+      integer, intent(in), optional  :: n_g_vac(:)
 
       integer :: isize, itype, l
 
@@ -24,5 +26,12 @@ contains
       enddo
 
       isize = isize + n_g(ikpt)
+
+      ! films: vacuum carriers per (vacuum, G||) and the two g = 0 second carriers
+      if (present(n_g_vac)) then
+         if (fi%input%film) then
+            isize = isize + n_g_vac(ikpt)*NVAC_MPB + NVAC_MPB
+         end if
+      endif
    end function mtir_size
 end module m_mtir_size
