@@ -127,6 +127,7 @@ CONTAINS
     CALL new_argument(0,"-serial_diag","Use serial diagonalization in parallel code","")
     CALL new_argument(0,"-disable_progress_thread","Do not use progress_thread","")
     CALL new_argument(0,"-abcoeff_store","Cache and reuse the LAPW matching coefficients (abCoeffs) computed in hsmt_ab","")
+    CALL new_argument(0,"-uhu_direct","Check C of the modern theory against a direct uHu in the muffin tins","")
     CALL new_argument(0,"-use_scalapack_redist","Use Scalapack for redistributing the matices","")   
     CALL new_argument(0,"-use_fast_redist","Use specialized fast row-cyclic to 2D redistribution in mpimat_copy","")
     !Debugging
