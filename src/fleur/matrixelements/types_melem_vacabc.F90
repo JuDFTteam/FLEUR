@@ -28,9 +28,14 @@
 !>  point where it is an integration measure.
 MODULE m_types_melem_vacabc
    USE m_juDFT
-   USE m_types
    USE m_vacuz
    USE m_vacudz
+   USE m_types_cell
+   USE m_types_enpara
+   USE m_types_lapw
+   USE m_types_mat
+   USE m_types_potden
+   USE m_types_vacuum
    IMPLICIT NONE
    PRIVATE
 

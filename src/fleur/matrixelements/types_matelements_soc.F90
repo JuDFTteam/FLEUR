@@ -18,6 +18,8 @@ MODULE m_types_matelements_soc
     USE m_types_sym
     USE m_types_potden
     USE m_judft
+    USE m_types_abc
+    USE m_types_radfun
     IMPLICIT NONE
    !> Only the type. init and calc_matrix_elements are reached through it -- secvar_soc
    !> and melem_coarse both call them as bindings -- so they are not part of the surface.
@@ -77,9 +79,6 @@ CONTAINS
     END SUBROUTINE init
 
     SUBROUTINE calc_matrix_elements(this, zmat, abc, radfun)
-        USE m_types_abc
-        USE m_types_radfun
-        USE m_types_nococonv
 
         CLASS(t_matelements_soc), INTENT(INOUT) :: this
         TYPE(t_mat),    INTENT(IN) :: zMat(:)   !unused, SOC works on the abc coefficients only

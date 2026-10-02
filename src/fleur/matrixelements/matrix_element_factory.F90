@@ -27,6 +27,8 @@ MODULE m_matrix_element_factory
     USE m_types_potden
     USE m_types_mpi
     USE m_judft, ONLY: judft_error, judft_bug
+    USE m_eig66_io, ONLY: read_eig
+    USE m_types_matelements
     IMPLICIT NONE
     PRIVATE
 
@@ -211,7 +213,6 @@ CONTAINS
                            noco, nococonv, enpara, lapw, vtot, fmpi, is, num_bands, ev_list, &
                            l_both_spinors, kpts)
 
-        USE m_eig66_io, ONLY: read_eig
 
         INTEGER,           INTENT(IN) :: eig_id, ikpt
         TYPE(t_input),     INTENT(IN) :: input
@@ -349,7 +350,6 @@ CONTAINS
     SUBROUTINE matrix_element_factory(matel, eig_id, ikpt, input, atoms, sym, cell, &
                                       noco, nococonv, enpara, lapw, vtot, fmpi, ev_list, &
                                       l_both_spinors, kpts)
-        USE m_types_matelements
 
         CLASS(t_matelements), INTENT(INOUT) :: matel
         INTEGER,           INTENT(IN) :: eig_id, ikpt
