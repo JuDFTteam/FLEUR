@@ -6,6 +6,19 @@
 MODULE m_dfpt_vis_xc
    USE m_juDFT
    use m_convol
+   use m_pw_tofrom_grid
+   use m_constants
+   use m_types_xcpot_libxc
+   use m_dfpt_gga_kernel
+   use m_types_cell
+   use m_types_xcpot
+   use m_types_input
+   use m_types_potden
+   use m_types_stars
+   use m_types_sym
+   implicit none
+   private
+   public :: dfpt_vis_xc
    !     ******************************************************
    !     subroutine generates the exchange-correlation potential
    !     in the interstitial region    c.l.fu
@@ -14,11 +27,6 @@ MODULE m_dfpt_vis_xc
 CONTAINS
    SUBROUTINE dfpt_vis_xc(stars,starsq,sym,cell,den,den1,xcpot,input,vTot)
 
-      USE m_pw_tofrom_grid
-      USE m_types
-      USE m_constants
-      USE m_types_xcpot_libxc
-      USE m_dfpt_gga_kernel
       IMPLICIT NONE
 
       CLASS(t_xcpot),INTENT(IN)     :: xcpot

@@ -8,6 +8,28 @@
 module m_types_dfpt_scf
 
     use m_judft
+    use m_types_fleurinput
+    use m_eigen
+    use m_fermie
+    use m_dfpt_sternheimer
+    use m_dfpt_generate_gradient
+    use m_types_dfpt
+    use m_types_enpara
+    use m_types_forcetheo
+    use m_types_hub1data
+    use m_types_hybdat
+    use m_types_kpts
+    use m_types_mpi
+    use m_types_nococonv
+    use m_types_potden
+    use m_types_misc
+    use m_types_sphhar
+    use m_types_stars
+    use m_types_sternheimerjob
+    use m_types_xcpot
+#ifdef CPP_MPI
+    use mpi
+#endif
     implicit none
     
     private
@@ -32,8 +54,7 @@ module m_types_dfpt_scf
 
     interface 
         subroutine init_child(this,fi,nqpts,dynMatNac)
-            use m_types
-            import t_dfpt_scf
+            import :: t_dfpt_scf, t_fleurinput
             class(t_dfpt_scf),intent(inout)    :: this
             type(t_fleurinput), intent(in) :: fi 
             integer, intent(in)            :: nqpts
@@ -43,10 +64,7 @@ module m_types_dfpt_scf
 
     interface 
         subroutine q_indepent_properties(this,sternheimerJob,fi,fmpi,sphhar,hybdat,xcpot,nococonv,stars,rho,vTot,grRho3,grVtot3,grVC3,grVext3,grgrVext3x3)
-            use m_types
-            
-
-            import t_dfpt_scf
+            import :: t_dfpt_scf, t_sternheimerjob, t_fleurinput, t_mpi, t_stars, t_sphhar, t_xcpot, t_nococonv, t_hybdat, t_potden
             class(t_dfpt_scf),intent(inout)       :: this      
             type(t_sternheimerjob),intent(in) :: sternheimerJob 
             type(t_fleurinput), intent(in)    :: fi 
@@ -66,9 +84,8 @@ module m_types_dfpt_scf
     interface 
         subroutine postprocessing_scf(this,sternheimerJob,fi,stars,starsq,sphhar,xcpot,nococonv,hybdat,fmpi,qpts,q_list,iQ,iDtype,iDir,eig_id,dfpt_eig_id, &
                                           dfpt_eig_id2,enpara,results,results1,l_real,dfpt,rho,vTot,grRho3,grVext3,grVc3,den1,vTot1,den1Im,vTot1Im,vC1,vC1Im)
-            use m_types
-            
-            import t_dfpt_scf
+            import :: t_dfpt_scf, t_sternheimerjob, t_fleurinput, t_stars, t_sphhar, t_xcpot, t_nococonv, &
+                      t_hybdat, t_mpi, t_kpts, t_enpara, t_results, t_dfpt, t_potden
             class(t_dfpt_scf),intent(inout)       :: this
             type(t_sternheimerjob),intent(in) :: sternheimerJob 
             type(t_fleurinput), intent(in)    :: fi 
@@ -94,8 +111,7 @@ module m_types_dfpt_scf
 
     interface 
         subroutine postprocessing_qpoint(this,fi,fmpi,dfpt,qpts,iQ,q_list)
-            use m_types
-            import t_dfpt_scf
+            import :: t_dfpt_scf, t_fleurinput, t_mpi, t_dfpt, t_kpts
             class(t_dfpt_scf),intent(inout)   :: this         
             type(t_fleurinput),intent(in) :: fi
             type(t_mpi),intent(in)        :: fmpi
@@ -109,8 +125,7 @@ module m_types_dfpt_scf
 
     interface 
         subroutine write_outfiles(this,fi,fmpi,dfpt)
-            use m_types
-            import t_dfpt_scf
+            import :: t_dfpt_scf, t_fleurinput, t_mpi, t_dfpt
             class(t_dfpt_scf),intent(inout)   :: this         
             type(t_fleurinput),intent(in) :: fi
             type(t_mpi),intent(in)        :: fmpi
@@ -121,7 +136,6 @@ module m_types_dfpt_scf
 contains
 
     subroutine init_scf(this,fi,qvec)
-        use m_types_fleurinput
 
         class(t_dfpt_scf), intent(inout) :: this
         type(t_fleurinput),intent(in) :: fi 
@@ -142,11 +156,6 @@ contains
     subroutine perform_scf(this,sternheimerJob,fi,fmpi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat,dfpt,rho,vTot,vxc,&
                             results,resultsq, results1, eig_id,q_eig_id, & 
                             dfpt_eig_id,dfpt_eig_id2,l_minusq,resultsqm,results1m,qm_eig_id, dfpt_eigm_id, dfpt_eigm_id2)
-        use m_eigen 
-        use m_fermie 
-        use m_dfpt_sternheimer
-        use m_dfpt_generate_gradient
-        use m_types
         
 
         class(t_dfpt_scf), intent(inout) :: this 

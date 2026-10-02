@@ -6,13 +6,26 @@
 
 MODULE m_dfpt_tlmplm
 
+   USE m_local_hamiltonian, ONLY: add_nonsph, extract_nonsph
+   USE m_types_atoms
+   USE m_types_enpara
+   USE m_types_hub1data
+   USE m_types_hub1inp
+   USE m_types_input
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_potden
+   USE m_types_sphhar
+   USE m_types_sym
+   USE m_types_tlmplm
+   USE m_judft
    implicit none
+   PRIVATE
+   PUBLIC :: dfpt_tlmplm
 CONTAINS
    SUBROUTINE dfpt_tlmplm(atoms,sym,sphhar,input,noco,enpara,hub1inp,hub1data,vTot,fmpi,tdV1,v1real,v1imag,conj_V,iDtype_col)
       !! Get the (lm) matrix elements for the perturbed potential, which differs slightly from the base
       !! case of tlmplm for V/H.
-      USE m_types
-      USE m_local_hamiltonian, ONLY: add_nonsph, extract_nonsph
 
       IMPLICIT NONE
 

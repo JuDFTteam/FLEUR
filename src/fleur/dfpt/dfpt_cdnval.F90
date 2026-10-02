@@ -9,7 +9,42 @@ MODULE m_dfpt_cdnval
 #ifdef CPP_MPI
    USE mpi
 #endif
+   USE m_constants
+   USE m_eig66_io
+   USE m_types_abc
+   USE m_types_denmatrix
+   USE m_pwden
+   USE m_vacden
+   USE m_types_radfun
+   USE m_types_dos
+   USE m_types_vacdos
+   USE m_npy
+#ifdef CPP_MPI
+   USE m_mpi_col_den
+#endif
+   USE m_types_atoms
+   USE m_types_banddos
+   USE m_types_cdnval
+   USE m_types_cell
+   USE m_types_enpara
+   USE m_types_hub1inp
+   USE m_types_input
+   USE m_types_kpts
+   USE m_types_lapw
+   USE m_types_mat
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_misc
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_sternheimerjob
+   USE m_types_sym
+   USE m_types_vacuum
    implicit none
+   PRIVATE
+   PUBLIC :: dfpt_cdnval
 CONTAINS
 
 SUBROUTINE dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,nococonv,input,banddosdummy,cell,atoms,enpara,stars,&
@@ -17,24 +52,10 @@ SUBROUTINE dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,
                   hub1inp, cdnvalJob1, resultsdummy, resultsdummy1, bqpt, iDtype, iDir, denIm, l_real,&
                   qm_eid_id,dfpt_eigm_id,starsmq,resultsdummy1m,cdnvalJob1m)
 
-   USE m_types
-   USE m_constants
-   USE m_eig66_io
-   USE m_types_abc
-   USE m_types_denmatrix
-   USE m_pwden
-   USE m_vacden
-   use m_types_radfun
    !USE m_cdnmt       ! calculate the density and orbital moments etc.
-   USE m_types_dos
-   USE m_types_vacdos
    
-#ifdef CPP_MPI
-   USE m_mpi_col_den ! collect density data from parallel nodes
-#endif
    
    !USE m_rhonmt
-   USE m_npy
 
    IMPLICIT NONE
 

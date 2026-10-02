@@ -14,6 +14,7 @@ module m_dfpt_gga_kernel
    !! Everything is linear in the response, so the real and the imaginary
    !! channel of rho1 are two independent calls sharing the same kernels.
 
+   use m_types_xcpot
    implicit none
    private
 
@@ -28,7 +29,6 @@ contains
       !! Local part of the GGA potential response for one channel. Returns v_xc1
       !! including the Laplacian terms of -div(H), and the response of drivsigma,
       !! whose gradient the caller has to feed back through dfpt_gga_grdotgr.
-      use m_types
 
       implicit none
 
@@ -87,7 +87,6 @@ contains
       !! Adds the two grad.grad terms of -div(H) to the potential response of one
       !! channel. gradDrivsigma and gradDrivsigma1 hold the n_sigma fields in the
       !! slot that a gradient usually reserves for the spin.
-      use m_types
 
       implicit none
 

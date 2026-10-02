@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -8,6 +8,18 @@ MODULE m_dfpt_fermie
 #ifdef CPP_MPI
    USE mpi
 #endif
+   USE m_constants
+   USE m_tetsrt
+   USE m_tetraWeight
+   USE m_bloechl
+   USE m_types_input
+   USE m_types_kpts
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_misc
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: dfpt_fermie, dfpt_fermie_hist, dfpt_fermie_tetra, sfermi
 
 CONTAINS
    SUBROUTINE dfpt_fermie(fmpi,kpts,input,noco,results,results1)
@@ -23,8 +35,6 @@ CONTAINS
       !! is not diagonal -- the weight of one tetrahedron corner depends on all
       !! of that tetrahedron's corner eigenvalues. Dispatch to the matching
       !! implementation accordingly.
-      USE m_types
-      USE m_constants
 
       IMPLICIT NONE
 
@@ -46,7 +56,6 @@ CONTAINS
       !! Fermi-Dirac smearing derivative of the perturbed occupation numbers,
       !! for bz_integration==hist/gauss/tria (all use input%tkb-based smearing
       !! for the ground-state occupations, so the same derivative applies).
-      USE m_types
 
       IMPLICIT NONE
 
@@ -116,7 +125,6 @@ CONTAINS
       !! eigenvalues (results1%eig) at all corners of every tetrahedron to
       !! solve for the perturbed Fermi energy (from charge neutrality) and the
       !! perturbed occupation-number weights.
-      USE m_types
 
       IMPLICIT NONE
 
@@ -224,9 +232,6 @@ CONTAINS
          !! Tetrahedron weight (+ Bloechl correction, if enabled) assigned to
          !! corner icorn, for the (unsorted, corner-index-ordered) eigenvalues
          !! etetra at a fixed Fermi energy efermi.
-         USE m_tetsrt
-         USE m_tetraWeight
-         USE m_bloechl
 
          REAL,    INTENT(IN) :: efermi
          REAL,    INTENT(IN) :: etetra(:)

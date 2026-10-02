@@ -1,18 +1,21 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 module m_dfpt_dynmat_eig
-  use m_types
+  use m_juDFT_stop
+  use m_constants
+  use m_xmlOutput
+  use m_types_atoms
   implicit none
+  private
+  public :: diagonalizedynmat, calculatefrequencies
 
   contains
 
   subroutine DiagonalizeDynMat(atoms, qvec, calcEv, dynMat, w, a, iqpt, l_scalemass, add_tag,l_sumrule,l_writeOutput)
 
-    USE m_juDFT_stop
-    USE m_constants
     implicit none
 
     ! Type parameters
@@ -236,7 +239,6 @@ module m_dfpt_dynmat_eig
 
   subroutine CalculateFrequencies( atoms, iqpt, eigenVals, eigenFreqs, add_tag, qvec ,l_writeOutput)
 
-    USE m_xmlOutput
     implicit none
 
     ! Type parameter

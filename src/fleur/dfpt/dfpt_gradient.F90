@@ -8,15 +8,19 @@
 module m_dfpt_gradient
     use m_juDFT
     use m_constants
-    use m_types
+    use m_gaunt, only: gaunt1
+    use m_types_atoms
+    use m_types_sphhar
+    use m_types_sym
 
     implicit none
+    private
+    public :: mt_gradient_lh, derivative_loc, sh_to_lh
 
 contains
 
     subroutine mt_gradient_lh(atoms, sphhar, sym, r2FlhMt, GrFshMt)
 
-      use m_gaunt, only : gaunt1
 
       type(t_atoms),               intent(in)  :: atoms
       type(t_sphhar),              intent(in)  :: sphhar
