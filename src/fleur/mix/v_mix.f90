@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -11,11 +11,15 @@ MODULE m_vmix
    ! --------------------------------------------------------
    ! Extension to multiple U per atom type by G.M. 2017
    USE m_juDFT
-   USE m_types
    USE m_constants
    USE m_xmlOutput
+   USE m_types_atoms
+   USE m_types_input
+   USE m_types_noco
 
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: v_mix
 
    CONTAINS
 

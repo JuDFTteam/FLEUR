@@ -1,15 +1,19 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 module m_distance
+   use m_types_mixvector
+   use m_constants
+   use m_xmlOutput
+   use m_types_potden
+   use m_types_misc
+   implicit none
+   private
+   public :: distance, dfpt_distance
 contains
   SUBROUTINE distance(irank,vol,jspins,nmzxyd,fsm,inden,outden,results,fsm_mag)
-    use m_types
-    use m_types_mixvector
-    USE m_constants
-    use m_xmlOutput
 
     implicit none
     integer,intent(in)             :: irank,jspins,nmzxyd
@@ -120,10 +124,6 @@ contains
   end SUBROUTINE distance
 
    SUBROUTINE dfpt_distance(irank,vol,jspins,nmzxyd,fsm,inden,outden,indenIm,outdenIm,results,fsm_mag)
-      USE m_types
-      USE m_types_mixvector
-      USE m_constants
-      USE m_xmlOutput
 
       IMPLICIT NONE
 
