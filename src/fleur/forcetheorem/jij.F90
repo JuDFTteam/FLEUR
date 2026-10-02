@@ -348,11 +348,10 @@ CONTAINS
     REAL,ALLOCATABLE,INTENT(OUT)     :: jr(:,:,:)
     INTEGER,ALLOCATABLE,INTENT(OUT)  :: R(:,:)
     
-    INTEGER  :: q,n_q,nn,nnn,i,j
-    INTEGER  :: n,ii,iii,J_r
+    INTEGER  :: q,n_q,nn,nnn,i,j,n,ii,iii
     LOGICAL  :: new
     real     :: dabsq(3),divi(3),tau(3)
-    real     :: tol
+    REAL, PARAMETER :: tol=0.000001
 
     REAL,ALLOCATABLE:: qvec(:,:)
     INTEGER,PARAMETER:: nx=1,ny=1,nz=1
@@ -373,6 +372,7 @@ CONTAINS
 
     Allocate(qvec(3,sym%nop))
     allocate(jr(size(jq,1),size(jq,2),size(r,2)))
+    jr=0.0
     DO q=1,size(this%qvec,2)
       !construct all equivalent q-vectors
       n_q=1
@@ -396,13 +396,12 @@ CONTAINS
       ENDDO  
 
       !Now do the fourier transform
-      J_r=0.0
       DO i=1,atoms%ntype
         if (this%map(i,i,1)==0) cycle !non-magnetic atom
         DO j=1,atoms%ntype
           if (this%map(j,j,1)==0) cycle !non-magnetic atom
           tau=atoms%taual(:,atoms%firstAtom(i))-atoms%taual(:,atoms%firstatom(j))
-          DO nn=1,n_q
+          DO nn=1,n_q-1
             DO nnn=1,size(r,2)  
                   Jr(i,j,nnn)=Jr(i,j,nnn)+exp(cmplx(0.0,-1.0)*dot_product(qvec(:,nn),1.0*R(:,nnn)-tau))*jq(i,j,q)
             ENDDO
