@@ -45,9 +45,6 @@ module m_mpmom
    use m_types_stars
    use m_types_sternheimerjob
    use m_types_sym
-#ifdef CPP_MPI
-   use mpi
-#endif
    implicit none
    private
    public :: mpmom, mt_moments, pw_moments, dfpt_mt_moments_sf, dfpt_pw_moments_sf
