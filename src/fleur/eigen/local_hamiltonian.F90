@@ -5,6 +5,22 @@
 !--------------------------------------------------------------------------------
 MODULE m_local_Hamiltonian
    USE m_judft
+   USE m_constants
+   USE m_intgr, ONLY: intgr3
+   USE m_gaunt, ONLY: gaunt1
+   USE m_types_atoms
+   USE m_opc_setup
+   USE m_types_enpara
+   USE m_types_hub1data
+   USE m_types_hub1inp
+   USE m_types_input
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_sphhar
+   USE m_types_sym
+   USE m_types_tlmplm
    IMPLICIT NONE
    PRIVATE
    PUBLIC:: local_ham, add_nonsph, extract_nonsph
@@ -20,8 +36,6 @@ CONTAINS
        fmpi,v,vx,inden,input,hub1inp,hub1data,td,alpha_hybrid,l_dfptmod,l_forces)
       !! l_dfptmod: no Cholesky decomposition
       !! l_forces:  LAPW part up to lmax and without DFT+U (forces add it separately)
-      USE m_constants
-      USE m_types
 
       TYPE(t_mpi),      INTENT(IN)    :: fmpi
       TYPE(t_noco),     INTENT(IN)    :: noco
@@ -83,8 +97,6 @@ CONTAINS
 
    SUBROUTINE nonsph_potential(atoms,enpara,v,vx,n,iSpinV,alpha_hybrid,vr,lh0)
       !! potential entering the non-spherical integrals and the first lattice harmonic to use
-      USE m_constants, ONLY: sfp_const
-      USE m_types
       TYPE(t_atoms),  INTENT(IN) :: atoms
       TYPE(t_enpara), INTENT(IN) :: enpara
       TYPE(t_potden), INTENT(IN) :: v,vx
@@ -108,10 +120,6 @@ CONTAINS
 
    SUBROUTINE add_nonsph(td,n,atoms,sym,sphhar,input,hub1inp,vr,lh0,j1,j2,one)
       !! td%h(:,:,n,j1,j2) += one * sum_lh <r_i^{l'} Y_{l'm'}|V_lh|r_j^l Y_lm> for all slots i,j
-      USE m_constants, ONLY: ImagUnit
-      USE m_intgr, ONLY: intgr3
-      USE m_gaunt, ONLY: gaunt1
-      USE m_types
       TYPE(t_tlmplm), INTENT(INOUT) :: td
       TYPE(t_atoms),  INTENT(IN)    :: atoms
       TYPE(t_sym),    INTENT(IN)    :: sym
@@ -176,7 +184,6 @@ CONTAINS
    END SUBROUTINE
 
    LOGICAL FUNCTION l_nonsph_removed(atoms,input,hub1inp,n,l)
-      USE m_types
       TYPE(t_atoms),  INTENT(IN) :: atoms
       TYPE(t_input),  INTENT(IN) :: input
       TYPE(t_hub1inp),INTENT(IN) :: hub1inp
@@ -192,7 +199,6 @@ CONTAINS
 
    SUBROUTINE add_sph(td,n,jsp)
       !! spherical Hamiltonian, diagonal in lm
-      USE m_types
       TYPE(t_tlmplm), INTENT(INOUT) :: td
       INTEGER,        INTENT(IN)    :: n,jsp
       INTEGER :: l,m,nr
@@ -208,7 +214,6 @@ CONTAINS
    END SUBROUTINE
 
    PURE INTEGER FUNCTION nonsph_size(atoms,n)
-      USE m_types_atoms
       TYPE(t_atoms), INTENT(IN) :: atoms
       INTEGER,       INTENT(IN) :: n
       nonsph_size = atoms%lnonsph(n)*(atoms%lnonsph(n)+2)+1
@@ -216,7 +221,6 @@ CONTAINS
 
    SUBROUTINE extract_nonsph(td,atoms,n,j1,j2)
       !! copy the u/udot block with l<=lnonsph of td%h into td%h_loc_nonsph
-      USE m_types
       TYPE(t_tlmplm), INTENT(INOUT) :: td
       TYPE(t_atoms),  INTENT(IN)    :: atoms
       INTEGER,        INTENT(IN)    :: n,j1,j2
@@ -228,7 +232,6 @@ CONTAINS
 
    FUNCTION nonsph_ind(td,atoms,n) RESULT(idx)
       !! positions in td%h of the u and udot functions with l<=lnonsph
-      USE m_types
       TYPE(t_tlmplm), INTENT(IN) :: td
       TYPE(t_atoms),  INTENT(IN) :: atoms
       INTEGER,        INTENT(IN) :: n
@@ -238,7 +241,6 @@ CONTAINS
 
    FUNCTION nonsph_lm_ind(atoms,n,l) RESULT(idx)
       !! positions in h_loc_nonsph of u (1,:) and udot (2,:) for all m of l
-      USE m_types_atoms
       TYPE(t_atoms), INTENT(IN) :: atoms
       INTEGER,       INTENT(IN) :: n,l
       INTEGER :: idx(2,-l:l),m
@@ -262,8 +264,6 @@ CONTAINS
 
    SUBROUTINE add_ldaU(fmpi,inden,jsp,atoms,v,input,td,j1,j2,l_forces)
       !! DFT+U, DFT+HIA and OPC; LOs get them only through h (u/udot parts)
-      USE m_opc_setup
-      USE m_types
       TYPE(t_mpi),      INTENT(IN)    :: fmpi
       TYPE(t_input),    INTENT(IN)    :: input
       TYPE(t_atoms),    INTENT(IN)    :: atoms
@@ -310,8 +310,6 @@ CONTAINS
    SUBROUTINE add_soc(fmpi,atoms,noco,nococonv,input,enpara,v,hub1inp,hub1data,td)
       ! Setup of the soc parameters for first-variation SOC and the resulting
       ! correction of the relativistic LOs' spherical Hamiltonian.
-      USE m_constants
-      USE m_types
 
       TYPE(t_mpi),      INTENT(IN)    :: fmpi
       TYPE(t_atoms),    INTENT(IN)    :: atoms
@@ -359,7 +357,6 @@ CONTAINS
 
    SUBROUTINE cholesky_decompose(td,atoms,jsp)
       !! shift the non-spherical LAPW block by e_shift*overlap until it is positive definite
-      USE m_types
       TYPE(t_tlmplm), INTENT(INOUT) :: td
       TYPE(t_atoms),  INTENT(IN)    :: atoms
       INTEGER,        INTENT(IN)    :: jsp

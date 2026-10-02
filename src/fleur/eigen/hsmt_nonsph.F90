@@ -5,18 +5,28 @@
 !--------------------------------------------------------------------------------
 MODULE m_hsmt_nonsph
    USE m_juDFT
+   USE m_hsmt_fjgj
+   USE m_hsmt_ab
+   USE m_abcoeff_store
+#ifdef _OPENACC
+   USE cublas
+#endif
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_lapw
+   USE m_types_mat
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_types_sym
+   USE m_types_tlmplm
    IMPLICIT NONE
    PRIVATE
    PUBLIC hsmt_nonsph
 
 CONTAINS
    SUBROUTINE hsmt_nonsph(n,fmpi,sym,atoms,ilSpinPr,ilSpin,igSpinPr,igSpin,chi,noco,nococonv,cell,lapw,td,fjgj,hmat,set0,lapwq,fjgjq)
-      USE m_hsmt_fjgj
-      USE m_types
-      USE m_hsmt_ab
-      USE m_abcoeff_store
 #ifdef _OPENACC
-      USE cublas
 #define CPP_zgemm cublaszgemm
 #define CPP_zherk cublaszherk
 #define CPP_data_c data_c

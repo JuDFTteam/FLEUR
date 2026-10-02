@@ -5,7 +5,29 @@
 !--------------------------------------------------------------------------------
 MODULE m_hsmt
   USE m_juDFT
+  USE m_types_mpimat
+  USE m_hsmt_nonsph
+  USE m_hsmt_sph
+  USE m_hsmt_lo
+  USE m_hsmt_distspins
+  USE m_hsmt_fjgj
+  USE m_hsmt_spinor
+  USE m_hsmt_soc_offdiag
+  USE m_hsmt_mtNocoPot_offdiag
+  USE m_types_atoms
+  USE m_types_cell
+  USE m_types_enpara
+  USE m_types_input
+  USE m_types_lapw
+  USE m_types_mat
+  USE m_types_mpi
+  USE m_types_noco
+  USE m_types_nococonv
+  USE m_types_sym
+  USE m_types_tlmplm
   IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: hsmt
 CONTAINS
   !> Setup of MT-part of the Hamiltonian and the overlap matrix
   !!
@@ -22,16 +44,6 @@ CONTAINS
 
   SUBROUTINE hsmt(atoms,sym,enpara,&
        isp,input,fmpi,noco,nococonv,cell,lapw,td,smat,hmat)
-    USE m_types
-    USE m_types_mpimat
-    USE m_hsmt_nonsph
-    USE m_hsmt_sph
-    USE m_hsmt_lo
-    USE m_hsmt_distspins
-    USE m_hsmt_fjgj
-    USE m_hsmt_spinor
-    USE m_hsmt_soc_offdiag
-    USE m_hsmt_mtNocoPot_offdiag
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)        :: fmpi
     TYPE(t_input),INTENT(IN)      :: input

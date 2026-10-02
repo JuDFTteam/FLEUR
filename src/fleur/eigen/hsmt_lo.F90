@@ -12,17 +12,26 @@
 #endif
 MODULE m_hsmt_lo
   USE m_juDFT
+  USE m_hlomat
+  USE m_slomat
+  USE m_setabc1lo
+  USE m_types_mpimat
+  USE m_hsmt_fjgj
+  USE m_types_atoms
+  USE m_types_cell
+  USE m_types_input
+  USE m_types_lapw
+  USE m_types_mat
+  USE m_types_mpi
+  USE m_types_noco
+  USE m_types_nococonv
+  USE m_types_sym
+  USE m_types_tlmplm
   IMPLICIT NONE
   PRIVATE
   PUBLIC hsmt_lo
 CONTAINS
   SUBROUTINE hsmt_lo(Input,Atoms,Sym,Cell,fmpi,Noco,nococonv,Lapw,Tlmplm,FjGj,N,Chi,ilSpinPr,ilSpin,igSpinPr,igSpin,Hmat,set0,l_fullj,l_ham,Smat,lapwq,fjgjq)
-    USE m_hlomat
-    USE m_slomat
-    USE m_setabc1lo
-    USE m_types_mpimat
-    USE m_types
-    USE m_hsmt_fjgj
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)      :: fmpi
     TYPE(t_input),INTENT(IN)    :: input

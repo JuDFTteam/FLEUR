@@ -10,7 +10,20 @@ MODULE m_slomat
   ! orbitals.
   !                                                p.kurz sept. 1996
   !***********************************************************************
+   USE m_constants, ONLY: fpi_const
+   USE m_hsmt_fjgj
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_input
+   USE m_types_lapw
+   USE m_types_mat
+   USE m_types_mpi
+   USE m_types_nococonv
+   USE m_types_radfun
+   USE m_types_sym
    implicit none
+   PRIVATE
+   PUBLIC :: slomat, legpol
 CONTAINS
    SUBROUTINE slomat(input,atoms,sym,fmpi,lapw,cell,nococonv,ntyp,na,&
                      isp,rf, alo1,blo1,clo1,fjgj,&
@@ -23,10 +36,7 @@ CONTAINS
     ! function legpol() at end of module
     !***********************************************************************
 
-      USE m_constants,ONLY: fpi_const
       !USE m_types_mpimat
-      USE m_types
-      USE m_hsmt_fjgj
 
       IMPLICIT NONE
 

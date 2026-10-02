@@ -6,7 +6,18 @@
 
 MODULE m_hsmt_sph
    USE m_juDFT
+   USE m_constants, ONLY: fpi_const, tpi_const
+   USE m_hsmt_fjgj
+   USE m_types_atoms
+   USE m_types_input
+   USE m_types_lapw
+   USE m_types_mat
+   USE m_types_mpi
+   USE m_types_nococonv
+   USE m_types_radfun
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: hsmt_sph_acc, hsmt_sph_cpu, hsmt_sph
 
    INTERFACE hsmt_sph
 #ifdef _OPENACC
@@ -19,9 +30,6 @@ MODULE m_hsmt_sph
 CONTAINS
 
    SUBROUTINE hsmt_sph_acc(n,atoms,fmpi,isp,input,nococonv,igSpinPr,igSpin,chi,lapw,el,e_shift,rf,fjgj,smat,hmat,set0,l_fullj,lapwq,fjgjq)
-      USE m_constants, ONLY : fpi_const, tpi_const
-      USE m_types
-      USE m_hsmt_fjgj
 
 
       TYPE(t_input),    INTENT(IN)    :: input
@@ -211,9 +219,6 @@ CONTAINS
    END SUBROUTINE hsmt_sph_acc
 
    SUBROUTINE hsmt_sph_cpu(n,atoms,fmpi,isp,input,nococonv,igSpinPr,igSpin,chi,lapw,el,e_shift,rf,fjgj,smat,hmat,set0,l_fullj,lapwq, fjgjq)
-      USE m_constants, ONLY : fpi_const, tpi_const
-      USE m_types
-      USE m_hsmt_fjgj
 
 
       TYPE(t_input),    INTENT(IN)    :: input

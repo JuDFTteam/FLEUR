@@ -10,7 +10,30 @@
 #endif
 MODULE m_hsmt_soc_offdiag
   USE m_juDFT
+  USE m_constants, ONLY: fpi_const, tpi_const, oUnit
+  USE m_hsmt_spinor
+  USE m_setabc1lo
+  USE m_hsmt_fjgj
+  USE m_anglso
+  USE m_ylm
+  USE m_types_atoms
+  USE m_types_cell
+  USE m_types_lapw
+  USE m_types_mat
+  USE m_types_mpi
+  USE m_types_nococonv
+  USE m_types_sym
+  USE m_types_tlmplm
   IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: hsmt_soc_offdiag_lo, hsmt_soc_offdiag_check, l_checksocangular
+#ifdef _OPENACC
+  PUBLIC :: hsmt_soc_offdiag
+#endif
+#ifdef _OPENACC
+#else
+  PUBLIC :: hsmt_soc_offdiag
+#endif
 
   !Development switch: set to .TRUE. to have hsmt_soc_offdiag_check verify the
   !closed-form SOC angular factor against an explicit spherical-harmonic reference
@@ -20,10 +43,6 @@ MODULE m_hsmt_soc_offdiag
 CONTAINS
 #ifdef _OPENACC
   SUBROUTINE hsmt_soc_offdiag(n,atoms,cell,fmpi,nococonv,lapw,sym,td,fjgj,hmat)
-    USE m_constants, ONLY : fpi_const,tpi_const
-    USE m_types
-    USE m_hsmt_spinor
-    USE m_hsmt_fjgj
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)        :: fmpi
     TYPE(t_nococonv),INTENT(IN)   :: nococonv
@@ -130,10 +149,6 @@ CONTAINS
   END SUBROUTINE hsmt_soc_offdiag
 #else
   SUBROUTINE hsmt_soc_offdiag(n,atoms,cell,fmpi,nococonv,lapw,sym,td,fjgj,hmat)
-    USE m_constants, ONLY : fpi_const,tpi_const
-    USE m_types
-    USE m_hsmt_spinor
-    USE m_hsmt_fjgj
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)        :: fmpi
     TYPE(t_nococonv),INTENT(IN)   :: nococonv
@@ -289,11 +304,6 @@ CONTAINS
 
 #endif  
   SUBROUTINE hsmt_soc_offdiag_LO(n,atoms,cell,fmpi,nococonv,lapw,sym,td,fjgj,hmat)
-    USE m_constants, ONLY : fpi_const,tpi_const
-    USE m_types
-    USE m_hsmt_spinor
-    USE m_setabc1lo
-    USE m_hsmt_fjgj
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)        :: fmpi
     TYPE(t_nococonv),INTENT(IN)   :: nococonv
@@ -502,11 +512,6 @@ CONTAINS
     !!    standard rotation only for beta=alpha=0, and there only up to a sign in the
     !!    spin-off-diagonal blocks (compensated below). For a rotated frame it is a
     !!    different operator, not a reference, and this check is therefore skipped.
-    USE m_constants, ONLY : fpi_const,oUnit
-    USE m_types
-    USE m_hsmt_spinor
-    USE m_anglso
-    USE m_ylm
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)        :: fmpi
     TYPE(t_nococonv),INTENT(IN)   :: nococonv

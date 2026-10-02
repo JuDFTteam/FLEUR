@@ -1,10 +1,16 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2022 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_hs_int_direct
+   USE m_types_mat
+   USE m_types_mpi
+   USE m_types_stars
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: hs_int_direct
 CONTAINS
    SUBROUTINE hs_int_direct(fmpi, stars, bbmat, gvecPr, gvec, kvecPr, kvec, nvPr, nv, &
                           & iTkin, fact, l_smat, l_fullj, vpw, hmat, smat, theta_alt)
@@ -30,7 +36,6 @@ CONTAINS
       ! [l_smat = F for offdiags, l_fullj = T]
       ! [iTkin = 0 for offdiags, 1 else]
 
-      USE m_types
 
       IMPLICIT NONE
 
