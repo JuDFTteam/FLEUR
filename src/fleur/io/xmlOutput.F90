@@ -8,6 +8,7 @@ MODULE m_xmlOutput
   USE m_judft_xmlOutput !most functionality is actually there
   USE m_juDFT_args
   USE m_juDFT_usage
+  USE m_juDFT_stop, ONLY: judft_error
   USE m_constants
   USE m_utility
   USE m_compile_descr
