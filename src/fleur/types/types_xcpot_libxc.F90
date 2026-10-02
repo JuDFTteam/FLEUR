@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -12,7 +12,19 @@ MODULE m_types_xcpot_libxc
    USE m_types_xcpot
    USE m_judft
    use m_types_misc
+   use, intrinsic :: IEEE_ARITHMETIC
+   use iso_c_binding
+   use m_constants
+   use M_mpi_bc_tool
    IMPLICIT NONE
+   private
+   public :: apply_vac_cutoffs, apply_cutoffs, xcpot_init, xcpot_vx_is_lda, xcpot_vc_is_lda, xcpot_exc_is_lda, &
+      xcpot_vc_is_gga, xcpot_vx_is_gga, xcpot_vx_is_metagga, xcpot_exc_is_gga, xcpot_exc_is_metagga, xcpot_is_hybrid, &
+      xcpot_get_exchange_weight, xcpot_get_vxc, xcpot_get_exc, xcpot_get_fxc_lda, xcpot_get_fxc_gga, &
+      xcpot_alloc_gradients, mpi_bc_xcpot_libxc
+#ifdef CPP_LIBXC
+   public :: xc_get_family
+#endif
 
 #ifdef CPP_LIBXC
    PRIVATE :: write_xc_info, check_fxc_available
@@ -109,7 +121,6 @@ CONTAINS
   end subroutine
 
    SUBROUTINE xcpot_init(xcpot, func_vxc_id_x, func_vxc_id_c, func_exc_id_x, func_exc_id_c, jspins)
-      USE m_judft
       IMPLICIT NONE
       CLASS(t_xcpot_libxc), INTENT(INOUT)    :: xcpot
       INTEGER, INTENT(IN)                 :: jspins, func_vxc_id_x, func_vxc_id_c, func_exc_id_x, func_exc_id_c
@@ -315,7 +326,6 @@ CONTAINS
    END FUNCTION xcpot_is_hybrid
 
    FUNCTION xcpot_get_exchange_weight(xcpot) RESULT(a_ex)
-      USE m_judft
       IMPLICIT NONE
       CLASS(t_xcpot_libxc), INTENT(IN):: xcpot
 
@@ -327,8 +337,6 @@ CONTAINS
 
    !***********************************************************************
    SUBROUTINE xcpot_get_vxc(xcpot,jspins,rh, vxc,vx, grad, kinenergyden_ks)
-      USE, INTRINSIC :: IEEE_ARITHMETIC
-      use iso_c_binding
       IMPLICIT NONE
       CLASS(t_xcpot_libxc), INTENT(IN) :: xcpot
       INTEGER, INTENT(IN)     :: jspins
@@ -373,8 +381,6 @@ CONTAINS
    END SUBROUTINE xcpot_get_vxc
 
    SUBROUTINE xcpot_get_exc(xcpot, jspins, rh, exc, grad, kinEnergyDen_KS, mt_call)
-      use m_constants
-      use ISO_C_BINDING
       IMPLICIT NONE
       CLASS(t_xcpot_libxc), INTENT(IN)          :: xcpot
       INTEGER, INTENT(IN)                  :: jspins
@@ -469,8 +475,6 @@ CONTAINS
    END SUBROUTINE xcpot_get_exc
 
    SUBROUTINE xcpot_get_fxc_lda(xcpot, jspins, rh, fxc)
-      USE, INTRINSIC :: IEEE_ARITHMETIC
-      use iso_c_binding
 
       IMPLICIT NONE
 
@@ -503,7 +507,6 @@ CONTAINS
    SUBROUTINE xcpot_get_fxc_gga(xcpot, jspins, rh, sigma, vsigma, v2rho2, v2rhosigma, v2sigma2)
       !! Second derivatives of a GGA energy density plus the undifferentiated vsigma.
       !! All kernel arrays keep the libxc layout with the spin-like index first.
-      use iso_c_binding
 
       IMPLICIT NONE
 
@@ -560,7 +563,6 @@ CONTAINS
    END SUBROUTINE xcpot_alloc_gradients
 
    subroutine mpi_bc_xcpot_libxc(This, Mpi_comm, Irank)
-      Use M_mpi_bc_tool
       Class(t_xcpot_libxc), Intent(Inout)::This
       Integer, Intent(In):: Mpi_comm
       Integer, Intent(In), Optional::Irank

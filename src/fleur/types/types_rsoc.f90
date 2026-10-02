@@ -5,6 +5,19 @@
 !--------------------------------------------------------------------------------
 module m_types_rsoc
    use m_judft
+   use m_types_atoms
+   use m_constants
+   use m_types_input
+   use m_types_noco
+   use m_types_nococonv
+   use m_types_potden
+   use m_types_enpara
+   use m_types_radfun
+   use m_types_mpi
+   use m_sointg
+   use m_intgr, only: intgr0
+   use m_anglso
+   use m_sgml
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: t_rsoc
@@ -20,7 +33,6 @@ module m_types_rsoc
 
   CONTAINS
    subroutine init(this,atoms)
-      use m_types_atoms
        implicit none
      class(t_rsoc),INTENT(INOUT):: this
      class(t_atoms),INTENT(IN)   :: atoms
@@ -34,16 +46,6 @@ module m_types_rsoc
 
   subroutine rad_matrix(rsoc,atoms,noco,nococonv,input,fmpi, enpara, vtot)
     !USE m_sorad
-    USE m_constants
-    USE m_types_atoms
-    USE m_types_input
-    USE m_types_noco
-    USE m_types_nococonv
-    USE m_types_potden
-    USE m_types_enpara      
-    USE m_types_radfun
-    USE m_types_mpi
-    use m_sointg
     IMPLICIT NONE
 
     TYPE(t_mpi),INTENT(IN)      :: fmpi
@@ -175,7 +177,6 @@ module m_types_rsoc
     !
     !     compute radial spin-orbit integrals
     !
-    USE m_intgr, ONLY : intgr0
     IMPLICIT NONE
     !
     !     .. Scalar Arguments ..
@@ -198,12 +199,7 @@ module m_types_rsoc
 
 
   subroutine angles(this,atoms,fmpi,theta,phi)
-    USE m_constants
-    USE m_anglso
-    USE m_sgml
     !USE m_sorad
-    USE m_types_atoms
-    USE m_types_mpi
     IMPLICIT NONE
     class(t_rsoc),INTENT(INOUT):: this
     TYPE(t_atoms),INTENT(IN)    :: atoms

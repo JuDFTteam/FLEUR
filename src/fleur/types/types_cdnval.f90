@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2018 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -12,6 +12,29 @@ MODULE m_types_cdnval
 
 
 
+   USE m_types_radfun
+   USE m_constants
+   USE m_juDFT
+   USE m_types_mpi
+   USE m_types_kpts
+   USE m_types_misc
+   USE m_types_lapw
+   USE m_types_enpara
+   USE m_types_potden
+   USE m_nstm3
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_input
+   USE m_types_noco
+   USE m_types_sliceplot
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_sym
+   USE m_types_vacuum
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: dencoeffs_init, eigveccoeffs_init, rotate_eigveccoeffs_to_rep_atom, moments_init, cdnvaljob_init, &
+      select_slice, compact_ev_list, gvacmap_init
    TYPE t_denCoeffs
 
       ! Refactored version for DFPT and more generalization:
@@ -80,14 +103,13 @@ MODULE m_types_cdnval
          PROCEDURE,PASS :: init => gVacMap_init
    END TYPE t_gVacMap
 
-PUBLIC t_orb, t_denCoeffs,  t_eigVecCoeffs
+PUBLIC t_denCoeffs,  t_eigVecCoeffs
 PUBLIC  t_moments,  t_cdnvalJob, t_gVacMap
 
 CONTAINS
 
 SUBROUTINE denCoeffs_init(thisDenCoeffs, atoms, sphhar, jsp_start, jsp_end)
 
-   USE m_types_setup
 
    IMPLICIT NONE
 
@@ -129,8 +151,6 @@ END SUBROUTINE denCoeffs_init
 
 SUBROUTINE eigVecCoeffs_init(thisEigVecCoeffs,input,atoms,jspin,noccbd,l_bothSpins)
 
-   USE m_types_setup
-   use m_types_radfun
    IMPLICIT NONE
 
    CLASS(t_eigVecCoeffs), INTENT(INOUT) :: thisEigVecCoeffs
@@ -174,9 +194,6 @@ FUNCTION rotate_eigveccoeffs_to_rep_atom(this, atoms, sym,lmax) RESULT(rot)
 ! C     *                                                             *
 ! C     * Christoph Friedrich Mar/2005                                *
 ! C     ***************************************************************
-      USE m_types_setup
-      USE m_constants
-      USE m_juDFT
       IMPLICIT NONE
 
       CLASS(t_eigVecCoeffs),  INTENT(IN)  :: this
@@ -231,8 +248,6 @@ END FUNCTION rotate_eigveccoeffs_to_rep_atom
 
 SUBROUTINE moments_init(thisMoments,mpi,input,sphhar,atoms)
 
-   USE m_types_setup
-   USE m_types_mpi
 
    IMPLICIT NONE
 
@@ -267,10 +282,6 @@ END SUBROUTINE moments_init
 
 SUBROUTINE cdnvalJob_init(thisCdnvalJob,mpi,input,kpts,noco,results,jspin)
 
-   USE m_types_mpi
-   USE m_types_setup
-   USE m_types_kpts
-   USE m_types_misc
 
    IMPLICIT NONE
 
@@ -305,9 +316,6 @@ SUBROUTINE cdnvalJob_init(thisCdnvalJob,mpi,input,kpts,noco,results,jspin)
  END SUBROUTINE cdnvalJob_init
 
  SUBROUTINE select_slice(thiscdnvalJob,sliceplot,results,input,kpts,noco,jspin)
-   USE m_types_setup
-   USE m_types_misc
-   USE m_types_kpts
    IMPLICIT NONE
    CLASS(t_cdnvalJob),INTENT(INOUT)  :: thisCdnvalJob
    TYPE(t_sliceplot), INTENT(IN)     :: sliceplot
@@ -386,12 +394,6 @@ SUBROUTINE cdnvalJob_init(thisCdnvalJob,mpi,input,kpts,noco,results,jspin)
 
 SUBROUTINE gVacMap_init(thisGVacMap,sym,atoms,vacuum,stars,lapw,input,cell,kpts,enpara,vTot,ikpt,jspin)
 
-   USE m_types_setup
-   USE m_types_lapw
-   USE m_types_enpara
-   USE m_types_potden
-   USE m_types_kpts
-   USE m_nstm3
 
    IMPLICIT NONE
 

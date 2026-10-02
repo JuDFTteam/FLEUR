@@ -1,12 +1,19 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_types_misc
 
+   USE m_types_atoms
+   USE m_types_input
+   USE m_types_noco
+   USE m_types_kpts
+   USE m_types_lapw
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: zmat_init, results_init, reset_results, t_energy_hf, t_results, t_zmat, t_hamovlp
 
    !*************************************************************
    !     This module contains definitions for all kind of types
@@ -101,11 +108,6 @@ CONTAINS
 
    SUBROUTINE results_init(thisResults,input,atoms,kpts,noco)
 
-     USE m_types_atoms
-     USE m_types_input
-     USE m_types_noco
-     USE m_types_kpts
-     USE m_types_lapw
       IMPLICIT NONE
 
       CLASS(t_results),      INTENT(INOUT) :: thisResults
@@ -163,7 +165,6 @@ CONTAINS
    END SUBROUTINE results_init
 
    SUBROUTINE reset_results(thisResults, input)
-      USE m_types_input
 
       IMPLICIT NONE
 

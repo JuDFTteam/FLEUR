@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_types_hybdat
    use m_types_usdus
    use m_types_mat
@@ -13,6 +18,8 @@ MODULE m_types_hybdat
 #ifdef CPP_MPI
    use mpi
 #endif
+   use m_types_atoms
+   use m_types_cell
    IMPLICIT NONE
    private
    !> Index layout of the mixed product basis (MPB)

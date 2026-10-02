@@ -11,6 +11,10 @@ MODULE m_types_mat
 #endif
    USE m_judft
    use m_constants
+   use m_divide_most_evenly
+#ifdef CPP_MPI
+   use mpi
+#endif
    IMPLICIT NONE
    PRIVATE
    INTEGER, PARAMETER   :: MPIMAT_2D_BLOCK_CYCLIC=1
@@ -65,9 +69,6 @@ MODULE m_types_mat
    PUBLIC t_mat,MPIMAT_2D_BLOCK_CYCLIC,MPIMAT_ROWCYCLIC,MPIMAT_COLUMN_BLOCK_CYCLIC
 CONTAINS
    subroutine add(mat,mat2,alpha_c,alpha_r)
-#ifdef _OPENACC
-         use openacc
-#endif            
          IMPLICIT NONE 
          CLASS(t_mat), INTENT(INOUT)      :: mat
          class(t_mat), INTENT(IN)         :: mat2
@@ -139,7 +140,6 @@ CONTAINS
    END SUBROUTINE
 
    subroutine t_mat_leastsq(A, b)
-      use m_constants
       implicit none
       class(t_mat), intent(inout) :: A
       type(t_mat), intent(inout)  :: b
@@ -217,10 +217,6 @@ CONTAINS
    end subroutine t_mat_pos_eigvec_sum
 
    subroutine t_mat_bcast(mat, root, comm)
-      use m_divide_most_evenly 
-#ifdef CPP_MPI
-      use mpi
-#endif
       implicit none
       CLASS(t_mat), INTENT(INOUT)   :: mat
       integer, intent(in)           :: root, comm
@@ -338,7 +334,6 @@ CONTAINS
 
    ! copy upper triangle to lower triangle
    subroutine t_mat_u2l(mat)
-      use m_judft
       implicit none
       class(t_mat), intent(inout) :: mat
       integer :: i,j
@@ -594,7 +589,6 @@ CONTAINS
 #endif
 
    SUBROUTINE t_mat_free(mat)
-      use m_judft
       CLASS(t_mat), INTENT(INOUT)::mat
       call timestart("t_mat_free")
       IF (ALLOCATED(mat%data_c)) DEALLOCATE (mat%data_c)
@@ -671,7 +665,6 @@ CONTAINS
    END SUBROUTINE t_mat_init_template
 
    SUBROUTINE t_mat_alloc(mat, l_real, matsize1, matsize2, init, mat_name)
-      use m_judft
       CLASS(t_mat) :: mat
       LOGICAL, INTENT(IN), OPTIONAL:: l_real
       INTEGER, INTENT(IN), OPTIONAL:: matsize1, matsize2
@@ -720,7 +713,6 @@ CONTAINS
    END SUBROUTINE t_mat_alloc
 
    SUBROUTINE t_mat_multiply(mat1, mat2, res, transA, transB)
-      use m_judft
       CLASS(t_mat), INTENT(INOUT)            :: mat1
       CLASS(t_mat), INTENT(IN)               :: mat2
       CLASS(t_mat), INTENT(INOUT), OPTIONAL    :: res
@@ -935,7 +927,6 @@ CONTAINS
    end SUBROUTINE t_mat_transpose
 
    SUBROUTINE t_mat_from_packed_real(mat1, matsize, packed_r)
-      use m_judft
       CLASS(t_mat), INTENT(INOUT)       :: mat1
       INTEGER, INTENT(IN)               :: matsize
       REAL, INTENT(IN)                  :: packed_r(:)
@@ -959,7 +950,6 @@ CONTAINS
    end SUBROUTINE t_mat_from_packed_real
 
    SUBROUTINE t_mat_from_packed_cmplx(mat1, matsize, packed_c)
-      use m_judft
       CLASS(t_mat), INTENT(INOUT)       :: mat1
       INTEGER, INTENT(IN)               :: matsize
       COMPLEX, INTENT(IN)               :: packed_c(:)
@@ -1178,7 +1168,6 @@ CONTAINS
    END SUBROUTINE t_mat_clear
 
    subroutine t_mat_save_npy(mat, filename)
-      use m_judft
       implicit NONE
       class(t_mat), intent(in) :: mat
       character(len=*)         :: filename

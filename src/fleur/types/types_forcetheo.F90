@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -22,6 +22,18 @@
 
 MODULE m_types_forcetheo
   USE m_juDFT 
+  USE m_types_potden
+  USE m_types_atoms
+  USE m_types_noco
+  USE m_types_nococonv
+  USE m_types_mpi
+  USE m_types_input
+  USE m_types_sym
+  USE m_types_cell
+  USE m_types_misc
+  USE m_types_kpts
+  USE m_types_enpara
+  USE m_types_fleurinput
   IMPLICIT NONE
   PRIVATE
   PUBLIC:: t_forcetheo
@@ -39,7 +51,6 @@ MODULE m_types_forcetheo
 
 CONTAINS
   SUBROUTINE forcetheo_start(this,potden,l_io)
-    USE m_types_potden
     IMPLICIT NONE
     CLASS(t_forcetheo),INTENT(INOUT):: this
     TYPE(t_potden) ,INTENT(INOUT)   :: potden
@@ -49,10 +60,6 @@ CONTAINS
   END SUBROUTINE forcetheo_start
 
   LOGICAL FUNCTION forcetheo_next_job(this,fmpi,lastiter,atoms,noco,nococonv)
-    USE m_types_atoms
-    USE m_types_noco
-    USE m_types_nococonv
-    USE m_types_mpi
     IMPLICIT NONE
     CLASS(t_forcetheo),INTENT(INOUT)    :: this
     TYPE(t_mpi), INTENT(IN)             :: fmpi
@@ -67,18 +74,7 @@ CONTAINS
 
   FUNCTION forcetheo_eval(this,eig_id,atoms,kpts,sym,&
        cell,noco,nococonv, input,fmpi,  enpara,v,results)RESULT(skip)
-    USE m_types_atoms
      
-    USE m_types_input
-    USE m_types_noco
-    USE m_types_sym
-    USE m_types_cell
-    USE m_types_mpi
-    USE m_types_potden
-    USE m_types_misc
-    USE m_types_kpts
-    USE m_types_enpara
-    USE m_types_nococonv
 
     IMPLICIT NONE
     CLASS(t_forcetheo),INTENT(INOUT):: this
@@ -102,9 +98,6 @@ CONTAINS
   END FUNCTION forcetheo_eval
 
   SUBROUTINE forcetheo_postprocess(this,fi,results,fmpi)
-    USE m_types_fleurinput
-    USE m_types_misc
-    USE m_types_mpi
     IMPLICIT NONE
     CLASS(t_forcetheo),INTENT(INOUT):: this
     TYPE(t_fleurinput),INTENT(IN)   :: fi

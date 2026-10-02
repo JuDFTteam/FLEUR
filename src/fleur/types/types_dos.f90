@@ -6,6 +6,14 @@
 MODULE m_types_dos
    USE m_juDFT
    USE m_types_eigdos
+   USE m_types_atoms
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_types_banddos
+   USE m_types_radfun
+   USE m_types_abc
+   USE m_types_input
+   USE m_types_kpts
    IMPLICIT NONE
    PRIVATE
    PUBLIC:: t_dos
@@ -31,10 +39,6 @@ MODULE m_types_dos
 CONTAINS
 
    subroutine postprocessing(this, noco,nococonv, banddos, alldos, ef)
-      use m_types_atoms
-      use m_types_noco
-      use m_types_nococonv
-      use m_types_banddos
       class(t_dos), intent(inout):: this
       TYPE(t_noco), INTENT(IN)    :: noco
       TYPE(t_nococonv), INTENT(IN)    :: nococonv
@@ -64,10 +68,6 @@ CONTAINS
    end subroutine
 
    subroutine calc_mt_dos(dos, abc, abc1, banddos, radfun, atoms, ev_list, itype, ikpt, jsp, jsp1)
-    use m_types_atoms
-    use m_types_banddos
-    use m_types_radfun
-    use m_types_abc
 
     class(t_dos), intent(inout):: dos
     TYPE(t_atoms), INTENT(IN)    :: atoms
@@ -182,11 +182,6 @@ CONTAINS
    end function
 
    SUBROUTINE dos_init(thisDOS, input, atoms, kpts, banddos, l_noco, eig)
-      USE m_types_input
-      USE m_types_atoms
-      USE m_types_banddos
-      USE m_types_kpts
-      USE m_types_noco
       IMPLICIT NONE
       CLASS(t_dos), INTENT(INOUT) :: thisDOS
       TYPE(t_input), INTENT(IN)    :: input
