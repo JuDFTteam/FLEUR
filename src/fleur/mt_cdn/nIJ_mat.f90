@@ -15,17 +15,25 @@ MODULE m_nIJmat
    !                                                                               !
    !------------------------------------------------------------------------------ !
 
+   USE m_constants
+   USE m_juDFT
+   USE m_intgr, ONLY: intgr0
+   USE m_radfun
+   USE m_types_abc
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_enpara
+   USE m_types_input
+   USE m_types_kpts
+   USE m_types_potden
+   USE m_types_radfun
    implicit none
+   PRIVATE
+   PUBLIC :: nij_mat
 CONTAINS
 
    SUBROUTINE nIJ_mat(firstspin, input, atoms, ne, rf, we, abc, cell, kpts, kptindx, nIJ_llp_mmp, enpara, v)
 
-      USE m_types
-      USE m_constants
-      USE m_juDFT
-      USE m_intgr, ONLY: intgr0
-      USE m_radfun
-      USE m_types_abc
       !USE m_check_mt_radii
 
       IMPLICIT NONE

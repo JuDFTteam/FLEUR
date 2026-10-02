@@ -1,12 +1,29 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 module m_types_denmatrix
    use m_judft
+   use m_types_mpi
+   use m_types_radfun
+   use m_constants
+   use m_types_atoms
+   use m_intgr, only: intgr3
+   use m_types_sphhar
+   use m_types_sym
+   use m_types_abc
+   use m_gaunt
+#ifdef CPP_MPI
+   use mpi
+#endif
+   use m_types_input
+   use m_types_cdnval
+   use m_types_noco
    implicit none
+   private
+   public :: mpi_collect, init, l_like_charge, hff_contact, hff_dipolar, rhonmt, to_full_density, t_denmatrix
    type:: t_denmatrix
       integer, private:: itype = 0
       logical         :: l_triang = .false.
@@ -24,10 +41,6 @@ module m_types_denmatrix
 contains
 
    subroutine mpi_collect(this,fmpi)
-      use m_types_mpi
-#ifdef CPP_MPI
-      use mpi
-#endif      
       implicit none
       class(t_denmatrix), intent(inout):: this
       type(t_mpi), intent(in):: fmpi
@@ -38,8 +51,6 @@ contains
 #endif
    end subroutine
    subroutine init(this, itype, atoms, input, sphhar)
-      use m_types
-      use m_types_radfun
       implicit none
       class(t_denmatrix), intent(inout):: this
       integer, intent(in):: itype
@@ -60,8 +71,6 @@ contains
    end subroutine
 
    function l_like_charge(this, radfun, ispin, lmax) result(qmtl)
-      use m_types_radfun
-      use m_constants
       implicit none
       class(t_denmatrix), intent(in)   :: this
       type(t_radfun), intent(in)       :: radfun
@@ -81,10 +90,6 @@ contains
    end function
 
    function hff_contact(this, radfun, atoms, itype, ispin) result(contribs)
-      use m_types_radfun
-      use m_types_atoms
-      use m_intgr, only: intgr3
-      use m_constants, only: pi_const, c_light
       implicit none
       class(t_denmatrix), intent(in)  :: this
       type(t_radfun),     intent(in)  :: radfun
@@ -127,12 +132,6 @@ contains
       !! Y_2^0 content of the lattice harmonics.  For cubic symmetry, returns zero
       !! by symmetry (no Y_2^0 in any lattice harmonic).
       !! Both large and small radial components enter the 1/r^3 matrix element.
-      use m_types_radfun
-      use m_types_atoms
-      use m_types_sphhar
-      use m_types_sym
-      use m_intgr, only: intgr3
-      use m_constants, only: pi_const
       implicit none
       class(t_denmatrix), intent(in)  :: this
       type(t_radfun),     intent(in)  :: radfun
@@ -225,9 +224,6 @@ contains
     !! \(\tilde{f}_{\nu\boldsymbol{k}}\): (Smeared) occupation number [perturbed for \(\tilde{f}^{(1)}\)]
     !!
     !! \(A\): Summed matching coefficients and eigenvectors [perturbed for \(A^{(1)}\)]
-      use m_types
-      use m_types_abc
-      use m_gaunt
       implicit none
       class(t_denmatrix)         :: this
       type(t_sym), intent(IN)    :: sym
@@ -332,8 +328,6 @@ contains
       !! \(s\) is the index for the big/small components yielded by the
       !! scalar-relativistic Schrödinger equation.
 
-      use m_types
-      use m_types_radfun
 
       implicit none
       CLASS(t_denmatrix), intent(IN)  :: denmat

@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 ! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
@@ -5,15 +10,19 @@
 
 module m_l_like
    !!calculate the "l-like charge"
+   use m_types_denmatrix
+   use m_types_radfun
+   use m_xmlOutput
+   use m_constants
+   use m_types_atoms
+   implicit none
+   private
+   public :: print_l_like_charge
 contains
 
    subroutine print_l_like_charge(spin0,atoms,radfun,denmatrix,itype)
             !!Use the density matrix in denCoeffs to calculate the l-like charge
             !!Output to out and out.xml
-      use m_types_denmatrix
-      use m_types_radfun
-      use m_types
-      use m_xmlOutput
       implicit none
       integer,intent(in)           :: spin0
       type(t_radfun), intent(IN)   :: radfun
