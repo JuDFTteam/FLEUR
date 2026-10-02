@@ -1,13 +1,35 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_add_vnonlocal
    USE m_judft
-   USE m_types
    use m_types_mpimat
+   use m_constants
+   use m_symm_hf, only: symm_hf
+   use m_intgrf, only: intgrf, intgrf_init
+   use m_exchange_valence_hf
+   use m_exchange_core
+   use m_symmetrizeh
+   use m_wrapper
+   use m_hsefunctional, only: exchange_vccvHSE, exchange_ccccHSE
+   use m_io_hybrid
+   use m_glob_tofrom_loc
+   use m_types_mat
+   use m_types_fleurinput
+   use m_types_hybdat
+   use m_types_lapw
+   use m_types_mpi
+   use m_types_nococonv
+   use m_types_xcpot
+#ifdef CPP_MPI
+   use mpi
+#endif
+   implicit none
+   private
+   public :: add_vnonlocal
 ! c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c
 !     This module is the driver routine for the calculation of the Hartree    c
 !     Fock exchange term by using the mixed basis set.                        c
@@ -45,16 +67,6 @@ MODULE m_add_vnonlocal
 CONTAINS
    SUBROUTINE add_vnonlocal(nk, lapw, fi, hybdat, jsp,&
                             xcpot, fmpi, nococonv, hmat)
-      USE m_constants
-      USE m_symm_hf, ONLY: symm_hf
-      USE m_intgrf, ONLY: intgrf, intgrf_init
-      USE m_exchange_valence_hf
-      USE m_exchange_core
-      USE m_symmetrizeh
-      USE m_wrapper
-      USE m_hsefunctional, ONLY: exchange_vccvHSE, exchange_ccccHSE
-      USE m_io_hybrid
-      use m_glob_tofrom_loc
       IMPLICIT NONE
 
       type(t_fleurinput), intent(in) :: fi

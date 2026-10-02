@@ -10,9 +10,13 @@
 MODULE m_irir_2d
    USE m_juDFT
    USE m_constants
-   USE m_types
    USE m_irvac_2d, ONLY: irvac_sphere, irvac_sphere_dgamma, irvac_sphere_d2gamma
    USE m_glob_tofrom_loc, ONLY: glob_to_loc
+   USE m_types_fleurinput
+   USE m_types_hybdat
+   USE m_types_mat
+   USE m_types_mpdata
+   USE m_types_mpi
 
    IMPLICIT NONE
    PRIVATE

@@ -1,4 +1,16 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_hyb_abcrot
+   USE m_juDFT
+   USE m_types_atoms
+   USE m_types_hybinp
+   USE m_types_sym
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: hyb_abcrot
 CONTAINS
    SUBROUTINE hyb_abcrot(hybinp, atoms, neig, sym,&
                     acof, bcof, ccof)
@@ -9,8 +21,6 @@ CONTAINS
 !     *                                                             *
 !     * Christoph Friedrich Mar/2005                                *
 !     ***************************************************************
-      USE m_types
-      USE m_juDFT
       IMPLICIT NONE
       TYPE(t_hybinp), INTENT(IN) :: hybinp
       TYPE(t_sym), INTENT(IN)    :: sym

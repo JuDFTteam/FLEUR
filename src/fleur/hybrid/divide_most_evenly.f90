@@ -1,5 +1,13 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_divide_most_evenly 
    use m_judft
+   implicit none
+   private
+   public :: divide_most_evenly
 contains
    subroutine divide_most_evenly(n_total, n_parts, start_idx, psize)
       implicit none

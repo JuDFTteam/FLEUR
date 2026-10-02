@@ -10,10 +10,14 @@
 MODULE m_mtir_2d
    USE m_juDFT
    USE m_constants
-   USE m_types
    USE m_solid_harmonics, ONLY: solidharm_init, solidharm_eval_conj
    USE m_glob_tofrom_loc
    USE m_calc_l_m_from_lm
+   USE m_types_fleurinput
+   USE m_types_hybdat
+   USE m_types_mat
+   USE m_types_mpdata
+   USE m_types_mpi
    IMPLICIT NONE
    PRIVATE
    PUBLIC :: mtir_film_2a_correction

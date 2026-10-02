@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -8,22 +8,36 @@ MODULE m_trafo
    use m_judft
    use m_glob_tofrom_loc
    use m_constants
+   use m_wrapper
+   use m_types_mpdata
+   use m_types_hybinp
+   use m_types_hybdat
+   use m_types_sym
+   use m_types_kpts
+   use m_types_atoms
+   use m_types_lapw
+   use m_types_mat
+   use m_types_input
+   use m_types_fleurinput
+   use m_types_mpi
+   use m_vac_rows, only: row_offset, basfn_offset, NVAC_MPB
+   use m_types_vacuum
+   use m_util
+#ifdef CPP_MPI
+   use mpi
+#endif
+   use m_types_fleurinput_base
+   implicit none
+   private
+   public :: waveftrafo_symm, waveftrafo_gen_cmt, waveftrafo_genwavf, waveftrafo_gen_zmat, symmetrize_mpimat, &
+      symmetrize, desymmetrize, bra_trafo, vac_pair_rot, bra_trafo_real, bra_trafo_cmplx, bra_trafo_core, &
+      find_corresponding_g_vac, find_corresponding_g, commonphase, commonphase_mtx, bramat_trafo
 CONTAINS
 
    SUBROUTINE waveftrafo_symm(cmt_out, z_out, cmt, l_real, z_r, z_c, bandi, ndb, &
                               nk, iop, atoms, mpdata, hybinp, hybdat, kpts, &
                               sym, jsp, lapw)
 
-      USE m_constants
-      USE m_wrapper
-      USE m_types_mpdata
-      USE m_types_hybinp
-      USE m_types_hybdat
-      USE m_types_sym
-      USE m_types_kpts
-      USE m_types_atoms
-      USE m_types_lapw
-      USE m_juDFT
       IMPLICIT NONE
 
       TYPE(t_mpdata), INTENT(IN)      :: mpdata
@@ -140,14 +154,6 @@ CONTAINS
    SUBROUTINE waveftrafo_gen_cmt(cmt, c_phase, l_real, nk, iop, atoms, &
                                  mpdata, hybinp, kpts, sym, nbands, cmt_out)
 
-      use m_juDFT
-      USE m_constants
-      USE m_wrapper
-      USE m_types_mpdata
-      USE m_types_hybinp
-      USE m_types_sym
-      USE m_types_kpts
-      USE m_types_atoms
       IMPLICIT NONE
 
       TYPE(t_mpdata), INTENT(IN) :: mpdata
@@ -242,17 +248,6 @@ CONTAINS
       mpdata, hybinp, kpts, sym, jsp, input, nbands, &
       lapw_nk, lapw_rkpt, cmt_out, z_out)
 
-      use m_juDFT
-      USE m_constants
-      USE m_wrapper
-      USE m_types_mat
-      USE m_types_input
-      USE m_types_mpdata
-      USE m_types_hybinp
-      USE m_types_sym
-      USE m_types_kpts
-      USE m_types_atoms
-      USE m_types_lapw
       IMPLICIT NONE
 
       type(t_mat), intent(in)     :: z_in
@@ -387,13 +382,6 @@ CONTAINS
                                   kpts, sym, jsp, nbands, &
                                   lapw_nk, lapw_rkpt, z_out, c_phase)
 
-      use m_juDFT
-      USE m_constants
-      USE m_wrapper
-      USE m_types_mat
-      USE m_types_sym
-      USE m_types_kpts
-      USE m_types_lapw
       IMPLICIT NONE
 
       type(t_mat), intent(in)     :: z_in
@@ -487,13 +475,7 @@ CONTAINS
    ! (Array mat is overwritten! )
 
    SUBROUTINE symmetrize_mpimat(fi, fmpi, mpimat, start_dim, end_dim, imode, lreal, nindxm)
-      USE m_types_fleurinput
-      USE m_types_mpi
-      use m_constants
 
-#ifdef CPP_MPI
-      USE mpi
-#endif
 
 
       IMPLICIT NONE
@@ -628,9 +610,6 @@ CONTAINS
 
    SUBROUTINE symmetrize(mat, dim1, dim2, imode,&
                          atoms, lcutm, maxlcutm, nindxm, sym)
-      USE m_types_atoms
-      USE m_types_sym
-      use m_constants
       IMPLICIT NONE
       TYPE(t_atoms), INTENT(IN)   :: atoms
       TYPE(t_sym), INTENT(IN)     :: sym
@@ -714,8 +693,6 @@ CONTAINS
    SUBROUTINE desymmetrize(mat, dim1, dim2, &
                            atoms, lcutm, maxlcutm, nindxm, sym)
 
-      USE m_types_sym
-      USE m_types_atoms
       IMPLICIT NONE
       TYPE(t_sym), INTENT(IN)   :: sym
       TYPE(t_atoms), INTENT(IN)   :: atoms
@@ -786,12 +763,6 @@ CONTAINS
    ! isym maps kpts%bkp(ikpt) on ikpt
 
    subroutine bra_trafo(fi, mpdata, hybdat, nbands, ikpt, psize, phase, vecin, vecout)
-      use m_types_fleurinput
-      USE m_types_mpdata
-      USE m_types_hybdat
-      USE m_types_mat
-      use m_constants
-      use m_judft
       implicit none
       type(t_fleurinput), intent(in)    :: fi
       type(t_mpdata), intent(in)        :: mpdata
@@ -812,10 +783,6 @@ CONTAINS
 
    !>invs films: vacuum rows between the real pair (M_1 +- M_2)/sqrt(2) and M_1, M_2 (l_fwd: to real).
    subroutine vac_pair_rot(mpdata, hybdat, iq, nvac, vec, l_fwd)
-      USE m_vac_rows, ONLY: row_offset, basfn_offset, NVAC_MPB
-      USE m_types_mpdata
-      USE m_types_hybdat
-      use m_constants
       implicit none
       type(t_mpdata), intent(in) :: mpdata
       type(t_hybdat), intent(in) :: hybdat
@@ -850,12 +817,6 @@ CONTAINS
    end subroutine vac_pair_rot
 
    subroutine bra_trafo_real(fi, mpdata, hybdat, nbands, ikpt, psize, phase, matin_r, matout_r)
-      use m_types_fleurinput
-      USE m_types_mpdata
-      USE m_types_hybdat
-      use m_constants
-      use m_judft
-      use m_vac_rows, only: NVAC_MPB
       implicit none
       type(t_fleurinput), intent(in)    :: fi
       type(t_mpdata), intent(in)        :: mpdata
@@ -926,11 +887,6 @@ CONTAINS
    end subroutine bra_trafo_real
 
    subroutine bra_trafo_cmplx(fi, mpdata, hybdat, nbands, ikpt, psize, vecin_c, vecout_c)
-      use m_constants
-      use m_judft
-      use m_types_fleurinput
-      USE m_types_mpdata
-      USE m_types_hybdat
       implicit none
       type(t_fleurinput), intent(in)    :: fi
       type(t_mpdata), intent(in)        :: mpdata
@@ -963,15 +919,6 @@ CONTAINS
    subroutine bra_trafo_core(nbands, ikpt, psize, sym, &
                              mpdata, hybinp, hybdat, kpts, atoms, vacuum, igptm2_list, &
                              igmv2_list, vecin1, vecout1)
-      use m_constants
-      USE m_types_mpdata
-      USE m_types_hybinp
-      use m_types_hybdat
-      USE m_types_sym
-      USE m_types_kpts
-      USE m_types_atoms
-      USE m_types_vacuum
-      USE m_vac_rows, ONLY: row_offset, basfn_offset, NVAC_MPB
       implicit none
       type(t_mpdata), intent(in)  :: mpdata
       TYPE(t_hybinp), INTENT(IN)  :: hybinp
@@ -1147,9 +1094,6 @@ CONTAINS
 
    !>VAC analogue of find_corresponding_g for the in-plane vectors.
    subroutine find_corresponding_g_vac(sym, kpts, mpdata, ikpt, igmv2_list)
-      use m_types_sym
-      USE m_types_kpts
-      USE m_types_mpdata
       implicit none
       type(t_sym), intent(in)    :: sym
       type(t_kpts), intent(in)   :: kpts
@@ -1195,9 +1139,6 @@ CONTAINS
    end subroutine find_corresponding_g_vac
 
    subroutine find_corresponding_g(sym, kpts, mpdata, ikpt, igptm2_list)
-      use m_types_sym
-      USE m_types_kpts
-      USE m_types_mpdata
       implicit none
       type(t_sym), intent(in)    :: sym
       type(t_kpts), intent(in)   :: kpts
@@ -1259,7 +1200,6 @@ CONTAINS
 
    ! Determines common phase factor (with unit norm)
    function commonphase(carr, n) result(cfac)
-      USE m_juDFT
       IMPLICIT NONE
       INTEGER, INTENT(IN)      :: n
       COMPLEX, INTENT(IN)      :: carr(n)
@@ -1317,13 +1257,6 @@ CONTAINS
                            rrot, invrrot, mpdata, hybinp, kpts, maxlcutm, atoms, lcutm, nindxm, maxindxm, &
                            dwgn, nbasp, nbasm, vecout, igptm_out)
 
-      USE m_constants
-      USE m_util
-      USE m_types_mpdata
-      USE m_types_hybinp
-      USE m_types_sym
-      USE m_types_kpts
-      USE m_types_atoms
       IMPLICIT NONE
       type(t_mpdata), intent(in) :: mpdata
       TYPE(t_hybinp), INTENT(IN)   :: hybinp

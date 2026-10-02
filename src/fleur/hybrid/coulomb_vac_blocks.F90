@@ -13,11 +13,14 @@ MODULE m_coulomb_vac_blocks
    USE m_vac_rows, ONLY: vac_mtir_idx, vac_mtir_idx2
    USE m_juDFT
    USE m_constants
-   USE m_types
    USE m_types_coul, ONLY: t_coul
    USE m_mtir_size
    USE m_coulomb_vac, ONLY: vac_int_samevac, vac_int_samevac_g0, vac_exp_mom, vac_pref, vac_mom_g0, zquad
    USE m_coulomb_vac, ONLY: vac_elem_gram_cached
+   USE m_mtvac_2d, ONLY: mtvac_shape
+   USE m_trafo, ONLY: symmetrize
+   USE m_types_fleurinput
+   USE m_types_mpdata
 
    IMPLICIT NONE
    PRIVATE
@@ -169,7 +172,6 @@ CONTAINS
    !>MT-VAC: only MT and vacuum moment carriers couple; at g = 0 a second vacuum carrier holds
    !>the first z-moment.  The atom phase uses G|| only, since V(q) is reused for all q in the star.
    SUBROUTINE assemble_mtvac_blocks(fi, mpdata, coul, moment, ikpt)
-      USE m_mtvac_2d, ONLY: mtvac_shape
       IMPLICIT NONE
       TYPE(t_fleurinput), INTENT(IN) :: fi
       TYPE(t_mpdata), INTENT(IN)     :: mpdata
@@ -247,7 +249,6 @@ CONTAINS
       END DO
       IF (l_rot) THEN
          block
-            USE m_trafo, ONLY: symmetrize
             INTEGER :: ones(0:MAXVAL(fi%hybinp%lcutm1), fi%atoms%ntype)
             INTEGER :: jc1, jc2
             COMPLEX :: w1, w2
@@ -284,7 +285,6 @@ CONTAINS
 
    SUBROUTINE mtvac_write_col(fi, mpdata, coul, moment, kv, gv, sigma, z1, area, kk, &
                               l_g0, q_i, zm_i, mu, icol, buf, jcol)
-      USE m_mtvac_2d, ONLY: mtvac_shape
       IMPLICIT NONE
       TYPE(t_fleurinput), INTENT(IN) :: fi
       TYPE(t_mpdata), INTENT(IN)     :: mpdata

@@ -1,18 +1,35 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_wavefproducts_aux
    use m_types_fftGrid
-   use m_types
+!$ use omp_lib
+   use m_constants
+   use m_judft
+   use m_fft_interface
+   use m_io_hybrid
+#ifdef CPP_MPI
+   use mpi
+#endif
+   use m_types_atoms
+   use m_types_fft
+   use m_types_fleurinput
+   use m_types_hybdat
+   use m_types_lapw
+   use m_types_mat
+   use m_types_mpdata
+   use m_types_noco
+   use m_types_nococonv
+   use m_types_stars
+   implicit none
+   private
+   public :: wavefproducts_is_fft, setup_g_ptr, wavef2rs, prep_list_of_gvec, calc_number_of_basis_functions, &
+      outer_prod
 CONTAINS
    subroutine wavefproducts_IS_FFT(fi, ik, iq, g_t, jsp, bandoi, bandof, mpdata, hybdat, lapw, stars, nococonv, &
                                    ikqpt, z_k, z_kqpt_p, c_phase_kqpt, cprod, lapw_kq_out, z_kq_out)
-      !$ use omp_lib
-      use m_constants
-      use m_judft
-      use m_fft_interface
-      use m_io_hybrid
-      use m_juDFT
-#ifdef CPP_MPI
-      use mpi
-#endif
       implicit NONE
       type(t_fleurinput), intent(in)  :: fi
       TYPE(t_nococonv), INTENT(IN)    :: nococonv
@@ -234,9 +251,6 @@ CONTAINS
 
    subroutine wavef2rs(fi, lapw, zmat, gcutoff,  bandoi, bandof, jspin, grid, fft, psi)
       ! put block of wave functions through FFT
-!$    use omp_lib
-      use m_types
-      use m_fft_interface
       implicit none
       type(t_fleurinput), intent(in) :: fi
       type(t_lapw), intent(in)       :: lapw
@@ -263,8 +277,6 @@ CONTAINS
    end subroutine wavef2rs
 
    subroutine prep_list_of_gvec(lapw, mpdata, g_bounds, g_t, iq, jsp, pointer, gpt0, ngpt0)
-      use m_types
-      use m_juDFT
       implicit none
       type(t_lapw), intent(in)    :: lapw
       TYPE(t_mpdata), intent(in)         :: mpdata
@@ -300,7 +312,6 @@ CONTAINS
    end subroutine prep_list_of_gvec
 
    function calc_number_of_basis_functions(lapw, atoms, noco, jsp) result(nbasfcn)
-      use m_types
       implicit NONE
       type(t_lapw), intent(in)  :: lapw
       type(t_atoms), intent(in) :: atoms

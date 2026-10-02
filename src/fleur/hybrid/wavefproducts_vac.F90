@@ -9,9 +9,15 @@
 MODULE m_wavefproducts_vac
    USE m_vac_rows, ONLY: NVAC_MPB
    USE m_juDFT
-   USE m_types
    USE m_constants
    USE m_vac_rows, ONLY: row_offset, basfn_offset
+   USE m_vac_abcof
+   USE m_coulomb_vac, ONLY: vac_zint
+   USE m_types_fleurinput
+   USE m_types_hybdat
+   USE m_types_lapw
+   USE m_types_mat
+   USE m_types_mpdata
    IMPLICIT NONE
    PRIVATE
    PUBLIC :: wavefproducts_vac
@@ -20,7 +26,6 @@ CONTAINS
 
    SUBROUTINE wavefproducts_vac(fi, ik, iq, ikqpt, g_t, jsp, bandoi, bandof, &
                                 mpdata, hybdat, lapw, lapw_kq, z_k, z_kq, cprod)
-      USE m_vac_abcof
       IMPLICIT NONE
       TYPE(t_fleurinput), INTENT(IN) :: fi
       INTEGER, INTENT(IN)            :: ik, iq, ikqpt, g_t(3), jsp, bandoi, bandof
@@ -172,7 +177,6 @@ CONTAINS
    END SUBROUTINE partner_map
 
    REAL FUNCTION z_dot3(f, g, h, nz, delz)
-      USE m_coulomb_vac, ONLY: vac_zint
       IMPLICIT NONE
       REAL, INTENT(IN)    :: f(:), g(:), h(:)
       INTEGER, INTENT(IN) :: nz

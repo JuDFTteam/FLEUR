@@ -1,6 +1,14 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_mtir_size
    USE m_vac_const, ONLY: NVAC_MPB
+   USE m_types_fleurinput
    implicit none
+   PRIVATE
+   PUBLIC :: mtir_size
 contains
 
    !> Size of the *reduced* MT+IR layout used by t_coul%mtir.
@@ -10,7 +18,6 @@ contains
    !> contracted at that point.  Do not mix the two layouts or the accessors in
    !> t_hybdat (which describe the full mixed product basis) with each other.
    function mtir_size(fi, n_g, ikpt, n_g_vac) result(isize)
-      use m_types_fleurinput
       implicit none
       type(t_fleurinput), intent(in) :: fi
       integer, intent(in)            :: n_g(:), ikpt

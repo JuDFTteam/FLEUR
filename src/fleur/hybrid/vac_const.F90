@@ -6,7 +6,8 @@
 
 MODULE m_vac_const
    IMPLICIT NONE
-   PUBLIC
+   PRIVATE
+   PUBLIC :: nvac_mpb
 
    ! vacua in the mixed basis; for nvac = 1 the second one is the mirror image
    INTEGER, PARAMETER :: NVAC_MPB = 2

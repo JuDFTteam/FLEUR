@@ -27,7 +27,6 @@ CONTAINS
    END FUNCTION nmono
 
    SUBROUTINE solidharm_init(lmax)
-      USE m_ylm, ONLY: ylm4
       IMPLICIT NONE
       INTEGER, INTENT(IN) :: lmax
 
