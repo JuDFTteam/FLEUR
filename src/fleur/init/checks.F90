@@ -6,7 +6,23 @@
 
 MODULE m_checks
   USE m_juDFT
-  USE m_types
+  USE m_nocoInputCheck
+  USE m_socsym
+  USE m_constants
+#ifdef CPP_MPI
+  USE mpi
+#endif
+  USE m_types_atoms
+  USE m_types_banddos
+  USE m_types_cell
+  USE m_types_hybinp
+  USE m_types_input
+  USE m_types_kpts
+  USE m_types_mpi
+  USE m_types_mpinp
+  USE m_types_noco
+  USE m_types_sym
+  USE m_types_vacuum
   IMPLICIT NONE
   private
   public :: check_command_line,check_input_switches,check_input_switches_all_pe
@@ -14,7 +30,6 @@ MODULE m_checks
     SUBROUTINE check_command_line(fmpi)
       !Here we check is command line arguments are OK
 #ifdef CPP_MPI
-      USE mpi
       INTEGER:: isize,ierr,irank
 #endif
       TYPE(t_mpi), INTENT(INOUT):: fmpi
@@ -49,10 +64,6 @@ MODULE m_checks
     END SUBROUTINE check_command_line
 
     SUBROUTINE check_input_switches(banddos,vacuum,noco,atoms,input,sym,kpts,hybinp,cell)
-      USE m_nocoInputCheck
-      USE m_socsym
-      USE m_types_fleurinput
-      USE m_constants
       type(t_banddos),INTENT(IN)::banddos
       type(t_vacuum),INTENT(IN) ::vacuum
       type(t_noco),INTENT(IN)   ::noco
@@ -170,7 +181,6 @@ MODULE m_checks
     !> continue -- i.e. a warning rather than an error -- belongs here instead.
     !> Call this after fleurinput_mpi_bc, when all ranks have the input.
     SUBROUTINE check_input_switches_all_pe(input,hybinp,mpinp)
-      USE m_types_fleurinput
       type(t_input),INTENT(IN)  :: input
       type(t_hybinp),INTENT(IN) :: hybinp
       type(t_mpinp),INTENT(IN)  :: mpinp

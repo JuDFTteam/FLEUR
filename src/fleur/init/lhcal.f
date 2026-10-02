@@ -1,5 +1,12 @@
       MODULE m_lhcal
       use m_juDFT
+      use m_constants
+      use m_gaussp
+      use m_gtest
+      use m_ylm
+      implicit none
+      private
+      public :: lhcal
 
 !*********************************************************************
 !     determines the lattice harmonics for the given local
@@ -28,10 +35,6 @@
      >                 memd,nlhd,lmax,nrot,orth,
      <                 nlh,lnu,mem,lmnu,c)
 !DEC$ NOOPTIMIZE
-      USE m_constants
-      USE m_gaussp
-      USE m_gtest
-      USE m_ylm
       IMPLICIT NONE
 
 !---> Arguments
