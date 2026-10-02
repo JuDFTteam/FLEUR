@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -7,6 +7,13 @@
 MODULE m_kptgen_hybrid
 
    USE m_juDFT
+   USE m_types_cell
+   USE m_types_sym
+   USE m_types_kpts
+   USE m_constants
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: kptgen_hybrid
 
 CONTAINS
 
@@ -17,10 +24,6 @@ CONTAINS
 
    SUBROUTINE kptgen_hybrid(film, grid_in, cell, sym, kpts, l_soc, l_onlyIdentitySym)
 
-      USE m_types_cell
-      USE m_types_sym
-      USE m_types_kpts
-      USE m_constants
 
       IMPLICIT NONE
 
