@@ -15,6 +15,9 @@ MODULE m_wgauge_coeff_b
   USE m_types_wgauge_manifold, ONLY : t_wgauge_manifold
   USE m_types_wgauge_bmesh
   USE m_wgauge_io, ONLY : wgauge_write_realspace
+#ifdef CPP_MPI
+  USE mpi
+#endif
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: wgauge_write_bmn
@@ -37,9 +40,6 @@ CONTAINS
   ! Checked on the fly against B^W = H^W A^W, which is exact where V is square.
   SUBROUTINE wgauge_write_bmn(this, kpts, eig, u_matrix, u_opt, mmn_loc, gk_loc, &
                              bmesh, irvec, nrpts, mpicm, irank, wfpref)
-#ifdef CPP_MPI
-    use mpi
-#endif
     TYPE(t_wgauge_manifold), INTENT(IN) :: this
     TYPE(t_kpts), INTENT(IN) :: kpts
     REAL,    INTENT(IN) :: eig(:, :)                 ! (nb,nk) ab-initio, Hartree
