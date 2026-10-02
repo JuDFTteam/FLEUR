@@ -5,7 +5,30 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_pwden
+   USE m_types_dos
+   USE m_constants
+   USE m_forceb8
+   USE m_pwint
+   USE m_juDFT
+   USE m_types_fftGrid
+   USE m_fft_interface
+   USE m_types_atoms
+   USE m_types_banddos
+   USE m_types_cell
+   USE m_types_input
+   USE m_types_kpts
+   USE m_types_lapw
+   USE m_types_mat
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_misc
+   USE m_types_stars
+   USE m_types_sym
    implicit none
+   PRIVATE
+   PUBLIC :: pwden
 CONTAINS
    SUBROUTINE pwden(stars, kpts, banddos,   input, fmpi, noco, nococonv, cell, atoms, sym, &
                     ikpt, jspin, lapw, ne, ev_list, we, eig, den, results, f_b8, zMat, dos, q_dfpt, lapwq, we1, zMat1, iDir, &
@@ -40,14 +63,6 @@ CONTAINS
       !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 !DEC$ NOOPTIMIZE
-      USE m_types
-      USE m_types_dos
-      USE m_constants
-      USE m_forceb8
-      USE m_pwint
-      USE m_juDFT
-      USE m_types_fftGrid
-      USE m_fft_interface
 
       IMPLICIT NONE
 

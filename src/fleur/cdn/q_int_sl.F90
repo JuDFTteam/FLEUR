@@ -1,5 +1,21 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_qintsl
   USE m_juDFT
+  USE m_pwintsl
+  USE m_types_slab
+  USE m_types_atoms
+  USE m_types_cell
+  USE m_types_lapw
+  USE m_types_mat
+  USE m_types_stars
+  USE m_types_sym
+  IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: q_int_sl
 CONTAINS
   SUBROUTINE q_int_sl(isp,ikpt,stars,atoms,sym,cell,ne,ev_list,lapw,slab ,zMat)
     !     *******************************************************
@@ -9,9 +25,6 @@ CONTAINS
     !             From pwden_old.F and pwint.F by  c.l.fu
     !     *******************************************************
 
-    USE m_pwintsl
-    USE m_types
-    USE m_types_slab
     IMPLICIT NONE
 
     TYPE(t_lapw),INTENT(IN)   :: lapw
