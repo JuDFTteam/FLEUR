@@ -4,7 +4,22 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_forcea21
+   USE m_forcea21lo
+   USE m_forcea21U
+   USE m_types_misc
+   USE m_types_radfun
+   USE m_types_tlmplm
+   USE m_types_abc
+   USE m_types_potden
+   USE m_constants
+   USE m_juDFT
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_input
+   USE m_types_sym
    implicit none
+   PRIVATE
+   PUBLIC :: force_a21
 CONTAINS
    SUBROUTINE force_a21(input,atoms,sym ,cell,we,jsp,epar,ne,eig,rf,tlmplm,&
                         vtot,abc,aveccof,bveccof,cveccof,f_a21,f_b4,results,itype)
@@ -29,16 +44,6 @@ CONTAINS
       ! GMadsen FZJ 20/3-01
       !--------------------------------------------------------------------------
 
-      USE m_forcea21lo
-      USE m_forcea21U
-      USE m_types_setup
-      USE m_types_misc
-      USE m_types_radfun
-      USE m_types_tlmplm
-      USE m_types_abc
-      USE m_types_potden
-      USE m_constants
-      USE m_juDFT
 
       IMPLICIT NONE
 

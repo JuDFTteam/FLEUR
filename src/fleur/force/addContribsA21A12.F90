@@ -6,6 +6,23 @@
 
 MODULE m_addContribsA21A12
 
+    use m_types_force
+    use m_types_lapw
+    use m_types_mat
+    use m_types_sphhar
+    use m_types_radfun
+    use m_types_tlmplm
+    use m_types_enpara
+    use m_types_abc
+    use m_types_misc
+    use m_types_potden
+    use m_forcea12
+    use m_forcea21
+    use m_force_a12_lv2
+    use m_types_atoms
+    use m_types_cell
+    use m_types_input
+    use m_types_sym
     IMPLICIT NONE
   
     PRIVATE
@@ -14,20 +31,6 @@ MODULE m_addContribsA21A12
 
 SUBROUTINE addContribsA21A12(thisForce,input,atoms,sym,cell ,enpara,&
     rf,tlmplm,vtot,abc,noccbd,ispin,eig,we,results,jsp_start,jspin,nbasfcn,zMat,lapw,sphhar,k1,k2,k3,bkpt,itype)
- use m_types_force
- USE m_types_setup
- USE m_types_lapw
- USE m_types_mat
- USE m_types_sphhar
- USE m_types_radfun
- USE m_types_tlmplm
- USE m_types_enpara
- USE m_types_abc
- USE m_types_misc
- USE m_types_potden
- USE m_forcea12
- USE m_forcea21
- USE m_force_a12_lv2
 
  IMPLICIT NONE
 

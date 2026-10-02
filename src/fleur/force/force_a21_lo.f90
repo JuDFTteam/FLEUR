@@ -5,7 +5,14 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_forcea21lo
+   USE m_types_radfun
+   USE m_types_tlmplm
+   USE m_types_cdnval
+   USE m_types_abc
+   USE m_types_atoms
    implicit none
+   PRIVATE
+   PUBLIC :: force_a21_lo
 CONTAINS
    SUBROUTINE force_a21_lo(atoms, isp, itype, we, eig, ne, abc, &
                            aveccof, bveccof, cveccof, tlmplm, rf, a21)
@@ -16,11 +23,6 @@ CONTAINS
       ! p.kurz nov. 1997
       !--------------------------------------------------------------------------
 
-      USE m_types_setup
-      USE m_types_radfun
-      USE m_types_tlmplm
-      USE m_types_cdnval
-      USE m_types_abc
 
       IMPLICIT NONE
 
