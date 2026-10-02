@@ -37,10 +37,14 @@ module m_dfpt_write_epw
    !! anisotropic Eliashberg runs. (In the QE reference files crrw is itself zero.)
 
    use m_juDFT
-   use m_types
    use m_constants
    use m_matrix_interpolation,  only: t_wann_ft
    use m_dfpt_dynmat_fourier,   only: ft_dyn, ft_dyn_direct, build_ws_ft
+   use m_types_cell
+   use m_types_fleurinput
+   use m_types_kpts
+   use m_types_misc
+   use m_types_sym
 
    implicit none
    private
