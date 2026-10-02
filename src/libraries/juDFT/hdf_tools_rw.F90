@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -14,6 +14,16 @@ MODULE m_hdf_tools2
 !-----------------------------------------------
    USE m_hdf_tools4
    USE m_judft_stop
+   USE hdf5
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: io_read_real0, io_read_real1, io_read_real2, io_read_real3, io_read_real4, io_read_real5, io_read_real6, &
+      io_write_real0, io_write_real1, io_write_real2, io_write_real3, io_write_real4, io_write_real5, io_write_real6, &
+      io_read_integer0, io_read_integer1, io_read_integer2, io_read_integer3, io_read_integer4, io_read_integer5, &
+      io_read_integer6, io_write_integer0, io_write_integer1, io_write_integer2, io_write_integer3, io_write_integer4, &
+      io_write_integer5, io_write_integer6, io_read_complex0, io_read_complex1, io_read_complex2, io_read_complex3, &
+      io_read_complex4, io_read_complex5, io_write_complex0, io_write_complex1, io_write_complex2, io_write_complex3, &
+      io_write_complex4, io_write_complex5
    !PRIVATE
    !<--definitions of interfaces
 
@@ -51,7 +61,6 @@ CONTAINS
 !*****************************************************************
    SUBROUTINE io_read_real0(did, start, ncount, DATA, transprop)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -98,7 +107,6 @@ CONTAINS
 
    SUBROUTINE io_read_real1(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -147,7 +155,6 @@ CONTAINS
 
    SUBROUTINE io_read_real2(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
-      USE hdf5
       IMPLICIT NONE
 
       INTEGER(HID_T), INTENT(IN)  :: did
@@ -200,7 +207,6 @@ CONTAINS
 
    SUBROUTINE io_read_real3(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
-      USE hdf5
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
       INTEGER, INTENT(IN)         ::start(:),                            &
@@ -251,7 +257,6 @@ CONTAINS
 
    SUBROUTINE io_read_real4(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
-      USE hdf5
       IMPLICIT NONE
 
       INTEGER(HID_T), INTENT(IN)  :: did
@@ -300,7 +305,6 @@ CONTAINS
 
    SUBROUTINE io_read_real5(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -352,7 +356,6 @@ CONTAINS
 
    SUBROUTINE io_read_real6(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -406,7 +409,6 @@ CONTAINS
 
    SUBROUTINE io_write_real0(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
 
@@ -464,7 +466,6 @@ CONTAINS
 
    SUBROUTINE io_write_real1(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
 
@@ -524,7 +525,6 @@ CONTAINS
 
    SUBROUTINE io_write_real2(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -573,7 +573,6 @@ CONTAINS
 
    SUBROUTINE io_write_real3(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
-      USE hdf5
       IMPLICIT NONE
 
       INTEGER(HID_T), INTENT(IN) :: did
@@ -620,7 +619,6 @@ CONTAINS
 
    SUBROUTINE io_write_real4(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -668,7 +666,6 @@ CONTAINS
 
    SUBROUTINE io_write_real5(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -717,7 +714,6 @@ CONTAINS
 
    SUBROUTINE io_write_real6(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -773,7 +769,6 @@ CONTAINS
 !*****************************************************************
    SUBROUTINE io_read_integer0(did, start, ncount, DATA, transprop)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -822,7 +817,6 @@ CONTAINS
 
    SUBROUTINE io_read_integer1(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -872,7 +866,6 @@ CONTAINS
 
    SUBROUTINE io_read_integer2(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -922,7 +915,6 @@ CONTAINS
 
    SUBROUTINE io_read_integer3(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -972,7 +964,6 @@ CONTAINS
 
    SUBROUTINE io_read_integer4(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -1022,7 +1013,6 @@ CONTAINS
 
    SUBROUTINE io_read_integer5(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -1073,7 +1063,6 @@ CONTAINS
 
    SUBROUTINE io_read_integer6(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -1124,7 +1113,6 @@ CONTAINS
 !----------------------------------------------------------------------
    SUBROUTINE io_write_integer0(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
 
@@ -1186,7 +1174,6 @@ CONTAINS
 !----------------------------------------------------------------------
    SUBROUTINE io_write_integer1(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
 
@@ -1248,7 +1235,6 @@ CONTAINS
 
    SUBROUTINE io_write_integer2(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -1296,7 +1282,6 @@ CONTAINS
 
    SUBROUTINE io_write_integer3(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -1343,7 +1328,6 @@ CONTAINS
 
    SUBROUTINE io_write_integer4(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -1389,7 +1373,6 @@ CONTAINS
 
    SUBROUTINE io_write_integer5(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -1437,7 +1420,6 @@ CONTAINS
 
    SUBROUTINE io_write_integer6(did, start, ncount, dat_tag, DATA, transprop)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -1491,7 +1473,6 @@ CONTAINS
 
    SUBROUTINE io_read_complex0(did, start, ncount, dat_tag, DATA, trans)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -1516,7 +1497,6 @@ CONTAINS
    END SUBROUTINE
    SUBROUTINE io_read_complex1(did, start, ncount, dat_tag, DATA, trans)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -1551,7 +1531,6 @@ CONTAINS
 
    SUBROUTINE io_read_complex2(did, start, ncount, dat_tag, DATA, trans)
 !*****************************************************************
-      USE hdf5
       IMPLICIT NONE
 ! arguments
       INTEGER(HID_T), INTENT(IN)  :: did
@@ -1589,7 +1568,6 @@ CONTAINS
    END SUBROUTINE
    SUBROUTINE io_read_complex3(did, start, ncount, dat_tag, DATA, trans)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -1626,7 +1604,6 @@ CONTAINS
    END SUBROUTINE
    SUBROUTINE io_read_complex4(did, start, ncount, dat_tag, DATA, trans)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -1663,7 +1640,6 @@ CONTAINS
    END SUBROUTINE
    SUBROUTINE io_read_complex5(did, start, ncount, dat_tag, DATA, trans)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -1700,7 +1676,6 @@ CONTAINS
    END SUBROUTINE
    SUBROUTINE io_write_complex0(did, start, ncount, dat_tag, DATA, trans)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -1727,7 +1702,6 @@ CONTAINS
    END SUBROUTINE
    SUBROUTINE io_write_complex1(did, start, ncount, dat_tag, DATA, trans)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -1752,7 +1726,6 @@ CONTAINS
    END SUBROUTINE
    SUBROUTINE io_write_complex2(did, start, ncount, dat_tag, DATA, trans)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -1779,7 +1752,6 @@ CONTAINS
 
    SUBROUTINE io_write_complex3(did, start, ncount, dat_tag, DATA, trans)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -1807,7 +1779,6 @@ CONTAINS
    END SUBROUTINE
    SUBROUTINE io_write_complex4(did, start, ncount, dat_tag, DATA, trans)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
@@ -1835,7 +1806,6 @@ CONTAINS
    END SUBROUTINE
    SUBROUTINE io_write_complex5(did, start, ncount, dat_tag, DATA, trans)
 !*****************************************************************
-      USE hdf5
 
       IMPLICIT NONE
       INTEGER(HID_T), INTENT(IN)  ::did
