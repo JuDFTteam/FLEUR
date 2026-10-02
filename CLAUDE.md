@@ -102,7 +102,7 @@ Set `juDFT_PYTHON` to override the Python interpreter used by `run_tests.sh`.
 - **Array arguments:** use shape-assumed `real, intent(in) :: x(:,:)` or allocatable arrays; avoid explicit-size `real, intent(in) :: x(n,m)` which allows unsafe rank/size reinterpretation
 - **No file I/O outside `io/`:** files are not substitutes for common blocks or status variables
 
-Pre-commit hooks (`.pre-commit-config.yaml`) enforce: copyright header presence, `implicit none`, absence of `stop` statements, and validity of XML/YAML/TOML files and check for added large files. Install them with:
+Pre-commit hooks (`.pre-commit-config.yaml`, hooks from `fleur/fleur-pre-commit`) enforce: copyright header presence, `implicit none`, absence of `stop` statements, `USE` only in the module head (`check-use-placement` moves them there itself), a `PRIVATE` default in every module, no `USE` of the removed `m_types`/`m_types_setup`, validity of XML/YAML/TOML files and check for added large files. Install them with:
 
 ```bash
 pre-commit install
