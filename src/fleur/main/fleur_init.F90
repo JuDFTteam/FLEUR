@@ -7,43 +7,59 @@ MODULE m_fleur_init
 #ifdef CPP_MPI
    use mpi
 #endif
+   use m_test_performance
+   use m_store_load_hybrid
+   use m_fleurinput_read_xml
+   use m_fleurinput_mpi_bc
+   use m_types_mpinp
+   use m_judft
+   use m_juDFT_init
+   use m_dwigner
+   use m_ylm
+   use m_xmlOutput
+   use m_constants
+   use m_writeOutParameters
+   use m_setupMPI
+   use m_cdn_io
+   use m_fleur_info
+   use m_mixing_history
+   use m_checks
+   use m_writeOutHeader
+   use m_types_xcpot_inbuild
+   use m_make_stars
+   use m_make_sphhar
+   use m_convn
+   use m_efield
+   use m_fleurinput_postprocess
+   use m_make_forcetheo
+   use m_lapwdim
+   use m_make_xcpot
+   use m_gaunt, only: gaunt_init
+#ifdef CPP_HDF
+   use m_hdf_tools
+#endif
+   use m_types_lapw
+   use m_types_enpara
+   use m_types_enparaxml
+   use m_types_fleurinput
+   use m_types_forcetheo
+   use m_types_forcetheo_data
+   use m_types_hybdat
+   use m_types_kpts
+   use m_types_mpdata
+   use m_types_mpi
+   use m_types_nococonv
+   use m_types_misc
+   use m_types_sphhar
+   use m_types_stars
+   use m_types_xcpot
    IMPLICIT NONE
+   private
+   public :: fleur_init
 CONTAINS
    SUBROUTINE fleur_init(fmpi, fi, sphhar, stars, nococonv, forcetheo, enpara, xcpot, results, hybdat, mpdata, filename_add, l_skip_setupmpi)
-      USE m_types
-      USE m_test_performance
-      use m_store_load_hybrid
-      USE m_fleurinput_read_xml
-      USE m_fleurinput_mpi_bc
-      USE m_types_mpinp
-      USE m_judft
-      USE m_juDFT_init
-      USE m_dwigner
-      USE m_ylm
       !USE m_InitParallelProcesses
-      USE m_xmlOutput
-      USE m_constants
-      USE m_writeOutParameters
-      USE m_setupMPI
-      USE m_cdn_io
-      USE m_fleur_info
-      USE m_mixing_history
-      USE m_checks
-      USE m_writeOutHeader
       !USE m_fleur_init_old
-      USE m_types_xcpot_inbuild
-      USE m_make_stars
-      USE m_make_sphhar
-      USE m_convn
-      USE m_efield
-      USE m_fleurinput_postprocess
-      USE m_make_forcetheo
-      USE m_lapwdim
-      use m_make_xcpot
-      USE m_gaunt, ONLY: gaunt_init
-#ifdef CPP_HDF
-      USE m_hdf_tools
-#endif
       IMPLICIT NONE
       !     Types, these variables contain a lot of data!
 

@@ -7,27 +7,15 @@ MODULE m_cdngen
 #ifdef CPP_MPI
    USE mpi
 #endif
-   implicit none
-CONTAINS
-
-SUBROUTINE cdngen(eig_id,fmpi,input,xas,banddos,sliceplot,vacuum,&
-                  kpts,atoms,sphhar,stars,sym,gfinp,hub1inp,&
-                  enpara,cell,field,noco,nococonv,vTot,results ,coreSpecInput,&
-                  archiveType, xcpot,outDen,EnergyDen,core_den,greensFunction,hub1data,vxc,exc,&
-                  moessbauerParams)
-
-   !*****************************************************
-   !    Charge density generator
-   !    calls cdnval to generate the valence charge and the
-   !    core routines for the core contribution
-   !*****************************************************
-   use m_types_vacdos
-   use m_types_mcd
-   use m_types_slab
-   use m_types_orbcomp
-   use m_types_jdos
-   use m_types_jointdos
-   USE m_types
+#ifdef CPP_HDF
+   USE hdf5
+#endif
+   USE m_types_vacdos
+   USE m_types_mcd
+   USE m_types_slab
+   USE m_types_orbcomp
+   USE m_types_jdos
+   USE m_types_jointdos
    USE m_constants
    USE m_juDFT
    USE m_cdnval
@@ -42,12 +30,9 @@ SUBROUTINE cdngen(eig_id,fmpi,input,xas,banddos,sliceplot,vacuum,&
    USE m_resMoms
    USE m_cdncore
    USE m_make_dos
-   !USE m_Ekwritesl
-   !USE m_banddos_io
    USE m_metagga
-   !USE m_unfold_band_kpts
    USE m_denMultipoleExp
-   use m_slater
+   USE m_slater
    USE m_greensfPostProcess
    USE m_types_greensfContourData
    USE m_types_eigdos
@@ -55,8 +40,53 @@ SUBROUTINE cdngen(eig_id,fmpi,input,xas,banddos,sliceplot,vacuum,&
    USE m_rixs_driver, ONLY: rixs_run_driver
    USE m_xas_driver, ONLY: xas_run_driver
    USE m_types_moessbauerParams
+   USE m_force_sf
+   USE m_types_atoms
+   USE m_types_banddos
+   USE m_types_cdnval
+   USE m_types_cell
+   USE m_types_corespecinput
+   USE m_types_enpara
+   USE m_types_field
+   USE m_types_gfinp
+   USE m_types_greensf
+   USE m_types_greensfcoeffs
+   USE m_types_hub1data
+   USE m_types_hub1inp
+   USE m_types_input
+   USE m_types_kpts
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_misc
+   USE m_types_sliceplot
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_sym
+   USE m_types_vacuum
+   USE m_types_xas
+   USE m_types_xcpot
+   implicit none
+   PRIVATE
+   PUBLIC :: cdngen, write_output_struct_xsf, initialize_eigdos_types
+CONTAINS
 
-   USE m_force_sf ! Klueppelberg (force level 3)
+SUBROUTINE cdngen(eig_id,fmpi,input,xas,banddos,sliceplot,vacuum,&
+                  kpts,atoms,sphhar,stars,sym,gfinp,hub1inp,&
+                  enpara,cell,field,noco,nococonv,vTot,results ,coreSpecInput,&
+                  archiveType, xcpot,outDen,EnergyDen,core_den,greensFunction,hub1data,vxc,exc,&
+                  moessbauerParams)
+
+   !*****************************************************
+   !    Charge density generator
+   !    calls cdnval to generate the valence charge and the
+   !    core routines for the core contribution
+   !*****************************************************
+   !USE m_Ekwritesl
+   !USE m_banddos_io
+   !USE m_unfold_band_kpts
+
 
    IMPLICIT NONE
 
@@ -305,7 +335,6 @@ END SUBROUTINE cdngen
 
 SUBROUTINE write_output_struct_xsf(atoms,nococonv,outDen)
 
-   USE m_types
 
    IMPLICIT NONE
 
@@ -383,15 +412,6 @@ SUBROUTINE initialize_eigdos_types(eigdos, dos, jointDOS, vacdos, mcd, slab, orb
    ! Initialize all eigenvalue/DOS types and populate
    ! the eigdos pointer array
    !*****************************************************
-   USE m_types_eigdos
-   USE m_types_dos
-   USE m_types_jointdos
-   USE m_types_vacdos
-   USE m_types_mcd
-   USE m_types_slab
-   USE m_types_orbcomp
-   USE m_types_jdos
-   use m_types
    
    IMPLICIT NONE
    

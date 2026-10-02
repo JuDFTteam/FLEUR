@@ -28,57 +28,81 @@ MODULE m_fleur
    !! one-dimensional        --- y.mokrousov   2002
    !! exchange parameters    --- m.lezaic      2004
    !!                            g.bihlmayer, s.bluegel 1999
+   USE m_types_forcetheo_extended
+   USE m_constants
+   USE m_optional
+   USE m_cdn_io
+   USE m_mixing_history
+   USE m_qfix
+   USE m_vgen
+   USE m_vgen_coulomb
+   USE m_writexcstuff
+   USE m_eigen
+   USE m_secvar_soc
+   USE m_fermie
+   USE m_cdngen
+   USE m_totale
+   USE m_potdis
+   USE m_mix
+   USE m_xmlOutput
+   USE m_juDFT_time
+   USE m_calc_hybrid
+   USE m_rdmft
+   USE m_io_hybrid
+   USE m_dwigner
+   USE m_ylm
+   USE m_metagga
+   USE m_plot
+   USE m_usetup
+   USE m_hubbard1_setup
+   USE m_writeCFOutput
+   USE m_mpi_bc_tool
+   USE m_eig66_io
+   USE m_writeBasis
+   USE m_RelaxSpinAxisMagn
+   USE m_dfpt
+   USE m_abcoeff_store
+   USE m_make_stars
+   USE m_dfpt_vefield
+   USE m_checkdopall
+   USE m_store_load_hybrid
+   USE m_wannierlib_main
+   USE m_types_moessbauerParams
+!$ USE omp_lib
+   USE m_judft
+   USE m_types_lapw
+   USE m_types_enpara
+   USE m_types_field
+   USE m_types_fleurinput
+   USE m_types_forcetheo
+   USE m_types_greensf
+   USE m_types_hub1data
+   USE m_types_hybdat
+   USE m_types_input
+   USE m_types_mpdata
+   USE m_types_mpi
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_misc
+   USE m_types_sliceplot
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_xcpot
+   USE m_types_xcpot_inbuild
+#ifdef CPP_MPI
+   USE mpi
+#endif
    implicit none
+   PRIVATE
+   PUBLIC :: fleur_execute
 
 CONTAINS
    SUBROUTINE fleur_execute(fmpi, fi, sphhar, stars, nococonv, forcetheo, enpara, results, &
                             xcpot, hybdat, mpdata)
       !! This routine is the main program of the FLEUR code.
 
-      USE m_types
-      USE m_types_forcetheo_extended
-      USE m_constants
-      USE m_optional
-      USE m_cdn_io
-      USE m_mixing_history
-      USE m_qfix
-      USE m_vgen
-      USE m_vgen_coulomb
-      USE m_writexcstuff
-      USE m_eigen
-      USE m_secvar_soc
-      USE m_fermie
-      USE m_cdngen
-      USE m_totale
-      USE m_potdis
-      USE m_mix
-      USE m_xmlOutput
-      USE m_juDFT_time
-      USE m_calc_hybrid
-      USE m_rdmft
-      USE m_io_hybrid
-      USE m_dwigner
-      USE m_ylm
-      USE m_metagga
-      USE m_plot
-      USE m_usetup
-      USE m_hubbard1_setup
-      USE m_writeCFOutput
-      USE m_mpi_bc_tool
-      USE m_eig66_io
-      USE m_writeBasis
-      USE m_RelaxSpinAxisMagn
-      USE m_dfpt
-      USE m_abcoeff_store
       !For vTot1 efield WIP
-      USE m_make_stars
-      USE m_dfpt_vefield
-      USE m_checkdopall
-      USE m_store_load_hybrid
-      USE m_wannierlib_main
-      USE m_types_moessbauerParams
 
-!$    USE omp_lib
 
       TYPE(t_mpi),        INTENT(INOUT) :: fmpi
       TYPE(t_fleurinput), INTENT(IN)    :: fi
