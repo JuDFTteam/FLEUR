@@ -5,7 +5,45 @@
 !--------------------------------------------------------------------------------
 MODULE m_metagga
    USE m_judft
+   USE m_juDFT_stop
+   USE m_types_potden
+   USE m_types_kpts
+   USE m_types_mpi
+   USE m_types_enpara
+   USE m_types_misc
+   USE m_types_regionCharges
+   USE m_types_dos
+   USE m_types_vacdos
+   USE m_types_cdnval
+   USE m_cdnval
+   USE m_types_nococonv
+   USE m_eig66_io
+   USE m_constants
+   USE m_cdn_io
+#ifdef CPP_LIBXC
+   USE m_pw_tofrom_grid
+   USE m_mt_tofrom_grid
+#endif
+   USE m_types_atoms
+   USE m_types_banddos
+   USE m_types_cell
+   USE m_types_gfinp
+   USE m_types_xcpot
+   USE m_types_hub1inp
+   USE m_types_input
+   USE m_types_lapw
+   USE m_types_mat
+   USE m_types_noco
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_sym
+   USE m_types_vacuum
    implicit none
+   PRIVATE
+   PUBLIC :: ked_alloc_mt, set_zprime, internal_to_rez, undo_vgen_finalize, set_kined, t_rs_potden, t_kined
+#ifdef CPP_LIBXC
+   PUBLIC :: set_kined_is, set_kined_mt
+#endif
    PUBLIC  :: calc_EnergyDen
    PRIVATE :: calc_EnergyDen_auxillary_weights, &
               calc_kinEnergyDen_pw, &
@@ -42,7 +80,6 @@ CONTAINS
 
 
    SUBROUTINE calc_kinEnergyDen_pw(EnergyDen_rs, vTot_rs, den_rs, kinEnergyDen_RS)
-      USE m_juDFT_stop
       !use m_cdngen
       IMPLICIT NONE
       REAL, INTENT(in)                 :: den_RS(:,:), EnergyDen_RS(:,:), vTot_RS(:,:)
@@ -58,7 +95,6 @@ CONTAINS
 
    SUBROUTINE calc_kinEnergyDen_mt(EnergyDen_RS, vTot_rs, vTot0_rs, core_den_rs, val_den_rs, &
                                    kinEnergyDen_RS)
-      USE m_juDFT_stop
       implicit none
       REAL, INTENT(in)                 :: EnergyDen_RS(:,:), vTot_rs(:,:), vTot0_rs(:,:), core_den_rs(:,:), val_den_rs(:,:)
       REAL, INTENT(inout)              :: kinEnergyDen_RS(:,:)
@@ -78,18 +114,6 @@ CONTAINS
       ! where n_i(r) is the one-particle density
       ! and \varepsilon_i are the eigenenergies
 
-      USE m_types_setup
-      USE m_types_potden
-      USE m_types_kpts
-      USE m_types_mpi
-      USE m_types_enpara
-      USE m_types_misc
-      USE m_types_regionCharges
-      USE m_types_dos
-      USE m_types_vacdos
-      USE m_types_cdnval
-      USE m_cdnval
-      use m_types_nococonv
       IMPLICIT NONE
 
       INTEGER,           INTENT(in)           :: eig_id
@@ -147,8 +171,6 @@ CONTAINS
    END SUBROUTINE calc_EnergyDen
 
    SUBROUTINE calc_EnergyDen_auxillary_weights(eig_id, kpts, jspin, f_ik)
-      USE m_types_kpts
-      USE m_eig66_io
       IMPLICIT NONE
       ! calculates new (auxillary-)weights as
       ! f_iks = w_iks * E_iks
@@ -172,8 +194,6 @@ CONTAINS
    END SUBROUTINE calc_EnergyDen_auxillary_weights
 
    subroutine set_zPrime(dim_idx, zMat, kpt, lapw, cell, zPrime)
-      USE m_types
-      USE m_constants
       implicit none
       INTEGER, intent(in)      :: dim_idx
       TYPE (t_mat), intent(in) :: zMat
@@ -202,7 +222,6 @@ CONTAINS
    end subroutine set_zPrime
 
    function internal_to_rez(cell, vec) result(res)
-      use m_types
       implicit none
       type(t_cell), intent(in) :: cell
       real, intent(in)      :: vec(3)
@@ -212,9 +231,6 @@ CONTAINS
    end function internal_to_rez
 
    subroutine undo_vgen_finalize(vtot, atoms, noco, stars)
-      use m_types
-      use m_constants
-      use m_judft
       implicit none
       TYPE(t_potden), intent(inout)  :: vtot
       type(t_atoms), intent(in)      :: atoms
@@ -243,8 +259,6 @@ CONTAINS
 
    subroutine set_kinED(fmpi,   sphhar, atoms, sym,  xcpot, &
                         input, noco,   stars, vacuum ,cell,     den,     EnergyDen, vTot,kinED)
-      use m_types
-      use m_cdn_io
       implicit none
       TYPE(t_mpi),INTENT(IN)       :: fmpi
       TYPE(t_sphhar),INTENT(IN)    :: sphhar
@@ -287,8 +301,6 @@ CONTAINS
    end subroutine set_kinED
 #ifdef CPP_LIBXC
    subroutine set_kinED_is(xcpot, input, noco, stars, sym, cell, den, EnergyDen, vTot,kinED)
-      use m_types
-      use m_pw_tofrom_grid
       implicit none
       CLASS(t_xcpot),INTENT(IN)    :: xcpot
       TYPE(t_input),INTENT(IN)     :: input
@@ -321,8 +333,6 @@ CONTAINS
 
    subroutine set_kinED_mt(fmpi,   sphhar,    atoms, sym, noco,core_den, val_den, &
                            xcpot, EnergyDen, input, vTot,kinED)
-      use m_types
-      use m_mt_tofrom_grid
       implicit none
       TYPE(t_mpi),INTENT(IN)         :: fmpi
       TYPE(t_sphhar),INTENT(IN)      :: sphhar

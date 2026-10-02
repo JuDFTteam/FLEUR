@@ -1,14 +1,27 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_libxc_postprocess_gga
+   USE m_mt_tofrom_grid
+   USE m_pw_tofrom_grid
+   USE m_vac_tofrom_grid
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_xcpot
+   USE m_types_input
+   USE m_types_noco
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_sym
+   USE m_types_vacuum
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: libxc_postprocess_gga_mt, libxc_postprocess_gga_pw, libxc_postprocess_gga_vac, libxc_postprocess_gga
 CONTAINS
 
    SUBROUTINE libxc_postprocess_gga_mt(xcpot,atoms,sym,sphhar,noco,n,v_xc,grad, atom_num)
-      USE m_mt_tofrom_grid
-      USE m_types
 
       IMPLICIT NONE
       CLASS(t_xcpot),INTENT(IN)   :: xcpot
@@ -43,8 +56,6 @@ CONTAINS
    END SUBROUTINE libxc_postprocess_gga_mt
 
    SUBROUTINE libxc_postprocess_gga_pw(xcpot,stars,cell,v_xc,grad)
-      USE m_pw_tofrom_grid
-      USE m_types
 
       IMPLICIT NONE
       CLASS(t_xcpot),INTENT(IN)   :: xcpot
@@ -71,8 +82,6 @@ CONTAINS
    END SUBROUTINE libxc_postprocess_gga_pw
 
    SUBROUTINE libxc_postprocess_gga_vac(xcpot,input,cell,stars,vacuum ,v_xc,grad)
-      USE m_vac_tofrom_grid
-      USE m_types
 
       IMPLICIT NONE
       CLASS(t_xcpot),INTENT(IN)   :: xcpot
@@ -105,7 +114,6 @@ CONTAINS
    END SUBROUTINE libxc_postprocess_gga_vac
 
    SUBROUTINE libxc_postprocess_gga(vsigma,grad,grad_vsigma,v_xc)
-      USE m_types
       IMPLICIT NONE
       REAL,INTENT(IN)             :: vsigma(:,:)
       TYPE(t_gradients),INTENT(IN):: grad,grad_vsigma
