@@ -1,4 +1,22 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_cored
+   USE m_juDFT
+   USE m_intgr, ONLY: intgr3, intgr0, intgr1, intgr2
+   USE m_constants
+   USE m_differ
+   USE m_types_moessbauerParams
+   USE m_cdn_io
+   USE m_xmlOutput
+   USE m_types_atoms
+   USE m_types_input
+   USE m_types_sphhar
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: cored
 CONTAINS
    SUBROUTINE cored(input, jspin, iType, atoms, rho,  sphhar, l_CoreDenPresent, vr, qint, rhc, tec, seig, l_useOtherCoreSolver, EnergyDen, &
                      moessbauerParams)
@@ -6,15 +24,7 @@ CONTAINS
       !     *****   set up the core densities for compounds.  *****
       !     *****                      d.d.koelling           *****
       !     *******************************************************
-      USE m_juDFT
-      USE m_intgr, ONLY : intgr3,intgr0,intgr1,intgr2
-      USE m_constants
       !USE m_setcor
-      USE m_differ
-      USE m_types
-      USE m_types_moessbauerParams
-      USE m_cdn_io
-      USE m_xmlOutput
       IMPLICIT NONE
 
       TYPE(t_input),INTENT(IN)       :: input
