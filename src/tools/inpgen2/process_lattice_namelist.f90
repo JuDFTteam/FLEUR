@@ -1,6 +1,14 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_process_lattice_namelist
   use m_juDFT
+  use m_constants
   implicit none
+  private
+  public :: process_lattice, angles, brvmat
   !---------------------------------------------------------------------!
   ! eventually easy input of all 14 Bravais lattices in agreement with  !
   ! 'International Tables of Crystallography'                           !
@@ -9,7 +17,6 @@ MODULE m_process_lattice_namelist
 CONTAINS
   SUBROUTINE process_lattice(line,a1,a2,a3,aa,scale,mat,cart_mat)
 
-    USE m_constants
     IMPLICIT NONE
 
     !==> Arguments
@@ -488,7 +495,6 @@ CONTAINS
     !     and angles beween them ; write results to standard output        !
     !----------------------------------------------------------------------!
 
-    USE m_constants
     IMPLICIT NONE
 
     REAL, INTENT(IN) :: am(3,3)
@@ -532,7 +538,6 @@ CONTAINS
     !     unit vector poins in (1,0,0) direction                gb`05      !
     !----------------------------------------------------------------------!
 
-    USE m_constants
     IMPLICIT NONE
 
     REAL, INTENT (IN)  :: alpha, beta, gamma

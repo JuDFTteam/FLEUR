@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -7,16 +7,22 @@ MODULE m_make_kpoints
   USE m_juDFT
   use m_types_kpts
   USE m_constants
+  USE m_types_cell
+  USE m_types_sym
+  USE m_types_hybinp
+  USE m_kpts_kplib
+  USE m_types_brZone
+  USE m_divi
+  USE m_kvecon
+  USE m_bravais
+  USE m_brzone2
+  USE m_kptmop
+  USE m_kptgen_hybrid
   IMPLICIT NONE
   private
   public :: make_kpoints, add_special_points_default
 CONTAINS
   SUBROUTINE make_kpoints(kpts,cell,sym,hybinp,film,l_socorss,bz_integration,l_gamma,str,kptsName,kptsPath)
-    USE m_types_kpts
-    USE m_types_cell
-    USE m_types_sym
-    USE m_types_hybinp
-    USE m_kpts_kplib
     TYPE(t_kpts),INTENT(out)   :: kpts
     TYPE(t_cell),INTENT(in)    :: cell
     TYPE(t_sym),INTENT(in)     :: sym
@@ -206,7 +212,6 @@ CONTAINS
 
 
   SUBROUTINE init_special(kpts,cell,film)
-    USE m_types_cell
     CLASS(t_kpts),INTENT(inout):: kpts
     LOGICAL,INTENT(IN)         :: film
     TYPE(t_cell),INTENT(IN)    :: cell
@@ -275,8 +280,6 @@ CONTAINS
 
 
   SUBROUTINE init_defaults(kpts,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma,l_OnlyIdentitySym)
-    USE m_types_cell
-    USE m_types_sym
     CLASS(t_kpts),INTENT(out):: kpts
     LOGICAL,INTENT(in)       :: film,l_soc_or_ss,l_gamma
     LOGICAL,INTENT(IN)       :: l_OnlyIdentitySym
@@ -303,8 +306,6 @@ CONTAINS
   END SUBROUTINE init_defaults
 
   SUBROUTINE init_by_density(kpts,density,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma,l_OnlyIdentitySym)
-    USE m_types_cell
-    USE m_types_sym
     CLASS(t_kpts),INTENT(out):: kpts
     REAL,INTENT(in)          :: density
     TYPE(t_cell),INTENT(IN)  :: cell
@@ -324,12 +325,6 @@ CONTAINS
   END SUBROUTINE init_by_density
 
   SUBROUTINE init_by_number(kpts,nkpt,cell,sym,film,bz_integration,l_soc_or_ss,l_gamma,l_OnlyIdentitySym)
-    USE m_constants
-    USE m_types_cell
-    USE m_types_sym
-    USE m_types_brZone
-    USE m_divi
-    USE m_kvecon
 
     IMPLICIT NONE
 
@@ -389,15 +384,6 @@ CONTAINS
     ! and kvecon routines of the MD-programm.                              |
     !                                                          G.B. 07/01  |
     !----------------------------------------------------------------------+
-    USE m_constants
-    USE m_bravais
-    USE m_brzone2
-    USE m_kptmop
-    USE m_kvecon
-    USE m_types_cell
-    USE m_types_sym
-    USE m_types_brZone
-    USE m_kptgen_hybrid
     IMPLICIT NONE
     CLASS(t_kpts),INTENT(out):: kpts
 
@@ -525,9 +511,6 @@ CONTAINS
   END SUBROUTINE init_by_grid
 
   SUBROUTINE add_special_points_default(kpts,film,cell,l_check)
-    USE m_judft
-    USE m_bravais
-    USE m_types_cell
     TYPE(t_kpts),INTENT(inout)     :: kpts
     LOGICAL,INTENT(in)             :: film
     LOGICAL,OPTIONAL,INTENT(INOUT) :: l_check
