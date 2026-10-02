@@ -28,7 +28,7 @@ MODULE m_types_eigdos
     procedure          :: get_dos_grid
     procedure          :: make_dos=>t_eigdos_make_dos
     procedure          :: smooth=>dosdata_smooth
-    procedure          :: write_raw   !should be implemented later to allow eig66 functionality
+    procedure          :: write_extra !output that does not fit the scalar weights
     procedure          :: write_dos
     procedure          :: write_band
     procedure          :: write_EVData
@@ -357,11 +357,16 @@ subroutine write_dos(eigdos,hdf_id,l_dfpt)
 
 
 
-  subroutine write_raw(this,id)
+  subroutine write_extra(this,hdf_id)
+#ifdef CPP_HDF
+    use HDF5
+#endif
     class(t_eigdos),INTENT(IN):: this
-    INTEGER,INTENT(IN)        :: id
-
-
+#ifdef CPP_HDF
+    integer(HID_T),intent(in) ::hdf_id
+#else
+    integer,       intent(in) ::hdf_id
+#endif
   end subroutine
 
 

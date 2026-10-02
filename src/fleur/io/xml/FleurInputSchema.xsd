@@ -2835,6 +2835,13 @@
             - Unoccupied bands typically need higher k-density for convergence
          </xsd:documentation>
       </xsd:annotation>
+      <xsd:sequence>
+         <xsd:element maxOccurs="1" minOccurs="0" name="densityMatrix" type="DensityMatrixOutputType">
+            <xsd:annotation>
+               <xsd:documentation>Band- and k-resolved local density matrix of the DOS atoms, written to banddos.hdf.</xsd:documentation>
+            </xsd:annotation>
+         </xsd:element>
+      </xsd:sequence>
       <xsd:attribute name="storeEVData" type="FleurBool" use="optional" default="T">
          <xsd:annotation>
             <xsd:documentation>Store eigenvalue data for DOS post-processing.</xsd:documentation>
@@ -2901,6 +2908,53 @@
          <xsd:annotation>
             <xsd:documentation>Number of energy points in DOS spectrum.</xsd:documentation>
          </xsd:annotation>
+      </xsd:attribute>
+   </xsd:complexType>
+
+   <xsd:complexType name="DensityMatrixOutputType">
+      <xsd:annotation>
+         <xsd:documentation>
+            Band-resolved local density matrix output (group "DensityMatrix" in banddos.hdf).
+            For every eigenstate, k-point and selected atom (bandDOS atom selection) the matrix
+            n(m,m') = &lt;l' m' s|rho|l m s'&gt; in the basis of the muffin-tin functions u_l Y_lm is stored,
+            including all radial functions (u, udot, LOs). Traces are also available as
+            ordinary DOS/band weights. See docs/densityMatrixDOS.md.
+         </xsd:documentation>
+      </xsd:annotation>
+      <xsd:attribute name="l" use="optional" default="spd">
+         <xsd:annotation>
+            <xsd:documentation>l channels to store, any subset of "spdf".</xsd:documentation>
+         </xsd:annotation>
+         <xsd:simpleType>
+            <xsd:restriction base="xsd:string">
+               <xsd:pattern value="[spdf]{1,4}"/>
+            </xsd:restriction>
+         </xsd:simpleType>
+      </xsd:attribute>
+      <xsd:attribute name="lCross" type="xsd:string" use="optional" default="none">
+         <xsd:annotation>
+            <xsd:documentation>
+               Blocks between different l: "none", "all" (all pairs of the selected l),
+               or a list of pairs such as "sd pd". Only l &lt; l' is stored, the partner block is its hermitian conjugate.
+            </xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="symmetrize" use="optional" default="auto">
+         <xsd:annotation>
+            <xsd:documentation>
+               Symmetrize the matrices with the site symmetry and average over equivalent atoms (one matrix per atom type).
+               "auto": symmetrize unless the k-points form a path. "F": store every selected atom unsymmetrized.
+            </xsd:documentation>
+         </xsd:annotation>
+         <xsd:simpleType>
+            <xsd:restriction base="xsd:string">
+               <xsd:enumeration value="auto"/>
+               <xsd:enumeration value="T"/>
+               <xsd:enumeration value="t"/>
+               <xsd:enumeration value="F"/>
+               <xsd:enumeration value="f"/>
+            </xsd:restriction>
+         </xsd:simpleType>
       </xsd:attribute>
    </xsd:complexType>
 

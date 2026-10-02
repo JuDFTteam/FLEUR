@@ -21,7 +21,7 @@ MODULE m_mpi_col_den
    implicit none
 CONTAINS
   SUBROUTINE mpi_col_den(fmpi,sphhar,atoms ,stars,vacuum,input,noco,jspin,dos,vacdos,&
-                         results,den,mcd,slab,orbcomp,jDOS)
+                         results,den,mcd,slab,orbcomp,jDOS,dmdos)
 
     USE m_types
     USE m_constants
@@ -31,6 +31,7 @@ CONTAINS
     use m_types_orbcomp
     use m_types_jDOS
     use m_types_vacdos
+    use m_types_dmdos
     IMPLICIT NONE
 
     TYPE(t_results),INTENT(INOUT):: results
@@ -56,6 +57,7 @@ CONTAINS
     TYPE (t_slab),      OPTIONAL, INTENT(INOUT) :: slab
     TYPE (t_orbcomp),   OPTIONAL, INTENT(INOUT) :: orbcomp
     TYPE (t_jDOS),      OPTIONAL, INTENT(INOUT) :: jDOS
+    TYPE (t_dmdos),     OPTIONAL, INTENT(INOUT) :: dmdos
     ! ..
     ! ..  Local Scalars ..
     INTEGER :: n, i
@@ -246,6 +248,8 @@ CONTAINS
       ENDIF
     ENDIF
     !-jDOS
+
+    IF (PRESENT(dmdos)) CALL dmdos%collect(fmpi,jspin)
 
     ! -> Collect force
     IF (input%l_f) THEN
