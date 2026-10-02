@@ -14,6 +14,9 @@ MODULE m_types_wannierlib
   USE m_types_noco
   USE m_types_fleurinput_base
   USE m_constants,ONLY: ounit
+  USE m_mpi_bc_tool
+  USE m_types_xml
+  USE m_constants
   IMPLICIT NONE
   PRIVATE
 
@@ -364,7 +367,6 @@ CONTAINS
   END FUNCTION projection_m_count
 
   SUBROUTINE mpi_bc_wannierlib(this, mpi_comm, irank)
-    USE m_mpi_bc_tool
     CLASS(t_wannierlib_wannierize), INTENT(INOUT) :: this
     INTEGER, INTENT(IN) :: mpi_comm
     INTEGER, INTENT(IN), OPTIONAL :: irank
@@ -471,9 +473,6 @@ CONTAINS
   END SUBROUTINE mpi_bc_wannierlib
 
   SUBROUTINE read_xml_wannierlib(this, xml)
-    USE m_types_xml
-    USE m_constants
-    USE m_types_kpts
     CLASS(t_wannierlib_wannierize), INTENT(INOUT) :: this
     TYPE(t_xml), INTENT(INOUT) :: xml
 
@@ -808,7 +807,6 @@ CONTAINS
   !> Runs wherever read_xml runs, but the result is consumed only on rank 0, so it is never
   !> broadcast -- see the note on dom_kset.
   SUBROUTINE read_domain_kset_wannierlib(kset, xml, listname, npts)
-    USE m_types_xml
     TYPE(t_kpts), INTENT(OUT) :: kset
     TYPE(t_xml), INTENT(INOUT) :: xml
     CHARACTER(LEN=*), INTENT(IN) :: listname

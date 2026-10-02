@@ -7,6 +7,10 @@ MODULE m_types_atoms
   USE m_juDFT
   USE m_types_econfig
   USE m_types_fleurinput_base
+  USE m_mpi_bc_tool
+  USE m_types_xml
+  USE m_constants
+  USE m_types_cell
   IMPLICIT NONE
   PRIVATE
 
@@ -179,7 +183,6 @@ pure integer function slot_of_lo(this,lo,itype)
   slot_of_lo = 2 + count(this%llo(1:lo,itype)==this%llo(lo,itype))
 end function slot_of_lo
 SUBROUTINE mpi_bc_atoms(this,mpi_comm,irank)
- USE m_mpi_bc_tool
  CLASS(t_atoms),INTENT(INOUT)::this
  INTEGER,INTENT(IN):: mpi_comm
  INTEGER,INTENT(IN),OPTIONAL::irank
@@ -297,7 +300,6 @@ ENDDO
 END SUBROUTINE mpi_bc_atoms
 
 LOGICAL FUNCTION same_species(atoms,n,nn)
- USE m_judft
  IMPLICIT NONE
  CLASS(t_atoms),INTENT(IN)::atoms
  INTEGER,INTENT(in)::n,nn
@@ -329,8 +331,6 @@ PURE FUNCTION calc_nsp_atom(self) RESULT(nsp)
 END FUNCTION calc_nsp_atom
 
 SUBROUTINE read_xml_atoms(this,xml)
- USE m_types_xml
- USE m_constants
  IMPLICIT NONE
  CLASS(t_atoms),INTENT(INOUT):: this
  TYPE(t_xml),INTENT(INOUT)    :: xml
@@ -784,7 +784,6 @@ END SUBROUTINE read_xml_atoms
 
 SUBROUTINE readAtomAttributeString(xml, atomType, relAttPath, outString, l_error)
 
-   USE m_types_xml
 
    IMPLICIT NONE
 
@@ -816,8 +815,6 @@ END SUBROUTINE readAtomAttributeString
 
 SUBROUTINE readAtomAttribute(xml, atomType, relAttPath, outValue)
 
-   USE m_types_xml
-   USE m_juDFT
 
    IMPLICIT NONE
 
@@ -849,7 +846,6 @@ END SUBROUTINE readAtomAttribute
 
 SUBROUTINE init_atoms(this,cell)
 
-   USE m_types_cell
 
    IMPLICIT NONE
 

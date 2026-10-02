@@ -7,7 +7,14 @@
 MODULE m_types_brZone
 
    USE m_judft
+   USE m_constants
+   USE m_types_cell
+   USE m_types_sym
+   USE m_bravais
+   USE m_brzone2
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: initbzone, nop48_const, mface_const, nbsz_const, nv48_const
 
    INTEGER, PARAMETER :: nop48_const  = 48
    INTEGER, PARAMETER :: mface_const  = 51
@@ -43,11 +50,6 @@ MODULE m_types_brZone
 
    SUBROUTINE initBZone(bz, cell, sym, l_soc_or_ss, film, l_onlyIdentitySym)
 
-      USE m_constants
-      USE m_types_cell
-      USE m_types_sym
-      USE m_bravais
-      USE m_brzone2
 
       IMPLICIT NONE
 
