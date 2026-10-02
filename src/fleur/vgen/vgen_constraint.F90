@@ -5,11 +5,16 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_vgen_constraint
+    use m_constants, only: sfp_const
+    use m_types_atoms
+    use m_types_noco
+    use m_types_nococonv
+    use m_types_potden
     IMPLICIT NONE
+    PRIVATE
+    PUBLIC :: vgen_constraint
     CONTAINS
     subroutine vgen_constraint(atoms,noco,nococonv,vtot)
-        use m_types
-        use m_constants, only: sfp_const
         TYPE(t_atoms),INTENT(in)    :: atoms
         TYPE(t_noco),INTENT(IN)     :: noco
         TYPE(t_nococonv),INTENT(IN) :: nococonv

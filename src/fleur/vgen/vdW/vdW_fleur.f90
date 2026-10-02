@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_vdWfleur_grimme
     !
     !   implements Grimmes D2 and D3 based on routines from V. Caciuc (`19)
@@ -6,6 +11,14 @@ MODULE m_vdWfleur_grimme
     !
     ! Types for vdW-forces
     !
+    USE m_constants, ONLY: oUnit, tpi_const
+    USE DFT_D2, ONLY: driver_DFT_D2
+    USE DFT_D3, ONLY: driver_DFT_D3
+    USE m_types_atoms
+    USE m_types_cell
+    USE m_types_input
+    USE m_types_sym
+    IMPLICIT NONE
     PRIVATE
     TYPE atom_data
     INTEGER, DIMENSION(:),  POINTER :: nr_atom_type
@@ -20,10 +33,6 @@ MODULE m_vdWfleur_grimme
 
     CONTAINS
     SUBROUTINE vdW_fleur_grimme(input,atoms,sym,cell,e_vdW,f_vdW)
-        USE m_constants,only:oUnit,tpi_const
-        USE m_types,only: t_atoms,t_cell,t_sym,t_input
-        USE DFT_D2,  ONLY: driver_DFT_D2
-        USE DFT_D3,  ONLY: driver_DFT_D3
        
         IMPLICIT NONE
         TYPE(t_input),INTENT(IN) :: input
@@ -170,7 +179,6 @@ END SUBROUTINE vdW_fleur_grimme
 
 SUBROUTINE gener_new_cell(atom,cell,irep,atom_new)
     
-    USE m_types,only: t_cell
         
     IMPLICIT NONE
     

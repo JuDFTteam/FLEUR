@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -9,6 +9,35 @@ MODULE m_vgen_xcpot
 #ifdef CPP_MPI
    use mpi
 #endif
+   use m_constants
+   use m_intnv
+   use m_vmt_xc
+   use m_vvac_xc
+   use m_vis_xc
+   use m_checkdopall
+   use m_cdn_io
+   use m_convol
+   use m_intgr
+   use m_metagga
+   use m_dfpt_vmt_xc
+   use m_dfpt_vis_xc
+   use m_dfpt_vvac_xc
+   use m_types_atoms
+   use m_types_cell
+   use m_types_hybdat
+   use m_types_input
+   use m_types_mpi
+   use m_types_noco
+   use m_types_potden
+   use m_types_misc
+   use m_types_sphhar
+   use m_types_stars
+   use m_types_sym
+   use m_types_vacuum
+   use m_types_xcpot
+   implicit none
+   private
+   public :: vgen_xcpot
 
 CONTAINS
 
@@ -24,20 +53,6 @@ CONTAINS
       !! DFPT case: Calculate Vxc1 instead of Vxc. For this we need fxc, the xc Kernel.
       !! The calculation changes dramatically, so we enter different subroutines for it.
 
-      USE m_types
-      USE m_constants
-      USE m_intnv
-      USE m_vmt_xc
-      USE m_vvac_xc
-      USE m_vis_xc
-      USE m_checkdopall
-      USE m_cdn_io
-      USE m_convol
-      USE m_intgr
-      USE m_metagga
-      USE m_dfpt_vmt_xc
-      USE m_dfpt_vis_xc
-      USE m_dfpt_vvac_xc
 
       IMPLICIT NONE
 

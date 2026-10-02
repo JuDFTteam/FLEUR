@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
    !--------------------------------------------------------------------------------
    ! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
    ! This file is part of FLEUR and available as free software under the conditions
@@ -8,6 +13,21 @@ MODULE m_vmt_xc
    use mpi 
 #endif
    USE m_judft
+   USE m_libxc_postprocess_gga
+   USE m_mt_tofrom_grid
+   USE m_types_xcpot_inbuild
+   USE m_metagga
+   USE m_types_atoms
+   USE m_types_xcpot
+   USE m_types_input
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_potden
+   USE m_types_sphhar
+   USE m_types_sym
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: vmt_xc
       !.....------------------------------------------------------------------
       !     Calculate the GGA xc-potential in the MT-spheres
       !.....------------------------------------------------------------------
@@ -29,11 +49,6 @@ MODULE m_vmt_xc
       SUBROUTINE vmt_xc(fmpi,sphhar,atoms,&
                         den,xcpot,input,sym,EnergyDen,kinED,noco,vTot,vx,exc,vxc)
 
-         use m_libxc_postprocess_gga
-         USE m_mt_tofrom_grid
-         USE m_types_xcpot_inbuild
-         USE m_types
-         USE m_metagga
          IMPLICIT NONE
 
          CLASS(t_xcpot),INTENT(IN)      :: xcpot

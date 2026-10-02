@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -11,6 +11,20 @@
 MODULE m_vis_xc
    USE m_juDFT
    use m_convol
+   use m_pw_tofrom_grid
+   use m_types_xcpot_libxc
+   use m_libxc_postprocess_gga
+   use m_metagga
+   use m_types_cell
+   use m_types_xcpot
+   use m_types_input
+   use m_types_noco
+   use m_types_potden
+   use m_types_stars
+   use m_types_sym
+   implicit none
+   private
+   public :: vis_xc
    !     ******************************************************
    !     subroutine generates the exchange-correlation potential
    !     in the interstitial region    c.l.fu
@@ -30,11 +44,6 @@ CONTAINS
       !     density
       !     ** r.pentcheva 08.05.96
       !     ******************************************************************
-      USE m_pw_tofrom_grid
-      USE m_types
-      USE m_types_xcpot_libxc
-      USE m_libxc_postprocess_gga
-      USE m_metagga
       IMPLICIT NONE
 
       CLASS(t_xcpot),INTENT(IN)     :: xcpot

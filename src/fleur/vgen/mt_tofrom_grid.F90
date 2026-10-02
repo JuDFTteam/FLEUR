@@ -4,7 +4,17 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_mt_tofrom_grid
-   USE m_types
+   USE m_gaussp
+   USE m_lhglptg
+   USE m_lhglpts
+   USE m_grdchlh
+   USE m_mkgylm
+   USE m_types_atoms
+   USE m_types_xcpot
+   USE m_types_noco
+   USE m_types_sphhar
+   USE m_types_sym
+   USE m_judft
    implicit none
    PRIVATE
    REAL, PARAMETER    :: d_15 = 1.e-15
@@ -14,9 +24,6 @@ MODULE m_mt_tofrom_grid
    PUBLIC :: init_mt_grid, mt_to_grid, mt_from_grid, finish_mt_grid
 CONTAINS
    SUBROUTINE init_mt_grid(jspins, atoms, sphhar, dograds, sym, thout, phout)
-      USE m_gaussp
-      USE m_lhglptg
-      USE m_lhglpts
       IMPLICIT NONE
       INTEGER, INTENT(IN)          :: jspins
       TYPE(t_atoms), INTENT(IN)    :: atoms
@@ -55,8 +62,6 @@ CONTAINS
    END SUBROUTINE init_mt_grid
 
    SUBROUTINE mt_to_grid(dograds, jspins, atoms, sym,sphhar,rotch, den_mt, n, noco ,grad, ch)
-      USE m_grdchlh
-      USE m_mkgylm
       IMPLICIT NONE
       LOGICAL, INTENT(IN)          :: dograds
       TYPE(t_atoms), INTENT(IN)    :: atoms

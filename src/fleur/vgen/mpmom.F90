@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_mpmom
   !     ***********************************************************
   !     calculation of the multipole moments of the original charge
@@ -20,13 +25,37 @@ module m_mpmom
   !     M. Weinert: J.Math.Phys. 22(11) (1981) p.2434 eq. (10)-(15)
   !     ***********************************************************
 
+   use m_constants
+   use m_intgr, only: intgr3
+   use m_DoubleFactorial
+   use m_SphBessel
+   use m_juDFT
+   use m_mpi_bc_tool
+   use m_mpi_reduce_tool
+   use m_phasy1
+   use m_sphbes
+   use m_gaunt, only: Gaunt1
+   use m_types_parallelloop
+   use m_types_atoms
+   use m_types_cell
+   use m_types_input
+   use m_types_mpi
+   use m_types_potden
+   use m_types_sphhar
+   use m_types_stars
+   use m_types_sternheimerjob
+   use m_types_sym
+#ifdef CPP_MPI
+   use mpi
+#endif
+   implicit none
+   private
+   public :: mpmom, mt_moments, pw_moments, dfpt_mt_moments_sf, dfpt_pw_moments_sf
 contains
 
   subroutine mpmom( input, fmpi, atoms, sphhar, stars, sym, cell, qpw, rho, potdenType, qlm, ispin, l_coreCharge,&
                   & sternheimerJob, rhoimag, stars2, iDtype, iDir, rho0, iDir2 )
 
-    use m_types
-    USE m_constants
     
     implicit none
 
@@ -117,12 +146,6 @@ contains
     ! multipole moments of original charge density
     ! see (A15) (Coulomb case) or (A17) (Yukawa case)
 
-    use m_intgr,     only: intgr3
-    use m_constants, only: sfp_const, POTDEN_TYPE_POTYUK, POTDEN_TYPE_CRYSTALFIELD
-    use m_types
-    use m_DoubleFactorial
-    use m_SphBessel
-    use m_juDFT
     
 
     implicit none
@@ -219,15 +242,7 @@ contains
   subroutine pw_moments( input, fmpi, stars, atoms, cell, sym,   qpw_in, potdenType, qlmp_out, l_dfptvgen )
     ! multipole moments of the interstitial charge in the spheres
 
-    use m_mpi_bc_tool
-    use m_mpi_reduce_tool
-    use m_phasy1
-    use m_sphbes
 
-    use m_constants, only: sfp_const, POTDEN_TYPE_POTYUK
-    use m_types
-    use m_DoubleFactorial
-    use m_SphBessel
     implicit none
 
     type(t_input),    intent(in)   :: input
@@ -339,9 +354,6 @@ contains
   end subroutine pw_moments
 
    SUBROUTINE dfpt_mt_moments_SF(atoms, sym, sphhar, iDtype, iDir, rho0, qlmo)
-      USE m_types
-      USE m_gaunt, only : Gaunt1
-      USE m_constants
 
       IMPLICIT NONE
 
@@ -389,13 +401,6 @@ contains
 
    SUBROUTINE dfpt_pw_moments_SF( fmpi, stars, atoms, cell, sym, iDtype, iDir, qpw_in, qlmp_SF )
 
-      use m_mpi_bc_tool
-      use m_mpi_reduce_tool
-      use m_phasy1
-      use m_sphbes
-      use m_constants
-      use m_types
-      USE m_gaunt, only : Gaunt1
 
       implicit none
 
