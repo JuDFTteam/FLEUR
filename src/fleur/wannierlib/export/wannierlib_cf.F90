@@ -44,7 +44,6 @@ MODULE m_wannierlib_cf
   USE m_melem_nabla_sph, ONLY: melem_nabla_sph
   USE m_matrix_element_factory, ONLY: matrix_element_states, matrix_element_release_anchor
   USE m_eig66_io, ONLY: read_eig
-  USE m_types
   USE m_types_abc
   USE m_types_radfun
   USE m_types_spinor_layout, ONLY: t_spinor_layout, radial_slot
@@ -60,6 +59,9 @@ MODULE m_wannierlib_cf
   USE m_types_enpara
   USE m_types_potden
   USE m_types_mpi
+  USE m_types_lapw
+  USE m_types_mat
+  USE m_types_stars
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: wannierlib_uiu, wannierlib_uhu
