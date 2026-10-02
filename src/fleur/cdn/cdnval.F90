@@ -34,6 +34,7 @@ MODULE m_cdnval
    use m_types_mcd
    use m_types_slab
    use m_types_jDOS
+   use m_types_dmdos
    use m_types_vacDOS
    use m_types_orbcomp
    use m_types_denmatrix
@@ -82,7 +83,8 @@ CONTAINS
 
    SUBROUTINE cdnval(eig_id, fmpi, kpts, jspin, noco, nococonv, input, banddos, cell, atoms, enpara, stars, &
                      vacuum, sphhar, sym, vTot, cdnvalJob, den, dos, vacdos, results, &
-                     moments, moessbauerParams, gfinp, hub1inp, hub1data, coreSpecInput, mcd, slab, orbcomp, jDOS, greensfImagPart)
+                     moments, moessbauerParams, gfinp, hub1inp, hub1data, coreSpecInput, mcd, slab, orbcomp, jDOS, greensfImagPart, &
+                     dmdos)
 
       !************************************************************************************
       !     This is the FLEUR valence density generator
@@ -130,6 +132,7 @@ CONTAINS
       TYPE(t_orbcomp), INTENT(INOUT) :: orbcomp
       TYPE(t_jDOS), INTENT(INOUT) :: jDOS
       TYPE(t_greensfImagPart), OPTIONAL, INTENT(INOUT) :: greensfImagPart
+      TYPE(t_dmdos), OPTIONAL, INTENT(INOUT) :: dmdos
 
       ! Scalar Arguments
       INTEGER, INTENT(IN)    :: eig_id, jspin
@@ -139,7 +142,7 @@ CONTAINS
       INTEGER :: iErr, nbands, noccbd, iType, ispinpr, ispin123
       INTEGER :: skip_t, skip_tt, nbasfcn,abc_itype
       LOGICAL :: l_real, l_corespec, l_empty
-      LOGICAL :: l_moessbauerHFF
+      LOGICAL :: l_moessbauerHFF, l_dmdos
 
       ! Local Arrays
       REAL, ALLOCATABLE  :: we(:), eig(:)
@@ -172,7 +175,9 @@ CONTAINS
          CALL init_sf(sym, cell, atoms)
       END IF
 
-      IF (noco%l_mperp .OR. banddos%l_jDOS) THEN
+      l_dmdos = .FALSE.
+      IF (PRESENT(dmdos)) l_dmdos = dmdos%l_initialized
+      IF (noco%l_mperp .OR. banddos%l_jDOS .OR. (l_dmdos .AND. noco%l_noco)) THEN
          ! when the off-diag. part of the density matrix, i.e. m_x and
          ! m_y, is calculated inside the muffin-tins (l_mperp = T), cdnval
          ! is called only once. therefore, several spin loops have been
@@ -313,6 +318,8 @@ CONTAINS
                   ! Determine weights for DOS and Bandstructures
                   call dos%calc_mt_dos(abc(ispin, abc_itype), abc(ispinpr, abc_itype), banddos, radfun(itype), &
                                        atoms, ev_list, itype, ikpt, ispin, ispinpr)
+                  IF (l_dmdos) call dmdos%calc_dm(abc(ispin, abc_itype), abc(ispinpr, abc_itype), radfun(itype), &
+                                                  atoms, sym, ev_list, itype, ikpt, ispin, ispinpr)
                   if (ispin == ispinpr) THEN
                      !No off-diagonal contributions yet
                      call mcd%calc_mt_mcd(banddos, atoms, ev_list, abc(ispin, abc_itype), itype, ikpt, ispin)
@@ -400,7 +407,7 @@ CONTAINS
       END DO
       DO ispin = jsp_start, jsp_end
          CALL mpi_col_den(fmpi, sphhar, atoms, stars, vacuum, input, noco, ispin, dos, vacdos, &
-                          results, den, mcd, slab, orbcomp, jDOS)
+                          results, den, mcd, slab, orbcomp, jDOS, dmdos)
          DO ispinpr = jsp_start, ispin
             DO itype = 1, atoms%ntype
                call denmatrix(ispin, ispinpr, itype)%mpi_collect(fmpi)

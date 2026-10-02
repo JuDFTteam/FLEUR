@@ -51,6 +51,12 @@ MODULE m_types_banddos
 
      LOGICAL :: l_jointDOS = .FALSE.
 
+     !band-resolved local density matrix
+     LOGICAL :: l_dm = .FALSE.
+     INTEGER :: dm_sym = 0                    !0: auto, 1: symmetrize, 2: no symmetrization
+     LOGICAL, ALLOCATABLE :: dm_l(:)          !(0:3) l channels stored
+     INTEGER, ALLOCATABLE :: dm_lpairs(:, :)  !(2,npair) blocks (l,l') with l<=l'
+
      LOGICAL :: l_slab=.false.
 
      LOGICAL,ALLOCATABLE :: dos_atom(:) ! for each atom (not type) switch on DOS
@@ -84,6 +90,10 @@ CONTAINS
     CALL mpi_bc(this%l_orb ,rank,mpi_comm)
     CALL mpi_bc(this%l_jDOS,rank,mpi_comm)
     CALL mpi_bc(this%l_jointDOS,rank,mpi_comm)
+    CALL mpi_bc(this%l_dm,rank,mpi_comm)
+    CALL mpi_bc(this%dm_sym,rank,mpi_comm)
+    CALL mpi_bc(this%dm_l,rank,mpi_comm)
+    CALL mpi_bc(this%dm_lpairs,rank,mpi_comm)
     CALL mpi_bc(this%vacdos ,rank,mpi_comm)
     CALL mpi_bc(this%e1_dos,rank,mpi_comm)
     CALL mpi_bc(this%e2_dos,rank,mpi_comm)
@@ -147,7 +157,10 @@ CONTAINS
        this%sig_dos = evaluateFirstOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@sigma'))
        if (xml%GetNumberOfNodes('/fleurInput/output/bandDOS/@globalspin')>0) this%global_frame = evaluateFirstBoolOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@globalspin'))
        this%ndos_points=evaluateFirstIntOnly(xml%GetAttributeValue('/fleurInput/output/bandDOS/@numberPoints'))
+       IF (xml%GetNumberOfNodes("/fleurInput/output/bandDOS/densityMatrix")==1) CALL read_xml_densitymatrix(this,xml)
     END IF
+    IF (.NOT.allocated(this%dm_l)) allocate(this%dm_l(0:3),source=.FALSE.)
+    IF (.NOT.allocated(this%dm_lpairs)) allocate(this%dm_lpairs(2,0))
 
     ! Read in optional magnetic circular dichroism parameters
     numberNodes = xml%GetNumberOfNodes('/fleurInput/output/magneticCircularDichroism')
@@ -294,5 +307,82 @@ CONTAINS
 
 
   END SUBROUTINE read_xml_banddos
+
+  SUBROUTINE read_xml_densitymatrix(this,xml)
+    CLASS(t_banddos),INTENT(INOUT)::this
+    TYPE(t_xml),INTENT(INOUT)::xml
+
+    CHARACTER(len=*), PARAMETER :: xPath="/fleurInput/output/bandDOS/densityMatrix"
+    CHARACTER(len=*), PARAMETER :: spdf="spdf"
+    CHARACTER(len=200) :: str
+    INTEGER :: i, l, lp, npair, pairs(2,10)
+    LOGICAL :: cross(0:3,0:3)
+
+    this%l_dm = .TRUE.
+    allocate(this%dm_l(0:3),source=.FALSE.)
+    str = xml%GetAttributeValue(xPath//"/@l")
+    DO i = 1, len_trim(str)
+       l = index(spdf,str(i:i)) - 1
+       IF (l<0) CALL judft_error("densityMatrix: l must be a subset of 'spdf'",calledby="types_banddos")
+       this%dm_l(l) = .TRUE.
+    END DO
+
+    !cross(l,lp) for l<lp: additional off-diagonal blocks
+    cross = .FALSE.
+    str = ADJUSTL(xml%GetAttributeValue(xPath//"/@lCross"))
+    IF (TRIM(str)=="all") THEN
+       DO l = 0, 3
+          DO lp = l+1, 3
+             cross(l,lp) = this%dm_l(l).AND.this%dm_l(lp)
+          END DO
+       END DO
+    ELSE IF (TRIM(str)/="none") THEN
+       i = 1
+       DO WHILE (i<=len_trim(str))
+          IF (str(i:i)==" ") THEN
+             i = i + 1
+             CYCLE
+          END IF
+          !each entry consists of exactly two letters
+          IF (i+1>len_trim(str)) CALL judft_error("densityMatrix: invalid lCross entry: "//TRIM(str),calledby="types_banddos")
+          IF (i+2<=len_trim(str)) THEN
+             IF (str(i+2:i+2)/=" ") CALL judft_error("densityMatrix: invalid lCross entry: "//TRIM(str),calledby="types_banddos")
+          END IF
+          l = index(spdf,str(i:i)) - 1
+          lp = index(spdf,str(i+1:i+1)) - 1
+          IF (l<0.OR.lp<0.OR.l==lp) CALL judft_error("densityMatrix: invalid lCross entry: "//TRIM(str),calledby="types_banddos")
+          IF (.NOT.(this%dm_l(l).AND.this%dm_l(lp))) THEN
+             CALL judft_error("densityMatrix: lCross uses an l not listed in l: "//TRIM(str),calledby="types_banddos")
+          END IF
+          cross(min(l,lp),max(l,lp)) = .TRUE.
+          i = i + 2
+       END DO
+    END IF
+
+    npair = 0
+    DO l = 0, 3
+       IF (.NOT.this%dm_l(l)) CYCLE
+       npair = npair + 1
+       pairs(:,npair) = [l,l]
+    END DO
+    DO l = 0, 3
+       DO lp = l+1, 3
+          IF (.NOT.cross(l,lp)) CYCLE
+          npair = npair + 1
+          pairs(:,npair) = [l,lp]
+       END DO
+    END DO
+    this%dm_lpairs = pairs(:,:npair)
+
+    str = ADJUSTL(xml%GetAttributeValue(xPath//"/@symmetrize"))
+    SELECT CASE (TRIM(str))
+    CASE ("T","t")
+       this%dm_sym = 1
+    CASE ("F","f")
+       this%dm_sym = 2
+    CASE DEFAULT
+       this%dm_sym = 0
+    END SELECT
+  END SUBROUTINE read_xml_densitymatrix
 
 END MODULE m_types_banddos

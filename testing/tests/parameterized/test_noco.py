@@ -30,4 +30,18 @@ def test_Fe_sc_GGA_mtNocoPot(default_fleur_test):
     mx, my, mz = [float(x) for x in moments[-1].attrib["vec"].split()]
     assert abs(mx) < 1e-4 and abs(my) < 1e-4
     assert mz > 1.0
-    
+
+
+@pytest.mark.fleur
+@pytest.mark.noco
+@pytest.mark.bulk
+@pytest.mark.dos
+@pytest.mark.hdf
+def test_FeBccNocoDM(default_fleur_test, grep_number):
+    """
+    Band-resolved density matrix with all four spin blocks (unsymmetrized, l_mperp):
+    the traces including the spin off-diagonal part must reproduce the l-resolved DOS weights
+    """
+    res_files = default_fleur_test("noco/FeBccNocoDM", mpi_procs=2)
+    deviation = grep_number(res_files['out'], "from the l-resolved DOS weights:")
+    assert deviation < 1e-10
