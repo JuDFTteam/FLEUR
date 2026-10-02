@@ -6,6 +6,20 @@
 MODULE m_types_eigdos
   USE m_juDFT
   use m_constants
+  use m_smooth
+  use m_types_banddos
+  use m_types_kpts
+  use m_types_cell
+  use m_gnuplot_BS
+  use m_types_input
+  use m_dosbin
+  use m_ptdos
+  use m_tetra_dos
+  use m_dostetra
+#ifdef CPP_HDF
+  use HDF5
+  use m_banddos_io
+#endif
   IMPLICIT NONE
   PRIVATE
   PUBLIC:: t_eigdos,t_eigdos_list,t_eigdos_make_dos
@@ -143,8 +157,6 @@ CONTAINS
   END function
 
 subroutine dosdata_smooth(eigdos,banddos)
-  use m_smooth
-  use m_types_banddos
   class(t_eigdos),INTENT(INOUT)  :: eigdos
   type(t_banddos),INTENT(IN)     :: banddos
 
@@ -172,10 +184,6 @@ subroutine dosdata_smooth(eigdos,banddos)
 END subroutine
 
 subroutine write_dos(eigdos,hdf_id,l_dfpt)
-#ifdef CPP_HDF
-    use HDF5
-    use m_banddos_io
-#endif
     class(t_eigdos),INTENT(INOUT):: eigdos
 #ifdef CPP_HDF
     integer(HID_T),intent(in) ::hdf_id
@@ -225,14 +233,6 @@ subroutine write_dos(eigdos,hdf_id,l_dfpt)
   END subroutine
 
   subroutine write_band(eigdos,kpts,title,cell,hdf_id,efermi,banddos)
-    use m_types_kpts
-    use m_types_cell
-    use m_gnuplot_BS
-    use m_types_banddos
-#ifdef CPP_HDF
-     use HDF5
-     use m_banddos_io
-#endif
     class(t_eigdos),INTENT(INOUT):: eigdos
     type(t_kpts),intent(in)      :: kpts
     type(t_banddos),INTENT(IN)   :: banddos
@@ -287,10 +287,6 @@ subroutine write_dos(eigdos,hdf_id,l_dfpt)
   end subroutine
 
   subroutine write_EVData(eigdos,hdf_id)
-#ifdef CPP_HDF
-     use HDF5
-     use m_banddos_io
-#endif
      class(t_eigdos),INTENT(INOUT):: eigdos
 #ifdef CPP_HDF
      integer(HID_T),intent(in) ::hdf_id
@@ -307,13 +303,6 @@ subroutine write_dos(eigdos,hdf_id,l_dfpt)
   end subroutine
 
   subroutine t_eigdos_make_dos(eigdos,kpts,input,banddos,efermi)
-    use m_types_banddos
-    use m_types_input
-    use m_dosbin
-    use m_ptdos
-    use m_tetra_dos
-    use m_dostetra
-    use m_types_kpts
 
     class(t_eigdos),intent(inout):: eigdos
     type(t_banddos),intent(in)   :: banddos

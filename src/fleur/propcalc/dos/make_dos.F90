@@ -6,24 +6,40 @@
 
 MODULE m_make_dos
   USE m_juDFT
+  USE m_constants
+  USE m_cdn_io
+  USE m_unfold_band_kpts
+  USE m_cdninf
+  USE m_types_eigdos
+  USE m_banddos_io
+#ifdef CPP_HDF
+  USE m_hdf_tools
+#endif
+  USE m_types_atoms
+  USE m_types_banddos
+  USE m_types_cell
+  USE m_types_dfpt
+  USE m_types_input
+  USE m_types_kpts
+  USE m_types_noco
+  USE m_types_nococonv
+  USE m_types_misc
+  USE m_types_sliceplot
+  USE m_types_sym
+  USE m_types_vacuum
+#ifdef CPP_HDF
+  USE hdf5
+#endif
   !
   !-- now write cdninf for all kpts if on T3E
   !-- now read data from tmp_dos and write to vacdos&dosinp .. dw
   !
    implicit none
+  PRIVATE
+  PUBLIC :: make_dos
 CONTAINS
   SUBROUTINE make_dos(kpts,atoms,vacuum,input,banddos,&
                       sliceplot,noco,nococonv,sym,cell,results,eigdos,dfpt )
-    USE m_types
-    USE m_constants
-    USE m_cdn_io
-    USE m_unfold_band_kpts
-    USE m_cdninf
-    USE m_types_eigdos
-#ifdef CPP_HDF
-    use m_hdf_tools
-#endif
-    use m_banddos_io
     IMPLICIT NONE
 
 

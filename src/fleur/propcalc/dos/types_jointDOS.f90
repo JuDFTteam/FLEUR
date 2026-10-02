@@ -6,6 +6,14 @@
 MODULE m_types_jointdos
    use m_judft
    use m_types_eigdos
+   use m_types_atoms
+   use m_types_noco
+   use m_types_nococonv
+   use m_types_banddos
+   use m_types_dos
+   use m_sort
+   use m_types_input
+   use m_types_kpts
    implicit none
    PRIVATE
    public t_jointdos
@@ -57,12 +65,6 @@ CONTAINS
    end function charge_mag
 
    subroutine postprocessing(this, noco,nococonv, banddos, alldos, ef)
-      use m_types_atoms
-      use m_types_noco
-      use m_types_nococonv
-      use m_types_banddos
-      use m_types_dos
-      use m_sort 
       class(t_jointDOS), intent(inout):: this
       class(t_eigdos_list), intent(in),optional    :: alldos(:)
       TYPE(t_noco), INTENT(IN)        :: noco
@@ -222,11 +224,6 @@ CONTAINS
    end function
 
    SUBROUTINE jointDOS_init(thisDOS, input, atoms, kpts, banddos, l_noco, eig)
-      USE m_types_input
-      USE m_types_atoms
-      USE m_types_banddos
-      USE m_types_kpts
-      USE m_types_noco
       IMPLICIT NONE
       CLASS(t_jointDOS), INTENT(INOUT) :: thisDOS
       TYPE(t_input), INTENT(IN)    :: input
