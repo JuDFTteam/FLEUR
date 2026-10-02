@@ -6,6 +6,12 @@
 
       MODULE m_spg2set
       use m_juDFT
+      use m_constants
+      use m_symdata, only: gen2, tau2, spg2, gnt2, namgr2, nammap,
+     &ord2
+      implicit none
+      private
+      public :: spg2set
 !-------------------------------------------------------------------------+
 ! determine the rotation martrices (mrot) and non-symorphic translations  !
 ! for a given 2D symmetry (defined by a number n2spg) plus eventually     !
@@ -20,8 +26,6 @@
      >                   nop,zrfs,invs,namgrp,latnam,
      <                   mrot,tau,nop2,symor)
 
-      USE m_constants
-      USE m_symdata, ONLY : gen2,tau2,spg2,gnt2,namgr2,nammap,ord2
       IMPLICIT NONE
 
       INTEGER, INTENT (IN) :: nop
