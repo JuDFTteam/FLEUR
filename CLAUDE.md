@@ -95,7 +95,9 @@ Set `juDFT_PYTHON` to override the Python interpreter used by `run_tests.sh`.
 - **Indentation:** 3 spaces (no tabs)
 - **Module naming:** prefix with `m_` (e.g., `m_sorad`, `m_types_fleur`)
 - **File/module correspondence:** one module per file, names must match
-- **Every module:** starts with `implicit none` and `private`
+- **Every module:** starts with `implicit none` and `private`, and lists its exports in `public` statements. Re-exporting facades (`m_juDFT`, `m_xmloutput`, `m_hdf_tools`) list the re-exported names too
+- **USE placement:** all `USE` statements go into the module (or program) head, never into contained procedures; only interface bodies may have their own `USE`
+- **Import from the defining module:** e.g. `USE m_types_atoms` for `t_atoms`; the aggregators `m_types` and `m_types_setup` were removed (issue #795), `m_types_fleurinput` only exports `t_fleurinput`
 - **Error handling:** use `judft_error()`, `judft_warn()`, `judft_end()` — never `stop`
 - **Array arguments:** use shape-assumed `real, intent(in) :: x(:,:)` or allocatable arrays; avoid explicit-size `real, intent(in) :: x(n,m)` which allows unsafe rank/size reinterpretation
 - **No file I/O outside `io/`:** files are not substitutes for common blocks or status variables
@@ -131,7 +133,7 @@ Input-describing types live in `src/libraries/fleurinput/` and are aggregated in
 - `t_noco` — non-collinear magnetism settings (types_noco.f90)
 - `t_xcpot` — XC functional selection (types_xcpot.F90)
 
-Calculation-state types live in `src/fleur/types/` and are collected in `m_types` (types.F90):
+Calculation-state types live in `src/fleur/types/`, one module per type (import the module that defines the type):
 - `t_lapw` — LAPW basis (G-vectors, k-points) (types_lapw.F90)
 - `t_potden` — potential and density arrays (interstitial + muffin-tin) (types_potden.F90)
 - `t_mat` — Hamiltonian/overlap matrix (dense or MPI-distributed) (types_mat.F90)
