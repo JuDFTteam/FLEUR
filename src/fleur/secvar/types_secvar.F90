@@ -9,6 +9,10 @@ MODULE m_types_secvar
     use m_types_lapw
     use m_types_atoms
     use m_judft
+    use m_eig66_io
+    use m_types_input
+    use m_types_mpimat
+    use m_eigen_diag
     IMPLICIT NONE
     PRIVATE
     TYPE :: t_secvar
@@ -40,8 +44,6 @@ MODULE m_types_secvar
     contains
     
     SUBROUTINE initialize(this, l_noco, ikpt, eig_id, input, fmpi, lapw, atoms, l_both_spinors)
-        use m_eig66_io
-        use m_types_input
         CLASS(t_secvar), INTENT(INOUT) :: this
         LOGICAL, INTENT(IN) :: l_noco
         !> Write both spinor components of the SOC eigenvectors to the eig file, even when
@@ -105,8 +107,6 @@ MODULE m_types_secvar
     END SUBROUTINE initialize
 
     SUBROUTINE add_diagonal_elements(this)
-        use m_types_mat
-        use m_types_mpimat
         CLASS(t_secvar), INTENT(INOUT) :: this
         INTEGER :: i,jsp,jsp_in,i0
 
@@ -140,8 +140,6 @@ MODULE m_types_secvar
 
 
     subroutine diagonalize(this)
-        use m_eigen_diag
-        use m_types_mpimat
         CLASS(t_secvar), INTENT(INOUT) :: this
         class(t_mat),allocatable :: hmat
         integer :: ne_loc
@@ -229,9 +227,6 @@ MODULE m_types_secvar
 
 
     subroutine store_eigvec(this)
-        use m_types_mat
-        use m_types_mpimat
-        use m_eig66_io
         CLASS(t_secvar), INTENT(INOUT) :: this
         type(t_mat) :: eig, backtransformed
         integer :: jsp
