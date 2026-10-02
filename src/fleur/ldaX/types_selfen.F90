@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_types_selfen
 
    !------------------------------------------------------------------------
@@ -7,6 +12,12 @@ MODULE m_types_selfen
    !------------------------------------------------------------------------
 
    USE m_constants
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_rotMMPmat
+#ifdef CPP_MPI
+   USE mpi
+#endif
 
    IMPLICIT NONE
 
@@ -46,9 +57,6 @@ MODULE m_types_selfen
 
       SUBROUTINE collect_selfen(this,mpi_communicator)
 
-#ifdef CPP_MPI
-         USE mpi
-#endif
 
          CLASS(t_selfen),     INTENT(INOUT) :: this
          INTEGER,             INTENT(IN)    :: mpi_communicator
@@ -77,9 +85,6 @@ MODULE m_types_selfen
 
       SUBROUTINE postProcess_selfen(this,noco,nococonv,atomType,l,jspins,vmmp)
 
-         USE m_types_noco
-         USE m_types_nococonv
-         USE m_rotMMPmat
 
          CLASS(t_selfen), INTENT(INOUT) :: this
          TYPE(t_noco),    INTENT(IN)    :: noco

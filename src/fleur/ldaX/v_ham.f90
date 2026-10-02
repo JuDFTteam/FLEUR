@@ -23,19 +23,32 @@ MODULE m_vham
     !------------------------------------------------------------------------------------! 
 
 
+   USE m_constants
+   USE m_juDFT
+   USE m_hsmt_ab
+   USE m_abcoeff_store
+   USE m_hsmt_fjgj
+   USE m_ylm
+   USE m_radsrd
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_input
+   USE m_types_kpts
+   USE m_types_lapw
+   USE m_types_mat
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_radfun
+   USE m_types_sym
    implicit none
+   PRIVATE
+   PUBLIC :: v_ham
     CONTAINS
 
     SUBROUTINE v_ham(input,rf,atoms,kpts,cell,lapw,sym,noco,fmpi,nococonv,fjgj,den,jspin,kptindx,hmat)
 
-        USE m_types
-        USE m_constants
-        USE m_juDFT
-        USE m_hsmt_ab
-        USE m_abcoeff_store
-        USE m_hsmt_fjgj
-        USE m_ylm
-        USE m_radsrd
 
         IMPLICIT NONE
 
