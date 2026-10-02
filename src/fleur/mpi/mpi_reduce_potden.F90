@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -8,15 +8,25 @@ MODULE m_mpi_reduce_potden
 #ifdef CPP_MPI 
   use mpi 
 #endif
+  use m_constants
+  use m_juDFT
+  use m_types_atoms
+  use m_types_input
+  use m_types_mpi
+  use m_types_noco
+  use m_types_potden
+  use m_types_sphhar
+  use m_types_stars
+  use m_types_vacuum
+  implicit none
+  private
+  public :: mpi_reduce_potden
 CONTAINS
 
   SUBROUTINE mpi_reduce_potden( fmpi, stars, sphhar, atoms, input, vacuum,   noco, potden )
 
     ! It is assumed that, if some quantity is allocated for some fmpi rank, that it is also allocated on fmpi rank 0. 
 
-    USE m_types
-    USE m_constants
-    USE m_juDFT
     IMPLICIT NONE
 
     TYPE(t_mpi),     INTENT(IN)     :: fmpi

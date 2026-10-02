@@ -7,7 +7,15 @@
 MODULE m_mpimakegroups
   use m_juDFT
   use mpi
+  use m_types_lapw
+  use m_types_atoms
+  use m_types_input
+  use m_types_kpts
+  use m_types_mpi
+  use m_types_noco
    implicit none
+  private
+  public :: mpi_make_groups, check_memory
 CONTAINS
   SUBROUTINE mpi_make_groups(&
        fmpi,kpts, input,atoms,noco,&
@@ -44,7 +52,6 @@ CONTAINS
 !          G.B. `99
 !
 !------------------------------------------------------------------------
-    USE m_types
     IMPLICIT NONE
 
     TYPE(t_mpi),INTENT(IN)       :: fmpi
@@ -187,7 +194,6 @@ CONTAINS
 ! check the free and the (approximate) required memory ;
 ! determine minimal n_size to fit into the memory (hopefully).
 !
-        USE m_types
       IMPLICIT NONE
       type(t_mpi),INTENT(IN)         :: fmpi
 
