@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -38,6 +38,9 @@ use m_juDFT
    !type for array constructors
 
 #endif
+#ifdef CPP_HDFMPI
+   USE mpi
+#endif
    PUBLIC open_eig, close_eig
    PUBLIC read_eig
    PUBLIC write_eig!,writesingleeig,writeeigc,writebas
@@ -62,9 +65,6 @@ CONTAINS
       !*****************************************************************
       !     opens hdf-file for eigenvectors+values
       !*****************************************************************
-#ifdef CPP_HDFMPI
-      USE mpi
-#endif
       IMPLICIT NONE
 
       INTEGER, INTENT(IN) :: id, fmpi_comm
@@ -184,7 +184,6 @@ CONTAINS
    !----------------------------------------------------------------------
    SUBROUTINE priv_r_vec(d, nk, jspin, list, z)
 
-      USE m_hdf_tools
       IMPLICIT NONE
       TYPE(t_data_HDF), INTENT(IN)::d
       INTEGER, INTENT(IN)  :: nk, jspin
@@ -296,7 +295,6 @@ CONTAINS
    SUBROUTINE priv_r_vecc(&
         &                     d, nk, jspin, list, z)
 
-      USE m_hdf_tools
       IMPLICIT NONE
       TYPE(t_data_HDF), INTENT(IN)::d
       INTEGER, INTENT(IN)  :: nk, jspin

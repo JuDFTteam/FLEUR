@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2017 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -16,7 +16,6 @@ MODULE m_cdn_io
 #ifdef CPP_MPI
   use mpi
 #endif
-  USE m_types
   USE m_juDFT
   USE m_loddop
   USE m_wrtdop
@@ -26,6 +25,20 @@ MODULE m_cdn_io
 #ifdef CPP_HDF
   USE hdf5
 #endif
+  USE m_qfix
+  USE m_fix_by_gaussian
+  USE m_types_atoms
+  USE m_types_cell
+  USE m_types_field
+  USE m_types_input
+  USE m_types_mpi
+  USE m_types_noco
+  USE m_types_nococonv
+  USE m_types_potden
+  USE m_types_sphhar
+  USE m_types_stars
+  USE m_types_sym
+  USE m_types_vacuum
   IMPLICIT NONE
 
   PRIVATE
@@ -531,7 +544,7 @@ CONTAINS
 #endif
     ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
        ! Write density to cdn.str file
-       STOP 'CDN_STREAM_MODE not yet implemented!'
+       CALL judft_error('CDN_STREAM_MODE not yet implemented!')
     ELSE
        filename = 'cdn1'
        IF (archiveType.EQ.CDN_ARCHIVE_TYPE_NOCO_const) THEN
@@ -771,7 +784,7 @@ CONTAINS
        CALL closeCDNPOT_HDF(fileID)
 #endif
     ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
-       STOP 'cdn.str not yet implemented!'
+       CALL judft_error('cdn.str not yet implemented!')
     ELSE
        l_error = .TRUE.
     END IF
@@ -822,7 +835,7 @@ CONTAINS
        CALL closeCDNPOT_HDF(fileID)
 #endif
     ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
-       STOP 'cdn.str not yet implemented!'
+       CALL judft_error('cdn.str not yet implemented!')
     ELSE
        l_error = .TRUE.
     END IF
@@ -933,7 +946,7 @@ CONTAINS
 #endif
     ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
        ! Write core density to cdn.str file
-       STOP 'CDN_STREAM_MODE not yet implemented!'
+       CALL judft_error('CDN_STREAM_MODE not yet implemented!')
     ELSE
        iUnit = 17
        OPEN (iUnit,file='cdnc',form='unformatted',status='unknown')
@@ -1015,7 +1028,7 @@ CONTAINS
 #endif
        ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
           ! Write stars to stars file
-          STOP 'CDN_STREAM_MODE not yet implemented!'
+          CALL judft_error('CDN_STREAM_MODE not yet implemented!')
        ELSE
           ! In direct access mode no structure information is written to any file.
        END IF
@@ -1026,10 +1039,6 @@ CONTAINS
   END SUBROUTINE storeStructureIfNew
 
   SUBROUTINE transform_by_moving_atoms(fmpi,stars,atoms,vacuum,cell,field,sym,sphhar,input,noco,nococonv)
-    USE m_types
-    USE m_constants
-    USE m_qfix
-    USE m_fix_by_gaussian
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)      :: fmpi
     TYPE(t_atoms),INTENT(IN)    :: atoms
@@ -1176,7 +1185,7 @@ CONTAINS
 #endif
     ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
        ! Write stars to stars file
-       STOP 'CDN_STREAM_MODE not yet implemented!'
+       CALL judft_error('CDN_STREAM_MODE not yet implemented!')
     ELSE
        !         OPEN (51,file='stars',form='unformatted',status='unknown')
        !         WRITE (51) stars%gmax,stars%ng3,stars%ng2,ngz,izmin,izmax,stars%mx1,stars%mx2,stars%mx3
@@ -1267,7 +1276,7 @@ CONTAINS
     IF(mode.EQ.CDN_STREAM_MODE) THEN
        INQUIRE(FILE='cdn.str',EXIST=l_exist)
        IF (l_exist) THEN
-          STOP 'cdn.str code path not yet implemented!'
+          CALL judft_error('cdn.str code path not yet implemented!')
        END IF
        IF (.NOT.l_exist) THEN
           mode = CDN_DIRECT_MODE
@@ -1355,7 +1364,7 @@ CONTAINS
 #endif
     ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
        ! Write stars to stars file
-       STOP 'CDN_STREAM_MODE not yet implemented!'
+       CALL judft_error('CDN_STREAM_MODE not yet implemented!')
     ELSE
        !         OPEN (14,file='wkf2',form='unformatted',status='unknown')
 
@@ -1427,7 +1436,7 @@ CONTAINS
     IF(mode.EQ.CDN_STREAM_MODE) THEN
        INQUIRE(FILE='cdn.str',EXIST=l_exist)
        IF (l_exist) THEN
-          STOP 'cdn.str code path not yet implemented!'
+          CALL judft_error('cdn.str code path not yet implemented!')
        END IF
        IF (.NOT.l_exist) THEN
           mode = CDN_DIRECT_MODE
@@ -1511,7 +1520,7 @@ CONTAINS
        CALL closeCDNPOT_HDF(fileID)
 #endif
     ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
-       STOP 'CDN_STREAM_MODE not yet implemented!'
+       CALL judft_error('CDN_STREAM_MODE not yet implemented!')
     ELSE
        WRITE(*,*) 'Explicit setting of starting density in direct access mode'
        WRITE(*,*) 'not implemented.'
@@ -1620,7 +1629,7 @@ CONTAINS
           WRITE(*,*) "No cdn.hdf file found. No density entry deleted."
        END IF
     ELSE IF(mode.EQ.CDN_STREAM_MODE) THEN
-       STOP 'CDN_STREAM_MODE not yet implemented!'
+       CALL judft_error('CDN_STREAM_MODE not yet implemented!')
     ELSE
        WRITE(*,*) 'Explicit deletion of densities in direct access mode'
        WRITE(*,*) 'not implemented.'
@@ -1724,7 +1733,7 @@ CONTAINS
     IF ((mode.EQ.CDN_STREAM_MODE).OR.(mode.EQ.CDN_HDF5_MODE)) THEN
        INQUIRE(FILE='cdn.str',EXIST=l_exist)
        IF(l_exist) THEN
-          STOP 'Not yet implemented!'
+          CALL judft_error('Not yet implemented!')
           RETURN
        END IF
     END IF

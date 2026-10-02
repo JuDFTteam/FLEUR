@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2017 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -11,6 +11,16 @@ MODULE m_cdnpot_io_hdf
 #ifdef CPP_HDF
    USE hdf5
    USE m_hdf_tools
+#endif
+#ifdef CPP_HDF
+   USE m_types_stars
+   USE m_types_sphhar
+   USE m_types_input
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_vacuum
+   USE m_types_sym
+   USE m_types_potden
 #endif
    IMPLICIT NONE
 
@@ -232,7 +242,6 @@ MODULE m_cdnpot_io_hdf
    END SUBROUTINE writePOTHeaderData
 
    SUBROUTINE writeStarsHDF(fileID, starsIndex, structureIndex, stars, l_checkBroyd, l_storeAddMetadata)
-     use m_types_stars
 
       INTEGER(HID_T), INTENT(IN) :: fileID
       INTEGER,        INTENT(IN) :: starsIndex, structureIndex
@@ -386,7 +395,6 @@ MODULE m_cdnpot_io_hdf
    END SUBROUTINE writeStarsHDF
 
    SUBROUTINE readStarsHDF(fileID, starsIndex, stars)
-      use m_types_stars
 
       INTEGER(HID_T), INTENT(IN)    :: fileID
       INTEGER,        INTENT(IN)    :: starsIndex
@@ -567,7 +575,6 @@ MODULE m_cdnpot_io_hdf
    END SUBROUTINE peekStarsHDF
 
    SUBROUTINE writeStepfunctionHDF(fileID, stepfunctionIndex, starsIndex, structureIndex, stars, l_CheckBroyd)
-      use m_types_stars
       INTEGER(HID_T), INTENT(IN)    :: fileID
       INTEGER,        INTENT(IN)    :: stepfunctionIndex, starsIndex, structureIndex
       TYPE(t_stars),  INTENT(IN)    :: stars
@@ -629,7 +636,6 @@ MODULE m_cdnpot_io_hdf
    END SUBROUTINE writeStepfunctionHDF
 
    SUBROUTINE readStepfunctionHDF(fileID, stepfunctionIndex, stars)
-      use m_types_stars
       INTEGER(HID_T), INTENT(IN)    :: fileID
       INTEGER,        INTENT(IN)    :: stepfunctionIndex
       TYPE(t_stars),  INTENT(INOUT) :: stars
@@ -716,7 +722,6 @@ MODULE m_cdnpot_io_hdf
    END SUBROUTINE peekStepfunctionHDF
 
    SUBROUTINE writeLatharmsHDF(fileID, latharmsIndex, structureIndex, latharms, l_CheckBroyd)
-      use m_types_sphhar
       INTEGER(HID_T), INTENT(IN)  :: fileID
       INTEGER,        INTENT(IN)  :: latharmsIndex, structureIndex
       TYPE(t_sphhar), INTENT(IN)  :: latharms
@@ -798,7 +803,6 @@ MODULE m_cdnpot_io_hdf
    END SUBROUTINE writeLatharmsHDF
 
    SUBROUTINE readLatharmsHDF(fileID, latharmsIndex, latharms)
-      use m_types_sphhar
       INTEGER(HID_T), INTENT(IN)  :: fileID
       INTEGER,        INTENT(IN)  :: latharmsIndex
       TYPE(t_sphhar), INTENT(INOUT) :: latharms
@@ -890,12 +894,7 @@ MODULE m_cdnpot_io_hdf
    END SUBROUTINE peekLatharmsHDF
 
    SUBROUTINE writeStructureHDF(fileID, input, atoms, cell, vacuum,   sym, structureIndex, l_CheckBroyd)
-      use m_types_input
-      use m_types_atoms
-      use m_types_cell
-      use m_types_vacuum
 
-      use m_types_sym
 
       INTEGER(HID_T), INTENT(IN) :: fileID
       INTEGER, INTENT(IN)        :: structureIndex
@@ -1345,12 +1344,7 @@ MODULE m_cdnpot_io_hdf
    END SUBROUTINE writeStructureHDF
 
    SUBROUTINE readStructureHDF(fileID, input, atoms, cell, vacuum,   sym,structureIndex)
-      use m_types_input
-      use m_types_atoms
-      use m_types_cell
-      use m_types_vacuum
 
-      use m_types_sym
 
       INTEGER(HID_T), INTENT(IN)    :: fileID
       INTEGER, INTENT(IN)           :: structureIndex
@@ -1767,8 +1761,6 @@ MODULE m_cdnpot_io_hdf
    SUBROUTINE writeDensityHDF(input, fileID, archiveName, densityType, previousDensityIndex,&
                               starsIndex, latharmsIndex, structureIndex, stepfunctionIndex,&
                               date,time,distance,fermiEnergy,mmpmatDistance,occDistance,l_qfix,iter,den,denIm,b_constr)
-      use m_types_input
-      use m_types_potden
       TYPE(t_input),    INTENT(IN) :: input
       TYPE(t_potden),   INTENT(IN) :: den
       INTEGER(HID_T),   INTENT(IN) :: fileID
@@ -2320,8 +2312,6 @@ MODULE m_cdnpot_io_hdf
    SUBROUTINE writePotentialHDF(input, fileID, archiveName, potentialType,&
                                 starsIndex, latharmsIndex, structureIndex,stepfunctionIndex,&
                                 iter,pot,fpw,l_noco,l_mtNoco)
-      use m_types_input
-      use m_types_potden
 
       TYPE(t_input),    INTENT(IN) :: input
       TYPE(t_potden),   INTENT(IN) :: pot
@@ -2594,13 +2584,7 @@ MODULE m_cdnpot_io_hdf
 
    SUBROUTINE readDensityHDF(fileID, input, stars, latharms, atoms, vacuum,  &
                              archiveName, densityType,fermiEnergy,lastDistance,l_qfix,l_DimChange,den,denIm,b_constr)
-      use m_types_input
-      use m_types_stars
-      use m_types_sphhar
-      use m_types_atoms
-      use m_types_vacuum
 
-      use m_types_potden
 
       TYPE(t_input),INTENT(IN)     :: input
       TYPE(t_stars),INTENT(IN)     :: stars
@@ -3444,8 +3428,6 @@ MODULE m_cdnpot_io_hdf
    END SUBROUTINE peekDensityEntryHDF
 
    SUBROUTINE writeCoreDensityHDF(fileID,input,atoms,rhcs,tecs,qints)
-      use m_types_atoms
-      use m_types_input
       TYPE(t_atoms),    INTENT(IN) :: atoms
       TYPE(t_input),    INTENT(IN) :: input
 
@@ -3544,8 +3526,6 @@ MODULE m_cdnpot_io_hdf
    END SUBROUTINE writeCoreDensityHDF
 
    SUBROUTINE readCoreDensityHDF(fileID,input,atoms,rhcs,tecs,qints)
-      use m_types_atoms
-      use m_types_input
 
       TYPE(t_atoms),    INTENT(IN) :: atoms
       TYPE(t_input),    INTENT(IN) :: input

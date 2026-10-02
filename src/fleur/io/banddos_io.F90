@@ -20,8 +20,17 @@ MODULE m_banddos_io
 
    USE hdf5
    USE m_hdf_tools
+   USE m_types_input
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_kpts
+   USE m_types_sym
+   USE m_types_banddos
+   USE m_hdf_tools4
 
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: writeevdata, io_write_string1
 
    PUBLIC openBandDOSFile, closeBandDOSFile, writeBandData, writedosData
 
@@ -29,14 +38,7 @@ MODULE m_banddos_io
 
    SUBROUTINE openBandDOSFile(fileID, input, atoms, cell, kpts, sym, banddos, eFermiPrev)
 
-      USE m_types_input
-      USE m_types_atoms
-      USE m_types_cell
-      USE m_types_kpts
-      USE m_types_sym
-      USE m_types_banddos
 
-      USE hdf5
       !USE m_cdn_io
 
       TYPE(t_input),   INTENT(IN)  :: input
@@ -249,7 +251,6 @@ MODULE m_banddos_io
    END SUBROUTINE
 
    SUBROUTINE writeBandData(fileID,kpts,name_of_dos,weight_name,weight_eig,eig)
-      USE m_types_kpts
       character(len=*),intent(in) :: name_of_dos
       character(len=*),intent(in) :: weight_name
       real,intent(in)             :: weight_eig(:,:,:)
@@ -338,8 +339,6 @@ MODULE m_banddos_io
 
    SUBROUTINE io_write_string1(datasetID,dims,stringLength,dataArray)
 
-      USE hdf5
-      USE m_hdf_tools4
 
       IMPLICIT NONE
 
