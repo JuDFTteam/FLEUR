@@ -16,7 +16,6 @@
 !--------------------------------------------------------------------------------
 MODULE m_wannierlib_main
    USE m_juDFT
-   USE m_types, ONLY: t_stars, t_results
    USE m_matrix_element_factory, ONLY: matrix_element_factory_reset, &
                                        matrix_element_release_anchor, matrix_element_radial
    USE m_types_melem_request, ONLY: t_melem_request
@@ -56,6 +55,8 @@ USE m_wannierlib_band_window, ONLY: wannierlib_default_windows, wannierlib_creat
    USE m_types_abc
    USE m_types_wannierlib
    use m_wann_write_amn
+   use m_types_misc
+   use m_types_stars
    IMPLICIT NONE
    PRIVATE
    PUBLIC :: wannierlib_main

@@ -6,6 +6,10 @@
 
       MODULE m_wann_plot_vac
       use m_juDFT
+      use m_constants, only: pimach
+      implicit none
+      private
+      public :: wann_plot_vac
 c**************************************************************
 c   Calculates the lattice periodic part of the Bloch function
 c   in the vacuum. Used for plotting.  
@@ -22,7 +26,6 @@ c***************************************************************
      >     nbasfcn,neigd,nv,omtil,nslibd,ac,bc,u,ue,
      <     value)
 
-      use m_constants, only : pimach
       implicit none
 
 c     .. scalar Arguments..
