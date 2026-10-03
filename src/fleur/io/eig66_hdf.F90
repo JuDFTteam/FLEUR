@@ -30,6 +30,11 @@ use m_juDFT
 #ifdef CPP_HDF
    USE hdf5
    USE m_hdf_tools
+#endif
+#ifdef CPP_HDFMPI
+   USE mpi
+#endif
+#ifdef CPP_HDF
    IMPLICIT NONE
 
    PRIVATE
@@ -37,9 +42,6 @@ use m_juDFT
    !to have the correct
    !type for array constructors
 
-#endif
-#ifdef CPP_HDFMPI
-   USE mpi
 #endif
    PUBLIC open_eig, close_eig
    PUBLIC read_eig
