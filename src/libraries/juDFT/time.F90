@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -15,6 +15,20 @@ MODULE m_juDFT_time
    USE m_judft_xmlOutput
 #ifdef CPP_MPI 
    use mpi 
+#endif
+!$ use omp_lib
+   use m_judft_args
+   use iso_c_binding
+   use m_judft_sysinfo
+   use m_judft_string
+   use m_juDFT_internalParams
+   use m_judft_usage
+   use m_juDFT_logging
+#ifdef CPP_NVTX
+   use nvtx
+#endif
+#ifdef __INTEL_COMPILER
+   use ifport
 #endif
    IMPLICIT NONE
    !     List of different timers
@@ -123,8 +137,6 @@ CONTAINS
    end subroutine addtime
 
    SUBROUTINE timestart(ttimer, file, line)
-      !$ use omp_lib
-      USE m_judft_args
       IMPLICIT NONE
       CHARACTER(LEN=*), INTENT(IN)          :: ttimer
       CHARACTER(LEN=*), INTENT(IN), OPTIONAL  :: file
@@ -165,7 +177,6 @@ CONTAINS
    !<-- S:timestop(timer)
 
    SUBROUTINE timestop(ttimer)
-     !$ use omp_lib
       implicit none
       CHARACTER(LEN=*), INTENT(IN) :: ttimer
 
@@ -199,14 +210,6 @@ CONTAINS
 
    !>
    SUBROUTINE priv_debug_output(startstop, name)
-      USE iso_c_binding
-      USE m_judft_sysinfo
-#ifdef CPP_MPI
-      USE mpi
-#endif
-#ifdef CPP_NVTX      
-      use nvtx
-#endif      
       IMPLICIT NONE
       CHARACTER(LEN=*), INTENT(IN):: startstop, name
 #ifdef CPP_MPI
@@ -347,11 +350,6 @@ CONTAINS
    !<-- S:writetimes()
 
    SUBROUTINE priv_add_system_description(outstr)
-#ifdef CPP_MPI
-      use mpi 
-#endif   
-      use m_judft_sysinfo         
-      use m_judft_string
       IMPLICIT NONE
       CHARACTER(len=:), allocatable, INTENT(INOUT) :: outstr
 
@@ -378,7 +376,6 @@ CONTAINS
    end subroutine priv_add_system_description
 
    RECURSIVE SUBROUTINE priv_genjson(timer, level, outstr, opt_idstr)
-      use m_judft_string
       IMPLICIT NONE
       TYPE(t_timer), INTENT(IN)                    :: timer
       INTEGER, INTENT(IN)                          :: level
@@ -461,12 +458,6 @@ CONTAINS
 
    ! writes all times to file
    SUBROUTINE writetimes(stdout)
-#ifdef CPP_MPI 
-     use mpi 
-#endif
-     USE m_juDFT_internalParams
-     USE m_judft_usage
-     USE m_judft_args
       IMPLICIT NONE
       LOGICAL, INTENT(IN), OPTIONAL::stdout
       INTEGER :: irank = 0
@@ -517,9 +508,6 @@ CONTAINS
 
    ! writes all times to out.xml file
    SUBROUTINE writeTimesXML()
-#ifdef CPP_MPI 
-      use mpi 
-#endif
       IMPLICIT NONE
 
       INTEGER                ::  irank = 0
@@ -595,7 +583,6 @@ CONTAINS
 
    SUBROUTINE check_time_for_next_iteration(it, l_cont)
 
-      USE m_judft_args
       IMPLICIT NONE
       INTEGER, INTENT(IN)     :: it
       LOGICAL, INTENT(INOUT)  :: l_cont
@@ -631,9 +618,6 @@ CONTAINS
    END SUBROUTINE check_time_for_next_iteration
 
    SUBROUTINE resetIterationDependentTimers()
-#ifdef CPP_MPI 
-      use mpi 
-#endif
       IMPLICIT NONE
 
       INTEGER                ::  irank = 0
@@ -730,10 +714,6 @@ CONTAINS
    !<-- F: cputime()
    !Private function to return the cpu_time in sec
    FUNCTION cputime()
-!$    use omp_lib
-#ifdef __INTEL_COMPILER
-      USE ifport
-#endif
       IMPLICIT NONE
       REAL::cputime
 
@@ -751,7 +731,6 @@ CONTAINS
    END FUNCTION cputime
    !>
    SUBROUTINE juDFT_time_lastlocation(log)
-      use m_juDFT_logging
       type(t_log_message),intent(inout)::log
       IF (ASSOCIATED(current_timer)) THEN
          WRITE (*, *) "Last known location:"

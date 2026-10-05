@@ -15,6 +15,9 @@ MODULE m_wannierlib_export_bloch
    USE m_types_mpi, ONLY: t_mpi
    USE m_types_kpts
    USE m_types_wannierlib, ONLY: t_wannierlib_wannierize
+#ifdef CPP_MPI
+   USE mpi
+#endif
    IMPLICIT NONE
    PRIVATE
 
@@ -52,9 +55,6 @@ CONTAINS
    ! cheaper here, but then the number of output files would depend on how the run was
    ! parallelised, which is not something a reader should have to know.
    SUBROUTINE wannierlib_write_s0(fmpi, distk, nkptf, s0_loc, filename)
-#ifdef CPP_MPI
-      use mpi
-#endif
       TYPE(t_mpi), INTENT(IN) :: fmpi
       INTEGER, INTENT(IN) :: distk(:)             ! (nkptf) owning rank of each k
       INTEGER, INTENT(IN) :: nkptf

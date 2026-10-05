@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -51,6 +51,7 @@ PROGRAM inpgen
   USE m_types_dfpt
   use m_make_sym
   USE m_types_profile
+  USE m_types_enparaxml
 
       IMPLICIT NONE
 

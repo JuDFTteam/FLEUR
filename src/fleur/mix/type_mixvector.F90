@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -10,7 +10,20 @@ MODULE m_types_mixvector
 #ifdef CPP_MPI
    use mpi
 #endif
-   USE m_types
+   USE m_convol
+   USE m_metrz0
+   USE m_constants
+   USE m_types_mpi
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_input
+   USE m_types_noco
+   USE m_types_potden
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_sym
+   USE m_types_vacuum
+   USE m_judft
    IMPLICIT NONE
 
    PRIVATE
@@ -128,7 +141,6 @@ CONTAINS
    END SUBROUTINE mixvector_reset
 
    SUBROUTINE mixvector_from_density(vec, den, nmzxyd, swapspin, denIm)
-      USE m_types
       IMPLICIT NONE
       CLASS(t_mixvector), INTENT(INOUT)    :: vec
       TYPE(t_potden), INTENT(inout)    :: Den
@@ -307,7 +319,6 @@ CONTAINS
    END SUBROUTINE mixvector_from_density
 
    SUBROUTINE mixvector_to_density(vec, den, nmzxyd, denIm)
-      USE m_types
       IMPLICIT NONE
       CLASS(t_mixvector), INTENT(IN)    :: vec
       TYPE(t_potden), INTENT(INOUT) :: den
@@ -449,8 +460,6 @@ CONTAINS
    END SUBROUTINE mixvector_to_density
 
    FUNCTION mixvector_metric(vec,l_dfpt) RESULT(mvec)
-      USE m_types
-      USE m_convol
       IMPLICIT NONE
       CLASS(t_mixvector), INTENT(IN) :: vec
       LOGICAL,            INTENT(IN) :: l_dfpt
@@ -520,7 +529,6 @@ CONTAINS
    END FUNCTION mixvector_metric
 
    SUBROUTINE init_metric(vacuum, stars, l_dfpt)
-      USE m_metrz0
       IMPLICIT NONE
       !
       TYPE(t_vacuum), INTENT(in) :: vacuum
@@ -664,7 +672,6 @@ CONTAINS
    END SUBROUTINE init_storage_mpi
 
    SUBROUTINE mixvector_init(comm_mpi, l_densitymatrix, l_densitymatrixV, input, vacuum, noco, stars_i, cell_i, sphhar_i, atoms_i, sym_i, l_dfpt)
-      USE m_types
       IMPLICIT NONE
       INTEGER, INTENT(IN)               :: comm_mpi
       LOGICAL, INTENT(IN)               :: l_densitymatrix

@@ -5,6 +5,15 @@
 !--------------------------------------------------------------------------------
 MODULE m_hsmt_fjgj
   USE m_juDFT
+  USE m_types_noco
+  USE m_constants, ONLY: fpi_const
+  USE m_sphbes
+  USE m_dsphbs
+  USE m_types_input
+  USE m_types_cell
+  USE m_types_atoms
+  USE m_types_lapw
+  USE m_types_radfun
   IMPLICIT NONE
 
   PRIVATE
@@ -18,7 +27,6 @@ MODULE m_hsmt_fjgj
 
 CONTAINS
   subroutine alloc(fjgj,nvd,lmaxd,isp,noco)
-    USE m_types_noco
     CLASS(t_fjgj),INTENT(OUT) :: fjgj
     INTEGER,INTENT(IN)        :: nvd,lmaxd,isp
     TYPE(t_noco),INTENT(IN)   :: noco
@@ -34,15 +42,6 @@ CONTAINS
   SUBROUTINE hsmt_fjgj_cpu(fjgj,input,atoms,cell,lapw,noco,rf,n,ispin)
     !Calculate the fj&gj array which contain the part of the A,B matching coeff. depending on the
     !radial functions at the MT boundary (rf%bnd)
-    USE m_constants, ONLY : fpi_const
-    USE m_sphbes
-    USE m_dsphbs
-    USE m_types_input
-    USE m_types_cell
-    USE m_types_noco
-    USE m_types_atoms
-    USE m_types_lapw
-    USE m_types_radfun
     
     
     

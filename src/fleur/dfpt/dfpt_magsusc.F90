@@ -5,7 +5,6 @@
 !--------------------------------------------------------------------------------
 
 module m_dfpt_magsusc
-    use m_types
     use m_dfpt_vbfield
     use m_convol
     use m_dfpt_dynmat
@@ -13,11 +12,19 @@ module m_dfpt_magsusc
     USE m_make_stars
     use m_inv3
     USE m_checkdopall
+    USE m_constants
+    USE m_types_fleurinput
+    USE m_types_mpi
+    USE m_types_potden
+    USE m_types_sphhar
+    USE m_types_stars
 
 
 
 
     implicit none
+    PRIVATE
+    PUBLIC :: dfpt_magnetic_susc
 
 contains
 

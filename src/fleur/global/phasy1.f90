@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -11,7 +11,10 @@ MODULE m_phasy1
    USE m_constants
    USE m_ylm
    USE m_spgrot
-   USE m_types
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_stars
+   USE m_types_sym
    implicit none
 
    private
@@ -138,9 +141,6 @@ CONTAINS
 
    subroutine phasy1nSym(atoms, cell, Gvec, qptn, pylm)
       !Routine by C. Gerhorst to calculate phasefactors for dfpt
-      use m_ylm
-      use m_types_atoms
-      use m_types_cell
     
       implicit none
     

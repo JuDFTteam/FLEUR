@@ -5,13 +5,18 @@
 !--------------------------------------------------------------------------------
 MODULE m_fertetra
 
-   USE m_types
    USE m_constants
    USE m_juDFT
    USE m_tetrahedronInit
    USE m_xmlOutput
+   USE m_types_input
+   USE m_types_kpts
+   USE m_types_mpi
+   USE m_types_noco
 
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: fertetra
 
    CONTAINS
 

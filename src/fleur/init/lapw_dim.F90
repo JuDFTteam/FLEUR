@@ -1,11 +1,26 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_lapwdim
 
+   USE m_judft
+   USE m_types_forcetheo
+   USE m_types_lapw
+   USE m_types_nococonv
+   USE m_boxdim
+   USE m_types_forcetheo_extended
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_dfpt
+   USE m_types_input
+   USE m_types_kpts
+   USE m_types_noco
+   implicit none
+   PRIVATE
+   PUBLIC :: lapw_dim
 CONTAINS
 
    SUBROUTINE lapw_dim(kpts,cell,input,noco,nococonv,forcetheo,atoms,nbasfcn,dfpt)
@@ -14,9 +29,6 @@ CONTAINS
       !     determines dimensions of the lapw basis set with |k+G|<rkmax.
       !  Generalization of the old apws_dim routine
       !*********************************************************************
-      USE m_boxdim
-      USE m_types_fleurinput
-      USE m_types_forcetheo_extended
       IMPLICIT NONE
       TYPE(t_kpts),INTENT(IN)      :: kpts
       TYPE(t_cell),INTENT(IN)      :: cell

@@ -5,7 +5,24 @@
 !--------------------------------------------------------------------------------
 MODULE m_hsmt_mtNocoPot_offdiag
   USE m_juDFT
+  USE m_hsmt_nonsph
+  USE m_hsmt_distspins
+  USE m_hsmt_spinor
+  USE m_hsmt_lo
+  USE m_hsmt_fjgj
+  USE m_types_atoms
+  USE m_types_cell
+  USE m_types_input
+  USE m_types_lapw
+  USE m_types_mat
+  USE m_types_mpi
+  USE m_types_noco
+  USE m_types_nococonv
+  USE m_types_sym
+  USE m_types_tlmplm
   IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: hsmt_mtnocopot_offdiag
 CONTAINS
   SUBROUTINE hsmt_mtNocoPot_offdiag(n,input,fmpi,sym,atoms,noco,nococonv,cell,lapw,td,fjgj,igSpinPr,igSpin,hmat_tmp,hmat)
     !!Calculate the contribution from the local-spin-offdiagonal potential
@@ -15,12 +32,6 @@ CONTAINS
     !!full matrix). So both can be updated from this matrix. But since the off-diagonal
     !!local potential is real we have to call the routine twice and use the chi_one factor
     !!to get the imaginary contribution
-    USE m_types
-    USE m_hsmt_nonsph
-    USE m_hsmt_distspins
-    USE m_hsmt_spinor
-    USE m_hsmt_lo
-    USE m_hsmt_fjgj
     IMPLICIT NONE
     TYPE(t_input),INTENT(IN)      :: input
     TYPE(t_mpi),INTENT(IN)        :: fmpi

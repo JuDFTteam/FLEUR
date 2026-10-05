@@ -9,12 +9,18 @@
 !>At Gamma the divergent l = 0 head is omitted (m_gamma_2d); only its finite remainder is kept.
 MODULE m_structureconstant_2d
    USE m_juDFT
-   USE m_types
    USE m_constants
    USE m_ylm
 #ifdef CPP_MPI
    USE mpi
 #endif
+   USE m_structconst_2d_parry, ONLY: parry_structconst_2d
+   USE m_structconst_2d_weinert, ONLY: weinert_structconst_2d
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_hybinp
+   USE m_types_kpts
+   USE m_types_mpi
    IMPLICIT NONE
    PRIVATE
 
@@ -95,8 +101,6 @@ CONTAINS
    END SUBROUTINE structconst_2d_direct
 
    SUBROUTINE structconst_2d_lowl(lmax, qrel, r0, amat, bmat, conv_tol, s)
-      USE m_structconst_2d_parry, ONLY: parry_structconst_2d
-      USE m_structconst_2d_weinert, ONLY: weinert_structconst_2d
       IMPLICIT NONE
       INTEGER, INTENT(IN)  :: lmax
       REAL, INTENT(IN)     :: qrel(3), r0(3), amat(3, 3), bmat(3, 3), conv_tol

@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -52,10 +52,42 @@
 MODULE m_exchange_valence_hf
 
    USE m_constants
-   USE m_types
    USE m_util
    use m_matmul_dgemm
    use m_gamma_2d, only: divergence_2d
+   use m_wrapper
+   use m_trafo
+   use m_wavefproducts
+   use m_olap
+   use m_hsefunctional
+   use m_io_hybrid
+   use m_kp_perturbation
+   use m_spmm_inv
+   use m_spmm_noinv
+   use m_work_package
+   use m_judft
+#ifdef CPP_MPI
+   use mpi
+#endif
+#ifdef _OPENACC
+   use cublas
+#endif
+   use m_types_cell
+   use m_types_fleurinput
+   use m_types_hybdat
+   use m_types_kpts
+   use m_types_lapw
+   use m_types_mat
+   use m_types_mpdata
+   use m_types_mpi
+   use m_types_nococonv
+   use m_types_misc
+   use m_types_stars
+   use m_types_xcpot_inbuild
+   use iso_c_binding
+   implicit none
+   private
+   public :: exchange_valence_hf, calc_divergence, recombine_parts, alloc_dev_cpy, zero_order, ibs_corr
 
    LOGICAL, PARAMETER:: zero_order = .false., ibs_corr = .false.
 
@@ -63,22 +95,7 @@ CONTAINS
    SUBROUTINE exchange_valence_hf(k_pack, fi, fmpi, z_k, mpdata, jsp, hybdat, lapw, eig_irr, results, &
                                   n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, cmt_nk, mat_ex)
       
-      USE m_wrapper
-      USE m_trafo
-      USE m_wavefproducts
-      USE m_olap
-      USE m_hsefunctional
-      USE m_io_hybrid
-      USE m_kp_perturbation
-      use m_spmm_inv
-      use m_spmm_noinv
-      use m_work_package
-      use m_judft 
-#ifdef CPP_MPI
-      use mpi
-#endif
 #ifdef _OPENACC
-      USE cublas
 #define CPP_zgemm cublaszgemm
 #define CPP_dgemm cublasdgemm
 #else
@@ -599,7 +616,6 @@ CONTAINS
    END SUBROUTINE calc_divergence
 
    subroutine recombine_parts(in_part, ipart, psizes, out_total)
-      use m_types
       type(t_mat), intent(in)    :: in_part
       integer, intent(in)        :: ipart, psizes(:)
       type(t_mat), intent(inout) :: out_total

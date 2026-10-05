@@ -1,16 +1,29 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2022 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_desymmetrizer
-   USE m_types
+   USE m_spgrot
+   USE m_dwigner
+   USE m_types_lapw
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_enpara
+   USE m_types_input
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_types_misc
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_sym
 
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: desymmetrize_pw, desymmetrize_mt, desymmetrize_types
 
 CONTAINS
    SUBROUTINE desymmetrize_pw(sym, stars, stars_nosym, rhopw, rhopw_nosym, rhopw_w, rhopw_w_nosym)
-      USE m_spgrot
 
       TYPE(t_sym),   INTENT(IN) :: sym
       TYPE(t_stars), INTENT(IN) :: stars, stars_nosym
@@ -36,7 +49,6 @@ CONTAINS
    END SUBROUTINE
 
    SUBROUTINE desymmetrize_mt(sym, sym_nosym, cell, atoms, atoms_nosym, sphhar, sphhar_nosym, rhomt, rhomt_nosym)
-      USE m_dwigner
 
       TYPE(t_sym),    INTENT(IN) :: sym, sym_nosym
       TYPE(t_cell),   INTENT(IN) :: cell
@@ -98,7 +110,6 @@ CONTAINS
    END SUBROUTINE
 
    SUBROUTINE desymmetrize_types(input, input_nosym, atoms, atoms_nosym, noco, nococonv, nococonv_nosym, enpara, enpara_nosym, results, results_nosym)
-      USE m_types_lapw
 
       TYPE(t_input),    INTENT(IN) :: input, input_nosym
       TYPE(t_atoms),    INTENT(IN) :: atoms, atoms_nosym

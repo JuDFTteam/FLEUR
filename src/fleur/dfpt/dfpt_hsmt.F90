@@ -5,8 +5,30 @@
 !--------------------------------------------------------------------------------
 MODULE m_dfpt_hsmt
    USE m_juDFT
+   USE m_types_mpimat
+   USE m_hsmt_nonsph
+   USE m_hsmt_sph
+   USE m_hsmt_lo
+   USE m_hsmt_distspins
+   USE m_hsmt_fjgj
+   USE m_hsmt_spinor
+   USE m_matrix_pref
+   USE m_types_mat
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_enpara
+   USE m_types_input
+   USE m_types_lapw
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_types_sternheimerjob
+   USE m_types_sym
+   USE m_types_tlmplm
 
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: dfpt_hsmt, dfpt_dynmat_hsmt
 
 CONTAINS
    SUBROUTINE dfpt_hsmt(sternheimerJob, atoms, sym, enpara, iSpin, iDir, iDtype, input, fmpi, &
@@ -34,15 +56,6 @@ CONTAINS
       !! - iDir: Displacement direction.
       !! - iDtype: Type of the displaced atom.
 
-      USE m_types
-      USE m_types_mpimat
-      USE m_hsmt_nonsph
-      USE m_hsmt_sph
-      USE m_hsmt_lo
-      USE m_hsmt_distspins
-      USE m_hsmt_fjgj
-      USE m_hsmt_spinor
-      USE m_matrix_pref
       
 
       IMPLICIT NONE
@@ -215,15 +228,6 @@ CONTAINS
                       & noco, nococonv, cell, lapw, lapwq, td, tdV1,&
                       hmat1, smat1, hmat1q, smat1q, hmat2, smat2, nk, killcont, vmat2)
 
-      USE m_types
-      USE m_types_mpimat
-      USE m_hsmt_nonsph
-      USE m_hsmt_sph
-      USE m_hsmt_lo
-      USE m_hsmt_distspins
-      USE m_hsmt_fjgj
-      USE m_hsmt_spinor
-      USE m_matrix_pref
 
       IMPLICIT NONE
 

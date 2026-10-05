@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -9,6 +9,19 @@ MODULE m_types_xcpot_inbuild
    USE m_types_xcpot
    USE m_types_xcpot_inbuild_nofunction
    USE m_judft
+   USE m_xcxal, ONLY: vxcxal, excxal
+   USE m_xcwgn, ONLY: vxcwgn, excwgn
+   USE m_xcbh, ONLY: vxcbh, excbh
+   USE m_xcvwn, ONLY: vxcvwn, excvwn
+   USE m_xcpz, ONLY: vxcpz, excpz
+   USE m_vxcl91
+   USE m_vxcwb91
+   USE m_vxcpw91
+   USE m_vxcepbe
+   USE m_excl91
+   USE m_excwb91
+   USE m_excpw91
+   USE m_excepbe
    IMPLICIT NONE
    PRIVATE
    CHARACTER(len=4),PARAMETER:: xc_names(20)=[&
@@ -28,15 +41,6 @@ MODULE m_types_xcpot_inbuild
 
    SUBROUTINE xcpot_get_vxc(xcpot,jspins,rh, vxc,vx, grad,kinEnergyDen_KS)
 !
-      USE m_xcxal, ONLY : vxcxal
-      USE m_xcwgn, ONLY : vxcwgn
-      USE m_xcbh,  ONLY : vxcbh
-      USE m_xcvwn, ONLY : vxcvwn
-      USE m_xcpz,  ONLY : vxcpz
-      USE m_vxcl91
-      USE m_vxcwb91
-      USE m_vxcpw91
-      USE m_vxcepbe
       IMPLICIT NONE
 !c
 !c---> running mode parameters
@@ -131,15 +135,6 @@ MODULE m_types_xcpot_inbuild
 !***********************************************************************
    SUBROUTINE xcpot_get_exc(xcpot,jspins,rh,exc,grad,kinEnergyDen_KS, mt_call)
 !***********************************************************************
-      USE m_xcxal, ONLY : excxal
-      USE m_xcwgn, ONLY : excwgn
-      USE m_xcbh,  ONLY : excbh
-      USE m_xcvwn, ONLY : excvwn
-      USE m_xcpz,  ONLY : excpz
-      USE m_excl91
-      USE m_excwb91
-      USE m_excpw91
-      USE m_excepbe
       IMPLICIT NONE
 
       CLASS(t_xcpot_inbuild),INTENT(IN)     :: xcpot

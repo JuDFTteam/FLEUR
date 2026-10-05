@@ -16,7 +16,6 @@
 !>  also keeps it valid across the pair-overlap passes that run later.
 MODULE m_wannierlib_build_amn_mmn
    USE m_juDFT
-   USE m_types, ONLY: t_stars
    USE m_types_atoms
    USE m_types_cell
    USE m_types_vacuum
@@ -40,6 +39,10 @@ MODULE m_wannierlib_build_amn_mmn
    USE m_melem_ujugaunt
    USE m_wannierlib_amn
    USE m_wannierlib_mmnkb
+#ifdef CPP_MPI
+   USE mpi
+#endif
+   USE m_types_stars
    IMPLICIT NONE
    PRIVATE
    PUBLIC :: wannierlib_build_amn_mmn, &
@@ -138,9 +141,6 @@ CONTAINS
    ! Complete the distributed amn: each rank filled only its distk k-slice (zeros elsewhere),
    ! so an MPI_ALLREDUCE(SUM) reassembles the full amn on every rank (needed by w90_set_u_opt).
    SUBROUTINE wannierlib_reduce_amn(fmpi, amn)
-#ifdef CPP_MPI
-      use mpi
-#endif
       TYPE(t_mpi), INTENT(IN) :: fmpi
       COMPLEX, INTENT(INOUT) :: amn(:, :, :)
 #ifdef CPP_MPI
@@ -158,9 +158,6 @@ CONTAINS
    ! owned by exactly one rank, so the sum is a copy. This is the one full-mesh buffer the
    ! distributed post-processing otherwise avoids, so it is allocated only when asked for.
    SUBROUTINE wannierlib_gather_mmn(fmpi, distk, nkptf, mmn_loc, mmn_full)
-#ifdef CPP_MPI
-      use mpi
-#endif
       TYPE(t_mpi), INTENT(IN) :: fmpi
       INTEGER, INTENT(IN) :: distk(:)             ! (nkptf) owning rank of each k
       INTEGER, INTENT(IN) :: nkptf

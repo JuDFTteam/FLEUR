@@ -1,4 +1,23 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_potdis
+   USE m_intgr, ONLY: intgr3, intgz0
+   USE m_constants
+   USE m_loddop
+   USE m_cfft
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_input
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_sym
+   USE m_types_vacuum
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: potdis
 CONTAINS
   SUBROUTINE potdis(stars,vacuum,atoms,sphhar, input,cell,sym)
     !
@@ -8,11 +27,6 @@ CONTAINS
     !                                 based on code by   c.l.fu
     !     *****************************************************
     !
-    USE m_intgr, ONLY : intgr3, intgz0
-    USE m_constants
-    USE m_loddop
-    USE m_cfft
-    USE m_types
     IMPLICIT NONE
     TYPE(t_input),INTENT(IN)   :: input
     TYPE(t_vacuum),INTENT(IN)  :: vacuum

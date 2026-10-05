@@ -5,30 +5,36 @@
 !--------------------------------------------------------------------------------
 MODULE m_ssomat
   USE m_judft
+  USE m_types_nococonv
+  USE m_types_mat
+  USE m_types_mpi
+  USE m_types_enpara
+  USE m_types_potden
+  USE m_types_misc
+  USE m_types_kpts
+  USE m_types_tlmplm
+  USE m_types_usdus
+  USE m_types_lapw
+  USE m_constants
+  USE m_eig66_io
+  USE m_abcof
+  USE m_fermifct
+  USE m_genMTBasis
+  USE m_types_rsoc
+#ifdef CPP_MPI
+  USE mpi
+#endif
+  USE m_types_atoms
+  USE m_types_cell
+  USE m_types_input
+  USE m_types_noco
+  USE m_types_sym
   IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: ssomat, ssomatel
 CONTAINS
   SUBROUTINE ssomat(seigvso,h_so,theta,phi,eig_id,atoms,kpts,sym,&
        cell,noco,nococonv, input,fmpi,  enpara,v,results,ef )
-    USE m_types_nococonv
-    USE m_types_mat
-    USE m_types_setup
-    USE m_types_mpi
-    USE m_types_enpara
-    USE m_types_potden
-    USE m_types_misc
-    USE m_types_kpts
-    USE m_types_tlmplm
-    USE m_types_usdus
-    USE m_types_lapw
-    USE m_constants
-    USE m_eig66_io
-    USE m_abcof
-    USE m_fermifct
-    USE m_genMTBasis
-    use m_types_rsoc
-#ifdef CPP_MPI
-    USE mpi
-#endif
     IMPLICIT NONE
 
     TYPE(t_mpi),INTENT(IN)         :: fmpi
@@ -212,7 +218,6 @@ CONTAINS
        diag, &
        acof1,bcof1,ccof1,acof2,bcof2,ccof2,&
        matel )
-    USE m_types
     IMPLICIT NONE
     TYPE(t_input),INTENT(IN)   :: input
     TYPE(t_noco),INTENT(IN)        :: noco

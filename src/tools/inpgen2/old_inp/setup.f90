@@ -1,5 +1,22 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
       MODULE m_setup
       USE m_juDFT
+      USE m_types_atoms
+      USE m_types_kpts
+      USE m_types_sym
+      USE m_types_input
+      USE m_types_cell
+      USE m_types_enpara
+      USE m_rwsymfile
+      USE m_spg2set
+      USE m_inpeig
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: setup
       CONTAINS
         SUBROUTINE setup(atoms,kpts,&
              sym , input,cell,enpara,latnam,namgrp)
@@ -33,22 +50,13 @@
           !----------------------------------------
 
           !
-          USE m_types_atoms
-          USE m_types_kpts
-          USE m_types_sym
            
-          USE m_types_input
-          USE m_types_cell
-          USE m_types_enpara
      
           !USE m_localsym
-          USE m_rwsymfile
-          USE m_spg2set
           !USE m_dwigner
           !USE m_strgn
           !USE m_mapatom
           !USE m_convn
-          USE m_inpeig
           !USE m_ylm
           !-odim
           ! 

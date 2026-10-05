@@ -1,11 +1,25 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_apply_inverse_olap
    use m_glob_tofrom_loc
    USE m_types_mpimat
+   USE m_olap, ONLY: olap_pw
+   USE m_judft
+   USE m_types_mat
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_hybdat
+   USE m_types_mpdata
+   USE m_types_mpi
+   USE m_types_sym
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: apply_inverse_olaps, copy_in_2, copy_out_2
 contains
    subroutine apply_inverse_olaps(mpdata, atoms, cell, hybdat, fmpi, sym, ikpt, coulomb)
-      USE m_olap, ONLY: olap_pw
-      USE m_types
-      use m_judft
       implicit none
       type(t_mpdata), intent(in)  :: mpdata
       type(t_atoms), intent(in)   :: atoms
@@ -88,7 +102,6 @@ contains
    end subroutine apply_inverse_olaps
 
    subroutine copy_in_2(fmpi, sym, mpdata, hybdat, coulomb, ikpt, coul_submtx)
-      USE m_types
       implicit none 
       type(t_mpi), intent(in)      :: fmpi 
       integer, intent(in)          :: ikpt
@@ -147,7 +160,6 @@ contains
    end subroutine copy_in_2
 
    subroutine copy_out_2(fmpi, sym, mpdata, hybdat, ikpt, coul_submtx, coulomb)
-      USE m_types
       implicit none 
       type(t_mpi), intent(in)      :: fmpi 
       integer, intent(in)          :: ikpt

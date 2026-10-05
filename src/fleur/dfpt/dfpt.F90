@@ -6,24 +6,47 @@
 MODULE m_dfpt
    USE m_juDFT
    USE m_constants
-   USE m_types
+   USE m_juDFT_stop, ONLY: juDFT_error
+   USE m_eig66_io, ONLY: open_eig, close_eig
+   USE m_dfpt_check
+   USE m_dfpt_interpolation
+   USE m_types_dfpt_scf
+   USE m_types_phonon
+   USE m_types_efield
+   USE m_types_BEC
+   USE m_types_bfield
+   USE m_dfpt_postprocess_pot
+   USE m_desymmetrizer
+   USE m_outcdn
+   USE m_plot
+   USE m_fleur_init
+   USE m_types_lapw
+   USE m_types_enpara
+   USE m_types_fleurinput
+   USE m_types_forcetheo
+   USE m_types_hybdat
+   USE m_types_kpts
+   USE m_types_mpdata
+   USE m_types_mpi
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_misc
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_sternheimerjob
+   USE m_types_xcpot
+#ifdef CPP_MPI
+   USE mpi
+#endif
 
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: dfpt, dfpt_desym
 
 CONTAINS
    SUBROUTINE dfpt(fi, sphhar, stars, nococonv, qpts, fmpi, results, enpara, &
                  & rho, vTot, vxc, eig_id, xcpot, hybdat, mpdata, forcetheo)
 
-      USE m_juDFT_stop, only : juDFT_error
-      USE m_eig66_io, only : open_eig,close_eig
-      USE m_dfpt_check
-      USE m_dfpt_interpolation
-      use m_types_dfpt_scf
-      use m_types_phonon
-      use m_types_efield
-      use m_types_BEC
-      use m_types_bfield
-      use m_dfpt_postprocess_pot
       
 
 
@@ -185,10 +208,6 @@ CONTAINS
 
    SUBROUTINE dfpt_desym(fmpi_nosym,fi_nosym,sphhar_nosym,stars_nosym,nococonv_nosym,enpara_nosym,results_nosym,hybdat_nosym,mpdata_nosym,xcpot_nosym,forcetheo_nosym,rho_nosym,vTot_nosym,grid,inp_pref,&
                          fi,sphhar,stars,nococonv,enpara,results,rho,vTot)
-      USE m_desymmetrizer
-      USE m_outcdn
-      USE m_plot
-      USE m_fleur_init
 
       TYPE(t_mpi),        INTENT(INOUT) :: fmpi_nosym
       TYPE(t_fleurinput), INTENT(INOUT) :: fi_nosym

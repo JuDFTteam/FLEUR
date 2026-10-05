@@ -6,6 +6,9 @@
 
       module m_eulerrot
       use m_judft
+      implicit none
+      private
+      public :: eulerrot, eulerrot1
 c************************************
 c     Perform Euler rotations.
 c     Y. Mokrousov 

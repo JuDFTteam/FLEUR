@@ -6,7 +6,32 @@
 
 MODULE m_abcof
 
+   use m_juDFT
+   use m_constants
+   use m_ylm
+   use m_setabc1lo
+   use m_abclocdn
+   use m_hsmt_fjgj
+   use m_hsmt_ab
+   use m_abcoeff_store
+   use m_types_cdnval
+#ifdef _OPENACC
+   use cublas
+#endif
+   use m_types_atoms
+   use m_types_cell
+   use m_types_force
+   use m_types_input
+   use m_types_lapw
+   use m_types_mat
+   use m_types_noco
+   use m_types_nococonv
+   use m_types_radfun
+   use m_types_sym
+   use m_types_usdus
    implicit none
+   PRIVATE
+   PUBLIC :: abcof, abcof_new
 CONTAINS
 
   ! The subroutine abcof calculates the A, B, and C coefficients for the
@@ -14,7 +39,6 @@ CONTAINS
 SUBROUTINE abcof(input,atoms,sym, cell,lapw,ne,usdus,&
    noco,nococonv,jspin , acof,bcof,ccof,zMat,eig,force,nat_start,nat_stop)
 #ifdef _OPENACC
-use cublas
 #define CPP_ACC acc
 #define CPP_OMP no_OMP_used
 #define zgemm_acc cublaszgemm
@@ -23,15 +47,6 @@ use cublas
 #define CPP_OMP OMP
 #define zgemm_acc zgemm
 #endif
-USE m_juDFT
-USE m_types
-USE m_constants
-USE m_ylm
-USE m_setabc1lo
-USE m_abclocdn
-USE m_hsmt_fjgj
-USE m_hsmt_ab
-USE m_abcoeff_store
 
 IMPLICIT NONE
 
@@ -446,7 +461,6 @@ INTEGER,OPTIONAL,INTENT(IN):: nat_start,nat_stop
   SUBROUTINE abcof_new(input,atoms,sym, cell,lapw,ne,usdus,&
    noco,nococonv,ispin ,eigveccoefs,zMat,eig,force,nat_start,nat_stop)
 #ifdef _OPENACC
-use cublas
 #define CPP_ACC acc
 #define CPP_OMP no_OMP_used
 #define zgemm_acc cublaszgemm
@@ -455,16 +469,6 @@ use cublas
 #define CPP_OMP OMP
 #define zgemm_acc zgemm
 #endif
-USE m_juDFT
-USE m_types
-USE m_constants
-USE m_ylm
-USE m_setabc1lo
-USE m_abclocdn
-USE m_hsmt_fjgj
-USE m_hsmt_ab
-USE m_abcoeff_store
-USE m_types_cdnval
 IMPLICIT NONE
 
 TYPE(t_input),INTENT(IN)             :: input

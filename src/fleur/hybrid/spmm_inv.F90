@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_spmm_inv
    use iso_c_binding
    use m_spmm
@@ -18,12 +23,17 @@ module m_spmm_inv
 #define CPP_mtir_c hybdat%coul(ikpt)%mtir%data_c
 #define CPP_mtir_r hybdat%coul(ikpt)%mtir%data_r
 #endif
+      USE m_juDFT
+      USE m_reorder
+      USE m_calc_l_m_from_lm
+      USE m_types_fleurinput
+      USE m_types_hybdat
+      USE m_types_mpdata
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: spmm_invs
 contains
    subroutine spmm_invs(fi, mpdata, hybdat, ikpt, mat_in, mat_out)
-      use m_juDFT
-      use m_types
-      use m_reorder
-      use m_calc_l_m_from_lm
       implicit none
       type(t_fleurinput), intent(in)    :: fi
       type(t_mpdata), intent(in)        :: mpdata

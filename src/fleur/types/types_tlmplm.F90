@@ -10,6 +10,8 @@ MODULE m_types_tlmplm
    !! followed by the (2l+1) functions of each LO in atoms%llo order; see ind.
    use m_types_rsoc
    use m_types_radfun
+   use m_judft
+   use m_types_atoms
   IMPLICIT NONE
   PRIVATE
 
@@ -29,8 +31,6 @@ MODULE m_types_tlmplm
 CONTAINS
   SUBROUTINE tlmplm_init(td,atoms,jspins,l_fulllmax)
     !! l_fulllmax: LAPW part up to lmax (forces) instead of lnonsph
-    USE m_judft
-    USE m_types_atoms
     CLASS(t_tlmplm),INTENT(INOUT):: td
     TYPE(t_atoms),INTENT(IN)     :: atoms
     INTEGER,INTENT(in)           :: jspins

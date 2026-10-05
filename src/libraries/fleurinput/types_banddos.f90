@@ -7,6 +7,8 @@
 MODULE m_types_banddos
   USE m_juDFT
   USE m_types_fleurinput_base
+  USE m_mpi_bc_tool
+  USE m_types_xml
   IMPLICIT NONE
   PRIVATE
   PUBLIC:: t_banddos
@@ -73,7 +75,6 @@ MODULE m_types_banddos
   END TYPE t_banddos
 CONTAINS
   SUBROUTINE mpi_bc_banddos(this,mpi_comm,irank)
-    USE m_mpi_bc_tool
     CLASS(t_banddos),INTENT(INOUT)::this
     integer,INTENT(IN):: mpi_comm
     INTEGER,INTENT(IN),OPTIONAL::irank
@@ -130,7 +131,6 @@ CONTAINS
 
   END SUBROUTINE mpi_bc_banddos
   SUBROUTINE read_xml_banddos(this,xml)
-    USE m_types_xml
     CLASS(t_banddos),INTENT(INOUT)::this
     TYPE(t_xml),INTENT(INOUT)::xml
 
@@ -309,7 +309,6 @@ CONTAINS
   END SUBROUTINE read_xml_banddos
 
   SUBROUTINE read_xml_densitymatrix(this,xml)
-    USE m_types_xml
     CLASS(t_banddos),INTENT(INOUT)::this
     TYPE(t_xml),INTENT(INOUT)::xml
 

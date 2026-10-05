@@ -18,20 +18,31 @@ MODULE m_mpi_col_den
 #ifdef CPP_MPI
    use mpi
 #endif
+   use m_constants
+   use m_juDFT
+   use m_types_mcd
+   use m_types_slab
+   use m_types_orbcomp
+   use m_types_jDOS
+   use m_types_vacdos
+   use m_types_dmdos
+   use m_types_atoms
+   use m_types_dos
+   use m_types_input
+   use m_types_mpi
+   use m_types_noco
+   use m_types_potden
+   use m_types_misc
+   use m_types_sphhar
+   use m_types_stars
+   use m_types_vacuum
    implicit none
+   private
+   public :: mpi_col_den
 CONTAINS
   SUBROUTINE mpi_col_den(fmpi,sphhar,atoms ,stars,vacuum,input,noco,jspin,dos,vacdos,&
                          results,den,mcd,slab,orbcomp,jDOS,dmdos)
 
-    USE m_types
-    USE m_constants
-    USE m_juDFT
-    use m_types_mcd
-    use m_types_slab
-    use m_types_orbcomp
-    use m_types_jDOS
-    use m_types_vacdos
-    use m_types_dmdos
     IMPLICIT NONE
 
     TYPE(t_results),INTENT(INOUT):: results

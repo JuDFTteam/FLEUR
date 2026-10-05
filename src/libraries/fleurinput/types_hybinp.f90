@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -7,6 +7,15 @@
 MODULE m_types_hybinp
    USE m_judft
    USE m_types_fleurinput_base
+   USE m_mpi_bc_tool
+   USE m_types_xml
+   USE m_dwigner
+   USE m_types_xcpot
+   USE m_types_sym
+   USE m_types_atoms
+   USE m_types_input
+   USE m_types_cell
+   USE m_map_to_unit
    IMPLICIT NONE
    PRIVATE
 
@@ -36,7 +45,6 @@ MODULE m_types_hybinp
 CONTAINS
 
    SUBROUTINE mpi_bc_hybinp(this, mpi_comm, irank)
-      USE m_mpi_bc_tool
       CLASS(t_hybinp), INTENT(INOUT)::this
       INTEGER, INTENT(IN):: mpi_comm
       INTEGER, INTENT(IN), OPTIONAL::irank
@@ -61,7 +69,6 @@ CONTAINS
    END SUBROUTINE mpi_bc_hybinp
 
    SUBROUTINE read_xml_hybinp(this, xml)
-      USE m_types_xml
       CLASS(t_hybinp), INTENT(INout):: this
       TYPE(t_xml),INTENT(INOUT) ::xml
 
@@ -114,13 +121,7 @@ CONTAINS
    END SUBROUTINE read_xml_hybinp
 
    SUBROUTINE init_hybinp(self, atoms, cell, input,   sym, xcpot)
-      USE m_dwigner
-      use m_types_xcpot
-      use m_types_sym
-      use m_types_atoms
        
-      use m_types_input
-      use m_types_cell
 
       implicit none
       class(t_hybinp), intent(inout) :: self
@@ -163,11 +164,7 @@ CONTAINS
    END SUBROUTINE init_hybinp
 
    SUBROUTINE gen_map_hybinp(hybinp, atoms, sym)
-      use m_types_atoms
-      use m_types_sym
        
-      USE m_juDFT
-      use m_map_to_unit
       IMPLICIT NONE
       CLASS(t_hybinp), INTENT(INOUT) :: hybinp
       TYPE(t_atoms), INTENT(IN)      :: atoms

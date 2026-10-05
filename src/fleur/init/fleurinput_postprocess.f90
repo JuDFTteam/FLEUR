@@ -4,22 +4,33 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_fleurinput_postprocess
-  USE m_types_fleurinput
+  USE m_juDFT
+  USE m_make_sym
+  USE m_chkmt
+  USE m_lapwdim
+  USE m_checks
+  USE m_relaxio
+  USE m_types_nococonv
+  USE m_constants
+  USE m_types_wannierlib
+  USE m_types_atoms
+  USE m_types_banddos
+  USE m_types_cell
+  USE m_types_gfinp
+  USE m_types_hybinp
+  USE m_types_input
+  USE m_types_kpts
+  USE m_types_noco
+  USE m_types_sym
+  USE m_types_vacuum
+  USE m_types_xcpot
    implicit none
+  PRIVATE
+  PUBLIC :: fleurinput_postprocess
 CONTAINS
   SUBROUTINE fleurinput_postprocess(Cell,Sym,Atoms,Input,Noco,Vacuum,&
     Banddos,hybinp ,Xcpot,Kpts,gfinp,wannierlib)
-    USE m_juDFT
-    USE m_types_fleurinput
-    use m_make_sym
-    USE m_chkmt
     !use m_make_xcpot
-    use m_lapwdim
-    use m_checks
-    USE m_relaxio
-    USE m_types_nococonv
-    USE m_constants
-    USE m_types_wannierlib
     IMPLICIT NONE
 
     TYPE(t_cell),INTENT(INOUT)  ::cell

@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -23,6 +23,8 @@
 MODULE m_types_forcetheo_data
   USE m_juDFT
   USE m_types_fleurinput_base
+  USE m_mpi_bc_tool
+  USE m_types_xml
   IMPLICIT NONE
   PRIVATE
   PUBLIC:: t_forcetheo_data
@@ -39,7 +41,6 @@ MODULE m_types_forcetheo_data
   END TYPE t_forcetheo_data
 CONTAINS
    SUBROUTINE mpi_bc_forcetheo_data(this,mpi_comm,irank)
-    use m_mpi_bc_tool
     CLASS(t_forcetheo_data),INTENT(INOUT)::this
     integer,INTENT(IN):: mpi_comm
     INTEGER,INTENT(IN),OPTIONAL::irank
@@ -58,7 +59,6 @@ CONTAINS
   END SUBROUTINE mpi_bc_forcetheo_data
 
   SUBROUTINE read_xml_forcetheo_data(this,xml)
-    USE m_types_xml
     CLASS(t_forcetheo_data),INTENT(INOUT):: this
     TYPE(t_xml),INTENT(INOUT)             :: xml
     CHARACTER(len=200)::str

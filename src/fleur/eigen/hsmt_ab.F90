@@ -7,8 +7,21 @@ MODULE m_hsmt_ab
    !! Module to produce matching coefficients.
 
    USE m_juDFT
+   USE m_types_atoms
+   USE m_constants, ONLY: fpi_const, tpi_const
+   USE m_types_sym
+   USE m_types_cell
+   USE m_types_lapw
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_hsmt_fjgj
+   USE m_ylm
+   USE m_matmul_dgemm
+   USE m_abcoeff_store
 
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: hsmt_ab_size, hsmt_ab
 
 CONTAINS
 
@@ -23,7 +36,6 @@ CONTAINS
    !> any aggregate overlapping it fails with "partially present".  Keeping both
    !> halves in the caller's scope removes that asymmetry.
    PURE INTEGER FUNCTION hsmt_ab_size(atoms, n, l_nonsph)
-      USE m_types_atoms
       IMPLICIT NONE
       TYPE(t_atoms), INTENT(IN) :: atoms
       INTEGER, INTENT(IN)       :: n
@@ -61,18 +73,6 @@ CONTAINS
       !! [\(\pm q\) in K] and the \(u/\overset{.}{u}\)
       !! respectively. The former also appears in the complex phase factor.
 
-      USE m_constants, ONLY : fpi_const,tpi_const
-      USE m_types_sym
-      USE m_types_cell
-      USE m_types_atoms
-      USE m_types_lapw
-      USE m_types_noco
-      USE m_types_nococonv
-      USE m_hsmt_fjgj
-      USE m_ylm
-      USE m_hsmt_fjgj
-      USE m_matmul_dgemm
-      USE m_abcoeff_store
 
       TYPE(t_sym),      INTENT(IN)    :: sym
       TYPE(t_cell),     INTENT(IN)    :: cell

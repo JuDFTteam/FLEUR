@@ -3,6 +3,11 @@
       USE m_setr0ab, ONLY: setr0ab
 !
       IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: initialize_dft_d3, ncoord, getc6, copyc6, limit,
+     &force_ncoord, force_getc6, calc_ene_dft_d3,
+     &calc_ene_dft_d3_debug, driver_dft_d3, max_elem, maxc, k1, k2, k3,
+     &rs6pbe, rs6revpbe, alp6, rcov
 !      PRIVATE
 !
       INTEGER  :: max_elem,maxc

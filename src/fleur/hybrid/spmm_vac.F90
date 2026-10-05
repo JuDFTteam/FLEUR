@@ -10,13 +10,15 @@
 MODULE m_spmm_vac
    USE m_vac_rows, ONLY: NVAC_MPB
    USE m_juDFT
-   USE m_types
    USE m_constants
    USE m_mtir_size
    USE m_coulomb_vac, ONLY: vac_mom_g0
    USE m_types_coul, ONLY: t_coul
    USE m_vac_rows, ONLY: row_offset, basfn_offset, vac_g0_moments
    USE m_vac_rows, ONLY: vac_mtir_idx, vac_mtir_idx2
+   USE m_types_fleurinput
+   USE m_types_hybdat
+   USE m_types_mpdata
 
    IMPLICIT NONE
    PRIVATE

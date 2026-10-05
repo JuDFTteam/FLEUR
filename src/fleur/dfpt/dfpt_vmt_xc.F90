@@ -8,14 +8,24 @@ MODULE m_dfpt_vmt_xc
 use mpi
 #endif
 USE m_judft
+   USE m_mt_tofrom_grid
+   USE m_types_xcpot_inbuild
+   USE m_types_xcpot_libxc
+   USE m_dfpt_gga_kernel
+   USE m_types_atoms
+   USE m_types_xcpot
+   USE m_types_input
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_potden
+   USE m_types_sphhar
+   USE m_types_sym
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: dfpt_vmt_xc, mt_gradient_ftgrid
 
 CONTAINS
    SUBROUTINE dfpt_vmt_xc(fmpi,sphhar,atoms,den,den1,den1im,xcpot,input,sym,noco,vTot,dfptvTotimag)
-      USE m_mt_tofrom_grid
-      USE m_types_xcpot_inbuild
-      USE m_types_xcpot_libxc
-      USE m_types
-      USE m_dfpt_gga_kernel
       IMPLICIT NONE
 
       CLASS(t_xcpot),INTENT(IN)      :: xcpot
@@ -150,8 +160,6 @@ CONTAINS
    SUBROUTINE mt_gradient_ftgrid(xcpot,atoms,sym,sphhar,noco,n,f,f_mt,gradF)
       !! Gradient of a real field on the MT grid, obtained by projecting it back
       !! onto the lattice harmonics and differentiating there. f_mt is scratch.
-      USE m_mt_tofrom_grid
-      USE m_types
       IMPLICIT NONE
       CLASS(t_xcpot),INTENT(IN)       :: xcpot
       TYPE(t_atoms),INTENT(IN)        :: atoms

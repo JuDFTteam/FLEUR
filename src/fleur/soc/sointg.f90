@@ -7,14 +7,16 @@ MODULE m_sointg
   !*********************************************************************
   !     compute radial spin-orbit integrant
   !*********************************************************************
+   USE m_differentiate, ONLY: diff3
+   USE m_constants, ONLY: c_light
+   USE m_types_input
+   USE m_types_atoms
    implicit none
+   PRIVATE
+   PUBLIC :: sointg
 CONTAINS
   SUBROUTINE sointg(ntyp,e,vr,v0,atoms,input, vso)
     !
-    USE m_differentiate,ONLY:diff3
-    USE m_constants,ONLY: c_light
-    USE m_types_input
-    USE m_types_atoms
     IMPLICIT NONE
 
     TYPE(t_input),INTENT(IN)   :: input

@@ -10,6 +10,7 @@ MODULE m_structconst_2d_weinert
    USE m_juDFT
    USE m_constants
    USE m_ylm
+   USE m_grule, ONLY: grule
    IMPLICIT NONE
    PRIVATE
    PUBLIC :: weinert_structconst_2d
@@ -124,7 +125,6 @@ CONTAINS
    END FUNCTION bes_jn
 
    SUBROUTINE gauleg_unit(n, x, w)
-      USE m_grule, ONLY: grule
       IMPLICIT NONE
       INTEGER, INTENT(IN) :: n
       REAL, INTENT(OUT)   :: x(n), w(n)

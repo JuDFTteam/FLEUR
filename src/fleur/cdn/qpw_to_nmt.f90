@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -11,6 +11,16 @@ MODULE m_qpwtonmt
   !
   !             Stefan Bl"ugel  , IFF, Nov. 1997
   !***************************************************************
+  USE m_constants
+  USE m_phasy1
+  USE m_sphbes
+  USE m_types_atoms
+  USE m_types_cell
+  USE m_types_mpi
+  USE m_types_sphhar
+  USE m_types_stars
+  USE m_types_sym
+  USE m_judft
   IMPLICIT NONE
   PRIVATE
 
@@ -28,7 +38,6 @@ CONTAINS
 
   SUBROUTINE qpw_to_nmt_spin(sphhar,atoms,stars,sym,cell,fmpi,jspin,l_cutoff,qpwc,rho)
 
-    USE m_types
 
     IMPLICIT NONE
 
@@ -66,10 +75,6 @@ CONTAINS
     !     Note that all these fields are real in real space, so each component
     !     is accumulated in exactly the same way as in the collinear case.
     !***************************************************************
-    USE m_constants
-    USE m_phasy1
-    USE m_sphbes
-    USE m_types
 
     IMPLICIT NONE
 

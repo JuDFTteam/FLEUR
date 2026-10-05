@@ -10,6 +10,15 @@ module m_types_radfun
    !! Each slot solves H r_i = e_i r_i + P r_i inside the sphere (P u = 0, P udot = u,
    !! P ulo = filo for energy-derivative LOs), except relLOs which are Dirac solutions.
    use m_judft
+   use m_types_atoms
+   use m_types_input
+   use m_genMTBasis
+   use m_types_enpara
+   use m_types_hub1data
+   use m_types_mpi
+   use m_types_potden
+   use m_types_usdus
+   use m_intgr
    implicit none
    private
    type:: t_radfun
@@ -33,8 +42,6 @@ module m_types_radfun
    public:: t_radfun
 contains
    pure subroutine init(this, atoms, input, itype)
-      use m_types_atoms
-      use m_types_input
       implicit none
       class(t_radfun), intent(inout):: this
       type(t_atoms), intent(IN)   :: atoms
@@ -49,15 +56,6 @@ contains
    end subroutine
 
    subroutine generate_radial_functions(this, atoms, input, enpara, fmpi, vtot, iType, hub1data,usdus_out)
-      use m_genMTBasis
-      use m_types_atoms
-      use m_types_input
-      use m_types_enpara
-      use m_types_hub1data
-      use m_types_mpi
-      use m_types_potden
-      use m_types_usdus
-      use m_intgr
       implicit none
       class(t_radfun), intent(inout)         ::this
       type(t_atoms), intent(IN)      :: atoms
@@ -178,8 +176,6 @@ contains
 
    subroutine to_usdus(this, atoms, usdus)
       !! fill the legacy t_usdus entries of this atom type
-      use m_types_atoms
-      use m_types_usdus
       class(t_radfun), intent(in)  :: this
       type(t_atoms), intent(in)    :: atoms
       type(t_usdus), intent(inout) :: usdus
@@ -220,8 +216,6 @@ contains
    subroutine from_usdus(this, atoms, usdus, itype)
       !! boundary values and spin-diagonal overlaps of itype from a legacy t_usdus;
       !! no radial functions, energies or cross-spin overlaps (bridge for code still filling t_usdus)
-      use m_types_atoms
-      use m_types_usdus
       class(t_radfun), intent(inout) :: this
       type(t_atoms), intent(in)      :: atoms
       type(t_usdus), intent(in)      :: usdus

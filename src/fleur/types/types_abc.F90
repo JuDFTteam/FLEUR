@@ -16,6 +16,25 @@ MODULE m_types_abc
 #define zgemm_acc zgemm
 #endif
    use m_judft
+   use m_types_atoms
+   use m_types_input
+   use m_types_sym
+   use m_types_cell
+   use m_types_lapw
+   use m_types_radfun
+   use m_types_noco
+   use m_types_nococonv
+   use m_types_enpara
+   use m_constants
+   use m_ylm
+   use m_setabc1lo
+   use m_hsmt_fjgj
+   use m_hsmt_ab
+   use m_abcoeff_store
+   use m_types_mat
+   use m_types_force
+   use m_dwigner
+   use m_types_hybinp
    IMPLICIT NONE
 
    PRIVATE
@@ -64,8 +83,6 @@ CONTAINS
 
    SUBROUTINE abc_init(this, input, atoms, noccbd, itype)
 
-      USE m_types_atoms
-      USE m_types_input
 
       IMPLICIT NONE
 
@@ -98,23 +115,6 @@ CONTAINS
 
    subroutine calc_abc(this, input, atoms, sym, cell, lapw, ne, rf, &
                        noco, nococonv, jspin, itype, zMat)
-      USE m_juDFT
-      USE m_types_atoms
-      USE m_types_input
-      USE m_types_sym
-      USE m_types_cell
-      USE m_types_lapw
-      USE m_types_radfun
-      USE m_types_noco
-      USE m_types_nococonv
-      USE m_types_enpara
-      USE m_constants
-      USE m_ylm
-      USE m_setabc1lo
-      USE m_hsmt_fjgj
-      USE m_hsmt_ab
-      USE m_abcoeff_store
-      USE m_types_mat
 
       IMPLICIT NONE
       CLASS(t_abc), INTENT(INOUT) :: this
@@ -429,24 +429,6 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
 
    subroutine calc_force_abc(this, input, atoms, sym, cell, lapw, ne, rf, &
                              noco, nococonv, jspin, itype, zMat,eig,force)
-      USE m_juDFT
-      USE m_types_atoms
-      USE m_types_input
-      USE m_types_force
-      USE m_types_sym
-      USE m_types_cell
-      USE m_types_lapw
-      USE m_types_radfun
-      USE m_types_noco
-      USE m_types_nococonv
-      USE m_types_enpara
-      USE m_constants
-      USE m_ylm
-      USE m_setabc1lo
-      USE m_hsmt_fjgj
-      USE m_hsmt_ab
-      USE m_abcoeff_store
-      USE m_types_mat
 
       IMPLICIT NONE
       CLASS(t_abc), INTENT(INOUT) :: this
@@ -749,7 +731,6 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
    end subroutine calc_force_abc
 
    function rotate(abc, alpha, beta, gamma, lmax) result(abc_rot)
-      USE m_dwigner
 
       IMPLICIT NONE
       class(t_abc), INTENT(IN)           :: abc
@@ -791,10 +772,6 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
 !     *                                                             *
 !     * Christoph Friedrich Mar/2005                                *
 !     ***************************************************************
-      USE m_types_hybinp
-      USE m_types_sym
-      USE m_types_atoms
-      USE m_juDFT
       IMPLICIT NONE
       CLASS(t_abc), INTENT(INOUT) :: abc
       TYPE(t_hybinp), INTENT(IN) :: hybinp
@@ -835,10 +812,6 @@ CALL zgemm_acc("T","T",ne,2*abSize,nvmax,CMPLX(1.0,0.0),work_c,MAXVAL(lapw%nv),a
    END SUBROUTINE rot_to_unrotated
 
    subroutine fill_work_array(zmat, noco, atoms, lapw, ccchi, iintsp, nvmax, jspin, ne, work_c)
-      use m_types_mat
-      use m_types_noco
-      use m_types_atoms
-      use m_types_lapw
       type(t_mat), intent(in)::zMat
       type(t_noco), intent(in)::noco
       type(t_atoms), intent(in)::atoms

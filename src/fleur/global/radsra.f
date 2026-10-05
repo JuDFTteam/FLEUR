@@ -1,5 +1,9 @@
       MODULE m_radsra
       use m_juDFT
+      use m_intgr, only: intgr0
+      implicit none
+      private
+      public :: radsra
 c*********************************************************************
 c     calculates the scalar relativistic wavefuction for energy e and
 c     angular momentum l for the potential vr by integrating outward.
@@ -11,7 +15,6 @@ c*********************************************************************
      >                  e,l,vr,r0,h,jri,c,
      <                  us,dus,nodes,p,q)
 
-      USE m_intgr, ONLY : intgr0
       IMPLICIT NONE
 C     ..
 C     .. Scalar Arguments ..

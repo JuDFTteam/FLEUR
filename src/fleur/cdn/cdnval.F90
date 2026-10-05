@@ -9,7 +9,75 @@ MODULE m_cdnval
 #ifdef CPP_MPI
    use mpi
 #endif
+   use m_constants
+   use m_eig66_io
+   use m_mcdinit
+   use m_sympsi
+   use m_nmat
+   use m_vacden
+   use m_pwden
+   use m_forcea8
+   use m_force_sf
+   use m_checkdopall
+   use m_greensfBZint
+   use m_greensfCalcImagPart
+   use m_local_hamiltonian
+   use m_greensfCalcScalarProducts
+   use m_abcof
+   use m_qmtsl
+   use m_qintsl
+   use m_corespec, only: l_cs
+   use m_corespec_io, only: corespec_init
+   use m_corespec_eval, only: corespec_gaunt, corespec_rme, corespec_dos, corespec_ddscs
+   use m_xmlOutput
+   use m_types_dos
+   use m_types_mcd
+   use m_types_slab
+   use m_types_jDOS
+   use m_types_dmdos
+   use m_types_vacDOS
+   use m_types_orbcomp
+   use m_types_denmatrix
+   use m_types_radfun
+   use m_types_moessbauerParams
+   use m_l_like
+   use m_types_abc
+   use m_types_orbmom, only: t_orbmom
+   use m_addContribsA21A12
+   use m_nIJmat
+   use m_types_sym
+   use m_types_cell
+#ifdef CPP_MPI
+   use m_mpi_col_den
+#endif
+   use m_types_atoms
+   use m_types_banddos
+   use m_types_cdnval
+   use m_types_corespecinput
+   use m_types_enpara
+   use m_types_force
+   use m_types_gfinp
+   use m_types_greensfcoeffs
+   use m_types_hub1data
+   use m_types_hub1inp
+   use m_types_input
+   use m_types_kpts
+   use m_types_lapw
+   use m_types_mat
+   use m_types_mpi
+   use m_types_noco
+   use m_types_nococonv
+   use m_types_potden
+   use m_types_misc
+   use m_types_scalargf
+   use m_types_sphhar
+   use m_types_stars
+   use m_types_tlmplm
+   use m_types_usdus
+   use m_types_vacuum
    implicit none
+   private
+   public :: cdnval, priv_sym_clmom
 
 CONTAINS
 
@@ -28,49 +96,9 @@ CONTAINS
       !     sqal     : l-like charge of each atom type. sum over all k-points and bands
       !************************************************************************************
 
-      USE m_types
-      USE m_constants
-      USE m_eig66_io
-      USE m_mcdinit
-      USE m_sympsi
-      USE m_nmat        ! calculate density matrix for LDA + U
-      USE m_vacden
-      USE m_pwden
-      USE m_forcea8
-      USE m_force_sf ! Klueppelberg (force level 3)
-      USE m_checkdopall
-      USE m_greensfBZint
-      USE m_greensfCalcImagPart
-      USE m_local_hamiltonian
-      USE m_greensfCalcScalarProducts
-      USE m_abcof
       !USE m_cdnmt       ! calculate the density and orbital moments etc.
       !USE m_orbmom      ! coeffd for orbital moments
-      USE m_qmtsl       ! These subroutines divide the input%film into banddos%layers
-      USE m_qintsl      ! (slabs) and intergate the DOS in these banddos%layers
       
-      USE m_corespec, only: l_cs    ! calculation of core spectra (EELS)
-      USE m_corespec_io, only: corespec_init
-      USE m_corespec_eval, only: corespec_gaunt, corespec_rme, corespec_dos, corespec_ddscs
-      USE m_xmlOutput
-      USE m_types_dos
-      USE m_types_mcd
-      USE m_types_slab
-      USE m_types_jDOS
-      USE m_types_dmdos
-      USE m_types_vacDOS
-      USE m_types_orbcomp
-      USE m_types_denmatrix
-      USE m_types_radfun
-      USE m_types_moessbauerParams
-      use m_l_like
-      use m_types_abc
-      use m_types_orbmom, only: t_orbmom
-      use m_addContribsA21A12
-#ifdef CPP_MPI
-      USE m_mpi_col_den ! collect density data from parallel nodes
-#endif
-      USE m_nIJmat
       IMPLICIT NONE
 
       TYPE(t_results), INTENT(INOUT) :: results
@@ -476,9 +504,6 @@ CONTAINS
       ! contributions. Averaging det(R)*R_cart*L over all operations projects
       ! L onto the physically correct invariant subspace regardless of crystal
       ! structure or magnetization direction.
-      USE m_types_sym
-      USE m_types_cell
-      USE m_constants, ONLY: tpi_const
       IMPLICIT NONE
       TYPE(t_sym),  INTENT(IN)    :: sym
       TYPE(t_cell), INTENT(IN)    :: cell

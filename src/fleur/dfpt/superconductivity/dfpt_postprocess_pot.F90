@@ -12,10 +12,35 @@ module m_dfpt_postprocess_pot
     USE m_juDFT
 
 
-    USE m_types 
     USE m_constants
+    USE m_cdn_io
+    USE m_make_stars
+    USE m_dfpt_dynmat_eig
+    USE m_eigen
+    USE m_dfpt_vgen
+    USE m_dfpt_elph_mat
+    USE m_fermie
+    USE m_dfpt_generate_gradient
+    USE m_dfpt_lambda
+    USE m_types_enpara
+    USE m_types_fleurinput
+    USE m_types_forcetheo
+    USE m_types_hub1data
+    USE m_types_hybdat
+    USE m_types_kpts
+    USE m_types_mpi
+    USE m_types_nococonv
+    USE m_types_potden
+    USE m_types_misc
+    USE m_types_sphhar
+    USE m_types_stars
+    USE m_types_sternheimerjob
+    USE m_types_sym
+    USE m_types_xcpot
     
     implicit none
+    PRIVATE
+    PUBLIC :: dfpt_postprocess_elph, read_dynmats
 
 
 contains 
@@ -23,17 +48,6 @@ contains
     subroutine dfpt_postprocess_elph(fmpi,fi,stars,sphhar,xcpot,forcetheo,enpara,nococonv,hybdat, &
                                   rho, vTot, vxc,results,eig_id,resultsq,q_eig_id,l_real)
 
-        use m_types 
-        use m_cdn_io
-        use m_make_stars
-        use m_dfpt_dynmat_eig
-        use m_eigen 
-        use m_dfpt_vgen
-        use m_dfpt_elph_mat
-        use m_fermie
-        use m_dfpt_generate_gradient
-        use m_dfpt_vgen
-        use m_dfpt_lambda
 
         type(t_mpi), intent(in)       :: fmpi
         type(t_fleurinput),intent(in) :: fi 

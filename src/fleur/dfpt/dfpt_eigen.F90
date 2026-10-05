@@ -17,24 +17,38 @@ MODULE m_dfpt_eigen
 #else
 #define CPP_zgemv zgemv
 #endif
+   USE m_constants
+   USE m_dfpt_eigen_hssetup
+   USE m_pot_io
+   USE m_util
+   USE m_eig66_io, ONLY: write_eig, read_eig
+   USE m_xmlOutput
+   USE m_types_mpimat
+   USE m_dfpt_tlmplm
+   USE m_local_hamiltonian
+   USE m_types_enpara
+   USE m_types_fleurinput
+   USE m_types_hub1data
+   USE m_types_lapw
+   USE m_types_mat
+   USE m_types_mpi
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_misc
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_sternheimerjob
+   USE m_types_tlmplm
 
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: dfpt_eigen
 
 CONTAINS
 
    SUBROUTINE dfpt_eigen(sternheimerJob,fi, sphhar, results, resultsq, results1, fmpi, enpara, nococonv, starsq, v1real, v1imag, vTot, inden, bqpt, &
                              eig_id, q_eig_id, dfpt_eig_id, iDir, iDtype, killcont, l_real, sh_den, dfpt_eig_id2)
 
-      USE m_types
-      USE m_constants
-      USE m_dfpt_eigen_hssetup
-      USE m_pot_io
-      USE m_util
-      USE m_eig66_io, ONLY : write_eig, read_eig
-      USE m_xmlOutput
-      USE m_types_mpimat
-      USE m_dfpt_tlmplm
-      USE m_local_hamiltonian
       
 
       IMPLICIT NONE

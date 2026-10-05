@@ -4,10 +4,32 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_plot
-   USE m_types
    USE m_juDFT
    USE m_constants
+   USE m_fft2d
+   USE m_fft3d
+   USE m_outcdn
+   USE m_xsf_io
+   USE m_polangle
+   USE m_checkdopall
+   USE m_Relaxspinaxismagn
+#ifdef CPP_MPI
+   USE mpi
+#endif
+   USE m_types_sliceplot
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_input
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_sym
+   USE m_types_vacuum
    implicit none
+   PRIVATE
 
 
    !-----------------------------------------------------------------------------
@@ -114,8 +136,6 @@ CONTAINS
 
    SUBROUTINE matrixsplit(sym,stars, atoms, sphhar, vacuum, input, noco,nococonv, factor, &
                           denmat, cden, mxden, myden, mzden)
-      USE m_fft2d
-      USE m_fft3d
   
       !--------------------------------------------------------------------------
       ! Takes a 2x2 density matrix and rearranges it into four plottable seperate
@@ -545,13 +565,6 @@ CONTAINS
 
    SUBROUTINE savxsf(sliceplot,stars, atoms, sphhar, vacuum, input, fmpi , sym, cell, &
                      noco, nococonv,score, potnorm, denName, denf, denA1, denA2, denA3,denf_im,name_string)
-      USE m_outcdn
-      USE m_xsf_io
-#ifdef CPP_MPI
-      USE mpi
-#endif
-      USE m_polangle
-      USE m_checkdopall
 
       ! Takes one/several t_potden variable(s), i.e. scalar fields in MT-sphere/
       ! plane wave representation and makes it/them into plottable .xsf file(s)
@@ -1004,9 +1017,6 @@ CONTAINS
 
    SUBROUTINE vectorplot(sliceplot,stars, atoms, sphhar, vacuum, input, fmpi  , sym, cell, &
                          noco,nococonv, factor, score, potnorm, denmat, denName)
-#ifdef CPP_MPI
-      USE mpi
-#endif
       ! Takes a spin-polarized t_potden variable, i.e. a 2D vector in MT-sphere/
       ! plane wave representation, splits it into two spinless ones, which are
       ! then passed on to the savxsf routine to get 2 .xsf files out.
@@ -1039,9 +1049,6 @@ CONTAINS
 
    SUBROUTINE matrixplot(sliceplot,stars, atoms, sphhar, vacuum, input, fmpi  , sym, cell, &
                          noco, nococonv,factor, score, potnorm, denmat, denName)
-#ifdef CPP_MPI
-      USE mpi
-#endif
       ! Takes a 2x2 t_potden variable, i.e. a sum of Pauli matrices in MT-
       ! sphere/ plane wave representation and splits it into four spinless ones,
       ! which are then passed on to the savxsf routine to get 4 .xsf files out.
@@ -1078,9 +1085,6 @@ CONTAINS
       ! According to iplot, we process which exact plots we make after we assured
       ! that we do any. n-th digit (from the back) of iplot ==1 --> plot with
       ! identifier n is done.
-#ifdef CPP_MPI
-      USE mpi
-#endif
 
       TYPE(t_stars),     INTENT(IN)    :: stars
       TYPE(t_atoms),     INTENT(IN)    :: atoms
@@ -1322,14 +1326,10 @@ CONTAINS
 
    SUBROUTINE makeplots(stars, atoms, sphhar, vacuum, input, fmpi,   sym, cell, &
                         noco, nococonv,denmat, plot_const, sliceplot,denmat_im,name_string)
-      USE m_Relaxspinaxismagn
       ! Checks, based on the iplot switch that is given in the input, whether or
       ! not plots should be made. Before the plot command is processed, we check
       ! whether the plot_inp is there or an oldform is given. Both are outdated.
       ! If that is not the case, we start plotting.
-#ifdef CPP_MPI
-      USE mpi
-#endif
 
       TYPE(t_stars),     INTENT(IN)    :: stars
       TYPE(t_atoms),     INTENT(IN)    :: atoms

@@ -1,15 +1,36 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_types_ssdisp
 
-  USE m_types
   USE m_types_forcetheo
   USE m_judft
+  USE m_calculator
+  USE m_constants
+  USE m_types_potden
+  USE m_xmlOutput
+  USE m_types_mpi
+  USE m_ssomat
+#ifdef CPP_MPI
+  USE mpi
+#endif
+  USE m_types_atoms
+  USE m_types_cell
+  USE m_types_enpara
+  USE m_types_fleurinput
+  USE m_types_input
+  USE m_types_kpts
+  USE m_types_noco
+  USE m_types_nococonv
+  USE m_types_misc
+  USE m_types_sym
   IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: ssdisp_init, ssdisp_start, ssdisp_next_job, ssdisp_postprocess, ssdisp_dist, ssdisp_eval, &
+     t_forcetheo_ssdisp
   TYPE,EXTENDS(t_forcetheo) :: t_forcetheo_ssdisp
      INTEGER :: q_done
      REAL,ALLOCATABLE:: qvec(:,:)
@@ -27,8 +48,6 @@ CONTAINS
 
 
   SUBROUTINE ssdisp_init(this,q)
-    USE m_calculator
-    USE m_constants
     IMPLICIT NONE
     CLASS(t_forcetheo_ssdisp),INTENT(INOUT):: this
     REAL,INTENT(in)                     :: q(:,:)
@@ -42,7 +61,6 @@ CONTAINS
   END SUBROUTINE ssdisp_init
 
   SUBROUTINE ssdisp_start(this,potden,l_io)
-    USE m_types_potden
     IMPLICIT NONE
     CLASS(t_forcetheo_ssdisp),INTENT(INOUT):: this
     TYPE(t_potden) ,INTENT(INOUT)          :: potden
@@ -65,10 +83,6 @@ CONTAINS
   END SUBROUTINE  ssdisp_start
 
   LOGICAL FUNCTION ssdisp_next_job(this,fmpi,lastiter,atoms,noco,nococonv)
-    USE m_types_setup
-    USE m_xmlOutput
-    USE m_constants
-    USE m_types_mpi
     IMPLICIT NONE
     CLASS(t_forcetheo_ssdisp),INTENT(INOUT):: this
     TYPE(t_mpi), INTENT(IN)                :: fmpi
@@ -105,8 +119,6 @@ CONTAINS
   END FUNCTION ssdisp_next_job
 
   SUBROUTINE ssdisp_postprocess(this,fi,results,fmpi)
-    USE m_xmlOutput
-    USE m_types_mpi
     IMPLICIT NONE
     CLASS(t_forcetheo_ssdisp),INTENT(INOUT):: this
     TYPE(t_fleurinput),INTENT(IN)   :: fi
@@ -135,10 +147,6 @@ CONTAINS
   END SUBROUTINE ssdisp_postprocess
 
   SUBROUTINE ssdisp_dist(this,fmpi)
-#ifdef CPP_MPI
-    USE mpi
-#endif
-    USE m_types_mpi
     IMPLICIT NONE
     CLASS(t_forcetheo_ssdisp),INTENT(INOUT):: this
     TYPE(t_mpi),INTENT(in):: fmpi
@@ -154,8 +162,6 @@ CONTAINS
 
   FUNCTION ssdisp_eval(this,eig_id,atoms,kpts,sym,&
        cell,noco,nococonv, input,fmpi,  enpara,v,results)RESULT(skip)
-     USE m_types
-     USE m_ssomat
     IMPLICIT NONE
     CLASS(t_forcetheo_ssdisp),INTENT(INOUT):: this
     LOGICAL :: skip

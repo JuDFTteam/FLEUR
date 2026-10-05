@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -7,35 +7,47 @@
 MODULE m_calc_hybrid
    USE m_judft
    use m_store_load_hybrid
+   use m_work_package
+   use m_set_coul_participation
+   use m_types_hybdat
+   use m_mixedbasis
+   use m_coulombmatrix
+   use m_hf_init
+   use m_hf_setup
+   use m_hsfock
+   use m_io_hybrid
+   use m_eig66_io
+   use m_eig66_mpi
+   use m_distribute_mpi
+   use m_create_coul_comms
+   use m_eigvec_setup
+   use m_distrib_vx
+   use, intrinsic :: iso_c_binding
+#ifdef CPP_MPI
+   use mpi
+#endif
+#ifdef CPP_PROG_THREAD
+   use m_thread_lib
+#endif
+   use m_types_mpi
+   use m_types_enpara
+   use m_types_fleurinput
+   use m_types_hybmpi
+   use m_types_lapw
+   use m_types_mat
+   use m_types_mpdata
+   use m_types_nococonv
+   use m_types_potden
+   use m_types_misc
+   use m_types_stars
+   use m_types_xcpot_inbuild
+   implicit none
    private
    public calc_hybrid
 CONTAINS
 
    SUBROUTINE calc_hybrid(fi,mpdata,hybdat,fmpi,nococonv,stars,enpara,&
                           results,xcpot,v,iter, iterHF)
-      use m_work_package
-      use m_set_coul_participation
-      USE m_types_hybdat
-      USE m_types
-      USE m_mixedbasis
-      USE m_coulombmatrix
-      USE m_hf_init
-      USE m_hf_setup
-      USE m_hsfock
-      USE m_io_hybrid
-      USE m_eig66_io
-      use m_eig66_mpi
-      use m_distribute_mpi 
-      use m_create_coul_comms
-      use m_eigvec_setup
-      use m_distrib_vx
-      use, intrinsic :: iso_c_binding
-#ifdef CPP_MPI 
-      use mpi 
-#endif
-#ifdef CPP_PROG_THREAD
-      use m_thread_lib
-#endif
 
       IMPLICIT NONE
 

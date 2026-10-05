@@ -13,14 +13,17 @@ MODULE m_nmat
    !     Part of the LDA+U package                   G.B., Oct. 2000
    !     Extension to multiple U per atom type by G.M. 2017
    !     ************************************************************
+   USE m_types_radfun
+   USE m_types_abc
+   USE m_constants
+   USE m_symMMPmat
+   USE m_types_atoms
+   USE m_types_sym
    implicit none
+   PRIVATE
+   PUBLIC :: n_mat
    CONTAINS
    SUBROUTINE n_mat(atoms,radfun,sym,ne,we,abc,abc1,n_mmp,ntype,jsp,jsp1)
-      USE m_types_radfun
-      USE m_types_abc
-      USE m_types
-      USE m_constants
-      USE m_symMMPmat
 
       IMPLICIT NONE
       TYPE(t_sym),         INTENT(IN)     :: sym

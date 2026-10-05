@@ -9,9 +9,20 @@
 !>individual in-plane momenta (the product of k+G and k+q+G' decays with both), per length |q+G||.
 MODULE m_mixedbasis_vac
    USE m_juDFT
-   USE m_types
    USE m_constants
    USE m_vac_rows, ONLY: NVAC_MPB, vac_src
+   USE m_vacuz
+   USE m_vacudz
+   USE m_coulomb_vac, ONLY: vac_zint, vac_mom_g0, vac_exp_mom
+   USE m_types_cell
+   USE m_types_enpara
+   USE m_types_input
+   USE m_types_kpts
+   USE m_types_mpdata
+   USE m_types_mpi
+   USE m_types_mpinp
+   USE m_types_potden
+   USE m_types_vacuum
    IMPLICIT NONE
    PRIVATE
 
@@ -23,8 +34,6 @@ MODULE m_mixedbasis_vac
 CONTAINS
 
    SUBROUTINE vac_rung(vacuum, vz, vzero, evac, h, u, ud)
-      USE m_vacuz
-      USE m_vacudz
       IMPLICIT NONE
       TYPE(t_vacuum), INTENT(IN) :: vacuum
       REAL, INTENT(IN)           :: vz(:), vzero, evac, h
@@ -60,8 +69,6 @@ CONTAINS
    END SUBROUTINE vac_mom_ladder
 
    SUBROUTINE gen_vac_basis(vacuum, cell, kpts, input, mpinp, mpdata, enpara, v, fmpi)
-      USE m_vacuz
-      USE m_vacudz
       IMPLICIT NONE
       TYPE(t_vacuum), INTENT(IN)        :: vacuum
       TYPE(t_cell), INTENT(IN)          :: cell
@@ -228,7 +235,6 @@ CONTAINS
    END SUBROUTINE gen_vac_basis
 
    REAL FUNCTION z_dot(f, h, nz, delz)
-      USE m_coulomb_vac, ONLY: vac_zint
       IMPLICIT NONE
       REAL, INTENT(IN)    :: f(:), h(:)
       INTEGER, INTENT(IN) :: nz
@@ -300,7 +306,6 @@ CONTAINS
 
    !>z range: until the slowest product drops below the linear-dependence tolerance.
    SUBROUTINE set_vac_zrange(vacuum, mpinp, enpara, vz, mpdata)
-      USE m_vacuz
       IMPLICIT NONE
       TYPE(t_vacuum), INTENT(IN)     :: vacuum
       TYPE(t_mpinp), INTENT(IN)      :: mpinp
@@ -374,7 +379,6 @@ CONTAINS
 
    !>Rotate the first z-moment of the charge-free functions into slot nn-1 (g = 0 only).
    SUBROUTINE concentrate_first_moment(mpdata, vacuum, ilen, ivac)
-      USE m_coulomb_vac, ONLY: vac_mom_g0
       IMPLICIT NONE
       TYPE(t_mpdata), INTENT(INOUT) :: mpdata
       TYPE(t_vacuum), INTENT(IN)    :: vacuum
@@ -490,7 +494,6 @@ CONTAINS
 
    CONTAINS
       REAL FUNCTION mom(f)
-         USE m_coulomb_vac, ONLY: vac_exp_mom
          IMPLICIT NONE
          REAL, INTENT(IN) :: f(:)
          mom = vac_exp_mom(f, nz, vacuum%delz, g)
@@ -498,7 +501,6 @@ CONTAINS
    END SUBROUTINE concentrate_exp_moment
 
    SUBROUTINE check_exp_moment(mpdata, vacuum, nmore)
-      USE m_coulomb_vac, ONLY: vac_exp_mom
       IMPLICIT NONE
       TYPE(t_mpdata), INTENT(IN) :: mpdata
       TYPE(t_vacuum), INTENT(IN) :: vacuum

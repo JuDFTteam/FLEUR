@@ -1,4 +1,7 @@
       MODULE m_diflgr
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: diflgr
       CONTAINS
       REAL FUNCTION diflgr(x,f)
 c     **********************************************************

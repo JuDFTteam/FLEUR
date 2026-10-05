@@ -1,15 +1,25 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_checkMMPmat
 
    !Check whether the given density matrix makes sense (only diagonal)
 
-   USE m_types
    USE m_juDFT
    USE m_constants
    use m_types_mixvector
    use m_mixing_history
    use m_mpi_bc_tool
+   use m_types_atoms
+   use m_types_input
+   use m_types_mpi
+   use m_types_potden
 
    IMPLICIT NONE
+   private
+   public :: checkmmpmat
 
    CONTAINS
 

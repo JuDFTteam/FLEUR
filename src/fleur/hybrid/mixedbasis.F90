@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -36,21 +36,39 @@
 
 MODULE m_mixedbasis
 
+   USE m_judft
+   USE m_constants
+   USE m_loddop, ONLY: loddop
+   USE m_intgrf, ONLY: intgrf_init, intgrf
+   USE m_hybrid_core
+   USE m_wrapper
+   USE m_eig66_io
+   USE m_mixedbasis_vac, ONLY: gen_vac_basis
+   USE m_vac_rows, ONLY: NVAC_MPB, vac_src
+   USE m_radfun, ONLY: radfun
+   USE m_radflo, ONLY: radflo
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_enpara
+   USE m_types_hybdat
+   USE m_types_hybinp
+   USE m_types_input
+   USE m_types_kpts
+   USE m_types_mpdata
+   USE m_types_mpi
+   USE m_types_mpinp
+   USE m_types_potden
+   USE m_types_usdus
+   USE m_types_vacuum
+   USE m_types_xcpot_inbuild
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: mixedbasis, gen_bas_fun, calc_selecmat
 CONTAINS
 
    SUBROUTINE mixedbasis(atoms, kpts, input, cell, vacuum, xcpot, mpinp, mpdata, hybinp, hybdat,&
                          enpara, fmpi, v, iterHF)
 
-      USE m_judft
-      USE m_types
-      USE m_constants
-      USE m_loddop, ONLY: loddop
-      USE m_intgrf, ONLY: intgrf_init, intgrf
-      USE m_hybrid_core
-      USE m_wrapper
-      USE m_eig66_io
-      USE m_mixedbasis_vac, ONLY: gen_vac_basis
-      USE m_vac_rows, ONLY: NVAC_MPB, vac_src
 
       IMPLICIT NONE
 
@@ -420,11 +438,6 @@ CONTAINS
    END SUBROUTINE mixedbasis
 
    subroutine gen_bas_fun(atoms, enpara, gridf, input, mpdata, fmpi, vr0, usdus, bas1, bas2)
-      use m_judft
-      use m_types
-      USE m_radfun, ONLY: radfun
-      USE m_radflo, ONLY: radflo
-      USE m_intgrf,   ONLY: intgrf
       implicit NONE
       type(t_atoms), intent(in)        :: atoms
       type(t_enpara), intent(in)       :: enpara
@@ -507,8 +520,6 @@ CONTAINS
 
    function calc_selecmat(atoms,mpdata,seleco, selecu) result(selecmat)
       ! Condense seleco and seleco into selecmat (each product corresponds to a matrix element)
-      use m_types
-      use m_judft
       implicit NONE
 
       type(t_atoms),  intent(in) :: atoms

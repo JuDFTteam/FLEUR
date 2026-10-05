@@ -1,10 +1,21 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_judft_para
 
+!$ USE omp_lib
+   USE m_judft_string
+   USE m_judft_stop
+#ifdef CPP_MPI
+   USE mpi
+#endif
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: judft_check_para, check_omp_para
 CONTAINS
    subroutine juDFT_check_para()
-#ifdef CPP_MPI
-      USE mpi
-#endif
       implicit none
       logical   :: omp_para_loc, omp_root_and
       integer   :: irank, ierr
@@ -59,9 +70,6 @@ CONTAINS
    !end subroutine check_mpi_para
 
    function check_omp_para() result(parallel_ok)
-      !$ use omp_lib
-      use m_judft_string
-      use m_judft_stop
       implicit none
       logical            :: parallel_ok
       real               :: summe, t_omp, t_seq

@@ -6,6 +6,12 @@
 
       module m_wann_write_amn
             use m_juDFT
+#ifdef CPP_MPI
+      use mpi
+#endif
+      implicit none
+      private
+      public :: wann_write_amn
       contains
       subroutine wann_write_amn(
      >               fmpi_comm,l_p0,filename,title,
@@ -26,9 +32,6 @@ c     Write the matrix A^{k}_{mn} to file WF1.amn/WF2.amn
 c
 c     Frank Freimuth
 c**********************************************************
-#ifdef CPP_MPI
-      use mpi
-#endif
 
       implicit none
       integer, intent(in)    :: fmpi_comm

@@ -1,5 +1,9 @@
       MODULE m_cnodes
       use m_juDFT
+      use m_coredir
+      implicit none
+      private
+      public :: cnodes
 c...........................................................cnodes
 c number of nodes
 c
@@ -7,7 +11,6 @@ c
       SUBROUTINE cnodes(mrad,iflag,is,ec,l,xmj,nqn,vv,bb,rc,dx,
      +                  nmatch,nzero,gc,fc,pow,qow,piw,qiw,node)
 c
-      USE m_coredir
       IMPLICIT NONE
 C     ..
 C     .. Scalar Arguments ..

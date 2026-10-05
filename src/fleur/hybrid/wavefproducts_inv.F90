@@ -1,16 +1,30 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_wavefproducts_inv
-   USE m_vac_rows, ONLY: NVAC_MPB
+   USE m_vac_rows, ONLY: NVAC_MPB, row_offset, basfn_offset
    USE m_types_hybdat
    use m_wavefproducts_noinv
    USE m_constants
    USE m_judft
-   USE m_types
    USE m_types_hybinp
    USE m_util
    USE m_io_hybrid
    USE m_wrapper
    USE m_constants
    USE m_wavefproducts_aux
+   USE m_wavefproducts_vac, ONLY: wavefproducts_vac
+   USE m_types_fleurinput
+   USE m_types_lapw
+   USE m_types_mat
+   USE m_types_mpdata
+   USE m_types_nococonv
+   USE m_types_stars
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: wavefproducts_inv, vac_to_realbasis, transform_to_realsph
 
 CONTAINS
    SUBROUTINE wavefproducts_inv(fi, ik, z_k, iq, jsp, bandoi, bandof, lapw, hybdat, mpdata, nococonv, stars, ikqpt, cmt_nk, cprod)
@@ -68,7 +82,6 @@ CONTAINS
 
          if (fi%input%film) then
             block
-               use m_wavefproducts_vac, only: wavefproducts_vac
                complex, allocatable :: tmp_vac(:,:)
                ! films: vacuum rows, computed complex and rotated to the real basis
                allocate(tmp_vac(cprod%matsize1, cprod%matsize2), source=cmplx_0)
@@ -108,8 +121,6 @@ CONTAINS
    !>Vacuum rows of cprod in the real pair (M_1 +- M_2)/sqrt(2); with inversion symmetry
    !>vac_abcof gives conjugate coefficients in the two vacua, so both combinations are real.
    subroutine vac_to_realbasis(fi, mpdata, hybdat, iq, cprod_c, cprod)
-      use m_vac_rows, only: row_offset, basfn_offset
-      use m_constants, only: sqrt_2
       implicit none
       type(t_fleurinput), intent(in) :: fi
       type(t_mpdata), intent(in)     :: mpdata
@@ -142,7 +153,6 @@ CONTAINS
       enddo
    end subroutine vac_to_realbasis
    subroutine transform_to_realsph(fi, mpdata, cprod)
-      use m_constants
       implicit none 
       type(t_fleurinput), intent(in):: fi
       TYPE(t_mpdata), intent(in)    :: mpdata

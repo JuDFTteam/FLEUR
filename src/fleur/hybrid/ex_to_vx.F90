@@ -1,12 +1,25 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_ex_to_vx
    USE m_judft
-   USE m_types
    USE m_symmetrizeh
+   USE m_eig66_io
+   USE m_types_fleurinput
+   USE m_types_hybdat
+   USE m_types_lapw
+   USE m_types_mat
+#ifdef CPP_MPI
+   USE mpi
+#endif
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: ex_to_vx
 
 contains
    subroutine ex_to_vx(fi, nk, jsp, nsymop, psym, hybdat, lapw, z, ex, v_x)
-      use m_juDFT
-      use m_eig66_io
       implicit none
 
       type(t_fleurinput), intent(in)    :: fi

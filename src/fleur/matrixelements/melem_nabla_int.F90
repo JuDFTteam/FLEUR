@@ -17,7 +17,10 @@
 !>  can simply be added.
 MODULE m_melem_nabla_int
   USE m_juDFT
-  USE m_types
+  USE m_types_cell
+  USE m_types_lapw
+  USE m_types_mat
+  USE m_types_stars
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: melem_nabla_int

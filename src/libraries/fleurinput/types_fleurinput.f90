@@ -29,6 +29,8 @@ MODULE m_types_fleurinput
   USE m_types_hub1inp
   USE m_types_dfpt
   IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: t_fleurinput
 
   TYPE t_fleurinput
     TYPE(t_cell)::cell

@@ -11,7 +11,38 @@ MODULE m_eigen
    use mpi
 #endif
    USE m_juDFT
+   USE m_constants
+   USE m_eigen_hssetup
+   USE m_pot_io
+   USE m_eigen_diag
+   USE m_local_Hamiltonian
+   USE m_util
+   USE m_eig66_io, ONLY: write_eig, read_eig
+   USE m_xmlOutput
+   USE m_symmetrize_matrix
+   USE m_unfold_band_kpts
+   USE m_types_mpimat
+   USE m_store_load_hybrid
+   USE m_npy
+   USE m_types_mat
+   USE m_types_enpara
+   USE m_types_fleurinput
+   USE m_types_forcetheo
+   USE m_types_hub1data
+   USE m_types_hybdat
+   USE m_types_kpts
+   USE m_types_lapw
+   USE m_types_mpi
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_misc
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_tlmplm
+   USE m_types_xcpot
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: eigen
 CONTAINS
    !>The eigenvalue problem is constructed and solved in this routine. The following steps are performed:
    !> 1. Preparation: generate energy parameters, open eig-file
@@ -33,23 +64,9 @@ CONTAINS
                     hybdat,iter,eig_id,results,inden,pot,potx,hub1data,&
                     bqpt, hmat_out, smat_out)
 
-      USE m_types
-      USE m_constants
-      USE m_eigen_hssetup
-      USE m_pot_io
-      USE m_eigen_diag
       !USE m_hsefunctional
-      USE m_local_Hamiltonian
-      USE m_util
       !USE m_icorrkeys
-      USE m_eig66_io, ONLY : write_eig, read_eig
-      USE m_xmlOutput
 
-      USE m_symmetrize_matrix
-      USE m_unfold_band_kpts !used for unfolding bands
-      USE m_types_mpimat
-      use m_store_load_hybrid
-      USE m_npy
 
       IMPLICIT NONE
 

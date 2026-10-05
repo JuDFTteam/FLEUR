@@ -10,6 +10,18 @@ MODULE m_relaxation
 #ifdef CPP_MPI
    USE mpi
 #endif
+   USE m_constants
+   USE m_relaxio
+   USE m_mixing_history
+   USE m_chkmt
+   USE m_types_xml
+   USE m_xsf_io
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_input
+   USE m_types_mpi
+   USE m_types_sym
+   USE m_types_vacuum
 
    IMPLICIT NONE
 
@@ -23,13 +35,6 @@ CONTAINS
       ! The history is taken into account by read_relax from m_relaxio
       ! After generating new positions the code stops
 
-      USE m_types
-      USE m_constants
-      USE m_relaxio
-      USE m_mixing_history
-      USE m_chkmt
-      USE m_types_xml
-      USE m_xsf_io
 
       TYPE(t_mpi),    INTENT(IN) :: fmpi
       TYPE(t_input),  INTENT(IN) :: input
@@ -201,7 +206,6 @@ CONTAINS
       !--------------------------------------------------------------------------
       !  Simple BFGS method to calculate shift out of old positions and forces
       !--------------------------------------------------------------------------
-      USE m_constants
 
       REAL,INTENT(IN)  :: pos(:,:,:),force(:,:,:)
       REAL,INTENT(OUT) :: shift(:,:)

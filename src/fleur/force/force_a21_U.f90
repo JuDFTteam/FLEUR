@@ -4,7 +4,14 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_forcea21U
+   USE m_constants
+   USE m_types_radfun
+   USE m_types_cdnval
+   USE m_types_abc
+   USE m_types_atoms
    implicit none
+   PRIVATE
+   PUBLIC :: force_a21_u
 CONTAINS
    SUBROUTINE force_a21_U(atoms,itype,isp,we,ne,rf,v_mmp,abc,aveccof,bveccof,cveccof,a21)
       !--------------------------------------------------------------------------
@@ -13,11 +20,6 @@ CONTAINS
       ! Comp.Phys.Comm. 179 (2008) 784-790
       !--------------------------------------------------------------------------
 
-      USE m_constants
-      USE m_types_setup
-      USE m_types_radfun
-      USE m_types_cdnval
-      USE m_types_abc
 
       IMPLICIT NONE
 

@@ -11,7 +11,6 @@ MODULE m_irvac_2d
    USE m_vac_rows, ONLY: NVAC_MPB
    USE m_juDFT
    USE m_constants
-   USE m_types
    USE m_mtir_size
    USE m_coulomb_vac, ONLY: vac_exp_mom, vac_mom_g0
    USE m_vac_rows, ONLY: row_offset, basfn_offset
@@ -20,6 +19,11 @@ MODULE m_irvac_2d
 #ifdef CPP_MPI
    USE mpi
 #endif
+   USE m_types_fleurinput
+   USE m_types_hybdat
+   USE m_types_mat
+   USE m_types_mpdata
+   USE m_types_mpi
 
    IMPLICIT NONE
    PRIVATE

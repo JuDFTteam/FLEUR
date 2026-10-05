@@ -10,7 +10,23 @@
 #endif
 MODULE m_hlomat
    use m_matmul_dgemm
+   use m_hsmt_ab
+   use m_abcoeff_store
+   use m_hsmt_fjgj
+   use m_types_atoms
+   use m_types_cell
+   use m_types_input
+   use m_types_lapw
+   use m_types_mat
+   use m_types_mpi
+   use m_types_noco
+   use m_types_nococonv
+   use m_types_sym
+   use m_types_tlmplm
+   use m_judft
   IMPLICIT NONE
+   private
+   public :: hlomat, lo_coefficients
   !***********************************************************************
   ! updates the hamiltonian  matrix with the contributions from the local
   ! orbitals.
@@ -20,11 +36,7 @@ CONTAINS
   SUBROUTINE hlomat(input,atoms,fmpi,lapw,tlmplm,sym,cell,noco,nococonv,ilSpinPr,ilSpin,&
        ntyp,na,fjgj,alo1,blo1,clo1, igSpinPr,igSpin,chi,hmat,l_fullj,l_ham,lapwq,fjgjq)
 
-    USE m_hsmt_ab
-    USE m_abcoeff_store
-    USE m_types
 !    USE m_types_mpimat
-    USE m_hsmt_fjgj
     IMPLICIT NONE
     TYPE(t_input),INTENT(IN)  :: input
     TYPE(t_atoms),INTENT(IN)  :: atoms
@@ -225,7 +237,6 @@ CONTAINS
    SUBROUTINE lo_coefficients(atoms,tlmplm,ntyp,na,invsfct,abclo,lapw,igSpin,c,glob)
       !! LO basis functions of atom na as columns in the unified radial basis of tlmplm%h:
       !! a*u + b*udot + c*u_lo for each m, and their global index in the matrix
-      USE m_types
       TYPE(t_atoms),  INTENT(IN) :: atoms
       TYPE(t_tlmplm), INTENT(IN) :: tlmplm
       TYPE(t_lapw),   INTENT(IN) :: lapw

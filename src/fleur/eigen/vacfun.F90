@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -8,7 +8,19 @@ MODULE m_vacfun
 #ifdef CPP_MPI
   use mpi
 #endif
+  use m_constants
+  use m_intgr, only: intgz0
+  use m_vacuz
+  use m_vacudz
+  use m_types_cell
+  use m_types_input
+  use m_types_mpi
+  use m_types_nococonv
+  use m_types_stars
+  use m_types_vacuum
    implicit none
+  private
+  public :: vacfun
 CONTAINS
   SUBROUTINE vacfun(&
        fmpi,vacuum,stars,input,nococonv,jspin1,jspin2,&
@@ -23,11 +35,6 @@ CONTAINS
     !               m. weinert
     !*********************************************************************
 
-    USE m_constants
-    USE m_intgr, ONLY : intgz0
-    USE m_vacuz
-    USE m_vacudz
-    USE m_types
     IMPLICIT NONE
 
     TYPE(t_mpi),INTENT(IN)        :: fmpi

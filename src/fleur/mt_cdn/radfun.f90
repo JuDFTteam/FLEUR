@@ -1,5 +1,18 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_radfun
   USE m_juDFT
+  USE m_constants, ONLY: c_light
+  USE m_radsra
+  USE m_radsrd
+  USE m_types_usdus
+  USE m_types_atoms
+  IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: radfun
 CONTAINS
   SUBROUTINE radfun(l,itype,jsp,e,vr,atoms, f,g,usdus,nodeu,noded,wronk)
     !*********************************************************************
@@ -18,11 +31,6 @@ CONTAINS
     !
     !*********************************************************************
 
-    USE m_constants, ONLY : c_light
-    USE m_radsra
-    USE m_radsrd
-    USE m_types_usdus
-    USE m_types_atoms
     IMPLICIT NONE
     TYPE(t_usdus),INTENT(INOUT):: usdus
     TYPE(t_atoms),INTENT(IN)   :: atoms

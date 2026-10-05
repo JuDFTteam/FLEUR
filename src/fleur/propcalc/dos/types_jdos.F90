@@ -6,6 +6,16 @@
 MODULE m_types_jdos
    use m_judft
    use m_types_eigdos
+   use m_types_atoms
+   use m_types_noco
+   use m_types_nococonv
+   use m_types_banddos
+   use m_types_input
+   use m_types_radfun
+   use m_types_abc
+   use m_constants
+   use m_clebsch
+   use m_types_kpts
    implicit none
    PRIVATE
    public t_jdos
@@ -36,10 +46,6 @@ MODULE m_types_jdos
    END TYPE t_jDOS
 CONTAINS
    subroutine postprocessing(this, noco,nococonv, banddos, alldos, ef)
-      use m_types_atoms
-      use m_types_noco
-      use m_types_nococonv
-      use m_types_banddos
       class(t_jDOS), intent(inout):: this
       TYPE(t_noco), INTENT(IN)    :: noco
       TYPE(t_nococonv), INTENT(IN)    :: nococonv
@@ -50,14 +56,6 @@ CONTAINS
    end subroutine postprocessing    
 
    SUBROUTINE calc_jDOS(jDOS, ikpt, noccbd, ev_list, we, atoms, banddos, input, nococonv, itype, radfun, abc_u, abc_d)
-      use m_types_atoms
-      use m_types_banddos
-      use m_types_input
-      use m_types_nococonv
-      use m_types_radfun
-      use m_types_abc
-      use m_constants
-      use m_clebsch
       CLASS(t_jDOS), INTENT(INOUT)  :: jDOS
       TYPE(t_atoms), INTENT(IN)     :: atoms
       TYPE(t_banddos), INTENT(IN)     :: banddos
@@ -458,8 +456,6 @@ CONTAINS
 
    SUBROUTINE jDOS_init(thisjDOS, input, banddos, atoms, kpts, eig)
 
-      USE m_types_setup
-      USE m_types_kpts
 
       IMPLICIT NONE
 

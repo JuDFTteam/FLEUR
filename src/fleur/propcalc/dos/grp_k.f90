@@ -1,11 +1,16 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_grp_k
   USE m_juDFT
+  USE m_inv3
+  USE m_constants
+  USE m_socsym, ONLY: soc_sym, cross
+  USE m_types_cell
+  USE m_types_sym
 
   IMPLICIT NONE
 
@@ -36,10 +41,6 @@ CONTAINS
     !**************************************************************
 
     !      USE m_mrot2su
-    USE m_inv3
-    USE m_constants
-    USE m_socsym,    ONLY : soc_sym, cross
-    USE m_types
     IMPLICIT NONE
 
     TYPE(t_sym),INTENT(IN)   :: sym
@@ -737,9 +738,6 @@ CONTAINS
 
     ! determines the Euler angles corresponding the proper rotation part of mrot      
 
-    USE m_constants, ONLY : pi_const
-    USE m_inv3
-    USE m_types
     IMPLICIT NONE
     INTEGER,INTENT(IN)         :: n
     TYPE(t_sym),INTENT(IN)     :: sym

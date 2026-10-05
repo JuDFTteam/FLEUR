@@ -20,8 +20,36 @@ module m_dfpt_lambda
 #define CPP_zgemm zgemm
 #endif
 
-   use m_types
    use m_constants
+   use m_fleur_init
+   use m_eig66_io, only: read_eig
+   use m_trafo, only: waveftrafo_gen_zmat, waveftrafo_gen_cmt
+   use m_genMTBasis, only: genMTBasis
+   use m_hs_int_direct
+   use m_inv3
+   use m_dwigner
+   use m_map_to_unit
+   use m_types_abc
+   use m_types_atoms
+   use m_types_enpara
+   use m_types_fleurinput
+   use m_types_forcetheo
+   use m_types_hybdat
+   use m_types_hybinp
+   use m_types_kpts
+   use m_types_lapw
+   use m_types_mat
+   use m_types_mpdata
+   use m_types_mpi
+   use m_types_nococonv
+   use m_types_potden
+   use m_types_radfun
+   use m_types_misc
+   use m_types_sphhar
+   use m_types_stars
+   use m_types_sym
+   use m_types_usdus
+   use m_types_xcpot
 
    implicit none
 
@@ -34,7 +62,6 @@ contains
    subroutine dfpt_read_fullsym(fmpi, fi, sym_full, qvec_full)
       !! Reads the `fullsym_` input set and returns the full symmetry group and
       !! the symmetry-reduced q mesh.
-      use m_fleur_init
 
       type(t_mpi),        intent(in)  :: fmpi
       type(t_fleurinput), intent(in)  :: fi
@@ -115,10 +142,6 @@ contains
       !! every operation of the full group. `eig_win` returns the band-window
       !! eigenvalues for `dfpt_check_lambda`.
 
-      use m_eig66_io,   only: read_eig
-      use m_trafo,      only: waveftrafo_gen_zmat, waveftrafo_gen_cmt
-      use m_genMTBasis, only: genMTBasis
-      use m_hs_int_direct
 
       type(t_fleurinput),   intent(in)  :: fi
       type(t_sym),          intent(in)  :: sym_full
@@ -405,7 +428,6 @@ contains
       !! tabulated up to `nop`, so the spatial operation is `-invmrot` at index
       !! `isym - nop`, and the source block is conjugated
 
-      use m_inv3
 
       type(t_fleurinput), intent(in)    :: fi
       type(t_sym),        intent(in)    :: sym_full
@@ -510,7 +532,6 @@ contains
       !! translation vectors and Wigner d matrices on the full group, plus the
       !! radial overlap table in the t_abc radial ordering.
 
-      use m_dwigner
 
       type(t_fleurinput),   intent(in)  :: fi
       type(t_sym),          intent(in)  :: sym_full
@@ -593,7 +614,6 @@ contains
       !! restricts the search to `neq(itype)`.
       !! DFPT runs with -nosym, types are broken up
 
-      use m_map_to_unit
 
       type(t_atoms),  intent(in)    :: atoms
       type(t_sym),    intent(in)    :: sym_full
@@ -644,7 +664,6 @@ contains
       !! radial-function index (u, udot, local orbitals).
 
 
-      use m_types_abc
 
       type(t_fleurinput), intent(in)  :: fi
       type(t_usdus),      intent(in)  :: usdus

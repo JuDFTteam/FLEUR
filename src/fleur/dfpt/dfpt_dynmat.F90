@@ -4,22 +4,64 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_dfpt_dynmat
-   USE m_types
    USE m_constants
+   USE m_step_function
+   USE m_convol
+   USE m_dfpt_vgen
+   USE m_vgen_coulomb
+   USE m_dfpt_eii2
+   USE m_dfpt_potdenLocal
+   USE m_intgr, ONLY: intgr3, intgr3LinIntp, intgz0
+   USE m_gaunt, ONLY: gaunt1
+   USE m_eigen_hssetup
+   USE m_pot_io
+   USE m_eigen_diag
+   USE m_local_hamiltonian
+   USE m_util
+   USE m_eig66_io, ONLY: write_eig, read_eig
+   USE m_xmlOutput
+   USE m_types_mpimat
+   USE m_dfpt_tlmplm
+   USE m_dfpt_hs_int
+   USE m_dfpt_hsmt
+   USE m_eigen_redist_matrix
+   USE m_judft
+   USE m_types_mat
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_dfpt
+   USE m_types_enpara
+   USE m_types_fftgrid
+   USE m_types_fleurinput
+   USE m_types_hub1data
+   USE m_types_hybdat
+   USE m_types_kpts
+   USE m_types_lapw
+   USE m_types_mpi
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_misc
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_sternheimerjob
+   USE m_types_sym
+   USE m_types_tlmplm
+   USE m_types_vacuum
+   USE m_types_xcpot
+#ifdef CPP_MPI
+   USE mpi
+#endif
 
 IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: dfpt_dynmat_row, dfpt_int_pw, dfpt_int_mt, dfpt_int_mt_sf, dfpt_int_vac, dfpt_sf_vac, dfpt_dynmat_eigen, &
+      dfpt_dynmat_hssetup
 
 CONTAINS
    SUBROUTINE dfpt_dynmat_row(sternheimerJob, fi, stars, starsq, sphhar, xcpot, nococonv, hybdat, fmpi, qpts, iQ, iDtype_row, iDir_row, &
                               eig_id, dfpt_eig_id, dfpt_eig_id2, enpara, results, results1, l_real, dfpt,&
                               rho, vTot, grRho3, grVext3, grVC3, denIn1, vTot1, denIn1Im, vTot1Im, vC1, vC1Im, dyn_row, &
                               E2ndOrdII, q_eig_id)
-      USE m_step_function
-      USE m_convol
-      USE m_dfpt_vgen
-      USE m_vgen_coulomb
-      USE m_dfpt_eii2
-      USE m_dfpt_potdenLocal
       
 
       TYPE(t_sternheimerJob),INTENT(IN) :: sternheimerJob
@@ -489,7 +531,6 @@ CONTAINS
    END SUBROUTINE dfpt_int_pw
 
    SUBROUTINE dfpt_int_mt(atoms, sphhar, sym, nat, mt_conj, mt_conj_im, mt_pure, mt_pure_im, mt_int)
-      USE m_intgr, ONLY: intgr3, intgr3LinIntp
 
       TYPE(t_atoms),  INTENT(IN) :: atoms
       TYPE(t_sphhar), INTENT(IN) :: sphhar
@@ -523,7 +564,6 @@ CONTAINS
    END SUBROUTINE dfpt_int_mt
 
    SUBROUTINE dfpt_int_mt_sf(atoms, sphhar, sym, iDir, nat, mt_conj, mt_pure, mt_pure_im, sf_int)
-      USE m_gaunt, ONLY: gaunt1
 
       TYPE(t_atoms),  INTENT(IN) :: atoms
       TYPE(t_sphhar), INTENT(IN) :: sphhar
@@ -582,9 +622,6 @@ CONTAINS
    END SUBROUTINE dfpt_int_mt_sf
 
    SUBROUTINE dfpt_int_vac(stars,vacuum,cell,vac_conj,vac_pure,vac_int)
-      USE m_types
-      USE m_constants
-      USE m_intgr, ONLY : intgz0
 
       IMPLICIT NONE
 
@@ -680,17 +717,6 @@ CONTAINS
                                 eig_id, dfpt_eig_id, dfpt_eig_id2, iDir_col, iDtype_col, iDir_row, iDtype_row, &
                                 theta1_pw0, theta1_pw, bqpt, l_real, eigen_term, killcont, q_eig_id)
 
-      USE m_types
-      USE m_constants
-      USE m_eigen_hssetup
-      USE m_pot_io
-      USE m_eigen_diag
-      USE m_local_hamiltonian
-      USE m_util
-      USE m_eig66_io, ONLY : write_eig, read_eig
-      USE m_xmlOutput
-      USE m_types_mpimat
-      USE m_dfpt_tlmplm
 
 ! TODO: One bright day, these things will also be relevant for DFPT.
 !       We cannot keep doing small systems on small CPUs forever.
@@ -975,11 +1001,6 @@ CONTAINS
    SUBROUTINE dfpt_dynmat_hssetup(isp, fmpi, fi, enpara, nococonv, starsq, stars, &
                             td, tdV1, lapw, lapwq, iDir_row, iDtype_row, iDir_col, iDtype_col, theta1_pw0, theta1_pw, &
                             smat1_final, hmat1_final, smat1q_final, hmat1q_final, smat2_final, hmat2_final, nk, killcont, vmat2_final)
-      USE m_types
-      USE m_types_mpimat
-      USE m_dfpt_hs_int
-      USE m_dfpt_hsmt
-      USE m_eigen_redist_matrix
 
       IMPLICIT NONE
 

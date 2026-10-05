@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -8,6 +8,14 @@ MODULE m_types_dfpt
    USE m_judft
    USE m_types_fleurinput_base
    USE m_types_kpts
+   USE m_mpi_bc_tool
+   USE m_types_xml
+   USE m_types_cell
+   USE m_types_input
+   USE m_inv3
+   USE m_constants
+   USE m_types_sym
+   USE m_types_noco
    IMPLICIT NONE
    PRIVATE
 
@@ -64,7 +72,6 @@ MODULE m_types_dfpt
 CONTAINS
 
    SUBROUTINE mpi_bc_dfpt(this, mpi_comm, irank)
-      USE m_mpi_bc_tool
 
       CLASS(t_dfpt),     INTENT(INOUT) :: this
       INTEGER, INTENT(IN)           :: mpi_comm
@@ -121,7 +128,6 @@ CONTAINS
    SUBROUTINE read_kpts_list(xml, listName, kpts_out)
       !! Read the k-point list <listName> from inp.xml/kpts.xml into a t_kpts
       !! (populates nkpt, bk and wtkpt).
-      USE m_types_xml
       TYPE(t_xml),      INTENT(INOUT) :: xml
       CHARACTER(len=*), INTENT(IN)    :: listName
       TYPE(t_kpts),     INTENT(INOUT) :: kpts_out
@@ -140,7 +146,6 @@ CONTAINS
    SUBROUTINE read_qvec_list(xml, path, kpts_out)
       !! Read an inline <qVectors>/<q> list at <path> into a t_kpts
       !! (sets nkpt and fills bk; assigns uniform weights).
-      USE m_types_xml
       TYPE(t_xml),      INTENT(INOUT) :: xml
       CHARACTER(len=*), INTENT(IN)    :: path
       TYPE(t_kpts),     INTENT(INOUT) :: kpts_out
@@ -162,9 +167,6 @@ CONTAINS
    END SUBROUTINE read_qvec_list
 
    SUBROUTINE read_xml_dfpt(this, xml)
-      USE m_types_xml
-      USE m_judft
-      USE m_types_kpts
 
       IMPLICIT NONE
 
@@ -426,12 +428,6 @@ CONTAINS
 
    SUBROUTINE init_dfpt(this,cell,input,sym,noco)
 
-    USE m_types_cell
-    USE m_types_input
-    USE m_inv3
-    USE m_constants
-    USE m_types_sym
-    USE m_types_noco
 
       CLASS(t_dfpt), INTENT(INOUT) :: this
       TYPE(t_cell),    INTENT(IN)     :: cell
@@ -500,8 +496,6 @@ CONTAINS
    SUBROUTINE precheck_dfpt(this,xml)
     ! This routine checks if the general input structure 
     ! for the dfpt calculation is compatible 
-    USE m_types_xml
-    USE m_judft 
 
     IMPLICIT NONE 
 

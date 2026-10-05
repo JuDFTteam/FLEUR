@@ -5,7 +5,52 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_eigen_hssetup
+   USE m_juDFT
+   USE m_hsvac
+#ifndef _OPENACC
+   USE m_types_mpimat
+   USE m_hs_int
+   USE m_hsmt
+   USE m_vham
+   USE m_eigen_redist_matrix
+   USE m_add_vnonlocal
+   USE m_hsmt_fjgj
+   USE m_eig66_io, ONLY: open_eig, write_eig, read_eig
+#endif
+#ifndef _OPENACC
+#else
+   USE m_types_mpimat
+   USE m_hs_int
+   USE m_hsmt
+   USE m_vham
+   USE m_eigen_redist_matrix
+   USE m_add_vnonlocal
+   USE m_hsmt_fjgj
+   USE m_eig66_io, ONLY: open_eig, write_eig, read_eig
+#endif
+   USE m_types_mat
+   USE m_types_enpara
+   USE m_types_fleurinput
+   USE m_types_hybdat
+   USE m_types_lapw
+   USE m_types_mpi
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_misc
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_tlmplm
+   USE m_types_xcpot
    implicit none
+   PRIVATE
+   PUBLIC :: hsvac_hyb
+#ifndef _OPENACC
+   PUBLIC :: eigen_hssetup
+#endif
+#ifndef _OPENACC
+#else
+   PUBLIC :: eigen_hssetup
+#endif
    CONTAINS
 #ifndef _OPENACC
       !> The setup of the Hamiltonian and Overlap matrices are performed here
@@ -18,16 +63,6 @@ MODULE m_eigen_hssetup
      !! 5. The matrices are copied to the final matrix, in the fi%noco-case the full matrix is constructed from the 4-parts.
 SUBROUTINE eigen_hssetup(isp, fmpi, fi, results, den, vx, xcpot, enpara, nococonv, stars, sphhar, hybdat, &
    td, v, lapw, nk, smat_final, hmat_final)
-USE m_types
-USE m_types_mpimat
-USE m_hs_int
-USE m_hsvac
-USE m_hsmt
-USE m_vham
-USE m_eigen_redist_matrix
-USE m_add_vnonlocal
-USE m_hsmt_fjgj
-USE m_eig66_io, ONLY: open_eig, write_eig, read_eig
 IMPLICIT NONE
 INTEGER, INTENT(IN)           :: isp
 TYPE(t_mpi), INTENT(IN)       :: fmpi
@@ -142,16 +177,6 @@ END SUBROUTINE eigen_hssetup
 #else
    SUBROUTINE eigen_hssetup(isp, fmpi, fi,  results, den, vx, xcpot, enpara, nococonv, stars, sphhar, hybdat, &
       td, v, lapw, nk, smat_final, hmat_final)
-USE m_types
-USE m_types_mpimat
-USE m_hs_int
-USE m_hsvac
-USE m_hsmt
-USE m_vham
-USE m_eigen_redist_matrix
-USE m_add_vnonlocal
-USE m_hsmt_fjgj
-USE m_eig66_io, ONLY: open_eig, write_eig, read_eig
 IMPLICIT NONE
 INTEGER, INTENT(IN)           :: isp
 TYPE(t_mpi), INTENT(IN)       :: fmpi
@@ -335,9 +360,6 @@ END SUBROUTINE eigen_hssetup
 #endif
    !>Vacuum part; for hybrids -a*v_x enters as matrix elements, as in the muffin-tins.
    SUBROUTINE hsvac_hyb(fi, stars, fmpi, isp, v, vx, xcpot, hybdat, enpara, lapw, nococonv, hmat, smat)
-      USE m_juDFT
-      USE m_types
-      USE m_hsvac
       IMPLICIT NONE
       TYPE(t_fleurinput), INTENT(IN) :: fi
       TYPE(t_stars), INTENT(IN)      :: stars

@@ -17,6 +17,25 @@ MODULE m_types_dmdos
    use m_judft
    use m_constants
    use m_types_eigdos
+   use m_types_input
+   use m_types_atoms
+   use m_types_kpts
+   use m_types_banddos
+   use m_types_noco
+   use m_types_sym
+   use m_types_cell
+   use m_dwigner
+   use m_angles
+   use m_types_abc
+   use m_types_radfun
+   use m_intgr
+   use m_types_mpi
+   use m_types_nococonv
+   use m_types_dos
+#ifdef CPP_HDF
+   use HDF5
+   use m_banddos_io
+#endif
    implicit none
    PRIVATE
    public t_dmdos
@@ -50,15 +69,6 @@ MODULE m_types_dmdos
 CONTAINS
 
    SUBROUTINE dmdos_init(this, input, atoms, kpts, banddos, noco, sym, cell, eig)
-      USE m_types_input
-      USE m_types_atoms
-      USE m_types_kpts
-      USE m_types_banddos
-      USE m_types_noco
-      USE m_types_sym
-      USE m_types_cell
-      USE m_dwigner
-      USE m_angles
       CLASS(t_dmdos), INTENT(INOUT) :: this
       TYPE(t_input), INTENT(IN)     :: input
       TYPE(t_atoms), INTENT(IN)     :: atoms
@@ -152,11 +162,6 @@ CONTAINS
    SUBROUTINE calc_dm(this, abc_s, abc_sp, radfun, atoms, sym, ev_list, itype, ikpt, ispin, ispinpr)
       !! Adds the contribution of atom type itype for the spin pair (ispin,ispinpr) with ispinpr<=ispin.
       !! For ispin/=ispinpr both off-diagonal blocks 21 and 12 are computed.
-      USE m_types_atoms
-      USE m_types_sym
-      USE m_types_abc
-      USE m_types_radfun
-      USE m_intgr
       CLASS(t_dmdos), INTENT(INOUT) :: this
       TYPE(t_abc), INTENT(IN)       :: abc_s, abc_sp
       TYPE(t_radfun), INTENT(IN)    :: radfun
@@ -247,7 +252,6 @@ CONTAINS
 
    FUNCTION site_symmetrize(this, mat, sym, na, l, lp, l_offdiag) RESULT(mat_sym)
       !! Average over the operations that map atom na onto itself, as symMMPmat (also for l=0 blocks)
-      USE m_types_sym
       CLASS(t_dmdos), INTENT(IN) :: this
       COMPLEX, INTENT(IN)        :: mat(-lmaxU_const:, -lmaxU_const:)
       TYPE(t_sym), INTENT(IN)    :: sym
@@ -273,7 +277,6 @@ CONTAINS
    SUBROUTINE collect(this, fmpi, jspin)
       !! Sum the data of all ranks on rank 0. In a non-collinear run all blocks are collected once (jspin=1),
       !! otherwise the block of the current spin.
-      USE m_types_mpi
       CLASS(t_dmdos), INTENT(INOUT) :: this
       TYPE(t_mpi), INTENT(IN)       :: fmpi
       INTEGER, INTENT(IN)           :: jspin
@@ -333,11 +336,6 @@ CONTAINS
 
    SUBROUTINE postprocessing(this, noco, nococonv, banddos, alldos, ef)
       !! Rotates into the requested orbital and spin frames and checks the traces against the l-resolved DOS
-      USE m_types_noco
-      USE m_types_nococonv
-      USE m_types_banddos
-      USE m_types_dos
-      USE m_dwigner
       CLASS(t_dmdos), INTENT(INOUT) :: this
       TYPE(t_noco), INTENT(IN)      :: noco
       TYPE(t_nococonv), INTENT(IN)  :: nococonv
@@ -438,8 +436,6 @@ CONTAINS
    REAL FUNCTION trace_deviation(this, dos, banddos)
       !! Largest difference between Tr rho_ll and the corresponding MT:<type><l> weight. Unsymmetrized data is
       !! compared as average over the equivalent atoms, the spin off-diagonal part only without symmetrization.
-      USE m_types_dos
-      USE m_types_banddos
       CLASS(t_dmdos), INTENT(IN)  :: this
       TYPE(t_dos), INTENT(IN)     :: dos
       TYPE(t_banddos), INTENT(IN) :: banddos
@@ -532,10 +528,6 @@ CONTAINS
    END FUNCTION get_weight_eig
 
    SUBROUTINE write_extra(this, hdf_id)
-#ifdef CPP_HDF
-      USE HDF5
-      USE m_banddos_io
-#endif
       CLASS(t_dmdos), INTENT(IN) :: this
 #ifdef CPP_HDF
       INTEGER(HID_T), INTENT(IN) :: hdf_id

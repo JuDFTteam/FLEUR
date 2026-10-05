@@ -37,7 +37,6 @@
 MODULE m_wannierlib_plot
    USE m_juDFT
    USE m_constants
-   USE m_types
    USE m_types_abc
    USE m_types_radfun
    USE m_types_wannierlib
@@ -48,6 +47,23 @@ MODULE m_wannierlib_plot
    USE m_wann_plot_vac
    USE m_wann_2dvacabcof
    USE m_xsf_io
+#ifdef CPP_MPI
+   USE mpi
+#endif
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_enpara
+   USE m_types_input
+   USE m_types_kpts
+   USE m_types_lapw
+   USE m_types_mat
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_stars
+   USE m_types_sym
+   USE m_types_vacuum
    IMPLICIT NONE
    PRIVATE
    PUBLIC :: wannierlib_plot_wf
@@ -352,7 +368,6 @@ CONTAINS
 #ifdef CPP_MPI
    !> Each rank summed its own share of the k-mesh; the whole sum lives on rank 0.
    SUBROUTINE collect_wf(wf, fmpi)
-      USE mpi
       COMPLEX,     INTENT(INOUT) :: wf(:, :)
       TYPE(t_mpi), INTENT(IN)    :: fmpi
       INTEGER :: ierr

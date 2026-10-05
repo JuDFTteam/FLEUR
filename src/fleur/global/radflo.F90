@@ -1,11 +1,22 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_radflo
   USE m_juDFT
+  USE m_intgr, ONLY: intgr0
+  USE m_constants
+  USE m_radsra
+  USE m_radsrdn
+  USE m_relLO_dirac, ONLY: relLO_dirac_radial
+  USE m_types_usdus
+  USE m_types_mpi
+  USE m_types_atoms
+  IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: radflo
 CONTAINS
   SUBROUTINE radflo(atoms, ntyp,jsp,ello,vr, f,g,fmpi, usdus,&
        uuilon,duilon,ulouilopn,flo,lout_all)
@@ -49,15 +60,6 @@ CONTAINS
     ! C. Friedrich Feb. 2005
     !***********************************************************************
     !
-    USE m_intgr, ONLY : intgr0
-    USE m_constants
-    USE m_radsra
-    USE m_radsrdn
-    USE m_relLO_dirac, ONLY : relLO_dirac_radial
-    USE m_types_usdus
-    USE m_types_mpi
-    USE m_types_atoms
-    USE m_types_usdus
     IMPLICIT NONE
     TYPE(t_usdus),INTENT(INOUT):: usdus !lo part is calculated here
     TYPE(t_mpi),INTENT(IN)     :: fmpi

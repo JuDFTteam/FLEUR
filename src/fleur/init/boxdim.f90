@@ -1,10 +1,14 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_boxdim
+   USE m_juDFT
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: boxdim
 CONTAINS
    SUBROUTINE boxdim( &
       bmat, &
@@ -35,7 +39,6 @@ CONTAINS
 !                         S. Bl"ugel, IFF, 13. Nov. 97
 !               tested by S. Heinze , IFF,
 !*********************************************************************
-      USE m_juDFT
 ! SE m_constants
 
 !     .. Parameters ..

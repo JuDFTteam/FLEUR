@@ -4,6 +4,18 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_types_moessbauerParams
+   USE m_efg
+   USE m_constants
+   USE m_juDFT
+   USE m_intgr, ONLY: intgr2
+   USE m_xmlOutput
+   USE m_types_atoms
+   USE m_types_input
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_potden
+   USE m_types_sphhar
+   USE m_types_sym
    implicit none
 
    PRIVATE
@@ -59,7 +71,6 @@ MODULE m_types_moessbauerParams
 
    SUBROUTINE mPInit(this, input, noco, atoms)
 
-      USE m_types
 
       CLASS(t_moessbauerParams), INTENT(INOUT) :: this
       TYPE(t_input),             INTENT(IN)    :: input
@@ -107,8 +118,6 @@ MODULE m_types_moessbauerParams
 
    SUBROUTINE mPCalcEFG(this, atoms, sym, sphhar, fmpi, vCoul)
 
-      USE m_types
-      USE m_efg
 
       CLASS(t_moessbauerParams), INTENT(INOUT) :: this
       TYPE(t_atoms),             INTENT(IN)    :: atoms
@@ -125,10 +134,6 @@ MODULE m_types_moessbauerParams
 
    SUBROUTINE mPCalcIS(this, input, atoms, fmpi, den)
 
-      USE m_constants
-      USE m_types
-      USE m_juDFT
-      USE m_intgr, ONLY : intgr2
 
       CLASS(t_moessbauerParams), INTENT(INOUT) :: this
       TYPE(t_input),             INTENT(IN)    :: input
@@ -252,9 +257,6 @@ MODULE m_types_moessbauerParams
 
    SUBROUTINE mPPrintAll(this, fmpi, atoms)
 
-      USE m_constants
-      USE m_types
-      USE m_xmlOutput
 
       CLASS(t_moessbauerParams), INTENT(INOUT) :: this
       TYPE(t_mpi),               INTENT(IN)    :: fmpi

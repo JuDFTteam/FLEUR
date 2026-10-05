@@ -5,16 +5,28 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_dfpt_eigen_hssetup
+   USE m_types_mpimat
+   USE m_dfpt_hs_int
+   USE m_dfpt_hsmt
+   USE m_dfpt_hsvac
+   USE m_eigen_redist_matrix
+   USE m_types_mat
+   USE m_types_enpara
+   USE m_types_fleurinput
+   USE m_types_lapw
+   USE m_types_mpi
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_stars
+   USE m_types_sternheimerjob
+   USE m_types_tlmplm
+   USE m_judft
    implicit none
+   PRIVATE
+   PUBLIC :: dfpt_eigen_hssetup
 CONTAINS
    SUBROUTINE dfpt_eigen_hssetup(sternheimerJob, isp, fmpi, fi, enpara, nococonv, starsq, &
                             td, tdV1, vTot, vTot1, lapw, lapwq, iDir, iDtype, hmat_final, smat_final, nk, killcont)
-      USE m_types
-      USE m_types_mpimat
-      USE m_dfpt_hs_int
-      USE m_dfpt_hsmt
-      USE m_dfpt_hsvac
-      USE m_eigen_redist_matrix
       
 
       IMPLICIT NONE

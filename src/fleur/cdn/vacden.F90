@@ -1,10 +1,30 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_vacden
    USE m_juDFT
+   USE m_vac_abcof
+   USE m_constants
+   USE m_grdchlh
+   USE m_qsf
+   USE m_vacuz
+   USE m_vacudz
+   USE m_types_vacdos
+   USE m_types_dos
+   USE m_npy
+   USE m_types_atoms
+   USE m_types_banddos
+   USE m_types_cell
+   USE m_types_input
+   USE m_types_lapw
+   USE m_types_mat
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_stars
+   USE m_types_vacuum
    ! Legacy comments:
    !     *************************************************************
    !     determines the 2-d star function expansion coefficients of
@@ -23,6 +43,8 @@ MODULE m_vacden
    !     Philipp Kurz 99/07
    !***********************************************************************
    implicit none
+   PRIVATE
+   PUBLIC :: vacden
 
    !******** ABBREVIATIONS ************************************************
    !     qvac     : vacuum charge of each eigenstate, needed in in cdnval
@@ -63,7 +85,6 @@ MODULE m_vacden
 CONTAINS
    SUBROUTINE vacden(vacuum,stars,input,cell,atoms,noco,nococonv,banddos,&
                      we,ikpt,jspin,vz,ne,ev_list,lapw,evac,den,zMat,vacdos,dos,lapwq,we1,zMat1)
-      USE m_vac_abcof
       !! Calculates the vacuum part of the density and puts it into den%vac. The variable has
       !! four dimensions: The z, star, vacuum and spin index. Recent refactoring combined the
       !! real variable vacz and the complex star expansion vacxy into one. vacz is identical
@@ -73,15 +94,6 @@ CONTAINS
       !!
       !! In practice, the density looks as follows:
       !! $$$$
-      USE m_constants
-      USE m_grdchlh
-      USE m_qsf
-      USE m_vacuz
-      USE m_vacudz
-      USE m_types
-      USE m_types_vacdos
-      USE m_types_dos
-      USE m_npy
       
       IMPLICIT NONE
       

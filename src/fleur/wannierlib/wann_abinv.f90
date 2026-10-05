@@ -5,7 +5,11 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_wann_abinv
+   USE m_types_atoms
+   USE m_types_sym
    implicit none
+   PRIVATE
+   PUBLIC :: wann_abinv
 CONTAINS
   SUBROUTINE wann_abinv(atoms,sym,acof,bcof,ccof)
     !     ***************************************************************
@@ -14,7 +18,6 @@ CONTAINS
     !     Based on abcrot.
     !     Frank Freimuth
     !     ***************************************************************
-    USE m_types
     IMPLICIT NONE
     !     ..
     !     .. Scalar Arguments ..

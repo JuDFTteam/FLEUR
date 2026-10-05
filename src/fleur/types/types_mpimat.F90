@@ -11,6 +11,10 @@ MODULE m_types_mpimat
 #ifdef CPP_MPI
    USE mpi
 #endif
+#ifdef CPP_SCALAPACK
+   USE mpi
+   USE iso_c_binding
+#endif
    IMPLICIT NONE
    PRIVATE
    INTEGER, PARAMETER    :: DEFAULT_BLOCKSIZE = 64
@@ -125,7 +129,6 @@ CONTAINS
    end subroutine mpimat_print_type
 
    SUBROUTINE mpimat_multiply(mat1, mat2, res, transA, transB)
-      use m_judft
       CLASS(t_mpimat), INTENT(INOUT)     :: mat1
       CLASS(t_mat), INTENT(IN)           :: mat2
       CLASS(t_mat), INTENT(INOUT), OPTIONAL :: res
@@ -232,9 +235,6 @@ CONTAINS
    END subroutine
 
    SUBROUTINE print_matrix(mat, fileno)
-#ifdef CPP_SCALAPACK
-      USE mpi
-#endif
       CLASS(t_mpimat), INTENT(INOUT) ::mat
       INTEGER:: fileno
 
@@ -271,9 +271,6 @@ CONTAINS
    END SUBROUTINE print_matrix
 
    subroutine t_mpimat_l2u(mat)
-#ifdef CPP_SCALAPACK
-      USE mpi
-#endif
       implicit none
       CLASS(t_mpimat), INTENT(INOUT) ::mat
 
@@ -330,9 +327,6 @@ CONTAINS
    end subroutine t_mpimat_l2u
 
    SUBROUTINE t_mpimat_u2l(mat)
-#ifdef CPP_SCALAPACK
-      USE mpi
-#endif
       implicit none
       CLASS(t_mpimat), INTENT(INOUT) ::mat
 
@@ -553,7 +547,6 @@ CONTAINS
    end subroutine to_non_dist
 
    subroutine mpimat_save_npy(mat, filename)
-      use m_judft
       implicit NONE
       CLASS(t_mpimat), INTENT(IN)::mat
       character(len=*)         :: filename
@@ -718,9 +711,6 @@ CONTAINS
   !!
   !! The argument dist_type controls the kind of distribution used. See head of file for possible values
    SUBROUTINE mpimat_init(mat, l_real, matsize1, matsize2, mpi_subcom, dist_type, nb_x, nb_y, mat_name)
-#ifdef CPP_MPI
-      use mpi
-#endif
       IMPLICIT NONE
       CLASS(t_mpimat)                      :: mat
       INTEGER, INTENT(IN), OPTIONAL        :: matsize1, matsize2, mpi_subcom
@@ -803,9 +793,6 @@ CONTAINS
    END SUBROUTINE mpimat_init_template
 
    SUBROUTINE priv_create_blacsgrid(mpi_subcom, dist_type, m1, m2, nbc, nbr, blacsdata, local_size1, local_size2)
-#ifdef CPP_SCALAPACK
-      USE mpi
-#endif
       IMPLICIT NONE
       INTEGER, INTENT(IN) :: mpi_subcom
       INTEGER, INTENT(IN) :: m1, m2
@@ -1440,7 +1427,6 @@ CONTAINS
    end subroutine
 
    subroutine cyclic_column_to_2Dblock_cyclic(mat,mat2d,offset1,offset2)
-      use iso_c_binding
       implicit none 
       class(t_mpimat),intent(in)   ::mat
       class(t_mpimat),intent(inout)::mat2d
@@ -1619,7 +1605,6 @@ CONTAINS
    END subroutine
    
    subroutine create_RMA_win(mat,offset1,np_row,my_row,blocksize,mpi_comm,win_handle)
-      use iso_c_binding
       implicit none
       type(t_mpimat),intent(in),target::mat !This is the sending matrix
       INTEGER,INTENT(IN)  :: offset1 ! The offsets of the target matrix

@@ -1,10 +1,24 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_hsvac
    USE m_juDFT
+   USE m_vacfun
+   USE m_types_cell
+   USE m_types_input
+   USE m_types_lapw
+   USE m_types_mat
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_stars
+   USE m_types_vacuum
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: hsvac
 CONTAINS
    !-----------------------------------------------------------------------------
    ! Calculate the vacuum contribution to the Hamiltonian and Overlap matrix
@@ -12,8 +26,6 @@ CONTAINS
    SUBROUTINE hsvac(vacuum, stars, fmpi, jsp, input, v, evac, cell, &
                   & lapw, noco, nococonv, hmat, smat, dv)
 
-      USE m_vacfun
-      USE m_types
 
       IMPLICIT NONE
 

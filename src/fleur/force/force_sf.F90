@@ -1,12 +1,22 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_force_sf
    USE m_constants
-   USE m_types
+   USE m_sphbes
+   USE m_phasy1
+   USE m_gaunt
+   USE m_ylm
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_mpi
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_sym
+   USE m_judft
    !-----------------------------------------------------------------------------
    ! This routine calculates a contribution to the forces stemming
    ! from the discontinuity of density and potential at the muffin-tin
@@ -21,6 +31,8 @@ MODULE m_force_sf
    !-----------------------------------------------------------------------------
 
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: force_sf_is, force_sf_mt, init_sf, exit_sf
 
    COMPLEX, PRIVATE, SAVE, ALLOCATABLE :: force_mt(:,:)
    COMPLEX, PRIVATE, SAVE, ALLOCATABLE :: force_is(:,:)
@@ -37,9 +49,6 @@ CONTAINS
       ! It is called in a spin loop at the end of vgen.F90-
       !--------------------------------------------------------------------------
 
-      USE m_sphbes
-      USE m_phasy1
-      USE m_gaunt
 
       TYPE(t_sym),INTENT(IN)     :: sym
       TYPE(t_stars),INTENT(IN)   :: stars
@@ -175,8 +184,6 @@ CONTAINS
       ! It is called in a spin loop at the end of cdngen.F90
       !--------------------------------------------------------------------------
 
-      USE m_gaunt
-      USE m_ylm
 
       TYPE(t_mpi),INTENT(IN)   :: fmpi
       TYPE(t_sym),INTENT(IN)   :: sym

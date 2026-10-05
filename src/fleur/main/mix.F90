@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -13,6 +13,41 @@ MODULE m_mix
   !    IMIX = 7 : Generalized Anderson method
   !------------------------------------------------------------------------
 
+   use m_juDFT
+   use m_constants
+   use m_cdn_io
+   use m_stmix
+   use m_broyden
+   use m_qfix
+   use m_umix
+   use m_vmix
+   use m_checkMMPmat
+   use m_kerker
+   use m_pulay
+   use m_a_pulay
+   use m_types_mixvector
+   use m_distance
+   use m_mixing_history
+   use m_RelaxSpinAxisMagn
+   use m_plot
+   use m_types_atoms
+   use m_types_cell
+   use m_types_field
+   use m_types_input
+   use m_types_mpi
+   use m_types_noco
+   use m_types_nococonv
+   use m_types_potden
+   use m_types_misc
+   use m_types_sliceplot
+   use m_types_sphhar
+   use m_types_stars
+   use m_types_sym
+   use m_types_vacuum
+   use m_types_xcpot
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: mix_charge
 contains
 
   SUBROUTINE mix_charge( field,   fmpi, l_writehistory,&
@@ -20,24 +55,6 @@ contains
          archiveType, xcpot, iteration, inDen, outDen, results, coreDen, l_runhia, sliceplot,&
          inDenIm, outDenIm, dfpt_tag)
 
-    use m_juDFT
-    use m_constants
-    use m_cdn_io
-    use m_stmix
-    use m_broyden
-    use m_qfix
-    use m_types
-    use m_umix
-    use m_vmix
-    use m_checkMMPmat
-    USE m_kerker
-    use m_pulay
-    use m_a_pulay
-    use m_types_mixvector
-    USE m_distance
-    use m_mixing_history
-    use m_RelaxSpinAxisMagn
-    USE m_plot
     implicit none
 
 

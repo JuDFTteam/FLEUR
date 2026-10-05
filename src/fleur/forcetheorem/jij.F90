@@ -6,13 +6,33 @@
 
 MODULE m_types_jij
 
-  USE m_types
   USE m_types_forcetheo
   USE m_judft
 #ifdef CPP_MPI
   USE mpi
 #endif
-   implicit none
+  USE m_constants
+  USE m_types_mpi
+  USE m_types_potden
+  USE m_xmlOutput
+  USE m_types_nococonv
+  USE m_ssomat
+#ifdef CPP_NEVER
+  USE m_nshell
+#endif
+  USE m_types_atoms
+  USE m_types_cell
+  USE m_types_enpara
+  USE m_types_fleurinput
+  USE m_types_input
+  USE m_types_kpts
+  USE m_types_noco
+  USE m_types_misc
+  USE m_types_sym
+  IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: jij_init, jij_dist, jij_start, jij_next_job, jij_postprocess, jij_eval, jij_q, map, fourier_transform, &
+     priv_analyse_data, t_forcetheo_jij
   TYPE,EXTENDS(t_forcetheo) :: t_forcetheo_jij
      INTEGER :: loopindex,no_loops
      INTEGER,ALLOCATABLE :: q_index(:),iatom(:),jatom(:)
@@ -39,8 +59,6 @@ CONTAINS
 
 
   SUBROUTINE jij_init(this,qvec,thetaj,atoms)
-    USE m_types_setup
-    USE m_constants
     IMPLICIT NONE
     CLASS(t_forcetheo_jij),INTENT(INOUT):: this
     REAL,INTENT(in)                     :: qvec(:,:),thetaj
@@ -87,7 +105,6 @@ CONTAINS
 
 
   SUBROUTINE jij_dist(this,fmpi)
-    USE m_types_mpi
     IMPLICIT NONE
     CLASS(t_forcetheo_jij),INTENT(INOUT):: this
     TYPE(t_mpi),INTENT(in):: fmpi
@@ -101,7 +118,6 @@ CONTAINS
 
 
   SUBROUTINE jij_start(this,potden,l_io)
-    USE m_types_potden
     IMPLICIT NONE
     CLASS(t_forcetheo_jij),INTENT(INOUT):: this
     TYPE(t_potden) ,INTENT(INOUT)       :: potden
@@ -111,11 +127,6 @@ CONTAINS
   END SUBROUTINE  jij_start
 
   LOGICAL FUNCTION jij_next_job(this,fmpi,lastiter,atoms,noco,nococonv)
-    USE m_types_setup
-    USE m_xmlOutput
-    USE m_constants
-    USE m_types_nococonv
-    USE m_types_mpi
     IMPLICIT NONE
     CLASS(t_forcetheo_jij),INTENT(INOUT):: this
     TYPE(t_mpi), INTENT(IN)             :: fmpi
@@ -171,8 +182,6 @@ CONTAINS
   END FUNCTION jij_next_job
 
   SUBROUTINE jij_postprocess(this,fi,results,fmpi)
-    USE m_xmlOutput
-    USE m_types_mpi
     IMPLICIT NONE
     CLASS(t_forcetheo_jij),INTENT(INOUT):: this
     TYPE(t_fleurinput), INTENT(IN)      :: fi
@@ -238,8 +247,6 @@ CONTAINS
 
   FUNCTION jij_eval(this,eig_id,atoms,kpts,sym,&
        cell,noco,nococonv, input,fmpi,  enpara,v,results)RESULT(skip)
-     USE m_types
-     USE m_ssomat
     IMPLICIT NONE
     CLASS(t_forcetheo_jij),INTENT(INOUT):: this
     LOGICAL :: skip
@@ -269,7 +276,6 @@ CONTAINS
   subroutine jij_q(this,atoms,M,Jq)
   !   Now calculate Jq=Re(Jq)+i*Im(Jq)
   !  See thesis M.Lezaic, page 55
-    USE m_types
     IMPLICIT NONE
     CLASS(t_forcetheo_jij),INTENT(IN):: this
     type(t_atoms),INTENT(IN)         :: atoms
@@ -413,10 +419,8 @@ CONTAINS
 !                                   M. Lezaic 04
 !-------------------------------------------------------------------
 
-    USE m_constants
     PRINT *,"jcoef2 has still to be reimplemented"
 #ifdef CPP_NEVER
-      USE m_nshell
       IMPLICIT NONE
 
 c     .. Scalar arguments ..

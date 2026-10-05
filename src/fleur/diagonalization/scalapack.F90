@@ -16,6 +16,8 @@ module m_scalapack
    use mpi
 #endif
    implicit none
+   private
+   public :: scalapack_gev, scalapack_std, scalapack_reduction, scalapack_recover, t_solver_scalapack
 
    type, extends(t_solver)::t_solver_scalapack
    contains

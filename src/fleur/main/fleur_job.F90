@@ -8,6 +8,23 @@ MODULE m_fleur_jobs
     use mpi
 #endif
     USE m_juDFT
+    USE m_fleur_help
+    USE m_fleur_version
+    USE m_fleur_dropxmlschema
+    USE m_constants
+    USE m_fleur
+    USE m_fleur_init
+    USE m_types_mpi
+    USE m_types_enpara
+    USE m_types_fleurinput
+    USE m_types_forcetheo
+    USE m_types_hybdat
+    USE m_types_mpdata
+    USE m_types_nococonv
+    USE m_types_misc
+    USE m_types_sphhar
+    USE m_types_stars
+    USE m_types_xcpot
     IMPLICIT NONE
     PRIVATE
     CHARACTER(LEN=30),PARAMETER:: NOT_A_JOBFILE=".__NOT__A__JOBFILE__"
@@ -127,11 +144,6 @@ CONTAINS
     END SUBROUTINE
 
     SUBROUTINE fleur_job_init(l_mpi_multithreaded)
-      USE m_fleur_help
-      use m_fleur_version
-      use m_fleur_dropxmlschema
-      use m_judft
-      USE m_constants
         logical, intent(out) :: l_mpi_multithreaded
         INTEGER :: irank=0
 #ifdef CPP_MPI
@@ -187,9 +199,6 @@ CONTAINS
     END SUBROUTINE
 
     SUBROUTINE fleur_job_execute(jobs, l_mpi_multithreaded)
-        USE m_fleur
-        USE m_types
-        USE m_fleur_init
 
         TYPE(t_job),INTENT(IN) ::jobs(:)
         logical, intent(in)    :: l_mpi_multithreaded
@@ -248,7 +257,6 @@ CONTAINS
     END SUBROUTINE
 
     SUBROUTINE fleur_job_distribute(jobs)
-        use m_types_mpi
         TYPE(t_job),INTENT(INOUT)::jobs(:)
 #ifdef CPP_MPI
         INTEGER:: i,free_pe,isize,irank,min_pe,new_comm,ierr

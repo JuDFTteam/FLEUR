@@ -4,11 +4,13 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_anglso
+   USE m_juDFT
+   USE m_constants
    implicit none
+   PRIVATE
+   PUBLIC :: anglso
 contains
   COMPLEX FUNCTION anglso(theta,phi,l1,m1,is1,l2,m2,is2)
-    USE m_juDFT
-    USE m_constants
     !
     ! calculates spin-orbit matrix for theta,phi =/= 0
     !

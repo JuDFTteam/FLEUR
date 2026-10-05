@@ -9,7 +9,12 @@
 !>hybrid film code.
 MODULE m_vac_abcof
    USE m_juDFT
-   USE m_types
+   USE m_vacuz
+   USE m_vacudz
+   USE m_types_cell
+   USE m_types_lapw
+   USE m_types_mat
+   USE m_types_vacuum
    IMPLICIT NONE
    PRIVATE
    PUBLIC :: vac_map2, vac_uz, vac_abcof
@@ -46,8 +51,6 @@ CONTAINS
 
    SUBROUTINE vac_uz(vacuum, cell, evacp, vz, bk2, kvac1, kvac2, nv2, &
                      u, ue, t, dt, te, dte, tei)
-      USE m_vacuz
-      USE m_vacudz
       IMPLICIT NONE
       TYPE(t_vacuum), INTENT(IN) :: vacuum
       TYPE(t_cell), INTENT(IN)   :: cell

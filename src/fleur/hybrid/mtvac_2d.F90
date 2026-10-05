@@ -9,7 +9,6 @@
 MODULE m_mtvac_2d
    USE m_juDFT
    USE m_constants
-   USE m_types
    USE m_ylm
    USE m_multipole_2d, ONLY: multipole_2d_pot
 
