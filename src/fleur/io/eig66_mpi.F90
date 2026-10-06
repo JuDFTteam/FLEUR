@@ -12,10 +12,9 @@ use m_juDFT
    USE mpi
 #endif
    USE, INTRINSIC :: iso_c_binding
-   USE m_eig66_DA, ONLY: open_eig_DA => open_eig, write_eig_DA => write_eig, close_eig_DA => close_eig
+   USE m_eig66_DA, ONLY: open_eig_DA => open_eig, write_eig_DA => write_eig, close_eig_DA => close_eig , read_eig_DA => read_eig
 #ifdef CPP_MPI
    USE m_types_mpi, ONLY: judft_win_create
-   USE m_eig66_DA, ONLY: open_eig_DA => open_eig, read_eig_DA => read_eig, close_eig_DA => close_eig
 #endif
    IMPLICIT NONE
    PRIVATE
