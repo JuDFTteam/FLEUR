@@ -141,7 +141,7 @@ CONTAINS
       INTEGER :: iter, iterHF, i, n, i_gf
       INTEGER :: wannierspin
       LOGICAL :: l_opti, l_cont, l_qfix, l_real, l_olap, l_error, l_dummy
-      LOGICAL :: l_forceTheorem, l_lastIter, l_exist, l_maxiter, l_walltime, l_writehistory
+      LOGICAL :: l_lastIter, l_writehistory
       CHARACTER(len=:), ALLOCATABLE :: scf_status
       REAL    :: fix, sfscale, rdummy, tempDistance
       REAL    :: mmpmatDistancePrev, occDistancePrev
@@ -276,6 +276,7 @@ CONTAINS
 
       ! Start the scf loop.
       l_lastIter = .FALSE.
+      l_writehistory = .FALSE.
       scfloop: DO WHILE (l_cont)
          iterRuntime = cputime()
          iter = iter + 1
@@ -619,9 +620,10 @@ CONTAINS
          CALL toGlobalSpinFrame(fi%noco, nococonv, fi%vacuum, sphhar, stars, fi%sym, fi%cell, fi%input, fi%atoms, outDen, fmpi, .TRUE.)
          
          ! mix input and output densities
-         CALL mix_charge(field2, fmpi, (iter == fi%input%itmax .OR. judft_was_argument("-mix_io")), stars, &
+         CALL mix_charge(field2, fmpi, stars, &
                          fi%atoms, sphhar, fi%vacuum, fi%input, fi%sym, fi%cell, fi%noco, nococonv, &
                          archiveType, xcpot, iter, inDen, outDen,  results, coreDen, hub1data%l_runthisiter, fi%sliceplot)
+         IF (judft_was_argument("-mix_io")) CALL mixing_history_close(fmpi, fi%input%imix)
          
          ! Rotating to the local MT frame
          CALL toLocalSpinFrame(fmpi, fi%vacuum, sphhar, stars, fi%sym, fi%cell, fi%noco, &
@@ -649,102 +651,8 @@ CONTAINS
          CALL MPI_BARRIER(fmpi%mpi_comm, ierr)
 #endif
 
-       
-         l_cont = .TRUE.
-         ! l_walltime: the wall-clock check stopped the loop
-         l_walltime = .FALSE.
-         IF (fi%hybinp%l_hybrid) THEN
-            IF (hybdat%l_calhf) THEN
-               l_cont = l_cont .AND. (iterHF < fi%input%itmax)
-               l_cont = l_cont .AND. (fi%input%mindistance <= results%last_distance)
-               l_walltime = l_cont
-               CALL check_time_for_next_iteration(iterHF, l_cont)
-               l_walltime = l_walltime .AND. .NOT. l_cont
-            ELSE
-               l_cont = l_cont .AND. (iter < 100) ! Security stop for non-converging nested PBE calculations
-            END IF
-
-         ELSE IF (fi%atoms%n_hia > 0) THEN
-            l_cont = l_cont .AND. (iter < fi%input%itmax) !The SCF cycle reached the maximum iteration
-            l_cont = l_cont .AND. ((fi%input%mindistance <= results%last_distance) .OR. fi%input%l_f)
-            !If we have converged run hia if the density matrix has not converged
-            hub1data%l_runthisiter = .NOT. l_cont .AND. (fi%hub1inp%minoccDistance <= results%last_occdistance &
-                                                         .OR. results%last_occdistance <= 0.0 .OR. results%last_mmpMatdistance <= 0.0 &
-                                                         .OR. fi%hub1inp%minmatDistance <= results%last_mmpMatdistance)
-            !Run after first overall iteration to generate a starting density matrix
-            hub1data%l_runthisiter = hub1data%l_runthisiter .OR. (iter == 1 .AND. (hub1data%iter == 0 &
-                                                            .AND. ALL(ABS(vTot%mmpMat(:, :, fi%atoms%n_u + 1:fi%atoms%n_u + fi%atoms%n_hia, :)) .LT. 1e-12)))
-            hub1data%l_runthisiter = hub1data%l_runthisiter .AND. (iter < fi%input%itmax)
-            hub1data%l_runthisiter = hub1data%l_runthisiter .AND. (hub1data%iter < fi%hub1inp%itmax)
-            !Prevent that the scf loop terminates
-            l_cont = l_cont .OR. hub1data%l_runthisiter
-            l_walltime = l_cont
-            CALL check_time_for_next_iteration(hub1data%overallIteration, l_cont)
-            l_walltime = l_walltime .AND. .NOT. l_cont
-         ELSE
-            l_cont = l_cont .AND. (iter < fi%input%itmax)
-            ! MetaGGAs need a at least 2 iterations
-            l_cont = l_cont .AND. ((fi%input%mindistance <= results%last_distance) .OR. fi%input%l_f &
-                                   .OR. (xcpot%exc_is_MetaGGA() .and. iter == 1))
-            l_walltime = l_cont
-            CALL check_time_for_next_iteration(iter, l_cont)
-            l_walltime = l_walltime .AND. .NOT. l_cont
-         END IF
-
-         ! Reason for stopping the SCF loop, reported in runlog.json
-         IF (.NOT. l_cont) THEN
-            IF (fi%hybinp%l_hybrid) THEN
-               l_maxiter = (iterHF >= fi%input%itmax) .OR. (iter >= 100)
-            ELSE
-               l_maxiter = (iter >= fi%input%itmax)
-            END IF
-            IF (results%last_distance >= 0.0 .AND. results%last_distance < fi%input%mindistance) THEN
-               scf_status = "converged"
-            ELSE IF (l_maxiter) THEN
-               scf_status = "max_iterations"
-            ELSE
-               scf_status = "walltime"
-            END IF
-         END IF
-
-         ! Add extra iteration for force theorem if necessary
-         l_forceTheorem = .FALSE.
-         SELECT TYPE(forcetheo)
-            TYPE IS(t_forcetheo_mae)
-               l_forceTheorem = .TRUE.
-            TYPE IS(t_forcetheo_dmi)
-               l_forceTheorem = .TRUE.
-            TYPE IS(t_forcetheo_jij)
-               l_forceTheorem = .TRUE.
-            TYPE IS(t_forcetheo_ssdisp)
-               l_forceTheorem = .TRUE.
-         END SELECT
-
-         IF(l_forceTheorem.AND..NOT.l_cont) THEN
-            IF(.NOT.l_lastIter) THEN
-               l_lastIter = .TRUE.
-               l_cont = .TRUE.
-            END IF
-         ELSE IF(l_forceTheorem.AND.l_lastIter) THEN
-            l_cont = .FALSE.
-         END IF
-         
-         ! IF file JUDFT_NO_MORE_ITERATIONS is present in the directory, don't do any more iterations
-         IF(fmpi%irank.EQ.0) THEN
-            l_exist = .FALSE.
-            INQUIRE (file='JUDFT_NO_MORE_ITERATIONS', exist=l_exist)
-            IF (l_exist) THEN
-               l_cont = .FALSE.
-               scf_status = "stop_file"
-            END IF
-            l_writehistory = .NOT. l_cont .AND. (l_exist .OR. l_walltime)
-         END IF
-#ifdef CPP_MPI
-         CALL MPI_BCAST(l_cont,1,MPI_LOGICAL,0,fmpi%mpi_comm,ierr)
-         CALL MPI_BCAST(l_writehistory,1,MPI_LOGICAL,0,fmpi%mpi_comm,ierr)
-#endif
-         ! Write the mixing history to allow a restart
-         IF (l_writehistory .AND. fi%input%imix /= 0) CALL mixing_history_close(fmpi)
+         CALL scf_continue(fi, fmpi, xcpot, forcetheo, hybdat, results, vTot, iter, iterHF, hub1data, &
+                           l_lastIter, l_cont, l_writehistory, scf_status)
 
          ! TODO: What is commented out here and should it perhaps be removed?
          !CALL writeTimesXML()
@@ -753,25 +661,18 @@ CONTAINS
             IF (isCurrentXMLElement("iteration")) CALL closeXMLElement('iteration')
          END IF
 
-         IF ((fi%sliceplot%iplot .NE. 0)) THEN
-            ! Plot the mixed density
+         IF (fi%sliceplot%iplot .NE. 0) THEN
+            ! Plot the mixed density, the last plottable density of the iteration, then stop.
+            ! Collective stop (see above): pass fmpi%irank so all ranks finalize cleanly.
             CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi,   fi%sym, &
                            fi%cell, fi%noco, nococonv, inDen, PLOT_MIXDEN_Y_CORE, fi%sliceplot)
-            ! Plot the mixed valence density
-            !CALL makeplots(fi%sym,stars,fi%vacuum,fi%atoms,sphhar,fi%input,fi%cell, fi%noco,fi%sliceplot,inDen,PLOT_MIXDEN_N_CORE)
-            !CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input,   fi%sym, fi%cell, fi%noco, inDen, PLOT_OUTDEN_N_CORE, fi%sliceplot)
-         END IF
-
-         ! Break SCF loop if Plots were generated in ongoing run (iplot/=0). This needs to happen here, as the mixed density
-         ! is the last plottable t_potden to appear in the scf loop and with no mixed density written out (so it is quasi
-         ! post-process).
-
-         IF (fi%sliceplot%iplot .NE. 0) THEN
-            ! Collective stop (see above): pass fmpi%irank so all ranks finalize cleanly.
             CALL juDFT_end("Stopped self consistency loop after plots have been generated.", fmpi%irank)
          END IF
 
       END DO scfloop ! DO WHILE (l_cont)
+
+      ! Write the mixing history to allow a restart
+      IF (l_writehistory) CALL mixing_history_close(fmpi, fi%input%imix)
 
       IF (fmpi%irank == 0) THEN
          IF (.NOT. ALLOCATED(scf_status)) scf_status = "none"
@@ -789,4 +690,123 @@ CONTAINS
       IF (fi%noco%l_soc .AND. fi%hybinp%l_hybrid) CALL close_eig(hybdat%eig_id)
       CALL juDFT_end("all done", fmpi%irank)
    END SUBROUTINE fleur_execute
+
+   SUBROUTINE scf_continue(fi, fmpi, xcpot, forcetheo, hybdat, results, vTot, iter, iterHF, hub1data, &
+                           l_lastIter, l_cont, l_writehistory, scf_status)
+      !! Decide whether the SCF loop continues, why it stops and whether the mixing history is written.
+
+      TYPE(t_fleurinput), INTENT(IN)    :: fi
+      TYPE(t_mpi),        INTENT(IN)    :: fmpi
+      CLASS(t_xcpot),     INTENT(IN)    :: xcpot
+      CLASS(t_forcetheo), INTENT(IN)    :: forcetheo
+      TYPE(t_hybdat),     INTENT(IN)    :: hybdat
+      TYPE(t_results),    INTENT(IN)    :: results
+      TYPE(t_potden),     INTENT(IN)    :: vTot
+      INTEGER,            INTENT(IN)    :: iter, iterHF
+      TYPE(t_hub1data),   INTENT(INOUT) :: hub1data
+      LOGICAL,            INTENT(INOUT) :: l_lastIter
+      LOGICAL,            INTENT(OUT)   :: l_cont, l_writehistory
+      CHARACTER(len=:), ALLOCATABLE, INTENT(INOUT) :: scf_status
+
+      LOGICAL :: l_forceTheorem, l_exist, l_maxiter, l_walltime
+#ifdef CPP_MPI
+      INTEGER :: ierr
+#endif
+
+      l_cont = .TRUE.
+      ! l_walltime: the wall-clock check stopped the loop
+      l_walltime = .FALSE.
+      IF (fi%hybinp%l_hybrid) THEN
+         IF (hybdat%l_calhf) THEN
+            l_cont = l_cont .AND. (iterHF < fi%input%itmax)
+            l_cont = l_cont .AND. (fi%input%mindistance <= results%last_distance)
+            l_walltime = l_cont
+            CALL check_time_for_next_iteration(iterHF, l_cont)
+            l_walltime = l_walltime .AND. .NOT. l_cont
+         ELSE
+            l_cont = l_cont .AND. (iter < 100) ! Security stop for non-converging nested PBE calculations
+         END IF
+
+      ELSE IF (fi%atoms%n_hia > 0) THEN
+         l_cont = l_cont .AND. (iter < fi%input%itmax) !The SCF cycle reached the maximum iteration
+         l_cont = l_cont .AND. ((fi%input%mindistance <= results%last_distance) .OR. fi%input%l_f)
+         !If we have converged run hia if the density matrix has not converged
+         hub1data%l_runthisiter = .NOT. l_cont .AND. (fi%hub1inp%minoccDistance <= results%last_occdistance &
+                                                      .OR. results%last_occdistance <= 0.0 .OR. results%last_mmpMatdistance <= 0.0 &
+                                                      .OR. fi%hub1inp%minmatDistance <= results%last_mmpMatdistance)
+         !Run after first overall iteration to generate a starting density matrix
+         hub1data%l_runthisiter = hub1data%l_runthisiter .OR. (iter == 1 .AND. (hub1data%iter == 0 &
+                                                         .AND. ALL(ABS(vTot%mmpMat(:, :, fi%atoms%n_u + 1:fi%atoms%n_u + fi%atoms%n_hia, :)) .LT. 1e-12)))
+         hub1data%l_runthisiter = hub1data%l_runthisiter .AND. (iter < fi%input%itmax)
+         hub1data%l_runthisiter = hub1data%l_runthisiter .AND. (hub1data%iter < fi%hub1inp%itmax)
+         !Prevent that the scf loop terminates
+         l_cont = l_cont .OR. hub1data%l_runthisiter
+         l_walltime = l_cont
+         CALL check_time_for_next_iteration(hub1data%overallIteration, l_cont)
+         l_walltime = l_walltime .AND. .NOT. l_cont
+      ELSE
+         l_cont = l_cont .AND. (iter < fi%input%itmax)
+         ! MetaGGAs need a at least 2 iterations
+         l_cont = l_cont .AND. ((fi%input%mindistance <= results%last_distance) .OR. fi%input%l_f &
+                                .OR. (xcpot%exc_is_MetaGGA() .and. iter == 1))
+         l_walltime = l_cont
+         CALL check_time_for_next_iteration(iter, l_cont)
+         l_walltime = l_walltime .AND. .NOT. l_cont
+      END IF
+
+      IF (fi%hybinp%l_hybrid) THEN
+         l_maxiter = (iterHF >= fi%input%itmax) .OR. (iter >= 100)
+      ELSE
+         l_maxiter = (iter >= fi%input%itmax)
+      END IF
+
+      ! Reason for stopping the SCF loop, reported in runlog.json
+      IF (.NOT. l_cont) THEN
+         IF (results%last_distance >= 0.0 .AND. results%last_distance < fi%input%mindistance) THEN
+            scf_status = "converged"
+         ELSE IF (l_maxiter) THEN
+            scf_status = "max_iterations"
+         ELSE
+            scf_status = "walltime"
+         END IF
+      END IF
+
+      ! Add extra iteration for force theorem if necessary
+      l_forceTheorem = .FALSE.
+      SELECT TYPE(forcetheo)
+         TYPE IS(t_forcetheo_mae)
+            l_forceTheorem = .TRUE.
+         TYPE IS(t_forcetheo_dmi)
+            l_forceTheorem = .TRUE.
+         TYPE IS(t_forcetheo_jij)
+            l_forceTheorem = .TRUE.
+         TYPE IS(t_forcetheo_ssdisp)
+            l_forceTheorem = .TRUE.
+      END SELECT
+
+      IF(l_forceTheorem.AND..NOT.l_cont) THEN
+         IF(.NOT.l_lastIter) THEN
+            l_lastIter = .TRUE.
+            l_cont = .TRUE.
+         END IF
+      ELSE IF(l_forceTheorem.AND.l_lastIter) THEN
+         l_cont = .FALSE.
+      END IF
+
+      ! IF file JUDFT_NO_MORE_ITERATIONS is present in the directory, don't do any more iterations
+      IF(fmpi%irank.EQ.0) THEN
+         l_exist = .FALSE.
+         INQUIRE (file='JUDFT_NO_MORE_ITERATIONS', exist=l_exist)
+         IF (l_exist) THEN
+            l_cont = .FALSE.
+            scf_status = "stop_file"
+         END IF
+         ! Write the mixing history only if a restart may continue the SCF loop
+         l_writehistory = .NOT. l_cont .AND. (l_maxiter .OR. l_walltime .OR. l_exist)
+      END IF
+#ifdef CPP_MPI
+      CALL MPI_BCAST(l_cont,1,MPI_LOGICAL,0,fmpi%mpi_comm,ierr)
+      CALL MPI_BCAST(l_writehistory,1,MPI_LOGICAL,0,fmpi%mpi_comm,ierr)
+#endif
+   END SUBROUTINE scf_continue
 END MODULE m_fleur

@@ -11,6 +11,7 @@ MODULE m_dfpt_sternheimer
    USE m_dfpt_vgen
    USE m_dfpt_fermie
    USE m_mix
+   USE m_mixing_history
    USE m_constants
    USE m_cdn_io
    USE m_eig66_io
@@ -479,10 +480,11 @@ CONTAINS
 
          ! Mix input and output densities
          CALL timestart("DFPT mixing")
-         CALL mix_charge(field2, fmpi, (iter == fi%input%itmax .OR. judft_was_argument("-mix_io")), starsq, &
+         CALL mix_charge(field2, fmpi, starsq, &
                          fi%atoms, sphhar, fi%vacuum, fi%input, fi%sym, fi%cell, fi%noco, nococonv, &
                          archiveType, xcpot, iter, denIn1, denOut1, results1,l_runhia=.false.,sliceplot=fi%sliceplot,&
                          inDenIm=denIn1Im, outDenIm=denOut1Im, dfpt_tag=dfpt_tag)
+         IF (iter == fi%input%itmax .OR. judft_was_argument("-mix_io")) CALL mixing_history_close(fmpi, fi%input%imix, dfpt_tag)
          CALL timestop("DFPT mixing")
 
          IF (sternheimerJob%l_IBScorrection) denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
@@ -491,10 +493,11 @@ CONTAINS
 
          IF (l_minusq) THEN
             CALL timestart("DFPT mixing")
-            CALL mix_charge(field2, fmpi, (iter == fi%input%itmax .OR. judft_was_argument("-mix_io")), starsmq, &
+            CALL mix_charge(field2, fmpi, starsmq, &
                             fi%atoms, sphhar, fi%vacuum, fi%input, fi%sym, fi%cell, fi%noco, nococonv, &
                             archiveType, xcpot, iterm, denIn1m, denOut1m, results1m, l_runhia=.false.,sliceplot=fi%sliceplot,&
                             inDenIm=denIn1Im, outDenIm=denOut1Im, dfpt_tag=dfpt_tag)
+            IF (iter == fi%input%itmax .OR. judft_was_argument("-mix_io")) CALL mixing_history_close(fmpi, fi%input%imix, dfpt_tag)
             CALL timestop("DFPT mixing")
 
             IF (sternheimerJob%l_IBScorrection) denIn1m%mt(:,0:,iDtype,:) = denIn1m%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)

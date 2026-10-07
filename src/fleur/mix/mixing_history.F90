@@ -70,8 +70,9 @@ CONTAINS
 !#endif
   END SUBROUTINE mixing_history_open
 
-  SUBROUTINE mixing_history_close(mpi,basename)
+  SUBROUTINE mixing_history_close(mpi,imix,basename)
     TYPE(t_mpi),INTENT(in):: mpi
+    INTEGER,INTENT(IN)    :: imix
 
     CHARACTER(len=20), OPTIONAL, INTENT(IN) :: basename
 
@@ -79,6 +80,7 @@ CONTAINS
     INTEGER          :: n
 
 
+    IF (imix==0) RETURN ! Straight mixing needs no history
     IF (iter_stored==0) RETURN ! Nothing found to be stored
     IF (mpi%isize>1) THEN
        IF (.NOT.PRESENT(basename)) THEN

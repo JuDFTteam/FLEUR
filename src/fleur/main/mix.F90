@@ -50,7 +50,7 @@ MODULE m_mix
    PUBLIC :: mix_charge
 contains
 
-  SUBROUTINE mix_charge( field,   fmpi, l_writehistory,&
+  SUBROUTINE mix_charge( field,   fmpi,&
        stars, atoms, sphhar, vacuum, input, sym, cell, noco, nococonv,&
          archiveType, xcpot, iteration, inDen, outDen, results, coreDen, l_runhia, sliceplot,&
          inDenIm, outDenIm, dfpt_tag)
@@ -77,7 +77,6 @@ contains
     type(t_potden),    intent(inout) :: inDen
     integer,           intent(in)    :: archiveType
     integer,           intent(inout) :: iteration
-    LOGICAL,           INTENT(IN)    :: l_writehistory
     LOGICAL,           INTENT(IN)    :: l_runhia
 
     type(t_potden), OPTIONAL, INTENT(INOUT) :: inDenIm, outDenIm
@@ -308,12 +307,6 @@ contains
 #endif
     call timestop("Density output")
     inDen%iter = inDen%iter + 1
-
-    IF (.NOT.l_dfpt) THEN
-       IF (l_writehistory.AND.input%imix.NE.0) CALL mixing_history_close(fmpi)
-    ELSE
-       IF (l_writehistory.AND.input%imix.NE.0) CALL mixing_history_close(fmpi,dfpt_tag)
-    END IF
 
     CALL timestop("Postprocessing")
     CALL timestop("Charge Density Mixing")
