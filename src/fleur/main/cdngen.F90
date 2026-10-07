@@ -242,6 +242,8 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    CALL timestop("cdngen: cdncore")
 
    CALL outDen%distribute(fmpi%mpi_comm)
+   ! The MT part of tau (valence and core) is only complete on rank 0
+   IF (xcpot%is_MetaGGA()) CALL EnergyDen%distribute(fmpi%mpi_comm)
 
    IF(.FALSE.) CALL denMultipoleExp(input, fmpi, atoms, sphhar, stars, sym, cell,   outDen) ! There should be a switch in the inp file for this
    IF(fmpi%irank.EQ.0) THEN
@@ -311,8 +313,8 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
      END IF
 
      ! Persist kinetic energy density for restart
-     CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,CDN_ARCHIVE_TYPE_CDN_const,CDN_INPUT_DEN_const,&
-                           0,-1.0,0.0,-1.0,-1.0,.FALSE.,EnergyDen,inFilename='kinED')
+     IF (fmpi%irank == 0) CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,CDN_ARCHIVE_TYPE_CDN_const,&
+                           CDN_INPUT_DEN_const,0,-1.0,0.0,-1.0,-1.0,.FALSE.,EnergyDen,inFilename='kinED')
    endif
 
 #ifdef CPP_MPI
