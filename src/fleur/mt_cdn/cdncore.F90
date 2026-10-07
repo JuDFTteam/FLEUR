@@ -97,7 +97,7 @@ SUBROUTINE cdncore(fmpi ,input,vacuum,noco,nococonv,sym,enpara,&
       END IF
    END IF
 
-   vr0=enpara%vr(:,:,:)
+   vr0=enpara%vr_core(:,:,:)
    IF (.false.) THEN !there should be a imput switch here!!
       vr0(:,:,1)=0.5*(vr0(:,:,1)+vr0(:,:,2))
       vr0(:,:,2)=vr0(:,:,1)

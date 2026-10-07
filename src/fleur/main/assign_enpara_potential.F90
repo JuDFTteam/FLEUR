@@ -96,7 +96,9 @@ CONTAINS
       CALL timestop("Auxiliary GGA for basis")
     END IF
 
-    
+    ! The core states keep the spin-resolved potential, also for a non-spin-polarized basis
+    enpara%vr_core = enpara%vr
+
      ! Non-spin-polarized basis: both spin channels use the spin-averaged potential.
      ! Average enpara%vr itself rather than re-reading v%mt, so that any MetaGGA
      ! auxiliary-GGA correction applied above is preserved. For jspins=1 this is a no-op.
