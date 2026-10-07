@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -69,6 +69,13 @@ CONTAINS
     IF (hybinp%l_hybrid) THEN
        input%minDistance = 1.0e-5
        input%ctail = .FALSE.
+    END IF
+
+    ! MetaGGA: the core kinetic energy density exists inside the spheres only, so fleur
+    ! rejects core tails in the interstitial
+    IF (xcpot%inbuild_name(1:5) == 'LibXC') THEN
+       IF (INDEX(xcpot%inbuild_name, 'AuxExchID') > 0 .OR. INDEX(xcpot%inbuild_name, 'mgga') > 0 &
+           .OR. INDEX(xcpot%inbuild_name, 'MGGA') > 0) input%ctail = .FALSE.
     END IF
 
     IF (input%rkmax == 0.0) THEN
