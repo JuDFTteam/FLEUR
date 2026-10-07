@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -13,12 +13,13 @@ MODULE m_mix
   !    IMIX = 7 : Generalized Anderson method
   !------------------------------------------------------------------------
 
+   implicit none
 contains
 
   SUBROUTINE mix_charge( field,   fmpi, l_writehistory,&
        stars, atoms, sphhar, vacuum, input, sym, cell, noco, nococonv,&
          archiveType, xcpot, iteration, inDen, outDen, results, coreDen, l_runhia, sliceplot,&
-         inDenIm, outDenIm, dfpt_tag)
+         inDenIm, outDenIm, dfpt_tag, inTau, outTau)
 
     use m_juDFT
     use m_constants
@@ -67,6 +68,8 @@ contains
     
     type(t_potden), OPTIONAL , intent(inout) :: coreDen
     CHARACTER(len=20), OPTIONAL, INTENT(IN) :: dfpt_tag
+    ! MetaGGA kinetic energy densities: mixed with the coefficients of the density (passive)
+    type(t_potden), OPTIONAL, INTENT(INOUT) :: inTau, outTau
 
     real                             :: fix
     type(t_potden)                   :: resDen, vYukawa
@@ -107,7 +110,10 @@ contains
 
     CALL timestart("Reading of distances")
     IF (iteration==1) CALL mixvector_reset(.TRUE.)
-    CALL mixvector_init(fmpi%mpi_comm,l_densitymatrix,l_densitymatrixV,input,vacuum,noco,stars,cell,sphhar,atoms,sym,l_dfpt)
+    ! History files do not contain tau, so a run that mixes tau never continues an old history
+    IF (iteration==1 .AND. PRESENT(inTau)) CALL mixing_history_reset(fmpi)
+    CALL mixvector_init(fmpi%mpi_comm,l_densitymatrix,l_densitymatrixV,input,vacuum,noco,stars,cell,sphhar,atoms,sym,l_dfpt,&
+                        l_tau=PRESENT(inTau))
     CALL timestart("read history")
     IF (.NOT.l_dfpt) THEN
       CALL mixing_history_open(fmpi,input%maxiter)
@@ -118,7 +124,7 @@ contains
     CALL timestop("read history")
     maxiter=MERGE(1,input%maxiter,input%imix==0)
     IF (.NOT.l_dfpt) THEN
-      CALL mixing_history(input%imix,maxiter,inden,outden,sm,fsm,it,vacuum%nmzxyd)
+      CALL mixing_history(input%imix,maxiter,inden,outden,sm,fsm,it,vacuum%nmzxyd,inTau=inTau,outTau=outTau)
     ELSE
       IF (iteration==1) CALL dfpt_mixing_history_reset()
       CALL mixing_history(input%imix,maxiter,inden,outden,sm,fsm,it,vacuum%nmzxyd,inDenIm,outDenIm)
@@ -198,8 +204,15 @@ contains
     IF (ALLOCATED(inDen%vac)) inden%vac=0.0
     IF (ALLOCATED(inDen%mmpMat).AND.l_densitymatrix) inden%mmpMat(:,:,:atoms%n_u,:)=0.0
     IF (ALLOCATED(inDen%nIJ_llp_mmp).AND.l_densitymatrixV) inden%nIJ_llp_mmp(:,:,:,:)=CMPLX(0.0,0.0)
+    IF (PRESENT(inTau)) THEN
+      ! to_density collects by summation over the PEs
+      inTau%pw=0.0; inTau%mt=0.0
+      IF (ALLOCATED(inTau%vac)) inTau%vac=0.0
+      IF (ALLOCATED(inTau%mmpMat)) inTau%mmpMat=0.0
+      IF (ALLOCATED(inTau%nIJ_llp_mmp)) inTau%nIJ_llp_mmp=CMPLX(0.0,0.0)
+    END IF
     IF (.NOT.l_dfpt) THEN
-      CALL sm(it)%to_density(inDen,vacuum%nmzxyd)
+      CALL sm(it)%to_density(inDen,vacuum%nmzxyd,tau=inTau)
     ELSE
       CALL sm(it)%to_density(inDen,vacuum%nmzxyd,inDenIm)
     END IF

@@ -350,9 +350,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
         END IF
      END IF
 
-     ! Persist kinetic energy density for restart
-     IF (fmpi%irank == 0) CALL writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,CDN_ARCHIVE_TYPE_CDN_const,&
-                           CDN_INPUT_DEN_const,0,-1.0,0.0,-1.0,-1.0,.FALSE.,EnergyDen,inFilename='kinED')
+     ! The mixed kinetic energy density is written after the mixing (fleur.F90)
    endif
 
 #ifdef CPP_MPI

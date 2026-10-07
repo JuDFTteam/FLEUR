@@ -102,6 +102,7 @@ CONTAINS
       TYPE(t_field)    :: field2
       TYPE(t_potden)   :: vTot, vx, vCoul, vxc, exc, vTau
       TYPE(t_potden)   :: inDen, outDen, EnergyDen, sliceDen,coreden
+      TYPE(t_potden)   :: kinEDout ! MetaGGA: output kinetic energy density; EnergyDen holds the input one
       TYPE(t_hub1data) :: hub1data
       TYPE(t_moessbauerParams) :: moessbauerParams
 
@@ -625,7 +626,7 @@ CONTAINS
             CALL cdngen(eig_id, fmpi, input_soc, fi%banddos, fi%sliceplot, fi%vacuum, &
                         fi%kpts, fi%atoms, sphhar, stars, fi%sym, fi%gfinp, fi%hub1inp, &
                         enpara, fi%cell, fi%field, fi%noco, nococonv, vTot, results,   fi%corespecinput, &
-                        archiveType, xcpot, outDen, EnergyDen, coreden,greensFunction, hub1data,vxc,exc,&
+                        archiveType, xcpot, outDen, kinEDout, coreden,greensFunction, hub1data,vxc,exc,&
                         moessbauerParams, vTau=vTau)
             ! The density matrix for DFT+Hubbard1 only changes in hubbard1_setup and is kept constant otherwise
             outDen%mmpMat(:, :, fi%atoms%n_u + 1:fi%atoms%n_u + fi%atoms%n_hia, :) = inDen%mmpMat(:, :, fi%atoms%n_u + 1:fi%atoms%n_u + fi%atoms%n_hia, :)
@@ -720,9 +721,24 @@ CONTAINS
          CALL toGlobalSpinFrame(fi%noco, nococonv, fi%vacuum, sphhar, stars, fi%sym, fi%cell, fi%input, fi%atoms, outDen, fmpi, .TRUE.)
          
          ! mix input and output densities
-         CALL mix_charge(field2, fmpi, (iter == fi%input%itmax .OR. judft_was_argument("-mix_io")), stars, &
-                         fi%atoms, sphhar, fi%vacuum, fi%input, fi%sym, fi%cell, fi%noco, nococonv, &
-                         archiveType, xcpot, iter, inDen, outDen,  results, coreDen, hub1data%l_runthisiter, fi%sliceplot)
+         IF (xcpot%is_MetaGGA()) THEN
+            ! tau is mixed along with the density. Without an input tau (first iteration) the
+            ! output tau serves as input, so it passes the mixing unchanged.
+            IF (REAL(EnergyDen%pw(1,1)) < kinEnergyDenUnset_const) CALL EnergyDen%copyPotDen(kinEDout)
+            CALL mix_charge(field2, fmpi, (iter == fi%input%itmax .OR. judft_was_argument("-mix_io")), stars, &
+                            fi%atoms, sphhar, fi%vacuum, fi%input, fi%sym, fi%cell, fi%noco, nococonv, &
+                            archiveType, xcpot, iter, inDen, outDen,  results, coreDen, hub1data%l_runthisiter, fi%sliceplot, &
+                            inTau=EnergyDen, outTau=kinEDout)
+            CALL EnergyDen%distribute(fmpi%mpi_comm)
+            ! Persist the mixed tau for a restart, like the mixed density
+            IF (fmpi%irank==0) CALL writeDensity(stars, fi%noco, fi%vacuum, fi%atoms, fi%cell, sphhar, fi%input, fi%sym, &
+                                                 CDN_ARCHIVE_TYPE_CDN_const, CDN_INPUT_DEN_const, 0, -1.0, 0.0, -1.0, -1.0, &
+                                                 .FALSE., EnergyDen, inFilename='kinED')
+         ELSE
+            CALL mix_charge(field2, fmpi, (iter == fi%input%itmax .OR. judft_was_argument("-mix_io")), stars, &
+                            fi%atoms, sphhar, fi%vacuum, fi%input, fi%sym, fi%cell, fi%noco, nococonv, &
+                            archiveType, xcpot, iter, inDen, outDen,  results, coreDen, hub1data%l_runthisiter, fi%sliceplot)
+         END IF
          
          ! Rotating to the local MT frame
          CALL toLocalSpinFrame(fmpi, fi%vacuum, sphhar, stars, fi%sym, fi%cell, fi%noco, &

@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -109,7 +109,7 @@ CONTAINS
   END SUBROUTINE mixing_history_close
 
 
-  SUBROUTINE mixing_history(imix,maxiter,inden,outden,sm,fsm,it,nmzxyd,inDenIm,outDenIm)
+  SUBROUTINE mixing_history(imix,maxiter,inden,outden,sm,fsm,it,nmzxyd,inDenIm,outDenIm,inTau,outTau)
     USE m_types
     implicit none
     INTEGER,INTENT(in)::imix,maxiter
@@ -119,6 +119,7 @@ CONTAINS
     INTEGER,INTENT(IN) :: nmzxyd
 
     type(t_potden), OPTIONAL, INTENT(INOUT) :: inDenIm, outDenIm
+    type(t_potden), OPTIONAL, INTENT(INOUT) :: inTau, outTau !MetaGGA kinetic energy densities
 
     INTEGER:: n
 
@@ -132,8 +133,8 @@ CONTAINS
     CALL sm(it)%alloc()
     CALL fsm(it)%alloc()
     IF (.NOT.PRESENT(inDenIm)) THEN
-      CALL sm(it)%from_density(inDen,nmzxyd)
-      CALL fsm(it)%from_density(outDen,nmzxyd)
+      CALL sm(it)%from_density(inDen,nmzxyd,tau=inTau)
+      CALL fsm(it)%from_density(outDen,nmzxyd,tau=outTau)
     ELSE
       CALL sm(it)%from_density(inDen,nmzxyd,denIm=inDenIm)
       CALL fsm(it)%from_density(outDen,nmzxyd,denIm=outDenIm)
