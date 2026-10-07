@@ -174,6 +174,7 @@ SUBROUTINE cdncore(fmpi ,input,vacuum,noco,nococonv,sym,enpara,&
    END DO
    IF (input%ctail) THEN
       IF(PRESENT(EnergyDen)) call juDFT_error("Energyden not implemented for ctail")
+      IF(PRESENT(kinEnergyDen)) call juDFT_error("kinEnergyDen not implemented for ctail")
       IF (noco%l_noco) THEN
          ! The core tails have to be rotated from the local spin frames of the
          ! atoms into the global frame of the interstitial (and back into the local

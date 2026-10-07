@@ -192,6 +192,23 @@ CONTAINS
       IF (xcpot%is_MetaGGA().AND.fi%input%film) &
          CALL judft_error("MetaGGA is not implemented for film geometries (no tau in the vacuum)", &
                           calledby="fleur", hint="Use a bulk geometry, or a non-MetaGGA functional.")
+      ! The core tau is built from the core states inside the spheres only, so a frozen core
+      ! or core tails in the interstitial would leave tau inconsistent with the core density.
+      IF (xcpot%is_MetaGGA().AND.fi%input%frcor) &
+         CALL judft_error("MetaGGA is not implemented with a frozen core", calledby="fleur", &
+                          hint="Set /calculationSetup/coreElectrons/@frcor to F.")
+      IF (xcpot%is_MetaGGA().AND.fi%input%ctail) &
+         CALL judft_error("MetaGGA is not implemented with core tails in the interstitial", calledby="fleur", &
+                          hint="Set /calculationSetup/coreElectrons/@ctail to F.")
+      ! Core and valence states see different potentials, and the force code has no V_tau terms
+      IF (xcpot%is_MetaGGA().AND.fi%input%l_f) &
+         CALL judft_error("Forces are not implemented for MetaGGA functionals", calledby="fleur", &
+                          hint="Set /calculationSetup/geometryOptimization/@l_f to F.")
+      ! Radial basis functions and core states are generated with the auxiliary GGA
+      IF (xcpot%needs_MetaGGA_ham().AND..NOT.xcpot%has_aux_gga()) &
+         CALL judft_error("A MetaGGA needs an auxiliary GGA for the radial basis and the core states", &
+                          calledby="fleur", hint='Add e.g. <AuxGGA exchange="117" correlation="130"/> '// &
+                          '(RPBE, recommended for SCAN and TPSS) to the xcFunctional element.')
 
                                               ! Load persisted kinetic energy density for MetaGGA (if available)
       IF (xcpot%is_MetaGGA()) THEN

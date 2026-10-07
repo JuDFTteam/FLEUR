@@ -16,6 +16,7 @@ MODULE m_types_xcpot_libxc
 #define xc_f03_func_info_get_family xc_f90_func_info_get_family
 #define xc_f03_func_info_get_kind xc_f90_func_info_get_kind
 #define xc_f03_func_info_get_name xc_f90_func_info_get_name
+#define xc_f03_func_info_get_flags xc_f90_func_info_get_flags
 #define xc_f03_func_info_get_references xc_f90_func_info_get_references
 #define xc_f03_func_reference_get_ref xc_f90_func_reference_get_ref
 #define xc_f03_hyb_exx_coef xc_f90_hyb_exx_coef
@@ -35,7 +36,7 @@ MODULE m_types_xcpot_libxc
    IMPLICIT NONE
 
 #ifdef CPP_LIBXC
-   PRIVATE :: write_xc_info, check_fxc_available
+   PRIVATE :: write_xc_info, check_fxc_available, check_functional_support
 #endif
 
    TYPE,EXTENDS(t_xcpot):: t_xcpot_libxc
@@ -209,6 +210,12 @@ CONTAINS
                CALL xc_f03_func_init(xcpot%aux_func_c, xcpot%func_aux_id_c, XC_POLARIZED)
          ENDIF
       ENDIF
+
+      ! Stop for functionals whose potential or energy this interface can not evaluate
+      CALL check_functional_support(xcpot%vxc_func_x, xcpot%l_bj, .FALSE.)
+      IF (xcpot%func_vxc_id_c > 0) CALL check_functional_support(xcpot%vxc_func_c, xcpot%l_bj, .FALSE.)
+      CALL check_functional_support(xcpot%exc_func_x, xcpot%l_bj, .TRUE.)
+      IF (xcpot%func_exc_id_c > 0) CALL check_functional_support(xcpot%exc_func_c, xcpot%l_bj, .TRUE.)
 
       CALL write_xc_info(xcpot%vxc_func_x)
 
@@ -862,6 +869,34 @@ CONTAINS
       integer              :: family
       family = xc_f03_func_info_get_family(xc_f03_func_get_info(xc_func))
    END FUNCTION xc_get_family
+
+   SUBROUTINE check_functional_support(xc_func, l_bj, l_energy)
+      !! Stops for libxc functionals that can not be used consistently here.
+      IMPLICIT NONE
+      TYPE(xc_f03_func_t), INTENT(IN) :: xc_func
+      LOGICAL,             INTENT(IN) :: l_bj      !! Becke-Johnson model potential: only vrho is used
+      LOGICAL,             INTENT(IN) :: l_energy  !! functional is used for the total energy
+      TYPE(xc_f03_func_info_t)        :: xc_info
+      INTEGER                         :: family, flags
+      CHARACTER(len=200)              :: fname
+
+      xc_info = xc_f03_func_get_info(xc_func)
+      family  = xc_f03_func_info_get_family(xc_info)
+      flags   = xc_f03_func_info_get_flags(xc_info)
+      fname   = xc_f03_func_info_get_name(xc_info)
+
+      IF (family == XC_FAMILY_HYB_MGGA) CALL judft_error("The hybrid MetaGGA '"//TRIM(fname)//"' is not supported", &
+         calledby="xcpot_init", hint="Exact exchange is only available for the inbuild hybrid functionals.")
+      IF (l_energy) THEN
+         IF (IAND(flags, XC_FLAGS_HAVE_EXC) == 0) CALL judft_error("The libxc functional '"//TRIM(fname)// &
+            "' provides no energy and can not be used for the total energy", calledby="xcpot_init", &
+            hint="Select an energy functional with the etot_exchange and etot_correlation attributes.")
+      ELSE IF (family == XC_FAMILY_MGGA .AND. .NOT. l_bj) THEN
+         ! The v_lapl term of the potential is not implemented
+         IF (IAND(flags, XC_FLAGS_NEEDS_LAPLACIAN) /= 0) CALL judft_error("The MetaGGA '"//TRIM(fname)// &
+            "' depends on the Laplacian of the density, which is not supported", calledby="xcpot_init")
+      END IF
+   END SUBROUTINE check_functional_support
 
    SUBROUTINE check_fxc_available(xc_func)
       !! Stops with a readable message if the functional has no analytic second derivative.
