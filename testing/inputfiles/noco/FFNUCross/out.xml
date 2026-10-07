@@ -286,7 +286,7 @@
                0.00595 0.00178 0.00316
             </electricFieldGradient>
          </moessbauerParams>
-         <totalEnergy                                    value="    -1270.7695797363" units="Htr">
+         <totalEnergy                                    value="    -1270.7662341368" units="Htr">
             <sumOfEigenvalues                            value="     -732.2689252233">
                <coreElectrons value="-720.0537319784"/>
                <valenceElectrons value="-12.2151932449"/>
@@ -300,10 +300,10 @@
                <electronNucleiInteractionDifferentMTs value="1516.4675425400"/>
                <MadelungTerm value="-13.9303256882"/>
             </atomTypeDependentContributions>
-            <dftUCorrection value="-0.0920305976"/>
+            <dftUCorrection value="-0.0953761972"/>
             <tkbTimesEntropy value="0.0003435398"/>
-            <freeEnergy value="-1270.7699232761"/>
-            <extrapolationTo0K value="-1270.7697515062"/>
+            <freeEnergy value="-1270.7665776766"/>
+            <extrapolationTo0K value="-1270.7664059067"/>
          </totalEnergy>
          <ldaUDensityMatrix>
             <densityMatrixFor spin="1" atomType="1" uIndex="1" l="2" U="2.00000000" J="0.90000000">
@@ -408,7 +408,7 @@
                0.05651 0.01548 0.00232
             </electricFieldGradient>
          </moessbauerParams>
-         <totalEnergy                                    value="    -1270.7723259782" units="Htr">
+         <totalEnergy                                    value="    -1270.7689021426" units="Htr">
             <sumOfEigenvalues                            value="     -732.4444265029">
                <coreElectrons value="-720.1500178152"/>
                <valenceElectrons value="-12.2944086877"/>
@@ -422,10 +422,10 @@
                <electronNucleiInteractionDifferentMTs value="1516.3177089133"/>
                <MadelungTerm value="-13.9592210701"/>
             </atomTypeDependentContributions>
-            <dftUCorrection value="-0.0921572268"/>
+            <dftUCorrection value="-0.0955810624"/>
             <tkbTimesEntropy value="0.0002620143"/>
-            <freeEnergy value="-1270.7725879925"/>
-            <extrapolationTo0K value="-1270.7724569854"/>
+            <freeEnergy value="-1270.7691641569"/>
+            <extrapolationTo0K value="-1270.7690331498"/>
          </totalEnergy>
          <ldaUDensityMatrix>
             <densityMatrixFor spin="1" atomType="1" uIndex="1" l="2" U="2.00000000" J="0.90000000">
