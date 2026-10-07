@@ -33,6 +33,7 @@ Testset: Basic
 | +   | Bulk Fe, Tetrahedon method                   | basic/Fe_Tetra_noSYM     | bulk                  |                    |                 | 2   |
 |     | LDA+U with AMF double counting and magnetism | basic/NiOldaUAMF         | bulk,ldau             | LDA+U AMF disabled |                 | 2   |
 | +   | LDA+U with LF double counting and magnetism  | basic/NiOldaUFLL         | bulk,ldau             |                    |                 | 2   |
+| +   | DFT+V between two atom types                 | basic/GaAsLdaV           | bulk,ldau             |                    |                 | 2   |
 | +   | Crystal field output                         | basic/CrystalFieldOutput | bulk                  |                    |                 | 2   |
 
 Testset: Films
