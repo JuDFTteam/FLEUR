@@ -14,7 +14,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
                   kpts,atoms,sphhar,stars,sym,gfinp,hub1inp,&
                   enpara,cell,field,noco,nococonv,vTot,results ,coreSpecInput,&
                   archiveType, xcpot,outDen,EnergyDen,core_den,greensFunction,hub1data,vxc,exc,&
-                  moessbauerParams)
+                  moessbauerParams,vTau)
 
    !*****************************************************
    !    Charge density generator
@@ -30,6 +30,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    USE m_types
    USE m_constants
    USE m_juDFT
+   USE m_intgr, ONLY : intgr3
    USE m_cdnval
    USE m_plot
    USE m_cdn_io
@@ -87,6 +88,7 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    TYPE(t_potden),INTENT(OUT),optional       :: core_den
    TYPE(t_potden),INTENT(INOUT),OPTIONAL:: vxc, exc
    TYPE(t_moessbauerParams), OPTIONAL, INTENT(INOUT) :: moessbauerParams
+   TYPE(t_potden),INTENT(IN),OPTIONAL   :: vTau  !! MetaGGA V_tau of this iteration
 
    !Scalar Arguments
    INTEGER, INTENT (IN)             :: eig_id, archiveType
@@ -117,6 +119,11 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
    INTEGER(HID_T)        :: banddosFile_id
 #endif
    LOGICAL               :: l_error,Perform_metagga
+
+   ! MetaGGA: core kinetic energy density, kept apart for the core double counting
+   TYPE(t_potden)        :: core_tau
+   REAL                  :: dc_integrand(atoms%jmtd), dc_integral
+   INTEGER               :: iType_dc
 
    ! MetaGGA: integrals of the kinetic energy density, reported per region
    REAL                  :: tau_q(input%jspins), tau_qis(input%jspins)
@@ -230,16 +237,47 @@ SUBROUTINE cdngen(eig_id,fmpi,input,banddos,sliceplot,vacuum,&
 
    CALL timestart("cdngen: cdncore")
    if(xcpot%is_MetaGGA()) then
-      ! Pass EnergyDen as kinEnergyDen: core KED is added directly.
-      ! Do NOT also pass as EnergyDen (energy density) — we use the direct approach now.
+      ! The core tau is collected separately: it is needed on its own for the core double counting
+      CALL core_tau%init(stars, atoms, sphhar, vacuum, noco, input%jspins, POTDEN_TYPE_EnergyDen)
       CALL cdncore(fmpi ,input,vacuum,noco,nococonv,sym,enpara,&
-                   stars,cell,sphhar,atoms,vTot,outDen,moments,results,moessbauerParams, kinEnergyDen=EnergyDen)
+                   stars,cell,sphhar,atoms,vTot,outDen,moments,results,moessbauerParams, kinEnergyDen=core_tau)
+      EnergyDen%mt = EnergyDen%mt + core_tau%mt
    else
       CALL cdncore(fmpi ,input,vacuum,noco,nococonv,sym,enpara,&
                    stars,cell,sphhar,atoms,vTot,outDen,moments,results,moessbauerParams)
    endif
    call core_den%subPotDen(outDen, val_den)
    CALL timestop("cdngen: cdncore")
+
+   ! MetaGGA core double counting (Doumont et al., PRB 105, 195138, Eq. 13): the core states
+   ! solve the auxiliary GGA potential enpara%vr_core and contain no V_tau, while totale
+   ! subtracts vTot and V_tau for the full density. The difference for the core,
+   !    int (v_mult - v_GGA) rho_core + int V_tau tau_core,
+   ! is evaluated here with the core density and core tau of this iteration.
+   results%te_core_mgga = 0.0
+   IF (xcpot%needs_MetaGGA_ham().AND.PRESENT(vTau).AND.PRESENT(core_den).AND.fmpi%irank==0) THEN
+      DO jspin = 1, input%jspins
+         DO iType_dc = 1, atoms%ntype
+            ! vTot%mt(:,0) and enpara%vr_core hold r*V_00/sqrt(4pi); densities are stored as r^2*rho_00
+            dc_integrand(:atoms%jri(iType_dc)) = (vTot%mt(:atoms%jri(iType_dc),0,iType_dc,jspin) &
+                 - enpara%vr_core(:atoms%jri(iType_dc),iType_dc,jspin))*sfp_const/atoms%rmsh(:atoms%jri(iType_dc),iType_dc) &
+                 * core_den%mt(:atoms%jri(iType_dc),0,iType_dc,jspin) &
+                 + vTau%mt(:atoms%jri(iType_dc),0,iType_dc,jspin)*core_tau%mt(:atoms%jri(iType_dc),0,iType_dc,jspin)
+            CALL intgr3(dc_integrand,atoms%rmsh(1,iType_dc),atoms%dx(iType_dc),atoms%jri(iType_dc),dc_integral)
+            results%te_core_mgga = results%te_core_mgga + atoms%neq(iType_dc)*dc_integral
+         END DO
+      END DO
+   END IF
+   IF (xcpot%is_MetaGGA().AND.fmpi%irank==0) THEN
+      ! Integral of the core tau per atom; equals the core kinetic energy up to relativistic corrections
+      DO jspin = 1, input%jspins
+         DO iType_dc = 1, atoms%ntype
+            CALL intgr3(core_tau%mt(:,0,iType_dc,jspin),atoms%rmsh(1,iType_dc),atoms%dx(iType_dc),atoms%jri(iType_dc),dc_integral)
+            WRITE (oUnit,'(a,i3,a,i2,a,f20.10)') ' core tau integral: atom type ',iType_dc,' spin ',jspin, &
+                                                 ' :', dc_integral*sfp_const
+         END DO
+      END DO
+   END IF
 
    CALL outDen%distribute(fmpi%mpi_comm)
    ! The MT part of tau (valence and core) is only complete on rank 0

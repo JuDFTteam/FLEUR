@@ -1139,6 +1139,7 @@ def check_all_outxml(test_logger,check_outxml):
         ["isoOrbitalIndicator","alphaMinMT",-1,1e-8,None],
         ["isoOrbitalIndicator","alphaMinIR",-1,1e-8,None],
         ["kinEnergyDenVTauIntegral","value",-1,1e-6,None],
+        ["mggaCoreDoubleCounting","value",-1,0.00003,None],
         ["frequencies",None,-1,0.001,"list"], 
             ["dieltensor",None,-1,0.001,"list"],
             ["borneffcharge",None,-1,0.001,"list"] 

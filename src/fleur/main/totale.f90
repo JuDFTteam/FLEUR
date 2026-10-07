@@ -128,6 +128,15 @@ CONTAINS
        END IF
 8041   FORMAT (/,10x,'kinetic energy density-V_tau integral=', t40,f20.10)
        !
+       !      ---> MetaGGA core double counting: the core states solve the auxiliary GGA
+       !           potential and contain no V_tau (cdngen)
+       !
+       IF (results%te_core_mgga.NE.0.0) THEN
+          results%tote = results%tote + results%te_core_mgga
+          WRITE (oUnit,FMT=8042) results%te_core_mgga
+       END IF
+8042   FORMAT (/,10x,'MetaGGA core double counting =', t40,f20.10)
+       !
        !      ---> Fock exchange contribution
        !
        IF (xcpot%is_hybrid()) THEN
@@ -248,6 +257,8 @@ CONTAINS
        ! files of all non-MetaGGA tests stay unchanged.
        IF (results%te_vtau.NE.0.0) &
           CALL writeXMLElementFormPoly('kinEnergyDenVTauIntegral',(/'value'/),(/results%te_vtau/),reshape((/26,20/),(/1,2/)))
+       IF (results%te_core_mgga.NE.0.0) &
+          CALL writeXMLElementFormPoly('mggaCoreDoubleCounting',(/'value'/),(/results%te_core_mgga/),reshape((/26,20/),(/1,2/)))
        CALL writeXMLElementFormPoly('FockExchangeEnergyValence',(/'value'/),(/0.5e0*results%te_hfex%valence/),reshape((/23,20/),(/1,2/)))
        CALL writeXMLElementFormPoly('FockExchangeEnergyCore',(/'value'/),(/0.5e0*results%te_hfex%core/),reshape((/26,20/),(/1,2/)))
        if (btest(input%vdw,0).or.btest(input%vdW,1)) call writeXMLElementFormPoly('vdWEnergy',(/'value'/),(/results%e_vdW/),reshape((/17,20/),(/1,2/)))
