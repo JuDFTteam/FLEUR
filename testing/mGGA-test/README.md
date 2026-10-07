@@ -70,33 +70,22 @@ This suite was generated without direct network access to
 without being able to download the paper's PDF/HTML as a single document
 (only fetched in fragments through a web-fetch tool). Two consequences:
 
-1. **XC-functional switch in `inp.xml` is *not* verified against the
-   `metaGGA` branch source.** FLEUR's public documentation (MaX-7.0,
-   `ext_inter` page) only documents the LibXC interface for GGA/LDA, e.g.
-
-   ```xml
-   <xcFunctional name="LibXC" relativisticCorrections="F">
-      <LibXCName exchange="gga_x_pbe" correlation="gga_c_pbe"/>
-   </xcFunctional>
-   ```
-
-   The "Hybrid functionals and meta-GGA" subsection of that same page is
-   present but empty (work in progress), so it does not confirm the
-   meta-GGA syntax. Every generated test therefore uses, as a best guess,
+1. **XC-functional input.** The `inp.xml` files use the input the `metaGGA`
+   branch expects:
 
    ```xml
    <xcFunctional name="LibXC" relativisticCorrections="F">
       <LibXCName exchange="mgga_x_scan" correlation="mgga_c_scan"/>
+      <AuxGGA exchange="117" correlation="130"/>
    </xcFunctional>
    ```
 
-   (lower-cased libxc names `MGGA_X_SCAN` / `MGGA_C_SCAN`, ids 263/267,
-   following the same naming convention as the documented PBE example).
-   **Please check this against the `metaGGA` branch itself** -- it may
-   instead expose a dedicated `name="SCAN"` shortcut, an extra namelist
-   switch to turn on kinetic-energy-density (tau) evaluation, or different
-   attribute names. This is marked `TODO-VERIFY` in every `inp.xml.notes`
-   file.
+   `<AuxGGA>` is required: it selects the GGA (here RPBE exchange with PBE
+   correlation, the choice of Doumont et al., PRB 105, 195138 (2022)) used for
+   the radial basis functions and the core states. fleur also requires
+   `ctail="F"`, `frcor="F"` and `l_f="F"` for MetaGGA calculations. With inpgen,
+   use `xctyp='LibXC: Exch: mgga_x_scan, Cor: mgga_c_scan, AuxExchID: 117, AuxCorID: 130'`;
+   inpgen then sets `ctail="F"` itself.
 
 2. **Structural data (Table I) and the SCAN/experimental reference values
    (Table III, Table VI) were extracted from the paper via automated PDF
@@ -137,7 +126,15 @@ without being able to download the paper's PDF/HTML as a single document
    PBE), and use the "Expt." column as the ultimate sanity check instead
    if the MT-vs-Bader offset is a concern.
 
-5. No FLEUR calculations were actually run to produce these tests (no
-   compiled `metaGGA`-branch FLEUR binary was available in this
-   sandbox); these are **input decks + target values**, not verified
-   regression baselines.
+5. Only Fe and Ni have been run so far (October 2026, serial build, inputs as
+   given here). The total spin moments per formula unit agree with the
+   self-consistent WIEN2k values of Doumont et al., PRB 105, 195138 (2022),
+   Table V, which are the better targets for the ferromagnets than the
+   fixed-spin-moment values of the 2020 paper used in the table above:
+
+   | | FLEUR PBE | WIEN2k PBE | FLEUR SCAN | WIEN2k SCAN |
+   |---|---|---|---|---|
+   | Fe | 2.23 | 2.22 | 2.60 | 2.60 |
+   | Ni | 0.63 | 0.64 | 0.76 | 0.77 |
+
+   The other cases are still input decks without verified results.
