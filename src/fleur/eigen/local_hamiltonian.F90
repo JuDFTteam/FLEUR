@@ -243,7 +243,7 @@ CONTAINS
       !! positions in h_loc_nonsph of u (1,:) and udot (2,:) for all m of l
       TYPE(t_atoms), INTENT(IN) :: atoms
       INTEGER,       INTENT(IN) :: n,l
-      INTEGER :: idx(2,-l:l),m
+      INTEGER :: idx(2,2*l+1),m
       idx(1,:) = [(l*(l+1)+m,m=-l,l)]
       idx(2,:) = idx(1,:)+nonsph_size(atoms,n)
    END FUNCTION
@@ -254,10 +254,14 @@ CONTAINS
       INTEGER, INTENT(IN)    :: idx(:,:)
       COMPLEX, INTENT(IN)    :: mm(:,:)
       REAL,    INTENT(IN)    :: r(:,:)
-      INTEGER :: m,mp
+      INTEGER :: m,mp,i,j
       DO mp = 1,SIZE(mm,2)
          DO m = 1,SIZE(mm,1)
-            mat(idx(:,m),idx(:,mp)) = mat(idx(:,m),idx(:,mp)) + mm(m,mp)*r
+            DO j = 1,SIZE(idx,1)
+               DO i = 1,SIZE(idx,1)
+                  mat(idx(i,m),idx(j,mp)) = mat(idx(i,m),idx(j,mp)) + mm(m,mp)*r(i,j)
+               END DO
+            END DO
          END DO
       END DO
    END SUBROUTINE
