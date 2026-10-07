@@ -122,7 +122,8 @@ given below.
 
 Special options:
   -gpu # : Compile for GPU. Currently you should specify something like acc:cc80 to use OpenACC
-           and NVIDIA compute capability 80. Currently this works only using the NVHPC compilers.
+           and NVIDIA compute capability 80. Currently this works only using the NVHPC compilers;
+           GPU builds with LLVM flang are rejected.
 
 
 To help the script finding a proper configuration you should provide some information on your compiler toolchain.
@@ -140,6 +141,7 @@ Alternatively, you can try to specify the compiler toolchain using the -c option
   intel-mpi  -- use mpi compiler wrappers with intel compilers (mpiifx,mpiicx,mpiicpx)
   nvidia     -- use the NVHPC compilers
   gfortran   -- use the compilers from the GNU collection
+  flang      -- use the LLVM compilers (flang or flang-new, clang, clang++)
 
   auto       -- let cmake determine the compilers (will usually use the 'first' compiler found if multiple are available)
   interactive-- search for compilers on you machine and offer a choice. This will also be offered if you specify no
