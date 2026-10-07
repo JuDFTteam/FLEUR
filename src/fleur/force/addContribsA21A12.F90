@@ -75,7 +75,7 @@ SUBROUTINE addContribsA21A12(thisForce,input,atoms,sym,cell ,enpara,&
  CALL force_a21(input,atoms,sym ,cell,we,ispin,&
       enpara%el0(0:,:,ispin),noccbd,eig,rf,tlmplm,vtot,abc,&
       thisForce%aveccof,thisForce%bveccof,thisForce%cveccof,&
-      thisForce%f_a21,thisForce%f_b4,results,itype)
+      thisForce%f_a21,results,itype)
 
 END SUBROUTINE addContribsA21A12
 end module

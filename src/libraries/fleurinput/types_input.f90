@@ -199,9 +199,7 @@ SUBROUTINE read_xml_input(this,xml)
    CHARACTER(len=100):: valueString,xpathA,xpathB,xPathC
    INTEGER:: numberNodes,nodeSum, i, numberNodesB,numberNodesC
 
-   !TODO! these switches should be in the inp-file
-   !this%l_core_confpot=.TRUE. !former CPP_CORE !Done (A.N.).
-   this%l_useapw=.FALSE.   !former CPP_APW
+   !l_useapw is derived from the atoms input in fleurinput_postprocess
    this%comment =  xml%GetAttributeValue('/fleurInput/comment')
    DO i = 1, LEN(this%comment)
       IF(IACHAR(this%comment(i:i)).LT.32) this%comment(i:i) = ' '

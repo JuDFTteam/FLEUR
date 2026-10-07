@@ -96,7 +96,7 @@ module m_types_rsoc
          efun(1) = (enpara%el0(l,itype,1)+enpara%el0(l,itype,min(2,input%jspins)))/2.
          efun(2) = efun(1)
          DO ilo = 1, atoms%nlo(itype)
-            IF (atoms%llo(ilo,itype).NE.l) CYCLE
+            IF (atoms%llo(ilo,itype).NE.l .OR. atoms%l_dulo(ilo,itype)) CYCLE ! APW LO: slot 2 is udot at el0
             efun(atoms%slot_of_lo(ilo,itype)) = (enpara%ello0(ilo,itype,1)+enpara%ello0(ilo,itype,min(2,input%jspins)))/2.
          END DO
 
