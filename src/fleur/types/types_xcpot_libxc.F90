@@ -462,8 +462,11 @@ CONTAINS
 
       ! Prepare gradient arrays (leave unallocated for LDA)
       IF (PRESENT(grad)) THEN
-         sigma = grad%sigma
-         ALLOCATE(vsigma, mold=grad%vsigma); vsigma = 0.0
+         ! grad is passed for LDA as well, but then carries no allocated gradients
+         IF (ALLOCATED(grad%sigma)) THEN
+            sigma = grad%sigma
+            ALLOCATE(vsigma, mold=grad%sigma); vsigma = 0.0
+         ENDIF
          IF (ALLOCATED(grad%laplace)) laplace = grad%laplace
       ENDIF
 
