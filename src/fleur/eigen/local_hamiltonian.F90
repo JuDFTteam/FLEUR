@@ -85,7 +85,7 @@ CONTAINS
             !$OMP end parallel do
             CALL add_ldaU(fmpi,inden,jsp,atoms,v,input,td,j1,j2,PRESENT(l_forces))
             ! For DFPT, do not decompose
-            IF (jsp<3.AND..NOT.PRESENT(l_dfptmod)) CALL cholesky_decompose(td,atoms,jsp)
+            IF (jsp<3.AND..NOT.PRESENT(l_dfptmod)) CALL cholesky_decompose(fmpi,td,atoms,jsp)
          END DO
       END DO
 
@@ -255,7 +255,7 @@ CONTAINS
       INTEGER :: boff(0:atoms%lnonsph(n))
       INTEGER :: m
       boff(0:atoms%lnonsph(n)) = atoms%udot_rows(atoms%lnonsph(n),n)
-      ALLOCATE(idx(MERGE(1,2,boff(l)<0),-l:l))
+      ALLOCATE(idx(MERGE(1,2,boff(l)<0),2*l+1))
       idx(1,:) = [(l*(l+1)+m,m=-l,l)]
       IF (boff(l)>=0) idx(2,:) = [(boff(l)+l+m,m=-l,l)]
    END FUNCTION
@@ -278,10 +278,14 @@ CONTAINS
       INTEGER, INTENT(IN)    :: idx(:,:)
       COMPLEX, INTENT(IN)    :: mm(:,:)
       REAL,    INTENT(IN)    :: r(:,:)
-      INTEGER :: m,mp
+      INTEGER :: m,mp,i,j
       DO mp = 1,SIZE(mm,2)
          DO m = 1,SIZE(mm,1)
-            mat(idx(:,m),idx(:,mp)) = mat(idx(:,m),idx(:,mp)) + mm(m,mp)*r
+            DO j = 1,SIZE(idx,1)
+               DO i = 1,SIZE(idx,1)
+                  mat(idx(i,m),idx(j,mp)) = mat(idx(i,m),idx(j,mp)) + mm(m,mp)*r(i,j)
+               END DO
+            END DO
          END DO
       END DO
    END SUBROUTINE
@@ -383,8 +387,9 @@ CONTAINS
       END DO
    END SUBROUTINE
 
-   SUBROUTINE cholesky_decompose(td,atoms,jsp)
+   SUBROUTINE cholesky_decompose(fmpi,td,atoms,jsp)
       !! shift the non-spherical LAPW block by e_shift*overlap until it is positive definite
+      TYPE(t_mpi),    INTENT(IN)    :: fmpi
       TYPE(t_tlmplm), INTENT(INOUT) :: td
       TYPE(t_atoms),  INTENT(IN)    :: atoms
       INTEGER,        INTENT(IN)    :: jsp
@@ -415,10 +420,60 @@ CONTAINS
             END DO
             IF (info.NE.0) THEN
                td%e_shift(n,jsp) = td%e_shift(n,jsp)*2.0
-               IF (td%e_shift(n,jsp)>e_shift_max) CALL judft_error("Potential shift at maximum")
+               IF (td%e_shift(n,jsp)>e_shift_max) THEN
+                  CALL cholesky_failure_report(fmpi,td,atoms,n,jsp,info)
+                  CALL judft_error("Potential shift at maximum",calledby="cholesky_decompose",&
+                                   hint="Local Hamiltonian not positive definite, see diagnostics above")
+               END IF
             END IF
          END DO
          td%h_loc_nonsph(:s-1,:s-1,n,jsp,jsp) = mat
+      END DO
+   END SUBROUTINE
+
+   SUBROUTINE cholesky_failure_report(fmpi,td,atoms,n,jsp,info)
+      !! diagnostics of the unshifted non-spherical LAPW block written before aborting
+      TYPE(t_mpi),    INTENT(IN) :: fmpi
+      TYPE(t_tlmplm), INTENT(IN) :: td
+      TYPE(t_atoms),  INTENT(IN) :: atoms
+      INTEGER,        INTENT(IN) :: n,jsp,info
+
+      INTEGER :: s,ns,k,l,m,ierr,nbad
+      INTEGER :: boff(0:atoms%lnonsph(n))
+      REAL, ALLOCATABLE    :: eig(:),rwork(:)
+      COMPLEX, ALLOCATABLE :: h(:,:),work(:)
+
+      s = nonsph_size(atoms,n)
+      ns = atoms%num_ab_rows(atoms%lnonsph(n),n)
+      boff(0:atoms%lnonsph(n)) = atoms%udot_rows(atoms%lnonsph(n),n)
+      h = td%h_loc_nonsph(:ns-1,:ns-1,n,jsp,jsp)
+      WRITE(*,'(a,i0,a,i0,a,i0,a,i0)') "Rank ",fmpi%irank,": Cholesky decomposition of local Hamiltonian failed for atom type ",&
+         n,", spin ",jsp,", lnonsph ",atoms%lnonsph(n)
+      WRITE(*,'(a,f8.3,a,i0)') "  last shift (Htr): ",td%e_shift(n,jsp),", zpotrf info: ",info
+      IF (info>0) THEN
+         IF (info<=s) THEN
+            k = info-1
+            l = INT(SQRT(REAL(k)+0.5))
+         ELSE
+            l = MAXLOC(boff,1,MASK=boff<=info-1)-1
+            k = info-1-boff(l)+l*l
+         END IF
+         m = k-l*(l+1)
+         WRITE(*,'(3a,i0,a,i0,a,2es14.5)') "  failing basis function: ",MERGE("u   ","udot",info<=s)," l=",l," m=",m,&
+            ", unshifted diagonal element: ",h(info,info)
+      END IF
+      nbad = COUNT(.NOT.(ABS(h)<=HUGE(1.0)))
+      WRITE(*,'(a,i0)') "  NaN/Inf matrix elements: ",nbad
+      IF (nbad==0) THEN
+         WRITE(*,'(a,es14.5)') "  max |H-H^H|: ",MAXVAL(ABS(h-CONJG(TRANSPOSE(h))))
+         ALLOCATE(eig(ns),rwork(3*ns),work(2*ns))
+         CALL zheev("N","L",ns,h,ns,eig,work,SIZE(work),rwork,ierr)
+         IF (ierr==0) WRITE(*,'(a,4es14.5)') "  lowest eigenvalues (unshifted): ",eig(:MIN(4,ns))
+      END IF
+      WRITE(*,'(a)') "  radial overlaps  l   <u|u>          <u|udot>       <udot|udot>"
+      DO l = 0,atoms%lnonsph(n)
+         WRITE(*,'(15x,i3,3es15.5)') l,td%radfun(n)%integral(1,1,l,jsp,jsp),td%radfun(n)%integral(1,2,l,jsp,jsp),&
+            td%radfun(n)%integral(2,2,l,jsp,jsp)
       END DO
    END SUBROUTINE
 

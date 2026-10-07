@@ -52,6 +52,7 @@ CONTAINS
       type(t_mat)  :: z_kq
       type(t_lapw) :: lapw_kq
       complex, allocatable :: c_phase_kqpt(:), tmp(:,:)
+      complex, allocatable :: tmp_vac(:,:)
 
       CALL timestart("wavefproducts_inv")
       ikqpt = -1
@@ -81,15 +82,12 @@ CONTAINS
          !$acc end data ! cprod
 
          if (fi%input%film) then
-            block
-               complex, allocatable :: tmp_vac(:,:)
                ! films: vacuum rows, computed complex and rotated to the real basis
                allocate(tmp_vac(cprod%matsize1, cprod%matsize2), source=cmplx_0)
                call wavefproducts_vac(fi, ik, iq, ikqpt, g_t, jsp, bandoi, bandof, mpdata, &
                                       hybdat, lapw, lapw_kq, z_k, z_kq, tmp_vac)
                call vac_to_realbasis(fi, mpdata, hybdat, iq, tmp_vac, cprod)
                deallocate(tmp_vac)
-            end block
          endif
 
          

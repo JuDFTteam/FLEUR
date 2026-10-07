@@ -189,6 +189,8 @@
          <xsd:element maxOccurs="1" minOccurs="0" name="totalForcesOnRepresentativeAtoms" type="OutTotalForcesType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="ldaUDensityMatrix" type="LDAUDensityMatrixType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="ldaUDensityMatrixConvergence" type="LDAUDensityMatrixConvergenceType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="ldaVDensityMatrix" type="LDAUDensityMatrixType"/>
+         <xsd:element maxOccurs="1" minOccurs="0" name="ldaVDensityMatrixConvergence" type="LDAUDensityMatrixConvergenceType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="densityConvergence" type="DensityConvergenceType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="timing" type="TimingType"/>
          <xsd:element maxOccurs="1" minOccurs="0" name="phonon" type="PhononsType"/>
