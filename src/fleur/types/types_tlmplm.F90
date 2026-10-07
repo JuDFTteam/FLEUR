@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -30,6 +30,10 @@ MODULE m_types_tlmplm
 
      COMPLEX,ALLOCATABLE :: h_off(:,:,:,:,:)      !l,lp,ntype,ispin,jspin)
      REAL,ALLOCATABLE    :: e_shift(:,:)
+     ! MetaGGA: lambda=0 matrix elements (uu,ud,du,dd) for l>lnonsph, which only the
+     ! spherical setup (hsmt_sph) can add; filled by tlmplm_vtau
+     REAL,ALLOCATABLE    :: h_sph_extra(:,:,:,:)   !0:3,0:lmaxd,ntype,jspins
+     LOGICAL             :: l_sph_extra = .FALSE.
      !COMPLEX,ALLOCATABLE :: h_loc_sp(:,:,:,:)   !l,lp,ntype,ispin,jspin
      !COMPLEX,ALLOCATABLE :: h_locLO(:,:,:,:,:)  !lm+mlo,mlo,ntype,ispin,jspin
      TYPE(t_rsoc)        :: rsoc
@@ -76,6 +80,9 @@ CONTAINS
     ALLOCATE(td%h_lo2(0:MAXVAL(td%h_loc2_nonsph)*2-1,-atoms%llod:atoms%llod,SUM(atoms%nlo),jspins,jspins),stat=err(6));td%h_lo2=0.0
 
     ALLOCATE(td%e_shift(atoms%ntype,jspins),stat=err(7))
+    IF (ALLOCATED(td%h_sph_extra)) DEALLOCATE(td%h_sph_extra)
+    ALLOCATE(td%h_sph_extra(0:3,0:atoms%lmaxd,atoms%ntype,jspins),stat=err(10));td%h_sph_extra=0.0
+    td%l_sph_extra=.FALSE.
     IF (l_offdiag) THEN
        ALLOCATE(td%h_off(0:2*atoms%lmaxd+1,0:2*atoms%lmaxd+1,atoms%ntype,2,2),stat=err(4))
     ELSE

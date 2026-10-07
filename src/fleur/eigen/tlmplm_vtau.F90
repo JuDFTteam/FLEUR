@@ -91,6 +91,10 @@ CONTAINS
       INTEGER :: lp1, lpl, mem, mems, mp, mu, nh, na, m, nsym, s, lplmax, jri, comp
       INTEGER :: lo, lop, loplo, mlo, s_lo, lpmin, lpmax, lpmin0, lpmax0
 
+      ! lambda=0 blocks for l>lnonsph: spherical potential correction (Eq. 8 of Doumont et al.)
+      REAL, ALLOCATABLE :: vr0(:)
+      REAL    :: c0, sph(0:3)
+
       jri = atoms%jri(n)
       lplmax = atoms%lmaxd*(atoms%lmaxd+3)/2
 
@@ -237,6 +241,37 @@ CONTAINS
       END DO
 
       CALL timestop("tlmplm_vtau: radial integrals")
+
+      ! For l>lnonsph only the spherical setup (hsmt_sph) acts, which knows nothing but the
+      ! energy parameters. Pass it the lambda=0 part of V_tau and the difference between the
+      ! spherical potential and the auxiliary GGA potential used for the radial functions.
+      IF (ilSpinPr == ilSpin .AND. atoms%lmax(n) > atoms%lnonsph(n)) THEN
+         ALLOCATE(vr0(jri))
+         vr0(:) = (v%mt(:jri,0,n,iSpinV) - enpara%vr(:jri,n,iSpinV)) / atoms%rmsh(:jri,n) * sfp_const
+         DO l = atoms%lnonsph(n) + 1, atoms%lmax(n)
+            lpl = (l*(l+1))/2 + l
+            c0 = REAL(sphhar%clnu(1,0,nsym)) * gaunt1(l, 0, l, 0, 0, 0, atoms%lmaxd)
+            DO i = 1, jri
+               x(i) = (f(i,1,l,ilSpin)*f(i,1,l,ilSpin) + f(i,2,l,ilSpin)*f(i,2,l,ilSpin)) * vr0(i)
+            END DO
+            CALL intgr3(x, atoms%rmsh(1,n), atoms%dx(n), jri, sph(0))
+            DO i = 1, jri
+               x(i) = (f(i,1,l,ilSpin)*g(i,1,l,ilSpin) + f(i,2,l,ilSpin)*g(i,2,l,ilSpin)) * vr0(i)
+            END DO
+            CALL intgr3(x, atoms%rmsh(1,n), atoms%dx(n), jri, sph(1))
+            sph(2) = sph(1)
+            DO i = 1, jri
+               x(i) = (g(i,1,l,ilSpin)*g(i,1,l,ilSpin) + g(i,2,l,ilSpin)*g(i,2,l,ilSpin)) * vr0(i)
+            END DO
+            CALL intgr3(x, atoms%rmsh(1,n), atoms%dx(n), jri, sph(3))
+            ! order: <u|.|u>, <u|.|udot>, <udot|.|u>, <udot|.|udot>
+            td%h_sph_extra(0,l,n,ilSpin) = c0 * (sph(0) + uvu(lpl,0))
+            td%h_sph_extra(1,l,n,ilSpin) = c0 * (sph(1) + uvd(lpl,0))
+            td%h_sph_extra(2,l,n,ilSpin) = c0 * (sph(2) + dvu(lpl,0))
+            td%h_sph_extra(3,l,n,ilSpin) = c0 * (sph(3) + dvd(lpl,0))
+         END DO
+         DEALLOCATE(vr0)
+      END IF
 
       ! Assemble the V_tau contribution into td%h_loc using the same
       ! angular coupling (Gaunt coefficients) as in tlmplm.

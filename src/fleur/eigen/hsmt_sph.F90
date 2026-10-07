@@ -1,5 +1,5 @@
-! -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -18,7 +18,7 @@ MODULE m_hsmt_sph
 
 CONTAINS
 
-   SUBROUTINE hsmt_sph_acc(n,atoms,fmpi,isp,input,nococonv,igSpinPr,igSpin,chi,lapw,el,e_shift,usdus,fjgj,smat,hmat,set0,l_fullj,lapwq,fjgjq)
+   SUBROUTINE hsmt_sph_acc(n,atoms,fmpi,isp,input,nococonv,igSpinPr,igSpin,chi,lapw,el,e_shift,usdus,fjgj,smat,hmat,set0,l_fullj,lapwq,fjgjq,h_sph_extra)
       USE m_constants, ONLY : fpi_const, tpi_const
       USE m_types
       USE m_hsmt_fjgj
@@ -44,6 +44,8 @@ CONTAINS
       ! Array Arguments
       REAL,    INTENT(IN) :: el(0:atoms%lmaxd,atoms%ntype,input%jspins)
       REAL,    INTENT(IN) :: e_shift!(atoms%ntype,input%jspins)
+      ! MetaGGA: lambda=0 elements (uu,ud,du,dd) to add for l>lnonsph
+      REAL, OPTIONAL, INTENT(IN) :: h_sph_extra(0:,0:)
 
       ! Local Scalars
       REAL :: tnn(3), elall, fjkiln, gjkiln, ddnln, ski(3)
@@ -62,11 +64,15 @@ CONTAINS
 
       COMPLEX :: cfac
 
-      LOGICAL :: l_samelapw
+      LOGICAL :: l_samelapw, l_extra
+      REAL    :: extra(0:3,0:atoms%lmaxd)
 
       TYPE(t_lapw) :: lapwPr
 
       CALL timestart("spherical setup")
+      l_extra = PRESENT(h_sph_extra)
+      extra = 0.0
+      IF (l_extra) extra(:,0:atoms%lmax(n)) = h_sph_extra(:,0:atoms%lmax(n))
       l_samelapw = .FALSE.
       IF (.NOT.PRESENT(lapwq)) l_samelapw = .TRUE.
       IF (.NOT.l_samelapw) THEN
@@ -84,7 +90,7 @@ CONTAINS
       qssAdd   = MERGE(-nococonv%qss/2, +nococonv%qss/2,   igSpin.EQ.1)
       qssAddPr = MERGE(-nococonv%qss/2, +nococonv%qss/2, igSpinPr.EQ.1)
       !$acc  data &
-      !$acc&   copyin(igSpin,igSpinPr,n,fleg1,fleg2,isp,fl2p1,el,e_shift,chi,qssAdd,qssAddPr,l_fullj)&
+      !$acc&   copyin(igSpin,igSpinPr,n,fleg1,fleg2,isp,fl2p1,el,e_shift,chi,qssAdd,qssAddPr,l_fullj,l_extra,extra)&
       !$acc&   copyin(lapw,lapwPr,atoms,fmpi,input,usdus)&
       !$acc&   copyin(lapw%nv,lapw%gvec,lapw%gk,lapwPr%nv,lapwPr%gvec,lapwPr%gk,lapw%bkpt,lapwPr%bkpt)&
       !$acc&   copyin(atoms%lmax,atoms%rmt,atoms%lnonsph,atoms%firstAtom,atoms%neq,atoms%taual)&
@@ -149,6 +155,12 @@ CONTAINS
                VecHelpS = VecHelpS + fct
                VecHelpH = VecHelpH + fct*elall + fct2
 
+               IF (l_extra .AND. l > atoms%lnonsph(n)) THEN
+                  VecHelpH = VecHelpH + plegend(l3) * fl2p1(l) * ( &
+                             fjkiln*fjgj%fj(ikGPr,l,isp,igSpinPr)*extra(0,l) + gjkiln*fjgj%fj(ikGPr,l,isp,igSpinPr)*extra(1,l) &
+                           + fjkiln*fjgj%gj(ikGPr,l,isp,igSpinPr)*extra(2,l) + gjkiln*fjgj%gj(ikGPr,l,isp,igSpinPr)*extra(3,l) )
+               END IF
+
                IF (input%l_useapw) THEN
                   VecHelpH = VecHelpH + plegend(l3) * ( apw_lo1*fjgj%fj(ikGPr,l,isp,igSpinPr) &
                                                     & + apw_lo2*fjgj%gj(l,ikGPr,isp,igSpinPr) )
@@ -207,7 +219,7 @@ CONTAINS
       RETURN
    END SUBROUTINE hsmt_sph_acc
 
-   SUBROUTINE hsmt_sph_cpu(n,atoms,fmpi,isp,input,nococonv,igSpinPr,igSpin,chi,lapw,el,e_shift,usdus,fjgj,smat,hmat,set0,l_fullj,lapwq, fjgjq)
+   SUBROUTINE hsmt_sph_cpu(n,atoms,fmpi,isp,input,nococonv,igSpinPr,igSpin,chi,lapw,el,e_shift,usdus,fjgj,smat,hmat,set0,l_fullj,lapwq, fjgjq,h_sph_extra)
       USE m_constants, ONLY : fpi_const, tpi_const
       USE m_types
       USE m_hsmt_fjgj
@@ -233,6 +245,8 @@ CONTAINS
       ! Array Arguments
       REAL,    INTENT(IN) :: el(0:atoms%lmaxd,atoms%ntype,input%jspins)
       REAL,    INTENT(IN) :: e_shift!(atoms%ntype,input%jspins)
+      ! MetaGGA: lambda=0 elements (uu,ud,du,dd) to add for l>lnonsph
+      REAL, OPTIONAL, INTENT(IN) :: h_sph_extra(0:,0:)
 
       ! Local Scalars
       REAL :: tnn(3), elall, fjkiln, gjkiln, ddnln, ski(3)
@@ -261,7 +275,13 @@ CONTAINS
 
       INTEGER :: NVEC_rem  !remainder
 
+      LOGICAL :: l_extra
+      REAL    :: extra(0:3,0:atoms%lmaxd)
+
       CALL timestart("spherical setup")
+      l_extra = PRESENT(h_sph_extra)
+      extra = 0.0
+      IF (l_extra) extra(:,0:atoms%lmax(n)) = h_sph_extra(:,0:atoms%lmax(n))
       l_samelapw = .FALSE.
       IF (.NOT.PRESENT(lapwq)) l_samelapw = .TRUE.
       IF (.NOT.l_samelapw) THEN
@@ -280,7 +300,7 @@ CONTAINS
 
       !$OMP     PARALLEL DEFAULT(NONE)&
       !$OMP     SHARED(lapw,lapwPr,atoms,nococonv,fmpi,input,usdus,smat,hmat)&
-      !$OMP     SHARED(igSpin,igSpinPr,n,fleg1,fleg2,fjgj,fjgjPr,isp,fl2p1,el,e_shift,chi,set0,l_fullj)&
+      !$OMP     SHARED(igSpin,igSpinPr,n,fleg1,fleg2,fjgj,fjgjPr,isp,fl2p1,el,e_shift,chi,set0,l_fullj,l_extra,extra)&
       !$OMP     PRIVATE(ikG0,ikG,ski,ikGPr,kj_off,kj_vec,plegend,xlegend,l,l3,kj_end,qssAdd,qssAddPr,fct2)&
       !$OMP     PRIVATE(cph_re,cph_im,cfac,dot,nn,tnn,fjkiln,gjkiln)&
       !$OMP     PRIVATE(w1,apw_lo1,apw_lo2,ddnln,elall,fct)&
@@ -365,6 +385,15 @@ CONTAINS
 
                VecHelpS(:NVEC_REM) = VecHelpS(:NVEC_REM) + fct(:NVEC_REM)
                VecHelpH(:NVEC_REM) = VecHelpH(:NVEC_REM) + fct(:NVEC_REM)*elall + fct2(:NVEC_REM)
+
+               ! bra (G') carries fjgjPr, ket (G) fjkiln/gjkiln: <u|.|u>, <u|.|udot>, <udot|.|u>, <udot|.|udot>
+               IF (l_extra .AND. l > atoms%lnonsph(n)) THEN
+                  VecHelpH(:NVEC_REM) = VecHelpH(:NVEC_REM) + plegend(:NVEC_REM,l3) * fl2p1(l) * ( &
+                       fjkiln*fjgjPr%fj(kj_off:kj_vec,l,isp,igSpinPr)*extra(0,l) &
+                     + gjkiln*fjgjPr%fj(kj_off:kj_vec,l,isp,igSpinPr)*extra(1,l) &
+                     + fjkiln*fjgjPr%gj(kj_off:kj_vec,l,isp,igSpinPr)*extra(2,l) &
+                     + gjkiln*fjgjPr%gj(kj_off:kj_vec,l,isp,igSpinPr)*extra(3,l) )
+               END IF
 
                !IF (input%l_useapw.OR.(l_fullj.AND.l==0)) THEN
                !IF (input%l_useapw.OR.l_fullj) THEN ! correction

@@ -59,6 +59,8 @@ CONTAINS
 
       CALL timestart("local_hamiltonian")
       CALL td%init(atoms,input%jspins,(noco%l_noco.AND.noco%l_soc.AND..NOT.noco%l_ss).OR.any(noco%l_constrained).or.any(noco%l_constrained))
+      ! tlmplm_vtau fills td%h_sph_extra for l>lnonsph, which hsmt_sph has to add
+      IF (PRESENT(vTau) .AND. PRESENT(xcpot)) td%l_sph_extra = xcpot%needs_MetaGGA_ham()
 
       DO jsp=1,MERGE(4,input%jspins,any(noco%l_unrestrictMT).OR.any(noco%l_spinoffd_ldau).or.any(noco%l_constrained))
 
