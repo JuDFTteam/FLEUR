@@ -93,6 +93,7 @@ CONTAINS
         END DO
       END DO
 
+      CALL xcpot_aux%free()
       CALL timestop("Auxiliary GGA for basis")
     END IF
 

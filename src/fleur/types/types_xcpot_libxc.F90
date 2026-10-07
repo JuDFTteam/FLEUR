@@ -12,6 +12,7 @@ MODULE m_types_xcpot_libxc
 #define xc_f03_func_t xc_f90_func_t
 #define xc_f03_func_info_t xc_f90_func_info_t
 #define xc_f03_func_init xc_f90_func_init
+#define xc_f03_func_end xc_f90_func_end
 #define xc_f03_func_get_info xc_f90_func_get_info
 #define xc_f03_func_info_get_family xc_f90_func_info_get_family
 #define xc_f03_func_info_get_kind xc_f90_func_info_get_kind
@@ -73,6 +74,7 @@ MODULE m_types_xcpot_libxc
       !Not             overloeaded...
       PROCEDURE        :: init => xcpot_init
       PROCEDURE        :: create_from_aux => xcpot_create_from_aux
+      PROCEDURE        :: free => xcpot_free
       PROCEDURE,NOPASS :: apply_cutoffs
       PROCEDURE,NOPASS :: apply_vac_cutoffs
    END TYPE t_xcpot_libxc
@@ -573,87 +575,47 @@ CONTAINS
       TYPE(t_gradients), OPTIONAL, INTENT(IN) :: grad
       LOGICAL, OPTIONAL, INTENT(IN)         :: mt_call
 
-      ! kinED from Kohn-Sham equations:
-      ! tau = sum[phi_i(r)^dag nabla phi_i(r)]
-      ! see eq (2) in https://doi.org/10.1063/1.1565316
-      ! (-0.5 is applied below)
+      ! Kohn-Sham kinetic energy density tau = 0.5 * sum[|grad phi_i(r)|^2], (points, spin)
       REAL, INTENT(IN), OPTIONAL     :: kinEnergyDen_KS(:, :)
 
 #ifdef CPP_LIBXC
-      TYPE(xc_f03_func_info_t)       :: xc_info
-      REAL  :: excc(SIZE(exc))
-      REAL  :: cut_ratio = 0.1
-      INTEGER :: cut_idx
-      LOGICAL :: is_mt
+      REAL, ALLOCATABLE :: kinEnergyDen_libXC(:, :)
 
-      ! tau = 0.5 * sum[|grad phi_i(r)|²]
-      ! see eq (3) in https://doi.org/10.1063/1.1565316
-      REAL, ALLOCATABLE              :: kinEnergyDen_libXC(:, :), pkzb_ratio(:, :), pkzb_zaehler(:, :), pkzb_nenner(:, :)
+      IF (PRESENT(kinEnergyDen_KS)) kinEnergyDen_libXC = TRANSPOSE(kinEnergyDen_KS)
 
-      is_mt = merge(mt_call, .False., present(mt_call))
-      IF (xcpot%exc_is_gga()) THEN
-         IF (.NOT. PRESENT(grad)) CALL judft_error("Bug: You called get_exc for a GGA potential without providing derivatives")
-         CALL xc_f03_gga_exc(xcpot%exc_func_x, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), grad%sigma, exc)
-         IF (xcpot%func_exc_id_c > 0) THEN
-            CALL xc_f03_gga_exc(xcpot%exc_func_c, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), grad%sigma, excc)
-            exc = exc + excc
-         END IF
-      ELSEIF (xcpot%exc_is_LDA()) THEN  !LDA potentials
-         CALL xc_f03_lda_exc(xcpot%exc_func_x, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), exc)
-         IF (xcpot%func_exc_id_c > 0) THEN
-            CALL xc_f03_lda_exc(xcpot%exc_func_c, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), excc)
-            exc = exc + excc
-         END IF
-      ELSEIF (xcpot%exc_is_MetaGGA()) THEN
-         IF (PRESENT(kinEnergyDen_KS)) THEN
-            
-            kinEnergyDen_libXC = transpose(kinEnergyDen_KS )
+      ! Exchange and correlation may belong to different families (e.g. MetaGGA exchange
+      ! with LDA correlation), so each is evaluated according to its own family.
+      exc = 0.0
+      CALL eval_exc(xcpot%exc_func_x)
+      IF (xcpot%func_exc_id_c > 0) CALL eval_exc(xcpot%exc_func_c)
 
-            !only cut core of muffin tin
-            cut_idx = MERGE(NINT(size(rh, 1)*cut_ratio), 0, is_mt)
+   CONTAINS
 
-            exc = 0.0
-            excc = 0.0
-            call xc_f03_mgga_exc(xcpot%exc_func_x, SIZE(rh(cut_idx + 1:, :), 1, kind=c_size_t), &
-                                 TRANSPOSE(rh(cut_idx + 1:, :)), &
-                                 grad%sigma(:, cut_idx + 1:), &
-                                 transpose(grad%laplace(cut_idx + 1:, :)), &
-                                 kinEnergyDen_libXC(:, cut_idx + 1:), &
-                                 exc(cut_idx + 1:))
+      !> Adds the energy density per particle of one functional to exc.
+      !! Uses rh, grad and kinEnergyDen_libXC from the parent scope.
+      SUBROUTINE eval_exc(func)
+         TYPE(xc_f03_func_t), INTENT(IN) :: func
+         REAL                            :: e_tmp(SIZE(exc))
+         INTEGER                         :: family
 
-            call xc_f03_gga_exc(xcpot%vxc_func_x, SIZE(rh(:cut_idx, :), 1, kind=c_size_t), &
-                                TRANSPOSE(rh(:cut_idx, :)), &
-                                grad%sigma(:, :cut_idx), &
-                                exc(:cut_idx))
-
-            IF (xcpot%func_exc_id_c > 0) THEN
-               call xc_f03_mgga_exc(xcpot%exc_func_c, SIZE(rh(cut_idx + 1:, :), 1, kind=c_size_t), &
-                                    TRANSPOSE(rh(cut_idx + 1:, :)), &
-                                    grad%sigma(:, cut_idx + 1:), &
-                                    transpose(grad%laplace(cut_idx + 1:, :)), &
-                                    kinEnergyDen_libXC(:, cut_idx + 1:), &
-                                    excc(cut_idx + 1:))
-
-               call xc_f03_gga_exc(xcpot%vxc_func_c, SIZE(rh(:cut_idx, :), 1, kind=c_size_t), &
-                                   TRANSPOSE(rh(:cut_idx, :)), &
-                                   grad%sigma(:, :cut_idx), &
-                                   excc(:cut_idx))
-               exc = exc + excc
-            END IF
-
-         ELSE ! first iteration is GGA
-            IF (.NOT. PRESENT(grad)) CALL judft_error("Bug: You called get_exc for a MetaGGA potential without providing derivatives")
-            CALL xc_f03_gga_exc(xcpot%vxc_func_x, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), grad%sigma, exc)
-            IF (xcpot%func_exc_id_c > 0) THEN
-               CALL xc_f03_gga_exc(xcpot%vxc_func_c, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), grad%sigma, excc)
-               exc = exc + excc
-            END IF
+         family = xc_f03_func_info_get_family(xc_f03_func_get_info(func))
+         e_tmp = 0.0
+         IF (ANY([XC_FAMILY_LDA, XC_FAMILY_HYB_LDA] == family)) THEN
+            CALL xc_f03_lda_exc(func, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), e_tmp)
+         ELSEIF (ANY([XC_FAMILY_GGA, XC_FAMILY_HYB_GGA] == family)) THEN
+            IF (.NOT. PRESENT(grad)) CALL judft_error("Bug: get_exc for a GGA needs gradients", calledby="xcpot_get_exc@libxc")
+            CALL xc_f03_gga_exc(func, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), grad%sigma, e_tmp)
+         ELSEIF (ANY([XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA] == family)) THEN
+            IF (.NOT. PRESENT(grad)) CALL judft_error("Bug: get_exc for a MetaGGA needs gradients", calledby="xcpot_get_exc@libxc")
+            IF (.NOT. ALLOCATED(kinEnergyDen_libXC)) CALL judft_error( &
+               "Bug: get_exc for a MetaGGA needs the kinetic energy density", calledby="xcpot_get_exc@libxc")
+            CALL xc_f03_mgga_exc(func, SIZE(rh, 1, kind=c_size_t), TRANSPOSE(rh), grad%sigma, &
+                                 TRANSPOSE(grad%laplace), kinEnergyDen_libXC, e_tmp)
+         ELSE
+            CALL juDFT_error("exc is not part of a known family", calledby="xcpot_get_exc@libxc")
          ENDIF
-
-      ELSE
-         call juDFT_error("exc is part of a known Family", calledby="xcpot_get_exc@libxc")
-      ENDIF
-
+         exc = exc + e_tmp
+      END SUBROUTINE eval_exc
 #endif
    END SUBROUTINE xcpot_get_exc
 
@@ -779,6 +741,23 @@ CONTAINS
       CALL judft_error("create_from_aux requires FLEUR compiled with libxc support")
 #endif
    END SUBROUTINE xcpot_create_from_aux
+
+   !> Releases the libxc functionals set up in xcpot_init. Only call this for an xcpot that
+   !! owns its functionals, i.e. not for a shallow copy of another xcpot.
+   SUBROUTINE xcpot_free(xcpot)
+      IMPLICIT NONE
+      CLASS(t_xcpot_libxc), INTENT(INOUT) :: xcpot
+#ifdef CPP_LIBXC
+      IF (xcpot%func_vxc_id_x > 0) CALL xc_f03_func_end(xcpot%vxc_func_x)
+      IF (xcpot%func_vxc_id_c > 0) CALL xc_f03_func_end(xcpot%vxc_func_c)
+      IF (xcpot%func_exc_id_x > 0) CALL xc_f03_func_end(xcpot%exc_func_x)
+      IF (xcpot%func_exc_id_c > 0) CALL xc_f03_func_end(xcpot%exc_func_c)
+      IF (xcpot%l_has_aux) THEN
+         CALL xc_f03_func_end(xcpot%aux_func_x)
+         IF (xcpot%func_aux_id_c > 0) CALL xc_f03_func_end(xcpot%aux_func_c)
+      END IF
+#endif
+   END SUBROUTINE xcpot_free
 
    subroutine mpi_bc_xcpot_libxc(This, Mpi_comm, Irank)
       Use M_mpi_bc_tool

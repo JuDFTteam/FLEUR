@@ -78,6 +78,7 @@ MODULE m_types_xcpot
       PROCEDURE, NOPASS :: alloc_gradients => xcpot_alloc_gradients
       PROCEDURE        :: has_aux_gga => xcpot_has_aux_gga
       PROCEDURE        :: create_from_aux => xcpot_create_from_aux
+      PROCEDURE        :: free => xcpot_free
       PROCEDURE        :: read_xml => read_xml_xcpot
       PROCEDURE        :: mpi_bc => mpi_bc_xcpot_abstract
    END TYPE t_xcpot
@@ -409,6 +410,12 @@ CONTAINS
       CLASS(t_xcpot), INTENT(IN):: xcpot
       xcpot_has_aux_gga = (xcpot%func_aux_id_x > 0)
    END FUNCTION xcpot_has_aux_gga
+
+   !> Releases resources held by the functional. Nothing to do for the base class.
+   SUBROUTINE xcpot_free(xcpot)
+      IMPLICIT NONE
+      CLASS(t_xcpot), INTENT(INOUT) :: xcpot
+   END SUBROUTINE xcpot_free
 
    !> Default implementation: always errors. Override in t_xcpot_libxc for MetaGGA use.
    ! Subroutine form avoids polymorphic allocatable function-result assignment, which
