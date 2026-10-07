@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -141,7 +141,7 @@ CONTAINS
             vtot1%mtIm(i,:,n,:)=vtot1%mtIm(i,:,n,:)*atoms%rmsh(i,n)**2
          END DO
 
-         CALL mt_to_grid(.FALSE.,4,atoms,sym,sphhar,.FALSE.,vtot_loc%mt(:,0:,n,:),n,noco,grad,chtmp(:,1:2))
+         CALL mt_to_grid(.FALSE.,4,atoms,sym,sphhar,.FALSE.,vtot_loc%mt(:,0:,n,:),n,noco,grad,chtmp(:,1:4))
          CALL mt_to_grid(.FALSE.,2,atoms,sym,sphhar,.FALSE.,vtot1%mt(:,0:,n,:),n,noco,grad,chretmp(:,1:2))
          CALL mt_to_grid(.FALSE.,2,atoms,sym,sphhar,.FALSE.,vtot1%mtIm(:,0:,n,:),n,noco,grad,chimtmp(:,1:2))
 

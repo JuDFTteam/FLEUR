@@ -43,6 +43,7 @@ CONTAINS
       USE m_hsmt_fjgj
       USE m_hsmt_spinor
       USE m_hsmt_offdiag
+      USE m_hsmt_mtNocoPot_offdiag
       USE m_matrix_pref
       
 
@@ -107,7 +108,7 @@ CONTAINS
       !!$acc data copyin(fjgjq) create(fjgjq%fj,fjgjq%gj)
       igSpinPr = 1; igSpin = 1; chi_one = 1.0 ! Defaults in non-noco case
       DO n = 1, atoms%ntype
-         DO ilSpinPr = MERGE(1,iSpin,noco%l_noco), MERGE(2,iSpin,noco%l_noco)
+         DO ilSpinPr = MERGE(1,iSpin,noco%l_noco), MERGE(2,iSpin,noco%l_noco) 
             CALL timestart("fjgj coefficients")
             CALL fjgjq%calculate(input,atoms,cell,lapwq,noco,usdus,n,ilSpinPr)
             !$acc update device(fjgjq%fj,fjgjq%gj)
@@ -129,7 +130,6 @@ CONTAINS
                      !CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,usdus,td,fjgj,n,chi_one,ilSpinPr,ilSpin,igSpinPr,igSpin,hmat(1,1),.FALSE.,smat(1,1))
                   END IF
                ELSE
-                  ! TODO: Everything from here onwards  most certainly has the wrong spin logic.
                   IF (ilSpinPr==ilSpin) THEN !local spin-diagonal contribution
                      CALL hsmt_spinor(ilSpinPr,n,nococonv,chi)
                      IF (n.EQ.iDtype .AND. sternheimerJob%l_IBScorrection) THEN
@@ -151,42 +151,11 @@ CONTAINS
                         CALL timestop("hsmt_distspins")
                      END IF
                   ELSE IF (noco%l_unrestrictMT(n)) THEN
-                     !2,1
-                     CALL hsmt_spinor(3,n,nococonv,chi)
                      IF (n.EQ.iDtype .AND. sternheimerJob%l_IBScorrection) THEN
-                        CALL hsmt_nonsph(n,fmpi,sym,atoms,ilSpinPr,ilSpinPr,2,1,chi_one,noco,nococonv,cell,lapw,td,fjgj,hmat_tmp,.TRUE.,lapwq,fjgjq)
-                        CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,usdus,td,fjgj,n,chi_one,2,1,igSpinPr,igSpin,hmat_tmp,.TRUE.,.TRUE.,.FALSE.,lapwq=lapwq,fjgjq=fjgjq)
-                        CALL timestart("hsmt_distspins")
-                        CALL hsmt_distspins(chi,smat_tmp,s1mat_tmp)
-                        CALL hsmt_distspins(chi,hmat_tmp,h1mat_tmp)
-                        CALL timestop("hsmt_distspins")
+                        CALL hsmt_mtNocoPot_offdiag(n,input,fmpi,sym,atoms,noco,nococonv,cell,lapw,usdus,td,fjgj,igSpinPr,igSpin,hmat_tmp,h1mat_tmp,lapwq,fjgjq)
                      END IF
                      IF (killcont(1)/=0) THEN
-                        CALL hsmt_nonsph(n,fmpi,sym,atoms,ilSpinPr,ilSpinPr,2,1,chi_one,noco,nococonv,cell,lapw,tdV1,fjgj,hmat_tmp,.TRUE.,lapwq,fjgjq)
-                        CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,usdus,tdV1,fjgj,n,chi_one,2,1,igSpinPr,igSpin,hmat_tmp,.FALSE.,.TRUE.,.FALSE.,lapwq=lapwq,fjgjq=fjgjq)
-                        CALL timestart("hsmt_distspins")
-                        !CALL hsmt_distspins(chi,smat_tmp,smat)
-                        CALL hsmt_distspins(chi,hmat_tmp,hmat)
-                        CALL timestop("hsmt_distspins")
-                     END IF
-
-                     !1,2
-                     CALL hsmt_spinor(4,n,nococonv,chi)
-                     IF (n.EQ.iDtype .AND. sternheimerJob%l_IBScorrection) THEN
-                        CALL hsmt_nonsph(n,fmpi,sym,atoms,ilSpinPr,ilSpinPr,1,2,chi_one,noco,nococonv,cell,lapw,td,fjgj,hmat_tmp,.TRUE.,lapwq,fjgjq)
-                        CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,usdus,td,fjgj,n,chi_one,1,2,igSpinPr,igSpin,hmat_tmp,.TRUE.,.TRUE.,.FALSE.,lapwq=lapwq,fjgjq=fjgjq)
-                        CALL timestart("hsmt_distspins")
-                        CALL hsmt_distspins(chi,smat_tmp,s1mat_tmp)
-                        CALL hsmt_distspins(chi,hmat_tmp,h1mat_tmp)
-                        CALL timestop("hsmt_distspins")
-                     END IF
-                     IF (killcont(1)/=0) THEN
-                        CALL hsmt_nonsph(n,fmpi,sym,atoms,ilSpinPr,ilSpinPr,1,2,chi_one,noco,nococonv,cell,lapw,tdV1,fjgj,hmat_tmp,.TRUE.,lapwq,fjgjq)
-                        CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,usdus,tdV1,fjgj,n,chi_one,1,2,igSpinPr,igSpin,hmat_tmp,.FALSE.,.TRUE.,.FALSE.,lapwq=lapwq,fjgjq=fjgjq)
-                        CALL timestart("hsmt_distspins")
-                        !CALL hsmt_distspins(chi,smat_tmp,smat)
-                        CALL hsmt_distspins(chi,hmat_tmp,hmat)
-                        CALL timestop("hsmt_distspins")
+                        CALL hsmt_mtNocoPot_offdiag(n,input,fmpi,sym,atoms,noco,nococonv,cell,lapw,usdus,tdV1,fjgj,igSpinPr,igSpin,hmat_tmp,hmat,lapwq,fjgjq)
                      END IF
                   END IF
                END IF
@@ -226,6 +195,7 @@ CONTAINS
       USE m_hsmt_distspins
       USE m_hsmt_fjgj
       USE m_hsmt_spinor
+      USE m_hsmt_mtNocoPot_offdiag
       USE m_matrix_pref
 
       IMPLICIT NONE
@@ -306,7 +276,7 @@ CONTAINS
       CALL fjgjq%alloc(MAXVAL(lapwq%nv),atoms%lmaxd,iSpin,noco)
       !$acc data copyin(fjgj) create(fjgj%fj,fjgj%gj)
       !$acc data copyin(fjgjq) create(fjgjq%fj,fjgjq%gj)
-      igSpinPr = 1; igSpin = 1; chi_one = 1.0 ! Defaults in non-noco case
+      igSpinPr = 1; igSpin = 1; chi_one = 1.0 ! Defaults for no spin-spirals
       DO ilSpinPr = MERGE(1,iSpin,noco%l_noco), MERGE(2,iSpin,noco%l_noco)
          CALL timestart("fjgj coefficients")
          CALL fjgjq%calculate(input,atoms,cell,lapwq,noco,usdus,iDtype_col,ilSpinPr)
@@ -370,38 +340,14 @@ CONTAINS
                      END IF
                   END IF
                ELSE IF (noco%l_unrestrictMT(iDtype_col)) THEN
-                  !2,1
-                  CALL hsmt_spinor(3,iDtype_col,nococonv,chi)
-                  CALL hsmt_nonsph(iDtype_col,fmpi,sym,atoms,ilSpinPr,ilSpinPr,2,1,chi_one,noco,nococonv,cell,lapw,td,fjgj,hmat_tmp,.TRUE.,lapwq,fjgjq)
-                  CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,usdus,td,fjgj,iDtype_col,chi_one,2,1,igSpinPr,igSpin,hmat_tmp,.TRUE.,.TRUE.,.FALSE.,lapwq=lapwq,fjgjq=fjgjq)
-                  CALL timestart("hsmt_distspins")
-                  CALL hsmt_distspins(chi,smat_tmp,s1mat_tmp)
-                  CALL hsmt_distspins(chi,hmat_tmp,h1mat_tmp)
-                  CALL timestop("hsmt_distspins")
+                  CALL hsmt_mtNocoPot_offdiag(iDtype_col,input,fmpi,sym,atoms,noco,nococonv,cell,lapw,usdus,td,fjgj,igSpinPr,igSpin,hmatq_tmp,h1qmat_tmp,lapwq,fjgjq)
+                  CALL hsmt_mtNocoPot_offdiag(iDtype_col,input,fmpi,sym,atoms,noco,nococonv,cell,lapw,usdus,td,fjgj,igSpinPr,igSpin,hmat_tmp,h1mat_tmp,lapw,fjgj)
                   IF (killcont(1)/=0) THEN
-                     CALL hsmt_nonsph(iDtype_col,fmpi,sym,atoms,ilSpinPr,ilSpinPr,2,1,chi_one,noco,nococonv,cell,lapw,tdV1,fjgj,hmat_tmp,.TRUE.,lapwq,fjgjq)
-                     CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,usdus,tdV1,fjgj,iDtype_col,chi_one,2,1,igSpinPr,igSpin,hmat_tmp,.FALSE.,.TRUE.,.FALSE.,lapwq=lapwq,fjgjq=fjgjq)
-                     CALL timestart("hsmt_distspins")
-                     CALL hsmt_distspins(chi,smat_tmp,smat1)
-                     CALL hsmt_distspins(chi,hmat_tmp,hmat1)
-                     CALL timestop("hsmt_distspins")
-                  END IF
-
-                  !1,2
-                  CALL hsmt_spinor(4,iDtype_col,nococonv,chi)
-                  CALL hsmt_nonsph(iDtype_col,fmpi,sym,atoms,ilSpinPr,ilSpinPr,1,2,chi_one,noco,nococonv,cell,lapw,td,fjgj,hmat_tmp,.TRUE.,lapwq,fjgjq)
-                  CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,usdus,td,fjgj,iDtype_col,chi_one,1,2,igSpinPr,igSpin,hmat_tmp,.TRUE.,.TRUE.,.FALSE.,lapwq=lapwq,fjgjq=fjgjq)
-                  CALL timestart("hsmt_distspins")
-                  CALL hsmt_distspins(chi,smat_tmp,s1mat_tmp)
-                  CALL hsmt_distspins(chi,hmat_tmp,h1mat_tmp)
-                  CALL timestop("hsmt_distspins")
-                  IF (killcont(1)/=0) THEN
-                     CALL hsmt_nonsph(iDtype_col,fmpi,sym,atoms,ilSpinPr,ilSpinPr,1,2,chi_one,noco,nococonv,cell,lapw,tdV1,fjgj,hmat_tmp,.TRUE.,lapwq,fjgjq)
-                     CALL hsmt_lo(input,atoms,sym,cell,fmpi,noco,nococonv,lapw,usdus,tdV1,fjgj,iDtype_col,chi_one,1,2,igSpinPr,igSpin,hmat_tmp,.FALSE.,.TRUE.,.FALSE.,lapwq=lapwq,fjgjq=fjgjq)
-                     CALL timestart("hsmt_distspins")
-                     CALL hsmt_distspins(chi,smat_tmp,smat1)
-                     CALL hsmt_distspins(chi,hmat_tmp,hmat1)
-                     CALL timestop("hsmt_distspins")
+                     IF (.NOT.PRESENT(vmat2)) THEN
+                        CALL hsmt_mtNocoPot_offdiag(iDtype_col,input,fmpi,sym,atoms,noco,nococonv,cell,lapw,usdus,tdV1,fjgj,igSpinPr,igSpin,hmat_tmp,h2mat_tmp,lapw,fjgj)
+                     ELSE
+                        CALL hsmt_mtNocoPot_offdiag(iDtype_col,input,fmpi,sym,atoms,noco,nococonv,cell,lapw,usdus,tdV1,fjgj,igSpinPr,igSpin,hmatq_tmp,h2mat_tmp,lapwq,fjgjq)
+                     END IF
                   END IF
                END IF
             END IF
