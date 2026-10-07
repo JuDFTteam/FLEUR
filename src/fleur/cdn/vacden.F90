@@ -5,6 +5,22 @@
 !--------------------------------------------------------------------------------
 MODULE m_vacden
    USE m_juDFT
+   USE m_constants
+   USE m_qsf
+   USE m_types_atoms
+   USE m_types_banddos
+   USE m_types_cell
+   USE m_types_input
+   USE m_types_lapw
+   USE m_types_mat
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_stars
+   USE m_types_vacuum
+   USE m_types_vacdos
+   USE m_types_dos
+   USE m_types_vacbasis
    !! Vacuum contribution to the valence charge density of a film.
    !!
    !! Determines the 2D star-function expansion coefficients of the vacuum charge
@@ -62,10 +78,6 @@ CONTAINS
       !!
       !! This routine is a driver: it sets up the vacuum basis (`t_vacbasis`) for each
       !! vacuum and then hands the accumulation over to the private workers below.
-      USE m_types
-      USE m_types_vacbasis
-      USE m_types_vacdos
-      USE m_types_dos
 
       IMPLICIT NONE
 
@@ -100,7 +112,6 @@ CONTAINS
       !! Basis in the vacuum: vb at k, vbq at k+q (DFPT only).
       TYPE(t_vacbasis) :: vb, vbq
 
-      REAL    :: const, zsign, wronk
       REAL    :: gshift(2,2), noshift(2,2)
       INTEGER :: ivac, ispin, k
       LOGICAL :: l_dfpt, l_center0
@@ -132,9 +143,6 @@ CONTAINS
          END DO
       END IF
 
-      wronk = vb%wronk
-      const = 1.0 / ( SQRT(cell%omtil)*wronk )
-
       DO ivac = 1,vacuum%nvac
          vb%ac(:,:,:) = CMPLX(0.0,0.0)
          vb%bc(:,:,:) = CMPLX(0.0,0.0)
@@ -142,7 +150,6 @@ CONTAINS
             vbq%ac(:,:,:) = CMPLX(0.0,0.0)
             vbq%bc(:,:,:) = CMPLX(0.0,0.0)
          END IF
-         zsign = 3. - 2.*ivac
 
          !---> vacuum wave functions and their A/B expansion coefficients
          IF (noco%l_noco) THEN
@@ -157,18 +164,18 @@ CONTAINS
             DO ispin = 1,input%jspins
                !--->       the coefficients of the spin-down basis functions are
                !--->       stored in the second half of the eigenvector
-               CALL vb%calc_abcoeff(lapw, cell, zMat, ne, ispin, zsign, const, &
+               CALL vb%calc_abcoeff(lapw, cell, zMat, ne, ispin, ivac, &
                                     (lapw%nv(1)+atoms%nlotot)*(ispin-1), 1.0)
             END DO
          ELSE
             CALL vb%calc_radfun(vacuum, cell, lapw%bkpt, noshift, evac(ivac,:), vz(:,ivac,:), jspin, jspin)
-            CALL vb%calc_abcoeff(lapw, cell, zMat, ne, jspin, zsign, const, 0, 1.0)
+            CALL vb%calc_abcoeff(lapw, cell, zMat, ne, jspin, ivac, 0, 1.0)
             IF (l_dfpt) THEN
                ! Same unperturbed potential and energy parameter, basis shifted by the phonon q.
                gshift(1,:) = lapwq%qphon(1)
                gshift(2,:) = lapwq%qphon(2)
                CALL vbq%calc_radfun(vacuum, cell, lapwq%bkpt, gshift, evac(ivac,:), vz(:,ivac,:), jspin, jspin)
-               CALL vbq%calc_abcoeff(lapwq, cell, zMat1, ne, jspin, zsign, const, 0, 2.0)
+               CALL vbq%calc_abcoeff(lapwq, cell, zMat1, ne, jspin, ivac, 0, 2.0)
             END IF
          END IF
 
@@ -251,10 +258,6 @@ CONTAINS
       !! Non-warping (G_|| = 0) part of the diagonal density matrix elements n_11 and
       !! n_22, plus the vacuum charge of each eigenstate. The non-warping part of the
       !! off-diagonal n_21 is done together with its warping part in priv_den_offdiag.
-      USE m_types
-      USE m_types_vacbasis
-      USE m_types_vacdos
-      USE m_types_dos
       IMPLICIT NONE
 
       TYPE(t_vacbasis), INTENT(IN)    :: vb
@@ -302,10 +305,6 @@ CONTAINS
       !! of each eigenstate. In the DFPT case the response density picks up both the
       !! occupation response (we1 with the unperturbed coefficients) and the
       !! coefficient response (we with vbq).
-      USE m_types
-      USE m_types_vacbasis
-      USE m_types_vacdos
-      USE m_types_dos
       IMPLICIT NONE
 
       TYPE(t_vacbasis), INTENT(IN)    :: vb, vbq
@@ -366,11 +365,6 @@ CONTAINS
       !! Layer-resolved vacuum DOS, either integrated over the whole 2D unit cell or,
       !! if locx/locy differ, over the rectangle spanned by
       !! (locx(1),locy(1)) .. (locx(2),locy(2)) in internal coordinates.
-      USE m_constants
-      USE m_qsf
-      USE m_types
-      USE m_types_vacbasis
-      USE m_types_vacdos
       IMPLICIT NONE
 
       TYPE(t_vacbasis), INTENT(IN)    :: vb
@@ -490,8 +484,6 @@ CONTAINS
 
    SUBROUTINE priv_den_warp_noco(vb, den, stars, vacuum, input, we, ne, ivac)
       !! Warping part (G_|| /= 0) of the diagonal density matrix elements n_11 and n_22.
-      USE m_types
-      USE m_types_vacbasis
       IMPLICIT NONE
 
       TYPE(t_vacbasis), INTENT(IN)    :: vb
@@ -542,8 +534,6 @@ CONTAINS
       !! Off-diagonal element n_21 of the non-collinear density matrix. Unlike the
       !! diagonal elements, its non-warping (1st star) part is accumulated here too,
       !! because both parts come from the same spin-1/spin-2 pair loop.
-      USE m_types
-      USE m_types_vacbasis
       IMPLICIT NONE
 
       TYPE(t_vacbasis), INTENT(IN)    :: vb
@@ -607,8 +597,6 @@ CONTAINS
       !! only ikGPr < ikG. Note that for a shifted star centre (l_center0 false) the
       !! first star is *not* skipped here: priv_den_g0_col does not run in that case,
       !! so the G_|| = 0 term is produced by this loop instead.
-      USE m_types
-      USE m_types_vacbasis
       IMPLICIT NONE
 
       TYPE(t_vacbasis),  INTENT(IN)    :: vb, vbq
@@ -724,9 +712,6 @@ CONTAINS
       !! Star coefficients 1 .. nstars for each k-point and eigenvalue, written to
       !! vacdos%qstars. The 0th star is the charge integrated over the 2D cell and is
       !! already covered by qvac.
-      USE m_types
-      USE m_types_vacbasis
-      USE m_types_vacdos
       IMPLICIT NONE
 
       TYPE(t_vacbasis), INTENT(IN)    :: vb

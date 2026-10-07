@@ -6,7 +6,32 @@
 
 MODULE m_abcof
 
+   use m_juDFT
+   use m_constants
+   use m_ylm
+   use m_setabc1lo
+   use m_abclocdn
+   use m_hsmt_fjgj
+   use m_hsmt_ab
+   use m_abcoeff_store
+   use m_types_cdnval
+#ifdef _OPENACC
+   use cublas
+#endif
+   use m_types_atoms
+   use m_types_cell
+   use m_types_force
+   use m_types_input
+   use m_types_lapw
+   use m_types_mat
+   use m_types_noco
+   use m_types_nococonv
+   use m_types_radfun
+   use m_types_sym
+   use m_types_usdus
    implicit none
+   PRIVATE
+   PUBLIC :: abcof, abcof_new
 CONTAINS
 
   ! The subroutine abcof calculates the A, B, and C coefficients for the
@@ -14,7 +39,6 @@ CONTAINS
 SUBROUTINE abcof(input,atoms,sym, cell,lapw,ne,usdus,&
    noco,nococonv,jspin , acof,bcof,ccof,zMat,eig,force,nat_start,nat_stop)
 #ifdef _OPENACC
-use cublas
 #define CPP_ACC acc
 #define CPP_OMP no_OMP_used
 #define zgemm_acc cublaszgemm
@@ -23,15 +47,6 @@ use cublas
 #define CPP_OMP OMP
 #define zgemm_acc zgemm
 #endif
-USE m_juDFT
-USE m_types
-USE m_constants
-USE m_ylm
-USE m_setabc1lo
-USE m_abclocdn
-USE m_hsmt_fjgj
-USE m_hsmt_ab
-USE m_abcoeff_store
 
 IMPLICIT NONE
 
@@ -60,6 +75,7 @@ INTEGER,OPTIONAL,INTENT(IN):: nat_start,nat_stop
 
     ! Local objects
     TYPE(t_fjgj) :: fjgj
+    TYPE(t_radfun) :: rf
 
     ! Local scalars
     INTEGER :: i,iLAPW,l,ll1,lm,nap,jAtom,lmp,m,nkvec,iAtom,iType,acof_size,iAtom_l,jatom_l
@@ -134,11 +150,12 @@ INTEGER,OPTIONAL,INTENT(IN):: nat_start,nat_stop
        iType = atoms%itype(iAtom)
 
        CALL timestart("fjgj coefficients")
-       CALL fjgj%calculate(input,atoms,cell,lapw,noco,usdus,iType,jspin)
+       CALL rf%from_usdus(atoms,usdus,iType)
+       CALL fjgj%calculate(input,atoms,cell,lapw,noco,rf,iType,jspin)
        !$acc update device (fjgj%fj,fjgj%gj)
        CALL timestop("fjgj coefficients")
 
-       CALL setabc1lo(atoms,iType,usdus,jspin,alo1,blo1,clo1)
+       CALL setabc1lo(atoms,iType,rf,jspin,alo1,blo1,clo1)
 
           ! generate the spinors (chi)
        IF(noco%l_noco) ccchi=conjg(nococonv%umat(itype))
@@ -207,6 +224,21 @@ INTEGER,OPTIONAL,INTENT(IN):: nat_start,nat_stop
              ! Calculation of a, b coefficients for LAPW basis functions
              CALL timestart("hsmt_ab")
              !!$acc data copyin(fjgj,fjgj%fj,fjgj%gj) copyout(abcoeffs)
+             ! Own the abCoeffs mapping in the caller's scope -- see types_abc.F90 for why
+             ! hsmt_ab must not do the `enter data` on its own dummy argument.
+             IF (.NOT.l_use_abcoeff_store) THEN
+                abSize = hsmt_ab_size(atoms, iType, .FALSE.)
+                IF (ALLOCATED(abCoeffs)) THEN
+                   IF (SIZE(abCoeffs,1)/=2*abSize .OR. SIZE(abCoeffs,2)/=lapw%nv(iintsp)) THEN
+                      !$acc exit data delete(abCoeffs)
+                      DEALLOCATE(abCoeffs)
+                   END IF
+                END IF
+                IF (.NOT.ALLOCATED(abCoeffs)) THEN
+                   ALLOCATE(abCoeffs(2*abSize, lapw%nv(iintsp)))
+                   !$acc enter data create(abCoeffs)
+                END IF
+             END IF
              CALL hsmt_ab(sym,atoms,noco,nococonv,jspin,iintsp,iType,iAtom,cell,lapw,fjgj,abCoeffs,abSize,.FALSE.,l_store=.TRUE.)
              !!$acc end data
              abSize = abSize / 2
@@ -429,7 +461,6 @@ INTEGER,OPTIONAL,INTENT(IN):: nat_start,nat_stop
   SUBROUTINE abcof_new(input,atoms,sym, cell,lapw,ne,usdus,&
    noco,nococonv,ispin ,eigveccoefs,zMat,eig,force,nat_start,nat_stop)
 #ifdef _OPENACC
-use cublas
 #define CPP_ACC acc
 #define CPP_OMP no_OMP_used
 #define zgemm_acc cublaszgemm
@@ -438,16 +469,6 @@ use cublas
 #define CPP_OMP OMP
 #define zgemm_acc zgemm
 #endif
-USE m_juDFT
-USE m_types
-USE m_constants
-USE m_ylm
-USE m_setabc1lo
-USE m_abclocdn
-USE m_hsmt_fjgj
-USE m_hsmt_ab
-USE m_abcoeff_store
-USE m_types_cdnval
 IMPLICIT NONE
 
 TYPE(t_input),INTENT(IN)             :: input
@@ -472,7 +493,7 @@ COMPLEX       :: ccof(-atoms%llod:atoms%llod,size(eigveccoefs%abcof,1),atoms%nlo
 REAL, OPTIONAL, INTENT(IN) :: eig(:)!(input%neig)
 INTEGER,OPTIONAL,INTENT(IN):: nat_start,nat_stop
 
-integer:: itype,lo,l,na,m,lm,n_l(0:atoms%lmaxd)
+integer:: itype,lo,l,na,m,lm
 
 call abcof(input,atoms,sym,cell,lapw,ne,usdus,noco,nococonv,ispin,&
 eigVecCoefs%abcof(:,0:,0,:,ispin),eigVecCoefs%abcof(:,0:,1,:,ispin),&
@@ -484,14 +505,12 @@ eigVecCoefs%ccof(:,:,:,:,ispin) = ccof
 
 !Now put the c-coef into the correct abcof
 DO itype=1,atoms%ntype
-   n_l=1
    DO lo=1,atoms%nlo(itype)
       l=atoms%llo(lo,itype)
-      n_l(l)=n_l(l)+1
       do m=-l,l
          lm=l*(l+1)+m
          DO na=atoms%firstatom(itype),atoms%firstatom(itype)+atoms%neq(itype)-1
-            eigveccoefs%abcof(:,lm,n_l(l),na,ispin)=ccof(m,:,lo,na)
+            eigveccoefs%abcof(:,lm,atoms%slot_of_lo(lo,itype)-1,na,ispin)=ccof(m,:,lo,na)
          enddo
       enddo
    enddo

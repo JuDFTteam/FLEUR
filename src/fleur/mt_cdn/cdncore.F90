@@ -1,30 +1,47 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_cdncore
-   implicit none
-
-CONTAINS
-
-SUBROUTINE cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
-                   stars,cell,sphhar,atoms,vTot,outDen,moments,results,moessbauerParams, EnergyDen)
-
    USE m_constants
    USE m_judft
    USE m_cdn_io
    USE m_cdnovlp
    USE m_cored
    USE m_coredr
-   USE m_types
    USE m_types_moessbauerParams
    USE m_xmlOutput
-
 #ifdef CPP_MPI
    USE m_mpi_bc_coreden
 #endif
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_input
+   USE m_types_cdnval
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_misc
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_sym
+   USE m_types_vacuum
+#ifdef CPP_MPI
+   USE mpi
+#endif
+   implicit none
+   PRIVATE
+   PUBLIC :: cdncore
+
+CONTAINS
+
+SUBROUTINE cdncore(fmpi ,input,vacuum,noco,nococonv,sym,&
+                   stars,cell,sphhar,atoms,vTot,outDen,moments,results,moessbauerParams, EnergyDen)
+
+
 
    IMPLICIT NONE
 

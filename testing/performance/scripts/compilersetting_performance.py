@@ -25,11 +25,12 @@ def make(name):
     cpus=os.cpu_count()
     return subprocess.run(["make",f"-j{cpus}"],cwd=workdir)    
 
-def run_perf(name,iter,env):
+def run_perf(name,iter,env,test=None):
     cwd=os.getcwd()
     os.chdir(f"build.{name}")
-    json_file=run_test(env=env)
-    shutil.copyfile(json_file,f"{cwd}/{name}.{iter}.json")
+    json_file=run_test(name=test,env=env)
+    label=f"{name}.{test}.{iter}" if test else f"{name}.{iter}"
+    shutil.copyfile(json_file,f"{cwd}/{label}.json")
     os.chdir(cwd)
 
 def test_configs(filename):
@@ -67,12 +68,16 @@ def test_configs(filename):
         else:
             opt=None
 
+        #optional list of tests, default is the Noco test
+        tests=configs[name].get("tests",[None])
+
         configure(source_dir,name,env,opt)
         make(name)
-        i=0
-        for timer_opts in configs[name]["timers"]:
-            run_perf(f"{name}",i,timer_opts)
-            i=i+1
+        for test in tests:
+            i=0
+            for timer_opts in configs[name]["timers"]:
+                run_perf(f"{name}",i,timer_opts,test)
+                i=i+1
 
 if __name__ == "__main__":
     if len(sys.argv)<2:

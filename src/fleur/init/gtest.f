@@ -1,5 +1,10 @@
       MODULE m_gtest
       use m_juDFT
+      use m_constants
+      use m_ylm
+      implicit none
+      private
+      public :: gtest
 !*********************************************************************
 !     test the gaussian integration mesh for this l
 !     1) integrate each ylm, 2) get normalization of each ylm,
@@ -8,8 +13,6 @@
       CONTAINS
       SUBROUTINE gtest(lmax,ngpts,vgauss,wt)
 
-      USE m_constants
-      USE m_ylm
       IMPLICIT NONE
 !
       INTEGER, INTENT (IN) :: lmax,ngpts

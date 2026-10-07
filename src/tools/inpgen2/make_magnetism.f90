@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
  !--------------------------------------------------------------------------------
 ! Copyright (c) 2022 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
@@ -5,13 +10,15 @@
 !--------------------------------------------------------------------------------
 module m_make_magnetism
     USE m_judft
+    USE m_types_input
+    USE m_types_noco
+    USE m_types_atoms
+    USE m_polangle
     implicit none
+    PRIVATE
+    PUBLIC :: make_magnetism
     contains
     subroutine make_magnetism(input,noco,atoms,mag_mom)
-        use m_types_input
-        use m_types_noco
-        use m_types_atoms
-        use m_polangle
         TYPE(t_input),INTENT(INOUT):: input
         TYPE(t_noco),INTENT(INOUT) :: noco 
         TYPE(t_atoms),INTENT(INOUT):: atoms 

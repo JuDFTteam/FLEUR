@@ -1,11 +1,15 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_find_enpara
   USE m_judft
+  USE m_radsra
+  USE m_differ
+  USE m_constants
+  USE m_types_atoms
   IMPLICIT NONE
   PRIVATE
   PUBLIC:: find_enpara
@@ -16,10 +20,6 @@ CONTAINS
   !! Different schemes are implemented. Nqn (main quantum number) is used as a switch.
   !! This code was previously in lodpot.f
   REAL FUNCTION find_enpara(lo,l,n,jsp,nqn,atoms,vr,e_lo,e_up,l_scalar_relativi,l_relLO)RESULT(e)
-    USE m_types_setup
-    USE m_radsra
-    USE m_differ
-    USE m_constants
     IMPLICIT NONE
     LOGICAL,INTENT(IN):: lo
     INTEGER,INTENT(IN):: l,n,nqn,jsp
@@ -51,10 +51,6 @@ CONTAINS
 
 
   REAL FUNCTION priv_method1(lo,l,n,jsp,nqn,atoms,vr,e_lo,e_up,l_relLO)RESULT(e)
-    USE m_types_setup
-    USE m_radsra
-    USE m_differ
-    USE m_constants
     IMPLICIT NONE
     LOGICAL,INTENT(IN):: lo
     INTEGER,INTENT(IN):: l,n,nqn,jsp
@@ -185,10 +181,6 @@ CONTAINS
   END FUNCTION priv_method1
 
   REAL FUNCTION priv_method2(lo,l,n,jsp,nqn,atoms,vr,e_lo,e_up)RESULT(e)
-    USE m_types_setup
-    USE m_radsra
-    USE m_differ
-    USE m_constants
     IMPLICIT NONE
     LOGICAL,INTENT(IN):: lo
     INTEGER,INTENT(IN):: l,n,nqn,jsp
@@ -313,10 +305,6 @@ CONTAINS
      END FUNCTION priv_method2
 
   REAL FUNCTION priv_scalar_relativi(lo,l,n,jsp,nqn,atoms,vr,e_lo,e_up)RESULT(e)
-    USE m_types_setup
-    USE m_radsra
-    USE m_differ
-    USE m_constants
     IMPLICIT NONE
     LOGICAL,INTENT(IN):: lo
     INTEGER,INTENT(IN):: l,n,nqn,jsp

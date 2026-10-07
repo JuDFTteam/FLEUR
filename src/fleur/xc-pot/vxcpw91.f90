@@ -1,4 +1,16 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_vxcpw91
+   USE m_corl91
+   USE m_corg91
+   USE m_xch91
+   USE m_constants, ONLY: pi_const
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: vxcpw91
 CONTAINS
 !.....-----------------------------------------------------------------
 !.....pw91 exchange-correlation potential in hartree.
@@ -9,10 +21,6 @@ CONTAINS
       vx,vxc, &
       idsprs,isprsv,sprsv)
 
-      USE m_corl91
-      USE m_corg91
-      USE m_xch91
-      USE m_constants, ONLY: pi_const
 
       IMPLICIT NONE
 

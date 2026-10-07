@@ -1,11 +1,28 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_addContribsA21A12
 
+    use m_types_force
+    use m_types_lapw
+    use m_types_mat
+    use m_types_sphhar
+    use m_types_radfun
+    use m_types_tlmplm
+    use m_types_enpara
+    use m_types_abc
+    use m_types_misc
+    use m_types_potden
+    use m_forcea12
+    use m_forcea21
+    use m_force_a12_lv2
+    use m_types_atoms
+    use m_types_cell
+    use m_types_input
+    use m_types_sym
     IMPLICIT NONE
   
     PRIVATE
@@ -13,21 +30,7 @@ MODULE m_addContribsA21A12
   contains
 
 SUBROUTINE addContribsA21A12(thisForce,input,atoms,sym,cell ,enpara,&
-    usdus,tlmplm,vtot,abc,noccbd,ispin,eig,we,results,jsp_start,jspin,nbasfcn,zMat,lapw,sphhar,k1,k2,k3,bkpt,itype)
- use m_types_force
- USE m_types_setup
- USE m_types_lapw
- USE m_types_mat
- USE m_types_sphhar
- USE m_types_usdus
- USE m_types_tlmplm
- USE m_types_enpara
- USE m_types_abc
- USE m_types_misc
- USE m_types_potden
- USE m_forcea12
- USE m_forcea21
- USE m_force_a12_lv2
+    rf,tlmplm,vtot,abc,noccbd,ispin,eig,we,results,jsp_start,jspin,nbasfcn,zMat,lapw,sphhar,k1,k2,k3,bkpt,itype)
 
  IMPLICIT NONE
 
@@ -38,7 +41,7 @@ SUBROUTINE addContribsA21A12(thisForce,input,atoms,sym,cell ,enpara,&
  TYPE(t_cell),         INTENT(IN)    :: cell
   
  TYPE(t_enpara),       INTENT(IN)    :: enpara
- TYPE(t_usdus),        INTENT(IN)    :: usdus
+ TYPE(t_radfun),       INTENT(IN)    :: rf !radial basis of itype
  TYPE(t_tlmplm),       INTENT(IN)    :: tlmplm
  TYPE(t_potden),       INTENT(IN)    :: vtot
  TYPE(t_abc), INTENT(IN)             :: abc
@@ -59,7 +62,7 @@ SUBROUTINE addContribsA21A12(thisForce,input,atoms,sym,cell ,enpara,&
 
     IF (input%f_level.LT.2) THEN
        CALL force_a12(atoms,noccbd,sym,cell ,&
-            we,ispin,noccbd,usdus,abc,thisForce%acoflo,thisForce%bcoflo,&
+            we,ispin,noccbd,rf,abc,thisForce%acoflo,thisForce%bcoflo,&
             thisForce%e1cof,thisForce%e2cof,thisForce%f_a12,results,itype)
     ELSE ! Klueppelberg (force level 2)
        IF (ispin.eq.jsp_start) THEN ! since we use IS rep, this part needs to be calculated only once
@@ -70,7 +73,7 @@ SUBROUTINE addContribsA21A12(thisForce,input,atoms,sym,cell ,enpara,&
     END IF
  END IF
  CALL force_a21(input,atoms,sym ,cell,we,ispin,&
-      enpara%el0(0:,:,ispin),noccbd,eig,usdus,tlmplm,vtot,abc,&
+      enpara%el0(0:,:,ispin),noccbd,eig,rf,tlmplm,vtot,abc,&
       thisForce%aveccof,thisForce%bveccof,thisForce%cveccof,&
       thisForce%f_a21,thisForce%f_b4,results,itype)
 

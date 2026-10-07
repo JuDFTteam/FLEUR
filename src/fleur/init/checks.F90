@@ -1,20 +1,35 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Gruenberg Institut, Forschungszentrum Juelich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_checks
   USE m_juDFT
-  USE m_types
+  USE m_nocoInputCheck
+  USE m_socsym
+  USE m_constants
+#ifdef CPP_MPI
+  USE mpi
+#endif
+  USE m_types_atoms
+  USE m_types_banddos
+  USE m_types_cell
+  USE m_types_hybinp
+  USE m_types_input
+  USE m_types_kpts
+  USE m_types_mpi
+  USE m_types_mpinp
+  USE m_types_noco
+  USE m_types_sym
+  USE m_types_vacuum
   IMPLICIT NONE
   private
-  public :: check_command_line,check_input_switches
+  public :: check_command_line,check_input_switches,check_input_switches_all_pe
   CONTAINS
     SUBROUTINE check_command_line(fmpi)
       !Here we check is command line arguments are OK
 #ifdef CPP_MPI
-      USE mpi
       INTEGER:: isize,ierr,irank
 #endif
       TYPE(t_mpi), INTENT(INOUT):: fmpi
@@ -49,10 +64,6 @@ MODULE m_checks
     END SUBROUTINE check_command_line
 
     SUBROUTINE check_input_switches(banddos,vacuum,noco,atoms,input,sym,kpts,hybinp,cell)
-      USE m_nocoInputCheck
-      USE m_socsym
-      USE m_types_fleurinput
-      USE m_constants
       type(t_banddos),INTENT(IN)::banddos
       type(t_vacuum),INTENT(IN) ::vacuum
       type(t_noco),INTENT(IN)   ::noco
@@ -147,8 +158,51 @@ MODULE m_checks
 
 #ifndef CPP_HDF
      if (hybinp%l_hybrid) call juDFT_warn("Hybrid calculations should always use HDF5")
-#endif     
+     if (noco%l_noco.and.noco%l_mperp) call juDFT_error("l_mperp=T requires HDF5 for the charge density IO", &
+                  hint="The direct access density files cannot store the off-diagonal MT magnetization. Recompile with HDF5.", &
+                  calledby="check_input_switches")
+#else
+     if (noco%l_noco.and.noco%l_mperp.and.juDFT_was_argument("-no_cdn_hdf")) &
+        call juDFT_error("l_mperp=T cannot be used with -no_cdn_hdf", &
+                  hint="The direct access density files cannot store the off-diagonal MT magnetization.", &
+                  calledby="check_input_switches")
+#endif
 
    END SUBROUTINE check_input_switches
+
+    !> Input checks that must be executed by *every* MPI rank.
+    !>
+    !> juDFT_warn/juDFT_error do MPI communication: juDFT_error calls
+    !> collect_messages(), which posts an MPI_isend on MPI_COMM_WORLD to every
+    !> rank.  Emitting a warning that actually fires from a rank-0-only code path
+    !> therefore leaves sends nobody receives (and leaks request handles, since
+    !> collect_messages reuses ihandle(0) for all of them).  check_input_switches
+    !> above is run by PE 0 alone, so any check there that can both fire and
+    !> continue -- i.e. a warning rather than an error -- belongs here instead.
+    !> Call this after fleurinput_mpi_bc, when all ranks have the input.
+    SUBROUTINE check_input_switches_all_pe(input,hybinp,mpinp)
+      type(t_input),INTENT(IN)  :: input
+      type(t_hybinp),INTENT(IN) :: hybinp
+      type(t_mpinp),INTENT(IN)  :: mpinp
+
+      IF (hybinp%l_hybrid) THEN
+         ! The interstitial part of a wave-function product is built on an FFT
+         ! grid as psi*_k * ustep * psi_(k+q), and its coefficients are read off
+         ! for the mixed-basis G vectors, |q+G| <= gcutm.  Those coefficients are
+         ! a convolution, sum_G' ustep(G-G') * [psi*psi](G'), with |G'| <= 2*rkmax
+         ! because each wave function is limited by rkmax.  So the step function
+         ! is needed out to 2*rkmax+gcutm -- but ustep is only tabulated on the
+         ! stars, which reach gmax, and t_fftGrid%putFieldOnGrid() silently leaves
+         ! everything beyond that at zero.  gmax therefore bounds how far ustep is
+         ! known, which is what this compares.
+         IF (2*input%rkmax + mpinp%g_cutoff > input%gmax) THEN
+            CALL juDFT_warn("Hybrid functionals: gmax < 2*kmax+gcutm, the step function &
+                            &is truncated inside the wave-function products", &
+                            calledby="check_input_switches_all_pe", &
+                            hint="Increase gmax to at least 2*kmax+gcutm, or reduce gcutm")
+         END IF
+      END IF
+
+    END SUBROUTINE check_input_switches_all_pe
 
   END MODULE m_checks

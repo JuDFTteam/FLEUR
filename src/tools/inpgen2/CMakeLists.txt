@@ -113,7 +113,6 @@ ${FLEUR_SRC}/types/types_mpimat.F90
 ${FLEUR_SRC}/types/types_parallelLoop.F90
 ${FLEUR_SRC}/types/types_potden.F90
 ${FLEUR_SRC}/types/types_enpara.F90
-${FLEUR_SRC}/types/types_setup.F90
 ${FLEUR_SRC}/types/types_hub1data.f90
 
 ${FLEUR_SRC}/hybrid/divide_most_evenly.f90
@@ -210,25 +209,25 @@ if (XXD_PROG)
 else()
     ADD_CUSTOM_COMMAND(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/default_econfig.h
-    COMMAND cp ${CMAKE_SOURCE_DIR}/src/tools/inpgen2/default_econfig.h.backup ${CMAKE_CURRENT_BINARY_DIR}/default_econfig.h
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/src/tools/inpgen2/default_econfig.h.backup ${CMAKE_CURRENT_BINARY_DIR}/default_econfig.h
     COMMENT "No xxd found using backup")
     message("No xxd command found! Using backup of default_econfig.h")
 
     ADD_CUSTOM_COMMAND(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/default2_econfig.h
-    COMMAND cp ${CMAKE_SOURCE_DIR}/src/tools/inpgen2/default2_econfig.h.backup ${CMAKE_CURRENT_BINARY_DIR}/default2_econfig.h
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/src/tools/inpgen2/default2_econfig.h.backup ${CMAKE_CURRENT_BINARY_DIR}/default2_econfig.h
     COMMENT "No xxd found using backup")
     message("No xxd command found! Using backup of oxides_validation_econfig.h")
 
     ADD_CUSTOM_COMMAND(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/oxides_validation_econfig.h
-    COMMAND cp ${CMAKE_SOURCE_DIR}/src/tools/inpgen2/oxides_validation_econfig.h.backup ${CMAKE_CURRENT_BINARY_DIR}/oxides_validation_econfig.h
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/src/tools/inpgen2/oxides_validation_econfig.h.backup ${CMAKE_CURRENT_BINARY_DIR}/oxides_validation_econfig.h
     COMMENT "No xxd found using backup")
     message("No xxd command found! Using backup of oxides_validation_econfig.h")
 
     ADD_CUSTOM_COMMAND(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/profileConfig.h
-    COMMAND cp ${CMAKE_SOURCE_DIR}/src/tools/inpgen2/profileConfig.h.backup ${CMAKE_CURRENT_BINARY_DIR}/profileConfig.h
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/src/tools/inpgen2/profileConfig.h.backup ${CMAKE_CURRENT_BINARY_DIR}/profileConfig.h
     COMMENT "No xxd found using backup")
     message("No xxd command found! Using backup of profileConfig.h")
 

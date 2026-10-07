@@ -1,11 +1,18 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2023 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 module m_test_performance
     !$ use omp_lib
+    use m_eigen_diag
+    use m_types_mat
+    use m_types_mpimat
+    use m_types_lapw
+#ifdef CPP_MPI
+    use mpi
+#endif
     implicit none
     private
     public test_performance
@@ -60,12 +67,6 @@ contains
     end SUBROUTINE      
 
     subroutine check_diag_multithreading(N,time)
-        use m_eigen_diag
-        use m_types_mat
-        use m_types_mpimat
-#ifdef CPP_MPI
-        use mpi 
-#endif        
         REAL,INTENT(OUT) :: time(:)
         INTEGER,INTENT(IN)  :: N
       
@@ -116,7 +117,6 @@ contains
     end subroutine
 
     subroutine test_performance()
-        use m_types_lapw
         INTEGER :: dim
         real,allocatable::time(:,:)
         INTEGER :: n

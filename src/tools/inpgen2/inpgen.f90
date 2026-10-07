@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -51,6 +51,7 @@ PROGRAM inpgen
   USE m_types_dfpt
   use m_make_sym
   USE m_types_profile
+  USE m_types_enparaxml
 
       IMPLICIT NONE
 
@@ -228,7 +229,7 @@ PROGRAM inpgen
          l_oldinpXML=.true.
          call Fleurinput_read_xml(0,filename_add,cell,sym,atoms,input,noco,vacuum,sliceplot=Sliceplot,banddos=Banddos,&
                                   hybinp=hybinp, xcpot=Xcpot,kptsSelection=kptsSelection,&
-                                  kptsArray=kpts,enparaXML=enparaXML,old_version=l_oldinpXML)
+                                  kptsArray=kpts,enparaXML=enparaXML,dfpt=dfpt,old_version=l_oldinpXML)
          Call Cell%Init(Dot_product(Atoms%Volmts(:),Atoms%Neq(:)))
          call atoms%init(cell)
          Call Sym%Init(Cell,Input%Film)

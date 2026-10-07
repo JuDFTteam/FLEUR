@@ -1,6 +1,12 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_spmm_inv
    use iso_c_binding
    use m_spmm
+   use m_spmm_vac, only: spmm_vac_r, apply_mtir_vac_r
 #ifdef _OPENACC
       USE cublas
 #define CPP_zgemm cublaszgemm
@@ -17,12 +23,17 @@ module m_spmm_inv
 #define CPP_mtir_c hybdat%coul(ikpt)%mtir%data_c
 #define CPP_mtir_r hybdat%coul(ikpt)%mtir%data_r
 #endif
+      USE m_juDFT
+      USE m_reorder
+      USE m_calc_l_m_from_lm
+      USE m_types_fleurinput
+      USE m_types_hybdat
+      USE m_types_mpdata
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: spmm_invs
 contains
    subroutine spmm_invs(fi, mpdata, hybdat, ikpt, mat_in, mat_out)
-      use m_juDFT
-      use m_types
-      use m_reorder
-      use m_calc_l_m_from_lm
       implicit none
       type(t_fleurinput), intent(in)    :: fi
       type(t_mpdata), intent(in)        :: mpdata
@@ -41,7 +52,7 @@ contains
 #endif
 
       call timestart("spmm_invs")
-      mat_in_line = mat_in(hybdat%nbasp + 1, :)
+      mat_in_line = mat_in(hybdat%n_mt + 1, :)
       
       n_vec = size(mat_in, 2)
 
@@ -167,7 +178,7 @@ contains
                         indx3 = indx3 + ishift1
                      END DO
 
-                     IF (indx3 /= hybdat%nbasp) call judft_error('spmvec: error counting index indx3')
+                     IF (indx3 /= hybdat%n_mt) call judft_error('spmvec: error counting index indx3')
 
                      n_size = mpdata%num_radbasfn(l, itype) - 1
                      max_lcut_plus_1 = maxval(fi%hybinp%lcutm1) + 1
@@ -214,6 +225,10 @@ contains
 #endif
             call timestop("ibasm+1 -> dgemm")
 
+            ! films: vacuum part, outside the MT+IR corner of mtir
+            call spmm_vac_r(fi, mpdata, hybdat, hybdat%coul(ikpt), ikpt, mat_in, mat_out)
+            call apply_mtir_vac_r(fi, mpdata, hybdat, hybdat%coul(ikpt), ikpt, ibasm, indx1, mat_in, mat_out)
+
             call timestart("dot prod")
             iatom = 0
             indx1 = ibasm; indx2 = 0; indx3 = 0
@@ -256,7 +271,7 @@ contains
                indx2 = indx1 + mpdata%num_radbasfn(0, itype) - 2
                n_size = mpdata%num_radbasfn(0, itype) - 1
                do i_vec = 1, n_vec
-                  mat_out(hybdat%nbasp + 1, i_vec) = mat_out(hybdat%nbasp + 1, i_vec) &
+                  mat_out(hybdat%n_mt + 1, i_vec) = mat_out(hybdat%n_mt + 1, i_vec) &
                                                    + dot_product(mt2_tmp(:n_size, 0, maxval(fi%hybinp%lcutm1) + 1, iatom), &
                                                                   mat_in(indx1:indx2, i_vec))
                enddo

@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_intgr
 
   !**********************************************************************
@@ -24,7 +29,11 @@ MODULE m_intgr
   !                                                            m. weinert
   !**********************************************************************
 
+  USE m_juDFT_stop, ONLY: juDFT_error
   IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: intgr0, intgr1, intgr2, intgr3_modern, intgr3, intgz0, intgz1, intgz1complex, intgz1realreverse, &
+     intgz1complexreverse, sfint, intgr3linintp, intgr2linintp, intgz1reverse, ddot
 
   !INTRINSIC exp,log
   INTERFACE
@@ -547,7 +556,6 @@ END SUBROUTINE intgr3_modern
    ! For dfpt (juPhon):
    SUBROUTINE intgr3LinIntp(y,r,h,jri,z, i1)
 
-       USE m_juDFT_stop, ONLY : juDFT_error
 
        INTEGER, INTENT (IN) :: jri
        INTEGER, INTENT (IN) :: i1

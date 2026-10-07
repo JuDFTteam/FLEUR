@@ -13,4 +13,6 @@ You probably want to use the development branch to insert your changes. If your 
 ## More info
 In the menu to the left you will find information on various topics as well as the links to the source-code documentation.
 
+- Wannier90 library-mode input documentation: [wannierlib.md](wannierlib.md)
+
 

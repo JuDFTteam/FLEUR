@@ -9,6 +9,24 @@ module m_types_phonon
 
     use m_juDFT
     use m_types_dfpt_scf
+    use m_dfpt_NAC
+    use m_dfpt_eii2
+    use m_dfpt_generate_gradient
+    use m_dfpt_dynmat
+    use m_dfpt_dynmat_eig
+    use m_types_dfpt
+    use m_types_enpara
+    use m_types_fleurinput
+    use m_types_hybdat
+    use m_types_kpts
+    use m_types_mpi
+    use m_types_nococonv
+    use m_types_potden
+    use m_types_misc
+    use m_types_sphhar
+    use m_types_stars
+    use m_types_sternheimerjob
+    use m_types_xcpot
 
     implicit none 
 
@@ -77,19 +95,19 @@ module m_types_phonon
         outEii2 = this%Eii2        
     end subroutine get_Eii2
     
-    subroutine get_dynNAC(this,outDynNAC)
+    subroutine get_dynNAC(this,fi,outDynNAC)
         class(t_phonon), intent(in) :: this
+        type(t_fleurinput), intent(in) :: fi 
         complex, allocatable, intent(out) :: outDynNAC(:,:)
 
         if (allocated(outDynNAC)) deallocate(outDynNAC)
         allocate(outDynNAC,mold=this%dynMatNac)
-
-        outDynNAC = this%dynMatNac        
+        call dfpt_NAC(fi,outDynNAC)
+        !outDynNAC = this%dynMatNac        
     end subroutine get_dynNAC
 
 
     subroutine init_child_phonon(this,fi,nqpts,dynMatNac)
-        use m_types
         class(t_phonon), intent(inout) :: this
         type(t_fleurinput), intent(in) :: fi 
         integer, intent(in)  :: nqpts
@@ -110,10 +128,7 @@ module m_types_phonon
 
     subroutine q_indepent_properties_phonon(this,sternheimerJob,fi,fmpi,sphhar,hybdat,xcpot,nococonv,stars,rho,vTot,grRho3,grVtot3,grVC3,grVext3,grgrVext3x3)
         
-        use m_types
-        use m_dfpt_eii2    
         
-        use m_dfpt_generate_gradient
 
 
         class(t_phonon), intent(inout) :: this
@@ -179,8 +194,6 @@ module m_types_phonon
                                           dfpt_eig_id2,enpara,results,results1,l_real,dfpt,rho,vTot,grRho3,grVext3,grVc3,den1,vTot1,den1Im,vTot1Im,vC1,vC1Im)
         
         
-        use m_types
-        use m_dfpt_dynmat
         
 
         class(t_phonon),intent(inout) :: this
@@ -228,8 +241,6 @@ module m_types_phonon
 
     subroutine postprocessing_qpoint_phonon(this,fi,fmpi,dfpt,qpts,iQ,q_list)
 
-        use m_types
-        use m_dfpt_dynmat_eig
 
         class(t_phonon), intent(inout) :: this
         type(t_fleurinput),intent(in)  :: fi 
@@ -251,9 +262,9 @@ module m_types_phonon
 
         if (fmpi%irank==0) then 
             ! Add NAC contribution
-            if (l_gamma .and. dfpt%l_polar) then 
-                call this%get_dynNAC(dynMatNac)
-                dyn_mat(iQ,:,:) = dyn_mat(iQ,:,:) + dynMatNac(:,:) 
+            if (l_gamma .and. dfpt%l_polar) then
+                call this%get_dynNAC(fi,dynMatNac)
+                dyn_mat(iQ,:,:) = dyn_mat(iQ,:,:) + dynMatNac(:,:)
             end if 
 
             call timestart("Dynmat diagonalization")
@@ -261,7 +272,7 @@ module m_types_phonon
             call timestop("Dynmat diagonalization")
 
             call timestart("Frequency calculation")
-            call CalculateFrequencies(fi%atoms, q_list(iQ), eigenVals, eigenFreqs,"raw",qpts%bk(:,q_list(iQ)))
+            call CalculateFrequencies(fi%atoms, q_list(iQ), eigenVals, eigenFreqs,"raw",qpts%bk(:,q_list(iQ)),l_writeOutput=.true.)
             call timestop("Frequency calculation")
         end if 
 
@@ -269,7 +280,6 @@ module m_types_phonon
 
     subroutine write_outfiles_phonon(this,fi,fmpi,dfpt)
 
-        use m_types 
 
         class(t_phonon),intent(inout)   :: this         
         type(t_fleurinput),intent(in) :: fi

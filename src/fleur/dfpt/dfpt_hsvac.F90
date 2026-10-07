@@ -5,7 +5,21 @@
 !--------------------------------------------------------------------------------
 MODULE m_dfpt_hsvac
    USE m_juDFT
-   implicit none
+   USE m_vacfun
+   USE m_vac_abcof
+   USE m_types_cell
+   USE m_types_input
+   USE m_types_lapw
+   USE m_types_mat
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_stars
+   USE m_types_vacuum
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: dfpt_hsvac
 CONTAINS
    !-----------------------------------------------------------------------------
    ! Calculate the vacuum contribution to the Hamiltonian perturbation
@@ -13,9 +27,6 @@ CONTAINS
    SUBROUTINE dfpt_hsvac(vacuum, stars, fmpi, jsp, input, v, v1, evac, cell, &
                   & lapwq, lapw, noco, nococonv, hmat)
 
-      USE m_vacfun
-      USE m_vac_map2
-      USE m_types
 
       IMPLICIT NONE
 
@@ -57,9 +68,13 @@ CONTAINS
 
       d2 = SQRT(cell%omtil/cell%area)
 
-      !---> set up mapping function from 3d-->2d lapws, at k and at k+q
-      CALL vac_map2(lapw,  input%jspins, nv2,  kvac,  map2)
-      CALL vac_map2(lapwq, input%jspins, nv2q, kvacq, map2q)
+      !---> set up mapping function from 3d-->2d lapws
+      DO jspin = 1,input%jspins
+         CALL vac_map2(lapw, jspin, lapw%dim_nv2d(), kvac(1,:,jspin), kvac(2,:,jspin), &
+                       map2(:,jspin), nv2(jspin))
+         CALL vac_map2(lapwq, jspin, lapw%dim_nv2d(), kvacq(1,:,jspin), kvacq(2,:,jspin), &
+                       map2q(:,jspin), nv2q(jspin))
+      END DO
 
       !---> loop over the two vacuua (1: upper; 2: lower)
       DO ivac = 1,2

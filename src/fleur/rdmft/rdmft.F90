@@ -1,48 +1,63 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_rdmft
 
+   use m_types_vacdos
+   use m_work_package
+   use m_juDFT
+   use m_constants
+   use m_intgr, only: intgr3
+   use m_eig66_io
+#ifndef CPP_OLDINTEL
+   use m_cdnval
+   use m_cdngen
+   use m_cdn_io
+   use m_cdncore
+   use m_qfix
+   use m_vgen_coulomb
+   use m_convol
+   use m_intnv
+   use m_mixedbasis
+   use m_coulombmatrix
+   use m_hf_init
+   use m_hf_setup
+   use m_io_hybrid
+   use m_symm_hf
+   use m_exchange_valence_hf
+   use m_exchange_core
+   use m_symmetrizeh
+   use m_bfgs_b2
+   use m_xmlOutput
+   use m_types_dos
+   use m_calc_cmt
+#endif
+   use m_types_cdnval
+   use m_types_enpara
+   use m_types_fleurinput
+   use m_types_hybdat
+   use m_types_hybmpi
+   use m_types_lapw
+   use m_types_mat
+   use m_types_mpdata
+   use m_types_mpi
+   use m_types_nococonv
+   use m_types_potden
+   use m_types_misc
+   use m_types_sphhar
+   use m_types_stars
+   use m_types_xcpot_inbuild
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: rdmft
 CONTAINS
 
 SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
                  sphhar,vTot,vCoul,nococonv,xcpot,mpdata,hybdat,&
                  results,archiveType,outDen)
-   use m_types_vacdos
-   use m_work_package
-   USE m_types
-   USE m_juDFT
-   USE m_constants
-   USE m_intgr, ONLY : intgr3
-   USE m_eig66_io
-#ifndef CPP_OLDINTEL
-   USE m_cdnval
-   USE m_cdngen
-   USE m_cdn_io
-   USE m_cdncore
-   USE m_qfix
-   USE m_vgen_coulomb
-   USE m_convol
-   USE m_intnv
-
-   USE m_mixedbasis
-   USE m_coulombmatrix
-   USE m_hf_init
-   USE m_hf_setup
-   USE m_io_hybrid
-   USE m_symm_hf
-   USE m_exchange_valence_hf
-   USE m_exchange_core
-   USE m_symmetrizeh
-   USE m_bfgs_b2
-   USE m_xmlOutput
-   USE m_types_dos
-   use m_calc_cmt
-
-#endif
 
    IMPLICIT NONE
 
@@ -380,7 +395,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
    iterHF = 0
    hybdat%l_calhf = .TRUE.
 
-   CALL mixedbasis(fi%atoms,fi%kpts,fi%input,fi%cell,xcpot,fi%mpinp,mpdata,fi%hybinp, hybdat,enpara,fmpi,vTot, iterHF)
+   CALL mixedbasis(fi%atoms,fi%kpts,fi%input,fi%cell,fi%vacuum,xcpot,fi%mpinp,mpdata,fi%hybinp, hybdat,enpara,fmpi,vTot, iterHF)
 
    !allocate coulomb matrix
    IF (.NOT.ALLOCATED(hybdat%coul)) ALLOCATE(hybdat%coul(fi%kpts%nkpt))
@@ -858,7 +873,7 @@ SUBROUTINE rdmft(eig_id,fmpi,fi,enpara,stars,&
 
    !I think we need most of cdngen at this place so I just use cdngen
    CALL outDen%resetPotDen()
-   CALL cdngen(eig_id,fmpi,fi%input,fi%banddos,fi%sliceplot,fi%vacuum,fi%kpts,fi%atoms,sphhar,stars,fi%sym,fi%gfinp,fi%hub1inp,&
+   CALL cdngen(eig_id,fmpi,fi%input,fi%xas,fi%banddos,fi%sliceplot,fi%vacuum,fi%kpts,fi%atoms,sphhar,stars,fi%sym,fi%gfinp,fi%hub1inp,&
                enpara,fi%cell,fi%field,fi%noco,nococonv,vTot,results, fi%corespecinput,archiveType,xcpot,outDen, EnergyDen)
 
    ! Calculate RDMFT energy

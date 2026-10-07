@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -15,11 +15,12 @@ MODULE m_types_fleurinput
   USE m_types_field
   USE m_types_sliceplot
   USE m_types_banddos
+  USE m_types_xas
   USE m_types_mpinp
   USE m_types_hybinp
    
   USE m_types_coreSpecInput
-  USE m_types_wannier
+  USE m_types_wannierlib
   USE m_types_xcpot
   USE m_types_forcetheo_data
   USE m_types_kpts
@@ -28,6 +29,8 @@ MODULE m_types_fleurinput
   USE m_types_hub1inp
   USE m_types_dfpt
   IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: t_fleurinput
 
   TYPE t_fleurinput
     TYPE(t_cell)::cell
@@ -39,10 +42,12 @@ MODULE m_types_fleurinput
     TYPE(t_field)::field
     TYPE(t_sliceplot)::sliceplot
     TYPE(t_banddos)::banddos
+    TYPE(t_xas)::xas
     TYPE(t_hybinp)::hybinp
     type(t_mpinp) :: mpinp
      
     TYPE(t_coreSpecInput)::coreSpecInput
+    TYPE(t_wannierlib_wannierize)::wannierlib
     TYPE(t_forcetheo_data)::forcetheo_data
     TYPE(t_enparaXML)::enparaXML
     TYPE(t_kpts)::kpts

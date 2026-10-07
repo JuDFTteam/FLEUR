@@ -5,6 +5,19 @@
 !--------------------------------------------------------------------------------
 module m_types_rsoc
    use m_judft
+   use m_types_atoms
+   use m_constants
+   use m_types_input
+   use m_types_noco
+   use m_types_nococonv
+   use m_types_potden
+   use m_types_enpara
+   use m_types_radfun
+   use m_types_mpi
+   use m_sointg
+   use m_intgr, only: intgr0
+   use m_anglso
+   use m_sgml
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: t_rsoc
@@ -20,7 +33,6 @@ module m_types_rsoc
 
   CONTAINS
    subroutine init(this,atoms)
-      use m_types_atoms
        implicit none
      class(t_rsoc),INTENT(INOUT):: this
      class(t_atoms),INTENT(IN)   :: atoms
@@ -34,16 +46,6 @@ module m_types_rsoc
 
   subroutine rad_matrix(rsoc,atoms,noco,nococonv,input,fmpi, enpara, vtot)
     !USE m_sorad
-    USE m_constants
-    USE m_types_atoms
-    USE m_types_input
-    USE m_types_noco
-    USE m_types_nococonv
-    USE m_types_potden
-    USE m_types_enpara      
-    USE m_types_radfun
-    USE m_types_mpi
-    use m_sointg
     IMPLICIT NONE
 
     TYPE(t_mpi),INTENT(IN)      :: fmpi
@@ -57,7 +59,7 @@ module m_types_rsoc
   
     !     ..
     !     .. Local Scalars ..
-    INTEGER:: n,i,j,l,itype,ispin,jspin,ispin1,jspin1,ilo,nr
+    INTEGER:: n,i,j,l,itype,ispin,jspin,ispin1,jspin1,ilo
     LOGICAL, SAVE :: first_k = .TRUE.
     TYPE(t_radfun) :: radfun
     REAL,ALLOCATABLE:: v0(:)
@@ -93,11 +95,9 @@ module m_types_rsoc
          !
          efun(1) = (enpara%el0(l,itype,1)+enpara%el0(l,itype,min(2,input%jspins)))/2.
          efun(2) = efun(1)
-         nr = 2
          DO ilo = 1, atoms%nlo(itype)
             IF (atoms%llo(ilo,itype).NE.l) CYCLE
-            nr = nr + 1
-            efun(nr) = (enpara%ello0(ilo,itype,1)+enpara%ello0(ilo,itype,min(2,input%jspins)))/2.
+            efun(atoms%slot_of_lo(ilo,itype)) = (enpara%ello0(ilo,itype,1)+enpara%ello0(ilo,itype,min(2,input%jspins)))/2.
          END DO
 
          !                        s       s'            .s       s'
@@ -177,7 +177,6 @@ module m_types_rsoc
     !
     !     compute radial spin-orbit integrals
     !
-    USE m_intgr, ONLY : intgr0
     IMPLICIT NONE
     !
     !     .. Scalar Arguments ..
@@ -199,19 +198,13 @@ module m_types_rsoc
 
 
 
-  subroutine angles(this,atoms,fmpi,theta,phi,compo)
-    USE m_constants
-    USE m_anglso
-    USE m_sgml
+  subroutine angles(this,atoms,fmpi,theta,phi)
     !USE m_sorad
-    USE m_types_atoms
-    USE m_types_mpi
     IMPLICIT NONE
     class(t_rsoc),INTENT(INOUT):: this
     TYPE(t_atoms),INTENT(IN)    :: atoms
     TYPE(t_mpi),INTENT(IN)      :: fmpi
     REAL,INTENT(IN)             :: theta,phi
-    INTEGER, INTENT(IN),OPTIONAL :: compo
     !     ..
     !     ..
     !     .. Local Scalars ..
@@ -221,8 +214,7 @@ module m_types_rsoc
     INTEGER,PARAMETER:: ispjsp(2) = [1,-1]
     
 
-    IF ((ABS(theta).LT.0.00001).AND.(ABS(phi).LT.0.00001)&
-                       .AND..NOT.PRESENT(compo)) THEN
+    IF ((ABS(theta).LT.0.00001).AND.(ABS(phi).LT.0.00001)) THEN
        !
        !       TEST for real function sgml(l1,m1,is1,l2,m2,is2)
        !
@@ -257,7 +249,7 @@ module m_types_rsoc
                    DO m1 = -l1,l1,1
                       DO m2 = -l2,l2,1
                          this%soangl(l1,m1,jspin1,l2,m2,jspin2) =&
-                           anglso(theta,phi,l1,m1,is1,l2,m2,is2,compo)
+                           anglso(theta,phi,l1,m1,is1,l2,m2,is2)
                       ENDDO
                    ENDDO
                    !

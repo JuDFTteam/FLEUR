@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2024 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -8,7 +8,23 @@
 MODULE m_dfpt_potdenLocal
 
 
+    USE m_types_fleurinput
+    USE m_constants
+    USE m_types_stars
+    USE m_types_atoms
+    USE m_types_sym
+    USE m_types_vacuum
+    USE m_types_input
+    USE m_types_cell
+    USE m_convn
+    USE m_types_mpi
+    USE m_make_stars
+    USE m_types_noco
+    USE m_types_potden
+    USE m_types_sphhar
     IMPLICIT NONE 
+    PRIVATE
+    PUBLIC :: create_typeslocal, cast_smaller_grid, cast_onto_larger_grid
 
 
 CONTAINS
@@ -16,18 +32,6 @@ CONTAINS
         
         ! This subroutine creates the types with a bigger Gmaxz Cutoff
         ! Nessesary for the Film-Mode Calcaultion 
-        USE m_types_fleurinput
-        USE m_types
-        use m_constants
-        USE m_types_stars
-        USE m_types_atoms
-        USE m_types_sym
-        USE m_types_vacuum
-        USE m_types_input
-        USE m_types_cell
-        USE m_convn
-        USE m_types_mpi
-        USE m_make_stars
         TYPE(t_fleurinput), INTENT(IN) :: fi
         TYPE(t_mpi), INTENT(IN) :: fmpi
         TYPE(t_sym), INTENT(IN) :: sym
@@ -52,8 +56,6 @@ CONTAINS
 
     SUBROUTINE cast_smaller_grid(pot1,pot2,starsGlobal,input)
         
-        USE m_types_input
-        USE m_types
 
         TYPE(t_potden), INTENT(INOUT) :: pot1
         TYPE(t_potden), INTENT(IN)    :: pot2
@@ -72,8 +74,6 @@ CONTAINS
 
     SUBROUTINE cast_onto_larger_grid(pot1,pot2,starsGlobal,input)
         
-        USE m_types_input
-        USE m_types
 
         TYPE(t_potden), INTENT(INOUT) :: pot1
         TYPE(t_potden), INTENT(IN)    :: pot2

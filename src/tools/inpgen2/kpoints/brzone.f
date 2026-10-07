@@ -1,5 +1,9 @@
       MODULE m_brzone
       use m_juDFT
+      use m_constants
+      implicit none
+      private
+      public :: brzone
 !
 ! This subroutine finds the corner-points, the edges, and the
 ! faces of the irreducible wedge of the brillouin zone (IBZ).
@@ -10,7 +14,6 @@
      =                   cpoint,
      <                   xvec,ncorn,nedge,nface,fnorm,fdist)
 
-      USE m_constants
 
       IMPLICIT NONE
 

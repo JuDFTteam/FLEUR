@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -7,6 +7,15 @@
 MODULE m_mpimakegroups
   use m_juDFT
   use mpi
+  use m_types_lapw
+  use m_types_atoms
+  use m_types_input
+  use m_types_kpts
+  use m_types_mpi
+  use m_types_noco
+   implicit none
+  private
+  public :: mpi_make_groups, check_memory
 CONTAINS
   SUBROUTINE mpi_make_groups(&
        fmpi,kpts, input,atoms,noco,&
@@ -43,7 +52,6 @@ CONTAINS
 !          G.B. `99
 !
 !------------------------------------------------------------------------
-    USE m_types
     IMPLICIT NONE
 
     TYPE(t_mpi),INTENT(IN)       :: fmpi
@@ -186,7 +194,6 @@ CONTAINS
 ! check the free and the (approximate) required memory ;
 ! determine minimal n_size to fit into the memory (hopefully).
 !
-        USE m_types
       IMPLICIT NONE
       type(t_mpi),INTENT(IN)         :: fmpi
 
@@ -209,12 +216,9 @@ CONTAINS
 ! some basic arrays allocated in eigen()
 !
 
-      mem = ((atoms%lmaxd*(atoms%lmaxd+2)* (atoms%lmaxd*(atoms%lmaxd+2)+3))/2+1)*atoms%ntype*4                       ! tlmplm%tuu,tlmplm%tdd etc.
-      mem = mem + (atoms%lmaxd*(atoms%lmaxd+2)+1)*(2*atoms%llod+1)*max(mlotot,1)*2 ! tlmplm%tuulo ...
-      mem = mem + (2*atoms%llod+1)**2 * max(mlolotot,1)    ! tlmplm%tuloulo
+      mem = (2*(atoms%lmaxd*(atoms%lmaxd+2)+1)+(2*atoms%llod+1)*atoms%nlod)**2*atoms%ntype*2 ! tlmplm%h
       IF (noco%l_noco) mem = mem * 2                      ! both spins
       mem = mem + 49*(atoms%n_u+atoms%n_hia)*input%jspins*2                      ! lda+U, *2 for complex
-      mem = mem+INT((lapw_dim_nbasfcn*2+(atoms%lmaxd*(atoms%lmaxd+2)+1)*atoms%ntype)*0.5)+1 ! tlmplm%ind, *0.5 for integer
 
       matsz = lapw_dim_nbasfcn * CEILING(REAL(lapw_dim_nbasfcn)/n_size) ! size of a, b
 #ifdef CPP_INVERSION

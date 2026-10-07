@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -52,31 +52,50 @@
 MODULE m_exchange_valence_hf
 
    USE m_constants
-   USE m_types
    USE m_util
    use m_matmul_dgemm
+   use m_gamma_2d, only: divergence_2d
+   use m_wrapper
+   use m_trafo
+   use m_wavefproducts
+   use m_olap
+   use m_hsefunctional
+   use m_io_hybrid
+   use m_kp_perturbation
+   use m_spmm_inv
+   use m_spmm_noinv
+   use m_work_package
+   use m_judft
+#ifdef CPP_MPI
+   use mpi
+#endif
+#ifdef _OPENACC
+   use cublas
+#endif
+   use m_types_cell
+   use m_types_fleurinput
+   use m_types_hybdat
+   use m_types_kpts
+   use m_types_lapw
+   use m_types_mat
+   use m_types_mpdata
+   use m_types_mpi
+   use m_types_nococonv
+   use m_types_misc
+   use m_types_stars
+   use m_types_xcpot_inbuild
+   use iso_c_binding
+   implicit none
+   private
+   public :: exchange_valence_hf, calc_divergence, recombine_parts, alloc_dev_cpy, zero_order, ibs_corr
+
    LOGICAL, PARAMETER:: zero_order = .false., ibs_corr = .false.
 
 CONTAINS
    SUBROUTINE exchange_valence_hf(k_pack, fi, fmpi, z_k, mpdata, jsp, hybdat, lapw, eig_irr, results, &
                                   n_q, wl_iks, xcpot, nococonv, stars, nsest, indx_sest, cmt_nk, mat_ex)
       
-      USE m_wrapper
-      USE m_trafo
-      USE m_wavefproducts
-      USE m_olap
-      USE m_hsefunctional
-      USE m_io_hybrid
-      USE m_kp_perturbation
-      use m_spmm_inv
-      use m_spmm_noinv
-      use m_work_package
-      use m_judft 
-#ifdef CPP_MPI
-      use mpi
-#endif
 #ifdef _OPENACC
-      USE cublas
 #define CPP_zgemm cublaszgemm
 #define CPP_dgemm cublasdgemm
 #else
@@ -145,7 +164,12 @@ CONTAINS
       ik = k_pack%nk
 
       IF (initialize) THEN !it .eq. 1 .and. ik .eq. 1) THEN
+         if (fi%input%film) then
+            ! films: head 2 pi/(A q) instead of 4 pi/(Omega q^2)
+            call divergence_2d(fi%cell, fi%kpts, divergence)
+         else
          call calc_divergence(fi%cell, fi%kpts, divergence)
+         endif
          if(fmpi%irank == 0) write (*,*) "Divergence:", divergence
          initialize = .false.
       END IF
@@ -481,7 +505,13 @@ CONTAINS
                !multiply divergent contribution with occupation number;
                !this only affects metals
                IF (n1 == nn2) THEN
+                  if (fi%input%film) then
+                     ! film prefactor 2 pi/A
+                     cdum2 = tpi_const/(fi%cell%omtil/fi%cell%amat(3, 3)) &
+                             *divergence*wl_iks(n1, ik)*fi%kpts%nkptf
+                  else
                   cdum2 = fpi_const/fi%cell%omtil*divergence*wl_iks(n1, ik)*fi%kpts%nkptf
+                  endif
                END IF
 
                ! due to the symmetrization afterwards the factor 1/n_q(1) must be added
@@ -585,36 +615,7 @@ CONTAINS
       call timestop("calc_divergence")
    END SUBROUTINE calc_divergence
 
-   function calc_divergence2(cell, kpts) result(divergence)
-      USE m_types
-      USE m_constants
-      USE m_util, ONLY: cerf
-      implicit none
-      TYPE(t_cell), INTENT(IN)  :: cell
-      TYPE(t_kpts), INTENT(IN)  :: kpts
-      REAL                      :: divergence
-
-      INTEGER :: ikpt
-      REAL, PARAMETER :: expo = 5e-3
-      REAL    :: rrad, k(3), knorm2
-      COMPLEX :: cdum
-
-      rrad = sqrt(-log(5e-3)/expo)
-      cdum = sqrt(expo)*rrad
-      divergence = real(cell%omtil/(tpi_const**2)*sqrt(pi_const/expo)*cerf(cdum))
-      rrad = rrad**2
-
-      do ikpt = 1, kpts%nkptf
-         k = kpts%bkf(:, ikpt)
-         knorm2 = norm2(k)
-         IF (knorm2 < rrad) THEN
-            divergence = divergence - exp(-expo*knorm2)/knorm2/kpts%nkptf
-         END IF
-      enddo
-   end function calc_divergence2
-
    subroutine recombine_parts(in_part, ipart, psizes, out_total)
-      use m_types
       type(t_mat), intent(in)    :: in_part
       integer, intent(in)        :: ipart, psizes(:)
       type(t_mat), intent(inout) :: out_total

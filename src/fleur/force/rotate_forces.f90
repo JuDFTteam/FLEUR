@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_rotate_forces
    ! This routine writes a file similar to forces.dat, but containing
    ! all atoms in a sequence corresponding to their appearance in the
@@ -14,10 +19,13 @@ MODULE m_rotate_forces
    ! Modified to construct a file for use with phonopy instead of PHON.
    ! Neukirchen, Dec 2020 
 
+   USE m_constants
+   USE m_juDFT_string
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: rotate_forces
 CONTAINS
    SUBROUTINE rotate_forces(ntypd,ntype,natd,nop,tote,omtil,neq,mrot,amat,bmat,taual,tau,force,label)
-      USE m_constants
-      USE m_juDFT_string
 
       IMPLICIT NONE
 

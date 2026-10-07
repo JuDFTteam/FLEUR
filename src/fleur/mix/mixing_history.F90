@@ -1,10 +1,12 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_mixing_history
   USE m_types_mixvector
+  USE m_types_mpi
+  USE m_types_potden
   IMPLICIT NONE
   PRIVATE
   INTEGER:: iter_stored=0
@@ -15,7 +17,6 @@ MODULE m_mixing_history
 CONTAINS
 
   SUBROUTINE mixing_history_open(mpi,maxiter,basename)
-    USE m_types,ONLY:t_mpi
     INTEGER,INTENT(IN)    :: maxiter
     TYPE(t_mpi),INTENT(in):: mpi
 
@@ -69,9 +70,9 @@ CONTAINS
 !#endif
   END SUBROUTINE mixing_history_open
 
-  SUBROUTINE mixing_history_close(mpi,basename)
-    USE m_types,ONLY:t_mpi
+  SUBROUTINE mixing_history_close(mpi,imix,basename)
     TYPE(t_mpi),INTENT(in):: mpi
+    INTEGER,INTENT(IN)    :: imix
 
     CHARACTER(len=20), OPTIONAL, INTENT(IN) :: basename
 
@@ -79,6 +80,7 @@ CONTAINS
     INTEGER          :: n
 
 
+    IF (imix==0) RETURN ! Straight mixing needs no history
     IF (iter_stored==0) RETURN ! Nothing found to be stored
     IF (mpi%isize>1) THEN
        IF (.NOT.PRESENT(basename)) THEN
@@ -110,7 +112,6 @@ CONTAINS
 
 
   SUBROUTINE mixing_history(imix,maxiter,inden,outden,sm,fsm,it,nmzxyd,inDenIm,outDenIm)
-    USE m_types
     implicit none
     INTEGER,INTENT(in)::imix,maxiter
     type(t_potden),intent(inout)::inden,outden
@@ -155,7 +156,6 @@ CONTAINS
   end subroutine mixing_history
 
   SUBROUTINE mixing_history_reset(mpi,basename)
-    USE m_types,ONLY:t_mpi
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(in)::mpi
     CHARACTER(len=20), OPTIONAL, INTENT(IN) :: basename
@@ -195,7 +195,6 @@ CONTAINS
 END SUBROUTINE dfpt_mixing_history_reset
 
   SUBROUTINE mixing_history_file_count(mpi,expected_files,existing_files,l_has_history,basename)
-    USE m_types,ONLY:t_mpi
     IMPLICIT NONE
 
     TYPE(t_mpi),INTENT(IN) :: mpi

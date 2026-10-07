@@ -10,7 +10,30 @@
 #endif
 MODULE m_hsmt_soc_offdiag
   USE m_juDFT
+  USE m_constants, ONLY: fpi_const, tpi_const, oUnit
+  USE m_hsmt_spinor
+  USE m_setabc1lo
+  USE m_hsmt_fjgj
+  USE m_anglso
+  USE m_ylm
+  USE m_types_atoms
+  USE m_types_cell
+  USE m_types_lapw
+  USE m_types_mat
+  USE m_types_mpi
+  USE m_types_nococonv
+  USE m_types_sym
+  USE m_types_tlmplm
   IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: hsmt_soc_offdiag_lo, hsmt_soc_offdiag_check, l_checksocangular
+#ifdef _OPENACC
+  PUBLIC :: hsmt_soc_offdiag
+#endif
+#ifdef _OPENACC
+#else
+  PUBLIC :: hsmt_soc_offdiag
+#endif
 
   !Development switch: set to .TRUE. to have hsmt_soc_offdiag_check verify the
   !closed-form SOC angular factor against an explicit spherical-harmonic reference
@@ -19,11 +42,7 @@ MODULE m_hsmt_soc_offdiag
 
 CONTAINS
 #ifdef _OPENACC
-  SUBROUTINE hsmt_soc_offdiag(n,atoms,cell,fmpi,nococonv,lapw,sym,usdus,td,fjgj,hmat)
-    USE m_constants, ONLY : fpi_const,tpi_const
-    USE m_types
-    USE m_hsmt_spinor
-    USE m_hsmt_fjgj
+  SUBROUTINE hsmt_soc_offdiag(n,atoms,cell,fmpi,nococonv,lapw,sym,td,fjgj,hmat)
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)        :: fmpi
     TYPE(t_nococonv),INTENT(IN)   :: nococonv
@@ -31,7 +50,6 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)       :: cell
     TYPE(t_lapw),INTENT(IN)       :: lapw
     TYPE(t_sym  ),INTENT(IN)      :: sym
-    TYPE(t_usdus),INTENT(IN)      :: usdus
     TYPE(t_tlmplm),INTENT(IN)     :: td
     TYPE(t_fjgj),INTENT(IN)       :: fjgj
     CLASS(t_mat),INTENT(INOUT)    :: hmat(:,:)!(2,2)
@@ -125,16 +143,12 @@ CONTAINS
     CALL timestop("offdiagonal soc-setup")
 
     if (atoms%nlo(n)>0) THEN
-      call hsmt_soc_offdiag_LO(n,atoms,cell,fmpi,nococonv,lapw,sym,td,usdus,fjgj,hmat)
+      call hsmt_soc_offdiag_LO(n,atoms,cell,fmpi,nococonv,lapw,sym,td,fjgj,hmat)
     endif  
     RETURN
   END SUBROUTINE hsmt_soc_offdiag
 #else
-  SUBROUTINE hsmt_soc_offdiag(n,atoms,cell,fmpi,nococonv,lapw,sym,usdus,td,fjgj,hmat)
-    USE m_constants, ONLY : fpi_const,tpi_const
-    USE m_types
-    USE m_hsmt_spinor
-    USE m_hsmt_fjgj
+  SUBROUTINE hsmt_soc_offdiag(n,atoms,cell,fmpi,nococonv,lapw,sym,td,fjgj,hmat)
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)        :: fmpi
     TYPE(t_nococonv),INTENT(IN)   :: nococonv
@@ -142,7 +156,6 @@ CONTAINS
     TYPE(t_cell),INTENT(IN)       :: cell
     TYPE(t_lapw),INTENT(IN)       :: lapw
     TYPE(t_sym  ),INTENT(IN)      :: sym
-    TYPE(t_usdus),INTENT(IN)      :: usdus
     TYPE(t_tlmplm),INTENT(IN)     :: td
     TYPE(t_fjgj),INTENT(IN)       :: fjgj
     CLASS(t_mat),INTENT(INOUT)    :: hmat(:,:)!(2,2)
@@ -283,19 +296,14 @@ CONTAINS
     !!$acc end data
     CALL timestop("offdiagonal soc-setup")
 
-    if (atoms%nlo(n)>0) call hsmt_soc_offdiag_LO(n,atoms,cell,fmpi,nococonv,lapw,sym,td,usdus,fjgj,hmat)
+    if (atoms%nlo(n)>0) call hsmt_soc_offdiag_LO(n,atoms,cell,fmpi,nococonv,lapw,sym,td,fjgj,hmat)
     !$acc update device(hmat(1,1)%data_c,hmat(2,1)%data_c,hmat(1,2)%data_c,hmat(2,2)%data_c)
     RETURN
   END SUBROUTINE hsmt_soc_offdiag
 
 
 #endif  
-  SUBROUTINE hsmt_soc_offdiag_LO(n,atoms,cell,fmpi,nococonv,lapw,sym,td,ud,fjgj,hmat)
-    USE m_constants, ONLY : fpi_const,tpi_const
-    USE m_types
-    USE m_hsmt_spinor
-    USE m_setabc1lo
-    USE m_hsmt_fjgj
+  SUBROUTINE hsmt_soc_offdiag_LO(n,atoms,cell,fmpi,nococonv,lapw,sym,td,fjgj,hmat)
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)        :: fmpi
     TYPE(t_nococonv),INTENT(IN)   :: nococonv
@@ -304,7 +312,6 @@ CONTAINS
     TYPE(t_lapw),INTENT(IN)       :: lapw
     TYPE(t_sym),INTENT(IN)        :: sym
     TYPE(t_tlmplm),INTENT(IN)     :: td
-    TYPE(t_usdus),INTENT(IN)      :: ud
     TYPE(t_fjgj),INTENT(IN)       :: fjgj
     CLASS(t_mat),INTENT(INOUT)    :: hmat(:,:)!(2,2)
     !     ..
@@ -323,7 +330,7 @@ CONTAINS
     REAL, ALLOCATABLE :: plegend(:,:),dplegend(:,:)
     COMPLEX, ALLOCATABLE :: cph(:)
     REAL                 :: alo1(atoms%nlod,2),blo1(atoms%nlod,2),clo1(atoms%nlod,2)
-    INTEGER              :: lo_slot(atoms%nlod),lo_cnt(0:atoms%lmaxd)
+    INTEGER              :: lo_slot(atoms%nlod)
     CALL timestart("offdiagonal soc-setup LO")
 
     DO l = 0,atoms%lmaxd
@@ -340,7 +347,7 @@ CONTAINS
     dplegend(:,1)=1.e0
 
     DO j1=1,2
-      call setabc1lo(atoms,n,ud,j1, alo1,blo1,clo1)
+      call setabc1lo(atoms,n,td%radfun(n),j1, alo1,blo1,clo1)
     ENDDO
     !Normalization taken from hsmt_ab
     alo1=alo1*fpi_const/SQRT(cell%omtil)* ((atoms%rmt(n)**2)/2)
@@ -350,11 +357,8 @@ CONTAINS
     !Map each LO to its radial-function slot in rsoc%rso: slot 1=u, 2=udot,
     !3.. = LOs of the same l in the order they appear in atoms%llo (same ordering
     !as in types_radfun%generate_radial_functions).
-    lo_cnt = 0
     DO lo = 1,atoms%nlo(n)
-       l = atoms%llo(lo,n)
-       lo_cnt(l) = lo_cnt(l) + 1
-       lo_slot(lo) = 2 + lo_cnt(l)
+       lo_slot(lo) = atoms%slot_of_lo(lo,n)
     ENDDO
 
     associate(h11=>hmat(1,1)%data_c,h12=>hmat(1,2)%data_c,h21=>hmat(2,1)%data_c,h22=>hmat(2,2)%data_c)
@@ -508,11 +512,6 @@ CONTAINS
     !!    standard rotation only for beta=alpha=0, and there only up to a sign in the
     !!    spin-off-diagonal blocks (compensated below). For a rotated frame it is a
     !!    different operator, not a reference, and this check is therefore skipped.
-    USE m_constants, ONLY : fpi_const,oUnit
-    USE m_types
-    USE m_hsmt_spinor
-    USE m_anglso
-    USE m_ylm
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)        :: fmpi
     TYPE(t_nococonv),INTENT(IN)   :: nococonv

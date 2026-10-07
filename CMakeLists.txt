@@ -15,7 +15,19 @@ set(CMAKE_Fortran_FLAGS "")
 project(FLEUR LANGUAGES C CXX Fortran)
 string(STRIP "${CMAKE_Fortran_FLAGS} ${CMAKE_Fortran_FLAGS_backup}" CMAKE_Fortran_FLAGS)
 
+# CMake >= 4.0 rejects cmake_minimum_required(VERSION <3.5) in bundled
+# submodules (libxc, BLACS test project of SCALAPACK, ...). The environment
+# variable also covers sub-configures started via execute_process.
+if (NOT DEFINED CMAKE_POLICY_VERSION_MINIMUM)
+   set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+endif()
+if (NOT DEFINED ENV{CMAKE_POLICY_VERSION_MINIMUM})
+   set(ENV{CMAKE_POLICY_VERSION_MINIMUM} ${CMAKE_POLICY_VERSION_MINIMUM})
+endif()
+
 include("cmake/CompilerConfig.txt")
+
+include("cmake/rpath.cmake")
 
 include("cmake/Generate_Schema.cmake")
 
@@ -24,23 +36,16 @@ include("cmake/Files_and_Targets.txt")
 include("cmake/filespecific.cmake")
 include("cmake/pytest_setup.cmake")
 
-# Also build inpgen2+3
+# Also build inpgen
 add_subdirectory("src/tools/inpgen2")
-add_subdirectory("src/tools/inpgen3")
-# Ensure buildinfo.h is generated before inpgen2/3 and fleurinpgen are compiled.
+# Ensure buildinfo.h is generated before inpgen2 is compiled.
 # The 'buildinfo' target (defined in cmake/compileenv.txt) generates the header
 # independently, so we no longer need to depend on the full fleur/fleur_MPI builds.
 add_dependencies("inpgen2" buildinfo)
-add_dependencies("inpgen3" buildinfo)
-add_dependencies("fleurinpgen" buildinfo)
-
-
-#Build fleuriste TUI/CLI
-add_subdirectory("src/tools/inpgen3/fleuriste")
 
 include("cmake/ReportConfig.txt")
 
-#install(TARGETS fleur inpgen DESTINATION bin)
-install(PROGRAMS ${CMAKE_BINARY_DIR}/fleur DESTINATION bin OPTIONAL)
-install(PROGRAMS ${CMAKE_BINARY_DIR}/fleur_MPI DESTINATION bin OPTIONAL)
-install(PROGRAMS ${CMAKE_BINARY_DIR}/inpgen DESTINATION bin)
+#Both targets are renamed on output ('fleur' -> 'fleur_MPI' for an MPI build,
+#'inpgen2' -> 'inpgen'); install(TARGETS) honours RUNTIME_OUTPUT_NAME.
+install(TARGETS fleur   RUNTIME DESTINATION bin)
+install(TARGETS inpgen2 RUNTIME DESTINATION bin)

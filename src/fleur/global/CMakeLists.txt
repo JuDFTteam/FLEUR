@@ -16,14 +16,12 @@ src/fleur/global/savewigner.f90
 src/fleur/global/checkdop.F90
 src/fleur/global/checkdopall.f90
 src/fleur/global/sort.f90
-src/fleur/global/vac_map2.f90
 src/fleur/global/genMTBasis.f90
 src/fleur/global/chkmt.f90
 src/fleur/global/convn.f90
 src/fleur/global/phasy1.f90
 src/fleur/global/qfix.f90
 src/fleur/global/radflo.F90
-src/fleur/global/relLO_tmat.f90
 src/fleur/global/relLO_dirac.f90
 src/fleur/global/starf.f90
 src/fleur/global/utility.F90

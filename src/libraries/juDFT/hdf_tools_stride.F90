@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -11,13 +11,15 @@ MODULE m_hdf_tools5
 !     IO-with stride
 !-----------------------------------------------
    USE m_hdf_tools4
+   USE hdf5
+   USE m_judft
+   IMPLICIT NONE
    PRIVATE
    PUBLIC io_write_real1s, io_write_real2s, io_write_real3s
 CONTAINS
    !<--subroutines for IO with stride
    SUBROUTINE io_write_real3s(did, start, count, data, stride, transprop)
 !*****************************************************************
-      USE hdf5
       IMPLICIT NONE
 
       INTEGER(HID_T), INTENT(IN) :: did
@@ -76,7 +78,6 @@ CONTAINS
    SUBROUTINE io_write_real1s(                                       &
   &                           did, start, count, DATA, stride, transprop)
 !*****************************************************************
-      USE hdf5
       IMPLICIT NONE
 
 !arguments
@@ -150,8 +151,6 @@ CONTAINS
    SUBROUTINE io_write_real2s(                                       &
   &                           did, start, count, DATA, stride, transprop)
 !*****************************************************************
-      USE hdf5
-      use m_judft
       IMPLICIT NONE
 
 !arguments

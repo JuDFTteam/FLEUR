@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -14,6 +14,12 @@
 MODULE m_types_xcpot
    USE m_juDFT
    USE m_types_fleurinput_base
+   USE M_mpi_bc_tool
+   USE m_types_xml
+   USE, INTRINSIC :: IEEE_ARITHMETIC
+#ifdef CPP_LIBXC
+   USE xc_f90_lib_m
+#endif
    IMPLICIT NONE
    PRIVATE
    PUBLIC :: t_xcpot, t_gradients
@@ -68,7 +74,7 @@ MODULE m_types_xcpot
       PROCEDURE        :: get_exchange_weight => xcpot_get_exchange_weight
       PROCEDURE        :: get_vxc => xcpot_get_vxc
       PROCEDURE        :: get_exc => xcpot_get_exc
-      PROCEDURE        :: get_fxc => xcpot_get_fxc
+      PROCEDURE        :: get_fxc_lda => xcpot_get_fxc_lda
       PROCEDURE,NOPASS :: apply_cutoffs
 
       PROCEDURE, NOPASS :: alloc_gradients => xcpot_alloc_gradients
@@ -94,7 +100,6 @@ MODULE m_types_xcpot
 CONTAINS
 
   subroutine mpi_bc_xcpot_abstract(This, Mpi_comm, Irank)
-    Use M_mpi_bc_tool
     class(t_xcpot), intent(inout)::This
     integer, intent(in):: Mpi_comm
     integer, intent(in), Optional::Irank
@@ -123,10 +128,6 @@ CONTAINS
   end subroutine
 
    SUBROUTINE read_xml_xcpot(this, xml)
-      USE m_types_xml
-#ifdef CPP_LIBXC
-      USE xc_f90_lib_m
-#endif
       CLASS(t_xcpot), INTENT(INOUT):: this
       TYPE(t_xml), INTENT(INOUT)    ::xml
 
@@ -281,7 +282,6 @@ CONTAINS
    END FUNCTION xcpot_needs_grad
 
    FUNCTION xcpot_get_exchange_weight(xcpot) RESULT(a_ex)
-      USE m_judft
       IMPLICIT NONE
       CLASS(t_xcpot), INTENT(IN):: xcpot
       REAL:: a_ex
@@ -289,7 +289,6 @@ CONTAINS
    END FUNCTION xcpot_get_exchange_weight
 
    SUBROUTINE xcpot_get_vxc(xcpot, jspins, rh, vxc, vx, grad,kinEnergyDen_KS)
-      USE m_judft
       IMPLICIT NONE
 
       CLASS(t_xcpot), INTENT(IN) :: xcpot
@@ -307,8 +306,6 @@ CONTAINS
 
    SUBROUTINE xcpot_get_exc(xcpot, jspins, rh, exc, grad, kinEnergyDen_KS, mt_call)
       !USE m_types_misc
-      USE m_judft
-      USE, INTRINSIC :: IEEE_ARITHMETIC
       IMPLICIT NONE
 
       CLASS(t_xcpot), INTENT(IN)             :: xcpot
@@ -326,8 +323,7 @@ CONTAINS
       CALL juDFT_error("Can't use XC-parrent class")
    END SUBROUTINE xcpot_get_exc
 
-   SUBROUTINE xcpot_get_fxc(xcpot, jspins, rh, fxc)
-      USE m_judft
+   SUBROUTINE xcpot_get_fxc_lda(xcpot, jspins, rh, fxc)
       IMPLICIT NONE
 
       CLASS(t_xcpot), INTENT(IN) :: xcpot
@@ -338,7 +334,7 @@ CONTAINS
       REAL, INTENT(OUT)       :: fxc(:, :)
       fxc = 0.0
       CALL juDFT_error("Can't use XC-parrent class")
-  END SUBROUTINE xcpot_get_fxc
+  END SUBROUTINE xcpot_get_fxc_lda
 
    SUBROUTINE xcpot_alloc_gradients(ngrid, jspins, grad)
       IMPLICIT NONE

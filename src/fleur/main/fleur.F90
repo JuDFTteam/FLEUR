@@ -28,59 +28,81 @@ MODULE m_fleur
    !! one-dimensional        --- y.mokrousov   2002
    !! exchange parameters    --- m.lezaic      2004
    !!                            g.bihlmayer, s.bluegel 1999
+   USE m_types_forcetheo_extended
+   USE m_constants
+   USE m_optional
+   USE m_cdn_io
+   USE m_mixing_history
+   USE m_qfix
+   USE m_vgen
+   USE m_vgen_coulomb
+   USE m_writexcstuff
+   USE m_eigen
+   USE m_secvar_soc
+   USE m_fermie
+   USE m_cdngen
+   USE m_totale
+   USE m_potdis
+   USE m_mix
+   USE m_xmlOutput
+   USE m_juDFT_time
+   USE m_calc_hybrid
+   USE m_rdmft
+   USE m_io_hybrid
+   USE m_dwigner
+   USE m_ylm
+   USE m_metagga
+   USE m_plot
+   USE m_usetup
+   USE m_hubbard1_setup
+   USE m_writeCFOutput
+   USE m_mpi_bc_tool
+   USE m_eig66_io
+   USE m_writeBasis
+   USE m_RelaxSpinAxisMagn
+   USE m_dfpt
+   USE m_abcoeff_store
+   USE m_make_stars
+   USE m_dfpt_vefield
+   USE m_checkdopall
+   USE m_store_load_hybrid
+   USE m_wannierlib_main
+   USE m_types_moessbauerParams
+!$ USE omp_lib
+   USE m_judft
+   USE m_types_lapw
+   USE m_types_enpara
+   USE m_types_field
+   USE m_types_fleurinput
+   USE m_types_forcetheo
+   USE m_types_greensf
+   USE m_types_hub1data
+   USE m_types_hybdat
+   USE m_types_input
+   USE m_types_mpdata
+   USE m_types_mpi
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_misc
+   USE m_types_sliceplot
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_xcpot
+   USE m_types_xcpot_inbuild
+#ifdef CPP_MPI
+   USE mpi
+#endif
    implicit none
+   PRIVATE
+   PUBLIC :: fleur_execute
 
 CONTAINS
    SUBROUTINE fleur_execute(fmpi, fi, sphhar, stars, nococonv, forcetheo, enpara, results, &
-                            xcpot, wann, hybdat, mpdata)
+                            xcpot, hybdat, mpdata)
       !! This routine is the main program of the FLEUR code.
 
-      USE m_types
-      USE m_types_forcetheo_extended
-      USE m_constants
-      USE m_optional
-      USE m_cdn_io
-      USE m_mixing_history
-      USE m_qfix
-      USE m_vgen
-      USE m_vgen_coulomb
-      USE m_writexcstuff
-      USE m_eigen
-      USE m_secvar_soc
-      USE m_fermie
-      USE m_cdngen
-      USE m_totale
-      USE m_potdis
-      USE m_mix
-      USE m_xmlOutput
-      USE m_juDFT_time
-      USE m_calc_hybrid
-      USE m_rdmft
-      USE m_io_hybrid
-      USE m_wann_optional
-      USE m_wannier
-      USE m_bs_comfort
-      USE m_dwigner
-      USE m_ylm
-      USE m_metagga
-      USE m_plot
-      USE m_usetup
-      USE m_hubbard1_setup
-      USE m_writeCFOutput
-      USE m_mpi_bc_tool
-      USE m_eig66_io
-      USE m_writeBasis
-      USE m_RelaxSpinAxisMagn
-      USE m_dfpt
-      USE m_abcoeff_store
       !For vTot1 efield WIP
-      USE m_make_stars
-      USE m_dfpt_vefield
-      USE m_checkdopall
-      USE m_store_load_hybrid
-      USE m_types_moessbauerParams
 
-!$    USE omp_lib
 
       TYPE(t_mpi),        INTENT(INOUT) :: fmpi
       TYPE(t_fleurinput), INTENT(IN)    :: fi
@@ -89,7 +111,6 @@ CONTAINS
       TYPE(t_stars),      INTENT(IN)    :: stars
       TYPE(t_nococonv),   INTENT(INOUT) :: nococonv
       TYPE(t_results),    INTENT(INOUT) :: results
-      TYPE(t_wann),       INTENT(INOUT) :: wann
 
       CLASS(t_forcetheo), INTENT(INOUT) :: forcetheo
       TYPE(t_enpara),     INTENT(INOUT) :: enpara
@@ -120,7 +141,8 @@ CONTAINS
       INTEGER :: iter, iterHF, i, n, i_gf
       INTEGER :: wannierspin
       LOGICAL :: l_opti, l_cont, l_qfix, l_real, l_olap, l_error, l_dummy
-      LOGICAL :: l_forceTheorem, l_lastIter, l_exist
+      LOGICAL :: l_lastIter, l_writehistory
+      CHARACTER(len=:), ALLOCATABLE :: scf_status
       REAL    :: fix, sfscale, rdummy, tempDistance
       REAL    :: mmpmatDistancePrev, occDistancePrev
       REAL    :: iterRuntime
@@ -134,13 +156,6 @@ CONTAINS
       ! generate a starting density.
       CALL optional(fmpi, fi%atoms, sphhar, fi%vacuum, stars, fi%input, &
                     fi%sym, fi%cell, fi%field, fi%sliceplot, xcpot, fi%noco)
-
-      IF (fi%input%l_wann .AND. (.NOT. wann%l_bs_comf)) THEN
-         ! TODO: If this warning is commented out, can it be erased?
-         !IF(fmpi%isize.NE.1) CALL juDFT_error('No Wannier+MPI at the moment',calledby = 'fleur')
-         if (fmpi%irank==0) CALL wann_optional(fmpi, fi%input, fi%kpts, fi%atoms, fi%sym, fi%cell,   fi%noco, wann)
-         if (wann%l_stopopt) CALL juDFT_end("wann_optional done",fmpi%irank) 
-      END IF
 
       iter = 0
       iterHF = 0
@@ -223,7 +238,8 @@ CONTAINS
 
       ! Open/allocate eigenvector storage
       CALL timestart("Open/allocate eigenvector storage")
-      IF (fi%noco%l_soc .AND. fi%input%l_wann) THEN
+      IF (fi%noco%l_soc .AND. .NOT.fi%noco%l_noco .AND. &
+          fi%wannierlib%l_wannierize) THEN
          ! Weed up and down spinor components for SOC MLWFs.
          ! When jspins=1 Fleur usually writes only the up-spinor into the eig-file.
          ! Make sure we always get up and down spinors when SOC=true.
@@ -260,6 +276,7 @@ CONTAINS
 
       ! Start the scf loop.
       l_lastIter = .FALSE.
+      l_writehistory = .FALSE.
       scfloop: DO WHILE (l_cont)
          iterRuntime = cputime()
          iter = iter + 1
@@ -329,19 +346,6 @@ CONTAINS
             END IF
          END IF
 
-         ! TODO: What is commented out here and should it perhaps be removed?
-
-! !$             DO pc = 1, wann%nparampts
-! !$                !---> gwf
-! !$                IF (wann%l_sgwf.OR.wann%l_ms) THEN
-! !$                   fi%noco%qss(:) = wann%param_vec(:,pc)
-! !$                   fi%noco%alph(:) = wann%param_alpha(:,pc)
-! !$                ELSE IF (wann%l_socgwf) THEN
-! !$                   IF(wann%l_dim(2)) fi%noco%phi   = tpi_const * wann%param_vec(2,pc)
-! !$                   IF(wann%l_dim(3)) fi%noco%theta = tpi_const * wann%param_vec(3,pc)
-! !$                END IF
-         !---< gwf
-
          ! Optionally scale up the magnetization density before the potential calculation.
          IF (ANY(fi%noco%l_unrestrictMT).AND.fi%noco%l_scaleMag) THEN
             sfscale = fi%noco%mag_scale
@@ -405,6 +409,8 @@ CONTAINS
             CALL enpara%update(fmpi, fi%atoms, fi%vacuum, fi%input, vToT, hub1data)
             CALL timestop("Updating energy parameters")
 
+            IF (fi%hybinp%l_hybrid) hybdat%results%te_hfex%valence = 0.0
+
             IF (.NOT. fi%input%eig66(1)) THEN
                CALL eigen(fi, fmpi, stars, sphhar, xcpot, forcetheo, enpara, nococonv,  &
                           hybdat, iter, eig_id, results, inDen, vToT, vx, hub1data)
@@ -419,7 +425,7 @@ CONTAINS
                IF(hybdat%l_calhf) hybdat%results%te_hfex%core = 2*hybdat%results%te_hfex%core
             END IF
             ! Send all result of local total energies to the r ! TODO: Is half the comment missing?
-            IF (fi%hybinp%l_hybrid .AND. hybdat%l_calhf) THEN
+            IF (fi%hybinp%l_hybrid) THEN
                results%te_hfex=hybdat%results%te_hfex
 #ifdef CPP_MPI
                CALL fmpi%set_root_comm()
@@ -460,6 +466,7 @@ CONTAINS
                END IF
             END IF
 
+
             CALL timestart("determination of fermi energy")
 
             CALL fermie(eig_id, fmpi, fi%kpts, input_soc, fi%noco, enpara%epara_min, fi%cell, results)
@@ -480,26 +487,13 @@ CONTAINS
 #endif            
             CALL timestop("determination of fermi energy")
 
-            ! TODO: What is commented out here and should it perhaps be removed?
-! !$          !+Wannier
-! !$          IF(wann%l_bs_comf)THEN
-! !$             IF(pc.EQ.1) THEN
-! !$                OPEN(777,file='out_eig.1')
-! !$                OPEN(778,file='out_eig.2')
-! !$                OPEN(779,file='out_eig.1_diag')
-! !$                OPEN(780,file='out_eig.2_diag')
-! !$             END IF
-! !$
-! !$             CALL bs_comfort(eig_id,fi%input,fi%noco,fi%kpts%nkpt,pc)
-! !$
-! !$             IF(pc.EQ.wann%nparampts)THEN
-! !$                CLOSE(777)
-! !$                CLOSE(778)
-! !$                CLOSE(779)
-! !$                CLOSE(780)
-! !$             END IF
-! !$          END IF
-! !$          !-Wannier
+            IF (fi%wannierlib%l_wannierize) THEN
+               CALL timestart("wannierlib")
+               CALL wannierlib_main(fi%wannierlib, fi%atoms, fi%cell, input_soc, fi%kpts, fi%sym, fi%noco, nococonv, stars, enpara, fmpi, &
+                                    vTot, results, eig_id, fi%vacuum)
+               CALL timestop("wannierlib")
+               IF (.NOT. fi%dfpt%l_dfpt) CALL juDFT_end("Wannierization done. Fleur ends.", fmpi%irank)
+            END IF
 
             !ENDIF
 
@@ -507,14 +501,6 @@ CONTAINS
             IF (forcetheo%eval(eig_id, fi%atoms, fi%kpts, fi%sym, fi%cell, fi%noco, nococonv, input_soc, fmpi,   enpara, vToT, results)) THEN
                CYCLE forcetheoloop
             END IF
-
-            CALL timestart("Wannier")
-            IF ((fi%input%l_wann) .AND. (.NOT. wann%l_bs_comf)) THEN
-               CALL wannier(fmpi, input_soc, fi%kpts, fi%sym, fi%atoms, stars, fi%vacuum, sphhar,   &
-                            wann, fi%noco, nococonv, fi%cell, enpara, fi%banddos, fi%sliceplot, vTot, results, &
-                            (/eig_id/), (fi%sym%invs) .AND. (.NOT. fi%noco%l_soc) .AND. (.NOT. fi%noco%l_noco), fi%kpts%nkpt)
-            END IF
-            CALL timestop("Wannier")
 
             ! Check if the greensFunction have to be calculated
             IF (fi%gfinp%n > 0) THEN
@@ -536,7 +522,7 @@ CONTAINS
             CALL timestart("generation of new charge density (total)")
             CALL outDen%init(stars, fi%atoms, sphhar, fi%vacuum, fi%noco, fi%input%jspins, POTDEN_TYPE_DEN)
             outDen%iter = inDen%iter
-            CALL cdngen(eig_id, fmpi, input_soc, fi%banddos, fi%sliceplot, fi%vacuum, &
+            CALL cdngen(eig_id, fmpi, input_soc, fi%xas, fi%banddos, fi%sliceplot, fi%vacuum, &
                         fi%kpts, fi%atoms, sphhar, stars, fi%sym, fi%gfinp, fi%hub1inp, &
                         enpara, fi%cell, fi%field, fi%noco, nococonv, vTot, results,   fi%corespecinput, &
                         archiveType, xcpot, outDen, EnergyDen, coreden,greensFunction, hub1data,vxc,exc,&
@@ -623,7 +609,7 @@ CONTAINS
             CALL timestop('determination of total energy')
          END DO forcetheoloop
 
-         CALL forcetheo%postprocess(fi,results)
+         CALL forcetheo%postprocess(fi,results,fmpi)
 
          CALL enpara%mix(fmpi%mpi_comm, fi%atoms, fi%vacuum, fi%input, vTot)
          field2 = fi%field
@@ -634,9 +620,10 @@ CONTAINS
          CALL toGlobalSpinFrame(fi%noco, nococonv, fi%vacuum, sphhar, stars, fi%sym, fi%cell, fi%input, fi%atoms, outDen, fmpi, .TRUE.)
          
          ! mix input and output densities
-         CALL mix_charge(field2, fmpi, (iter == fi%input%itmax .OR. judft_was_argument("-mix_io")), stars, &
+         CALL mix_charge(field2, fmpi, stars, &
                          fi%atoms, sphhar, fi%vacuum, fi%input, fi%sym, fi%cell, fi%noco, nococonv, &
                          archiveType, xcpot, iter, inDen, outDen,  results, coreDen, hub1data%l_runthisiter, fi%sliceplot)
+         IF (judft_was_argument("-mix_io")) CALL mixing_history_close(fmpi, fi%input%imix)
          
          ! Rotating to the local MT frame
          CALL toLocalSpinFrame(fmpi, fi%vacuum, sphhar, stars, fi%sym, fi%cell, fi%noco, &
@@ -647,7 +634,7 @@ CONTAINS
          IF (fmpi%irank==0) THEN
             WRITE (oUnit, FMT=8130) iter
 8130        FORMAT(/, 5x, '******* it=', i3, '  is completed********', /,/)
-            call log%add("Interation",int2str(iter))
+            call log%add("Iteration",int2str(iter))
             IF (fi%hybinp%l_hybrid) THEN
                WRITE (*, *) "Iteration:", iter, " Distance:", results%last_distance, " hyb distance:", hybdat%results%last_distance
                call log%add("Hybrid-distance",float2str(hybdat%results%last_distance))
@@ -664,74 +651,8 @@ CONTAINS
          CALL MPI_BARRIER(fmpi%mpi_comm, ierr)
 #endif
 
-       
-         l_cont = .TRUE.
-         IF (fi%hybinp%l_hybrid) THEN
-            IF (hybdat%l_calhf) THEN
-               l_cont = l_cont .AND. (iterHF < fi%input%itmax)
-               l_cont = l_cont .AND. (fi%input%mindistance <= results%last_distance)
-               CALL check_time_for_next_iteration(iterHF, l_cont)
-            ELSE
-               l_cont = l_cont .AND. (iter < 100) ! Security stop for non-converging nested PBE calculations
-            END IF
-
-            IF (hybdat%l_subvxc) THEN
-               results%te_hfex%valence = 0
-            END IF
-         ELSE IF (fi%atoms%n_hia > 0) THEN
-            l_cont = l_cont .AND. (iter < fi%input%itmax) !The SCF cycle reached the maximum iteration
-            l_cont = l_cont .AND. ((fi%input%mindistance <= results%last_distance) .OR. fi%input%l_f)
-            !If we have converged run hia if the density matrix has not converged
-            hub1data%l_runthisiter = .NOT. l_cont .AND. (fi%hub1inp%minoccDistance <= results%last_occdistance &
-                                                         .OR. results%last_occdistance <= 0.0 .OR. results%last_mmpMatdistance <= 0.0 &
-                                                         .OR. fi%hub1inp%minmatDistance <= results%last_mmpMatdistance)
-            !Run after first overall iteration to generate a starting density matrix
-            hub1data%l_runthisiter = hub1data%l_runthisiter .OR. (iter == 1 .AND. (hub1data%iter == 0 &
-                                                            .AND. ALL(ABS(vTot%mmpMat(:, :, fi%atoms%n_u + 1:fi%atoms%n_u + fi%atoms%n_hia, :)) .LT. 1e-12)))
-            hub1data%l_runthisiter = hub1data%l_runthisiter .AND. (iter < fi%input%itmax)
-            hub1data%l_runthisiter = hub1data%l_runthisiter .AND. (hub1data%iter < fi%hub1inp%itmax)
-            !Prevent that the scf loop terminates
-            l_cont = l_cont .OR. hub1data%l_runthisiter
-            CALL check_time_for_next_iteration(hub1data%overallIteration, l_cont)
-         ELSE
-            l_cont = l_cont .AND. (iter < fi%input%itmax)
-            ! MetaGGAs need a at least 2 iterations
-            l_cont = l_cont .AND. ((fi%input%mindistance <= results%last_distance) .OR. fi%input%l_f &
-                                   .OR. (xcpot%exc_is_MetaGGA() .and. iter == 1))
-            CALL check_time_for_next_iteration(iter, l_cont)
-         END IF
-
-         ! Add extra iteration for force theorem if necessary
-         l_forceTheorem = .FALSE.
-         SELECT TYPE(forcetheo)
-            TYPE IS(t_forcetheo_mae)
-               l_forceTheorem = .TRUE.
-            TYPE IS(t_forcetheo_dmi)
-               l_forceTheorem = .TRUE.
-            TYPE IS(t_forcetheo_jij)
-               l_forceTheorem = .TRUE.
-            TYPE IS(t_forcetheo_ssdisp)
-               l_forceTheorem = .TRUE.
-         END SELECT
-
-         IF(l_forceTheorem.AND..NOT.l_cont) THEN
-            IF(.NOT.l_lastIter) THEN
-               l_lastIter = .TRUE.
-               l_cont = .TRUE.
-            END IF
-         ELSE IF(l_forceTheorem.AND.l_lastIter) THEN
-            l_cont = .FALSE.
-         END IF
-         
-         ! IF file JUDFT_NO_MORE_ITERATIONS is present in the directory, don't do any more iterations
-         IF(fmpi%irank.EQ.0) THEN
-            l_exist = .FALSE.
-            INQUIRE (file='JUDFT_NO_MORE_ITERATIONS', exist=l_exist)
-            IF (l_exist) l_cont = .FALSE.
-         END IF
-#ifdef CPP_MPI
-         CALL MPI_BCAST(l_cont,1,MPI_LOGICAL,0,fmpi%mpi_comm,ierr)
-#endif
+         CALL scf_continue(fi, fmpi, xcpot, forcetheo, hybdat, results, vTot, iter, iterHF, hub1data, &
+                           l_lastIter, l_cont, l_writehistory, scf_status)
 
          ! TODO: What is commented out here and should it perhaps be removed?
          !CALL writeTimesXML()
@@ -740,25 +661,26 @@ CONTAINS
             IF (isCurrentXMLElement("iteration")) CALL closeXMLElement('iteration')
          END IF
 
-         IF ((fi%sliceplot%iplot .NE. 0)) THEN
-            ! Plot the mixed density
+         IF (fi%sliceplot%iplot .NE. 0) THEN
+            ! Plot the mixed density, the last plottable density of the iteration, then stop.
+            ! Collective stop (see above): pass fmpi%irank so all ranks finalize cleanly.
             CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input, fmpi,   fi%sym, &
                            fi%cell, fi%noco, nococonv, inDen, PLOT_MIXDEN_Y_CORE, fi%sliceplot)
-            ! Plot the mixed valence density
-            !CALL makeplots(fi%sym,stars,fi%vacuum,fi%atoms,sphhar,fi%input,fi%cell, fi%noco,fi%sliceplot,inDen,PLOT_MIXDEN_N_CORE)
-            !CALL makeplots(stars, fi%atoms, sphhar, fi%vacuum, fi%input,   fi%sym, fi%cell, fi%noco, inDen, PLOT_OUTDEN_N_CORE, fi%sliceplot)
-         END IF
-
-         ! Break SCF loop if Plots were generated in ongoing run (iplot/=0). This needs to happen here, as the mixed density
-         ! is the last plottable t_potden to appear in the scf loop and with no mixed density written out (so it is quasi
-         ! post-process).
-
-         IF (fi%sliceplot%iplot .NE. 0) THEN
-            ! Collective stop (see above): pass fmpi%irank so all ranks finalize cleanly.
             CALL juDFT_end("Stopped self consistency loop after plots have been generated.", fmpi%irank)
          END IF
 
       END DO scfloop ! DO WHILE (l_cont)
+
+      ! Write the mixing history to allow a restart
+      IF (l_writehistory) CALL mixing_history_close(fmpi, fi%input%imix)
+
+      IF (fmpi%irank == 0) THEN
+         IF (.NOT. ALLOCATED(scf_status)) scf_status = "none"
+         call log%add("SCF-status", scf_status)
+         call log%add("Iterations", int2str(iter))
+         call log%add("Distance", float2str(results%last_distance))
+         call log%report(logmode_status)
+      END IF
 
       CALL add_usage_data("Iterations", iter)
 
@@ -768,4 +690,123 @@ CONTAINS
       IF (fi%noco%l_soc .AND. fi%hybinp%l_hybrid) CALL close_eig(hybdat%eig_id)
       CALL juDFT_end("all done", fmpi%irank)
    END SUBROUTINE fleur_execute
+
+   SUBROUTINE scf_continue(fi, fmpi, xcpot, forcetheo, hybdat, results, vTot, iter, iterHF, hub1data, &
+                           l_lastIter, l_cont, l_writehistory, scf_status)
+      !! Decide whether the SCF loop continues, why it stops and whether the mixing history is written.
+
+      TYPE(t_fleurinput), INTENT(IN)    :: fi
+      TYPE(t_mpi),        INTENT(IN)    :: fmpi
+      CLASS(t_xcpot),     INTENT(IN)    :: xcpot
+      CLASS(t_forcetheo), INTENT(IN)    :: forcetheo
+      TYPE(t_hybdat),     INTENT(IN)    :: hybdat
+      TYPE(t_results),    INTENT(IN)    :: results
+      TYPE(t_potden),     INTENT(IN)    :: vTot
+      INTEGER,            INTENT(IN)    :: iter, iterHF
+      TYPE(t_hub1data),   INTENT(INOUT) :: hub1data
+      LOGICAL,            INTENT(INOUT) :: l_lastIter
+      LOGICAL,            INTENT(OUT)   :: l_cont, l_writehistory
+      CHARACTER(len=:), ALLOCATABLE, INTENT(INOUT) :: scf_status
+
+      LOGICAL :: l_forceTheorem, l_exist, l_maxiter, l_walltime
+#ifdef CPP_MPI
+      INTEGER :: ierr
+#endif
+
+      l_cont = .TRUE.
+      ! l_walltime: the wall-clock check stopped the loop
+      l_walltime = .FALSE.
+      IF (fi%hybinp%l_hybrid) THEN
+         IF (hybdat%l_calhf) THEN
+            l_cont = l_cont .AND. (iterHF < fi%input%itmax)
+            l_cont = l_cont .AND. (fi%input%mindistance <= results%last_distance)
+            l_walltime = l_cont
+            CALL check_time_for_next_iteration(iterHF, l_cont)
+            l_walltime = l_walltime .AND. .NOT. l_cont
+         ELSE
+            l_cont = l_cont .AND. (iter < 100) ! Security stop for non-converging nested PBE calculations
+         END IF
+
+      ELSE IF (fi%atoms%n_hia > 0) THEN
+         l_cont = l_cont .AND. (iter < fi%input%itmax) !The SCF cycle reached the maximum iteration
+         l_cont = l_cont .AND. ((fi%input%mindistance <= results%last_distance) .OR. fi%input%l_f)
+         !If we have converged run hia if the density matrix has not converged
+         hub1data%l_runthisiter = .NOT. l_cont .AND. (fi%hub1inp%minoccDistance <= results%last_occdistance &
+                                                      .OR. results%last_occdistance <= 0.0 .OR. results%last_mmpMatdistance <= 0.0 &
+                                                      .OR. fi%hub1inp%minmatDistance <= results%last_mmpMatdistance)
+         !Run after first overall iteration to generate a starting density matrix
+         hub1data%l_runthisiter = hub1data%l_runthisiter .OR. (iter == 1 .AND. (hub1data%iter == 0 &
+                                                         .AND. ALL(ABS(vTot%mmpMat(:, :, fi%atoms%n_u + 1:fi%atoms%n_u + fi%atoms%n_hia, :)) .LT. 1e-12)))
+         hub1data%l_runthisiter = hub1data%l_runthisiter .AND. (iter < fi%input%itmax)
+         hub1data%l_runthisiter = hub1data%l_runthisiter .AND. (hub1data%iter < fi%hub1inp%itmax)
+         !Prevent that the scf loop terminates
+         l_cont = l_cont .OR. hub1data%l_runthisiter
+         l_walltime = l_cont
+         CALL check_time_for_next_iteration(hub1data%overallIteration, l_cont)
+         l_walltime = l_walltime .AND. .NOT. l_cont
+      ELSE
+         l_cont = l_cont .AND. (iter < fi%input%itmax)
+         ! MetaGGAs need a at least 2 iterations
+         l_cont = l_cont .AND. ((fi%input%mindistance <= results%last_distance) .OR. fi%input%l_f &
+                                .OR. (xcpot%exc_is_MetaGGA() .and. iter == 1))
+         l_walltime = l_cont
+         CALL check_time_for_next_iteration(iter, l_cont)
+         l_walltime = l_walltime .AND. .NOT. l_cont
+      END IF
+
+      IF (fi%hybinp%l_hybrid) THEN
+         l_maxiter = (iterHF >= fi%input%itmax) .OR. (iter >= 100)
+      ELSE
+         l_maxiter = (iter >= fi%input%itmax)
+      END IF
+
+      ! Reason for stopping the SCF loop, reported in runlog.json
+      IF (.NOT. l_cont) THEN
+         IF (results%last_distance >= 0.0 .AND. results%last_distance < fi%input%mindistance) THEN
+            scf_status = "converged"
+         ELSE IF (l_maxiter) THEN
+            scf_status = "max_iterations"
+         ELSE
+            scf_status = "walltime"
+         END IF
+      END IF
+
+      ! Add extra iteration for force theorem if necessary
+      l_forceTheorem = .FALSE.
+      SELECT TYPE(forcetheo)
+         TYPE IS(t_forcetheo_mae)
+            l_forceTheorem = .TRUE.
+         TYPE IS(t_forcetheo_dmi)
+            l_forceTheorem = .TRUE.
+         TYPE IS(t_forcetheo_jij)
+            l_forceTheorem = .TRUE.
+         TYPE IS(t_forcetheo_ssdisp)
+            l_forceTheorem = .TRUE.
+      END SELECT
+
+      IF(l_forceTheorem.AND..NOT.l_cont) THEN
+         IF(.NOT.l_lastIter) THEN
+            l_lastIter = .TRUE.
+            l_cont = .TRUE.
+         END IF
+      ELSE IF(l_forceTheorem.AND.l_lastIter) THEN
+         l_cont = .FALSE.
+      END IF
+
+      ! IF file JUDFT_NO_MORE_ITERATIONS is present in the directory, don't do any more iterations
+      IF(fmpi%irank.EQ.0) THEN
+         l_exist = .FALSE.
+         INQUIRE (file='JUDFT_NO_MORE_ITERATIONS', exist=l_exist)
+         IF (l_exist) THEN
+            l_cont = .FALSE.
+            scf_status = "stop_file"
+         END IF
+         ! Write the mixing history only if a restart may continue the SCF loop
+         l_writehistory = .NOT. l_cont .AND. (l_maxiter .OR. l_walltime .OR. l_exist)
+      END IF
+#ifdef CPP_MPI
+      CALL MPI_BCAST(l_cont,1,MPI_LOGICAL,0,fmpi%mpi_comm,ierr)
+      CALL MPI_BCAST(l_writehistory,1,MPI_LOGICAL,0,fmpi%mpi_comm,ierr)
+#endif
+   END SUBROUTINE scf_continue
 END MODULE m_fleur

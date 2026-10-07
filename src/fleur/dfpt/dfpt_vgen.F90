@@ -1,10 +1,44 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2022 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_dfpt_vgen
    USE m_juDFT
+   USE m_constants
+   USE m_rotate_int_den_tofrom_local
+   USE m_bfield
+   USE m_vgen_coulomb
+   USE m_vgen_xcpot
+   USE m_vgen_finalize
+   USE m_rotate_mt_den_tofrom_local
+   USE m_get_int_perturbation
+   USE m_get_mt_perturbation
+   USE m_dfpt_vgen_finalize
+   USE m_dfpt_vefield
+   USE m_dfpt_vbfield
+   USE m_checkdopall
+   USE m_plot
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_dfpt
+   USE m_types_field
+   USE m_types_hybdat
+   USE m_types_input
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_sliceplot
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_sternheimerjob
+   USE m_types_sym
+   USE m_types_vacuum
+   USE m_types_xcpot
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: dfpt_vgen
 
 CONTAINS
 
@@ -27,21 +61,6 @@ CONTAINS
       ! - den is still den; we need it for additional qlm of surface contributions
       !--------------------------------------------------------------------------
 
-      USE m_types
-      USE m_constants
-      USE m_rotate_int_den_tofrom_local
-      USE m_bfield
-      USE m_vgen_coulomb
-      USE m_vgen_xcpot
-      USE m_vgen_finalize
-      USE m_rotate_mt_den_tofrom_local
-      USE m_get_int_perturbation
-      USE m_get_mt_perturbation
-      USE m_dfpt_vgen_finalize
-      USE m_dfpt_vefield
-      USE m_dfpt_vbfield
-      USE m_checkdopall
-      USE m_plot
       
 
       IMPLICIT NONE

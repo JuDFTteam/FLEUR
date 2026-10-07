@@ -1,12 +1,26 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_make_defaults
   USE m_juDFT
+  USE m_types_atoms
+  USE m_types_cell
+  USE m_types_sym
+  USE m_types_vacuum
+  USE m_types_xcpot_inbuild_nofunction
+  USE m_types_input
+  USE m_types_stars
+  USE m_types_noco
+  USE m_types_banddos
+  USE m_types_mpinp
+  USE m_types_hybinp
+  USE m_types_profile
   IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: make_defaults
   !---------------------------------------------------------------------
   !  Check muffin tin radii and determine a reasonable choice for MTRs.
   !  Derive also other parameters for the input file, to provide some
@@ -15,19 +29,6 @@ MODULE m_make_defaults
 CONTAINS
 
   SUBROUTINE make_defaults(atoms, sym, cell, vacuum, input, stars, xcpot, profile, noco, banddos, mpinp, hybinp)
-    USE m_types_atoms
-    USE m_types_cell
-    USE m_types_sym
-    USE m_types_vacuum
-    USE m_types_xcpot_inbuild_nofunction
-    USE m_types_input
-    USE m_types_stars
-    USE m_types_noco
-    USE m_types_banddos
-    USE m_types_mpinp
-    USE m_types_hybinp
-    USE m_types_profile
-    USE m_juDFT
 
     TYPE(t_atoms), INTENT(INOUT)            :: atoms
     TYPE(t_sym), INTENT(IN)                 :: sym
@@ -140,7 +141,7 @@ CONTAINS
              min_dtild=MAX(MAXVAL(ABS(atoms%pos(3,atoms%firstAtom(n):atoms%firstAtom(n)+atoms%neq(n)-1))+atoms%rmt(n)),min_dtild)
           ENDDO
           IF (ABS(vacuum%dvac)<=abs(cell%amat(3,3)))THEN
-             vacuum%dvac=2*min_dtild+0.2
+             vacuum%dvac=2*min_dtild+0.8
           ELSE
              vacuum%dvac=2*min_dtild-vacuum%dvac
           ENDIF

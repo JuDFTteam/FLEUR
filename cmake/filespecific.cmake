@@ -7,6 +7,9 @@
 
 if (CMAKE_Fortran_COMPILER_ID MATCHES "GNU")
    set_source_files_properties(${CMAKE_SOURCE_DIR}/src/fleur/vgen/vgen_coulomb.F90 PROPERTIES COMPILE_FLAGS -O0)
+   #gfortran 15.2 on arm64 miscompiles the matching coefficients when the loop
+   #vectorizer is active, which corrupts the LO parts of the H and S matrices
+   set_source_files_properties(${CMAKE_SOURCE_DIR}/src/fleur/eigen/hsmt_ab.F90 PROPERTIES COMPILE_FLAGS -fno-tree-vectorize)
 endif()
 
 if (CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
@@ -19,6 +22,7 @@ if (CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
    set_source_files_properties(${CMAKE_SOURCE_DIR}/src/fleur/vgen/psqpw.F90 PROPERTIES COMPILE_FLAGS -O1)
    set_source_files_properties(${CMAKE_SOURCE_DIR}/src/fleur/vgen/mpmom.F90 PROPERTIES COMPILE_FLAGS -O1)
    set_source_files_properties(${CMAKE_SOURCE_DIR}/src/fleur/cdn/cdnovlp.F90 PROPERTIES COMPILE_FLAGS -O1)
+   set_source_files_properties(${CMAKE_SOURCE_DIR}/src/fleur/dfpt/dfpt_interpolation.F90 PROPERTIES COMPILE_FLAGS -O1)
    
    if (CMAKE_Fortran_COMPILER_VERSION VERSION_LESS "14.1.0.0")
       set_source_files_properties(${CMAKE_SOURCE_DIR}/src/fleur/vgen/vmtxcg.F90 PROPERTIES COMPILE_FLAGS -no-openmp)
@@ -28,4 +32,4 @@ endif()
 if (CMAKE_Fortran_COMPILER_ID MATCHES "PGI")
 set_source_files_properties(${CMAKE_SOURCE_DIR}/src/fleur/vgen/mkgylm.f90 PROPERTIES COMPILE_FLAGS "-O0 -Mvect=nosimd")
 set_source_files_properties(${CMAKE_SOURCE_DIR}/src/fleur/eigen/hsmt_nonsph.F90 PROPERTIES COMPILE_FLAGS "-O1 -Mvect=nosimd -nomp")
-endif()    
+endif()

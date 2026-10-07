@@ -1,11 +1,19 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_types_stars
   USE m_juDFT
+  USE m_mpi_bc_tool
+  USE m_spgrot
+  USE m_types_cell
+  USE m_types_sym
+  USE m_sort
+  USE m_boxdim
+  USE m_constants, ONLY: tpi_const
+  USE m_types_vacuum
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: t_stars
@@ -72,7 +80,6 @@ MODULE m_types_stars
   END TYPE t_stars
 CONTAINS
   SUBROUTINE mpi_bc_stars(this,mpi_comm,irank)
-    USE m_mpi_bc_tool
     CLASS(t_stars),INTENT(INOUT)::this
     INTEGER,INTENT(IN):: mpi_comm
     INTEGER,INTENT(IN),OPTIONAL::irank
@@ -131,10 +138,6 @@ CONTAINS
   END SUBROUTINE mpi_bc_stars
 
   subroutine init_stars(stars,cell,sym,film,rkmax,qvec)
-    USE m_spgrot
-    USE m_types_cell
-    USE m_types_sym
-    USE m_sort
     CLASS(t_stars),INTENT(INOUT)  :: stars
     TYPE(t_cell),INTENT(IN)       :: cell
     TYPE(t_sym),INTENT(IN)        :: sym
@@ -347,10 +350,6 @@ CONTAINS
     !! determine the key dimensions of the stars:
     !! mx1,mx2,mx3
     !! ng3, ng2
-    USE m_spgrot
-    USE m_types_cell
-    USE m_types_sym
-    USE m_boxdim
     CLASS(t_stars),INTENT(INOUT)  :: stars
     TYPE(t_cell),INTENT(IN)       :: cell
     TYPE(t_sym),INTENT(IN)        :: sym
@@ -425,8 +424,6 @@ CONTAINS
   subroutine map_2nd_vac(stars,vacuum,n2,n2_src,phas)
     !! Relate the lower vacuum to the upper one for films in which only the
     !! upper vacuum is calculated (vacuum%nvac==1).
-    USE m_constants,ONLY: tpi_const
-    USE m_types_vacuum
     CLASS(t_stars),INTENT(IN)    :: stars
     TYPE(t_vacuum),INTENT(IN)    :: vacuum
     INTEGER,INTENT(IN)           :: n2
@@ -457,7 +454,6 @@ CONTAINS
     !! Fill the lower vacuum of a film from the upper one when only the upper one
     !! was calculated (vacuum%nvac==1), applying the relation of map_2nd_vac to
     !! every 2D star and spin. Does nothing if both vacua were calculated.
-    USE m_types_vacuum
     CLASS(t_stars),INTENT(IN)    :: stars
     TYPE(t_vacuum),INTENT(IN)    :: vacuum
     COMPLEX,INTENT(INOUT)        :: vac(:,:,:,:) !(nmzd,ng2,2,nspins)

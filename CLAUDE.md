@@ -4,7 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What FLEUR Is
 
-FLEUR is an all-electron DFT code implementing the full-potential linearized augmented plane-wave (FLAPW) method. It is a scientific HPC code written primarily in Fortran 90/95+, with Python tooling for input generation and testing. The primary executables are `fleur` (serial) and `fleur_MPI` (parallel), plus `inpgen`/`inpgen3` for input file generation.
+FLEUR is an all-electron DFT code implementing the full-potential linearized augmented plane-wave (FLAPW) method. It is a scientific HPC code written primarily in Fortran 90/95+, with Python tooling for testing. The primary executables are `fleur` (serial) and `fleur_MPI` (parallel), plus `inpgen` for input file generation.
+
+## General Rules (User generated)
+
+- do not state in commit messages that CLAUDE is a co-author
+- ask the user before doing a commit
+- commit messages should be <300 words
+- code comments should be short and not include references to previous code versions
 
 ## Building
 
@@ -60,7 +67,8 @@ Tests use pytest and require a built FLEUR. The easiest way from the build direc
 ./run_tests.sh -k <substring>         # tests matching name substring
 ./run_tests.sh -m <marker>            # tests with a specific marker
 ./run_tests.sh -x                     # stop at first failure
-./run_tests.sh testing/tests/feature_reg/test_CuBulk.py  # single file
+./run_tests.sh testing/tests/parameterized/test_basic.py # single file
+./run_tests.sh -k CuBulk               # one case from tests.md
 ```
 
 Alternatively, from `testing/` with a non-default build dir:
@@ -68,7 +76,7 @@ Alternatively, from `testing/` with a non-default build dir:
 ```bash
 cd testing
 pytest --build_dir=../build.123
-pytest tests/feature_reg/test_CuBulk.py --build_dir=../build
+pytest tests/parameterized/test_basic.py --build_dir=../build
 ```
 
 Common test markers: `bulk`, `film`, `collinear`, `non_collinear`, `soc`, `noco`, `forces`, `hybrid`, `dfpt`, `greensfunction`, `fast`, `slow`, `very_slow`, `spinspiral`, `lo`, `ldau`, `xml`, `mpi`, `serial`.
@@ -82,59 +90,19 @@ The build step generates `pytest_incl.py` in the build dir with marker exclusion
 
 Set `juDFT_PYTHON` to override the Python interpreter used by `run_tests.sh`.
 
-## Source Layout
-
-```
-src/
-  fleur/           # Core DFT engine (Fortran)
-    cdn/           # Charge density in interstitial region
-    cdn_mt/        # Charge density in muffin-tin spheres
-    core/          # Core electron calculations
-    dfpt/          # Density functional perturbation theory (phonons)
-    diagonalization/ # Eigenvalue solvers
-    eigen/         # Hamiltonian/overlap matrix construction
-    eigen_soc/     # Spin-orbit coupling
-    fft/           # Fast Fourier transforms
-    force/         # Hellmann-Feynman forces
-    greensf/       # Green's functions
-    hybrid/        # Hybrid functionals
-    init/          # Initialization routines
-    io/            # XML and HDF5 I/O
-    main/          # Top-level SCF loop
-    mix/           # SCF density mixing
-    mpi/           # MPI parallelization
-    types/         # Derived type definitions
-    vgen/          # Potential generation
-    wannier/       # Wannier function interface
-    global/        # Global variables/parameters
-    math/          # Mathematical utilities
-  libraries/
-    juDFT/         # Error handling, timing, MPI wrappers
-    fleurinput/    # XML input parsing
-  tools/
-    inpgen2/       # Legacy input generator
-    inpgen3/       # Current input generator (Fortran + Python)
-    inpgen3/fleuriste/  # TUI/CLI parallelization helper (Python)
-testing/
-  tests/           # pytest test files (feature_reg/, inpgen/, masci_tools/, libxc/)
-  inputfiles/      # Input files for tests
-  helpers/         # Shared Python test utilities
-  conftest.py      # Pytest fixtures and configuration
-cmake/             # CMake modules and build configuration
-external/          # Git submodules (libxc, HDF5, ELSI, ELPA, SCALAPACK, etc.)
-```
-
 ## Coding Conventions (Fortran)
 
 - **Indentation:** 3 spaces (no tabs)
 - **Module naming:** prefix with `m_` (e.g., `m_sorad`, `m_types_fleur`)
 - **File/module correspondence:** one module per file, names must match
-- **Every module:** starts with `implicit none` and `private`
+- **Every module:** starts with `implicit none` and `private`, and lists its exports in `public` statements. Re-exporting facades (`m_juDFT`, `m_xmloutput`, `m_hdf_tools`) list the re-exported names too
+- **USE placement:** all `USE` statements go into the module (or program) head, never into contained procedures; only interface bodies may have their own `USE`
+- **Import from the defining module:** e.g. `USE m_types_atoms` for `t_atoms`; the aggregators `m_types` and `m_types_setup` were removed (issue #795), `m_types_fleurinput` only exports `t_fleurinput`
 - **Error handling:** use `judft_error()`, `judft_warn()`, `judft_end()` — never `stop`
 - **Array arguments:** use shape-assumed `real, intent(in) :: x(:,:)` or allocatable arrays; avoid explicit-size `real, intent(in) :: x(n,m)` which allows unsafe rank/size reinterpretation
 - **No file I/O outside `io/`:** files are not substitutes for common blocks or status variables
 
-Pre-commit hooks (`.pre-commit-config.yaml`) enforce: copyright header presence, `implicit none`, absence of `stop` statements, and validity of XML/YAML/TOML files and check for added large files. Install them with:
+Pre-commit hooks (`.pre-commit-config.yaml`, hooks from `fleur/fleur-pre-commit`) enforce: copyright header presence, `implicit none`, absence of `stop` statements, `USE` only in the module head (`check-use-placement` moves them there itself), a `PRIVATE` default in every module, no `USE` of the removed `m_types`/`m_types_setup`, validity of XML/YAML/TOML files and check for added large files. Install them with:
 
 ```bash
 pre-commit install
@@ -165,7 +133,7 @@ Input-describing types live in `src/libraries/fleurinput/` and are aggregated in
 - `t_noco` — non-collinear magnetism settings (types_noco.f90)
 - `t_xcpot` — XC functional selection (types_xcpot.F90)
 
-Calculation-state types live in `src/fleur/types/` and are collected in `m_types` (types.F90):
+Calculation-state types live in `src/fleur/types/`, one module per type (import the module that defines the type):
 - `t_lapw` — LAPW basis (G-vectors, k-points) (types_lapw.F90)
 - `t_potden` — potential and density arrays (interstitial + muffin-tin) (types_potden.F90)
 - `t_mat` — Hamiltonian/overlap matrix (dense or MPI-distributed) (types_mat.F90)
@@ -183,13 +151,13 @@ All input types extend `t_fleurinput_base` and expose an `mpi_bc` method for bro
 - **String utilities:** `string.f90` — `int2str` and other helpers
 - **Argument parsing:** `args.F90`, `check_arguments.F90` — CLI flag extraction
 
-### inpgen3
+### inpgen
 
-`src/tools/inpgen3/` operates in two modes:
+`src/tools/inpgen2/` builds the `inpgen` binary (the CMake target is named `inpgen2` but its output is renamed to `inpgen`). It operates in two modes:
 1. Generate `inp.xml` from a simple input file: `inpgen -f <input>`
 2. Add a k-point set to an existing `inp.xml`: `inpgen -kpt ...`
 
-`FleurInpgen.py` provides a ctypes interface to the inpgen Fortran library; it searches standard paths and respects the `FLEUR_BUILDDIR` environment variable for library discovery. The `fleuriste/` subdirectory is a TUI/CLI tool for setting up parallelized FLEUR runs.
+Note that `src/libraries/fleurinput/CMakeLists.txt` compiles four k-point sources (`tetcon.f90`, `triang.f`, `bravais.f90`, `brzone2.f90`) directly out of `src/tools/inpgen2/kpoints/`, so the core `fleurinput` library has a source-level dependency on this tool's tree.
 
 ## Environment Variables
 
@@ -197,7 +165,6 @@ All input types extend `t_fleurinput_base` and expose an `mpi_bc` method for bro
 - `juDFT_NPROCS` — Override number of MPI processes for tests
 - `juDFT_PYTHON` — Override the Python interpreter used by `run_tests.sh`
 - `juDFT_ARGS` — Extra command-line arguments passed to FLEUR
-- `FLEUR_BUILDDIR` — Build directory for `FleurInpgen.py` ctypes library discovery
 
 ## Writing Tests
 

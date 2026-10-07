@@ -1,5 +1,9 @@
       MODULE m_radsrd
       use m_juDFT
+      use m_intgr, only: intgr0
+      implicit none
+      private
+      public :: radsrd
 
 c*********************************************************************
 c     calculates the energy derivative of the scalar relativistic
@@ -34,7 +38,6 @@ c*********************************************************************
      <                  ud,dud,ddn,nodes,pe,qe,
      >                  p,q,dus)
 
-      USE m_intgr, ONLY : intgr0
       IMPLICIT NONE
 C     ..
 C     .. Scalar Arguments ..

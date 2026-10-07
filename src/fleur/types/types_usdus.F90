@@ -1,10 +1,15 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_types_usdus
+   USE m_judft
+   USE m_types_atoms
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: usdus_init, usdus_free, t_usdus
    TYPE t_usdus
       REAL, ALLOCATABLE, DIMENSION(:, :, :)    :: us
       REAL, ALLOCATABLE, DIMENSION(:, :, :)    :: dus
@@ -26,8 +31,6 @@ MODULE m_types_usdus
 
 CONTAINS
    SUBROUTINE usdus_init(ud, atoms, jsp)
-      USE m_judft
-      USE m_types_setup
       IMPLICIT NONE
       CLASS(t_usdus)           :: ud
       TYPE(t_atoms), INTENT(IN) :: atoms

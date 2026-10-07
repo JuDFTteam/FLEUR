@@ -23,24 +23,37 @@ MODULE m_vham
     !------------------------------------------------------------------------------------! 
 
 
+   USE m_constants
+   USE m_juDFT
+   USE m_hsmt_ab
+   USE m_abcoeff_store
+   USE m_hsmt_fjgj
+   USE m_ylm
+   USE m_radsrd
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_input
+   USE m_types_kpts
+   USE m_types_lapw
+   USE m_types_mat
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_radfun
+   USE m_types_sym
    implicit none
+   PRIVATE
+   PUBLIC :: v_ham
     CONTAINS
 
-    SUBROUTINE v_ham(input,usdus,atoms,kpts,cell,lapw,sym,noco,fmpi,nococonv,fjgj,den,jspin,kptindx,hmat)
+    SUBROUTINE v_ham(input,rf,atoms,kpts,cell,lapw,sym,noco,fmpi,nococonv,fjgj,den,jspin,kptindx,hmat)
 
-        USE m_types
-        USE m_constants
-        USE m_juDFT
-        USE m_hsmt_ab
-        USE m_abcoeff_store
-        USE m_hsmt_fjgj
-        USE m_ylm
-        USE m_radsrd
 
         IMPLICIT NONE
 
         TYPE(t_input),       INTENT(IN)     :: input
-        TYPE(t_usdus),       INTENT(IN)     :: usdus
+        TYPE(t_radfun),      INTENT(IN)     :: rf(:)
         TYPE(t_atoms),       INTENT(IN)     :: atoms
         TYPE(t_kpts),        INTENT(IN)     :: kpts
         TYPE(t_cell),        INTENT(IN)     :: cell
@@ -76,16 +89,46 @@ MODULE m_vham
                 natom1=atoms%lda_v(i_v)%atomIndex
                 latom1=atoms%lda_v(i_v)%thisAtomL
                 ll1atom1=latom1*(latom1+1)
-                norm1_W = usdus%ddn(latom1,atoms%itype(natom1),jspin)**0.5
-                CALL fjgj%calculate(input,atoms,cell,lapw,noco,usdus,atoms%itype(natom1),jspin)
+                norm1_W = rf(atoms%itype(natom1))%integral(2,2,latom1,jspin,jspin)**0.5
+                CALL fjgj%calculate(input,atoms,cell,lapw,noco,rf(atoms%itype(natom1)),atoms%itype(natom1),jspin)
+                ! Own the abG mapping in the caller's scope -- see types_abc.F90 for why
+                ! hsmt_ab must not do the `enter data` on its own dummy argument.
+                IF (.NOT.l_use_abcoeff_store) THEN
+                   abSizeG1 = hsmt_ab_size(atoms, atoms%itype(natom1), .FALSE.)
+                   IF (ALLOCATED(abG1)) THEN
+                      IF (SIZE(abG1,1)/=2*abSizeG1 .OR. SIZE(abG1,2)/=lapw%nv(1)) THEN
+                         !$acc exit data delete(abG1)
+                         DEALLOCATE(abG1)
+                      END IF
+                   END IF
+                   IF (.NOT.ALLOCATED(abG1)) THEN
+                      ALLOCATE(abG1(2*abSizeG1, lapw%nv(1)))
+                      !$acc enter data create(abG1)
+                   END IF
+                END IF
                 CALL hsmt_ab(sym,atoms,noco,nococonv,jspin,1,atoms%itype(natom1),natom1,cell,lapw,fjgj,abG1,abSizeG1,.FALSE.,l_store=.TRUE.)
                 Do atom2=1,atoms%lda_v(i_v)%numOtherAtoms
                     natom2=atoms%lda_v(i_v)%otherAtomIndices(atom2)
                     latom2=atoms%lda_v(i_v)%otherAtomL
                     ll1atom2=latom2*(latom2+1)
-                    norm2_W = usdus%ddn(latom2,atoms%itype(natom2),jspin)**0.5
+                    norm2_W = rf(atoms%itype(natom2))%integral(2,2,latom2,jspin,jspin)**0.5
                     power_fac=(cmplx(0, -1)**latom1) *(cmplx(0, 1)**latom2) 
-                    CALL fjgj%calculate(input,atoms,cell,lapw,noco,usdus,atoms%itype(natom2),jspin)
+                    CALL fjgj%calculate(input,atoms,cell,lapw,noco,rf(atoms%itype(natom2)),atoms%itype(natom2),jspin)
+                    ! Own the abG mapping in the caller's scope -- see types_abc.F90 for why
+                    ! hsmt_ab must not do the `enter data` on its own dummy argument.
+                    IF (.NOT.l_use_abcoeff_store) THEN
+                       abSizeG2 = hsmt_ab_size(atoms, atoms%itype(natom2), .FALSE.)
+                       IF (ALLOCATED(abG2)) THEN
+                          IF (SIZE(abG2,1)/=2*abSizeG2 .OR. SIZE(abG2,2)/=lapw%nv(1)) THEN
+                             !$acc exit data delete(abG2)
+                             DEALLOCATE(abG2)
+                          END IF
+                       END IF
+                       IF (.NOT.ALLOCATED(abG2)) THEN
+                          ALLOCATE(abG2(2*abSizeG2, lapw%nv(1)))
+                          !$acc enter data create(abG2)
+                       END IF
+                    END IF
                     CALL hsmt_ab(sym,atoms,noco,nococonv,jspin,1,atoms%itype(natom2),natom2,cell,lapw,fjgj,abG2,abSizeG2,.FALSE.,l_store=.TRUE.)
                     DO iG2=1,lapw%nv(jspin)
                         exponent=EXP(cmplx(0.0,tpi_const)*dot_product(atoms%lda_v(i_v)%atomShifts(:,atom2),(kpts%bk(:,kptindx)+lapw%gvec(:, iG2,jspin))))
