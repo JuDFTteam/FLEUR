@@ -141,7 +141,7 @@ CONTAINS
       INTEGER :: iter, iterHF, i, n, i_gf
       INTEGER :: wannierspin
       LOGICAL :: l_opti, l_cont, l_qfix, l_real, l_olap, l_error, l_dummy
-      LOGICAL :: l_forceTheorem, l_lastIter, l_exist, l_maxiter
+      LOGICAL :: l_forceTheorem, l_lastIter, l_exist, l_maxiter, l_walltime, l_writehistory
       CHARACTER(len=:), ALLOCATABLE :: scf_status
       REAL    :: fix, sfscale, rdummy, tempDistance
       REAL    :: mmpmatDistancePrev, occDistancePrev
@@ -651,11 +651,15 @@ CONTAINS
 
        
          l_cont = .TRUE.
+         ! l_walltime: the wall-clock check stopped the loop
+         l_walltime = .FALSE.
          IF (fi%hybinp%l_hybrid) THEN
             IF (hybdat%l_calhf) THEN
                l_cont = l_cont .AND. (iterHF < fi%input%itmax)
                l_cont = l_cont .AND. (fi%input%mindistance <= results%last_distance)
+               l_walltime = l_cont
                CALL check_time_for_next_iteration(iterHF, l_cont)
+               l_walltime = l_walltime .AND. .NOT. l_cont
             ELSE
                l_cont = l_cont .AND. (iter < 100) ! Security stop for non-converging nested PBE calculations
             END IF
@@ -674,13 +678,17 @@ CONTAINS
             hub1data%l_runthisiter = hub1data%l_runthisiter .AND. (hub1data%iter < fi%hub1inp%itmax)
             !Prevent that the scf loop terminates
             l_cont = l_cont .OR. hub1data%l_runthisiter
+            l_walltime = l_cont
             CALL check_time_for_next_iteration(hub1data%overallIteration, l_cont)
+            l_walltime = l_walltime .AND. .NOT. l_cont
          ELSE
             l_cont = l_cont .AND. (iter < fi%input%itmax)
             ! MetaGGAs need a at least 2 iterations
             l_cont = l_cont .AND. ((fi%input%mindistance <= results%last_distance) .OR. fi%input%l_f &
                                    .OR. (xcpot%exc_is_MetaGGA() .and. iter == 1))
+            l_walltime = l_cont
             CALL check_time_for_next_iteration(iter, l_cont)
+            l_walltime = l_walltime .AND. .NOT. l_cont
          END IF
 
          ! Reason for stopping the SCF loop, reported in runlog.json
@@ -729,10 +737,14 @@ CONTAINS
                l_cont = .FALSE.
                scf_status = "stop_file"
             END IF
+            l_writehistory = .NOT. l_cont .AND. (l_exist .OR. l_walltime)
          END IF
 #ifdef CPP_MPI
          CALL MPI_BCAST(l_cont,1,MPI_LOGICAL,0,fmpi%mpi_comm,ierr)
+         CALL MPI_BCAST(l_writehistory,1,MPI_LOGICAL,0,fmpi%mpi_comm,ierr)
 #endif
+         ! Write the mixing history to allow a restart
+         IF (l_writehistory .AND. fi%input%imix /= 0) CALL mixing_history_close(fmpi)
 
          ! TODO: What is commented out here and should it perhaps be removed?
          !CALL writeTimesXML()
