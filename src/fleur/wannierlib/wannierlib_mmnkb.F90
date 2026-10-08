@@ -7,7 +7,6 @@ MODULE m_wannierlib_mmnkb
   USE m_juDFT
   USE m_melem_overlap, ONLY: melem_overlap_states
   USE m_types_melem_vacabc, ONLY: t_melem_vacabc
-  USE m_melem_overlap, ONLY: melem_overlap_check_identity
   USE m_types_radfun
   USE m_matrix_element_factory, ONLY: matrix_element_states
   USE m_types
@@ -85,11 +84,9 @@ CONTAINS
     !> This k is the bra of every neighbour below, so its expansion is built once.
     IF (input%film) CALL vac%calc(vacuum, cell, enpara, vtot, lapw, jspin_rad, zMat, &
                                   manifold%num_bands, ioff=layout%row_offset(jspin))
-    !> One k is enough for an invariant: M(k,k) = 1 tests the regions, not the mesh. Only
-    !> the rank that owns this k reaches the line, so oUnit is written by one rank.
-    IF (nk == 1) CALL melem_overlap_check_identity(stars, atoms, cell, lapw, zMat, abc, &
-                                                   radfun, jspin_rad, layout%row_offset(jspin), &
-                                                   manifold%num_bands, nk, vac=vac)
+    !> The M(k,k) = 1 invariant used to be taken here and it cannot be: this routine sees
+    !> ONE spin component, and the identity is a property of the whole state. It now lives
+    !> in the caller, which walks the components and can add them up first.
 
     DO kk = 1, bmesh%nntot
       nk_b = bmesh%nnlist(nk, kk)

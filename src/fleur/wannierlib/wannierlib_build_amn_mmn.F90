@@ -33,10 +33,12 @@ MODULE m_wannierlib_build_amn_mmn
    USE m_types_mat
    USE m_types_radfun
    USE m_types_abc
+   USE m_types_melem_vacabc, ONLY: t_melem_vacabc
+   USE m_melem_overlap, ONLY: melem_overlap_identity_add, melem_overlap_identity_report
    USE m_types_wannierlib
    USE m_types_wgauge_manifold, ONLY: t_wgauge_manifold
    USE m_types_wgauge_bmesh, ONLY: t_wgauge_bmesh
-   USE m_types_spinor_layout, ONLY: radial_slot
+   USE m_types_spinor_layout, ONLY: radial_slot, t_spinor_layout
    USE m_matrix_element_factory, ONLY: matrix_element_states
    USE m_melem_ujugaunt
    USE m_wannierlib_amn
@@ -84,6 +86,10 @@ CONTAINS
       TYPE(t_lapw) :: lapw
       TYPE(t_mat),    POINTER :: zmat_p(:)    !> into the factory cache
       TYPE(t_abc),    POINTER :: abc_p(:, :)  !> likewise
+      COMPLEX, ALLOCATABLE :: ovl_chk(:, :), ovl_novac(:, :)
+      TYPE(t_melem_vacabc) :: vac_chk
+      TYPE(t_spinor_layout) :: layout_chk
+      LOGICAL :: l_chk
 
       ! calculate the  matrices for all k-points
       ALLOCATE (amn(this%num_bands, this%num_wann, kpts%nkptf), stat=ierr, source=cmplx(0.0, 0.0))
@@ -92,6 +98,23 @@ CONTAINS
       nk_local = COUNT(distk == fmpi%irank)
       ALLOCATE(mmn(this%num_bands, this%num_bands, nntot_w90, nk_local), stat=ierr, source=cmplx(0.0, 0.0))
       IF (ierr /= 0) CALL juDFT_error('wannierlib failed allocating local mmn buffer', calledby='wannierlib_build_amn_mmn')
+
+      !> M(k,k) = 1 is a property of the WHOLE state, and a spinor arrives one component
+      !> at a time -- the component loop below is the outer one, so the two halves of a
+      !> given k are visited passes apart. The accumulator therefore lives out here, is
+      !> added to once per component, and is judged when they are all in. Taking the
+      !> verdict inside the loop measured half a wavefunction and reported a deviation of
+      !> 1 for every spin-orbit run we have.
+      !>
+      !> Two of them on a film: the same sum without the vacuum expansion says how much of
+      !> the identity the two inner regions already carry, so the gap between the lines is
+      !> the vacuum contribution, which is what tells a wrong vacuum term from a small one.
+      l_chk = (distk(1) == fmpi%irank)
+      IF (l_chk) THEN
+         ALLOCATE (ovl_chk(manifold%num_bands, manifold%num_bands), source=CMPLX(0.0, 0.0))
+         IF (input%film) ALLOCATE (ovl_novac(manifold%num_bands, manifold%num_bands), &
+                                   source=CMPLX(0.0, 0.0))
+      END IF
 
       jspin_rad_done = -1
       DO jspin_comp = MERGE(1, jspin, l_wannierlib_spinors), MERGE(2, jspin, l_wannierlib_spinors)
@@ -125,6 +148,27 @@ CONTAINS
 
             CALL wannierlib_amn(this, atoms, kpts, ikpt, usdus, radfun, abc_p(jspin_comp, :), l_wannierlib_spinors, jspin_comp, jspin_rad, amn(:, :, ikpt))
 
+            !> One k is enough for an invariant: it tests the regions, not the mesh.
+            IF (ikpt == 1 .AND. l_chk) THEN
+               CALL layout_chk%init(input, noco, lapw, atoms)
+               IF (input%film) THEN
+                  CALL vac_chk%calc(vacuum, cell, enpara, vtot, lapw, jspin_rad, &
+                                    zmat_p(irec), manifold%num_bands, &
+                                    ioff=layout_chk%row_offset(jspin_comp))
+                  CALL melem_overlap_identity_add(stars, atoms, cell, lapw, zmat_p(irec), &
+                                                  abc_p(jspin_comp, :), radfun, jspin_rad, &
+                                                  layout_chk%row_offset(jspin_comp), ovl_novac)
+                  CALL melem_overlap_identity_add(stars, atoms, cell, lapw, zmat_p(irec), &
+                                                  abc_p(jspin_comp, :), radfun, jspin_rad, &
+                                                  layout_chk%row_offset(jspin_comp), ovl_chk, &
+                                                  vac=vac_chk)
+               ELSE
+                  CALL melem_overlap_identity_add(stars, atoms, cell, lapw, zmat_p(irec), &
+                                                  abc_p(jspin_comp, :), radfun, jspin_rad, &
+                                                  layout_chk%row_offset(jspin_comp), ovl_chk)
+               END IF
+            END IF
+
             ik_local = ik_local + 1
             CALL wannierlib_mmnkb(manifold, bmesh, ikpt, kpts, &
                                   ujug, atoms, cell, input, sym, noco, nococonv, &
@@ -133,6 +177,13 @@ CONTAINS
          END DO
 
       END DO
+
+      IF (l_chk) THEN
+         IF (input%film) CALL melem_overlap_identity_report(ovl_novac, 1, l_vac=.FALSE.)
+         CALL melem_overlap_identity_report(ovl_chk, 1, l_vac=input%film)
+         DEALLOCATE (ovl_chk)
+         IF (ALLOCATED(ovl_novac)) DEALLOCATE (ovl_novac)
+      END IF
       IF (ALLOCATED(ujug)) DEALLOCATE (ujug)
    END SUBROUTINE wannierlib_build_amn_mmn
 

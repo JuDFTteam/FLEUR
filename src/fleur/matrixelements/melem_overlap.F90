@@ -27,6 +27,7 @@ MODULE m_melem_overlap
    PRIVATE
    PUBLIC :: melem_overlap_interstitial, melem_overlap_states
    PUBLIC :: melem_overlap_check_identity
+   PUBLIC :: melem_overlap_identity_add, melem_overlap_identity_report
 
 CONTAINS
 
@@ -166,6 +167,85 @@ CONTAINS
    !>
    !>  Warns rather than stops, like m_melem_check: a tolerance right for one basis is not
    !>  obviously right for the next.
+   !> Add ONE spin component's share of M(k,k) to acc.
+   !>
+   !> It is split from the verdict because a spinor is not one call. The state is built
+   !> component by component -- two eig records, or two row blocks of one -- and the caller
+   !> walks them in separate passes, so no single call ever sees the whole thing. Judging
+   !> inside one of them measures half a wavefunction: a band living in the other component
+   !> has zero norm here, and the deviation from the identity comes out as 1 whatever the
+   !> overlap is worth. Measured on WannPtSOC that is exactly what happened, while the same
+   !> material without spin-orbit came out at 6e-15.
+   SUBROUTINE melem_overlap_identity_add(stars, atoms, cell, lapw, zmat, abc, radfun, &
+                                         jspin_rad, ioff, acc, vac)
+      TYPE(t_stars), INTENT(IN) :: stars
+      TYPE(t_atoms), INTENT(IN) :: atoms
+      TYPE(t_cell),  INTENT(IN) :: cell
+      TYPE(t_lapw),  INTENT(IN) :: lapw
+      TYPE(t_mat),   INTENT(IN) :: zmat
+      TYPE(t_abc),   INTENT(IN) :: abc(:)
+      TYPE(t_radfun), INTENT(IN) :: radfun(:)
+      INTEGER, INTENT(IN) :: jspin_rad, ioff
+      COMPLEX, INTENT(INOUT) :: acc(:, :)
+      TYPE(t_melem_vacabc), INTENT(IN), OPTIONAL :: vac
+
+      REAL :: kdiff0(3, 1)
+      COMPLEX, ALLOCATABLE :: ujug0(:, :, :, :, :, :)
+
+      kdiff0 = 0.0
+      CALL melem_ujugaunt(atoms, cell, 1, kdiff0, radfun, radfun, jspin_rad, jspin_rad, &
+                          .FALSE., 1, ujug0)
+      CALL melem_overlap_states(stars, atoms, lapw, lapw, zmat, zmat, abc, abc, &
+                                jspin_rad, jspin_rad, lapw%bkpt, lapw%bkpt, [0, 0, 0], &
+                                ujug0, kdiff0, 1, ioff, ioff, acc, vac_a=vac, vac_b=vac)
+      DEALLOCATE (ujug0)
+   END SUBROUTINE melem_overlap_identity_add
+
+   !> The verdict on what the components added up to.
+   SUBROUTINE melem_overlap_identity_report(acc, ik, l_vac, tol, l_ok)
+      COMPLEX, INTENT(IN) :: acc(:, :)
+      INTEGER, INTENT(IN) :: ik
+      LOGICAL, INTENT(IN) :: l_vac
+      REAL, INTENT(IN), OPTIONAL :: tol
+      LOGICAL, INTENT(OUT), OPTIONAL :: l_ok
+
+      REAL :: t, dmax, omax, d
+      INTEGER :: i, j
+      CHARACTER(LEN=12) :: reg
+
+      !> A film cannot reach the tolerance a bulk cell does, and the reason is the z
+      !> integration: the vacuum half is a quadrature on a linear mesh plus an analytic
+      !> tail beyond its last point, while the muffin tins and the interstitial are sums
+      !> that close to machine precision. Measured on the square Al monolayer the residual
+      !> is 3.4e-9 with the vacuum in, against 5.3e-1 with it left out -- so eight orders
+      !> separate "the quadrature stops here" from "a region is wrong or missing", and the
+      !> looser bound still catches the second. Holding a film to 1e-10 only produces a
+      !> check that is red for everyone, which is what this invariant was just rescued from.
+      t = MERGE(1.0e-7, MELEM_CHECK_TOL, l_vac)
+      IF (PRESENT(tol)) t = tol
+      reg = 'MT+int'
+      IF (l_vac) reg = 'MT+int+vac'
+
+      dmax = 0.0; omax = 0.0
+      DO j = 1, SIZE(acc, 2)
+         DO i = 1, SIZE(acc, 1)
+            IF (i == j) THEN
+               d = ABS(acc(i, j) - CMPLX(1.0, 0.0)); dmax = MAX(dmax, d)
+            ELSE
+               d = ABS(acc(i, j)); omax = MAX(omax, d)
+            END IF
+         END DO
+      END DO
+      IF (dmax > t .OR. omax > t) THEN
+         WRITE (oUnit, '(a,i0,a,2(a,es12.4))') 'melem overlap check [k=', ik, ', '// &
+            TRIM(reg)//']: M(k,k) is not the identity', '  diagonal ', dmax, '  off-diagonal ', omax
+      ELSE
+         WRITE (oUnit, '(a,i0,a,2(a,es12.4))') 'melem overlap check [k=', ik, ', '// &
+            TRIM(reg)//']: M(k,k) = 1 ok', '  diagonal ', dmax, '  off-diagonal ', omax
+      END IF
+      IF (PRESENT(l_ok)) l_ok = (dmax <= t .AND. omax <= t)
+   END SUBROUTINE melem_overlap_identity_report
+
    SUBROUTINE melem_overlap_check_identity(stars, atoms, cell, lapw, zmat, abc, radfun, &
                                            jspin_rad, ioff, nbnd, ik, vac, tol, l_ok)
       TYPE(t_stars), INTENT(IN) :: stars
