@@ -174,7 +174,8 @@ CONTAINS
     REAL fleg1(0:atoms%lmaxd),fleg2(0:atoms%lmaxd),fl2p1(0:atoms%lmaxd),cross_k(3)
     COMPLEX:: chi(2,2,2,2),isigma(2,2,3)
     REAL, ALLOCATABLE :: plegend(:,:),dplegend(:,:)
-    REAL, ALLOCATABLE :: xlegend(:), dot(:)
+    REAL, ALLOCATABLE :: xlegend(:), dot(:), racc(:,:,:)
+    REAL, ALLOCATABLE :: rki_f(:,:,:), rki_g(:,:,:)
     COMPLEX, ALLOCATABLE :: cph(:),fct(:),angso(:,:,:)
 
     CALL timestart("offdiagonal soc-setup")
@@ -189,12 +190,14 @@ CONTAINS
        fleg2(l) = REAL(l)/REAL(l+1)
        fl2p1(l) = REAL(l+l+1)/fpi_const
     END DO
+    !Set up spinors...
+    CALL hsmt_spinor_soc(n,nococonv,chi,isigma)
     !!$acc data copyin(td,td%rsoc,td%rsoc%rso)
     !CPP_OMP PARALLEL DEFAULT(NONE)&
-    !CPP_OMP SHARED(n,lapw,atoms,td,fjgj,nococonv,fl2p1,fleg1,fleg2,hmat,fmpi)&
-    !CPP_OMP PRIVATE(kii,ki,ski,kj,plegend,dplegend,l,j1,j2,angso,chi)&
+    !CPP_OMP SHARED(n,lapw,atoms,td,fjgj,fl2p1,fleg1,fleg2,hmat,fmpi,chi,isigma)&
+    !CPP_OMP PRIVATE(kii,ki,ski,kj,plegend,dplegend,l,j1,j2,angso)&
     !CPP_OMP PRIVATE(cph,dot,nn,tnn,fct,xlegend,l3,fjkiln,gjkiln,NVEC_rem)&
-    !CPP_OMP PRIVATE(kj_off,kj_vec,jv,cross_k,isigma)
+    !CPP_OMP PRIVATE(kj_off,kj_vec,jv,cross_k,racc,rki_f,rki_g)
     ALLOCATE(cph(NVEC))
     ALLOCATE(xlegend(NVEC))
     ALLOCATE(plegend(NVEC,0:2))
@@ -202,9 +205,23 @@ CONTAINS
     ALLOCATE(fct(NVEC))
     ALLOCATE(dot(NVEC))
     ALLOCATE(angso(NVEC,2,2))
+    ALLOCATE(racc(NVEC,2,2))
+    ALLOCATE(rki_f(atoms%lmax(n),2,2),rki_g(atoms%lmax(n),2,2))
     !CPP_OMP DO SCHEDULE(DYNAMIC,1)
     DO  ki =  fmpi%n_rank+1, lapw%nv(1), fmpi%n_size
        kii=(ki-1)/fmpi%n_size+1
+
+       !Column (ki) factors of the radial integrals: rki_f multiplies fj(kj), rki_g gj(kj)
+       DO j2=1,2
+          DO j1=1,2
+             DO l=1,atoms%lmax(n)
+                fjkiln=fjgj%fj(ki,l,j2,1)
+                gjkiln=fjgj%gj(ki,l,j2,1)
+                rki_f(l,j1,j2)=fl2p1(l)*(fjkiln*td%rsoc%rso(1,1,n,l,j1,j2)+gjkiln*td%rsoc%rso(1,2,n,l,j1,j2))
+                rki_g(l,j1,j2)=fl2p1(l)*(fjkiln*td%rsoc%rso(2,1,n,l,j1,j2)+gjkiln*td%rsoc%rso(2,2,n,l,j1,j2))
+             ENDDO
+          ENDDO
+       ENDDO
 
        DO  kj_off = 1, ki, NVEC
           NVEC_rem = NVEC
@@ -215,8 +232,6 @@ CONTAINS
           ENDIF
           if (NVEC_rem<0 ) exit
 
-          !Set up spinors...
-          CALL hsmt_spinor_soc(n,nococonv,chi,isigma)
           DO jv = 1,NVEC_rem
             kj = kj_off - 1 + jv
             cross_k(1)=lapw%gk(2,ki,1)*lapw%gk(3,kj,1)- lapw%gk(3,ki,1)*lapw%gk(2,kj,1)
@@ -251,12 +266,8 @@ CONTAINS
           plegend(:NVEC_rem,0) = 1.0
           dplegend(:NVEC_rem,0) = 0.0
 
-          !--->          update overlap and l-diagonal hamiltonian matrix
-          !!$acc kernels &
-          !!$acc copyin(atoms,atoms%lmax,xlegend,cph,angso)&
-          !!$acc create(plegend,dplegend,fct)&
-          !!$acc present(fjgj,fjgj%fj,fjgj%gj)&
-          !!$acc present(hmat(1,1)%data_c,hmat(2,1)%data_c,hmat(1,2)%data_c,hmat(2,2)%data_c)
+          !--->          accumulate the real l-sum; cph, angso and chi are l-independent
+          racc(:NVEC_rem,:,:) = 0.0
           DO  l = 1,atoms%lmax(n)
              !--->       legendre polynomials
              l3 = MODULO(l, 3)
@@ -267,31 +278,33 @@ CONTAINS
                 plegend(:NVEC_rem,l3) = fleg1(l-1)*xlegend(:NVEC_rem)*plegend(:NVEC_rem,MODULO(l-1,3)) - fleg2(l-1)*plegend(:NVEC_rem,MODULO(l-2,3))
                 dplegend(:NVEC_rem,l3)=REAL(l)*plegend(:NVEC_rem,MODULO(l-1,3))+xlegend(:NVEC_rem)*dplegend(:NVEC_rem,MODULO(l-1,3))
              END IF ! l
-             DO j1=1,2
-                DO j2=1,2      
-                  fct(:NVEC_rem)  =cph(:NVEC_rem) * dplegend(:NVEC_rem,l3)*fl2p1(l)*(&
-                  fjgj%fj(kj_off:kj_vec,l,j1,1)*fjgj%fj(ki,l,j2,1) *td%rsoc%rso(1,1,n,l,j1,j2) + &
-                  fjgj%gj(kj_off:kj_vec,l,j1,1)*fjgj%fj(ki,l,j2,1) *td%rsoc%rso(2,1,n,l,j1,j2) + &
-                  fjgj%fj(kj_off:kj_vec,l,j1,1)*fjgj%gj(ki,l,j2,1) *td%rsoc%rso(1,2,n,l,j1,j2) + &
-                  fjgj%gj(kj_off:kj_vec,l,j1,1)*fjgj%gj(ki,l,j2,1) *td%rsoc%rso(2,2,n,l,j1,j2)) &
-                  * angso(:NVEC_rem,j1,j2)
-
-                  hmat(1,1)%data_c(kj_off:kj_vec,kii)=hmat(1,1)%data_c(kj_off:kj_vec,kii) + chi(1,1,j1,j2)*fct(:NVEC_rem)
-                  hmat(1,2)%data_c(kj_off:kj_vec,kii)=hmat(1,2)%data_c(kj_off:kj_vec,kii) + chi(1,2,j1,j2)*fct(:NVEC_rem)
-                  hmat(2,1)%data_c(kj_off:kj_vec,kii)=hmat(2,1)%data_c(kj_off:kj_vec,kii) + chi(2,1,j1,j2)*fct(:NVEC_rem)
-                  hmat(2,2)%data_c(kj_off:kj_vec,kii)=hmat(2,2)%data_c(kj_off:kj_vec,kii) + chi(2,2,j1,j2)*fct(:NVEC_rem)
+             DO j2=1,2
+                DO j1=1,2
+                  racc(:NVEC_rem,j1,j2) = racc(:NVEC_rem,j1,j2) + dplegend(:NVEC_rem,l3)*( &
+                     fjgj%fj(kj_off:kj_vec,l,j1,1)*rki_f(l,j1,j2) + &
+                     fjgj%gj(kj_off:kj_vec,l,j1,1)*rki_g(l,j1,j2))
                 ENDDO
              ENDDO
           !--->          end loop over l
           ENDDO
-          !!$acc end kernels
+
+          !--->          update hamiltonian matrix
+          DO j2=1,2
+             DO j1=1,2
+                fct(:NVEC_rem) = cph(:NVEC_rem)*angso(:NVEC_rem,j1,j2)*racc(:NVEC_rem,j1,j2)
+                hmat(1,1)%data_c(kj_off:kj_vec,kii)=hmat(1,1)%data_c(kj_off:kj_vec,kii) + chi(1,1,j1,j2)*fct(:NVEC_rem)
+                hmat(1,2)%data_c(kj_off:kj_vec,kii)=hmat(1,2)%data_c(kj_off:kj_vec,kii) + chi(1,2,j1,j2)*fct(:NVEC_rem)
+                hmat(2,1)%data_c(kj_off:kj_vec,kii)=hmat(2,1)%data_c(kj_off:kj_vec,kii) + chi(2,1,j1,j2)*fct(:NVEC_rem)
+                hmat(2,2)%data_c(kj_off:kj_vec,kii)=hmat(2,2)%data_c(kj_off:kj_vec,kii) + chi(2,2,j1,j2)*fct(:NVEC_rem)
+             ENDDO
+          ENDDO
        ENDDO
     !--->    end loop over ki
     ENDDO
     !CPP_OMP END DO
     !--->       end loop over atom types (ntype)
     DEALLOCATE(xlegend,plegend,dplegend)
-    DEALLOCATE(cph)
+    DEALLOCATE(cph,fct,dot,angso,racc,rki_f,rki_g)
     !CPP_OMP END PARALLEL
     !!$acc end data
     CALL timestop("offdiagonal soc-setup")
