@@ -16,6 +16,7 @@ include:
    - "packaging/CI/gfortran-serial.yml"
    - "packaging/CI/oneAPI.yml"
    - "packaging/CI/NVHPC.yml"
+   - "packaging/CI/LLVM.yml"
    - "packaging/CI/html.yml"
    - "packaging/CI/AiiDA.yml"
    - "packaging/CI/CB.yml"
