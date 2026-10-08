@@ -31,6 +31,7 @@ MODULE m_wannierlib_main
    USE m_melem_coarse, ONLY: t_melem_coarse
    USE m_wgauge_run, ONLY: wgauge_run
    USE m_wannierlib_export_basis, ONLY: wannierlib_export_basis
+   USE m_wannierlib_export_orbitrans, ONLY: wannierlib_export_orbitrans
    USE m_wannierlib_export_gauge, ONLY: wannierlib_export_gauge, wannierlib_store_gauge
 USE m_wannierlib_mmnkb, ONLY: wannierlib_kdiff
 USE m_wannierlib_band_window, ONLY: wannierlib_default_windows, wannierlib_create_eig
@@ -263,6 +264,12 @@ CONTAINS
          CALL wgauge_run(request, manifold, domains, cell, kpts, eig, u_matrix, u_opt, melem, f0_loc, c0_loc, &
                         mmn, bmesh, distk, fmpi, &
                         wf_channel=jspin, spin_suffix=TRIM(spin_sfx))
+
+         !> After wgauge_run so the message order in `out` keeps the operators together,
+         !> and inside the channel loop because a collinear two-channel run lays its
+         !> centres down one channel at a time.
+         IF (this%export%orbitrans) &
+            CALL wannierlib_export_orbitrans(this, atoms, cell, bmesh, fmpi, jspin, melem%n_channels)
 
          if (fmpi%isize == 1) CALL report_w90(this)
 

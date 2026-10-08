@@ -65,6 +65,7 @@ MODULE m_types_wannierlib
     LOGICAL :: basis = .FALSE.   ! <export wannierberri="T"/>:   WF<n>_basis.hdf
     LOGICAL :: gauge = .FALSE.   ! <export gauge="T"/>:          WF<n>_gauge.hdf, u_opt and u_mlwf
     LOGICAL :: bloch = .FALSE.   ! <export blochOperators="T"/>: WF<n>_s0.dat
+    LOGICAL :: orbitrans = .FALSE. ! <export orbitrans="T"/>:    orbitrans_input/, four structural files
   END TYPE t_wannierlib_export
 
   TYPE, EXTENDS(t_fleurinput_base) :: t_wannierlib_wannierize
@@ -428,6 +429,7 @@ CONTAINS
     CALL mpi_bc(this%export%basis, rank, mpi_comm)
     CALL mpi_bc(this%export%gauge, rank, mpi_comm)
     CALL mpi_bc(this%export%bloch, rank, mpi_comm)
+    CALL mpi_bc(this%export%orbitrans, rank, mpi_comm)
     CALL mpi_bc(this%l_plot_wf, rank, mpi_comm)
     CALL mpi_bc(this%op_r_name, rank, mpi_comm)
     CALL mpi_bc(this%num_wann, rank, mpi_comm)
@@ -681,6 +683,8 @@ CONTAINS
         TRIM(ADJUSTL(xPathA))//'/@gauge'))
       this%export%bloch = evaluateFirstBoolOnly(xml%getAttributeValue( &
         TRIM(ADJUSTL(xPathA))//'/@blochOperators'))
+      this%export%orbitrans = evaluateFirstBoolOnly(xml%getAttributeValue( &
+        TRIM(ADJUSTL(xPathA))//'/@orbitrans'))
     END IF
 
     ! --- operators_r: real-space operator matrices O(R) (Fourier step 3, no interpolation).
