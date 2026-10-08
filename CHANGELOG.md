@@ -15,6 +15,10 @@ Please remember that a lot of bugfixes are not documented here and thus we alway
 - Hybrid functionals in combination with 2nd variation spin-orbit coupling.
 - Alternative parameter setup profiles for the input generator.
 
+### Removed:
+
+- The `inpgen` input generator and its build target have been removed (`src/tools/inpgen2`), including the optional kplib interface that only it used.
+
 ### Notable bugfixes:
 
 - Fixes for spin-spiral calculations with local orbitals.

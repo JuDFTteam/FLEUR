@@ -7,8 +7,7 @@ MODULE m_libxc_xctyp
    !Parses the inpgen "LibXC: ..." xctyp specification (raw xcpot%inbuild_name)
    !into either name-based (Exch/Cor) or id-based (ExchID/CorID) functional
    !selection, plus an optional auxiliary GGA (AuxExchID/AuxCorID) for the
-   !MetaGGA radial basis. Shared between src/fleur/io/w_inpXML.f90 (fleur and
-   !inpgen2) and src/tools/inpgen3/w_inpXML.f90 (inpgen3).
+   !MetaGGA radial basis. Shared between src/fleur/io/w_inpXML.f90 (fleur).
    USE m_judft
    IMPLICIT NONE
    PRIVATE

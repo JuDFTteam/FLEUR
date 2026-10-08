@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What FLEUR Is
 
-FLEUR is an all-electron DFT code implementing the full-potential linearized augmented plane-wave (FLAPW) method. It is a scientific HPC code written primarily in Fortran 90/95+, with Python tooling for testing. The primary executables are `fleur` (serial) and `fleur_MPI` (parallel), plus `inpgen` for input file generation.
+FLEUR is an all-electron DFT code implementing the full-potential linearized augmented plane-wave (FLAPW) method. It is a scientific HPC code written primarily in Fortran 90/95+, with Python tooling for testing. The primary executables are `fleur` (serial) and `fleur_MPI` (parallel).
 
 ## General Rules (User generated)
 
@@ -151,14 +151,6 @@ All input types extend `t_fleurinput_base` and expose an `mpi_bc` method for bro
 - **String utilities:** `string.f90` — `int2str` and other helpers
 - **Argument parsing:** `args.F90`, `check_arguments.F90` — CLI flag extraction
 
-### inpgen
-
-`src/tools/inpgen2/` builds the `inpgen` binary (the CMake target is named `inpgen2` but its output is renamed to `inpgen`). It operates in two modes:
-1. Generate `inp.xml` from a simple input file: `inpgen -f <input>`
-2. Add a k-point set to an existing `inp.xml`: `inpgen -kpt ...`
-
-Note that `src/libraries/fleurinput/CMakeLists.txt` compiles four k-point sources (`tetcon.f90`, `triang.f`, `bravais.f90`, `brzone2.f90`) directly out of `src/tools/inpgen2/kpoints/`, so the core `fleurinput` library has a source-level dependency on this tool's tree.
-
 ## Environment Variables
 
 - `juDFT_MPI` — Custom MPI command template (use `{mpi_procs}` as placeholder)
@@ -170,7 +162,7 @@ Note that `src/libraries/fleurinput/CMakeLists.txt` compiles four k-point source
 
 Tests in `testing/tests/` use fixtures from `testing/conftest.py`. Key helpers:
 
-- `execute_fleur(...)` / `execute_inpgen(...)` — copy input files and run the binary
+- `execute_fleur(...)` — copy input files and run the binary
 - `grep_exists(filepath, expression)` — assert a regex appears in an output file
 - `grep_number(filepath, expression, ...)` — extract a float value from an output file
 - `check_outxml(filepath, ...)` — compare values in `out.xml` against expected numbers

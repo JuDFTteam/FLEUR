@@ -36,16 +36,8 @@ include("cmake/Files_and_Targets.txt")
 include("cmake/filespecific.cmake")
 include("cmake/pytest_setup.cmake")
 
-# Also build inpgen
-add_subdirectory("src/tools/inpgen2")
-# Ensure buildinfo.h is generated before inpgen2 is compiled.
-# The 'buildinfo' target (defined in cmake/compileenv.txt) generates the header
-# independently, so we no longer need to depend on the full fleur/fleur_MPI builds.
-add_dependencies("inpgen2" buildinfo)
-
 include("cmake/ReportConfig.txt")
 
-#Both targets are renamed on output ('fleur' -> 'fleur_MPI' for an MPI build,
-#'inpgen2' -> 'inpgen'); install(TARGETS) honours RUNTIME_OUTPUT_NAME.
+#The target is renamed on output ('fleur' -> 'fleur_MPI' for an MPI build);
+#install(TARGETS) honours RUNTIME_OUTPUT_NAME.
 install(TARGETS fleur   RUNTIME DESTINATION bin)
-install(TARGETS inpgen2 RUNTIME DESTINATION bin)

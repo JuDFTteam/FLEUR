@@ -193,7 +193,6 @@ def pytest_report_header(config):#libs):
     work_dir = get_work_dir(build_dir)
     failed_dir = get_failed_dir(build_dir)
     path_fleur, para = get_fleur_binary(build_dir)
-    path_inp = get_inpgen_binary(build_dir)
     mpiruncmd = get_mpi_command(dict(os.environ), '{mpi_procs}', para)
     mpiruncmd = ' '.join(mpiruncmd)
     libs = []
@@ -201,7 +200,6 @@ def pytest_report_header(config):#libs):
     reporter = config.pluginmanager.getplugin("terminalreporter")
     reporter.write_sep('-',title='Fleur test session')
     add_header_strings = [f"Fleur exe: {path_fleur}",
-                          f"Inpgen exe: {path_inp}",
                           f"NOT linked libraries: {libs}",
                           f"Running tests in: {work_dir}",
                           f"Failed tests will be copied to: {failed_dir}",
@@ -236,15 +234,14 @@ def read_cmake_config(configfilepath):
 
 _parser_tests_collected = False
 fleur_tests = set()
-inpgen_tests = set()
 
 def pytest_generate_tests(metafunc):
     """Generate tests during collection
 
         This is modified to be able to use parametrized tests for the parsers and automatically performing the tests
-        for all available fleur/inpgen tests
+        for all available fleur tests
 
-        Fleur and inpgen tests are detected based on their usage of the `execute_fleur` or `execute_ingpen` fixture
+        Fleur tests are detected based on their usage of the `execute_fleur` fixture
         They are added to (module level) sets as tuples (function name, function module file, all given pytest markers)
         and when a parser test is encountered (detection based on the fixture `fleur_test_name`) the corresponding fixture
         is parametrized with all collected tests
@@ -261,20 +258,9 @@ def pytest_generate_tests(metafunc):
                          metafunc.module.__file__.replace(os.path.dirname(os.path.abspath(__file__))+'/','')) + markers)
    #     if _parser_tests_collected:
    #         metafunc.config.issue_config_time_warning(UserWarning(f"Fleur test collected after parser test. Missed: {metafunc.function.__name__}"),2)
-    if 'execute_inpgen' in metafunc.fixturenames:
-        markers = tuple({mark.name for mark in metafunc.function.pytestmark})
-        inpgen_tests.add((metafunc.function.__name__,
-                          metafunc.module.__file__.replace(os.path.dirname(os.path.abspath(__file__))+'/','')) + markers)
-        if _parser_tests_collected:
-            metafunc.config.issue_config_time_warning(UserWarning('Inpgen test collected after parser test. Missed: '\
-                                                                  f"{metafunc.function.__name__}"),2)
-
     if 'fleur_test_name' in metafunc.fixturenames:
         _parser_tests_collected = True
-        if 'inpxml' in metafunc.function.__name__:
-            test_info = fleur_tests.union(inpgen_tests)
-        else:
-            test_info = fleur_tests
+        test_info = fleur_tests
 
         default_markers = set(['fleur_parser', 'masci_tools', 'hdf']) #These markers should be ignored for selection
 
@@ -367,7 +353,6 @@ def pytest_configure(config):
     We make them all lowercaps as convention
     """
     # run mode markers
-    config.addinivalue_line("markers", "inpgen: test running inpgen")
     config.addinivalue_line("markers", "fleur: test running fleur")
     config.addinivalue_line("markers", "serial: test running fleur serial")
     config.addinivalue_line("markers", "mpi: test running fleur in parallel")
@@ -453,7 +438,7 @@ def pytest_configure(config):
 ##### fixtures for whole test session ####
 
 @pytest.fixture(scope='session', autouse=True)
-def fleur_test_session(parser_testdir, failed_dir, work_dir, inpgen_binary, fleur_binary, request):
+def fleur_test_session(parser_testdir, failed_dir, work_dir, fleur_binary, request):
     """
     Setup a fleur test session
     - cleanup directories
@@ -472,11 +457,9 @@ def fleur_test_session(parser_testdir, failed_dir, work_dir, inpgen_binary, fleu
 
     # First we print out some info, which will show at the end of session:
     path_fleur, para = fleur_binary
-    path_inp = inpgen_binary
     add_header_string = "\n#########################################\n"
     add_header_string += "Fleur test session information:\n\n"
     add_header_string += "Fleur exe: {} \n".format(path_fleur)
-    add_header_string += "Inpgen exe: {} \n".format(path_inp)
     add_header_string += "NOT linked libraries: {} \n".format(str(libs))
     add_header_string += "Running tests in: {} \n".format(work_dir_path)
     add_header_string += "Failed tests will be copied to: {} \n\n".format(failed_dir_path)
@@ -650,99 +633,6 @@ def pytest_runtest_logreport(report):
     yield
 
 ##### other fixtures ####
-
-@pytest.fixture
-def execute_inpgen(inpgen_binary, work_dir, pytestconfig, test_logger):
-    """
-    Fixture which returns an execute_inpgen function
-    """
-    def _execute_inpgen(test_file_folder=None, cmdline_param=None, exclude=[], only_copy=[], rm_files=[]):
-        """
-        Function which copies the input files
-        executes inpgen with the given cmdline_param
-        and returns a path to the folder with the results
-
-        :param test_file_folder: string relative path to a folder containing all files, to copy for the test
-        :param cmdline_param: list of strings, containing cmdline args, for example ['-inp' , 'simple_inp']
-        :param exclude: list of strings file names to exclude from copy
-        :param only_copy: list of string file names, or length 2 to change file name. example ['inp', ['kpts2', 'kpts']]
-        in which the file 'kpts2' in the source dir will be renamed to kpts in the destination dir.
-        :param rm_files: list of strings files in the workdir to be removed, will be executed before copy
-
-        :return: a dictionary of the form 'filename :filepath'
-        """
-        import subprocess
-
-        __tracebackhide__ = not pytestconfig.getoption('--show-tracebacks') #We do not need the traceback here
-
-        workdir = str(work_dir)
-        testdir = test_dir()
-        if cmdline_param is None:
-            cmdline_param = []
-
-        # Prepare only copy list, since we allow for name changes.
-
-        new_only_copy_list = {}
-        for entry in only_copy:
-            if isinstance(entry, list):
-                new_only_copy_list[entry[0]] = entry[1]
-            else:
-                new_only_copy_list[entry] = entry
-
-        if test_file_folder is not None:
-            abspath = os.path.abspath(os.path.join(testdir, test_file_folder))
-            source = os.listdir(abspath)
-            for files in source:
-                if files not in exclude:
-                    if new_only_copy_list != {}:
-                        if files in list(new_only_copy_list.keys()):
-                            #os.remove(os.path.abspath(os.path.join(workdir, new_only_copy_list[files])))
-                            shutil.copy(os.path.abspath(os.path.join(abspath, new_only_copy_list[files])), workdir)
-                    else:
-                        shutil.copy(os.path.abspath(os.path.join(abspath, files)), workdir)
-        #print(inpgen_binary)
-        if inpgen_binary is None:
-            test_logger.error('No Inpgen binary found')
-            pytest.fail('No Inpgen binary found')
-
-        arg_list = [inpgen_binary] + cmdline_param
-        #print(arg_list)
-
-        os.chdir(workdir)
-        with open(f"{workdir}/stdout", "w") as f_stdout:
-            with open(f"{workdir}/stderr", "w") as f_stderr:
-                p1 = subprocess.run(arg_list + ["-no_send"], stdout=f_stdout, stderr=f_stderr, check=False)
-        # Check per hand if successful:
-        with open(f"{workdir}/stdout", "r") as f_stdout:
-            out_content= f_stdout.read()
-
-        if 'Run finished successfully' not in out_content:
-            with open(f"{workdir}/stderr", "r") as f_stderr:
-                error_content= f_stderr.read()
-            # failure
-            print('Inpgen execution failed.')
-            print('======================================')
-            print('The following was printed to stdout:')
-            print(out_content)
-            print('======================================')
-            print('The following was printed to stderr:')
-            print(error_content)
-            test_logger.error('Inpgen Execution failed')
-            pytest.fail('Inpgen Execution failed')
-
-        result_files = {}
-        for root, dirs, files in os.walk(workdir):
-            for file in files:
-                rel_path = os.path.relpath(os.path.join(root, file), workdir)
-                rel_path = rel_path.lstrip('./')
-                abs_path = os.path.abspath(os.path.join(root, file))
-                result_files[rel_path] = abs_path
-        test_logger.info(f'Inpgen produced files: {list(result_files.keys())}')
-        os.chdir(testdir)
-
-        return result_files
-
-    return _execute_inpgen
 
 def get_mpi_command(env, mpi_procs, parallel):
     """
@@ -1003,7 +893,7 @@ def validate_out_xml_file(test_logger):
 
 # Comment: Instead of implementing grep in python one could also just execute grep via subprocess
 # This might be rather unsave someone not nice could put 'grep x y; rm -rf /' in a test...
-# The same goes for fleur and inpgen execute
+# The same goes for fleur execute
 # Pro: The rexpressions stay close that what people are used to.
 @pytest.fixture
 def grep_exists(test_logger):
@@ -1414,31 +1304,6 @@ def stage_for_parser_test(request, work_dir, parser_testdir):
     else:
         yield
 
-def get_inpgen_binary(fleur_dir):
-    """
-    Fixture returning the path to a inpgen executable
-    """
-    if(fleur_dir[-1] == "/"):
-        fleur_dir = fleur_dir[:-1]
-
-    if(os.path.isfile(f"{fleur_dir}/inpgen")):
-        binary = f"{fleur_dir}/inpgen"
-        #logging.info(f"Use {self.binary} as executable")
-    else:
-        binary = None
-    #else:
-    #   logging.warning("Can not find any executables")
-
-    return binary
-
-@pytest.fixture(scope='session')
-def inpgen_binary(build_dir):
-    """
-    Fixture returning the path to a inpgen executable
-    """
-    return get_inpgen_binary(build_dir)
-
-
 def get_fleur_binary(fleur_dir):
     """
     Fixture returning the path to a fleur executable
@@ -1499,8 +1364,8 @@ def collect_all_judft_messages():
     # and to avoid problems with binaries and so on.
     src_folders = ['cdn', 'cdn_mt', 'core', 'diagonalization', 'propcalc/dos', 'propcalc/eels', 'eigen',
      'soc', 'secvar', 'matrixelements', 'fermi', 'fft', '../tools/fleurinput', 'force',
-    'forcetheorem', 'global', 'greensf', 'hybrid',  'init', '../tools/inpgen2',
-    'io', 'juDFT', '../tools/inpgen2/kpoints',  'ldaX', 'main', 'math', 'mix', 'mpi', 'startden', 'propcalc/orbdep',
+    'forcetheorem', 'global', 'greensf', 'hybrid',  'init', 
+    'io', 'juDFT', 'ldaX', 'main', 'math', 'mix', 'mpi', 'startden', 'propcalc/orbdep',
     'rdmft', 'tetra', 'types', 'vgen', 'wannierlib', 'xc-pot'
      ]
 

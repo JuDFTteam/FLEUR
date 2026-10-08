@@ -78,7 +78,7 @@ $pytest tests/bar/test_foo.py
 ```
 # What is added to the build dir:
 Under `Testing/` a test session run will create several folders:
-- `work`: here we run the tests, i.e execute inpgen and fleur. This folder is cleaned after every test.
+- `work`: here we run the tests, i.e execute fleur. This folder is cleaned after every test.
 - `failed_test_results`: a folder where for all failed tests the content of `work` is preserved of the last test session. This folder is cleaned at the beginning of a test session.
 - `parser_testdir`: a folder where all scheduled parser tests go, this is cleaned before each test session. Soon this is cleaned during a session, and failed parser tests are also moved to `failed_test_results`
 - (only on CI) `pytest_session.stdout`, `pytest_summmary.out`: On the CI we also write the pytest report and the short summary to files (using tee, check the ci.yml file)
@@ -96,36 +96,35 @@ A example (shorted) log from a test session run with line numbers may look like 
  2 platform linux -- Python 3.8.5, pytest-6.2.4, py-1.10.0, pluggy-0.13.1
  3 ------------------------------ Fleur test session ------------------------------
  4 Fleur exe: /builds/fleur/build/fleur_MPI
- 5 Inpgen exe: /builds/fleur/build/inpgen
- 6 NOT linked libraries: []
- 7 Running tests in: /builds/fleur/build/Testing/work
- 8 Failed tests will be copied to: /builds/fleur/build/Testing/failed_test_results
- 9 Parser tests will be run (masci-tools version 0.4.8)
-10 Default MPI command: mpirun -n {mpi_procs} --allow-run-as-root --mca btl vader,self
-11 Now cleaning work, failed and parser_test directories...
-12 rootdir: /builds/fleur/tests/new_pytest_system, configfile: setup.cfg
-13 Excluding tests with the following markers in 'pytest_incl.py':  ['chase', 'cusolver', 'edsolver', 'elpa', 'elpaonenode', 'fftmkl', 'gpu', 'magma', 'noci', 'progthread', 'spfft']
-14 Running every 1st test with offset 0, others will be skipped.
-15 collected 210 items / 4 deselected / 206 selected
-16 ../tests/feature_reg/test_AlLibxcPbe.py .         [  0%]
-17 ../tests/feature_reg/test_Co.py ..                [  1%]
-18 ../tests/feature_reg/test_CrystalFieldOutput.py . [  1%]
-19 ../tests/feature_reg/test_CuBulk.py .....         [  4%]
+ 5 NOT linked libraries: []
+ 6 Running tests in: /builds/fleur/build/Testing/work
+ 7 Failed tests will be copied to: /builds/fleur/build/Testing/failed_test_results
+ 8 Parser tests will be run (masci-tools version 0.4.8)
+ 9 Default MPI command: mpirun -n {mpi_procs} --allow-run-as-root --mca btl vader,self
+10 Now cleaning work, failed and parser_test directories...
+11 rootdir: /builds/fleur/tests/new_pytest_system, configfile: setup.cfg
+12 Excluding tests with the following markers in 'pytest_incl.py':  ['chase', 'cusolver', 'edsolver', 'elpa', 'elpaonenode', 'fftmkl', 'gpu', 'magma', 'noci', 'progthread', 'spfft']
+13 Running every 1st test with offset 0, others will be skipped.
+14 collected 210 items / 4 deselected / 206 selected
+15 ../tests/feature_reg/test_AlLibxcPbe.py .         [  0%]
+16 ../tests/feature_reg/test_Co.py ..                [  1%]
+17 ../tests/feature_reg/test_CrystalFieldOutput.py . [  1%]
+18 ../tests/feature_reg/test_CuBulk.py .....         [  4%]
 20-80.....
-81 ../tests/libxc/test_libx.py s                     [ 31%]
+80 ../tests/libxc/test_libx.py s                     [ 31%]
 82../tests/masci_tools/test_banddos_parser.py ....   [ 33%]
-83 ../tests/masci_tools/test_fleur_parser.py ..s... [ 38%]
-84 s...s..........s.......s............s...s...........s...ss.....s..s....s [ 73%]
-85 ........s.......s............s...s.........F.s...ss...                   [ 99%]
-86 ../tests/new_pytest_system/tests/masci_tools/test_judft_errors.py .      [100%]
-87 =========================== short test summary info ============================
-88 FAILED ../test_fleur_mt_outxml_parser[test_CwannXML]
-89 ===== 1 failed, 178 passed, 27 skipped, 4 deselected in 1408.04s (0:23:28) =====
+82 ../tests/masci_tools/test_fleur_parser.py ..s... [ 38%]
+83 s...s..........s.......s............s...s...........s...ss.....s..s....s [ 73%]
+84 ........s.......s............s...s.........F.s...ss...                   [ 99%]
+85 ../tests/new_pytest_system/tests/masci_tools/test_judft_errors.py .      [100%]
+86 =========================== short test summary info ============================
+87 FAILED ../test_fleur_mt_outxml_parser[test_CwannXML]
+88 ===== 1 failed, 178 passed, 27 skipped, 4 deselected in 1408.04s (0:23:28) =====
 ```
 ## Log: Test session header
 The log starts with a session header, going in this case from line 1 to 15.
 In this header contains default pytest output of versions (line 1), and the output of how many tests pytest has discovered, selected and deselected (line 15).
-Further the session header contains information we put there. I.e which fleur executable used (line 4), inpgen executable used (line 5), libraries not linked (line 6), in which folder the tests will run (line 7), where files from failed tests will be copied to (line 8), if parser tests will be run, and for which masci-tools version (line 9), the default mpi command to execute fleur (line 10), at the start of the sessions these folders are cleared and/or created (mentioned on line 11), the rootdir (all other paths below are relative to this) and the pytest configfile (line 12).  Line 13 list all markers cmake has written into `pytest_incl.py` within the build dir for compilation related test deselection. Line 14 states if only every x test is run and if the test session has an offset.
+Further the session header contains information we put there. I.e which fleur executable used (line 4), libraries not linked (line 5), in which folder the tests will run (line 6), where files from failed tests will be copied to (line 7), if parser tests will be run, and for which masci-tools version (line 8), the default mpi command to execute fleur (line 9), at the start of the sessions these folders are cleared and/or created (mentioned on line 10), the rootdir (all other paths below are relative to this) and the pytest configfile (line 11).  Line 13 list all markers cmake has written into `pytest_incl.py` within the build dir for compilation related test deselection. Line 14 states if only every x test is run and if the test session has an offset.
 
 ## Log: Running tests
 Then in the lines 16-86 information on the running tests is outputed. Each line contains information on tests from which file are run, followed by a '.' (dot) for each passed test. Skipped tests are marked with an 's', failed tests with and 'F' and tests which had unexpected errors with an 'E'.

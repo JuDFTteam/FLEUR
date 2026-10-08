@@ -20,7 +20,6 @@ do
     -libxml2) shift; CLI_COMPILE_LIBXML=$1;;
 	  -wannier) shift; CLI_USE_WANNIER=$1;;
     -edsolver) shift; CLI_USE_EDSOLVER=$1;;
-	  -kplib)  CLI_USE_KPLIB=1;;
 	  -mpi) shift; CLI_USE_MPI=$1;;
 	  -magma) shift; CLI_USE_MAGMA=$1;;
 	  -elsi) shift; CLI_USE_ELSI=$1;;

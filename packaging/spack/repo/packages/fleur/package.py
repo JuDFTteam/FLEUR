@@ -204,7 +204,6 @@ class Fleur(CudaPackage, Package):
                 install("fleur_MPI", prefix.bin)
             else:
                 install("fleur", prefix.bin)
-            install("inpgen", prefix.bin)
 
     @run_after("build")
     @on_package_attributes(run_tests=True)
