@@ -328,7 +328,6 @@ SUBROUTINE dfpt_cdnval(sternheimerJob,eig_id, dfpt_eig_id, fmpi,kpts,jspin,noco,
    END IF
 
 
-   call den%distribute(fmpi%mpi_comm)
 
    CALL timestop("dfpt_cdnval")
 

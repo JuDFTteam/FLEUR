@@ -245,6 +245,12 @@ CONTAINS
        IF (fmpi%irank.EQ.0) THEN
           den%pw(:,3)=RESHAPE(c_b,(/n/))
        ENDIF
+       IF (SIZE(den%pw,2).EQ.4) THEN !DFPT case 
+          CALL MPI_REDUCE(den%pw(:,4),c_b,n,MPI_DOUBLE_COMPLEX,MPI_SUM,0, MPI_COMM_WORLD,ierr)
+          IF (fmpi%irank.EQ.0) THEN
+             den%pw(:,4)=RESHAPE(c_b,(/n/))
+          ENDIF
+       ENDIF
        DEALLOCATE (c_b)
        !
        IF (input%film) THEN
