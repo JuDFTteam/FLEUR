@@ -15,38 +15,40 @@ MODULE m_winpXML
 !!!                                         GM'16
 !!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-   implicit none
+   use m_types_input
+   use m_types_sym
+   use m_types_stars
+   use m_types_atoms
+   use m_types_vacuum
+   use m_types_kpts
+   use m_types_mpinp
+   use m_types_hybinp
+   use m_types_gfinp
+   use m_types_hub1inp
+   use m_types_cell
+   use m_types_banddos
+   use m_types_sliceplot
+   use m_types_xcpot
+   use m_types_xcpot_inbuild_nofunction
+   use m_libxc_xctyp
+   use m_types_noco
+   use m_types_enparaxml
+   use m_types_forcetheo
+   use m_types_dfpt
+   use m_juDFT
+   use m_constants
+   use m_xmlOutput
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: w_inpxml
 CONTAINS
    SUBROUTINE w_inpXML( &
       atoms, vacuum, input, stars, sliceplot, forcetheo, banddos, dfpt, &
       cell, sym, xcpot, noco,   mpinp, hybinp, kptsArray, kptsSelection, enpara, &
       gfinp, hub1inp, l_explicitIn, l_includeIn, filename, add_filename)
 
-      use m_types_input
-      use m_types_sym
-      use m_types_stars
-      use m_types_atoms
-      use m_types_vacuum
-      use m_types_kpts
 
-      use m_types_mpinp
-      use m_types_hybinp
-      use m_types_gfinp
-      use m_types_hub1inp
-      use m_types_cell
-      use m_types_banddos
-      use m_types_sliceplot
-      USE m_types_xcpot
-      USE m_types_xcpot_inbuild_nofunction
-      USE m_libxc_xctyp
-      USE m_types_noco
-      use m_types_enparaxml
-      USE m_types_forcetheo
-      USE m_types_dfpt
 
-      USE m_juDFT
-      USE m_constants
-      USE m_xmlOutput
 
       IMPLICIT NONE
 
@@ -455,7 +457,12 @@ WRITE (fileNum, 242) fr(1.0)
 
 !         <atomicCutoffs lmax="8" lnonsphr="6"/>
 320      FORMAT('         <atomicCutoffs lmax="', i0, '" lnonsphr="', i0, '"/>')
-         WRITE (fileNum, 320) atoms%lmax(iAtomType), atoms%lnonsph(iAtomType)
+329      FORMAT('         <atomicCutoffs lmax="', i0, '" lnonsphr="', i0, '" lmaxAPW="', i0, '"/>')
+         IF (atoms%lapw_l(iAtomType)>=0) THEN
+            WRITE (fileNum, 329) atoms%lmax(iAtomType), atoms%lnonsph(iAtomType), atoms%lapw_l(iAtomType)
+         ELSE
+            WRITE (fileNum, 320) atoms%lmax(iAtomType), atoms%lnonsph(iAtomType)
+         END IF
 
          WRITE (fileNum, '(a)') '         <electronConfig flipSpins="F">'
 !         <coreConfig>[He] (2s1/2) (2p1/2) (2p3/2)</coreConfig>
@@ -519,6 +526,9 @@ WRITE (fileNum, 242) fr(1.0)
             END IF
             IF (atoms%l_relLO(ilo, iAtomType)) THEN
                loType = 'relLO'
+            END IF
+            IF (atoms%l_dulo(ilo, iAtomType)) THEN
+               loType = 'APW'
             END IF
             n = ABS(n)
 324         FORMAT('         <lo type="', a, '" l="', i0, '" n="', i0, '" eDeriv="', i0, '"/>')

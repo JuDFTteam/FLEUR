@@ -14,6 +14,16 @@
 MODULE m_types_xcpot
    USE m_juDFT
    USE m_types_fleurinput_base
+   USE M_mpi_bc_tool
+   USE m_types_xml
+   USE, INTRINSIC :: IEEE_ARITHMETIC
+#ifdef CPP_LIBXC
+#ifdef CPP_LIBXC_F90
+#define xc_f03_lib_m xc_f90_lib_m
+#define xc_f03_functional_get_number xc_f90_functional_get_number
+#endif
+   USE xc_f03_lib_m
+#endif
    IMPLICIT NONE
    PRIVATE
    PUBLIC :: t_xcpot, t_gradients
@@ -101,7 +111,6 @@ MODULE m_types_xcpot
 CONTAINS
 
   subroutine mpi_bc_xcpot_abstract(This, Mpi_comm, Irank)
-    Use M_mpi_bc_tool
     class(t_xcpot), intent(inout)::This
     integer, intent(in):: Mpi_comm
     integer, intent(in), Optional::Irank
@@ -133,16 +142,6 @@ CONTAINS
   end subroutine
 
    SUBROUTINE read_xml_xcpot(this, xml)
-      USE m_types_xml
-#ifdef CPP_LIBXC
-#ifdef CPP_LIBXC_F90
-#define xc_f03_lib_m xc_f90_lib_m
-#define xc_f03_functional_get_number xc_f90_functional_get_number
-    use xc_f90_lib_m
-#else
-      USE xc_f03_lib_m
-#endif   
-#endif
       CLASS(t_xcpot), INTENT(INOUT):: this
       TYPE(t_xml), INTENT(INOUT)    ::xml
 
@@ -320,7 +319,6 @@ CONTAINS
    END FUNCTION xcpot_needs_grad
 
    FUNCTION xcpot_get_exchange_weight(xcpot) RESULT(a_ex)
-      USE m_judft
       IMPLICIT NONE
       CLASS(t_xcpot), INTENT(IN):: xcpot
       REAL:: a_ex
@@ -328,7 +326,6 @@ CONTAINS
    END FUNCTION xcpot_get_exchange_weight
 
    SUBROUTINE xcpot_get_vxc(xcpot, jspins, rh, vxc, vx, grad,kinEnergyDen_KS, vtau, l_aux)
-      USE m_judft
       IMPLICIT NONE
 
       CLASS(t_xcpot), INTENT(IN) :: xcpot
@@ -348,8 +345,6 @@ CONTAINS
 
    SUBROUTINE xcpot_get_exc(xcpot, jspins, rh, exc, grad, kinEnergyDen_KS, mt_call)
       !USE m_types_misc
-      USE m_judft
-      USE, INTRINSIC :: IEEE_ARITHMETIC
       IMPLICIT NONE
 
       CLASS(t_xcpot), INTENT(IN)             :: xcpot
@@ -368,7 +363,6 @@ CONTAINS
    END SUBROUTINE xcpot_get_exc
 
    SUBROUTINE xcpot_get_fxc_lda(xcpot, jspins, rh, fxc)
-      USE m_judft
       IMPLICIT NONE
 
       CLASS(t_xcpot), INTENT(IN) :: xcpot
@@ -421,7 +415,6 @@ CONTAINS
    ! Subroutine form avoids polymorphic allocatable function-result assignment, which
    ! Intel compilers (ifort/ifx) cannot handle (gfortran handles it fine).
    SUBROUTINE xcpot_create_from_aux(xcpot, aux_libxc)
-      USE m_judft
       IMPLICIT NONE
       CLASS(t_xcpot),              INTENT(IN)  :: xcpot
       CLASS(t_xcpot), ALLOCATABLE, INTENT(OUT) :: aux_libxc

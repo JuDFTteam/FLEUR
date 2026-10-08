@@ -15,6 +15,20 @@
 !!
 !! Reference: Doumont et al., Phys. Rev. B 106, 235159 (2022), Section II.B
 MODULE m_assign_enpara_potential
+  USE m_types_enpara
+  USE m_types_atoms
+  USE m_types_input
+  USE m_types_potden
+  USE m_types_xcpot
+  USE m_types_sphhar
+  USE m_types_sym
+  USE m_types_stars
+  USE m_types_vacuum
+  USE m_types_noco
+  USE m_types_mpi
+  USE m_vmt_xc
+  USE m_constants
+  USE m_judft
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: assign_enpara_potential
@@ -23,20 +37,6 @@ CONTAINS
 
   SUBROUTINE assign_enpara_potential(enpara, fmpi, atoms, input, v, xcpot, vxc, inDen, &
                                      sphhar, sym, stars, vacuum, noco, EnergyDen)
-    USE m_types_enpara
-    USE m_types_atoms
-    USE m_types_input
-    USE m_types_potden
-    USE m_types_xcpot
-    USE m_types_sphhar
-    USE m_types_sym
-    USE m_types_stars
-    USE m_types_vacuum
-    USE m_types_noco
-    USE m_types_mpi
-    USE m_vmt_xc
-    USE m_constants
-    USE m_judft
     IMPLICIT NONE
 
     TYPE(t_enpara), INTENT(INOUT)        :: enpara

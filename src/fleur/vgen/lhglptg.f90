@@ -1,21 +1,29 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_lhglptg
   !.....------------------------------------------------------------------
   !     calculates lattice harmonics and their gradients on the
   !       gauss-legendre angular mesh - r.p. and t.a.
   !     for gradient. t.a. 1996.
   !.....------------------------------------------------------------------
+   USE m_polangle
+   USE m_ylm
+   USE m_dylm
+   USE m_types_sym
+   USE m_types_sphhar
+   USE m_types_atoms
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: lhglptg
 CONTAINS
   SUBROUTINE lhglptg(&
        &                   sphhar,atoms,&
        &                   rx,nsp,dograds,sym,&
        &                   ylh,thet,phi,ylht1,ylht2,ylhf1,ylhf2,ylhtf)
     !
-    USE m_polangle
-    USE m_ylm
-    USE m_dylm
-    USE m_types_sym
-    USE m_types_sphhar
-    USE m_types_atoms
 
     IMPLICIT NONE
 

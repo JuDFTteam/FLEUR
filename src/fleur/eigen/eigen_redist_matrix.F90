@@ -1,11 +1,21 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_eigen_redist_matrix
+   USE m_types_mpimat
+#ifdef CPP_MPI
+   USE mpi
+#endif
+   USE m_types_mat
+   USE m_types_atoms
+   USE m_types_lapw
+   USE m_types_mpi
    implicit none
+   PRIVATE
+   PUBLIC :: eigen_redist_matrix, priv_copy_lapwlo_part
 CONTAINS
   !> Collect Hamiltonian or overlap matrix to final form
   !!
@@ -16,8 +26,6 @@ CONTAINS
 
 
   SUBROUTINE eigen_redist_matrix(fmpi,lapw,atoms,mat,mat_final,mat_final_templ,lapwq)
-   USE m_types
-   USE m_types_mpimat
    IMPLICIT NONE
    TYPE(t_mpi),INTENT(IN)    :: fmpi
    TYPE(t_lapw),INTENT(IN)   :: lapw
@@ -74,11 +82,6 @@ CONTAINS
   END SUBROUTINE eigen_redist_matrix
 
   subroutine priv_copy_lapwLO_Part(m1,m2,nv,nlotot,fmpi)
-   USE m_types
-   USE m_types_mpimat
-#ifdef CPP_MPI
-   use mpi 
-#endif   
    implicit none
    CLASS(t_mat),target,INTENT(INOUT):: m1,m2
    integer,intent(in)               :: nv(2),nlotot

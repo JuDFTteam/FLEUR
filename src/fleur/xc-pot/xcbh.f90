@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -26,7 +26,10 @@ MODULE m_xcbh
 
    USE m_constants, ONLY : pi_const
    USE m_relcor
+   USE m_types_xcpot_data
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: vxcbh, excbh, fc, fex
 
    REAL, PARAMETER, PRIVATE :: ff  = 3.847322101863  ! 1 / ( 2^(1/3) - 1 )
    REAL, PARAMETER, PRIVATE :: cvx = 1.221774115422  ! 2 * ( 3/(2*pi) )^(2/3)
@@ -48,7 +51,6 @@ CONTAINS
        mgrid,ngrid,rh, &
        vx,vxc)
 !************************************************************************
-      USE m_types_xcpot_data
 
 !     .. Scalar Arguments ..
       INTEGER, INTENT (IN) :: jspins
@@ -156,7 +158,6 @@ CONTAINS
        mgrid,ngrid,rh, &
        exc)
 !***********************************************************************
-      USE m_types_xcpot_data
 
 !     .. Scalar Arguments ..
       INTEGER, INTENT (IN) :: jspins

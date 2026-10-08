@@ -1,12 +1,27 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_Ekwritesl
   use m_juDFT
+  use m_types_atoms
+  use m_types_cell
+  use m_types_dos
+  use m_types_input
+  use m_types_kpts
+  use m_types_misc
+  use m_types_sym
+  use m_types_vacuum
+  implicit none
+  private
+  public :: ek_write_sl
 CONTAINS
   SUBROUTINE Ek_write_sl(eig_id,kpts,atoms,vacuum,input,jspin,sym,cell,dos,slab,orbcomp,results)
     !-----------------------------------------------------------------
     !-- now write E(k) for all kpts if on T3E
     !-- now read data from tmp_dos and write of E(k) in  ek_orbcomp
     !-----------------------------------------------------------------
-    USE m_types
     IMPLICIT NONE
     
     TYPE(t_input),INTENT(IN)       :: input

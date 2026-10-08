@@ -5,7 +5,16 @@
 !--------------------------------------------------------------------------------
       MODULE m_loddop
       USE m_juDFT
-   implicit none
+      USE m_constants
+      USE m_types_atoms
+      USE m_types_input
+      USE m_types_sphhar
+      USE m_types_stars
+      USE m_types_sym
+      USE m_types_vacuum
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: loddop
       CONTAINS
         SUBROUTINE loddop(stars,vacuum,atoms,sphhar,input,sym,nu,&
                           it,fr,fpw,fvac)
@@ -18,13 +27,6 @@
           !     themselves.
           !     ***********************************************************
 
-          USE m_types_stars
-          USE m_types_atoms
-          USE m_types_sym
-          USE m_types_vacuum
-          USE m_types_sphhar
-          USE m_types_input
-          USE m_constants
 
           IMPLICIT NONE
 

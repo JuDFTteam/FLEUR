@@ -4,7 +4,33 @@
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_totale
-   implicit none
+   USE m_intgr, ONLY: intgr3
+   USE m_constants
+   USE m_force_a4
+   USE m_force_a3
+   USE m_force_a4_add
+   USE m_force_sf
+   USE m_forcew
+   USE m_cdn_io
+   USE m_xmlOutput
+   USE m_judft
+   USE m_vdWfleur_grimme
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_hybdat
+   USE m_types_input
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_potden
+   USE m_types_misc
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_sym
+   USE m_types_vacuum
+   USE m_types_xcpot
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: totale
 CONTAINS
   SUBROUTINE totale(fmpi,atoms,sphhar,stars,vacuum, &
        sym,input,noco,cell , xcpot,hybdat,vTot,vCoul,it,den,results)
@@ -41,18 +67,6 @@ CONTAINS
     !     E0 = TOTE - TS/2
     !     ***************************************************
     !
-    USE m_intgr    , ONLY : intgr3
-    USE m_constants
-    USE m_force_a4
-    USE m_force_a3
-    USE m_force_a4_add ! Klueppelberg (force level 1)
-    USE m_force_sf ! Klueppelberg (force level 3)
-    USE m_forcew
-    USE m_cdn_io
-    USE m_types
-    USE m_xmlOutput
-    use m_judft
-    USE m_vdWfleur_grimme
     
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)          :: fmpi

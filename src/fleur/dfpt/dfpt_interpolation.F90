@@ -11,20 +11,35 @@ module m_dfpt_interpolation
 
     use m_juDFT
     use m_constants
-    use m_types
     use m_dfpt_NAC
+    use m_fleur_init
+    use m_dfpt_dynmat_fourier
+    use m_dfpt_dynmat_eig
+    use m_make_dos
+    use m_types_eigdos
+    use m_types_banddos
+    use m_types_dos
+    use m_types_enpara
+    use m_types_fleurinput
+    use m_types_forcetheo
+    use m_types_hybdat
+    use m_types_kpts
+    use m_types_mpdata
+    use m_types_mpi
+    use m_types_nococonv
+    use m_types_misc
+    use m_types_sphhar
+    use m_types_stars
+    use m_types_xcpot
 
     implicit none 
+    private
+    public :: dfpt_interpolation
 
 contains 
 
     subroutine dfpt_interpolation(fi,fmpi,nococonv,results)
 
-        use m_fleur_init
-        use m_dfpt_dynmat_fourier
-        use m_dfpt_dynmat_eig
-        use m_make_dos
-        use m_types_eigdos
 
         type(t_fleurinput), intent(in) :: fi 
         type(t_mpi), intent(in)        :: fmpi
@@ -39,7 +54,6 @@ contains
         type(t_nococonv)   :: nococonv_fullsym
         type(t_enpara)     :: enpara_fullsym
         type(t_results)    :: results_fullsym
-        type(t_wann)       :: wann_fullsym
         type(t_hybdat)     :: hybdat_fullsym
         type(t_mpdata)     :: mpdata_fullsym
 
@@ -95,7 +109,7 @@ contains
         ! parallel-solver setup it would otherwise do is never used here and fails
         ! when the fullsym q-mesh does not factor evenly onto the MPI ranks.
         call fleur_init(fmpi_fullsym, fi_fullsym, sphhar_fullsym, stars_fullsym, nococonv_fullsym, forcetheo_fullsym, &
-                        enpara_fullsym, xcpot_fullsym, results_fullsym, wann_fullsym, hybdat_fullsym, mpdata_fullsym, &
+                        enpara_fullsym, xcpot_fullsym, results_fullsym, hybdat_fullsym, mpdata_fullsym, &
                         inp_pref, l_skip_setupmpi=.true.)
         qpts = fi_fullsym%kpts
 

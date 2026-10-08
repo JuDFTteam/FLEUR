@@ -1,6 +1,10 @@
 #Check if we can compile with GPU
 if (CLI_FLEUR_USE_GPU)
    #No check is done
+   if (CMAKE_Fortran_COMPILER_ID STREQUAL "LLVMFlang")
+      #FLEUR's GPU code needs OpenACC offloading and the NVHPC modules cudafor, cublas, cufft and cusolverDn
+      message(FATAL_ERROR "GPU builds are not supported with LLVM flang. Use the NVHPC compilers for -gpu.")
+   endif()
    set(FLEUR_USE_GPU TRUE)
    message("GPU:${CLI_FLEUR_USE_GPU}")
    set(FLEUR_DEFINITIONS ${FLEUR_DEFINITIONS} "CPP_GPU")
@@ -8,17 +12,19 @@ if (CLI_FLEUR_USE_GPU)
       set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fopenacc ")
    elseif(${CLI_FLEUR_USE_GPU} MATCHES "acc")
       set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -acc -cudaforlibs -cudalib=cublas,cufft,cusolver,cusparse -Minfo=accel")
-   elseif(${CLI_Fortran_FLAGS} MATCHES "omp")
+   elseif(${CLI_FLEUR_USE_GPU} MATCHES "omp")
       #We try to use OMP offloading
       set(FLEUR_DEFINITIONS ${FLEUR_DEFINITIONS} "CPP_OMP_GPU='$omp'")
   else()
-      message(ERROR,"Choose a GPU mode")
+      message(FATAL_ERROR "Choose a GPU mode")
    endif()
    #Check if a CC is given
    STRING(REGEX MATCH ".*:(cc..)" CC_MODE "${CLI_FLEUR_USE_GPU}")
    message("CC:${CC_MODE} ${CMAKE_MATCH_1}")
    if (CC_MODE)
-       set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -gpu=${CMAKE_MATCH_1}")
+       if ((CMAKE_Fortran_COMPILER_ID STREQUAL "NVHPC") OR (CMAKE_Fortran_COMPILER_ID STREQUAL "PGI"))
+          set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -gpu=${CMAKE_MATCH_1}")
+       endif()
        STRING(REGEX MATCH ".*:cc(..)" FLEUR_CC_MODE "${CC_MODE}")
        set(FLEUR_CC_MODE "${CMAKE_MATCH_1}" )
    endif()

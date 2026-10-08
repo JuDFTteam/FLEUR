@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -26,6 +26,8 @@ MODULE m_xcpz
    USE m_constants, ONLY : pi_const
    USE m_relcor
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: vxcpz, excpz, fecl, fvcl, fecs, fvcs
 
    REAL, PARAMETER, PRIVATE :: cvx = 1.221774115422  ! 2 * ( 3/(2*pi) )^(2/3)
    REAL, PARAMETER, PRIVATE :: d_15 = 1.e-15 , c76 = 7.0 / 6.0

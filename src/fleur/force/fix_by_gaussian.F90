@@ -1,31 +1,33 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_fix_by_gaussian
    USE m_judft
+   USE m_qfix
+   USE m_spgrot
+   USE m_constants
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_field
+   USE m_types_input
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_sym
+   USE m_types_vacuum
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: fix_by_gaussian, gaussian_r, gaussian_g
 CONTAINS
    SUBROUTINE fix_by_gaussian(shift,atoms,nococonv,stars,fmpi,sym,vacuum,sphhar,input,cell,field,noco,den)
       ! The idea of this fix is to add an Gaussian to the INT which make the charge flat at the
       ! MT-boundary and to shift this Gaussian with the displacement.
-      USE m_qfix
-      USE m_spgrot
-      USE m_constants
-      USE m_types_atoms
-      USE m_types_sym
-      USE m_types_cell
-      USE m_types_vacuum
-      USE m_types_sphhar
-      USE m_types_input
-      USE m_types_stars
-      USE m_types_nococonv
-      USE m_types_mpi
-      USE m_types_potden      
-      use m_types_noco
-      use m_types_field
 
       REAL,           INTENT(IN)    :: shift(:,:)
       TYPE(t_mpi),    INTENT(IN)    :: fmpi
@@ -91,7 +93,6 @@ CONTAINS
    END FUNCTION gaussian_r
 
    FUNCTION gaussian_g(g,alpha)
-      USE m_constants
       REAL,INTENT(IN) :: g,alpha
       REAL            :: gaussian_g
 

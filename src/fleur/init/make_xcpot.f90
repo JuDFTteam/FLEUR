@@ -1,24 +1,24 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_make_xcpot
    use m_juDFT
+   use m_types_xcpot
+   use m_types_atoms
+   use m_types_input
+   use m_types_xcpot_libxc
+   use m_types_xcpot_inbuild
+   use m_types_xcpot_inbuild_nofunction
+   use m_types_mpi
    implicit none
    private
    public make_xcpot
 
 contains
    subroutine make_xcpot(fmpi,xcpot, atoms, input)
-      use m_types_xcpot
-      use m_types_atoms
-      use m_types_input
-      USE m_types_xcpot_libxc
-      USE m_types_xcpot_inbuild
-      USE m_types_xcpot_inbuild_nofunction
-      USE m_types_mpi
 
       TYPE(t_mpi),INTENT(IN)        :: fmpi
       TYPE(t_input), INTENT(IN)     :: input

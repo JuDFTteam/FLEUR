@@ -27,6 +27,7 @@ MODULE m_mgga_alpha
    !! independent of the inner-10% GGA fallback that get_exc applies in the muffin
    !! tins - that makes it usable as an exact check.
 
+   USE m_constants
    IMPLICIT NONE
    PRIVATE
    PUBLIC :: mgga_alpha_extrema
@@ -34,7 +35,6 @@ MODULE m_mgga_alpha
 CONTAINS
 
    SUBROUTINE mgga_alpha_extrema(jspins, rho, sigma, ked, alphaMin, alphaMax)
-      USE m_constants
       IMPLICIT NONE
 
       INTEGER, INTENT(IN)    :: jspins

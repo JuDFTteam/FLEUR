@@ -1,5 +1,9 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_structureconstant
-   USE m_types
    USE m_juDFT
    USE m_constants
    use m_ylm
@@ -7,6 +11,15 @@ module m_structureconstant
 #ifdef CPP_MPI
    use mpi
 #endif
+   use ieee_arithmetic
+   use m_types_atoms
+   use m_types_cell
+   use m_types_hybinp
+   use m_types_kpts
+   use m_types_mpi
+   implicit none
+   private
+   public :: structureconstant, getshells, realspace_sum
 contains
    !     -----------------------------------------------------------------------------------------------
 
@@ -294,8 +307,6 @@ contains
 
    SUBROUTINE getshells(ptsh, nptsh, radsh, nshell, rad, lat, lwrite)
 
-      USE m_juDFT
-      USE m_constants
 
       IMPLICIT NONE
 
@@ -384,7 +395,6 @@ contains
    END SUBROUTINE getshells
 
    subroutine realspace_sum(atoms, cell, hybinp, fmpi, kpts, first, scale, convpar, g, a, a1, rad, structconst)
-      use ieee_arithmetic
       implicit none 
       type(t_atoms), intent(in) :: atoms 
       type(t_cell), intent(in)  :: cell 

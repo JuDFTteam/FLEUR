@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -7,6 +7,12 @@
 MODULE m_types_sym
    USE m_juDFT
    USE m_types_fleurinput_base
+   USE m_mpi_bc_tool
+   USE m_types_xml
+   USE m_calculator
+   USE m_types_cell
+   USE m_types_input
+   USE m_constants
    IMPLICIT NONE
    PRIVATE
    PUBLIC :: t_sym
@@ -65,7 +71,6 @@ MODULE m_types_sym
 CONTAINS
 
    SUBROUTINE mpi_bc_sym(this, mpi_comm, irank)
-      USE m_mpi_bc_tool
       CLASS(t_sym), INTENT(INOUT)::this
       INTEGER, INTENT(IN):: mpi_comm
       INTEGER, INTENT(IN), OPTIONAL::irank
@@ -99,8 +104,6 @@ CONTAINS
    END SUBROUTINE mpi_bc_sym
 
    SUBROUTINE read_xml_sym(this, xml)
-      USE m_types_xml
-      USE m_calculator
       CLASS(t_sym), INTENT(inout):: this
       TYPE(t_xml), INTENT(INOUT)::xml
 
@@ -137,7 +140,6 @@ CONTAINS
       ENDDO
    END SUBROUTINE read_xml_sym
    SUBROUTINE read_sym_out(mrot, tau, nop)
-      USE m_types_xml
       INTEGER, ALLOCATABLE, INTENT(out) :: mrot(:, :, :)
       REAL, ALLOCATABLE, INTENT(out)    :: tau(:, :)
       INTEGER, INTENT(out)            :: nop
@@ -203,9 +205,6 @@ CONTAINS
    SUBROUTINE init(sym, cell, film)
       !Generates missing symmetry info.
       !tau,mrot and nop have to be specified alread
-      USE m_types_cell
-      USE m_types_input
-      USE m_constants
       CLASS(t_sym), INTENT(INOUT):: sym
       TYPE(t_cell), INTENT(IN)   :: cell
       LOGICAL, INTENT(IN)        :: film
@@ -366,7 +365,6 @@ CONTAINS
    END SUBROUTINE init
 
    FUNCTION closure(sym) RESULT(lclose)
-      USE m_constants
       CLASS(t_sym), INTENT(IN):: sym
       LOGICAL                :: lclose
 
@@ -419,7 +417,6 @@ CONTAINS
    END FUNCTION closure
 
    SUBROUTINE check_close(sym, optype)
-      USE m_constants
       CLASS(t_sym), INTENT(inout)::sym
       INTEGER, INTENT(OUT) :: optype(sym%nop)
 

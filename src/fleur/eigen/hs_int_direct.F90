@@ -5,7 +5,12 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_hs_int_direct
-   implicit none
+   USE m_types_mat
+   USE m_types_mpi
+   USE m_types_stars
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: hs_int_direct
 CONTAINS
    SUBROUTINE hs_int_direct(fmpi, stars, bbmat, gvecPr, gvec, kvecPr, kvec, nvPr, nv, &
                           & iTkin, fact, l_smat, l_fullj, vpw, hmat, smat, theta_alt, vtau_pw)
@@ -31,7 +36,6 @@ CONTAINS
       ! [l_smat = F for offdiags, l_fullj = T]
       ! [iTkin = 0 for offdiags, 1 else]
 
-      USE m_types
 
       IMPLICIT NONE
 

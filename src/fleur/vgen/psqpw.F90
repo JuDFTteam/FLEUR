@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_psqpw
   !     ***********************************************************
   !     generates the fourier coefficients of pseudo charge density
@@ -14,26 +19,39 @@ module m_psqpw
   !     M. Weinert: J. Math. Phys. 22(11) (1981) p.2434 eq. (10)-(15)
   !     ***********************************************************
 
+   use m_constants
+   use m_phasy1
+   use m_mpmom
+   use m_sphbes
+   use m_qsf
+   use m_mpi_reduce_tool
+   use m_DoubleFactorial
+   use m_SphBessel
+#ifdef CPP_MPI
+   use mpi
+#endif
+   use m_types_mpi
+   use m_types_atoms
+   use m_types_cell
+   use m_types_input
+   use m_types_potden
+   use m_types_sphhar
+   use m_types_stars
+   use m_types_sternheimerjob
+   use m_types_sym
+   use m_types_vacuum
+   use m_judft
+   implicit none
+   private
+   public :: psqpw
 contains
 
   subroutine psqpw( fmpi, atoms, sphhar, stars, vacuum,  cell, input, sym,  &
        &     den, ispin, l_xyav, potdenType, psq, sternheimerJob, rhoimag, stars2, iDtype, iDir, rho0, iDir2 )
 
-#ifdef CPP_MPI
-    use mpi
-#endif
-    use m_constants
-    use m_phasy1
-    use m_mpmom
-    use m_sphbes
-    use m_qsf
-    USE m_mpi_reduce_tool
     
      
      
-    use m_types
-    use m_DoubleFactorial
-    use m_SphBessel
     implicit none
 
     type(t_mpi),        intent(in)  :: fmpi

@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -8,17 +8,20 @@
 !     calculate the integral of a star function over the interstial    *
 !     region              c.l.fu                                       *
 !     ******************************************************************
+   USE m_spgrot
+   USE m_juDFT
+   USE m_constants
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_stars
+   USE m_types_sym
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: pwint, pwint_all
       CONTAINS
       SUBROUTINE pwint(stars,atoms,sym,cell,ng,x)
 
-      USE m_spgrot
        
-      use m_juDFT
-      USE m_types_stars
-      USE m_types_atoms
-      USE m_types_sym
-      USE m_types_cell
-      USE m_constants
       IMPLICIT NONE
 !     ..
 !     .. Scalar Arguments ..
@@ -84,14 +87,7 @@
       END SUBROUTINE pwint
       SUBROUTINE pwint_all(stars,atoms,sym,cell,x_start,x_end,x)
 
-      USE m_spgrot
        
-      use m_juDFT
-      USE m_types_stars
-      USE m_types_atoms
-      USE m_types_sym
-      USE m_types_cell
-      USE m_constants
       IMPLICIT NONE
 !     ..
 

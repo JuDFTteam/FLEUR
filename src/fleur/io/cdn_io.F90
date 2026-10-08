@@ -16,7 +16,6 @@ MODULE m_cdn_io
 #ifdef CPP_MPI
   use mpi
 #endif
-  
   USE m_juDFT
   USE m_loddop
   USE m_wrtdop
@@ -26,6 +25,20 @@ MODULE m_cdn_io
 #ifdef CPP_HDF
   USE hdf5
 #endif
+  USE m_qfix
+  USE m_fix_by_gaussian
+  USE m_types_atoms
+  USE m_types_cell
+  USE m_types_field
+  USE m_types_input
+  USE m_types_mpi
+  USE m_types_noco
+  USE m_types_nococonv
+  USE m_types_potden
+  USE m_types_sphhar
+  USE m_types_stars
+  USE m_types_sym
+  USE m_types_vacuum
   IMPLICIT NONE
 
   PRIVATE
@@ -137,15 +150,6 @@ CONTAINS
 
   SUBROUTINE readDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,inOrOutCDN,&
        relCdnIndex,fermiEnergy,lastDistance,l_qfix,den,inFilename,denIm,b_constr)
-    use m_types_stars
-    use m_types_atoms
-    use m_types_sym
-    use m_types_vacuum
-    use m_types_sphhar
-    use m_types_input
-    use m_types_potden
-    use m_types_cell
-    use m_types_noco
 
     TYPE(t_stars),INTENT(IN)     :: stars
     TYPE(t_vacuum),INTENT(IN)    :: vacuum
@@ -386,15 +390,6 @@ CONTAINS
 
   SUBROUTINE writeDensity(stars,noco,vacuum,atoms,cell,sphhar,input,sym ,archiveType,inOrOutCDN,&
        relCdnIndex,distance,fermiEnergy,mmpmatDistance,occDistance,l_qfix,den,inFilename,denIm,b_constr)
-    use m_types_stars
-    use m_types_atoms
-    use m_types_sym
-    use m_types_vacuum
-    use m_types_sphhar
-    use m_types_input
-    use m_types_potden
-    use m_types_cell
-    use m_types_noco
     TYPE(t_noco),INTENT(IN)      :: noco
     TYPE(t_stars),INTENT(IN)     :: stars
     TYPE(t_vacuum),INTENT(IN)    :: vacuum
@@ -847,8 +842,6 @@ CONTAINS
   END SUBROUTINE readPrevmmpDistances
 
   SUBROUTINE readCoreDensity(input,atoms,rhcs,tecs,qints)
-    use m_types_atoms
-    use m_types_input
     
     TYPE(t_atoms),INTENT(IN)     :: atoms
     TYPE(t_input),INTENT(IN)     :: input
@@ -922,8 +915,6 @@ CONTAINS
   END SUBROUTINE readCoreDensity
 
   SUBROUTINE writeCoreDensity(input,atoms,rhcs,tecs,qints,filename)
-      use m_types_atoms
-      use m_types_input
     TYPE(t_atoms),INTENT(IN)     :: atoms
     TYPE(t_input),INTENT(IN)     :: input
 
@@ -970,16 +961,6 @@ CONTAINS
   END SUBROUTINE writeCoreDensity
 
   SUBROUTINE storeStructureIfNew(input,stars, atoms, cell, vacuum,   sym,fmpi,sphhar,noco)
-     use m_types_stars
-    use m_types_atoms
-    use m_types_sym
-    use m_types_vacuum
-    use m_types_sphhar
-    use m_types_input
-    use m_types_potden
-    use m_types_cell
-    use m_types_noco
-    use m_types_mpi
 
     TYPE(t_input),INTENT(IN)   :: input
     TYPE(t_atoms), INTENT(IN)  :: atoms
@@ -1055,23 +1036,7 @@ CONTAINS
 #endif
   END SUBROUTINE storeStructureIfNew
 
-   SUBROUTINE transform_by_moving_atoms(fmpi,stars,atoms,vacuum, cell, field, sym, sphhar,input ,noco,nococonv)
-    use m_types_stars
-    use m_types_atoms
-    use m_types_sym
-    use m_types_vacuum
-    use m_types_sphhar
-    use m_types_input
-    use m_types_potden
-    use m_types_field
-    use m_types_cell
-    use m_types_noco
-    use m_types_nococonv
-    use m_types_mpi
-    USE m_constants
-    USE m_qfix
-    USE m_types_field
-    USE m_fix_by_gaussian
+  SUBROUTINE transform_by_moving_atoms(fmpi,stars,atoms,vacuum,cell,field,sym,sphhar,input,noco,nococonv)
     IMPLICIT NONE
     TYPE(t_mpi),INTENT(IN)      :: fmpi
     TYPE(t_atoms),INTENT(IN)    :: atoms
@@ -1181,7 +1146,6 @@ CONTAINS
   END SUBROUTINE transform_by_moving_atoms
 
   SUBROUTINE writeStars(stars ,l_xcExtended,l_ExtData)
-   use m_types_stars
     TYPE(t_stars),INTENT(IN)   :: stars
      
     LOGICAL, INTENT(IN)        :: l_xcExtended, l_ExtData
@@ -1248,7 +1212,6 @@ CONTAINS
   END SUBROUTINE writeStars
 
   SUBROUTINE readStars(stars ,l_xcExtended,l_ExtData,l_error)
-  use m_types_stars
     TYPE(t_stars),INTENT(INOUT) :: stars
      
     LOGICAL, INTENT(IN)         :: l_xcExtended,l_ExtData
@@ -1367,7 +1330,6 @@ CONTAINS
   END SUBROUTINE readStars
 
   SUBROUTINE writeStepfunction(stars)
-   use m_types_stars
     TYPE(t_stars),INTENT(IN) :: stars
 
     INTEGER                  :: mode, ifftd, i
@@ -1411,11 +1373,6 @@ CONTAINS
   END SUBROUTINE writeStepfunction
 
   SUBROUTINE readStepfunction(stars, atoms, cell, vacuum, l_error)
-   use m_types_stars
-    use m_types_atoms
-    use m_types_cell
-    use m_types_vacuum
-    use m_types_input
     TYPE(t_stars),INTENT(INOUT)   :: stars
     TYPE(t_atoms), INTENT(IN)     :: atoms
     TYPE(t_cell), INTENT(IN)      :: cell

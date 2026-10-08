@@ -114,7 +114,6 @@ ${FLEUR_SRC}/types/types_mpimat.F90
 ${FLEUR_SRC}/types/types_parallelLoop.F90
 ${FLEUR_SRC}/types/types_potden.F90
 ${FLEUR_SRC}/types/types_enpara.F90
-${FLEUR_SRC}/types/types_setup.F90
 ${FLEUR_SRC}/types/types_hub1data.f90
 
 ${FLEUR_SRC}/hybrid/divide_most_evenly.f90

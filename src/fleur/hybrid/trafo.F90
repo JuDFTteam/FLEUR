@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -8,22 +8,36 @@ MODULE m_trafo
    use m_judft
    use m_glob_tofrom_loc
    use m_constants
+   use m_wrapper
+   use m_types_mpdata
+   use m_types_hybinp
+   use m_types_hybdat
+   use m_types_sym
+   use m_types_kpts
+   use m_types_atoms
+   use m_types_lapw
+   use m_types_mat
+   use m_types_input
+   use m_types_fleurinput
+   use m_types_mpi
+   use m_vac_rows, only: row_offset, basfn_offset, NVAC_MPB
+   use m_types_vacuum
+   use m_util
+#ifdef CPP_MPI
+   use mpi
+#endif
+   use m_types_fleurinput_base
+   implicit none
+   private
+   public :: waveftrafo_symm, waveftrafo_gen_cmt, waveftrafo_genwavf, waveftrafo_gen_zmat, symmetrize_mpimat, &
+      symmetrize, desymmetrize, bra_trafo, vac_pair_rot, bra_trafo_real, bra_trafo_cmplx, bra_trafo_core, &
+      find_corresponding_g_vac, find_corresponding_g, commonphase, commonphase_mtx, bramat_trafo
 CONTAINS
 
    SUBROUTINE waveftrafo_symm(cmt_out, z_out, cmt, l_real, z_r, z_c, bandi, ndb, &
                               nk, iop, atoms, mpdata, hybinp, hybdat, kpts, &
                               sym, jsp, lapw)
 
-      USE m_constants
-      USE m_wrapper
-      USE m_types_mpdata
-      USE m_types_hybinp
-      USE m_types_hybdat
-      USE m_types_sym
-      USE m_types_kpts
-      USE m_types_atoms
-      USE m_types_lapw
-      USE m_juDFT
       IMPLICIT NONE
 
       TYPE(t_mpdata), INTENT(IN)      :: mpdata
@@ -140,14 +154,6 @@ CONTAINS
    SUBROUTINE waveftrafo_gen_cmt(cmt, c_phase, l_real, nk, iop, atoms, &
                                  mpdata, hybinp, kpts, sym, nbands, cmt_out)
 
-      use m_juDFT
-      USE m_constants
-      USE m_wrapper
-      USE m_types_mpdata
-      USE m_types_hybinp
-      USE m_types_sym
-      USE m_types_kpts
-      USE m_types_atoms
       IMPLICIT NONE
 
       TYPE(t_mpdata), INTENT(IN) :: mpdata
@@ -242,17 +248,6 @@ CONTAINS
       mpdata, hybinp, kpts, sym, jsp, input, nbands, &
       lapw_nk, lapw_rkpt, cmt_out, z_out)
 
-      use m_juDFT
-      USE m_constants
-      USE m_wrapper
-      USE m_types_mat
-      USE m_types_input
-      USE m_types_mpdata
-      USE m_types_hybinp
-      USE m_types_sym
-      USE m_types_kpts
-      USE m_types_atoms
-      USE m_types_lapw
       IMPLICIT NONE
 
       type(t_mat), intent(in)     :: z_in
@@ -387,13 +382,6 @@ CONTAINS
                                   kpts, sym, jsp, nbands, &
                                   lapw_nk, lapw_rkpt, z_out, c_phase)
 
-      use m_juDFT
-      USE m_constants
-      USE m_wrapper
-      USE m_types_mat
-      USE m_types_sym
-      USE m_types_kpts
-      USE m_types_lapw
       IMPLICIT NONE
 
       type(t_mat), intent(in)     :: z_in
@@ -487,13 +475,7 @@ CONTAINS
    ! (Array mat is overwritten! )
 
    SUBROUTINE symmetrize_mpimat(fi, fmpi, mpimat, start_dim, end_dim, imode, lreal, nindxm)
-      USE m_types_fleurinput
-      USE m_types_mpi
-      use m_constants
 
-#ifdef CPP_MPI
-      USE mpi
-#endif
 
 
       IMPLICIT NONE
@@ -628,9 +610,6 @@ CONTAINS
 
    SUBROUTINE symmetrize(mat, dim1, dim2, imode,&
                          atoms, lcutm, maxlcutm, nindxm, sym)
-      USE m_types_atoms
-      USE m_types_sym
-      use m_constants
       IMPLICIT NONE
       TYPE(t_atoms), INTENT(IN)   :: atoms
       TYPE(t_sym), INTENT(IN)     :: sym
@@ -714,8 +693,6 @@ CONTAINS
    SUBROUTINE desymmetrize(mat, dim1, dim2, &
                            atoms, lcutm, maxlcutm, nindxm, sym)
 
-      USE m_types_sym
-      USE m_types_atoms
       IMPLICIT NONE
       TYPE(t_sym), INTENT(IN)   :: sym
       TYPE(t_atoms), INTENT(IN)   :: atoms
@@ -786,12 +763,6 @@ CONTAINS
    ! isym maps kpts%bkp(ikpt) on ikpt
 
    subroutine bra_trafo(fi, mpdata, hybdat, nbands, ikpt, psize, phase, vecin, vecout)
-      use m_types_fleurinput
-      USE m_types_mpdata
-      USE m_types_hybdat
-      USE m_types_mat
-      use m_constants
-      use m_judft
       implicit none
       type(t_fleurinput), intent(in)    :: fi
       type(t_mpdata), intent(in)        :: mpdata
@@ -810,12 +781,42 @@ CONTAINS
 
    end subroutine bra_trafo
 
+   !>invs films: vacuum rows between the real pair (M_1 +- M_2)/sqrt(2) and M_1, M_2 (l_fwd: to real).
+   subroutine vac_pair_rot(mpdata, hybdat, iq, nvac, vec, l_fwd)
+      implicit none
+      type(t_mpdata), intent(in) :: mpdata
+      type(t_hybdat), intent(in) :: hybdat
+      integer, intent(in)        :: iq, nvac
+      complex, intent(inout)     :: vec(:)
+      logical, intent(in)        :: l_fwd
+
+      integer :: igm, ilen, nn, b1, b2, j
+      complex :: a, b, c1
+
+      if (nvac /= 2) return
+      if (.not. allocated(mpdata%num_zbasfn_vac)) return
+
+      do igm = 1, mpdata%n_g_vac(iq)
+         ilen = mpdata%glen_ptr_vac(igm, iq)
+         nn = mpdata%num_zbasfn_vac(ilen, 1)
+         if (nn == 0) cycle
+         b1 = row_offset(mpdata, hybdat, iq, 1) + basfn_offset(mpdata, iq, 1, igm)
+         b2 = row_offset(mpdata, hybdat, iq, 2) + basfn_offset(mpdata, iq, 2, igm)
+         do j = 1, nn
+            a = vec(b1 + j); b = vec(b2 + j)
+            if (l_fwd) then
+               vec(b1 + j) = (a + b)/sqrt_2
+               vec(b2 + j) = -ImagUnit*(a - b)/sqrt_2
+            else
+               c1 = (a + ImagUnit*b)/sqrt_2
+               vec(b1 + j) = c1
+               vec(b2 + j) = conjg(c1)
+            end if
+         end do
+      end do
+   end subroutine vac_pair_rot
+
    subroutine bra_trafo_real(fi, mpdata, hybdat, nbands, ikpt, psize, phase, matin_r, matout_r)
-      use m_types_fleurinput
-      USE m_types_mpdata
-      USE m_types_hybdat
-      use m_constants
-      use m_judft
       implicit none
       type(t_fleurinput), intent(in)    :: fi
       type(t_mpdata), intent(in)        :: mpdata
@@ -828,6 +829,7 @@ CONTAINS
       COMPLEX, ALLOCATABLE    ::  vecin(:, :), vecout(:, :)
       integer :: ok, i, j, cnt
       integer :: igptm2_list(mpdata%n_g(ikpt))
+      integer, allocatable :: igmv2_list(:)
 
       phase = cmplx_0
       call timestart("bra trafo real")
@@ -835,9 +837,16 @@ CONTAINS
       IF (maxval(fi%hybinp%lcutm1) > fi%atoms%lmaxd) call judft_error('bra_trafo: maxlcutm > atoms%lmaxd')   ! very improbable case
       call find_corresponding_g(fi%sym, fi%kpts, mpdata, ikpt, igptm2_list)
 
+      IF (ALLOCATED(mpdata%n_g_vac)) THEN
+         allocate (igmv2_list(mpdata%n_g_vac(fi%kpts%bkp(ikpt))), source=0)
+         call find_corresponding_g_vac(fi%sym, fi%kpts, mpdata, ikpt, igmv2_list)
+      ELSE
+         allocate (igmv2_list(1), source=0)
+      END IF
+
 !     transform back to unsymmetrized product basis in case of inversion symmetry
       !$OMP parallel default(none) private(i,j, cnt, vecin, vecout, ok) &
-      !$OMP shared(nbands, psize, fi, hybdat, mpdata, phase, matin_r, matout_r, ikpt, igptm2_list) 
+      !$OMP shared(nbands, psize, fi, hybdat, mpdata, phase, matin_r, matout_r, ikpt, igptm2_list, igmv2_list)
       allocate (vecin(size(matin_r, dim=1), 1), vecout(size(matin_r, dim=1), 1),  stat=ok, source=cmplx_0)
       IF (ok /= 0) call judft_error('bra_trafo: error allocating vecin or vecout')
 
@@ -848,12 +857,17 @@ CONTAINS
             vecin(:,1) = matin_r(:,cnt)
             CALL desymmetrize(vecin(:hybdat%n_mt, 1), hybdat%n_mt, 1, &
                               fi%atoms, fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, fi%sym)
+            IF (fi%input%film) call vac_pair_rot(mpdata, hybdat, ikpt, NVAC_MPB, &
+                                                 vecin(:, 1), .false.)
 
             call bra_trafo_core(1, ikpt, 1, fi%sym, mpdata, &
-                              fi%hybinp, hybdat, fi%kpts, fi%atoms, igptm2_list, vecin(:,1:1), vecout(:,1:1))
+                              fi%hybinp, hybdat, fi%kpts, fi%atoms, fi%vacuum, igptm2_list, &
+                              igmv2_list, vecin(:,1:1), vecout(:,1:1))
 
             CALL symmetrize(vecout(:, 1:1), hybdat%nbasm(ikpt), 1, 1, &
                             fi%atoms, fi%hybinp%lcutm1, maxval(fi%hybinp%lcutm1), mpdata%num_radbasfn, fi%sym)
+            IF (fi%input%film) call vac_pair_rot(mpdata, hybdat, fi%kpts%bkp(ikpt), &
+                                                 NVAC_MPB, vecout(:, 1), .true.)
 
             phase(j, i) = commonphase(vecout(:, 1), hybdat%nbasm(ikpt))
             matout_r(:, cnt) = real(vecout(:, 1)/phase(j, i))
@@ -873,11 +887,6 @@ CONTAINS
    end subroutine bra_trafo_real
 
    subroutine bra_trafo_cmplx(fi, mpdata, hybdat, nbands, ikpt, psize, vecin_c, vecout_c)
-      use m_constants
-      use m_judft
-      use m_types_fleurinput
-      USE m_types_mpdata
-      USE m_types_hybdat
       implicit none
       type(t_fleurinput), intent(in)    :: fi
       type(t_mpdata), intent(in)        :: mpdata
@@ -887,26 +896,29 @@ CONTAINS
       COMPLEX, INTENT(INOUT)            ::  vecout_c(:, :)
 
       integer :: igptm2_list(mpdata%n_g(ikpt))
+      integer, allocatable :: igmv2_list(:)
 
       call timestart("bra trafo cmplx")
 
       IF (maxval(fi%hybinp%lcutm1) > fi%atoms%lmaxd) call judft_error('bra_trafo: maxlcutm > fi%atoms%lmaxd')   ! very improbable case
       call find_corresponding_g(fi%sym, fi%kpts, mpdata, ikpt, igptm2_list)
 
-      call bra_trafo_core(nbands, ikpt, psize, fi%sym, mpdata, fi%hybinp, hybdat, fi%kpts, fi%atoms, igptm2_list, vecin_c, vecout_c)
+      IF (ALLOCATED(mpdata%n_g_vac)) THEN
+         allocate (igmv2_list(mpdata%n_g_vac(fi%kpts%bkp(ikpt))), source=0)
+         call find_corresponding_g_vac(fi%sym, fi%kpts, mpdata, ikpt, igmv2_list)
+      ELSE
+         allocate (igmv2_list(1), source=0)
+      END IF
+
+      call bra_trafo_core(nbands, ikpt, psize, fi%sym, mpdata, fi%hybinp, hybdat, fi%kpts, fi%atoms, &
+                          fi%vacuum, igptm2_list, igmv2_list, vecin_c, vecout_c)
 
       call timestop("bra trafo cmplx")
    end subroutine bra_trafo_cmplx
 
    subroutine bra_trafo_core(nbands, ikpt, psize, sym, &
-                             mpdata, hybinp, hybdat, kpts, atoms, igptm2_list, vecin1, vecout1)
-      use m_constants
-      USE m_types_mpdata
-      USE m_types_hybinp
-      use m_types_hybdat
-      USE m_types_sym
-      USE m_types_kpts
-      USE m_types_atoms
+                             mpdata, hybinp, hybdat, kpts, atoms, vacuum, igptm2_list, &
+                             igmv2_list, vecin1, vecout1)
       implicit none
       type(t_mpdata), intent(in)  :: mpdata
       TYPE(t_hybinp), INTENT(IN)  :: hybinp
@@ -914,7 +926,9 @@ CONTAINS
       TYPE(t_sym), INTENT(IN)     :: sym
       TYPE(t_kpts), INTENT(IN)    :: kpts
       TYPE(t_atoms), INTENT(IN)   :: atoms
+      TYPE(t_vacuum), INTENT(IN)  :: vacuum
       integer, intent(in)         :: igptm2_list(:)
+      integer, intent(in)         :: igmv2_list(:)
 
       INTEGER, INTENT(IN)      ::  ikpt, nbands, psize
 
@@ -1037,13 +1051,94 @@ CONTAINS
       END DO
       !$OMP end parallel do
 !      call timestop("PW part")
+
+      ! VAC rows: the operation permutes G|| and swaps the vacua if it contains z -> -z
+      IF (ALLOCATED(mpdata%num_zbasfn_vac) .AND. NVAC_MPB > 0) THEN
+         block
+            INTEGER :: kp_v, ivac, jvac, igm, igm2, ni, irow, jrow, iz
+            INTEGER :: gv(2), gv1(3)
+            LOGICAL :: l_zflip
+            COMPLEX :: cdumv
+
+            kp_v = kpts%bkp(ikpt)
+            ! from invrot: rrot carries an extra sign for time reversal
+            l_zflip = invrot(3, 3) < 0
+            IF (abs(trans(3)) > 1e-12) call judft_error( &
+               'bra_trafo: film symmetry operation has a z translation', &
+               hint='the vacuum phase assumes tau_z = 0, which holds for films')
+
+            DO ivac = 1, NVAC_MPB
+               jvac = ivac
+               IF (l_zflip .AND. NVAC_MPB == 2) jvac = 3 - ivac
+               DO igm = 1, mpdata%n_g_vac(kp_v)
+                  igm2 = igmv2_list(igm)
+                  gv = mpdata%g_vac(:, mpdata%gptm_ptr_vac(igm, kp_v))
+                  gv1(1:2) = matmul(rrot(1:2, 1:2), gv) + g(1:2)
+                  gv1(3) = 0
+                  cdumv = exp(ImagUnit*tpi_const*dot_product(kpts%bkf(:, ikpt) + gv1, trans(:)))
+
+                  ni = mpdata%num_zbasfn_vac(mpdata%glen_ptr_vac(igm, kp_v), ivac)
+                  irow = row_offset(mpdata, hybdat, kp_v, ivac) &
+                         + basfn_offset(mpdata, kp_v, ivac, igm)
+                  jrow = row_offset(mpdata, hybdat, ikpt, jvac) &
+                         + basfn_offset(mpdata, ikpt, jvac, igm2)
+                  DO iz = 1, ni
+                     vecout1(irow + iz, :) = cdumv*vecin1(jrow + iz, :)
+                  END DO
+               END DO
+            END DO
+         end block
+      END IF
 !      call timestop("bra_trafo_core")
    end subroutine bra_trafo_core
 
+   !>VAC analogue of find_corresponding_g for the in-plane vectors.
+   subroutine find_corresponding_g_vac(sym, kpts, mpdata, ikpt, igmv2_list)
+      implicit none
+      type(t_sym), intent(in)    :: sym
+      type(t_kpts), intent(in)   :: kpts
+      type(t_mpdata), intent(in) :: mpdata
+      integer, intent(in)        :: ikpt
+      integer, intent(inout)     :: igmv2_list(:)
+
+      integer :: igm, igm2, i, iiop, kp, g2(2), g1(2)
+      integer :: g(3), rrot(3, 3)
+      REAL    :: rkpt(3), rkpthlp(3)
+
+      IF (kpts%bksym(ikpt) <= sym%nop) THEN
+         rrot = transpose(sym%mrot(:, :, sym%invtab(kpts%bksym(ikpt))))
+      ELSE
+         iiop = kpts%bksym(ikpt) - sym%nop
+         rrot = -transpose(sym%mrot(:, :, sym%invtab(iiop)))
+      END IF
+
+      IF (ANY(rrot(1:2, 3) /= 0) .OR. ANY(rrot(3, 1:2) /= 0)) &
+         call judft_error('bra_trafo: film symmetry operation is not block diagonal', &
+                          hint='the vacuum G|| rotation assumes G_z does not mix into G||')
+
+      rkpt = matmul(rrot, kpts%bkf(:, kpts%bkp(ikpt)))
+      rkpthlp = rkpt
+      rkpt = kpts%to_first_bz(rkpt)
+      g = nint(rkpthlp - rkpt)
+
+      kp = kpts%bkp(ikpt)
+      do igm = 1, mpdata%n_g_vac(kp)
+         g2 = mpdata%g_vac(:, mpdata%gptm_ptr_vac(igm, kp))
+         g1 = matmul(rrot(1:2, 1:2), g2) + g(1:2)
+
+         igm2 = 0
+         DO i = 1, mpdata%n_g_vac(ikpt)
+            IF (maxval(abs(g1 - mpdata%g_vac(:, mpdata%gptm_ptr_vac(i, ikpt)))) == 0) THEN
+               igm2 = i
+               EXIT
+            END IF
+         END DO
+         IF (igm2 == 0) call judft_error('bra_trafo: 2D G-point not found in the vacuum set.')
+         igmv2_list(igm) = igm2
+      enddo
+   end subroutine find_corresponding_g_vac
+
    subroutine find_corresponding_g(sym, kpts, mpdata, ikpt, igptm2_list)
-      use m_types_sym
-      USE m_types_kpts
-      USE m_types_mpdata
       implicit none
       type(t_sym), intent(in)    :: sym
       type(t_kpts), intent(in)   :: kpts
@@ -1105,7 +1200,6 @@ CONTAINS
 
    ! Determines common phase factor (with unit norm)
    function commonphase(carr, n) result(cfac)
-      USE m_juDFT
       IMPLICIT NONE
       INTEGER, INTENT(IN)      :: n
       COMPLEX, INTENT(IN)      :: carr(n)
@@ -1163,13 +1257,6 @@ CONTAINS
                            rrot, invrrot, mpdata, hybinp, kpts, maxlcutm, atoms, lcutm, nindxm, maxindxm, &
                            dwgn, nbasp, nbasm, vecout, igptm_out)
 
-      USE m_constants
-      USE m_util
-      USE m_types_mpdata
-      USE m_types_hybinp
-      USE m_types_sym
-      USE m_types_kpts
-      USE m_types_atoms
       IMPLICIT NONE
       type(t_mpdata), intent(in) :: mpdata
       TYPE(t_hybinp), INTENT(IN)   :: hybinp

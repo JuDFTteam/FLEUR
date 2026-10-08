@@ -5,96 +5,82 @@
 !--------------------------------------------------------------------------------
 
 MODULE m_types_tlmplm
+   !! Local muffin-tin Hamiltonian in the unified radial basis of t_radfun.
+   !! Basis index of type n: u(lm) = lm for l<=lrange(n), then udot(lm) of the LAPW channels in the
+   !! order of the matching coefficients (atoms%udot_rows), udot(lm) of the APW channels, and the
+   !! (2l+1) functions of each LO in atoms%llo order; see ind.
    use m_types_rsoc
+   use m_types_radfun
+   use m_judft
+   use m_types_atoms
   IMPLICIT NONE
   PRIVATE
- 
 
   TYPE t_tlmplm
-     COMPLEX,ALLOCATABLE :: tdulo(:,:,:,:,:)
-     !(0:lmd,-llod:llod,mlotot,tspin)
-     COMPLEX,ALLOCATABLE :: tuulo(:,:,:,:,:)
-     COMPLEX,ALLOCATABLE :: tulou(:,:,:,:,:)
-     COMPLEX,ALLOCATABLE :: tulod(:,:,:,:,:)
-     !(0:lmd,-llod:llod,mlotot,tspin)
-     COMPLEX,ALLOCATABLE :: tuloulo(:,:,:,:,:)
-     COMPLEX,ALLOCATABLE :: tuloulo_newer(:,:,:,:,:,:,:)
-     !(-llod:llod,-llod:llod,mlolotot,tspin)
-     COMPLEX,ALLOCATABLE :: h_loc_LO(:,:,:,:,:)    !lm,lmp,ntype,ispin,jspin
-     COMPLEX,ALLOCATABLE :: h_LO(:,:,:,:,:)    !lmp,m,lo+mlo,ispin,jspin
-     COMPLEX,ALLOCATABLE :: h_LO2(:,:,:,:,:)    !lmp,m,lo+mlo,ispin,jspin
-     COMPLEX,ALLOCATABLE :: h_loc(:,:,:,:,:)    !lm,lmp,ntype,ispin,jspin
-     COMPLEX,ALLOCATABLE :: h_loc_nonsph(:,:,:,:,:)    !lm,lmp,ntype,ispin,jspin
-     INTEGER,ALLOCATABLE :: h_loc2(:)
-     INTEGER,ALLOCATABLE :: h_loc2_nonsph(:)
-
-     COMPLEX,ALLOCATABLE :: h_off(:,:,:,:,:)      !l,lp,ntype,ispin,jspin)
+     COMPLEX,ALLOCATABLE :: h(:,:,:,:,:)            !(0:nbasd-1,0:nbasd-1,ntype,ispin,jspin)
+     COMPLEX,ALLOCATABLE :: h_loc_nonsph(:,:,:,:,:) !non-spherical block of u and LAPW udot (l<=lnonsph) incl. LDA+U; Cholesky factor if spin-diagonal
+     INTEGER,ALLOCATABLE :: ind(:,:,:)              !position of (slot,lm) of type n in h (slot,0:lmd,ntype); -1 if not in basis
+     INTEGER,ALLOCATABLE :: nbas(:)                 !size of the unified basis per type
+     INTEGER,ALLOCATABLE :: lrange(:)               !largest l of the LAPW part per type
      REAL,ALLOCATABLE    :: e_shift(:,:)
-     ! MetaGGA: lambda=0 matrix elements (uu,ud,du,dd) for l>lnonsph, which only the
-     ! spherical setup (hsmt_sph) can add; filled by tlmplm_vtau
-     REAL,ALLOCATABLE    :: h_sph_extra(:,:,:,:)   !0:3,0:lmaxd,ntype,jspins
+     TYPE(t_radfun),ALLOCATABLE :: radfun(:)        !radial basis of h
+     REAL,ALLOCATABLE    :: h_sph_extra(:,:,:,:)    !MetaGGA: lambda=0 elements (uu,ud,du,dd) for l>lnonsph, added by hsmt_sph (0:3,0:lmaxd,ntype,jspins)
      LOGICAL             :: l_sph_extra = .FALSE.
-     !COMPLEX,ALLOCATABLE :: h_loc_sp(:,:,:,:)   !l,lp,ntype,ispin,jspin
-     !COMPLEX,ALLOCATABLE :: h_locLO(:,:,:,:,:)  !lm+mlo,mlo,ntype,ispin,jspin
      TYPE(t_rsoc)        :: rsoc
-     ! For juPhon:
-     INTEGER,ALLOCATABLE :: ind(:,:,:,:)
    CONTAINS
      PROCEDURE,PASS :: init => tlmplm_init
   END TYPE t_tlmplm
   PUBLIC t_tlmplm
 CONTAINS
-  SUBROUTINE tlmplm_init(td,atoms,jspins,l_offdiag)
-    USE m_judft
-    USE m_types_atoms
+  SUBROUTINE tlmplm_init(td,atoms,jspins,l_fulllmax)
+    !! l_fulllmax: LAPW part up to lmax (forces) instead of lnonsph
     CLASS(t_tlmplm),INTENT(INOUT):: td
-    TYPE(t_atoms)                :: atoms
+    TYPE(t_atoms),INTENT(IN)     :: atoms
     INTEGER,INTENT(in)           :: jspins
-    LOGICAL,INTENT(IN)           :: l_offdiag
-    INTEGER :: err(11),lmd,mlolotot
-    err = 0
-    mlolotot=DOT_PRODUCT(atoms%nlo,atoms%nlo+1)/2
-    lmd=atoms%lmaxd*(atoms%lmaxd+2)
-    !lmplmd=(lmd*(lmd+3))/2
+    LOGICAL,INTENT(IN)           :: l_fulllmax
 
-    td%h_loc2=atoms%lmax*(atoms%lmax+2)+1
-    td%h_loc2_nonsph=atoms%lnonsph*(atoms%lnonsph+2)+1
-    IF (ALLOCATED(td%h_loc)) &
-         DEALLOCATE(td%tdulo,td%tuulo,td%tulod,td%tulou,&
-         td%tuloulo,td%tuloulo_newer,td%h_loc,td%e_shift,td%h_off,td%h_loc_nonsph,td%h_loc_LO,td%h_lo,td%h_lo2)
-    !    ALLOCATE(td%tuu(0:lmplmd,ntype,jspins),stat=err)
-    !    ALLOCATE(td%tud(0:lmplmd,ntype,jspins),stat=err)
-    !    ALLOCATE(td%tdd(0:lmplmd,ntype,jspins),stat=err)
-    !    ALLOCATE(td%tdu(0:lmplmd,ntype,jspins),stat=err)
-    ALLOCATE(td%tdulo(0:lmd,-atoms%llod:atoms%llod,SUM(atoms%nlo),jspins,jspins),stat=err(1));td%tdulo=0.0
-    ALLOCATE(td%tuulo(0:lmd,-atoms%llod:atoms%llod,SUM(atoms%nlo),jspins,jspins),stat=err(2));td%tuulo=0.0
-    ALLOCATE(td%tulod(0:lmd,-atoms%llod:atoms%llod,SUM(atoms%nlo),jspins,jspins),stat=err(8));td%tulod=0.0
-    ALLOCATE(td%tulou(0:lmd,-atoms%llod:atoms%llod,SUM(atoms%nlo),jspins,jspins),stat=err(9));td%tulou=0.0
-    ALLOCATE(td%tuloulo(-atoms%llod:atoms%llod,-atoms%llod:atoms%llod,MAX(mlolotot,1),jspins,jspins), stat=err(3));td%tuloulo=0.0
-    mlolotot = DOT_PRODUCT(atoms%nlo,atoms%nlo)
-    ALLOCATE(td%tuloulo_newer(-atoms%llod:atoms%llod,-atoms%llod:atoms%llod,atoms%nlod,atoms%nlod,atoms%ntype,jspins,jspins), stat=err(11));td%tuloulo_newer=0.0
-    ALLOCATE(td%h_loc(0:2*lmd+1,0:2*lmd+1,atoms%ntype,jspins,jspins),stat=err(5));td%h_loc=0.0
-    ALLOCATE(td%h_loc_nonsph(0:MAXVAL(td%h_loc2_nonsph)*2-1,0:MAXVAL(td%h_loc2_nonsph)*2-1,atoms%ntype,jspins,jspins),stat=err(6));td%h_loc_nonsph=0.0
-    ALLOCATE(td%h_loc_lo(0:MAXVAL(td%h_loc2_nonsph)*2-1,0:MAXVAL(td%h_loc2_nonsph)*2-1,atoms%ntype,jspins,jspins),stat=err(6));td%h_loc_lo=0.0
-    ALLOCATE(td%h_lo(0:MAXVAL(td%h_loc2_nonsph)*2-1,-atoms%llod:atoms%llod,SUM(atoms%nlo),jspins,jspins),stat=err(6));td%h_lo=0.0
-    ALLOCATE(td%h_lo2(0:MAXVAL(td%h_loc2_nonsph)*2-1,-atoms%llod:atoms%llod,SUM(atoms%nlo),jspins,jspins),stat=err(6));td%h_lo2=0.0
+    INTEGER :: n,l,m,lo,s,nb,sns
+    INTEGER :: boff(0:atoms%lmaxd)
 
-    ALLOCATE(td%e_shift(atoms%ntype,jspins),stat=err(7))
-    IF (ALLOCATED(td%h_sph_extra)) DEALLOCATE(td%h_sph_extra)
-    ALLOCATE(td%h_sph_extra(0:3,0:atoms%lmaxd,atoms%ntype,jspins),stat=err(10));td%h_sph_extra=0.0
-    td%l_sph_extra=.FALSE.
-    IF (l_offdiag) THEN
-       ALLOCATE(td%h_off(0:2*atoms%lmaxd+1,0:2*atoms%lmaxd+1,atoms%ntype,2,2),stat=err(4))
-    ELSE
-       ALLOCATE(td%h_off(1,1,1,1,1),stat=err(4))
-    END IF
-    td%h_off=0.0
-    IF (ANY(err.NE.0)) THEN
-       WRITE (*,*) 'an error occured during allocation of'
-       WRITE (*,*) 'the tlmplm local matrix elements'
-       WRITE (*,'(9i7)') err(:)
-       CALL juDFT_error("eigen: Error during allocation of tlmplm",calledby ="types_tlmplm")
-    ENDIF
+    IF (ALLOCATED(td%h)) DEALLOCATE(td%h,td%h_loc_nonsph,td%ind,td%nbas,td%lrange,td%e_shift,td%radfun,td%h_sph_extra)
+    td%lrange = MERGE(atoms%lmax,atoms%lnonsph,l_fulllmax)
+    ALLOCATE(td%nbas(atoms%ntype))
+    ALLOCATE(td%ind(MAXVAL([(atoms%num_radial_functions_per_l(n),n=1,atoms%ntype)]),0:atoms%lmaxd*(atoms%lmaxd+2),atoms%ntype),source=-1)
+    DO n = 1,atoms%ntype
+       IF (ANY(atoms%llo(:atoms%nlo(n),n)>td%lrange(n))) &
+          CALL judft_error("Local orbital with l larger than the non-spherical cutoff lnonsph",calledby="types_tlmplm")
+       s = td%lrange(n)*(td%lrange(n)+2)+1
+       ! udot of the LAPW channels in the order of the matching coefficients, then udot of APW channels
+       boff(0:td%lrange(n)) = atoms%udot_rows(td%lrange(n),n)
+       nb = atoms%num_ab_rows(td%lrange(n),n)
+       DO l = 0,td%lrange(n)
+          DO m = -l,l
+             td%ind(1,l*(l+1)+m,n) = l*(l+1)+m
+             IF (boff(l)>=0) td%ind(2,l*(l+1)+m,n) = boff(l)+l+m
+          END DO
+          IF (boff(l)>=0) CYCLE
+          DO m = -l,l
+             td%ind(2,l*(l+1)+m,n) = nb+l+m
+          END DO
+          nb = nb+2*l+1
+       END DO
+       DO lo = 1,atoms%nlo(n)
+          IF (atoms%l_dulo(lo,n)) CYCLE ! APW LO lives on the udot slot
+          l = atoms%llo(lo,n)
+          DO m = -l,l
+             td%ind(atoms%slot_of_lo(lo,n),l*(l+1)+m,n) = nb+l+m
+          END DO
+          nb = nb+2*l+1
+       END DO
+       td%nbas(n) = nb
+    END DO
+    sns = MAXVAL(atoms%lnonsph*(atoms%lnonsph+2)+1)
+    ALLOCATE(td%h(0:MAXVAL(td%nbas)-1,0:MAXVAL(td%nbas)-1,atoms%ntype,jspins,jspins),source=CMPLX(0.0,0.0))
+    ALLOCATE(td%h_loc_nonsph(0:2*sns-1,0:2*sns-1,atoms%ntype,jspins,jspins),source=CMPLX(0.0,0.0))
+    ALLOCATE(td%e_shift(atoms%ntype,jspins),source=0.0)
+    ALLOCATE(td%radfun(atoms%ntype))
+    ALLOCATE(td%h_sph_extra(0:3,0:atoms%lmaxd,atoms%ntype,jspins),source=0.0)
+    td%l_sph_extra = .FALSE.
   END SUBROUTINE tlmplm_init
 
 END MODULE m_types_tlmplm

@@ -1,11 +1,24 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_make_stars
    USE m_juDFT
+   USE m_stepf
+   USE m_types_sym
+   USE m_types_atoms
+   USE m_types_vacuum
+   USE m_types_sphhar
+   USE m_types_input
+   USE m_types_cell
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_mpi_bc_tool
+   USE m_types_stars
+   USE m_step_function
+   USE m_types_fftgrid
 
    IMPLICIT NONE
 
@@ -13,19 +26,6 @@ MODULE m_make_stars
    PUBLIC :: make_stars
 CONTAINS
    SUBROUTINE make_stars(stars,sym,atoms,vacuum,sphhar,input,cell,noco,fmpi,qvec,iDtype,iDir,l_efield,gmaxzLocal)
-      USE m_stepf
-      USE m_types_sym
-      USE m_types_atoms
-      USE m_types_vacuum
-      USE m_types_sphhar
-      USE m_types_input
-      USE m_types_cell
-      USE m_types_mpi
-      USE m_types_noco
-      USE m_mpi_bc_tool
-      USE m_types_stars
-      USE m_step_function
-      USE m_mpi_bc_tool
 
       CLASS(t_stars),INTENT(INOUT) :: stars
       TYPE(t_sym),INTENT(in)::sym

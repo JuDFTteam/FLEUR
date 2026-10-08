@@ -9,6 +9,7 @@
 module m_types_sternheimerJob
 
     use m_juDFT 
+    use m_types_fleurinput
     
     implicit none 
 
@@ -51,7 +52,6 @@ module m_types_sternheimerJob
 
     subroutine init_sternheimerJob(this,fi,l_phonon,l_BEC,l_efield,l_bfield)
 
-        use m_types_fleurinput
         
         class(t_sternheimerJob),intent(inout) :: this
         type(t_fleurinput),intent(in) :: fi 

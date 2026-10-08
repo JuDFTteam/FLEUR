@@ -6,23 +6,29 @@
 module m_wannier_interpolate
 
     use m_juDFT
-    use m_types
     use m_constants
     use m_matrix_interpolation
     use m_npy
+    use m_available_solvers
+    use m_types_solver
+    use m_eig66_io
+    use m_banddos_io
+#ifdef CPP_HDF
+    use hdf5
+    use m_hdf_tools
+#endif
+    use m_types_banddos
+    use m_types_fleurinput
+    use m_types_kpts
+    use m_types_mat
+    use m_types_misc
     implicit none
+    private
+    public :: interpolate_bandstructure
 
 contains
     subroutine interpolate_bandstructure(fi, results, kpts_fine,eig_id_interpol,l_write_output)
 
-        use m_available_solvers
-        use m_types_solver
-        use m_eig66_io
-        use m_banddos_io
-#ifdef CPP_HDF
-        use hdf5
-        use m_hdf_tools
-#endif
 
         type(t_fleurinput), intent(in) :: fi
         type(t_results),    intent(in) :: results

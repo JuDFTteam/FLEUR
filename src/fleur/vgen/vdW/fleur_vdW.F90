@@ -1,10 +1,30 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_fleur_vdW
+  USE m_constants
+  USE m_psqpw
+  USE m_fft3d
+  USE m_qpwtonmt
+  USE m_convol
+  USE m_cdn_io
+  USE m_juDFT
+  USE param, ONLY: Zab_v1, Zab_v2
+  USE nonlocal_data, ONLY: nx, ny, nz, n_grid, a1, a2, a3, b1, b2, b3, G_cut, Zab, lambda, m_c, omega, tpibya
+  USE nonlocal_funct, ONLY: soler
+  USE m_types_atoms
+  USE m_types_cell
+  USE m_types_input
+  USE m_types_mpi
+  USE m_types_potden
+  USE m_types_misc
+  USE m_types_sphhar
+  USE m_types_stars
+  USE m_types_sym
+  USE m_types_vacuum
   IMPLICIT NONE
   PRIVATE
   PUBLIC fleur_vdW_mCallsen
@@ -13,13 +33,6 @@ CONTAINS
    cell,sym,vacuum,results,    &
    den,vpw_total,vr_total)
     !Interface to Juelich vdW-code
-    USE m_types
-    USE m_constants
-    USE m_psqpw
-    USE m_fft3d
-    USE m_qpwtonmt
-    USE m_convol
-    USE m_cdn_io
 
     IMPLICIT NONE
 
@@ -121,18 +134,7 @@ CONTAINS
 
   SUBROUTINE priv_fleur_vdW(cell,stars,n_pseudo,e_vdw,v_vdw,l_vdW_v1)
 
-    USE m_types
-    USE m_constants
-    USE m_juDFT
-    USE param, ONLY:  Zab_v1,Zab_v2
 
-    USE nonlocal_data, ONLY: nx,ny,nz,                &
-         n_grid,                  &
-         a1,a2,a3,                &
-         b1,b2,b3,                &
-         G_cut,Zab,               &
-         lambda,m_c,omega,tpibya
-    USE nonlocal_funct,ONLY: soler
     IMPLICIT NONE
     TYPE(t_cell),INTENT(IN)  :: cell
     TYPE(t_stars),INTENT(IN) :: stars
@@ -192,7 +194,6 @@ CONTAINS
   END SUBROUTINE priv_fleur_vdW
 
   SUBROUTINE test_charge(qpw,stars)
-    USE m_types
     IMPLICIT NONE
     TYPE(t_stars),INTENT(IN) :: stars
     COMPLEX,INTENT(out)      :: qpw(:)

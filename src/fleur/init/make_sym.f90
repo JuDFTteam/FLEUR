@@ -1,10 +1,22 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_make_sym
    USE m_judft
+   USE m_dwigner
+   USE m_angles
+   USE m_constants
+   USE m_mapatom
+   USE m_ptsym
+   USE m_types_sym
+   USE m_types_cell
+   USE m_types_atoms
+   USE m_types_noco
+   USE m_types_input
+   USE m_types_gfinp
+   USE m_types_fleurinput_base, ONLY: REAL_NOT_INITALIZED, CMPLX_NOT_INITALIZED
    IMPLICIT NONE
    PRIVATE
    PUBLIC make_sym
@@ -12,19 +24,7 @@ CONTAINS
    SUBROUTINE make_sym(sym, cell, atoms, noco,   input, gfinp)
       !Generates missing symmetry info.
       !tau,mrot and nop have to be specified alread
-      USE m_dwigner
-      USE m_angles !Phase factors for spin-offdiagonal lda+u
-      USE m_constants
-      USE m_mapatom
-      use m_ptsym
-      USE m_types_sym
-      USE m_types_cell
-      USE m_types_atoms
-      USE m_types_noco
        
-      use m_types_input
-      USE m_types_gfinp
-      use m_types_fleurinput_base, only: REAL_NOT_INITALIZED, CMPLX_NOT_INITALIZED
       TYPE(t_sym), INTENT(INOUT) :: sym
       TYPE(t_cell), INTENT(IN)   :: cell
       TYPE(t_atoms), INTENT(IN)  :: atoms

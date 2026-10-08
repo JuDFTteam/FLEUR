@@ -8,18 +8,20 @@
 !     write formatted density or potential onto unit 'nu'
 !     e. wimmer   march 1985
 !     ****************************************************
-   implicit none
+   USE m_constants
+   USE m_types_atoms
+   USE m_types_input
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_sym
+   USE m_types_vacuum
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: wrtdop
       CONTAINS
         SUBROUTINE wrtdop(stars,vacuum,atoms,sphhar,input,sym,nu,&
                           it,fr,fpw,fvac)
 
-          USE m_constants
-          USE m_types_stars
-          USE m_types_atoms
-          USE m_types_sym
-          USE m_types_vacuum
-          USE m_types_sphhar
-          USE m_types_input
 
           IMPLICIT NONE
 

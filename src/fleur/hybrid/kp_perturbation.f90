@@ -1,5 +1,37 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_kp_perturbation
    USE m_types_hybdat
+   USE m_sphbes
+   USE m_dsphbs
+   USE m_constants
+   USE m_ylm
+   USE m_gaunt
+   USE m_util
+   USE m_intgrf
+   USE m_io_hybrid
+   USE m_juDFT
+   USE m_wrapper
+   USE m_olap
+   USE m_dr2fdr
+   USE m_calc_cmt
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_hybinp
+   USE m_types_input
+   USE m_types_kpts
+   USE m_types_lapw
+   USE m_types_mat
+   USE m_types_mpdata
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_types_sym
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: ibs_correction, gauntvec, w, wronskian, dwavefproducts, momentum_matrix
 
 CONTAINS
 
@@ -7,15 +39,6 @@ CONTAINS
                              lapw, kpts, cell, mnobd, sym, noco,nococonv, &
                              proj_ibsc, olap_ibsc)
 
-      USE m_sphbes
-      USE m_dsphbs
-      USE m_constants
-      USE m_ylm
-      USE m_gaunt
-      USE m_util
-      use m_intgrf
-      USE m_types
-      USE m_io_hybrid
       IMPLICIT NONE
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
       TYPE(t_mpdata), intent(inout) :: mpdata
@@ -608,11 +631,7 @@ CONTAINS
 
    FUNCTION gauntvec(l1, m1, l2, m2, atoms)
 
-      USE m_constants
-      USE m_gaunt
-      USE m_juDFT
 
-      USE m_types
       IMPLICIT NONE
       TYPE(t_atoms), INTENT(IN)   :: atoms
 
@@ -647,8 +666,6 @@ CONTAINS
 
    FUNCTION w(p1, l1, p2, l2, itype, bas1_mt, drbas1_mt, &
               rmt)
-      USE m_types
-      USE m_juDFT
       IMPLICIT NONE
 
       INTEGER, INTENT(IN)       ::  p1, l1, p2, l2
@@ -710,9 +727,6 @@ CONTAINS
       jsp, &
       eig_irr)
 
-      USE m_wrapper
-      USE m_types
-      use m_constants, only: cmplx_0
       IMPLICIT NONE
 
       TYPE(t_hybdat), INTENT(IN)   :: hybdat
@@ -781,15 +795,6 @@ CONTAINS
    SUBROUTINE momentum_matrix(momentum, nk, bandi1, bandf1, bandi2, bandf2, &
                               input, atoms, mpdata, hybinp, &
                               cell, hybdat, kpts, sym, noco,nococonv, lapw,   jsp)
-      USE m_olap
-      USE m_wrapper
-      USE m_util, only: derivative
-      use m_intgrf, only: intgrf_init, intgrf
-      USE m_dr2fdr
-      USE m_constants
-      USE m_types
-      USE m_io_hybrid
-      use m_calc_cmt
       IMPLICIT NONE
       TYPE(t_input), INTENT(IN)     :: input
       TYPE(t_hybdat), INTENT(IN)   :: hybdat

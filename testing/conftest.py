@@ -80,7 +80,10 @@ def pytest_html_results_table_header(cells):
     cells.pop()
 
 def pytest_html_results_table_row(report, cells):
-    cells.insert(1, html.td(report.description))
+    # A CollectReport (e.g. a module that failed to import) has no
+    # description; without this guard rendering it crashes the hook itself
+    # and turns a plain collection error into an INTERNALERROR.
+    cells.insert(1, html.td(getattr(report, "description", "")))
     cells.pop()
 
    
@@ -369,6 +372,7 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "serial: test running fleur serial")
     config.addinivalue_line("markers", "mpi: test running fleur in parallel")
     config.addinivalue_line("markers", "fast: tests which take < 1 sec to execute")
+    config.addinivalue_line("markers", "wannierlib: test needs the wannierlib (library-mode Wannier90) API")
     config.addinivalue_line("markers", "slow: tests which take < 1 min to execute")
     config.addinivalue_line("markers", "very_slow: tests which take > 1 min to execute")
     config.addinivalue_line("markers", "metagga: MetaGGA (kinetic energy density) tests")
@@ -413,9 +417,6 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "hdf: tests needing hdf")
     config.addinivalue_line("markers", "mpi: tests needing mpi")
     config.addinivalue_line("markers", "libxc: test for fleur using libxc")
-    config.addinivalue_line("markers", "wannier: test for fleur using wannier") # TODO account for differnet wannier versions?
-    config.addinivalue_line("markers", "wannier4: test for fleur using wannier 4D calculations")
-    config.addinivalue_line("markers", "wannier5: test for fleur using wannier 5D calculations")
     config.addinivalue_line("markers", "masci_tools: tests which use functions from masci-tools repo")
     config.addinivalue_line("markers", "fleur_parser: tests testing fleur parsers or generate files for them")
     config.addinivalue_line("markers", "outxml_parser_xfail: tests for which the outxml_parser is expected to output some error message")
@@ -1169,7 +1170,7 @@ def check_hdf(test_logger):
     return _check_hdf
 
 @pytest.fixture
-def default_fleur_test(test_logger,check_all_outxml,execute_fleur,validate_out_xml_file,check_hdf):
+def default_fleur_test(test_logger,check_all_outxml,check_outxml,execute_fleur,validate_out_xml_file,check_hdf):
     """returns the default_fleur_test function
     """
     def _default_fleur_test(testname,files=None,checks=None,hdf_checks=[],clean=False,cmdline_args=None,mpi_procs=None):
@@ -1202,7 +1203,7 @@ def default_fleur_test(test_logger,check_all_outxml,execute_fleur,validate_out_x
         
             if not validate_out_xml_file(res_files['out.xml']): pytest.fail("validating out_xml_failed")
             if not check_all_outxml(res_files['out.xml'],ref_out_xml): pytest.fail("checking out_xml_failed in basic test")
-            if checks and not check_outxml(res_files['out.xml'],ref_out_xml): pytest.fail("checking out.xml failed in advanced test")
+            if checks and not check_outxml(res_files['out.xml'],ref_out_xml,checks): pytest.fail("checking out.xml failed in advanced test")
             #compare cdn files 
             if not ("banddos.hdf" in hdf_checks) and os.path.isfile(f"{test_file_folder}/banddos.hdf"): hdf_checks.append("banddos.hdf")
             if hdf_checks:
@@ -1497,10 +1498,10 @@ def collect_all_judft_messages():
     # source code is top dir, to much other stuff in there, thats why hardcode source dirs for speed
     # and to avoid problems with binaries and so on.
     src_folders = ['cdn', 'cdn_mt', 'core', 'diagonalization', 'propcalc/dos', 'propcalc/eels', 'eigen',
-     'eigen_soc', 'fermi', 'fft', '../tools/fleurinput', 'force',
+     'soc', 'secvar', 'matrixelements', 'fermi', 'fft', '../tools/fleurinput', 'force',
     'forcetheorem', 'global', 'greensf', 'hybrid',  'init', '../tools/inpgen2',
     'io', 'juDFT', '../tools/inpgen2/kpoints',  'ldaX', 'main', 'math', 'mix', 'mpi', 'startden', 'propcalc/orbdep',
-    'rdmft', 'tetra', 'types', 'vgen', 'wannier', 'xc-pot'
+    'rdmft', 'tetra', 'types', 'vgen', 'wannierlib', 'xc-pot'
      ]
 
     grep_results = []

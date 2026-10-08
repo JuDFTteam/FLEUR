@@ -1,5 +1,16 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_util
    USE m_juDFT
+   USE m_constants
+   USE m_types_atoms
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: gaunt, wigner3j, primitivef, modulo1, derivative_t, derivative_nt, sphbessel, harmonicsr, cerf, chr, &
+      derivative, no_error, negative_exponent_error
 !     error and warning codes for intgrf function
    INTEGER, PARAMETER :: NO_ERROR = 0
    INTEGER, PARAMETER :: NEGATIVE_EXPONENT_ERROR = 2
@@ -20,7 +31,6 @@ CONTAINS
 
    FUNCTION gaunt(l1, l2, l3, m1, m2, m3, maxfac, fac, sfac)
 
-      USE m_constants, ONLY: pimach
 
       IMPLICIT NONE
 
@@ -118,7 +128,6 @@ CONTAINS
 
    SUBROUTINE primitivef(primf, fin, rmsh, dx, jri, jmtd, itypein, ntype)
 
-      USE m_constants
 
       IMPLICIT NONE
 
@@ -224,7 +233,6 @@ CONTAINS
 ! unction modulo1 maps kpoint into first BZ
    FUNCTION modulo1(kpoint, nkpt3)
 
-      USE m_constants
 
       IMPLICIT NONE
 
@@ -251,7 +259,6 @@ CONTAINS
 !     Returns derivative of f in df.
 
    SUBROUTINE derivative_t(df, f, atoms, itype)
-      USE m_types_atoms
       IMPLICIT NONE
       REAL, INTENT(IN)   ::   f(:)
       REAL, INTENT(OUT)  ::   df(:)
@@ -536,7 +543,6 @@ CONTAINS
 !     Returns the complex error function.
    FUNCTION cerf(z)
 
-      USE m_constants, ONLY: pimach
 
       IMPLICIT NONE
       COMPLEX, INTENT(IN) ::  z

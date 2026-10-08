@@ -6,7 +6,21 @@
 
 MODULE m_make_defaults
   USE m_juDFT
+  USE m_types_atoms
+  USE m_types_cell
+  USE m_types_sym
+  USE m_types_vacuum
+  USE m_types_xcpot_inbuild_nofunction
+  USE m_types_input
+  USE m_types_stars
+  USE m_types_noco
+  USE m_types_banddos
+  USE m_types_mpinp
+  USE m_types_hybinp
+  USE m_types_profile
   IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: make_defaults
   !---------------------------------------------------------------------
   !  Check muffin tin radii and determine a reasonable choice for MTRs.
   !  Derive also other parameters for the input file, to provide some
@@ -15,19 +29,6 @@ MODULE m_make_defaults
 CONTAINS
 
   SUBROUTINE make_defaults(atoms, sym, cell, vacuum, input, stars, xcpot, profile, noco, banddos, mpinp, hybinp)
-    USE m_types_atoms
-    USE m_types_cell
-    USE m_types_sym
-    USE m_types_vacuum
-    USE m_types_xcpot_inbuild_nofunction
-    USE m_types_input
-    USE m_types_stars
-    USE m_types_noco
-    USE m_types_banddos
-    USE m_types_mpinp
-    USE m_types_hybinp
-    USE m_types_profile
-    USE m_juDFT
 
     TYPE(t_atoms), INTENT(INOUT)            :: atoms
     TYPE(t_sym), INTENT(IN)                 :: sym

@@ -5,8 +5,37 @@
 !--------------------------------------------------------------------------------
 MODULE m_vgen
    USE m_juDFT
+   USE m_constants
+   USE m_rotate_int_den_tofrom_local
+   USE m_vgen_coulomb
+   USE m_vgen_xcpot
+   USE m_vgen_finalize
+   USE m_rotate_mt_den_tofrom_local
+   USE m_magnMomFromDen
+   USE m_force_sf
+   USE m_fleur_vdW
+   USE m_vgen_constraint
+   USE m_types_moessbauerParams
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_field
+   USE m_types_hybdat
+   USE m_types_input
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_misc
+   USE m_types_sliceplot
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_sym
+   USE m_types_vacuum
+   USE m_types_xcpot
 
    implicit none
+   PRIVATE
+   PUBLIC :: vgen
 CONTAINS
 
    SUBROUTINE vgen(hybdat,field,input,xcpot,atoms,sphhar,stars,vacuum,sym,&
@@ -28,18 +57,6 @@ CONTAINS
       !
       !--------------------------------------------------------------------------
 
-      USE m_types
-      USE m_constants
-      USE m_rotate_int_den_tofrom_local
-      USE m_vgen_coulomb
-      USE m_vgen_xcpot
-      USE m_vgen_finalize
-      USE m_rotate_mt_den_tofrom_local
-      USE m_magnMomFromDen
-      USE m_force_sf ! Klueppelberg (force level 3)
-      USE m_fleur_vdW
-      use m_vgen_constraint
-      USE m_types_moessbauerParams
       IMPLICIT NONE
 
       TYPE(t_results),   INTENT(INOUT) :: results
@@ -155,11 +172,17 @@ CONTAINS
          END IF
       END IF
 
-      if (any(noco%l_constrained)) call vgen_constraint(atoms,noco,nococonv,vtot)
-
       ! d)
       ! TODO: Check if this is needed for more potentials as well!
       CALL vgen_finalize(fmpi ,field,cell,atoms,stars,vacuum,sym,noco,nococonv,input,xcpot,sphhar,vTot,vCoul,denRot,sliceplot)
+
+      ! The transverse constraining field has to be added AFTER vgen_finalize.
+      ! For l_mtNocoPot=T the latter calls rotate_mt_den_from_local, which zeroes
+      ! vTot%mt and rebuilds all four spin components from the local-frame diagonal
+      ! pair plus theta_mt/phi_mt. Anything written into components 3/4 before that
+      ! point is therefore discarded. This mirrors the placement of bfield(), which
+      ! carries the longitudinal b_con(3) of the fixed-moment constraint.
+      if (any(noco%l_constrained)) call vgen_constraint(atoms,noco,nococonv,vtot)
       !DEALLOCATE(vcoul%pw_w)
 
       CALL vTot%distribute(fmpi%mpi_comm)

@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -7,8 +7,30 @@ MODULE m_cdntot
 #ifdef CPP_MPI
    use mpi
 #endif
-   use m_judft
+   use m_intgr, only: intgr3
+   use m_constants
+   use m_qsf
+   use m_pwint
+   use m_juDFT
+   use m_mt_tofrom_grid
+   use m_pw_tofrom_grid
+   use m_xmlOutput
+   use ieee_arithmetic
+   use m_types_atoms
+   use m_types_cell
+   use m_types_input
+   use m_types_mpi
+   use m_types_noco
+   use m_types_nococonv
+   use m_types_potden
+   use m_types_sphhar
+   use m_types_stars
+   use m_types_sym
+   use m_types_vacuum
+   use m_types_xcpot
    implicit none
+   private
+   public :: integrate_cdn, integrate_realspace, cdntot, cdntot_writings, print_cdn_inte
 !     ********************************************************
 !     calculate the total charge density in the interstial.,
 !     vacuum, and mt regions      c.l.fu
@@ -18,20 +40,6 @@ CONTAINS
                                    q, qis, qmt, qvac, qtot, qistot, fmpi)
       ! if called with fmpi variable, distribute the calculation of the pwint 
       ! over fmpi processes in fmpi%mpi_comm
-      USE m_intgr, ONLY : intgr3
-      USE m_constants
-      USE m_qsf
-      USE m_pwint
-      USE m_types_stars
-      USE m_types_atoms
-      USE m_types_sym
-      USE m_types_cell
-      USE m_types_vacuum
-      USE m_types_input
-      USE m_types_potden
-      use m_types_nococonv
-      USE m_types_mpi
-      USE m_juDFT
       IMPLICIT NONE
       TYPE(t_stars),INTENT(IN)  :: stars
       TYPE(t_nococonv),INTENT(IN):: nococonv
@@ -139,19 +147,6 @@ CONTAINS
 
    SUBROUTINE integrate_realspace(xcpot, atoms, sym, sphhar, input, &
                                   stars, cell,   vacuum, noco, mt, is, hint)
-      use m_types_xcpot
-      use m_types_atoms
-      use m_types_sym
-      use m_types_cell
-      use m_types_sphhar
-      use m_types_input
-      use m_types_stars
-      use m_types_vacuum
-      use m_types_noco
-      use m_types_potden
-      use m_mt_tofrom_grid
-      use m_pw_tofrom_grid
-      use m_constants
       implicit none
       CLASS(t_xcpot), INTENT(inout)   :: xcpot
       TYPE(t_atoms),INTENT(IN)      :: atoms
@@ -198,16 +193,6 @@ CONTAINS
    SUBROUTINE cdntot(stars,nococonv,atoms,sym,vacuum,input,cell ,&
                      den,l_printData,qtot,qistot,fmpi,l_par)
 
-      USE m_types_stars
-      USE m_types_atoms
-      USE m_types_sym
-      USE m_types_cell
-      USE m_types_vacuum
-      USE m_types_input
-      USE m_types_potden
-      use m_types_nococonv
-      use m_types_mpi
-      USE m_juDFT
       IMPLICIT NONE
 
 !     .. Scalar Arguments ..
@@ -245,12 +230,6 @@ CONTAINS
 
    SUBROUTINE cdntot_writings(atoms,vacuum,input,l_printData,q,qis,qmt,qvac,qtot)
 
-      USE m_constants
-      USE m_types_atoms
-      USE m_types_vacuum
-      USE m_types_input
-      USE m_juDFT
-      USE m_xmlOutput
       IMPLICIT NONE
 
 !     .. Scalar Arguments ..
@@ -313,7 +292,6 @@ CONTAINS
    END SUBROUTINE cdntot_writings
 
    SUBROUTINE print_cdn_inte(q, qis, qmt, qvac, qtot, qistot, hint)
-      use  ieee_arithmetic
       implicit none
       REAL, INTENT(in)                       :: q(:), qis(:), qmt(:,:), qvac(:,:), qtot, qistot
       character(len=*), intent(in), optional :: hint

@@ -1,10 +1,20 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_coredr
+   USE m_etabinit
+   USE m_spratm
+   USE m_ccdnup
+   USE m_cdn_io
+   USE m_types_input
+   USE m_types_atoms
+   USE m_types_sphhar
+   USE m_types_moessbauerParams
    implicit none
+   PRIVATE
+   PUBLIC :: coredr
 CONTAINS
   SUBROUTINE coredr(input,atoms,iType,seig, rho,sphhar, vrs, qints,rhc,l_useOtherCoreSolver,moessbauerParams)
     !     *******************************************************
@@ -12,14 +22,6 @@ CONTAINS
     !     *****   for relativistic core                     *****
     !     *******************************************************
 
-    USE m_etabinit
-    USE m_spratm
-    USE m_ccdnup
-    USE m_cdn_io
-    USE m_types_input
-    USE m_types_atoms
-    USE m_types_sphhar
-    USE m_types_moessbauerParams
 
     IMPLICIT NONE
 

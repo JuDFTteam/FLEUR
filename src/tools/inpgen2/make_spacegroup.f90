@@ -1,7 +1,22 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 
 
 MODULE m_make_spacegroup
   USE m_juDFT
+  USE m_bravaissymm
+  USE m_supercheck
+  USE m_types_noco
+  USE m_types_cell
+  USE m_types_sym
+  USE m_constants
+  USE m_sssym
+  USE m_socsym
+  USE m_film_sym
+  IMPLICIT NONE
   PRIVATE
   PUBLIC make_spacegroup
   !********************************************************************
@@ -14,15 +29,6 @@ MODULE m_make_spacegroup
 CONTAINS
   SUBROUTINE make_spacegroup(film,noco,cell,pos,atomid,mag_mom,sym)
 
-    USE m_bravaissymm
-    USE m_supercheck
-    USE m_types_noco
-    USE m_types_cell
-    USE m_types_sym
-    USE m_constants
-    USE m_sssym
-    USE m_socsym
-    USE m_film_sym
     IMPLICIT NONE
     LOGICAL,INTENT(in)         :: film
     TYPE(t_noco),INTENT(in)    :: noco

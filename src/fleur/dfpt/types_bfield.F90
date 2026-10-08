@@ -7,8 +7,20 @@
 module m_types_bfield
     use m_juDFT
     use m_types_dfpt_scf
-    use m_types
     use m_dfpt_magsusc
+    use m_types_dfpt
+    use m_types_enpara
+    use m_types_fleurinput
+    use m_types_hybdat
+    use m_types_kpts
+    use m_types_mpi
+    use m_types_nococonv
+    use m_types_potden
+    use m_types_misc
+    use m_types_sphhar
+    use m_types_stars
+    use m_types_sternheimerjob
+    use m_types_xcpot
 
     implicit none
 
@@ -45,7 +57,6 @@ contains
     end subroutine get_magnetic_susc
 
     subroutine init_child_bfield(this,fi,nqpts,dynMatNac)
-        use m_types
         class(t_bfield), intent(inout) :: this
         type(t_fleurinput), intent(in) :: fi
         integer, intent(in)            :: nqpts
@@ -56,7 +67,6 @@ contains
     end subroutine init_child_bfield
 
     subroutine q_indepent_properties_bfield(this,sternheimerJob,fi,fmpi,sphhar,hybdat,xcpot,nococonv,stars,rho,vTot,grRho3,grVtot3,grVC3,grVext3,grgrVext3x3)
-        use m_types
         class(t_bfield), intent(inout) :: this
         type(t_sternheimerjob),intent(in) :: sternheimerJob
         type(t_fleurinput), intent(in)  :: fi
@@ -73,7 +83,6 @@ contains
 
     subroutine postprocessing_scf_bfield(this,sternheimerJob,fi,stars,starsq,sphhar,xcpot,nococonv,hybdat,fmpi,qpts,q_list,iQ,iDtype,iDir,eig_id,dfpt_eig_id, &
                                           dfpt_eig_id2,enpara,results,results1,l_real,dfpt,rho,vTot,grRho3,grVext3,grVC3,den1,vTot1,den1Im,vTot1Im,vC1,vC1Im)
-        use m_types
         class(t_bfield),intent(inout) :: this
         type(t_sternheimerjob),intent(in) :: sternheimerJob
         type(t_fleurinput), intent(in)  :: fi
@@ -100,7 +109,6 @@ contains
     end subroutine postprocessing_scf_bfield
 
     subroutine postprocessing_qpoint_bfield(this,fi,fmpi,dfpt,qpts,iQ,q_list)
-        use m_types
         class(t_bfield), intent(inout) :: this
         type(t_fleurinput),intent(in) :: fi
         type(t_mpi),intent(in)        :: fmpi
@@ -111,7 +119,6 @@ contains
     end subroutine postprocessing_qpoint_bfield
 
     subroutine write_outfiles_bfield(this,fi,fmpi,dfpt)
-        use m_types
         class(t_bfield),intent(inout)   :: this
         type(t_fleurinput),intent(in)  :: fi
         type(t_mpi),intent(in)         :: fmpi

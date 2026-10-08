@@ -6,7 +6,14 @@
 
 MODULE m_types_misc
 
+   USE m_types_atoms
+   USE m_types_input
+   USE m_types_noco
+   USE m_types_kpts
+   USE m_types_lapw
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: zmat_init, results_init, reset_results, t_energy_hf, t_results, t_zmat, t_hamovlp
 
    !*************************************************************
    !     This module contains definitions for all kind of types
@@ -105,11 +112,6 @@ CONTAINS
 
    SUBROUTINE results_init(thisResults,input,atoms,kpts,noco)
 
-     USE m_types_atoms
-     USE m_types_input
-     USE m_types_noco
-     USE m_types_kpts
-     USE m_types_lapw
       IMPLICIT NONE
 
       CLASS(t_results),      INTENT(INOUT) :: thisResults
@@ -173,7 +175,6 @@ CONTAINS
    END SUBROUTINE results_init
 
    SUBROUTINE reset_results(thisResults, input)
-      USE m_types_input
 
       IMPLICIT NONE
 

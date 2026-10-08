@@ -1,7 +1,19 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_excwb91
 !.....-----------------------------------------------------------------
 !.....pw91 exchange-correlation energy density in hartree.
 !.....------------------------------------------------------------------
+   USE m_corl91
+   USE m_corg91
+   USE m_xch91
+   USE m_constants
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: excwb91
 CONTAINS
    SUBROUTINE excwb91( &
       mirm,irmx,rh1,rh2,agr,agru,agrd, &
@@ -9,10 +21,6 @@ CONTAINS
       exc, &
       idsprs,isprsv,sprsv)
 
-      USE m_corl91
-      USE m_corg91
-      USE m_xch91
-      USE m_constants
 
       IMPLICIT NONE
 

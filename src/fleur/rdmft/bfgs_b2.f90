@@ -1,11 +1,15 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2019 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_bfgs_b2
 
+   USE m_constants
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: bfgs_b2
 CONTAINS
 
 ! The subroutine bfgs_b2 is an implementation of a BFGS algorithm with
@@ -23,7 +27,6 @@ SUBROUTINE bfgs_b2(vecLength,gradient,lastGradient,minConstraints,maxConstraints
                    lastParameters,equalityLinCombi,equalityCriterion,maxHistoryLength,paramCorrections,&
                    gradientCorrections,iStep,mixParam,l_converged,convCrit)
 
-   USE m_constants
 
    IMPLICIT NONE
 

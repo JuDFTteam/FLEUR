@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-! Copyright (c) 2022 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !-------------------------------------------------------------------------------
@@ -10,6 +10,16 @@ module m_vvac
    ! calculates the g(2-dim)=0 part of the vacuum coulomb potential *
    ! for general symmetry.          c.l.fu, r.podloucky             *
    ! ****************************************************************
+   use m_constants
+   use m_qsf
+   use m_types_cell
+   use m_types_field
+   use m_types_input
+   use m_types_stars
+   use m_types_vacuum
+   implicit none
+   private
+   public :: vvac
 contains
    subroutine vvac(vacuum, stars, cell, input, field, psq, rht, vnew, rhobar, sig1dh, vz1dh, vslope, vmz1dh,l_dfptvgen)
       !! Calculates the \(\boldsymbol{G}_{||}=0\) part of the vacuum Coulomb potential.
@@ -19,9 +29,6 @@ contains
       !! $$V^{0}(z)=-4\pi[\int_{z}^{\infty}\sigma_{+}^{0}(z')dz'+(z-z_{\sigma})\sigma_{+}]=: V_{+}^{0}(z)$$
       !! with
       !! $$\sigma_{+}^{0}(z):=\int_{z}^{\infty}n_{V}^{0}(z')dz'$$
-      use m_constants
-      use m_qsf
-      use m_types
 
       implicit none
 

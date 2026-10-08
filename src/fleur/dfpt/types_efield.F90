@@ -7,6 +7,20 @@
 module m_types_efield
     use m_juDFT
     use m_types_dfpt_scf
+    use m_dfpt_dielecten
+    use m_types_dfpt
+    use m_types_enpara
+    use m_types_fleurinput
+    use m_types_hybdat
+    use m_types_kpts
+    use m_types_mpi
+    use m_types_nococonv
+    use m_types_potden
+    use m_types_misc
+    use m_types_sphhar
+    use m_types_stars
+    use m_types_sternheimerjob
+    use m_types_xcpot
 
     implicit none 
 
@@ -53,7 +67,6 @@ module m_types_efield
 
 
     subroutine init_child_efield(this,fi,nqpts,dynMatNac)
-        use m_types
         class(t_efield_pert), intent(inout) :: this
         type(t_fleurinput), intent(in) :: fi 
         integer, intent(in)  :: nqpts
@@ -68,7 +81,6 @@ module m_types_efield
 
     subroutine q_indepent_properties_efield(this,sternheimerJob,fi,fmpi,sphhar,hybdat,xcpot,nococonv,stars,rho,vTot,grRho3,grVtot3,grVC3,grVext3,grgrVext3x3)
         
-        use m_types
         
 
         class(t_efield_pert), intent(inout) :: this
@@ -90,8 +102,6 @@ module m_types_efield
                                           dfpt_eig_id2,enpara,results,results1,l_real,dfpt,rho,vTot,grRho3,grVext3,grVc3,den1,vTot1,den1Im,vTot1Im,vC1,vC1Im)
         
         
-        use m_types
-        use m_dfpt_dielecten
         
 
         class(t_efield_pert),intent(inout) :: this
@@ -133,8 +143,6 @@ module m_types_efield
 
     subroutine postprocessing_qpoint_efield(this,fi,fmpi,dfpt,qpts,iQ,q_list)
 
-        use m_types
-        use m_dfpt_dielecten
 
         class(t_efield_pert), intent(inout) :: this
         type(t_fleurinput),intent(in)  :: fi 
@@ -149,8 +157,6 @@ module m_types_efield
 
     subroutine write_outfiles_efield(this,fi,fmpi,dfpt)
 
-        use m_types 
-        use m_dfpt_dielecten
 
         class(t_efield_pert),intent(inout)   :: this         
         type(t_fleurinput),intent(in) :: fi

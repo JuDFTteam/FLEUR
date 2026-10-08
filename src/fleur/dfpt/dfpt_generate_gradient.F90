@@ -9,20 +9,31 @@ module m_dfpt_generate_gradient
 
     use m_juDFT
     use m_constants
-    use m_types
+    use m_dfpt_vgen
+    use m_vgen_coulomb
+    use m_dfpt_potdenLocal
+    use m_dfpt_gradient
+    use m_grdchlh
+    use m_types_atoms
+    use m_types_fleurinput
+    use m_types_hybdat
+    use m_types_mpi
+    use m_types_nococonv
+    use m_types_potden
+    use m_types_sphhar
+    use m_types_stars
+    use m_types_sternheimerjob
+    use m_types_xcpot
 
 
     implicit none 
+    private
+    public :: dfpt_generate_gradient
 
 contains 
 
     subroutine dfpt_generate_gradient(sternheimerJob,fi,fmpi,sphhar,hybdat,xcpot,nococonv,stars,rho,vTot,grRho3,grVtot3,grVc3,grVext3,grgrVext3x3)
         
-        use m_dfpt_vgen
-        use m_vgen_coulomb
-        use m_dfpt_potdenLocal
-        use m_dfpt_gradient 
-        use m_grdchlh
         
 
         type(t_sternheimerjob),intent(in) :: sternheimerJob

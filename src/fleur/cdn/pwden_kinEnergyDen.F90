@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -19,6 +19,21 @@ MODULE m_pwden_kinEnergyDen
    !! After accumulating over all bands, the real-space KED is FFT'd back to
    !! reciprocal space and stored as star coefficients in kinEnergyDen%pw.
 
+   USE m_types_fftGrid
+   USE m_fft_interface
+   USE m_juDFT
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_input
+   USE m_types_kpts
+   USE m_types_lapw
+   USE m_types_mat
+   USE m_types_potden
+   USE m_types_stars
+   USE m_types_sym
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: pwden_kinenergyden
 CONTAINS
 
    SUBROUTINE pwden_kinEnergyDen(stars, kpts, input, cell, atoms, sym, &
@@ -28,10 +43,6 @@ CONTAINS
       !! This is called once per k-point from cdnval_kinEnergyDen.
       !! The result is added to kinEnergyDen%pw(:, jspin).
 
-      USE m_types
-      USE m_types_fftGrid
-      USE m_fft_interface
-      USE m_juDFT
 
       IMPLICIT NONE
 

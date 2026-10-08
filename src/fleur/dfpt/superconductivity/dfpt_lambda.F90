@@ -20,8 +20,36 @@ module m_dfpt_lambda
 #define CPP_zgemm zgemm
 #endif
 
-   use m_types
    use m_constants
+   use m_fleur_init
+   use m_eig66_io, only: read_eig
+   use m_trafo, only: waveftrafo_gen_zmat, waveftrafo_gen_cmt
+   use m_genMTBasis, only: genMTBasis
+   use m_hs_int_direct
+   use m_inv3
+   use m_dwigner
+   use m_map_to_unit
+   use m_types_abc
+   use m_types_atoms
+   use m_types_enpara
+   use m_types_fleurinput
+   use m_types_forcetheo
+   use m_types_hybdat
+   use m_types_hybinp
+   use m_types_kpts
+   use m_types_lapw
+   use m_types_mat
+   use m_types_mpdata
+   use m_types_mpi
+   use m_types_nococonv
+   use m_types_potden
+   use m_types_radfun
+   use m_types_misc
+   use m_types_sphhar
+   use m_types_stars
+   use m_types_sym
+   use m_types_usdus
+   use m_types_xcpot
 
    implicit none
 
@@ -34,7 +62,6 @@ contains
    subroutine dfpt_read_fullsym(fmpi, fi, sym_full, qvec_full)
       !! Reads the `fullsym_` input set and returns the full symmetry group and
       !! the symmetry-reduced q mesh.
-      use m_fleur_init
 
       type(t_mpi),        intent(in)  :: fmpi
       type(t_fleurinput), intent(in)  :: fi
@@ -48,7 +75,6 @@ contains
       type(t_nococonv)   :: nococonv_fullsym
       type(t_enpara)     :: enpara_fullsym
       type(t_results)    :: results_fullsym
-      type(t_wann)       :: wann_fullsym
       type(t_hybdat)     :: hybdat_fullsym
       type(t_mpdata)     :: mpdata_fullsym
 
@@ -68,7 +94,7 @@ contains
 
       ! Skip setupMPI: the parallel-solver setup can fail if the fullsym q-mesh
       call fleur_init(fmpi_fullsym, fi_fullsym, sphhar_fullsym, stars_fullsym, nococonv_fullsym, forcetheo_fullsym, &
-                      enpara_fullsym, xcpot_fullsym, results_fullsym, wann_fullsym, hybdat_fullsym, mpdata_fullsym, inp_pref, l_skip_setupmpi=.true.)
+                      enpara_fullsym, xcpot_fullsym, results_fullsym, hybdat_fullsym, mpdata_fullsym, inp_pref, l_skip_setupmpi=.true.)
 
       sym_full  = fi_fullsym%sym
       qvec_full = fi_fullsym%kpts
@@ -116,10 +142,6 @@ contains
       !! every operation of the full group. `eig_win` returns the band-window
       !! eigenvalues for `dfpt_check_lambda`.
 
-      use m_eig66_io,   only: read_eig
-      use m_trafo,      only: waveftrafo_gen_zmat, waveftrafo_gen_cmt
-      use m_genMTBasis, only: genMTBasis
-      use m_hs_int_direct
 
       type(t_fleurinput),   intent(in)  :: fi
       type(t_sym),          intent(in)  :: sym_full
@@ -406,7 +428,6 @@ contains
       !! tabulated up to `nop`, so the spatial operation is `-invmrot` at index
       !! `isym - nop`, and the source block is conjugated
 
-      use m_inv3
 
       type(t_fleurinput), intent(in)    :: fi
       type(t_sym),        intent(in)    :: sym_full
@@ -511,7 +532,6 @@ contains
       !! translation vectors and Wigner d matrices on the full group, plus the
       !! radial overlap table in the t_abc radial ordering.
 
-      use m_dwigner
 
       type(t_fleurinput),   intent(in)  :: fi
       type(t_sym),          intent(in)  :: sym_full
@@ -524,7 +544,6 @@ contains
       integer,              intent(out) :: maxlmindx, maxn_r
 
       integer :: itype, l, m1, m2, isym, iisym, ilo, jlo, iOrd, jOrd, lmaxd
-      integer :: n_l(0:fi%atoms%lmaxd), lo_ord(fi%atoms%nlod)
 
       lmaxd = fi%atoms%lmaxd
 
@@ -570,18 +589,9 @@ contains
             olapmt(2, 2, l, itype) = cmplx(usdus%ddn(l, itype, jsp), 0.0)
          end do
 
-         ! set number of radfuns 
-         n_l    = 2 ! u, dot(u)
-         lo_ord = 0
-         do ilo = 1, fi%atoms%nlo(itype)
-            l           = fi%atoms%llo(ilo, itype)
-            n_l(l)      = n_l(l) + 1
-            lo_ord(ilo) = n_l(l)
-         end do
-
          do ilo = 1, fi%atoms%nlo(itype)
             l    = fi%atoms%llo(ilo, itype)
-            iOrd = lo_ord(ilo)
+            iOrd = fi%atoms%slot_of_lo(ilo, itype)
 
             olapmt(1, iOrd, l, itype) = cmplx(usdus%uulon(ilo, itype, jsp), 0.0)
             olapmt(iOrd, 1, l, itype) = olapmt(1, iOrd, l, itype)
@@ -590,7 +600,7 @@ contains
 
             do jlo = 1, fi%atoms%nlo(itype)
                if (fi%atoms%llo(jlo, itype) /= l) cycle
-               jOrd = lo_ord(jlo)
+               jOrd = fi%atoms%slot_of_lo(jlo, itype)
                olapmt(iOrd, jOrd, l, itype) = cmplx(usdus%uloulopn(ilo, jlo, itype, jsp), 0.0)
             end do
          end do
@@ -604,7 +614,6 @@ contains
       !! restricts the search to `neq(itype)`.
       !! DFPT runs with -nosym, types are broken up
 
-      use m_map_to_unit
 
       type(t_atoms),  intent(in)    :: atoms
       type(t_sym),    intent(in)    :: sym_full
@@ -655,7 +664,6 @@ contains
       !! radial-function index (u, udot, local orbitals).
 
 
-      use m_types_abc
 
       type(t_fleurinput), intent(in)  :: fi
       type(t_usdus),      intent(in)  :: usdus
@@ -666,6 +674,7 @@ contains
       complex,            intent(out) :: cmt(:, :, :)
 
       type(t_abc) :: abc
+      type(t_radfun) :: rf
       integer     :: itype, na, iatom, indx, l, ll, m, lm, i
       complex     :: cdum
 
@@ -673,7 +682,8 @@ contains
 
       do itype = 1, fi%atoms%ntype
          call abc%init(fi%input, fi%atoms, nbands, itype)
-         call abc%calc_abc(fi%input, fi%atoms, fi%sym, fi%cell, lapw, nbands, usdus, fi%noco, nococonv, jsp, itype, zMat)
+         call rf%from_usdus(fi%atoms, usdus, itype)
+         call abc%calc_abc(fi%input, fi%atoms, fi%sym, fi%cell, lapw, nbands, rf, fi%noco, nococonv, jsp, itype, zMat)
 
          do na = 1, fi%atoms%neq(itype)
             iatom = fi%atoms%firstAtom(itype) + na - 1

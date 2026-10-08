@@ -6,6 +6,11 @@
 
       MODULE m_socsym
       use m_juDFT
+      use m_constants
+      use m_inv3
+      implicit none
+      private
+      public :: soc_sym, cross
 !-----------------------------------------------------------------------!
 ! tests the compatibility of the symmetry elements with the SQA defined !
 ! by theta and phi in case of spin-orbit coupling.                gb`02 !
@@ -15,8 +20,6 @@
      >                   nop,mrot,theta,phi,amat,
      <                   error)
       
-      USE m_constants
-      USE m_inv3
       IMPLICIT NONE
 
       INTEGER, INTENT (IN)  :: nop, mrot(3,3,nop)

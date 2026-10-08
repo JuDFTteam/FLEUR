@@ -1,16 +1,36 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2019 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_xcBfield
-   USE m_types
    USE m_constants
    USE m_plot
    USE m_divergence
    USE m_juDFT
+   USE m_vgen_coulomb
+   USE m_gradYlm
+   USE m_grdchlh
+   USE m_sphpts
+   USE m_checkdop
+   USE m_BfieldtoVmat
+   USE m_pw_tofrom_grid
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_field
+   USE m_types_xcpot
+   USE m_types_input
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_sphhar
+   USE m_types_stars
+   USE m_types_sym
+   USE m_types_vacuum
 
    IMPLICIT NONE
+   PRIVATE
 
    !-----------------------------------------------------------------------------
    ! This module contains all the operations on exchange-correlation B-fields
@@ -103,13 +123,6 @@ CONTAINS
    END SUBROUTINE makeVectorField
 
    SUBROUTINE sourcefree(fmpi,field,stars,atoms,sphhar,vacuum,input ,sym,cell,aVec,vScal,vCorr)
-      USE m_vgen_coulomb
-      USE m_gradYlm
-      USE m_grdchlh
-      USE m_sphpts
-      USE m_checkdop
-      USE m_BfieldtoVmat
-      USE m_pw_tofrom_grid
 
       ! Takes a vectorial quantity, i.e. a t_potden variable of dimension 3, and
       ! makes it into a source free vector field as follows:
@@ -199,7 +212,6 @@ CONTAINS
    END SUBROUTINE sourcefree
 
    SUBROUTINE correctPot(vTot,c)
-      USE m_types
 
       ! Takes a vectorial quantity c and saves its components into the appro
       ! priate components of the potential matrix V.

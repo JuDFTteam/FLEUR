@@ -1,5 +1,8 @@
       MODULE m_nshell
       use m_juDFT
+      implicit none
+      private
+      public :: nshell
 c-------------------------------------------------------------------
 c     Constructs the neighbouring shells up to the given number nsh
 c                                                 M. Lezaic '04

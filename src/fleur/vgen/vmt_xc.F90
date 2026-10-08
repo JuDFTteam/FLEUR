@@ -13,6 +13,22 @@ MODULE m_vmt_xc
    use mpi 
 #endif
    USE m_judft
+   USE m_libxc_postprocess_gga
+   USE m_mt_tofrom_grid
+   USE m_types_xcpot_inbuild
+   USE m_mgga_alpha
+   USE m_constants
+   USE m_types_atoms
+   USE m_types_xcpot
+   USE m_types_input
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_potden
+   USE m_types_sphhar
+   USE m_types_sym
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: vmt_xc
       !.....------------------------------------------------------------------
       !     Calculate the GGA xc-potential in the MT-spheres
       !.....------------------------------------------------------------------
@@ -30,17 +46,10 @@ MODULE m_vmt_xc
       !             U.Alekseeva, February 2017
       !     *********************************************************
 
-   implicit none
    CONTAINS
       SUBROUTINE vmt_xc(fmpi,sphhar,atoms,&
                         den,xcpot,input,sym,EnergyDen,noco,vTot,vx,exc,vxc,vTau,alphaMin,alphaMax)
 
-         use m_libxc_postprocess_gga
-         USE m_mt_tofrom_grid
-         USE m_types_xcpot_inbuild
-         USE m_types
-         USE m_constants
-         USE m_mgga_alpha
          IMPLICIT NONE
 
          CLASS(t_xcpot),INTENT(IN)      :: xcpot

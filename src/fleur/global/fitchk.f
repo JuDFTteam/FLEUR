@@ -1,4 +1,7 @@
       MODULE m_fitchk
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: fitchk
       CONTAINS
       SUBROUTINE fitchk(f1,f2,av,rms,dmx)
 !     ************************************************

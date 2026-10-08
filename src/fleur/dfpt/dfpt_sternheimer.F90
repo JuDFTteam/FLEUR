@@ -1,10 +1,9 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2021 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_dfpt_sternheimer
-   USE m_types
    USE m_make_stars
    USE m_vgen
    USE m_dfpt_eigen
@@ -12,6 +11,7 @@ MODULE m_dfpt_sternheimer
    USE m_dfpt_vgen
    USE m_dfpt_fermie
    USE m_mix
+   USE m_mixing_history
    USE m_constants
    USE m_cdn_io
    USE m_eig66_io
@@ -20,11 +20,33 @@ MODULE m_dfpt_sternheimer
    USE m_plot
    USE m_checkdopall
    use m_dfpt_vefield
+   use m_judft
+   use m_types_banddos
+   use m_types_dfpt
+   use m_types_enpara
+   use m_types_field
+   use m_types_fleurinput
+   use m_types_hybdat
+   use m_types_kpts
+   use m_types_mpi
+   use m_types_nococonv
+   use m_types_potden
+   use m_types_misc
+   use m_types_sliceplot
+   use m_types_sphhar
+   use m_types_stars
+   use m_types_sternheimerjob
+   use m_types_xcpot
+#ifdef CPP_MPI
+   use mpi
+#endif
    
 
 
 
 IMPLICIT NONE
+   private
+   public :: dfpt_sternheimer
 
 CONTAINS
    SUBROUTINE dfpt_sternheimer(sternheimerJob, fi, xcpot, sphhar, stars, starsq, nococonv, qpts, fmpi, results, resultsq, enpara, hybdat, dfpt, &
@@ -458,10 +480,11 @@ CONTAINS
 
          ! Mix input and output densities
          CALL timestart("DFPT mixing")
-         CALL mix_charge(field2, fmpi, (iter == fi%input%itmax .OR. judft_was_argument("-mix_io")), starsq, &
+         CALL mix_charge(field2, fmpi, starsq, &
                          fi%atoms, sphhar, fi%vacuum, fi%input, fi%sym, fi%cell, fi%noco, nococonv, &
                          archiveType, xcpot, iter, denIn1, denOut1, results1,l_runhia=.false.,sliceplot=fi%sliceplot,&
                          inDenIm=denIn1Im, outDenIm=denOut1Im, dfpt_tag=dfpt_tag)
+         IF (iter == fi%input%itmax .OR. judft_was_argument("-mix_io")) CALL mixing_history_close(fmpi, fi%input%imix, dfpt_tag)
          CALL timestop("DFPT mixing")
 
          IF (sternheimerJob%l_IBScorrection) denIn1%mt(:,0:,iDtype,:) = denIn1%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)
@@ -470,10 +493,11 @@ CONTAINS
 
          IF (l_minusq) THEN
             CALL timestart("DFPT mixing")
-            CALL mix_charge(field2, fmpi, (iter == fi%input%itmax .OR. judft_was_argument("-mix_io")), starsmq, &
+            CALL mix_charge(field2, fmpi, starsmq, &
                             fi%atoms, sphhar, fi%vacuum, fi%input, fi%sym, fi%cell, fi%noco, nococonv, &
                             archiveType, xcpot, iterm, denIn1m, denOut1m, results1m, l_runhia=.false.,sliceplot=fi%sliceplot,&
                             inDenIm=denIn1Im, outDenIm=denOut1Im, dfpt_tag=dfpt_tag)
+            IF (iter == fi%input%itmax .OR. judft_was_argument("-mix_io")) CALL mixing_history_close(fmpi, fi%input%imix, dfpt_tag)
             CALL timestop("DFPT mixing")
 
             IF (sternheimerJob%l_IBScorrection) denIn1m%mt(:,0:,iDtype,:) = denIn1m%mt(:,0:,iDtype,:) - grRho%mt(:,0:,iDtype,:)

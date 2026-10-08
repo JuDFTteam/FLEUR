@@ -22,16 +22,21 @@ Testset: Basic
 | +   | Bulk Cu one iteration                        | basic/CuBulk             | fast,bulk             |                    |                 | 2   |
 | +   | Bulk Cu one iteration,DOS                    | basic/CuDOS              | fast,bulk,dos         |                    |                 | 2   |
 | +   | Bulk Cu one iteration,DOS,Orbital decomp.    | basic/CuOrb              | fast,bulk,dos,orbcomp |                    |                 | 2   |
+| +   | Bulk Cu spin-polarized, joint DOS            | basic/CuJointDOS         | fast,bulk,dos         |                    |                 | 2   |
 |     | Bulk Co, DOS,MCD                             | basic/CoMCD              | bulk,dos,mcd          | MCD disabled       |                 | 2   |
 | +   | Bulk Co, bandstructure, unfolding            | basic/CoUnfold           | band,bulk             |                    |                 | 2   |
 | +   | Bulk Fe, Kerker preconditioner               | basic/Fe_Kerker          | bulk                  |                    |                 | 2   |
 | +   | Bulk Fe fcc with relativistic core solver    | basic/Fe_fcc_kcrel       |                       |                    |                 | 2   |
 | +   | Si with LOs                                  | basic/SiLO               | bulk                  |                    |                 | 2   |
+| +   | Cu with APW+lo, LAPW and APW channels        | basic/CuAPWlo            | bulk                  |                    |                 | 2   |
+| +   | Cu with APW+lo and DFT+U on the APW+lo d     | basic/CuAPWlo_U          | bulk,ldau             |                    |                 | 2   |
+| +   | Fe with APW+lo, SOC 2nd variation            | basic/FeAPWlo_SOC2       | bulk,soc              |                    |                 | 2   |
 | +   | Bulk PTO                                     | basic/PTO                | bulk                  |                    |                 | 2   |
 | +   | Bulk PTO, SOC                                | basic/PTO-SOC            | bulk,soc              |                    |                 | 2   |
 | +   | Bulk Fe, Tetrahedon method                   | basic/Fe_Tetra_noSYM     | bulk                  |                    |                 | 2   |
 |     | LDA+U with AMF double counting and magnetism | basic/NiOldaUAMF         | bulk,ldau             | LDA+U AMF disabled |                 | 2   |
 | +   | LDA+U with LF double counting and magnetism  | basic/NiOldaUFLL         | bulk,ldau             |                    |                 | 2   |
+| +   | DFT+V between two atom types                 | basic/GaAsLdaV           | bulk,ldau             |                    |                 | 2   |
 | +   | Crystal field output                         | basic/CrystalFieldOutput | bulk                  |                    |                 | 2   |
 
 Testset: Films
@@ -55,6 +60,7 @@ Testset: Forces
 | --- | -------------------------------------------- | ----------------------- | --------- | ------- | ------- | --- |
 | +   | Bulk GaAs, Relaxation, LDA+U                 | forces/GaAsMultiUForce  | bulk,ldau |         |         | 2   |
 | +   | Bulk VO2, Relaxation                         | forces/VO2_forces       | bulk      |         |         | 2   |
+| +   | Si displaced, APW+lo forces                  | forces/SiAPWlo_force    | bulk      |         |         | 2   |
 | +   | Bulk VO2, Relaxation, different force levels | forces/VO2_force_levels | bulk      |         |         | 2   |
 | +   | Bulk H2O, Relaxtion using BFGS               | forces/H2ORelaxBFGS     | bulk      |         |         | 2   |
 
@@ -71,7 +77,7 @@ Testset: DFPT
 | +   | C bulk fcc              | dfpt/CBulk        | libxc | partly ready |         |   1 |
 | +   | C bulk fcc BEC             | dfpt/CBulk-BEC        | libxc | partly ready |         |   1 |
 | +   | Graphene Film           | dfpt/GrapheneFilm | libxc |              |         |   1 |
-| +   | V bulk bcc, mpi         | dfpt/VBulkMPI     | libxc |              |         |   2 |
+|     | V bulk bcc, mpi         | dfpt/VBulkMPI     | libxc |              |         |   2 |
 
 
 Testset: Noco
@@ -82,14 +88,14 @@ Testset: Noco
 | +   | Fe bct,noco, LOs                              | noco/Fe_bct_LO          | bulk                         |                   |         | 2   |
 | +   | Fe bct,noco                                   | noco/Fe_bct             | bulk                         |                   |         | 2   |
 | +   | Fe bct,noco,libxc                             | noco/Fe_bct_LibXC       | bulk,libxc                   |                   |         | 2   |
-| +   | Noco, one atom, mag. in x direction           | noco/1atx               | bulk                         |                   |         | 2   |
-| +   | Noco, one atom, mag. in y direction           | noco/1aty               | bulk                         |                   |         | 2   |
-| +   | Noco, one atom, mag. in z direction           | noco/1atz               | bulk                         |                   |         | 2   |
-| +   | Noco, one atom, mag. in non-sym direction     | noco/1at                | bulk                         |                   |         | 2   |
-| +   | Noco,SOC, one atom, mag. in x direction       | noco/1atSOCx            | bulk,soc                     |                   |         | 2   |
-| +   | Noco,SOC, one atom, mag. in y direction       | noco/1atSOCy            | bulk,soc                     |                   |         | 2   |
-| +   | Noco,SOC, one atom, mag. in z direction       | noco/1atSOCz            | bulk,soc                     |                   |         | 2   |
-| +   | Noco,SOC, one atom, mag. in non-sym direction | noco/1atSOC             | bulk,soc                     |                   |         | 2   |
+| +   | Noco, one atom, mag. in x direction           | noco/1atx               | bulk,hdf                     |                   |         | 2   |
+| +   | Noco, one atom, mag. in y direction           | noco/1aty               | bulk,hdf                     |                   |         | 2   |
+| +   | Noco, one atom, mag. in z direction           | noco/1atz               | bulk,hdf                     |                   |         | 2   |
+| +   | Noco, one atom, mag. in non-sym direction     | noco/1at                | bulk,hdf                     |                   |         | 2   |
+| +   | Noco,SOC, one atom, mag. in x direction       | noco/1atSOCx            | bulk,soc,hdf                 |                   |         | 2   |
+| +   | Noco,SOC, one atom, mag. in y direction       | noco/1atSOCy            | bulk,soc,hdf                 |                   |         | 2   |
+| +   | Noco,SOC, one atom, mag. in z direction       | noco/1atSOCz            | bulk,soc,hdf                 |                   |         | 2   |
+| +   | Noco,SOC, one atom, mag. in non-sym direction | noco/1atSOC             | bulk,soc,hdf                 |                   |         | 2   |
 | +   | Noco, SOC, two eq. atoms, relLOs              | noco/relLO              | bulk,soc                     |                   |         | 2   |
 | +   | FFNNoco, one atom, mag. in x direction        | noco/1atFFNx            | bulk,hdf                     |                   |         | 2   |
 | +   | FFNNoco, one atom, mag. in y direction        | noco/1atFFNy            | bulk,hdf                     |                   |         | 2   |
@@ -100,12 +106,18 @@ Testset: Noco
 | +   | Noco, Mn Monolayer SS q=1,0,0                 | noco/MnFilmSS           | film,spinspiral              |                   |         | 2   |
 | +   | Noco, Mn Monolayer mag. in X                  | noco/MnFilmX            | film                         |                   |         | 2   |
 | +   | Noco, Mn Monolayer mag. in Y                  | noco/MnFilmY            | film                         |                   |         | 2   |
-| +   | Fe bct,noco,non-collinear,coretails           | noco/Fe_bct_ctail       | bulk                         |                   |         | 2   |
+| +   | Fe bct,noco,non-collinear,coretails           | noco/Fe_bct_ctail       | bulk,hdf                     |                   |         | 2   |
 | +   | Noco, Mn Monolayer mag. in X, coretails       | noco/MnFilm_ctail       | film                         |                   |         | 2   |
-| +   | Noco, one atom in x, noco IR starting density | noco/1atx_sdNocoIR      | bulk                         |                   |         | 2   |
+| +   | Noco, one atom in x, noco IR starting density | noco/1atx_sdNocoIR      | bulk,hdf                     |                   |         | 2   |
+| +   | Noco APW+lo, two Fe atoms, canted             | noco/FeAPWlo_noco       | bulk                         |                   |         | 2   |
+| +   | Noco APW+lo, Fe bcc flat spin spiral          | noco/FeAPWlo_ss         | bulk,spinspiral              |                   |         | 2   |
+| +   | Noco APW+lo, Fe bcc, SOC 1st variation        | noco/FeAPWlo_SOC1       | bulk,soc                     |                   |         | 2   |
 |     | Fe bcc, Flipcdn and noco in MT,x-dir          | noco/Fe_bcc_FlipcdnXLDA | bulk                         | produces warnings |         | 2   |
 |     | Fe bcc, Flipcdn and noco in MT,y-dir          | noco/Fe_bcc_FlipcdnYLDA | bulk                         | produces warnings |         | 2   |
 | +   | relaxation feature of FFN in the MT           | noco/RelaxMT            | bulk,hdf                     |                   |         | 2   |
+| +   | FFN noco, spin off-diagonal LDA+U             | noco/FFNUCross          | bulk,ldau,soc,hdf            |                   |         | 2   |
+| +   | FFN noco, transverse constraint               | noco/FFNConstraint      | bulk,hdf                     |                   |         | 2   |
+| +   | Fe bcc noco l_mperp, DOS, jDOS and joint DOS   | noco/FeBccNocoDOS       | bulk,dos,hdf                 |                   |         | 2   |
 
 Testset: Experimental
 ----------
@@ -118,13 +130,12 @@ Testset: Experimental
 |     | Test of GW interface 1                         | extra/gw1Interface      | bulk          | inp.xml files too old     |         | 2   |
 |     | Test of GW interface 2                         | extra/gw2Interface      | bulk          | inp.xml files too old     |         | 2   |
 |     | Sm jDOS decomposition                          | extra/SmAtomjDOS        | bulk,dos      |                           |         | 2   |
-| +   | C: simple test for the Wannier code            | extra/Cwann             | bulk,wannier  |                           |         | 2   |
 |     | TiO2 EELS spectrum                             | extra/TiO2eels          | bulk,eels     | inp.xml too old           |         | 2   |
 | +   | Hubbard1 using SOC                             | extra/Gd_Hubbard1       | bulk,edsolver |                           |         | 2   |
 | +   | Hubbard1 without sym                           | extra/Gd_Hubbard1_noSYM | bulk,edsolver |                           |         | 2   |
 |     | diamond for one k-point with scan              | extra/Diamond_SCAN      | bulk,libxc    | SCAN has to be refactored |         | 2   |
 | +   | diamond, self-consistent SCAN (V_tau in H)     | extra/MetaGGA_SCAN      | bulk,libxc,metagga | exercises the MetaGGA V_tau interstitial+MT Hamiltonian and the tau*V_tau double counting |         | 2   |
-| +   | bcc V, self-consistent SCAN with semicore LOs  | extra/MetaGGA_SCAN_LO   | bulk,libxc,metagga | exercises the V_tau contribution to the local-orbital Hamiltonian blocks (h_LO, h_LO2, tuloulo_newer) |         | 2   |
+| +   | bcc V, self-consistent SCAN with semicore LOs  | extra/MetaGGA_SCAN_LO   | bulk,libxc,metagga | exercises the V_tau contribution to the local-orbital blocks of the local Hamiltonian |         | 2   |
 | +   | 3D vector plots of the magnetization           | extra/PlotOnlyMT        | bulk,plot,hdf |                           |         | 2   |
 | +   | density and potential plots, vector plots      | extra/PlotDenandPot     | bulk,plot,hdf |                           |         | 2   |
 
@@ -161,3 +172,22 @@ Testset: Greenfunctions
 |     | Greens Function intersite multiple shells            | greens/GreensFunction_IntersiteMultipleShells        | bulk  |                 |         | 2   |
 |     | Greens Function intersite shell construction         | greens/GreensFunction_IntersiteShellConstruction     | bulk  | takes too long! |         | 2   |
 |     | Greens Function intersite shell construction         | greens/GreensFunction_IntersiteShellConstructionFilm | bulk  |                 |         | 2   | 
+
+Testset: Wannier
+------
+
+|     | Description                              | directory name   | marks         | Remarks | CmdLine | MPI |
+| --- | ---------------------------------------- | ---------------- | ------------- | ------- | ------- | --- |
+| +   | Pt no-SOC, wannierlib total spread       | wannier/WannPt   | wannierlib,bulk  |         |         | 1   |
+| +   | Pt SOC, wannierlib total spread              | wannier/WannPtSOC | wannierlib,bulk,soc |         |         | 1   |
+| +   | fcc Fe FM noco, wannierlib total spread      | wannier/WannFeFM | wannierlib,bulk  |         |         | 1   |
+| +   | fcc Fe FM noco, moment along y (alpha!=0)    | wannier/WannFeFMy | wannierlib,bulk  |         |         | 1   |
+| +   | fcc Fe AFM noco, wannierlib total spread     | wannier/WannFeAFM | wannierlib,bulk  |         |         | 1   |
+| +   | fcc Fe AFM noco+SOC, wannierlib total spread | wannier/WannFeAFMSOC | wannierlib,bulk,soc |         |         | 1   |
+| +   | Pt SOC, wannierlib real-space operators O(R) | wannier/WannPtSOCOps | wannierlib,bulk,soc |         |         | 1   |
+| +   | bcc Fe FM collinear+SOC, wannierlib O(R)     | wannier/WannFeBccSOC | wannierlib,bulk,soc |         |         | 1   |
+| +   | fcc Fe AFM collinear+SOC, wannierlib O(R)    | wannier/WannFeAFMColSOC | wannierlib,bulk,soc |         |         | 1   |
+| +   | bcc Fe FM collinear no-SOC, wannierlib O(R)  | wannier/WannFeBcc | wannierlib,bulk |         |         | 1   |
+| +   | fcc Fe AFM noco+SOC, wannierlib O(R)         | wannier/WannFeAFMSOCOps | wannierlib,bulk,soc |         |         | 1   |
+| +   | fcc Fe AFM collinear no-SOC, wannierlib O(R) | wannier/WannFeAFMCol | wannierlib,bulk |         |         | 1   |
+| +   | bcc Fe FM collinear, Wannier interpolation   | wannier/WannFeBccInterp | wannierlib,bulk,band |         |         | 1   |

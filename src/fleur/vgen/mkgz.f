@@ -7,11 +7,14 @@ cc      gzgr
 cc    used to calculate gradient contribution to xc potential and
 cc    energy.
 c.....------------------------------------------------------------------
+      USE m_types_xcpot
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: mkgz
       CONTAINS
       SUBROUTINE mkgz(
      >     nmzdf,jspins,rh1,rh2,rhdz1,rhdz2,rhdzz1,rhdzz2,idx,
      <     grad)
-      USE m_types
       IMPLICIT NONE
       INTEGER, INTENT (IN) :: nmzdf,jspins,idx
       REAL,    INTENT (IN) :: rh1(nmzdf),rhdz1(nmzdf),rhdzz1(nmzdf)

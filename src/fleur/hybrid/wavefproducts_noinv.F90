@@ -1,12 +1,28 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 module m_wavefproducts_noinv
    USE m_types_hybdat
+   USE m_juDFT
+   USE m_wavefproducts_aux
+   USE m_wavefproducts_vac, ONLY: wavefproducts_vac
+   USE m_constants
+   USE m_io_hybrid
+   USE m_calc_cmt
+   USE m_types_fleurinput
+   USE m_types_lapw
+   USE m_types_mat
+   USE m_types_mpdata
+   USE m_types_nococonv
+   USE m_types_stars
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: wavefproducts_noinv, wavefproducts_noinv_mt
 
 CONTAINS
    SUBROUTINE wavefproducts_noinv(fi, ik, z_k, iq, jsp, bandoi, bandof, lapw, hybdat, mpdata, nococonv, stars, ikqpt, cmt_nk, cprod)
-      USE m_types
-      use m_juDFT
-      use m_wavefproducts_aux
-      use m_constants, only: cmplx_0
       IMPLICIT NONE
 
       type(t_fleurinput), intent(in)  :: fi
@@ -28,6 +44,8 @@ CONTAINS
       REAL                 :: kqpt(3), kqpthlp(3)
       complex, allocatable :: c_phase_kqpt(:)
       type(t_mat)          :: z_kqpt_p
+      type(t_lapw)         :: lapw_kq
+      type(t_mat)          :: z_kq
 
       call timestart("wavefproducts_noinv")
       ! calculate ikqpt
@@ -51,11 +69,18 @@ CONTAINS
          cprod%data_c(:,:) = 0.0
          !$acc end kernels
          call wavefproducts_IS_FFT(fi, ik, iq, g_t, jsp, bandoi, bandof, mpdata, hybdat, lapw, stars, nococonv, &
-                                    ikqpt, z_k, z_kqpt_p, c_phase_kqpt, cprod)
+                                    ikqpt, z_k, z_kqpt_p, c_phase_kqpt, cprod, &
+                                    lapw_kq_out=lapw_kq, z_kq_out=z_kq)
 
          call wavefproducts_noinv_MT(fi, ik, iq, bandoi, bandof, nococonv, mpdata, hybdat, &
                                     jsp, ikqpt, z_kqpt_p, c_phase_kqpt, cmt_nk, cprod%data_c)
       !$acc end data ! cprod
+
+      if (fi%input%film) then
+         ! films: vacuum rows of cprod
+         call wavefproducts_vac(fi, ik, iq, ikqpt, g_t, jsp, bandoi, bandof, mpdata, &
+                                hybdat, lapw, lapw_kq, z_k, z_kq, cprod%data_c)
+      endif
 
       call timestop("wavefproducts_noinv")
 
@@ -63,12 +88,6 @@ CONTAINS
 
    subroutine wavefproducts_noinv_MT(fi, ik, iq, bandoi, bandof, nococonv, mpdata, hybdat, jsp, ikqpt, &
                                      z_kqpt_p, c_phase_kqpt, cmt_nk, cprod)
-      use m_types
-      USE m_constants
-      use m_io_hybrid
-      use m_judft
-      use m_wavefproducts_aux
-      use m_calc_cmt
       IMPLICIT NONE
       type(t_fleurinput), intent(in)  :: fi
       type(t_nococonv), intent(in)    :: nococonv

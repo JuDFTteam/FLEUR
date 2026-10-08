@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 MODULE m_spratm
 
 !------------------------------------------------------------------
@@ -27,12 +32,15 @@ MODULE m_spratm
 !
 !........................................................ spratm
 
+   USE m_core
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: spratm
 CONTAINS
 
    SUBROUTINE spratm(msh,vr,br,z,rnot,dx,jtop,ectab,ntab,ltab,sume,rhochr,rhospn,&
                      nshell_out,nqntab_out,lqntab_out,bhff_out,isomerShift_out)
 
-      USE m_core
 
       IMPLICIT NONE
 

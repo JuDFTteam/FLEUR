@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -8,6 +8,7 @@ MODULE m_types_xcpot_inbuild_nofunction
    USE m_types_xcpot_data
    USE m_types_xcpot
    USE m_judft
+   USE M_mpi_bc_tool
    IMPLICIT NONE
    PRIVATE
    REAL, PARAMETER, PRIVATE :: hrtr_half = 0.5
@@ -64,7 +65,6 @@ MODULE m_types_xcpot_inbuild_nofunction
 CONTAINS
 
    Subroutine Mpi_bc_xcpot_ib(This, Mpi_comm, Irank)
-      Use M_mpi_bc_tool
       Class(t_xcpot_inbuild_nf), Intent(Inout)::This
       Integer, Intent(In):: Mpi_comm
       Integer, Intent(In), Optional::Irank
@@ -98,7 +98,6 @@ CONTAINS
    END FUNCTION relativistic_correction
 
    CHARACTER(len=4) FUNCTION xcpot_get_name(xcpot)
-      USE m_judft
       IMPLICIT NONE
       CLASS(t_xcpot_inbuild_nf), INTENT(IN)    :: xcpot
       IF (xcpot%icorr == 0) CALL judft_error("xc-potential not initialized", calledby="types_xcpot.F90")
@@ -106,7 +105,6 @@ CONTAINS
    END FUNCTION xcpot_get_name
 
    SUBROUTINE xcpot_init(xcpot, ntype)
-      USE m_judft
       IMPLICIT NONE
       CLASS(t_xcpot_inbuild_nf), INTENT(INOUT)    :: xcpot
       INTEGER, INTENT(IN)           :: ntype
@@ -197,7 +195,6 @@ CONTAINS
    END FUNCTION xcpot_is_hybrid
 
    FUNCTION xcpot_get_exchange_weight(xcpot) RESULT(a_ex)
-      USE m_judft
       IMPLICIT NONE
       CLASS(t_xcpot_inbuild_nf), INTENT(IN):: xcpot
 

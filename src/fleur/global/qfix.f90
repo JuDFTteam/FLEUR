@@ -1,10 +1,27 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions 
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_qfix
   USE m_juDFT
+  USE m_constants
+  USE m_cdntot
+  USE m_xmlOutput
+  USE m_types_atoms
+  USE m_types_cell
+  USE m_types_field
+  USE m_types_input
+  USE m_types_mpi
+  USE m_types_nococonv
+  USE m_types_potden
+  USE m_types_sphhar
+  USE m_types_stars
+  USE m_types_sym
+  USE m_types_vacuum
+  IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: qfix
   !Calculate total charge
   !Depending on variable input%qfix, the following will be done to fix the charge
   !Input qfix can be 1 or 2
@@ -22,20 +39,6 @@ CONTAINS
   SUBROUTINE qfix(fmpi,stars,nococonv,atoms,sym,vacuum,sphhar,input,cell,field,&
                   den,l_noco,l_printData,l_par,force_fix,fix,fix_pw_only)
 
-    USE m_types_atoms
-    USE m_types_sym
-    use m_types_stars
-    USE m_types_vacuum
-    USE m_types_sphhar
-    USE m_types_input
-    USE m_types_cell
-    USE m_types_potden
-    use m_types_nococonv
-    use m_types_field
-    use m_types_mpi
-    USE m_constants
-    USE m_cdntot
-    USE m_xmlOutput
 
     IMPLICIT NONE
 

@@ -1,12 +1,28 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2020 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_forcea21
+   USE m_forcea21lo
+   USE m_forcea21U
+   USE m_types_misc
+   USE m_types_radfun
+   USE m_types_tlmplm
+   USE m_types_abc
+   USE m_types_potden
+   USE m_constants
+   USE m_juDFT
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_input
+   USE m_types_sym
+   implicit none
+   PRIVATE
+   PUBLIC :: force_a21
 CONTAINS
-   SUBROUTINE force_a21(input,atoms,sym ,cell,we,jsp,epar,ne,eig,usdus,tlmplm,&
-                        vtot,abc,aveccof,bveccof,cveccof,f_a21,f_b4,results,itype)
+   SUBROUTINE force_a21(input,atoms,sym ,cell,we,jsp,epar,ne,eig,rf,tlmplm,&
+                        vtot,abc,aveccof,bveccof,cveccof,f_a21,results,itype)
       !--------------------------------------------------------------------------
       ! Pulay 2nd and 3rd term force contributions à la Rici et al.
       !
@@ -23,21 +39,10 @@ CONTAINS
       ! 22/june/97: Probably found symmetrization error replacing S^-1 by S
       ! (IS instead of isinv)
       !
-      ! Force contribution B4 added following
-      ! Madsen, Blaha, Schwarz, Sjostedt, Nordstrom
-      ! GMadsen FZJ 20/3-01
+      ! With APW+lo the MT surface term of the kinetic energy (B4 of Madsen et al.)
+      ! is part of tlmplm%h (radfun%hsurf), so A21 contains it.
       !--------------------------------------------------------------------------
 
-      USE m_forcea21lo
-      USE m_forcea21U
-      USE m_types_setup
-      USE m_types_misc
-      USE m_types_usdus
-      USE m_types_tlmplm
-      USE m_types_abc
-      USE m_types_potden
-      USE m_constants
-      USE m_juDFT
 
       IMPLICIT NONE
 
@@ -46,7 +51,7 @@ CONTAINS
       TYPE(t_sym),          INTENT(IN)    :: sym
        
       TYPE(t_cell),         INTENT(IN)    :: cell
-      TYPE(t_usdus),        INTENT(IN)    :: usdus
+      TYPE(t_radfun),       INTENT(IN)    :: rf !radial basis of itype
       TYPE(t_tlmplm),       INTENT(IN)    :: tlmplm
       TYPE(t_potden),       INTENT(IN)    :: vtot
       TYPE(t_abc),          INTENT(IN)    :: abc
@@ -61,35 +66,31 @@ CONTAINS
       COMPLEX, INTENT(IN)    :: bveccof(3,ne,0:atoms%lmaxd*(atoms%lmaxd+2),atoms%nat)
       COMPLEX, INTENT(IN)    :: cveccof(3,-atoms%llod:atoms%llod,ne,atoms%nlod,atoms%nat)
       COMPLEX, INTENT(INOUT) :: f_a21(3,atoms%ntype)
-      COMPLEX, INTENT(INOUT) :: f_b4(3,atoms%ntype)
 
       REAL,    PARAMETER :: zero=0.0
       COMPLEX, PARAMETER :: czero=CMPLX(0.,0.)
       COMPLEX dtd, dtu, utd, utu
-      INTEGER lo,n_lo
       INTEGER i, ie, im, l1, l2, ll1, ll2, lm1, lm2, m1, m2, n, natom, m
       INTEGER natrun, is, isinv, j, irinv, it, lmplmd
 
-      REAL, ALLOCATABLE :: a21(:,:), b4(:,:)
-      COMPLEX forc_a21(3), forc_b4(3)
-      REAL starsum(3), starsum2(3), gvint(3), gvint2(3)
-      REAL vec(3), vec2(3), vecsum(3), vecsum2(3)
+      REAL, ALLOCATABLE :: a21(:,:)
+      COMPLEX forc_a21(3)
+      REAL starsum(3), gvint(3)
+      REAL vec(3), vecsum(3)
 
       CALL timestart("force_a21")
 
       lmplmd = (atoms%lmaxd*(atoms%lmaxd+2)* (atoms%lmaxd*(atoms%lmaxd+2)+3))/2
 
-      ALLOCATE(a21(3,atoms%nat),b4(3,atoms%nat) )
+      ALLOCATE(a21(3,atoms%nat))
 
       n = itype
          natom = atoms%firstAtom(n)
          IF (atoms%l_geo(n)) THEN
             forc_a21(:) = czero
-            forc_b4(:) = czero
 
             DO natrun = natom,natom + atoms%neq(n) - 1
                a21(:,natrun) = zero
-               b4(:,natrun) = zero
             END DO
 
             DO ie = 1,ne
@@ -102,10 +103,10 @@ CONTAINS
                         DO m2 = -l2,l2
                            lm2 = ll2 + m2
                            DO natrun = natom,natom + atoms%neq(n) - 1
-                              utu = CONJG(tlmplm%h_loc(lm2,lm1,n,jsp,jsp))
-                              dtd = CONJG(tlmplm%h_loc(lm2+tlmplm%h_loc2(n),lm1+tlmplm%h_loc2(n),n,jsp,jsp))
-                              utd = CONJG(tlmplm%h_loc(lm2+tlmplm%h_loc2(n),lm1,n,jsp,jsp))
-                              dtu = CONJG(tlmplm%h_loc(lm2,lm1+tlmplm%h_loc2(n),n,jsp,jsp))
+                              utu = CONJG(tlmplm%h(tlmplm%ind(1,lm2,n),tlmplm%ind(1,lm1,n),n,jsp,jsp))
+                              dtd = CONJG(tlmplm%h(tlmplm%ind(2,lm2,n),tlmplm%ind(2,lm1,n),n,jsp,jsp))
+                              utd = CONJG(tlmplm%h(tlmplm%ind(2,lm2,n),tlmplm%ind(1,lm1,n),n,jsp,jsp))
+                              dtu = CONJG(tlmplm%h(tlmplm%ind(1,lm2,n),tlmplm%ind(2,lm1,n),n,jsp,jsp))
                               DO i = 1,3
                                  a21(i,natrun) = a21(i,natrun) + 2.0*&
                                     AIMAG( CONJG(abc%cof(ie,lm1,1,natrun-natom+1)) *utu*aveccof(i,ie,lm2,natrun)&
@@ -121,7 +122,7 @@ CONTAINS
                      utu = -eig(ie)
                      utd = 0.0
                      dtu = 0.0
-                     dtd = utu*usdus%ddn(l1,n,jsp)
+                     dtd = utu*rf%integral(2,2,l1,jsp,jsp)
                      DO i = 1,3
                         DO natrun = natom,natom + atoms%neq(n) - 1
                            a21(i,natrun) = a21(i,natrun) + 2.0*AIMAG(&
@@ -138,65 +139,10 @@ CONTAINS
 
             ! Add the local orbital and U contribution to a21:
 
-            CALL force_a21_lo(atoms,jsp,n,we,eig,ne,abc,aveccof,bveccof,cveccof,tlmplm,usdus,a21)
+            CALL force_a21_lo(atoms,jsp,n,we,eig,ne,abc,aveccof,bveccof,cveccof,tlmplm,rf,a21)
 
             IF (atoms%n_u+atoms%n_hia>0) THEN
-               CALL force_a21_U(atoms,n,jsp,we,ne,usdus,vTot%mmpMat(:,:,:,jsp),abc,aveccof,bveccof,cveccof,a21)
-            END IF
-
-            IF (input%l_useapw) THEN
-               
-               ! B4 force
-               DO ie = 1,ne
-                  DO l1 = 0,atoms%lmax(n)
-                     ll1 = l1* (l1+1)
-                     DO m1 = -l1,l1
-                        lm1 = ll1 + m1
-                        DO i = 1,3
-                           DO natrun = natom,natom + atoms%neq(n) - 1
-                              b4(i,natrun) = b4(i,natrun) + 0.5 *&
-                                 we(ie)/atoms%neq(n)*atoms%rmt(n)**2*AIMAG(&
-                                 CONJG(abc%cof(ie,lm1,1,natrun-natom+1)*usdus%us(l1,n,jsp)&
-                                 +abc%cof(ie,lm1,2,natrun-natom+1)*usdus%uds(l1,n,jsp))*&
-                                 (aveccof(i,ie,lm1,natrun)*usdus%dus(l1,n,jsp)&
-                                 +bveccof(i,ie,lm1,natrun)*usdus%duds(l1,n,jsp) )&
-                                 -CONJG(aveccof(i,ie,lm1,natrun)*usdus%us(l1,n,jsp)&
-                                 +bveccof(i,ie,lm1,natrun)*usdus%uds(l1,n,jsp) )*&
-                                 (abc%cof(ie,lm1,1,natrun-natom+1)*usdus%dus(l1,n,jsp)&
-                                 +abc%cof(ie,lm1,2,natrun-natom+1)*usdus%duds(l1,n,jsp)) )
-                           END DO
-                        END DO
-                     END DO
-                  END DO
-
-                  DO lo = 1,atoms%nlo(n)
-                     l1 = atoms%llo(lo,n)
-                     n_lo=2+count(atoms%llo(:lo,itype)==l1) !TODO should be a "1+" here since we are using APW?!
-                     DO m = -l1,l1
-                        lm1 = l1* (l1+1) + m
-                        DO i=1,3
-                           DO natrun = natom,natom + atoms%neq(n) - 1
-                              b4(i,natrun) = b4(i,natrun) + 0.5 *&
-                                 we(ie)/atoms%neq(n)*atoms%rmt(n)**2*AIMAG(&
-                                 CONJG( abc%cof(ie,lm1,1,natrun-natom+1)* usdus%us(l1,n,jsp)&
-                                 + abc%cof(ie,lm1,2,natrun-natom+1)* usdus%uds(l1,n,jsp) ) *&
-                                 cveccof(i,m,ie,lo,natrun)*usdus%dulos(lo,n,jsp)&
-                                 + CONJG(abc%cof(ie,lm1,n_lo,natrun-natom+1)*usdus%ulos(lo,n,jsp)) *&
-                                 ( aveccof(i,ie,lm1,natrun)* usdus%dus(l1,n,jsp)&
-                                 + bveccof(i,ie,lm1,natrun)* usdus%duds(l1,n,jsp)&
-                                 + cveccof(i,m,ie,lo,natrun)*usdus%dulos(lo,n,jsp) )  &
-                                 - (CONJG( aveccof(i,ie,lm1,natrun) *usdus%us(l1,n,jsp)&
-                                 + bveccof(i,ie,lm1,natrun) *usdus%uds(l1,n,jsp) ) *&
-                                 abc%cof(ie,lm1,n_lo,natrun-natom+1)  *usdus%dulos(lo,n,jsp)&
-                                 + CONJG(cveccof(i,m,ie,lo,natrun)*usdus%ulos(lo,n,jsp)) *&
-                                 ( abc%cof(ie,lm1,1,natrun-natom+1)*usdus%dus(l1,n,jsp)&
-                                 + abc%cof(ie,lm1,2,natrun-natom+1)*usdus%duds(l1,n,jsp)&
-                                 + abc%cof(ie,lm1,n_lo,natrun-natom+1)*usdus%dulos(lo,n,jsp) ) ) )
-                           END DO
-                        END DO
-                     END DO
-                  END DO
-               END DO
+               CALL force_a21_U(atoms,n,jsp,we,ne,rf,vTot%mmpMat(:,:,:,jsp),abc,aveccof,bveccof,cveccof,a21)
             END IF
 
             DO natrun = natom,natom + atoms%neq(n) - 1
@@ -221,12 +167,9 @@ CONTAINS
                !  transform recip vector g-g' into internal coordinates
 
                vec(:) = a21(:,natrun)
-               vec2(:) = b4(:,natrun)
 
                gvint=MATMUL(cell%bmat,vec)/tpi_const
-               gvint2=MATMUL(cell%bmat,vec2)/tpi_const
                vecsum(:) = zero
-               vecsum2(:) = zero
 
                !-gb2002
                !            irinv = invtab(ngopr(natrun))
@@ -249,26 +192,21 @@ CONTAINS
                      !  mrot acts on internal ones
                      DO i = 1,3
                         vec(i) = zero
-                        vec2(i) = zero
                         DO j = 1,3
                            
                               vec(i) = vec(i) + sym%mrot(i,j,isinv)*gvint(j)
-                              vec2(i) = vec2(i) + sym%mrot(i,j,isinv)*gvint2(j)
                            
                      END DO
                   END DO
                   DO i = 1,3
                      vecsum(i) = vecsum(i) + vec(i)
-                     vecsum2(i) = vecsum2(i) + vec2(i)
                   END DO
                END DO ! end operator loop
 
                ! Transform from internal to cart. coordinates
                starsum=MATMUL(cell%amat,vecsum)
-               starsum2=MATMUL(cell%amat,vecsum2)
                DO i = 1,3
                   forc_a21(i) = forc_a21(i) + starsum(i)/sym%invarind(natrun)
-                  forc_b4(i) = forc_b4(i) + starsum2(i)/sym%invarind(natrun)
                END DO
             END DO ! natrun
 
@@ -286,9 +224,8 @@ CONTAINS
             ! if PSI is one.
 
             DO i = 1, 3
-               results%force(i,n,jsp) = results%force(i,n,jsp) + REAL(forc_a21(i) + forc_b4(i))
+               results%force(i,n,jsp) = results%force(i,n,jsp) + REAL(forc_a21(i))
                f_a21(i,n)     = f_a21(i,n)     + forc_a21(i)
-               f_b4(i,n)      = f_b4(i,n)      + forc_b4(i)
             END DO
 
          END IF ! l_geo(n)

@@ -13,32 +13,48 @@ MODULE m_mix
   !    IMIX = 7 : Generalized Anderson method
   !------------------------------------------------------------------------
 
-   implicit none
+   use m_juDFT
+   use m_constants
+   use m_cdn_io
+   use m_stmix
+   use m_broyden
+   use m_qfix
+   use m_umix
+   use m_vmix
+   use m_checkMMPmat
+   use m_kerker
+   use m_pulay
+   use m_a_pulay
+   use m_types_mixvector
+   use m_distance
+   use m_mixing_history
+   use m_RelaxSpinAxisMagn
+   use m_plot
+   use m_types_atoms
+   use m_types_cell
+   use m_types_field
+   use m_types_input
+   use m_types_mpi
+   use m_types_noco
+   use m_types_nococonv
+   use m_types_potden
+   use m_types_misc
+   use m_types_sliceplot
+   use m_types_sphhar
+   use m_types_stars
+   use m_types_sym
+   use m_types_vacuum
+   use m_types_xcpot
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: mix_charge
 contains
 
-  SUBROUTINE mix_charge( field,   fmpi, l_writehistory,&
+  SUBROUTINE mix_charge( field,   fmpi,&
        stars, atoms, sphhar, vacuum, input, sym, cell, noco, nococonv,&
          archiveType, xcpot, iteration, inDen, outDen, results, coreDen, l_runhia, sliceplot,&
          inDenIm, outDenIm, dfpt_tag, inTau, outTau)
 
-    use m_juDFT
-    use m_constants
-    use m_cdn_io
-    use m_stmix
-    use m_broyden
-    use m_qfix
-    use m_types
-    use m_umix
-    use m_vmix
-    use m_checkMMPmat
-    USE m_kerker
-    use m_pulay
-    use m_a_pulay
-    use m_types_mixvector
-    USE m_distance
-    use m_mixing_history
-    use m_RelaxSpinAxisMagn
-    USE m_plot
     implicit none
 
 
@@ -61,7 +77,6 @@ contains
     type(t_potden),    intent(inout) :: inDen
     integer,           intent(in)    :: archiveType
     integer,           intent(inout) :: iteration
-    LOGICAL,           INTENT(IN)    :: l_writehistory
     LOGICAL,           INTENT(IN)    :: l_runhia
 
     type(t_potden), OPTIONAL, INTENT(INOUT) :: inDenIm, outDenIm
@@ -304,12 +319,6 @@ contains
 #endif
     call timestop("Density output")
     inDen%iter = inDen%iter + 1
-
-    IF (.NOT.l_dfpt) THEN
-       IF (l_writehistory.AND.input%imix.NE.0) CALL mixing_history_close(fmpi)
-    ELSE
-       IF (l_writehistory.AND.input%imix.NE.0) CALL mixing_history_close(fmpi,dfpt_tag)
-    END IF
 
     CALL timestop("Postprocessing")
     CALL timestop("Charge Density Mixing")

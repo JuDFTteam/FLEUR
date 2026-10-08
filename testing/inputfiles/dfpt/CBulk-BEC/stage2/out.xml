@@ -1,20 +1,20 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <fleurOutput fleurOutputVersion="0.38">
    <programVersion version="fleur 42">
-      <compilationInfo date="2026-08-19T17:43:38" user="hanrath" host="iff1835.iff.kfa-juelich.de" flag="-fiopenmp -qmkl  -assume byterecl -no-wrap-margin -fPIC -I/Data/ias-1/hanrath/fleur-versions/local/dfpt_noco/b" link="lmkl_scalapack_lp64;-lmkl_blacs_intelmpi_lp64;/usr/lib64/libxml2.so"/>
-      <gitInfo version="MaX-R8.1-177-g3d4ef951f-dirty" branch="DFPT_noco" lastCommitHash="3d4ef951feaa884fab19d892f0059aef6217744c"/>
+      <compilationInfo date="2026-10-02T11:39:24" user="wortmann" host="mb-wortmann" flag="-fopenmp -ffree-line-length-none -Wno-missing-include-dirs -fno-sign-zero -fPIC -I/Users/wortmann/fleur/fleur-" link="Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib/libxml2.tbd;/Library/Developer/CommandLineTools/SDK"/>
+      <gitInfo version="MaX-R8.1-687-g9d9ef5784" branch="faster-tests" lastCommitHash="9d9ef578433068c8aca639f98c86b303dba6aee3"/>
       <targetComputerArchitectures>GEN</targetComputerArchitectures>
       <precision type="DOUBLE"/>
       <targetStructureClass> </targetStructureClass>
       <additionalCompilerFlags>CPP_MPI             CPP_HDF</additionalCompilerFlags>
-      <programExecution commandLine="/Data/ias-1/hanrath/fleur-versions/local/dfpt_noco/build/fleur_MPI -warn_only"/>
+      <programExecution commandLine="/Users/wortmann/fleur/fleur-develop/build/fleur_MPI -warn_only"/>
    </programVersion>
    <parallelSetup>
       <openMP ompThreads="1"/>
       <mpi mpiProcesses="1"/>
-      <mem memoryPerNode="15856812 kB"/>
+      <mem memoryPerNode="unknown"/>
    </parallelSetup>
-   <startDateAndTime date="2026/08/20" time="10:00:21" zone="+0200"/>
+   <startDateAndTime date="2026/10/02" time="13:53:03" zone="+0200"/>
    <!-- Now follows a dump of the inp.xml file after evaluating the Schema -->
   <fleurInput fleurInputVersion="0.39">
       <comment>
@@ -22,7 +22,7 @@
       </comment>
       <calculationSetup>
          <cutoffs Kmax="2.3000000" Gmax="6.9000000" GmaxXC="6.9000000" numbands="all" Gmaxz="0.0"/>
-         <scfLoop itmax="7" minDistance=".00001000" maxIterBroyd="15" imix="Anderson" alpha=".05000000" precondParam="0.0" spinf="2.00000000" sdNocoIR="F"/>
+         <scfLoop itmax="3" minDistance=".00001000" maxIterBroyd="15" imix="Anderson" alpha=".05000000" precondParam="0.0" spinf="2.00000000" sdNocoIR="F"/>
          <coreElectrons ctail="F" frcor="F" kcrel="0" coretail_lmax="0" l_core_confpot="T"/>
          <xcFunctional name="LibXC" relativisticCorrections="F">
             <LibXCName exchange="lda_x" correlation="lda_c_vwn"/>
@@ -72,15 +72,15 @@
       </atomSpecies>
       <atomGroups>
          <atomGroup species="Carbon (C)">
-            <relPos label="                   1" wannier="F" alignToSpin="F">1.000/8.000 1.000/8.000 1.000/8.000</relPos>
+            <relPos label="                   1" alignToSpin="F">1.000/8.000 1.000/8.000 1.000/8.000</relPos>
             <force calculate="T" relaxXYZ="TTT"/>
          </atomGroup>
          <atomGroup species="Carbon (C)">
-            <relPos label="                   2" wannier="F" alignToSpin="F">-1.000/8.000 -1.000/8.000 -1.000/8.000</relPos>
+            <relPos label="                   2" alignToSpin="F">-1.000/8.000 -1.000/8.000 -1.000/8.000</relPos>
             <force calculate="T" relaxXYZ="TTT"/>
          </atomGroup>
       </atomGroups>
-      <output dos="F" band="F" slice="F" coreSpec="F" wannier="F" eig66="F">
+      <output dos="F" band="F" slice="F" coreSpec="F" eig66="F">
          <checks vchk="F" cdinf="F" disp="F" sympsi="F"/>
          <bandDOS minEnergy="-.50000000*Htr" maxEnergy=".50000000*Htr" sigma=".01500000" storeEVData="T" all_atoms="T" orbcomp="F" globalspin="F" jDOS="F" jointDOS="F" numberPoints="1321"/>
          <vacuumDOS vacdos="F" integ="F" star="F" nstars="0" locx1=".00000" locy1=".00000" locx2=".00000" locy2=".00000" nstm="0" tworkf=".00000"/>
@@ -183,14 +183,14 @@
          <sumValenceSingleParticleEnergies value="2.0042603366" units="Htr"/>
          <FermiEnergy value="0.4661767813" units="Htr"/>
          <DFPTEfield>
-            <borneffcharge iDtype="1" iDir="1">-7.4838934242       -0.0000045407       -0.0000045214</borneffcharge>
-            <borneffcharge iDtype="1" iDir="2">-0.0000046535       -7.4838945043        0.0026603601</borneffcharge>
-            <borneffcharge iDtype="1" iDir="3">-0.0000046557       -0.0014657278       -7.4836377634</borneffcharge>
-            <borneffcharge iDtype="2" iDir="1">-7.4838929880       -0.0000047682       -0.0000047835</borneffcharge>
-            <borneffcharge iDtype="2" iDir="2">-0.0000046554       -7.4838945018       -0.0026696660</borneffcharge>
-            <borneffcharge iDtype="2" iDir="3">-0.0000046474        0.0014564238       -7.4836377658</borneffcharge>
+            <borneffcharge iDtype="1" iDir="1">-7.4691170701       -0.0000045556       -0.0000045428</borneffcharge>
+            <borneffcharge iDtype="1" iDir="2">-0.0000046673       -7.4691181059        0.0026596185</borneffcharge>
+            <borneffcharge iDtype="1" iDir="3">-0.0000046695       -0.0014651998       -7.4688705312</borneffcharge>
+            <borneffcharge iDtype="2" iDir="1">-7.4691166302       -0.0000047809       -0.0000047896</borneffcharge>
+            <borneffcharge iDtype="2" iDir="2">-0.0000046692       -7.4691181034       -0.0026689510</borneffcharge>
+            <borneffcharge iDtype="2" iDir="3">-0.0000046611        0.0014558692       -7.4688705337</borneffcharge>
          </DFPTEfield>
       </iteration>
    </scfLoop>
-   <endDateAndTime date="2026/08/20" time="10:00:27" zone="+0200"/>
+   <endDateAndTime date="2026/10/02" time="13:53:05" zone="+0200"/>
 </fleurOutput>

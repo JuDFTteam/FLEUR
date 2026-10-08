@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! This file is part of FLEUR and available as free software under the conditions 
+! of the MIT license as expressed in the LICENSE file in more detail.
+!--------------------------------------------------------------------------------
 
 !--------------
 ! Copyright (c) 2018 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
@@ -7,6 +12,20 @@
 
 MODULE m_magDiMom
 
+   USE m_constants
+   USE m_juDFT
+   USE m_lattHarmsSphHarmsConv
+   USE m_gaunt
+   USE m_intgr
+   USE m_types_atoms
+   USE m_types_input
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_types_sphhar
+   USE m_types_sym
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: magdimom
 CONTAINS
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -19,12 +38,6 @@ CONTAINS
 
 SUBROUTINE magDiMom(sym,input,atoms,sphhar,noco,nococonv,l_fmpl2,rho,magDipoles,elecDipoles)
 
-   USE m_constants
-   USE m_types
-   USE m_juDFT
-   USE m_lattHarmsSphHarmsConv
-   USE m_gaunt
-   USE m_intgr
 
    IMPLICIT NONE
    TYPE(t_sym),           INTENT(IN)    :: sym

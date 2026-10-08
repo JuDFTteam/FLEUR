@@ -18,24 +18,49 @@ MODULE m_dfpt_elph_mat
 #define CPP_zgemv zgemv
 #endif
 
-    USE m_types 
     USE m_constants
     USE m_npy 
+    USE m_dfpt_eigen_hssetup
+    USE m_util
+    USE m_types_mpimat
+    USE m_dfpt_tlmplm
+    USE m_local_hamiltonian
+    USE m_eig66_io, ONLY: write_eig, read_eig, open_eig, close_eig
+    USE m_matrix_interpolation
+    USE m_dfpt_write_epw, ONLY: write_epw_restart_files
+    USE m_wannier_interpolate
+    USE m_dfpt_dynmat_fourier
+    USE m_dfpt_dynmat_eig
+    USE m_dfpt_elph_linewidth
+    USE m_fermie, ONLY: fermie
+    USE m_types_enpara
+    USE m_types_fleurinput
+    USE m_types_hub1data
+    USE m_types_input
+    USE m_types_kpts
+    USE m_types_lapw
+    USE m_types_mat
+    USE m_types_mpi
+    USE m_types_nococonv
+    USE m_types_potden
+    USE m_types_misc
+    USE m_types_sphhar
+    USE m_types_stars
+    USE m_types_sternheimerjob
+    USE m_types_sym
+    USE m_types_tlmplm
 
     IMPLICIT NONE
+    PRIVATE
+    PUBLIC :: construct_elph_element, el_ph_wannier, elph_fine_mesh_linewidth, global_phonon_energy_bound, &
+       interpolate_fermi_dos, select_fermi_kpoints
 
 CONTAINS
     SUBROUTINE construct_elph_element(sternheimerJob,fi,sphhar,results,fmpi,enpara,nococonv,starsq,v1real,v1imag,vTot,inden,bqpt,eig_id,q_eig_id,iDir,iDtype,killcont,l_real,gmatBuffer,nuWindow)
         ! This routine is very similar to dfpt_eigen
         ! However, we do not need the gmat which is slightly different to z1
         ! Output needs to be different 
-        USE m_dfpt_eigen_hssetup
-        USE m_util !this needed?
-        USE m_types_mpimat
-        USE m_dfpt_tlmplm
-        USE m_local_hamiltonian
         
-        USE m_eig66_io, ONLY : write_eig, read_eig
 
         IMPLICIT NONE 
 
@@ -57,7 +82,6 @@ CONTAINS
 
         TYPE(t_tlmplm)  :: td, tdV1
         TYPE(t_potden) :: vx
-        TYPE(t_usdus)  :: ud
         TYPE(t_lapw)   :: lapw,lapwq
         CLASS(t_mat), ALLOCATABLE :: zMatk, zMatq, gmat ! this we propably rename to something better
         CLASS(t_mat), ALLOCATABLE :: hmat,smat
@@ -83,12 +107,11 @@ CONTAINS
         gmatBuffer=0.0 
 
         ! Get the (lm) matrix elements for V1 and H0
-        CALL ud%init(fi%atoms,fi%input%jspins)
         CALL dfpt_tlmplm(fi%atoms,fi%sym,sphhar,fi%input,fi%noco,enpara,fi%hub1inp,hub1data,vTot,fmpi,tdV1,v1real,v1imag,.FALSE.)
-        CALL local_ham(sphhar,fi%atoms,fi%sym,fi%noco,nococonv,enpara,fmpi,vTot,vx,inden,fi%input,fi%hub1inp,hub1data,td,ud,0.0,l_dfptmod=.TRUE.)
+        CALL local_ham(sphhar,fi%atoms,fi%sym,fi%noco,nococonv,enpara,fmpi,vTot,vx,inden,fi%input,fi%hub1inp,hub1data,td,alpha_hybrid=0.0,l_dfptmod=.TRUE.)
 
-#ifndef _OPENACC  
-!newer nvhpc versions fail here with ICE        
+#if !defined(_OPENACC) && !defined(__NVCOMPILER)
+!nvhpc fails here with ICE
 
         DO jsp = 1, merge(1,fi%input%jspins,fi%noco%l_noco)
             DO nk_i = 1, size(fmpi%k_list)
@@ -146,7 +169,7 @@ CONTAINS
 
                 ! Construct the perturbed Hamiltonian and Overlap matrix perturbations:
                 CALL timestart("Setup of matrix perturbations")
-                CALL dfpt_eigen_hssetup(sternheimerJob,jsp,fmpi,fi,enpara,nococonv,starsq,ud,td,tdV1,vTot,v1real,lapw,lapwq,iDir,iDtype,hmat,smat,nk,killcont)
+                CALL dfpt_eigen_hssetup(sternheimerJob,jsp,fmpi,fi,enpara,nococonv,starsq,td,tdV1,vTot,v1real,lapw,lapwq,iDir,iDtype,hmat,smat,nk,killcont)
                 CALL timestop("Setup of matrix perturbations")
     
                 IF (fmpi%n_size == 1) THEN
@@ -246,7 +269,9 @@ CONTAINS
 
             END DO !nk_i
         END DO !jsp
-#endif 
+#else
+        CALL juDFT_error("DFPT is not available in builds with the NVIDIA compiler", calledby="dfpt_elph_mat.F90")
+#endif
 
 #ifdef CPP_MPI
        CALL MPI_ALLREDUCE(MPI_IN_PLACE,gmatBuffer,size(gmatBuffer),MPI_DOUBLE_COMPLEX,MPI_SUM,fmpi%mpi_comm,ierr)
@@ -263,8 +288,6 @@ CONTAINS
         ! gmatCart lives on the full zone of qpts_q (nkptf/bkf), dynMats on its
         ! irreducible wedge (nkpt/bk); sym_q connects the two.
 
-        use m_matrix_interpolation
-        use m_dfpt_write_epw, only : write_epw_restart_files
 
         type(t_mpi), intent(in)         :: fmpi
         type(t_fleurinput) , intent(in) :: fi
@@ -326,12 +349,6 @@ CONTAINS
         !
         ! dynMats lives on the irreducible wedge of qpts_q; sym_q unfolds it.
 
-        use m_eig66_io, only : open_eig,close_eig,read_eig
-        use m_wannier_interpolate
-        use m_matrix_interpolation
-        use m_dfpt_dynmat_fourier
-        use m_dfpt_dynmat_eig
-        use m_dfpt_elph_linewidth
 
         type(t_mpi),         intent(in) :: fmpi
         type(t_fleurinput),  intent(in) :: fi
@@ -343,7 +360,8 @@ CONTAINS
 
         integer :: eig_id_interpol,q_eig_id_interpol, num_wann , ikpt, iMode, ispin, iPerturb
         integer :: iQ, nKept, nSurv, iKept, ne, iWann, i, nLocKpts, nInterpol
-        real    :: qvec(3), pref
+        real    :: qvec(3)
+        complex :: pref
         real,allocatable :: kqpts_interpol(:,:)
         integer, allocatable :: myIdx(:)       ! this rank's global fine-k indices
         real,    allocatable :: myKpts(:,:)    ! (3, nLocKpts) this rank's slice of the fine k-mesh
@@ -601,7 +619,6 @@ CONTAINS
 
     function global_phonon_energy_bound(fi, dynMats, qpts_q) result(omegaMax)
         ! compute maxvalue of the eigenValues of dynMat
-        use m_dfpt_dynmat_eig, only : DiagonalizeDynMat
 
         type(t_fleurinput), intent(in) :: fi
         complex,             intent(in) :: dynMats(:,:,:) !(3*nat,3*nat,nqcoarse)
@@ -626,8 +643,6 @@ CONTAINS
 
     subroutine interpolate_fermi_dos(fmpi, fi, ef_guess, eig_id_interpol, nLocKpts, ef_interp, dos_ef_interp)
         ! Fermi energy and DOS(E_F) on the *interpolated* fine k-mesh.
-        use m_eig66_io, only : read_eig
-        use m_fermie,   only : fermie
 
         type(t_mpi),        intent(in)  :: fmpi
         type(t_fleurinput), intent(in)  :: fi
@@ -740,7 +755,6 @@ CONTAINS
         ! Read the interpolated eigenvalues stored in eig_id for the point set given by
         ! coords(:,1:npoints) and keep only those points that have at least one eigenvalue
         ! within window of the Fermi energy.
-        use m_eig66_io, only : read_eig
 
         type(t_fleurinput), intent(in)  :: fi
         type(t_results),    intent(in)  :: results

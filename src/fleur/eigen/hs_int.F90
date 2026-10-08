@@ -1,10 +1,21 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_hs_int
+   USE m_hs_int_direct
+   USE m_types_input
+   USE m_types_lapw
+   USE m_types_mat
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_types_stars
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: hs_int
 CONTAINS
    !Subroutine to construct the interstitial Hamiltonian and overlap matrix
    SUBROUTINE hs_int(input, noco, nococonv, stars, lapw, fmpi, bbmat, isp, vpw, &
@@ -19,8 +30,6 @@ CONTAINS
       ! All primed indices are to be understood as corresponding to the Bra
       ! basis function, e.g. iSpinPr is the left and iSpin the right hand spin.
 
-      USE m_types
-      USE m_hs_int_direct
 
       IMPLICIT NONE
 
@@ -68,12 +77,11 @@ CONTAINS
             ELSE
                vpw_temp = vpw(:, iSpin)
                l_smat   = .TRUE.
+               iQss = 1 ! spin-spiral q/2 shifts in the kinetic energy
                IF (input%l_useapw) THEN
                   iTkin = 1 ! Dirac form.
-                  iQss  = 0 ! No q-vector in kinetic energy.
                ELSE
                   iTkin = 2 ! Symmetrized Laplace form.
-                  iQss  = 1 ! Additional q-vectors in kinetic energy.
                END IF
                fact     = 1
                

@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2019 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -11,14 +11,24 @@ MODULE m_forcew
 #ifdef CPP_MPI
    USE mpi 
 #endif
+   USE m_constants
+   USE m_xmlOutput
+   USE m_relaxation
+   USE m_rotate_forces
+   USE m_judft
+   USE m_types_atoms
+   USE m_types_cell
+   USE m_types_input
+   USE m_types_mpi
+   USE m_types_misc
+   USE m_types_sym
+   USE m_types_vacuum
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: force_w
 
 CONTAINS
    SUBROUTINE force_w(fmpi,input,atoms,sym,results,cell ,vacuum)
-      USE m_types
-      USE m_constants
-      USE m_xmlOutput
-      USE m_relaxation
-      USE m_rotate_forces
       IMPLICIT NONE
 
       TYPE(t_mpi),     INTENT(IN)    :: fmpi

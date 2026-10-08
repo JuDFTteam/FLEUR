@@ -160,7 +160,7 @@
    <atomSpecies>
       <species name="Nickel (Ni)" element="Ni" atomicNumber="28">
          <mtSphere radius="2.47000000" gridPoints="817" logIncrement=".01500000"/>
-         <atomicCutoffs lmax="10" lnonsphr="8"/>
+         <atomicCutoffs lmax="8" lnonsphr="6"/>
          <electronConfig flipSpins="F">
             <coreConfig>(1s1/2) (2s1/2) (2p1/2) (2p3/2) (3s1/2)</coreConfig>
             <valenceConfig>(3p1/2) (3p3/2) (4s1/2) (3d3/2) (3d5/2)</valenceConfig>
@@ -184,7 +184,7 @@
       </species>
       <species name="Ni-1" element="Ni" atomicNumber="28">
          <mtSphere radius="2.47000000" gridPoints="817" logIncrement=".01500000"/>
-         <atomicCutoffs lmax="10" lnonsphr="8"/>
+         <atomicCutoffs lmax="8" lnonsphr="6"/>
          <electronConfig flipSpins="F">
             <coreConfig>(1s1/2) (2s1/2) (2p1/2) (2p3/2) (3s1/2)</coreConfig>
             <valenceConfig>(3p1/2) (3p3/2) (4s1/2) (3d3/2) (3d5/2)</valenceConfig>

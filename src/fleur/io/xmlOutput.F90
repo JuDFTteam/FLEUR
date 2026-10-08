@@ -1,11 +1,21 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_xmlOutput
   USE m_judft_xmlOutput !most functionality is actually there
+  USE m_juDFT_args
+  USE m_juDFT_usage
+  USE m_juDFT_stop, ONLY: judft_error
+  USE m_constants
+  USE m_utility
+  USE m_compile_descr
+!$ USE omp_lib
+#ifdef CPP_MPI
+  USE mpi
+#endif
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!
 !!!   XML output service routines
@@ -17,20 +27,15 @@ MODULE m_xmlOutput
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
    IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: startfleur_xmloutput, getxmloutputunitnumber, startxmloutput, endxmloutput, writexmlelementform, &
+     writexmlelementmatrixpoly, writexmlelementmatrixformpoly, writexmlelementmatrixform, writexmlelement, &
+     writexmlelementnoattributes, openxmlelementnoattributes, openxmlelement, openxmlelementform, closexmlelement, &
+     iscurrentxmlelement, writexmlelementformpoly, writexmlelementpoly, openxmlelementpoly, openxmlelementformpoly
  
    CONTAINS
 
    SUBROUTINE startfleur_XMLOutput(filename_add)
-     USE m_judft_xmloutput
-      USE m_juDFT_args
-      USE m_juDFT_usage
-      USE m_constants
-      USE m_utility
-      USE m_compile_descr
-#ifdef CPP_MPI
-      use mpi
-#endif
-!$    use omp_lib
       
       IMPLICIT NONE
 
@@ -75,7 +80,7 @@ MODULE m_xmlOutput
       END IF
       CALL writeXMLElementNoAttributes('targetComputerArchitectures',flags(1:numFlags))
       IF (numFlags.GT.1) THEN 
-         STOP "ERROR: Define only one system architecture! (called by xmlOutput)"
+         CALL judft_error("Define only one system architecture! (called by xmlOutput)")
       END IF
       CALL getPrecision(precisionString)
       CALL writeXMLElement('precision',(/'type'/),(/precisionString/))

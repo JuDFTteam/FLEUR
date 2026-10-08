@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -7,6 +7,19 @@
 MODULE m_read_inpgen_input
   USE m_judft
   USE m_calculator
+  USE m_atompar
+  USE m_types_input
+  USE m_types_sym
+  USE m_types_noco
+  USE m_types_vacuum
+  USE m_types_stars
+  USE m_types_xcpot_inbuild_nofunction
+  USE m_types_cell
+  USE m_types_hybinp
+  USE m_constants
+  USE m_process_lattice_namelist
+  USE m_inv3
+  USE m_types_profile
   IMPLICIT NONE
   PRIVATE
   PUBLIC read_inpgen_input, peekInpgenInput
@@ -15,19 +28,6 @@ CONTAINS
   SUBROUTINE read_inpgen_input(profile,atom_pos,atom_id,mag_mom,atom_label,kpts_str,kptsName,kptsPath,kptsBZintegration,&
                                kptsGamma,input,sym,noco,vacuum,stars,xcpot,cell,hybinp)
     !Subroutine reads the old-style input for inpgen
-    USE m_atompar
-    USE m_types_input
-    USE m_types_sym
-    USE m_types_noco
-    USE m_types_vacuum
-    USE m_types_stars
-    USE m_types_xcpot_inbuild_nofunction
-    USE m_types_cell
-    USE m_types_hybinp
-    USE m_constants
-    USE m_process_lattice_namelist
-    USE m_inv3
-    USE m_types_profile
 
     TYPE(t_profile),INTENT(IN)     :: profile
     REAL,    ALLOCATABLE,INTENT(OUT) :: atom_pos(:, :),atom_id(:),mag_mom(:,:)
@@ -329,7 +329,6 @@ CONTAINS
 
 
   SUBROUTINE process_kpts(line,kpts_str,kptsName,kptsPath,bz_integration_out,kptsGamma,tkb)
-    USE m_constants
     CHARACTER(len=*),INTENT(in)::line
     CHARACTER(len=40),INTENT(out)::kpts_str
     CHARACTER(len=40),INTENT(out)::kptsName
@@ -417,7 +416,6 @@ CONTAINS
   END SUBROUTINE process_input
 
   SUBROUTINE process_scf(line,input)
-   USE m_types_input
    CHARACTER(len=*),INTENT(in)::line
    TYPE(t_input),INTENT(INOUT)::input
    INTEGER:: itmax,ios
@@ -433,7 +431,6 @@ CONTAINS
    input%preconditioning_param=precond
   END subroutine 
   SUBROUTINE process_qss(line,noco)
-    USE m_types_noco
     CHARACTER(len=*),INTENT(in)::line
     TYPE(t_noco),INTENT(INOUT) :: noco
     CHARACTER(len=1000) :: buf
@@ -448,7 +445,6 @@ CONTAINS
   END SUBROUTINE process_qss
 
   SUBROUTINE process_soc(line,noco)
-    USE m_types_noco
     CHARACTER(len=*),INTENT(in)::line
     TYPE(t_noco),INTENT(INOUT) :: noco
     CHARACTER(len=1000) :: buf
@@ -503,7 +499,6 @@ CONTAINS
   END SUBROUTINE process_factor
 
   SUBROUTINE process_exco(line,xcpot)
-    USE m_types_xcpot_inbuild_nofunction
     CHARACTER(len=*),INTENT(in)::line
     TYPE(t_xcpot_inbuild_nf),INTENT(INOUT) :: xcpot
     LOGICAL::relxc
@@ -536,7 +531,6 @@ CONTAINS
   END SUBROUTINE process_comp
 
   SUBROUTINE process_expert(line,gw,primCellZ)
-    USE m_types_xcpot_inbuild_nofunction
     CHARACTER(len=*),INTENT(in)::line
     INTEGER, INTENT(INOUT) :: gw
     REAL, INTENT(OUT) :: primCellZ

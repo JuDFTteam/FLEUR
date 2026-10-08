@@ -1,35 +1,47 @@
 !--------------------------------------------------------------------------------
 ! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
-! This file is part of FLEUR and available as free software under the conditions 
+! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_local_Hamiltonian
    USE m_judft
+   USE m_constants
+   USE m_intgr, ONLY: intgr3
+   USE m_gaunt, ONLY: gaunt1
+   USE m_gradYlm, ONLY: Derivative
+   USE m_types_atoms
+   USE m_opc_setup
+   USE m_types_enpara
+   USE m_types_hub1data
+   USE m_types_hub1inp
+   USE m_types_input
+   USE m_types_mpi
+   USE m_types_noco
+   USE m_types_nococonv
+   USE m_types_potden
+   USE m_types_radfun
+   USE m_types_sphhar
+   USE m_types_sym
+   USE m_types_tlmplm
    IMPLICIT NONE
    PRIVATE
-   PUBLIC:: local_ham
+   PUBLIC:: local_ham, add_nonsph, extract_nonsph
   !*********************************************************************
-  !     sets up the local Hamiltonian, i.e. the Hamiltonian in the
-  !     l',m',l,m,u- basis which is independent from k!
-  !     shifts this local Hamiltonian to make it positive definite
-  !     and does a cholesky decomposition
+  ! Sets up the k-independent muffin-tin Hamiltonian td%h in the unified
+  ! radial basis (u, udot and LOs per l, see t_radfun and t_tlmplm):
+  !   h = V_nonsph + H_sph + DFT+U/OPC (for LOs)
+  ! and the non-spherical LAPW block td%h_loc_nonsph used by hsmt_nonsph,
+  ! shifted to be positive definite and Cholesky decomposed.
+  ! For MetaGGAs h also contains -1/2 div(V_tau grad), and td%h_sph_extra
+  ! the spherical terms for l>lnonsph that hsmt_sph adds.
   !*********************************************************************
 CONTAINS
    SUBROUTINE local_ham(sphhar,atoms,sym,noco,nococonv,enpara,&
-       fmpi,v,vx,inden,input,hub1inp,hub1data,td,ud,alpha_hybrid,xcpot,l_dfptmod,vTau)
-      !! Should probably be called tlmplm_postprocess or something, as there is a
-      !! lot more happening than only the Cholesky decomposition.
+       fmpi,v,vx,inden,input,hub1inp,hub1data,td,alpha_hybrid,l_dfptmod,l_forces,vTau)
+      !! l_dfptmod: no Cholesky decomposition
+      !! l_forces:  LAPW part up to lmax and without DFT+U (forces add it separately)
+      !! vTau:      MetaGGA potential dE_xc/dtau (collinear only)
 
-      ! Add onto the t_{L'L}^{\mu} matrices from tlmplm some contributions from
-      ! DFT+U, DFT+HIA, DFT+OPC, constraint fields and the diagonal E_{l} terms
-      ! etc. In the diagonal case, Cholesky decompose the nonspherical part of
-      ! the Hamiltonian by shifting the diagonal part upwards until the matrix
-      ! is positive-definite.
-      USE m_constants
-      USE m_tlmplm
-      USE m_tlmplm_vtau
-      USE m_types
-    
       TYPE(t_mpi),      INTENT(IN)    :: fmpi
       TYPE(t_noco),     INTENT(IN)    :: noco
       TYPE(t_nococonv), INTENT(IN)    :: nococonv
@@ -42,173 +54,400 @@ CONTAINS
       TYPE(t_hub1data), INTENT(INOUT) :: hub1data
       TYPE(t_potden),   INTENT(IN)    :: v,vx,inden
       TYPE(t_tlmplm),   INTENT(INOUT) :: td
-      TYPE(t_usdus),    INTENT(INOUT) :: ud
+      REAL,             INTENT(IN)    :: alpha_hybrid
+      LOGICAL, INTENT(IN),OPTIONAL    :: l_dfptmod, l_forces
+      TYPE(t_potden),   INTENT(IN), OPTIONAL :: vTau
 
-      ! Scalar Arguments
-      
-      REAL,    INTENT(IN) :: alpha_hybrid
-
-      CLASS(t_xcpot),   INTENT(IN), OPTIONAL :: xcpot
-      LOGICAL, INTENT(IN),OPTIONAL :: l_dfptmod
-      TYPE(t_potden), INTENT(IN), OPTIONAL :: vTau  ! MetaGGA V_tau potential
-
-      ! Local Scalars
-      INTEGER :: l,lm,j1,j2,jsp
-      INTEGER :: n,m,s
+      INTEGER :: j1,j2,jsp,n,lh0
       COMPLEX :: one
+      REAL, ALLOCATABLE :: vr(:,:)
 
       CALL timestart("local_hamiltonian")
-      CALL td%init(atoms,input%jspins,(noco%l_noco.AND.noco%l_soc.AND..NOT.noco%l_ss).OR.any(noco%l_constrained).or.any(noco%l_constrained))
-      ! tlmplm_vtau fills td%h_sph_extra for l>lnonsph, which hsmt_sph has to add
-      IF (PRESENT(vTau) .AND. PRESENT(xcpot)) td%l_sph_extra = xcpot%needs_MetaGGA_ham()
+      IF (input%secvar) CALL judft_error("Second variation is not supported",calledby="local_ham")
+      CALL td%init(atoms,input%jspins,PRESENT(l_forces))
+      td%l_sph_extra = PRESENT(vTau)
+
+      !$OMP PARALLEL DO DEFAULT(NONE) SHARED(atoms,input,enpara,fmpi,v,hub1data,td)
+      DO n = 1,atoms%ntype
+         CALL td%radfun(n)%generate_radial_functions(atoms,input,enpara,fmpi,v,n,hub1data)
+      END DO
+      !$OMP END PARALLEL DO
 
       DO jsp=1,MERGE(4,input%jspins,any(noco%l_unrestrictMT).OR.any(noco%l_spinoffd_ldau).or.any(noco%l_constrained))
-
          DO j1=merge(jsp,1,jsp<3),merge(jsp,2,jsp<3)
             j2  = MERGE(j1,3-j1,jsp<3)
             one = MERGE(CMPLX(1.,0.),CMPLX(0.,1.),jsp<4)
             one = MERGE(CONJG(one),one,j1<j2)
 
-            !$OMP PARALLEL DO DEFAULT(NONE) PRIVATE(l,m,lm,s)&
-            !$OMP SHARED(atoms,sphhar,sym,enpara,nococonv,j1,j2,jsp,fmpi,v,vx,input,hub1inp,hub1data,td,ud,alpha_hybrid,one,xcpot,l_dfptmod,noco,vTau)
+            !$OMP PARALLEL DO DEFAULT(NONE) PRIVATE(vr,lh0)&
+            !$OMP SHARED(atoms,sphhar,sym,enpara,j1,j2,jsp,v,vx,input,hub1inp,td,alpha_hybrid,one,noco,vTau)
             DO  n = 1,atoms%ntype
                IF (j1==j2.OR.noco%l_unrestrictMT(n).or.noco%l_constrained(n)) THEN
-                  CALL tlmplm(n,sphhar,atoms,sym,enpara,nococonv,j1,j2,jsp,fmpi,v,vx,input,hub1inp,hub1data,td,ud,alpha_hybrid,one,PRESENT(l_dfptmod))
-                  ! Add MetaGGA V_tau contribution to local Hamiltonian
-                  IF (PRESENT(vTau) .AND. PRESENT(xcpot)) THEN
-                     IF (xcpot%needs_MetaGGA_ham() .AND. jsp < 3) THEN
-                        CALL tlmplm_vtau(n, sphhar, atoms, sym, enpara, nococonv, &
-                             j1, j2, jsp, fmpi, v, vTau, input, hub1data, td, ud)
-                     END IF
+                  CALL nonsph_potential(atoms,enpara,v,vx,n,jsp,alpha_hybrid,vr,lh0)
+                  IF (PRESENT(vTau).AND.jsp<3) THEN
+                     ! lambda=0 carries V_tau and V_sph-enpara%vr: the radial functions solve the
+                     ! auxiliary GGA potential (Eq. 8 of Doumont et al., PRB 105, 195138)
+                     lh0 = 0
+                     CALL add_nonsph(td,n,atoms,sym,sphhar,input,hub1inp,vr,lh0,j1,j2,one,vtau=vTau%mt(:,0:,n,jsp))
+                     CALL add_sph_extra(td,n,atoms,sym,sphhar,vr(:,0),vTau%mt(:,0,n,jsp),jsp)
+                  ELSE
+                     CALL add_nonsph(td,n,atoms,sym,sphhar,input,hub1inp,vr,lh0,j1,j2,one)
                   END IF
                END IF
-               !Copy local hamiltonian for non_spherical setup
-               call restrict_to_lnonsph(td%h_loc(:,:,n,j1,j2),td%h_loc2(n),td%h_loc2_nonsph(n),td%h_loc_nonsph(:,:,n,j1,j2))
-               ! Now add diagonal contributions to the matrices:
-               IF (jsp<3) THEN
-                  DO l = 0,atoms%lmax(n)
-                     DO  m = -l,l
-                        lm = l*(l+1) + m
-                        s = td%h_loc2(n)
-                        td%h_loc(lm,lm,n,jsp,jsp)     = td%h_loc(lm,lm,n,jsp,jsp)     + enpara%el0(l,n,jsp)
-                        td%h_loc(lm,lm+s,n,jsp,jsp)   = td%h_loc(lm,lm+s,n,jsp,jsp)   + 0.5 ! Symmetrized from 1.0
-                        td%h_loc(lm+s,lm,n,jsp,jsp)   = td%h_loc(lm+s,lm,n,jsp,jsp)   + 0.5 ! Symmetrized from 0.0
-                        td%h_loc(lm+s,lm+s,n,jsp,jsp) = td%h_loc(lm+s,lm+s,n,jsp,jsp) + enpara%el0(l,n,jsp)*ud%ddn(l,n,jsp)
-                     END DO
-                  END DO
-               END IF
-               ! Store Matrices needed for LOs 
-               if (atoms%nlotot>0) call restrict_to_lnonsph(td%h_loc(:,:,n,j1,j2),td%h_loc2(n),td%h_loc2_nonsph(n),td%h_loc_LO(:,:,n,j1,j2))
+               CALL extract_nonsph(td,atoms,n,j1,j2)
+               IF (jsp<3) CALL add_sph(td,n,jsp,input%l_useapw)
             ENDDO
             !$OMP end parallel do
-            !Add LDA+U
-            call add_ldaU(fmpi,inden,jsp,atoms,v,ud,input,hub1data,enpara,td%h_loc_nonsph,td%h_loc2_nonsph,j1,j2,.false.)
-            !Add LDA+U also to LO part   
-            if (atoms%nlotot>0) call add_ldaU(fmpi,inden,jsp,atoms,v,ud,input,hub1data,enpara,td%h_loc_LO,td%h_loc2_nonsph,j1,j2,.true.)
-            ! Create Cholesky decomposition of local hamiltonian
-            ! For DFPT, do not decompose!
-            IF (jsp<3.AND..NOT.PRESENT(l_dfptmod)) THEN
-               call cholesky_decompose(td%h_loc_nonsph(:,:,:,j1,j2),td%e_shift(:,jsp),atoms,ud,jsp)
-            endif
-
+            CALL add_ldaU(fmpi,inden,jsp,atoms,v,input,td,j1,j2,PRESENT(l_forces))
+            ! For DFPT, do not decompose
+            IF (jsp<3.AND..NOT.PRESENT(l_dfptmod)) CALL cholesky_decompose(fmpi,td,atoms,jsp)
          END DO
       END DO
 
-      !Setup of soc parameters for first-variation SOC
       IF (noco%l_soc.AND.noco%l_noco.AND..NOT.noco%l_ss) &
          CALL add_soc(fmpi,atoms,noco,nococonv,input,enpara,v,hub1inp,hub1data,td)
 
       CALL timestop("local_hamiltonian")
-   END SUBROUTINE 
+   END SUBROUTINE
 
+   SUBROUTINE nonsph_potential(atoms,enpara,v,vx,n,iSpinV,alpha_hybrid,vr,lh0)
+      !! potential entering the non-spherical integrals and the first lattice harmonic to use
+      TYPE(t_atoms),  INTENT(IN) :: atoms
+      TYPE(t_enpara), INTENT(IN) :: enpara
+      TYPE(t_potden), INTENT(IN) :: v,vx
+      INTEGER,        INTENT(IN) :: n,iSpinV
+      REAL,           INTENT(IN) :: alpha_hybrid
+      REAL, ALLOCATABLE, INTENT(OUT) :: vr(:,:)
+      INTEGER,        INTENT(OUT):: lh0
 
-   SUBROUTINE add_ldaU(fmpi,inden,jsp,atoms,v,ud,input,hub1data,enpara,mat,mat_half,j1,j2,l_lomatrix)
-               ! Include contribution from LDA+U and LDA+HIA (latter are behind LDA+U contributions)
-      USE m_radovlp
-      USE m_opc_setup
-      TYPE(t_mpi),      INTENT(IN)    :: fmpi
-      TYPE(t_input),    INTENT(IN)    :: input
-      TYPE(t_atoms),    INTENT(IN)    :: atoms
-      TYPE(t_enpara),   INTENT(IN)    :: enpara
-      TYPE(t_hub1data), INTENT(IN)    :: hub1data
-      TYPE(t_usdus),    INTENT(INOUT) :: ud
-      TYPE(t_potden),   INTENT(IN)    :: v,inden
-      INTEGER,INTENT(IN)              :: jsp,j1,j2
-      COMPLEX,INTENT(INOUT)           :: mat(:,:,:,:,:)
-      INTEGER,INTENT(IN)              :: mat_half(:)
-      LOGICAL,INTENT(IN)              :: l_lomatrix
+      INTEGER :: jri
 
-      INTEGER  :: i_u,n,s,l,lp,m,lm,mp,lmp,i_opc
-      REAL, ALLOCATABLE :: uun21(:,:),udn21(:,:),dun21(:,:),ddn21(:,:)
-      REAL, ALLOCATABLE :: opc_corrections(:)
-
-      IF(atoms%n_u+atoms%n_hia+atoms%n_opc==0) return !No LDA+U
-
-      IF (j1.ne.j2) THEN
-         !Calculate overlap integrals for the off-diagonal LDA+U contributions
-         ALLOCATE(uun21(0:atoms%lmaxd,atoms%ntype),source=0.0)
-         ALLOCATE(udn21(0:atoms%lmaxd,atoms%ntype),source=0.0)
-         ALLOCATE(dun21(0:atoms%lmaxd,atoms%ntype),source=0.0)
-         ALLOCATE(ddn21(0:atoms%lmaxd,atoms%ntype),source=0.0)
-         CALL rad_ovlp(atoms,ud,input,hub1data,v%mt,enpara%el0, uun21,udn21,dun21,ddn21)
-      ELSE 
-         IF (atoms%n_opc > 0) THEN
-            CALL opc_setup(input,atoms,fmpi,v,inden,jsp,opc_corrections)
-         END IF
-      
+      jri = atoms%jri(n)
+      lh0 = MERGE(1,0,iSpinV<3.and.alpha_hybrid==0)
+      IF (atoms%l_nonpolbas(n)) lh0 = 0
+      ALLOCATE(vr(SIZE(v%mt,1),0:SIZE(v%mt,2)-1),source=0.0)
+      vr(:jri,0:) = v%mt(:jri,0:,n,iSpinV)
+      IF (iSpinV<3) THEN
+         vr(:jri,0) = (v%mt(:jri,0,n,iSpinV)-enpara%vr(:jri,n,iSpinV))/atoms%rmsh(:jri,n)*sfp_const
+         IF (alpha_hybrid.NE.0) vr(:jri,0:) = vr(:jri,0:)-alpha_hybrid*vx%mt(:jri,0:,n,iSpinV)
       END IF
-   
-      !!$OMP PARALLEL DO DEFAULT(NONE) private(n,s,l,lp,m,lm,mp,lmp)&
-      !!$OMP shared(atoms,mat_half,l_lomatrix,v,mat,uun21,udn21,dun21,ddn21,j1,j2,ud,jsp)
-      DO i_u=1,atoms%n_u+atoms%n_hia
-         if (l_lomatrix.and..not.atoms%lda_u(i_u)%use_lo) cycle
-         n=atoms%lda_u(i_u)%atomType
-         s=mat_half(n)
-         ! Found a "U" for this atom type
-         l  = atoms%lda_u(i_u)%l
-         lp = atoms%lda_u(i_u)%l
-         
-         DO m = -l,l
-            lm = l* (l+1) + m +1 !indexing from 1
-            DO mp = -lp,lp
-               lmp = lp*(lp+1) + mp +1 !indexing from 1
-               IF (j1==j2) THEN
-                  mat(lm  ,lmp  ,n,j1,j2) = mat(lm  ,lmp  ,n,j1,j2) + v%mmpMat(m,mp,i_u,jsp)
-                  mat(lm+s,lmp+s,n,j1,j2) = mat(lm+s,lmp+s,n,j1,j2) + v%mmpMat(m,mp,i_u,jsp) * ud%ddn(lp,n,jsp)
-               ELSE IF(j1>j2) THEN
-                  mat(lm  ,lmp  ,n,j1,j2) = mat(lm  ,lmp  ,n,j1,j2) + v%mmpMat(m,mp,i_u,3) * uun21(l,n)
-                  mat(lm  ,lmp+s,n,j1,j2) = mat(lm  ,lmp+s,n,j1,j2) + v%mmpMat(m,mp,i_u,3) * udn21(l,n)
-                  mat(lm+s,lmp  ,n,j1,j2) = mat(lm+s,lmp  ,n,j1,j2) + v%mmpMat(m,mp,i_u,3) * dun21(l,n)
-                  mat(lm+s,lmp+s,n,j1,j2) = mat(lm+s,lmp+s,n,j1,j2) + v%mmpMat(m,mp,i_u,3) * ddn21(l,n)
-               ELSE
-                  ! For this part of the Hamiltonian we need to perform Hermitian conjugation on mmpMat
-                  mat(lm  ,lmp  ,n,j1,j2) = mat(lm  ,lmp  ,n,j1,j2) + conjg(v%mmpMat(mp,m,i_u,3)) * uun21(l,n)
-                  mat(lm  ,lmp+s,n,j1,j2) = mat(lm  ,lmp+s,n,j1,j2) + conjg(v%mmpMat(mp,m,i_u,3)) * udn21(l,n)
-                  mat(lm+s,lmp  ,n,j1,j2) = mat(lm+s,lmp  ,n,j1,j2) + conjg(v%mmpMat(mp,m,i_u,3)) * dun21(l,n)
-                  mat(lm+s,lmp+s,n,j1,j2) = mat(lm+s,lmp+s,n,j1,j2) + conjg(v%mmpMat(mp,m,i_u,3)) * ddn21(l,n)
-               END IF
+   END SUBROUTINE
+
+   SUBROUTINE add_nonsph(td,n,atoms,sym,sphhar,input,hub1inp,vr,lh0,j1,j2,one,vtau)
+      !! td%h(:,:,n,j1,j2) += one * sum_lh <r_i^{l'} Y_{l'm'}|V_lh|r_j^l Y_lm> for all slots i,j
+      !! vtau (MetaGGA, needs lh0=0): also the elements of -1/2 div(V_tau grad), see vtau_integrals
+      TYPE(t_tlmplm), INTENT(INOUT) :: td
+      TYPE(t_atoms),  INTENT(IN)    :: atoms
+      TYPE(t_sym),    INTENT(IN)    :: sym
+      TYPE(t_sphhar), INTENT(IN)    :: sphhar
+      TYPE(t_input),  INTENT(IN)    :: input
+      TYPE(t_hub1inp),INTENT(IN)    :: hub1inp
+      REAL,           INTENT(IN)    :: vr(:,0:)
+      INTEGER,        INTENT(IN)    :: n,lh0,j1,j2
+      COMPLEX,        INTENT(IN)    :: one
+      REAL, OPTIONAL, INTENT(IN)    :: vtau(:,0:)
+
+      REAL, ALLOCATABLE :: vint(:,:,:,:,:)
+      COMPLEX :: cil
+      INTEGER :: nsym,nh,lr,jri,lp,l,lh,lamda,i,j,mp,m,mem,mu,lmp,lm
+
+      ASSOCIATE(rf => td%radfun(n))
+      nsym = sym%ntypsy(atoms%firstAtom(n))
+      nh   = sphhar%nlh(nsym)
+      lr   = td%lrange(n)
+      jri  = atoms%jri(n)
+
+      ! radial integrals of all slot pairs allowed by the Gaunt selection rules
+      ALLOCATE(vint(MAXVAL(rf%n_r),MAXVAL(rf%n_r),0:lr,0:lr,lh0:MAX(lh0,nh)),source=0.0)
+      DO lh = lh0,nh
+         lamda = sphhar%llh(lh,nsym)
+         DO lp = 0,lr
+            DO l = 0,lr
+               IF (MOD(lamda+lp+l,2)==1 .OR. lamda<ABS(lp-l) .OR. lamda>lp+l) CYCLE
+               DO j = 1,rf%n_r(l)
+                  DO i = 1,rf%n_r(lp)
+                     CALL intgr3((rf%r(:jri,1,i,lp,j1)*rf%r(:jri,1,j,l,j2)+rf%r(:jri,2,i,lp,j1)*rf%r(:jri,2,j,l,j2))*vr(:jri,lh),&
+                                 atoms%rmsh(:,n),atoms%dx(n),jri,vint(i,j,lp,l,lh))
+                  END DO
+               END DO
             END DO
          END DO
       END DO
-      !!$OMP end parallel do
-      DO i_opc=1,atoms%n_opc
-         n=atoms%lda_opc(i_opc)%atomType
-         s=mat_half(n)
-         ! Found an "OPC" for this atom type
-         l=atoms%lda_opc(i_opc)%l
-         DO m = -l,l
-            lm = l*(l+1) + m +1 !indexing from 1
-            mat(lm  ,lm  ,n,j1,j2) = mat(lm  ,lm  ,n,j1,j2) + opc_corrections(i_opc) * m
-            mat(lm+s,lm+s,n,j1,j2) = mat(lm+s,lm+s,n,j1,j2) + opc_corrections(i_opc) * m * ud%ddn(l,n,jsp)
+      ! DFT+U/HIA orbitals: non-spherical double counting removed from their u/udot block
+      DO l = 0,lr
+         IF (l_nonsph_removed(atoms,input,hub1inp,n,l)) vint(1:2,1:2,l,l,:) = 0.0
+      END DO
+      IF (PRESENT(vtau)) THEN
+         IF (lh0/=0) CALL judft_bug("V_tau needs the lambda=0 lattice harmonic",calledby="add_nonsph")
+         CALL vtau_integrals(atoms,sphhar,rf,n,nsym,lr,j1,j2,vtau,vint)
+      END IF
+
+      DO lp = 0,lr
+         DO mp = -lp,lp
+            lmp = lp*(lp+1)+mp
+            DO lh = lh0,nh
+               lamda = sphhar%llh(lh,nsym)
+               DO mem = 1,sphhar%nmem(lh,nsym)
+                  mu = sphhar%mlh(mem,lh,nsym)
+                  m  = mp-mu
+                  DO l = ABS(lp-lamda),MIN(lp+lamda,lr),2
+                     IF (ABS(m)>l) CYCLE
+                     lm  = l*(l+1)+m
+                     cil = ImagUnit**(l-lp)*sphhar%clnu(mem,lh,nsym)*gaunt1(lp,lamda,l,mp,mu,m,atoms%lmaxd)
+                     td%h(td%ind(:rf%n_r(lp),lmp,n),td%ind(:rf%n_r(l),lm,n),n,j1,j2) = &
+                        td%h(td%ind(:rf%n_r(lp),lmp,n),td%ind(:rf%n_r(l),lm,n),n,j1,j2) + one*cil*vint(:rf%n_r(lp),:rf%n_r(l),lp,l,lh)
+                  END DO
+               END DO
+            END DO
          END DO
       END DO
-    END SUBROUTINE
+      END ASSOCIATE
+   END SUBROUTINE
+
+   SUBROUTINE vtau_integrals(atoms,sphhar,rf,n,nsym,lr,j1,j2,vtau,vint)
+      !! vint(i,j,l',l,lh) += 1/2 int [D_i^{l'} D_j^l + a/r^2 r_i^{l'} r_j^l] V_tau,lh dr, the radial part of
+      !! 1/2 <grad(r_i^{l'} Y_{l'm'})|V_tau,lh Y_lh|grad(r_j^l Y_lm)>. D = dr/dr - r/r for the large and
+      !! small component; a = [l(l+1)+l'(l'+1)-lambda(lambda+1)]/2 comes from the angular gradients.
+      TYPE(t_atoms),  INTENT(IN)    :: atoms
+      TYPE(t_sphhar), INTENT(IN)    :: sphhar
+      TYPE(t_radfun), INTENT(IN)    :: rf
+      INTEGER,        INTENT(IN)    :: n,nsym,lr,j1,j2
+      REAL,           INTENT(IN)    :: vtau(:,0:)
+      REAL,           INTENT(INOUT) :: vint(:,:,0:,0:,0:)
+
+      REAL, ALLOCATABLE :: d(:,:,:,:,:)
+      REAL    :: a,x
+      INTEGER :: jri,lh,lamda,lp,l,i,j,c,s,js(2)
+
+      jri = atoms%jri(n)
+      js  = [j1,j2]
+      ALLOCATE(d(jri,2,MAXVAL(rf%n_r),0:lr,2))
+      DO s = 1,2
+         DO l = 0,lr
+            DO i = 1,rf%n_r(l)
+               DO c = 1,2
+                  CALL Derivative(rf%r(:jri,c,i,l,js(s)),n,atoms,d(:,c,i,l,s))
+                  d(:,c,i,l,s) = d(:,c,i,l,s)-rf%r(:jri,c,i,l,js(s))/atoms%rmsh(:jri,n)
+               END DO
+            END DO
+         END DO
+      END DO
+
+      DO lh = 0,sphhar%nlh(nsym)
+         lamda = sphhar%llh(lh,nsym)
+         DO lp = 0,lr
+            DO l = 0,lr
+               IF (MOD(lamda+lp+l,2)==1 .OR. lamda<ABS(lp-l) .OR. lamda>lp+l) CYCLE
+               a = 0.5*REAL(l*(l+1)+lp*(lp+1)-lamda*(lamda+1))
+               DO j = 1,rf%n_r(l)
+                  DO i = 1,rf%n_r(lp)
+                     CALL intgr3((d(:,1,i,lp,1)*d(:,1,j,l,2)+d(:,2,i,lp,1)*d(:,2,j,l,2) &
+                                 +a*(rf%r(:jri,1,i,lp,j1)*rf%r(:jri,1,j,l,j2)+rf%r(:jri,2,i,lp,j1)*rf%r(:jri,2,j,l,j2)) &
+                                 /atoms%rmsh(:jri,n)**2)*vtau(:jri,lh),atoms%rmsh(:,n),atoms%dx(n),jri,x)
+                     vint(i,j,lp,l,lh) = vint(i,j,lp,l,lh)+0.5*x
+                  END DO
+               END DO
+            END DO
+         END DO
+      END DO
+   END SUBROUTINE
+
+   SUBROUTINE add_sph_extra(td,n,atoms,sym,sphhar,vr0,vtau0,jsp)
+      !! MetaGGA, l>td%lrange(n): lambda=0 elements of V_sph-enpara%vr (vr0, as in nonsph_potential) and of
+      !! -1/2 div(V_tau grad) for u and udot, which hsmt_sph adds to its energy-parameter based setup.
+      !! Order in td%h_sph_extra: <u|u>, <u|udot>, <udot|u>, <udot|udot>.
+      TYPE(t_tlmplm), INTENT(INOUT) :: td
+      TYPE(t_atoms),  INTENT(IN)    :: atoms
+      TYPE(t_sym),    INTENT(IN)    :: sym
+      TYPE(t_sphhar), INTENT(IN)    :: sphhar
+      REAL,           INTENT(IN)    :: vr0(:),vtau0(:)
+      INTEGER,        INTENT(IN)    :: n,jsp
+
+      REAL    :: d(atoms%jri(n),2,2),e(2,2),c0
+      INTEGER :: jri,nsym,l,i,j,c
+
+      jri  = atoms%jri(n)
+      nsym = sym%ntypsy(atoms%firstAtom(n))
+      ASSOCIATE(rf => td%radfun(n))
+      DO l = td%lrange(n)+1,atoms%lmax(n)
+         c0 = REAL(sphhar%clnu(1,0,nsym))*gaunt1(l,0,l,0,0,0,atoms%lmaxd)
+         DO i = 1,2
+            DO c = 1,2
+               CALL Derivative(rf%r(:jri,c,i,l,jsp),n,atoms,d(:,c,i))
+               d(:,c,i) = d(:,c,i)-rf%r(:jri,c,i,l,jsp)/atoms%rmsh(:jri,n)
+            END DO
+         END DO
+         DO j = 1,2
+            DO i = 1,2
+               CALL intgr3((rf%r(:jri,1,i,l,jsp)*rf%r(:jri,1,j,l,jsp)+rf%r(:jri,2,i,l,jsp)*rf%r(:jri,2,j,l,jsp)) &
+                           *(vr0(:jri)+0.5*REAL(l*(l+1))*vtau0(:jri)/atoms%rmsh(:jri,n)**2) &
+                           +0.5*(d(:,1,i)*d(:,1,j)+d(:,2,i)*d(:,2,j))*vtau0(:jri),atoms%rmsh(:,n),atoms%dx(n),jri,e(i,j))
+            END DO
+         END DO
+         td%h_sph_extra(:,l,n,jsp) = c0*[e(1,1),e(1,2),e(2,1),e(2,2)]
+      END DO
+      END ASSOCIATE
+   END SUBROUTINE
+
+   LOGICAL FUNCTION l_nonsph_removed(atoms,input,hub1inp,n,l)
+      TYPE(t_atoms),  INTENT(IN) :: atoms
+      TYPE(t_input),  INTENT(IN) :: input
+      TYPE(t_hub1inp),INTENT(IN) :: hub1inp
+      INTEGER,        INTENT(IN) :: n,l
+      INTEGER :: i
+      l_nonsph_removed = .FALSE.
+      DO i = 1,atoms%n_u+atoms%n_hia
+         IF (atoms%lda_u(i)%atomType/=n .OR. atoms%lda_u(i)%l/=l) CYCLE
+         IF (i<=atoms%n_u) l_nonsph_removed = l_nonsph_removed .OR. input%ldauNonsphDC
+         IF (i> atoms%n_u) l_nonsph_removed = l_nonsph_removed .OR. hub1inp%l_nonsphDC
+      END DO
+   END FUNCTION
+
+   SUBROUTINE add_sph(td,n,jsp,l_useapw)
+      !! spherical Hamiltonian, diagonal in lm; with APW including the kinetic surface
+      !! term, which hsmt_sph adds itself for the LAPW part (h_loc_nonsph is extracted before)
+      TYPE(t_tlmplm), INTENT(INOUT) :: td
+      INTEGER,        INTENT(IN)    :: n,jsp
+      LOGICAL,        INTENT(IN)    :: l_useapw
+      INTEGER :: l,m,nr
+      REAL, ALLOCATABLE :: hs(:,:)
+      DO l = 0,td%lrange(n)
+         hs = td%radfun(n)%hsph(l,jsp)
+         IF (l_useapw) hs = hs + td%radfun(n)%hsurf(l,jsp)
+         nr = td%radfun(n)%n_r(l)
+         DO m = -l,l
+            td%h(td%ind(:nr,l*(l+1)+m,n),td%ind(:nr,l*(l+1)+m,n),n,jsp,jsp) = &
+               td%h(td%ind(:nr,l*(l+1)+m,n),td%ind(:nr,l*(l+1)+m,n),n,jsp,jsp) + hs
+         END DO
+      END DO
+   END SUBROUTINE
+
+   PURE INTEGER FUNCTION nonsph_size(atoms,n)
+      TYPE(t_atoms), INTENT(IN) :: atoms
+      INTEGER,       INTENT(IN) :: n
+      nonsph_size = atoms%lnonsph(n)*(atoms%lnonsph(n)+2)+1
+   END FUNCTION
+
+   SUBROUTINE extract_nonsph(td,atoms,n,j1,j2)
+      !! copy the block of u and LAPW udot with l<=lnonsph of td%h into td%h_loc_nonsph
+      TYPE(t_tlmplm), INTENT(INOUT) :: td
+      TYPE(t_atoms),  INTENT(IN)    :: atoms
+      INTEGER,        INTENT(IN)    :: n,j1,j2
+      INTEGER, ALLOCATABLE :: idx(:)
+      idx = nonsph_ind(td,atoms,n)
+      td%h_loc_nonsph(:,:,n,j1,j2) = CMPLX(0.0,0.0)
+      td%h_loc_nonsph(:SIZE(idx)-1,:SIZE(idx)-1,n,j1,j2) = td%h(idx,idx,n,j1,j2)
+   END SUBROUTINE
+
+   FUNCTION nonsph_ind(td,atoms,n) RESULT(idx)
+      !! positions in td%h of the u and the LAPW udot functions with l<=lnonsph,
+      !! in the order of the matching coefficients of hsmt_ab
+      TYPE(t_tlmplm), INTENT(IN) :: td
+      TYPE(t_atoms),  INTENT(IN) :: atoms
+      INTEGER,        INTENT(IN) :: n
+      INTEGER, ALLOCATABLE :: idx(:)
+      INTEGER :: l
+      idx = td%ind(1,:nonsph_size(atoms,n)-1,n)
+      DO l = 0,atoms%lnonsph(n)
+         IF (.NOT.atoms%l_apw(l,n)) idx = [idx,td%ind(2,l*l:l*l+2*l,n)]
+      END DO
+   END FUNCTION
+
+   FUNCTION nonsph_lm_ind(atoms,n,l) RESULT(idx)
+      !! positions in h_loc_nonsph of u (1,:) and, for LAPW channels, udot (2,:) for all m of l
+      TYPE(t_atoms), INTENT(IN) :: atoms
+      INTEGER,       INTENT(IN) :: n,l
+      INTEGER, ALLOCATABLE :: idx(:,:)
+      INTEGER :: boff(0:atoms%lnonsph(n))
+      INTEGER :: m
+      boff(0:atoms%lnonsph(n)) = atoms%udot_rows(atoms%lnonsph(n),n)
+      ALLOCATE(idx(MERGE(1,2,boff(l)<0),2*l+1))
+      idx(1,:) = [(l*(l+1)+m,m=-l,l)]
+      IF (boff(l)>=0) idx(2,:) = [(boff(l)+l+m,m=-l,l)]
+   END FUNCTION
+
+   SUBROUTINE add_nonsph_lm_block(mat,atoms,n,l,mm,r)
+      !! h_loc_nonsph-shaped mat += mm(m,mp)*r(i,j) for the u (and LAPW udot) functions of l
+      COMPLEX,       INTENT(INOUT) :: mat(0:,0:)
+      TYPE(t_atoms), INTENT(IN)    :: atoms
+      INTEGER,       INTENT(IN)    :: n,l
+      COMPLEX,       INTENT(IN)    :: mm(:,:)
+      REAL,          INTENT(IN)    :: r(:,:)
+      INTEGER, ALLOCATABLE :: idx(:,:)
+      idx = nonsph_lm_ind(atoms,n,l)
+      CALL add_lm_block(mat,idx,mm,r(:SIZE(idx,1),:SIZE(idx,1)))
+   END SUBROUTINE add_nonsph_lm_block
+
+   SUBROUTINE add_lm_block(mat,idx,mm,r)
+      !! mat(idx(i,m),idx(j,mp)) += mm(m,mp)*r(i,j)
+      COMPLEX, INTENT(INOUT) :: mat(0:,0:)
+      INTEGER, INTENT(IN)    :: idx(:,:)
+      COMPLEX, INTENT(IN)    :: mm(:,:)
+      REAL,    INTENT(IN)    :: r(:,:)
+      INTEGER :: m,mp,i,j
+      DO mp = 1,SIZE(mm,2)
+         DO m = 1,SIZE(mm,1)
+            DO j = 1,SIZE(idx,1)
+               DO i = 1,SIZE(idx,1)
+                  mat(idx(i,m),idx(j,mp)) = mat(idx(i,m),idx(j,mp)) + mm(m,mp)*r(i,j)
+               END DO
+            END DO
+         END DO
+      END DO
+   END SUBROUTINE
+
+   SUBROUTINE add_ldaU(fmpi,inden,jsp,atoms,v,input,td,j1,j2,l_forces)
+      !! DFT+U, DFT+HIA and OPC; LOs get them only through h (u/udot parts)
+      TYPE(t_mpi),      INTENT(IN)    :: fmpi
+      TYPE(t_input),    INTENT(IN)    :: input
+      TYPE(t_atoms),    INTENT(IN)    :: atoms
+      TYPE(t_potden),   INTENT(IN)    :: v,inden
+      TYPE(t_tlmplm),   INTENT(INOUT) :: td
+      INTEGER,          INTENT(IN)    :: jsp,j1,j2
+      LOGICAL,          INTENT(IN)    :: l_forces
+
+      INTEGER  :: i_u,i_opc,n,l,m
+      LOGICAL  :: l_apwlo
+      COMPLEX, ALLOCATABLE :: mm(:,:)
+      REAL, ALLOCATABLE :: opc_corrections(:)
+
+      DO i_u = 1,atoms%n_u+atoms%n_hia
+         n = atoms%lda_u(i_u)%atomType
+         l = atoms%lda_u(i_u)%l
+         IF (j1==j2) THEN
+            mm = v%mmpMat(-l:l,-l:l,i_u,jsp)
+         ELSE IF (j1>j2) THEN
+            mm = v%mmpMat(-l:l,-l:l,i_u,3)
+         ELSE
+            mm = CONJG(TRANSPOSE(v%mmpMat(-l:l,-l:l,i_u,3)))
+         END IF
+         CALL add_nonsph_lm_block(td%h_loc_nonsph(:,:,n,j1,j2),atoms,n,l,mm,td%radfun(n)%integral(1:2,1:2,l,j1,j2))
+         ! An APW LO carries most of the weight of its channel and gets U through td%h;
+         ! spin off-diagonal blocks only in their last pass (jsp=4), after extract_nonsph
+         l_apwlo = ANY(atoms%l_dulo(:atoms%nlo(n),n).AND.atoms%llo(:atoms%nlo(n),n)==l)
+         IF ((atoms%lda_u(i_u)%use_lo.OR.(l_apwlo.AND.(j1==j2.OR.jsp==4))).AND..NOT.l_forces) &
+            CALL add_lm_block(td%h(:,:,n,j1,j2),td%ind(1:2,l*l:l*l+2*l,n),mm,td%radfun(n)%integral(1:2,1:2,l,j1,j2))
+      END DO
+
+      IF (atoms%n_opc==0 .OR. j1/=j2) RETURN
+      CALL opc_setup(input,atoms,fmpi,v,inden,jsp,opc_corrections)
+      DO i_opc = 1,atoms%n_opc
+         n = atoms%lda_opc(i_opc)%atomType
+         l = atoms%lda_opc(i_opc)%l
+         IF (ALLOCATED(mm)) DEALLOCATE(mm)
+         ALLOCATE(mm(2*l+1,2*l+1),source=CMPLX(0.0,0.0))
+         DO m = -l,l
+            mm(m+l+1,m+l+1) = opc_corrections(i_opc)*m
+         END DO
+         CALL add_nonsph_lm_block(td%h_loc_nonsph(:,:,n,j1,j2),atoms,n,l,mm,td%radfun(n)%integral(1:2,1:2,l,j1,j2))
+         IF (.NOT.l_forces) &
+            CALL add_lm_block(td%h(:,:,n,j1,j2),td%ind(1:2,l*l:l*l+2*l,n),mm,td%radfun(n)%integral(1:2,1:2,l,j1,j2))
+      END DO
+   END SUBROUTINE
 
    SUBROUTINE add_soc(fmpi,atoms,noco,nococonv,input,enpara,v,hub1inp,hub1data,td)
       ! Setup of the soc parameters for first-variation SOC and the resulting
       ! correction of the relativistic LOs' spherical Hamiltonian.
-      USE m_constants
-      USE m_types
 
       TYPE(t_mpi),      INTENT(IN)    :: fmpi
       TYPE(t_atoms),    INTENT(IN)    :: atoms
@@ -221,16 +460,12 @@ CONTAINS
       TYPE(t_hub1data), INTENT(INOUT) :: hub1data
       TYPE(t_tlmplm),   INTENT(INOUT) :: td
 
-      INTEGER :: n,l,m,jsp,lo,i_hia
-      INTEGER :: lo_slot(atoms%nlod),lo_cnt(0:atoms%lmaxd)
+      INTEGER :: n,l,m,jsp,lo,i_hia,i
 
-      ! Fill the unified radial SOC matrix rsoc%rso used by hsmt_soc_offdiag.
-      ! (This replaces the former spnorb call; the angular matrix elements are
-      ! built from the Pauli matrices in hsmt_soc_offdiag, so soangl is not needed.)
+      ! Radial SOC matrix rsoc%rso used by hsmt_soc_offdiag
       IF (.NOT.ALLOCATED(td%rsoc%rso)) CALL td%rsoc%init(atoms)
       CALL td%rsoc%rad_matrix(atoms,noco,nococonv,input,fmpi,enpara,v)
-      ! Derive the Hubbard-1 SOC parameter xi from the radial matrix element
-      ! <u|V_SO|u> = rso(1,1,...) (formerly taken from rsopp in spnorb).
+      ! Hubbard-1 SOC parameter xi from <u|V_SO|u>
       IF (fmpi%irank==0) THEN
          DO i_hia = 1, atoms%n_hia
             IF (hub1inp%l_soc_given(i_hia)) CYCLE
@@ -240,100 +475,112 @@ CONTAINS
          END DO
       END IF
 
-      ! relLO: correct the relLO's diagonal spherical-Hamiltonian t-matrix.
-      ! tlmplm set the relLO's own element (tuloulo) to ello = epsilon, the DIRAC j=l-1/2
-      ! eigenvalue, which already contains the spin-orbit interaction
-      ! of that branch. But H_sph must carry the SCALAR-relativistic (SOC-free) value,
-      ! exactly as an ordinary LO's ello does; the first-variational SOC is
-      ! then added, once, by hsmt_soc. So only the relLO's OWN element is corrected here:
-      !     <relLO|H_sph|relLO> = epsilon + (l+1)*I_so,   I_so = rsoc%rso(slot,slot,n,l),
-      ! with H_sph = H_Dirac - H_SO
+      ! relLO: its own spherical element is the Dirac eigenvalue, which already contains
+      ! the SOC of the j=l-1/2 branch. H_sph must carry the SOC-free value, as the
+      ! first-variational SOC is added by hsmt_soc:
+      !     <relLO|H_sph|relLO> = epsilon + (l+1)*I_so,   I_so = rsoc%rso(slot,slot,n,l)
       DO n = 1, atoms%ntype
-         ! Map each LO to its radial-function slot in rsoc%rso: slot 1=u, 2=udot,
-         ! 3.. = LOs of the same l in the order they appear in atoms%llo (same
-         ! ordering as in types_radfun%generate_radial_functions).
-         lo_cnt = 0
-         DO lo = 1, atoms%nlo(n)
-            l = atoms%llo(lo,n)
-            lo_cnt(l) = lo_cnt(l) + 1
-            lo_slot(lo) = 2 + lo_cnt(l)
-         END DO
          DO lo = 1, atoms%nlo(n)
             IF (.NOT.atoms%l_relLO(lo,n)) CYCLE
             l = atoms%llo(lo,n)
             DO jsp = 1, input%jspins
                DO m = -l, l
-                  td%tuloulo_newer(m,m,lo,lo,n,jsp,jsp) = td%tuloulo_newer(m,m,lo,lo,n,jsp,jsp) &
-                       + REAL(l+1) * td%rsoc%rso(lo_slot(lo),lo_slot(lo),n,l,jsp,jsp)
+                  i = td%ind(atoms%slot_of_lo(lo,n),l*(l+1)+m,n)
+                  td%h(i,i,n,jsp,jsp) = td%h(i,i,n,jsp,jsp) + REAL(l+1)*td%rsoc%rso(atoms%slot_of_lo(lo,n),atoms%slot_of_lo(lo,n),n,l,jsp,jsp)
                END DO
             END DO
          END DO
       END DO
    END SUBROUTINE
 
-    subroutine cholesky_decompose(matrix,e_shift,atoms,ud,jsp)
-    USE m_types
-    TYPE(t_atoms),    INTENT(IN)    :: atoms
-    TYPE(t_usdus),INTENT(IN)        :: ud
-    COMPLEX,INTENT(INOUT)           :: matrix(0:,0:,:)
-    REAL, INTENT(OUT)               :: e_shift(:)
-    INTEGER,INTENT(IN)              :: jsp
+   SUBROUTINE cholesky_decompose(fmpi,td,atoms,jsp)
+      !! shift the non-spherical LAPW block by e_shift*overlap until it is positive definite
+      TYPE(t_mpi),    INTENT(IN)    :: fmpi
+      TYPE(t_tlmplm), INTENT(INOUT) :: td
+      TYPE(t_atoms),  INTENT(IN)    :: atoms
+      INTEGER,        INTENT(IN)    :: jsp
 
-    REAL, PARAMETER :: e_shift_min=0.5
-    REAL, PARAMETER :: e_shift_max=65.0
+      REAL, PARAMETER :: e_shift_min=0.5
+      REAL, PARAMETER :: e_shift_max=65.0
 
-    INTEGER :: n,info,s,l,lp,lmp,mp
-    COMPLEX,ALLOCATABLE :: mat(:,:)
+      INTEGER :: n,info,s,l,i,m
+      COMPLEX,ALLOCATABLE :: mat(:,:),shift(:,:)
 
-    e_shift=e_shift_min
-
-    DO n=1,atoms%ntype
-      s=atoms%lnonsph(n)*(atoms%lnonsph(n)+2)+1
-      info=1
-      cholesky_loop:DO WHILE(info.ne.0)
-         mat=matrix(0:,0:,n)
-         !Mat is now using a lower bound of 1!!
-         ! Add shift onto the diagonal terms to make matrix positive definite
-         DO lp = 0,atoms%lnonsph(n)
-               DO mp = -lp,lp
-               lmp = lp* (lp+1) + mp +1
-               mat(lmp,lmp)=e_shift(n)+mat(lmp,lmp)
-               mat(lmp+s,lmp+s)=e_shift(n)*ud%ddn(lp,n,jsp)+mat(lmp+s,lmp+s)
+      td%e_shift(:,jsp) = e_shift_min
+      DO n = 1,atoms%ntype
+         s = atoms%num_ab_rows(atoms%lnonsph(n),n)
+         info = 1
+         DO WHILE(info.NE.0)
+            mat = td%h_loc_nonsph(:s-1,:s-1,n,jsp,jsp)
+            DO l = 0,atoms%lnonsph(n)
+               ALLOCATE(shift(2*l+1,2*l+1),source=CMPLX(0.0,0.0))
+               DO m = 1,2*l+1
+                  shift(m,m) = td%e_shift(n,jsp)
                END DO
-         END DO
-         IF (lmp.NE.s) CALL judft_error("BUG in local_Hamiltonian:cholesky")
-
-         ! Perform cholesky decomposition
-         CALL zpotrf("L",2*s,mat(:,:),SIZE(mat,1),info)
-
-         ! Set upper part to zero
-         DO l=1,2*s
-               DO lp=1,l-1
-               mat(lp,l)=0.0
-               END DO
-         END DO
-
-         IF (info.NE.0) THEN
-               e_shift(n)=e_shift(n)*2.0
-               IF (e_shift(n)>e_shift_max) THEN
-               CALL judft_error("Potential shift at maximum")
+               CALL add_nonsph_lm_block(mat,atoms,n,l,shift,td%radfun(n)%integral(1:2,1:2,l,jsp,jsp))
+               DEALLOCATE(shift)
+            END DO
+            CALL zpotrf("L",s,mat,SIZE(mat,1),info)
+            DO i = 1,s
+               mat(:i-1,i) = 0.0
+            END DO
+            IF (info.NE.0) THEN
+               td%e_shift(n,jsp) = td%e_shift(n,jsp)*2.0
+               IF (td%e_shift(n,jsp)>e_shift_max) THEN
+                  CALL cholesky_failure_report(fmpi,td,atoms,n,jsp,info)
+                  CALL judft_error("Potential shift at maximum",calledby="cholesky_decompose",&
+                                   hint="Local Hamiltonian not positive definite, see diagnostics above")
                END IF
-         END IF
-      END DO cholesky_loop
-      matrix(0:,0:,n)=mat
-   ENDDO   
+            END IF
+         END DO
+         td%h_loc_nonsph(:s-1,:s-1,n,jsp,jsp) = mat
+      END DO
    END SUBROUTINE
 
+   SUBROUTINE cholesky_failure_report(fmpi,td,atoms,n,jsp,info)
+      !! diagnostics of the unshifted non-spherical LAPW block written before aborting
+      TYPE(t_mpi),    INTENT(IN) :: fmpi
+      TYPE(t_tlmplm), INTENT(IN) :: td
+      TYPE(t_atoms),  INTENT(IN) :: atoms
+      INTEGER,        INTENT(IN) :: n,jsp,info
 
-    subroutine restrict_to_lnonsph(mat,s2,s,mat_nonsph)
-        COMPLEX,INTENT(IN)   :: mat(0:,0:)
-        INTEGER,INTENT(IN)   :: s,s2
-        COMPLEX,INTENT(OUT)  :: mat_nonsph(0:,0:)
-        ! Set up local hamiltonian
-        mat_nonsph(0:s-1,0:s-1)    = mat(0:s-1,0:s-1)
-        mat_nonsph(s:s+s-1,0:s-1)  = mat(s2:s+s2-1,0:s-1)
-        mat_nonsph(0:s-1,s:s+s-1)  = mat(0:s-1,s2:s+s2-1)
-        mat_nonsph(s:s+s-1,s:s+s-1)= mat(s2:s+s2-1,s2:s+s2-1)
-    end subroutine
-        
+      INTEGER :: s,ns,k,l,m,ierr,nbad
+      INTEGER :: boff(0:atoms%lnonsph(n))
+      REAL, ALLOCATABLE    :: eig(:),rwork(:)
+      COMPLEX, ALLOCATABLE :: h(:,:),work(:)
+
+      s = nonsph_size(atoms,n)
+      ns = atoms%num_ab_rows(atoms%lnonsph(n),n)
+      boff(0:atoms%lnonsph(n)) = atoms%udot_rows(atoms%lnonsph(n),n)
+      h = td%h_loc_nonsph(:ns-1,:ns-1,n,jsp,jsp)
+      WRITE(*,'(a,i0,a,i0,a,i0,a,i0)') "Rank ",fmpi%irank,": Cholesky decomposition of local Hamiltonian failed for atom type ",&
+         n,", spin ",jsp,", lnonsph ",atoms%lnonsph(n)
+      WRITE(*,'(a,f8.3,a,i0)') "  last shift (Htr): ",td%e_shift(n,jsp),", zpotrf info: ",info
+      IF (info>0) THEN
+         IF (info<=s) THEN
+            k = info-1
+            l = INT(SQRT(REAL(k)+0.5))
+         ELSE
+            l = MAXLOC(boff,1,MASK=boff<=info-1)-1
+            k = info-1-boff(l)+l*l
+         END IF
+         m = k-l*(l+1)
+         WRITE(*,'(3a,i0,a,i0,a,2es14.5)') "  failing basis function: ",MERGE("u   ","udot",info<=s)," l=",l," m=",m,&
+            ", unshifted diagonal element: ",h(info,info)
+      END IF
+      nbad = COUNT(.NOT.(ABS(h)<=HUGE(1.0)))
+      WRITE(*,'(a,i0)') "  NaN/Inf matrix elements: ",nbad
+      IF (nbad==0) THEN
+         WRITE(*,'(a,es14.5)') "  max |H-H^H|: ",MAXVAL(ABS(h-CONJG(TRANSPOSE(h))))
+         ALLOCATE(eig(ns),rwork(3*ns),work(2*ns))
+         CALL zheev("N","L",ns,h,ns,eig,work,SIZE(work),rwork,ierr)
+         IF (ierr==0) WRITE(*,'(a,4es14.5)') "  lowest eigenvalues (unshifted): ",eig(:MIN(4,ns))
+      END IF
+      WRITE(*,'(a)') "  radial overlaps  l   <u|u>          <u|udot>       <udot|udot>"
+      DO l = 0,atoms%lnonsph(n)
+         WRITE(*,'(15x,i3,3es15.5)') l,td%radfun(n)%integral(1,1,l,jsp,jsp),td%radfun(n)%integral(1,2,l,jsp,jsp),&
+            td%radfun(n)%integral(2,2,l,jsp,jsp)
+      END DO
+   END SUBROUTINE
+
 END MODULE m_local_Hamiltonian

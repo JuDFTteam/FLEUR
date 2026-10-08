@@ -1,28 +1,45 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 
 MODULE m_make_dos
   USE m_juDFT
+  USE m_constants
+  USE m_cdn_io
+  USE m_unfold_band_kpts
+  USE m_cdninf
+  USE m_types_eigdos
+  USE m_banddos_io
+#ifdef CPP_HDF
+  USE m_hdf_tools
+#endif
+  USE m_types_atoms
+  USE m_types_banddos
+  USE m_types_cell
+  USE m_types_dfpt
+  USE m_types_input
+  USE m_types_kpts
+  USE m_types_noco
+  USE m_types_nococonv
+  USE m_types_misc
+  USE m_types_sliceplot
+  USE m_types_sym
+  USE m_types_vacuum
+#ifdef CPP_HDF
+  USE hdf5
+#endif
   !
   !-- now write cdninf for all kpts if on T3E
   !-- now read data from tmp_dos and write to vacdos&dosinp .. dw
   !
+   implicit none
+  PRIVATE
+  PUBLIC :: make_dos
 CONTAINS
   SUBROUTINE make_dos(kpts,atoms,vacuum,input,banddos,&
                       sliceplot,noco,nococonv,sym,cell,results,eigdos,dfpt )
-    USE m_types
-    USE m_constants
-    USE m_cdn_io
-    USE m_unfold_band_kpts
-    USE m_cdninf
-    USE m_types_eigdos
-#ifdef CPP_HDF
-    use m_hdf_tools
-#endif
-    use m_banddos_io
     IMPLICIT NONE
 
 
@@ -114,11 +131,8 @@ CONTAINS
 
     IF (banddos%dos) THEN
        DO n=1,size(eigdos)
-          print *,"Makedos:",n
           call eigdos(n)%p%make_dos(kpts,input,banddos,eFermi)
-          print *,"Smooth:",n
           call eigdos(n)%p%smooth(banddos)
-          print *,"WriteDos:",n
           call eigdos(n)%p%write_dos(banddosFile_id,l_dfpt)
        END DO
        IF (banddos%l_storeEVData) THEN
@@ -130,6 +144,11 @@ CONTAINS
        WRITE(*,*) "Note: DOS data (together with different weights) is also stored in the banddos.hdf file."
        WRITE(*,*) "      A convenient way of extracting and plotting the data from that file is by making use of the"
        WRITE(*,*) "      masci-tools (https://pypi.org/project/masci-tools/)."
+    END IF
+    IF (banddos%band.OR.banddos%dos) THEN
+       DO n=1,size(eigdos)
+          call eigdos(n)%p%write_extra(banddosFile_id)
+       END DO
     END IF
 #ifdef CPP_HDF
       CALL closeBandDOSFile(banddosFile_id)

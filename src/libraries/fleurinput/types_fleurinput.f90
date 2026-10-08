@@ -15,11 +15,11 @@ MODULE m_types_fleurinput
   USE m_types_field
   USE m_types_sliceplot
   USE m_types_banddos
+  USE m_types_xas
   USE m_types_mpinp
   USE m_types_hybinp
    
   USE m_types_coreSpecInput
-  USE m_types_wannier
   USE m_types_wannierlib
   USE m_types_xcpot
   USE m_types_forcetheo_data
@@ -29,6 +29,8 @@ MODULE m_types_fleurinput
   USE m_types_hub1inp
   USE m_types_dfpt
   IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: t_fleurinput
 
   TYPE t_fleurinput
     TYPE(t_cell)::cell
@@ -40,6 +42,7 @@ MODULE m_types_fleurinput
     TYPE(t_field)::field
     TYPE(t_sliceplot)::sliceplot
     TYPE(t_banddos)::banddos
+    TYPE(t_xas)::xas
     TYPE(t_hybinp)::hybinp
     type(t_mpinp) :: mpinp
      

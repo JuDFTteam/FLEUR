@@ -9,11 +9,13 @@ MODULE m_libxc_xctyp
    !selection, plus an optional auxiliary GGA (AuxExchID/AuxCorID) for the
    !MetaGGA radial basis. Shared between src/fleur/io/w_inpXML.f90 (fleur and
    !inpgen2) and src/tools/inpgen3/w_inpXML.f90 (inpgen3).
+   USE m_judft
    IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: parse_libxc_xctyp
 CONTAINS
 
    SUBROUTINE parse_libxc_xctyp(inbuild_name, l_useID, xName, cName, xID, cID, l_aux, auxXID, auxCID)
-      USE m_judft
       IMPLICIT NONE
       CHARACTER(len=*), INTENT(IN)  :: inbuild_name
       LOGICAL,          INTENT(OUT) :: l_useID

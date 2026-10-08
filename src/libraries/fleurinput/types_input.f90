@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -8,6 +8,9 @@ MODULE m_types_input
   USE m_judfT
   USE m_constants
   USE m_types_fleurinput_base
+  USE m_mpi_bc_tool
+  USE m_types_xml
+  USE m_types_noco
   IMPLICIT NONE
   PRIVATE
   PUBLIC:: t_input
@@ -66,7 +69,6 @@ MODULE m_types_input
   LOGICAL:: integ=.FALSE.
   LOGICAL:: pallst=.FALSE.
   LOGICAL:: l_coreSpec=.FALSE.
-  LOGICAL:: l_wann=.FALSE.
   LOGICAL:: l_sympsi=.FALSE.
   LOGICAL:: l_kpts_fullbz=.FALSE.
   LOGICAL:: secvar=.FALSE.
@@ -104,7 +106,6 @@ END TYPE t_input
 
 CONTAINS
 SUBROUTINE mpi_bc_input(this,mpi_comm,irank)
-   USE m_mpi_bc_tool
    CLASS(t_input),INTENT(INOUT)::this
    INTEGER,INTENT(IN):: mpi_comm
    INTEGER,INTENT(IN),OPTIONAL::irank
@@ -161,7 +162,6 @@ SUBROUTINE mpi_bc_input(this,mpi_comm,irank)
    CALL mpi_bc(this%integ,rank,mpi_comm)
    CALL mpi_bc(this%pallst,rank,mpi_comm)
    CALL mpi_bc(this%l_coreSpec,rank,mpi_comm)
-   CALL mpi_bc(this%l_wann,rank,mpi_comm)
    CALL mpi_bc(this%secvar,rank,mpi_comm)
    CALL mpi_bc(this%evonly,rank,mpi_comm)
    CALL mpi_bc(this%l_onlyMtStDen,rank,mpi_comm)
@@ -193,17 +193,13 @@ SUBROUTINE mpi_bc_input(this,mpi_comm,irank)
 END SUBROUTINE mpi_bc_input
 
 SUBROUTINE read_xml_input(this,xml)
-   USE m_types_xml
-   USE m_constants
    CLASS(t_input),INTENT(inout):: this
    TYPE(t_xml),INTENT(INOUT)  ::xml
 
    CHARACTER(len=100):: valueString,xpathA,xpathB,xPathC
    INTEGER:: numberNodes,nodeSum, i, numberNodesB,numberNodesC
 
-   !TODO! these switches should be in the inp-file
-   !this%l_core_confpot=.TRUE. !former CPP_CORE !Done (A.N.).
-   this%l_useapw=.FALSE.   !former CPP_APW
+   !l_useapw is derived from the atoms input in fleurinput_postprocess
    this%comment =  xml%GetAttributeValue('/fleurInput/comment')
    DO i = 1, LEN(this%comment)
       IF(IACHAR(this%comment(i:i)).LT.32) this%comment(i:i) = ' '
@@ -419,7 +415,7 @@ SUBROUTINE read_xml_input(this,xml)
       CASE ('Muller')
          this%rdmftFunctional = 1
       CASE DEFAULT
-         STOP 'Error: unknown RDMFT functional selected!'
+         CALL judft_error('unknown RDMFT functional selected!')
       END SELECT
    END IF
    ! !! Start of output section
@@ -428,7 +424,6 @@ SUBROUTINE read_xml_input(this,xml)
    IF (numberNodes.EQ.1) THEN
       ! Read in general output switches
       this%l_coreSpec = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@coreSpec'))
-      this%l_wann = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@wannier'))
       IF (xml%versionNumber > 31)this%eig66(1) = evaluateFirstBoolOnly(xml%GetAttributeValue(TRIM(ADJUSTL(xPathA))//'/@eig66'))
       ! Read in optional switches for checks
       xPathA = '/fleurInput/output/checks'
@@ -480,7 +475,6 @@ SUBROUTINE read_xml_input(this,xml)
 END SUBROUTINE read_xml_input
 
 SUBROUTINE init_input(input,noco,l_hybrid,invs,n_denmat,n_hia,nbasfcn)
-   USE m_types_noco
    CLASS(t_input),INTENT(inout):: input
    TYPE(t_noco),INTENT(in)     :: noco
    LOGICAL, INTENT(IN)         :: invs

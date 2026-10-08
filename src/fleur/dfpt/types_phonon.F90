@@ -10,6 +10,23 @@ module m_types_phonon
     use m_juDFT
     use m_types_dfpt_scf
     use m_dfpt_NAC
+    use m_dfpt_eii2
+    use m_dfpt_generate_gradient
+    use m_dfpt_dynmat
+    use m_dfpt_dynmat_eig
+    use m_types_dfpt
+    use m_types_enpara
+    use m_types_fleurinput
+    use m_types_hybdat
+    use m_types_kpts
+    use m_types_mpi
+    use m_types_nococonv
+    use m_types_potden
+    use m_types_misc
+    use m_types_sphhar
+    use m_types_stars
+    use m_types_sternheimerjob
+    use m_types_xcpot
 
     implicit none 
 
@@ -91,7 +108,6 @@ module m_types_phonon
 
 
     subroutine init_child_phonon(this,fi,nqpts,dynMatNac)
-        use m_types
         class(t_phonon), intent(inout) :: this
         type(t_fleurinput), intent(in) :: fi 
         integer, intent(in)  :: nqpts
@@ -112,10 +128,7 @@ module m_types_phonon
 
     subroutine q_indepent_properties_phonon(this,sternheimerJob,fi,fmpi,sphhar,hybdat,xcpot,nococonv,stars,rho,vTot,grRho3,grVtot3,grVC3,grVext3,grgrVext3x3)
         
-        use m_types
-        use m_dfpt_eii2    
         
-        use m_dfpt_generate_gradient
 
 
         class(t_phonon), intent(inout) :: this
@@ -181,8 +194,6 @@ module m_types_phonon
                                           dfpt_eig_id2,enpara,results,results1,l_real,dfpt,rho,vTot,grRho3,grVext3,grVc3,den1,vTot1,den1Im,vTot1Im,vC1,vC1Im)
         
         
-        use m_types
-        use m_dfpt_dynmat
         
 
         class(t_phonon),intent(inout) :: this
@@ -230,8 +241,6 @@ module m_types_phonon
 
     subroutine postprocessing_qpoint_phonon(this,fi,fmpi,dfpt,qpts,iQ,q_list)
 
-        use m_types
-        use m_dfpt_dynmat_eig
 
         class(t_phonon), intent(inout) :: this
         type(t_fleurinput),intent(in)  :: fi 
@@ -271,7 +280,6 @@ module m_types_phonon
 
     subroutine write_outfiles_phonon(this,fi,fmpi,dfpt)
 
-        use m_types 
 
         class(t_phonon),intent(inout)   :: this         
         type(t_fleurinput),intent(in) :: fi

@@ -1,5 +1,8 @@
       MODULE m_fulstar
       use m_juDFT
+      implicit none
+      private
+      public :: fulstar
       CONTAINS
       SUBROUTINE  fulstar(
      >                    iofile,iokpt,kpri,ktest,

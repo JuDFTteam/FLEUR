@@ -11,12 +11,26 @@
 MODULE m_vis_xc
    USE m_juDFT
    use m_convol
+   use m_pw_tofrom_grid
+   use m_types_xcpot_libxc
+   use m_libxc_postprocess_gga
+   use m_mgga_alpha
+   use m_constants
+   use m_types_cell
+   use m_types_xcpot
+   use m_types_input
+   use m_types_noco
+   use m_types_potden
+   use m_types_stars
+   use m_types_sym
+   implicit none
+   private
+   public :: vis_xc
    !     ******************************************************
    !     subroutine generates the exchange-correlation potential
    !     in the interstitial region    c.l.fu
    !     including gradient corrections. t.a. 1996.
    !     ******************************************************
-   implicit none
 CONTAINS
    SUBROUTINE vis_xc(stars,sym,cell,den,xcpot,input,noco,EnergyDen,vTot,vx,exc,vxc,vTau,alphaMin,alphaMax)
 
@@ -31,12 +45,6 @@ CONTAINS
       !     density
       !     ** r.pentcheva 08.05.96
       !     ******************************************************************
-      USE m_pw_tofrom_grid
-      USE m_types
-      USE m_constants
-      USE m_types_xcpot_libxc
-      USE m_libxc_postprocess_gga
-      USE m_mgga_alpha
       IMPLICIT NONE
 
       CLASS(t_xcpot),INTENT(IN)     :: xcpot

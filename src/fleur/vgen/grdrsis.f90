@@ -1,10 +1,13 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2025 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
 MODULE m_grdrsis
   USE m_juDFT
+  USE m_constants
+  USE m_types_cell
+  IMPLICIT NONE
   PRIVATE
   INTEGER,PARAMETER :: ndvgrd=6 ! this should be consistent across GGA derivative routines
   PUBLIC grdrsis
@@ -29,8 +32,6 @@ CONTAINS
     !   gradient of ro in non-internal coordinates 
     !       
     !.....-----------------------------------------------------------------
-    USE m_constants
-    USE m_types_cell
     IMPLICIT NONE 
     TYPE(t_cell),INTENT(IN)   :: cell
     !     ..

@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------------
-! Copyright (c) 2016 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
+! Copyright (c) 2026 Peter Grünberg Institut, Forschungszentrum Jülich, Germany
 ! This file is part of FLEUR and available as free software under the conditions
 ! of the MIT license as expressed in the LICENSE file in more detail.
 !--------------------------------------------------------------------------------
@@ -15,17 +15,20 @@
 !     alpha,beta:Euler angles of the local magnetic field direction of
 !                each atom(-type).
 !**********************************************************************
+   USE m_constants
+   USE m_rwnoco
+   USE m_types_atoms
+   USE m_types_input
+   USE m_types_sym
+   USE m_types_vacuum
+   USE m_types_noco
+   USE m_nocoInputCheck
+   IMPLICIT NONE
+   PRIVATE
+   PUBLIC :: inpnoco
       CONTAINS
       SUBROUTINE inpnoco(atoms,input,sym,vacuum,noco)
 
-      USE m_constants
-      USE m_rwnoco
-      USE m_types_atoms
-      USE m_types_input
-      USE m_types_sym
-      USE m_types_vacuum
-      USE m_types_noco
-      Use m_nocoInputCheck
       IMPLICIT NONE
       TYPE(t_atoms),INTENT(INOUT) ::atoms
       TYPE(t_input),INTENT(INOUT) ::input

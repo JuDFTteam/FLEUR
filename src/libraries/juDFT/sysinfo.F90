@@ -6,7 +6,17 @@
 
 
 MODULE m_judft_sysinfo
+!$ use omp_lib
+  use iso_c_binding
+#ifdef _OPENACC
+  use openacc
+#endif
+#ifdef CPP_MPI
+  use mpi
+#endif
   IMPLICIT NONE
+  PRIVATE
+  PUBLIC :: fp_error_check, num_openmp, num_gpu, uname, print_memory_info, memory_usage_string, checkstack
 
 
 CONTAINS
@@ -38,15 +48,11 @@ subroutine fp_error_check(onoff)
 end subroutine fp_error_check
 
 integer function num_openmp()
-!$  use omp_lib
 num_openmp=0
 !$ num_openmp=omp_get_max_threads()
 end function  
 
 integer function num_gpu()
-#ifdef _OPENACC
-   use openacc
-#endif
    num_gpu=0
 #ifdef _OPENACC
    num_gpu=acc_get_num_devices(acc_device_nvidia)
@@ -78,10 +84,6 @@ end function
   !That is why it defaults to .FALSE. - a caller that forgets it loses a line
   !of output, it does not hang.
   SUBROUTINE print_memory_info(io,maxmem,l_par)
-#ifdef CPP_MPI
-    USE mpi
-#endif
-    USE iso_c_binding
     IMPLICIT NONE
     INTEGER,INTENT(in)          :: io
     LOGICAL,INTENT(IN),OPTIONAL :: maxmem
@@ -143,7 +145,6 @@ end function
   !Both come from the portable C helpers in mem_usage.c (getrusage / proc / mach),
   !so a real value is produced on Linux, macOS and BSD rather than only on Linux.
   FUNCTION memory_usage_string(maxmem)
-    USE iso_c_binding
     IMPLICIT NONE
     LOGICAL,INTENT(IN),OPTIONAL :: maxmem
     CHARACTER(len=100):: memory_usage_string
@@ -198,9 +199,6 @@ end function
     
    
   SUBROUTINE checkstack()
-#ifdef CPP_MPI
-    USE mpi
-#endif
     CHARACTER(LEN=10):: l1,l2,l3,l4
     INTEGER          :: err
     LOGICAL          :: unlimited,l_mpi
