@@ -3506,6 +3506,11 @@
       <xsd:attribute name="convTol" type="FleurDouble" use="required"/>
       <xsd:attribute name="convWindow" type="xsd:nonNegativeInteger" use="optional"/>
       <xsd:attribute default="F" name="precond" type="FleurBool" use="optional"/>
+      <xsd:attribute name="fdOrder" type="xsd:positiveInteger" use="optional">
+         <xsd:annotation>
+            <xsd:documentation>Order of the finite-difference stencil Wannier90 builds the b-shells with (its higher_order_n). The default 1 is the one-shell formula of Marzari and Vanderbilt, whose error in the k derivative is O(b^2); 2 and 3 combine more shells and reduce it to O(b^4) and O(b^6), at the cost of more neighbours per k point and therefore more overlap matrices. It matters for every quantity built as a k derivative - the Berry connection A, and above all C and F, which are second derivatives. Silence leaves Wannier90 on its own default, so an existing input keeps its numbers.</xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
    </xsd:complexType>
 
    <xsd:complexType name="WannierlibOperatorType">

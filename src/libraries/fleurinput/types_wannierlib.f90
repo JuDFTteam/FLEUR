@@ -171,6 +171,12 @@ MODULE m_types_wannierlib
     !> It changes the descent inside a valley, not the functional, so it cannot move the
     !> minimum.
     LOGICAL :: precond = .FALSE.
+    !> Order of the finite-difference stencil for the k derivatives (W90 higher_order_n);
+    !> XML @fdOrder. Zero is our sentinel for "say nothing", so Wannier90 keeps its own
+    !> default of 1 -- the single-shell formula with an O(b^2) error. The quantities that
+    !> feel it are the ones defined as k derivatives: A, and above all C and F, which are
+    !> second derivatives and therefore carry the error squared.
+    INTEGER :: fd_order = 0
 
     LOGICAL :: l_intp = .FALSE.         ! Do interpolation
     REAL, ALLOCATABLE :: kpts_fine(:,:) ! kPoints to interpolate on 
@@ -443,6 +449,7 @@ CONTAINS
     CALL mpi_bc(this%dis_conv_window, rank, mpi_comm)
     CALL mpi_bc(this%conv_window, rank, mpi_comm)
     CALL mpi_bc(this%precond, rank, mpi_comm)
+    CALL mpi_bc(this%fd_order, rank, mpi_comm)
     !> An array of a derived type does not go through the generic mpi_bc, which sizes the
     !> receivers from the message itself. The count travels first, then each record field by
     !> field -- the shape t_atoms uses for lda_u.
@@ -583,6 +590,10 @@ CONTAINS
       IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@convWindow') == 1) &
         this%conv_window = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@convWindow'))
       this%precond = evaluateFirstBoolOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@precond'))
+      !> Like convWindow: read only when the attribute is present, so that silence
+      !> leaves Wannier90 on its own default and an older inp.xml keeps its numbers.
+      IF (xml%getNumberOfNodes(TRIM(ADJUSTL(xPathA))//'/@fdOrder') == 1) &
+        this%fd_order = evaluateFirstIntOnly(xml%getAttributeValue(TRIM(ADJUSTL(xPathA))//'/@fdOrder'))
     END IF
 
     ! --- interpolation domain + operator list ---

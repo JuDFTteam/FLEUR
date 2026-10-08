@@ -152,6 +152,13 @@ CONTAINS
        CALL w90_set_option(wannierlib_w90main, 'dis_proj_max', this%dis_proj_max)
     END IF
     IF (this%precond) CALL w90_set_option(wannierlib_w90main, 'precond', .TRUE.)                            ! MLWF/wannierise (XML precond)
+    !> The order of the finite-difference stencil Wannier90 builds its b-shells with.
+    !> Its default is 1, the single-shell formula of Marzari and Vanderbilt, whose error
+    !> in the k derivative is O(b^2). What feels it are the quantities DEFINED as a
+    !> derivative -- A, and above all C and F, which are second derivatives and so carry
+    !> that error squared. Behind the sentinel, like everything optional: silence tells
+    !> Wannier90 nothing and leaves it on its own default.
+    IF (this%fd_order > 0) CALL w90_set_option(wannierlib_w90main, 'higher_order_n', this%fd_order)
 
     seedname = 'fleur_wlib_internal'
     CALL w90_input_setopt(wannierlib_w90main, seedname, oUnit, oUnit, ierr)
